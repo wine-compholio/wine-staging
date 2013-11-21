@@ -1,0 +1,57 @@
+From c80b095c919dcc976955f258fe177a2b24fd8dea Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 28 Oct 2013 00:39:17 +0100
+Subject: winex11: Enable/disable windows when they are (un)mapped by foreign
+ applications
+
+---
+ dlls/winex11.drv/event.c |   17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/dlls/winex11.drv/event.c b/dlls/winex11.drv/event.c
+index df27468..9d958c0 100644
+--- a/dlls/winex11.drv/event.c
++++ b/dlls/winex11.drv/event.c
+@@ -929,6 +929,7 @@ static void X11DRV_Expose( HWND hwnd, XEvent *xev )
+ static void X11DRV_MapNotify( HWND hwnd, XEvent *event )
+ {
+     struct x11drv_win_data *data;
++    BOOL is_embedded;
+ 
+     if (event->xany.window == x11drv_thread_data()->clip_window)
+     {
+@@ -943,7 +944,12 @@ static void X11DRV_MapNotify( HWND hwnd, XEvent *event )
+         if (hwndFocus && IsChild( hwnd, hwndFocus ))
+             set_input_focus( hwnd );
+     }
++
++    is_embedded = data->embedded;
+     release_win_data( data );
++
++    if (is_embedded)
++        EnableWindow( hwnd, TRUE );
+ }
+ 
+ 
+@@ -952,7 +958,18 @@ static void X11DRV_MapNotify( HWND hwnd, XEvent *event )
+  */
+ static void X11DRV_UnmapNotify( HWND hwnd, XEvent *event )
+ {
++    struct x11drv_win_data *data;
++    BOOL is_embedded;
++
+     if (event->xany.window == x11drv_thread_data()->clip_window) clipping_cursor = 0;
++
++    if (!(data = get_win_data( hwnd ))) return;
++
++    is_embedded = data->embedded;
++    release_win_data( data );
++    
++    if (is_embedded)
++        EnableWindow( hwnd, FALSE );
+ }
+ 
+ 
+-- 
+1.7.9.5
+

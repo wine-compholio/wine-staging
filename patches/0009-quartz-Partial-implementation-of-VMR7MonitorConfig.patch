@@ -1,0 +1,122 @@
+From beed64a33606fd3de77f41708f8a2b590521ea51 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 10 Nov 2013 21:40:10 +0100
+Subject: quartz: Partial implementation of VMR7MonitorConfig
+
+---
+ dlls/quartz/vmr9.c |   70 +++++++++++++++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 64 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/quartz/vmr9.c b/dlls/quartz/vmr9.c
+index 0acdd26..6b2970b 100644
+--- a/dlls/quartz/vmr9.c
++++ b/dlls/quartz/vmr9.c
+@@ -1309,7 +1309,7 @@ static HRESULT WINAPI VMR7MonitorConfig_SetMonitor(IVMRMonitorConfig *iface, con
+     struct quartz_vmr *This = impl_from_IVMRMonitorConfig(iface);
+ 
+     FIXME("(%p/%p)->(%p) stub\n", iface, This, pGUID);
+-    return E_NOTIMPL;
++    return S_OK;
+ }
+ 
+ static HRESULT WINAPI VMR7MonitorConfig_GetMonitor(IVMRMonitorConfig *iface, VMRGUID *pGUID)
+@@ -1317,7 +1317,11 @@ static HRESULT WINAPI VMR7MonitorConfig_GetMonitor(IVMRMonitorConfig *iface, VMR
+     struct quartz_vmr *This = impl_from_IVMRMonitorConfig(iface);
+ 
+     FIXME("(%p/%p)->(%p) stub\n", iface, This, pGUID);
+-    return E_NOTIMPL;
++
++    if (pGUID)
++        pGUID->pGUID = NULL; /* default DirectDraw device */
++
++    return S_OK;
+ }
+ 
+ static HRESULT WINAPI VMR7MonitorConfig_SetDefaultMonitor(IVMRMonitorConfig *iface,
+@@ -1326,7 +1330,7 @@ static HRESULT WINAPI VMR7MonitorConfig_SetDefaultMonitor(IVMRMonitorConfig *ifa
+     struct quartz_vmr *This = impl_from_IVMRMonitorConfig(iface);
+ 
+     FIXME("(%p/%p)->(%p) stub\n", iface, This, pGUID);
+-    return E_NOTIMPL;
++    return S_OK;
+ }
+ 
+ static HRESULT WINAPI VMR7MonitorConfig_GetDefaultMonitor(IVMRMonitorConfig *iface, VMRGUID *pGUID)
+@@ -1334,7 +1338,11 @@ static HRESULT WINAPI VMR7MonitorConfig_GetDefaultMonitor(IVMRMonitorConfig *ifa
+     struct quartz_vmr *This = impl_from_IVMRMonitorConfig(iface);
+ 
+     FIXME("(%p/%p)->(%p) stub\n", iface, This, pGUID);
+-    return E_NOTIMPL;
++
++    if (pGUID)
++        pGUID->pGUID = NULL; /* default DirectDraw device */
++
++    return S_OK;
+ }
+ 
+ static HRESULT WINAPI VMR7MonitorConfig_GetAvailableMonitors(IVMRMonitorConfig *iface,
+@@ -1342,9 +1350,59 @@ static HRESULT WINAPI VMR7MonitorConfig_GetAvailableMonitors(IVMRMonitorConfig *
+                                                              DWORD *numdev)
+ {
+     struct quartz_vmr *This = impl_from_IVMRMonitorConfig(iface);
++    DISPLAY_DEVICEW device;
++    DWORD devnum, count;
++    DEVMODEW mode;
+ 
+-    FIXME("(%p/%p)->(%p, %u, %p) stub\n", iface, This, info, arraysize, numdev);
+-    return E_NOTIMPL;
++    FIXME("(%p/%p)->(%p, %u, %p) semi-stub\n", iface, This, info, arraysize, numdev);
++
++    if (!numdev)
++        return E_POINTER;
++
++    device.cb = sizeof(DISPLAY_DEVICEW);
++
++    /* return the number of available monitors if info == NULL */
++    if (info == NULL)
++    {
++        for (devnum = 0; EnumDisplayDevicesW(NULL, devnum, &device, 0); ++devnum);
++        *numdev = devnum;
++        return S_OK;
++    }
++
++    /* at least one entry */
++    if (arraysize == 0)
++        return E_INVALIDARG;
++
++    for (count = 0, devnum = 0; count < arraysize && EnumDisplayDevicesW(NULL, devnum, &device, 0); ++devnum)
++    {
++
++        mode.dmSize         = sizeof(DEVMODEW);
++        mode.dmDriverExtra  = 0;
++
++        if (!EnumDisplaySettingsExW(device.DeviceName, ENUM_CURRENT_SETTINGS, &mode, EDS_RAWMODE))
++            continue;
++
++        memset(info, 0, sizeof(VMRMONITORINFO));
++
++        info->guid.pGUID          = NULL; /* default DirectDraw device */
++
++        info->rcMonitor.left      = mode.u1.s2.dmPosition.x;
++        info->rcMonitor.top       = mode.u1.s2.dmPosition.y;
++        info->rcMonitor.right     = mode.u1.s2.dmPosition.x + mode.dmPelsWidth;
++        info->rcMonitor.bottom    = mode.u1.s2.dmPosition.y + mode.dmPelsHeight;
++
++        info->hMon                = 0; /* FIXME: return monitor handle */
++        info->dwFlags             = (device.StateFlags & DISPLAY_DEVICE_PRIMARY_DEVICE) ? MONITORINFOF_PRIMARY : 0;
++
++        lstrcpynW(info->szDevice, device.DeviceName, sizeof(info->szDevice)/sizeof(WCHAR));
++        lstrcpynW(info->szDescription, device.DeviceString, sizeof(info->szDescription)/sizeof(WCHAR));
++
++        count++;
++        info++;
++    }
++
++    *numdev = count;
++    return S_OK;
+ }
+ 
+ static const IVMRMonitorConfigVtbl VMR7_MonitorConfig_Vtbl =
+-- 
+1.7.9.5
+

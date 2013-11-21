@@ -1,30 +1,15 @@
-From d90c33b813316c9fb409f835dbf55a5d42750200 Mon Sep 17 00:00:00 2001
+From aa5c2e5b4bf9716af3ea2065a3d3de10c840f59b Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Fri, 4 Oct 2013 08:22:17 -0600
+Date: Mon, 18 Nov 2013 17:22:04 -0700
 Subject: server: Implement an interface change notification object.
 
 ---
- configure.ac        |    2 +
  server/event.c      |   13 +++
  server/named_pipe.c |   13 ---
  server/object.h     |    1 +
- server/sock.c       |  292 ++++++++++++++++++++++++++++++++++++++++++++++++++-
- 5 files changed, 306 insertions(+), 15 deletions(-)
+ server/sock.c       |  289 ++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 4 files changed, 301 insertions(+), 15 deletions(-)
 
-diff --git a/configure.ac b/configure.ac
-index fc68e1d..6db7859 100644
---- a/configure.ac
-+++ b/configure.ac
-@@ -429,7 +429,9 @@ AC_CHECK_HEADERS(\
- 	linux/ioctl.h \
- 	linux/joystick.h \
- 	linux/major.h \
-+	linux/netlink.h \
- 	linux/param.h \
-+	linux/rtnetlink.h \
- 	linux/serial.h \
- 	linux/types.h \
- 	linux/ucdrom.h \
 diff --git a/server/event.c b/server/event.c
 index b8515af..e8a3888 100644
 --- a/server/event.c
@@ -86,16 +71,13 @@ index bb3ff21..bad162f 100644
  extern struct keyed_event *get_keyed_event_obj( struct process *process, obj_handle_t handle, unsigned int access );
  extern void pulse_event( struct event *event );
 diff --git a/server/sock.c b/server/sock.c
-index 1a3a8f7..c617928 100644
+index 1a3a8f7..4e41b72 100644
 --- a/server/sock.c
 +++ b/server/sock.c
-@@ -44,11 +44,20 @@
+@@ -44,11 +44,17 @@
  #include <time.h>
  #include <unistd.h>
  
-+#ifdef HAVE_LINUX_NETLINK_H
-+# include <linux/netlink.h>
-+#endif
 +#ifdef HAVE_LINUX_RTNETLINK_H
 +# include <linux/rtnetlink.h>
 +#endif
@@ -110,7 +92,7 @@ index 1a3a8f7..c617928 100644
  
  #include "process.h"
  #include "file.h"
-@@ -107,8 +116,12 @@ struct sock
+@@ -107,8 +113,12 @@ struct sock
      struct sock        *deferred;    /* socket that waits for a deferred accept */
      struct async_queue *read_q;      /* queue for asynchronous reads */
      struct async_queue *write_q;     /* queue for asynchronous writes */
@@ -123,7 +105,7 @@ index 1a3a8f7..c617928 100644
  static void sock_dump( struct object *obj, int verbose );
  static int sock_signaled( struct object *obj, struct wait_queue_entry *entry );
  static struct fd *sock_get_fd( struct object *obj );
-@@ -117,6 +130,8 @@ static void sock_destroy( struct object *obj );
+@@ -117,6 +127,8 @@ static void sock_destroy( struct object *obj );
  static int sock_get_poll_events( struct fd *fd );
  static void sock_poll_event( struct fd *fd, int event );
  static enum server_fd_type sock_get_fd_type( struct fd *fd );
@@ -132,7 +114,7 @@ index 1a3a8f7..c617928 100644
  static void sock_queue_async( struct fd *fd, const async_data_t *data, int type, int count );
  static void sock_reselect_async( struct fd *fd, struct async_queue *queue );
  static void sock_cancel_async( struct fd *fd, struct process *process, struct thread *thread, client_ptr_t iosb );
-@@ -151,12 +166,15 @@ static const struct fd_ops sock_fd_ops =
+@@ -151,12 +163,15 @@ static const struct fd_ops sock_fd_ops =
      sock_poll_event,              /* poll_event */
      no_flush,                     /* flush */
      sock_get_fd_type,             /* get_fd_type */
@@ -149,7 +131,7 @@ index 1a3a8f7..c617928 100644
  
  /* Permutation of 0..FD_MAX_EVENTS - 1 representing the order in which
   * we post messages if there are multiple events.  Used to send
-@@ -518,6 +536,39 @@ static enum server_fd_type sock_get_fd_type( struct fd *fd )
+@@ -518,6 +533,39 @@ static enum server_fd_type sock_get_fd_type( struct fd *fd )
      return FD_TYPE_SOCKET;
  }
  
@@ -189,7 +171,7 @@ index 1a3a8f7..c617928 100644
  static void sock_queue_async( struct fd *fd, const async_data_t *data, int type, int count )
  {
      struct sock *sock = get_fd_user( fd );
-@@ -587,11 +638,17 @@ static void sock_destroy( struct object *obj )
+@@ -587,11 +635,17 @@ static void sock_destroy( struct object *obj )
  
      /* FIXME: special socket shutdown stuff? */
  
@@ -208,7 +190,7 @@ index 1a3a8f7..c617928 100644
      if (sock->event) release_object( sock->event );
      if (sock->fd)
      {
-@@ -618,6 +675,7 @@ static void init_sock(struct sock *sock)
+@@ -618,6 +672,7 @@ static void init_sock(struct sock *sock)
      sock->deferred = NULL;
      sock->read_q  = NULL;
      sock->write_q = NULL;
@@ -216,7 +198,7 @@ index 1a3a8f7..c617928 100644
      memset( sock->errors, 0, sizeof(sock->errors) );
  }
  
-@@ -906,6 +964,236 @@ static void sock_set_error(void)
+@@ -906,6 +961,236 @@ static void sock_set_error(void)
      set_error( sock_get_ntstatus( errno ) );
  }
  

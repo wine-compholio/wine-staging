@@ -1,77 +1,47 @@
-From 1c8bf1825218528541076451f35b5c1f3c04add3 Mon Sep 17 00:00:00 2001
+From 78a5ebb94f3717bedd77f7c096e8fce1e9a640d1 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Thu, 3 Oct 2013 13:27:30 -0600
+Date: Mon, 18 Nov 2013 18:12:05 -0700
 Subject: server: Store and return security attributes with extended file
  attributes.
 
 ---
- configure.ac                    |    1 +
- dlls/advapi32/tests/security.c  |    9 +-
- dlls/kernel32/tests/directory.c |   15 ++--
- server/change.c                 |   11 ++-
- server/fd.c                     |   68 ++++++++++++++-
- server/file.c                   |  176 ++++++++++++++++++++++++++++++++++++++-
- server/file.h                   |    5 +-
- 7 files changed, 263 insertions(+), 22 deletions(-)
+ configure.ac                   |    6 ++
+ dlls/advapi32/tests/security.c |   25 +++---
+ server/change.c                |   11 ++-
+ server/fd.c                    |   68 +++++++++++++++-
+ server/file.c                  |  176 +++++++++++++++++++++++++++++++++++++++-
+ server/file.h                  |    5 +-
+ 6 files changed, 269 insertions(+), 22 deletions(-)
 
 diff --git a/configure.ac b/configure.ac
-index 8ad29db..b7a3098 100644
+index 98a73f2..bb03667 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -410,6 +410,7 @@ AC_CHECK_HEADERS(\
- 	arpa/nameser.h \
- 	asm/types.h \
- 	asm/user.h \
-+	attr/xattr.h \
- 	curses.h \
- 	direct.h \
- 	dirent.h \
+@@ -71,6 +71,7 @@ AC_ARG_WITH(pthread,   AS_HELP_STRING([--without-pthread],[do not use the pthrea
+ AC_ARG_WITH(sane,      AS_HELP_STRING([--without-sane],[do not use SANE (scanner support)]))
+ AC_ARG_WITH(tiff,      AS_HELP_STRING([--without-tiff],[do not use TIFF]))
+ AC_ARG_WITH(v4l,       AS_HELP_STRING([--without-v4l],[do not use v4l1 (v4l support)]))
++AC_ARG_WITH(xattr,     AS_HELP_STRING([--without-xattr],[do not use xattr (security attributes support)]))
+ AC_ARG_WITH(xcomposite,AS_HELP_STRING([--without-xcomposite],[do not use the Xcomposite extension]),
+             [if test "x$withval" = "xno"; then ac_cv_header_X11_extensions_Xcomposite_h=no; fi])
+ AC_ARG_WITH(xcursor,   AS_HELP_STRING([--without-xcursor],[do not use the Xcursor extension]),
+@@ -666,6 +667,11 @@ AC_CHECK_HEADERS([libprocstat.h],,,
+ #include <sys/socket.h>
+ #endif])
+ 
++if test "x$with_xattr" != "xno"
++then
++  AC_CHECK_HEADERS(attr/xattr.h)
++fi
++
+ dnl **** Check for working dll ****
+ 
+ AC_SUBST(dlldir,"\${libdir}/wine")
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index c622bb2..4c9e8d4 100644
+index fe31b5c..7d28c05 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -3166,7 +3166,7 @@ static void test_GetNamedSecurityInfoA(void)
-         bret = pGetAce(pDacl, 0, (VOID **)&ace);
-         ok(bret, "Failed to get Current User ACE.\n");
-         bret = EqualSid(&ace->SidStart, user_sid);
--        todo_wine ok(bret, "Current User ACE != Current User SID.\n");
-+        ok(bret, "Current User ACE != Current User SID.\n");
-         ok(((ACE_HEADER *)ace)->AceFlags == 0,
-            "Current User ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
-         ok(ace->Mask == 0x1f01ff, "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n",
-@@ -3177,8 +3177,7 @@ static void test_GetNamedSecurityInfoA(void)
-         bret = pGetAce(pDacl, 1, (VOID **)&ace);
-         ok(bret, "Failed to get Administators Group ACE.\n");
-         bret = EqualSid(&ace->SidStart, admin_sid);
--        todo_wine ok(bret || broken(!bret) /* win2k */,
--                     "Administators Group ACE != Administators Group SID.\n");
-+        ok(bret || broken(!bret) /* win2k */, "Administators Group ACE != Administators Group SID.\n");
-         ok(((ACE_HEADER *)ace)->AceFlags == 0,
-            "Administators Group ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
-         ok(ace->Mask == 0x1f01ff || broken(ace->Mask == GENERIC_ALL) /* win2k */,
-@@ -3832,7 +3831,7 @@ static void test_GetSecurityInfo(void)
-         bret = pGetAce(pDacl, 0, (VOID **)&ace);
-         ok(bret, "Failed to get Current User ACE.\n");
-         bret = EqualSid(&ace->SidStart, user_sid);
--        todo_wine ok(bret, "Current User ACE != Current User SID.\n");
-+        ok(bret, "Current User ACE != Current User SID.\n");
-         ok(((ACE_HEADER *)ace)->AceFlags == 0,
-            "Current User ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
-         ok(ace->Mask == 0x1f01ff, "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n",
-@@ -3843,7 +3842,7 @@ static void test_GetSecurityInfo(void)
-         bret = pGetAce(pDacl, 1, (VOID **)&ace);
-         ok(bret, "Failed to get Administators Group ACE.\n");
-         bret = EqualSid(&ace->SidStart, admin_sid);
--        todo_wine ok(bret, "Administators Group ACE != Administators Group SID.\n");
-+        ok(bret, "Administators Group ACE != Administators Group SID.\n");
-         ok(((ACE_HEADER *)ace)->AceFlags == 0,
-            "Administators Group ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
-         ok(ace->Mask == 0x1f01ff, "Administators Group ACE has unexpected mask (0x%x != 0x1f01ff)\n",
-diff --git a/dlls/kernel32/tests/directory.c b/dlls/kernel32/tests/directory.c
-index df434b6..a8dfa81 100644
---- a/dlls/kernel32/tests/directory.c
-+++ b/dlls/kernel32/tests/directory.c
-@@ -580,10 +580,9 @@ static void test_security_attributes(void)
+@@ -3088,10 +3088,10 @@ static void test_CreateDirectoryA(void)
          bret = pGetAce(pDacl, 0, (VOID **)&ace);
          ok(bret, "Failed to get Current User ACE.\n");
          bret = EqualSid(&ace->SidStart, user_sid);
@@ -81,11 +51,12 @@ index df434b6..a8dfa81 100644
 -                     ((ACE_HEADER *)ace)->AceFlags);
 +        ok(bret, "Current User ACE != Current User SID.\n");
 +        ok(((ACE_HEADER *)ace)->AceFlags == (OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE),
-+           "Current User ACE has unexpected flags (0x%x != 0x03)\n", ((ACE_HEADER *)ace)->AceFlags);
++           "Current User ACE has unexpected flags (0x%x != 0x03)\n",
++           ((ACE_HEADER *)ace)->AceFlags);
          ok(ace->Mask == 0x1f01ff, "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n",
                                    ace->Mask);
      }
-@@ -592,10 +591,10 @@ static void test_security_attributes(void)
+@@ -3100,10 +3100,10 @@ static void test_CreateDirectoryA(void)
          bret = pGetAce(pDacl, 1, (VOID **)&ace);
          ok(bret, "Failed to get Administators Group ACE.\n");
          bret = EqualSid(&ace->SidStart, admin_sid);
@@ -100,6 +71,43 @@ index df434b6..a8dfa81 100644
          ok(ace->Mask == 0x1f01ff, "Administators Group ACE has unexpected mask (0x%x != 0x1f01ff)\n",
                                    ace->Mask);
      }
+@@ -3277,7 +3277,7 @@ static void test_GetNamedSecurityInfoA(void)
+         bret = pGetAce(pDacl, 0, (VOID **)&ace);
+         ok(bret, "Failed to get Current User ACE.\n");
+         bret = EqualSid(&ace->SidStart, user_sid);
+-        todo_wine ok(bret, "Current User ACE != Current User SID.\n");
++        ok(bret, "Current User ACE != Current User SID.\n");
+         ok(((ACE_HEADER *)ace)->AceFlags == 0,
+            "Current User ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
+         ok(ace->Mask == 0x1f01ff, "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n",
+@@ -3288,8 +3288,7 @@ static void test_GetNamedSecurityInfoA(void)
+         bret = pGetAce(pDacl, 1, (VOID **)&ace);
+         ok(bret, "Failed to get Administators Group ACE.\n");
+         bret = EqualSid(&ace->SidStart, admin_sid);
+-        todo_wine ok(bret || broken(!bret) /* win2k */,
+-                     "Administators Group ACE != Administators Group SID.\n");
++        ok(bret || broken(!bret) /* win2k */, "Administators Group ACE != Administators Group SID.\n");
+         ok(((ACE_HEADER *)ace)->AceFlags == 0,
+            "Administators Group ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
+         ok(ace->Mask == 0x1f01ff || broken(ace->Mask == GENERIC_ALL) /* win2k */,
+@@ -3943,7 +3942,7 @@ static void test_GetSecurityInfo(void)
+         bret = pGetAce(pDacl, 0, (VOID **)&ace);
+         ok(bret, "Failed to get Current User ACE.\n");
+         bret = EqualSid(&ace->SidStart, user_sid);
+-        todo_wine ok(bret, "Current User ACE != Current User SID.\n");
++        ok(bret, "Current User ACE != Current User SID.\n");
+         ok(((ACE_HEADER *)ace)->AceFlags == 0,
+            "Current User ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
+         ok(ace->Mask == 0x1f01ff, "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n",
+@@ -3954,7 +3953,7 @@ static void test_GetSecurityInfo(void)
+         bret = pGetAce(pDacl, 1, (VOID **)&ace);
+         ok(bret, "Failed to get Administators Group ACE.\n");
+         bret = EqualSid(&ace->SidStart, admin_sid);
+-        todo_wine ok(bret, "Administators Group ACE != Administators Group SID.\n");
++        ok(bret, "Administators Group ACE != Administators Group SID.\n");
+         ok(((ACE_HEADER *)ace)->AceFlags == 0,
+            "Administators Group ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
+         ok(ace->Mask == 0x1f01ff, "Administators Group ACE has unexpected mask (0x%x != 0x1f01ff)\n",
 diff --git a/server/change.c b/server/change.c
 index f6d56b0..022c780 100644
 --- a/server/change.c
@@ -239,7 +247,7 @@ index fa8874c..98e3eca 100644
      closed_fd->unlink[0] = 0;
      fstat( fd->unix_fd, &st );
 diff --git a/server/file.c b/server/file.c
-index 9c6cb80..f4d97fd 100644
+index cceb8ad..9ac9188 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -32,6 +32,7 @@
@@ -260,7 +268,7 @@ index 9c6cb80..f4d97fd 100644
  
  #include "ntstatus.h"
  #define WIN32_NO_STATUS
-@@ -240,7 +244,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+@@ -237,7 +241,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
      access = generic_file_map_access( access );
  
      /* FIXME: should set error to STATUS_OBJECT_NAME_COLLISION if file existed before */
@@ -269,7 +277,7 @@ index 9c6cb80..f4d97fd 100644
      if (!fd) goto done;
  
      if (S_ISDIR(mode))
-@@ -427,9 +431,169 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID
+@@ -424,9 +428,169 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID
      return sd;
  }
  
@@ -439,7 +447,7 @@ index 9c6cb80..f4d97fd 100644
      struct stat st;
      int unix_fd;
      struct security_descriptor *sd;
-@@ -446,9 +610,11 @@ static struct security_descriptor *file_get_sd( struct object *obj )
+@@ -443,9 +607,11 @@ static struct security_descriptor *file_get_sd( struct object *obj )
          (st.st_uid == file->uid))
          return obj->sd;
  
@@ -454,7 +462,7 @@ index 9c6cb80..f4d97fd 100644
      if (!sd) return obj->sd;
  
      file->mode = st.st_mode;
-@@ -578,6 +744,8 @@ static int file_set_sd( struct object *obj, const struct security_descriptor *sd
+@@ -575,6 +741,8 @@ static int file_set_sd( struct object *obj, const struct security_descriptor *sd
          mode = st.st_mode & (S_ISUID|S_ISGID|S_ISVTX);
          mode |= sd_to_mode( sd, owner );
  
@@ -464,7 +472,7 @@ index 9c6cb80..f4d97fd 100644
          {
              file_set_error();
 diff --git a/server/file.h b/server/file.h
-index aae8b20..2d744eb 100644
+index 493d30b..721c087 100644
 --- a/server/file.h
 +++ b/server/file.h
 @@ -56,7 +56,8 @@ extern struct fd *alloc_pseudo_fd( const struct fd_ops *fd_user_ops, struct obje

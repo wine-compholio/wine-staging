@@ -1,0 +1,95 @@
+diff --git a/libs/wine/config.c b/libs/wine/config.c
+index a273502..751a9e7 100644
+--- a/libs/wine/config.c
++++ b/libs/wine/config.c
+@@ -478,6 +478,##PATCH_LINES## @@ const char *wine_get_version(void)
+     return PACKAGE_VERSION;
+ }
+ 
++struct wine_patch {
++    const char *hash;
++    const char *author;
++    const char *title;
++} wine_patch_data[] = {
+##PATCH_DATA##
++    { NULL, NULL, NULL }
++};
++
++/* return the applied non-standard patches */
++const struct wine_patch * wine_get_patches(void)
++{
++    return &wine_patch_data[0];
++}
++
+ /* return the build id string */
+ const char *wine_get_build_id(void)
+ {
+diff --git a/libs/wine/wine.def b/libs/wine/wine.def
+index ed315bd..5b42029 100644
+--- a/libs/wine/wine.def
++++ b/libs/wine/wine.def
+@@ -83,6 +83,7 @@ EXPORTS
+     wine_get_sortkey
+     wine_get_user_name
+     wine_get_version
++    wine_get_patches
+     wine_init
+     wine_init_argv0_path
+     wine_is_dbcs_leadbyte
+diff --git a/libs/wine/wine.map b/libs/wine/wine.map
+index 2159fac..7cb2918 100644
+--- a/libs/wine/wine.map
++++ b/libs/wine/wine.map
+@@ -90,6 +90,7 @@ WINE_1.0
+     wine_get_ss;
+     wine_get_user_name;
+     wine_get_version;
++    wine_get_patches;
+     wine_init;
+     wine_init_argv0_path;
+     wine_is_dbcs_leadbyte;
+diff --git a/loader/main.c b/loader/main.c
+index ac67290..516fd82 100644
+--- a/loader/main.c
++++ b/loader/main.c
+@@ -79,6 +79,13 @@ static inline void reserve_area( void *addr, size_t size )
+ 
+ #endif  /* __APPLE__ */
+ 
++struct wine_patch {
++    const char *hash;
++    const char *author;
++    const char *title;
++};
++extern void * CDECL wine_get_patches(void);
++
+ /***********************************************************************
+  *           check_command_line
+  *
+@@ -89,7 +96,8 @@ static void check_command_line( int argc, char *argv[] )
+     static const char usage[] =
+         "Usage: wine PROGRAM [ARGUMENTS...]   Run the specified program\n"
+         "       wine --help                   Display this help and exit\n"
+-        "       wine --version                Output version information and exit";
++        "       wine --version                Output version information and exit\n"
++        "       wine --patches                Output patch information and exit";
+ 
+     if (argc <= 1)
+     {
+@@ -106,6 +114,16 @@ static void check_command_line( int argc, char *argv[] )
+         printf( "%s\n", wine_get_build_id() );
+         exit(0);
+     }
++    if (!strcmp( argv[1], "--patches" ))
++    {
++        struct wine_patch *wine_patch_data = wine_get_patches();
++        for(; wine_patch_data->hash != NULL; wine_patch_data++)
++        {
++            printf( "%s :: %s :: %s\n", wine_patch_data->hash, wine_patch_data->author,
++                    wine_patch_data->title );
++        }
++        exit(0);
++    }
+ }
+ 
+ 

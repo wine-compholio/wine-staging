@@ -1,0 +1,136 @@
+diff --git a/dlls/ntdll/misc.c b/dlls/ntdll/misc.c
+index 8bd4eb7..4b4c318 100644
+--- a/dlls/ntdll/misc.c
++++ b/dlls/ntdll/misc.c
+@@ -60,6 +60,14 @@ const char * CDECL NTDLL_wine_get_version(void)
+ }
+ 
+ /*********************************************************************
++ *                  wine_get_patches   (NTDLL.@)
++ */
++const void * CDECL NTDLL_wine_get_patches(void)
++{
++    return wine_get_patches();
++}
++
++/*********************************************************************
+  *                  wine_get_build_id   (NTDLL.@)
+  */
+ const char * CDECL NTDLL_wine_get_build_id(void)
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index 70bf94f..42eddcf 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -1410,6 +1410,7 @@
+ 
+ # Version
+ @ cdecl wine_get_version() NTDLL_wine_get_version
++@ cdecl wine_get_patches() NTDLL_wine_get_patches
+ @ cdecl wine_get_build_id() NTDLL_wine_get_build_id
+ @ cdecl wine_get_host_version(ptr ptr) NTDLL_wine_get_host_version
+ 
+diff --git a/libs/wine/config.c b/libs/wine/config.c
+index a273502..5fa0cd5 100644
+--- a/libs/wine/config.c
++++ b/libs/wine/config.c
+@@ -478,6 +478,30 @@ const char *wine_get_version(void)
+     return PACKAGE_VERSION;
+ }
+ 
++struct wine_patch {
++    const char *hash;
++    const char *author;
++    const char *title;
++} wine_patch_data[] = {
++    { "1576327940e115940a1dff56ca4449ec", "Erich E. Hoover", "ws2_32: Ask the server to process unsupported WSAIoctl operations." },
++    { "513a2077edca99523ea55ae430b918e2", "Erich E. Hoover", "server: Implement an interface change notification object." },
++    { "c54623ff60a72953c108a997e52bfe7d", "Erich E. Hoover", "ws2_32: Add an interactive test for interface change notifications." },
++    { "d7af4990da84cfe5678c36e137ffa78a", "Erich E. Hoover", "server: Store and return security attributes with extended file attributes." },
++    { "9d2fc8ba3a12f0b54dfd788a6d904484", "Erich E. Hoover", "ntdll: Inherit security attributes from parent directories." },
++    { "31df02dc75b2e280aee57c1b46de2389", "Erich E. Hoover", "kernel32: Allow string comparison with linguistic casing." },
++    { "90a5c71390783f035089952056d1adb0", "Sebastian Lackner", "quartz/tests: Add tests for IVMRMonitorConfig" },
++    { "102b21f7108d936a8e9a581d34354795", "Sebastian Lackner", "winex11: Update gl_drawable for embedded windows" },
++    { "c8958b63e6afe0335d46da9b46520279", "Sebastian Lackner", "kernel32: Change return value of stub SetNamedPipeHandleState to TRUE" },
++    { "97d0a371f63a6bf00857decf3a358e29", "Sebastian Lackner", "winex11: Enable/disable windows when they are (un)mapped by foreign applications" },
++    { "d41d8cd98f00b204e9800998ecf8427e", "", "" },
++    { NULL, NULL, NULL }
++};
++
++/* return the applied non-standard patches */
++const struct wine_patch * wine_get_patches(void)
++{
++    return &wine_patch_data[0];
++}
++
+ /* return the build id string */
+ const char *wine_get_build_id(void)
+ {
+diff --git a/libs/wine/wine.def b/libs/wine/wine.def
+index ed315bd..5b42029 100644
+--- a/libs/wine/wine.def
++++ b/libs/wine/wine.def
+@@ -83,6 +83,7 @@ EXPORTS
+     wine_get_sortkey
+     wine_get_user_name
+     wine_get_version
++    wine_get_patches
+     wine_init
+     wine_init_argv0_path
+     wine_is_dbcs_leadbyte
+diff --git a/libs/wine/wine.map b/libs/wine/wine.map
+index 2159fac..7cb2918 100644
+--- a/libs/wine/wine.map
++++ b/libs/wine/wine.map
+@@ -90,6 +90,7 @@ WINE_1.0
+     wine_get_ss;
+     wine_get_user_name;
+     wine_get_version;
++    wine_get_patches;
+     wine_init;
+     wine_init_argv0_path;
+     wine_is_dbcs_leadbyte;
+diff --git a/loader/main.c b/loader/main.c
+index ac67290..516fd82 100644
+--- a/loader/main.c
++++ b/loader/main.c
+@@ -79,6 +79,13 @@ static inline void reserve_area( void *addr, size_t size )
+ 
+ #endif  /* __APPLE__ */
+ 
++struct wine_patch {
++    const char *hash;
++    const char *author;
++    const char *title;
++};
++extern void * CDECL wine_get_patches(void);
++
+ /***********************************************************************
+  *           check_command_line
+  *
+@@ -89,7 +96,8 @@ static void check_command_line( int argc, char *argv[] )
+     static const char usage[] =
+         "Usage: wine PROGRAM [ARGUMENTS...]   Run the specified program\n"
+         "       wine --help                   Display this help and exit\n"
+-        "       wine --version                Output version information and exit";
++        "       wine --version                Output version information and exit\n"
++        "       wine --patches                Output patch information and exit";
+ 
+     if (argc <= 1)
+     {
+@@ -106,6 +114,16 @@ static void check_command_line( int argc, char *argv[] )
+         printf( "%s\n", wine_get_build_id() );
+         exit(0);
+     }
++    if (!strcmp( argv[1], "--patches" ))
++    {
++        struct wine_patch *wine_patch_data = wine_get_patches();
++        for(; wine_patch_data->hash != NULL; wine_patch_data++)
++        {
++            printf( "%s :: %s :: %s\n", wine_patch_data->hash, wine_patch_data->author,
++                    wine_patch_data->title );
++        }
++        exit(0);
++    }
+ }
+ 
+ 

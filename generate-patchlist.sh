@@ -1,7 +1,7 @@
 #!/bin/sh
 
 PATCH_DATA="";
-for FILE in patches/*.patch; do
+for FILE in patches/*.patch patches/*/*.patch; do
 	MD5SUM=$(md5sum "${FILE}" | sed 's| .*||g');
 	AUTHOR=$(cat "${FILE}" | sed -n 's|From: \([^<]*\).*|\1|p' | sed -e 's|"||g' -e 's| $||g');
 	TITLE=$(cat "${FILE}" | sed -n '1!N; s|Subject: \(.*\)\n|\1|p');

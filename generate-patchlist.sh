@@ -1,10 +1,11 @@
 #!/bin/sh
 
 PATCH_DATA="";
-for FILE in patches/*.patch patches/*/*.patch; do
-	MD5SUM=$(md5sum "${FILE}" | sed 's| .*||g');
-	AUTHOR=$(cat "${FILE}" | sed -n 's|From: \([^<]*\).*|\1|p' | sed -e 's|"||g' -e 's| $||g');
-	TITLE=$(cat "${FILE}" | sed -n '1!N; s|Subject: \(.*\)\n|\1|p');
+for FILE in patches/*/*.def; do
+	UUID=$(echo "${FILE}" | sed -e 's|^.*/||g' -e 's|\.def$||g');
+	REVISION=$(cat "${FILE}" | sed -n 's|Revision: \(.*\)|\1|p');
+	AUTHOR=$(cat "${FILE}" | sed -n 's|Author: \(.*\)|\1|p');
+	TITLE=$(cat "${FILE}" | sed -n 's|Title: \(.*\)|\1|p');
 	if [ "${AUTHOR}" = "" ] && [ "${TITLE}" = "" ]; then
 		continue;
 	fi
@@ -12,7 +13,7 @@ for FILE in patches/*.patch patches/*/*.patch; do
 		PATCH_DATA="${PATCH_DATA}
 ";
 	fi
-	PATCH_DATA="${PATCH_DATA}+    { \"${MD5SUM}\", \"${AUTHOR}\", \"${TITLE}\" },";
+	PATCH_DATA="${PATCH_DATA}+    { \"${UUID}:${REVISION}\", \"${AUTHOR}\", \"${TITLE}\" },";
 done
 PATCH_LINES=$(echo "${PATCH_DATA}" | grep -c '\n');
 PATCH_LINES=$((${PATCH_LINES}+20));

@@ -1,14 +1,14 @@
-From c1f305f001257ac6bc215abd34c1577e7d9bf7f2 Mon Sep 17 00:00:00 2001
+From 362ec39591ce54bcb5ce825c1baab8f5d0885193 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Fri, 4 Oct 2013 08:10:20 -0600
+Date: Thu, 5 Dec 2013 13:32:34 -0700
 Subject: ws2_32: Ask the server to process unsupported WSAIoctl operations.
 
 ---
- dlls/ws2_32/socket.c |   47 ++++++++++++++++++++++++++++++++++++++++++++---
- 1 file changed, 44 insertions(+), 3 deletions(-)
+ dlls/ws2_32/socket.c |   56 +++++++++++++++++++++++++++++++++++++++++++-------
+ 1 file changed, 49 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index 679258b..44a9093 100644
+index 304b0eb..170dde7 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
 @@ -3608,6 +3608,36 @@ static const char *debugstr_wsaioctl(DWORD ioctl)
@@ -48,19 +48,25 @@ index 679258b..44a9093 100644
  /**********************************************************************
   *              WSAIoctl                (WS2_32.50)
   *
-@@ -3800,9 +3830,8 @@ INT WINAPI WSAIoctl(SOCKET s, DWORD code, LPVOID in_buff, DWORD in_size, LPVOID
+@@ -3799,12 +3829,6 @@ INT WINAPI WSAIoctl(SOCKET s, DWORD code, LPVOID in_buff, DWORD in_size, LPVOID
+            break;
         }
  
-    case WS_SIO_ADDRESS_LIST_CHANGE:
+-   case WS_SIO_ADDRESS_LIST_CHANGE:
 -       FIXME("-> SIO_ADDRESS_LIST_CHANGE request: stub\n");
 -       /* FIXME: error and return code depend on whether socket was created
 -        * with WSA_FLAG_OVERLAPPED, but there is no easy way to get this */
-+       TRACE("-> SIO_ADDRESS_LIST_CHANGE request\n");
-+       status = WSAEOPNOTSUPP; /* this operation needs to be handled by the server */
-        break;
- 
+-       break;
+-
     case WS_SIO_ADDRESS_LIST_QUERY:
-@@ -4045,6 +4074,18 @@ INT WINAPI WSAIoctl(SOCKET s, DWORD code, LPVOID in_buff, DWORD in_size, LPVOID
+    {
+         DWORD size;
+@@ -4040,11 +4064,29 @@ INT WINAPI WSAIoctl(SOCKET s, DWORD code, LPVOID in_buff, DWORD in_size, LPVOID
+         WSASetLastError(WSAEOPNOTSUPP);
+         return SOCKET_ERROR;
+     default:
+-        FIXME("unsupported WS_IOCTL cmd (%s)\n", debugstr_wsaioctl(code));
+         status = WSAEOPNOTSUPP;
          break;
      }
  
@@ -70,10 +76,17 @@ index 679258b..44a9093 100644
 +                                   overlapped, completion);
 +        if (status != WSAEOPNOTSUPP)
 +        {
++            if (status == 0 || status == WSA_IO_PENDING)
++                TRACE("-> %s request\n", debugstr_wsaioctl(code));
++            else
++                ERR("-> %s request failed with status 0x%x\n", debugstr_wsaioctl(code), status);
++
 +            /* overlapped and completion operations will be handled by the server */
 +            completion = NULL;
 +            overlapped = NULL;
 +        }
++        else
++            FIXME("unsupported WS_IOCTL cmd (%s)\n", debugstr_wsaioctl(code));
 +    }
 +
      if (completion)

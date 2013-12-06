@@ -1,0 +1,285 @@
+From 3b427a167037eec4e3f6b0be941c11795235c635 Mon Sep 17 00:00:00 2001
+From: Maarten Lankhorst <m.b.lankhorst@gmail.com>
+Date: Fri, 22 Nov 2013 21:29:57 +0100
+Subject: [PATCH 14/42] winepulse: Add audiostreamvolume
+
+---
+Pulse allows streams to set volume, but for various reasons it's
+better off being disabled by default.
+
+It can be enabled with HKCU\Software\Wine\Pulse\StreamVol=0x1
+---
+ dlls/winepulse.drv/mmdevdrv.c | 236 ++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 236 insertions(+)
+
+diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
+index 3ed2288..b7414c2 100644
+--- a/dlls/winepulse.drv/mmdevdrv.c
++++ b/dlls/winepulse.drv/mmdevdrv.c
+@@ -177,6 +177,11 @@ static inline ACImpl *impl_from_IAudioClock2(IAudioClock2 *iface)
+     return CONTAINING_RECORD(iface, ACImpl, IAudioClock2_iface);
+ }
+ 
++static inline ACImpl *impl_from_IAudioStreamVolume(IAudioStreamVolume *iface)
++{
++    return CONTAINING_RECORD(iface, ACImpl, IAudioStreamVolume_iface);
++}
++
+ /* Following pulseaudio design here, mainloop has the lock taken whenever
+  * it is handling something for pulse, and the lock is required whenever
+  * doing any pa_* call that can affect the state in any way
+@@ -444,6 +449,12 @@ static void pulse_op_cb(pa_stream *s, int success, void *user) {
+     pthread_cond_signal(&pulse_cond);
+ }
+ 
++static void pulse_ctx_op_cb(pa_context *c, int success, void *user) {
++    TRACE("Success: %i\n", success);
++    *(int*)user = success;
++    pthread_cond_signal(&pulse_cond);
++}
++
+ static void pulse_attr_update(pa_stream *s, void *user) {
+     const pa_buffer_attr *attr = pa_stream_get_buffer_attr(s);
+     TRACE("New attributes or device moved:\n");
+@@ -1461,6 +1472,8 @@ static HRESULT WINAPI AudioClient_GetService(IAudioClient *iface, REFIID riid,
+         *ppv = &This->IAudioCaptureClient_iface;
+     } else if (IsEqualIID(riid, &IID_IAudioClock)) {
+         *ppv = &This->IAudioClock_iface;
++    } else if (IsEqualIID(riid, &IID_IAudioStreamVolume)) {
++        *ppv = &This->IAudioStreamVolume_iface;
+     }
+ 
+     if (*ppv) {
+@@ -1922,6 +1935,229 @@ static const IAudioClock2Vtbl AudioClock2_Vtbl =
+     AudioClock2_GetDevicePosition
+ };
+ 
++static HRESULT WINAPI AudioStreamVolume_QueryInterface(
++        IAudioStreamVolume *iface, REFIID riid, void **ppv)
++{
++    TRACE("(%p)->(%s, %p)\n", iface, debugstr_guid(riid), ppv);
++
++    if (!ppv)
++        return E_POINTER;
++    *ppv = NULL;
++
++    if (IsEqualIID(riid, &IID_IUnknown) ||
++        IsEqualIID(riid, &IID_IAudioStreamVolume))
++        *ppv = iface;
++    if (*ppv) {
++        IUnknown_AddRef((IUnknown*)*ppv);
++        return S_OK;
++    }
++
++    WARN("Unknown interface %s\n", debugstr_guid(riid));
++    return E_NOINTERFACE;
++}
++
++static ULONG WINAPI AudioStreamVolume_AddRef(IAudioStreamVolume *iface)
++{
++    ACImpl *This = impl_from_IAudioStreamVolume(iface);
++    return IAudioClient_AddRef(&This->IAudioClient_iface);
++}
++
++static ULONG WINAPI AudioStreamVolume_Release(IAudioStreamVolume *iface)
++{
++    ACImpl *This = impl_from_IAudioStreamVolume(iface);
++    return IAudioClient_Release(&This->IAudioClient_iface);
++}
++
++static HRESULT WINAPI AudioStreamVolume_GetChannelCount(
++        IAudioStreamVolume *iface, UINT32 *out)
++{
++    ACImpl *This = impl_from_IAudioStreamVolume(iface);
++
++    TRACE("(%p)->(%p)\n", This, out);
++
++    if (!out)
++        return E_POINTER;
++
++    *out = This->ss.channels;
++
++    return S_OK;
++}
++
++struct pulse_info_cb_data {
++    UINT32 n;
++    float *levels;
++};
++
++static void pulse_sink_input_info_cb(pa_context *c, const pa_sink_input_info *info, int eol, void *data)
++{
++    struct pulse_info_cb_data *d = data;
++    int i;
++    if (eol)
++        return;
++    for (i = 0; i < d->n; ++i)
++        d->levels[i] = (float)info->volume.values[i] / (float)PA_VOLUME_NORM;
++    pthread_cond_signal(&pulse_cond);
++}
++
++static void pulse_source_info_cb(pa_context *c, const pa_source_info *info, int eol, void *data)
++{
++    struct pulse_info_cb_data *d = data;
++    int i;
++    if (eol)
++        return;
++    for (i = 0; i < d->n; ++i)
++        d->levels[i] = (float)info->volume.values[i] / (float)PA_VOLUME_NORM;
++    pthread_cond_signal(&pulse_cond);
++}
++
++static HRESULT WINAPI AudioStreamVolume_SetAllVolumes(
++        IAudioStreamVolume *iface, UINT32 count, const float *levels)
++{
++    ACImpl *This = impl_from_IAudioStreamVolume(iface);
++    pa_operation *o;
++    HRESULT hr;
++    int success = 0, i;
++    pa_cvolume cv;
++
++    TRACE("(%p)->(%d, %p)\n", This, count, levels);
++
++    if (!levels)
++        return E_POINTER;
++
++    if (count != This->ss.channels)
++        return E_INVALIDARG;
++
++    pthread_mutex_lock(&pulse_lock);
++    hr = pulse_stream_valid(This);
++    if (FAILED(hr))
++        goto out;
++
++    if (pulse_stream_volume) {
++        cv.channels = count;
++        for (i = 0; i < cv.channels; ++i)
++            cv.values[i] = levels[i] * (float)PA_VOLUME_NORM;
++        if (This->dataflow == eRender)
++            o = pa_context_set_sink_input_volume(pulse_ctx, pa_stream_get_index(This->stream), &cv, pulse_ctx_op_cb, &success);
++        else
++            o = pa_context_set_source_volume_by_index(pulse_ctx, pa_stream_get_device_index(This->stream), &cv, pulse_ctx_op_cb, &success);
++        if (o) {
++            while(pa_operation_get_state(o) == PA_OPERATION_RUNNING)
++                pthread_cond_wait(&pulse_cond, &pulse_lock);
++            pa_operation_unref(o);
++        }
++        if (!success)
++            hr = AUDCLNT_E_BUFFER_ERROR;
++    } else {
++        int i;
++        for (i = 0; i < count; ++i)
++            This->vol[i] = levels[i];
++    }
++
++out:
++    pthread_mutex_unlock(&pulse_lock);
++    return hr;
++}
++
++static HRESULT WINAPI AudioStreamVolume_GetAllVolumes(
++        IAudioStreamVolume *iface, UINT32 count, float *levels)
++{
++    ACImpl *This = impl_from_IAudioStreamVolume(iface);
++    pa_operation *o;
++    HRESULT hr;
++    struct pulse_info_cb_data info;
++
++    TRACE("(%p)->(%d, %p)\n", This, count, levels);
++
++    if (!levels)
++        return E_POINTER;
++
++    if (count != This->ss.channels)
++        return E_INVALIDARG;
++
++    pthread_mutex_lock(&pulse_lock);
++    hr = pulse_stream_valid(This);
++    if (FAILED(hr))
++        goto out;
++
++    if (pulse_stream_volume) {
++        info.n = count;
++        info.levels = levels;
++        if (This->dataflow == eRender)
++            o = pa_context_get_sink_input_info(pulse_ctx, pa_stream_get_index(This->stream), pulse_sink_input_info_cb, &info);
++        else
++            o = pa_context_get_source_info_by_index(pulse_ctx, pa_stream_get_device_index(This->stream), pulse_source_info_cb, &info);
++        if (o) {
++            while(pa_operation_get_state(o) == PA_OPERATION_RUNNING)
++                pthread_cond_wait(&pulse_cond, &pulse_lock);
++            pa_operation_unref(o);
++        } else
++            hr = AUDCLNT_E_BUFFER_ERROR;
++    } else {
++        int i;
++        for (i = 0; i < count; ++i)
++            levels[i] = This->vol[i];
++    }
++
++out:
++    pthread_mutex_unlock(&pulse_lock);
++    return hr;
++}
++
++static HRESULT WINAPI AudioStreamVolume_SetChannelVolume(
++        IAudioStreamVolume *iface, UINT32 index, float level)
++{
++    ACImpl *This = impl_from_IAudioStreamVolume(iface);
++    HRESULT hr;
++    float volumes[PA_CHANNELS_MAX];
++
++    TRACE("(%p)->(%d, %f)\n", This, index, level);
++
++    if (level < 0.f || level > 1.f)
++        return E_INVALIDARG;
++
++    if (index >= This->ss.channels)
++        return E_INVALIDARG;
++
++    hr = AudioStreamVolume_GetAllVolumes(iface, This->ss.channels, volumes);
++    volumes[index] = level;
++    if (SUCCEEDED(hr))
++        hr = AudioStreamVolume_SetAllVolumes(iface, This->ss.channels, volumes);
++    return hr;
++}
++
++static HRESULT WINAPI AudioStreamVolume_GetChannelVolume(
++        IAudioStreamVolume *iface, UINT32 index, float *level)
++{
++    ACImpl *This = impl_from_IAudioStreamVolume(iface);
++    float volumes[PA_CHANNELS_MAX];
++    HRESULT hr;
++
++    TRACE("(%p)->(%d, %p)\n", This, index, level);
++
++    if (!level)
++        return E_POINTER;
++
++    if (index >= This->ss.channels)
++        return E_INVALIDARG;
++
++    hr = AudioStreamVolume_GetAllVolumes(iface, This->ss.channels, volumes);
++    if (SUCCEEDED(hr))
++        *level = volumes[index];
++    return hr;
++}
++
++static const IAudioStreamVolumeVtbl AudioStreamVolume_Vtbl =
++{
++    AudioStreamVolume_QueryInterface,
++    AudioStreamVolume_AddRef,
++    AudioStreamVolume_Release,
++    AudioStreamVolume_GetChannelCount,
++    AudioStreamVolume_SetChannelVolume,
++    AudioStreamVolume_GetChannelVolume,
++    AudioStreamVolume_SetAllVolumes,
++    AudioStreamVolume_GetAllVolumes
++};
++
+ HRESULT WINAPI AUDDRV_GetAudioSessionManager(IMMDevice *device,
+         IAudioSessionManager2 **out)
+ {
+-- 
+1.8.4.4
+

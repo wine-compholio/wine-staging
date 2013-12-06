@@ -1,0 +1,58 @@
+From 34aa975484571428eed615bb0774cbdcc3a3ea0a Mon Sep 17 00:00:00 2001
+From: Maarten Lankhorst <maarten.lankhorst@canonical.com>
+Date: Fri, 22 Nov 2013 21:29:58 +0100
+Subject: [PATCH 23/42] winepulse: Fix low latency support
+
+Some games request a 20 ms buffer and will only fill 20 ms.
+Since 10 ms periods are too long in this case for winepulse,
+fill change period size to 5 ms and force a trigger if
+there's still data left to fill.
+---
+ dlls/winepulse.drv/mmdevdrv.c | 14 ++++++++++++--
+ 1 file changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
+index b374b53..7c07f54 100644
+--- a/dlls/winepulse.drv/mmdevdrv.c
++++ b/dlls/winepulse.drv/mmdevdrv.c
+@@ -1205,11 +1205,15 @@ static HRESULT WINAPI AudioClient_Initialize(IAudioClient *iface,
+          * default
+          */
+         if (duration < 2 * def)
+-           period = min;
++            period = min;
+         else
+-           period = def;
++            period = def;
+         if (duration < 2 * period)
+             duration = 2 * period;
++
++        /* Uh oh, really low latency requested.. */
++        if (duration <= 2 * period)
++            period /= 2;
+     }
+     period_bytes = pa_frame_size(&This->ss) * MulDiv(period, This->ss.rate, 10000000);
+ 
+@@ -1820,6 +1824,7 @@ static HRESULT WINAPI AudioRenderClient_ReleaseBuffer(
+ {
+     ACImpl *This = impl_from_IAudioRenderClient(iface);
+     UINT32 written_bytes = written_frames * pa_frame_size(&This->ss);
++    UINT32 period;
+ 
+     TRACE("(%p)->(%u, %x)\n", This, written_frames, flags);
+ 
+@@ -1854,6 +1859,11 @@ static HRESULT WINAPI AudioRenderClient_ReleaseBuffer(
+     This->locked_ptr = NULL;
+     TRACE("Released %u, pad %zu\n", written_frames, This->pad / pa_frame_size(&This->ss));
+     assert(This->pad <= This->bufsize_bytes);
++
++    period = pa_stream_get_buffer_attr(This->stream)->minreq;
++    /* Require a minimum of 3 periods filled, if possible */
++    if (This->event && This->pad + period <= This->bufsize_bytes && This->pad < period * 3)
++        SetEvent(This->event);
+     pthread_mutex_unlock(&pulse_lock);
+     return S_OK;
+ }
+-- 
+1.8.4.4
+

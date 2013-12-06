@@ -1,0 +1,207 @@
+From c87397b563c9eb30a1a2f347b7690a9d76c14fbb Mon Sep 17 00:00:00 2001
+From: Maarten Lankhorst <maarten.lankhorst@canonical.com>
+Date: Fri, 22 Nov 2013 21:29:58 +0100
+Subject: [PATCH 21/42] winepulse v18: Latency and compilation improvements
+
+Changes since v17:
+- Remove clock_pulse interpolation
+  * Couldn't work, sadly
+- Allow 2 * MinimumPeriod for shared buffers
+- Fix all compiler warnings when compiling with 64-bits
+- Dynamically select low latency mode if less than 2 default periods are request
+  * This requires the rtkit patch to be useful
+---
+ dlls/winepulse.drv/mmdevdrv.c | 55 +++++++++++++++++--------------------------
+ 1 file changed, 22 insertions(+), 33 deletions(-)
+
+diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
+index 6e75674..8e76826 100644
+--- a/dlls/winepulse.drv/mmdevdrv.c
++++ b/dlls/winepulse.drv/mmdevdrv.c
+@@ -169,7 +169,6 @@ struct ACImpl {
+     pa_channel_map map;
+ 
+     INT64 clock_lastpos, clock_written;
+-    pa_usec_t clock_pulse;
+ 
+     AudioSession *session;
+     AudioSessionWrapper *session_wrapper;
+@@ -518,7 +517,6 @@ static void pulse_attr_update(pa_stream *s, void *user) {
+ static void pulse_wr_callback(pa_stream *s, size_t bytes, void *userdata)
+ {
+     ACImpl *This = userdata;
+-    pa_usec_t time;
+     UINT32 oldpad = This->pad;
+ 
+     if (bytes < This->bufsize_bytes)
+@@ -528,13 +526,8 @@ static void pulse_wr_callback(pa_stream *s, size_t bytes, void *userdata)
+ 
+     assert(oldpad >= This->pad);
+ 
+-    if (0 && This->pad && pa_stream_get_time(This->stream, &time) >= 0)
+-        This->clock_pulse = time;
+-    else
+-        This->clock_pulse = PA_USEC_INVALID;
+-
+     This->clock_written += oldpad - This->pad;
+-    TRACE("New pad: %u (-%u)\n", This->pad / pa_frame_size(&This->ss), (oldpad - This->pad) / pa_frame_size(&This->ss));
++    TRACE("New pad: %zu (-%zu)\n", This->pad / pa_frame_size(&This->ss), (oldpad - This->pad) / pa_frame_size(&This->ss));
+ 
+     if (This->event)
+         SetEvent(This->event);
+@@ -542,8 +535,6 @@ static void pulse_wr_callback(pa_stream *s, size_t bytes, void *userdata)
+ 
+ static void pulse_underflow_callback(pa_stream *s, void *userdata)
+ {
+-    ACImpl *This = userdata;
+-    This->clock_pulse = PA_USEC_INVALID;
+     WARN("Underflow\n");
+ }
+ 
+@@ -562,12 +553,8 @@ static void pulse_latency_callback(pa_stream *s, void *userdata)
+ static void pulse_started_callback(pa_stream *s, void *userdata)
+ {
+     ACImpl *This = userdata;
+-    pa_usec_t time;
+ 
+     TRACE("(Re)started playing\n");
+-    assert(This->clock_pulse == PA_USEC_INVALID);
+-    if (0 && pa_stream_get_time(This->stream, &time) >= 0)
+-        This->clock_pulse = time;
+     if (This->event)
+         SetEvent(This->event);
+ }
+@@ -578,7 +565,7 @@ static void pulse_rd_loop(ACImpl *This, size_t bytes)
+         ACPacket *p, *next;
+         LARGE_INTEGER stamp, freq;
+         BYTE *dst, *src;
+-        UINT32 src_len, copy, rem = This->capture_period;
++        size_t src_len, copy, rem = This->capture_period;
+         if (!(p = (ACPacket*)list_head(&This->packet_free_head))) {
+             p = (ACPacket*)list_head(&This->packet_filled_head);
+             if (!p->discont) {
+@@ -630,7 +617,7 @@ static void pulse_rd_loop(ACImpl *This, size_t bytes)
+ static void pulse_rd_drop(ACImpl *This, size_t bytes)
+ {
+     while (bytes >= This->capture_period) {
+-        UINT32 src_len, copy, rem = This->capture_period;
++        size_t src_len, copy, rem = This->capture_period;
+         while (rem) {
+             const void *src;
+             pa_stream_peek(This->stream, &src, &src_len);
+@@ -660,7 +647,7 @@ static void pulse_rd_callback(pa_stream *s, size_t bytes, void *userdata)
+ {
+     ACImpl *This = userdata;
+ 
+-    TRACE("Readable total: %u, fragsize: %u\n", bytes, pa_stream_get_buffer_attr(s)->fragsize);
++    TRACE("Readable total: %zu, fragsize: %u\n", bytes, pa_stream_get_buffer_attr(s)->fragsize);
+     assert(bytes >= This->peek_ofs);
+     bytes -= This->peek_ofs;
+     if (bytes < This->capture_period)
+@@ -815,7 +802,6 @@ HRESULT WINAPI AUDDRV_GetAudioEndpoint(void *key, IMMDevice *dev,
+     This->IAudioStreamVolume_iface.lpVtbl = &AudioStreamVolume_Vtbl;
+     This->dataflow = dataflow;
+     This->parent = dev;
+-    This->clock_pulse = PA_USEC_INVALID;
+     for (i = 0; i < PA_CHANNELS_MAX; ++i)
+         This->vol[i] = 1.f;
+     IMMDevice_AddRef(This->parent);
+@@ -1199,7 +1185,19 @@ static HRESULT WINAPI AudioClient_Initialize(IAudioClient *iface,
+         goto exit;
+ 
+     if (mode == AUDCLNT_SHAREMODE_SHARED) {
+-        period = pulse_def_period[This->dataflow == eCapture];
++        REFERENCE_TIME def = pulse_def_period[This->dataflow == eCapture];
++        REFERENCE_TIME min = pulse_min_period[This->dataflow == eCapture];
++
++        /* Switch to low latency mode if below 2 default periods,
++         * which is 20 ms by default, this will increase the amount
++         * of interrupts but allows very low latency. In dsound I
++         * managed to get a total latency of ~8ms, which is well below
++         * default
++         */
++        if (duration < 2 * def)
++           period = min;
++        else
++           period = def;
+         if (duration < 2 * period)
+             duration = 2 * period;
+     }
+@@ -1510,7 +1508,6 @@ static HRESULT WINAPI AudioClient_Start(IAudioClient *iface)
+         pthread_mutex_unlock(&pulse_lock);
+         return AUDCLNT_E_NOT_STOPPED;
+     }
+-    This->clock_pulse = PA_USEC_INVALID;
+ 
+     if (pa_stream_is_corked(This->stream)) {
+         o = pa_stream_cork(This->stream, 0, pulse_op_cb, &success);
+@@ -1566,7 +1563,6 @@ static HRESULT WINAPI AudioClient_Stop(IAudioClient *iface)
+     }
+     if (SUCCEEDED(hr)) {
+         This->started = FALSE;
+-        This->clock_pulse = PA_USEC_INVALID;
+     }
+     pthread_mutex_unlock(&pulse_lock);
+     return hr;
+@@ -1764,7 +1760,8 @@ static HRESULT WINAPI AudioRenderClient_GetBuffer(IAudioRenderClient *iface,
+         UINT32 frames, BYTE **data)
+ {
+     ACImpl *This = impl_from_IAudioRenderClient(iface);
+-    UINT32 avail, pad, req, bytes = frames * pa_frame_size(&This->ss);
++    size_t avail, req, bytes = frames * pa_frame_size(&This->ss);
++    UINT32 pad;
+     HRESULT hr = S_OK;
+     int ret = -1;
+ 
+@@ -1789,7 +1786,7 @@ static HRESULT WINAPI AudioRenderClient_GetBuffer(IAudioRenderClient *iface,
+     avail = This->bufsize_frames - pad;
+     if (avail < frames || bytes > This->bufsize_bytes) {
+         pthread_mutex_unlock(&pulse_lock);
+-        WARN("Wanted to write %u, but only %u available\n", frames, avail);
++        WARN("Wanted to write %u, but only %zu available\n", frames, avail);
+         return AUDCLNT_E_BUFFER_TOO_LARGE;
+     }
+ 
+@@ -1797,7 +1794,7 @@ static HRESULT WINAPI AudioRenderClient_GetBuffer(IAudioRenderClient *iface,
+     req = bytes;
+     ret = pa_stream_begin_write(This->stream, &This->locked_ptr, &req);
+     if (ret < 0 || req < bytes) {
+-        FIXME("%p Not using pulse locked data: %i %u/%u %u/%u\n", This, ret, req/pa_frame_size(&This->ss), frames, pad, This->bufsize_frames);
++        FIXME("%p Not using pulse locked data: %i %zu/%u %u/%u\n", This, ret, req/pa_frame_size(&This->ss), frames, pad, This->bufsize_frames);
+         if (ret >= 0)
+             pa_stream_cancel_write(This->stream);
+         *data = This->tmp_buffer;
+@@ -1845,7 +1842,7 @@ static HRESULT WINAPI AudioRenderClient_ReleaseBuffer(
+         pa_stream_write(This->stream, This->tmp_buffer, written_bytes, NULL, 0, PA_SEEK_RELATIVE);
+     This->pad += written_bytes;
+     This->locked_ptr = NULL;
+-    TRACE("Released %u, pad %u\n", written_frames, This->pad / pa_frame_size(&This->ss));
++    TRACE("Released %u, pad %zu\n", written_frames, This->pad / pa_frame_size(&This->ss));
+     assert(This->pad <= This->bufsize_bytes);
+     pthread_mutex_unlock(&pulse_lock);
+     return S_OK;
+@@ -2053,7 +2050,6 @@ static HRESULT WINAPI AudioClock_GetPosition(IAudioClock *iface, UINT64 *pos,
+         UINT64 *qpctime)
+ {
+     ACImpl *This = impl_from_IAudioClock(iface);
+-    pa_usec_t time;
+     HRESULT hr;
+ 
+     TRACE("(%p)->(%p, %p)\n", This, pos, qpctime);
+@@ -2069,13 +2065,6 @@ static HRESULT WINAPI AudioClock_GetPosition(IAudioClock *iface, UINT64 *pos,
+     }
+ 
+     *pos = This->clock_written;
+-    if (This->clock_pulse != PA_USEC_INVALID && pa_stream_get_time(This->stream, &time) >= 0) {
+-        UINT32 delta = pa_usec_to_bytes(time - This->clock_pulse, &This->ss);
+-        if (delta < This->pad)
+-            *pos += delta;
+-        else
+-            *pos += This->pad;
+-    }
+ 
+     /* Make time never go backwards */
+     if (*pos < This->clock_lastpos)
+-- 
+1.8.4.4
+

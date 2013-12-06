@@ -1,0 +1,580 @@
+From a24bd3805faff36a0999f67ee0facda2989e189a Mon Sep 17 00:00:00 2001
+From: Maarten Lankhorst <m.b.lankhorst@gmail.com>
+Date: Fri, 22 Nov 2013 21:29:57 +0100
+Subject: [PATCH 09/42] winepulse: Add initial stub for pulseaudio support
+
+---
+Just the basic of initialization and pulseaudio mainloop support is
+added here.
+---
+ configure                             |  97 +++++++++++-
+ configure.ac                          |  31 +++-
+ dlls/mmdevapi/main.c                  |   2 +-
+ dlls/winepulse.drv/Makefile.in        |   9 ++
+ dlls/winepulse.drv/mmdevdrv.c         | 290 ++++++++++++++++++++++++++++++++++
+ dlls/winepulse.drv/winepulse.drv.spec |   5 +
+ 6 files changed, 429 insertions(+), 5 deletions(-)
+ create mode 100644 dlls/winepulse.drv/Makefile.in
+ create mode 100644 dlls/winepulse.drv/mmdevdrv.c
+ create mode 100644 dlls/winepulse.drv/winepulse.drv.spec
+
+diff --git a/configure b/configure
+index 17e8af6..7c5ed91 100755
+--- a/configure
++++ b/configure
+@@ -658,6 +658,8 @@ OSS4INCL
+ ALSALIBS
+ GSTREAMER_LIBS
+ GSTREAMER_CFLAGS
++PULSEINCL
++PULSELIBS
+ LIBGETTEXTPO
+ ZLIB
+ FREETYPE_LIBS
+@@ -835,6 +837,7 @@ with_osmesa
+ with_oss
+ with_png
+ with_pthread
++with_pulse
+ with_sane
+ with_tiff
+ with_v4l
+@@ -2047,6 +2050,7 @@ Optional Packages:
+   --without-oss           do not use the OSS sound support
+   --without-png           do not use PNG
+   --without-pthread       do not use the pthread library
++  --without-pulse         do not use PulseAudio sound support
+   --without-sane          do not use SANE (scanner support)
+   --without-tiff          do not use TIFF
+   --without-v4l           do not use v4l1 (v4l support)
+@@ -3282,6 +3286,12 @@ if test "${with_pthread+set}" = set; then :
+ fi
+ 
+ 
++# Check whether --with-pulse was given.
++if test "${with_pulse+set}" = set; then :
++  withval=$with_pulse;
++fi
++
++
+ # Check whether --with-sane was given.
+ if test "${with_sane+set}" = set; then :
+   withval=$with_sane;
+@@ -11720,6 +11730,87 @@ esac
+ fi
+ fi
+ 
++PULSELIBS=""
++
++PULSEINCL=""
++
++if test "x$with_pulse" != "xno";
++then
++    ac_save_CPPFLAGS="$CPPFLAGS"
++    if test "$PKG_CONFIG" != "false";
++    then
++        ac_pulse_libs="`$PKG_CONFIG --libs libpulse 2>/dev/null`"
++        ac_pulse_cflags="`$PKG_CONFIG --cflags-only-I libpulse 2>/dev/null`"
++
++        CPPFLAGS="$CPPFLAGS $ac_pulse_cflags"
++        for ac_header in pulse/pulseaudio.h
++do :
++  ac_fn_c_check_header_mongrel "$LINENO" "pulse/pulseaudio.h" "ac_cv_header_pulse_pulseaudio_h" "$ac_includes_default"
++if test "x$ac_cv_header_pulse_pulseaudio_h" = xyes; then :
++  cat >>confdefs.h <<_ACEOF
++#define HAVE_PULSE_PULSEAUDIO_H 1
++_ACEOF
++ { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pa_stream_is_corked in -lpulse" >&5
++$as_echo_n "checking for pa_stream_is_corked in -lpulse... " >&6; }
++if ${ac_cv_lib_pulse_pa_stream_is_corked+:} false; then :
++  $as_echo_n "(cached) " >&6
++else
++  ac_check_lib_save_LIBS=$LIBS
++LIBS="-lpulse $ac_pulse_libs $LIBS"
++cat confdefs.h - <<_ACEOF >conftest.$ac_ext
++/* end confdefs.h.  */
++
++/* Override any GCC internal prototype to avoid an error.
++   Use char because int might match the return type of a GCC
++   builtin and then its argument prototype would still apply.  */
++#ifdef __cplusplus
++extern "C"
++#endif
++char pa_stream_is_corked ();
++int
++main ()
++{
++return pa_stream_is_corked ();
++  ;
++  return 0;
++}
++_ACEOF
++if ac_fn_c_try_link "$LINENO"; then :
++  ac_cv_lib_pulse_pa_stream_is_corked=yes
++else
++  ac_cv_lib_pulse_pa_stream_is_corked=no
++fi
++rm -f core conftest.err conftest.$ac_objext \
++    conftest$ac_exeext conftest.$ac_ext
++LIBS=$ac_check_lib_save_LIBS
++fi
++{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_pulse_pa_stream_is_corked" >&5
++$as_echo "$ac_cv_lib_pulse_pa_stream_is_corked" >&6; }
++if test "x$ac_cv_lib_pulse_pa_stream_is_corked" = xyes; then :
++
++$as_echo "#define HAVE_PULSEAUDIO 1" >>confdefs.h
++
++                 PULSELIBS="$ac_pulse_libs"
++                 PULSEINCL="$ac_pulse_cflags"
++fi
++
++
++fi
++
++done
++
++    fi
++    CPPFLAGS="$ac_save_CPPFLAGS"
++fi
++if test "$ac_cv_lib_pulse_pa_stream_is_corked" != "yes"; then :
++  case "x$with_pulse" in
++  x)   as_fn_append wine_warnings "|libpulse ${notice_platform}development files not found or too old, Pulse won't be supported." ;;
++  xno) ;;
++  *)   as_fn_error $? "libpulse ${notice_platform}development files not found or too old, Pulse won't be supported.
++This is an error since --with-pulse was requested." "$LINENO" 5 ;;
++esac
++fi
++
+ if test "x$with_gstreamer" != "xno"
+ then
+     if test -n "$GSTREAMER_CFLAGS"; then :
+@@ -13057,12 +13148,13 @@ fi
+ 
+ test -n "$ALSALIBS" || enable_winealsa_drv=${enable_winealsa_drv:-no}
+ test -n "$COREAUDIO" || enable_winecoreaudio_drv=${enable_winecoreaudio_drv:-no}
++test -n "$PULSELIBS" || enable_winepulse_drv=${enable_winepulse_drv:-no}
+ test "x$ac_cv_member_oss_sysinfo_numaudioengines" = xyes || enable_wineoss_drv=${enable_wineoss_drv:-no}
+ test "$ac_cv_header_linux_joystick_h" = "yes" || enable_winejoystick_drv=${enable_winejoystick_drv:-no}
+ 
+-if test "x$ALSALIBS$COREAUDIO" = "x" -a \
++if test "x$ALSALIBS$COREAUDIO$PULSELIBS" = "x" -a \
+         "x$ac_cv_member_oss_sysinfo_numaudioengines" != xyes -a \
+-        "x$with_alsa$with_coreaudio$with_oss" != xnonono
++        "x$with_alsa$with_coreaudio$with_oss$with_pulse" != xnononono
+ then
+     as_fn_append wine_warnings "|No sound system was found. Windows applications will be silent."
+ fi
+@@ -17268,6 +17360,7 @@ wine_fn_config_dll winemp3.acm enable_winemp3_acm
+ wine_fn_config_dll wineoss.drv enable_wineoss_drv
+ wine_fn_config_dll wineps.drv enable_wineps_drv clean,po
+ wine_fn_config_dll wineps16.drv16 enable_win16
++wine_fn_config_dll winepulse.drv enable_winepulse_drv
+ wine_fn_config_dll wineqtdecoder enable_wineqtdecoder
+ wine_fn_config_dll winex11.drv enable_winex11_drv
+ wine_fn_config_dll wing.dll16 enable_win16
+diff --git a/configure.ac b/configure.ac
+index 98a73f2..f5d0035 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -68,6 +68,7 @@ AC_ARG_WITH(oss,       AS_HELP_STRING([--without-oss],[do not use the OSS sound
+ AC_ARG_WITH(png,       AS_HELP_STRING([--without-png],[do not use PNG]))
+ AC_ARG_WITH(pthread,   AS_HELP_STRING([--without-pthread],[do not use the pthread library]),
+             [if test "x$withval" = "xno"; then ac_cv_header_pthread_h=no; fi])
++AC_ARG_WITH(pulse,     AC_HELP_STRING([--without-pulse],[do not use PulseAudio sound support]))
+ AC_ARG_WITH(sane,      AS_HELP_STRING([--without-sane],[do not use SANE (scanner support)]))
+ AC_ARG_WITH(tiff,      AS_HELP_STRING([--without-tiff],[do not use TIFF]))
+ AC_ARG_WITH(v4l,       AS_HELP_STRING([--without-v4l],[do not use v4l1 (v4l support)]))
+@@ -1542,6 +1543,30 @@ then
+           [GetText ${notice_platform}development files not found (or too old), po files can't be rebuilt.])
+ fi
+ 
++dnl **** Check for PulseAudio ****
++AC_SUBST(PULSELIBS,"")
++AC_SUBST(PULSEINCL,"")
++if test "x$with_pulse" != "xno";
++then
++    ac_save_CPPFLAGS="$CPPFLAGS"
++    if test "$PKG_CONFIG" != "false";
++    then
++        ac_pulse_libs="`$PKG_CONFIG --libs libpulse 2>/dev/null`"
++        ac_pulse_cflags="`$PKG_CONFIG --cflags-only-I libpulse 2>/dev/null`"
++
++        CPPFLAGS="$CPPFLAGS $ac_pulse_cflags"
++        AC_CHECK_HEADERS(pulse/pulseaudio.h,
++            [AC_CHECK_LIB(pulse, pa_stream_is_corked,
++                [AC_DEFINE(HAVE_PULSEAUDIO, 1, [Define if you have pulseaudio])
++                 PULSELIBS="$ac_pulse_libs"
++                 PULSEINCL="$ac_pulse_cflags"],,$ac_pulse_libs)
++        ])
++    fi
++    CPPFLAGS="$ac_save_CPPFLAGS"
++fi
++WINE_WARNING_WITH(pulse, [test "$ac_cv_lib_pulse_pa_stream_is_corked" != "yes"],
++        [libpulse ${notice_platform}development files not found or too old, Pulse won't be supported.])
++
+ dnl **** Check for gstreamer ****
+ if test "x$with_gstreamer" != "xno"
+ then
+@@ -1766,13 +1791,14 @@ fi
+ dnl **** Disable unsupported winmm drivers ****
+ test -n "$ALSALIBS" || enable_winealsa_drv=${enable_winealsa_drv:-no}
+ test -n "$COREAUDIO" || enable_winecoreaudio_drv=${enable_winecoreaudio_drv:-no}
++test -n "$PULSELIBS" || enable_winepulse_drv=${enable_winepulse_drv:-no}
+ test "x$ac_cv_member_oss_sysinfo_numaudioengines" = xyes || enable_wineoss_drv=${enable_wineoss_drv:-no}
+ test "$ac_cv_header_linux_joystick_h" = "yes" || enable_winejoystick_drv=${enable_winejoystick_drv:-no}
+ 
+ dnl **** Check for any sound system ****
+-if test "x$ALSALIBS$COREAUDIO" = "x" -a \
++if test "x$ALSALIBS$COREAUDIO$PULSELIBS" = "x" -a \
+         "x$ac_cv_member_oss_sysinfo_numaudioengines" != xyes -a \
+-        "x$with_alsa$with_coreaudio$with_oss" != xnonono
++        "x$with_alsa$with_coreaudio$with_oss$with_pulse" != xnononono
+ then
+     WINE_WARNING([No sound system was found. Windows applications will be silent.])
+ fi
+@@ -3260,6 +3286,7 @@ WINE_CONFIG_DLL(winemp3.acm)
+ WINE_CONFIG_DLL(wineoss.drv)
+ WINE_CONFIG_DLL(wineps.drv,,[clean,po])
+ WINE_CONFIG_DLL(wineps16.drv16,enable_win16)
++WINE_CONFIG_DLL(winepulse.drv)
+ WINE_CONFIG_DLL(wineqtdecoder)
+ WINE_CONFIG_DLL(winex11.drv)
+ WINE_CONFIG_DLL(wing.dll16,enable_win16)
+diff --git a/dlls/mmdevapi/main.c b/dlls/mmdevapi/main.c
+index 447813f..b9ae99e 100644
+--- a/dlls/mmdevapi/main.c
++++ b/dlls/mmdevapi/main.c
+@@ -110,7 +110,7 @@ static BOOL init_driver(void)
+ {
+     static const WCHAR drv_value[] = {'A','u','d','i','o',0};
+ 
+-    static WCHAR default_list[] = {'a','l','s','a',',','o','s','s',',',
++    static WCHAR default_list[] = {'p','u','l','s','e',',','a','l','s','a',',','o','s','s',',',
+         'c','o','r','e','a','u','d','i','o',0};
+ 
+     DriverFuncs driver;
+diff --git a/dlls/winepulse.drv/Makefile.in b/dlls/winepulse.drv/Makefile.in
+new file mode 100644
+index 0000000..0f595f1
+--- /dev/null
++++ b/dlls/winepulse.drv/Makefile.in
+@@ -0,0 +1,9 @@
++MODULE    = winepulse.drv
++IMPORTS   = dxguid uuid winmm user32 advapi32 ole32
++EXTRALIBS = @PULSELIBS@ @LIBPTHREAD@
++EXTRAINCL = @PULSEINCL@
++
++C_SRCS = \
++	mmdevdrv.c
++
++@MAKE_DLL_RULES@
+diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
+new file mode 100644
+index 0000000..d187bdc
+--- /dev/null
++++ b/dlls/winepulse.drv/mmdevdrv.c
+@@ -0,0 +1,290 @@
++/*
++ * Copyright 2011-2012 Maarten Lankhorst
++ * Copyright 2010-2011 Maarten Lankhorst for CodeWeavers
++ * Copyright 2011 Andrew Eikum for CodeWeavers
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ *
++ * Pulseaudio driver support.. hell froze over
++ */
++
++#define NONAMELESSUNION
++#define COBJMACROS
++#include "config.h"
++#include <poll.h>
++#include <pthread.h>
++
++#include <stdarg.h>
++#include <unistd.h>
++#include <math.h>
++#include <stdio.h>
++
++#include <pulse/pulseaudio.h>
++
++#include "windef.h"
++#include "winbase.h"
++#include "winnls.h"
++#include "winreg.h"
++#include "wine/debug.h"
++#include "wine/unicode.h"
++#include "wine/list.h"
++
++#include "ole2.h"
++#include "dshow.h"
++#include "dsound.h"
++#include "propsys.h"
++
++#include "initguid.h"
++#include "ks.h"
++#include "ksmedia.h"
++#include "mmdeviceapi.h"
++#include "audioclient.h"
++#include "endpointvolume.h"
++#include "audiopolicy.h"
++
++#include "wine/list.h"
++
++#define NULL_PTR_ERR MAKE_HRESULT(SEVERITY_ERROR, FACILITY_WIN32, RPC_X_NULL_REF_POINTER)
++
++WINE_DEFAULT_DEBUG_CHANNEL(pulse);
++
++static const REFERENCE_TIME MinimumPeriod = 30000;
++static const REFERENCE_TIME DefaultPeriod = 100000;
++
++static pa_context *pulse_ctx;
++static pa_mainloop *pulse_ml;
++
++static HANDLE pulse_thread;
++static pthread_mutex_t pulse_lock = PTHREAD_MUTEX_INITIALIZER;
++static pthread_cond_t pulse_cond = PTHREAD_COND_INITIALIZER;
++
++static DWORD pulse_stream_volume;
++
++const WCHAR pulse_keyW[] = {'S','o','f','t','w','a','r','e','\\',
++    'W','i','n','e','\\','P','u','l','s','e',0};
++const WCHAR pulse_streamW[] = { 'S','t','r','e','a','m','V','o','l',0 };
++
++BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, void *reserved)
++{
++    if (reason == DLL_PROCESS_ATTACH) {
++        HKEY key;
++        if (RegOpenKeyW(HKEY_CURRENT_USER, pulse_keyW, &key) == ERROR_SUCCESS) {
++            DWORD size = sizeof(pulse_stream_volume);
++            RegQueryValueExW(key, pulse_streamW, 0, NULL,
++                             (BYTE*)&pulse_stream_volume, &size);
++            RegCloseKey(key);
++        }
++        DisableThreadLibraryCalls(dll);
++    } else if (reason == DLL_PROCESS_DETACH) {
++        if (pulse_ctx) {
++           pa_context_disconnect(pulse_ctx);
++           pa_context_unref(pulse_ctx);
++        }
++        if (pulse_ml)
++            pa_mainloop_quit(pulse_ml, 0);
++        CloseHandle(pulse_thread);
++    }
++    return TRUE;
++}
++
++
++static const WCHAR defaultW[] = {'P','u','l','s','e','a','u','d','i','o',0};
++
++/* Following pulseaudio design here, mainloop has the lock taken whenever
++ * it is handling something for pulse, and the lock is required whenever
++ * doing any pa_* call that can affect the state in any way
++ *
++ * pa_cond_wait is used when waiting on results, because the mainloop needs
++ * the same lock taken to affect the state
++ *
++ * This is basically the same as the pa_threaded_mainloop implementation,
++ * but that cannot be used because it uses pthread_create directly
++ *
++ * pa_threaded_mainloop_(un)lock -> pthread_mutex_(un)lock
++ * pa_threaded_mainloop_signal -> pthread_cond_signal
++ * pa_threaded_mainloop_wait -> pthread_cond_wait
++ */
++
++static int pulse_poll_func(struct pollfd *ufds, unsigned long nfds, int timeout, void *userdata) {
++    int r;
++    pthread_mutex_unlock(&pulse_lock);
++    r = poll(ufds, nfds, timeout);
++    pthread_mutex_lock(&pulse_lock);
++    return r;
++}
++
++static DWORD CALLBACK pulse_mainloop_thread(void *tmp) {
++    int ret;
++    pulse_ml = pa_mainloop_new();
++    pa_mainloop_set_poll_func(pulse_ml, pulse_poll_func, NULL);
++    pthread_mutex_lock(&pulse_lock);
++    pthread_cond_signal(&pulse_cond);
++    pa_mainloop_run(pulse_ml, &ret);
++    pthread_mutex_unlock(&pulse_lock);
++    pa_mainloop_free(pulse_ml);
++    CloseHandle(pulse_thread);
++    return ret;
++}
++
++static void pulse_contextcallback(pa_context *c, void *userdata);
++
++static HRESULT pulse_connect(void)
++{
++    int len;
++    WCHAR path[PATH_MAX], *name;
++    char *str;
++
++    if (!pulse_thread)
++    {
++        if (!(pulse_thread = CreateThread(NULL, 0, pulse_mainloop_thread, NULL, 0, NULL)))
++        {
++            ERR("Failed to create mainloop thread.");
++            return E_FAIL;
++        }
++        SetThreadPriority(pulse_thread, THREAD_PRIORITY_TIME_CRITICAL);
++        pthread_cond_wait(&pulse_cond, &pulse_lock);
++    }
++
++    if (pulse_ctx && PA_CONTEXT_IS_GOOD(pa_context_get_state(pulse_ctx)))
++        return S_OK;
++    if (pulse_ctx)
++        pa_context_unref(pulse_ctx);
++
++    GetModuleFileNameW(NULL, path, sizeof(path)/sizeof(*path));
++    name = strrchrW(path, '\\');
++    if (!name)
++        name = path;
++    else
++        name++;
++    len = WideCharToMultiByte(CP_UNIXCP, 0, name, -1, NULL, 0, NULL, NULL);
++    str = pa_xmalloc(len);
++    WideCharToMultiByte(CP_UNIXCP, 0, name, -1, str, len, NULL, NULL);
++    TRACE("Name: %s\n", str);
++    pulse_ctx = pa_context_new(pa_mainloop_get_api(pulse_ml), str);
++    pa_xfree(str);
++    if (!pulse_ctx) {
++        ERR("Failed to create context\n");
++        return E_FAIL;
++    }
++
++    pa_context_set_state_callback(pulse_ctx, pulse_contextcallback, NULL);
++
++    TRACE("libpulse protocol version: %u. API Version %u\n", pa_context_get_protocol_version(pulse_ctx), PA_API_VERSION);
++    if (pa_context_connect(pulse_ctx, NULL, 0, NULL) < 0)
++        goto fail;
++
++    /* Wait for connection */
++    while (pthread_cond_wait(&pulse_cond, &pulse_lock)) {
++        pa_context_state_t state = pa_context_get_state(pulse_ctx);
++
++        if (state == PA_CONTEXT_FAILED || state == PA_CONTEXT_TERMINATED)
++            goto fail;
++
++        if (state == PA_CONTEXT_READY)
++            break;
++    }
++
++    TRACE("Connected to server %s with protocol version: %i.\n",
++        pa_context_get_server(pulse_ctx),
++        pa_context_get_server_protocol_version(pulse_ctx));
++    return S_OK;
++
++fail:
++    pa_context_unref(pulse_ctx);
++    pulse_ctx = NULL;
++    return E_FAIL;
++}
++
++static void pulse_contextcallback(pa_context *c, void *userdata) {
++    switch (pa_context_get_state(c)) {
++        default:
++            FIXME("Unhandled state: %i\n", pa_context_get_state(c));
++        case PA_CONTEXT_CONNECTING:
++        case PA_CONTEXT_UNCONNECTED:
++        case PA_CONTEXT_AUTHORIZING:
++        case PA_CONTEXT_SETTING_NAME:
++        case PA_CONTEXT_TERMINATED:
++            TRACE("State change to %i\n", pa_context_get_state(c));
++            return;
++
++        case PA_CONTEXT_READY:
++            TRACE("Ready\n");
++            break;
++
++        case PA_CONTEXT_FAILED:
++            ERR("Context failed: %s\n", pa_strerror(pa_context_errno(c)));
++            break;
++    }
++    pthread_cond_signal(&pulse_cond);
++}
++
++HRESULT WINAPI AUDDRV_GetEndpointIDs(EDataFlow flow, WCHAR ***ids, void ***keys,
++        UINT *num, UINT *def_index)
++{
++    HRESULT hr = S_OK;
++    TRACE("%d %p %p %p\n", flow, ids, num, def_index);
++
++    pthread_mutex_lock(&pulse_lock);
++    hr = pulse_connect();
++    pthread_mutex_unlock(&pulse_lock);
++    if (FAILED(hr))
++        return hr;
++    *num = 1;
++    *def_index = 0;
++
++    *ids = HeapAlloc(GetProcessHeap(), 0, sizeof(WCHAR *));
++    if (!*ids)
++        return E_OUTOFMEMORY;
++
++    (*ids)[0] = HeapAlloc(GetProcessHeap(), 0, sizeof(defaultW));
++    if (!(*ids)[0]) {
++        HeapFree(GetProcessHeap(), 0, *ids);
++        return E_OUTOFMEMORY;
++    }
++
++    lstrcpyW((*ids)[0], defaultW);
++
++    *keys = HeapAlloc(GetProcessHeap(), 0, sizeof(void *));
++    (*keys)[0] = NULL;
++
++    return S_OK;
++}
++
++int WINAPI AUDDRV_GetPriority(void)
++{
++    HRESULT hr;
++    pthread_mutex_lock(&pulse_lock);
++    hr = pulse_connect();
++    pthread_mutex_unlock(&pulse_lock);
++    return SUCCEEDED(hr) ? 3 : 0;
++}
++
++HRESULT WINAPI AUDDRV_GetAudioEndpoint(void *key, IMMDevice *dev,
++        EDataFlow dataflow, IAudioClient **out)
++{
++    TRACE("%p %p %d %p\n", key, dev, dataflow, out);
++    if (dataflow != eRender && dataflow != eCapture)
++        return E_UNEXPECTED;
++
++    *out = NULL;
++    return E_NOTIMPL;
++}
++
++HRESULT WINAPI AUDDRV_GetAudioSessionManager(IMMDevice *device,
++        IAudioSessionManager2 **out)
++{
++    *out = NULL;
++    return E_NOTIMPL;
++}
+diff --git a/dlls/winepulse.drv/winepulse.drv.spec b/dlls/winepulse.drv/winepulse.drv.spec
+new file mode 100644
+index 0000000..a089166
+--- /dev/null
++++ b/dlls/winepulse.drv/winepulse.drv.spec
+@@ -0,0 +1,5 @@
++# MMDevAPI driver functions
++@ stdcall -private GetPriority() AUDDRV_GetPriority
++@ stdcall -private GetEndpointIDs(long ptr ptr ptr ptr) AUDDRV_GetEndpointIDs
++@ stdcall -private GetAudioEndpoint(ptr ptr long ptr) AUDDRV_GetAudioEndpoint
++@ stdcall -private GetAudioSessionManager(ptr ptr) AUDDRV_GetAudioSessionManager
+-- 
+1.8.4.4
+

@@ -1,0 +1,125 @@
+From b5111c70a07ffd6ce97f4300686556d7bc1bccd3 Mon Sep 17 00:00:00 2001
+From: Maarten Lankhorst <m.b.lankhorst@gmail.com>
+Date: Fri, 22 Nov 2013 21:29:58 +0100
+Subject: [PATCH 20/42] winepulse v17: Fix winmm tests
+
+Handle dwChannelMask = SPEAKER_ALL better so WAVE_FORMAT_EXTENSIBLE tests pass too
+---
+ dlls/winepulse.drv/mmdevdrv.c | 72 +++++++++++++++++++++++++++++++++----------
+ 1 file changed, 56 insertions(+), 16 deletions(-)
+
+diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
+index 76a2e0e..6e75674 100644
+--- a/dlls/winepulse.drv/mmdevdrv.c
++++ b/dlls/winepulse.drv/mmdevdrv.c
+@@ -1066,6 +1066,8 @@ static HRESULT pulse_spec_from_waveformat(ACImpl *This, const WAVEFORMATEX *fmt)
+             This->ss.format = PA_SAMPLE_U8;
+         else if (fmt->wBitsPerSample == 16)
+             This->ss.format = PA_SAMPLE_S16LE;
++        else
++            return AUDCLNT_E_UNSUPPORTED_FORMAT;
+         pa_channel_map_init_auto(&This->map, fmt->nChannels, PA_CHANNEL_MAP_ALSA);
+         break;
+     case WAVE_FORMAT_EXTENSIBLE: {
+@@ -1102,13 +1104,16 @@ static HRESULT pulse_spec_from_waveformat(ACImpl *This, const WAVEFORMATEX *fmt)
+                         This->ss.format = PA_SAMPLE_S24_32LE;
+                     else if (valid == 32)
+                         This->ss.format = PA_SAMPLE_S32LE;
+-                default:
+                     break;
++                default:
++                    return AUDCLNT_E_UNSUPPORTED_FORMAT;
+             }
+         }
+         This->map.channels = fmt->nChannels;
+-        if (!mask)
++        if (!mask || mask == SPEAKER_ALL)
+             mask = get_channel_mask(fmt->nChannels);
++        else if (mask == ~0U && fmt->nChannels == 1)
++            mask = SPEAKER_FRONT_CENTER;
+         for (j = 0; j < sizeof(pulse_pos_from_wfx)/sizeof(*pulse_pos_from_wfx) && i < fmt->nChannels; ++j) {
+             if (mask & (1 << j))
+                 This->map.map[i++] = pulse_pos_from_wfx[j];
+@@ -1118,14 +1123,9 @@ static HRESULT pulse_spec_from_waveformat(ACImpl *This, const WAVEFORMATEX *fmt)
+         if (mask == SPEAKER_FRONT_CENTER)
+             This->map.map[0] = PA_CHANNEL_POSITION_MONO;
+ 
+-        if ((mask & SPEAKER_ALL) && i < fmt->nChannels) {
+-            This->map.map[i++] = PA_CHANNEL_POSITION_MONO;
+-            FIXME("Is the 'all' channel mapped correctly?\n");
+-        }
+-
+         if (i < fmt->nChannels || (mask & SPEAKER_RESERVED)) {
+             This->map.channels = 0;
+-            ERR("Invalid channel mask: %i/%i and %x\n", i, fmt->nChannels, mask);
++            ERR("Invalid channel mask: %i/%i and %x(%x)\n", i, fmt->nChannels, mask, wfe->dwChannelMask);
+             break;
+         }
+         break;
+@@ -1383,15 +1383,55 @@ static HRESULT WINAPI AudioClient_IsFormatSupported(IAudioClient *iface,
+         return E_INVALIDARG;
+     if (mode == AUDCLNT_SHAREMODE_EXCLUSIVE)
+         return This->dataflow == eCapture ? AUDCLNT_E_UNSUPPORTED_FORMAT : AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED;
+-    if (fmt->wFormatTag == WAVE_FORMAT_EXTENSIBLE &&
+-        fmt->cbSize < sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX))
+-        return E_INVALIDARG;
+-
+-    dump_fmt(fmt);
+-
++    switch (fmt->wFormatTag) {
++    case WAVE_FORMAT_EXTENSIBLE:
++        if (fmt->cbSize < sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX))
++            return E_INVALIDARG;
++        dump_fmt(fmt);
++        break;
++    case WAVE_FORMAT_ALAW:
++    case WAVE_FORMAT_MULAW:
++    case WAVE_FORMAT_IEEE_FLOAT:
++    case WAVE_FORMAT_PCM:
++        dump_fmt(fmt);
++        break;
++    default:
++        dump_fmt(fmt);
++        return AUDCLNT_E_UNSUPPORTED_FORMAT;
++    }
++    if (fmt->nChannels == 0)
++        return AUDCLNT_E_UNSUPPORTED_FORMAT;
+     closest = clone_format(fmt);
+-    if (!closest)
+-        hr = E_OUTOFMEMORY;
++    if (!closest) {
++        if (out)
++            *out = NULL;
++        return E_OUTOFMEMORY;
++    }
++
++    if (fmt->wFormatTag == WAVE_FORMAT_EXTENSIBLE) {
++        UINT32 mask = 0, i, channels = 0;
++        WAVEFORMATEXTENSIBLE *ext = (WAVEFORMATEXTENSIBLE*)closest;
++
++        if ((fmt->nChannels > 1 && ext->dwChannelMask == SPEAKER_ALL) ||
++            (fmt->nChannels == 1 && ext->dwChannelMask == ~0U)) {
++            mask = ext->dwChannelMask;
++            channels = fmt->nChannels;
++        } else if (ext->dwChannelMask) {
++            for (i = 1; !(i & SPEAKER_RESERVED); i <<= 1) {
++                if (i & ext->dwChannelMask) {
++                    mask |= i;
++                    channels++;
++                }
++            }
++            if (channels < fmt->nChannels)
++                mask = get_channel_mask(fmt->nChannels);
++        } else
++            mask = ext->dwChannelMask;
++        if (ext->dwChannelMask != mask) {
++            ext->dwChannelMask = mask;
++            hr = S_FALSE;
++        }
++    }
+ 
+     if (hr == S_OK || !out) {
+         CoTaskMemFree(closest);
+-- 
+1.8.4.4
+

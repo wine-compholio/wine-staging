@@ -1,0 +1,114 @@
+From e2845d85e98107c4859b0efa521516dd31cf88ea Mon Sep 17 00:00:00 2001
+From: Juergen Tretthahn <orson@orson.at>
+Date: Fri, 22 Nov 2013 21:29:58 +0100
+Subject: [PATCH 22/42] winepulse: API Compatibility with 1.5.2 onward, v2
+
+V2: Add winepulse.drv.spec to commit too
+V1: Original version
+
+Commit e87cb774d131963d2642d075977571585ec5da8d changed the driver api
+leave this commit out to build for builds prior to this
+
+Not needed for: 1.5.1, 1.5 and 1.4 builds
+---
+ dlls/winepulse.drv/mmdevdrv.c         | 34 ++++++++++++++++++++++------------
+ dlls/winepulse.drv/winepulse.drv.spec |  2 +-
+ 2 files changed, 23 insertions(+), 13 deletions(-)
+
+diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
+index 8e76826..b374b53 100644
+--- a/dlls/winepulse.drv/mmdevdrv.c
++++ b/dlls/winepulse.drv/mmdevdrv.c
+@@ -82,6 +82,11 @@ const WCHAR pulse_keyW[] = {'S','o','f','t','w','a','r','e','\\',
+     'W','i','n','e','\\','P','u','l','s','e',0};
+ const WCHAR pulse_streamW[] = { 'S','t','r','e','a','m','V','o','l',0 };
+ 
++static GUID pulse_render_guid =
++{ 0xfd47d9cc, 0x4218, 0x4135, { 0x9c, 0xe2, 0x0c, 0x19, 0x5c, 0x87, 0x40, 0x5b } };
++static GUID pulse_capture_guid =
++{ 0x25da76d0, 0x033c, 0x4235, { 0x90, 0x02, 0x19, 0xf4, 0x88, 0x94, 0xac, 0x6f } };
++
+ static HANDLE warn_once;
+ 
+ BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, void *reserved)
+@@ -716,7 +721,7 @@ static HRESULT pulse_stream_connect(ACImpl *This, UINT32 period_bytes) {
+     return S_OK;
+ }
+ 
+-HRESULT WINAPI AUDDRV_GetEndpointIDs(EDataFlow flow, WCHAR ***ids, void ***keys,
++HRESULT WINAPI AUDDRV_GetEndpointIDs(EDataFlow flow, const WCHAR ***ids, GUID **keys,
+         UINT *num, UINT *def_index)
+ {
+     HRESULT hr = S_OK;
+@@ -730,20 +735,21 @@ HRESULT WINAPI AUDDRV_GetEndpointIDs(EDataFlow flow, WCHAR ***ids, void ***keys,
+     *num = 1;
+     *def_index = 0;
+ 
+-    *ids = HeapAlloc(GetProcessHeap(), 0, sizeof(WCHAR *));
++    *ids = HeapAlloc(GetProcessHeap(), 0, sizeof(**ids));
+     if (!*ids)
+         return E_OUTOFMEMORY;
++    (*ids)[0] = defaultW;
+ 
+-    (*ids)[0] = HeapAlloc(GetProcessHeap(), 0, sizeof(defaultW));
+-    if (!(*ids)[0]) {
++    *keys = HeapAlloc(GetProcessHeap(), 0, sizeof(**keys));
++    if (!*keys) {
+         HeapFree(GetProcessHeap(), 0, *ids);
++        *ids = NULL;
+         return E_OUTOFMEMORY;
+     }
+-
+-    lstrcpyW((*ids)[0], defaultW);
+-
+-    *keys = HeapAlloc(GetProcessHeap(), 0, sizeof(void *));
+-    (*keys)[0] = NULL;
++    if (flow == eRender)
++        (*keys)[0] = pulse_render_guid;
++    else
++        (*keys)[0] = pulse_capture_guid;
+ 
+     return S_OK;
+ }
+@@ -761,12 +767,12 @@ int WINAPI AUDDRV_GetPriority(void)
+     return SUCCEEDED(hr) ? 3 : 0;
+ }
+ 
+-HRESULT WINAPI AUDDRV_GetAudioEndpoint(void *key, IMMDevice *dev,
+-        EDataFlow dataflow, IAudioClient **out)
++HRESULT WINAPI AUDDRV_GetAudioEndpoint(GUID *guid, IMMDevice *dev, IAudioClient **out)
+ {
+     HRESULT hr;
+     ACImpl *This;
+     int i;
++    EDataFlow dataflow;
+ 
+     /* Give one visible warning per session
+      * Sadly wine has chosen not to accept the winepulse patch, so support ourselves
+@@ -780,7 +786,11 @@ HRESULT WINAPI AUDDRV_GetAudioEndpoint(void *key, IMMDevice *dev,
+     }
+ 
+     TRACE("%s %p %p\n", debugstr_guid(guid), dev, out);
+-    if (dataflow != eRender && dataflow != eCapture)
++    if (IsEqualGUID(guid, &pulse_render_guid))
++        dataflow = eRender;
++    else if (IsEqualGUID(guid, &pulse_capture_guid))
++        dataflow = eCapture;
++    else
+         return E_UNEXPECTED;
+ 
+     *out = NULL;
+diff --git a/dlls/winepulse.drv/winepulse.drv.spec b/dlls/winepulse.drv/winepulse.drv.spec
+index a089166..612bf46 100644
+--- a/dlls/winepulse.drv/winepulse.drv.spec
++++ b/dlls/winepulse.drv/winepulse.drv.spec
+@@ -1,5 +1,5 @@
+ # MMDevAPI driver functions
+ @ stdcall -private GetPriority() AUDDRV_GetPriority
+ @ stdcall -private GetEndpointIDs(long ptr ptr ptr ptr) AUDDRV_GetEndpointIDs
+-@ stdcall -private GetAudioEndpoint(ptr ptr long ptr) AUDDRV_GetAudioEndpoint
++@ stdcall -private GetAudioEndpoint(ptr ptr ptr) AUDDRV_GetAudioEndpoint
+ @ stdcall -private GetAudioSessionManager(ptr ptr) AUDDRV_GetAudioSessionManager
+-- 
+1.8.4.4
+

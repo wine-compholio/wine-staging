@@ -1,0 +1,67 @@
+From 4e827b780247c1f99c122cd789af4f54b96447cf Mon Sep 17 00:00:00 2001
+From: Maarten Lankhorst <maarten.lankhorst@canonical.com>
+Date: Fri, 22 Nov 2013 21:29:59 +0100
+Subject: [PATCH 38/42] winepulse: use a pi-mutex for serialization.
+
+The winepulse thread is realtime, to prevent blocking it indefinitely
+use priority inheritance. Only initialize and release are potentially
+unsafe, the rest should be ok with -rt.
+---
+ dlls/winepulse.drv/mmdevdrv.c | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
+index 5b041a2..a09ce7f 100644
+--- a/dlls/winepulse.drv/mmdevdrv.c
++++ b/dlls/winepulse.drv/mmdevdrv.c
+@@ -22,6 +22,8 @@
+ 
+ #define NONAMELESSUNION
+ #define COBJMACROS
++#define _GNU_SOURCE
++
+ #include "config.h"
+ #include <poll.h>
+ #include <pthread.h>
+@@ -30,6 +32,7 @@
+ #include <unistd.h>
+ #include <math.h>
+ #include <stdio.h>
++#include <errno.h>
+ 
+ #include <pulse/pulseaudio.h>
+ 
+@@ -68,7 +71,7 @@ static pa_context *pulse_ctx;
+ static pa_mainloop *pulse_ml;
+ 
+ static HANDLE pulse_thread;
+-static pthread_mutex_t pulse_lock = PTHREAD_MUTEX_INITIALIZER;
++static pthread_mutex_t pulse_lock;
+ static pthread_cond_t pulse_cond = PTHREAD_COND_INITIALIZER;
+ static struct list g_sessions = LIST_INIT(g_sessions);
+ 
+@@ -93,6 +96,8 @@ BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, void *reserved)
+ {
+     if (reason == DLL_PROCESS_ATTACH) {
+         HKEY key;
++        pthread_mutexattr_t attr;
++
+         if (RegOpenKeyW(HKEY_CURRENT_USER, pulse_keyW, &key) == ERROR_SUCCESS) {
+             DWORD size = sizeof(pulse_stream_volume);
+             RegQueryValueExW(key, pulse_streamW, 0, NULL,
+@@ -100,6 +105,12 @@ BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, void *reserved)
+             RegCloseKey(key);
+         }
+         DisableThreadLibraryCalls(dll);
++
++        pthread_mutexattr_init(&attr);
++        pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
++
++        if (pthread_mutex_init(&pulse_lock, &attr) != 0)
++            pthread_mutex_init(&pulse_lock, NULL);
+     } else if (reason == DLL_PROCESS_DETACH) {
+         if (pulse_thread)
+            SetThreadPriority(pulse_thread, 0);
+-- 
+1.8.4.4
+

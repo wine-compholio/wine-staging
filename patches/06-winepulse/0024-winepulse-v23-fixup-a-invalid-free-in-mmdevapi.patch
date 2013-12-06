@@ -1,0 +1,51 @@
+From b6806f13b832b9aaa68d266825092526730aee30 Mon Sep 17 00:00:00 2001
+From: Maarten Lankhorst <maarten.lankhorst@canonical.com>
+Date: Fri, 22 Nov 2013 21:29:58 +0100
+Subject: [PATCH 31/42] winepulse v23: fixup a invalid free in mmdevapi
+
+array members of ids should be dynamically allocated, judging from valgrind output.
+---
+ dlls/winepulse.drv/mmdevdrv.c | 12 ++++++++++--
+ 1 file changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
+index 3ca68fd..5b041a2 100644
+--- a/dlls/winepulse.drv/mmdevdrv.c
++++ b/dlls/winepulse.drv/mmdevdrv.c
+@@ -726,6 +726,8 @@ HRESULT WINAPI AUDDRV_GetEndpointIDs(EDataFlow flow, const WCHAR ***ids, GUID **
+         UINT *num, UINT *def_index)
+ {
+     HRESULT hr = S_OK;
++    WCHAR *id;
++
+     TRACE("%d %p %p %p\n", flow, ids, num, def_index);
+ 
+     pthread_mutex_lock(&pulse_lock);
+@@ -737,16 +739,22 @@ HRESULT WINAPI AUDDRV_GetEndpointIDs(EDataFlow flow, const WCHAR ***ids, GUID **
+     *def_index = 0;
+ 
+     *ids = HeapAlloc(GetProcessHeap(), 0, sizeof(**ids));
++    *keys = NULL;
+     if (!*ids)
+         return E_OUTOFMEMORY;
+-    (*ids)[0] = defaultW;
+ 
++    (*ids)[0] = id = HeapAlloc(GetProcessHeap(), 0, sizeof(defaultW));
+     *keys = HeapAlloc(GetProcessHeap(), 0, sizeof(**keys));
+-    if (!*keys) {
++    if (!*keys || !id) {
++        HeapFree(GetProcessHeap(), 0, id);
++        HeapFree(GetProcessHeap(), 0, *keys);
+         HeapFree(GetProcessHeap(), 0, *ids);
+         *ids = NULL;
++        *keys = NULL;
+         return E_OUTOFMEMORY;
+     }
++    memcpy(id, defaultW, sizeof(defaultW));
++
+     if (flow == eRender)
+         (*keys)[0] = pulse_render_guid;
+     else
+-- 
+1.8.4.4
+

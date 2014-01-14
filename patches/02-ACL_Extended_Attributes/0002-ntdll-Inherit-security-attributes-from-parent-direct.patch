@@ -1,18 +1,18 @@
-From 5e49f53a4bd591e67c9b7c4fdaf46933e319f9aa Mon Sep 17 00:00:00 2001
+From b5efc991444e6539adf73f42b44e333b8aa7de2f Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Mon, 18 Nov 2013 18:15:20 -0700
+Date: Mon, 13 Jan 2014 18:32:05 -0700
 Subject: ntdll: Inherit security attributes from parent directories.
 
 ---
  dlls/advapi32/tests/security.c |   40 ++++++++++++++++++-
- dlls/ntdll/file.c              |   85 +++++++++++++++++++++++++++++++++++++++-
- 2 files changed, 123 insertions(+), 2 deletions(-)
+ dlls/ntdll/file.c              |   83 +++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 121 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index 7d28c05..a8d136b 100644
+index 297cf96..4b1c5a2 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -3013,10 +3013,11 @@ static void test_CreateDirectoryA(void)
+@@ -3030,10 +3030,11 @@ static void test_CreateDirectoryA(void)
      ACL_SIZE_INFORMATION acl_size;
      ACCESS_ALLOWED_ACE *ace;
      SECURITY_ATTRIBUTES sa;
@@ -25,7 +25,7 @@ index 7d28c05..a8d136b 100644
      DWORD error;
      PACL pDacl;
  
-@@ -3108,6 +3109,43 @@ static void test_CreateDirectoryA(void)
+@@ -3125,6 +3126,43 @@ static void test_CreateDirectoryA(void)
                                    ace->Mask);
      }
  
@@ -70,10 +70,10 @@ index 7d28c05..a8d136b 100644
      HeapFree(GetProcessHeap(), 0, user);
      bret = RemoveDirectoryA(tmpdir);
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 1de2c61..8948bb7 100644
+index d2efcc1..bdcaab4 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -103,6 +103,81 @@ mode_t FILE_umask = 0;
+@@ -103,6 +103,79 @@ mode_t FILE_umask = 0;
  
  static const WCHAR ntfsW[] = {'N','T','F','S'};
  
@@ -86,10 +86,10 @@ index 1de2c61..8948bb7 100644
 +{
 +    SECURITY_INFORMATION info = OWNER_SECURITY_INFORMATION|GROUP_SECURITY_INFORMATION
 +                                |DACL_SECURITY_INFORMATION|SACL_SECURITY_INFORMATION;
++    WCHAR *p, parent[UNICODE_STRING_MAX_CHARS];
 +    PSECURITY_DESCRIPTOR parentsd = NULL;
 +    ACL_SIZE_INFORMATION acl_size;
 +    BOOLEAN present, defaulted;
-+    WCHAR *p, parent[MAX_PATH];
 +    OBJECT_ATTRIBUTES pattr;
 +    UNICODE_STRING parentW;
 +    IO_STATUS_BLOCK io;
@@ -102,11 +102,9 @@ index 1de2c61..8948bb7 100644
 +    parentW.Buffer = parent;
 +    parentW.Length = filenameW->Length;
 +    memcpy(parentW.Buffer, filenameW->Buffer, filenameW->Length);
-+    if ((p = strrchrW(parent, '\\')) != NULL)
-+    {
-+        p[0] = 0;
-+        parentW.Length = (p-parent)*sizeof(WCHAR);
-+    }
++    if ((p = strrchrW(parent, '\\')) == NULL) return NULL;
++    p[0] = 0;
++    parentW.Length = (p-parent)*sizeof(WCHAR);
 +    memset(&pattr, 0x0, sizeof(pattr));
 +    pattr.Length = sizeof(pattr);
 +    pattr.Attributes = OBJ_CASE_INSENSITIVE;
@@ -155,7 +153,7 @@ index 1de2c61..8948bb7 100644
  /**************************************************************************
   *                 FILE_CreateFile                    (internal)
   * Open a file.
-@@ -161,10 +236,18 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
+@@ -161,10 +234,18 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
      {
          struct security_descriptor *sd;
          struct object_attributes objattr;

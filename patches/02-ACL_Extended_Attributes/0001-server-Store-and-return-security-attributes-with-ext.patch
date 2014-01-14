@@ -1,6 +1,6 @@
-From 78a5ebb94f3717bedd77f7c096e8fce1e9a640d1 Mon Sep 17 00:00:00 2001
+From acc6aac3356b0ec9024362488016945b76f67111 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Mon, 18 Nov 2013 18:12:05 -0700
+Date: Sat, 11 Jan 2014 09:18:16 -0700
 Subject: server: Store and return security attributes with extended file
  attributes.
 
@@ -14,10 +14,10 @@ Subject: server: Store and return security attributes with extended file
  6 files changed, 269 insertions(+), 22 deletions(-)
 
 diff --git a/configure.ac b/configure.ac
-index 98a73f2..bb03667 100644
+index dcabb55..fc8bd5c 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -71,6 +71,7 @@ AC_ARG_WITH(pthread,   AS_HELP_STRING([--without-pthread],[do not use the pthrea
+@@ -73,6 +73,7 @@ AC_ARG_WITH(pthread,   AS_HELP_STRING([--without-pthread],[do not use the pthrea
  AC_ARG_WITH(sane,      AS_HELP_STRING([--without-sane],[do not use SANE (scanner support)]))
  AC_ARG_WITH(tiff,      AS_HELP_STRING([--without-tiff],[do not use TIFF]))
  AC_ARG_WITH(v4l,       AS_HELP_STRING([--without-v4l],[do not use v4l1 (v4l support)]))
@@ -25,7 +25,7 @@ index 98a73f2..bb03667 100644
  AC_ARG_WITH(xcomposite,AS_HELP_STRING([--without-xcomposite],[do not use the Xcomposite extension]),
              [if test "x$withval" = "xno"; then ac_cv_header_X11_extensions_Xcomposite_h=no; fi])
  AC_ARG_WITH(xcursor,   AS_HELP_STRING([--without-xcursor],[do not use the Xcursor extension]),
-@@ -666,6 +667,11 @@ AC_CHECK_HEADERS([libprocstat.h],,,
+@@ -665,6 +666,11 @@ AC_CHECK_HEADERS([libprocstat.h],,,
  #include <sys/socket.h>
  #endif])
  
@@ -38,10 +38,10 @@ index 98a73f2..bb03667 100644
  
  AC_SUBST(dlldir,"\${libdir}/wine")
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index fe31b5c..7d28c05 100644
+index 2efe80e..297cf96 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -3088,10 +3088,10 @@ static void test_CreateDirectoryA(void)
+@@ -3105,10 +3105,10 @@ static void test_CreateDirectoryA(void)
          bret = pGetAce(pDacl, 0, (VOID **)&ace);
          ok(bret, "Failed to get Current User ACE.\n");
          bret = EqualSid(&ace->SidStart, user_sid);
@@ -56,7 +56,7 @@ index fe31b5c..7d28c05 100644
          ok(ace->Mask == 0x1f01ff, "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n",
                                    ace->Mask);
      }
-@@ -3100,10 +3100,10 @@ static void test_CreateDirectoryA(void)
+@@ -3117,10 +3117,10 @@ static void test_CreateDirectoryA(void)
          bret = pGetAce(pDacl, 1, (VOID **)&ace);
          ok(bret, "Failed to get Administators Group ACE.\n");
          bret = EqualSid(&ace->SidStart, admin_sid);
@@ -71,7 +71,7 @@ index fe31b5c..7d28c05 100644
          ok(ace->Mask == 0x1f01ff, "Administators Group ACE has unexpected mask (0x%x != 0x1f01ff)\n",
                                    ace->Mask);
      }
-@@ -3277,7 +3277,7 @@ static void test_GetNamedSecurityInfoA(void)
+@@ -3294,7 +3294,7 @@ static void test_GetNamedSecurityInfoA(void)
          bret = pGetAce(pDacl, 0, (VOID **)&ace);
          ok(bret, "Failed to get Current User ACE.\n");
          bret = EqualSid(&ace->SidStart, user_sid);
@@ -80,7 +80,7 @@ index fe31b5c..7d28c05 100644
          ok(((ACE_HEADER *)ace)->AceFlags == 0,
             "Current User ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
          ok(ace->Mask == 0x1f01ff, "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n",
-@@ -3288,8 +3288,7 @@ static void test_GetNamedSecurityInfoA(void)
+@@ -3305,8 +3305,7 @@ static void test_GetNamedSecurityInfoA(void)
          bret = pGetAce(pDacl, 1, (VOID **)&ace);
          ok(bret, "Failed to get Administators Group ACE.\n");
          bret = EqualSid(&ace->SidStart, admin_sid);
@@ -90,7 +90,7 @@ index fe31b5c..7d28c05 100644
          ok(((ACE_HEADER *)ace)->AceFlags == 0,
             "Administators Group ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
          ok(ace->Mask == 0x1f01ff || broken(ace->Mask == GENERIC_ALL) /* win2k */,
-@@ -3943,7 +3942,7 @@ static void test_GetSecurityInfo(void)
+@@ -3960,7 +3959,7 @@ static void test_GetSecurityInfo(void)
          bret = pGetAce(pDacl, 0, (VOID **)&ace);
          ok(bret, "Failed to get Current User ACE.\n");
          bret = EqualSid(&ace->SidStart, user_sid);
@@ -99,7 +99,7 @@ index fe31b5c..7d28c05 100644
          ok(((ACE_HEADER *)ace)->AceFlags == 0,
             "Current User ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
          ok(ace->Mask == 0x1f01ff, "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n",
-@@ -3954,7 +3953,7 @@ static void test_GetSecurityInfo(void)
+@@ -3971,7 +3970,7 @@ static void test_GetSecurityInfo(void)
          bret = pGetAce(pDacl, 1, (VOID **)&ace);
          ok(bret, "Failed to get Administators Group ACE.\n");
          bret = EqualSid(&ace->SidStart, admin_sid);

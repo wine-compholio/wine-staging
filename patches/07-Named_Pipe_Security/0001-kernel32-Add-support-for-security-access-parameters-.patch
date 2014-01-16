@@ -1,0 +1,68 @@
+From 2c5a578303cf9fff587c3ce42f049cf1e1e27305 Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Thu, 16 Jan 2014 11:06:37 -0700
+Subject: kernel32: Add support for security access parameters for named
+ pipes.
+
+---
+ dlls/advapi32/tests/security.c |   29 +++++++++++++++++++++++++++++
+ dlls/kernel32/sync.c           |    3 +++
+ 2 files changed, 32 insertions(+)
+
+diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
+index 2efe80e..e1e7d70 100644
+--- a/dlls/advapi32/tests/security.c
++++ b/dlls/advapi32/tests/security.c
+@@ -4725,6 +4725,35 @@ static void test_named_pipe_security(HANDLE token)
+         { 1, GENERIC_EXECUTE, FILE_GENERIC_EXECUTE },
+         { 1, GENERIC_ALL, STANDARD_RIGHTS_ALL | FILE_ALL_ACCESS }
+     };
++    static const struct
++    {
++        DWORD open_mode;
++        DWORD access;
++    } creation_access[] =
++    {
++        { PIPE_ACCESS_INBOUND, FILE_GENERIC_READ },
++        { PIPE_ACCESS_OUTBOUND, FILE_GENERIC_WRITE },
++        { PIPE_ACCESS_DUPLEX, FILE_GENERIC_READ|FILE_GENERIC_WRITE },
++        { PIPE_ACCESS_INBOUND|WRITE_DAC, FILE_GENERIC_READ|WRITE_DAC },
++        { PIPE_ACCESS_INBOUND|WRITE_OWNER, FILE_GENERIC_READ|WRITE_OWNER }
++        /* ACCESS_SYSTEM_SECURITY is also valid, but will fail with ERROR_PRIVILEGE_NOT_HELD */
++    };
++
++    /* Test the different security access options for pipes */
++    for (i = 0; i < sizeof(creation_access)/sizeof(creation_access[0]); i++)
++    {
++        SetLastError(0xdeadbeef);
++        pipe = CreateNamedPipeA(WINE_TEST_PIPE, creation_access[i].open_mode,
++                                PIPE_TYPE_BYTE | PIPE_NOWAIT, PIPE_UNLIMITED_INSTANCES, 0, 0,
++                                NMPWAIT_USE_DEFAULT_WAIT, NULL);
++        ok(pipe != INVALID_HANDLE_VALUE, "CreateNamedPipe(0x%x) error %d\n",
++                                         creation_access[i].open_mode, GetLastError());
++        access = get_obj_access(pipe);
++        ok(access == creation_access[i].access,
++           "CreateNamedPipeA(0x%x) pipe expected access 0x%x (got 0x%x)\n",
++           creation_access[i].open_mode, creation_access[i].access, access);
++        CloseHandle(pipe);
++    }
+ 
+     SetLastError(0xdeadbeef);
+     pipe = CreateNamedPipeA(WINE_TEST_PIPE, PIPE_ACCESS_DUPLEX | FILE_FLAG_FIRST_PIPE_INSTANCE,
+diff --git a/dlls/kernel32/sync.c b/dlls/kernel32/sync.c
+index 2b7f4b0..547d437 100644
+--- a/dlls/kernel32/sync.c
++++ b/dlls/kernel32/sync.c
+@@ -1395,6 +1395,9 @@ HANDLE WINAPI CreateNamedPipeW( LPCWSTR name, DWORD dwOpenMode,
+     }
+     access |= SYNCHRONIZE;
+     options = 0;
++    if (dwOpenMode & WRITE_DAC) access |= WRITE_DAC;
++    if (dwOpenMode & WRITE_OWNER) access |= WRITE_OWNER;
++    if (dwOpenMode & ACCESS_SYSTEM_SECURITY) access |= ACCESS_SYSTEM_SECURITY;
+     if (dwOpenMode & FILE_FLAG_WRITE_THROUGH) options |= FILE_WRITE_THROUGH;
+     if (!(dwOpenMode & FILE_FLAG_OVERLAPPED)) options |= FILE_SYNCHRONOUS_IO_NONALERT;
+     pipe_type = (dwPipeMode & PIPE_TYPE_MESSAGE) != 0;
+-- 
+1.7.9.5
+

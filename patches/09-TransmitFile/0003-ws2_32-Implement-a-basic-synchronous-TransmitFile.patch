@@ -1,0 +1,202 @@
+From e1278ab064bba641f34caa8132c8ddc8e83b9778 Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Thu, 16 Jan 2014 18:24:27 -0700
+Subject: ws2_32: Implement a basic synchronous TransmitFile.
+
+---
+ dlls/ws2_32/socket.c     |   66 ++++++++++++++++++++++++++++++++++++++++--
+ dlls/ws2_32/tests/sock.c |   71 +++++++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 134 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
+index ae23dd6..1faf443 100644
+--- a/dlls/ws2_32/socket.c
++++ b/dlls/ws2_32/socket.c
+@@ -2473,6 +2473,64 @@ static BOOL WINAPI WS2_AcceptEx(SOCKET listener, SOCKET acceptor, PVOID dest, DW
+ }
+ 
+ /***********************************************************************
++ *     WS2_transmitfile_base            (INTERNAL)
++ * 
++ * Shared implementation for both synchronous and asynchronous TransmitFile.
++ */
++static BOOL WS2_transmitfile_base( SOCKET s, HANDLE h, DWORD total_bytes, DWORD bytes_per_send,
++                                   LPOVERLAPPED overlapped, LPTRANSMIT_FILE_BUFFERS buffers,
++                                   DWORD flags )
++{
++    DWORD bytes_sent = 0;
++    char *buffer = NULL;
++    BOOL ret = FALSE;
++
++    /* set reasonable defaults when requested */
++    if (!bytes_per_send)
++        bytes_per_send = 1024;
++
++    /* send the header (if applicable) */
++    if (buffers && WS_send( s, buffers->Head, buffers->HeadLength, 0 ) == SOCKET_ERROR)
++        goto cleanup;
++
++    /* process the main file */
++    if (h)
++    {
++        buffer = HeapAlloc( GetProcessHeap(), 0, bytes_per_send );
++        if (!buffer) goto cleanup;
++
++        /* read and send the data from the file */
++        do
++        {
++            DWORD n = 0;
++            BOOL ok;
++
++            /* when the size of the transfer is limited ensure that we don't go past that limit */
++            if (total_bytes != 0)
++                bytes_per_send = min(bytes_per_send, total_bytes - bytes_sent);
++            ok = ReadFile( h, buffer, bytes_per_send, &n, NULL );
++            if (ok && n == 0)
++                break;
++            else if(!ok)
++                goto cleanup;
++            if (WS_send( s, buffer, n, 0 ) == SOCKET_ERROR)
++                goto cleanup;
++            bytes_sent += n;
++        } while(total_bytes == 0 || bytes_sent < total_bytes);
++    }
++
++    /* send the footer (if applicable) */
++    if (buffers && WS_send( s, buffers->Tail, buffers->TailLength, 0 ) == SOCKET_ERROR)
++        goto cleanup;
++
++    ret = TRUE;
++
++cleanup:
++    HeapFree( GetProcessHeap(), 0, buffer );
++    return ret;
++}
++
++/***********************************************************************
+  *     TransmitFile
+  */
+ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD total_bytes, DWORD bytes_per_send,
+@@ -2482,8 +2540,7 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD total_bytes, DWOR
+     unsigned int uaddrlen = sizeof(uaddr);
+     int fd;
+ 
+-    FIXME("(%lx, %p, %d, %d, %p, %p, %d): stub !\n", s, h, total_bytes, bytes_per_send, overlapped, buffers,
+-                                                     flags );
++    TRACE("(%lx, %p, %d, %d, %p, %p, %d)\n", s, h, total_bytes, bytes_per_send, overlapped, buffers, flags );
+     if (s == INVALID_SOCKET)
+     {
+         WSASetLastError( WSAENOTSOCK );
+@@ -2500,6 +2557,11 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD total_bytes, DWOR
+     if (flags)
+         FIXME("Flags are not currently supported (0x%x).\n", flags);
+ 
++    if (!overlapped)
++        return WS2_transmitfile_base( s, h, total_bytes, bytes_per_send, overlapped, buffers, flags );
++
++    FIXME("(%lx, %p, %d, %d, %p, %p, %d): stub !\n", s, h, total_bytes, bytes_per_send, overlapped, buffers,
++                                                     flags );
+     WSASetLastError( WSAEOPNOTSUPP );
+     return FALSE;
+ }
+diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
+index 30c8bc1..79052ab 100644
+--- a/dlls/ws2_32/tests/sock.c
++++ b/dlls/ws2_32/tests/sock.c
+@@ -6334,15 +6334,45 @@ end:
+         closesocket(connector2);
+ }
+ 
++#define compare_file(h,s) compare_file2(h,s,__FILE__,__LINE__)
++
++static void compare_file2(HANDLE handle, SOCKET sock, const char *file, int line)
++{
++    char buf1[256], buf2[256];
++    BOOL success;
++    int i = 0;
++
++    SetFilePointer(handle, 0, NULL, FILE_BEGIN);
++    while (1)
++    {
++        DWORD n1 = 0, n2 = 0;
++
++        success = ReadFile(handle, buf1, sizeof(buf1), &n1, NULL);
++        ok_(file,line)(success, "Failed to read from file.\n");
++        if (success && n1 == 0)
++            break;
++        else if(!success)
++            return;
++        n2 = recv(sock, buf2, n1, 0);
++        ok_(file,line)(n1 == n2, "Block %d size mismatch (%d != %d)\n", i, n1, n2);
++        ok_(file,line)(memcmp(buf1, buf2, n2) == 0, "Block %d failed\n", i);
++        i++;
++    }
++}
++
+ static void test_TransmitFile(void)
+ {
+     GUID transmitFileGuid = WSAID_TRANSMITFILE;
+     LPFN_TRANSMITFILE pTransmitFile = NULL;
+     HANDLE file = INVALID_HANDLE_VALUE;
++    char header_msg[] = "hello world";
++    char footer_msg[] = "goodbye!!!";
+     char system_ini_path[MAX_PATH];
+     struct sockaddr_in bindAddress;
++    TRANSMIT_FILE_BUFFERS buffers;
+     SOCKET client, server, dest;
+     DWORD num_bytes, err;
++    char buf[256];
+     int iret, len;
+     BOOL bret;
+ 
+@@ -6420,7 +6450,46 @@ static void test_TransmitFile(void)
+ 
+     /* Test TransmitFile with no possible buffer */
+     bret = pTransmitFile(client, NULL, 0, 0, NULL, NULL, 0);
+-    todo_wine ok(bret, "TransmitFile failed unexpectedly.\n");
++    ok(bret, "TransmitFile failed unexpectedly.\n");
++    iret = recv(dest, buf, sizeof(buf), 0);
++    ok(iret == -1, "Returned an unexpected buffer from TransmitFile (%d != -1).\n", iret);
++
++    /* Test TransmitFile with only buffer data */
++    buffers.Head = &header_msg[0];
++    buffers.HeadLength = sizeof(header_msg)+1;
++    buffers.Tail = &footer_msg[0];
++    buffers.TailLength = sizeof(footer_msg)+1;
++    bret = pTransmitFile(client, NULL, 0, 0, NULL, &buffers, 0);
++    ok(bret, "TransmitFile failed unexpectedly.\n");
++    iret = recv(dest, buf, sizeof(buf), 0);
++    ok(iret == sizeof(header_msg)+sizeof(footer_msg)+2,
++       "Returned an unexpected buffer from TransmitFile (%d != %d).\n", iret,
++       sizeof(header_msg)+sizeof(footer_msg)+2);
++    ok(memcmp(&buf[0], &header_msg[0], sizeof(header_msg)+1) == 0,
++       "TransmitFile header buffer did not match!\n");
++    ok(memcmp(&buf[sizeof(header_msg)+1], &footer_msg[0], sizeof(footer_msg)+1) == 0,
++       "TransmitFile footer buffer did not match!\n");
++
++    /* Test TransmitFile with only file data */
++    bret = pTransmitFile(client, file, 0, 0, NULL, NULL, 0);
++    ok(bret, "TransmitFile failed unexpectedly.\n");
++    compare_file(file, dest);
++
++    /* Test TransmitFile with both file and buffer data */
++    buffers.Head = &header_msg[0];
++    buffers.HeadLength = sizeof(header_msg)+1;
++    buffers.Tail = &footer_msg[0];
++    buffers.TailLength = sizeof(footer_msg)+1;
++    SetFilePointer(file, 0, NULL, FILE_BEGIN);
++    bret = pTransmitFile(client, file, 0, 0, NULL, &buffers, 0);
++    ok(bret, "TransmitFile failed unexpectedly.\n");
++    iret = recv(dest, buf, sizeof(header_msg)+1, 0);
++    ok(memcmp(buf, &header_msg[0], sizeof(header_msg)+1) == 0,
++       "TransmitFile header buffer did not match!\n");
++    compare_file(file, dest);
++    iret = recv(dest, buf, sizeof(footer_msg)+1, 0);
++    ok(memcmp(buf, &footer_msg[0], sizeof(footer_msg)+1) == 0,
++       "TransmitFile footer buffer did not match!\n");
+ 
+     /* Test TransmitFile with a UDP datagram socket */
+     closesocket(client);
+-- 
+1.7.9.5
+

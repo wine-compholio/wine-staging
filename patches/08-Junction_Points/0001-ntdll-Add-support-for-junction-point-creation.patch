@@ -1,0 +1,310 @@
+From 4d377524363a3e33e2df29c38fe16542b6cd0aa1 Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Thu, 16 Jan 2014 20:56:49 -0700
+Subject: ntdll: Add support for junction point creation.
+
+---
+ dlls/ntdll/file.c       |   89 ++++++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/tests/file.c |   94 +++++++++++++++++++++++++++++++++++++++++++++++
+ include/ntifs.h         |   52 ++++++++++++++++++++++++++
+ 3 files changed, 235 insertions(+)
+ create mode 100644 include/ntifs.h
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index d2efcc1..7164d1e 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -89,12 +89,14 @@
+ #include "winioctl.h"
+ #include "ddk/ntddk.h"
+ #include "ddk/ntddser.h"
++#include "ntifs.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(ntdll);
+ WINE_DECLARE_DEBUG_CHANNEL(winediag);
+ 
+ mode_t FILE_umask = 0;
+ 
++#define WINE_TEMPLINK      P_tmpdir"/winelink.XXXXXX"
+ #define SECSPERDAY         86400
+ #define SECS_1601_TO_1970  ((369 * 365 + 89) * (ULONGLONG)SECSPERDAY)
+ 
+@@ -1470,6 +1472,76 @@ NTSTATUS WINAPI NtDeviceIoControlFile(HANDLE handle, HANDLE event,
+ }
+ 
+ 
++/*
++ * Retrieve the unix name corresponding to a file handle, remove that directory, and then symlink the
++ * requested directory to the location of the old directory.
++ */
++NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
++{
++    int dest_len = buffer->MountPointReparseBuffer.SubstituteNameLength;
++    int offset = buffer->MountPointReparseBuffer.SubstituteNameOffset;
++    WCHAR *dest = &buffer->MountPointReparseBuffer.PathBuffer[offset];
++    char tmplink[] = WINE_TEMPLINK;
++    ANSI_STRING unix_src, unix_dest;
++    BOOL dest_allocated = FALSE;
++    int dest_fd, needs_close;
++    UNICODE_STRING nt_dest;
++    NTSTATUS status;
++
++    if ((status = server_get_unix_fd( handle, FILE_SPECIAL_ACCESS, &dest_fd, &needs_close, NULL, NULL )))
++        return status;
++
++    if ((status = server_get_unix_name( handle, &unix_src )))
++        goto cleanup;
++
++    nt_dest.Buffer = dest;
++    nt_dest.Length = dest_len;
++    if ((status = wine_nt_to_unix_file_name( &nt_dest, &unix_dest, FILE_OPEN, FALSE )))
++        goto cleanup;
++    dest_allocated = TRUE;
++
++    TRACE("Linking %s to %s\n", unix_src.Buffer, unix_dest.Buffer);
++
++    /* Produce the link in a temporary location */
++    while(1)
++    {
++        int fd;
++
++        memcpy( tmplink, WINE_TEMPLINK, sizeof(tmplink) );
++        fd = mkstemps( tmplink, 0 );
++        if (fd == -1) break;
++        if (!unlink( tmplink ))
++        {
++            if (!symlink( unix_dest.Buffer, tmplink ))
++                break;
++        }
++        close(fd);
++    }
++    /* Atomically move the link into position */
++    if (rename( tmplink, unix_src.Buffer ))
++    {
++        unlink( tmplink );
++        FIXME("Atomic replace of directory with symbolic link unsupported on this system, may result in race condition.\n");
++        if (rmdir( unix_src.Buffer ) < 0)
++        {
++            status = FILE_GetNtStatus();
++            goto cleanup;
++        }
++        if (symlink( unix_dest.Buffer, unix_src.Buffer ) < 0)
++        {
++            status = FILE_GetNtStatus();
++            goto cleanup;
++        }
++    }
++    status = STATUS_SUCCESS;
++
++cleanup:
++    if (dest_allocated) RtlFreeAnsiString( &unix_dest );
++    if (needs_close) close( dest_fd );
++    return status;
++}
++
++
+ /**************************************************************************
+  *              NtFsControlFile                 [NTDLL.@]
+  *              ZwFsControlFile                 [NTDLL.@]
+@@ -1617,6 +1689,23 @@ NTSTATUS WINAPI NtFsControlFile(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc
+         }
+         break;
+     }
++
++    case FSCTL_SET_REPARSE_POINT:
++    {
++        REPARSE_DATA_BUFFER *buffer = (REPARSE_DATA_BUFFER *)in_buffer;
++
++        switch(buffer->ReparseTag)
++        {
++        case IO_REPARSE_TAG_MOUNT_POINT:
++            status = FILE_CreateSymlink( handle, buffer );
++            break;
++        default:
++            FIXME("stub: FSCTL_SET_REPARSE_POINT(%x)\n", buffer->ReparseTag);
++            status = STATUS_NOT_IMPLEMENTED;
++            break;
++        }
++        break;
++    }
+     case FSCTL_PIPE_LISTEN:
+     case FSCTL_PIPE_WAIT:
+     default:
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index 695f034..127681a 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -37,6 +37,7 @@
+ #include "winternl.h"
+ #include "winuser.h"
+ #include "winioctl.h"
++#include "ntifs.h"
+ 
+ #ifndef IO_COMPLETION_ALL_ACCESS
+ #define IO_COMPLETION_ALL_ACCESS 0x001F0003
+@@ -2672,6 +2673,98 @@ todo_wine
+     CloseHandle(hfile);
+ }
+ 
++static INT build_reparse_buffer(WCHAR *filename, REPARSE_DATA_BUFFER **pbuffer)
++{
++    REPARSE_DATA_BUFFER *buffer;
++    INT buffer_len, string_len;
++    WCHAR *dest;
++
++    string_len = (lstrlenW(filename)+1)*sizeof(WCHAR);
++    buffer_len = FIELD_OFFSET(REPARSE_DATA_BUFFER, MountPointReparseBuffer.PathBuffer[1]) + string_len;
++    buffer = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, buffer_len);
++    buffer->ReparseTag = IO_REPARSE_TAG_MOUNT_POINT;
++    buffer->ReparseDataLength = sizeof(buffer->MountPointReparseBuffer) + string_len;
++    buffer->MountPointReparseBuffer.SubstituteNameLength = string_len - sizeof(WCHAR);
++    buffer->MountPointReparseBuffer.PrintNameOffset = string_len;
++    dest = &buffer->MountPointReparseBuffer.PathBuffer[0];
++    memcpy(dest, filename, string_len);
++    *pbuffer = buffer;
++    return buffer_len;
++}
++
++static void test_junction_points(void)
++{
++    static const WCHAR junctionW[] = {'\\','j','u','n','c','t','i','o','n',0};
++    WCHAR path[MAX_PATH], junction_path[MAX_PATH], target_path[MAX_PATH];
++    static const WCHAR targetW[] = {'\\','t','a','r','g','e','t',0};
++    static const WCHAR fooW[] = {'f','o','o',0};
++    static WCHAR volW[] = {'c',':','\\',0};
++    static const WCHAR dotW[] = {'.',0};
++    REPARSE_DATA_BUFFER *buffer = NULL;
++    DWORD dwret, dwLen, dwFlags;
++    UNICODE_STRING nameW;
++    HANDLE hJunction;
++    INT buffer_len;
++    BOOL bret;
++
++    /* Create a temporary folder for the junction point tests */
++    GetTempFileNameW(dotW, fooW, 0, path);
++    DeleteFileW(path);
++    if (!CreateDirectoryW(path, NULL))
++    {
++        win_skip("Unable to create a temporary junction point directory.\n");
++        return;
++    }
++
++    /* Check that the volume this folder is located on supports junction points */
++    pRtlDosPathNameToNtPathName_U(path, &nameW, NULL, NULL);
++    volW[0] = nameW.Buffer[4];
++    pRtlFreeUnicodeString( &nameW );
++    GetVolumeInformationW(volW, 0, 0, 0, &dwLen, &dwFlags, 0, 0);
++    if (!(dwFlags & FILE_SUPPORTS_REPARSE_POINTS))
++    {
++        skip("File system does not support junction points.\n");
++        RemoveDirectoryW(path);
++        return;
++    }
++
++    /* Create the folder to be replaced by a junction point */
++    lstrcpyW(junction_path, path);
++    lstrcatW(junction_path, junctionW);
++    bret = CreateDirectoryW(junction_path, NULL);
++    ok(bret, "Failed to create junction point directory.\n");
++
++    /* Create a destination folder for the junction point to target */
++    lstrcpyW(target_path, path);
++    lstrcatW(target_path, targetW);
++    bret = CreateDirectoryW(target_path, NULL);
++    ok(bret, "Failed to create junction point target directory.\n");
++    pRtlDosPathNameToNtPathName_U(target_path, &nameW, NULL, NULL);
++
++    /* Create the junction point */
++    hJunction = CreateFileW(junction_path, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING,
++                            FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0);
++    if (hJunction == INVALID_HANDLE_VALUE)
++    {
++        win_skip("Failed to open junction point directory handle (0x%x).\n", GetLastError());
++        goto cleanup;
++    }
++    buffer_len = build_reparse_buffer(nameW.Buffer, &buffer);
++    bret = DeviceIoControl(hJunction, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
++    ok(bret, "Failed to create junction point! (0x%x)\n", GetLastError());
++    CloseHandle(hJunction);
++
++cleanup:
++    /* Cleanup */
++    pRtlFreeUnicodeString( &nameW );
++    HeapFree(GetProcessHeap(), 0, buffer);
++    bret = RemoveDirectoryW(junction_path);
++    ok(bret, "Failed to remove temporary junction point directory!\n");
++    bret = RemoveDirectoryW(target_path);
++    ok(bret, "Failed to remove temporary target directory!\n");
++    RemoveDirectoryW(path);
++}
++
+ START_TEST(file)
+ {
+     HMODULE hkernel32 = GetModuleHandleA("kernel32.dll");
+@@ -2725,4 +2818,5 @@ START_TEST(file)
+     test_file_disposition_information();
+     test_query_volume_information_file();
+     test_query_attribute_information_file();
++    test_junction_points();
+ }
+diff --git a/include/ntifs.h b/include/ntifs.h
+new file mode 100644
+index 0000000..db07c28
+--- /dev/null
++++ b/include/ntifs.h
+@@ -0,0 +1,52 @@
++/*
++ * Win32 definitions for Windows NT
++ *
++ * Copyright 2012 Erich Hoover
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#ifndef __WINE_NTIFS_H
++#define __WINE_NTIFS_H
++
++typedef struct _REPARSE_DATA_BUFFER {
++    ULONG  ReparseTag;
++    USHORT ReparseDataLength;
++    USHORT Reserved;
++    union {
++        struct {
++            USHORT SubstituteNameOffset;
++            USHORT SubstituteNameLength;
++            USHORT PrintNameOffset;
++            USHORT PrintNameLength;
++            ULONG  Flags;
++            WCHAR  PathBuffer[1];
++        } SymbolicLinkReparseBuffer;
++        struct {
++            USHORT SubstituteNameOffset;
++            USHORT SubstituteNameLength;
++            USHORT PrintNameOffset;
++            USHORT PrintNameLength;
++            WCHAR  PathBuffer[1];
++        } MountPointReparseBuffer;
++        struct {
++            UCHAR DataBuffer[1];
++        } GenericReparseBuffer;
++    };
++} REPARSE_DATA_BUFFER, *PREPARSE_DATA_BUFFER;
++
++#define IO_REPARSE_TAG_MOUNT_POINT           0xa0000003
++
++#endif /* __WINE_NTIFS_H */
+-- 
+1.7.9.5
+

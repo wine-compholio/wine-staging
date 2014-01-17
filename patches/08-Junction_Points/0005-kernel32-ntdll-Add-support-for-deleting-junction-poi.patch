@@ -1,0 +1,103 @@
+From e6a876330230784a2b2be6588b94e5555de169da Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Thu, 16 Jan 2014 21:02:11 -0700
+Subject: kernel32,ntdll: Add support for deleting junction points with
+ RemoveDirectory.
+
+---
+ dlls/kernel32/path.c    |   12 ++++++++++--
+ dlls/ntdll/tests/file.c |   34 +++++++++++++++++++++++++++++++++-
+ 2 files changed, 43 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/kernel32/path.c b/dlls/kernel32/path.c
+index 09fb04b..c328cc0 100644
+--- a/dlls/kernel32/path.c
++++ b/dlls/kernel32/path.c
+@@ -1587,6 +1587,7 @@ BOOL WINAPI CreateDirectoryExW( LPCWSTR template, LPCWSTR path, LPSECURITY_ATTRI
+  */
+ BOOL WINAPI RemoveDirectoryW( LPCWSTR path )
+ {
++    FILE_BASIC_INFORMATION info;
+     OBJECT_ATTRIBUTES attr;
+     UNICODE_STRING nt_name;
+     ANSI_STRING unix_name;
+@@ -1614,15 +1615,22 @@ BOOL WINAPI RemoveDirectoryW( LPCWSTR path )
+                          FILE_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT );
+     if (status == STATUS_SUCCESS)
+         status = wine_nt_to_unix_file_name( &nt_name, &unix_name, FILE_OPEN, FALSE );
+-    RtlFreeUnicodeString( &nt_name );
+ 
+     if (status != STATUS_SUCCESS)
+     {
++        RtlFreeUnicodeString( &nt_name );
+         SetLastError( RtlNtStatusToDosError(status) );
+         return FALSE;
+     }
+ 
+-    if (!(ret = (rmdir( unix_name.Buffer ) != -1))) FILE_SetDosError();
++    status = NtQueryAttributesFile( &attr, &info );
++    RtlFreeUnicodeString( &nt_name );
++    if ((info.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) && (info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY))
++        ret = (unlink( unix_name.Buffer ) != -1);
++    else
++        ret = (rmdir( unix_name.Buffer ) != -1);
++    if (!ret) FILE_SetDosError();
++
+     RtlFreeAnsiString( &unix_name );
+     NtClose( handle );
+     return ret;
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index c75ba47..f94a61c 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -2703,7 +2703,7 @@ static void test_junction_points(void)
+     REPARSE_GUID_DATA_BUFFER guid_buffer;
+     static const WCHAR dotW[] = {'.',0};
+     REPARSE_DATA_BUFFER *buffer = NULL;
+-    DWORD dwret, dwLen, dwFlags;
++    DWORD dwret, dwLen, dwFlags, err;
+     INT buffer_len, string_len;
+     IO_STATUS_BLOCK iosb;
+     UNICODE_STRING nameW;
+@@ -2794,6 +2794,38 @@ static void test_junction_points(void)
+                  new_attrib.LastAccessTime.QuadPart, old_attrib.LastAccessTime.QuadPart);
+     CloseHandle(hJunction);
+ 
++    /* Check deleting a junction point as if it were a directory */
++    HeapFree(GetProcessHeap(), 0, buffer);
++    hJunction = CreateFileW(junction_path, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING,
++                            FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0);
++    buffer_len = build_reparse_buffer(nameW.Buffer, &buffer);
++    bret = DeviceIoControl(hJunction, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
++    ok(bret, "Failed to create junction point! (0x%x)\n", GetLastError());
++    CloseHandle(hJunction);
++    bret = RemoveDirectoryW(junction_path);
++    ok(bret, "Failed to delete junction point as directory!\n");
++    dwret = GetFileAttributesW(junction_path);
++    ok(dwret == (DWORD)~0, "Junction point still exists (attributes: 0x%x)!\n", dwret);
++
++    /* Check deleting a junction point as if it were a file */
++    HeapFree(GetProcessHeap(), 0, buffer);
++    bret = CreateDirectoryW(junction_path, NULL);
++    ok(bret, "Failed to create junction point target directory.\n");
++    hJunction = CreateFileW(junction_path, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING,
++                            FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0);
++    buffer_len = build_reparse_buffer(nameW.Buffer, &buffer);
++    bret = DeviceIoControl(hJunction, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
++    ok(bret, "Failed to create junction point! (0x%x)\n", GetLastError());
++    CloseHandle(hJunction);
++    bret = DeleteFileW(junction_path);
++    ok(!bret, "Succeeded in deleting junction point as file!\n");
++    err = GetLastError();
++    ok(err == ERROR_ACCESS_DENIED, "Expected last error 0x%x for DeleteFile on junction point (actually 0x%x)!\n",
++                                   ERROR_ACCESS_DENIED, err);
++    dwret = GetFileAttributesW(junction_path);
++    ok(dwret != (DWORD)~0, "Junction point doesn't exist (attributes: 0x%x)!\n", dwret);
++    ok(dwret & FILE_ATTRIBUTE_REPARSE_POINT, "File is not a junction point! (attributes: 0x%x)\n", dwret);
++
+ cleanup:
+     /* Cleanup */
+     pRtlFreeUnicodeString( &nameW );
+-- 
+1.7.9.5
+

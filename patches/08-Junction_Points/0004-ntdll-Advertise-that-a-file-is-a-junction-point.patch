@@ -1,0 +1,57 @@
+From f35e4dc0c96de3e9fbeb4ff1bdefc9db7c7d56d8 Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Thu, 16 Jan 2014 21:01:25 -0700
+Subject: ntdll: Advertise that a file is a junction point.
+
+---
+ dlls/ntdll/file.c       |    7 ++++++-
+ dlls/ntdll/tests/file.c |    5 +++++
+ 2 files changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index 396bdf9..b4e06d1 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -1988,10 +1988,11 @@ NTSTATUS fill_stat_info( const struct stat *st, void *ptr, FILE_INFORMATION_CLAS
+ 
+             get_file_times( st, &info->LastWriteTime, &info->ChangeTime,
+                             &info->LastAccessTime, &info->CreationTime );
+-            if (S_ISDIR(st->st_mode)) info->FileAttributes = FILE_ATTRIBUTE_DIRECTORY;
++            if (st->st_mode & S_IFDIR) info->FileAttributes = FILE_ATTRIBUTE_DIRECTORY;
+             else info->FileAttributes = FILE_ATTRIBUTE_ARCHIVE;
+             if (!(st->st_mode & (S_IWUSR | S_IWGRP | S_IWOTH)))
+                 info->FileAttributes |= FILE_ATTRIBUTE_READONLY;
++            if ((st->st_mode & S_IFLNK) == S_IFLNK) info->FileAttributes |= FILE_ATTRIBUTE_REPARSE_POINT;
+         }
+         break;
+     case FileStandardInformation:
+@@ -2657,6 +2658,10 @@ NTSTATUS WINAPI NtQueryAttributesFile( const OBJECT_ATTRIBUTES *attr, FILE_BASIC
+             status = STATUS_INVALID_INFO_CLASS;
+         else
+         {
++            struct stat lst;
++
++            if (lstat( unix_name.Buffer, &lst ) != -1)
++                st.st_mode |= (lst.st_mode & S_IFLNK);
+             status = fill_stat_info( &st, info, FileBasicInformation );
+             if (DIR_is_hidden_file( attr->ObjectName ))
+                 info->FileAttributes |= FILE_ATTRIBUTE_HIDDEN;
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index d3c6cf0..c75ba47 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -2759,6 +2759,11 @@ static void test_junction_points(void)
+     bret = DeviceIoControl(hJunction, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
+     ok(bret, "Failed to create junction point! (0x%x)\n", GetLastError());
+ 
++    /* Check the file attributes of the junction point */
++    dwret = GetFileAttributesW(junction_path);
++    ok(dwret != (DWORD)~0, "Junction point doesn't exist (attributes: 0x%x)!\n", dwret);
++    ok(dwret & FILE_ATTRIBUTE_REPARSE_POINT, "File is not a junction point! (attributes: %d)\n", dwret);
++
+     /* Read back the junction point */
+     HeapFree(GetProcessHeap(), 0, buffer);
+     buffer_len = sizeof(*buffer) + MAX_PATH*sizeof(WCHAR);
+-- 
+1.7.9.5
+

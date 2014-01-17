@@ -1,0 +1,128 @@
+From c191da3e2cf2136800fbf0658ced3a3534280806 Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Thu, 16 Jan 2014 20:57:57 -0700
+Subject: ntdll: Add support for reading junction points.
+
+---
+ dlls/ntdll/file.c       |   63 +++++++++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/tests/file.c |   14 ++++++++++-
+ 2 files changed, 76 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index 7164d1e..56e0ef6 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -1542,6 +1542,60 @@ cleanup:
+ }
+ 
+ 
++/*
++ * Retrieve the unix name corresponding to a file handle and use that to find the destination of the symlink
++ * corresponding to that file handle.
++ */
++NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
++{
++    ANSI_STRING unix_src, unix_dest;
++    BOOL dest_allocated = FALSE;
++    int dest_fd, needs_close;
++    UNICODE_STRING nt_dest;
++    NTSTATUS status;
++    VOID *dest_name;
++    ssize_t ret;
++
++    if ((status = server_get_unix_fd( handle, FILE_ANY_ACCESS, &dest_fd, &needs_close, NULL, NULL )))
++        return status;
++
++    if ((status = server_get_unix_name( handle, &unix_src )))
++        goto cleanup;
++
++    unix_dest.Buffer = RtlAllocateHeap( GetProcessHeap(), 0, PATH_MAX );
++    unix_dest.MaximumLength = PATH_MAX;
++    dest_allocated = TRUE;
++    ret = readlink( unix_src.Buffer, unix_dest.Buffer, unix_dest.MaximumLength );
++    if (ret < 0)
++    {
++        status = FILE_GetNtStatus();
++        goto cleanup;
++    }
++    unix_dest.Length = ret;
++
++    if ((status = wine_unix_to_nt_file_name( &unix_dest, &nt_dest )))
++        goto cleanup;
++
++    if (nt_dest.Length > buffer->MountPointReparseBuffer.SubstituteNameLength)
++    {
++        status = STATUS_BUFFER_TOO_SMALL;
++        goto cleanup;
++    }
++
++    buffer->ReparseTag = IO_REPARSE_TAG_MOUNT_POINT;
++    buffer->MountPointReparseBuffer.SubstituteNameLength = nt_dest.Length;
++    buffer->MountPointReparseBuffer.SubstituteNameOffset = 0;
++    dest_name = &buffer->MountPointReparseBuffer.PathBuffer[buffer->MountPointReparseBuffer.SubstituteNameOffset];
++    memcpy( dest_name, nt_dest.Buffer, nt_dest.Length );
++    status = STATUS_SUCCESS;
++
++cleanup:
++    if (dest_allocated) RtlFreeAnsiString( &unix_dest );
++    if (needs_close) close( dest_fd );
++    return status;
++}
++
++
+ /**************************************************************************
+  *              NtFsControlFile                 [NTDLL.@]
+  *              ZwFsControlFile                 [NTDLL.@]
+@@ -1690,6 +1744,15 @@ NTSTATUS WINAPI NtFsControlFile(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc
+         break;
+     }
+ 
++    case FSCTL_GET_REPARSE_POINT:
++    {
++        REPARSE_DATA_BUFFER *buffer = (REPARSE_DATA_BUFFER *)out_buffer;
++        DWORD max_length = out_size-FIELD_OFFSET(REPARSE_DATA_BUFFER, MountPointReparseBuffer.PathBuffer[1]);
++
++        buffer->MountPointReparseBuffer.SubstituteNameLength = max_length;
++        status = FILE_GetSymlink( handle, buffer );
++        break;
++    }
+     case FSCTL_SET_REPARSE_POINT:
+     {
+         REPARSE_DATA_BUFFER *buffer = (REPARSE_DATA_BUFFER *)in_buffer;
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index 127681a..595276a 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -2702,9 +2702,10 @@ static void test_junction_points(void)
+     static const WCHAR dotW[] = {'.',0};
+     REPARSE_DATA_BUFFER *buffer = NULL;
+     DWORD dwret, dwLen, dwFlags;
++    INT buffer_len, string_len;
+     UNICODE_STRING nameW;
+     HANDLE hJunction;
+-    INT buffer_len;
++    WCHAR *dest;
+     BOOL bret;
+ 
+     /* Create a temporary folder for the junction point tests */
+@@ -2752,6 +2753,17 @@ static void test_junction_points(void)
+     buffer_len = build_reparse_buffer(nameW.Buffer, &buffer);
+     bret = DeviceIoControl(hJunction, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
+     ok(bret, "Failed to create junction point! (0x%x)\n", GetLastError());
++
++    /* Read back the junction point */
++    HeapFree(GetProcessHeap(), 0, buffer);
++    buffer_len = sizeof(*buffer) + MAX_PATH*sizeof(WCHAR);
++    buffer = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, buffer_len);
++    bret = DeviceIoControl(hJunction, FSCTL_GET_REPARSE_POINT, NULL, 0, (LPVOID)buffer, buffer_len, &dwret, 0);
++    string_len = buffer->MountPointReparseBuffer.SubstituteNameLength;
++    dest = &buffer->MountPointReparseBuffer.PathBuffer[buffer->MountPointReparseBuffer.SubstituteNameOffset/sizeof(WCHAR)];
++    ok(bret, "Failed to read junction point!\n");
++    ok((memcmp(dest, nameW.Buffer, string_len) == 0), "Junction point destination does not match ('%s' != '%s')!\n",
++                                                      wine_dbgstr_w(dest), wine_dbgstr_w(nameW.Buffer));
+     CloseHandle(hJunction);
+ 
+ cleanup:
+-- 
+1.7.9.5
+

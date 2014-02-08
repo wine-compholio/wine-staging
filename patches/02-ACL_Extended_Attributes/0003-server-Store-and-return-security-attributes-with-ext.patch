@@ -1,20 +1,17 @@
-From acc6aac3356b0ec9024362488016945b76f67111 Mon Sep 17 00:00:00 2001
+From 9eeab4088f54ab8f00fa36e3d3046e756a732a1e Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Sat, 11 Jan 2014 09:18:16 -0700
+Date: Thu, 6 Feb 2014 23:13:11 -0700
 Subject: server: Store and return security attributes with extended file
  attributes.
 
 ---
- configure.ac                   |    6 ++
- dlls/advapi32/tests/security.c |   25 +++---
- server/change.c                |   11 ++-
- server/fd.c                    |   68 +++++++++++++++-
- server/file.c                  |  176 +++++++++++++++++++++++++++++++++++++++-
- server/file.h                  |    5 +-
- 6 files changed, 269 insertions(+), 22 deletions(-)
+ configure.ac                   |    6 +
+ dlls/advapi32/tests/security.c |   25 ++--
+ server/file.c                  |  245 +++++++++++++++++++++++++++++++++++++++-
+ 3 files changed, 260 insertions(+), 16 deletions(-)
 
 diff --git a/configure.ac b/configure.ac
-index dcabb55..fc8bd5c 100644
+index de807d2..ddf0000 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -73,6 +73,7 @@ AC_ARG_WITH(pthread,   AS_HELP_STRING([--without-pthread],[do not use the pthrea
@@ -25,7 +22,7 @@ index dcabb55..fc8bd5c 100644
  AC_ARG_WITH(xcomposite,AS_HELP_STRING([--without-xcomposite],[do not use the Xcomposite extension]),
              [if test "x$withval" = "xno"; then ac_cv_header_X11_extensions_Xcomposite_h=no; fi])
  AC_ARG_WITH(xcursor,   AS_HELP_STRING([--without-xcursor],[do not use the Xcursor extension]),
-@@ -665,6 +666,11 @@ AC_CHECK_HEADERS([libprocstat.h],,,
+@@ -660,6 +661,11 @@ AC_CHECK_HEADERS([libprocstat.h],,,
  #include <sys/socket.h>
  #endif])
  
@@ -38,7 +35,7 @@ index dcabb55..fc8bd5c 100644
  
  AC_SUBST(dlldir,"\${libdir}/wine")
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index 2efe80e..297cf96 100644
+index f3cc85d..ceea60e 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
 @@ -3105,10 +3105,10 @@ static void test_CreateDirectoryA(void)
@@ -108,49 +105,21 @@ index 2efe80e..297cf96 100644
          ok(((ACE_HEADER *)ace)->AceFlags == 0,
             "Administators Group ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
          ok(ace->Mask == 0x1f01ff, "Administators Group ACE has unexpected mask (0x%x != 0x1f01ff)\n",
-diff --git a/server/change.c b/server/change.c
-index f6d56b0..022c780 100644
---- a/server/change.c
-+++ b/server/change.c
-@@ -286,6 +286,7 @@ static int get_dir_unix_fd( struct dir *dir )
- static struct security_descriptor *dir_get_sd( struct object *obj )
- {
-     struct dir *dir = (struct dir *)obj;
-+    const SID *user, *group;
-     int unix_fd;
-     struct stat st;
-     struct security_descriptor *sd;
-@@ -302,9 +303,11 @@ static struct security_descriptor *dir_get_sd( struct object *obj )
-         (st.st_uid == dir->uid))
-         return obj->sd;
- 
--    sd = mode_to_sd( st.st_mode,
--                     security_unix_uid_to_sid( st.st_uid ),
--                     token_get_primary_group( current->process->token ));
-+    user = security_unix_uid_to_sid( st.st_uid );
-+    group = token_get_primary_group( current->process->token );
-+    sd = get_file_acls( unix_fd, user, group );
-+    if (!sd)
-+        sd = mode_to_sd( st.st_mode, user, group );
-     if (!sd) return obj->sd;
- 
-     dir->mode = st.st_mode;
-@@ -353,6 +356,8 @@ static int dir_set_sd( struct object *obj, const struct security_descriptor *sd,
-         mode = st.st_mode & (S_ISUID|S_ISGID|S_ISVTX);
-         mode |= sd_to_mode( sd, owner );
- 
-+        set_file_acls( unix_fd, sd );
-+
-         if (((st.st_mode ^ mode) & (S_IRWXU|S_IRWXG|S_IRWXO)) && fchmod( unix_fd, mode ) == -1)
-         {
-             file_set_error();
-diff --git a/server/fd.c b/server/fd.c
-index fa8874c..98e3eca 100644
---- a/server/fd.c
-+++ b/server/fd.c
-@@ -91,6 +91,9 @@
- #ifdef HAVE_SYS_SYSCALL_H
- #include <sys/syscall.h>
+diff --git a/server/file.c b/server/file.c
+index 8baa712..0df2245 100644
+--- a/server/file.c
++++ b/server/file.c
+@@ -32,6 +32,7 @@
+ #include <sys/time.h>
+ #include <sys/types.h>
+ #include <time.h>
++#include <limits.h>
+ #include <unistd.h>
+ #ifdef HAVE_UTIME_H
+ #include <utime.h>
+@@ -39,6 +40,9 @@
+ #ifdef HAVE_POLL_H
+ #include <poll.h>
  #endif
 +#ifdef HAVE_ATTR_XATTR_H
 +#include <attr/xattr.h>
@@ -158,19 +127,11 @@ index fa8874c..98e3eca 100644
  
  #include "ntstatus.h"
  #define WIN32_NO_STATUS
-@@ -99,6 +102,7 @@
- #include "handle.h"
- #include "process.h"
- #include "request.h"
-+#include "security.h"
- 
- #include "winternl.h"
- #include "winioctl.h"
-@@ -1726,9 +1730,69 @@ static char *dup_fd_name( struct fd *root, const char *name )
-     return ret;
+@@ -178,6 +182,66 @@ static struct object *create_file_obj( struct fd *fd, unsigned int access, mode_
+     return &file->obj;
  }
  
-+void set_file_acls( int fd, const struct security_descriptor *sd )
++void set_xattr_acls( int fd, const struct security_descriptor *sd )
 +{
 +#ifdef HAVE_ATTR_XATTR_H
 +    char buffer[XATTR_SIZE_MAX], *p = buffer;
@@ -230,58 +191,22 @@ index fa8874c..98e3eca 100644
 +#endif
 +}
 +
- /* open() wrapper that returns a struct fd with no fd user set */
- struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode, unsigned int access,
--                    unsigned int sharing, unsigned int options )
-+                    unsigned int sharing, unsigned int options, const struct security_descriptor *sd )
- {
-     struct stat st;
-     struct closed_fd *closed_fd;
-@@ -1804,6 +1868,8 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
-         }
-     }
- 
-+    set_file_acls( fd->unix_fd, sd );
-+
-     closed_fd->unix_fd = fd->unix_fd;
-     closed_fd->unlink[0] = 0;
-     fstat( fd->unix_fd, &st );
-diff --git a/server/file.c b/server/file.c
-index cceb8ad..9ac9188 100644
---- a/server/file.c
-+++ b/server/file.c
-@@ -32,6 +32,7 @@
- #include <sys/time.h>
- #include <sys/types.h>
- #include <time.h>
-+#include <limits.h>
- #include <unistd.h>
- #ifdef HAVE_UTIME_H
- #include <utime.h>
-@@ -39,6 +40,9 @@
- #ifdef HAVE_POLL_H
- #include <poll.h>
- #endif
-+#ifdef HAVE_ATTR_XATTR_H
-+#include <attr/xattr.h>
-+#endif
- 
- #include "ntstatus.h"
- #define WIN32_NO_STATUS
-@@ -237,7 +241,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
-     access = generic_file_map_access( access );
- 
+ static struct object *create_file( struct fd *root, const char *nameptr, data_size_t len,
+                                    unsigned int access, unsigned int sharing, int create,
+                                    unsigned int options, unsigned int attrs,
+@@ -239,6 +303,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
      /* FIXME: should set error to STATUS_OBJECT_NAME_COLLISION if file existed before */
--    fd = open_fd( root, name, flags | O_NONBLOCK | O_LARGEFILE, &mode, access, sharing, options );
-+    fd = open_fd( root, name, flags | O_NONBLOCK | O_LARGEFILE, &mode, access, sharing, options, sd );
+     fd = open_fd( root, name, flags | O_NONBLOCK | O_LARGEFILE, &mode, access, sharing, options );
      if (!fd) goto done;
++    set_xattr_acls( get_unix_fd( fd ), sd );
  
      if (S_ISDIR(mode))
-@@ -424,9 +428,169 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID
+         obj = create_dir_obj( fd, access, mode );
+@@ -424,11 +489,181 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID
      return sd;
  }
  
-+struct security_descriptor *get_file_acls( int fd, const SID *user, const SID *group )
++struct security_descriptor *get_xattr_acls( int fd, const SID *user, const SID *group )
 +{
 +#ifdef HAVE_ATTR_XATTR_H
 +    int ace_count = 0, dacl_size = sizeof(ACL), i, n;
@@ -397,17 +322,6 @@ index cceb8ad..9ac9188 100644
 +        while(p);
 +        sid->SubAuthorityCount = sub_authority_count;
 +
-+        /* Convert generic rights into standard access rights */
-+        if (mask & GENERIC_ALL)
-+            mask |= WRITE_DAC | WRITE_OWNER | DELETE | FILE_DELETE_CHILD;
-+        if (mask & (GENERIC_ALL|GENERIC_READ))
-+            mask |= FILE_GENERIC_READ;
-+        if (mask & (GENERIC_ALL|GENERIC_WRITE))
-+            mask |= FILE_GENERIC_WRITE;
-+        if (mask & (GENERIC_ALL|GENERIC_EXECUTE))
-+            mask |= FILE_GENERIC_EXECUTE;
-+        mask &= 0x0FFFFFFF;
-+
 +        /* Handle the specific ACE */
 +        switch (type)
 +        {
@@ -440,15 +354,38 @@ index cceb8ad..9ac9188 100644
 +#endif
 +}
 +
- static struct security_descriptor *file_get_sd( struct object *obj )
++/* Convert generic rights into standard access rights */
++void convert_generic_sd( struct security_descriptor *sd )
++{
++    const ACL *dacl;
++    int present;
++
++    dacl = sd_get_dacl( sd, &present );
++    if (present && dacl)
++    {
++        const ACE_HEADER *ace = (const ACE_HEADER *)(dacl + 1);
++        ULONG i;
++
++        for (i = 0; i < dacl->AceCount; i++, ace = ace_next( ace ))
++        {
++            DWORD *mask = (DWORD *)(ace + 1);
++
++            *mask = generic_file_map_access( *mask );
++        }
++    }
++}
++
+ struct security_descriptor *file_get_acls( struct object *obj, struct fd *fd, mode_t *mode,
+                                            uid_t *uid )
  {
-     struct file *file = (struct file *)obj;
+     int unix_fd = get_unix_fd( fd );
+     struct security_descriptor *sd;
 +    const SID *user, *group;
      struct stat st;
-     int unix_fd;
-     struct security_descriptor *sd;
-@@ -443,9 +607,11 @@ static struct security_descriptor *file_get_sd( struct object *obj )
-         (st.st_uid == file->uid))
+ 
+     if (unix_fd == -1 || fstat( unix_fd, &st ) == -1)
+@@ -439,9 +674,11 @@ struct security_descriptor *file_get_acls( struct object *obj, struct fd *fd, mo
+         (st.st_uid == *uid))
          return obj->sd;
  
 -    sd = mode_to_sd( st.st_mode,
@@ -456,44 +393,21 @@ index cceb8ad..9ac9188 100644
 -                     token_get_primary_group( current->process->token ));
 +    user = security_unix_uid_to_sid( st.st_uid );
 +    group = token_get_primary_group( current->process->token );
-+    sd = get_file_acls( unix_fd, user, group );
-+    if (!sd)
-+        sd = mode_to_sd( st.st_mode, user, group);
++    sd = get_xattr_acls( unix_fd, user, group );
++    if (sd) convert_generic_sd( sd );
++    if (!sd) sd = mode_to_sd( st.st_mode, user, group);
      if (!sd) return obj->sd;
  
-     file->mode = st.st_mode;
-@@ -575,6 +741,8 @@ static int file_set_sd( struct object *obj, const struct security_descriptor *sd
+     *mode = st.st_mode;
+@@ -580,6 +817,8 @@ int file_set_acls( struct object *obj, struct fd *fd, const struct security_desc
          mode = st.st_mode & (S_ISUID|S_ISGID|S_ISVTX);
          mode |= sd_to_mode( sd, owner );
  
-+        set_file_acls( unix_fd, sd );
++        set_xattr_acls( unix_fd, sd );
 +
          if (((st.st_mode ^ mode) & (S_IRWXU|S_IRWXG|S_IRWXO)) && fchmod( unix_fd, mode ) == -1)
          {
              file_set_error();
-diff --git a/server/file.h b/server/file.h
-index 493d30b..721c087 100644
---- a/server/file.h
-+++ b/server/file.h
-@@ -56,7 +56,8 @@ extern struct fd *alloc_pseudo_fd( const struct fd_ops *fd_user_ops, struct obje
-                                    unsigned int options );
- extern void set_no_fd_status( struct fd *fd, unsigned int status );
- extern struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
--                           unsigned int access, unsigned int sharing, unsigned int options );
-+                           unsigned int access, unsigned int sharing, unsigned int options,
-+                           const struct security_descriptor *sd );
- extern struct fd *create_anonymous_fd( const struct fd_ops *fd_user_ops,
-                                        int unix_fd, struct object *user, unsigned int options );
- extern struct fd *dup_fd_object( struct fd *orig, unsigned int access, unsigned int sharing,
-@@ -122,6 +123,8 @@ extern struct file *create_file_for_fd_obj( struct fd *fd, unsigned int access,
- extern void file_set_error(void);
- extern struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID *group );
- extern mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner );
-+extern void set_file_acls( int fd, const struct security_descriptor *sd );
-+extern struct security_descriptor *get_file_acls( int fd, const SID *user, const SID *group );
- 
- /* file mapping functions */
- 
 -- 
 1.7.9.5
 

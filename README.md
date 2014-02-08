@@ -6,6 +6,7 @@ Daily updates for the Wine "Compholio" Edition.
 Current patches include:
 * Support for interface change notifications (http://bugs.winehq.org/show_bug.cgi?id=32328)
 * Support for stored file ACLs (http://bugs.winehq.org/show_bug.cgi?id=31858)
+* Support for inherited file ACLs (http://bugs.winehq.org/show_bug.cgi?id=34406)
 * Support for Junction Points (http://bugs.winehq.org/show_bug.cgi?id=12401)
 * Support for TransmitFile (http://bugs.winehq.org/show_bug.cgi?id=5048)
 * Support for access security with named pipes (http://bugs.winehq.org/show_bug.cgi?id=34098)

@@ -1,17 +1,17 @@
-From 362ec39591ce54bcb5ce825c1baab8f5d0885193 Mon Sep 17 00:00:00 2001
+From a1ad64b059de5325b15ed09a39083f5eb973a2f6 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Thu, 5 Dec 2013 13:32:34 -0700
+Date: Wed, 12 Feb 2014 13:46:28 -0700
 Subject: ws2_32: Ask the server to process unsupported WSAIoctl operations.
 
 ---
- dlls/ws2_32/socket.c |   56 +++++++++++++++++++++++++++++++++++++++++++-------
- 1 file changed, 49 insertions(+), 7 deletions(-)
+ dlls/ws2_32/socket.c |   60 ++++++++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 53 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index 304b0eb..170dde7 100644
+index 1c558bf..fe5577c 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
-@@ -3608,6 +3608,36 @@ static const char *debugstr_wsaioctl(DWORD ioctl)
+@@ -3668,6 +3668,40 @@ static const char *debugstr_wsaioctl(DWORD ioctl)
                              (USHORT)(ioctl & 0xffff));
  }
  
@@ -37,8 +37,12 @@ index 304b0eb..170dde7 100644
 +    status = NtDeviceIoControlFile( handle, event, (PIO_APC_ROUTINE)ws2_async_apc, wsa, io, code,
 +                                    in_buff, in_size, out_buff, out_size );
 +    if (status == STATUS_NOT_SUPPORTED)
++    {
 +        FIXME("Unsupported ioctl %x (device=%x access=%x func=%x method=%x)\n",
 +              code, code >> 16, (code >> 14) & 3, (code >> 2) & 0xfff, code & 3);
++    }
++    else if (status == STATUS_SUCCESS)
++        *ret_size = io->Information; /* "Information" is the size written to the output buffer */
 +
 +    if (status != STATUS_PENDING) RtlFreeHeap( GetProcessHeap(), 0, wsa );
 +
@@ -48,7 +52,7 @@ index 304b0eb..170dde7 100644
  /**********************************************************************
   *              WSAIoctl                (WS2_32.50)
   *
-@@ -3799,12 +3829,6 @@ INT WINAPI WSAIoctl(SOCKET s, DWORD code, LPVOID in_buff, DWORD in_size, LPVOID
+@@ -3859,12 +3893,6 @@ INT WINAPI WSAIoctl(SOCKET s, DWORD code, LPVOID in_buff, DWORD in_size, LPVOID
             break;
         }
  
@@ -61,7 +65,7 @@ index 304b0eb..170dde7 100644
     case WS_SIO_ADDRESS_LIST_QUERY:
     {
          DWORD size;
-@@ -4040,11 +4064,29 @@ INT WINAPI WSAIoctl(SOCKET s, DWORD code, LPVOID in_buff, DWORD in_size, LPVOID
+@@ -4100,11 +4128,29 @@ INT WINAPI WSAIoctl(SOCKET s, DWORD code, LPVOID in_buff, DWORD in_size, LPVOID
          WSASetLastError(WSAEOPNOTSUPP);
          return SOCKET_ERROR;
      default:
@@ -72,7 +76,7 @@ index 304b0eb..170dde7 100644
  
 +    if (status == WSAEOPNOTSUPP)
 +    {
-+        status = server_ioctl_sock(s, code, in_buff, in_size, out_buff, out_size, ret_size,
++        status = server_ioctl_sock(s, code, in_buff, in_size, out_buff, out_size, &total,
 +                                   overlapped, completion);
 +        if (status != WSAEOPNOTSUPP)
 +        {

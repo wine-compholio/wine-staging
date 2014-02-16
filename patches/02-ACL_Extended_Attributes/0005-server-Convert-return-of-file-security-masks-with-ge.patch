@@ -1,0 +1,124 @@
+From e1b3d93adab31966d145ea41a9246d8f498c09d6 Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Thu, 13 Feb 2014 16:06:54 -0700
+Subject: server: Convert return of file security masks with generic access
+ mappings.
+
+---
+ dlls/advapi32/tests/security.c |   24 ++++++++++++------------
+ server/file.c                  |   22 ++++++++++++++++++++++
+ 2 files changed, 34 insertions(+), 12 deletions(-)
+
+diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
+index f107abc..b71bad3 100644
+--- a/dlls/advapi32/tests/security.c
++++ b/dlls/advapi32/tests/security.c
+@@ -3109,8 +3109,8 @@ static void test_CreateDirectoryA(void)
+         ok(((ACE_HEADER *)ace)->AceFlags == (OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE),
+            "Current User ACE has unexpected flags (0x%x != 0x03)\n",
+            ((ACE_HEADER *)ace)->AceFlags);
+-        todo_wine ok(ace->Mask == 0x1f01ff,
+-                     "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n", ace->Mask);
++        ok(ace->Mask == 0x1f01ff, "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n",
++                                  ace->Mask);
+     }
+     if (acl_size.AceCount > 1)
+     {
+@@ -3121,8 +3121,8 @@ static void test_CreateDirectoryA(void)
+         ok(((ACE_HEADER *)ace)->AceFlags == (OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE),
+            "Administators Group ACE has unexpected flags (0x%x != 0x03)\n",
+            ((ACE_HEADER *)ace)->AceFlags);
+-        todo_wine ok(ace->Mask == 0x1f01ff,
+-                     "Administators Group ACE has unexpected mask (0x%x != 0x1f01ff)\n", ace->Mask);
++        ok(ace->Mask == 0x1f01ff, "Administators Group ACE has unexpected mask (0x%x != 0x1f01ff)\n",
++                                  ace->Mask);
+     }
+ 
+ done:
+@@ -3297,8 +3297,8 @@ static void test_GetNamedSecurityInfoA(void)
+         ok(bret, "Current User ACE != Current User SID.\n");
+         ok(((ACE_HEADER *)ace)->AceFlags == 0,
+            "Current User ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
+-        todo_wine ok(ace->Mask == 0x1f01ff,
+-                     "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n", ace->Mask);
++        ok(ace->Mask == 0x1f01ff, "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n",
++                                  ace->Mask);
+     }
+     if (acl_size.AceCount > 1)
+     {
+@@ -3308,8 +3308,8 @@ static void test_GetNamedSecurityInfoA(void)
+         ok(bret || broken(!bret) /* win2k */, "Administators Group ACE != Administators Group SID.\n");
+         ok(((ACE_HEADER *)ace)->AceFlags == 0,
+            "Administators Group ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
+-        todo_wine ok(ace->Mask == 0x1f01ff || broken(ace->Mask == GENERIC_ALL) /* win2k */,
+-                     "Administators Group ACE has unexpected mask (0x%x != 0x1f01ff)\n", ace->Mask);
++        ok(ace->Mask == 0x1f01ff || broken(ace->Mask == GENERIC_ALL) /* win2k */,
++           "Administators Group ACE has unexpected mask (0x%x != 0x1f01ff)\n", ace->Mask);
+     }
+     LocalFree(pSD);
+     HeapFree(GetProcessHeap(), 0, user);
+@@ -3962,8 +3962,8 @@ static void test_GetSecurityInfo(void)
+         ok(bret, "Current User ACE != Current User SID.\n");
+         ok(((ACE_HEADER *)ace)->AceFlags == 0,
+            "Current User ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
+-        todo_wine ok(ace->Mask == 0x1f01ff,
+-                     "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n", ace->Mask);
++        ok(ace->Mask == 0x1f01ff, "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n",
++                                    ace->Mask);
+     }
+     if (acl_size.AceCount > 1)
+     {
+@@ -3973,8 +3973,8 @@ static void test_GetSecurityInfo(void)
+         ok(bret, "Administators Group ACE != Administators Group SID.\n");
+         ok(((ACE_HEADER *)ace)->AceFlags == 0,
+            "Administators Group ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
+-        todo_wine ok(ace->Mask == 0x1f01ff,
+-                     "Administators Group ACE has unexpected mask (0x%x != 0x1f01ff)\n", ace->Mask);
++        ok(ace->Mask == 0x1f01ff, "Administators Group ACE has unexpected mask (0x%x != 0x1f01ff)\n",
++                                  ace->Mask);
+     }
+     CloseHandle(obj);
+ }
+diff --git a/server/file.c b/server/file.c
+index b9135b9..0df2245 100644
+--- a/server/file.c
++++ b/server/file.c
+@@ -637,6 +637,27 @@ struct security_descriptor *get_xattr_acls( int fd, const SID *user, const SID *
+ #endif
+ }
+ 
++/* Convert generic rights into standard access rights */
++void convert_generic_sd( struct security_descriptor *sd )
++{
++    const ACL *dacl;
++    int present;
++
++    dacl = sd_get_dacl( sd, &present );
++    if (present && dacl)
++    {
++        const ACE_HEADER *ace = (const ACE_HEADER *)(dacl + 1);
++        ULONG i;
++
++        for (i = 0; i < dacl->AceCount; i++, ace = ace_next( ace ))
++        {
++            DWORD *mask = (DWORD *)(ace + 1);
++
++            *mask = generic_file_map_access( *mask );
++        }
++    }
++}
++
+ struct security_descriptor *file_get_acls( struct object *obj, struct fd *fd, mode_t *mode,
+                                            uid_t *uid )
+ {
+@@ -656,6 +677,7 @@ struct security_descriptor *file_get_acls( struct object *obj, struct fd *fd, mo
+     user = security_unix_uid_to_sid( st.st_uid );
+     group = token_get_primary_group( current->process->token );
+     sd = get_xattr_acls( unix_fd, user, group );
++    if (sd) convert_generic_sd( sd );
+     if (!sd) sd = mode_to_sd( st.st_mode, user, group);
+     if (!sd) return obj->sd;
+ 
+-- 
+1.7.9.5
+

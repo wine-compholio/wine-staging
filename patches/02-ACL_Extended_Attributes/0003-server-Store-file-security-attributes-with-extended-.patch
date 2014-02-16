@@ -1,0 +1,144 @@
+From 3e44f846dd1ff9487ba6085e11f74f10027a6f2c Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Thu, 13 Feb 2014 15:54:02 -0700
+Subject: server: Store file security attributes with extended file
+ attributes.
+
+---
+ configure.ac  |    6 ++++++
+ server/file.c |   67 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 73 insertions(+)
+
+diff --git a/configure.ac b/configure.ac
+index 32730f3..bdcc5f8 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -73,6 +73,7 @@ AC_ARG_WITH(pthread,   AS_HELP_STRING([--without-pthread],[do not use the pthrea
+ AC_ARG_WITH(sane,      AS_HELP_STRING([--without-sane],[do not use SANE (scanner support)]))
+ AC_ARG_WITH(tiff,      AS_HELP_STRING([--without-tiff],[do not use TIFF]))
+ AC_ARG_WITH(v4l,       AS_HELP_STRING([--without-v4l],[do not use v4l1 (v4l support)]))
++AC_ARG_WITH(xattr,     AS_HELP_STRING([--without-xattr],[do not use xattr (security attributes support)]))
+ AC_ARG_WITH(xcomposite,AS_HELP_STRING([--without-xcomposite],[do not use the Xcomposite extension]),
+             [if test "x$withval" = "xno"; then ac_cv_header_X11_extensions_Xcomposite_h=no; fi])
+ AC_ARG_WITH(xcursor,   AS_HELP_STRING([--without-xcursor],[do not use the Xcursor extension]),
+@@ -661,6 +662,11 @@ AC_CHECK_HEADERS([libprocstat.h],,,
+ #include <sys/socket.h>
+ #endif])
+ 
++if test "x$with_xattr" != "xno"
++then
++  AC_CHECK_HEADERS(attr/xattr.h)
++fi
++
+ dnl **** Check for working dll ****
+ 
+ AC_SUBST(dlldir,"\${libdir}/wine")
+diff --git a/server/file.c b/server/file.c
+index 8baa712..c375c72 100644
+--- a/server/file.c
++++ b/server/file.c
+@@ -32,6 +32,7 @@
+ #include <sys/time.h>
+ #include <sys/types.h>
+ #include <time.h>
++#include <limits.h>
+ #include <unistd.h>
+ #ifdef HAVE_UTIME_H
+ #include <utime.h>
+@@ -39,6 +40,9 @@
+ #ifdef HAVE_POLL_H
+ #include <poll.h>
+ #endif
++#ifdef HAVE_ATTR_XATTR_H
++#include <attr/xattr.h>
++#endif
+ 
+ #include "ntstatus.h"
+ #define WIN32_NO_STATUS
+@@ -178,6 +182,66 @@ static struct object *create_file_obj( struct fd *fd, unsigned int access, mode_
+     return &file->obj;
+ }
+ 
++void set_xattr_acls( int fd, const struct security_descriptor *sd )
++{
++#ifdef HAVE_ATTR_XATTR_H
++    char buffer[XATTR_SIZE_MAX], *p = buffer;
++    const ACE_HEADER *ace;
++    int present, i, j, n;
++    const ACL *dacl;
++
++    if (!sd) return;
++    dacl = sd_get_dacl( sd, &present );
++    if (!present || !dacl) return;
++    ace = (const ACE_HEADER *)(dacl + 1);
++
++    for (i = 0; i < dacl->AceCount; i++, ace = ace_next( ace ))
++    {
++        BYTE type = ace->AceType, flags;
++        const ACCESS_ALLOWED_ACE *aaa;
++        const ACCESS_DENIED_ACE *ada;
++        char sidtxt[100], *s;
++        const SID *sid;
++        DWORD mask;
++
++        if (type & INHERIT_ONLY_ACE) continue;
++
++        switch (type)
++        {
++            case ACCESS_DENIED_ACE_TYPE:
++                ada   = (const ACCESS_DENIED_ACE *)ace;
++                flags = ada->Header.AceFlags;
++                mask  = ada->Mask;
++                sid   = (const SID *)&ada->SidStart;
++                break;
++            case ACCESS_ALLOWED_ACE_TYPE:
++                aaa   = (const ACCESS_ALLOWED_ACE *)ace;
++                flags = aaa->Header.AceFlags;
++                mask  = aaa->Mask;
++                sid   = (const SID *)&aaa->SidStart;
++                break;
++            default:
++                continue;
++        }
++        n = sprintf( sidtxt,  "S-%u-%d", sid->Revision,
++            MAKELONG(
++                MAKEWORD( sid->IdentifierAuthority.Value[5],
++                          sid->IdentifierAuthority.Value[4] ),
++                MAKEWORD( sid->IdentifierAuthority.Value[3],
++                          sid->IdentifierAuthority.Value[2] )
++            ) );
++        s = sidtxt + n;
++        for( j=0; j<sid->SubAuthorityCount; j++ )
++            s += sprintf( s, "-%u", sid->SubAuthority[j] );
++
++        p += snprintf( p, XATTR_SIZE_MAX-(p-buffer), "%s%x,%x,%x,%s",
++                      (p != buffer ? ";" : ""), type, flags, mask, sidtxt );
++    }
++
++    fsetxattr( fd, "user.wine.acl", buffer, p-buffer, 0 );
++#endif
++}
++
+ static struct object *create_file( struct fd *root, const char *nameptr, data_size_t len,
+                                    unsigned int access, unsigned int sharing, int create,
+                                    unsigned int options, unsigned int attrs,
+@@ -239,6 +303,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+     /* FIXME: should set error to STATUS_OBJECT_NAME_COLLISION if file existed before */
+     fd = open_fd( root, name, flags | O_NONBLOCK | O_LARGEFILE, &mode, access, sharing, options );
+     if (!fd) goto done;
++    set_xattr_acls( get_unix_fd( fd ), sd );
+ 
+     if (S_ISDIR(mode))
+         obj = create_dir_obj( fd, access, mode );
+@@ -580,6 +645,8 @@ int file_set_acls( struct object *obj, struct fd *fd, const struct security_desc
+         mode = st.st_mode & (S_ISUID|S_ISGID|S_ISVTX);
+         mode |= sd_to_mode( sd, owner );
+ 
++        set_xattr_acls( unix_fd, sd );
++
+         if (((st.st_mode ^ mode) & (S_IRWXU|S_IRWXG|S_IRWXO)) && fchmod( unix_fd, mode ) == -1)
+         {
+             file_set_error();
+-- 
+1.7.9.5
+

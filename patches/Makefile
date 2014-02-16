@@ -1,6 +1,9 @@
 PATCH:=patch -N -p0 --strip=1
 
 install:
+	# Update the list of patches
+	cd $(CURDIR)/..; ./generate-patchlist.sh > $(CURDIR)/patch-list.patch;
+
 	# Apply our patches to Wine
 	for DIR in $$(find $(CURDIR) -type d | sort); do \
 		for FILE in $$(ls $$DIR | sort | grep '\.patch$$'); do \

@@ -5,11 +5,12 @@ install:
 	cd $(CURDIR)/..; ./generate-patchlist.sh > $(CURDIR)/patch-list.patch;
 
 	# Apply our patches to Wine
+	cd $(DESTDIR); \
 	for DIR in $$(find $(CURDIR) -type d | sort); do \
 		for FILE in $$(ls $$DIR | sort | grep '\.patch$$'); do \
 			SHORTNAME=$$(echo "$$DIR/$$FILE" | sed 's|$(CURDIR)|\.|g' ); \
 			printf "Applying patch '$$SHORTNAME'...\n"; \
-			cd $(DESTDIR); $(PATCH) < $$DIR/$$FILE || cat || exit 1; \
+			$(PATCH) < $$DIR/$$FILE || cat || exit 1; \
 		done \
 	done
 

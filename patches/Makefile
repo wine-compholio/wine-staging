@@ -10,7 +10,7 @@ install:
 		for FILE in $$(ls $$DIR | sort | grep '\.patch$$'); do \
 			SHORTNAME=$$(echo "$$DIR/$$FILE" | sed 's|$(CURDIR)|\.|g' ); \
 			printf "Applying patch '$$SHORTNAME'...\n"; \
-			$(PATCH) < $$DIR/$$FILE || cat || exit 1; \
+			$(PATCH) < $$DIR/$$FILE || exit 1; \
 		done \
 	done
 

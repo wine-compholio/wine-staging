@@ -1,19 +1,19 @@
-From 66f9f86efeef5c9113d724da5addeed8ae308a05 Mon Sep 17 00:00:00 2001
+From c361e711537ebbe23ef30dafe3eaa00923be804c Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Thu, 13 Feb 2014 16:07:20 -0700
+Date: Tue, 25 Feb 2014 10:40:03 -0700
 Subject: server: Inherit security attributes from parent directories on
  SetSecurityInfo.
 
 ---
- dlls/advapi32/tests/security.c |   68 +++++++++++++++++++++++
+ dlls/advapi32/tests/security.c |   68 ++++++++++++++++++++++
  include/winnt.h                |    7 ++-
  server/fd.c                    |   13 ++++-
- server/file.c                  |  120 +++++++++++++++++++++++++++++++++++++++-
+ server/file.c                  |  124 +++++++++++++++++++++++++++++++++++++++-
  server/file.h                  |    1 +
- 5 files changed, 203 insertions(+), 6 deletions(-)
+ 5 files changed, 205 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index cad8ca9..b795234 100644
+index fb3e17e..d5969c1 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
 @@ -3350,6 +3350,74 @@ static void test_GetNamedSecurityInfoA(void)
@@ -146,7 +146,7 @@ index fa8874c..9e6b9a8 100644
  
      if (orig->inode)
 diff --git a/server/file.c b/server/file.c
-index c115ff7..f6abc8c 100644
+index c115ff7..c57783b 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -324,6 +324,105 @@ struct security_descriptor *inherit_sd( const struct security_descriptor *parent
@@ -255,7 +255,7 @@ index c115ff7..f6abc8c 100644
  static struct security_descriptor *file_get_parent_sd( struct fd *root, char *parent_name,
                                                         int is_dir )
  {
-@@ -921,16 +1020,35 @@ mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner )
+@@ -921,16 +1020,31 @@ mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner )
      return new_mode & ~denied_mode;
  }
  
@@ -263,35 +263,48 @@ index c115ff7..f6abc8c 100644
 +int file_set_acls( struct object *obj, struct fd *fd, const struct security_descriptor *new_sd,
                     unsigned int set_info )
  {
-+    const struct security_descriptor *sd = new_sd;
++    const struct security_descriptor *sd = new_sd, *parent_sd = NULL;
      int unix_fd = get_unix_fd( fd );
-+    char *child_name = NULL;
      const SID *owner;
      struct stat st;
      mode_t mode;
++    int ret = 1;
  
      if (unix_fd == -1 || fstat( unix_fd, &st ) == -1) return 1;
  
 +    if (!(set_info & PROTECTED_DACL_SECURITY_INFORMATION))
 +    {
-+        child_name = fd_get_unix_name( fd );
++        char *child_name = fd_get_unix_name( fd );
++
 +        if (child_name)
 +        {
-+            struct security_descriptor *parent_sd;
-+
 +            parent_sd = file_get_parent_sd( NULL, child_name, S_ISDIR(st.st_mode) );
 +            free( child_name );
 +            if (parent_sd)
-+            {
 +                sd = file_combine_sds( parent_sd, new_sd );
-+                free( parent_sd );
-+            }
 +        }
 +    }
 +
      if (set_info & OWNER_SECURITY_INFORMATION)
      {
          owner = sd_get_owner( sd );
+@@ -962,10 +1076,14 @@ int file_set_acls( struct object *obj, struct fd *fd, const struct security_desc
+         if (((st.st_mode ^ mode) & (S_IRWXU|S_IRWXG|S_IRWXO)) && fchmod( unix_fd, mode ) == -1)
+         {
+             file_set_error();
+-            return 0;
++            ret = 0;
+         }
+     }
+-    return 1;
++
++    if (parent_sd)
++        free( parent_sd );
++
++    return ret;
+ }
+ 
+ static int file_set_sd( struct object *obj, const struct security_descriptor *sd,
 diff --git a/server/file.h b/server/file.h
 index 0905fbb..8cbc4cb 100644
 --- a/server/file.h

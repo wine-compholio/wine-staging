@@ -1,17 +1,17 @@
-From 938e979d889737ed2dcd4197aff9734891f06449 Mon Sep 17 00:00:00 2001
+From a71389d7b9a53ea66a8cafc19c89a2287ee9cda0 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Thu, 13 Feb 2014 16:07:26 -0700
+Date: Tue, 25 Feb 2014 10:44:36 -0700
 Subject: shell32: Set the default security attributes for user shell folders.
 
 ---
- dlls/shell32/shellpath.c |   94 +++++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 93 insertions(+), 1 deletion(-)
+ dlls/shell32/shellpath.c |   87 +++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 86 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/shell32/shellpath.c b/dlls/shell32/shellpath.c
-index 875be38..3476a88 100644
+index 875be38..947ef29 100644
 --- a/dlls/shell32/shellpath.c
 +++ b/dlls/shell32/shellpath.c
-@@ -2169,6 +2169,70 @@ cleanup:
+@@ -2169,6 +2169,63 @@ cleanup:
      return hr;
  }
  
@@ -28,44 +28,37 @@ index 875be38..3476a88 100644
 +    if(!sd || !dacl) goto cleanup;
 +
 +    /* find the user SID */
-+    ret = TRUE;
 +    if (!OpenThreadToken(GetCurrentThread(), TOKEN_READ, TRUE, &token))
 +    {
-+        if (GetLastError() != ERROR_NO_TOKEN) ret = FALSE;
-+        else if (!OpenProcessToken(GetCurrentProcess(), TOKEN_READ, &token)) ret = FALSE;
++        if (GetLastError() != ERROR_NO_TOKEN) goto cleanup;
++        else if (!OpenProcessToken(GetCurrentProcess(), TOKEN_READ, &token)) goto cleanup;
 +    }
-+    if (!ret) goto cleanup;
 +    sid_size = 0;
-+    ret = GetTokenInformation(token, TokenUser, NULL, 0, &sid_size);
++    GetTokenInformation(token, TokenUser, NULL, 0, &sid_size);
 +    if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) goto cleanup;
 +    user = HeapAlloc(GetProcessHeap(), 0, sid_size);
 +    if (!user) goto cleanup;
-+    ret = GetTokenInformation(token, TokenUser, user, sid_size, &sid_size);
-+    if (!ret) goto cleanup;
++    if (!GetTokenInformation(token, TokenUser, user, sid_size, &sid_size)) goto cleanup;
 +    CloseHandle(token);
 +    user_sid = user->User.Sid;
 +
 +    /* find the administrator group SID */
 +    sid_size = 0;
-+    ret = CreateWellKnownSid(WinBuiltinAdministratorsSid, NULL, NULL, &sid_size);
++    CreateWellKnownSid(WinBuiltinAdministratorsSid, NULL, NULL, &sid_size);
 +    if(GetLastError() != ERROR_INSUFFICIENT_BUFFER) goto cleanup;
 +    admin_sid = HeapAlloc(GetProcessHeap(), 0, sid_size);
 +    if(!admin_sid) goto cleanup;
-+    ret = CreateWellKnownSid(WinBuiltinAdministratorsSid, NULL, admin_sid, &sid_size);
-+    if(!ret) goto cleanup;
++    if(!CreateWellKnownSid(WinBuiltinAdministratorsSid, NULL, admin_sid, &sid_size)) goto cleanup;
 +
 +    /* build the DACL */
-+    ret = InitializeSecurityDescriptor(sd, SECURITY_DESCRIPTOR_REVISION);
-+    if(!ret) goto cleanup;
-+    ret = InitializeAcl(dacl, 100, ACL_REVISION);
-+    if(!ret) goto cleanup;
-+    ret = AddAccessAllowedAceEx(dacl, ACL_REVISION, OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE,
-+                                GENERIC_ALL, user_sid);
-+    if(!ret) goto cleanup;
-+    ret = AddAccessAllowedAceEx(dacl, ACL_REVISION, OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE,
-+                                GENERIC_ALL, admin_sid);
-+    if(!ret) goto cleanup;
-+    ret = SetSecurityDescriptorDacl(sd, TRUE, dacl, FALSE);
++    if(!InitializeSecurityDescriptor(sd, SECURITY_DESCRIPTOR_REVISION)) goto cleanup;
++    if(!InitializeAcl(dacl, 100, ACL_REVISION)) goto cleanup;
++    if(!AddAccessAllowedAceEx(dacl, ACL_REVISION, OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE,
++                              GENERIC_ALL, user_sid)) goto cleanup;
++    if(!AddAccessAllowedAceEx(dacl, ACL_REVISION, OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE,
++                              GENERIC_ALL, admin_sid)) goto cleanup;
++    if(!SetSecurityDescriptorDacl(sd, TRUE, dacl, FALSE)) goto cleanup;
++    ret = TRUE;
 +
 +cleanup:
 +    HeapFree(GetProcessHeap(), 0, user);
@@ -82,7 +75,7 @@ index 875be38..3476a88 100644
  /*************************************************************************
   * SHGetFolderPathAndSubDirW		[SHELL32.@]
   */
-@@ -2180,6 +2244,8 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
+@@ -2180,6 +2237,8 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
  	LPCWSTR pszSubPath,/* [I] sub directory of the specified folder */
  	LPWSTR pszPath)    /* [O] converted path */
  {
@@ -91,7 +84,7 @@ index 875be38..3476a88 100644
      HRESULT    hr;
      WCHAR      szBuildPath[MAX_PATH], szTemp[MAX_PATH];
      DWORD      folder = nFolder & CSIDL_FOLDER_MASK;
-@@ -2292,8 +2358,25 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
+@@ -2292,8 +2351,25 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
          goto end;
      }
  
@@ -118,7 +111,7 @@ index 875be38..3476a88 100644
      if (ret && ret != ERROR_ALREADY_EXISTS)
      {
          ERR("Failed to create directory %s.\n", debugstr_w(szBuildPath));
-@@ -2303,6 +2386,15 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
+@@ -2303,6 +2379,15 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
  
      TRACE("Created missing system directory %s\n", debugstr_w(szBuildPath));
  end:

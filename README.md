@@ -10,6 +10,7 @@ Current patches include:
 * Support for Junction Points (http://bugs.winehq.org/show_bug.cgi?id=12401)
 * Support for TransmitFile (http://bugs.winehq.org/show_bug.cgi?id=5048)
 * Support for GetVolumePathName
+* Implement an Arial replacement font (http://bugs.winehq.org/show_bug.cgi?id=32323)
 * Allow CompareStringEx flag NORM_LINGUISTIC_CASING (http://bugs.winehq.org/show_bug.cgi?id=34269)
 * Workaround for TransactNamedPipe not being supported (http://bugs.winehq.org/show_bug.cgi?id=17273)
 * XEMBED support for embedding Wine windows inside Linux applications

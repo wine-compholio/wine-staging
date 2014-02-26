@@ -1,3 +1,5 @@
+SUBDIRS=10-Missing_Fonts
+
 PATCH:=patch -N -p0 --strip=1
 
 install:
@@ -12,6 +14,11 @@ install:
 			printf "Applying patch '$$SHORTNAME'...\n"; \
 			$(PATCH) < $$DIR/$$FILE || exit 1; \
 		done \
+	done
+
+	# Apply binary patches to Wine
+	for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir; \
 	done
 
 	# Update the configure script

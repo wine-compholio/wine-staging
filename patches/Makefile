@@ -4,7 +4,7 @@ PATCH:=patch -N -p0 --strip=1
 
 install:
 	# Update the list of patches
-	cd $(CURDIR)/..; ./generate-patchlist.sh > $(CURDIR)/patch-list.patch;
+	cd $(CURDIR)/..; ./debian/tools/generate-patchlist.sh > $(CURDIR)/patch-list.patch;
 
 	# Apply our patches to Wine
 	cd $(DESTDIR); \

@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Setup parser variables
+nogit=0
 lineno=0
 verbose=0
 patch_mode=0
@@ -60,6 +61,10 @@ while [[ $# > 0 ]]; do
 			verbose=1
 			;;
 
+		--nogit)
+			nogit=1
+			;;
+
 		--help)
 			usage
 			exit 0
@@ -70,6 +75,12 @@ while [[ $# > 0 ]]; do
 			;;
 	esac
 done
+
+# Redirect to git apply if available
+if [ "$nogit" -eq 0 ] && command -v git >/dev/null 2>&1; then
+	exec git apply "$@"
+	exit 1
+fi
 
 # Decode base85 git data, prepend with a gzip header
 awk_b85='

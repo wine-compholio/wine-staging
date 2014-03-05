@@ -71,7 +71,7 @@ while [[ $# > 0 ]]; do
 			;;
 
 		*)
-			warning "Unknown argument $cmd"
+			warning "Unknown argument $cmd."
 			;;
 	esac
 done
@@ -368,7 +368,7 @@ while IFS= read -r line; do
 
 			decoded_tmpfile=$(mktemp)
 			if [ ! -f "$decoded_tmpfile" ]; then
-				abort "Unable to create temporary file for patch"
+				abort "Unable to create temporary file for patch."
 			fi
 
 			# Decode base85 and add a gzip header
@@ -380,7 +380,7 @@ while IFS= read -r line; do
 
 			# Ensure that resulting binary patch has the correct size
 			if [ "$binary_patch_size" -ne "$(du -b "$patch_tmpfile" | cut -f 1)" ]; then
-				abort "Uncompressed data has wrong size, expected $binary_patch_size, got $size"
+				abort "Uncompressed binary patch has wrong size."
 			fi
 
 			# Apply git delta path
@@ -388,7 +388,7 @@ while IFS= read -r line; do
 
 				decoded_tmpfile=$(mktemp)
 				if [ ! -f "$decoded_tmpfile" ]; then
-					abort "Unable to create temporary file for patch"
+					abort "Unable to create temporary file for patch."
 				fi
 
 				binary_patch_complete=0
@@ -418,7 +418,7 @@ while IFS= read -r line; do
 				if [ "$binary_patch_complete" -ne 1 ]; then
 					abort "Unable to parse full patch."
 				elif [ "$binary_patch_destsize" -ne "$(du -b "$patch_tmpfile" | cut -f 1)" ]; then
-					abort "Unpacked file has wrong length."
+					abort "Unpacked delta patch has wrong size."
 				fi
 
 			elif [ "$binary_patch_type" != "literal" ]; then
@@ -430,7 +430,7 @@ while IFS= read -r line; do
 			if [ "$patch_newsha1" != "$sha" ]; then
 				echo "$lineno: Expected $patch_newsha1"
 				echo "$lineno: Got      $sha"
-				abort "Unable to continue because of sha1 mismatch after applying the patch"
+				abort "Unable to continue because of sha1 mismatch after applying the patch."
 			fi
 
 			if ! cp "$patch_tmpfile" "$patch_oldname"; then

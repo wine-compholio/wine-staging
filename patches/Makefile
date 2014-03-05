@@ -1,6 +1,8 @@
 SUBDIRS=10-Missing_Fonts
 
-PATCH:=patch -N -p0 --strip=1
+#PATCH:=patch -N -p0 --strip=1
+#PATCH:=git apply
+PATCH:=$(CURDIR)/../debian/tools/gitapply.sh
 
 install:
 	# Update the list of patches
@@ -16,11 +18,6 @@ install:
 		done \
 	done
 
-	# Apply binary patches to Wine
-	for dir in $(SUBDIRS); do \
-		$(MAKE) -C $$dir; \
-	done
-
 	# Update the configure script
 	cd $(DESTDIR); autoreconf;
 
@@ -29,11 +26,12 @@ install:
 
 uninstall:
 	# Remove our patches from Wine
+	cd $(DESTDIR); \
 	for DIR in $$(find $(CURDIR) -type d | sort -r); do \
 		for FILE in $$(ls $$DIR | sort -r | grep '\.patch$$'); do \
 			SHORTNAME=$$(echo "$$DIR/$$FILE" | sed 's|$(CURDIR)|\.|g' ); \
 			printf "Reversing patch '$$SHORTNAME'...\n"; \
-			cd $(DESTDIR); $(PATCH) -R < $$DIR/$$FILE || exit 1; \
+			$(PATCH) -R < $$DIR/$$FILE || exit 1; \
 		done \
 	done
 

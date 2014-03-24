@@ -1,36 +1,4 @@
 #!/usr/bin/make -f
-# -*- makefile -*-
-# Sample debian/rules that uses debhelper.
-# This file was originally written by Joey Hess and Craig Small.
-# As a special exception, when this file is copied by dh-make into a
-# dh-make output file, you may use that output file without restriction.
-# This special exception was added by Craig Small in version 0.37 of dh-make.
-
-# Uncomment this to turn on verbose mode.
-#export DH_VERBOSE=1
-
-
-# These are used for cross-compiling and for saving the configure script
-# from having to guess our platform (since we know it already)
-DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
-DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
-ifneq ($(DEB_HOST_GNU_TYPE),$(DEB_BUILD_GNU_TYPE))
-	CROSS= --build $(DEB_BUILD_GNU_TYPE) --host $(DEB_HOST_GNU_TYPE)
-else
-	CROSS= --build $(DEB_BUILD_GNU_TYPE)
-endif
-
-
-# Apparently it's important to have an empty LDFLAGS, see:
-# http://www.winehq.org/pipermail/wine-bugs/2007-July/062505.html
-# For Wine 1.1.44 it's also important not to compile at -O0
-LDFLAGS = 
-CFLAGS = -Wall -g -O2
-
-# On amd64 the 32-bit libraries are in lib32 instead of lib
-ifeq ($(DEB_BUILD_ARCH), amd64)
-	CONFFLAGS += --libdir=\$${prefix}/lib32
-endif
 
 # Use gcc-4.5 if it's available
 ifeq ($(shell which gcc-4.5),)
@@ -39,106 +7,33 @@ else
 	CC = gcc-4.5
 endif
 
-# Support passing of parallel=<n> in build options
-ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
-	NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
-	MAKEFLAGS += -j$(NUMJOBS)
-endif
+%:
+	dh $@ --parallel
 
-configure:
-	# Unpack the original Wine version
-	tar -xjvf wine-*.tar.bz2
-	mv wine-*/* .
-	rm wine-*/.* || true
-	rm wine-*.tar.bz2
-	rmdir wine-*
-
-config.status: configure
-	dh_testdir
-	# Add here commands to configure the package.
-ifneq "$(wildcard /usr/share/misc/config.sub)" ""
-	cp -f /usr/share/misc/config.sub config.sub
-endif
-ifneq "$(wildcard /usr/share/misc/config.guess)" ""
-	cp -f /usr/share/misc/config.guess config.guess
-endif
+override_dh_auto_configure:
 
 	# Apply our patches, reconfigure, and update the wineserver protocol request data
 	make -C "$(CURDIR)/patches/" DESTDIR="$(CURDIR)" install
 
-	# Configure
-	CC="$(CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" ./configure --host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) --prefix=/opt/wine-compholio --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info --with-xattr $(CONFFLAGS)
-
-build: build-stamp
-
-build-stamp:  config.status 
-	dh_testdir
-
-	# Add here commands to compile the package.
-	$(MAKE) depend
-	$(MAKE) $(MAKEFLAGS)
-	#docbook-to-man debian/wine-compholio.sgml > wine-compholio.1
-
-	touch $@
-
-clean: 
-	dh_testdir
-	dh_testroot
-	rm -f build-stamp 
-
-	# Add here commands to clean up after the build process.
-	[ ! -f Makefile ] || $(MAKE) distclean
-	rm -f config.sub config.guess
-
-	dh_clean 
-
-install: build
-	dh_testdir
-	dh_testroot
-	dh_prep  
-	dh_installdirs
-
-	# Add here commands to install the package into debian/wine-compholio.
-	$(MAKE) DESTDIR=$(CURDIR)/debian/wine-compholio install
-
-# Build architecture-independent files here.
-binary-indep: build install
-# We have nothing to do by default.
-
-# Build architecture-dependent files here.
-binary-arch: build install
-	dh_testdir
-	dh_testroot
-#	dh_installchangelogs ChangeLog
-#	dh_installdocs
-	dh_installexamples
-#	dh_install
-#	dh_installmenu
-#	dh_installdebconf
-#	dh_installlogrotate
-#	dh_installemacsen
-#	dh_installpam
-#	dh_installmime
-#	dh_python
-#	dh_installinit
-#	dh_installcron
-#	dh_installinfo
-	dh_installman
-	dh_link
-	dh_strip
-	dh_compress
-	dh_fixperms
-#	dh_perl
-	dh_makeshlibs
-	dh_installdeb
 ifeq ($(DEB_BUILD_ARCH), amd64)
-	dh_gencontrol -- -V"shlibs:Depends= ia32-libs (>= 1.6), lib32asound2 (>> 1.0.14), libc6-i386 (>= 2.6-1), lib32nss-mdns (>= 0.10-3)"
+	./configure --prefix=/opt/wine-compholio --libdir=\$${prefix}/lib64 --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info --enable-win64 --with-xattr
 else
-	LD_LIBRARY_PATH="$(CURDIR)/debian/wine-compholio/opt/wine-compholio/lib:${LD_LIBRARY_PATH}" dh_shlibdeps -L wine-compholio -l debian/wine-compholio/opt/wine-compholio/lib
-	dh_gencontrol
+	./configure --prefix=/opt/wine-compholio --libdir=\$${prefix}/lib --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info --with-xattr
 endif
-	dh_md5sums
-	dh_builddeb -- -Z lzma
 
-binary: binary-indep binary-arch
-.PHONY: build clean binary-indep binary-arch binary install 
+override_dh_auto_test:
+	# Wine's test suite does not pass on build daemons, skip it for now
+
+override_dh_installdocs:
+	dh_installdocs --link-doc=wine-compholio
+
+override_dh_install:
+	dh_install --fail-missing
+	# These files will end up in multiple packages otherwise
+	rm -f debian/wine-compholio/opt/wine-compholio/bin/wine
+	rm -f debian/wine-compholio/opt/wine-compholio/bin/wine-preloader
+	rm -f debian/wine-compholio/opt/wine-compholio/bin/wine64
+	rm -f debian/wine-compholio/opt/wine-compholio/bin/wine64-preloader
+
+override_dh_strip:
+	dh_strip -Xwine-pthread -Xwine-kthread --dbg-package=wine-compholio-dbg

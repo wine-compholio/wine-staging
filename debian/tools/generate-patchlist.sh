@@ -16,7 +16,7 @@ for FILE in patches/*/*.def; do
 	PATCH_DATA="${PATCH_DATA}+    { \"${UUID}:${REVISION}\", \"${AUTHOR}\", \"${TITLE}\" },";
 done
 
-PATCH_LINES=$(echo "${PATCH_DATA}" | grep -c '\n');
+PATCH_LINES=$(echo "${PATCH_DATA}" | wc -l);
 PATCH_LINES=$((${PATCH_LINES}+20));
 PATCH_DATA=$(echo "${PATCH_DATA}" | sed ':a;N;$!ba;s/\n/\\n/g');
 

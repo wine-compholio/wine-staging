@@ -1,0 +1,114 @@
+From 45dfbd2ddb5ca2c64fcfd56392be9c55513abc4b Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Thu, 3 Apr 2014 09:23:02 -0600
+Subject: server: Add delayed processing for socket-specific ioctl().
+
+---
+ server/event.c      |   13 +++++++++++++
+ server/named_pipe.c |   13 -------------
+ server/object.h     |    1 +
+ server/sock.c       |   19 +++++++++++++++++--
+ 4 files changed, 31 insertions(+), 15 deletions(-)
+
+diff --git a/server/event.c b/server/event.c
+index 4d3c562..0daa5b2 100644
+--- a/server/event.c
++++ b/server/event.c
+@@ -124,6 +124,19 @@ struct event *create_event( struct directory *root, const struct unicode_str *na
+     return event;
+ }
+ 
++obj_handle_t alloc_wait_event( struct process *process )
++{
++    obj_handle_t handle = 0;
++    struct event *event = create_event( NULL, NULL, 0, 1, 0, NULL );
++
++    if (event)
++    {
++        handle = alloc_handle( process, event, EVENT_ALL_ACCESS, 0 );
++        release_object( event );
++    }
++    return handle;
++}
++
+ struct event *get_event_obj( struct process *process, obj_handle_t handle, unsigned int access )
+ {
+     return (struct event *)get_handle_obj( process, handle, access, &event_ops );
+diff --git a/server/named_pipe.c b/server/named_pipe.c
+index 4c85104..6ba2145 100644
+--- a/server/named_pipe.c
++++ b/server/named_pipe.c
+@@ -587,19 +587,6 @@ static enum server_fd_type pipe_client_get_fd_type( struct fd *fd )
+     return FD_TYPE_PIPE;
+ }
+ 
+-static obj_handle_t alloc_wait_event( struct process *process )
+-{
+-    obj_handle_t handle = 0;
+-    struct event *event = create_event( NULL, NULL, 0, 1, 0, NULL );
+-
+-    if (event)
+-    {
+-        handle = alloc_handle( process, event, EVENT_ALL_ACCESS, 0 );
+-        release_object( event );
+-    }
+-    return handle;
+-}
+-
+ static obj_handle_t pipe_server_ioctl( struct fd *fd, ioctl_code_t code, const async_data_t *async_data,
+                                        int blocking, const void *data, data_size_t size )
+ {
+diff --git a/server/object.h b/server/object.h
+index bb3ff21..bad162f 100644
+--- a/server/object.h
++++ b/server/object.h
+@@ -159,6 +159,7 @@ extern struct event *create_event( struct directory *root, const struct unicode_
+                                    const struct security_descriptor *sd );
+ extern struct keyed_event *create_keyed_event( struct directory *root, const struct unicode_str *name,
+                                                unsigned int attr, const struct security_descriptor *sd );
++extern obj_handle_t alloc_wait_event( struct process *process );
+ extern struct event *get_event_obj( struct process *process, obj_handle_t handle, unsigned int access );
+ extern struct keyed_event *get_keyed_event_obj( struct process *process, obj_handle_t handle, unsigned int access );
+ extern void pulse_event( struct event *event );
+diff --git a/server/sock.c b/server/sock.c
+index 3eb1bdf..05fc38b 100644
+--- a/server/sock.c
++++ b/server/sock.c
+@@ -523,17 +523,32 @@ obj_handle_t sock_ioctl( struct fd *fd, ioctl_code_t code, const async_data_t *a
+                          int blocking, const void *data, data_size_t size )
+ {
+     struct sock *sock = get_fd_user( fd );
++    obj_handle_t wait_handle = 0;
++    async_data_t new_data;
++    int error;
+ 
+     assert( sock->obj.ops == &sock_ops );
+ 
++    if (blocking)
++    {
++        if (!(wait_handle = alloc_wait_event( current->process ))) return 0;
++        new_data = *async_data;
++        new_data.event = wait_handle;
++        async_data = &new_data;
++    }
+     switch(code)
+     {
+     case WS_SIO_ADDRESS_LIST_CHANGE:
+         /* intentional fallthrough, not yet supported */
+     default:
+-        set_error( STATUS_NOT_SUPPORTED );
+-        return 0;
++        error = STATUS_NOT_SUPPORTED;
++        break;
+     }
++    set_error( error );
++    if (error == STATUS_PENDING)
++        return wait_handle;
++    close_handle( current->process, wait_handle );
++    return 0;
+ }
+ 
+ static void sock_queue_async( struct fd *fd, const async_data_t *data, int type, int count )
+-- 
+1.7.9.5
+

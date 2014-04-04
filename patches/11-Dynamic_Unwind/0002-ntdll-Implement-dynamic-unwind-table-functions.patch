@@ -1,12 +1,13 @@
-From 8e29d9d7826cb1e5749909e4fe388af8dcf4a2f3 Mon Sep 17 00:00:00 2001
+From efcbb9869c71a40f88ff0c4516f0d65419394104 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 4 Apr 2014 19:32:33 +0200
 Subject: ntdll: Implement dynamic unwind table functions.
 
 ---
  dlls/ntdll/ntdll.spec      |    1 +
- dlls/ntdll/signal_x86_64.c |  127 +++++++++++++++++++++++++++++++++++++++++++-
- 2 files changed, 126 insertions(+), 2 deletions(-)
+ dlls/ntdll/signal_x86_64.c |  128 +++++++++++++++++++++++++++++++++++++++++++-
+ include/winnt.h            |    3 ++
+ 3 files changed, 130 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
 index 0dd75a2..7a3c3f1 100644
@@ -21,7 +22,7 @@ index 0dd75a2..7a3c3f1 100644
  @ stdcall RtlIntegerToChar(long long long ptr)
  @ stdcall RtlIntegerToUnicodeString(long long ptr)
 diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
-index 57afe16..47bdf54 100644
+index 57afe16..c8e1a16 100644
 --- a/dlls/ntdll/signal_x86_64.c
 +++ b/dlls/ntdll/signal_x86_64.c
 @@ -56,6 +56,7 @@
@@ -50,7 +51,7 @@ index 57afe16..47bdf54 100644
 +    RUNTIME_FUNCTION *table;
 +    DWORD table_size;
 +
-+    PRUNTIME_FUNCTION (CDECL *callback)( DWORD pc, PVOID context );
++    PGET_RUNTIME_FUNCTION_CALLBACK callback;
 +    PVOID context;
 +};
 +
@@ -101,7 +102,7 @@ index 57afe16..47bdf54 100644
  
      return func;
  }
-@@ -2528,7 +2577,31 @@ void signal_init_process(void)
+@@ -2528,7 +2577,29 @@ void signal_init_process(void)
   */
  BOOLEAN CDECL RtlAddFunctionTable( RUNTIME_FUNCTION *table, DWORD count, DWORD64 addr )
  {
@@ -111,9 +112,7 @@ index 57afe16..47bdf54 100644
 +
 +    TRACE( "%p %u %lx\n", table, count, addr );
 +
-+    /* both low-order bits must be unset */
-+    if (((ULONG_PTR)table & 0x3) != 0)
-+        return FALSE;
++    /* NOTE: Windows doesn't check if table is aligned or a NULL pointer */
 +
 +    size  = table[count - 1].EndAddress;
 +    entry = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*entry) );
@@ -134,7 +133,7 @@ index 57afe16..47bdf54 100644
      return TRUE;
  }
  
-@@ -2538,7 +2611,57 @@ BOOLEAN CDECL RtlAddFunctionTable( RUNTIME_FUNCTION *table, DWORD count, DWORD64
+@@ -2538,7 +2609,60 @@ BOOLEAN CDECL RtlAddFunctionTable( RUNTIME_FUNCTION *table, DWORD count, DWORD64
   */
  BOOLEAN CDECL RtlDeleteFunctionTable( RUNTIME_FUNCTION *table )
  {
@@ -165,14 +164,17 @@ index 57afe16..47bdf54 100644
 +/**********************************************************************
 + *              RtlInstallFunctionTableCallback   (NTDLL.@)
 + */
-+BOOLEAN CDECL RtlInstallFunctionTableCallback( DWORD64 table, DWORD64 base, DWORD length, PVOID callback, PVOID context, PCWSTR dll )
++BOOLEAN CDECL RtlInstallFunctionTableCallback( DWORD64 table, DWORD64 base, DWORD length,
++                                               PGET_RUNTIME_FUNCTION_CALLBACK callback, PVOID context, PCWSTR dll )
 +{
 +    struct dynamic_unwind_entry *entry;
 +
 +    TRACE( "%lx %lx %d %p %p %s\n", table, base, length, callback, context, wine_dbgstr_w(dll) );
 +
-+    /* both low-order bits must be set, callback must be provided */
-+    if ((table & 0x3) != 0x3 || !callback)
++    /* NOTE: Windows doesn't check if the provided callback is a NULL pointer */
++
++    /* both low-order bits must be set */
++    if ((table & 0x3) != 0x3)
 +        return FALSE;
 +
 +    entry = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*entry) );
@@ -192,6 +194,22 @@ index 57afe16..47bdf54 100644
 +
      return TRUE;
  }
+ 
+diff --git a/include/winnt.h b/include/winnt.h
+index 93fd70a..3f33c6b 100644
+--- a/include/winnt.h
++++ b/include/winnt.h
+@@ -1193,8 +1193,11 @@ typedef struct _KNONVOLATILE_CONTEXT_POINTERS
+     } DUMMYUNIONNAME2;
+ } KNONVOLATILE_CONTEXT_POINTERS, *PKNONVOLATILE_CONTEXT_POINTERS;
+ 
++typedef PRUNTIME_FUNCTION (CALLBACK *PGET_RUNTIME_FUNCTION_CALLBACK)(DWORD64,PVOID);
++
+ BOOLEAN CDECL            RtlAddFunctionTable(RUNTIME_FUNCTION*,DWORD,DWORD64);
+ BOOLEAN CDECL            RtlDeleteFunctionTable(RUNTIME_FUNCTION*);
++BOOLEAN CDECL            RtlInstallFunctionTableCallback(DWORD64,DWORD64,DWORD,PGET_RUNTIME_FUNCTION_CALLBACK,PVOID,PCWSTR);
+ PRUNTIME_FUNCTION WINAPI RtlLookupFunctionEntry(DWORD64,DWORD64*,UNWIND_HISTORY_TABLE*);
+ PVOID WINAPI             RtlVirtualUnwind(ULONG,ULONG64,ULONG64,RUNTIME_FUNCTION*,CONTEXT*,PVOID*,ULONG64*,KNONVOLATILE_CONTEXT_POINTERS*);
  
 -- 
 1.7.9.5

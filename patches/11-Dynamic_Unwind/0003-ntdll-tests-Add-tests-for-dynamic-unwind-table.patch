@@ -1,0 +1,177 @@
+From fe1571d281c60aa9a1db503c8d143ac5029982c2 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 5 Apr 2014 01:04:25 +0200
+Subject: ntdll/tests: Add tests for dynamic unwind table.
+
+---
+ dlls/ntdll/tests/exception.c |  133 ++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 133 insertions(+)
+
+diff --git a/dlls/ntdll/tests/exception.c b/dlls/ntdll/tests/exception.c
+index b4cbaf5..ac70802 100644
+--- a/dlls/ntdll/tests/exception.c
++++ b/dlls/ntdll/tests/exception.c
+@@ -49,6 +49,10 @@ static NTSTATUS  (WINAPI *pNtReadVirtualMemory)(HANDLE, const void*, void*, SIZE
+ static NTSTATUS  (WINAPI *pNtTerminateProcess)(HANDLE handle, LONG exit_code);
+ static NTSTATUS  (WINAPI *pNtQueryInformationProcess)(HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG);
+ static NTSTATUS  (WINAPI *pNtSetInformationProcess)(HANDLE, PROCESSINFOCLASS, PVOID, ULONG);
++static BOOLEAN   (WINAPI *pRtlAddFunctionTable)(RUNTIME_FUNCTION*, DWORD, DWORD64);
++static BOOLEAN   (WINAPI *pRtlDeleteFunctionTable)(RUNTIME_FUNCTION*);
++static BOOLEAN   (WINAPI *pRtlInstallFunctionTableCallback)(DWORD64, DWORD64, DWORD, PGET_RUNTIME_FUNCTION_CALLBACK, PVOID, PCWSTR);
++static PRUNTIME_FUNCTION (WINAPI *pRtlLookupFunctionEntry)(ULONG64, ULONG64*, UNWIND_HISTORY_TABLE*);
+ static BOOL      (WINAPI *pIsWow64Process)(HANDLE, PBOOL);
+ 
+ #ifdef __i386__
+@@ -1447,6 +1451,122 @@ static void test_virtual_unwind(void)
+         call_virtual_unwind( i, &tests[i] );
+ }
+ 
++static RUNTIME_FUNCTION* CALLBACK function_table_callback( DWORD64 pc, PVOID context )
++{
++    static const int code_offset = 1024;
++    static RUNTIME_FUNCTION runtime_func;
++    (*(DWORD *)context)++;
++
++    runtime_func.BeginAddress = code_offset;
++    runtime_func.EndAddress   = code_offset + 16;
++    runtime_func.UnwindData   = 0;
++    return &runtime_func;
++}
++
++static void test_dynamic_unwind(void)
++{
++    static const int code_offset = 1024;
++    char buf[sizeof(RUNTIME_FUNCTION) + 4];
++    RUNTIME_FUNCTION *runtime_func, *func;
++    ULONG_PTR table, base;
++    DWORD count;
++
++    /* Aligned RUNTIME_FUNCTION pointer */
++    runtime_func = (RUNTIME_FUNCTION *)buf;
++    runtime_func->BeginAddress = code_offset;
++    runtime_func->EndAddress   = code_offset + 16;
++    runtime_func->UnwindData   = 0;
++    ok( pRtlAddFunctionTable( runtime_func, 1, (ULONG_PTR)code_mem ),
++        "RtlAddFunctionTable failed for runtime_func = %p (aligned)\n", runtime_func );
++
++    /* Pointer outside of the area */
++    base = 0xdeadbeef;
++    func = pRtlLookupFunctionEntry( (ULONG_PTR)code_mem + code_offset + 16, &base, NULL );
++    ok( func == NULL,
++        "RtlLookupFunctionEntry returned unexpected function, expected: NULL, got: %p\n", func );
++    ok( base == 0xdeadbeef,
++        "RtlLookupFunctionEntry modified base address, expected: 0xdeadbeef, got: %lx\n", base );
++
++    /* Pointer inside of a function */
++    base = 0xdeadbeef;
++    func = pRtlLookupFunctionEntry( (ULONG_PTR)code_mem + code_offset + 8, &base, NULL );
++    ok( func == runtime_func,
++        "RtlLookupFunctionEntry didn't return expected function, expected: %p, got: %p\n", runtime_func, func );
++    ok( base == (ULONG_PTR)code_mem,
++        "RtlLookupFunctionEntry returned invalid base, expected: %lx, got: %lx\n", (ULONG_PTR)code_mem, base );
++
++    /* Ensure that deleting is also successful */
++    ok( pRtlDeleteFunctionTable( runtime_func ),
++        "RtlDeleteFunctionTable failed for runtime_func = %p (aligned)\n", runtime_func );
++    ok( !pRtlDeleteFunctionTable( runtime_func ),
++        "RtlDeleteFunctionTable returned success for nonexistent table runtime_func = %p\n", runtime_func );
++
++    /* Unaligned RUNTIME_FUNCTION pointer */
++    runtime_func = (RUNTIME_FUNCTION *)((ULONG_PTR)buf | 0x3);
++    runtime_func->BeginAddress = code_offset;
++    runtime_func->EndAddress   = code_offset + 16;
++    runtime_func->UnwindData   = 0;
++    ok( pRtlAddFunctionTable( runtime_func, 1, (ULONG_PTR)code_mem ),
++        "RtlAddFunctionTable failed for runtime_func = %p (unaligned)\n", runtime_func );
++    ok( pRtlDeleteFunctionTable( runtime_func ),
++        "RtlDeleteFunctionTable failed for runtime_func = %p (unaligned)\n", runtime_func );
++
++    /* Attempt to insert the same entry twice */
++    runtime_func = (RUNTIME_FUNCTION *)buf;
++    runtime_func->BeginAddress = code_offset;
++    runtime_func->EndAddress   = code_offset + 16;
++    runtime_func->UnwindData   = 0;
++    ok( pRtlAddFunctionTable( runtime_func, 1, (ULONG_PTR)code_mem ),
++        "RtlAddFunctionTable failed for runtime_func = %p (first attempt)\n", runtime_func );
++    ok( pRtlAddFunctionTable( runtime_func, 1, (ULONG_PTR)code_mem ),
++        "RtlAddFunctionTable failed for runtime_func = %p (second attempt)\n", runtime_func );
++    ok( pRtlDeleteFunctionTable( runtime_func ),
++        "RtlDeleteFunctionTable failed for runtime_func = %p (first attempt)\n", runtime_func );
++    ok( pRtlDeleteFunctionTable( runtime_func ),
++        "RtlDeleteFunctionTable failed for runtime_func = %p (second attempt)\n", runtime_func );
++    ok( !pRtlDeleteFunctionTable( runtime_func ),
++        "RtlDeleteFunctionTable returned success for nonexistent table runtime_func = %p\n", runtime_func );
++
++    /* Table without both low bits set */
++    table = (ULONG_PTR)code_mem;
++    ok( !pRtlInstallFunctionTableCallback( table, (ULONG_PTR)code_mem, code_offset + 16, &function_table_callback, (PVOID*)&count, NULL ),
++        "RtlInstallFunctionTableCallback returned success for table = %lx\n", table );
++
++    /* Table with both low bits set */
++    table = (ULONG_PTR)code_mem | 0x3;
++    ok( pRtlInstallFunctionTableCallback( table, (ULONG_PTR)code_mem, code_offset + 16, &function_table_callback, (PVOID*)&count, NULL ),
++        "RtlInstallFunctionTableCallback failed for table = %lx\n", table );
++
++    /* Pointer outside of the area */
++    count = 0;
++    base = 0xdeadbeef;
++    func = pRtlLookupFunctionEntry( (ULONG_PTR)code_mem + code_offset + 16, &base, NULL );
++    ok( func == NULL,
++        "RtlLookupFunctionEntry returned unexpected function, expected: NULL, got: %p\n", func );
++    ok( base == 0xdeadbeef,
++        "RtlLookupFunctionEntry modified base address, expected: 0xdeadbeef, got: %lx\n", base );
++    ok( !count,
++        "RtlLookupFunctionEntry issued %d unexpected calls to function_table_callback\n", count );
++
++    /* Pointer inside of a function */
++    count = 0;
++    base = 0xdeadbeef;
++    func = pRtlLookupFunctionEntry( (ULONG_PTR)code_mem + code_offset + 8, &base, NULL );
++    ok( func != NULL && func->BeginAddress == code_offset && func->EndAddress == code_offset + 16,
++        "RtlLookupFunctionEntry didn't return expected function, got: %p\n", func );
++    ok( base == (ULONG_PTR)code_mem,
++        "RtlLookupFunctionEntry returned invalid base, expected: %lx, got: %lx\n", (ULONG_PTR)code_mem, base );
++    ok( count == 1,
++        "RtlLookupFunctionEntry issued %d calls to function_table_callback, expected: 1\n", count );
++
++    /* Clean up again */
++    ok( pRtlDeleteFunctionTable( (PRUNTIME_FUNCTION)table ),
++        "RtlDeleteFunctionTable failed for table = %p\n", (PVOID)table );
++    ok( !pRtlDeleteFunctionTable( (PRUNTIME_FUNCTION)table ),
++        "RtlDeleteFunctionTable returned success for nonexistent table = %p\n", (PVOID)table );
++
++}
++
+ #endif  /* __x86_64__ */
+ 
+ START_TEST(exception)
+@@ -1473,6 +1593,14 @@ START_TEST(exception)
+                                                                  "NtQueryInformationProcess" );
+     pNtSetInformationProcess           = (void*)GetProcAddress( hntdll,
+                                                                  "NtSetInformationProcess" );
++    pRtlAddFunctionTable               = (void *)GetProcAddress( hntdll,
++                                                                 "RtlAddFunctionTable" );
++    pRtlDeleteFunctionTable            = (void *)GetProcAddress( hntdll,
++                                                                 "RtlDeleteFunctionTable" );
++    pRtlInstallFunctionTableCallback   = (void *)GetProcAddress( hntdll,
++                                                                 "RtlInstallFunctionTableCallback" );
++    pRtlLookupFunctionEntry            = (void *)GetProcAddress( hntdll,
++                                                                 "RtlLookupFunctionEntry" );
+     pIsWow64Process = (void *)GetProcAddress(GetModuleHandleA("kernel32.dll"), "IsWow64Process");
+ 
+ #ifdef __i386__
+@@ -1537,6 +1665,11 @@ START_TEST(exception)
+ 
+     test_virtual_unwind();
+ 
++    if (pRtlAddFunctionTable && pRtlDeleteFunctionTable && pRtlInstallFunctionTableCallback && pRtlLookupFunctionEntry)
++      test_dynamic_unwind();
++    else
++      skip( "Rtl{Add,Delete}FunctionTable or RtlInstallFunctionTableCallback or RtlLookupFunctionEntry not found\n" );
++
+ #endif
+ 
+     VirtualFree(code_mem, 0, MEM_FREE);
+-- 
+1.7.9.5
+

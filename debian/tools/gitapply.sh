@@ -78,7 +78,7 @@ done
 
 # Redirect to git apply if available
 if [ "$nogit" -eq 0 ] && command -v git >/dev/null 2>&1; then
-	exec git apply "$@"
+	exec git apply --whitespace=nowarn "$@"
 	exit 1
 fi
 

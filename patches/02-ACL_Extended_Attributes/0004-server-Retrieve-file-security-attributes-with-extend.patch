@@ -1,13 +1,13 @@
-From 2d625c28a1d39e093adcf0059815082e6995666e Mon Sep 17 00:00:00 2001
+From 96ef630b374cc6254dd8d0afe0eb8a9a240f4d50 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Tue, 15 Apr 2014 14:31:43 -0600
+Date: Tue, 15 Apr 2014 14:55:45 -0600
 Subject: server: Retrieve file security attributes with extended file
  attributes.
 
 ---
- dlls/advapi32/tests/security.c |   49 +++++++------
- server/file.c                  |  156 +++++++++++++++++++++++++++++++++++++++-
- 2 files changed, 177 insertions(+), 28 deletions(-)
+ dlls/advapi32/tests/security.c |   49 ++++++------
+ server/file.c                  |  169 +++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 190 insertions(+), 28 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
 index bd45189..e5ef7e6 100644
@@ -110,10 +110,10 @@ index bd45189..e5ef7e6 100644
      CloseHandle(obj);
  }
 diff --git a/server/file.c b/server/file.c
-index 40013b1..77da72e 100644
+index adf7e51..39169a4 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -487,12 +487,161 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID
+@@ -492,12 +492,174 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID
      return sd;
  }
  
@@ -149,6 +149,11 @@ index 40013b1..77da72e 100644
 +        }
 +        while(p && (!pn || p < pn));
 +        sub_authority_count -= 3; /* Revision and IdentifierAuthority don't count */
++        p = pn; /* prepare for the next ACE */
++
++        /* verify that the SubAuthorityCount does not exceed the maximum permitted value */
++        if (sub_authority_count > SID_MAX_SUB_AUTHORITIES)
++            continue;
 +
 +        switch (type)
 +        {
@@ -164,7 +169,6 @@ index 40013b1..77da72e 100644
 +                continue;
 +        }
 +        ace_count++;
-+        p = pn;
 +    }
 +    while(p);
 +
@@ -224,6 +228,11 @@ index 40013b1..77da72e 100644
 +        p = strchr(p, '-')+1; /* IdentifierAuthority doesn't count */
 +        do
 +        {
++            if (sub_authority_count == SID_MAX_SUB_AUTHORITIES)
++            {
++                sub_authority_count++; /* fail on this SID and move on to the next one */
++                break;
++            }
 +            sscanf(p, "%u", &sa);
 +            sid->SubAuthority[sub_authority_count] = sa;
 +            p = strchr(p, '-');
@@ -232,6 +241,11 @@ index 40013b1..77da72e 100644
 +        }
 +        while(p);
 +        sid->SubAuthorityCount = sub_authority_count;
++        p = pn; /* prepare for the next ACE */
++
++        /* verify that the SubAuthorityCount does not exceed the maximum permitted value */
++        if (sub_authority_count > SID_MAX_SUB_AUTHORITIES)
++            continue;
 +
 +        /* Handle the specific ACE */
 +        switch (type)
@@ -256,7 +270,6 @@ index 40013b1..77da72e 100644
 +            default:
 +                continue;
 +        }
-+        p = pn;
 +    }
 +
 +    return sd;
@@ -275,7 +288,7 @@ index 40013b1..77da72e 100644
  
      if (unix_fd == -1 || fstat( unix_fd, &st ) == -1)
          return obj->sd;
-@@ -502,9 +651,10 @@ struct security_descriptor *file_get_acls( struct object *obj, struct fd *fd, mo
+@@ -507,9 +669,10 @@ struct security_descriptor *file_get_acls( struct object *obj, struct fd *fd, mo
          (st.st_uid == *uid))
          return obj->sd;
  

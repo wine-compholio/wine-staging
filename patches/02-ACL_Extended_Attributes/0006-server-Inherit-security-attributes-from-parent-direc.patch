@@ -1,15 +1,15 @@
-From 1f5176d46bfc17facf91aad86c1180586465fbc6 Mon Sep 17 00:00:00 2001
+From 714f718fb09748a7865c2a92c4b12f0d798cc878 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Tue, 15 Apr 2014 15:07:50 -0600
+Date: Tue, 15 Apr 2014 15:13:55 -0600
 Subject: server: Inherit security attributes from parent directories on
  creation.
 
 ---
- dlls/advapi32/tests/security.c |   40 ++++++++++-
+ dlls/advapi32/tests/security.c |   40 +++++++++++-
  server/change.c                |    2 +-
- server/file.c                  |  144 +++++++++++++++++++++++++++++++++++++++-
+ server/file.c                  |  141 +++++++++++++++++++++++++++++++++++++++-
  server/file.h                  |    2 +-
- 4 files changed, 182 insertions(+), 6 deletions(-)
+ 4 files changed, 179 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
 index 5b7e6a6..68b63a0 100644
@@ -86,10 +86,10 @@ index eb16923..1571eb8 100644
      return sd;
  }
 diff --git a/server/file.c b/server/file.c
-index a12679d..b6e3599 100644
+index a12679d..65a9604 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -246,11 +246,139 @@ void set_xattr_acls( int fd, const struct security_descriptor *sd )
+@@ -246,11 +246,141 @@ void set_xattr_acls( int fd, const struct security_descriptor *sd )
  #endif
  }
  
@@ -173,9 +173,10 @@ index a12679d..b6e3599 100644
 +    return sd;
 +}
 +
-+static struct security_descriptor *file_get_parent_sd( struct fd *root, char *parent_name,
-+                                                       int is_dir )
++static struct security_descriptor *file_get_parent_sd( struct fd *root, char *child_name,
++                                                       int child_len, int is_dir )
 +{
++    char *parent_name = strndup( child_name, child_len );
 +    struct security_descriptor *sd = NULL;
 +    int len = strlen( parent_name );
 +    mode_t parent_mode = 0555;
@@ -196,6 +197,7 @@ index a12679d..b6e3599 100644
 +                         READ_CONTROL|ACCESS_SYSTEM_SECURITY,
 +                         FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
 +                         FILE_OPEN_FOR_BACKUP_INTENT );
++    free(parent_name);
 +    if(parent_fd)
 +    {
 +        struct object *obj;
@@ -229,23 +231,18 @@ index a12679d..b6e3599 100644
      struct object *obj = NULL;
      struct fd *fd;
      int flags;
-@@ -279,6 +407,15 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+@@ -279,6 +409,10 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
      default:                set_error( STATUS_INVALID_PARAMETER ); goto done;
      }
  
++    /* Note: inheritance of security descriptors only occurs on creation when sd is NULL */
 +    if (!sd && (create == FILE_CREATE || create == FILE_OVERWRITE_IF))
-+    {
-+        /* Note: inheritance of security descriptors only occurs on creation when sd is NULL */
-+        char *child_name = strndup( nameptr, len );
-+
-+        sd = temp_sd = file_get_parent_sd( root, child_name, options & FILE_DIRECTORY_FILE );
-+        free(child_name);
-+    }
++        sd = temp_sd = file_get_parent_sd( root, nameptr, len, options & FILE_DIRECTORY_FILE );
 +
      if (sd)
      {
          const SID *owner = sd_get_owner( sd );
-@@ -319,6 +456,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+@@ -319,6 +453,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
      release_object( fd );
  
  done:
@@ -253,7 +250,7 @@ index a12679d..b6e3599 100644
      free( name );
      return obj;
  }
-@@ -676,7 +814,7 @@ void convert_generic_sd( struct security_descriptor *sd )
+@@ -676,7 +811,7 @@ void convert_generic_sd( struct security_descriptor *sd )
  }
  
  struct security_descriptor *file_get_acls( struct object *obj, struct fd *fd, mode_t *mode,
@@ -262,7 +259,7 @@ index a12679d..b6e3599 100644
  {
      int unix_fd = get_unix_fd( fd );
      struct stat st;
-@@ -694,7 +832,7 @@ struct security_descriptor *file_get_acls( struct object *obj, struct fd *fd, mo
+@@ -694,7 +829,7 @@ struct security_descriptor *file_get_acls( struct object *obj, struct fd *fd, mo
      user = security_unix_uid_to_sid( st.st_uid );
      group = token_get_primary_group( current->process->token );
      sd = get_xattr_acls( unix_fd, user, group );
@@ -271,7 +268,7 @@ index a12679d..b6e3599 100644
      if (!sd) sd = mode_to_sd( st.st_mode, user, group);
      if (!sd) return obj->sd;
  
-@@ -714,7 +852,7 @@ static struct security_descriptor *file_get_sd( struct object *obj )
+@@ -714,7 +849,7 @@ static struct security_descriptor *file_get_sd( struct object *obj )
      assert( obj->ops == &file_ops );
  
      fd = file_get_fd( obj );

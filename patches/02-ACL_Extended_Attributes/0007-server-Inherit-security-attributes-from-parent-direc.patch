@@ -1,6 +1,6 @@
-From 9c6061a4e74991b1b02a1532d5c109600504d91e Mon Sep 17 00:00:00 2001
+From c71273c87839889d351fe8c5b84f3c947783500a Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Tue, 11 Mar 2014 11:09:00 -0600
+Date: Tue, 15 Apr 2014 15:23:46 -0600
 Subject: server: Inherit security attributes from parent directories on
  SetSecurityInfo.
 
@@ -8,9 +8,9 @@ Subject: server: Inherit security attributes from parent directories on
  dlls/advapi32/tests/security.c |   68 ++++++++++++++++++++++
  include/winnt.h                |    7 ++-
  server/fd.c                    |   13 ++++-
- server/file.c                  |  125 +++++++++++++++++++++++++++++++++++++++-
+ server/file.c                  |  126 +++++++++++++++++++++++++++++++++++++++-
  server/file.h                  |    1 +
- 5 files changed, 206 insertions(+), 8 deletions(-)
+ 5 files changed, 207 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
 index 68b63a0..c981c1b 100644
@@ -92,10 +92,10 @@ index 68b63a0..c981c1b 100644
      CloseHandle(hTemp);
  
 diff --git a/include/winnt.h b/include/winnt.h
-index f785d33..5151638 100644
+index 3f33c6b..5d2234f 100644
 --- a/include/winnt.h
 +++ b/include/winnt.h
-@@ -5054,14 +5054,15 @@ typedef struct _TAPE_GET_MEDIA_PARAMETERS {
+@@ -5057,14 +5057,15 @@ typedef struct _TAPE_GET_MEDIA_PARAMETERS {
      BOOLEAN WriteProtected;
  } TAPE_GET_MEDIA_PARAMETERS, *PTAPE_GET_MEDIA_PARAMETERS;
  
@@ -146,10 +146,10 @@ index fa8874c..9e6b9a8 100644
  
      if (orig->inode)
 diff --git a/server/file.c b/server/file.c
-index c115ff7..cb518f5 100644
+index eae4984..08d2db0 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -324,6 +324,105 @@ struct security_descriptor *inherit_sd( const struct security_descriptor *parent
+@@ -326,6 +326,105 @@ struct security_descriptor *inherit_sd( const struct security_descriptor *parent
      return sd;
  }
  
@@ -252,10 +252,10 @@ index c115ff7..cb518f5 100644
 +    return sd;
 +}
 +
- static struct security_descriptor *file_get_parent_sd( struct fd *root, char *parent_name,
-                                                        int is_dir )
+ static struct security_descriptor *file_get_parent_sd( struct fd *root, const char *child_name,
+                                                        int child_len, int is_dir )
  {
-@@ -921,16 +1020,32 @@ mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner )
+@@ -933,16 +1032,33 @@ mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner )
      return new_mode & ~denied_mode;
  }
  
@@ -279,7 +279,8 @@ index c115ff7..cb518f5 100644
 +
 +        if (child_name)
 +        {
-+            parent_sd = file_get_parent_sd( NULL, child_name, S_ISDIR(st.st_mode) );
++            parent_sd = file_get_parent_sd( NULL, child_name, strlen(child_name),
++                                                  S_ISDIR(st.st_mode) );
 +            free( child_name );
 +            if (parent_sd)
 +                sd = file_combine_sds( parent_sd, new_sd );
@@ -289,7 +290,7 @@ index c115ff7..cb518f5 100644
      if (set_info & OWNER_SECURITY_INFORMATION)
      {
          owner = sd_get_owner( sd );
-@@ -962,10 +1077,14 @@ int file_set_acls( struct object *obj, struct fd *fd, const struct security_desc
+@@ -974,10 +1090,14 @@ int file_set_acls( struct object *obj, struct fd *fd, const struct security_desc
          if (((st.st_mode ^ mode) & (S_IRWXU|S_IRWXG|S_IRWXO)) && fchmod( unix_fd, mode ) == -1)
          {
              file_set_error();

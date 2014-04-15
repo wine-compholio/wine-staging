@@ -1,16 +1,16 @@
-From 96470b6ee4c0e91700ac197e77784feb42d9a961 Mon Sep 17 00:00:00 2001
+From 060f418210bd083d4893b5bf481c9a42525320c6 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Sat, 15 Feb 2014 18:20:49 -0700
+Date: Tue, 15 Apr 2014 14:27:48 -0600
 Subject: server: Store file security attributes with extended file
  attributes.
 
 ---
  configure.ac  |   12 +++++++++++
- server/file.c |   67 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 79 insertions(+)
+ server/file.c |   65 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 77 insertions(+)
 
 diff --git a/configure.ac b/configure.ac
-index 32730f3..96d796a 100644
+index 7e463b9..c0cc653 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -73,6 +73,7 @@ AC_ARG_WITH(pthread,   AS_HELP_STRING([--without-pthread],[do not use the pthrea
@@ -21,7 +21,7 @@ index 32730f3..96d796a 100644
  AC_ARG_WITH(xcomposite,AS_HELP_STRING([--without-xcomposite],[do not use the Xcomposite extension]),
              [if test "x$withval" = "xno"; then ac_cv_header_X11_extensions_Xcomposite_h=no; fi])
  AC_ARG_WITH(xcursor,   AS_HELP_STRING([--without-xcursor],[do not use the Xcursor extension]),
-@@ -661,6 +662,17 @@ AC_CHECK_HEADERS([libprocstat.h],,,
+@@ -664,6 +665,17 @@ AC_CHECK_HEADERS([libprocstat.h],,,
  #include <sys/socket.h>
  #endif])
  
@@ -40,7 +40,7 @@ index 32730f3..96d796a 100644
  
  AC_SUBST(dlldir,"\${libdir}/wine")
 diff --git a/server/file.c b/server/file.c
-index 8baa712..c375c72 100644
+index c98f045..40013b1 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -32,6 +32,7 @@
@@ -61,7 +61,7 @@ index 8baa712..c375c72 100644
  
  #include "ntstatus.h"
  #define WIN32_NO_STATUS
-@@ -178,6 +182,66 @@ static struct object *create_file_obj( struct fd *fd, unsigned int access, mode_
+@@ -178,6 +182,64 @@ static struct object *create_file_obj( struct fd *fd, unsigned int access, mode_
      return &file->obj;
  }
  
@@ -86,8 +86,6 @@ index 8baa712..c375c72 100644
 +        char sidtxt[100], *s;
 +        const SID *sid;
 +        DWORD mask;
-+
-+        if (type & INHERIT_ONLY_ACE) continue;
 +
 +        switch (type)
 +        {
@@ -128,7 +126,7 @@ index 8baa712..c375c72 100644
  static struct object *create_file( struct fd *root, const char *nameptr, data_size_t len,
                                     unsigned int access, unsigned int sharing, int create,
                                     unsigned int options, unsigned int attrs,
-@@ -239,6 +303,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+@@ -239,6 +301,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
      /* FIXME: should set error to STATUS_OBJECT_NAME_COLLISION if file existed before */
      fd = open_fd( root, name, flags | O_NONBLOCK | O_LARGEFILE, &mode, access, sharing, options );
      if (!fd) goto done;
@@ -136,7 +134,7 @@ index 8baa712..c375c72 100644
  
      if (S_ISDIR(mode))
          obj = create_dir_obj( fd, access, mode );
-@@ -580,6 +645,8 @@ int file_set_acls( struct object *obj, struct fd *fd, const struct security_desc
+@@ -580,6 +643,8 @@ int file_set_acls( struct object *obj, struct fd *fd, const struct security_desc
          mode = st.st_mode & (S_ISUID|S_ISGID|S_ISVTX);
          mode |= sd_to_mode( sd, owner );
  

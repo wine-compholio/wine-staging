@@ -1,16 +1,16 @@
-From be78120bae662c7290b09433b020548a2b299361 Mon Sep 17 00:00:00 2001
+From a82ce7ae33ae842f531c96cc9457a73430c45773 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Tue, 15 Apr 2014 15:03:12 -0600
+Date: Thu, 17 Apr 2014 16:08:03 -0600
 Subject: server: Store file security attributes with extended file
  attributes.
 
 ---
- configure.ac  |   12 ++++++++++
- server/file.c |   71 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 83 insertions(+)
+ configure.ac  |   12 ++++++++++++
+ server/file.c |   31 +++++++++++++++++++++++++++++++
+ 2 files changed, 43 insertions(+)
 
 diff --git a/configure.ac b/configure.ac
-index 7e463b9..c0cc653 100644
+index 46602d6..99fcb9b 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -73,6 +73,7 @@ AC_ARG_WITH(pthread,   AS_HELP_STRING([--without-pthread],[do not use the pthrea
@@ -40,7 +40,7 @@ index 7e463b9..c0cc653 100644
  
  AC_SUBST(dlldir,"\${libdir}/wine")
 diff --git a/server/file.c b/server/file.c
-index c98f045..032205e 100644
+index 1f008ea..ceb57be 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -32,6 +32,7 @@
@@ -61,90 +61,50 @@ index c98f045..032205e 100644
  
  #include "ntstatus.h"
  #define WIN32_NO_STATUS
-@@ -178,6 +182,70 @@ static struct object *create_file_obj( struct fd *fd, unsigned int access, mode_
+@@ -178,6 +182,30 @@ static struct object *create_file_obj( struct fd *fd, unsigned int access, mode_
      return &file->obj;
  }
  
-+void set_xattr_acls( int fd, const struct security_descriptor *sd )
++void set_xattr_sd( int fd, const struct security_descriptor *sd )
 +{
 +#ifdef HAVE_ATTR_XATTR_H
-+    char buffer[XATTR_SIZE_MAX], *p = buffer;
-+    const ACE_HEADER *ace;
-+    int present, i, j, n;
++    char buffer[XATTR_SIZE_MAX];
++    int present, len;
 +    const ACL *dacl;
 +
++    /* there's no point in storing the security descriptor if there's no DACL */
 +    if (!sd) return;
 +    dacl = sd_get_dacl( sd, &present );
 +    if (!present || !dacl) return;
-+    ace = (const ACE_HEADER *)(dacl + 1);
 +
-+    for (i = 0; i < dacl->AceCount; i++, ace = ace_next( ace ))
-+    {
-+        BYTE type = ace->AceType, flags;
-+        const ACCESS_ALLOWED_ACE *aaa;
-+        const ACCESS_DENIED_ACE *ada;
-+        char sidtxt[100], *s;
-+        const SID *sid;
-+        DWORD mask;
++    len = 2 + sizeof(struct security_descriptor) + sd->owner_len + sd->group_len + sd->sacl_len
++          + sd->dacl_len;
++    if (len > XATTR_SIZE_MAX) return;
 +
-+        switch (type)
-+        {
-+            case ACCESS_DENIED_ACE_TYPE:
-+                ada   = (const ACCESS_DENIED_ACE *)ace;
-+                flags = ada->Header.AceFlags;
-+                mask  = ada->Mask;
-+                sid   = (const SID *)&ada->SidStart;
-+                break;
-+            case ACCESS_ALLOWED_ACE_TYPE:
-+                aaa   = (const ACCESS_ALLOWED_ACE *)ace;
-+                flags = aaa->Header.AceFlags;
-+                mask  = aaa->Mask;
-+                sid   = (const SID *)&aaa->SidStart;
-+                break;
-+            default:
-+                continue;
-+        }
-+
-+        /* verify that the SubAuthorityCount does not exceed the maximum permitted value */
-+        if (sid->SubAuthorityCount > SID_MAX_SUB_AUTHORITIES)
-+            continue;
-+
-+        n = sprintf( sidtxt,  "S-%u-%d", sid->Revision,
-+            MAKELONG(
-+                MAKEWORD( sid->IdentifierAuthority.Value[5],
-+                          sid->IdentifierAuthority.Value[4] ),
-+                MAKEWORD( sid->IdentifierAuthority.Value[3],
-+                          sid->IdentifierAuthority.Value[2] )
-+            ) );
-+        s = sidtxt + n;
-+        for( j=0; j<sid->SubAuthorityCount; j++ )
-+            s += sprintf( s, "-%u", sid->SubAuthority[j] );
-+
-+        p += snprintf( p, XATTR_SIZE_MAX-(p-buffer), "%s%x,%x,%x,%s",
-+                      (p != buffer ? ";" : ""), type, flags, mask, sidtxt );
-+    }
-+
-+    buffer[XATTR_SIZE_MAX-1] = 0; /* ensure NULL terminated if snprintf truncated the buffer */
-+    fsetxattr( fd, "user.wine.acl", buffer, p-buffer, 0 );
++    /* include the descriptor revision and resource manager control bits */
++    buffer[0] = SECURITY_DESCRIPTOR_REVISION;
++    buffer[1] = 0;
++    memcpy( &buffer[2], sd, len - 2 );
++    fsetxattr( fd, "user.wine.sd", buffer, len, 0 );
 +#endif
 +}
 +
  static struct object *create_file( struct fd *root, const char *nameptr, data_size_t len,
                                     unsigned int access, unsigned int sharing, int create,
                                     unsigned int options, unsigned int attrs,
-@@ -239,6 +307,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+@@ -239,6 +267,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
      /* FIXME: should set error to STATUS_OBJECT_NAME_COLLISION if file existed before */
      fd = open_fd( root, name, flags | O_NONBLOCK | O_LARGEFILE, &mode, access, sharing, options );
      if (!fd) goto done;
-+    set_xattr_acls( get_unix_fd( fd ), sd );
++    set_xattr_sd( get_unix_fd( fd ), sd );
  
      if (S_ISDIR(mode))
          obj = create_dir_obj( fd, access, mode );
-@@ -580,6 +649,8 @@ int file_set_acls( struct object *obj, struct fd *fd, const struct security_desc
+@@ -580,6 +609,8 @@ int set_file_sd( struct object *obj, struct fd *fd, const struct security_descri
          mode = st.st_mode & (S_ISUID|S_ISGID|S_ISVTX);
          mode |= sd_to_mode( sd, owner );
  
-+        set_xattr_acls( unix_fd, sd );
++        set_xattr_sd( unix_fd, sd );
 +
          if (((st.st_mode ^ mode) & (S_IRWXU|S_IRWXG|S_IRWXO)) && fchmod( unix_fd, mode ) == -1)
          {

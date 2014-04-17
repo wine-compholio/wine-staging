@@ -1,6 +1,6 @@
-From bf6cb3c547ce790864af7b244f7934d3f5e3780d Mon Sep 17 00:00:00 2001
+From e20db446df6bb0177f90964cd09dd9a993d120f3 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Tue, 15 Apr 2014 14:19:26 -0600
+Date: Thu, 17 Apr 2014 16:07:50 -0600
 Subject: server: Unify the retrieval of security attributes for files and
  directories.
 
@@ -11,7 +11,7 @@ Subject: server: Unify the retrieval of security attributes for files and
  3 files changed, 28 insertions(+), 38 deletions(-)
 
 diff --git a/server/change.c b/server/change.c
-index 76fc9f7..eb16923 100644
+index 7cea06b..c391180 100644
 --- a/server/change.c
 +++ b/server/change.c
 @@ -278,39 +278,17 @@ static struct fd *dir_get_fd( struct object *obj )
@@ -54,13 +54,13 @@ index 76fc9f7..eb16923 100644
 -    free( obj->sd );
 -    obj->sd = sd;
 +    fd = dir_get_fd( obj );
-+    sd = file_get_acls( obj, fd, &dir->mode, &dir->uid );
++    sd = set_file_sd( obj, fd, &dir->mode, &dir->uid );
 +    release_object( fd );
      return sd;
  }
  
 diff --git a/server/file.c b/server/file.c
-index 13ebaf9..c98f045 100644
+index fb89272..1f008ea 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -424,23 +424,19 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID
@@ -68,8 +68,8 @@ index 13ebaf9..c98f045 100644
  }
  
 -static struct security_descriptor *file_get_sd( struct object *obj )
-+struct security_descriptor *file_get_acls( struct object *obj, struct fd *fd, mode_t *mode,
-+                                           uid_t *uid )
++struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode_t *mode,
++                                         uid_t *uid )
  {
 -    struct file *file = (struct file *)obj;
 +    int unix_fd = get_unix_fd( fd );
@@ -114,7 +114,7 @@ index 13ebaf9..c98f045 100644
 +    assert( obj->ops == &file_ops );
 +
 +    fd = file_get_fd( obj );
-+    sd = file_get_acls( obj, fd, &file->mode, &file->uid );
++    sd = get_file_sd( obj, fd, &file->mode, &file->uid );
 +    release_object( fd );
 +    return sd;
 +}
@@ -123,15 +123,15 @@ index 13ebaf9..c98f045 100644
  {
      mode_t mode = 0;
 diff --git a/server/file.h b/server/file.h
-index 11c3220..89b5888 100644
+index 76cb383..43a234f 100644
 --- a/server/file.h
 +++ b/server/file.h
 @@ -124,6 +124,8 @@ extern struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, con
  extern mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner );
- extern int file_set_acls( struct object *obj, struct fd *fd, const struct security_descriptor *sd,
-                           unsigned int set_info );
-+extern struct security_descriptor *file_get_acls( struct object *obj, struct fd *fd, mode_t *mode,
-+                                                  uid_t *uid );
+ extern int set_file_sd( struct object *obj, struct fd *fd, const struct security_descriptor *sd,
+                         unsigned int set_info );
++extern struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode_t *mode,
++                                                uid_t *uid );
  
  /* file mapping functions */
  

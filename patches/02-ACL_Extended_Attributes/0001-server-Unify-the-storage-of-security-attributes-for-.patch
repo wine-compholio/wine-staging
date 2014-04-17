@@ -1,6 +1,6 @@
-From ee79e1be71635431d0d05841c7f9cea720411ba6 Mon Sep 17 00:00:00 2001
+From 379e01b2aea67fa305d2ccd08b589d2d31cd0da0 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Thu, 13 Feb 2014 15:45:41 -0700
+Date: Thu, 17 Apr 2014 16:07:46 -0600
 Subject: server: Unify the storage of security attributes for files and
  directories.
 
@@ -11,7 +11,7 @@ Subject: server: Unify the storage of security attributes for files and
  3 files changed, 25 insertions(+), 48 deletions(-)
 
 diff --git a/server/change.c b/server/change.c
-index f6d56b0..76fc9f7 100644
+index f6d56b0..7cea06b 100644
 --- a/server/change.c
 +++ b/server/change.c
 @@ -317,49 +317,15 @@ static struct security_descriptor *dir_get_sd( struct object *obj )
@@ -64,14 +64,14 @@ index f6d56b0..76fc9f7 100644
 -    }
 -    return 1;
 +    fd = dir_get_fd( obj );
-+    ret = file_set_acls( obj, fd, sd, set_info );
++    ret = set_file_sd( obj, fd, sd, set_info );
 +    release_object( fd );
 +    return ret;
  }
  
  static struct change_record *get_first_change_record( struct dir *dir )
 diff --git a/server/file.c b/server/file.c
-index cceb8ad..13ebaf9 100644
+index cceb8ad..fb89272 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -534,18 +534,13 @@ mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner )
@@ -80,8 +80,8 @@ index cceb8ad..13ebaf9 100644
  
 -static int file_set_sd( struct object *obj, const struct security_descriptor *sd,
 -                        unsigned int set_info )
-+int file_set_acls( struct object *obj, struct fd *fd, const struct security_descriptor *sd,
-+                   unsigned int set_info )
++int set_file_sd( struct object *obj, struct fd *fd, const struct security_descriptor *sd,
++                 unsigned int set_info )
  {
 -    struct file *file = (struct file *)obj;
 +    int unix_fd = get_unix_fd( fd );
@@ -109,7 +109,7 @@ index cceb8ad..13ebaf9 100644
 +    assert( obj->ops == &file_ops );
 +
 +    fd = file_get_fd( obj );
-+    ret = file_set_acls( obj, fd, sd, set_info );
++    ret = set_file_sd( obj, fd, sd, set_info );
 +    release_object( fd );
 +    return ret;
 +}
@@ -118,15 +118,15 @@ index cceb8ad..13ebaf9 100644
  {
      struct file *file = (struct file *)obj;
 diff --git a/server/file.h b/server/file.h
-index 493d30b..11c3220 100644
+index 493d30b..76cb383 100644
 --- a/server/file.h
 +++ b/server/file.h
 @@ -122,6 +122,8 @@ extern struct file *create_file_for_fd_obj( struct fd *fd, unsigned int access,
  extern void file_set_error(void);
  extern struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID *group );
  extern mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner );
-+extern int file_set_acls( struct object *obj, struct fd *fd, const struct security_descriptor *sd,
-+                          unsigned int set_info );
++extern int set_file_sd( struct object *obj, struct fd *fd, const struct security_descriptor *sd,
++                        unsigned int set_info );
  
  /* file mapping functions */
  

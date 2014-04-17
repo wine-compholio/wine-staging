@@ -1,6 +1,6 @@
-From c71273c87839889d351fe8c5b84f3c947783500a Mon Sep 17 00:00:00 2001
+From cefa61c21ee6aacaff75f9c98c779a362a01845d Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Tue, 15 Apr 2014 15:23:46 -0600
+Date: Thu, 17 Apr 2014 16:10:17 -0600
 Subject: server: Inherit security attributes from parent directories on
  SetSecurityInfo.
 
@@ -146,10 +146,10 @@ index fa8874c..9e6b9a8 100644
  
      if (orig->inode)
 diff --git a/server/file.c b/server/file.c
-index eae4984..08d2db0 100644
+index 0a29948..fe0b88f 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -326,6 +326,105 @@ struct security_descriptor *inherit_sd( const struct security_descriptor *parent
+@@ -286,6 +286,105 @@ struct security_descriptor *inherit_sd( const struct security_descriptor *parent
      return sd;
  }
  
@@ -255,13 +255,13 @@ index eae4984..08d2db0 100644
  static struct security_descriptor *file_get_parent_sd( struct fd *root, const char *child_name,
                                                         int child_len, int is_dir )
  {
-@@ -933,16 +1032,33 @@ mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner )
+@@ -794,16 +893,33 @@ mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner )
      return new_mode & ~denied_mode;
  }
  
--int file_set_acls( struct object *obj, struct fd *fd, const struct security_descriptor *sd,
-+int file_set_acls( struct object *obj, struct fd *fd, const struct security_descriptor *new_sd,
-                    unsigned int set_info )
+-int set_file_sd( struct object *obj, struct fd *fd, const struct security_descriptor *sd,
++int set_file_sd( struct object *obj, struct fd *fd, const struct security_descriptor *new_sd,
+                  unsigned int set_info )
  {
 +    const struct security_descriptor *sd = new_sd;
 +    struct security_descriptor *parent_sd = NULL;
@@ -290,7 +290,7 @@ index eae4984..08d2db0 100644
      if (set_info & OWNER_SECURITY_INFORMATION)
      {
          owner = sd_get_owner( sd );
-@@ -974,10 +1090,14 @@ int file_set_acls( struct object *obj, struct fd *fd, const struct security_desc
+@@ -835,10 +951,14 @@ int set_file_sd( struct object *obj, struct fd *fd, const struct security_descri
          if (((st.st_mode ^ mode) & (S_IRWXU|S_IRWXG|S_IRWXO)) && fchmod( unix_fd, mode ) == -1)
          {
              file_set_error();
@@ -308,7 +308,7 @@ index eae4984..08d2db0 100644
  
  static int file_set_sd( struct object *obj, const struct security_descriptor *sd,
 diff --git a/server/file.h b/server/file.h
-index 0905fbb..8cbc4cb 100644
+index 2f537cf..fa83001 100644
 --- a/server/file.h
 +++ b/server/file.h
 @@ -77,6 +77,7 @@ extern void allow_fd_caching( struct fd *fd );

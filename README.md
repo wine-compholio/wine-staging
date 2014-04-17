@@ -11,7 +11,6 @@ Current patches include:
 * Support for TransmitFile (http://bugs.winehq.org/show_bug.cgi?id=5048)
 * Support for GetVolumePathName
 * Implement an Arial replacement font (http://bugs.winehq.org/show_bug.cgi?id=32323)
-* Allow CompareStringEx flag NORM_LINGUISTIC_CASING (http://bugs.winehq.org/show_bug.cgi?id=34269)
 * Workaround for TransactNamedPipe not being supported (http://bugs.winehq.org/show_bug.cgi?id=17273)
 * XEMBED support for embedding Wine windows inside Linux applications
 * Reduced SetTimer minimum value from 15 ms to 5 ms (improves Silverlight framerates)

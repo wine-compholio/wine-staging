@@ -1,6 +1,6 @@
-From 2e2b2120c5b4930ec89aaf074c1c78e0dd61bc59 Mon Sep 17 00:00:00 2001
+From 0be335ce9c2c93a186cf35be0a99519868ab8a0d Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Thu, 17 Apr 2014 16:11:25 -0600
+Date: Fri, 18 Apr 2014 15:21:00 -0600
 Subject: server: Add compatibility code for handling the old method of
  storing ACLs.
 
@@ -9,11 +9,11 @@ Subject: server: Add compatibility code for handling the old method of
  1 file changed, 162 insertions(+)
 
 diff --git a/server/file.c b/server/file.c
-index fe0b88f..ea31a29 100644
+index e29d06b..08231a7 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -687,6 +687,167 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID
-     return sd;
+@@ -750,6 +750,167 @@ struct security_descriptor *get_xattr_sd( int fd )
+ #endif
  }
  
 +struct security_descriptor *get_xattr_acls( int fd, const SID *user, const SID *group )
@@ -122,7 +122,7 @@ index fe0b88f..ea31a29 100644
 +        sid->IdentifierAuthority.Value[3] = LOBYTE(HIWORD(ia));
 +        sid->IdentifierAuthority.Value[4] = HIBYTE(LOWORD(ia));
 +        sid->IdentifierAuthority.Value[5] = LOBYTE(LOWORD(ia));
-+        p = strchr(sidtxt, '-')+1; 
++        p = strchr(sidtxt, '-')+1;
 +        p = strchr(p, '-')+1; /* Revision doesn't count */
 +        p = strchr(p, '-')+1; /* IdentifierAuthority doesn't count */
 +        do
@@ -177,13 +177,13 @@ index fe0b88f..ea31a29 100644
 +#endif
 +}
 +
- struct security_descriptor *get_xattr_sd( int fd, const SID *user, const SID *group )
+ /* Convert generic rights into standard access rights */
+ void convert_generic_sd( struct security_descriptor *sd )
  {
- #ifdef HAVE_ATTR_XATTR_H
-@@ -789,6 +950,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
+@@ -790,6 +951,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
      user = security_unix_uid_to_sid( st.st_uid );
      group = token_get_primary_group( current->process->token );
-     sd = get_xattr_sd( unix_fd, user, group );
+     sd = get_xattr_sd( unix_fd );
 +    if (!sd) sd = get_xattr_acls( unix_fd, user, group );
      if (sd && convert_generic) convert_generic_sd( sd );
      if (!sd) sd = mode_to_sd( st.st_mode, user, group);

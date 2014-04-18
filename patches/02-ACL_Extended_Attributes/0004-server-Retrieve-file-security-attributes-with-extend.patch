@@ -1,13 +1,14 @@
-From 469fa2de7b5ea74c880a64c4acbb31a2397c8dc4 Mon Sep 17 00:00:00 2001
+From e031dc5069bebd63770a405d684ee75a14d1826b Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Thu, 17 Apr 2014 16:09:01 -0600
+Date: Fri, 18 Apr 2014 14:01:35 -0600
 Subject: server: Retrieve file security attributes with extended file
  attributes.
 
 ---
- dlls/advapi32/tests/security.c |   49 ++++++++++++++--------------
- server/file.c                  |   70 ++++++++++++++++++++++++++++++++++++++--
- 2 files changed, 91 insertions(+), 28 deletions(-)
+ dlls/advapi32/tests/security.c |   49 ++++++++++++++++++++--------------------
+ server/change.c                |    2 +-
+ server/file.c                  |   28 ++++++++++++++++++++---
+ 3 files changed, 50 insertions(+), 29 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
 index bd45189..e5ef7e6 100644
@@ -109,70 +110,41 @@ index bd45189..e5ef7e6 100644
      }
      CloseHandle(obj);
  }
+diff --git a/server/change.c b/server/change.c
+index c391180..77c01bb 100644
+--- a/server/change.c
++++ b/server/change.c
+@@ -287,7 +287,7 @@ static struct security_descriptor *dir_get_sd( struct object *obj )
+     assert( obj->ops == &dir_ops );
+ 
+     fd = dir_get_fd( obj );
+-    sd = set_file_sd( obj, fd, &dir->mode, &dir->uid );
++    sd = get_file_sd( obj, fd, &dir->mode, &dir->uid );
+     release_object( fd );
+     return sd;
+ }
 diff --git a/server/file.c b/server/file.c
-index ceb57be..430d183 100644
+index b9106a8..c4706b6 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -453,12 +453,75 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID
+@@ -496,12 +496,33 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID
      return sd;
  }
  
-+struct security_descriptor *get_xattr_sd( int fd, const SID *user, const SID *group )
++struct security_descriptor *get_xattr_sd( int fd )
 +{
 +#ifdef HAVE_ATTR_XATTR_H
-+    char buffer[XATTR_SIZE_MAX], *sd_ptr, *buffer_ptr;
 +    struct security_descriptor *sd;
-+    int n, owner_len, group_len;
++    char buffer[XATTR_SIZE_MAX];
++    int n;
 +
 +    n = fgetxattr( fd, "user.wine.sd", buffer, sizeof(buffer) );
 +    if (n == -1) return NULL;
 +    /* validate that we can handle the descriptor */
 +    if (buffer[0] != SECURITY_DESCRIPTOR_REVISION || buffer[1] != 0) return NULL;
 +
-+    owner_len = FIELD_OFFSET(SID, SubAuthority[user->SubAuthorityCount]);
-+    group_len = FIELD_OFFSET(SID, SubAuthority[group->SubAuthorityCount]);
-+    sd = mem_alloc( n - 2 + owner_len + group_len );
-+    sd_ptr = (char *)sd;
-+    buffer_ptr = &buffer[2];
-+    memcpy( sd_ptr, buffer_ptr, sizeof(struct security_descriptor));
-+    sd_ptr += sizeof(struct security_descriptor);
-+    buffer_ptr += sizeof(struct security_descriptor);
-+
-+    /* if no owner or group information is stored in the SD then return the corresponding data
-+     * from the information stored in the filesystem */
-+    if (!sd->owner_len)
-+    {
-+        memcpy( sd_ptr, user, owner_len );
-+        sd_ptr += owner_len;
-+    }
-+    else
-+    {
-+        memcpy( sd_ptr, buffer_ptr, sd->owner_len );
-+        sd_ptr += sd->owner_len;
-+    }
-+    buffer_ptr += sd->owner_len;
-+    if (!sd->owner_len)
-+    {
-+        memcpy( sd_ptr, group, group_len );
-+        sd_ptr += group_len;
-+    }
-+    else
-+    {
-+        memcpy( sd_ptr, buffer_ptr, sd->group_len );
-+        sd_ptr += sd->group_len;
-+    }
-+    buffer_ptr += sd->group_len;
-+
-+    memcpy( sd_ptr, buffer_ptr, sd->sacl_len );
-+    sd_ptr += sd->sacl_len;
-+    buffer_ptr += sd->sacl_len;
-+    memcpy( sd_ptr, buffer_ptr, sd->dacl_len );
-+    sd_ptr += sd->dacl_len;
-+    buffer_ptr += sd->dacl_len;
-+
-+    sd->owner_len = owner_len;
-+    sd->group_len = group_len;
-+
++    sd = mem_alloc( n - 2 );
++    memcpy( sd, &buffer[2], n - 2 );
 +    return sd;
 +#else
 +    return NULL;
@@ -189,7 +161,7 @@ index ceb57be..430d183 100644
  
      if (unix_fd == -1 || fstat( unix_fd, &st ) == -1)
          return obj->sd;
-@@ -468,9 +531,10 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
+@@ -511,9 +532,10 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
          (st.st_uid == *uid))
          return obj->sd;
  
@@ -198,7 +170,7 @@ index ceb57be..430d183 100644
 -                     token_get_primary_group( current->process->token ));
 +    user = security_unix_uid_to_sid( st.st_uid );
 +    group = token_get_primary_group( current->process->token );
-+    sd = get_xattr_sd( unix_fd, user, group );
++    sd = get_xattr_sd( unix_fd );
 +    if (!sd) sd = mode_to_sd( st.st_mode, user, group);
      if (!sd) return obj->sd;
  

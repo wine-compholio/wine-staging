@@ -1,6 +1,6 @@
-From 657456dc0bb9846fb79ca5c3b3705b70fb13bfe1 Mon Sep 17 00:00:00 2001
+From fba93c12801c694d0e1248cd582c9d679e3a246a Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Thu, 17 Apr 2014 16:10:07 -0600
+Date: Fri, 18 Apr 2014 14:08:36 -0600
 Subject: server: Inherit security attributes from parent directories on
  creation.
 
@@ -73,23 +73,23 @@ index 5b7e6a6..68b63a0 100644
      HeapFree(GetProcessHeap(), 0, user);
      bret = RemoveDirectoryA(tmpdir);
 diff --git a/server/change.c b/server/change.c
-index c391180..2cf1cab 100644
+index 77c01bb..2cf1cab 100644
 --- a/server/change.c
 +++ b/server/change.c
 @@ -287,7 +287,7 @@ static struct security_descriptor *dir_get_sd( struct object *obj )
      assert( obj->ops == &dir_ops );
  
      fd = dir_get_fd( obj );
--    sd = set_file_sd( obj, fd, &dir->mode, &dir->uid );
+-    sd = get_file_sd( obj, fd, &dir->mode, &dir->uid );
 +    sd = get_file_sd( obj, fd, &dir->mode, &dir->uid, TRUE );
      release_object( fd );
      return sd;
  }
 diff --git a/server/file.c b/server/file.c
-index 572b31f..0a29948 100644
+index 75f015b..6ce8806 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -206,11 +206,141 @@ void set_xattr_sd( int fd, const struct security_descriptor *sd )
+@@ -245,11 +245,141 @@ void set_xattr_sd( int fd, const struct security_descriptor *sd, const SID *user
  #endif
  }
  
@@ -228,10 +228,10 @@ index 572b31f..0a29948 100644
                                     const struct security_descriptor *sd )
  {
 +    struct security_descriptor *temp_sd = NULL;
+     const SID *owner = NULL, *group = NULL;
      struct object *obj = NULL;
      struct fd *fd;
-     int flags;
-@@ -239,6 +369,10 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+@@ -279,6 +409,10 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
      default:                set_error( STATUS_INVALID_PARAMETER ); goto done;
      }
  
@@ -241,8 +241,8 @@ index 572b31f..0a29948 100644
 +
      if (sd)
      {
-         const SID *owner = sd_get_owner( sd );
-@@ -279,6 +413,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+         owner = sd_get_owner( sd );
+@@ -322,6 +456,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
      release_object( fd );
  
  done:
@@ -250,7 +250,7 @@ index 572b31f..0a29948 100644
      free( name );
      return obj;
  }
-@@ -537,7 +672,7 @@ void convert_generic_sd( struct security_descriptor *sd )
+@@ -538,7 +673,7 @@ void convert_generic_sd( struct security_descriptor *sd )
  }
  
  struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode_t *mode,
@@ -259,16 +259,16 @@ index 572b31f..0a29948 100644
  {
      int unix_fd = get_unix_fd( fd );
      struct stat st;
-@@ -555,7 +690,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
+@@ -556,7 +691,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
      user = security_unix_uid_to_sid( st.st_uid );
      group = token_get_primary_group( current->process->token );
-     sd = get_xattr_sd( unix_fd, user, group );
+     sd = get_xattr_sd( unix_fd );
 -    if (sd) convert_generic_sd( sd );
 +    if (sd && convert_generic) convert_generic_sd( sd );
      if (!sd) sd = mode_to_sd( st.st_mode, user, group);
      if (!sd) return obj->sd;
  
-@@ -575,7 +710,7 @@ static struct security_descriptor *file_get_sd( struct object *obj )
+@@ -576,7 +711,7 @@ static struct security_descriptor *file_get_sd( struct object *obj )
      assert( obj->ops == &file_ops );
  
      fd = file_get_fd( obj );

@@ -1,0 +1,324 @@
+From 04bbc2e2841b01a5a5344bb1f62c94ff84b25350 Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Fri, 18 Apr 2014 14:10:49 -0600
+Subject: server: Inherit security attributes from parent directories on
+ SetSecurityInfo.
+
+---
+ dlls/advapi32/tests/security.c |   68 ++++++++++++++++++++++
+ include/winnt.h                |    7 ++-
+ server/fd.c                    |   13 ++++-
+ server/file.c                  |  126 +++++++++++++++++++++++++++++++++++++++-
+ server/file.h                  |    1 +
+ 5 files changed, 207 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
+index 68b63a0..c981c1b 100644
+--- a/dlls/advapi32/tests/security.c
++++ b/dlls/advapi32/tests/security.c
+@@ -3350,6 +3350,74 @@ static void test_GetNamedSecurityInfoA(void)
+            "Administators Group ACE has unexpected mask (0x%x != 0x1f01ff)\n", ace->Mask);
+     }
+     LocalFree(pSD);
++    CloseHandle(hTemp);
++
++    /* Create security descriptor with no inheritance and test that it comes back the same */
++    pSD = &sd;
++    pDacl = HeapAlloc(GetProcessHeap(), 0, 100);
++    InitializeSecurityDescriptor(pSD, SECURITY_DESCRIPTOR_REVISION);
++    pCreateWellKnownSid(WinBuiltinAdministratorsSid, NULL, admin_sid, &sid_size);
++    bret = InitializeAcl(pDacl, 100, ACL_REVISION);
++    ok(bret, "Failed to initialize ACL.\n");
++    bret = pAddAccessAllowedAceEx(pDacl, ACL_REVISION, 0, GENERIC_ALL, user_sid);
++    ok(bret, "Failed to add Current User to ACL.\n");
++    bret = pAddAccessAllowedAceEx(pDacl, ACL_REVISION, 0, GENERIC_ALL, admin_sid);
++    ok(bret, "Failed to add Administrator Group to ACL.\n");
++    bret = SetSecurityDescriptorDacl(pSD, TRUE, pDacl, FALSE);
++    ok(bret, "Failed to add ACL to security desciptor.\n");
++    GetTempFileNameA(".", "foo", 0, tmpfile);
++    hTemp = CreateFileA(tmpfile, GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING,
++                        FILE_FLAG_DELETE_ON_CLOSE, NULL);
++    SetLastError(0xdeadbeef);
++    error = pSetNamedSecurityInfoA(tmpfile, SE_FILE_OBJECT,
++                                   DACL_SECURITY_INFORMATION|PROTECTED_DACL_SECURITY_INFORMATION,
++                                    NULL, NULL, pDacl, NULL);
++    HeapFree(GetProcessHeap(), 0, pDacl);
++    if (error != ERROR_SUCCESS && (GetLastError() == ERROR_CALL_NOT_IMPLEMENTED))
++    {
++        win_skip("SetNamedSecurityInfoA is not implemented\n");
++        HeapFree(GetProcessHeap(), 0, user);
++        CloseHandle(hTemp);
++        return;
++    }
++    ok(!error, "SetNamedSecurityInfoA failed with error %d\n", error);
++    SetLastError(0xdeadbeef);
++    error = pGetNamedSecurityInfoA(tmpfile, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION,
++                                   NULL, NULL, &pDacl, NULL, &pSD);
++    if (error != ERROR_SUCCESS && (GetLastError() == ERROR_CALL_NOT_IMPLEMENTED))
++    {
++        win_skip("GetNamedSecurityInfoA is not implemented\n");
++        HeapFree(GetProcessHeap(), 0, user);
++        CloseHandle(hTemp);
++        return;
++    }
++    ok(!error, "GetNamedSecurityInfo failed with error %d\n", error);
++
++    bret = pGetAclInformation(pDacl, &acl_size, sizeof(acl_size), AclSizeInformation);
++    ok(bret, "GetAclInformation failed\n");
++    if (acl_size.AceCount > 0)
++    {
++        bret = pGetAce(pDacl, 0, (VOID **)&ace);
++        ok(bret, "Failed to get Current User ACE.\n");
++        bret = EqualSid(&ace->SidStart, user_sid);
++        ok(bret, "Current User ACE != Current User SID.\n");
++        ok(((ACE_HEADER *)ace)->AceFlags == 0,
++           "Current User ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
++        ok(ace->Mask == 0x1f01ff, "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n",
++                                  ace->Mask);
++    }
++    if (acl_size.AceCount > 1)
++    {
++        bret = pGetAce(pDacl, 1, (VOID **)&ace);
++        ok(bret, "Failed to get Administators Group ACE.\n");
++        bret = EqualSid(&ace->SidStart, admin_sid);
++        ok(bret || broken(!bret) /* win2k */, "Administators Group ACE != Administators Group SID.\n");
++        ok(((ACE_HEADER *)ace)->AceFlags == 0,
++           "Administators Group ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
++        ok(ace->Mask == 0x1f01ff || broken(ace->Mask == GENERIC_ALL) /* win2k */,
++           "Administators Group ACE has unexpected mask (0x%x != 0x1f01ff)\n", ace->Mask);
++    }
++    LocalFree(pSD);
+     HeapFree(GetProcessHeap(), 0, user);
+     CloseHandle(hTemp);
+ 
+diff --git a/include/winnt.h b/include/winnt.h
+index 3f33c6b..5d2234f 100644
+--- a/include/winnt.h
++++ b/include/winnt.h
+@@ -5057,14 +5057,15 @@ typedef struct _TAPE_GET_MEDIA_PARAMETERS {
+     BOOLEAN WriteProtected;
+ } TAPE_GET_MEDIA_PARAMETERS, *PTAPE_GET_MEDIA_PARAMETERS;
+ 
+-/* ----------------------------- begin registry ----------------------------- */
+-
+-/* Registry security values */
+ #define OWNER_SECURITY_INFORMATION	0x00000001
+ #define GROUP_SECURITY_INFORMATION	0x00000002
+ #define DACL_SECURITY_INFORMATION	0x00000004
+ #define SACL_SECURITY_INFORMATION	0x00000008
++#define PROTECTED_DACL_SECURITY_INFORMATION  0x80000000
+ 
++/* ----------------------------- begin registry ----------------------------- */
++
++/* Registry security values */
+ #define REG_OPTION_RESERVED		0x00000000
+ #define REG_OPTION_NON_VOLATILE		0x00000000
+ #define REG_OPTION_VOLATILE		0x00000001
+diff --git a/server/fd.c b/server/fd.c
+index fa8874c..9e6b9a8 100644
+--- a/server/fd.c
++++ b/server/fd.c
+@@ -1629,6 +1629,16 @@ struct fd *alloc_pseudo_fd( const struct fd_ops *fd_user_ops, struct object *use
+     return fd;
+ }
+ 
++char *fd_get_unix_name( struct fd *obj )
++{
++    char *unix_name;
++
++    unix_name = mem_alloc( strlen(obj->unix_name) + 1 );
++    if (!unix_name) return NULL;
++    strcpy( unix_name, obj->unix_name );
++    return unix_name;
++}
++
+ /* duplicate an fd object for a different user */
+ struct fd *dup_fd_object( struct fd *orig, unsigned int access, unsigned int sharing, unsigned int options )
+ {
+@@ -1642,8 +1652,7 @@ struct fd *dup_fd_object( struct fd *orig, unsigned int access, unsigned int sha
+ 
+     if (orig->unix_name)
+     {
+-        if (!(fd->unix_name = mem_alloc( strlen(orig->unix_name) + 1 ))) goto failed;
+-        strcpy( fd->unix_name, orig->unix_name );
++        if (!(fd->unix_name = fd_get_unix_name( orig ))) goto failed;
+     }
+ 
+     if (orig->inode)
+diff --git a/server/file.c b/server/file.c
+index 6ce8806..e29d06b 100644
+--- a/server/file.c
++++ b/server/file.c
+@@ -325,6 +325,105 @@ struct security_descriptor *inherit_sd( const struct security_descriptor *parent
+     return sd;
+ }
+ 
++struct security_descriptor *file_combine_sds( const struct security_descriptor *parent_sd,
++                                              const struct security_descriptor *child_sd )
++{
++    size_t dacl_size = sizeof(ACL), ace_count = 0;
++    const struct security_descriptor *old_sd;
++    struct security_descriptor *sd = NULL;
++    const ACL *child_dacl, *parent_dacl;
++    int child_present, parent_present;
++    const SID *user, *group;
++    const ACE_HEADER *old_ace;
++    ACE_HEADER *ace;
++    ACL *dacl;
++    char *ptr;
++    ULONG i;
++
++    child_dacl = sd_get_dacl( child_sd, &child_present );
++    if (child_present && child_dacl)
++    {
++        old_ace = (const ACE_HEADER *)(child_dacl + 1);
++        for (i = 0; i < child_dacl->AceCount; i++, old_ace = ace_next( old_ace ))
++        {
++            ace_count++;
++            dacl_size += sizeof(ACE_HEADER) + old_ace->AceSize;
++        }
++    }
++
++    parent_dacl = sd_get_dacl( parent_sd, &parent_present );
++    if (parent_present && parent_dacl)
++    {
++        old_ace = (const ACE_HEADER *)(parent_dacl + 1);
++        for (i = 0; i < parent_dacl->AceCount; i++, old_ace = ace_next( old_ace ))
++        {
++            ace_count++;
++            dacl_size += sizeof(ACE_HEADER) + old_ace->AceSize;
++        }
++    }
++
++    if(!ace_count) return sd; /* No inheritance */
++
++    if (child_present && child_dacl)
++        old_sd = child_sd;
++    else
++        old_sd = parent_sd;
++
++    /* Fill in the security descriptor so that it is compatible with our DACL */
++    user = (const SID *)(old_sd + 1);
++    group = (const SID *)((char *)(old_sd + 1) + old_sd->owner_len);
++    sd = mem_alloc( sizeof(struct security_descriptor) + security_sid_len( user )
++                    + security_sid_len( group ) + dacl_size );
++    if (!sd) return sd;
++    sd->control = SE_DACL_PRESENT;
++    sd->owner_len = old_sd->owner_len;
++    sd->group_len = old_sd->group_len;
++    sd->sacl_len = 0;
++    sd->dacl_len = dacl_size;
++    ptr = (char *)(sd + 1);
++    memcpy( ptr, user, sd->owner_len );
++    ptr += sd->owner_len;
++    memcpy( ptr, group, sd->group_len );
++    ptr += sd->group_len;
++    dacl = (ACL *)ptr;
++    dacl->AclRevision = ACL_REVISION;
++    dacl->Sbz1 = 0;
++    dacl->AclSize = dacl_size;
++    dacl->AceCount = ace_count;
++    dacl->Sbz2 = 0;
++    ace = (ACE_HEADER *)(dacl + 1);
++
++    if (parent_present && parent_dacl)
++    {
++        /* Build the new DACL, inheriting from the parent's information */
++        old_ace = (const ACE_HEADER *)(parent_dacl + 1);
++        for (i = 0; i < parent_dacl->AceCount; i++, old_ace = ace_next( old_ace ))
++        {
++            ace->AceType = old_ace->AceType;
++            ace->AceFlags = old_ace->AceFlags;
++            ace->AceSize = old_ace->AceSize;
++            memcpy( ace + 1, old_ace + 1, old_ace->AceSize);
++            ace = (ACE_HEADER *)ace_next( ace );
++        }
++    }
++
++    if (child_present && child_dacl)
++    {
++        /* Build the new DACL, inheriting from the child's information */
++        old_ace = (const ACE_HEADER *)(child_dacl + 1);
++        for (i = 0; i < child_dacl->AceCount; i++, old_ace = ace_next( old_ace ))
++        {
++            ace->AceType = old_ace->AceType;
++            ace->AceFlags = old_ace->AceFlags;
++            ace->AceSize = old_ace->AceSize;
++            memcpy( ace + 1, old_ace + 1, old_ace->AceSize);
++            ace = (ACE_HEADER *)ace_next( ace );
++        }
++    }
++
++    return sd;
++}
++
+ static struct security_descriptor *file_get_parent_sd( struct fd *root, const char *child_name,
+                                                        int child_len, int is_dir )
+ {
+@@ -795,16 +894,33 @@ mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner )
+     return new_mode & ~denied_mode;
+ }
+ 
+-int set_file_sd( struct object *obj, struct fd *fd, const struct security_descriptor *sd,
++int set_file_sd( struct object *obj, struct fd *fd, const struct security_descriptor *new_sd,
+                  unsigned int set_info )
+ {
++    const struct security_descriptor *sd = new_sd;
++    struct security_descriptor *parent_sd = NULL;
+     int unix_fd = get_unix_fd( fd );
+     const SID *owner, *group;
+     struct stat st;
+     mode_t mode;
++    int ret = 1;
+ 
+     if (unix_fd == -1 || fstat( unix_fd, &st ) == -1) return 1;
+ 
++    if (!(set_info & PROTECTED_DACL_SECURITY_INFORMATION))
++    {
++        char *child_name = fd_get_unix_name( fd );
++
++        if (child_name)
++        {
++            parent_sd = file_get_parent_sd( NULL, child_name, strlen(child_name),
++                                                  S_ISDIR(st.st_mode) );
++            free( child_name );
++            if (parent_sd)
++                sd = file_combine_sds( parent_sd, new_sd );
++        }
++    }
++
+     if (set_info & OWNER_SECURITY_INFORMATION)
+     {
+         owner = sd_get_owner( sd );
+@@ -854,10 +970,14 @@ int set_file_sd( struct object *obj, struct fd *fd, const struct security_descri
+         if (((st.st_mode ^ mode) & (S_IRWXU|S_IRWXG|S_IRWXO)) && fchmod( unix_fd, mode ) == -1)
+         {
+             file_set_error();
+-            return 0;
++            ret = 0;
+         }
+     }
+-    return 1;
++
++    if (parent_sd)
++        free( parent_sd );
++
++    return ret;
+ }
+ 
+ static int file_set_sd( struct object *obj, const struct security_descriptor *sd,
+diff --git a/server/file.h b/server/file.h
+index 2f537cf..fa83001 100644
+--- a/server/file.h
++++ b/server/file.h
+@@ -77,6 +77,7 @@ extern void allow_fd_caching( struct fd *fd );
+ extern void set_fd_signaled( struct fd *fd, int signaled );
+ extern int is_fd_signaled( struct fd *fd );
+ 
++extern char *fd_get_unix_name( struct fd *obj );
+ extern int default_fd_signaled( struct object *obj, struct wait_queue_entry *entry );
+ extern unsigned int default_fd_map_access( struct object *obj, unsigned int access );
+ extern int default_fd_get_poll_events( struct fd *fd );
+-- 
+1.7.9.5
+

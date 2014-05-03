@@ -2,6 +2,7 @@ SUBDIRS=10-Missing_Fonts
 
 #PATCH:=patch -N -p0 --strip=1
 #PATCH:=git apply
+CURDIR ?= ${.CURDIR}
 PATCH:=$(CURDIR)/../debian/tools/gitapply.sh
 
 install:

@@ -1,15 +1,15 @@
-From 69e77bd226057f486d1c076ccbebb963d3b750ee Mon Sep 17 00:00:00 2001
+From 864781654bfbb059a351fdcda6773e2857019278 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Thu, 3 Apr 2014 09:25:48 -0600
+Date: Tue, 6 May 2014 08:39:18 -0600
 Subject: server: Add socket-side support for the interface change
  notification object.
 
 ---
- server/sock.c |   92 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 91 insertions(+), 1 deletion(-)
+ server/sock.c |   87 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 86 insertions(+), 1 deletion(-)
 
 diff --git a/server/sock.c b/server/sock.c
-index 05fc38b..20d022f 100644
+index 3eb1bdf..ad20a69 100644
 --- a/server/sock.c
 +++ b/server/sock.c
 @@ -106,12 +106,18 @@ struct sock
@@ -22,26 +22,26 @@ index 05fc38b..20d022f 100644
  };
  
  static void sock_dump( struct object *obj, int verbose );
-+static int sock_add_ifchange( struct sock *sock, const async_data_t *async_data );
++static void sock_add_ifchange( struct sock *sock, const async_data_t *async_data );
  static int sock_signaled( struct object *obj, struct wait_queue_entry *entry );
  static struct fd *sock_get_fd( struct object *obj );
  static void sock_destroy( struct object *obj );
-+static int sock_get_ifchange_q( struct sock *sock, struct async_queue **async_queue );
++static struct async_queue *sock_get_ifchange_q( struct sock *sock );
 +static void sock_destroy_ifchange_q( struct sock *sock );
  
  static int sock_get_poll_events( struct fd *fd );
  static void sock_poll_event( struct fd *fd, int event );
-@@ -539,7 +545,8 @@ obj_handle_t sock_ioctl( struct fd *fd, ioctl_code_t code, const async_data_t *a
+@@ -529,7 +535,8 @@ obj_handle_t sock_ioctl( struct fd *fd, ioctl_code_t code, const async_data_t *a
      switch(code)
      {
      case WS_SIO_ADDRESS_LIST_CHANGE:
 -        /* intentional fallthrough, not yet supported */
-+        error = sock_add_ifchange( sock, async_data );
-+        break;
++        sock_add_ifchange( sock, async_data );
++        return 0;
      default:
-         error = STATUS_NOT_SUPPORTED;
-         break;
-@@ -625,6 +632,7 @@ static void sock_destroy( struct object *obj )
+         set_error( STATUS_NOT_SUPPORTED );
+         return 0;
+@@ -610,6 +617,7 @@ static void sock_destroy( struct object *obj )
  
      free_async_queue( sock->read_q );
      free_async_queue( sock->write_q );
@@ -49,7 +49,7 @@ index 05fc38b..20d022f 100644
      if (sock->event) release_object( sock->event );
      if (sock->fd)
      {
-@@ -651,6 +659,8 @@ static void init_sock(struct sock *sock)
+@@ -636,6 +644,8 @@ static void init_sock(struct sock *sock)
      sock->deferred = NULL;
      sock->read_q  = NULL;
      sock->write_q = NULL;
@@ -58,37 +58,37 @@ index 05fc38b..20d022f 100644
      memset( sock->errors, 0, sizeof(sock->errors) );
  }
  
-@@ -939,6 +949,86 @@ static void sock_set_error(void)
+@@ -924,6 +934,81 @@ static void sock_set_error(void)
      set_error( sock_get_ntstatus( errno ) );
  }
  
 +/* add interface change notification to a socket */
-+static int sock_add_ifchange( struct sock *sock, const async_data_t *async_data )
++static void sock_add_ifchange( struct sock *sock, const async_data_t *async_data )
 +{
 +    struct async_queue *ifchange_q = NULL;
 +    struct async *async;
-+    int error;
 +
-+    error = sock_get_ifchange_q( sock, &ifchange_q );
-+    if (error != STATUS_PENDING)
-+        return error;
++    if (!(ifchange_q = sock_get_ifchange_q( sock )))
++        return;
 +
 +    if (!(async = create_async( current, ifchange_q, async_data )))
 +    {
 +        if (!async_queued( ifchange_q ))
 +            sock_destroy_ifchange_q( sock );
 +
-+        return STATUS_NO_MEMORY;
++        set_error( STATUS_NO_MEMORY );
++        return;
 +    }
 +
 +    release_object( async );
-+    return error;
++    set_error( STATUS_PENDING );
 +}
 +
 +/* stub ifchange object */
-+static int get_ifchange( struct object **obj )
++static struct object *get_ifchange( void )
 +{
-+    return STATUS_NOT_SUPPORTED;
++    set_error( STATUS_NOT_SUPPORTED );
++    return NULL;
 +}
 +
 +/* stub ifchange add socket to list */
@@ -97,21 +97,16 @@ index 05fc38b..20d022f 100644
 +}
 +
 +/* create a new ifchange queue for a specific socket or, if one already exists, reuse the existing one */
-+static int sock_get_ifchange_q( struct sock *sock, struct async_queue **async_queue )
++static struct async_queue *sock_get_ifchange_q( struct sock *sock )
 +{
 +    struct object *ifchange = NULL;
 +    struct fd *fd;
-+    int error;
 +
 +    if (sock->ifchange_q) /* reuse existing ifchange_q for this socket */
-+    {
-+        *async_queue = sock->ifchange_q;
-+        return STATUS_PENDING;
-+    }
++        return sock->ifchange_q;
 +
-+    error = get_ifchange( &ifchange );
-+    if (error != STATUS_PENDING)
-+        return error;
++    if (!(ifchange = get_ifchange()))
++        return NULL;
 +
 +    /* create the ifchange notification queue */
 +    fd = ifchange->ops->get_fd( ifchange );
@@ -120,14 +115,14 @@ index 05fc38b..20d022f 100644
 +    if (!sock->ifchange_q)
 +    {
 +        release_object( ifchange );
-+        return STATUS_NO_MEMORY;
++        set_error( STATUS_NO_MEMORY );
++        return NULL;
 +    }
 +
 +    /* add the socket to the ifchange notification list */
 +    ifchange_add_sock( ifchange, sock );
 +    sock->ifchange_obj = ifchange;
-+    *async_queue = sock->ifchange_q;
-+    return error;
++    return sock->ifchange_q;
 +}
 +
 +/* destroy an existing ifchange queue for a specific socket */

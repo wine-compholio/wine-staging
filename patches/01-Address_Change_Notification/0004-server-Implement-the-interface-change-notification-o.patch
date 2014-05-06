@@ -1,14 +1,14 @@
-From 85d0475a493be336c340f25cab9895846e202f26 Mon Sep 17 00:00:00 2001
+From 55c83dc866e2d0e2cdc15b976b6d818a03ef4b89 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Thu, 3 Apr 2014 09:26:34 -0600
+Date: Tue, 6 May 2014 08:49:52 -0600
 Subject: server: Implement the interface change notification object.
 
 ---
- server/sock.c |  200 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 198 insertions(+), 2 deletions(-)
+ server/sock.c |  206 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 203 insertions(+), 3 deletions(-)
 
 diff --git a/server/sock.c b/server/sock.c
-index 20d022f..82464f2 100644
+index a8a5ac3..2af9acc 100644
 --- a/server/sock.c
 +++ b/server/sock.c
 @@ -43,6 +43,10 @@
@@ -22,11 +22,12 @@ index 20d022f..82464f2 100644
  
  #include "ntstatus.h"
  #define WIN32_NO_STATUS
-@@ -972,15 +976,207 @@ static int sock_add_ifchange( struct sock *sock, const async_data_t *async_data
-     return error;
+@@ -970,16 +974,212 @@ static int sock_add_ifchange( struct sock *sock, const async_data_t *async_data
+     return TRUE;
  }
  
 -/* stub ifchange object */
+-static struct object *get_ifchange( void )
 +#ifdef HAVE_LINUX_RTNETLINK_H
 +
 +/* only keep one ifchange object around, all sockets waiting for wakeups will look to it */
@@ -162,7 +163,7 @@ index 20d022f..82464f2 100644
 +}
 +
 +static void ifchange_reselect_async( struct fd *fd, struct async_queue *queue )
-+{
+ {
 +    /* do nothing, this object is about to disappear */
 +}
 +
@@ -170,8 +171,8 @@ index 20d022f..82464f2 100644
 +
 +/* we only need one of these interface notification objects, all of the sockets dependent upon
 + * it will wake up when a notification event occurs */
- static int get_ifchange( struct object **obj )
- {
++ static struct object *get_ifchange( void )
++ {
 +#ifdef HAVE_LINUX_RTNETLINK_H
 +    struct ifchange *ifchange;
 +    struct sockaddr_nl addr;
@@ -180,14 +181,16 @@ index 20d022f..82464f2 100644
 +    if (ifchange_object)
 +    {
 +        /* increment the refcount for each socket that uses the ifchange object */
-+        *obj = grab_object( ifchange_object );
-+        return STATUS_PENDING;
++        return grab_object( ifchange_object );
 +    }
 +
 +    /* create the socket we need for processing interface change notifications */
 +    unix_fd = socket( PF_NETLINK, SOCK_RAW, NETLINK_ROUTE );
 +    if (unix_fd == -1)
-+        return sock_get_ntstatus( errno );
++    {
++        sock_set_error();
++        return NULL;
++    }
 +    fcntl( unix_fd, F_SETFL, O_NONBLOCK ); /* make socket nonblocking */
 +    memset( &addr, 0, sizeof(addr) );
 +    addr.nl_family = AF_NETLINK;
@@ -196,27 +199,30 @@ index 20d022f..82464f2 100644
 +    if (bind( unix_fd, (struct sockaddr *)&addr, sizeof(addr) ) == -1)
 +    {
 +        close( unix_fd );
-+        return sock_get_ntstatus( errno );
++        sock_set_error();
++        return NULL;
 +    }
 +    if (!(ifchange = alloc_object( &ifchange_ops )))
 +    {
 +        close( unix_fd );
-+        return STATUS_NO_MEMORY;
++        set_error( STATUS_NO_MEMORY );
++        return NULL;
 +    }
 +    list_init( &ifchange->sockets );
 +    if (!(ifchange->fd = create_anonymous_fd( &ifchange_fd_ops, unix_fd, &ifchange->obj, 0 )))
 +    {
 +        release_object( ifchange );
-+        return STATUS_NO_MEMORY;
++        set_error( STATUS_NO_MEMORY );
++        return NULL;
 +    }
 +    set_fd_events( ifchange->fd, POLLIN ); /* enable read wakeup on the file descriptor */
 +
 +    /* the ifchange object is now successfully configured */
 +    ifchange_object = &ifchange->obj;
-+    *obj = &ifchange->obj;
-+    return STATUS_PENDING;
++    return &ifchange->obj;
 +#else
-     return STATUS_NOT_SUPPORTED;
+     set_error( STATUS_NOT_SUPPORTED );
+     return NULL;
 +#endif
  }
  

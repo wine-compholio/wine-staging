@@ -1,0 +1,138 @@
+From a28102527d80bd4c499bcf21d871565665f5606d Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 31 May 2014 03:21:39 +0200
+Subject: ntdll: Use lockfree implementation for get_cached_fd.
+
+---
+ dlls/ntdll/server.c |   57 ++++++++++++++++++++++++++++++++++++---------------
+ 1 file changed, 40 insertions(+), 17 deletions(-)
+
+diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
+index f3c6b38..6a6082a 100644
+--- a/dlls/ntdll/server.c
++++ b/dlls/ntdll/server.c
+@@ -787,17 +787,27 @@ static int receive_fd( obj_handle_t *handle )
+ /***********************************************************************/
+ /* fd cache support */
+ 
++union fd_cache_entry_attrs
++{
++    int value;
++    struct
++    {
++        enum server_fd_type type : 5;
++        unsigned int        access : 3;
++        unsigned int        options : 24;
++    } s;
++};
++
+ struct fd_cache_entry
+ {
+     int fd;
+-    enum server_fd_type type : 5;
+-    unsigned int        access : 3;
+-    unsigned int        options : 24;
++    union fd_cache_entry_attrs attrs;
+ };
+ 
+ #define FD_CACHE_BLOCK_SIZE  (65536 / sizeof(struct fd_cache_entry))
+ #define FD_CACHE_ENTRIES     128
+ 
++static int fd_cache_epoch;
+ static struct fd_cache_entry *fd_cache[FD_CACHE_ENTRIES];
+ static struct fd_cache_entry fd_cache_initial_block[FD_CACHE_BLOCK_SIZE];
+ 
+@@ -818,6 +828,7 @@ static BOOL add_fd_to_cache( HANDLE handle, int fd, enum server_fd_type type,
+                             unsigned int access, unsigned int options )
+ {
+     unsigned int entry, idx = handle_to_index( handle, &entry );
++    union fd_cache_entry_attrs attrs;
+     int prev_fd;
+ 
+     if (entry >= FD_CACHE_ENTRIES)
+@@ -837,11 +848,16 @@ static BOOL add_fd_to_cache( HANDLE handle, int fd, enum server_fd_type type,
+             fd_cache[entry] = ptr;
+         }
+     }
++
++    attrs.s.type = type;
++    attrs.s.access = access;
++    attrs.s.options = options;
++
+     /* store fd+1 so that 0 can be used as the unset value */
+-    prev_fd = interlocked_xchg( &fd_cache[entry][idx].fd, fd + 1 ) - 1;
+-    fd_cache[entry][idx].type = type;
+-    fd_cache[entry][idx].access = access;
+-    fd_cache[entry][idx].options = options;
++    prev_fd = interlocked_xchg( &fd_cache[entry][idx].fd, 0 ) - 1;
++    interlocked_xchg_add( &fd_cache_epoch, 1 );
++    fd_cache[entry][idx].attrs.value = attrs.value;
++    fd_cache[entry][idx].fd = fd + 1;
+     if (prev_fd != -1) close( prev_fd );
+     return TRUE;
+ }
+@@ -849,22 +865,30 @@ static BOOL add_fd_to_cache( HANDLE handle, int fd, enum server_fd_type type,
+ 
+ /***********************************************************************
+  *           get_cached_fd
+- *
+- * Caller must hold fd_cache_section.
+  */
+ static inline int get_cached_fd( HANDLE handle, enum server_fd_type *type,
+                                  unsigned int *access, unsigned int *options )
+ {
+     unsigned int entry, idx = handle_to_index( handle, &entry );
+-    int fd = -1;
++    union fd_cache_entry_attrs attrs;
++    int epoch, fd = -1;
+ 
+     if (entry < FD_CACHE_ENTRIES && fd_cache[entry])
+     {
+-        fd = fd_cache[entry][idx].fd - 1;
+-        if (type) *type = fd_cache[entry][idx].type;
+-        if (access) *access = fd_cache[entry][idx].access;
+-        if (options) *options = fd_cache[entry][idx].options;
++        do
++        {
++            epoch = fd_cache_epoch;
++            attrs.value = fd_cache[entry][idx].attrs.value;
++            fd = fd_cache[entry][idx].fd - 1;
++            __asm__ __volatile__( "" : : : "memory" );
++        }
++        while (epoch != fd_cache_epoch);
++
++        if (type) *type = attrs.s.type;
++        if (access) *access = attrs.s.access;
++        if (options) *options = attrs.s.options;
+     }
++
+     return fd;
+ }
+ 
+@@ -901,11 +925,10 @@ int server_get_unix_fd( HANDLE handle, unsigned int wanted_access, int *unix_fd,
+     *needs_close = 0;
+     wanted_access &= FILE_READ_DATA | FILE_WRITE_DATA | FILE_APPEND_DATA;
+ 
+-    server_enter_uninterrupted_section( &fd_cache_section, &sigset );
+-
+     fd = get_cached_fd( handle, type, &access, options );
+     if (fd != -1) goto done;
+ 
++    server_enter_uninterrupted_section( &fd_cache_section, &sigset );
+     SERVER_START_REQ( get_handle_fd )
+     {
+         req->handle = wine_server_obj_handle( handle );
+@@ -925,9 +948,9 @@ int server_get_unix_fd( HANDLE handle, unsigned int wanted_access, int *unix_fd,
+         }
+     }
+     SERVER_END_REQ;
++    server_leave_uninterrupted_section( &fd_cache_section, &sigset );
+ 
+ done:
+-    server_leave_uninterrupted_section( &fd_cache_section, &sigset );
+     if (!ret && ((access & wanted_access) != wanted_access))
+     {
+         ret = STATUS_ACCESS_DENIED;
+-- 
+1.7.9.5
+

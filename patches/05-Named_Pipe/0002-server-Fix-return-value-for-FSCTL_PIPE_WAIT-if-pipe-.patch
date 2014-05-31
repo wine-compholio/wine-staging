@@ -1,0 +1,43 @@
+From 453924c0861d4d1844f8b48c05dba3b2cf49b4ae Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 31 May 2014 02:44:36 +0200
+Subject: server: Fix return value for FSCTL_PIPE_WAIT if pipe does not exist
+
+---
+ dlls/kernel32/tests/pipe.c | 6 ++++++
+ server/named_pipe.c        | 2 +-
+ 2 files changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/kernel32/tests/pipe.c b/dlls/kernel32/tests/pipe.c
+index b192f96..f7c7531 100644
+--- a/dlls/kernel32/tests/pipe.c
++++ b/dlls/kernel32/tests/pipe.c
+@@ -60,6 +60,12 @@ static void test_CreateNamedPipe(int pipemode)
+         trace("test_CreateNamedPipe starting in byte mode\n");
+     else
+         trace("test_CreateNamedPipe starting in message mode\n");
++
++    /* Wait for non existing pipe */
++    ret = WaitNamedPipeA(PIPENAME, 2000);
++    ok(ret == 0, "WaitNamedPipe returned %d for non existing pipe\n", ret);
++    ok(GetLastError() == ERROR_FILE_NOT_FOUND, "wrong error %u\n", GetLastError());
++
+     /* Bad parameter checks */
+     hnp = CreateNamedPipeA("not a named pipe", PIPE_ACCESS_DUPLEX, pipemode | PIPE_WAIT,
+         /* nMaxInstances */ 1,
+diff --git a/server/named_pipe.c b/server/named_pipe.c
+index 6ba2145..c9be0c2 100644
+--- a/server/named_pipe.c
++++ b/server/named_pipe.c
+@@ -887,7 +887,7 @@ static obj_handle_t named_pipe_device_ioctl( struct fd *fd, ioctl_code_t code, c
+             name.len = (buffer->NameLength / sizeof(WCHAR)) * sizeof(WCHAR);
+             if (!(pipe = (struct named_pipe *)find_object( device->pipes, &name, OBJ_CASE_INSENSITIVE )))
+             {
+-                set_error( STATUS_PIPE_NOT_AVAILABLE );
++                set_error( STATUS_OBJECT_NAME_NOT_FOUND );
+                 return 0;
+             }
+             if (!(server = find_available_server( pipe )))
+-- 
+1.8.3.2
+

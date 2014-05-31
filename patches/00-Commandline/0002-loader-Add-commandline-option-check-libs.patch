@@ -1,0 +1,301 @@
+From eb9657a39d222aa59140f6b0aff657ae86d1824d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Wed, 28 May 2014 19:50:51 +0200
+Subject: loader: Add commandline option --check-libs.
+
+---
+ include/wine/library.h |    2 ++
+ libs/wine/config.c     |   91 ++++++++++++++++++++++++++++++++++++++++++++++++
+ libs/wine/loader.c     |   36 +++++++++++++++++++
+ libs/wine/wine.def     |    2 ++
+ libs/wine/wine.map     |    2 ++
+ loader/main.c          |   50 +++++++++++++++++++++++++-
+ 6 files changed, 182 insertions(+), 1 deletion(-)
+
+diff --git a/include/wine/library.h b/include/wine/library.h
+index fae73fe..7395a11 100644
+--- a/include/wine/library.h
++++ b/include/wine/library.h
+@@ -40,6 +40,7 @@ extern "C" {
+ extern const char *wine_get_build_dir(void);
+ extern const char *wine_get_config_dir(void);
+ extern const char *wine_get_data_dir(void);
++extern const char **wine_get_libs(void);
+ extern const char *wine_get_server_dir(void);
+ extern const char *wine_get_user_name(void);
+ extern const char *wine_get_version(void);
+@@ -52,6 +53,7 @@ extern void wine_exec_wine_binary( const char *name, char **argv, const char *en
+ 
+ typedef void (*load_dll_callback_t)( void *, const char * );
+ 
++extern int wine_dladdr( void *addr, void *info, char *error, size_t errorsize );
+ extern void *wine_dlopen( const char *filename, int flag, char *error, size_t errorsize );
+ extern void *wine_dlsym( void *handle, const char *symbol, char *error, size_t errorsize );
+ extern int wine_dlclose( void *handle, char *error, size_t errorsize );
+diff --git a/libs/wine/config.c b/libs/wine/config.c
+index 954035d..3fb7327 100644
+--- a/libs/wine/config.c
++++ b/libs/wine/config.c
+@@ -444,6 +444,97 @@ const char *wine_get_build_dir(void)
+     return build_dir;
+ }
+ 
++const char *wine_libs[] = {
++#ifdef SONAME_LIBCAPI20
++    SONAME_LIBCAPI20,
++#endif
++#ifdef SONAME_LIBCUPS
++    SONAME_LIBCUPS,
++#endif
++#ifdef SONAME_LIBCURSES
++    SONAME_LIBCURSES,
++#endif
++#ifdef SONAME_LIBDBUS_1
++    SONAME_LIBDBUS_1,
++#endif
++#ifdef SONAME_LIBFONTCONFIG
++    SONAME_LIBFONTCONFIG,
++#endif
++#ifdef SONAME_LIBGL
++    SONAME_LIBGL,
++#endif
++#ifdef SONAME_LIBGNUTLS
++    SONAME_LIBGNUTLS,
++#endif
++#ifdef SONAME_LIBGSM
++    SONAME_LIBGSM,
++#endif
++#ifdef SONAME_LIBHAL
++    SONAME_LIBHAL,
++#endif
++#ifdef SONAME_LIBJPEG
++    SONAME_LIBJPEG,
++#endif
++#ifdef SONAME_LIBNCURSES
++    SONAME_LIBNCURSES,
++#endif
++#ifdef SONAME_LIBNETAPI
++    SONAME_LIBNETAPI,
++#endif
++#ifdef SONAME_LIBODBC
++    SONAME_LIBODBC,
++#endif
++#ifdef SONAME_LIBOSMESA
++    SONAME_LIBOSMESA,
++#endif
++#ifdef SONAME_LIBPNG
++    SONAME_LIBPNG,
++#endif
++#ifdef SONAME_LIBSANE
++    SONAME_LIBSANE,
++#endif
++#ifdef SONAME_LIBTIFF
++    SONAME_LIBTIFF,
++#endif
++#ifdef SONAME_LIBV4L1
++    SONAME_LIBV4L1,
++#endif
++#ifdef SONAME_LIBXCOMPOSITE
++    SONAME_LIBXCOMPOSITE,
++#endif
++#ifdef SONAME_LIBXCURSOR
++    SONAME_LIBXCURSOR,
++#endif
++#ifdef SONAME_LIBXEXT
++    SONAME_LIBXEXT,
++#endif
++#ifdef SONAME_LIBXI
++    SONAME_LIBXI,
++#endif
++#ifdef SONAME_LIBXINERAMA
++    SONAME_LIBXINERAMA,
++#endif
++#ifdef SONAME_LIBXRANDR
++    SONAME_LIBXRANDR,
++#endif
++#ifdef SONAME_LIBXRENDER
++    SONAME_LIBXRENDER,
++#endif
++#ifdef SONAME_LIBXSLT
++    SONAME_LIBXSLT,
++#endif
++#ifdef SONAME_LIBXXF86VM
++    SONAME_LIBXXF86VM,
++#endif
++    NULL
++};
++
++/* return the list of shared libs used by wine */
++const char **wine_get_libs(void)
++{
++    return &wine_libs[0];
++}
++
+ /* return the full name of the server directory (the one containing the socket) */
+ const char *wine_get_server_dir(void)
+ {
+diff --git a/libs/wine/loader.c b/libs/wine/loader.c
+index 5c0192d..91a4428 100644
+--- a/libs/wine/loader.c
++++ b/libs/wine/loader.c
+@@ -1054,6 +1054,42 @@ void *wine_dlopen( const char *filename, int flag, char *error, size_t errorsize
+ }
+ 
+ /***********************************************************************
++ *      wine_dladdr
++ */
++int wine_dladdr( void *addr, void *info, char *error, size_t errorsize )
++{
++#ifdef HAVE_DLADDR
++    int ret;
++    const char *s;
++    dlerror(); dlerror();
++    ret = dladdr( addr, (Dl_info *)info );
++    s = dlerror();
++    if (error && errorsize)
++    {
++        if (s)
++        {
++            size_t len = strlen(s);
++            if (len >= errorsize) len = errorsize - 1;
++            memcpy( error, s, len );
++            error[len] = 0;
++        }
++        else error[0] = 0;
++    }
++    dlerror();
++    return ret;
++#else
++    if (error)
++    {
++        static const char msg[] = "dladdr interface not detected by configure";
++        size_t len = min( errorsize, sizeof(msg) );
++        memcpy( error, msg, len );
++        error[len - 1] = 0;
++    }
++    return 0;
++#endif
++}
++
++/***********************************************************************
+  *		wine_dlsym
+  */
+ void *wine_dlsym( void *handle, const char *symbol, char *error, size_t errorsize )
+diff --git a/libs/wine/wine.def b/libs/wine/wine.def
+index 5b42029..6acf329 100644
+--- a/libs/wine/wine.def
++++ b/libs/wine/wine.def
+@@ -64,6 +64,7 @@ EXPORTS
+     wine_dbg_sprintf
+     wine_dbgstr_an
+     wine_dbgstr_wn
++    wine_dladdr
+     wine_dlclose
+     wine_dll_enum_load_path
+     wine_dll_get_owner
+@@ -79,6 +80,7 @@ EXPORTS
+     wine_get_build_id
+     wine_get_config_dir
+     wine_get_data_dir
++    wine_get_libs
+     wine_get_server_dir
+     wine_get_sortkey
+     wine_get_user_name
+diff --git a/libs/wine/wine.map b/libs/wine/wine.map
+index 7cb2918..72ffed8 100644
+--- a/libs/wine/wine.map
++++ b/libs/wine/wine.map
+@@ -65,6 +65,7 @@ WINE_1.0
+     wine_dbg_sprintf;
+     wine_dbgstr_an;
+     wine_dbgstr_wn;
++    wine_dladdr;
+     wine_dlclose;
+     wine_dll_enum_load_path;
+     wine_dll_get_owner;
+@@ -85,6 +86,7 @@ WINE_1.0
+     wine_get_es;
+     wine_get_fs;
+     wine_get_gs;
++    wine_get_libs;
+     wine_get_server_dir;
+     wine_get_sortkey;
+     wine_get_ss;
+diff --git a/loader/main.c b/loader/main.c
+index 71e5055..131ac2f 100644
+--- a/loader/main.c
++++ b/loader/main.c
+@@ -36,6 +36,12 @@
+ #ifdef HAVE_UNISTD_H
+ # include <unistd.h>
+ #endif
++#ifdef HAVE_DLADDR
++# include <dlfcn.h>
++#endif
++#ifdef HAVE_LINK_H
++# include <link.h>
++#endif
+ #include <pthread.h>
+ 
+ #include "wine/library.h"
+@@ -96,7 +102,8 @@ static void check_command_line( int argc, char *argv[] )
+         "Usage: wine PROGRAM [ARGUMENTS...]   Run the specified program\n"
+         "       wine --help                   Display this help and exit\n"
+         "       wine --version                Output version information and exit\n"
+-        "       wine --patches                Output patch information and exit";
++        "       wine --patches                Output patch information and exit\n"
++        "       wine --check-libs             Checks if shared libs are installed";
+ 
+     if (argc <= 1)
+     {
+@@ -123,6 +130,47 @@ static void check_command_line( int argc, char *argv[] )
+         }
+         exit(0);
+     }
++    if (!strcmp( argv[1], "--check-libs" ))
++    {
++        void* lib_handle;
++        int ret = 0;
++        const char **wine_libs = wine_get_libs();
++
++        for(; *wine_libs; wine_libs++)
++        {
++            lib_handle = wine_dlopen( *wine_libs, RTLD_NOW, NULL, 0 );
++            if (lib_handle)
++            {
++            #ifdef HAVE_DLADDR
++                Dl_info libinfo;
++                void* symbol;
++
++            #ifdef HAVE_LINK_H
++                struct link_map *lm = (struct link_map *)lib_handle;
++                symbol = (void *)lm->l_addr;
++            #else
++                symbol = wine_dlsym( lib_handle, "_init", NULL, 0 );
++            #endif
++                if (symbol && wine_dladdr( symbol, &libinfo, NULL, 0 ))
++                {
++                    printf( "%s: %s\n", *wine_libs, libinfo.dli_fname );
++                }
++                else
++            #endif
++                {
++                    printf( "%s: found\n", *wine_libs );
++                }
++                wine_dlclose( lib_handle, NULL, 0 );
++            }
++            else
++            {
++                printf( "%s: missing\n", *wine_libs );
++                ret = 1;
++            }
++        }
++
++        exit(ret);
++    }
+ }
+ 
+ 
+-- 
+1.7.9.5
+

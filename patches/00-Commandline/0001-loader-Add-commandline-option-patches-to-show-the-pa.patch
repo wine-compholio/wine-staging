@@ -1,0 +1,89 @@
+From d88eb32e40bff9b8279f57b13a5f2cc09a9273ea Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Thu, 29 May 2014 23:43:45 +0200
+Subject: loader: Add commandline option --patches to show the patch list.
+
+---
+ dlls/ntdll/misc.c     |    8 ++++++++
+ dlls/ntdll/ntdll.spec |    1 +
+ loader/main.c         |   19 ++++++++++++++++++-
+ 3 files changed, 27 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/misc.c b/dlls/ntdll/misc.c
+index 8bd4eb7..4b4c318 100644
+--- a/dlls/ntdll/misc.c
++++ b/dlls/ntdll/misc.c
+@@ -60,6 +60,14 @@ const char * CDECL NTDLL_wine_get_version(void)
+ }
+ 
+ /*********************************************************************
++ *                  wine_get_patches   (NTDLL.@)
++ */
++const void * CDECL NTDLL_wine_get_patches(void)
++{
++    return wine_get_patches();
++}
++
++/*********************************************************************
+  *                  wine_get_build_id   (NTDLL.@)
+  */
+ const char * CDECL NTDLL_wine_get_build_id(void)
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index 5bac269..ab50882 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -1419,6 +1419,7 @@
+ 
+ # Version
+ @ cdecl wine_get_version() NTDLL_wine_get_version
++@ cdecl wine_get_patches() NTDLL_wine_get_patches
+ @ cdecl wine_get_build_id() NTDLL_wine_get_build_id
+ @ cdecl wine_get_host_version(ptr ptr) NTDLL_wine_get_host_version
+ 
+diff --git a/loader/main.c b/loader/main.c
+index ac67290..71e5055 100644
+--- a/loader/main.c
++++ b/loader/main.c
+@@ -79,6 +79,12 @@ static inline void reserve_area( void *addr, size_t size )
+ 
+ #endif  /* __APPLE__ */
+ 
++struct wine_patch {
++    const char *hash;
++    const char *author;
++    const char *title;
++};
++
+ /***********************************************************************
+  *           check_command_line
+  *
+@@ -89,7 +95,8 @@ static void check_command_line( int argc, char *argv[] )
+     static const char usage[] =
+         "Usage: wine PROGRAM [ARGUMENTS...]   Run the specified program\n"
+         "       wine --help                   Display this help and exit\n"
+-        "       wine --version                Output version information and exit";
++        "       wine --version                Output version information and exit\n"
++        "       wine --patches                Output patch information and exit";
+ 
+     if (argc <= 1)
+     {
+@@ -106,6 +113,16 @@ static void check_command_line( int argc, char *argv[] )
+         printf( "%s\n", wine_get_build_id() );
+         exit(0);
+     }
++    if (!strcmp( argv[1], "--patches" ))
++    {
++        const struct wine_patch *wine_patch_data = wine_get_patches();
++        for(; wine_patch_data->hash != NULL; wine_patch_data++)
++        {
++            printf( "%s :: %s :: %s\n", wine_patch_data->hash, wine_patch_data->author,
++                    wine_patch_data->title );
++        }
++        exit(0);
++    }
+ }
+ 
+ 
+-- 
+1.7.9.5
+

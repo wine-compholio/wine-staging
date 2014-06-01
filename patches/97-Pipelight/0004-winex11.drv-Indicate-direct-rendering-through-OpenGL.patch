@@ -1,0 +1,51 @@
+From b6bd496bacbe8eb82dfa53148e92474c9a7511bb Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 1 Jun 2014 22:51:32 +0200
+Subject: winex11.drv: Indicate direct rendering through OpenGL extension
+
+---
+ dlls/winex11.drv/opengl.c | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/winex11.drv/opengl.c b/dlls/winex11.drv/opengl.c
+index 71af3db..6f3aca0 100644
+--- a/dlls/winex11.drv/opengl.c
++++ b/dlls/winex11.drv/opengl.c
+@@ -440,6 +440,7 @@ static int GLXErrorHandler(Display *dpy, XErrorEvent *event, void *arg)
+ static BOOL X11DRV_WineGL_InitOpenglInfo(void)
+ {
+     static const char legacy_extensions[] = " WGL_EXT_extensions_string WGL_EXT_swap_control";
++    static const char direct_extension[] = " WINE_EXT_direct_rendering";
+ 
+     int screen = DefaultScreen(gdi_display);
+     Window win = 0, root = 0;
+@@ -491,10 +492,16 @@ static BOOL X11DRV_WineGL_InitOpenglInfo(void)
+     }
+     gl_renderer = (const char *)opengl_funcs.gl.p_glGetString(GL_RENDERER);
+     WineGLInfo.glVersion = (const char *) opengl_funcs.gl.p_glGetString(GL_VERSION);
++    WineGLInfo.glxDirect = pglXIsDirect(gdi_display, ctx);
+     str = (const char *) opengl_funcs.gl.p_glGetString(GL_EXTENSIONS);
+-    WineGLInfo.glExtensions = HeapAlloc(GetProcessHeap(), 0, strlen(str)+sizeof(legacy_extensions));
++    if (WineGLInfo.glxDirect)
++        WineGLInfo.glExtensions = HeapAlloc(GetProcessHeap(), 0, strlen(str)+sizeof(legacy_extensions)+sizeof(direct_extension));
++    else
++        WineGLInfo.glExtensions = HeapAlloc(GetProcessHeap(), 0, strlen(str)+sizeof(legacy_extensions));
+     strcpy(WineGLInfo.glExtensions, str);
+     strcat(WineGLInfo.glExtensions, legacy_extensions);
++    if (WineGLInfo.glxDirect)
++        strcat(WineGLInfo.glExtensions, direct_extension);
+ 
+     /* Get the common GLX version supported by GLX client and server ( major/minor) */
+     pglXQueryVersion(gdi_display, &WineGLInfo.glxVersion[0], &WineGLInfo.glxVersion[1]);
+@@ -508,7 +515,7 @@ static BOOL X11DRV_WineGL_InitOpenglInfo(void)
+     WineGLInfo.glxClientExtensions = pglXGetClientString(gdi_display, GLX_EXTENSIONS);
+ 
+     WineGLInfo.glxExtensions = pglXQueryExtensionsString(gdi_display, screen);
+-    WineGLInfo.glxDirect = pglXIsDirect(gdi_display, ctx);
++
+ 
+     TRACE("GL version             : %s.\n", WineGLInfo.glVersion);
+     TRACE("GL renderer            : %s.\n", gl_renderer);
+-- 
+1.8.3.2
+

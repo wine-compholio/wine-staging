@@ -1,4 +1,4 @@
-From 9124129971336d0e76deb76a8eb0396e1f4aa6a9 Mon Sep 17 00:00:00 2001
+From d1fa972e77cab4a5529631371dff0c80a04a8ad5 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 31 May 2014 21:02:04 +0200
 Subject: ntdll: Use lockfree implementation for get_cached_fd.
@@ -8,7 +8,7 @@ Subject: ntdll: Use lockfree implementation for get_cached_fd.
  1 file changed, 46 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
-index f3c6b38..cda0896 100644
+index f3c6b38..75988ec 100644
 --- a/dlls/ntdll/server.c
 +++ b/dlls/ntdll/server.c
 @@ -73,6 +73,8 @@
@@ -39,7 +39,7 @@ index f3c6b38..cda0896 100644
  
      if (entry >= FD_CACHE_ENTRIES)
      {
-@@ -837,12 +842,29 @@ static BOOL add_fd_to_cache( HANDLE handle, int fd, enum server_fd_type type,
+@@ -837,12 +842,31 @@ static BOOL add_fd_to_cache( HANDLE handle, int fd, enum server_fd_type type,
              fd_cache[entry] = ptr;
          }
      }
@@ -47,7 +47,8 @@ index f3c6b38..cda0896 100644
 +#if defined(__powerpc__)
      /* store fd+1 so that 0 can be used as the unset value */
 -    prev_fd = interlocked_xchg( &fd_cache[entry][idx].fd, fd + 1 ) - 1;
-+    assert( !interlocked_xchg( &fd_cache[entry][idx].fd, fd + 1 ) );
++    fd = interlocked_xchg( &fd_cache[entry][idx].fd, fd + 1 );
++    assert( !fd );
      fd_cache[entry][idx].type = type;
      fd_cache[entry][idx].access = access;
      fd_cache[entry][idx].options = options;
@@ -65,13 +66,14 @@ index f3c6b38..cda0896 100644
 +        /* we're holding the lock and have checked the content before, so the cache always contains the latest value */
 +        old_cache = fd_cache[entry][idx];
 +        assert( !old_cache.fd );
-+        assert( interlocked_cmpxchg64( (LONG64 *)&fd_cache[entry][idx], *(LONG64 *)&new_cache, *(LONG64 *)&old_cache ) == *(LONG64 *)&old_cache );
++        *(LONG64 *)&new_cache = interlocked_cmpxchg64( (LONG64 *)&fd_cache[entry][idx], *(LONG64 *)&new_cache, *(LONG64 *)&old_cache );
++        assert( !memcmp(&old_cache, &new_cache, sizeof(struct fd_cache_entry)) );
 +    }
 +#endif
      return TRUE;
  }
  
-@@ -850,7 +872,7 @@ static BOOL add_fd_to_cache( HANDLE handle, int fd, enum server_fd_type type,
+@@ -850,7 +874,7 @@ static BOOL add_fd_to_cache( HANDLE handle, int fd, enum server_fd_type type,
  /***********************************************************************
   *           get_cached_fd
   *
@@ -80,7 +82,7 @@ index f3c6b38..cda0896 100644
   */
  static inline int get_cached_fd( HANDLE handle, enum server_fd_type *type,
                                   unsigned int *access, unsigned int *options )
-@@ -860,10 +882,21 @@ static inline int get_cached_fd( HANDLE handle, enum server_fd_type *type,
+@@ -860,10 +884,19 @@ static inline int get_cached_fd( HANDLE handle, enum server_fd_type *type,
  
      if (entry < FD_CACHE_ENTRIES && fd_cache[entry])
      {
@@ -90,14 +92,12 @@ index f3c6b38..cda0896 100644
          if (access) *access = fd_cache[entry][idx].access;
          if (options) *options = fd_cache[entry][idx].options;
 +    #else
-+        {
-+            struct fd_cache_entry cache;
-+            *(LONG64 *)&cache = interlocked_cmpxchg64( (LONG64 *)&fd_cache[entry][idx], 0, 0 );
-+            fd = cache.fd - 1;
-+            if (type) *type = cache.type;
-+            if (access) *access = cache.access;
-+            if (options) *options = cache.options;
-+        }
++        struct fd_cache_entry cache;
++        *(LONG64 *)&cache = interlocked_cmpxchg64( (LONG64 *)&fd_cache[entry][idx], 0, 0 );
++        fd = cache.fd - 1;
++        if (type) *type = cache.type;
++        if (access) *access = cache.access;
++        if (options) *options = cache.options;
 +    #endif
      }
      return fd;

@@ -82,6 +82,12 @@ if [ "$nogit" -eq 0 ] && command -v git >/dev/null 2>&1; then
 	exit 1
 fi
 
+if gzip -V 2>&1 | grep "BSD" &> /dev/null; then
+	echo "This script is not compatible with *BSD utilities." >&2
+	echo "Please install git, which provides the same functionality and will be used instead." >&2
+	exit 1;
+fi
+
 # Decode base85 git data, prepend with a gzip header
 awk_b85='
 BEGIN{

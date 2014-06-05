@@ -20,7 +20,7 @@ install:
 	done
 
 	# Update the configure script
-	cd $(DESTDIR); autoreconf;
+	cd $(DESTDIR); autoreconf -f;
 
 	# Update the wineserver protocol request data
 	cd $(DESTDIR); ./tools/make_requests;

@@ -1,28 +1,28 @@
-From ddd8b17270df0d8ba557d15e1c9425cab8c7fe12 Mon Sep 17 00:00:00 2001
+From dac832bfc418de315808a109ab9adba0c5936be5 Mon Sep 17 00:00:00 2001
 From: Maarten Lankhorst <m.b.lankhorst@gmail.com>
-Date: Sat, 4 Jan 2014 07:08:54 +0100
+Date: Sat, 8 Feb 2014 16:08:53 +0100
 Subject: [PATCH 09/42] winepulse: Add initial stub for pulseaudio support
 
 ---
 Just the basic of initialization and pulseaudio mainloop support is
 added here.
 ---
- configure                             |  97 +++++++++++-
- configure.ac                          |  31 +++-
+ configure                             |  99 +++++++++++-
+ configure.ac                          |  32 +++-
  dlls/mmdevapi/main.c                  |   2 +-
  dlls/winepulse.drv/Makefile.in        |   7 +
  dlls/winepulse.drv/mmdevdrv.c         | 290 ++++++++++++++++++++++++++++++++++
  dlls/winepulse.drv/winepulse.drv.spec |   5 +
- 6 files changed, 427 insertions(+), 5 deletions(-)
+ 6 files changed, 430 insertions(+), 5 deletions(-)
  create mode 100644 dlls/winepulse.drv/Makefile.in
  create mode 100644 dlls/winepulse.drv/mmdevdrv.c
  create mode 100644 dlls/winepulse.drv/winepulse.drv.spec
 
 diff --git a/configure b/configure
-index b4dfb47..c8f9168 100755
+index 246b888..d9f6ddd 100755
 --- a/configure
 +++ b/configure
-@@ -653,6 +633,8 @@ OSS4_CFLAGS
+@@ -653,6 +653,8 @@ OSS4_CFLAGS
  ALSA_LIBS
  GSTREAMER_LIBS
  GSTREAMER_CFLAGS
@@ -31,7 +31,7 @@ index b4dfb47..c8f9168 100755
  GETTEXTPO_LIBS
  Z_LIBS
  FREETYPE_LIBS
-@@ -830,6 +832,7 @@ with_osmesa
+@@ -824,6 +826,7 @@ with_osmesa
  with_oss
  with_png
  with_pthread
@@ -39,7 +39,15 @@ index b4dfb47..c8f9168 100755
  with_sane
  with_tiff
  with_v4l
-@@ -2044,6 +2047,7 @@ Optional Packages:
+@@ -1253,6 +1256,7 @@ enable_winemapi
+ enable_winemp3_acm
+ enable_wineoss_drv
+ enable_wineps_drv
++enable_winepulse_drv
+ enable_wineqtdecoder
+ enable_winex11_drv
+ enable_wing32
+@@ -2079,6 +2083,7 @@ Optional Packages:
    --without-oss           do not use the OSS sound support
    --without-png           do not use PNG
    --without-pthread       do not use the pthread library
@@ -47,7 +55,7 @@ index b4dfb47..c8f9168 100755
    --without-sane          do not use SANE (scanner support)
    --without-tiff          do not use TIFF
    --without-v4l           do not use v4l1 (v4l support)
-@@ -3281,6 +3285,12 @@ if test "${with_pthread+set}" = set; then :
+@@ -3320,6 +3325,12 @@ if test "${with_pthread+set}" = set; then :
  fi
  
  
@@ -60,7 +68,7 @@ index b4dfb47..c8f9168 100755
  # Check whether --with-sane was given.
  if test "${with_sane+set}" = set; then :
    withval=$with_sane;
-@@ -12095,6 +12105,87 @@ esac
+@@ -12083,6 +12094,87 @@ esac
  fi
  fi
  
@@ -148,7 +156,7 @@ index b4dfb47..c8f9168 100755
  if test "x$with_gstreamer" != "xno"
  then
      if ${GSTREAMER_CFLAGS:+false} :; then :
-@@ -13394,12 +13473,13 @@ fi
+@@ -13394,12 +13486,14 @@ fi
  
  test -n "$ALSA_LIBS" || enable_winealsa_drv=${enable_winealsa_drv:-no}
  test -n "$COREAUDIO_LIBS" || enable_winecoreaudio_drv=${enable_winecoreaudio_drv:-no}
@@ -157,6 +165,7 @@ index b4dfb47..c8f9168 100755
  test "$ac_cv_header_linux_joystick_h" = "yes" || enable_winejoystick_drv=${enable_winejoystick_drv:-no}
  
 -if test "x$ALSA_LIBS$COREAUDIO_LIBS" = "x" -a \
++if test "x$ALSA_LIBS$COREAUDIO_LIBS$PULSELIBS" = "x" -a \
 +if test "x$ALSALIBS$COREAUDIO$PULSELIBS" = "x" -a \
          "x$ac_cv_member_oss_sysinfo_numaudioengines" != xyes -a \
 -        "x$with_alsa$with_coreaudio$with_oss" != xnonono
@@ -164,7 +173,7 @@ index b4dfb47..c8f9168 100755
  then
      as_fn_append wine_warnings "|No sound system was found. Windows applications will be silent."
  fi
-@@ -17130,6 +17222,7 @@ wine_fn_config_dll winemp3.acm enable_winemp3_acm
+@@ -17203,6 +17297,7 @@ wine_fn_config_dll winemp3.acm enable_winemp3_acm
  wine_fn_config_dll wineoss.drv enable_wineoss_drv
  wine_fn_config_dll wineps.drv enable_wineps_drv clean,po
  wine_fn_config_dll wineps16.drv16 enable_win16
@@ -173,7 +182,7 @@ index b4dfb47..c8f9168 100755
  wine_fn_config_dll winex11.drv enable_winex11_drv
  wine_fn_config_dll wing.dll16 enable_win16
 diff --git a/configure.ac b/configure.ac
-index 3c1101c..cf2cb7f 100644
+index de807d2..ec3db46 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -70,6 +70,7 @@ AC_ARG_WITH(oss,       AS_HELP_STRING([--without-oss],[do not use the OSS sound
@@ -184,7 +193,7 @@ index 3c1101c..cf2cb7f 100644
  AC_ARG_WITH(sane,      AS_HELP_STRING([--without-sane],[do not use SANE (scanner support)]))
  AC_ARG_WITH(tiff,      AS_HELP_STRING([--without-tiff],[do not use TIFF]))
  AC_ARG_WITH(v4l,       AS_HELP_STRING([--without-v4l],[do not use v4l1 (v4l support)]))
-@@ -1522,6 +1523,30 @@ then
+@@ -1512,6 +1513,30 @@ then
            [GetText ${notice_platform}development files not found (or too old), po files can't be rebuilt.])
  fi
  
@@ -215,7 +224,7 @@ index 3c1101c..cf2cb7f 100644
  dnl **** Check for gstreamer ****
  if test "x$with_gstreamer" != "xno"
  then
-@@ -1730,13 +1755,14 @@ fi
+@@ -1730,13 +1755,15 @@ fi
  dnl **** Disable unsupported winmm drivers ****
  test -n "$ALSA_LIBS" || enable_winealsa_drv=${enable_winealsa_drv:-no}
  test -n "$COREAUDIO_LIBS" || enable_winecoreaudio_drv=${enable_winecoreaudio_drv:-no}
@@ -225,6 +234,7 @@ index 3c1101c..cf2cb7f 100644
  
  dnl **** Check for any sound system ****
 -if test "x$ALSA_LIBS$COREAUDIO_LIBS" = "x" -a \
++if test "x$ALSA_LIBS$COREAUDIO_LIBS$PULSELIBS" = "x" -a \
 +if test "x$ALSALIBS$COREAUDIO$PULSELIBS" = "x" -a \
          "x$ac_cv_member_oss_sysinfo_numaudioengines" != xyes -a \
 -        "x$with_alsa$with_coreaudio$with_oss" != xnonono
@@ -232,7 +242,7 @@ index 3c1101c..cf2cb7f 100644
  then
      WINE_WARNING([No sound system was found. Windows applications will be silent.])
  fi
-@@ -3184,6 +3210,7 @@ WINE_CONFIG_DLL(winemp3.acm)
+@@ -3217,6 +3244,7 @@ WINE_CONFIG_DLL(winemp3.acm)
  WINE_CONFIG_DLL(wineoss.drv)
  WINE_CONFIG_DLL(wineps.drv,,[clean,po])
  WINE_CONFIG_DLL(wineps16.drv16,enable_win16)
@@ -255,13 +265,13 @@ index 447813f..b9ae99e 100644
      DriverFuncs driver;
 diff --git a/dlls/winepulse.drv/Makefile.in b/dlls/winepulse.drv/Makefile.in
 new file mode 100644
-index 0000000..ae66542
+index 0000000..158bbc0
 --- /dev/null
 +++ b/dlls/winepulse.drv/Makefile.in
 @@ -0,0 +1,7 @@
 +MODULE    = winepulse.drv
 +IMPORTS   = dxguid uuid winmm user32 advapi32 ole32
-+EXTRALIBS = @PULSELIBS@ @PTHREAD_LIBS@
++EXTRALIBS = @PULSELIBS@ $(PTHREAD_LIBS)
 +EXTRAINCL = @PULSEINCL@
 +
 +C_SRCS = \

@@ -1,0 +1,138 @@
+From 83880f60c7b647123815acb945c090bec17bab47 Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Wed, 14 May 2014 08:14:46 -0600
+Subject: server: Add default security descriptor DACL for processes.
+
+---
+ dlls/advapi32/tests/security.c |   50 ++++++++++++++++++++++++++++++++++++++++
+ server/process.c               |   28 ++++++++++++++++++++--
+ 2 files changed, 76 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
+index 2cf18e0..f767512 100644
+--- a/dlls/advapi32/tests/security.c
++++ b/dlls/advapi32/tests/security.c
+@@ -3858,10 +3858,12 @@ static void test_GetSecurityInfo(void)
+     char admin_ptr[sizeof(SID)+sizeof(ULONG)*SID_MAX_SUB_AUTHORITIES], dacl[100];
+     PSID domain_users_sid = (PSID) domain_users_ptr, domain_sid;
+     SID_IDENTIFIER_AUTHORITY sia = { SECURITY_NT_AUTHORITY };
++    int domain_users_ace_id = -1, admins_ace_id = -1, i;
+     DWORD sid_size = sizeof(admin_ptr), l = sizeof(b);
+     PSID admin_sid = (PSID) admin_ptr, user_sid;
+     char sd[SECURITY_DESCRIPTOR_MIN_LENGTH];
+     BOOL owner_defaulted, group_defaulted;
++    BOOL dacl_defaulted, dacl_present;
+     ACL_SIZE_INFORMATION acl_size;
+     PSECURITY_DESCRIPTOR pSD;
+     ACCESS_ALLOWED_ACE *ace;
+@@ -3869,6 +3871,7 @@ static void test_GetSecurityInfo(void)
+     PSID owner, group;
+     BOOL bret = TRUE;
+     PACL pDacl;
++    BYTE flags;
+     DWORD ret;
+ 
+     if (!pGetSecurityInfo || !pSetSecurityInfo)
+@@ -4016,6 +4019,53 @@ static void test_GetSecurityInfo(void)
+     ok(group != NULL, "group should not be NULL\n");
+     ok(EqualSid(group, domain_users_sid), "Process group SID != Domain Users SID.\n");
+     LocalFree(pSD);
++
++    /* Test querying the DACL of a process */
++    ret = pGetSecurityInfo(GetCurrentProcess(), SE_KERNEL_OBJECT, DACL_SECURITY_INFORMATION,
++                                   NULL, NULL, NULL, NULL, &pSD);
++    ok(!ret, "GetSecurityInfo failed with error %d\n", ret);
++
++    bret = GetSecurityDescriptorDacl(pSD, &dacl_present, &pDacl, &dacl_defaulted);
++    ok(bret, "GetSecurityDescriptorDacl failed with error %d\n", GetLastError());
++    ok(dacl_present, "DACL should be present\n");
++    ok(pDacl && IsValidAcl(pDacl), "GetSecurityDescriptorDacl returned invalid DACL.\n");
++    bret = pGetAclInformation(pDacl, &acl_size, sizeof(acl_size), AclSizeInformation);
++    ok(bret, "GetAclInformation failed\n");
++    ok(acl_size.AceCount != 0, "GetAclInformation returned no ACLs\n");
++    for (i=0; i<acl_size.AceCount; i++)
++    {
++        bret = pGetAce(pDacl, i, (VOID **)&ace);
++        ok(bret, "Failed to get ACE %d.\n", i);
++        bret = EqualSid(&ace->SidStart, domain_users_sid);
++        if (bret) domain_users_ace_id = i;
++        bret = EqualSid(&ace->SidStart, admin_sid);
++        if (bret) admins_ace_id = i;
++    }
++    ok(domain_users_ace_id != -1 || broken(domain_users_ace_id == -1) /* win2k */,
++       "Domain Users ACE not found.\n");
++    if (domain_users_ace_id != -1)
++    {
++        bret = pGetAce(pDacl, domain_users_ace_id, (VOID **)&ace);
++        ok(bret, "Failed to get Domain Users ACE.\n");
++        flags = ((ACE_HEADER *)ace)->AceFlags;
++        ok(flags == (INHERIT_ONLY_ACE|CONTAINER_INHERIT_ACE),
++           "Domain Users ACE has unexpected flags (0x%x != 0x%x)\n", flags,
++           INHERIT_ONLY_ACE|CONTAINER_INHERIT_ACE);
++        ok(ace->Mask == GENERIC_READ, "Domain Users ACE has unexpected mask (0x%x != 0x%x)\n",
++                                      ace->Mask, GENERIC_READ);
++    }
++    ok(admins_ace_id != -1 || broken(admins_ace_id == -1) /* xp */,
++       "Builtin Admins ACE not found.\n");
++    if (admins_ace_id != -1)
++    {
++        bret = pGetAce(pDacl, admins_ace_id, (VOID **)&ace);
++        ok(bret, "Failed to get Builtin Admins ACE.\n");
++        flags = ((ACE_HEADER *)ace)->AceFlags;
++        ok(flags == 0x0, "Builtin Admins ACE has unexpected flags (0x%x != 0x0)\n", flags);
++        ok(ace->Mask == PROCESS_ALL_ACCESS || broken(ace->Mask == 0x1f0fff) /* win2k */,
++           "Builtin Admins ACE has unexpected mask (0x%x != 0x%x)\n", ace->Mask, PROCESS_ALL_ACCESS);
++    }
++    LocalFree(pSD);
+ }
+ 
+ static void test_GetSidSubAuthority(void)
+diff --git a/server/process.c b/server/process.c
+index 01016d2..9f4586a 100644
+--- a/server/process.c
++++ b/server/process.c
+@@ -467,15 +467,39 @@ static struct security_descriptor *process_get_sd( struct object *obj )
+     {
+         size_t users_sid_len = security_sid_len( security_domain_users_sid );
+         size_t admins_sid_len = security_sid_len( security_builtin_admins_sid );
++        size_t dacl_len = sizeof(ACL) + 2 * offsetof( ACCESS_ALLOWED_ACE, SidStart )
++                          + users_sid_len + admins_sid_len;
++        ACCESS_ALLOWED_ACE *aaa;
++        ACL *dacl;
+ 
+-        key_default_sd = mem_alloc( sizeof(*key_default_sd) + admins_sid_len + users_sid_len  );
++        key_default_sd = mem_alloc( sizeof(*key_default_sd) + admins_sid_len + users_sid_len
++                                    + dacl_len );
+         key_default_sd->control   = SE_DACL_PRESENT;
+         key_default_sd->owner_len = admins_sid_len;
+         key_default_sd->group_len = users_sid_len;
+         key_default_sd->sacl_len  = 0;
+-        key_default_sd->dacl_len  = 0;
++        key_default_sd->dacl_len  = dacl_len;
+         memcpy( key_default_sd + 1, security_builtin_admins_sid, admins_sid_len );
+         memcpy( (char *)(key_default_sd + 1) + admins_sid_len, security_domain_users_sid, users_sid_len );
++
++        dacl = (ACL *)((char *)(key_default_sd + 1) + admins_sid_len + users_sid_len);
++        dacl->AclRevision = ACL_REVISION;
++        dacl->Sbz1 = 0;
++        dacl->AclSize = dacl_len;
++        dacl->AceCount = 2;
++        dacl->Sbz2 = 0;
++        aaa = (ACCESS_ALLOWED_ACE *)(dacl + 1);
++        aaa->Header.AceType = ACCESS_ALLOWED_ACE_TYPE;
++        aaa->Header.AceFlags = INHERIT_ONLY_ACE | CONTAINER_INHERIT_ACE;
++        aaa->Header.AceSize = offsetof( ACCESS_ALLOWED_ACE, SidStart ) + users_sid_len;
++        aaa->Mask = GENERIC_READ;
++        memcpy( &aaa->SidStart, security_domain_users_sid, users_sid_len );
++        aaa = (ACCESS_ALLOWED_ACE *)((char *)aaa + aaa->Header.AceSize);
++        aaa->Header.AceType = ACCESS_ALLOWED_ACE_TYPE;
++        aaa->Header.AceFlags = 0;
++        aaa->Header.AceSize = offsetof( ACCESS_ALLOWED_ACE, SidStart ) + admins_sid_len;
++        aaa->Mask = PROCESS_ALL_ACCESS;
++        memcpy( &aaa->SidStart, security_builtin_admins_sid, admins_sid_len );
+     }
+     return key_default_sd;
+ }
+-- 
+1.7.9.5
+

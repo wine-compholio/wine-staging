@@ -1,0 +1,168 @@
+From ccfec2389d48a56f0bfdf54b5f1fde6ead00e345 Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Tue, 13 May 2014 16:49:31 -0600
+Subject: server: Add default security descriptor ownership for processes.
+
+---
+ dlls/advapi32/tests/security.c |   34 ++++++++++++++++++++++++++++++++++
+ server/process.c               |   26 +++++++++++++++++++++++++-
+ server/security.h              |    1 +
+ server/token.c                 |    8 ++++++++
+ 4 files changed, 68 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
+index 05da0ae..2cf18e0 100644
+--- a/dlls/advapi32/tests/security.c
++++ b/dlls/advapi32/tests/security.c
+@@ -3853,11 +3853,15 @@ static void test_acls(void)
+ 
+ static void test_GetSecurityInfo(void)
+ {
++    char domain_users_ptr[sizeof(TOKEN_USER) + sizeof(SID) + sizeof(DWORD)*SID_MAX_SUB_AUTHORITIES];
+     char b[sizeof(TOKEN_USER) + sizeof(SID) + sizeof(DWORD)*SID_MAX_SUB_AUTHORITIES];
+     char admin_ptr[sizeof(SID)+sizeof(ULONG)*SID_MAX_SUB_AUTHORITIES], dacl[100];
++    PSID domain_users_sid = (PSID) domain_users_ptr, domain_sid;
++    SID_IDENTIFIER_AUTHORITY sia = { SECURITY_NT_AUTHORITY };
+     DWORD sid_size = sizeof(admin_ptr), l = sizeof(b);
+     PSID admin_sid = (PSID) admin_ptr, user_sid;
+     char sd[SECURITY_DESCRIPTOR_MIN_LENGTH];
++    BOOL owner_defaulted, group_defaulted;
+     ACL_SIZE_INFORMATION acl_size;
+     PSECURITY_DESCRIPTOR pSD;
+     ACCESS_ALLOWED_ACE *ace;
+@@ -3887,6 +3891,18 @@ static void test_GetSecurityInfo(void)
+     CloseHandle( token );
+     user_sid = ((TOKEN_USER *)b)->User.Sid;
+ 
++    if (!AllocateAndInitializeSid(&sia, 4, *GetSidSubAuthority(user_sid, 0),
++                                  *GetSidSubAuthority(user_sid, 1),
++                                  *GetSidSubAuthority(user_sid, 2),
++                                  *GetSidSubAuthority(user_sid, 3), 0, 0, 0, 0, &domain_sid))
++    {
++        win_skip("Failed to get current domain SID\n");
++        return;
++    }
++    sid_size = sizeof(domain_users_ptr);
++    pCreateWellKnownSid(WinAccountDomainUsersSid, domain_sid, domain_users_sid, &sid_size);
++    FreeSid(domain_sid);
++
+     /* Create something.  Files have lots of associated security info.  */
+     obj = CreateFileA(myARGV[0], GENERIC_READ|WRITE_DAC, FILE_SHARE_READ, NULL,
+                       OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+@@ -3982,6 +3998,24 @@ static void test_GetSecurityInfo(void)
+     }
+     LocalFree(pSD);
+     CloseHandle(obj);
++
++    /* Test querying the ownership of a process */
++    ret = pGetSecurityInfo(GetCurrentProcess(), SE_KERNEL_OBJECT,
++                           OWNER_SECURITY_INFORMATION|GROUP_SECURITY_INFORMATION,
++                           NULL, NULL, NULL, NULL, &pSD);
++    ok(!ret, "GetNamedSecurityInfo failed with error %d\n", ret);
++
++    bret = GetSecurityDescriptorOwner(pSD, &owner, &owner_defaulted);
++    ok(bret, "GetSecurityDescriptorOwner failed with error %d\n", GetLastError());
++    ok(owner != NULL, "owner should not be NULL\n");
++    ok(EqualSid(owner, admin_sid) || EqualSid(owner, user_sid),
++       "Process owner SID != Administrators SID.\n");
++
++    bret = GetSecurityDescriptorGroup(pSD, &group, &group_defaulted);
++    ok(bret, "GetSecurityDescriptorGroup failed with error %d\n", GetLastError());
++    ok(group != NULL, "group should not be NULL\n");
++    ok(EqualSid(group, domain_users_sid), "Process group SID != Domain Users SID.\n");
++    LocalFree(pSD);
+ }
+ 
+ static void test_GetSidSubAuthority(void)
+diff --git a/server/process.c b/server/process.c
+index 7b9a3b2..01016d2 100644
+--- a/server/process.c
++++ b/server/process.c
+@@ -62,6 +62,7 @@ static int shutdown_stage;  /* current stage in the shutdown process */
+ static void process_dump( struct object *obj, int verbose );
+ static int process_signaled( struct object *obj, struct wait_queue_entry *entry );
+ static unsigned int process_map_access( struct object *obj, unsigned int access );
++static struct security_descriptor *process_get_sd( struct object *obj );
+ static void process_poll_event( struct fd *fd, int event );
+ static void process_destroy( struct object *obj );
+ 
+@@ -77,7 +78,7 @@ static const struct object_ops process_ops =
+     no_signal,                   /* signal */
+     no_get_fd,                   /* get_fd */
+     process_map_access,          /* map_access */
+-    default_get_sd,              /* get_sd */
++    process_get_sd,              /* get_sd */
+     default_set_sd,              /* set_sd */
+     no_lookup_name,              /* lookup_name */
+     no_open_file,                /* open_file */
+@@ -456,6 +457,29 @@ static unsigned int process_map_access( struct object *obj, unsigned int access
+     return access & ~(GENERIC_READ | GENERIC_WRITE | GENERIC_EXECUTE | GENERIC_ALL);
+ }
+ 
++static struct security_descriptor *process_get_sd( struct object *obj )
++{
++    static struct security_descriptor *key_default_sd;
++
++    if (obj->sd) return obj->sd;
++
++    if (!key_default_sd)
++    {
++        size_t users_sid_len = security_sid_len( security_domain_users_sid );
++        size_t admins_sid_len = security_sid_len( security_builtin_admins_sid );
++
++        key_default_sd = mem_alloc( sizeof(*key_default_sd) + admins_sid_len + users_sid_len  );
++        key_default_sd->control   = SE_DACL_PRESENT;
++        key_default_sd->owner_len = admins_sid_len;
++        key_default_sd->group_len = users_sid_len;
++        key_default_sd->sacl_len  = 0;
++        key_default_sd->dacl_len  = 0;
++        memcpy( key_default_sd + 1, security_builtin_admins_sid, admins_sid_len );
++        memcpy( (char *)(key_default_sd + 1) + admins_sid_len, security_domain_users_sid, users_sid_len );
++    }
++    return key_default_sd;
++}
++
+ static void process_poll_event( struct fd *fd, int event )
+ {
+     struct process *process = get_fd_user( fd );
+diff --git a/server/security.h b/server/security.h
+index ab5f027..b9fbe6a 100644
+--- a/server/security.h
++++ b/server/security.h
+@@ -44,6 +44,7 @@ extern const PSID security_local_user_sid;
+ extern const PSID security_local_system_sid;
+ extern const PSID security_builtin_users_sid;
+ extern const PSID security_builtin_admins_sid;
++extern const PSID security_domain_users_sid;
+ 
+ 
+ /* token functions */
+diff --git a/server/token.c b/server/token.c
+index cb81eec..914dfba 100644
+--- a/server/token.c
++++ b/server/token.c
+@@ -91,6 +91,13 @@ static const struct /* same fields as struct SID */
+     SID_IDENTIFIER_AUTHORITY IdentifierAuthority;
+     DWORD SubAuthority[2];
+ } builtin_users_sid = { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_USERS } };
++static const struct /* same fields as struct SID */
++{
++    BYTE Revision;
++    BYTE SubAuthorityCount;
++    SID_IDENTIFIER_AUTHORITY IdentifierAuthority;
++    DWORD SubAuthority[5];
++} domain_users_sid = { SID_REVISION, 5, { SECURITY_NT_AUTHORITY }, { SECURITY_NT_NON_UNIQUE, 0, 0, 0, DOMAIN_GROUP_RID_USERS } };
+ 
+ const PSID security_world_sid = (PSID)&world_sid;
+ static const PSID security_local_sid = (PSID)&local_sid;
+@@ -100,6 +107,7 @@ const PSID security_local_system_sid = (PSID)&local_system_sid;
+ const PSID security_local_user_sid = (PSID)&local_user_sid;
+ const PSID security_builtin_admins_sid = (PSID)&builtin_admins_sid;
+ const PSID security_builtin_users_sid = (PSID)&builtin_users_sid;
++const PSID security_domain_users_sid = (PSID)&domain_users_sid;
+ 
+ static luid_t prev_luid_value = { 1000, 0 };
+ 
+-- 
+1.7.9.5
+

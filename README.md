@@ -12,7 +12,10 @@ Current patches include:
 * Support for GetVolumePathName
 * Implement an Arial replacement font (http://bugs.winehq.org/show_bug.cgi?id=32323)
 * Workaround for TransactNamedPipe not being supported (http://bugs.winehq.org/show_bug.cgi?id=17273)
+* Avoid unloading modules while hook is still active (http://bugs.winehq.org/show_bug.cgi?id=22091)
 * XEMBED support for embedding Wine windows inside Linux applications
 * Reduced SetTimer minimum value from 15 ms to 5 ms (improves Silverlight framerates)
+* Lockfree algorithm for filedescriptor cache (improves file access speed)
 * Workaround for shlwapi URLs with relative paths
 * Support for PulseAudio backend for audio
+* Other Pipelight specific enhancements

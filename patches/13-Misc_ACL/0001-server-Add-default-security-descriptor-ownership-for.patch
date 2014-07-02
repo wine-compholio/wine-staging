@@ -1,17 +1,17 @@
-From ccfec2389d48a56f0bfdf54b5f1fde6ead00e345 Mon Sep 17 00:00:00 2001
+From 977d05dff239899b548e170055e2a38ee16d5fd6 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Tue, 13 May 2014 16:49:31 -0600
+Date: Wed, 25 Jun 2014 11:49:12 -0600
 Subject: server: Add default security descriptor ownership for processes.
 
 ---
- dlls/advapi32/tests/security.c |   34 ++++++++++++++++++++++++++++++++++
+ dlls/advapi32/tests/security.c |   35 +++++++++++++++++++++++++++++++++++
  server/process.c               |   26 +++++++++++++++++++++++++-
  server/security.h              |    1 +
  server/token.c                 |    8 ++++++++
- 4 files changed, 68 insertions(+), 1 deletion(-)
+ 4 files changed, 69 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index 05da0ae..2cf18e0 100644
+index 05da0ae..2fb57c4 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
 @@ -3853,11 +3853,15 @@ static void test_acls(void)
@@ -30,10 +30,12 @@ index 05da0ae..2cf18e0 100644
      ACL_SIZE_INFORMATION acl_size;
      PSECURITY_DESCRIPTOR pSD;
      ACCESS_ALLOWED_ACE *ace;
-@@ -3887,6 +3891,18 @@ static void test_GetSecurityInfo(void)
-     CloseHandle( token );
-     user_sid = ((TOKEN_USER *)b)->User.Sid;
- 
+@@ -3982,6 +3986,37 @@ static void test_GetSecurityInfo(void)
+     }
+     LocalFree(pSD);
+     CloseHandle(obj);
++
++    /* Obtain the "domain users" SID from the user SID */
 +    if (!AllocateAndInitializeSid(&sia, 4, *GetSidSubAuthority(user_sid, 0),
 +                                  *GetSidSubAuthority(user_sid, 1),
 +                                  *GetSidSubAuthority(user_sid, 2),
@@ -45,14 +47,6 @@ index 05da0ae..2cf18e0 100644
 +    sid_size = sizeof(domain_users_ptr);
 +    pCreateWellKnownSid(WinAccountDomainUsersSid, domain_sid, domain_users_sid, &sid_size);
 +    FreeSid(domain_sid);
-+
-     /* Create something.  Files have lots of associated security info.  */
-     obj = CreateFileA(myARGV[0], GENERIC_READ|WRITE_DAC, FILE_SHARE_READ, NULL,
-                       OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-@@ -3982,6 +3998,24 @@ static void test_GetSecurityInfo(void)
-     }
-     LocalFree(pSD);
-     CloseHandle(obj);
 +
 +    /* Test querying the ownership of a process */
 +    ret = pGetSecurityInfo(GetCurrentProcess(), SE_KERNEL_OBJECT,

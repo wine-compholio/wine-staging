@@ -13,6 +13,7 @@ Current patches include:
 * Implement an Arial replacement font (http://bugs.winehq.org/show_bug.cgi?id=32323)
 * Workaround for TransactNamedPipe not being supported (http://bugs.winehq.org/show_bug.cgi?id=17273)
 * Fix incorrect scaling for DECIMAL values in VarDecAdd (http://bugs.winehq.org/show_bug.cgi?id=31269)
+* Return NULL-terminated list of arguments in CommandLineToArgvW (http://bugs.winehq.org/show_bug.cgi?id=22829)
 * XEMBED support for embedding Wine windows inside Linux applications
 * Reduced SetTimer minimum value from 15 ms to 5 ms (improves Silverlight framerates)
 * Lockfree algorithm for filedescriptor cache (improves file access speed)

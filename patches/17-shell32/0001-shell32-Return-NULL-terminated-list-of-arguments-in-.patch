@@ -1,0 +1,97 @@
+From 93f4119c240a38fbd7108674d766e12998dbb081 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 7 Jul 2014 22:43:01 +0200
+Subject: shell32: Return NULL-terminated list of arguments in
+ CommandLineToArgvW.
+
+---
+ dlls/shell32/shell32_main.c  |   15 +++++++++------
+ dlls/shell32/tests/shlexec.c |    4 ++++
+ 2 files changed, 13 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/shell32/shell32_main.c b/dlls/shell32/shell32_main.c
+index 679ebec..3bf442e 100644
+--- a/dlls/shell32/shell32_main.c
++++ b/dlls/shell32/shell32_main.c
+@@ -101,11 +101,11 @@ LPWSTR* WINAPI CommandLineToArgvW(LPCWSTR lpCmdline, int* numargs)
+         /* Return the path to the executable */
+         DWORD len, deslen=MAX_PATH, size;
+ 
+-        size = sizeof(LPWSTR) + deslen*sizeof(WCHAR) + sizeof(LPWSTR);
++        size = sizeof(LPWSTR)*2 + deslen*sizeof(WCHAR);
+         for (;;)
+         {
+             if (!(argv = LocalAlloc(LMEM_FIXED, size))) return NULL;
+-            len = GetModuleFileNameW(0, (LPWSTR)(argv+1), deslen);
++            len = GetModuleFileNameW(0, (LPWSTR)(argv+2), deslen);
+             if (!len)
+             {
+                 LocalFree(argv);
+@@ -113,10 +113,11 @@ LPWSTR* WINAPI CommandLineToArgvW(LPCWSTR lpCmdline, int* numargs)
+             }
+             if (len < deslen) break;
+             deslen*=2;
+-            size = sizeof(LPWSTR) + deslen*sizeof(WCHAR) + sizeof(LPWSTR);
++            size = sizeof(LPWSTR)*2 + deslen*sizeof(WCHAR);
+             LocalFree( argv );
+         }
+-        argv[0]=(LPWSTR)(argv+1);
++        argv[0]=(LPWSTR)(argv+2);
++        argv[1]=NULL;
+         *numargs=1;
+ 
+         return argv;
+@@ -194,10 +195,10 @@ LPWSTR* WINAPI CommandLineToArgvW(LPCWSTR lpCmdline, int* numargs)
+      * with it. This way the caller can make a single LocalFree() call to free
+      * both, as per MSDN.
+      */
+-    argv=LocalAlloc(LMEM_FIXED, argc*sizeof(LPWSTR)+(strlenW(lpCmdline)+1)*sizeof(WCHAR));
++    argv=LocalAlloc(LMEM_FIXED, (argc+1)*sizeof(LPWSTR)+(strlenW(lpCmdline)+1)*sizeof(WCHAR));
+     if (!argv)
+         return NULL;
+-    cmdline=(LPWSTR)(argv+argc);
++    cmdline=(LPWSTR)(argv+argc+1);
+     strcpyW(cmdline, lpCmdline);
+ 
+     /* --- Then split and copy the arguments */
+@@ -235,6 +236,7 @@ LPWSTR* WINAPI CommandLineToArgvW(LPCWSTR lpCmdline, int* numargs)
+     if (!*s)
+     {
+         /* There are no parameters so we are all done */
++        argv[argc]=NULL;
+         *numargs=argc;
+         return argv;
+     }
+@@ -306,6 +308,7 @@ LPWSTR* WINAPI CommandLineToArgvW(LPCWSTR lpCmdline, int* numargs)
+         }
+     }
+     *d='\0';
++    argv[argc]=NULL;
+     *numargs=argc;
+ 
+     return argv;
+diff --git a/dlls/shell32/tests/shlexec.c b/dlls/shell32/tests/shlexec.c
+index 7f07c70..f81794e 100644
+--- a/dlls/shell32/tests/shlexec.c
++++ b/dlls/shell32/tests/shlexec.c
+@@ -1159,6 +1159,8 @@ static BOOL test_one_cmdline(const cmdline_tests_t* test)
+         win_skip("CommandLineToArgvW not implemented, skipping\n");
+         return FALSE;
+     }
++    ok(!argsW[cl2a_count] || broken(argsW[cl2a_count] != NULL) /* before Vista */,
++       "expected NULL-terminated list of commandline arguments\n");
+ 
+     count = 0;
+     while (test->args[count])
+@@ -1218,6 +1220,8 @@ static void test_commandline2argv(void)
+     *strW = 0;
+     args = CommandLineToArgvW(strW, &numargs);
+     ok(numargs == 1, "expected 1 args, got %d\n", numargs);
++    ok(!args || (!args[numargs] || broken(args[numargs] != NULL) /* before Vista */),
++       "expected NULL-terminated list of commandline arguments\n");
+     if (numargs == 1)
+     {
+         GetModuleFileNameW(NULL, strW, sizeof(strW)/sizeof(*strW));
+-- 
+1.7.9.5
+

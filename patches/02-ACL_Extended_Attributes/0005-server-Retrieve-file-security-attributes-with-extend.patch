@@ -1,4 +1,4 @@
-From 4498c57f61bf85fca6eb17afd21c0c7051534f75 Mon Sep 17 00:00:00 2001
+From 935a2c860d16ac42e4f6f97370aab51dbd8f4527 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 14:01:35 -0600
 Subject: server: Retrieve file security attributes with extended file
@@ -7,14 +7,14 @@ Subject: server: Retrieve file security attributes with extended file
 ---
  dlls/advapi32/tests/security.c |   49 ++++++++++++++++++++--------------------
  server/change.c                |    2 +-
- server/file.c                  |   28 ++++++++++++++++++++---
- 3 files changed, 50 insertions(+), 29 deletions(-)
+ server/file.c                  |   34 +++++++++++++++++++++++++---
+ 3 files changed, 56 insertions(+), 29 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index a0574c4..26cde37 100644
+index f3ccc8e..4352ba6 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -3105,24 +3105,24 @@ static void test_CreateDirectoryA(void)
+@@ -3131,24 +3131,24 @@ static void test_CreateDirectoryA(void)
          bret = pGetAce(pDacl, 0, (VOID **)&ace);
          ok(bret, "Failed to get Current User ACE.\n");
          bret = EqualSid(&ace->SidStart, user_sid);
@@ -51,7 +51,7 @@ index a0574c4..26cde37 100644
      }
      LocalFree(pSD);
  
-@@ -3297,23 +3297,22 @@ static void test_GetNamedSecurityInfoA(void)
+@@ -3323,23 +3323,22 @@ static void test_GetNamedSecurityInfoA(void)
          bret = pGetAce(pDacl, 0, (VOID **)&ace);
          ok(bret, "Failed to get Current User ACE.\n");
          bret = EqualSid(&ace->SidStart, user_sid);
@@ -81,7 +81,7 @@ index a0574c4..26cde37 100644
      }
      LocalFree(pSD);
      HeapFree(GetProcessHeap(), 0, user);
-@@ -3963,22 +3962,22 @@ static void test_GetSecurityInfo(void)
+@@ -3989,22 +3988,22 @@ static void test_GetSecurityInfo(void)
          bret = pGetAce(pDacl, 0, (VOID **)&ace);
          ok(bret, "Failed to get Current User ACE.\n");
          bret = EqualSid(&ace->SidStart, user_sid);
@@ -111,10 +111,10 @@ index a0574c4..26cde37 100644
      LocalFree(pSD);
      CloseHandle(obj);
 diff --git a/server/change.c b/server/change.c
-index c391180..77c01bb 100644
+index c673c48..27dbe25 100644
 --- a/server/change.c
 +++ b/server/change.c
-@@ -287,7 +287,7 @@ static struct security_descriptor *dir_get_sd( struct object *obj )
+@@ -290,7 +290,7 @@ static struct security_descriptor *dir_get_sd( struct object *obj )
      assert( obj->ops == &dir_ops );
  
      fd = dir_get_fd( obj );
@@ -124,10 +124,10 @@ index c391180..77c01bb 100644
      return sd;
  }
 diff --git a/server/file.c b/server/file.c
-index b9106a8..c4706b6 100644
+index 6981fca..66fb7af 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -496,12 +496,33 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID
+@@ -504,12 +504,39 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID
      return sd;
  }
  
@@ -139,12 +139,18 @@ index b9106a8..c4706b6 100644
 +    int n;
 +
 +    n = fgetxattr( fd, "user.wine.sd", buffer, sizeof(buffer) );
-+    if (n == -1) return NULL;
++    if (n == -1 || n < 2 + sizeof(struct security_descriptor)) return NULL;
++
 +    /* validate that we can handle the descriptor */
 +    if (buffer[0] != SECURITY_DESCRIPTOR_REVISION || buffer[1] != 0) return NULL;
 +
++    sd = (struct security_descriptor *)&buffer[2];
++    if (n  < 2 + sizeof(struct security_descriptor) + sd->owner_len
++               + sd->group_len + sd->sacl_len + sd->dacl_len)
++        return NULL;
++
 +    sd = mem_alloc( n - 2 );
-+    memcpy( sd, &buffer[2], n - 2 );
++    if (sd) memcpy( sd, &buffer[2], n - 2 );
 +    return sd;
 +#else
 +    return NULL;
@@ -161,7 +167,7 @@ index b9106a8..c4706b6 100644
  
      if (unix_fd == -1 || fstat( unix_fd, &st ) == -1)
          return obj->sd;
-@@ -511,9 +532,10 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
+@@ -519,9 +546,10 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
          (st.st_uid == *uid))
          return obj->sd;
  

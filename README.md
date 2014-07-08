@@ -1,7 +1,7 @@
-wine-compholio-daily
-====================
+wine-compholio
+==============
 
-Daily updates for the Wine "Compholio" Edition.
+The Wine "Compholio" Edition repository includes a variety of patches for Wine to run common Windows applications under Linux.
 
 Current patches include:
 * Support for interface change notifications (http://bugs.winehq.org/show_bug.cgi?id=32328)

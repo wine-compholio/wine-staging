@@ -1,4 +1,4 @@
-From 935a2c860d16ac42e4f6f97370aab51dbd8f4527 Mon Sep 17 00:00:00 2001
+From 0fea62714c3bdf5384f2f47c1985c21470710cfd Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 14:01:35 -0600
 Subject: server: Retrieve file security attributes with extended file
@@ -7,8 +7,8 @@ Subject: server: Retrieve file security attributes with extended file
 ---
  dlls/advapi32/tests/security.c |   49 ++++++++++++++++++++--------------------
  server/change.c                |    2 +-
- server/file.c                  |   34 +++++++++++++++++++++++++---
- 3 files changed, 56 insertions(+), 29 deletions(-)
+ server/file.c                  |   38 ++++++++++++++++++++++++++++---
+ 3 files changed, 60 insertions(+), 29 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
 index f3ccc8e..4352ba6 100644
@@ -124,21 +124,25 @@ index c673c48..27dbe25 100644
      return sd;
  }
 diff --git a/server/file.c b/server/file.c
-index 6981fca..66fb7af 100644
+index 6981fca..26962df 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -504,12 +504,39 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID
+@@ -504,12 +504,43 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID
      return sd;
  }
  
 +struct security_descriptor *get_xattr_sd( int fd )
 +{
-+#ifdef HAVE_ATTR_XATTR_H
++#if defined(HAVE_ATTR_XATTR_H) || defined(HAVE_SYS_EXTATTR_H)
 +    struct security_descriptor *sd;
 +    char buffer[XATTR_SIZE_MAX];
 +    int n;
 +
++#if defined(HAVE_ATTR_XATTR_H)
 +    n = fgetxattr( fd, "user.wine.sd", buffer, sizeof(buffer) );
++#else
++    n = extattr_get_fd( fd, EXTATTR_NAMESPACE_USER, "wine.sd", buffer, sizeof(buffer) );
++#endif
 +    if (n == -1 || n < 2 + sizeof(struct security_descriptor)) return NULL;
 +
 +    /* validate that we can handle the descriptor */
@@ -167,7 +171,7 @@ index 6981fca..66fb7af 100644
  
      if (unix_fd == -1 || fstat( unix_fd, &st ) == -1)
          return obj->sd;
-@@ -519,9 +546,10 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
+@@ -519,9 +550,10 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
          (st.st_uid == *uid))
          return obj->sd;
  

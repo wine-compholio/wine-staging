@@ -31,7 +31,7 @@ warning()
 usage()
 {
 	echo ""
-	echo "Usage: ./gitapply [-v] [-d DIRECTORY]"
+	echo "Usage: ./gitapply [--nogit] [-v] [-d DIRECTORY]"
 	echo ""
 	echo "Reads patch data from stdin and applies the patch to the current"
 	echo "directory or the directory given via commandline."
@@ -46,6 +46,14 @@ while [[ $# > 0 ]]; do
 	cmd="$1"; shift
 	case "$cmd" in
 
+		--nogit)
+			nogit=1
+			;;
+
+		-v)
+			verbose=1
+			;;
+
 		--directory=*)
 			cd "${cmd#*=}"
 			;;
@@ -55,14 +63,6 @@ while [[ $# > 0 ]]; do
 
 		-R)
 			abort "Reverse applying patches not supported yet with this patch tool."
-			;;
-
-		-v)
-			verbose=1
-			;;
-
-		--nogit)
-			nogit=1
 			;;
 
 		--help)
@@ -333,8 +333,8 @@ while IFS= read -r line; do
 					sha="0000000000000000000000000000000000000000"
 				fi
 				if [ "$patch_oldsha1" != "$sha" ]; then
-					echo "$lineno: Expected $patch_oldsha1"
-					echo "$lineno: Got      $sha"
+					echo "$lineno: Expected $patch_oldsha1" >&2
+					echo "$lineno: Got      $sha" >&2
 					abort "Unable to continue because of sha1 mismatch of original file."
 				fi
 			fi
@@ -434,8 +434,8 @@ while IFS= read -r line; do
 			# Check shasum if its not a patch creating a new file
 			sha=$(echo -en "blob $(du -b "$patch_tmpfile" | cut -f1)\x00" | cat - "$patch_tmpfile" | sha1sum | cut -d' ' -f1)
 			if [ "$patch_newsha1" != "$sha" ]; then
-				echo "$lineno: Expected $patch_newsha1"
-				echo "$lineno: Got      $sha"
+				echo "$lineno: Expected $patch_newsha1" >&2
+				echo "$lineno: Got      $sha" >&2
 				abort "Unable to continue because of sha1 mismatch after applying the patch."
 			fi
 

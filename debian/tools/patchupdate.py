@@ -247,16 +247,22 @@ def generate_readme(patches, fp):
     fp.write("\n")
     fp.write("These patches fix the following Wine bugs:\n")
     fp.write("\n")
+    all_fixes = []
     for i, patch in patches.iteritems():
         for (bugid, bugname) in patch.fixes:
-            fp.write("* ([Wine Bug #%d](http://bugs.winehq.org/show_bug.cgi?id=%d)) %s\n" % (bugid, bugid, bugname))
+            all_fixes.append((bugid, bugname))
+    for (bugid, bugname) in sorted(all_fixes):
+        fp.write("* ([Wine Bug #%d](http://bugs.winehq.org/show_bug.cgi?id=%d)) %s\n" % (bugid, bugid, bugname))
     fp.write("\n")
     fp.write("\n")
     fp.write("Besides that the following additional changes are included:\n")
     fp.write("\n")
+    all_changes = []
     for i, patch in patches.iteritems():
         for change in patch.changes:
-            fp.write("* %s\n" % change)
+            all_changes.append(change)
+    for change in sorted(all_changes):
+        fp.write("* %s\n" % change)
     fp.write("\n")
 
 if __name__ == "__main__":

@@ -1,21 +1,5 @@
 #!/bin/sh
-PATCH_DATA="";
-
-for FILE in patches/*/*.def; do
-	UUID=$(echo "${FILE}" | sed -e 's|^.*/||g' -e 's|\.def$||g');
-	REVISION=$(cat "${FILE}" | sed -n 's|Revision: \(.*\)|\1|p');
-	AUTHOR=$(cat "${FILE}" | sed -n 's|Author: \(.*\)|\1|p');
-	TITLE=$(cat "${FILE}" | sed -n 's|Title: \(.*\)|\1|p');
-	if [ "${AUTHOR}" = "" ] && [ "${TITLE}" = "" ]; then
-		continue;
-	fi
-	if [ "${PATCH_DATA}" != "" ]; then
-		PATCH_DATA="${PATCH_DATA}
-";
-	fi
-	PATCH_DATA="${PATCH_DATA}+    { \"${UUID}:${REVISION}\", \"${AUTHOR}\", \"${TITLE}\" },";
-done
-
+PATCH_DATA=$(cat);
 PATCH_LINES=$(echo "${PATCH_DATA}" | wc -l);
 PATCH_LINES=$((${PATCH_LINES}+20));
 

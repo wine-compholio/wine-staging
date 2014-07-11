@@ -5,6 +5,7 @@ import textwrap
 import urllib
 import contextlib
 from xml.dom import minidom
+from multiprocessing import Pool
 
 class AuthorInfo(object):
     def __init__(self):
@@ -93,10 +94,15 @@ def lsdiff(f):
                 if len(tmp) == 4 and tmp[3].startswith("b/"):
                     yield tmp[3][2:]
 
+def download(url):
+    with contextlib.closing(urllib.urlopen(url)) as wr:
+        return wr.read()
+
 def read_patchsets(directory):
     next_patch = 0
     patches = {}
     name_to_id = {}
+    all_fixes = []
 
     for name in sorted(os.listdir(directory)): # Read in sorted order to ensure created Makefile doesn't change too much
         if name in [".", ".."]: continue
@@ -161,10 +167,8 @@ def read_patchsets(directory):
                         val = int(val)
                     except ValueError:
                         continue # Ignore invalid entry
-                    with contextlib.closing(urllib.urlopen("http://bugs.winehq.org/show_bug.cgi?id=%d&ctype=xml&field=short_desc" % val)) as wr:
-                        xmldoc = minidom.parseString(wr.read())
-                    short_desc = xmldoc.getElementsByTagName('short_desc')[0].firstChild.data
-                    patch.fixes.append((val, short_desc))
+                    patch.fixes.append(val)
+                    all_fixes.append(val)
                 elif cmd == "changes":
                     patch.changes.append(val)
                 elif cmd == "depends":
@@ -177,6 +181,15 @@ def read_patchsets(directory):
 
             if len(info.author) and len(info.subject) and len(info.revision):
                 patch.authors.append(info)
+
+    # In a third step query information for the patches from Wine bugzilla
+    pool = Pool(8)
+    bug_short_desc = {}
+    for bugid, data in zip(all_fixes, pool.map(download, ["http://bugs.winehq.org/show_bug.cgi?id=%d&ctype=xml&field=short_desc" % bugid for bugid in all_fixes])):
+        bug_short_desc[bugid] = minidom.parseString(data).getElementsByTagName('short_desc')[0].firstChild.data
+    pool.close()
+    for i, patch in patches.iteritems():
+        patch.fixes = [(bugid, bug_short_desc[bugid]) for bugid in patch.fixes]
 
     return patches
 

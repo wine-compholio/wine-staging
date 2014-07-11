@@ -34,7 +34,7 @@ def pairs(a):
             yield (j, k)
 
 def causal_time_combine(a, b):
-    return [(a if a > b else b) for a, b in zip(a, b)]
+    return [max(a, b) for a, b in zip(a, b)]
 
 def causal_time_smaller(a, b):
     return all([i <= j for i, j in zip(a,b)]) and any([i < j for i, j in zip(a,b)])
@@ -94,10 +94,12 @@ def lsdiff(f):
                 tmp = line.strip().split(" ")
                 if len(tmp) == 4 and tmp[3].startswith("b/"):
                     yield tmp[3][2:]
+                else:
+                    print "** Unable to parse patch git header in %s: %s" % (f, line)
 
 def download(url):
-    with contextlib.closing(urllib.urlopen(url)) as wr:
-        return wr.read()
+    with contextlib.closing(urllib.urlopen(url)) as fp:
+        return fp.read()
 
 def read_patchsets(directory):
     next_patch = 0
@@ -115,11 +117,7 @@ def read_patchsets(directory):
         for f in sorted(os.listdir(subdirectory)):
             if not f.endswith(".patch") or not os.path.isfile(os.path.join(subdirectory, f)):
                 continue
-
-            # Append to the list of patches within this set
             patch.patches.append(f)
-
-            # Determine which files are affected
             for modified_file in lsdiff(os.path.join(subdirectory, f)):
                 patch.files.add(modified_file)
 

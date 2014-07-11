@@ -70,6 +70,10 @@ abort:
 # | Included patches:
 # |   *	Store and return security attributes with extended file attributes. [rev 6, by Erich E. Hoover]
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#31858] Netflix on Firefox fails with Internet Connection Problem when loading bar is at 99%
+# |   *	[#34406] Finale Notepad 2012 doesn't copy/create user files on program start
+# |
 02-ACL_Extended_Attributes.ok:
 	$(PATCH) < 02-ACL_Extended_Attributes/0001-server-Unify-the-storage-of-security-attributes-for-.patch
 	$(PATCH) < 02-ACL_Extended_Attributes/0002-server-Unify-the-retrieval-of-security-attributes-fo.patch
@@ -103,6 +107,10 @@ abort:
 # |
 # | Included patches:
 # |   *	Change return value of stub SetNamedPipeHandleState to TRUE. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#17273] Many apps and games need SetNamedPipeHandleState implementation (support for named pipe message
+# | 	mode)(FireFox+Flash, Win8/NET 4.x SDK/vcrun2012, WiX installers)
 # |
 05-Named_Pipe.ok:
 	$(PATCH) < 05-Named_Pipe/0001-kernel32-Change-return-value-of-stub-SetNamedPipeHandl.patch
@@ -165,6 +173,9 @@ abort:
 # | Included patches:
 # |   *	Support for junction points/reparse points. [by Erich E. Hoover]
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12401] Support junction points, i.e. DeviceIoCtl(FSCTL_SET_REPARSE_POINT/FSCTL_GET_REPARSE_POINT)
+# |
 08-Junction_Points.ok: 07-GetVolumePathName.ok
 	$(PATCH) < 08-Junction_Points/0001-ntdll-Add-support-for-junction-point-creation.patch
 	$(PATCH) < 08-Junction_Points/0002-ntdll-Add-support-for-reading-junction-points.patch
@@ -183,6 +194,10 @@ abort:
 # | Included patches:
 # |   *	Implement TransmitFile. [by Erich E. Hoover]
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#5048] Multiple applications and games need support for ws2_32 SIO_GET_EXTENSION_FUNCTION_POINTER TransmitFile
+# | 	(WSAID_TRANSMITFILE)
+# |
 09-TransmitFile.ok: 01-Address_Change_Notification.ok
 	$(PATCH) < 09-TransmitFile/0001-ws2_32-Add-stub-for-TransmitFile.patch
 	$(PATCH) < 09-TransmitFile/0002-ws2_32-Check-for-invalid-parameters-in-TransmitFile.patch
@@ -197,6 +212,10 @@ abort:
 # |
 # | Included patches:
 # |   *	Implement missing fonts expected by Silverlight. [by Erich E. Hoover]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#32323] Netflix (Silverlight 4.x) and several .NET Framework 3.x/4.0 WPF apps require either Arial or Verdana to be
+# | 	installed
 # |
 10-Missing_Fonts.ok:
 	$(PATCH) < 10-Missing_Fonts/0001-fonts-Add-a-subset-of-Liberation-Sans-as-an-Arial-re.patch
@@ -221,6 +240,9 @@ abort:
 # | Included patches:
 # |   *	Add default security descriptor ownership and DACLs for processes. [by Erich E. Hoover]
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] Rhapsody 2 crashes on startup (GetSecurityInfo returns NULL DACL for process object)
+# |
 13-Misc_ACL.ok: 02-ACL_Extended_Attributes.ok
 	$(PATCH) < 13-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
 	$(PATCH) < 13-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
@@ -244,6 +266,10 @@ abort:
 # |
 # | Included patches:
 # |   *	Partial implementation of WTSEnumerateProcessesW. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#29903] Some Microsoft debuggers fail to enumerate processes due to wtsapi32.WTSEnumerateProcessesW() being a stub
+# | 	(Microsoft Visual Studio 2005, DbgCLR from .NET 2.0 SDK)
 # |
 15-wtsapi32.ok:
 	$(PATCH) < 15-wtsapi32/0001-wtsapi32-Partial-implementation-of-WTSEnumerateProce.patch

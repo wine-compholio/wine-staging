@@ -1,11 +1,12 @@
 #!/usr/bin/python
-import sys
-import os
+from multiprocessing import Pool
+from xml.dom import minidom
+import contextlib
 import textwrap
 import urllib
-import contextlib
-from xml.dom import minidom
-from multiprocessing import Pool
+import sys
+import os
+import re
 
 class AuthorInfo(object):
     def __init__(self):
@@ -102,7 +103,7 @@ def read_patchsets(directory):
     next_patch = 0
     patches = {}
     name_to_id = {}
-    all_fixes = []
+    all_bugs = []
 
     for name in sorted(os.listdir(directory)): # Read in sorted order to ensure created Makefile doesn't change too much
         if name in [".", ".."]: continue
@@ -163,14 +164,19 @@ def read_patchsets(directory):
                     if len(info.revision): info.revision += ", "
                     info.revision += val
                 elif cmd == "fixes":
-                    try:
-                        val = int(val)
-                    except ValueError:
-                        continue # Ignore invalid entry
-                    patch.fixes.append(val)
-                    all_fixes.append(val)
-                elif cmd == "changes":
-                    patch.changes.append(val)
+                    r = re.match("^[0-9]+$", val)
+                    if r:
+                        bugid = int(val)
+                        patch.fixes.append((bugid, None, None))
+                        all_bugs.append(bugid)
+                        continue
+                    r = re.match("^\\[ *([0-9]+) *\\](.*)$", val)
+                    if r:
+                        bugid, description = int(r.group(1)), r.group(2).strip()
+                        patch.fixes.append((bugid, None, description))   
+                        all_bugs.append(bugid)
+                        continue
+                    patch.fixes.append((None, None, val))
                 elif cmd == "depends":
                     if not name_to_id.has_key(val):
                         print "** Definition file %s references unknown dependency %s" % (deffile, val)
@@ -184,12 +190,12 @@ def read_patchsets(directory):
 
     # In a third step query information for the patches from Wine bugzilla
     pool = Pool(8)
-    bug_short_desc = {}
-    for bugid, data in zip(all_fixes, pool.map(download, ["http://bugs.winehq.org/show_bug.cgi?id=%d&ctype=xml&field=short_desc" % bugid for bugid in all_fixes])):
+    bug_short_desc = {None:None}
+    for bugid, data in zip(all_bugs, pool.map(download, ["http://bugs.winehq.org/show_bug.cgi?id=%d&ctype=xml&field=short_desc" % bugid for bugid in all_bugs])):
         bug_short_desc[bugid] = minidom.parseString(data).getElementsByTagName('short_desc')[0].firstChild.data
     pool.close()
     for i, patch in patches.iteritems():
-        patch.fixes = [(bugid, bug_short_desc[bugid]) for bugid in patch.fixes]
+        patch.fixes = [(bugid, bug_short_desc[bugid], description) for bugid, dummy, description in patch.fixes]
 
     return patches
 
@@ -228,10 +234,11 @@ def generate_makefile(patches, fp):
             fp.write("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap(info.subject + s, 120)))
         fp.write("# |\n")
 
-        if len(patch.fixes):
+        if any([bugid is not None for bugid, bugname, description in patch.fixes]):
             fp.write("# | This patchset fixes the following Wine bugs:\n")
-            for (bugid, bugname) in patch.fixes:
-                fp.write("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap("[#%d] %s" % (bugid, bugname), 120)))
+            for bugid, bugname, description in patch.fixes:
+                if bugid is not None:
+                    fp.write("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap("[#%d] %s" % (bugid, bugname), 120)))
             fp.write("# |\n")
 
         depends = " ".join([""] + ["%s.ok" % patches[d].name for d in patch.depends]) if len(patch.depends) else ""
@@ -260,22 +267,27 @@ def generate_readme(patches, fp):
     fp.write("\n")
     fp.write("These patches fix the following Wine bugs:\n")
     fp.write("\n")
-    all_fixes = []
+
+    all_bugs = []
     for i, patch in patches.iteritems():
-        for (bugid, bugname) in patch.fixes:
-            all_fixes.append((bugid, bugname))
-    for (bugid, bugname) in sorted(all_fixes):
-        fp.write("* %s ([Wine Bug #%d](http://bugs.winehq.org/show_bug.cgi?id=%d))\n" % (bugname, bugid, bugid))
+        for (bugid, bugname, description) in patch.fixes:
+            if bugid is not None: all_bugs.append((bugid, bugname, description))
+    for (bugid, bugname, description) in sorted(all_bugs):
+        if description is None: description = bugname
+        fp.write("* %s ([Wine Bug #%d](http://bugs.winehq.org/show_bug.cgi?id=%d \"%s\"))\n" % (description, bugid, bugid, bugname))
+
     fp.write("\n")
     fp.write("\n")
     fp.write("Besides that the following additional changes are included:\n")
     fp.write("\n")
-    all_changes = []
+
+    all_fixes = []
     for i, patch in patches.iteritems():
-        for change in patch.changes:
-            all_changes.append(change)
-    for change in sorted(all_changes):
-        fp.write("* %s\n" % change)
+        for (bugid, bugname, description) in patch.fixes:
+            if bugid is None: all_fixes.append(description)
+    for description in sorted(all_fixes):
+        fp.write("* %s\n" % description)
+
     fp.write("\n")
 
 if __name__ == "__main__":

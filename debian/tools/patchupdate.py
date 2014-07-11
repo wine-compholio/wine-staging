@@ -252,7 +252,7 @@ def generate_readme(patches, fp):
         for (bugid, bugname) in patch.fixes:
             all_fixes.append((bugid, bugname))
     for (bugid, bugname) in sorted(all_fixes):
-        fp.write("* ([Wine Bug #%d](http://bugs.winehq.org/show_bug.cgi?id=%d)) %s\n" % (bugid, bugid, bugname))
+        fp.write("* %s ([Wine Bug #%d](http://bugs.winehq.org/show_bug.cgi?id=%d))\n" % (bugname, bugid, bugid))
     fp.write("\n")
     fp.write("\n")
     fp.write("Besides that the following additional changes are included:\n")

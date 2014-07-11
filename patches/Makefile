@@ -19,6 +19,7 @@ PATCHLIST :=	00-Commandline.ok \
 		13-Misc_ACL.ok \
 		14-UrlCombineW.ok \
 		15-wtsapi32.ok \
+		16-server-CreateProcess_ACLs.ok \
 		97-Pipelight.ok \
 		98-Miscellaneous.ok
 
@@ -276,6 +277,23 @@ abort:
 	( \
 		echo "+    { \"15-wtsapi32\", \"Sebastian Lackner\", \"Partial implementation of WTSEnumerateProcessesW.\" },"; \
 	) > 15-wtsapi32.ok
+
+# Patchset 16-server-CreateProcess_ACLs
+# |
+# | Included patches:
+# |   *	Implement passing ACLs to CreateProcess. [by Joris van der Wel]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#22006] OpenProcess does not enforce ACL
+# |
+16-server-CreateProcess_ACLs.ok: 09-TransmitFile.ok 13-Misc_ACL.ok
+	$(PATCH) < 16-server-CreateProcess_ACLs/0001-server-A-new-function-set_sd_defaults_from_token-try.patch
+	$(PATCH) < 16-server-CreateProcess_ACLs/0002-server-Support-sending-process-and-thread-security-d.patch
+	$(PATCH) < 16-server-CreateProcess_ACLs/0003-server-implement-passing-a-process-security-descript.patch
+	$(PATCH) < 16-server-CreateProcess_ACLs/0004-server-implement-passing-a-thread-security-descripto.patch
+	( \
+		echo "+    { \"16-server-CreateProcess_ACLs\", \"Joris van der Wel\", \"Implement passing ACLs to CreateProcess.\" },"; \
+	) > 16-server-CreateProcess_ACLs.ok
 
 # Patchset 97-Pipelight
 # |

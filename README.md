@@ -27,11 +27,11 @@ Besides that the following additional changes are included:
 * Workaround for shlwapi URLs with relative paths
 * XEMBED support for embedding Wine windows inside Linux applications
 
-# Compiling wine-compholio
+## Compiling wine-compholio
 
 In order to wine-compholio, please use the recommended Makefile based approach which
 will automatically decide whether to use 'git apply' or 'gitapply.sh'. The following
-instructions (based on the [Gentoo Wiki](https://wiki.gentoo.org/wiki/Netflix/Pipelight#Compiling_manually)
+instructions (based on the [Gentoo Wiki](https://wiki.gentoo.org/wiki/Netflix/Pipelight#Compiling_manually))
 will give a short overview how to compile wine-compholio, but of course not explain
 details. Make sure to install all required wine dependencies before proceeding.
 

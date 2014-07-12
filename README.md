@@ -1,7 +1,8 @@
 wine-compholio
 ==============
 
-The Wine "Compholio" Edition repository includes a variety of patches for Wine to run common Windows applications under Linux.
+The Wine "Compholio" Edition repository includes a variety of patches ") for
+Wine to run common Windows applications under Linux.
 
 These patches fix the following Wine bugs:
 
@@ -16,7 +17,6 @@ These patches fix the following Wine bugs:
 * Support for interface change notifications ([Wine Bug #32328](http://bugs.winehq.org/show_bug.cgi?id=32328 "Many .NET and Silverlight applications require SIO_ADDRESS_LIST_CHANGE for interface change notifications"))
 * Support for inherited file ACLs ([Wine Bug #34406](http://bugs.winehq.org/show_bug.cgi?id=34406 "Finale Notepad 2012 doesn't copy/create user files on program start"))
 
-
 Besides that the following additional changes are included:
 
 * Lockfree algorithm for filedescriptor cache (improves file access speed)
@@ -27,3 +27,44 @@ Besides that the following additional changes are included:
 * Workaround for shlwapi URLs with relative paths
 * XEMBED support for embedding Wine windows inside Linux applications
 
+# Compiling wine-compholio
+
+In order to wine-compholio, please use the recommended Makefile based approach which
+will automatically decide whether to use 'git apply' or 'gitapply.sh'. The following
+instructions (based on the [Gentoo Wiki](https://wiki.gentoo.org/wiki/Netflix/Pipelight#Compiling_manually)
+will give a short overview how to compile wine-compholio, but of course not explain
+details. Make sure to install all required wine dependencies before proceeding.
+
+As the first step please grab the latest Wine source:
+```bash
+wget http://prdownloads.sourceforge.net/wine/wine-1.7.22.tar.bz2
+wget https://github.com/compholio/wine-compholio-daily/archive/v1.7.22.tar.gz
+```
+Extract the archives:
+```bash
+tar xvjf wine-1*.tar.bz2
+cd wine-1*
+tar xvzf ../v1.7.22.tar.gz --strip-components 1
+```
+And apply the patches:
+```bash
+make -C ./patches DESTDIR=$(pwd) install
+```
+Afterwards run configure (you can also specify a prefix if you don't want to install
+wine-compholio system-wide):
+```bash
+./configure --with-xattr
+```
+Before you continue you should make sure that ./configure doesn't show any warnings
+(look at the end of the output). If there are any warnings, this most likely means
+that you're missing some important header files. Install them and repeat the ./configure
+step until all problems are fixed.
+
+Afterwards compile it (and grab a cup of coffee):
+```bash
+make
+```
+And install it (you only need sudo for a system-wide installation):
+```bash
+sudo make install
+```

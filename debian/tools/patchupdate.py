@@ -270,11 +270,11 @@ Wine to run common Windows applications under Linux.
 
 These patches fix the following Wine bugs:
 
-@@bugs@@
+{bugs}
 
 Besides that the following additional changes are included:
 
-@@fixes@@
+{fixes}
 
 ## Compiling wine-compholio
 
@@ -286,14 +286,14 @@ details. Make sure to install all required wine dependencies before proceeding.
 
 As the first step please grab the latest Wine source:
 ```bash
-wget http://prdownloads.sourceforge.net/wine/wine-@@version@@.tar.bz2
-wget https://github.com/compholio/wine-compholio-daily/archive/v@@version@@.tar.gz
+wget http://prdownloads.sourceforge.net/wine/wine-{version}.tar.bz2
+wget https://github.com/compholio/wine-compholio-daily/archive/v{version}.tar.gz
 ```
 Extract the archives:
 ```bash
 tar xvjf wine-1*.tar.bz2
 cd wine-1*
-tar xvzf ../v@@version@@.tar.gz --strip-components 1
+tar xvzf ../v{version}.tar.gz --strip-components 1
 ```
 And apply the patches:
 ```bash
@@ -346,11 +346,7 @@ def generate_readme(patches, fp):
             if distro.lower() == "unreleased": continue
             return version
 
-    template = README_template
-    template = template.replace("@@bugs@@", _enum(_all_bugs()))
-    template = template.replace("@@fixes@@", _enum(_all_fixes()))
-    template = template.replace("@@version@@", _latest_stable_version())
-    fp.write(template)
+    fp.write(README_template.format(bugs=_enum(_all_bugs()), fixes=_enum(_all_fixes()), version=_latest_stable_version()))
 
 if __name__ == "__main__":
     patches = read_patchsets("./patches")

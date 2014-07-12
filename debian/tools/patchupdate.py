@@ -245,6 +245,10 @@ def generate_makefile(patches, fp):
                     fp.write("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap("[#%d] %s" % (bugid, bugname), 120)))
             fp.write("# |\n")
 
+        fp.write("# | Modified files: \n")
+        fp.write("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap(", ".join(sorted(patch.files)), 120)))
+        fp.write("# |\n")
+
         depends = " ".join([""] + ["%s.ok" % patches[d].name for d in patch.depends]) if len(patch.depends) else ""
         fp.write("%s.ok:%s\n" % (patch.name, depends))
         for f in patch.patches:

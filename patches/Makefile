@@ -40,6 +40,10 @@ abort:
 # |   *	Add commandline option --patches to show the patch list. [by Sebastian Lackner]
 # |   *	Add commandline option --check-libs to test if shared libraries are installed. [by Michael Müller]
 # |
+# | Modified files: 
+# |   *	dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec, include/wine/library.h, libs/wine/config.c, libs/wine/loader.c,
+# | 	libs/wine/wine.def, libs/wine/wine.map, loader/main.c
+# |
 00-Commandline.ok:
 	$(PATCH) < 00-Commandline/0001-loader-Add-commandline-option-patches-to-show-the-pa.patch
 	$(PATCH) < 00-Commandline/0002-loader-Add-commandline-option-check-libs.patch
@@ -55,6 +59,9 @@ abort:
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#32328] Many .NET and Silverlight applications require SIO_ADDRESS_LIST_CHANGE for interface change notifications
+# |
+# | Modified files: 
+# |   *	dlls/ws2_32/tests/sock.c, server/event.c, server/named_pipe.c, server/object.h, server/sock.c
 # |
 01-Address_Change_Notification.ok:
 	$(PATCH) < 01-Address_Change_Notification/0001-server-Implement-socket-specific-ioctl-routine.patch
@@ -74,6 +81,10 @@ abort:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#31858] Netflix on Firefox fails with Internet Connection Problem when loading bar is at 99%
 # |   *	[#34406] Finale Notepad 2012 doesn't copy/create user files on program start
+# |
+# | Modified files: 
+# |   *	configure.ac, dlls/advapi32/tests/security.c, dlls/shell32/shellpath.c, include/winnt.h, server/change.c, server/fd.c,
+# | 	server/file.c, server/file.h
 # |
 02-ACL_Extended_Attributes.ok:
 	$(PATCH) < 02-ACL_Extended_Attributes/0001-server-Unify-the-storage-of-security-attributes-for-.patch
@@ -96,6 +107,9 @@ abort:
 # |   *	Enable/disable windows when they are (un)mapped by foreign applications. [by Sebastian Lackner]
 # |   *	Update gl_drawable for embedded windows. [by Sebastian Lackner]
 # |
+# | Modified files: 
+# |   *	dlls/winex11.drv/event.c, dlls/winex11.drv/window.c
+# |
 04-XEMBED.ok:
 	$(PATCH) < 04-XEMBED/0001-winex11-Update-gl_drawable-for-embedded-windows.patch
 	$(PATCH) < 04-XEMBED/0002-winex11-Enable-disable-windows-when-they-are-un-mapped.patch
@@ -113,6 +127,9 @@ abort:
 # |   *	[#17273] Many apps and games need SetNamedPipeHandleState implementation (support for named pipe message
 # | 	mode)(FireFox+Flash, Win8/NET 4.x SDK/vcrun2012, WiX installers)
 # |
+# | Modified files: 
+# |   *	dlls/kernel32/sync.c
+# |
 05-Named_Pipe.ok:
 	$(PATCH) < 05-Named_Pipe/0001-kernel32-Change-return-value-of-stub-SetNamedPipeHandl.patch
 	( \
@@ -124,6 +141,10 @@ abort:
 # | Included patches:
 # |   *	Winepulse patches extracted from https://launchpad.net/~ubuntu-
 # | 	wine/+archive/ppa/+files/wine1.7_1.7.19-0ubuntu2~trusty2.debian.tar.gz. [rev 3, by Maarten Lankhorst]
+# |
+# | Modified files: 
+# |   *	configure, configure.ac, dlls/mmdevapi/main.c, dlls/mmdevapi/tests/render.c, dlls/winepulse.drv/Makefile.in,
+# | 	dlls/winepulse.drv/mmdevdrv.c, dlls/winepulse.drv/winepulse.drv.spec, dlls/winmm/lolvldrv.c
 # |
 06-winepulse.ok: 02-ACL_Extended_Attributes.ok
 	$(PATCH) < 06-winepulse/0001-winmm-Load-winealsa-if-winepulse-is-found.patch
@@ -161,6 +182,9 @@ abort:
 # | Included patches:
 # |   *	Implement GetVolumePathName. [by Erich E. Hoover]
 # |
+# | Modified files: 
+# |   *	dlls/kernel32/tests/volume.c, dlls/kernel32/volume.c
+# |
 07-GetVolumePathName.ok:
 	$(PATCH) < 07-GetVolumePathName/0001-kernel32-Implement-GetVolumePathName.patch
 	$(PATCH) < 07-GetVolumePathName/0002-kernel32-Convert-GetVolumePathName-tests-into-a-list.patch
@@ -176,6 +200,9 @@ abort:
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#12401] Support junction points, i.e. DeviceIoCtl(FSCTL_SET_REPARSE_POINT/FSCTL_GET_REPARSE_POINT)
+# |
+# | Modified files: 
+# |   *	dlls/kernel32/path.c, dlls/kernel32/volume.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/ntifs.h
 # |
 08-Junction_Points.ok: 07-GetVolumePathName.ok
 	$(PATCH) < 08-Junction_Points/0001-ntdll-Add-support-for-junction-point-creation.patch
@@ -199,6 +226,9 @@ abort:
 # |   *	[#5048] Multiple applications and games need support for ws2_32 SIO_GET_EXTENSION_FUNCTION_POINTER TransmitFile
 # | 	(WSAID_TRANSMITFILE)
 # |
+# | Modified files: 
+# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c
+# |
 09-TransmitFile.ok: 01-Address_Change_Notification.ok
 	$(PATCH) < 09-TransmitFile/0001-ws2_32-Add-stub-for-TransmitFile.patch
 	$(PATCH) < 09-TransmitFile/0002-ws2_32-Check-for-invalid-parameters-in-TransmitFile.patch
@@ -218,6 +248,9 @@ abort:
 # |   *	[#32323] Netflix (Silverlight 4.x) and several .NET Framework 3.x/4.0 WPF apps require either Arial or Verdana to be
 # | 	installed
 # |
+# | Modified files: 
+# |   *	fonts/Makefile.in, fonts/arial.sfd, fonts/arial.ttf
+# |
 10-Missing_Fonts.ok:
 	$(PATCH) < 10-Missing_Fonts/0001-fonts-Add-a-subset-of-Liberation-Sans-as-an-Arial-re.patch
 	$(PATCH) < 10-Missing_Fonts/0002-fonts-Implement-the-rest-of-Liberation-Sans-Arial-re.patch
@@ -229,6 +262,9 @@ abort:
 # |
 # | Included patches:
 # |   *	Use lockfree implementation for get_cached_fd. [rev 4, by Sebastian Lackner]
+# |
+# | Modified files: 
+# |   *	dlls/ntdll/server.c
 # |
 12-FD_Cache.ok:
 	$(PATCH) < 12-FD_Cache/0001-ntdll-Use-lockfree-implementation-for-get_cached_fd.patch
@@ -244,6 +280,9 @@ abort:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#15980] Rhapsody 2 crashes on startup (GetSecurityInfo returns NULL DACL for process object)
 # |
+# | Modified files: 
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
 13-Misc_ACL.ok: 02-ACL_Extended_Attributes.ok
 	$(PATCH) < 13-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
 	$(PATCH) < 13-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
@@ -255,6 +294,9 @@ abort:
 # |
 # | Included patches:
 # |   *	Workaround for broken implementation of shlwapi url functions. [by Sebastian Lackner]
+# |
+# | Modified files: 
+# |   *	dlls/shlwapi/tests/url.c, dlls/shlwapi/url.c
 # |
 14-UrlCombineW.ok:
 	$(PATCH) < 14-UrlCombineW/0001-shlwapi-tests-Add-additional-tests-for-UrlCombine-and-.patch
@@ -272,6 +314,9 @@ abort:
 # |   *	[#29903] Some Microsoft debuggers fail to enumerate processes due to wtsapi32.WTSEnumerateProcessesW() being a stub
 # | 	(Microsoft Visual Studio 2005, DbgCLR from .NET 2.0 SDK)
 # |
+# | Modified files: 
+# |   *	dlls/wtsapi32/tests/wtsapi.c, dlls/wtsapi32/wtsapi32.c
+# |
 15-wtsapi32.ok:
 	$(PATCH) < 15-wtsapi32/0001-wtsapi32-Partial-implementation-of-WTSEnumerateProce.patch
 	( \
@@ -285,6 +330,10 @@ abort:
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#22006] OpenProcess does not enforce ACL
+# |
+# | Modified files: 
+# |   *	dlls/advapi32/tests/security.c, dlls/kernel32/process.c, server/object.c, server/object.h, server/process.c,
+# | 	server/protocol.def
 # |
 16-server-CreateProcess_ACLs.ok: 09-TransmitFile.ok 13-Misc_ACL.ok
 	$(PATCH) < 16-server-CreateProcess_ACLs/0001-server-A-new-function-set_sd_defaults_from_token-try.patch
@@ -302,6 +351,10 @@ abort:
 # |   *	Allow changing strict draw ordering through an exported function. [by Michael Müller]
 # |   *	Indicate direct rendering through OpenGL extension. [by Michael Müller]
 # |   *	Implement X11DRV_FLUSH_GDI_DISPLAY ExtEscape command. [by Sebastian Lackner]
+# |
+# | Modified files: 
+# |   *	dlls/user32/message.c, dlls/wined3d/wined3d.spec, dlls/wined3d/wined3d_main.c, dlls/winex11.drv/init.c,
+# | 	dlls/winex11.drv/opengl.c, dlls/winex11.drv/x11drv.h
 # |
 97-Pipelight.ok:
 	$(PATCH) < 97-Pipelight/0001-winex11-Implement-X11DRV_FLUSH_GDI_DISPLAY-ExtEscape-c.patch
@@ -321,6 +374,9 @@ abort:
 # |   *	kernel32: Silence repeated CompareStringEx FIXME. [by Sebastian Lackner]
 # |   *	wined3d: Silence repeated resource_check_usage FIXME. [rev 2, by Erich E. Hoover]
 # |   *	wined3d: Silence repeated wined3d_swapchain_present FIXME. [by Sebastian Lackner]
+# |
+# | Modified files: 
+# |   *	dlls/kernel32/locale.c, dlls/wined3d/resource.c, dlls/wined3d/swapchain.c
 # |
 98-Miscellaneous.ok:
 	$(PATCH) < 98-Miscellaneous/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch

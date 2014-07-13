@@ -34,6 +34,8 @@ install: $(PATCHLIST)
 abort:
 	rm -f *.ok
 
+.NOTPARALLEL:
+
 # Patchset 00-Commandline
 # |
 # | Included patches:

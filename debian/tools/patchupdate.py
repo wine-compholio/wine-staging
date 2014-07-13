@@ -224,6 +224,8 @@ def generate_makefile(patches, fp):
     fp.write("abort:\n")
     fp.write("\trm -f *.ok\n")
     fp.write("\n")
+    fp.write(".NOTPARALLEL:\n")
+    fp.write("\n")
 
     for i, patch in patches.iteritems():
         fp.write("# Patchset %s\n" % patch.name)

@@ -140,7 +140,7 @@ abort:
 # |
 # | Included patches:
 # |   *	Winepulse patches extracted from https://launchpad.net/~ubuntu-
-# | 	wine/+archive/ppa/+files/wine1.7_1.7.19-0ubuntu2~trusty2.debian.tar.gz. [rev 3, by Maarten Lankhorst]
+# | 	wine/+archive/ubuntu/ppa/+files/wine1.7_1.7.21-0ubuntu1~ppa1.debian.tar.gz. [rev 4, by Maarten Lankhorst]
 # |
 # | Modified files: 
 # |   *	configure, configure.ac, dlls/mmdevapi/main.c, dlls/mmdevapi/tests/render.c, dlls/winepulse.drv/Makefile.in,
@@ -173,8 +173,9 @@ abort:
 	$(PATCH) < 06-winepulse/0024-winepulse-v23-fixup-a-invalid-free-in-mmdevapi.patch
 	$(PATCH) < 06-winepulse/0025-winepulse-use-a-pi-mutex-for-serialization.patch
 	$(PATCH) < 06-winepulse/0026-winepulse-add-support-for-IMarshal.patch
+	$(PATCH) < 06-winepulse/0027-winepulse-handle-stream-create-failing-correctly.patch
 	( \
-		echo "+    { \"06-winepulse\", \"Maarten Lankhorst\", \"Winepulse patches extracted from https://launchpad.net/~ubuntu-wine/+archive/ppa/+files/wine1.7_1.7.19-0ubuntu2~trusty2.debian.tar.gz. [rev 3]\" },"; \
+		echo "+    { \"06-winepulse\", \"Maarten Lankhorst\", \"Winepulse patches extracted from https://launchpad.net/~ubuntu-wine/+archive/ubuntu/ppa/+files/wine1.7_1.7.21-0ubuntu1~ppa1.debian.tar.gz. [rev 4]\" },"; \
 	) > 06-winepulse.ok
 
 # Patchset 07-GetVolumePathName

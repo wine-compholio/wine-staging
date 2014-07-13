@@ -282,7 +282,7 @@ Besides that the following additional changes are included:
 
 {fixes}
 
-## Compiling wine-compholio
+### Compiling wine-compholio
 
 In order to wine-compholio, please use the recommended Makefile based approach which
 will automatically decide whether to use 'git apply' or 'gitapply.sh'. The following
@@ -322,6 +322,18 @@ make
 And install it (you only need sudo for a system-wide installation):
 ```bash
 sudo make install
+```
+
+### Excluding patches
+
+It is also possible to apply only a subset of the patches, for example if you're compiling
+for a distribution where PulseAudio is not installed, or if you just don't like a specific
+patchset. Please note that some patchsets depend on each other, and requesting an impossible
+situation might result in a failure to apply all patches.
+
+Lets assume you want to exclude the patchset in directory DIRNAME, then just invoke make like that:
+```bash
+make -C ./patches DESTDIR=$(pwd) install -W DIRNAME.ok
 ```
 """
 

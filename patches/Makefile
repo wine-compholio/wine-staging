@@ -143,7 +143,7 @@ abort:
 # | 	wine/+archive/ubuntu/ppa/+files/wine1.7_1.7.21-0ubuntu1~ppa1.debian.tar.gz. [rev 4, by Maarten Lankhorst]
 # |
 # | Modified files: 
-# |   *	configure, configure.ac, dlls/mmdevapi/main.c, dlls/mmdevapi/tests/render.c, dlls/winepulse.drv/Makefile.in,
+# |   *	configure.ac, dlls/mmdevapi/main.c, dlls/mmdevapi/tests/render.c, dlls/winepulse.drv/Makefile.in,
 # | 	dlls/winepulse.drv/mmdevdrv.c, dlls/winepulse.drv/winepulse.drv.spec, dlls/winmm/lolvldrv.c
 # |
 06-winepulse.ok: 02-ACL_Extended_Attributes.ok

@@ -28,6 +28,11 @@ class PatchSet(object):
         self.verify_depends = set()
         self.verify_time    = None
 
+def abort(m):
+    print "*** CRITICAL ERROR ***"
+    print m
+    exit(1)
+
 def pairs(a):
     for i, j in enumerate(a):
         for k in a[i+1:]:
@@ -51,13 +56,11 @@ def lsdiff(f):
                 if len(tmp) == 4 and tmp[3].startswith("b/"):
                     files.add(tmp[3][2:])
                 else:
-                    print "** Unable to parse patch git header in %s: %s" % (f, line)
-                    exit(1)
+                    abort("Unable to parse patch git header in file %s: \"%s\"" % (f, line))
             elif line.startswith("+++ b/"):
                 files.add(line[6:].strip())
             elif line.startswith("+++ "):
-                print "** Unable to parse patch header in %s: %s" % (f, line)
-                exit(1)
+                abort("Unable to parse patch header in file %s: \"%s\"" % (f, line))
     return files
 
 def verify_dependencies(all_patches):
@@ -78,9 +81,7 @@ def verify_dependencies(all_patches):
                 to_delete.append(i)
 
         if len(to_delete) == 0:
-            print "** Found circular dependencies, unable to apply remaining patches:"
-            print "** %s" % ", ".join([patch.name for dummy, patch in patches.iteritems()])
-            exit(1)
+            abort("Circular dependency in set of patches: %s" % ", ".join([patch.name for dummy, patch in patches.iteritems()]))
 
         for j in to_delete:
             for i, patch in patches.iteritems():
@@ -101,9 +102,7 @@ def verify_dependencies(all_patches):
     for f, indices in modified_files.iteritems():
         for i, j in pairs(indices):
             if not causal_time_relation(all_patches[i].verify_time, all_patches[j].verify_time):
-                print "** Missing dependency between %s and %s" % (all_patches[i].name, all_patches[j].name)
-                print "** Both patches modify the same file %s" % f
-                exit(1)
+                abort("Missing dependency between %s and %s because of same file %s" % (all_patches[i].name, all_patches[j].name, f))
 
 def download(url):
     with contextlib.closing(urllib.urlopen(url)) as fp:
@@ -143,8 +142,7 @@ def read_patchsets(directory):
         deffile = os.path.join(os.path.join(directory, patch.name), "definition")
 
         if not os.path.isfile(deffile):
-            print "** Missing definition file: %s" % deffile
-            exit(1)
+            abort("Missing definition file %s" % deffile)
 
         info = AuthorInfo()
 
@@ -185,8 +183,7 @@ def read_patchsets(directory):
                     patch.fixes.append((None, None, val))
                 elif cmd == "depends":
                     if not name_to_id.has_key(val):
-                        print "** Definition file %s references unknown dependency %s" % (deffile, val)
-                        exit(1)
+                        abort("Definition file %s references unknown dependency %s" % (deffile, val))
                     patch.depends.add(name_to_id[val])
                 else:
                     print "** Ignoring unknown command in definition file %s: %s" % (deffile, line)

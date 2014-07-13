@@ -42,6 +42,24 @@ def causal_time_smaller(a, b):
 def causal_time_relation(a, b):
     return causal_time_smaller(a, b) or causal_time_smaller(b, a)
 
+def lsdiff(f):
+    files = set()
+    with open(f) as fp:
+        for line in fp:
+            if line.startswith("diff --git "):
+                tmp = line.strip().split(" ")
+                if len(tmp) == 4 and tmp[3].startswith("b/"):
+                    files.add(tmp[3][2:])
+                else:
+                    print "** Unable to parse patch git header in %s: %s" % (f, line)
+                    exit(1)
+            elif line.startswith("+++ b/"):
+                files.add(line[6:].strip())
+            elif line.startswith("+++ "):
+                print "** Unable to parse patch header in %s: %s" % (f, line)
+                exit(1)
+    return files
+
 def verify_dependencies(all_patches):
     max_patches = max(all_patches.keys()) + 1
 
@@ -86,16 +104,6 @@ def verify_dependencies(all_patches):
                 print "** Missing dependency between %s and %s" % (all_patches[i].name, all_patches[j].name)
                 print "** Both patches modify the same file %s" % f
                 exit(1)
-
-def lsdiff(f):
-    with open(f) as fp:
-        for line in fp:
-            if line.startswith("diff --git "):
-                tmp = line.strip().split(" ")
-                if len(tmp) == 4 and tmp[3].startswith("b/"):
-                    yield tmp[3][2:]
-                else:
-                    print "** Unable to parse patch git header in %s: %s" % (f, line)
 
 def download(url):
     with contextlib.closing(urllib.urlopen(url)) as fp:

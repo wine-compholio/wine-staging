@@ -1,0 +1,255 @@
+From 1b190ec8ab3c976cdc82fa6b40d8e3bef5caece4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Wed, 23 Jul 2014 01:11:08 +0200
+Subject: gdi32: add symlinks for external fonts
+
+---
+ dlls/gdi32/freetype.c | 173 ++++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 167 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/gdi32/freetype.c b/dlls/gdi32/freetype.c
+index fae9ffe..49aa651 100644
+--- a/dlls/gdi32/freetype.c
++++ b/dlls/gdi32/freetype.c
+@@ -108,6 +108,10 @@
+ 
+ #include "resource.h"
+ 
++#ifdef HAVE_SYS_STAT_H
++    #include <sys/stat.h>
++#endif
++
+ WINE_DEFAULT_DEBUG_CHANNEL(font);
+ 
+ #ifdef HAVE_FREETYPE
+@@ -2936,6 +2940,74 @@ static void load_system_fonts(void)
+     }
+ }
+ 
++static char* get_filename(char *path)
++{
++    char *p;
++
++    if (!path)
++        return NULL;
++
++    p = path + strlen(path) - 1;
++    while (p > path && *p != '/') p--;
++    p++;
++
++    return (*p != 0) ? p : NULL;
++}
++
++static char* combine_path(char *dir, char *filename)
++{
++    char *result;
++
++    if (!dir || !filename)
++        return NULL;
++
++    result = HeapAlloc(GetProcessHeap(), 0, strlen(dir) + strlen(filename) + 2);
++    if (result)
++        sprintf(result, "%s/%s", dir, filename);
++
++    return result;
++}
++
++static WCHAR* add_font_symlink(char *fontdir, char *fontfile)
++{
++    char *combined;
++    struct stat file_st;
++    char link_path[MAX_PATH];
++    WCHAR *result = NULL;
++
++    if (!fontdir || !fontfile)
++        return NULL;
++
++    combined = combine_path(fontdir, get_filename(fontfile));
++    if (!combined)
++        return NULL;
++
++    /*
++     *  Check if a file with the same name already exists and
++     *  points to the same destination. We do not overwrite
++     *  any files, just add new ones.
++     */
++    if (lstat(combined, &file_st))
++    {
++        if (!symlink(fontfile, combined))
++            result = wine_get_dos_file_name( combined );
++    }
++    else if (S_ISLNK(file_st.st_mode))
++    {
++        ssize_t size = readlink(combined, link_path, MAX_PATH-1);
++        if (size > 0)
++        {
++            link_path[size] = 0;
++
++            if (!strcmp(fontfile, link_path))
++                result = wine_get_dos_file_name( combined );
++        }
++    }
++
++    HeapFree(GetProcessHeap(), 0, combined);
++    return result;
++}
++
+ /*************************************************************
+  *
+  * This adds registry entries for any externally loaded fonts
+@@ -2951,8 +3023,16 @@ static void update_reg_entries(void)
+     Family *family;
+     Face *face;
+     WCHAR *file, *path;
++    WCHAR fontsdir[MAX_PATH];
++    char *fontsdir_unix = NULL;
++
++    static const WCHAR fonts[] = {'\\','F','o','n','t','s','\0'};
+     static const WCHAR TrueType[] = {' ','(','T','r','u','e','T','y','p','e',')','\0'};
+ 
++    GetWindowsDirectoryW(fontsdir, sizeof(fontsdir) / sizeof(WCHAR));
++    strcatW(fontsdir, fonts); /* TODO: use something better */
++    fontsdir_unix = wine_get_unix_file_name(fontsdir);
++
+     if(RegCreateKeyExW(HKEY_LOCAL_MACHINE, winnt_font_reg_key,
+                        0, NULL, 0, KEY_ALL_ACCESS, NULL, &winnt_key, NULL) != ERROR_SUCCESS) {
+         ERR("Can't create Windows font reg key\n");
+@@ -2992,7 +3072,8 @@ static void update_reg_entries(void)
+             }
+ 
+             buffer = strWtoA( CP_UNIXCP, face->file );
+-            path = wine_get_dos_file_name( buffer );
++            path = add_font_symlink(fontsdir_unix, buffer);
++            if (!path) path = wine_get_dos_file_name( buffer );
+             HeapFree( GetProcessHeap(), 0, buffer );
+ 
+             if (path)
+@@ -3015,15 +3096,73 @@ static void update_reg_entries(void)
+     if(external_key) RegCloseKey(external_key);
+     if(win9x_key) RegCloseKey(win9x_key);
+     if(winnt_key) RegCloseKey(winnt_key);
++    if(fontsdir_unix) HeapFree(GetProcessHeap(), 0, fontsdir_unix);
+     return;
+ }
+ 
++static BOOL stat_parent(char *filename, struct stat *parent_st)
++{
++    char *path, *p;
++    int length, result;
++
++    length = strlen(filename);
++    path = HeapAlloc(GetProcessHeap(), 0, length + 1);
++    if (!path) return FALSE;
++
++    /* copy including null character */
++    memcpy(path, filename, length + 1);
++
++    p = path + length - 1;
++
++    /* get parent */
++    while (p > path && *p != '/') p--;
++    while (p > path && *p == '/') p--;
++    p[1] = 0;
++
++    result = stat( path, parent_st );
++
++    HeapFree(GetProcessHeap(), 0, path);
++    return !result;
++}
++
++static void unlink_symlink_same_parent(WCHAR *path, struct stat *directory_st)
++{
++    char *path_unix;
++    struct stat file_st, parent_st;
++
++    path_unix = wine_get_unix_file_name(path);
++    if (!path_unix) return;
++
++    if (stat_parent(path_unix, &parent_st) &&
++        parent_st.st_dev == directory_st->st_dev &&
++        parent_st.st_ino == directory_st->st_ino)
++    {
++        if (!lstat( path_unix, &file_st ) && S_ISLNK(file_st.st_mode))
++            unlink(path_unix);
++    }
++
++    HeapFree(GetProcessHeap(), 0, path_unix);
++}
++
+ static void delete_external_font_keys(void)
+ {
+     HKEY winnt_key = 0, win9x_key = 0, external_key = 0;
+     DWORD dlen, vlen, datalen, valuelen, i, type;
+-    LPWSTR valueW;
+-    LPVOID data;
++    LPWSTR valueW, data;
++    WCHAR fontsdir[MAX_PATH];
++    char *fontsdir_unix = NULL;
++    struct stat fontdir_st;
++    static const WCHAR fonts[] = {'\\','F','o','n','t','s','\0'};
++
++    GetWindowsDirectoryW(fontsdir, sizeof(fontsdir) / sizeof(WCHAR));
++    strcatW(fontsdir, fonts); /* TODO: use something better */
++
++    fontsdir_unix = wine_get_unix_file_name(fontsdir);
++    if (!fontsdir_unix || stat( fontsdir_unix, &fontdir_st ))
++    {
++        fontdir_st.st_ino = 0;
++        fontdir_st.st_dev = 0;
++    }
+ 
+     if(RegCreateKeyExW(HKEY_LOCAL_MACHINE, winnt_font_reg_key,
+                        0, NULL, 0, KEY_ALL_ACCESS, NULL, &winnt_key, NULL) != ERROR_SUCCESS) {
+@@ -3047,17 +3186,38 @@ static void delete_external_font_keys(void)
+     RegQueryInfoKeyW(external_key, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                      &valuelen, &datalen, NULL, NULL);
+     valuelen++; /* returned value doesn't include room for '\0' */
++    datalen++;
++
++    datalen *= sizeof(WCHAR);
++
+     valueW = HeapAlloc(GetProcessHeap(), 0, valuelen * sizeof(WCHAR));
+-    data = HeapAlloc(GetProcessHeap(), 0, datalen * sizeof(WCHAR));
++    data = HeapAlloc(GetProcessHeap(), 0, datalen);
+ 
+-    dlen = datalen * sizeof(WCHAR);
++    dlen = datalen;
+     vlen = valuelen;
+     i = 0;
+-    while(RegEnumValueW(external_key, i++, valueW, &vlen, NULL, &type, data,
++    while(RegEnumValueW(external_key, i++, valueW, &vlen, NULL, &type, (LPBYTE)data,
+                         &dlen) == ERROR_SUCCESS) {
+ 
+         RegDeleteValueW(winnt_key, valueW);
+         RegDeleteValueW(win9x_key, valueW);
++
++        if (type == REG_SZ)
++        {
++            /*
++             *  Depending on how the string was added, the returned length
++             *  includes the null character or not. We try to add the character
++             *  if it is missing or skip the string if it is not possible.
++             */
++            if (data[dlen-1] == 0)
++                unlink_symlink_same_parent(data, &fontdir_st);
++            else if (dlen < datalen)
++            {
++                data[dlen] = 0;
++                unlink_symlink_same_parent(data, &fontdir_st);
++            }
++        }
++
+         /* reset dlen and vlen */
+         dlen = datalen;
+         vlen = valuelen;
+@@ -3072,6 +3232,7 @@ static void delete_external_font_keys(void)
+  end:
+     if(win9x_key) RegCloseKey(win9x_key);
+     if(winnt_key) RegCloseKey(winnt_key);
++    if(fontsdir_unix) HeapFree(GetProcessHeap(), 0, fontsdir_unix);
+ }
+ 
+ /*************************************************************
+-- 
+1.8.3.2
+

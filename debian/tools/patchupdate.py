@@ -455,9 +455,17 @@ Besides that the following additional changes are included:
 
 ### Compiling wine-compholio
 
-In order to build wine-compholio, please use the recommended Makefile based approach 
-which will automatically decide whether to use 'git apply' or 'gitapply.sh'. The following
-instructions (based on the [Gentoo Wiki](https://wiki.gentoo.org/wiki/Netflix/Pipelight#Compiling_manually))
+Please note that starting with wine-compholio 1.7.23 it is deprecated to manually
+apply patches without using the Makefile. To avoid typical pitfalls for package
+maintainers (like trying to use the patch commandline utility for binary patches or
+not updating the patchlist) it is highly recommended to use the Makefile in order
+to apply all patches. This ensures that the the correct patch utility is used, that
+the list of patches is updated appropriately, and so on. Please note that it is still
+possible to exclude patches if desired, take a look at the end of this document for
+more details.
+
+The following instructions (based on the
+[Gentoo Wiki](https://wiki.gentoo.org/wiki/Netflix/Pipelight#Compiling_manually))
 will give a short overview how to compile wine-compholio, but of course not explain
 all details. Make sure to install all required Wine dependencies before proceeding.
 

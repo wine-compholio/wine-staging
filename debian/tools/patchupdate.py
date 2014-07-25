@@ -8,8 +8,13 @@ import sys
 import hashlib
 import itertools
 import patchutils
+import subprocess
+import pickle
 import os
 import re
+
+# Cached information to speed up patch dependency checks
+cached_patch_result = {}
 
 class AuthorInfo(object):
     def __init__(self):
@@ -48,8 +53,110 @@ def causal_time_combine(a, b):
 def causal_time_smaller(a, b):
     return all([i <= j for i, j in zip(a,b)]) and any([i < j for i, j in zip(a,b)])
 
-def causal_time_relation(a, b):
-    return causal_time_smaller(a, b) or causal_time_smaller(b, a)
+def causal_time_relation(all_patches, indices):
+    for i, j in pairs(indices):
+        if not (causal_time_smaller(all_patches[i].verify_time, all_patches[j].verify_time) or \
+                causal_time_smaller(all_patches[j].verify_time, all_patches[i].verify_time)):
+            return False
+    return True
+
+def causal_time_permutations(all_patches, indices, filename):
+    for perm in itertools.permutations(indices):
+        for i, j in zip(perm[:-1], perm[1:]):
+            if causal_time_smaller(all_patches[j].verify_time, all_patches[i].verify_time):
+                break
+        else:
+            selected_patches = []
+            for i in perm:
+                selected_patches += [patch for patch in all_patches[i].patches if patch.modified_file == filename]
+            yield selected_patches
+
+def contains_binary_patch(all_patches, indices, filename):
+    for i in indices:
+        for patch in all_patches[i].patches:
+            if patch.modified_file == filename and patch.is_binary():
+                return True
+    return False
+
+def load_patch_cache():
+    global cached_patch_result
+    try:
+        with open("./.depcache") as fp:
+            cached_patch_result = pickle.load(fp)
+    except IOError:
+        cached_patch_result = {}
+
+def save_patch_cache():
+    with open("./.depcache", "wb") as fp:
+        pickle.dump(cached_patch_result, fp, pickle.HIGHEST_PROTOCOL)
+
+def verify_patch_order(all_patches, indices, filename):
+    global cached_patch_result
+
+    # If one of patches is a binary patch, then we cannot / won't verify it - require dependencies in this case
+    if contains_binary_patch(all_patches, indices, filename):
+        if not causal_time_relation(all_patches, indices):
+            abort("Missing dependency between %s and %s because of same file %s" % (all_patches[i].name, all_patches[j].name, filename))
+        return
+
+    # Grab original file from the wine git repository - please note we grab from origin/master, not the current branch
+    try:
+        with open(os.devnull, 'w') as devnull:
+            original_content = subprocess.check_output(["git", "show", "origin/master:%s" % filename],
+                                                       cwd="./debian/tools/wine", stderr=devnull)
+    except subprocess.CalledProcessError as e:
+        if e.returncode != 128: raise # not found
+        original_content = ""
+
+    # Calculate hash of original content
+    original_content_hash = hashlib.sha256(original_content).digest()
+
+    # Check for possible ways to apply the patch
+    failed_to_apply   = False
+    last_result_hash  = None
+    for patches in causal_time_permutations(all_patches, indices, filename):
+
+        # Calculate unique hash based on the original content and the order in which the patches are applied
+        m = hashlib.sha256()
+        m.update(original_content_hash)
+        for patch in patches:
+            m.update(patch.hash())
+        unique_hash = m.digest()
+
+        # Fast path -> we know that it applies properly
+        if cached_patch_result.has_key(unique_hash):
+            result_hash = cached_patch_result[unique_hash]
+
+        else:
+            # Apply the patches (without fuzz)
+            try:
+                content = patchutils.apply_patch(original_content, patches, fuzz=0)
+            except patchutils.PatchApplyError:
+                if last_result_hash is not None:
+                    break
+                # We failed to apply the patches, but don't know if it works at all - continue
+                failed_to_apply = True
+                continue
+
+            # Get hash of resulting file and add to cache
+            result_hash = hashlib.sha256(content).digest()
+            cached_patch_result[unique_hash] = result_hash
+
+        # First time we got a successful result
+        if last_result_hash is None:
+            last_result_hash = result_hash
+            if failed_to_apply: break
+        # All the other times: hash to match with previous attempt
+        elif last_result_hash != result_hash:
+            last_result_hash = None
+            break
+
+    if failed_to_apply and last_result_hash is None:
+        abort("Patches affecting file %s don't apply on source tree: %s" % (filename, ', '.join([all_patches[i].name for i in indices])))
+    elif failed_to_apply or last_result_hash is None:
+        abort("Missing dependency between patches affecting %s: %s" % (filename, ', '.join([all_patches[i].name for i in indices])))
+    else:
+        assert len(last_result_hash) == 32
 
 def verify_dependencies(all_patches):
     max_patches = max(all_patches.keys()) + 1
@@ -87,10 +194,12 @@ def verify_dependencies(all_patches):
             modified_files[f].append(i)
 
     # Iterate over pairs of patches, check for existing causal relationship
-    for f, indices in modified_files.iteritems():
-        for i, j in pairs(indices):
-            if not causal_time_relation(all_patches[i].verify_time, all_patches[j].verify_time):
-                abort("Missing dependency between %s and %s because of same file %s" % (all_patches[i].name, all_patches[j].name, f))
+    load_patch_cache()
+    try:
+        for f, indices in modified_files.iteritems():
+            verify_patch_order(all_patches, indices, f)
+    finally:
+        save_patch_cache()
 
 def download(url):
     with contextlib.closing(urllib.urlopen(url)) as fp:
@@ -361,6 +470,9 @@ def generate_readme(patches, fp):
     fp.write(README_template.format(bugs=_enum(_all_bugs()), fixes=_enum(_all_fixes()), version=_latest_stable_version()))
 
 if __name__ == "__main__":
+    if not os.path.isdir("./debian/tools/wine"):
+        raise RuntimeError("Please create a symlink to the wine repository in ./debian/tools/wine")
+
     patches = read_patchsets("./patches")
     verify_dependencies(patches)
 

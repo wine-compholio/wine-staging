@@ -150,7 +150,7 @@ abort:
 # |   *	configure.ac, dlls/mmdevapi/main.c, dlls/mmdevapi/tests/render.c, dlls/winepulse.drv/Makefile.in,
 # | 	dlls/winepulse.drv/mmdevdrv.c, dlls/winepulse.drv/winepulse.drv.spec, dlls/winmm/lolvldrv.c
 # |
-06-winepulse.ok: 02-ACL_Extended_Attributes.ok
+06-winepulse.ok:
 	$(PATCH) < 06-winepulse/0001-winmm-Load-winealsa-if-winepulse-is-found.patch
 	$(PATCH) < 06-winepulse/0002-winepulse-Add-initial-stub-for-pulseaudio-support.patch
 	$(PATCH) < 06-winepulse/0003-winepulse-Add-format-and-period-probing.patch
@@ -209,7 +209,7 @@ abort:
 # | Modified files: 
 # |   *	dlls/kernel32/path.c, dlls/kernel32/volume.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/ntifs.h
 # |
-08-Junction_Points.ok: 07-GetVolumePathName.ok
+08-Junction_Points.ok:
 	$(PATCH) < 08-Junction_Points/0001-ntdll-Add-support-for-junction-point-creation.patch
 	$(PATCH) < 08-Junction_Points/0002-ntdll-Add-support-for-reading-junction-points.patch
 	$(PATCH) < 08-Junction_Points/0003-ntdll-Add-support-for-deleting-junction-points.patch
@@ -233,7 +233,7 @@ abort:
 # | Modified files: 
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c
 # |
-09-TransmitFile.ok: 01-Address_Change_Notification.ok
+09-TransmitFile.ok:
 	$(PATCH) < 09-TransmitFile/0001-ws2_32-Add-stub-for-TransmitFile.patch
 	$(PATCH) < 09-TransmitFile/0002-ws2_32-Check-for-invalid-parameters-in-TransmitFile.patch
 	$(PATCH) < 09-TransmitFile/0003-ws2_32-Implement-a-basic-synchronous-TransmitFile.patch
@@ -286,7 +286,7 @@ abort:
 # | Modified files: 
 # |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
 # |
-13-Misc_ACL.ok: 02-ACL_Extended_Attributes.ok
+13-Misc_ACL.ok:
 	$(PATCH) < 13-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
 	$(PATCH) < 13-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
 	( \
@@ -338,7 +338,7 @@ abort:
 # |   *	dlls/advapi32/tests/security.c, dlls/kernel32/process.c, server/object.c, server/object.h, server/process.c,
 # | 	server/protocol.def
 # |
-16-server-CreateProcess_ACLs.ok: 09-TransmitFile.ok 13-Misc_ACL.ok
+16-server-CreateProcess_ACLs.ok:
 	$(PATCH) < 16-server-CreateProcess_ACLs/0001-server-A-new-function-set_sd_defaults_from_token-try.patch
 	$(PATCH) < 16-server-CreateProcess_ACLs/0002-server-Support-sending-process-and-thread-security-d.patch
 	$(PATCH) < 16-server-CreateProcess_ACLs/0003-server-implement-passing-a-process-security-descript.patch

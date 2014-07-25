@@ -1,0 +1,68 @@
+From e2abc9b73d2e909f62468de5d66c5d9ec51fce0f Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Tue, 22 Jul 2014 08:32:31 -0600
+Subject: quartz: Implement MediaSeeking_GetStopPosition on top of
+ MediaSeeking_GetPositions.
+
+---
+ dlls/quartz/filtergraph.c |   37 ++++++++++++++++---------------------
+ 1 file changed, 16 insertions(+), 21 deletions(-)
+
+diff --git a/dlls/quartz/filtergraph.c b/dlls/quartz/filtergraph.c
+index 4c093f3..0d06ba4 100644
+--- a/dlls/quartz/filtergraph.c
++++ b/dlls/quartz/filtergraph.c
+@@ -2430,27 +2430,6 @@ static HRESULT WINAPI MediaSeeking_GetDuration(IMediaSeeking *iface, LONGLONG *p
+     return hr;
+ }
+ 
+-static HRESULT WINAPI MediaSeeking_GetStopPosition(IMediaSeeking *iface, LONGLONG *pStop)
+-{
+-    IFilterGraphImpl *This = impl_from_IMediaSeeking(iface);
+-    HRESULT hr = S_OK;
+-
+-    TRACE("(%p/%p)->(%p)\n", This, iface, pStop);
+-
+-    if (!pStop)
+-        return E_POINTER;
+-
+-    EnterCriticalSection(&This->cs);
+-    if (This->stop_position < 0)
+-        /* Stop position not set, use duration instead */
+-        hr = IMediaSeeking_GetDuration(iface, pStop);
+-    else
+-        *pStop = This->stop_position;
+-    LeaveCriticalSection(&This->cs);
+-
+-    return hr;
+-}
+-
+ static HRESULT WINAPI MediaSeeking_ConvertTimeFormat(IMediaSeeking *iface, LONGLONG *pTarget,
+         const GUID *pTargetFormat, LONGLONG Source, const GUID *pSourceFormat)
+ {
+@@ -2565,6 +2544,22 @@ static HRESULT WINAPI MediaSeeking_GetCurrentPosition(IMediaSeeking *iface, LONG
+     return hr;
+ }
+ 
++static HRESULT WINAPI MediaSeeking_GetStopPosition(IMediaSeeking *iface, LONGLONG *pStop)
++{
++    IFilterGraphImpl *This = impl_from_IMediaSeeking(iface);
++    LONGLONG time;
++    HRESULT hr;
++
++    TRACE("(%p/%p)->(%p)\n", This, iface, pStop);
++
++    if (!pStop)
++        return E_POINTER;
++
++    hr = MediaSeeking_GetPositions(iface, &time, pStop);
++
++    return hr;
++}
++
+ static HRESULT WINAPI MediaSeeking_GetAvailable(IMediaSeeking *iface, LONGLONG *pEarliest,
+         LONGLONG *pLatest)
+ {
+-- 
+1.7.9.5
+

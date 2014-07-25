@@ -265,7 +265,7 @@ def generate_makefile(patches, fp):
 README_template = """wine-compholio
 ==============
 
-The Wine \"Compholio\" Edition repository includes a variety of patches ") for
+The Wine \"Compholio\" Edition repository includes a variety of patches for
 Wine to run common Windows applications under Linux.
 
 These patches fix the following Wine bugs:

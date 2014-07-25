@@ -20,6 +20,8 @@ PATCHLIST :=	00-Commandline.ok \
 		14-UrlCombineW.ok \
 		15-wtsapi32.ok \
 		16-server-CreateProcess_ACLs.ok \
+		17-strmbase-Lock_Race_Conditions.ok \
+		18-quartz-MediaSeeking_Positions.ok \
 		97-Pipelight.ok \
 		98-Miscellaneous.ok
 
@@ -215,7 +217,6 @@ abort:
 	$(PATCH) < 08-Junction_Points/0005-kernel32-ntdll-Add-support-for-deleting-junction-poi.patch
 	$(PATCH) < 08-Junction_Points/0006-kernel32-Advertise-junction-point-support.patch
 	$(PATCH) < 08-Junction_Points/0007-ntdll-tests-Add-test-for-deleting-junction-point-tar.patch
-	$(PATCH) < 08-Junction_Points/0008-ntdll-Use-relative-paths-for-creating-links.patch
 	( \
 		echo "+    { \"08-Junction_Points\", \"Erich E. Hoover\", \"Support for junction points/reparse points.\" },"; \
 	) > 08-Junction_Points.ok
@@ -245,7 +246,7 @@ abort:
 # Patchset 10-Missing_Fonts
 # |
 # | Included patches:
-# |   *	Implement missing fonts expected by Silverlight. [by Erich E. Hoover]
+# |   *	Implement missing Arial font expected by Silverlight. [by Torsten Kurbad]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#32323] Netflix (Silverlight 4.x) and several .NET Framework 3.x/4.0 WPF apps require either Arial or Verdana to be
@@ -255,10 +256,9 @@ abort:
 # |   *	fonts/Makefile.in, fonts/arial.sfd, fonts/arial.ttf
 # |
 10-Missing_Fonts.ok:
-	$(PATCH) < 10-Missing_Fonts/0001-fonts-Add-a-subset-of-Liberation-Sans-as-an-Arial-re.patch
-	$(PATCH) < 10-Missing_Fonts/0002-fonts-Implement-the-rest-of-Liberation-Sans-Arial-re.patch
+	$(PATCH) < 10-Missing_Fonts/0001-fonts-Add-Liberation-Sans-as-an-Arial-replacement.patch
 	( \
-		echo "+    { \"10-Missing_Fonts\", \"Erich E. Hoover\", \"Implement missing fonts expected by Silverlight.\" },"; \
+		echo "+    { \"10-Missing_Fonts\", \"Torsten Kurbad\", \"Implement missing Arial font expected by Silverlight.\" },"; \
 	) > 10-Missing_Fonts.ok
 
 # Patchset 12-FD_Cache
@@ -346,6 +346,48 @@ abort:
 	( \
 		echo "+    { \"16-server-CreateProcess_ACLs\", \"Joris van der Wel\", \"Implement passing ACLs to CreateProcess.\" },"; \
 	) > 16-server-CreateProcess_ACLs.ok
+
+# Patchset 17-strmbase-Lock_Race_Conditions
+# |
+# | Included patches:
+# |   *	Fix possible race conditions in strmbase/quartz. [by Erich E. Hoover]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#31566] Fallout 3: regression causes block at critical section when radio is enabled
+# |
+# | Modified files: 
+# |   *	dlls/quartz/dsoundrender.c, dlls/quartz/videorenderer.c, dlls/strmbase/renderer.c
+# |
+17-strmbase-Lock_Race_Conditions.ok:
+	$(PATCH) < 17-strmbase-Lock_Race_Conditions/0001-strmbase-Fix-race-condition-on-InputPin_BeginFlush-b.patch
+	$(PATCH) < 17-strmbase-Lock_Race_Conditions/0002-strmbase-Fix-race-condition-on-InputPin_EndFlush-bet.patch
+	$(PATCH) < 17-strmbase-Lock_Race_Conditions/0003-strmbase-Fix-race-condition-on-InputPin_EndOfStream-.patch
+	$(PATCH) < 17-strmbase-Lock_Race_Conditions/0004-quartz-Fix-race-condition-on-EndOfStream-between-csR.patch
+	$(PATCH) < 17-strmbase-Lock_Race_Conditions/0005-quartz-Fix-race-condition-on-EndFlush-between-csRend.patch
+	$(PATCH) < 17-strmbase-Lock_Race_Conditions/0006-quartz-Fix-race-condition-between-EndOfStream-and-Pa.patch
+	( \
+		echo "+    { \"17-strmbase-Lock_Race_Conditions\", \"Erich E. Hoover\", \"Fix possible race conditions in strmbase/quartz.\" },"; \
+	) > 17-strmbase-Lock_Race_Conditions.ok
+
+# Patchset 18-quartz-MediaSeeking_Positions
+# |
+# | Included patches:
+# |   *	Return correct IMediaSeeking stream positions in quartz. [by Erich E. Hoover]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#23174] Fallout 3: Diologue and Video/sound issues
+# |
+# | Modified files: 
+# |   *	dlls/quartz/filtergraph.c
+# |
+18-quartz-MediaSeeking_Positions.ok:
+	$(PATCH) < 18-quartz-MediaSeeking_Positions/0001-quartz-Include-the-stream-position-in-addition-to-th.patch
+	$(PATCH) < 18-quartz-MediaSeeking_Positions/0002-quartz-Implement-MediaSeeking_GetCurrentPosition-on-.patch
+	$(PATCH) < 18-quartz-MediaSeeking_Positions/0003-quartz-Implement-MediaSeeking_GetStopPosition-on-top.patch
+	$(PATCH) < 18-quartz-MediaSeeking_Positions/0004-quartz-Remove-unused-cache-of-MediaSeeking-stop-posi.patch
+	( \
+		echo "+    { \"18-quartz-MediaSeeking_Positions\", \"Erich E. Hoover\", \"Return correct IMediaSeeking stream positions in quartz.\" },"; \
+	) > 18-quartz-MediaSeeking_Positions.ok
 
 # Patchset 97-Pipelight
 # |

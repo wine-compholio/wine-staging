@@ -1,0 +1,58 @@
+From fb2417ad73fb67b20340a65d645b9dac245bdbf0 Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Tue, 22 Jul 2014 08:26:47 -0600
+Subject: quartz: Include the stream position in addition to the reference
+ clock offset in the time returned by MediaSeeking_GetPositions.
+
+---
+ dlls/quartz/filtergraph.c |   27 ++++++++++++++++++++++++---
+ 1 file changed, 24 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/quartz/filtergraph.c b/dlls/quartz/filtergraph.c
+index 771a330..ad24691 100644
+--- a/dlls/quartz/filtergraph.c
++++ b/dlls/quartz/filtergraph.c
+@@ -2539,16 +2539,37 @@ static HRESULT WINAPI MediaSeeking_SetPositions(IMediaSeeking *iface, LONGLONG *
+     return hr;
+ }
+ 
++static HRESULT WINAPI found_getposition(IFilterGraphImpl *This, IMediaSeeking *seek, DWORD_PTR pargs)
++{
++    struct pos_args *args = (void*)pargs;
++
++    return IMediaSeeking_GetPositions(seek, args->current, args->stop);
++}
++
+ static HRESULT WINAPI MediaSeeking_GetPositions(IMediaSeeking *iface, LONGLONG *pCurrent,
+         LONGLONG *pStop)
+ {
+     IFilterGraphImpl *This = impl_from_IMediaSeeking(iface);
++    struct pos_args args;
++    LONGLONG time = 0;
+     HRESULT hr;
+ 
+     TRACE("(%p/%p)->(%p, %p)\n", This, iface, pCurrent, pStop);
+-    hr = IMediaSeeking_GetCurrentPosition(iface, pCurrent);
+-    if (SUCCEEDED(hr))
+-        hr = IMediaSeeking_GetStopPosition(iface, pStop);
++
++    args.current = pCurrent;
++    args.stop = pStop;
++    EnterCriticalSection(&This->cs);
++    hr = all_renderers_seek(This, found_getposition, (DWORD_PTR)&args);
++    if (This->state == State_Running && This->refClock && This->start_time >= 0)
++    {
++        IReferenceClock_GetTime(This->refClock, &time);
++        if (time)
++            time -= This->start_time;
++    }
++    if (This->pause_time > 0)
++        time += This->pause_time;
++    *pCurrent += time;
++    LeaveCriticalSection(&This->cs);
+ 
+     return hr;
+ }
+-- 
+1.7.9.5
+

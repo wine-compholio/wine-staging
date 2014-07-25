@@ -81,12 +81,21 @@ sudo make install
 
 ### Excluding patches
 
-It is also possible to apply only a subset of the patches, for example if you're compiling
-for a distribution where PulseAudio is not installed, or if you just don't like a specific
-patchset. Please note that some patchsets depend on each other, and requesting an impossible
-situation might result in a failure to apply all patches.
+It is also possible to apply only a subset of the patches, for example if you're
+compiling for a distribution where PulseAudio is not installed, or if you just don't
+like a specific patchset. Please note that some patchsets depend on each other, and
+requesting an impossible situation might result in a failure to apply all patches.
 
-Lets assume you want to exclude the patchset in directory DIRNAME, then just invoke make like that:
+Lets assume you want to exclude the patchset in directory DIRNAME, then just invoke the
+Makefile like this:
 ```bash
 make -C ./patches DESTDIR=$(pwd) install -W DIRNAME.ok
+```
+
+Using the same method its also possible to exclude multiple patchsets. If you want to
+exclude a very large number of patches, it is easier to do specify a list of patches
+which should be included instead. To apply for example only the patchsets in directory
+DIRNAME1 and DIRNAME2, you can use:
+```bash
+make -C ./patches DESTDIR=$(pwd) PATCHLIST="DIRNAME1.ok DIRNAME2.ok" install
 ```

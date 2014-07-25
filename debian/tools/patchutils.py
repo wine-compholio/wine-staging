@@ -24,12 +24,6 @@ class Patch(object):
     def is_empty(self):
         raise NotImplementedError("is_empty not implemented.")
 
-    def min_source_size(self):
-        raise NotImplementedError("min_source_size not implemented.")
-
-    def min_dest_size(self):
-        raise NotImplementedError("min_dest_size not implemented.")
-
     def read_chunks(self):
         raise NotImplementedError("read_chunks not implemented.")
 
@@ -77,24 +71,6 @@ class FilePatch(Patch):
 
     def is_empty(self):
         return len(self.hunks) == 0
-
-    def min_source_size(self):
-        """Returns the minimum size of the source file, so that the patch can apply."""
-        if self.isbinary:
-            raise GeneralPatchError("Not possible to calculate minimum source size for binary patches.")
-        elif len(self.hunks) == 0:
-            return 0
-        last = max(self.hunks, key=lambda x: x[1]+x[2])
-        return last[1]+last[2]
-
-    def min_dest_size(self):
-        """Returns the minimum size of the destination file, so that the patch can apply."""
-        if self.isbinary:
-            raise GeneralPatchError("Not possible to calculate minimum destination size for binary patches.")
-        elif len(self.hunks) == 0:
-            return 0
-        last = max(self.hunks, key=lambda x: x[3]+x[4])
-        return last[3]+last[4]
 
     def read_chunks(self):
         """Iterates over arbitrary sized chunks of this patch."""
@@ -164,20 +140,6 @@ class MemoryPatch(Patch):
 
     def is_empty(self):
         return len(self.hunks) == 0
-
-    def min_source_size(self):
-        """Returns the minimum size of the source file, so that the patch can apply."""
-        if len(self.hunks) == 0:
-            return 0
-        last = max(self.hunks, key=lambda x: x[0]+x[1])
-        return last[0]+last[1]
-
-    def min_dest_size(self):
-        """Returns the minimum size of the destination file, so that the patch can apply."""
-        if len(self.hunks) == 0:
-            return 0
-        last = max(self.hunks, key=lambda x: x[2]+x[3])
-        return last[2]+last[3]
 
     def read_chunks(self):
         """Iterates over arbitrary sized chunks of this patch."""

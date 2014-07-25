@@ -432,13 +432,13 @@ while IFS= read -r line; do
 				while read cmd arg1 arg2; do
 					if [ "$cmd" == "S" ]; then
 						binary_patch_destsize="$arg2"
-						if [ "$arg1" -ne "$(du -b "$patch_oldname" | cut -f 1)" ]; then break; fi
+						[ "$arg1" -eq "$(du -b "$patch_oldname" | cut -f 1)" ] || break
 
 					elif [ "$cmd" == "1" ]; then
-						if ! dd if="$patch_oldname" bs=1 skip="$arg1" count="$arg2" >> "$decoded_tmpfile" 2>/dev/null; then break; fi
+						dd if="$patch_oldname" bs=1 skip="$arg1" count="$arg2" >> "$decoded_tmpfile" 2>/dev/null || break
 
 					elif [ "$cmd" == "2" ]; then
-						if ! dd if="$patch_tmpfile" bs=1 skip="$arg1" count="$arg2" >> "$decoded_tmpfile" 2>/dev/null; then break; fi
+						dd if="$patch_tmpfile" bs=1 skip="$arg1" count="$arg2" >> "$decoded_tmpfile" 2>/dev/null || break
 
 					elif [ "$cmd" == "E" ]; then
 						binary_patch_complete=1
@@ -500,7 +500,7 @@ while IFS= read -r line; do
 			patch_mode=201
 			continue
 
-		elif [[ "$line" =~ ^\\\  ]]; then
+		elif [ "${line:0:2}" == "\\ " ]; then
 			# ignore
 			echo "$line" >> "$patch_tmpfile"
 			continue
@@ -523,19 +523,19 @@ while IFS= read -r line; do
 		# These lines are part of a hunk, append it
 		echo "$line" >> "$patch_tmpfile"
 
-		if [[ "$line" =~ ^\  ]] && [ "$hunk_src_lines" -gt 0 ] && [ "$hunk_dst_lines" -gt 0 ]; then
+		if [ "${line:0:1}" == " " ] && [ "$hunk_src_lines" -gt 0 ] && [ "$hunk_dst_lines" -gt 0 ]; then
 			(( hunk_src_lines-- ))
 			(( hunk_dst_lines-- ))
 
-		elif [[ "$line" =~ ^- ]] && [ "$hunk_src_lines" -gt 0 ]; then
+		elif [ "${line:0:1}" == "-" ] && [ "$hunk_src_lines" -gt 0 ]; then
 			(( hunk_src_lines-- ))
 			(( patch_total_rem++ ))
 
-		elif [[ "$line" =~ ^\+ ]] && [ "$hunk_dst_lines" -gt 0 ]; then
+		elif [ "${line:0:1}" == "+" ] && [ "$hunk_dst_lines" -gt 0 ]; then
 			(( hunk_dst_lines-- ))
 			(( patch_total_add++ ))
 
-		elif [[ "$line" =~ ^\\\  ]]; then
+		elif [ "${line:0:2}" == "\\ " ]; then
 			continue # ignore "\\ No newline ..."
 
 		else

@@ -23,7 +23,7 @@ Besides that the following additional changes are included:
 
 * Lockfree algorithm for filedescriptor cache (improves file access speed)
 * Other Pipelight specific enhancements
-* Reduced SetTimer minimum value from 15 ms to 5 ms (improves Silverlight framerates)
+* Reduced SetTimer minimum value from 10 ms to 5 ms (improves Silverlight framerates)
 * Support for GetVolumePathName
 * Support for PulseAudio backend for audio
 * Workaround for shlwapi URLs with relative paths

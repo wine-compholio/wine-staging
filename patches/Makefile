@@ -26,14 +26,20 @@ PATCHLIST :=	00-Commandline.ok \
 		98-Miscellaneous.ok
 
 .PHONY: install
-install: $(PATCHLIST)
-	cat *.ok | sort | $(CURDIR)/../debian/tools/patchlist.sh | $(PATCH)
-	cd $(DESTDIR); autoreconf -f
-	cd $(DESTDIR); ./tools/make_requests
-	rm -f *.ok
+install:
+	@$(MAKE) apply; \
+	status=$$?;     \
+	rm -f *.ok;     \
+	exit $$status
 
-.PHONY: abort
-abort:
+.PHONY: apply
+apply: $(PATCHLIST)
+	cat *.ok | sort | $(CURDIR)/../debian/tools/patchlist.sh | $(PATCH)
+	cd $(DESTDIR) && autoreconf -f
+	cd $(DESTDIR) && ./tools/make_requests
+
+.PHONY: clean
+clean:
 	rm -f *.ok
 
 .NOTPARALLEL:

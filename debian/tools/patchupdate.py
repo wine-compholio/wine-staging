@@ -5,25 +5,29 @@ import contextlib
 import textwrap
 import urllib
 import sys
+import hashlib
+import itertools
+import patchutils
 import os
 import re
 
 class AuthorInfo(object):
     def __init__(self):
-        self.author = ""
-        self.subject = ""
-        self.revision = ""
+        self.author         = ""
+        self.subject        = ""
+        self.revision       = ""
 
 class PatchSet(object):
     def __init__(self, name):
-        self.name    = name
-        self.authors = []
-        self.fixes   = []
-        self.changes = []
+        self.name           = name
+        self.authors        = []
+        self.fixes          = []
+        self.changes        = []
 
-        self.patches = []
-        self.files   = set()
-        self.depends = set()
+        self.files          = []
+        self.patches        = []
+        self.modified_files = set()
+        self.depends        = set()
 
         self.verify_depends = set()
         self.verify_time    = None
@@ -46,22 +50,6 @@ def causal_time_smaller(a, b):
 
 def causal_time_relation(a, b):
     return causal_time_smaller(a, b) or causal_time_smaller(b, a)
-
-def lsdiff(f):
-    files = set()
-    with open(f) as fp:
-        for line in fp:
-            if line.startswith("diff --git "):
-                tmp = line.strip().split(" ")
-                if len(tmp) == 4 and tmp[3].startswith("b/"):
-                    files.add(tmp[3][2:])
-                else:
-                    abort("Unable to parse patch git header in file %s: \"%s\"" % (f, line))
-            elif line.startswith("+++ b/"):
-                files.add(line[6:].strip())
-            elif line.startswith("+++ "):
-                abort("Unable to parse patch header in file %s: \"%s\"" % (f, line))
-    return files
 
 def verify_dependencies(all_patches):
     max_patches = max(all_patches.keys()) + 1
@@ -93,7 +81,7 @@ def verify_dependencies(all_patches):
     # Find out which files are modified by multiple patches
     modified_files = {}
     for i, patch in all_patches.iteritems():
-        for f in patch.files:
+        for f in patch.modified_files:
             if f not in modified_files:
                 modified_files[f] = []
             modified_files[f].append(i)
@@ -124,9 +112,10 @@ def read_patchsets(directory):
         for f in sorted(os.listdir(subdirectory)):
             if not f.endswith(".patch") or not os.path.isfile(os.path.join(subdirectory, f)):
                 continue
-            patch.patches.append(f)
-            for modified_file in lsdiff(os.path.join(subdirectory, f)):
-                patch.files.add(modified_file)
+            patch.files.append(f)
+            for p in patchutils.read_patch(os.path.join(subdirectory, f)):
+                patch.patches.append(p)
+                patch.modified_files.add(p.modified_file)
 
         # No single patch within this directory, ignore it
         if len(patch.patches) == 0:
@@ -253,12 +242,12 @@ def generate_makefile(patches, fp):
             fp.write("# |\n")
 
         fp.write("# | Modified files: \n")
-        fp.write("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap(", ".join(sorted(patch.files)), 120)))
+        fp.write("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap(", ".join(sorted(patch.modified_files)), 120)))
         fp.write("# |\n")
 
         depends = " ".join([""] + ["%s.ok" % patches[d].name for d in patch.depends]) if len(patch.depends) else ""
         fp.write("%s.ok:%s\n" % (patch.name, depends))
-        for f in patch.patches:
+        for f in patch.files:
             fp.write("\t$(PATCH) < %s\n" % os.path.join(patch.name, f))
 
         if len(patch.authors):

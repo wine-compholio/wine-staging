@@ -60,6 +60,12 @@ usage()
 	echo ""
 }
 
+gitsha1()
+{
+	echo -en "blob $(du -b "$1" | cut -f1)\x00" | cat - "$1" | sha1sum | cut -d' ' -f1
+}
+
+
 # Parse environment variables
 while [[ $# > 0 ]]; do
 	cmd="$1"; shift
@@ -351,7 +357,7 @@ while IFS= read -r line; do
 			# Check shasum if its not a patch creating a new file
 			if [ "$patch_oldsha1" != "0000000000000000000000000000000000000000" ] || [ "$binary_patch_type" == "delta" ] || [ -f "$patch_oldname" ]; then
 				if [ -f "$patch_oldname" ]; then
-					sha=$(echo -en "blob $(du -b "$patch_oldname" | cut -f1)\x00" | cat - "$patch_oldname" | sha1sum | cut -d' ' -f1)
+					sha=$(gitsha1 "$patch_oldname")
 				else
 					sha="0000000000000000000000000000000000000000"
 				fi
@@ -455,7 +461,7 @@ while IFS= read -r line; do
 			fi
 
 			# Check shasum if its not a patch creating a new file
-			sha=$(echo -en "blob $(du -b "$patch_tmpfile" | cut -f1)\x00" | cat - "$patch_tmpfile" | sha1sum | cut -d' ' -f1)
+			sha=$(gitsha1 "$patch_tmpfile")
 			if [ "$patch_newsha1" != "$sha" ]; then
 				echo "$lineno: Expected $patch_newsha1" >&2
 				echo "$lineno: Got      $sha" >&2

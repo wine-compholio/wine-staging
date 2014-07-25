@@ -182,7 +182,7 @@ def read_patch(filename):
         # Decide between binary and textual patch
         if line is None or line.startswith("diff --git ") or line.startswith("--- "):
             if oldname != newname:
-                raise PatchParserError("Stripped old- and new name doesn't match for binary patch.")
+                raise PatchParserError("Stripped old- and new name doesn't match.")
 
         elif line.startswith("@@ -"):
             while True:

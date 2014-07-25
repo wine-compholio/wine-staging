@@ -1,4 +1,23 @@
 #!/usr/bin/env bash
+#
+# Wrapper to apply binary patches without git.
+#
+# Copyright (C) 2014 Sebastian Lackner
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+#
 
 # Setup parser variables
 nogit=0
@@ -41,6 +60,12 @@ usage()
 	echo ""
 }
 
+gitsha1()
+{
+	echo -en "blob $(du -b "$1" | cut -f1)\x00" | cat - "$1" | sha1sum | cut -d' ' -f1
+}
+
+
 # Parse environment variables
 while [[ $# > 0 ]]; do
 	cmd="$1"; shift
@@ -62,7 +87,8 @@ while [[ $# > 0 ]]; do
 			;;
 
 		-R)
-			abort "Reverse applying patches not supported yet with this patch tool."
+			echo "Reverse applying patches not supported yet with this tool." >&2
+			exit 1
 			;;
 
 		--help)
@@ -82,10 +108,19 @@ if [ "$nogit" -eq 0 ] && command -v git >/dev/null 2>&1; then
 	exit 1
 fi
 
+# Check for missing depdencies
+for dependency in awk chmod cut dd du gzip hexdump patch sha1sum; do
+	if ! command -v "$dependency" >/dev/null 2>&1; then
+		echo "Missing dependency: $dependency - please install this program and try again." >&2
+		exit 1
+	fi
+done
+
+# Detect BSD
 if gzip -V 2>&1 | grep "BSD" &> /dev/null; then
-	echo "This script is not compatible with *BSD utilities." >&2
-	echo "Please install git, which provides the same functionality and will be used instead." >&2
-	exit 1;
+	echo "This script is not compatible with *BSD utilities. Please install git," >&2
+	echo "which provides the same functionality and will be used instead." >&2
+	exit 1
 fi
 
 # Decode base85 git data, prepend with a gzip header
@@ -194,7 +229,7 @@ while IFS= read -r line; do
 			echo "$line" >> "$patch_tmpfile"
 			continue
 
-		elif [[ "$line" =~ ^old\ mode ]] || [[ "$line" =~ ^deleted\ file\ mode ]]; then
+		elif [ "${line:0:8}" == "old mode" ] || [ "${line:0:17}" == "deleted file mode" ]; then
 			# ignore
 			echo "$line" >> "$patch_tmpfile"
 			continue
@@ -204,31 +239,25 @@ while IFS= read -r line; do
 			echo "$line" >> "$patch_tmpfile"
 			continue
 
-		elif [[ "$line" =~ ^new\ mode ]] || [[ "$line" =~ ^new\ file\ mode ]]; then
-			patch_errors+=("$lineno: unable to parse header line '$line'")
+		elif [ "${line:0:8}" == "new mode" ] || [ "${line:0:13}" == "new file mode" ]; then
+			patch_errors+=("$lineno: Unable to parse header line '$line'.")
 			patch_invalid=1
 			echo "$line" >> "$patch_tmpfile"
 			continue
 
-		elif [[ "$line" =~ ^copy\ from ]] || [[ "$line" =~ ^copy\ to ]]; then
-			patch_errors+=("$lineno: copy header not implemented yet")
+		elif [ "${line:0:9}" == "copy from" ] || [ "${line:0:7}" == "copy to" ]; then
+			patch_errors+=("$lineno: Copy header not implemented yet.")
 			patch_invalid=1
 			echo "$line" >> "$patch_tmpfile"
 			continue
 
-		elif [[ "$line" =~ ^rename\ old ]] || [[ "$line" =~ ^rename\ from ]]; then
-			patch_errors+=("$lineno: rename header not implemented yet")
+		elif [ "${line:0:7}" == "rename " ]; then
+			patch_errors+=("$lineno: Patch rename header not implemented yet.")
 			patch_invalid=1
 			echo "$line" >> "$patch_tmpfile"
 			continue
 
-		elif [[ "$line" =~ ^rename\ new ]] || [[ "$line" =~ ^rename\ to ]]; then
-			patch_errors+=("$lineno: rename header not implemented yet")
-			patch_invalid=1
-			echo "$line" >> "$patch_tmpfile"
-			continue
-
-		elif [[ "$line" =~ ^similarity\ index ]] || [[ "$line" =~ ^dissimilarity\ index ]]; then
+		elif [ "${line:0:16}" == "similarity index" ] || [ "${line:0:19}" == "dissimilarity index" ]; then
 			# ignore
 			echo "$line" >> "$patch_tmpfile"
 			continue
@@ -239,8 +268,8 @@ while IFS= read -r line; do
 			echo "$line" >> "$patch_tmpfile"
 			continue
 
-		elif [[ "$line" =~ ^index\  ]]; then
-			patch_errors+=("$lineno: unable to parse header line '$line'")
+		elif [ "${line:0:6}" == "index " ]; then
+			patch_errors+=("$lineno: Unable to parse header line '$line'.")
 			patch_invalid=1
 			echo "$line" >> "$patch_tmpfile"
 			continue
@@ -250,12 +279,12 @@ while IFS= read -r line; do
 			if [[ "$patch_oldname" =~ ^a/(.*)$ ]]; then
 				patch_oldname="${BASH_REMATCH[1]}"
 			elif [ "$patch_oldname" != "/dev/null" ]; then
-				abort "old name doesn't start with a/."
+				abort "Old name doesn't start with a/."
 			fi
 			if [[ "$patch_newname" =~ ^b/(.*)$ ]]; then
 				patch_newname="${BASH_REMATCH[1]}"
 			elif [ "$patch_newname" != "/dev/null" ]; then
-				abort "new name doesn't start with b/."
+				abort "New name doesn't start with b/."
 			fi
 
 			patch_mode=2
@@ -269,12 +298,12 @@ while IFS= read -r line; do
 		if [[ "$line" == "GIT binary patch" ]]; then
 
 			if [ -z "$patch_oldsha1" ] || [ -z "$patch_newsha1" ]; then
-				patch_errors+=("$lineno: missing index header, sha1 sums required for binary patch")
+				patch_errors+=("$lineno: Missing index header, sha1 sums required for binary patch.")
 				patch_invalid=1
 			fi
 
 			if [ "$patch_oldname" != "$patch_newname" ]; then
-				patch_errors+=("$lineno: stripped old- and new name doesn't match")
+				patch_errors+=("$lineno: Stripped old- and new name doesn't match for binary patch.")
 				patch_invalid=1
 			fi
 
@@ -286,7 +315,7 @@ while IFS= read -r line; do
 			patch_mode=100
 			continue
 
-		elif [[ "$line" =~ ^@@\ - ]]; then
+		elif [ "${line:0:4}" == "@@ -" ]; then
 			# We count the number of lines added/removed for informational purposes
 			patch_total_add=0
 			patch_total_rem=0
@@ -294,10 +323,10 @@ while IFS= read -r line; do
 			patch_mode=200
 			# fall-through
 
-		elif [[ "$line" =~ ^diff\ --git\  ]]; then
+		elif [ "${line:0:11}" == "diff --git " ]; then
 
 			if [ "$patch_oldname" != "$patch_newname" ]; then
-				patch_errors+=("$lineno: stripped old- and new name doesn't match")
+				patch_errors+=("$lineno: Stripped old- and new name doesn't match.")
 				patch_invalid=1
 			fi
 
@@ -328,7 +357,7 @@ while IFS= read -r line; do
 			# Check shasum if its not a patch creating a new file
 			if [ "$patch_oldsha1" != "0000000000000000000000000000000000000000" ] || [ "$binary_patch_type" == "delta" ] || [ -f "$patch_oldname" ]; then
 				if [ -f "$patch_oldname" ]; then
-					sha=$(echo -en "blob $(du -b "$patch_oldname" | cut -f1)\x00" | cat - "$patch_oldname" | sha1sum | cut -d' ' -f1)
+					sha=$(gitsha1 "$patch_oldname")
 				else
 					sha="0000000000000000000000000000000000000000"
 				fi
@@ -403,13 +432,13 @@ while IFS= read -r line; do
 				while read cmd arg1 arg2; do
 					if [ "$cmd" == "S" ]; then
 						binary_patch_destsize="$arg2"
-						if [ "$arg1" -ne "$(du -b "$patch_oldname" | cut -f 1)" ]; then break; fi
+						[ "$arg1" -eq "$(du -b "$patch_oldname" | cut -f 1)" ] || break
 
 					elif [ "$cmd" == "1" ]; then
-						if ! dd if="$patch_oldname" bs=1 skip="$arg1" count="$arg2" >> "$decoded_tmpfile" 2>/dev/null; then break; fi
+						dd if="$patch_oldname" bs=1 skip="$arg1" count="$arg2" >> "$decoded_tmpfile" 2>/dev/null || break
 
 					elif [ "$cmd" == "2" ]; then
-						if ! dd if="$patch_tmpfile" bs=1 skip="$arg1" count="$arg2" >> "$decoded_tmpfile" 2>/dev/null; then break; fi
+						dd if="$patch_tmpfile" bs=1 skip="$arg1" count="$arg2" >> "$decoded_tmpfile" 2>/dev/null || break
 
 					elif [ "$cmd" == "E" ]; then
 						binary_patch_complete=1
@@ -432,7 +461,7 @@ while IFS= read -r line; do
 			fi
 
 			# Check shasum if its not a patch creating a new file
-			sha=$(echo -en "blob $(du -b "$patch_tmpfile" | cut -f1)\x00" | cat - "$patch_tmpfile" | sha1sum | cut -d' ' -f1)
+			sha=$(gitsha1 "$patch_tmpfile")
 			if [ "$patch_newsha1" != "$sha" ]; then
 				echo "$lineno: Expected $patch_newsha1" >&2
 				echo "$lineno: Got      $sha" >&2
@@ -440,7 +469,7 @@ while IFS= read -r line; do
 			fi
 
 			if ! cp "$patch_tmpfile" "$patch_oldname"; then
-				abort "Unable to replace original file"
+				abort "Unable to replace original file."
 			fi
 			if [ ! -z "$patch_filemode" ]; then
 				chmod "${patch_filemode: -3}" "$patch_oldname" # we ignore failures for now
@@ -471,6 +500,11 @@ while IFS= read -r line; do
 			patch_mode=201
 			continue
 
+		elif [ "${line:0:2}" == "\\ " ]; then
+			# ignore
+			echo "$line" >> "$patch_tmpfile"
+			continue
+
 		else
 			echo "patching $patch_newname"
 
@@ -489,23 +523,23 @@ while IFS= read -r line; do
 		# These lines are part of a hunk, append it
 		echo "$line" >> "$patch_tmpfile"
 
-		if [ "$hunk_src_lines" -gt 0 ] && [ "$hunk_dst_lines" -gt 0 ] && [[ "$line" =~ ^\  ]]; then
+		if [ "${line:0:1}" == " " ] && [ "$hunk_src_lines" -gt 0 ] && [ "$hunk_dst_lines" -gt 0 ]; then
 			(( hunk_src_lines-- ))
 			(( hunk_dst_lines-- ))
 
-		elif [ "$hunk_src_lines" -gt 0 ] && [[ "$line" =~ ^- ]]; then
+		elif [ "${line:0:1}" == "-" ] && [ "$hunk_src_lines" -gt 0 ]; then
 			(( hunk_src_lines-- ))
 			(( patch_total_rem++ ))
 
-		elif [ "$hunk_dst_lines" -gt 0 ] && [[ "$line" =~ ^\+ ]]; then
+		elif [ "${line:0:1}" == "+" ] && [ "$hunk_dst_lines" -gt 0 ]; then
 			(( hunk_dst_lines-- ))
 			(( patch_total_add++ ))
 
-		elif [[ "$line" =~ ^\\\  ]]; then
+		elif [ "${line:0:2}" == "\\ " ]; then
 			continue # ignore "\\ No newline ..."
 
 		else
-			abort "Unexpected line in hunk"
+			abort "Unexpected line in hunk."
 		fi
 
 		# If it was the last line of this hunk then go back to mode 200
@@ -544,7 +578,7 @@ while IFS= read -r line; do
 			patch_mode=1
 			continue
 
-		elif [[ "$line" =~ ^@@\ - ]] || [[ "$line" =~ ^---\  ]] || [[ "$line" =~ ^\+\+\+\  ]]; then
+		elif [ "${line:0:4}" == "@@ -" ] || [ "${line:0:4}" == "--- " ] || [ "${line:0:4}" == "+++ " ]; then
 			abort "Patch corrupted or not created with git."
 		fi
 	fi

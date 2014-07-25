@@ -544,8 +544,8 @@ def generate_readme(all_patches, fp):
     # Get version number of the latest stable release
     def _latest_stable_version():
         for package, version, distro in _read_changelog():
-            if distro.lower() == "unreleased": continue
-            return version
+            if distro.lower() != "unreleased":
+                return version
 
     fp.write(README_template.format(bugs=_enum(_all_bugs()), fixes=_enum(_all_fixes()), version=_latest_stable_version()))
 

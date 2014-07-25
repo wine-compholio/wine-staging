@@ -223,7 +223,7 @@ while IFS= read -r line; do
 			echo "$line" >> "$patch_tmpfile"
 			continue
 
-		elif [[ "$line" =~ ^old\ mode ]] || [[ "$line" =~ ^deleted\ file\ mode ]]; then
+		elif [ "${line:0:8}" == "old mode" ] || [ "${line:0:17}" == "deleted file mode" ]; then
 			# ignore
 			echo "$line" >> "$patch_tmpfile"
 			continue
@@ -233,31 +233,25 @@ while IFS= read -r line; do
 			echo "$line" >> "$patch_tmpfile"
 			continue
 
-		elif [[ "$line" =~ ^new\ mode ]] || [[ "$line" =~ ^new\ file\ mode ]]; then
+		elif [ "${line:0:8}" == "new mode" ] || [ "${line:0:13}" == "new file mode" ]; then
 			patch_errors+=("$lineno: Unable to parse header line '$line'.")
 			patch_invalid=1
 			echo "$line" >> "$patch_tmpfile"
 			continue
 
-		elif [[ "$line" =~ ^copy\ from ]] || [[ "$line" =~ ^copy\ to ]]; then
+		elif [ "${line:0:9}" == "copy from" ] || [ "${line:0:7}" == "copy to" ]; then
 			patch_errors+=("$lineno: Copy header not implemented yet.")
 			patch_invalid=1
 			echo "$line" >> "$patch_tmpfile"
 			continue
 
-		elif [[ "$line" =~ ^rename\ old ]] || [[ "$line" =~ ^rename\ from ]]; then
-			patch_errors+=("$lineno: Rename header not implemented yet.")
+		elif [ "${line:0:7}" == "rename " ]; then
+			patch_errors+=("$lineno: Patch rename header not implemented yet.")
 			patch_invalid=1
 			echo "$line" >> "$patch_tmpfile"
 			continue
 
-		elif [[ "$line" =~ ^rename\ new ]] || [[ "$line" =~ ^rename\ to ]]; then
-			patch_errors+=("$lineno: Rename header not implemented yet.")
-			patch_invalid=1
-			echo "$line" >> "$patch_tmpfile"
-			continue
-
-		elif [[ "$line" =~ ^similarity\ index ]] || [[ "$line" =~ ^dissimilarity\ index ]]; then
+		elif [ "${line:0:16}" == "similarity index" ] || [ "${line:0:19}" == "dissimilarity index" ]; then
 			# ignore
 			echo "$line" >> "$patch_tmpfile"
 			continue
@@ -268,7 +262,7 @@ while IFS= read -r line; do
 			echo "$line" >> "$patch_tmpfile"
 			continue
 
-		elif [[ "$line" =~ ^index\  ]]; then
+		elif [ "${line:0:6}" == "index " ]; then
 			patch_errors+=("$lineno: Unable to parse header line '$line'.")
 			patch_invalid=1
 			echo "$line" >> "$patch_tmpfile"
@@ -315,7 +309,7 @@ while IFS= read -r line; do
 			patch_mode=100
 			continue
 
-		elif [[ "$line" =~ ^@@\ - ]]; then
+		elif [ "${line:0:4}" == "@@ -" ]; then
 			# We count the number of lines added/removed for informational purposes
 			patch_total_add=0
 			patch_total_rem=0
@@ -323,7 +317,7 @@ while IFS= read -r line; do
 			patch_mode=200
 			# fall-through
 
-		elif [[ "$line" =~ ^diff\ --git\  ]]; then
+		elif [ "${line:0:11}" == "diff --git " ]; then
 
 			if [ "$patch_oldname" != "$patch_newname" ]; then
 				patch_errors+=("$lineno: Stripped old- and new name doesn't match.")
@@ -578,7 +572,7 @@ while IFS= read -r line; do
 			patch_mode=1
 			continue
 
-		elif [[ "$line" =~ ^@@\ - ]] || [[ "$line" =~ ^---\  ]] || [[ "$line" =~ ^\+\+\+\  ]]; then
+		elif [ "${line:0:4}" == "@@ -" ] || [ "${line:0:4}" == "--- " ] || [ "${line:0:4}" == "+++ " ]; then
 			abort "Patch corrupted or not created with git."
 		fi
 	fi

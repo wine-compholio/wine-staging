@@ -22,6 +22,7 @@ PATCHLIST :=	00-Commandline.ok \
 		16-server-CreateProcess_ACLs.ok \
 		17-strmbase-Lock_Race_Conditions.ok \
 		18-quartz-MediaSeeking_Positions.ok \
+		19-ntdll-Dynamic_DST.ok \
 		97-Pipelight.ok \
 		98-Miscellaneous.ok
 
@@ -394,6 +395,26 @@ clean:
 	( \
 		echo "+    { \"18-quartz-MediaSeeking_Positions\", \"Erich E. Hoover\", \"Return correct IMediaSeeking stream positions in quartz.\" },"; \
 	) > 18-quartz-MediaSeeking_Positions.ok
+
+# Patchset 19-ntdll-Dynamic_DST
+# |
+# | Included patches:
+# |   *	Add support for Dynamic DST (daylight saving time) information in registry. [by Michael Müller]
+# |   *	Add Dynamic DST exceptions for Israel Standard Time. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36374] Israel timezone handled incorrectly
+# |
+# | Modified files: 
+# |   *	dlls/ntdll/time.c, loader/wine.inf.in
+# |
+19-ntdll-Dynamic_DST.ok:
+	$(PATCH) < 19-ntdll-Dynamic_DST/0001-ntdll-Add-support-for-Dynamic-DST-daylight-saving-ti.patch
+	$(PATCH) < 19-ntdll-Dynamic_DST/0002-wine.inf-Add-Dynamic-DST-exceptions-for-Israel-Stand.patch
+	( \
+		echo "+    { \"19-ntdll-Dynamic_DST\", \"Michael Müller\", \"Add support for Dynamic DST (daylight saving time) information in registry.\" },"; \
+		echo "+    { \"19-ntdll-Dynamic_DST\", \"Sebastian Lackner\", \"Add Dynamic DST exceptions for Israel Standard Time.\" },"; \
+	) > 19-ntdll-Dynamic_DST.ok
 
 # Patchset 97-Pipelight
 # |

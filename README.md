@@ -18,9 +18,11 @@ These patches fix the following Wine bugs:
 * Implement an Arial replacement font ([Wine Bug #32323](http://bugs.winehq.org/show_bug.cgi?id=32323 "Netflix (Silverlight 4.x) and several .NET Framework 3.x/4.0 WPF apps require either Arial or Verdana to be installed"))
 * Support for interface change notifications ([Wine Bug #32328](http://bugs.winehq.org/show_bug.cgi?id=32328 "Many .NET and Silverlight applications require SIO_ADDRESS_LIST_CHANGE for interface change notifications"))
 * Support for inherited file ACLs ([Wine Bug #34406](http://bugs.winehq.org/show_bug.cgi?id=34406 "Finale Notepad 2012 doesn't copy/create user files on program start"))
+* Add Dynamic DST exceptions for Israel Standard Time ([Wine Bug #36374](http://bugs.winehq.org/show_bug.cgi?id=36374 "Israel timezone handled incorrectly"))
 
 Besides that the following additional changes are included:
 
+* Add support for Dynamic DST (daylight saving time) information in registry
 * Lockfree algorithm for filedescriptor cache (improves file access speed)
 * Other Pipelight specific enhancements
 * Reduced SetTimer minimum value from 10 ms to 5 ms (improves Silverlight framerates)

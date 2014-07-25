@@ -305,7 +305,8 @@ def apply_patch(content, patches, reverse=False, fuzz=2):
             if fuzz != 2: cmdline.append("--fuzz=%d" % fuzz)
             cmdline += [contentfile.name, patchfile.name]
 
-            exitcode = subprocess.call(cmdline)
+            with open(os.devnull, 'w') as devnull:
+                exitcode = subprocess.call(cmdline, stdout=devnull, stderr=devnull)
             if exitcode != 0:
                 raise PatchApplyError("Failed to apply patch (exitcode %d)." % exitcode)
 

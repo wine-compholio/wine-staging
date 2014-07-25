@@ -1,11 +1,32 @@
-import re
-import os
-import tempfile
-import itertools
-import difflib
-import subprocess
-import hashlib
+#!/usr/bin/python
+#
+# Python functions to read, split and apply patches.
+#
+# Copyright (C) 2014 Sebastian Lackner
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+#
+
 import collections
+import difflib
+import hashlib
+import itertools
+import os
+import re
+import subprocess
+import tempfile
 
 class PatchParserError(RuntimeError):
     """Unable to parse patch file - either an unimplemented feature, or corrupted patch."""
@@ -23,6 +44,7 @@ class PatchObject(object):
         self.filename               = filename
         self.offset_begin           = None
         self.offset_end             = None
+        self.isbinary               = False
 
         self.oldname                = None
         self.newname                = None
@@ -31,11 +53,6 @@ class PatchObject(object):
         self.oldsha1                = None
         self.newsha1                = None
         self.newmode                = None
-
-        self.isbinary               = False
-        self.binary_patch_offset    = None
-        self.binary_patch_type      = None
-        self.binary_patch_size      = None
 
     def is_binary(self):
         return self.isbinary
@@ -118,6 +135,8 @@ def read_patch(filename):
             return tmp[1]
 
     def _read_single_patch(fp, oldname=None, newname=None):
+        """Internal function to read a single patch from a file."""
+
         patch = PatchObject(fp.filename)
         patch.offset_begin = fp.tell()
         patch.oldname = oldname
@@ -237,11 +256,7 @@ def read_patch(filename):
             if line is None: raise PatchParserError("Unexpected end of file.")
             r = re.match("^(literal|delta) ([0-9]+)", line)
             if not r: raise NotImplementedError("Only literal/delta patches are supported.")
-
             patch.isbinary = True
-            patch.binary_patch_offset = fp.tell()
-            patch.binary_patch_type = r.group(1)
-            patch.binary_patch_size = int(r.group(2))
 
             # Skip over patch data
             while True:

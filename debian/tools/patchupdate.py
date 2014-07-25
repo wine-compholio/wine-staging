@@ -36,6 +36,10 @@ import urllib
 # Cached information to speed up patch dependency checks
 cached_patch_result = {}
 
+class PatchUpdaterError(RuntimeError):
+    """Failed to update patches."""
+    pass
+
 class AuthorInfo(object):
     def __init__(self):
         self.author         = ""
@@ -56,12 +60,6 @@ class PatchSet(object):
 
         self.verify_depends = set()
         self.verify_time    = None
-
-def abort(m):
-    print "*** CRITICAL ERROR ***"
-    print m
-    exit(1)
-
 
 def download(url):
     """Open a specific URL and return the content."""
@@ -118,7 +116,7 @@ def read_patchsets(directory):
         deffile = os.path.join(os.path.join(directory, patch.name), "definition")
 
         if not os.path.isfile(deffile):
-            abort("Missing definition file %s" % deffile)
+            raise PatchUpdaterError("Missing definition file %s" % deffile)
 
         info = AuthorInfo()
 
@@ -160,11 +158,11 @@ def read_patchsets(directory):
 
             elif key == "depends":
                 if not name_to_id.has_key(val):
-                    abort("Definition file %s references unknown dependency %s" % (deffile, val))
+                    raise PatchUpdaterError("Definition file %s references unknown dependency %s" % (deffile, val))
                 patch.depends.add(name_to_id[val])
 
             else:
-                print "** Ignoring unknown command in definition file %s: %s" % (deffile, line)
+                print "WARNING: Ignoring unknown command in definition file %s: %s" % (deffile, line)
 
         if len(info.author) and len(info.subject) and len(info.revision):
             patch.authors.append(info)
@@ -176,7 +174,10 @@ def read_patchsets(directory):
     for bugid, data in zip(all_bugs, pool.map(download, ["http://bugs.winehq.org/show_bug.cgi?id=%d&ctype=xml&field=short_desc" % bugid for bugid in all_bugs])):
         bug_short_desc[bugid] = minidom.parseString(data).getElementsByTagName('short_desc')[0].firstChild.data
 
-    pool.close()
+    # The following command triggers a (harmless) python bug, which would confuse the user:
+    # > Exception RuntimeError: RuntimeError('cannot join current thread',) in <Finalize object, dead> ignored
+    # To avoid that just keep the pool until it destroyed by the garbage collector.
+    # pool.close()
 
     for i, patch in all_patches.iteritems():
         patch.fixes = [(bugid, bug_short_desc[bugid], description) for bugid, dummy, description in patch.fixes]
@@ -247,7 +248,8 @@ def verify_patch_order(all_patches, indices, filename):
     # If one of patches is a binary patch, then we cannot / won't verify it - require dependencies in this case
     if contains_binary_patch(all_patches, indices, filename):
         if not causal_time_relation(all_patches, indices):
-            abort("Missing dependency between %s and %s because of same file %s" % (all_patches[i].name, all_patches[j].name, filename))
+            raise PatchUpdaterError("Because of binary patch modifying file %s the following patches need explicit dependencies: %s" %
+                                    (filename, ", ".join([all_patches[i].name for i in indices])))
         return
 
     # Grab original file from the wine git repository - please note we grab from origin/master, not the current branch
@@ -303,9 +305,13 @@ def verify_patch_order(all_patches, indices, filename):
             break
 
     if failed_to_apply and last_result_hash is None:
-        abort("Patches affecting file %s don't apply on source tree: %s" % (filename, ', '.join([all_patches[i].name for i in indices])))
+        raise PatchUpdaterError("Changes to file %s don't apply on git source tree: %s" %
+                                (filename, ", ".join([all_patches[i].name for i in indices])))
+
     elif failed_to_apply or last_result_hash is None:
-        abort("Missing dependency between patches affecting %s: %s" % (filename, ', '.join([all_patches[i].name for i in indices])))
+        raise PatchUpdaterError("Depending on the order some changes to file %s dont't apply / lead to different results: %s" %
+                                (filename, ", ".join([all_patches[i].name for i in indices])))
+
     else:
         assert len(last_result_hash) == 32
 
@@ -328,7 +334,8 @@ def verify_dependencies(all_patches):
                 to_delete.append(i)
 
         if len(to_delete) == 0:
-            abort("Circular dependency in set of patches: %s" % ", ".join([patch.name for dummy, patch in patches.iteritems()]))
+            raise PatchUpdaterError("Circular dependency in set of patches: %d" %
+                                    ", ".join([patch.name for i, patch in patches.iteritems()]))
 
         for j in to_delete:
             for i, patch in patches.iteritems():
@@ -546,8 +553,15 @@ if __name__ == "__main__":
     if not os.path.isdir("./debian/tools/wine"):
         raise RuntimeError("Please create a symlink to the wine repository in ./debian/tools/wine")
 
-    all_patches = read_patchsets("./patches")
-    verify_dependencies(all_patches)
+    try:
+        all_patches = read_patchsets("./patches")
+        verify_dependencies(all_patches)
+    except PatchUpdaterError as e:
+        print ""
+        print "ERROR: %s" % e
+        print ""
+        exit(1)
+
 
     with open("./patches/Makefile", "w") as fp:
         generate_makefile(all_patches, fp)

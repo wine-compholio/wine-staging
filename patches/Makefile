@@ -8,6 +8,7 @@ PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 PATCHLIST :=	Miscellaneous.ok \
 		Pipelight.ok \
 		fonts-Missing_Fonts.ok \
+		iphlpapi-TCP_Table.ok \
 		kernel32-GetVolumePathName.ok \
 		kernel32-Named_Pipe.ok \
 		loader-Cmdline_Diagnostics.ok \
@@ -112,6 +113,23 @@ fonts-Missing_Fonts.ok:
 	( \
 		echo '+    { "fonts-Missing_Fonts", "Torsten Kurbad / Erich E. Hoover", "Implement missing fonts expected by Silverlight. [rev 2]" },'; \
 	) > fonts-Missing_Fonts.ok
+
+# Patchset iphlpapi-TCP_Table
+# |
+# | Included patches:
+# |   *	Implement AllocateAndGetTcpExTableFromStack. [by Erich E. Hoover]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34372] Add missing function AllocateAndGetTcpExTableFromStack() to iphlpapi.dll
+# |
+# | Modified files: 
+# |   *	dlls/iphlpapi/iphlpapi.spec, dlls/iphlpapi/ipstats.c, dlls/iphlpapi/ipstats.h
+# |
+iphlpapi-TCP_Table.ok:
+	$(PATCH) < iphlpapi-TCP_Table/0001-iphlpapi-Implement-AllocateAndGetTcpExTableFromStack.patch
+	( \
+		echo '+    { "iphlpapi-TCP_Table", "Erich E. Hoover", "Implement AllocateAndGetTcpExTableFromStack." },'; \
+	) > iphlpapi-TCP_Table.ok
 
 # Patchset kernel32-GetVolumePathName
 # |

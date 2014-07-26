@@ -1,0 +1,84 @@
+From 1b79f1bc06ec42137a91e30e6543835b6b081250 Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Sat, 26 Jul 2014 12:31:50 -0600
+Subject: iphlpapi: Implement AllocateAndGetTcpExTableFromStack.
+
+Based on a patch by Ralf Habacker.
+---
+ dlls/iphlpapi/iphlpapi.spec |    1 +
+ dlls/iphlpapi/ipstats.c     |   34 ++++++++++++++++++++++++++++++++++
+ dlls/iphlpapi/ipstats.h     |    1 +
+ 3 files changed, 36 insertions(+)
+
+diff --git a/dlls/iphlpapi/iphlpapi.spec b/dlls/iphlpapi/iphlpapi.spec
+index 36ba13f..4f56e23 100644
+--- a/dlls/iphlpapi/iphlpapi.spec
++++ b/dlls/iphlpapi/iphlpapi.spec
+@@ -5,6 +5,7 @@
+ @ stdcall AllocateAndGetIpAddrTableFromStack( ptr long long long )
+ @ stdcall AllocateAndGetIpForwardTableFromStack( ptr long long long )
+ @ stdcall AllocateAndGetIpNetTableFromStack( ptr long long long )
++@ stdcall AllocateAndGetTcpExTableFromStack( ptr long long long long )
+ @ stdcall AllocateAndGetTcpTableFromStack( ptr long long long )
+ @ stdcall AllocateAndGetUdpTableFromStack( ptr long long long )
+ @ stdcall CancelIPChangeNotify( ptr )
+diff --git a/dlls/iphlpapi/ipstats.c b/dlls/iphlpapi/ipstats.c
+index 3ff30f3..cf42ee9 100644
+--- a/dlls/iphlpapi/ipstats.c
++++ b/dlls/iphlpapi/ipstats.c
+@@ -2327,6 +2327,40 @@ DWORD WINAPI AllocateAndGetTcpTableFromStack( PMIB_TCPTABLE *ppTcpTable, BOOL bO
+     return build_tcp_table( TCP_TABLE_BASIC_ALL, (void **)ppTcpTable, bOrder, heap, flags, NULL );
+ }
+ 
++/******************************************************************
++ *    AllocateAndGetTcpExTableFromStack (IPHLPAPI.@)
++ *
++ * Get the TCP connection table.
++ * Like GetTcpTable(), but allocate the returned table from heap.
++ *
++ * PARAMS
++ *  ppTcpTable [Out] pointer into which the MIB_TCPTABLE_EX is
++ *                   allocated and returned.
++ *  bOrder     [In]  whether to sort the table
++ *  heap       [In]  heap from which the table is allocated
++ *  flags      [In]  flags to HeapAlloc
++ *  family     [In]  
++ *
++ * RETURNS
++ *  ERROR_INVALID_PARAMETER if ppTcpTable is NULL, whatever GetTcpTable()
++ *  returns otherwise.
++ */
++DWORD WINAPI AllocateAndGetTcpExTableFromStack( VOID **ppTcpTable, BOOL bOrder,
++                                                HANDLE heap, DWORD flags, DWORD family )
++{
++    TRACE("table %p, bOrder %d, heap %p, flags 0x%08x\n", ppTcpTable, bOrder, heap, flags);
++
++    if (!ppTcpTable) return ERROR_INVALID_PARAMETER;
++
++    if (family != AF_INET)
++    {
++        FIXME( "family = %u not supported\n", family );
++        return ERROR_NOT_SUPPORTED;
++    }
++
++    return build_tcp_table( TCP_TABLE_OWNER_PID_ALL, ppTcpTable, bOrder, heap, flags, NULL );
++}
++
+ static DWORD get_udp_table_sizes( UDP_TABLE_CLASS class, DWORD row_count, DWORD *row_size )
+ {
+     DWORD table_size;
+diff --git a/dlls/iphlpapi/ipstats.h b/dlls/iphlpapi/ipstats.h
+index bf5bb92..d8835aa 100644
+--- a/dlls/iphlpapi/ipstats.h
++++ b/dlls/iphlpapi/ipstats.h
+@@ -34,6 +34,7 @@ DWORD getInterfaceStatsByName(const char *name, PMIB_IFROW entry) DECLSPEC_HIDDE
+ 
+ DWORD WINAPI AllocateAndGetUdpTableFromStack(PMIB_UDPTABLE *ppUdpTable, BOOL bOrder, HANDLE heap, DWORD flags) DECLSPEC_HIDDEN;
+ DWORD WINAPI AllocateAndGetTcpTableFromStack(PMIB_TCPTABLE *ppTcpTable, BOOL bOrder, HANDLE heap, DWORD flags) DECLSPEC_HIDDEN;
++DWORD WINAPI AllocateAndGetTcpExTableFromStack(VOID **ppTcpTable, BOOL bOrder, HANDLE heap, DWORD flags, DWORD family) DECLSPEC_HIDDEN;
+ DWORD WINAPI AllocateAndGetIpNetTableFromStack(PMIB_IPNETTABLE *ppIpNetTable, BOOL bOrder, HANDLE heap, DWORD flags) DECLSPEC_HIDDEN;
+ DWORD WINAPI AllocateAndGetIpForwardTableFromStack(PMIB_IPFORWARDTABLE *ppIpForwardTable, BOOL bOrder, HANDLE heap, DWORD flags) DECLSPEC_HIDDEN;
+ 
+-- 
+1.7.9.5
+

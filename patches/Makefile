@@ -6,7 +6,6 @@ CURDIR ?= ${.CURDIR}
 PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 
 PATCHLIST :=	13-Misc_ACL.ok \
-		16-server-CreateProcess_ACLs.ok \
 		97-Pipelight.ok \
 		98-Miscellaneous.ok \
 		fonts-Missing_Fonts.ok \
@@ -19,6 +18,7 @@ PATCHLIST :=	13-Misc_ACL.ok \
 		quartz-MediaSeeking_Positions.ok \
 		server-ACL_Compat.ok \
 		server-Address_Change_Notification.ok \
+		server-CreateProcess_ACLs.ok \
 		server-Inherited_ACLs.ok \
 		server-Stored_ACLs.ok \
 		shell32-Default_Folder_ACLs.ok \
@@ -65,27 +65,6 @@ clean:
 	( \
 		echo "+    { \"13-Misc_ACL\", \"Erich E. Hoover\", \"Add default security descriptor ownership and DACLs for processes.\" },"; \
 	) > 13-Misc_ACL.ok
-
-# Patchset 16-server-CreateProcess_ACLs
-# |
-# | Included patches:
-# |   *	Implement passing ACLs to CreateProcess. [by Joris van der Wel]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#22006] OpenProcess does not enforce ACL
-# |
-# | Modified files: 
-# |   *	dlls/advapi32/tests/security.c, dlls/kernel32/process.c, server/object.c, server/object.h, server/process.c,
-# | 	server/protocol.def
-# |
-16-server-CreateProcess_ACLs.ok:
-	$(PATCH) < 16-server-CreateProcess_ACLs/0001-server-A-new-function-set_sd_defaults_from_token-try.patch
-	$(PATCH) < 16-server-CreateProcess_ACLs/0002-server-Support-sending-process-and-thread-security-d.patch
-	$(PATCH) < 16-server-CreateProcess_ACLs/0003-server-implement-passing-a-process-security-descript.patch
-	$(PATCH) < 16-server-CreateProcess_ACLs/0004-server-implement-passing-a-thread-security-descripto.patch
-	( \
-		echo "+    { \"16-server-CreateProcess_ACLs\", \"Joris van der Wel\", \"Implement passing ACLs to CreateProcess.\" },"; \
-	) > 16-server-CreateProcess_ACLs.ok
 
 # Patchset 97-Pipelight
 # |
@@ -312,6 +291,27 @@ server-Address_Change_Notification.ok:
 	( \
 		echo "+    { \"server-Address_Change_Notification\", \"Erich E. Hoover\", \"Implement SIO_ADDRESS_LIST_CHANGE. [rev 2]\" },"; \
 	) > server-Address_Change_Notification.ok
+
+# Patchset server-CreateProcess_ACLs
+# |
+# | Included patches:
+# |   *	Implement passing ACLs to CreateProcess. [by Joris van der Wel]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#22006] OpenProcess does not enforce ACL
+# |
+# | Modified files: 
+# |   *	dlls/advapi32/tests/security.c, dlls/kernel32/process.c, server/object.c, server/object.h, server/process.c,
+# | 	server/protocol.def
+# |
+server-CreateProcess_ACLs.ok:
+	$(PATCH) < server-CreateProcess_ACLs/0001-server-A-new-function-set_sd_defaults_from_token-try.patch
+	$(PATCH) < server-CreateProcess_ACLs/0002-server-Support-sending-process-and-thread-security-d.patch
+	$(PATCH) < server-CreateProcess_ACLs/0003-server-implement-passing-a-process-security-descript.patch
+	$(PATCH) < server-CreateProcess_ACLs/0004-server-implement-passing-a-thread-security-descripto.patch
+	( \
+		echo "+    { \"server-CreateProcess_ACLs\", \"Joris van der Wel\", \"Implement passing ACLs to CreateProcess.\" },"; \
+	) > server-CreateProcess_ACLs.ok
 
 # Patchset server-Inherited_ACLs
 # |

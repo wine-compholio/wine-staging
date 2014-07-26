@@ -5,8 +5,7 @@
 CURDIR ?= ${.CURDIR}
 PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 
-PATCHLIST :=	04-XEMBED.ok \
-		06-winepulse.ok \
+PATCHLIST :=	06-winepulse.ok \
 		07-GetVolumePathName.ok \
 		08-Junction_Points.ok \
 		09-TransmitFile.ok \
@@ -27,7 +26,8 @@ PATCHLIST :=	04-XEMBED.ok \
 		server-Address_Change_Notification.ok \
 		server-Inherited_ACLs.ok \
 		server-Stored_ACLs.ok \
-		shell32-Default_Folder_ACLs.ok
+		shell32-Default_Folder_ACLs.ok \
+		winex11-XEMBED.ok
 
 .PHONY: install
 install:
@@ -47,23 +47,6 @@ clean:
 	rm -f *.ok
 
 .NOTPARALLEL:
-
-# Patchset 04-XEMBED
-# |
-# | Included patches:
-# |   *	Enable/disable windows when they are (un)mapped by foreign applications. [by Sebastian Lackner]
-# |   *	Update gl_drawable for embedded windows. [by Sebastian Lackner]
-# |
-# | Modified files: 
-# |   *	dlls/winex11.drv/event.c, dlls/winex11.drv/window.c
-# |
-04-XEMBED.ok:
-	$(PATCH) < 04-XEMBED/0001-winex11-Update-gl_drawable-for-embedded-windows.patch
-	$(PATCH) < 04-XEMBED/0002-winex11-Enable-disable-windows-when-they-are-un-mapped.patch
-	( \
-		echo "+    { \"04-XEMBED\", \"Sebastian Lackner\", \"Enable/disable windows when they are (un)mapped by foreign applications.\" },"; \
-		echo "+    { \"04-XEMBED\", \"Sebastian Lackner\", \"Update gl_drawable for embedded windows.\" },"; \
-	) > 04-XEMBED.ok
 
 # Patchset 06-winepulse
 # |
@@ -502,4 +485,21 @@ shell32-Default_Folder_ACLs.ok:
 	( \
 		echo "+    { \"shell32-Default_Folder_ACLs\", \"Erich E. Hoover\", \"Generate default ACLs for user shell folders. [rev 6]\" },"; \
 	) > shell32-Default_Folder_ACLs.ok
+
+# Patchset winex11-XEMBED
+# |
+# | Included patches:
+# |   *	Enable/disable windows when they are (un)mapped by foreign applications. [by Sebastian Lackner]
+# |   *	Update gl_drawable for embedded windows. [by Sebastian Lackner]
+# |
+# | Modified files: 
+# |   *	dlls/winex11.drv/event.c, dlls/winex11.drv/window.c
+# |
+winex11-XEMBED.ok:
+	$(PATCH) < winex11-XEMBED/0001-winex11-Update-gl_drawable-for-embedded-windows.patch
+	$(PATCH) < winex11-XEMBED/0002-winex11-Enable-disable-windows-when-they-are-un-mapped.patch
+	( \
+		echo "+    { \"winex11-XEMBED\", \"Sebastian Lackner\", \"Enable/disable windows when they are (un)mapped by foreign applications.\" },"; \
+		echo "+    { \"winex11-XEMBED\", \"Sebastian Lackner\", \"Update gl_drawable for embedded windows.\" },"; \
+	) > winex11-XEMBED.ok
 

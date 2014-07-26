@@ -197,18 +197,18 @@ def _pairs(a):
         for k in a[i+1:]:
             yield (j, k)
 
-def causal_time_relation_any(all_patches, indices):
-    """Checks if the patches with given indices are applied in a very specific order."""
+def causal_time_relation(all_patches, indices):
+    """Checks if the dependencies of patches are compatible with a specific apply order."""
     for i, j in _pairs(indices):
-        if not (causal_time_smaller(all_patches[i].verify_time, all_patches[j].verify_time) or \
-                causal_time_smaller(all_patches[j].verify_time, all_patches[i].verify_time)):
+        if causal_time_smaller(all_patches[j].verify_time, all_patches[i].verify_time):
             return False
     return True
 
-def causal_time_relation(all_patches, permutation):
-    """Checks if the dependencies of patches are compatible with a specific order."""
-    for i, j in _pairs(permutation):
-        if causal_time_smaller(all_patches[j].verify_time, all_patches[i].verify_time):
+def causal_time_relation_any(all_patches, indices):
+    """Similar to causal_time_relation(), but also check all possible permutations of indices."""
+    for i, j in _pairs(indices):
+        if not (causal_time_smaller(all_patches[i].verify_time, all_patches[j].verify_time) or \
+                causal_time_smaller(all_patches[j].verify_time, all_patches[i].verify_time)):
             return False
     return True
 

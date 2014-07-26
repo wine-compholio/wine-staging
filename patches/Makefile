@@ -8,7 +8,6 @@ PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 PATCHLIST :=	13-Misc_ACL.ok \
 		15-wtsapi32.ok \
 		16-server-CreateProcess_ACLs.ok \
-		17-strmbase-Lock_Race_Conditions.ok \
 		18-quartz-MediaSeeking_Positions.ok \
 		19-ntdll-Dynamic_DST.ok \
 		97-Pipelight.ok \
@@ -25,6 +24,7 @@ PATCHLIST :=	13-Misc_ACL.ok \
 		server-Stored_ACLs.ok \
 		shell32-Default_Folder_ACLs.ok \
 		shlwapi-UrlCombine.ok \
+		strmbase-Lock_Race_Conditions.ok \
 		winepulse-PulseAudio_Support.ok \
 		winex11-XEMBED.ok \
 		ws2_32-TransmitFile.ok
@@ -104,28 +104,6 @@ clean:
 	( \
 		echo "+    { \"16-server-CreateProcess_ACLs\", \"Joris van der Wel\", \"Implement passing ACLs to CreateProcess.\" },"; \
 	) > 16-server-CreateProcess_ACLs.ok
-
-# Patchset 17-strmbase-Lock_Race_Conditions
-# |
-# | Included patches:
-# |   *	Fix possible race conditions in strmbase/quartz. [by Erich E. Hoover]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#31566] Fallout 3: regression causes block at critical section when radio is enabled
-# |
-# | Modified files: 
-# |   *	dlls/quartz/dsoundrender.c, dlls/quartz/videorenderer.c, dlls/strmbase/renderer.c
-# |
-17-strmbase-Lock_Race_Conditions.ok:
-	$(PATCH) < 17-strmbase-Lock_Race_Conditions/0001-strmbase-Fix-race-condition-on-InputPin_BeginFlush-b.patch
-	$(PATCH) < 17-strmbase-Lock_Race_Conditions/0002-strmbase-Fix-race-condition-on-InputPin_EndFlush-bet.patch
-	$(PATCH) < 17-strmbase-Lock_Race_Conditions/0003-strmbase-Fix-race-condition-on-InputPin_EndOfStream-.patch
-	$(PATCH) < 17-strmbase-Lock_Race_Conditions/0004-quartz-Fix-race-condition-on-EndOfStream-between-csR.patch
-	$(PATCH) < 17-strmbase-Lock_Race_Conditions/0005-quartz-Fix-race-condition-on-EndFlush-between-csRend.patch
-	$(PATCH) < 17-strmbase-Lock_Race_Conditions/0006-quartz-Fix-race-condition-between-EndOfStream-and-Pa.patch
-	( \
-		echo "+    { \"17-strmbase-Lock_Race_Conditions\", \"Erich E. Hoover\", \"Fix possible race conditions in strmbase/quartz.\" },"; \
-	) > 17-strmbase-Lock_Race_Conditions.ok
 
 # Patchset 18-quartz-MediaSeeking_Positions
 # |
@@ -421,6 +399,28 @@ shlwapi-UrlCombine.ok:
 	( \
 		echo "+    { \"shlwapi-UrlCombine\", \"Sebastian Lackner\", \"Workaround for broken implementation of shlwapi url functions.\" },"; \
 	) > shlwapi-UrlCombine.ok
+
+# Patchset strmbase-Lock_Race_Conditions
+# |
+# | Included patches:
+# |   *	Fix possible race conditions in strmbase/quartz. [by Erich E. Hoover]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#31566] Fallout 3: regression causes block at critical section when radio is enabled
+# |
+# | Modified files: 
+# |   *	dlls/quartz/dsoundrender.c, dlls/quartz/videorenderer.c, dlls/strmbase/renderer.c
+# |
+strmbase-Lock_Race_Conditions.ok:
+	$(PATCH) < strmbase-Lock_Race_Conditions/0001-strmbase-Fix-race-condition-on-InputPin_BeginFlush-b.patch
+	$(PATCH) < strmbase-Lock_Race_Conditions/0002-strmbase-Fix-race-condition-on-InputPin_EndFlush-bet.patch
+	$(PATCH) < strmbase-Lock_Race_Conditions/0003-strmbase-Fix-race-condition-on-InputPin_EndOfStream-.patch
+	$(PATCH) < strmbase-Lock_Race_Conditions/0004-quartz-Fix-race-condition-on-EndOfStream-between-csR.patch
+	$(PATCH) < strmbase-Lock_Race_Conditions/0005-quartz-Fix-race-condition-on-EndFlush-between-csRend.patch
+	$(PATCH) < strmbase-Lock_Race_Conditions/0006-quartz-Fix-race-condition-between-EndOfStream-and-Pa.patch
+	( \
+		echo "+    { \"strmbase-Lock_Race_Conditions\", \"Erich E. Hoover\", \"Fix possible race conditions in strmbase/quartz.\" },"; \
+	) > strmbase-Lock_Race_Conditions.ok
 
 # Patchset winepulse-PulseAudio_Support
 # |

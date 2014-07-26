@@ -5,8 +5,7 @@
 CURDIR ?= ${.CURDIR}
 PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 
-PATCHLIST :=	08-Junction_Points.ok \
-		09-TransmitFile.ok \
+PATCHLIST :=	09-TransmitFile.ok \
 		10-Missing_Fonts.ok \
 		12-FD_Cache.ok \
 		13-Misc_ACL.ok \
@@ -21,6 +20,7 @@ PATCHLIST :=	08-Junction_Points.ok \
 		kernel32-GetVolumePathName.ok \
 		kernel32-Named_Pipe.ok \
 		loader-Cmdline_Diagnostics.ok \
+		ntdll-Junction_Points.ok \
 		server-ACL_Compat.ok \
 		server-Address_Change_Notification.ok \
 		server-Inherited_ACLs.ok \
@@ -47,29 +47,6 @@ clean:
 	rm -f *.ok
 
 .NOTPARALLEL:
-
-# Patchset 08-Junction_Points
-# |
-# | Included patches:
-# |   *	Support for junction points/reparse points. [by Erich E. Hoover]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12401] Support junction points, i.e. DeviceIoCtl(FSCTL_SET_REPARSE_POINT/FSCTL_GET_REPARSE_POINT)
-# |
-# | Modified files: 
-# |   *	dlls/kernel32/path.c, dlls/kernel32/volume.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/ntifs.h
-# |
-08-Junction_Points.ok:
-	$(PATCH) < 08-Junction_Points/0001-ntdll-Add-support-for-junction-point-creation.patch
-	$(PATCH) < 08-Junction_Points/0002-ntdll-Add-support-for-reading-junction-points.patch
-	$(PATCH) < 08-Junction_Points/0003-ntdll-Add-support-for-deleting-junction-points.patch
-	$(PATCH) < 08-Junction_Points/0004-ntdll-Advertise-that-a-file-is-a-junction-point.patch
-	$(PATCH) < 08-Junction_Points/0005-kernel32-ntdll-Add-support-for-deleting-junction-poi.patch
-	$(PATCH) < 08-Junction_Points/0006-kernel32-Advertise-junction-point-support.patch
-	$(PATCH) < 08-Junction_Points/0007-ntdll-tests-Add-test-for-deleting-junction-point-tar.patch
-	( \
-		echo "+    { \"08-Junction_Points\", \"Erich E. Hoover\", \"Support for junction points/reparse points.\" },"; \
-	) > 08-Junction_Points.ok
 
 # Patchset 09-TransmitFile
 # |
@@ -354,6 +331,29 @@ loader-Cmdline_Diagnostics.ok:
 		echo "+    { \"loader-Cmdline_Diagnostics\", \"Sebastian Lackner\", \"Add commandline option --patches to show the patch list.\" },"; \
 		echo "+    { \"loader-Cmdline_Diagnostics\", \"Michael Müller\", \"Add commandline option --check-libs to test if shared libraries are installed.\" },"; \
 	) > loader-Cmdline_Diagnostics.ok
+
+# Patchset ntdll-Junction_Points
+# |
+# | Included patches:
+# |   *	Support for junction points/reparse points. [by Erich E. Hoover]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12401] Support junction points, i.e. DeviceIoCtl(FSCTL_SET_REPARSE_POINT/FSCTL_GET_REPARSE_POINT)
+# |
+# | Modified files: 
+# |   *	dlls/kernel32/path.c, dlls/kernel32/volume.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/ntifs.h
+# |
+ntdll-Junction_Points.ok:
+	$(PATCH) < ntdll-Junction_Points/0001-ntdll-Add-support-for-junction-point-creation.patch
+	$(PATCH) < ntdll-Junction_Points/0002-ntdll-Add-support-for-reading-junction-points.patch
+	$(PATCH) < ntdll-Junction_Points/0003-ntdll-Add-support-for-deleting-junction-points.patch
+	$(PATCH) < ntdll-Junction_Points/0004-ntdll-Advertise-that-a-file-is-a-junction-point.patch
+	$(PATCH) < ntdll-Junction_Points/0005-kernel32-ntdll-Add-support-for-deleting-junction-poi.patch
+	$(PATCH) < ntdll-Junction_Points/0006-kernel32-Advertise-junction-point-support.patch
+	$(PATCH) < ntdll-Junction_Points/0007-ntdll-tests-Add-test-for-deleting-junction-point-tar.patch
+	( \
+		echo "+    { \"ntdll-Junction_Points\", \"Erich E. Hoover\", \"Support for junction points/reparse points.\" },"; \
+	) > ntdll-Junction_Points.ok
 
 # Patchset server-ACL_Compat
 # |

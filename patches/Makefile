@@ -6,7 +6,6 @@ CURDIR ?= ${.CURDIR}
 PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 
 PATCHLIST :=	13-Misc_ACL.ok \
-		15-wtsapi32.ok \
 		16-server-CreateProcess_ACLs.ok \
 		97-Pipelight.ok \
 		98-Miscellaneous.ok \
@@ -27,7 +26,8 @@ PATCHLIST :=	13-Misc_ACL.ok \
 		strmbase-Lock_Race_Conditions.ok \
 		winepulse-PulseAudio_Support.ok \
 		winex11-XEMBED.ok \
-		ws2_32-TransmitFile.ok
+		ws2_32-TransmitFile.ok \
+		wtsapi32-EnumerateProcesses.ok
 
 .PHONY: install
 install:
@@ -65,24 +65,6 @@ clean:
 	( \
 		echo "+    { \"13-Misc_ACL\", \"Erich E. Hoover\", \"Add default security descriptor ownership and DACLs for processes.\" },"; \
 	) > 13-Misc_ACL.ok
-
-# Patchset 15-wtsapi32
-# |
-# | Included patches:
-# |   *	Partial implementation of WTSEnumerateProcessesW. [by Sebastian Lackner]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#29903] Some Microsoft debuggers fail to enumerate processes due to wtsapi32.WTSEnumerateProcessesW() being a stub
-# | 	(Microsoft Visual Studio 2005, DbgCLR from .NET 2.0 SDK)
-# |
-# | Modified files: 
-# |   *	dlls/wtsapi32/tests/wtsapi.c, dlls/wtsapi32/wtsapi32.c
-# |
-15-wtsapi32.ok:
-	$(PATCH) < 15-wtsapi32/0001-wtsapi32-Partial-implementation-of-WTSEnumerateProce.patch
-	( \
-		echo "+    { \"15-wtsapi32\", \"Sebastian Lackner\", \"Partial implementation of WTSEnumerateProcessesW.\" },"; \
-	) > 15-wtsapi32.ok
 
 # Patchset 16-server-CreateProcess_ACLs
 # |
@@ -502,4 +484,22 @@ ws2_32-TransmitFile.ok:
 	( \
 		echo "+    { \"ws2_32-TransmitFile\", \"Erich E. Hoover\", \"Implement TransmitFile.\" },"; \
 	) > ws2_32-TransmitFile.ok
+
+# Patchset wtsapi32-EnumerateProcesses
+# |
+# | Included patches:
+# |   *	Partial implementation of WTSEnumerateProcessesW. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#29903] Some Microsoft debuggers fail to enumerate processes due to wtsapi32.WTSEnumerateProcessesW() being a stub
+# | 	(Microsoft Visual Studio 2005, DbgCLR from .NET 2.0 SDK)
+# |
+# | Modified files: 
+# |   *	dlls/wtsapi32/tests/wtsapi.c, dlls/wtsapi32/wtsapi32.c
+# |
+wtsapi32-EnumerateProcesses.ok:
+	$(PATCH) < wtsapi32-EnumerateProcesses/0001-wtsapi32-Partial-implementation-of-WTSEnumerateProce.patch
+	( \
+		echo "+    { \"wtsapi32-EnumerateProcesses\", \"Sebastian Lackner\", \"Partial implementation of WTSEnumerateProcessesW.\" },"; \
+	) > wtsapi32-EnumerateProcesses.ok
 

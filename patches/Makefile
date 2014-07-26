@@ -5,8 +5,7 @@
 CURDIR ?= ${.CURDIR}
 PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 
-PATCHLIST :=	06-winepulse.ok \
-		07-GetVolumePathName.ok \
+PATCHLIST :=	07-GetVolumePathName.ok \
 		08-Junction_Points.ok \
 		09-TransmitFile.ok \
 		10-Missing_Fonts.ok \
@@ -27,6 +26,7 @@ PATCHLIST :=	06-winepulse.ok \
 		server-Inherited_ACLs.ok \
 		server-Stored_ACLs.ok \
 		shell32-Default_Folder_ACLs.ok \
+		winepulse-PulseAudio_Support.ok \
 		winex11-XEMBED.ok
 
 .PHONY: install
@@ -47,48 +47,6 @@ clean:
 	rm -f *.ok
 
 .NOTPARALLEL:
-
-# Patchset 06-winepulse
-# |
-# | Included patches:
-# |   *	Winepulse patches extracted from https://launchpad.net/~ubuntu-
-# | 	wine/+archive/ubuntu/ppa/+files/wine1.7_1.7.21-0ubuntu1~ppa1.debian.tar.gz. [rev 4, by Maarten Lankhorst]
-# |
-# | Modified files: 
-# |   *	configure.ac, dlls/mmdevapi/main.c, dlls/mmdevapi/tests/render.c, dlls/winepulse.drv/Makefile.in,
-# | 	dlls/winepulse.drv/mmdevdrv.c, dlls/winepulse.drv/winepulse.drv.spec, dlls/winmm/lolvldrv.c
-# |
-06-winepulse.ok:
-	$(PATCH) < 06-winepulse/0001-winmm-Load-winealsa-if-winepulse-is-found.patch
-	$(PATCH) < 06-winepulse/0002-winepulse-Add-initial-stub-for-pulseaudio-support.patch
-	$(PATCH) < 06-winepulse/0003-winepulse-Add-format-and-period-probing.patch
-	$(PATCH) < 06-winepulse/0004-winepulse-Add-audioclient.patch
-	$(PATCH) < 06-winepulse/0005-winepulse-Add-IAudioRenderClient-and-IAudioCaptureCl.patch
-	$(PATCH) < 06-winepulse/0006-winepulse-Add-IAudioClock-and-IAudioClock2.patch
-	$(PATCH) < 06-winepulse/0007-winepulse-Add-audiostreamvolume.patch
-	$(PATCH) < 06-winepulse/0008-winepulse-Add-session-support.patch
-	$(PATCH) < 06-winepulse/0009-fix-fdels-trailing-whitespaces.patch
-	$(PATCH) < 06-winepulse/0010-winepulse-v12.patch
-	$(PATCH) < 06-winepulse/0011-winepulse-v15-Add-support-for-missing-formats-and-si.patch
-	$(PATCH) < 06-winepulse/0012-winepulse-v16-Add-official-warning-wine-doesn-t-want.patch
-	$(PATCH) < 06-winepulse/0013-winepulse-v17-Fix-winmm-tests.patch
-	$(PATCH) < 06-winepulse/0014-winepulse-v18-Latency-and-compilation-improvements.patch
-	$(PATCH) < 06-winepulse/0015-winepulse-API-Compatibility-with-1.5.2-onward-v2.patch
-	$(PATCH) < 06-winepulse/0016-winepulse-Fix-low-latency-support.patch
-	$(PATCH) < 06-winepulse/0017-winepulse-drop-realtime-priority-before-thread-destr.patch
-	$(PATCH) < 06-winepulse/0018-winepulse-remove-bogus-SetEvent-from-pulse_started_c.patch
-	$(PATCH) < 06-winepulse/0019-winepulse-disable-the-setevent-part-of-the-latency-h.patch
-	$(PATCH) < 06-winepulse/0020-winepulse-v20-fix-the-checks-in-IsFormatSupported.patch
-	$(PATCH) < 06-winepulse/0021-winepulse-fixup-IsFormatSupported-calls.patch
-	$(PATCH) < 06-winepulse/0022-winepulse-v21-return-early-if-padding-didn-t-update.patch
-	$(PATCH) < 06-winepulse/0023-winepulse-fix-unneeded-free-in-write.patch
-	$(PATCH) < 06-winepulse/0024-winepulse-v23-fixup-a-invalid-free-in-mmdevapi.patch
-	$(PATCH) < 06-winepulse/0025-winepulse-use-a-pi-mutex-for-serialization.patch
-	$(PATCH) < 06-winepulse/0026-winepulse-add-support-for-IMarshal.patch
-	$(PATCH) < 06-winepulse/0027-winepulse-handle-stream-create-failing-correctly.patch
-	( \
-		echo "+    { \"06-winepulse\", \"Maarten Lankhorst\", \"Winepulse patches extracted from https://launchpad.net/~ubuntu-wine/+archive/ubuntu/ppa/+files/wine1.7_1.7.21-0ubuntu1~ppa1.debian.tar.gz. [rev 4]\" },"; \
-	) > 06-winepulse.ok
 
 # Patchset 07-GetVolumePathName
 # |
@@ -485,6 +443,48 @@ shell32-Default_Folder_ACLs.ok:
 	( \
 		echo "+    { \"shell32-Default_Folder_ACLs\", \"Erich E. Hoover\", \"Generate default ACLs for user shell folders. [rev 6]\" },"; \
 	) > shell32-Default_Folder_ACLs.ok
+
+# Patchset winepulse-PulseAudio_Support
+# |
+# | Included patches:
+# |   *	Winepulse patches extracted from https://launchpad.net/~ubuntu-
+# | 	wine/+archive/ubuntu/ppa/+files/wine1.7_1.7.21-0ubuntu1~ppa1.debian.tar.gz. [rev 4, by Maarten Lankhorst]
+# |
+# | Modified files: 
+# |   *	configure.ac, dlls/mmdevapi/main.c, dlls/mmdevapi/tests/render.c, dlls/winepulse.drv/Makefile.in,
+# | 	dlls/winepulse.drv/mmdevdrv.c, dlls/winepulse.drv/winepulse.drv.spec, dlls/winmm/lolvldrv.c
+# |
+winepulse-PulseAudio_Support.ok:
+	$(PATCH) < winepulse-PulseAudio_Support/0001-winmm-Load-winealsa-if-winepulse-is-found.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0002-winepulse-Add-initial-stub-for-pulseaudio-support.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0003-winepulse-Add-format-and-period-probing.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0004-winepulse-Add-audioclient.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0005-winepulse-Add-IAudioRenderClient-and-IAudioCaptureCl.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0006-winepulse-Add-IAudioClock-and-IAudioClock2.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0007-winepulse-Add-audiostreamvolume.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0008-winepulse-Add-session-support.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0009-fix-fdels-trailing-whitespaces.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0010-winepulse-v12.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0011-winepulse-v15-Add-support-for-missing-formats-and-si.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0012-winepulse-v16-Add-official-warning-wine-doesn-t-want.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0013-winepulse-v17-Fix-winmm-tests.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0014-winepulse-v18-Latency-and-compilation-improvements.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0015-winepulse-API-Compatibility-with-1.5.2-onward-v2.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0016-winepulse-Fix-low-latency-support.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0017-winepulse-drop-realtime-priority-before-thread-destr.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0018-winepulse-remove-bogus-SetEvent-from-pulse_started_c.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0019-winepulse-disable-the-setevent-part-of-the-latency-h.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0020-winepulse-v20-fix-the-checks-in-IsFormatSupported.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0021-winepulse-fixup-IsFormatSupported-calls.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0022-winepulse-v21-return-early-if-padding-didn-t-update.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0023-winepulse-fix-unneeded-free-in-write.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0024-winepulse-v23-fixup-a-invalid-free-in-mmdevapi.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0025-winepulse-use-a-pi-mutex-for-serialization.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0026-winepulse-add-support-for-IMarshal.patch
+	$(PATCH) < winepulse-PulseAudio_Support/0027-winepulse-handle-stream-create-failing-correctly.patch
+	( \
+		echo "+    { \"winepulse-PulseAudio_Support\", \"Maarten Lankhorst\", \"Winepulse patches extracted from https://launchpad.net/~ubuntu-wine/+archive/ubuntu/ppa/+files/wine1.7_1.7.21-0ubuntu1~ppa1.debian.tar.gz. [rev 4]\" },"; \
+	) > winepulse-PulseAudio_Support.ok
 
 # Patchset winex11-XEMBED
 # |

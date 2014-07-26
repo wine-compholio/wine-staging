@@ -5,8 +5,7 @@
 CURDIR ?= ${.CURDIR}
 PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 
-PATCHLIST :=	12-FD_Cache.ok \
-		13-Misc_ACL.ok \
+PATCHLIST :=	13-Misc_ACL.ok \
 		14-UrlCombineW.ok \
 		15-wtsapi32.ok \
 		16-server-CreateProcess_ACLs.ok \
@@ -19,6 +18,7 @@ PATCHLIST :=	12-FD_Cache.ok \
 		kernel32-GetVolumePathName.ok \
 		kernel32-Named_Pipe.ok \
 		loader-Cmdline_Diagnostics.ok \
+		ntdll-FD_Cache.ok \
 		ntdll-Junction_Points.ok \
 		server-ACL_Compat.ok \
 		server-Address_Change_Notification.ok \
@@ -47,20 +47,6 @@ clean:
 	rm -f *.ok
 
 .NOTPARALLEL:
-
-# Patchset 12-FD_Cache
-# |
-# | Included patches:
-# |   *	Use lockfree implementation for get_cached_fd. [rev 4, by Sebastian Lackner]
-# |
-# | Modified files: 
-# |   *	dlls/ntdll/server.c
-# |
-12-FD_Cache.ok:
-	$(PATCH) < 12-FD_Cache/0001-ntdll-Use-lockfree-implementation-for-get_cached_fd.patch
-	( \
-		echo "+    { \"12-FD_Cache\", \"Sebastian Lackner\", \"Use lockfree implementation for get_cached_fd. [rev 4]\" },"; \
-	) > 12-FD_Cache.ok
 
 # Patchset 13-Misc_ACL
 # |
@@ -309,6 +295,20 @@ loader-Cmdline_Diagnostics.ok:
 		echo "+    { \"loader-Cmdline_Diagnostics\", \"Sebastian Lackner\", \"Add commandline option --patches to show the patch list.\" },"; \
 		echo "+    { \"loader-Cmdline_Diagnostics\", \"Michael Müller\", \"Add commandline option --check-libs to test if shared libraries are installed.\" },"; \
 	) > loader-Cmdline_Diagnostics.ok
+
+# Patchset ntdll-FD_Cache
+# |
+# | Included patches:
+# |   *	Use lockfree implementation for get_cached_fd. [rev 4, by Sebastian Lackner]
+# |
+# | Modified files: 
+# |   *	dlls/ntdll/server.c
+# |
+ntdll-FD_Cache.ok:
+	$(PATCH) < ntdll-FD_Cache/0001-ntdll-Use-lockfree-implementation-for-get_cached_fd.patch
+	( \
+		echo "+    { \"ntdll-FD_Cache\", \"Sebastian Lackner\", \"Use lockfree implementation for get_cached_fd. [rev 4]\" },"; \
+	) > ntdll-FD_Cache.ok
 
 # Patchset ntdll-Junction_Points
 # |

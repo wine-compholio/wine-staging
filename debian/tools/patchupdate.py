@@ -450,7 +450,8 @@ def generate_readme(all_patches, fp):
                 if bugid is not None: all_bugs.append((bugid, bugname, description))
         for (bugid, bugname, description) in sorted(all_bugs):
             if description is None: description = bugname
-            yield "%s ([Wine Bug #%d](http://bugs.winehq.org/show_bug.cgi?id=%d \"%s\"))" % (description, bugid, bugid, bugname)
+            yield "%s ([Wine Bug #%d](http://bugs.winehq.org/show_bug.cgi?id=%d \"%s\"))" % \
+                  (description, bugid, bugid, bugname.replace("\\", "\\\\").replace("\"", "\\\""))
 
     # Get list of all fixes
     def _all_fixes():

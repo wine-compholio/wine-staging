@@ -6,7 +6,6 @@ CURDIR ?= ${.CURDIR}
 PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 
 PATCHLIST :=	00-Commandline.ok \
-		02-ACL_Extended_Attributes.ok \
 		04-XEMBED.ok \
 		05-Named_Pipe.ok \
 		06-winepulse.ok \
@@ -24,7 +23,11 @@ PATCHLIST :=	00-Commandline.ok \
 		19-ntdll-Dynamic_DST.ok \
 		97-Pipelight.ok \
 		98-Miscellaneous.ok \
-		server-Address_Change_Notification.ok
+		server-ACL_Compat.ok \
+		server-Address_Change_Notification.ok \
+		server-Inherited_ACLs.ok \
+		server-Stored_ACLs.ok \
+		shell32-Default_Folder_ACLs.ok
 
 .PHONY: install
 install:
@@ -62,34 +65,6 @@ clean:
 		echo "+    { \"00-Commandline\", \"Sebastian Lackner\", \"Add commandline option --patches to show the patch list.\" },"; \
 		echo "+    { \"00-Commandline\", \"Michael Müller\", \"Add commandline option --check-libs to test if shared libraries are installed.\" },"; \
 	) > 00-Commandline.ok
-
-# Patchset 02-ACL_Extended_Attributes
-# |
-# | Included patches:
-# |   *	Store and return security attributes with extended file attributes. [rev 6, by Erich E. Hoover]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#31858] Netflix on Firefox fails with Internet Connection Problem when loading bar is at 99%
-# |   *	[#34406] Finale Notepad 2012 doesn't copy/create user files on program start
-# |
-# | Modified files: 
-# |   *	configure.ac, dlls/advapi32/tests/security.c, dlls/shell32/shellpath.c, include/winnt.h, server/change.c, server/fd.c,
-# | 	server/file.c, server/file.h
-# |
-02-ACL_Extended_Attributes.ok:
-	$(PATCH) < 02-ACL_Extended_Attributes/0001-server-Unify-the-storage-of-security-attributes-for-.patch
-	$(PATCH) < 02-ACL_Extended_Attributes/0002-server-Unify-the-retrieval-of-security-attributes-fo.patch
-	$(PATCH) < 02-ACL_Extended_Attributes/0003-server-Store-file-security-attributes-with-extended-.patch
-	$(PATCH) < 02-ACL_Extended_Attributes/0004-server-Store-user-and-group-inside-stored-extended-f.patch
-	$(PATCH) < 02-ACL_Extended_Attributes/0005-server-Retrieve-file-security-attributes-with-extend.patch
-	$(PATCH) < 02-ACL_Extended_Attributes/0006-server-Convert-return-of-file-security-masks-with-ge.patch
-	$(PATCH) < 02-ACL_Extended_Attributes/0007-server-Inherit-security-attributes-from-parent-direc.patch
-	$(PATCH) < 02-ACL_Extended_Attributes/0008-server-Inherit-security-attributes-from-parent-direc.patch
-	$(PATCH) < 02-ACL_Extended_Attributes/0009-shell32-Set-the-default-security-attributes-for-user.patch
-	$(PATCH) < 02-ACL_Extended_Attributes/0010-server-Add-compatibility-code-for-handling-the-old-m.patch
-	( \
-		echo "+    { \"02-ACL_Extended_Attributes\", \"Erich E. Hoover\", \"Store and return security attributes with extended file attributes. [rev 6]\" },"; \
-	) > 02-ACL_Extended_Attributes.ok
 
 # Patchset 04-XEMBED
 # |
@@ -439,6 +414,20 @@ clean:
 		echo "+    { \"98-Miscellaneous\", \"Sebastian Lackner\", \"wined3d: Silence repeated wined3d_swapchain_present FIXME.\" },"; \
 	) > 98-Miscellaneous.ok
 
+# Patchset server-ACL_Compat
+# |
+# | Included patches:
+# |   *	Compatibility patch for old method of storing extended file system attributes. [rev 6, by Erich E. Hoover]
+# |
+# | Modified files: 
+# |   *	server/file.c
+# |
+server-ACL_Compat.ok: server-Inherited_ACLs.ok
+	$(PATCH) < server-ACL_Compat/0010-server-Add-compatibility-code-for-handling-the-old-m.patch
+	( \
+		echo "+    { \"server-ACL_Compat\", \"Erich E. Hoover\", \"Compatibility patch for old method of storing extended file system attributes. [rev 6]\" },"; \
+	) > server-ACL_Compat.ok
+
 # Patchset server-Address_Change_Notification
 # |
 # | Included patches:
@@ -459,4 +448,58 @@ server-Address_Change_Notification.ok:
 	( \
 		echo "+    { \"server-Address_Change_Notification\", \"Erich E. Hoover\", \"Implement SIO_ADDRESS_LIST_CHANGE. [rev 2]\" },"; \
 	) > server-Address_Change_Notification.ok
+
+# Patchset server-Inherited_ACLs
+# |
+# | Included patches:
+# |   *	Add support for inherited security attributes. [rev 6, by Erich E. Hoover]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34406] Finale Notepad 2012 doesn't copy/create user files on program start
+# |
+# | Modified files: 
+# |   *	dlls/advapi32/tests/security.c, include/winnt.h, server/change.c, server/fd.c, server/file.c, server/file.h
+# |
+server-Inherited_ACLs.ok: server-Stored_ACLs.ok
+	$(PATCH) < server-Inherited_ACLs/0001-server-Inherit-security-attributes-from-parent-direc.patch
+	$(PATCH) < server-Inherited_ACLs/0002-server-Inherit-security-attributes-from-parent-direc.patch
+	( \
+		echo "+    { \"server-Inherited_ACLs\", \"Erich E. Hoover\", \"Add support for inherited security attributes. [rev 6]\" },"; \
+	) > server-Inherited_ACLs.ok
+
+# Patchset server-Stored_ACLs
+# |
+# | Included patches:
+# |   *	Store and return security attributes with extended file attributes. [rev 6, by Erich E. Hoover]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#31858] Netflix on Firefox fails with Internet Connection Problem when loading bar is at 99%
+# |
+# | Modified files: 
+# |   *	configure.ac, dlls/advapi32/tests/security.c, server/change.c, server/file.c, server/file.h
+# |
+server-Stored_ACLs.ok:
+	$(PATCH) < server-Stored_ACLs/0001-server-Unify-the-storage-of-security-attributes-for-.patch
+	$(PATCH) < server-Stored_ACLs/0002-server-Unify-the-retrieval-of-security-attributes-fo.patch
+	$(PATCH) < server-Stored_ACLs/0003-server-Store-file-security-attributes-with-extended-.patch
+	$(PATCH) < server-Stored_ACLs/0004-server-Store-user-and-group-inside-stored-extended-f.patch
+	$(PATCH) < server-Stored_ACLs/0005-server-Retrieve-file-security-attributes-with-extend.patch
+	$(PATCH) < server-Stored_ACLs/0006-server-Convert-return-of-file-security-masks-with-ge.patch
+	( \
+		echo "+    { \"server-Stored_ACLs\", \"Erich E. Hoover\", \"Store and return security attributes with extended file attributes. [rev 6]\" },"; \
+	) > server-Stored_ACLs.ok
+
+# Patchset shell32-Default_Folder_ACLs
+# |
+# | Included patches:
+# |   *	Generate default ACLs for user shell folders. [rev 6, by Erich E. Hoover]
+# |
+# | Modified files: 
+# |   *	dlls/shell32/shellpath.c
+# |
+shell32-Default_Folder_ACLs.ok:
+	$(PATCH) < shell32-Default_Folder_ACLs/0001-shell32-Set-the-default-security-attributes-for-user.patch
+	( \
+		echo "+    { \"shell32-Default_Folder_ACLs\", \"Erich E. Hoover\", \"Generate default ACLs for user shell folders. [rev 6]\" },"; \
+	) > shell32-Default_Folder_ACLs.ok
 

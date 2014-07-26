@@ -6,7 +6,6 @@ CURDIR ?= ${.CURDIR}
 PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 
 PATCHLIST :=	00-Commandline.ok \
-		01-Address_Change_Notification.ok \
 		02-ACL_Extended_Attributes.ok \
 		04-XEMBED.ok \
 		05-Named_Pipe.ok \
@@ -24,7 +23,8 @@ PATCHLIST :=	00-Commandline.ok \
 		18-quartz-MediaSeeking_Positions.ok \
 		19-ntdll-Dynamic_DST.ok \
 		97-Pipelight.ok \
-		98-Miscellaneous.ok
+		98-Miscellaneous.ok \
+		server-Address_Change_Notification.ok
 
 .PHONY: install
 install:
@@ -62,27 +62,6 @@ clean:
 		echo "+    { \"00-Commandline\", \"Sebastian Lackner\", \"Add commandline option --patches to show the patch list.\" },"; \
 		echo "+    { \"00-Commandline\", \"Michael Müller\", \"Add commandline option --check-libs to test if shared libraries are installed.\" },"; \
 	) > 00-Commandline.ok
-
-# Patchset 01-Address_Change_Notification
-# |
-# | Included patches:
-# |   *	Implement SIO_ADDRESS_LIST_CHANGE. [rev 2, by Erich E. Hoover]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#32328] Many .NET and Silverlight applications require SIO_ADDRESS_LIST_CHANGE for interface change notifications
-# |
-# | Modified files: 
-# |   *	dlls/ws2_32/tests/sock.c, server/event.c, server/named_pipe.c, server/object.h, server/sock.c
-# |
-01-Address_Change_Notification.ok:
-	$(PATCH) < 01-Address_Change_Notification/0001-server-Implement-socket-specific-ioctl-routine.patch
-	$(PATCH) < 01-Address_Change_Notification/0002-server-Add-socket-side-support-for-the-interface-cha.patch
-	$(PATCH) < 01-Address_Change_Notification/0003-server-Add-blocked-support-for-SIO_ADDRESS_LIST_CHAN.patch
-	$(PATCH) < 01-Address_Change_Notification/0004-server-Implement-the-interface-change-notification-o.patch
-	$(PATCH) < 01-Address_Change_Notification/0005-ws2_32-Add-an-interactive-test-for-interface-change-.patch
-	( \
-		echo "+    { \"01-Address_Change_Notification\", \"Erich E. Hoover\", \"Implement SIO_ADDRESS_LIST_CHANGE. [rev 2]\" },"; \
-	) > 01-Address_Change_Notification.ok
 
 # Patchset 02-ACL_Extended_Attributes
 # |
@@ -459,4 +438,25 @@ clean:
 		echo "+    { \"98-Miscellaneous\", \"Erich E. Hoover\", \"wined3d: Silence repeated resource_check_usage FIXME. [rev 2]\" },"; \
 		echo "+    { \"98-Miscellaneous\", \"Sebastian Lackner\", \"wined3d: Silence repeated wined3d_swapchain_present FIXME.\" },"; \
 	) > 98-Miscellaneous.ok
+
+# Patchset server-Address_Change_Notification
+# |
+# | Included patches:
+# |   *	Implement SIO_ADDRESS_LIST_CHANGE. [rev 2, by Erich E. Hoover]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#32328] Many .NET and Silverlight applications require SIO_ADDRESS_LIST_CHANGE for interface change notifications
+# |
+# | Modified files: 
+# |   *	dlls/ws2_32/tests/sock.c, server/event.c, server/named_pipe.c, server/object.h, server/sock.c
+# |
+server-Address_Change_Notification.ok:
+	$(PATCH) < server-Address_Change_Notification/0001-server-Implement-socket-specific-ioctl-routine.patch
+	$(PATCH) < server-Address_Change_Notification/0002-server-Add-socket-side-support-for-the-interface-cha.patch
+	$(PATCH) < server-Address_Change_Notification/0003-server-Add-blocked-support-for-SIO_ADDRESS_LIST_CHAN.patch
+	$(PATCH) < server-Address_Change_Notification/0004-server-Implement-the-interface-change-notification-o.patch
+	$(PATCH) < server-Address_Change_Notification/0005-ws2_32-Add-an-interactive-test-for-interface-change-.patch
+	( \
+		echo "+    { \"server-Address_Change_Notification\", \"Erich E. Hoover\", \"Implement SIO_ADDRESS_LIST_CHANGE. [rev 2]\" },"; \
+	) > server-Address_Change_Notification.ok
 

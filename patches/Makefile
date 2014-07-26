@@ -5,8 +5,8 @@
 CURDIR ?= ${.CURDIR}
 PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 
-PATCHLIST :=	97-Pipelight.ok \
-		98-Miscellaneous.ok \
+PATCHLIST :=	98-Miscellaneous.ok \
+		Pipelight.ok \
 		fonts-Missing_Fonts.ok \
 		kernel32-GetVolumePathName.ok \
 		kernel32-Named_Pipe.ok \
@@ -48,30 +48,6 @@ clean:
 
 .NOTPARALLEL:
 
-# Patchset 97-Pipelight
-# |
-# | Included patches:
-# |   *	Decrease minimum SetTimer interval to 5 ms. [rev 2, by Michael Müller]
-# |   *	Allow changing strict draw ordering through an exported function. [by Michael Müller]
-# |   *	Indicate direct rendering through OpenGL extension. [by Michael Müller]
-# |   *	Implement X11DRV_FLUSH_GDI_DISPLAY ExtEscape command. [by Sebastian Lackner]
-# |
-# | Modified files: 
-# |   *	dlls/user32/message.c, dlls/wined3d/wined3d.spec, dlls/wined3d/wined3d_main.c, dlls/winex11.drv/init.c,
-# | 	dlls/winex11.drv/opengl.c, dlls/winex11.drv/x11drv.h
-# |
-97-Pipelight.ok:
-	$(PATCH) < 97-Pipelight/0001-winex11-Implement-X11DRV_FLUSH_GDI_DISPLAY-ExtEscape-c.patch
-	$(PATCH) < 97-Pipelight/0002-user32-Decrease-minimum-SetTimer-interval-to-5-ms.patch
-	$(PATCH) < 97-Pipelight/0003-wined3d-allow-changing-strict-drawing-through-an-exp.patch
-	$(PATCH) < 97-Pipelight/0004-winex11.drv-Indicate-direct-rendering-through-OpenGL.patch
-	( \
-		echo "+    { \"97-Pipelight\", \"Michael Müller\", \"Decrease minimum SetTimer interval to 5 ms. [rev 2]\" },"; \
-		echo "+    { \"97-Pipelight\", \"Michael Müller\", \"Allow changing strict draw ordering through an exported function.\" },"; \
-		echo "+    { \"97-Pipelight\", \"Michael Müller\", \"Indicate direct rendering through OpenGL extension.\" },"; \
-		echo "+    { \"97-Pipelight\", \"Sebastian Lackner\", \"Implement X11DRV_FLUSH_GDI_DISPLAY ExtEscape command.\" },"; \
-	) > 97-Pipelight.ok
-
 # Patchset 98-Miscellaneous
 # |
 # | Included patches:
@@ -91,6 +67,30 @@ clean:
 		echo "+    { \"98-Miscellaneous\", \"Erich E. Hoover\", \"wined3d: Silence repeated resource_check_usage FIXME. [rev 2]\" },"; \
 		echo "+    { \"98-Miscellaneous\", \"Sebastian Lackner\", \"wined3d: Silence repeated wined3d_swapchain_present FIXME.\" },"; \
 	) > 98-Miscellaneous.ok
+
+# Patchset Pipelight
+# |
+# | Included patches:
+# |   *	Decrease minimum SetTimer interval to 5 ms. [rev 2, by Michael Müller]
+# |   *	Allow changing strict draw ordering through an exported function. [by Michael Müller]
+# |   *	Indicate direct rendering through OpenGL extension. [by Michael Müller]
+# |   *	Implement X11DRV_FLUSH_GDI_DISPLAY ExtEscape command. [by Sebastian Lackner]
+# |
+# | Modified files: 
+# |   *	dlls/user32/message.c, dlls/wined3d/wined3d.spec, dlls/wined3d/wined3d_main.c, dlls/winex11.drv/init.c,
+# | 	dlls/winex11.drv/opengl.c, dlls/winex11.drv/x11drv.h
+# |
+Pipelight.ok:
+	$(PATCH) < Pipelight/0001-winex11-Implement-X11DRV_FLUSH_GDI_DISPLAY-ExtEscape-c.patch
+	$(PATCH) < Pipelight/0002-user32-Decrease-minimum-SetTimer-interval-to-5-ms.patch
+	$(PATCH) < Pipelight/0003-wined3d-allow-changing-strict-drawing-through-an-exp.patch
+	$(PATCH) < Pipelight/0004-winex11.drv-Indicate-direct-rendering-through-OpenGL.patch
+	( \
+		echo "+    { \"Pipelight\", \"Michael Müller\", \"Decrease minimum SetTimer interval to 5 ms. [rev 2]\" },"; \
+		echo "+    { \"Pipelight\", \"Michael Müller\", \"Allow changing strict draw ordering through an exported function.\" },"; \
+		echo "+    { \"Pipelight\", \"Michael Müller\", \"Indicate direct rendering through OpenGL extension.\" },"; \
+		echo "+    { \"Pipelight\", \"Sebastian Lackner\", \"Implement X11DRV_FLUSH_GDI_DISPLAY ExtEscape command.\" },"; \
+	) > Pipelight.ok
 
 # Patchset fonts-Missing_Fonts
 # |

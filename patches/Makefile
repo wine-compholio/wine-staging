@@ -412,7 +412,7 @@ shell32-Default_Folder_ACLs.ok:
 # Patchset shell32-SHCreateSessionKey
 # |
 # | Included patches:
-# |   *	shell32: Implement SHCreateSessionKey. [by Erich E. Hoover]
+# |   *	shell32: Implement SHCreateSessionKey. [by Dmitry Timoshkov]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#35630] SHCreateSessionKey is unimplemented
@@ -423,7 +423,7 @@ shell32-Default_Folder_ACLs.ok:
 shell32-SHCreateSessionKey.ok:
 	$(PATCH) < shell32-SHCreateSessionKey/0001-shell32-Implement-SHCreateSessionKey.patch
 	@( \
-		echo '+    { "shell32-SHCreateSessionKey", "Erich E. Hoover", "shell32: Implement SHCreateSessionKey." },'; \
+		echo '+    { "shell32-SHCreateSessionKey", "Dmitry Timoshkov", "shell32: Implement SHCreateSessionKey." },'; \
 	) > shell32-SHCreateSessionKey.ok
 
 # Patchset shlwapi-UrlCombine

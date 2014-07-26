@@ -345,7 +345,7 @@ server-Inherited_ACLs.ok: server-Stored_ACLs.ok
 # | Modified files: 
 # |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
 # |
-server-Misc_ACL.ok: server-Stored_ACLs.ok
+server-Misc_ACL.ok:
 	$(PATCH) < server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
 	$(PATCH) < server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
 	@( \

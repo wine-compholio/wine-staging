@@ -192,30 +192,33 @@ def causal_time_smaller(a, b):
     """Checks if timestamp a is smaller than timestamp b."""
     return all([i <= j for i, j in zip(a,b)]) and any([i < j for i, j in zip(a,b)])
 
-def causal_time_relation(all_patches, indices):
+def _pairs(a):
+    for i, j in enumerate(a):
+        for k in a[i+1:]:
+            yield (j, k)
+
+def causal_time_relation_any(all_patches, indices):
     """Checks if the patches with given indices are applied in a very specific order."""
-
-    def _pairs(a):
-        for i, j in enumerate(a):
-            for k in a[i+1:]:
-                yield (j, k)
-
     for i, j in _pairs(indices):
         if not (causal_time_smaller(all_patches[i].verify_time, all_patches[j].verify_time) or \
                 causal_time_smaller(all_patches[j].verify_time, all_patches[i].verify_time)):
             return False
     return True
 
+def causal_time_relation(all_patches, permutation):
+    """Checks if the dependencies of patches are compatible with a specific order."""
+    for i, j in _pairs(permutation):
+        if causal_time_smaller(all_patches[j].verify_time, all_patches[i].verify_time):
+            return False
+    return True
+
 def causal_time_permutations(all_patches, indices, filename):
     """Iterate over all possible permutations of patches affecting
        a specific file, which are compatible with dependencies."""
-    for perm in itertools.permutations(indices):
-        for i, j in zip(perm[:-1], perm[1:]):
-            if causal_time_smaller(all_patches[j].verify_time, all_patches[i].verify_time):
-                break
-        else:
+    for permutation in itertools.permutations(indices):
+        if causal_time_relation(all_patches, permutation):
             selected_patches = []
-            for i in perm:
+            for i in permutation:
                 selected_patches += [patch for patch in all_patches[i].patches if patch.modified_file == filename]
             yield selected_patches
 
@@ -247,7 +250,7 @@ def verify_patch_order(all_patches, indices, filename):
 
     # If one of patches is a binary patch, then we cannot / won't verify it - require dependencies in this case
     if contains_binary_patch(all_patches, indices, filename):
-        if not causal_time_relation(all_patches, indices):
+        if not causal_time_relation_any(all_patches, indices):
             raise PatchUpdaterError("Because of binary patch modifying file %s the following patches need explicit dependencies: %s" %
                                     (filename, ", ".join([all_patches[i].name for i in indices])))
         return

@@ -96,7 +96,7 @@ Pipelight.ok:
 # Patchset fonts-Missing_Fonts
 # |
 # | Included patches:
-# |   *	Implement missing fonts expected by Silverlight. [rev 2, by Torsten Kurbad]
+# |   *	Implement missing fonts expected by Silverlight. [rev 2, by Torsten Kurbad / Erich E. Hoover]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#32323] Netflix (Silverlight 4.x) and several .NET Framework 3.x/4.0 WPF apps require either Arial or Verdana to be
@@ -110,7 +110,7 @@ fonts-Missing_Fonts.ok:
 	$(PATCH) < fonts-Missing_Fonts/0001-fonts-Add-Liberation-Sans-as-an-Arial-replacement.patch
 	$(PATCH) < fonts-Missing_Fonts/0002-fonts-Add-WenQuanYi-Micro-Hei-as-a-Microsoft-Yahei-r.patch
 	( \
-		echo "+    { \"fonts-Missing_Fonts\", \"Torsten Kurbad\", \"Implement missing fonts expected by Silverlight. [rev 2]\" },"; \
+		echo "+    { \"fonts-Missing_Fonts\", \"Torsten Kurbad / Erich E. Hoover\", \"Implement missing fonts expected by Silverlight. [rev 2]\" },"; \
 	) > fonts-Missing_Fonts.ok
 
 # Patchset kernel32-GetVolumePathName

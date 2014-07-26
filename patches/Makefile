@@ -6,7 +6,6 @@ CURDIR ?= ${.CURDIR}
 PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 
 PATCHLIST :=	13-Misc_ACL.ok \
-		14-UrlCombineW.ok \
 		15-wtsapi32.ok \
 		16-server-CreateProcess_ACLs.ok \
 		17-strmbase-Lock_Race_Conditions.ok \
@@ -25,6 +24,7 @@ PATCHLIST :=	13-Misc_ACL.ok \
 		server-Inherited_ACLs.ok \
 		server-Stored_ACLs.ok \
 		shell32-Default_Folder_ACLs.ok \
+		shlwapi-UrlCombine.ok \
 		winepulse-PulseAudio_Support.ok \
 		winex11-XEMBED.ok \
 		ws2_32-TransmitFile.ok
@@ -65,21 +65,6 @@ clean:
 	( \
 		echo "+    { \"13-Misc_ACL\", \"Erich E. Hoover\", \"Add default security descriptor ownership and DACLs for processes.\" },"; \
 	) > 13-Misc_ACL.ok
-
-# Patchset 14-UrlCombineW
-# |
-# | Included patches:
-# |   *	Workaround for broken implementation of shlwapi url functions. [by Sebastian Lackner]
-# |
-# | Modified files: 
-# |   *	dlls/shlwapi/tests/url.c, dlls/shlwapi/url.c
-# |
-14-UrlCombineW.ok:
-	$(PATCH) < 14-UrlCombineW/0001-shlwapi-tests-Add-additional-tests-for-UrlCombine-and-.patch
-	$(PATCH) < 14-UrlCombineW/0002-shlwapi-UrlCombineW-workaround-for-relative-paths.patch
-	( \
-		echo "+    { \"14-UrlCombineW\", \"Sebastian Lackner\", \"Workaround for broken implementation of shlwapi url functions.\" },"; \
-	) > 14-UrlCombineW.ok
 
 # Patchset 15-wtsapi32
 # |
@@ -421,6 +406,21 @@ shell32-Default_Folder_ACLs.ok:
 	( \
 		echo "+    { \"shell32-Default_Folder_ACLs\", \"Erich E. Hoover\", \"Generate default ACLs for user shell folders. [rev 6]\" },"; \
 	) > shell32-Default_Folder_ACLs.ok
+
+# Patchset shlwapi-UrlCombine
+# |
+# | Included patches:
+# |   *	Workaround for broken implementation of shlwapi url functions. [by Sebastian Lackner]
+# |
+# | Modified files: 
+# |   *	dlls/shlwapi/tests/url.c, dlls/shlwapi/url.c
+# |
+shlwapi-UrlCombine.ok:
+	$(PATCH) < shlwapi-UrlCombine/0001-shlwapi-tests-Add-additional-tests-for-UrlCombine-and-.patch
+	$(PATCH) < shlwapi-UrlCombine/0002-shlwapi-UrlCombineW-workaround-for-relative-paths.patch
+	( \
+		echo "+    { \"shlwapi-UrlCombine\", \"Sebastian Lackner\", \"Workaround for broken implementation of shlwapi url functions.\" },"; \
+	) > shlwapi-UrlCombine.ok
 
 # Patchset winepulse-PulseAudio_Support
 # |

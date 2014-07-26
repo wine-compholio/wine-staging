@@ -5,8 +5,7 @@
 CURDIR ?= ${.CURDIR}
 PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 
-PATCHLIST :=	13-Misc_ACL.ok \
-		97-Pipelight.ok \
+PATCHLIST :=	97-Pipelight.ok \
 		98-Miscellaneous.ok \
 		fonts-Missing_Fonts.ok \
 		kernel32-GetVolumePathName.ok \
@@ -20,6 +19,7 @@ PATCHLIST :=	13-Misc_ACL.ok \
 		server-Address_Change_Notification.ok \
 		server-CreateProcess_ACLs.ok \
 		server-Inherited_ACLs.ok \
+		server-Misc_ACL.ok \
 		server-Stored_ACLs.ok \
 		shell32-Default_Folder_ACLs.ok \
 		shlwapi-UrlCombine.ok \
@@ -47,24 +47,6 @@ clean:
 	rm -f *.ok
 
 .NOTPARALLEL:
-
-# Patchset 13-Misc_ACL
-# |
-# | Included patches:
-# |   *	Add default security descriptor ownership and DACLs for processes. [by Erich E. Hoover]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] Rhapsody 2 crashes on startup (GetSecurityInfo returns NULL DACL for process object)
-# |
-# | Modified files: 
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-13-Misc_ACL.ok:
-	$(PATCH) < 13-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	$(PATCH) < 13-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	( \
-		echo "+    { \"13-Misc_ACL\", \"Erich E. Hoover\", \"Add default security descriptor ownership and DACLs for processes.\" },"; \
-	) > 13-Misc_ACL.ok
 
 # Patchset 97-Pipelight
 # |
@@ -330,6 +312,24 @@ server-Inherited_ACLs.ok: server-Stored_ACLs.ok
 	( \
 		echo "+    { \"server-Inherited_ACLs\", \"Erich E. Hoover\", \"Add support for inherited security attributes. [rev 6]\" },"; \
 	) > server-Inherited_ACLs.ok
+
+# Patchset server-Misc_ACL
+# |
+# | Included patches:
+# |   *	Add default security descriptor ownership and DACLs for processes. [by Erich E. Hoover]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] Rhapsody 2 crashes on startup (GetSecurityInfo returns NULL DACL for process object)
+# |
+# | Modified files: 
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+server-Misc_ACL.ok: server-Stored_ACLs.ok
+	$(PATCH) < server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	$(PATCH) < server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	( \
+		echo "+    { \"server-Misc_ACL\", \"Erich E. Hoover\", \"Add default security descriptor ownership and DACLs for processes.\" },"; \
+	) > server-Misc_ACL.ok
 
 # Patchset server-Stored_ACLs
 # |

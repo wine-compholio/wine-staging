@@ -403,7 +403,7 @@ def generate_makefile(all_patches, fp):
 
         # Create *.ok file (used to generate patchlist)
         if len(patch.authors):
-            fp.write("\t( \\\n")
+            fp.write("\t@( \\\n")
             for info in patch.authors:
                 if not info.subject: continue
                 s = info.subject.replace("\\", "\\\\\\\\").replace("\"", "\\\\\"")

@@ -64,7 +64,7 @@ Miscellaneous.ok:
 	$(PATCH) < Miscellaneous/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
 	$(PATCH) < Miscellaneous/0002-kernel32-Silence-repeated-CompareStringEx-FIXME.patch
 	$(PATCH) < Miscellaneous/0003-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	( \
+	@( \
 		echo '+    { "Miscellaneous", "Sebastian Lackner", "kernel32: Silence repeated CompareStringEx FIXME." },'; \
 		echo '+    { "Miscellaneous", "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME. [rev 2]" },'; \
 		echo '+    { "Miscellaneous", "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME." },'; \
@@ -87,7 +87,7 @@ Pipelight.ok:
 	$(PATCH) < Pipelight/0002-user32-Decrease-minimum-SetTimer-interval-to-5-ms.patch
 	$(PATCH) < Pipelight/0003-wined3d-allow-changing-strict-drawing-through-an-exp.patch
 	$(PATCH) < Pipelight/0004-winex11.drv-Indicate-direct-rendering-through-OpenGL.patch
-	( \
+	@( \
 		echo '+    { "Pipelight", "Michael Müller", "Decrease minimum SetTimer interval to 5 ms. [rev 2]" },'; \
 		echo '+    { "Pipelight", "Michael Müller", "Allow changing strict draw ordering through an exported function." },'; \
 		echo '+    { "Pipelight", "Michael Müller", "Indicate direct rendering through OpenGL extension." },'; \
@@ -110,7 +110,7 @@ Pipelight.ok:
 fonts-Missing_Fonts.ok:
 	$(PATCH) < fonts-Missing_Fonts/0001-fonts-Add-Liberation-Sans-as-an-Arial-replacement.patch
 	$(PATCH) < fonts-Missing_Fonts/0002-fonts-Add-WenQuanYi-Micro-Hei-as-a-Microsoft-Yahei-r.patch
-	( \
+	@( \
 		echo '+    { "fonts-Missing_Fonts", "Torsten Kurbad / Erich E. Hoover", "Implement missing fonts expected by Silverlight. [rev 2]" },'; \
 	) > fonts-Missing_Fonts.ok
 
@@ -127,7 +127,7 @@ fonts-Missing_Fonts.ok:
 # |
 iphlpapi-TCP_Table.ok:
 	$(PATCH) < iphlpapi-TCP_Table/0001-iphlpapi-Implement-AllocateAndGetTcpExTableFromStack.patch
-	( \
+	@( \
 		echo '+    { "iphlpapi-TCP_Table", "Erich E. Hoover", "Implement AllocateAndGetTcpExTableFromStack." },'; \
 	) > iphlpapi-TCP_Table.ok
 
@@ -143,7 +143,7 @@ kernel32-GetVolumePathName.ok:
 	$(PATCH) < kernel32-GetVolumePathName/0001-kernel32-Implement-GetVolumePathName.patch
 	$(PATCH) < kernel32-GetVolumePathName/0002-kernel32-Convert-GetVolumePathName-tests-into-a-list.patch
 	$(PATCH) < kernel32-GetVolumePathName/0003-kernel32-Add-a-bunch-more-GetVolumePathName-tests.patch
-	( \
+	@( \
 		echo '+    { "kernel32-GetVolumePathName", "Erich E. Hoover", "Implement GetVolumePathName." },'; \
 	) > kernel32-GetVolumePathName.ok
 
@@ -161,7 +161,7 @@ kernel32-GetVolumePathName.ok:
 # |
 kernel32-Named_Pipe.ok:
 	$(PATCH) < kernel32-Named_Pipe/0001-kernel32-Change-return-value-of-stub-SetNamedPipeHandl.patch
-	( \
+	@( \
 		echo '+    { "kernel32-Named_Pipe", "Sebastian Lackner", "Change return value of stub SetNamedPipeHandleState to TRUE." },'; \
 	) > kernel32-Named_Pipe.ok
 
@@ -178,7 +178,7 @@ kernel32-Named_Pipe.ok:
 loader-Cmdline_Diagnostics.ok:
 	$(PATCH) < loader-Cmdline_Diagnostics/0001-loader-Add-commandline-option-patches-to-show-the-pa.patch
 	$(PATCH) < loader-Cmdline_Diagnostics/0002-loader-Add-commandline-option-check-libs.patch
-	( \
+	@( \
 		echo '+    { "loader-Cmdline_Diagnostics", "Sebastian Lackner", "Add commandline option --patches to show the patch list." },'; \
 		echo '+    { "loader-Cmdline_Diagnostics", "Michael Müller", "Add commandline option --check-libs to test if shared libraries are installed." },'; \
 	) > loader-Cmdline_Diagnostics.ok
@@ -198,7 +198,7 @@ loader-Cmdline_Diagnostics.ok:
 ntdll-Dynamic_DST.ok:
 	$(PATCH) < ntdll-Dynamic_DST/0001-ntdll-Add-support-for-Dynamic-DST-daylight-saving-ti.patch
 	$(PATCH) < ntdll-Dynamic_DST/0002-wine.inf-Add-Dynamic-DST-exceptions-for-Israel-Stand.patch
-	( \
+	@( \
 		echo '+    { "ntdll-Dynamic_DST", "Michael Müller", "Add support for Dynamic DST (daylight saving time) information in registry." },'; \
 		echo '+    { "ntdll-Dynamic_DST", "Sebastian Lackner", "Add Dynamic DST exceptions for Israel Standard Time." },'; \
 	) > ntdll-Dynamic_DST.ok
@@ -213,7 +213,7 @@ ntdll-Dynamic_DST.ok:
 # |
 ntdll-FD_Cache.ok:
 	$(PATCH) < ntdll-FD_Cache/0001-ntdll-Use-lockfree-implementation-for-get_cached_fd.patch
-	( \
+	@( \
 		echo '+    { "ntdll-FD_Cache", "Sebastian Lackner", "Use lockfree implementation for get_cached_fd. [rev 4]" },'; \
 	) > ntdll-FD_Cache.ok
 
@@ -236,7 +236,7 @@ ntdll-Junction_Points.ok:
 	$(PATCH) < ntdll-Junction_Points/0005-kernel32-ntdll-Add-support-for-deleting-junction-poi.patch
 	$(PATCH) < ntdll-Junction_Points/0006-kernel32-Advertise-junction-point-support.patch
 	$(PATCH) < ntdll-Junction_Points/0007-ntdll-tests-Add-test-for-deleting-junction-point-tar.patch
-	( \
+	@( \
 		echo '+    { "ntdll-Junction_Points", "Erich E. Hoover", "Support for junction points/reparse points." },'; \
 	) > ntdll-Junction_Points.ok
 
@@ -256,7 +256,7 @@ quartz-MediaSeeking_Positions.ok:
 	$(PATCH) < quartz-MediaSeeking_Positions/0002-quartz-Implement-MediaSeeking_GetCurrentPosition-on-.patch
 	$(PATCH) < quartz-MediaSeeking_Positions/0003-quartz-Implement-MediaSeeking_GetStopPosition-on-top.patch
 	$(PATCH) < quartz-MediaSeeking_Positions/0004-quartz-Remove-unused-cache-of-MediaSeeking-stop-posi.patch
-	( \
+	@( \
 		echo '+    { "quartz-MediaSeeking_Positions", "Erich E. Hoover", "Return correct IMediaSeeking stream positions in quartz." },'; \
 	) > quartz-MediaSeeking_Positions.ok
 
@@ -270,7 +270,7 @@ quartz-MediaSeeking_Positions.ok:
 # |
 server-ACL_Compat.ok: server-Inherited_ACLs.ok
 	$(PATCH) < server-ACL_Compat/0010-server-Add-compatibility-code-for-handling-the-old-m.patch
-	( \
+	@( \
 		echo '+    { "server-ACL_Compat", "Erich E. Hoover", "Compatibility patch for old method of storing extended file system attributes. [rev 6]" },'; \
 	) > server-ACL_Compat.ok
 
@@ -291,7 +291,7 @@ server-Address_Change_Notification.ok:
 	$(PATCH) < server-Address_Change_Notification/0003-server-Add-blocked-support-for-SIO_ADDRESS_LIST_CHAN.patch
 	$(PATCH) < server-Address_Change_Notification/0004-server-Implement-the-interface-change-notification-o.patch
 	$(PATCH) < server-Address_Change_Notification/0005-ws2_32-Add-an-interactive-test-for-interface-change-.patch
-	( \
+	@( \
 		echo '+    { "server-Address_Change_Notification", "Erich E. Hoover", "Implement SIO_ADDRESS_LIST_CHANGE. [rev 2]" },'; \
 	) > server-Address_Change_Notification.ok
 
@@ -312,7 +312,7 @@ server-CreateProcess_ACLs.ok:
 	$(PATCH) < server-CreateProcess_ACLs/0002-server-Support-sending-process-and-thread-security-d.patch
 	$(PATCH) < server-CreateProcess_ACLs/0003-server-implement-passing-a-process-security-descript.patch
 	$(PATCH) < server-CreateProcess_ACLs/0004-server-implement-passing-a-thread-security-descripto.patch
-	( \
+	@( \
 		echo '+    { "server-CreateProcess_ACLs", "Joris van der Wel", "Implement passing ACLs to CreateProcess." },'; \
 	) > server-CreateProcess_ACLs.ok
 
@@ -330,7 +330,7 @@ server-CreateProcess_ACLs.ok:
 server-Inherited_ACLs.ok: server-Stored_ACLs.ok
 	$(PATCH) < server-Inherited_ACLs/0001-server-Inherit-security-attributes-from-parent-direc.patch
 	$(PATCH) < server-Inherited_ACLs/0002-server-Inherit-security-attributes-from-parent-direc.patch
-	( \
+	@( \
 		echo '+    { "server-Inherited_ACLs", "Erich E. Hoover", "Add support for inherited security attributes. [rev 6]" },'; \
 	) > server-Inherited_ACLs.ok
 
@@ -348,7 +348,7 @@ server-Inherited_ACLs.ok: server-Stored_ACLs.ok
 server-Misc_ACL.ok: server-Stored_ACLs.ok
 	$(PATCH) < server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
 	$(PATCH) < server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	( \
+	@( \
 		echo '+    { "server-Misc_ACL", "Erich E. Hoover", "Add default security descriptor ownership and DACLs for processes." },'; \
 	) > server-Misc_ACL.ok
 
@@ -370,7 +370,7 @@ server-Stored_ACLs.ok:
 	$(PATCH) < server-Stored_ACLs/0004-server-Store-user-and-group-inside-stored-extended-f.patch
 	$(PATCH) < server-Stored_ACLs/0005-server-Retrieve-file-security-attributes-with-extend.patch
 	$(PATCH) < server-Stored_ACLs/0006-server-Convert-return-of-file-security-masks-with-ge.patch
-	( \
+	@( \
 		echo '+    { "server-Stored_ACLs", "Erich E. Hoover", "Store and return security attributes with extended file attributes. [rev 6]" },'; \
 	) > server-Stored_ACLs.ok
 
@@ -384,7 +384,7 @@ server-Stored_ACLs.ok:
 # |
 shell32-Default_Folder_ACLs.ok:
 	$(PATCH) < shell32-Default_Folder_ACLs/0001-shell32-Set-the-default-security-attributes-for-user.patch
-	( \
+	@( \
 		echo '+    { "shell32-Default_Folder_ACLs", "Erich E. Hoover", "Generate default ACLs for user shell folders. [rev 6]" },'; \
 	) > shell32-Default_Folder_ACLs.ok
 
@@ -399,7 +399,7 @@ shell32-Default_Folder_ACLs.ok:
 shlwapi-UrlCombine.ok:
 	$(PATCH) < shlwapi-UrlCombine/0001-shlwapi-tests-Add-additional-tests-for-UrlCombine-and-.patch
 	$(PATCH) < shlwapi-UrlCombine/0002-shlwapi-UrlCombineW-workaround-for-relative-paths.patch
-	( \
+	@( \
 		echo '+    { "shlwapi-UrlCombine", "Sebastian Lackner", "Workaround for broken implementation of shlwapi url functions." },'; \
 	) > shlwapi-UrlCombine.ok
 
@@ -421,7 +421,7 @@ strmbase-Lock_Race_Conditions.ok:
 	$(PATCH) < strmbase-Lock_Race_Conditions/0004-quartz-Fix-race-condition-on-EndOfStream-between-csR.patch
 	$(PATCH) < strmbase-Lock_Race_Conditions/0005-quartz-Fix-race-condition-on-EndFlush-between-csRend.patch
 	$(PATCH) < strmbase-Lock_Race_Conditions/0006-quartz-Fix-race-condition-between-EndOfStream-and-Pa.patch
-	( \
+	@( \
 		echo '+    { "strmbase-Lock_Race_Conditions", "Erich E. Hoover", "Fix possible race conditions in strmbase/quartz." },'; \
 	) > strmbase-Lock_Race_Conditions.ok
 
@@ -439,7 +439,7 @@ strmbase-Lock_Race_Conditions.ok:
 # |
 wineboot-HKEY_DYN_DATA.ok:
 	$(PATCH) < wineboot-HKEY_DYN_DATA/0001-wineboot-Add-some-generic-hardware-in-HKEY_DYN_DATA-.patch
-	( \
+	@( \
 		echo '+    { "wineboot-HKEY_DYN_DATA", "Michael Müller", "Add some generic hardware in HKEY_DYN_DATA\\\\Config Manager\\\\Enum." },'; \
 	) > wineboot-HKEY_DYN_DATA.ok
 
@@ -481,7 +481,7 @@ winepulse-PulseAudio_Support.ok:
 	$(PATCH) < winepulse-PulseAudio_Support/0025-winepulse-use-a-pi-mutex-for-serialization.patch
 	$(PATCH) < winepulse-PulseAudio_Support/0026-winepulse-add-support-for-IMarshal.patch
 	$(PATCH) < winepulse-PulseAudio_Support/0027-winepulse-handle-stream-create-failing-correctly.patch
-	( \
+	@( \
 		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "Winepulse patches extracted from https://launchpad.net/~ubuntu-wine/+archive/ubuntu/ppa/+files/wine1.7_1.7.22-0ubuntu1.debian.tar.gz. [rev 4]" },'; \
 	) > winepulse-PulseAudio_Support.ok
 
@@ -497,7 +497,7 @@ winepulse-PulseAudio_Support.ok:
 winex11-XEMBED.ok:
 	$(PATCH) < winex11-XEMBED/0001-winex11-Update-gl_drawable-for-embedded-windows.patch
 	$(PATCH) < winex11-XEMBED/0002-winex11-Enable-disable-windows-when-they-are-un-mapped.patch
-	( \
+	@( \
 		echo '+    { "winex11-XEMBED", "Sebastian Lackner", "Enable/disable windows when they are (un)mapped by foreign applications." },'; \
 		echo '+    { "winex11-XEMBED", "Sebastian Lackner", "Update gl_drawable for embedded windows." },'; \
 	) > winex11-XEMBED.ok
@@ -520,7 +520,7 @@ ws2_32-TransmitFile.ok:
 	$(PATCH) < ws2_32-TransmitFile/0003-ws2_32-Implement-a-basic-synchronous-TransmitFile.patch
 	$(PATCH) < ws2_32-TransmitFile/0004-ws2_32-Add-asynchronous-support-for-TransmitFile.patch
 	$(PATCH) < ws2_32-TransmitFile/0005-ws2_32-Add-support-for-TF_DISCONNECT-and-TF_REUSE_SO.patch
-	( \
+	@( \
 		echo '+    { "ws2_32-TransmitFile", "Erich E. Hoover", "Implement TransmitFile." },'; \
 	) > ws2_32-TransmitFile.ok
 
@@ -538,7 +538,7 @@ ws2_32-TransmitFile.ok:
 # |
 wtsapi32-EnumerateProcesses.ok:
 	$(PATCH) < wtsapi32-EnumerateProcesses/0001-wtsapi32-Partial-implementation-of-WTSEnumerateProce.patch
-	( \
+	@( \
 		echo '+    { "wtsapi32-EnumerateProcesses", "Sebastian Lackner", "Partial implementation of WTSEnumerateProcessesW." },'; \
 	) > wtsapi32-EnumerateProcesses.ok
 

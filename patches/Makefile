@@ -8,13 +8,13 @@ PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 PATCHLIST :=	13-Misc_ACL.ok \
 		15-wtsapi32.ok \
 		16-server-CreateProcess_ACLs.ok \
-		19-ntdll-Dynamic_DST.ok \
 		97-Pipelight.ok \
 		98-Miscellaneous.ok \
 		fonts-Missing_Fonts.ok \
 		kernel32-GetVolumePathName.ok \
 		kernel32-Named_Pipe.ok \
 		loader-Cmdline_Diagnostics.ok \
+		ntdll-Dynamic_DST.ok \
 		ntdll-FD_Cache.ok \
 		ntdll-Junction_Points.ok \
 		quartz-MediaSeeking_Positions.ok \
@@ -104,26 +104,6 @@ clean:
 	( \
 		echo "+    { \"16-server-CreateProcess_ACLs\", \"Joris van der Wel\", \"Implement passing ACLs to CreateProcess.\" },"; \
 	) > 16-server-CreateProcess_ACLs.ok
-
-# Patchset 19-ntdll-Dynamic_DST
-# |
-# | Included patches:
-# |   *	Add support for Dynamic DST (daylight saving time) information in registry. [by Michael Müller]
-# |   *	Add Dynamic DST exceptions for Israel Standard Time. [by Sebastian Lackner]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36374] Israel timezone handled incorrectly
-# |
-# | Modified files: 
-# |   *	dlls/ntdll/time.c, loader/wine.inf.in
-# |
-19-ntdll-Dynamic_DST.ok:
-	$(PATCH) < 19-ntdll-Dynamic_DST/0001-ntdll-Add-support-for-Dynamic-DST-daylight-saving-ti.patch
-	$(PATCH) < 19-ntdll-Dynamic_DST/0002-wine.inf-Add-Dynamic-DST-exceptions-for-Israel-Stand.patch
-	( \
-		echo "+    { \"19-ntdll-Dynamic_DST\", \"Michael Müller\", \"Add support for Dynamic DST (daylight saving time) information in registry.\" },"; \
-		echo "+    { \"19-ntdll-Dynamic_DST\", \"Sebastian Lackner\", \"Add Dynamic DST exceptions for Israel Standard Time.\" },"; \
-	) > 19-ntdll-Dynamic_DST.ok
 
 # Patchset 97-Pipelight
 # |
@@ -238,6 +218,26 @@ loader-Cmdline_Diagnostics.ok:
 		echo "+    { \"loader-Cmdline_Diagnostics\", \"Sebastian Lackner\", \"Add commandline option --patches to show the patch list.\" },"; \
 		echo "+    { \"loader-Cmdline_Diagnostics\", \"Michael Müller\", \"Add commandline option --check-libs to test if shared libraries are installed.\" },"; \
 	) > loader-Cmdline_Diagnostics.ok
+
+# Patchset ntdll-Dynamic_DST
+# |
+# | Included patches:
+# |   *	Add support for Dynamic DST (daylight saving time) information in registry. [by Michael Müller]
+# |   *	Add Dynamic DST exceptions for Israel Standard Time. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36374] Israel timezone handled incorrectly
+# |
+# | Modified files: 
+# |   *	dlls/ntdll/time.c, loader/wine.inf.in
+# |
+ntdll-Dynamic_DST.ok:
+	$(PATCH) < ntdll-Dynamic_DST/0001-ntdll-Add-support-for-Dynamic-DST-daylight-saving-ti.patch
+	$(PATCH) < ntdll-Dynamic_DST/0002-wine.inf-Add-Dynamic-DST-exceptions-for-Israel-Stand.patch
+	( \
+		echo "+    { \"ntdll-Dynamic_DST\", \"Michael Müller\", \"Add support for Dynamic DST (daylight saving time) information in registry.\" },"; \
+		echo "+    { \"ntdll-Dynamic_DST\", \"Sebastian Lackner\", \"Add Dynamic DST exceptions for Israel Standard Time.\" },"; \
+	) > ntdll-Dynamic_DST.ok
 
 # Patchset ntdll-FD_Cache
 # |

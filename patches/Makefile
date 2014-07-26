@@ -150,9 +150,10 @@ kernel32-GetVolumePathName.ok:
 # Patchset kernel32-Named_Pipe
 # |
 # | Included patches:
-# |   *	Change return value of stub SetNamedPipeHandleState to TRUE. [by Sebastian Lackner]
+# |   *	Support for NamedPipe operations. [rev 2, by Sebastian Lackner / Dan Kegel]
 # |
 # | This patchset fixes the following Wine bugs:
+# |   *	[#16550] ConnectNamedPort should never return OK in overlapped mode (affects chromium ui_tests.exe)
 # |   *	[#17273] Many apps and games need SetNamedPipeHandleState implementation (support for named pipe message
 # | 	mode)(FireFox+Flash, Win8/NET 4.x SDK/vcrun2012, WiX installers)
 # |
@@ -161,8 +162,9 @@ kernel32-GetVolumePathName.ok:
 # |
 kernel32-Named_Pipe.ok:
 	$(PATCH) < kernel32-Named_Pipe/0001-kernel32-Change-return-value-of-stub-SetNamedPipeHandl.patch
+	$(PATCH) < kernel32-Named_Pipe/0002-kernel32-ConnectNamedPort-should-return-FALSE-and-se.patch
 	@( \
-		echo '+    { "kernel32-Named_Pipe", "Sebastian Lackner", "Change return value of stub SetNamedPipeHandleState to TRUE." },'; \
+		echo '+    { "kernel32-Named_Pipe", "Sebastian Lackner / Dan Kegel", "Support for NamedPipe operations. [rev 2]" },'; \
 	) > kernel32-Named_Pipe.ok
 
 # Patchset loader-Cmdline_Diagnostics

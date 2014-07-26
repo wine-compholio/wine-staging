@@ -5,8 +5,7 @@
 CURDIR ?= ${.CURDIR}
 PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 
-PATCHLIST :=	07-GetVolumePathName.ok \
-		08-Junction_Points.ok \
+PATCHLIST :=	08-Junction_Points.ok \
 		09-TransmitFile.ok \
 		10-Missing_Fonts.ok \
 		12-FD_Cache.ok \
@@ -19,6 +18,7 @@ PATCHLIST :=	07-GetVolumePathName.ok \
 		19-ntdll-Dynamic_DST.ok \
 		97-Pipelight.ok \
 		98-Miscellaneous.ok \
+		kernel32-GetVolumePathName.ok \
 		kernel32-Named_Pipe.ok \
 		loader-Cmdline_Diagnostics.ok \
 		server-ACL_Compat.ok \
@@ -47,22 +47,6 @@ clean:
 	rm -f *.ok
 
 .NOTPARALLEL:
-
-# Patchset 07-GetVolumePathName
-# |
-# | Included patches:
-# |   *	Implement GetVolumePathName. [by Erich E. Hoover]
-# |
-# | Modified files: 
-# |   *	dlls/kernel32/tests/volume.c, dlls/kernel32/volume.c
-# |
-07-GetVolumePathName.ok:
-	$(PATCH) < 07-GetVolumePathName/0001-kernel32-Implement-GetVolumePathName.patch
-	$(PATCH) < 07-GetVolumePathName/0002-kernel32-Convert-GetVolumePathName-tests-into-a-list.patch
-	$(PATCH) < 07-GetVolumePathName/0003-kernel32-Add-a-bunch-more-GetVolumePathName-tests.patch
-	( \
-		echo "+    { \"07-GetVolumePathName\", \"Erich E. Hoover\", \"Implement GetVolumePathName.\" },"; \
-	) > 07-GetVolumePathName.ok
 
 # Patchset 08-Junction_Points
 # |
@@ -318,6 +302,22 @@ clean:
 		echo "+    { \"98-Miscellaneous\", \"Erich E. Hoover\", \"wined3d: Silence repeated resource_check_usage FIXME. [rev 2]\" },"; \
 		echo "+    { \"98-Miscellaneous\", \"Sebastian Lackner\", \"wined3d: Silence repeated wined3d_swapchain_present FIXME.\" },"; \
 	) > 98-Miscellaneous.ok
+
+# Patchset kernel32-GetVolumePathName
+# |
+# | Included patches:
+# |   *	Implement GetVolumePathName. [by Erich E. Hoover]
+# |
+# | Modified files: 
+# |   *	dlls/kernel32/tests/volume.c, dlls/kernel32/volume.c
+# |
+kernel32-GetVolumePathName.ok:
+	$(PATCH) < kernel32-GetVolumePathName/0001-kernel32-Implement-GetVolumePathName.patch
+	$(PATCH) < kernel32-GetVolumePathName/0002-kernel32-Convert-GetVolumePathName-tests-into-a-list.patch
+	$(PATCH) < kernel32-GetVolumePathName/0003-kernel32-Add-a-bunch-more-GetVolumePathName-tests.patch
+	( \
+		echo "+    { \"kernel32-GetVolumePathName\", \"Erich E. Hoover\", \"Implement GetVolumePathName.\" },"; \
+	) > kernel32-GetVolumePathName.ok
 
 # Patchset kernel32-Named_Pipe
 # |

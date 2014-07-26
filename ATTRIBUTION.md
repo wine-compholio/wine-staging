@@ -1,5 +1,5 @@
 Patch attribution for wine-compholio
-==============
+====================================
 
 The Wine "Compholio" Edition repository expects all patches to conform to Wine's attribution guidelines.  There are a variety of ways to attribute patches, but they all involve an additional line to the patch subject:
 

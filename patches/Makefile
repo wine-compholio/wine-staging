@@ -5,8 +5,7 @@
 CURDIR ?= ${.CURDIR}
 PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 
-PATCHLIST :=	00-Commandline.ok \
-		04-XEMBED.ok \
+PATCHLIST :=	04-XEMBED.ok \
 		05-Named_Pipe.ok \
 		06-winepulse.ok \
 		07-GetVolumePathName.ok \
@@ -23,6 +22,7 @@ PATCHLIST :=	00-Commandline.ok \
 		19-ntdll-Dynamic_DST.ok \
 		97-Pipelight.ok \
 		98-Miscellaneous.ok \
+		loader-Cmdline_Diagnostics.ok \
 		server-ACL_Compat.ok \
 		server-Address_Change_Notification.ok \
 		server-Inherited_ACLs.ok \
@@ -47,24 +47,6 @@ clean:
 	rm -f *.ok
 
 .NOTPARALLEL:
-
-# Patchset 00-Commandline
-# |
-# | Included patches:
-# |   *	Add commandline option --patches to show the patch list. [by Sebastian Lackner]
-# |   *	Add commandline option --check-libs to test if shared libraries are installed. [by Michael Müller]
-# |
-# | Modified files: 
-# |   *	dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec, include/wine/library.h, libs/wine/config.c, libs/wine/loader.c,
-# | 	libs/wine/wine.def, libs/wine/wine.map, loader/main.c
-# |
-00-Commandline.ok:
-	$(PATCH) < 00-Commandline/0001-loader-Add-commandline-option-patches-to-show-the-pa.patch
-	$(PATCH) < 00-Commandline/0002-loader-Add-commandline-option-check-libs.patch
-	( \
-		echo "+    { \"00-Commandline\", \"Sebastian Lackner\", \"Add commandline option --patches to show the patch list.\" },"; \
-		echo "+    { \"00-Commandline\", \"Michael Müller\", \"Add commandline option --check-libs to test if shared libraries are installed.\" },"; \
-	) > 00-Commandline.ok
 
 # Patchset 04-XEMBED
 # |
@@ -413,6 +395,24 @@ clean:
 		echo "+    { \"98-Miscellaneous\", \"Erich E. Hoover\", \"wined3d: Silence repeated resource_check_usage FIXME. [rev 2]\" },"; \
 		echo "+    { \"98-Miscellaneous\", \"Sebastian Lackner\", \"wined3d: Silence repeated wined3d_swapchain_present FIXME.\" },"; \
 	) > 98-Miscellaneous.ok
+
+# Patchset loader-Cmdline_Diagnostics
+# |
+# | Included patches:
+# |   *	Add commandline option --patches to show the patch list. [by Sebastian Lackner]
+# |   *	Add commandline option --check-libs to test if shared libraries are installed. [by Michael Müller]
+# |
+# | Modified files: 
+# |   *	dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec, include/wine/library.h, libs/wine/config.c, libs/wine/loader.c,
+# | 	libs/wine/wine.def, libs/wine/wine.map, loader/main.c
+# |
+loader-Cmdline_Diagnostics.ok:
+	$(PATCH) < loader-Cmdline_Diagnostics/0001-loader-Add-commandline-option-patches-to-show-the-pa.patch
+	$(PATCH) < loader-Cmdline_Diagnostics/0002-loader-Add-commandline-option-check-libs.patch
+	( \
+		echo "+    { \"loader-Cmdline_Diagnostics\", \"Sebastian Lackner\", \"Add commandline option --patches to show the patch list.\" },"; \
+		echo "+    { \"loader-Cmdline_Diagnostics\", \"Michael Müller\", \"Add commandline option --check-libs to test if shared libraries are installed.\" },"; \
+	) > loader-Cmdline_Diagnostics.ok
 
 # Patchset server-ACL_Compat
 # |

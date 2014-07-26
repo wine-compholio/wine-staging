@@ -8,7 +8,6 @@ PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 PATCHLIST :=	13-Misc_ACL.ok \
 		15-wtsapi32.ok \
 		16-server-CreateProcess_ACLs.ok \
-		18-quartz-MediaSeeking_Positions.ok \
 		19-ntdll-Dynamic_DST.ok \
 		97-Pipelight.ok \
 		98-Miscellaneous.ok \
@@ -18,6 +17,7 @@ PATCHLIST :=	13-Misc_ACL.ok \
 		loader-Cmdline_Diagnostics.ok \
 		ntdll-FD_Cache.ok \
 		ntdll-Junction_Points.ok \
+		quartz-MediaSeeking_Positions.ok \
 		server-ACL_Compat.ok \
 		server-Address_Change_Notification.ok \
 		server-Inherited_ACLs.ok \
@@ -104,26 +104,6 @@ clean:
 	( \
 		echo "+    { \"16-server-CreateProcess_ACLs\", \"Joris van der Wel\", \"Implement passing ACLs to CreateProcess.\" },"; \
 	) > 16-server-CreateProcess_ACLs.ok
-
-# Patchset 18-quartz-MediaSeeking_Positions
-# |
-# | Included patches:
-# |   *	Return correct IMediaSeeking stream positions in quartz. [by Erich E. Hoover]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#23174] Fallout 3: Diologue and Video/sound issues
-# |
-# | Modified files: 
-# |   *	dlls/quartz/filtergraph.c
-# |
-18-quartz-MediaSeeking_Positions.ok:
-	$(PATCH) < 18-quartz-MediaSeeking_Positions/0001-quartz-Include-the-stream-position-in-addition-to-th.patch
-	$(PATCH) < 18-quartz-MediaSeeking_Positions/0002-quartz-Implement-MediaSeeking_GetCurrentPosition-on-.patch
-	$(PATCH) < 18-quartz-MediaSeeking_Positions/0003-quartz-Implement-MediaSeeking_GetStopPosition-on-top.patch
-	$(PATCH) < 18-quartz-MediaSeeking_Positions/0004-quartz-Remove-unused-cache-of-MediaSeeking-stop-posi.patch
-	( \
-		echo "+    { \"18-quartz-MediaSeeking_Positions\", \"Erich E. Hoover\", \"Return correct IMediaSeeking stream positions in quartz.\" },"; \
-	) > 18-quartz-MediaSeeking_Positions.ok
 
 # Patchset 19-ntdll-Dynamic_DST
 # |
@@ -295,6 +275,26 @@ ntdll-Junction_Points.ok:
 	( \
 		echo "+    { \"ntdll-Junction_Points\", \"Erich E. Hoover\", \"Support for junction points/reparse points.\" },"; \
 	) > ntdll-Junction_Points.ok
+
+# Patchset quartz-MediaSeeking_Positions
+# |
+# | Included patches:
+# |   *	Return correct IMediaSeeking stream positions in quartz. [by Erich E. Hoover]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#23174] Fallout 3: Diologue and Video/sound issues
+# |
+# | Modified files: 
+# |   *	dlls/quartz/filtergraph.c
+# |
+quartz-MediaSeeking_Positions.ok:
+	$(PATCH) < quartz-MediaSeeking_Positions/0001-quartz-Include-the-stream-position-in-addition-to-th.patch
+	$(PATCH) < quartz-MediaSeeking_Positions/0002-quartz-Implement-MediaSeeking_GetCurrentPosition-on-.patch
+	$(PATCH) < quartz-MediaSeeking_Positions/0003-quartz-Implement-MediaSeeking_GetStopPosition-on-top.patch
+	$(PATCH) < quartz-MediaSeeking_Positions/0004-quartz-Remove-unused-cache-of-MediaSeeking-stop-posi.patch
+	( \
+		echo "+    { \"quartz-MediaSeeking_Positions\", \"Erich E. Hoover\", \"Return correct IMediaSeeking stream positions in quartz.\" },"; \
+	) > quartz-MediaSeeking_Positions.ok
 
 # Patchset server-ACL_Compat
 # |

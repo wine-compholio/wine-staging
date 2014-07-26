@@ -24,6 +24,7 @@ PATCHLIST :=	Miscellaneous.ok \
 		server-Misc_ACL.ok \
 		server-Stored_ACLs.ok \
 		shell32-Default_Folder_ACLs.ok \
+		shell32-SHCreateSessionKey.ok \
 		shlwapi-UrlCombine.ok \
 		strmbase-Lock_Race_Conditions.ok \
 		wineboot-HKEY_DYN_DATA.ok \
@@ -407,6 +408,23 @@ shell32-Default_Folder_ACLs.ok:
 	@( \
 		echo '+    { "shell32-Default_Folder_ACLs", "Erich E. Hoover", "Generate default ACLs for user shell folders. [rev 6]" },'; \
 	) > shell32-Default_Folder_ACLs.ok
+
+# Patchset shell32-SHCreateSessionKey
+# |
+# | Included patches:
+# |   *	shell32: Implement SHCreateSessionKey. [by Erich E. Hoover]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35630] SHCreateSessionKey is unimplemented
+# |
+# | Modified files: 
+# |   *	dlls/shell32/shell32.spec, dlls/shell32/shellreg.c
+# |
+shell32-SHCreateSessionKey.ok:
+	$(PATCH) < shell32-SHCreateSessionKey/0001-shell32-Implement-SHCreateSessionKey.patch
+	@( \
+		echo '+    { "shell32-SHCreateSessionKey", "Erich E. Hoover", "shell32: Implement SHCreateSessionKey." },'; \
+	) > shell32-SHCreateSessionKey.ok
 
 # Patchset shlwapi-UrlCombine
 # |

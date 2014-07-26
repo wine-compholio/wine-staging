@@ -427,7 +427,7 @@ wineboot-HKEY_DYN_DATA.ok:
 # |
 # | Included patches:
 # |   *	Winepulse patches extracted from https://launchpad.net/~ubuntu-
-# | 	wine/+archive/ubuntu/ppa/+files/wine1.7_1.7.21-0ubuntu1~ppa1.debian.tar.gz. [rev 4, by Maarten Lankhorst]
+# | 	wine/+archive/ubuntu/ppa/+files/wine1.7_1.7.22-0ubuntu1.debian.tar.gz. [rev 4, by Maarten Lankhorst]
 # |
 # | Modified files: 
 # |   *	configure.ac, dlls/mmdevapi/main.c, dlls/mmdevapi/tests/render.c, dlls/winepulse.drv/Makefile.in,
@@ -462,7 +462,7 @@ winepulse-PulseAudio_Support.ok:
 	$(PATCH) < winepulse-PulseAudio_Support/0026-winepulse-add-support-for-IMarshal.patch
 	$(PATCH) < winepulse-PulseAudio_Support/0027-winepulse-handle-stream-create-failing-correctly.patch
 	( \
-		echo "+    { \"winepulse-PulseAudio_Support\", \"Maarten Lankhorst\", \"Winepulse patches extracted from https://launchpad.net/~ubuntu-wine/+archive/ubuntu/ppa/+files/wine1.7_1.7.21-0ubuntu1~ppa1.debian.tar.gz. [rev 4]\" },"; \
+		echo "+    { \"winepulse-PulseAudio_Support\", \"Maarten Lankhorst\", \"Winepulse patches extracted from https://launchpad.net/~ubuntu-wine/+archive/ubuntu/ppa/+files/wine1.7_1.7.22-0ubuntu1.debian.tar.gz. [rev 4]\" },"; \
 	) > winepulse-PulseAudio_Support.ok
 
 # Patchset winex11-XEMBED

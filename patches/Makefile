@@ -5,8 +5,7 @@
 CURDIR ?= ${.CURDIR}
 PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 
-PATCHLIST :=	09-TransmitFile.ok \
-		10-Missing_Fonts.ok \
+PATCHLIST :=	10-Missing_Fonts.ok \
 		12-FD_Cache.ok \
 		13-Misc_ACL.ok \
 		14-UrlCombineW.ok \
@@ -27,7 +26,8 @@ PATCHLIST :=	09-TransmitFile.ok \
 		server-Stored_ACLs.ok \
 		shell32-Default_Folder_ACLs.ok \
 		winepulse-PulseAudio_Support.ok \
-		winex11-XEMBED.ok
+		winex11-XEMBED.ok \
+		ws2_32-TransmitFile.ok
 
 .PHONY: install
 install:
@@ -47,28 +47,6 @@ clean:
 	rm -f *.ok
 
 .NOTPARALLEL:
-
-# Patchset 09-TransmitFile
-# |
-# | Included patches:
-# |   *	Implement TransmitFile. [by Erich E. Hoover]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#5048] Multiple applications and games need support for ws2_32 SIO_GET_EXTENSION_FUNCTION_POINTER TransmitFile
-# | 	(WSAID_TRANSMITFILE)
-# |
-# | Modified files: 
-# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c
-# |
-09-TransmitFile.ok:
-	$(PATCH) < 09-TransmitFile/0001-ws2_32-Add-stub-for-TransmitFile.patch
-	$(PATCH) < 09-TransmitFile/0002-ws2_32-Check-for-invalid-parameters-in-TransmitFile.patch
-	$(PATCH) < 09-TransmitFile/0003-ws2_32-Implement-a-basic-synchronous-TransmitFile.patch
-	$(PATCH) < 09-TransmitFile/0004-ws2_32-Add-asynchronous-support-for-TransmitFile.patch
-	$(PATCH) < 09-TransmitFile/0005-ws2_32-Add-support-for-TF_DISCONNECT-and-TF_REUSE_SO.patch
-	( \
-		echo "+    { \"09-TransmitFile\", \"Erich E. Hoover\", \"Implement TransmitFile.\" },"; \
-	) > 09-TransmitFile.ok
 
 # Patchset 10-Missing_Fonts
 # |
@@ -502,4 +480,26 @@ winex11-XEMBED.ok:
 		echo "+    { \"winex11-XEMBED\", \"Sebastian Lackner\", \"Enable/disable windows when they are (un)mapped by foreign applications.\" },"; \
 		echo "+    { \"winex11-XEMBED\", \"Sebastian Lackner\", \"Update gl_drawable for embedded windows.\" },"; \
 	) > winex11-XEMBED.ok
+
+# Patchset ws2_32-TransmitFile
+# |
+# | Included patches:
+# |   *	Implement TransmitFile. [by Erich E. Hoover]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#5048] Multiple applications and games need support for ws2_32 SIO_GET_EXTENSION_FUNCTION_POINTER TransmitFile
+# | 	(WSAID_TRANSMITFILE)
+# |
+# | Modified files: 
+# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c
+# |
+ws2_32-TransmitFile.ok:
+	$(PATCH) < ws2_32-TransmitFile/0001-ws2_32-Add-stub-for-TransmitFile.patch
+	$(PATCH) < ws2_32-TransmitFile/0002-ws2_32-Check-for-invalid-parameters-in-TransmitFile.patch
+	$(PATCH) < ws2_32-TransmitFile/0003-ws2_32-Implement-a-basic-synchronous-TransmitFile.patch
+	$(PATCH) < ws2_32-TransmitFile/0004-ws2_32-Add-asynchronous-support-for-TransmitFile.patch
+	$(PATCH) < ws2_32-TransmitFile/0005-ws2_32-Add-support-for-TF_DISCONNECT-and-TF_REUSE_SO.patch
+	( \
+		echo "+    { \"ws2_32-TransmitFile\", \"Erich E. Hoover\", \"Implement TransmitFile.\" },"; \
+	) > ws2_32-TransmitFile.ok
 

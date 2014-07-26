@@ -6,7 +6,6 @@ CURDIR ?= ${.CURDIR}
 PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 
 PATCHLIST :=	04-XEMBED.ok \
-		05-Named_Pipe.ok \
 		06-winepulse.ok \
 		07-GetVolumePathName.ok \
 		08-Junction_Points.ok \
@@ -22,6 +21,7 @@ PATCHLIST :=	04-XEMBED.ok \
 		19-ntdll-Dynamic_DST.ok \
 		97-Pipelight.ok \
 		98-Miscellaneous.ok \
+		kernel32-Named_Pipe.ok \
 		loader-Cmdline_Diagnostics.ok \
 		server-ACL_Compat.ok \
 		server-Address_Change_Notification.ok \
@@ -64,24 +64,6 @@ clean:
 		echo "+    { \"04-XEMBED\", \"Sebastian Lackner\", \"Enable/disable windows when they are (un)mapped by foreign applications.\" },"; \
 		echo "+    { \"04-XEMBED\", \"Sebastian Lackner\", \"Update gl_drawable for embedded windows.\" },"; \
 	) > 04-XEMBED.ok
-
-# Patchset 05-Named_Pipe
-# |
-# | Included patches:
-# |   *	Change return value of stub SetNamedPipeHandleState to TRUE. [by Sebastian Lackner]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#17273] Many apps and games need SetNamedPipeHandleState implementation (support for named pipe message
-# | 	mode)(FireFox+Flash, Win8/NET 4.x SDK/vcrun2012, WiX installers)
-# |
-# | Modified files: 
-# |   *	dlls/kernel32/sync.c
-# |
-05-Named_Pipe.ok:
-	$(PATCH) < 05-Named_Pipe/0001-kernel32-Change-return-value-of-stub-SetNamedPipeHandl.patch
-	( \
-		echo "+    { \"05-Named_Pipe\", \"Sebastian Lackner\", \"Change return value of stub SetNamedPipeHandleState to TRUE.\" },"; \
-	) > 05-Named_Pipe.ok
 
 # Patchset 06-winepulse
 # |
@@ -395,6 +377,24 @@ clean:
 		echo "+    { \"98-Miscellaneous\", \"Erich E. Hoover\", \"wined3d: Silence repeated resource_check_usage FIXME. [rev 2]\" },"; \
 		echo "+    { \"98-Miscellaneous\", \"Sebastian Lackner\", \"wined3d: Silence repeated wined3d_swapchain_present FIXME.\" },"; \
 	) > 98-Miscellaneous.ok
+
+# Patchset kernel32-Named_Pipe
+# |
+# | Included patches:
+# |   *	Change return value of stub SetNamedPipeHandleState to TRUE. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#17273] Many apps and games need SetNamedPipeHandleState implementation (support for named pipe message
+# | 	mode)(FireFox+Flash, Win8/NET 4.x SDK/vcrun2012, WiX installers)
+# |
+# | Modified files: 
+# |   *	dlls/kernel32/sync.c
+# |
+kernel32-Named_Pipe.ok:
+	$(PATCH) < kernel32-Named_Pipe/0001-kernel32-Change-return-value-of-stub-SetNamedPipeHandl.patch
+	( \
+		echo "+    { \"kernel32-Named_Pipe\", \"Sebastian Lackner\", \"Change return value of stub SetNamedPipeHandleState to TRUE.\" },"; \
+	) > kernel32-Named_Pipe.ok
 
 # Patchset loader-Cmdline_Diagnostics
 # |

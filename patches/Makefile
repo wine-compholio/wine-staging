@@ -7,6 +7,7 @@ PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 
 PATCHLIST :=	Miscellaneous.ok \
 		Pipelight.ok \
+		atl-IOCS_Property.ok \
 		fonts-Missing_Fonts.ok \
 		iphlpapi-TCP_Table.ok \
 		kernel32-GetVolumePathName.ok \
@@ -93,6 +94,23 @@ Pipelight.ok:
 		echo '+    { "Pipelight", "Michael Müller", "Indicate direct rendering through OpenGL extension." },'; \
 		echo '+    { "Pipelight", "Sebastian Lackner", "Implement X11DRV_FLUSH_GDI_DISPLAY ExtEscape command." },'; \
 	) > Pipelight.ok
+
+# Patchset atl-IOCS_Property
+# |
+# | Included patches:
+# |   *	Store IOCS data in a property instead of GWLP_USERDATA. [by Qian Hong]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#21767] JLC's Internet TV crashes on startup
+# |
+# | Modified files: 
+# |   *	dlls/atl/atl_ax.c
+# |
+atl-IOCS_Property.ok:
+	$(PATCH) < atl-IOCS_Property/0001-atl-Don-t-use-GWLP_USERDATA-to-store-IOCS-to-avoid-c.patch
+	@( \
+		echo '+    { "atl-IOCS_Property", "Qian Hong", "Store IOCS data in a property instead of GWLP_USERDATA." },'; \
+	) > atl-IOCS_Property.ok
 
 # Patchset fonts-Missing_Fonts
 # |

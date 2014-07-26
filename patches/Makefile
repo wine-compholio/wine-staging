@@ -24,6 +24,7 @@ PATCHLIST :=	Miscellaneous.ok \
 		shell32-Default_Folder_ACLs.ok \
 		shlwapi-UrlCombine.ok \
 		strmbase-Lock_Race_Conditions.ok \
+		wineboot-HKEY_DYN_DATA.ok \
 		winepulse-PulseAudio_Support.ok \
 		winex11-XEMBED.ok \
 		ws2_32-TransmitFile.ok \
@@ -403,6 +404,24 @@ strmbase-Lock_Race_Conditions.ok:
 	( \
 		echo "+    { \"strmbase-Lock_Race_Conditions\", \"Erich E. Hoover\", \"Fix possible race conditions in strmbase/quartz.\" },"; \
 	) > strmbase-Lock_Race_Conditions.ok
+
+# Patchset wineboot-HKEY_DYN_DATA
+# |
+# | Included patches:
+# |   *	Add some generic hardware in HKEY_DYN_DATA\Config Manager\Enum. [by Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#7115] Need for Speed III installer fails in Win9X mode, reporting "Could not get 'HardWareKey' value" (active PnP
+# | 	device keys in 'HKEY_DYN_DATA\\Config Manager\\Enum' missing)
+# |
+# | Modified files: 
+# |   *	programs/wineboot/wineboot.c
+# |
+wineboot-HKEY_DYN_DATA.ok:
+	$(PATCH) < wineboot-HKEY_DYN_DATA/0001-wineboot-Add-some-generic-hardware-in-HKEY_DYN_DATA-.patch
+	( \
+		echo "+    { \"wineboot-HKEY_DYN_DATA\", \"Michael Müller\", \"Add some generic hardware in HKEY_DYN_DATA\Config Manager\Enum.\" },"; \
+	) > wineboot-HKEY_DYN_DATA.ok
 
 # Patchset winepulse-PulseAudio_Support
 # |

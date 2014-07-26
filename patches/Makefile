@@ -5,7 +5,7 @@
 CURDIR ?= ${.CURDIR}
 PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 
-PATCHLIST :=	98-Miscellaneous.ok \
+PATCHLIST :=	Miscellaneous.ok \
 		Pipelight.ok \
 		fonts-Missing_Fonts.ok \
 		kernel32-GetVolumePathName.ok \
@@ -48,7 +48,7 @@ clean:
 
 .NOTPARALLEL:
 
-# Patchset 98-Miscellaneous
+# Patchset Miscellaneous
 # |
 # | Included patches:
 # |   *	kernel32: Silence repeated CompareStringEx FIXME. [by Sebastian Lackner]
@@ -58,15 +58,15 @@ clean:
 # | Modified files: 
 # |   *	dlls/kernel32/locale.c, dlls/wined3d/resource.c, dlls/wined3d/swapchain.c
 # |
-98-Miscellaneous.ok:
-	$(PATCH) < 98-Miscellaneous/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	$(PATCH) < 98-Miscellaneous/0002-kernel32-Silence-repeated-CompareStringEx-FIXME.patch
-	$(PATCH) < 98-Miscellaneous/0003-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+Miscellaneous.ok:
+	$(PATCH) < Miscellaneous/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	$(PATCH) < Miscellaneous/0002-kernel32-Silence-repeated-CompareStringEx-FIXME.patch
+	$(PATCH) < Miscellaneous/0003-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
 	( \
-		echo "+    { \"98-Miscellaneous\", \"Sebastian Lackner\", \"kernel32: Silence repeated CompareStringEx FIXME.\" },"; \
-		echo "+    { \"98-Miscellaneous\", \"Erich E. Hoover\", \"wined3d: Silence repeated resource_check_usage FIXME. [rev 2]\" },"; \
-		echo "+    { \"98-Miscellaneous\", \"Sebastian Lackner\", \"wined3d: Silence repeated wined3d_swapchain_present FIXME.\" },"; \
-	) > 98-Miscellaneous.ok
+		echo "+    { \"Miscellaneous\", \"Sebastian Lackner\", \"kernel32: Silence repeated CompareStringEx FIXME.\" },"; \
+		echo "+    { \"Miscellaneous\", \"Erich E. Hoover\", \"wined3d: Silence repeated resource_check_usage FIXME. [rev 2]\" },"; \
+		echo "+    { \"Miscellaneous\", \"Sebastian Lackner\", \"wined3d: Silence repeated wined3d_swapchain_present FIXME.\" },"; \
+	) > Miscellaneous.ok
 
 # Patchset Pipelight
 # |

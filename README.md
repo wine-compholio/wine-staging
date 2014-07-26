@@ -56,8 +56,8 @@ If your distribution is not listed below, feel free to add a feature request - i
 demand is high enough we might consider packaging it for additional distributions.
 
 
-Ubuntu / Linux Mint
--------------------
+![alt text](http://pipelight.net/cms/user-images/ubuntu.svg) Ubuntu / Linux Mint
+--------------------------------------------------------------------------------
 
 Please run the following commands from a terminal, one line after each other.
 ```bash
@@ -66,8 +66,8 @@ sudo apt-get update
 sudo apt-get install --install-recommends wine-compholio
 ```
 
-Arch Linux
-----------
+![alt text](http://pipelight.net/cms/user-images/image-arch.svg) Arch Linux
+---------------------------------------------------------------------------
 
 In order to add our repository, you have to add the following lines to your
 `/etc/pacman.conf`:
@@ -88,8 +88,8 @@ Now you can install wine-compholio directly using `pacman`:
 sudo pacman -Sy wine-compholio
 ```
 
-Debian Jessie/Sid
------------------
+![alt text](http://pipelight.net/cms/user-images/debian.svg) Debian Jessie/Sid
+------------------------------------------------------------------------------
 
 *(Instructions for Debian Wheezy can be found below)*
 
@@ -121,8 +121,8 @@ sudo apt-get install wine-compholio
 ```
 
 
-Debian Wheezy
--------------
+![alt text](http://pipelight.net/cms/user-images/debian.svg) Debian Wheezy
+--------------------------------------------------------------------------
 
 In order to install i386 packages on a 64-bit system, you have to run the following
 command as a first step:
@@ -149,8 +149,8 @@ sudo apt-get install wine-compholio
 ```
 
 
-OpenSUSE
---------
+![alt text](http://pipelight.net/cms/user-images/opensuse.svg) OpenSUSE
+-----------------------------------------------------------------------
 
 All the following steps have to be executed as root user. As a first step you have
 to add the repository - this step depends on the openSUSE version you're using.
@@ -176,8 +176,8 @@ zypper install wine-compholio
 ```
 
 
-Fedora
-------
+![alt text](http://pipelight.net/cms/user-images/fedora.svg) Fedora
+-------------------------------------------------------------------
 
 **Warning:** In contrary to other distributions, its not possible to have both a
 regular wine version and wine-compholio installed at the same time - using the
@@ -215,8 +215,8 @@ When you're using wine-compholio this will show to a list of all patches include
 an unpatched version this command will fail.
 
 
-Mageia 4
---------
+![alt text](http://pipelight.net/cms/user-images/mageia.svg) Mageia 4
+---------------------------------------------------------------------
 
 As a first step please add the key for our repository
 ```bash

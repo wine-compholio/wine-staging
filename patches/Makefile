@@ -5,8 +5,7 @@
 CURDIR ?= ${.CURDIR}
 PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 
-PATCHLIST :=	10-Missing_Fonts.ok \
-		12-FD_Cache.ok \
+PATCHLIST :=	12-FD_Cache.ok \
 		13-Misc_ACL.ok \
 		14-UrlCombineW.ok \
 		15-wtsapi32.ok \
@@ -16,6 +15,7 @@ PATCHLIST :=	10-Missing_Fonts.ok \
 		19-ntdll-Dynamic_DST.ok \
 		97-Pipelight.ok \
 		98-Miscellaneous.ok \
+		fonts-Missing_Fonts.ok \
 		kernel32-GetVolumePathName.ok \
 		kernel32-Named_Pipe.ok \
 		loader-Cmdline_Diagnostics.ok \
@@ -47,24 +47,6 @@ clean:
 	rm -f *.ok
 
 .NOTPARALLEL:
-
-# Patchset 10-Missing_Fonts
-# |
-# | Included patches:
-# |   *	Implement missing Arial font expected by Silverlight. [by Torsten Kurbad]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#32323] Netflix (Silverlight 4.x) and several .NET Framework 3.x/4.0 WPF apps require either Arial or Verdana to be
-# | 	installed
-# |
-# | Modified files: 
-# |   *	fonts/Makefile.in, fonts/arial.sfd, fonts/arial.ttf
-# |
-10-Missing_Fonts.ok:
-	$(PATCH) < 10-Missing_Fonts/0001-fonts-Add-Liberation-Sans-as-an-Arial-replacement.patch
-	( \
-		echo "+    { \"10-Missing_Fonts\", \"Torsten Kurbad\", \"Implement missing Arial font expected by Silverlight.\" },"; \
-	) > 10-Missing_Fonts.ok
 
 # Patchset 12-FD_Cache
 # |
@@ -257,6 +239,24 @@ clean:
 		echo "+    { \"98-Miscellaneous\", \"Erich E. Hoover\", \"wined3d: Silence repeated resource_check_usage FIXME. [rev 2]\" },"; \
 		echo "+    { \"98-Miscellaneous\", \"Sebastian Lackner\", \"wined3d: Silence repeated wined3d_swapchain_present FIXME.\" },"; \
 	) > 98-Miscellaneous.ok
+
+# Patchset fonts-Missing_Fonts
+# |
+# | Included patches:
+# |   *	Implement missing Arial font expected by Silverlight. [by Torsten Kurbad]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#32323] Netflix (Silverlight 4.x) and several .NET Framework 3.x/4.0 WPF apps require either Arial or Verdana to be
+# | 	installed
+# |
+# | Modified files: 
+# |   *	fonts/Makefile.in, fonts/arial.sfd, fonts/arial.ttf
+# |
+fonts-Missing_Fonts.ok:
+	$(PATCH) < fonts-Missing_Fonts/0001-fonts-Add-Liberation-Sans-as-an-Arial-replacement.patch
+	( \
+		echo "+    { \"fonts-Missing_Fonts\", \"Torsten Kurbad\", \"Implement missing Arial font expected by Silverlight.\" },"; \
+	) > fonts-Missing_Fonts.ok
 
 # Patchset kernel32-GetVolumePathName
 # |

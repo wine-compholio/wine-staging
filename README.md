@@ -1,10 +1,18 @@
-wine-compholio
-==============
+What is wine-compholio?
+=======================
 
-The Wine "Compholio" Edition repository includes a variety of patches for
-Wine to run common Windows applications under Linux.
+The **Wine "Compholio" Edition** is a special patched version of Wine that includes both patches
+written by our team directly and specific patches by third party developers that we consider
+good enough for inclusion.  This can be seen as a testing version in preparation for patches
+to be submitted to upstream Wine - don't be surprised if you encounter additional bugs, which
+are not present in regular wine, and always report such issues to us (via github), so we can
+improve our fixes even further. Thanks!
 
-These patches fix the following Wine bugs:
+
+Included bugfixes and improvements
+----------------------------------
+
+Wine-compholio contains fixes for the following Wine bugs:
 
 * Support for TransmitFile ([Wine Bug #5048](http://bugs.winehq.org/show_bug.cgi?id=5048 "Multiple applications and games need support for ws2_32 SIO_GET_EXTENSION_FUNCTION_POINTER TransmitFile (WSAID_TRANSMITFILE)"))
 * Need for Speed 3 installer requires devices in HKEY_DYN_DATA ([Wine Bug #7115](http://bugs.winehq.org/show_bug.cgi?id=7115 "Need for Speed III installer fails in Win9X mode, reporting \"Could not get 'HardWareKey' value\" (active PnP device keys in 'HKEY_DYN_DATA\\\\Config Manager\\\\Enum' missing)"))

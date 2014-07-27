@@ -33,6 +33,7 @@ PATCHLIST :=	Miscellaneous.ok \
 		winepulse-PulseAudio_Support.ok \
 		winex11-XEMBED.ok \
 		ws2_32-TransmitFile.ok \
+		ws2_32-inet_pton.ok \
 		wtsapi32-EnumerateProcesses.ok
 
 .PHONY: install
@@ -598,6 +599,23 @@ ws2_32-TransmitFile.ok:
 	@( \
 		echo '+    { "ws2_32-TransmitFile", "Erich E. Hoover", "Implement TransmitFile." },'; \
 	) > ws2_32-TransmitFile.ok
+
+# Patchset ws2_32-inet_pton
+# |
+# | Included patches:
+# |   *	Implement ws2_32.inet_pton. [by Erich E. Hoover]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36713] Watch_Dogs requires ws2_32.inet_pton
+# |
+# | Modified files: 
+# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/ws2_32.spec, include/ws2tcpip.h
+# |
+ws2_32-inet_pton.ok:
+	$(PATCH) < ws2_32-inet_pton/0001-ws2_32-Implement-inet_pton.patch
+	@( \
+		echo '+    { "ws2_32-inet_pton", "Erich E. Hoover", "Implement ws2_32.inet_pton." },'; \
+	) > ws2_32-inet_pton.ok
 
 # Patchset wtsapi32-EnumerateProcesses
 # |

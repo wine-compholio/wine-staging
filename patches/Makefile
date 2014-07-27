@@ -16,6 +16,7 @@ PATCHLIST :=	Miscellaneous.ok \
 		ntdll-Dynamic_DST.ok \
 		ntdll-FD_Cache.ok \
 		ntdll-Junction_Points.ok \
+		ntdll-Pipe_SpecialCharacters.ok \
 		quartz-MediaSeeking_Positions.ok \
 		server-ACL_Compat.ok \
 		server-Address_Change_Notification.ok \
@@ -261,6 +262,23 @@ ntdll-Junction_Points.ok:
 	@( \
 		echo '+    { "ntdll-Junction_Points", "Erich E. Hoover", "Support for junction points/reparse points." },'; \
 	) > ntdll-Junction_Points.ok
+
+# Patchset ntdll-Pipe_SpecialCharacters
+# |
+# | Included patches:
+# |   *	Allow special characters in pipe names. [by Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#28995] Unable to use named pipes with ">" character in the name
+# |
+# | Modified files: 
+# |   *	dlls/kernel32/tests/pipe.c, dlls/ntdll/directory.c
+# |
+ntdll-Pipe_SpecialCharacters.ok:
+	$(PATCH) < ntdll-Pipe_SpecialCharacters/0001-ntdll-Allow-special-characters-in-pipe-names.patch
+	@( \
+		echo '+    { "ntdll-Pipe_SpecialCharacters", "Michael Müller", "Allow special characters in pipe names." },'; \
+	) > ntdll-Pipe_SpecialCharacters.ok
 
 # Patchset quartz-MediaSeeking_Positions
 # |

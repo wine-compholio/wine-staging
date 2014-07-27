@@ -426,9 +426,10 @@ def generate_readme(all_patches, fp):
         all_bugs = []
         for i, patch in all_patches.iteritems():
             for (bugid, bugname, description) in patch.fixes:
-                if bugid is not None: all_bugs.append((bugid, bugname, description))
-        for (bugid, bugname, description) in sorted(all_bugs):
-            if description is None: description = bugname
+                if bugid is not None:
+                    if description is None: description = bugname
+                    all_bugs.append((bugid, bugname, description))
+        for (bugid, bugname, description) in sorted(all_bugs, key=lambda x: x[2]):
             yield "%s ([Wine Bug #%d](http://bugs.winehq.org/show_bug.cgi?id=%d \"%s\"))" % \
                   (description, bugid, bugid, bugname.replace("\\", "\\\\").replace("\"", "\\\""))
 

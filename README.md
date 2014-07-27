@@ -70,18 +70,17 @@ sudo apt-get install --install-recommends wine-compholio
 ![alt text](http://cdn.fds-team.de/misc/images/arch.png) Arch Linux
 -------------------------------------------------------------------------
 
-In order to add our repository, you have to add the following lines to your
-`/etc/pacman.conf`:
-```
-[compholio]
-Server = http://cdn.fds-team.de/stable/arch/$arch
-```
-
-Afterwards you have to import the key for our repository, and set the trust level to
-trusted:
+As a first step you have to import the key for our repository, and set the trust level
+to trusted:
 ```bash
 sudo pacman-key -r E49CC0415DC2D5CA
 sudo pacman-key --lsign-key E49CC0415DC2D5CA
+```
+
+Afterwards you have to add the following lines to `/etc/pacman.conf`:
+```
+[compholio]
+Server = http://cdn.fds-team.de/stable/arch/$arch
 ```
 
 Now you can install wine-compholio directly using `pacman`:

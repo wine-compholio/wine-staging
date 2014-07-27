@@ -24,6 +24,7 @@ PATCHLIST :=	Miscellaneous.ok \
 		server-Misc_ACL.ok \
 		server-Stored_ACLs.ok \
 		shell32-Default_Folder_ACLs.ok \
+		shell32-Register_Folders.ok \
 		shell32-SHCreateSessionKey.ok \
 		shlwapi-UrlCombine.ok \
 		strmbase-Lock_Race_Conditions.ok \
@@ -408,6 +409,24 @@ shell32-Default_Folder_ACLs.ok:
 	@( \
 		echo '+    { "shell32-Default_Folder_ACLs", "Erich E. Hoover", "Generate default ACLs for user shell folders. [rev 6]" },'; \
 	) > shell32-Default_Folder_ACLs.ok
+
+# Patchset shell32-Register_Folders
+# |
+# | Included patches:
+# |   *	Create AppData\LocalLow in user profile directory. [by Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#22896] Multiple applications and games need support for shell32 FOLDERID_LocalAppDataLow (.NET based Unity Engine
+# | 	games, Java JRE 6 in Vista mode)
+# |
+# | Modified files: 
+# |   *	dlls/shell32/shellpath.c, include/shlobj.h
+# |
+shell32-Register_Folders.ok:
+	$(PATCH) < shell32-Register_Folders/0001-shell32-create-AppData-LocalLow-directory.patch
+	@( \
+		echo '+    { "shell32-Register_Folders", "Michael Müller", "Create AppData\\\\LocalLow in user profile directory." },'; \
+	) > shell32-Register_Folders.ok
 
 # Patchset shell32-SHCreateSessionKey
 # |

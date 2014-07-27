@@ -10,6 +10,7 @@ PATCHLIST :=	Miscellaneous.ok \
 		atl-IOCS_Property.ok \
 		fonts-Missing_Fonts.ok \
 		iphlpapi-TCP_Table.ok \
+		kernel32-GetSystemTimes.ok \
 		kernel32-GetVolumePathName.ok \
 		kernel32-Named_Pipe.ok \
 		kernel32-SystemFileCacheSize.ok \
@@ -151,6 +152,25 @@ iphlpapi-TCP_Table.ok:
 	@( \
 		echo '+    { "iphlpapi-TCP_Table", "Erich E. Hoover", "Implement AllocateAndGetTcpExTableFromStack." },'; \
 	) > iphlpapi-TCP_Table.ok
+
+# Patchset kernel32-GetSystemTimes
+# |
+# | Included patches:
+# |   *	Implement GetSystemTimes. [by Louis Lenders / Erich E. Hoover]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#19813] Voddler needs GetSystemTimes to run
+# |
+# | Modified files: 
+# |   *	dlls/kernel32/tests/time.c, dlls/kernel32/time.c
+# |
+.INTERMEDIATE: kernel32-GetSystemTimes.ok
+kernel32-GetSystemTimes.ok:
+	$(PATCH) < kernel32-GetSystemTimes/0001-kernel32-Add-tests-for-GetSystemTimes.patch
+	$(PATCH) < kernel32-GetSystemTimes/0002-kernel32-Implement-GetSystemTimes.patch
+	@( \
+		echo '+    { "kernel32-GetSystemTimes", "Louis Lenders / Erich E. Hoover", "Implement GetSystemTimes." },'; \
+	) > kernel32-GetSystemTimes.ok
 
 # Patchset kernel32-GetVolumePathName
 # |

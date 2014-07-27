@@ -12,6 +12,7 @@ PATCHLIST :=	Miscellaneous.ok \
 		iphlpapi-TCP_Table.ok \
 		kernel32-GetVolumePathName.ok \
 		kernel32-Named_Pipe.ok \
+		kernel32-SystemFileCacheSize.ok \
 		loader-Cmdline_Diagnostics.ok \
 		ntdll-Dynamic_DST.ok \
 		ntdll-FD_Cache.ok \
@@ -188,6 +189,24 @@ kernel32-Named_Pipe.ok:
 	@( \
 		echo '+    { "kernel32-Named_Pipe", "Sebastian Lackner / Dan Kegel", "Support for NamedPipe operations. [rev 2]" },'; \
 	) > kernel32-Named_Pipe.ok
+
+# Patchset kernel32-SystemFileCacheSize
+# |
+# | Included patches:
+# |   *	Add stub for [Get|Set]SystemFileCacheSize. [by Austin English]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35886] Lotus Notes 9 'cacheset.exe' utility needs KERNEL32.dll.SetSystemFileCacheSize
+# |
+# | Modified files: 
+# |   *	dlls/api-ms-win-core-memory-l1-1-1/api-ms-win-core-memory-l1-1-1.spec, dlls/kernel32/heap.c, dlls/kernel32/kernel32.spec
+# |
+.INTERMEDIATE: kernel32-SystemFileCacheSize.ok
+kernel32-SystemFileCacheSize.ok:
+	$(PATCH) < kernel32-SystemFileCacheSize/0001-kernel32-Add-stub-for-Get-Set-SystemFileCacheSize.patch
+	@( \
+		echo '+    { "kernel32-SystemFileCacheSize", "Austin English", "Add stub for [Get|Set]SystemFileCacheSize." },'; \
+	) > kernel32-SystemFileCacheSize.ok
 
 # Patchset loader-Cmdline_Diagnostics
 # |

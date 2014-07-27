@@ -37,14 +37,7 @@ PATCHLIST :=	Miscellaneous.ok \
 		wtsapi32-EnumerateProcesses.ok
 
 .PHONY: install
-install:
-	@$(MAKE) apply; \
-	status=$$?;     \
-	rm -f *.ok;     \
-	exit $$status
-
-.PHONY: apply
-apply: $(PATCHLIST)
+install: $(PATCHLIST)
 	cat *.ok | sort | $(CURDIR)/../debian/tools/patchlist.sh | $(PATCH)
 	cd $(DESTDIR) && autoreconf -f
 	cd $(DESTDIR) && ./tools/make_requests
@@ -65,6 +58,7 @@ clean:
 # | Modified files: 
 # |   *	dlls/kernel32/locale.c, dlls/wined3d/resource.c, dlls/wined3d/swapchain.c
 # |
+.INTERMEDIATE: Miscellaneous.ok
 Miscellaneous.ok:
 	$(PATCH) < Miscellaneous/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
 	$(PATCH) < Miscellaneous/0002-kernel32-Silence-repeated-CompareStringEx-FIXME.patch
@@ -87,6 +81,7 @@ Miscellaneous.ok:
 # |   *	dlls/user32/message.c, dlls/wined3d/wined3d.spec, dlls/wined3d/wined3d_main.c, dlls/winex11.drv/init.c,
 # | 	dlls/winex11.drv/opengl.c, dlls/winex11.drv/x11drv.h
 # |
+.INTERMEDIATE: Pipelight.ok
 Pipelight.ok:
 	$(PATCH) < Pipelight/0001-winex11-Implement-X11DRV_FLUSH_GDI_DISPLAY-ExtEscape-c.patch
 	$(PATCH) < Pipelight/0002-user32-Decrease-minimum-SetTimer-interval-to-5-ms.patch
@@ -110,6 +105,7 @@ Pipelight.ok:
 # | Modified files: 
 # |   *	dlls/atl/atl_ax.c
 # |
+.INTERMEDIATE: atl-IOCS_Property.ok
 atl-IOCS_Property.ok:
 	$(PATCH) < atl-IOCS_Property/0001-atl-Don-t-use-GWLP_USERDATA-to-store-IOCS-to-avoid-c.patch
 	@( \
@@ -129,6 +125,7 @@ atl-IOCS_Property.ok:
 # | Modified files: 
 # |   *	fonts/Makefile.in, fonts/arial.sfd, fonts/arial.ttf, fonts/msyh.sfd, fonts/msyh.ttf
 # |
+.INTERMEDIATE: fonts-Missing_Fonts.ok
 fonts-Missing_Fonts.ok:
 	$(PATCH) < fonts-Missing_Fonts/0001-fonts-Add-Liberation-Sans-as-an-Arial-replacement.patch
 	$(PATCH) < fonts-Missing_Fonts/0002-fonts-Add-WenQuanYi-Micro-Hei-as-a-Microsoft-Yahei-r.patch
@@ -147,6 +144,7 @@ fonts-Missing_Fonts.ok:
 # | Modified files: 
 # |   *	dlls/iphlpapi/iphlpapi.spec, dlls/iphlpapi/ipstats.c, dlls/iphlpapi/ipstats.h
 # |
+.INTERMEDIATE: iphlpapi-TCP_Table.ok
 iphlpapi-TCP_Table.ok:
 	$(PATCH) < iphlpapi-TCP_Table/0001-iphlpapi-Implement-AllocateAndGetTcpExTableFromStack.patch
 	@( \
@@ -161,6 +159,7 @@ iphlpapi-TCP_Table.ok:
 # | Modified files: 
 # |   *	dlls/kernel32/tests/volume.c, dlls/kernel32/volume.c
 # |
+.INTERMEDIATE: kernel32-GetVolumePathName.ok
 kernel32-GetVolumePathName.ok:
 	$(PATCH) < kernel32-GetVolumePathName/0001-kernel32-Implement-GetVolumePathName.patch
 	$(PATCH) < kernel32-GetVolumePathName/0002-kernel32-Convert-GetVolumePathName-tests-into-a-list.patch
@@ -182,6 +181,7 @@ kernel32-GetVolumePathName.ok:
 # | Modified files: 
 # |   *	dlls/kernel32/sync.c
 # |
+.INTERMEDIATE: kernel32-Named_Pipe.ok
 kernel32-Named_Pipe.ok:
 	$(PATCH) < kernel32-Named_Pipe/0001-kernel32-Change-return-value-of-stub-SetNamedPipeHandl.patch
 	$(PATCH) < kernel32-Named_Pipe/0002-kernel32-ConnectNamedPort-should-return-FALSE-and-se.patch
@@ -199,6 +199,7 @@ kernel32-Named_Pipe.ok:
 # |   *	dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec, include/wine/library.h, libs/wine/config.c, libs/wine/loader.c,
 # | 	libs/wine/wine.def, libs/wine/wine.map, loader/main.c
 # |
+.INTERMEDIATE: loader-Cmdline_Diagnostics.ok
 loader-Cmdline_Diagnostics.ok:
 	$(PATCH) < loader-Cmdline_Diagnostics/0001-loader-Add-commandline-option-patches-to-show-the-pa.patch
 	$(PATCH) < loader-Cmdline_Diagnostics/0002-loader-Add-commandline-option-check-libs.patch
@@ -219,6 +220,7 @@ loader-Cmdline_Diagnostics.ok:
 # | Modified files: 
 # |   *	dlls/ntdll/time.c, loader/wine.inf.in
 # |
+.INTERMEDIATE: ntdll-Dynamic_DST.ok
 ntdll-Dynamic_DST.ok:
 	$(PATCH) < ntdll-Dynamic_DST/0001-ntdll-Add-support-for-Dynamic-DST-daylight-saving-ti.patch
 	$(PATCH) < ntdll-Dynamic_DST/0002-wine.inf-Add-Dynamic-DST-exceptions-for-Israel-Stand.patch
@@ -235,6 +237,7 @@ ntdll-Dynamic_DST.ok:
 # | Modified files: 
 # |   *	dlls/ntdll/server.c
 # |
+.INTERMEDIATE: ntdll-FD_Cache.ok
 ntdll-FD_Cache.ok:
 	$(PATCH) < ntdll-FD_Cache/0001-ntdll-Use-lockfree-implementation-for-get_cached_fd.patch
 	@( \
@@ -252,6 +255,7 @@ ntdll-FD_Cache.ok:
 # | Modified files: 
 # |   *	dlls/kernel32/path.c, dlls/kernel32/volume.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/ntifs.h
 # |
+.INTERMEDIATE: ntdll-Junction_Points.ok
 ntdll-Junction_Points.ok:
 	$(PATCH) < ntdll-Junction_Points/0001-ntdll-Add-support-for-junction-point-creation.patch
 	$(PATCH) < ntdll-Junction_Points/0002-ntdll-Add-support-for-reading-junction-points.patch
@@ -275,6 +279,7 @@ ntdll-Junction_Points.ok:
 # | Modified files: 
 # |   *	dlls/kernel32/tests/pipe.c, dlls/ntdll/directory.c
 # |
+.INTERMEDIATE: ntdll-Pipe_SpecialCharacters.ok
 ntdll-Pipe_SpecialCharacters.ok:
 	$(PATCH) < ntdll-Pipe_SpecialCharacters/0001-ntdll-Allow-special-characters-in-pipe-names.patch
 	@( \
@@ -292,6 +297,7 @@ ntdll-Pipe_SpecialCharacters.ok:
 # | Modified files: 
 # |   *	dlls/quartz/filtergraph.c
 # |
+.INTERMEDIATE: quartz-MediaSeeking_Positions.ok
 quartz-MediaSeeking_Positions.ok:
 	$(PATCH) < quartz-MediaSeeking_Positions/0001-quartz-Include-the-stream-position-in-addition-to-th.patch
 	$(PATCH) < quartz-MediaSeeking_Positions/0002-quartz-Implement-MediaSeeking_GetCurrentPosition-on-.patch
@@ -309,6 +315,7 @@ quartz-MediaSeeking_Positions.ok:
 # | Modified files: 
 # |   *	server/file.c
 # |
+.INTERMEDIATE: server-ACL_Compat.ok
 server-ACL_Compat.ok: server-Inherited_ACLs.ok
 	$(PATCH) < server-ACL_Compat/0010-server-Add-compatibility-code-for-handling-the-old-m.patch
 	@( \
@@ -326,6 +333,7 @@ server-ACL_Compat.ok: server-Inherited_ACLs.ok
 # | Modified files: 
 # |   *	dlls/ws2_32/tests/sock.c, server/event.c, server/named_pipe.c, server/object.h, server/sock.c
 # |
+.INTERMEDIATE: server-Address_Change_Notification.ok
 server-Address_Change_Notification.ok:
 	$(PATCH) < server-Address_Change_Notification/0001-server-Implement-socket-specific-ioctl-routine.patch
 	$(PATCH) < server-Address_Change_Notification/0002-server-Add-socket-side-support-for-the-interface-cha.patch
@@ -348,6 +356,7 @@ server-Address_Change_Notification.ok:
 # |   *	dlls/advapi32/tests/security.c, dlls/kernel32/process.c, server/object.c, server/object.h, server/process.c,
 # | 	server/protocol.def
 # |
+.INTERMEDIATE: server-CreateProcess_ACLs.ok
 server-CreateProcess_ACLs.ok:
 	$(PATCH) < server-CreateProcess_ACLs/0001-server-A-new-function-set_sd_defaults_from_token-try.patch
 	$(PATCH) < server-CreateProcess_ACLs/0002-server-Support-sending-process-and-thread-security-d.patch
@@ -368,6 +377,7 @@ server-CreateProcess_ACLs.ok:
 # | Modified files: 
 # |   *	dlls/advapi32/tests/security.c, include/winnt.h, server/change.c, server/fd.c, server/file.c, server/file.h
 # |
+.INTERMEDIATE: server-Inherited_ACLs.ok
 server-Inherited_ACLs.ok: server-Stored_ACLs.ok
 	$(PATCH) < server-Inherited_ACLs/0001-server-Inherit-security-attributes-from-parent-direc.patch
 	$(PATCH) < server-Inherited_ACLs/0002-server-Inherit-security-attributes-from-parent-direc.patch
@@ -386,6 +396,7 @@ server-Inherited_ACLs.ok: server-Stored_ACLs.ok
 # | Modified files: 
 # |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
 # |
+.INTERMEDIATE: server-Misc_ACL.ok
 server-Misc_ACL.ok:
 	$(PATCH) < server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
 	$(PATCH) < server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
@@ -404,6 +415,7 @@ server-Misc_ACL.ok:
 # | Modified files: 
 # |   *	configure.ac, dlls/advapi32/tests/security.c, server/change.c, server/file.c, server/file.h
 # |
+.INTERMEDIATE: server-Stored_ACLs.ok
 server-Stored_ACLs.ok:
 	$(PATCH) < server-Stored_ACLs/0001-server-Unify-the-storage-of-security-attributes-for-.patch
 	$(PATCH) < server-Stored_ACLs/0002-server-Unify-the-retrieval-of-security-attributes-fo.patch
@@ -423,6 +435,7 @@ server-Stored_ACLs.ok:
 # | Modified files: 
 # |   *	dlls/shell32/shellpath.c
 # |
+.INTERMEDIATE: shell32-Default_Folder_ACLs.ok
 shell32-Default_Folder_ACLs.ok:
 	$(PATCH) < shell32-Default_Folder_ACLs/0001-shell32-Set-the-default-security-attributes-for-user.patch
 	@( \
@@ -441,6 +454,7 @@ shell32-Default_Folder_ACLs.ok:
 # | Modified files: 
 # |   *	dlls/shell32/shellpath.c, include/shlobj.h
 # |
+.INTERMEDIATE: shell32-Register_Folders.ok
 shell32-Register_Folders.ok:
 	$(PATCH) < shell32-Register_Folders/0001-shell32-create-AppData-LocalLow-directory.patch
 	@( \
@@ -458,6 +472,7 @@ shell32-Register_Folders.ok:
 # | Modified files: 
 # |   *	dlls/shell32/shell32.spec, dlls/shell32/shellreg.c
 # |
+.INTERMEDIATE: shell32-SHCreateSessionKey.ok
 shell32-SHCreateSessionKey.ok:
 	$(PATCH) < shell32-SHCreateSessionKey/0001-shell32-Implement-SHCreateSessionKey.patch
 	@( \
@@ -472,6 +487,7 @@ shell32-SHCreateSessionKey.ok:
 # | Modified files: 
 # |   *	dlls/shlwapi/tests/url.c, dlls/shlwapi/url.c
 # |
+.INTERMEDIATE: shlwapi-UrlCombine.ok
 shlwapi-UrlCombine.ok:
 	$(PATCH) < shlwapi-UrlCombine/0001-shlwapi-tests-Add-additional-tests-for-UrlCombine-and-.patch
 	$(PATCH) < shlwapi-UrlCombine/0002-shlwapi-UrlCombineW-workaround-for-relative-paths.patch
@@ -490,6 +506,7 @@ shlwapi-UrlCombine.ok:
 # | Modified files: 
 # |   *	dlls/quartz/dsoundrender.c, dlls/quartz/videorenderer.c, dlls/strmbase/renderer.c
 # |
+.INTERMEDIATE: strmbase-Lock_Race_Conditions.ok
 strmbase-Lock_Race_Conditions.ok:
 	$(PATCH) < strmbase-Lock_Race_Conditions/0001-strmbase-Fix-race-condition-on-InputPin_BeginFlush-b.patch
 	$(PATCH) < strmbase-Lock_Race_Conditions/0002-strmbase-Fix-race-condition-on-InputPin_EndFlush-bet.patch
@@ -513,6 +530,7 @@ strmbase-Lock_Race_Conditions.ok:
 # | Modified files: 
 # |   *	programs/wineboot/wineboot.c
 # |
+.INTERMEDIATE: wineboot-HKEY_DYN_DATA.ok
 wineboot-HKEY_DYN_DATA.ok:
 	$(PATCH) < wineboot-HKEY_DYN_DATA/0001-wineboot-Add-some-generic-hardware-in-HKEY_DYN_DATA-.patch
 	@( \
@@ -529,6 +547,7 @@ wineboot-HKEY_DYN_DATA.ok:
 # |   *	configure.ac, dlls/mmdevapi/main.c, dlls/mmdevapi/tests/render.c, dlls/winepulse.drv/Makefile.in,
 # | 	dlls/winepulse.drv/mmdevdrv.c, dlls/winepulse.drv/winepulse.drv.spec, dlls/winmm/lolvldrv.c
 # |
+.INTERMEDIATE: winepulse-PulseAudio_Support.ok
 winepulse-PulseAudio_Support.ok:
 	$(PATCH) < winepulse-PulseAudio_Support/0001-winmm-Load-winealsa-if-winepulse-is-found.patch
 	$(PATCH) < winepulse-PulseAudio_Support/0002-winepulse-Add-initial-stub-for-pulseaudio-support.patch
@@ -570,6 +589,7 @@ winepulse-PulseAudio_Support.ok:
 # | Modified files: 
 # |   *	dlls/winex11.drv/event.c, dlls/winex11.drv/window.c
 # |
+.INTERMEDIATE: winex11-XEMBED.ok
 winex11-XEMBED.ok:
 	$(PATCH) < winex11-XEMBED/0001-winex11-Update-gl_drawable-for-embedded-windows.patch
 	$(PATCH) < winex11-XEMBED/0002-winex11-Enable-disable-windows-when-they-are-un-mapped.patch
@@ -590,6 +610,7 @@ winex11-XEMBED.ok:
 # | Modified files: 
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c
 # |
+.INTERMEDIATE: ws2_32-TransmitFile.ok
 ws2_32-TransmitFile.ok:
 	$(PATCH) < ws2_32-TransmitFile/0001-ws2_32-Add-stub-for-TransmitFile.patch
 	$(PATCH) < ws2_32-TransmitFile/0002-ws2_32-Check-for-invalid-parameters-in-TransmitFile.patch
@@ -611,6 +632,7 @@ ws2_32-TransmitFile.ok:
 # | Modified files: 
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/ws2_32.spec, include/ws2tcpip.h
 # |
+.INTERMEDIATE: ws2_32-inet_pton.ok
 ws2_32-inet_pton.ok:
 	$(PATCH) < ws2_32-inet_pton/0001-ws2_32-Implement-inet_pton.patch
 	@( \
@@ -629,6 +651,7 @@ ws2_32-inet_pton.ok:
 # | Modified files: 
 # |   *	dlls/wtsapi32/tests/wtsapi.c, dlls/wtsapi32/wtsapi32.c
 # |
+.INTERMEDIATE: wtsapi32-EnumerateProcesses.ok
 wtsapi32-EnumerateProcesses.ok:
 	$(PATCH) < wtsapi32-EnumerateProcesses/0001-wtsapi32-Partial-implementation-of-WTSEnumerateProce.patch
 	@( \

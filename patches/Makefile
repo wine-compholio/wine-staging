@@ -543,6 +543,9 @@ wineboot-HKEY_DYN_DATA.ok:
 # |   *	Winepulse patches extracted from https://launchpad.net/~ubuntu-
 # | 	wine/+archive/ubuntu/ppa/+files/wine1.7_1.7.22-0ubuntu1.debian.tar.gz. [rev 4, by Maarten Lankhorst]
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#10495] Wine should support PulseAudio
+# |
 # | Modified files: 
 # |   *	configure.ac, dlls/mmdevapi/main.c, dlls/mmdevapi/tests/render.c, dlls/winepulse.drv/Makefile.in,
 # | 	dlls/winepulse.drv/mmdevdrv.c, dlls/winepulse.drv/winepulse.drv.spec, dlls/winmm/lolvldrv.c

@@ -20,6 +20,7 @@ PATCHLIST :=	Miscellaneous.ok \
 		ntdll-Junction_Points.ok \
 		ntdll-Pipe_SpecialCharacters.ok \
 		quartz-MediaSeeking_Positions.ok \
+		secur32-DecryptMessage.ok \
 		server-ACL_Compat.ok \
 		server-Address_Change_Notification.ok \
 		server-CreateProcess_ACLs.ok \
@@ -345,6 +346,24 @@ quartz-MediaSeeking_Positions.ok:
 	@( \
 		echo '+    { "quartz-MediaSeeking_Positions", "Erich E. Hoover", "Return correct IMediaSeeking stream positions in quartz." },'; \
 	) > quartz-MediaSeeking_Positions.ok
+
+# Patchset secur32-DecryptMessage
+# |
+# | Included patches:
+# |   *	Use an empty buffer in DecryptMessage to return decrypted data. [by Hans Leidekker]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#20748] chromium's net_unittests!SSLClientSocketTest.Read_Interrupted fails.
+# |
+# | Modified files: 
+# |   *	dlls/secur32/schannel.c
+# |
+.INTERMEDIATE: secur32-DecryptMessage.ok
+secur32-DecryptMessage.ok:
+	$(PATCH) < secur32-DecryptMessage/0001-secur32-Use-an-empty-buffer-in-DecryptMessage-to-ret.patch
+	@( \
+		echo '+    { "secur32-DecryptMessage", "Hans Leidekker", "Use an empty buffer in DecryptMessage to return decrypted data." },'; \
+	) > secur32-DecryptMessage.ok
 
 # Patchset server-ACL_Compat
 # |

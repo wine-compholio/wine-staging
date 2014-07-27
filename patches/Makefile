@@ -603,7 +603,7 @@ ws2_32-TransmitFile.ok:
 # Patchset ws2_32-inet_pton
 # |
 # | Included patches:
-# |   *	Implement ws2_32.inet_pton. [by Erich E. Hoover]
+# |   *	Implement ws2_32.inet_pton. [by Bruno Jesus]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#36713] Watch_Dogs requires ws2_32.inet_pton
@@ -614,7 +614,7 @@ ws2_32-TransmitFile.ok:
 ws2_32-inet_pton.ok:
 	$(PATCH) < ws2_32-inet_pton/0001-ws2_32-Implement-inet_pton.patch
 	@( \
-		echo '+    { "ws2_32-inet_pton", "Erich E. Hoover", "Implement ws2_32.inet_pton." },'; \
+		echo '+    { "ws2_32-inet_pton", "Bruno Jesus", "Implement ws2_32.inet_pton." },'; \
 	) > ws2_32-inet_pton.ok
 
 # Patchset wtsapi32-EnumerateProcesses

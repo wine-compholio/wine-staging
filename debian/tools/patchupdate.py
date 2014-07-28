@@ -63,7 +63,26 @@ class PatchSet(object):
         self.verify_depends = set()
         self.verify_time    = None
 
-def download(url):
+def _pairs(a):
+    """Iterate over all pairs of elements contained in the list a."""
+    for i, j in enumerate(a):
+        for k in a[i+1:]:
+            yield (j, k)
+
+def _load_dict(filename):
+    """Load a Python dictionary object from a file."""
+    try:
+        with open(filename) as fp:
+            return pickle.load(fp)
+    except IOError:
+        return {}
+
+def _save_dict(filename, value):
+    """Save a Python dictionary object to a file."""
+    with open(filename, "wb") as fp:
+        pickle.dump(value, fp, pickle.HIGHEST_PROTOCOL)
+
+def _download(url):
     """Open a specific URL and return the content."""
     with contextlib.closing(urllib.urlopen(url)) as fp:
         return fp.read()
@@ -72,6 +91,7 @@ def read_patchsets(directory):
     """Read information about all patchsets in a given directory."""
 
     def _iter_kv_from_file(filename):
+        """Iterate through all key/value pairs in a file."""
         with open(filename) as fp:
             for line in fp:
                 if line.startswith("#"):
@@ -173,7 +193,7 @@ def read_patchsets(directory):
     pool = Pool(8)
 
     bug_short_desc = {None:None}
-    for bugid, data in zip(all_bugs, pool.map(download, ["http://bugs.winehq.org/show_bug.cgi?id=%d&ctype=xml&field=short_desc" % bugid for bugid in all_bugs])):
+    for bugid, data in zip(all_bugs, pool.map(_download, ["http://bugs.winehq.org/show_bug.cgi?id=%d&ctype=xml&field=short_desc" % bugid for bugid in all_bugs])):
         bug_short_desc[bugid] = minidom.parseString(data).getElementsByTagName('short_desc')[0].firstChild.data
 
     # The following command triggers a (harmless) python bug, which would confuse the user:
@@ -193,11 +213,6 @@ def causal_time_combine(a, b):
 def causal_time_smaller(a, b):
     """Checks if timestamp a is smaller than timestamp b."""
     return all([i <= j for i, j in zip(a,b)]) and any([i < j for i, j in zip(a,b)])
-
-def _pairs(a):
-    for i, j in enumerate(a):
-        for k in a[i+1:]:
-            yield (j, k)
 
 def causal_time_relation(all_patches, indices):
     """Checks if the dependencies of patches are compatible with a specific apply order."""
@@ -232,33 +247,11 @@ def contains_binary_patch(all_patches, indices, filename):
                 return True
     return False
 
-def _load_dict(filename):
-    try:
-        with open(filename) as fp:
-            return pickle.load(fp)
-    except IOError:
-        return {}
-
-def _save_dict(filename, value):
-    with open(filename, "wb") as fp:
-        pickle.dump(value, fp, pickle.HIGHEST_PROTOCOL)
-
-def load_patch_cache():
-    """Load dictionary for cached patch dependency tests into cached_patch_result."""
-    global cached_patch_result
-    global cached_original_src
-    cached_patch_result = _load_dict("./.depcache")
-    cached_original_src = _load_dict("./.srccache")
-
-def save_patch_cache():
-    """Save dictionary for cached patch depdency tests."""
-    _save_dict("./.depcache", cached_patch_result)
-    _save_dict("./.srccache", cached_original_src)
-
-def _get_wine_file(filename, force=False):
-    entry = "%s:%s" % (latest_wine_commit, filename)
+def get_wine_file(filename, force=False):
+    """Return the hash and optionally the content of a file."""
 
     # If we're not forced, we try to save time and only lookup the cached checksum
+    entry = "%s:%s" % (latest_wine_commit, filename)
     if not force and cached_original_src.has_key(entry):
         return (cached_original_src[entry], None)
 
@@ -287,7 +280,7 @@ def verify_patch_order(all_patches, indices, filename):
         return
 
     # Get at least the checksum of the original file
-    original_content_hash, original_content = _get_wine_file(filename)
+    original_content_hash, original_content = get_wine_file(filename)
 
     # Check for possible ways to apply the patch
     failed_to_apply   = False
@@ -308,15 +301,13 @@ def verify_patch_order(all_patches, indices, filename):
         else:
             # Now really get the file, if we don't have it yet
             if original_content is None:
-                original_content_hash, original_content = _get_wine_file(filename, force=True)
+                original_content_hash, original_content = get_wine_file(filename, force=True)
 
             # Apply the patches (without fuzz)
             try:
                 content = patchutils.apply_patch(original_content, patches, fuzz=0)
             except patchutils.PatchApplyError:
-                if last_result_hash is not None:
-                    break
-                # We failed to apply the patches, but don't know if it works at all - continue
+                if last_result_hash is not None: break
                 failed_to_apply = True
                 continue
 
@@ -324,15 +315,14 @@ def verify_patch_order(all_patches, indices, filename):
             result_hash = hashlib.sha256(content).digest()
             cached_patch_result[unique_hash] = result_hash
 
-        # First time we got a successful result
         if last_result_hash is None:
             last_result_hash = result_hash
             if failed_to_apply: break
-        # All the other times: hash to match with previous attempt
         elif last_result_hash != result_hash:
             last_result_hash = None
             break
 
+    # If something failed, then show the appropriate error message.
     if failed_to_apply and last_result_hash is None:
         raise PatchUpdaterError("Changes to file %s don't apply on git source tree: %s" %
                                 (filename, ", ".join([all_patches[i].name for i in indices])))
@@ -346,6 +336,19 @@ def verify_patch_order(all_patches, indices, filename):
 
 def verify_dependencies(all_patches):
     """Resolve dependencies, and afterwards run verify_patch_order() to check if everything applies properly."""
+
+    def _load_patch_cache():
+        """Load dictionary for cached patch dependency tests into cached_patch_result."""
+        global cached_patch_result
+        global cached_original_src
+        cached_patch_result = _load_dict("./.depcache")
+        cached_original_src = _load_dict("./.srccache")
+
+    def _save_patch_cache():
+        """Save dictionary for cached patch depdency tests."""
+        _save_dict("./.depcache", cached_patch_result)
+        _save_dict("./.srccache", cached_original_src)
+
     max_patches = max(all_patches.keys()) + 1
 
     for i, patch in all_patches.iteritems():
@@ -382,12 +385,12 @@ def verify_dependencies(all_patches):
             modified_files[f].append(i)
 
     # Check if patches always apply correctly
-    load_patch_cache()
+    _load_patch_cache()
     try:
         for f, indices in modified_files.iteritems():
             verify_patch_order(all_patches, indices, f)
     finally:
-        save_patch_cache()
+        _save_patch_cache()
 
 def generate_makefile(all_patches, fp):
     """Generate Makefile for a specific set of patches."""

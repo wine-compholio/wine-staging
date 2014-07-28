@@ -18,7 +18,6 @@ Wine-compholio contains fixes for the following Wine bugs:
 * Add Dynamic DST exceptions for Israel Standard Time ([Wine Bug #36374](http://bugs.winehq.org/show_bug.cgi?id=36374 "Israel timezone handled incorrectly"))
 * Add implementation of WTSEnumerateProcessesW ([Wine Bug #29903](http://bugs.winehq.org/show_bug.cgi?id=29903 "Some Microsoft debuggers fail to enumerate processes due to wtsapi32.WTSEnumerateProcessesW() being a stub (Microsoft Visual Studio 2005, DbgCLR from .NET 2.0 SDK)"))
 * Allow special characters in pipe names. ([Wine Bug #28995](http://bugs.winehq.org/show_bug.cgi?id=28995 "Unable to use named pipes with \">\" character in the name"))
-* Chromium unit test fails in DecryptMessage ([Wine Bug #20748](http://bugs.winehq.org/show_bug.cgi?id=20748 "chromium's net_unittests!SSLClientSocketTest.Read_Interrupted fails."))
 * Create AppData\LocalLow directory inside the profile directory ([Wine Bug #22896](http://bugs.winehq.org/show_bug.cgi?id=22896 "Multiple applications and games need support for shell32 FOLDERID_LocalAppDataLow (.NET based Unity Engine games, Java JRE 6 in Vista mode)"))
 * Create Saved Games directory inside the profile directory ([Wine Bug #28312](http://bugs.winehq.org/show_bug.cgi?id=28312 "Assassin's Creed Brotherhood v1.03 needs \"Saved Games\" folder"))
 * Fix for ConnectNamedPort return value in overlapped mode ([Wine Bug #16550](http://bugs.winehq.org/show_bug.cgi?id=16550 "ConnectNamedPort should never return OK in overlapped mode (affects chromium ui_tests.exe)"))

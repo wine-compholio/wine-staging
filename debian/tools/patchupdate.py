@@ -19,11 +19,11 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 #
 
-from multiprocessing import Pool
 from xml.dom import minidom
 import contextlib
 import hashlib
 import itertools
+import multiprocessing
 import os
 import patchutils
 import pickle
@@ -204,16 +204,11 @@ def read_patchsets(directory):
             patch.authors.append(info)
 
     # In a third step query information for the patches from Wine bugzilla
-    pool = Pool(8)
+    pool = multiprocessing.Pool(16)
 
     bug_short_desc = {None:None}
     for bugid, data in zip(all_bugs, pool.map(_download, ["http://bugs.winehq.org/show_bug.cgi?id=%d&ctype=xml&field=short_desc" % bugid for bugid in all_bugs])):
         bug_short_desc[bugid] = minidom.parseString(data).getElementsByTagName('short_desc')[0].firstChild.data
-
-    # The following command triggers a (harmless) python bug, which would confuse the user:
-    # > Exception RuntimeError: RuntimeError('cannot join current thread',) in <Finalize object, dead> ignored
-    # To avoid that just keep the pool until it destroyed by the garbage collector.
-    # pool.close()
 
     for i, patch in all_patches.iteritems():
         patch.fixes = [(bugid, bug_short_desc[bugid], description) for bugid, dummy, description in patch.fixes]

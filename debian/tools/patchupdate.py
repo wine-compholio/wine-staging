@@ -34,7 +34,9 @@ import textwrap
 import urllib
 
 # Cached information to speed up patch dependency checks
+latest_wine_commit  = None
 cached_patch_result = {}
+cached_original_src = {}
 
 class PatchUpdaterError(RuntimeError):
     """Failed to update patches."""
@@ -230,19 +232,48 @@ def contains_binary_patch(all_patches, indices, filename):
                 return True
     return False
 
+def _load_dict(filename):
+    try:
+        with open(filename) as fp:
+            return pickle.load(fp)
+    except IOError:
+        return {}
+
+def _save_dict(filename, value):
+    with open(filename, "wb") as fp:
+        pickle.dump(value, fp, pickle.HIGHEST_PROTOCOL)
+
 def load_patch_cache():
     """Load dictionary for cached patch dependency tests into cached_patch_result."""
     global cached_patch_result
-    try:
-        with open("./.depcache") as fp:
-            cached_patch_result = pickle.load(fp)
-    except IOError:
-        cached_patch_result = {}
+    global cached_original_src
+    cached_patch_result = _load_dict("./.depcache")
+    cached_original_src = _load_dict("./.srccache")
 
 def save_patch_cache():
     """Save dictionary for cached patch depdency tests."""
-    with open("./.depcache", "wb") as fp:
-        pickle.dump(cached_patch_result, fp, pickle.HIGHEST_PROTOCOL)
+    _save_dict("./.depcache", cached_patch_result)
+    _save_dict("./.srccache", cached_original_src)
+
+def _get_wine_file(filename, force=False):
+    entry = "%s:%s" % (latest_wine_commit, filename)
+
+    # If we're not forced, we try to save time and only lookup the cached checksum
+    if not force and cached_original_src.has_key(entry):
+        return (cached_original_src[entry], None)
+
+    # Grab original file from the wine git repository
+    try:
+        with open(os.devnull, 'w') as devnull:
+            content = subprocess.check_output(["git", "show", entry], cwd="./debian/tools/wine",
+                                                                      stderr=devnull)
+    except subprocess.CalledProcessError as e:
+        if e.returncode != 128: raise # not found
+        content = ""
+
+    content_hash = hashlib.sha256(content).digest()
+    cached_original_src[entry] = content_hash
+    return (content_hash, content)
 
 def verify_patch_order(all_patches, indices, filename):
     """Checks if the dependencies are defined correctly by applying on the patches on a copy from the git tree."""
@@ -255,17 +286,8 @@ def verify_patch_order(all_patches, indices, filename):
                                     (filename, ", ".join([all_patches[i].name for i in indices])))
         return
 
-    # Grab original file from the wine git repository - please note we grab from origin/master, not the current branch
-    try:
-        with open(os.devnull, 'w') as devnull:
-            original_content = subprocess.check_output(["git", "show", "origin/master:%s" % filename],
-                                                       cwd="./debian/tools/wine", stderr=devnull)
-    except subprocess.CalledProcessError as e:
-        if e.returncode != 128: raise # not found
-        original_content = ""
-
-    # Calculate hash of original content
-    original_content_hash = hashlib.sha256(original_content).digest()
+    # Get at least the checksum of the original file
+    original_content_hash, original_content = _get_wine_file(filename)
 
     # Check for possible ways to apply the patch
     failed_to_apply   = False
@@ -284,6 +306,10 @@ def verify_patch_order(all_patches, indices, filename):
             result_hash = cached_patch_result[unique_hash]
 
         else:
+            # Now really get the file, if we don't have it yet
+            if original_content is None:
+                original_content_hash, original_content = _get_wine_file(filename, force=True)
+
             # Apply the patches (without fuzz)
             try:
                 content = patchutils.apply_patch(original_content, patches, fuzz=0)
@@ -466,6 +492,11 @@ def generate_readme(all_patches, fp):
 if __name__ == "__main__":
     if not os.path.isdir("./debian/tools/wine"):
         raise RuntimeError("Please create a symlink to the wine repository in ./debian/tools/wine")
+
+    # Get the latest wine commit (sha1)
+    latest_wine_commit = subprocess.check_output(["git", "rev-parse", "origin/master"],
+                                                 cwd="./debian/tools/wine").strip()
+    assert len(latest_wine_commit) == 40
 
     try:
         all_patches = read_patchsets("./patches")

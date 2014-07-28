@@ -38,6 +38,20 @@ latest_wine_commit  = None
 cached_patch_result = {}
 cached_original_src = {}
 
+class config(object):
+    path_depcache           = "./.depcache"
+    path_srccache           = "./.srccache"
+
+    path_patches            = "./patches"
+    path_changelog          = "./debian/changelog"
+    path_wine               = "./debian/tools/wine"
+
+    path_template_Makefile  = "./debian/tools/Makefile.in"
+    path_Makefile           = "./patches/Makefile"
+
+    path_README_md          = "./README.md"
+    path_template_README_md = "./debian/tools/README.md.in"
+
 class PatchUpdaterError(RuntimeError):
     """Failed to update patches."""
     pass
@@ -258,8 +272,7 @@ def get_wine_file(filename, force=False):
     # Grab original file from the wine git repository
     try:
         with open(os.devnull, 'w') as devnull:
-            content = subprocess.check_output(["git", "show", entry], cwd="./debian/tools/wine",
-                                                                      stderr=devnull)
+            content = subprocess.check_output(["git", "show", entry], cwd=config.path_wine, stderr=devnull)
     except subprocess.CalledProcessError as e:
         if e.returncode != 128: raise # not found
         content = ""
@@ -341,13 +354,13 @@ def verify_dependencies(all_patches):
         """Load dictionary for cached patch dependency tests into cached_patch_result."""
         global cached_patch_result
         global cached_original_src
-        cached_patch_result = _load_dict("./.depcache")
-        cached_original_src = _load_dict("./.srccache")
+        cached_patch_result = _load_dict(config.path_depcache)
+        cached_original_src = _load_dict(config.path_srccache)
 
     def _save_patch_cache():
         """Save dictionary for cached patch depdency tests."""
-        _save_dict("./.depcache", cached_patch_result)
-        _save_dict("./.srccache", cached_original_src)
+        _save_dict(config.path_depcache, cached_patch_result)
+        _save_dict(config.path_srccache, cached_original_src)
 
     max_patches = max(all_patches.keys()) + 1
 
@@ -395,7 +408,7 @@ def verify_dependencies(all_patches):
 def generate_makefile(all_patches, fp):
     """Generate Makefile for a specific set of patches."""
 
-    with open("./debian/tools/Makefile.in") as template_fp:
+    with open(config.path_template_Makefile) as template_fp:
         template = template_fp.read()
     fp.write(template.format(patchlist=" \\\n\t\t".join(["%s.ok" % patch.name for i, patch in all_patches.iteritems()])))
 
@@ -477,7 +490,7 @@ def generate_readme(all_patches, fp):
 
     # Read information from changelog
     def _read_changelog():
-        with open("debian/changelog") as fp:
+        with open(config.path_changelog) as fp:
             for line in fp:
                 r = re.match("^([a-zA-Z0-9][^(]*)\((.*)\) ([^;]*)", line)
                 if r: yield (r.group(1).strip(), r.group(2).strip(), r.group(3).strip())
@@ -488,21 +501,20 @@ def generate_readme(all_patches, fp):
             if distro.lower() != "unreleased":
                 return version
 
-    with open("./debian/tools/README.md.in") as template_fp:
+    with open(config.path_template_README_md) as template_fp:
         template = template_fp.read()
     fp.write(template.format(bugs=_enum(_all_bugs()), fixes=_enum(_all_fixes()), version=_latest_stable_version()))
 
 if __name__ == "__main__":
-    if not os.path.isdir("./debian/tools/wine"):
-        raise RuntimeError("Please create a symlink to the wine repository in ./debian/tools/wine")
 
     # Get the latest wine commit (sha1)
-    latest_wine_commit = subprocess.check_output(["git", "rev-parse", "origin/master"],
-                                                 cwd="./debian/tools/wine").strip()
+    if not os.path.isdir(config.path_wine):
+        raise RuntimeError("Please create a symlink to the wine repository in %s" % config.path_wine)
+    latest_wine_commit = subprocess.check_output(["git", "rev-parse", "origin/master"], cwd=config.path_wine).strip()
     assert len(latest_wine_commit) == 40
 
     try:
-        all_patches = read_patchsets("./patches")
+        all_patches = read_patchsets(config.path_patches)
         verify_dependencies(all_patches)
     except PatchUpdaterError as e:
         print ""
@@ -510,8 +522,8 @@ if __name__ == "__main__":
         print ""
         exit(1)
 
-    with open("./patches/Makefile", "w") as fp:
+    with open(config.path_Makefile, "w") as fp:
         generate_makefile(all_patches, fp)
 
-    with open("./README.md", "w") as fp:
+    with open(config.path_README_md, "w") as fp:
         generate_readme(all_patches, fp)

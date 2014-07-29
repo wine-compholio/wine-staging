@@ -4,9 +4,10 @@ each individual project.
 
 Liberation Sans
 ===============
-Used as a replacement font for Arial.
+
 **License:** [LIBERATION FONT SOFTWARE LICENSE](#liberation-font-software-license)
 
+Used as a replacement font for **Arial**, installed for end-user convenience.
 The following files are affected by this license:
 ```
 ./patches/fonts-Missing_Fonts/0001-fonts-Add-Liberation-Sans-as-an-Arial-replacement.patch
@@ -16,9 +17,10 @@ The following files are affected by this license:
 
 WenQuanYi Micro Hei
 ===================
-Used as a replacement font for Microsoft Yahei.
+
 **License:** APACHE 2 / [GPLv3](#gnu-gpl-version-3)
 
+Used as a replacement font for **Microsoft Yahei**, installed for end-user convenience.
 The following files are affected by this license:
 ```
 ./patches/fonts-Missing_Fonts/0002-fonts-Add-WenQuanYi-Micro-Hei-as-a-Microsoft-Yahei-r.patch`
@@ -28,7 +30,7 @@ The following files are affected by this license:
 wine-compholio
 ==============
 
-All other files in this repository are part of **wine-compholio**, and are
+All other files in this repository are part of **wine-compholio**, and is
 licensed under the [LGPLv2.1](#gnu-lgpl-version-21) license, similar to Wine:
 
 ```

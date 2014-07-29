@@ -1,5 +1,5 @@
-License information for wine-compholio
-======================================
+Font files
+==========
 
 The following font files are *not* part of wine-compholio - they can be used
 by any application and are installed simplify for end-user convenience.
@@ -8,7 +8,7 @@ by any application and are installed simplify for end-user convenience.
 
 Liberation Sans (as an Arial replacement)
 -----------------------------------------
-**License:** LIBERATION FONT SOFTWARE LICENSE
+**License:** [LIBERATION FONT SOFTWARE LICENSE](#liberation-font-software-license)
 
 The following files are affected by this license:
 * `./patches/fonts-Missing_Fonts/0001-fonts-Add-Liberation-Sans-as-an-Arial-replacement.patch`
@@ -17,18 +17,18 @@ The following files are affected by this license:
 
 WenQuanYi Micro Hei (as a Microsoft Yahei replacement)
 ------------------------------------------------------
-**License:** APACHE 2 / GPLv3
+**License:** APACHE 2 / [GPLv3](#gnu-gpl-version-3)
 
 The following files are affected by this license:
 * `./patches/fonts-Missing_Fonts/0002-fonts-Add-WenQuanYi-Micro-Hei-as-a-Microsoft-Yahei-r.patch`
 
 
 
-Everything else
----------------
+wine-compholio
+==============
 
 All other files in this repository are part of **wine-compholio**, and are
-licensed under the LGPLv2.1 license, similar to Wine:
+licensed under the [LGPLv2.1](#gnu-lgpl-version-21) license, similar to Wine:
 
 ```
 Copyright (C) 2014 the Wine-compholio project authors.

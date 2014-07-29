@@ -1,3 +1,12 @@
+Developer and maintainers guide for wine-compholio
+==================================================
+
+This document will provide some information targeted at developers, who either want to
+build/package wine-compholio for their distribution, but also for developers who would
+like to contribute their patches to wine-compholio, to get them included in future
+releases.
+
+
 Compiling wine-compholio
 ========================
 
@@ -73,3 +82,55 @@ which should be included instead. To apply for example only the patchsets in dir
 ```bash
 make -C ./patches DESTDIR=$(pwd) PATCHLIST="DIRNAME1.ok DIRNAME2.ok" install
 ```
+
+
+Contributing to wine-compholio
+==============================
+
+Please note that wine-compholio is not just an arbitrary collection of Wine patches. We see
+wine-compholio as a **testing version** in preparation for patches to be submitted to upstream
+Wine. This implies that all patches should at least have a minimum standard quality. Unlike some
+other PPAs/AURs which provide heavily patched Wine versions, we will not accept hacks for very
+specific games. Such hacks often break compatibility with other applications, which means we
+probably don't want to include them, sorry.
+
+If you think your patches are indeed a proper implementation, then feel free to contribute them.
+Please note that to allow possible later inclusion into upstream Wine, we will require you to
+pay attention to the same [rules](http://wiki.winehq.org/SubmittingPatches). Please be patient
+and give us up to about a week to review them - we're a very small team, so it might take some
+time, and we want to make sure that the implementation doesn't contain any critical errors, which
+could cause regressions. If you want to contribute huge sets of patches, we would really like you
+to *stay contributing* in the future. Even if we accepted your patches, this doesn't necessary mean
+we understand all of it, and if you cannot or don't want to maintain them (especially in case of
+errors, or difficult rebasing), we will probably end up removing them again.
+
+You can also suggest adding patches written by other people - in this case your request should
+include who wrote the patch. Anonymous patches which don't include the author information aren't
+welcome, similar to the rules for upstream Wine.
+
+Attribution guidelines
+----------------------
+
+The Wine "Compholio" Edition repository expects all patches to conform to Wine's (undocumented)
+attribution guidelines. There are a variety of ways to attribute patches, but they all involve an
+additional line to the patch subject:
+
+```
+commit 0000000000000000000000000000000000000000
+Author: Example Author <example.email@email-provider.com>
+Date:   Sat Jul 26 12:31:50 2014 -0600
+
+    Name of patch.
+    
+    TYPE-OF-ATTRIBUTION.
+```
+
+TYPE-OF-ATTRIBUTION can be any of the following:
+
+`Found/Spotted by FINDER.`:
+The resolved issue was found by FINDER, they should receive appropriate credit for finding the
+problem - even though their patch was not used in the final implementation.
+
+`Based on patch by AUTHOR.`:
+The patch created by AUTHOR was a starting point for the patch, some modifications were made to
+their patch - but they should receive credit since the original implementation was theirs.

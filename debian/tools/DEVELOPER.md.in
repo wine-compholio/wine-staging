@@ -1,5 +1,5 @@
-Developer and maintainers guide for wine-compholio
-==================================================
+Developers and maintainers guide
+================================
 
 This document will provide some information targeted at developers, who either want to
 build/package wine-compholio for their distribution, but also for developers who would

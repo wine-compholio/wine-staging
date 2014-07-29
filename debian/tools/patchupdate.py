@@ -52,6 +52,9 @@ class config(object):
     path_README_md          = "./README.md"
     path_template_README_md = "./debian/tools/README.md.in"
 
+    path_DEVELOPER_md       = "./DEVELOPER.md"
+    path_template_DEVELOPER_md = "./debian/tools/DEVELOPER.md.in"
+
 class PatchUpdaterError(RuntimeError):
     """Failed to update patches."""
     pass
@@ -455,7 +458,7 @@ def generate_makefile(all_patches, fp):
             fp.write("\ttouch %s.ok\n" % patch.name)
         fp.write("\n");
 
-def generate_readme(all_patches, fp):
+def generate_readme_md(all_patches, fp):
     """Generate README.md including information about specific patches and bugfixes."""
 
     # Get list of all bugs
@@ -483,6 +486,12 @@ def generate_readme(all_patches, fp):
     def _enum(x):
         return "* " + "\n* ".join(x)
 
+    with open(config.path_template_README_md) as template_fp:
+        template = template_fp.read()
+    fp.write(template.format(bugs=_enum(_all_bugs()), fixes=_enum(_all_fixes())))
+
+def generate_developer_md(fp):
+
     # Read information from changelog
     def _read_changelog():
         with open(config.path_changelog) as fp:
@@ -496,9 +505,10 @@ def generate_readme(all_patches, fp):
             if distro.lower() != "unreleased":
                 return version
 
-    with open(config.path_template_README_md) as template_fp:
+    with open(config.path_template_DEVELOPER_md) as template_fp:
         template = template_fp.read()
-    fp.write(template.format(bugs=_enum(_all_bugs()), fixes=_enum(_all_fixes()), version=_latest_stable_version()))
+    fp.write(template.format(version=_latest_stable_version()))
+
 
 if __name__ == "__main__":
 
@@ -521,4 +531,7 @@ if __name__ == "__main__":
         generate_makefile(all_patches, fp)
 
     with open(config.path_README_md, "w") as fp:
-        generate_readme(all_patches, fp)
+        generate_readme_md(all_patches, fp)
+
+    with open(config.path_DEVELOPER_md, "w") as fp:
+        generate_developer_md(fp)

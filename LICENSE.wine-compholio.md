@@ -4,14 +4,14 @@ License information for wine-compholio
 The following font files are *not* part of wine-compholio - they can be used
 by any application and are installed simplify for end-user convenience.
 
-* Liberation Sans (as an Arial replacement) - LIBERATION FONT SOFTWARE LICENSE
-`./patches/fonts-Missing_Fonts/0001-fonts-Add-Liberation-Sans-as-an-Arial-replacement.patch`
+1. **Liberation Sans** (as an Arial replacement) - LIBERATION FONT SOFTWARE LICENSE
+    * `./patches/fonts-Missing_Fonts/0001-fonts-Add-Liberation-Sans-as-an-Arial-replacement.patch`
 
-* WenQuanYi Micro Hei (as a Microsoft Yahei replacement) - APACHE 2 / GPLv3
-`./patches/fonts-Missing_Fonts/0002-fonts-Add-WenQuanYi-Micro-Hei-as-a-Microsoft-Yahei-r.patch`
+2. **WenQuanYi Micro Hei** (as a Microsoft Yahei replacement) - APACHE 2 / GPLv3
+    * ./patches/fonts-Missing_Fonts/0002-fonts-Add-WenQuanYi-Micro-Hei-as-a-Microsoft-Yahei-r.patch`
 
 
-All other files in this repository are part of wine-compholio, and are
+All other files in this repository are part of **wine-compholio**, and are
 licensed under the LGPLv2.1 license, similar to Wine:
 
 ```
@@ -34,8 +34,8 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA.
 
 
 
-GNU LESSER GENERAL PUBLIC LICENSE, Version 2.1
-==============================================
+GNU LGPL, Version 2.1
+=====================
 
 ```
                   GNU LESSER GENERAL PUBLIC LICENSE
@@ -544,8 +544,8 @@ That's all there is to it!
 
 
 
-GNU GENERAL PUBLIC LICENSE, Version 3
-=====================================
+GNU GPL, Version 3
+==================
 
 ```
                     GNU GENERAL PUBLIC LICENSE

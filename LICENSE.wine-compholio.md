@@ -27,10 +27,10 @@ The following files are affected by this license:
 ```
 
 
-wine-compholio
+Wine-compholio
 ==============
 
-All other files in this repository are part of **wine-compholio**, and is
+All other files in this repository are part of **Wine-compholio**, and are
 licensed under the [LGPLv2.1](#gnu-lgpl-version-21) license, similar to Wine:
 
 ```

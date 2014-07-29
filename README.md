@@ -1,12 +1,13 @@
 What is wine-compholio?
 =======================
 
-The **Wine "Compholio" Edition** is a special patched version of Wine that includes both patches
-written by our team directly and specific patches by third party developers that we consider
-good enough for inclusion.  This can be seen as a testing version in preparation for patches
-to be submitted to upstream Wine - don't be surprised if you encounter additional bugs, which
-are not present in regular wine, and always report such issues to us (via github), so we can
-improve our fixes even further. Thanks!
+The **Wine "Compholio" Edition** is a special patched version of Wine that
+includes both patches written by our team directly and specific patches by
+third party developers that we consider good enough for inclusion.  This can
+be seen as a testing version in preparation for patches to be submitted
+to upstream Wine - don't be surprised if you encounter additional bugs,
+which are not present in regular wine, and always report such issues to us
+(via github), so we can improve our fixes even further. Thanks!
 
 
 Included bugfixes and improvements
@@ -56,18 +57,19 @@ Besides that the following additional changes are included:
 How to install wine-compholio
 =============================
 
-Ready-to-use packages for wine-compholio are available for a variety of different
-Linux distributions directly for download. Just follow the instructions below to
-install it (and all required dependencies). After the installation, please take a
-look at the next section for instructions how to use it in order to run your desired
-application.
+Ready-to-use packages for wine-compholio are available for a variety
+of different Linux distributions directly for download. Just follow the
+instructions below to install it (and all required dependencies). After the
+installation, please take a look at the next section for instructions how
+to use it in order to run your desired application.
 
-**Important:** If you already have pipelight installed on your system, there is a
-good chance that you already have wine-compholio. Take a look at the next section
-on how to find out if this is the case.
+**Important:** If you already have pipelight installed on your system, there
+is a good chance that you already have wine-compholio. Take a look at the
+next section on how to find out if this is the case.
 
-If your distribution is not listed below, feel free to add a feature request - if the
-demand is high enough we might consider packaging it for additional distributions.
+If your distribution is not listed below, feel free to add a feature request
+- if the demand is high enough we might consider packaging it for additional
+distributions.
 
 
 ![alt text](http://repos.fds-team.de/misc/images/ubuntu.png) Ubuntu / Linux Mint
@@ -83,8 +85,8 @@ sudo apt-get install --install-recommends wine-compholio
 ![alt text](http://repos.fds-team.de/misc/images/arch.png) Arch Linux
 ---------------------------------------------------------------------
 
-As a first step you have to import the key for our repository, and set the trust level
-to trusted:
+As a first step you have to import the key for our repository, and set the
+trust level to trusted:
 ```bash
 sudo pacman-key -r E49CC0415DC2D5CA
 sudo pacman-key --lsign-key E49CC0415DC2D5CA
@@ -106,8 +108,8 @@ sudo pacman -Sy wine-compholio
 
 *(Instructions for Debian Wheezy can be found below)*
 
-In order to install i386 packages on a 64-bit system, you have to run the following
-command as a first step:
+In order to install i386 packages on a 64-bit system, you have to run the
+following command as a first step:
 ```bash
 sudo dpkg --add-architecture i386
 ```
@@ -137,8 +139,8 @@ sudo apt-get install wine-compholio
 ![alt text](http://repos.fds-team.de/misc/images/debian.png) Debian Wheezy
 --------------------------------------------------------------------------
 
-In order to install i386 packages on a 64-bit system, you have to run the following
-command as a first step:
+In order to install i386 packages on a 64-bit system, you have to run the
+following command as a first step:
 ```bash
 sudo dpkg --add-architecture i386
 ```
@@ -165,8 +167,9 @@ sudo apt-get install wine-compholio
 ![alt text](http://repos.fds-team.de/misc/images/opensuse.png) OpenSUSE
 -----------------------------------------------------------------------
 
-All the following steps have to be executed as root user. As a first step you have
-to add the repository - this step depends on the openSUSE version you're using.
+All the following steps have to be executed as root user. As a first step
+you have to add the repository - this step depends on the openSUSE version
+you're using.
 
 | openSUSE version    | Path component          |
 | ------------------- | ----------------------- |
@@ -176,8 +179,8 @@ to add the repository - this step depends on the openSUSE version you're using.
 | openSUSE Factory    | `/openSUSE_Factory/`    |
 | openSUSE Tumbleweed | `/openSUSE_Tumbleweed/` |
 
-The following commandline is an example for openSUSE 13.1, for a different version
-just replace the path component according to the table above:
+The following commandline is an example for openSUSE 13.1, for a different
+version just replace the path component according to the table above:
 ```bash
 zypper ar --refresh http://download.opensuse.org/repositories/home:/DarkPlayer:/Pipelight/openSUSE_13.1/home:DarkPlayer:Pipelight.repo
 ```
@@ -192,13 +195,13 @@ zypper install wine-compholio
 ![alt text](http://repos.fds-team.de/misc/images/fedora.png) Fedora
 -------------------------------------------------------------------
 
-**Warning:** In contrary to other distributions, its not possible to have both a
-regular wine version and wine-compholio installed at the same time - using the
-instructions below will replace your regular version. Moreover it will be installed
-to `/usr/bin/wine` in contrary to `/opt/wine-compholio/bin/wine`.
+**Warning:** In contrary to other distributions, its not possible to have both
+a regular wine version and wine-compholio installed at the same time - using
+the instructions below will replace your regular version. Moreover it will
+be installed to `/usr/bin/wine` in contrary to `/opt/wine-compholio/bin/wine`.
 
-As a first step you have to add the repository - this step depends on the Fedora
-version you're using.
+As a first step you have to add the repository - this step depends on the
+Fedora version you're using.
 
 | Fedora version  | Patch component |
 | --------------- | --------------- |
@@ -206,8 +209,8 @@ version you're using.
 | Fedora 19       | `/Fedora_19/`   |
 | Fedora 20       | `/Fedora_20/`   |
 
-The following commandline is an example for Fedora 19, for a different version just
-replace the path component according to the table above:
+The following commandline is an example for Fedora 19, for a different version
+just replace the path component according to the table above:
 ```bash
 sudo wget http://download.opensuse.org/repositories/home:/DarkPlayer:/Pipelight/Fedora_19/home:DarkPlayer:Pipelight.repo -O /etc/yum.repos.d/pipelight.repo
 ```
@@ -217,15 +220,16 @@ Afterwards run the following command to install the package:
 sudo yum install wine-compholio
 ```
 
-Please note that you might run into trouble if the official Fedora package (without
-compholio patches) is newer than the one from the repository above, so if something
-doesn't work, always make sure that you have installed our version. To do that just
-run:
+Please note that you might run into trouble if the official Fedora package
+(without compholio patches) is newer than the one from the repository above,
+so if something doesn't work, always make sure that you have installed
+our version. To do that just run:
 ```bash
 /usr/bin/wine --patches
 ```
-When you're using wine-compholio this will show to a list of all patches included, for
-an unpatched version this command will fail.
+
+When you're using wine-compholio this will show to a list of all patches
+included, for an unpatched version this command will fail.
 
 
 ![alt text](http://repos.fds-team.de/misc/images/mageia.png) Mageia 4
@@ -237,12 +241,14 @@ wget http://repos.fds-team.de/Release.key
 rpm --import Release.keyy
 ```
 
-If you're using a 32-bit version of Mageia just add the repository for 32-bit packages:
+If you're using a 32-bit version of Mageia just add the repository
+for 32-bit packages:
 ```bash
 sudo urpmi.addmedia "Compholio 32-bit" http://cdn.fds-team.de/stable/mageia/4/i586/
 ```
 
-For a 64-bit version of Mageia you'll need both the 32-bit and the 64-bit repository:
+For a 64-bit version of Mageia you'll need both the 32-bit and the
+64-bit repository:
 ```bash
 sudo urpmi.addmedia "Compholio 32-bit" http://cdn.fds-team.de/stable/mageia/4/i586/
 sudo urpmi.addmedia "Compholio 64-bit" http://cdn.fds-team.de/stable/mageia/4/x86_64/
@@ -257,23 +263,25 @@ sudo urpmi wine-compholio
 Using wine-compholio
 ====================
 
-Since we don't want to duplicate a lot of information here, we recommend to take a
-look at the [official Wine FAQ](http://wiki.winehq.org/FAQ) for general information
-about how to use Wine. The following part will mainly concentrate on the differences
-between wine and wine-compholio.
+Since we don't want to duplicate a lot of information here, we recommend
+to take a look at the [official Wine FAQ](http://wiki.winehq.org/FAQ) for
+general information about how to use Wine. The following part will mainly
+concentrate on the differences between wine and wine-compholio.
 
 
 Running wine-compholio
 ----------------------
 
-**Using multiple Wine versions:*** Unless you specify a special `WINEPREFIX` environment
-variable, wine-compholio will use the same wineprefix `~/.wine` (in your home directory)
-like regular wine. This allows you to use your already installed programs directly,
-without much effort or reinstalling them. Often you have both regular wine and wine-compholio
-installed at the same time, which is *absolutely no problem* - by typing in either `wine`
-(=regular wine) or `/opt/wine-compholio/bin/wine` you can decide, which wine version you
-want to run. You can switch between versions as often as you like - just make sure that all
-Windows programs have terminated before starting them with a different version.
+**Using multiple Wine versions:*** Unless you specify a special `WINEPREFIX`
+environment variable, wine-compholio will use the same wineprefix `~/.wine`
+(in your home directory) like regular wine. This allows you to use your
+already installed programs directly, without much effort or reinstalling
+them. Often you have both regular wine and wine-compholio installed at the
+same time, which is *absolutely no problem* - by typing in either `wine`
+(=regular wine) or `/opt/wine-compholio/bin/wine` you can decide, which
+wine version you want to run. You can switch between versions as often as
+you like - just make sure that all Windows programs have terminated before
+starting them with a different version.
 
 To run wine-compholio always type `/opt/wine-compholio/bin/wine`, for example:
 ```bash
@@ -281,8 +289,8 @@ cd ~/.wine/drive_c/<your path>/
 /opt/wine-compholio/bin/wine game.exe
 ```
 
-You also have to add `/opt/wine-compholio/bin/` when running other wine related programs,
-here are some additional example:
+You also have to add `/opt/wine-compholio/bin/` when running other wine
+related programs, here are some additional example:
 ```bash
 # Initialize the wine prefix
 /opt/wine-compholio/bin/wineboot
@@ -299,43 +307,57 @@ here are some additional example:
 ...
 ```
 
-If you're an experienced user, and always want to use wine-compholio, you can also add
-`/opt/wine-compholio/bin` to your bash profile. We will not go into detail here, because
-such a setup has the big disadvantage, that it hides which version you're using - which
-is very important for getting support or reporting bugs.
+If you're an experienced user, and always want to use wine-compholio, you
+can also add `/opt/wine-compholio/bin` to your bash profile. We will not
+go into detail here, because such a setup has the big disadvantage, that
+it hides which version you're using - which is very important for getting
+support or reporting bugs.
 
 
 Submitting bugs
 ---------------
 
-**Warning: Do not submit bug reports at bugs.winehq.org when using this version!**
+**Warning: Do not submit bug reports at bugs.winehq.org when using this
+version!**
 
-If you encounter any issues, the first thing you should do is to try it with regular wine.
-We're only a very small developer team, and although we would like to do that, we probably
-cannot really solve all your Wine bugs. When it turns out that the official Wine version also
-doesn't work, you can file a bugreport at the official [Wine bugtracker](http://bugs.winehq.org/).
-Feel free to mention that you also tested with wine-compholio, but all bugreport related
-information (logs, crashdumps, ...) should concentrate only on upstream wine.
+If you encounter any issues, the first thing you should do is to try it with
+regular wine.  We're only a very small developer team, and although we would
+like to do that, we probably cannot really solve all your Wine bugs. When
+it turns out that the official Wine version also doesn't work, you can file
+a bugreport at the official [Wine bugtracker](http://bugs.winehq.org/).
+Feel free to mention that you also tested with wine-compholio, but all
+bugreport related information (logs, crashdumps, ...) should concentrate
+only on upstream wine.
 
-If it turns out, that it works with upstream wine, but not with wine-compholio, then it
-might be a regression caused by our patches. We would like you to report this issue to us,
-so we can fix it in future versions. You can also report issues, when testing with upstream
-Wine is impossible or it crashes with a different error (for example much earlier).
+If it turns out, that it works with upstream wine, but not with wine-compholio,
+then it might be a regression caused by our patches. We would like you to
+report this issue to us, so we can fix it in future versions. You can also
+report issues, when testing with upstream Wine is impossible or it crashes
+with a different error (for example much earlier).
 
-When submitting a application related bug here on github, please make sure to include at least
-the following information. Generally its always a good idea to provide as much information as
-possible, since this will significantly increase chances to provide support and to fix it.
+When submitting a application related bug here on github, please make sure to
+include at least the following information. Generally its always a good idea
+to provide as much information as possible, since this will significantly
+increase chances to provide support and to fix it.
 
 1. **Which application triggers the bug**
-	* Application name
-	* Version number (if available)
-	* Download URL (if available)
-2. **WINEPREFIX settings**
-	* *Recommended:* Test it in a new wine prefix, and report if this works
-	* Did you install any overrides? (for examples by using `winetricks`)
-	* Did you change any settings by running `winecfg`?
+    * Application name and version number
+    * How to obtain it (download URL + checksum if public available)
+
+2. **What exactly doesn't work**
+    * Log of the terminal output of the application
+    * For visual issues please additionally attach a screenshot, and describe
+      what it should look like
+    * *Optionally:* If you already know whats going wrong, please attach
+      appropriate `WINEDEBUG` logs or excerpts showing the issue.
+
+2. **Details about your WINEPREFIX**
+    * *Recommended:* Test it in a new wine prefix, and report if this works
+    * Did you install any overrides? (for examples by using `winetricks`)
+    * Did you change any settings by running `winecfg`?
+
 3. **Information about your wine-compholio version**
-	* *Recommended:* Test with regular wine, and report if this works
-	* Version number (`/opt/wine-compholio/bin/wine --version`)
-	* Patches in your build (`/opt/wine-compholio/bin/wine --patches`)
-	* Installed optional libraries (`/opt/wine-compholio/bin/wine --check-libs`)
+    * *Recommended:* Test with regular wine, and report if this works
+    * Version number (`/opt/wine-compholio/bin/wine --version`)
+    * Patches in your build (`/opt/wine-compholio/bin/wine --patches`)
+    * Installed optional libraries (`/opt/wine-compholio/bin/wine --check-libs`)

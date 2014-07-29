@@ -351,12 +351,12 @@ increase chances to provide support and to fix it.
     * *Optionally:* If you already know whats going wrong, please attach
       appropriate `WINEDEBUG` logs or excerpts showing the issue.
 
-2. **Details about your WINEPREFIX**
+3. **Details about your WINEPREFIX**
     * *Recommended:* Test it in a new wine prefix, and report if this works
     * Did you install any overrides? (for examples by using `winetricks`)
     * Did you change any settings by running `winecfg`?
 
-3. **Information about your wine-compholio version**
+4. **Information about your wine-compholio version**
     * *Recommended:* Test with regular wine, and report if this works
     * Version number (`/opt/wine-compholio/bin/wine --version`)
     * Patches in your build (`/opt/wine-compholio/bin/wine --patches`)

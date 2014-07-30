@@ -99,10 +99,24 @@ def _save_dict(filename, value):
     with open(filename, "wb") as fp:
         pickle.dump(value, fp, pickle.HIGHEST_PROTOCOL)
 
-def _download(url):
-    """Open a specific URL and return the content."""
+def _winebugs_query_short_desc(bugids):
+    """Query short_desc from multiple wine bugzilla bugs at the same time."""
+    bugids = list(set(bugids)) # Remove duplicates and convert to fixed order
+    if len(bugids) == 0: return {}
+
+    # Query bugzilla
+    url = "http://bugs.winehq.org/show_bug.cgi?%s&ctype=xml&field=short_desc" % \
+          "&".join(["id=%d" % bugid for bugid in bugids])
     with contextlib.closing(urllib.urlopen(url)) as fp:
-        return fp.read()
+        data = minidom.parseString(fp.read())
+
+    # convert xml in a dictionary containing all bugs we found
+    result = {}
+    for element in data.getElementsByTagName('bug_id'):
+        bugids.remove(int(element.firstChild.data))
+    for bugid, element in zip(bugids, data.getElementsByTagName('short_desc')):
+        result[bugid] = element.firstChild.data
+    return result
 
 def read_patchsets(directory):
     """Read information about all patchsets in a given directory."""
@@ -206,15 +220,10 @@ def read_patchsets(directory):
         if len(info.author) and len(info.subject) and len(info.revision):
             patch.authors.append(info)
 
-    # In a third step query information for the patches from Wine bugzilla
-    pool = multiprocessing.Pool(16)
-
-    bug_short_desc = {None:None}
-    for bugid, data in zip(all_bugs, pool.map(_download, ["http://bugs.winehq.org/show_bug.cgi?id=%d&ctype=xml&field=short_desc" % bugid for bugid in all_bugs])):
-        bug_short_desc[bugid] = minidom.parseString(data).getElementsByTagName('short_desc')[0].firstChild.data
-
+    bug_short_desc = _winebugs_query_short_desc(all_bugs)
     for i, patch in all_patches.iteritems():
-        patch.fixes = [(bugid, bug_short_desc[bugid], description) for bugid, dummy, description in patch.fixes]
+        patch.fixes = [(bugid, (bug_short_desc[bugid] if bug_short_desc.has_key(bugid) else None),
+                       description) for bugid, dummy, description in patch.fixes]
 
     return all_patches
 

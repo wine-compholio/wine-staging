@@ -8,6 +8,7 @@ PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 PATCHLIST :=	Miscellaneous.ok \
 		Pipelight.ok \
 		atl-IOCS_Property.ok \
+		ddraw-Empty_Hardware_Flags.ok \
 		fonts-Missing_Fonts.ok \
 		iphlpapi-TCP_Table.ok \
 		kernel32-GetSystemTimes.ok \
@@ -113,6 +114,25 @@ atl-IOCS_Property.ok:
 	@( \
 		echo '+    { "atl-IOCS_Property", "Qian Hong", "Store IOCS data in a property instead of GWLP_USERDATA." },'; \
 	) > atl-IOCS_Property.ok
+
+# Patchset ddraw-Empty_Hardware_Flags
+# |
+# | Included patches:
+# |   *	Return empty D3D hardware flags for HEL device enumeration. [by Erich E. Hoover]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#32581] Invalid dwFlags of reference rasterizer's HAL D3DDEVICEDESC
+# |
+# | Modified files: 
+# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/tests/d3d.c
+# |
+.INTERMEDIATE: ddraw-Empty_Hardware_Flags.ok
+ddraw-Empty_Hardware_Flags.ok:
+	$(PATCH) < ddraw-Empty_Hardware_Flags/0001-ddraw-tests-Ignore-broken-behavior-of-D3DTRANSFORM_U.patch
+	$(PATCH) < ddraw-Empty_Hardware_Flags/0002-ddraw-Return-empty-D3D-hardware-flags-for-HEL-device.patch
+	@( \
+		echo '+    { "ddraw-Empty_Hardware_Flags", "Erich E. Hoover", "Return empty D3D hardware flags for HEL device enumeration." },'; \
+	) > ddraw-Empty_Hardware_Flags.ok
 
 # Patchset fonts-Missing_Fonts
 # |

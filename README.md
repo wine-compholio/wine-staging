@@ -50,6 +50,7 @@ Besides that the following additional changes are included:
 * Lockfree algorithm for filedescriptor cache (improves file access speed)
 * Other Pipelight specific enhancements
 * Reduced SetTimer minimum value from 10 ms to 5 ms (improves Silverlight framerates)
+* SO_CONNECT_TIME returns the appropriate time
 * Support for GetVolumePathName
 * Workaround for shlwapi URLs with relative paths
 * XEMBED support for embedding Wine windows inside Linux applications

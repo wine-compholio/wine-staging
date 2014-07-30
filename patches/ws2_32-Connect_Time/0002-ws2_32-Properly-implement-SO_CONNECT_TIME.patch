@@ -1,0 +1,97 @@
+From b12ee02f7341a4c2d7fc874bd3cba10c7cd452c1 Mon Sep 17 00:00:00 2001
+From: Bruno Jesus <00cpxxx@gmail.com>
+Date: Wed, 30 Jul 2014 17:35:13 -0600
+Subject: ws2_32: Properly implement SO_CONNECT_TIME.
+
+---
+ dlls/ws2_32/socket.c     |   24 ++++++++++++++++++------
+ dlls/ws2_32/tests/sock.c |   14 ++++++++++++++
+ 2 files changed, 32 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
+index 5900c8f..8b63a1e 100644
+--- a/dlls/ws2_32/socket.c
++++ b/dlls/ws2_32/socket.c
+@@ -877,6 +877,21 @@ static NTSTATUS _is_blocking(SOCKET s, BOOL *ret)
+     return status;
+ }
+ 
++static unsigned int _get_connect_time(SOCKET s)
++{
++    NTSTATUS status;
++    unsigned int connect_time = 0;
++    SERVER_START_REQ( get_socket_info )
++    {
++        req->handle  = wine_server_obj_handle( SOCKET2HANDLE(s) );
++        status = wine_server_call( req );
++        if (!status)
++            connect_time = reply->connect_time;
++    }
++    SERVER_END_REQ;
++    return connect_time;
++}
++
+ static unsigned int _get_sock_mask(SOCKET s)
+ {
+     unsigned int ret;
+@@ -3121,22 +3136,19 @@ INT WINAPI WS_getsockopt(SOCKET s, INT level,
+ 
+         case WS_SO_CONNECT_TIME:
+         {
+-            static int pretendtime = 0;
+             struct WS_sockaddr addr;
+             int len = sizeof(addr);
++            DWORD connect_time;
+ 
+             if (!optlen || *optlen < sizeof(DWORD) || !optval)
+             {
+                 SetLastError(WSAEFAULT);
+                 return SOCKET_ERROR;
+             }
+-            if (WS_getpeername(s, &addr, &len) == SOCKET_ERROR)
++            if (WS_getpeername(s, &addr, &len) == SOCKET_ERROR || !(connect_time = _get_connect_time(s)))
+                 *(DWORD *)optval = ~0u;
+             else
+-            {
+-                if (!pretendtime) FIXME("WS_SO_CONNECT_TIME - faking results\n");
+-                *(DWORD *)optval = pretendtime++;
+-            }
++                *(DWORD *)optval = (GetTickCount() - connect_time) / 1000;
+             *optlen = sizeof(DWORD);
+             return ret;
+         }
+diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
+index 8a9cbba..7a4ceac 100644
+--- a/dlls/ws2_32/tests/sock.c
++++ b/dlls/ws2_32/tests/sock.c
+@@ -4141,6 +4141,8 @@ static void test_send(void)
+     OVERLAPPED ov;
+     BOOL bret;
+     DWORD id, bytes_sent, dwRet;
++    socklen_t optlen;
++    DWORD connect_time;
+ 
+     memset(&ov, 0, sizeof(ov));
+ 
+@@ -4235,6 +4237,18 @@ static void test_send(void)
+     ok(ret == SOCKET_ERROR && WSAGetLastError() == ERROR_IO_PENDING,
+        "Failed to start overlapped send %d - %d\n", ret, WSAGetLastError());
+ 
++    connect_time = 0;
++    optlen = sizeof(connect_time);
++    ret = getsockopt(dst, SOL_SOCKET, SO_CONNECT_TIME, (char *)&connect_time, &optlen);
++    ok(!ret, "getsockopt failed %d\n", WSAGetLastError());
++    ok(connect_time > 0, "unexpected connect time %u\n", connect_time);
++
++    connect_time = 0;
++    optlen = sizeof(connect_time);
++    ret = getsockopt(src, SOL_SOCKET, SO_CONNECT_TIME, (char *)&connect_time, &optlen);
++    ok(!ret, "getsockopt failed %d\n", WSAGetLastError());
++    ok(connect_time > 0, "unexpected connect time %u\n", connect_time);
++
+ end:
+     if (src != INVALID_SOCKET)
+         closesocket(src);
+-- 
+1.7.9.5
+

@@ -24,7 +24,7 @@ If you did not receive this copy, write to the Free Software Foundation,
 Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA.
 ```
 
-=== Exceptions ===
+### Exceptions
 
 The following files are not part of Wine-Compholio and provided under a
 different license. These files are not linked to the rest of the project in

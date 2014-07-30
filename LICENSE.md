@@ -2,9 +2,9 @@ Wine-Compholio license
 ======================
 
 **Note:** Some files in this repository are provided under a different license.
-Please check the list of exceptions below. Unless states otherwise all files
-are part of **Wine-Compholio** and are licensed under the [LGPLv2.1](#gnu-lgpl-version-21)
-license, to be compatible with Wine:
+Please check the list of exceptions below. Unless stated otherwise all files
+are part of **Wine-Compholio** and are licensed under the terms of the
+[LGPLv2.1](#gnu-lgpl-version-21), to stay compatible with Wine:
 
 ```
 Copyright (C) 2014 the Wine-Compholio project authors.

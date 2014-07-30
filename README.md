@@ -100,7 +100,7 @@ Server = http://cdn.fds-team.de/stable/arch/$arch
 
 Now you can install Wine-Compholio directly using `pacman`:
 ```bash
-sudo pacman -Sy wine-compholio
+sudo pacman -Syu wine-compholio
 ```
 
 ![alt text](http://repos.fds-team.de/misc/images/debian.png) Debian Jessie/Sid

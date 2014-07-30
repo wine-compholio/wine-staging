@@ -1,42 +1,15 @@
-This repository contains multiple projects, which are provided under different
-licenses. Please take a look at the list below to find out more details about
-each individual project.
+Wine-Compholio license
+======================
 
-Liberation Sans
-===============
-
-**License:** [LIBERATION FONT SOFTWARE LICENSE](#liberation-font-software-license)
-
-Used as a replacement font for **Arial**, installed for end-user convenience.
-The following files are affected by this license:
-```
-./patches/fonts-Missing_Fonts/0001-fonts-Add-Liberation-Sans-as-an-Arial-replacement.patch
-```
-
-
-
-WenQuanYi Micro Hei
-===================
-
-**License:** APACHE 2 / [GPLv3](#gnu-gpl-version-3)
-
-Used as a replacement font for **Microsoft Yahei**, installed for end-user convenience.
-The following files are affected by this license:
-```
-./patches/fonts-Missing_Fonts/0002-fonts-Add-WenQuanYi-Micro-Hei-as-a-Microsoft-Yahei-r.patch`
-```
-
-
-Wine-compholio
-==============
-
-All other files in this repository are part of **Wine-compholio**, and are
-licensed under the [LGPLv2.1](#gnu-lgpl-version-21) license, similar to Wine:
+**Note:** Some files in this repository are provided under a different license.
+Please check the list of exceptions below. Unless states otherwise all files
+are part of **Wine-Compholio** and are licensed under the [LGPLv2.1](#gnu-lgpl-version-21)
+license, to be compatible with Wine:
 
 ```
-Copyright (C) 2014 the Wine-compholio project authors.
+Copyright (C) 2014 the Wine-Compholio project authors.
 
-Wine-compholio is free software; you can redistribute it and/or
+Wine-Compholio is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
 License as published by the Free Software Foundation; either
 version 2.1 of the License, or (at your option) any later version.
@@ -51,10 +24,31 @@ If you did not receive this copy, write to the Free Software Foundation,
 Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA.
 ```
 
+=== Exceptions ===
 
+The following files are not part of Wine-Compholio and provided under a
+different license. These files are not linked to the rest of the project in
+any way and are simply installed for end-user convenience.
+
+* `./patches/fonts-Missing_Fonts/`
+
+    * `0001-fonts-Add-Liberation-Sans-as-an-Arial-replacement.patch`:
+      The **Liberation Sans** font is used as an Arial replacement. This
+      file is licensed under the
+      [LIBERATION FONT SOFTWARE LICENSE](#liberation-font-software-license).
+
+    * `0002-fonts-Add-WenQuanYi-Micro-Hei-as-a-Microsoft-Yahei-r.patch`:
+      The **WenQuanYi Micro Hei** font is used as a Microsoft Yahei
+      replacement. This file is licensed under both the APACHE 2 license and
+      [GPLv3](#gnu-gpl-version-3).
+
+
+
+Full license texts
+==================
 
 GNU LGPL, Version 2.1
-=====================
+---------------------
 
 ```
                   GNU LESSER GENERAL PUBLIC LICENSE
@@ -563,8 +557,72 @@ That's all there is to it!
 
 
 
+LIBERATION FONT SOFTWARE LICENSE
+--------------------------------
+
+```
+LICENSE AGREEMENT AND LIMITED PRODUCT WARRANTY
+LIBERATION FONT SOFTWARE
+
+This agreement governs the use of the Software and any updates to the Software,
+regardless of the delivery mechanism. Subject to the following terms, Red Hat,
+Inc. ("Red Hat") grants to the user ("Client") a license to this work pursuant
+to the GNU General Public License v.2 with the exceptions set forth below and
+such other terms as our set forth in this End User License Agreement.
+
+1.The Software and License Exception. LIBERATION font software  (the "Software")
+consists of TrueType-OpenType formatted font software for rendering LIBERATION
+typefaces in sans serif, serif, and monospaced character styles. You are licensed
+to use, modify, copy, and distribute the Software pursuant to the GNU General
+Public License v.2 with the following exceptions:
+(a)As a special exception, if you create a document which uses this font, and
+embed this font or unaltered portions of this font into the document, this font
+does not by itself cause the resulting document to be covered by the GNU General
+Public License. This exception does not however invalidate any other reasons why
+the document might be covered by the GNU General Public License. If you modify
+this font, you may extend this exception to your version of the font, but you
+are not obligated to do so. If you do not wish to do so, delete this exception
+statement from your version.
+(b)As a further exception, any distribution of the object code of the Software
+in a physical product must provide you the right to access and modify the source
+code for the Software and to reinstall that modified version of the Software in
+object code form on the same physical product on which you received it.
+2.Intellectual Property Rights. The Software and each of its components,
+including the source code, documentation, appearance, structure and organization
+are owned by Red Hat and others and are protected under copyright and other laws.
+Title to the Software and any component, or to any copy, modification, or merged
+portion shall remain with the aforementioned, subject to the applicable license.
+The "LIBERATION" trademark is a trademark of Red Hat, Inc. in the U.S. and other
+countries. This agreement does not permit Client to distribute modified versions
+of the Software using Red Hat's trademarks. If Client makes a redistribution of
+a modified version of the Software, then Client must modify the files names to
+remove any reference to the Red Hat trademarks and must not use the Red Hat
+trademarks in any way to reference or promote the modified Software.
+3.Limited Warranty. To the maximum extent permitted under applicable law, the
+Software is provided and licensed "as is" without warranty of any kind,
+expressed or implied, including the implied warranties of merchantability,
+non-infringement or fitness for a particular purpose. Red Hat does not warrant
+that the functions contained in the Software will meet Client's requirements or
+that the operation of the Software will be entirely error free or appear
+precisely as described in the accompanying documentation.
+4.Limitation of Remedies and Liability. To the maximum extent permitted by
+applicable law, Red Hat or any Red Hat authorized dealer will not be liable to
+Client for any incidental or consequential damages, including lost profits or
+lost savings arising out of the use or inability to use the Software, even if
+Red Hat or such dealer has been advised of the possibility of such damages.
+5.General. If any provision of this agreement is held to be unenforceable, that
+shall not affect the enforceability of the remaining provisions. This agreement
+shall be governed by the laws of the State of North Carolina and of the United
+States, without regard to any conflict of laws provisions, except that the
+United Nations Convention on the International Sale of Goods shall not apply.
+Copyright © 2007 Red Hat, Inc. All rights reserved. LIBERATION is a trademark
+of Red Hat, Inc.
+```
+
+
+
 GNU GPL, Version 3
-==================
+------------------
 
 ```
                     GNU GENERAL PUBLIC LICENSE
@@ -1241,68 +1299,4 @@ may consider it more useful to permit linking proprietary applications with
 the library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.  But first, please read
 <http://www.gnu.org/philosophy/why-not-lgpl.html>.
-```
-
-
-
-LIBERATION FONT SOFTWARE LICENSE
-================================
-
-```
-LICENSE AGREEMENT AND LIMITED PRODUCT WARRANTY
-LIBERATION FONT SOFTWARE
-
-This agreement governs the use of the Software and any updates to the Software,
-regardless of the delivery mechanism. Subject to the following terms, Red Hat,
-Inc. ("Red Hat") grants to the user ("Client") a license to this work pursuant
-to the GNU General Public License v.2 with the exceptions set forth below and
-such other terms as our set forth in this End User License Agreement.
-
-1.The Software and License Exception. LIBERATION font software  (the "Software")
-consists of TrueType-OpenType formatted font software for rendering LIBERATION
-typefaces in sans serif, serif, and monospaced character styles. You are licensed
-to use, modify, copy, and distribute the Software pursuant to the GNU General
-Public License v.2 with the following exceptions:
-(a)As a special exception, if you create a document which uses this font, and
-embed this font or unaltered portions of this font into the document, this font
-does not by itself cause the resulting document to be covered by the GNU General
-Public License. This exception does not however invalidate any other reasons why
-the document might be covered by the GNU General Public License. If you modify
-this font, you may extend this exception to your version of the font, but you
-are not obligated to do so. If you do not wish to do so, delete this exception
-statement from your version.
-(b)As a further exception, any distribution of the object code of the Software
-in a physical product must provide you the right to access and modify the source
-code for the Software and to reinstall that modified version of the Software in
-object code form on the same physical product on which you received it.
-2.Intellectual Property Rights. The Software and each of its components,
-including the source code, documentation, appearance, structure and organization
-are owned by Red Hat and others and are protected under copyright and other laws.
-Title to the Software and any component, or to any copy, modification, or merged
-portion shall remain with the aforementioned, subject to the applicable license.
-The "LIBERATION" trademark is a trademark of Red Hat, Inc. in the U.S. and other
-countries. This agreement does not permit Client to distribute modified versions
-of the Software using Red Hat's trademarks. If Client makes a redistribution of
-a modified version of the Software, then Client must modify the files names to
-remove any reference to the Red Hat trademarks and must not use the Red Hat
-trademarks in any way to reference or promote the modified Software.
-3.Limited Warranty. To the maximum extent permitted under applicable law, the
-Software is provided and licensed "as is" without warranty of any kind,
-expressed or implied, including the implied warranties of merchantability,
-non-infringement or fitness for a particular purpose. Red Hat does not warrant
-that the functions contained in the Software will meet Client's requirements or
-that the operation of the Software will be entirely error free or appear
-precisely as described in the accompanying documentation.
-4.Limitation of Remedies and Liability. To the maximum extent permitted by
-applicable law, Red Hat or any Red Hat authorized dealer will not be liable to
-Client for any incidental or consequential damages, including lost profits or
-lost savings arising out of the use or inability to use the Software, even if
-Red Hat or such dealer has been advised of the possibility of such damages.
-5.General. If any provision of this agreement is held to be unenforceable, that
-shall not affect the enforceability of the remaining provisions. This agreement
-shall be governed by the laws of the State of North Carolina and of the United
-States, without regard to any conflict of laws provisions, except that the
-United Nations Convention on the International Sale of Goods shall not apply.
-Copyright © 2007 Red Hat, Inc. All rights reserved. LIBERATION is a trademark
-of Red Hat, Inc.
 ```

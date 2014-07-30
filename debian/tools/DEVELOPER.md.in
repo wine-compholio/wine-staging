@@ -2,16 +2,16 @@ Developers and maintainers guide
 ================================
 
 This document will provide some information targeted at developers, who
-either want to build/package wine-compholio for their distribution, but also
-for developers who would like to contribute their patches to wine-compholio,
+either want to build/package Wine-Compholio for their distribution, but also
+for developers who would like to contribute their patches to Wine-Compholio,
 to get them included in future releases.
 
 
 
-Compiling wine-compholio
+Compiling Wine-Compholio
 ========================
 
-**Warning:** Please note that starting with wine-compholio 1.7.23 it is
+**Warning:** Please note that starting with Wine-Compholio 1.7.23 it is
 deprecated to manually apply patches without using the Makefile. To avoid
 typical pitfalls for package maintainers (like trying to use the patch
 commandline utility for binary patches or not updating the patchlist) it is
@@ -26,7 +26,7 @@ Instructions
 
 The following instructions (based on the [Gentoo
 Wiki](https://wiki.gentoo.org/wiki/Netflix/Pipelight#Compiling_manually))
-will give a short overview how to compile wine-compholio, but of course not
+will give a short overview how to compile Wine-Compholio, but of course not
 explain all details. Make sure to install all required Wine dependencies
 before proceeding.
 
@@ -49,7 +49,7 @@ make -C ./patches DESTDIR=$(pwd) install
 ```
 
 Afterwards run configure (you can also specify a prefix if you don't want to install
-wine-compholio system-wide):
+Wine-Compholio system-wide):
 ```bash
 ./configure --with-xattr
 ```
@@ -93,11 +93,11 @@ make -C ./patches DESTDIR=$(pwd) PATCHLIST="DIRNAME1.ok DIRNAME2.ok" install
 ```
 
 
-Contributing to wine-compholio
+Contributing to Wine-Compholio
 ==============================
 
-Please note that wine-compholio is not just an arbitrary collection of Wine
-patches. We see wine-compholio as a **testing version** in preparation for
+Please note that Wine-Compholio is not just an arbitrary collection of Wine
+patches. We see Wine-Compholio as a **testing version** in preparation for
 patches to be submitted to upstream Wine. This implies that all patches should
 at least have a minimum standard quality. Unlike some other PPAs/AURs which
 provide heavily patched Wine versions, we will not accept hacks for very

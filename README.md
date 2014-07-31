@@ -34,6 +34,7 @@ Wine-Compholio contains fixes for the following Wine bugs:
 * Support for GetSystemTimes ([Wine Bug #19813](http://bugs.winehq.org/show_bug.cgi?id=19813 "Voddler needs GetSystemTimes to run"))
 * Support for Junction Points ([Wine Bug #12401](http://bugs.winehq.org/show_bug.cgi?id=12401 "Support junction points, i.e. DeviceIoCtl(FSCTL_SET_REPARSE_POINT/FSCTL_GET_REPARSE_POINT)"))
 * Support for PulseAudio backend for audio ([Wine Bug #10495](http://bugs.winehq.org/show_bug.cgi?id=10495 "Wine should support PulseAudio"))
+* Support for TOOLTIPS_GetTipText edge cases ([Wine Bug #30648](http://bugs.winehq.org/show_bug.cgi?id=30648 "SEGA Genesis / Mega Drive Classic Collection (Steam) crashes on startup"))
 * Support for TransmitFile ([Wine Bug #5048](http://bugs.winehq.org/show_bug.cgi?id=5048 "Multiple applications and games need support for ws2_32 SIO_GET_EXTENSION_FUNCTION_POINTER TransmitFile (WSAID_TRANSMITFILE)"))
 * Support for [Get|Set]SystemFileCacheSize ([Wine Bug #35886](http://bugs.winehq.org/show_bug.cgi?id=35886 "Lotus Notes 9 'cacheset.exe' utility needs KERNEL32.dll.SetSystemFileCacheSize"))
 * Support for inherited file ACLs ([Wine Bug #34406](http://bugs.winehq.org/show_bug.cgi?id=34406 "Finale Notepad 2012 doesn't copy/create user files on program start"))

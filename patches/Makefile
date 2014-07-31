@@ -32,6 +32,7 @@ PATCHLIST :=	Miscellaneous.ok \
 		shell32-SHCreateSessionKey.ok \
 		shlwapi-UrlCombine.ok \
 		strmbase-Lock_Race_Conditions.ok \
+		user32-GetTipText.ok \
 		wineboot-HKEY_DYN_DATA.ok \
 		winepulse-PulseAudio_Support.ok \
 		winex11-XEMBED.ok \
@@ -578,6 +579,25 @@ strmbase-Lock_Race_Conditions.ok:
 	@( \
 		echo '+    { "strmbase-Lock_Race_Conditions", "Erich E. Hoover", "Fix possible race conditions in strmbase/quartz." },'; \
 	) > strmbase-Lock_Race_Conditions.ok
+
+# Patchset user32-GetTipText
+# |
+# | Included patches:
+# |   *	Handle TOOLTIPS_GetTipText edge cases. [by Erich E. Hoover]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#30648] SEGA Genesis / Mega Drive Classic Collection (Steam) crashes on startup
+# |
+# | Modified files: 
+# |   *	dlls/comctl32/tooltips.c
+# |
+.INTERMEDIATE: user32-GetTipText.ok
+user32-GetTipText.ok:
+	$(PATCH) < user32-GetTipText/0001-Fix-TOOLTIPS_GetTipText-when-a-resource-cannot-be-fo.patch
+	$(PATCH) < user32-GetTipText/0002-Fix-TOOLTIPS_GetTipText-when-a-NULL-instance-is-used.patch
+	@( \
+		echo '+    { "user32-GetTipText", "Erich E. Hoover", "Handle TOOLTIPS_GetTipText edge cases." },'; \
+	) > user32-GetTipText.ok
 
 # Patchset wineboot-HKEY_DYN_DATA
 # |

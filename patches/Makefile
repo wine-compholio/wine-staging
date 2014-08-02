@@ -32,6 +32,7 @@ PATCHLIST :=	Miscellaneous.ok \
 		shell32-SHCreateSessionKey.ok \
 		shlwapi-UrlCombine.ok \
 		strmbase-Lock_Race_Conditions.ok \
+		user32-GetSystemMetrics.ok \
 		user32-GetTipText.ok \
 		wineboot-HKEY_DYN_DATA.ok \
 		winepulse-PulseAudio_Support.ok \
@@ -579,6 +580,24 @@ strmbase-Lock_Race_Conditions.ok:
 	@( \
 		echo '+    { "strmbase-Lock_Race_Conditions", "Erich E. Hoover", "Fix possible race conditions in strmbase/quartz." },'; \
 	) > strmbase-Lock_Race_Conditions.ok
+
+# Patchset user32-GetSystemMetrics
+# |
+# | Included patches:
+# |   *	Allow changing the tablet / media center status via wine registry key. [by Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#18732] Microsoft Experience Pack for Tablet PC 1 refuses to install
+# |
+# | Modified files: 
+# |   *	dlls/user32/sysparams.c
+# |
+.INTERMEDIATE: user32-GetSystemMetrics.ok
+user32-GetSystemMetrics.ok:
+	$(PATCH) < user32-GetSystemMetrics/0001-user32-Allow-changing-the-tablet-media-center-status.patch
+	@( \
+		echo '+    { "user32-GetSystemMetrics", "Michael Müller", "Allow changing the tablet / media center status via wine registry key." },'; \
+	) > user32-GetSystemMetrics.ok
 
 # Patchset user32-GetTipText
 # |

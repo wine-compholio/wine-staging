@@ -28,6 +28,7 @@ PATCHLIST :=	Miscellaneous.ok \
 		server-Misc_ACL.ok \
 		server-Stored_ACLs.ok \
 		shell32-Default_Folder_ACLs.ok \
+		shell32-Icons.ok \
 		shell32-Register_Folders.ok \
 		shell32-SHCreateSessionKey.ok \
 		shlwapi-UrlCombine.ok \
@@ -503,6 +504,24 @@ shell32-Default_Folder_ACLs.ok:
 	@( \
 		echo '+    { "shell32-Default_Folder_ACLs", "Erich E. Hoover", "Generate default ACLs for user shell folders. [rev 6]" },'; \
 	) > shell32-Default_Folder_ACLs.ok
+
+# Patchset shell32-Icons
+# |
+# | Included patches:
+# |   *	Add support for extra large and jumbo icon lists in shell32. [by Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#24721] Explorer++ crashes when choosing to view large icons or extra large icons
+# |
+# | Modified files: 
+# |   *	dlls/shell32/iconcache.c, dlls/shell32/shell32_main.h, dlls/shell32/shellord.c
+# |
+.INTERMEDIATE: shell32-Icons.ok
+shell32-Icons.ok:
+	$(PATCH) < shell32-Icons/0001-shell32-Add-support-for-extra-large-and-jumbo-icon-l.patch
+	@( \
+		echo '+    { "shell32-Icons", "Michael Müller", "Add support for extra large and jumbo icon lists in shell32." },'; \
+	) > shell32-Icons.ok
 
 # Patchset shell32-Register_Folders
 # |

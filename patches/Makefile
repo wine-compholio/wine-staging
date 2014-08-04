@@ -29,7 +29,6 @@ PATCHLIST :=	Miscellaneous.ok \
 		server-Stored_ACLs.ok \
 		shell32-Default_Folder_ACLs.ok \
 		shell32-Icons.ok \
-		shell32-Register_Folders.ok \
 		shell32-SHCreateSessionKey.ok \
 		shlwapi-UrlCombine.ok \
 		strmbase-Lock_Race_Conditions.ok \
@@ -522,26 +521,6 @@ shell32-Icons.ok:
 	@( \
 		echo '+    { "shell32-Icons", "Michael Müller", "Add support for extra large and jumbo icon lists in shell32." },'; \
 	) > shell32-Icons.ok
-
-# Patchset shell32-Register_Folders
-# |
-# | Included patches:
-# |   *	Create additional profile directories available in vista and above. [rev 2, by Michael Müller]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#22896] Multiple applications and games need support for shell32 FOLDERID_LocalAppDataLow (.NET based Unity Engine
-# | 	games, Java JRE 6 in Vista mode)
-# |   *	[#28312] Assassin's Creed Brotherhood v1.03 needs "Saved Games" folder
-# |
-# | Modified files: 
-# |   *	dlls/shell32/shellpath.c, include/shlobj.h
-# |
-.INTERMEDIATE: shell32-Register_Folders.ok
-shell32-Register_Folders.ok:
-	$(PATCH) < shell32-Register_Folders/0001-shell32-Create-profile-directories-available-in-Vist.patch
-	@( \
-		echo '+    { "shell32-Register_Folders", "Michael Müller", "Create additional profile directories available in vista and above. [rev 2]" },'; \
-	) > shell32-Register_Folders.ok
 
 # Patchset shell32-SHCreateSessionKey
 # |

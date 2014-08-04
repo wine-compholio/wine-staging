@@ -29,6 +29,7 @@ PATCHLIST :=	Miscellaneous.ok \
 		server-Stored_ACLs.ok \
 		shell32-Default_Folder_ACLs.ok \
 		shell32-Icons.ok \
+		shell32-RunDLL_CallEntry16.ok \
 		shell32-SHCreateSessionKey.ok \
 		shlwapi-UrlCombine.ok \
 		strmbase-Lock_Race_Conditions.ok \
@@ -521,6 +522,24 @@ shell32-Icons.ok:
 	@( \
 		echo '+    { "shell32-Icons", "Michael Müller", "Add support for extra large and jumbo icon lists in shell32." },'; \
 	) > shell32-Icons.ok
+
+# Patchset shell32-RunDLL_CallEntry16
+# |
+# | Included patches:
+# |   *	Manually relay RunDLL_CallEntry16 to make Tages Protection v5 happy. [by Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#23033] Tages Protection v5.x: games report "DLL not found shell.dll16.dll" (Runaway 2: The Dream Of The Turtle, ...)
+# |
+# | Modified files: 
+# |   *	dlls/shell32/control.c, dlls/shell32/shell32.spec
+# |
+.INTERMEDIATE: shell32-RunDLL_CallEntry16.ok
+shell32-RunDLL_CallEntry16.ok:
+	$(PATCH) < shell32-RunDLL_CallEntry16/0001-shell32-Use-manual-redirection-for-RunDLL_CallEntry1.patch
+	@( \
+		echo '+    { "shell32-RunDLL_CallEntry16", "Michael Müller", "Manually relay RunDLL_CallEntry16 to make Tages Protection v5 happy." },'; \
+	) > shell32-RunDLL_CallEntry16.ok
 
 # Patchset shell32-SHCreateSessionKey
 # |

@@ -1,0 +1,56 @@
+From f83364d68291cd94bc0e20fee08fd08ff1e8f35d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Mon, 4 Aug 2014 23:04:34 +0200
+Subject: shell32: Use manual redirection for RunDLL_CallEntry16
+
+---
+ dlls/shell32/control.c    | 22 ++++++++++++++++++++++
+ dlls/shell32/shell32.spec |  2 +-
+ 2 files changed, 23 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/shell32/control.c b/dlls/shell32/control.c
+index b393154..2ddf8b0 100644
+--- a/dlls/shell32/control.c
++++ b/dlls/shell32/control.c
+@@ -883,3 +883,25 @@ DWORD WINAPI CallCPLEntry16(HMODULE hMod, FARPROC pFunc, DWORD dw3, DWORD dw4, D
+     FIXME("(%p, %p, %08x, %08x, %08x, %08x): stub.\n", hMod, pFunc, dw3, dw4, dw5, dw6);
+     return 0x0deadbee;
+ }
++
++/*************************************************************************
++ * RunDLL_CallEntry16        [SHELL32.122]
++ * Manually relay this function to make Tages Protection v5 happy
++ */
++void WINAPI RunDLL_CallEntry16( DWORD proc, HWND hwnd, HINSTANCE inst,
++                                LPCSTR cmdline, INT cmdshow )
++{
++    static HMODULE shell16 = NULL;
++    static void (WINAPI *pRunDLL_CallEntry16)( DWORD proc, HWND hwnd, HINSTANCE inst,
++                                               LPCSTR cmdline, INT cmdshow ) = NULL;
++
++    if (!pRunDLL_CallEntry16)
++    {
++        if (!shell16 && !(shell16 = LoadLibraryA( "shell.dll16" )))
++            return;
++        if (!(pRunDLL_CallEntry16 = (void *)GetProcAddress( shell16, "RunDLL_CallEntry16" )))
++            return;
++    }
++
++    pRunDLL_CallEntry16( proc, hwnd, inst, cmdline, cmdshow );
++}
+diff --git a/dlls/shell32/shell32.spec b/dlls/shell32/shell32.spec
+index d73dcbb..e559587 100644
+--- a/dlls/shell32/shell32.spec
++++ b/dlls/shell32/shell32.spec
+@@ -114,7 +114,7 @@
+  119 stdcall -ordinal IsLFNDrive(ptr) IsLFNDriveAW
+  120 stdcall -noname FileMenu_AbortInitMenu()
+  121 stdcall -noname SHFlushClipboard()
+- 122 stdcall -private @(long long ptr str long) shell.dll16.RunDLL_CallEntry16
++ 122 stdcall -noname RunDLL_CallEntry16(long long long str long)
+  123 stdcall -noname SHFreeUnusedLibraries()
+  124 stdcall -noname FileMenu_AppendFilesForPidl(long ptr long)
+  125 stdcall -noname FileMenu_AddFilesForPidl(long long long ptr long long ptr)
+-- 
+1.8.3.2
+

@@ -20,6 +20,7 @@ PATCHLIST :=	Miscellaneous.ok \
 		ntdll-FD_Cache.ok \
 		ntdll-Junction_Points.ok \
 		ntdll-Pipe_SpecialCharacters.ok \
+		ntdll-loader_EntryPoint.ok \
 		quartz-MediaSeeking_Positions.ok \
 		server-ACL_Compat.ok \
 		server-Address_Change_Notification.ok \
@@ -348,6 +349,24 @@ ntdll-Pipe_SpecialCharacters.ok:
 	@( \
 		echo '+    { "ntdll-Pipe_SpecialCharacters", "Michael Müller", "Allow special characters in pipe names." },'; \
 	) > ntdll-Pipe_SpecialCharacters.ok
+
+# Patchset ntdll-loader_EntryPoint
+# |
+# | Included patches:
+# |   *	Set ldr.EntryPoint for main executable. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33034] Many GFWL (Games For Windows Live) 1.x/2.x/3.x games crash or exit silently on startup (DiRT 2/3, GTA IV Steam)
+# |
+# | Modified files: 
+# |   *	dlls/ntdll/loader.c
+# |
+.INTERMEDIATE: ntdll-loader_EntryPoint.ok
+ntdll-loader_EntryPoint.ok:
+	$(PATCH) < ntdll-loader_EntryPoint/0001-ntdll-Set-ldr.EntryPoint-for-main-executable.patch
+	@( \
+		echo '+    { "ntdll-loader_EntryPoint", "Sebastian Lackner", "Set ldr.EntryPoint for main executable." },'; \
+	) > ntdll-loader_EntryPoint.ok
 
 # Patchset quartz-MediaSeeking_Positions
 # |

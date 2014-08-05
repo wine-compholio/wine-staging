@@ -1,0 +1,38 @@
+From 63a62bb5903e62f161b7e5972662220c606d702f Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 2 Aug 2014 18:27:20 +0200
+Subject: ntdll: Set ldr.EntryPoint for main executable.
+
+---
+ dlls/ntdll/loader.c |    7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index 79aa341..c869d8f 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -921,9 +921,10 @@ static WINE_MODREF *alloc_module( HMODULE hModule, LPCWSTR filename )
+     else p = wm->ldr.FullDllName.Buffer;
+     RtlInitUnicodeString( &wm->ldr.BaseDllName, p );
+ 
+-    if ((nt->FileHeader.Characteristics & IMAGE_FILE_DLL) && !is_dll_native_subsystem( hModule, nt, p ))
++    if (!(nt->FileHeader.Characteristics & IMAGE_FILE_DLL) || !is_dll_native_subsystem( hModule, nt, p ))
+     {
+-        wm->ldr.Flags |= LDR_IMAGE_IS_DLL;
++        if (nt->FileHeader.Characteristics & IMAGE_FILE_DLL)
++            wm->ldr.Flags |= LDR_IMAGE_IS_DLL;
+         if (nt->OptionalHeader.AddressOfEntryPoint)
+             wm->ldr.EntryPoint = (char *)hModule + nt->OptionalHeader.AddressOfEntryPoint;
+     }
+@@ -1049,7 +1050,7 @@ static NTSTATUS MODULE_InitDLL( WINE_MODREF *wm, UINT reason, LPVOID lpReserved
+ 
+     if (wm->ldr.Flags & LDR_DONT_RESOLVE_REFS) return STATUS_SUCCESS;
+     if (wm->ldr.TlsIndex != -1) call_tls_callbacks( wm->ldr.BaseAddress, reason );
+-    if (!entry) return STATUS_SUCCESS;
++    if (!entry || !(wm->ldr.Flags & LDR_IMAGE_IS_DLL)) return STATUS_SUCCESS;
+ 
+     if (TRACE_ON(relay))
+     {
+-- 
+1.7.9.5
+

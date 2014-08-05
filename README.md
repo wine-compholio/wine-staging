@@ -21,7 +21,6 @@ Wine-Compholio contains fixes for the following Wine bugs:
 * Add support for extra large and jumbo icon lists in shell32 ([Wine Bug #24721](http://bugs.winehq.org/show_bug.cgi?id=24721 "Explorer++ crashes when choosing to view large icons or extra large icons"))
 * Allow special characters in pipe names ([Wine Bug #28995](http://bugs.winehq.org/show_bug.cgi?id=28995 "Unable to use named pipes with \">\" character in the name"))
 * Fix for ConnectNamedPort return value in overlapped mode ([Wine Bug #16550](http://bugs.winehq.org/show_bug.cgi?id=16550 "ConnectNamedPort should never return OK in overlapped mode (affects chromium ui_tests.exe)"))
-* Fix race conditions and deadlocks in strmbase/quartz ([Wine Bug #31566](http://bugs.winehq.org/show_bug.cgi?id=31566 "Fallout 3: regression causes block at critical section when radio is enabled"))
 * GetSecurityInfo returns NULL DACL for process object ([Wine Bug #15980](http://bugs.winehq.org/show_bug.cgi?id=15980 "Rhapsody 2 crashes on startup (GetSecurityInfo returns NULL DACL for process object)"))
 * Implement a Microsoft Yahei replacement font ([Wine Bug #13829](http://bugs.winehq.org/show_bug.cgi?id=13829 "Wine does not have CJK fonts"))
 * Implement an Arial replacement font ([Wine Bug #32323](http://bugs.winehq.org/show_bug.cgi?id=32323 "Netflix (Silverlight 4.x) and several .NET Framework 3.x/4.0 WPF apps require either Arial or Verdana to be installed"))

@@ -416,7 +416,7 @@ for offset in $(awk '/^diff --git /{ print FNR; }' "$tmpfile"); do
 		abort "Checksum mismatch for patched $patch_newname (expected: $patch_newsha1, got $sha)."
 	fi
 
-	# Apply the patch - copy literal patch to destination patch
+	# Apply the patch - copy literal patch to destination path
 	if ! cp "$literal_tmpfile" "$patch_newname"; then
 		rm "$literal_tmpfile"
 		abort "Unable to replace $patch_newname with patched file."

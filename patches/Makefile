@@ -10,6 +10,7 @@ PATCHLIST :=	Miscellaneous.ok \
 		atl-IOCS_Property.ok \
 		comctl32-LoadIconMetric.ok \
 		ddraw-Empty_Hardware_Flags.ok \
+		dsound-Fast_Mixer.ok \
 		fonts-Missing_Fonts.ok \
 		iphlpapi-TCP_Table.ok \
 		kernel32-GetSystemTimes.ok \
@@ -159,6 +160,24 @@ ddraw-Empty_Hardware_Flags.ok:
 	@( \
 		echo '+    { "ddraw-Empty_Hardware_Flags", "Erich E. Hoover", "Return empty D3D hardware flags for HEL device enumeration." },'; \
 	) > ddraw-Empty_Hardware_Flags.ok
+
+# Patchset dsound-Fast_Mixer
+# |
+# | Included patches:
+# |   *	Add a linear resampler for use with a large number of dsound mixing buffers. [by Alexander E. Patrakov]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#30639] Audio stuttering and performance drops in Star Wolves 3
+# |
+# | Modified files: 
+# |   *	dlls/dsound/dsound_main.c, dlls/dsound/dsound_private.h, dlls/dsound/mixer.c
+# |
+.INTERMEDIATE: dsound-Fast_Mixer.ok
+dsound-Fast_Mixer.ok:
+	$(PATCH) < dsound-Fast_Mixer/0001-dsound-Add-a-linear-resampler-for-use-with-a-large-n.patch
+	@( \
+		echo '+    { "dsound-Fast_Mixer", "Alexander E. Patrakov", "Add a linear resampler for use with a large number of dsound mixing buffers." },'; \
+	) > dsound-Fast_Mixer.ok
 
 # Patchset fonts-Missing_Fonts
 # |

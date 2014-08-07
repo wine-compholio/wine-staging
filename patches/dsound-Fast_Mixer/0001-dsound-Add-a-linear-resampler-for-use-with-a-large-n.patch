@@ -1,0 +1,123 @@
+From c62167818f1d4f14eb98e1590beec11056e5712f Mon Sep 17 00:00:00 2001
+From: "Alexander E. Patrakov" <patrakov at gmail.com>
+Date: Thu, 7 Aug 2014 17:15:00 -0600
+Subject: dsound: Add a linear resampler for use with a large number of mixing
+ buffers.
+
+---
+ dlls/dsound/dsound_main.c    |    5 +++++
+ dlls/dsound/dsound_private.h |    1 +
+ dlls/dsound/mixer.c          |   49 ++++++++++++++++++++++++++++++++++++++++--
+ 3 files changed, 53 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/dsound/dsound_main.c b/dlls/dsound/dsound_main.c
+index 0e3a313..492df48 100644
+--- a/dlls/dsound/dsound_main.c
++++ b/dlls/dsound/dsound_main.c
+@@ -93,6 +93,7 @@ WCHAR wine_vxd_drv[] = { 'w','i','n','e','m','m','.','v','x','d', 0 };
+ /* All default settings, you most likely don't want to touch these, see wiki on UsefulRegistryKeys */
+ int ds_hel_buflen = 32768 * 2;
+ int ds_snd_queue_max = 10;
++int ds_hq_buffers_max = 4;
+ static HINSTANCE instance;
+ 
+ /*
+@@ -149,11 +150,15 @@ void setup_dsound_options(void)
+         ds_snd_queue_max = atoi(buffer);
+ 
+ 
++    if (!get_config_key( hkey, appkey, "HQBuffersMax", buffer, MAX_PATH ))
++        ds_hq_buffers_max = atoi(buffer);
++
+     if (appkey) RegCloseKey( appkey );
+     if (hkey) RegCloseKey( hkey );
+ 
+     TRACE("ds_hel_buflen = %d\n", ds_hel_buflen);
+     TRACE("ds_snd_queue_max = %d\n", ds_snd_queue_max);
++    TRACE("ds_hq_buffers_max = %d\n", ds_hq_buffers_max);
+ }
+ 
+ static const char * get_device_id(LPCGUID pGuid)
+diff --git a/dlls/dsound/dsound_private.h b/dlls/dsound/dsound_private.h
+index a8f5f42..2db769d 100644
+--- a/dlls/dsound/dsound_private.h
++++ b/dlls/dsound/dsound_private.h
+@@ -32,6 +32,7 @@
+ 
+ extern int ds_hel_buflen DECLSPEC_HIDDEN;
+ extern int ds_snd_queue_max DECLSPEC_HIDDEN;
++extern int ds_hq_buffers_max DECLSPEC_HIDDEN;
+ 
+ /*****************************************************************************
+  * Predeclare the interface implementation structures
+diff --git a/dlls/dsound/mixer.c b/dlls/dsound/mixer.c
+index 43b7dca..7f16c59 100644
+--- a/dlls/dsound/mixer.c
++++ b/dlls/dsound/mixer.c
+@@ -247,7 +247,50 @@ static UINT cp_fields_noresample(IDirectSoundBufferImpl *dsb, UINT count)
+     return count;
+ }
+ 
+-static UINT cp_fields_resample(IDirectSoundBufferImpl *dsb, UINT count, float *freqAcc)
++static UINT cp_fields_resample_lq(IDirectSoundBufferImpl *dsb, UINT count, float *freqAcc)
++{
++    UINT i, channel;
++    UINT istride = dsb->pwfx->nBlockAlign;
++    UINT ostride = dsb->device->pwfx->nChannels * sizeof(float);
++    UINT channels = dsb->mix_channels;
++
++    float freqAdjust = dsb->freqAdjust;
++    float freqAcc_start = *freqAcc;
++    float freqAcc_end = freqAcc_start + count * freqAdjust;
++    UINT max_ipos = freqAcc_end;
++
++    freqAcc_end -= (int)freqAcc_end;
++
++    for(i = 0; i < count; ++i) {
++        float cur_freqAcc = freqAcc_start + i * freqAdjust;
++	float cur_freqAcc2;
++        UINT ipos = cur_freqAcc;
++        UINT idx = dsb->sec_mixpos + ipos * istride;
++        cur_freqAcc -= (int)cur_freqAcc;
++        cur_freqAcc2 = 1.0 - cur_freqAcc;
++        for (channel = 0; channel < channels; channel++) {
++            /**
++             * Generally we cannot cache the result of get_current_sample().
++             * Consider the case of resampling from 192000 Hz to 44100 Hz -
++             * none of the values will get reused for the next value of i.
++             * OTOH, for resampling from 44100 Hz to 192000 Hz both values
++             * will likely be reused.
++             *
++             * So far, this possibility of saving calls to
++             * get_current_sample() is ignored.
++             */
++            float s1 = get_current_sample(dsb, idx, channel);
++            float s2 = get_current_sample(dsb, idx + istride, channel);
++            float result = s1 * cur_freqAcc2 + s2 * cur_freqAcc;
++            dsb->put(dsb, i * ostride, channel, result);
++        }
++    }
++
++    *freqAcc = freqAcc_end;
++    return max_ipos;
++}
++
++static UINT cp_fields_resample_hq(IDirectSoundBufferImpl *dsb, UINT count, float *freqAcc)
+ {
+     UINT i, channel;
+     UINT istride = dsb->pwfx->nBlockAlign;
+@@ -321,8 +364,10 @@ static void cp_fields(IDirectSoundBufferImpl *dsb, UINT count, float *freqAcc)
+ 
+     if (dsb->freqAdjust == 1.0)
+         adv = cp_fields_noresample(dsb, count); /* *freqAcc is unmodified */
++    else if (dsb->device->nrofbuffers > ds_hq_buffers_max)
++        adv = cp_fields_resample_lq(dsb, count, freqAcc);
+     else
+-        adv = cp_fields_resample(dsb, count, freqAcc);
++        adv = cp_fields_resample_hq(dsb, count, freqAcc);
+ 
+     ipos = dsb->sec_mixpos + adv * dsb->pwfx->nBlockAlign;
+     if (ipos >= dsb->buflen) {
+-- 
+1.7.9.5
+

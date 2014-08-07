@@ -36,7 +36,6 @@ PATCHLIST :=	Miscellaneous.ok \
 		shlwapi-UrlCombine.ok \
 		user32-GetSystemMetrics.ok \
 		user32-GetTipText.ok \
-		windowscodecs-PropertyBag.ok \
 		wineboot-HKEY_DYN_DATA.ok \
 		winepulse-PulseAudio_Support.ok \
 		winex11-XEMBED.ok \
@@ -652,25 +651,6 @@ user32-GetTipText.ok:
 	@( \
 		echo '+    { "user32-GetTipText", "Erich E. Hoover", "Handle TOOLTIPS_GetTipText edge cases." },'; \
 	) > user32-GetTipText.ok
-
-# Patchset windowscodecs-PropertyBag
-# |
-# | Included patches:
-# |   *	Fix number of returned properties in PropertyBag_GetPropertyInfo. [by Michael Müller]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37005] Serif WebPlus Starter Edition crashes on startup (IPropertyBag2::GetPropertyInfo returns more properties than
-# | 	the caller requested, leading to stack smashing)
-# |
-# | Modified files: 
-# |   *	dlls/windowscodecs/propertybag.c
-# |
-.INTERMEDIATE: windowscodecs-PropertyBag.ok
-windowscodecs-PropertyBag.ok:
-	$(PATCH) < windowscodecs-PropertyBag/0001-windowscodecs-Fix-number-of-returned-properties-in-P.patch
-	@( \
-		echo '+    { "windowscodecs-PropertyBag", "Michael Müller", "Fix number of returned properties in PropertyBag_GetPropertyInfo." },'; \
-	) > windowscodecs-PropertyBag.ok
 
 # Patchset wineboot-HKEY_DYN_DATA
 # |

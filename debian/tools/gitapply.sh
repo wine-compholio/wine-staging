@@ -136,7 +136,9 @@ BEGIN{
   b85="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~";
   printf("\x1f\x8b\x08\x00\x00\x00\x00\x00");
   while (getline > 0){
-    l = index(git, substr($0, 1, 1)); if (l == 0){ exit 1; }; p=2;
+    l = index(git, substr($0, 1, 1));
+    if (l == 0){ exit 1; }
+    p=2;
     while (l > 0 && p <= length($0)){
       a = index(b85, substr($0, p++, 1));
       b = index(b85, substr($0, p++, 1));
@@ -199,7 +201,7 @@ BEGIN{
       if (and(cmd, 0x10)){ cp_size  = get_byte(); }
       if (and(cmd, 0x20)){ cp_size += lshift(get_byte(), 8); }
       if (and(cmd, 0x40)){ cp_size += lshift(get_byte(), 16); }
-      if (cp_size == 0){ cp_size = 0x10000; }
+      if (cp_size == 0){   cp_size  = 0x10000; }
       if (cp_offs + cp_size > src_size || cp_size > dst_size){ exit 1; }
       printf("1 %d %d\n", cp_offs, cp_size);
       dst_size -= cp_size;
@@ -330,7 +332,7 @@ for offset in $(awk '/^diff --git /{ print FNR; }' "$tmpfile"); do
 	# Ensure that checksum of old file matches
 	sha=$(gitsha1 "$patch_oldname")
 	if [ "$patch_oldsha1" != "$sha" ]; then
-		abort "Checksum mismatch for $patch_oldname (expected: $patch_oldsha1, got $sha)."
+		abort "Checksum mismatch for $patch_oldname (expected $patch_oldsha1, got $sha)."
 	fi
 
 	# Find end of binary patch
@@ -367,7 +369,7 @@ for offset in $(awk '/^diff --git /{ print FNR; }' "$tmpfile"); do
 	fi
 
 	# Convert delta to literal patch
-	if [ "$binary_patch_type" == "delta" ]; then
+	if [ "$patch_binary_type" == "delta" ]; then
 
 		# Create new temporary file for literal patch
 		delta_tmpfile="$literal_tmpfile"
@@ -413,7 +415,7 @@ for offset in $(awk '/^diff --git /{ print FNR; }' "$tmpfile"); do
 	sha=$(gitsha1 "$literal_tmpfile")
 	if [ "$patch_newsha1" != "$sha" ]; then
 		rm "$literal_tmpfile"
-		abort "Checksum mismatch for patched $patch_newname (expected: $patch_newsha1, got $sha)."
+		abort "Checksum mismatch for patched $patch_newname (expected $patch_newsha1, got $sha)."
 	fi
 
 	# Apply the patch - copy literal patch to destination path

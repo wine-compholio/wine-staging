@@ -1,0 +1,131 @@
+From bd8ddd1f8297c0216db8f027652c35cbfdfdcb54 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 7 Aug 2014 01:41:25 +0200
+Subject: comctl32: Implement LoadIconMetric function.
+
+---
+ dlls/comctl32/Makefile.in   |  1 +
+ dlls/comctl32/comctl32.spec |  1 +
+ dlls/comctl32/icon.c        | 68 +++++++++++++++++++++++++++++++++++++++++++++
+ include/commctrl.h          |  6 ++++
+ 4 files changed, 76 insertions(+)
+ create mode 100644 dlls/comctl32/icon.c
+
+diff --git a/dlls/comctl32/Makefile.in b/dlls/comctl32/Makefile.in
+index e63f0ac..af49017 100644
+--- a/dlls/comctl32/Makefile.in
++++ b/dlls/comctl32/Makefile.in
+@@ -16,6 +16,7 @@ C_SRCS = \
+ 	flatsb.c \
+ 	header.c \
+ 	hotkey.c \
++	icon.c \
+ 	imagelist.c \
+ 	ipaddress.c \
+ 	listview.c \
+diff --git a/dlls/comctl32/comctl32.spec b/dlls/comctl32/comctl32.spec
+index 0dff369..1343fca 100644
+--- a/dlls/comctl32/comctl32.spec
++++ b/dlls/comctl32/comctl32.spec
+@@ -88,6 +88,7 @@
+ 375 stdcall -noname -private StrCSpnIW(wstr wstr)
+ 376 stdcall -noname -private IntlStrEqWorkerA(long str str long)
+ 377 stdcall -noname -private IntlStrEqWorkerW(long wstr wstr long)
++380 stdcall LoadIconMetric(ptr wstr long ptr)
+ 382 stdcall -noname SmoothScrollWindow(ptr)
+ 383 stub -noname DoReaderMode
+ 384 stdcall -noname SetPathWordBreakProc(ptr long)
+diff --git a/dlls/comctl32/icon.c b/dlls/comctl32/icon.c
+new file mode 100644
+index 0000000..a664e2c
+--- /dev/null
++++ b/dlls/comctl32/icon.c
+@@ -0,0 +1,68 @@
++/*
++ * Comctl32 Icon functions
++ *
++ * Copyright 2014 Michael Müller
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include <stdarg.h>
++#include <string.h>
++#include "windef.h"
++#include "winbase.h"
++#include "wingdi.h"
++#include "winuser.h"
++#include "winnls.h"
++#include "commctrl.h"
++#include "comctl32.h"
++#include "wine/debug.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(commctrl);
++
++HRESULT WINAPI
++LoadIconMetric (HINSTANCE hinst, PCWSTR name, INT size, HICON *icon)
++{
++    INT width, height;
++
++    TRACE("(%p %s %d %p)\n", hinst, debugstr_w(name), size, icon);
++
++    if (!icon)
++        return E_INVALIDARG;
++
++    /* windows sets it to zero in a case of failure */
++    *icon = NULL;
++
++    if (!name)
++        return E_INVALIDARG;
++
++    if (size == LIM_SMALL)
++    {
++        width  = GetSystemMetrics( SM_CXSMICON );
++        height = GetSystemMetrics( SM_CYSMICON );
++    }
++    else if (size == LIM_LARGE)
++    {
++        width  = GetSystemMetrics( SM_CXICON );
++        height = GetSystemMetrics( SM_CYICON );
++    }
++    else
++        return E_INVALIDARG;
++
++    *icon = LoadImageW( hinst, name, IMAGE_ICON, width, height, LR_SHARED );
++    if (*icon)
++        return S_OK;
++
++    return HRESULT_FROM_WIN32(GetLastError());
++}
+diff --git a/include/commctrl.h b/include/commctrl.h
+index 9993ec7..0cc401e 100644
+--- a/include/commctrl.h
++++ b/include/commctrl.h
+@@ -1373,6 +1373,12 @@ typedef struct tagTBADDBITMAP {
+ #define HIST_ADDTOFAVORITES     3
+ #define HIST_VIEWTREE           4
+ 
++enum _LI_METRIC
++{
++   LIM_SMALL,
++   LIM_LARGE,
++};
++
+ typedef struct tagTBSAVEPARAMSA {
+     HKEY   hkr;
+     LPCSTR pszSubKey;
+-- 
+1.8.3.2
+

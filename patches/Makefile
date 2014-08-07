@@ -8,6 +8,7 @@ PATCH := $(CURDIR)/../debian/tools/gitapply.sh -d $(DESTDIR)
 PATCHLIST :=	Miscellaneous.ok \
 		Pipelight.ok \
 		atl-IOCS_Property.ok \
+		comctl32-LoadIconMetric.ok \
 		ddraw-Empty_Hardware_Flags.ok \
 		fonts-Missing_Fonts.ok \
 		iphlpapi-TCP_Table.ok \
@@ -118,6 +119,27 @@ atl-IOCS_Property.ok:
 	@( \
 		echo '+    { "atl-IOCS_Property", "Qian Hong", "Store IOCS data in a property instead of GWLP_USERDATA." },'; \
 	) > atl-IOCS_Property.ok
+
+# Patchset comctl32-LoadIconMetric
+# |
+# | Included patches:
+# |   *	Implement LoadIconMetric function. [by Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35375] Multiple applications need Vista+ API COMCTL32.dll.380 a.k.a. 'LoadIconMetric' (Solidworks 2013 systray
+# | 	monitor, Microsoft One/SkyDrive)
+# |
+# | Modified files: 
+# |   *	dlls/comctl32/Makefile.in, dlls/comctl32/comctl32.spec, dlls/comctl32/icon.c, dlls/comctl32/tests/misc.c,
+# | 	include/commctrl.h
+# |
+.INTERMEDIATE: comctl32-LoadIconMetric.ok
+comctl32-LoadIconMetric.ok:
+	$(PATCH) < comctl32-LoadIconMetric/0001-comctl32-Implement-LoadIconMetric-function.patch
+	$(PATCH) < comctl32-LoadIconMetric/0002-comctl32-tests-Add-tests-for-LoadIconMetric-function.patch
+	@( \
+		echo '+    { "comctl32-LoadIconMetric", "Michael Müller", "Implement LoadIconMetric function." },'; \
+	) > comctl32-LoadIconMetric.ok
 
 # Patchset ddraw-Empty_Hardware_Flags
 # |

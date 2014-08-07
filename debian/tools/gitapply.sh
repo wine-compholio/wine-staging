@@ -130,7 +130,7 @@ for dependency in awk cut dd du grep gzip hexdump patch sha1sum; do
 done
 
 # Decode base85 git data, prepend with a gzip header
-awk_b85='
+awk_decode_b85='
 BEGIN{
   git="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
   b85="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~";
@@ -162,7 +162,7 @@ BEGIN{
 }'
 
 # Decodes the information from a git delta patch passed in as hex encoded
-awk_gitpatch='
+awk_decode_binarypatch='
 function get_byte(a, b){ # usage: get_byte()
   if (length(__buffer) == 0){ if(getline __buffer <= 0){ exit 1; } }
   a = index(hex, substr(__buffer, 1, 1));
@@ -215,6 +215,43 @@ BEGIN{
   printf("E 0 0\n");
 }'
 
+# Find end of patch header
+awk_eof_header='
+BEGIN{
+  ofs=1;
+}
+!/^(--- |\+\+\+ |old |new |copy |rename |similarity |index |GIT |literal |delta )/{
+  ofs=0; exit 0;
+}
+END{
+  print FNR+ofs;
+}'
+
+# Find end of text patch
+awk_eof_textpatch='
+BEGIN{
+  ofs=1;
+}
+!/^(@| |+|-|\\)/{
+  ofs=0; exit 0;
+}
+END{
+  print FNR+ofs;
+}'
+
+# Find end of git binary patch
+awk_eof_binarypatch='
+BEGIN{
+  ofs=1;
+}
+!/^[A-Za-z]/{
+  ofs=0; exit 0;
+}
+END{
+  print FNR+ofs;
+}'
+
+
 # Create a temporary file containing the patch - NOTE: even if the user
 # provided a filename it still makes sense to work with a temporary file,
 # to avoid changes of the content while this script is active.
@@ -242,11 +279,7 @@ for offset in $(awk '/^diff --git /{ print FNR; }' "$tmpfile"); do
 
 	# Find out the size of the patch header
 	tmpoffset=$((offset + 1))
-	tmpoffset=$(sed -n "$tmpoffset,\$ p" "$tmpfile" |
-				awk '!/^(--- |\+\+\+ |old |new |copy |rename |similarity |index |GIT |literal |delta )/{ exit 42; } END{ print FNR; }')
-	if [ "$?" -ne 42 ]; then
-		tmpoffset=$((tmpoffset + 1))
-	fi
+	tmpoffset=$(sed -n "$tmpoffset,\$ p" "$tmpfile" | awk "$awk_eof_header")
 	hdroffset=$((offset + tmpoffset))
 
 	# Parse all important fields of the header
@@ -303,10 +336,7 @@ for offset in $(awk '/^diff --git /{ print FNR; }' "$tmpfile"); do
 	if [ "$patch_is_binary" -eq 0 ]; then
 
 		# Find end of textual patch
-		tmpoffset=$(sed -n "$hdroffset,\$ p" "$tmpfile" | awk '!/^(@| |+|-|\\)/{ exit 42; } END{ print FNR; }')
-		if [ "$?" -ne 42 ]; then
-			tmpoffset=$((tmpoffset + 1))
-		fi
+		tmpoffset=$(sed -n "$hdroffset,\$ p" "$tmpfile" | awk "$awk_eof_textpatch")
 		lastoffset=$((hdroffset + tmpoffset - 1))
 
 		# Apply textual patch
@@ -336,10 +366,7 @@ for offset in $(awk '/^diff --git /{ print FNR; }' "$tmpfile"); do
 	fi
 
 	# Find end of binary patch
-	tmpoffset=$(sed -n "$hdroffset,\$ p" "$tmpfile" | awk '!/^[A-Za-z]/{ exit 42; } END{ print FNR; }')
-	if [ "$?" -ne 42 ]; then
-		tmpoffset=$((tmpoffset + 1))
-	fi
+	tmpoffset=$(sed -n "$hdroffset,\$ p" "$tmpfile" | awk "$awk_eof_binarypatch")
 	lastoffset=$((hdroffset + tmpoffset - 1))
 
 	# Special case - deleting the whole file
@@ -362,7 +389,7 @@ for offset in $(awk '/^diff --git /{ print FNR; }' "$tmpfile"); do
 
 	# Decode base85 and gzip compression
 	tmpoffset=$((lastoffset - 1))
-	sed -n "$hdroffset,$tmpoffset p" "$tmpfile" | awk "$awk_b85" | gzip -dc > "$literal_tmpfile" 2>/dev/null
+	sed -n "$hdroffset,$tmpoffset p" "$tmpfile" | awk "$awk_decode_b85" | gzip -dc > "$literal_tmpfile" 2>/dev/null
 	if [ "$patch_binary_size" -ne "$(filesize "$literal_tmpfile")" ]; then
 		rm "$literal_tmpfile"
 		abort "Uncompressed binary patch has wrong size."
@@ -397,7 +424,7 @@ for offset in $(awk '/^diff --git /{ print FNR; }' "$tmpfile"); do
 				patch_binary_complete=1
 
 			else break; fi
-		done < <(hexdump -v -e '32/1 "%02X" "\n"' "$delta_tmpfile" | awk "$awk_gitpatch")
+		done < <(hexdump -v -e '32/1 "%02X" "\n"' "$delta_tmpfile" | awk "$awk_decode_binarypatch")
 
 		rm "$delta_tmpfile"
 

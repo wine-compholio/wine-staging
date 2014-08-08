@@ -39,6 +39,7 @@ PATCHLIST :=	Miscellaneous.ok \
 		shlwapi-UrlCombine.ok \
 		user32-GetSystemMetrics.ok \
 		user32-GetTipText.ok \
+		user32-WndProc.ok \
 		wineboot-HKEY_DYN_DATA.ok \
 		winepulse-PulseAudio_Support.ok \
 		winex11-XEMBED.ok \
@@ -711,6 +712,25 @@ user32-GetTipText.ok:
 	@( \
 		echo '+    { "user32-GetTipText", "Erich E. Hoover", "Handle TOOLTIPS_GetTipText edge cases." },'; \
 	) > user32-GetTipText.ok
+
+# Patchset user32-WndProc
+# |
+# | Included patches:
+# |   *	Workaround for programs leaking wndproc splots. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#32451] Multiple GOG.com installer bundles show a broken/unresponsive dialog window during installation (installer
+# | 	process running out of wndproc slots)
+# |
+# | Modified files: 
+# |   *	dlls/user32/winproc.c
+# |
+.INTERMEDIATE: user32-WndProc.ok
+user32-WndProc.ok:
+	$(PATCH) < user32-WndProc/0001-user32-Increase-MAX_WINPROCS-to-16384.patch
+	@( \
+		echo '+    { "user32-WndProc", "Sebastian Lackner", "Workaround for programs leaking wndproc splots." },'; \
+	) > user32-WndProc.ok
 
 # Patchset wineboot-HKEY_DYN_DATA
 # |

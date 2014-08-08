@@ -17,6 +17,7 @@ PATCHLIST :=	Miscellaneous.ok \
 		kernel32-GetVolumePathName.ok \
 		kernel32-Named_Pipe.ok \
 		kernel32-SystemFileCacheSize.ok \
+		libs-Unicode_Collation.ok \
 		loader-Cmdline_Diagnostics.ok \
 		ntdll-Dynamic_DST.ok \
 		ntdll-FD_Cache.ok \
@@ -293,6 +294,24 @@ kernel32-SystemFileCacheSize.ok:
 	@( \
 		echo '+    { "kernel32-SystemFileCacheSize", "Austin English", "Add stub for [Get|Set]SystemFileCacheSize." },'; \
 	) > kernel32-SystemFileCacheSize.ok
+
+# Patchset libs-Unicode_Collation
+# |
+# | Included patches:
+# |   *	Fix comparison of punctuation characters. [by Dmitry Timoshkov]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#10767] lstrcmp and others do not compare punctuation characters correctly
+# |
+# | Modified files: 
+# |   *	dlls/kernel32/tests/locale.c, libs/wine/collation.c
+# |
+.INTERMEDIATE: libs-Unicode_Collation.ok
+libs-Unicode_Collation.ok:
+	$(PATCH) < libs-Unicode_Collation/0001-libs-Fix-most-problems-with-CompareString.patch
+	@( \
+		echo '+    { "libs-Unicode_Collation", "Dmitry Timoshkov", "Fix comparison of punctuation characters." },'; \
+	) > libs-Unicode_Collation.ok
 
 # Patchset loader-Cmdline_Diagnostics
 # |

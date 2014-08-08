@@ -155,8 +155,8 @@ comctl32-LoadIconMetric.ok:
 # |
 .INTERMEDIATE: ddraw-Empty_Hardware_Flags.ok
 ddraw-Empty_Hardware_Flags.ok:
-	$(PATCH) < ddraw-Empty_Hardware_Flags/0001-ddraw-tests-Ignore-broken-behavior-of-D3DTRANSFORM_U.patch
-	$(PATCH) < ddraw-Empty_Hardware_Flags/0002-ddraw-Return-empty-D3D-hardware-flags-for-HEL-device.patch
+	$(PATCH) < ddraw-Empty_Hardware_Flags/0001-ddraw-tests-Remove-broken-tests-of-D3DTRANSFORM_UNCL.patch
+	$(PATCH) < ddraw-Empty_Hardware_Flags/0002-ddraw-Return-empty-D3D-hardware-flags-for-RGB-device.patch
 	@( \
 		echo '+    { "ddraw-Empty_Hardware_Flags", "Erich E. Hoover", "Return empty D3D hardware flags for HEL device enumeration." },'; \
 	) > ddraw-Empty_Hardware_Flags.ok

@@ -20,6 +20,7 @@ PATCHLIST :=	Miscellaneous.ok \
 		loader-Cmdline_Diagnostics.ok \
 		ntdll-Dynamic_DST.ok \
 		ntdll-FD_Cache.ok \
+		ntdll-FileDispositionInformation.ok \
 		ntdll-Junction_Points.ok \
 		ntdll-Pipe_SpecialCharacters.ok \
 		ntdll-loader_EntryPoint.ok \
@@ -347,6 +348,27 @@ ntdll-FD_Cache.ok:
 	@( \
 		echo '+    { "ntdll-FD_Cache", "Sebastian Lackner", "Use lockfree implementation for get_cached_fd. [rev 4]" },'; \
 	) > ntdll-FD_Cache.ok
+
+# Patchset ntdll-FileDispositionInformation
+# |
+# | Included patches:
+# |   *	Add support for setting file disposition information. [by Dmitry Timoshkov / Erich E. Hoover]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#30397] Multiple applications need support for NtSetInformationFile class FileDispositionInformation (Cygwin installer,
+# | 	Stylizer 5.x Visual CSS editor, Spoon Studio 2011 (ex Xenocode) application sandboxing scheme)
+# |
+# | Modified files: 
+# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c, server/fd.c, server/file.c, server/file.h, server/protocol.def
+# |
+.INTERMEDIATE: ntdll-FileDispositionInformation.ok
+ntdll-FileDispositionInformation.ok:
+	$(PATCH) < ntdll-FileDispositionInformation/0001-server-Keep-a-pointer-to-parent-s-fd-unix_name-in-th.patch
+	$(PATCH) < ntdll-FileDispositionInformation/0002-server-Add-support-for-setting-file-disposition-info.patch
+	$(PATCH) < ntdll-FileDispositionInformation/0003-server-Do-not-permit-FileDispositionInformation-to-d.patch
+	@( \
+		echo '+    { "ntdll-FileDispositionInformation", "Dmitry Timoshkov / Erich E. Hoover", "Add support for setting file disposition information." },'; \
+	) > ntdll-FileDispositionInformation.ok
 
 # Patchset ntdll-Junction_Points
 # |

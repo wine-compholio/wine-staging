@@ -1,0 +1,233 @@
+From 723aef38c2549d8767bb185906cc3fc8d865b695 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Thu, 7 Aug 2014 20:32:19 -0600
+Subject: server: Add support for setting file disposition information.
+
+---
+ dlls/ntdll/file.c       |   16 ++++++++++++++++
+ dlls/ntdll/tests/file.c |   12 ++----------
+ server/fd.c             |   30 ++++++++++++++++++++++++++++++
+ server/file.c           |   23 +++++++++++++++++++++++
+ server/file.h           |    1 +
+ server/protocol.def     |    6 ++++++
+ 6 files changed, 78 insertions(+), 10 deletions(-)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index d2efcc1..5d59470 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -2383,6 +2383,22 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
+         else io->u.Status = STATUS_INVALID_PARAMETER_3;
+         break;
+ 
++    case FileDispositionInformation:
++        if (len >= sizeof(FILE_DISPOSITION_INFORMATION))
++        {
++            FILE_DISPOSITION_INFORMATION *info = ptr;
++
++            SERVER_START_REQ( set_file_info )
++            {
++                req->handle   = wine_server_obj_handle( handle );
++                req->unlink   = info->DoDeleteFile;
++                io->u.Status = wine_server_call( req );
++            }
++            SERVER_END_REQ;
++        } else
++            io->u.Status = STATUS_INVALID_PARAMETER_3;
++        break;
++
+     default:
+         FIXME("Unsupported class (%d)\n", class);
+         io->u.Status = STATUS_NOT_IMPLEMENTED;
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index d70ed6b..1606f83 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -1371,7 +1371,6 @@ static void test_file_disposition_information(void)
+     ok( res == STATUS_INVALID_INFO_CLASS || res == STATUS_NOT_IMPLEMENTED, "Unexpected NtQueryInformationFile result (expected STATUS_INVALID_INFO_CLASS, got %x)\n", res );
+     fdi.DoDeleteFile = TRUE;
+     res = pNtSetInformationFile( handle, &io, &fdi, sizeof fdi, FileDispositionInformation );
+-    todo_wine
+     ok( res == STATUS_ACCESS_DENIED, "unexpected FileDispositionInformation result (expected STATUS_ACCESS_DENIED, got %x)\n", res );
+     CloseHandle( handle );
+     fileDeleted = GetFileAttributesA( buffer ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -1384,11 +1383,9 @@ static void test_file_disposition_information(void)
+     ok( handle != INVALID_HANDLE_VALUE, "failed to create temp file\n" );
+     fdi.DoDeleteFile = TRUE;
+     res = pNtSetInformationFile( handle, &io, &fdi, sizeof fdi, FileDispositionInformation );
+-    todo_wine
+     ok( res == STATUS_SUCCESS, "unexpected FileDispositionInformation result (expected STATUS_SUCCESS, got %x)\n", res );
+     CloseHandle( handle );
+     fileDeleted = GetFileAttributesA( buffer ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+-    todo_wine
+     ok( fileDeleted, "File should have been deleted\n" );
+     DeleteFileA( buffer );
+ 
+@@ -1402,6 +1399,7 @@ static void test_file_disposition_information(void)
+     ok( res == STATUS_CANNOT_DELETE, "unexpected FileDispositionInformation result (expected STATUS_CANNOT_DELETE, got %x)\n", res );
+     CloseHandle( handle );
+     fileDeleted = GetFileAttributesA( buffer ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
++    todo_wine
+     ok( !fileDeleted, "File shouldn't have been deleted\n" );
+     SetFileAttributesA( buffer, FILE_ATTRIBUTE_NORMAL );
+     DeleteFileA( buffer );
+@@ -1412,11 +1410,9 @@ static void test_file_disposition_information(void)
+     ok( handle != INVALID_HANDLE_VALUE, "failed to create temp file\n" );
+     fdi.DoDeleteFile = TRUE;
+     res = pNtSetInformationFile( handle, &io, &fdi, sizeof fdi, FileDispositionInformation );
+-    todo_wine
+     ok( res == STATUS_SUCCESS, "unexpected FileDispositionInformation result (expected STATUS_SUCCESS, got %x)\n", res );
+     fdi.DoDeleteFile = FALSE;
+     res = pNtSetInformationFile( handle, &io, &fdi, sizeof fdi, FileDispositionInformation );
+-    todo_wine
+     ok( res == STATUS_SUCCESS, "unexpected FileDispositionInformation result (expected STATUS_SUCCESS, got %x)\n", res );
+     CloseHandle( handle );
+     fileDeleted = GetFileAttributesA( buffer ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -1429,7 +1425,6 @@ static void test_file_disposition_information(void)
+     ok( handle != INVALID_HANDLE_VALUE, "failed to create temp file\n" );
+     fdi.DoDeleteFile = FALSE;
+     res = pNtSetInformationFile( handle, &io, &fdi, sizeof fdi, FileDispositionInformation );
+-    todo_wine
+     ok( res == STATUS_SUCCESS, "unexpected FileDispositionInformation result (expected STATUS_SUCCESS, got %x)\n", res );
+     CloseHandle( handle );
+     fileDeleted = GetFileAttributesA( buffer ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -1444,7 +1439,6 @@ static void test_file_disposition_information(void)
+     CloseHandle( handle );
+     fdi.DoDeleteFile = FALSE;
+     res = pNtSetInformationFile( handle2, &io, &fdi, sizeof fdi, FileDispositionInformation );
+-    todo_wine
+     ok( res == STATUS_SUCCESS, "unexpected FileDispositionInformation result (expected STATUS_SUCCESS, got %x)\n", res );
+     CloseHandle( handle2 );
+     fileDeleted = GetFileAttributesA( buffer ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -1459,11 +1453,9 @@ static void test_file_disposition_information(void)
+     ok( handle != INVALID_HANDLE_VALUE, "failed to open a directory\n" );
+     fdi.DoDeleteFile = TRUE;
+     res = pNtSetInformationFile( handle, &io, &fdi, sizeof fdi, FileDispositionInformation );
+-    todo_wine
+     ok( res == STATUS_SUCCESS, "unexpected FileDispositionInformation result (expected STATUS_SUCCESS, got %x)\n", res );
+     CloseHandle( handle );
+     fileDeleted = GetFileAttributesA( buffer ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+-    todo_wine
+     ok( fileDeleted, "Directory should have been deleted\n" );
+     RemoveDirectoryA( buffer );
+ 
+@@ -1476,7 +1468,6 @@ static void test_file_disposition_information(void)
+     RemoveDirectoryA( buffer );
+     fdi.DoDeleteFile = FALSE;
+     res = pNtSetInformationFile( handle, &io, &fdi, sizeof fdi, FileDispositionInformation );
+-    todo_wine
+     ok( res == STATUS_SUCCESS, "unexpected FileDispositionInformation result (expected STATUS_SUCCESS, got %x)\n", res );
+     CloseHandle( handle );
+     fileDeleted = GetFileAttributesA( buffer ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -1501,6 +1492,7 @@ static void test_file_disposition_information(void)
+     buffer[dirpos] = '\0';
+     CloseHandle( handle );
+     fileDeleted = GetFileAttributesA( buffer ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
++    todo_wine
+     ok( !fileDeleted, "Directory shouldn't have been deleted\n" );
+     RemoveDirectoryA( buffer );
+ }
+diff --git a/server/fd.c b/server/fd.c
+index b022a3c..7be3f4c 100644
+--- a/server/fd.c
++++ b/server/fd.c
+@@ -1921,6 +1921,36 @@ unsigned int get_fd_options( struct fd *fd )
+     return fd->options;
+ }
+ 
++/* set disposition for the fd */
++void set_fd_disposition( struct fd *fd, int unlink )
++{
++    struct stat st;
++
++    if (fd->unix_fd == -1)
++    {
++        set_error( STATUS_INVALID_HANDLE );
++        return;
++    }
++
++    if (fstat( fd->unix_fd, &st ) == -1)
++    {
++        file_set_error();
++        return;
++    }
++
++    if (unlink && !S_ISDIR(st.st_mode) && !S_ISREG(st.st_mode))
++    {
++        /* can't unlink special files */
++        set_error( STATUS_INVALID_PARAMETER );
++        return;
++    }
++
++    if (unlink)
++        fd->closed->unlink = 1;
++    else if (!(fd->options & FILE_DELETE_ON_CLOSE))
++        fd->closed->unlink = 0;
++}
++
+ /* retrieve the unix fd for an object */
+ int get_unix_fd( struct fd *fd )
+ {
+diff --git a/server/file.c b/server/file.c
+index cceb8ad..0a7da00 100644
+--- a/server/file.c
++++ b/server/file.c
+@@ -728,3 +728,26 @@ DECL_HANDLER(unlock_file)
+         release_object( file );
+     }
+ }
++
++/* set file information */
++DECL_HANDLER(set_file_info)
++{
++    struct file *file;
++
++    if ((file = get_file_obj( current->process, req->handle, DELETE )))
++    {
++        set_fd_disposition( file->fd, req->unlink );
++        release_object( file );
++        return;
++    }
++
++    if (get_error() == STATUS_OBJECT_TYPE_MISMATCH)
++    {
++        clear_error();
++        if ((file = (struct file *)get_dir_obj( current->process, req->handle, DELETE )))
++        {
++            set_fd_disposition( file->fd, req->unlink );
++            release_object( file );
++        }
++    }
++}
+diff --git a/server/file.h b/server/file.h
+index 493d30b..d689d29 100644
+--- a/server/file.h
++++ b/server/file.h
+@@ -65,6 +65,7 @@ extern struct fd *get_fd_object_for_mapping( struct fd *fd, unsigned int access,
+ extern void *get_fd_user( struct fd *fd );
+ extern void set_fd_user( struct fd *fd, const struct fd_ops *ops, struct object *user );
+ extern unsigned int get_fd_options( struct fd *fd );
++extern void set_fd_disposition( struct fd *fd, int unlink );
+ extern int get_unix_fd( struct fd *fd );
+ extern int is_same_file_fd( struct fd *fd1, struct fd *fd2 );
+ extern int is_fd_removable( struct fd *fd );
+diff --git a/server/protocol.def b/server/protocol.def
+index a8c1fb9..85505c8 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -1178,6 +1178,12 @@ enum server_fd_type
+ @END
+ 
+ 
++/* Set file information */
++@REQ(set_file_info)
++    obj_handle_t handle;        /* handle to the file */
++    int          unlink;        /* whether to unlink file on close */
++@END
++
+ /* Create a socket */
+ @REQ(create_socket)
+     unsigned int access;        /* wanted access rights */
+-- 
+1.7.9.5
+

@@ -1,0 +1,78 @@
+From ea378bcb8a0a6113178c2d42a3e8151b7f99dfb6 Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Thu, 7 Aug 2014 21:14:25 -0600
+Subject: server: Do not permit FileDispositionInformation to delete a file
+ without write access.
+
+---
+ dlls/ntdll/tests/file.c |   28 ++++++++++++++++++++++++++++
+ server/fd.c             |    7 +++++++
+ 2 files changed, 35 insertions(+)
+
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index 1606f83..05ce517 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -1391,6 +1391,20 @@ static void test_file_disposition_information(void)
+ 
+     /* cannot set disposition on readonly file */
+     GetTempFileNameA( tmp_path, "dis", 0, buffer );
++    DeleteFileA( buffer );
++    handle = CreateFileA(buffer, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_READONLY, 0);
++    ok( handle != INVALID_HANDLE_VALUE, "failed to create temp file\n" );
++    fdi.DoDeleteFile = TRUE;
++    res = pNtSetInformationFile( handle, &io, &fdi, sizeof fdi, FileDispositionInformation );
++    ok( res == STATUS_CANNOT_DELETE, "unexpected FileDispositionInformation result (expected STATUS_CANNOT_DELETE, got %x)\n", res );
++    CloseHandle( handle );
++    fileDeleted = GetFileAttributesA( buffer ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
++    ok( !fileDeleted, "File shouldn't have been deleted\n" );
++    SetFileAttributesA( buffer, FILE_ATTRIBUTE_NORMAL );
++    DeleteFileA( buffer );
++
++    /* cannot set disposition on readonly file */
++    GetTempFileNameA( tmp_path, "dis", 0, buffer );
+     handle = CreateFileA(buffer, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_READONLY, 0);
+     ok( handle != INVALID_HANDLE_VALUE, "failed to create temp file\n" );
+     fdi.DoDeleteFile = TRUE;
+@@ -1404,6 +1418,20 @@ static void test_file_disposition_information(void)
+     SetFileAttributesA( buffer, FILE_ATTRIBUTE_NORMAL );
+     DeleteFileA( buffer );
+ 
++    /* cannot set disposition on readonly file */
++    GetTempFileNameA( tmp_path, "dis", 0, buffer );
++    DeleteFileA( buffer );
++    handle = CreateFileA(buffer, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_READONLY, 0);
++    ok( handle != INVALID_HANDLE_VALUE, "failed to create temp file\n" );
++    fdi.DoDeleteFile = TRUE;
++    res = pNtSetInformationFile( handle, &io, &fdi, sizeof fdi, FileDispositionInformation );
++    ok( res == STATUS_CANNOT_DELETE, "unexpected FileDispositionInformation result (expected STATUS_CANNOT_DELETE, got %x)\n", res );
++    CloseHandle( handle );
++    fileDeleted = GetFileAttributesA( buffer ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
++    ok( !fileDeleted, "File shouldn't have been deleted\n" );
++    SetFileAttributesA( buffer, FILE_ATTRIBUTE_NORMAL );
++    DeleteFileA( buffer );
++
+     /* can set disposition on file and then reset it */
+     GetTempFileNameA( tmp_path, "dis", 0, buffer );
+     handle = CreateFileA(buffer, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, 0, 0);
+diff --git a/server/fd.c b/server/fd.c
+index 7be3f4c..37377d1 100644
+--- a/server/fd.c
++++ b/server/fd.c
+@@ -1945,6 +1945,13 @@ void set_fd_disposition( struct fd *fd, int unlink )
+         return;
+     }
+ 
++    if (unlink && !(st.st_mode & (S_IWUSR | S_IWGRP | S_IWOTH)))
++    {
++        /* can't unlink files we don't have permission to access */
++        set_error( STATUS_CANNOT_DELETE );
++        return;
++    }
++
+     if (unlink)
+         fd->closed->unlink = 1;
+     else if (!(fd->options & FILE_DELETE_ON_CLOSE))
+-- 
+1.7.9.5
+

@@ -63,6 +63,7 @@ Besides that the following additional changes are included:
 * Support for GetVolumePathName
 * Workaround for shlwapi URLs with relative paths
 * XEMBED support for embedding Wine windows inside Linux applications
+* nVidia driver for high-end laptop cards does not list all supported resolutions
 
 
 How to install Wine-Compholio

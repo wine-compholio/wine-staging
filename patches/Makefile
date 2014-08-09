@@ -46,6 +46,7 @@ PATCHLIST := \
 	user32-WndProc.ok \
 	wineboot-HKEY_DYN_DATA.ok \
 	winepulse-PulseAudio_Support.ok \
+	winex11-Limited_Resolutions.ok \
 	winex11-XEMBED.ok \
 	ws2_32-Connect_Time.ok \
 	ws2_32-TransmitFile.ok \
@@ -837,6 +838,22 @@ winepulse-PulseAudio_Support.ok:
 	@( \
 		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "Winepulse patches extracted from https://launchpad.net/~ubuntu-wine/+archive/ubuntu/ppa/+files/wine1.7_1.7.22-0ubuntu1.debian.tar.gz. [rev 4]" },'; \
 	) > winepulse-PulseAudio_Support.ok
+
+# Patchset winex11-Limited_Resolutions
+# |
+# | Included patches:
+# |   *	Update the check for broken nVidia RandR to test for the number of resolutions instead of the number of modes. [by Erich
+# | 	E. Hoover]
+# |
+# | Modified files: 
+# |   *	dlls/winex11.drv/xrandr.c
+# |
+.INTERMEDIATE: winex11-Limited_Resolutions.ok
+winex11-Limited_Resolutions.ok:
+	$(call APPLY_FILE,winex11-Limited_Resolutions/0001-winex11.drv-Update-the-check-for-broken-nVidia-RandR.patch)
+	@( \
+		echo '+    { "winex11-Limited_Resolutions", "Erich E. Hoover", "Update the check for broken nVidia RandR to test for the number of resolutions instead of the number of modes." },'; \
+	) > winex11-Limited_Resolutions.ok
 
 # Patchset winex11-XEMBED
 # |

@@ -1,0 +1,86 @@
+From dcaf0bbafbfa6cfb89803c363f464c4766c972ff Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Sat, 9 Aug 2014 13:15:09 -0600
+Subject: winex11.drv: Update the check for broken nVidia RandR to test for
+ the number of resolutions instead of the number of modes.
+
+---
+ dlls/winex11.drv/xrandr.c |   48 +++++++++++++++++++++++++++++++--------------
+ 1 file changed, 33 insertions(+), 15 deletions(-)
+
+diff --git a/dlls/winex11.drv/xrandr.c b/dlls/winex11.drv/xrandr.c
+index fc09020..bcad0ce 100644
+--- a/dlls/winex11.drv/xrandr.c
++++ b/dlls/winex11.drv/xrandr.c
+@@ -389,6 +389,7 @@ static int xrandr12_init_modes(void)
+     XRRScreenResources *resources;
+     XRROutputInfo *output_info;
+     XRRCrtcInfo *crtc_info;
++    int resolution_count;
+     int ret = -1;
+     int i, j;
+ 
+@@ -434,21 +435,6 @@ static int xrandr12_init_modes(void)
+         goto done;
+     }
+ 
+-    /* Recent (304.64, possibly earlier) versions of the nvidia driver only
+-     * report a DFP's native mode through RandR 1.2 / 1.3. Standard DMT modes
+-     * are only listed through RandR 1.0 / 1.1. This is completely useless,
+-     * but NVIDIA considers this a feature, so it's unlikely to change. The
+-     * best we can do is to fall back to RandR 1.0 and encourage users to
+-     * consider more cooperative driver vendors when we detect such a
+-     * configuration. */
+-    if (output_info->nmode == 1 && XQueryExtension( gdi_display, "NV-CONTROL", &i, &j, &ret ))
+-    {
+-        ERR_(winediag)("Broken NVIDIA RandR detected, falling back to RandR 1.0. "
+-                       "Please consider using the Nouveau driver instead.\n");
+-        ret = -1;
+-        goto done;
+-    }
+-
+     if (!(xrandr12_modes = HeapAlloc( GetProcessHeap(), 0, sizeof(*xrandr12_modes) * output_info->nmode )))
+     {
+         ERR("Failed to allocate xrandr mode info array.\n");
+@@ -480,6 +466,38 @@ static int xrandr12_init_modes(void)
+         }
+     }
+ 
++    resolution_count = 0;
++    for (i = 0; i < xrandr_mode_count; ++i)
++    {
++        int duplicate_resolution = 0;
++
++        for (j = 0; j < i; ++j)
++        {
++            if(dd_modes[i].width == dd_modes[j].width && dd_modes[i].height == dd_modes[j].height)
++            {
++                duplicate_resolution = 1;
++                break;
++            }
++        }
++
++        if (!duplicate_resolution) resolution_count++;
++    }
++
++    /* Recent (304.64, possibly earlier) versions of the nvidia driver only
++     * report a DFP's native mode through RandR 1.2 / 1.3. Standard DMT modes
++     * are only listed through RandR 1.0 / 1.1. This is completely useless,
++     * but NVIDIA considers this a feature, so it's unlikely to change. The
++     * best we can do is to fall back to RandR 1.0 and encourage users to
++     * consider more cooperative driver vendors when we detect such a
++     * configuration. */
++    if (resolution_count == 1 && XQueryExtension( gdi_display, "NV-CONTROL", &i, &j, &ret ))
++    {
++        ERR_(winediag)("Broken NVIDIA RandR detected, falling back to RandR 1.0. "
++                       "Please consider using the Nouveau driver instead.\n");
++        ret = -1;
++        goto done;
++    }
++
+     X11DRV_Settings_AddDepthModes();
+     ret = 0;
+ 
+-- 
+1.7.9.5
+

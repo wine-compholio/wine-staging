@@ -1,0 +1,272 @@
+From e6d0113506679fc705bfd65f9ae759fce0152159 Mon Sep 17 00:00:00 2001
+From: Jactry Zeng <wine@jactry.com>
+Date: Fri, 8 Aug 2014 21:32:57 +0800
+Subject: riched20: Implement IText{Selection, Range}::Set{Start, End}.
+
+---
+ dlls/riched20/richole.c       |   52 +++++++++++++---
+ dlls/riched20/tests/richole.c |  135 +++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 179 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/riched20/richole.c b/dlls/riched20/richole.c
+index 9a7e690..5a16d6d 100644
+--- a/dlls/riched20/richole.c
++++ b/dlls/riched20/richole.c
+@@ -665,14 +665,27 @@ static HRESULT WINAPI ITextRange_fnGetStart(ITextRange *me, LONG *pcpFirst)
+     return S_OK;
+ }
+ 
++static HRESULT range_SetStart(ME_TextEditor *editor, LONG cpFirst, LONG *start, LONG *end)
++{
++    int len = ME_GetTextLength(editor);
++
++    TRACE("%d\n", cpFirst);
++    if (cpFirst == *start)
++        return S_FALSE;
++    cpFirst = min(cpFirst, len);
++    cpFirst = max(cpFirst, 0);
++    *end = max(*end, cpFirst);
++    *start = cpFirst;
++    return S_OK;
++}
++
+ static HRESULT WINAPI ITextRange_fnSetStart(ITextRange *me, LONG cpFirst)
+ {
+     ITextRangeImpl *This = impl_from_ITextRange(me);
+     if (!This->reOle)
+         return CO_E_RELEASED;
+ 
+-    FIXME("not implemented %p\n", This);
+-    return E_NOTIMPL;
++    return range_SetStart(This->reOle->editor, cpFirst, &This->start, &This->end);
+ }
+ 
+ static HRESULT WINAPI ITextRange_fnGetEnd(ITextRange *me, LONG *pcpLim)
+@@ -688,14 +701,27 @@ static HRESULT WINAPI ITextRange_fnGetEnd(ITextRange *me, LONG *pcpLim)
+     return S_OK;
+ }
+ 
++static HRESULT range_SetEnd(ME_TextEditor *editor, LONG cpLim, LONG *start, LONG *end)
++{
++    int len = ME_GetTextLength(editor) + 1;
++
++    TRACE("%d\n", cpLim);
++    if (cpLim == *end)
++        return S_FALSE;
++    cpLim = min(cpLim, len);
++    cpLim = max(cpLim, 0);
++    *start = min(*start, cpLim);
++    *end = cpLim;
++    return S_OK;
++}
++
+ static HRESULT WINAPI ITextRange_fnSetEnd(ITextRange *me, LONG cpLim)
+ {
+     ITextRangeImpl *This = impl_from_ITextRange(me);
+     if (!This->reOle)
+         return CO_E_RELEASED;
+ 
+-    FIXME("not implemented %p\n", This);
+-    return E_NOTIMPL;
++    return range_SetEnd(This->reOle->editor, cpLim, &This->start, &This->end);
+ }
+ 
+ static HRESULT WINAPI ITextRange_fnGetFont(ITextRange *me, ITextFont **pFont)
+@@ -1672,11 +1698,16 @@ static HRESULT WINAPI ITextSelection_fnGetStart(ITextSelection *me, LONG *pcpFir
+ static HRESULT WINAPI ITextSelection_fnSetStart(ITextSelection *me, LONG cpFirst)
+ {
+     ITextSelectionImpl *This = impl_from_ITextSelection(me);
++    int start, end;
++    HRESULT hres;
+     if (!This->reOle)
+         return CO_E_RELEASED;
+ 
+-    FIXME("not implemented\n");
+-    return E_NOTIMPL;
++    ME_GetSelectionOfs(This->reOle->editor, &start, &end);
++    hres = range_SetStart(This->reOle->editor, cpFirst, &start, &end);
++    if (!hres)
++        ME_SetSelection(This->reOle->editor, start, end);
++    return hres;
+ }
+ 
+ static HRESULT WINAPI ITextSelection_fnGetEnd(ITextSelection *me, LONG *pcpLim)
+@@ -1696,11 +1727,16 @@ static HRESULT WINAPI ITextSelection_fnGetEnd(ITextSelection *me, LONG *pcpLim)
+ static HRESULT WINAPI ITextSelection_fnSetEnd(ITextSelection *me, LONG cpLim)
+ {
+     ITextSelectionImpl *This = impl_from_ITextSelection(me);
++    int start, end;
++    HRESULT hres;
+     if (!This->reOle)
+         return CO_E_RELEASED;
+ 
+-    FIXME("not implemented\n");
+-    return E_NOTIMPL;
++    ME_GetSelectionOfs(This->reOle->editor, &start, &end);
++    hres = range_SetEnd(This->reOle->editor, cpLim, &start, &end);
++    if (!hres)
++        ME_SetSelection(This->reOle->editor, start, end);
++    return hres;
+ }
+ 
+ static HRESULT WINAPI ITextSelection_fnGetFont(ITextSelection *me, ITextFont **pFont)
+diff --git a/dlls/riched20/tests/richole.c b/dlls/riched20/tests/richole.c
+index 7effc3d..2916bc5 100644
+--- a/dlls/riched20/tests/richole.c
++++ b/dlls/riched20/tests/richole.c
+@@ -747,6 +747,137 @@ static void test_ITextSelection_Collapse(void)
+   release_interfaces(&w, &reOle, &txtDoc, &txtSel);
+ }
+ 
++static void test_ITextRange_SetStart(void)
++{
++  HWND w;
++  IRichEditOle *reOle = NULL;
++  ITextDocument *txtDoc = NULL;
++  ITextRange *txtRge = NULL;
++  HRESULT hres;
++  LONG first, lim, start, end;
++  static const CHAR test_text1[] = "TestSomeText";
++
++  create_interfaces(&w, &reOle, &txtDoc, NULL);
++  SendMessageA(w, WM_SETTEXT, 0, (LPARAM)test_text1);
++
++  first = 4, lim = 8;
++  ITextDocument_Range(txtDoc, first, lim, &txtRge);
++  hres = ITextRange_SetStart(txtRge, first);
++  ok(hres == S_FALSE, "ITextRange_SetStart\n");
++
++#define TEST_TXTRGE_SETSTART(cp, expected_start, expected_end)  \
++  hres = ITextRange_SetStart(txtRge, cp);                       \
++  ok(hres == S_OK, "ITextRange_SetStart\n");                    \
++  ITextRange_GetStart(txtRge, &start);                          \
++  ITextRange_GetEnd(txtRge, &end);                              \
++  ok(start == expected_start, "got wrong start value: %d\n", start);  \
++  ok(end == expected_end, "got wrong end value: %d\n", end);
++
++  TEST_TXTRGE_SETSTART(2, 2, 8)
++  TEST_TXTRGE_SETSTART(-1, 0, 8)
++  TEST_TXTRGE_SETSTART(13, 12, 12)
++
++  release_interfaces(&w, &reOle, &txtDoc, NULL);
++}
++
++static void test_ITextRange_SetEnd(void)
++{
++  HWND w;
++  IRichEditOle *reOle = NULL;
++  ITextDocument *txtDoc = NULL;
++  ITextRange *txtRge = NULL;
++  HRESULT hres;
++  LONG first, lim, start, end;
++  static const CHAR test_text1[] = "TestSomeText";
++
++  create_interfaces(&w, &reOle, &txtDoc, NULL);
++  SendMessageA(w, WM_SETTEXT, 0, (LPARAM)test_text1);
++
++  first = 4, lim = 8;
++  ITextDocument_Range(txtDoc, first, lim, &txtRge);
++  hres = ITextRange_SetEnd(txtRge, lim);
++  ok(hres == S_FALSE, "ITextRange_SetEnd\n");
++
++#define TEST_TXTRGE_SETEND(cp, expected_start, expected_end)    \
++  hres = ITextRange_SetEnd(txtRge, cp);                         \
++  ok(hres == S_OK, "ITextRange_SetEnd\n");                      \
++  ITextRange_GetStart(txtRge, &start);                          \
++  ITextRange_GetEnd(txtRge, &end);                              \
++  ok(start == expected_start, "got wrong start value: %d\n", start);  \
++  ok(end == expected_end, "got wrong end value: %d\n", end);
++
++  TEST_TXTRGE_SETEND(6, 4, 6)
++  TEST_TXTRGE_SETEND(14, 4, 13)
++  TEST_TXTRGE_SETEND(-1, 0, 0)
++
++  ITextRange_Release(txtRge);
++  release_interfaces(&w, &reOle, &txtDoc, NULL);
++}
++
++static void test_ITextSelection_SetStart(void)
++{
++  HWND w;
++  IRichEditOle *reOle = NULL;
++  ITextDocument *txtDoc = NULL;
++  ITextSelection *txtSel = NULL;
++  HRESULT hres;
++  LONG first, lim, start, end;
++  static const CHAR test_text1[] = "TestSomeText";
++
++  create_interfaces(&w, &reOle, &txtDoc, &txtSel);
++  SendMessageA(w, WM_SETTEXT, 0, (LPARAM)test_text1);
++
++  first = 4, lim = 8;
++  SendMessageA(w, EM_SETSEL, first, lim);
++  hres = ITextSelection_SetStart(txtSel, first);
++  ok(hres == S_FALSE, "ITextSelection_SetStart\n");
++
++#define TEST_TXTSEL_SETSTART(cp, expected_start, expected_end)        \
++  hres = ITextSelection_SetStart(txtSel, cp);                         \
++  ok(hres == S_OK, "ITextSelection_SetStart\n");                      \
++  SendMessageA(w, EM_GETSEL, (LPARAM)&start, (WPARAM)&end);           \
++  ok(start == expected_start, "got wrong start value: %d\n", start);  \
++  ok(end == expected_end, "got wrong end value: %d\n", end);
++
++  TEST_TXTSEL_SETSTART(2, 2, 8)
++  TEST_TXTSEL_SETSTART(-1, 0, 8)
++  TEST_TXTSEL_SETSTART(13, 12, 12)
++
++  release_interfaces(&w, &reOle, &txtDoc, &txtSel);
++}
++
++static void test_ITextSelection_SetEnd(void)
++{
++  HWND w;
++  IRichEditOle *reOle = NULL;
++  ITextDocument *txtDoc = NULL;
++  ITextSelection *txtSel = NULL;
++  HRESULT hres;
++  LONG first, lim, start, end;
++  static const CHAR test_text1[] = "TestSomeText";
++
++  create_interfaces(&w, &reOle, &txtDoc, &txtSel);
++  SendMessageA(w, WM_SETTEXT, 0, (LPARAM)test_text1);
++
++  first = 4, lim = 8;
++  SendMessageA(w, EM_SETSEL, first, lim);
++  hres = ITextSelection_SetEnd(txtSel, lim);
++  ok(hres == S_FALSE, "ITextSelection_SetEnd\n");
++
++#define TEST_TXTSEL_SETEND(cp, expected_start, expected_end)          \
++  hres = ITextSelection_SetEnd(txtSel, cp);                           \
++  ok(hres == S_OK, "ITextSelection_SetEnd\n");                        \
++  SendMessageA(w, EM_GETSEL, (LPARAM)&start, (WPARAM)&end);           \
++  ok(start == expected_start, "got wrong start value: %d\n", start);  \
++  ok(end == expected_end, "got wrong end value: %d\n", end);
++
++  TEST_TXTSEL_SETEND(6, 4, 6)
++  TEST_TXTSEL_SETEND(14, 4, 13)
++  TEST_TXTSEL_SETEND(-1, 0, 0)
++
++  release_interfaces(&w, &reOle, &txtDoc, &txtSel);
++}
++
+ START_TEST(richole)
+ {
+   /* Must explicitly LoadLibrary(). The test has no references to functions in
+@@ -758,10 +889,14 @@ START_TEST(richole)
+   test_ITextDocument_Open();
+   test_ITextSelection_GetText();
+   test_ITextSelection_GetChar();
++  test_ITextSelection_SetStart();
++  test_ITextSelection_SetEnd();
+   test_ITextSelection_Collapse();
+   test_ITextDocument_Range();
+   test_ITextRange_GetChar();
+   test_ITextRange_GetDuplicate();
+   test_GetStart_GetEnd();
+   test_ITextRange_Collapse();
++  test_ITextRange_SetStart();
++  test_ITextRange_SetEnd();
+ }
+-- 
+1.7.9.5
+

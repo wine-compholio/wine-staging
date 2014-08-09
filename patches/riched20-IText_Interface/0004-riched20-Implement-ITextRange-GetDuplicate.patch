@@ -1,0 +1,102 @@
+From 3cc40358e08460d01b43647844f260eafc670e28 Mon Sep 17 00:00:00 2001
+From: Jactry Zeng <wine@jactry.com>
+Date: Thu, 7 Aug 2014 15:11:07 +0800
+Subject: riched20: Implement ITextRange::GetDuplicate.
+
+---
+ dlls/riched20/richole.c       |   23 +++++++++++++++++++++--
+ dlls/riched20/tests/richole.c |   35 +++++++++++++++++++++++++++++++++++
+ 2 files changed, 56 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/riched20/richole.c b/dlls/riched20/richole.c
+index bd3dee8..229fb5d 100644
+--- a/dlls/riched20/richole.c
++++ b/dlls/riched20/richole.c
+@@ -606,11 +606,30 @@ static HRESULT WINAPI ITextRange_fnSetChar(ITextRange *me, LONG ch)
+ static HRESULT WINAPI ITextRange_fnGetDuplicate(ITextRange *me, ITextRange **ppRange)
+ {
+     ITextRangeImpl *This = impl_from_ITextRange(me);
++    ITextRangeImpl *txtRge = NULL;
+     if (!This->reOle)
+         return CO_E_RELEASED;
+ 
+-    FIXME("not implemented %p\n", This);
+-    return E_NOTIMPL;
++    TRACE("%p %p\n", This, ppRange);
++    if (!ppRange)
++        return E_INVALIDARG;
++
++    txtRge = heap_alloc(sizeof *txtRge);
++    if (!txtRge)
++        return E_FAIL;
++
++    txtRge->ITextRange_iface.lpVtbl = This->ITextRange_iface.lpVtbl;
++    txtRge->ref = 1;
++    txtRge->reOle = This->reOle;
++    txtRge->start = This->start;
++    txtRge->end  = This->end;
++    txtRge->next = This->reOle->txtRgehead->next;
++    This->reOle->txtRgehead->next->prev = txtRge;
++    This->reOle->txtRgehead->next = txtRge;
++    txtRge->prev = This->reOle->txtRgehead;
++    *ppRange = &txtRge->ITextRange_iface;
++
++    return S_OK;
+ }
+ 
+ static HRESULT WINAPI ITextRange_fnGetFormattedText(ITextRange *me, ITextRange **ppRange)
+diff --git a/dlls/riched20/tests/richole.c b/dlls/riched20/tests/richole.c
+index 22ee4b5..bc04c84 100644
+--- a/dlls/riched20/tests/richole.c
++++ b/dlls/riched20/tests/richole.c
+@@ -635,6 +635,40 @@ static void test_GetStart_GetEnd(void)
+   release_interfaces(&w, &reOle, &txtDoc, &txtSel);
+ }
+ 
++static void test_ITextRange_GetDuplicate(void)
++{
++  HWND w;
++  IRichEditOle *reOle = NULL;
++  ITextDocument *txtDoc = NULL;
++  ITextRange *txtRge = NULL;
++  ITextRange *txtRgeDup = NULL;
++  HRESULT hres;
++  LONG first, lim, start, end;
++  static const CHAR test_text1[] = "TestSomeText";
++
++  create_interfaces(&w, &reOle, &txtDoc, NULL);
++  SendMessageA(w, WM_SETTEXT, 0, (LPARAM)test_text1);
++  first = 0, lim = 4;
++  hres = ITextDocument_Range(txtDoc, first, lim, &txtRge);
++  ok(hres == S_OK, "ITextDocument_Range fails 0x%x.\n", hres);
++
++  hres = ITextRange_GetDuplicate(txtRge, &txtRgeDup);
++  ok(hres == S_OK, "ITextRange_GetDuplicate\n");
++  ok(txtRgeDup != txtRge, "A new pointer should be returned\n");
++  ITextRange_GetStart(txtRgeDup, &start);
++  ok(start == first, "got wrong value: %d\n", start);
++  ITextRange_GetEnd(txtRgeDup, &end);
++  ok(end == lim, "got wrong value: %d\n", end);
++
++  ITextRange_Release(txtRgeDup);
++
++  hres = ITextRange_GetDuplicate(txtRge, NULL);
++  ok(hres == E_INVALIDARG, "ITextRange_GetDuplicate\n");
++
++  ITextRange_Release(txtRge);
++  release_interfaces(&w, &reOle, &txtDoc, NULL);
++}
++
+ START_TEST(richole)
+ {
+   /* Must explicitly LoadLibrary(). The test has no references to functions in
+@@ -648,5 +682,6 @@ START_TEST(richole)
+   test_ITextSelection_GetChar();
+   test_ITextDocument_Range();
+   test_ITextRange_GetChar();
++  test_ITextRange_GetDuplicate();
+   test_GetStart_GetEnd();
+ }
+-- 
+1.7.9.5
+

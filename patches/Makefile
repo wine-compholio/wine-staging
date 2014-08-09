@@ -29,6 +29,7 @@ PATCHLIST := \
 	ntdll-Pipe_SpecialCharacters.ok \
 	ntdll-loader_EntryPoint.ok \
 	quartz-MediaSeeking_Positions.ok \
+	riched20-IText_Interface.ok \
 	server-ACL_Compat.ok \
 	server-Address_Change_Notification.ok \
 	server-CreateProcess_ACLs.ok \
@@ -477,6 +478,38 @@ quartz-MediaSeeking_Positions.ok:
 	@( \
 		echo '+    { "quartz-MediaSeeking_Positions", "Erich E. Hoover", "Return correct IMediaSeeking stream positions in quartz." },'; \
 	) > quartz-MediaSeeking_Positions.ok
+
+# Patchset riched20-IText_Interface
+# |
+# | Included patches:
+# |   *	Implement Stubs for ITextRange interface. [by Jactry Zeng]
+# |   *	Implement IText{Range,Selection}::{GetChar,GetStart,GetEnd,GetDuplicate,Collapse,SetStart,SetEnd}. [by Jactry Zeng]
+# |   *	Implement Stubs for ITextFont interface. [by Jactry Zeng]
+# |   *	Implement Stubs for ITextPara interface. [by Jactry Zeng]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12458] Multiple apps fail due to RichEdit ITextDocument_fnRange stub (MySQL Workbench, BlitzMaxDemo137)
+# |   *	[#18303] Adobe Acrobat Pro 7: Crashes when selecting the "edit" menu while having a file open.
+# |
+# | Modified files: 
+# |   *	dlls/riched20/richole.c, dlls/riched20/tests/richole.c
+# |
+.INTERMEDIATE: riched20-IText_Interface.ok
+riched20-IText_Interface.ok:
+	$(call APPLY_FILE,riched20-IText_Interface/0001-riched20-Stub-for-ITextRange-interface-and-implement.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0002-riched20-Implement-ITextSelection-GetChar-and-ITextR.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0003-riched20-Implement-IText-Selection-Range-Get-Start-E.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0004-riched20-Implement-ITextRange-GetDuplicate.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0005-riched20-Implement-ITextRange-Collapse-and-ITextSele.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0006-riched20-Implement-IText-Selection-Range-Set-Start-E.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0007-riched20-Stub-for-ITextFont-interface-and-implement-.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0008-riched20-Stub-for-ITextPara-interface-and-implement-.patch)
+	@( \
+		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextRange interface." },'; \
+		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement IText{Range,Selection}::{GetChar,GetStart,GetEnd,GetDuplicate,Collapse,SetStart,SetEnd}." },'; \
+		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextFont interface." },'; \
+		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextPara interface." },'; \
+	) > riched20-IText_Interface.ok
 
 # Patchset server-ACL_Compat
 # |

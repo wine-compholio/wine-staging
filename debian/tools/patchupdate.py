@@ -417,7 +417,7 @@ def generate_makefile(all_patches, fp):
 
     with open(config.path_template_Makefile) as template_fp:
         template = template_fp.read()
-    fp.write(template.format(patchlist=" \\\n\t\t".join(["%s.ok" % patch.name for i, patch in all_patches.iteritems()])))
+    fp.write(template.format(patchlist="\t" + " \\\n\t".join(["%s.ok" % patch.name for i, patch in all_patches.iteritems()])))
 
     for i, patch in all_patches.iteritems():
         fp.write("# Patchset %s\n" % patch.name)
@@ -452,7 +452,7 @@ def generate_makefile(all_patches, fp):
         depends = " ".join([""] + ["%s.ok" % all_patches[d].name for d in patch.depends]) if len(patch.depends) else ""
         fp.write("%s.ok:%s\n" % (patch.name, depends))
         for f in patch.files:
-            fp.write("\t$(call APPLY_PATCH,%s)\n" % os.path.join(patch.name, f))
+            fp.write("\t$(call APPLY_FILE,%s)\n" % os.path.join(patch.name, f))
 
         # Create *.ok file (used to generate patchlist)
         if len(patch.authors):

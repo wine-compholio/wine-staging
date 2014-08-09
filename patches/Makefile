@@ -54,7 +54,7 @@ PATCHLIST :=	Miscellaneous.ok \
 
 .PHONY: install
 install: $(PATCHLIST)
-	cat *.ok | sort | $(CURDIR)/../debian/tools/patchlist.sh | $(PATCH)
+	cat *.ok | sort | $(CURDIR)/../debian/tools/patchlist.sh | (cd $(DESTDIR) && $(PATCH))
 	cd $(DESTDIR) && autoreconf -f
 	cd $(DESTDIR) && ./tools/make_requests
 

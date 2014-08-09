@@ -57,7 +57,7 @@ Besides that the following additional changes are included:
 * Add default ACLs for user shell folders
 * Add support for Dynamic DST (daylight saving time) information in registry
 * Lockfree algorithm for filedescriptor cache (improves file access speed)
-* Other Pipelight specific enhancements
+* Other Pipelight-specific enhancements
 * Reduced SetTimer minimum value from 10 ms to 5 ms (improves Silverlight framerates)
 * SO_CONNECT_TIME returns the appropriate time
 * Support for GetVolumePathName

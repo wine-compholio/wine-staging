@@ -452,7 +452,7 @@ def generate_makefile(all_patches, fp):
         depends = " ".join([""] + ["%s.ok" % all_patches[d].name for d in patch.depends]) if len(patch.depends) else ""
         fp.write("%s.ok:%s\n" % (patch.name, depends))
         for f in patch.files:
-            fp.write("\t$(PATCH) < %s\n" % os.path.join(patch.name, f))
+            fp.write("\t$(call APPLY_PATCH,%s)\n" % os.path.join(patch.name, f))
 
         # Create *.ok file (used to generate patchlist)
         if len(patch.authors):

@@ -1,18 +1,18 @@
-From e924e19cc72127f16b64bef300e394a7f641dba1 Mon Sep 17 00:00:00 2001
+From 649ce4e95f5ea671857d5c62eb220c95a6af35d7 Mon Sep 17 00:00:00 2001
 From: Joris van der Wel <joris@jorisvanderwel.com>
-Date: Wed, 9 Jul 2014 01:00:02 +0200
+Date: Sun, 3 Aug 2014 12:52:44 +0200
 Subject: server: implement passing a thread security descriptor to
  CreateProcess
 
 server: implement passing a thread security descriptor to CreateProcess
 ---
- dlls/advapi32/tests/security.c |   45 ++++++++++++++++++++++++++++++++++++----
- dlls/kernel32/process.c        |   24 ++++++++++++++++++---
- server/process.c               |   28 ++++++++++++++++++++++++-
- 3 files changed, 89 insertions(+), 8 deletions(-)
+ dlls/advapi32/tests/security.c |   44 ++++++++++++++++++++++++++++++++++++----
+ dlls/kernel32/process.c        |   24 +++++++++++++++++++---
+ server/process.c               |   25 +++++++++++++++++++++--
+ 3 files changed, 84 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index b1b35aa..aab63f3 100644
+index b1b35aa..244844f 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
 @@ -2532,12 +2532,12 @@ static void test_process_security(void)
@@ -31,12 +31,10 @@ index b1b35aa..aab63f3 100644
      HANDLE token, event;
      DWORD size;
      SID_IDENTIFIER_AUTHORITY SIDAuthWorld = { SECURITY_WORLD_SID_AUTHORITY };
-@@ -2657,12 +2657,38 @@ static void test_process_security(void)
-     psa.nLength = sizeof(psa);
+@@ -2658,11 +2658,36 @@ static void test_process_security(void)
      psa.lpSecurityDescriptor = SecurityDescriptor;
      psa.bInheritHandle = TRUE;
-+    
-+    
+ 
 +    ThreadSecurityDescriptor = HeapAlloc(GetProcessHeap(), 0, SECURITY_DESCRIPTOR_MIN_LENGTH);
 +    res = InitializeSecurityDescriptor(ThreadSecurityDescriptor, SECURITY_DESCRIPTOR_REVISION);
 +    ok(res, "InitializeSecurityDescriptor failed with error %d\n", GetLastError());
@@ -59,7 +57,7 @@ index b1b35aa..aab63f3 100644
 +    tsa.nLength = sizeof(tsa);
 +    tsa.lpSecurityDescriptor = ThreadSecurityDescriptor;
 +    tsa.bInheritHandle = TRUE;
- 
++
      /* Doesn't matter what ACL say we should get full access for ourselves */
 -    res = CreateProcessA( NULL, buffer, &psa, NULL, FALSE, 0, NULL, NULL, &startup, &info );
 +    res = CreateProcessA( NULL, buffer, &psa, &tsa, FALSE, 0, NULL, NULL, &startup, &info );
@@ -71,7 +69,7 @@ index b1b35aa..aab63f3 100644
      winetest_wait_child_process( info.hProcess );
  
      FreeSid(EveryoneSid);
-@@ -2673,6 +2699,8 @@ static void test_process_security(void)
+@@ -2673,6 +2698,8 @@ static void test_process_security(void)
      HeapFree(GetProcessHeap(), 0, owner);
      HeapFree(GetProcessHeap(), 0, Acl);
      HeapFree(GetProcessHeap(), 0, SecurityDescriptor);
@@ -80,24 +78,24 @@ index b1b35aa..aab63f3 100644
  }
  
  static void test_process_security_child(void)
-@@ -2728,6 +2756,15 @@ static void test_process_security_child(void)
+@@ -2728,6 +2755,15 @@ static void test_process_security_child(void)
      TEST_GRANTED_ACCESS( handle1, PROCESS_VM_READ );
      CloseHandle( handle1 );
      CloseHandle( handle );
-+    
-+    
++
++
 +    handle = OpenThread( THREAD_TERMINATE, FALSE, GetCurrentThreadId() );
 +    ok(handle != NULL, "OpenThread(THREAD_TERMINATE) with err:%d\n", GetLastError());
 +    TEST_GRANTED_ACCESS( handle, PROCESS_TERMINATE );
 +    CloseHandle( handle );
-+    
++
 +    handle = OpenThread( THREAD_SET_THREAD_TOKEN, FALSE, GetCurrentThreadId() );
 +    ok(handle == NULL, "OpenThread(THREAD_SET_THREAD_TOKEN) should have failed\n");
  }
  
  static void test_impersonation_level(void)
 diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
-index 5f6c2e5..a01e681 100644
+index 44e7711..dd21100 100644
 --- a/dlls/kernel32/process.c
 +++ b/dlls/kernel32/process.c
 @@ -2003,8 +2003,8 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
@@ -114,8 +112,7 @@ index 5f6c2e5..a01e681 100644
 @@ -2022,12 +2022,26 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
              return FALSE;
          }
-     }
-+    
+      }
 +    if (tsa && (tsa->nLength >= sizeof(*tsa)) && tsa->lpSecurityDescriptor)
 +    {
 +        status = create_struct_sd( tsa->lpSecurityDescriptor, &tsd, &tsd_len );
@@ -123,6 +120,7 @@ index 5f6c2e5..a01e681 100644
 +        if (status != STATUS_SUCCESS)
 +        {
 +            RtlFreeHeap(GetProcessHeap(), 0, psd);
++            RtlFreeHeap(GetProcessHeap(), 0, tsd);
 +            WARN("Invalid thread security descriptor with status %x\n", status);
 +            SetLastError( RtlNtStatusToDosError(status) );
 +            return FALSE;
@@ -154,21 +152,20 @@ index 5f6c2e5..a01e681 100644
          return FALSE;
      }
      if (!env) env = NtCurrentTeb()->Peb->ProcessParameters->Environment;
-@@ -2115,11 +2131,12 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
-         req->thread_attr     = (tsa && (tsa->nLength >= sizeof(*tsa)) && tsa->bInheritHandle) ? OBJ_INHERIT : 0;
-         req->cpu             = cpu;
-         req->process_sd_size = psd_len;
--        req->thread_sd_size  = 0;
-+        req->thread_sd_size  = tsd_len;
-         req->info_size       = startup_info_size;
-         req->env_size        = (env_end - env) * sizeof(WCHAR);
-         
-         wine_server_add_data( req, psd         , req->process_sd_size );
-+        wine_server_add_data( req, tsd         , req->thread_sd_size  );
-         wine_server_add_data( req, startup_info, req->info_size       );
-         wine_server_add_data( req, env         , req->env_size        );
-         
-@@ -2135,6 +2152,7 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
+@@ -2115,10 +2131,11 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
+         req->thread_attr    = (tsa && (tsa->nLength >= sizeof(*tsa)) && tsa->bInheritHandle) ? OBJ_INHERIT : 0;
+         req->cpu            = cpu;
+         req->process_sd_size= psd_len;
+-        req->thread_sd_size = 0;
++        req->thread_sd_size = tsd_len;
+         req->info_size      = startup_info_size;
+ 
+         wine_server_add_data( req, psd, psd_len );
++        wine_server_add_data( req, tsd, tsd_len );
+         wine_server_add_data( req, startup_info, startup_info_size );
+         wine_server_add_data( req, env, (env_end - env) * sizeof(WCHAR) );
+         if (!(status = wine_server_call( req )))
+@@ -2133,6 +2150,7 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
      SERVER_END_REQ;
  
      RtlFreeHeap(GetProcessHeap(), 0, psd);
@@ -177,42 +174,41 @@ index 5f6c2e5..a01e681 100644
      RtlReleasePebLock();
      if (status)
 diff --git a/server/process.c b/server/process.c
-index 1fba134..f9a4611 100644
+index 571f05a..52c04f7 100644
 --- a/server/process.c
 +++ b/server/process.c
-@@ -883,7 +883,7 @@ DECL_HANDLER(new_process)
+@@ -880,7 +880,7 @@ DECL_HANDLER(new_process)
+     struct process *process;
+     struct process *parent = current->process;
+     int socket_fd = thread_get_inflight_fd( current, req->socket_fd );
+-    const struct security_descriptor *req_psd = NULL;
++    const struct security_descriptor *req_psd = NULL, *req_tsd = NULL;
      const startup_info_t *req_info;
      data_size_t req_info_size;
      const WCHAR *req_env;
--    const struct security_descriptor *req_psd = NULL;
-+    const struct security_descriptor *req_psd = NULL, *req_tsd = NULL;
- 
-     if (socket_fd == -1)
-     {
-@@ -919,6 +919,18 @@ DECL_HANDLER(new_process)
+@@ -903,7 +903,17 @@ DECL_HANDLER(new_process)
+             return;
          }
      }
-     
 +    if (req->thread_sd_size)
 +    {
-+        req_tsd = (const struct security_descriptor *) 
-+              ((char*)get_req_data() + req->process_sd_size);
-+        
++        req_tsd = (const struct security_descriptor *)
++                  ((char*)get_req_data() + req->process_sd_size);
+ 
 +        if (!sd_is_valid( req_tsd, req->thread_sd_size ))
 +        {
 +            set_error( STATUS_INVALID_SECURITY_DESCR );
 +            return;
 +        }
 +    }
-+    
      req_info = (const startup_info_t *)
                 ((char*)get_req_data() + req->process_sd_size + req->thread_sd_size);
-     
-@@ -1035,6 +1047,20 @@ DECL_HANDLER(new_process)
+     req_env = (const WCHAR *)
+@@ -1043,7 +1053,18 @@ DECL_HANDLER(new_process)
                          DACL_SECURITY_INFORMATION|
                          SACL_SECURITY_INFORMATION );
      }
-+    
+-
 +    if (req_tsd)
 +    {
 +        /* In CreateProcess the thread defaults come from the process token,
@@ -225,7 +221,6 @@ index 1fba134..f9a4611 100644
 +                                    SACL_SECURITY_INFORMATION,
 +                                    process->token );
 +    }
-+
   done:
      release_object( info );
  }

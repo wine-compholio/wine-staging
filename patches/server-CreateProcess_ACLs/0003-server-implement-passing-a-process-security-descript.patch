@@ -1,18 +1,18 @@
-From d565d8b72c9f57d5553f72dfd7d18e2e05033c0c Mon Sep 17 00:00:00 2001
+From 43eb6734382c298997573522244de3daf3a52a78 Mon Sep 17 00:00:00 2001
 From: Joris van der Wel <joris@jorisvanderwel.com>
-Date: Wed, 9 Jul 2014 00:59:30 +0200
+Date: Sun, 3 Aug 2014 12:52:32 +0200
 Subject: server: implement passing a process security descriptor to
- CreateProcess.
+ CreateProcess
 
 server: implement passing a process security descriptor to CreateProcess.
 
 For now the function "NTDLL_create_struct_sd" has been duplicated in
-kernel32.
-This is needed because kernel32 makes the server call. kernel32 currently
-makes the server call because NtCreateProcess(Ex) has not been implemented in
-ntdll. When NtCreateProcessEx (and NtCreateThreadEx) gets implemented, the
-server call will be made from within ntdll instead, and this extra function
-in kernel32 will no longer be needed.
+kernel32. This is needed because kernel32 makes the server call.
+Kernel32 currently makes the server call because NtCreateProcess(Ex)
+has not been implemented in ntdll. When NtCreateProcessEx (and
+NtCreateThreadEx) gets implemented,
+the server call will be made from within ntdll instead, and this extra
+function in kernel32 will no longer be needed.
 ---
  dlls/advapi32/tests/security.c |    3 --
  dlls/kernel32/process.c        |   85 +++++++++++++++++++++++++++++++++++++++-
@@ -43,7 +43,7 @@ index b44496a..b1b35aa 100644
  
      /* Documented privilege elevation */
 diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
-index 8bf1934..5f6c2e5 100644
+index efd0e84..44e7711 100644
 --- a/dlls/kernel32/process.c
 +++ b/dlls/kernel32/process.c
 @@ -1916,6 +1916,70 @@ static pid_t exec_loader( LPCWSTR cmd_line, unsigned int flags, int socketfd,
@@ -128,8 +128,8 @@ index 8bf1934..5f6c2e5 100644
      {
          SetLastError( ERROR_BAD_EXE_FORMAT );
          return FALSE;
-+    }    
-+        
+     }
++    
 +    if (psa && (psa->nLength >= sizeof(*psa)) && psa->lpSecurityDescriptor)
 +    {
 +        status = create_struct_sd( psa->lpSecurityDescriptor, &psd, &psd_len );
@@ -139,7 +139,7 @@ index 8bf1934..5f6c2e5 100644
 +            SetLastError( RtlNtStatusToDosError(status) );
 +            return FALSE;
 +        }
-     }
++     }
  
      /* create the socket for the new process */
  
@@ -165,21 +165,20 @@ index 8bf1934..5f6c2e5 100644
          return FALSE;
      }
      if (!env) env = NtCurrentTeb()->Peb->ProcessParameters->Environment;
-@@ -2034,11 +2114,12 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
-         req->thread_access   = THREAD_ALL_ACCESS;
-         req->thread_attr     = (tsa && (tsa->nLength >= sizeof(*tsa)) && tsa->bInheritHandle) ? OBJ_INHERIT : 0;
-         req->cpu             = cpu;
--        req->process_sd_size = 0;
-+        req->process_sd_size = psd_len;
-         req->thread_sd_size  = 0;
-         req->info_size       = startup_info_size;
-         req->env_size        = (env_end - env) * sizeof(WCHAR);
-         
-+        wine_server_add_data( req, psd         , req->process_sd_size );
-         wine_server_add_data( req, startup_info, req->info_size       );
-         wine_server_add_data( req, env         , req->env_size        );
-         
-@@ -2053,6 +2134,8 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
+@@ -2034,10 +2114,11 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
+         req->thread_access  = THREAD_ALL_ACCESS;
+         req->thread_attr    = (tsa && (tsa->nLength >= sizeof(*tsa)) && tsa->bInheritHandle) ? OBJ_INHERIT : 0;
+         req->cpu            = cpu;
+-        req->process_sd_size= 0;
++        req->process_sd_size= psd_len;
+         req->thread_sd_size = 0;
+         req->info_size      = startup_info_size;
+ 
++        wine_server_add_data( req, psd, psd_len );
+         wine_server_add_data( req, startup_info, startup_info_size );
+         wine_server_add_data( req, env, (env_end - env) * sizeof(WCHAR) );
+         if (!(status = wine_server_call( req )))
+@@ -2051,6 +2132,8 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
      }
      SERVER_END_REQ;
  
@@ -189,36 +188,35 @@ index 8bf1934..5f6c2e5 100644
      if (status)
      {
 diff --git a/server/process.c b/server/process.c
-index 9942eb3..1fba134 100644
+index 110a38f..571f05a 100644
 --- a/server/process.c
 +++ b/server/process.c
-@@ -883,6 +883,7 @@ DECL_HANDLER(new_process)
+@@ -880,6 +880,7 @@ DECL_HANDLER(new_process)
+     struct process *process;
+     struct process *parent = current->process;
+     int socket_fd = thread_get_inflight_fd( current, req->socket_fd );
++    const struct security_descriptor *req_psd = NULL;
      const startup_info_t *req_info;
      data_size_t req_info_size;
      const WCHAR *req_env;
-+    const struct security_descriptor *req_psd = NULL;
- 
-     if (socket_fd == -1)
-     {
-@@ -907,6 +908,17 @@ DECL_HANDLER(new_process)
+@@ -892,6 +893,16 @@ DECL_HANDLER(new_process)
+         close( socket_fd );
          return;
      }
-     
++    
 +    if (req->process_sd_size)
 +    {
-+        req_psd = get_req_data();
-+        
++        req_psd = get_req_data();        
 +        if (!sd_is_valid( req_psd, req->process_sd_size ))
 +        {
 +            set_error( STATUS_INVALID_SECURITY_DESCR );
 +            return;
 +        }
 +    }
-+    
+ 
      req_info = (const startup_info_t *)
                 ((char*)get_req_data() + req->process_sd_size + req->thread_sd_size);
-     
-@@ -1011,6 +1023,18 @@ DECL_HANDLER(new_process)
+@@ -1020,6 +1031,19 @@ DECL_HANDLER(new_process)
      reply->phandle = alloc_handle( parent, process, req->process_access, req->process_attr );
      reply->thandle = alloc_handle( parent, thread, req->thread_access, req->thread_attr );
  
@@ -234,6 +232,7 @@ index 9942eb3..1fba134 100644
 +                        DACL_SECURITY_INFORMATION|
 +                        SACL_SECURITY_INFORMATION );
 +    }
++
   done:
      release_object( info );
  }

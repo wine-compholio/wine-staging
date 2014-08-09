@@ -45,7 +45,7 @@ any way and are simply installed for end-user convenience.
     * `0003-fonts-Add-Courier-Prime-as-a-Courier-New-replacement.patch`:
       The **Courier Prime** font is used as a Courier New replacement.
       This file is licensed under the 
-      [OFLv1.1](#ofl-version-1-1).
+      [OFLv1.1](#ofl-version-11).
 
 Full license texts
 ==================

@@ -201,12 +201,13 @@ dsound-Fast_Mixer.ok:
 # |   *	[#13829] Wine does not have CJK fonts
 # |
 # | Modified files: 
-# |   *	fonts/Makefile.in, fonts/arial.sfd, fonts/arial.ttf, fonts/msyh.sfd, fonts/msyh.ttf
+# |   *	fonts/Makefile.in, fonts/arial.sfd, fonts/arial.ttf, fonts/cour.sfd, fonts/cour.ttf, fonts/msyh.sfd, fonts/msyh.ttf
 # |
 .INTERMEDIATE: fonts-Missing_Fonts.ok
 fonts-Missing_Fonts.ok:
 	$(call APPLY_FILE,fonts-Missing_Fonts/0001-fonts-Add-Liberation-Sans-as-an-Arial-replacement.patch)
 	$(call APPLY_FILE,fonts-Missing_Fonts/0002-fonts-Add-WenQuanYi-Micro-Hei-as-a-Microsoft-Yahei-r.patch)
+	$(call APPLY_FILE,fonts-Missing_Fonts/0003-fonts-Add-Courier-Prime-as-a-Courier-New-replacement.patch)
 	@( \
 		echo '+    { "fonts-Missing_Fonts", "Torsten Kurbad / Erich E. Hoover", "Implement missing fonts expected by Silverlight. [rev 2]" },'; \
 	) > fonts-Missing_Fonts.ok

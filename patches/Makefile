@@ -528,10 +528,11 @@ server-Address_Change_Notification.ok:
 # | 	server/protocol.def
 # |
 .INTERMEDIATE: server-CreateProcess_ACLs.ok
-	$(call APPLY_PATCH,server-CreateProcess_ACLs/0001-server-A-new-function-set_sd_defaults_from_token-tha.patch)
-	$(call APPLY_PATCH,server-CreateProcess_ACLs/0002-server-Support-sending-process-and-thread-security-d.patch)
-	$(call APPLY_PATCH,server-CreateProcess_ACLs/0003-server-implement-passing-a-process-security-descript.patch)
-	$(call APPLY_PATCH,server-CreateProcess_ACLs/0004-server-implement-passing-a-thread-security-descripto.patch)
+server-CreateProcess_ACLs.ok:
+	$(call APPLY_FILE,server-CreateProcess_ACLs/0001-server-A-new-function-set_sd_defaults_from_token-tha.patch)
+	$(call APPLY_FILE,server-CreateProcess_ACLs/0002-server-Support-sending-process-and-thread-security-d.patch)
+	$(call APPLY_FILE,server-CreateProcess_ACLs/0003-server-implement-passing-a-process-security-descript.patch)
+	$(call APPLY_FILE,server-CreateProcess_ACLs/0004-server-implement-passing-a-thread-security-descripto.patch)
 	@( \
 		echo '+    { "server-CreateProcess_ACLs", "Joris van der Wel", "Implement passing ACLs to CreateProcess." },'; \
 	) > server-CreateProcess_ACLs.ok

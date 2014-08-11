@@ -12,7 +12,6 @@ PATCHLIST := \
 	Pipelight.ok \
 	atl-IOCS_Property.ok \
 	comctl32-LoadIconMetric.ok \
-	ddraw-Empty_Hardware_Flags.ok \
 	dsound-Fast_Mixer.ok \
 	dwmapi-Invalidate_Thumbnail.ok \
 	fonts-Missing_Fonts.ok \
@@ -154,25 +153,6 @@ comctl32-LoadIconMetric.ok:
 	@( \
 		echo '+    { "comctl32-LoadIconMetric", "Michael Müller", "Implement LoadIconMetric function." },'; \
 	) > comctl32-LoadIconMetric.ok
-
-# Patchset ddraw-Empty_Hardware_Flags
-# |
-# | Included patches:
-# |   *	Return empty D3D hardware flags for HEL device enumeration. [by Erich E. Hoover]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#32581] Invalid dwFlags of reference rasterizer's HAL D3DDEVICEDESC
-# |
-# | Modified files: 
-# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/tests/d3d.c
-# |
-.INTERMEDIATE: ddraw-Empty_Hardware_Flags.ok
-ddraw-Empty_Hardware_Flags.ok:
-	$(call APPLY_FILE,ddraw-Empty_Hardware_Flags/0001-ddraw-tests-Remove-broken-tests-of-D3DTRANSFORM_UNCL.patch)
-	$(call APPLY_FILE,ddraw-Empty_Hardware_Flags/0002-ddraw-Return-empty-D3D-hardware-flags-for-RGB-device.patch)
-	@( \
-		echo '+    { "ddraw-Empty_Hardware_Flags", "Erich E. Hoover", "Return empty D3D hardware flags for HEL device enumeration." },'; \
-	) > ddraw-Empty_Hardware_Flags.ok
 
 # Patchset dsound-Fast_Mixer
 # |

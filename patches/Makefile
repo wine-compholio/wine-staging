@@ -503,10 +503,10 @@ quartz-MediaSeeking_Positions.ok:
 # Patchset riched20-IText_Interface
 # |
 # | Included patches:
-# |   *	Implement Stubs for ITextRange interface. [by Jactry Zeng]
+# |   *	Implement Stubs for ITextRange interface. [rev 2, by Jactry Zeng]
 # |   *	Implement IText{Range,Selection}::{GetChar,GetStart,GetEnd,GetDuplicate,Collapse,SetStart,SetEnd}. [by Jactry Zeng]
-# |   *	Implement Stubs for ITextFont interface. [by Jactry Zeng]
-# |   *	Implement Stubs for ITextPara interface. [by Jactry Zeng]
+# |   *	Implement Stubs for ITextFont interface. [rev 2, by Jactry Zeng]
+# |   *	Implement Stubs for ITextPara interface. [rev 2, by Jactry Zeng]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#12458] Multiple apps fail due to RichEdit ITextDocument_fnRange stub (MySQL Workbench, BlitzMaxDemo137)
@@ -526,10 +526,10 @@ riched20-IText_Interface.ok:
 	$(call APPLY_FILE,riched20-IText_Interface/0007-riched20-Stub-for-ITextFont-interface-and-implement-.patch)
 	$(call APPLY_FILE,riched20-IText_Interface/0008-riched20-Stub-for-ITextPara-interface-and-implement-.patch)
 	@( \
-		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextRange interface." },'; \
+		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextRange interface. [rev 2]" },'; \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement IText{Range,Selection}::{GetChar,GetStart,GetEnd,GetDuplicate,Collapse,SetStart,SetEnd}." },'; \
-		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextFont interface." },'; \
-		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextPara interface." },'; \
+		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextFont interface. [rev 2]" },'; \
+		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextPara interface. [rev 2]" },'; \
 	) > riched20-IText_Interface.ok
 
 # Patchset server-ACL_Compat

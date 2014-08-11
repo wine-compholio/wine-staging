@@ -1,16 +1,16 @@
-From dd0e81dcc531aff95bde3c121c6f108a32f8374c Mon Sep 17 00:00:00 2001
+From 54ca28ec8417735f945883923a72893ff9e5363e Mon Sep 17 00:00:00 2001
 From: Jactry Zeng <wine@jactry.com>
-Date: Fri, 8 Aug 2014 23:41:22 +0800
+Date: Sun, 10 Aug 2014 22:17:57 +0800
 Subject: riched20: Stub for ITextPara interface and implement
  ITextRange::GetPara.
 
 ---
- dlls/riched20/richole.c       |  721 ++++++++++++++++++++++++++++++++++++++++-
+ dlls/riched20/richole.c       |  684 ++++++++++++++++++++++++++++++++++++++++-
  dlls/riched20/tests/richole.c |   47 +++
- 2 files changed, 766 insertions(+), 2 deletions(-)
+ 2 files changed, 729 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/riched20/richole.c b/dlls/riched20/richole.c
-index c1569b0..0a80b8f 100644
+index d171963..0897c4f 100644
 --- a/dlls/riched20/richole.c
 +++ b/dlls/riched20/richole.c
 @@ -47,11 +47,13 @@ DEFINE_GUID(IID_ITextDocument, 0x8cc497c0, 0xa1df, 0x11ce, 0x80, 0x98, 0x00, 0xa
@@ -27,22 +27,17 @@ index c1569b0..0a80b8f 100644
  
  typedef struct IRichEditOleImpl {
      IRichEditOle IRichEditOle_iface;
-@@ -63,6 +65,7 @@ typedef struct IRichEditOleImpl {
+@@ -63,8 +65,19 @@ typedef struct IRichEditOleImpl {
      IOleClientSiteImpl *clientSite;
-     ITextRangeImpl *txtRgehead, *txtRgetail;
-     ITextFontImpl *txtFonthead, *txtFonttail;
-+    ITextParaImpl *txtParahead, *txtParatail;
+     struct list rangelist;
+     struct list fontlist;
++    struct list paralist;
  } IRichEditOleImpl;
- 
- struct ITextRangeImpl {
-@@ -74,6 +77,16 @@ struct ITextRangeImpl {
-     IRichEditOleImpl *reOle;
- };
  
 +struct ITextParaImpl {
 +    ITextPara ITextPara_iface;
 +    LONG ref;
-+    ITextParaImpl *prev, *next;
++    struct list entry;
 +
 +    IRichEditOleImpl *reOle;
 +    ITextRangeImpl *txtRge;
@@ -54,27 +49,22 @@ index c1569b0..0a80b8f 100644
      LONG ref;
 @@ -154,6 +167,7 @@ IRichEditOle_fnRelease(IRichEditOle *me)
      {
-         ITextRangeImpl *txtRgeImpl = This->txtRgehead->next;
-         ITextFontImpl *txtFontImpl = This->txtFonthead->next;
-+        ITextParaImpl *txtParaImpl = This->txtParahead->next;
+         ITextRangeImpl *txtRge;
+         ITextFontImpl *txtFont;
++        ITextParaImpl *txtPara;
          TRACE ("Destroying %p\n", This);
          This->txtSel->reOle = NULL;
          ITextSelection_Release(&This->txtSel->ITextSelection_iface);
-@@ -172,6 +186,13 @@ IRichEditOle_fnRelease(IRichEditOle *me)
-         }
-         heap_free(This->txtFonthead);
-         heap_free(This->txtFonttail);
-+        while (txtParaImpl)
-+        {
-+            txtParaImpl->reOle = NULL;
-+            txtParaImpl = txtParaImpl->next;
-+        }
-+        heap_free(This->txtParahead);
-+        heap_free(This->txtParatail);
+@@ -162,6 +176,8 @@ IRichEditOle_fnRelease(IRichEditOle *me)
+             txtRge->reOle = NULL;
+         LIST_FOR_EACH_ENTRY(txtFont, &This->fontlist, ITextFontImpl, entry)
+             txtFont->reOle = NULL;
++        LIST_FOR_EACH_ENTRY(txtPara, &This->paralist, ITextParaImpl, entry)
++            txtPara->reOle = NULL;
          heap_free(This);
      }
      return ref;
-@@ -483,6 +504,642 @@ static const IRichEditOleVtbl revt = {
+@@ -473,6 +489,641 @@ static const IRichEditOleVtbl revt = {
      IRichEditOle_fnImportDataObject
  };
  
@@ -113,15 +103,14 @@ index c1569b0..0a80b8f 100644
 +    TRACE ("%p ref=%u\n", This, ref);
 +    if (ref == 0)
 +    {
-+        if (!This->txtSel)
++        if (This->txtRge)
 +            ITextRange_Release(&This->txtRge->ITextRange_iface);
 +        else
 +            ITextSelection_Release(&This->txtSel->ITextSelection_iface);
 +        This->reOle = NULL;
 +        This->txtRge = NULL;
 +        This->txtSel = NULL;
-+        This->prev->next = This->next;
-+        This->next->prev = This->prev;
++        list_remove(&This->entry);
 +        heap_free(This);
 +    }
 +    return ref;
@@ -717,11 +706,11 @@ index c1569b0..0a80b8f 100644
  /* ITextFont interface */
  static inline ITextFontImpl *impl_from_ITextFont(ITextFont *iface)
  {
-@@ -1531,14 +2188,45 @@ static HRESULT WINAPI ITextRange_fnSetFont(ITextRange *me, ITextFont *pFont)
+@@ -1507,14 +2158,42 @@ static HRESULT WINAPI ITextRange_fnSetFont(ITextRange *me, ITextFont *pFont)
      return E_NOTIMPL;
  }
  
-+static HRESULT range_GetPara(IRichEditOleImpl *reOle, ITextParaImpl **ptxtPara)
++static HRESULT CreateITextPara(IRichEditOleImpl *reOle, ITextParaImpl **ptxtPara)
 +{
 +    ITextParaImpl *txtPara = NULL;
 +    txtPara = heap_alloc(sizeof(ITextParaImpl));
@@ -731,10 +720,7 @@ index c1569b0..0a80b8f 100644
 +    txtPara->ITextPara_iface.lpVtbl = &tpvt;
 +    txtPara->ref = 1;
 +    txtPara->reOle = reOle;
-+    txtPara->next = reOle->txtParahead->next;
-+    reOle->txtParahead->next->prev = txtPara;
-+    reOle->txtParahead->next = txtPara;
-+    txtPara->prev = reOle->txtParahead;
++    list_add_head(&reOle->paralist, &txtPara->entry);
 +    *ptxtPara = txtPara;
 +    return S_OK;
 +}
@@ -753,7 +739,7 @@ index c1569b0..0a80b8f 100644
 +    TRACE("%p\n", This);
 +    if (!ppPara)
 +        return E_INVALIDARG;
-+    hres = range_GetPara(This->reOle, &txtPara);
++    hres = CreateITextPara(This->reOle, &txtPara);
 +    if (!hres)
 +    {
 +        txtPara->txtSel = NULL;
@@ -765,39 +751,11 @@ index c1569b0..0a80b8f 100644
  }
  
  static HRESULT WINAPI ITextRange_fnSetPara(ITextRange *me, ITextPara *pPara)
-@@ -3249,6 +3937,35 @@ LRESULT CreateIRichEditOle(ME_TextEditor *editor, LPVOID *ppObj)
-     reo->txtFonthead->prev = NULL;
-     reo->txtFonttail->next = NULL;
-     reo->txtFonttail->prev = reo->txtFonthead;
-+    reo->txtParahead = heap_alloc(sizeof(ITextParaImpl));
-+    if (!reo->txtParahead)
-+    {
-+        ITextSelection_Release(&reo->txtSel->ITextSelection_iface);
-+        IOleClientSite_Release(&reo->clientSite->IOleClientSite_iface);
-+        heap_free(reo->txtRgehead);
-+        heap_free(reo->txtRgetail);
-+        heap_free(reo->txtFonthead);
-+        heap_free(reo->txtFonttail);
-+        heap_free(reo);
-+        return 0;
-+    }
-+    reo->txtParatail = heap_alloc(sizeof(ITextParaImpl));
-+    if (!reo->txtParatail)
-+    {
-+        ITextSelection_Release(&reo->txtSel->ITextSelection_iface);
-+        IOleClientSite_Release(&reo->clientSite->IOleClientSite_iface);
-+        heap_free(reo->txtRgehead);
-+        heap_free(reo->txtRgetail);
-+        heap_free(reo->txtFonthead);
-+        heap_free(reo->txtFonttail);
-+        heap_free(reo->txtParahead);
-+        heap_free(reo);
-+        return 0;
-+    }
-+    reo->txtParahead->next = reo->txtParatail;
-+    reo->txtParahead->prev = NULL;
-+    reo->txtParatail->next = NULL;
-+    reo->txtParatail->prev = reo->txtParahead;
+@@ -3159,6 +3838,7 @@ LRESULT CreateIRichEditOle(ME_TextEditor *editor, LPVOID *ppObj)
+     *ppObj = reo;
+     list_init(&reo->rangelist);
+     list_init(&reo->fontlist);
++    list_init(&reo->paralist);
  
      return 1;
  }

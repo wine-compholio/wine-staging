@@ -1,16 +1,16 @@
-From 1fb42d0cc90d02df67dc117764f6352da0e40195 Mon Sep 17 00:00:00 2001
+From 31fc24d0900889d69dcdba411420216ba15675c0 Mon Sep 17 00:00:00 2001
 From: Jactry Zeng <wine@jactry.com>
-Date: Fri, 8 Aug 2014 20:12:54 +0800
+Date: Sun, 10 Aug 2014 21:50:03 +0800
 Subject: riched20: Stub for ITextRange interface and implement
  ITextDocument::Range.
 
 ---
- dlls/riched20/richole.c       |  773 ++++++++++++++++++++++++++++++++++++++++-
- dlls/riched20/tests/richole.c |   36 +-
- 2 files changed, 806 insertions(+), 3 deletions(-)
+ dlls/riched20/richole.c       |  726 ++++++++++++++++++++++++++++++++++++++++-
+ dlls/riched20/tests/richole.c |   35 +-
+ 2 files changed, 758 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/riched20/richole.c b/dlls/riched20/richole.c
-index 487fcda..314bc1e 100644
+index 487fcda..8ec5314 100644
 --- a/dlls/riched20/richole.c
 +++ b/dlls/riched20/richole.c
 @@ -49,6 +49,7 @@ DEFINE_GUID(IID_ITextSelection, 0x8cc497c1, 0xa1df, 0x11ce, 0x80, 0x98, 0x00, 0x
@@ -25,14 +25,14 @@ index 487fcda..314bc1e 100644
      ME_TextEditor *editor;
      ITextSelectionImpl *txtSel;
      IOleClientSiteImpl *clientSite;
-+    ITextRangeImpl *txtRgehead, *txtRgetail;
++    struct list rangelist;
  } IRichEditOleImpl;
  
 +struct ITextRangeImpl {
 +    ITextRange ITextRange_iface;
 +    LONG ref;
-+    int start, end;
-+    ITextRangeImpl *prev, *next;
++    LONG start, end;
++    struct list entry;
 +
 +    IRichEditOleImpl *reOle;
 +};
@@ -40,26 +40,21 @@ index 487fcda..314bc1e 100644
  struct ITextSelectionImpl {
      ITextSelection ITextSelection_iface;
      LONG ref;
-@@ -128,10 +139,18 @@ IRichEditOle_fnRelease(IRichEditOle *me)
+@@ -128,10 +139,13 @@ IRichEditOle_fnRelease(IRichEditOle *me)
  
      if (!ref)
      {
-+        ITextRangeImpl *txtRgeImpl = This->txtRgehead->next;
++        ITextRangeImpl *txtRge;
          TRACE ("Destroying %p\n", This);
          This->txtSel->reOle = NULL;
          ITextSelection_Release(&This->txtSel->ITextSelection_iface);
          IOleClientSite_Release(&This->clientSite->IOleClientSite_iface);
-+        while (txtRgeImpl)
-+        {
-+            txtRgeImpl->reOle = NULL;
-+            txtRgeImpl = txtRgeImpl->next;
-+        }
-+        heap_free(This->txtRgehead);
-+        heap_free(This->txtRgetail);
++        LIST_FOR_EACH_ENTRY(txtRge, &This->rangelist, ITextRangeImpl, entry)
++            txtRge->reOle = NULL;
          heap_free(This);
      }
      return ref;
-@@ -443,6 +462,681 @@ static const IRichEditOleVtbl revt = {
+@@ -443,6 +457,680 @@ static const IRichEditOleVtbl revt = {
      IRichEditOle_fnImportDataObject
  };
  
@@ -99,8 +94,7 @@ index 487fcda..314bc1e 100644
 +    if (ref == 0)
 +    {
 +        This->reOle = NULL;
-+        This->prev->next = This->next;
-+        This->next->prev = This->prev;
++        list_remove(&This->entry);
 +        heap_free(This);
 +    }
 +    return ref;
@@ -741,7 +735,25 @@ index 487fcda..314bc1e 100644
  static HRESULT WINAPI
  ITextDocument_fnQueryInterface(ITextDocument* me, REFIID riid,
      void** ppvObject)
-@@ -651,8 +1345,40 @@ ITextDocument_fnRange(ITextDocument* me, LONG cp1, LONG cp2,
+@@ -646,13 +1334,46 @@ ITextDocument_fnRedo(ITextDocument* me, LONG Count, LONG* prop)
+     return E_NOTIMPL;
+ }
+ 
++static HRESULT CreateITextRange(IRichEditOleImpl *reOle, LONG start, LONG end,
++                                ITextRangeImpl *txtRge, ITextRange** ppRange)
++{
++    txtRge->ITextRange_iface.lpVtbl = &trvt;
++    txtRge->ref = 1;
++    txtRge->reOle = reOle;
++    txtRge->start = start;
++    txtRge->end = end;
++    list_add_head(&reOle->rangelist, &txtRge->entry);
++    *ppRange = &txtRge->ITextRange_iface;
++    return S_OK;
++}
++
+ static HRESULT WINAPI
+ ITextDocument_fnRange(ITextDocument* me, LONG cp1, LONG cp2,
      ITextRange** ppRange)
  {
      IRichEditOleImpl *This = impl_from_ITextDocument(me);
@@ -758,91 +770,30 @@ index 487fcda..314bc1e 100644
 +    cp2 = max(cp2, 0);
 +    cp1 = min(cp1, len);
 +    cp2 = min(cp2, len);
-+    if (cp1 >= cp2)
++    if (cp1 > cp2)
 +    {
 +        int tmp;
 +        tmp = cp1;
 +        cp1 = cp2;
 +        cp2 = tmp;
 +    }
-+
-+    txtRge = heap_alloc(sizeof *txtRge);
++    txtRge = heap_alloc(sizeof(ITextRangeImpl));
 +    if (!txtRge)
 +        return E_OUTOFMEMORY;
-+    txtRge->ITextRange_iface.lpVtbl = &trvt;
-+    txtRge->ref = 1;
-+    txtRge->reOle = This;
-+    txtRge->start = cp1;
-+    txtRge->end = cp2;
-+    txtRge->next = This->txtRgehead->next;
-+    This->txtRgehead->next->prev = txtRge;
-+    This->txtRgehead->next = txtRge;
-+    txtRge->prev = This->txtRgehead;
-+    *ppRange = &txtRge->ITextRange_iface;
-+
-+    return S_OK;
++    return CreateITextRange(This, cp1, cp2, txtRge, ppRange);
  }
  
  static HRESULT WINAPI
-@@ -1521,6 +2247,30 @@ CreateTextSelection(IRichEditOleImpl *reOle)
-     return txtSel;
- }
- 
-+static void CreateEmptyITextRangeImpl(IRichEditOleImpl *reOle, int type)
-+{
-+    ITextRangeImpl *txtRgeImpl;
-+    if (type)
-+    {
-+        txtRgeImpl = reOle->txtRgehead;
-+        txtRgeImpl->prev = NULL;
-+        txtRgeImpl->next = reOle->txtRgetail;
-+    }
-+    else
-+    {
-+        txtRgeImpl = reOle->txtRgetail;
-+        txtRgeImpl->prev = reOle->txtRgehead;
-+        txtRgeImpl->next = NULL;
-+    }
-+
-+    txtRgeImpl->ITextRange_iface.lpVtbl = &trvt;
-+    txtRgeImpl->ref = 1;
-+    txtRgeImpl->reOle = NULL;
-+    txtRgeImpl->start = 0;
-+    txtRgeImpl->end = 0;
-+
-+}
-+
- LRESULT CreateIRichEditOle(ME_TextEditor *editor, LPVOID *ppObj)
- {
-     IRichEditOleImpl *reo;
-@@ -1549,6 +2299,25 @@ LRESULT CreateIRichEditOle(ME_TextEditor *editor, LPVOID *ppObj)
+@@ -1548,6 +2269,7 @@ LRESULT CreateIRichEditOle(ME_TextEditor *editor, LPVOID *ppObj)
+     }
      TRACE("Created %p\n",reo);
      *ppObj = reo;
++    list_init(&reo->rangelist);
  
-+    reo->txtRgehead = heap_alloc(sizeof(ITextRangeImpl));
-+    if (!reo->txtRgehead)
-+    {
-+        ITextSelection_Release(&reo->txtSel->ITextSelection_iface);
-+        IOleClientSite_Release(&reo->clientSite->IOleClientSite_iface);
-+        heap_free(reo);
-+        return 0;
-+    }
-+    reo->txtRgetail = heap_alloc(sizeof(ITextRangeImpl));
-+    if (!reo->txtRgetail)
-+    {
-+        ITextSelection_Release(&reo->txtSel->ITextSelection_iface);
-+        IOleClientSite_Release(&reo->clientSite->IOleClientSite_iface);
-+        heap_free(reo->txtRgehead);
-+        heap_free(reo);
-+        return 0;
-+    }
-+    CreateEmptyITextRangeImpl(reo, 1);
-+    CreateEmptyITextRangeImpl(reo, 0);
      return 1;
  }
- 
 diff --git a/dlls/riched20/tests/richole.c b/dlls/riched20/tests/richole.c
-index 571e5cd..417b68f 100644
+index 571e5cd..f56a14a 100644
 --- a/dlls/riched20/tests/richole.c
 +++ b/dlls/riched20/tests/richole.c
 @@ -86,10 +86,11 @@ static void create_interfaces(HWND *w, IRichEditOle **reOle, ITextDocument **txt
@@ -858,7 +809,7 @@ index 571e5cd..417b68f 100644
  }
  
  static ULONG get_refcount(IUnknown *iface)
-@@ -486,6 +487,38 @@ static void test_ITextSelection_GetText(void)
+@@ -486,6 +487,37 @@ static void test_ITextSelection_GetText(void)
    release_interfaces(&w, &reOle, &txtDoc, &txtSel);
  }
  
@@ -893,11 +844,10 @@ index 571e5cd..417b68f 100644
 +  ITextRange_Release(txtRge);
 +}
 +
-+
  START_TEST(richole)
  {
    /* Must explicitly LoadLibrary(). The test has no references to functions in
-@@ -496,4 +529,5 @@ START_TEST(richole)
+@@ -496,4 +528,5 @@ START_TEST(richole)
    test_Interfaces();
    test_ITextDocument_Open();
    test_ITextSelection_GetText();

@@ -122,7 +122,7 @@ Pipelight.ok:
 # |   *	Store IOCS data in a property instead of GWLP_USERDATA. [by Qian Hong]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#21767] JLC's Internet TV crashes on startup
+# |   *	[#21767] ATL IOCS data should not be stored in GWLP_USERDATA
 # |
 # | Modified files: 
 # |   *	dlls/atl/atl_ax.c
@@ -140,8 +140,7 @@ atl-IOCS_Property.ok:
 # |   *	Implement LoadIconMetric function. [by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#35375] Multiple applications need Vista+ API COMCTL32.dll.380 a.k.a. 'LoadIconMetric' (Solidworks 2013 systray
-# | 	monitor, Microsoft One/SkyDrive)
+# |   *	[#35375] Implement LoadIconMetric function
 # |
 # | Modified files: 
 # |   *	dlls/comctl32/Makefile.in, dlls/comctl32/comctl32.spec, dlls/comctl32/icon.c, dlls/comctl32/tests/misc.c,
@@ -161,7 +160,7 @@ comctl32-LoadIconMetric.ok:
 # |   *	Add a linear resampler for use with a large number of dsound mixing buffers. [by Alexander E. Patrakov]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#30639] Audio stuttering and performance drops in Star Wolves 3
+# |   *	[#30639] Audio stuttering and performance drops in multiple applications
 # |
 # | Modified files: 
 # |   *	dlls/dsound/dsound_main.c, dlls/dsound/dsound_private.h, dlls/dsound/mixer.c
@@ -179,7 +178,7 @@ dsound-Fast_Mixer.ok:
 # |   *	Add stub for DwmInvalidateIconicBitmaps. [by Erich E. Hoover]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#32977] Solidworks 2012 needs unimplemented function dwmapi.dll.DwmInvalidateIconicBitmaps (Win7 mode)
+# |   *	[#32977] Support for DwmInvalidateIconicBitmaps
 # |
 # | Modified files: 
 # |   *	dlls/dwmapi/dwmapi.spec, dlls/dwmapi/dwmapi_main.c, include/dwmapi.h
@@ -197,9 +196,8 @@ dwmapi-Invalidate_Thumbnail.ok:
 # |   *	Implement missing fonts expected by Silverlight. [rev 2, by Torsten Kurbad / Erich E. Hoover]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#32323] Netflix (Silverlight 4.x) and several .NET Framework 3.x/4.0 WPF apps require either Arial or Verdana to be
-# | 	installed
-# |   *	[#13829] Wine does not have CJK fonts
+# |   *	[#32323] Implement an Arial replacement font
+# |   *	[#13829] Implement a Microsoft Yahei replacement font
 # |
 # | Modified files: 
 # |   *	fonts/Makefile.in, fonts/arial.sfd, fonts/arial.ttf, fonts/cour.sfd, fonts/cour.ttf, fonts/msyh.sfd, fonts/msyh.ttf
@@ -219,7 +217,7 @@ fonts-Missing_Fonts.ok:
 # |   *	Implement AllocateAndGetTcpExTableFromStack. [by Erich E. Hoover]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#34372] Add missing function AllocateAndGetTcpExTableFromStack() to iphlpapi.dll
+# |   *	[#34372] Support for AllocateAndGetTcpExTableFromStack
 # |
 # | Modified files: 
 # |   *	dlls/iphlpapi/iphlpapi.spec, dlls/iphlpapi/ipstats.c, dlls/iphlpapi/ipstats.h
@@ -237,7 +235,7 @@ iphlpapi-TCP_Table.ok:
 # |   *	Implement GetFinalPathNameByHandle in kernel32. [by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#36073] OneDrive crashes on unimplemented function KERNEL32.dll.GetFinalPathNameByHandleW
+# |   *	[#36073] Some applications neeed kernel32.GetFinalPathNameByHandle
 # |
 # | Modified files: 
 # |   *	dlls/kernel32/file.c, dlls/kernel32/kernel32.spec, dlls/kernel32/tests/file.c, include/fileapi.h
@@ -256,7 +254,7 @@ kernel32-GetFinalPathNameByHandle.ok:
 # |   *	Implement GetSystemTimes. [by Louis Lenders / Erich E. Hoover]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#19813] Voddler needs GetSystemTimes to run
+# |   *	[#19813] Support for GetSystemTimes
 # |
 # | Modified files: 
 # |   *	dlls/kernel32/tests/time.c, dlls/kernel32/time.c
@@ -292,9 +290,8 @@ kernel32-GetVolumePathName.ok:
 # |   *	Support for NamedPipe operations. [rev 2, by Sebastian Lackner / Dan Kegel]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#16550] ConnectNamedPort should never return OK in overlapped mode (affects chromium ui_tests.exe)
-# |   *	[#17273] Many apps and games need SetNamedPipeHandleState implementation (support for named pipe message
-# | 	mode)(FireFox+Flash, Win8/NET 4.x SDK/vcrun2012, WiX installers)
+# |   *	[#16550] Fix for ConnectNamedPort return value in overlapped mode
+# |   *	[#17273] Workaround for TransactNamedPipe not being supported
 # |
 # | Modified files: 
 # |   *	dlls/kernel32/sync.c
@@ -313,7 +310,7 @@ kernel32-Named_Pipe.ok:
 # |   *	Add stub for [Get|Set]SystemFileCacheSize. [by Austin English]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#35886] Lotus Notes 9 'cacheset.exe' utility needs KERNEL32.dll.SetSystemFileCacheSize
+# |   *	[#35886] Support for [Get|Set]SystemFileCacheSize
 # |
 # | Modified files: 
 # |   *	dlls/api-ms-win-core-memory-l1-1-1/api-ms-win-core-memory-l1-1-1.spec, dlls/kernel32/heap.c, dlls/kernel32/kernel32.spec
@@ -331,7 +328,7 @@ kernel32-SystemFileCacheSize.ok:
 # |   *	Fix comparison of punctuation characters. [by Dmitry Timoshkov]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#10767] lstrcmp and others do not compare punctuation characters correctly
+# |   *	[#10767] Fix comparison of punctuation characters in lstrcmp
 # |
 # | Modified files: 
 # |   *	dlls/kernel32/tests/locale.c, libs/wine/collation.c
@@ -369,7 +366,7 @@ loader-Cmdline_Diagnostics.ok:
 # |   *	Add Dynamic DST exceptions for Israel Standard Time. [by Sebastian Lackner]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#36374] Israel timezone handled incorrectly
+# |   *	[#36374] Add Dynamic DST exceptions for Israel Standard Time
 # |
 # | Modified files: 
 # |   *	dlls/ntdll/time.c, loader/wine.inf.in
@@ -404,8 +401,7 @@ ntdll-FD_Cache.ok:
 # |   *	Add support for setting file disposition information. [by Dmitry Timoshkov / Erich E. Hoover]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#30397] Multiple applications need support for NtSetInformationFile class FileDispositionInformation (Cygwin installer,
-# | 	Stylizer 5.x Visual CSS editor, Spoon Studio 2011 (ex Xenocode) application sandboxing scheme)
+# |   *	[#30397] Support for NtSetInformationFile class FileDispositionInformation
 # |
 # | Modified files: 
 # |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c, server/fd.c, server/file.c, server/file.h, server/protocol.def
@@ -425,7 +421,7 @@ ntdll-FileDispositionInformation.ok:
 # |   *	Support for junction points/reparse points. [by Erich E. Hoover]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#12401] Support junction points, i.e. DeviceIoCtl(FSCTL_SET_REPARSE_POINT/FSCTL_GET_REPARSE_POINT)
+# |   *	[#12401] Support for Junction Points
 # |
 # | Modified files: 
 # |   *	dlls/kernel32/path.c, dlls/kernel32/volume.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/ntifs.h
@@ -449,7 +445,7 @@ ntdll-Junction_Points.ok:
 # |   *	Allow special characters in pipe names. [by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#28995] Unable to use named pipes with ">" character in the name
+# |   *	[#28995] Allow special characters in pipe names
 # |
 # | Modified files: 
 # |   *	dlls/kernel32/tests/pipe.c, dlls/ntdll/directory.c
@@ -467,7 +463,7 @@ ntdll-Pipe_SpecialCharacters.ok:
 # |   *	Set ldr.EntryPoint for main executable. [by Sebastian Lackner]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#33034] Many GFWL (Games For Windows Live) 1.x/2.x/3.x games crash or exit silently on startup (DiRT 2/3, GTA IV Steam)
+# |   *	[#33034] Set ldr.EntryPoint for main executable
 # |
 # | Modified files: 
 # |   *	dlls/ntdll/loader.c
@@ -485,7 +481,7 @@ ntdll-loader_EntryPoint.ok:
 # |   *	Return correct IMediaSeeking stream positions in quartz. [by Erich E. Hoover]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#23174] Fallout 3: Diologue and Video/sound issues
+# |   *	[#23174] Return correct IMediaSeeking stream positions in quartz
 # |
 # | Modified files: 
 # |   *	dlls/quartz/filtergraph.c
@@ -509,8 +505,8 @@ quartz-MediaSeeking_Positions.ok:
 # |   *	Implement Stubs for ITextPara interface. [rev 2, by Jactry Zeng]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#12458] Multiple apps fail due to RichEdit ITextDocument_fnRange stub (MySQL Workbench, BlitzMaxDemo137)
-# |   *	[#18303] Adobe Acrobat Pro 7: Crashes when selecting the "edit" menu while having a file open.
+# |   *	[#12458] Implement ITextDocument_fnRange function
+# |   *	[#18303] Support for ITextRange, ITextFont and ITextPara
 # |
 # | Modified files: 
 # |   *	dlls/riched20/richole.c, dlls/riched20/tests/richole.c
@@ -553,7 +549,7 @@ server-ACL_Compat.ok: server-Inherited_ACLs.ok
 # |   *	Implement SIO_ADDRESS_LIST_CHANGE. [rev 2, by Erich E. Hoover]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#32328] Many .NET and Silverlight applications require SIO_ADDRESS_LIST_CHANGE for interface change notifications
+# |   *	[#32328] Support for interface change notifications
 # |
 # | Modified files: 
 # |   *	dlls/ws2_32/tests/sock.c, server/event.c, server/named_pipe.c, server/object.h, server/sock.c
@@ -575,7 +571,7 @@ server-Address_Change_Notification.ok:
 # |   *	Implement passing ACLs to CreateProcess. [by Joris van der Wel]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#22006] OpenProcess does not enforce ACL
+# |   *	[#22006] Support for process ACLs
 # |
 # | Modified files: 
 # |   *	dlls/advapi32/tests/security.c, dlls/kernel32/process.c, server/object.c, server/object.h, server/process.c,
@@ -597,7 +593,7 @@ server-CreateProcess_ACLs.ok:
 # |   *	Add support for inherited security attributes. [rev 6, by Erich E. Hoover]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#34406] Finale Notepad 2012 doesn't copy/create user files on program start
+# |   *	[#34406] Support for inherited file ACLs
 # |
 # | Modified files: 
 # |   *	dlls/advapi32/tests/security.c, include/winnt.h, server/change.c, server/fd.c, server/file.c, server/file.h
@@ -616,7 +612,7 @@ server-Inherited_ACLs.ok: server-Stored_ACLs.ok
 # |   *	Add default security descriptor ownership and DACLs for processes. [by Erich E. Hoover]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#15980] Rhapsody 2 crashes on startup (GetSecurityInfo returns NULL DACL for process object)
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
 # |
 # | Modified files: 
 # |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
@@ -635,7 +631,7 @@ server-Misc_ACL.ok:
 # |   *	Store and return security attributes with extended file attributes. [rev 6, by Erich E. Hoover]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#31858] Netflix on Firefox fails with Internet Connection Problem when loading bar is at 99%
+# |   *	[#31858] Support for stored file ACLs
 # |
 # | Modified files: 
 # |   *	configure.ac, dlls/advapi32/tests/security.c, server/change.c, server/file.c, server/file.h
@@ -673,7 +669,7 @@ shell32-Default_Folder_ACLs.ok:
 # |   *	Add support for extra large and jumbo icon lists in shell32. [by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#24721] Explorer++ crashes when choosing to view large icons or extra large icons
+# |   *	[#24721] Add support for extra large and jumbo icon lists in shell32
 # |
 # | Modified files: 
 # |   *	dlls/shell32/iconcache.c, dlls/shell32/shell32_main.h, dlls/shell32/shellord.c
@@ -691,7 +687,7 @@ shell32-Icons.ok:
 # |   *	Manually relay RunDLL_CallEntry16 to make Tages Protection v5 happy. [by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#23033] Tages Protection v5.x: games report "DLL not found shell.dll16.dll" (Runaway 2: The Dream Of The Turtle, ...)
+# |   *	[#23033] Use manual relay for RunDLL_CallEntry16 in shell32
 # |
 # | Modified files: 
 # |   *	dlls/shell32/control.c, dlls/shell32/shell32.spec
@@ -709,7 +705,7 @@ shell32-RunDLL_CallEntry16.ok:
 # |   *	shell32: Implement SHCreateSessionKey. [by Dmitry Timoshkov]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#35630] SHCreateSessionKey is unimplemented
+# |   *	[#35630] Support for SHCreateSessionKey
 # |
 # | Modified files: 
 # |   *	dlls/shell32/shell32.spec, dlls/shell32/shellreg.c
@@ -743,7 +739,7 @@ shlwapi-UrlCombine.ok:
 # |   *	Allow changing the tablet / media center status via wine registry key. [by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#18732] Microsoft Experience Pack for Tablet PC 1 refuses to install
+# |   *	[#18732] Make it possible to change media center / tablet pc status
 # |
 # | Modified files: 
 # |   *	dlls/user32/sysparams.c
@@ -761,7 +757,7 @@ user32-GetSystemMetrics.ok:
 # |   *	Handle TOOLTIPS_GetTipText edge cases. [by Erich E. Hoover]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#30648] SEGA Genesis / Mega Drive Classic Collection (Steam) crashes on startup
+# |   *	[#30648] Support for TOOLTIPS_GetTipText edge cases
 # |
 # | Modified files: 
 # |   *	dlls/comctl32/tooltips.c
@@ -780,8 +776,7 @@ user32-GetTipText.ok:
 # |   *	Workaround for programs leaking wndproc splots. [by Sebastian Lackner]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#32451] Multiple GOG.com installer bundles show a broken/unresponsive dialog window during installation (installer
-# | 	process running out of wndproc slots)
+# |   *	[#32451] Fix for programs leaking wndproc slots
 # |
 # | Modified files: 
 # |   *	dlls/user32/winproc.c
@@ -799,8 +794,7 @@ user32-WndProc.ok:
 # |   *	Add some generic hardware in HKEY_DYN_DATA\Config Manager\Enum. [by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#7115] Need for Speed III installer fails in Win9X mode, reporting "Could not get 'HardWareKey' value" (active PnP
-# | 	device keys in 'HKEY_DYN_DATA\\Config Manager\\Enum' missing)
+# |   *	[#7115] Need for Speed 3 installer requires devices in HKEY_DYN_DATA
 # |
 # | Modified files: 
 # |   *	programs/wineboot/wineboot.c
@@ -819,7 +813,7 @@ wineboot-HKEY_DYN_DATA.ok:
 # | 	wine/+archive/ubuntu/ppa/+files/wine1.7_1.7.22-0ubuntu1.debian.tar.gz. [rev 4, by Maarten Lankhorst]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#10495] Wine should support PulseAudio
+# |   *	[#10495] Support for PulseAudio backend for audio
 # |
 # | Modified files: 
 # |   *	configure.ac, dlls/mmdevapi/main.c, dlls/mmdevapi/tests/render.c, dlls/winepulse.drv/Makefile.in,
@@ -914,8 +908,7 @@ ws2_32-Connect_Time.ok:
 # |   *	Implement TransmitFile. [by Erich E. Hoover]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#5048] Multiple applications and games need support for ws2_32 SIO_GET_EXTENSION_FUNCTION_POINTER TransmitFile
-# | 	(WSAID_TRANSMITFILE)
+# |   *	[#5048] Support for TransmitFile
 # |
 # | Modified files: 
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c
@@ -937,7 +930,7 @@ ws2_32-TransmitFile.ok:
 # |   *	Implement ws2_32.inet_pton. [by Bruno Jesus]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#36713] Watch_Dogs requires ws2_32.inet_pton
+# |   *	[#36713] Support for ws2_32.inet_pton
 # |
 # | Modified files: 
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/ws2_32.spec, include/ws2tcpip.h
@@ -955,8 +948,7 @@ ws2_32-inet_pton.ok:
 # |   *	Partial implementation of WTSEnumerateProcessesW. [by Sebastian Lackner]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#29903] Some Microsoft debuggers fail to enumerate processes due to wtsapi32.WTSEnumerateProcessesW() being a stub
-# | 	(Microsoft Visual Studio 2005, DbgCLR from .NET 2.0 SDK)
+# |   *	[#29903] Add implementation of WTSEnumerateProcessesW
 # |
 # | Modified files: 
 # |   *	dlls/wtsapi32/tests/wtsapi.c, dlls/wtsapi32/wtsapi32.c

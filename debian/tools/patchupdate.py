@@ -136,7 +136,6 @@ def read_patchsets(directory):
     unique_id   = itertools.count()
     all_patches = {}
     name_to_id  = {}
-    all_bugs    = []
 
     # Read in sorted order (to ensure created Makefile doesn't change too much)
     for name in sorted(os.listdir(directory)):
@@ -195,19 +194,13 @@ def read_patchsets(directory):
             elif key == "fixes":
                 r = re.match("^[0-9]+$", val)
                 if r:
-                    bugid = int(val)
-                    patch.fixes.append((bugid, None, None))
-                    all_bugs.append(bugid)
+                    patch.fixes.append((int(val), None))
                     continue
-
                 r = re.match("^\\[ *([0-9]+) *\\](.*)$", val)
                 if r:
-                    bugid, description = int(r.group(1)), r.group(2).strip()
-                    patch.fixes.append((bugid, None, description))   
-                    all_bugs.append(bugid)
+                    patch.fixes.append((int(r.group(1)), r.group(2).strip()))
                     continue
-
-                patch.fixes.append((None, None, val))
+                patch.fixes.append((None, val))
 
             elif key == "depends":
                 if not name_to_id.has_key(val):
@@ -219,11 +212,6 @@ def read_patchsets(directory):
 
         if len(info.author) and len(info.subject) and len(info.revision):
             patch.authors.append(info)
-
-    bug_short_desc = _winebugs_query_short_desc(all_bugs)
-    for i, patch in all_patches.iteritems():
-        patch.fixes = [(bugid, (bug_short_desc[bugid] if bug_short_desc.has_key(bugid) else None),
-                       description) for bugid, dummy, description in patch.fixes]
 
     return all_patches
 
@@ -437,9 +425,9 @@ def generate_makefile(all_patches):
             fp.write("# |\n")
 
             # List all bugs fixed by this patchset
-            if any([bugid is not None for bugid, bugname, description in patch.fixes]):
+            if any([bugid is not None for bugid, bugname in patch.fixes]):
                 fp.write("# | This patchset fixes the following Wine bugs:\n")
-                for bugid, bugname, description in patch.fixes:
+                for bugid, bugname in patch.fixes:
                     if bugid is not None:
                         fp.write("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap("[#%d] %s" % (bugid, bugname), 120)))
                 fp.write("# |\n")
@@ -472,26 +460,28 @@ def generate_makefile(all_patches):
 def generate_markdown(all_patches):
     """Generate README.md and DEVELOPER.md including information about specific patches and bugfixes."""
 
-    # Get list of all bugs
+    # Get list of all bugs (including short_desc from Wine bugzilla)
     def _all_bugs():
         all_bugs = []
         for i, patch in all_patches.iteritems():
-            for (bugid, bugname, description) in patch.fixes:
-                if bugid is not None:
-                    if description is None: description = bugname
-                    all_bugs.append((bugid, bugname, description))
-        for (bugid, bugname, description) in sorted(all_bugs, key=lambda x: x[2]):
+            for bugid, bugname in patch.fixes:
+                if bugid is not None: all_bugs.append((bugid, bugname))
+        bug_short_desc = _winebugs_query_short_desc([bugid for bugid, bugname in all_bugs])
+        for bugid, bugname in sorted(all_bugs, key=lambda x: x[1]):
+            if bugid is None: continue
+            short_desc = bug_short_desc[bugid]
+            if bugname is None: bugname = short_desc
             yield "%s ([Wine Bug #%d](http://bugs.winehq.org/show_bug.cgi?id=%d \"%s\"))" % \
-                  (description, bugid, bugid, bugname.replace("\\", "\\\\").replace("\"", "\\\""))
+                  (bugname, bugid, bugid, short_desc.replace("\\", "\\\\").replace("\"", "\\\""))
 
     # Get list of all fixes
     def _all_fixes():
         all_fixes = []
         for i, patch in all_patches.iteritems():
-            for (bugid, bugname, description) in patch.fixes:
-                if bugid is None: all_fixes.append(description)
-        for description in sorted(all_fixes):
-            yield description
+            for bugid, bugname in patch.fixes:
+                if bugid is None: all_fixes.append((bugid, bugname))
+        for bugid, bugname in sorted(all_fixes, key=lambda x: x[1]):
+            yield bugname
 
     # Read information from changelog
     def _read_changelog():

@@ -129,6 +129,10 @@ for dependency in awk cut dd du grep gzip hexdump patch sha1sum; do
 	fi
 done
 
+# Workaround for new versions of awk, which assume that we want to use unicode
+export LANG=C
+export LC_ALL=C
+
 # Decode base85 git data, prepend with a gzip header
 awk_decode_b85='
 BEGIN{

@@ -33,6 +33,7 @@ Wine-Compholio contains fixes for the following Wine bugs:
 * Need for Speed 3 installer requires devices in HKEY_DYN_DATA ([Wine Bug #7115](http://bugs.winehq.org/show_bug.cgi?id=7115 "Need for Speed III installer fails in Win9X mode, reporting \"Could not get 'HardWareKey' value\" (active PnP device keys in 'HKEY_DYN_DATA\\\\Config Manager\\\\Enum' missing)"))
 * Return correct IMediaSeeking stream positions in quartz ([Wine Bug #23174](http://bugs.winehq.org/show_bug.cgi?id=23174 "Fallout 3: Diologue and Video/sound issues"))
 * Set ldr.EntryPoint for main executable ([Wine Bug #33034](http://bugs.winehq.org/show_bug.cgi?id=33034 "Many GFWL (Games For Windows Live) 1.x/2.x/3.x games crash or exit silently on startup (DiRT 2/3, GTA IV Steam)"))
+* Some applications neeed kernel32.GetFinalPathNameByHandle ([Wine Bug #36073](http://bugs.winehq.org/show_bug.cgi?id=36073 "OneDrive crashes on unimplemented function KERNEL32.dll.GetFinalPathNameByHandleW"))
 * Support for AllocateAndGetTcpExTableFromStack ([Wine Bug #34372](http://bugs.winehq.org/show_bug.cgi?id=34372 "Add missing function AllocateAndGetTcpExTableFromStack() to iphlpapi.dll"))
 * Support for DwmInvalidateIconicBitmaps ([Wine Bug #32977](http://bugs.winehq.org/show_bug.cgi?id=32977 "Solidworks 2012 needs unimplemented function dwmapi.dll.DwmInvalidateIconicBitmaps (Win7 mode)"))
 * Support for GetSystemTimes ([Wine Bug #19813](http://bugs.winehq.org/show_bug.cgi?id=19813 "Voddler needs GetSystemTimes to run"))

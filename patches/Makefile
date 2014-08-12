@@ -16,6 +16,7 @@ PATCHLIST := \
 	dwmapi-Invalidate_Thumbnail.ok \
 	fonts-Missing_Fonts.ok \
 	iphlpapi-TCP_Table.ok \
+	kernel32-GetFinalPathNameByHandle.ok \
 	kernel32-GetSystemTimes.ok \
 	kernel32-GetVolumePathName.ok \
 	kernel32-Named_Pipe.ok \
@@ -229,6 +230,25 @@ iphlpapi-TCP_Table.ok:
 	@( \
 		echo '+    { "iphlpapi-TCP_Table", "Erich E. Hoover", "Implement AllocateAndGetTcpExTableFromStack." },'; \
 	) > iphlpapi-TCP_Table.ok
+
+# Patchset kernel32-GetFinalPathNameByHandle
+# |
+# | Included patches:
+# |   *	Implement GetFinalPathNameByHandle in kernel32. [by Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36073] OneDrive crashes on unimplemented function KERNEL32.dll.GetFinalPathNameByHandleW
+# |
+# | Modified files: 
+# |   *	dlls/kernel32/file.c, dlls/kernel32/kernel32.spec, dlls/kernel32/tests/file.c, include/fileapi.h
+# |
+.INTERMEDIATE: kernel32-GetFinalPathNameByHandle.ok
+kernel32-GetFinalPathNameByHandle.ok:
+	$(call APPLY_FILE,kernel32-GetFinalPathNameByHandle/0001-kernel32-Implement-GetFinalPathNameByHandle.patch)
+	$(call APPLY_FILE,kernel32-GetFinalPathNameByHandle/0002-kernel32-tests-Add-tests-for-GetFinalPathNameByHandl.patch)
+	@( \
+		echo '+    { "kernel32-GetFinalPathNameByHandle", "Michael Müller", "Implement GetFinalPathNameByHandle in kernel32." },'; \
+	) > kernel32-GetFinalPathNameByHandle.ok
 
 # Patchset kernel32-GetSystemTimes
 # |

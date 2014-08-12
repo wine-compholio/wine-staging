@@ -13,11 +13,21 @@ which are not present in regular wine, and always report such issues to us
 Included bugfixes and improvements
 ----------------------------------
 
-Wine-Compholio contains fixes for the following Wine bugs:
+Fixed bugs for the next release (4):
+
+* Other Pipelight-specific enhancements
+* Some applications neeed kernel32.GetFinalPathNameByHandle ([Wine Bug #36073](http://bugs.winehq.org/show_bug.cgi?id=36073 "OneDrive crashes on unimplemented function KERNEL32.dll.GetFinalPathNameByHandleW"))
+* Support for DwmInvalidateIconicBitmaps ([Wine Bug #32977](http://bugs.winehq.org/show_bug.cgi?id=32977 "Solidworks 2012 needs unimplemented function dwmapi.dll.DwmInvalidateIconicBitmaps (Win7 mode)"))
+* nVidia driver for high-end laptop cards does not list all supported resolutions
+
+
+Fixed bugs in Wine-Compholio 1.7.24 (45):
 
 * ATL IOCS data should not be stored in GWLP_USERDATA ([Wine Bug #21767](http://bugs.winehq.org/show_bug.cgi?id=21767 "JLC's Internet TV crashes on startup"))
 * Add Dynamic DST exceptions for Israel Standard Time ([Wine Bug #36374](http://bugs.winehq.org/show_bug.cgi?id=36374 "Israel timezone handled incorrectly"))
+* Add default ACLs for user shell folders
 * Add implementation of WTSEnumerateProcessesW ([Wine Bug #29903](http://bugs.winehq.org/show_bug.cgi?id=29903 "Some Microsoft debuggers fail to enumerate processes due to wtsapi32.WTSEnumerateProcessesW() being a stub (Microsoft Visual Studio 2005, DbgCLR from .NET 2.0 SDK)"))
+* Add support for Dynamic DST (daylight saving time) information in registry
 * Add support for extra large and jumbo icon lists in shell32 ([Wine Bug #24721](http://bugs.winehq.org/show_bug.cgi?id=24721 "Explorer++ crashes when choosing to view large icons or extra large icons"))
 * Allow special characters in pipe names ([Wine Bug #28995](http://bugs.winehq.org/show_bug.cgi?id=28995 "Unable to use named pipes with \">\" character in the name"))
 * Audio stuttering and performance drops in multiple applications ([Wine Bug #30639](http://bugs.winehq.org/show_bug.cgi?id=30639 "Audio stuttering and performance drops in Star Wolves 3"))
@@ -29,14 +39,18 @@ Wine-Compholio contains fixes for the following Wine bugs:
 * Implement LoadIconMetric function ([Wine Bug #35375](http://bugs.winehq.org/show_bug.cgi?id=35375 "Multiple applications need Vista+ API COMCTL32.dll.380 a.k.a. 'LoadIconMetric' (Solidworks 2013 systray monitor, Microsoft One/SkyDrive)"))
 * Implement a Microsoft Yahei replacement font ([Wine Bug #13829](http://bugs.winehq.org/show_bug.cgi?id=13829 "Wine does not have CJK fonts"))
 * Implement an Arial replacement font ([Wine Bug #32323](http://bugs.winehq.org/show_bug.cgi?id=32323 "Netflix (Silverlight 4.x) and several .NET Framework 3.x/4.0 WPF apps require either Arial or Verdana to be installed"))
+* Lockfree algorithm for filedescriptor cache (improves file access speed)
 * Make it possible to change media center / tablet pc status ([Wine Bug #18732](http://bugs.winehq.org/show_bug.cgi?id=18732 "Microsoft Experience Pack for Tablet PC 1 refuses to install"))
 * Need for Speed 3 installer requires devices in HKEY_DYN_DATA ([Wine Bug #7115](http://bugs.winehq.org/show_bug.cgi?id=7115 "Need for Speed III installer fails in Win9X mode, reporting \"Could not get 'HardWareKey' value\" (active PnP device keys in 'HKEY_DYN_DATA\\\\Config Manager\\\\Enum' missing)"))
+* ~~Old games cannot locate software-only renderer~~ ([Wine Bug #32581](http://bugs.winehq.org/show_bug.cgi?id=32581 "Invalid dwFlags of reference rasterizer's HAL D3DDEVICEDESC"))
+* ~~Other Pipelight specific enhancements~~
+* Reduced SetTimer minimum value from 10 ms to 5 ms (improves Silverlight framerates)
 * Return correct IMediaSeeking stream positions in quartz ([Wine Bug #23174](http://bugs.winehq.org/show_bug.cgi?id=23174 "Fallout 3: Diologue and Video/sound issues"))
+* SO_CONNECT_TIME returns the appropriate time
 * Set ldr.EntryPoint for main executable ([Wine Bug #33034](http://bugs.winehq.org/show_bug.cgi?id=33034 "Many GFWL (Games For Windows Live) 1.x/2.x/3.x games crash or exit silently on startup (DiRT 2/3, GTA IV Steam)"))
-* Some applications neeed kernel32.GetFinalPathNameByHandle ([Wine Bug #36073](http://bugs.winehq.org/show_bug.cgi?id=36073 "OneDrive crashes on unimplemented function KERNEL32.dll.GetFinalPathNameByHandleW"))
 * Support for AllocateAndGetTcpExTableFromStack ([Wine Bug #34372](http://bugs.winehq.org/show_bug.cgi?id=34372 "Add missing function AllocateAndGetTcpExTableFromStack() to iphlpapi.dll"))
-* Support for DwmInvalidateIconicBitmaps ([Wine Bug #32977](http://bugs.winehq.org/show_bug.cgi?id=32977 "Solidworks 2012 needs unimplemented function dwmapi.dll.DwmInvalidateIconicBitmaps (Win7 mode)"))
 * Support for GetSystemTimes ([Wine Bug #19813](http://bugs.winehq.org/show_bug.cgi?id=19813 "Voddler needs GetSystemTimes to run"))
+* Support for GetVolumePathName
 * Support for ITextRange, ITextFont and ITextPara ([Wine Bug #18303](http://bugs.winehq.org/show_bug.cgi?id=18303 "Adobe Acrobat Pro 7: Crashes when selecting the \"edit\" menu while having a file open."))
 * Support for Junction Points ([Wine Bug #12401](http://bugs.winehq.org/show_bug.cgi?id=12401 "Support junction points, i.e. DeviceIoCtl(FSCTL_SET_REPARSE_POINT/FSCTL_GET_REPARSE_POINT)"))
 * Support for NtSetInformationFile class FileDispositionInformation ([Wine Bug #30397](http://bugs.winehq.org/show_bug.cgi?id=30397 "Multiple applications need support for NtSetInformationFile class FileDispositionInformation (Cygwin installer, Stylizer 5.x Visual CSS editor, Spoon Studio 2011 (ex Xenocode) application sandboxing scheme)"))
@@ -52,19 +66,8 @@ Wine-Compholio contains fixes for the following Wine bugs:
 * Support for ws2_32.inet_pton ([Wine Bug #36713](http://bugs.winehq.org/show_bug.cgi?id=36713 "Watch_Dogs requires ws2_32.inet_pton"))
 * Use manual relay for RunDLL_CallEntry16 in shell32 ([Wine Bug #23033](http://bugs.winehq.org/show_bug.cgi?id=23033 "Tages Protection v5.x: games report \"DLL not found shell.dll16.dll\" (Runaway 2: The Dream Of The Turtle, ...)"))
 * Workaround for TransactNamedPipe not being supported ([Wine Bug #17273](http://bugs.winehq.org/show_bug.cgi?id=17273 "Many apps and games need SetNamedPipeHandleState implementation (support for named pipe message mode)(FireFox+Flash, Win8/NET 4.x SDK/vcrun2012, WiX installers)"))
-
-Besides that the following additional changes are included:
-
-* Add default ACLs for user shell folders
-* Add support for Dynamic DST (daylight saving time) information in registry
-* Lockfree algorithm for filedescriptor cache (improves file access speed)
-* Other Pipelight-specific enhancements
-* Reduced SetTimer minimum value from 10 ms to 5 ms (improves Silverlight framerates)
-* SO_CONNECT_TIME returns the appropriate time
-* Support for GetVolumePathName
 * Workaround for shlwapi URLs with relative paths
 * XEMBED support for embedding Wine windows inside Linux applications
-* nVidia driver for high-end laptop cards does not list all supported resolutions
 
 
 How to install Wine-Compholio

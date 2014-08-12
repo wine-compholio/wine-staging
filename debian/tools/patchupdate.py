@@ -412,63 +412,65 @@ def verify_dependencies(all_patches):
     finally:
         _save_patch_cache()
 
-def generate_makefile(all_patches, fp):
+def generate_makefile(all_patches):
     """Generate Makefile for a specific set of patches."""
 
     with open(config.path_template_Makefile) as template_fp:
         template = template_fp.read()
-    fp.write(template.format(patchlist="\t" + " \\\n\t".join(["%s.ok" % patch.name for i, patch in all_patches.iteritems()])))
 
-    for i, patch in all_patches.iteritems():
-        fp.write("# Patchset %s\n" % patch.name)
-        fp.write("# |\n")
-        fp.write("# | Included patches:\n")
+    with open(config.path_Makefile, "w") as fp:
+        fp.write(template.format(patchlist="\t" + " \\\n\t".join(["%s.ok" % patch.name for i, patch in all_patches.iteritems()])))
 
-        # List all patches and their corresponding authors
-        for info in patch.authors:
-            if not info.subject: continue
-            s = []
-            if info.revision and info.revision != "1": s.append("rev %s" % info.revision)
-            if info.author: s.append("by %s" % info.author)
-            if len(s): s = " [%s]" % ", ".join(s)
-            fp.write("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap(info.subject + s, 120)))
-        fp.write("# |\n")
-
-        # List all bugs fixed by this patchset
-        if any([bugid is not None for bugid, bugname, description in patch.fixes]):
-            fp.write("# | This patchset fixes the following Wine bugs:\n")
-            for bugid, bugname, description in patch.fixes:
-                if bugid is not None:
-                    fp.write("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap("[#%d] %s" % (bugid, bugname), 120)))
+        for i, patch in all_patches.iteritems():
+            fp.write("# Patchset %s\n" % patch.name)
             fp.write("# |\n")
+            fp.write("# | Included patches:\n")
 
-        # List all modified files
-        fp.write("# | Modified files: \n")
-        fp.write("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap(", ".join(sorted(patch.modified_files)), 120)))
-        fp.write("# |\n")
-
-        # Generate dependencies and code to apply patches
-        fp.write(".INTERMEDIATE: %s.ok\n" % patch.name)
-        depends = " ".join([""] + ["%s.ok" % all_patches[d].name for d in patch.depends]) if len(patch.depends) else ""
-        fp.write("%s.ok:%s\n" % (patch.name, depends))
-        for f in patch.files:
-            fp.write("\t$(call APPLY_FILE,%s)\n" % os.path.join(patch.name, f))
-
-        # Create *.ok file (used to generate patchlist)
-        if len(patch.authors):
-            fp.write("\t@( \\\n")
+            # List all patches and their corresponding authors
             for info in patch.authors:
                 if not info.subject: continue
-                s = info.subject.replace("\\", "\\\\\\\\").replace("\"", "\\\\\"")
-                if info.revision and info.revision != "1": s += " [rev %s]" % info.revision
-                fp.write("\t\techo '+    { \"%s\", \"%s\", \"%s\" },'; \\\n" % (patch.name, info.author, s))
-            fp.write("\t) > %s.ok\n" % patch.name)
-        else:
-            fp.write("\ttouch %s.ok\n" % patch.name)
-        fp.write("\n");
+                s = []
+                if info.revision and info.revision != "1": s.append("rev %s" % info.revision)
+                if info.author: s.append("by %s" % info.author)
+                if len(s): s = " [%s]" % ", ".join(s)
+                fp.write("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap(info.subject + s, 120)))
+            fp.write("# |\n")
 
-def generate_readme_md(all_patches, fp):
-    """Generate README.md including information about specific patches and bugfixes."""
+            # List all bugs fixed by this patchset
+            if any([bugid is not None for bugid, bugname, description in patch.fixes]):
+                fp.write("# | This patchset fixes the following Wine bugs:\n")
+                for bugid, bugname, description in patch.fixes:
+                    if bugid is not None:
+                        fp.write("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap("[#%d] %s" % (bugid, bugname), 120)))
+                fp.write("# |\n")
+
+            # List all modified files
+            fp.write("# | Modified files: \n")
+            fp.write("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap(", ".join(sorted(patch.modified_files)), 120)))
+            fp.write("# |\n")
+
+            # Generate dependencies and code to apply patches
+            fp.write(".INTERMEDIATE: %s.ok\n" % patch.name)
+            depends = " ".join([""] + ["%s.ok" % all_patches[d].name for d in patch.depends]) if len(patch.depends) else ""
+            fp.write("%s.ok:%s\n" % (patch.name, depends))
+            for f in patch.files:
+                fp.write("\t$(call APPLY_FILE,%s)\n" % os.path.join(patch.name, f))
+
+            # Create *.ok file (used to generate patchlist)
+            if len(patch.authors):
+                fp.write("\t@( \\\n")
+                for info in patch.authors:
+                    if not info.subject: continue
+                    s = info.subject.replace("\\", "\\\\\\\\").replace("\"", "\\\\\"")
+                    if info.revision and info.revision != "1": s += " [rev %s]" % info.revision
+                    fp.write("\t\techo '+    { \"%s\", \"%s\", \"%s\" },'; \\\n" % (patch.name, info.author, s))
+                fp.write("\t) > %s.ok\n" % patch.name)
+            else:
+                fp.write("\ttouch %s.ok\n" % patch.name)
+            fp.write("\n");
+
+def generate_markdown(all_patches):
+    """Generate README.md and DEVELOPER.md including information about specific patches and bugfixes."""
 
     # Get list of all bugs
     def _all_bugs():
@@ -491,16 +493,6 @@ def generate_readme_md(all_patches, fp):
         for description in sorted(all_fixes):
             yield description
 
-    # Create enumeration from list
-    def _enum(x):
-        return "* " + "\n* ".join(x)
-
-    with open(config.path_template_README_md) as template_fp:
-        template = template_fp.read()
-    fp.write(template.format(bugs=_enum(_all_bugs()), fixes=_enum(_all_fixes())))
-
-def generate_developer_md(fp):
-
     # Read information from changelog
     def _read_changelog():
         with open(config.path_changelog) as fp:
@@ -514,10 +506,19 @@ def generate_developer_md(fp):
             if distro.lower() != "unreleased":
                 return version
 
+    # Create enumeration from list
+    def _enum(x):
+        return "* " + "\n* ".join(x)
+
+    with open(config.path_template_README_md) as template_fp:
+        template = template_fp.read()
+    with open(config.path_README_md, "w") as fp:
+        fp.write(template.format(bugs=_enum(_all_bugs()), fixes=_enum(_all_fixes())))
+
     with open(config.path_template_DEVELOPER_md) as template_fp:
         template = template_fp.read()
-    fp.write(template.format(version=_latest_stable_version()))
-
+    with open(config.path_DEVELOPER_md, "w") as fp:
+        fp.write(template.format(version=_latest_stable_version()))
 
 if __name__ == "__main__":
 
@@ -536,11 +537,5 @@ if __name__ == "__main__":
         print ""
         exit(1)
 
-    with open(config.path_Makefile, "w") as fp:
-        generate_makefile(all_patches, fp)
-
-    with open(config.path_README_md, "w") as fp:
-        generate_readme_md(all_patches, fp)
-
-    with open(config.path_DEVELOPER_md, "w") as fp:
-        generate_developer_md(fp)
+    generate_makefile(all_patches)
+    generate_markdown(all_patches)

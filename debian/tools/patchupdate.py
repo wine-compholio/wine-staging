@@ -118,6 +118,69 @@ def _winebugs_query_short_desc(bugids):
         result[bugid] = element.firstChild.data
     return result
 
+def read_definition(filename, name_to_id = None, revision = None):
+    """Read a definition file and return information as tuple (authors, depends, fixes)."""
+
+    filename = os.path.join(filename, "definition")
+    try:
+        if revision is not None:
+            filename = "%s:%s" % (revision, filename)
+            with open(os.devnull, 'w') as devnull:
+                content = subprocess.check_output(["git", "show", filename], stderr=devnull)
+        else:
+            with open(filename) as fp:
+                content = fp.read()
+    except IOError:
+        raise PatchUpaterError("Missing definition file %s" % filename)
+
+    authors = []
+    depends = set()
+    fixes   = []
+    info    = AuthorInfo()
+
+    for line in content.split("\n"):
+        if line.startswith("#"):
+            continue
+
+        tmp = line.split(":", 1)
+        if len(tmp) != 2:
+            if len(info.author) and len(info.subject):
+                authors.append(info)
+                info = AuthorInfo()
+            continue
+
+        key, val = tmp[0].lower(), tmp[1].strip()
+        if key == "author":
+            if len(info.author): info.author += ", "
+            info.author += val
+        elif key == "subject" or key == "title":
+            if len(info.subject): info.subject += " "
+            info.subject += val
+        elif key == "revision":
+            if len(info.revision): info.revision += ", "
+            info.revision += val
+        elif key == "depends":
+            if name_to_id is not None:
+                if not name_to_id.has_key(val):
+                    raise PatchUpdaterError("Definition file %s references unknown dependency %s" % (filename, val))
+                depends.add(name_to_id[val])
+        elif key == "fixes":
+            r = re.match("^[0-9]+$", val)
+            if r:
+                fixes.append((int(val), None))
+                continue
+            r = re.match("^\\[ *([0-9]+) *\\](.*)$", val)
+            if r:
+                fixes.append((int(r.group(1)), r.group(2).strip()))
+                continue
+            fixes.append((None, val))
+        else:
+            print "WARNING: Ignoring unknown command in definition file %s: %s" % (deffile, line)
+
+    if len(info.author) and len(info.subject):
+        authors.append(info)
+    return authors, depends, fixes
+
 def read_patchsets(directory):
     """Read information about all patchsets in a given directory."""
 
@@ -165,53 +228,8 @@ def read_patchsets(directory):
 
     # Now read the definition files in a second step
     for i, patch in all_patches.iteritems():
-        deffile = os.path.join(os.path.join(directory, patch.name), "definition")
-
-        if not os.path.isfile(deffile):
-            raise PatchUpdaterError("Missing definition file %s" % deffile)
-
-        info = AuthorInfo()
-
-        for key, val in _iter_kv_from_file(deffile):
-            if key is None:
-                if len(info.author) and len(info.subject) and len(info.revision):
-                    patch.authors.append(info)
-                    info = AuthorInfo()
-                continue
-
-            if key == "author":
-                if len(info.author): info.author += ", "
-                info.author += val
-
-            elif key == "subject" or key == "title":
-                if len(info.subject): info.subject += " "
-                info.subject += val
-
-            elif key == "revision":
-                if len(info.revision): info.revision += ", "
-                info.revision += val
-
-            elif key == "fixes":
-                r = re.match("^[0-9]+$", val)
-                if r:
-                    patch.fixes.append((int(val), None))
-                    continue
-                r = re.match("^\\[ *([0-9]+) *\\](.*)$", val)
-                if r:
-                    patch.fixes.append((int(r.group(1)), r.group(2).strip()))
-                    continue
-                patch.fixes.append((None, val))
-
-            elif key == "depends":
-                if not name_to_id.has_key(val):
-                    raise PatchUpdaterError("Definition file %s references unknown dependency %s" % (deffile, val))
-                patch.depends.add(name_to_id[val])
-
-            else:
-                print "WARNING: Ignoring unknown command in definition file %s: %s" % (deffile, line)
-
-        if len(info.author) and len(info.subject) and len(info.revision):
-            patch.authors.append(info)
+        patch.authors, patch.depends, patch.fixes = \
+            read_definition(os.path.join(directory, patch.name), name_to_id=name_to_id)
 
     return all_patches
 

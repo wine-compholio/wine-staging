@@ -157,8 +157,12 @@ def enum_directories(revision, path):
             dirs.append((name, subdirectory))
     else:
         filename = "%s:%s" % (revision, path)
-        with open(os.devnull, 'w') as devnull:
-            content = subprocess.check_output(["git", "show", filename], stderr=devnull)
+        try:
+            with open(os.devnull, 'w') as devnull:
+                content = subprocess.check_output(["git", "show", filename], stderr=devnull)
+        except subprocess.CalledProcessError as e:
+            if e.returncode != 128: raise
+            return [] # ignore error
         lines = content.split("\n")
         if not lines[0].startswith("tree ") or lines[1] != "":
             raise RuntimeError("Unexpected output from 'git show %s'" % filename)
@@ -336,7 +340,7 @@ def get_wine_file(filename, force=False):
         with open(os.devnull, 'w') as devnull:
             content = subprocess.check_output(["git", "show", entry], cwd=config.path_wine, stderr=devnull)
     except subprocess.CalledProcessError as e:
-        if e.returncode != 128: raise # not found
+        if e.returncode != 128: raise
         content = ""
 
     content_hash = hashlib.sha256(content).digest()
@@ -562,13 +566,18 @@ def generate_markdown(all_patches, stable_patches, stable_compholio_version):
     old_fixes = [(mode, bugid, bugname) for dummy, (mode, bugid, bugname) in
                                             all_fixes.iteritems() if mode <= 0]
 
+    # List of old fixes is not available when releasing a new version
+    if len(old_fixes) == 0:
+        old_fixes = new_fixes
+        new_fixes = []
+
     # Query information from bugzilla
     bug_short_desc = _winebugs_query_short_desc(all_bugids)
 
     # Generate information for current version
     lines = []
     if len(new_fixes):
-        lines.append("**Bugs and features included in the next upcoming release [%d]:**" % len(new_fixes))
+        lines.append("**Bugfixes and features included in the next upcoming release [%d]:**" % len(new_fixes))
         lines.append("")
         for mode, bugid, bugname in sorted(new_fixes, key=lambda x: x[2]):
             lines.append(_format_bug(mode, bugid, bugname))

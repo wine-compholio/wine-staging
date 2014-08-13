@@ -13,7 +13,7 @@ which are not present in regular wine, and always report such issues to us
 Included bugfixes and improvements
 ----------------------------------
 
-**Bugs and features included in the next upcomping release [5]:**
+**Bugs and features included in the next upcoming release [5]:**
 
 * Other Pipelight-specific enhancements
 * Support for DwmInvalidateIconicBitmaps ([Wine Bug #32977](http://bugs.winehq.org/show_bug.cgi?id=32977 "Solidworks 2012 needs unimplemented function dwmapi.dll.DwmInvalidateIconicBitmaps (Win7 mode)"))

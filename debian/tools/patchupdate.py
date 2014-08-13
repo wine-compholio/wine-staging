@@ -568,7 +568,7 @@ def generate_markdown(all_patches, stable_patches, stable_compholio_version):
     # Generate information for current version
     lines = []
     if len(new_fixes):
-        lines.append("**Bugs and features included in the next upcomping release [%d]:**" % len(new_fixes))
+        lines.append("**Bugs and features included in the next upcoming release [%d]:**" % len(new_fixes))
         lines.append("")
         for mode, bugid, bugname in sorted(new_fixes, key=lambda x: x[2]):
             lines.append(_format_bug(mode, bugid, bugname))

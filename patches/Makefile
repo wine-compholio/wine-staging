@@ -23,6 +23,7 @@ PATCHLIST := \
 	kernel32-SystemFileCacheSize.ok \
 	libs-Unicode_Collation.ok \
 	loader-Cmdline_Diagnostics.ok \
+	msi-MoveFiles.ok \
 	ntdll-Dynamic_DST.ok \
 	ntdll-FD_Cache.ok \
 	ntdll-FileDispositionInformation.ok \
@@ -358,6 +359,24 @@ loader-Cmdline_Diagnostics.ok:
 		echo '+    { "loader-Cmdline_Diagnostics", "Sebastian Lackner", "Add commandline option --patches to show the patch list." },'; \
 		echo '+    { "loader-Cmdline_Diagnostics", "Michael Müller", "Add commandline option --check-libs to test if shared libraries are installed." },'; \
 	) > loader-Cmdline_Diagnostics.ok
+
+# Patchset msi-MoveFiles
+# |
+# | Included patches:
+# |   *	Fix ITERATE_MoveFiles when no source- and destname is specified. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#10085] Fix ITERATE_MoveFiles when no source- and destname is specified
+# |
+# | Modified files: 
+# |   *	dlls/msi/files.c
+# |
+.INTERMEDIATE: msi-MoveFiles.ok
+msi-MoveFiles.ok:
+	$(call APPLY_FILE,msi-MoveFiles/0001-msi-Fix-ITERATE_MoveFiles-when-no-source-and-destnam.patch)
+	@( \
+		echo '+    { "msi-MoveFiles", "Sebastian Lackner", "Fix ITERATE_MoveFiles when no source- and destname is specified." },'; \
+	) > msi-MoveFiles.ok
 
 # Patchset ntdll-Dynamic_DST
 # |

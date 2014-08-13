@@ -172,12 +172,17 @@ def enum_directories(revision, path):
 def read_definition(revision, filename, name_to_id):
     """Read a definition file and return information as tuple (authors, depends, fixes)."""
 
-    filename = "%s:%s" % (revision if revision else "", os.path.join(filename, "definition"))
-    try:
-        with open(os.devnull, 'w') as devnull:
-            content = subprocess.check_output(["git", "show", filename], stderr=devnull)
-    except CalledProcessError:
-        raise IOError("Failed to read %s" % filename)
+    filename = os.path.join(filename, "definition")
+    if revision is None:
+        with open(filename) as fp:
+            content = fp.read()
+    else:
+        filename = "%s:%s" % (revision, filename)
+        try:
+            with open(os.devnull, 'w') as devnull:
+                content = subprocess.check_output(["git", "show", filename], stderr=devnull)
+        except CalledProcessError:
+            raise IOError("Failed to load %s" % filename)
 
     authors = []
     depends = set()

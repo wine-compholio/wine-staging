@@ -140,7 +140,7 @@ atl-IOCS_Property.ok:
 # |   *	Implement LoadIconMetric function. [by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#35375] Implement LoadIconMetric function
+# |   *	[#35375] Support for LoadIconMetric
 # |
 # | Modified files: 
 # |   *	dlls/comctl32/Makefile.in, dlls/comctl32/comctl32.spec, dlls/comctl32/icon.c, dlls/comctl32/tests/misc.c,
@@ -235,7 +235,7 @@ iphlpapi-TCP_Table.ok:
 # |   *	Implement GetFinalPathNameByHandle in kernel32. [by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#36073] Some applications neeed kernel32.GetFinalPathNameByHandle
+# |   *	[#36073] Support for GetFinalPathNameByHandle
 # |
 # | Modified files: 
 # |   *	dlls/kernel32/file.c, dlls/kernel32/kernel32.spec, dlls/kernel32/tests/file.c, include/fileapi.h
@@ -505,7 +505,7 @@ quartz-MediaSeeking_Positions.ok:
 # |   *	Implement Stubs for ITextPara interface. [rev 2, by Jactry Zeng]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#12458] Implement ITextDocument_fnRange function
+# |   *	[#12458] Support for ITextDocument_fnRange function
 # |   *	[#18303] Support for ITextRange, ITextFont and ITextPara
 # |
 # | Modified files: 
@@ -669,7 +669,7 @@ shell32-Default_Folder_ACLs.ok:
 # |   *	Add support for extra large and jumbo icon lists in shell32. [by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#24721] Add support for extra large and jumbo icon lists in shell32
+# |   *	[#24721] Support for extra large and jumbo icon lists in shell32
 # |
 # | Modified files: 
 # |   *	dlls/shell32/iconcache.c, dlls/shell32/shell32_main.h, dlls/shell32/shellord.c
@@ -948,7 +948,7 @@ ws2_32-inet_pton.ok:
 # |   *	Partial implementation of WTSEnumerateProcessesW. [by Sebastian Lackner]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#29903] Add implementation of WTSEnumerateProcessesW
+# |   *	[#29903] Support for WTSEnumerateProcessesW
 # |
 # | Modified files: 
 # |   *	dlls/wtsapi32/tests/wtsapi.c, dlls/wtsapi32/wtsapi32.c

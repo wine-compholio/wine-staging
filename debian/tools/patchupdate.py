@@ -568,13 +568,13 @@ def generate_markdown(all_patches, stable_patches, stable_compholio_version):
     # Generate information for current version
     lines = []
     if len(new_fixes):
-        lines.append("Fixed bugs for the next release (%d):" % len(new_fixes))
+        lines.append("**Bugs and features included in the next upcomping release [%d]:**" % len(new_fixes))
         lines.append("")
         for mode, bugid, bugname in sorted(new_fixes, key=lambda x: x[2]):
             lines.append(_format_bug(mode, bugid, bugname))
         lines.append("")
         lines.append("")
-    lines.append("Fixed bugs in Wine-Compholio %s (%d):" % (stable_compholio_version, len(old_fixes)))
+    lines.append("**Bugs fixed in Wine-Compholio %s [%d]:**" % (stable_compholio_version, len(old_fixes)))
     lines.append("")
     for mode, bugid, bugname in sorted(old_fixes, key=lambda x: x[2]):
         lines.append(_format_bug(mode, bugid, bugname))

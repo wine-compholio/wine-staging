@@ -37,6 +37,7 @@ PATCHLIST := \
 	server-CreateProcess_ACLs.ok \
 	server-Inherited_ACLs.ok \
 	server-Misc_ACL.ok \
+	server-Process.ok \
 	server-Stored_ACLs.ok \
 	shell32-Default_Folder_ACLs.ok \
 	shell32-Icons.ok \
@@ -643,6 +644,24 @@ server-Misc_ACL.ok:
 	@( \
 		echo '+    { "server-Misc_ACL", "Erich E. Hoover", "Add default security descriptor ownership and DACLs for processes." },'; \
 	) > server-Misc_ACL.ok
+
+# Patchset server-Process
+# |
+# | Included patches:
+# |   *	Return error when opening a terminating process. [by Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37087] Gothic 2 demo expects an error when opening a terminating process
+# |
+# | Modified files: 
+# |   *	server/process.c
+# |
+.INTERMEDIATE: server-Process.ok
+server-Process.ok:
+	$(call APPLY_FILE,server-Process/0001-server-Return-error-when-opening-a-terminating-proce.patch)
+	@( \
+		echo '+    { "server-Process", "Michael Müller", "Return error when opening a terminating process." },'; \
+	) > server-Process.ok
 
 # Patchset server-Stored_ACLs
 # |

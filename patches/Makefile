@@ -11,6 +11,7 @@ PATCHLIST := \
 	Miscellaneous.ok \
 	Pipelight.ok \
 	atl-IOCS_Property.ok \
+	bcrypt-BCryptGetFipsAlgorithmMode.ok \
 	comctl32-LoadIconMetric.ok \
 	dsound-Fast_Mixer.ok \
 	dwmapi-Invalidate_Thumbnail.ok \
@@ -135,6 +136,24 @@ atl-IOCS_Property.ok:
 	@( \
 		echo '+    { "atl-IOCS_Property", "Qian Hong", "Store IOCS data in a property instead of GWLP_USERDATA." },'; \
 	) > atl-IOCS_Property.ok
+
+# Patchset bcrypt-BCryptGetFipsAlgorithmMode
+# |
+# | Included patches:
+# |   *	Add semi-stub for BCryptGetFipsAlgorithmMode. [by Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#32194] Multiple applications need BCryptGetFipsAlgorithmMode
+# |
+# | Modified files: 
+# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/tests/bcrypt.c
+# |
+.INTERMEDIATE: bcrypt-BCryptGetFipsAlgorithmMode.ok
+bcrypt-BCryptGetFipsAlgorithmMode.ok:
+	$(call APPLY_FILE,bcrypt-BCryptGetFipsAlgorithmMode/0001-bcrypt-Add-semi-stub-for-BCryptGetFipsAlgorithmMode.patch)
+	@( \
+		echo '+    { "bcrypt-BCryptGetFipsAlgorithmMode", "Michael Müller", "Add semi-stub for BCryptGetFipsAlgorithmMode." },'; \
+	) > bcrypt-BCryptGetFipsAlgorithmMode.ok
 
 # Patchset comctl32-LoadIconMetric
 # |

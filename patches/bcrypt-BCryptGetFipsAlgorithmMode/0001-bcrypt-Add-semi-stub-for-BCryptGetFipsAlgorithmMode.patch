@@ -1,0 +1,98 @@
+From cdadefc52b0cdab8bc768dd6e494de69e75ae379 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 16 Aug 2014 00:18:06 +0200
+Subject: bcrypt: Add semi-stub for BCryptGetFipsAlgorithmMode
+
+---
+ dlls/bcrypt/bcrypt.spec    |  2 +-
+ dlls/bcrypt/bcrypt_main.c  | 11 +++++++++++
+ dlls/bcrypt/tests/bcrypt.c | 22 ++++++++++++++++++++++
+ 3 files changed, 34 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/bcrypt/bcrypt.spec b/dlls/bcrypt/bcrypt.spec
+index 3b154f5..83cdbea 100644
+--- a/dlls/bcrypt/bcrypt.spec
++++ b/dlls/bcrypt/bcrypt.spec
+@@ -27,7 +27,7 @@
+ @ stdcall BCryptGenRandom(ptr ptr long long)
+ @ stub BCryptGenerateKeyPair
+ @ stub BCryptGenerateSymmetricKey
+-@ stub BCryptGetFipsAlgorithmMode
++@ stdcall BCryptGetFipsAlgorithmMode(ptr)
+ @ stub BCryptGetProperty
+ @ stub BCryptHashData
+ @ stub BCryptImportKey
+diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
+index 5ccb9f1..b4c6fad 100644
+--- a/dlls/bcrypt/bcrypt_main.c
++++ b/dlls/bcrypt/bcrypt_main.c
+@@ -97,3 +97,14 @@ NTSTATUS WINAPI BCryptCloseAlgorithmProvider(BCRYPT_ALG_HANDLE algorithm, DWORD
+ 
+     return STATUS_NOT_IMPLEMENTED;
+ }
++
++NTSTATUS WINAPI BCryptGetFipsAlgorithmMode(BOOLEAN *enabled)
++{
++    FIXME("%p - semi-stub\n", enabled);
++
++    if (!enabled)
++        return STATUS_INVALID_PARAMETER;
++
++    *enabled = FALSE;
++    return STATUS_SUCCESS;
++}
+\ No newline at end of file
+diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
+index 288e745..6e183e8 100644
+--- a/dlls/bcrypt/tests/bcrypt.c
++++ b/dlls/bcrypt/tests/bcrypt.c
+@@ -27,6 +27,7 @@
+ 
+ static NTSTATUS (WINAPI *pBCryptGenRandom)(BCRYPT_ALG_HANDLE hAlgorithm, PUCHAR pbBuffer,
+                                            ULONG cbBuffer, ULONG dwFlags);
++static NTSTATUS (WINAPI *pBCryptGetFipsAlgorithmMode)(BOOLEAN *enabled);
+ 
+ static BOOL Init(void)
+ {
+@@ -38,6 +39,7 @@ static BOOL Init(void)
+     }
+ 
+     pBCryptGenRandom = (void *)GetProcAddress(hbcrypt, "BCryptGenRandom");
++    pBCryptGetFipsAlgorithmMode = (void *)GetProcAddress(hbcrypt, "BCryptGetFipsAlgorithmMode");
+ 
+     return TRUE;
+ }
+@@ -78,10 +80,30 @@ static void test_BCryptGenRandom(void)
+     ok(memcmp(buffer, buffer + 8, 8), "Expected a random number, got 0\n");
+ }
+ 
++static void test_BCryptGetFipsAlgorithmMode(void)
++{
++    NTSTATUS ret;
++    BOOLEAN enabled;
++
++    if (!pBCryptGetFipsAlgorithmMode)
++    {
++        win_skip("BCryptGetFipsAlgorithmMode is not available\n");
++        return;
++    }
++
++    ret = pBCryptGetFipsAlgorithmMode(&enabled);
++    ok(ret == STATUS_SUCCESS, "Expected STATUS_SUCCESS, got 0x%x\n", ret);
++    ok(!enabled, "Expected FIPS mode to be disabled, but it is enabled\n");
++
++    ret = pBCryptGetFipsAlgorithmMode(NULL);
++    ok(ret == STATUS_INVALID_PARAMETER, "Expected STATUS_INVALID_PARAMETER, got 0x%x\n", ret);
++}
++
+ START_TEST(bcrypt)
+ {
+     if (!Init())
+         return;
+ 
+     test_BCryptGenRandom();
++    test_BCryptGetFipsAlgorithmMode();
+ }
+-- 
+1.9.1
+

@@ -13,10 +13,11 @@ which are not present in regular wine, and always report such issues to us
 Included bugfixes and improvements
 ----------------------------------
 
-**Bugfixes and features included in the next upcoming release [7]:**
+**Bugfixes and features included in the next upcoming release [8]:**
 
 * Fix ITERATE_MoveFiles when no source- and destname is specified ([Wine Bug #10085](http://bugs.winehq.org/show_bug.cgi?id=10085 "Adobe Bridge CS2 complains that it can't start due to licensing restrictions (affects photoshop)"))
 * Gothic 2 demo expects an error when opening a terminating process ([Wine Bug #37087](http://bugs.winehq.org/show_bug.cgi?id=37087 "Gothic 2 english demo fails with 'Conflict: a hook process was found. Please deactivate all Antivirus and Anti-Trojan programs and debuggers.'"))
+* Multiple applications need BCryptGetFipsAlgorithmMode ([Wine Bug #32194](http://bugs.winehq.org/show_bug.cgi?id=32194 "Multiple games and applications need bcrypt.dll.BCryptGetFipsAlgorithmMode (Chess Position Trainer, Terraria, .NET System.Security.Cryptography)"))
 * Other Pipelight-specific enhancements
 * Support for DwmInvalidateIconicBitmaps ([Wine Bug #32977](http://bugs.winehq.org/show_bug.cgi?id=32977 "Solidworks 2012 needs unimplemented function dwmapi.dll.DwmInvalidateIconicBitmaps (Win7 mode)"))
 * Support for Dynamic DST (daylight saving time) information in registry

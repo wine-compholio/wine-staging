@@ -51,6 +51,7 @@ PATCHLIST := \
 	wineboot-HKEY_DYN_DATA.ok \
 	winepulse-PulseAudio_Support.ok \
 	winex11-Limited_Resolutions.ok \
+	winex11-Window_Groups.ok \
 	winex11-XEMBED.ok \
 	ws2_32-Connect_Time.ok \
 	ws2_32-TransmitFile.ok \
@@ -924,6 +925,24 @@ winex11-Limited_Resolutions.ok:
 	@( \
 		echo '+    { "winex11-Limited_Resolutions", "Erich E. Hoover", "Update the check for broken nVidia RandR to test for the number of resolutions instead of the number of modes." },'; \
 	) > winex11-Limited_Resolutions.ok
+
+# Patchset winex11-Window_Groups
+# |
+# | Included patches:
+# |   *	Prevent window managers from grouping all wine programs together. [by Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#32699] Prevent window managers from grouping all wine programs together
+# |
+# | Modified files: 
+# |   *	dlls/winex11.drv/window.c
+# |
+.INTERMEDIATE: winex11-Window_Groups.ok
+winex11-Window_Groups.ok:
+	$(call APPLY_FILE,winex11-Window_Groups/0001-winex11-Prevent-window-managers-from-grouping-all-wi.patch)
+	@( \
+		echo '+    { "winex11-Window_Groups", "Michael Müller", "Prevent window managers from grouping all wine programs together." },'; \
+	) > winex11-Window_Groups.ok
 
 # Patchset winex11-XEMBED
 # |

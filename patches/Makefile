@@ -12,6 +12,7 @@ PATCHLIST := \
 	Pipelight.ok \
 	atl-IOCS_Property.ok \
 	bcrypt-BCryptGetFipsAlgorithmMode.ok \
+	comctl32-ImageList.ok \
 	comctl32-LoadIconMetric.ok \
 	dsound-Fast_Mixer.ok \
 	dwmapi-Invalidate_Thumbnail.ok \
@@ -155,6 +156,24 @@ bcrypt-BCryptGetFipsAlgorithmMode.ok:
 	@( \
 		echo '+    { "bcrypt-BCryptGetFipsAlgorithmMode", "Michael Müller", "Add semi-stub for BCryptGetFipsAlgorithmMode." },'; \
 	) > bcrypt-BCryptGetFipsAlgorithmMode.ok
+
+# Patchset comctl32-ImageList
+# |
+# | Included patches:
+# |   *	Fix issue that dragimage in ImageList only works for first four elements. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36761] Fix issue with invisible dragimages in ImageList
+# |
+# | Modified files: 
+# |   *	dlls/comctl32/imagelist.c
+# |
+.INTERMEDIATE: comctl32-ImageList.ok
+comctl32-ImageList.ok:
+	$(call APPLY_FILE,comctl32-ImageList/0001-comctl32-Fix-issue-that-dragimage-in-ImageList-only-.patch)
+	@( \
+		echo '+    { "comctl32-ImageList", "Sebastian Lackner", "Fix issue that dragimage in ImageList only works for first four elements." },'; \
+	) > comctl32-ImageList.ok
 
 # Patchset comctl32-LoadIconMetric
 # |

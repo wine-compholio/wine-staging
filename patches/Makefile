@@ -592,7 +592,7 @@ server-ACL_Compat.ok: server-Inherited_ACLs.ok
 # |   *	[#32328] Support for interface change notifications
 # |
 # | Modified files: 
-# |   *	dlls/ws2_32/tests/sock.c, server/event.c, server/named_pipe.c, server/object.h, server/sock.c
+# |   *	Makefile.in, dlls/ws2_32/tests/sock.c, server/event.c, server/named_pipe.c, server/object.h, server/sock.c
 # |
 .INTERMEDIATE: server-Address_Change_Notification.ok
 server-Address_Change_Notification.ok:

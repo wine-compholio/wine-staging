@@ -1,27 +1,41 @@
-From 93caf99d2eee8cdfd38b68a0bbfed068de0ad0b8 Mon Sep 17 00:00:00 2001
+From f9cff65e9092054ff1398dc426c0b8b19a3c0d8f Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 3 Apr 2014 09:21:51 -0600
 Subject: server: Implement socket-specific ioctl() routine.
 
 ---
- server/sock.c |   27 +++++++++++++++++++++++----
- 1 file changed, 23 insertions(+), 4 deletions(-)
+ Makefile.in   |    3 ++-
+ server/sock.c |   26 ++++++++++++++++++++++----
+ 2 files changed, 24 insertions(+), 5 deletions(-)
 
+diff --git a/Makefile.in b/Makefile.in
+index 5c163b8..b600cf7 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -52,7 +52,8 @@ __tooldeps__: libs/port libs/wine libs/wpp
+ __builddeps__: __tooldeps__ include
+ .PHONY: depend check test testclean crosstest __tooldeps__ __builddeps__
+ 
+-loader server: libs/port libs/wine tools
++loader: libs/port libs/wine tools
++server: libs/port libs/wine tools include
+ fonts: tools/sfnt2fon
+ include: tools tools/widl
+ libs/wine tools: libs/port
 diff --git a/server/sock.c b/server/sock.c
-index 4adad0f..d12ad6d 100644
+index 4adad0f..ed36dcc 100644
 --- a/server/sock.c
 +++ b/server/sock.c
-@@ -52,6 +52,9 @@
+@@ -52,6 +52,8 @@
  #include "windef.h"
  #include "winternl.h"
  #include "winerror.h"
-+#include "wtypes.h"
 +#define USE_WS_PREFIX
 +#include "winsock2.h"
  
  #include "process.h"
  #include "file.h"
-@@ -86,9 +89,6 @@
+@@ -86,9 +88,6 @@
  #define FD_WINE_RAW                0x80000000
  #define FD_WINE_INTERNAL           0xFFFF0000
  
@@ -31,7 +45,7 @@ index 4adad0f..d12ad6d 100644
  struct sock
  {
      struct object       obj;         /* object header */
-@@ -120,6 +120,8 @@ static void sock_destroy( struct object *obj );
+@@ -120,6 +119,8 @@ static void sock_destroy( struct object *obj );
  static int sock_get_poll_events( struct fd *fd );
  static void sock_poll_event( struct fd *fd, int event );
  static enum server_fd_type sock_get_fd_type( struct fd *fd );
@@ -40,7 +54,7 @@ index 4adad0f..d12ad6d 100644
  static void sock_queue_async( struct fd *fd, const async_data_t *data, int type, int count );
  static void sock_reselect_async( struct fd *fd, struct async_queue *queue );
  static void sock_cancel_async( struct fd *fd, struct process *process, struct thread *thread, client_ptr_t iosb );
-@@ -154,7 +156,7 @@ static const struct fd_ops sock_fd_ops =
+@@ -154,7 +155,7 @@ static const struct fd_ops sock_fd_ops =
      sock_poll_event,              /* poll_event */
      no_flush,                     /* flush */
      sock_get_fd_type,             /* get_fd_type */
@@ -49,7 +63,7 @@ index 4adad0f..d12ad6d 100644
      sock_queue_async,             /* queue_async */
      sock_reselect_async,          /* reselect_async */
      sock_cancel_async             /* cancel_async */
-@@ -521,6 +523,23 @@ static enum server_fd_type sock_get_fd_type( struct fd *fd )
+@@ -521,6 +522,23 @@ static enum server_fd_type sock_get_fd_type( struct fd *fd )
      return FD_TYPE_SOCKET;
  }
  

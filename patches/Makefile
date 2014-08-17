@@ -948,18 +948,15 @@ winex11-Window_Groups.ok:
 # |
 # | Included patches:
 # |   *	Enable/disable windows when they are (un)mapped by foreign applications. [by Sebastian Lackner]
-# |   *	Update gl_drawable for embedded windows. [by Sebastian Lackner]
 # |
 # | Modified files: 
-# |   *	dlls/winex11.drv/event.c, dlls/winex11.drv/window.c
+# |   *	dlls/winex11.drv/event.c
 # |
 .INTERMEDIATE: winex11-XEMBED.ok
 winex11-XEMBED.ok:
-	$(call APPLY_FILE,winex11-XEMBED/0001-winex11-Update-gl_drawable-for-embedded-windows.patch)
-	$(call APPLY_FILE,winex11-XEMBED/0002-winex11-Enable-disable-windows-when-they-are-un-mapped.patch)
+	$(call APPLY_FILE,winex11-XEMBED/0001-winex11-Enable-disable-windows-when-they-are-un-mapped.patch)
 	@( \
 		echo '+    { "winex11-XEMBED", "Sebastian Lackner", "Enable/disable windows when they are (un)mapped by foreign applications." },'; \
-		echo '+    { "winex11-XEMBED", "Sebastian Lackner", "Update gl_drawable for embedded windows." },'; \
 	) > winex11-XEMBED.ok
 
 # Patchset ws2_32-Connect_Time

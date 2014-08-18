@@ -328,21 +328,29 @@ kernel32-GetVolumePathName.ok:
 # Patchset kernel32-Named_Pipe
 # |
 # | Included patches:
-# |   *	Support for NamedPipe operations. [rev 2, by Sebastian Lackner / Dan Kegel]
+# |   *	Fix for ConnectNamedPort return value in overlapped mode. [by Dan Kegel]
+# |   *	Add proper implementation for SetNamedPipeHandleState. [rev 7, by Sebastian Lackner / Adam Martinson]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#16550] Fix for ConnectNamedPort return value in overlapped mode
-# |   *	[#17273] Workaround for TransactNamedPipe not being supported
+# |   *	[#17273] Support for SetNamedPipeHandleState
 # |
 # | Modified files: 
-# |   *	dlls/kernel32/sync.c
+# |   *	dlls/kernel32/sync.c, dlls/kernel32/tests/pipe.c, dlls/ntdll/file.c, dlls/ntdll/tests/pipe.c, include/winternl.h,
+# | 	server/named_pipe.c, server/protocol.def
 # |
 .INTERMEDIATE: kernel32-Named_Pipe.ok
 kernel32-Named_Pipe.ok:
-	$(call APPLY_FILE,kernel32-Named_Pipe/0001-kernel32-Change-return-value-of-stub-SetNamedPipeHandl.patch)
-	$(call APPLY_FILE,kernel32-Named_Pipe/0002-kernel32-ConnectNamedPort-should-return-FALSE-and-se.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0001-kernel32-ConnectNamedPort-should-return-FALSE-and-se.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0002-ntdll-Implement-FILE_PIPE_INFORMATION-for-NtQueryInf.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0003-server-Store-pipe_flags-in-a-separate-variable-for-b.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0004-server-Implement-set_named_pipe_info-wineserver-call.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0005-ntdll-tests-Add-tests-for-FILE_PIPE_INFORMATION.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0006-kernel32-tests-Always-allow-only-one-specific-test-r.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0007-kernel32-Implement-Get-Set-NamedPipeHandleState.patch)
 	@( \
-		echo '+    { "kernel32-Named_Pipe", "Sebastian Lackner / Dan Kegel", "Support for NamedPipe operations. [rev 2]" },'; \
+		echo '+    { "kernel32-Named_Pipe", "Dan Kegel", "Fix for ConnectNamedPort return value in overlapped mode." },'; \
+		echo '+    { "kernel32-Named_Pipe", "Sebastian Lackner / Adam Martinson", "Add proper implementation for SetNamedPipeHandleState. [rev 7]" },'; \
 	) > kernel32-Named_Pipe.ok
 
 # Patchset kernel32-SystemFileCacheSize

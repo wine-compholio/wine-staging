@@ -13,8 +13,9 @@ which are not present in regular wine, and always report such issues to us
 Included bugfixes and improvements
 ----------------------------------
 
-**Bugfixes and features included in the next upcoming release [10]:**
+**Bugfixes and features included in the next upcoming release [11]:**
 
+* Adobe Reader requires NtProtectVirtualMemory and NtCreateSection to be on separate pages ([Wine Bug #33162](http://bugs.winehq.org/show_bug.cgi?id=33162 "Acrobat Reader 11 crashes on start (native API application virtualization, NtProtectVirtualMemory removes execute page protection on its own code)"))
 * Fix ITERATE_MoveFiles when no source- and destname is specified ([Wine Bug #10085](http://bugs.winehq.org/show_bug.cgi?id=10085 "Adobe Bridge CS2 complains that it can't start due to licensing restrictions (affects photoshop)"))
 * Fix issue with invisible dragimages in ImageList ([Wine Bug #36761](http://bugs.winehq.org/show_bug.cgi?id=36761 "Imagelist invisible dragimage"))
 * Gothic 2 demo expects an error when opening a terminating process ([Wine Bug #37087](http://bugs.winehq.org/show_bug.cgi?id=37087 "Gothic 2 english demo fails with 'Conflict: a hook process was found. Please deactivate all Antivirus and Anti-Trojan programs and debuggers.'"))

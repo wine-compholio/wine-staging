@@ -29,6 +29,7 @@ PATCHLIST := \
 	ntdll-Dynamic_DST.ok \
 	ntdll-FD_Cache.ok \
 	ntdll-FileDispositionInformation.ok \
+	ntdll-Fix_Alignment.ok \
 	ntdll-Junction_Points.ok \
 	ntdll-Pipe_SpecialCharacters.ok \
 	ntdll-loader_EntryPoint.ok \
@@ -481,6 +482,24 @@ ntdll-FileDispositionInformation.ok:
 	@( \
 		echo '+    { "ntdll-FileDispositionInformation", "Dmitry Timoshkov / Erich E. Hoover", "Add support for setting file disposition information." },'; \
 	) > ntdll-FileDispositionInformation.ok
+
+# Patchset ntdll-Fix_Alignment
+# |
+# | Included patches:
+# |   *	Move NtProtectVirtualMemory and NtCreateSection to separate pages in ntdll on x86. [by Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33162] Adobe Reader requires NtProtectVirtualMemory and NtCreateSection to be on separate pages
+# |
+# | Modified files: 
+# |   *	dlls/ntdll/virtual.c
+# |
+.INTERMEDIATE: ntdll-Fix_Alignment.ok
+ntdll-Fix_Alignment.ok:
+	$(call APPLY_FILE,ntdll-Fix_Alignment/0001-ntdll-Move-NtProtectVirtualMemory-and-NtCreateSectio.patch)
+	@( \
+		echo '+    { "ntdll-Fix_Alignment", "Michael Müller", "Move NtProtectVirtualMemory and NtCreateSection to separate pages in ntdll on x86." },'; \
+	) > ntdll-Fix_Alignment.ok
 
 # Patchset ntdll-Junction_Points
 # |

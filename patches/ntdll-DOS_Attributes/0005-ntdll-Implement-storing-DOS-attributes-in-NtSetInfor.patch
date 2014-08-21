@@ -1,0 +1,185 @@
+From 1313cd2f5b09593702acd6d71187afdd50ccea4d Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Wed, 20 Aug 2014 00:08:52 -0600
+Subject: ntdll: Implement storing DOS attributes in NtSetInformationFile.
+
+---
+ dlls/ntdll/file.c       |   50 ++++++++++++++++++++++++++++-------------------
+ dlls/ntdll/tests/file.c |    8 ++++----
+ include/wine/port.h     |    2 ++
+ libs/port/xattr.c       |   31 +++++++++++++++++++++++++++++
+ 4 files changed, 67 insertions(+), 24 deletions(-)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index 8b2f398..1294888 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -138,6 +138,35 @@ int fd_get_file_info( int fd, struct stat *st, ULONG *xattr )
+     return ret;
+ }
+ 
++NTSTATUS fd_set_file_info( int fd, ULONG attr )
++{
++    char hexattr[10];
++    struct stat st;
++    int len;
++
++    if (fstat( fd, &st ) == -1) return FILE_GetNtStatus();
++    if (attr & FILE_ATTRIBUTE_READONLY)
++    {
++        if (S_ISDIR( st.st_mode))
++            WARN("FILE_ATTRIBUTE_READONLY ignored for directory.\n");
++        else
++            st.st_mode &= ~0222; /* clear write permission bits */
++    }
++    else
++    {
++        /* add write permission only where we already have read permission */
++        st.st_mode |= (0600 | ((st.st_mode & 044) >> 1)) & (~FILE_umask);
++    }
++    if (fchmod( fd, st.st_mode ) == -1) return FILE_GetNtStatus();
++    attr &= ~FILE_ATTRIBUTE_NORMAL; /* do not store everything, but keep everything Samba can use */
++    len = sprintf( hexattr, "0x%x", attr );
++    if (attr != 0)
++        xattr_fset( fd, SAMBA_XATTR_DOS_ATTRIB, hexattr, len );
++    else
++        xattr_fremove( fd, SAMBA_XATTR_DOS_ATTRIB );
++    return STATUS_SUCCESS;
++}
++
+ int get_file_info( const char *path, struct stat *st, ULONG *xattr )
+ {
+     char hexattr[10];
+@@ -2324,7 +2353,6 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
+     case FileBasicInformation:
+         if (len >= sizeof(FILE_BASIC_INFORMATION))
+         {
+-            struct stat st;
+             const FILE_BASIC_INFORMATION *info = ptr;
+ 
+             if ((io->u.Status = server_get_unix_fd( handle, 0, &fd, &needs_close, NULL, NULL )))
+@@ -2334,25 +2362,7 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
+                 io->u.Status = set_file_times( fd, &info->LastWriteTime, &info->LastAccessTime );
+ 
+             if (io->u.Status == STATUS_SUCCESS && info->FileAttributes)
+-            {
+-                if (fstat( fd, &st ) == -1) io->u.Status = FILE_GetNtStatus();
+-                else
+-                {
+-                    if (info->FileAttributes & FILE_ATTRIBUTE_READONLY)
+-                    {
+-                        if (S_ISDIR( st.st_mode))
+-                            WARN("FILE_ATTRIBUTE_READONLY ignored for directory.\n");
+-                        else
+-                            st.st_mode &= ~0222; /* clear write permission bits */
+-                    }
+-                    else
+-                    {
+-                        /* add write permission only where we already have read permission */
+-                        st.st_mode |= (0600 | ((st.st_mode & 044) >> 1)) & (~FILE_umask);
+-                    }
+-                    if (fchmod( fd, st.st_mode ) == -1) io->u.Status = FILE_GetNtStatus();
+-                }
+-            }
++                io->u.Status = fd_set_file_info( fd, info->FileAttributes );
+ 
+             if (needs_close) close( fd );
+         }
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index d70ed6b..7a8e5d4 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -1234,7 +1234,7 @@ static void test_file_basic_information(void)
+     memset(&fbi, 0, sizeof(fbi));
+     res = pNtQueryInformationFile(h, &io, &fbi, sizeof fbi, FileBasicInformation);
+     ok ( res == STATUS_SUCCESS, "can't get attributes\n");
+-    todo_wine ok ( (fbi.FileAttributes & attrib_mask) == FILE_ATTRIBUTE_SYSTEM, "attribute %x not FILE_ATTRIBUTE_SYSTEM\n", fbi.FileAttributes );
++    ok ( (fbi.FileAttributes & attrib_mask) == FILE_ATTRIBUTE_SYSTEM, "attribute %x not FILE_ATTRIBUTE_SYSTEM (ok in old linux without xattr)\n", fbi.FileAttributes );
+ 
+     /* Then HIDDEN */
+     memset(&fbi, 0, sizeof(fbi));
+@@ -1247,7 +1247,7 @@ static void test_file_basic_information(void)
+     memset(&fbi, 0, sizeof(fbi));
+     res = pNtQueryInformationFile(h, &io, &fbi, sizeof fbi, FileBasicInformation);
+     ok ( res == STATUS_SUCCESS, "can't get attributes\n");
+-    todo_wine ok ( (fbi.FileAttributes & attrib_mask) == FILE_ATTRIBUTE_HIDDEN, "attribute %x not FILE_ATTRIBUTE_HIDDEN\n", fbi.FileAttributes );
++    ok ( (fbi.FileAttributes & attrib_mask) == FILE_ATTRIBUTE_HIDDEN, "attribute %x not FILE_ATTRIBUTE_HIDDEN (ok in old linux without xattr)\n", fbi.FileAttributes );
+ 
+     /* Check NORMAL last of all (to make sure we can clear attributes) */
+     memset(&fbi, 0, sizeof(fbi));
+@@ -1304,7 +1304,7 @@ static void test_file_all_information(void)
+     memset(&fai_buf.fai, 0, sizeof(fai_buf.fai));
+     res = pNtQueryInformationFile(h, &io, &fai_buf.fai, sizeof fai_buf, FileAllInformation);
+     ok ( res == STATUS_SUCCESS, "can't get attributes, res %x\n", res);
+-    todo_wine ok ( (fai_buf.fai.BasicInformation.FileAttributes & attrib_mask) == FILE_ATTRIBUTE_SYSTEM, "attribute %x not FILE_ATTRIBUTE_SYSTEM\n", fai_buf.fai.BasicInformation.FileAttributes );
++    ok ( (fai_buf.fai.BasicInformation.FileAttributes & attrib_mask) == FILE_ATTRIBUTE_SYSTEM, "attribute %x not FILE_ATTRIBUTE_SYSTEM (ok in old linux without xattr)\n", fai_buf.fai.BasicInformation.FileAttributes );
+ 
+     /* Then HIDDEN */
+     memset(&fai_buf.fai.BasicInformation, 0, sizeof(fai_buf.fai.BasicInformation));
+@@ -1317,7 +1317,7 @@ static void test_file_all_information(void)
+     memset(&fai_buf.fai, 0, sizeof(fai_buf.fai));
+     res = pNtQueryInformationFile(h, &io, &fai_buf.fai, sizeof fai_buf, FileAllInformation);
+     ok ( res == STATUS_SUCCESS, "can't get attributes\n");
+-    todo_wine ok ( (fai_buf.fai.BasicInformation.FileAttributes & attrib_mask) == FILE_ATTRIBUTE_HIDDEN, "attribute %x not FILE_ATTRIBUTE_HIDDEN\n", fai_buf.fai.BasicInformation.FileAttributes );
++    ok ( (fai_buf.fai.BasicInformation.FileAttributes & attrib_mask) == FILE_ATTRIBUTE_HIDDEN, "attribute %x not FILE_ATTRIBUTE_HIDDEN (ok in old linux without xattr)\n", fai_buf.fai.BasicInformation.FileAttributes );
+ 
+     /* Check NORMAL last of all (to make sure we can clear attributes) */
+     memset(&fai_buf.fai.BasicInformation, 0, sizeof(fai_buf.fai.BasicInformation));
+diff --git a/include/wine/port.h b/include/wine/port.h
+index 7d8ea1a..af052da 100644
+--- a/include/wine/port.h
++++ b/include/wine/port.h
+@@ -373,6 +373,8 @@ extern int _spawnvp(int mode, const char *cmdname, const char * const argv[]);
+ #endif
+ 
+ extern int xattr_fget( int filedes, const char *name, void *value, size_t size );
++extern int xattr_fremove( int filedes, const char *name );
++extern int xattr_fset( int filedes, const char *name, void *value, size_t size );
+ extern int xattr_get( const char *path, const char *name, void *value, size_t size );
+ 
+ /* Interlocked functions */
+diff --git a/libs/port/xattr.c b/libs/port/xattr.c
+index 0d77ce3..2668cf9 100644
+--- a/libs/port/xattr.c
++++ b/libs/port/xattr.c
+@@ -60,6 +60,37 @@ int xattr_fget( int filedes, const char *name, void *value, size_t size )
+ #endif
+ }
+ 
++int xattr_fremove( int filedes, const char *name )
++{
++    if (!xattr_valid_namespace( name )) return -1;
++#if defined(HAVE_ATTR_XATTR_H)
++    return fremovexattr( filedes, name );
++#elif defined(HAVE_SYS_XATTR_H)
++    return fremovexattr( filedes, name, 0 );
++#elif defined(HAVE_SYS_EXTATTR_H)
++    return extattr_delete_fd( filedes, EXTATTR_NAMESPACE_USER, &name[XATTR_USER_PREFIX_LEN] );
++#else
++    errno = ENOTSUP;
++    return -1;
++#endif
++}
++
++int xattr_fset( int filedes, const char *name, void *value, size_t size )
++{
++    if (!xattr_valid_namespace( name )) return -1;
++#if defined(HAVE_ATTR_XATTR_H)
++    return fsetxattr( filedes, name, value, size, 0 );
++#elif defined(HAVE_SYS_XATTR_H)
++    return fsetxattr( filedes, name, value, size, 0, 0 );
++#elif defined(HAVE_SYS_EXTATTR_H)
++    return extattr_set_fd( filedes, EXTATTR_NAMESPACE_USER, &name[XATTR_USER_PREFIX_LEN],
++                           value, size );
++#else
++    errno = ENOTSUP;
++    return -1;
++#endif
++}
++
+ int xattr_get( const char *path, const char *name, void *value, size_t size )
+ {
+     if (!xattr_valid_namespace( name )) return -1;
+-- 
+1.7.9.5
+

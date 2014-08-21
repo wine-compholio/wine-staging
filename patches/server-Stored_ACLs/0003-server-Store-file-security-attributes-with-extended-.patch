@@ -1,46 +1,30 @@
-From a424efd08ebe4a247b4a3b874137faadb7f59266 Mon Sep 17 00:00:00 2001
+From 0184c0316ba0e8ebbce82d8058f4979bfd2b8c97 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 15:34:47 -0600
 Subject: server: Store file security attributes with extended file
  attributes.
 
 ---
- configure.ac  |   12 ++++++++++++
- server/file.c |   39 +++++++++++++++++++++++++++++++++++++++
- 2 files changed, 51 insertions(+)
+ include/wine/port.h |    3 +++
+ server/file.c       |   34 ++++++++++++++++++++++++++++++++++
+ 2 files changed, 37 insertions(+)
 
-diff --git a/configure.ac b/configure.ac
-index c913f9f..2d5d5ee 100644
---- a/configure.ac
-+++ b/configure.ac
-@@ -73,6 +73,7 @@ AC_ARG_WITH(pthread,   AS_HELP_STRING([--without-pthread],[do not use the pthrea
- AC_ARG_WITH(sane,      AS_HELP_STRING([--without-sane],[do not use SANE (scanner support)]))
- AC_ARG_WITH(tiff,      AS_HELP_STRING([--without-tiff],[do not use TIFF]))
- AC_ARG_WITH(v4l,       AS_HELP_STRING([--without-v4l],[do not use v4l1 (v4l support)]))
-+AC_ARG_WITH(xattr,     AS_HELP_STRING([--without-xattr],[do not use xattr (security attributes support)]))
- AC_ARG_WITH(xcomposite,AS_HELP_STRING([--without-xcomposite],[do not use the Xcomposite extension]),
-             [if test "x$withval" = "xno"; then ac_cv_header_X11_extensions_Xcomposite_h=no; fi])
- AC_ARG_WITH(xcursor,   AS_HELP_STRING([--without-xcursor],[do not use the Xcursor extension]),
-@@ -664,6 +665,17 @@ AC_CHECK_HEADERS([libprocstat.h],,,
- #include <sys/socket.h>
- #endif])
+diff --git a/include/wine/port.h b/include/wine/port.h
+index f989731..433f1b9 100644
+--- a/include/wine/port.h
++++ b/include/wine/port.h
+@@ -371,6 +371,9 @@ extern int _spawnvp(int mode, const char *cmdname, const char * const argv[]);
+ #ifndef XATTR_USER_PREFIX_LEN
+ #define XATTR_USER_PREFIX_LEN (sizeof(XATTR_USER_PREFIX) - 1)
+ #endif
++#ifndef XATTR_SIZE_MAX
++#define XATTR_SIZE_MAX        65536
++#endif
  
-+if test "x$with_xattr" != "xno"
-+then
-+  AC_CHECK_HEADERS(attr/xattr.h sys/extattr.h,HAVE_XATTR=1)
-+fi
-+if test "x$with_xattr" == "xyes"
-+then
-+  WINE_ERROR_WITH(xattr,[test "x$HAVE_XATTR" = "x"],[xattr ${notice_platform}development files not \
-+found. Wine will be built without extended attribute support, which probably isn't what you want. \
-+You will need to install ${notice_platform}development packages of libacl at the very least.])
-+fi
-+
- dnl **** Check for working dll ****
- 
- AC_SUBST(dlldir,"\${libdir}/wine")
+ extern int xattr_fget( int filedes, const char *name, void *value, size_t size );
+ extern int xattr_fremove( int filedes, const char *name );
 diff --git a/server/file.c b/server/file.c
-index 1f008ea..951e25b 100644
+index 1f008ea..502951c 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -32,6 +32,7 @@
@@ -51,27 +35,27 @@ index 1f008ea..951e25b 100644
  #include <unistd.h>
  #ifdef HAVE_UTIME_H
  #include <utime.h>
-@@ -39,6 +40,13 @@
- #ifdef HAVE_POLL_H
- #include <poll.h>
- #endif
-+#ifdef HAVE_ATTR_XATTR_H
-+#include <attr/xattr.h>
-+#endif
-+#ifdef HAVE_SYS_EXTATTR_H
-+#include <sys/extattr.h>
-+#define XATTR_SIZE_MAX 65536
-+#endif
+@@ -52,6 +53,14 @@
+ #include "process.h"
+ #include "security.h"
  
- #include "ntstatus.h"
- #define WIN32_NO_STATUS
-@@ -178,6 +186,34 @@ static struct object *create_file_obj( struct fd *fd, unsigned int access, mode_
++/* We intentionally do not match the Samba 4 extended attribute for NT security descriptors (SDs):
++ *  1) Samba stores this information using an internal data structure (we use a flat NT SD).
++ *  2) Samba uses the attribute "security.NTACL".  This attribute is within a namespace that only
++ *     the administrator has write access to, which prohibits the user from copying the attributes
++ *     when copying a file and would require Wine to run with adminstrative privileges.
++ */
++#define WINE_XATTR_SD  XATTR_USER_PREFIX "wine.sd"
++
+ struct file
+ {
+     struct object       obj;        /* object header */
+@@ -178,6 +187,28 @@ static struct object *create_file_obj( struct fd *fd, unsigned int access, mode_
      return &file->obj;
  }
  
 +void set_xattr_sd( int fd, const struct security_descriptor *sd )
 +{
-+#if defined(HAVE_ATTR_XATTR_H) || defined(HAVE_SYS_EXTATTR_H)
 +    char buffer[XATTR_SIZE_MAX];
 +    int present, len;
 +    const ACL *dacl;
@@ -89,18 +73,13 @@ index 1f008ea..951e25b 100644
 +    buffer[0] = SECURITY_DESCRIPTOR_REVISION;
 +    buffer[1] = 0;
 +    memcpy( &buffer[2], sd, len - 2 );
-+#if defined(HAVE_ATTR_XATTR_H)
-+    fsetxattr( fd, "user.wine.sd", buffer, len, 0 );
-+#else
-+    extattr_set_fd( fd, EXTATTR_NAMESPACE_USER, "wine.sd", buffer, len );
-+#endif
-+#endif
++    xattr_fset( fd, WINE_XATTR_SD, buffer, len );
 +}
 +
  static struct object *create_file( struct fd *root, const char *nameptr, data_size_t len,
                                     unsigned int access, unsigned int sharing, int create,
                                     unsigned int options, unsigned int attrs,
-@@ -239,6 +275,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+@@ -239,6 +270,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
      /* FIXME: should set error to STATUS_OBJECT_NAME_COLLISION if file existed before */
      fd = open_fd( root, name, flags | O_NONBLOCK | O_LARGEFILE, &mode, access, sharing, options );
      if (!fd) goto done;
@@ -108,7 +87,7 @@ index 1f008ea..951e25b 100644
  
      if (S_ISDIR(mode))
          obj = create_dir_obj( fd, access, mode );
-@@ -580,6 +617,8 @@ int set_file_sd( struct object *obj, struct fd *fd, const struct security_descri
+@@ -580,6 +612,8 @@ int set_file_sd( struct object *obj, struct fd *fd, const struct security_descri
          mode = st.st_mode & (S_ISUID|S_ISGID|S_ISVTX);
          mode |= sd_to_mode( sd, owner );
  

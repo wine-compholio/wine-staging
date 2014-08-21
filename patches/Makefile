@@ -26,6 +26,7 @@ PATCHLIST := \
 	libs-Unicode_Collation.ok \
 	loader-Cmdline_Diagnostics.ok \
 	msi-MoveFiles.ok \
+	ntdll-DOS_Attributes.ok \
 	ntdll-Dynamic_DST.ok \
 	ntdll-FD_Cache.ok \
 	ntdll-FileDispositionInformation.ok \
@@ -423,6 +424,31 @@ msi-MoveFiles.ok:
 		echo '+    { "msi-MoveFiles", "Sebastian Lackner", "Fix ITERATE_MoveFiles when no source- and destname is specified." },'; \
 	) > msi-MoveFiles.ok
 
+# Patchset ntdll-DOS_Attributes
+# |
+# | Included patches:
+# |   *	Implement DOS hidden/system file attributes [by Erich E. Hoover]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#9158] Support for DOS hidden/system file attributes
+# |
+# | Modified files: 
+# |   *	configure.ac, dlls/ntdll/directory.c, dlls/ntdll/file.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/directory.c,
+# | 	dlls/ntdll/tests/file.c, include/wine/port.h, libs/port/Makefile.in, libs/port/xattr.c
+# |
+.INTERMEDIATE: ntdll-DOS_Attributes.ok
+ntdll-DOS_Attributes.ok:
+	$(call APPLY_FILE,ntdll-DOS_Attributes/0001-ntdll-Unify-retrieving-the-attributes-of-a-file.patch)
+	$(call APPLY_FILE,ntdll-DOS_Attributes/0002-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch)
+	$(call APPLY_FILE,ntdll-DOS_Attributes/0003-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch)
+	$(call APPLY_FILE,ntdll-DOS_Attributes/0004-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch)
+	$(call APPLY_FILE,ntdll-DOS_Attributes/0005-ntdll-Implement-storing-DOS-attributes-in-NtSetInfor.patch)
+	$(call APPLY_FILE,ntdll-DOS_Attributes/0006-ntdll-Implement-storing-DOS-attributes-in-NtCreateFi.patch)
+	$(call APPLY_FILE,ntdll-DOS_Attributes/0007-ntdll-Perform-the-Unix-style-hidden-file-check-withi.patch)
+	@( \
+		echo '+    { "ntdll-DOS_Attributes", "Erich E. Hoover", "Implement DOS hidden/system file attributes" },'; \
+	) > ntdll-DOS_Attributes.ok
+
 # Patchset ntdll-Dynamic_DST
 # |
 # | Included patches:
@@ -517,6 +543,7 @@ ntdll-Junction_Points.ok:
 	$(call APPLY_FILE,ntdll-Junction_Points/0005-kernel32-ntdll-Add-support-for-deleting-junction-poi.patch)
 	$(call APPLY_FILE,ntdll-Junction_Points/0006-kernel32-Advertise-junction-point-support.patch)
 	$(call APPLY_FILE,ntdll-Junction_Points/0007-ntdll-tests-Add-test-for-deleting-junction-point-tar.patch)
+	$(call APPLY_FILE,ntdll-Junction_Points/0008-ntdll-Use-relative-paths-for-creating-links.patch)
 	@( \
 		echo '+    { "ntdll-Junction_Points", "Erich E. Hoover", "Support for junction points/reparse points." },'; \
 	) > ntdll-Junction_Points.ok
@@ -620,7 +647,7 @@ riched20-IText_Interface.ok:
 # |
 .INTERMEDIATE: server-ACL_Compat.ok
 server-ACL_Compat.ok: server-Inherited_ACLs.ok
-	$(call APPLY_FILE,server-ACL_Compat/0010-server-Add-compatibility-code-for-handling-the-old-m.patch)
+	$(call APPLY_FILE,server-ACL_Compat/0001-server-Add-compatibility-code-for-handling-the-old-m.patch)
 	@( \
 		echo '+    { "server-ACL_Compat", "Erich E. Hoover", "Compatibility patch for old method of storing extended file system attributes. [rev 6]" },'; \
 	) > server-ACL_Compat.ok
@@ -728,16 +755,16 @@ server-Process.ok:
 # Patchset server-Stored_ACLs
 # |
 # | Included patches:
-# |   *	Store and return security attributes with extended file attributes. [rev 6, by Erich E. Hoover]
+# |   *	Store and return security attributes with extended file attributes. [rev 7, by Erich E. Hoover]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#31858] Support for stored file ACLs
 # |
 # | Modified files: 
-# |   *	configure.ac, dlls/advapi32/tests/security.c, server/change.c, server/file.c, server/file.h
+# |   *	dlls/advapi32/tests/security.c, include/wine/port.h, server/change.c, server/file.c, server/file.h
 # |
 .INTERMEDIATE: server-Stored_ACLs.ok
-server-Stored_ACLs.ok:
+server-Stored_ACLs.ok: ntdll-DOS_Attributes.ok
 	$(call APPLY_FILE,server-Stored_ACLs/0001-server-Unify-the-storage-of-security-attributes-for-.patch)
 	$(call APPLY_FILE,server-Stored_ACLs/0002-server-Unify-the-retrieval-of-security-attributes-fo.patch)
 	$(call APPLY_FILE,server-Stored_ACLs/0003-server-Store-file-security-attributes-with-extended-.patch)
@@ -745,7 +772,7 @@ server-Stored_ACLs.ok:
 	$(call APPLY_FILE,server-Stored_ACLs/0005-server-Retrieve-file-security-attributes-with-extend.patch)
 	$(call APPLY_FILE,server-Stored_ACLs/0006-server-Convert-return-of-file-security-masks-with-ge.patch)
 	@( \
-		echo '+    { "server-Stored_ACLs", "Erich E. Hoover", "Store and return security attributes with extended file attributes. [rev 6]" },'; \
+		echo '+    { "server-Stored_ACLs", "Erich E. Hoover", "Store and return security attributes with extended file attributes. [rev 7]" },'; \
 	) > server-Stored_ACLs.ok
 
 # Patchset shell32-Default_Folder_ACLs

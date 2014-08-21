@@ -1,0 +1,68 @@
+From 7922ba3b2a5414d30053821394962afed4e5b13c Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Tue, 19 Aug 2014 20:31:00 -0600
+Subject: ntdll: Unify retrieving the attributes of a file.
+
+---
+ dlls/ntdll/file.c |   25 +++++++++++++++++--------
+ 1 file changed, 17 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index 92d9829..78c375a 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -1774,6 +1774,21 @@ static inline void get_file_times( const struct stat *st, LARGE_INTEGER *mtime,
+ #endif
+ }
+ 
++/* fetch the attributes of a file */
++static inline ULONG get_file_attributes( const struct stat *st )
++{
++    ULONG attr;
++
++    if (S_ISDIR(st->st_mode))
++        attr = FILE_ATTRIBUTE_DIRECTORY;
++    else
++        attr = FILE_ATTRIBUTE_ARCHIVE;
++    if (!(st->st_mode & (S_IWUSR | S_IWGRP | S_IWOTH)))
++        attr |= FILE_ATTRIBUTE_READONLY;
++    return attr;
++}
++
++
+ /* fill in the file information that depends on the stat info */
+ NTSTATUS fill_stat_info( const struct stat *st, void *ptr, FILE_INFORMATION_CLASS class )
+ {
+@@ -1785,10 +1800,7 @@ NTSTATUS fill_stat_info( const struct stat *st, void *ptr, FILE_INFORMATION_CLAS
+ 
+             get_file_times( st, &info->LastWriteTime, &info->ChangeTime,
+                             &info->LastAccessTime, &info->CreationTime );
+-            if (S_ISDIR(st->st_mode)) info->FileAttributes = FILE_ATTRIBUTE_DIRECTORY;
+-            else info->FileAttributes = FILE_ATTRIBUTE_ARCHIVE;
+-            if (!(st->st_mode & (S_IWUSR | S_IWGRP | S_IWOTH)))
+-                info->FileAttributes |= FILE_ATTRIBUTE_READONLY;
++            info->FileAttributes = get_file_attributes( st );
+         }
+         break;
+     case FileStandardInformation:
+@@ -1842,16 +1854,13 @@ NTSTATUS fill_stat_info( const struct stat *st, void *ptr, FILE_INFORMATION_CLAS
+             {
+                 info->AllocationSize.QuadPart = 0;
+                 info->EndOfFile.QuadPart      = 0;
+-                info->FileAttributes = FILE_ATTRIBUTE_DIRECTORY;
+             }
+             else
+             {
+                 info->AllocationSize.QuadPart = (ULONGLONG)st->st_blocks * 512;
+                 info->EndOfFile.QuadPart      = st->st_size;
+-                info->FileAttributes = FILE_ATTRIBUTE_ARCHIVE;
+             }
+-            if (!(st->st_mode & (S_IWUSR | S_IWGRP | S_IWOTH)))
+-                info->FileAttributes |= FILE_ATTRIBUTE_READONLY;
++            info->FileAttributes = get_file_attributes( st );
+         }
+         break;
+     case FileIdFullDirectoryInformation:
+-- 
+1.7.9.5
+

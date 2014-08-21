@@ -1,4 +1,4 @@
-From 04bbc2e2841b01a5a5344bb1f62c94ff84b25350 Mon Sep 17 00:00:00 2001
+From 6a598ee04025242f900fdf2726a21afe93d018bd Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 14:10:49 -0600
 Subject: server: Inherit security attributes from parent directories on
@@ -13,10 +13,10 @@ Subject: server: Inherit security attributes from parent directories on
  5 files changed, 207 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index 68b63a0..c981c1b 100644
+index 3e88c2e..952d001 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -3350,6 +3350,74 @@ static void test_GetNamedSecurityInfoA(void)
+@@ -3440,6 +3440,74 @@ static void test_GetNamedSecurityInfoA(void)
             "Administators Group ACE has unexpected mask (0x%x != 0x1f01ff)\n", ace->Mask);
      }
      LocalFree(pSD);
@@ -92,10 +92,10 @@ index 68b63a0..c981c1b 100644
      CloseHandle(hTemp);
  
 diff --git a/include/winnt.h b/include/winnt.h
-index 3f33c6b..5d2234f 100644
+index 709a93f..63882bb 100644
 --- a/include/winnt.h
 +++ b/include/winnt.h
-@@ -5057,14 +5057,15 @@ typedef struct _TAPE_GET_MEDIA_PARAMETERS {
+@@ -5078,14 +5078,15 @@ typedef struct _TAPE_GET_MEDIA_PARAMETERS {
      BOOLEAN WriteProtected;
  } TAPE_GET_MEDIA_PARAMETERS, *PTAPE_GET_MEDIA_PARAMETERS;
  
@@ -115,10 +115,10 @@ index 3f33c6b..5d2234f 100644
  #define REG_OPTION_NON_VOLATILE		0x00000000
  #define REG_OPTION_VOLATILE		0x00000001
 diff --git a/server/fd.c b/server/fd.c
-index fa8874c..9e6b9a8 100644
+index e3b722c..7d50ab6 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -1629,6 +1629,16 @@ struct fd *alloc_pseudo_fd( const struct fd_ops *fd_user_ops, struct object *use
+@@ -1634,6 +1634,16 @@ struct fd *alloc_pseudo_fd( const struct fd_ops *fd_user_ops, struct object *use
      return fd;
  }
  
@@ -135,7 +135,7 @@ index fa8874c..9e6b9a8 100644
  /* duplicate an fd object for a different user */
  struct fd *dup_fd_object( struct fd *orig, unsigned int access, unsigned int sharing, unsigned int options )
  {
-@@ -1642,8 +1652,7 @@ struct fd *dup_fd_object( struct fd *orig, unsigned int access, unsigned int sha
+@@ -1647,8 +1657,7 @@ struct fd *dup_fd_object( struct fd *orig, unsigned int access, unsigned int sha
  
      if (orig->unix_name)
      {
@@ -146,10 +146,10 @@ index fa8874c..9e6b9a8 100644
  
      if (orig->inode)
 diff --git a/server/file.c b/server/file.c
-index 6ce8806..e29d06b 100644
+index 1414ee6..bbb9358 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -325,6 +325,105 @@ struct security_descriptor *inherit_sd( const struct security_descriptor *parent
+@@ -328,6 +328,105 @@ struct security_descriptor *inherit_sd( const struct security_descriptor *parent
      return sd;
  }
  
@@ -255,7 +255,7 @@ index 6ce8806..e29d06b 100644
  static struct security_descriptor *file_get_parent_sd( struct fd *root, const char *child_name,
                                                         int child_len, int is_dir )
  {
-@@ -795,16 +894,33 @@ mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner )
+@@ -800,16 +899,33 @@ mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner )
      return new_mode & ~denied_mode;
  }
  
@@ -290,7 +290,7 @@ index 6ce8806..e29d06b 100644
      if (set_info & OWNER_SECURITY_INFORMATION)
      {
          owner = sd_get_owner( sd );
-@@ -854,10 +970,14 @@ int set_file_sd( struct object *obj, struct fd *fd, const struct security_descri
+@@ -859,10 +975,14 @@ int set_file_sd( struct object *obj, struct fd *fd, const struct security_descri
          if (((st.st_mode ^ mode) & (S_IRWXU|S_IRWXG|S_IRWXO)) && fchmod( unix_fd, mode ) == -1)
          {
              file_set_error();

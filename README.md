@@ -13,7 +13,7 @@ which are not present in regular wine, and always report such issues to us
 Included bugfixes and improvements
 ----------------------------------
 
-**Bugfixes and features included in the next upcoming release [11]:**
+**Bugfixes and features included in the next upcoming release [12]:**
 
 * Adobe Reader requires NtProtectVirtualMemory and NtCreateSection to be on separate pages ([Wine Bug #33162](http://bugs.winehq.org/show_bug.cgi?id=33162 "Acrobat Reader 11 crashes on start (native API application virtualization, NtProtectVirtualMemory removes execute page protection on its own code)"))
 * Fix ITERATE_MoveFiles when no source- and destname is specified ([Wine Bug #10085](http://bugs.winehq.org/show_bug.cgi?id=10085 "Adobe Bridge CS2 complains that it can't start due to licensing restrictions (affects photoshop)"))
@@ -22,6 +22,7 @@ Included bugfixes and improvements
 * Multiple applications need BCryptGetFipsAlgorithmMode ([Wine Bug #32194](http://bugs.winehq.org/show_bug.cgi?id=32194 "Multiple games and applications need bcrypt.dll.BCryptGetFipsAlgorithmMode (Chess Position Trainer, Terraria, .NET System.Security.Cryptography)"))
 * Other Pipelight-specific enhancements
 * Prevent window managers from grouping all wine programs together ([Wine Bug #32699](http://bugs.winehq.org/show_bug.cgi?id=32699 "Add StartupWMClass to .desktop files."))
+* Support for DOS hidden/system file attributes ([Wine Bug #9158](http://bugs.winehq.org/show_bug.cgi?id=9158 "Multiple Microsoft development tools online/web installers fail to skip \"$shtdwn$.req\" with FILE_ATTRIBUTE_HIDDEN (Visual Studio Express Editions, .NET Framework 3.0)"))
 * Support for DwmInvalidateIconicBitmaps ([Wine Bug #32977](http://bugs.winehq.org/show_bug.cgi?id=32977 "Solidworks 2012 needs unimplemented function dwmapi.dll.DwmInvalidateIconicBitmaps (Win7 mode)"))
 * Support for Dynamic DST (daylight saving time) information in registry
 * Support for GetFinalPathNameByHandle ([Wine Bug #36073](http://bugs.winehq.org/show_bug.cgi?id=36073 "OneDrive crashes on unimplemented function KERNEL32.dll.GetFinalPathNameByHandleW"))

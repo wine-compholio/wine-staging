@@ -1,24 +1,23 @@
-From 0be335ce9c2c93a186cf35be0a99519868ab8a0d Mon Sep 17 00:00:00 2001
+From cc8ce50fa0194313f2ac9d8f967350fdeb643ad7 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 15:21:00 -0600
 Subject: server: Add compatibility code for handling the old method of
  storing ACLs.
 
 ---
- server/file.c |  162 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 162 insertions(+)
+ server/file.c |  158 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 158 insertions(+)
 
 diff --git a/server/file.c b/server/file.c
-index e29d06b..08231a7 100644
+index bbb9358..309c49d 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -750,6 +750,167 @@ struct security_descriptor *get_xattr_sd( int fd )
- #endif
+@@ -755,6 +755,163 @@ struct security_descriptor *get_xattr_sd( int fd )
+     return sd;
  }
  
 +struct security_descriptor *get_xattr_acls( int fd, const SID *user, const SID *group )
 +{
-+#ifdef HAVE_ATTR_XATTR_H
 +    int ace_count = 0, dacl_size = sizeof(ACL), i, n;
 +    char buffer[XATTR_SIZE_MAX], *p = buffer, *pn;
 +    struct security_descriptor *sd;
@@ -29,7 +28,7 @@ index e29d06b..08231a7 100644
 +    ACL *dacl;
 +    char *ptr;
 +
-+    n = fgetxattr( fd, "user.wine.acl", buffer, sizeof(buffer) );
++    n = xattr_fget( fd, "user.wine.acl", buffer, sizeof(buffer) );
 +    if (n == -1) return NULL;
 +    buffer[n] = 0; /* ensure NULL terminated buffer for string functions */
 +
@@ -172,15 +171,12 @@ index e29d06b..08231a7 100644
 +    }
 +
 +    return sd;
-+#else
-+    return NULL;
-+#endif
 +}
 +
  /* Convert generic rights into standard access rights */
  void convert_generic_sd( struct security_descriptor *sd )
  {
-@@ -790,6 +951,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
+@@ -795,6 +952,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
      user = security_unix_uid_to_sid( st.st_uid );
      group = token_get_primary_group( current->process->token );
      sd = get_xattr_sd( unix_fd );

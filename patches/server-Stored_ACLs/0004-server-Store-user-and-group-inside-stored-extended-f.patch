@@ -1,4 +1,4 @@
-From 9b59ad02610a11d39ee8338404fd26021e0458c6 Mon Sep 17 00:00:00 2001
+From 52669858326cb82bafd0cfbb0afa354f8991fe11 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 15:35:24 -0600
 Subject: server: Store user and group inside stored extended file attribute
@@ -9,17 +9,16 @@ Subject: server: Store user and group inside stored extended file attribute
  1 file changed, 70 insertions(+), 9 deletions(-)
 
 diff --git a/server/file.c b/server/file.c
-index 951e25b..6981fca 100644
+index 502951c..4f7e5b5 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -186,11 +186,12 @@ static struct object *create_file_obj( struct fd *fd, unsigned int access, mode_
+@@ -187,10 +187,11 @@ static struct object *create_file_obj( struct fd *fd, unsigned int access, mode_
      return &file->obj;
  }
  
 -void set_xattr_sd( int fd, const struct security_descriptor *sd )
 +void set_xattr_sd( int fd, const struct security_descriptor *sd, const SID *user, const SID *group )
  {
- #if defined(HAVE_ATTR_XATTR_H) || defined(HAVE_SYS_EXTATTR_H)
 -    char buffer[XATTR_SIZE_MAX];
 -    int present, len;
 +    char buffer[XATTR_SIZE_MAX], *dst_ptr = &buffer[2], *src_ptr = (char *)sd;
@@ -80,10 +79,10 @@ index 951e25b..6981fca 100644
 +    memcpy( dst_ptr, src_ptr, sd->dacl_len );
 +    src_ptr += sd->dacl_len;
 +    dst_ptr += sd->dacl_len;
- #if defined(HAVE_ATTR_XATTR_H)
-     fsetxattr( fd, "user.wine.sd", buffer, len, 0 );
- #else
-@@ -219,6 +258,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+     xattr_fset( fd, WINE_XATTR_SD, buffer, len );
+ }
+ 
+@@ -214,6 +253,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
                                     unsigned int options, unsigned int attrs,
                                     const struct security_descriptor *sd )
  {
@@ -91,7 +90,7 @@ index 951e25b..6981fca 100644
      struct object *obj = NULL;
      struct fd *fd;
      int flags;
-@@ -249,9 +289,12 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+@@ -244,9 +284,12 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
  
      if (sd)
      {
@@ -105,7 +104,7 @@ index 951e25b..6981fca 100644
          mode = sd_to_mode( sd, owner );
      }
      else if (options & FILE_DIRECTORY_FILE)
-@@ -275,7 +318,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+@@ -270,7 +313,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
      /* FIXME: should set error to STATUS_OBJECT_NAME_COLLISION if file existed before */
      fd = open_fd( root, name, flags | O_NONBLOCK | O_LARGEFILE, &mode, access, sharing, options );
      if (!fd) goto done;
@@ -114,7 +113,7 @@ index 951e25b..6981fca 100644
  
      if (S_ISDIR(mode))
          obj = create_dir_obj( fd, access, mode );
-@@ -585,7 +628,7 @@ int set_file_sd( struct object *obj, struct fd *fd, const struct security_descri
+@@ -580,7 +623,7 @@ int set_file_sd( struct object *obj, struct fd *fd, const struct security_descri
                   unsigned int set_info )
  {
      int unix_fd = get_unix_fd( fd );
@@ -123,7 +122,7 @@ index 951e25b..6981fca 100644
      struct stat st;
      mode_t mode;
  
-@@ -609,6 +652,24 @@ int set_file_sd( struct object *obj, struct fd *fd, const struct security_descri
+@@ -604,6 +647,24 @@ int set_file_sd( struct object *obj, struct fd *fd, const struct security_descri
      else
          owner = token_get_user( current->process->token );
  
@@ -148,7 +147,7 @@ index 951e25b..6981fca 100644
      /* group and sacl not supported */
  
      if (set_info & DACL_SECURITY_INFORMATION)
-@@ -617,7 +678,7 @@ int set_file_sd( struct object *obj, struct fd *fd, const struct security_descri
+@@ -612,7 +673,7 @@ int set_file_sd( struct object *obj, struct fd *fd, const struct security_descri
          mode = st.st_mode & (S_ISUID|S_ISGID|S_ISVTX);
          mode |= sd_to_mode( sd, owner );
  

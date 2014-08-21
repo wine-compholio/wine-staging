@@ -18,6 +18,7 @@ Included bugfixes and improvements
 * Adobe Reader requires NtProtectVirtualMemory and NtCreateSection to be on separate pages ([Wine Bug #33162](http://bugs.winehq.org/show_bug.cgi?id=33162 "Acrobat Reader 11 crashes on start (native API application virtualization, NtProtectVirtualMemory removes execute page protection on its own code)"))
 * Fix ITERATE_MoveFiles when no source- and destname is specified ([Wine Bug #10085](http://bugs.winehq.org/show_bug.cgi?id=10085 "Adobe Bridge CS2 complains that it can't start due to licensing restrictions (affects photoshop)"))
 * Fix issue with invisible dragimages in ImageList ([Wine Bug #36761](http://bugs.winehq.org/show_bug.cgi?id=36761 "Imagelist invisible dragimage"))
+* Games For Windows Live 1.x expects a valid linker version in the PE header ([Wine Bug #28768](http://bugs.winehq.org/show_bug.cgi?id=28768 "Multiple GFWL (Games For Windows Live) 1.x games crash on startup (Kane & Lynch: Dead Men)"))
 * Gothic 2 demo expects an error when opening a terminating process ([Wine Bug #37087](http://bugs.winehq.org/show_bug.cgi?id=37087 "Gothic 2 english demo fails with 'Conflict: a hook process was found. Please deactivate all Antivirus and Anti-Trojan programs and debuggers.'"))
 * Multiple applications need BCryptGetFipsAlgorithmMode ([Wine Bug #32194](http://bugs.winehq.org/show_bug.cgi?id=32194 "Multiple games and applications need bcrypt.dll.BCryptGetFipsAlgorithmMode (Chess Position Trainer, Terraria, .NET System.Security.Cryptography)"))
 * Other Pipelight-specific enhancements

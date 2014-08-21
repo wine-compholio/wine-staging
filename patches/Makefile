@@ -15,7 +15,6 @@ PATCHLIST := \
 	comctl32-ImageList.ok \
 	comctl32-LoadIconMetric.ok \
 	dsound-Fast_Mixer.ok \
-	dwmapi-Invalidate_Thumbnail.ok \
 	fonts-Missing_Fonts.ok \
 	iphlpapi-TCP_Table.ok \
 	kernel32-GetFinalPathNameByHandle.ok \
@@ -214,24 +213,6 @@ dsound-Fast_Mixer.ok:
 	@( \
 		echo '+    { "dsound-Fast_Mixer", "Alexander E. Patrakov", "Add a linear resampler for use with a large number of dsound mixing buffers." },'; \
 	) > dsound-Fast_Mixer.ok
-
-# Patchset dwmapi-Invalidate_Thumbnail
-# |
-# | Included patches:
-# |   *	Add stub for DwmInvalidateIconicBitmaps. [by Erich E. Hoover]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#32977] Support for DwmInvalidateIconicBitmaps
-# |
-# | Modified files: 
-# |   *	dlls/dwmapi/dwmapi.spec, dlls/dwmapi/dwmapi_main.c, include/dwmapi.h
-# |
-.INTERMEDIATE: dwmapi-Invalidate_Thumbnail.ok
-dwmapi-Invalidate_Thumbnail.ok:
-	$(call APPLY_FILE,dwmapi-Invalidate_Thumbnail/0001-dwmapi-Add-stub-for-DwmInvalidateIconicBitmaps.patch)
-	@( \
-		echo '+    { "dwmapi-Invalidate_Thumbnail", "Erich E. Hoover", "Add stub for DwmInvalidateIconicBitmaps." },'; \
-	) > dwmapi-Invalidate_Thumbnail.ok
 
 # Patchset fonts-Missing_Fonts
 # |

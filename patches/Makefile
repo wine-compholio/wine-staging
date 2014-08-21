@@ -51,6 +51,7 @@ PATCHLIST := \
 	user32-GetTipText.ok \
 	user32-WndProc.ok \
 	wineboot-HKEY_DYN_DATA.ok \
+	winebuild-LinkerVersion.ok \
 	winepulse-PulseAudio_Support.ok \
 	winex11-Limited_Resolutions.ok \
 	winex11-Window_Groups.ok \
@@ -905,6 +906,24 @@ wineboot-HKEY_DYN_DATA.ok:
 	@( \
 		echo '+    { "wineboot-HKEY_DYN_DATA", "Michael Müller", "Add some generic hardware in HKEY_DYN_DATA\\\\Config Manager\\\\Enum." },'; \
 	) > wineboot-HKEY_DYN_DATA.ok
+
+# Patchset winebuild-LinkerVersion
+# |
+# | Included patches:
+# |   *	Set a valid major and minor linker version in the PE header. [by Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#28768] Games For Windows Live 1.x expects a valid linker version in the PE header
+# |
+# | Modified files: 
+# |   *	tools/winebuild/spec32.c
+# |
+.INTERMEDIATE: winebuild-LinkerVersion.ok
+winebuild-LinkerVersion.ok:
+	$(call APPLY_FILE,winebuild-LinkerVersion/0001-winebuild-Set-a-valid-major-and-minor-linker-version.patch)
+	@( \
+		echo '+    { "winebuild-LinkerVersion", "Michael Müller", "Set a valid major and minor linker version in the PE header." },'; \
+	) > winebuild-LinkerVersion.ok
 
 # Patchset winepulse-PulseAudio_Support
 # |

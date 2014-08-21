@@ -1,18 +1,16 @@
-From 07b0e6fe66d8ac19d7584f52a066d2957d858144 Mon Sep 17 00:00:00 2001
+From 38c961e5a031c4394523843b4e85a6634e34423d Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Tue, 19 Aug 2014 22:10:49 -0600
 Subject: ntdll: Implement retrieving DOS attributes in
  NtQueryInformationFile.
 
 ---
- configure.ac            |   12 +++++++
- dlls/ntdll/directory.c  |    3 +-
- dlls/ntdll/file.c       |   80 ++++++++++++++++++++++++++++++++++++-----------
- dlls/ntdll/ntdll_misc.h |    2 +-
- include/wine/port.h     |   11 +++++++
- libs/port/Makefile.in   |    3 +-
- libs/port/xattr.c       |   61 ++++++++++++++++++++++++++++++++++++
- 7 files changed, 150 insertions(+), 22 deletions(-)
+ configure.ac          |   12 ++++++++++
+ dlls/ntdll/file.c     |   30 +++++++++++++++++++++++-
+ include/wine/port.h   |   11 +++++++++
+ libs/port/Makefile.in |    3 ++-
+ libs/port/xattr.c     |   61 +++++++++++++++++++++++++++++++++++++++++++++++++
+ 5 files changed, 115 insertions(+), 2 deletions(-)
  create mode 100644 libs/port/xattr.c
 
 diff --git a/configure.ac b/configure.ac
@@ -45,32 +43,11 @@ index 7de7a87..b77c12f 100644
  dnl **** Check for working dll ****
  
  AC_SUBST(dlldir,"\${libdir}/wine")
-diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
-index a2796b2..678aef5 100644
---- a/dlls/ntdll/directory.c
-+++ b/dlls/ntdll/directory.c
-@@ -1381,6 +1381,7 @@ static union file_directory_info *append_entry( void *info_ptr, IO_STATUS_BLOCK
-     WCHAR *filename;
-     UNICODE_STRING str;
-     ULONG attributes = 0;
-+    ULONG xattr = 0;
- 
-     io->u.Status = STATUS_SUCCESS;
-     long_len = ntdll_umbstowcs( 0, long_name, strlen(long_name), long_nameW, MAX_DIR_ENTRY_LEN );
-@@ -1440,7 +1441,7 @@ static union file_directory_info *append_entry( void *info_ptr, IO_STATUS_BLOCK
-     info = (union file_directory_info *)((char *)info_ptr + io->Information);
-     if (st.st_dev != curdir.dev) st.st_ino = 0;  /* ignore inode if on a different device */
-     /* all the structures start with a FileDirectoryInformation layout */
--    fill_stat_info( &st, info, class );
-+    fill_file_info( xattr, &st, info, class );
-     info->dir.NextEntryOffset = total_len;
-     info->dir.FileIndex = 0;  /* NTFS always has 0 here, so let's not bother with it */
-     info->dir.FileAttributes |= attributes;
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 78c375a..c8176dd 100644
+index 4ec2c34..7985dcb 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -103,6 +103,41 @@ mode_t FILE_umask = 0;
+@@ -103,6 +103,29 @@ mode_t FILE_umask = 0;
  
  static const WCHAR ntfsW[] = {'N','T','F','S'};
  
@@ -86,6 +63,7 @@ index 78c375a..c8176dd 100644
 +/* We are only interested in some attributes, the others have corresponding Unix attributes */
 +#define XATTR_ATTRIBS_MASK     (FILE_ATTRIBUTE_HIDDEN|FILE_ATTRIBUTE_SYSTEM)
 +
++/* decode the xattr-stored DOS attributes */
 +static inline int get_file_xattr( char *hexattr, int attrlen )
 +{
 +    if (attrlen > 2 && hexattr[0] == '0' && hexattr[1] == 'x')
@@ -96,213 +74,29 @@ index 78c375a..c8176dd 100644
 +    return 0;
 +}
 +
-+int fd_get_file_info( int fd, struct stat *st, ULONG *xattr )
-+{
-+    int len, ret = fstat( fd, st );
+ /* fetch the attributes of a file */
+ static inline ULONG get_file_attributes( const struct stat *st )
+ {
+@@ -120,13 +143,18 @@ static inline ULONG get_file_attributes( const struct stat *st )
+ /* get the stat info and file attributes for a file (by file descriptor) */
+ int fd_get_file_info( int fd, struct stat *st, ULONG *attr )
+ {
+-    int ret;
 +    char hexattr[10];
-+
-+    *xattr = 0;
-+    if (ret == -1) return ret;
++    int len, ret;
+ 
+     *attr = 0;
+     ret = fstat( fd, st );
+     if (ret == -1) return ret;
+     /* convert the Unix stat info into file attributes */
+     *attr |= get_file_attributes( st );
++    /* retrieve any stored DOS attributes */
 +    len = xattr_fget( fd, SAMBA_XATTR_DOS_ATTRIB, hexattr, sizeof(hexattr)-1 );
 +    if (len == -1) return ret;
-+    *xattr |= get_file_xattr( hexattr, len );
-+    return ret;
-+}
-+
- /**************************************************************************
-  *                 FILE_CreateFile                    (internal)
-  * Open a file.
-@@ -1775,7 +1810,7 @@ static inline void get_file_times( const struct stat *st, LARGE_INTEGER *mtime,
++    *attr |= get_file_xattr( hexattr, len );
+     return ret;
  }
  
- /* fetch the attributes of a file */
--static inline ULONG get_file_attributes( const struct stat *st )
-+static inline ULONG get_file_attributes( const ULONG xattr, const struct stat *st )
- {
-     ULONG attr;
- 
-@@ -1783,6 +1818,10 @@ static inline ULONG get_file_attributes( const struct stat *st )
-         attr = FILE_ATTRIBUTE_DIRECTORY;
-     else
-         attr = FILE_ATTRIBUTE_ARCHIVE;
-+
-+    /* if any extended attributes exist then add them to the traditional attributes */
-+    attr |= xattr;
-+
-     if (!(st->st_mode & (S_IWUSR | S_IWGRP | S_IWOTH)))
-         attr |= FILE_ATTRIBUTE_READONLY;
-     return attr;
-@@ -1790,7 +1829,7 @@ static inline ULONG get_file_attributes( const struct stat *st )
- 
- 
- /* fill in the file information that depends on the stat info */
--NTSTATUS fill_stat_info( const struct stat *st, void *ptr, FILE_INFORMATION_CLASS class )
-+NTSTATUS fill_file_info( const ULONG xattr, const struct stat *st, void *ptr, FILE_INFORMATION_CLASS class )
- {
-     switch (class)
-     {
-@@ -1800,7 +1839,7 @@ NTSTATUS fill_stat_info( const struct stat *st, void *ptr, FILE_INFORMATION_CLAS
- 
-             get_file_times( st, &info->LastWriteTime, &info->ChangeTime,
-                             &info->LastAccessTime, &info->CreationTime );
--            info->FileAttributes = get_file_attributes( st );
-+            info->FileAttributes = get_file_attributes( xattr, st );
-         }
-         break;
-     case FileStandardInformation:
-@@ -1836,9 +1875,9 @@ NTSTATUS fill_stat_info( const struct stat *st, void *ptr, FILE_INFORMATION_CLAS
-     case FileAllInformation:
-         {
-             FILE_ALL_INFORMATION *info = ptr;
--            fill_stat_info( st, &info->BasicInformation, FileBasicInformation );
--            fill_stat_info( st, &info->StandardInformation, FileStandardInformation );
--            fill_stat_info( st, &info->InternalInformation, FileInternalInformation );
-+            fill_file_info( xattr, st, &info->BasicInformation, FileBasicInformation );
-+            fill_file_info( xattr, st, &info->StandardInformation, FileStandardInformation );
-+            fill_file_info( xattr, st, &info->InternalInformation, FileInternalInformation );
-         }
-         break;
-     /* all directory structures start with the FileDirectoryInformation layout */
-@@ -1860,21 +1899,21 @@ NTSTATUS fill_stat_info( const struct stat *st, void *ptr, FILE_INFORMATION_CLAS
-                 info->AllocationSize.QuadPart = (ULONGLONG)st->st_blocks * 512;
-                 info->EndOfFile.QuadPart      = st->st_size;
-             }
--            info->FileAttributes = get_file_attributes( st );
-+            info->FileAttributes = get_file_attributes( xattr, st );
-         }
-         break;
-     case FileIdFullDirectoryInformation:
-         {
-             FILE_ID_FULL_DIRECTORY_INFORMATION *info = ptr;
-             info->FileId.QuadPart = st->st_ino;
--            fill_stat_info( st, info, FileDirectoryInformation );
-+            fill_file_info( xattr, st, info, FileDirectoryInformation );
-         }
-         break;
-     case FileIdBothDirectoryInformation:
-         {
-             FILE_ID_BOTH_DIRECTORY_INFORMATION *info = ptr;
-             info->FileId.QuadPart = st->st_ino;
--            fill_stat_info( st, info, FileDirectoryInformation );
-+            fill_file_info( xattr, st, info, FileDirectoryInformation );
-         }
-         break;
- 
-@@ -2026,6 +2065,7 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
- 
-     struct stat st;
-     int fd, needs_close = FALSE;
-+    ULONG xattr;
- 
-     TRACE("(%p,%p,%p,0x%08x,0x%08x)\n", hFile, io, ptr, len, class);
- 
-@@ -2050,12 +2090,12 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
-     switch (class)
-     {
-     case FileBasicInformation:
--        if (fstat( fd, &st ) == -1)
-+        if (fd_get_file_info( fd, &st, &xattr ) == -1)
-             io->u.Status = FILE_GetNtStatus();
-         else if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
-             io->u.Status = STATUS_INVALID_INFO_CLASS;
-         else
--            fill_stat_info( &st, ptr, class );
-+            fill_file_info( xattr, &st, ptr, class );
-         break;
-     case FileStandardInformation:
-         {
-@@ -2064,7 +2104,7 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
-             if (fstat( fd, &st ) == -1) io->u.Status = FILE_GetNtStatus();
-             else
-             {
--                fill_stat_info( &st, info, class );
-+                fill_file_info( xattr, &st, info, class );
-                 info->DeletePending = FALSE; /* FIXME */
-             }
-         }
-@@ -2079,7 +2119,7 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
-         break;
-     case FileInternalInformation:
-         if (fstat( fd, &st ) == -1) io->u.Status = FILE_GetNtStatus();
--        else fill_stat_info( &st, ptr, class );
-+        else fill_file_info( xattr, &st, ptr, class );
-         break;
-     case FileEaInformation:
-         {
-@@ -2089,21 +2129,21 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
-         break;
-     case FileEndOfFileInformation:
-         if (fstat( fd, &st ) == -1) io->u.Status = FILE_GetNtStatus();
--        else fill_stat_info( &st, ptr, class );
-+        else fill_file_info( xattr, &st, ptr, class );
-         break;
-     case FileAllInformation:
-         {
-             FILE_ALL_INFORMATION *info = ptr;
-             ANSI_STRING unix_name;
- 
--            if (fstat( fd, &st ) == -1) io->u.Status = FILE_GetNtStatus();
-+            if (fd_get_file_info( fd, &st, &xattr ) == -1) io->u.Status = FILE_GetNtStatus();
-             else if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
-                 io->u.Status = STATUS_INVALID_INFO_CLASS;
-             else if (!(io->u.Status = server_get_unix_name( hFile, &unix_name )))
-             {
-                 LONG name_len = len - FIELD_OFFSET(FILE_ALL_INFORMATION, NameInformation.FileName);
- 
--                fill_stat_info( &st, info, FileAllInformation );
-+                fill_file_info( xattr, &st, info, FileAllInformation );
-                 info->StandardInformation.DeletePending = FALSE; /* FIXME */
-                 info->EaInformation.EaSize = 0;
-                 info->AccessInformation.AccessFlags = 0;  /* FIXME */
-@@ -2455,6 +2495,7 @@ NTSTATUS WINAPI NtQueryFullAttributesFile( const OBJECT_ATTRIBUTES *attr,
-     if (!(status = nt_to_unix_file_name_attr( attr, &unix_name, FILE_OPEN )))
-     {
-         struct stat st;
-+        ULONG xattr = 0;
- 
-         if (stat( unix_name.Buffer, &st ) == -1)
-             status = FILE_GetNtStatus();
-@@ -2465,8 +2506,8 @@ NTSTATUS WINAPI NtQueryFullAttributesFile( const OBJECT_ATTRIBUTES *attr,
-             FILE_BASIC_INFORMATION basic;
-             FILE_STANDARD_INFORMATION std;
- 
--            fill_stat_info( &st, &basic, FileBasicInformation );
--            fill_stat_info( &st, &std, FileStandardInformation );
-+            fill_file_info( xattr, &st, &basic, FileBasicInformation );
-+            fill_file_info( xattr, &st, &std, FileStandardInformation );
- 
-             info->CreationTime   = basic.CreationTime;
-             info->LastAccessTime = basic.LastAccessTime;
-@@ -2497,6 +2538,7 @@ NTSTATUS WINAPI NtQueryAttributesFile( const OBJECT_ATTRIBUTES *attr, FILE_BASIC
-     if (!(status = nt_to_unix_file_name_attr( attr, &unix_name, FILE_OPEN )))
-     {
-         struct stat st;
-+        ULONG xattr = 0;
- 
-         if (stat( unix_name.Buffer, &st ) == -1)
-             status = FILE_GetNtStatus();
-@@ -2504,7 +2546,7 @@ NTSTATUS WINAPI NtQueryAttributesFile( const OBJECT_ATTRIBUTES *attr, FILE_BASIC
-             status = STATUS_INVALID_INFO_CLASS;
-         else
-         {
--            status = fill_stat_info( &st, info, FileBasicInformation );
-+            status = fill_file_info( xattr, &st, info, FileBasicInformation );
-             if (DIR_is_hidden_file( attr->ObjectName ))
-                 info->FileAttributes |= FILE_ATTRIBUTE_HIDDEN;
-         }
-diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 4370084..ec96427 100644
---- a/dlls/ntdll/ntdll_misc.h
-+++ b/dlls/ntdll/ntdll_misc.h
-@@ -148,7 +148,7 @@ extern NTSTATUS COMM_FlushBuffersFile( int fd ) DECLSPEC_HIDDEN;
- /* file I/O */
- struct stat;
- extern NTSTATUS FILE_GetNtStatus(void) DECLSPEC_HIDDEN;
--extern NTSTATUS fill_stat_info( const struct stat *st, void *ptr, FILE_INFORMATION_CLASS class ) DECLSPEC_HIDDEN;
-+extern NTSTATUS fill_file_info( ULONG xattr, const struct stat *st, void *ptr, FILE_INFORMATION_CLASS class ) DECLSPEC_HIDDEN;
- extern NTSTATUS server_get_unix_name( HANDLE handle, ANSI_STRING *unix_name ) DECLSPEC_HIDDEN;
- extern void DIR_init_windows_dir( const WCHAR *windir, const WCHAR *sysdir ) DECLSPEC_HIDDEN;
- extern BOOL DIR_is_hidden_file( const UNICODE_STRING *name ) DECLSPEC_HIDDEN;
 diff --git a/include/wine/port.h b/include/wine/port.h
 index 3548a44..715a9e2 100644
 --- a/include/wine/port.h

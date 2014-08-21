@@ -1,70 +1,40 @@
-From aca454765b4a1cd8b7a50761fb0bd9f82043b895 Mon Sep 17 00:00:00 2001
+From 89997cb9e557658b23bb4dd00273f5d2f9082fc9 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 20 Aug 2014 16:04:34 -0600
 Subject: ntdll: Implement retrieving DOS attributes in
- NtQuery[Full]AttributesFile.
+ NtQuery[Full]AttributesFile and NtQueryDirectoryFile.
 
 ---
- dlls/ntdll/file.c   |   28 ++++++++++++++++++++++++----
+ dlls/ntdll/file.c   |    7 ++++++-
  include/wine/port.h |    1 +
  libs/port/xattr.c   |   16 ++++++++++++++++
- 3 files changed, 41 insertions(+), 4 deletions(-)
+ 3 files changed, 23 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index c8176dd..8b2f398 100644
+index 7985dcb..25815a5 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -138,6 +138,26 @@ int fd_get_file_info( int fd, struct stat *st, ULONG *xattr )
+@@ -161,7 +161,8 @@ int fd_get_file_info( int fd, struct stat *st, ULONG *attr )
+ /* get the stat info and file attributes for a file (by name) */
+ int get_file_info( const char *path, struct stat *st, ULONG *attr )
+ {
+-    int ret;
++    char hexattr[10];
++    int len, ret;
+ 
+     *attr = 0;
+     /* stat the file and don't follow symbol links */
+@@ -177,6 +178,10 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
+     }
+     /* convert the Unix stat info into file attributes */
+     *attr |= get_file_attributes( st );
++    /* retrieve any stored DOS attributes */
++    len = xattr_get( path, SAMBA_XATTR_DOS_ATTRIB, hexattr, sizeof(hexattr)-1 );
++    if (len == -1) return ret;
++    *attr |= get_file_xattr( hexattr, len );
      return ret;
  }
  
-+int get_file_info( const char *path, struct stat *st, ULONG *xattr )
-+{
-+    char hexattr[10];
-+    int len, ret;
-+
-+    *xattr = 0;
-+    ret = lstat( path, st );
-+    if (ret == -1) return ret;
-+    if (S_ISLNK( st->st_mode ))
-+    {
-+        ret = stat( path, st );
-+        if (ret == -1) return ret;
-+        if (S_ISDIR( st->st_mode )) *xattr |= FILE_ATTRIBUTE_REPARSE_POINT;
-+    }
-+    len = xattr_get( path, SAMBA_XATTR_DOS_ATTRIB, hexattr, sizeof(hexattr)-1 );
-+    if (len == -1) return ret;
-+    *xattr |= get_file_xattr( hexattr, len );
-+    return ret;
-+}
-+
- /**************************************************************************
-  *                 FILE_CreateFile                    (internal)
-  * Open a file.
-@@ -2495,9 +2515,9 @@ NTSTATUS WINAPI NtQueryFullAttributesFile( const OBJECT_ATTRIBUTES *attr,
-     if (!(status = nt_to_unix_file_name_attr( attr, &unix_name, FILE_OPEN )))
-     {
-         struct stat st;
--        ULONG xattr = 0;
-+        ULONG xattr;
- 
--        if (stat( unix_name.Buffer, &st ) == -1)
-+        if (get_file_info( unix_name.Buffer, &st, &xattr ) == -1)
-             status = FILE_GetNtStatus();
-         else if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
-             status = STATUS_INVALID_INFO_CLASS;
-@@ -2538,9 +2558,9 @@ NTSTATUS WINAPI NtQueryAttributesFile( const OBJECT_ATTRIBUTES *attr, FILE_BASIC
-     if (!(status = nt_to_unix_file_name_attr( attr, &unix_name, FILE_OPEN )))
-     {
-         struct stat st;
--        ULONG xattr = 0;
-+        ULONG xattr;
- 
--        if (stat( unix_name.Buffer, &st ) == -1)
-+        if (get_file_info( unix_name.Buffer, &st, &xattr ) == -1)
-             status = FILE_GetNtStatus();
-         else if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
-             status = STATUS_INVALID_INFO_CLASS;
 diff --git a/include/wine/port.h b/include/wine/port.h
 index 715a9e2..7d8ea1a 100644
 --- a/include/wine/port.h

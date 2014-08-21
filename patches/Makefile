@@ -442,10 +442,9 @@ ntdll-DOS_Attributes.ok:
 	$(call APPLY_FILE,ntdll-DOS_Attributes/0001-ntdll-Unify-retrieving-the-attributes-of-a-file.patch)
 	$(call APPLY_FILE,ntdll-DOS_Attributes/0002-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch)
 	$(call APPLY_FILE,ntdll-DOS_Attributes/0003-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch)
-	$(call APPLY_FILE,ntdll-DOS_Attributes/0004-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch)
-	$(call APPLY_FILE,ntdll-DOS_Attributes/0005-ntdll-Implement-storing-DOS-attributes-in-NtSetInfor.patch)
-	$(call APPLY_FILE,ntdll-DOS_Attributes/0006-ntdll-Implement-storing-DOS-attributes-in-NtCreateFi.patch)
-	$(call APPLY_FILE,ntdll-DOS_Attributes/0007-ntdll-Perform-the-Unix-style-hidden-file-check-withi.patch)
+	$(call APPLY_FILE,ntdll-DOS_Attributes/0004-ntdll-Implement-storing-DOS-attributes-in-NtSetInfor.patch)
+	$(call APPLY_FILE,ntdll-DOS_Attributes/0005-ntdll-Implement-storing-DOS-attributes-in-NtCreateFi.patch)
+	$(call APPLY_FILE,ntdll-DOS_Attributes/0006-ntdll-Perform-the-Unix-style-hidden-file-check-withi.patch)
 	@( \
 		echo '+    { "ntdll-DOS_Attributes", "Erich E. Hoover", "Implement DOS hidden/system file attributes" },'; \
 	) > ntdll-DOS_Attributes.ok
@@ -540,7 +539,7 @@ ntdll-Junction_Points.ok:
 	$(call APPLY_FILE,ntdll-Junction_Points/0001-ntdll-Add-support-for-junction-point-creation.patch)
 	$(call APPLY_FILE,ntdll-Junction_Points/0002-ntdll-Add-support-for-reading-junction-points.patch)
 	$(call APPLY_FILE,ntdll-Junction_Points/0003-ntdll-Add-support-for-deleting-junction-points.patch)
-	$(call APPLY_FILE,ntdll-Junction_Points/0004-ntdll-Advertise-that-a-file-is-a-junction-point.patch)
+	$(call APPLY_FILE,ntdll-Junction_Points/0004-ntdll-Add-a-test-for-junction-point-advertisement.patch)
 	$(call APPLY_FILE,ntdll-Junction_Points/0005-kernel32-ntdll-Add-support-for-deleting-junction-poi.patch)
 	$(call APPLY_FILE,ntdll-Junction_Points/0006-kernel32-Advertise-junction-point-support.patch)
 	$(call APPLY_FILE,ntdll-Junction_Points/0007-ntdll-tests-Add-test-for-deleting-junction-point-tar.patch)

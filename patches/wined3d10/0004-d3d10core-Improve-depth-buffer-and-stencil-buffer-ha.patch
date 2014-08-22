@@ -1,0 +1,141 @@
+From aba7d294cc5ab566fc36b0a0e9b84b0390316b49 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Fri, 22 Aug 2014 22:34:12 +0200
+Subject: d3d10core: Improve depth buffer and stencil buffer handling.
+
+---
+ dlls/d3d10core/device.c   | 48 ++++++++++++++++++++++++++++++++++++++++++++++-
+ dlls/wined3d/device.c     | 10 ++++++++++
+ dlls/wined3d/wined3d.spec |  1 +
+ include/wine/wined3d.h    |  2 ++
+ 4 files changed, 60 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/d3d10core/device.c b/dlls/d3d10core/device.c
+index eef7e1b..c10c06c 100644
+--- a/dlls/d3d10core/device.c
++++ b/dlls/d3d10core/device.c
+@@ -417,6 +417,26 @@ static void STDMETHODCALLTYPE d3d10_device_OMSetRenderTargets(ID3D10Device1 *ifa
+     dsv = unsafe_impl_from_ID3D10DepthStencilView(depth_stencil_view);
+     wined3d_device_set_depth_stencil_view(device->wined3d_device,
+             dsv ? dsv->wined3d_view : NULL);
++
++    /*
++     * DirectX 10 enables the depth buffer depending on the depth_stencil_view value
++     * as long as no explicit depth buffer state was set using OMSetDepthStencilState
++     * to disable the depth buffer test.
++     * The default values are described at:
++     * http://msdn.microsoft.com/en-us/library/windows/desktop/bb205036(v=vs.85).aspx
++     */
++    if (!device->depth_stencil_state)
++    {
++        wined3d_mutex_lock();
++        wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_ZENABLE, dsv ? TRUE : FALSE);
++        wined3d_mutex_unlock();
++    }
++    else if (device->depth_stencil_state->desc.DepthEnable && !dsv)
++    {
++        wined3d_mutex_lock();
++        wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_ZENABLE, FALSE);
++        wined3d_mutex_unlock();
++    }
+ }
+ 
+ static void STDMETHODCALLTYPE d3d10_device_OMSetBlendState(ID3D10Device1 *iface,
+@@ -436,12 +456,26 @@ static void STDMETHODCALLTYPE d3d10_device_OMSetDepthStencilState(ID3D10Device1
+         ID3D10DepthStencilState *depth_stencil_state, UINT stencil_ref)
+ {
+     struct d3d10_device *device = impl_from_ID3D10Device(iface);
++    D3D10_DEPTH_STENCIL_DESC *desc;
+ 
+     TRACE("iface %p, depth_stencil_state %p, stencil_ref %u.\n",
+             iface, depth_stencil_state, stencil_ref);
+ 
+     device->depth_stencil_state = unsafe_impl_from_ID3D10DepthStencilState(depth_stencil_state);
+     device->stencil_ref = stencil_ref;
++
++    desc = &device->depth_stencil_state->desc;
++
++    wined3d_mutex_lock();
++    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_ZENABLE, desc->DepthEnable);
++    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_ZWRITEENABLE, (desc->DepthWriteMask == D3D10_DEPTH_WRITE_MASK_ALL));
++    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_ZFUNC, desc->DepthFunc); /* the enumeration is identical */
++    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_STENCILENABLE, desc->StencilEnable);
++    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_STENCILMASK, desc->StencilReadMask);
++    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_STENCILWRITEMASK, desc->StencilWriteMask);
++    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_STENCILREF, device->stencil_ref);
++    /* TODO: set front face and backface stencil operations, otherwise the stencil buffer is quite useless */
++    wined3d_mutex_unlock();
+ }
+ 
+ static void STDMETHODCALLTYPE d3d10_device_SOSetTargets(ID3D10Device1 *iface,
+@@ -588,8 +622,20 @@ static void STDMETHODCALLTYPE d3d10_device_ClearRenderTargetView(ID3D10Device1 *
+ static void STDMETHODCALLTYPE d3d10_device_ClearDepthStencilView(ID3D10Device1 *iface,
+         ID3D10DepthStencilView *depth_stencil_view, UINT flags, FLOAT depth, UINT8 stencil)
+ {
+-    FIXME("iface %p, depth_stencil_view %p, flags %#x, depth %f, stencil %u stub!\n",
++    struct d3d10_device *device = impl_from_ID3D10Device(iface);
++    struct d3d10_depthstencil_view *view = unsafe_impl_from_ID3D10DepthStencilView(depth_stencil_view);
++    int wined3d_flags = 0;
++
++    TRACE("iface %p, depth_stencil_view %p, flags %#x, depth %f, stencil %u stub!\n",
+             iface, depth_stencil_view, flags, depth, stencil);
++
++    if (!depth_stencil_view)
++        return;
++
++    if (flags & D3D10_CLEAR_DEPTH) wined3d_flags = WINED3DCLEAR_ZBUFFER;
++    if (flags & D3D10_CLEAR_STENCIL) wined3d_flags |= WINED3DCLEAR_STENCIL;
++
++    wined3d_device_clear_depthstencil_view(device->wined3d_device, view->wined3d_view, wined3d_flags, depth, stencil);
+ }
+ 
+ static void STDMETHODCALLTYPE d3d10_device_GenerateMips(ID3D10Device1 *iface,
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index 9df422f..8a2fa3b 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -3731,6 +3731,16 @@ void CDECL wined3d_device_copy_resource(struct wined3d_device *device,
+     }
+ }
+ 
++void CDECL wined3d_device_clear_depthstencil_view(struct wined3d_device *device,
++        struct wined3d_rendertarget_view *view, int flags, float depth, DWORD stencil)
++{
++    struct wined3d_fb_state fb = {NULL, view};
++    const RECT draw_rect = {0, 0, view->width, view->height};
++
++    device_clear_render_targets(device, 0, &fb, 0, NULL, &draw_rect, flags, 0, depth, stencil);
++}
++
++
+ HRESULT CDECL wined3d_device_clear_rendertarget_view(struct wined3d_device *device,
+         struct wined3d_rendertarget_view *view, const RECT *rect, const struct wined3d_color *color)
+ {
+diff --git a/dlls/wined3d/wined3d.spec b/dlls/wined3d/wined3d.spec
+index 1904bc5..7262366 100644
+--- a/dlls/wined3d/wined3d.spec
++++ b/dlls/wined3d/wined3d.spec
+@@ -36,6 +36,7 @@
+ @ cdecl wined3d_device_begin_scene(ptr)
+ @ cdecl wined3d_device_begin_stateblock(ptr)
+ @ cdecl wined3d_device_clear(ptr long ptr long ptr float long)
++@ cdecl wined3d_device_clear_depthstencil_view(ptr ptr long float long)
+ @ cdecl wined3d_device_clear_rendertarget_view(ptr ptr ptr ptr)
+ @ cdecl wined3d_device_copy_resource(ptr ptr ptr)
+ @ cdecl wined3d_device_create(ptr long long ptr long long ptr ptr)
+diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
+index 7a49b87..54b5eee 100644
+--- a/include/wine/wined3d.h
++++ b/include/wine/wined3d.h
+@@ -2095,6 +2095,8 @@ HRESULT __cdecl wined3d_device_begin_scene(struct wined3d_device *device);
+ HRESULT __cdecl wined3d_device_begin_stateblock(struct wined3d_device *device);
+ HRESULT __cdecl wined3d_device_clear(struct wined3d_device *device, DWORD rect_count, const RECT *rects, DWORD flags,
+         const struct wined3d_color *color, float z, DWORD stencil);
++void CDECL wined3d_device_clear_depthstencil_view(struct wined3d_device *device,
++        struct wined3d_rendertarget_view *view, int flags, float depth, DWORD stencil);
+ HRESULT __cdecl wined3d_device_clear_rendertarget_view(struct wined3d_device *device,
+         struct wined3d_rendertarget_view *view, const RECT *rect, const struct wined3d_color *color);
+ void __cdecl wined3d_device_copy_resource(struct wined3d_device *device,
+-- 
+1.9.1
+

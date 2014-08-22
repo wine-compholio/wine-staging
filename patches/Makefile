@@ -51,6 +51,7 @@ PATCHLIST := \
 	user32-WndProc.ok \
 	wineboot-HKEY_DYN_DATA.ok \
 	winebuild-LinkerVersion.ok \
+	wined3d10.ok \
 	winepulse-PulseAudio_Support.ok \
 	winex11-Limited_Resolutions.ok \
 	winex11-Window_Groups.ok \
@@ -899,6 +900,25 @@ winebuild-LinkerVersion.ok:
 	@( \
 		echo '+    { "winebuild-LinkerVersion", "Michael Müller", "Set a valid major and minor linker version in the PE header." },'; \
 	) > winebuild-LinkerVersion.ok
+
+# Patchset wined3d10
+# |
+# | Included patches:
+# |   *	Experimental patches to improve d3d10 support. [by Michael Müller]
+# |
+# | Modified files: 
+# |   *	dlls/d3d10core/buffer.c, dlls/d3d10core/device.c, dlls/dxgi/dxgi_private.h, dlls/dxgi/factory.c, dlls/wined3d/device.c,
+# | 	dlls/wined3d/resource.c, dlls/wined3d/wined3d.spec, include/wine/wined3d.h
+# |
+.INTERMEDIATE: wined3d10.ok
+wined3d10.ok:
+	$(call APPLY_FILE,wined3d10/0001-dxgi-Improve-stubs-for-MakeWindowAssociation-and-Get.patch)
+	$(call APPLY_FILE,wined3d10/0002-d3d10core-Implement-UpdateSubresource-for-buffers.patch)
+	$(call APPLY_FILE,wined3d10/0003-d3d10core-Implement-usage-flag-conversion-in-d3d10_b.patch)
+	$(call APPLY_FILE,wined3d10/0004-d3d10core-Improve-depth-buffer-and-stencil-buffer-ha.patch)
+	@( \
+		echo '+    { "wined3d10", "Michael Müller", "Experimental patches to improve d3d10 support." },'; \
+	) > wined3d10.ok
 
 # Patchset winepulse-PulseAudio_Support
 # |

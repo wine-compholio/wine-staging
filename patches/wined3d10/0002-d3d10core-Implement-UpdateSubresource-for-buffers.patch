@@ -1,0 +1,107 @@
+From 526fa9da0f45b1bd01df63e60860b55cf9c8303d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Fri, 22 Aug 2014 20:32:53 +0200
+Subject: d3d10core: Implement UpdateSubresource for buffers.
+
+---
+ dlls/d3d10core/device.c   | 20 +++++++++++++++++++-
+ dlls/wined3d/resource.c   | 27 +++++++++++++++++++++++++++
+ dlls/wined3d/wined3d.spec |  1 +
+ include/wine/wined3d.h    |  2 ++
+ 4 files changed, 49 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/d3d10core/device.c b/dlls/d3d10core/device.c
+index bb5265b..eef7e1b 100644
+--- a/dlls/d3d10core/device.c
++++ b/dlls/d3d10core/device.c
+@@ -548,8 +548,26 @@ static void STDMETHODCALLTYPE d3d10_device_UpdateSubresource(ID3D10Device1 *ifac
+         ID3D10Resource *resource, UINT subresource_idx, const D3D10_BOX *box,
+         const void *data, UINT row_pitch, UINT depth_pitch)
+ {
+-    FIXME("iface %p, resource %p, subresource_idx %u, box %p, data %p, row_pitch %u, depth_pitch %u stub!\n",
++    struct d3d10_device *device = impl_from_ID3D10Device(iface);
++    struct wined3d_resource* wined3d_resource;
++    struct wined3d_box wined3d_box;
++
++    TRACE("iface %p, resource %p, subresource_idx %u, box %p, data %p, row_pitch %u, depth_pitch %u stub!\n",
+             iface, resource, subresource_idx, box, data, row_pitch, depth_pitch);
++
++    wined3d_resource = wined3d_resource_from_resource(resource);
++    if (box)
++    {
++        wined3d_box.left   = box->left;
++        wined3d_box.top    = box->top;
++        wined3d_box.front  = box->front;
++        wined3d_box.right  = box->right;
++        wined3d_box.bottom = box->bottom;
++        wined3d_box.back   = box->back;
++    }
++
++    wined3d_resource_update(device->wined3d_device, wined3d_resource, subresource_idx,
++        box ? &wined3d_box : NULL, data, row_pitch, depth_pitch);
+ }
+ 
+ static void STDMETHODCALLTYPE d3d10_device_ClearRenderTargetView(ID3D10Device1 *iface,
+diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
+index 4247cd7..3b934d8 100644
+--- a/dlls/wined3d/resource.c
++++ b/dlls/wined3d/resource.c
+@@ -333,3 +333,30 @@ void wined3d_resource_update_draw_binding(struct wined3d_resource *resource)
+     else
+         resource->draw_binding = WINED3D_LOCATION_TEXTURE_RGB;
+ }
++
++void CDECL wined3d_resource_update(struct wined3d_device *device, struct wined3d_resource *resource, UINT sub_resource_idx,
++        struct wined3d_box *box, const void *data, UINT row_pitch, UINT depth_pitch)
++{
++    struct wined3d_buffer *buffer;
++    BYTE *dest;
++
++    if (resource->type != WINED3D_RTYPE_BUFFER)
++    {
++        FIXME("Unsuported resource type: %d\n", resource->type);
++        return;
++    }
++
++    if (sub_resource_idx || box)
++    {
++        WARN("Subresource index and/or Box parameter is not supported for buffers\n");
++        return;
++    }
++
++    /* FIXME: should normally use the command stream here */
++    buffer = buffer_from_resource(resource);
++    if (SUCCEEDED(wined3d_buffer_map(buffer, 0, 0, &dest, 0)))
++    {
++        memcpy(dest, data, buffer->desc.byte_width); /* FIXME: is row_pitch and depth_pitch used? */
++        wined3d_buffer_unmap(buffer);
++    }
++}
+diff --git a/dlls/wined3d/wined3d.spec b/dlls/wined3d/wined3d.spec
+index 0ee16c4..1904bc5 100644
+--- a/dlls/wined3d/wined3d.spec
++++ b/dlls/wined3d/wined3d.spec
+@@ -175,6 +175,7 @@
+ @ cdecl wined3d_resource_get_priority(ptr)
+ @ cdecl wined3d_resource_set_parent(ptr ptr)
+ @ cdecl wined3d_resource_set_priority(ptr long)
++@ cdecl wined3d_resource_update(ptr ptr long ptr ptr long long)
+ 
+ @ cdecl wined3d_rendertarget_view_create(ptr ptr ptr ptr ptr)
+ @ cdecl wined3d_rendertarget_view_create_from_surface(ptr ptr ptr ptr)
+diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
+index 6dda931..7a49b87 100644
+--- a/include/wine/wined3d.h
++++ b/include/wine/wined3d.h
+@@ -2374,6 +2374,8 @@ void * __cdecl wined3d_resource_get_parent(const struct wined3d_resource *resour
+ DWORD __cdecl wined3d_resource_get_priority(const struct wined3d_resource *resource);
+ void __cdecl wined3d_resource_set_parent(struct wined3d_resource *resource, void *parent);
+ DWORD __cdecl wined3d_resource_set_priority(struct wined3d_resource *resource, DWORD priority);
++void __cdecl wined3d_resource_update(struct wined3d_device *device, struct wined3d_resource *resource, UINT sub_resource_idx,
++        struct wined3d_box *box, const void *data, UINT row_pitch, UINT depth_pitch);
+ 
+ HRESULT __cdecl wined3d_rendertarget_view_create(const struct wined3d_rendertarget_view_desc *desc,
+         struct wined3d_resource *resource, void *parent, const struct wined3d_parent_ops *parent_ops,
+-- 
+1.9.1
+

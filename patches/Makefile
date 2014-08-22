@@ -686,7 +686,7 @@ server-Misc_ACL.ok:
 # Patchset server-Process
 # |
 # | Included patches:
-# |   *	Return error when opening a terminating process. [by Michael Müller]
+# |   *	Return error when opening a terminating process. [rev 2, by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#37087] Gothic 2 demo expects an error when opening a terminating process
@@ -698,7 +698,7 @@ server-Misc_ACL.ok:
 server-Process.ok:
 	$(call APPLY_FILE,server-Process/0001-server-Return-error-when-opening-a-terminating-proce.patch)
 	@( \
-		echo '+    { "server-Process", "Michael Müller", "Return error when opening a terminating process." },'; \
+		echo '+    { "server-Process", "Michael Müller", "Return error when opening a terminating process. [rev 2]" },'; \
 	) > server-Process.ok
 
 # Patchset server-Stored_ACLs

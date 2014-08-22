@@ -13,7 +13,7 @@ which are not present in regular wine, and always report such issues to us
 Included bugfixes and improvements
 ----------------------------------
 
-**Bugfixes and features included in the next upcoming release [11]:**
+**Bugfixes and features included in the next upcoming release [12]:**
 
 * Adobe Reader requires NtProtectVirtualMemory and NtCreateSection to be on separate pages ([Wine Bug #33162](http://bugs.winehq.org/show_bug.cgi?id=33162 "Acrobat Reader 11 crashes on start (native API application virtualization, NtProtectVirtualMemory removes execute page protection on its own code)"))
 * Fix ITERATE_MoveFiles when no source- and destname is specified ([Wine Bug #10085](http://bugs.winehq.org/show_bug.cgi?id=10085 "Adobe Bridge CS2 complains that it can't start due to licensing restrictions (affects photoshop)"))
@@ -25,6 +25,7 @@ Included bugfixes and improvements
 * Prevent window managers from grouping all wine programs together ([Wine Bug #32699](http://bugs.winehq.org/show_bug.cgi?id=32699 "Add StartupWMClass to .desktop files."))
 * Support for Dynamic DST (daylight saving time) information in registry
 * Support for GetFinalPathNameByHandle ([Wine Bug #36073](http://bugs.winehq.org/show_bug.cgi?id=36073 "OneDrive crashes on unimplemented function KERNEL32.dll.GetFinalPathNameByHandleW"))
+* Support for KF_FLAG_DEFAULT_PATH in SHGetKnownFolderPath ([Wine Bug #30385](http://bugs.winehq.org/show_bug.cgi?id=30385 "Windows Live Essentials 2011 web installer fails to download packages in background (shell32.SHGetKnownFolderPath missing support for KF_FLAG_DEFAULT_PATH)"))
 * nVidia driver for high-end laptop cards does not list all supported resolutions
 
 

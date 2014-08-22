@@ -42,6 +42,7 @@ PATCHLIST := \
 	server-Process.ok \
 	server-Stored_ACLs.ok \
 	shell32-Default_Folder_ACLs.ok \
+	shell32-Default_Path.ok \
 	shell32-Icons.ok \
 	shell32-RunDLL_CallEntry16.ok \
 	shell32-SHCreateSessionKey.ok \
@@ -738,6 +739,24 @@ shell32-Default_Folder_ACLs.ok:
 	@( \
 		echo '+    { "shell32-Default_Folder_ACLs", "Erich E. Hoover", "Generate default ACLs for user shell folders. [rev 6]" },'; \
 	) > shell32-Default_Folder_ACLs.ok
+
+# Patchset shell32-Default_Path
+# |
+# | Included patches:
+# |   *	Implement KF_FLAG_DEFAULT_PATH flag for SHGetKnownFolderPath. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#30385] Support for KF_FLAG_DEFAULT_PATH in SHGetKnownFolderPath
+# |
+# | Modified files: 
+# |   *	dlls/shell32/shellpath.c, dlls/shell32/tests/shellpath.c
+# |
+.INTERMEDIATE: shell32-Default_Path.ok
+shell32-Default_Path.ok:
+	$(call APPLY_FILE,shell32-Default_Path/0001-shell32-Implement-KF_FLAG_DEFAULT_PATH-flag-for-SHGe.patch)
+	@( \
+		echo '+    { "shell32-Default_Path", "Sebastian Lackner", "Implement KF_FLAG_DEFAULT_PATH flag for SHGetKnownFolderPath." },'; \
+	) > shell32-Default_Path.ok
 
 # Patchset shell32-Icons
 # |

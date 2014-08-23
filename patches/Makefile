@@ -635,7 +635,7 @@ server-Address_Change_Notification.ok:
 # Patchset server-CreateProcess_ACLs
 # |
 # | Included patches:
-# |   *	Implement passing ACLs to CreateProcess. [by Joris van der Wel]
+# |   *	Implement passing ACLs to CreateProcess. [rev 2, by Joris van der Wel / Sebastian Lackner]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#22006] Support for process ACLs
@@ -647,11 +647,11 @@ server-Address_Change_Notification.ok:
 .INTERMEDIATE: server-CreateProcess_ACLs.ok
 server-CreateProcess_ACLs.ok:
 	$(call APPLY_FILE,server-CreateProcess_ACLs/0001-server-A-new-function-set_sd_defaults_from_token-tha.patch)
-	$(call APPLY_FILE,server-CreateProcess_ACLs/0002-server-Support-sending-process-and-thread-security-d.patch)
-	$(call APPLY_FILE,server-CreateProcess_ACLs/0003-server-implement-passing-a-process-security-descript.patch)
-	$(call APPLY_FILE,server-CreateProcess_ACLs/0004-server-implement-passing-a-thread-security-descripto.patch)
+	$(call APPLY_FILE,server-CreateProcess_ACLs/0002-server-Support-sending-thread-and-process-security-d.patch)
+	$(call APPLY_FILE,server-CreateProcess_ACLs/0003-kernel32-Implement-passing-a-process-security-descri.patch)
+	$(call APPLY_FILE,server-CreateProcess_ACLs/0004-advapi32-tests-Add-additional-tests-for-passing-a-th.patch)
 	@( \
-		echo '+    { "server-CreateProcess_ACLs", "Joris van der Wel", "Implement passing ACLs to CreateProcess." },'; \
+		echo '+    { "server-CreateProcess_ACLs", "Joris van der Wel / Sebastian Lackner", "Implement passing ACLs to CreateProcess. [rev 2]" },'; \
 	) > server-CreateProcess_ACLs.ok
 
 # Patchset server-Inherited_ACLs

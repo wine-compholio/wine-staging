@@ -1,10 +1,8 @@
-From 43eb6734382c298997573522244de3daf3a52a78 Mon Sep 17 00:00:00 2001
+From 31d68ddd963e008e73e31c661556cd76b78da17e Mon Sep 17 00:00:00 2001
 From: Joris van der Wel <joris@jorisvanderwel.com>
 Date: Sun, 3 Aug 2014 12:52:32 +0200
 Subject: server: implement passing a process security descriptor to
  CreateProcess
-
-server: implement passing a process security descriptor to CreateProcess.
 
 For now the function "NTDLL_create_struct_sd" has been duplicated in
 kernel32. This is needed because kernel32 makes the server call.
@@ -43,7 +41,7 @@ index b44496a..b1b35aa 100644
  
      /* Documented privilege elevation */
 diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
-index efd0e84..44e7711 100644
+index 66e4a31..65e6978 100644
 --- a/dlls/kernel32/process.c
 +++ b/dlls/kernel32/process.c
 @@ -1916,6 +1916,70 @@ static pid_t exec_loader( LPCWSTR cmd_line, unsigned int flags, int socketfd,
@@ -117,7 +115,7 @@ index efd0e84..44e7711 100644
  /***********************************************************************
   *           create_process
   *
-@@ -1939,17 +2003,31 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
+@@ -1939,6 +2003,8 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
      int socketfd[2], stdin_fd = -1, stdout_fd = -1;
      pid_t pid;
      int err, cpu;
@@ -126,10 +124,10 @@ index efd0e84..44e7711 100644
  
      if ((cpu = get_process_cpu( filename, binary_info )) == -1)
      {
-         SetLastError( ERROR_BAD_EXE_FORMAT );
+@@ -1946,10 +2012,22 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
          return FALSE;
      }
-+    
+ 
 +    if (psa && (psa->nLength >= sizeof(*psa)) && psa->lpSecurityDescriptor)
 +    {
 +        status = create_struct_sd( psa->lpSecurityDescriptor, &psd, &psd_len );
@@ -140,7 +138,7 @@ index efd0e84..44e7711 100644
 +            return FALSE;
 +        }
 +     }
- 
++
      /* create the socket for the new process */
  
      if (socketpair( PF_UNIX, SOCK_STREAM, 0, socketfd ) == -1)
@@ -188,7 +186,7 @@ index efd0e84..44e7711 100644
      if (status)
      {
 diff --git a/server/process.c b/server/process.c
-index 110a38f..571f05a 100644
+index d7220e1..2119a08 100644
 --- a/server/process.c
 +++ b/server/process.c
 @@ -880,6 +880,7 @@ DECL_HANDLER(new_process)
@@ -199,37 +197,37 @@ index 110a38f..571f05a 100644
      const startup_info_t *req_info;
      data_size_t req_info_size;
      const WCHAR *req_env;
-@@ -892,6 +893,16 @@ DECL_HANDLER(new_process)
-         close( socket_fd );
+@@ -893,6 +894,16 @@ DECL_HANDLER(new_process)
          return;
      }
-+    
+ 
 +    if (req->process_sd_size)
 +    {
-+        req_psd = get_req_data();        
++        req_psd = get_req_data();
 +        if (!sd_is_valid( req_psd, req->process_sd_size ))
 +        {
 +            set_error( STATUS_INVALID_SECURITY_DESCR );
 +            return;
 +        }
 +    }
- 
++
      req_info = (const startup_info_t *)
                 ((char*)get_req_data() + req->process_sd_size + req->thread_sd_size);
+     req_env = (const WCHAR *)
 @@ -1020,6 +1031,19 @@ DECL_HANDLER(new_process)
      reply->phandle = alloc_handle( parent, process, req->process_access, req->process_attr );
      reply->thandle = alloc_handle( parent, thread, req->thread_access, req->thread_attr );
  
-+    /* note: alloc_handle might fail with access denied 
++    /* note: alloc_handle might fail with access denied
 +     * if the security descriptor is set before that call */
-+    
++
 +    if (req_psd)
 +    {
 +        default_set_sd( &process->obj,
 +                        req_psd,
-+                        OWNER_SECURITY_INFORMATION|
-+                        GROUP_SECURITY_INFORMATION|
-+                        DACL_SECURITY_INFORMATION|
++                        OWNER_SECURITY_INFORMATION |
++                        GROUP_SECURITY_INFORMATION |
++                        DACL_SECURITY_INFORMATION |
 +                        SACL_SECURITY_INFORMATION );
 +    }
 +

@@ -1,10 +1,9 @@
-From 649ce4e95f5ea671857d5c62eb220c95a6af35d7 Mon Sep 17 00:00:00 2001
+From c4b089e56ea5ace923a69428c1a96c838e94a2aa Mon Sep 17 00:00:00 2001
 From: Joris van der Wel <joris@jorisvanderwel.com>
 Date: Sun, 3 Aug 2014 12:52:44 +0200
 Subject: server: implement passing a thread security descriptor to
  CreateProcess
 
-server: implement passing a thread security descriptor to CreateProcess
 ---
  dlls/advapi32/tests/security.c |   44 ++++++++++++++++++++++++++++++++++++----
  dlls/kernel32/process.c        |   24 +++++++++++++++++++---
@@ -12,7 +11,7 @@ server: implement passing a thread security descriptor to CreateProcess
  3 files changed, 84 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index b1b35aa..244844f 100644
+index b1b35aa..eb9b8cb 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
 @@ -2532,12 +2532,12 @@ static void test_process_security(void)
@@ -38,7 +37,7 @@ index b1b35aa..244844f 100644
 +    ThreadSecurityDescriptor = HeapAlloc(GetProcessHeap(), 0, SECURITY_DESCRIPTOR_MIN_LENGTH);
 +    res = InitializeSecurityDescriptor(ThreadSecurityDescriptor, SECURITY_DESCRIPTOR_REVISION);
 +    ok(res, "InitializeSecurityDescriptor failed with error %d\n", GetLastError());
-+    
++
 +    ThreadAcl = HeapAlloc(GetProcessHeap(), 0, 256);
 +    res = InitializeAcl(ThreadAcl, 256, ACL_REVISION);
 +    ok(res, "InitializeAcl failed with error %d\n", GetLastError());
@@ -46,14 +45,14 @@ index b1b35aa..244844f 100644
 +    ok(res, "AddAccessDeniedAce failed with error %d\n", GetLastError());
 +    res = AddAccessAllowedAce(ThreadAcl, ACL_REVISION, THREAD_ALL_ACCESS, AdminSid);
 +    ok(res, "AddAccessAllowedAce failed with error %d\n", GetLastError());
-+    
++
 +    res = SetSecurityDescriptorOwner(ThreadSecurityDescriptor, AdminSid, FALSE);
 +    ok(res, "SetSecurityDescriptorOwner failed with error %d\n", GetLastError());
 +    res = SetSecurityDescriptorGroup(ThreadSecurityDescriptor, UsersSid, FALSE);
 +    ok(res, "SetSecurityDescriptorGroup failed with error %d\n", GetLastError());
 +    res = SetSecurityDescriptorDacl(ThreadSecurityDescriptor, TRUE, ThreadAcl, FALSE);
 +    ok(res, "SetSecurityDescriptorDacl failed with error %d\n", GetLastError());
-+    
++
 +    tsa.nLength = sizeof(tsa);
 +    tsa.lpSecurityDescriptor = ThreadSecurityDescriptor;
 +    tsa.bInheritHandle = TRUE;
@@ -95,7 +94,7 @@ index b1b35aa..244844f 100644
  
  static void test_impersonation_level(void)
 diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
-index 44e7711..dd21100 100644
+index 65e6978..f2d11ba 100644
 --- a/dlls/kernel32/process.c
 +++ b/dlls/kernel32/process.c
 @@ -2003,8 +2003,8 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
@@ -116,7 +115,7 @@ index 44e7711..dd21100 100644
 +    if (tsa && (tsa->nLength >= sizeof(*tsa)) && tsa->lpSecurityDescriptor)
 +    {
 +        status = create_struct_sd( tsa->lpSecurityDescriptor, &tsd, &tsd_len );
-+        
++
 +        if (status != STATUS_SUCCESS)
 +        {
 +            RtlFreeHeap(GetProcessHeap(), 0, psd);
@@ -174,7 +173,7 @@ index 44e7711..dd21100 100644
      RtlReleasePebLock();
      if (status)
 diff --git a/server/process.c b/server/process.c
-index 571f05a..52c04f7 100644
+index 2119a08..c0b82d1 100644
 --- a/server/process.c
 +++ b/server/process.c
 @@ -880,7 +880,7 @@ DECL_HANDLER(new_process)
@@ -205,7 +204,7 @@ index 571f05a..52c04f7 100644
                 ((char*)get_req_data() + req->process_sd_size + req->thread_sd_size);
      req_env = (const WCHAR *)
 @@ -1043,7 +1053,18 @@ DECL_HANDLER(new_process)
-                         DACL_SECURITY_INFORMATION|
+                         DACL_SECURITY_INFORMATION |
                          SACL_SECURITY_INFORMATION );
      }
 -
@@ -214,10 +213,10 @@ index 571f05a..52c04f7 100644
 +        /* In CreateProcess the thread defaults come from the process token,
 +         * (this is not the case during CreateThread however) */
 +        set_sd_defaults_from_token( &thread->obj,
-+                                    req_tsd, 
-+                                    OWNER_SECURITY_INFORMATION|
-+                                    GROUP_SECURITY_INFORMATION|
-+                                    DACL_SECURITY_INFORMATION|
++                                    req_tsd,
++                                    OWNER_SECURITY_INFORMATION |
++                                    GROUP_SECURITY_INFORMATION |
++                                    DACL_SECURITY_INFORMATION |
 +                                    SACL_SECURITY_INFORMATION,
 +                                    process->token );
 +    }

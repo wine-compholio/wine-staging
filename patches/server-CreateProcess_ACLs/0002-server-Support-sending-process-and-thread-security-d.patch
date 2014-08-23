@@ -1,19 +1,17 @@
-From 7c1b44caf023c4120b48a2792a442ca5ac1e3166 Mon Sep 17 00:00:00 2001
+From 38c3a1a50ca4bdef0b5ec0cf120fd5da889954dd Mon Sep 17 00:00:00 2001
 From: Joris van der Wel <joris@jorisvanderwel.com>
 Date: Sun, 3 Aug 2014 12:52:14 +0200
 Subject: server: Support sending process and thread security descriptors for
  the "new_process" request in the protocol
 
-server: Support sending process and thread security descriptors for
- the "new_process" request in the protocol.
 ---
  dlls/kernel32/process.c |    2 ++
- server/process.c        |   44 ++++++++++++++++++++++++++++++--------------
+ server/process.c        |   42 +++++++++++++++++++++++++++++-------------
  server/protocol.def     |    4 ++++
- 3 files changed, 36 insertions(+), 14 deletions(-)
+ 3 files changed, 35 insertions(+), 13 deletions(-)
 
 diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
-index 2566ac4..efd0e84 100644
+index 301c64a..66e4a31 100644
 --- a/dlls/kernel32/process.c
 +++ b/dlls/kernel32/process.c
 @@ -2034,6 +2034,8 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
@@ -26,7 +24,7 @@ index 2566ac4..efd0e84 100644
  
          wine_server_add_data( req, startup_info, startup_info_size );
 diff --git a/server/process.c b/server/process.c
-index 7b9a3b2..110a38f 100644
+index 7b9a3b2..d7220e1 100644
 --- a/server/process.c
 +++ b/server/process.c
 @@ -880,6 +880,24 @@ DECL_HANDLER(new_process)
@@ -75,7 +73,7 @@ index 7b9a3b2..110a38f 100644
 -        info->data_size = info->info_size + env_size;
 +        info->info_size = sizeof(*info->data);
 +        info->data_size = sizeof(*info->data) + req_env_size;
-+        
++
 +        req_info_size = min( req->info_size, FIELD_OFFSET( startup_info_t, curdir_len ));
 +        if (!(info->data = mem_alloc( info->data_size ))) goto done;
 +        memset( info->data, 0, info->data_size );
@@ -85,17 +83,16 @@ index 7b9a3b2..110a38f 100644
      else
      {
          data_size_t pos = sizeof(*info->data);
--
--        if (!(info->data = memdup( get_req_data(), info->data_size ))) goto done;
 +        info->info_size = req->info_size;
 +        info->data_size = req->info_size + req_env_size;
-+ 
+ 
+-        if (!(info->data = memdup( get_req_data(), info->data_size ))) goto done;
 +        if (!(info->data = memdup( req_info, info->data_size ))) goto done;
  #define FIXUP_LEN(len) do { (len) = min( (len), info->info_size - pos ); pos += (len); } while(0)
          FIXUP_LEN( info->data->curdir_len );
          FIXUP_LEN( info->data->dllpath_len );
 diff --git a/server/protocol.def b/server/protocol.def
-index a8c1fb9..d2cfd71 100644
+index c9270ea..dca98a4 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -670,7 +670,11 @@ struct rawinput_device

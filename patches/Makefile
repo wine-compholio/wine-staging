@@ -695,19 +695,19 @@ server-Misc_ACL.ok:
 # Patchset server-OpenProcess
 # |
 # | Included patches:
-# |   *	Return error when opening a terminating process. [rev 2, by Michael Müller]
+# |   *	Return error when opening a terminating process. [rev 3, by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#37087] Return an error when trying to open a terminated process
 # |
 # | Modified files: 
-# |   *	server/process.c
+# |   *	server/process.c, server/process.h
 # |
 .INTERMEDIATE: server-OpenProcess.ok
 server-OpenProcess.ok:
 	$(call APPLY_FILE,server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch)
 	@( \
-		echo '+    { "server-OpenProcess", "Michael Müller", "Return error when opening a terminating process. [rev 2]" },'; \
+		echo '+    { "server-OpenProcess", "Michael Müller", "Return error when opening a terminating process. [rev 3]" },'; \
 	) > server-OpenProcess.ok
 
 # Patchset server-Stored_ACLs

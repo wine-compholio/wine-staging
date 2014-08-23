@@ -559,16 +559,17 @@ quartz-MediaSeeking_Positions.ok:
 # |
 # | Included patches:
 # |   *	Implement Stubs for ITextRange interface. [rev 3, by Jactry Zeng]
-# |   *	Implement IText{Range,Selection}::{GetChar,GetStart,GetEnd,GetDuplicate,Collapse,SetStart,SetEnd}. [by Jactry Zeng]
 # |   *	Implement Stubs for ITextFont interface. [rev 2, by Jactry Zeng]
 # |   *	Implement Stubs for ITextPara interface. [rev 2, by Jactry Zeng]
+# |   *	Implement ITextRange/Selection::{GetChar,GetStart,GetEnd,GetDuplicate,Collapse,SetStart,SetEnd}. [by Jactry Zeng]
+# |   *	Implement ITextRange/Selection::{GetText,SetRange,IsEqual,GetStoryLength}. [by Jactry Zeng]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#12458] Support for ITextDocument_fnRange function
 # |   *	[#18303] Support for ITextRange, ITextFont and ITextPara
 # |
 # | Modified files: 
-# |   *	dlls/riched20/richole.c, dlls/riched20/tests/richole.c
+# |   *	dlls/riched20/richole.c, dlls/riched20/run.c, dlls/riched20/tests/richole.c
 # |
 .INTERMEDIATE: riched20-IText_Interface.ok
 riched20-IText_Interface.ok:
@@ -580,11 +581,18 @@ riched20-IText_Interface.ok:
 	$(call APPLY_FILE,riched20-IText_Interface/0006-riched20-Implement-IText-Selection-Range-Set-Start-E.patch)
 	$(call APPLY_FILE,riched20-IText_Interface/0007-riched20-Stub-for-ITextFont-interface-and-implement-.patch)
 	$(call APPLY_FILE,riched20-IText_Interface/0008-riched20-Stub-for-ITextPara-interface-and-implement-.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0009-riched20-Fix-ME_RunOfsFromCharOfs-when-nCharOfs-strl.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0010-riched20-Implement-ITextRange-GetText.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0011-riched20-Implement-ITextRange-SetRange.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0012-riched20-Implement-ITextRange-IsEqual.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0013-riched20-Implement-ITextRange-GetStoryLength.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0014-riched20-Implement-ITextSelection-GetStoryLength.patch)
 	@( \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextRange interface. [rev 3]" },'; \
-		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement IText{Range,Selection}::{GetChar,GetStart,GetEnd,GetDuplicate,Collapse,SetStart,SetEnd}." },'; \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextFont interface. [rev 2]" },'; \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextPara interface. [rev 2]" },'; \
+		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement ITextRange/Selection::{GetChar,GetStart,GetEnd,GetDuplicate,Collapse,SetStart,SetEnd}." },'; \
+		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement ITextRange/Selection::{GetText,SetRange,IsEqual,GetStoryLength}." },'; \
 	) > riched20-IText_Interface.ok
 
 # Patchset server-ACL_Compat

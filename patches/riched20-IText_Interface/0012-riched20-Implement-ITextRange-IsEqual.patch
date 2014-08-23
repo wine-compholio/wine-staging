@@ -1,0 +1,112 @@
+From e17c9f4954b364347ef6b5eb258ec66f50362db6 Mon Sep 17 00:00:00 2001
+From: Jactry Zeng <wine@jactry.com>
+Date: Fri, 15 Aug 2014 14:27:21 +0800
+Subject: riched20: Implement ITextRange::IsEqual.
+
+---
+ dlls/riched20/richole.c       |   19 +++++++++++++++--
+ dlls/riched20/tests/richole.c |   47 +++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 64 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/riched20/richole.c b/dlls/riched20/richole.c
+index 98f1b1e..47ad0f9 100644
+--- a/dlls/riched20/richole.c
++++ b/dlls/riched20/richole.c
+@@ -2363,14 +2363,29 @@ static HRESULT WINAPI ITextRange_fnInStory(ITextRange *me, ITextRange *pRange, L
+     return E_NOTIMPL;
+ }
+ 
++static HRESULT range_IsEqual(LONG start, LONG end, ITextRange *pRange, LONG *pb)
++{
++    ITextRangeImpl *pRangeImpl = impl_from_ITextRange(pRange);
++    if (start == pRangeImpl->start && end == pRangeImpl->end)
++    {
++        if (pb)
++            *pb = tomTrue;
++        return S_OK;
++    }
++    if (pb)
++        *pb = tomFalse;
++    return S_FALSE;
++}
++
+ static HRESULT WINAPI ITextRange_fnIsEqual(ITextRange *me, ITextRange *pRange, LONG *pb)
+ {
+     ITextRangeImpl *This = impl_from_ITextRange(me);
+     if (!This->reOle)
+         return CO_E_RELEASED;
+ 
+-    FIXME("not implemented %p\n", This);
+-    return E_NOTIMPL;
++    if (!pRange)
++        return S_FALSE;
++    return range_IsEqual(This->start, This->end, pRange, pb);
+ }
+ 
+ static HRESULT WINAPI ITextRange_fnSelect(ITextRange *me)
+diff --git a/dlls/riched20/tests/richole.c b/dlls/riched20/tests/richole.c
+index 6c7c15d..6642ca3 100644
+--- a/dlls/riched20/tests/richole.c
++++ b/dlls/riched20/tests/richole.c
+@@ -1088,6 +1088,52 @@ static void test_ITextRange_SetRange(void)
+   release_interfaces(&w, &reOle, &txtDoc, NULL);
+ }
+ 
++static void test_ITextRange_IsEqual(void)
++{
++  HWND w;
++  IRichEditOle *reOle = NULL;
++  ITextDocument *txtDoc = NULL;
++  ITextRange *txtRge1 = NULL, *txtRge2 = NULL;
++  HRESULT hres;
++  static const CHAR test_text1[] = "TestSomeText";
++  LONG res;
++
++  create_interfaces(&w, &reOle, &txtDoc, NULL);
++  SendMessageA(w, WM_SETTEXT, 0, (LPARAM)test_text1);
++  ITextDocument_Range(txtDoc, 2, 4, &txtRge1);
++  ITextDocument_Range(txtDoc, 2, 4, &txtRge2);
++
++#define TEST_TXTRGE_ISEQUAL(expected_hres, expected_res)                \
++  hres = ITextRange_IsEqual(txtRge1, txtRge2, &res);                    \
++  ok(hres == expected_hres, "ITextRange_IsEqual\n");                    \
++  ok(res == expected_res, "got wrong return value: %d\n", res);
++
++  TEST_TXTRGE_ISEQUAL(S_OK, tomTrue)
++  ITextRange_SetRange(txtRge2, 1, 2);
++  TEST_TXTRGE_ISEQUAL(S_FALSE, tomFalse)
++
++  ITextRange_SetRange(txtRge1, 1, 1);
++  ITextRange_SetRange(txtRge2, 2, 2);
++  TEST_TXTRGE_ISEQUAL(S_FALSE, tomFalse)
++
++  ITextRange_SetRange(txtRge2, 1, 1);
++  TEST_TXTRGE_ISEQUAL(S_OK, tomTrue)
++
++  hres = ITextRange_IsEqual(txtRge1, txtRge1, &res);
++  ok(hres == S_OK, "ITextRange_IsEqual\n");
++  ok(res == tomTrue, "got wrong return value: %d\n", res);
++
++  hres = ITextRange_IsEqual(txtRge1, txtRge2, NULL);
++  ok(hres == S_OK, "ITextRange_IsEqual\n");
++
++  hres = ITextRange_IsEqual(txtRge1, NULL, NULL);
++  ok(hres == S_FALSE, "ITextRange_IsEqual\n");
++
++  ITextRange_Release(txtRge1);
++  ITextRange_Release(txtRge2);
++  release_interfaces(&w, &reOle, &txtDoc, NULL);
++}
++
+ START_TEST(richole)
+ {
+   /* Must explicitly LoadLibrary(). The test has no references to functions in
+@@ -1114,4 +1160,5 @@ START_TEST(richole)
+   test_ITextRange_GetPara();
+   test_ITextRange_GetText();
+   test_ITextRange_SetRange();
++  test_ITextRange_IsEqual();
+ }
+-- 
+1.7.9.5
+

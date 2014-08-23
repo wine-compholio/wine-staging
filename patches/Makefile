@@ -39,7 +39,7 @@ PATCHLIST := \
 	server-CreateProcess_ACLs.ok \
 	server-Inherited_ACLs.ok \
 	server-Misc_ACL.ok \
-	server-Process.ok \
+	server-OpenProcess.ok \
 	server-Stored_ACLs.ok \
 	shell32-Default_Folder_ACLs.ok \
 	shell32-Default_Path.ok \
@@ -692,7 +692,7 @@ server-Misc_ACL.ok:
 		echo '+    { "server-Misc_ACL", "Erich E. Hoover", "Add default security descriptor ownership and DACLs for processes." },'; \
 	) > server-Misc_ACL.ok
 
-# Patchset server-Process
+# Patchset server-OpenProcess
 # |
 # | Included patches:
 # |   *	Return error when opening a terminating process. [rev 2, by Michael Müller]
@@ -703,12 +703,12 @@ server-Misc_ACL.ok:
 # | Modified files: 
 # |   *	server/process.c
 # |
-.INTERMEDIATE: server-Process.ok
-server-Process.ok:
-	$(call APPLY_FILE,server-Process/0001-server-Return-error-when-opening-a-terminating-proce.patch)
+.INTERMEDIATE: server-OpenProcess.ok
+server-OpenProcess.ok:
+	$(call APPLY_FILE,server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch)
 	@( \
-		echo '+    { "server-Process", "Michael Müller", "Return error when opening a terminating process. [rev 2]" },'; \
-	) > server-Process.ok
+		echo '+    { "server-OpenProcess", "Michael Müller", "Return error when opening a terminating process. [rev 2]" },'; \
+	) > server-OpenProcess.ok
 
 # Patchset server-Stored_ACLs
 # |

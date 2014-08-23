@@ -147,7 +147,7 @@ atl-IOCS_Property.ok:
 # |   *	Add semi-stub for BCryptGetFipsAlgorithmMode. [by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#32194] Multiple applications need BCryptGetFipsAlgorithmMode
+# |   *	[#32194] Support for BCryptGetFipsAlgorithmMode
 # |
 # | Modified files: 
 # |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/tests/bcrypt.c
@@ -462,7 +462,7 @@ ntdll-FileDispositionInformation.ok:
 # |   *	Move NtProtectVirtualMemory and NtCreateSection to separate pages in ntdll on x86. [by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#33162] Adobe Reader requires NtProtectVirtualMemory and NtCreateSection to be on separate pages
+# |   *	[#33162] Ensure NtProtectVirtualMemory and NtCreateSection are on separate pages
 # |
 # | Modified files: 
 # |   *	dlls/ntdll/virtual.c
@@ -698,7 +698,7 @@ server-Misc_ACL.ok:
 # |   *	Return error when opening a terminating process. [rev 2, by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#37087] Gothic 2 demo expects an error when opening a terminating process
+# |   *	[#37087] Return an error when trying to open a terminated process
 # |
 # | Modified files: 
 # |   *	server/process.c

@@ -519,7 +519,6 @@ ntdll-Junction_Points.ok:
 	$(call APPLY_FILE,ntdll-Junction_Points/0005-kernel32-ntdll-Add-support-for-deleting-junction-poi.patch)
 	$(call APPLY_FILE,ntdll-Junction_Points/0006-kernel32-Advertise-junction-point-support.patch)
 	$(call APPLY_FILE,ntdll-Junction_Points/0007-ntdll-tests-Add-test-for-deleting-junction-point-tar.patch)
-	$(call APPLY_FILE,ntdll-Junction_Points/0008-ntdll-Use-relative-paths-for-creating-links.patch)
 	@( \
 		echo '+    { "ntdll-Junction_Points", "Erich E. Hoover", "Support for junction points/reparse points." },'; \
 	) > ntdll-Junction_Points.ok

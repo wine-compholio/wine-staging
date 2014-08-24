@@ -1,23 +1,23 @@
-From e1278ab064bba641f34caa8132c8ddc8e83b9778 Mon Sep 17 00:00:00 2001
+From 87a9e724ea4529250b5e194265fd81019b76eea9 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 18:24:27 -0700
 Subject: ws2_32: Implement a basic synchronous TransmitFile.
 
 ---
- dlls/ws2_32/socket.c     |   66 ++++++++++++++++++++++++++++++++++++++++--
+ dlls/ws2_32/socket.c     |   66 +++++++++++++++++++++++++++++++++++++++++-
  dlls/ws2_32/tests/sock.c |   71 +++++++++++++++++++++++++++++++++++++++++++++-
- 2 files changed, 134 insertions(+), 3 deletions(-)
+ 2 files changed, 135 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index ae23dd6..1faf443 100644
+index 597b248..322c5ed 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
-@@ -2473,6 +2473,64 @@ static BOOL WINAPI WS2_AcceptEx(SOCKET listener, SOCKET acceptor, PVOID dest, DW
+@@ -2485,6 +2485,65 @@ static BOOL WINAPI WS2_AcceptEx(SOCKET listener, SOCKET acceptor, PVOID dest, DW
  }
  
  /***********************************************************************
 + *     WS2_transmitfile_base            (INTERNAL)
-+ * 
++ *
 + * Shared implementation for both synchronous and asynchronous TransmitFile.
 + */
 +static BOOL WS2_transmitfile_base( SOCKET s, HANDLE h, DWORD total_bytes, DWORD bytes_per_send,
@@ -56,7 +56,8 @@ index ae23dd6..1faf443 100644
 +                break;
 +            else if(!ok)
 +                goto cleanup;
-+            if (WS_send( s, buffer, n, 0 ) == SOCKET_ERROR)
++            n = WS_send( s, buffer, n, 0 );
++            if (n == SOCKET_ERROR)
 +                goto cleanup;
 +            bytes_sent += n;
 +        } while(total_bytes == 0 || bytes_sent < total_bytes);
@@ -77,17 +78,16 @@ index ae23dd6..1faf443 100644
   *     TransmitFile
   */
  static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD total_bytes, DWORD bytes_per_send,
-@@ -2482,8 +2540,7 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD total_bytes, DWOR
+@@ -2494,7 +2553,7 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD total_bytes, DWOR
      unsigned int uaddrlen = sizeof(uaddr);
      int fd;
  
 -    FIXME("(%lx, %p, %d, %d, %p, %p, %d): stub !\n", s, h, total_bytes, bytes_per_send, overlapped, buffers,
--                                                     flags );
-+    TRACE("(%lx, %p, %d, %d, %p, %p, %d)\n", s, h, total_bytes, bytes_per_send, overlapped, buffers, flags );
-     if (s == INVALID_SOCKET)
-     {
-         WSASetLastError( WSAENOTSOCK );
-@@ -2500,6 +2557,11 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD total_bytes, DWOR
++    TRACE("(%lx, %p, %d, %d, %p, %p, %d): stub !\n", s, h, total_bytes, bytes_per_send, overlapped, buffers,
+                                                      flags );
+ 
+     fd = get_sock_fd( s, 0, NULL );
+@@ -2513,6 +2572,11 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD total_bytes, DWOR
      if (flags)
          FIXME("Flags are not currently supported (0x%x).\n", flags);
  
@@ -100,10 +100,10 @@ index ae23dd6..1faf443 100644
      return FALSE;
  }
 diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
-index 30c8bc1..79052ab 100644
+index dc393e6..2312f50 100644
 --- a/dlls/ws2_32/tests/sock.c
 +++ b/dlls/ws2_32/tests/sock.c
-@@ -6334,15 +6334,45 @@ end:
+@@ -6491,15 +6491,45 @@ end:
          closesocket(connector2);
  }
  
@@ -149,7 +149,7 @@ index 30c8bc1..79052ab 100644
      int iret, len;
      BOOL bret;
  
-@@ -6420,7 +6450,46 @@ static void test_TransmitFile(void)
+@@ -6577,7 +6607,46 @@ static void test_TransmitFile(void)
  
      /* Test TransmitFile with no possible buffer */
      bret = pTransmitFile(client, NULL, 0, 0, NULL, NULL, 0);

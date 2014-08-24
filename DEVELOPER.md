@@ -32,15 +32,15 @@ before proceeding.
 
 As the first step please grab the latest Wine source:
 ```bash
-wget http://prdownloads.sourceforge.net/wine/wine-1.7.24.tar.bz2
-wget https://github.com/compholio/wine-compholio-daily/archive/v1.7.24.tar.gz
+wget http://prdownloads.sourceforge.net/wine/wine-1.7.25.tar.bz2
+wget https://github.com/compholio/wine-compholio-daily/archive/v1.7.25.tar.gz
 ```
 
 Extract the archives:
 ```bash
 tar xvjf wine-1*.tar.bz2
 cd wine-1*
-tar xvzf ../v1.7.24.tar.gz --strip-components 1
+tar xvzf ../v1.7.25.tar.gz --strip-components 1
 ```
 
 And apply the patches:

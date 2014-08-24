@@ -1,23 +1,14 @@
-From 43eb6734382c298997573522244de3daf3a52a78 Mon Sep 17 00:00:00 2001
-From: Joris van der Wel <joris@jorisvanderwel.com>
-Date: Sun, 3 Aug 2014 12:52:32 +0200
-Subject: server: implement passing a process security descriptor to
- CreateProcess
+From bcf14e35900209c3177b76ae9b1e368aa12d58e6 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 23 Aug 2014 06:27:28 +0200
+Subject: kernel32: Implement passing a process security descriptor from
+ CreateProcess to the wineserver.
 
-server: implement passing a process security descriptor to CreateProcess.
-
-For now the function "NTDLL_create_struct_sd" has been duplicated in
-kernel32. This is needed because kernel32 makes the server call.
-Kernel32 currently makes the server call because NtCreateProcess(Ex)
-has not been implemented in ntdll. When NtCreateProcessEx (and
-NtCreateThreadEx) gets implemented,
-the server call will be made from within ntdll instead, and this extra
-function in kernel32 will no longer be needed.
+Based on a patch by Joris van der Wel.
 ---
  dlls/advapi32/tests/security.c |    3 --
- dlls/kernel32/process.c        |   85 +++++++++++++++++++++++++++++++++++++++-
- server/process.c               |   24 ++++++++++++
- 3 files changed, 108 insertions(+), 4 deletions(-)
+ dlls/kernel32/process.c        |  102 +++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 101 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
 index b44496a..b1b35aa 100644
@@ -43,7 +34,7 @@ index b44496a..b1b35aa 100644
  
      /* Documented privilege elevation */
 diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
-index efd0e84..44e7711 100644
+index 5de8b59..7d28140 100644
 --- a/dlls/kernel32/process.c
 +++ b/dlls/kernel32/process.c
 @@ -1916,6 +1916,70 @@ static pid_t exec_loader( LPCWSTR cmd_line, unsigned int flags, int socketfd,
@@ -117,125 +108,81 @@ index efd0e84..44e7711 100644
  /***********************************************************************
   *           create_process
   *
-@@ -1939,17 +2003,31 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
+@@ -1939,6 +2003,8 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
      int socketfd[2], stdin_fd = -1, stdout_fd = -1;
      pid_t pid;
      int err, cpu;
-+    struct security_descriptor *psd = NULL;
-+    data_size_t psd_len = 0;
++    struct security_descriptor *process_sd = NULL, *thread_sd = NULL;
++    data_size_t process_sd_size = 0, thread_sd_size = 0;
  
      if ((cpu = get_process_cpu( filename, binary_info )) == -1)
      {
-         SetLastError( ERROR_BAD_EXE_FORMAT );
+@@ -1993,12 +2059,41 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
          return FALSE;
      }
-+    
-+    if (psa && (psa->nLength >= sizeof(*psa)) && psa->lpSecurityDescriptor)
+ 
++    if (psa && (psa->nLength >= sizeof(*psa)))
 +    {
-+        status = create_struct_sd( psa->lpSecurityDescriptor, &psd, &psd_len );
++        status = create_struct_sd( psa->lpSecurityDescriptor, &process_sd, &process_sd_size );
 +        if (status != STATUS_SUCCESS)
 +        {
-+            WARN("Invalid process security descriptor with status %x\n", status);
++            close( socketfd[0] );
++            close( socketfd[1] );
++            WARN("Invalid process security descriptor: Status %x\n", status);
 +            SetLastError( RtlNtStatusToDosError(status) );
 +            return FALSE;
 +        }
-+     }
- 
-     /* create the socket for the new process */
- 
-     if (socketpair( PF_UNIX, SOCK_STREAM, 0, socketfd ) == -1)
-     {
-+        RtlFreeHeap(GetProcessHeap(), 0, psd);
-         SetLastError( ERROR_TOO_MANY_OPEN_FILES );
-         return FALSE;
-     }
-@@ -1989,6 +2067,7 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
-                          winedebug, binary_info, TRUE );
-         }
-         close( socketfd[0] );
-+        RtlFreeHeap(GetProcessHeap(), 0, psd);
-         SetLastError( RtlNtStatusToDosError( status ));
-         return FALSE;
-     }
-@@ -2001,6 +2080,7 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
-         RtlReleasePebLock();
-         close( socketfd[0] );
-         close( socketfd[1] );
-+        RtlFreeHeap(GetProcessHeap(), 0, psd);
-         return FALSE;
-     }
-     if (!env) env = NtCurrentTeb()->Peb->ProcessParameters->Environment;
-@@ -2034,10 +2114,11 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
-         req->thread_access  = THREAD_ALL_ACCESS;
-         req->thread_attr    = (tsa && (tsa->nLength >= sizeof(*tsa)) && tsa->bInheritHandle) ? OBJ_INHERIT : 0;
-         req->cpu            = cpu;
--        req->process_sd_size= 0;
-+        req->process_sd_size= psd_len;
-         req->thread_sd_size = 0;
-         req->info_size      = startup_info_size;
- 
-+        wine_server_add_data( req, psd, psd_len );
-         wine_server_add_data( req, startup_info, startup_info_size );
-         wine_server_add_data( req, env, (env_end - env) * sizeof(WCHAR) );
-         if (!(status = wine_server_call( req )))
-@@ -2051,6 +2132,8 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
-     }
-     SERVER_END_REQ;
- 
-+    RtlFreeHeap(GetProcessHeap(), 0, psd);
++    }
 +
-     RtlReleasePebLock();
-     if (status)
-     {
-diff --git a/server/process.c b/server/process.c
-index 110a38f..571f05a 100644
---- a/server/process.c
-+++ b/server/process.c
-@@ -880,6 +880,7 @@ DECL_HANDLER(new_process)
-     struct process *process;
-     struct process *parent = current->process;
-     int socket_fd = thread_get_inflight_fd( current, req->socket_fd );
-+    const struct security_descriptor *req_psd = NULL;
-     const startup_info_t *req_info;
-     data_size_t req_info_size;
-     const WCHAR *req_env;
-@@ -892,6 +893,16 @@ DECL_HANDLER(new_process)
-         close( socket_fd );
-         return;
-     }
-+    
-+    if (req->process_sd_size)
++    if (tsa && (tsa->nLength >= sizeof(*tsa)))
 +    {
-+        req_psd = get_req_data();        
-+        if (!sd_is_valid( req_psd, req->process_sd_size ))
++        status = create_struct_sd( tsa->lpSecurityDescriptor, &thread_sd, &thread_sd_size );
++        if (status != STATUS_SUCCESS)
 +        {
-+            set_error( STATUS_INVALID_SECURITY_DESCR );
-+            return;
++            RtlFreeHeap(GetProcessHeap(), 0, process_sd);
++            close( socketfd[0] );
++            close( socketfd[1] );
++            WARN("Invalid thread security descriptor: Status %x\n", status);
++            SetLastError( RtlNtStatusToDosError(status) );
++            return FALSE;
 +        }
 +    }
- 
-     req_info = (const startup_info_t *)
-                ((char*)get_req_data() + req->process_sd_size + req->thread_sd_size);
-@@ -1020,6 +1031,19 @@ DECL_HANDLER(new_process)
-     reply->phandle = alloc_handle( parent, process, req->process_access, req->process_attr );
-     reply->thandle = alloc_handle( parent, thread, req->thread_access, req->thread_attr );
- 
-+    /* note: alloc_handle might fail with access denied 
-+     * if the security descriptor is set before that call */
-+    
-+    if (req_psd)
-+    {
-+        default_set_sd( &process->obj,
-+                        req_psd,
-+                        OWNER_SECURITY_INFORMATION|
-+                        GROUP_SECURITY_INFORMATION|
-+                        DACL_SECURITY_INFORMATION|
-+                        SACL_SECURITY_INFORMATION );
-+    }
 +
-  done:
-     release_object( info );
- }
+     RtlAcquirePebLock();
+ 
+     if (!(startup_info = create_startup_info( filename, cmd_line, cur_dir, env, flags, startup,
+                                               &startup_info_size )))
+     {
+         RtlReleasePebLock();
++        RtlFreeHeap(GetProcessHeap(), 0, process_sd);
++        RtlFreeHeap(GetProcessHeap(), 0, thread_sd);
+         close( socketfd[0] );
+         close( socketfd[1] );
+         return FALSE;
+@@ -2036,10 +2131,12 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
+         req->cpu            = cpu;
+         req->info_size      = startup_info_size;
+         req->env_size       = (env_end - env) * sizeof(WCHAR);
+-        req->process_sd_size = 0;
++        req->process_sd_size = process_sd_size;
+ 
+         wine_server_add_data( req, startup_info, startup_info_size );
+         wine_server_add_data( req, env, (env_end - env) * sizeof(WCHAR) );
++        wine_server_add_data( req, process_sd, process_sd_size );
++        wine_server_add_data( req, thread_sd, thread_sd_size );
+         if (!(status = wine_server_call( req )))
+         {
+             info->dwProcessId = (DWORD)reply->pid;
+@@ -2052,6 +2149,9 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
+     SERVER_END_REQ;
+ 
+     RtlReleasePebLock();
++    RtlFreeHeap(GetProcessHeap(), 0, process_sd);
++    RtlFreeHeap(GetProcessHeap(), 0, thread_sd);
++
+     if (status)
+     {
+         switch (status)
 -- 
 1.7.9.5
 

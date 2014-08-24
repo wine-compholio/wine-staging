@@ -1,18 +1,18 @@
-From 4ee238e8c4b76aba464025ba0d0d9c2f297c7300 Mon Sep 17 00:00:00 2001
+From 75ceb8ccd7dcf5908f7a1fcf9ef4d20b71f4148a Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 17 Jan 2014 12:35:57 -0700
 Subject: ws2_32: Check for invalid parameters in TransmitFile.
 
 ---
- dlls/ws2_32/socket.c     |   20 +++++++++
+ dlls/ws2_32/socket.c     |   21 ++++++++++
  dlls/ws2_32/tests/sock.c |  103 ++++++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 123 insertions(+)
+ 2 files changed, 124 insertions(+)
 
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index c7f17c7..ae23dd6 100644
+index 07d2a47..597b248 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
-@@ -2478,8 +2478,28 @@ static BOOL WINAPI WS2_AcceptEx(SOCKET listener, SOCKET acceptor, PVOID dest, DW
+@@ -2490,8 +2490,29 @@ static BOOL WINAPI WS2_AcceptEx(SOCKET listener, SOCKET acceptor, PVOID dest, DW
  static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD total_bytes, DWORD bytes_per_send,
                                       LPOVERLAPPED overlapped, LPTRANSMIT_FILE_BUFFERS buffers, DWORD flags )
  {
@@ -22,12 +22,13 @@ index c7f17c7..ae23dd6 100644
 +
      FIXME("(%lx, %p, %d, %d, %p, %p, %d): stub !\n", s, h, total_bytes, bytes_per_send, overlapped, buffers,
                                                       flags );
-+    if (s == INVALID_SOCKET)
++
++    fd = get_sock_fd( s, 0, NULL );
++    if (fd == -1)
 +    {
-+        WSASetLastError( WSAENOTSOCK );
++        SetLastError( WSAENOTSOCK );
 +        return FALSE;
 +    }
-+    fd = get_sock_fd( s, 0, NULL );
 +    if (getpeername( fd, &uaddr.addr, &uaddrlen ) != 0)
 +    {
 +        release_sock_fd( s, fd );
@@ -42,10 +43,10 @@ index c7f17c7..ae23dd6 100644
      return FALSE;
  }
 diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
-index 0abf732..9b01dd5 100644
+index 8a9cbba..dc393e6 100644
 --- a/dlls/ws2_32/tests/sock.c
 +++ b/dlls/ws2_32/tests/sock.c
-@@ -6334,6 +6334,108 @@ end:
+@@ -6491,6 +6491,108 @@ end:
          closesocket(connector2);
  }
  
@@ -154,7 +155,7 @@ index 0abf732..9b01dd5 100644
  static void test_getpeername(void)
  {
      SOCKET sock;
-@@ -7564,6 +7666,7 @@ START_TEST( sock )
+@@ -7726,6 +7828,7 @@ START_TEST( sock )
      test_events(1);
  
      test_ipv6only();

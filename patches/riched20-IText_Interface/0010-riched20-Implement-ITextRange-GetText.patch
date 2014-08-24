@@ -1,0 +1,148 @@
+From c76f8caf18ce72f26901f4a05b0ff13b5ea38e51 Mon Sep 17 00:00:00 2001
+From: Jactry Zeng <wine@jactry.com>
+Date: Wed, 13 Aug 2014 15:40:11 +0800
+Subject: riched20: Implement ITextRange::GetText.
+
+---
+ dlls/riched20/richole.c       |   50 ++++++++++++++++++++++++-----------------
+ dlls/riched20/tests/richole.c |   38 +++++++++++++++++++++++++++++++
+ 2 files changed, 67 insertions(+), 21 deletions(-)
+
+diff --git a/dlls/riched20/richole.c b/dlls/riched20/richole.c
+index 241c681..8b93aad 100644
+--- a/dlls/riched20/richole.c
++++ b/dlls/riched20/richole.c
+@@ -1949,14 +1949,40 @@ static HRESULT WINAPI ITextRange_fnInvoke(ITextRange *me, DISPID dispIdMember, R
+     return E_NOTIMPL;
+ }
+ 
++static HRESULT range_GetText(ME_TextEditor *editor, ME_Cursor *start, ME_Cursor *end, BSTR *pbstr)
++{
++    int nChars, endOfs;
++    BOOL bEOP;
++
++    endOfs = ME_GetCursorOfs(end);
++    nChars = endOfs - ME_GetCursorOfs(start);
++    if (!nChars)
++    {
++        *pbstr = NULL;
++        return S_OK;
++    }
++
++    *pbstr = SysAllocStringLen(NULL, nChars);
++    if (!*pbstr)
++        return E_OUTOFMEMORY;
++
++    bEOP = (end->pRun->next->type == diTextEnd && endOfs > ME_GetTextLength(editor));
++    ME_GetTextW(editor, *pbstr, nChars, start, nChars, FALSE, bEOP);
++    TRACE("%s\n", wine_dbgstr_w(*pbstr));
++
++    return S_OK;
++}
++
+ static HRESULT WINAPI ITextRange_fnGetText(ITextRange *me, BSTR *pbstr)
+ {
+     ITextRangeImpl *This = impl_from_ITextRange(me);
++    ME_Cursor start, end;
+     if (!This->reOle)
+         return CO_E_RELEASED;
+ 
+-    FIXME("not implemented %p\n", This);
+-    return E_NOTIMPL;
++    ME_CursorFromCharOfs(This->reOle->editor, This->start, &start);
++    ME_CursorFromCharOfs(This->reOle->editor, This->end, &end);
++    return range_GetText(This->reOle->editor, &start, &end, pbstr);
+ }
+ 
+ static HRESULT WINAPI ITextRange_fnSetText(ITextRange *me, BSTR bstr)
+@@ -3039,8 +3065,6 @@ static HRESULT WINAPI ITextSelection_fnGetText(ITextSelection *me, BSTR *pbstr)
+ {
+     ITextSelectionImpl *This = impl_from_ITextSelection(me);
+     ME_Cursor *start = NULL, *end = NULL;
+-    int nChars, endOfs;
+-    BOOL bEOP;
+ 
+     if (!This->reOle)
+         return CO_E_RELEASED;
+@@ -3049,23 +3073,7 @@ static HRESULT WINAPI ITextSelection_fnGetText(ITextSelection *me, BSTR *pbstr)
+         return E_INVALIDARG;
+ 
+     ME_GetSelection(This->reOle->editor, &start, &end);
+-    endOfs = ME_GetCursorOfs(end);
+-    nChars = endOfs - ME_GetCursorOfs(start);
+-    if (!nChars)
+-    {
+-        *pbstr = NULL;
+-        return S_OK;
+-    }
+-
+-    *pbstr = SysAllocStringLen(NULL, nChars);
+-    if (!*pbstr)
+-        return E_OUTOFMEMORY;
+-
+-    bEOP = (end->pRun->next->type == diTextEnd && endOfs > ME_GetTextLength(This->reOle->editor));
+-    ME_GetTextW(This->reOle->editor, *pbstr, nChars, start, nChars, FALSE, bEOP);
+-    TRACE("%s\n", wine_dbgstr_w(*pbstr));
+-
+-    return S_OK;
++    return range_GetText(This->reOle->editor, start, end, pbstr);
+ }
+ 
+ static HRESULT WINAPI ITextSelection_fnSetText(ITextSelection *me, BSTR bstr)
+diff --git a/dlls/riched20/tests/richole.c b/dlls/riched20/tests/richole.c
+index f7f27d1..ae514ec 100644
+--- a/dlls/riched20/tests/richole.c
++++ b/dlls/riched20/tests/richole.c
+@@ -1017,6 +1017,43 @@ static void test_ITextRange_GetPara(void)
+   ITextPara_Release(txtPara);
+ }
+ 
++static void test_ITextRange_GetText(void)
++{
++  HWND w;
++  IRichEditOle *reOle = NULL;
++  ITextDocument *txtDoc = NULL;
++  ITextRange *txtRge = NULL;
++  HRESULT hres;
++  BSTR bstr = NULL;
++  static const CHAR test_text1[] = "TestSomeText";
++  static const WCHAR bufW1[] = {'T', 'e', 's', 't', 0};
++  static const WCHAR bufW2[] = {'T', 'e', 'x', 't', '\r', 0};
++  static const WCHAR bufW3[] = {'T', 'e', 'x', 't', 0};
++  static const WCHAR bufW4[] = {'T', 'e', 's', 't', 'S', 'o', 'm',
++                                'e', 'T', 'e', 'x', 't', '\r', 0};
++  static const WCHAR bufW5[] = {'\r', 0};
++
++
++#define TEST_TXTRGE_GETTEXT(first, lim, expected_string)                \
++  create_interfaces(&w, &reOle, &txtDoc, NULL);                         \
++  SendMessageA(w, WM_SETTEXT, 0, (LPARAM)test_text1);                   \
++  ITextDocument_Range(txtDoc, first, lim, &txtRge);                     \
++  hres = ITextRange_GetText(txtRge, &bstr);                             \
++  ok(hres == S_OK, "ITextRange_GetText\n");                             \
++  ok(!lstrcmpW(bstr, expected_string), "got wrong text: %s\n", wine_dbgstr_w(bstr)); \
++  SysFreeString(bstr);                                                  \
++  ITextRange_Release(txtRge);                                           \
++  release_interfaces(&w, &reOle, &txtDoc, NULL);
++
++  TEST_TXTRGE_GETTEXT(0, 4, bufW1)
++  TEST_TXTRGE_GETTEXT(4, 0, bufW1)
++  TEST_TXTRGE_GETTEXT(8, 12, bufW3)
++  TEST_TXTRGE_GETTEXT(8, 13, bufW2)
++  TEST_TXTRGE_GETTEXT(12, 13, bufW5)
++  TEST_TXTRGE_GETTEXT(0, 13, bufW4)
++  TEST_TXTRGE_GETTEXT(1, 1, NULL)
++}
++
+ START_TEST(richole)
+ {
+   /* Must explicitly LoadLibrary(). The test has no references to functions in
+@@ -1041,4 +1078,5 @@ START_TEST(richole)
+   test_ITextRange_SetEnd();
+   test_ITextRange_GetFont();
+   test_ITextRange_GetPara();
++  test_ITextRange_GetText();
+ }
+-- 
+1.7.9.5
+

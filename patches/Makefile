@@ -15,7 +15,6 @@ PATCHLIST := \
 	comctl32-ImageList.ok \
 	comctl32-LoadIconMetric.ok \
 	dsound-Fast_Mixer.ok \
-	dwmapi-Invalidate_Thumbnail.ok \
 	fonts-Missing_Fonts.ok \
 	iphlpapi-TCP_Table.ok \
 	kernel32-GetFinalPathNameByHandle.ok \
@@ -41,9 +40,10 @@ PATCHLIST := \
 	server-CreateProcess_ACLs.ok \
 	server-Inherited_ACLs.ok \
 	server-Misc_ACL.ok \
-	server-Process.ok \
+	server-OpenProcess.ok \
 	server-Stored_ACLs.ok \
 	shell32-Default_Folder_ACLs.ok \
+	shell32-Default_Path.ok \
 	shell32-Icons.ok \
 	shell32-RunDLL_CallEntry16.ok \
 	shell32-SHCreateSessionKey.ok \
@@ -148,7 +148,7 @@ atl-IOCS_Property.ok:
 # |   *	Add semi-stub for BCryptGetFipsAlgorithmMode. [by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#32194] Multiple applications need BCryptGetFipsAlgorithmMode
+# |   *	[#32194] Support for BCryptGetFipsAlgorithmMode
 # |
 # | Modified files: 
 # |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/tests/bcrypt.c
@@ -215,24 +215,6 @@ dsound-Fast_Mixer.ok:
 	@( \
 		echo '+    { "dsound-Fast_Mixer", "Alexander E. Patrakov", "Add a linear resampler for use with a large number of dsound mixing buffers." },'; \
 	) > dsound-Fast_Mixer.ok
-
-# Patchset dwmapi-Invalidate_Thumbnail
-# |
-# | Included patches:
-# |   *	Add stub for DwmInvalidateIconicBitmaps. [by Erich E. Hoover]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#32977] Support for DwmInvalidateIconicBitmaps
-# |
-# | Modified files: 
-# |   *	dlls/dwmapi/dwmapi.spec, dlls/dwmapi/dwmapi_main.c, include/dwmapi.h
-# |
-.INTERMEDIATE: dwmapi-Invalidate_Thumbnail.ok
-dwmapi-Invalidate_Thumbnail.ok:
-	$(call APPLY_FILE,dwmapi-Invalidate_Thumbnail/0001-dwmapi-Add-stub-for-DwmInvalidateIconicBitmaps.patch)
-	@( \
-		echo '+    { "dwmapi-Invalidate_Thumbnail", "Erich E. Hoover", "Add stub for DwmInvalidateIconicBitmaps." },'; \
-	) > dwmapi-Invalidate_Thumbnail.ok
 
 # Patchset fonts-Missing_Fonts
 # |
@@ -332,24 +314,18 @@ kernel32-GetVolumePathName.ok:
 # |
 # | Included patches:
 # |   *	Fix for ConnectNamedPort return value in overlapped mode. [by Dan Kegel]
-# |   *	Add proper implementation for SetNamedPipeHandleState. [rev 7, by Sebastian Lackner / Adam Martinson]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#16550] Fix for ConnectNamedPort return value in overlapped mode
-# |   *	[#17273] Support for SetNamedPipeHandleState
 # |
 # | Modified files: 
-# |   *	dlls/kernel32/sync.c, dlls/kernel32/tests/pipe.c, dlls/ntdll/tests/pipe.c
+# |   *	dlls/kernel32/sync.c
 # |
 .INTERMEDIATE: kernel32-Named_Pipe.ok
 kernel32-Named_Pipe.ok:
 	$(call APPLY_FILE,kernel32-Named_Pipe/0001-kernel32-ConnectNamedPort-should-return-FALSE-and-se.patch)
-	$(call APPLY_FILE,kernel32-Named_Pipe/0002-ntdll-tests-Add-tests-for-FILE_PIPE_INFORMATION.patch)
-	$(call APPLY_FILE,kernel32-Named_Pipe/0003-kernel32-tests-Always-allow-only-one-specific-test-r.patch)
-	$(call APPLY_FILE,kernel32-Named_Pipe/0004-kernel32-Implement-Get-Set-NamedPipeHandleState.patch)
 	@( \
 		echo '+    { "kernel32-Named_Pipe", "Dan Kegel", "Fix for ConnectNamedPort return value in overlapped mode." },'; \
-		echo '+    { "kernel32-Named_Pipe", "Sebastian Lackner / Adam Martinson", "Add proper implementation for SetNamedPipeHandleState. [rev 7]" },'; \
 	) > kernel32-Named_Pipe.ok
 
 # Patchset kernel32-SystemFileCacheSize
@@ -511,7 +487,7 @@ ntdll-FileDispositionInformation.ok:
 # |   *	Move NtProtectVirtualMemory and NtCreateSection to separate pages in ntdll on x86. [by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#33162] Adobe Reader requires NtProtectVirtualMemory and NtCreateSection to be on separate pages
+# |   *	[#33162] Ensure NtProtectVirtualMemory and NtCreateSection are on separate pages
 # |
 # | Modified files: 
 # |   *	dlls/ntdll/virtual.c
@@ -609,16 +585,17 @@ quartz-MediaSeeking_Positions.ok:
 # |
 # | Included patches:
 # |   *	Implement Stubs for ITextRange interface. [rev 3, by Jactry Zeng]
-# |   *	Implement IText{Range,Selection}::{GetChar,GetStart,GetEnd,GetDuplicate,Collapse,SetStart,SetEnd}. [by Jactry Zeng]
 # |   *	Implement Stubs for ITextFont interface. [rev 2, by Jactry Zeng]
 # |   *	Implement Stubs for ITextPara interface. [rev 2, by Jactry Zeng]
+# |   *	Implement ITextRange/Selection::{GetChar,GetStart,GetEnd,GetDuplicate,Collapse,SetStart,SetEnd}. [by Jactry Zeng]
+# |   *	Implement ITextRange/Selection::{GetText,SetRange,IsEqual,GetStoryLength}. [by Jactry Zeng]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#12458] Support for ITextDocument_fnRange function
 # |   *	[#18303] Support for ITextRange, ITextFont and ITextPara
 # |
 # | Modified files: 
-# |   *	dlls/riched20/richole.c, dlls/riched20/tests/richole.c
+# |   *	dlls/riched20/richole.c, dlls/riched20/run.c, dlls/riched20/tests/richole.c
 # |
 .INTERMEDIATE: riched20-IText_Interface.ok
 riched20-IText_Interface.ok:
@@ -630,11 +607,18 @@ riched20-IText_Interface.ok:
 	$(call APPLY_FILE,riched20-IText_Interface/0006-riched20-Implement-IText-Selection-Range-Set-Start-E.patch)
 	$(call APPLY_FILE,riched20-IText_Interface/0007-riched20-Stub-for-ITextFont-interface-and-implement-.patch)
 	$(call APPLY_FILE,riched20-IText_Interface/0008-riched20-Stub-for-ITextPara-interface-and-implement-.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0009-riched20-Fix-ME_RunOfsFromCharOfs-when-nCharOfs-strl.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0010-riched20-Implement-ITextRange-GetText.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0011-riched20-Implement-ITextRange-SetRange.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0012-riched20-Implement-ITextRange-IsEqual.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0013-riched20-Implement-ITextRange-GetStoryLength.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0014-riched20-Implement-ITextSelection-GetStoryLength.patch)
 	@( \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextRange interface. [rev 3]" },'; \
-		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement IText{Range,Selection}::{GetChar,GetStart,GetEnd,GetDuplicate,Collapse,SetStart,SetEnd}." },'; \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextFont interface. [rev 2]" },'; \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextPara interface. [rev 2]" },'; \
+		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement ITextRange/Selection::{GetChar,GetStart,GetEnd,GetDuplicate,Collapse,SetStart,SetEnd}." },'; \
+		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement ITextRange/Selection::{GetText,SetRange,IsEqual,GetStoryLength}." },'; \
 	) > riched20-IText_Interface.ok
 
 # Patchset server-ACL_Compat
@@ -677,7 +661,7 @@ server-Address_Change_Notification.ok:
 # Patchset server-CreateProcess_ACLs
 # |
 # | Included patches:
-# |   *	Implement passing ACLs to CreateProcess. [by Joris van der Wel]
+# |   *	Implement passing ACLs to CreateProcess. [rev 2, by Joris van der Wel / Sebastian Lackner]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#22006] Support for process ACLs
@@ -689,11 +673,11 @@ server-Address_Change_Notification.ok:
 .INTERMEDIATE: server-CreateProcess_ACLs.ok
 server-CreateProcess_ACLs.ok:
 	$(call APPLY_FILE,server-CreateProcess_ACLs/0001-server-A-new-function-set_sd_defaults_from_token-tha.patch)
-	$(call APPLY_FILE,server-CreateProcess_ACLs/0002-server-Support-sending-process-and-thread-security-d.patch)
-	$(call APPLY_FILE,server-CreateProcess_ACLs/0003-server-implement-passing-a-process-security-descript.patch)
-	$(call APPLY_FILE,server-CreateProcess_ACLs/0004-server-implement-passing-a-thread-security-descripto.patch)
+	$(call APPLY_FILE,server-CreateProcess_ACLs/0002-server-Support-sending-thread-and-process-security-d.patch)
+	$(call APPLY_FILE,server-CreateProcess_ACLs/0003-kernel32-Implement-passing-a-process-security-descri.patch)
+	$(call APPLY_FILE,server-CreateProcess_ACLs/0004-advapi32-tests-Add-additional-tests-for-passing-a-th.patch)
 	@( \
-		echo '+    { "server-CreateProcess_ACLs", "Joris van der Wel", "Implement passing ACLs to CreateProcess." },'; \
+		echo '+    { "server-CreateProcess_ACLs", "Joris van der Wel / Sebastian Lackner", "Implement passing ACLs to CreateProcess. [rev 2]" },'; \
 	) > server-CreateProcess_ACLs.ok
 
 # Patchset server-Inherited_ACLs
@@ -734,23 +718,23 @@ server-Misc_ACL.ok:
 		echo '+    { "server-Misc_ACL", "Erich E. Hoover", "Add default security descriptor ownership and DACLs for processes." },'; \
 	) > server-Misc_ACL.ok
 
-# Patchset server-Process
+# Patchset server-OpenProcess
 # |
 # | Included patches:
-# |   *	Return error when opening a terminating process. [by Michael Müller]
+# |   *	Return error when opening a terminating process. [rev 3, by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#37087] Gothic 2 demo expects an error when opening a terminating process
+# |   *	[#37087] Return an error when trying to open a terminated process
 # |
 # | Modified files: 
-# |   *	server/process.c
+# |   *	server/process.c, server/process.h
 # |
-.INTERMEDIATE: server-Process.ok
-server-Process.ok:
-	$(call APPLY_FILE,server-Process/0001-server-Return-error-when-opening-a-terminating-proce.patch)
+.INTERMEDIATE: server-OpenProcess.ok
+server-OpenProcess.ok:
+	$(call APPLY_FILE,server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch)
 	@( \
-		echo '+    { "server-Process", "Michael Müller", "Return error when opening a terminating process." },'; \
-	) > server-Process.ok
+		echo '+    { "server-OpenProcess", "Michael Müller", "Return error when opening a terminating process. [rev 3]" },'; \
+	) > server-OpenProcess.ok
 
 # Patchset server-Stored_ACLs
 # |
@@ -789,6 +773,24 @@ shell32-Default_Folder_ACLs.ok:
 	@( \
 		echo '+    { "shell32-Default_Folder_ACLs", "Erich E. Hoover", "Generate default ACLs for user shell folders. [rev 6]" },'; \
 	) > shell32-Default_Folder_ACLs.ok
+
+# Patchset shell32-Default_Path
+# |
+# | Included patches:
+# |   *	Implement KF_FLAG_DEFAULT_PATH flag for SHGetKnownFolderPath. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#30385] Support for KF_FLAG_DEFAULT_PATH in SHGetKnownFolderPath
+# |
+# | Modified files: 
+# |   *	dlls/shell32/shellpath.c, dlls/shell32/tests/shellpath.c
+# |
+.INTERMEDIATE: shell32-Default_Path.ok
+shell32-Default_Path.ok:
+	$(call APPLY_FILE,shell32-Default_Path/0001-shell32-Implement-KF_FLAG_DEFAULT_PATH-flag-for-SHGe.patch)
+	@( \
+		echo '+    { "shell32-Default_Path", "Sebastian Lackner", "Implement KF_FLAG_DEFAULT_PATH flag for SHGetKnownFolderPath." },'; \
+	) > shell32-Default_Path.ok
 
 # Patchset shell32-Icons
 # |

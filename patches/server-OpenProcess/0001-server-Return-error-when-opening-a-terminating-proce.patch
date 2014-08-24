@@ -1,0 +1,57 @@
+From c45e6864494332d04e7e93be02a0ee8222bd9383 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 14 Aug 2014 03:05:52 +0200
+Subject: server: Return error when opening a terminating process.
+
+---
+ server/process.c |    7 ++++++-
+ server/process.h |    1 +
+ 2 files changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/server/process.c b/server/process.c
+index 426bcca..0574a32 100644
+--- a/server/process.c
++++ b/server/process.c
+@@ -268,6 +268,7 @@ void shutdown_master_socket(void)
+ /* final cleanup once we are sure a process is really dead */
+ static void process_died( struct process *process )
+ {
++    process->is_terminated = 1;
+     if (debug_level) fprintf( stderr, "%04x: *process killed*\n", process->id );
+     if (!process->is_system)
+     {
+@@ -324,6 +325,7 @@ struct thread *create_process( int fd, struct thread *parent_thread, int inherit
+     process->is_system       = 0;
+     process->debug_children  = 0;
+     process->is_terminating  = 0;
++    process->is_terminated   = 0;
+     process->console         = NULL;
+     process->startup_state   = STARTUP_IN_PROGRESS;
+     process->startup_info    = NULL;
+@@ -1129,7 +1131,10 @@ DECL_HANDLER(open_process)
+     reply->handle = 0;
+     if (process)
+     {
+-        reply->handle = alloc_handle( current->process, process, req->access, req->attributes );
++        if (!process->is_terminated)
++            reply->handle = alloc_handle( current->process, process, req->access, req->attributes );
++        else
++            set_error( STATUS_INVALID_PARAMETER );
+         release_object( process );
+     }
+ }
+diff --git a/server/process.h b/server/process.h
+index a50b537..da6d3da 100644
+--- a/server/process.h
++++ b/server/process.h
+@@ -75,6 +75,7 @@ struct process
+     unsigned int         is_system:1;     /* is it a system process? */
+     unsigned int         debug_children:1;/* also debug all child processes */
+     unsigned int         is_terminating:1;/* is process terminating? */
++    unsigned int         is_terminated:1; /* is process terminated? */
+     struct list          locks;           /* list of file locks owned by the process */
+     struct list          classes;         /* window classes owned by the process */
+     struct console_input*console;         /* console input */
+-- 
+1.7.9.5
+

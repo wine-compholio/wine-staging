@@ -1,4 +1,4 @@
-From ecf3a78c92ff49e1322d5e7467c54081606e9e8d Mon Sep 17 00:00:00 2001
+From 0535832365c4fba553cfddd1546ce55d63b45510 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 18:24:53 -0700
 Subject: ws2_32: Add asynchronous support for TransmitFile.
@@ -9,10 +9,10 @@ Subject: ws2_32: Add asynchronous support for TransmitFile.
  2 files changed, 124 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index 1faf443..2323e3d 100644
+index 322c5ed..42c7832 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
-@@ -363,6 +363,18 @@ typedef struct ws2_accept_async
+@@ -364,6 +364,18 @@ typedef struct ws2_accept_async
      struct ws2_async    *read;
  } ws2_accept_async;
  
@@ -31,7 +31,7 @@ index 1faf443..2323e3d 100644
  /****************************************************************/
  
  /* ----------------------------------- internal data */
-@@ -2499,6 +2511,16 @@ static BOOL WS2_transmitfile_base( SOCKET s, HANDLE h, DWORD total_bytes, DWORD
+@@ -2511,6 +2523,16 @@ static BOOL WS2_transmitfile_base( SOCKET s, HANDLE h, DWORD total_bytes, DWORD
          buffer = HeapAlloc( GetProcessHeap(), 0, bytes_per_send );
          if (!buffer) goto cleanup;
  
@@ -48,15 +48,15 @@ index 1faf443..2323e3d 100644
          /* read and send the data from the file */
          do
          {
-@@ -2531,6 +2553,32 @@ cleanup:
+@@ -2544,6 +2566,32 @@ cleanup:
  }
  
  /***********************************************************************
 + *     WS2_async_transmitfile           (INTERNAL)
-+ * 
++ *
 + * Asynchronous callback for overlapped TransmitFile operations.
 + */
-+static NTSTATUS WS2_async_transmitfile( void *arg, IO_STATUS_BLOCK *iosb, ULONG reserved )
++static NTSTATUS WS2_async_transmitfile( void *arg, IO_STATUS_BLOCK *iosb, ULONG reserved, void **apc)
 +{
 +    struct ws2_transmitfile_async *wsa = arg;
 +    BOOL ret;
@@ -81,7 +81,7 @@ index 1faf443..2323e3d 100644
   *     TransmitFile
   */
  static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD total_bytes, DWORD bytes_per_send,
-@@ -2538,7 +2586,9 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD total_bytes, DWOR
+@@ -2551,7 +2599,9 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD total_bytes, DWOR
  {
      union generic_unix_sockaddr uaddr;
      unsigned int uaddrlen = sizeof(uaddr);
@@ -90,9 +90,9 @@ index 1faf443..2323e3d 100644
 +    struct ws2_transmitfile_async *wsa;
 +    int status, fd;
  
-     TRACE("(%lx, %p, %d, %d, %p, %p, %d)\n", s, h, total_bytes, bytes_per_send, overlapped, buffers, flags );
-     if (s == INVALID_SOCKET)
-@@ -2560,9 +2610,37 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD total_bytes, DWOR
+     TRACE("(%lx, %p, %d, %d, %p, %p, %d): stub !\n", s, h, total_bytes, bytes_per_send, overlapped, buffers,
+                                                      flags );
+@@ -2575,9 +2625,37 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD total_bytes, DWOR
      if (!overlapped)
          return WS2_transmitfile_base( s, h, total_bytes, bytes_per_send, overlapped, buffers, flags );
  
@@ -134,10 +134,10 @@ index 1faf443..2323e3d 100644
  }
  
 diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
-index 79052ab..652f75f 100644
+index 2312f50..dbb762a 100644
 --- a/dlls/ws2_32/tests/sock.c
 +++ b/dlls/ws2_32/tests/sock.c
-@@ -6334,15 +6334,15 @@ end:
+@@ -6491,15 +6491,15 @@ end:
          closesocket(connector2);
  }
  
@@ -156,7 +156,7 @@ index 79052ab..652f75f 100644
      while (1)
      {
          DWORD n1 = 0, n2 = 0;
-@@ -6372,10 +6372,13 @@ static void test_TransmitFile(void)
+@@ -6529,10 +6529,13 @@ static void test_TransmitFile(void)
      TRANSMIT_FILE_BUFFERS buffers;
      SOCKET client, server, dest;
      DWORD num_bytes, err;
@@ -170,7 +170,7 @@ index 79052ab..652f75f 100644
      /* Setup sockets for testing TransmitFile */
      client = socket(AF_INET, SOCK_STREAM, 0);
      server = socket(AF_INET, SOCK_STREAM, 0);
-@@ -6473,7 +6476,7 @@ static void test_TransmitFile(void)
+@@ -6630,7 +6633,7 @@ static void test_TransmitFile(void)
      /* Test TransmitFile with only file data */
      bret = pTransmitFile(client, file, 0, 0, NULL, NULL, 0);
      ok(bret, "TransmitFile failed unexpectedly.\n");
@@ -179,7 +179,7 @@ index 79052ab..652f75f 100644
  
      /* Test TransmitFile with both file and buffer data */
      buffers.Head = &header_msg[0];
-@@ -6486,11 +6489,44 @@ static void test_TransmitFile(void)
+@@ -6643,11 +6646,44 @@ static void test_TransmitFile(void)
      iret = recv(dest, buf, sizeof(header_msg)+1, 0);
      ok(memcmp(buf, &header_msg[0], sizeof(header_msg)+1) == 0,
         "TransmitFile header buffer did not match!\n");
@@ -225,7 +225,7 @@ index 79052ab..652f75f 100644
      /* Test TransmitFile with a UDP datagram socket */
      closesocket(client);
      client = socket(AF_INET, SOCK_DGRAM, 0);
-@@ -6501,6 +6537,7 @@ static void test_TransmitFile(void)
+@@ -6658,6 +6694,7 @@ static void test_TransmitFile(void)
  
  cleanup:
      CloseHandle(file);

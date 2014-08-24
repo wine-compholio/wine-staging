@@ -1,0 +1,78 @@
+From 7c46ccadf6492585c2a2cd3fc9f06ab960fe30f4 Mon Sep 17 00:00:00 2001
+From: Jactry Zeng <wine@jactry.com>
+Date: Mon, 18 Aug 2014 14:38:50 +0800
+Subject: riched20: Implement ITextRange::GetStoryLength.
+
+---
+ dlls/riched20/richole.c       |    6 ++++--
+ dlls/riched20/tests/richole.c |   32 ++++++++++++++++++++++++++++++++
+ 2 files changed, 36 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/riched20/richole.c b/dlls/riched20/richole.c
+index 47ad0f9..1af7804 100644
+--- a/dlls/riched20/richole.c
++++ b/dlls/riched20/richole.c
+@@ -2244,8 +2244,10 @@ static HRESULT WINAPI ITextRange_fnGetStoryLength(ITextRange *me, LONG *pcch)
+     if (!This->reOle)
+         return CO_E_RELEASED;
+ 
+-    FIXME("not implemented %p\n", This);
+-    return E_NOTIMPL;
++    if (!pcch)
++        return E_INVALIDARG;
++    *pcch = ME_GetTextLength(This->reOle->editor) + 1;
++    return S_OK;
+ }
+ 
+ static HRESULT WINAPI ITextRange_fnGetStoryType(ITextRange *me, LONG *pValue)
+diff --git a/dlls/riched20/tests/richole.c b/dlls/riched20/tests/richole.c
+index 6642ca3..c4f58fd 100644
+--- a/dlls/riched20/tests/richole.c
++++ b/dlls/riched20/tests/richole.c
+@@ -1134,6 +1134,37 @@ static void test_ITextRange_IsEqual(void)
+   release_interfaces(&w, &reOle, &txtDoc, NULL);
+ }
+ 
++static void test_ITextRange_GetStoryLength(void)
++{
++  HWND w;
++  IRichEditOle *reOle = NULL;
++  ITextDocument *txtDoc = NULL;
++  ITextRange *txtRge = NULL;
++  HRESULT hres;
++  LONG count;
++  static const CHAR test_text1[] = "TestSomeText";
++  int len = strlen(test_text1) + 1;
++
++  create_interfaces(&w, &reOle, &txtDoc, NULL);
++  SendMessageA(w, WM_SETTEXT, 0, (LPARAM)test_text1);
++  ITextDocument_Range(txtDoc, 0, 0, &txtRge);
++
++  hres = ITextRange_GetStoryLength(txtRge, &count);
++  ok(hres == S_OK, "ITextRange_GetStoryLength\n");
++  ok(count == len, "got wrong length: %d\n", count);
++
++  ITextRange_SetRange(txtRge, 1, 2);
++  hres = ITextRange_GetStoryLength(txtRge, &count);
++  ok(hres == S_OK, "ITextRange_GetStoryLength\n");
++  ok(count == len, "got wrong length: %d\n", count);
++
++  hres = ITextRange_GetStoryLength(txtRge, NULL);
++  ok(hres == E_INVALIDARG, "ITextRange_GetStoryLength\n");
++
++  ITextRange_Release(txtRge);
++  release_interfaces(&w, &reOle, &txtDoc, NULL);
++}
++
+ START_TEST(richole)
+ {
+   /* Must explicitly LoadLibrary(). The test has no references to functions in
+@@ -1161,4 +1192,5 @@ START_TEST(richole)
+   test_ITextRange_GetText();
+   test_ITextRange_SetRange();
+   test_ITextRange_IsEqual();
++  test_ITextRange_GetStoryLength();
+ }
+-- 
+1.7.9.5
+

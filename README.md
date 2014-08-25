@@ -15,8 +15,8 @@ Included bugfixes and improvements
 
 **Bugfixes and features included in the next upcoming release [2]:**
 
+* Fix unintentional leaks with ntdll internals
 * Support for DOS hidden/system file attributes ([Wine Bug #9158](http://bugs.winehq.org/show_bug.cgi?id=9158 "Multiple Microsoft development tools online/web installers fail to skip \"$shtdwn$.req\" with FILE_ATTRIBUTE_HIDDEN (Visual Studio Express Editions, .NET Framework 3.0)"))
-* Unintentional leaks with ntdll internals
 
 
 **Bugs fixed in Wine-Compholio 1.7.25 [53]:**

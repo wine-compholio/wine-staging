@@ -30,6 +30,7 @@ PATCHLIST := \
 	ntdll-FD_Cache.ok \
 	ntdll-FileDispositionInformation.ok \
 	ntdll-Fix_Alignment.ok \
+	ntdll-Fix_Free.ok \
 	ntdll-Junction_Points.ok \
 	ntdll-Pipe_SpecialCharacters.ok \
 	ntdll-loader_EntryPoint.ok \
@@ -414,7 +415,7 @@ msi-MoveFiles.ok:
 # | 	dlls/ntdll/tests/file.c, include/wine/port.h, libs/port/Makefile.in, libs/port/xattr.c
 # |
 .INTERMEDIATE: ntdll-DOS_Attributes.ok
-ntdll-DOS_Attributes.ok:
+ntdll-DOS_Attributes.ok: ntdll-Fix_Free.ok
 	$(call APPLY_FILE,ntdll-DOS_Attributes/0001-ntdll-Unify-retrieving-the-attributes-of-a-file.patch)
 	$(call APPLY_FILE,ntdll-DOS_Attributes/0002-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch)
 	$(call APPLY_FILE,ntdll-DOS_Attributes/0003-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch)
@@ -498,6 +499,30 @@ ntdll-Fix_Alignment.ok:
 	@( \
 		echo '+    { "ntdll-Fix_Alignment", "Michael Müller", "Move NtProtectVirtualMemory and NtCreateSection to separate pages in ntdll on x86." },'; \
 	) > ntdll-Fix_Alignment.ok
+
+# Patchset ntdll-Fix_Free
+# |
+# | Included patches:
+# |   *	Fix unintentional leaks with ntdll internals [by Erich E. Hoover]
+# |
+# | Modified files: 
+# |   *	dlls/kernel32/path.c, dlls/kernel32/volume.c, dlls/ntdll/directory.c, dlls/ntdll/file.c, dlls/ntdll/loader.c
+# |
+.INTERMEDIATE: ntdll-Fix_Free.ok
+ntdll-Fix_Free.ok:
+	$(call APPLY_FILE,ntdll-Fix_Free/0001-ntdll-Make-nt_to_unix_file_name_attr-return-always-s.patch)
+	$(call APPLY_FILE,ntdll-Fix_Free/0002-ntdll-Make-wine_nt_to_unix_file_name-return-always-s.patch)
+	$(call APPLY_FILE,ntdll-Fix_Free/0003-ntdll-Make-file_id_to_unix_file_name-return-always-s.patch)
+	$(call APPLY_FILE,ntdll-Fix_Free/0004-ntdll-Fix-leak-on-STATUS_NO_SUCH_FILE-in-NtQueryFull.patch)
+	$(call APPLY_FILE,ntdll-Fix_Free/0005-ntdll-Fix-leak-on-STATUS_NO_SUCH_FILE-in-NtQueryAttr.patch)
+	$(call APPLY_FILE,ntdll-Fix_Free/0006-ntdll-Fix-unlikely-leak-on-STATUS_NO_SUCH_FILE-in-in.patch)
+	$(call APPLY_FILE,ntdll-Fix_Free/0007-ntdll-Fix-leak-on-STATUS_NO_SUCH_FILE-in-load_builti.patch)
+	$(call APPLY_FILE,ntdll-Fix_Free/0008-ntdll-Fix-leak-on-STATUS_NO_SUCH_FILE-for-certain-di.patch)
+	$(call APPLY_FILE,ntdll-Fix_Free/0009-kernel32-Fix-leak-on-STATUS_NO_SUCH_FILE-in-RemoveDi.patch)
+	$(call APPLY_FILE,ntdll-Fix_Free/0010-kernel32-Fix-leak-on-STATUS_NO_SUCH_FILE-in-QueryDos.patch)
+	@( \
+		echo '+    { "ntdll-Fix_Free", "Erich E. Hoover", "Fix unintentional leaks with ntdll internals" },'; \
+	) > ntdll-Fix_Free.ok
 
 # Patchset ntdll-Junction_Points
 # |

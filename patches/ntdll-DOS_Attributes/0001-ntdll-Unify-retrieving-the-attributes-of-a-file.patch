@@ -1,4 +1,4 @@
-From b331ed482682444dfeb31358977a2645c5c194f4 Mon Sep 17 00:00:00 2001
+From c7e981011339b8a665f0164fabdeb8603b247f2f Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Tue, 19 Aug 2014 20:31:00 -0600
 Subject: ntdll: Unify retrieving the attributes of a file.
@@ -10,7 +10,7 @@ Subject: ntdll: Unify retrieving the attributes of a file.
  3 files changed, 83 insertions(+), 40 deletions(-)
 
 diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
-index a2796b2..dad2ee2 100644
+index 4fb89e3..8871700 100644
 --- a/dlls/ntdll/directory.c
 +++ b/dlls/ntdll/directory.c
 @@ -1380,7 +1380,7 @@ static union file_directory_info *append_entry( void *info_ptr, IO_STATUS_BLOCK
@@ -49,7 +49,7 @@ index a2796b2..dad2ee2 100644
      switch (class)
      {
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 92d9829..4ec2c34 100644
+index 218e112..7dde57d 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
 @@ -103,6 +103,55 @@ mode_t FILE_umask = 0;
@@ -108,7 +108,7 @@ index 92d9829..4ec2c34 100644
  /**************************************************************************
   *                 FILE_CreateFile                    (internal)
   * Open a file.
-@@ -1774,8 +1823,9 @@ static inline void get_file_times( const struct stat *st, LARGE_INTEGER *mtime,
+@@ -1776,8 +1825,9 @@ static inline void get_file_times( const struct stat *st, LARGE_INTEGER *mtime,
  #endif
  }
  
@@ -120,7 +120,7 @@ index 92d9829..4ec2c34 100644
  {
      switch (class)
      {
-@@ -1785,10 +1835,7 @@ NTSTATUS fill_stat_info( const struct stat *st, void *ptr, FILE_INFORMATION_CLAS
+@@ -1787,10 +1837,7 @@ NTSTATUS fill_stat_info( const struct stat *st, void *ptr, FILE_INFORMATION_CLAS
  
              get_file_times( st, &info->LastWriteTime, &info->ChangeTime,
                              &info->LastAccessTime, &info->CreationTime );
@@ -132,7 +132,7 @@ index 92d9829..4ec2c34 100644
          }
          break;
      case FileStandardInformation:
-@@ -1824,9 +1871,9 @@ NTSTATUS fill_stat_info( const struct stat *st, void *ptr, FILE_INFORMATION_CLAS
+@@ -1826,9 +1873,9 @@ NTSTATUS fill_stat_info( const struct stat *st, void *ptr, FILE_INFORMATION_CLAS
      case FileAllInformation:
          {
              FILE_ALL_INFORMATION *info = ptr;
@@ -145,7 +145,7 @@ index 92d9829..4ec2c34 100644
          }
          break;
      /* all directory structures start with the FileDirectoryInformation layout */
-@@ -1842,30 +1889,27 @@ NTSTATUS fill_stat_info( const struct stat *st, void *ptr, FILE_INFORMATION_CLAS
+@@ -1844,30 +1891,27 @@ NTSTATUS fill_stat_info( const struct stat *st, void *ptr, FILE_INFORMATION_CLAS
              {
                  info->AllocationSize.QuadPart = 0;
                  info->EndOfFile.QuadPart      = 0;
@@ -179,7 +179,7 @@ index 92d9829..4ec2c34 100644
          }
          break;
  
-@@ -2017,6 +2061,7 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
+@@ -2019,6 +2063,7 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
  
      struct stat st;
      int fd, needs_close = FALSE;
@@ -187,7 +187,7 @@ index 92d9829..4ec2c34 100644
  
      TRACE("(%p,%p,%p,0x%08x,0x%08x)\n", hFile, io, ptr, len, class);
  
-@@ -2041,21 +2086,21 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
+@@ -2043,21 +2088,21 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
      switch (class)
      {
      case FileBasicInformation:
@@ -213,7 +213,7 @@ index 92d9829..4ec2c34 100644
                  info->DeletePending = FALSE; /* FIXME */
              }
          }
-@@ -2069,8 +2114,8 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
+@@ -2071,8 +2116,8 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
          }
          break;
      case FileInternalInformation:
@@ -224,7 +224,7 @@ index 92d9829..4ec2c34 100644
          break;
      case FileEaInformation:
          {
-@@ -2079,22 +2124,22 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
+@@ -2081,22 +2126,22 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
          }
          break;
      case FileEndOfFileInformation:
@@ -251,7 +251,7 @@ index 92d9829..4ec2c34 100644
                  info->StandardInformation.DeletePending = FALSE; /* FIXME */
                  info->EaInformation.EaSize = 0;
                  info->AccessInformation.AccessFlags = 0;  /* FIXME */
-@@ -2445,9 +2490,10 @@ NTSTATUS WINAPI NtQueryFullAttributesFile( const OBJECT_ATTRIBUTES *attr,
+@@ -2447,9 +2492,10 @@ NTSTATUS WINAPI NtQueryFullAttributesFile( const OBJECT_ATTRIBUTES *attr,
  
      if (!(status = nt_to_unix_file_name_attr( attr, &unix_name, FILE_OPEN )))
      {
@@ -263,7 +263,7 @@ index 92d9829..4ec2c34 100644
              status = FILE_GetNtStatus();
          else if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
              status = STATUS_INVALID_INFO_CLASS;
-@@ -2456,8 +2502,8 @@ NTSTATUS WINAPI NtQueryFullAttributesFile( const OBJECT_ATTRIBUTES *attr,
+@@ -2458,8 +2504,8 @@ NTSTATUS WINAPI NtQueryFullAttributesFile( const OBJECT_ATTRIBUTES *attr,
              FILE_BASIC_INFORMATION basic;
              FILE_STANDARD_INFORMATION std;
  
@@ -274,7 +274,7 @@ index 92d9829..4ec2c34 100644
  
              info->CreationTime   = basic.CreationTime;
              info->LastAccessTime = basic.LastAccessTime;
-@@ -2487,15 +2533,16 @@ NTSTATUS WINAPI NtQueryAttributesFile( const OBJECT_ATTRIBUTES *attr, FILE_BASIC
+@@ -2489,15 +2535,16 @@ NTSTATUS WINAPI NtQueryAttributesFile( const OBJECT_ATTRIBUTES *attr, FILE_BASIC
  
      if (!(status = nt_to_unix_file_name_attr( attr, &unix_name, FILE_OPEN )))
      {

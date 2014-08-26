@@ -58,6 +58,7 @@ PATCHLIST := \
 	winex11-Limited_Resolutions.ok \
 	winex11-Window_Groups.ok \
 	winex11-XEMBED.ok \
+	wpcap-Dynamic_Linking.ok \
 	ws2_32-Connect_Time.ok \
 	ws2_32-TransmitFile.ok \
 	ws2_32-inet_pton.ok \
@@ -1071,6 +1072,21 @@ winex11-XEMBED.ok:
 	@( \
 		echo '+    { "winex11-XEMBED", "Sebastian Lackner", "Enable/disable windows when they are (un)mapped by foreign applications." },'; \
 	) > winex11-XEMBED.ok
+
+# Patchset wpcap-Dynamic_Linking
+# |
+# | Included patches:
+# |   *	Use dynamic linking for libpcap. [by André Hentschel]
+# |
+# | Modified files: 
+# |   *	configure.ac, dlls/wpcap/Makefile.in, dlls/wpcap/wpcap.c
+# |
+.INTERMEDIATE: wpcap-Dynamic_Linking.ok
+wpcap-Dynamic_Linking.ok:
+	$(call APPLY_FILE,wpcap-Dynamic_Linking/0001-wpcap-Load-libpcap-dynamically.patch)
+	@( \
+		echo '+    { "wpcap-Dynamic_Linking", "André Hentschel", "Use dynamic linking for libpcap." },'; \
+	) > wpcap-Dynamic_Linking.ok
 
 # Patchset ws2_32-Connect_Time
 # |

@@ -14,6 +14,7 @@ PATCHLIST := \
 	bcrypt-BCryptGetFipsAlgorithmMode.ok \
 	comctl32-ImageList.ok \
 	comctl32-LoadIconMetric.ok \
+	configure-Absolute_RPATH.ok \
 	dsound-Fast_Mixer.ok \
 	fonts-Missing_Fonts.ok \
 	iphlpapi-TCP_Table.ok \
@@ -199,6 +200,24 @@ comctl32-LoadIconMetric.ok:
 	@( \
 		echo '+    { "comctl32-LoadIconMetric", "Michael Müller", "Implement LoadIconMetric function." },'; \
 	) > comctl32-LoadIconMetric.ok
+
+# Patchset configure-Absolute_RPATH
+# |
+# | Included patches:
+# |   *	Also add the absolute RPATH when linking against libwine. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#26256] Support for setcap on wine-preloader
+# |
+# | Modified files: 
+# |   *	configure.ac
+# |
+.INTERMEDIATE: configure-Absolute_RPATH.ok
+configure-Absolute_RPATH.ok:
+	$(call APPLY_FILE,configure-Absolute_RPATH/0001-configure-Also-add-the-absolute-RPATH-when-linking-a.patch)
+	@( \
+		echo '+    { "configure-Absolute_RPATH", "Sebastian Lackner", "Also add the absolute RPATH when linking against libwine." },'; \
+	) > configure-Absolute_RPATH.ok
 
 # Patchset dsound-Fast_Mixer
 # |

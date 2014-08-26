@@ -13,10 +13,11 @@ which are not present in regular wine, and always report such issues to us
 Included bugfixes and improvements
 ----------------------------------
 
-**Bugfixes and features included in the next upcoming release [2]:**
+**Bugfixes and features included in the next upcoming release [3]:**
 
 * Fix unintentional leaks with ntdll internals
 * Support for DOS hidden/system file attributes ([Wine Bug #9158](http://bugs.winehq.org/show_bug.cgi?id=9158 "Multiple Microsoft development tools online/web installers fail to skip \"$shtdwn$.req\" with FILE_ATTRIBUTE_HIDDEN (Visual Studio Express Editions, .NET Framework 3.0)"))
+* Support for setcap on wine-preloader ([Wine Bug #26256](http://bugs.winehq.org/show_bug.cgi?id=26256 "wine64-preloader can't handle setcap cap_net_raw+epi"))
 
 
 **Bugs fixed in Wine-Compholio 1.7.25 [53]:**

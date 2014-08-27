@@ -32,6 +32,7 @@ PATCHLIST := \
 	ntdll-FileDispositionInformation.ok \
 	ntdll-Fix_Alignment.ok \
 	ntdll-Fix_Free.ok \
+	ntdll-Heap_FreeLists.ok \
 	ntdll-Junction_Points.ok \
 	ntdll-Pipe_SpecialCharacters.ok \
 	ntdll-loader_EntryPoint.ok \
@@ -543,6 +544,21 @@ ntdll-Fix_Free.ok:
 	@( \
 		echo '+    { "ntdll-Fix_Free", "Erich E. Hoover", "Fix unintentional leaks with ntdll internals" },'; \
 	) > ntdll-Fix_Free.ok
+
+# Patchset ntdll-Heap_FreeLists
+# |
+# | Included patches:
+# |   *	Improve heap allocation performance by using more fine-grained free lists. [by Steaphan Greene]
+# |
+# | Modified files: 
+# |   *	dlls/ntdll/heap.c
+# |
+.INTERMEDIATE: ntdll-Heap_FreeLists.ok
+ntdll-Heap_FreeLists.ok:
+	$(call APPLY_FILE,ntdll-Heap_FreeLists/0001-ntdll-Improve-heap-allocation-performance-by-using-m.patch)
+	@( \
+		echo '+    { "ntdll-Heap_FreeLists", "Steaphan Greene", "Improve heap allocation performance by using more fine-grained free lists." },'; \
+	) > ntdll-Heap_FreeLists.ok
 
 # Patchset ntdll-Junction_Points
 # |

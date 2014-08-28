@@ -348,7 +348,8 @@ def get_wine_file(filename, force=False):
     return (content_hash, content)
 
 def verify_patch_order(all_patches, indices, filename):
-    """Checks if the dependencies are defined correctly by applying on the patches on a copy from the git tree."""
+    """Checks if the dependencies are defined correctly by applying
+       the patches on a (temporary) copy from the git tree."""
     global cached_patch_result
 
     # If one of patches is a binary patch, then we cannot / won't verify it - require dependencies in this case
@@ -414,7 +415,7 @@ def verify_patch_order(all_patches, indices, filename):
                                 (filename, ", ".join([all_patches[i].name for i in indices])))
 
     elif failed_to_apply:
-        raise PatchUpdaterError("Depending on the order some changes to file %s dont't apply / lead to different results: %s" %
+        raise PatchUpdaterError("Depending on the order some changes to file %s don't apply / lead to different results: %s" %
                                 (filename, ", ".join([all_patches[i].name for i in indices])))
 
     else:
@@ -424,14 +425,14 @@ def verify_dependencies(all_patches):
     """Resolve dependencies, and afterwards run verify_patch_order() to check if everything applies properly."""
 
     def _load_patch_cache():
-        """Load dictionary for cached patch dependency tests into cached_patch_result."""
+        """Load dictionary for cached patch dependency tests."""
         global cached_patch_result
         global cached_original_src
         cached_patch_result = _load_dict(config.path_depcache)
         cached_original_src = _load_dict(config.path_srccache)
 
     def _save_patch_cache():
-        """Save dictionary for cached patch depdency tests."""
+        """Save dictionary for cached patch dependency tests."""
         _save_dict(config.path_depcache, cached_patch_result)
         _save_dict(config.path_srccache, cached_original_src)
 

@@ -524,7 +524,7 @@ ntdll-Fix_Alignment.ok:
 # Patchset ntdll-Fix_Free
 # |
 # | Included patches:
-# |   *	Fix unintentional leaks with ntdll internals [by Erich E. Hoover]
+# |   *	Fix unintentional leaks with ntdll internals [rev 2, by Erich E. Hoover]
 # |
 # | Modified files: 
 # |   *	dlls/kernel32/path.c, dlls/kernel32/volume.c, dlls/ntdll/directory.c, dlls/ntdll/file.c, dlls/ntdll/loader.c
@@ -541,8 +541,9 @@ ntdll-Fix_Free.ok:
 	$(call APPLY_FILE,ntdll-Fix_Free/0008-ntdll-Fix-leak-on-STATUS_NO_SUCH_FILE-for-certain-di.patch)
 	$(call APPLY_FILE,ntdll-Fix_Free/0009-kernel32-Fix-leak-on-STATUS_NO_SUCH_FILE-in-RemoveDi.patch)
 	$(call APPLY_FILE,ntdll-Fix_Free/0010-kernel32-Fix-leak-on-STATUS_NO_SUCH_FILE-in-QueryDos.patch)
+	$(call APPLY_FILE,ntdll-Fix_Free/0011-kernel32-Fix-a-leak-and-invalid-memory-access-in-Rem.patch)
 	@( \
-		echo '+    { "ntdll-Fix_Free", "Erich E. Hoover", "Fix unintentional leaks with ntdll internals" },'; \
+		echo '+    { "ntdll-Fix_Free", "Erich E. Hoover", "Fix unintentional leaks with ntdll internals [rev 2]" },'; \
 	) > ntdll-Fix_Free.ok
 
 # Patchset ntdll-Heap_FreeLists

@@ -1,0 +1,47 @@
+From 09d194aee9e84242a2843711947a72426fc8678c Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Thu, 28 Aug 2014 05:36:01 +0200
+Subject: kernel32: Fix a leak and invalid memory access in RemoveDirectoryW.
+
+NtClose( handle ) was missing on the error path, besides that unix_name is
+not always initialized, and might contain garbage values - don't run
+RtlFreeAnsiString in this case.
+---
+ dlls/kernel32/path.c |   15 +++++++++------
+ 1 file changed, 9 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/kernel32/path.c b/dlls/kernel32/path.c
+index eeba48a..593cc1d 100644
+--- a/dlls/kernel32/path.c
++++ b/dlls/kernel32/path.c
+@@ -1612,18 +1612,21 @@ BOOL WINAPI RemoveDirectoryW( LPCWSTR path )
+     status = NtOpenFile( &handle, DELETE, &attr, &io,
+                          FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                          FILE_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT );
+-    if (status == STATUS_SUCCESS)
+-        status = wine_nt_to_unix_file_name( &nt_name, &unix_name, FILE_OPEN, FALSE );
+-    RtlFreeUnicodeString( &nt_name );
+-
+     if (status != STATUS_SUCCESS)
+     {
+         SetLastError( RtlNtStatusToDosError(status) );
+-        RtlFreeAnsiString( &unix_name );
++        RtlFreeUnicodeString( &nt_name );
+         return FALSE;
+     }
+ 
+-    if (!(ret = (rmdir( unix_name.Buffer ) != -1))) FILE_SetDosError();
++    status = wine_nt_to_unix_file_name( &nt_name, &unix_name, FILE_OPEN, FALSE );
++    RtlFreeUnicodeString( &nt_name );
++
++    if (status != STATUS_SUCCESS)
++        SetLastError( RtlNtStatusToDosError(status) );
++    else if (!(ret = (rmdir( unix_name.Buffer ) != -1)))
++        FILE_SetDosError();
++
+     RtlFreeAnsiString( &unix_name );
+     NtClose( handle );
+     return ret;
+-- 
+1.7.9.5
+

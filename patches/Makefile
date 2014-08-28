@@ -572,7 +572,7 @@ ntdll-Heap_FreeLists.ok:
 # |   *	dlls/kernel32/path.c, dlls/kernel32/volume.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/ntifs.h
 # |
 .INTERMEDIATE: ntdll-Junction_Points.ok
-ntdll-Junction_Points.ok:
+ntdll-Junction_Points.ok: ntdll-Fix_Free.ok
 	$(call APPLY_FILE,ntdll-Junction_Points/0001-ntdll-Add-support-for-junction-point-creation.patch)
 	$(call APPLY_FILE,ntdll-Junction_Points/0002-ntdll-Add-support-for-reading-junction-points.patch)
 	$(call APPLY_FILE,ntdll-Junction_Points/0003-ntdll-Add-support-for-deleting-junction-points.patch)

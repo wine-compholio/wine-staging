@@ -376,6 +376,7 @@ def verify_patch_order(all_patches, indices, filename):
         # Fast path -> we know that it applies properly
         if cached_patch_result.has_key(unique_hash):
             result_hash = cached_patch_result[unique_hash]
+            assert result_hash is not None
 
         else:
             # Now really get the file, if we don't have it yet
@@ -386,19 +387,25 @@ def verify_patch_order(all_patches, indices, filename):
             try:
                 content = patchutils.apply_patch(original_content, patches, fuzz=0)
             except patchutils.PatchApplyError:
-                if last_result_hash is not None: break
+                # Remember that we failed to apply the patches, but continue, if there is still a chance
+                # that it applies in a different order (to give a better error message).
                 failed_to_apply = True
-                continue
+                if last_result_hash is None:
+                    continue
+                break
 
             # Get hash of resulting file and add to cache
             result_hash = hashlib.sha256(content).digest()
             cached_patch_result[unique_hash] = result_hash
 
+        # No known hash yet, remember the result. If we failed applying before, we can stop now.
         if last_result_hash is None:
             last_result_hash = result_hash
             if failed_to_apply: break
+
+        # Applied successful, but result has a different hash - also treat as failure.
         elif last_result_hash != result_hash:
-            last_result_hash = None
+            failed_to_apply = True
             break
 
     # If something failed, then show the appropriate error message.
@@ -406,7 +413,7 @@ def verify_patch_order(all_patches, indices, filename):
         raise PatchUpdaterError("Changes to file %s don't apply on git source tree: %s" %
                                 (filename, ", ".join([all_patches[i].name for i in indices])))
 
-    elif failed_to_apply or last_result_hash is None:
+    elif failed_to_apply:
         raise PatchUpdaterError("Depending on the order some changes to file %s dont't apply / lead to different results: %s" %
                                 (filename, ", ".join([all_patches[i].name for i in indices])))
 

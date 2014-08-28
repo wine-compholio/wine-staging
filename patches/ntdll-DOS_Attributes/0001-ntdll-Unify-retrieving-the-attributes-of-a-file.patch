@@ -41,7 +41,7 @@ index 4fb89e3..8871700 100644
      if (st.st_dev != curdir.dev) st.st_ino = 0;  /* ignore inode if on a different device */
      /* all the structures start with a FileDirectoryInformation layout */
 -    fill_stat_info( &st, info, class );
-+    fill_file_info( attributes, &st, info, class );
++    fill_file_info( &st, attributes, info, class );
      info->dir.NextEntryOffset = total_len;
      info->dir.FileIndex = 0;  /* NTFS always has 0 here, so let's not bother with it */
 -    info->dir.FileAttributes |= attributes;
@@ -115,7 +115,7 @@ index 218e112..7dde57d 100644
 -/* fill in the file information that depends on the stat info */
 -NTSTATUS fill_stat_info( const struct stat *st, void *ptr, FILE_INFORMATION_CLASS class )
 +/* fill in the file information that depends on the stat and attribute info */
-+NTSTATUS fill_file_info( const ULONG attr, const struct stat *st, void *ptr,
++NTSTATUS fill_file_info( const struct stat *st, ULONG attr, void *ptr,
 +                         FILE_INFORMATION_CLASS class )
  {
      switch (class)
@@ -139,9 +139,9 @@ index 218e112..7dde57d 100644
 -            fill_stat_info( st, &info->BasicInformation, FileBasicInformation );
 -            fill_stat_info( st, &info->StandardInformation, FileStandardInformation );
 -            fill_stat_info( st, &info->InternalInformation, FileInternalInformation );
-+            fill_file_info( attr, st, &info->BasicInformation, FileBasicInformation );
-+            fill_file_info( attr, st, &info->StandardInformation, FileStandardInformation );
-+            fill_file_info( attr, st, &info->InternalInformation, FileInternalInformation );
++            fill_file_info( st, attr, &info->BasicInformation, FileBasicInformation );
++            fill_file_info( st, attr, &info->StandardInformation, FileStandardInformation );
++            fill_file_info( st, attr, &info->InternalInformation, FileInternalInformation );
          }
          break;
      /* all directory structures start with the FileDirectoryInformation layout */
@@ -167,7 +167,7 @@ index 218e112..7dde57d 100644
              FILE_ID_FULL_DIRECTORY_INFORMATION *info = ptr;
              info->FileId.QuadPart = st->st_ino;
 -            fill_stat_info( st, info, FileDirectoryInformation );
-+            fill_file_info( attr, st, info, FileDirectoryInformation );
++            fill_file_info( st, attr, info, FileDirectoryInformation );
          }
          break;
      case FileIdBothDirectoryInformation:
@@ -175,7 +175,7 @@ index 218e112..7dde57d 100644
              FILE_ID_BOTH_DIRECTORY_INFORMATION *info = ptr;
              info->FileId.QuadPart = st->st_ino;
 -            fill_stat_info( st, info, FileDirectoryInformation );
-+            fill_file_info( attr, st, info, FileDirectoryInformation );
++            fill_file_info( st, attr, info, FileDirectoryInformation );
          }
          break;
  
@@ -198,7 +198,7 @@ index 218e112..7dde57d 100644
              io->u.Status = STATUS_INVALID_INFO_CLASS;
          else
 -            fill_stat_info( &st, ptr, class );
-+            fill_file_info( attr, &st, ptr, class );
++            fill_file_info( &st, attr, ptr, class );
          break;
      case FileStandardInformation:
          {
@@ -209,7 +209,7 @@ index 218e112..7dde57d 100644
              else
              {
 -                fill_stat_info( &st, info, class );
-+                fill_file_info( attr, &st, info, class );
++                fill_file_info( &st, attr, info, class );
                  info->DeletePending = FALSE; /* FIXME */
              }
          }
@@ -220,7 +220,7 @@ index 218e112..7dde57d 100644
 -        if (fstat( fd, &st ) == -1) io->u.Status = FILE_GetNtStatus();
 -        else fill_stat_info( &st, ptr, class );
 +        if (fd_get_file_info( fd, &st, &attr ) == -1) io->u.Status = FILE_GetNtStatus();
-+        else fill_file_info( attr, &st, ptr, class );
++        else fill_file_info( &st, attr, ptr, class );
          break;
      case FileEaInformation:
          {
@@ -231,7 +231,7 @@ index 218e112..7dde57d 100644
 -        if (fstat( fd, &st ) == -1) io->u.Status = FILE_GetNtStatus();
 -        else fill_stat_info( &st, ptr, class );
 +        if (fd_get_file_info( fd, &st, &attr ) == -1) io->u.Status = FILE_GetNtStatus();
-+        else fill_file_info( attr, &st, ptr, class );
++        else fill_file_info( &st, attr, ptr, class );
          break;
      case FileAllInformation:
          {
@@ -247,7 +247,7 @@ index 218e112..7dde57d 100644
                  LONG name_len = len - FIELD_OFFSET(FILE_ALL_INFORMATION, NameInformation.FileName);
  
 -                fill_stat_info( &st, info, FileAllInformation );
-+                fill_file_info( attr, &st, info, FileAllInformation );
++                fill_file_info( &st, attr, info, FileAllInformation );
                  info->StandardInformation.DeletePending = FALSE; /* FIXME */
                  info->EaInformation.EaSize = 0;
                  info->AccessInformation.AccessFlags = 0;  /* FIXME */
@@ -269,8 +269,8 @@ index 218e112..7dde57d 100644
  
 -            fill_stat_info( &st, &basic, FileBasicInformation );
 -            fill_stat_info( &st, &std, FileStandardInformation );
-+            fill_file_info( attributes, &st, &basic, FileBasicInformation );
-+            fill_file_info( attributes, &st, &std, FileStandardInformation );
++            fill_file_info( &st, attributes, &basic, FileBasicInformation );
++            fill_file_info( &st, attributes, &std, FileStandardInformation );
  
              info->CreationTime   = basic.CreationTime;
              info->LastAccessTime = basic.LastAccessTime;
@@ -289,7 +289,7 @@ index 218e112..7dde57d 100644
          else
          {
 -            status = fill_stat_info( &st, info, FileBasicInformation );
-+            status = fill_file_info( attributes, &st, info, FileBasicInformation );
++            status = fill_file_info( &st, attributes, info, FileBasicInformation );
              if (DIR_is_hidden_file( attr->ObjectName ))
                  info->FileAttributes |= FILE_ATTRIBUTE_HIDDEN;
          }
@@ -303,7 +303,7 @@ index 4370084..ae59552 100644
  extern NTSTATUS FILE_GetNtStatus(void) DECLSPEC_HIDDEN;
 -extern NTSTATUS fill_stat_info( const struct stat *st, void *ptr, FILE_INFORMATION_CLASS class ) DECLSPEC_HIDDEN;
 +extern int get_file_info( const char *path, struct stat *st, ULONG *attr ) DECLSPEC_HIDDEN;
-+extern NTSTATUS fill_file_info( const ULONG attr, const struct stat *st, void *ptr,
++extern NTSTATUS fill_file_info( const struct stat *st, ULONG attr, void *ptr,
 +                                FILE_INFORMATION_CLASS class ) DECLSPEC_HIDDEN;
  extern NTSTATUS server_get_unix_name( HANDLE handle, ANSI_STRING *unix_name ) DECLSPEC_HIDDEN;
  extern void DIR_init_windows_dir( const WCHAR *windir, const WCHAR *sysdir ) DECLSPEC_HIDDEN;

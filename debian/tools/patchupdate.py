@@ -282,7 +282,7 @@ def read_patchset(revision = None):
             patch.authors, patch.depends, patch.fixes = \
                 read_definition(revision, os.path.join(config.path_patches, patch.name), name_to_id)
         except IOError:
-            raise PatchUpaterError("Missing definition file for %s" % patch.name)
+            raise PatchUpdaterError("Missing definition file for %s" % patch.name)
 
     return all_patches
 

@@ -1,20 +1,25 @@
-From 09d194aee9e84242a2843711947a72426fc8678c Mon Sep 17 00:00:00 2001
+From cecc1c37484bd63da728d6dcde7aca633019bdca Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Thu, 28 Aug 2014 05:36:01 +0200
-Subject: kernel32: Fix a leak and invalid memory access in RemoveDirectoryW.
+Subject: kernel32: Fix leaking directory handle in RemoveDirectoryW.
 
-NtClose( handle ) was missing on the error path, besides that unix_name is
-not always initialized, and might contain garbage values - don't run
-RtlFreeAnsiString in this case.
 ---
- dlls/kernel32/path.c |   15 +++++++++------
- 1 file changed, 9 insertions(+), 6 deletions(-)
+ dlls/kernel32/path.c |   16 +++++++++-------
+ 1 file changed, 9 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/kernel32/path.c b/dlls/kernel32/path.c
-index eeba48a..593cc1d 100644
+index 4a41ab8..593cc1d 100644
 --- a/dlls/kernel32/path.c
 +++ b/dlls/kernel32/path.c
-@@ -1612,18 +1612,21 @@ BOOL WINAPI RemoveDirectoryW( LPCWSTR path )
+@@ -1602,7 +1602,6 @@ BOOL WINAPI RemoveDirectoryW( LPCWSTR path )
+         SetLastError( ERROR_PATH_NOT_FOUND );
+         return FALSE;
+     }
+-    unix_name.Buffer = NULL;
+     attr.Length = sizeof(attr);
+     attr.RootDirectory = 0;
+     attr.Attributes = OBJ_CASE_INSENSITIVE;
+@@ -1613,18 +1612,21 @@ BOOL WINAPI RemoveDirectoryW( LPCWSTR path )
      status = NtOpenFile( &handle, DELETE, &attr, &io,
                           FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                           FILE_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT );

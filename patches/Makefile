@@ -541,7 +541,7 @@ ntdll-Fix_Free.ok:
 	$(call APPLY_FILE,ntdll-Fix_Free/0008-ntdll-Fix-leak-on-STATUS_NO_SUCH_FILE-for-certain-di.patch)
 	$(call APPLY_FILE,ntdll-Fix_Free/0009-kernel32-Fix-leak-on-STATUS_NO_SUCH_FILE-in-RemoveDi.patch)
 	$(call APPLY_FILE,ntdll-Fix_Free/0010-kernel32-Fix-leak-on-STATUS_NO_SUCH_FILE-in-QueryDos.patch)
-	$(call APPLY_FILE,ntdll-Fix_Free/0011-kernel32-Fix-a-leak-and-invalid-memory-access-in-Rem.patch)
+	$(call APPLY_FILE,ntdll-Fix_Free/0011-kernel32-Fix-leaking-directory-handle-in-RemoveDirec.patch)
 	@( \
 		echo '+    { "ntdll-Fix_Free", "Erich E. Hoover", "Fix unintentional leaks with ntdll internals [rev 2]" },'; \
 	) > ntdll-Fix_Free.ok

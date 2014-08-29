@@ -1,15 +1,15 @@
-From cc8ce50fa0194313f2ac9d8f967350fdeb643ad7 Mon Sep 17 00:00:00 2001
+From 3196e1dd12c6814dfb0536ba0f840da81a16b78f Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 15:21:00 -0600
 Subject: server: Add compatibility code for handling the old method of
  storing ACLs.
 
 ---
- server/file.c |  158 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 158 insertions(+)
+ server/file.c |  165 +++++++++++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 162 insertions(+), 3 deletions(-)
 
 diff --git a/server/file.c b/server/file.c
-index bbb9358..309c49d 100644
+index 1940a80..85f4dc8 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -755,6 +755,163 @@ struct security_descriptor *get_xattr_sd( int fd )
@@ -176,14 +176,30 @@ index bbb9358..309c49d 100644
  /* Convert generic rights into standard access rights */
  void convert_generic_sd( struct security_descriptor *sd )
  {
-@@ -795,6 +952,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
-     user = security_unix_uid_to_sid( st.st_uid );
-     group = token_get_primary_group( current->process->token );
+@@ -782,6 +939,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
+     int unix_fd = get_unix_fd( fd );
+     struct stat st;
+     struct security_descriptor *sd;
++    const SID *user, *group;
+ 
+     if (unix_fd == -1 || fstat( unix_fd, &st ) == -1)
+         return obj->sd;
+@@ -791,11 +949,12 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
+         (st.st_uid == *uid))
+         return obj->sd;
+ 
++    user = security_unix_uid_to_sid( st.st_uid );
++    group = token_get_primary_group( current->process->token );
      sd = get_xattr_sd( unix_fd );
 +    if (!sd) sd = get_xattr_acls( unix_fd, user, group );
      if (sd && convert_generic) convert_generic_sd( sd );
-     if (!sd) sd = mode_to_sd( st.st_mode, user, group);
+-    if (!sd) sd = mode_to_sd( st.st_mode,
+-                              security_unix_uid_to_sid( st.st_uid ),
+-                              token_get_primary_group( current->process->token ));
++    if (!sd) sd = mode_to_sd( st.st_mode, user, group );
      if (!sd) return obj->sd;
+ 
+     *mode = st.st_mode;
 -- 
 1.7.9.5
 

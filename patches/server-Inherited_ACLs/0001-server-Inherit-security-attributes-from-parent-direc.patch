@@ -1,4 +1,4 @@
-From 4c0c7fc3e73d39e30be7cba5c2e63f8c6f6c2792 Mon Sep 17 00:00:00 2001
+From ee8d26bb9615934669c81a2bae24fba13d51ed2e Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 14:08:36 -0600
 Subject: server: Inherit security attributes from parent directories on
@@ -86,7 +86,7 @@ index 27dbe25..0a82358 100644
      return sd;
  }
 diff --git a/server/file.c b/server/file.c
-index 3582493..1414ee6 100644
+index 38eda5c..8aec10d 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -248,11 +248,141 @@ void set_xattr_sd( int fd, const struct security_descriptor *sd, const SID *user
@@ -259,16 +259,16 @@ index 3582493..1414ee6 100644
  {
      int unix_fd = get_unix_fd( fd );
      struct stat st;
-@@ -561,7 +696,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
-     user = security_unix_uid_to_sid( st.st_uid );
-     group = token_get_primary_group( current->process->token );
+@@ -558,7 +693,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
+         return obj->sd;
+ 
      sd = get_xattr_sd( unix_fd );
 -    if (sd) convert_generic_sd( sd );
 +    if (sd && convert_generic) convert_generic_sd( sd );
-     if (!sd) sd = mode_to_sd( st.st_mode, user, group);
-     if (!sd) return obj->sd;
- 
-@@ -581,7 +716,7 @@ static struct security_descriptor *file_get_sd( struct object *obj )
+     if (!sd) sd = mode_to_sd( st.st_mode,
+                               security_unix_uid_to_sid( st.st_uid ),
+                               token_get_primary_group( current->process->token ));
+@@ -580,7 +715,7 @@ static struct security_descriptor *file_get_sd( struct object *obj )
      assert( obj->ops == &file_ops );
  
      fd = file_get_fd( obj );
@@ -278,10 +278,10 @@ index 3582493..1414ee6 100644
      return sd;
  }
 diff --git a/server/file.h b/server/file.h
-index 43a234f..2f537cf 100644
+index be25fb6..e09e227 100644
 --- a/server/file.h
 +++ b/server/file.h
-@@ -125,7 +125,7 @@ extern mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner
+@@ -127,7 +127,7 @@ extern mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner
  extern int set_file_sd( struct object *obj, struct fd *fd, const struct security_descriptor *sd,
                          unsigned int set_info );
  extern struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode_t *mode,

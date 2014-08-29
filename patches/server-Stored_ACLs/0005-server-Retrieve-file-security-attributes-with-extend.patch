@@ -1,4 +1,4 @@
-From 4d3a040d520cc92e3bfc50132a2868ae1857dd11 Mon Sep 17 00:00:00 2001
+From bea49452dfb1e768b03fc75fced9b733d1edd73f Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 14:01:35 -0600
 Subject: server: Retrieve file security attributes with extended file
@@ -6,8 +6,8 @@ Subject: server: Retrieve file security attributes with extended file
 
 ---
  dlls/advapi32/tests/security.c |   49 ++++++++++++++++++++--------------------
- server/file.c                  |   29 +++++++++++++++++++++---
- 2 files changed, 50 insertions(+), 28 deletions(-)
+ server/file.c                  |   26 ++++++++++++++++++---
+ 2 files changed, 47 insertions(+), 28 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
 index b44496a..02094a4 100644
@@ -110,10 +110,10 @@ index b44496a..02094a4 100644
      LocalFree(pSD);
      CloseHandle(obj);
 diff --git a/server/file.c b/server/file.c
-index 72d6d95..ff72273 100644
+index 72d6d95..ff51b73 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -499,6 +499,28 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID
+@@ -499,6 +499,25 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID
      return sd;
  }
  
@@ -127,11 +127,8 @@ index 72d6d95..ff72273 100644
 +    if (n == -1 || n < 2 + sizeof(struct security_descriptor)) return NULL;
 +
 +    /* validate that we can handle the descriptor */
-+    if (buffer[0] != SECURITY_DESCRIPTOR_REVISION || buffer[1] != 0) return NULL;
-+
-+    sd = (struct security_descriptor *)&buffer[2];
-+    if (n  < 2 + sizeof(struct security_descriptor) + sd->owner_len
-+               + sd->group_len + sd->sacl_len + sd->dacl_len)
++    if (buffer[0] != SECURITY_DESCRIPTOR_REVISION || buffer[1] != 0 ||
++            !sd_is_valid( (struct security_descriptor *)&buffer[2], n - 2 ))
 +        return NULL;
 +
 +    sd = mem_alloc( n - 2 );
@@ -142,7 +139,7 @@ index 72d6d95..ff72273 100644
  struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode_t *mode,
                                           uid_t *uid )
  {
-@@ -514,9 +536,10 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
+@@ -514,9 +533,10 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
          (st.st_uid == *uid))
          return obj->sd;
  

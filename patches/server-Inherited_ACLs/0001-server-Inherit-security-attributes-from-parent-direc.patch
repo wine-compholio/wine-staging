@@ -1,4 +1,4 @@
-From ee8d26bb9615934669c81a2bae24fba13d51ed2e Mon Sep 17 00:00:00 2001
+From 594424298d8626b1886288f0da10963e9d96762a Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 14:08:36 -0600
 Subject: server: Inherit security attributes from parent directories on
@@ -86,7 +86,7 @@ index 27dbe25..0a82358 100644
      return sd;
  }
 diff --git a/server/file.c b/server/file.c
-index 38eda5c..8aec10d 100644
+index 38eda5c..6c90a9c 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -248,11 +248,141 @@ void set_xattr_sd( int fd, const struct security_descriptor *sd, const SID *user
@@ -95,7 +95,7 @@ index 38eda5c..8aec10d 100644
  
 +struct security_descriptor *inherit_sd( const struct security_descriptor *parent_sd, int is_dir )
 +{
-+    DWORD inheritance_mask = INHERIT_ONLY_ACE|OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE;
++    const DWORD inheritance_mask = INHERIT_ONLY_ACE | OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE;
 +    struct security_descriptor *sd = NULL;
 +    const ACL *parent_dacl;
 +    int present;
@@ -120,13 +120,13 @@ index 38eda5c..8aec10d 100644
 +            ace_count++;
 +            dacl_size += parent_ace->AceSize;
 +        }
-+        if(!ace_count) return sd; /* No inheritance */
++        if (!ace_count) return sd; /* No inheritance */
 +
 +        /* Fill in the security descriptor so that it is compatible with our DACL */
 +        user = (const SID *)(parent_sd + 1);
 +        group = (const SID *)((char *)(parent_sd + 1) + parent_sd->owner_len);
-+        sd = mem_alloc( sizeof(struct security_descriptor) + security_sid_len( user )
-+                        + security_sid_len( group ) + dacl_size );
++        sd = mem_alloc( sizeof(struct security_descriptor) + parent_sd->owner_len
++                        + parent_sd->group_len + dacl_size );
 +        if (!sd) return sd;
 +        sd->control = SE_DACL_PRESENT;
 +        sd->owner_len = parent_sd->owner_len;
@@ -155,13 +155,13 @@ index 38eda5c..8aec10d 100644
 +            if (!(flags & inheritance_mask)) continue;
 +
 +            ace->AceType = parent_ace->AceType;
-+            if(is_dir && (flags & CONTAINER_INHERIT_ACE))
++            if (is_dir && (flags & CONTAINER_INHERIT_ACE))
 +                flags &= ~INHERIT_ONLY_ACE;
-+            else if(!is_dir && (flags & OBJECT_INHERIT_ACE))
++            else if (!is_dir && (flags & OBJECT_INHERIT_ACE))
 +                flags &= ~INHERIT_ONLY_ACE;
-+            else if(is_dir && (flags & OBJECT_INHERIT_ACE))
++            else if (is_dir && (flags & OBJECT_INHERIT_ACE))
 +                flags |= INHERIT_ONLY_ACE;
-+            if(is_dir)
++            if (is_dir)
 +                ace->AceFlags = flags | INHERITED_ACE;
 +            else
 +                ace->AceFlags = (parent_ace->AceFlags & ~inheritance_mask) | INHERITED_ACE;

@@ -1,0 +1,81 @@
+From d32cbf71cb4f53a9cd9f47b7a65551da850f60db Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 1 Sep 2014 20:32:15 +0200
+Subject: configure: Fix detection of ncurses library on Archlinux.
+
+---
+ configure.ac                  | 5 +++--
+ dlls/kernel32/term.c          | 4 +++-
+ programs/wineconsole/curses.c | 4 +++-
+ 3 files changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index ba0c927..5c2fbe4 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1370,7 +1370,8 @@ dnl **** Check which curses lib to use ***
+ CURSES_LIBS=""
+ if test "$ac_cv_header_ncurses_h" = "yes"
+ then
+-    WINE_CHECK_SONAME(ncurses,waddch,[CURSES_LIBS="-lncurses"])
++    WINE_CHECK_SONAME(ncurses,waddch,[CURSES_LIBS="-lncurses"],
++        [WINE_CHECK_SONAME(ncursesw,waddch,[CURSES_LIBS="-lncursesw"])])
+ elif test "$ac_cv_header_curses_h" = "yes"
+ then
+     WINE_CHECK_SONAME(curses,waddch,[CURSES_LIBS="-lcurses"])
+@@ -1379,7 +1380,7 @@ ac_save_LIBS="$LIBS"
+ LIBS="$LIBS $CURSES_LIBS"
+ AC_CHECK_FUNCS(mousemask)
+ LIBS="$ac_save_LIBS"
+-WINE_NOTICE_WITH(curses,[test "x$ac_cv_lib_soname_curses$ac_cv_lib_soname_ncurses" = "x"],
++WINE_NOTICE_WITH(curses,[test "x$ac_cv_lib_soname_curses$ac_cv_lib_soname_ncurses$ac_cv_lib_soname_ncursesw" = "x"],
+                  [lib(n)curses ${notice_platform}development files not found, curses won't be supported.])
+ 
+ dnl **** Check for SANE ****
+diff --git a/dlls/kernel32/term.c b/dlls/kernel32/term.c
+index 814b937..5672b85 100644
+--- a/dlls/kernel32/term.c
++++ b/dlls/kernel32/term.c
+@@ -146,7 +146,7 @@ unsigned TERM_FillSimpleChar(WCHAR real_inchar, INPUT_RECORD* ir)
+     return numEvent;
+ }
+ 
+-#if defined(SONAME_LIBCURSES) || defined(SONAME_LIBNCURSES)
++#if defined(SONAME_LIBCURSES) || defined(SONAME_LIBNCURSES) || defined(SONAME_LIBNCURSESW)
+ 
+ #ifdef HAVE_NCURSES_H
+ # define CURSES_NAME "ncurses"
+@@ -171,6 +171,8 @@ static BOOL TERM_bind_libcurses(void)
+ {
+ #ifdef SONAME_LIBNCURSES
+     static const char ncname[] = SONAME_LIBNCURSES;
++#elif defined(SONAME_LIBNCURSESW)
++    static const char ncname[] = SONAME_LIBNCURSESW;
+ #else
+     static const char ncname[] = SONAME_LIBCURSES;
+ #endif
+diff --git a/programs/wineconsole/curses.c b/programs/wineconsole/curses.c
+index 77d7718..8dccb05 100644
+--- a/programs/wineconsole/curses.c
++++ b/programs/wineconsole/curses.c
+@@ -62,7 +62,7 @@ WINE_DEFAULT_DEBUG_CHANNEL(curses);
+ 
+ #define PRIVATE(data)   ((struct inner_data_curse*)((data)->private))
+ 
+-#if defined(SONAME_LIBCURSES) || defined(SONAME_LIBNCURSES)
++#if defined(SONAME_LIBCURSES) || defined(SONAME_LIBNCURSES) || defined(SONAME_LIBNCURSESW)
+ 
+ #ifdef HAVE_NCURSES_H
+ # define CURSES_NAME "ncurses"
+@@ -135,6 +135,8 @@ static BOOL WCCURSES_bind_libcurses(void)
+ {
+ #ifdef SONAME_LIBNCURSES
+     static const char ncname[] = SONAME_LIBNCURSES;
++#elif defined(SONAME_LIBNCURSESW)
++    static const char ncname[] = SONAME_LIBNCURSESW;
+ #else
+     static const char ncname[] = SONAME_LIBCURSES;
+ #endif
+-- 
+2.1.0
+

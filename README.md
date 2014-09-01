@@ -45,7 +45,7 @@ Included bugfixes and improvements
 
 **Bugs fixed in Wine-Compholio 1.7.25 [53]:**
 
-* ATL IOCS data should not be stored in GWLP_USERDATA ([Wine Bug #21767](http://bugs.winehq.org/show_bug.cgi?id=21767 "JLC's Internet TV crashes on startup"))
+* ATL IOCS data should not be stored in GWLP_USERDATA ([Wine Bug #21767](http://bugs.winehq.org/show_bug.cgi?id=21767 "Multiple applications storing AxHostWindow instance pointer in GWLP_USERDATA crash on startup (Wine uses GWLP_USERDATA to store IOCS)(JLC's Internet TV, Anime Studio Pro 10.x)"))
 * Add Dynamic DST exceptions for Israel Standard Time ([Wine Bug #36374](http://bugs.winehq.org/show_bug.cgi?id=36374 "Israel timezone handled incorrectly"))
 * Add default ACLs for user shell folders
 * Allow special characters in pipe names ([Wine Bug #28995](http://bugs.winehq.org/show_bug.cgi?id=28995 "Unable to use named pipes with \">\" character in the name"))

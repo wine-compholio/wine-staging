@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Automatic patch dependency checker and Makefile/README.md generator.
 #

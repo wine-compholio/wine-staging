@@ -345,6 +345,7 @@ kernel32-GetVolumePathName.ok:
 	$(call APPLY_FILE,kernel32-GetVolumePathName/0002-kernel32-Convert-GetVolumePathName-tests-into-a-list.patch)
 	$(call APPLY_FILE,kernel32-GetVolumePathName/0003-kernel32-Add-a-bunch-more-GetVolumePathName-tests.patch)
 	$(call APPLY_FILE,kernel32-GetVolumePathName/0004-kernel32-tests-Add-a-lot-of-picky-GetVolumePathName-.patch)
+	$(call APPLY_FILE,kernel32-GetVolumePathName/0005-kernel32-Fix-some-of-the-issues-in-GetVolumePathName.patch)
 	@( \
 		echo '+    { "kernel32-GetVolumePathName", "Erich E. Hoover", "Implement GetVolumePathName." },'; \
 	) > kernel32-GetVolumePathName.ok

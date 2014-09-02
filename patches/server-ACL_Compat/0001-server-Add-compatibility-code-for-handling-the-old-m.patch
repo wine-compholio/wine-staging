@@ -1,34 +1,33 @@
-From 3196e1dd12c6814dfb0536ba0f840da81a16b78f Mon Sep 17 00:00:00 2001
+From f655336b598d83f66221041a504b64b87c62d7a0 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 15:21:00 -0600
-Subject: server: Add compatibility code for handling the old method of
- storing ACLs.
+Subject: server: Add compatibility code for handling the old method of storing
+ ACLs.
 
 ---
- server/file.c |  165 +++++++++++++++++++++++++++++++++++++++++++++++++++++++--
- 1 file changed, 162 insertions(+), 3 deletions(-)
+ server/file.c | 167 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 164 insertions(+), 3 deletions(-)
 
 diff --git a/server/file.c b/server/file.c
-index 1940a80..85f4dc8 100644
+index 23debaf..c93e747 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -755,6 +755,163 @@ struct security_descriptor *get_xattr_sd( int fd )
+@@ -752,6 +752,165 @@ struct security_descriptor *get_xattr_sd( int fd )
      return sd;
  }
  
 +struct security_descriptor *get_xattr_acls( int fd, const SID *user, const SID *group )
 +{
 +    int ace_count = 0, dacl_size = sizeof(ACL), i, n;
-+    char buffer[XATTR_SIZE_MAX], *p = buffer, *pn;
++    char buffer[XATTR_SIZE_MAX + 1], *p = buffer, *pn;
 +    struct security_descriptor *sd;
 +    ACE_HEADER *current_ace;
 +    ACCESS_ALLOWED_ACE *aaa;
-+    ACCESS_DENIED_ACE *ada;
 +    int type, flags, mask;
 +    ACL *dacl;
 +    char *ptr;
 +
-+    n = xattr_fget( fd, "user.wine.acl", buffer, sizeof(buffer) );
++    n = xattr_fget( fd, XATTR_USER_PREFIX "wine.acl", buffer, sizeof(buffer) - 1 );
 +    if (n == -1) return NULL;
 +    buffer[n] = 0; /* ensure NULL terminated buffer for string functions */
 +
@@ -45,7 +44,7 @@ index 1940a80..85f4dc8 100644
 +            if (p) p++;
 +            sub_authority_count++;
 +        }
-+        while(p && (!pn || p < pn));
++        while (p && (!pn || p < pn));
 +        sub_authority_count -= 3; /* Revision and IdentifierAuthority don't count */
 +        p = pn; /* prepare for the next ACE */
 +
@@ -68,12 +67,13 @@ index 1940a80..85f4dc8 100644
 +        }
 +        ace_count++;
 +    }
-+    while(p);
++    while (p);
 +
 +    sd = mem_alloc( sizeof(struct security_descriptor) +
 +                    FIELD_OFFSET(SID, SubAuthority[user->SubAuthorityCount]) +
 +                    FIELD_OFFSET(SID, SubAuthority[group->SubAuthorityCount]) +
 +                    dacl_size );
++    if (!sd) return NULL;
 +
 +    sd->control = SE_DACL_PRESENT;
 +    sd->owner_len = FIELD_OFFSET(SID, SubAuthority[user->SubAuthorityCount]);
@@ -97,11 +97,11 @@ index 1940a80..85f4dc8 100644
 +    current_ace = &aaa->Header;
 +
 +    p = buffer;
-+    for(i=0; i<ace_count; i++)
++    for (i=0; i<ace_count; i++)
 +    {
 +        char b[sizeof(SID) + sizeof(ULONG) * SID_MAX_SUB_AUTHORITIES];
 +        int sub_authority_count = 0;
-+        SID *sid = (SID *)&b[0];
++        SID *sid = (SID *)b;
 +        char sidtxt[100];
 +        int rev, ia, sa;
 +
@@ -137,7 +137,7 @@ index 1940a80..85f4dc8 100644
 +            if (p) p++;
 +            sub_authority_count++;
 +        }
-+        while(p);
++        while (p);
 +        sid->SubAuthorityCount = sub_authority_count;
 +        p = pn; /* prepare for the next ACE */
 +
@@ -149,13 +149,15 @@ index 1940a80..85f4dc8 100644
 +        switch (type)
 +        {
 +            case ACCESS_DENIED_ACE_TYPE:
-+                ada = (ACCESS_DENIED_ACE *)aaa;
-+                ada->Header.AceType  = type;
-+                ada->Header.AceFlags = flags;
-+                ada->Header.AceSize  = FIELD_OFFSET(ACCESS_DENIED_ACE, SidStart) +
-+                                       FIELD_OFFSET(SID, SubAuthority[sid->SubAuthorityCount]);
-+                ada->Mask            = mask;
-+                memcpy( &ada->SidStart, sid, FIELD_OFFSET(SID, SubAuthority[sid->SubAuthorityCount]) );
++                {
++                    ACCESS_DENIED_ACE *ada = (ACCESS_DENIED_ACE *)aaa;
++                    ada->Header.AceType  = type;
++                    ada->Header.AceFlags = flags;
++                    ada->Header.AceSize  = FIELD_OFFSET(ACCESS_DENIED_ACE, SidStart) +
++                                           FIELD_OFFSET(SID, SubAuthority[sid->SubAuthorityCount]);
++                    ada->Mask            = mask;
++                    memcpy( &ada->SidStart, sid, FIELD_OFFSET(SID, SubAuthority[sid->SubAuthorityCount]) );
++                }
 +                break;
 +            case ACCESS_ALLOWED_ACE_TYPE:
 +                aaa->Header.AceType  = type;
@@ -176,7 +178,7 @@ index 1940a80..85f4dc8 100644
  /* Convert generic rights into standard access rights */
  void convert_generic_sd( struct security_descriptor *sd )
  {
-@@ -782,6 +939,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
+@@ -779,6 +938,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
      int unix_fd = get_unix_fd( fd );
      struct stat st;
      struct security_descriptor *sd;
@@ -184,7 +186,7 @@ index 1940a80..85f4dc8 100644
  
      if (unix_fd == -1 || fstat( unix_fd, &st ) == -1)
          return obj->sd;
-@@ -791,11 +949,12 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
+@@ -788,11 +948,12 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
          (st.st_uid == *uid))
          return obj->sd;
  
@@ -201,5 +203,5 @@ index 1940a80..85f4dc8 100644
  
      *mode = st.st_mode;
 -- 
-1.7.9.5
+2.1.0
 

@@ -1,12 +1,12 @@
-From 98c28e54799dc51257ec44389eac5384b2ddb609 Mon Sep 17 00:00:00 2001
+From 719e096c6ca40ef86cd8f23d419807cdcd002656 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Sat, 25 Jan 2014 09:47:12 -0700
 Subject: kernel32: Implement GetVolumePathName.
 
 ---
- dlls/kernel32/tests/volume.c |   3 -
- dlls/kernel32/volume.c       | 129 ++++++++++++++++++++++++++++++++++++++-----
- 2 files changed, 115 insertions(+), 17 deletions(-)
+ dlls/kernel32/tests/volume.c |   3 --
+ dlls/kernel32/volume.c       | 123 ++++++++++++++++++++++++++++++++++++++-----
+ 2 files changed, 109 insertions(+), 17 deletions(-)
 
 diff --git a/dlls/kernel32/tests/volume.c b/dlls/kernel32/tests/volume.c
 index 61da509..4b3bdf5 100644
@@ -29,7 +29,7 @@ index 61da509..4b3bdf5 100644
  
      /* test an invalid path */
 diff --git a/dlls/kernel32/volume.c b/dlls/kernel32/volume.c
-index d396764..b723e9c 100644
+index d396764..8826dd2 100644
 --- a/dlls/kernel32/volume.c
 +++ b/dlls/kernel32/volume.c
 @@ -1786,7 +1786,7 @@ BOOL WINAPI GetVolumePathNameA(LPCSTR filename, LPSTR volumepathname, DWORD bufl
@@ -71,7 +71,7 @@ index d396764..b723e9c 100644
  
      if (!filename || !volumepathname || !buflen)
      {
-@@ -1815,24 +1830,110 @@ BOOL WINAPI GetVolumePathNameW(LPCWSTR filename, LPWSTR volumepathname, DWORD bu
+@@ -1815,24 +1830,104 @@ BOOL WINAPI GetVolumePathNameW(LPCWSTR filename, LPWSTR volumepathname, DWORD bu
          return FALSE;
      }
  
@@ -111,7 +111,6 @@ index d396764..b723e9c 100644
 +                status = STATUS_OBJECT_NAME_INVALID;
 +                goto cleanup;
 +            }
-+            RtlFreeAnsiString( &unix_name );
 +            if (first_run)
 +            {
 +                first_run = FALSE;
@@ -120,9 +119,11 @@ index d396764..b723e9c 100644
 +            else if (st.st_dev != search_dev)
 +            {
 +                /* folder is on a new filesystem, return the last folder */
++                RtlFreeAnsiString( &unix_name );
 +                break;
 +            }
 +        }
++        RtlFreeAnsiString( &unix_name );
 +        last_pos = pos;
 +        c = strrchrW( volumenameW, '\\' );
 +        if (c != NULL)
@@ -135,7 +136,7 @@ index d396764..b723e9c 100644
 +        if (filename[0] != '\\')
 +        {
 +            /* DOS-style paths revert to C:\ (anything not beginning with a slash) */
-+            last_pos = strlenW(fallbackpathW);
++            last_pos = strlenW(fallbackpathW) - 1; /* points to \\ */
 +            filename = fallbackpathW;
 +            status = STATUS_SUCCESS;
 +        }
@@ -154,32 +155,25 @@ index d396764..b723e9c 100644
  
 -    SetLastError(ERROR_INVALID_NAME);
 -    return FALSE;
-+    /* include the terminating backslash unless returning the full path */
-+    if (filename[last_pos] != '\0')
-+        last_pos++;
-+    /* require room to NULL terminate the string */
-+    if ((filename[last_pos] == '\\' && last_pos * sizeof(WCHAR) <= buflen)
-+        || (last_pos+1) * sizeof(WCHAR) <= buflen)
++    if (last_pos + 1 <= buflen)
 +    {
-+        memcpy(volumepathname, filename, last_pos*sizeof(WCHAR));
-+        /* remove the terminating backslash if the buffer is one byte short */
-+        if (filename[last_pos] == '\\' && (last_pos+1) * sizeof(WCHAR) > buflen)
-+            last_pos--;
++        WCHAR *p;
++        memcpy(volumepathname, filename, last_pos * sizeof(WCHAR));
++        if (last_pos + 2 <= buflen) volumepathname[last_pos++] = '\\';
 +        volumepathname[last_pos] = '\0';
-+    }
-+    else
-+        status = STATUS_NAME_TOO_LONG;
 +
-+    if (status == STATUS_SUCCESS)
-+    {
++        /* Normalize path */
++        for (p = volumepathname; *p; p++) if (*p == '/') *p = '\\';
++
++        /* DOS-style paths always return upper-case drive letters */
 +        if (volumepathname[1] == ':')
-+        {
-+            /* DOS-style paths always return upper-case drive letters */
 +            volumepathname[0] = toupper(volumepathname[0]);
-+        }
++
 +        TRACE("Successfully translated path %s to mount-point %s\n",
 +              debugstr_w(filename), debugstr_w(volumepathname));
 +    }
++    else
++        status = STATUS_NAME_TOO_LONG;
 +
 +cleanup:
 +    HeapFree( GetProcessHeap(), 0, volumenameW );

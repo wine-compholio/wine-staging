@@ -270,16 +270,16 @@ configure-Absolute_RPATH.ok:
 # Patchset configure-Detect_Ncurses
 # |
 # | Included patches:
-# |   *	Fix detection of ncurses library on Archlinux. [by Sebastian Lackner]
+# |   *	Fix detection of ncurses library on Archlinux. [rev 2, by Sebastian Lackner]
 # |
 # | Modified files: 
-# |   *	configure.ac, dlls/kernel32/term.c, programs/wineconsole/curses.c
+# |   *	configure.ac
 # |
 .INTERMEDIATE: configure-Detect_Ncurses.ok
 configure-Detect_Ncurses.ok:
 	$(call APPLY_FILE,configure-Detect_Ncurses/0001-configure-Fix-detection-of-ncurses-library-on-Archli.patch)
 	@( \
-		echo '+    { "configure-Detect_Ncurses", "Sebastian Lackner", "Fix detection of ncurses library on Archlinux." },'; \
+		echo '+    { "configure-Detect_Ncurses", "Sebastian Lackner", "Fix detection of ncurses library on Archlinux. [rev 2]" },'; \
 	) > configure-Detect_Ncurses.ok
 
 # Patchset dsound-Fast_Mixer

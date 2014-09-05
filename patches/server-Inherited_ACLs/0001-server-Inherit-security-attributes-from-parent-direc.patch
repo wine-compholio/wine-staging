@@ -1,15 +1,15 @@
-From 594424298d8626b1886288f0da10963e9d96762a Mon Sep 17 00:00:00 2001
+From 48f5d3ffa7cca6623f1d89d1c0f9bc62fde3badb Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 14:08:36 -0600
 Subject: server: Inherit security attributes from parent directories on
  creation.
 
 ---
- dlls/advapi32/tests/security.c |   40 +++++++++++-
- server/change.c                |    2 +-
- server/file.c                  |  141 +++++++++++++++++++++++++++++++++++++++-
- server/file.h                  |    2 +-
- 4 files changed, 179 insertions(+), 6 deletions(-)
+ dlls/advapi32/tests/security.c |  40 ++++++++++-
+ server/change.c                |   2 +-
+ server/file.c                  | 147 ++++++++++++++++++++++++++++++++++++++++-
+ server/file.h                  |   2 +-
+ 4 files changed, 185 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
 index 82c0639..3e88c2e 100644
@@ -86,10 +86,10 @@ index 27dbe25..0a82358 100644
      return sd;
  }
 diff --git a/server/file.c b/server/file.c
-index 38eda5c..6c90a9c 100644
+index 57100c1..16daf17 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -248,11 +248,141 @@ void set_xattr_sd( int fd, const struct security_descriptor *sd, const SID *user
+@@ -248,11 +248,147 @@ void set_xattr_sd( int fd, const struct security_descriptor *sd, const SID *user
      xattr_fset( fd, WINE_XATTR_SD, buffer, len );
  }
  
@@ -176,28 +176,34 @@ index 38eda5c..6c90a9c 100644
 +static struct security_descriptor *file_get_parent_sd( struct fd *root, const char *child_name,
 +                                                       int child_len, int is_dir )
 +{
-+    char *parent_name = strndup( child_name, child_len );
 +    struct security_descriptor *sd = NULL;
-+    int len = strlen( parent_name );
 +    mode_t parent_mode = 0555;
++    char *p, *parent_name;
 +    struct fd *parent_fd;
-+    char *slash;
 +
-+    /* Even if the file is a directory we need its parent, so skip any terminating slash */
-+    if (parent_name[len-1] == '/')
-+        parent_name[len-1] = 0;
-+    /* Find the last slash in the filename and terminate the name there */
-+    slash = strrchr(parent_name, '/');
-+    if (slash)
-+        slash[0] = 0;
-+    else
-+        parent_name[0] = 0;
++    parent_name = strndup( child_name, child_len );
++    if (!parent_name) return NULL;
++
++    /* skip trailing slashes */
++    p = parent_name + strlen( parent_name ) - 1;
++    while (p > parent_name && *p == '/') p--;
++
++    /* remove last path component */
++    if (p == parent_name && *p == '/')
++    {
++        free(parent_name);
++        return NULL;
++    }
++    while (p > parent_name && *p != '/') p--;
++    while (p > parent_name && *p == '/') p--;
++    p[1] = 0;
 +
 +    parent_fd = open_fd( root, parent_name, O_NONBLOCK | O_LARGEFILE, &parent_mode,
 +                         READ_CONTROL|ACCESS_SYSTEM_SECURITY,
 +                         FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
 +                         FILE_OPEN_FOR_BACKUP_INTENT );
 +    free(parent_name);
++
 +    if(parent_fd)
 +    {
 +        struct object *obj;
@@ -231,7 +237,7 @@ index 38eda5c..6c90a9c 100644
      const SID *owner = NULL, *group = NULL;
      struct object *obj = NULL;
      struct fd *fd;
-@@ -282,6 +412,10 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+@@ -282,6 +418,10 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
      default:                set_error( STATUS_INVALID_PARAMETER ); goto done;
      }
  
@@ -242,7 +248,7 @@ index 38eda5c..6c90a9c 100644
      if (sd)
      {
          owner = sd_get_owner( sd );
-@@ -325,6 +459,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+@@ -325,6 +465,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
      release_object( fd );
  
  done:
@@ -250,7 +256,7 @@ index 38eda5c..6c90a9c 100644
      free( name );
      return obj;
  }
-@@ -543,7 +678,7 @@ void convert_generic_sd( struct security_descriptor *sd )
+@@ -540,7 +681,7 @@ void convert_generic_sd( struct security_descriptor *sd )
  }
  
  struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode_t *mode,
@@ -259,7 +265,7 @@ index 38eda5c..6c90a9c 100644
  {
      int unix_fd = get_unix_fd( fd );
      struct stat st;
-@@ -558,7 +693,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
+@@ -555,7 +696,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
          return obj->sd;
  
      sd = get_xattr_sd( unix_fd );
@@ -268,7 +274,7 @@ index 38eda5c..6c90a9c 100644
      if (!sd) sd = mode_to_sd( st.st_mode,
                                security_unix_uid_to_sid( st.st_uid ),
                                token_get_primary_group( current->process->token ));
-@@ -580,7 +715,7 @@ static struct security_descriptor *file_get_sd( struct object *obj )
+@@ -577,7 +718,7 @@ static struct security_descriptor *file_get_sd( struct object *obj )
      assert( obj->ops == &file_ops );
  
      fd = file_get_fd( obj );
@@ -291,5 +297,5 @@ index be25fb6..e09e227 100644
  /* file mapping functions */
  
 -- 
-1.7.9.5
+2.1.0
 

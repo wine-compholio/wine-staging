@@ -1,15 +1,15 @@
-From 48f5d3ffa7cca6623f1d89d1c0f9bc62fde3badb Mon Sep 17 00:00:00 2001
+From a92a02401f74c0b678da541f3ca593135c6ab56d Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 14:08:36 -0600
 Subject: server: Inherit security attributes from parent directories on
  creation.
 
 ---
- dlls/advapi32/tests/security.c |  40 ++++++++++-
+ dlls/advapi32/tests/security.c |  40 +++++++++++-
  server/change.c                |   2 +-
- server/file.c                  | 147 ++++++++++++++++++++++++++++++++++++++++-
+ server/file.c                  | 142 ++++++++++++++++++++++++++++++++++++++++-
  server/file.h                  |   2 +-
- 4 files changed, 185 insertions(+), 6 deletions(-)
+ 4 files changed, 180 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
 index 82c0639..3e88c2e 100644
@@ -86,10 +86,18 @@ index 27dbe25..0a82358 100644
      return sd;
  }
 diff --git a/server/file.c b/server/file.c
-index 57100c1..16daf17 100644
+index 57100c1..521eff2 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -248,11 +248,147 @@ void set_xattr_sd( int fd, const struct security_descriptor *sd, const SID *user
+@@ -71,6 +71,7 @@ struct file
+ };
+ 
+ static unsigned int generic_file_map_access( unsigned int access );
++struct security_descriptor *get_xattr_sd( int fd );
+ 
+ static void file_dump( struct object *obj, int verbose );
+ static struct fd *file_get_fd( struct object *obj );
+@@ -248,11 +249,141 @@ void set_xattr_sd( int fd, const struct security_descriptor *sd, const SID *user
      xattr_fset( fd, WINE_XATTR_SD, buffer, len );
  }
  
@@ -176,10 +184,11 @@ index 57100c1..16daf17 100644
 +static struct security_descriptor *file_get_parent_sd( struct fd *root, const char *child_name,
 +                                                       int child_len, int is_dir )
 +{
-+    struct security_descriptor *sd = NULL;
++    struct security_descriptor *parent_sd, *sd = NULL;
 +    mode_t parent_mode = 0555;
 +    char *p, *parent_name;
 +    struct fd *parent_fd;
++    int unix_fd;
 +
 +    parent_name = strndup( child_name, child_len );
 +    if (!parent_name) return NULL;
@@ -202,26 +211,19 @@ index 57100c1..16daf17 100644
 +                         READ_CONTROL|ACCESS_SYSTEM_SECURITY,
 +                         FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
 +                         FILE_OPEN_FOR_BACKUP_INTENT );
-+    free(parent_name);
++    free( parent_name );
 +
-+    if(parent_fd)
++    if (parent_fd)
 +    {
-+        struct object *obj;
-+
-+        if ((obj = create_file_obj( parent_fd, READ_CONTROL|ACCESS_SYSTEM_SECURITY, parent_mode )))
++        unix_fd = get_unix_fd( parent_fd );
++        if (unix_fd != -1)
 +        {
-+            struct file *file = (struct file *)obj;
-+            struct fd *fd;
-+
-+            fd = file_get_fd( obj );
-+            if (fd)
++            parent_sd = get_xattr_sd( unix_fd );
++            if (parent_sd)
 +            {
-+                sd = get_file_sd( obj, fd, &file->mode, &file->uid, FALSE );
-+                release_object( fd );
++                sd = inherit_sd( parent_sd, is_dir );
++                free( parent_sd );
 +            }
-+            if (sd)
-+                sd = inherit_sd( sd, is_dir );
-+            release_object( obj );
 +        }
 +        release_object( parent_fd );
 +    }
@@ -237,7 +239,7 @@ index 57100c1..16daf17 100644
      const SID *owner = NULL, *group = NULL;
      struct object *obj = NULL;
      struct fd *fd;
-@@ -282,6 +418,10 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+@@ -282,6 +413,10 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
      default:                set_error( STATUS_INVALID_PARAMETER ); goto done;
      }
  
@@ -248,7 +250,7 @@ index 57100c1..16daf17 100644
      if (sd)
      {
          owner = sd_get_owner( sd );
-@@ -325,6 +465,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+@@ -325,6 +460,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
      release_object( fd );
  
  done:
@@ -256,7 +258,7 @@ index 57100c1..16daf17 100644
      free( name );
      return obj;
  }
-@@ -540,7 +681,7 @@ void convert_generic_sd( struct security_descriptor *sd )
+@@ -540,7 +676,7 @@ void convert_generic_sd( struct security_descriptor *sd )
  }
  
  struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode_t *mode,
@@ -265,7 +267,7 @@ index 57100c1..16daf17 100644
  {
      int unix_fd = get_unix_fd( fd );
      struct stat st;
-@@ -555,7 +696,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
+@@ -555,7 +691,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
          return obj->sd;
  
      sd = get_xattr_sd( unix_fd );
@@ -274,7 +276,7 @@ index 57100c1..16daf17 100644
      if (!sd) sd = mode_to_sd( st.st_mode,
                                security_unix_uid_to_sid( st.st_uid ),
                                token_get_primary_group( current->process->token ));
-@@ -577,7 +718,7 @@ static struct security_descriptor *file_get_sd( struct object *obj )
+@@ -577,7 +713,7 @@ static struct security_descriptor *file_get_sd( struct object *obj )
      assert( obj->ops == &file_ops );
  
      fd = file_get_fd( obj );

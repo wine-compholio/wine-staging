@@ -26,7 +26,6 @@ PATCHLIST := \
 	comctl32-ImageList.ok \
 	comctl32-LoadIconMetric.ok \
 	configure-Absolute_RPATH.ok \
-	configure-Detect_Ncurses.ok \
 	dsound-Fast_Mixer.ok \
 	fonts-Missing_Fonts.ok \
 	iphlpapi-TCP_Table.ok \
@@ -265,21 +264,6 @@ configure-Absolute_RPATH.ok:
 	@( \
 		echo '+    { "configure-Absolute_RPATH", "Sebastian Lackner", "Also add the absolute RPATH when linking against libwine." },'; \
 	) > configure-Absolute_RPATH.ok
-
-# Patchset configure-Detect_Ncurses
-# |
-# | Included patches:
-# |   *	Fix detection of ncurses library on Archlinux. [rev 3, by Sebastian Lackner]
-# |
-# | Modified files: 
-# |   *	configure.ac
-# |
-.INTERMEDIATE: configure-Detect_Ncurses.ok
-configure-Detect_Ncurses.ok:
-	$(call APPLY_FILE,configure-Detect_Ncurses/0001-configure-Fix-detection-of-ncurses-library-on-Archli.patch)
-	@( \
-		echo '+    { "configure-Detect_Ncurses", "Sebastian Lackner", "Fix detection of ncurses library on Archlinux. [rev 3]" },'; \
-	) > configure-Detect_Ncurses.ok
 
 # Patchset dsound-Fast_Mixer
 # |

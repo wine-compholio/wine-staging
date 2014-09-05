@@ -1,4 +1,4 @@
-From a92a02401f74c0b678da541f3ca593135c6ab56d Mon Sep 17 00:00:00 2001
+From 36c98dd468a20204bc12809b6f290340a5f8c010 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 14:08:36 -0600
 Subject: server: Inherit security attributes from parent directories on
@@ -6,10 +6,8 @@ Subject: server: Inherit security attributes from parent directories on
 
 ---
  dlls/advapi32/tests/security.c |  40 +++++++++++-
- server/change.c                |   2 +-
- server/file.c                  | 142 ++++++++++++++++++++++++++++++++++++++++-
- server/file.h                  |   2 +-
- 4 files changed, 180 insertions(+), 6 deletions(-)
+ server/file.c                  | 136 +++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 175 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
 index 82c0639..3e88c2e 100644
@@ -72,21 +70,8 @@ index 82c0639..3e88c2e 100644
  done:
      HeapFree(GetProcessHeap(), 0, user);
      bret = RemoveDirectoryA(tmpdir);
-diff --git a/server/change.c b/server/change.c
-index 27dbe25..0a82358 100644
---- a/server/change.c
-+++ b/server/change.c
-@@ -290,7 +290,7 @@ static struct security_descriptor *dir_get_sd( struct object *obj )
-     assert( obj->ops == &dir_ops );
- 
-     fd = dir_get_fd( obj );
--    sd = get_file_sd( obj, fd, &dir->mode, &dir->uid );
-+    sd = get_file_sd( obj, fd, &dir->mode, &dir->uid, TRUE );
-     release_object( fd );
-     return sd;
- }
 diff --git a/server/file.c b/server/file.c
-index 57100c1..521eff2 100644
+index 57100c1..431b8a1 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -71,6 +71,7 @@ struct file
@@ -258,46 +243,6 @@ index 57100c1..521eff2 100644
      free( name );
      return obj;
  }
-@@ -540,7 +676,7 @@ void convert_generic_sd( struct security_descriptor *sd )
- }
- 
- struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode_t *mode,
--                                         uid_t *uid )
-+                                         uid_t *uid, int convert_generic )
- {
-     int unix_fd = get_unix_fd( fd );
-     struct stat st;
-@@ -555,7 +691,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
-         return obj->sd;
- 
-     sd = get_xattr_sd( unix_fd );
--    if (sd) convert_generic_sd( sd );
-+    if (sd && convert_generic) convert_generic_sd( sd );
-     if (!sd) sd = mode_to_sd( st.st_mode,
-                               security_unix_uid_to_sid( st.st_uid ),
-                               token_get_primary_group( current->process->token ));
-@@ -577,7 +713,7 @@ static struct security_descriptor *file_get_sd( struct object *obj )
-     assert( obj->ops == &file_ops );
- 
-     fd = file_get_fd( obj );
--    sd = get_file_sd( obj, fd, &file->mode, &file->uid );
-+    sd = get_file_sd( obj, fd, &file->mode, &file->uid, TRUE );
-     release_object( fd );
-     return sd;
- }
-diff --git a/server/file.h b/server/file.h
-index be25fb6..e09e227 100644
---- a/server/file.h
-+++ b/server/file.h
-@@ -127,7 +127,7 @@ extern mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner
- extern int set_file_sd( struct object *obj, struct fd *fd, const struct security_descriptor *sd,
-                         unsigned int set_info );
- extern struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode_t *mode,
--                                                uid_t *uid );
-+                                                uid_t *uid, int convert_generic );
- 
- /* file mapping functions */
- 
 -- 
 2.1.0
 

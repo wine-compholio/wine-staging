@@ -778,7 +778,7 @@ server-CreateProcess_ACLs.ok:
 # |   *	[#34406] Support for inherited file ACLs
 # |
 # | Modified files: 
-# |   *	dlls/advapi32/tests/security.c, include/winnt.h, server/change.c, server/fd.c, server/file.c, server/file.h
+# |   *	dlls/advapi32/tests/security.c, include/winnt.h, server/fd.c, server/file.c, server/file.h
 # |
 .INTERMEDIATE: server-Inherited_ACLs.ok
 server-Inherited_ACLs.ok: server-Stored_ACLs.ok

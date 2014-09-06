@@ -512,7 +512,7 @@ def generate_makefile(all_patches):
                 fp.write("# |\n")
 
             # List all modified files
-            fp.write("# | Modified files: \n")
+            fp.write("# | Modified files:\n")
             fp.write("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap(", ".join(sorted(patch.modified_files)), 120)))
             fp.write("# |\n")
 

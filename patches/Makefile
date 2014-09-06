@@ -133,7 +133,7 @@ clean:
 # |   *	Appease the blessed version of gcc (4.5) when -Werror is enabled. [by Erich E. Hoover]
 # |   *	Appease the Archlinux version of gcc (4.9.1) when -Werror is enabled. [by Sebastian Lackner]
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/d3d9/tests/visual.c, dlls/kernel32/locale.c, dlls/msvcp90/ios.c, dlls/msvcp90/locale.c, dlls/msvcp90/string.c,
 # | 	dlls/netapi32/netapi32.c, dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/resource.c,
 # | 	dlls/wined3d/swapchain.c, server/object.c, tools/makedep.c
@@ -161,7 +161,7 @@ Miscellaneous.ok:
 # |   *	Indicate direct rendering through OpenGL extension. [by Michael Müller]
 # |   *	Implement X11DRV_FLUSH_GDI_DISPLAY ExtEscape command. [by Sebastian Lackner]
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/user32/message.c, dlls/wined3d/wined3d.spec, dlls/wined3d/wined3d_main.c, dlls/winex11.drv/init.c,
 # | 	dlls/winex11.drv/opengl.c, dlls/winex11.drv/x11drv.h
 # |
@@ -186,7 +186,7 @@ Pipelight.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#21767] ATL IOCS data should not be stored in GWLP_USERDATA
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/atl/atl_ax.c
 # |
 .INTERMEDIATE: atl-IOCS_Property.ok
@@ -204,7 +204,7 @@ atl-IOCS_Property.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#32194] Support for BCryptGetFipsAlgorithmMode
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/tests/bcrypt.c
 # |
 .INTERMEDIATE: bcrypt-BCryptGetFipsAlgorithmMode.ok
@@ -222,7 +222,7 @@ bcrypt-BCryptGetFipsAlgorithmMode.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#36761] Fix issue with invisible dragimages in ImageList
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/comctl32/imagelist.c
 # |
 .INTERMEDIATE: comctl32-ImageList.ok
@@ -240,7 +240,7 @@ comctl32-ImageList.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#35375] Support for LoadIconMetric
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/comctl32/Makefile.in, dlls/comctl32/comctl32.spec, dlls/comctl32/icon.c, dlls/comctl32/tests/misc.c,
 # | 	include/commctrl.h
 # |
@@ -260,7 +260,7 @@ comctl32-LoadIconMetric.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#26256] Support for setcap on wine-preloader
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	configure.ac
 # |
 .INTERMEDIATE: configure-Absolute_RPATH.ok
@@ -278,7 +278,7 @@ configure-Absolute_RPATH.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#30639] Audio stuttering and performance drops in multiple applications
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/dsound/dsound_main.c, dlls/dsound/dsound_private.h, dlls/dsound/mixer.c
 # |
 .INTERMEDIATE: dsound-Fast_Mixer.ok
@@ -297,7 +297,7 @@ dsound-Fast_Mixer.ok:
 # |   *	[#32323] Implement an Arial replacement font
 # |   *	[#13829] Implement a Microsoft Yahei replacement font
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	fonts/Makefile.in, fonts/arial.sfd, fonts/arial.ttf, fonts/cour.sfd, fonts/cour.ttf, fonts/msyh.sfd, fonts/msyh.ttf
 # |
 .INTERMEDIATE: fonts-Missing_Fonts.ok
@@ -317,7 +317,7 @@ fonts-Missing_Fonts.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#34372] Support for AllocateAndGetTcpExTableFromStack
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/iphlpapi/iphlpapi.spec, dlls/iphlpapi/ipstats.c, dlls/iphlpapi/ipstats.h
 # |
 .INTERMEDIATE: iphlpapi-TCP_Table.ok
@@ -335,7 +335,7 @@ iphlpapi-TCP_Table.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#36073] Support for GetFinalPathNameByHandle
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/kernel32/file.c, dlls/kernel32/kernel32.spec, dlls/kernel32/tests/file.c, include/fileapi.h
 # |
 .INTERMEDIATE: kernel32-GetFinalPathNameByHandle.ok
@@ -354,7 +354,7 @@ kernel32-GetFinalPathNameByHandle.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#19813] Support for GetSystemTimes
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/kernel32/tests/time.c, dlls/kernel32/time.c
 # |
 .INTERMEDIATE: kernel32-GetSystemTimes.ok
@@ -370,7 +370,7 @@ kernel32-GetSystemTimes.ok:
 # | Included patches:
 # |   *	Implement GetVolumePathName. [by Erich E. Hoover]
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/kernel32/tests/volume.c, dlls/kernel32/volume.c
 # |
 .INTERMEDIATE: kernel32-GetVolumePathName.ok
@@ -391,7 +391,7 @@ kernel32-GetVolumePathName.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#16550] Fix for ConnectNamedPort return value in overlapped mode
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/kernel32/sync.c
 # |
 .INTERMEDIATE: kernel32-Named_Pipe.ok
@@ -409,7 +409,7 @@ kernel32-Named_Pipe.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#35886] Support for [Get|Set]SystemFileCacheSize
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/api-ms-win-core-memory-l1-1-1/api-ms-win-core-memory-l1-1-1.spec, dlls/kernel32/heap.c, dlls/kernel32/kernel32.spec
 # |
 .INTERMEDIATE: kernel32-SystemFileCacheSize.ok
@@ -427,7 +427,7 @@ kernel32-SystemFileCacheSize.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#10767] Fix comparison of punctuation characters in lstrcmp
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/kernel32/tests/locale.c, libs/wine/collation.c
 # |
 .INTERMEDIATE: libs-Unicode_Collation.ok
@@ -443,7 +443,7 @@ libs-Unicode_Collation.ok:
 # |   *	Add commandline option --patches to show the patch list. [by Sebastian Lackner]
 # |   *	Add commandline option --check-libs to test if shared libraries are installed. [by Michael Müller]
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec, include/wine/library.h, libs/wine/config.c, libs/wine/loader.c,
 # | 	libs/wine/wine.def, libs/wine/wine.map, loader/main.c
 # |
@@ -464,7 +464,7 @@ loader-Cmdline_Diagnostics.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#9158] Support for DOS hidden/system file attributes
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	configure.ac, dlls/ntdll/directory.c, dlls/ntdll/file.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/directory.c,
 # | 	dlls/ntdll/tests/file.c, include/wine/port.h, libs/port/Makefile.in, libs/port/xattr.c
 # |
@@ -489,7 +489,7 @@ ntdll-DOS_Attributes.ok: ntdll-Fix_Free.ok
 # | This patchset fixes the following Wine bugs:
 # |   *	[#36374] Add Dynamic DST exceptions for Israel Standard Time
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/ntdll/time.c, loader/wine.inf.in
 # |
 .INTERMEDIATE: ntdll-Dynamic_DST.ok
@@ -506,7 +506,7 @@ ntdll-Dynamic_DST.ok:
 # | Included patches:
 # |   *	Use lockfree implementation for get_cached_fd. [rev 4, by Sebastian Lackner]
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/ntdll/server.c
 # |
 .INTERMEDIATE: ntdll-FD_Cache.ok
@@ -524,7 +524,7 @@ ntdll-FD_Cache.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#30397] Support for NtSetInformationFile class FileDispositionInformation
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c, server/fd.c, server/file.c, server/file.h, server/protocol.def
 # |
 .INTERMEDIATE: ntdll-FileDispositionInformation.ok
@@ -544,7 +544,7 @@ ntdll-FileDispositionInformation.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#33162] Ensure NtProtectVirtualMemory and NtCreateSection are on separate pages
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/ntdll/virtual.c
 # |
 .INTERMEDIATE: ntdll-Fix_Alignment.ok
@@ -559,7 +559,7 @@ ntdll-Fix_Alignment.ok:
 # | Included patches:
 # |   *	Fix unintentional leaks with ntdll internals [rev 2, by Erich E. Hoover]
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/kernel32/path.c, dlls/kernel32/volume.c, dlls/ntdll/directory.c, dlls/ntdll/file.c, dlls/ntdll/loader.c
 # |
 .INTERMEDIATE: ntdll-Fix_Free.ok
@@ -584,7 +584,7 @@ ntdll-Fix_Free.ok:
 # | Included patches:
 # |   *	Improve heap allocation performance by using more fine-grained free lists. [by Steaphan Greene]
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/ntdll/heap.c
 # |
 .INTERMEDIATE: ntdll-Heap_FreeLists.ok
@@ -602,7 +602,7 @@ ntdll-Heap_FreeLists.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#12401] Support for Junction Points
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/kernel32/path.c, dlls/kernel32/volume.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/ntifs.h
 # |
 .INTERMEDIATE: ntdll-Junction_Points.ok
@@ -626,7 +626,7 @@ ntdll-Junction_Points.ok: ntdll-Fix_Free.ok
 # | This patchset fixes the following Wine bugs:
 # |   *	[#28995] Allow special characters in pipe names
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/kernel32/tests/pipe.c, dlls/ntdll/directory.c
 # |
 .INTERMEDIATE: ntdll-Pipe_SpecialCharacters.ok
@@ -644,7 +644,7 @@ ntdll-Pipe_SpecialCharacters.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#21917] Use assembly wrapper to run TLS callbacks
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/ntdll/loader.c
 # |
 .INTERMEDIATE: ntdll-Save_Regs_Entrypoint.ok
@@ -663,7 +663,7 @@ ntdll-Save_Regs_Entrypoint.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#33034] Set ldr.EntryPoint for main executable
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/ntdll/loader.c
 # |
 .INTERMEDIATE: ntdll-loader_EntryPoint.ok
@@ -681,7 +681,7 @@ ntdll-loader_EntryPoint.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#23174] Return correct IMediaSeeking stream positions in quartz
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/quartz/filtergraph.c
 # |
 .INTERMEDIATE: quartz-MediaSeeking_Positions.ok
@@ -707,7 +707,7 @@ quartz-MediaSeeking_Positions.ok:
 # |   *	[#12458] Support for ITextDocument_fnRange function
 # |   *	[#18303] Support for ITextRange, ITextFont and ITextPara
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/riched20/richole.c, dlls/riched20/run.c, dlls/riched20/tests/richole.c
 # |
 .INTERMEDIATE: riched20-IText_Interface.ok
@@ -739,7 +739,7 @@ riched20-IText_Interface.ok:
 # | Included patches:
 # |   *	Compatibility patch for old method of storing extended file system attributes. [rev 6, by Erich E. Hoover]
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	server/file.c
 # |
 .INTERMEDIATE: server-ACL_Compat.ok
@@ -757,7 +757,7 @@ server-ACL_Compat.ok: server-Inherited_ACLs.ok
 # | This patchset fixes the following Wine bugs:
 # |   *	[#32328] Support for interface change notifications
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	Makefile.in, dlls/ws2_32/tests/sock.c, server/event.c, server/named_pipe.c, server/object.h, server/sock.c
 # |
 .INTERMEDIATE: server-Address_Change_Notification.ok
@@ -779,7 +779,7 @@ server-Address_Change_Notification.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#22006] Support for process ACLs
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/advapi32/tests/security.c, dlls/kernel32/process.c, server/object.c, server/object.h, server/process.c,
 # | 	server/protocol.def
 # |
@@ -801,7 +801,7 @@ server-CreateProcess_ACLs.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#34406] Support for inherited file ACLs
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/advapi32/tests/security.c, include/winnt.h, server/fd.c, server/file.c, server/file.h
 # |
 .INTERMEDIATE: server-Inherited_ACLs.ok
@@ -820,7 +820,7 @@ server-Inherited_ACLs.ok: server-Stored_ACLs.ok
 # | This patchset fixes the following Wine bugs:
 # |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
 # |
 .INTERMEDIATE: server-Misc_ACL.ok
@@ -839,7 +839,7 @@ server-Misc_ACL.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#37087] Return an error when trying to open a terminated process
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	server/process.c, server/process.h
 # |
 .INTERMEDIATE: server-OpenProcess.ok
@@ -857,7 +857,7 @@ server-OpenProcess.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#31858] Support for stored file ACLs
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/advapi32/tests/security.c, include/wine/port.h, server/change.c, server/file.c, server/file.h
 # |
 .INTERMEDIATE: server-Stored_ACLs.ok
@@ -877,7 +877,7 @@ server-Stored_ACLs.ok: ntdll-DOS_Attributes.ok
 # | Included patches:
 # |   *	Generate default ACLs for user shell folders. [rev 6, by Erich E. Hoover]
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/shell32/shellpath.c
 # |
 .INTERMEDIATE: shell32-Default_Folder_ACLs.ok
@@ -895,7 +895,7 @@ shell32-Default_Folder_ACLs.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#30385] Support for KF_FLAG_DEFAULT_PATH in SHGetKnownFolderPath
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/shell32/shellpath.c, dlls/shell32/tests/shellpath.c
 # |
 .INTERMEDIATE: shell32-Default_Path.ok
@@ -913,7 +913,7 @@ shell32-Default_Path.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#24721] Support for extra large and jumbo icon lists in shell32
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/shell32/iconcache.c, dlls/shell32/shell32_main.h, dlls/shell32/shellord.c
 # |
 .INTERMEDIATE: shell32-Icons.ok
@@ -931,7 +931,7 @@ shell32-Icons.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#23033] Use manual relay for RunDLL_CallEntry16 in shell32
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/shell32/control.c, dlls/shell32/shell32.spec
 # |
 .INTERMEDIATE: shell32-RunDLL_CallEntry16.ok
@@ -949,7 +949,7 @@ shell32-RunDLL_CallEntry16.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#35630] Support for SHCreateSessionKey
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/shell32/shell32.spec, dlls/shell32/shellreg.c
 # |
 .INTERMEDIATE: shell32-SHCreateSessionKey.ok
@@ -964,7 +964,7 @@ shell32-SHCreateSessionKey.ok:
 # | Included patches:
 # |   *	Workaround for broken implementation of shlwapi url functions. [by Sebastian Lackner]
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/shlwapi/tests/url.c, dlls/shlwapi/url.c
 # |
 .INTERMEDIATE: shlwapi-UrlCombine.ok
@@ -983,7 +983,7 @@ shlwapi-UrlCombine.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#18732] Make it possible to change media center / tablet pc status
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/user32/sysparams.c
 # |
 .INTERMEDIATE: user32-GetSystemMetrics.ok
@@ -1001,7 +1001,7 @@ user32-GetSystemMetrics.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#30648] Support for TOOLTIPS_GetTipText edge cases
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/comctl32/tooltips.c
 # |
 .INTERMEDIATE: user32-GetTipText.ok
@@ -1020,7 +1020,7 @@ user32-GetTipText.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#32451] Fix for programs leaking wndproc slots
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/user32/winproc.c
 # |
 .INTERMEDIATE: user32-WndProc.ok
@@ -1038,7 +1038,7 @@ user32-WndProc.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#7115] Need for Speed 3 installer requires devices in HKEY_DYN_DATA
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	programs/wineboot/wineboot.c
 # |
 .INTERMEDIATE: wineboot-HKEY_DYN_DATA.ok
@@ -1056,7 +1056,7 @@ wineboot-HKEY_DYN_DATA.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#28768] Games For Windows Live 1.x expects a valid linker version in the PE header
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	tools/winebuild/spec32.c
 # |
 .INTERMEDIATE: winebuild-LinkerVersion.ok
@@ -1075,7 +1075,7 @@ winebuild-LinkerVersion.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#10495] Support for PulseAudio backend for audio
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	configure.ac, dlls/mmdevapi/main.c, dlls/mmdevapi/tests/render.c, dlls/winepulse.drv/Makefile.in,
 # | 	dlls/winepulse.drv/mmdevdrv.c, dlls/winepulse.drv/winepulse.drv.spec, dlls/winmm/lolvldrv.c
 # |
@@ -1118,7 +1118,7 @@ winepulse-PulseAudio_Support.ok:
 # |   *	Update the check for broken nVidia RandR to test for the number of resolutions instead of the number of modes. [by Erich
 # | 	E. Hoover]
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/winex11.drv/xrandr.c
 # |
 .INTERMEDIATE: winex11-Limited_Resolutions.ok
@@ -1136,7 +1136,7 @@ winex11-Limited_Resolutions.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#32699] Prevent window managers from grouping all wine programs together
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/winex11.drv/window.c
 # |
 .INTERMEDIATE: winex11-Window_Groups.ok
@@ -1151,7 +1151,7 @@ winex11-Window_Groups.ok:
 # | Included patches:
 # |   *	Enable/disable windows when they are (un)mapped by foreign applications. [by Sebastian Lackner]
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/winex11.drv/event.c
 # |
 .INTERMEDIATE: winex11-XEMBED.ok
@@ -1166,7 +1166,7 @@ winex11-XEMBED.ok:
 # | Included patches:
 # |   *	Use dynamic linking for libpcap. [by André Hentschel]
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	configure.ac, dlls/wpcap/Makefile.in, dlls/wpcap/wpcap.c
 # |
 .INTERMEDIATE: wpcap-Dynamic_Linking.ok
@@ -1181,7 +1181,7 @@ wpcap-Dynamic_Linking.ok:
 # | Included patches:
 # |   *	Return the appropriate connection time with SO_CONNECT_TIME. [by Bruno Jesus / Erich E. Hoover]
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, server/protocol.def, server/sock.c
 # |
 .INTERMEDIATE: ws2_32-Connect_Time.ok
@@ -1200,7 +1200,7 @@ ws2_32-Connect_Time.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#5048] Support for TransmitFile
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c
 # |
 .INTERMEDIATE: ws2_32-TransmitFile.ok
@@ -1222,7 +1222,7 @@ ws2_32-TransmitFile.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#36713] Support for ws2_32.inet_pton
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/ws2_32.spec, include/ws2tcpip.h
 # |
 .INTERMEDIATE: ws2_32-inet_pton.ok
@@ -1240,7 +1240,7 @@ ws2_32-inet_pton.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#29903] Support for WTSEnumerateProcessesW
 # |
-# | Modified files: 
+# | Modified files:
 # |   *	dlls/wtsapi32/tests/wtsapi.c, dlls/wtsapi32/wtsapi32.c
 # |
 .INTERMEDIATE: wtsapi32-EnumerateProcesses.ok

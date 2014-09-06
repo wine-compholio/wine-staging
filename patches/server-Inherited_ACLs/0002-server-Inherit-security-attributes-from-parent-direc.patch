@@ -1,16 +1,16 @@
-From 6cf81a9d508316efad89b5a9a9b9995fcb3de297 Mon Sep 17 00:00:00 2001
+From 426cab848d0577238d08463e2e1b4e5f4a06ef45 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 14:10:49 -0600
 Subject: server: Inherit security attributes from parent directories on
  SetSecurityInfo.
 
 ---
- dlls/advapi32/tests/security.c |  68 ++++++++++++++++++++++
+ dlls/advapi32/tests/security.c |  68 +++++++++++++++++++++
  include/winnt.h                |   7 ++-
- server/fd.c                    |  13 ++++-
- server/file.c                  | 126 ++++++++++++++++++++++++++++++++++++++++-
+ server/fd.c                    |  13 +++-
+ server/file.c                  | 133 +++++++++++++++++++++++++++++++++++++++--
  server/file.h                  |   1 +
- 5 files changed, 207 insertions(+), 8 deletions(-)
+ 5 files changed, 213 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
 index 3e88c2e..952d001 100644
@@ -146,10 +146,10 @@ index e3b722c..e6ec90a 100644
  
      if (orig->inode)
 diff --git a/server/file.c b/server/file.c
-index 431b8a1..384cc66 100644
+index 431b8a1..9299132 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -329,6 +329,105 @@ struct security_descriptor *inherit_sd( const struct security_descriptor *parent
+@@ -329,6 +329,106 @@ struct security_descriptor *inherit_sd( const struct security_descriptor *parent
      return sd;
  }
  
@@ -192,6 +192,7 @@ index 431b8a1..384cc66 100644
 +
 +    if(!ace_count) return sd; /* No inheritance */
 +
++    /* FIXME: should use set_info flags? */
 +    if (child_present && child_dacl)
 +        old_sd = child_sd;
 +    else
@@ -255,16 +256,11 @@ index 431b8a1..384cc66 100644
  static struct security_descriptor *file_get_parent_sd( struct fd *root, const char *child_name,
                                                         int child_len, int is_dir )
  {
-@@ -797,16 +896,33 @@ mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner )
-     return new_mode & ~denied_mode;
- }
- 
--int set_file_sd( struct object *obj, struct fd *fd, const struct security_descriptor *sd,
-+int set_file_sd( struct object *obj, struct fd *fd, const struct security_descriptor *new_sd,
+@@ -800,20 +900,41 @@ mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner )
+ int set_file_sd( struct object *obj, struct fd *fd, const struct security_descriptor *sd,
                   unsigned int set_info )
  {
-+    const struct security_descriptor *sd = new_sd;
-+    struct security_descriptor *parent_sd = NULL;
++    struct security_descriptor *tmp_sd = NULL;
      int unix_fd = get_unix_fd( fd );
      const SID *owner, *group;
      struct stat st;
@@ -276,21 +272,44 @@ index 431b8a1..384cc66 100644
 +    if (!(set_info & PROTECTED_DACL_SECURITY_INFORMATION))
 +    {
 +        char *child_name = fd_get_unix_name( fd );
-+
 +        if (child_name)
 +        {
++            struct security_descriptor *parent_sd;
 +            parent_sd = file_get_parent_sd( NULL, child_name, strlen(child_name),
-+                                                  S_ISDIR(st.st_mode) );
++                                            S_ISDIR(st.st_mode) );
 +            free( child_name );
 +            if (parent_sd)
-+                sd = file_combine_sds( parent_sd, new_sd );
++            {
++                tmp_sd = file_combine_sds( parent_sd, sd );
++                if (tmp_sd) sd = tmp_sd; /* only used combined sd if successful */
++                free( parent_sd );
++            }
 +        }
 +    }
 +
      if (set_info & OWNER_SECURITY_INFORMATION)
      {
          owner = sd_get_owner( sd );
-@@ -856,10 +972,14 @@ int set_file_sd( struct object *obj, struct fd *fd, const struct security_descri
+         if (!owner)
+         {
+             set_error( STATUS_INVALID_SECURITY_DESCR );
+-            return 0;
++            ret = 0;
++            goto err;
+         }
+         if (!obj->sd || !security_equal_sid( owner, sd_get_owner( obj->sd ) ))
+         {
+@@ -831,7 +952,8 @@ int set_file_sd( struct object *obj, struct fd *fd, const struct security_descri
+         if (!group)
+         {
+             set_error( STATUS_INVALID_SECURITY_DESCR );
+-            return 0;
++            ret = 0;
++            goto err;
+         }
+         if (!obj->sd || !security_equal_sid( group, sd_get_group( obj->sd ) ))
+         {
+@@ -856,10 +978,13 @@ int set_file_sd( struct object *obj, struct fd *fd, const struct security_descri
          if (((st.st_mode ^ mode) & (S_IRWXU|S_IRWXG|S_IRWXO)) && fchmod( unix_fd, mode ) == -1)
          {
              file_set_error();
@@ -300,9 +319,8 @@ index 431b8a1..384cc66 100644
      }
 -    return 1;
 +
-+    if (parent_sd)
-+        free( parent_sd );
-+
++err:
++    free( tmp_sd );
 +    return ret;
  }
  

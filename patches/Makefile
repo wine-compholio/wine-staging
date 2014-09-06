@@ -772,7 +772,7 @@ server-CreateProcess_ACLs.ok:
 # Patchset server-Inherited_ACLs
 # |
 # | Included patches:
-# |   *	Add support for inherited security attributes. [rev 6, by Erich E. Hoover]
+# |   *	Add support for inherited security attributes. [rev 7, by Erich E. Hoover]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#34406] Support for inherited file ACLs
@@ -785,7 +785,7 @@ server-Inherited_ACLs.ok: server-Stored_ACLs.ok
 	$(call APPLY_FILE,server-Inherited_ACLs/0001-server-Inherit-security-attributes-from-parent-direc.patch)
 	$(call APPLY_FILE,server-Inherited_ACLs/0002-server-Inherit-security-attributes-from-parent-direc.patch)
 	@( \
-		echo '+    { "server-Inherited_ACLs", "Erich E. Hoover", "Add support for inherited security attributes. [rev 6]" },'; \
+		echo '+    { "server-Inherited_ACLs", "Erich E. Hoover", "Add support for inherited security attributes. [rev 7]" },'; \
 	) > server-Inherited_ACLs.ok
 
 # Patchset server-Misc_ACL

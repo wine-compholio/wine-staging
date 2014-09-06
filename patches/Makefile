@@ -45,6 +45,7 @@ PATCHLIST := \
 	ntdll-Heap_FreeLists.ok \
 	ntdll-Junction_Points.ok \
 	ntdll-Pipe_SpecialCharacters.ok \
+	ntdll-Save_Regs_Entrypoint.ok \
 	ntdll-loader_EntryPoint.ok \
 	quartz-MediaSeeking_Positions.ok \
 	riched20-IText_Interface.ok \
@@ -634,6 +635,25 @@ ntdll-Pipe_SpecialCharacters.ok:
 	@( \
 		echo '+    { "ntdll-Pipe_SpecialCharacters", "Michael Müller", "Allow special characters in pipe names." },'; \
 	) > ntdll-Pipe_SpecialCharacters.ok
+
+# Patchset ntdll-Save_Regs_Entrypoint
+# |
+# | Included patches:
+# |   *	Use assembly wrapper to run TLS callbacks and save EBP. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#21917] Use assembly wrapper to run TLS callbacks
+# |
+# | Modified files: 
+# |   *	dlls/ntdll/loader.c
+# |
+.INTERMEDIATE: ntdll-Save_Regs_Entrypoint.ok
+ntdll-Save_Regs_Entrypoint.ok:
+	$(call APPLY_FILE,ntdll-Save_Regs_Entrypoint/0001-ntdll-Save-more-registers-in-call_dll_entry_point-on.patch)
+	$(call APPLY_FILE,ntdll-Save_Regs_Entrypoint/0002-ntdll-Use-call_dll_entry_point-to-execute-TLS-callba.patch)
+	@( \
+		echo '+    { "ntdll-Save_Regs_Entrypoint", "Sebastian Lackner", "Use assembly wrapper to run TLS callbacks and save EBP." },'; \
+	) > ntdll-Save_Regs_Entrypoint.ok
 
 # Patchset ntdll-loader_EntryPoint
 # |

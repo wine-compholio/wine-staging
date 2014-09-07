@@ -35,9 +35,10 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [5]:**
+**Bugfixes and features included in the next upcoming release [6]:**
 
 * Fix unintentional leaks with ntdll internals
+* Fix unitialized cch value when calling GetMenuItemInfo with a null pointer ([Wine Bug #34642](http://bugs.winehq.org/show_bug.cgi?id=34642 "Adobe Premiere Pro 2.0 exits silently on startup ('GetMenuItemInfo' must zero out 'cch' if mask doesn't specify 'MIIM_TYPE')"))
 * Improvement for heap allocation performance
 * Support for DOS hidden/system file attributes ([Wine Bug #9158](http://bugs.winehq.org/show_bug.cgi?id=9158 "Multiple Microsoft development tools online/web installers fail to skip \"$shtdwn$.req\" with FILE_ATTRIBUTE_HIDDEN (Visual Studio Express Editions, .NET Framework 3.0)"))
 * Support for setcap on wine-preloader ([Wine Bug #26256](http://bugs.winehq.org/show_bug.cgi?id=26256 "wine64-preloader can't handle setcap cap_net_raw+epi"))

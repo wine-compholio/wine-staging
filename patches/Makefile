@@ -26,6 +26,7 @@ PATCHLIST := \
 	comctl32-ImageList.ok \
 	comctl32-LoadIconMetric.ok \
 	configure-Absolute_RPATH.ok \
+	configure-Detect_Gnutls.ok \
 	dsound-Fast_Mixer.ok \
 	fonts-Missing_Fonts.ok \
 	iphlpapi-TCP_Table.ok \
@@ -269,6 +270,21 @@ configure-Absolute_RPATH.ok:
 	@( \
 		echo '+    { "configure-Absolute_RPATH", "Sebastian Lackner", "Also add the absolute RPATH when linking against libwine." },'; \
 	) > configure-Absolute_RPATH.ok
+
+# Patchset configure-Detect_Gnutls
+# |
+# | Included patches:
+# |   *	Fix detection of gnutls on Ubuntu 14.10. [by Sebastian Lackner]
+# |
+# | Modified files:
+# |   *	configure.ac
+# |
+.INTERMEDIATE: configure-Detect_Gnutls.ok
+configure-Detect_Gnutls.ok:
+	$(call APPLY_FILE,configure-Detect_Gnutls/0001-configure-Fix-detection-of-gnutls-on-Ubuntu-14.10.patch)
+	@( \
+		echo '+    { "configure-Detect_Gnutls", "Sebastian Lackner", "Fix detection of gnutls on Ubuntu 14.10." },'; \
+	) > configure-Detect_Gnutls.ok
 
 # Patchset dsound-Fast_Mixer
 # |

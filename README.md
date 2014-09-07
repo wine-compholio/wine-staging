@@ -1,18 +1,18 @@
 What is Wine-Compholio?
 =======================
 
-**Warning: Do not report bug reports at bugs.winehq.org when using this
-version! Please take a look at our
+**Warning: Do not report bugs at bugs.winehq.org when using this version!
+Please take a look at our
 [Wiki](https://github.com/compholio/wine-compholio/wiki/Reporting-bugs)
 for more information about how to report bugs.**
 
-The **Wine "Compholio" Edition** is a special patched version of Wine that
-includes both patches written by our team directly and specific patches by
-third party developers that we consider good enough for inclusion. This can
-be seen as a testing version in preparation for patches to be submitted
-to upstream Wine - don't be surprised if you encounter additional bugs,
-which are not present in regular wine, and always report such issues to us
-(via github), so we can improve our fixes even further. Thanks!
+The **Wine "Compholio" Edition** is a special build of the popular Wine
+software that includes both patches written by our team and selected patches
+by third party developers that we consider good enough for inclusion. This can
+be seen as a testing version in preparation for patches to be submitted to
+upstream Wine - don't be surprised if you encounter additional bugs, which are
+not present in regular wine, and always report such issues to us (via github!),
+so we can improve our fixes even further. Thanks!
 
 
 How to install and use Wine-Compholio

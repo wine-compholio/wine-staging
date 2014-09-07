@@ -274,7 +274,7 @@ configure-Absolute_RPATH.ok:
 # Patchset configure-Detect_Gnutls
 # |
 # | Included patches:
-# |   *	Fix detection of gnutls on Ubuntu 14.10. [by Sebastian Lackner]
+# |   *	Fix detection of gnutls on Ubuntu 14.10. [rev 2, by Sebastian Lackner]
 # |
 # | Modified files:
 # |   *	configure.ac
@@ -283,7 +283,7 @@ configure-Absolute_RPATH.ok:
 configure-Detect_Gnutls.ok:
 	$(call APPLY_FILE,configure-Detect_Gnutls/0001-configure-Fix-detection-of-gnutls-on-Ubuntu-14.10.patch)
 	@( \
-		echo '+    { "configure-Detect_Gnutls", "Sebastian Lackner", "Fix detection of gnutls on Ubuntu 14.10." },'; \
+		echo '+    { "configure-Detect_Gnutls", "Sebastian Lackner", "Fix detection of gnutls on Ubuntu 14.10. [rev 2]" },'; \
 	) > configure-Detect_Gnutls.ok
 
 # Patchset dsound-Fast_Mixer

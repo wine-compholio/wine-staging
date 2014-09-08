@@ -90,7 +90,7 @@ Included bugfixes and improvements
 * Support for setcap on wine-preloader ([Wine Bug #26256](http://bugs.winehq.org/show_bug.cgi?id=26256 "wine64-preloader can't handle setcap cap_net_raw+epi"))
 * Support for stored file ACLs ([Wine Bug #31858](http://bugs.winehq.org/show_bug.cgi?id=31858 "Netflix on Firefox fails with Internet Connection Problem when loading bar is at 99%"))
 * Support for ws2_32.inet_pton ([Wine Bug #36713](http://bugs.winehq.org/show_bug.cgi?id=36713 "Watch_Dogs requires ws2_32.inet_pton"))
-* Use assembly wrapper to run TLS callbacks ([Wine Bug #21917](http://bugs.winehq.org/show_bug.cgi?id=21917 "SC2 'LazyLaunch' v2.0 fails with 'Exception frame is not in stack limits => unable to dispatch exception.' (TLS callbacks can taint EBP, needs assembly wrapper)"))
+* ~~Use assembly wrapper to run TLS callbacks~~ ([Wine Bug #21917](http://bugs.winehq.org/show_bug.cgi?id=21917 "SC2 'LazyLaunch' v2.0 fails with 'Exception frame is not in stack limits => unable to dispatch exception.' (TLS callbacks can taint EBP, needs assembly wrapper)"))
 * Use manual relay for RunDLL_CallEntry16 in shell32 ([Wine Bug #23033](http://bugs.winehq.org/show_bug.cgi?id=23033 "Tages Protection v5.x: games report \"DLL not found shell.dll16.dll\" (Runaway 2: The Dream Of The Turtle, ...)"))
 * Workaround for shlwapi URLs with relative paths
 * XEMBED support for embedding Wine windows inside Linux applications

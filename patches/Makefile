@@ -62,7 +62,6 @@ PATCHLIST := \
 	shell32-RunDLL_CallEntry16.ok \
 	shell32-SHCreateSessionKey.ok \
 	shlwapi-UrlCombine.ok \
-	user32-GetMenuItemInfo.ok \
 	user32-GetSystemMetrics.ok \
 	user32-GetTipText.ok \
 	user32-WndProc.ok \
@@ -971,24 +970,6 @@ shlwapi-UrlCombine.ok:
 	@( \
 		echo '+    { "shlwapi-UrlCombine", "Sebastian Lackner", "Workaround for broken implementation of shlwapi url functions." },'; \
 	) > shlwapi-UrlCombine.ok
-
-# Patchset user32-GetMenuItemInfo
-# |
-# | Included patches:
-# |   *	Also set cch member in GetMenuItemInfo when passing a null pointer. [by Michael Müller]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34642] Fix unitialized cch value when calling GetMenuItemInfo with a null pointer
-# |
-# | Modified files:
-# |   *	dlls/user32/menu.c
-# |
-.INTERMEDIATE: user32-GetMenuItemInfo.ok
-user32-GetMenuItemInfo.ok:
-	$(call APPLY_FILE,user32-GetMenuItemInfo/0001-user32-Also-set-cch-member-in-GetMenuItemInfo-when-p.patch)
-	@( \
-		echo '+    { "user32-GetMenuItemInfo", "Michael Müller", "Also set cch member in GetMenuItemInfo when passing a null pointer." },'; \
-	) > user32-GetMenuItemInfo.ok
 
 # Patchset user32-GetSystemMetrics
 # |

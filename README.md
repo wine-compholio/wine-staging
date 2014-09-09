@@ -48,7 +48,7 @@ Included bugfixes and improvements
 * Fix for programs leaking wndproc slots ([Wine Bug #32451](http://bugs.winehq.org/show_bug.cgi?id=32451 "Multiple GOG.com installer bundles show a broken/unresponsive dialog window during installation (installer process running out of wndproc slots)"))
 * Fix issue with invisible dragimages in ImageList ([Wine Bug #36761](http://bugs.winehq.org/show_bug.cgi?id=36761 "Imagelist invisible dragimage"))
 * Fix unintentional leaks with ntdll internals
-* Fix unitialized cch value when calling GetMenuItemInfo with a null pointer ([Wine Bug #34642](http://bugs.winehq.org/show_bug.cgi?id=34642 "Adobe Premiere Pro 2.0 exits silently on startup ('GetMenuItemInfo' must zero out 'cch' if mask doesn't specify 'MIIM_TYPE')"))
+* ~~Fix unitialized cch value when calling GetMenuItemInfo with a null pointer~~ ([Wine Bug #34642](http://bugs.winehq.org/show_bug.cgi?id=34642 "Adobe Premiere Pro 2.0 exits silently on startup ('GetMenuItemInfo' must zero out 'cch' if mask doesn't specify 'MIIM_TYPE')"))
 * Games For Windows Live 1.x expects a valid linker version in the PE header ([Wine Bug #28768](http://bugs.winehq.org/show_bug.cgi?id=28768 "Multiple GFWL (Games For Windows Live) 1.x games crash on startup (Kane & Lynch: Dead Men)"))
 * GetSecurityInfo returns NULL DACL for process object ([Wine Bug #15980](http://bugs.winehq.org/show_bug.cgi?id=15980 "Rhapsody 2 crashes on startup (GetSecurityInfo returns NULL DACL for process object)"))
 * Implement a Microsoft Yahei replacement font ([Wine Bug #13829](http://bugs.winehq.org/show_bug.cgi?id=13829 "Wine does not have CJK fonts"))

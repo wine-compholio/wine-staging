@@ -1,12 +1,12 @@
-From 7bfcc7c62a34a77b6cf613fb37aaef72af644cf1 Mon Sep 17 00:00:00 2001
+From eaccccc716b398e0841c5f2e7de5ba6cea3666ab Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Sun, 27 Jul 2014 12:38:29 -0600
 Subject: kernel32: Implement GetSystemTimes.
 
 ---
- dlls/kernel32/tests/time.c | 12 +++++-----
- dlls/kernel32/time.c       | 56 ++++++++++++++++++++++++++++++++++++++++++++--
- 2 files changed, 60 insertions(+), 8 deletions(-)
+ dlls/kernel32/tests/time.c | 12 ++++-----
+ dlls/kernel32/time.c       | 62 ++++++++++++++++++++++++++++++++++++++++++++--
+ 2 files changed, 66 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/kernel32/tests/time.c b/dlls/kernel32/tests/time.c
 index c524343..63ab35a 100644
@@ -43,10 +43,10 @@ index c524343..63ab35a 100644
      HeapFree(GetProcessHeap(), 0, sppi);
  }
 diff --git a/dlls/kernel32/time.c b/dlls/kernel32/time.c
-index 21ac120..96753d9 100644
+index 21ac120..b877adc 100644
 --- a/dlls/kernel32/time.c
 +++ b/dlls/kernel32/time.c
-@@ -1090,9 +1090,61 @@ BOOL WINAPI FileTimeToDosDateTime( const FILETIME *ft, LPWORD fatdate,
+@@ -1090,9 +1090,67 @@ BOOL WINAPI FileTimeToDosDateTime( const FILETIME *ft, LPWORD fatdate,
   */
  BOOL WINAPI GetSystemTimes(LPFILETIME lpIdleTime, LPFILETIME lpKernelTime, LPFILETIME lpUserTime)
  {
@@ -61,7 +61,11 @@ index 21ac120..96753d9 100644
 +    TRACE("(%p,%p,%p)\n", lpIdleTime, lpKernelTime, lpUserTime);
 +
 +    status = NtQuerySystemInformation( SystemBasicInformation, &sbi, sizeof(sbi), &ret_size );
-+    if (status != STATUS_SUCCESS) return FALSE;
++    if (status != STATUS_SUCCESS)
++    {
++        SetLastError( RtlNtStatusToDosError(status) );
++        return FALSE;
++    }
  
 -    return FALSE;
 +    sppi = HeapAlloc( GetProcessHeap(), 0,
@@ -72,13 +76,15 @@ index 21ac120..96753d9 100644
 +        return FALSE;
 +    }
 +
-+    status = NtQuerySystemInformation(SystemProcessorPerformanceInformation, sppi, sizeof(*sppi),
-+                                      &ret_size);
++    status = NtQuerySystemInformation( SystemProcessorPerformanceInformation, sppi, sizeof(*sppi),
++                                       &ret_size );
 +    if (status != STATUS_SUCCESS)
 +    {
 +        HeapFree( GetProcessHeap(), 0, sppi );
++        SetLastError( RtlNtStatusToDosError(status) );
 +        return FALSE;
 +    }
++
 +    idle_time.QuadPart = 0;
 +    kernel_time.QuadPart = 0;
 +    user_time.QuadPart = 0;

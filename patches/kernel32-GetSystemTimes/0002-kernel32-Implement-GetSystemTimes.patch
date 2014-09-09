@@ -1,15 +1,15 @@
-From c7d23fced92e26c724cdeb389f827c436294b05d Mon Sep 17 00:00:00 2001
+From 7bfcc7c62a34a77b6cf613fb37aaef72af644cf1 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Sun, 27 Jul 2014 12:38:29 -0600
 Subject: kernel32: Implement GetSystemTimes.
 
 ---
- dlls/kernel32/tests/time.c |   12 +++++------
- dlls/kernel32/time.c       |   51 ++++++++++++++++++++++++++++++++++++++++++--
- 2 files changed, 55 insertions(+), 8 deletions(-)
+ dlls/kernel32/tests/time.c | 12 +++++-----
+ dlls/kernel32/time.c       | 56 ++++++++++++++++++++++++++++++++++++++++++++--
+ 2 files changed, 60 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/kernel32/tests/time.c b/dlls/kernel32/tests/time.c
-index 6f5c03d..d3d3939 100644
+index c524343..63ab35a 100644
 --- a/dlls/kernel32/tests/time.c
 +++ b/dlls/kernel32/tests/time.c
 @@ -751,13 +751,13 @@ static void test_GetSystemTimes(void)
@@ -19,9 +19,9 @@ index 6f5c03d..d3d3939 100644
 -    todo_wine ok( pGetSystemTimes(NULL, NULL, NULL), "GetSystemTimes failed unexpectedly\n" );
 +    ok( pGetSystemTimes(NULL, NULL, NULL), "GetSystemTimes failed unexpectedly\n" );
  
-     memset( &idletime, 0x0, sizeof(idletime) );
-     memset( &kerneltime, 0x0, sizeof(kerneltime) );
-     memset( &usertime, 0x0, sizeof(usertime) );
+     memset( &idletime, 0x11, sizeof(idletime) );
+     memset( &kerneltime, 0x11, sizeof(kerneltime) );
+     memset( &usertime, 0x11, sizeof(usertime) );
 -    todo_wine ok( pGetSystemTimes(&idletime, &kerneltime , &usertime),
 -                  "GetSystemTimes failed unexpectedly\n" );
 +    ok( pGetSystemTimes(&idletime, &kerneltime , &usertime),
@@ -29,7 +29,7 @@ index 6f5c03d..d3d3939 100644
  
      ul1.LowPart = idletime.dwLowDateTime;
      ul1.HighPart = idletime.dwHighDateTime;
-@@ -801,9 +801,9 @@ static void test_GetSystemTimes(void)
+@@ -800,9 +800,9 @@ static void test_GetSystemTimes(void)
      trace( "total_idletime %f total_kerneltime %f total_usertime %f \n", total_idletime,
            total_kerneltime, total_usertime );
  
@@ -43,10 +43,10 @@ index 6f5c03d..d3d3939 100644
      HeapFree(GetProcessHeap(), 0, sppi);
  }
 diff --git a/dlls/kernel32/time.c b/dlls/kernel32/time.c
-index 21ac120..0100dd0 100644
+index 21ac120..96753d9 100644
 --- a/dlls/kernel32/time.c
 +++ b/dlls/kernel32/time.c
-@@ -1090,9 +1090,56 @@ BOOL WINAPI FileTimeToDosDateTime( const FILETIME *ft, LPWORD fatdate,
+@@ -1090,9 +1090,61 @@ BOOL WINAPI FileTimeToDosDateTime( const FILETIME *ft, LPWORD fatdate,
   */
  BOOL WINAPI GetSystemTimes(LPFILETIME lpIdleTime, LPFILETIME lpKernelTime, LPFILETIME lpUserTime)
  {
@@ -60,14 +60,17 @@ index 21ac120..0100dd0 100644
 +
 +    TRACE("(%p,%p,%p)\n", lpIdleTime, lpKernelTime, lpUserTime);
 +
-+
 +    status = NtQuerySystemInformation( SystemBasicInformation, &sbi, sizeof(sbi), &ret_size );
 +    if (status != STATUS_SUCCESS) return FALSE;
-+
-+    sppi = HeapAlloc( GetProcessHeap(), 0,
-+                      sizeof(SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION) * sbi.NumberOfProcessors);
  
 -    return FALSE;
++    sppi = HeapAlloc( GetProcessHeap(), 0,
++                      sizeof(SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION) * sbi.NumberOfProcessors);
++    if (!sppi)
++    {
++        SetLastError( ERROR_OUTOFMEMORY );
++        return FALSE;
++    }
 +
 +    status = NtQuerySystemInformation(SystemProcessorPerformanceInformation, sppi, sizeof(*sppi),
 +                                      &ret_size);
@@ -85,26 +88,28 @@ index 21ac120..0100dd0 100644
 +        kernel_time.QuadPart += sppi[i].KernelTime.QuadPart;
 +        user_time.QuadPart += sppi[i].UserTime.QuadPart;
 +    }
++
 +    if (lpIdleTime)
 +    {
-+        lpIdleTime->dwLowDateTime += idle_time.u.LowPart;
-+        lpIdleTime->dwHighDateTime += idle_time.u.HighPart;
++        lpIdleTime->dwLowDateTime = idle_time.u.LowPart;
++        lpIdleTime->dwHighDateTime = idle_time.u.HighPart;
 +    }
 +    if (lpKernelTime)
 +    {
-+        lpKernelTime->dwLowDateTime += kernel_time.u.LowPart;
-+        lpKernelTime->dwHighDateTime += kernel_time.u.HighPart;
++        lpKernelTime->dwLowDateTime = kernel_time.u.LowPart;
++        lpKernelTime->dwHighDateTime = kernel_time.u.HighPart;
 +    }
 +    if (lpUserTime)
 +    {
-+        lpUserTime->dwLowDateTime += user_time.u.LowPart;
-+        lpUserTime->dwHighDateTime += user_time.u.HighPart;
++        lpUserTime->dwLowDateTime = user_time.u.LowPart;
++        lpUserTime->dwHighDateTime = user_time.u.HighPart;
 +    }
++
 +    HeapFree( GetProcessHeap(), 0, sppi );
 +    return TRUE;
  }
  
  /***********************************************************************
 -- 
-1.7.9.5
+2.1.0
 

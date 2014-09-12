@@ -35,6 +35,11 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
+**Bugfixes and features included in the next upcoming release [1]:**
+
+* Support for FIND_FIRST_EX_LARGE_FETCH flag in FindFirstFileExW ([Wine Bug #35121](http://bugs.winehq.org/show_bug.cgi?id=35121 "Multiple applications/games fail to start with WinVer set to 'Windows 7' (FindFirstFileExW needs FIND_FIRST_EX_LARGE_FETCH support)(FotoQuelle Fotosoftware v4.13, QT5)"))
+
+
 **Bugs fixed in Wine-Compholio 1.7.26 [58]:**
 
 * ATL IOCS data should not be stored in GWLP_USERDATA ([Wine Bug #21767](http://bugs.winehq.org/show_bug.cgi?id=21767 "Multiple applications storing AxHostWindow instance pointer in GWLP_USERDATA crash on startup (Wine uses GWLP_USERDATA to store IOCS)(JLC's Internet TV, Anime Studio Pro 10.x)"))

@@ -30,6 +30,7 @@ PATCHLIST := \
 	dsound-Fast_Mixer.ok \
 	fonts-Missing_Fonts.ok \
 	iphlpapi-TCP_Table.ok \
+	kernel32-FindFirstFile-LargeFetch.ok \
 	kernel32-GetFinalPathNameByHandle.ok \
 	kernel32-GetSystemTimes.ok \
 	kernel32-GetVolumePathName.ok \
@@ -341,6 +342,24 @@ iphlpapi-TCP_Table.ok:
 	@( \
 		echo '+    { "iphlpapi-TCP_Table", "Erich E. Hoover", "Implement AllocateAndGetTcpExTableFromStack." },'; \
 	) > iphlpapi-TCP_Table.ok
+
+# Patchset kernel32-FindFirstFile-LargeFetch
+# |
+# | Included patches:
+# |   *	Ignore FIND_FIRST_EX_LARGE_FETCH flag in FindFirstFileExW. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35121] Support for FIND_FIRST_EX_LARGE_FETCH flag in FindFirstFileExW
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, include/winbase.h
+# |
+.INTERMEDIATE: kernel32-FindFirstFile-LargeFetch.ok
+kernel32-FindFirstFile-LargeFetch.ok:
+	$(call APPLY_FILE,kernel32-FindFirstFile-LargeFetch/0001-kernel32-Ignore-FIND_FIRST_EX_LARGE_FETCH-flag-in-Fi.patch)
+	@( \
+		echo '+    { "kernel32-FindFirstFile-LargeFetch", "Sebastian Lackner", "Ignore FIND_FIRST_EX_LARGE_FETCH flag in FindFirstFileExW." },'; \
+	) > kernel32-FindFirstFile-LargeFetch.ok
 
 # Patchset kernel32-GetFinalPathNameByHandle
 # |

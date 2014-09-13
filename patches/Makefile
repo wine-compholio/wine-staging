@@ -740,6 +740,7 @@ riched20-IText_Interface.ok:
 	$(call APPLY_FILE,riched20-IText_Interface/0011-riched20-Implement-ITextRange-IsEqual.patch)
 	$(call APPLY_FILE,riched20-IText_Interface/0012-riched20-Implement-ITextRange-GetStoryLength.patch)
 	$(call APPLY_FILE,riched20-IText_Interface/0013-riched20-Implement-ITextSelection-GetStoryLength.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0014-riched20-Fix-invalid-memory-access-when-parent-objec.patch)
 	@( \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextRange interface. [rev 3]" },'; \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextFont interface. [rev 2]" },'; \

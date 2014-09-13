@@ -1,0 +1,63 @@
+From ed3dbf533bbfdbb7bfb05135f60ea6ef214c7f3a Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 13 Sep 2014 17:21:31 +0200
+Subject: riched20: Fix invalid memory access when parent object was destroyed
+ earlier than child object.
+
+---
+ dlls/riched20/richole.c | 21 +++++++++++++++------
+ 1 file changed, 15 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/riched20/richole.c b/dlls/riched20/richole.c
+index 8c64492..b9ff71f 100644
+--- a/dlls/riched20/richole.c
++++ b/dlls/riched20/richole.c
+@@ -528,10 +528,13 @@ static ULONG WINAPI ITextPara_fnRelease(ITextPara *me)
+             ITextRange_Release(&This->txtRge->ITextRange_iface);
+         else
+             ITextSelection_Release(&This->txtSel->ITextSelection_iface);
+-        This->reOle = NULL;
+         This->txtRge = NULL;
+         This->txtSel = NULL;
+-        list_remove(&This->entry);
++        if (This->reOle)
++        {
++            list_remove(&This->entry);
++            This->reOle = NULL;
++        }
+         heap_free(This);
+     }
+     return ref;
+@@ -1163,10 +1166,13 @@ static ULONG WINAPI ITextFont_fnRelease(ITextFont *me)
+             ITextRange_Release(&This->txtRge->ITextRange_iface);
+         else
+             ITextSelection_Release(&This->txtSel->ITextSelection_iface);
+-        This->reOle = NULL;
+         This->txtRge = NULL;
+         This->txtSel = NULL;
+-        list_remove(&This->entry);
++        if (This->reOle)
++        {
++            list_remove(&This->entry);
++            This->reOle = NULL;
++        }
+         heap_free(This);
+     }
+     return ref;
+@@ -1897,8 +1903,11 @@ static ULONG WINAPI ITextRange_fnRelease(ITextRange *me)
+     TRACE ("%p ref=%u\n", This, ref);
+     if (ref == 0)
+     {
+-        This->reOle = NULL;
+-        list_remove(&This->entry);
++        if (This->reOle)
++        {
++            list_remove(&This->entry);
++            This->reOle = NULL;
++        }
+         heap_free(This);
+     }
+     return ref;
+-- 
+2.1.0
+

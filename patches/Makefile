@@ -29,6 +29,7 @@ PATCHLIST := \
 	configure-Detect_Gnutls.ok \
 	dsound-Fast_Mixer.ok \
 	fonts-Missing_Fonts.ok \
+	glu32-Polygon.ok \
 	iphlpapi-TCP_Table.ok \
 	kernel32-FindFirstFile-LargeFetch.ok \
 	kernel32-GetFinalPathNameByHandle.ok \
@@ -324,6 +325,24 @@ fonts-Missing_Fonts.ok:
 	@( \
 		echo '+    { "fonts-Missing_Fonts", "Torsten Kurbad / Erich E. Hoover", "Implement missing fonts expected by Silverlight. [rev 2]" },'; \
 	) > fonts-Missing_Fonts.ok
+
+# Patchset glu32-Polygon
+# |
+# | Included patches:
+# |   *	Fix wrapper function for glu[Begin|End]Polygon and gluNextContour. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37239] Fix deadlock caused by incorrect wrapper of glu polygon/contour function
+# |
+# | Modified files:
+# |   *	dlls/glu32/glu.c
+# |
+.INTERMEDIATE: glu32-Polygon.ok
+glu32-Polygon.ok:
+	$(call APPLY_FILE,glu32-Polygon/0001-glu32-Fix-wrapper-function-for-glu-Begin-End-Polygon.patch)
+	@( \
+		echo '+    { "glu32-Polygon", "Sebastian Lackner", "Fix wrapper function for glu[Begin|End]Polygon and gluNextContour." },'; \
+	) > glu32-Polygon.ok
 
 # Patchset iphlpapi-TCP_Table
 # |

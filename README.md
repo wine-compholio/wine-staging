@@ -35,8 +35,9 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [1]:**
+**Bugfixes and features included in the next upcoming release [2]:**
 
+* Fix deadlock caused by incorrect wrapper of glu polygon/contour function ([Wine Bug #37239](http://bugs.winehq.org/show_bug.cgi?id=37239 "Adobe Premiere Pro 2 deadlocks when importing video files"))
 * Support for FIND_FIRST_EX_LARGE_FETCH flag in FindFirstFileExW ([Wine Bug #35121](http://bugs.winehq.org/show_bug.cgi?id=35121 "Multiple applications/games fail to start with WinVer set to 'Windows 7' (FindFirstFileExW needs FIND_FIRST_EX_LARGE_FETCH support)(FotoQuelle Fotosoftware v4.13, QT5)"))
 
 

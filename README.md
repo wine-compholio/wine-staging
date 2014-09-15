@@ -35,8 +35,9 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [1]:**
+**Bugfixes and features included in the next upcoming release [2]:**
 
+* Don't fill KdHelp structure for usermode applications ([Wine Bug #37272](http://bugs.winehq.org/show_bug.cgi?id=37272 "CheatEngine 6.4 fails after remote process 'breakin', reporting 'Debugger Crash:Access violation (Last location:41)'"))
 * Support for FIND_FIRST_EX_LARGE_FETCH flag in FindFirstFileExW ([Wine Bug #35121](http://bugs.winehq.org/show_bug.cgi?id=35121 "Multiple applications/games fail to start with WinVer set to 'Windows 7' (FindFirstFileExW needs FIND_FIRST_EX_LARGE_FETCH support)(FotoQuelle Fotosoftware v4.13, QT5)"))
 
 

@@ -26,6 +26,7 @@ PATCHLIST := \
 	comctl32-LoadIconMetric.ok \
 	configure-Absolute_RPATH.ok \
 	configure-Detect_Gnutls.ok \
+	dbghelp-KdHelp.ok \
 	dsound-Fast_Mixer.ok \
 	fonts-Missing_Fonts.ok \
 	iphlpapi-TCP_Table.ok \
@@ -266,6 +267,24 @@ configure-Detect_Gnutls.ok:
 	@( \
 		echo '+    { "configure-Detect_Gnutls", "Sebastian Lackner", "Fix detection of gnutls on Ubuntu 14.10. [rev 3]" },'; \
 	) > configure-Detect_Gnutls.ok
+
+# Patchset dbghelp-KdHelp
+# |
+# | Included patches:
+# |   *	Don't fill KdHelp structure for usermode applications. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37272] Don't fill KdHelp structure for usermode applications
+# |
+# | Modified files:
+# |   *	dlls/dbghelp/stack.c
+# |
+.INTERMEDIATE: dbghelp-KdHelp.ok
+dbghelp-KdHelp.ok:
+	$(call APPLY_FILE,dbghelp-KdHelp/0001-dbghelp-Don-t-fill-KdHelp-structure-for-usermode-app.patch)
+	@( \
+		echo '+    { "dbghelp-KdHelp", "Sebastian Lackner", "Don't fill KdHelp structure for usermode applications." },'; \
+	) > dbghelp-KdHelp.ok
 
 # Patchset dsound-Fast_Mixer
 # |

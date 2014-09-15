@@ -35,9 +35,8 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [2]:**
+**Bugfixes and features included in the next upcoming release [1]:**
 
-* Fix deadlock caused by incorrect wrapper of glu polygon/contour function ([Wine Bug #37239](http://bugs.winehq.org/show_bug.cgi?id=37239 "Adobe Premiere Pro 2 deadlocks when importing video files"))
 * Support for FIND_FIRST_EX_LARGE_FETCH flag in FindFirstFileExW ([Wine Bug #35121](http://bugs.winehq.org/show_bug.cgi?id=35121 "Multiple applications/games fail to start with WinVer set to 'Windows 7' (FindFirstFileExW needs FIND_FIRST_EX_LARGE_FETCH support)(FotoQuelle Fotosoftware v4.13, QT5)"))
 
 
@@ -71,7 +70,7 @@ Included bugfixes and improvements
 * SO_CONNECT_TIME returns the appropriate time
 * Set ldr.EntryPoint for main executable ([Wine Bug #33034](http://bugs.winehq.org/show_bug.cgi?id=33034 "Many GFWL (Games For Windows Live) 1.x/2.x/3.x games crash or exit silently on startup (DiRT 2/3, GTA IV Steam)"))
 * Support for AllocateAndGetTcpExTableFromStack ([Wine Bug #34372](http://bugs.winehq.org/show_bug.cgi?id=34372 "Add missing function AllocateAndGetTcpExTableFromStack() to iphlpapi.dll"))
-* Support for BCryptGetFipsAlgorithmMode ([Wine Bug #32194](http://bugs.winehq.org/show_bug.cgi?id=32194 "Multiple games and applications need bcrypt.dll.BCryptGetFipsAlgorithmMode (Chess Position Trainer, Terraria, .NET System.Security.Cryptography)"))
+* ~~Support for BCryptGetFipsAlgorithmMode~~ ([Wine Bug #32194](http://bugs.winehq.org/show_bug.cgi?id=32194 "Multiple games and applications need bcrypt.dll.BCryptGetFipsAlgorithmMode (Chess Position Trainer, Terraria, .NET System.Security.Cryptography)"))
 * Support for DOS hidden/system file attributes ([Wine Bug #9158](http://bugs.winehq.org/show_bug.cgi?id=9158 "Multiple Microsoft development tools online/web installers fail to skip \"$shtdwn$.req\" with FILE_ATTRIBUTE_HIDDEN (Visual Studio Express Editions, .NET Framework 3.0)"))
 * Support for Dynamic DST (daylight saving time) information in registry
 * Support for GetFinalPathNameByHandle ([Wine Bug #36073](http://bugs.winehq.org/show_bug.cgi?id=36073 "OneDrive crashes on unimplemented function KERNEL32.dll.GetFinalPathNameByHandleW"))

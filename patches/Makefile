@@ -22,14 +22,12 @@ PATCHLIST := \
 	Miscellaneous.ok \
 	Pipelight.ok \
 	atl-IOCS_Property.ok \
-	bcrypt-BCryptGetFipsAlgorithmMode.ok \
 	comctl32-ImageList.ok \
 	comctl32-LoadIconMetric.ok \
 	configure-Absolute_RPATH.ok \
 	configure-Detect_Gnutls.ok \
 	dsound-Fast_Mixer.ok \
 	fonts-Missing_Fonts.ok \
-	glu32-Polygon.ok \
 	iphlpapi-TCP_Table.ok \
 	kernel32-FindFirstFile-LargeFetch.ok \
 	kernel32-GetFinalPathNameByHandle.ok \
@@ -198,24 +196,6 @@ atl-IOCS_Property.ok:
 		echo '+    { "atl-IOCS_Property", "Qian Hong", "Store IOCS data in a property instead of GWLP_USERDATA." },'; \
 	) > atl-IOCS_Property.ok
 
-# Patchset bcrypt-BCryptGetFipsAlgorithmMode
-# |
-# | Included patches:
-# |   *	Add semi-stub for BCryptGetFipsAlgorithmMode. [by Michael Müller]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#32194] Support for BCryptGetFipsAlgorithmMode
-# |
-# | Modified files:
-# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/tests/bcrypt.c
-# |
-.INTERMEDIATE: bcrypt-BCryptGetFipsAlgorithmMode.ok
-bcrypt-BCryptGetFipsAlgorithmMode.ok:
-	$(call APPLY_FILE,bcrypt-BCryptGetFipsAlgorithmMode/0001-bcrypt-Add-semi-stub-for-BCryptGetFipsAlgorithmMode.patch)
-	@( \
-		echo '+    { "bcrypt-BCryptGetFipsAlgorithmMode", "Michael Müller", "Add semi-stub for BCryptGetFipsAlgorithmMode." },'; \
-	) > bcrypt-BCryptGetFipsAlgorithmMode.ok
-
 # Patchset comctl32-ImageList
 # |
 # | Included patches:
@@ -325,24 +305,6 @@ fonts-Missing_Fonts.ok:
 	@( \
 		echo '+    { "fonts-Missing_Fonts", "Torsten Kurbad / Erich E. Hoover", "Implement missing fonts expected by Silverlight. [rev 2]" },'; \
 	) > fonts-Missing_Fonts.ok
-
-# Patchset glu32-Polygon
-# |
-# | Included patches:
-# |   *	Fix wrapper function for glu[Begin|End]Polygon and gluNextContour. [by Sebastian Lackner]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37239] Fix deadlock caused by incorrect wrapper of glu polygon/contour function
-# |
-# | Modified files:
-# |   *	dlls/glu32/glu.c
-# |
-.INTERMEDIATE: glu32-Polygon.ok
-glu32-Polygon.ok:
-	$(call APPLY_FILE,glu32-Polygon/0001-glu32-Fix-wrapper-function-for-glu-Begin-End-Polygon.patch)
-	@( \
-		echo '+    { "glu32-Polygon", "Sebastian Lackner", "Fix wrapper function for glu[Begin|End]Polygon and gluNextContour." },'; \
-	) > glu32-Polygon.ok
 
 # Patchset iphlpapi-TCP_Table
 # |
@@ -746,20 +708,19 @@ quartz-MediaSeeking_Positions.ok:
 # |
 .INTERMEDIATE: riched20-IText_Interface.ok
 riched20-IText_Interface.ok:
-	$(call APPLY_FILE,riched20-IText_Interface/0001-riched20-Implement-ITextSelection-GetChar-and-ITextR.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0002-riched20-Implement-IText-Selection-Range-Get-Start-E.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0003-riched20-Implement-ITextRange-GetDuplicate.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0004-riched20-Implement-ITextRange-Collapse-and-ITextSele.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0005-riched20-Implement-IText-Selection-Range-Set-Start-E.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0006-riched20-Stub-for-ITextFont-interface-and-implement-.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0007-riched20-Stub-for-ITextPara-interface-and-implement-.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0008-riched20-Fix-ME_RunOfsFromCharOfs-when-nCharOfs-strl.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0009-riched20-Implement-ITextRange-GetText.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0010-riched20-Implement-ITextRange-SetRange.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0011-riched20-Implement-ITextRange-IsEqual.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0012-riched20-Implement-ITextRange-GetStoryLength.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0013-riched20-Implement-ITextSelection-GetStoryLength.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0014-riched20-Fix-invalid-memory-access-when-parent-objec.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0001-riched20-Implement-IText-Selection-Range-Get-Start-E.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0002-riched20-Implement-ITextRange-GetDuplicate.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0003-riched20-Implement-ITextRange-Collapse-and-ITextSele.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0004-riched20-Implement-IText-Selection-Range-Set-Start-E.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0005-riched20-Stub-for-ITextFont-interface-and-implement-.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0006-riched20-Stub-for-ITextPara-interface-and-implement-.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0007-riched20-Fix-ME_RunOfsFromCharOfs-when-nCharOfs-strl.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0008-riched20-Implement-ITextRange-GetText.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0009-riched20-Implement-ITextRange-SetRange.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0010-riched20-Implement-ITextRange-IsEqual.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0011-riched20-Implement-ITextRange-GetStoryLength.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0012-riched20-Implement-ITextSelection-GetStoryLength.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0013-riched20-Fix-invalid-memory-access-when-parent-objec.patch)
 	@( \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextRange interface. [rev 3]" },'; \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextFont interface. [rev 2]" },'; \

@@ -727,19 +727,16 @@ quartz-MediaSeeking_Positions.ok:
 # |
 .INTERMEDIATE: riched20-IText_Interface.ok
 riched20-IText_Interface.ok:
-	$(call APPLY_FILE,riched20-IText_Interface/0001-riched20-Implement-IText-Selection-Range-Get-Start-E.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0002-riched20-Implement-ITextRange-GetDuplicate.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0003-riched20-Implement-ITextRange-Collapse-and-ITextSele.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0004-riched20-Implement-IText-Selection-Range-Set-Start-E.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0005-riched20-Stub-for-ITextFont-interface-and-implement-.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0006-riched20-Stub-for-ITextPara-interface-and-implement-.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0007-riched20-Fix-ME_RunOfsFromCharOfs-when-nCharOfs-strl.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0008-riched20-Implement-ITextRange-GetText.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0009-riched20-Implement-ITextRange-SetRange.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0010-riched20-Implement-ITextRange-IsEqual.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0011-riched20-Implement-ITextRange-GetStoryLength.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0012-riched20-Implement-ITextSelection-GetStoryLength.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0013-riched20-Fix-invalid-memory-access-when-parent-objec.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0001-riched20-Implement-IText-Selection-Range-Set-Start-E.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0002-riched20-Stub-for-ITextFont-interface-and-implement-.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0003-riched20-Stub-for-ITextPara-interface-and-implement-.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0004-riched20-Fix-ME_RunOfsFromCharOfs-when-nCharOfs-strl.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0005-riched20-Implement-ITextRange-GetText.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0006-riched20-Implement-ITextRange-SetRange.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0007-riched20-Implement-ITextRange-IsEqual.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0008-riched20-Implement-ITextRange-GetStoryLength.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0009-riched20-Implement-ITextSelection-GetStoryLength.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0010-riched20-Fix-invalid-memory-access-when-parent-objec.patch)
 	@( \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextRange interface. [rev 3]" },'; \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextFont interface. [rev 2]" },'; \

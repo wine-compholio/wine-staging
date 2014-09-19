@@ -287,7 +287,7 @@ configure-Detect_Gnutls.ok:
 dbghelp-KdHelp.ok:
 	$(call APPLY_FILE,dbghelp-KdHelp/0001-dbghelp-Don-t-fill-KdHelp-structure-for-usermode-app.patch)
 	@( \
-		echo '+    { "dbghelp-KdHelp", "Sebastian Lackner", "Don't fill KdHelp structure for usermode applications." },'; \
+		echo '+    { "dbghelp-KdHelp", "Sebastian Lackner", "Don'\''t fill KdHelp structure for usermode applications." },'; \
 	) > dbghelp-KdHelp.ok
 
 # Patchset dsound-Fast_Mixer

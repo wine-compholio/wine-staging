@@ -1,0 +1,57 @@
+From eac78fe59a4ef614418f0e80a96571d5fdaa7593 Mon Sep 17 00:00:00 2001
+From: Ken Thomases <ken@codeweavers.com>
+Date: Sun, 14 Sep 2014 19:47:08 -0500
+Subject: Revert "wined3d: When restoring pixel format in context_release(),
+ mark the context as needing to be set on the next context_acquire()."
+
+This reverts commit 57c51710e0a4474872125cc54be7562ea8db6ccd.
+---
+ dlls/wined3d/context.c | 9 +++------
+ 1 file changed, 3 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
+index a347a8b..d5ee29b 100644
+--- a/dlls/wined3d/context.c
++++ b/dlls/wined3d/context.c
+@@ -766,10 +766,9 @@ void context_surface_update(struct wined3d_context *context, const struct wined3
+     }
+ }
+ 
+-static BOOL context_restore_pixel_format(struct wined3d_context *ctx)
++static void context_restore_pixel_format(struct wined3d_context *ctx)
+ {
+     const struct wined3d_gl_info *gl_info = ctx->gl_info;
+-    BOOL ret = FALSE;
+ 
+     if (ctx->restore_pf && IsWindow(ctx->restore_pf_win))
+     {
+@@ -778,7 +777,7 @@ static BOOL context_restore_pixel_format(struct wined3d_context *ctx)
+             HDC dc = GetDC(ctx->restore_pf_win);
+             if (dc)
+             {
+-                if (!(ret = GL_EXTCALL(wglSetPixelFormatWINE(dc, ctx->restore_pf))))
++                if (!GL_EXTCALL(wglSetPixelFormatWINE(dc, ctx->restore_pf)))
+                 {
+                     ERR("wglSetPixelFormatWINE failed to restore pixel format %d on window %p.\n",
+                             ctx->restore_pf, ctx->restore_pf_win);
+@@ -794,7 +793,6 @@ static BOOL context_restore_pixel_format(struct wined3d_context *ctx)
+ 
+     ctx->restore_pf = 0;
+     ctx->restore_pf_win = NULL;
+-    return ret;
+ }
+ 
+ static BOOL context_set_pixel_format(struct wined3d_context *context, HDC dc, int format)
+@@ -1149,8 +1147,7 @@ void context_release(struct wined3d_context *context)
+ 
+     if (!--context->level)
+     {
+-        if (context_restore_pixel_format(context))
+-            context->needs_set = 1;
++        context_restore_pixel_format(context);
+         if (context->restore_ctx)
+         {
+             TRACE("Restoring GL context %p on device context %p.\n", context->restore_ctx, context->restore_dc);
+-- 
+2.1.0
+

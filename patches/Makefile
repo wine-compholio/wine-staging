@@ -68,6 +68,7 @@ PATCHLIST := \
 	user32-WndProc.ok \
 	wineboot-HKEY_DYN_DATA.ok \
 	winebuild-LinkerVersion.ok \
+	wined3d-Revert_PixelFormat.ok \
 	winepulse-PulseAudio_Support.ok \
 	winex11-Limited_Resolutions.ok \
 	winex11-Window_Groups.ok \
@@ -1079,6 +1080,36 @@ winebuild-LinkerVersion.ok:
 	@( \
 		echo '+    { "winebuild-LinkerVersion", "Michael Müller", "Set a valid major and minor linker version in the PE header." },'; \
 	) > winebuild-LinkerVersion.ok
+
+# Patchset wined3d-Revert_PixelFormat
+# |
+# | Included patches:
+# |   *	Revert wined3d pixelformat changes. [by Ken Thomases]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35655] Fix wined3d performance drop introduced by pixelformat changes.
+# |   *	[#35718] Fix flickering introduced by pixelformat changes.
+# |   *	[#35950] Fix black screen on startup introduced by pixelformat changes.
+# |   *	[#35975] Fix gray screen on startup introduced by pixelformat changes.
+# |   *	[#36900] Fix missing video introduced by pixelformat changes.
+# |
+# | Modified files:
+# |   *	dlls/d3d8/tests/device.c, dlls/d3d9/tests/device.c, dlls/ddraw/tests/ddraw1.c, dlls/ddraw/tests/ddraw2.c,
+# | 	dlls/ddraw/tests/ddraw4.c, dlls/ddraw/tests/ddraw7.c, dlls/wined3d/context.c, dlls/wined3d/wined3d_private.h
+# |
+.INTERMEDIATE: wined3d-Revert_PixelFormat.ok
+wined3d-Revert_PixelFormat.ok:
+	$(call APPLY_FILE,wined3d-Revert_PixelFormat/0001-Revert-wined3d-Track-if-a-context-s-private-hdc-has-.patch)
+	$(call APPLY_FILE,wined3d-Revert_PixelFormat/0002-Revert-wined3d-Track-if-a-context-s-hdc-is-private-s.patch)
+	$(call APPLY_FILE,wined3d-Revert_PixelFormat/0003-Revert-wined3d-When-restoring-pixel-format-in-contex.patch)
+	$(call APPLY_FILE,wined3d-Revert_PixelFormat/0004-Revert-wined3d-Don-t-call-GetPixelFormat-to-set-a-fl.patch)
+	$(call APPLY_FILE,wined3d-Revert_PixelFormat/0005-Revert-wined3d-Restore-the-pixel-format-of-the-windo.patch)
+	$(call APPLY_FILE,wined3d-Revert_PixelFormat/0006-d3d8-Mark-tests-which-no-longer-pass-due-to-reverts-.patch)
+	$(call APPLY_FILE,wined3d-Revert_PixelFormat/0007-d3d9-Mark-tests-which-no-longer-pass-due-to-reverts-.patch)
+	$(call APPLY_FILE,wined3d-Revert_PixelFormat/0008-ddraw-Mark-tests-which-no-longer-pass-due-to-reverts.patch)
+	@( \
+		echo '+    { "wined3d-Revert_PixelFormat", "Ken Thomases", "Revert wined3d pixelformat changes." },'; \
+	) > wined3d-Revert_PixelFormat.ok
 
 # Patchset winepulse-PulseAudio_Support
 # |

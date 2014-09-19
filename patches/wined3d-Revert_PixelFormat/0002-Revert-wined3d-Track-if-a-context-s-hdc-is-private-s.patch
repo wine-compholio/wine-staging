@@ -1,0 +1,128 @@
+From 9266e76fa92231e5186cbd8bd9e0b2c2ba1c47d4 Mon Sep 17 00:00:00 2001
+From: Ken Thomases <ken@codeweavers.com>
+Date: Sun, 14 Sep 2014 19:47:03 -0500
+Subject: Revert "wined3d: Track if a context's hdc is private so we never need
+ to restore its pixel format."
+
+This reverts commit 272873823e9beff91ea1a62845fc7e5f94a9636f.
+---
+ dlls/wined3d/context.c         | 21 ++++++++-------------
+ dlls/wined3d/wined3d_private.h |  3 +--
+ 2 files changed, 9 insertions(+), 15 deletions(-)
+
+diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
+index 402878d..a347a8b 100644
+--- a/dlls/wined3d/context.c
++++ b/dlls/wined3d/context.c
+@@ -797,7 +797,7 @@ static BOOL context_restore_pixel_format(struct wined3d_context *ctx)
+     return ret;
+ }
+ 
+-static BOOL context_set_pixel_format(struct wined3d_context *context, HDC dc, BOOL private, int format)
++static BOOL context_set_pixel_format(struct wined3d_context *context, HDC dc, int format)
+ {
+     const struct wined3d_gl_info *gl_info = context->gl_info;
+     int current = GetPixelFormat(dc);
+@@ -815,7 +815,7 @@ static BOOL context_set_pixel_format(struct wined3d_context *context, HDC dc, BO
+         }
+ 
+         context->restore_pf = 0;
+-        context->restore_pf_win = private ? NULL : WindowFromDC(dc);
++        context->restore_pf_win = WindowFromDC(dc);
+         return TRUE;
+     }
+ 
+@@ -834,12 +834,12 @@ static BOOL context_set_pixel_format(struct wined3d_context *context, HDC dc, BO
+             return FALSE;
+         }
+ 
+-        win = private ? NULL : WindowFromDC(dc);
++        win = WindowFromDC(dc);
+         if (win != context->restore_pf_win)
+         {
+             context_restore_pixel_format(context);
+ 
+-            context->restore_pf = private ? 0 : current;
++            context->restore_pf = current;
+             context->restore_pf_win = win;
+         }
+ 
+@@ -860,7 +860,7 @@ static BOOL context_set_gl_context(struct wined3d_context *ctx)
+     struct wined3d_swapchain *swapchain = ctx->swapchain;
+     BOOL backup = FALSE;
+ 
+-    if (!context_set_pixel_format(ctx, ctx->hdc, ctx->hdc_is_private, ctx->pixel_format))
++    if (!context_set_pixel_format(ctx, ctx->hdc, ctx->pixel_format))
+     {
+         WARN("Failed to set pixel format %d on device context %p.\n",
+                 ctx->pixel_format, ctx->hdc);
+@@ -893,7 +893,7 @@ static BOOL context_set_gl_context(struct wined3d_context *ctx)
+             return FALSE;
+         }
+ 
+-        if (!context_set_pixel_format(ctx, dc, TRUE, ctx->pixel_format))
++        if (!context_set_pixel_format(ctx, dc, ctx->pixel_format))
+         {
+             ERR("Failed to set pixel format %d on device context %p.\n",
+                     ctx->pixel_format, dc);
+@@ -937,7 +937,6 @@ static void context_update_window(struct wined3d_context *context)
+         wined3d_release_dc(context->win_handle, context->hdc);
+ 
+     context->win_handle = context->swapchain->win_handle;
+-    context->hdc_is_private = FALSE;
+     context->needs_set = 1;
+     context->valid = 1;
+ 
+@@ -1388,7 +1387,6 @@ struct wined3d_context *context_create(struct wined3d_swapchain *swapchain,
+     int swap_interval;
+     DWORD state;
+     HDC hdc;
+-    BOOL hdc_is_private = FALSE;
+ 
+     TRACE("swapchain %p, target %p, window %p.\n", swapchain, target, swapchain->win_handle);
+ 
+@@ -1456,9 +1454,7 @@ struct wined3d_context *context_create(struct wined3d_swapchain *swapchain,
+     {
+         WARN("Failed to retireve device context, trying swapchain backup.\n");
+ 
+-        if ((hdc = swapchain_get_backup_dc(swapchain)))
+-            hdc_is_private = TRUE;
+-        else
++        if (!(hdc = swapchain_get_backup_dc(swapchain)))
+         {
+             ERR("Failed to retrieve a device context.\n");
+             goto out;
+@@ -1509,7 +1505,7 @@ struct wined3d_context *context_create(struct wined3d_swapchain *swapchain,
+ 
+     ret->gl_info = gl_info;
+ 
+-    if (!context_set_pixel_format(ret, hdc, hdc_is_private, pixel_format))
++    if (!context_set_pixel_format(ret, hdc, pixel_format))
+     {
+         ERR("Failed to set pixel format %d on device context %p.\n", pixel_format, hdc);
+         context_release(ret);
+@@ -1586,7 +1582,6 @@ struct wined3d_context *context_create(struct wined3d_swapchain *swapchain,
+     ret->glCtx = ctx;
+     ret->win_handle = swapchain->win_handle;
+     ret->hdc = hdc;
+-    ret->hdc_is_private = hdc_is_private;
+     ret->pixel_format = pixel_format;
+     ret->needs_set = 1;
+ 
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 16323ca..849a44a 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -1102,8 +1102,7 @@ struct wined3d_context
+     DWORD lowest_disabled_stage : 4;    /* Max MAX_TEXTURES, 8 */
+     DWORD rebind_fbo : 1;
+     DWORD needs_set : 1;
+-    DWORD hdc_is_private : 1;
+-    DWORD padding : 17;
++    DWORD padding : 18;
+     DWORD shader_update_mask;
+     DWORD constant_update_mask;
+     DWORD                   numbered_array_mask;
+-- 
+2.1.0
+

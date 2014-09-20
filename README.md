@@ -35,7 +35,7 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [7]:**
+**Bugfixes and features included in the next upcoming release [8]:**
 
 * Don't fill KdHelp structure for usermode applications ([Wine Bug #37272](http://bugs.winehq.org/show_bug.cgi?id=37272 "CheatEngine 6.4 fails after remote process 'breakin', reporting 'Debugger Crash:Access violation (Last location:41)'"))
 * Fix black screen on startup introduced by pixelformat changes. ([Wine Bug #35950](http://bugs.winehq.org/show_bug.cgi?id=35950 "StarCraft: Black screen, hangs on startup"))
@@ -43,6 +43,7 @@ Included bugfixes and improvements
 * Fix gray screen on startup introduced by pixelformat changes. ([Wine Bug #35975](http://bugs.winehq.org/show_bug.cgi?id=35975 "Comanche 3 shows only gray screen"))
 * Fix missing video introduced by pixelformat changes. ([Wine Bug #36900](http://bugs.winehq.org/show_bug.cgi?id=36900 "Star Wars Galactic Battlegrounds Clone Campaigns: no video (regression)"))
 * Fix wined3d performance drop introduced by pixelformat changes. ([Wine Bug #35655](http://bugs.winehq.org/show_bug.cgi?id=35655 "Wined3d performance drop"))
+* Lego Stunt Rally requires DXTn software de/encoding support ([Wine Bug #25486](http://bugs.winehq.org/show_bug.cgi?id=25486 "Lego Stunt Rally: 3d scene is black"))
 * Support for FIND_FIRST_EX_LARGE_FETCH flag in FindFirstFileExW ([Wine Bug #35121](http://bugs.winehq.org/show_bug.cgi?id=35121 "Multiple applications/games fail to start with WinVer set to 'Windows 7' (FindFirstFileExW needs FIND_FIRST_EX_LARGE_FETCH support)(FotoQuelle Fotosoftware v4.13, QT5)"))
 
 

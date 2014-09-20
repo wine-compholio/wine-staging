@@ -68,6 +68,7 @@ PATCHLIST := \
 	user32-WndProc.ok \
 	wineboot-HKEY_DYN_DATA.ok \
 	winebuild-LinkerVersion.ok \
+	wined3d-DXTn.ok \
 	wined3d-Revert_PixelFormat.ok \
 	winepulse-PulseAudio_Support.ok \
 	winex11-Limited_Resolutions.ok \
@@ -1080,6 +1081,25 @@ winebuild-LinkerVersion.ok:
 	@( \
 		echo '+    { "winebuild-LinkerVersion", "Michael Müller", "Set a valid major and minor linker version in the PE header." },'; \
 	) > winebuild-LinkerVersion.ok
+
+# Patchset wined3d-DXTn
+# |
+# | Included patches:
+# |   *	Add support for DXTn software decoding through libxtc_dxtn. [by Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#25486] Lego Stunt Rally requires DXTn software de/encoding support
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/wined3d/Makefile.in, dlls/wined3d/dxtn.c, dlls/wined3d/surface.c, dlls/wined3d/wined3d_main.c,
+# | 	dlls/wined3d/wined3d_private.h
+# |
+.INTERMEDIATE: wined3d-DXTn.ok
+wined3d-DXTn.ok:
+	$(call APPLY_FILE,wined3d-DXTn/0001-wined3d-Add-support-for-DXTn-software-decoding-throu.patch)
+	@( \
+		echo '+    { "wined3d-DXTn", "Michael Müller", "Add support for DXTn software decoding through libxtc_dxtn." },'; \
+	) > wined3d-DXTn.ok
 
 # Patchset wined3d-Revert_PixelFormat
 # |

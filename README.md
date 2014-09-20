@@ -35,37 +35,31 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [8]:**
-
-* Don't fill KdHelp structure for usermode applications ([Wine Bug #37272](http://bugs.winehq.org/show_bug.cgi?id=37272 "CheatEngine 6.4 fails after remote process 'breakin', reporting 'Debugger Crash:Access violation (Last location:41)'"))
-* Fix black screen on startup introduced by pixelformat changes. ([Wine Bug #35950](http://bugs.winehq.org/show_bug.cgi?id=35950 "StarCraft: Black screen, hangs on startup"))
-* Fix flickering introduced by pixelformat changes. ([Wine Bug #35718](http://bugs.winehq.org/show_bug.cgi?id=35718 "Multiple games have extreme flicker, stutter, slowdown (Path of Exile, Roller Coaster Tycoon, Counter Strike: Global Offensive, Warframe, Crysis, Anno 1602,  Splinter Cell: Blacklist)"))
-* Fix gray screen on startup introduced by pixelformat changes. ([Wine Bug #35975](http://bugs.winehq.org/show_bug.cgi?id=35975 "Comanche 3 shows only gray screen"))
-* Fix missing video introduced by pixelformat changes. ([Wine Bug #36900](http://bugs.winehq.org/show_bug.cgi?id=36900 "Star Wars Galactic Battlegrounds Clone Campaigns: no video (regression)"))
-* Fix wined3d performance drop introduced by pixelformat changes. ([Wine Bug #35655](http://bugs.winehq.org/show_bug.cgi?id=35655 "Wined3d performance drop"))
-* Lego Stunt Rally requires DXTn software de/encoding support ([Wine Bug #25486](http://bugs.winehq.org/show_bug.cgi?id=25486 "Lego Stunt Rally: 3d scene is black"))
-* Support for FIND_FIRST_EX_LARGE_FETCH flag in FindFirstFileExW ([Wine Bug #35121](http://bugs.winehq.org/show_bug.cgi?id=35121 "Multiple applications/games fail to start with WinVer set to 'Windows 7' (FindFirstFileExW needs FIND_FIRST_EX_LARGE_FETCH support)(FotoQuelle Fotosoftware v4.13, QT5)"))
-
-
-**Bugs fixed in Wine-Compholio 1.7.26 [58]:**
+**Bugs fixed in Wine-Compholio 1.7.27 [63]:**
 
 * ATL IOCS data should not be stored in GWLP_USERDATA ([Wine Bug #21767](http://bugs.winehq.org/show_bug.cgi?id=21767 "Multiple applications storing AxHostWindow instance pointer in GWLP_USERDATA crash on startup (Wine uses GWLP_USERDATA to store IOCS)(JLC's Internet TV, Anime Studio Pro 10.x)"))
 * Add Dynamic DST exceptions for Israel Standard Time ([Wine Bug #36374](http://bugs.winehq.org/show_bug.cgi?id=36374 "Israel timezone handled incorrectly"))
 * Add default ACLs for user shell folders
 * Allow special characters in pipe names ([Wine Bug #28995](http://bugs.winehq.org/show_bug.cgi?id=28995 "Unable to use named pipes with \">\" character in the name"))
 * Audio stuttering and performance drops in multiple applications ([Wine Bug #30639](http://bugs.winehq.org/show_bug.cgi?id=30639 "Audio stuttering and performance drops in Star Wolves 3"))
+* Don't fill KdHelp structure for usermode applications ([Wine Bug #37272](http://bugs.winehq.org/show_bug.cgi?id=37272 "CheatEngine 6.4 fails after remote process 'breakin', reporting 'Debugger Crash:Access violation (Last location:41)'"))
 * Ensure NtProtectVirtualMemory and NtCreateSection are on separate pages ([Wine Bug #33162](http://bugs.winehq.org/show_bug.cgi?id=33162 "Acrobat Reader 11 crashes on start (native API application virtualization, NtProtectVirtualMemory removes execute page protection on its own code)"))
+* Fix black screen on startup introduced by pixelformat changes. ([Wine Bug #35950](http://bugs.winehq.org/show_bug.cgi?id=35950 "StarCraft: Black screen, hangs on startup"))
 * Fix comparison of punctuation characters in lstrcmp ([Wine Bug #10767](http://bugs.winehq.org/show_bug.cgi?id=10767 "lstrcmp and others do not compare punctuation characters correctly"))
+* Fix flickering introduced by pixelformat changes. ([Wine Bug #35718](http://bugs.winehq.org/show_bug.cgi?id=35718 "Multiple games have extreme flicker, stutter, slowdown (Path of Exile, Roller Coaster Tycoon, Counter Strike: Global Offensive, Warframe, Crysis, Anno 1602,  Splinter Cell: Blacklist)"))
 * Fix for ConnectNamedPort return value in overlapped mode ([Wine Bug #16550](http://bugs.winehq.org/show_bug.cgi?id=16550 "ConnectNamedPort should never return OK in overlapped mode (affects chromium ui_tests.exe)"))
 * Fix for programs leaking wndproc slots ([Wine Bug #32451](http://bugs.winehq.org/show_bug.cgi?id=32451 "Multiple GOG.com installer bundles show a broken/unresponsive dialog window during installation (installer process running out of wndproc slots)"))
+* Fix gray screen on startup introduced by pixelformat changes. ([Wine Bug #35975](http://bugs.winehq.org/show_bug.cgi?id=35975 "Comanche 3 shows only gray screen"))
 * Fix issue with invisible dragimages in ImageList ([Wine Bug #36761](http://bugs.winehq.org/show_bug.cgi?id=36761 "Imagelist invisible dragimage"))
+* Fix missing video introduced by pixelformat changes. ([Wine Bug #36900](http://bugs.winehq.org/show_bug.cgi?id=36900 "Star Wars Galactic Battlegrounds Clone Campaigns: no video (regression)"))
 * Fix unintentional leaks with ntdll internals
-* ~~Fix unitialized cch value when calling GetMenuItemInfo with a null pointer~~ ([Wine Bug #34642](http://bugs.winehq.org/show_bug.cgi?id=34642 "Adobe Premiere Pro 2.0 exits silently on startup ('GetMenuItemInfo' must zero out 'cch' if mask doesn't specify 'MIIM_TYPE')"))
+* Fix wined3d performance drop introduced by pixelformat changes. ([Wine Bug #35655](http://bugs.winehq.org/show_bug.cgi?id=35655 "Wined3d performance drop"))
 * Games For Windows Live 1.x expects a valid linker version in the PE header ([Wine Bug #28768](http://bugs.winehq.org/show_bug.cgi?id=28768 "Multiple GFWL (Games For Windows Live) 1.x games crash on startup (Kane & Lynch: Dead Men)"))
 * GetSecurityInfo returns NULL DACL for process object ([Wine Bug #15980](http://bugs.winehq.org/show_bug.cgi?id=15980 "Rhapsody 2 crashes on startup (GetSecurityInfo returns NULL DACL for process object)"))
 * Implement a Microsoft Yahei replacement font ([Wine Bug #13829](http://bugs.winehq.org/show_bug.cgi?id=13829 "Wine does not have CJK fonts"))
 * Implement an Arial replacement font ([Wine Bug #32323](http://bugs.winehq.org/show_bug.cgi?id=32323 "Netflix (Silverlight 4.x) and several .NET Framework 3.x/4.0 WPF apps require either Arial or Verdana to be installed"))
 * Improvement for heap allocation performance
+* Lego Stunt Rally requires DXTn software de/encoding support ([Wine Bug #25486](http://bugs.winehq.org/show_bug.cgi?id=25486 "Lego Stunt Rally: 3d scene is black"))
 * Lockfree algorithm for filedescriptor cache (improves file access speed)
 * Make it possible to change media center / tablet pc status ([Wine Bug #18732](http://bugs.winehq.org/show_bug.cgi?id=18732 "Microsoft Experience Pack for Tablet PC 1 refuses to install"))
 * Need for Speed 3 installer requires devices in HKEY_DYN_DATA ([Wine Bug #7115](http://bugs.winehq.org/show_bug.cgi?id=7115 "Need for Speed III installer fails in Win9X mode, reporting \"Could not get 'HardWareKey' value\" (active PnP device keys in 'HKEY_DYN_DATA\\\\Config Manager\\\\Enum' missing)"))
@@ -77,9 +71,9 @@ Included bugfixes and improvements
 * SO_CONNECT_TIME returns the appropriate time
 * Set ldr.EntryPoint for main executable ([Wine Bug #33034](http://bugs.winehq.org/show_bug.cgi?id=33034 "Many GFWL (Games For Windows Live) 1.x/2.x/3.x games crash or exit silently on startup (DiRT 2/3, GTA IV Steam)"))
 * Support for AllocateAndGetTcpExTableFromStack ([Wine Bug #34372](http://bugs.winehq.org/show_bug.cgi?id=34372 "Add missing function AllocateAndGetTcpExTableFromStack() to iphlpapi.dll"))
-* ~~Support for BCryptGetFipsAlgorithmMode~~ ([Wine Bug #32194](http://bugs.winehq.org/show_bug.cgi?id=32194 "Multiple games and applications need bcrypt.dll.BCryptGetFipsAlgorithmMode (Chess Position Trainer, Terraria, .NET System.Security.Cryptography)"))
 * Support for DOS hidden/system file attributes ([Wine Bug #9158](http://bugs.winehq.org/show_bug.cgi?id=9158 "Multiple Microsoft development tools online/web installers fail to skip \"$shtdwn$.req\" with FILE_ATTRIBUTE_HIDDEN (Visual Studio Express Editions, .NET Framework 3.0)"))
 * Support for Dynamic DST (daylight saving time) information in registry
+* Support for FIND_FIRST_EX_LARGE_FETCH flag in FindFirstFileExW ([Wine Bug #35121](http://bugs.winehq.org/show_bug.cgi?id=35121 "Multiple applications/games fail to start with WinVer set to 'Windows 7' (FindFirstFileExW needs FIND_FIRST_EX_LARGE_FETCH support)(FotoQuelle Fotosoftware v4.13, QT5)"))
 * Support for GetFinalPathNameByHandle ([Wine Bug #36073](http://bugs.winehq.org/show_bug.cgi?id=36073 "OneDrive crashes on unimplemented function KERNEL32.dll.GetFinalPathNameByHandleW"))
 * Support for GetSystemTimes ([Wine Bug #19813](http://bugs.winehq.org/show_bug.cgi?id=19813 "Voddler needs GetSystemTimes to run"))
 * Support for GetVolumePathName
@@ -102,7 +96,6 @@ Included bugfixes and improvements
 * Support for setcap on wine-preloader ([Wine Bug #26256](http://bugs.winehq.org/show_bug.cgi?id=26256 "wine64-preloader can't handle setcap cap_net_raw+epi"))
 * Support for stored file ACLs ([Wine Bug #31858](http://bugs.winehq.org/show_bug.cgi?id=31858 "Netflix on Firefox fails with Internet Connection Problem when loading bar is at 99%"))
 * Support for ws2_32.inet_pton ([Wine Bug #36713](http://bugs.winehq.org/show_bug.cgi?id=36713 "Watch_Dogs requires ws2_32.inet_pton"))
-* ~~Use assembly wrapper to run TLS callbacks~~ ([Wine Bug #21917](http://bugs.winehq.org/show_bug.cgi?id=21917 "SC2 'LazyLaunch' v2.0 fails with 'Exception frame is not in stack limits => unable to dispatch exception.' (TLS callbacks can taint EBP, needs assembly wrapper)"))
 * Use manual relay for RunDLL_CallEntry16 in shell32 ([Wine Bug #23033](http://bugs.winehq.org/show_bug.cgi?id=23033 "Tages Protection v5.x: games report \"DLL not found shell.dll16.dll\" (Runaway 2: The Dream Of The Turtle, ...)"))
 * Workaround for shlwapi URLs with relative paths
 * XEMBED support for embedding Wine windows inside Linux applications

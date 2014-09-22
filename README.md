@@ -35,6 +35,11 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
+**Bugfixes and features included in the next upcoming release [1]:**
+
+* Update a XIM candidate position when cursor location changes ([Wine Bug #30938](http://bugs.winehq.org/show_bug.cgi?id=30938))
+
+
 **Bugs fixed in Wine-Compholio 1.7.27 [63]:**
 
 * ATL IOCS data should not be stored in GWLP_USERDATA ([Wine Bug #21767](http://bugs.winehq.org/show_bug.cgi?id=21767))

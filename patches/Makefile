@@ -71,6 +71,7 @@ PATCHLIST := \
 	wined3d-DXTn.ok \
 	wined3d-Revert_PixelFormat.ok \
 	winepulse-PulseAudio_Support.ok \
+	winex11-CandidateWindowPos.ok \
 	winex11-Limited_Resolutions.ok \
 	winex11-Window_Groups.ok \
 	winex11-XEMBED.ok \
@@ -1176,6 +1177,25 @@ winepulse-PulseAudio_Support.ok:
 	@( \
 		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "Winepulse patches extracted from https://launchpad.net/~ubuntu-wine/+archive/ubuntu/ppa/+files/wine1.7_1.7.22-0ubuntu1.debian.tar.gz. [rev 4]" },'; \
 	) > winepulse-PulseAudio_Support.ok
+
+# Patchset winex11-CandidateWindowPos
+# |
+# | Included patches:
+# |   *	Update a candidate window's position with over-the-spot style. [by Felix Yan]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#30938] Update a XIM candidate position when cursor location changes
+# |
+# | Modified files:
+# |   *	dlls/user32/caret.c, dlls/user32/user32.spec, dlls/winex11.drv/event.c, dlls/winex11.drv/keyboard.c,
+# | 	dlls/winex11.drv/x11drv.h, dlls/winex11.drv/xim.c
+# |
+.INTERMEDIATE: winex11-CandidateWindowPos.ok
+winex11-CandidateWindowPos.ok:
+	$(call APPLY_FILE,winex11-CandidateWindowPos/0001-winex11.drv-Update-a-candidate-window-s-position-wit.patch)
+	@( \
+		echo '+    { "winex11-CandidateWindowPos", "Felix Yan", "Update a candidate window'\''s position with over-the-spot style." },'; \
+	) > winex11-CandidateWindowPos.ok
 
 # Patchset winex11-Limited_Resolutions
 # |

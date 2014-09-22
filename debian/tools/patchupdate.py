@@ -540,13 +540,13 @@ def generate_markdown(all_patches, stable_patches, stable_compholio_version):
     """Generate README.md and DEVELOPER.md including information about specific patches and bugfixes."""
 
     def _format_bug(mode, bugid, bugname):
-        if bugid is not None:
-            short_desc = bug_short_desc[bugid]
-            if bugname is None: bugname = short_desc
+        # if bugid is not None:
+        #     short_desc = bug_short_desc[bugid]
+        #     if bugname is None: bugname = short_desc
         if mode < 0: bugname = "~~%s~~" % bugname
         if bugid is None: return "* %s" % bugname
-        return "* %s ([Wine Bug #%d](http://bugs.winehq.org/show_bug.cgi?id=%d \"%s\"))" % \
-               (bugname, bugid, bugid, short_desc.replace("\\", "\\\\").replace("\"", "\\\""))
+        return "* %s ([Wine Bug #%d](http://bugs.winehq.org/show_bug.cgi?id=%d))" % \
+               (bugname, bugid, bugid) #, short_desc.replace("\\", "\\\\").replace("\"", "\\\""))
 
     all_bugids = set()
     all_fixes  = {}
@@ -580,7 +580,7 @@ def generate_markdown(all_patches, stable_patches, stable_compholio_version):
         new_fixes = []
 
     # Query information from bugzilla
-    bug_short_desc = _winebugs_query_short_desc(all_bugids)
+    # bug_short_desc = _winebugs_query_short_desc(all_bugids)
 
     # Generate information for current version
     lines = []

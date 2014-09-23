@@ -1,180 +1,242 @@
-From acaf4132ea6d30dbc5a93bd887c00f29afec9056 Mon Sep 17 00:00:00 2001
+From ed940af97f6488f87739b4d332101e69ed624412 Mon Sep 17 00:00:00 2001
 From: Felix Yan <felixonmars@gmail.com>
-Date: Mon, 22 Sep 2014 12:37:06 +0800
-Subject: winex11.drv: Update a candidate window's position with over-the-spot
- style
+Date: Tue, 23 Sep 2014 23:22:17 +0800
+Subject: [PATCH] winex11.drv: Update a candidate window's position with
+ over-the-spot style
 
 In the current implementation, the candidate window position of a input
 method is fixed because XNSpotLocation isn't updated after an input
 context (XIC) is created in X11DRV_CreateIC().
 X11DRV_UpdateCandidatePos() in this patch updates the position. You can
-see the change of a position with ibus, scim or fcitx when input style is
- set to "over the spot" in the registry key:
+see the change of a position with ibus, scim or fcitx when input style
+is set to "over the spot" in the registry key:
 
 [HKEY_CURRENT_USER\Software\Wine\X11 Driver]
 "InputStyle"="OverTheSpot"
 
-This patch was based on the original work by Muneyuki Noguchi.
+This patch was based on the original work by Muneyuki Noguchi, and
+received a lot of help from Sebastian Lackner.
 ---
- dlls/user32/caret.c         | 25 +++++++++++++++++++++++++
- dlls/user32/user32.spec     |  1 +
- dlls/winex11.drv/event.c    |  7 ++++++-
- dlls/winex11.drv/keyboard.c |  3 +++
- dlls/winex11.drv/x11drv.h   |  1 +
- dlls/winex11.drv/xim.c      | 45 +++++++++++++++++++++++++++++++++++++++++++++
- 6 files changed, 81 insertions(+), 1 deletion(-)
+ dlls/user32/caret.c               |  4 +++
+ dlls/user32/driver.c              | 19 +++++++++--
+ dlls/user32/user_private.h        |  2 ++
+ dlls/winex11.drv/winex11.drv.spec |  1 +
+ dlls/winex11.drv/xim.c            | 72 ++++++++++++++++++++++++++++++++++++++-
+ 5 files changed, 95 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/user32/caret.c b/dlls/user32/caret.c
-index 53bb5b4..13e13d5 100644
+index 53bb5b4..fff9e3e 100644
 --- a/dlls/user32/caret.c
 +++ b/dlls/user32/caret.c
-@@ -387,6 +387,31 @@ BOOL WINAPI GetCaretPos( LPPOINT pt )
+@@ -30,6 +30,8 @@
+ #include "winbase.h"
+ #include "wingdi.h"
+ #include "winuser.h"
++#include "user_private.h"
++
+ #include "wine/server.h"
+ #include "wine/debug.h"
+ 
+@@ -277,6 +279,7 @@ BOOL WINAPI SetCaretPos( INT x, INT y )
+         r.left = x;
+         r.top = y;
+         CARET_DisplayCaret( hwnd, &r );
++        USER_Driver->pUpdateCandidatePos( hwnd, &r );
+         SetSystemTimer( hwnd, TIMERID, Caret.timeout, CARET_Callback );
+     }
+     return ret;
+@@ -355,6 +358,7 @@ BOOL WINAPI ShowCaret( HWND hwnd )
+     if (ret && (hidden == 1))  /* hidden was 1 so it's now 0 */
+     {
+         CARET_DisplayCaret( hwnd, &r );
++        USER_Driver->pUpdateCandidatePos( hwnd, &r );
+         SetSystemTimer( hwnd, TIMERID, Caret.timeout, CARET_Callback );
+     }
+     return ret;
+diff --git a/dlls/user32/driver.c b/dlls/user32/driver.c
+index e0bc38c..0e8b007 100644
+--- a/dlls/user32/driver.c
++++ b/dlls/user32/driver.c
+@@ -154,6 +154,7 @@ static const USER_DRIVER *load_driver(void)
+         GET_USER_FUNC(WindowPosChanging);
+         GET_USER_FUNC(WindowPosChanged);
+         GET_USER_FUNC(SystemParametersInfo);
++        GET_USER_FUNC(UpdateCandidatePos);
+ #undef GET_USER_FUNC
+     }
+ 
+@@ -512,6 +513,10 @@ static BOOL CDECL nulldrv_SystemParametersInfo( UINT action, UINT int_param, voi
+     return FALSE;
  }
  
- 
-+BOOL CDECL __wine_get_caret_pos( LPRECT rect )
++static void CDECL nulldrv_UpdateCandidatePos( HWND hwnd, const RECT *caret_rect )
 +{
-+    BOOL ret;
++}
 +
-+    SERVER_START_REQ( set_caret_info )
-+    {
-+        req->flags  = 0;  /* don't set anything */
-+        req->handle = 0;
-+        req->x      = 0;
-+        req->y      = 0;
-+        req->hide   = 0;
-+        req->state  = 0;
-+        if ((ret = !wine_server_call_err( req )))
-+        {
-+            rect->left = reply->old_rect.left;
-+            rect->top = reply->old_rect.top;
-+            rect->right = reply->old_rect.right;
-+            rect->bottom = reply->old_rect.bottom;
-+        }
-+    }
-+    SERVER_END_REQ;
-+    return ret;
+ static USER_DRIVER null_driver =
+ {
+     /* keyboard functions */
+@@ -572,7 +577,9 @@ static USER_DRIVER null_driver =
+     nulldrv_WindowPosChanging,
+     nulldrv_WindowPosChanged,
+     /* system parameters */
+-    nulldrv_SystemParametersInfo
++    nulldrv_SystemParametersInfo,
++    /* candidate pos functions */
++    nulldrv_UpdateCandidatePos
+ };
+ 
+ 
+@@ -767,6 +774,12 @@ static BOOL CDECL loaderdrv_UpdateLayeredWindow( HWND hwnd, const UPDATELAYEREDW
+     return load_driver()->pUpdateLayeredWindow( hwnd, info, window_rect );
+ }
+ 
++static void CDECL loaderdrv_UpdateCandidatePos( HWND hwnd, const RECT *caret_rect )
++{
++    load_driver()->pUpdateCandidatePos( hwnd, caret_rect );
 +}
 +
 +
- /*****************************************************************
-  *		SetCaretBlinkTime (USER32.@)
-  */
-diff --git a/dlls/user32/user32.spec b/dlls/user32/user32.spec
-index da02c58..b004a1c 100644
---- a/dlls/user32/user32.spec
-+++ b/dlls/user32/user32.spec
-@@ -784,5 +784,6 @@
- # All functions must be prefixed with '__wine_' (for internal functions)
- # or 'wine_' (for user-visible functions) to avoid namespace conflicts.
- #
-+@ cdecl __wine_get_caret_pos(ptr)
- @ cdecl __wine_send_input(long ptr)
- @ cdecl __wine_set_pixel_format(long long)
-diff --git a/dlls/winex11.drv/event.c b/dlls/winex11.drv/event.c
-index ea24471..9e4f2fc 100644
---- a/dlls/winex11.drv/event.c
-+++ b/dlls/winex11.drv/event.c
-@@ -760,7 +760,12 @@ static void X11DRV_FocusIn( HWND hwnd, XEvent *xev )
-     if (event->detail == NotifyPointer) return;
-     if (hwnd == GetDesktopWindow()) return;
+ static USER_DRIVER lazy_load_driver =
+ {
+     /* keyboard functions */
+@@ -827,5 +840,7 @@ static USER_DRIVER lazy_load_driver =
+     nulldrv_WindowPosChanging,
+     nulldrv_WindowPosChanged,
+     /* system parameters */
+-    nulldrv_SystemParametersInfo
++    nulldrv_SystemParametersInfo,
++    /* candidate pos functions */
++    loaderdrv_UpdateCandidatePos
+ };
+diff --git a/dlls/user32/user_private.h b/dlls/user32/user_private.h
+index adf3f7d..6202818 100644
+--- a/dlls/user32/user_private.h
++++ b/dlls/user32/user_private.h
+@@ -117,6 +117,8 @@ typedef struct tagUSER_DRIVER {
+     void   (CDECL *pWindowPosChanged)(HWND,HWND,UINT,const RECT *,const RECT *,const RECT *,const RECT *,struct window_surface*);
+     /* system parameters */
+     BOOL   (CDECL *pSystemParametersInfo)(UINT,UINT,void*,UINT);
++    /* candidate pos functions */
++    void   (CDECL *pUpdateCandidatePos)(HWND,const RECT *);
+ } USER_DRIVER;
  
--    if ((xic = X11DRV_get_ic( hwnd ))) XSetICFocus( xic );
-+    if ((xic = X11DRV_get_ic( hwnd )))
-+    {
-+        XSetICFocus( xic );
-+        X11DRV_UpdateCandidatePos( hwnd, xic );
-+    }
-+
-     if (use_take_focus)
-     {
-         if (hwnd == GetForegroundWindow()) clip_fullscreen_window( hwnd, FALSE );
-diff --git a/dlls/winex11.drv/keyboard.c b/dlls/winex11.drv/keyboard.c
-index 039d15b..fc3c861 100644
---- a/dlls/winex11.drv/keyboard.c
-+++ b/dlls/winex11.drv/keyboard.c
-@@ -1353,6 +1353,9 @@ void X11DRV_KeyEvent( HWND hwnd, XEvent *xev )
+ extern const USER_DRIVER *USER_Driver DECLSPEC_HIDDEN;
+diff --git a/dlls/winex11.drv/winex11.drv.spec b/dlls/winex11.drv/winex11.drv.spec
+index b6e5c05..2a0d737 100644
+--- a/dlls/winex11.drv/winex11.drv.spec
++++ b/dlls/winex11.drv/winex11.drv.spec
+@@ -53,6 +53,7 @@
+ @ cdecl WindowPosChanging(long long long ptr ptr ptr ptr) X11DRV_WindowPosChanging
+ @ cdecl WindowPosChanged(long long long ptr ptr ptr ptr ptr) X11DRV_WindowPosChanged
+ @ cdecl SystemParametersInfo(long long ptr long) X11DRV_SystemParametersInfo
++@ cdecl UpdateCandidatePos(long ptr) X11DRV_UpdateCandidatePos
  
-     if (event->type == KeyPress) update_user_time( event->time );
- 
-+    if (xic)
-+        X11DRV_UpdateCandidatePos(hwnd, xic);
-+
-     /* Clients should pass only KeyPress events to XmbLookupString */
-     if (xic && event->type == KeyPress)
-     {
-diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
-index bcbfe14..b82ba5b 100644
---- a/dlls/winex11.drv/x11drv.h
-+++ b/dlls/winex11.drv/x11drv.h
-@@ -660,6 +660,7 @@ extern void X11DRV_SetupXIM(void) DECLSPEC_HIDDEN;
- extern void X11DRV_XIMLookupChars( const char *str, DWORD count ) DECLSPEC_HIDDEN;
- extern void X11DRV_ForceXIMReset(HWND hwnd) DECLSPEC_HIDDEN;
- extern void X11DRV_SetPreeditState(HWND hwnd, BOOL fOpen) DECLSPEC_HIDDEN;
-+extern void X11DRV_UpdateCandidatePos(HWND hwnd, XIC xic);
- 
- #define XEMBED_MAPPED  (1 << 0)
- 
+ # WinTab32
+ @ cdecl AttachEventQueueToTablet(long) X11DRV_AttachEventQueueToTablet
 diff --git a/dlls/winex11.drv/xim.c b/dlls/winex11.drv/xim.c
-index e0548b8..0052d76 100644
+index e0548b8..187323f 100644
 --- a/dlls/winex11.drv/xim.c
 +++ b/dlls/winex11.drv/xim.c
-@@ -39,6 +39,9 @@ WINE_DEFAULT_DEBUG_CHANNEL(xim);
- #define XICProc XIMProc
- #endif
+@@ -31,6 +31,7 @@
+ #include "x11drv.h"
+ #include "imm.h"
+ #include "wine/debug.h"
++#include "wine/server.h"
  
-+/* exported by user32 */
-+extern BOOL CDECL __wine_get_caret_pos( LPRECT rect );
-+
- BOOL ximInComposeMode=FALSE;
+ WINE_DEFAULT_DEBUG_CHANNEL(xim);
  
- /* moved here from imm32 for dll separation */
-@@ -598,3 +601,45 @@ XIC X11DRV_CreateIC(XIM xim, struct x11drv_win_data *data)
- 
-     return xic;
+@@ -471,6 +472,48 @@ static BOOL X11DRV_DestroyIC(XIC xic, XPointer p, XPointer data)
+     return TRUE;
  }
-+
-+void X11DRV_UpdateCandidatePos(HWND hwnd, XIC xic)
+ 
++/***********************************************************************
++ *           X11DRV_UpdateCandidatePos
++ */
++void X11DRV_UpdateCandidatePos( HWND hwnd, const RECT *caret_rect )
 +{
 +    if (ximStyle & XIMPreeditPosition)
 +    {
-+        HWND focus = GetFocus();
-+        if (focus)
++        struct x11drv_win_data *data;
++        HWND parent;
++
++        for (parent = hwnd; parent && parent != GetDesktopWindow(); parent = GetAncestor( parent, GA_PARENT ))
 +        {
-+            Window dummy;
-+            struct x11drv_win_data *data;
-+            int origin_x, origin_y;
-+            RECT caret_rect;
-+            POINT point;
-+            XPoint xpoint;
-+            XVaNestedList preedit;
++            if (!(data = get_win_data( parent ))) continue;
++            if (data->xic)
++            {
++                XVaNestedList preedit;
++                XPoint xpoint;
++                POINT pt;
 +
-+            if (!(data = get_win_data( hwnd ))) return;
++                pt.x = caret_rect->left;
++                pt.y = caret_rect->bottom;
 +
-+            XTranslateCoordinates(thread_display(), data->whole_window, root_window,
-+                0, 0, &origin_x, &origin_y, &dummy);
++                if (hwnd != data->hwnd)
++                    MapWindowPoints( hwnd, data->hwnd, &pt, 1 );
 +
-+            release_win_data( data );
++                if (GetWindowLongW( data->hwnd, GWL_EXSTYLE ) & WS_EX_LAYOUTRTL)
++                    pt.x = data->client_rect.right - data->client_rect.left - 1 - pt.x;
 +
-+            __wine_get_caret_pos(&caret_rect);
++                xpoint.x = pt.x + data->client_rect.left - data->whole_rect.left;
++                xpoint.y = pt.y + data->client_rect.top - data->whole_rect.top;
 +
-+            point.x = caret_rect.left;
-+            point.y = caret_rect.top;
-+
-+            ClientToScreen(focus, &point);
-+
-+            xpoint.x = point.x - origin_x;
-+            xpoint.y = point.y - origin_y + caret_rect.bottom - caret_rect.top;
-+
-+            preedit = XVaCreateNestedList(0, XNSpotLocation, &xpoint, NULL);
-+
-+            if (preedit != NULL) {
-+                XSetICValues(xic, XNPreeditAttributes, preedit, NULL);
-+                XFree(preedit);
++                preedit = XVaCreateNestedList( 0, XNSpotLocation, &xpoint, NULL );
++                if (preedit)
++                {
++                    XSetICValues( data->xic, XNPreeditAttributes, preedit, NULL );
++                    XFree( preedit );
++                }
 +            }
++            release_win_data( data );
 +        }
 +    }
 +}
+ 
+ XIC X11DRV_CreateIC(XIM xim, struct x11drv_win_data *data)
+ {
+@@ -498,7 +541,7 @@ XIC X11DRV_CreateIC(XIM xim, struct x11drv_win_data *data)
+                         XNDestroyCallback, &destroy,
+                         NULL);
+         data->xic = xic;
+-        return xic;
++        goto return_xic;
+     }
+ 
+     /* create callbacks */
+@@ -596,5 +639,32 @@ XIC X11DRV_CreateIC(XIM xim, struct x11drv_win_data *data)
+     if (status != NULL)
+         XFree(status);
+ 
++return_xic:
++    if (xic != NULL && (ximStyle & XIMPreeditPosition))
++    {
++        SERVER_START_REQ( set_caret_info )
++        {
++            req->flags  = 0;  /* don't set anything */
++            req->handle = 0;
++            req->x      = 0;
++            req->y      = 0;
++            req->hide   = 0;
++            req->state  = 0;
++            if (!wine_server_call_err( req ))
++            {
++                HWND hwnd;
++                RECT r;
++
++                hwnd      = wine_server_ptr_handle( reply->full_handle );
++                r.left    = reply->old_rect.left;
++                r.top     = reply->old_rect.top;
++                r.right   = reply->old_rect.right;
++                r.bottom  = reply->old_rect.bottom;
++                X11DRV_UpdateCandidatePos( hwnd, &r );
++            }
++        }
++        SERVER_END_REQ;
++    }
++
+     return xic;
+ }
 -- 
 2.1.0
 

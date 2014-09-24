@@ -70,6 +70,7 @@ PATCHLIST := \
 	winebuild-LinkerVersion.ok \
 	wined3d-DXTn.ok \
 	wined3d-Revert_PixelFormat.ok \
+	winemenubuilder-Desktop_Icon_Path.ok \
 	winepulse-PulseAudio_Support.ok \
 	winex11-CandidateWindowPos.ok \
 	winex11-Limited_Resolutions.ok \
@@ -1131,6 +1132,21 @@ wined3d-Revert_PixelFormat.ok:
 	@( \
 		echo '+    { "wined3d-Revert_PixelFormat", "Ken Thomases", "Revert wined3d pixelformat changes." },'; \
 	) > wined3d-Revert_PixelFormat.ok
+
+# Patchset winemenubuilder-Desktop_Icon_Path
+# |
+# | Included patches:
+# |   *	Create desktop shortcuts with absolute wine path. [by Sebastian Lackner]
+# |
+# | Modified files:
+# |   *	programs/winemenubuilder/Makefile.in, programs/winemenubuilder/winemenubuilder.c
+# |
+.INTERMEDIATE: winemenubuilder-Desktop_Icon_Path.ok
+winemenubuilder-Desktop_Icon_Path.ok:
+	$(call APPLY_FILE,winemenubuilder-Desktop_Icon_Path/0001-winemenubuilder-Create-desktop-shortcuts-with-absolu.patch)
+	@( \
+		echo '+    { "winemenubuilder-Desktop_Icon_Path", "Sebastian Lackner", "Create desktop shortcuts with absolute wine path." },'; \
+	) > winemenubuilder-Desktop_Icon_Path.ok
 
 # Patchset winepulse-PulseAudio_Support
 # |

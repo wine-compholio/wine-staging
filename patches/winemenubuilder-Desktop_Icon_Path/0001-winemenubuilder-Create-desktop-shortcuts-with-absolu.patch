@@ -1,0 +1,72 @@
+From ac8dd1c1c96f8e932a32d80ff854856c3833c20f Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 24 Sep 2014 21:13:59 +0200
+Subject: winemenubuilder: Create desktop shortcuts with absolute wine path.
+
+When having multiple wine versions installed (for example regular wine and wine-compholio), the desktop
+shortcuts will always run regular wine, even if the app was installed with wine-compholio. This patch
+changes the behaviour to use the absolute wine path in desktop shortcuts. The patch only modifies the
+behaviour on Linux, because some other distros are a bit special (FreeBSD requires a wrapper to start
+wine, and so on ...).
+---
+ programs/winemenubuilder/Makefile.in       |  1 +
+ programs/winemenubuilder/winemenubuilder.c | 17 +++++++++++++----
+ 2 files changed, 14 insertions(+), 4 deletions(-)
+
+diff --git a/programs/winemenubuilder/Makefile.in b/programs/winemenubuilder/Makefile.in
+index 07e2702..a4e28ad 100644
+--- a/programs/winemenubuilder/Makefile.in
++++ b/programs/winemenubuilder/Makefile.in
+@@ -1,6 +1,7 @@
+ MODULE    = winemenubuilder.exe
+ APPMODE   = -mwindows -municode
+ IMPORTS   = uuid windowscodecs shell32 shlwapi ole32 user32 advapi32
++EXTRADEFS = -DBINDIR="\"${bindir}\""
+ 
+ C_SRCS = \
+ 	winemenubuilder.c
+diff --git a/programs/winemenubuilder/winemenubuilder.c b/programs/winemenubuilder/winemenubuilder.c
+index fba3664..72f2a7a 100644
+--- a/programs/winemenubuilder/winemenubuilder.c
++++ b/programs/winemenubuilder/winemenubuilder.c
+@@ -103,7 +103,15 @@ WINE_DEFAULT_DEBUG_CHANNEL(menubuilder);
+                                (csidl)==CSIDL_COMMON_DESKTOPDIRECTORY)
+ #define in_startmenu(csidl)   ((csidl)==CSIDL_STARTMENU || \
+                                (csidl)==CSIDL_COMMON_STARTMENU)
+-        
++
++/* On linux we create all menu item entries with an absolute path to wine,
++ * in order to allow using multiple wine versions at the same time. */
++#ifdef __linux__
++    static const char wine_path[] = BINDIR "/wine";
++#else
++    static const char wine_path[] = "wine";
++#endif
++
+ /* link file formats */
+ 
+ #include "pshpack1.h"
+@@ -1455,8 +1463,8 @@ static BOOL write_desktop_entry(const char *unix_link, const char *location, con
+ 
+     fprintf(file, "[Desktop Entry]\n");
+     fprintf(file, "Name=%s\n", linkname);
+-    fprintf(file, "Exec=env WINEPREFIX=\"%s\" wine %s %s\n",
+-            wine_get_config_dir(), path, args);
++    fprintf(file, "Exec=env WINEPREFIX=\"%s\" %s %s %s\n",
++            wine_get_config_dir(), wine_path, path, args);
+     fprintf(file, "Type=Application\n");
+     fprintf(file, "StartupNotify=true\n");
+     if (descr && lstrlenA(descr))
+@@ -2529,7 +2537,8 @@ static BOOL write_freedesktop_association_entry(const char *desktopPath, const c
+         fprintf(desktop, "Type=Application\n");
+         fprintf(desktop, "Name=%s\n", friendlyAppName);
+         fprintf(desktop, "MimeType=%s;\n", mimeType);
+-        fprintf(desktop, "Exec=env WINEPREFIX=\"%s\" wine start /ProgIDOpen %s %%f\n", wine_get_config_dir(), progId);
++        fprintf(desktop, "Exec=env WINEPREFIX=\"%s\" %s start /ProgIDOpen %s %%f\n",
++                wine_get_config_dir(), wine_path, progId);
+         fprintf(desktop, "NoDisplay=true\n");
+         fprintf(desktop, "StartupNotify=true\n");
+         if (openWithIcon)
+-- 
+2.1.0
+

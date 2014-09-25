@@ -35,8 +35,9 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [1]:**
+**Bugfixes and features included in the next upcoming release [2]:**
 
+* Support for FIND_FIRST_EX_CASE_SENSITIVE flag in FindFirstFileExW
 * Update a XIM candidate position when cursor location changes ([Wine Bug #30938](http://bugs.winehq.org/show_bug.cgi?id=30938))
 
 

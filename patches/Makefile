@@ -63,6 +63,7 @@ PATCHLIST := \
 	shell32-RunDLL_CallEntry16.ok \
 	shell32-SHCreateSessionKey.ok \
 	shlwapi-UrlCombine.ok \
+	user32-Dialog_Paint_Event.ok \
 	user32-GetSystemMetrics.ok \
 	user32-GetTipText.ok \
 	user32-WndProc.ok \
@@ -995,6 +996,24 @@ shlwapi-UrlCombine.ok:
 	@( \
 		echo '+    { "shlwapi-UrlCombine", "Sebastian Lackner", "Workaround for broken implementation of shlwapi url functions." },'; \
 	) > shlwapi-UrlCombine.ok
+
+# Patchset user32-Dialog_Paint_Event
+# |
+# | Included patches:
+# |   *	Call UpdateWindow during DIALOG_CreateIndirect. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35652] Send WM_PAINT event during dialog creation
+# |
+# | Modified files:
+# |   *	dlls/user32/dialog.c
+# |
+.INTERMEDIATE: user32-Dialog_Paint_Event.ok
+user32-Dialog_Paint_Event.ok:
+	$(call APPLY_FILE,user32-Dialog_Paint_Event/0001-user32-Call-UpdateWindow-during-DIALOG_CreateIndirec.patch)
+	@( \
+		echo '+    { "user32-Dialog_Paint_Event", "Sebastian Lackner", "Call UpdateWindow during DIALOG_CreateIndirect." },'; \
+	) > user32-Dialog_Paint_Event.ok
 
 # Patchset user32-GetSystemMetrics
 # |

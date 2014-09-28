@@ -35,8 +35,9 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [5]:**
+**Bugfixes and features included in the next upcoming release [6]:**
 
+* Correctly treat '.' when checking for empty directories ([Wine Bug #26272](http://bugs.winehq.org/show_bug.cgi?id=26272))
 * Fix issues when driver dispatch routine returns different status codes ([Wine Bug #30155](http://bugs.winehq.org/show_bug.cgi?id=30155))
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](http://bugs.winehq.org/show_bug.cgi?id=35652))
 * Support for FIND_FIRST_EX_CASE_SENSITIVE flag in FindFirstFileExW

@@ -63,6 +63,7 @@ PATCHLIST := \
 	shell32-Icons.ok \
 	shell32-RunDLL_CallEntry16.ok \
 	shell32-SHCreateSessionKey.ok \
+	shlwapi-PathIsDirectoryEmptyW.ok \
 	shlwapi-UrlCombine.ok \
 	user32-Dialog_Paint_Event.ok \
 	user32-GetSystemMetrics.ok \
@@ -1000,6 +1001,24 @@ shell32-SHCreateSessionKey.ok:
 	@( \
 		echo '+    { "shell32-SHCreateSessionKey", "Dmitry Timoshkov", "shell32: Implement SHCreateSessionKey." },'; \
 	) > shell32-SHCreateSessionKey.ok
+
+# Patchset shlwapi-PathIsDirectoryEmptyW
+# |
+# | Included patches:
+# |   *	Correctly treat '.' when enumerating files in PathIsDirectoryEmptyW. [by Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#26272] Correctly treat '.' when checking for empty directories
+# |
+# | Modified files:
+# |   *	dlls/shlwapi/path.c
+# |
+.INTERMEDIATE: shlwapi-PathIsDirectoryEmptyW.ok
+shlwapi-PathIsDirectoryEmptyW.ok:
+	$(call APPLY_FILE,shlwapi-PathIsDirectoryEmptyW/0001-shlwapi-Correctly-treat-.-when-enumerating-files-in-.patch)
+	@( \
+		echo '+    { "shlwapi-PathIsDirectoryEmptyW", "Michael Müller", "Correctly treat '\''.'\'' when enumerating files in PathIsDirectoryEmptyW." },'; \
+	) > shlwapi-PathIsDirectoryEmptyW.ok
 
 # Patchset shlwapi-UrlCombine
 # |

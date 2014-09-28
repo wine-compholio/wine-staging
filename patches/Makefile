@@ -80,6 +80,7 @@ PATCHLIST := \
 	winex11-Limited_Resolutions.ok \
 	winex11-Window_Groups.ok \
 	winex11-XEMBED.ok \
+	winex11-wglShareLists.ok \
 	wpcap-Dynamic_Linking.ok \
 	ws2_32-Connect_Time.ok \
 	ws2_32-TransmitFile.ok \
@@ -1340,6 +1341,24 @@ winex11-XEMBED.ok:
 	@( \
 		echo '+    { "winex11-XEMBED", "Sebastian Lackner", "Enable/disable windows when they are (un)mapped by foreign applications." },'; \
 	) > winex11-XEMBED.ok
+
+# Patchset winex11-wglShareLists
+# |
+# | Included patches:
+# |   *	Only warn about used contexts in wglShareLists. [by Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#11436] Do not fail when a used context is passed to wglShareLists
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/opengl.c
+# |
+.INTERMEDIATE: winex11-wglShareLists.ok
+winex11-wglShareLists.ok:
+	$(call APPLY_FILE,winex11-wglShareLists/0001-winex11.drv-Only-warn-about-used-contexts-in-wglShar.patch)
+	@( \
+		echo '+    { "winex11-wglShareLists", "Michael Müller", "Only warn about used contexts in wglShareLists." },'; \
+	) > winex11-wglShareLists.ok
 
 # Patchset wpcap-Dynamic_Linking
 # |

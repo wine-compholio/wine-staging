@@ -48,6 +48,7 @@ PATCHLIST := \
 	ntdll-Junction_Points.ok \
 	ntdll-Pipe_SpecialCharacters.ok \
 	ntdll-loader_EntryPoint.ok \
+	ntoskrnl-Irp_Status.ok \
 	quartz-MediaSeeking_Positions.ok \
 	riched20-IText_Interface.ok \
 	server-ACL_Compat.ok \
@@ -698,6 +699,24 @@ ntdll-loader_EntryPoint.ok:
 	@( \
 		echo '+    { "ntdll-loader_EntryPoint", "Sebastian Lackner", "Set ldr.EntryPoint for main executable." },'; \
 	) > ntdll-loader_EntryPoint.ok
+
+# Patchset ntoskrnl-Irp_Status
+# |
+# | Included patches:
+# |   *	Handle issues when driver returns two different status codes from dispatcher. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#30155] Fix issues when driver dispatch routine returns different status codes
+# |
+# | Modified files:
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c
+# |
+.INTERMEDIATE: ntoskrnl-Irp_Status.ok
+ntoskrnl-Irp_Status.ok:
+	$(call APPLY_FILE,ntoskrnl-Irp_Status/0001-ntoskrnl-Handle-issues-when-driver-returns-two-diffe.patch)
+	@( \
+		echo '+    { "ntoskrnl-Irp_Status", "Sebastian Lackner", "Handle issues when driver returns two different status codes from dispatcher." },'; \
+	) > ntoskrnl-Irp_Status.ok
 
 # Patchset quartz-MediaSeeking_Positions
 # |

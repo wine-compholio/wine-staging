@@ -40,6 +40,7 @@ PATCHLIST := \
 	loader-Cmdline_Diagnostics.ok \
 	ntdll-DOS_Attributes.ok \
 	ntdll-Dynamic_DST.ok \
+	ntdll-Exception.ok \
 	ntdll-FD_Cache.ok \
 	ntdll-FileDispositionInformation.ok \
 	ntdll-Fix_Alignment.ok \
@@ -549,6 +550,22 @@ ntdll-Dynamic_DST.ok:
 		echo '+    { "ntdll-Dynamic_DST", "Michael Müller", "Add support for Dynamic DST (daylight saving time) information in registry." },'; \
 		echo '+    { "ntdll-Dynamic_DST", "Sebastian Lackner", "Add Dynamic DST exceptions for Israel Standard Time." },'; \
 	) > ntdll-Dynamic_DST.ok
+
+# Patchset ntdll-Exception
+# |
+# | Included patches:
+# |   *	Fix some differences in exception handling behaviour between Wine and Windows. [by Sebastian Lackner]
+# |
+# | Modified files:
+# |   *	dlls/kernel32/debugger.c, dlls/ntdll/om.c, dlls/ntdll/tests/exception.c
+# |
+.INTERMEDIATE: ntdll-Exception.ok
+ntdll-Exception.ok:
+	$(call APPLY_FILE,ntdll-Exception/0001-ntdll-Throw-exception-if-invalid-handle-is-passed-to.patch)
+	$(call APPLY_FILE,ntdll-Exception/0002-ntdll-OutputDebugString-should-throw-the-exception-a.patch)
+	@( \
+		echo '+    { "ntdll-Exception", "Sebastian Lackner", "Fix some differences in exception handling behaviour between Wine and Windows." },'; \
+	) > ntdll-Exception.ok
 
 # Patchset ntdll-FD_Cache
 # |

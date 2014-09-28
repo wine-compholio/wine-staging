@@ -1,0 +1,101 @@
+From fbc7c0a7ec5822215a9da690ea75d8cb3359bc9e Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 28 Sep 2014 23:39:51 +0200
+Subject: ntdll: OutputDebugString should throw the exception a second time, if
+ a debugger is attached.
+
+---
+ dlls/kernel32/debugger.c     | 17 +++++++++++++++++
+ dlls/ntdll/tests/exception.c | 19 +++++++------------
+ 2 files changed, 24 insertions(+), 12 deletions(-)
+
+diff --git a/dlls/kernel32/debugger.c b/dlls/kernel32/debugger.c
+index d4d66b2..981661b 100644
+--- a/dlls/kernel32/debugger.c
++++ b/dlls/kernel32/debugger.c
+@@ -277,6 +277,23 @@ void WINAPI OutputDebugStringA( LPCSTR str )
+     __ENDTRY
+     if (caught_by_dbg) return;
+ 
++    /* for some unknown reason Windows sends the exception a second time, if a
++     * debugger is attached, and the event wasn't handled in the first attempt */
++    if (NtCurrentTeb()->Peb->BeingDebugged)
++    {
++        __TRY
++        {
++            ULONG_PTR args[2];
++            args[0] = strlen(str) + 1;
++            args[1] = (ULONG_PTR)str;
++            RaiseException( DBG_PRINTEXCEPTION_C, 0, 2, args );
++        }
++        __EXCEPT(debug_exception_handler)
++        {
++        }
++        __ENDTRY
++    }
++
+     /* send string to a system-wide monitor */
+     if (!mutex_inited)
+     {
+diff --git a/dlls/ntdll/tests/exception.c b/dlls/ntdll/tests/exception.c
+index bc36242..3f0e6f5 100644
+--- a/dlls/ntdll/tests/exception.c
++++ b/dlls/ntdll/tests/exception.c
+@@ -1724,7 +1724,7 @@ static LONG CALLBACK outputdebugstring_vectored_handler(EXCEPTION_POINTERS *Exce
+     return EXCEPTION_CONTINUE_SEARCH;
+ }
+ 
+-static void test_outputdebugstring(DWORD numexc, BOOL todo)
++static void test_outputdebugstring(DWORD numexc)
+ {
+     PVOID vectored_handler;
+ 
+@@ -1739,13 +1739,8 @@ static void test_outputdebugstring(DWORD numexc, BOOL todo)
+ 
+     outputdebugstring_exceptions = 0;
+     OutputDebugStringA("Hello World");
+-    if (todo)
+-        todo_wine
+-        ok(outputdebugstring_exceptions == numexc, "OutputDebugStringA generated %d exceptions, expected %d\n",
+-           outputdebugstring_exceptions, numexc);
+-    else
+-        ok(outputdebugstring_exceptions == numexc, "OutputDebugStringA generated %d exceptions, expected %d\n",
+-           outputdebugstring_exceptions, numexc);
++    ok(outputdebugstring_exceptions == numexc, "OutputDebugStringA generated %d exceptions, expected %d\n",
++       outputdebugstring_exceptions, numexc);
+ 
+     pRtlRemoveVectoredExceptionHandler(vectored_handler);
+ }
+@@ -1917,9 +1912,9 @@ START_TEST(exception)
+             run_rtlraiseexception_test(EXCEPTION_BREAKPOINT);
+             run_rtlraiseexception_test(EXCEPTION_INVALID_HANDLE);
+             test_stage = 3;
+-            test_outputdebugstring(0, FALSE);
++            test_outputdebugstring(0);
+             test_stage = 4;
+-            test_outputdebugstring(2, TRUE); /* is this a Windows bug? */
++            test_outputdebugstring(2);
+             test_stage = 5;
+             test_ripevent(0);
+             test_stage = 6;
+@@ -1939,7 +1934,7 @@ START_TEST(exception)
+     test_unwind();
+     test_exceptions();
+     test_rtlraiseexception();
+-    test_outputdebugstring(1, FALSE);
++    test_outputdebugstring(1);
+     test_ripevent(1);
+     test_closehandle(0);
+     test_debugger();
+@@ -1958,7 +1953,7 @@ START_TEST(exception)
+     pRtlLookupFunctionEntry            = (void *)GetProcAddress( hntdll,
+                                                                  "RtlLookupFunctionEntry" );
+ 
+-    test_outputdebugstring(1, FALSE);
++    test_outputdebugstring(1);
+     test_ripevent(1);
+     test_closehandle(0);
+     test_virtual_unwind();
+-- 
+2.1.1
+

@@ -1,0 +1,184 @@
+From 05a69d408bc84fa489f297973e3a0ab384dad635 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 28 Sep 2014 22:42:46 +0200
+Subject: ntdll: Throw exception if invalid handle is passed to NtClose and
+ debugger enabled.
+
+---
+ dlls/ntdll/om.c              | 27 ++++++++++++++++++
+ dlls/ntdll/tests/exception.c | 65 ++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 92 insertions(+)
+
+diff --git a/dlls/ntdll/om.c b/dlls/ntdll/om.c
+index 47a2614..bcc6d69 100644
+--- a/dlls/ntdll/om.c
++++ b/dlls/ntdll/om.c
+@@ -38,6 +38,7 @@
+ #include "winternl.h"
+ #include "ntdll_misc.h"
+ #include "wine/server.h"
++#include "wine/exception.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(ntdll);
+ 
+@@ -343,6 +344,13 @@ NTSTATUS WINAPI NtDuplicateObject( HANDLE source_process, HANDLE source,
+     return ret;
+ }
+ 
++
++static LONG WINAPI invalid_handle_exception_handler( EXCEPTION_POINTERS *eptr )
++{
++    EXCEPTION_RECORD *rec = eptr->ExceptionRecord;
++    return (rec->ExceptionCode == EXCEPTION_INVALID_HANDLE) ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH;
++}
++
+ /* Everquest 2 / Pirates of the Burning Sea hooks NtClose, so we need a wrapper */
+ NTSTATUS close_handle( HANDLE handle )
+ {
+@@ -356,6 +364,25 @@ NTSTATUS close_handle( HANDLE handle )
+     }
+     SERVER_END_REQ;
+     if (fd != -1) close( fd );
++
++    if (ret == STATUS_INVALID_HANDLE && NtCurrentTeb()->Peb->BeingDebugged)
++    {
++        __TRY
++        {
++            EXCEPTION_RECORD record;
++            record.ExceptionCode    = EXCEPTION_INVALID_HANDLE;
++            record.ExceptionFlags   = 0;
++            record.ExceptionRecord  = NULL;
++            record.ExceptionAddress = NULL;
++            record.NumberParameters = 0;
++            RtlRaiseException( &record );
++        }
++        __EXCEPT(invalid_handle_exception_handler)
++        {
++        }
++        __ENDTRY
++    }
++
+     return ret;
+ }
+ 
+diff --git a/dlls/ntdll/tests/exception.c b/dlls/ntdll/tests/exception.c
+index 2074f0a..bc36242 100644
+--- a/dlls/ntdll/tests/exception.c
++++ b/dlls/ntdll/tests/exception.c
+@@ -51,6 +51,7 @@ static NTSTATUS  (WINAPI *pNtTerminateProcess)(HANDLE handle, LONG exit_code);
+ static NTSTATUS  (WINAPI *pNtQueryInformationProcess)(HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG);
+ static NTSTATUS  (WINAPI *pNtSetInformationProcess)(HANDLE, PROCESSINFOCLASS, PVOID, ULONG);
+ static BOOL      (WINAPI *pIsWow64Process)(HANDLE, PBOOL);
++static NTSTATUS  (WINAPI *pNtClose)(HANDLE);
+ 
+ #if defined(__x86_64__)
+ static BOOLEAN   (CDECL *pRtlAddFunctionTable)(RUNTIME_FUNCTION*, DWORD, DWORD64);
+@@ -936,6 +937,16 @@ static void test_debugger(void)
+                         /* here we handle exception */
+                     }
+                 }
++                else if (stage == 7 || stage == 8)
++                {
++                    ok(de.u.Exception.ExceptionRecord.ExceptionCode == EXCEPTION_INVALID_HANDLE,
++                       "unexpected exception code %08x, expected %08x\n", de.u.Exception.ExceptionRecord.ExceptionCode,
++                       EXCEPTION_INVALID_HANDLE);
++                    ok(de.u.Exception.ExceptionRecord.NumberParameters == 0,
++                       "unexpected number of parameters %d, expected 0\n", de.u.Exception.ExceptionRecord.NumberParameters);
++
++                    if (stage == 8) continuestatus = DBG_EXCEPTION_NOT_HANDLED;
++                }
+                 else
+                     ok(FALSE, "unexpected stage %x\n", stage);
+ 
+@@ -1788,6 +1799,53 @@ static void test_ripevent(DWORD numexc)
+     pRtlRemoveVectoredExceptionHandler(vectored_handler);
+ }
+ 
++static DWORD invalid_handle_exceptions;
++
++static LONG CALLBACK invalid_handle_vectored_handler(EXCEPTION_POINTERS *ExceptionInfo)
++{
++    PEXCEPTION_RECORD rec = ExceptionInfo->ExceptionRecord;
++    trace("vect. handler %08x addr:%p\n", rec->ExceptionCode, rec->ExceptionAddress);
++
++    ok(rec->ExceptionCode == EXCEPTION_INVALID_HANDLE, "ExceptionCode is %08x instead of %08x\n",
++       rec->ExceptionCode, EXCEPTION_INVALID_HANDLE);
++    ok(rec->NumberParameters == 0, "ExceptionParameters is %d instead of 0\n", rec->NumberParameters);
++
++    invalid_handle_exceptions++;
++    return (rec->ExceptionCode == EXCEPTION_INVALID_HANDLE) ? EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH;
++}
++
++static void test_closehandle(DWORD numexc)
++{
++    PVOID vectored_handler;
++    NTSTATUS status;
++    DWORD res;
++
++    if (!pRtlAddVectoredExceptionHandler || !pRtlRemoveVectoredExceptionHandler || !pRtlRaiseException)
++    {
++        skip("RtlAddVectoredExceptionHandler or RtlRemoveVectoredExceptionHandler or RtlRaiseException not found\n");
++        return;
++    }
++
++    vectored_handler = pRtlAddVectoredExceptionHandler(TRUE, &invalid_handle_vectored_handler);
++    ok(vectored_handler != 0, "RtlAddVectoredExceptionHandler failed\n");
++
++    invalid_handle_exceptions = 0;
++    res = CloseHandle((HANDLE)0xdeadbeef);
++    ok(!res, "CloseHandle(0xdeadbeef) unexpectedly succeeded\n");
++    ok(GetLastError() == ERROR_INVALID_HANDLE, "wrong error code %d instead of %d",
++       GetLastError(), ERROR_INVALID_HANDLE);
++    ok(invalid_handle_exceptions == numexc, "CloseHandle generated %d exceptions, expected %d\n",
++       invalid_handle_exceptions, numexc);
++
++    invalid_handle_exceptions = 0;
++    status = pNtClose((HANDLE)0xdeadbeef);
++    ok(status == STATUS_INVALID_HANDLE, "NtClose(0xdeadbeef) returned status %08x\n", status);
++    ok(invalid_handle_exceptions == numexc, "NtClose generated %d exceptions, expected %d\n",
++       invalid_handle_exceptions, numexc);
++
++    pRtlRemoveVectoredExceptionHandler(vectored_handler);
++}
++
+ START_TEST(exception)
+ {
+     HMODULE hntdll = GetModuleHandleA("ntdll.dll");
+@@ -1802,6 +1860,7 @@ START_TEST(exception)
+     pNtGetContextThread  = (void *)GetProcAddress( hntdll, "NtGetContextThread" );
+     pNtSetContextThread  = (void *)GetProcAddress( hntdll, "NtSetContextThread" );
+     pNtReadVirtualMemory = (void *)GetProcAddress( hntdll, "NtReadVirtualMemory" );
++    pNtClose             = (void *)GetProcAddress( hntdll, "NtClose" );
+     pRtlUnwind           = (void *)GetProcAddress( hntdll, "RtlUnwind" );
+     pRtlRaiseException   = (void *)GetProcAddress( hntdll, "RtlRaiseException" );
+     pNtTerminateProcess  = (void *)GetProcAddress( hntdll, "NtTerminateProcess" );
+@@ -1865,6 +1924,10 @@ START_TEST(exception)
+             test_ripevent(0);
+             test_stage = 6;
+             test_ripevent(1);
++            test_stage = 7;
++            test_closehandle(0);
++            test_stage = 8;
++            test_closehandle(1);
+         }
+         else
+             skip( "RtlRaiseException not found\n" );
+@@ -1878,6 +1941,7 @@ START_TEST(exception)
+     test_rtlraiseexception();
+     test_outputdebugstring(1, FALSE);
+     test_ripevent(1);
++    test_closehandle(0);
+     test_debugger();
+     test_simd_exceptions();
+     test_fpu_exceptions();
+@@ -1896,6 +1960,7 @@ START_TEST(exception)
+ 
+     test_outputdebugstring(1, FALSE);
+     test_ripevent(1);
++    test_closehandle(0);
+     test_virtual_unwind();
+ 
+     if (pRtlAddFunctionTable && pRtlDeleteFunctionTable && pRtlInstallFunctionTableCallback && pRtlLookupFunctionEntry)
+-- 
+2.1.1
+

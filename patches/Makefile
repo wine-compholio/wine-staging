@@ -38,6 +38,7 @@ PATCHLIST := \
 	kernel32-SystemFileCacheSize.ok \
 	libs-Unicode_Collation.ok \
 	loader-Cmdline_Diagnostics.ok \
+	msvcp110-Specfile.ok \
 	ntdll-DOS_Attributes.ok \
 	ntdll-Dynamic_DST.ok \
 	ntdll-Exception.ok \
@@ -505,6 +506,24 @@ loader-Cmdline_Diagnostics.ok:
 		echo '+    { "loader-Cmdline_Diagnostics", "Sebastian Lackner", "Add commandline option --patches to show the patch list." },'; \
 		echo '+    { "loader-Cmdline_Diagnostics", "Michael Müller", "Add commandline option --check-libs to test if shared libraries are installed." },'; \
 	) > loader-Cmdline_Diagnostics.ok
+
+# Patchset msvcp110-Specfile
+# |
+# | Included patches:
+# |   *	Export ?_BADOFF@std@@3_JB on both i386 and win64. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37198] Export ?_BADOFF@std@@3_JB on both i386 and win64
+# |
+# | Modified files:
+# |   *	dlls/msvcp110/msvcp110.spec
+# |
+.INTERMEDIATE: msvcp110-Specfile.ok
+msvcp110-Specfile.ok:
+	$(call APPLY_FILE,msvcp110-Specfile/0001-msvcp110-Export-_BADOFF-std-3_JB-on-both-i386-and-wi.patch)
+	@( \
+		echo '+    { "msvcp110-Specfile", "Sebastian Lackner", "Export ?_BADOFF@std@@3_JB on both i386 and win64." },'; \
+	) > msvcp110-Specfile.ok
 
 # Patchset ntdll-DOS_Attributes
 # |

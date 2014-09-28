@@ -35,10 +35,11 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [7]:**
+**Bugfixes and features included in the next upcoming release [8]:**
 
 * Correctly treat '.' when checking for empty directories ([Wine Bug #26272](http://bugs.winehq.org/show_bug.cgi?id=26272))
 * Do not fail when a used context is passed to wglShareLists ([Wine Bug #11436](http://bugs.winehq.org/show_bug.cgi?id=11436))
+* Export ?_BADOFF@std@@3_JB on both i386 and win64 ([Wine Bug #37198](http://bugs.winehq.org/show_bug.cgi?id=37198))
 * Fix issues when driver dispatch routine returns different status codes ([Wine Bug #30155](http://bugs.winehq.org/show_bug.cgi?id=30155))
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](http://bugs.winehq.org/show_bug.cgi?id=35652))
 * Support for FIND_FIRST_EX_CASE_SENSITIVE flag in FindFirstFileExW

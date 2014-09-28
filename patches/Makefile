@@ -68,6 +68,7 @@ PATCHLIST := \
 	user32-GetSystemMetrics.ok \
 	user32-GetTipText.ok \
 	user32-WndProc.ok \
+	wine.inf-ProductId.ok \
 	wineboot-HKEY_DYN_DATA.ok \
 	winebuild-LinkerVersion.ok \
 	wined3d-DXTn.ok \
@@ -1088,6 +1089,24 @@ user32-WndProc.ok:
 	@( \
 		echo '+    { "user32-WndProc", "Sebastian Lackner", "Workaround for programs leaking wndproc splots." },'; \
 	) > user32-WndProc.ok
+
+# Patchset wine.inf-ProductId
+# |
+# | Included patches:
+# |   *	wine.inf: Add fake ProductId to HKLM\CurrentVersionNT. [by Yanis Lukes]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36964] Unity3D Editor requires ProductId registry value
+# |
+# | Modified files:
+# |   *	loader/wine.inf.in
+# |
+.INTERMEDIATE: wine.inf-ProductId.ok
+wine.inf-ProductId.ok:
+	$(call APPLY_FILE,wine.inf-ProductId/0001-wine.inf-Add-fake-ProductId-to-HKLM-CurrentVersionNT.patch)
+	@( \
+		echo '+    { "wine.inf-ProductId", "Yanis Lukes", "wine.inf: Add fake ProductId to HKLM\\\\CurrentVersionNT." },'; \
+	) > wine.inf-ProductId.ok
 
 # Patchset wineboot-HKEY_DYN_DATA
 # |

@@ -29,6 +29,7 @@ PATCHLIST := \
 	dbghelp-KdHelp.ok \
 	dsound-Fast_Mixer.ok \
 	fonts-Missing_Fonts.ok \
+	imm32-Cross_Thread_Access.ok \
 	iphlpapi-TCP_Table.ok \
 	kernel32-FindFirstFile.ok \
 	kernel32-GetFinalPathNameByHandle.ok \
@@ -338,6 +339,28 @@ fonts-Missing_Fonts.ok:
 	@( \
 		echo '+    { "fonts-Missing_Fonts", "Torsten Kurbad / Erich E. Hoover", "Implement missing fonts expected by Silverlight. [rev 2]" },'; \
 	) > fonts-Missing_Fonts.ok
+
+# Patchset imm32-Cross_Thread_Access
+# |
+# | Included patches:
+# |   *	Limit cross thread access to ImmSet* functions. [by Aric Stewart]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35361] Limit cross thread access to ImmSet* functions
+# |
+# | Modified files:
+# |   *	dlls/imm32/imm.c, dlls/imm32/tests/imm32.c
+# |
+.INTERMEDIATE: imm32-Cross_Thread_Access.ok
+imm32-Cross_Thread_Access.ok:
+	$(call APPLY_FILE,imm32-Cross_Thread_Access/0001-imm32-Move-thread-data-from-TLSEntry-to-an-internal-.patch)
+	$(call APPLY_FILE,imm32-Cross_Thread_Access/0002-imm32-Do-not-let-ImmDestroyContext-destroy-any-defau.patch)
+	$(call APPLY_FILE,imm32-Cross_Thread_Access/0003-imm32-Use-thread-data-from-target-HWND.patch)
+	$(call APPLY_FILE,imm32-Cross_Thread_Access/0004-imm32-Restrict-crossthread-Association-and-destructi.patch)
+	$(call APPLY_FILE,imm32-Cross_Thread_Access/0005-imm32-Limit-cross-thread-access-to-ImmSet-functions.patch)
+	@( \
+		echo '+    { "imm32-Cross_Thread_Access", "Aric Stewart", "Limit cross thread access to ImmSet* functions." },'; \
+	) > imm32-Cross_Thread_Access.ok
 
 # Patchset iphlpapi-TCP_Table
 # |

@@ -383,22 +383,16 @@ iphlpapi-TCP_Table.ok:
 # Patchset kernel32-FindFirstFile
 # |
 # | Included patches:
-# |   *	Ignore FIND_FIRST_EX_LARGE_FETCH flag in FindFirstFileExW. [by Sebastian Lackner]
-# |   *	Ignore FIND_FIRST_EX_CASE_SENSITIVE flag in FindFirstFileExW. [by Sebastian Lackner]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35121] Support for FIND_FIRST_EX_LARGE_FETCH flag in FindFirstFileExW
+# |   *	Add tests for FIND_FIRST_EX_CASE_SENSITIVE flag in FindFirstFileExW. [by Sebastian Lackner]
 # |
 # | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/kernel32/tests/file.c, include/winbase.h
+# |   *	dlls/kernel32/tests/file.c
 # |
 .INTERMEDIATE: kernel32-FindFirstFile.ok
 kernel32-FindFirstFile.ok:
-	$(call APPLY_FILE,kernel32-FindFirstFile/0001-kernel32-Ignore-FIND_FIRST_EX_LARGE_FETCH-flag-in-Fi.patch)
-	$(call APPLY_FILE,kernel32-FindFirstFile/0002-kernel32-Ignore-FIND_FIRST_EX_CASE_SENSITIVE-flag-in.patch)
+	$(call APPLY_FILE,kernel32-FindFirstFile/0001-kernel32-tests-Add-tests-for-FIND_FIRST_EX_CASE_SENS.patch)
 	@( \
-		echo '+    { "kernel32-FindFirstFile", "Sebastian Lackner", "Ignore FIND_FIRST_EX_LARGE_FETCH flag in FindFirstFileExW." },'; \
-		echo '+    { "kernel32-FindFirstFile", "Sebastian Lackner", "Ignore FIND_FIRST_EX_CASE_SENSITIVE flag in FindFirstFileExW." },'; \
+		echo '+    { "kernel32-FindFirstFile", "Sebastian Lackner", "Add tests for FIND_FIRST_EX_CASE_SENSITIVE flag in FindFirstFileExW." },'; \
 	) > kernel32-FindFirstFile.ok
 
 # Patchset kernel32-GetFinalPathNameByHandle

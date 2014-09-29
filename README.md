@@ -35,7 +35,7 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [9]:**
+**Bugfixes and features included in the next upcoming release [10]:**
 
 * Correctly treat '.' when checking for empty directories ([Wine Bug #26272](http://bugs.winehq.org/show_bug.cgi?id=26272))
 * Do not fail when a used context is passed to wglShareLists ([Wine Bug #11436](http://bugs.winehq.org/show_bug.cgi?id=11436))
@@ -44,6 +44,7 @@ Included bugfixes and improvements
 * Limit cross thread access to ImmSet* functions ([Wine Bug #35361](http://bugs.winehq.org/show_bug.cgi?id=35361))
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](http://bugs.winehq.org/show_bug.cgi?id=35652))
 * Support for FIND_FIRST_EX_CASE_SENSITIVE flag in FindFirstFileExW
+* Support for IRichEditOle and ITextDocument support for ITextServices. ([Wine Bug #17042](http://bugs.winehq.org/show_bug.cgi?id=17042))
 * Unity3D Editor requires ProductId registry value ([Wine Bug #36964](http://bugs.winehq.org/show_bug.cgi?id=36964))
 * Update a XIM candidate position when cursor location changes ([Wine Bug #30938](http://bugs.winehq.org/show_bug.cgi?id=30938))
 

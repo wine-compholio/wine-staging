@@ -386,7 +386,7 @@ iphlpapi-TCP_Table.ok:
 # |   *	Add tests for FIND_FIRST_EX_CASE_SENSITIVE flag in FindFirstFileExW. [by Sebastian Lackner]
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/file.c
+# |   *	dlls/kernel32/tests/file.c, include/winbase.h
 # |
 .INTERMEDIATE: kernel32-FindFirstFile.ok
 kernel32-FindFirstFile.ok:

@@ -1,4 +1,4 @@
-From a91a7228c9547ea780b63576b021fca65af418d4 Mon Sep 17 00:00:00 2001
+From cc2e88887b8a809a49d0712cf2423663510f9741 Mon Sep 17 00:00:00 2001
 From: Jactry Zeng <jzeng@codeweavers.com>
 Date: Sun, 28 Sep 2014 13:17:49 +0800
 Subject: riched20: Add COM aggregation support for IRichEditOle.
@@ -6,8 +6,8 @@ Subject: riched20: Add COM aggregation support for IRichEditOle.
 ---
  dlls/riched20/editor.c  |  4 +-
  dlls/riched20/editor.h  |  2 +-
- dlls/riched20/richole.c | 99 ++++++++++++++++++++++++++++++++++---------------
- 3 files changed, 72 insertions(+), 33 deletions(-)
+ dlls/riched20/richole.c | 98 ++++++++++++++++++++++++++++++++++---------------
+ 3 files changed, 71 insertions(+), 33 deletions(-)
 
 diff --git a/dlls/riched20/editor.c b/dlls/riched20/editor.c
 index 3c0d970..a331001 100644
@@ -45,7 +45,7 @@ index edbac8e..75a3894 100644
  void ME_GetOLEObjectSize(const ME_Context *c, ME_Run *run, SIZE *pSize) DECLSPEC_HIDDEN;
  void ME_CopyReObject(REOBJECT* dst, const REOBJECT* src) DECLSPEC_HIDDEN;
 diff --git a/dlls/riched20/richole.c b/dlls/riched20/richole.c
-index 449b012..7e620ef 100644
+index a0ba2dc..7e620ef 100644
 --- a/dlls/riched20/richole.c
 +++ b/dlls/riched20/richole.c
 @@ -56,8 +56,10 @@ typedef struct ITextFontImpl ITextFontImpl;
@@ -133,15 +133,7 @@ index 449b012..7e620ef 100644
      ULONG ref = InterlockedDecrement(&This->ref);
  
      TRACE ("%p ref=%u\n", This, ref);
-@@ -170,6 +163,7 @@ IRichEditOle_fnRelease(IRichEditOle *me)
-         ITextParaImpl *txtPara;
-         TRACE ("Destroying %p\n", This);
-         This->txtSel->reOle = NULL;
-+        This->editor->reOle = NULL;
-         ITextSelection_Release(&This->txtSel->ITextSelection_iface);
-         IOleClientSite_Release(&This->clientSite->IOleClientSite_iface);
-         LIST_FOR_EACH_ENTRY(txtRge, &This->rangelist, ITextRangeImpl, entry)
-@@ -183,6 +177,44 @@ IRichEditOle_fnRelease(IRichEditOle *me)
+@@ -184,6 +177,44 @@ IRichEditOle_fnRelease(IRichEditOle *me)
      return ref;
  }
  
@@ -186,7 +178,7 @@ index 449b012..7e620ef 100644
  static HRESULT WINAPI
  IRichEditOle_fnActivateAs(IRichEditOle *me, REFCLSID rclsid, REFCLSID rclsidAs)
  {
-@@ -3855,7 +3887,7 @@ CreateTextSelection(IRichEditOleImpl *reOle)
+@@ -3856,7 +3887,7 @@ CreateTextSelection(IRichEditOleImpl *reOle)
      return txtSel;
  }
  
@@ -195,7 +187,7 @@ index 449b012..7e620ef 100644
  {
      IRichEditOleImpl *reo;
  
-@@ -3863,6 +3895,7 @@ LRESULT CreateIRichEditOle(ME_TextEditor *editor, LPVOID *ppObj)
+@@ -3864,6 +3895,7 @@ LRESULT CreateIRichEditOle(ME_TextEditor *editor, LPVOID *ppObj)
      if (!reo)
          return 0;
  
@@ -203,7 +195,7 @@ index 449b012..7e620ef 100644
      reo->IRichEditOle_iface.lpVtbl = &revt;
      reo->ITextDocument_iface.lpVtbl = &tdvt;
      reo->ref = 1;
-@@ -3881,11 +3914,17 @@ LRESULT CreateIRichEditOle(ME_TextEditor *editor, LPVOID *ppObj)
+@@ -3882,11 +3914,17 @@ LRESULT CreateIRichEditOle(ME_TextEditor *editor, LPVOID *ppObj)
          return 0;
      }
      TRACE("Created %p\n",reo);

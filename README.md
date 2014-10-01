@@ -35,7 +35,7 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [9]:**
+**Bugfixes and features included in the next upcoming release [10]:**
 
 * Correctly treat '.' when checking for empty directories ([Wine Bug #26272](http://bugs.winehq.org/show_bug.cgi?id=26272))
 * Do not fail when a used context is passed to wglShareLists ([Wine Bug #11436](http://bugs.winehq.org/show_bug.cgi?id=11436))
@@ -46,6 +46,7 @@ Included bugfixes and improvements
 * Support for IRichEditOle and ITextDocument support for ITextServices. ([Wine Bug #17042](http://bugs.winehq.org/show_bug.cgi?id=17042))
 * Unity3D Editor requires ProductId registry value ([Wine Bug #36964](http://bugs.winehq.org/show_bug.cgi?id=36964))
 * Update a XIM candidate position when cursor location changes ([Wine Bug #30938](http://bugs.winehq.org/show_bug.cgi?id=30938))
+* Voobly expects correct handling of WRITECOPY memory protection ([Wine Bug #29384](http://bugs.winehq.org/show_bug.cgi?id=29384))
 
 
 **Bugs fixed in Wine-Compholio 1.7.27 [63]:**

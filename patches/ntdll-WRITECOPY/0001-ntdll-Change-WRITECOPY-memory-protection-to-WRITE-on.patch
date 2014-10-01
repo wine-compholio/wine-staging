@@ -1,0 +1,261 @@
+From c4669a7173ca193f86a4d3e8bc24eb73b527f7f0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Wed, 1 Oct 2014 00:43:05 +0200
+Subject: ntdll: Change WRITECOPY memory protection to WRITE on first write
+ access.
+
+---
+ dlls/kernel32/tests/virtual.c | 12 ++---------
+ dlls/ntdll/ntdll_misc.h       |  1 +
+ dlls/ntdll/signal_arm.c       |  6 ++++++
+ dlls/ntdll/signal_arm64.c     |  6 ++++++
+ dlls/ntdll/signal_i386.c      | 47 +++++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/signal_powerpc.c   |  6 ++++++
+ dlls/ntdll/signal_x86_64.c    |  6 ++++++
+ dlls/ntdll/thread.c           |  1 +
+ dlls/ntdll/virtual.c          | 25 ++++++++++++++++-------
+ 9 files changed, 93 insertions(+), 17 deletions(-)
+
+diff --git a/dlls/kernel32/tests/virtual.c b/dlls/kernel32/tests/virtual.c
+index 0955d30..5b81e38 100644
+--- a/dlls/kernel32/tests/virtual.c
++++ b/dlls/kernel32/tests/virtual.c
+@@ -2038,11 +2038,7 @@ todo_wine
+                 SetLastError(0xdeadbeef);
+                 ret = VirtualQuery(base, &info, sizeof(info));
+                 ok(ret, "VirtualQuery failed %d\n", GetLastError());
+-                /* FIXME: remove the condition below once Wine is fixed */
+-                if (td[i].prot == PAGE_WRITECOPY || td[i].prot == PAGE_EXECUTE_WRITECOPY)
+-                    todo_wine ok(info.Protect == td[i].prot_after_write, "%d: got %#x != expected %#x\n", i, info.Protect, td[i].prot_after_write);
+-                else
+-                    ok(info.Protect == td[i].prot_after_write, "%d: got %#x != expected %#x\n", i, info.Protect, td[i].prot_after_write);
++                ok(info.Protect == td[i].prot_after_write, "%d: got %#x != expected %#x\n", i, info.Protect, td[i].prot_after_write);
+             }
+         }
+         else
+@@ -2056,11 +2052,7 @@ todo_wine
+         SetLastError(0xdeadbeef);
+         ret = VirtualProtect(base, si.dwPageSize, PAGE_NOACCESS, &old_prot);
+         ok(ret, "%d: VirtualProtect error %d\n", i, GetLastError());
+-        /* FIXME: remove the condition below once Wine is fixed */
+-        if (td[i].prot == PAGE_WRITECOPY || td[i].prot == PAGE_EXECUTE_WRITECOPY)
+-            todo_wine ok(old_prot == td[i].prot_after_write, "%d: got %#x != expected %#x\n", i, old_prot, td[i].prot_after_write);
+-        else
+-            ok(old_prot == td[i].prot_after_write, "%d: got %#x != expected %#x\n", i, old_prot, td[i].prot_after_write);
++        ok(old_prot == td[i].prot_after_write, "%d: got %#x != expected %#x\n", i, old_prot, td[i].prot_after_write);
+     }
+ 
+     UnmapViewOfFile(base);
+diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
+index 4370084..53e6b55 100644
+--- a/dlls/ntdll/ntdll_misc.h
++++ b/dlls/ntdll/ntdll_misc.h
+@@ -67,6 +67,7 @@ extern NTSTATUS signal_alloc_thread( TEB **teb ) DECLSPEC_HIDDEN;
+ extern void signal_free_thread( TEB *teb ) DECLSPEC_HIDDEN;
+ extern void signal_init_thread( TEB *teb ) DECLSPEC_HIDDEN;
+ extern void signal_init_process(void) DECLSPEC_HIDDEN;
++extern void signal_init_early(void) DECLSPEC_HIDDEN;
+ extern void version_init( const WCHAR *appname ) DECLSPEC_HIDDEN;
+ extern void debug_init(void) DECLSPEC_HIDDEN;
+ extern HANDLE thread_init(void) DECLSPEC_HIDDEN;
+diff --git a/dlls/ntdll/signal_arm.c b/dlls/ntdll/signal_arm.c
+index e3ae7bd..1d79b3d 100644
+--- a/dlls/ntdll/signal_arm.c
++++ b/dlls/ntdll/signal_arm.c
+@@ -930,6 +930,12 @@ void signal_init_process(void)
+     exit(1);
+ }
+ 
++/**********************************************************************
++ *    signal_init_early
++ */
++void signal_init_early(void)
++{
++}
+ 
+ /**********************************************************************
+  *              __wine_enter_vm86   (NTDLL.@)
+diff --git a/dlls/ntdll/signal_arm64.c b/dlls/ntdll/signal_arm64.c
+index 8c8f7af..483bc85 100644
+--- a/dlls/ntdll/signal_arm64.c
++++ b/dlls/ntdll/signal_arm64.c
+@@ -791,6 +791,12 @@ void signal_init_process(void)
+     exit(1);
+ }
+ 
++/**********************************************************************
++ *    signal_init_early
++ */
++void signal_init_early(void)
++{
++}
+ 
+ /**********************************************************************
+  *              __wine_enter_vm86   (NTDLL.@)
+diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
+index 12aa5a4..d24e3bf 100644
+--- a/dlls/ntdll/signal_i386.c
++++ b/dlls/ntdll/signal_i386.c
+@@ -1949,6 +1949,30 @@ static void usr2_handler( int signal, siginfo_t *siginfo, void *sigcontext )
+ 
+ 
+ /**********************************************************************
++ *    segv_handler_early
++ *
++ * Handler for SIGSEGV and related errors. Used only during the initialization
++ * of the process to handle virtual faults.
++ */
++static void segv_handler_early( int signal, siginfo_t *siginfo, void *sigcontext )
++{
++    WORD fs, gs;
++    ucontext_t *context = sigcontext;
++    init_handler( sigcontext, &fs, &gs );
++
++    switch(get_trap_code(context))
++    {
++    case TRAP_x86_PAGEFLT:  /* Page fault */
++        if (!virtual_handle_fault( siginfo->si_addr, (get_error_code(context) >> 1) & 0x09 ))
++            return;
++        /* fall-through */
++    default:
++        WINE_ERR( "Got unexpected trap %d during process initialization\n", get_trap_code(context) );
++        break;
++    }
++}
++
++/**********************************************************************
+  *		segv_handler
+  *
+  * Handler for SIGSEGV and related errors.
+@@ -2371,6 +2395,29 @@ void signal_init_process(void)
+     exit(1);
+ }
+ 
++/**********************************************************************
++ *    signal_init_early
++ */
++void signal_init_early(void)
++{
++    struct sigaction sig_act;
++
++    sig_act.sa_mask = server_block_set;
++    sig_act.sa_flags = SA_SIGINFO | SA_RESTART;
++#ifdef SA_ONSTACK
++    sig_act.sa_flags |= SA_ONSTACK;
++#endif
++#ifdef __ANDROID__
++    sig_act.sa_flags |= SA_RESTORER;
++    sig_act.sa_restorer = rt_sigreturn;
++#endif
++    sig_act.sa_sigaction = segv_handler_early;
++    if (sigaction( SIGSEGV, &sig_act, NULL ) == -1)
++    {
++        perror("sigaction");
++        exit(1);
++    }
++}
+ 
+ #ifdef __HAVE_VM86
+ /**********************************************************************
+diff --git a/dlls/ntdll/signal_powerpc.c b/dlls/ntdll/signal_powerpc.c
+index 0fca342..5d1d756 100644
+--- a/dlls/ntdll/signal_powerpc.c
++++ b/dlls/ntdll/signal_powerpc.c
+@@ -1048,6 +1048,12 @@ void signal_init_process(void)
+     exit(1);
+ }
+ 
++/**********************************************************************
++ *    signal_init_early
++ */
++void signal_init_early(void)
++{
++}
+ 
+ /**********************************************************************
+  *              __wine_enter_vm86   (NTDLL.@)
+diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
+index 05581c2..22da5d6 100644
+--- a/dlls/ntdll/signal_x86_64.c
++++ b/dlls/ntdll/signal_x86_64.c
+@@ -2576,6 +2576,12 @@ void signal_init_process(void)
+     exit(1);
+ }
+ 
++/**********************************************************************
++ *    signal_init_early
++ */
++void signal_init_early(void)
++{
++}
+ 
+ /**********************************************************************
+  *              RtlAddFunctionTable   (NTDLL.@)
+diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
+index c8461b0..a2937c2 100644
+--- a/dlls/ntdll/thread.c
++++ b/dlls/ntdll/thread.c
+@@ -221,6 +221,7 @@ HANDLE thread_init(void)
+     static struct debug_info debug_info;  /* debug info for initial thread */
+ 
+     virtual_init();
++    signal_init_early();
+ 
+     /* reserve space for shared user data */
+ 
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index 4819d2d..54d64e1 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -179,8 +179,13 @@ static int VIRTUAL_GetUnixProt( BYTE vprot )
+     {
+         if (vprot & VPROT_READ) prot |= PROT_READ;
+         if (vprot & VPROT_WRITE) prot |= PROT_WRITE | PROT_READ;
+-        if (vprot & VPROT_WRITECOPY) prot |= PROT_WRITE | PROT_READ;
+         if (vprot & VPROT_EXEC) prot |= PROT_EXEC | PROT_READ;
++#if defined(__i386__)
++        if (vprot & VPROT_WRITECOPY) prot &= ~PROT_WRITE;
++#else
++        /* FIXME: Architecture needs implementation of signal_init_early. */
++        if (vprot & VPROT_WRITECOPY) prot |= PROT_WRITE;
++#endif
+         if (vprot & VPROT_WRITEWATCH) prot &= ~PROT_WRITE;
+     }
+     if (!prot) prot = PROT_NONE;
+@@ -1522,21 +1527,27 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err )
+     {
+         void *page = ROUND_ADDR( addr, page_mask );
+         BYTE *vprot = &view->prot[((const char *)page - (const char *)view->base) >> page_shift];
+-        if (*vprot & VPROT_GUARD)
+-        {
+-            VIRTUAL_SetProt( view, page, page_size, *vprot & ~VPROT_GUARD );
+-            ret = STATUS_GUARD_PAGE_VIOLATION;
+-        }
+-        if ((err & EXCEPTION_WRITE_FAULT) && (view->protect & VPROT_WRITEWATCH))
++        if ((err & EXCEPTION_WRITE_FAULT) && ((view->protect & VPROT_WRITEWATCH) ||
++                                              (*vprot & VPROT_WRITECOPY)))
+         {
+             if (*vprot & VPROT_WRITEWATCH)
+             {
+                 *vprot &= ~VPROT_WRITEWATCH;
+                 VIRTUAL_SetProt( view, page, page_size, *vprot );
+             }
++            if (*vprot & VPROT_WRITECOPY)
++            {
++                *vprot = (*vprot & ~VPROT_WRITECOPY) | VPROT_WRITE;
++                VIRTUAL_SetProt( view, page, page_size, *vprot );
++            }
+             /* ignore fault if page is writable now */
+             if (VIRTUAL_GetUnixProt( *vprot ) & PROT_WRITE) ret = STATUS_SUCCESS;
+         }
++        if (*vprot & VPROT_GUARD)
++        {
++            VIRTUAL_SetProt( view, page, page_size, *vprot & ~VPROT_GUARD );
++            ret = STATUS_GUARD_PAGE_VIOLATION;
++        }
+     }
+     server_leave_uninterrupted_section( &csVirtual, &sigset );
+     return ret;
+-- 
+1.9.1
+

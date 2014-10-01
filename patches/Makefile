@@ -50,6 +50,7 @@ PATCHLIST := \
 	ntdll-Heap_FreeLists.ok \
 	ntdll-Junction_Points.ok \
 	ntdll-Pipe_SpecialCharacters.ok \
+	ntdll-WRITECOPY.ok \
 	ntdll-loader_EntryPoint.ok \
 	ntoskrnl-Irp_Status.ok \
 	quartz-MediaSeeking_Positions.ok \
@@ -738,6 +739,26 @@ ntdll-Pipe_SpecialCharacters.ok:
 	@( \
 		echo '+    { "ntdll-Pipe_SpecialCharacters", "Michael Müller", "Allow special characters in pipe names." },'; \
 	) > ntdll-Pipe_SpecialCharacters.ok
+
+# Patchset ntdll-WRITECOPY
+# |
+# | Included patches:
+# |   *	Change WRITECOPY memory protection to WRITE on first write. [by Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#29384] Voobly expects correct handling of WRITECOPY memory protection
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c,
+# | 	dlls/ntdll/signal_i386.c, dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/thread.c,
+# | 	dlls/ntdll/virtual.c
+# |
+.INTERMEDIATE: ntdll-WRITECOPY.ok
+ntdll-WRITECOPY.ok:
+	$(call APPLY_FILE,ntdll-WRITECOPY/0001-ntdll-Change-WRITECOPY-memory-protection-to-WRITE-on.patch)
+	@( \
+		echo '+    { "ntdll-WRITECOPY", "Michael Müller", "Change WRITECOPY memory protection to WRITE on first write." },'; \
+	) > ntdll-WRITECOPY.ok
 
 # Patchset ntdll-loader_EntryPoint
 # |

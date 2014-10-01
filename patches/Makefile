@@ -67,6 +67,7 @@ PATCHLIST := \
 	shell32-RunDLL_CallEntry16.ok \
 	shell32-SHCreateSessionKey.ok \
 	shlwapi-PathIsDirectoryEmptyW.ok \
+	shlwapi-SH_Shared.ok \
 	shlwapi-UrlCombine.ok \
 	user32-Dialog_Paint_Event.ok \
 	user32-GetSystemMetrics.ok \
@@ -1081,6 +1082,22 @@ shlwapi-PathIsDirectoryEmptyW.ok:
 	@( \
 		echo '+    { "shlwapi-PathIsDirectoryEmptyW", "Michael Müller", "Correctly treat '\''.'\'' when enumerating files in PathIsDirectoryEmptyW." },'; \
 	) > shlwapi-PathIsDirectoryEmptyW.ok
+
+# Patchset shlwapi-SH_Shared
+# |
+# | Included patches:
+# |   *	Fix implementation of SH*Shared commands. [by Sebastian Lackner]
+# |
+# | Modified files:
+# |   *	dlls/shlwapi/ordinal.c, dlls/shlwapi/tests/ordinal.c
+# |
+.INTERMEDIATE: shlwapi-SH_Shared.ok
+shlwapi-SH_Shared.ok:
+	$(call APPLY_FILE,shlwapi-SH_Shared/0001-shlwapi-tests-Add-SH-Shared-inter-process-tests.patch)
+	$(call APPLY_FILE,shlwapi-SH_Shared/0002-shlwapi-Fixed-swapped-argument-order-in-SHLWAPI_DupS.patch)
+	@( \
+		echo '+    { "shlwapi-SH_Shared", "Sebastian Lackner", "Fix implementation of SH*Shared commands." },'; \
+	) > shlwapi-SH_Shared.ok
 
 # Patchset shlwapi-UrlCombine
 # |

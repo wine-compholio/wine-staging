@@ -39,7 +39,6 @@ PATCHLIST := \
 	kernel32-SystemFileCacheSize.ok \
 	libs-Unicode_Collation.ok \
 	loader-Cmdline_Diagnostics.ok \
-	msvcp110-Specfile.ok \
 	ntdll-DOS_Attributes.ok \
 	ntdll-Dynamic_DST.ok \
 	ntdll-Exception.ok \
@@ -68,7 +67,6 @@ PATCHLIST := \
 	shell32-RunDLL_CallEntry16.ok \
 	shell32-SHCreateSessionKey.ok \
 	shlwapi-PathIsDirectoryEmptyW.ok \
-	shlwapi-SH_Shared.ok \
 	shlwapi-UrlCombine.ok \
 	user32-Dialog_Paint_Event.ok \
 	user32-GetSystemMetrics.ok \
@@ -152,7 +150,7 @@ clean:
 # | Modified files:
 # |   *	dlls/d3d9/tests/visual.c, dlls/kernel32/locale.c, dlls/msvcp90/ios.c, dlls/msvcp90/locale.c, dlls/msvcp90/string.c,
 # | 	dlls/netapi32/netapi32.c, dlls/usp10/opentype.c, dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c,
-# | 	dlls/wined3d/resource.c, dlls/wined3d/swapchain.c, server/object.c, tools/makedep.c
+# | 	dlls/wined3d/resource.c, dlls/wined3d/swapchain.c, tools/makedep.c
 # |
 .INTERMEDIATE: Miscellaneous.ok
 Miscellaneous.ok:
@@ -526,24 +524,6 @@ loader-Cmdline_Diagnostics.ok:
 		echo '+    { "loader-Cmdline_Diagnostics", "Michael Müller", "Add commandline option --check-libs to test if shared libraries are installed." },'; \
 	) > loader-Cmdline_Diagnostics.ok
 
-# Patchset msvcp110-Specfile
-# |
-# | Included patches:
-# |   *	Export ?_BADOFF@std@@3_JB on both i386 and win64. [by Sebastian Lackner]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37198] Export ?_BADOFF@std@@3_JB on both i386 and win64
-# |
-# | Modified files:
-# |   *	dlls/msvcp110/msvcp110.spec
-# |
-.INTERMEDIATE: msvcp110-Specfile.ok
-msvcp110-Specfile.ok:
-	$(call APPLY_FILE,msvcp110-Specfile/0001-msvcp110-Export-_BADOFF-std-3_JB-on-both-i386-and-wi.patch)
-	@( \
-		echo '+    { "msvcp110-Specfile", "Sebastian Lackner", "Export ?_BADOFF@std@@3_JB on both i386 and win64." },'; \
-	) > msvcp110-Specfile.ok
-
 # Patchset ntdll-DOS_Attributes
 # |
 # | Included patches:
@@ -907,15 +887,13 @@ server-Address_Change_Notification.ok:
 # |   *	[#22006] Support for process ACLs
 # |
 # | Modified files:
-# |   *	dlls/advapi32/tests/security.c, dlls/kernel32/process.c, server/object.c, server/object.h, server/process.c,
-# | 	server/protocol.def
+# |   *	dlls/advapi32/tests/security.c, dlls/kernel32/process.c, server/process.c, server/protocol.def
 # |
 .INTERMEDIATE: server-CreateProcess_ACLs.ok
 server-CreateProcess_ACLs.ok:
-	$(call APPLY_FILE,server-CreateProcess_ACLs/0001-server-A-new-function-set_sd_defaults_from_token-tha.patch)
-	$(call APPLY_FILE,server-CreateProcess_ACLs/0002-server-Support-sending-thread-and-process-security-d.patch)
-	$(call APPLY_FILE,server-CreateProcess_ACLs/0003-kernel32-Implement-passing-a-process-security-descri.patch)
-	$(call APPLY_FILE,server-CreateProcess_ACLs/0004-advapi32-tests-Add-additional-tests-for-passing-a-th.patch)
+	$(call APPLY_FILE,server-CreateProcess_ACLs/0001-server-Support-sending-thread-and-process-security-d.patch)
+	$(call APPLY_FILE,server-CreateProcess_ACLs/0002-kernel32-Implement-passing-a-process-security-descri.patch)
+	$(call APPLY_FILE,server-CreateProcess_ACLs/0003-advapi32-tests-Add-additional-tests-for-passing-a-th.patch)
 	@( \
 		echo '+    { "server-CreateProcess_ACLs", "Joris van der Wel / Sebastian Lackner", "Implement passing ACLs to CreateProcess. [rev 2]" },'; \
 	) > server-CreateProcess_ACLs.ok
@@ -1103,22 +1081,6 @@ shlwapi-PathIsDirectoryEmptyW.ok:
 	@( \
 		echo '+    { "shlwapi-PathIsDirectoryEmptyW", "Michael Müller", "Correctly treat '\''.'\'' when enumerating files in PathIsDirectoryEmptyW." },'; \
 	) > shlwapi-PathIsDirectoryEmptyW.ok
-
-# Patchset shlwapi-SH_Shared
-# |
-# | Included patches:
-# |   *	Fix implementation of SH*Shared commands. [by Sebastian Lackner]
-# |
-# | Modified files:
-# |   *	dlls/shlwapi/ordinal.c, dlls/shlwapi/tests/ordinal.c
-# |
-.INTERMEDIATE: shlwapi-SH_Shared.ok
-shlwapi-SH_Shared.ok:
-	$(call APPLY_FILE,shlwapi-SH_Shared/0001-shlwapi-tests-Add-SH-Shared-inter-process-tests.patch)
-	$(call APPLY_FILE,shlwapi-SH_Shared/0002-shlwapi-Fixed-swapped-argument-order-in-SHLWAPI_DupS.patch)
-	@( \
-		echo '+    { "shlwapi-SH_Shared", "Sebastian Lackner", "Fix implementation of SH*Shared commands." },'; \
-	) > shlwapi-SH_Shared.ok
 
 # Patchset shlwapi-UrlCombine
 # |

@@ -19,6 +19,7 @@ APPLY_FILE = @echo "Applying $(1)"; $(APPLY) < "$(CURDIR)/$(1)"
 #
 
 PATCHLIST := \
+	Compholio.ok \
 	Miscellaneous.ok \
 	Pipelight.ok \
 	atl-IOCS_Property.ok \
@@ -38,7 +39,6 @@ PATCHLIST := \
 	kernel32-Named_Pipe.ok \
 	kernel32-SystemFileCacheSize.ok \
 	libs-Unicode_Collation.ok \
-	loader-Cmdline_Diagnostics.ok \
 	ntdll-DOS_Attributes.ok \
 	ntdll-Dynamic_DST.ok \
 	ntdll-Exception.ok \
@@ -136,6 +136,31 @@ series: $(PATCHLIST)
 clean:
 	rm -f series patchlist.diff
 	rm -f *.ok
+
+# Patchset Compholio
+# |
+# | Included patches:
+# |   *	Add winediag message to show warning, that this isn't vanilla wine. [by Sebastian Lackner]
+# |   *	Append '(Compholio)' at the end of the version string. [by Sebastian Lackner]
+# |   *	Add commandline option --patches to show the patch list. [by Sebastian Lackner]
+# |   *	Add commandline option --check-libs to test if shared libraries are installed. [by Michael Müller]
+# |
+# | Modified files:
+# |   *	dlls/kernel32/process.c, dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec, include/wine/library.h, libs/wine/Makefile.in,
+# | 	libs/wine/config.c, libs/wine/loader.c, libs/wine/wine.def, libs/wine/wine.map, loader/main.c
+# |
+.INTERMEDIATE: Compholio.ok
+Compholio.ok:
+	$(call APPLY_FILE,Compholio/0001-kernel32-Add-winediag-message-to-show-warning-that-t.patch)
+	$(call APPLY_FILE,Compholio/0002-winelib-Append-Compholio-at-the-end-of-the-version-s.patch)
+	$(call APPLY_FILE,Compholio/0003-loader-Add-commandline-option-patches-to-show-the-pa.patch)
+	$(call APPLY_FILE,Compholio/0004-loader-Add-commandline-option-check-libs.patch)
+	@( \
+		echo '+    { "Compholio", "Sebastian Lackner", "Add winediag message to show warning, that this isn'\''t vanilla wine." },'; \
+		echo '+    { "Compholio", "Sebastian Lackner", "Append '\''(Compholio)'\'' at the end of the version string." },'; \
+		echo '+    { "Compholio", "Sebastian Lackner", "Add commandline option --patches to show the patch list." },'; \
+		echo '+    { "Compholio", "Michael Müller", "Add commandline option --check-libs to test if shared libraries are installed." },'; \
+	) > Compholio.ok
 
 # Patchset Miscellaneous
 # |
@@ -504,25 +529,6 @@ libs-Unicode_Collation.ok:
 	@( \
 		echo '+    { "libs-Unicode_Collation", "Dmitry Timoshkov", "Fix comparison of punctuation characters." },'; \
 	) > libs-Unicode_Collation.ok
-
-# Patchset loader-Cmdline_Diagnostics
-# |
-# | Included patches:
-# |   *	Add commandline option --patches to show the patch list. [by Sebastian Lackner]
-# |   *	Add commandline option --check-libs to test if shared libraries are installed. [by Michael Müller]
-# |
-# | Modified files:
-# |   *	dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec, include/wine/library.h, libs/wine/config.c, libs/wine/loader.c,
-# | 	libs/wine/wine.def, libs/wine/wine.map, loader/main.c
-# |
-.INTERMEDIATE: loader-Cmdline_Diagnostics.ok
-loader-Cmdline_Diagnostics.ok:
-	$(call APPLY_FILE,loader-Cmdline_Diagnostics/0001-loader-Add-commandline-option-patches-to-show-the-pa.patch)
-	$(call APPLY_FILE,loader-Cmdline_Diagnostics/0002-loader-Add-commandline-option-check-libs.patch)
-	@( \
-		echo '+    { "loader-Cmdline_Diagnostics", "Sebastian Lackner", "Add commandline option --patches to show the patch list." },'; \
-		echo '+    { "loader-Cmdline_Diagnostics", "Michael Müller", "Add commandline option --check-libs to test if shared libraries are installed." },'; \
-	) > loader-Cmdline_Diagnostics.ok
 
 # Patchset ntdll-DOS_Attributes
 # |

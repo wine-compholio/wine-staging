@@ -32,7 +32,6 @@ PATCHLIST := \
 	fonts-Missing_Fonts.ok \
 	imm32-Cross_Thread_Access.ok \
 	iphlpapi-TCP_Table.ok \
-	kernel32-FindFirstFile.ok \
 	kernel32-GetFinalPathNameByHandle.ok \
 	kernel32-GetSystemTimes.ok \
 	kernel32-GetVolumePathName.ok \
@@ -404,21 +403,6 @@ iphlpapi-TCP_Table.ok:
 	@( \
 		echo '+    { "iphlpapi-TCP_Table", "Erich E. Hoover", "Implement AllocateAndGetTcpExTableFromStack." },'; \
 	) > iphlpapi-TCP_Table.ok
-
-# Patchset kernel32-FindFirstFile
-# |
-# | Included patches:
-# |   *	Add tests for FIND_FIRST_EX_CASE_SENSITIVE flag in FindFirstFileExW. [by Sebastian Lackner]
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/file.c, include/winbase.h
-# |
-.INTERMEDIATE: kernel32-FindFirstFile.ok
-kernel32-FindFirstFile.ok:
-	$(call APPLY_FILE,kernel32-FindFirstFile/0001-kernel32-tests-Add-tests-for-FIND_FIRST_EX_CASE_SENS.patch)
-	@( \
-		echo '+    { "kernel32-FindFirstFile", "Sebastian Lackner", "Add tests for FIND_FIRST_EX_CASE_SENSITIVE flag in FindFirstFileExW." },'; \
-	) > kernel32-FindFirstFile.ok
 
 # Patchset kernel32-GetFinalPathNameByHandle
 # |

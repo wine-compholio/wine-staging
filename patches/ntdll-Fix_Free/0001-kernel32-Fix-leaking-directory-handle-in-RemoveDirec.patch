@@ -1,25 +1,17 @@
-From cecc1c37484bd63da728d6dcde7aca633019bdca Mon Sep 17 00:00:00 2001
+From fbb6ccb252d14593cefa5e47a5a6566406f79c40 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Thu, 28 Aug 2014 05:36:01 +0200
 Subject: kernel32: Fix leaking directory handle in RemoveDirectoryW.
 
 ---
- dlls/kernel32/path.c |   16 +++++++++-------
- 1 file changed, 9 insertions(+), 7 deletions(-)
+ dlls/kernel32/path.c |   17 +++++++++++------
+ 1 file changed, 11 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/kernel32/path.c b/dlls/kernel32/path.c
-index 4a41ab8..593cc1d 100644
+index 09fb04b..7e20dc3 100644
 --- a/dlls/kernel32/path.c
 +++ b/dlls/kernel32/path.c
-@@ -1602,7 +1602,6 @@ BOOL WINAPI RemoveDirectoryW( LPCWSTR path )
-         SetLastError( ERROR_PATH_NOT_FOUND );
-         return FALSE;
-     }
--    unix_name.Buffer = NULL;
-     attr.Length = sizeof(attr);
-     attr.RootDirectory = 0;
-     attr.Attributes = OBJ_CASE_INSENSITIVE;
-@@ -1613,18 +1612,21 @@ BOOL WINAPI RemoveDirectoryW( LPCWSTR path )
+@@ -1612,18 +1612,23 @@ BOOL WINAPI RemoveDirectoryW( LPCWSTR path )
      status = NtOpenFile( &handle, DELETE, &attr, &io,
                           FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                           FILE_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT );
@@ -30,12 +22,12 @@ index 4a41ab8..593cc1d 100644
      if (status != STATUS_SUCCESS)
      {
          SetLastError( RtlNtStatusToDosError(status) );
--        RtlFreeAnsiString( &unix_name );
 +        RtlFreeUnicodeString( &nt_name );
          return FALSE;
      }
  
 -    if (!(ret = (rmdir( unix_name.Buffer ) != -1))) FILE_SetDosError();
+-    RtlFreeAnsiString( &unix_name );
 +    status = wine_nt_to_unix_file_name( &nt_name, &unix_name, FILE_OPEN, FALSE );
 +    RtlFreeUnicodeString( &nt_name );
 +
@@ -44,9 +36,11 @@ index 4a41ab8..593cc1d 100644
 +    else if (!(ret = (rmdir( unix_name.Buffer ) != -1)))
 +        FILE_SetDosError();
 +
-     RtlFreeAnsiString( &unix_name );
++    if (status == STATUS_SUCCESS)
++        RtlFreeAnsiString( &unix_name );
      NtClose( handle );
      return ret;
+ }
 -- 
 1.7.9.5
 

@@ -17,7 +17,7 @@ index a273502..5fa0cd5 100644
  }
  
 +struct wine_patch {
-+    const char *hash;
++    const char *name;
 +    const char *author;
 +    const char *title;
 +} wine_patch_data[] = {

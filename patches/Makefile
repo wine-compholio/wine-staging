@@ -47,6 +47,7 @@ PATCHLIST := \
 	ntdll-Fix_Free.ok \
 	ntdll-Heap_FreeLists.ok \
 	ntdll-Junction_Points.ok \
+	ntdll-NtQuerySection.ok \
 	ntdll-Pipe_SpecialCharacters.ok \
 	ntdll-WRITECOPY.ok \
 	ntdll-loader_EntryPoint.ok \
@@ -681,6 +682,24 @@ ntdll-Junction_Points.ok: ntdll-Fix_Free.ok
 	@( \
 		echo '+    { "ntdll-Junction_Points", "Erich E. Hoover", "Support for junction points/reparse points." },'; \
 	) > ntdll-Junction_Points.ok
+
+# Patchset ntdll-NtQuerySection
+# |
+# | Included patches:
+# |   *	Implement NtQuerySection class SectionBasicInformation. [by Dmitry Timoshkov]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37338] Support for NtQuerySection
+# |
+# | Modified files:
+# |   *	dlls/ntdll/nt.c, dlls/ntdll/virtual.c, include/winternl.h
+# |
+.INTERMEDIATE: ntdll-NtQuerySection.ok
+ntdll-NtQuerySection.ok:
+	$(call APPLY_FILE,ntdll-NtQuerySection/0001-ntdll-Implement-NtQuerySection-class-SectionBasicInf.patch)
+	@( \
+		echo '+    { "ntdll-NtQuerySection", "Dmitry Timoshkov", "Implement NtQuerySection class SectionBasicInformation." },'; \
+	) > ntdll-NtQuerySection.ok
 
 # Patchset ntdll-Pipe_SpecialCharacters
 # |

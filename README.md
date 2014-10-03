@@ -35,13 +35,14 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [10]:**
+**Bugfixes and features included in the next upcoming release [11]:**
 
 * Correctly treat '.' when checking for empty directories ([Wine Bug #26272](http://bugs.winehq.org/show_bug.cgi?id=26272))
 * Do not fail when a used context is passed to wglShareLists ([Wine Bug #11436](http://bugs.winehq.org/show_bug.cgi?id=11436))
 * Fix issues when driver dispatch routine returns different status codes ([Wine Bug #30155](http://bugs.winehq.org/show_bug.cgi?id=30155))
 * Limit cross thread access to ImmSet* functions ([Wine Bug #35361](http://bugs.winehq.org/show_bug.cgi?id=35361))
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](http://bugs.winehq.org/show_bug.cgi?id=35652))
+* Support for FindFirstFileExW level FindExInfoBasic ([Wine Bug #37354](http://bugs.winehq.org/show_bug.cgi?id=37354))
 * Support for IRichEditOle and ITextDocument support for ITextServices. ([Wine Bug #17042](http://bugs.winehq.org/show_bug.cgi?id=17042))
 * Support for NtQuerySection ([Wine Bug #37338](http://bugs.winehq.org/show_bug.cgi?id=37338))
 * Unity3D Editor requires ProductId registry value ([Wine Bug #36964](http://bugs.winehq.org/show_bug.cgi?id=36964))

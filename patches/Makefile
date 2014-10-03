@@ -32,6 +32,7 @@ PATCHLIST := \
 	fonts-Missing_Fonts.ok \
 	imm32-Cross_Thread_Access.ok \
 	iphlpapi-TCP_Table.ok \
+	kernel32-FindFirstFile.ok \
 	kernel32-GetFinalPathNameByHandle.ok \
 	kernel32-GetSystemTimes.ok \
 	kernel32-GetVolumePathName.ok \
@@ -404,6 +405,25 @@ iphlpapi-TCP_Table.ok:
 	@( \
 		echo '+    { "iphlpapi-TCP_Table", "Erich E. Hoover", "Implement AllocateAndGetTcpExTableFromStack." },'; \
 	) > iphlpapi-TCP_Table.ok
+
+# Patchset kernel32-FindFirstFile
+# |
+# | Included patches:
+# |   *	Implement FindFirstFileExW level FindExInfoBasic. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37354] Support for FindFirstFileExW level FindExInfoBasic
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, dlls/kernel32/tests/file.c
+# |
+.INTERMEDIATE: kernel32-FindFirstFile.ok
+kernel32-FindFirstFile.ok:
+	$(call APPLY_FILE,kernel32-FindFirstFile/0001-kernel32-Set-proper-error-codes-if-FindFirstFileExW-.patch)
+	$(call APPLY_FILE,kernel32-FindFirstFile/0002-kernel32-Implement-FindFirstFileExW-level-FindExInfo.patch)
+	@( \
+		echo '+    { "kernel32-FindFirstFile", "Sebastian Lackner", "Implement FindFirstFileExW level FindExInfoBasic." },'; \
+	) > kernel32-FindFirstFile.ok
 
 # Patchset kernel32-GetFinalPathNameByHandle
 # |

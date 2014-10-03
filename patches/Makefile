@@ -703,21 +703,21 @@ ntdll-Pipe_SpecialCharacters.ok:
 # Patchset ntdll-WRITECOPY
 # |
 # | Included patches:
-# |   *	Change WRITECOPY memory protection to WRITE on first write. [by Michael Müller]
+# |   *	Change WRITECOPY memory protection to WRITE on first write. [rev 2, by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#29384] Voobly expects correct handling of WRITECOPY memory protection
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c,
-# | 	dlls/ntdll/signal_i386.c, dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/thread.c,
-# | 	dlls/ntdll/virtual.c
+# |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/loader.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/signal_arm.c,
+# | 	dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c, dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c,
+# | 	dlls/ntdll/thread.c, dlls/ntdll/virtual.c
 # |
 .INTERMEDIATE: ntdll-WRITECOPY.ok
 ntdll-WRITECOPY.ok:
 	$(call APPLY_FILE,ntdll-WRITECOPY/0001-ntdll-Change-WRITECOPY-memory-protection-to-WRITE-on.patch)
 	@( \
-		echo '+    { "ntdll-WRITECOPY", "Michael Müller", "Change WRITECOPY memory protection to WRITE on first write." },'; \
+		echo '+    { "ntdll-WRITECOPY", "Michael Müller", "Change WRITECOPY memory protection to WRITE on first write. [rev 2]" },'; \
 	) > ntdll-WRITECOPY.ok
 
 # Patchset ntdll-loader_EntryPoint

@@ -1,4 +1,4 @@
-From c4669a7173ca193f86a4d3e8bc24eb73b527f7f0 Mon Sep 17 00:00:00 2001
+From 0fc1479ef685757d335eead4193985df33244d04 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Wed, 1 Oct 2014 00:43:05 +0200
 Subject: ntdll: Change WRITECOPY memory protection to WRITE on first write
@@ -6,6 +6,7 @@ Subject: ntdll: Change WRITECOPY memory protection to WRITE on first write
 
 ---
  dlls/kernel32/tests/virtual.c | 12 ++---------
+ dlls/ntdll/loader.c           |  2 +-
  dlls/ntdll/ntdll_misc.h       |  1 +
  dlls/ntdll/signal_arm.c       |  6 ++++++
  dlls/ntdll/signal_arm64.c     |  6 ++++++
@@ -13,8 +14,8 @@ Subject: ntdll: Change WRITECOPY memory protection to WRITE on first write
  dlls/ntdll/signal_powerpc.c   |  6 ++++++
  dlls/ntdll/signal_x86_64.c    |  6 ++++++
  dlls/ntdll/thread.c           |  1 +
- dlls/ntdll/virtual.c          | 25 ++++++++++++++++-------
- 9 files changed, 93 insertions(+), 17 deletions(-)
+ dlls/ntdll/virtual.c          | 26 ++++++++++++++++--------
+ 10 files changed, 94 insertions(+), 19 deletions(-)
 
 diff --git a/dlls/kernel32/tests/virtual.c b/dlls/kernel32/tests/virtual.c
 index 0955d30..5b81e38 100644
@@ -46,6 +47,20 @@ index 0955d30..5b81e38 100644
      }
  
      UnmapViewOfFile(base);
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index 18ae29c..f0fb1f2 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -2641,8 +2641,8 @@ static void free_modref( WINE_MODREF *wm )
+ 
+     free_tls_slot( &wm->ldr );
+     RtlReleaseActivationContext( wm->ldr.ActivationContext );
+-    NtUnmapViewOfSection( NtCurrentProcess(), wm->ldr.BaseAddress );
+     if (wm->ldr.Flags & LDR_WINE_INTERNAL) wine_dll_unload( wm->ldr.SectionHandle );
++    NtUnmapViewOfSection( NtCurrentProcess(), wm->ldr.BaseAddress );
+     if (cached_modref == wm) cached_modref = NULL;
+     RtlFreeUnicodeString( &wm->ldr.FullDllName );
+     RtlFreeHeap( GetProcessHeap(), 0, wm->deps );
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
 index 4370084..53e6b55 100644
 --- a/dlls/ntdll/ntdll_misc.h
@@ -204,7 +219,7 @@ index c8461b0..a2937c2 100644
      /* reserve space for shared user data */
  
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 4819d2d..54d64e1 100644
+index 4819d2d..a58e582 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
 @@ -179,8 +179,13 @@ static int VIRTUAL_GetUnixProt( BYTE vprot )
@@ -222,7 +237,7 @@ index 4819d2d..54d64e1 100644
          if (vprot & VPROT_WRITEWATCH) prot &= ~PROT_WRITE;
      }
      if (!prot) prot = PROT_NONE;
-@@ -1522,21 +1527,27 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err )
+@@ -1522,21 +1527,26 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err )
      {
          void *page = ROUND_ADDR( addr, page_mask );
          BYTE *vprot = &view->prot[((const char *)page - (const char *)view->base) >> page_shift];
@@ -232,10 +247,10 @@ index 4819d2d..54d64e1 100644
 -            ret = STATUS_GUARD_PAGE_VIOLATION;
 -        }
 -        if ((err & EXCEPTION_WRITE_FAULT) && (view->protect & VPROT_WRITEWATCH))
-+        if ((err & EXCEPTION_WRITE_FAULT) && ((view->protect & VPROT_WRITEWATCH) ||
-+                                              (*vprot & VPROT_WRITECOPY)))
++        if (err & EXCEPTION_WRITE_FAULT)
          {
-             if (*vprot & VPROT_WRITEWATCH)
+-            if (*vprot & VPROT_WRITEWATCH)
++            if ((view->protect & VPROT_WRITEWATCH) && (*vprot & VPROT_WRITEWATCH))
              {
                  *vprot &= ~VPROT_WRITEWATCH;
                  VIRTUAL_SetProt( view, page, page_size, *vprot );

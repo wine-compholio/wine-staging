@@ -768,11 +768,12 @@ ntdll-WRITECOPY.ok:
 # |   *	[#33034] Set ldr.EntryPoint for main executable
 # |
 # | Modified files:
-# |   *	dlls/ntdll/loader.c
+# |   *	dlls/kernel32/tests/module.c, dlls/ntdll/loader.c
 # |
 .INTERMEDIATE: ntdll-loader_EntryPoint.ok
 ntdll-loader_EntryPoint.ok:
-	$(call APPLY_FILE,ntdll-loader_EntryPoint/0001-ntdll-Set-ldr.EntryPoint-for-main-executable.patch)
+	$(call APPLY_FILE,ntdll-loader_EntryPoint/0001-kernel32-tests-Add-tests-for-K32GetModuleInformation.patch)
+	$(call APPLY_FILE,ntdll-loader_EntryPoint/0002-ntdll-Set-ldr.EntryPoint-for-main-executable.-resend.patch)
 	@( \
 		echo '+    { "ntdll-loader_EntryPoint", "Sebastian Lackner", "Set ldr.EntryPoint for main executable." },'; \
 	) > ntdll-loader_EntryPoint.ok

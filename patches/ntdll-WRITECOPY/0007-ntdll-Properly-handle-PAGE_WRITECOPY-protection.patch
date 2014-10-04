@@ -1,0 +1,74 @@
+From 48c067d93de63a0dacbeaf1b962fa614f6015598 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 4 Oct 2014 02:56:08 +0200
+Subject: ntdll: Properly handle PAGE_WRITECOPY protection.
+
+---
+ dlls/kernel32/tests/virtual.c | 12 ++----------
+ dlls/ntdll/virtual.c          | 12 +++++++++++-
+ 2 files changed, 13 insertions(+), 11 deletions(-)
+
+diff --git a/dlls/kernel32/tests/virtual.c b/dlls/kernel32/tests/virtual.c
+index 0955d30..5b81e38 100644
+--- a/dlls/kernel32/tests/virtual.c
++++ b/dlls/kernel32/tests/virtual.c
+@@ -2038,11 +2038,7 @@ todo_wine
+                 SetLastError(0xdeadbeef);
+                 ret = VirtualQuery(base, &info, sizeof(info));
+                 ok(ret, "VirtualQuery failed %d\n", GetLastError());
+-                /* FIXME: remove the condition below once Wine is fixed */
+-                if (td[i].prot == PAGE_WRITECOPY || td[i].prot == PAGE_EXECUTE_WRITECOPY)
+-                    todo_wine ok(info.Protect == td[i].prot_after_write, "%d: got %#x != expected %#x\n", i, info.Protect, td[i].prot_after_write);
+-                else
+-                    ok(info.Protect == td[i].prot_after_write, "%d: got %#x != expected %#x\n", i, info.Protect, td[i].prot_after_write);
++                ok(info.Protect == td[i].prot_after_write, "%d: got %#x != expected %#x\n", i, info.Protect, td[i].prot_after_write);
+             }
+         }
+         else
+@@ -2056,11 +2052,7 @@ todo_wine
+         SetLastError(0xdeadbeef);
+         ret = VirtualProtect(base, si.dwPageSize, PAGE_NOACCESS, &old_prot);
+         ok(ret, "%d: VirtualProtect error %d\n", i, GetLastError());
+-        /* FIXME: remove the condition below once Wine is fixed */
+-        if (td[i].prot == PAGE_WRITECOPY || td[i].prot == PAGE_EXECUTE_WRITECOPY)
+-            todo_wine ok(old_prot == td[i].prot_after_write, "%d: got %#x != expected %#x\n", i, old_prot, td[i].prot_after_write);
+-        else
+-            ok(old_prot == td[i].prot_after_write, "%d: got %#x != expected %#x\n", i, old_prot, td[i].prot_after_write);
++        ok(old_prot == td[i].prot_after_write, "%d: got %#x != expected %#x\n", i, old_prot, td[i].prot_after_write);
+     }
+ 
+     UnmapViewOfFile(base);
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index 0864c24..47654f4 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -179,8 +179,13 @@ static int VIRTUAL_GetUnixProt( BYTE vprot )
+     {
+         if (vprot & VPROT_READ) prot |= PROT_READ;
+         if (vprot & VPROT_WRITE) prot |= PROT_WRITE | PROT_READ;
+-        if (vprot & VPROT_WRITECOPY) prot |= PROT_WRITE | PROT_READ;
+         if (vprot & VPROT_EXEC) prot |= PROT_EXEC | PROT_READ;
++#if defined(__i386__)
++        if (vprot & VPROT_WRITECOPY) prot &= ~PROT_WRITE;
++#else
++        /* FIXME: Architecture needs implementation of signal_init_early. */
++        if (vprot & VPROT_WRITECOPY) prot |= PROT_WRITE | PROT_READ;
++#endif
+         if (vprot & VPROT_WRITEWATCH) prot &= ~PROT_WRITE;
+     }
+     if (!prot) prot = PROT_NONE;
+@@ -1529,6 +1534,11 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err )
+                 *vprot &= ~VPROT_WRITEWATCH;
+                 VIRTUAL_SetProt( view, page, page_size, *vprot );
+             }
++            if (*vprot & VPROT_WRITECOPY)
++            {
++                *vprot = (*vprot & ~VPROT_WRITECOPY) | VPROT_WRITE;
++                VIRTUAL_SetProt( view, page, page_size, *vprot );
++            }
+             /* ignore fault if page is writable now */
+             if (VIRTUAL_GetUnixProt( *vprot ) & PROT_WRITE) ret = STATUS_SUCCESS;
+         }
+-- 
+2.1.1
+

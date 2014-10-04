@@ -1,0 +1,29 @@
+From 7bec7a1bbe62894ed24a07fb7cb2af6a1a496210 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 4 Oct 2014 02:49:51 +0200
+Subject: ntdll: Avoid race-condition if two threads trigger a write watch at
+ exactly the same time.
+
+---
+ dlls/ntdll/virtual.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index f8a5dd3..0864c24 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -1522,9 +1522,9 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err )
+     {
+         void *page = ROUND_ADDR( addr, page_mask );
+         BYTE *vprot = &view->prot[((const char *)page - (const char *)view->base) >> page_shift];
+-        if ((err & EXCEPTION_WRITE_FAULT) && (view->protect & VPROT_WRITEWATCH))
++        if (err & EXCEPTION_WRITE_FAULT)
+         {
+-            if (*vprot & VPROT_WRITEWATCH)
++            if ((view->protect & VPROT_WRITEWATCH) && (*vprot & VPROT_WRITEWATCH))
+             {
+                 *vprot &= ~VPROT_WRITEWATCH;
+                 VIRTUAL_SetProt( view, page, page_size, *vprot );
+-- 
+2.1.1
+

@@ -1,0 +1,32 @@
+From 9dd581f7b7013b9bc26894292f0fffc493caebdd Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 4 Oct 2014 02:35:44 +0200
+Subject: ntdll: Trigger write watches before passing userdata pointer to
+ wait_reply.
+
+---
+ dlls/ntdll/server.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
+index aabda4f..4d5d4ba 100644
+--- a/dlls/ntdll/server.c
++++ b/dlls/ntdll/server.c
+@@ -292,6 +292,14 @@ unsigned int wine_server_call( void *req_ptr )
+     sigset_t old_set;
+     unsigned int ret;
+ 
++    /* trigger write watches, otherwise read() might return EFAULT */
++    if (req->u.req.request_header.reply_size &&
++        !virtual_check_buffer_for_write( req->reply_data, req->u.req.request_header.reply_size ))
++    {
++        ret = STATUS_ACCESS_VIOLATION;
++        return ret;
++    }
++
+     pthread_sigmask( SIG_BLOCK, &server_block_set, &old_set );
+     ret = send_request( req );
+     if (!ret) ret = wait_reply( req );
+-- 
+2.1.1
+

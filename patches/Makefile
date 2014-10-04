@@ -757,11 +757,10 @@ ntdll-WRITECOPY.ok:
 	$(call APPLY_FILE,ntdll-WRITECOPY/0001-ntdll-Trigger-write-watches-before-passing-userdata-.patch)
 	$(call APPLY_FILE,ntdll-WRITECOPY/0002-advapi-Trigger-write-watches-before-passing-userdata.patch)
 	$(call APPLY_FILE,ntdll-WRITECOPY/0003-ntdll-Fix-handling-of-page-fault-if-a-guard-page-and.patch)
-	$(call APPLY_FILE,ntdll-WRITECOPY/0004-ntdll-Avoid-race-condition-if-two-threads-trigger-a-.patch)
-	$(call APPLY_FILE,ntdll-WRITECOPY/0005-ntdll-Wait-until-builtin-dlls-are-unloaded-before-re.patch)
-	$(call APPLY_FILE,ntdll-WRITECOPY/0006-ntdll-Setup-a-temporary-signal-handler-during-proces.patch)
-	$(call APPLY_FILE,ntdll-WRITECOPY/0007-ntdll-Properly-handle-PAGE_WRITECOPY-protection.patch)
-	$(call APPLY_FILE,ntdll-WRITECOPY/0008-ntdll-Only-enable-true-WRITECOPY-protection-when-a-s.patch)
+	$(call APPLY_FILE,ntdll-WRITECOPY/0004-ntdll-Wait-until-builtin-dlls-are-unloaded-before-re.patch)
+	$(call APPLY_FILE,ntdll-WRITECOPY/0005-ntdll-Setup-a-temporary-signal-handler-during-proces.patch)
+	$(call APPLY_FILE,ntdll-WRITECOPY/0006-ntdll-Properly-handle-PAGE_WRITECOPY-protection.patch)
+	$(call APPLY_FILE,ntdll-WRITECOPY/0007-ntdll-Only-enable-true-WRITECOPY-protection-when-a-s.patch)
 	@( \
 		echo '+    { "ntdll-WRITECOPY", "Michael Müller", "Change WRITECOPY memory protection to WRITE on first write. [rev 3]" },'; \
 	) > ntdll-WRITECOPY.ok

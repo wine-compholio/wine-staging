@@ -35,6 +35,11 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
+**Bugfixes and features included in the next upcoming release [1]:**
+
+* Wine ignores IDF_CHECKFIRST flag in SetupPromptForDisk ([Wine Bug #20465](http://bugs.winehq.org/show_bug.cgi?id=20465))
+
+
 **Bugs fixed in Wine-Compholio 1.7.28 [73]:**
 
 * ATL IOCS data should not be stored in GWLP_USERDATA ([Wine Bug #21767](http://bugs.winehq.org/show_bug.cgi?id=21767))

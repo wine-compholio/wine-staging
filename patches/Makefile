@@ -62,6 +62,7 @@ PATCHLIST := \
 	server-Misc_ACL.ok \
 	server-OpenProcess.ok \
 	server-Stored_ACLs.ok \
+	setupapi-SetupPromptForDisk.ok \
 	shell32-Default_Folder_ACLs.ok \
 	shell32-Default_Path.ok \
 	shell32-Icons.ok \
@@ -1002,6 +1003,25 @@ server-Stored_ACLs.ok: ntdll-DOS_Attributes.ok
 	@( \
 		echo '+    { "server-Stored_ACLs", "Erich E. Hoover", "Store and return security attributes with extended file attributes. [rev 7]" },'; \
 	) > server-Stored_ACLs.ok
+
+# Patchset setupapi-SetupPromptForDisk
+# |
+# | Included patches:
+# |   *	Add support for IDF_CHECKFIRST flag in SetupPromptForDiskW. [by Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#20465] Wine ignores IDF_CHECKFIRST flag in SetupPromptForDisk
+# |
+# | Modified files:
+# |   *	dlls/setupapi/dialog.c, dlls/setupapi/tests/Makefile.in, dlls/setupapi/tests/dialog.c
+# |
+.INTERMEDIATE: setupapi-SetupPromptForDisk.ok
+setupapi-SetupPromptForDisk.ok:
+	$(call APPLY_FILE,setupapi-SetupPromptForDisk/0001-setupapi-Add-support-for-IDF_CHECKFIRST-flag-in-Setu.patch)
+	$(call APPLY_FILE,setupapi-SetupPromptForDisk/0002-setupapi-tests-Add-test-for-IDF_CHECKFIRST-and-Setup.patch)
+	@( \
+		echo '+    { "setupapi-SetupPromptForDisk", "Michael Müller", "Add support for IDF_CHECKFIRST flag in SetupPromptForDiskW." },'; \
+	) > setupapi-SetupPromptForDisk.ok
 
 # Patchset shell32-Default_Folder_ACLs
 # |

@@ -1,0 +1,52 @@
+From 627cb8f9cd6853de1f711fc8100b1e4deecbce99 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 5 Oct 2014 23:29:18 +0200
+Subject: setupapi: Add support for IDF_CHECKFIRST flag in SetupPromptForDiskW.
+
+---
+ dlls/setupapi/dialog.c | 29 +++++++++++++++++++++++++++++
+ 1 file changed, 29 insertions(+)
+
+diff --git a/dlls/setupapi/dialog.c b/dlls/setupapi/dialog.c
+index 24a46e8..daacaf5 100644
+--- a/dlls/setupapi/dialog.c
++++ b/dlls/setupapi/dialog.c
+@@ -248,6 +248,35 @@ UINT WINAPI SetupPromptForDiskW(HWND hwndParent, PCWSTR DialogTitle, PCWSTR Disk
+         SetLastError(ERROR_INVALID_PARAMETER);
+         return DPROMPT_CANCEL;
+     }
++
++    if (PathToSource && (DiskPromptStyle & IDF_CHECKFIRST))
++    {
++        static const WCHAR format[] = {'%', 's', '\\', '%', 's', '\0'};
++        WCHAR filepath[MAX_PATH];
++
++        if (strlenW(PathToSource) + 1 + strlenW(FileSought) < sizeof(filepath))
++        {
++            snprintfW(filepath, MAX_PATH, format, PathToSource, FileSought);
++
++            if (GetFileAttributesW(filepath) != INVALID_FILE_ATTRIBUTES)
++            {
++                if (PathRequiredSize)
++                    *PathRequiredSize = strlenW(PathToSource) + 1;
++
++                if (!PathBuffer)
++                    return DPROMPT_SUCCESS;
++
++                if (PathBufferSize >= strlenW(PathToSource) + 1)
++                {
++                    strcpyW(PathBuffer, PathToSource);
++                    return DPROMPT_SUCCESS;
++                }
++                else
++                    return DPROMPT_BUFFERTOOSMALL;
++            }
++        }
++    }
++
+     params.DialogTitle = DialogTitle;
+     params.DiskName = DiskName;
+     params.PathToSource = PathToSource;
+-- 
+1.9.1
+

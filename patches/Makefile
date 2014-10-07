@@ -23,7 +23,6 @@ PATCHLIST := \
 	Miscellaneous.ok \
 	Pipelight.ok \
 	atl-IOCS_Property.ok \
-	comctl32-ImageList.ok \
 	comctl32-LoadIconMetric.ok \
 	configure-Absolute_RPATH.ok \
 	configure-Detect_Gnutls.ok \
@@ -51,7 +50,6 @@ PATCHLIST := \
 	ntdll-NtQuerySection.ok \
 	ntdll-Pipe_SpecialCharacters.ok \
 	ntdll-WRITECOPY.ok \
-	ntdll-loader_EntryPoint.ok \
 	ntoskrnl-Irp_Status.ok \
 	quartz-MediaSeeking_Positions.ok \
 	riched20-IText_Interface.ok \
@@ -238,24 +236,6 @@ atl-IOCS_Property.ok:
 	@( \
 		echo '+    { "atl-IOCS_Property", "Qian Hong", "Store IOCS data in a property instead of GWLP_USERDATA." },'; \
 	) > atl-IOCS_Property.ok
-
-# Patchset comctl32-ImageList
-# |
-# | Included patches:
-# |   *	Fix issue that dragimage in ImageList only works for first four elements. [by Sebastian Lackner]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36761] Fix issue with invisible dragimages in ImageList
-# |
-# | Modified files:
-# |   *	dlls/comctl32/imagelist.c
-# |
-.INTERMEDIATE: comctl32-ImageList.ok
-comctl32-ImageList.ok:
-	$(call APPLY_FILE,comctl32-ImageList/0001-comctl32-Fix-issue-that-dragimage-in-ImageList-only-.patch)
-	@( \
-		echo '+    { "comctl32-ImageList", "Sebastian Lackner", "Fix issue that dragimage in ImageList only works for first four elements." },'; \
-	) > comctl32-ImageList.ok
 
 # Patchset comctl32-LoadIconMetric
 # |
@@ -749,7 +729,7 @@ ntdll-Pipe_SpecialCharacters.ok:
 # |   *	[#29384] Voobly expects correct handling of WRITECOPY memory protection
 # |
 # | Modified files:
-# |   *	dlls/advapi32/crypt.c, dlls/kernel32/tests/virtual.c, dlls/ntdll/loader.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c,
+# |   *	dlls/advapi32/crypt.c, dlls/kernel32/tests/virtual.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c,
 # | 	dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c, dlls/ntdll/signal_powerpc.c,
 # | 	dlls/ntdll/signal_x86_64.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c
 # |
@@ -757,33 +737,12 @@ ntdll-Pipe_SpecialCharacters.ok:
 ntdll-WRITECOPY.ok:
 	$(call APPLY_FILE,ntdll-WRITECOPY/0001-ntdll-Trigger-write-watches-before-passing-userdata-.patch)
 	$(call APPLY_FILE,ntdll-WRITECOPY/0002-advapi-Trigger-write-watches-before-passing-userdata.patch)
-	$(call APPLY_FILE,ntdll-WRITECOPY/0003-ntdll-Fix-handling-of-page-fault-if-a-guard-page-and.patch)
-	$(call APPLY_FILE,ntdll-WRITECOPY/0004-ntdll-Wait-until-builtin-dlls-are-unloaded-before-re.patch)
-	$(call APPLY_FILE,ntdll-WRITECOPY/0005-ntdll-Setup-a-temporary-signal-handler-during-proces.patch)
-	$(call APPLY_FILE,ntdll-WRITECOPY/0006-ntdll-Properly-handle-PAGE_WRITECOPY-protection.patch)
-	$(call APPLY_FILE,ntdll-WRITECOPY/0007-ntdll-Only-enable-true-WRITECOPY-protection-when-a-s.patch)
+	$(call APPLY_FILE,ntdll-WRITECOPY/0003-ntdll-Setup-a-temporary-signal-handler-during-proces.patch)
+	$(call APPLY_FILE,ntdll-WRITECOPY/0004-ntdll-Properly-handle-PAGE_WRITECOPY-protection.patch)
+	$(call APPLY_FILE,ntdll-WRITECOPY/0005-ntdll-Only-enable-true-WRITECOPY-protection-when-a-s.patch)
 	@( \
 		echo '+    { "ntdll-WRITECOPY", "Michael Müller", "Change WRITECOPY memory protection to WRITE on first write. [rev 3]" },'; \
 	) > ntdll-WRITECOPY.ok
-
-# Patchset ntdll-loader_EntryPoint
-# |
-# | Included patches:
-# |   *	Set ldr.EntryPoint for main executable. [by Sebastian Lackner]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#33034] Set ldr.EntryPoint for main executable
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/module.c, dlls/ntdll/loader.c
-# |
-.INTERMEDIATE: ntdll-loader_EntryPoint.ok
-ntdll-loader_EntryPoint.ok:
-	$(call APPLY_FILE,ntdll-loader_EntryPoint/0001-kernel32-tests-Add-tests-for-K32GetModuleInformation.patch)
-	$(call APPLY_FILE,ntdll-loader_EntryPoint/0002-ntdll-Set-ldr.EntryPoint-for-main-executable.-resend.patch)
-	@( \
-		echo '+    { "ntdll-loader_EntryPoint", "Sebastian Lackner", "Set ldr.EntryPoint for main executable." },'; \
-	) > ntdll-loader_EntryPoint.ok
 
 # Patchset ntoskrnl-Irp_Status
 # |

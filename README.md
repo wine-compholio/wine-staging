@@ -57,7 +57,7 @@ Included bugfixes and improvements
 * Fix for ConnectNamedPort return value in overlapped mode ([Wine Bug #16550](http://bugs.winehq.org/show_bug.cgi?id=16550))
 * Fix for programs leaking wndproc slots ([Wine Bug #32451](http://bugs.winehq.org/show_bug.cgi?id=32451))
 * Fix gray screen on startup introduced by pixelformat changes. ([Wine Bug #35975](http://bugs.winehq.org/show_bug.cgi?id=35975))
-* Fix issue with invisible dragimages in ImageList ([Wine Bug #36761](http://bugs.winehq.org/show_bug.cgi?id=36761))
+* ~~Fix issue with invisible dragimages in ImageList~~ ([Wine Bug #36761](http://bugs.winehq.org/show_bug.cgi?id=36761))
 * Fix issues when driver dispatch routine returns different status codes ([Wine Bug #30155](http://bugs.winehq.org/show_bug.cgi?id=30155))
 * Fix missing video introduced by pixelformat changes. ([Wine Bug #36900](http://bugs.winehq.org/show_bug.cgi?id=36900))
 * Fix unintentional leaks with ntdll internals
@@ -79,7 +79,7 @@ Included bugfixes and improvements
 * Return correct IMediaSeeking stream positions in quartz ([Wine Bug #23174](http://bugs.winehq.org/show_bug.cgi?id=23174))
 * SO_CONNECT_TIME returns the appropriate time
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](http://bugs.winehq.org/show_bug.cgi?id=35652))
-* Set ldr.EntryPoint for main executable ([Wine Bug #33034](http://bugs.winehq.org/show_bug.cgi?id=33034))
+* ~~Set ldr.EntryPoint for main executable~~ ([Wine Bug #33034](http://bugs.winehq.org/show_bug.cgi?id=33034))
 * Support for AllocateAndGetTcpExTableFromStack ([Wine Bug #34372](http://bugs.winehq.org/show_bug.cgi?id=34372))
 * Support for DOS hidden/system file attributes ([Wine Bug #9158](http://bugs.winehq.org/show_bug.cgi?id=9158))
 * Support for Dynamic DST (daylight saving time) information in registry

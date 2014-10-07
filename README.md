@@ -35,8 +35,9 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [1]:**
+**Bugfixes and features included in the next upcoming release [2]:**
 
+* Programs using PortAudio library require ksuser.dll ([Wine Bug #29817](http://bugs.winehq.org/show_bug.cgi?id=29817))
 * Wine ignores IDF_CHECKFIRST flag in SetupPromptForDisk ([Wine Bug #20465](http://bugs.winehq.org/show_bug.cgi?id=20465))
 
 

@@ -37,7 +37,6 @@ PATCHLIST := \
 	kernel32-GetVolumePathName.ok \
 	kernel32-Named_Pipe.ok \
 	kernel32-SystemFileCacheSize.ok \
-	ksuser-stub.ok \
 	libs-Unicode_Collation.ok \
 	ntdll-DOS_Attributes.ok \
 	ntdll-Dynamic_DST.ok \
@@ -498,24 +497,6 @@ kernel32-SystemFileCacheSize.ok:
 	@( \
 		echo '+    { "kernel32-SystemFileCacheSize", "Austin English", "Add stub for [Get|Set]SystemFileCacheSize." },'; \
 	) > kernel32-SystemFileCacheSize.ok
-
-# Patchset ksuser-stub
-# |
-# | Included patches:
-# |   *	Add ksuser.dll stub. [by Stefan Leichter]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#29817] Programs using PortAudio library require ksuser.dll
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/ksuser/Makefile.in, dlls/ksuser/ksuser.spec, dlls/ksuser/main.c
-# |
-.INTERMEDIATE: ksuser-stub.ok
-ksuser-stub.ok:
-	$(call APPLY_FILE,ksuser-stub/0001-ksuser-new-stub-dll.patch)
-	@( \
-		echo '+    { "ksuser-stub", "Stefan Leichter", "Add ksuser.dll stub." },'; \
-	) > ksuser-stub.ok
 
 # Patchset libs-Unicode_Collation
 # |

@@ -1,0 +1,336 @@
+From c672ac883d5b2c6f00fb6cff0abd70887dbbcef1 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 8 Oct 2014 20:54:50 +0200
+Subject: kernel32/tests: Add tests for DEP combined with guard pages and write
+ watches.
+
+---
+ dlls/kernel32/tests/virtual.c | 293 ++++++++++++++++++++++++++++++++++++++++++
+ include/winternl.h            |   1 +
+ 2 files changed, 294 insertions(+)
+
+diff --git a/dlls/kernel32/tests/virtual.c b/dlls/kernel32/tests/virtual.c
+index 0fa2b99..ecb5d2f 100644
+--- a/dlls/kernel32/tests/virtual.c
++++ b/dlls/kernel32/tests/virtual.c
+@@ -1797,6 +1797,295 @@ static void test_guard_page(void)
+     VirtualFree( base, 0, MEM_FREE );
+ }
+ 
++DWORD num_execute_fault_calls;
++
++static DWORD execute_fault_handler( EXCEPTION_RECORD *rec, EXCEPTION_REGISTRATION_RECORD *frame,
++                                   CONTEXT *context, EXCEPTION_REGISTRATION_RECORD **dispatcher )
++{
++    trace( "exception: %08x flags:%x addr:%p\n",
++           rec->ExceptionCode, rec->ExceptionFlags, rec->ExceptionAddress );
++
++    ok( rec->NumberParameters == 2, "NumberParameters is %d instead of 2\n", rec->NumberParameters );
++    ok( rec->ExceptionCode == STATUS_ACCESS_VIOLATION || rec->ExceptionCode == STATUS_GUARD_PAGE_VIOLATION,
++        "ExceptionCode is %08x instead of STATUS_ACCESS_VIOLATION or STATUS_GUARD_PAGE_VIOLATION\n", rec->ExceptionCode );
++
++    if (rec->ExceptionCode == STATUS_GUARD_PAGE_VIOLATION)
++        num_guard_page_calls++;
++    else if (rec->ExceptionCode == STATUS_ACCESS_VIOLATION)
++    {
++        DWORD err, old_prot;
++        BOOL success;
++        ULONG flags;
++
++        NtQueryInformationProcess( GetCurrentProcess(), ProcessExecuteFlags, &flags, sizeof(flags), NULL );
++        err = (flags & MEM_EXECUTE_OPTION_DISABLE) ? EXCEPTION_EXECUTE_FAULT : EXCEPTION_READ_FAULT;
++        ok( rec->ExceptionInformation[0] == err, "ExceptionInformation[0] is %d instead of %d\n",
++            (DWORD)rec->ExceptionInformation[0], err );
++
++        success = VirtualProtect( (void *)rec->ExceptionInformation[1], 16, PAGE_EXECUTE_READWRITE, &old_prot );
++        ok( success, "VirtualProtect failed %u\n", GetLastError() );
++        ok( old_prot == PAGE_READWRITE, "wrong old prot %x\n", old_prot );
++
++        num_execute_fault_calls++;
++    }
++
++    return ExceptionContinueExecution;
++}
++
++static DWORD atl_test_func( DWORD arg )
++{
++    ok( arg == 0x11223344, "arg is 0x%08x instead of 0x11223344\n", arg );
++    return 43;
++}
++
++static void test_data_execution_prevention( ULONG dep_flags )
++{
++    static const char code_ret[] = {0xB8, 0x2A, 0x00, 0x00, 0x00, 0xC3};
++    static const char code_atl[] = {0xC7, 0x44, 0x24, 0x04, 0x44, 0x33, 0x22, 0x11, 0xE9, 0x00, 0x00, 0x00, 0x00};
++    EXCEPTION_REGISTRATION_RECORD frame;
++    DWORD (*code)(DWORD);
++    DWORD ret, size, old_prot;
++    ULONG old_flags = MEM_EXECUTE_OPTION_ENABLE;
++    void *results[64];
++    ULONG_PTR count;
++    ULONG pagesize;
++    BOOL success;
++    char *base;
++
++    if (!pNtCurrentTeb)
++    {
++        win_skip( "NtCurrentTeb not supported\n" );
++        return;
++    }
++
++    trace( "Running DEP tests with ProcessExecuteFlags = %d\n", dep_flags );
++
++    /* Adjust ProcessExecuteFlags if necessary */
++    NtQueryInformationProcess( GetCurrentProcess(), ProcessExecuteFlags, &old_flags, sizeof(old_flags), NULL );
++    if (old_flags != dep_flags)
++    {
++        ret = NtSetInformationProcess( GetCurrentProcess(), ProcessExecuteFlags, &dep_flags, sizeof(dep_flags) );
++        if (ret == STATUS_INVALID_INFO_CLASS) /* Windows 2000 */
++        {
++            win_skip( "Skipping DEP tests with ProcessExecuteFlags = %d\n", dep_flags );
++            return;
++        }
++        ok( !ret, "NtSetInformationProcess failed with status %08x\n", ret );
++    }
++
++    size = 0x1000;
++    base = VirtualAlloc( 0, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE );
++    ok( base != NULL, "VirtualAlloc failed %u\n", GetLastError() );
++
++    /* write some instructions into the memory, and try to execute it */
++    memcpy( base, code_ret, sizeof(code_ret) );
++    code = (void *)base;
++
++    frame.Handler = execute_fault_handler;
++    frame.Prev = pNtCurrentTeb()->Tib.ExceptionList;
++    pNtCurrentTeb()->Tib.ExceptionList = &frame;
++
++    num_guard_page_calls = num_execute_fault_calls = 0;
++    ret = code( 0xdeadbeef );
++    ok( ret == 42, "call returned wrong result, expected 42, got %d\n", ret );
++    ok( num_guard_page_calls == 0, "expected no STATUS_GUARD_PAGE_VIOLATION exception, got %d exceptions\n", num_guard_page_calls );
++    if (dep_flags & MEM_EXECUTE_OPTION_DISABLE)
++        ok( num_execute_fault_calls == 1, "expected one STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
++    else
++        ok( num_execute_fault_calls == 0, "expected no STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
++
++    pNtCurrentTeb()->Tib.ExceptionList = frame.Prev;
++
++    success = VirtualProtect( base, size, PAGE_READWRITE | PAGE_GUARD, &old_prot );
++    ok( success, "VirtualProtect failed %u\n", GetLastError() );
++    if (dep_flags & MEM_EXECUTE_OPTION_DISABLE)
++        ok( old_prot == PAGE_EXECUTE_READWRITE, "wrong old prot %x\n", old_prot );
++    else
++        ok( old_prot == PAGE_READWRITE, "wrong old prot %x\n", old_prot );
++
++    /* the same, but with PAGE_GUARD set */
++    frame.Handler = execute_fault_handler;
++    frame.Prev = pNtCurrentTeb()->Tib.ExceptionList;
++    pNtCurrentTeb()->Tib.ExceptionList = &frame;
++
++    num_guard_page_calls = num_execute_fault_calls = 0;
++    ret = code( 0xdeadbeef );
++    ok( ret == 42, "call returned wrong result, expected 42, got %d\n", ret );
++    ok( num_guard_page_calls == 1, "expected one STATUS_GUARD_PAGE_VIOLATION exception, got %d exceptions\n", num_guard_page_calls );
++    if (dep_flags & MEM_EXECUTE_OPTION_DISABLE)
++        ok( num_execute_fault_calls == 1, "expected one STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
++    else
++        todo_wine
++        ok( num_execute_fault_calls == 0, "expected no STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
++
++    pNtCurrentTeb()->Tib.ExceptionList = frame.Prev;
++
++    /* special case, test with ATL thunk */
++    memcpy( base, code_atl, sizeof(code_atl) );
++    *(DWORD *)(base + 9) = (DWORD_PTR)atl_test_func - (DWORD_PTR)(base + 13);
++
++    success = VirtualProtect( base, size, PAGE_READWRITE | PAGE_GUARD, &old_prot );
++    ok( success, "VirtualProtect failed %u\n", GetLastError() );
++    if (dep_flags & MEM_EXECUTE_OPTION_DISABLE)
++        ok( old_prot == PAGE_EXECUTE_READWRITE, "wrong old prot %x\n", old_prot );
++    else
++        todo_wine
++        ok( old_prot == PAGE_READWRITE, "wrong old prot %x\n", old_prot );
++
++    frame.Handler = execute_fault_handler;
++    frame.Prev = pNtCurrentTeb()->Tib.ExceptionList;
++    pNtCurrentTeb()->Tib.ExceptionList = &frame;
++
++    num_guard_page_calls = num_execute_fault_calls = 0;
++    ret = code( 0xdeadbeef );
++    ok( ret == 43, "call returned wrong result, expected 43, got %d\n", ret );
++    ok( num_guard_page_calls == 1, "expected one STATUS_GUARD_PAGE_VIOLATION exception, got %d exceptions\n", num_guard_page_calls );
++    if (dep_flags & MEM_EXECUTE_OPTION_DISABLE)
++        todo_wine
++        ok( num_execute_fault_calls == 1, "expected one STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
++    else
++        ok( num_execute_fault_calls == 0, "expected no STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
++
++    num_guard_page_calls = num_execute_fault_calls = 0;
++    ret = code( 0xdeadbeef );
++    ok( ret == 43, "call returned wrong result, expected 43, got %d\n", ret );
++    ok( num_guard_page_calls == 0, "expected no STATUS_GUARD_PAGE_VIOLATION exception, got %d exceptions\n", num_guard_page_calls );
++    ok( num_execute_fault_calls == 0, "expected no STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
++
++    pNtCurrentTeb()->Tib.ExceptionList = frame.Prev;
++
++    VirtualFree( base, 0, MEM_FREE );
++
++    /* same as above, but using memory with a write watch */
++    base = VirtualAlloc( 0, size, MEM_RESERVE | MEM_COMMIT | MEM_WRITE_WATCH, PAGE_READWRITE  );
++    if (!base && (GetLastError() == ERROR_INVALID_PARAMETER || GetLastError() == ERROR_NOT_SUPPORTED))
++    {
++        win_skip( "MEM_WRITE_WATCH not supported\n" );
++        goto out;
++    }
++    ok( base != NULL, "VirtualAlloc failed %u\n", GetLastError() );
++
++    count = 64;
++    ret = pGetWriteWatch( 0, base, size, results, &count, &pagesize );
++    ok( !ret, "GetWriteWatch failed %u\n", GetLastError() );
++    ok( count == 0, "wrong count %lu\n", count );
++
++    /* write some instructions into the memory, and try to execute it */
++    memcpy( base, code_ret, sizeof(code_ret) );
++    code = (void *)base;
++
++    count = 64;
++    ret = pGetWriteWatch( WRITE_WATCH_FLAG_RESET, base, size, results, &count, &pagesize );
++    ok( !ret, "GetWriteWatch failed %u\n", GetLastError() );
++    ok( count == 1, "wrong count %lu\n", count );
++    ok( results[0] == base, "wrong result %p\n", results[0] );
++
++    frame.Handler = execute_fault_handler;
++    frame.Prev = pNtCurrentTeb()->Tib.ExceptionList;
++    pNtCurrentTeb()->Tib.ExceptionList = &frame;
++
++    num_guard_page_calls = num_execute_fault_calls = 0;
++    ret = code( 0xdeadbeef );
++    ok( ret == 42, "call returned wrong result, expected 42, got %d\n", ret );
++    ok( num_guard_page_calls == 0, "expected no STATUS_GUARD_PAGE_VIOLATION exception, got %d exceptions\n", num_guard_page_calls );
++    if (dep_flags & MEM_EXECUTE_OPTION_DISABLE)
++        ok( num_execute_fault_calls == 1, "expected one STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
++    else
++        todo_wine
++        ok( num_execute_fault_calls == 0, "expected no STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
++
++    pNtCurrentTeb()->Tib.ExceptionList = frame.Prev;
++
++    count = 64;
++    ret = pGetWriteWatch( WRITE_WATCH_FLAG_RESET, base, size, results, &count, &pagesize );
++    ok( !ret, "GetWriteWatch failed %u\n", GetLastError() );
++    ok( count == 0, "wrong count %lu\n", count );
++
++    success = VirtualProtect( base, size, PAGE_READWRITE | PAGE_GUARD, &old_prot );
++    ok( success, "VirtualProtect failed %u\n", GetLastError() );
++    if (dep_flags & MEM_EXECUTE_OPTION_DISABLE)
++        ok( old_prot == PAGE_EXECUTE_READWRITE, "wrong old prot %x\n", old_prot );
++    else
++        todo_wine
++        ok( old_prot == PAGE_READWRITE, "wrong old prot %x\n", old_prot );
++
++    /* the same, but with PAGE_GUARD set */
++    frame.Handler = execute_fault_handler;
++    frame.Prev = pNtCurrentTeb()->Tib.ExceptionList;
++    pNtCurrentTeb()->Tib.ExceptionList = &frame;
++
++    num_guard_page_calls = num_execute_fault_calls = 0;
++    ret = code( 0xdeadbeef );
++    ok( ret == 42, "call returned wrong result, expected 42, got %d\n", ret );
++    ok( num_guard_page_calls == 1, "expected one STATUS_GUARD_PAGE_VIOLATION exception, got %d exceptions\n", num_guard_page_calls );
++    if (dep_flags & MEM_EXECUTE_OPTION_DISABLE)
++        ok( num_execute_fault_calls == 1, "expected one STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
++    else
++        todo_wine
++        ok( num_execute_fault_calls == 0, "expected no STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
++
++    pNtCurrentTeb()->Tib.ExceptionList = frame.Prev;
++
++    count = 64;
++    ret = pGetWriteWatch( WRITE_WATCH_FLAG_RESET, base, size, results, &count, &pagesize );
++    ok( !ret, "GetWriteWatch failed %u\n", GetLastError() );
++    ok( count == 0 || broken(count == 1) /* < Windows 8 */, "wrong count %lu\n", count );
++
++    /* special case, test with ATL thunk */
++    memcpy( base, code_atl, sizeof(code_atl) );
++    *(DWORD *)(base + 9) = (DWORD_PTR)atl_test_func - (DWORD_PTR)(base + 13);
++
++    count = 64;
++    ret = pGetWriteWatch( WRITE_WATCH_FLAG_RESET, base, size, results, &count, &pagesize );
++    ok( !ret, "GetWriteWatch failed %u\n", GetLastError() );
++    ok( count == 1, "wrong count %lu\n", count );
++    ok( results[0] == base, "wrong result %p\n", results[0] );
++
++    success = VirtualProtect( base, size, PAGE_READWRITE | PAGE_GUARD, &old_prot );
++    ok( success, "VirtualProtect failed %u\n", GetLastError() );
++    if (dep_flags & MEM_EXECUTE_OPTION_DISABLE)
++        ok( old_prot == PAGE_EXECUTE_READWRITE, "wrong old prot %x\n", old_prot );
++    else
++        todo_wine
++        ok( old_prot == PAGE_READWRITE, "wrong old prot %x\n", old_prot );
++
++    frame.Handler = execute_fault_handler;
++    frame.Prev = pNtCurrentTeb()->Tib.ExceptionList;
++    pNtCurrentTeb()->Tib.ExceptionList = &frame;
++
++    num_guard_page_calls = num_execute_fault_calls = 0;
++    ret = code( 0xdeadbeef );
++    ok( ret == 43, "call returned wrong result, expected 43, got %d\n", ret );
++    ok( num_guard_page_calls == 1, "expected one STATUS_GUARD_PAGE_VIOLATION exception, got %d exceptions\n", num_guard_page_calls );
++    if (dep_flags & MEM_EXECUTE_OPTION_DISABLE)
++        todo_wine
++        ok( num_execute_fault_calls == 1, "expected one STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
++    else
++        ok( num_execute_fault_calls == 0, "expected no STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
++
++    num_guard_page_calls = num_execute_fault_calls = 0;
++    ret = code( 0xdeadbeef );
++    ok( ret == 43, "call returned wrong result, expected 43, got %d\n", ret );
++    ok( num_guard_page_calls == 0, "expected no STATUS_GUARD_PAGE_VIOLATION exception, got %d exceptions\n", num_guard_page_calls );
++    ok( num_execute_fault_calls == 0, "expected no STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
++
++    count = 64;
++    ret = pGetWriteWatch( WRITE_WATCH_FLAG_RESET, base, size, results, &count, &pagesize );
++    ok( !ret, "GetWriteWatch failed %u\n", GetLastError() );
++    ok( count == 0 || broken(count == 1) /* < Windows 8 */, "wrong count %lu\n", count );
++
++    pNtCurrentTeb()->Tib.ExceptionList = frame.Prev;
++
++    VirtualFree( base, 0, MEM_FREE );
++
++out:
++    if (old_flags != dep_flags)
++    {
++        ret = NtSetInformationProcess( GetCurrentProcess(), ProcessExecuteFlags, &old_flags, sizeof(old_flags) );
++        ok( !ret, "NtSetInformationProcess failed with status %08x\n", ret );
++    }
++}
++
+ #endif  /* __i386__ */
+ 
+ static void test_VirtualProtect(void)
+@@ -2859,5 +3148,9 @@ START_TEST(virtual)
+     test_write_watch();
+ #ifdef __i386__
+     test_guard_page();
++    test_data_execution_prevention( MEM_EXECUTE_OPTION_ENABLE );
++    test_data_execution_prevention( MEM_EXECUTE_OPTION_ENABLE | MEM_EXECUTE_OPTION_ATL7_THUNK_EMULATION );
++    test_data_execution_prevention( MEM_EXECUTE_OPTION_DISABLE );
++    test_data_execution_prevention( MEM_EXECUTE_OPTION_DISABLE | MEM_EXECUTE_OPTION_ATL7_THUNK_EMULATION );
+ #endif
+ }
+diff --git a/include/winternl.h b/include/winternl.h
+index 95951e2..7f9a85d 100644
+--- a/include/winternl.h
++++ b/include/winternl.h
+@@ -728,6 +728,7 @@ typedef enum _PROCESSINFOCLASS {
+ 
+ #define MEM_EXECUTE_OPTION_DISABLE   0x01
+ #define MEM_EXECUTE_OPTION_ENABLE    0x02
++#define MEM_EXECUTE_OPTION_ATL7_THUNK_EMULATION 0x04
+ #define MEM_EXECUTE_OPTION_PERMANENT 0x08
+ 
+ typedef enum _SECTION_INHERIT {
+-- 
+2.1.2
+

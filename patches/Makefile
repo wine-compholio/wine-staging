@@ -38,6 +38,7 @@ PATCHLIST := \
 	kernel32-Named_Pipe.ok \
 	kernel32-SystemFileCacheSize.ok \
 	libs-Unicode_Collation.ok \
+	ntdll-ATL_Thunk.ok \
 	ntdll-DOS_Attributes.ok \
 	ntdll-Dynamic_DST.ok \
 	ntdll-Exception.ok \
@@ -515,6 +516,25 @@ libs-Unicode_Collation.ok:
 	@( \
 		echo '+    { "libs-Unicode_Collation", "Dmitry Timoshkov", "Fix comparison of punctuation characters." },'; \
 	) > libs-Unicode_Collation.ok
+
+# Patchset ntdll-ATL_Thunk
+# |
+# | Included patches:
+# |   *	Fix several issues with execute permissions in guard page / write watch handling. [by Sebastian Lackner]
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/signal_i386.c, dlls/ntdll/virtual.c, include/winternl.h
+# |
+.INTERMEDIATE: ntdll-ATL_Thunk.ok
+ntdll-ATL_Thunk.ok:
+	$(call APPLY_FILE,ntdll-ATL_Thunk/0001-kernel32-tests-Add-tests-for-DEP-combined-with-guard.patch)
+	$(call APPLY_FILE,ntdll-ATL_Thunk/0002-ntdll-Avoid-recursive-exception-handler-calls-when-h.patch)
+	$(call APPLY_FILE,ntdll-ATL_Thunk/0003-ntdll-Ensure-force_exec_prot-is-also-used-for-views-.patch)
+	$(call APPLY_FILE,ntdll-ATL_Thunk/0004-ntdll-reset_write_watches-shouldn-t-remove-enforced-.patch)
+	$(call APPLY_FILE,ntdll-ATL_Thunk/0005-ntdll-Only-check-for-ATL-thunk-if-DEP-is-not-enabled.patch)
+	@( \
+		echo '+    { "ntdll-ATL_Thunk", "Sebastian Lackner", "Fix several issues with execute permissions in guard page / write watch handling." },'; \
+	) > ntdll-ATL_Thunk.ok
 
 # Patchset ntdll-DOS_Attributes
 # |

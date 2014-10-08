@@ -1,0 +1,46 @@
+From 3bd2667c70cd1b9ef472d353ffe16220823cdc35 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 31 Jul 2014 04:52:01 +0200
+Subject: shell32: Choose return value for SHFileOperationW depending on
+ windows version
+
+---
+ dlls/shell32/shlfileop.c | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/shell32/shlfileop.c b/dlls/shell32/shlfileop.c
+index 62d7880..249970a 100644
+--- a/dlls/shell32/shlfileop.c
++++ b/dlls/shell32/shlfileop.c
+@@ -1022,7 +1022,7 @@ static HRESULT parse_file_list(FILE_LIST *flList, LPCWSTR szFiles)
+ 
+     /* empty list */
+     if (!szFiles[0])
+-        return ERROR_ACCESS_DENIED;
++        return ERROR_ACCESS_DENIED; /* S_OK for Windows 95/98 */
+         
+     flList->feFiles = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY,
+                                 flList->num_alloc * sizeof(FILE_ENTRY));
+@@ -1555,7 +1555,19 @@ int WINAPI SHFileOperationW(LPSHFILEOPSTRUCTW lpFileOp)
+     ZeroMemory(&flTo, sizeof(FILE_LIST));
+ 
+     if ((ret = parse_file_list(&flFrom, lpFileOp->pFrom)))
++    {
++        if (ret != ERROR_ACCESS_DENIED)
++            return ret;
++
++        /* Win 9X */
++        if (GetVersion() & 0x80000000)
++            return S_OK;
++
++        FIXME("The return value of this function call depends on the windows version.\n");
++        FIXME("For old software it might be necessary to set the windows version to 95/98 using winecfg.\n");
++
+         return ret;
++    }
+ 
+     if (lpFileOp->wFunc != FO_DELETE)
+         parse_file_list(&flTo, lpFileOp->pTo);
+-- 
+1.9.1
+

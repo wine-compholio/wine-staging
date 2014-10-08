@@ -35,8 +35,9 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [1]:**
+**Bugfixes and features included in the next upcoming release [2]:**
 
+* Anno 1602 installer depends on Windows 98 behavior of SHFileOperationW
 * Wine ignores IDF_CHECKFIRST flag in SetupPromptForDisk ([Wine Bug #20465](http://bugs.winehq.org/show_bug.cgi?id=20465))
 
 

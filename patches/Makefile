@@ -66,6 +66,7 @@ PATCHLIST := \
 	shell32-Icons.ok \
 	shell32-RunDLL_CallEntry16.ok \
 	shell32-SHCreateSessionKey.ok \
+	shell32-SHFileOperation.ok \
 	shlwapi-PathIsDirectoryEmptyW.ok \
 	shlwapi-UrlCombine.ok \
 	user32-Dialog_Paint_Event.ok \
@@ -1069,6 +1070,21 @@ shell32-SHCreateSessionKey.ok:
 	@( \
 		echo '+    { "shell32-SHCreateSessionKey", "Dmitry Timoshkov", "shell32: Implement SHCreateSessionKey." },'; \
 	) > shell32-SHCreateSessionKey.ok
+
+# Patchset shell32-SHFileOperation
+# |
+# | Included patches:
+# |   *	Choose return value for SHFileOperationW depending on windows version. [by Michael Müller]
+# |
+# | Modified files:
+# |   *	dlls/shell32/shlfileop.c
+# |
+.INTERMEDIATE: shell32-SHFileOperation.ok
+shell32-SHFileOperation.ok:
+	$(call APPLY_FILE,shell32-SHFileOperation/0001-shell32-Choose-return-value-for-SHFileOperationW-dep.patch)
+	@( \
+		echo '+    { "shell32-SHFileOperation", "Michael Müller", "Choose return value for SHFileOperationW depending on windows version." },'; \
+	) > shell32-SHFileOperation.ok
 
 # Patchset shlwapi-PathIsDirectoryEmptyW
 # |

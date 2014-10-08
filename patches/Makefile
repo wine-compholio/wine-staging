@@ -36,7 +36,6 @@ PATCHLIST := \
 	kernel32-GetSystemTimes.ok \
 	kernel32-GetVolumePathName.ok \
 	kernel32-Named_Pipe.ok \
-	kernel32-SystemFileCacheSize.ok \
 	libs-Unicode_Collation.ok \
 	ntdll-ATL_Thunk.ok \
 	ntdll-DOS_Attributes.ok \
@@ -480,24 +479,6 @@ kernel32-Named_Pipe.ok:
 	@( \
 		echo '+    { "kernel32-Named_Pipe", "Dan Kegel", "Fix for ConnectNamedPort return value in overlapped mode." },'; \
 	) > kernel32-Named_Pipe.ok
-
-# Patchset kernel32-SystemFileCacheSize
-# |
-# | Included patches:
-# |   *	Add stub for [Get|Set]SystemFileCacheSize. [by Austin English]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35886] Support for [Get|Set]SystemFileCacheSize
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-memory-l1-1-1/api-ms-win-core-memory-l1-1-1.spec, dlls/kernel32/heap.c, dlls/kernel32/kernel32.spec
-# |
-.INTERMEDIATE: kernel32-SystemFileCacheSize.ok
-kernel32-SystemFileCacheSize.ok:
-	$(call APPLY_FILE,kernel32-SystemFileCacheSize/0001-kernel32-Add-stub-for-Get-Set-SystemFileCacheSize.patch)
-	@( \
-		echo '+    { "kernel32-SystemFileCacheSize", "Austin English", "Add stub for [Get|Set]SystemFileCacheSize." },'; \
-	) > kernel32-SystemFileCacheSize.ok
 
 # Patchset libs-Unicode_Collation
 # |

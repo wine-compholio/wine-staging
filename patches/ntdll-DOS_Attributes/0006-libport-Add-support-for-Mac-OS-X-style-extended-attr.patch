@@ -1,0 +1,106 @@
+From 6dc0676e0cb53e392207fbbd4d0465399456804f Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Mon, 6 Oct 2014 14:21:11 -0600
+Subject: libport: Add support for Mac OS X style extended attributes.
+
+---
+ configure.ac      |    3 +++
+ libs/port/xattr.c |   26 ++++++++++++++++++++------
+ 2 files changed, 23 insertions(+), 6 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index fe06575..e6d8d94 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -671,6 +671,9 @@ AC_CHECK_HEADERS([libprocstat.h],,,
+ if test "x$with_xattr" != "xno"
+ then
+     AC_CHECK_HEADERS(attr/xattr.h, [HAVE_XATTR=1])
++    AC_CHECK_HEADERS(sys/xattr.h, [HAVE_XATTR=1]
++        [AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/xattr.h>]], [[getxattr("", "", "", 0, 0, 0);]])],
++            [AC_DEFINE(XATTR_ADDITIONAL_OPTIONS, 1, [Define if xattr functions take additional arguments (Mac OS X)])])])
+ fi
+ if test "x$with_xattr" == "xyes"
+ then
+diff --git a/libs/port/xattr.c b/libs/port/xattr.c
+index dc89a45..3badafc 100644
+--- a/libs/port/xattr.c
++++ b/libs/port/xattr.c
+@@ -23,6 +23,8 @@
+ 
+ #if defined(HAVE_ATTR_XATTR_H)
+ # include <attr/xattr.h>
++#elif defined(HAVE_SYS_XATTR_H)
++# include <sys/xattr.h>
+ #endif
+ 
+ #include <ctype.h>
+@@ -30,7 +32,9 @@
+ 
+ int xattr_fget( int filedes, const char *name, void *value, size_t size )
+ {
+-#if defined(HAVE_ATTR_XATTR_H)
++#if defined(XATTR_ADDITIONAL_OPTIONS)
++    return fgetxattr( filedes, name, value, size, 0, 0 );
++#elif defined(HAVE_SYS_XATTR_H) || defined(HAVE_ATTR_XATTR_H)
+     return fgetxattr( filedes, name, value, size );
+ #else
+     errno = ENOTSUP;
+@@ -40,7 +44,9 @@ int xattr_fget( int filedes, const char *name, void *value, size_t size )
+ 
+ int xattr_fremove( int filedes, const char *name )
+ {
+-#if defined(HAVE_ATTR_XATTR_H)
++#if defined(XATTR_ADDITIONAL_OPTIONS)
++    return fremovexattr( filedes, name, 0 );
++#elif defined(HAVE_SYS_XATTR_H) || defined(HAVE_ATTR_XATTR_H)
+     return fremovexattr( filedes, name );
+ #else
+     errno = ENOTSUP;
+@@ -50,7 +56,9 @@ int xattr_fremove( int filedes, const char *name )
+ 
+ int xattr_fset( int filedes, const char *name, void *value, size_t size )
+ {
+-#if defined(HAVE_ATTR_XATTR_H)
++#if defined(XATTR_ADDITIONAL_OPTIONS)
++    return fsetxattr( filedes, name, value, size, 0, 0 );
++#elif defined(HAVE_SYS_XATTR_H) || defined(HAVE_ATTR_XATTR_H)
+     return fsetxattr( filedes, name, value, size, 0 );
+ #else
+     errno = ENOTSUP;
+@@ -60,7 +68,9 @@ int xattr_fset( int filedes, const char *name, void *value, size_t size )
+ 
+ int xattr_get( const char *path, const char *name, void *value, size_t size )
+ {
+-#if defined(HAVE_ATTR_XATTR_H)
++#if defined(XATTR_ADDITIONAL_OPTIONS)
++    return getxattr( path, name, value, size, 0, 0 );
++#elif defined(HAVE_SYS_XATTR_H) || defined(HAVE_ATTR_XATTR_H)
+     return getxattr( path, name, value, size );
+ #else
+     errno = ENOTSUP;
+@@ -70,7 +80,9 @@ int xattr_get( const char *path, const char *name, void *value, size_t size )
+ 
+ int xattr_remove( const char *path, const char *name )
+ {
+-#if defined(HAVE_ATTR_XATTR_H)
++#if defined(XATTR_ADDITIONAL_OPTIONS)
++    return removexattr( path, name, 0 );
++#elif defined(HAVE_SYS_XATTR_H) || defined(HAVE_ATTR_XATTR_H)
+     return removexattr( path, name );
+ #else
+     errno = ENOTSUP;
+@@ -80,7 +92,9 @@ int xattr_remove( const char *path, const char *name )
+ 
+ int xattr_set( const char *path, const char *name, void *value, size_t size )
+ {
+-#if defined(HAVE_ATTR_XATTR_H)
++#if defined(XATTR_ADDITIONAL_OPTIONS)
++    return setxattr( path, name, value, size, 0, 0 );
++#elif defined(HAVE_SYS_XATTR_H) || defined(HAVE_ATTR_XATTR_H)
+     return setxattr( path, name, value, size, 0 );
+ #else
+     errno = ENOTSUP;
+-- 
+1.7.9.5
+

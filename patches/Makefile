@@ -578,7 +578,9 @@ ntdll-DOS_Attributes.ok:
 	$(call APPLY_FILE,ntdll-DOS_Attributes/0003-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch)
 	$(call APPLY_FILE,ntdll-DOS_Attributes/0004-ntdll-Implement-storing-DOS-attributes-in-NtSetInfor.patch)
 	$(call APPLY_FILE,ntdll-DOS_Attributes/0005-ntdll-Implement-storing-DOS-attributes-in-NtCreateFi.patch)
-	$(call APPLY_FILE,ntdll-DOS_Attributes/0006-ntdll-Perform-the-Unix-style-hidden-file-check-withi.patch)
+	$(call APPLY_FILE,ntdll-DOS_Attributes/0006-libport-Add-support-for-Mac-OS-X-style-extended-attr.patch)
+	$(call APPLY_FILE,ntdll-DOS_Attributes/0007-libport-Add-support-for-FreeBSD-style-extended-attri.patch)
+	$(call APPLY_FILE,ntdll-DOS_Attributes/0008-ntdll-Perform-the-Unix-style-hidden-file-check-withi.patch)
 	@( \
 		echo '+    { "ntdll-DOS_Attributes", "Erich E. Hoover", "Implement DOS hidden/system file attributes" },'; \
 	) > ntdll-DOS_Attributes.ok

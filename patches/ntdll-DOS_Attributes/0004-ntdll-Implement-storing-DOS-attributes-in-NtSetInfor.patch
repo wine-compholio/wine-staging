@@ -1,4 +1,4 @@
-From 931ab03f342fb65cece5c1fc83b8ef1fee22c1df Mon Sep 17 00:00:00 2001
+From 52e1d7d25db39c1bd748c8994a33c6d0e5664997 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 20 Aug 2014 00:08:52 -0600
 Subject: ntdll: Implement storing DOS attributes in NtSetInformationFile.
@@ -7,8 +7,8 @@ Subject: ntdll: Implement storing DOS attributes in NtSetInformationFile.
  dlls/ntdll/file.c       |   53 +++++++++++++++++++++++++++++------------------
  dlls/ntdll/tests/file.c |    8 +++----
  include/wine/port.h     |    2 ++
- libs/port/xattr.c       |   31 +++++++++++++++++++++++++++
- 4 files changed, 70 insertions(+), 24 deletions(-)
+ libs/port/xattr.c       |   20 ++++++++++++++++++
+ 4 files changed, 59 insertions(+), 24 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
 index 73a2789..4619058 100644
@@ -129,10 +129,10 @@ index d70ed6b..7a8e5d4 100644
      /* Check NORMAL last of all (to make sure we can clear attributes) */
      memset(&fai_buf.fai.BasicInformation, 0, sizeof(fai_buf.fai.BasicInformation));
 diff --git a/include/wine/port.h b/include/wine/port.h
-index 7d8ea1a..af052da 100644
+index 7977eb9..cc572f3 100644
 --- a/include/wine/port.h
 +++ b/include/wine/port.h
-@@ -373,6 +373,8 @@ extern int _spawnvp(int mode, const char *cmdname, const char * const argv[]);
+@@ -370,6 +370,8 @@ extern int _spawnvp(int mode, const char *cmdname, const char * const argv[]);
  #endif
  
  extern int xattr_fget( int filedes, const char *name, void *value, size_t size );
@@ -142,22 +142,17 @@ index 7d8ea1a..af052da 100644
  
  /* Interlocked functions */
 diff --git a/libs/port/xattr.c b/libs/port/xattr.c
-index ab50758..61c9f33 100644
+index 6ddaa9c..3ce5ffc 100644
 --- a/libs/port/xattr.c
 +++ b/libs/port/xattr.c
-@@ -60,6 +60,37 @@ int xattr_fget( int filedes, const char *name, void *value, size_t size )
+@@ -38,6 +38,26 @@ int xattr_fget( int filedes, const char *name, void *value, size_t size )
  #endif
  }
  
 +int xattr_fremove( int filedes, const char *name )
 +{
-+    if (!xattr_valid_namespace( name )) return -1;
-+#if defined(XATTR_ADDITIONAL_OPTIONS)
-+    return fremovexattr( filedes, name, 0 );
-+#elif defined(HAVE_SYS_XATTR_H) || defined(HAVE_ATTR_XATTR_H)
++#if defined(HAVE_ATTR_XATTR_H)
 +    return fremovexattr( filedes, name );
-+#elif defined(HAVE_SYS_EXTATTR_H)
-+    return extattr_delete_fd( filedes, EXTATTR_NAMESPACE_USER, &name[XATTR_USER_PREFIX_LEN] );
 +#else
 +    errno = ENOTSUP;
 +    return -1;
@@ -166,14 +161,8 @@ index ab50758..61c9f33 100644
 +
 +int xattr_fset( int filedes, const char *name, void *value, size_t size )
 +{
-+    if (!xattr_valid_namespace( name )) return -1;
-+#if defined(XATTR_ADDITIONAL_OPTIONS)
-+    return fsetxattr( filedes, name, value, size, 0, 0 );
-+#elif defined(HAVE_SYS_XATTR_H) || defined(HAVE_ATTR_XATTR_H)
++#if defined(HAVE_ATTR_XATTR_H)
 +    return fsetxattr( filedes, name, value, size, 0 );
-+#elif defined(HAVE_SYS_EXTATTR_H)
-+    return extattr_set_fd( filedes, EXTATTR_NAMESPACE_USER, &name[XATTR_USER_PREFIX_LEN],
-+                           value, size );
 +#else
 +    errno = ENOTSUP;
 +    return -1;
@@ -182,7 +171,7 @@ index ab50758..61c9f33 100644
 +
  int xattr_get( const char *path, const char *name, void *value, size_t size )
  {
-     if (!xattr_valid_namespace( name )) return -1;
+ #if defined(HAVE_ATTR_XATTR_H)
 -- 
 1.7.9.5
 

@@ -1,52 +1,39 @@
-From 87d1db941666d1136b0501d60a27dee82be482a7 Mon Sep 17 00:00:00 2001
+From 6d3f985054009a9030276bc6fa7ff9cd6ee3bf29 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Tue, 19 Aug 2014 22:10:49 -0600
 Subject: ntdll: Implement retrieving DOS attributes in
  NtQueryInformationFile.
 
 ---
- configure.ac          |   25 ++++++++++++++++++++
- dlls/ntdll/file.c     |   30 +++++++++++++++++++++++-
- include/wine/port.h   |   11 +++++++++
+ configure.ac          |   12 ++++++++++++
+ dlls/ntdll/file.c     |   30 +++++++++++++++++++++++++++++-
+ include/wine/port.h   |    8 ++++++++
  libs/port/Makefile.in |    3 ++-
- libs/port/xattr.c     |   61 +++++++++++++++++++++++++++++++++++++++++++++++++
- 5 files changed, 128 insertions(+), 2 deletions(-)
+ libs/port/xattr.c     |   39 +++++++++++++++++++++++++++++++++++++++
+ 5 files changed, 90 insertions(+), 2 deletions(-)
  create mode 100644 libs/port/xattr.c
 
 diff --git a/configure.ac b/configure.ac
-index f1f721d..f2c00e0 100644
+index f1f721d..fe06575 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -77,2 +77,3 @@ AC_ARG_WITH(tiff,      AS_HELP_STRING([--without-tiff],[do not use TIFF]))
  AC_ARG_WITH(v4l,       AS_HELP_STRING([--without-v4l],[do not use v4l1 (v4l support)]))
 +AC_ARG_WITH(xattr,     AS_HELP_STRING([--without-xattr],[do not use xattr (security attributes support)]))
  AC_ARG_WITH(xcomposite,AS_HELP_STRING([--without-xcomposite],[do not use the Xcomposite extension]),
-@@ -667,6 +668,30 @@ AC_CHECK_HEADERS([libprocstat.h],,,
+@@ -667,6 +668,17 @@ AC_CHECK_HEADERS([libprocstat.h],,,
  #include <sys/socket.h>
  #endif])
  
 +if test "x$with_xattr" != "xno"
 +then
-+    AC_CHECK_HEADERS(attr/xattr.h sys/xattr.h sys/extattr.h, HAVE_XATTR=1)
++    AC_CHECK_HEADERS(attr/xattr.h, [HAVE_XATTR=1])
 +fi
 +if test "x$with_xattr" == "xyes"
 +then
 +    WINE_ERROR_WITH(xattr,[test "x$HAVE_XATTR" = "x"],[xattr ${notice_platform}development files \
 +not found. Wine will be built without extended attribute support, which probably isn't what you \
 +want. You will need to install ${notice_platform}development packages of libattr at the very least.])
-+fi
-+if test "x$HAVE_XATTR" != "x"
-+then
-+    AC_CACHE_CHECK([whether xattr functions take additional options],
-+        wine_cv_xattr_additional_options,
-+        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/xattr.h>]],
-+                          [[getxattr("", "", "", 0, 0, 0);]])],
-+                          [wine_cv_xattr_additional_options=yes],
-+                          [wine_cv_xattr_additional_options=no]))
-+    if test "$wine_cv_xattr_additional_options" = "yes"
-+    then
-+        AC_DEFINE(XATTR_ADDITIONAL_OPTIONS, 1, [Define if xattr takes additional arguments (Mac OS X)])
-+    fi
 +fi
 +
  dnl **** Check for working dll ****
@@ -107,20 +94,17 @@ index 53cce85..83eaeba 100644
  }
  
 diff --git a/include/wine/port.h b/include/wine/port.h
-index 3548a44..715a9e2 100644
+index 3548a44..521246b 100644
 --- a/include/wine/port.h
 +++ b/include/wine/port.h
-@@ -363,6 +363,17 @@ extern int mkstemps(char *template, int suffix_len);
+@@ -363,6 +363,14 @@ extern int mkstemps(char *template, int suffix_len);
  extern int _spawnvp(int mode, const char *cmdname, const char * const argv[]);
  #endif
  
 +/* Extended attribute functions */
 +
 +#ifndef XATTR_USER_PREFIX
-+#define XATTR_USER_PREFIX     "user."
-+#endif
-+#ifndef XATTR_USER_PREFIX_LEN
-+#define XATTR_USER_PREFIX_LEN (sizeof(XATTR_USER_PREFIX) - 1)
++# define XATTR_USER_PREFIX "user."
 +#endif
 +
 +extern int xattr_fget( int filedes, const char *name, void *value, size_t size );
@@ -141,10 +125,10 @@ index 65f1714..67efbc7 100644
 +	xattr.c
 diff --git a/libs/port/xattr.c b/libs/port/xattr.c
 new file mode 100644
-index 0000000..70fd047
+index 0000000..2d37be9
 --- /dev/null
 +++ b/libs/port/xattr.c
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,39 @@
 +/*
 + * extended attributes functions
 + *
@@ -168,39 +152,17 @@ index 0000000..70fd047
 +#include "config.h"
 +#include "wine/port.h"
 +
-+#ifdef HAVE_SYS_XATTR_H
-+# include <sys/xattr.h>
-+#endif
-+#ifdef HAVE_ATTR_XATTR_H
++#if defined(HAVE_ATTR_XATTR_H)
 +# include <attr/xattr.h>
-+#endif
-+#ifdef HAVE_SYS_EXTATTR_H
-+# include <sys/extattr.h>
 +#endif
 +
 +#include <ctype.h>
 +#include <errno.h>
 +
-+static inline int xattr_valid_namespace( const char *name )
-+{
-+    if (strncmp( XATTR_USER_PREFIX, name, XATTR_USER_PREFIX_LEN ) != 0)
-+    {
-+        errno = EPERM;
-+        return 0;
-+    }
-+    return 1;
-+}
-+
 +int xattr_fget( int filedes, const char *name, void *value, size_t size )
 +{
-+    if (!xattr_valid_namespace( name )) return -1;
-+#if defined(XATTR_ADDITIONAL_OPTIONS)
-+    return fgetxattr( filedes, name, value, size, 0, 0 );
-+#elif defined(HAVE_SYS_XATTR_H) || defined(HAVE_ATTR_XATTR_H)
++#if defined(HAVE_ATTR_XATTR_H)
 +    return fgetxattr( filedes, name, value, size );
-+#elif defined(HAVE_SYS_EXTATTR_H)
-+    return extattr_get_fd( filedes, EXTATTR_NAMESPACE_USER, &name[XATTR_USER_PREFIX_LEN],
-+                           value, size );
 +#else
 +    errno = ENOTSUP;
 +    return -1;

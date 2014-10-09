@@ -1,0 +1,717 @@
+From 2197e9d68f4400b5c30fbbe787ac308bc8a94908 Mon Sep 17 00:00:00 2001
+From: Alex Henrie <alexhenrie24@gmail.com>
+Date: Wed, 8 Oct 2014 19:52:55 -0600
+Subject: kernel32/tests: Add tests for UTF-7 conversion.
+
+---
+ dlls/kernel32/tests/codepage.c | 687 +++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 687 insertions(+)
+
+diff --git a/dlls/kernel32/tests/codepage.c b/dlls/kernel32/tests/codepage.c
+index 8423c75..aeca011 100644
+--- a/dlls/kernel32/tests/codepage.c
++++ b/dlls/kernel32/tests/codepage.c
+@@ -412,6 +412,691 @@ static void test_string_conversion(LPBOOL bUsedDefaultChar)
+     ok(GetLastError() == 0xdeadbeef, "GetLastError() is %u\n", GetLastError());
+ }
+ 
++static void test_utf7_string_conversion(void)
++{
++    struct utf16_to_utf7_test
++    {
++        WCHAR utf16[32];
++        int utf16_len;
++        char utf7[32];
++        int utf7_len;
++    };
++
++    struct utf16_to_utf7_test utf16_to_utf7_tests[] = {
++        /* test some valid UTF-16 */
++        {
++            {0x4F60,0x597D,0x5417,0},
++            4,
++            "+T2BZfVQX-",
++            11
++        },
++        /* tests some invalid UTF-16 */
++        /* (stray lead surrogate) */
++        {
++            {0xD801,0},
++            2,
++            "+2AE-",
++            6
++        },
++        /* tests some more invalid UTF-16 */
++        /* (codepoint does not exist) */
++        {
++            {0xFF00,0},
++            2,
++            "+/wA-",
++            6
++        }
++    };
++
++    struct utf7_to_utf16_test
++    {
++        char utf7[32];
++        WCHAR utf16[32];
++        int utf16_len;
++    };
++
++    struct utf7_to_utf16_test utf7_to_utf16_tests[] = {
++        /* tests some invalid UTF-7 */
++        /* (number of bits in base64 sequence is not a multiple of 16 and the last bit is a 1) */
++        /* also tests whether the unfinished byte pair is discarded or not */
++        {
++            "+T2B-+T2B-+T2B-hello",
++            {0x4F60,0x4F60,0x4F60,'h','e','l','l','o',0},
++            9
++        },
++        /* tests some more invalid UTF-7 */
++        /* (number of bits in base64 sequence is a multiple of 8 but not a multiple of 16) */
++        /* also tests whether the unfinished byte pair is discarded or not */
++        {
++            "+T2BZ-+T2BZ-+T2BZ-hello",
++            {0x4F60,0x4F60,0x4F60,'h','e','l','l','o',0},
++            9
++        },
++        /* tests UTF-7 followed by characters that should be encoded but aren't */
++        {
++            "+T2BZ-\x82\xFE",
++            {0x4F60,0x0082,0x00FE,0},
++            4
++        }
++    };
++
++    struct wcstombs_test
++    {
++        /* inputs */
++        WCHAR src[2048];
++        int srclen;
++        int dstlen;
++        /* expected outputs */
++        char dst[2048];
++        int len;
++        DWORD error;
++    };
++
++    struct wcstombs_test wcstombs_tests[] = {
++        /* tests which one-byte characters are base64-encoded and which are not */
++        {
++            {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,
++            26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,
++            48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,
++            70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,
++            92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,
++            111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,
++            128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,
++            145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,
++            162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,
++            179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,
++            196,197,198,199,200,201,202,203,204,205,206,207,208,209,210,211,212,
++            213,214,215,216,217,218,219,220,221,222,223,224,225,226,227,228,229,
++            230,231,232,233,234,235,236,237,238,239,240,241,242,243,244,245,246,
++            247,248,249,250,251,252,253,254,255,256,0},
++            257,
++            2047,
++            "+AAEAAgADAAQABQAGAAcACA-\t\n+AAsADA-\r+AA4ADwAQABEAEgATABQAFQAWABc"
++            "AGAAZABoAGwAcAB0AHgAf- +ACEAIgAjACQAJQAm-'()+ACo-+-,-./0123456789:"
++            "+ADsAPAA9AD4-?+AEA-ABCDEFGHIJKLMNOPQRSTUVWXYZ+AFsAXABdAF4AXwBg-abc"
++            "defghijklmnopqrstuvwxyz+AHsAfAB9AH4AfwCAAIEAggCDAIQAhQCGAIcAiACJAI"
++            "oAiwCMAI0AjgCPAJAAkQCSAJMAlACVAJYAlwCYAJkAmgCbAJwAnQCeAJ8AoAChAKIA"
++            "owCkAKUApgCnAKgAqQCqAKsArACtAK4ArwCwALEAsgCzALQAtQC2ALcAuAC5ALoAuw"
++            "C8AL0AvgC/AMAAwQDCAMMAxADFAMYAxwDIAMkAygDLAMwAzQDOAM8A0ADRANIA0wDU"
++            "ANUA1gDXANgA2QDaANsA3ADdAN4A3wDgAOEA4gDjAOQA5QDmAOcA6ADpAOoA6wDsAO"
++            "0A7gDvAPAA8QDyAPMA9AD1APYA9wD4APkA+gD7APwA/QD+AP8BAA-",
++            579,
++            0xdeadbeef
++        },
++        /* same as above but surrounding the chars with a non-encoded char */
++        {
++            {' ',0x01,' ',0x02,' ',0x03,' ',0x04,' ',0x05,' ',0x06,' ',0x07,' ',
++            0x08,' ',0x09,' ',0x0A,' ',0x0B,' ',0x0C,' ',0x0D,' ',0x0E,' ',0x0F,
++            ' ',0x10,' ',0x11,' ',0x12,' ',0x13,' ',0x14,' ',0x15,' ',0x16,' ',
++            0x17,' ',0x18,' ',0x19,' ',0x1A,' ',0x1B,' ',0x1C,' ',0x1D,' ',0x1E,
++            ' ',0x1F,' ',0x20,' ',0x21,' ',0x22,' ',0x23,' ',0x24,' ',0x25,' ',
++            0x26,' ',0x27,' ',0x28,' ',0x29,' ',0x2A,' ',0x2B,' ',0x2C,' ',0x2D,
++            ' ',0x2E,' ',0x2F,' ',0x30,' ',0x31,' ',0x32,' ',0x33,' ',0x34,' ',
++            0x35,' ',0x36,' ',0x37,' ',0x38,' ',0x39,' ',0x3A,' ',0x3B,' ',0x3C,
++            ' ',0x3D,' ',0x3E,' ',0x3F,' ',0x40,' ',0x41,' ',0x42,' ',0x43,' ',
++            0x44,' ',0x45,' ',0x46,' ',0x47,' ',0x48,' ',0x49,' ',0x4A,' ',0x4B,
++            ' ',0x4C,' ',0x4D,' ',0x4E,' ',0x4F,' ',0x50,' ',0x51,' ',0x52,' ',
++            0x53,' ',0x54,' ',0x55,' ',0x56,' ',0x57,' ',0x58,' ',0x59,' ',0x5A,
++            ' ',0x5B,' ',0x5C,' ',0x5D,' ',0x5E,' ',0x5F,' ',0x60,' ',0x61,' ',
++            0x62,' ',0x63,' ',0x64,' ',0x65,' ',0x66,' ',0x67,' ',0x68,' ',0x69,
++            ' ',0x6A,' ',0x6B,' ',0x6C,' ',0x6D,' ',0x6E,' ',0x6F,' ',0x70,' ',
++            0x71,' ',0x72,' ',0x73,' ',0x74,' ',0x75,' ',0x76,' ',0x77,' ',0x78,
++            ' ',0x79,' ',0x7A,' ',0x7B,' ',0x7C,' ',0x7D,' ',0x7E,' ',0x7F,' ',
++            0x80,' ',0x81,' ',0x82,' ',0x83,' ',0x84,' ',0x85,' ',0x86,' ',0x87,
++            ' ',0x88,' ',0x89,' ',0x8A,' ',0x8B,' ',0x8C,' ',0x8D,' ',0x8E,' ',
++            0x8F,' ',0x90,' ',0x91,' ',0x92,' ',0x93,' ',0x94,' ',0x95,' ',0x96,
++            ' ',0x97,' ',0x98,' ',0x99,' ',0x9A,' ',0x9B,' ',0x9C,' ',0x9D,' ',
++            0x9E,' ',0x9F,' ',0xA0,' ',0xA1,' ',0xA2,' ',0xA3,' ',0xA4,' ',0xA5,
++            ' ',0xA6,' ',0xA7,' ',0xA8,' ',0xA9,' ',0xAA,' ',0xAB,' ',0xAC,' ',
++            0xAD,' ',0xAE,' ',0xAF,' ',0xB0,' ',0xB1,' ',0xB2,' ',0xB3,' ',0xB4,
++            ' ',0xB5,' ',0xB6,' ',0xB7,' ',0xB8,' ',0xB9,' ',0xBA,' ',0xBB,' ',
++            0xBC,' ',0xBD,' ',0xBE,' ',0xBF,' ',0xC0,' ',0xC1,' ',0xC2,' ',0xC3,
++            ' ',0xC4,' ',0xC5,' ',0xC6,' ',0xC7,' ',0xC8,' ',0xC9,' ',0xCA,' ',
++            0xCB,' ',0xCC,' ',0xCD,' ',0xCE,' ',0xCF,' ',0xD0,' ',0xD1,' ',0xD2,
++            ' ',0xD3,' ',0xD4,' ',0xD5,' ',0xD6,' ',0xD7,' ',0xD8,' ',0xD9,' ',
++            0xDA,' ',0xDB,' ',0xDC,' ',0xDD,' ',0xDE,' ',0xDF,' ',0xE0,' ',0xE1,
++            ' ',0xE2,' ',0xE3,' ',0xE4,' ',0xE5,' ',0xE6,' ',0xE7,' ',0xE8,' ',
++            0xE9,' ',0xEA,' ',0xEB,' ',0xEC,' ',0xED,' ',0xEE,' ',0xEF,' ',0xF0,
++            ' ',0xF1,' ',0xF2,' ',0xF3,' ',0xF4,' ',0xF5,' ',0xF6,' ',0xF7,' ',
++            0xF8,' ',0xF9,' ',0xFA,' ',0xFB,' ',0xFC,' ',0xFD,' ',0xFE,' ',0xFF,
++            ' ',0x00,' '},
++            513,
++            2047,
++            " +AAE- +AAI- +AAM- +AAQ- +AAU- +AAY- +AAc- +AAg- \t \n +AAs- +AAw-"
++            " \r +AA4- +AA8- +ABA- +ABE- +ABI- +ABM- +ABQ- +ABU- +ABY- +ABc- +A"
++            "Bg- +ABk- +ABo- +ABs- +ABw- +AB0- +AB4- +AB8-   +ACE- +ACI- +ACM- "
++            "+ACQ- +ACU- +ACY- ' ( ) +ACo- +- , - . / 0 1 2 3 4 5 6 7 8 9 : +AD"
++            "s- +ADw- +AD0- +AD4- ? +AEA- A B C D E F G H I J K L M N O P Q R S"
++            " T U V W X Y Z +AFs- +AFw- +AF0- +AF4- +AF8- +AGA- a b c d e f g h"
++            " i j k l m n o p q r s t u v w x y z +AHs- +AHw- +AH0- +AH4- +AH8-"
++            " +AIA- +AIE- +AII- +AIM- +AIQ- +AIU- +AIY- +AIc- +AIg- +AIk- +AIo-"
++            " +AIs- +AIw- +AI0- +AI4- +AI8- +AJA- +AJE- +AJI- +AJM- +AJQ- +AJU-"
++            " +AJY- +AJc- +AJg- +AJk- +AJo- +AJs- +AJw- +AJ0- +AJ4- +AJ8- +AKA-"
++            " +AKE- +AKI- +AKM- +AKQ- +AKU- +AKY- +AKc- +AKg- +AKk- +AKo- +AKs-"
++            " +AKw- +AK0- +AK4- +AK8- +ALA- +ALE- +ALI- +ALM- +ALQ- +ALU- +ALY-"
++            " +ALc- +ALg- +ALk- +ALo- +ALs- +ALw- +AL0- +AL4- +AL8- +AMA- +AME-"
++            " +AMI- +AMM- +AMQ- +AMU- +AMY- +AMc- +AMg- +AMk- +AMo- +AMs- +AMw-"
++            " +AM0- +AM4- +AM8- +ANA- +ANE- +ANI- +ANM- +ANQ- +ANU- +ANY- +ANc-"
++            " +ANg- +ANk- +ANo- +ANs- +ANw- +AN0- +AN4- +AN8- +AOA- +AOE- +AOI-"
++            " +AOM- +AOQ- +AOU- +AOY- +AOc- +AOg- +AOk- +AOo- +AOs- +AOw- +AO0-"
++            " +AO4- +AO8- +APA- +APE- +API- +APM- +APQ- +APU- +APY- +APc- +APg-"
++            " +APk- +APo- +APs- +APw- +AP0- +AP4- +AP8- \0 ",
++            1230,
++            0xdeadbeef
++        },
++        /* tests which one-byte characters are absorbed into surrounding base64 blocks */
++        /* (Windows always ends the base64 block when it encounters a directly encodable character) */
++        {
++            {0x2672,0x0001,0x2672,0x0002,0x2672,0x0003,0x2672,0x0004,0x2672,
++            0x0005,0x2672,0x0006,0x2672,0x0007,0x2672,0x0008,0x2672,0x0009,
++            0x2672,0x000A,0x2672,0x000B,0x2672,0x000C,0x2672,0x000D,0x2672,
++            0x000E,0x2672,0x000F,0x2672,0x0010,0x2672,0x0011,0x2672,0x0012,
++            0x2672,0x0013,0x2672,0x0014,0x2672,0x0015,0x2672,0x0016,0x2672,
++            0x0017,0x2672,0x0018,0x2672,0x0019,0x2672,0x001A,0x2672,0x001B,
++            0x2672,0x001C,0x2672,0x001D,0x2672,0x001E,0x2672,0x001F,0x2672,
++            0x0020,0x2672,0x0021,0x2672,0x0022,0x2672,0x0023,0x2672,0x0024,
++            0x2672,0x0025,0x2672,0x0026,0x2672,0x0027,0x2672,0x0028,0x2672,
++            0x0029,0x2672,0x002A,0x2672,0x002B,0x2672,0x002C,0x2672,0x002D,
++            0x2672,0x002E,0x2672,0x002F,0x2672,0x0030,0x2672,0x0031,0x2672,
++            0x0032,0x2672,0x0033,0x2672,0x0034,0x2672,0x0035,0x2672,0x0036,
++            0x2672,0x0037,0x2672,0x0038,0x2672,0x0039,0x2672,0x003A,0x2672,
++            0x003B,0x2672,0x003C,0x2672,0x003D,0x2672,0x003E,0x2672,0x003F,
++            0x2672,0x0040,0x2672,0x0041,0x2672,0x0042,0x2672,0x0043,0x2672,
++            0x0044,0x2672,0x0045,0x2672,0x0046,0x2672,0x0047,0x2672,0x0048,
++            0x2672,0x0049,0x2672,0x004A,0x2672,0x004B,0x2672,0x004C,0x2672,
++            0x004D,0x2672,0x004E,0x2672,0x004F,0x2672,0x0050,0x2672,0x0051,
++            0x2672,0x0052,0x2672,0x0053,0x2672,0x0054,0x2672,0x0055,0x2672,
++            0x0056,0x2672,0x0057,0x2672,0x0058,0x2672,0x0059,0x2672,0x005A,
++            0x2672,0x005B,0x2672,0x005C,0x2672,0x005D,0x2672,0x005E,0x2672,
++            0x005F,0x2672,0x0060,0x2672,0x0061,0x2672,0x0062,0x2672,0x0063,
++            0x2672,0x0064,0x2672,0x0065,0x2672,0x0066,0x2672,0x0067,0x2672,
++            0x0068,0x2672,0x0069,0x2672,0x006A,0x2672,0x006B,0x2672,0x006C,
++            0x2672,0x006D,0x2672,0x006E,0x2672,0x006F,0x2672,0x0070,0x2672,
++            0x0071,0x2672,0x0072,0x2672,0x0073,0x2672,0x0074,0x2672,0x0075,
++            0x2672,0x0076,0x2672,0x0077,0x2672,0x0078,0x2672,0x0079,0x2672,
++            0x007A,0x2672,0x007B,0x2672,0x007C,0x2672,0x007D,0x2672,0x007E,
++            0x2672,0x007F,0x2672,0x0080,0x2672,0x0081,0x2672,0x0082,0x2672,
++            0x0083,0x2672,0x0084,0x2672,0x0085,0x2672,0x0086,0x2672,0x0087,
++            0x2672,0x0088,0x2672,0x0089,0x2672,0x008A,0x2672,0x008B,0x2672,
++            0x008C,0x2672,0x008D,0x2672,0x008E,0x2672,0x008F,0x2672,0x0090,
++            0x2672,0x0091,0x2672,0x0092,0x2672,0x0093,0x2672,0x0094,0x2672,
++            0x0095,0x2672,0x0096,0x2672,0x0097,0x2672,0x0098,0x2672,0x0099,
++            0x2672,0x009A,0x2672,0x009B,0x2672,0x009C,0x2672,0x009D,0x2672,
++            0x009E,0x2672,0x009F,0x2672,0x00A0,0x2672,0x00A1,0x2672,0x00A2,
++            0x2672,0x00A3,0x2672,0x00A4,0x2672,0x00A5,0x2672,0x00A6,0x2672,
++            0x00A7,0x2672,0x00A8,0x2672,0x00A9,0x2672,0x00AA,0x2672,0x00AB,
++            0x2672,0x00AC,0x2672,0x00AD,0x2672,0x00AE,0x2672,0x00AF,0x2672,
++            0x00B0,0x2672,0x00B1,0x2672,0x00B2,0x2672,0x00B3,0x2672,0x00B4,
++            0x2672,0x00B5,0x2672,0x00B6,0x2672,0x00B7,0x2672,0x00B8,0x2672,
++            0x00B9,0x2672,0x00BA,0x2672,0x00BB,0x2672,0x00BC,0x2672,0x00BD,
++            0x2672,0x00BE,0x2672,0x00BF,0x2672,0x00C0,0x2672,0x00C1,0x2672,
++            0x00C2,0x2672,0x00C3,0x2672,0x00C4,0x2672,0x00C5,0x2672,0x00C6,
++            0x2672,0x00C7,0x2672,0x00C8,0x2672,0x00C9,0x2672,0x00CA,0x2672,
++            0x00CB,0x2672,0x00CC,0x2672,0x00CD,0x2672,0x00CE,0x2672,0x00CF,
++            0x2672,0x00D0,0x2672,0x00D1,0x2672,0x00D2,0x2672,0x00D3,0x2672,
++            0x00D4,0x2672,0x00D5,0x2672,0x00D6,0x2672,0x00D7,0x2672,0x00D8,
++            0x2672,0x00D9,0x2672,0x00DA,0x2672,0x00DB,0x2672,0x00DC,0x2672,
++            0x00DD,0x2672,0x00DE,0x2672,0x00DF,0x2672,0x00E0,0x2672,0x00E1,
++            0x2672,0x00E2,0x2672,0x00E3,0x2672,0x00E4,0x2672,0x00E5,0x2672,
++            0x00E6,0x2672,0x00E7,0x2672,0x00E8,0x2672,0x00E9,0x2672,0x00EA,
++            0x2672,0x00EB,0x2672,0x00EC,0x2672,0x00ED,0x2672,0x00EE,0x2672,
++            0x00EF,0x2672,0x00F0,0x2672,0x00F1,0x2672,0x00F2,0x2672,0x00F3,
++            0x2672,0x00F4,0x2672,0x00F5,0x2672,0x00F6,0x2672,0x00F7,0x2672,
++            0x00F8,0x2672,0x00F9,0x2672,0x00FA,0x2672,0x00FB,0x2672,0x00FC,
++            0x2672,0x00FD,0x2672,0x00FE,0x2672,0x00FF,0x2672,0x0100,0x2672,
++            0x0000,0x2672},
++            515,
++            2047,
++            "+JnIAASZyAAImcgADJnIABCZyAAUmcgAGJnIAByZyAAgmcg-\t+JnI-\n+JnIACyZy"
++            "AAwmcg-\r+JnIADiZyAA8mcgAQJnIAESZyABImcgATJnIAFCZyABUmcgAWJnIAFyZy"
++            "ABgmcgAZJnIAGiZyABsmcgAcJnIAHSZyAB4mcgAfJnI- +JnIAISZyACImcgAjJnIA"
++            "JCZyACUmcgAmJnI-'+JnI-(+JnI-)+JnIAKiZy-+-+JnI-,+JnI--+JnI-.+JnI-/+"
++            "JnI-0+JnI-1+JnI-2+JnI-3+JnI-4+JnI-5+JnI-6+JnI-7+JnI-8+JnI-9+JnI-:+"
++            "JnIAOyZyADwmcgA9JnIAPiZy-?+JnIAQCZy-A+JnI-B+JnI-C+JnI-D+JnI-E+JnI-"
++            "F+JnI-G+JnI-H+JnI-I+JnI-J+JnI-K+JnI-L+JnI-M+JnI-N+JnI-O+JnI-P+JnI-"
++            "Q+JnI-R+JnI-S+JnI-T+JnI-U+JnI-V+JnI-W+JnI-X+JnI-Y+JnI-Z+JnIAWyZyAF"
++            "wmcgBdJnIAXiZyAF8mcgBgJnI-a+JnI-b+JnI-c+JnI-d+JnI-e+JnI-f+JnI-g+Jn"
++            "I-h+JnI-i+JnI-j+JnI-k+JnI-l+JnI-m+JnI-n+JnI-o+JnI-p+JnI-q+JnI-r+Jn"
++            "I-s+JnI-t+JnI-u+JnI-v+JnI-w+JnI-x+JnI-y+JnI-z+JnIAeyZyAHwmcgB9JnIA"
++            "fiZyAH8mcgCAJnIAgSZyAIImcgCDJnIAhCZyAIUmcgCGJnIAhyZyAIgmcgCJJnIAii"
++            "ZyAIsmcgCMJnIAjSZyAI4mcgCPJnIAkCZyAJEmcgCSJnIAkyZyAJQmcgCVJnIAliZy"
++            "AJcmcgCYJnIAmSZyAJomcgCbJnIAnCZyAJ0mcgCeJnIAnyZyAKAmcgChJnIAoiZyAK"
++            "MmcgCkJnIApSZyAKYmcgCnJnIAqCZyAKkmcgCqJnIAqyZyAKwmcgCtJnIAriZyAK8m"
++            "cgCwJnIAsSZyALImcgCzJnIAtCZyALUmcgC2JnIAtyZyALgmcgC5JnIAuiZyALsmcg"
++            "C8JnIAvSZyAL4mcgC/JnIAwCZyAMEmcgDCJnIAwyZyAMQmcgDFJnIAxiZyAMcmcgDI"
++            "JnIAySZyAMomcgDLJnIAzCZyAM0mcgDOJnIAzyZyANAmcgDRJnIA0iZyANMmcgDUJn"
++            "IA1SZyANYmcgDXJnIA2CZyANkmcgDaJnIA2yZyANwmcgDdJnIA3iZyAN8mcgDgJnIA"
++            "4SZyAOImcgDjJnIA5CZyAOUmcgDmJnIA5yZyAOgmcgDpJnIA6iZyAOsmcgDsJnIA7S"
++            "ZyAO4mcgDvJnIA8CZyAPEmcgDyJnIA8yZyAPQmcgD1JnIA9iZyAPcmcgD4JnIA+SZy"
++            "APomcgD7JnIA/CZyAP0mcgD+JnIA/yZyAQAmcg-\0+JnI-",
++            1428,
++            0xdeadbeef
++        },
++        /* tests srclen > strlenW(src) */
++        {
++            {'a',0,'b',0},
++            4,
++            2047,
++            "a\0b",
++            4,
++            0xdeadbeef
++        },
++        /* tests srclen < strlenW(src) with directly encodable chars */
++        {
++            {'h','e','l','l','o',0},
++            2,
++            2047,
++            "he",
++            2,
++            0xdeadbeef
++        },
++        /* tests srclen < strlenW(src) with non-directly encodable chars*/
++        {
++            {0x4F60,0x597D,0x5417,0},
++            2,
++            2047,
++            "+T2BZfQ-",
++            8,
++            0xdeadbeef
++        },
++        /* tests a buffer that runs out while not encoding a UTF-7 sequence */
++        {
++            {'h','e','l','l','o',0},
++            -1,
++            2,
++            "he",
++            0,
++            ERROR_INSUFFICIENT_BUFFER
++        },
++        /* tests a buffer that runs out in the middle of encoding a UTF-7 sequence */
++        {
++            {0x4F60,0x597D,0},
++            -1,
++            2,
++            "+T",
++            0,
++            ERROR_INSUFFICIENT_BUFFER
++        }
++    };
++
++    struct mbstowcs_test
++    {
++        /* inputs */
++        char src[2048];
++        int srclen;
++        int dstlen;
++        /* expected outputs */
++        WCHAR dst[2048];
++        int len;
++        DWORD error;
++    };
++
++    struct mbstowcs_test mbstowcs_tests[] = {
++        /* tests which one-byte characters implicitly terminate a sequence */
++        /* also tests whether the unfinished byte pair is discarded or not */
++        /* also tests srclen > strlen(src) */
++        {
++            "+A\x01-+B\x02-+C\x03-+D\x04-+E\x05-+F\x06-+G\x07-+H\x08-+I\x09-+J"
++            "\x0A-+K\x0B-+L\x0C-+M\x0D-+N\x0E-+O\x0F-+P\x10-+Q\x11-+R\x12-+S"
++            "\x13-+T\x14-+U\x15-+V\x16-+W\x17-+X\x18-+Y\x19-+Z\x1A-+a\x1B-+b"
++            "\x1C-+c\x1D-+d\x1E-+e\x1F-+f\x20-+g\x21-+h\x22-+i\x23-+j\x24-+k"
++            "\x25-+l\x26-+m\x27-+n\x28-+o\x29-+p\x2A-+q\x2B-+r\x2C-+s\x2D-+t"
++            "\x2E-+u\x2F-+v\x30-+w\x31-+x\x32-+y\x33-+z\x34-+0\x35-+1\x36-+2"
++            "\x37-+3\x38-+4\x39-+5\x3A-+6\x3B-+7\x3C-+8\x3D-+9\x3E-++\x3F-+/"
++            "\x40-+A\x41-+B\x42-+C\x43-+D\x44-+E\x45-+F\x46-+G\x47-+H\x48-+I"
++            "\x49-+J\x4A-+K\x4B-+L\x4C-+M\x4D-+N\x4E-+O\x4F-+P\x50-+Q\x51-+R"
++            "\x52-+S\x53-+T\x54-+U\x55-+V\x56-+W\x57-+X\x58-+Y\x59-+Z\x5A-+a"
++            "\x5B-+b\x5C-+c\x5D-+d\x5E-+e\x5F-+f\x60-+g\x61-+h\x62-+i\x63-+j"
++            "\x64-+k\x65-+l\x66-+m\x67-+n\x68-+o\x69-+p\x6A-+q\x6B-+r\x6C-+s"
++            "\x6D-+t\x6E-+u\x6F-+v\x70-+w\x71-+x\x72-+y\x73-+z\x74-+0\x75-+1"
++            "\x76-+2\x77-+3\x78-+4\x79-+5\x7A-+6\x7B-+7\x7C-+8\x7D-+9\x7E-++"
++            "\x7F-+/\x80-+A\x81-+B\x82-+C\x83-+D\x84-+E\x85-+F\x86-+G\x87-+H"
++            "\x88-+I\x89-+J\x8A-+K\x8B-+L\x8C-+M\x8D-+N\x8E-+O\x8F-+P\x90-+Q"
++            "\x91-+R\x92-+S\x93-+T\x94-+U\x95-+V\x96-+W\x97-+X\x98-+Y\x99-+Z"
++            "\x9A-+a\x9B-+b\x9C-+c\x9D-+d\x9E-+e\x9F-+f\xA0-+g\xA1-+h\xA2-+i"
++            "\xA3-+j\xA4-+k\xA5-+l\xA6-+m\xA7-+n\xA8-+o\xA9-+p\xAA-+q\xAB-+r"
++            "\xAC-+s\xAD-+t\xAE-+u\xAF-+v\xB0-+w\xB1-+x\xB2-+y\xB3-+z\xB4-+0"
++            "\xB5-+1\xB6-+2\xB7-+3\xB8-+4\xB9-+5\xBA-+6\xBB-+7\xBC-+8\xBD-+9"
++            "\xBE-++\xBF-+/\xC0-+A\xC1-+B\xC2-+C\xC3-+D\xC4-+E\xC5-+F\xC6-+G"
++            "\xC7-+H\xC8-+I\xC9-+J\xCA-+K\xCB-+L\xCC-+M\xCD-+N\xCE-+O\xCF-+P"
++            "\xD0-+Q\xD1-+R\xD2-+S\xD3-+T\xD4-+U\xD5-+V\xD6-+W\xD7-+X\xD8-+Y"
++            "\xD9-+Z\xDA-+a\xDB-+b\xDC-+c\xDD-+d\xDE-+e\xDF-+f\xE0-+g\xE1-+h"
++            "\xE2-+i\xE3-+j\xE4-+k\xE5-+l\xE6-+m\xE7-+n\xE8-+o\xE9-+p\xEA-+q"
++            "\xEB-+r\xEC-+s\xED-+t\xEE-+u\xEF-+v\xF0-+w\xF1-+x\xF2-+y\xF3-+z"
++            "\xF4-+0\xF5-+1\xF6-+2\xF7-+3\xF8-+4\xF9-+5\xFA-+6\xFB-+7\xFC-+8"
++            "\xFD-+9\xFE-++\xFF-+A",
++            1023,
++            2047,
++            {0x0001,'-',0x0002,'-',0x0003,'-',0x0004,'-',0x0005,'-',0x0006,'-',
++            0x0007,'-',0x0008,'-','\t','-','\n','-',0x000B,'-',0x000C,'-','\r',
++            '-',0x000E,'-',0x000F,'-',0x0010,'-',0x0011,'-',0x0012,'-',0x0013,
++            '-',0x0014,'-',0x0015,'-',0x0016,'-',0x0017,'-',0x0018,'-',0x0019,
++            '-',0x001A,'-',0x001B,'-',0x001C,'-',0x001D,'-',0x001E,'-',0x001F,
++            '-',' ','-','!','-','"','-','#','-','$','-','%','-','&','-','\'',
++            '-','(','-',')','-','*','-',',','-','-','.','-',':','-',';','-','<',
++            '-','=','-','>','-','?','-','@','-','[','-','\\','-',']','-','^',
++            '-','_','-','`','-','{','-','|','-','}','-','~','-',0x007F,'-',
++            0x0080,'-',0x0081,'-',0xFC00,0x0082,'-',0x0083,'-',0x0084,'-',
++            0x420C,0x0085,'-',0x0086,'-',0x4146,0x0087,'-',0x0088,'-',0x0089,
++            '-',0x1C82,0x008A,'-',0x008B,'-',0x008C,'-',0x4A2C,0x008D,'-',
++            0x008E,'-',0xC34E,0x008F,'-',0x0090,'-',0x0091,'-',0x3D04,0x0092,
++            '-',0x0093,'-',0x0094,'-',0x524D,0x0095,'-',0x0096,'-',0x4556,
++            0x0097,'-',0x0098,'-',0x0099,'-',0x5D86,0x009A,'-',0x009B,'-',
++            0x009C,'-',0x5A6D,0x009D,'-',0x009E,'-',0xC75E,0x009F,'-',0x00A0,
++            '-',0x00A1,'-',0x7E08,0x00A2,'-',0x00A3,'-',0x00A4,'-',0x628E,
++            0x00A5,'-',0x00A6,'-',0x4966,0x00A7,'-',0x00A8,'-',0x00A9,'-',
++            0x9E8A,0x00AA,'-',0x00AB,'-',0x00AC,'-',0x6AAE,0x00AD,'-',0x00AE,
++            '-',0xCB6E,0x00AF,'-',0x00B0,'-',0x00B1,'-',0xBF0C,0x00B2,'-',
++            0x00B3,'-',0x00B4,'-',0x72CF,0x00B5,'-',0x00B6,'-',0x4D76,0x00B7,
++            '-',0x00B8,'-',0x00B9,'-',0xDF8E,0x00BA,'-',0x00BB,'-',0x00BC,'-',
++            0x7AEF,0x00BD,'-',0x00BE,'-',0xCF7E,0x00BF,'-',0x00C0,'-',0x00C1,
++            '-',0xFC00,0x00C2,'-',0x00C3,'-',0x00C4,'-',0x420C,0x00C5,'-',
++            0x00C6,'-',0x4146,0x00C7,'-',0x00C8,'-',0x00C9,'-',0x1C82,0x00CA,
++            '-',0x00CB,'-',0x00CC,'-',0x4A2C,0x00CD,'-',0x00CE,'-',0xC34E,
++            0x00CF,'-',0x00D0,'-',0x00D1,'-',0x3D04,0x00D2,'-',0x00D3,'-',
++            0x00D4,'-',0x524D,0x00D5,'-',0x00D6,'-',0x4556,0x00D7,'-',0x00D8,
++            '-',0x00D9,'-',0x5D86,0x00DA,'-',0x00DB,'-',0x00DC,'-',0x5A6D,
++            0x00DD,'-',0x00DE,'-',0xC75E,0x00DF,'-',0x00E0,'-',0x00E1,'-',
++            0x7E08,0x00E2,'-',0x00E3,'-',0x00E4,'-',0x628E,0x00E5,'-',0x00E6,
++            '-',0x4966,0x00E7,'-',0x00E8,'-',0x00E9,'-',0x9E8A,0x00EA,'-',
++            0x00EB,'-',0x00EC,'-',0x6AAE,0x00ED,'-',0x00EE,'-',0xCB6E,0x00EF,
++            '-',0x00F0,'-',0x00F1,'-',0xBF0C,0x00F2,'-',0x00F3,'-',0x00F4,'-',
++            0x72CF,0x00F5,'-',0x00F6,'-',0x4D76,0x00F7,'-',0x00F8,'-',0x00F9,
++            '-',0xDF8E,0x00FA,'-',0x00FB,'-',0x00FC,'-',0x7AEF,0x00FD,'-',
++            0x00FE,'-',0xCF7E,0x00FF,'-',0},
++            430,
++            0xdeadbeef
++        },
++        /* tests which one-byte characters remove stray + signs */
++        {
++            "+\x01-+\x02-+\x03-+\x04-+\x05-+\x06-+\x07-+\x08-+\x09-+\x0A-+\x0B-"
++            "+\x0C-+\x0D-+\x0E-+\x0F-+\x10-+\x11-+\x12-+\x13-+\x14-+\x15-+\x16-"
++            "+\x17-+\x18-+\x19-+\x1A-+\x1B-+\x1C-+\x1D-+\x1E-+\x1F-+\x20-+\x21-"
++            "+\x22-+\x23-+\x24-+\x25-+\x26-+\x27-+\x28-+\x29-+\x2A-+\x2B-+\x2C-"
++            "+\x2D-+\x2E-+\x2F-+\x30-+\x31-+\x32-+\x33-+\x34-+\x35-+\x36-+\x37-"
++            "+\x38-+\x39-+\x3A-+\x3B-+\x3C-+\x3D-+\x3E-+\x3F-+\x40-+\x41-+\x42-"
++            "+\x43-+\x44-+\x45-+\x46-+\x47-+\x48-+\x49-+\x4A-+\x4B-+\x4C-+\x4D-"
++            "+\x4E-+\x4F-+\x50-+\x51-+\x52-+\x53-+\x54-+\x55-+\x56-+\x57-+\x58-"
++            "+\x59-+\x5A-+\x5B-+\x5C-+\x5D-+\x5E-+\x5F-+\x60-+\x61-+\x62-+\x63-"
++            "+\x64-+\x65-+\x66-+\x67-+\x68-+\x69-+\x6A-+\x6B-+\x6C-+\x6D-+\x6E-"
++            "+\x6F-+\x70-+\x71-+\x72-+\x73-+\x74-+\x75-+\x76-+\x77-+\x78-+\x79-"
++            "+\x7A-+\x7B-+\x7C-+\x7D-+\x7E-+\x7F-+\x80-+\x81-+\x82-+\x83-+\x84-"
++            "+\x85-+\x86-+\x87-+\x88-+\x89-+\x8A-+\x8B-+\x8C-+\x8D-+\x8E-+\x8F-"
++            "+\x90-+\x91-+\x92-+\x93-+\x94-+\x95-+\x96-+\x97-+\x98-+\x99-+\x9A-"
++            "+\x9B-+\x9C-+\x9D-+\x9E-+\x9F-+\xA0-+\xA1-+\xA2-+\xA3-+\xA4-+\xA5-"
++            "+\xA6-+\xA7-+\xA8-+\xA9-+\xAA-+\xAB-+\xAC-+\xAD-+\xAE-+\xAF-+\xB0-"
++            "+\xB1-+\xB2-+\xB3-+\xB4-+\xB5-+\xB6-+\xB7-+\xB8-+\xB9-+\xBA-+\xBB-"
++            "+\xBC-+\xBD-+\xBE-+\xBF-+\xC0-+\xC1-+\xC2-+\xC3-+\xC4-+\xC5-+\xC6-"
++            "+\xC7-+\xC8-+\xC9-+\xCA-+\xCB-+\xCC-+\xCD-+\xCE-+\xCF-+\xD0-+\xD1-"
++            "+\xD2-+\xD3-+\xD4-+\xD5-+\xD6-+\xD7-+\xD8-+\xD9-+\xDA-+\xDB-+\xDC-"
++            "+\xDD-+\xDE-+\xDF-+\xE0-+\xE1-+\xE2-+\xE3-+\xE4-+\xE5-+\xE6-+\xE7-"
++            "+\xE8-+\xE9-+\xEA-+\xEB-+\xEC-+\xED-+\xEE-+\xEF-+\xF0-+\xF1-+\xF2-"
++            "+\xF3-+\xF4-+\xF5-+\xF6-+\xF7-+\xF8-+\xF9-+\xFA-+\xFB-+\xFC-+\xFD-"
++            "+\xFE-+\xFF-+",
++            767,
++            2047,
++            {0x0001,'-',0x0002,'-',0x0003,'-',0x0004,'-',0x0005,'-',0x0006,'-',
++            0x0007,'-',0x0008,'-','\t','-','\n','-',0x000B,'-',0x000C,'-','\r',
++            '-',0x000E,'-',0x000F,'-',0x0010,'-',0x0011,'-',0x0012,'-',0x0013,
++            '-',0x0014,'-',0x0015,'-',0x0016,'-',0x0017,'-',0x0018,'-',0x0019,
++            '-',0x001A,'-',0x001B,'-',0x001C,'-',0x001D,'-',0x001E,'-',0x001F,
++            '-',' ','-','!','-','"','-','#','-','$','-','%','-','&','-','\'',
++            '-','(','-',')','-','*','-',',','-','+','-','.','-',':','-',';','-',
++            '<','-','=','-','>','-','?','-','@','-','[','-','\\','-',']','-',
++            '^','-','_','-','`','-','{','-','|','-','}','-','~','-',0x007F,'-',
++            0x0080,'-',0x0081,'-',0x0082,'-',0x0083,'-',0x0084,'-',0x0085,'-',
++            0x0086,'-',0x0087,'-',0x0088,'-',0x0089,'-',0x008A,'-',0x008B,'-',
++            0x008C,'-',0x008D,'-',0x008E,'-',0x008F,'-',0x0090,'-',0x0091,'-',
++            0x0092,'-',0x0093,'-',0x0094,'-',0x0095,'-',0x0096,'-',0x0097,'-',
++            0x0098,'-',0x0099,'-',0x009A,'-',0x009B,'-',0x009C,'-',0x009D,'-',
++            0x009E,'-',0x009F,'-',0x00A0,'-',0x00A1,'-',0x00A2,'-',0x00A3,'-',
++            0x00A4,'-',0x00A5,'-',0x00A6,'-',0x00A7,'-',0x00A8,'-',0x00A9,'-',
++            0x00AA,'-',0x00AB,'-',0x00AC,'-',0x00AD,'-',0x00AE,'-',0x00AF,'-',
++            0x00B0,'-',0x00B1,'-',0x00B2,'-',0x00B3,'-',0x00B4,'-',0x00B5,'-',
++            0x00B6,'-',0x00B7,'-',0x00B8,'-',0x00B9,'-',0x00BA,'-',0x00BB,'-',
++            0x00BC,'-',0x00BD,'-',0x00BE,'-',0x00BF,'-',0x00C0,'-',0x00C1,'-',
++            0x00C2,'-',0x00C3,'-',0x00C4,'-',0x00C5,'-',0x00C6,'-',0x00C7,'-',
++            0x00C8,'-',0x00C9,'-',0x00CA,'-',0x00CB,'-',0x00CC,'-',0x00CD,'-',
++            0x00CE,'-',0x00CF,'-',0x00D0,'-',0x00D1,'-',0x00D2,'-',0x00D3,'-',
++            0x00D4,'-',0x00D5,'-',0x00D6,'-',0x00D7,'-',0x00D8,'-',0x00D9,'-',
++            0x00DA,'-',0x00DB,'-',0x00DC,'-',0x00DD,'-',0x00DE,'-',0x00DF,'-',
++            0x00E0,'-',0x00E1,'-',0x00E2,'-',0x00E3,'-',0x00E4,'-',0x00E5,'-',
++            0x00E6,'-',0x00E7,'-',0x00E8,'-',0x00E9,'-',0x00EA,'-',0x00EB,'-',
++            0x00EC,'-',0x00ED,'-',0x00EE,'-',0x00EF,'-',0x00F0,'-',0x00F1,'-',
++            0x00F2,'-',0x00F3,'-',0x00F4,'-',0x00F5,'-',0x00F6,'-',0x00F7,'-',
++            0x00F8,'-',0x00F9,'-',0x00FA,'-',0x00FB,'-',0x00FC,'-',0x00FD,'-',
++            0x00FE,'-',0x00FF,'-',0},
++            383,
++            0xdeadbeef
++        },
++        /* tests srclen > strlen(src) */
++        {
++            "a\0b",
++            4,
++            2047,
++            {'a',0,'b',0},
++            4,
++            0xdeadbeef
++        },
++        /* tests srclen < strlen(src) outside of a UTF-7 sequence */
++        {
++            "hello",
++            2,
++            2047,
++            {'h','e'},
++            2,
++            0xdeadbeef
++        },
++        /* tests srclen < strlen(src) inside of a UTF-7 sequence */
++        {
++            "+T2BZfQ-",
++            4,
++            2047,
++            {0x4F60},
++            1,
++            0xdeadbeef
++        },
++        /* tests a buffer that runs out while not decoding a UTF-7 sequence */
++        {
++            "hello",
++            -1,
++            2,
++            {'h','e'},
++            0,
++            ERROR_INSUFFICIENT_BUFFER
++        },
++        /* tests a buffer that runs out in the middle of decoding a UTF-7 sequence */
++        {
++            "+T2BZfQ-",
++            -1,
++            1,
++            {0x4F60},
++            0,
++            ERROR_INSUFFICIENT_BUFFER
++        }
++    };
++
++    int i;
++
++    for (i = 0; i < sizeof(utf16_to_utf7_tests) / sizeof(struct utf16_to_utf7_test); i++)
++    {
++        char c_buffer[32];
++        WCHAR w_buffer[32];
++        int len;
++
++        /* null-terminate the buffers */
++        c_buffer[sizeof(c_buffer) - 1] = 0;
++        w_buffer[sizeof(w_buffer) / sizeof(WCHAR) - 1] = 0;
++
++        /* test string conversion with srclen=-1 */
++        memset(c_buffer, '#', sizeof(c_buffer) - 1);
++        len = WideCharToMultiByte(CP_UTF7, 0, utf16_to_utf7_tests[i].utf16, -1, c_buffer, sizeof(c_buffer), NULL, NULL);
++        ok(len == utf16_to_utf7_tests[i].utf7_len &&
++           strcmp(c_buffer, utf16_to_utf7_tests[i].utf7) == 0 &&
++           c_buffer[len] == '#',
++           "utf16_to_utf7_test failure i=%i dst=\"%s\" len=%i\n", i, c_buffer, len);
++
++        /* test string conversion with srclen=-2 */
++        memset(c_buffer, '#', sizeof(c_buffer) - 1);
++        len = WideCharToMultiByte(CP_UTF7, 0, utf16_to_utf7_tests[i].utf16, -2, c_buffer, sizeof(c_buffer), NULL, NULL);
++        ok(len == utf16_to_utf7_tests[i].utf7_len &&
++           strcmp(c_buffer, utf16_to_utf7_tests[i].utf7) == 0 &&
++           c_buffer[len] == '#',
++           "utf16_to_utf7_test failure i=%i dst=\"%s\" len=%i\n", i, c_buffer, len);
++
++        /* test string conversion with dstlen=len-1 */
++        memset(c_buffer, '#', sizeof(c_buffer) - 1);
++        SetLastError(0);
++        len = WideCharToMultiByte(CP_UTF7, 0, utf16_to_utf7_tests[i].utf16, -1, c_buffer, utf16_to_utf7_tests[i].utf7_len - 1, NULL, NULL);
++        ok(len == 0 &&
++           memcmp(c_buffer, utf16_to_utf7_tests[i].utf7, utf16_to_utf7_tests[i].utf7_len - 1) == 0 &&
++           c_buffer[utf16_to_utf7_tests[i].utf7_len - 1] == '#',
++           "utf16_to_utf7_test failure i=%i dst=\"%s\" len=%i\n", i, c_buffer, len);
++        ok(GetLastError() == ERROR_INSUFFICIENT_BUFFER, "error=%x\n", GetLastError());
++
++        /* test string conversion with dstlen=len */
++        memset(c_buffer, '#', sizeof(c_buffer) - 1);
++        len = WideCharToMultiByte(CP_UTF7, 0, utf16_to_utf7_tests[i].utf16, -1, c_buffer, utf16_to_utf7_tests[i].utf7_len, NULL, NULL);
++        ok(len == utf16_to_utf7_tests[i].utf7_len &&
++           strcmp(c_buffer, utf16_to_utf7_tests[i].utf7) == 0 &&
++           c_buffer[len] == '#',
++           "utf16_to_utf7_test failure i=%i dst=\"%s\" len=%i\n", i, c_buffer, len);
++
++        /* test string conversion with dstlen=len+1 */
++        memset(c_buffer, '#', sizeof(c_buffer) - 1);
++        len = WideCharToMultiByte(CP_UTF7, 0, utf16_to_utf7_tests[i].utf16, -1, c_buffer, utf16_to_utf7_tests[i].utf7_len + 1, NULL, NULL);
++        ok(len == utf16_to_utf7_tests[i].utf7_len &&
++           strcmp(c_buffer, utf16_to_utf7_tests[i].utf7) == 0 &&
++           c_buffer[len] == '#',
++           "utf16_to_utf7_test failure i=%i dst=\"%s\" len=%i\n", i, c_buffer, len);
++
++        /* test dry run with dst=NULL and dstlen=0 */
++        memset(c_buffer, '#', sizeof(c_buffer));
++        len = WideCharToMultiByte(CP_UTF7, 0, utf16_to_utf7_tests[i].utf16, -1, NULL, 0, NULL, NULL);
++        ok(len == utf16_to_utf7_tests[i].utf7_len &&
++           c_buffer[0] == '#',
++           "utf16_to_utf7_test failure i=%i len=%i\n", i, len);
++
++        /* test dry run with dst!=NULL and dstlen=0 */
++        memset(c_buffer, '#', sizeof(c_buffer) - 1);
++        len = WideCharToMultiByte(CP_UTF7, 0, utf16_to_utf7_tests[i].utf16, -1, c_buffer, 0, NULL, NULL);
++        ok(len == utf16_to_utf7_tests[i].utf7_len &&
++           c_buffer[0] == '#',
++           "utf16_to_utf7_test failure i=%i len=%i\n", i, len);
++
++        /* all simple utf16-to-utf7 tests can be reversed to make utf7-to-utf16 tests */
++        memset(w_buffer, '#', sizeof(w_buffer) - sizeof(WCHAR));
++        len = MultiByteToWideChar(CP_UTF7, 0, utf16_to_utf7_tests[i].utf7, -1, w_buffer, sizeof(w_buffer) / sizeof(WCHAR));
++        ok(len == utf16_to_utf7_tests[i].utf16_len &&
++           memcmp(w_buffer, utf16_to_utf7_tests[i].utf16, len * sizeof(WCHAR)) == 0 &&
++           w_buffer[len] == 0x2323,
++           "utf16_to_utf7_test failure i=%i dst=%s len=%i\n", i, wine_dbgstr_w(w_buffer), len);
++    }
++
++    for (i = 0; i < sizeof(utf7_to_utf16_tests) / sizeof(struct utf7_to_utf16_test); i++)
++    {
++        WCHAR w_buffer[32];
++        int len;
++
++        /* null-terminate the buffer */
++        w_buffer[sizeof(w_buffer) / sizeof(WCHAR) - 1] = 0;
++
++        /* test string conversion with srclen=-1 */
++        memset(w_buffer, '#', sizeof(w_buffer) - sizeof(WCHAR));
++        len = MultiByteToWideChar(CP_UTF7, 0, utf7_to_utf16_tests[i].utf7, -1, w_buffer, sizeof(w_buffer) / sizeof(WCHAR));
++        ok(len == utf7_to_utf16_tests[i].utf16_len &&
++           winetest_strcmpW(w_buffer, utf7_to_utf16_tests[i].utf16) == 0 &&
++           w_buffer[len] == 0x2323,
++           "utf7_to_utf16_test failure i=%i dst=%s len=%i\n", i, wine_dbgstr_w(w_buffer), len);
++
++        /* test string conversion with srclen=-2 */
++        memset(w_buffer, '#', sizeof(w_buffer) - sizeof(WCHAR));
++        len = MultiByteToWideChar(CP_UTF7, 0, utf7_to_utf16_tests[i].utf7, -2, w_buffer, sizeof(w_buffer) / sizeof(WCHAR));
++        ok(len == utf7_to_utf16_tests[i].utf16_len &&
++           winetest_strcmpW(w_buffer, utf7_to_utf16_tests[i].utf16) == 0 &&
++           w_buffer[len] == 0x2323,
++           "utf7_to_utf16_test failure i=%i dst=%s len=%i\n", i, wine_dbgstr_w(w_buffer), len);
++
++        /* test string conversion with dstlen=len-1 */
++        memset(w_buffer, '#', sizeof(w_buffer) - sizeof(WCHAR));
++        SetLastError(0);
++        len = MultiByteToWideChar(CP_UTF7, 0, utf7_to_utf16_tests[i].utf7, -1, w_buffer, utf7_to_utf16_tests[i].utf16_len - 1);
++        ok(len == 0 &&
++           memcmp(w_buffer, utf7_to_utf16_tests[i].utf16, (utf7_to_utf16_tests[i].utf16_len - 1) * sizeof(WCHAR)) == 0 &&
++           w_buffer[utf7_to_utf16_tests[i].utf16_len - 1] == 0x2323,
++           "utf7_to_utf16_test failure i=%i dst=%s len=%i\n", i, wine_dbgstr_w(w_buffer), len);
++        ok(GetLastError() == ERROR_INSUFFICIENT_BUFFER, "error=%x\n", GetLastError());
++
++        /* test string conversion with dstlen=len */
++        memset(w_buffer, '#', sizeof(w_buffer) - sizeof(WCHAR));
++        len = MultiByteToWideChar(CP_UTF7, 0, utf7_to_utf16_tests[i].utf7, -1, w_buffer, utf7_to_utf16_tests[i].utf16_len);
++        ok(len == utf7_to_utf16_tests[i].utf16_len &&
++           winetest_strcmpW(w_buffer, utf7_to_utf16_tests[i].utf16) == 0 &&
++           w_buffer[len] == 0x2323,
++           "utf7_to_utf16_test failure i=%i dst=%s len=%i\n", i, wine_dbgstr_w(w_buffer), len);
++
++        /* test string conversion with dstlen=len+1 */
++        memset(w_buffer, '#', sizeof(w_buffer) - sizeof(WCHAR));
++        len = MultiByteToWideChar(CP_UTF7, 0, utf7_to_utf16_tests[i].utf7, -1, w_buffer, utf7_to_utf16_tests[i].utf16_len + 1);
++        ok(len == utf7_to_utf16_tests[i].utf16_len &&
++           winetest_strcmpW(w_buffer, utf7_to_utf16_tests[i].utf16) == 0 &&
++           w_buffer[len] == 0x2323,
++           "utf7_to_utf16_test failure i=%i dst=%s len=%i\n", i, wine_dbgstr_w(w_buffer), len);
++
++        /* test dry run with dst=NULL and dstlen=0 */
++        memset(w_buffer, '#', sizeof(w_buffer) - sizeof(WCHAR));
++        len = MultiByteToWideChar(CP_UTF7, 0, utf7_to_utf16_tests[i].utf7, -1, NULL, 0);
++        ok(len == utf7_to_utf16_tests[i].utf16_len &&
++           w_buffer[0] == 0x2323,
++           "utf7_to_utf16_test failure i=%i len=%i\n", i, len);
++
++        /* test dry run with dst!=NULL and dstlen=0 */
++        memset(w_buffer, '#', sizeof(w_buffer) - sizeof(WCHAR));
++        len = MultiByteToWideChar(CP_UTF7, 0, utf7_to_utf16_tests[i].utf7, -1, w_buffer, 0);
++        ok(len == utf7_to_utf16_tests[i].utf16_len &&
++           w_buffer[0] == 0x2323,
++           "utf7_to_utf16_test failure i=%i len=%i\n", i, len);
++    }
++
++    for (i = 0; i < sizeof(wcstombs_tests) / sizeof(struct wcstombs_test); i++)
++    {
++        char c_buffer[2048];
++        int len;
++
++        /* null-terminate the buffer */
++        c_buffer[sizeof(c_buffer) - 1] = 0;
++
++        /* run a complicated utf16-to-utf7 test */
++        memset(c_buffer, '#', sizeof(c_buffer) - 1);
++        SetLastError(0xdeadbeef);
++        len = WideCharToMultiByte(CP_UTF7, 0, wcstombs_tests[i].src, wcstombs_tests[i].srclen, c_buffer, wcstombs_tests[i].dstlen, NULL, NULL);
++        ok(len == wcstombs_tests[i].len &&
++           memcmp(c_buffer, wcstombs_tests[i].dst, len ? len : wcstombs_tests[i].dstlen) == 0 &&
++           c_buffer[len ? len : wcstombs_tests[i].dstlen] == '#',
++           "wcstombs_test failure i=%i len=%i dst=\"%s\"\n", i, len, c_buffer);
++        ok(GetLastError() == wcstombs_tests[i].error, "error=%x\n", GetLastError());
++    }
++
++    for (i = 0; i < sizeof(mbstowcs_tests) / sizeof(struct mbstowcs_test); i++)
++    {
++        WCHAR w_buffer[2048];
++        int len;
++
++        /* null-terminate the buffer */
++        w_buffer[sizeof(w_buffer) / sizeof(WCHAR) - 1] = 0;
++
++        /* run a complicated utf7-to-utf16 test */
++        memset(w_buffer, '#', sizeof(w_buffer) - sizeof(WCHAR));
++        SetLastError(0xdeadbeef);
++        len = MultiByteToWideChar(CP_UTF7, 0, mbstowcs_tests[i].src, mbstowcs_tests[i].srclen, w_buffer, mbstowcs_tests[i].dstlen);
++        ok(len == mbstowcs_tests[i].len &&
++           memcmp(w_buffer, mbstowcs_tests[i].dst, (len ? len : mbstowcs_tests[i].dstlen) * sizeof(WCHAR)) == 0 &&
++           w_buffer[len ? len : mbstowcs_tests[i].dstlen] == 0x2323,
++           "mbstowcs_test failure i=%i len=%i dst=%s\n", i, len, wine_dbgstr_w(w_buffer));
++        ok(GetLastError() == mbstowcs_tests[i].error, "error=%x\n", GetLastError());
++    }
++}
++
+ static void test_undefined_byte_char(void)
+ {
+     static const struct tag_testset {
+@@ -618,6 +1303,8 @@ START_TEST(codepage)
+     test_string_conversion(NULL);
+     test_string_conversion(&bUsedDefaultChar);
+ 
++    test_utf7_string_conversion();
++
+     test_undefined_byte_char();
+     test_threadcp();
+ }
+-- 
+2.1.2
+

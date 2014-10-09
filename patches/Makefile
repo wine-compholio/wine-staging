@@ -36,6 +36,7 @@ PATCHLIST := \
 	kernel32-GetSystemTimes.ok \
 	kernel32-GetVolumePathName.ok \
 	kernel32-Named_Pipe.ok \
+	kernel32-UTF7_Support.ok \
 	libs-Unicode_Collation.ok \
 	msvcp60-basic_string_wchar_dtor.ok \
 	ntdll-ATL_Thunk.ok \
@@ -481,6 +482,26 @@ kernel32-Named_Pipe.ok:
 	@( \
 		echo '+    { "kernel32-Named_Pipe", "Dan Kegel", "Fix for ConnectNamedPort return value in overlapped mode." },'; \
 	) > kernel32-Named_Pipe.ok
+
+# Patchset kernel32-UTF7_Support
+# |
+# | Included patches:
+# |   *	Support for UTF7 encoding/decoding [by Alex Henrie]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#27388] Support for UTF7 encoding/decoding
+# |
+# | Modified files:
+# |   *	dlls/kernel32/locale.c, dlls/kernel32/tests/codepage.c
+# |
+.INTERMEDIATE: kernel32-UTF7_Support.ok
+kernel32-UTF7_Support.ok:
+	$(call APPLY_FILE,kernel32-UTF7_Support/0001-kernel32-Support-UTF-7-in-MultiByteToWideChar.patch)
+	$(call APPLY_FILE,kernel32-UTF7_Support/0002-kernel32-Support-UTF-7-in-WideCharToMultiByte.patch)
+	$(call APPLY_FILE,kernel32-UTF7_Support/0003-kernel32-tests-Add-tests-for-UTF-7-conversion.patch)
+	@( \
+		echo '+    { "kernel32-UTF7_Support", "Alex Henrie", "Support for UTF7 encoding/decoding" },'; \
+	) > kernel32-UTF7_Support.ok
 
 # Patchset libs-Unicode_Collation
 # |

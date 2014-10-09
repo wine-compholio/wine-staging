@@ -1,0 +1,198 @@
+From 87874c02de939388405ebfcb752918c1a764a516 Mon Sep 17 00:00:00 2001
+From: Alex Henrie <alexhenrie24@gmail.com>
+Date: Wed, 8 Oct 2014 21:16:37 -0600
+Subject: kernel32: Support UTF-7 in MultiByteToWideChar.
+
+---
+ dlls/kernel32/locale.c | 161 +++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 157 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/kernel32/locale.c b/dlls/kernel32/locale.c
+index 730574b..a5d4403 100644
+--- a/dlls/kernel32/locale.c
++++ b/dlls/kernel32/locale.c
+@@ -1954,6 +1954,160 @@ BOOL WINAPI EnumSystemCodePagesW( CODEPAGE_ENUMPROCW lpfnCodePageEnum, DWORD fla
+ 
+ 
+ /***********************************************************************
++ *              write_to_w_string
++ *
++ * Helper for utf7_mbstowcs
++ *
++ * RETURNS
++ *   TRUE on success, FALSE on error
++ */
++static inline BOOL write_to_w_string(WCHAR *dst, int dstlen, int *index, WCHAR character)
++{
++    if (dst)
++    {
++        if (*index >= dstlen)
++            return FALSE;
++
++        dst[*index] = character;
++    }
++
++    (*index)++;
++
++    return TRUE;
++}
++
++/***********************************************************************
++ *              utf7_mbstowcs
++ *
++ * UTF-7 to UTF-16 string conversion, helper for MultiByteToWideChar
++ *
++ * RETURNS
++ *   On success, the number of characters written
++ *   On dst buffer overflow, -1
++ */
++static int utf7_mbstowcs(const char *src, int srclen, WCHAR *dst, int dstlen)
++{
++    static const WCHAR base64_decoding_table[] = {
++        /* \0   */ -1,    /* \x01 */ -1,    /* \x02 */ -1,    /* \x03 */ -1,
++        /* \x04 */ -1,    /* \x05 */ -1,    /* \x06 */ -1,    /* \a   */ -1,
++        /* \b   */ -1,    /* \t   */ -1,    /* \n   */ -1,    /* \v   */ -1,
++        /* \f   */ -1,    /* \r   */ -1,    /* \x0E */ -1,    /* \x0F */ -1,
++        /* \x10 */ -1,    /* \x11 */ -1,    /* \x12 */ -1,    /* \x13 */ -1,
++        /* \x14 */ -1,    /* \x15 */ -1,    /* \x16 */ -1,    /* \x17 */ -1,
++        /* \x18 */ -1,    /* \x19 */ -1,    /* \x1A */ -1,    /* \e   */ -1,
++        /* \x1C */ -1,    /* \x1D */ -1,    /* \x1E */ -1,    /* \x1F */ -1,
++        /*      */ -1,    /* !    */ -1,    /* "    */ -1,    /* #    */ -1,
++        /* $    */ -1,    /* %    */ -1,    /* &    */ -1,    /* '    */ -1,
++        /* (    */ -1,    /* )    */ -1,    /* *    */ -1,    /* +    */ 62,
++        /* ,    */ -1,    /* -    */ -1,    /* .    */ -1,    /* /    */ 63,
++        /* 0    */ 52,    /* 1    */ 53,    /* 2    */ 54,    /* 3    */ 55,
++        /* 4    */ 56,    /* 5    */ 57,    /* 6    */ 58,    /* 7    */ 59,
++        /* 8    */ 60,    /* 9    */ 61,    /* :    */ -1,    /* ;    */ -1,
++        /* <    */ -1,    /* =    */ -1,    /* >    */ -1,    /* ?    */ -1,
++        /* @    */ -1,    /* A    */  0,    /* B    */  1,    /* C    */  2,
++        /* D    */  3,    /* E    */  4,    /* F    */  5,    /* G    */  6,
++        /* H    */  7,    /* I    */  8,    /* J    */  9,    /* K    */ 10,
++        /* L    */ 11,    /* M    */ 12,    /* N    */ 13,    /* O    */ 14,
++        /* P    */ 15,    /* Q    */ 16,    /* R    */ 17,    /* S    */ 18,
++        /* T    */ 19,    /* U    */ 20,    /* V    */ 21,    /* W    */ 22,
++        /* X    */ 23,    /* Y    */ 24,    /* Z    */ 25,    /* [    */ -1,
++        /* \    */ -1,    /* ]    */ -1,    /* ^    */ -1,    /* _    */ -1,
++        /* `    */ -1,    /* a    */ 26,    /* b    */ 27,    /* c    */ 28,
++        /* d    */ 29,    /* e    */ 30,    /* f    */ 31,    /* g    */ 32,
++        /* h    */ 33,    /* i    */ 34,    /* j    */ 35,    /* k    */ 36,
++        /* l    */ 37,    /* m    */ 38,    /* n    */ 39,    /* o    */ 40,
++        /* p    */ 41,    /* q    */ 42,    /* r    */ 43,    /* s    */ 44,
++        /* t    */ 45,    /* u    */ 46,    /* v    */ 47,    /* w    */ 48,
++        /* x    */ 49,    /* y    */ 50,    /* z    */ 51,    /* {    */ -1,
++        /* |    */ -1,    /* }    */ -1,    /* ~    */ -1,    /* \x7F */ -1
++    };
++
++    const char *source_end = src + srclen;
++    int dest_index = 0;
++
++    DWORD byte_pair = 0;
++    short offset = 0;
++
++    /* MultiByteToWideChar guarantees that srclen > 0 */
++    assert(srclen > 0);
++
++    if (!dstlen)
++        dst = NULL;
++
++    do
++    {
++        if (*src == '+')
++        {
++            src++; /* skip the + sign */
++
++            if (*src == '-')
++            {
++                /* just a plus sign escaped as +- */
++                if (!write_to_w_string(dst, dstlen, &dest_index, '+'))
++                    return -1;
++                src++;
++                continue;
++            }
++
++            do
++            {
++                WCHAR sextet = *src;
++                if (sextet == '-')
++                {
++                    /* skip over the dash and end base64 decoding */
++                    /* the current, unfinished byte pair is discarded */
++                    src++;
++                    offset = 0;
++                    break;
++                }
++                else if (sextet <= 127)
++                {
++                    sextet = base64_decoding_table[sextet];
++                    if (sextet == (WCHAR)-1)
++                    {
++                        /* -1 means that the next character of src is not part of a base64 sequence */
++                        /* in other words, all sextets in this base64 sequence have been processed */
++                        /* the current, unfinished byte pair is discarded */
++                        offset = 0;
++                        break;
++                    }
++                }
++                else
++                {
++                    /* the next character of src is > 127 and therefore not part of a base64 sequence */
++                    /* the current, unfinished byte pair is NOT discarded in this case */
++                    /* this is probably a bug in Windows */
++                    break;
++                }
++
++                byte_pair = (byte_pair << 6) | sextet;
++                offset += 6;
++
++                if (offset >= 16)
++                {
++                    /* this byte pair is done */
++                    if (!write_to_w_string(dst, dstlen, &dest_index, (byte_pair >> (offset - 16)) & 0xFFFF ))
++                        return -1;
++                    offset -= 16;
++                }
++
++                /* this sextet is done */
++                src++;
++            } while (src < source_end);
++        }
++        else
++        {
++            /* we have to convert to unsigned char in case *src > 127 */
++            if (!write_to_w_string(dst, dstlen, &dest_index, (unsigned char)*src))
++                return -1;
++            src++;
++        }
++    } while (src < source_end);
++
++    return dest_index;
++}
++
++/***********************************************************************
+  *              MultiByteToWideChar   (KERNEL32.@)
+  *
+  * Convert a multibyte character string into a Unicode string.
+@@ -1963,7 +2117,7 @@ BOOL WINAPI EnumSystemCodePagesW( CODEPAGE_ENUMPROCW lpfnCodePageEnum, DWORD fla
+  *   flags  [I] Character mapping flags
+  *   src    [I] Source string buffer
+  *   srclen [I] Length of src (in bytes), or -1 if src is NUL terminated
+- *   dst    [O] Destination buffer
++ *   dst    [O] Destination buffer, or NULL to compute the required length
+  *   dstlen [I] Length of dst (in WCHARs), or 0 to compute the required length
+  *
+  * RETURNS
+@@ -2006,9 +2160,8 @@ INT WINAPI MultiByteToWideChar( UINT page, DWORD flags, LPCSTR src, INT srclen,
+             SetLastError( ERROR_INVALID_FLAGS );
+             return 0;
+         }
+-        FIXME("UTF-7 not supported\n");
+-        SetLastError( ERROR_CALL_NOT_IMPLEMENTED );
+-        return 0;
++        ret = utf7_mbstowcs( src, srclen, dst, dstlen );
++        break;
+     case CP_UNIXCP:
+         if (unix_cptable)
+         {
+-- 
+2.1.2
+

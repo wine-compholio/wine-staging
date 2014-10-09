@@ -1,0 +1,183 @@
+From eb7a37bf7d71cfa8696185047483fbe02d01a5d1 Mon Sep 17 00:00:00 2001
+From: Alex Henrie <alexhenrie24@gmail.com>
+Date: Wed, 8 Oct 2014 21:18:22 -0600
+Subject: kernel32: Support UTF-7 in WideCharToMultiByte.
+
+---
+ dlls/kernel32/locale.c | 146 +++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 142 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/kernel32/locale.c b/dlls/kernel32/locale.c
+index a5d4403..fc0a7ad 100644
+--- a/dlls/kernel32/locale.c
++++ b/dlls/kernel32/locale.c
+@@ -2201,6 +2201,145 @@ INT WINAPI MultiByteToWideChar( UINT page, DWORD flags, LPCSTR src, INT srclen,
+ 
+ 
+ /***********************************************************************
++ *              can_directly_encode
++ *
++ * Helper for utf7_wcstombs
++ */
++static inline BOOL utf7_can_directly_encode(WCHAR codepoint)
++{
++    static const BOOL directly_encodable_table[] = {
++        /* \0   */ TRUE,   /* \x01 */ FALSE,  /* \x02 */ FALSE,  /* \x03 */ FALSE,
++        /* \x04 */ FALSE,  /* \x05 */ FALSE,  /* \x06 */ FALSE,  /* \a   */ FALSE,
++        /* \b   */ FALSE,  /* \t   */ TRUE,   /* \n   */ TRUE,   /* \v   */ FALSE,
++        /* \f   */ FALSE,  /* \r   */ TRUE,   /* \x0E */ FALSE,  /* \x0F */ FALSE,
++        /* \x10 */ FALSE,  /* \x11 */ FALSE,  /* \x12 */ FALSE,  /* \x13 */ FALSE,
++        /* \x14 */ FALSE,  /* \x15 */ FALSE,  /* \x16 */ FALSE,  /* \x17 */ FALSE,
++        /* \x18 */ FALSE,  /* \x19 */ FALSE,  /* \x1A */ FALSE,  /* \e   */ FALSE,
++        /* \x1C */ FALSE,  /* \x1D */ FALSE,  /* \x1E */ FALSE,  /* \x1F */ FALSE,
++        /*      */ TRUE,   /* !    */ FALSE,  /* "    */ FALSE,  /* #    */ FALSE,
++        /* $    */ FALSE,  /* %    */ FALSE,  /* &    */ FALSE,  /* '    */ TRUE,
++        /* (    */ TRUE,   /* )    */ TRUE,   /* *    */ FALSE,  /* +    */ TRUE,
++        /* ,    */ TRUE,   /* -    */ TRUE,   /* .    */ TRUE,   /* /    */ TRUE,
++        /* 0    */ TRUE,   /* 1    */ TRUE,   /* 2    */ TRUE,   /* 3    */ TRUE,
++        /* 4    */ TRUE,   /* 5    */ TRUE,   /* 6    */ TRUE,   /* 7    */ TRUE,
++        /* 8    */ TRUE,   /* 9    */ TRUE,   /* :    */ TRUE,   /* ;    */ FALSE,
++        /* <    */ FALSE,  /* =    */ FALSE,  /* >    */ FALSE,  /* ?    */ TRUE,
++        /* @    */ FALSE,  /* A    */ TRUE,   /* B    */ TRUE,   /* C    */ TRUE,
++        /* D    */ TRUE,   /* E    */ TRUE,   /* F    */ TRUE,   /* G    */ TRUE,
++        /* H    */ TRUE,   /* I    */ TRUE,   /* J    */ TRUE,   /* K    */ TRUE,
++        /* L    */ TRUE,   /* M    */ TRUE,   /* N    */ TRUE,   /* O    */ TRUE,
++        /* P    */ TRUE,   /* Q    */ TRUE,   /* R    */ TRUE,   /* S    */ TRUE,
++        /* T    */ TRUE,   /* U    */ TRUE,   /* V    */ TRUE,   /* W    */ TRUE,
++        /* X    */ TRUE,   /* Y    */ TRUE,   /* Z    */ TRUE,   /* [    */ FALSE,
++        /* \    */ FALSE,  /* ]    */ FALSE,  /* ^    */ FALSE,  /* _    */ FALSE,
++        /* `    */ FALSE,  /* a    */ TRUE,   /* b    */ TRUE,   /* c    */ TRUE,
++        /* d    */ TRUE,   /* e    */ TRUE,   /* f    */ TRUE,   /* g    */ TRUE,
++        /* h    */ TRUE,   /* i    */ TRUE,   /* j    */ TRUE,   /* k    */ TRUE,
++        /* l    */ TRUE,   /* m    */ TRUE,   /* n    */ TRUE,   /* o    */ TRUE,
++        /* p    */ TRUE,   /* q    */ TRUE,   /* r    */ TRUE,   /* s    */ TRUE,
++        /* t    */ TRUE,   /* u    */ TRUE,   /* v    */ TRUE,   /* w    */ TRUE,
++        /* x    */ TRUE,   /* y    */ TRUE,   /* z    */ TRUE
++    };
++
++    return codepoint <= 'z' ? directly_encodable_table[codepoint] : FALSE;
++}
++
++/***********************************************************************
++ *              write_to_c_string
++ *
++ * Helper for utf7_wcstombs
++ *
++ * RETURNS
++ *   TRUE on success, FALSE on error
++ */
++static inline BOOL write_to_c_string(char *dst, int dstlen, int *index, char character)
++{
++    if (dst)
++    {
++        if (*index >= dstlen)
++            return FALSE;
++
++        dst[*index] = character;
++    }
++
++    (*index)++;
++
++    return TRUE;
++}
++
++/***********************************************************************
++ *              utf7_wcstombs
++ *
++ * UTF-16 to UTF-7 string conversion, helper for WideCharToMultiByte
++ *
++ * RETURNS
++ *   On success, the number of characters written
++ *   On dst buffer overflow, -1
++ */
++static int utf7_wcstombs(const WCHAR *src, int srclen, char *dst, int dstlen)
++{
++    static const char base64_encoding_table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
++
++    const WCHAR *source_end = src + srclen;
++    int dest_index = 0;
++
++    if (!dstlen)
++        dst = NULL;
++
++    while (src < source_end)
++    {
++        if (*src == '+')
++        {
++            if (!write_to_c_string(dst, dstlen, &dest_index, '+'))
++                return -1;
++            if (!write_to_c_string(dst, dstlen, &dest_index, '-'))
++                return -1;
++            src++;
++        }
++        else if (utf7_can_directly_encode(*src))
++        {
++            if (!write_to_c_string(dst, dstlen, &dest_index, *src))
++                return -1;
++            src++;
++        }
++        else
++        {
++            unsigned int offset = 0;
++            DWORD byte_pair = 0;
++
++            if (!write_to_c_string(dst, dstlen, &dest_index, '+'))
++                return -1;
++
++            while (src < source_end && !utf7_can_directly_encode(*src))
++            {
++                byte_pair = (byte_pair << 16) | *src;
++                offset += 16;
++                while (offset >= 6)
++                {
++                    if (!write_to_c_string(dst, dstlen, &dest_index, base64_encoding_table[(byte_pair >> (offset - 6)) & 0x3F]))
++                        return -1;
++                    offset -= 6;
++                }
++                src++;
++            }
++
++            if (offset)
++            {
++                byte_pair <<= (6 - offset);
++                if (!write_to_c_string(dst, dstlen, &dest_index, base64_encoding_table[byte_pair & 0x3F]))
++                    return -1;
++            }
++
++            /* Windows always explicitly terminates the base64 sequence even though RFC 2152 (page 3, rule 2) does not require this */
++            if (!write_to_c_string(dst, dstlen, &dest_index, '-'))
++                return -1;
++        }
++    }
++
++    return dest_index;
++}
++
++/***********************************************************************
+  *              WideCharToMultiByte   (KERNEL32.@)
+  *
+  * Convert a Unicode character string into a multibyte string.
+@@ -2210,7 +2349,7 @@ INT WINAPI MultiByteToWideChar( UINT page, DWORD flags, LPCSTR src, INT srclen,
+  *   flags   [I] Mapping Flags (MB_ constants from "winnls.h").
+  *   src     [I] Source string buffer
+  *   srclen  [I] Length of src (in WCHARs), or -1 if src is NUL terminated
+- *   dst     [O] Destination buffer
++ *   dst     [O] Destination buffer, or NULL to compute the required length
+  *   dstlen  [I] Length of dst (in bytes), or 0 to compute the required length
+  *   defchar [I] Default character to use for conversion if no exact
+  *		    conversion can be made
+@@ -2267,9 +2406,8 @@ INT WINAPI WideCharToMultiByte( UINT page, DWORD flags, LPCWSTR src, INT srclen,
+             SetLastError( ERROR_INVALID_FLAGS );
+             return 0;
+         }
+-        FIXME("UTF-7 not supported\n");
+-        SetLastError( ERROR_CALL_NOT_IMPLEMENTED );
+-        return 0;
++        ret = utf7_wcstombs( src, srclen, dst, dstlen );
++        break;
+     case CP_UNIXCP:
+         if (unix_cptable)
+         {
+-- 
+2.1.2
+

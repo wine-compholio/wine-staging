@@ -1,46 +1,65 @@
-From a71389d7b9a53ea66a8cafc19c89a2287ee9cda0 Mon Sep 17 00:00:00 2001
+From 6bb4f8bfe058eef317a85875d9fc6bc8f7eb3252 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Tue, 25 Feb 2014 10:44:36 -0700
 Subject: shell32: Set the default security attributes for user shell folders.
 
 ---
- dlls/shell32/shellpath.c |   87 +++++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 86 insertions(+), 1 deletion(-)
+ dlls/shell32/shellpath.c |  106 +++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 105 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/shell32/shellpath.c b/dlls/shell32/shellpath.c
-index 875be38..947ef29 100644
+index f92d56e..2aa010d 100644
 --- a/dlls/shell32/shellpath.c
 +++ b/dlls/shell32/shellpath.c
-@@ -2169,6 +2169,63 @@ cleanup:
+@@ -2200,6 +2200,82 @@ cleanup:
      return hr;
  }
  
++static BOOL alloc_sid( PSID src, PSID *dst )
++{
++    return AllocateAndInitializeSid(GetSidIdentifierAuthority(src), *GetSidSubAuthorityCount(src),
++                                    *GetSidSubAuthority(src, 0), *GetSidSubAuthority(src, 1),
++                                    *GetSidSubAuthority(src, 2), *GetSidSubAuthority(src, 3),
++                                    *GetSidSubAuthority(src, 4), *GetSidSubAuthority(src, 5),
++                                    *GetSidSubAuthority(src, 6), *GetSidSubAuthority(src, 7), dst);
++}
++
++static PSID get_user_sid( void )
++{
++    PSID ret = NULL, user_sid;
++    TOKEN_USER *user = NULL;
++    DWORD user_size = 0;
++    HANDLE token;
++
++    if (!OpenThreadToken(GetCurrentThread(), TOKEN_READ, TRUE, &token))
++    {
++        if (GetLastError() != ERROR_NO_TOKEN) goto cleanup;
++        if (!OpenProcessToken(GetCurrentProcess(), TOKEN_READ, &token)) goto cleanup;
++    }
++    GetTokenInformation(token, TokenUser, NULL, 0, &user_size);
++    if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) goto cleanup;
++    if ((user = HeapAlloc(GetProcessHeap(), 0, user_size)) == NULL) goto cleanup;
++    if (!GetTokenInformation(token, TokenUser, user, user_size, &user_size)) goto cleanup;
++    user_sid = user->User.Sid;
++    alloc_sid(user_sid, &ret);
++
++cleanup:
++    HeapFree(GetProcessHeap(), 0, user);
++    CloseHandle(token);
++    return ret;
++}
++
 +PSECURITY_DESCRIPTOR _SHGetUserSecurityDescriptor( void )
 +{
 +    PSECURITY_DESCRIPTOR sd = HeapAlloc(GetProcessHeap(), 0, SECURITY_DESCRIPTOR_MIN_LENGTH);
 +    PACL dacl = HeapAlloc(GetProcessHeap(), 0, 100);
-+    PSID admin_sid = NULL, user_sid;
-+    TOKEN_USER *user = NULL;
++    PSID admin_sid = NULL, user_sid = NULL;
 +    BOOL ret = FALSE;
 +    DWORD sid_size;
-+    HANDLE token;
 +
-+    if(!sd || !dacl) goto cleanup;
++    if (!sd || !dacl) goto cleanup;
 +
-+    /* find the user SID */
-+    if (!OpenThreadToken(GetCurrentThread(), TOKEN_READ, TRUE, &token))
-+    {
-+        if (GetLastError() != ERROR_NO_TOKEN) goto cleanup;
-+        else if (!OpenProcessToken(GetCurrentProcess(), TOKEN_READ, &token)) goto cleanup;
-+    }
-+    sid_size = 0;
-+    GetTokenInformation(token, TokenUser, NULL, 0, &sid_size);
-+    if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) goto cleanup;
-+    user = HeapAlloc(GetProcessHeap(), 0, sid_size);
-+    if (!user) goto cleanup;
-+    if (!GetTokenInformation(token, TokenUser, user, sid_size, &sid_size)) goto cleanup;
-+    CloseHandle(token);
-+    user_sid = user->User.Sid;
++    if ((user_sid = get_user_sid()) == NULL) goto cleanup;
 +
 +    /* find the administrator group SID */
 +    sid_size = 0;
@@ -61,7 +80,7 @@ index 875be38..947ef29 100644
 +    ret = TRUE;
 +
 +cleanup:
-+    HeapFree(GetProcessHeap(), 0, user);
++    FreeSid(user_sid);
 +    HeapFree(GetProcessHeap(), 0, admin_sid);
 +    if(!ret)
 +    {
@@ -75,7 +94,7 @@ index 875be38..947ef29 100644
  /*************************************************************************
   * SHGetFolderPathAndSubDirW		[SHELL32.@]
   */
-@@ -2180,6 +2237,8 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
+@@ -2211,6 +2287,8 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
  	LPCWSTR pszSubPath,/* [I] sub directory of the specified folder */
  	LPWSTR pszPath)    /* [O] converted path */
  {
@@ -84,7 +103,7 @@ index 875be38..947ef29 100644
      HRESULT    hr;
      WCHAR      szBuildPath[MAX_PATH], szTemp[MAX_PATH];
      DWORD      folder = nFolder & CSIDL_FOLDER_MASK;
-@@ -2292,8 +2351,25 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
+@@ -2323,8 +2401,25 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
          goto end;
      }
  
@@ -111,7 +130,7 @@ index 875be38..947ef29 100644
      if (ret && ret != ERROR_ALREADY_EXISTS)
      {
          ERR("Failed to create directory %s.\n", debugstr_w(szBuildPath));
-@@ -2303,6 +2379,15 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
+@@ -2334,6 +2429,15 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
  
      TRACE("Created missing system directory %s\n", debugstr_w(szBuildPath));
  end:

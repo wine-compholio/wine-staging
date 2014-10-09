@@ -1,14 +1,14 @@
-From ba4c288664b0af0213cb496e3c300f43f8f8bfd4 Mon Sep 17 00:00:00 2001
+From bfae4d4ff1369c9cf60867e97516fbffde86ba5d Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Tue, 25 Feb 2014 10:44:36 -0700
 Subject: shell32: Set the default security attributes for user shell folders.
 
 ---
- dlls/shell32/shellpath.c |  114 +++++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 113 insertions(+), 1 deletion(-)
+ dlls/shell32/shellpath.c |  106 +++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 105 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/shell32/shellpath.c b/dlls/shell32/shellpath.c
-index f92d56e..1e7d63f 100644
+index f92d56e..276c1cd 100644
 --- a/dlls/shell32/shellpath.c
 +++ b/dlls/shell32/shellpath.c
 @@ -2200,6 +2200,90 @@ cleanup:
@@ -67,19 +67,20 @@ index f92d56e..1e7d63f 100644
 +
 +PSECURITY_DESCRIPTOR _SHGetUserSecurityDescriptor( void )
 +{
-+    PSECURITY_DESCRIPTOR sd = HeapAlloc(GetProcessHeap(), 0, SECURITY_DESCRIPTOR_MIN_LENGTH);
 +    PACL dacl = HeapAlloc(GetProcessHeap(), 0, 100);
 +    PSID admin_sid = NULL, user_sid = NULL;
++    PSECURITY_DESCRIPTOR sd = NULL;
 +    BOOL ret = FALSE;
-+
-+    if (!sd || !dacl) goto cleanup;
++    DWORD dacl_size;
 +
 +    if ((user_sid = get_user_sid()) == NULL) goto cleanup;
 +    if ((admin_sid = get_admin_sid()) == NULL) goto cleanup;
++    dacl_size = 2 * sizeof(ACCESS_ALLOWED_ACE) + GetLengthSid(user_sid) + GetLengthSid(admin_sid);
++    if ((sd = HeapAlloc(GetProcessHeap(), 0, SECURITY_DESCRIPTOR_MIN_LENGTH + dacl_size)) == NULL) goto cleanup;
 +
 +    /* build the DACL */
 +    if(!InitializeSecurityDescriptor(sd, SECURITY_DESCRIPTOR_REVISION)) goto cleanup;
-+    if(!InitializeAcl(dacl, 100, ACL_REVISION)) goto cleanup;
++    if(!InitializeAcl(dacl, dacl_size, ACL_REVISION)) goto cleanup;
 +    if(!AddAccessAllowedAceEx(dacl, ACL_REVISION, OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE,
 +                              GENERIC_ALL, user_sid)) goto cleanup;
 +    if(!AddAccessAllowedAceEx(dacl, ACL_REVISION, OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE,
@@ -92,7 +93,6 @@ index f92d56e..1e7d63f 100644
 +    FreeSid(admin_sid);
 +    if(!ret)
 +    {
-+        HeapFree(GetProcessHeap(), 0, dacl);
 +        HeapFree(GetProcessHeap(), 0, sd);
 +        sd = NULL;
 +    }
@@ -138,19 +138,11 @@ index f92d56e..1e7d63f 100644
      if (ret && ret != ERROR_ALREADY_EXISTS)
      {
          ERR("Failed to create directory %s.\n", debugstr_w(szBuildPath));
-@@ -2334,6 +2437,15 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
+@@ -2334,6 +2437,7 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
  
      TRACE("Created missing system directory %s\n", debugstr_w(szBuildPath));
  end:
-+    if (sd)
-+    {
-+        BOOL present, defaulted;
-+        PACL dacl = NULL;
-+
-+        GetSecurityDescriptorDacl(sd, &present, &dacl, &defaulted);
-+        HeapFree(GetProcessHeap(), 0, dacl);
-+        HeapFree(GetProcessHeap(), 0, sd);
-+    }
++    HeapFree(GetProcessHeap(), 0, sd);
      TRACE("returning 0x%08x (final path is %s)\n", hr, debugstr_w(szBuildPath));
      return hr;
  }

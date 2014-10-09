@@ -37,6 +37,7 @@ PATCHLIST := \
 	kernel32-GetVolumePathName.ok \
 	kernel32-Named_Pipe.ok \
 	libs-Unicode_Collation.ok \
+	msvcp60-basic_string_wchar_dtor.ok \
 	ntdll-ATL_Thunk.ok \
 	ntdll-DOS_Attributes.ok \
 	ntdll-Dynamic_DST.ok \
@@ -498,6 +499,25 @@ libs-Unicode_Collation.ok:
 	@( \
 		echo '+    { "libs-Unicode_Collation", "Dmitry Timoshkov", "Fix comparison of punctuation characters." },'; \
 	) > libs-Unicode_Collation.ok
+
+# Patchset msvcp60-basic_string_wchar_dtor
+# |
+# | Included patches:
+# |   *	basic_string_wchar_dtor needs to return NULL. [by Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37358] FEAR 1 installer expects basic_string_wchar_dtor to return NULL
+# |
+# | Modified files:
+# |   *	dlls/msvcp60/msvcp.h, dlls/msvcp60/string.c, dlls/msvcp60/tests/string.c
+# |
+.INTERMEDIATE: msvcp60-basic_string_wchar_dtor.ok
+msvcp60-basic_string_wchar_dtor.ok:
+	$(call APPLY_FILE,msvcp60-basic_string_wchar_dtor/0001-msvcp60-basic_string_wchar_dtor-needs-to-return-NULL.patch)
+	$(call APPLY_FILE,msvcp60-basic_string_wchar_dtor/0002-msvcp60-tests-Add-tests-to-check-that-basic_string_w.patch)
+	@( \
+		echo '+    { "msvcp60-basic_string_wchar_dtor", "Michael Müller", "basic_string_wchar_dtor needs to return NULL." },'; \
+	) > msvcp60-basic_string_wchar_dtor.ok
 
 # Patchset ntdll-ATL_Thunk
 # |

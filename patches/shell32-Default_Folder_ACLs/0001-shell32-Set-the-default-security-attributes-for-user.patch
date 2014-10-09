@@ -1,17 +1,17 @@
-From bfae4d4ff1369c9cf60867e97516fbffde86ba5d Mon Sep 17 00:00:00 2001
+From 26e587fc7479bfc516d95dacba0a3597790ec6f7 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Tue, 25 Feb 2014 10:44:36 -0700
 Subject: shell32: Set the default security attributes for user shell folders.
 
 ---
- dlls/shell32/shellpath.c |  106 +++++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 105 insertions(+), 1 deletion(-)
+ dlls/shell32/shellpath.c |  101 +++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 100 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/shell32/shellpath.c b/dlls/shell32/shellpath.c
-index f92d56e..276c1cd 100644
+index f92d56e..0c0f607 100644
 --- a/dlls/shell32/shellpath.c
 +++ b/dlls/shell32/shellpath.c
-@@ -2200,6 +2200,90 @@ cleanup:
+@@ -2200,6 +2200,85 @@ cleanup:
      return hr;
  }
  
@@ -68,9 +68,8 @@ index f92d56e..276c1cd 100644
 +PSECURITY_DESCRIPTOR _SHGetUserSecurityDescriptor( void )
 +{
 +    PACL dacl = HeapAlloc(GetProcessHeap(), 0, 100);
++    PSECURITY_DESCRIPTOR sd = NULL, ret = NULL;
 +    PSID admin_sid = NULL, user_sid = NULL;
-+    PSECURITY_DESCRIPTOR sd = NULL;
-+    BOOL ret = FALSE;
 +    DWORD dacl_size;
 +
 +    if ((user_sid = get_user_sid()) == NULL) goto cleanup;
@@ -86,23 +85,19 @@ index f92d56e..276c1cd 100644
 +    if(!AddAccessAllowedAceEx(dacl, ACL_REVISION, OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE,
 +                              GENERIC_ALL, admin_sid)) goto cleanup;
 +    if(!SetSecurityDescriptorDacl(sd, TRUE, dacl, FALSE)) goto cleanup;
-+    ret = TRUE;
++    ret = sd;
 +
 +cleanup:
 +    FreeSid(user_sid);
 +    FreeSid(admin_sid);
-+    if(!ret)
-+    {
-+        HeapFree(GetProcessHeap(), 0, sd);
-+        sd = NULL;
-+    }
-+    return sd;
++    if(ret == NULL) HeapFree(GetProcessHeap(), 0, sd);
++    return ret;
 +}
 +
  /*************************************************************************
   * SHGetFolderPathAndSubDirW		[SHELL32.@]
   */
-@@ -2211,6 +2295,8 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
+@@ -2211,6 +2290,8 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
  	LPCWSTR pszSubPath,/* [I] sub directory of the specified folder */
  	LPWSTR pszPath)    /* [O] converted path */
  {
@@ -111,7 +106,7 @@ index f92d56e..276c1cd 100644
      HRESULT    hr;
      WCHAR      szBuildPath[MAX_PATH], szTemp[MAX_PATH];
      DWORD      folder = nFolder & CSIDL_FOLDER_MASK;
-@@ -2323,8 +2409,25 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
+@@ -2323,8 +2404,25 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
          goto end;
      }
  
@@ -138,7 +133,7 @@ index f92d56e..276c1cd 100644
      if (ret && ret != ERROR_ALREADY_EXISTS)
      {
          ERR("Failed to create directory %s.\n", debugstr_w(szBuildPath));
-@@ -2334,6 +2437,7 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
+@@ -2334,6 +2432,7 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
  
      TRACE("Created missing system directory %s\n", debugstr_w(szBuildPath));
  end:

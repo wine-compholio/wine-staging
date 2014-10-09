@@ -1,17 +1,17 @@
-From 6bb4f8bfe058eef317a85875d9fc6bc8f7eb3252 Mon Sep 17 00:00:00 2001
+From ba4c288664b0af0213cb496e3c300f43f8f8bfd4 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Tue, 25 Feb 2014 10:44:36 -0700
 Subject: shell32: Set the default security attributes for user shell folders.
 
 ---
- dlls/shell32/shellpath.c |  106 +++++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 105 insertions(+), 1 deletion(-)
+ dlls/shell32/shellpath.c |  114 +++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 113 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/shell32/shellpath.c b/dlls/shell32/shellpath.c
-index f92d56e..2aa010d 100644
+index f92d56e..1e7d63f 100644
 --- a/dlls/shell32/shellpath.c
 +++ b/dlls/shell32/shellpath.c
-@@ -2200,6 +2200,82 @@ cleanup:
+@@ -2200,6 +2200,90 @@ cleanup:
      return hr;
  }
  
@@ -49,25 +49,33 @@ index f92d56e..2aa010d 100644
 +    return ret;
 +}
 +
++static PSID get_admin_sid( void )
++{
++    PSID ret = NULL, admin_sid = NULL;
++    DWORD admin_size = 0;
++
++    CreateWellKnownSid(WinBuiltinAdministratorsSid, NULL, NULL, &admin_size);
++    if(GetLastError() != ERROR_INSUFFICIENT_BUFFER) goto cleanup;
++    if((admin_sid = HeapAlloc(GetProcessHeap(), 0, admin_size)) == NULL) goto cleanup;
++    if(!CreateWellKnownSid(WinBuiltinAdministratorsSid, NULL, admin_sid, &admin_size)) goto cleanup;
++    alloc_sid(admin_sid, &ret);
++
++cleanup:
++    HeapFree(GetProcessHeap(), 0, admin_sid);
++    return ret; 
++}
++
 +PSECURITY_DESCRIPTOR _SHGetUserSecurityDescriptor( void )
 +{
 +    PSECURITY_DESCRIPTOR sd = HeapAlloc(GetProcessHeap(), 0, SECURITY_DESCRIPTOR_MIN_LENGTH);
 +    PACL dacl = HeapAlloc(GetProcessHeap(), 0, 100);
 +    PSID admin_sid = NULL, user_sid = NULL;
 +    BOOL ret = FALSE;
-+    DWORD sid_size;
 +
 +    if (!sd || !dacl) goto cleanup;
 +
 +    if ((user_sid = get_user_sid()) == NULL) goto cleanup;
-+
-+    /* find the administrator group SID */
-+    sid_size = 0;
-+    CreateWellKnownSid(WinBuiltinAdministratorsSid, NULL, NULL, &sid_size);
-+    if(GetLastError() != ERROR_INSUFFICIENT_BUFFER) goto cleanup;
-+    admin_sid = HeapAlloc(GetProcessHeap(), 0, sid_size);
-+    if(!admin_sid) goto cleanup;
-+    if(!CreateWellKnownSid(WinBuiltinAdministratorsSid, NULL, admin_sid, &sid_size)) goto cleanup;
++    if ((admin_sid = get_admin_sid()) == NULL) goto cleanup;
 +
 +    /* build the DACL */
 +    if(!InitializeSecurityDescriptor(sd, SECURITY_DESCRIPTOR_REVISION)) goto cleanup;
@@ -81,7 +89,7 @@ index f92d56e..2aa010d 100644
 +
 +cleanup:
 +    FreeSid(user_sid);
-+    HeapFree(GetProcessHeap(), 0, admin_sid);
++    FreeSid(admin_sid);
 +    if(!ret)
 +    {
 +        HeapFree(GetProcessHeap(), 0, dacl);
@@ -94,7 +102,7 @@ index f92d56e..2aa010d 100644
  /*************************************************************************
   * SHGetFolderPathAndSubDirW		[SHELL32.@]
   */
-@@ -2211,6 +2287,8 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
+@@ -2211,6 +2295,8 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
  	LPCWSTR pszSubPath,/* [I] sub directory of the specified folder */
  	LPWSTR pszPath)    /* [O] converted path */
  {
@@ -103,7 +111,7 @@ index f92d56e..2aa010d 100644
      HRESULT    hr;
      WCHAR      szBuildPath[MAX_PATH], szTemp[MAX_PATH];
      DWORD      folder = nFolder & CSIDL_FOLDER_MASK;
-@@ -2323,8 +2401,25 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
+@@ -2323,8 +2409,25 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
          goto end;
      }
  
@@ -130,7 +138,7 @@ index f92d56e..2aa010d 100644
      if (ret && ret != ERROR_ALREADY_EXISTS)
      {
          ERR("Failed to create directory %s.\n", debugstr_w(szBuildPath));
-@@ -2334,6 +2429,15 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
+@@ -2334,6 +2437,15 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
  
      TRACE("Created missing system directory %s\n", debugstr_w(szBuildPath));
  end:

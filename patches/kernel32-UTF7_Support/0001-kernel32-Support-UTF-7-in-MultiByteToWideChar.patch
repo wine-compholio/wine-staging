@@ -1,17 +1,17 @@
-From 87874c02de939388405ebfcb752918c1a764a516 Mon Sep 17 00:00:00 2001
+From e0751978c723a0b402d238cc46fee336136e1aca Mon Sep 17 00:00:00 2001
 From: Alex Henrie <alexhenrie24@gmail.com>
 Date: Wed, 8 Oct 2014 21:16:37 -0600
 Subject: kernel32: Support UTF-7 in MultiByteToWideChar.
 
 ---
- dlls/kernel32/locale.c | 161 +++++++++++++++++++++++++++++++++++++++++++++++--
- 1 file changed, 157 insertions(+), 4 deletions(-)
+ dlls/kernel32/locale.c | 158 +++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 154 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/kernel32/locale.c b/dlls/kernel32/locale.c
-index 730574b..a5d4403 100644
+index 730574b..d0ed6ed 100644
 --- a/dlls/kernel32/locale.c
 +++ b/dlls/kernel32/locale.c
-@@ -1954,6 +1954,160 @@ BOOL WINAPI EnumSystemCodePagesW( CODEPAGE_ENUMPROCW lpfnCodePageEnum, DWORD fla
+@@ -1954,6 +1954,157 @@ BOOL WINAPI EnumSystemCodePagesW( CODEPAGE_ENUMPROCW lpfnCodePageEnum, DWORD fla
  
  
  /***********************************************************************
@@ -89,13 +89,10 @@ index 730574b..a5d4403 100644
 +    DWORD byte_pair = 0;
 +    short offset = 0;
 +
-+    /* MultiByteToWideChar guarantees that srclen > 0 */
-+    assert(srclen > 0);
-+
 +    if (!dstlen)
 +        dst = NULL;
 +
-+    do
++    while (src < source_end)
 +    {
 +        if (*src == '+')
 +        {
@@ -110,7 +107,7 @@ index 730574b..a5d4403 100644
 +                continue;
 +            }
 +
-+            do
++            while (src < source_end)
 +            {
 +                WCHAR sextet = *src;
 +                if (sextet == '-')
@@ -154,7 +151,7 @@ index 730574b..a5d4403 100644
 +
 +                /* this sextet is done */
 +                src++;
-+            } while (src < source_end);
++            }
 +        }
 +        else
 +        {
@@ -163,7 +160,7 @@ index 730574b..a5d4403 100644
 +                return -1;
 +            src++;
 +        }
-+    } while (src < source_end);
++    }
 +
 +    return dest_index;
 +}
@@ -172,7 +169,7 @@ index 730574b..a5d4403 100644
   *              MultiByteToWideChar   (KERNEL32.@)
   *
   * Convert a multibyte character string into a Unicode string.
-@@ -1963,7 +2117,7 @@ BOOL WINAPI EnumSystemCodePagesW( CODEPAGE_ENUMPROCW lpfnCodePageEnum, DWORD fla
+@@ -1963,7 +2114,7 @@ BOOL WINAPI EnumSystemCodePagesW( CODEPAGE_ENUMPROCW lpfnCodePageEnum, DWORD fla
   *   flags  [I] Character mapping flags
   *   src    [I] Source string buffer
   *   srclen [I] Length of src (in bytes), or -1 if src is NUL terminated
@@ -181,7 +178,7 @@ index 730574b..a5d4403 100644
   *   dstlen [I] Length of dst (in WCHARs), or 0 to compute the required length
   *
   * RETURNS
-@@ -2006,9 +2160,8 @@ INT WINAPI MultiByteToWideChar( UINT page, DWORD flags, LPCSTR src, INT srclen,
+@@ -2006,9 +2157,8 @@ INT WINAPI MultiByteToWideChar( UINT page, DWORD flags, LPCSTR src, INT srclen,
              SetLastError( ERROR_INVALID_FLAGS );
              return 0;
          }

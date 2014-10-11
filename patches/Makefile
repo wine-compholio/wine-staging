@@ -486,7 +486,7 @@ kernel32-Named_Pipe.ok:
 # Patchset kernel32-UTF7_Support
 # |
 # | Included patches:
-# |   *	Support for UTF7 encoding/decoding [by Alex Henrie]
+# |   *	Support for UTF7 encoding/decoding [rev 2, by Alex Henrie]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#27388] Support for UTF7 encoding/decoding
@@ -500,7 +500,7 @@ kernel32-UTF7_Support.ok:
 	$(call APPLY_FILE,kernel32-UTF7_Support/0002-kernel32-Support-UTF-7-in-WideCharToMultiByte.patch)
 	$(call APPLY_FILE,kernel32-UTF7_Support/0003-kernel32-tests-Add-tests-for-UTF-7-conversion.patch)
 	@( \
-		echo '+    { "kernel32-UTF7_Support", "Alex Henrie", "Support for UTF7 encoding/decoding" },'; \
+		echo '+    { "kernel32-UTF7_Support", "Alex Henrie", "Support for UTF7 encoding/decoding [rev 2]" },'; \
 	) > kernel32-UTF7_Support.ok
 
 # Patchset libs-Unicode_Collation

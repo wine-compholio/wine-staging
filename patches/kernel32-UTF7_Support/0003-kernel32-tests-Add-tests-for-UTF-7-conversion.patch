@@ -1,17 +1,17 @@
-From 017281b13109dc960dc4a928068853ccc8852f77 Mon Sep 17 00:00:00 2001
+From a771ecc9ee4a322e98b34611b2829001ba7a4a7f Mon Sep 17 00:00:00 2001
 From: Alex Henrie <alexhenrie24@gmail.com>
-Date: Wed, 8 Oct 2014 19:52:55 -0600
+Date: Thu, 9 Oct 2014 15:42:51 -0600
 Subject: kernel32/tests: Add tests for UTF-7 conversion.
 
 ---
- dlls/kernel32/tests/codepage.c | 687 +++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 687 insertions(+)
+ dlls/kernel32/tests/codepage.c | 751 +++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 751 insertions(+)
 
 diff --git a/dlls/kernel32/tests/codepage.c b/dlls/kernel32/tests/codepage.c
-index 8423c75..aeca011 100644
+index 8423c75..2538bc7 100644
 --- a/dlls/kernel32/tests/codepage.c
 +++ b/dlls/kernel32/tests/codepage.c
-@@ -412,6 +412,691 @@ static void test_string_conversion(LPBOOL bUsedDefaultChar)
+@@ -412,6 +412,755 @@ static void test_string_conversion(LPBOOL bUsedDefaultChar)
      ok(GetLastError() == 0xdeadbeef, "GetLastError() is %u\n", GetLastError());
  }
  
@@ -19,14 +19,42 @@ index 8423c75..aeca011 100644
 +{
 +    struct utf16_to_utf7_test
 +    {
-+        WCHAR utf16[32];
++        WCHAR utf16[2048];
 +        int utf16_len;
-+        char utf7[32];
++        char utf7[2048];
 +        int utf7_len;
 +    };
 +
 +    struct utf16_to_utf7_test utf16_to_utf7_tests[] = {
-+        /* test some valid UTF-16 */
++        /* tests which one-byte characters are base64-encoded and which are not */
++        {
++            {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,
++            26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,
++            48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,
++            70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,
++            92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,
++            111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,
++            128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,
++            145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,
++            162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,
++            179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,
++            196,197,198,199,200,201,202,203,204,205,206,207,208,209,210,211,212,
++            213,214,215,216,217,218,219,220,221,222,223,224,225,226,227,228,229,
++            230,231,232,233,234,235,236,237,238,239,240,241,242,243,244,245,246,
++            247,248,249,250,251,252,253,254,255,256,0},
++            257,
++            "+AAEAAgADAAQABQAGAAcACA-\t\n+AAsADA-\r+AA4ADwAQABEAEgATABQAFQAWABc"
++            "AGAAZABoAGwAcAB0AHgAf- +ACEAIgAjACQAJQAm-'()+ACo-+-,-./0123456789:"
++            "+ADsAPAA9AD4-?+AEA-ABCDEFGHIJKLMNOPQRSTUVWXYZ+AFsAXABdAF4AXwBg-abc"
++            "defghijklmnopqrstuvwxyz+AHsAfAB9AH4AfwCAAIEAggCDAIQAhQCGAIcAiACJAI"
++            "oAiwCMAI0AjgCPAJAAkQCSAJMAlACVAJYAlwCYAJkAmgCbAJwAnQCeAJ8AoAChAKIA"
++            "owCkAKUApgCnAKgAqQCqAKsArACtAK4ArwCwALEAsgCzALQAtQC2ALcAuAC5ALoAuw"
++            "C8AL0AvgC/AMAAwQDCAMMAxADFAMYAxwDIAMkAygDLAMwAzQDOAM8A0ADRANIA0wDU"
++            "ANUA1gDXANgA2QDaANsA3ADdAN4A3wDgAOEA4gDjAOQA5QDmAOcA6ADpAOoA6wDsAO"
++            "0A7gDvAPAA8QDyAPMA9AD1APYA9wD4APkA+gD7APwA/QD+AP8BAA-",
++            579
++        },
++        /* tests some valid UTF-16 */
 +        {
 +            {0x4F60,0x597D,0x5417,0},
 +            4,
@@ -53,8 +81,8 @@ index 8423c75..aeca011 100644
 +
 +    struct utf7_to_utf16_test
 +    {
-+        char utf7[32];
-+        WCHAR utf16[32];
++        char utf7[2048];
++        WCHAR utf16[2048];
 +        int utf16_len;
 +    };
 +
@@ -91,42 +119,13 @@ index 8423c75..aeca011 100644
 +        int dstlen;
 +        /* expected outputs */
 +        char dst[2048];
++        int chars_written;
 +        int len;
 +        DWORD error;
 +    };
 +
 +    struct wcstombs_test wcstombs_tests[] = {
-+        /* tests which one-byte characters are base64-encoded and which are not */
-+        {
-+            {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,
-+            26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,
-+            48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,
-+            70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,
-+            92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,
-+            111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,
-+            128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,
-+            145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,
-+            162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,
-+            179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,
-+            196,197,198,199,200,201,202,203,204,205,206,207,208,209,210,211,212,
-+            213,214,215,216,217,218,219,220,221,222,223,224,225,226,227,228,229,
-+            230,231,232,233,234,235,236,237,238,239,240,241,242,243,244,245,246,
-+            247,248,249,250,251,252,253,254,255,256,0},
-+            257,
-+            2047,
-+            "+AAEAAgADAAQABQAGAAcACA-\t\n+AAsADA-\r+AA4ADwAQABEAEgATABQAFQAWABc"
-+            "AGAAZABoAGwAcAB0AHgAf- +ACEAIgAjACQAJQAm-'()+ACo-+-,-./0123456789:"
-+            "+ADsAPAA9AD4-?+AEA-ABCDEFGHIJKLMNOPQRSTUVWXYZ+AFsAXABdAF4AXwBg-abc"
-+            "defghijklmnopqrstuvwxyz+AHsAfAB9AH4AfwCAAIEAggCDAIQAhQCGAIcAiACJAI"
-+            "oAiwCMAI0AjgCPAJAAkQCSAJMAlACVAJYAlwCYAJkAmgCbAJwAnQCeAJ8AoAChAKIA"
-+            "owCkAKUApgCnAKgAqQCqAKsArACtAK4ArwCwALEAsgCzALQAtQC2ALcAuAC5ALoAuw"
-+            "C8AL0AvgC/AMAAwQDCAMMAxADFAMYAxwDIAMkAygDLAMwAzQDOAM8A0ADRANIA0wDU"
-+            "ANUA1gDXANgA2QDaANsA3ADdAN4A3wDgAOEA4gDjAOQA5QDmAOcA6ADpAOoA6wDsAO"
-+            "0A7gDvAPAA8QDyAPMA9AD1APYA9wD4APkA+gD7APwA/QD+AP8BAA-",
-+            579,
-+            0xdeadbeef
-+        },
-+        /* same as above but surrounding the chars with a non-encoded char */
++        /* tests which characters are encoded if surrounded by non-encoded characters */
 +        {
 +            {' ',0x01,' ',0x02,' ',0x03,' ',0x04,' ',0x05,' ',0x06,' ',0x07,' ',
 +            0x08,' ',0x09,' ',0x0A,' ',0x0B,' ',0x0C,' ',0x0D,' ',0x0E,' ',0x0F,
@@ -184,6 +183,7 @@ index 8423c75..aeca011 100644
 +            " +AOM- +AOQ- +AOU- +AOY- +AOc- +AOg- +AOk- +AOo- +AOs- +AOw- +AO0-"
 +            " +AO4- +AO8- +APA- +APE- +API- +APM- +APQ- +APU- +APY- +APc- +APg-"
 +            " +APk- +APo- +APs- +APw- +AP0- +AP4- +AP8- \0 ",
++            1230,
 +            1230,
 +            0xdeadbeef
 +        },
@@ -273,6 +273,7 @@ index 8423c75..aeca011 100644
 +            "ZyAO4mcgDvJnIA8CZyAPEmcgDyJnIA8yZyAPQmcgD1JnIA9iZyAPcmcgD4JnIA+SZy"
 +            "APomcgD7JnIA/CZyAP0mcgD+JnIA/yZyAQAmcg-\0+JnI-",
 +            1428,
++            1428,
 +            0xdeadbeef
 +        },
 +        /* tests srclen > strlenW(src) */
@@ -281,6 +282,7 @@ index 8423c75..aeca011 100644
 +            4,
 +            2047,
 +            "a\0b",
++            4,
 +            4,
 +            0xdeadbeef
 +        },
@@ -291,6 +293,7 @@ index 8423c75..aeca011 100644
 +            2047,
 +            "he",
 +            2,
++            2,
 +            0xdeadbeef
 +        },
 +        /* tests srclen < strlenW(src) with non-directly encodable chars*/
@@ -300,6 +303,7 @@ index 8423c75..aeca011 100644
 +            2047,
 +            "+T2BZfQ-",
 +            8,
++            8,
 +            0xdeadbeef
 +        },
 +        /* tests a buffer that runs out while not encoding a UTF-7 sequence */
@@ -308,6 +312,7 @@ index 8423c75..aeca011 100644
 +            -1,
 +            2,
 +            "he",
++            2,
 +            0,
 +            ERROR_INSUFFICIENT_BUFFER
 +        },
@@ -317,6 +322,7 @@ index 8423c75..aeca011 100644
 +            -1,
 +            2,
 +            "+T",
++            2,
 +            0,
 +            ERROR_INSUFFICIENT_BUFFER
 +        }
@@ -330,6 +336,7 @@ index 8423c75..aeca011 100644
 +        int dstlen;
 +        /* expected outputs */
 +        WCHAR dst[2048];
++        int chars_written;
 +        int len;
 +        DWORD error;
 +    };
@@ -408,6 +415,7 @@ index 8423c75..aeca011 100644
 +            '-',0xDF8E,0x00FA,'-',0x00FB,'-',0x00FC,'-',0x7AEF,0x00FD,'-',
 +            0x00FE,'-',0xCF7E,0x00FF,'-',0},
 +            430,
++            430,
 +            0xdeadbeef
 +        },
 +        /* tests which one-byte characters remove stray + signs */
@@ -470,6 +478,7 @@ index 8423c75..aeca011 100644
 +            0x00F8,'-',0x00F9,'-',0x00FA,'-',0x00FB,'-',0x00FC,'-',0x00FD,'-',
 +            0x00FE,'-',0x00FF,'-',0},
 +            383,
++            383,
 +            0xdeadbeef
 +        },
 +        /* tests srclen > strlen(src) */
@@ -478,6 +487,7 @@ index 8423c75..aeca011 100644
 +            4,
 +            2047,
 +            {'a',0,'b',0},
++            4,
 +            4,
 +            0xdeadbeef
 +        },
@@ -488,6 +498,7 @@ index 8423c75..aeca011 100644
 +            2047,
 +            {'h','e'},
 +            2,
++            2,
 +            0xdeadbeef
 +        },
 +        /* tests srclen < strlen(src) inside of a UTF-7 sequence */
@@ -497,6 +508,57 @@ index 8423c75..aeca011 100644
 +            2047,
 +            {0x4F60},
 +            1,
++            1,
++            0xdeadbeef
++        },
++        /* tests srclen < strlen(src) right at the beginning of a UTF-7 sequence */
++        {
++            "hi+T2A-",
++            3,
++            2047,
++            {'h','i'},
++            2,
++            2,
++            0xdeadbeef
++        },
++        /* tests srclen < strlen(src) right at the end of a UTF-7 sequence */
++        {
++            "+T2A-hi",
++            5,
++            2047,
++            {0x4F60},
++            1,
++            1,
++            0xdeadbeef
++        },
++        /* tests srclen < strlen(src) at the beginning of an escaped + sign */
++        {
++            "hi+-",
++            3,
++            2047,
++            {'h','i'},
++            2,
++            2,
++            0xdeadbeef
++        },
++        /* tests srclen < strlen(src) at the end of an escaped + sign */
++        {
++            "+-hi",
++            2,
++            2047,
++            {'+'},
++            1,
++            1,
++            0xdeadbeef
++        },
++        /* tests len=0 but no error */
++        {
++            "+",
++            1,
++            2047,
++            {},
++            0,
++            0,
 +            0xdeadbeef
 +        },
 +        /* tests a buffer that runs out while not decoding a UTF-7 sequence */
@@ -505,6 +567,7 @@ index 8423c75..aeca011 100644
 +            -1,
 +            2,
 +            {'h','e'},
++            2,
 +            0,
 +            ERROR_INSUFFICIENT_BUFFER
 +        },
@@ -514,6 +577,7 @@ index 8423c75..aeca011 100644
 +            -1,
 +            1,
 +            {0x4F60},
++            1,
 +            0,
 +            ERROR_INSUFFICIENT_BUFFER
 +        }
@@ -523,8 +587,8 @@ index 8423c75..aeca011 100644
 +
 +    for (i = 0; i < sizeof(utf16_to_utf7_tests) / sizeof(struct utf16_to_utf7_test); i++)
 +    {
-+        char c_buffer[32];
-+        WCHAR w_buffer[32];
++        char c_buffer[2048];
++        WCHAR w_buffer[2048];
 +        int len;
 +
 +        /* null-terminate the buffers */
@@ -598,7 +662,7 @@ index 8423c75..aeca011 100644
 +
 +    for (i = 0; i < sizeof(utf7_to_utf16_tests) / sizeof(struct utf7_to_utf16_test); i++)
 +    {
-+        WCHAR w_buffer[32];
++        WCHAR w_buffer[2048];
 +        int len;
 +
 +        /* null-terminate the buffer */
@@ -674,8 +738,8 @@ index 8423c75..aeca011 100644
 +        SetLastError(0xdeadbeef);
 +        len = WideCharToMultiByte(CP_UTF7, 0, wcstombs_tests[i].src, wcstombs_tests[i].srclen, c_buffer, wcstombs_tests[i].dstlen, NULL, NULL);
 +        ok(len == wcstombs_tests[i].len &&
-+           memcmp(c_buffer, wcstombs_tests[i].dst, len ? len : wcstombs_tests[i].dstlen) == 0 &&
-+           c_buffer[len ? len : wcstombs_tests[i].dstlen] == '#',
++           memcmp(c_buffer, wcstombs_tests[i].dst, wcstombs_tests[i].chars_written) == 0 &&
++           c_buffer[wcstombs_tests[i].chars_written] == '#',
 +           "wcstombs_test failure i=%i len=%i dst=\"%s\"\n", i, len, c_buffer);
 +        ok(GetLastError() == wcstombs_tests[i].error, "error=%x\n", GetLastError());
 +    }
@@ -693,8 +757,8 @@ index 8423c75..aeca011 100644
 +        SetLastError(0xdeadbeef);
 +        len = MultiByteToWideChar(CP_UTF7, 0, mbstowcs_tests[i].src, mbstowcs_tests[i].srclen, w_buffer, mbstowcs_tests[i].dstlen);
 +        ok(len == mbstowcs_tests[i].len &&
-+           memcmp(w_buffer, mbstowcs_tests[i].dst, (len ? len : mbstowcs_tests[i].dstlen) * sizeof(WCHAR)) == 0 &&
-+           w_buffer[len ? len : mbstowcs_tests[i].dstlen] == 0x2323,
++           memcmp(w_buffer, mbstowcs_tests[i].dst, mbstowcs_tests[i].chars_written * sizeof(WCHAR)) == 0 &&
++           w_buffer[mbstowcs_tests[i].chars_written] == 0x2323,
 +           "mbstowcs_test failure i=%i len=%i dst=%s\n", i, len, wine_dbgstr_w(w_buffer));
 +        ok(GetLastError() == mbstowcs_tests[i].error, "error=%x\n", GetLastError());
 +    }
@@ -703,7 +767,7 @@ index 8423c75..aeca011 100644
  static void test_undefined_byte_char(void)
  {
      static const struct tag_testset {
-@@ -618,6 +1303,8 @@ START_TEST(codepage)
+@@ -618,6 +1367,8 @@ START_TEST(codepage)
      test_string_conversion(NULL);
      test_string_conversion(&bUsedDefaultChar);
  

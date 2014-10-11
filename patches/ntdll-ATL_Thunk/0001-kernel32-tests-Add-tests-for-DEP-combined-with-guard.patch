@@ -1,16 +1,16 @@
-From 58524cf1b19cd820ee51e38e5ca6c002142f2047 Mon Sep 17 00:00:00 2001
+From 74b84ed98a660e029a60ef7c6e20efa6a71c2361 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 8 Oct 2014 20:54:50 +0200
 Subject: kernel32/tests: Add tests for DEP combined with guard pages and write
  watches.
 
 ---
- dlls/kernel32/tests/virtual.c | 438 ++++++++++++++++++++++++++++++++++++++++++
+ dlls/kernel32/tests/virtual.c | 449 ++++++++++++++++++++++++++++++++++++++++++
  include/winternl.h            |   1 +
- 2 files changed, 439 insertions(+)
+ 2 files changed, 450 insertions(+)
 
 diff --git a/dlls/kernel32/tests/virtual.c b/dlls/kernel32/tests/virtual.c
-index 0fa2b99..47feff1 100644
+index 0fa2b99..501934d 100644
 --- a/dlls/kernel32/tests/virtual.c
 +++ b/dlls/kernel32/tests/virtual.c
 @@ -28,6 +28,7 @@
@@ -21,7 +21,7 @@ index 0fa2b99..47feff1 100644
  #include "excpt.h"
  #include "wine/test.h"
  
-@@ -1797,6 +1798,438 @@ static void test_guard_page(void)
+@@ -1797,6 +1798,449 @@ static void test_guard_page(void)
      VirtualFree( base, 0, MEM_FREE );
  }
  
@@ -30,22 +30,33 @@ index 0fa2b99..47feff1 100644
 +static DWORD execute_fault_seh_handler( EXCEPTION_RECORD *rec, EXCEPTION_REGISTRATION_RECORD *frame,
 +                                        CONTEXT *context, EXCEPTION_REGISTRATION_RECORD **dispatcher )
 +{
-+    trace( "exception: %08x flags:%x addr:%p\n",
-+           rec->ExceptionCode, rec->ExceptionFlags, rec->ExceptionAddress );
++    ULONG flags = MEM_EXECUTE_OPTION_ENABLE;
++
++    trace( "exception: %08x flags:%x addr:%p info[0]:%ld info[1]:%p\n",
++           rec->ExceptionCode, rec->ExceptionFlags, rec->ExceptionAddress,
++           rec->ExceptionInformation[0], (void *)rec->ExceptionInformation[1] );
 +
 +    ok( rec->NumberParameters == 2, "NumberParameters is %d instead of 2\n", rec->NumberParameters );
 +    ok( rec->ExceptionCode == STATUS_ACCESS_VIOLATION || rec->ExceptionCode == STATUS_GUARD_PAGE_VIOLATION,
 +        "ExceptionCode is %08x instead of STATUS_ACCESS_VIOLATION or STATUS_GUARD_PAGE_VIOLATION\n", rec->ExceptionCode );
 +
++    NtQueryInformationProcess( GetCurrentProcess(), ProcessExecuteFlags, &flags, sizeof(flags), NULL );
++
 +    if (rec->ExceptionCode == STATUS_GUARD_PAGE_VIOLATION)
++    {
++
++        todo_wine
++        ok( rec->ExceptionInformation[0] == EXCEPTION_EXECUTE_FAULT ||
++            broken(!(flags & MEM_EXECUTE_OPTION_DISABLE) && rec->ExceptionInformation[0] == EXCEPTION_READ_FAULT), /* Windows 2000 */
++            "ExceptionInformation[0] is %d instead of %d\n", (DWORD)rec->ExceptionInformation[0], EXCEPTION_EXECUTE_FAULT );
++
 +        num_guard_page_calls++;
++    }
 +    else if (rec->ExceptionCode == STATUS_ACCESS_VIOLATION)
 +    {
 +        DWORD err, old_prot;
 +        BOOL success;
-+        ULONG flags;
 +
-+        NtQueryInformationProcess( GetCurrentProcess(), ProcessExecuteFlags, &flags, sizeof(flags), NULL );
 +        err = (flags & MEM_EXECUTE_OPTION_DISABLE) ? EXCEPTION_EXECUTE_FAULT : EXCEPTION_READ_FAULT;
 +        ok( rec->ExceptionInformation[0] == err, "ExceptionInformation[0] is %d instead of %d\n",
 +            (DWORD)rec->ExceptionInformation[0], err );
@@ -460,7 +471,7 @@ index 0fa2b99..47feff1 100644
  #endif  /* __i386__ */
  
  static void test_VirtualProtect(void)
-@@ -2859,5 +3292,10 @@ START_TEST(virtual)
+@@ -2859,5 +3303,10 @@ START_TEST(virtual)
      test_write_watch();
  #ifdef __i386__
      test_guard_page();

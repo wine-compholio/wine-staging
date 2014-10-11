@@ -543,7 +543,11 @@ msvcp90-basic_string_wchar_dtor.ok:
 # Patchset ntdll-ATL_Thunk
 # |
 # | Included patches:
-# |   *	Fix several issues with execute permissions in guard page / write watch handling. [by Sebastian Lackner]
+# |   *	Fix several issues with execute permissions in guard page / write watch handling. [rev 2, by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#19296] ATL thunk check shouldn't trigger page fault
+# |   *	[#34479] Fix issue with ATL thunks in combination with guard pages
 # |
 # | Modified files:
 # |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/signal_i386.c, dlls/ntdll/virtual.c, include/winternl.h
@@ -554,9 +558,11 @@ ntdll-ATL_Thunk.ok:
 	$(call APPLY_FILE,ntdll-ATL_Thunk/0002-ntdll-Avoid-recursive-exception-handler-calls-when-h.patch)
 	$(call APPLY_FILE,ntdll-ATL_Thunk/0003-ntdll-Ensure-force_exec_prot-is-also-used-for-views-.patch)
 	$(call APPLY_FILE,ntdll-ATL_Thunk/0004-ntdll-reset_write_watches-shouldn-t-remove-enforced-.patch)
-	$(call APPLY_FILE,ntdll-ATL_Thunk/0005-ntdll-Only-check-for-ATL-thunk-if-DEP-is-not-enabled.patch)
+	$(call APPLY_FILE,ntdll-ATL_Thunk/0005-ntdll-Only-check-for-ATL-thunk-if-allowed-by-execute.patch)
+	$(call APPLY_FILE,ntdll-ATL_Thunk/0006-kernel32-tests-Add-test-to-show-incorrect-behaviour-.patch)
+	$(call APPLY_FILE,ntdll-ATL_Thunk/0007-ntdll-Try-to-not-raise-exceptions-when-checking-for-.patch)
 	@( \
-		echo '+    { "ntdll-ATL_Thunk", "Sebastian Lackner", "Fix several issues with execute permissions in guard page / write watch handling." },'; \
+		echo '+    { "ntdll-ATL_Thunk", "Sebastian Lackner", "Fix several issues with execute permissions in guard page / write watch handling. [rev 2]" },'; \
 	) > ntdll-ATL_Thunk.ok
 
 # Patchset ntdll-DOS_Attributes

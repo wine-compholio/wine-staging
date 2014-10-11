@@ -35,10 +35,12 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [4]:**
+**Bugfixes and features included in the next upcoming release [6]:**
 
+* ATL thunk check shouldn't trigger page fault ([Wine Bug #19296](http://bugs.winehq.org/show_bug.cgi?id=19296))
 * Anno 1602 installer depends on Windows 98 behavior of SHFileOperationW
 * FEAR 1 installer expects basic_string_wchar_dtor to return NULL ([Wine Bug #37358](http://bugs.winehq.org/show_bug.cgi?id=37358))
+* Fix issue with ATL thunks in combination with guard pages ([Wine Bug #34479](http://bugs.winehq.org/show_bug.cgi?id=34479))
 * Support for UTF7 encoding/decoding ([Wine Bug #27388](http://bugs.winehq.org/show_bug.cgi?id=27388))
 * Wine ignores IDF_CHECKFIRST flag in SetupPromptForDisk ([Wine Bug #20465](http://bugs.winehq.org/show_bug.cgi?id=20465))
 

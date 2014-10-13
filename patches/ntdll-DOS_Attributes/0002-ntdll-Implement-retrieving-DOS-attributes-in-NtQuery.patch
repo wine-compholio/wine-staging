@@ -1,4 +1,4 @@
-From 6d3f985054009a9030276bc6fa7ff9cd6ee3bf29 Mon Sep 17 00:00:00 2001
+From 6a744d7489e7bc7047c2c7235e5dc91d938bf927 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Tue, 19 Aug 2014 22:10:49 -0600
 Subject: ntdll: Implement retrieving DOS attributes in
@@ -6,15 +6,15 @@ Subject: ntdll: Implement retrieving DOS attributes in
 
 ---
  configure.ac          |   12 ++++++++++++
- dlls/ntdll/file.c     |   30 +++++++++++++++++++++++++++++-
+ dlls/ntdll/file.c     |   23 ++++++++++++++++++++++-
  include/wine/port.h   |    8 ++++++++
  libs/port/Makefile.in |    3 ++-
  libs/port/xattr.c     |   39 +++++++++++++++++++++++++++++++++++++++
- 5 files changed, 90 insertions(+), 2 deletions(-)
+ 5 files changed, 83 insertions(+), 2 deletions(-)
  create mode 100644 libs/port/xattr.c
 
 diff --git a/configure.ac b/configure.ac
-index f1f721d..fe06575 100644
+index 240ce29..fd760e3 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -77,2 +77,3 @@ AC_ARG_WITH(tiff,      AS_HELP_STRING([--without-tiff],[do not use TIFF]))
@@ -40,21 +40,14 @@ index f1f721d..fe06575 100644
  
  AC_SUBST(dlldir,"\${libdir}/wine")
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 53cce85..83eaeba 100644
+index 53cce85..e258ca1 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -103,6 +103,29 @@ mode_t FILE_umask = 0;
+@@ -103,6 +103,22 @@ mode_t FILE_umask = 0;
  
  static const WCHAR ntfsW[] = {'N','T','F','S'};
  
-+/* Match the conventions as Samba 3 for storing DOS file attributes;
-+ * see {get,set}_ea_dos_attribute() in http://gitweb.samba.org/?p=samba.git;a=blob;f=source3/smbd/dosmode.c
-+ * In particular, encode FILE_ATTRIBUTE_* as the string 0x followed by one or two hexadecimal digits.
-+ * Differences from Samba 3:
-+ * Wine currently only stores hidden and system in xattrs;
-+ * Samba 3 also seems to store the readonly and directory bits.
-+ * Samba 4 additionally supports NT security descriptors with a different xattr
-+ */
++/* Match the Samba conventions for storing DOS file attributes */
 +#define SAMBA_XATTR_DOS_ATTRIB XATTR_USER_PREFIX "DOSATTRIB"
 +/* We are only interested in some attributes, the others have corresponding Unix attributes */
 +#define XATTR_ATTRIBS_MASK     (FILE_ATTRIBUTE_HIDDEN|FILE_ATTRIBUTE_SYSTEM)
@@ -73,7 +66,7 @@ index 53cce85..83eaeba 100644
  /* fetch the attributes of a file */
  static inline ULONG get_file_attributes( const struct stat *st )
  {
-@@ -120,13 +143,18 @@ static inline ULONG get_file_attributes( const struct stat *st )
+@@ -120,13 +136,18 @@ static inline ULONG get_file_attributes( const struct stat *st )
  /* get the stat info and file attributes for a file (by file descriptor) */
  int fd_get_file_info( int fd, struct stat *st, ULONG *attr )
  {

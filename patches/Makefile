@@ -26,6 +26,7 @@ PATCHLIST := \
 	comctl32-LoadIconMetric.ok \
 	configure-Absolute_RPATH.ok \
 	configure-Detect_Gnutls.ok \
+	d3dx9_36-UpdateSkinnedMesh.ok \
 	dbghelp-KdHelp.ok \
 	dsound-Fast_Mixer.ok \
 	fonts-Missing_Fonts.ok \
@@ -291,6 +292,24 @@ configure-Detect_Gnutls.ok:
 	@( \
 		echo '+    { "configure-Detect_Gnutls", "Sebastian Lackner", "Fix detection of gnutls on Ubuntu 14.10. [rev 3]" },'; \
 	) > configure-Detect_Gnutls.ok
+
+# Patchset d3dx9_36-UpdateSkinnedMesh
+# |
+# | Included patches:
+# |   *	Implement ID3DXSkinInfoImpl_UpdateSkinnedMesh [by Christian Costa]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#32572] Alpha Polaris requires implementation of UpdateSkinnedMesh
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/skin.c, dlls/d3dx9_36/tests/mesh.c
+# |
+.INTERMEDIATE: d3dx9_36-UpdateSkinnedMesh.ok
+d3dx9_36-UpdateSkinnedMesh.ok:
+	$(call APPLY_FILE,d3dx9_36-UpdateSkinnedMesh/0001-d3dx9_36-Implement-ID3DXSkinInfoImpl_UpdateSkinnedMe.patch)
+	@( \
+		echo '+    { "d3dx9_36-UpdateSkinnedMesh", "Christian Costa", "Implement ID3DXSkinInfoImpl_UpdateSkinnedMesh" },'; \
+	) > d3dx9_36-UpdateSkinnedMesh.ok
 
 # Patchset dbghelp-KdHelp
 # |

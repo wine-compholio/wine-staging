@@ -39,7 +39,6 @@ PATCHLIST := \
 	kernel32-UTF7_Support.ok \
 	libs-Unicode_Collation.ok \
 	msvcp90-basic_string_wchar_dtor.ok \
-	ntdll-ATL_Thunk.ok \
 	ntdll-DOS_Attributes.ok \
 	ntdll-Dynamic_DST.ok \
 	ntdll-Exception.ok \
@@ -539,26 +538,6 @@ msvcp90-basic_string_wchar_dtor.ok:
 	@( \
 		echo '+    { "msvcp90-basic_string_wchar_dtor", "Michael Müller", "basic_string_wchar_dtor needs to return NULL." },'; \
 	) > msvcp90-basic_string_wchar_dtor.ok
-
-# Patchset ntdll-ATL_Thunk
-# |
-# | Included patches:
-# |   *	Fix several issues with execute permissions in guard page / write watch handling. [rev 2, by Sebastian Lackner]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#19296] ATL thunk check shouldn't trigger page fault
-# |   *	[#34479] Fix issue with ATL thunks in combination with guard pages
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/signal_i386.c
-# |
-.INTERMEDIATE: ntdll-ATL_Thunk.ok
-ntdll-ATL_Thunk.ok:
-	$(call APPLY_FILE,ntdll-ATL_Thunk/0001-kernel32-tests-Add-test-to-show-incorrect-behaviour-.patch)
-	$(call APPLY_FILE,ntdll-ATL_Thunk/0002-ntdll-Try-to-not-raise-exceptions-when-checking-for-.patch)
-	@( \
-		echo '+    { "ntdll-ATL_Thunk", "Sebastian Lackner", "Fix several issues with execute permissions in guard page / write watch handling. [rev 2]" },'; \
-	) > ntdll-ATL_Thunk.ok
 
 # Patchset ntdll-DOS_Attributes
 # |

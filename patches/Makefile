@@ -731,19 +731,22 @@ ntdll-Junction_Points.ok: ntdll-Fix_Free.ok
 # Patchset ntdll-NtQuerySection
 # |
 # | Included patches:
-# |   *	Implement NtQuerySection class SectionBasicInformation. [by Dmitry Timoshkov]
+# |   *	Implement NtQuerySection class SectionBasicInformation. [rev 2, by Dmitry Timoshkov]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#37338] Support for NtQuerySection
 # |
 # | Modified files:
-# |   *	dlls/ntdll/nt.c, dlls/ntdll/virtual.c, include/winternl.h
+# |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, dlls/ntdll/virtual.c, include/winternl.h,
+# | 	server/mapping.c, server/protocol.def
 # |
 .INTERMEDIATE: ntdll-NtQuerySection.ok
 ntdll-NtQuerySection.ok:
-	$(call APPLY_FILE,ntdll-NtQuerySection/0001-ntdll-Implement-NtQuerySection-class-SectionBasicInf.patch)
+	$(call APPLY_FILE,ntdll-NtQuerySection/0001-include-Fix-definition-of-SECTION_BASIC_INFORMATION-.patch)
+	$(call APPLY_FILE,ntdll-NtQuerySection/0002-ntdll-Implement-NtQuerySection.patch)
+	$(call APPLY_FILE,ntdll-NtQuerySection/0003-kernel32-tests-Add-tests-for-NtQuerySection.patch)
 	@( \
-		echo '+    { "ntdll-NtQuerySection", "Dmitry Timoshkov", "Implement NtQuerySection class SectionBasicInformation." },'; \
+		echo '+    { "ntdll-NtQuerySection", "Dmitry Timoshkov", "Implement NtQuerySection class SectionBasicInformation. [rev 2]" },'; \
 	) > ntdll-NtQuerySection.ok
 
 # Patchset ntdll-Pipe_SpecialCharacters

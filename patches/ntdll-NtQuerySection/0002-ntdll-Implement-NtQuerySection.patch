@@ -1,0 +1,283 @@
+From 0cd17445c177428f06fa6dccd724e62fccd7619c Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Thu, 16 Oct 2014 23:24:37 +0200
+Subject: ntdll: Implement NtQuerySection.
+
+---
+ dlls/ntdll/nt.c       | 19 ----------
+ dlls/ntdll/ntdll.spec |  4 +--
+ dlls/ntdll/virtual.c  | 98 +++++++++++++++++++++++++++++++++++++++++++++++++++
+ server/mapping.c      | 43 ++++++++++++++++++++++
+ server/protocol.def   |  7 ++++
+ 5 files changed, 150 insertions(+), 21 deletions(-)
+
+diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
+index 73d9383..f0433db 100644
+--- a/dlls/ntdll/nt.c
++++ b/dlls/ntdll/nt.c
+@@ -646,25 +646,6 @@ NTSTATUS WINAPI NtPrivilegeCheck(
+ }
+ 
+ /*
+- *	Section
+- */
+-
+-/******************************************************************************
+- *  NtQuerySection	[NTDLL.@]
+- */
+-NTSTATUS WINAPI NtQuerySection(
+-	IN HANDLE SectionHandle,
+-	IN SECTION_INFORMATION_CLASS SectionInformationClass,
+-	OUT PVOID SectionInformation,
+-	IN ULONG Length,
+-	OUT PULONG ResultLength)
+-{
+-	FIXME("(%p,%d,%p,0x%08x,%p) stub!\n",
+-	SectionHandle,SectionInformationClass,SectionInformation,Length,ResultLength);
+-	return 0;
+-}
+-
+-/*
+  *	ports
+  */
+ 
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index 5bac269..32b023b 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -262,7 +262,7 @@
+ @ stdcall NtQueryPerformanceCounter(ptr ptr)
+ # @ stub NtQueryPortInformationProcess
+ # @ stub NtQueryQuotaInformationFile
+-@ stdcall NtQuerySection (long long long long long)
++@ stdcall NtQuerySection(long long ptr long ptr)
+ @ stdcall NtQuerySecurityObject (long long long long long)
+ @ stdcall NtQuerySemaphore (long long ptr long ptr)
+ @ stdcall NtQuerySymbolicLinkObject(long ptr ptr)
+@@ -1139,7 +1139,7 @@
+ @ stdcall ZwQueryPerformanceCounter (long long) NtQueryPerformanceCounter
+ # @ stub ZwQueryPortInformationProcess
+ # @ stub ZwQueryQuotaInformationFile
+-@ stdcall ZwQuerySection (long long long long long) NtQuerySection
++@ stdcall ZwQuerySection(long long ptr long ptr) NtQuerySection
+ @ stdcall ZwQuerySecurityObject (long long long long long) NtQuerySecurityObject
+ @ stdcall ZwQuerySemaphore (long long long long long) NtQuerySemaphore
+ @ stdcall ZwQuerySymbolicLinkObject(long ptr ptr) NtQuerySymbolicLinkObject
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index 4c4c05d..c3ed481 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -2553,6 +2553,104 @@ NTSTATUS WINAPI NtOpenSection( HANDLE *handle, ACCESS_MASK access, const OBJECT_
+ 
+ 
+ /***********************************************************************
++ *             NtQuerySection   (NTDLL.@)
++ */
++NTSTATUS WINAPI NtQuerySection(HANDLE handle, SECTION_INFORMATION_CLASS info_class,
++                               PVOID buffer, ULONG len, PULONG ret_len)
++{
++    HANDLE dup_mapping, shared_file;
++    unsigned protect;
++    LARGE_INTEGER size;
++    void *base, *entry;
++    short machine, subsystem;
++    short major_subsystem, minor_subsystem;
++    short characteristics, dll_characteristics;
++    NTSTATUS res;
++
++    if (info_class == SectionBasicInformation)
++    {
++        if (len < sizeof(SECTION_BASIC_INFORMATION))
++            return STATUS_INFO_LENGTH_MISMATCH;
++    }
++    else if (info_class == SectionImageInformation)
++    {
++        if (len < sizeof(SECTION_IMAGE_INFORMATION))
++            return STATUS_INFO_LENGTH_MISMATCH;
++    }
++    else
++    {
++        FIXME("%p,info_class=%d,%p,%u,%p) Unknown information class\n",
++              handle, info_class, buffer, len, ret_len);
++        return STATUS_INVALID_INFO_CLASS;
++    }
++
++    if (!buffer) return STATUS_ACCESS_VIOLATION;
++
++    SERVER_START_REQ( get_mapping_info )
++    {
++        req->handle = wine_server_obj_handle( handle );
++        req->access = SECTION_QUERY;
++        res = wine_server_call( req );
++        protect       = reply->protect;
++        base          = wine_server_get_ptr( reply->base );
++        size.QuadPart = reply->size;
++        dup_mapping   = wine_server_ptr_handle( reply->mapping );
++        shared_file   = wine_server_ptr_handle( reply->shared_file );
++        if ((ULONG_PTR)base != reply->base) base = NULL;
++
++        entry               = wine_server_get_ptr( reply->entry );
++        subsystem           = reply->subsystem;
++        major_subsystem     = reply->major_subsystem;
++        minor_subsystem     = reply->minor_subsystem;
++        characteristics     = reply->characteristics;
++        dll_characteristics = reply->dll_characteristics;
++        machine             = reply->machine;
++    }
++    SERVER_END_REQ;
++    if (res) return res;
++
++    if (dup_mapping) NtClose( dup_mapping );
++    if (shared_file) NtClose( shared_file );
++
++    if (info_class == SectionBasicInformation)
++    {
++        SECTION_BASIC_INFORMATION *info = buffer;
++
++        info->BaseAddress = NULL;
++        info->Size        = size;
++        info->Attributes  = (protect & VPROT_COMMITTED) ? SEC_COMMIT : SEC_RESERVE;
++        if (protect & VPROT_NOCACHE) info->Attributes |= SEC_NOCACHE;
++        if (protect & VPROT_IMAGE)   info->Attributes |= SEC_IMAGE;
++        /* FIXME: SEC_FILE */
++        if (ret_len) *ret_len = sizeof(*info);
++    }
++    else
++    {
++        SECTION_IMAGE_INFORMATION *info = buffer;
++
++        if (!(protect & VPROT_IMAGE))
++            return STATUS_SECTION_NOT_IMAGE;
++
++        memset( info, 0, sizeof(*info) );
++        info->EntryPoint           = entry;
++        info->StackZeroBits        = 0; /* FIXME */
++        info->StackReserved        = 0; /* FIXME */
++        info->StackCommit          = 0; /* FIXME */
++        info->ImageSubsystem       = subsystem;
++        info->SubsystemVersionHigh = major_subsystem;
++        info->SubsystemVersionLow  = minor_subsystem;
++        info->ImageCharacteristics = characteristics;
++        info->DllCharacteristics   = dll_characteristics;
++        info->ImageMachineType     = machine;
++        info->ImageContainsCode    = TRUE; /* FIXME */
++        if (ret_len) *ret_len = sizeof(*info);
++    }
++
++    return STATUS_SUCCESS;
++}
++
++
++/***********************************************************************
+  *             NtMapViewOfSection   (NTDLL.@)
+  *             ZwMapViewOfSection   (NTDLL.@)
+  */
+diff --git a/server/mapping.c b/server/mapping.c
+index 64b3003..8a04183 100644
+--- a/server/mapping.c
++++ b/server/mapping.c
+@@ -64,6 +64,15 @@ struct mapping
+     enum cpu_type   cpu;             /* client CPU (for PE image mapping) */
+     int             header_size;     /* size of headers (for PE image mapping) */
+     client_ptr_t    base;            /* default base addr (for PE image mapping) */
++    client_ptr_t    entry;           /* entry point addr (for PE image mapping) */
++    mem_size_t      stack_reserve;   /* stack reserve (for PE image mapping) */
++    mem_size_t      stack_commit;    /* stack commit (for PE image mapping) */
++    int             subsystem;       /* subsystem (for PE image mapping) */
++    int             major_subsystem; /* major subsystem version (for PE image mapping) */
++    int             minor_subsystem; /* minor subsystem version (for PE image mapping) */
++    int             characteristics; /* image characteristics (for PE image mapping) */
++    int             dll_characteristics; /* dll characteristics (for PE image mapping) */
++    int             machine;         /* image machine type (for PE image mapping) */
+     struct ranges  *committed;       /* list of committed ranges in this mapping */
+     struct file    *shared_file;     /* temp file for shared PE mapping */
+     struct list     shared_entry;    /* entry in global shared PE mappings list */
+@@ -430,17 +439,34 @@ static unsigned int get_image_params( struct mapping *mapping, int unix_fd, int
+         return STATUS_INVALID_IMAGE_FORMAT;
+     }
+ 
++    mapping->characteristics = nt.FileHeader.Characteristics;
++    mapping->machine         = nt.FileHeader.Machine;
++
+     switch (nt.opt.hdr32.Magic)
+     {
+     case IMAGE_NT_OPTIONAL_HDR32_MAGIC:
+         mapping->size        = ROUND_SIZE( nt.opt.hdr32.SizeOfImage );
+         mapping->base        = nt.opt.hdr32.ImageBase;
+         mapping->header_size = nt.opt.hdr32.SizeOfHeaders;
++        mapping->entry               = mapping->base + nt.opt.hdr32.AddressOfEntryPoint;
++        mapping->stack_reserve       = nt.opt.hdr32.SizeOfStackReserve;
++        mapping->stack_commit        = nt.opt.hdr32.SizeOfStackCommit;
++        mapping->subsystem           = nt.opt.hdr32.Subsystem;
++        mapping->major_subsystem     = nt.opt.hdr32.MajorSubsystemVersion;
++        mapping->minor_subsystem     = nt.opt.hdr32.MinorSubsystemVersion;
++        mapping->dll_characteristics = nt.opt.hdr32.DllCharacteristics;
+         break;
+     case IMAGE_NT_OPTIONAL_HDR64_MAGIC:
+         mapping->size        = ROUND_SIZE( nt.opt.hdr64.SizeOfImage );
+         mapping->base        = nt.opt.hdr64.ImageBase;
+         mapping->header_size = nt.opt.hdr64.SizeOfHeaders;
++        mapping->entry               = mapping->base + nt.opt.hdr64.AddressOfEntryPoint;
++        mapping->stack_reserve       = nt.opt.hdr64.SizeOfStackReserve;
++        mapping->stack_commit        = nt.opt.hdr64.SizeOfStackCommit;
++        mapping->subsystem           = nt.opt.hdr64.Subsystem;
++        mapping->major_subsystem     = nt.opt.hdr64.MajorSubsystemVersion;
++        mapping->minor_subsystem     = nt.opt.hdr64.MinorSubsystemVersion;
++        mapping->dll_characteristics = nt.opt.hdr64.DllCharacteristics;
+         break;
+     }
+ 
+@@ -488,8 +514,18 @@ static struct object *create_mapping( struct directory *root, const struct unico
+                                                GROUP_SECURITY_INFORMATION|
+                                                DACL_SECURITY_INFORMATION|
+                                                SACL_SECURITY_INFORMATION );
++
+     mapping->header_size = 0;
+     mapping->base        = 0;
++    mapping->entry               = 0;
++    mapping->stack_reserve       = 0;
++    mapping->stack_commit        = 0;
++    mapping->subsystem           = 0;
++    mapping->major_subsystem     = 0;
++    mapping->minor_subsystem     = 0;
++    mapping->characteristics     = 0;
++    mapping->dll_characteristics = 0;
++    mapping->machine             = 0;
+     mapping->fd          = NULL;
+     mapping->shared_file = NULL;
+     mapping->committed   = NULL;
+@@ -727,6 +763,13 @@ DECL_HANDLER(get_mapping_info)
+     reply->protect     = mapping->protect;
+     reply->header_size = mapping->header_size;
+     reply->base        = mapping->base;
++    reply->entry               = mapping->entry;
++    reply->subsystem           = mapping->subsystem;
++    reply->major_subsystem     = mapping->major_subsystem;
++    reply->minor_subsystem     = mapping->minor_subsystem;
++    reply->characteristics     = mapping->characteristics;
++    reply->dll_characteristics = mapping->dll_characteristics;
++    reply->machine             = mapping->machine;
+     reply->shared_file = 0;
+     if ((fd = get_obj_fd( &mapping->obj )))
+     {
+diff --git a/server/protocol.def b/server/protocol.def
+index c9270ea..9585fe2 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -1619,6 +1619,13 @@ enum char_info_mode
+     int          protect;       /* protection flags */
+     int          header_size;   /* header size (for VPROT_IMAGE mapping) */
+     client_ptr_t base;          /* default base addr (for VPROT_IMAGE mapping) */
++    client_ptr_t entry;         /* entry point addr (for PE image mapping) */
++    short int    subsystem;     /* subsystem (for PE image mapping) */
++    short int    major_subsystem; /* major subsystem version (for PE image mapping) */
++    short int    minor_subsystem; /* minor subsystem version (for PE image mapping) */
++    short int    characteristics; /* image characteristics (for PE image mapping) */
++    short int    dll_characteristics; /* dll characteristics (for PE image mapping) */
++    short int    machine;       /* image machine type (for PE image mapping) */
+     obj_handle_t mapping;       /* duplicate mapping handle unless removable */
+     obj_handle_t shared_file;   /* shared mapping file handle */
+ @END
+-- 
+2.1.2
+

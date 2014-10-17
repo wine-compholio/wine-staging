@@ -26,6 +26,7 @@ PATCHLIST := \
 	comctl32-LoadIconMetric.ok \
 	configure-Absolute_RPATH.ok \
 	configure-Detect_Gnutls.ok \
+	d3dx9_36-GetShaderSemantics.ok \
 	d3dx9_36-UpdateSkinnedMesh.ok \
 	dbghelp-KdHelp.ok \
 	dsound-Fast_Mixer.ok \
@@ -293,13 +294,31 @@ configure-Detect_Gnutls.ok:
 		echo '+    { "configure-Detect_Gnutls", "Sebastian Lackner", "Fix detection of gnutls on Ubuntu 14.10. [rev 3]" },'; \
 	) > configure-Detect_Gnutls.ok
 
+# Patchset d3dx9_36-GetShaderSemantics
+# |
+# | Included patches:
+# |   *	Implement D3DXGetShaderInputSemantics [by Christian Costa]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#22682] Support for D3DXGetShaderInputSemantics
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/shader.c, dlls/d3dx9_36/tests/shader.c, include/d3dx9shader.h
+# |
+.INTERMEDIATE: d3dx9_36-GetShaderSemantics.ok
+d3dx9_36-GetShaderSemantics.ok:
+	$(call APPLY_FILE,d3dx9_36-GetShaderSemantics/0001-d3dx9_36-Implement-D3DXGetShaderInputSemantics-tests.patch)
+	@( \
+		echo '+    { "d3dx9_36-GetShaderSemantics", "Christian Costa", "Implement D3DXGetShaderInputSemantics" },'; \
+	) > d3dx9_36-GetShaderSemantics.ok
+
 # Patchset d3dx9_36-UpdateSkinnedMesh
 # |
 # | Included patches:
 # |   *	Implement ID3DXSkinInfoImpl_UpdateSkinnedMesh [by Christian Costa]
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#32572] Alpha Polaris requires implementation of UpdateSkinnedMesh
+# |   *	[#32572] Support for ID3DXSkinInfoImpl_UpdateSkinnedMesh
 # |
 # | Modified files:
 # |   *	dlls/d3dx9_36/skin.c, dlls/d3dx9_36/tests/mesh.c

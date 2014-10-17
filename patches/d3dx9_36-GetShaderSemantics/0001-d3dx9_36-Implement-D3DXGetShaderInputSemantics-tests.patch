@@ -1,0 +1,265 @@
+From 8bead9c1fd37eff6e1f0612faf0fc7fb93e899f3 Mon Sep 17 00:00:00 2001
+From: Christian Costa <titan.costa@gmail.com>
+Date: Sat, 5 Apr 2014 14:02:07 +0200
+Subject: d3dx9_36: Implement D3DXGetShaderInputSemantics + tests.
+
+Fixes bug 22682.
+---
+ dlls/d3dx9_36/d3dx9_36.spec  |  2 +-
+ dlls/d3dx9_36/shader.c       | 94 ++++++++++++++++++++++++++++++++++++++++++++
+ dlls/d3dx9_36/tests/shader.c | 86 ++++++++++++++++++++++++++++++++++++++++
+ include/d3dx9shader.h        |  1 +
+ 4 files changed, 182 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/d3dx9_36/d3dx9_36.spec b/dlls/d3dx9_36/d3dx9_36.spec
+index 4c72dc2..e4890ee 100644
+--- a/dlls/d3dx9_36/d3dx9_36.spec
++++ b/dlls/d3dx9_36/d3dx9_36.spec
+@@ -159,7 +159,7 @@
+ @ stdcall D3DXGetPixelShaderProfile(ptr)
+ @ stdcall D3DXGetShaderConstantTable(ptr ptr)
+ @ stdcall D3DXGetShaderConstantTableEx(ptr long ptr)
+-@ stub D3DXGetShaderInputSemantics(ptr ptr ptr)
++@ stdcall D3DXGetShaderInputSemantics(ptr ptr ptr)
+ @ stub D3DXGetShaderOutputSemantics(ptr ptr ptr)
+ @ stdcall D3DXGetShaderSamplers(ptr ptr ptr)
+ @ stdcall D3DXGetShaderSize(ptr)
+diff --git a/dlls/d3dx9_36/shader.c b/dlls/d3dx9_36/shader.c
+index 5ea3d13..63852d0 100644
+--- a/dlls/d3dx9_36/shader.c
++++ b/dlls/d3dx9_36/shader.c
+@@ -1,6 +1,7 @@
+ /*
+  * Copyright 2008 Luis Busquets
+  * Copyright 2009 Matteo Bruni
++ * Copyright 2010, 2013 Christian Costa
+  * Copyright 2011 Travis Athougies
+  *
+  * This library is free software; you can redistribute it and/or
+@@ -2126,3 +2127,96 @@ HRESULT WINAPI D3DXGetShaderSamplers(const DWORD *byte_code, const char **sample
+ 
+     return D3D_OK;
+ }
++
++const DWORD* skip_instruction(const DWORD *byte_code, UINT shader_model)
++{
++    TRACE("Shader model %u\n", shader_model);
++
++    /* Handle all special instructions whose arguments may contain D3DSIO_DCL */
++    if ((*byte_code & D3DSI_OPCODE_MASK) == D3DSIO_COMMENT)
++    {
++        byte_code += 1 + ((*byte_code & D3DSI_COMMENTSIZE_MASK) >> D3DSI_COMMENTSIZE_SHIFT);
++    }
++    else if (shader_model >= 2)
++    {
++        byte_code += 1 + ((*byte_code & D3DSI_INSTLENGTH_MASK) >> D3DSI_INSTLENGTH_SHIFT);
++    }
++    else if ((*byte_code & D3DSI_OPCODE_MASK) == D3DSIO_DEF)
++    {
++        byte_code += 1 + 5;
++    }
++    else
++    {
++        /* Handle remaining safe instructions */
++        while (*++byte_code & (1 << 31));
++    }
++
++    return byte_code;
++}
++
++static UINT get_shader_semantics(const DWORD *byte_code, D3DXSEMANTIC *semantics, BOOL input)
++{
++    const DWORD *ptr = byte_code;
++    UINT shader_model = (*ptr >> 8) & 0xff;
++    UINT i = 0;
++
++    TRACE("Shader version: %#x\n", *ptr++);
++
++    while (*ptr != D3DSIO_END)
++    {
++        if (*ptr & (1 << 31))
++        {
++            FIXME("Opcode expected\n");
++            return 0;
++        }
++        else if ((*ptr & D3DSI_OPCODE_MASK) == D3DSIO_DCL)
++        {
++            DWORD param1 = *++ptr;
++            DWORD param2 = *++ptr;
++            DWORD usage = param1 & 0x1f;
++            DWORD usage_index = (param1 >> 16) & 0xf;
++            DWORD reg_type = (((param2 >> 11) & 0x3) << 3) | ((param2 >> 28) & 0x7);
++
++            TRACE("D3DSIO_DCL param1: %#x, param2: %#x, usage: %u, usage_index: %u, reg_type: %u\n",
++                   param1, param2, usage, usage_index, reg_type);
++
++            if (input && (reg_type == D3DSPR_INPUT))
++            {
++                if (semantics)
++                {
++                    semantics[i].Usage = usage;
++                    semantics[i].UsageIndex = usage_index;
++                }
++                i++;
++            }
++            else
++            {
++                /* FIXME: Support for output semantics */
++            }
++            ptr++;
++        }
++        else
++        {
++            ptr = skip_instruction(ptr, shader_model);
++        }
++    }
++
++    return i;
++}
++
++HRESULT WINAPI D3DXGetShaderInputSemantics(const DWORD *byte_code, D3DXSEMANTIC *semantics, UINT *count)
++{
++    UINT nb_semantics;
++
++    TRACE("byte_code %p, semantics %p, count %p\n", byte_code, semantics, count);
++
++    if (!byte_code)
++        return D3DERR_INVALIDCALL;
++
++    nb_semantics = get_shader_semantics(byte_code, semantics, TRUE);
++
++    if (count)
++        *count = nb_semantics;
++
++    return D3D_OK;
++}
+diff --git a/dlls/d3dx9_36/tests/shader.c b/dlls/d3dx9_36/tests/shader.c
+index 694540c..728cd86 100644
+--- a/dlls/d3dx9_36/tests/shader.c
++++ b/dlls/d3dx9_36/tests/shader.c
+@@ -1,5 +1,6 @@
+ /*
+  * Copyright 2008 Luis Busquets
++ * Copyright 2010, 2013 Christian Costa
+  * Copyright 2011 Travis Athougies
+  *
+  * This library is free software; you can redistribute it and/or
+@@ -299,6 +300,26 @@ static const DWORD fx_shader_with_ctab[] =
+     0x0000ffff                                                              /* END                      */
+ };
+ 
++static const DWORD semantics_vs11[] = {
++    0xfffe0101,                                                             /* vs_1_1                       */
++    0x0001fffe, D3DSIO_DCL,                                                 /* Comment                      */
++    0x00000051, 0xa00f0001, D3DSIO_DCL, D3DSIO_DCL, D3DSIO_DCL, D3DSIO_DCL, /* def c1 = dcl, dcl, dcl, dcl  */
++    0x0000001f, 0x80000000, 0x900f0000,                                     /* dcl_position0 v0 (input)     */
++    0x0000001f, 0x80000005, 0x900f0001,                                     /* dcl_texcoord0 v1 (input)     */
++    0x0000001f, 0x80010005, 0x900f0002,                                     /* dcl_texcoord1 v2 (input)     */
++    0x0000001f, 0x8000000a, 0xe00f0000,                                     /* dcl_color0    oD0 (output)   */
++    0x0000ffff};                                                            /* END                          */
++
++static const DWORD semantics_vs30[] = {
++    0xfffe0300,                                                             /* vs_3_0                       */
++    0x0001fffe, D3DSIO_DCL,                                                 /* Comment                      */
++    0x05000051, 0xa00f0001, D3DSIO_DCL, D3DSIO_DCL, D3DSIO_DCL, D3DSIO_DCL, /* def c1 = dcl, dcl, dcl, dcl  */
++    0x0200001f, 0x80000000, 0x900f0000,                                     /* dcl_position0 v0 (input)     */
++    0x0200001f, 0x80000005, 0x900f0001,                                     /* dcl_texcoord0 v1 (input)     */
++    0x0200001f, 0x80010005, 0x900f0002,                                     /* dcl_texcoord1 v2 (input)     */
++    0x0200001f, 0x8000000a, 0xe00f0000,                                     /* dcl_color0    o0 (output)    */
++    0x0000ffff};                                                            /* END                          */
++
+ static void test_get_shader_size(void)
+ {
+     UINT shader_size, expected;
+@@ -6489,6 +6510,70 @@ static void test_registerset_defaults(void)
+     if (wnd) DestroyWindow(wnd);
+ }
+ 
++static void test_get_shader_semantics(void)
++{
++    HRESULT ret;
++    D3DXSEMANTIC semantics[MAXD3DDECLLENGTH];
++    UINT count;
++
++    /* Test D3DXGetShaderInputSemantics */
++
++    /* Check wrong parameters */
++    ret = D3DXGetShaderInputSemantics(NULL, NULL, NULL);
++    ok(ret == D3DERR_INVALIDCALL, "Returned %#x, expected %#x\n", ret, D3DERR_INVALIDCALL);
++    ret = D3DXGetShaderInputSemantics(NULL, NULL, &count);
++    ok(ret == D3DERR_INVALIDCALL, "Returned %#x, expected %#x\n", ret, D3DERR_INVALIDCALL);
++    ret = D3DXGetShaderInputSemantics(NULL, semantics, NULL);
++    ok(ret == D3DERR_INVALIDCALL, "Returned %#x, expected %#x\n", ret, D3DERR_INVALIDCALL);
++    ret = D3DXGetShaderInputSemantics(NULL, semantics, &count);
++    ok(ret == D3DERR_INVALIDCALL, "Returned %#x, expected %#x\n", ret, D3DERR_INVALIDCALL);
++    ret = D3DXGetShaderInputSemantics(semantics_vs11, NULL, NULL);
++    ok(ret == D3D_OK, "Failed with %#x\n", ret);
++
++    /* Check null semantics pointer */
++    count = 0xdeadbeef;
++    ret = D3DXGetShaderInputSemantics(semantics_vs11, NULL, &count);
++    ok(ret == D3D_OK, "Failed with %#x\n", ret);
++    ok(count == 3, "Got %u, expected 3\n", count);
++
++    /* Check null count pointer */
++    memset(semantics, 0xcc, sizeof(semantics));
++    ret = D3DXGetShaderInputSemantics(semantics_vs11, semantics, NULL);
++    ok(ret == D3D_OK, "Failed with %#x\n", ret);
++    ok(semantics[0].Usage == D3DDECLUSAGE_POSITION, "Got %u, expected %u\n", semantics[0].Usage, D3DDECLUSAGE_POSITION);
++    ok(semantics[0].UsageIndex == 0, "Got %u, expected 0\n", semantics[0].UsageIndex);
++    ok(semantics[1].Usage == D3DDECLUSAGE_TEXCOORD, "Got %u, expected %u\n", semantics[1].Usage, D3DDECLUSAGE_TEXCOORD);
++    ok(semantics[1].UsageIndex == 0, "Got %u, expected 0\n", semantics[0].UsageIndex);
++    ok(semantics[2].Usage == D3DDECLUSAGE_TEXCOORD, "Got %u, expected %u\n", semantics[2].Usage, D3DDECLUSAGE_TEXCOORD);
++    ok(semantics[2].UsageIndex == 1, "Got %u, expected 1\n", semantics[0].UsageIndex);
++
++    /* Check with vs11 shader */
++    count = 0xdeadbeef;
++    memset(semantics, 0xcc, sizeof(semantics));
++    ret = D3DXGetShaderInputSemantics(semantics_vs11, semantics, &count);
++    ok(ret == D3D_OK, "Failed with %#x\n", ret);
++    ok(count == 3, "Got %u, expected 3\n", count);
++    ok(semantics[0].Usage == D3DDECLUSAGE_POSITION, "Got %u, expected %u\n", semantics[0].Usage, D3DDECLUSAGE_POSITION);
++    ok(semantics[0].UsageIndex == 0, "Got %u, expected 0\n", semantics[0].UsageIndex);
++    ok(semantics[1].Usage == D3DDECLUSAGE_TEXCOORD, "Got %u, expected %u\n", semantics[1].Usage, D3DDECLUSAGE_TEXCOORD);
++    ok(semantics[1].UsageIndex == 0, "Got %u, expected 0\n", semantics[0].UsageIndex);
++    ok(semantics[2].Usage == D3DDECLUSAGE_TEXCOORD, "Got %u, expected %u\n", semantics[2].Usage, D3DDECLUSAGE_TEXCOORD);
++    ok(semantics[2].UsageIndex == 1, "Got %u, expected 1\n", semantics[0].UsageIndex);
++
++    /* Check with vs30 shader */
++    count = 0xdeadbeef;
++    memset(semantics, 0xcc, sizeof(semantics));
++    ret = D3DXGetShaderInputSemantics(semantics_vs30, semantics, &count);
++    ok(ret == D3D_OK, "Failed with %#x\n", ret);
++    ok(count == 3, "Got %u, expected 3\n", count);
++    ok(semantics[0].Usage == D3DDECLUSAGE_POSITION, "Got %u, expected %u\n", semantics[0].Usage, D3DDECLUSAGE_POSITION);
++    ok(semantics[0].UsageIndex == 0, "Got %u, expected 0\n", semantics[0].UsageIndex);
++    ok(semantics[1].Usage == D3DDECLUSAGE_TEXCOORD, "Got %u, expected %u\n", semantics[1].Usage, D3DDECLUSAGE_TEXCOORD);
++    ok(semantics[1].UsageIndex == 0, "Got %u, expected 0\n", semantics[0].UsageIndex);
++    ok(semantics[2].Usage == D3DDECLUSAGE_TEXCOORD, "Got %u, expected %u\n", semantics[2].Usage, D3DDECLUSAGE_TEXCOORD);
++    ok(semantics[2].UsageIndex == 1, "Got %u, expected 1\n", semantics[0].UsageIndex);
++}
++
+ START_TEST(shader)
+ {
+     test_get_shader_size();
+@@ -6502,4 +6587,5 @@ START_TEST(shader)
+     test_get_shader_constant_variables();
+     test_registerset();
+     test_registerset_defaults();
++    test_get_shader_semantics();
+ }
+diff --git a/include/d3dx9shader.h b/include/d3dx9shader.h
+index d665f72..f565432 100644
+--- a/include/d3dx9shader.h
++++ b/include/d3dx9shader.h
+@@ -315,6 +315,7 @@ DWORD WINAPI D3DXGetShaderVersion(const DWORD *byte_code);
+ const char * WINAPI D3DXGetVertexShaderProfile(struct IDirect3DDevice9 *device);
+ HRESULT WINAPI D3DXFindShaderComment(const DWORD *byte_code, DWORD fourcc, const void **data, UINT *size);
+ HRESULT WINAPI D3DXGetShaderSamplers(const DWORD *byte_code, const char **samplers, UINT *count);
++HRESULT WINAPI D3DXGetShaderInputSemantics(const DWORD *byte_code, D3DXSEMANTIC *semantics, UINT *count);
+ 
+ HRESULT WINAPI D3DXAssembleShaderFromFileA(const char *filename, const D3DXMACRO *defines,
+         ID3DXInclude *include, DWORD flags, ID3DXBuffer **shader, ID3DXBuffer **error_messages);
+-- 
+2.1.2
+

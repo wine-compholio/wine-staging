@@ -64,6 +64,7 @@ PATCHLIST := \
 	server-OpenProcess.ok \
 	server-Stored_ACLs.ok \
 	setupapi-SetupPromptForDisk.ok \
+	shdocvw-ParseURLFromOutsideSource_Tests.ok \
 	shell32-Default_Folder_ACLs.ok \
 	shell32-Default_Path.ok \
 	shell32-Icons.ok \
@@ -1047,6 +1048,21 @@ setupapi-SetupPromptForDisk.ok:
 	@( \
 		echo '+    { "setupapi-SetupPromptForDisk", "Michael Müller", "Add support for IDF_CHECKFIRST flag in SetupPromptForDiskW." },'; \
 	) > setupapi-SetupPromptForDisk.ok
+
+# Patchset shdocvw-ParseURLFromOutsideSource_Tests
+# |
+# | Included patches:
+# |   *	Check for exact return values in ParseURLFromOutsideSourceX tests. [by Christian Costa]
+# |
+# | Modified files:
+# |   *	dlls/shdocvw/shdocvw_main.c, dlls/shdocvw/tests/shdocvw.c
+# |
+.INTERMEDIATE: shdocvw-ParseURLFromOutsideSource_Tests.ok
+shdocvw-ParseURLFromOutsideSource_Tests.ok:
+	$(call APPLY_FILE,shdocvw-ParseURLFromOutsideSource_Tests/0001-shdocvw-Check-precisely-ParseURLFromOutsideSourceX-r.patch)
+	@( \
+		echo '+    { "shdocvw-ParseURLFromOutsideSource_Tests", "Christian Costa", "Check for exact return values in ParseURLFromOutsideSourceX tests." },'; \
+	) > shdocvw-ParseURLFromOutsideSource_Tests.ok
 
 # Patchset shell32-Default_Folder_ACLs
 # |

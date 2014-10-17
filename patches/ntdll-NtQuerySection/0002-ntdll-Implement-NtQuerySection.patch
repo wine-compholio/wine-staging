@@ -1,15 +1,16 @@
-From 0cd17445c177428f06fa6dccd724e62fccd7619c Mon Sep 17 00:00:00 2001
+From 7f27b62ee7bc1a498490e8a97717d0fb18d6b716 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Thu, 16 Oct 2014 23:24:37 +0200
 Subject: ntdll: Implement NtQuerySection.
 
+Some small modifications by Sebastian Lackner <sebastian@fds-team.de>
 ---
- dlls/ntdll/nt.c       | 19 ----------
+ dlls/ntdll/nt.c       | 19 -----------
  dlls/ntdll/ntdll.spec |  4 +--
- dlls/ntdll/virtual.c  | 98 +++++++++++++++++++++++++++++++++++++++++++++++++++
- server/mapping.c      | 43 ++++++++++++++++++++++
+ dlls/ntdll/virtual.c  | 95 +++++++++++++++++++++++++++++++++++++++++++++++++++
+ server/mapping.c      | 42 +++++++++++++++++++++++
  server/protocol.def   |  7 ++++
- 5 files changed, 150 insertions(+), 21 deletions(-)
+ 5 files changed, 146 insertions(+), 21 deletions(-)
 
 diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
 index 73d9383..f0433db 100644
@@ -64,22 +65,22 @@ index 5bac269..32b023b 100644
  @ stdcall ZwQuerySemaphore (long long long long long) NtQuerySemaphore
  @ stdcall ZwQuerySymbolicLinkObject(long ptr ptr) NtQuerySymbolicLinkObject
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 4c4c05d..c3ed481 100644
+index 4c4c05d..7e75f30 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -2553,6 +2553,104 @@ NTSTATUS WINAPI NtOpenSection( HANDLE *handle, ACCESS_MASK access, const OBJECT_
+@@ -2553,6 +2553,101 @@ NTSTATUS WINAPI NtOpenSection( HANDLE *handle, ACCESS_MASK access, const OBJECT_
  
  
  /***********************************************************************
 + *             NtQuerySection   (NTDLL.@)
 + */
-+NTSTATUS WINAPI NtQuerySection(HANDLE handle, SECTION_INFORMATION_CLASS info_class,
-+                               PVOID buffer, ULONG len, PULONG ret_len)
++NTSTATUS WINAPI NtQuerySection( HANDLE handle, SECTION_INFORMATION_CLASS info_class,
++                                PVOID buffer, ULONG len, PULONG ret_len )
 +{
 +    HANDLE dup_mapping, shared_file;
 +    unsigned protect;
 +    LARGE_INTEGER size;
-+    void *base, *entry;
++    void *entry;
 +    short machine, subsystem;
 +    short major_subsystem, minor_subsystem;
 +    short characteristics, dll_characteristics;
@@ -109,13 +110,10 @@ index 4c4c05d..c3ed481 100644
 +        req->handle = wine_server_obj_handle( handle );
 +        req->access = SECTION_QUERY;
 +        res = wine_server_call( req );
-+        protect       = reply->protect;
-+        base          = wine_server_get_ptr( reply->base );
-+        size.QuadPart = reply->size;
-+        dup_mapping   = wine_server_ptr_handle( reply->mapping );
-+        shared_file   = wine_server_ptr_handle( reply->shared_file );
-+        if ((ULONG_PTR)base != reply->base) base = NULL;
-+
++        protect             = reply->protect;
++        size.QuadPart       = reply->size;
++        dup_mapping         = wine_server_ptr_handle( reply->mapping );
++        shared_file         = wine_server_ptr_handle( reply->shared_file );
 +        entry               = wine_server_get_ptr( reply->entry );
 +        subsystem           = reply->subsystem;
 +        major_subsystem     = reply->major_subsystem;
@@ -173,7 +171,7 @@ index 4c4c05d..c3ed481 100644
   *             ZwMapViewOfSection   (NTDLL.@)
   */
 diff --git a/server/mapping.c b/server/mapping.c
-index 64b3003..8a04183 100644
+index 64b3003..a701944 100644
 --- a/server/mapping.c
 +++ b/server/mapping.c
 @@ -64,6 +64,15 @@ struct mapping
@@ -227,11 +225,8 @@ index 64b3003..8a04183 100644
          break;
      }
  
-@@ -488,8 +514,18 @@ static struct object *create_mapping( struct directory *root, const struct unico
-                                                GROUP_SECURITY_INFORMATION|
-                                                DACL_SECURITY_INFORMATION|
+@@ -490,6 +516,15 @@ static struct object *create_mapping( struct directory *root, const struct unico
                                                 SACL_SECURITY_INFORMATION );
-+
      mapping->header_size = 0;
      mapping->base        = 0;
 +    mapping->entry               = 0;
@@ -246,7 +241,7 @@ index 64b3003..8a04183 100644
      mapping->fd          = NULL;
      mapping->shared_file = NULL;
      mapping->committed   = NULL;
-@@ -727,6 +763,13 @@ DECL_HANDLER(get_mapping_info)
+@@ -727,6 +762,13 @@ DECL_HANDLER(get_mapping_info)
      reply->protect     = mapping->protect;
      reply->header_size = mapping->header_size;
      reply->base        = mapping->base;
@@ -261,7 +256,7 @@ index 64b3003..8a04183 100644
      if ((fd = get_obj_fd( &mapping->obj )))
      {
 diff --git a/server/protocol.def b/server/protocol.def
-index c9270ea..9585fe2 100644
+index 4854e3d..d5ca1f1 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -1619,6 +1619,13 @@ enum char_info_mode

@@ -1,13 +1,15 @@
-From bcf14e35900209c3177b76ae9b1e368aa12d58e6 Mon Sep 17 00:00:00 2001
+From 116bf59039367e09f1409e5a4df5f64d9667749f Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
-Date: Sat, 23 Aug 2014 06:27:28 +0200
-Subject: kernel32: Implement passing a process security descriptor from
- CreateProcess to the wineserver.
+Date: Wed, 15 Oct 2014 10:02:27 +0200
+Subject: kernel32: Implement passing security descriptors from CreateProcess
+ to the wineserver.
 
 Based on a patch by Joris van der Wel.
+
+Unfortunately we have to duplicate create_struct_sd from ntdll, but thats the easiest solution right now. In long term we should probably think about moving process creation logic to ntdll.
 ---
- dlls/advapi32/tests/security.c |    3 --
- dlls/kernel32/process.c        |  102 +++++++++++++++++++++++++++++++++++++++-
+ dlls/advapi32/tests/security.c |   3 --
+ dlls/kernel32/process.c        | 102 ++++++++++++++++++++++++++++++++++++++++-
  2 files changed, 101 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
@@ -34,7 +36,7 @@ index b44496a..b1b35aa 100644
  
      /* Documented privilege elevation */
 diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
-index 5de8b59..7d28140 100644
+index 5de8b59..d1746a5 100644
 --- a/dlls/kernel32/process.c
 +++ b/dlls/kernel32/process.c
 @@ -1916,6 +1916,70 @@ static pid_t exec_loader( LPCWSTR cmd_line, unsigned int flags, int socketfd,
@@ -128,7 +130,7 @@ index 5de8b59..7d28140 100644
 +        {
 +            close( socketfd[0] );
 +            close( socketfd[1] );
-+            WARN("Invalid process security descriptor: Status %x\n", status);
++            WARN( "Invalid process security descriptor: Status %x\n", status );
 +            SetLastError( RtlNtStatusToDosError(status) );
 +            return FALSE;
 +        }
@@ -139,10 +141,10 @@ index 5de8b59..7d28140 100644
 +        status = create_struct_sd( tsa->lpSecurityDescriptor, &thread_sd, &thread_sd_size );
 +        if (status != STATUS_SUCCESS)
 +        {
-+            RtlFreeHeap(GetProcessHeap(), 0, process_sd);
++            RtlFreeHeap( GetProcessHeap(), 0, process_sd );
 +            close( socketfd[0] );
 +            close( socketfd[1] );
-+            WARN("Invalid thread security descriptor: Status %x\n", status);
++            WARN( "Invalid thread security descriptor: Status %x\n", status );
 +            SetLastError( RtlNtStatusToDosError(status) );
 +            return FALSE;
 +        }
@@ -154,8 +156,8 @@ index 5de8b59..7d28140 100644
                                                &startup_info_size )))
      {
          RtlReleasePebLock();
-+        RtlFreeHeap(GetProcessHeap(), 0, process_sd);
-+        RtlFreeHeap(GetProcessHeap(), 0, thread_sd);
++        RtlFreeHeap( GetProcessHeap(), 0, process_sd );
++        RtlFreeHeap( GetProcessHeap(), 0, thread_sd );
          close( socketfd[0] );
          close( socketfd[1] );
          return FALSE;
@@ -177,12 +179,12 @@ index 5de8b59..7d28140 100644
      SERVER_END_REQ;
  
      RtlReleasePebLock();
-+    RtlFreeHeap(GetProcessHeap(), 0, process_sd);
-+    RtlFreeHeap(GetProcessHeap(), 0, thread_sd);
++    RtlFreeHeap( GetProcessHeap(), 0, process_sd );
++    RtlFreeHeap( GetProcessHeap(), 0, thread_sd );
 +
      if (status)
      {
          switch (status)
 -- 
-1.7.9.5
+2.1.2
 

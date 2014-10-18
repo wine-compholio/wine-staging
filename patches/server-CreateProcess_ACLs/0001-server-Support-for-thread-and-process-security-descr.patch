@@ -1,15 +1,17 @@
-From 9a9b0d8a21af0e88e1a0af4f32bcf10fabad3e5a Mon Sep 17 00:00:00 2001
+From d1b9346061b979dfa089e690f29618d67aff1c3d Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
-Date: Sat, 23 Aug 2014 05:58:30 +0200
-Subject: server: Support sending thread and process security descriptors in
+Date: Wed, 15 Oct 2014 10:02:22 +0200
+Subject: server: Support for thread and process security descriptors in
  new_process wineserver call.
 
-Based on a patch by Joris van der Wel. The original patch was removed since it contained several mistakes in validating untrusted length arguments.
+Based on a patch by Joris van der Wel.
+
+Needs ./tools/make_requests
 ---
- dlls/kernel32/process.c |    2 ++
- server/process.c        |   49 ++++++++++++++++++++++++++++++++++++++++++++++-
- server/protocol.def     |    6 +++++-
- 3 files changed, 55 insertions(+), 2 deletions(-)
+ dlls/kernel32/process.c |  2 ++
+ server/process.c        | 50 ++++++++++++++++++++++++++++++++++++++++++++++++-
+ server/protocol.def     |  6 +++++-
+ 3 files changed, 56 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
 index 301c64a..5de8b59 100644
@@ -25,7 +27,7 @@ index 301c64a..5de8b59 100644
          wine_server_add_data( req, startup_info, startup_info_size );
          wine_server_add_data( req, env, (env_end - env) * sizeof(WCHAR) );
 diff --git a/server/process.c b/server/process.c
-index 7b9a3b2..426bcca 100644
+index 7b9a3b2..6020ca0 100644
 --- a/server/process.c
 +++ b/server/process.c
 @@ -880,6 +880,7 @@ DECL_HANDLER(new_process)
@@ -45,14 +47,15 @@ index 7b9a3b2..426bcca 100644
      info->info_size = min( req->info_size, info->data_size );
  
      if (req->info_size < sizeof(*info->data))
-@@ -953,6 +954,31 @@ DECL_HANDLER(new_process)
+@@ -953,6 +954,34 @@ DECL_HANDLER(new_process)
  #undef FIXUP_LEN
      }
  
-+    /* validate security descriptors (if any) */
 +    if (get_req_data_size() > req->info_size + req->env_size)
 +    {
 +        data_size_t sd_size, pos = req->info_size + req->env_size;
++
++        /* verify process sd */
 +        if ((sd_size = min( get_req_data_size() - pos, req->process_sd_size )))
 +        {
 +            process_sd = (const struct security_descriptor *)((const char *)get_req_data() + pos);
@@ -63,6 +66,8 @@ index 7b9a3b2..426bcca 100644
 +            }
 +            pos += sd_size;
 +        }
++
++        /* verify thread sd */
 +        if ((sd_size = get_req_data_size() - pos))
 +        {
 +            thread_sd = (const struct security_descriptor *)((const char *)get_req_data() + pos);
@@ -77,14 +82,13 @@ index 7b9a3b2..426bcca 100644
      if (!(thread = create_process( socket_fd, current, req->inherit_all ))) goto done;
      process = thread->process;
      process->debug_children = (req->create_flags & DEBUG_PROCESS)
-@@ -1004,6 +1030,27 @@ DECL_HANDLER(new_process)
+@@ -1004,6 +1033,25 @@ DECL_HANDLER(new_process)
      reply->phandle = alloc_handle( parent, process, req->process_access, req->process_attr );
      reply->thandle = alloc_handle( parent, thread, req->thread_access, req->thread_attr );
  
 +    if (process_sd)
 +    {
-+        default_set_sd( &process->obj,
-+                        process_sd,
++        default_set_sd( &process->obj, process_sd,
 +                        OWNER_SECURITY_INFORMATION |
 +                        GROUP_SECURITY_INFORMATION |
 +                        DACL_SECURITY_INFORMATION |
@@ -93,8 +97,7 @@ index 7b9a3b2..426bcca 100644
 +
 +    if (thread_sd)
 +    {
-+        set_sd_defaults_from_token( &thread->obj,
-+                                    thread_sd,
++        set_sd_defaults_from_token( &thread->obj, thread_sd,
 +                                    OWNER_SECURITY_INFORMATION |
 +                                    GROUP_SECURITY_INFORMATION |
 +                                    DACL_SECURITY_INFORMATION |
@@ -106,7 +109,7 @@ index 7b9a3b2..426bcca 100644
      release_object( info );
  }
 diff --git a/server/protocol.def b/server/protocol.def
-index c9270ea..3f75375 100644
+index 4854e3d..97f0623 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -671,8 +671,12 @@ struct rawinput_device
@@ -117,12 +120,12 @@ index c9270ea..3f75375 100644
 +    data_size_t  process_sd_size;/* size of the process security descriptor */
      VARARG(info,startup_info,info_size); /* startup information */
 -    VARARG(env,unicode_str);     /* environment for new process */
-+    VARARG(env,unicode_str,env_size); /* environment for new process */
++    VARARG(env,unicode_str,env_size);                       /* environment for new process */
 +    VARARG(process_sd,security_descriptor,process_sd_size); /* security descriptor to set on the process */
-+    VARARG(thread_sd,security_descriptor); /* security descriptor to set on the thread */
++    VARARG(thread_sd,security_descriptor);                  /* security descriptor to set on the thread */
  @REPLY
      obj_handle_t info;           /* new process info handle */
      process_id_t pid;            /* process id */
 -- 
-1.7.9.5
+2.1.2
 

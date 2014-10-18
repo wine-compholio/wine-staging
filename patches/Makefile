@@ -1063,8 +1063,8 @@ server-Address_Change_Notification.ok:
 # |
 .INTERMEDIATE: server-CreateProcess_ACLs.ok
 server-CreateProcess_ACLs.ok:
-	$(call APPLY_FILE,server-CreateProcess_ACLs/0001-server-Support-sending-thread-and-process-security-d.patch)
-	$(call APPLY_FILE,server-CreateProcess_ACLs/0002-kernel32-Implement-passing-a-process-security-descri.patch)
+	$(call APPLY_FILE,server-CreateProcess_ACLs/0001-server-Support-for-thread-and-process-security-descr.patch)
+	$(call APPLY_FILE,server-CreateProcess_ACLs/0002-kernel32-Implement-passing-security-descriptors-from.patch)
 	$(call APPLY_FILE,server-CreateProcess_ACLs/0003-advapi32-tests-Add-additional-tests-for-passing-a-th.patch)
 	@( \
 		echo '+    { "server-CreateProcess_ACLs", "Joris van der Wel / Sebastian Lackner", "Implement passing ACLs to CreateProcess. [rev 2]" },'; \

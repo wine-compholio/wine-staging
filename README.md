@@ -35,8 +35,9 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [5]:**
+**Bugfixes and features included in the next upcoming release [6]:**
 
+* Add partially support for sessionStorage
 * Alpha Polaris requires implementation of UpdateSkinnedMesh ([Wine Bug #32572](http://bugs.winehq.org/show_bug.cgi?id=32572))
 * Anno 1602 installer depends on Windows 98 behavior of SHFileOperationW
 * FEAR 1 installer expects basic_string_wchar_dtor to return NULL ([Wine Bug #37358](http://bugs.winehq.org/show_bug.cgi?id=37358))

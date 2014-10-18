@@ -41,6 +41,7 @@ PATCHLIST := \
 	kernel32-Named_Pipe.ok \
 	kernel32-UTF7_Support.ok \
 	libs-Unicode_Collation.ok \
+	libwine-BSD_mmap_fixed.ok \
 	mshtml-sessionStorage.ok \
 	msvcp90-basic_string_wchar_dtor.ok \
 	ntdll-ATL_Thunk.ok \
@@ -579,10 +580,28 @@ libs-Unicode_Collation.ok:
 		echo '+    { "libs-Unicode_Collation", "Dmitry Timoshkov", "Fix comparison of punctuation characters." },'; \
 	) > libs-Unicode_Collation.ok
 
+# Patchset libwine-BSD_mmap_fixed
+# |
+# | Included patches:
+# |   *	Use try_mmap_fixed for wine64 on FreeBSD. [by André Hentschel]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34330] Support for wine64 on FreeBSD/PC-BSD
+# |
+# | Modified files:
+# |   *	libs/wine/mmap.c
+# |
+.INTERMEDIATE: libwine-BSD_mmap_fixed.ok
+libwine-BSD_mmap_fixed.ok:
+	$(call APPLY_FILE,libwine-BSD_mmap_fixed/0001-libwine-Use-try_mmap_fixed-for-wine64-on-FreeBSD.patch)
+	@( \
+		echo '+    { "libwine-BSD_mmap_fixed", "André Hentschel", "Use try_mmap_fixed for wine64 on FreeBSD." },'; \
+	) > libwine-BSD_mmap_fixed.ok
+
 # Patchset mshtml-sessionStorage
 # |
 # | Included patches:
-# |   *	Implement sessionStorage(partially). [by Zhenbo Li]
+# |   *	Implement sessionStorage (partially). [by Zhenbo Li]
 # |
 # | Modified files:
 # |   *	dlls/mshtml/htmlstorage.c, dlls/mshtml/htmlwindow.c, dlls/mshtml/mshtml_private.h, dlls/mshtml/nsiface.idl,
@@ -594,7 +613,7 @@ mshtml-sessionStorage.ok:
 	$(call APPLY_FILE,mshtml-sessionStorage/0002-mshtml-Fixed-create_storage-and-IHTMLStorage-Release.patch)
 	$(call APPLY_FILE,mshtml-sessionStorage/0003-mshtml-Added-IHTMLStorage-getItem-setItem-methods-im.patch)
 	@( \
-		echo '+    { "mshtml-sessionStorage", "Zhenbo Li", "Implement sessionStorage(partially)." },'; \
+		echo '+    { "mshtml-sessionStorage", "Zhenbo Li", "Implement sessionStorage (partially)." },'; \
 	) > mshtml-sessionStorage.ok
 
 # Patchset msvcp90-basic_string_wchar_dtor

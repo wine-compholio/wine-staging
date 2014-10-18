@@ -35,7 +35,7 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [7]:**
+**Bugfixes and features included in the next upcoming release [8]:**
 
 * Add partially support for sessionStorage
 * Anno 1602 installer depends on Windows 98 behavior of SHFileOperationW
@@ -43,6 +43,7 @@ Included bugfixes and improvements
 * Support for D3DXGetShaderInputSemantics ([Wine Bug #22682](http://bugs.winehq.org/show_bug.cgi?id=22682))
 * Support for ID3DXSkinInfoImpl_UpdateSkinnedMesh ([Wine Bug #32572](http://bugs.winehq.org/show_bug.cgi?id=32572))
 * Support for UTF7 encoding/decoding ([Wine Bug #27388](http://bugs.winehq.org/show_bug.cgi?id=27388))
+* Support for wine64 on FreeBSD/PC-BSD ([Wine Bug #34330](http://bugs.winehq.org/show_bug.cgi?id=34330))
 * Wine ignores IDF_CHECKFIRST flag in SetupPromptForDisk ([Wine Bug #20465](http://bugs.winehq.org/show_bug.cgi?id=20465))
 
 

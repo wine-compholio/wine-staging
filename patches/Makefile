@@ -180,11 +180,12 @@ Compholio.ok:
 # |   *	usp10: Silence repeated GSUB_apply_ChainContext[Subst|Pos] FIXMEs. [by Sebastian Lackner]
 # |   *	Appease the blessed version of gcc (4.5) when -Werror is enabled. [by Erich E. Hoover]
 # |   *	Appease the Archlinux version of gcc (4.9.1) when -Werror is enabled. [by Sebastian Lackner]
+# |   *	Silence Clang warning by removing unused TransformFilter_Vtbl. [by Amine Khaldi]
 # |
 # | Modified files:
 # |   *	dlls/d3d9/tests/visual.c, dlls/kernel32/locale.c, dlls/msvcp90/ios.c, dlls/msvcp90/locale.c, dlls/msvcp90/string.c,
-# | 	dlls/netapi32/netapi32.c, dlls/usp10/opentype.c, dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c,
-# | 	dlls/wined3d/resource.c, dlls/wined3d/swapchain.c, tools/makedep.c
+# | 	dlls/netapi32/netapi32.c, dlls/strmbase/transform.c, dlls/usp10/opentype.c, dlls/winealsa.drv/mmdevdrv.c,
+# | 	dlls/wined3d/glsl_shader.c, dlls/wined3d/resource.c, dlls/wined3d/swapchain.c, tools/makedep.c
 # |
 .INTERMEDIATE: Miscellaneous.ok
 Miscellaneous.ok:
@@ -194,6 +195,7 @@ Miscellaneous.ok:
 	$(call APPLY_FILE,Miscellaneous/0004-usp10-Silence-repeated-GSUB_apply_ChainContext-Subst.patch)
 	$(call APPLY_FILE,Miscellaneous/0005-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch)
 	$(call APPLY_FILE,Miscellaneous/0006-Appease-the-Archlinux-version-of-gcc-4.9.1-when-Werr.patch)
+	$(call APPLY_FILE,Miscellaneous/0007-strmbase-Remove-unused-TransformFilter_Vtbl-Clang.patch)
 	@( \
 		echo '+    { "Miscellaneous", "Sebastian Lackner", "kernel32: Silence repeated CompareStringEx FIXME." },'; \
 		echo '+    { "Miscellaneous", "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME. [rev 2]" },'; \
@@ -201,6 +203,7 @@ Miscellaneous.ok:
 		echo '+    { "Miscellaneous", "Sebastian Lackner", "usp10: Silence repeated GSUB_apply_ChainContext[Subst|Pos] FIXMEs." },'; \
 		echo '+    { "Miscellaneous", "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled." },'; \
 		echo '+    { "Miscellaneous", "Sebastian Lackner", "Appease the Archlinux version of gcc (4.9.1) when -Werror is enabled." },'; \
+		echo '+    { "Miscellaneous", "Amine Khaldi", "Silence Clang warning by removing unused TransformFilter_Vtbl." },'; \
 	) > Miscellaneous.ok
 
 # Patchset Pipelight

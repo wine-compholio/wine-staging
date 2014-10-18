@@ -35,6 +35,7 @@ PATCHLIST := \
 	iphlpapi-TCP_Table.ok \
 	kernel32-FindFirstFile.ok \
 	kernel32-GetFinalPathNameByHandle.ok \
+	kernel32-GetNumaProcessorNode.ok \
 	kernel32-GetSystemTimes.ok \
 	kernel32-GetVolumePathName.ok \
 	kernel32-Named_Pipe.ok \
@@ -467,6 +468,23 @@ kernel32-GetFinalPathNameByHandle.ok:
 	@( \
 		echo '+    { "kernel32-GetFinalPathNameByHandle", "Michael Müller", "Implement GetFinalPathNameByHandle in kernel32." },'; \
 	) > kernel32-GetFinalPathNameByHandle.ok
+
+# Patchset kernel32-GetNumaProcessorNode
+# |
+# | Included patches:
+# |   *	Implement GetNumaProcessorNode. [by Michael Müller]
+# |
+# | Modified files:
+# |   *	dlls/kernel32/cpu.c, dlls/kernel32/kernel32.spec, dlls/kernel32/tests/Makefile.in, dlls/kernel32/tests/cpu.c,
+# | 	include/winbase.h
+# |
+.INTERMEDIATE: kernel32-GetNumaProcessorNode.ok
+kernel32-GetNumaProcessorNode.ok:
+	$(call APPLY_FILE,kernel32-GetNumaProcessorNode/0001-kernel32-Implement-GetNumaProcessorNode.patch)
+	$(call APPLY_FILE,kernel32-GetNumaProcessorNode/0002-kernel32-tests-Add-tests-for-GetNumaProcessorNode.patch)
+	@( \
+		echo '+    { "kernel32-GetNumaProcessorNode", "Michael Müller", "Implement GetNumaProcessorNode." },'; \
+	) > kernel32-GetNumaProcessorNode.ok
 
 # Patchset kernel32-GetSystemTimes
 # |

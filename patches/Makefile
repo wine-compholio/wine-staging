@@ -32,6 +32,7 @@ PATCHLIST := \
 	dsound-Fast_Mixer.ok \
 	fonts-Missing_Fonts.ok \
 	gdi32-MultiMonitor.ok \
+	imagehlp-BindImageEx.ok \
 	imm32-Cross_Thread_Access.ok \
 	iphlpapi-TCP_Table.ok \
 	kernel32-FindFirstFile.ok \
@@ -415,6 +416,24 @@ gdi32-MultiMonitor.ok:
 	@( \
 		echo '+    { "gdi32-MultiMonitor", "Ken Thomases", "Add multi monitor support to gdi32." },'; \
 	) > gdi32-MultiMonitor.ok
+
+# Patchset imagehlp-BindImageEx
+# |
+# | Included patches:
+# |   *	Partial implementation of BindImageEx. [by Bernhard Reiter]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#3591] Support for BindImageEx
+# |
+# | Modified files:
+# |   *	dlls/imagehlp/modify.c, dlls/imagehlp/tests/image.c
+# |
+.INTERMEDIATE: imagehlp-BindImageEx.ok
+imagehlp-BindImageEx.ok:
+	$(call APPLY_FILE,imagehlp-BindImageEx/0001-imagehlp-Implement-parts-of-BindImageEx-to-make-free.patch)
+	@( \
+		echo '+    { "imagehlp-BindImageEx", "Bernhard Reiter", "Partial implementation of BindImageEx." },'; \
+	) > imagehlp-BindImageEx.ok
 
 # Patchset imm32-Cross_Thread_Access
 # |

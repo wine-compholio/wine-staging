@@ -40,6 +40,7 @@ PATCHLIST := \
 	kernel32-Named_Pipe.ok \
 	kernel32-UTF7_Support.ok \
 	libs-Unicode_Collation.ok \
+	mshtml-sessionStorage.ok \
 	msvcp90-basic_string_wchar_dtor.ok \
 	ntdll-ATL_Thunk.ok \
 	ntdll-DOS_Attributes.ok \
@@ -559,6 +560,24 @@ libs-Unicode_Collation.ok:
 	@( \
 		echo '+    { "libs-Unicode_Collation", "Dmitry Timoshkov", "Fix comparison of punctuation characters." },'; \
 	) > libs-Unicode_Collation.ok
+
+# Patchset mshtml-sessionStorage
+# |
+# | Included patches:
+# |   *	Implement sessionStorage(partially). [by Zhenbo Li]
+# |
+# | Modified files:
+# |   *	dlls/mshtml/htmlstorage.c, dlls/mshtml/htmlwindow.c, dlls/mshtml/mshtml_private.h, dlls/mshtml/nsiface.idl,
+# | 	dlls/mshtml/tests/htmldoc.c
+# |
+.INTERMEDIATE: mshtml-sessionStorage.ok
+mshtml-sessionStorage.ok:
+	$(call APPLY_FILE,mshtml-sessionStorage/0001-mshtml-Added-nsIDOMStorage-declaration.patch)
+	$(call APPLY_FILE,mshtml-sessionStorage/0002-mshtml-Fixed-create_storage-and-IHTMLStorage-Release.patch)
+	$(call APPLY_FILE,mshtml-sessionStorage/0003-mshtml-Added-IHTMLStorage-getItem-setItem-methods-im.patch)
+	@( \
+		echo '+    { "mshtml-sessionStorage", "Zhenbo Li", "Implement sessionStorage(partially)." },'; \
+	) > mshtml-sessionStorage.ok
 
 # Patchset msvcp90-basic_string_wchar_dtor
 # |

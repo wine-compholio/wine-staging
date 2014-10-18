@@ -1,0 +1,204 @@
+From 31046c5a489a1b646b6dfb94c8156b96bb40bd2e Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 18 Oct 2014 04:32:27 +0200
+Subject: ntdll: Add support for additional ATL thunks.
+
+---
+ dlls/kernel32/tests/virtual.c |  12 -----
+ dlls/ntdll/signal_i386.c      | 120 ++++++++++++++++++++++++++++++++++++------
+ 2 files changed, 103 insertions(+), 29 deletions(-)
+
+diff --git a/dlls/kernel32/tests/virtual.c b/dlls/kernel32/tests/virtual.c
+index 6971144..3be2977 100644
+--- a/dlls/kernel32/tests/virtual.c
++++ b/dlls/kernel32/tests/virtual.c
+@@ -2120,9 +2120,6 @@ static void test_atl_thunk_emulation( ULONG dep_flags )
+     ok( num_guard_page_calls == 0, "expected no STATUS_GUARD_PAGE_VIOLATION exception, got %d exceptions\n", num_guard_page_calls );
+     if ((dep_flags & MEM_EXECUTE_OPTION_DISABLE) && (dep_flags & MEM_EXECUTE_OPTION_DISABLE_THUNK_EMULATION))
+         ok( num_execute_fault_calls == 1, "expected one STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
+-    else if (dep_flags & MEM_EXECUTE_OPTION_DISABLE)
+-        todo_wine
+-        ok( num_execute_fault_calls == 0, "expected no STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
+     else
+         ok( num_execute_fault_calls == 0, "expected no STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
+ 
+@@ -2138,9 +2135,6 @@ static void test_atl_thunk_emulation( ULONG dep_flags )
+     ok( num_guard_page_calls == 0, "expected no STATUS_GUARD_PAGE_VIOLATION exception, got %d exceptions\n", num_guard_page_calls );
+     if ((dep_flags & MEM_EXECUTE_OPTION_DISABLE) && (dep_flags & MEM_EXECUTE_OPTION_DISABLE_THUNK_EMULATION))
+         ok( num_execute_fault_calls == 1, "expected one STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
+-    else if (dep_flags & MEM_EXECUTE_OPTION_DISABLE)
+-        todo_wine
+-        ok( num_execute_fault_calls == 0, "expected no STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
+     else
+         ok( num_execute_fault_calls == 0, "expected no STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
+ 
+@@ -2156,9 +2150,6 @@ static void test_atl_thunk_emulation( ULONG dep_flags )
+     ok( num_guard_page_calls == 0, "expected no STATUS_GUARD_PAGE_VIOLATION exception, got %d exceptions\n", num_guard_page_calls );
+     if ((dep_flags & MEM_EXECUTE_OPTION_DISABLE) && (dep_flags & MEM_EXECUTE_OPTION_DISABLE_THUNK_EMULATION))
+         ok( num_execute_fault_calls == 1, "expected one STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
+-    else if (dep_flags & MEM_EXECUTE_OPTION_DISABLE)
+-        todo_wine
+-        ok( num_execute_fault_calls == 0, "expected no STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
+     else
+         ok( num_execute_fault_calls == 0, "expected no STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
+ 
+@@ -2174,9 +2165,6 @@ static void test_atl_thunk_emulation( ULONG dep_flags )
+     ok( num_guard_page_calls == 0, "expected no STATUS_GUARD_PAGE_VIOLATION exception, got %d exceptions\n", num_guard_page_calls );
+     if ((dep_flags & MEM_EXECUTE_OPTION_DISABLE) && (dep_flags & MEM_EXECUTE_OPTION_DISABLE_THUNK_EMULATION))
+         ok( num_execute_fault_calls == 1, "expected one STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
+-    else if (dep_flags & MEM_EXECUTE_OPTION_DISABLE)
+-        todo_wine
+-        ok( num_execute_fault_calls == 0, "expected no STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
+     else
+         ok( num_execute_fault_calls == 0, "expected no STATUS_ACCESS_VIOLATION exception, got %d exceptions\n", num_execute_fault_calls );
+ 
+diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
+index f97799c..b2a9cb0 100644
+--- a/dlls/ntdll/signal_i386.c
++++ b/dlls/ntdll/signal_i386.c
+@@ -1616,12 +1616,46 @@ static inline BOOL check_invalid_gs( CONTEXT *context )
+ 
+ 
+ #include "pshpack1.h"
+-struct atl_thunk
++union atl_thunk
+ {
+-    DWORD movl;  /* movl this,4(%esp) */
+-    DWORD this;
+-    BYTE  jmp;   /* jmp func */
+-    int   func;
++    struct
++    {
++        DWORD movl;  /* movl this,4(%esp) */
++        DWORD this;
++        BYTE  jmp;   /* jmp func */
++        int   func;
++    } t1;
++    struct
++    {
++        BYTE  movl;  /* movl this,ecx */
++        DWORD this;
++        BYTE  jmp;   /* jmp func */
++        int   func;
++    } t2;
++    struct
++    {
++        BYTE  movl1; /* movl this,edx */
++        DWORD this;
++        BYTE  movl2; /* movl func,ecx */
++        DWORD func;
++        WORD  jmp;   /* jmp ecx */
++    } t3;
++    struct
++    {
++        BYTE  movl1; /* movl this,ecx */
++        DWORD this;
++        BYTE  movl2; /* movl func,eax */
++        DWORD func;
++        WORD  jmp;   /* jmp eax */
++    } t4;
++    struct
++    {
++        DWORD inst1; /* pop ecx
++                      * pop eax
++                      * push ecx
++                      * jmp 4(%eax) */
++        WORD  inst2;
++    } t5;
+ };
+ #include "poppack.h"
+ 
+@@ -1632,26 +1666,78 @@ struct atl_thunk
+  */
+ static BOOL check_atl_thunk( EXCEPTION_RECORD *rec, CONTEXT *context )
+ {
+-    const struct atl_thunk *thunk = (const struct atl_thunk *)rec->ExceptionInformation[1];
+-    struct atl_thunk thunk_copy;
+-    BOOL ret = FALSE;
++    const union atl_thunk *thunk = (const union atl_thunk *)rec->ExceptionInformation[1];
++    union atl_thunk thunk_copy;
++    SIZE_T thunk_len;
+ 
+-    if (virtual_uninterrupted_read_memory( thunk, &thunk_copy, sizeof(*thunk) ) != sizeof(*thunk))
+-        return FALSE;
++    thunk_len = virtual_uninterrupted_read_memory( thunk, &thunk_copy, sizeof(*thunk) );
++    if (!thunk_len) return FALSE;
+ 
+-    if (thunk_copy.movl == 0x042444c7 && thunk_copy.jmp == 0xe9)
++    if (thunk_len >= sizeof(thunk_copy.t1) && thunk_copy.t1.movl == 0x042444c7 &&
++                                              thunk_copy.t1.jmp == 0xe9)
+     {
+         if (virtual_uninterrupted_write_memory( (DWORD *)context->Esp + 1,
+-            &thunk_copy.this, sizeof(DWORD) ) == sizeof(DWORD))
++            &thunk_copy.t1.this, sizeof(DWORD) ) == sizeof(DWORD))
++        {
++            context->Eip = (DWORD_PTR)(&thunk->t1.func + 1) + thunk_copy.t1.func;
++            TRACE( "emulating ATL thunk type 1 at %p, func=%08x arg=%08x\n",
++                   thunk, context->Eip, thunk_copy.t1.this );
++            return TRUE;
++        }
++    }
++    else if (thunk_len >= sizeof(thunk_copy.t2) && thunk_copy.t2.movl == 0xb9 &&
++                                                   thunk_copy.t2.jmp == 0xe9)
++    {
++        context->Ecx = thunk_copy.t2.this;
++        context->Eip = (DWORD_PTR)(&thunk->t2.func + 1) + thunk_copy.t2.func;
++        TRACE( "emulating ATL thunk type 2 at %p, func=%08x ecx=%08x\n",
++               thunk, context->Eip, context->Ecx );
++        return TRUE;
++    }
++    else if (thunk_len >= sizeof(thunk_copy.t3) && thunk_copy.t3.movl1 == 0xba &&
++                                                   thunk_copy.t3.movl2 == 0xb9 &&
++                                                   thunk_copy.t3.jmp == 0xe1ff)
++    {
++        context->Edx = thunk_copy.t3.this;
++        context->Ecx = thunk_copy.t3.func;
++        context->Eip = thunk_copy.t3.func;
++        TRACE( "emulating ATL thunk type 3 at %p, func=%08x ecx=%08x edx=%08x\n",
++               thunk, context->Eip, context->Ecx, context->Edx );
++        return TRUE;
++    }
++    else if (thunk_len >= sizeof(thunk_copy.t4) && thunk_copy.t4.movl1 == 0xb9 &&
++                                                   thunk_copy.t4.movl2 == 0xb8 &&
++                                                   thunk_copy.t4.jmp == 0xe0ff)
++    {
++        context->Ecx = thunk_copy.t4.this;
++        context->Eax = thunk_copy.t4.func;
++        context->Eip = thunk_copy.t4.func;
++        TRACE( "emulating ATL thunk type 4 at %p, func=%08x eax=%08x ecx=%08x\n",
++               thunk, context->Eip, context->Eax, context->Ecx );
++        return TRUE;
++    }
++    else if (thunk_len >= sizeof(thunk_copy.t5) && thunk_copy.t5.inst1 == 0xff515859 &&
++                                                   thunk_copy.t5.inst2 == 0x0460)
++    {
++        DWORD func, stack[2];
++        if (virtual_uninterrupted_read_memory( context->Esp,
++            stack, sizeof(stack) ) == sizeof(stack) &&
++            virtual_uninterrupted_read_memory( (DWORD *)stack[1] + 1,
++            &func, sizeof(DWORD) ) == sizeof(DWORD) &&
++            virtual_uninterrupted_write_memory( (DWORD *)context->Esp + 1,
++            &stack[0], sizeof(stack[0]) ) == sizeof(stack[0]))
+         {
+-            context->Eip = (DWORD_PTR)(&thunk->func + 1) + thunk_copy.func;
+-            TRACE( "emulating ATL thunk at %p, func=%08x arg=%08x\n",
+-                   thunk, context->Eip, thunk_copy.this );
+-            ret = TRUE;
++            context->Ecx = stack[0];
++            context->Eax = stack[1];
++            context->Esp = context->Esp + sizeof(DWORD);
++            context->Eip = func;
++            TRACE( "emulating ATL thunk type 5 at %p, func=%08x eax=%08x ecx=%08x esp=%08x\n",
++                   thunk, context->Eip, context->Eax, context->Ecx, context->Esp );
++            return TRUE;
+         }
+     }
+ 
+-    return ret;
++    return FALSE;
+ }
+ 
+ 
+-- 
+2.1.2
+

@@ -31,6 +31,7 @@ PATCHLIST := \
 	dbghelp-KdHelp.ok \
 	dsound-Fast_Mixer.ok \
 	fonts-Missing_Fonts.ok \
+	gdi32-MultiMonitor.ok \
 	imm32-Cross_Thread_Access.ok \
 	iphlpapi-TCP_Table.ok \
 	kernel32-FindFirstFile.ok \
@@ -391,6 +392,26 @@ fonts-Missing_Fonts.ok:
 	@( \
 		echo '+    { "fonts-Missing_Fonts", "Torsten Kurbad / Erich E. Hoover", "Implement missing fonts expected by Silverlight. [rev 2]" },'; \
 	) > fonts-Missing_Fonts.ok
+
+# Patchset gdi32-MultiMonitor
+# |
+# | Included patches:
+# |   *	Add multi monitor support to gdi32. [by Ken Thomases]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34978] Multiple applications need EnumDisplayDevicesW implementation
+# |
+# | Modified files:
+# |   *	dlls/gdi32/driver.c, dlls/user32/misc.c, dlls/winex11.drv/xinerama.c
+# |
+.INTERMEDIATE: gdi32-MultiMonitor.ok
+gdi32-MultiMonitor.ok:
+	$(call APPLY_FILE,gdi32-MultiMonitor/0001-gdi32-Also-accept-.-DISPLAY-n-devices-names-with-n-o.patch)
+	$(call APPLY_FILE,gdi32-MultiMonitor/0002-winex11-Make-GetMonitorInfo-give-a-different-device-.patch)
+	$(call APPLY_FILE,gdi32-MultiMonitor/0003-user32-Implement-EnumDisplayDevicesW-based-on-EnumDi.patch)
+	@( \
+		echo '+    { "gdi32-MultiMonitor", "Ken Thomases", "Add multi monitor support to gdi32." },'; \
+	) > gdi32-MultiMonitor.ok
 
 # Patchset imm32-Cross_Thread_Access
 # |

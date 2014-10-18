@@ -1,32 +1,32 @@
-From 8e54f8c98655c08b09d3a5ce6a27d5e6a1c1c5e3 Mon Sep 17 00:00:00 2001
+From a8bf53baa972197e228ea01701d5992a11151824 Mon Sep 17 00:00:00 2001
 From: Alex Henrie <alexhenrie24@gmail.com>
-Date: Thu, 9 Oct 2014 14:13:00 -0600
+Date: Fri, 17 Oct 2014 12:54:02 -0600
 Subject: kernel32: Support UTF-7 in MultiByteToWideChar.
 
 Portions of utf7_mbstowcs were written by Sebastian Lackner
 <sebastian@fds-team.de>
 ---
- dlls/kernel32/locale.c | 160 +++++++++++++++++++++++++++++++++++++++++++++++--
- 1 file changed, 156 insertions(+), 4 deletions(-)
+ dlls/kernel32/locale.c | 153 ++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 150 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/kernel32/locale.c b/dlls/kernel32/locale.c
-index 730574b..6ccb799 100644
+index 730574b..0123124 100644
 --- a/dlls/kernel32/locale.c
 +++ b/dlls/kernel32/locale.c
-@@ -1954,6 +1954,159 @@ BOOL WINAPI EnumSystemCodePagesW( CODEPAGE_ENUMPROCW lpfnCodePageEnum, DWORD fla
+@@ -1954,6 +1954,154 @@ BOOL WINAPI EnumSystemCodePagesW( CODEPAGE_ENUMPROCW lpfnCodePageEnum, DWORD fla
  
  
  /***********************************************************************
-+ *              write_to_w_string
++ *              utf7_write_w
 + *
 + * Helper for utf7_mbstowcs
 + *
 + * RETURNS
 + *   TRUE on success, FALSE on error
 + */
-+static inline BOOL write_to_w_string(WCHAR *dst, int dstlen, int *index, WCHAR character)
++static inline BOOL utf7_write_w(WCHAR *dst, int dstlen, int *index, WCHAR character)
 +{
-+    if (dst)
++    if (dstlen > 0)
 +    {
 +        if (*index >= dstlen)
 +            return FALSE;
@@ -50,39 +50,39 @@ index 730574b..6ccb799 100644
 + */
 +static int utf7_mbstowcs(const char *src, int srclen, WCHAR *dst, int dstlen)
 +{
-+    static const WCHAR base64_decoding_table[] = {
-+        /* \0   */ -1,    /* \x01 */ -1,    /* \x02 */ -1,    /* \x03 */ -1,
-+        /* \x04 */ -1,    /* \x05 */ -1,    /* \x06 */ -1,    /* \a   */ -1,
-+        /* \b   */ -1,    /* \t   */ -1,    /* \n   */ -1,    /* \v   */ -1,
-+        /* \f   */ -1,    /* \r   */ -1,    /* \x0E */ -1,    /* \x0F */ -1,
-+        /* \x10 */ -1,    /* \x11 */ -1,    /* \x12 */ -1,    /* \x13 */ -1,
-+        /* \x14 */ -1,    /* \x15 */ -1,    /* \x16 */ -1,    /* \x17 */ -1,
-+        /* \x18 */ -1,    /* \x19 */ -1,    /* \x1A */ -1,    /* \e   */ -1,
-+        /* \x1C */ -1,    /* \x1D */ -1,    /* \x1E */ -1,    /* \x1F */ -1,
-+        /*      */ -1,    /* !    */ -1,    /* "    */ -1,    /* #    */ -1,
-+        /* $    */ -1,    /* %    */ -1,    /* &    */ -1,    /* '    */ -1,
-+        /* (    */ -1,    /* )    */ -1,    /* *    */ -1,    /* +    */ 62,
-+        /* ,    */ -1,    /* -    */ -1,    /* .    */ -1,    /* /    */ 63,
-+        /* 0    */ 52,    /* 1    */ 53,    /* 2    */ 54,    /* 3    */ 55,
-+        /* 4    */ 56,    /* 5    */ 57,    /* 6    */ 58,    /* 7    */ 59,
-+        /* 8    */ 60,    /* 9    */ 61,    /* :    */ -1,    /* ;    */ -1,
-+        /* <    */ -1,    /* =    */ -1,    /* >    */ -1,    /* ?    */ -1,
-+        /* @    */ -1,    /* A    */  0,    /* B    */  1,    /* C    */  2,
-+        /* D    */  3,    /* E    */  4,    /* F    */  5,    /* G    */  6,
-+        /* H    */  7,    /* I    */  8,    /* J    */  9,    /* K    */ 10,
-+        /* L    */ 11,    /* M    */ 12,    /* N    */ 13,    /* O    */ 14,
-+        /* P    */ 15,    /* Q    */ 16,    /* R    */ 17,    /* S    */ 18,
-+        /* T    */ 19,    /* U    */ 20,    /* V    */ 21,    /* W    */ 22,
-+        /* X    */ 23,    /* Y    */ 24,    /* Z    */ 25,    /* [    */ -1,
-+        /* \    */ -1,    /* ]    */ -1,    /* ^    */ -1,    /* _    */ -1,
-+        /* `    */ -1,    /* a    */ 26,    /* b    */ 27,    /* c    */ 28,
-+        /* d    */ 29,    /* e    */ 30,    /* f    */ 31,    /* g    */ 32,
-+        /* h    */ 33,    /* i    */ 34,    /* j    */ 35,    /* k    */ 36,
-+        /* l    */ 37,    /* m    */ 38,    /* n    */ 39,    /* o    */ 40,
-+        /* p    */ 41,    /* q    */ 42,    /* r    */ 43,    /* s    */ 44,
-+        /* t    */ 45,    /* u    */ 46,    /* v    */ 47,    /* w    */ 48,
-+        /* x    */ 49,    /* y    */ 50,    /* z    */ 51,    /* {    */ -1,
-+        /* |    */ -1,    /* }    */ -1,    /* ~    */ -1,    /* \x7F */ -1
++    static const signed char base64_decoding_table[] = {
++        /* \0     \x01   \x02   \x03   \x04   \x05   \x06   \a   */
++           -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
++        /* \b     \t     \n     \v     \f     \r     \x0E   \x0F */
++           -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
++        /* \x10   \x11   \x12   \x13   \x14   \x15   \x16   \x17 */
++           -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
++        /* \x18   \x19   \x1A   \e     \x1C   \x1D   \x1E   \x1F */
++           -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
++        /*        !      "      #      $      %      &      '    */
++           -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
++        /* (      )      *      +      ,      -      .      /    */
++           -1,    -1,    -1,    62,    -1,    -1,    -1,    63,
++        /* 0      1      2      3      4      5      6      7    */
++           52,    53,    54,    55,    56,    57,    58,    59,
++        /* 8      9      :      ;      <      =      >      ?    */
++           60,    61,    -1,    -1,    -1,    -1,    -1,    -1,
++        /* @      A      B      C      D      E      F      G    */
++           -1,    0,     1,     2,     3,     4,     5,     6,
++        /* H      I      J      K      L      M      N      O    */
++           7,     8,     9,     10,    11,    12,    13,    14,
++        /* P      Q      R      S      T      U      V      W    */
++           15,    16,    17,    18,    19,    20,    21,    22,
++        /* X      Y      Z      [      \      ]      ^      _    */
++           23,    24,    25,    -1,    -1,    -1,    -1,    -1,
++        /* `      a      b      c      d      e      f      g    */
++           -1,    26,    27,    28,    29,    30,    31,    32,
++        /* h      i      j      k      l      m      n      o    */
++           33,    34,    35,    36,    37,    38,    39,    40,
++        /* p      q      r      s      t      u      v      w    */
++           41,    42,    43,    44,    45,    46,    47,    48,
++        /* x      y      z      {      |      }      ~      \x7F */
++           49,    50,    51,    -1,    -1,    -1,    -1,    -1
 +    };
 +
 +    const char *source_end = src + srclen;
@@ -91,21 +91,18 @@ index 730574b..6ccb799 100644
 +    DWORD byte_pair = 0;
 +    short offset = 0;
 +
-+    if (!dstlen)
-+        dst = NULL;
-+
 +    while (src < source_end)
 +    {
 +        if (*src == '+')
 +        {
-+            src++; /* skip the + sign */
++            src++;
 +            if (src >= source_end)
 +                break;
 +
 +            if (*src == '-')
 +            {
 +                /* just a plus sign escaped as +- */
-+                if (!write_to_w_string(dst, dstlen, &dest_index, '+'))
++                if (!utf7_write_w(dst, dstlen, &dest_index, '+'))
 +                    return -1;
 +                src++;
 +                continue;
@@ -113,7 +110,7 @@ index 730574b..6ccb799 100644
 +
 +            do
 +            {
-+                WCHAR sextet = *src;
++                signed char sextet = *src;
 +                if (sextet == '-')
 +                {
 +                    /* skip over the dash and end base64 decoding */
@@ -122,23 +119,21 @@ index 730574b..6ccb799 100644
 +                    offset = 0;
 +                    break;
 +                }
-+                else if (sextet <= 127)
++                if (sextet < 0)
 +                {
-+                    sextet = base64_decoding_table[sextet];
-+                    if (sextet == (WCHAR)-1)
-+                    {
-+                        /* -1 means that the next character of src is not part of a base64 sequence */
-+                        /* in other words, all sextets in this base64 sequence have been processed */
-+                        /* the current, unfinished byte pair is discarded */
-+                        offset = 0;
-+                        break;
-+                    }
-+                }
-+                else
-+                {
-+                    /* the next character of src is > 127 and therefore not part of a base64 sequence */
++                    /* the next character of src is < 0 and therefore not part of a base64 sequence */
 +                    /* the current, unfinished byte pair is NOT discarded in this case */
 +                    /* this is probably a bug in Windows */
++                    break;
++                }
++
++                sextet = base64_decoding_table[sextet];
++                if (sextet == -1)
++                {
++                    /* -1 means that the next character of src is not part of a base64 sequence */
++                    /* in other words, all sextets in this base64 sequence have been processed */
++                    /* the current, unfinished byte pair is discarded */
++                    offset = 0;
 +                    break;
 +                }
 +
@@ -148,19 +143,19 @@ index 730574b..6ccb799 100644
 +                if (offset >= 16)
 +                {
 +                    /* this byte pair is done */
-+                    if (!write_to_w_string(dst, dstlen, &dest_index, (byte_pair >> (offset - 16)) & 0xFFFF))
++                    if (!utf7_write_w(dst, dstlen, &dest_index, (byte_pair >> (offset - 16)) & 0xFFFF))
 +                        return -1;
 +                    offset -= 16;
 +                }
 +
-+                /* this sextet is done */
 +                src++;
-+            } while (src < source_end);
++            }
++            while (src < source_end);
 +        }
 +        else
 +        {
-+            /* we have to convert to unsigned char in case *src > 127 */
-+            if (!write_to_w_string(dst, dstlen, &dest_index, (unsigned char)*src))
++            /* we have to convert to unsigned char in case *src < 0 */
++            if (!utf7_write_w(dst, dstlen, &dest_index, (unsigned char)*src))
 +                return -1;
 +            src++;
 +        }
@@ -173,16 +168,7 @@ index 730574b..6ccb799 100644
   *              MultiByteToWideChar   (KERNEL32.@)
   *
   * Convert a multibyte character string into a Unicode string.
-@@ -1963,7 +2116,7 @@ BOOL WINAPI EnumSystemCodePagesW( CODEPAGE_ENUMPROCW lpfnCodePageEnum, DWORD fla
-  *   flags  [I] Character mapping flags
-  *   src    [I] Source string buffer
-  *   srclen [I] Length of src (in bytes), or -1 if src is NUL terminated
-- *   dst    [O] Destination buffer
-+ *   dst    [O] Destination buffer, or NULL to compute the required length
-  *   dstlen [I] Length of dst (in WCHARs), or 0 to compute the required length
-  *
-  * RETURNS
-@@ -2006,9 +2159,8 @@ INT WINAPI MultiByteToWideChar( UINT page, DWORD flags, LPCSTR src, INT srclen,
+@@ -2006,9 +2154,8 @@ INT WINAPI MultiByteToWideChar( UINT page, DWORD flags, LPCSTR src, INT srclen,
              SetLastError( ERROR_INVALID_FLAGS );
              return 0;
          }

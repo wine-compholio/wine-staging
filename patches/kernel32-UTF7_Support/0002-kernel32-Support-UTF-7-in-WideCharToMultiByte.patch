@@ -1,76 +1,77 @@
-From 102cc040e57795ac5287e47194620db8419adcf4 Mon Sep 17 00:00:00 2001
+From 02cb021277295aa3a2166e2497a686d2ebb32126 Mon Sep 17 00:00:00 2001
 From: Alex Henrie <alexhenrie24@gmail.com>
-Date: Thu, 9 Oct 2014 14:07:39 -0600
+Date: Fri, 17 Oct 2014 15:40:51 -0600
 Subject: kernel32: Support UTF-7 in WideCharToMultiByte.
 
 Portions of utf7_wcstombs were written by Sebastian Lackner
 <sebastian@fds-team.de>
 ---
- dlls/kernel32/locale.c | 147 +++++++++++++++++++++++++++++++++++++++++++++++--
- 1 file changed, 143 insertions(+), 4 deletions(-)
+ dlls/kernel32/locale.c | 148 ++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 145 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/kernel32/locale.c b/dlls/kernel32/locale.c
-index 6ccb799..b412851 100644
+index 0123124..6c2b6e7 100644
 --- a/dlls/kernel32/locale.c
 +++ b/dlls/kernel32/locale.c
-@@ -2200,6 +2200,146 @@ INT WINAPI MultiByteToWideChar( UINT page, DWORD flags, LPCSTR src, INT srclen,
+@@ -2195,6 +2195,149 @@ INT WINAPI MultiByteToWideChar( UINT page, DWORD flags, LPCSTR src, INT srclen,
  
  
  /***********************************************************************
-+ *              can_directly_encode
++ *              utf7_can_directly_encode
 + *
 + * Helper for utf7_wcstombs
 + */
 +static inline BOOL utf7_can_directly_encode(WCHAR codepoint)
 +{
 +    static const BOOL directly_encodable_table[] = {
-+        /* \0   */ TRUE,   /* \x01 */ FALSE,  /* \x02 */ FALSE,  /* \x03 */ FALSE,
-+        /* \x04 */ FALSE,  /* \x05 */ FALSE,  /* \x06 */ FALSE,  /* \a   */ FALSE,
-+        /* \b   */ FALSE,  /* \t   */ TRUE,   /* \n   */ TRUE,   /* \v   */ FALSE,
-+        /* \f   */ FALSE,  /* \r   */ TRUE,   /* \x0E */ FALSE,  /* \x0F */ FALSE,
-+        /* \x10 */ FALSE,  /* \x11 */ FALSE,  /* \x12 */ FALSE,  /* \x13 */ FALSE,
-+        /* \x14 */ FALSE,  /* \x15 */ FALSE,  /* \x16 */ FALSE,  /* \x17 */ FALSE,
-+        /* \x18 */ FALSE,  /* \x19 */ FALSE,  /* \x1A */ FALSE,  /* \e   */ FALSE,
-+        /* \x1C */ FALSE,  /* \x1D */ FALSE,  /* \x1E */ FALSE,  /* \x1F */ FALSE,
-+        /*      */ TRUE,   /* !    */ FALSE,  /* "    */ FALSE,  /* #    */ FALSE,
-+        /* $    */ FALSE,  /* %    */ FALSE,  /* &    */ FALSE,  /* '    */ TRUE,
-+        /* (    */ TRUE,   /* )    */ TRUE,   /* *    */ FALSE,  /* +    */ TRUE,
-+        /* ,    */ TRUE,   /* -    */ TRUE,   /* .    */ TRUE,   /* /    */ TRUE,
-+        /* 0    */ TRUE,   /* 1    */ TRUE,   /* 2    */ TRUE,   /* 3    */ TRUE,
-+        /* 4    */ TRUE,   /* 5    */ TRUE,   /* 6    */ TRUE,   /* 7    */ TRUE,
-+        /* 8    */ TRUE,   /* 9    */ TRUE,   /* :    */ TRUE,   /* ;    */ FALSE,
-+        /* <    */ FALSE,  /* =    */ FALSE,  /* >    */ FALSE,  /* ?    */ TRUE,
-+        /* @    */ FALSE,  /* A    */ TRUE,   /* B    */ TRUE,   /* C    */ TRUE,
-+        /* D    */ TRUE,   /* E    */ TRUE,   /* F    */ TRUE,   /* G    */ TRUE,
-+        /* H    */ TRUE,   /* I    */ TRUE,   /* J    */ TRUE,   /* K    */ TRUE,
-+        /* L    */ TRUE,   /* M    */ TRUE,   /* N    */ TRUE,   /* O    */ TRUE,
-+        /* P    */ TRUE,   /* Q    */ TRUE,   /* R    */ TRUE,   /* S    */ TRUE,
-+        /* T    */ TRUE,   /* U    */ TRUE,   /* V    */ TRUE,   /* W    */ TRUE,
-+        /* X    */ TRUE,   /* Y    */ TRUE,   /* Z    */ TRUE,   /* [    */ FALSE,
-+        /* \    */ FALSE,  /* ]    */ FALSE,  /* ^    */ FALSE,  /* _    */ FALSE,
-+        /* `    */ FALSE,  /* a    */ TRUE,   /* b    */ TRUE,   /* c    */ TRUE,
-+        /* d    */ TRUE,   /* e    */ TRUE,   /* f    */ TRUE,   /* g    */ TRUE,
-+        /* h    */ TRUE,   /* i    */ TRUE,   /* j    */ TRUE,   /* k    */ TRUE,
-+        /* l    */ TRUE,   /* m    */ TRUE,   /* n    */ TRUE,   /* o    */ TRUE,
-+        /* p    */ TRUE,   /* q    */ TRUE,   /* r    */ TRUE,   /* s    */ TRUE,
-+        /* t    */ TRUE,   /* u    */ TRUE,   /* v    */ TRUE,   /* w    */ TRUE,
-+        /* x    */ TRUE,   /* y    */ TRUE,   /* z    */ TRUE
++        /* \0     \x01   \x02   \x03   \x04   \x05   \x06   \a   */
++           TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
++        /* \b     \t     \n     \v     \f     \r     \x0E   \x0F */
++           FALSE, TRUE,  TRUE,  FALSE, FALSE, TRUE,  FALSE, FALSE,
++        /* \x10   \x11   \x12   \x13   \x14   \x15   \x16   \x17 */
++           FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
++        /* \x18   \x19   \x1A   \e     \x1C   \x1D   \x1E   \x1F */
++           FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
++        /*        !      "      #      $      %      &      '    */
++           TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE,
++        /* (      )      *      +      ,      -      .      /    */
++           TRUE,  TRUE,  FALSE, TRUE,  TRUE,  TRUE,  TRUE,  TRUE,
++        /* 0      1      2      3      4      5      6      7    */
++           TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,
++        /* 8      9      :      ;      <      =      >      ?    */
++           TRUE,  TRUE,  TRUE,  FALSE, FALSE, FALSE, FALSE, TRUE,
++        /* @      A      B      C      D      E      F      G    */
++           FALSE, TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,
++        /* H      I      J      K      L      M      N      O    */
++           TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,
++        /* P      Q      R      S      T      U      V      W    */
++           TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,
++        /* X      Y      Z      [      \      ]      ^      _    */
++           TRUE,  TRUE,  TRUE,  FALSE, FALSE, FALSE, FALSE, FALSE,
++        /* `      a      b      c      d      e      f      g    */
++           FALSE, TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,
++        /* h      i      j      k      l      m      n      o    */
++           TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,
++        /* p      q      r      s      t      u      v      w    */
++           TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,
++        /* x      y      z                                       */
++           TRUE,  TRUE,  TRUE
 +    };
 +
 +    return codepoint <= 'z' ? directly_encodable_table[codepoint] : FALSE;
 +}
 +
 +/***********************************************************************
-+ *              write_to_c_string
++ *              utf7_write_c
 + *
 + * Helper for utf7_wcstombs
 + *
 + * RETURNS
 + *   TRUE on success, FALSE on error
 + */
-+static inline BOOL write_to_c_string(char *dst, int dstlen, int *index, char character)
++static inline BOOL utf7_write_c(char *dst, int dstlen, int *index, char character)
 +{
-+    if (dst)
++    if (dstlen > 0)
 +    {
 +        if (*index >= dstlen)
 +            return FALSE;
@@ -99,22 +100,19 @@ index 6ccb799..b412851 100644
 +    const WCHAR *source_end = src + srclen;
 +    int dest_index = 0;
 +
-+    if (!dstlen)
-+        dst = NULL;
-+
 +    while (src < source_end)
 +    {
 +        if (*src == '+')
 +        {
-+            if (!write_to_c_string(dst, dstlen, &dest_index, '+'))
++            if (!utf7_write_c(dst, dstlen, &dest_index, '+'))
 +                return -1;
-+            if (!write_to_c_string(dst, dstlen, &dest_index, '-'))
++            if (!utf7_write_c(dst, dstlen, &dest_index, '-'))
 +                return -1;
 +            src++;
 +        }
 +        else if (utf7_can_directly_encode(*src))
 +        {
-+            if (!write_to_c_string(dst, dstlen, &dest_index, *src))
++            if (!utf7_write_c(dst, dstlen, &dest_index, *src))
 +                return -1;
 +            src++;
 +        }
@@ -123,7 +121,7 @@ index 6ccb799..b412851 100644
 +            unsigned int offset = 0;
 +            DWORD byte_pair = 0;
 +
-+            if (!write_to_c_string(dst, dstlen, &dest_index, '+'))
++            if (!utf7_write_c(dst, dstlen, &dest_index, '+'))
 +                return -1;
 +
 +            do
@@ -132,7 +130,7 @@ index 6ccb799..b412851 100644
 +                offset += 16;
 +                while (offset >= 6)
 +                {
-+                    if (!write_to_c_string(dst, dstlen, &dest_index, base64_encoding_table[(byte_pair >> (offset - 6)) & 0x3F]))
++                    if (!utf7_write_c(dst, dstlen, &dest_index, base64_encoding_table[(byte_pair >> (offset - 6)) & 0x3F]))
 +                        return -1;
 +                    offset -= 6;
 +                }
@@ -142,13 +140,18 @@ index 6ccb799..b412851 100644
 +
 +            if (offset)
 +            {
++                /* Windows won't create a padded base64 character if there's not room for the - sign too */
++                /* this is probably a bug in Windows */
++                if (dstlen > 0 && dest_index + 1 >= dstlen)
++                    return -1;
++
 +                byte_pair <<= (6 - offset);
-+                if (!write_to_c_string(dst, dstlen, &dest_index, base64_encoding_table[byte_pair & 0x3F]))
++                if (!utf7_write_c(dst, dstlen, &dest_index, base64_encoding_table[byte_pair & 0x3F]))
 +                    return -1;
 +            }
 +
 +            /* Windows always explicitly terminates the base64 sequence even though RFC 2152 (page 3, rule 2) does not require this */
-+            if (!write_to_c_string(dst, dstlen, &dest_index, '-'))
++            if (!utf7_write_c(dst, dstlen, &dest_index, '-'))
 +                return -1;
 +        }
 +    }
@@ -160,16 +163,7 @@ index 6ccb799..b412851 100644
   *              WideCharToMultiByte   (KERNEL32.@)
   *
   * Convert a Unicode character string into a multibyte string.
-@@ -2209,7 +2349,7 @@ INT WINAPI MultiByteToWideChar( UINT page, DWORD flags, LPCSTR src, INT srclen,
-  *   flags   [I] Mapping Flags (MB_ constants from "winnls.h").
-  *   src     [I] Source string buffer
-  *   srclen  [I] Length of src (in WCHARs), or -1 if src is NUL terminated
-- *   dst     [O] Destination buffer
-+ *   dst     [O] Destination buffer, or NULL to compute the required length
-  *   dstlen  [I] Length of dst (in bytes), or 0 to compute the required length
-  *   defchar [I] Default character to use for conversion if no exact
-  *		    conversion can be made
-@@ -2266,9 +2406,8 @@ INT WINAPI WideCharToMultiByte( UINT page, DWORD flags, LPCWSTR src, INT srclen,
+@@ -2261,9 +2404,8 @@ INT WINAPI WideCharToMultiByte( UINT page, DWORD flags, LPCWSTR src, INT srclen,
              SetLastError( ERROR_INVALID_FLAGS );
              return 0;
          }

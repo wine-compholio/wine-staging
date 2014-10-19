@@ -1186,7 +1186,7 @@ shdocvw-ParseURLFromOutsideSource_Tests.ok:
 # Patchset shell32-Default_Folder_ACLs
 # |
 # | Included patches:
-# |   *	Generate default ACLs for user shell folders. [rev 6, by Erich E. Hoover]
+# |   *	Generate default ACLs for user shell folders. [rev 7, by Sebastian Lackner]
 # |
 # | Modified files:
 # |   *	dlls/shell32/shellpath.c
@@ -1195,7 +1195,7 @@ shdocvw-ParseURLFromOutsideSource_Tests.ok:
 shell32-Default_Folder_ACLs.ok:
 	$(call APPLY_FILE,shell32-Default_Folder_ACLs/0001-shell32-Set-the-default-security-attributes-for-user.patch)
 	@( \
-		echo '+    { "shell32-Default_Folder_ACLs", "Erich E. Hoover", "Generate default ACLs for user shell folders. [rev 6]" },'; \
+		echo '+    { "shell32-Default_Folder_ACLs", "Sebastian Lackner", "Generate default ACLs for user shell folders. [rev 7]" },'; \
 	) > shell32-Default_Folder_ACLs.ok
 
 # Patchset shell32-Default_Path

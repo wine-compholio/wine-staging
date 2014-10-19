@@ -909,7 +909,7 @@ ntdll-Pipe_SpecialCharacters.ok:
 # Patchset ntdll-WRITECOPY
 # |
 # | Included patches:
-# |   *	Change WRITECOPY memory protection to WRITE on first write. [rev 3, by Michael Müller]
+# |   *	Change WRITECOPY memory protection to WRITE on first write. [rev 4, by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#29384] Voobly expects correct handling of WRITECOPY memory protection
@@ -927,7 +927,7 @@ ntdll-WRITECOPY.ok:
 	$(call APPLY_FILE,ntdll-WRITECOPY/0004-ntdll-Properly-handle-PAGE_WRITECOPY-protection.patch)
 	$(call APPLY_FILE,ntdll-WRITECOPY/0005-ntdll-Only-enable-true-WRITECOPY-protection-when-a-s.patch)
 	@( \
-		echo '+    { "ntdll-WRITECOPY", "Michael Müller", "Change WRITECOPY memory protection to WRITE on first write. [rev 3]" },'; \
+		echo '+    { "ntdll-WRITECOPY", "Michael Müller", "Change WRITECOPY memory protection to WRITE on first write. [rev 4]" },'; \
 	) > ntdll-WRITECOPY.ok
 
 # Patchset ntoskrnl-Irp_Status

@@ -1,4 +1,4 @@
-From b9feb57a3a271cc42e37707a9b5ecac51cc70269 Mon Sep 17 00:00:00 2001
+From 0596c2b03fa72a5159fa5a9df3e909e925d6144f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 4 Oct 2014 02:56:08 +0200
 Subject: ntdll: Properly handle PAGE_WRITECOPY protection.
@@ -9,10 +9,10 @@ Subject: ntdll: Properly handle PAGE_WRITECOPY protection.
  2 files changed, 15 insertions(+), 13 deletions(-)
 
 diff --git a/dlls/kernel32/tests/virtual.c b/dlls/kernel32/tests/virtual.c
-index 0955d30..5b81e38 100644
+index 73b753e..5797805 100644
 --- a/dlls/kernel32/tests/virtual.c
 +++ b/dlls/kernel32/tests/virtual.c
-@@ -2038,11 +2038,7 @@ todo_wine
+@@ -2786,11 +2786,7 @@ todo_wine
                  SetLastError(0xdeadbeef);
                  ret = VirtualQuery(base, &info, sizeof(info));
                  ok(ret, "VirtualQuery failed %d\n", GetLastError());
@@ -25,7 +25,7 @@ index 0955d30..5b81e38 100644
              }
          }
          else
-@@ -2056,11 +2052,7 @@ todo_wine
+@@ -2804,11 +2800,7 @@ todo_wine
          SetLastError(0xdeadbeef);
          ret = VirtualProtect(base, si.dwPageSize, PAGE_NOACCESS, &old_prot);
          ok(ret, "%d: VirtualProtect error %d\n", i, GetLastError());
@@ -39,7 +39,7 @@ index 0955d30..5b81e38 100644
  
      UnmapViewOfFile(base);
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index f8a5dd3..47654f4 100644
+index 4c4c05d..d26fe26 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
 @@ -179,8 +179,13 @@ static int VIRTUAL_GetUnixProt( BYTE vprot )
@@ -49,7 +49,7 @@ index f8a5dd3..47654f4 100644
 -        if (vprot & VPROT_WRITECOPY) prot |= PROT_WRITE | PROT_READ;
          if (vprot & VPROT_EXEC) prot |= PROT_EXEC | PROT_READ;
 +#if defined(__i386__)
-+        if (vprot & VPROT_WRITECOPY) prot &= ~PROT_WRITE;
++        if (vprot & VPROT_WRITECOPY) prot = (prot & ~PROT_WRITE) | PROT_READ;
 +#else
 +        /* FIXME: Architecture needs implementation of signal_init_early. */
 +        if (vprot & VPROT_WRITECOPY) prot |= PROT_WRITE | PROT_READ;
@@ -57,7 +57,7 @@ index f8a5dd3..47654f4 100644
          if (vprot & VPROT_WRITEWATCH) prot &= ~PROT_WRITE;
      }
      if (!prot) prot = PROT_NONE;
-@@ -1522,13 +1527,18 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err )
+@@ -1532,13 +1537,18 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err )
      {
          void *page = ROUND_ADDR( addr, page_mask );
          BYTE *vprot = &view->prot[((const char *)page - (const char *)view->base) >> page_shift];
@@ -79,5 +79,5 @@ index f8a5dd3..47654f4 100644
              if (VIRTUAL_GetUnixProt( *vprot ) & PROT_WRITE) ret = STATUS_SUCCESS;
          }
 -- 
-2.1.1
+2.1.2
 

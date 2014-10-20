@@ -26,6 +26,7 @@ PATCHLIST := \
 	comctl32-LoadIconMetric.ok \
 	configure-Absolute_RPATH.ok \
 	configure-Detect_Gnutls.ok \
+	d3dx9_36-Filter_Warnings.ok \
 	d3dx9_36-GetShaderSemantics.ok \
 	d3dx9_36-UpdateSkinnedMesh.ok \
 	dbghelp-KdHelp.ok \
@@ -300,6 +301,24 @@ configure-Detect_Gnutls.ok:
 	@( \
 		echo '+    { "configure-Detect_Gnutls", "Sebastian Lackner", "Fix detection of gnutls on Ubuntu 14.10. [rev 3]" },'; \
 	) > configure-Detect_Gnutls.ok
+
+# Patchset d3dx9_36-Filter_Warnings
+# |
+# | Included patches:
+# |   *	D3DCompileShader should filter specific warning messages. [by Christian Costa]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33770] D3DCompileShader should filter specific warning messages
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/shader.c
+# |
+.INTERMEDIATE: d3dx9_36-Filter_Warnings.ok
+d3dx9_36-Filter_Warnings.ok:
+	$(call APPLY_FILE,d3dx9_36-Filter_Warnings/0001-d3dx9_36-Filter-out-D3DCompile-warning-messages-that.patch)
+	@( \
+		echo '+    { "d3dx9_36-Filter_Warnings", "Christian Costa", "D3DCompileShader should filter specific warning messages." },'; \
+	) > d3dx9_36-Filter_Warnings.ok
 
 # Patchset d3dx9_36-GetShaderSemantics
 # |

@@ -47,7 +47,6 @@ PATCHLIST := \
 	libwine-BSD_mmap_fixed.ok \
 	mshtml-sessionStorage.ok \
 	msvcp90-basic_string_wchar_dtor.ok \
-	ntdll-ATL_Thunk.ok \
 	ntdll-DOS_Attributes.ok \
 	ntdll-Dynamic_DST.ok \
 	ntdll-Exception.ok \
@@ -693,25 +692,6 @@ msvcp90-basic_string_wchar_dtor.ok:
 	@( \
 		echo '+    { "msvcp90-basic_string_wchar_dtor", "Michael Müller", "basic_string_wchar_dtor needs to return NULL." },'; \
 	) > msvcp90-basic_string_wchar_dtor.ok
-
-# Patchset ntdll-ATL_Thunk
-# |
-# | Included patches:
-# |   *	Implement additional ATL Thunks. [by Sebastian Lackner]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#29903] Support for additional ATL Thunks
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/signal_i386.c
-# |
-.INTERMEDIATE: ntdll-ATL_Thunk.ok
-ntdll-ATL_Thunk.ok:
-	$(call APPLY_FILE,ntdll-ATL_Thunk/0001-kernel32-tests-Add-tests-for-additional-ATL-thunks-e.patch)
-	$(call APPLY_FILE,ntdll-ATL_Thunk/0002-ntdll-Add-support-for-additional-ATL-thunks.patch)
-	@( \
-		echo '+    { "ntdll-ATL_Thunk", "Sebastian Lackner", "Implement additional ATL Thunks." },'; \
-	) > ntdll-ATL_Thunk.ok
 
 # Patchset ntdll-DOS_Attributes
 # |

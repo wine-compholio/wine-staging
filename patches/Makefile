@@ -1445,10 +1445,11 @@ winebuild-LinkerVersion.ok:
 # Patchset wined3d-DXTn
 # |
 # | Included patches:
-# |   *	Add support for DXTn software decoding through libxtc_dxtn. [by Michael Müller]
+# |   *	Add support for DXTn software decoding through libxtc_dxtn. [rev 2, by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#25486] Lego Stunt Rally requires DXTn software de/encoding support
+# |   *	[#29586] Tumblebugs 2 requires DXTn software encoding support
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d/Makefile.in, dlls/wined3d/dxtn.c, dlls/wined3d/surface.c, dlls/wined3d/wined3d_main.c,
@@ -1458,7 +1459,7 @@ winebuild-LinkerVersion.ok:
 wined3d-DXTn.ok:
 	$(call APPLY_FILE,wined3d-DXTn/0001-wined3d-Add-support-for-DXTn-software-decoding-throu.patch)
 	@( \
-		echo '+    { "wined3d-DXTn", "Michael Müller", "Add support for DXTn software decoding through libxtc_dxtn." },'; \
+		echo '+    { "wined3d-DXTn", "Michael Müller", "Add support for DXTn software decoding through libxtc_dxtn. [rev 2]" },'; \
 	) > wined3d-DXTn.ok
 
 # Patchset wined3d-Revert_PixelFormat

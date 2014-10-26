@@ -1,4 +1,4 @@
-From b51c739540f15a1d3a809d01ced465879c1c4425 Mon Sep 17 00:00:00 2001
+From 4ed4e0e27d54ecd2ef742a982f1d784183f58caf Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 20 Sep 2014 02:48:07 +0200
 Subject: wined3d: Add support for DXTn software decoding through libtxc_dxtn.
@@ -6,22 +6,22 @@ Subject: wined3d: Add support for DXTn software decoding through libtxc_dxtn.
 ---
  configure.ac                   |   9 ++
  dlls/wined3d/Makefile.in       |   1 +
- dlls/wined3d/dxtn.c            | 259 +++++++++++++++++++++++++++++++++++++++++
- dlls/wined3d/surface.c         |  42 +++++++
+ dlls/wined3d/dxtn.c            | 324 +++++++++++++++++++++++++++++++++++++++++
+ dlls/wined3d/surface.c         |  70 +++++++++
  dlls/wined3d/wined3d_main.c    |   5 +
- dlls/wined3d/wined3d_private.h |   5 +
- 6 files changed, 321 insertions(+)
+ dlls/wined3d/wined3d_private.h |   8 +
+ 6 files changed, 417 insertions(+)
  create mode 100644 dlls/wined3d/dxtn.c
 
 diff --git a/configure.ac b/configure.ac
-index 17ff399..17a67df 100644
+index ea016b1..c982f39 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -76,2 +76,3 @@ AC_ARG_WITH(sane,      AS_HELP_STRING([--without-sane],[do not use SANE (scanner
  AC_ARG_WITH(tiff,      AS_HELP_STRING([--without-tiff],[do not use TIFF]))
 +AC_ARG_WITH(txc_dxtn,  AS_HELP_STRING([--without-txc_dxtn],[do not use txc_dxtn lib (DXTn software support)]))
  AC_ARG_WITH(v4l,       AS_HELP_STRING([--without-v4l],[do not use v4l1 (v4l support)]))
-@@ -1699,6 +1700,14 @@ fi
+@@ -1698,6 +1699,14 @@ fi
  WINE_NOTICE_WITH(tiff,[test "x$ac_cv_lib_soname_tiff" = "x"],
                   [libtiff ${notice_platform}development files not found, TIFF won't be supported.])
  
@@ -50,10 +50,10 @@ index 655800b..ee0615f 100644
  	nvidia_texture_shader.c \
 diff --git a/dlls/wined3d/dxtn.c b/dlls/wined3d/dxtn.c
 new file mode 100644
-index 0000000..cffa2aa
+index 0000000..067dcdd
 --- /dev/null
 +++ b/dlls/wined3d/dxtn.c
-@@ -0,0 +1,259 @@
+@@ -0,0 +1,324 @@
 +/*
 + * Copyright 2014 Michael Müller
 + *
@@ -86,15 +86,8 @@ index 0000000..cffa2aa
 +static void (*ptx_compress_dxtn)(int comps, int width, int height, const BYTE *srcPixData,
 +                                 GLenum destformat, BYTE *dest, int dstRowStride);
 +
-+/* pfetch_2d_texel_rgba_dxt1 doesn't correctly handle pitch - this wrapper should fix it */
-+static inline void dxt1_get_pixel(const BYTE *src, DWORD pitch_in, unsigned int x, unsigned int y, DWORD *color)
-+{
-+    const BYTE *src_block = src + (y / 4) * pitch_in + (x / 4) * 8;
-+    pfetch_2d_texel_rgba_dxt1(0, src_block, x & 3, y & 3, color);
-+}
-+
-+static inline BOOL dxt1_to_x8r8g8b8(const BYTE *src, BYTE *dst,
-+        DWORD pitch_in, DWORD pitch_out, unsigned int w, unsigned int h, BOOL alpha)
++static inline BOOL dxt1_to_x8r8g8b8(const BYTE *src, BYTE *dst, DWORD pitch_in,
++        DWORD pitch_out, unsigned int w, unsigned int h, BOOL alpha)
 +{
 +    unsigned int x, y;
 +    DWORD color;
@@ -106,9 +99,14 @@ index 0000000..cffa2aa
 +        DWORD *dst_line = (DWORD *)(dst + y * pitch_out);
 +        for (x = 0; x < w; ++x)
 +        {
-+            dxt1_get_pixel(src, pitch_in, x, y, &color);
++            /* pfetch_2d_texel_rgba_dxt1 doesn't correctly handle pitch */
++            pfetch_2d_texel_rgba_dxt1(0, src + (y / 4) * pitch_in + (x / 4) * 8,
++                                      x & 3, y & 3, &color);
 +            if (alpha)
-+                dst_line[x] = (color & 0xFF00FF00) | ((color & 0xFF) << 16) | ((color & 0xFF0000) >> 16);
++            {
++                dst_line[x] = (color & 0xFF00FF00) | ((color & 0xFF) << 16) |
++                              ((color & 0xFF0000) >> 16);
++            }
 +            else
 +            {
 +                dst_line[x] = 0xFF000000 | ((color & 0xFF) << 16) |
@@ -120,8 +118,8 @@ index 0000000..cffa2aa
 +    return TRUE;
 +}
 +
-+static inline BOOL x8r8g8b8_to_dxt1(const BYTE *src, BYTE *dst,
-+        DWORD pitch_in, DWORD pitch_out, unsigned int w, unsigned int h, BOOL alpha)
++static inline BOOL x8r8g8b8_to_dxtn(const BYTE *src, BYTE *dst, DWORD pitch_in,
++        DWORD pitch_out, unsigned int w, unsigned int h, GLenum destformat, BOOL alpha)
 +{
 +    unsigned int x, y;
 +    DWORD color, *tmp;
@@ -143,7 +141,10 @@ index 0000000..cffa2aa
 +        {
 +            color = src_line[x];
 +            if (alpha)
-+                dst_line[x] = (color & 0xFF00FF00) | ((color & 0xFF) << 16) | ((color & 0xFF0000) >> 16);
++            {
++                dst_line[x] = (color & 0xFF00FF00) | ((color & 0xFF) << 16) |
++                              ((color & 0xFF0000) >> 16);
++            }
 +            else
 +            {
 +                dst_line[x] = 0xFF000000 | ((color & 0xFF) << 16) |
@@ -152,15 +153,13 @@ index 0000000..cffa2aa
 +        }
 +    }
 +
-+    ptx_compress_dxtn(4, w, h, (BYTE *)tmp, alpha ? GL_COMPRESSED_RGBA_S3TC_DXT1_EXT :
-+        GL_COMPRESSED_RGB_S3TC_DXT1_EXT, dst, pitch_out);
-+
++    ptx_compress_dxtn(4, w, h, (BYTE *)tmp, destformat, dst, pitch_out);
 +    HeapFree(GetProcessHeap(), 0, tmp);
 +    return TRUE;
 +}
 +
-+static inline BOOL x1r5g5b5_to_dxt1(const BYTE *src, BYTE *dst,
-+        DWORD pitch_in, DWORD pitch_out, unsigned int w, unsigned int h, BOOL alpha)
++static inline BOOL x1r5g5b5_to_dxtn(const BYTE *src, BYTE *dst, DWORD pitch_in,
++        DWORD pitch_out, unsigned int w, unsigned int h, GLenum destformat, BOOL alpha)
 +{
 +    static const unsigned char convert_5to8[] =
 +    {
@@ -205,9 +204,7 @@ index 0000000..cffa2aa
 +        }
 +    }
 +
-+    ptx_compress_dxtn(4, w, h, (BYTE *)tmp, alpha ? GL_COMPRESSED_RGBA_S3TC_DXT1_EXT :
-+        GL_COMPRESSED_RGB_S3TC_DXT1_EXT, dst, pitch_out);
-+
++    ptx_compress_dxtn(4, w, h, (BYTE *)tmp, destformat, dst, pitch_out);
 +    HeapFree(GetProcessHeap(), 0, tmp);
 +    return TRUE;
 +}
@@ -215,7 +212,7 @@ index 0000000..cffa2aa
 +BOOL wined3d_dxt1_decode(const BYTE *src, BYTE *dst, DWORD pitch_in, DWORD pitch_out,
 +        enum wined3d_format_id format, unsigned int w, unsigned int h)
 +{
-+    if (!ptx_compress_dxtn)
++    if (!pfetch_2d_texel_rgba_dxt1)
 +    {
 +        FIXME("Failed to decode DXT1 image, there is a problem with %s.\n", SONAME_LIBTXC_DXTN);
 +        return FALSE;
@@ -238,7 +235,7 @@ index 0000000..cffa2aa
 +BOOL wined3d_dxt1_encode(const BYTE *src, BYTE *dst, DWORD pitch_in, DWORD pitch_out,
 +        enum wined3d_format_id format, unsigned int w, unsigned int h)
 +{
-+    if (!pfetch_2d_texel_rgba_dxt1)
++    if (!ptx_compress_dxtn)
 +    {
 +        FIXME("Failed to encode DXT1 image, there is a problem with %s.\n", SONAME_LIBTXC_DXTN);
 +        return FALSE;
@@ -247,18 +244,72 @@ index 0000000..cffa2aa
 +    switch (format)
 +    {
 +        case WINED3DFMT_B8G8R8A8_UNORM:
-+            return x8r8g8b8_to_dxt1(src, dst, pitch_in, pitch_out, w, h, TRUE);
++            return x8r8g8b8_to_dxtn(src, dst, pitch_in, pitch_out, w, h,
++                                    GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, TRUE);
 +        case WINED3DFMT_B8G8R8X8_UNORM:
-+            return x8r8g8b8_to_dxt1(src, dst, pitch_in, pitch_out, w, h, FALSE);
++            return x8r8g8b8_to_dxtn(src, dst, pitch_in, pitch_out, w, h,
++                                    GL_COMPRESSED_RGB_S3TC_DXT1_EXT, FALSE);
 +        case WINED3DFMT_B5G5R5A1_UNORM:
-+            return x1r5g5b5_to_dxt1(src, dst, pitch_in, pitch_out, w, h, TRUE);
++            return x1r5g5b5_to_dxtn(src, dst, pitch_in, pitch_out, w, h,
++                                    GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, TRUE);
 +        case WINED3DFMT_B5G5R5X1_UNORM:
-+            return x1r5g5b5_to_dxt1(src, dst, pitch_in, pitch_out, w, h, FALSE);
++            return x1r5g5b5_to_dxtn(src, dst, pitch_in, pitch_out, w, h,
++                                    GL_COMPRESSED_RGB_S3TC_DXT1_EXT, FALSE);
 +        default:
 +            break;
 +    }
 +
 +    FIXME("Cannot find a conversion function from format %s to DXT1.\n", debug_d3dformat(format));
++    return FALSE;
++}
++
++BOOL wined3d_dxt3_encode(const BYTE *src, BYTE *dst, DWORD pitch_in, DWORD pitch_out,
++        enum wined3d_format_id format, unsigned int w, unsigned int h)
++{
++    if (!ptx_compress_dxtn)
++    {
++        FIXME("Failed to encode DXT3 image, there is a problem with %s.\n", SONAME_LIBTXC_DXTN);
++        return FALSE;
++    }
++
++    switch (format)
++    {
++        case WINED3DFMT_B8G8R8A8_UNORM:
++            return x8r8g8b8_to_dxtn(src, dst, pitch_in, pitch_out, w, h,
++                                    GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, TRUE);
++        case WINED3DFMT_B8G8R8X8_UNORM:
++            return x8r8g8b8_to_dxtn(src, dst, pitch_in, pitch_out, w, h,
++                                    GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, FALSE);
++        default:
++            break;
++    }
++
++    FIXME("Cannot find a conversion function from format %s to DXT3.\n", debug_d3dformat(format));
++    return FALSE;
++}
++
++BOOL wined3d_dxt5_encode(const BYTE *src, BYTE *dst, DWORD pitch_in, DWORD pitch_out,
++        enum wined3d_format_id format, unsigned int w, unsigned int h)
++{
++    if (!ptx_compress_dxtn)
++    {
++        FIXME("Failed to encode DXT5 image, there is a problem with %s.\n", SONAME_LIBTXC_DXTN);
++        return FALSE;
++    }
++
++    switch (format)
++    {
++        case WINED3DFMT_B8G8R8A8_UNORM:
++            return x8r8g8b8_to_dxtn(src, dst, pitch_in, pitch_out, w, h,
++                                    GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, TRUE);
++        case WINED3DFMT_B8G8R8X8_UNORM:
++            return x8r8g8b8_to_dxtn(src, dst, pitch_in, pitch_out, w, h,
++                                    GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, FALSE);
++        default:
++            break;
++    }
++
++    FIXME("Cannot find a conversion function from format %s to DXT5.\n", debug_d3dformat(format));
 +    return FALSE;
 +}
 +
@@ -298,7 +349,21 @@ index 0000000..cffa2aa
 +BOOL wined3d_dxt1_encode(const BYTE *src, BYTE *dst, DWORD pitch_in, DWORD pitch_out,
 +        enum wined3d_format_id format, unsigned int w, unsigned int h)
 +{
-+    FIXME("Failed to convert DXT1 texture. Wine is compiled without DXT1 support.\n");
++    FIXME("Failed to convert to DXT1 texture. Wine is compiled without DXT1 support.\n");
++    return FALSE;
++}
++
++BOOL wined3d_dxt3_encode(const BYTE *src, BYTE *dst, DWORD pitch_in, DWORD pitch_out,
++        enum wined3d_format_id format, unsigned int w, unsigned int h)
++{
++    FIXME("Failed to convert to DXT3 texture. Wine is compiled without DXT3 support.\n");
++    return FALSE;
++}
++
++BOOL wined3d_dxt5_encode(const BYTE *src, BYTE *dst, DWORD pitch_in, DWORD pitch_out,
++        enum wined3d_format_id format, unsigned int w, unsigned int h)
++{
++    FIXME("Failed to convert to DXT5 texture. Wine is compiled without DXT5 support.\n");
 +    return FALSE;
 +}
 +
@@ -315,10 +380,10 @@ index 0000000..cffa2aa
 +#endif
 \ No newline at end of file
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index 04ef3f0..d8f1d3e 100644
+index 092cbe6..2f9d323 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
-@@ -2647,6 +2647,42 @@ static void convert_yuy2_r5g6b5(const BYTE *src, BYTE *dst,
+@@ -2415,6 +2415,66 @@ static void convert_yuy2_r5g6b5(const BYTE *src, BYTE *dst,
      }
  }
  
@@ -358,10 +423,34 @@ index 04ef3f0..d8f1d3e 100644
 +    wined3d_dxt1_encode(src, dst, pitch_in, pitch_out, WINED3DFMT_B5G5R5X1_UNORM, w, h);
 +}
 +
++static void convert_a8r8g8b8_dxt3(const BYTE *src, BYTE *dst,
++        DWORD pitch_in, DWORD pitch_out, unsigned int w, unsigned int h)
++{
++    wined3d_dxt3_encode(src, dst, pitch_in, pitch_out, WINED3DFMT_B8G8R8A8_UNORM, w, h);
++}
++
++static void convert_x8r8g8b8_dxt3(const BYTE *src, BYTE *dst,
++        DWORD pitch_in, DWORD pitch_out, unsigned int w, unsigned int h)
++{
++    wined3d_dxt3_encode(src, dst, pitch_in, pitch_out, WINED3DFMT_B8G8R8X8_UNORM, w, h);
++}
++
++static void convert_a8r8g8b8_dxt5(const BYTE *src, BYTE *dst,
++        DWORD pitch_in, DWORD pitch_out, unsigned int w, unsigned int h)
++{
++    wined3d_dxt5_encode(src, dst, pitch_in, pitch_out, WINED3DFMT_B8G8R8A8_UNORM, w, h);
++}
++
++static void convert_x8r8g8b8_dxt5(const BYTE *src, BYTE *dst,
++        DWORD pitch_in, DWORD pitch_out, unsigned int w, unsigned int h)
++{
++    wined3d_dxt5_encode(src, dst, pitch_in, pitch_out, WINED3DFMT_B8G8R8X8_UNORM, w, h);
++}
++
  struct d3dfmt_converter_desc
  {
      enum wined3d_format_id from, to;
-@@ -2661,6 +2697,12 @@ static const struct d3dfmt_converter_desc converters[] =
+@@ -2429,6 +2489,16 @@ static const struct d3dfmt_converter_desc converters[] =
      {WINED3DFMT_B8G8R8X8_UNORM, WINED3DFMT_B8G8R8A8_UNORM,  convert_a8r8g8b8_x8r8g8b8},
      {WINED3DFMT_YUY2,           WINED3DFMT_B8G8R8X8_UNORM,  convert_yuy2_x8r8g8b8},
      {WINED3DFMT_YUY2,           WINED3DFMT_B5G6R5_UNORM,    convert_yuy2_r5g6b5},
@@ -370,7 +459,11 @@ index 04ef3f0..d8f1d3e 100644
 +    {WINED3DFMT_B8G8R8A8_UNORM, WINED3DFMT_DXT1,            convert_a8r8g8b8_dxt1},
 +    {WINED3DFMT_B8G8R8X8_UNORM, WINED3DFMT_DXT1,            convert_x8r8g8b8_dxt1},
 +    {WINED3DFMT_B5G5R5A1_UNORM, WINED3DFMT_DXT1,            convert_a1r5g5b5_dxt1},
-+    {WINED3DFMT_B5G5R5X1_UNORM, WINED3DFMT_DXT1,            convert_x1r5g5b5_dxt1}
++    {WINED3DFMT_B5G5R5X1_UNORM, WINED3DFMT_DXT1,            convert_x1r5g5b5_dxt1},
++    {WINED3DFMT_B8G8R8A8_UNORM, WINED3DFMT_DXT3,            convert_a8r8g8b8_dxt3},
++    {WINED3DFMT_B8G8R8X8_UNORM, WINED3DFMT_DXT3,            convert_x8r8g8b8_dxt3},
++    {WINED3DFMT_B8G8R8A8_UNORM, WINED3DFMT_DXT5,            convert_a8r8g8b8_dxt5},
++    {WINED3DFMT_B8G8R8X8_UNORM, WINED3DFMT_DXT5,            convert_x8r8g8b8_dxt5}
  };
  
  static inline const struct d3dfmt_converter_desc *find_converter(enum wined3d_format_id from,
@@ -398,15 +491,18 @@ index 758ba43..08021a2 100644
  }
  
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index f55b118..dceaa6d 100644
+index f4ded4f..c1df04c 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3105,6 +3105,11 @@ static inline void context_apply_state(struct wined3d_context *context,
+@@ -3120,6 +3120,14 @@ static inline void context_apply_state(struct wined3d_context *context,
      state_table[rep].apply(context, state, rep);
  }
  
 +BOOL wined3d_dxt1_decode(const BYTE *src, BYTE *dst, DWORD pitch_in, DWORD pitch_out, enum wined3d_format_id format, unsigned int w, unsigned int h);
 +BOOL wined3d_dxt1_encode(const BYTE *src, BYTE *dst, DWORD pitch_in, DWORD pitch_out, enum wined3d_format_id format, unsigned int w, unsigned int h);
++BOOL wined3d_dxt3_encode(const BYTE *src, BYTE *dst, DWORD pitch_in, DWORD pitch_out, enum wined3d_format_id format, unsigned int w, unsigned int h);
++BOOL wined3d_dxt5_encode(const BYTE *src, BYTE *dst, DWORD pitch_in, DWORD pitch_out, enum wined3d_format_id format, unsigned int w, unsigned int h);
++
 +BOOL wined3d_dxtn_init(void);
 +void wined3d_dxtn_free(void);
 +

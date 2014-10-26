@@ -35,9 +35,10 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [1]:**
+**Bugfixes and features included in the next upcoming release [2]:**
 
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](http://bugs.winehq.org/show_bug.cgi?id=33770))
+* Tumblebugs 2 requires DXTn software encoding support ([Wine Bug #29586](http://bugs.winehq.org/show_bug.cgi?id=29586))
 
 
 **Bugs fixed in Wine-Compholio 1.7.29 [80]:**

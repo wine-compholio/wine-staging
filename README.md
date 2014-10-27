@@ -35,8 +35,9 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [2]:**
+**Bugfixes and features included in the next upcoming release [3]:**
 
+* Cinema 4D needs NotifyIpInterfaceChange ([Wine Bug #34573](http://bugs.winehq.org/show_bug.cgi?id=34573))
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](http://bugs.winehq.org/show_bug.cgi?id=33770))
 * Tumblebugs 2 requires DXTn software encoding support ([Wine Bug #29586](http://bugs.winehq.org/show_bug.cgi?id=29586))
 

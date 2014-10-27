@@ -35,6 +35,7 @@ PATCHLIST := \
 	gdi32-MultiMonitor.ok \
 	imagehlp-BindImageEx.ok \
 	imm32-Cross_Thread_Access.ok \
+	iphlpapi-Stubs.ok \
 	iphlpapi-TCP_Table.ok \
 	kernel32-FindFirstFile.ok \
 	kernel32-GetFinalPathNameByHandle.ok \
@@ -471,6 +472,25 @@ imm32-Cross_Thread_Access.ok:
 	@( \
 		echo '+    { "imm32-Cross_Thread_Access", "Aric Stewart", "Limit cross thread access to ImmSet* functions." },'; \
 	) > imm32-Cross_Thread_Access.ok
+
+# Patchset iphlpapi-Stubs
+# |
+# | Included patches:
+# |   *	Add stubs for CancelMibChangeNotify2 and NotifyIpInterfaceChange. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34573] Cinema 4D needs NotifyIpInterfaceChange
+# |
+# | Modified files:
+# |   *	dlls/iphlpapi/iphlpapi.spec, dlls/iphlpapi/iphlpapi_main.c
+# |
+.INTERMEDIATE: iphlpapi-Stubs.ok
+iphlpapi-Stubs.ok:
+	$(call APPLY_FILE,iphlpapi-Stubs/0001-iphlpapi-Add-stub-for-CancelMibChangeNotify2.patch)
+	$(call APPLY_FILE,iphlpapi-Stubs/0002-iphlpapi-Add-stub-for-NotifyIpInterfaceChange.patch)
+	@( \
+		echo '+    { "iphlpapi-Stubs", "Sebastian Lackner", "Add stubs for CancelMibChangeNotify2 and NotifyIpInterfaceChange." },'; \
+	) > iphlpapi-Stubs.ok
 
 # Patchset iphlpapi-TCP_Table
 # |

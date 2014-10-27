@@ -92,6 +92,7 @@ PATCHLIST := \
 	winemenubuilder-Desktop_Icon_Path.ok \
 	winepulse-PulseAudio_Support.ok \
 	winex11-CandidateWindowPos.ok \
+	winex11-Clipboard_HTML.ok \
 	winex11-Limited_Resolutions.ok \
 	winex11-Window_Groups.ok \
 	winex11-XEMBED.ok \
@@ -1591,6 +1592,24 @@ winex11-CandidateWindowPos.ok:
 	@( \
 		echo '+    { "winex11-CandidateWindowPos", "Felix Yan", "Update a candidate window'\''s position with over-the-spot style. [rev 2]" },'; \
 	) > winex11-CandidateWindowPos.ok
+
+# Patchset winex11-Clipboard_HTML
+# |
+# | Included patches:
+# |   *	Import X11's "text/html" as "HTML Format". [rev 3, by Damjan Jovanovic]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#7372] Support for pasting HTML from Unix applications
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/clipboard.c
+# |
+.INTERMEDIATE: winex11-Clipboard_HTML.ok
+winex11-Clipboard_HTML.ok:
+	$(call APPLY_FILE,winex11-Clipboard_HTML/0001-winex11.drv-Import-X11-s-text-html-as-HTML-Format.patch)
+	@( \
+		echo '+    { "winex11-Clipboard_HTML", "Damjan Jovanovic", "Import X11'\''s \\"text/html\\" as \\"HTML Format\\". [rev 3]" },'; \
+	) > winex11-Clipboard_HTML.ok
 
 # Patchset winex11-Limited_Resolutions
 # |

@@ -1,0 +1,250 @@
+From d819c8a4fb3b754fa9f39eebbb7d28eb49d0dcf3 Mon Sep 17 00:00:00 2001
+From: Damjan Jovanovic <damjan.jov@gmail.com>
+Date: Fri, 8 Aug 2014 20:05:54 +0200
+Subject: winex11.drv: Import X11's "text/html" as "HTML Format".
+
+Implements proper importing of "text/html" into Windows's "HTML
+Format" which fixes pasting rich text into a large number of apps and
+closes #7372.
+
+Changes by Sebastian Lackner <sebastian@fds-team.de>:
+* Fix incorrect detection of startOfMarkup
+* Some small formatting fixes
+---
+ dlls/winex11.drv/clipboard.c | 203 ++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 202 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/winex11.drv/clipboard.c b/dlls/winex11.drv/clipboard.c
+index b2705b4..3825c8c 100644
+--- a/dlls/winex11.drv/clipboard.c
++++ b/dlls/winex11.drv/clipboard.c
+@@ -148,6 +148,7 @@ static HANDLE X11DRV_CLIPBOARD_ImportImageBmp(Display *d, Window w, Atom prop);
+ static HANDLE X11DRV_CLIPBOARD_ImportXAString(Display *d, Window w, Atom prop);
+ static HANDLE X11DRV_CLIPBOARD_ImportUTF8(Display *d, Window w, Atom prop);
+ static HANDLE X11DRV_CLIPBOARD_ImportCompoundText(Display *d, Window w, Atom prop);
++static HANDLE X11DRV_CLIPBOARD_ImportTextHtml(Display *display, Window w, Atom prop);
+ static HANDLE X11DRV_CLIPBOARD_ImportTextUriList(Display *display, Window w, Atom prop);
+ static HANDLE X11DRV_CLIPBOARD_ExportClipboardData(Display *display, Window requestor, Atom aTarget,
+     Atom rprop, LPWINE_CLIPDATA lpData, LPDWORD lpBytes);
+@@ -343,10 +344,11 @@ void X11DRV_InitClipboard(void)
+         X11DRV_CLIPBOARD_InsertClipboardFormat( RegisterClipboardFormatW(PropertyFormatMap[i].lpszFormat),
+                                                 GET_ATOM(PropertyFormatMap[i].prop));
+ 
+-    /* Set up a conversion function from "HTML Format" to "text/html" */
++    /* Set up a conversion function between "HTML Format" and "text/html" */
+     format = X11DRV_CLIPBOARD_InsertClipboardFormat( RegisterClipboardFormatW(wszHTMLFormat),
+                                                      GET_ATOM(XATOM_text_html));
+     format->lpDrvExportFunc = X11DRV_CLIPBOARD_ExportTextHtml;
++    format->lpDrvImportFunc = X11DRV_CLIPBOARD_ImportTextHtml;
+ }
+ 
+ 
+@@ -1568,6 +1570,205 @@ static HANDLE X11DRV_CLIPBOARD_ImportEnhMetaFile(Display *display, Window w, Ato
+ }
+ 
+ 
++static char* read_and_standardize_text_html(Display *display, Window w, Atom prop)
++{
++    BOOL needHtmlTag = FALSE, needBodyTag = FALSE;
++    char *textHtml, *dst, *fullHtml = NULL;
++    unsigned long textHtmlLen;
++    int startOfMarkup = 0;
++
++    if (!X11DRV_CLIPBOARD_ReadProperty(display, w, prop, (LPBYTE*)&textHtml, &textHtmlLen))
++        return 0;
++
++    /* Firefox uses UTF-16LE with byte order mark. Convert to UTF-8 without the BOM. */
++    if (textHtmlLen >= 2 && ((BYTE*)textHtml)[0] == 0xff && ((BYTE*)textHtml)[1] == 0xfe)
++    {
++        char *textHtmlUtf8;
++        INT size = WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)&textHtml[2], (textHtmlLen-2)/sizeof(WCHAR),
++                                       NULL, 0, NULL, NULL);
++        textHtmlUtf8 = HeapAlloc(GetProcessHeap(), 0, size);
++        if (!textHtmlUtf8)
++        {
++            ERR("out of memory\n");
++            goto end;
++        }
++
++        WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)&textHtml[2], (textHtmlLen-2)/sizeof(WCHAR),
++                            textHtmlUtf8, size, NULL, NULL);
++        HeapFree(GetProcessHeap(), 0, textHtml);
++
++        textHtml = textHtmlUtf8;
++        textHtmlLen = size;
++    }
++
++    /* Strip trailing null characters. */
++    while (textHtmlLen > 0 && textHtml[textHtmlLen-1] == '\0')
++        textHtmlLen--;
++
++    /* While HTML fragments are supposed to be valid in Windows, some apps only want
++     * to paste a complete HTML document. So if we got an HTML fragment, complete it. */
++    if (textHtmlLen >= 7 && strncasecmp(&textHtml[textHtmlLen - 7], "</HTML>", 7))
++    {
++        int i;
++        needHtmlTag = TRUE;
++        needBodyTag = TRUE;
++        for (i = textHtmlLen - 7; i > 0; i--)
++        {
++            if (!strncasecmp(&textHtml[i], "</BODY>", 7))
++            {
++                needBodyTag = FALSE;
++                break;
++            }
++        }
++
++        for (startOfMarkup = 0; startOfMarkup < textHtmlLen; startOfMarkup++)
++        {
++            if (isspace(textHtml[startOfMarkup]))
++                continue;
++            else if (textHtml[startOfMarkup] != '<')
++                break;
++            else if (startOfMarkup + 1 < textHtmlLen && (textHtml[startOfMarkup + 1] == '!' ||
++                                                         textHtml[startOfMarkup + 1] == '/'))
++            {
++                char *pos = memchr(&textHtml[startOfMarkup + 1], '>', textHtmlLen - startOfMarkup - 1);
++                if (pos) startOfMarkup = pos - textHtml;
++                continue;
++            }
++            else
++                break;
++        }
++        if (startOfMarkup >= textHtmlLen) startOfMarkup = 0;
++    }
++
++    fullHtml = HeapAlloc(GetProcessHeap(), 0, textHtmlLen + (needBodyTag ? (6 + 7) : 0) +
++                                                            (needHtmlTag ? (6 + 7) : 0) + 1);
++    if (fullHtml)
++    {
++        dst = fullHtml;
++        memcpy(dst, textHtml, startOfMarkup);
++        dst += startOfMarkup;
++        if (needHtmlTag)
++        {
++            memcpy(dst, "<HTML>", 6);
++            dst += 6;
++        }
++        if (needBodyTag)
++        {
++            memcpy(dst, "<BODY>", 6);
++            dst += 6;
++        }
++        memcpy(dst, &textHtml[startOfMarkup], textHtmlLen - startOfMarkup);
++        dst += textHtmlLen - startOfMarkup;
++        if (needBodyTag)
++        {
++            memcpy(dst, "</BODY>", 7);
++            dst += 7;
++        }
++        if (needHtmlTag)
++        {
++            memcpy(dst, "</HTML>", 7);
++            dst += 7;
++        }
++        *dst = '\0';
++    }
++    else
++        ERR("out of memory\n");
++
++end:
++    HeapFree(GetProcessHeap(), 0, textHtml);
++    return fullHtml;
++}
++
++
++/**************************************************************************
++ *      X11DRV_CLIPBOARD_ImportTextHtml
++ *
++ *  Import text/html into "HTML Format".
++ */
++static HANDLE X11DRV_CLIPBOARD_ImportTextHtml(Display *display, Window w, Atom prop)
++{
++    static const char startFragment[] = "<!--StartFragment -->";
++    static const char endFragment[]   = "<!--EndFragment -->";
++    int i, bodyStart = -1, bodyEnd = -1;
++    HGLOBAL hClipData = NULL;
++    char *textHtml = NULL;
++    char description[256];
++
++    textHtml = read_and_standardize_text_html(display, w, prop);
++    if (textHtml == NULL)
++        goto end;
++
++    /* find <BODY> tag */
++    for (i = 0; textHtml[i]; i++)
++    {
++        if (strncasecmp(&textHtml[i], "<BODY>", 6) == 0)
++        {
++            bodyStart = i + 6;
++            break;
++        }
++    }
++    if (bodyStart < 0)
++    {
++        ERR("HTML doesn't have <BODY>\n");
++        goto end;
++    }
++
++    /* find </BODY> tag */
++    for (i = strlen(textHtml) - 7; i >= bodyStart; i--)
++    {
++        if (strncasecmp(&textHtml[i], "</BODY>", 7) == 0)
++        {
++            bodyEnd = i;
++            break;
++        }
++    }
++    if (bodyEnd < 0)
++    {
++        ERR("HTML doesn't have </BODY>\n");
++        goto end;
++    }
++
++    snprintf(description, sizeof(description),
++            "Version:0.9\n"         /* 12 */
++            "StartHTML:%010u\n"     /* 21 */
++            "EndHTML:%010u\n"       /* 19 */
++            "StartFragment:%010u\n" /* 25 */
++            "EndFragment:%010u\n",  /* 23 */
++            100,
++            100 + (UINT)(strlen(textHtml) + strlen(startFragment) + strlen(endFragment)),
++            100 + (UINT)(bodyStart + strlen(startFragment)),
++            100 + (UINT)(strlen(startFragment) + bodyEnd));
++
++    hClipData = GlobalAlloc(GMEM_MOVEABLE | GMEM_DDESHARE, strlen(description) +
++                            strlen(textHtml) + strlen(startFragment) + strlen(endFragment) + 1);
++    if (hClipData)
++    {
++        char *dst, *htmlFormat;
++        dst = htmlFormat = GlobalLock(hClipData);
++        strcpy(dst, description);
++        dst += strlen(description);
++        memcpy(dst, textHtml, bodyStart);
++        dst += bodyStart;
++        memcpy(dst, startFragment, strlen(startFragment));
++        dst += strlen(startFragment);
++        memcpy(dst, &textHtml[bodyStart], bodyEnd - bodyStart);
++        dst += (bodyEnd - bodyStart);
++        memcpy(dst, endFragment, strlen(endFragment));
++        dst += strlen(endFragment);
++        memcpy(dst, &textHtml[bodyEnd], strlen(textHtml) - bodyEnd);
++        dst += (strlen(textHtml) - bodyEnd);
++        *dst = 0;
++        GlobalUnlock(hClipData);
++    }
++    else
++        ERR("out of memory\n");
++
++end:
++    HeapFree(GetProcessHeap(), 0, textHtml);
++    return hClipData;
++}
++
++
+ /**************************************************************************
+  *      X11DRV_CLIPBOARD_ImportTextUriList
+  *
+-- 
+2.1.2
+

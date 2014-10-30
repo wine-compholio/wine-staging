@@ -57,6 +57,7 @@ PATCHLIST := \
 	ntdll-Fix_Free.ok \
 	ntdll-Heap_FreeLists.ok \
 	ntdll-Junction_Points.ok \
+	ntdll-LZNT1_Compression.ok \
 	ntdll-NtQuerySection.ok \
 	ntdll-Pipe_SpecialCharacters.ok \
 	ntdll-WRITECOPY.ok \
@@ -883,6 +884,27 @@ ntdll-Junction_Points.ok: ntdll-Fix_Free.ok
 	@( \
 		echo '+    { "ntdll-Junction_Points", "Erich E. Hoover", "Support for junction points/reparse points." },'; \
 	) > ntdll-Junction_Points.ok
+
+# Patchset ntdll-LZNT1_Compression
+# |
+# | Included patches:
+# |   *	Implement Rtl[Decompress|Compress]Buffer and RtlGetCompressionWorkSpaceSize. [by Sebastian Lackner / Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37449] Support for RtlDecompressBuffer
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntdll/tests/rtl.c, include/winnt.h
+# |
+.INTERMEDIATE: ntdll-LZNT1_Compression.ok
+ntdll-LZNT1_Compression.ok:
+	$(call APPLY_FILE,ntdll-LZNT1_Compression/0001-ntdll-Implement-semi-stub-for-RtlGetCompressionWorkS.patch)
+	$(call APPLY_FILE,ntdll-LZNT1_Compression/0002-ntdll-Implement-semi-stub-for-RtlCompressBuffer.patch)
+	$(call APPLY_FILE,ntdll-LZNT1_Compression/0003-ntdll-Implement-LZNT1-algorithm-for-RtlDecompressBuf.patch)
+	$(call APPLY_FILE,ntdll-LZNT1_Compression/0004-ntdll-tests-Add-tests-for-Rtl-Decompress-Compress-Bu.patch)
+	@( \
+		echo '+    { "ntdll-LZNT1_Compression", "Sebastian Lackner / Michael Müller", "Implement Rtl[Decompress|Compress]Buffer and RtlGetCompressionWorkSpaceSize." },'; \
+	) > ntdll-LZNT1_Compression.ok
 
 # Patchset ntdll-NtQuerySection
 # |

@@ -1,0 +1,90 @@
+From e487c879736038053aac64aa728ba35c78888e71 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Thu, 30 Oct 2014 17:24:26 +0100
+Subject: ntdll: Implement semi-stub for RtlCompressBuffer.
+
+---
+ dlls/ntdll/rtl.c | 62 ++++++++++++++++++++++++++++++++++++++++++++++++--------
+ 1 file changed, 54 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/ntdll/rtl.c b/dlls/ntdll/rtl.c
+index 884a14a..b790910 100644
+--- a/dlls/ntdll/rtl.c
++++ b/dlls/ntdll/rtl.c
+@@ -1239,19 +1239,65 @@ NTSTATUS WINAPI RtlGetCompressionWorkSpaceSize(USHORT format, PULONG compress_wo
+     }
+ }
+ 
++/* compress data using LZNT1, currently only a stub */
++static NTSTATUS lznt1_compress(UCHAR *src, ULONG src_size, UCHAR *dst, ULONG dst_size,
++                               ULONG chunk_size, ULONG *final_size, UCHAR *workspace)
++{
++    UCHAR *src_cur, *src_end, *dst_cur, *dst_end;
++    ULONG block_size;
++
++    src_cur = src;
++    src_end = src + src_size;
++    dst_cur = dst;
++    dst_end = dst + dst_size;
++
++    while (src_cur < src_end)
++    {
++        /* determine size of current chunk */
++        block_size = min(0x1000, src_end - src_cur);
++        if (dst_cur + sizeof(WORD) + block_size > dst_end)
++            return STATUS_BUFFER_TOO_SMALL;
++
++        /* write (uncompressed) chunk header */
++        *(WORD *)dst_cur = 0x3000 | (block_size - 1);
++        dst_cur += sizeof(WORD);
++
++        /* write chunk content */
++        memcpy(dst_cur, src_cur, block_size);
++        dst_cur += block_size;
++        src_cur += block_size;
++    }
++
++    if (final_size)
++        *final_size = dst_cur - dst;
++
++    return STATUS_SUCCESS;
++}
++
+ /******************************************************************************
+  *  RtlCompressBuffer		[NTDLL.@]
+  */
+-NTSTATUS WINAPI RtlCompressBuffer(USHORT CompressionFormatAndEngine, PUCHAR UncompressedBuffer,
+-                                  ULONG UncompressedBufferSize, PUCHAR CompressedBuffer,
+-                                  ULONG CompressedBufferSize, ULONG UncompressedChunkSize,
+-                                  PULONG FinalCompressedSize, PVOID WorkSpace)
++NTSTATUS WINAPI RtlCompressBuffer(USHORT format, PUCHAR uncompressed, ULONG uncompressed_size,
++                                  PUCHAR compressed, ULONG compressed_size, ULONG chunk_size,
++                                  PULONG final_size, PVOID workspace)
+ {
+-    FIXME("0x%04x, %p, %u, %p, %u, %u, %p, %p :stub\n", CompressionFormatAndEngine, UncompressedBuffer,
+-         UncompressedBufferSize, CompressedBuffer, CompressedBufferSize, UncompressedChunkSize,
+-         FinalCompressedSize, WorkSpace);
++    FIXME("0x%04x, %p, %u, %p, %u, %u, %p, %p :semi-stub\n", format, uncompressed,
++          uncompressed_size, compressed, compressed_size, chunk_size, final_size, workspace);
+ 
+-    return STATUS_NOT_IMPLEMENTED;
++    switch (format & ~COMPRESSION_ENGINE_MAXIMUM)
++    {
++        case COMPRESSION_FORMAT_LZNT1:
++            return lznt1_compress(uncompressed, uncompressed_size, compressed,
++                                  compressed_size, chunk_size, final_size, workspace);
++
++        case COMPRESSION_FORMAT_NONE:
++        case COMPRESSION_FORMAT_DEFAULT:
++            return STATUS_INVALID_PARAMETER;
++
++        default:
++            FIXME("format %d not implemented\n", format);
++            return STATUS_UNSUPPORTED_COMPRESSION;
++    }
+ }
+ 
+ /******************************************************************************
+-- 
+2.1.2
+

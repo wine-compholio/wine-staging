@@ -96,7 +96,7 @@ Included bugfixes and improvements
 * Support for GetSystemTimes ([Wine Bug #19813](http://bugs.winehq.org/show_bug.cgi?id=19813))
 * Support for GetVolumePathName
 * Support for ID3DXSkinInfoImpl_UpdateSkinnedMesh ([Wine Bug #32572](http://bugs.winehq.org/show_bug.cgi?id=32572))
-* Support for IRichEditOle and ITextDocument support for ITextServices. ([Wine Bug #17042](http://bugs.winehq.org/show_bug.cgi?id=17042))
+* ~~Support for IRichEditOle and ITextDocument support for ITextServices.~~ ([Wine Bug #17042](http://bugs.winehq.org/show_bug.cgi?id=17042))
 * Support for ITextDocument_fnRange function ([Wine Bug #12458](http://bugs.winehq.org/show_bug.cgi?id=12458))
 * Support for ITextRange, ITextFont and ITextPara ([Wine Bug #18303](http://bugs.winehq.org/show_bug.cgi?id=18303))
 * Support for Junction Points ([Wine Bug #12401](http://bugs.winehq.org/show_bug.cgi?id=12401))

@@ -1016,17 +1016,13 @@ quartz-MediaSeeking_Positions.ok:
 # |   *	Implement Stubs for ITextPara interface. [rev 2, by Jactry Zeng]
 # |   *	Implement ITextRange/Selection::{GetChar,GetStart,GetEnd,GetDuplicate,Collapse,SetStart,SetEnd}. [by Jactry Zeng]
 # |   *	Implement ITextRange/Selection::{GetText,SetRange,IsEqual,GetStoryLength}. [by Jactry Zeng]
-# |   *	Add COM aggregation support for IRichEditOle. [by Jactry Zeng]
-# |   *	Implement IRichEditOle and ITextDocument support for ITextServices. [by Jactry Zeng]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#12458] Support for ITextDocument_fnRange function
 # |   *	[#18303] Support for ITextRange, ITextFont and ITextPara
-# |   *	[#17042] Support for IRichEditOle and ITextDocument support for ITextServices.
 # |
 # | Modified files:
-# |   *	dlls/riched20/editor.c, dlls/riched20/editor.h, dlls/riched20/richole.c, dlls/riched20/run.c,
-# | 	dlls/riched20/tests/richole.c, dlls/riched20/tests/txtsrv.c, dlls/riched20/txtsrv.c
+# |   *	dlls/riched20/richole.c, dlls/riched20/run.c, dlls/riched20/tests/richole.c
 # |
 .INTERMEDIATE: riched20-IText_Interface.ok
 riched20-IText_Interface.ok:
@@ -1040,16 +1036,12 @@ riched20-IText_Interface.ok:
 	$(call APPLY_FILE,riched20-IText_Interface/0008-riched20-Implement-ITextRange-GetStoryLength.patch)
 	$(call APPLY_FILE,riched20-IText_Interface/0009-riched20-Implement-ITextSelection-GetStoryLength.patch)
 	$(call APPLY_FILE,riched20-IText_Interface/0010-riched20-Fix-invalid-memory-access-when-parent-objec.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0011-riched20-Add-COM-aggregation-support-for-IRichEditOl.patch)
-	$(call APPLY_FILE,riched20-IText_Interface/0012-riched20-Add-IID_IRichEditOle-and-IID_ITextDocument-.patch)
 	@( \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextRange interface. [rev 3]" },'; \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextFont interface. [rev 2]" },'; \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextPara interface. [rev 2]" },'; \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement ITextRange/Selection::{GetChar,GetStart,GetEnd,GetDuplicate,Collapse,SetStart,SetEnd}." },'; \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement ITextRange/Selection::{GetText,SetRange,IsEqual,GetStoryLength}." },'; \
-		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Add COM aggregation support for IRichEditOle." },'; \
-		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement IRichEditOle and ITextDocument support for ITextServices." },'; \
 	) > riched20-IText_Interface.ok
 
 # Patchset server-ACL_Compat

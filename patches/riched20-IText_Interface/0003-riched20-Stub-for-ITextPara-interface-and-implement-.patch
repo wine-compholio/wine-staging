@@ -1,4 +1,4 @@
-From 4a54bc77b87e9b301e26b521e34bc1208a11a20c Mon Sep 17 00:00:00 2001
+From ad5c4b52d44704ff75e0706ce0e2aaa3859f6f29 Mon Sep 17 00:00:00 2001
 From: Jactry Zeng <wine@jactry.com>
 Date: Sun, 10 Aug 2014 22:17:57 +0800
 Subject: riched20: Stub for ITextPara interface and implement
@@ -10,7 +10,7 @@ Subject: riched20: Stub for ITextPara interface and implement
  2 files changed, 729 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/riched20/richole.c b/dlls/riched20/richole.c
-index 39d352f..575f634 100644
+index 6cc4b09..76fc51d 100644
 --- a/dlls/riched20/richole.c
 +++ b/dlls/riched20/richole.c
 @@ -47,11 +47,13 @@ DEFINE_GUID(IID_ITextDocument, 0x8cc497c0, 0xa1df, 0x11ce, 0x80, 0x98, 0x00, 0xa
@@ -26,8 +26,8 @@ index 39d352f..575f634 100644
 +typedef struct ITextParaImpl ITextParaImpl;
  
  typedef struct IRichEditOleImpl {
-     IRichEditOle IRichEditOle_iface;
-@@ -63,8 +65,19 @@ typedef struct IRichEditOleImpl {
+     IUnknown IUnknown_inner;
+@@ -65,8 +67,19 @@ typedef struct IRichEditOleImpl {
      IOleClientSiteImpl *clientSite;
      struct list rangelist;
      struct list fontlist;
@@ -47,24 +47,7 @@ index 39d352f..575f634 100644
  struct ITextFontImpl {
      ITextFont ITextFont_iface;
      LONG ref;
-@@ -154,6 +167,7 @@ IRichEditOle_fnRelease(IRichEditOle *me)
-     {
-         ITextRangeImpl *txtRge;
-         ITextFontImpl *txtFont;
-+        ITextParaImpl *txtPara;
-         TRACE ("Destroying %p\n", This);
-         This->txtSel->reOle = NULL;
-         This->editor->reOle = NULL;
-@@ -163,6 +177,8 @@ IRichEditOle_fnRelease(IRichEditOle *me)
-             txtRge->reOle = NULL;
-         LIST_FOR_EACH_ENTRY(txtFont, &This->fontlist, ITextFontImpl, entry)
-             txtFont->reOle = NULL;
-+        LIST_FOR_EACH_ENTRY(txtPara, &This->paralist, ITextParaImpl, entry)
-+            txtPara->reOle = NULL;
-         heap_free(This);
-     }
-     return ref;
-@@ -474,6 +490,641 @@ static const IRichEditOleVtbl revt = {
+@@ -494,6 +507,641 @@ static const IRichEditOleVtbl revt = {
      IRichEditOle_fnImportDataObject
  };
  
@@ -706,7 +689,7 @@ index 39d352f..575f634 100644
  /* ITextFont interface */
  static inline ITextFontImpl *impl_from_ITextFont(ITextFont *iface)
  {
-@@ -1512,14 +2163,42 @@ static HRESULT WINAPI ITextRange_fnSetFont(ITextRange *me, ITextFont *pFont)
+@@ -1532,14 +2180,42 @@ static HRESULT WINAPI ITextRange_fnSetFont(ITextRange *me, ITextFont *pFont)
      return E_NOTIMPL;
  }
  
@@ -751,14 +734,31 @@ index 39d352f..575f634 100644
  }
  
  static HRESULT WINAPI ITextRange_fnSetPara(ITextRange *me, ITextPara *pPara)
-@@ -3165,6 +3844,7 @@ LRESULT CreateIRichEditOle(ME_TextEditor *editor, LPVOID *ppObj)
-     *ppObj = reo;
+@@ -3185,6 +3861,7 @@ LRESULT CreateIRichEditOle(IUnknown *outer_unk, ME_TextEditor *editor, LPVOID *p
+     TRACE("Created %p\n",reo);
      list_init(&reo->rangelist);
      list_init(&reo->fontlist);
 +    list_init(&reo->paralist);
+     if (outer_unk)
+         reo->outer_unk = outer_unk;
+     else
+@@ -3199,6 +3876,7 @@ void DestroyIRichEditOle(IRichEditOle *iface)
+     IRichEditOleImpl *This = impl_from_IRichEditOle(iface);
+     ITextRangeImpl *txtRge;
+     ITextFontImpl *txtFont;
++    ITextParaImpl *txtPara;
  
-     return 1;
+     TRACE("Destroying %p\n", This);
+     This->txtSel->reOle = NULL;
+@@ -3209,6 +3887,8 @@ void DestroyIRichEditOle(IRichEditOle *iface)
+         txtRge->reOle = NULL;
+     LIST_FOR_EACH_ENTRY(txtFont, &This->fontlist, ITextFontImpl, entry)
+         txtFont->reOle = NULL;
++    LIST_FOR_EACH_ENTRY(txtPara, &This->paralist, ITextParaImpl, entry)
++        txtPara->reOle = NULL;
+     heap_free(This);
  }
+ 
 diff --git a/dlls/riched20/tests/richole.c b/dlls/riched20/tests/richole.c
 index e9618d8..909d27e 100644
 --- a/dlls/riched20/tests/richole.c
@@ -823,5 +823,5 @@ index e9618d8..909d27e 100644
 +  test_ITextRange_GetPara();
  }
 -- 
-2.1.1
+2.1.2
 

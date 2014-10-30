@@ -1424,7 +1424,7 @@ user32-WndProc.ok:
 wine.inf-ProductId.ok:
 	$(call APPLY_FILE,wine.inf-ProductId/0001-wine.inf-Add-fake-ProductId-to-HKLM-CurrentVersionNT.patch)
 	@( \
-		echo '+    { "wine.inf-ProductId", "Yanis Lukes", "wine.inf: Add fake ProductId to HKLM\\\\CurrentVersionNT." },'; \
+		echo '+    { "wine.inf-ProductId", "Yanis Lukes", "wine.inf: Add fake ProductId to HKLM\\CurrentVersionNT." },'; \
 	) > wine.inf-ProductId.ok
 
 # Patchset wineboot-HKEY_DYN_DATA
@@ -1442,7 +1442,7 @@ wine.inf-ProductId.ok:
 wineboot-HKEY_DYN_DATA.ok:
 	$(call APPLY_FILE,wineboot-HKEY_DYN_DATA/0001-wineboot-Add-some-generic-hardware-in-HKEY_DYN_DATA-.patch)
 	@( \
-		echo '+    { "wineboot-HKEY_DYN_DATA", "Michael Müller", "Add some generic hardware in HKEY_DYN_DATA\\\\Config Manager\\\\Enum." },'; \
+		echo '+    { "wineboot-HKEY_DYN_DATA", "Michael Müller", "Add some generic hardware in HKEY_DYN_DATA\\Config Manager\\Enum." },'; \
 	) > wineboot-HKEY_DYN_DATA.ok
 
 # Patchset winebuild-LinkerVersion
@@ -1608,7 +1608,7 @@ winex11-CandidateWindowPos.ok:
 winex11-Clipboard_HTML.ok:
 	$(call APPLY_FILE,winex11-Clipboard_HTML/0001-winex11.drv-Import-X11-s-text-html-as-HTML-Format.patch)
 	@( \
-		echo '+    { "winex11-Clipboard_HTML", "Damjan Jovanovic", "Import X11'\''s \\"text/html\\" as \\"HTML Format\\". [rev 3]" },'; \
+		echo '+    { "winex11-Clipboard_HTML", "Damjan Jovanovic", "Import X11'\''s \"text/html\" as \"HTML Format\". [rev 3]" },'; \
 	) > winex11-Clipboard_HTML.ok
 
 # Patchset winex11-Limited_Resolutions

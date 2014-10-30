@@ -528,7 +528,7 @@ def generate_makefile(all_patches):
                 fp.write("\t@( \\\n")
                 for info in patch.authors:
                     if not info.subject: continue
-                    s = info.subject.replace("\\", "\\\\\\\\").replace("\"", "\\\\\"").replace("'", "'\\''")
+                    s = info.subject.replace("\\", "\\\\").replace("\"", "\\\"").replace("'", "'\\''")
                     if info.revision and info.revision != "1": s += " [rev %s]" % info.revision
                     fp.write("\t\techo '+    { \"%s\", \"%s\", \"%s\" },'; \\\n" % (patch.name, info.author, s))
                 fp.write("\t) > %s.ok\n" % patch.name)

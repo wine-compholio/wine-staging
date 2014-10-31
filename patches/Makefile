@@ -33,6 +33,7 @@ PATCHLIST := \
 	dsound-Fast_Mixer.ok \
 	fonts-Missing_Fonts.ok \
 	gdi32-MultiMonitor.ok \
+	gdiplus-GdipCreateRegionRgnData.ok \
 	imagehlp-BindImageEx.ok \
 	imm32-Cross_Thread_Access.ok \
 	iphlpapi-Stubs.ok \
@@ -432,6 +433,24 @@ gdi32-MultiMonitor.ok:
 	@( \
 		echo '+    { "gdi32-MultiMonitor", "Ken Thomases", "Add multi monitor support to gdi32." },'; \
 	) > gdi32-MultiMonitor.ok
+
+# Patchset gdiplus-GdipCreateRegionRgnData
+# |
+# | Included patches:
+# |   *	Implement GdipCreateRegionRgnData. [rev 3, by Dmitry Timoshkov]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34843] Support for GdipCreateRegionRgnData
+# |
+# | Modified files:
+# |   *	dlls/gdiplus/region.c, dlls/gdiplus/tests/region.c
+# |
+.INTERMEDIATE: gdiplus-GdipCreateRegionRgnData.ok
+gdiplus-GdipCreateRegionRgnData.ok:
+	$(call APPLY_FILE,gdiplus-GdipCreateRegionRgnData/0001-gdiplus-Implement-GdipCreateRegionRgnData.-Take-3.patch)
+	@( \
+		echo '+    { "gdiplus-GdipCreateRegionRgnData", "Dmitry Timoshkov", "Implement GdipCreateRegionRgnData. [rev 3]" },'; \
+	) > gdiplus-GdipCreateRegionRgnData.ok
 
 # Patchset imagehlp-BindImageEx
 # |

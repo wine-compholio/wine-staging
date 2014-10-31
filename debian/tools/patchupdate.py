@@ -545,7 +545,7 @@ def generate_markdown(all_patches, stable_patches, stable_compholio_version):
         #     if bugname is None: bugname = short_desc
         if mode < 0: bugname = "~~%s~~" % bugname
         if bugid is None: return "* %s" % bugname
-        return "* %s ([Wine Bug #%d](http://bugs.winehq.org/show_bug.cgi?id=%d))" % \
+        return "* %s ([Wine Bug #%d](https://bugs.winehq.org/show_bug.cgi?id=%d))" % \
                (bugname, bugid, bugid) #, short_desc.replace("\\", "\\\\").replace("\"", "\\\""))
 
     all_bugids = set()

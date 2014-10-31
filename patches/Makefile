@@ -26,6 +26,7 @@ PATCHLIST := \
 	comctl32-LoadIconMetric.ok \
 	configure-Absolute_RPATH.ok \
 	configure-Detect_Gnutls.ok \
+	d3dx9_36-CreatePolygon.ok \
 	d3dx9_36-Filter_Warnings.ok \
 	d3dx9_36-GetShaderSemantics.ok \
 	d3dx9_36-UpdateSkinnedMesh.ok \
@@ -303,6 +304,25 @@ configure-Detect_Gnutls.ok:
 		echo '+    { "configure-Detect_Gnutls", "Sebastian Lackner", "Fix detection of gnutls on Ubuntu 14.10. [rev 3]" },'; \
 	) > configure-Detect_Gnutls.ok
 
+# Patchset d3dx9_36-CreatePolygon
+# |
+# | Included patches:
+# |   *	Implement D3DXCreatePolygon. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#13632] Support for D3DXCreatePolygon
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/mesh.c, dlls/d3dx9_36/tests/mesh.c, include/d3dx9shape.h
+# |
+.INTERMEDIATE: d3dx9_36-CreatePolygon.ok
+d3dx9_36-CreatePolygon.ok:
+	$(call APPLY_FILE,d3dx9_36-CreatePolygon/0001-d3dx9_36-Implement-D3DXCreatePolygon.patch)
+	$(call APPLY_FILE,d3dx9_36-CreatePolygon/0002-d3dx9_36-tests-Add-tests-for-D3DXCreatePolygon.patch)
+	@( \
+		echo '+    { "d3dx9_36-CreatePolygon", "Sebastian Lackner", "Implement D3DXCreatePolygon." },'; \
+	) > d3dx9_36-CreatePolygon.ok
+
 # Patchset d3dx9_36-Filter_Warnings
 # |
 # | Included patches:
@@ -324,7 +344,7 @@ d3dx9_36-Filter_Warnings.ok:
 # Patchset d3dx9_36-GetShaderSemantics
 # |
 # | Included patches:
-# |   *	Implement D3DXGetShaderInputSemantics [by Christian Costa]
+# |   *	Implement D3DXGetShaderInputSemantics. [by Christian Costa]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#22682] Support for D3DXGetShaderInputSemantics
@@ -336,7 +356,7 @@ d3dx9_36-Filter_Warnings.ok:
 d3dx9_36-GetShaderSemantics.ok:
 	$(call APPLY_FILE,d3dx9_36-GetShaderSemantics/0001-d3dx9_36-Implement-D3DXGetShaderInputSemantics-tests.patch)
 	@( \
-		echo '+    { "d3dx9_36-GetShaderSemantics", "Christian Costa", "Implement D3DXGetShaderInputSemantics" },'; \
+		echo '+    { "d3dx9_36-GetShaderSemantics", "Christian Costa", "Implement D3DXGetShaderInputSemantics." },'; \
 	) > d3dx9_36-GetShaderSemantics.ok
 
 # Patchset d3dx9_36-UpdateSkinnedMesh

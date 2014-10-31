@@ -1,0 +1,141 @@
+From 0daaeab7e4e9b36cafbeb3fe296a1d62cd79c20b Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 31 Oct 2014 09:43:40 +0100
+Subject: d3dx9_36: Implement D3DXCreatePolygon.
+
+Based on a patch by David Adam.
+---
+ dlls/d3dx9_36/d3dx9_36.spec |  2 +-
+ dlls/d3dx9_36/mesh.c        | 89 +++++++++++++++++++++++++++++++++++++++++++++
+ include/d3dx9shape.h        |  2 +
+ 3 files changed, 92 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/d3dx9_36/d3dx9_36.spec b/dlls/d3dx9_36/d3dx9_36.spec
+index 4c72dc2..ebe46dc 100644
+--- a/dlls/d3dx9_36/d3dx9_36.spec
++++ b/dlls/d3dx9_36/d3dx9_36.spec
+@@ -76,7 +76,7 @@
+ @ stub D3DXCreateNPatchMesh(ptr ptr)
+ @ stub D3DXCreatePMeshFromStream(ptr long ptr ptr ptr ptr ptr)
+ @ stub D3DXCreatePatchMesh(ptr long long long ptr ptr ptr)
+-@ stub D3DXCreatePolygon(ptr long long ptr ptr)
++@ stdcall D3DXCreatePolygon(ptr long long ptr ptr)
+ @ stub D3DXCreatePRTBuffer(long long long ptr)
+ @ stub D3DXCreatePRTBufferTex(long long long long ptr)
+ @ stub D3DXCreatePRTCompBuffer(long long long ptr ptr ptr ptr)
+diff --git a/dlls/d3dx9_36/mesh.c b/dlls/d3dx9_36/mesh.c
+index aecb45d..9bd24e4 100644
+--- a/dlls/d3dx9_36/mesh.c
++++ b/dlls/d3dx9_36/mesh.c
+@@ -4555,6 +4555,95 @@ struct vertex
+     D3DXVECTOR3 normal;
+ };
+ 
++HRESULT WINAPI D3DXCreatePolygon(struct IDirect3DDevice9 *device, float length, UINT sides,
++        struct ID3DXMesh **mesh, struct ID3DXBuffer **adjacency)
++{
++    HRESULT hr;
++    ID3DXMesh *polygon;
++    struct vertex *vertices;
++    WORD (*faces)[3];
++    DWORD (*adjacency_buf)[3];
++    float scale;
++    unsigned int i;
++
++    TRACE("(%p, %f, %u, %p, %p)\n", device, length, sides, mesh, adjacency);
++
++    if (!device || length < 0.0f || sides == 0 || !mesh)
++    {
++        return D3DERR_INVALIDCALL;
++    }
++
++    if (FAILED(hr = D3DXCreateMeshFVF(sides, sides + 1, D3DXMESH_MANAGED,
++                                      D3DFVF_XYZ | D3DFVF_NORMAL,device, &polygon)))
++    {
++        return hr;
++    }
++
++    if (FAILED(hr = polygon->lpVtbl->LockVertexBuffer(polygon, 0, (void **)&vertices)))
++    {
++        polygon->lpVtbl->Release(polygon);
++        return hr;
++    }
++
++    if (FAILED(hr = polygon->lpVtbl->LockIndexBuffer(polygon, 0, (void **)&faces)))
++    {
++        polygon->lpVtbl->UnlockVertexBuffer(polygon);
++        polygon->lpVtbl->Release(polygon);
++        return hr;
++    }
++
++    scale = 0.5f * length / sin(D3DX_PI / sides);
++
++    vertices[0].position.x = 0.0f;
++    vertices[0].position.y = 0.0f;
++    vertices[0].position.z = 0.0f;
++    vertices[0].normal.x = 0.0f;
++    vertices[0].normal.y = 0.0f;
++    vertices[0].normal.z = 1.0f;
++
++    for (i = 0; i < sides; i++)
++    {
++        vertices[i + 1].position.x = cos(2.0f * D3DX_PI * i / sides) * scale;
++        vertices[i + 1].position.y = sin(2.0f * D3DX_PI * i / sides) * scale;
++        vertices[i + 1].position.z = 0.0f;
++        vertices[i + 1].normal.x = 0.0f;
++        vertices[i + 1].normal.y = 0.0f;
++        vertices[i + 1].normal.z = 1.0f;
++
++        faces[i][0] = 0;
++        faces[i][1] = i + 1;
++        faces[i][2] = i + 2;
++    }
++
++    faces[sides - 1][2] = 1;
++
++    polygon->lpVtbl->UnlockVertexBuffer(polygon);
++    polygon->lpVtbl->UnlockIndexBuffer(polygon);
++
++    if (adjacency)
++    {
++        if (FAILED(hr = D3DXCreateBuffer(sides * sizeof(DWORD) * 3, adjacency)))
++        {
++            polygon->lpVtbl->Release(polygon);
++            return hr;
++        }
++
++        adjacency_buf = ID3DXBuffer_GetBufferPointer(*adjacency);
++        for (i = 0; i < sides; i++)
++        {
++            adjacency_buf[i][0] = i - 1;
++            adjacency_buf[i][1] = -1;
++            adjacency_buf[i][2] = i + 1;
++        }
++        adjacency_buf[0][0] = sides - 1;
++        adjacency_buf[sides - 1][2] = 0;
++    }
++
++    *mesh = polygon;
++
++    return D3D_OK;
++}
++
+ HRESULT WINAPI D3DXCreateBox(struct IDirect3DDevice9 *device, float width, float height,
+         float depth, struct ID3DXMesh **mesh, struct ID3DXBuffer **adjacency)
+ {
+diff --git a/include/d3dx9shape.h b/include/d3dx9shape.h
+index 0d24032..af49bb4 100644
+--- a/include/d3dx9shape.h
++++ b/include/d3dx9shape.h
+@@ -29,6 +29,8 @@ HRESULT WINAPI D3DXCreateBox(struct IDirect3DDevice9 *device, float width, float
+         float depth, struct ID3DXMesh **mesh, struct ID3DXBuffer **adjacency);
+ HRESULT WINAPI D3DXCreateCylinder(struct IDirect3DDevice9 *device, float radius1, float radius2,
+         float length, UINT slices, UINT stacks, struct ID3DXMesh **mesh, struct ID3DXBuffer **adjacency);
++HRESULT WINAPI D3DXCreatePolygon(struct IDirect3DDevice9 *device, float length, UINT sides, struct ID3DXMesh **mesh,
++        ID3DXBuffer **adjacency);
+ HRESULT WINAPI D3DXCreateSphere(struct IDirect3DDevice9 *device, float radius, UINT slices,
+         UINT stacks, struct ID3DXMesh **mesh, struct ID3DXBuffer **adjacency);
+ HRESULT WINAPI D3DXCreateTeapot(struct IDirect3DDevice9 *device,
+-- 
+2.1.2
+

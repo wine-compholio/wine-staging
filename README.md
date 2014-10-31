@@ -35,11 +35,12 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [7]:**
+**Bugfixes and features included in the next upcoming release [8]:**
 
 * Cinema 4D needs NotifyIpInterfaceChange ([Wine Bug #34573](http://bugs.winehq.org/show_bug.cgi?id=34573))
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](http://bugs.winehq.org/show_bug.cgi?id=33770))
 * Emulate write to CR4 register ([Wine Bug #30220](http://bugs.winehq.org/show_bug.cgi?id=30220))
+* Support for D3DXCreatePolygon ([Wine Bug #13632](http://bugs.winehq.org/show_bug.cgi?id=13632))
 * Support for GdipCreateRegionRgnData ([Wine Bug #34843](http://bugs.winehq.org/show_bug.cgi?id=34843))
 * Support for RtlDecompressBuffer ([Wine Bug #37449](http://bugs.winehq.org/show_bug.cgi?id=37449))
 * Support for pasting HTML from Unix applications ([Wine Bug #7372](http://bugs.winehq.org/show_bug.cgi?id=7372))

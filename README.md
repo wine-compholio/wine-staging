@@ -35,10 +35,11 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [5]:**
+**Bugfixes and features included in the next upcoming release [6]:**
 
 * Cinema 4D needs NotifyIpInterfaceChange ([Wine Bug #34573](http://bugs.winehq.org/show_bug.cgi?id=34573))
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](http://bugs.winehq.org/show_bug.cgi?id=33770))
+* Emulate write to CR4 register ([Wine Bug #30220](http://bugs.winehq.org/show_bug.cgi?id=30220))
 * Support for RtlDecompressBuffer ([Wine Bug #37449](http://bugs.winehq.org/show_bug.cgi?id=37449))
 * Support for pasting HTML from Unix applications ([Wine Bug #7372](http://bugs.winehq.org/show_bug.cgi?id=7372))
 * Tumblebugs 2 requires DXTn software encoding support ([Wine Bug #29586](http://bugs.winehq.org/show_bug.cgi?id=29586))

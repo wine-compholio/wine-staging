@@ -62,6 +62,7 @@ PATCHLIST := \
 	ntdll-Pipe_SpecialCharacters.ok \
 	ntdll-WRITECOPY.ok \
 	ntoskrnl-Irp_Status.ok \
+	ntoskrnl-Write_CR4.ok \
 	quartz-MediaSeeking_Positions.ok \
 	riched20-IText_Interface.ok \
 	server-ACL_Compat.ok \
@@ -986,6 +987,24 @@ ntoskrnl-Irp_Status.ok:
 	@( \
 		echo '+    { "ntoskrnl-Irp_Status", "Sebastian Lackner", "Handle issues when driver returns two different status codes from dispatcher." },'; \
 	) > ntoskrnl-Irp_Status.ok
+
+# Patchset ntoskrnl-Write_CR4
+# |
+# | Included patches:
+# |   *	Emulate write to CR4 register. [by Stefan Leichter]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#30220] Emulate write to CR4 register
+# |
+# | Modified files:
+# |   *	dlls/ntoskrnl.exe/instr.c
+# |
+.INTERMEDIATE: ntoskrnl-Write_CR4.ok
+ntoskrnl-Write_CR4.ok:
+	$(call APPLY_FILE,ntoskrnl-Write_CR4/0001-ntoskrnl.exe-Emulate-write-to-CR4-register.patch)
+	@( \
+		echo '+    { "ntoskrnl-Write_CR4", "Stefan Leichter", "Emulate write to CR4 register." },'; \
+	) > ntoskrnl-Write_CR4.ok
 
 # Patchset quartz-MediaSeeking_Positions
 # |

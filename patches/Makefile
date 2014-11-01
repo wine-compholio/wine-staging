@@ -1109,6 +1109,7 @@ quartz-MediaSeeking_Positions.ok:
 # |   *	Implement Stubs for ITextPara interface. [rev 2, by Jactry Zeng]
 # |   *	Implement ITextRange/Selection::{GetChar,GetStart,GetEnd,GetDuplicate,Collapse,SetStart,SetEnd}. [by Jactry Zeng]
 # |   *	Implement ITextRange/Selection::{GetText,SetRange,IsEqual,GetStoryLength}. [by Jactry Zeng]
+# |   *	Implement ITextSelection_fnGetDuplicate. [by Sebastian Lackner]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#12458] Support for ITextDocument_fnRange function
@@ -1129,12 +1130,15 @@ riched20-IText_Interface.ok:
 	$(call APPLY_FILE,riched20-IText_Interface/0008-riched20-Implement-ITextRange-GetStoryLength.patch)
 	$(call APPLY_FILE,riched20-IText_Interface/0009-riched20-Implement-ITextSelection-GetStoryLength.patch)
 	$(call APPLY_FILE,riched20-IText_Interface/0010-riched20-Fix-invalid-memory-access-when-parent-objec.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0011-riched20-Silence-repeated-FIXMEs-triggered-by-Adobe-.patch)
+	$(call APPLY_FILE,riched20-IText_Interface/0012-riched20-Implement-ITextSelection_fnGetDuplicate.patch)
 	@( \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextRange interface. [rev 3]" },'; \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextFont interface. [rev 2]" },'; \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement Stubs for ITextPara interface. [rev 2]" },'; \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement ITextRange/Selection::{GetChar,GetStart,GetEnd,GetDuplicate,Collapse,SetStart,SetEnd}." },'; \
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement ITextRange/Selection::{GetText,SetRange,IsEqual,GetStoryLength}." },'; \
+		echo '+    { "riched20-IText_Interface", "Sebastian Lackner", "Implement ITextSelection_fnGetDuplicate." },'; \
 	) > riched20-IText_Interface.ok
 
 # Patchset server-ACL_Compat

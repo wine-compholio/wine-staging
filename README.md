@@ -35,8 +35,9 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [10]:**
+**Bugfixes and features included in the next upcoming release [11]:**
 
+* Adobe Reader needs ITextSelection_fnGetDuplicate implementation
 * Cinema 4D needs NotifyIpInterfaceChange ([Wine Bug #34573](https://bugs.winehq.org/show_bug.cgi?id=34573))
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](https://bugs.winehq.org/show_bug.cgi?id=33770))
 * Emulate write to CR4 register ([Wine Bug #30220](https://bugs.winehq.org/show_bug.cgi?id=30220))

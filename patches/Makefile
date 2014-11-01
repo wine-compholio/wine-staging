@@ -49,6 +49,7 @@ PATCHLIST := \
 	libs-Unicode_Collation.ok \
 	libwine-BSD_mmap_fixed.ok \
 	mshtml-sessionStorage.ok \
+	msi-Transform_ProductVersion.ok \
 	msvcp90-basic_string_wchar_dtor.ok \
 	ntdll-DOS_Attributes.ok \
 	ntdll-Dynamic_DST.ok \
@@ -733,6 +734,24 @@ mshtml-sessionStorage.ok:
 	@( \
 		echo '+    { "mshtml-sessionStorage", "Zhenbo Li", "Implement sessionStorage (partially)." },'; \
 	) > mshtml-sessionStorage.ok
+
+# Patchset msi-Transform_ProductVersion
+# |
+# | Included patches:
+# |   *	Update ProductVersion property when applying MSI transforms. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37493] Update ProductVersion property when applying MSI transforms
+# |
+# | Modified files:
+# |   *	dlls/msi/patch.c
+# |
+.INTERMEDIATE: msi-Transform_ProductVersion.ok
+msi-Transform_ProductVersion.ok:
+	$(call APPLY_FILE,msi-Transform_ProductVersion/0001-msi-Update-ProductVersion-property-when-applying-tra.patch)
+	@( \
+		echo '+    { "msi-Transform_ProductVersion", "Sebastian Lackner", "Update ProductVersion property when applying MSI transforms." },'; \
+	) > msi-Transform_ProductVersion.ok
 
 # Patchset msvcp90-basic_string_wchar_dtor
 # |

@@ -35,7 +35,7 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [9]:**
+**Bugfixes and features included in the next upcoming release [10]:**
 
 * Cinema 4D needs NotifyIpInterfaceChange ([Wine Bug #34573](https://bugs.winehq.org/show_bug.cgi?id=34573))
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](https://bugs.winehq.org/show_bug.cgi?id=33770))
@@ -46,6 +46,7 @@ Included bugfixes and improvements
 * Support for TLB dependencies lookup in resources ([Wine Bug #34184](https://bugs.winehq.org/show_bug.cgi?id=34184))
 * Support for pasting HTML from Unix applications ([Wine Bug #7372](https://bugs.winehq.org/show_bug.cgi?id=7372))
 * Tumblebugs 2 requires DXTn software encoding support ([Wine Bug #29586](https://bugs.winehq.org/show_bug.cgi?id=29586))
+* Update ProductVersion property when applying MSI transforms ([Wine Bug #37493](https://bugs.winehq.org/show_bug.cgi?id=37493))
 
 
 **Bugs fixed in Wine-Compholio 1.7.29 [80]:**

@@ -35,33 +35,22 @@ Wine. All those differences are also documented on the
 Included bugfixes and improvements
 ==================================
 
-**Bugfixes and features included in the next upcoming release [11]:**
-
-* Adobe Reader needs ITextSelection_fnGetDuplicate implementation
-* Cinema 4D needs NotifyIpInterfaceChange ([Wine Bug #34573](https://bugs.winehq.org/show_bug.cgi?id=34573))
-* D3DCompileShader should filter specific warning messages ([Wine Bug #33770](https://bugs.winehq.org/show_bug.cgi?id=33770))
-* Emulate write to CR4 register ([Wine Bug #30220](https://bugs.winehq.org/show_bug.cgi?id=30220))
-* Support for D3DXCreatePolygon ([Wine Bug #13632](https://bugs.winehq.org/show_bug.cgi?id=13632))
-* Support for GdipCreateRegionRgnData ([Wine Bug #34843](https://bugs.winehq.org/show_bug.cgi?id=34843))
-* Support for RtlDecompressBuffer ([Wine Bug #37449](https://bugs.winehq.org/show_bug.cgi?id=37449))
-* Support for TLB dependencies lookup in resources ([Wine Bug #34184](https://bugs.winehq.org/show_bug.cgi?id=34184))
-* Support for pasting HTML from Unix applications ([Wine Bug #7372](https://bugs.winehq.org/show_bug.cgi?id=7372))
-* Tumblebugs 2 requires DXTn software encoding support ([Wine Bug #29586](https://bugs.winehq.org/show_bug.cgi?id=29586))
-* Update ProductVersion property when applying MSI transforms ([Wine Bug #37493](https://bugs.winehq.org/show_bug.cgi?id=37493))
-
-
-**Bugs fixed in Wine-Compholio 1.7.29 [80]:**
+**Bugs fixed in Wine-Compholio 1.7.30 [90]:**
 
 * ATL IOCS data should not be stored in GWLP_USERDATA ([Wine Bug #21767](https://bugs.winehq.org/show_bug.cgi?id=21767))
 * Add Dynamic DST exceptions for Israel Standard Time ([Wine Bug #36374](https://bugs.winehq.org/show_bug.cgi?id=36374))
 * Add default ACLs for user shell folders
 * Add partially support for sessionStorage
+* Adobe Reader needs ITextSelection_fnGetDuplicate implementation
 * Allow special characters in pipe names ([Wine Bug #28995](https://bugs.winehq.org/show_bug.cgi?id=28995))
 * Anno 1602 installer depends on Windows 98 behavior of SHFileOperationW
 * Audio stuttering and performance drops in multiple applications ([Wine Bug #30639](https://bugs.winehq.org/show_bug.cgi?id=30639))
+* Cinema 4D needs NotifyIpInterfaceChange ([Wine Bug #34573](https://bugs.winehq.org/show_bug.cgi?id=34573))
 * Correctly treat '.' when checking for empty directories ([Wine Bug #26272](https://bugs.winehq.org/show_bug.cgi?id=26272))
+* D3DCompileShader should filter specific warning messages ([Wine Bug #33770](https://bugs.winehq.org/show_bug.cgi?id=33770))
 * Do not fail when a used context is passed to wglShareLists ([Wine Bug #11436](https://bugs.winehq.org/show_bug.cgi?id=11436))
 * Don't fill KdHelp structure for usermode applications ([Wine Bug #37272](https://bugs.winehq.org/show_bug.cgi?id=37272))
+* Emulate write to CR4 register ([Wine Bug #30220](https://bugs.winehq.org/show_bug.cgi?id=30220))
 * Ensure NtProtectVirtualMemory and NtCreateSection are on separate pages ([Wine Bug #33162](https://bugs.winehq.org/show_bug.cgi?id=33162))
 * FEAR 1 installer expects basic_string_wchar_dtor to return NULL ([Wine Bug #37358](https://bugs.winehq.org/show_bug.cgi?id=37358))
 * Fix black screen on startup introduced by pixelformat changes. ([Wine Bug #35950](https://bugs.winehq.org/show_bug.cgi?id=35950))
@@ -94,15 +83,16 @@ Included bugfixes and improvements
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](https://bugs.winehq.org/show_bug.cgi?id=35652))
 * Support for AllocateAndGetTcpExTableFromStack ([Wine Bug #34372](https://bugs.winehq.org/show_bug.cgi?id=34372))
 * Support for BindImageEx ([Wine Bug #3591](https://bugs.winehq.org/show_bug.cgi?id=3591))
+* Support for D3DXCreatePolygon ([Wine Bug #13632](https://bugs.winehq.org/show_bug.cgi?id=13632))
 * Support for D3DXGetShaderInputSemantics ([Wine Bug #22682](https://bugs.winehq.org/show_bug.cgi?id=22682))
 * Support for DOS hidden/system file attributes ([Wine Bug #9158](https://bugs.winehq.org/show_bug.cgi?id=9158))
 * Support for Dynamic DST (daylight saving time) information in registry
 * Support for FindFirstFileExW level FindExInfoBasic ([Wine Bug #37354](https://bugs.winehq.org/show_bug.cgi?id=37354))
+* Support for GdipCreateRegionRgnData ([Wine Bug #34843](https://bugs.winehq.org/show_bug.cgi?id=34843))
 * Support for GetFinalPathNameByHandle ([Wine Bug #36073](https://bugs.winehq.org/show_bug.cgi?id=36073))
 * Support for GetSystemTimes ([Wine Bug #19813](https://bugs.winehq.org/show_bug.cgi?id=19813))
 * Support for GetVolumePathName
 * Support for ID3DXSkinInfoImpl_UpdateSkinnedMesh ([Wine Bug #32572](https://bugs.winehq.org/show_bug.cgi?id=32572))
-* ~~Support for IRichEditOle and ITextDocument support for ITextServices.~~ ([Wine Bug #17042](https://bugs.winehq.org/show_bug.cgi?id=17042))
 * Support for ITextDocument_fnRange function ([Wine Bug #12458](https://bugs.winehq.org/show_bug.cgi?id=12458))
 * Support for ITextRange, ITextFont and ITextPara ([Wine Bug #18303](https://bugs.winehq.org/show_bug.cgi?id=18303))
 * Support for Junction Points ([Wine Bug #12401](https://bugs.winehq.org/show_bug.cgi?id=12401))
@@ -111,7 +101,9 @@ Included bugfixes and improvements
 * Support for NtQuerySection ([Wine Bug #37338](https://bugs.winehq.org/show_bug.cgi?id=37338))
 * Support for NtSetInformationFile class FileDispositionInformation ([Wine Bug #30397](https://bugs.winehq.org/show_bug.cgi?id=30397))
 * Support for PulseAudio backend for audio ([Wine Bug #10495](https://bugs.winehq.org/show_bug.cgi?id=10495))
+* Support for RtlDecompressBuffer ([Wine Bug #37449](https://bugs.winehq.org/show_bug.cgi?id=37449))
 * Support for SHCreateSessionKey ([Wine Bug #35630](https://bugs.winehq.org/show_bug.cgi?id=35630))
+* Support for TLB dependencies lookup in resources ([Wine Bug #34184](https://bugs.winehq.org/show_bug.cgi?id=34184))
 * Support for TOOLTIPS_GetTipText edge cases ([Wine Bug #30648](https://bugs.winehq.org/show_bug.cgi?id=30648))
 * Support for TransmitFile ([Wine Bug #5048](https://bugs.winehq.org/show_bug.cgi?id=5048))
 * Support for UTF7 encoding/decoding ([Wine Bug #27388](https://bugs.winehq.org/show_bug.cgi?id=27388))
@@ -119,12 +111,15 @@ Included bugfixes and improvements
 * Support for extra large and jumbo icon lists in shell32 ([Wine Bug #24721](https://bugs.winehq.org/show_bug.cgi?id=24721))
 * Support for inherited file ACLs ([Wine Bug #34406](https://bugs.winehq.org/show_bug.cgi?id=34406))
 * Support for interface change notifications ([Wine Bug #32328](https://bugs.winehq.org/show_bug.cgi?id=32328))
+* Support for pasting HTML from Unix applications ([Wine Bug #7372](https://bugs.winehq.org/show_bug.cgi?id=7372))
 * Support for process ACLs ([Wine Bug #22006](https://bugs.winehq.org/show_bug.cgi?id=22006))
 * Support for setcap on wine-preloader ([Wine Bug #26256](https://bugs.winehq.org/show_bug.cgi?id=26256))
 * Support for stored file ACLs ([Wine Bug #31858](https://bugs.winehq.org/show_bug.cgi?id=31858))
 * Support for wine64 on FreeBSD/PC-BSD ([Wine Bug #34330](https://bugs.winehq.org/show_bug.cgi?id=34330))
 * Support for ws2_32.inet_pton ([Wine Bug #36713](https://bugs.winehq.org/show_bug.cgi?id=36713))
+* Tumblebugs 2 requires DXTn software encoding support ([Wine Bug #29586](https://bugs.winehq.org/show_bug.cgi?id=29586))
 * Unity3D Editor requires ProductId registry value ([Wine Bug #36964](https://bugs.winehq.org/show_bug.cgi?id=36964))
+* Update ProductVersion property when applying MSI transforms ([Wine Bug #37493](https://bugs.winehq.org/show_bug.cgi?id=37493))
 * Update a XIM candidate position when cursor location changes ([Wine Bug #30938](https://bugs.winehq.org/show_bug.cgi?id=30938))
 * Use manual relay for RunDLL_CallEntry16 in shell32 ([Wine Bug #23033](https://bugs.winehq.org/show_bug.cgi?id=23033))
 * Voobly expects correct handling of WRITECOPY memory protection ([Wine Bug #29384](https://bugs.winehq.org/show_bug.cgi?id=29384))

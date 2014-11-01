@@ -1,0 +1,127 @@
+From ad5b73eba53261f5821493068386c41a8d072751 Mon Sep 17 00:00:00 2001
+From: Guillaume Charifi <guillaume.charifi@sfr.fr>
+Date: Sat, 1 Nov 2014 08:47:44 +0100
+Subject: oleaut32: Implement TLB dependencies lookup in resources.
+
+Changes by Sebastian Lackner <sebastian@fds-team.de>:
+* Avoid duplicating code for loading typelibs.
+* Avoid casts from const to non-const variables.
+* Simplify logic to generate filename.
+* Use appropriate function for UUID comparison.
+---
+ dlls/oleaut32/tests/typelib.c |  2 +-
+ dlls/oleaut32/typelib.c       | 73 +++++++++++++++++++++++++++++++++++++------
+ 2 files changed, 65 insertions(+), 10 deletions(-)
+
+diff --git a/dlls/oleaut32/tests/typelib.c b/dlls/oleaut32/tests/typelib.c
+index 728185a..45a56ea 100644
+--- a/dlls/oleaut32/tests/typelib.c
++++ b/dlls/oleaut32/tests/typelib.c
+@@ -5594,7 +5594,7 @@ static void test_dep(void) {
+     ok(hr == S_OK, "got: %x\n", hr);
+ 
+     hr = ITypeInfo_GetRefTypeInfo(ptInfo, refType, &ptInfoExt);
+-    todo_wine ok(hr == S_OK || broken(hr == TYPE_E_CANTLOADLIBRARY) /* win 2000 */, "got: %x\n", hr);
++    ok(hr == S_OK || broken(hr == TYPE_E_CANTLOADLIBRARY) /* win 2000 */, "got: %x\n", hr);
+ 
+     ITypeInfo_Release(ptInfo);
+     if(ptInfoExt)
+diff --git a/dlls/oleaut32/typelib.c b/dlls/oleaut32/typelib.c
+index 00f5043..6497313 100644
+--- a/dlls/oleaut32/typelib.c
++++ b/dlls/oleaut32/typelib.c
+@@ -7572,6 +7572,48 @@ static HRESULT ITypeInfoImpl_GetDispatchRefTypeInfo( ITypeInfo *iface,
+         return E_FAIL;
+ }
+ 
++struct search_res_tlb_params
++{
++    const GUID *guid;
++    ITypeLib *pTLib;
++};
++
++static BOOL CALLBACK search_res_tlb(HMODULE hModule, LPCWSTR lpszType, LPWSTR lpszName, LONG_PTR lParam)
++{
++    struct search_res_tlb_params *params = (LPVOID)lParam;
++    static const WCHAR formatW[] = {'\\','%','d',0};
++    WCHAR szPath[MAX_PATH+1];
++    ITypeLib2 *pTLib = NULL;
++    HRESULT ret;
++    DWORD len;
++
++    if (IS_INTRESOURCE(lpszName) == FALSE)
++        return TRUE;
++
++    if (!(len = GetModuleFileNameW(hModule, szPath, MAX_PATH)))
++        return TRUE;
++
++    if (snprintfW(szPath + len, sizeof(szPath)/sizeof(WCHAR) - len,
++                  formatW, PtrToInt(lpszName)) < 0)
++    {
++        return TRUE;
++    }
++
++    ret = LoadTypeLibEx(szPath, REGKIND_NONE, (ITypeLib **)&pTLib);
++    if (SUCCEEDED(ret))
++    {
++        ITypeLibImpl *impl = impl_from_ITypeLib2(pTLib);
++        if (IsEqualGUID(params->guid, impl->guid))
++        {
++            params->pTLib = (ITypeLib *)pTLib;
++            return FALSE; /* stop enumeration */
++        }
++        ITypeLib_Release((ITypeLib *)pTLib);
++    }
++
++    return TRUE;
++}
++
+ /* ITypeInfo::GetRefTypeInfo
+  *
+  * If a type description references other type descriptions, it retrieves
+@@ -7665,20 +7707,33 @@ static HRESULT WINAPI ITypeInfo_fnGetRefTypeInfo(
+                 ITypeLib_AddRef(pTLib);
+                 result = S_OK;
+             } else {
++                static const WCHAR TYPELIBW[] = {'T','Y','P','E','L','I','B',0};
++                struct search_res_tlb_params params;
+                 BSTR libnam;
+ 
+                 TRACE("typeinfo in imported typelib that isn't already loaded\n");
+ 
+-                result = query_typelib_path(TLB_get_guid_null(ref_type->pImpTLInfo->guid),
+-                        ref_type->pImpTLInfo->wVersionMajor,
+-                        ref_type->pImpTLInfo->wVersionMinor,
+-                        This->pTypeLib->syskind,
+-                        ref_type->pImpTLInfo->lcid, &libnam, TRUE);
+-                if(FAILED(result))
+-                    libnam = SysAllocString(ref_type->pImpTLInfo->name);
++                /* Search in resource table */
++                params.guid  = TLB_get_guid_null(ref_type->pImpTLInfo->guid);
++                params.pTLib = NULL;
++                EnumResourceNamesW(NULL, TYPELIBW, search_res_tlb, (LONG_PTR)&params);
++                pTLib  = params.pTLib;
++                result = S_OK;
+ 
+-                result = LoadTypeLib(libnam, &pTLib);
+-                SysFreeString(libnam);
++                if (!pTLib)
++                {
++                    /* Search on disk */
++                    result = query_typelib_path(TLB_get_guid_null(ref_type->pImpTLInfo->guid),
++                            ref_type->pImpTLInfo->wVersionMajor,
++                            ref_type->pImpTLInfo->wVersionMinor,
++                            This->pTypeLib->syskind,
++                            ref_type->pImpTLInfo->lcid, &libnam, TRUE);
++                    if (FAILED(result))
++                        libnam = SysAllocString(ref_type->pImpTLInfo->name);
++
++                    result = LoadTypeLib(libnam, &pTLib);
++                    SysFreeString(libnam);
++                }
+ 
+                 if(SUCCEEDED(result)) {
+                     ref_type->pImpTLInfo->pImpTypeLib = impl_from_ITypeLib(pTLib);
+-- 
+2.1.2
+

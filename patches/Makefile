@@ -65,6 +65,7 @@ PATCHLIST := \
 	ntdll-WRITECOPY.ok \
 	ntoskrnl-Irp_Status.ok \
 	ntoskrnl-Write_CR4.ok \
+	oleaut32-TLB_Resource.ok \
 	quartz-MediaSeeking_Positions.ok \
 	riched20-IText_Interface.ok \
 	server-ACL_Compat.ok \
@@ -1041,6 +1042,24 @@ ntoskrnl-Write_CR4.ok:
 	@( \
 		echo '+    { "ntoskrnl-Write_CR4", "Stefan Leichter", "Emulate write to CR4 register." },'; \
 	) > ntoskrnl-Write_CR4.ok
+
+# Patchset oleaut32-TLB_Resource
+# |
+# | Included patches:
+# |   *	Implement TLB dependencies lookup in resources. [by Guillaume Charifi]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34184] Support for TLB dependencies lookup in resources
+# |
+# | Modified files:
+# |   *	dlls/oleaut32/tests/typelib.c, dlls/oleaut32/typelib.c
+# |
+.INTERMEDIATE: oleaut32-TLB_Resource.ok
+oleaut32-TLB_Resource.ok:
+	$(call APPLY_FILE,oleaut32-TLB_Resource/0001-oleaut32-Implement-TLB-dependencies-lookup-in-resour.patch)
+	@( \
+		echo '+    { "oleaut32-TLB_Resource", "Guillaume Charifi", "Implement TLB dependencies lookup in resources." },'; \
+	) > oleaut32-TLB_Resource.ok
 
 # Patchset quartz-MediaSeeking_Positions
 # |

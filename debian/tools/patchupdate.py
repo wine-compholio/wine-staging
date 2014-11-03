@@ -71,6 +71,7 @@ class PatchSet(object):
         self.authors        = []
         self.fixes          = []
         self.changes        = []
+        self.disabled       = False
 
         self.files          = []
         self.patches        = []
@@ -98,6 +99,16 @@ def _save_dict(filename, value):
     """Save a Python dictionary object to a file."""
     with open(filename, "wb") as fp:
         pickle.dump(value, fp, pickle.HIGHEST_PROTOCOL)
+
+def parse_int(val, default=0):
+    """Parse an integer or boolean value."""
+    r = re.match("^[0-9]+$", val)
+    if r:
+        return int(val)
+    try:
+        return {'true': 1, 'yes': 1, 'false': 0, 'no': 0}[val.lower()]
+    except AttributeError:
+        return default
 
 def _winebugs_query_short_desc(bugids):
     """Query short_desc from multiple wine bugzilla bugs at the same time."""
@@ -188,10 +199,11 @@ def read_definition(revision, filename, name_to_id):
         except CalledProcessError:
             raise IOError("Failed to load %s" % filename)
 
-    authors = []
-    depends = set()
-    fixes   = []
-    info    = AuthorInfo()
+    authors  = []
+    depends  = set()
+    fixes    = []
+    info     = AuthorInfo()
+    disabled = False
 
     for line in content.split("\n"):
         if line.startswith("#"):
@@ -234,12 +246,15 @@ def read_definition(revision, filename, name_to_id):
                 continue
             fixes.append((None, val))
 
+        elif key == "disabled":
+            disabled = parse_int(val)
+
         else:
-            print "WARNING: Ignoring unknown command in definition file %s: %s" % (deffile, line)
+            print "WARNING: Ignoring unknown command in definition file %s: %s" % (filename, line)
 
     if len(info.author) and len(info.subject):
         authors.append(info)
-    return authors, depends, fixes
+    return authors, depends, fixes, disabled
 
 def read_patchset(revision = None):
     """Read information about all patchsets for a specific revision."""
@@ -279,7 +294,7 @@ def read_patchset(revision = None):
     # Now read the definition files in a second step
     for i, patch in all_patches.iteritems():
         try:
-            patch.authors, patch.depends, patch.fixes = \
+            patch.authors, patch.depends, patch.fixes, patch.disabled = \
                 read_definition(revision, os.path.join(config.path_patches, patch.name), name_to_id)
         except IOError:
             raise PatchUpdaterError("Missing definition file for %s" % patch.name)
@@ -436,14 +451,15 @@ def verify_dependencies(all_patches):
         _save_dict(config.path_depcache, cached_patch_result)
         _save_dict(config.path_srccache, cached_original_src)
 
-    max_patches = max(all_patches.keys()) + 1
+    enabled_patches = dict([(i, patch) for i, patch in all_patches.iteritems() if not patch.disabled])
+    max_patches     = max(enabled_patches.keys()) + 1
 
-    for i, patch in all_patches.iteritems():
+    for i, patch in enabled_patches.iteritems():
         patch.verify_depends = set(patch.depends)
         patch.verify_time    = [0]*max_patches
 
     # Check for circular dependencies and perform modified vector clock algorithm
-    patches = dict(all_patches)
+    patches = dict(enabled_patches)
     while len(patches):
 
         to_delete = []
@@ -453,7 +469,7 @@ def verify_dependencies(all_patches):
                 to_delete.append(i)
 
         if len(to_delete) == 0:
-            raise PatchUpdaterError("Circular dependency in set of patches: %s" %
+            raise PatchUpdaterError("Circular dependency (or disabled dependency) in set of patches: %s" %
                                     ", ".join([patch.name for i, patch in patches.iteritems()]))
 
         for j in to_delete:
@@ -465,7 +481,7 @@ def verify_dependencies(all_patches):
 
     # Find out which files are modified by multiple patches
     modified_files = {}
-    for i, patch in all_patches.iteritems():
+    for i, patch in enabled_patches.iteritems():
         for f in patch.modified_files:
             if f not in modified_files:
                 modified_files[f] = []
@@ -475,7 +491,7 @@ def verify_dependencies(all_patches):
     _load_patch_cache()
     try:
         for f, indices in modified_files.iteritems():
-            verify_patch_order(all_patches, indices, f)
+            verify_patch_order(enabled_patches, indices, f)
     finally:
         _save_patch_cache()
 
@@ -486,7 +502,8 @@ def generate_makefile(all_patches):
         template = template_fp.read()
 
     with open(config.path_Makefile, "w") as fp:
-        fp.write(template.format(patchlist="\t" + " \\\n\t".join(["%s.ok" % patch.name for i, patch in all_patches.iteritems()])))
+        fp.write(template.format(patchlist="\t" + " \\\n\t".join(
+            ["%s.ok" % patch.name for i, patch in all_patches.iteritems() if not patch.disabled])))
 
         for i, patch in all_patches.iteritems():
             fp.write("# Patchset %s\n" % patch.name)

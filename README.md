@@ -45,7 +45,7 @@ Included bugfixes and improvements
 * Allow special characters in pipe names ([Wine Bug #28995](https://bugs.winehq.org/show_bug.cgi?id=28995))
 * Anno 1602 installer depends on Windows 98 behavior of SHFileOperationW
 * Audio stuttering and performance drops in multiple applications ([Wine Bug #30639](https://bugs.winehq.org/show_bug.cgi?id=30639))
-* Cinema 4D needs NotifyIpInterfaceChange ([Wine Bug #34573](https://bugs.winehq.org/show_bug.cgi?id=34573))
+* ~~Cinema 4D needs NotifyIpInterfaceChange~~ ([Wine Bug #34573](https://bugs.winehq.org/show_bug.cgi?id=34573))
 * Correctly treat '.' when checking for empty directories ([Wine Bug #26272](https://bugs.winehq.org/show_bug.cgi?id=26272))
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](https://bugs.winehq.org/show_bug.cgi?id=33770))
 * Do not fail when a used context is passed to wglShareLists ([Wine Bug #11436](https://bugs.winehq.org/show_bug.cgi?id=11436))

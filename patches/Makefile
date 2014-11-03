@@ -37,7 +37,6 @@ PATCHLIST := \
 	gdiplus-GdipCreateRegionRgnData.ok \
 	imagehlp-BindImageEx.ok \
 	imm32-Cross_Thread_Access.ok \
-	iphlpapi-Stubs.ok \
 	iphlpapi-TCP_Table.ok \
 	kernel32-FindFirstFile.ok \
 	kernel32-GetFinalPathNameByHandle.ok \
@@ -48,7 +47,6 @@ PATCHLIST := \
 	kernel32-UTF7_Support.ok \
 	libs-Unicode_Collation.ok \
 	libwine-BSD_mmap_fixed.ok \
-	mshtml-sessionStorage.ok \
 	msi-Transform_ProductVersion.ok \
 	msvcp90-basic_string_wchar_dtor.ok \
 	ntdll-DOS_Attributes.ok \
@@ -514,25 +512,6 @@ imm32-Cross_Thread_Access.ok:
 		echo '+    { "imm32-Cross_Thread_Access", "Aric Stewart", "Limit cross thread access to ImmSet* functions." },'; \
 	) > imm32-Cross_Thread_Access.ok
 
-# Patchset iphlpapi-Stubs
-# |
-# | Included patches:
-# |   *	Add stubs for CancelMibChangeNotify2 and NotifyIpInterfaceChange. [by Sebastian Lackner]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34573] Cinema 4D needs NotifyIpInterfaceChange
-# |
-# | Modified files:
-# |   *	dlls/iphlpapi/iphlpapi.spec, dlls/iphlpapi/iphlpapi_main.c
-# |
-.INTERMEDIATE: iphlpapi-Stubs.ok
-iphlpapi-Stubs.ok:
-	$(call APPLY_FILE,iphlpapi-Stubs/0001-iphlpapi-Add-stub-for-CancelMibChangeNotify2.patch)
-	$(call APPLY_FILE,iphlpapi-Stubs/0002-iphlpapi-Add-stub-for-NotifyIpInterfaceChange.patch)
-	@( \
-		echo '+    { "iphlpapi-Stubs", "Sebastian Lackner", "Add stubs for CancelMibChangeNotify2 and NotifyIpInterfaceChange." },'; \
-	) > iphlpapi-Stubs.ok
-
 # Patchset iphlpapi-TCP_Table
 # |
 # | Included patches:
@@ -564,8 +543,7 @@ iphlpapi-TCP_Table.ok:
 # |
 .INTERMEDIATE: kernel32-FindFirstFile.ok
 kernel32-FindFirstFile.ok:
-	$(call APPLY_FILE,kernel32-FindFirstFile/0001-kernel32-Set-proper-error-codes-if-FindFirstFileExW-.patch)
-	$(call APPLY_FILE,kernel32-FindFirstFile/0002-kernel32-Implement-FindFirstFileExW-level-FindExInfo.patch)
+	$(call APPLY_FILE,kernel32-FindFirstFile/0001-kernel32-Implement-FindFirstFileExW-level-FindExInfo.patch)
 	@( \
 		echo '+    { "kernel32-FindFirstFile", "Sebastian Lackner", "Implement FindFirstFileExW level FindExInfoBasic." },'; \
 	) > kernel32-FindFirstFile.ok

@@ -1,41 +1,45 @@
-What is Wine-Compholio?
-=======================
+What is Wine Staging?
+=====================
 
 **Warning: Do not report bugs at bugs.winehq.org when using this version!
 Please take a look at our
-[Wiki](https://github.com/compholio/wine-compholio/wiki/Reporting-bugs)
+[Wiki](https://github.com/wine-compholio/wine-staging/wiki/Reporting-bugs)
 for more information about how to report bugs.**
 
-The **Wine "Compholio" Edition** is a special build of the popular Wine
-software that includes both patches written by our team and selected patches
-by third party developers that we consider good enough for inclusion. This can
-be seen as a testing version in preparation for patches to be submitted to
-upstream Wine - don't be surprised if you encounter additional bugs, which are
-not present in regular wine, and always report such issues to us (via github!),
-so we can improve our fixes even further. Thanks!
+**Wine Staging** (formerly wine-compholio) is a special wine version containing
+bug fixes and features that are not yet available in regular wine versions. The
+idea behind Wine Staging is to provide new features faster to end users and to
+give developers the possibility to discuss and improve their patches before
+they are sent upstream. We also intend to create a community of wine developers
+to share experience and to make it easier for beginners to start hacking on
+wine.
 
+Although we are reviewing all patches before adding them, you may encounter
+additional bugs, which are not present in regular wine. Make sure to report
+such issues in our bug tracker instead of winehq.org so that we can try to
+solve them in future versions. Thanks!
 
-How to install and use Wine-Compholio
-=====================================
+How to install and use Wine Staging
+===================================
 
-Ready-to-use packages for Wine-Compholio are available for a variety
+Ready-to-use packages for Wine Staging are available for a variety
 of different Linux distributions directly for download. Just follow the
 instructions available on the
-[Wiki](https://github.com/compholio/wine-compholio/wiki/Installation).
+[Wiki](https://github.com/wine-compholio/wine-staging/wiki/Installation).
 
-When using Wine-Compholio there are a few differences compared to regular
+When using Wine Staging there are a few differences compared to regular
 Wine. The main difference is that it is not sufficient to type `wine` to
 run it, but instead you will have to type `/opt/wine-compholio/bin/wine`.
 Besides that there are also some other differences, for example additional
 configuration options to tweak performance, which are not available in regular
 Wine. All those differences are also documented on the
-[Wiki](https://github.com/compholio/wine-compholio/wiki/Usage).
+[Wiki](https://github.com/wine-compholio/wine-staging/wiki/Usage).
 
 
-Included bugfixes and improvements
-==================================
+Included bug fixes and improvements
+===================================
 
-**Bugs fixed in Wine-Compholio 1.7.30 [90]:**
+**Bugs fixed in Wine Staging 1.7.30 [90]:**
 
 * ATL IOCS data should not be stored in GWLP_USERDATA ([Wine Bug #21767](https://bugs.winehq.org/show_bug.cgi?id=21767))
 * Add Dynamic DST exceptions for Israel Standard Time ([Wine Bug #36374](https://bugs.winehq.org/show_bug.cgi?id=36374))

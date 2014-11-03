@@ -583,7 +583,7 @@ def generate_markdown(all_patches, stable_patches, stable_compholio_version):
             lines.append(_format_bug(mode, bugid, bugname))
         lines.append("")
         lines.append("")
-    lines.append("**Bugs fixed in Wine-Compholio %s [%d]:**" % (stable_compholio_version, len(old_fixes)))
+    lines.append("**Bugs fixed in Wine Staging %s [%d]:**" % (stable_compholio_version, len(old_fixes)))
     lines.append("")
     for mode, bugid, bugname in sorted(old_fixes, key=lambda x: x[2]):
         lines.append(_format_bug(mode, bugid, bugname))

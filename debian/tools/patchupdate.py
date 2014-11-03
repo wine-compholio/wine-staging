@@ -110,25 +110,6 @@ def parse_int(val, default=0):
     except AttributeError:
         return default
 
-def _winebugs_query_short_desc(bugids):
-    """Query short_desc from multiple wine bugzilla bugs at the same time."""
-    bugids = list(set(bugids)) # Remove duplicates and convert to fixed order
-    if len(bugids) == 0: return {}
-
-    # Query bugzilla
-    url = "http://bugs.winehq.org/show_bug.cgi?%s&ctype=xml&field=short_desc" % \
-          "&".join(["id=%d" % bugid for bugid in bugids])
-    with contextlib.closing(urllib.urlopen(url)) as fp:
-        data = minidom.parseString(fp.read())
-
-    # convert xml in a dictionary containing all bugs we found
-    result = {}
-    for element in data.getElementsByTagName('bug_id'):
-        bugids.remove(int(element.firstChild.data))
-    for bugid, element in zip(bugids, data.getElementsByTagName('short_desc')):
-        result[bugid] = element.firstChild.data
-    return result
-
 # Read information from changelog
 def _read_changelog():
     with open(config.path_changelog) as fp:
@@ -557,9 +538,6 @@ def generate_markdown(all_patches, stable_patches, stable_compholio_version):
     """Generate README.md and DEVELOPER.md including information about specific patches and bugfixes."""
 
     def _format_bug(mode, bugid, bugname):
-        # if bugid is not None:
-        #     short_desc = bug_short_desc[bugid]
-        #     if bugname is None: bugname = short_desc
         if mode < 0: bugname = "~~%s~~" % bugname
         if bugid is None: return "* %s" % bugname
         return "* %s ([Wine Bug #%d](https://bugs.winehq.org/show_bug.cgi?id=%d))" % \
@@ -595,9 +573,6 @@ def generate_markdown(all_patches, stable_patches, stable_compholio_version):
     if len(old_fixes) == 0:
         old_fixes = new_fixes
         new_fixes = []
-
-    # Query information from bugzilla
-    # bug_short_desc = _winebugs_query_short_desc(all_bugids)
 
     # Generate information for current version
     lines = []

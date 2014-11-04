@@ -19,9 +19,9 @@ APPLY_FILE = @echo "Applying $(1)"; $(APPLY) < "$(CURDIR)/$(1)"
 #
 
 PATCHLIST := \
-	Compholio.ok \
 	Miscellaneous.ok \
 	Pipelight.ok \
+	Staging.ok \
 	atl-IOCS_Property.ok \
 	comctl32-LoadIconMetric.ok \
 	configure-Absolute_RPATH.ok \
@@ -154,31 +154,6 @@ clean:
 	rm -f series patchlist.diff
 	rm -f *.ok
 
-# Patchset Compholio
-# |
-# | Included patches:
-# |   *	Add winediag message to show warning, that this isn't vanilla wine. [by Sebastian Lackner]
-# |   *	Append '(Compholio)' at the end of the version string. [by Sebastian Lackner]
-# |   *	Add commandline option --patches to show the patch list. [by Sebastian Lackner]
-# |   *	Add commandline option --check-libs to test if shared libraries are installed. [by Michael Müller]
-# |
-# | Modified files:
-# |   *	dlls/kernel32/process.c, dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec, include/wine/library.h, libs/wine/Makefile.in,
-# | 	libs/wine/config.c, libs/wine/loader.c, libs/wine/wine.def, libs/wine/wine.map, loader/main.c
-# |
-.INTERMEDIATE: Compholio.ok
-Compholio.ok:
-	$(call APPLY_FILE,Compholio/0001-kernel32-Add-winediag-message-to-show-warning-that-t.patch)
-	$(call APPLY_FILE,Compholio/0002-winelib-Append-Compholio-at-the-end-of-the-version-s.patch)
-	$(call APPLY_FILE,Compholio/0003-loader-Add-commandline-option-patches-to-show-the-pa.patch)
-	$(call APPLY_FILE,Compholio/0004-loader-Add-commandline-option-check-libs.patch)
-	@( \
-		echo '+    { "Compholio", "Sebastian Lackner", "Add winediag message to show warning, that this isn'\''t vanilla wine." },'; \
-		echo '+    { "Compholio", "Sebastian Lackner", "Append '\''(Compholio)'\'' at the end of the version string." },'; \
-		echo '+    { "Compholio", "Sebastian Lackner", "Add commandline option --patches to show the patch list." },'; \
-		echo '+    { "Compholio", "Michael Müller", "Add commandline option --check-libs to test if shared libraries are installed." },'; \
-	) > Compholio.ok
-
 # Patchset Miscellaneous
 # |
 # | Included patches:
@@ -232,6 +207,31 @@ Pipelight.ok:
 		echo '+    { "Pipelight", "Michael Müller", "Indicate direct rendering through OpenGL extension." },'; \
 		echo '+    { "Pipelight", "Sebastian Lackner", "Implement X11DRV_FLUSH_GDI_DISPLAY ExtEscape command." },'; \
 	) > Pipelight.ok
+
+# Patchset Staging
+# |
+# | Included patches:
+# |   *	Add winediag message to show warning, that this isn't vanilla wine. [by Sebastian Lackner]
+# |   *	Append '(Staging)' at the end of the version string. [by Sebastian Lackner]
+# |   *	Add commandline option --patches to show the patch list. [by Sebastian Lackner]
+# |   *	Add commandline option --check-libs to test if shared libraries are installed. [by Michael Müller]
+# |
+# | Modified files:
+# |   *	dlls/kernel32/process.c, dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec, include/wine/library.h, libs/wine/Makefile.in,
+# | 	libs/wine/config.c, libs/wine/loader.c, libs/wine/wine.def, libs/wine/wine.map, loader/main.c
+# |
+.INTERMEDIATE: Staging.ok
+Staging.ok:
+	$(call APPLY_FILE,Staging/0001-kernel32-Add-winediag-message-to-show-warning-that-t.patch)
+	$(call APPLY_FILE,Staging/0002-winelib-Append-Staging-at-the-end-of-the-version-s.patch)
+	$(call APPLY_FILE,Staging/0003-loader-Add-commandline-option-patches-to-show-the-pa.patch)
+	$(call APPLY_FILE,Staging/0004-loader-Add-commandline-option-check-libs.patch)
+	@( \
+		echo '+    { "Staging", "Sebastian Lackner", "Add winediag message to show warning, that this isn'\''t vanilla wine." },'; \
+		echo '+    { "Staging", "Sebastian Lackner", "Append '\''(Staging)'\'' at the end of the version string." },'; \
+		echo '+    { "Staging", "Sebastian Lackner", "Add commandline option --patches to show the patch list." },'; \
+		echo '+    { "Staging", "Michael Müller", "Add commandline option --check-libs to test if shared libraries are installed." },'; \
+	) > Staging.ok
 
 # Patchset atl-IOCS_Property
 # |

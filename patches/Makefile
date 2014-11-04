@@ -307,7 +307,7 @@ configure-Detect_Gnutls.ok:
 # Patchset d3dx9_36-CreatePolygon
 # |
 # | Included patches:
-# |   *	Implement D3DXCreatePolygon. [by Sebastian Lackner]
+# |   *	Implement D3DXCreatePolygon. [rev 2, by Sebastian Lackner]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#13632] Support for D3DXCreatePolygon
@@ -320,7 +320,7 @@ d3dx9_36-CreatePolygon.ok:
 	$(call APPLY_FILE,d3dx9_36-CreatePolygon/0001-d3dx9_36-Implement-D3DXCreatePolygon.patch)
 	$(call APPLY_FILE,d3dx9_36-CreatePolygon/0002-d3dx9_36-tests-Add-tests-for-D3DXCreatePolygon.patch)
 	@( \
-		echo '+    { "d3dx9_36-CreatePolygon", "Sebastian Lackner", "Implement D3DXCreatePolygon." },'; \
+		echo '+    { "d3dx9_36-CreatePolygon", "Sebastian Lackner", "Implement D3DXCreatePolygon. [rev 2]" },'; \
 	) > d3dx9_36-CreatePolygon.ok
 
 # Patchset d3dx9_36-Filter_Warnings

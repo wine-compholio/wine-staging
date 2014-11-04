@@ -1,4 +1,4 @@
-From 0daaeab7e4e9b36cafbeb3fe296a1d62cd79c20b Mon Sep 17 00:00:00 2001
+From 09aaa5716d86ecab330f01957995864a683a98c9 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 31 Oct 2014 09:43:40 +0100
 Subject: d3dx9_36: Implement D3DXCreatePolygon.
@@ -6,12 +6,12 @@ Subject: d3dx9_36: Implement D3DXCreatePolygon.
 Based on a patch by David Adam.
 ---
  dlls/d3dx9_36/d3dx9_36.spec |  2 +-
- dlls/d3dx9_36/mesh.c        | 89 +++++++++++++++++++++++++++++++++++++++++++++
- include/d3dx9shape.h        |  2 +
- 3 files changed, 92 insertions(+), 1 deletion(-)
+ dlls/d3dx9_36/mesh.c        | 88 +++++++++++++++++++++++++++++++++++++++++++++
+ include/d3dx9shape.h        |  2 ++
+ 3 files changed, 91 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/d3dx9_36/d3dx9_36.spec b/dlls/d3dx9_36/d3dx9_36.spec
-index 4c72dc2..ebe46dc 100644
+index 4c72dc2..13f0d99 100644
 --- a/dlls/d3dx9_36/d3dx9_36.spec
 +++ b/dlls/d3dx9_36/d3dx9_36.spec
 @@ -76,7 +76,7 @@
@@ -24,10 +24,10 @@ index 4c72dc2..ebe46dc 100644
  @ stub D3DXCreatePRTBufferTex(long long long long ptr)
  @ stub D3DXCreatePRTCompBuffer(long long long ptr ptr ptr ptr)
 diff --git a/dlls/d3dx9_36/mesh.c b/dlls/d3dx9_36/mesh.c
-index aecb45d..9bd24e4 100644
+index aecb45d..fe2899a 100644
 --- a/dlls/d3dx9_36/mesh.c
 +++ b/dlls/d3dx9_36/mesh.c
-@@ -4555,6 +4555,95 @@ struct vertex
+@@ -4555,6 +4555,94 @@ struct vertex
      D3DXVECTOR3 normal;
  };
  
@@ -42,15 +42,14 @@ index aecb45d..9bd24e4 100644
 +    float scale;
 +    unsigned int i;
 +
-+    TRACE("(%p, %f, %u, %p, %p)\n", device, length, sides, mesh, adjacency);
++    TRACE("device %p, length %f, sides %u, mesh %p, adjacency %p.\n",
++            device, length, sides, mesh, adjacency);
 +
-+    if (!device || length < 0.0f || sides == 0 || !mesh)
-+    {
++    if (!device || length < 0.0f || sides < 3 || !mesh)
 +        return D3DERR_INVALIDCALL;
-+    }
 +
 +    if (FAILED(hr = D3DXCreateMeshFVF(sides, sides + 1, D3DXMESH_MANAGED,
-+                                      D3DFVF_XYZ | D3DFVF_NORMAL,device, &polygon)))
++            D3DFVF_XYZ | D3DFVF_NORMAL, device, &polygon)))
 +    {
 +        return hr;
 +    }
@@ -68,7 +67,7 @@ index aecb45d..9bd24e4 100644
 +        return hr;
 +    }
 +
-+    scale = 0.5f * length / sin(D3DX_PI / sides);
++    scale = 0.5f * length / sinf(D3DX_PI / sides);
 +
 +    vertices[0].position.x = 0.0f;
 +    vertices[0].position.y = 0.0f;
@@ -77,10 +76,10 @@ index aecb45d..9bd24e4 100644
 +    vertices[0].normal.y = 0.0f;
 +    vertices[0].normal.z = 1.0f;
 +
-+    for (i = 0; i < sides; i++)
++    for (i = 0; i < sides; ++i)
 +    {
-+        vertices[i + 1].position.x = cos(2.0f * D3DX_PI * i / sides) * scale;
-+        vertices[i + 1].position.y = sin(2.0f * D3DX_PI * i / sides) * scale;
++        vertices[i + 1].position.x = cosf(2.0f * D3DX_PI * i / sides) * scale;
++        vertices[i + 1].position.y = sinf(2.0f * D3DX_PI * i / sides) * scale;
 +        vertices[i + 1].position.z = 0.0f;
 +        vertices[i + 1].normal.x = 0.0f;
 +        vertices[i + 1].normal.y = 0.0f;
@@ -105,10 +104,10 @@ index aecb45d..9bd24e4 100644
 +        }
 +
 +        adjacency_buf = ID3DXBuffer_GetBufferPointer(*adjacency);
-+        for (i = 0; i < sides; i++)
++        for (i = 0; i < sides; ++i)
 +        {
 +            adjacency_buf[i][0] = i - 1;
-+            adjacency_buf[i][1] = -1;
++            adjacency_buf[i][1] = ~0;
 +            adjacency_buf[i][2] = i + 1;
 +        }
 +        adjacency_buf[0][0] = sides - 1;
@@ -137,5 +136,5 @@ index 0d24032..af49bb4 100644
          UINT stacks, struct ID3DXMesh **mesh, struct ID3DXBuffer **adjacency);
  HRESULT WINAPI D3DXCreateTeapot(struct IDirect3DDevice9 *device,
 -- 
-2.1.2
+2.1.3
 

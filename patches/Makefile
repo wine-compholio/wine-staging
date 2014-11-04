@@ -58,6 +58,7 @@ PATCHLIST := \
 	ntdll-Junction_Points.ok \
 	ntdll-LZNT1_Compression.ok \
 	ntdll-NtQuerySection.ok \
+	ntdll-NtSetLdtEntries.ok \
 	ntdll-Pipe_SpecialCharacters.ok \
 	ntdll-WRITECOPY.ok \
 	ntoskrnl-Irp_Status.ok \
@@ -921,6 +922,24 @@ ntdll-NtQuerySection.ok:
 	@( \
 		echo '+    { "ntdll-NtQuerySection", "Dmitry Timoshkov", "Implement NtQuerySection class SectionBasicInformation. [rev 2]" },'; \
 	) > ntdll-NtQuerySection.ok
+
+# Patchset ntdll-NtSetLdtEntries
+# |
+# | Included patches:
+# |   *	Add stub for NtSetLdtEntries/ZwSetLdtEntries. [rev 2, by Austin English]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#26268] Add stub for NtSetLdtEntries/ZwSetLdtEntries
+# |
+# | Modified files:
+# |   *	dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, include/ddk/wdm.h, include/winternl.h
+# |
+.INTERMEDIATE: ntdll-NtSetLdtEntries.ok
+ntdll-NtSetLdtEntries.ok:
+	$(call APPLY_FILE,ntdll-NtSetLdtEntries/0001-ntdll-add-NtSetLdtEntries-ZwSetLdtEntries-stub-try-2.patch)
+	@( \
+		echo '+    { "ntdll-NtSetLdtEntries", "Austin English", "Add stub for NtSetLdtEntries/ZwSetLdtEntries. [rev 2]" },'; \
+	) > ntdll-NtSetLdtEntries.ok
 
 # Patchset ntdll-Pipe_SpecialCharacters
 # |

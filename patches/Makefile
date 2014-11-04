@@ -38,7 +38,6 @@ PATCHLIST := \
 	imagehlp-BindImageEx.ok \
 	imm32-Cross_Thread_Access.ok \
 	iphlpapi-TCP_Table.ok \
-	kernel32-FindFirstFile.ok \
 	kernel32-GetFinalPathNameByHandle.ok \
 	kernel32-GetNumaProcessorNode.ok \
 	kernel32-GetSystemTimes.ok \
@@ -47,7 +46,6 @@ PATCHLIST := \
 	kernel32-UTF7_Support.ok \
 	libs-Unicode_Collation.ok \
 	libwine-BSD_mmap_fixed.ok \
-	msi-Transform_ProductVersion.ok \
 	msvcp90-basic_string_wchar_dtor.ok \
 	ntdll-DOS_Attributes.ok \
 	ntdll-Dynamic_DST.ok \
@@ -64,7 +62,6 @@ PATCHLIST := \
 	ntdll-WRITECOPY.ok \
 	ntoskrnl-Irp_Status.ok \
 	ntoskrnl-Write_CR4.ok \
-	oleaut32-TLB_Resource.ok \
 	quartz-MediaSeeking_Positions.ok \
 	riched20-IText_Interface.ok \
 	server-ACL_Compat.ok \
@@ -104,7 +101,6 @@ PATCHLIST := \
 	wpcap-Dynamic_Linking.ok \
 	ws2_32-Connect_Time.ok \
 	ws2_32-TransmitFile.ok \
-	ws2_32-inet_pton.ok \
 	wtsapi32-EnumerateProcesses.ok
 
 .PHONY: install
@@ -530,24 +526,6 @@ iphlpapi-TCP_Table.ok:
 		echo '+    { "iphlpapi-TCP_Table", "Erich E. Hoover", "Implement AllocateAndGetTcpExTableFromStack." },'; \
 	) > iphlpapi-TCP_Table.ok
 
-# Patchset kernel32-FindFirstFile
-# |
-# | Included patches:
-# |   *	Implement FindFirstFileExW level FindExInfoBasic. [by Sebastian Lackner]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37354] Support for FindFirstFileExW level FindExInfoBasic
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/kernel32/tests/file.c
-# |
-.INTERMEDIATE: kernel32-FindFirstFile.ok
-kernel32-FindFirstFile.ok:
-	$(call APPLY_FILE,kernel32-FindFirstFile/0001-kernel32-Implement-FindFirstFileExW-level-FindExInfo.patch)
-	@( \
-		echo '+    { "kernel32-FindFirstFile", "Sebastian Lackner", "Implement FindFirstFileExW level FindExInfoBasic." },'; \
-	) > kernel32-FindFirstFile.ok
-
 # Patchset kernel32-GetFinalPathNameByHandle
 # |
 # | Included patches:
@@ -712,24 +690,6 @@ mshtml-sessionStorage.ok:
 	@( \
 		echo '+    { "mshtml-sessionStorage", "Zhenbo Li", "Implement sessionStorage (partially)." },'; \
 	) > mshtml-sessionStorage.ok
-
-# Patchset msi-Transform_ProductVersion
-# |
-# | Included patches:
-# |   *	Update ProductVersion property when applying MSI transforms. [by Sebastian Lackner]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37493] Update ProductVersion property when applying MSI transforms
-# |
-# | Modified files:
-# |   *	dlls/msi/patch.c
-# |
-.INTERMEDIATE: msi-Transform_ProductVersion.ok
-msi-Transform_ProductVersion.ok:
-	$(call APPLY_FILE,msi-Transform_ProductVersion/0001-msi-Update-ProductVersion-property-when-applying-tra.patch)
-	@( \
-		echo '+    { "msi-Transform_ProductVersion", "Sebastian Lackner", "Update ProductVersion property when applying MSI transforms." },'; \
-	) > msi-Transform_ProductVersion.ok
 
 # Patchset msvcp90-basic_string_wchar_dtor
 # |
@@ -1039,24 +999,6 @@ ntoskrnl-Write_CR4.ok:
 	@( \
 		echo '+    { "ntoskrnl-Write_CR4", "Stefan Leichter", "Emulate write to CR4 register." },'; \
 	) > ntoskrnl-Write_CR4.ok
-
-# Patchset oleaut32-TLB_Resource
-# |
-# | Included patches:
-# |   *	Implement TLB dependencies lookup in resources. [by Guillaume Charifi]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34184] Support for TLB dependencies lookup in resources
-# |
-# | Modified files:
-# |   *	dlls/oleaut32/tests/typelib.c, dlls/oleaut32/typelib.c
-# |
-.INTERMEDIATE: oleaut32-TLB_Resource.ok
-oleaut32-TLB_Resource.ok:
-	$(call APPLY_FILE,oleaut32-TLB_Resource/0001-oleaut32-Implement-TLB-dependencies-lookup-in-resour.patch)
-	@( \
-		echo '+    { "oleaut32-TLB_Resource", "Guillaume Charifi", "Implement TLB dependencies lookup in resources." },'; \
-	) > oleaut32-TLB_Resource.ok
 
 # Patchset quartz-MediaSeeking_Positions
 # |
@@ -1822,24 +1764,6 @@ ws2_32-TransmitFile.ok:
 	@( \
 		echo '+    { "ws2_32-TransmitFile", "Erich E. Hoover", "Implement TransmitFile." },'; \
 	) > ws2_32-TransmitFile.ok
-
-# Patchset ws2_32-inet_pton
-# |
-# | Included patches:
-# |   *	Implement ws2_32.inet_pton. [by Bruno Jesus]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36713] Support for ws2_32.inet_pton
-# |
-# | Modified files:
-# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/ws2_32.spec, include/ws2tcpip.h
-# |
-.INTERMEDIATE: ws2_32-inet_pton.ok
-ws2_32-inet_pton.ok:
-	$(call APPLY_FILE,ws2_32-inet_pton/0001-ws2_32-Implement-inet_pton.patch)
-	@( \
-		echo '+    { "ws2_32-inet_pton", "Bruno Jesus", "Implement ws2_32.inet_pton." },'; \
-	) > ws2_32-inet_pton.ok
 
 # Patchset wtsapi32-EnumerateProcesses
 # |

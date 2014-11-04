@@ -218,27 +218,28 @@ def read_patch(filename):
                     raise PatchParserError("Empty hunk doesn't make sense.")
                 assert fp.read() == line
 
-                while srclines > 0 or dstlines > 0:
-                    line = fp.read()
-                    if line is None:
-                        raise PatchParserError("Truncated patch.")
-                    elif line.startswith(" "):
-                        if srclines == 0 or dstlines == 0:
-                            raise PatchParserError("Corrupted patch.")
-                        srclines -= 1
-                        dstlines -= 1
-                    elif line.startswith("-"):
-                        if srclines == 0:
-                            raise PatchParserError("Corrupted patch.")
-                        srclines -= 1
-                    elif line.startswith("+"):
-                        if dstlines == 0:
-                            raise PatchParserError("Corrupted patch.")
-                        dstlines -= 1
-                    elif line.startswith("\\ "):
-                        pass # ignore
-                    else:
-                        raise PatchParserError("Unexpected line in hunk.")
+                try:
+                    while srclines > 0 or dstlines > 0:
+                        line = fp.read()[0]
+                        if line == " ":
+                            if srclines == 0 or dstlines == 0:
+                                raise PatchParserError("Corrupted patch.")
+                            srclines -= 1
+                            dstlines -= 1
+                        elif line == "-":
+                            if srclines == 0:
+                                raise PatchParserError("Corrupted patch.")
+                            srclines -= 1
+                        elif line == "+":
+                            if dstlines == 0:
+                                raise PatchParserError("Corrupted patch.")
+                            dstlines -= 1
+                        elif line == "\\":
+                            pass # ignore
+                        else:
+                            raise PatchParserError("Unexpected line in hunk.")
+                except TypeError: # triggered by None[0]
+                    raise PatchParserError("Truncated patch.")
 
                 while True:
                     line = fp.peek()

@@ -1622,6 +1622,7 @@ winemenubuilder-Desktop_Icon_Path.ok:
 # | Included patches:
 # |   *	Winepulse patches extracted from https://launchpad.net/~ubuntu-
 # | 	wine/+archive/ubuntu/ppa/+files/wine1.7_1.7.22-0ubuntu1.debian.tar.gz. [rev 4, by Maarten Lankhorst]
+# |   *	Expose audio devices directly to programs. [by Mark Harmstone]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#10495] Support for PulseAudio backend for audio
@@ -1659,8 +1660,10 @@ winepulse-PulseAudio_Support.ok:
 	$(call APPLY_FILE,winepulse-PulseAudio_Support/0025-winepulse-use-a-pi-mutex-for-serialization.patch)
 	$(call APPLY_FILE,winepulse-PulseAudio_Support/0026-winepulse-add-support-for-IMarshal.patch)
 	$(call APPLY_FILE,winepulse-PulseAudio_Support/0027-winepulse-handle-stream-create-failing-correctly.patch)
+	$(call APPLY_FILE,winepulse-PulseAudio_Support/0028-winepulse-expose-audio-devices-directly-to-programs.patch)
 	@( \
 		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "Winepulse patches extracted from https://launchpad.net/~ubuntu-wine/+archive/ubuntu/ppa/+files/wine1.7_1.7.22-0ubuntu1.debian.tar.gz. [rev 4]" },'; \
+		echo '+    { "winepulse-PulseAudio_Support", "Mark Harmstone", "Expose audio devices directly to programs." },'; \
 	) > winepulse-PulseAudio_Support.ok
 
 # Patchset winex11-CandidateWindowPos

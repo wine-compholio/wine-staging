@@ -63,6 +63,7 @@ PATCHLIST := \
 	ntdll-WRITECOPY.ok \
 	ntoskrnl-Irp_Status.ok \
 	ntoskrnl-Write_CR4.ok \
+	ole32-CoWaitForMultipleHandles.ok \
 	quartz-MediaSeeking_Positions.ok \
 	riched20-IText_Interface.ok \
 	server-ACL_Compat.ok \
@@ -1018,6 +1019,26 @@ ntoskrnl-Write_CR4.ok:
 	@( \
 		echo '+    { "ntoskrnl-Write_CR4", "Stefan Leichter", "Emulate write to CR4 register." },'; \
 	) > ntoskrnl-Write_CR4.ok
+
+# Patchset ole32-CoWaitForMultipleHandles
+# |
+# | Included patches:
+# |   *	CoWaitForMultipleHandles shouldn't process window events when APC calls are queued. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#32568] CoWaitForMultipleHandles shouldn't process window events when APC calls are queued
+# |
+# | Modified files:
+# |   *	dlls/ole32/compobj.c, dlls/ole32/tests/compobj.c, include/objbase.h
+# |
+.INTERMEDIATE: ole32-CoWaitForMultipleHandles.ok
+ole32-CoWaitForMultipleHandles.ok:
+	$(call APPLY_FILE,ole32-CoWaitForMultipleHandles/0001-ole32-tests-Add-tests-for-CoWaitForMultipleHandles.patch)
+	$(call APPLY_FILE,ole32-CoWaitForMultipleHandles/0002-ole32-Verify-arguments-for-CoWaitForMultipleHandles-.patch)
+	$(call APPLY_FILE,ole32-CoWaitForMultipleHandles/0003-ole32-Don-t-process-window-events-when-APC-calls-are.patch)
+	@( \
+		echo '+    { "ole32-CoWaitForMultipleHandles", "Sebastian Lackner", "CoWaitForMultipleHandles shouldn'\''t process window events when APC calls are queued." },'; \
+	) > ole32-CoWaitForMultipleHandles.ok
 
 # Patchset quartz-MediaSeeking_Positions
 # |

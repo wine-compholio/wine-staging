@@ -62,6 +62,7 @@ PATCHLIST := \
 	ntdll-Pipe_SpecialCharacters.ok \
 	ntdll-WRITECOPY.ok \
 	ntoskrnl-Irp_Status.ok \
+	ntoskrnl-KeSetSystemAffinityThread.ok \
 	ntoskrnl-Write_CR4.ok \
 	ole32-CoWaitForMultipleHandles.ok \
 	quartz-MediaSeeking_Positions.ok \
@@ -1001,6 +1002,24 @@ ntoskrnl-Irp_Status.ok:
 	@( \
 		echo '+    { "ntoskrnl-Irp_Status", "Sebastian Lackner", "Handle issues when driver returns two different status codes from dispatcher." },'; \
 	) > ntoskrnl-Irp_Status.ok
+
+# Patchset ntoskrnl-KeSetSystemAffinityThread
+# |
+# | Included patches:
+# |   *	Add stub for KeSetSystemAffinityThread. [by Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36822] FairplayKD.sys needs KeSetSystemAffinityThread
+# |
+# | Modified files:
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c
+# |
+.INTERMEDIATE: ntoskrnl-KeSetSystemAffinityThread.ok
+ntoskrnl-KeSetSystemAffinityThread.ok:
+	$(call APPLY_FILE,ntoskrnl-KeSetSystemAffinityThread/0001-ntoskrnl-Add-stub-for-KeSetSystemAffinityThread.patch)
+	@( \
+		echo '+    { "ntoskrnl-KeSetSystemAffinityThread", "Michael Müller", "Add stub for KeSetSystemAffinityThread." },'; \
+	) > ntoskrnl-KeSetSystemAffinityThread.ok
 
 # Patchset ntoskrnl-Write_CR4
 # |

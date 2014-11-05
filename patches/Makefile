@@ -1048,13 +1048,14 @@ ntoskrnl-Write_CR4.ok:
 # |   *	[#32568] CoWaitForMultipleHandles shouldn't process window events when APC calls are queued
 # |
 # | Modified files:
-# |   *	dlls/ole32/compobj.c, dlls/ole32/tests/compobj.c, include/objbase.h
+# |   *	dlls/ole32/compobj.c, dlls/ole32/tests/compobj.c, dlls/user32/tests/msg.c, include/objbase.h
 # |
 .INTERMEDIATE: ole32-CoWaitForMultipleHandles.ok
 ole32-CoWaitForMultipleHandles.ok:
 	$(call APPLY_FILE,ole32-CoWaitForMultipleHandles/0001-ole32-tests-Add-tests-for-CoWaitForMultipleHandles.patch)
 	$(call APPLY_FILE,ole32-CoWaitForMultipleHandles/0002-ole32-Verify-arguments-for-CoWaitForMultipleHandles-.patch)
 	$(call APPLY_FILE,ole32-CoWaitForMultipleHandles/0003-ole32-Don-t-process-window-events-when-APC-calls-are.patch)
+	$(call APPLY_FILE,ole32-CoWaitForMultipleHandles/0004-user32-tests-Add-tests-for-MsgWaitForMultipleObjects.patch)
 	@( \
 		echo '+    { "ole32-CoWaitForMultipleHandles", "Sebastian Lackner", "CoWaitForMultipleHandles shouldn'\''t process window events when APC calls are queued." },'; \
 	) > ole32-CoWaitForMultipleHandles.ok

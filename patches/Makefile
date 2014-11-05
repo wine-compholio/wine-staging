@@ -1012,7 +1012,7 @@ ntoskrnl-Irp_Status.ok:
 # |   *	[#36822] FairplayKD.sys needs KeSetSystemAffinityThread
 # |
 # | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec
 # |
 .INTERMEDIATE: ntoskrnl-KeSetSystemAffinityThread.ok
 ntoskrnl-KeSetSystemAffinityThread.ok:

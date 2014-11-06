@@ -814,7 +814,7 @@ ntdll-FileDispositionInformation.ok:
 # Patchset ntdll-Fix_Alignment
 # |
 # | Included patches:
-# |   *	Move NtProtectVirtualMemory and NtCreateSection to separate pages in ntdll on x86. [by Michael Müller]
+# |   *	Move NtProtectVirtualMemory and NtCreateSection to separate pages in ntdll on x86. [rev 2, by Michael Müller]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#33162] Ensure NtProtectVirtualMemory and NtCreateSection are on separate pages
@@ -826,7 +826,7 @@ ntdll-FileDispositionInformation.ok:
 ntdll-Fix_Alignment.ok:
 	$(call APPLY_FILE,ntdll-Fix_Alignment/0001-ntdll-Move-NtProtectVirtualMemory-and-NtCreateSectio.patch)
 	@( \
-		echo '+    { "ntdll-Fix_Alignment", "Michael Müller", "Move NtProtectVirtualMemory and NtCreateSection to separate pages in ntdll on x86." },'; \
+		echo '+    { "ntdll-Fix_Alignment", "Michael Müller", "Move NtProtectVirtualMemory and NtCreateSection to separate pages in ntdll on x86. [rev 2]" },'; \
 	) > ntdll-Fix_Alignment.ok
 
 # Patchset ntdll-Fix_Free

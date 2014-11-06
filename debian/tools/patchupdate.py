@@ -19,19 +19,14 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 #
 
-from xml.dom import minidom
-import contextlib
 import hashlib
 import itertools
-import multiprocessing
 import os
 import patchutils
 import pickle
 import re
 import subprocess
-import sys
 import textwrap
-import urllib
 
 # Cached information to speed up patch dependency checks
 latest_wine_commit  = None
@@ -543,20 +538,17 @@ def generate_markdown(all_patches, stable_patches, stable_compholio_version):
         return "* %s ([Wine Bug #%d](https://bugs.winehq.org/show_bug.cgi?id=%d))" % \
                (bugname, bugid, bugid) #, short_desc.replace("\\", "\\\\").replace("\"", "\\\""))
 
-    all_bugids = set()
     all_fixes  = {}
 
     # Get fixes for current version
     for i, patch in all_patches.iteritems():
         for bugid, bugname in patch.fixes:
-            if bugid is not None: all_bugids.add(bugid)
             key = bugid if bugid is not None else bugname
             all_fixes[key] = [1, bugid, bugname]
 
     # Compare with fixes for latest stable version
     for i, patch in stable_patches.iteritems():
         for bugid, bugname in patch.fixes:
-            if bugid is not None: all_bugids.add(bugid)
             key = bugid if bugid is not None else bugname
             if all_fixes.has_key(key):
                 all_fixes[key][0] = 0

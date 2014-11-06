@@ -326,7 +326,6 @@ d3dx9_36-CreatePolygon.ok:
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#33768] Fix texture corruption in CSI: Fatal Conspiracy
-# |   *	[#28851] Fix crash on mission launch on Airstrike (Eagles of WWII)
 # |   *	[#19231] Fix crash of Trine Demo on start
 # |   *	[#37391] Exception during start of fr-043 caused by missing DXTn support
 # |

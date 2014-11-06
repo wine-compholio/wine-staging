@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [8]:**
+**Bugfixes and features included in the next upcoming release [7]:**
 
 * Add stub for NtSetLdtEntries/ZwSetLdtEntries ([Wine Bug #26268](https://bugs.winehq.org/show_bug.cgi?id=26268))
 * Allow selection of audio device for PulseAudio backend
@@ -47,7 +47,6 @@ Included bug fixes and improvements
 * Exception during start of fr-043 caused by missing DXTn support ([Wine Bug #37391](https://bugs.winehq.org/show_bug.cgi?id=37391))
 * FairplayKD.sys needs KeSetSystemAffinityThread ([Wine Bug #36822](https://bugs.winehq.org/show_bug.cgi?id=36822))
 * Fix crash of Trine Demo on start ([Wine Bug #19231](https://bugs.winehq.org/show_bug.cgi?id=19231))
-* Fix crash on mission launch on Airstrike (Eagles of WWII) ([Wine Bug #28851](https://bugs.winehq.org/show_bug.cgi?id=28851))
 * Fix texture corruption in CSI: Fatal Conspiracy ([Wine Bug #33768](https://bugs.winehq.org/show_bug.cgi?id=33768))
 
 

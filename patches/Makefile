@@ -27,6 +27,7 @@ PATCHLIST := \
 	configure-Absolute_RPATH.ok \
 	configure-Detect_Gnutls.ok \
 	d3dx9_36-CreatePolygon.ok \
+	d3dx9_36-DXTn.ok \
 	d3dx9_36-Filter_Warnings.ok \
 	d3dx9_36-GetShaderSemantics.ok \
 	d3dx9_36-UpdateSkinnedMesh.ok \
@@ -321,6 +322,27 @@ d3dx9_36-CreatePolygon.ok:
 	@( \
 		echo '+    { "d3dx9_36-CreatePolygon", "Sebastian Lackner", "Implement D3DXCreatePolygon. [rev 2]" },'; \
 	) > d3dx9_36-CreatePolygon.ok
+
+# Patchset d3dx9_36-DXTn
+# |
+# | Included patches:
+# |   *	Add DXTn support to d3dx9_36. [by Christian Costa]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33768] Fix texture corruption in CSI: Fatal Conspiracy
+# |   *	[#28851] Fix crash on mission launch on Airstrike (Eagles of WWII)
+# |   *	[#19231] Fix crash of Trine Demo on start
+# |   *	[#37391] Exception during start of fr-043 caused by missing DXTn support
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/surface.c
+# |
+.INTERMEDIATE: d3dx9_36-DXTn.ok
+d3dx9_36-DXTn.ok: wined3d-DXTn.ok
+	$(call APPLY_FILE,d3dx9_36-DXTn/0001-d3dx9_36-Add-dxtn-support.patch)
+	@( \
+		echo '+    { "d3dx9_36-DXTn", "Christian Costa", "Add DXTn support to d3dx9_36." },'; \
+	) > d3dx9_36-DXTn.ok
 
 # Patchset d3dx9_36-Filter_Warnings
 # |
@@ -1557,21 +1579,22 @@ winebuild-LinkerVersion.ok:
 # Patchset wined3d-DXTn
 # |
 # | Included patches:
-# |   *	Add support for DXTn software decoding through libxtc_dxtn. [rev 2, by Michael Müller]
+# |   *	Add support for DXTn software decoding through libxtc_dxtn. [rev 3, by Michael Müller / Christian Costa]
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#25486] Lego Stunt Rally requires DXTn software de/encoding support
 # |   *	[#29586] Tumblebugs 2 requires DXTn software encoding support
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/wined3d/Makefile.in, dlls/wined3d/dxtn.c, dlls/wined3d/surface.c, dlls/wined3d/wined3d_main.c,
-# | 	dlls/wined3d/wined3d_private.h
+# |   *	configure.ac, dlls/wined3d/Makefile.in, dlls/wined3d/dxtn.c, dlls/wined3d/surface.c, dlls/wined3d/wined3d.spec,
+# | 	dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
 # |
 .INTERMEDIATE: wined3d-DXTn.ok
 wined3d-DXTn.ok:
 	$(call APPLY_FILE,wined3d-DXTn/0001-wined3d-Add-support-for-DXTn-software-decoding-throu.patch)
+	$(call APPLY_FILE,wined3d-DXTn/0002-wined3d-Improve-DXTn-support-and-export-conversion-f.patch)
 	@( \
-		echo '+    { "wined3d-DXTn", "Michael Müller", "Add support for DXTn software decoding through libxtc_dxtn. [rev 2]" },'; \
+		echo '+    { "wined3d-DXTn", "Michael Müller / Christian Costa", "Add support for DXTn software decoding through libxtc_dxtn. [rev 3]" },'; \
 	) > wined3d-DXTn.ok
 
 # Patchset wined3d-Revert_PixelFormat

@@ -30,6 +30,7 @@ PATCHLIST := \
 	d3dx9_36-DXTn.ok \
 	d3dx9_36-Filter_Warnings.ok \
 	d3dx9_36-GetShaderSemantics.ok \
+	d3dx9_36-Texture_Align.ok \
 	d3dx9_36-UpdateSkinnedMesh.ok \
 	dbghelp-KdHelp.ok \
 	dsound-Fast_Mixer.ok \
@@ -375,6 +376,21 @@ d3dx9_36-GetShaderSemantics.ok:
 	@( \
 		echo '+    { "d3dx9_36-GetShaderSemantics", "Christian Costa", "Implement D3DXGetShaderInputSemantics." },'; \
 	) > d3dx9_36-GetShaderSemantics.ok
+
+# Patchset d3dx9_36-Texture_Align
+# |
+# | Included patches:
+# |   *	Align texture dimensions to block size for compressed textures. [by Christian Costa]
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/tests/texture.c, dlls/d3dx9_36/texture.c
+# |
+.INTERMEDIATE: d3dx9_36-Texture_Align.ok
+d3dx9_36-Texture_Align.ok:
+	$(call APPLY_FILE,d3dx9_36-Texture_Align/0001-d3dx9_36-Align-texture-dimensions-to-block-size-for-.patch)
+	@( \
+		echo '+    { "d3dx9_36-Texture_Align", "Christian Costa", "Align texture dimensions to block size for compressed textures." },'; \
+	) > d3dx9_36-Texture_Align.ok
 
 # Patchset d3dx9_36-UpdateSkinnedMesh
 # |

@@ -1,0 +1,54 @@
+From e83a145da4b9e2c0c4b2b449aa72ce129344c5e5 Mon Sep 17 00:00:00 2001
+From: Christian Costa <titan.costa@gmail.com>
+Date: Tue, 4 Nov 2014 22:22:03 +0100
+Subject: d3dx9_36: Align texture dimensions to block size for compressed
+ textures in D3DXCheckTextureRequirements.
+
+---
+ dlls/d3dx9_36/tests/texture.c | 10 ++++++++++
+ dlls/d3dx9_36/texture.c       |  8 ++++----
+ 2 files changed, 14 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/d3dx9_36/tests/texture.c b/dlls/d3dx9_36/tests/texture.c
+index 61132bb..11a3b92 100644
+--- a/dlls/d3dx9_36/tests/texture.c
++++ b/dlls/d3dx9_36/tests/texture.c
+@@ -374,6 +374,16 @@ static void test_D3DXCheckTextureRequirements(IDirect3DDevice9 *device)
+         ok(height == 4, "Returned height %d, expected %d\n", height, 4);
+         ok(mipmaps == 1, "Returned mipmaps %d, expected %d\n", mipmaps, 1);
+         ok(format == D3DFMT_DXT5, "Returned format %u, expected %u\n", format, D3DFMT_DXT5);
++
++        format = D3DFMT_DXT5;
++        width = 5; height = 5;
++        mipmaps = 1;
++        hr = D3DXCheckTextureRequirements(device, &width, &height, &mipmaps, 0, &format, D3DPOOL_DEFAULT);
++        ok(hr == D3D_OK, "D3DXCheckTextureRequirements returned %#x, expected %#x\n", hr, D3D_OK);
++        ok(width == 8, "Returned width %d, expected %d\n", width, 8);
++        ok(height == 8, "Returned height %d, expected %d\n", height, 8);
++        ok(mipmaps == 1, "Returned mipmaps %d, expected %d\n", mipmaps, 1);
++        ok(format == D3DFMT_DXT5, "Returned format %u, expected %u\n", format, D3DFMT_DXT5);
+     }
+     else
+     {
+diff --git a/dlls/d3dx9_36/texture.c b/dlls/d3dx9_36/texture.c
+index 7ebe264..fa0106c 100644
+--- a/dlls/d3dx9_36/texture.c
++++ b/dlls/d3dx9_36/texture.c
+@@ -333,10 +333,10 @@ HRESULT WINAPI D3DXCheckTextureRequirements(struct IDirect3DDevice9 *device, UIN
+ 
+     if (fmt->block_width != 1 || fmt->block_height != 1)
+     {
+-        if (w < fmt->block_width)
+-            w = fmt->block_width;
+-        if (h < fmt->block_height)
+-            h = fmt->block_height;
++        if (w % fmt->block_width)
++            w += fmt->block_width - w % fmt->block_width;
++        if (h % fmt->block_height)
++            h += fmt->block_height - h % fmt->block_height;
+     }
+ 
+     if ((caps.TextureCaps & D3DPTEXTURECAPS_POW2) && (!is_pow2(w)))
+-- 
+2.1.3
+

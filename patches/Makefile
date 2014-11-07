@@ -61,6 +61,7 @@ PATCHLIST := \
 	ntdll-NtQuerySection.ok \
 	ntdll-NtSetLdtEntries.ok \
 	ntdll-Pipe_SpecialCharacters.ok \
+	ntdll-ThreadTime.ok \
 	ntdll-WRITECOPY.ok \
 	ntoskrnl-Irp_Status.ok \
 	ntoskrnl-KeSetSystemAffinityThread.ok \
@@ -977,6 +978,24 @@ ntdll-Pipe_SpecialCharacters.ok:
 	@( \
 		echo '+    { "ntdll-Pipe_SpecialCharacters", "Michael Müller", "Allow special characters in pipe names." },'; \
 	) > ntdll-Pipe_SpecialCharacters.ok
+
+# Patchset ntdll-ThreadTime
+# |
+# | Included patches:
+# |   *	Return correct values in GetThreadTimes() for all threads. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#20230] Return correct values for GetThreadTimes function
+# |
+# | Modified files:
+# |   *	dlls/ntdll/thread.c, server/protocol.def, server/thread.c
+# |
+.INTERMEDIATE: ntdll-ThreadTime.ok
+ntdll-ThreadTime.ok:
+	$(call APPLY_FILE,ntdll-ThreadTime/0001-ntdll-Return-correct-values-in-GetThreadTimes-for-al.patch)
+	@( \
+		echo '+    { "ntdll-ThreadTime", "Sebastian Lackner", "Return correct values in GetThreadTimes() for all threads." },'; \
+	) > ntdll-ThreadTime.ok
 
 # Patchset ntdll-WRITECOPY
 # |

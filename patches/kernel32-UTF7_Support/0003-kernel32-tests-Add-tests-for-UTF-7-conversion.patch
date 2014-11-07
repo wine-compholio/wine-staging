@@ -1,14 +1,14 @@
-From 4d6e2cf318083f38645cc7fabe6442ae286868c0 Mon Sep 17 00:00:00 2001
+From 33869b53b2b4bd532042b3cd92c1ab3652d583ff Mon Sep 17 00:00:00 2001
 From: Alex Henrie <alexhenrie24@gmail.com>
 Date: Fri, 17 Oct 2014 00:18:39 -0600
 Subject: kernel32/tests: Add tests for UTF-7 conversion.
 
 ---
- dlls/kernel32/tests/codepage.c | 720 +++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 720 insertions(+)
+ dlls/kernel32/tests/codepage.c | 593 +++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 593 insertions(+)
 
 diff --git a/dlls/kernel32/tests/codepage.c b/dlls/kernel32/tests/codepage.c
-index 147989b..1b5a60d 100644
+index 6e89533..0eabaac 100644
 --- a/dlls/kernel32/tests/codepage.c
 +++ b/dlls/kernel32/tests/codepage.c
 @@ -433,6 +433,266 @@ static void test_utf7_encoding(void)
@@ -278,7 +278,7 @@ index 147989b..1b5a60d 100644
      if (WideCharToMultiByte(CP_UTF7, 0, foobarW, -1, NULL, 0, NULL, NULL) == 0 &&
          GetLastError() == ERROR_CALL_NOT_IMPLEMENTED)
      {
-@@ -525,6 +785,465 @@ static void test_utf7_encoding(void)
+@@ -525,6 +785,55 @@ static void test_utf7_encoding(void)
          ok(output[expected_len] == '#', "i=0x%04x: expected output[%i]='#', got output[%i]=%i\n",
             i, expected_len, expected_len, output[expected_len]);
      }
@@ -293,8 +293,7 @@ index 147989b..1b5a60d 100644
 +                                  tests[i].dst, tests[i].dstlen, NULL, NULL);
 +
 +        ok(GetLastError() == tests[i].error,
-+           "tests[%i]: expected error=0x%x, got error=0x%x\n",
-+           i, tests[i].error, GetLastError());
++           "tests[%i]: expected error=0x%x, got error=0x%x\n", i, tests[i].error, GetLastError());
 +        ok(len == tests[i].len, "tests[%i]: expected len=%i, got len=%i\n", i, tests[i].len, len);
 +
 +        if (tests[i].dst)
@@ -320,11 +319,9 @@ index 147989b..1b5a60d 100644
 +                                      w_buffer, sizeof(w_buffer) / sizeof(WCHAR) - 1);
 +
 +            ok(GetLastError() == 0xdeadbeef,
-+               "tests[%i]: expected error=0xdeadbeef, got error=0x%x\n",
-+               i, GetLastError());
++               "tests[%i]: expected error=0xdeadbeef, got error=0x%x\n", i, GetLastError());
 +            ok(len == tests[i].reversed_len,
-+               "tests[%i]: expected len=%i, got len=%i\n",
-+               i, tests[i].reversed_len, len);
++               "tests[%i]: expected len=%i, got len=%i\n", i, tests[i].reversed_len, len);
 +            ok(memcmp(w_buffer, tests[i].src, tests[i].reversed_len * sizeof(WCHAR)) == 0,
 +               "tests[%i]: expected w_buffer[0:%i]=%s, got w_buffer[0:%i]=%s\n",
 +               i, tests[i].reversed_len, wine_dbgstr_wn(tests[i].src, tests[i].reversed_len),
@@ -334,26 +331,13 @@ index 147989b..1b5a60d 100644
 +               i, tests[i].reversed_len, tests[i].reversed_len, w_buffer[tests[i].reversed_len]);
 +        }
 +    }
-+}
-+
-+static void test_utf7_decoding(void)
-+{
-+    char input[32];
-+    WCHAR output[32], expected[32];
-+    int i, len, expected_len;
-+
-+    static const char base64_decoding_table[] =
-+    {
-+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 0x00-0x0F */
-+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 0x10-0x1F */
-+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 62, -1, -1, -1, 63, /* 0x20-0x2F */
-+        52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -1, -1, -1, -1, -1, -1, /* 0x30-0x3F */
-+        -1,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, /* 0x40-0x4F */
-+        15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -1, -1, -1, -1, -1, /* 0x50-0x5F */
-+        -1, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, /* 0x60-0x6F */
-+        41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -1, -1, -1, -1, -1  /* 0x70-0x7F */
-+    };
-+
+ }
+ 
+ static void test_utf7_decoding(void)
+@@ -545,6 +854,265 @@ static void test_utf7_decoding(void)
+         41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -1, -1, -1, -1, -1  /* 0x70-0x7F */
+     };
+ 
 +    const struct
 +    {
 +        /* inputs */
@@ -613,112 +597,17 @@ index 147989b..1b5a60d 100644
 +        }
 +    };
 +
-+    if (MultiByteToWideChar(CP_UTF7, 0, "foobar", -1, NULL, 0) == 0 &&
-+        GetLastError() == ERROR_CALL_NOT_IMPLEMENTED)
-+    {
-+        skip("UTF-7 decoding not implemented\n");
-+        return;
-+    }
-+
-+    /* test which one-byte characters remove stray + signs */
-+    for (i = 0; i < 256; i++)
-+    {
-+        sprintf(input, "+%c+AAA", i);
-+
-+        memset(output, '#', sizeof(output) - sizeof(WCHAR));
-+        output[sizeof(output) / sizeof(WCHAR) - 1] = 0;
-+
-+        len = MultiByteToWideChar(CP_UTF7, 0, input, 7, output, sizeof(output) / sizeof(WCHAR) - 1);
-+
-+        if (i == '-')
-+        {
-+            /* removes the - sign */
-+            expected_len = 3;
-+            expected[0] = 0x002B;
-+            expected[1] = 0;
-+            expected[2] = 0;
-+        }
-+        else if (i < 128 && base64_decoding_table[i] != -1)
-+        {
-+            /* absorbs the character into the base64 sequence */
-+            expected_len = 2;
-+            expected[0] = (base64_decoding_table[i] << 10) | 0x03E0;
-+            expected[1] = 0;
-+        }
-+        else
-+        {
-+            /* removes the + sign */
-+            expected_len = 3;
-+            expected[0] = i;
-+            expected[1] = 0;
-+            expected[2] = 0;
-+        }
-+        expected[expected_len] = 0x2323;
-+
-+        ok(len == expected_len, "i=0x%04x: expected len=%i, got len=%i\n", i, expected_len, len);
-+        ok(memcmp(output, expected, (expected_len + 1) * sizeof(WCHAR)) == 0,
-+           "i=0x%04x: expected output[0:%i]=%s, got output[0:%i]=%s\n",
-+           i, expected_len + 1, wine_dbgstr_wn(expected, expected_len + 1),
-+           expected_len + 1, wine_dbgstr_wn(output, expected_len + 1));
-+    }
-+
-+    /* test which one-byte characters terminate a sequence
-+     * also test whether the unfinished byte pair is discarded or not */
-+    for (i = 0; i < 256; i++)
-+    {
-+        sprintf(input, "+B%c+AAA", i);
-+
-+        memset(output, '#', sizeof(output) - sizeof(WCHAR));
-+        output[sizeof(output) / sizeof(WCHAR) - 1] = 0;
-+
-+        len = MultiByteToWideChar(CP_UTF7, 0, input, 8, output, sizeof(output) / sizeof(WCHAR) - 1);
-+
-+        if (i == '-')
-+        {
-+            /* explicitly terminates */
-+            expected_len = 2;
-+            expected[0] = 0;
-+            expected[1] = 0;
-+        }
-+        else if (i < 128)
-+        {
-+            if (base64_decoding_table[i] != -1)
-+            {
-+                /* absorbs the character into the base64 sequence */
-+                expected_len = 3;
-+                expected[0] = 0x0400 | (base64_decoding_table[i] << 4) | 0x000F;
-+                expected[1] = 0x8000;
-+                expected[2] = 0;
-+            }
-+            else
-+            {
-+                /* implicitly terminates and discards the unfinished byte pair */
-+                expected_len = 3;
-+                expected[0] = i;
-+                expected[1] = 0;
-+                expected[2] = 0;
-+            }
-+        }
-+        else
-+        {
-+            /* implicitly terminates but does not the discard unfinished byte pair */
-+            expected_len = 3;
-+            expected[0] = i;
-+            expected[1] = 0x0400;
-+            expected[2] = 0;
-+        }
-+        expected[expected_len] = 0x2323;
-+
-+        ok(len == expected_len, "i=0x%04x: expected len=%i, got len=%i\n", i, expected_len, len);
-+        ok(memcmp(output, expected, (expected_len + 1) * sizeof(WCHAR)) == 0,
-+           "i=0x%04x: expected output[0:%i]=%s, got output[0:%i]=%s\n",
-+           i, expected_len + 1, wine_dbgstr_wn(expected, expected_len + 1),
-+           expected_len + 1, wine_dbgstr_wn(output, expected_len + 1));
-+    }
+     if (MultiByteToWideChar(CP_UTF7, 0, "foobar", -1, NULL, 0) == 0 &&
+         GetLastError() == ERROR_CALL_NOT_IMPLEMENTED)
+     {
+@@ -645,6 +1213,31 @@ static void test_utf7_decoding(void)
+            "i=0x%02x: expected output=%s, got output=%s\n",
+            i, wine_dbgstr_wn(expected, expected_len + 1), wine_dbgstr_wn(output, expected_len + 1));
+     }
 +
 +    for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
 +    {
-+        memset(output, '#', sizeof(output) - sizeof(WCHAR));
++        memset(output, 0x23, sizeof(output) - sizeof(WCHAR));
 +        output[sizeof(output) / sizeof(WCHAR) - 1] = 0;
 +        SetLastError(0xdeadbeef);
 +
@@ -726,8 +615,7 @@ index 147989b..1b5a60d 100644
 +                                  tests[i].dst, tests[i].dstlen);
 +
 +        ok(GetLastError() == tests[i].error,
-+           "tests[%i]: expected error=0x%x, got error=0x%x\n",
-+           i, tests[i].error, GetLastError());
++           "tests[%i]: expected error=0x%x, got error=0x%x\n", i, tests[i].error, GetLastError());
 +        ok(len == tests[i].len, "tests[%i]: expected len=%i, got len=%i\n", i, tests[i].len, len);
 +
 +        if (tests[i].dst)
@@ -744,14 +632,6 @@ index 147989b..1b5a60d 100644
  }
  
  static void test_undefined_byte_char(void)
-@@ -734,6 +1453,7 @@ START_TEST(codepage)
-     test_string_conversion(&bUsedDefaultChar);
- 
-     test_utf7_encoding();
-+    test_utf7_decoding();
- 
-     test_undefined_byte_char();
-     test_threadcp();
 -- 
 2.1.3
 

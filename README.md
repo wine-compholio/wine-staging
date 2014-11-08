@@ -39,9 +39,10 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [9]:**
+**Bugfixes and features included in the next upcoming release [10]:**
 
 * Add stub for NtSetLdtEntries/ZwSetLdtEntries ([Wine Bug #26268](https://bugs.winehq.org/show_bug.cgi?id=26268))
+* Add stubs for vectored continue handler ([Wine Bug #30572](https://bugs.winehq.org/show_bug.cgi?id=30572))
 * Allow selection of audio device for PulseAudio backend
 * CoWaitForMultipleHandles shouldn't process window events when APC calls are queued ([Wine Bug #32568](https://bugs.winehq.org/show_bug.cgi?id=32568))
 * Exception during start of fr-043 caused by missing DXTn support ([Wine Bug #37391](https://bugs.winehq.org/show_bug.cgi?id=37391))

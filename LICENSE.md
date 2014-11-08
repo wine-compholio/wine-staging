@@ -1,15 +1,15 @@
-Wine-Compholio license
-======================
+Wine Staging license
+====================
 
 **Note:** Some files in this repository are provided under a different license.
 Please check the list of exceptions below. Unless stated otherwise all files
-are part of **Wine-Compholio** and are licensed under the terms of the
+are part of **Wine Staging** and are licensed under the terms of the
 [LGPLv2.1](#gnu-lgpl-version-21), to stay compatible with Wine:
 
 ```
-Copyright (C) 2014 the Wine-Compholio project authors.
+Copyright (C) 2014 the Wine Staging project authors.
 
-Wine-Compholio is free software; you can redistribute it and/or
+Wine Staging is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
 License as published by the Free Software Foundation; either
 version 2.1 of the License, or (at your option) any later version.
@@ -26,7 +26,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA.
 
 ### Exceptions
 
-The following files are not part of Wine-Compholio and provided under a
+The following files are not part of Wine Staging and provided under a
 different license. These files are not linked to the rest of the project in
 any way and are simply installed for end-user convenience.
 

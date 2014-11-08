@@ -64,6 +64,7 @@ PATCHLIST := \
 	ntdll-Pipe_SpecialCharacters.ok \
 	ntdll-ThreadTime.ok \
 	ntdll-WRITECOPY.ok \
+	ntoskrnl-IoCsqInitialize.ok \
 	ntoskrnl-Irp_Status.ok \
 	ntoskrnl-KeSetSystemAffinityThread.ok \
 	ntoskrnl-Write_CR4.ok \
@@ -1036,6 +1037,24 @@ ntdll-WRITECOPY.ok:
 	@( \
 		echo '+    { "ntdll-WRITECOPY", "Michael Müller", "Change WRITECOPY memory protection to WRITE on first write. [rev 4]" },'; \
 	) > ntdll-WRITECOPY.ok
+
+# Patchset ntoskrnl-IoCsqInitialize
+# |
+# | Included patches:
+# |   *	Add stub for IoCsqInitialize. [by Austin English]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36777] vSphere needs IoCsqInitialize
+# |
+# | Modified files:
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/csq.h
+# |
+.INTERMEDIATE: ntoskrnl-IoCsqInitialize.ok
+ntoskrnl-IoCsqInitialize.ok:
+	$(call APPLY_FILE,ntoskrnl-IoCsqInitialize/0001-ntoskrnl.exe-Add-a-stub-for-IoCsqInitialize.patch)
+	@( \
+		echo '+    { "ntoskrnl-IoCsqInitialize", "Austin English", "Add stub for IoCsqInitialize." },'; \
+	) > ntoskrnl-IoCsqInitialize.ok
 
 # Patchset ntoskrnl-Irp_Status
 # |

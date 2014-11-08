@@ -51,6 +51,7 @@ PATCHLIST := \
 	libs-Unicode_Collation.ok \
 	libwine-BSD_mmap_fixed.ok \
 	msvcp90-basic_string_wchar_dtor.ok \
+	msvcrt-atof_strtod.ok \
 	ntdll-DOS_Attributes.ok \
 	ntdll-Dynamic_DST.ok \
 	ntdll-Exception.ok \
@@ -786,6 +787,24 @@ msvcp90-basic_string_wchar_dtor.ok:
 	@( \
 		echo '+    { "msvcp90-basic_string_wchar_dtor", "Michael Müller", "basic_string_wchar_dtor needs to return NULL." },'; \
 	) > msvcp90-basic_string_wchar_dtor.ok
+
+# Patchset msvcrt-atof_strtod
+# |
+# | Included patches:
+# |   *	Do not crash when passing NULL as string to atof or strtod. [by Michael Müller]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#32550] MSVCRT crashes when NULL is passed as string to atof or strtod
+# |
+# | Modified files:
+# |   *	dlls/msvcrt/string.c, dlls/msvcrt/tests/string.c
+# |
+.INTERMEDIATE: msvcrt-atof_strtod.ok
+msvcrt-atof_strtod.ok:
+	$(call APPLY_FILE,msvcrt-atof_strtod/0001-msvcrt-Avoid-crash-when-NULL-pointer-is-passed-to-at.patch)
+	@( \
+		echo '+    { "msvcrt-atof_strtod", "Michael Müller", "Do not crash when passing NULL as string to atof or strtod." },'; \
+	) > msvcrt-atof_strtod.ok
 
 # Patchset ntdll-DOS_Attributes
 # |

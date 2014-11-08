@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [12]:**
+**Bugfixes and features included in the next upcoming release [13]:**
 
 * Add stub for NtSetLdtEntries/ZwSetLdtEntries ([Wine Bug #26268](https://bugs.winehq.org/show_bug.cgi?id=26268))
 * Add stubs for vectored continue handler ([Wine Bug #30572](https://bugs.winehq.org/show_bug.cgi?id=30572))
@@ -50,6 +50,7 @@ Included bug fixes and improvements
 * FairplayKD.sys needs KeSetSystemAffinityThread ([Wine Bug #36822](https://bugs.winehq.org/show_bug.cgi?id=36822))
 * Fix crash of Trine Demo on start ([Wine Bug #19231](https://bugs.winehq.org/show_bug.cgi?id=19231))
 * Fix texture corruption in CSI: Fatal Conspiracy ([Wine Bug #33768](https://bugs.winehq.org/show_bug.cgi?id=33768))
+* MSVCRT crashes when NULL is passed as string to atof or strtod ([Wine Bug #32550](https://bugs.winehq.org/show_bug.cgi?id=32550))
 * Return correct values for GetThreadTimes function ([Wine Bug #20230](https://bugs.winehq.org/show_bug.cgi?id=20230))
 * vSphere needs IoCsqInitialize ([Wine Bug #36777](https://bugs.winehq.org/show_bug.cgi?id=36777))
 * wglDescribePixelFormat should return max index for NULL descriptor ([Wine Bug #6176](https://bugs.winehq.org/show_bug.cgi?id=6176))

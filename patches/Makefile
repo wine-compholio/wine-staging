@@ -35,6 +35,7 @@ PATCHLIST := \
 	dbghelp-KdHelp.ok \
 	dsound-Fast_Mixer.ok \
 	fonts-Missing_Fonts.ok \
+	gdi32-MaxPixelFormats.ok \
 	gdi32-MultiMonitor.ok \
 	gdiplus-GdipCreateRegionRgnData.ok \
 	imagehlp-BindImageEx.ok \
@@ -468,6 +469,24 @@ fonts-Missing_Fonts.ok:
 	@( \
 		echo '+    { "fonts-Missing_Fonts", "Torsten Kurbad / Erich E. Hoover", "Implement missing fonts expected by Silverlight. [rev 2]" },'; \
 	) > fonts-Missing_Fonts.ok
+
+# Patchset gdi32-MaxPixelFormats
+# |
+# | Included patches:
+# |   *	Return maximum number of pixel formats when NULL pointer is passed to wglDescribePixelFormat. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#6176] wglDescribePixelFormat should return max index for NULL descriptor
+# |
+# | Modified files:
+# |   *	dlls/gdi32/dibdrv/opengl.c
+# |
+.INTERMEDIATE: gdi32-MaxPixelFormats.ok
+gdi32-MaxPixelFormats.ok:
+	$(call APPLY_FILE,gdi32-MaxPixelFormats/0001-gdi32-Return-maximum-number-of-pixel-formats-when-NU.patch)
+	@( \
+		echo '+    { "gdi32-MaxPixelFormats", "Sebastian Lackner", "Return maximum number of pixel formats when NULL pointer is passed to wglDescribePixelFormat." },'; \
+	) > gdi32-MaxPixelFormats.ok
 
 # Patchset gdi32-MultiMonitor
 # |

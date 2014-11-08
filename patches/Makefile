@@ -30,6 +30,7 @@ PATCHLIST := \
 	d3dx9_36-DXTn.ok \
 	d3dx9_36-Filter_Warnings.ok \
 	d3dx9_36-GetShaderSemantics.ok \
+	d3dx9_36-IntersectTri.ok \
 	d3dx9_36-Texture_Align.ok \
 	d3dx9_36-UpdateSkinnedMesh.ok \
 	dbghelp-KdHelp.ok \
@@ -379,6 +380,24 @@ d3dx9_36-GetShaderSemantics.ok:
 	@( \
 		echo '+    { "d3dx9_36-GetShaderSemantics", "Christian Costa", "Implement D3DXGetShaderInputSemantics." },'; \
 	) > d3dx9_36-GetShaderSemantics.ok
+
+# Patchset d3dx9_36-IntersectTri
+# |
+# | Included patches:
+# |   *	Allow NULL pointer for optional arguments of D3DXIntersectTri. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35133] Allow NULL pointer for optional arguments of D3DXIntersectTri
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/mesh.c, dlls/d3dx9_36/tests/mesh.c
+# |
+.INTERMEDIATE: d3dx9_36-IntersectTri.ok
+d3dx9_36-IntersectTri.ok:
+	$(call APPLY_FILE,d3dx9_36-IntersectTri/0001-d3dx9_36-Allow-NULL-pointer-for-optional-arguments-o.patch)
+	@( \
+		echo '+    { "d3dx9_36-IntersectTri", "Sebastian Lackner", "Allow NULL pointer for optional arguments of D3DXIntersectTri." },'; \
+	) > d3dx9_36-IntersectTri.ok
 
 # Patchset d3dx9_36-Texture_Align
 # |

@@ -324,6 +324,7 @@ configure-Detect_Gnutls.ok:
 d3dx9_36-CreatePolygon.ok:
 	$(call APPLY_FILE,d3dx9_36-CreatePolygon/0001-d3dx9_36-Implement-D3DXCreatePolygon.patch)
 	$(call APPLY_FILE,d3dx9_36-CreatePolygon/0002-d3dx9_36-tests-Add-tests-for-D3DXCreatePolygon.patch)
+	$(call APPLY_FILE,d3dx9_36-CreatePolygon/0003-d3dx9_36-tests-Remove-code-to-skip-test-which-should.patch)
 	@( \
 		echo '+    { "d3dx9_36-CreatePolygon", "Sebastian Lackner", "Implement D3DXCreatePolygon. [rev 2]" },'; \
 	) > d3dx9_36-CreatePolygon.ok

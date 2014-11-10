@@ -101,6 +101,7 @@ PATCHLIST := \
 	winebuild-LinkerVersion.ok \
 	wined3d-DXTn.ok \
 	wined3d-Revert_PixelFormat.ok \
+	winedevice-Fix_Relocation.ok \
 	winemenubuilder-Desktop_Icon_Path.ok \
 	winepulse-PulseAudio_Support.ok \
 	winex11-CandidateWindowPos.ok \
@@ -1750,6 +1751,24 @@ wined3d-Revert_PixelFormat.ok:
 	@( \
 		echo '+    { "wined3d-Revert_PixelFormat", "Ken Thomases", "Revert wined3d pixelformat changes." },'; \
 	) > wined3d-Revert_PixelFormat.ok
+
+# Patchset winedevice-Fix_Relocation
+# |
+# | Included patches:
+# |   *	Avoid invalid memory access when relocation block addresses memory outside of the current page. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#28254] Fix crash of winedevice when relocation entry crosses page boundary
+# |
+# | Modified files:
+# |   *	programs/winedevice/device.c
+# |
+.INTERMEDIATE: winedevice-Fix_Relocation.ok
+winedevice-Fix_Relocation.ok:
+	$(call APPLY_FILE,winedevice-Fix_Relocation/0001-winedevice-Avoid-invalid-memory-access-when-relocati.patch)
+	@( \
+		echo '+    { "winedevice-Fix_Relocation", "Sebastian Lackner", "Avoid invalid memory access when relocation block addresses memory outside of the current page." },'; \
+	) > winedevice-Fix_Relocation.ok
 
 # Patchset winemenubuilder-Desktop_Icon_Path
 # |

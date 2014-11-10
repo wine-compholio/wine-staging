@@ -72,6 +72,7 @@ PATCHLIST := \
 	ntoskrnl-IoCsqInitialize.ok \
 	ntoskrnl-Irp_Status.ok \
 	ntoskrnl-KeSetSystemAffinityThread.ok \
+	ntoskrnl-Stub_FileObject.ok \
 	ntoskrnl-Write_CR4.ok \
 	ole32-CoWaitForMultipleHandles.ok \
 	quartz-MediaSeeking_Positions.ok \
@@ -1192,6 +1193,21 @@ ntoskrnl-KeSetSystemAffinityThread.ok:
 	@( \
 		echo '+    { "ntoskrnl-KeSetSystemAffinityThread", "Michael Müller", "Add stub for KeSetSystemAffinityThread." },'; \
 	) > ntoskrnl-KeSetSystemAffinityThread.ok
+
+# Patchset ntoskrnl-Stub_FileObject
+# |
+# | Included patches:
+# |   *	Initialize irp.Tail.Overlay.OriginalFileObject with stub file object. [by Sebastian Lackner]
+# |
+# | Modified files:
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c
+# |
+.INTERMEDIATE: ntoskrnl-Stub_FileObject.ok
+ntoskrnl-Stub_FileObject.ok:
+	$(call APPLY_FILE,ntoskrnl-Stub_FileObject/0001-ntoskrnl-Initialize-irp.Tail.Overlay.OriginalFileObj.patch)
+	@( \
+		echo '+    { "ntoskrnl-Stub_FileObject", "Sebastian Lackner", "Initialize irp.Tail.Overlay.OriginalFileObject with stub file object." },'; \
+	) > ntoskrnl-Stub_FileObject.ok
 
 # Patchset ntoskrnl-Write_CR4
 # |

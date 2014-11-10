@@ -68,6 +68,7 @@ PATCHLIST := \
 	ntdll-ThreadTime.ok \
 	ntdll-Vectored_Continue_Handler.ok \
 	ntdll-WRITECOPY.ok \
+	ntoskrnl-Emulator.ok \
 	ntoskrnl-IoCsqInitialize.ok \
 	ntoskrnl-Irp_Status.ok \
 	ntoskrnl-KeSetSystemAffinityThread.ok \
@@ -1114,6 +1115,21 @@ ntdll-WRITECOPY.ok:
 	@( \
 		echo '+    { "ntdll-WRITECOPY", "Michael Müller", "Change WRITECOPY memory protection to WRITE on first write. [rev 4]" },'; \
 	) > ntdll-WRITECOPY.ok
+
+# Patchset ntoskrnl-Emulator
+# |
+# | Included patches:
+# |   *	Emulate 'mov Eb, Gb' instruction on x86 processor architecture. [by Sebastian Lackner]
+# |
+# | Modified files:
+# |   *	dlls/ntoskrnl.exe/instr.c
+# |
+.INTERMEDIATE: ntoskrnl-Emulator.ok
+ntoskrnl-Emulator.ok:
+	$(call APPLY_FILE,ntoskrnl-Emulator/0001-ntoskrnl-Emulate-mov-Eb-Gb-instruction-on-x86-proces.patch)
+	@( \
+		echo '+    { "ntoskrnl-Emulator", "Sebastian Lackner", "Emulate '\''mov Eb, Gb'\'' instruction on x86 processor architecture." },'; \
+	) > ntoskrnl-Emulator.ok
 
 # Patchset ntoskrnl-IoCsqInitialize
 # |

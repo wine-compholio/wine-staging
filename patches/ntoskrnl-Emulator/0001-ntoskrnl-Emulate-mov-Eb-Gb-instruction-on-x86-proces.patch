@@ -1,15 +1,15 @@
-From 4fa4d95330e47ca48ea7bfc0297c782374d55a4e Mon Sep 17 00:00:00 2001
+From 332dcc33d8be2ab7cddeba6320bde968b5872246 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 10 Nov 2014 07:14:48 +0100
 Subject: ntoskrnl: Emulate 'mov Eb, Gb' instruction on x86 processor
  architecture.
 
 ---
- dlls/ntoskrnl.exe/instr.c | 30 +++++++++++++++++++++++++++---
- 1 file changed, 27 insertions(+), 3 deletions(-)
+ dlls/ntoskrnl.exe/instr.c | 33 ++++++++++++++++++++++++++++-----
+ 1 file changed, 28 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/ntoskrnl.exe/instr.c b/dlls/ntoskrnl.exe/instr.c
-index fe35686..38492f0 100644
+index fe35686..05cd238 100644
 --- a/dlls/ntoskrnl.exe/instr.c
 +++ b/dlls/ntoskrnl.exe/instr.c
 @@ -59,7 +59,7 @@ static inline struct idtr get_idtr(void)
@@ -44,21 +44,23 @@ index fe35686..38492f0 100644
  /***********************************************************************
   *           INSTR_GetOperandAddr
   *
-@@ -399,19 +415,27 @@ static DWORD emulate_instruction( EXCEPTION_RECORD *rec, CONTEXT *context )
+@@ -399,19 +415,26 @@ static DWORD emulate_instruction( EXCEPTION_RECORD *rec, CONTEXT *context )
          }
          break;  /* Unable to emulate it */
  
 +    case 0x8a: /* mov Eb, Gb */
      case 0x8b: /* mov Ev, Gv */
      {
-         BYTE *addr = INSTR_GetOperandAddr(context, instr + 1, long_addr,
+-        BYTE *addr = INSTR_GetOperandAddr(context, instr + 1, long_addr,
++        BYTE *data = INSTR_GetOperandAddr(context, instr + 1, long_addr,
                                            segprefix, &len);
++        unsigned int data_size = (*instr == 0x8b) ? (long_op ? 4 : 2) : 1;
          struct idtr idtr = get_idtr();
-         unsigned int offset = addr - idtr.base;
-+        unsigned int size = (*instr == 0x8b) ? (long_op ? 4 : 2) : 1;
+-        unsigned int offset = addr - idtr.base;
++        unsigned int offset = data - idtr.base;
  
 -        if (offset <= idtr.limit + 1 - (long_op ? 4 : 2))
-+        if (offset <= idtr.limit + 1 - size)
++        if (offset <= idtr.limit + 1 - data_size)
          {
              idt[1].LimitLow = 0x100; /* FIXME */
              idt[2].LimitLow = 0x11E; /* FIXME */
@@ -67,10 +69,9 @@ index fe35686..38492f0 100644
 +
 +            switch (*instr)
 +            {
-+                case 0x8a: store_reg_byte( context, instr[1], (BYTE *)idt + offset ); break;
-+                case 0x8b: store_reg_word( context, instr[1], (BYTE *)idt + offset, long_op ); break;
++            case 0x8a: store_reg_byte( context, instr[1], (BYTE *)idt + offset ); break;
++            case 0x8b: store_reg_word( context, instr[1], (BYTE *)idt + offset, long_op ); break;
 +            }
-+
              context->Eip += prefixlen + len + 1;
              return ExceptionContinueExecution;
          }

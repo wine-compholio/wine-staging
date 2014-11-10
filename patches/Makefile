@@ -1121,15 +1121,22 @@ ntdll-WRITECOPY.ok:
 # |
 # | Included patches:
 # |   *	Emulate 'mov Eb, Gb' instruction on x86 processor architecture. [by Sebastian Lackner]
+# |   *	Emulate access to KI_USER_SHARED_DATA kernel page on x86_64. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33849] Emulate access to KI_USER_SHARED_DATA kernel page on x86_64
 # |
 # | Modified files:
-# |   *	dlls/ntoskrnl.exe/instr.c
+# |   *	dlls/ntoskrnl.exe/instr.c, dlls/ntoskrnl.exe/ntoskrnl.c
 # |
 .INTERMEDIATE: ntoskrnl-Emulator.ok
 ntoskrnl-Emulator.ok:
 	$(call APPLY_FILE,ntoskrnl-Emulator/0001-ntoskrnl-Emulate-mov-Eb-Gb-instruction-on-x86-proces.patch)
+	$(call APPLY_FILE,ntoskrnl-Emulator/0002-ntoskrnl-Emulate-memory-access-to-KI_USER_SHARED_DAT.patch)
+	$(call APPLY_FILE,ntoskrnl-Emulator/0003-ntoskrnl-Add-TRACEs-for-instruction-emulator-on-x86_.patch)
 	@( \
 		echo '+    { "ntoskrnl-Emulator", "Sebastian Lackner", "Emulate '\''mov Eb, Gb'\'' instruction on x86 processor architecture." },'; \
+		echo '+    { "ntoskrnl-Emulator", "Sebastian Lackner", "Emulate access to KI_USER_SHARED_DATA kernel page on x86_64." },'; \
 	) > ntoskrnl-Emulator.ok
 
 # Patchset ntoskrnl-IoCsqInitialize

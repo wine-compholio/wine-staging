@@ -1,4 +1,4 @@
-From d6e9673ae62469399560736a43368ce7f4ff5a8e Mon Sep 17 00:00:00 2001
+From 6da899c91d3b1080fa4398f74f9fd58c6dce8484 Mon Sep 17 00:00:00 2001
 From: Aric Stewart <aric@codeweavers.com>
 Date: Mon, 8 Sep 2014 21:05:31 -0500
 Subject: imm32: Move thread data from TLSEntry to an internal list.
@@ -8,14 +8,14 @@ Changes by Sebastian Lackner <sebastian@fds-team.de>:
 * IMM_GetInitializedThreadData shouldn't hold the CS while destroying the context in case of a race-condition
 * ImmGetDefaultIMEWnd shouldn't hold the CS while creating a window
 ---
- dlls/imm32/imm.c | 160 ++++++++++++++++++++++++++++++++++++++++++-------------
- 1 file changed, 124 insertions(+), 36 deletions(-)
+ dlls/imm32/imm.c | 163 ++++++++++++++++++++++++++++++++++++++++++-------------
+ 1 file changed, 124 insertions(+), 39 deletions(-)
 
 diff --git a/dlls/imm32/imm.c b/dlls/imm32/imm.c
-index 2fa31ac..b617f5a 100644
+index f09b132..cf38bf6 100644
 --- a/dlls/imm32/imm.c
 +++ b/dlls/imm32/imm.c
-@@ -86,12 +86,14 @@ typedef struct _tagTRANSMSG {
+@@ -89,12 +89,14 @@ typedef struct _tagTRANSMSG {
  } TRANSMSG, *LPTRANSMSG;
  
  typedef struct _tagIMMThreadData {
@@ -29,9 +29,9 @@ index 2fa31ac..b617f5a 100644
  static struct list ImmHklList = LIST_INIT(ImmHklList);
 +static struct list ImmThreadDataList = LIST_INIT(ImmThreadDataList);
  
- /* MSIME messages */
- static UINT WM_MSIME_SERVICE;
-@@ -110,6 +112,15 @@ static const WCHAR szImeRegFmt[] = {'S','y','s','t','e','m','\\','C','u','r','r'
+ static const WCHAR szwWineIMCProperty[] = {'W','i','n','e','I','m','m','H','I','M','C','P','r','o','p','e','r','t','y',0};
+ 
+@@ -104,6 +106,15 @@ static const WCHAR szImeRegFmt[] = {'S','y','s','t','e','m','\\','C','u','r','r'
  
  static const WCHAR szwIME[] = {'I','M','E',0};
  
@@ -44,10 +44,10 @@ index 2fa31ac..b617f5a 100644
 +};
 +static CRITICAL_SECTION threaddata_cs = { &critsect_debug, -1, 0, 0, 0, 0 };
 +
- static LRESULT WINAPI DefIME_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
-                                         LPARAM lParam);
+ #define is_himc_ime_unicode(p)  (p->immKbd->imeInfo.fdwProperty & IME_PROP_UNICODE)
+ #define is_kbd_ime_unicode(p)  (p->imeInfo.fdwProperty & IME_PROP_UNICODE)
  
-@@ -220,29 +231,50 @@ static DWORD convert_candidatelist_AtoW(
+@@ -211,29 +222,50 @@ static DWORD convert_candidatelist_AtoW(
      return ret;
  }
  
@@ -111,25 +111,30 @@ index 2fa31ac..b617f5a 100644
  }
  
  static HMODULE load_graphics_driver(void)
-@@ -398,9 +430,6 @@ BOOL WINAPI DllMain(HINSTANCE hInstDLL, DWORD fdwReason, LPVOID lpReserved)
+@@ -368,14 +400,8 @@ BOOL WINAPI DllMain(HINSTANCE hInstDLL, DWORD fdwReason, LPVOID lpReserved)
+     switch (fdwReason)
      {
          case DLL_PROCESS_ATTACH:
-             IMM_RegisterMessages();
 -            tlsIndex = TlsAlloc();
 -            if (tlsIndex == TLS_OUT_OF_INDEXES)
 -                return FALSE;
-             IMM_RegisterIMEClass();
+             if (!User32InitializeImmEntryTable(IMM_INIT_MAGIC))
+-            {
+-                TlsFree(tlsIndex);
+                 return FALSE;
+-            }
              break;
          case DLL_THREAD_ATTACH:
-@@ -412,7 +441,6 @@ BOOL WINAPI DllMain(HINSTANCE hInstDLL, DWORD fdwReason, LPVOID lpReserved)
+             break;
+@@ -386,7 +412,6 @@ BOOL WINAPI DllMain(HINSTANCE hInstDLL, DWORD fdwReason, LPVOID lpReserved)
              if (lpReserved) break;
              IMM_FreeThreadData();
              IMM_FreeAllImmHkl();
 -            TlsFree(tlsIndex);
-             UnregisterClassW(szwIME, NULL);
              break;
      }
-@@ -469,6 +497,34 @@ static InputContextData* get_imc_data(HIMC hIMC)
+     return TRUE;
+@@ -442,6 +467,34 @@ static InputContextData* get_imc_data(HIMC hIMC)
      return data;
  }
  
@@ -164,7 +169,7 @@ index 2fa31ac..b617f5a 100644
  /***********************************************************************
   *		ImmAssociateContext (IMM32.@)
   */
-@@ -476,31 +532,30 @@ HIMC WINAPI ImmAssociateContext(HWND hWnd, HIMC hIMC)
+@@ -449,31 +502,30 @@ HIMC WINAPI ImmAssociateContext(HWND hWnd, HIMC hIMC)
  {
      HIMC old = NULL;
      InputContextData *data = get_imc_data(hIMC);
@@ -200,7 +205,7 @@ index 2fa31ac..b617f5a 100644
          {
              if (hIMC == NULL) /* Meaning disable imm for that window*/
                  SetPropW(hWnd,szwWineIMCProperty,(HANDLE)-1);
-@@ -515,6 +570,7 @@ HIMC WINAPI ImmAssociateContext(HWND hWnd, HIMC hIMC)
+@@ -488,6 +540,7 @@ HIMC WINAPI ImmAssociateContext(HWND hWnd, HIMC hIMC)
                  old_data->IMC.hWnd = NULL;
          }
      }
@@ -208,7 +213,7 @@ index 2fa31ac..b617f5a 100644
  
      if (!hIMC)
          return old;
-@@ -556,12 +612,17 @@ static BOOL CALLBACK _ImmAssociateContextExEnumProc(HWND hwnd, LPARAM lParam)
+@@ -529,12 +582,17 @@ static BOOL CALLBACK _ImmAssociateContextExEnumProc(HWND hwnd, LPARAM lParam)
   */
  BOOL WINAPI ImmAssociateContextEx(HWND hWnd, HIMC hIMC, DWORD dwFlags)
  {
@@ -229,7 +234,7 @@ index 2fa31ac..b617f5a 100644
  
      switch (dwFlags)
      {
-@@ -569,7 +630,7 @@ BOOL WINAPI ImmAssociateContextEx(HWND hWnd, HIMC hIMC, DWORD dwFlags)
+@@ -542,7 +600,7 @@ BOOL WINAPI ImmAssociateContextEx(HWND hWnd, HIMC hIMC, DWORD dwFlags)
          ImmAssociateContext(hWnd,hIMC);
          return TRUE;
      case IACE_DEFAULT:
@@ -238,7 +243,7 @@ index 2fa31ac..b617f5a 100644
          return TRUE;
      case IACE_IGNORENOCONTEXT:
          if (GetPropW(hWnd,szwWineIMCProperty))
-@@ -744,7 +805,11 @@ static BOOL IMM_DestroyContext(HIMC hIMC)
+@@ -717,7 +775,11 @@ static BOOL IMM_DestroyContext(HIMC hIMC)
   */
  BOOL WINAPI ImmDestroyContext(HIMC hIMC)
  {
@@ -251,7 +256,7 @@ index 2fa31ac..b617f5a 100644
          return IMM_DestroyContext(hIMC);
      else
          return FALSE;
-@@ -1410,6 +1475,7 @@ BOOL WINAPI ImmGetCompositionWindow(HIMC hIMC, LPCOMPOSITIONFORM lpCompForm)
+@@ -1383,6 +1445,7 @@ BOOL WINAPI ImmGetCompositionWindow(HIMC hIMC, LPCOMPOSITIONFORM lpCompForm)
  HIMC WINAPI ImmGetContext(HWND hWnd)
  {
      HIMC rc;
@@ -259,7 +264,7 @@ index 2fa31ac..b617f5a 100644
  
      TRACE("%p\n", hWnd);
  
-@@ -1418,20 +1484,21 @@ HIMC WINAPI ImmGetContext(HWND hWnd)
+@@ -1391,20 +1454,21 @@ HIMC WINAPI ImmGetContext(HWND hWnd)
          SetLastError(ERROR_INVALID_WINDOW_HANDLE);
          return NULL;
      }
@@ -284,7 +289,7 @@ index 2fa31ac..b617f5a 100644
      TRACE("returning %p\n", rc);
  
      return rc;
-@@ -1539,11 +1606,32 @@ BOOL WINAPI ImmGetConversionStatus(
+@@ -1512,11 +1576,32 @@ BOOL WINAPI ImmGetConversionStatus(
   */
  HWND WINAPI ImmGetDefaultIMEWnd(HWND hWnd)
  {
@@ -323,5 +328,5 @@ index 2fa31ac..b617f5a 100644
  
  /***********************************************************************
 -- 
-2.1.1
+2.1.3
 

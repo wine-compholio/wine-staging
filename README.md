@@ -107,7 +107,7 @@ Included bug fixes and improvements
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](https://bugs.winehq.org/show_bug.cgi?id=35652))
 * Support for AllocateAndGetTcpExTableFromStack ([Wine Bug #34372](https://bugs.winehq.org/show_bug.cgi?id=34372))
 * Support for BindImageEx ([Wine Bug #3591](https://bugs.winehq.org/show_bug.cgi?id=3591))
-* Support for D3DXCreatePolygon ([Wine Bug #13632](https://bugs.winehq.org/show_bug.cgi?id=13632))
+* ~~Support for D3DXCreatePolygon~~ ([Wine Bug #13632](https://bugs.winehq.org/show_bug.cgi?id=13632))
 * Support for D3DXGetShaderInputSemantics ([Wine Bug #22682](https://bugs.winehq.org/show_bug.cgi?id=22682))
 * Support for DOS hidden/system file attributes ([Wine Bug #9158](https://bugs.winehq.org/show_bug.cgi?id=9158))
 * Support for Dynamic DST (daylight saving time) information in registry

@@ -78,6 +78,7 @@ PATCHLIST := \
 	ole32-CoWaitForMultipleHandles.ok \
 	quartz-MediaSeeking_Positions.ok \
 	riched20-IText_Interface.ok \
+	secur32-Schannel_ContextAttr.ok \
 	server-ACL_Compat.ok \
 	server-Address_Change_Notification.ok \
 	server-CreateProcess_ACLs.ok \
@@ -1323,6 +1324,24 @@ riched20-IText_Interface.ok:
 		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "Implement ITextRange/Selection::{GetText,SetRange,IsEqual,GetStoryLength}." },'; \
 		echo '+    { "riched20-IText_Interface", "Sebastian Lackner", "Implement ITextSelection_fnGetDuplicate." },'; \
 	) > riched20-IText_Interface.ok
+
+# Patchset secur32-Schannel_ContextAttr
+# |
+# | Included patches:
+# |   *	Return more context attributes in schan_InitializeSecurityContextW. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37527] Return more context attributes in schan_InitializeSecurityContextW
+# |
+# | Modified files:
+# |   *	dlls/secur32/schannel.c
+# |
+.INTERMEDIATE: secur32-Schannel_ContextAttr.ok
+secur32-Schannel_ContextAttr.ok:
+	$(call APPLY_FILE,secur32-Schannel_ContextAttr/0001-secur32-Return-more-context-attributes-in-schan_Init.patch)
+	@( \
+		echo '+    { "secur32-Schannel_ContextAttr", "Sebastian Lackner", "Return more context attributes in schan_InitializeSecurityContextW." },'; \
+	) > secur32-Schannel_ContextAttr.ok
 
 # Patchset server-ACL_Compat
 # |

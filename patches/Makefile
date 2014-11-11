@@ -19,6 +19,7 @@ APPLY_FILE = @echo "Applying $(1)"; $(APPLY) < "$(CURDIR)/$(1)"
 #
 
 PATCHLIST := \
+	Exagear.ok \
 	Miscellaneous.ok \
 	Pipelight.ok \
 	Staging.ok \
@@ -163,6 +164,21 @@ series: $(PATCHLIST)
 clean:
 	rm -f series patchlist.diff
 	rm -f *.ok
+
+# Patchset Exagear
+# |
+# | Included patches:
+# |   *	Implement emulation SIDT instruction when using Exagear. [by Sebastian Lackner]
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/ntdll/signal_i386.c
+# |
+.INTERMEDIATE: Exagear.ok
+Exagear.ok:
+	$(call APPLY_FILE,Exagear/0001-ntdll-Implement-emulation-SIDT-instruction-when-usin.patch)
+	@( \
+		echo '+    { "Exagear", "Sebastian Lackner", "Implement emulation SIDT instruction when using Exagear." },'; \
+	) > Exagear.ok
 
 # Patchset Miscellaneous
 # |

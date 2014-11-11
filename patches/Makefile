@@ -27,6 +27,7 @@ PATCHLIST := \
 	comctl32-LoadIconMetric.ok \
 	configure-Absolute_RPATH.ok \
 	configure-Detect_Gnutls.ok \
+	d3d9-Surface_Refcount.ok \
 	d3dx9_36-DXTn.ok \
 	d3dx9_36-Filter_Warnings.ok \
 	d3dx9_36-GetShaderSemantics.ok \
@@ -325,6 +326,24 @@ configure-Detect_Gnutls.ok:
 	@( \
 		echo '+    { "configure-Detect_Gnutls", "Sebastian Lackner", "Fix detection of gnutls on Ubuntu 14.10. [rev 3]" },'; \
 	) > configure-Detect_Gnutls.ok
+
+# Patchset d3d9-Surface_Refcount
+# |
+# | Included patches:
+# |   *	Don't decrease surface refcount when its already zero. [by Henri Verbeet]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#18477] Avoid crashing when broken app tries to release surface although refcount is zero
+# |
+# | Modified files:
+# |   *	dlls/d3d9/surface.c
+# |
+.INTERMEDIATE: d3d9-Surface_Refcount.ok
+d3d9-Surface_Refcount.ok:
+	$(call APPLY_FILE,d3d9-Surface_Refcount/0001-d3d9-Don-t-decrease-surface-refcount-when-its-alread.patch)
+	@( \
+		echo '+    { "d3d9-Surface_Refcount", "Henri Verbeet", "Don'\''t decrease surface refcount when its already zero." },'; \
+	) > d3d9-Surface_Refcount.ok
 
 # Patchset d3dx9_36-DXTn
 # |

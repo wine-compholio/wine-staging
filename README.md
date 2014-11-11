@@ -39,12 +39,13 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [16]:**
+**Bugfixes and features included in the next upcoming release [17]:**
 
 * Add stub for NtSetLdtEntries/ZwSetLdtEntries ([Wine Bug #26268](https://bugs.winehq.org/show_bug.cgi?id=26268))
 * Add stubs for vectored continue handler ([Wine Bug #30572](https://bugs.winehq.org/show_bug.cgi?id=30572))
 * Allow NULL pointer for optional arguments of D3DXIntersectTri ([Wine Bug #35133](https://bugs.winehq.org/show_bug.cgi?id=35133))
 * Allow selection of audio device for PulseAudio backend
+* Avoid crashing when broken app tries to release surface although refcount is zero ([Wine Bug #18477](https://bugs.winehq.org/show_bug.cgi?id=18477))
 * CoWaitForMultipleHandles shouldn't process window events when APC calls are queued ([Wine Bug #32568](https://bugs.winehq.org/show_bug.cgi?id=32568))
 * Emulate access to KI_USER_SHARED_DATA kernel page on x86_64 ([Wine Bug #33849](https://bugs.winehq.org/show_bug.cgi?id=33849))
 * Exception during start of fr-043 caused by missing DXTn support ([Wine Bug #37391](https://bugs.winehq.org/show_bug.cgi?id=37391))

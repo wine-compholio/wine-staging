@@ -168,16 +168,16 @@ clean:
 # Patchset Exagear
 # |
 # | Included patches:
-# |   *	Implement emulation SIDT instruction when using Exagear. [by Sebastian Lackner]
+# |   *	Implement emulation of SIDT instruction when using Exagear. [by Sebastian Lackner]
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/ntdll/signal_i386.c
 # |
 .INTERMEDIATE: Exagear.ok
 Exagear.ok:
-	$(call APPLY_FILE,Exagear/0001-ntdll-Implement-emulation-SIDT-instruction-when-usin.patch)
+	$(call APPLY_FILE,Exagear/0001-ntdll-Implement-emulation-of-SIDT-instruction-when-u.patch)
 	@( \
-		echo '+    { "Exagear", "Sebastian Lackner", "Implement emulation SIDT instruction when using Exagear." },'; \
+		echo '+    { "Exagear", "Sebastian Lackner", "Implement emulation of SIDT instruction when using Exagear." },'; \
 	) > Exagear.ok
 
 # Patchset Miscellaneous

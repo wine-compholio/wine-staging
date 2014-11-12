@@ -1671,6 +1671,9 @@ user32-Dialog_Paint_Event.ok:
 # | Included patches:
 # |   *	Avoid sending window messages in FindWindowExW. [by Sebastian Lackner]
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#27282] Avoid sending window messages in FindWindowExW
+# |
 # | Modified files:
 # |   *	dlls/user32/tests/win.c, dlls/user32/win.c
 # |

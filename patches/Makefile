@@ -97,6 +97,7 @@ PATCHLIST := \
 	shlwapi-PathIsDirectoryEmptyW.ok \
 	shlwapi-UrlCombine.ok \
 	user32-Dialog_Paint_Event.ok \
+	user32-FindWindowEx.ok \
 	user32-GetSystemMetrics.ok \
 	user32-GetTipText.ok \
 	user32-WndProc.ok \
@@ -1664,6 +1665,23 @@ user32-Dialog_Paint_Event.ok:
 	@( \
 		echo '+    { "user32-Dialog_Paint_Event", "Sebastian Lackner", "Call UpdateWindow during DIALOG_CreateIndirect." },'; \
 	) > user32-Dialog_Paint_Event.ok
+
+# Patchset user32-FindWindowEx
+# |
+# | Included patches:
+# |   *	Avoid sending window messages in FindWindowExW. [by Sebastian Lackner]
+# |
+# | Modified files:
+# |   *	dlls/user32/tests/win.c, dlls/user32/win.c
+# |
+.INTERMEDIATE: user32-FindWindowEx.ok
+user32-FindWindowEx.ok:
+	$(call APPLY_FILE,user32-FindWindowEx/0001-user32-tests-Add-tests-to-demonstrate-FindWindow-doe.patch)
+	$(call APPLY_FILE,user32-FindWindowEx/0002-user32-tests-Add-tests-for-Set-Get-WindowTextA-with-.patch)
+	$(call APPLY_FILE,user32-FindWindowEx/0003-user32-Avoid-sending-window-messages-in-FindWindowEx.patch)
+	@( \
+		echo '+    { "user32-FindWindowEx", "Sebastian Lackner", "Avoid sending window messages in FindWindowExW." },'; \
+	) > user32-FindWindowEx.ok
 
 # Patchset user32-GetSystemMetrics
 # |

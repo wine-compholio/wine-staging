@@ -2047,17 +2047,16 @@ wpcap-Dynamic_Linking.ok:
 # Patchset ws2_32-Connect_Time
 # |
 # | Included patches:
-# |   *	Return the appropriate connection time with SO_CONNECT_TIME. [by Bruno Jesus / Erich E. Hoover]
+# |   *	Return the appropriate connection time with SO_CONNECT_TIME. [rev 2, by Bruno Jesus / Erich E. Hoover]
 # |
 # | Modified files:
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, server/protocol.def, server/sock.c
 # |
 .INTERMEDIATE: ws2_32-Connect_Time.ok
 ws2_32-Connect_Time.ok:
-	$(call APPLY_FILE,ws2_32-Connect_Time/0001-server-Store-the-time-of-the-socket-connection.patch)
-	$(call APPLY_FILE,ws2_32-Connect_Time/0002-ws2_32-Properly-implement-SO_CONNECT_TIME.patch)
+	$(call APPLY_FILE,ws2_32-Connect_Time/0001-ws2_32-Properly-implement-SO_CONNECT_TIME.patch)
 	@( \
-		echo '+    { "ws2_32-Connect_Time", "Bruno Jesus / Erich E. Hoover", "Return the appropriate connection time with SO_CONNECT_TIME." },'; \
+		echo '+    { "ws2_32-Connect_Time", "Bruno Jesus / Erich E. Hoover", "Return the appropriate connection time with SO_CONNECT_TIME. [rev 2]" },'; \
 	) > ws2_32-Connect_Time.ok
 
 # Patchset ws2_32-TransmitFile

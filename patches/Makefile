@@ -97,6 +97,7 @@ PATCHLIST := \
 	shlwapi-PathIsDirectoryEmptyW.ok \
 	shlwapi-UrlCombine.ok \
 	user32-Dialog_Paint_Event.ok \
+	user32-DrawTextExW.ok \
 	user32-FindWindowEx.ok \
 	user32-GetSystemMetrics.ok \
 	user32-GetTipText.ok \
@@ -1665,6 +1666,24 @@ user32-Dialog_Paint_Event.ok:
 	@( \
 		echo '+    { "user32-Dialog_Paint_Event", "Sebastian Lackner", "Call UpdateWindow during DIALOG_CreateIndirect." },'; \
 	) > user32-Dialog_Paint_Event.ok
+
+# Patchset user32-DrawTextExW
+# |
+# | Included patches:
+# |   *	Fix handling of invert_y in DrawTextExW. [by Sebastian Lackner]
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#22109] Fix handling of invert_y in DrawTextExW
+# |
+# | Modified files:
+# |   *	dlls/user32/text.c
+# |
+.INTERMEDIATE: user32-DrawTextExW.ok
+user32-DrawTextExW.ok:
+	$(call APPLY_FILE,user32-DrawTextExW/0001-user32-Fix-handling-of-invert_y-in-DrawTextExW.patch)
+	@( \
+		echo '+    { "user32-DrawTextExW", "Sebastian Lackner", "Fix handling of invert_y in DrawTextExW." },'; \
+	) > user32-DrawTextExW.ok
 
 # Patchset user32-FindWindowEx
 # |

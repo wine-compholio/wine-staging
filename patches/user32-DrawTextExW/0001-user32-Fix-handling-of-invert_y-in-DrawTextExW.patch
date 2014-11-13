@@ -1,0 +1,83 @@
+From 984661d3ad7f1a78cc5b69f81a45b949781ce791 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Thu, 13 Nov 2014 06:43:43 +0100
+Subject: user32: Fix handling of invert_y in DrawTextExW.
+
+---
+ dlls/user32/text.c | 32 +++++++++++++++-----------------
+ 1 file changed, 15 insertions(+), 17 deletions(-)
+
+diff --git a/dlls/user32/text.c b/dlls/user32/text.c
+index 66a35d2..2aa127a 100644
+--- a/dlls/user32/text.c
++++ b/dlls/user32/text.c
+@@ -911,6 +911,15 @@ INT WINAPI DrawTextExW( HDC hdc, LPWSTR str, INT i_count,
+     if (dtp && dtp->cbSize != sizeof(DRAWTEXTPARAMS))
+         return 0;
+ 
++    if (GetGraphicsMode(hdc) == GM_COMPATIBLE)
++    {
++        SIZE window_ext, viewport_ext;
++        GetWindowExtEx(hdc, &window_ext);
++        GetViewportExtEx(hdc, &viewport_ext);
++        if ((window_ext.cy > 0) != (viewport_ext.cy > 0))
++            invert_y = TRUE;
++    }
++
+     if (count == -1)
+     {
+         count = strlenW(str);
+@@ -920,7 +929,7 @@ INT WINAPI DrawTextExW( HDC hdc, LPWSTR str, INT i_count,
+             {
+                 rect->right = rect->left;
+                 if( flags & DT_SINGLELINE)
+-                    rect->bottom = rect->top + lh;
++                    rect->bottom = rect->top + (invert_y ? -lh : lh);
+                 else
+                     rect->bottom = rect->top;
+             }
+@@ -928,15 +937,6 @@ INT WINAPI DrawTextExW( HDC hdc, LPWSTR str, INT i_count,
+         }
+     }
+ 
+-    if (GetGraphicsMode(hdc) == GM_COMPATIBLE)
+-    {
+-        SIZE window_ext, viewport_ext;
+-        GetWindowExtEx(hdc, &window_ext);
+-        GetViewportExtEx(hdc, &viewport_ext);
+-        if ((window_ext.cy > 0) != (viewport_ext.cy > 0))
+-            invert_y = TRUE;
+-    }
+-
+     if (dtp)
+     {
+         lmargin = dtp->iLeftMargin;
+@@ -983,9 +983,10 @@ INT WINAPI DrawTextExW( HDC hdc, LPWSTR str, INT i_count,
+ 
+ 	if (flags & DT_SINGLELINE)
+ 	{
+-	    if (flags & DT_VCENTER) y = rect->top +
+-	    	(rect->bottom - rect->top) / 2 - size.cy / 2;
+-	    else if (flags & DT_BOTTOM) y = rect->bottom - size.cy;
++            if (flags & DT_VCENTER)
++                y = rect->top + (rect->bottom - rect->top) / 2 + (invert_y ? (size.cy / 2) : (-size.cy / 2));
++            else if (flags & DT_BOTTOM)
++                y = rect->bottom + (invert_y ? 0 : -size.cy);
+         }
+ 
+ 	if (!(flags & DT_CALCRECT))
+@@ -1050,10 +1051,7 @@ INT WINAPI DrawTextExW( HDC hdc, LPWSTR str, INT i_count,
+ 	else if (size.cx > max_width)
+ 	    max_width = size.cx;
+ 
+-        if (invert_y)
+-	    y -= lh;
+-        else
+-	    y += lh;
++        y += invert_y ? -lh : lh;
+         if (dtp)
+             dtp->uiLengthDrawn += len;
+     }
+-- 
+2.1.3
+

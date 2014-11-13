@@ -39,10 +39,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [19]:**
+**Bugfixes and features included in the next upcoming release [18]:**
 
 * Add stub for NtSetLdtEntries/ZwSetLdtEntries ([Wine Bug #26268](https://bugs.winehq.org/show_bug.cgi?id=26268))
-* Add stubs for vectored continue handler ([Wine Bug #30572](https://bugs.winehq.org/show_bug.cgi?id=30572))
 * Allow NULL pointer for optional arguments of D3DXIntersectTri ([Wine Bug #35133](https://bugs.winehq.org/show_bug.cgi?id=35133))
 * Allow selection of audio device for PulseAudio backend
 * Avoid crashing when broken app tries to release surface although refcount is zero ([Wine Bug #18477](https://bugs.winehq.org/show_bug.cgi?id=18477))

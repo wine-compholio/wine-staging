@@ -67,7 +67,6 @@ PATCHLIST := \
 	ntdll-NtSetLdtEntries.ok \
 	ntdll-Pipe_SpecialCharacters.ok \
 	ntdll-ThreadTime.ok \
-	ntdll-Vectored_Continue_Handler.ok \
 	ntdll-WRITECOPY.ok \
 	ntoskrnl-Emulator.ok \
 	ntoskrnl-IoCsqInitialize.ok \
@@ -1092,24 +1091,6 @@ ntdll-ThreadTime.ok:
 	@( \
 		echo '+    { "ntdll-ThreadTime", "Sebastian Lackner", "Return correct values in GetThreadTimes() for all threads." },'; \
 	) > ntdll-ThreadTime.ok
-
-# Patchset ntdll-Vectored_Continue_Handler
-# |
-# | Included patches:
-# |   *	Add stubs for vectored continue handler. [by Austin English]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#30572] Add stubs for vectored continue handler
-# |
-# | Modified files:
-# |   *	dlls/kernel32/kernel32.spec, dlls/ntdll/exception.c, dlls/ntdll/ntdll.spec
-# |
-.INTERMEDIATE: ntdll-Vectored_Continue_Handler.ok
-ntdll-Vectored_Continue_Handler.ok:
-	$(call APPLY_FILE,ntdll-Vectored_Continue_Handler/0001-ntdll-Add-stubs-for-vectored-continue-handler.patch)
-	@( \
-		echo '+    { "ntdll-Vectored_Continue_Handler", "Austin English", "Add stubs for vectored continue handler." },'; \
-	) > ntdll-Vectored_Continue_Handler.ok
 
 # Patchset ntdll-WRITECOPY
 # |

@@ -39,10 +39,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [19]:**
+**Bugfixes and features included in the next upcoming release [17]:**
 
 * Add stub for NtSetLdtEntries/ZwSetLdtEntries ([Wine Bug #26268](https://bugs.winehq.org/show_bug.cgi?id=26268))
-* Allow NULL pointer for optional arguments of D3DXIntersectTri ([Wine Bug #35133](https://bugs.winehq.org/show_bug.cgi?id=35133))
 * Allow selection of audio device for PulseAudio backend
 * Avoid crashing when broken app tries to release surface although refcount is zero ([Wine Bug #18477](https://bugs.winehq.org/show_bug.cgi?id=18477))
 * Avoid sending window messages in FindWindowExW ([Wine Bug #27282](https://bugs.winehq.org/show_bug.cgi?id=27282))
@@ -53,7 +52,6 @@ Included bug fixes and improvements
 * Fix crash of Trine Demo on start ([Wine Bug #19231](https://bugs.winehq.org/show_bug.cgi?id=19231))
 * Fix crash of winedevice when relocation entry crosses page boundary ([Wine Bug #28254](https://bugs.winehq.org/show_bug.cgi?id=28254))
 * Fix handling of invert_y in DrawTextExW ([Wine Bug #22109](https://bugs.winehq.org/show_bug.cgi?id=22109))
-* Fix implementation of K32GetPerformanceInfo ([Wine Bug #37512](https://bugs.winehq.org/show_bug.cgi?id=37512))
 * Fix texture corruption in CSI: Fatal Conspiracy ([Wine Bug #33768](https://bugs.winehq.org/show_bug.cgi?id=33768))
 * MSVCRT crashes when NULL is passed as string to atof or strtod ([Wine Bug #32550](https://bugs.winehq.org/show_bug.cgi?id=32550))
 * Return correct values for GetThreadTimes function ([Wine Bug #20230](https://bugs.winehq.org/show_bug.cgi?id=20230))

@@ -1,4 +1,4 @@
-From 63e3716b712d4ad9e811fe550906f72ec916a813 Mon Sep 17 00:00:00 2001
+From 1d4383d08858f302927f08138bbe81093efbfd14 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 28 Sep 2014 22:42:46 +0200
 Subject: ntdll: Throw exception if invalid handle is passed to NtClose and
@@ -62,10 +62,10 @@ index 47a2614..bcc6d69 100644
  }
  
 diff --git a/dlls/ntdll/tests/exception.c b/dlls/ntdll/tests/exception.c
-index a94ed3a..4df8fe5 100644
+index 5cbab71..7a97ae5 100644
 --- a/dlls/ntdll/tests/exception.c
 +++ b/dlls/ntdll/tests/exception.c
-@@ -51,6 +51,7 @@ static NTSTATUS  (WINAPI *pNtTerminateProcess)(HANDLE handle, LONG exit_code);
+@@ -53,6 +53,7 @@ static NTSTATUS  (WINAPI *pNtTerminateProcess)(HANDLE handle, LONG exit_code);
  static NTSTATUS  (WINAPI *pNtQueryInformationProcess)(HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG);
  static NTSTATUS  (WINAPI *pNtSetInformationProcess)(HANDLE, PROCESSINFOCLASS, PVOID, ULONG);
  static BOOL      (WINAPI *pIsWow64Process)(HANDLE, PBOOL);
@@ -73,7 +73,7 @@ index a94ed3a..4df8fe5 100644
  
  #if defined(__x86_64__)
  static BOOLEAN   (CDECL *pRtlAddFunctionTable)(RUNTIME_FUNCTION*, DWORD, DWORD64);
-@@ -936,6 +937,16 @@ static void test_debugger(void)
+@@ -938,6 +939,16 @@ static void test_debugger(void)
                          /* here we handle exception */
                      }
                  }
@@ -90,11 +90,10 @@ index a94ed3a..4df8fe5 100644
                  else
                      ok(FALSE, "unexpected stage %x\n", stage);
  
-@@ -1788,6 +1799,53 @@ static void test_ripevent(DWORD numexc)
- 
+@@ -1791,6 +1802,53 @@ static void test_ripevent(DWORD numexc)
      pRtlRemoveVectoredExceptionHandler(vectored_handler);
  }
-+
+ 
 +static DWORD invalid_handle_exceptions;
 +
 +static LONG CALLBACK invalid_handle_vectored_handler(EXCEPTION_POINTERS *ExceptionInfo)
@@ -141,10 +140,11 @@ index a94ed3a..4df8fe5 100644
 +
 +    pRtlRemoveVectoredExceptionHandler(vectored_handler);
 +}
- #endif /* defined(__i386__) || defined(__x86_64__) */
- 
- START_TEST(exception)
-@@ -1804,6 +1862,7 @@ START_TEST(exception)
++
+ static void test_vectored_continue_handler(void)
+ {
+     PVOID handler1, handler2;
+@@ -1843,6 +1901,7 @@ START_TEST(exception)
      pNtGetContextThread  = (void *)GetProcAddress( hntdll, "NtGetContextThread" );
      pNtSetContextThread  = (void *)GetProcAddress( hntdll, "NtSetContextThread" );
      pNtReadVirtualMemory = (void *)GetProcAddress( hntdll, "NtReadVirtualMemory" );
@@ -152,7 +152,7 @@ index a94ed3a..4df8fe5 100644
      pRtlUnwind           = (void *)GetProcAddress( hntdll, "RtlUnwind" );
      pRtlRaiseException   = (void *)GetProcAddress( hntdll, "RtlRaiseException" );
      pNtTerminateProcess  = (void *)GetProcAddress( hntdll, "NtTerminateProcess" );
-@@ -1867,6 +1926,10 @@ START_TEST(exception)
+@@ -1910,6 +1969,10 @@ START_TEST(exception)
              test_ripevent(0);
              test_stage = 6;
              test_ripevent(1);
@@ -163,22 +163,22 @@ index a94ed3a..4df8fe5 100644
          }
          else
              skip( "RtlRaiseException not found\n" );
-@@ -1880,6 +1943,7 @@ START_TEST(exception)
+@@ -1923,6 +1986,7 @@ START_TEST(exception)
      test_rtlraiseexception();
      test_outputdebugstring(1, FALSE);
      test_ripevent(1);
 +    test_closehandle(0);
+     test_vectored_continue_handler();
      test_debugger();
      test_simd_exceptions();
-     test_fpu_exceptions();
-@@ -1898,6 +1962,7 @@ START_TEST(exception)
+@@ -1942,6 +2006,7 @@ START_TEST(exception)
  
      test_outputdebugstring(1, FALSE);
      test_ripevent(1);
 +    test_closehandle(0);
+     test_vectored_continue_handler();
      test_virtual_unwind();
  
-     if (pRtlAddFunctionTable && pRtlDeleteFunctionTable && pRtlInstallFunctionTableCallback && pRtlLookupFunctionEntry)
 -- 
 2.1.3
 

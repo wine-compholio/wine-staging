@@ -31,7 +31,6 @@ PATCHLIST := \
 	d3dx9_36-DXTn.ok \
 	d3dx9_36-Filter_Warnings.ok \
 	d3dx9_36-GetShaderSemantics.ok \
-	d3dx9_36-IntersectTri.ok \
 	d3dx9_36-Texture_Align.ok \
 	d3dx9_36-UpdateSkinnedMesh.ok \
 	dbghelp-KdHelp.ok \
@@ -47,7 +46,6 @@ PATCHLIST := \
 	kernel32-GetNumaProcessorNode.ok \
 	kernel32-GetSystemTimes.ok \
 	kernel32-GetVolumePathName.ok \
-	kernel32-K32GetPerformanceInfo.ok \
 	kernel32-Named_Pipe.ok \
 	kernel32-UTF7_Support.ok \
 	libs-Unicode_Collation.ok \
@@ -403,24 +401,6 @@ d3dx9_36-GetShaderSemantics.ok:
 		echo '+    { "d3dx9_36-GetShaderSemantics", "Christian Costa", "Implement D3DXGetShaderInputSemantics." },'; \
 	) > d3dx9_36-GetShaderSemantics.ok
 
-# Patchset d3dx9_36-IntersectTri
-# |
-# | Included patches:
-# |   *	Allow NULL pointer for optional arguments of D3DXIntersectTri. [by Sebastian Lackner]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35133] Allow NULL pointer for optional arguments of D3DXIntersectTri
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_36/mesh.c, dlls/d3dx9_36/tests/mesh.c
-# |
-.INTERMEDIATE: d3dx9_36-IntersectTri.ok
-d3dx9_36-IntersectTri.ok:
-	$(call APPLY_FILE,d3dx9_36-IntersectTri/0001-d3dx9_36-Allow-NULL-pointer-for-optional-arguments-o.patch)
-	@( \
-		echo '+    { "d3dx9_36-IntersectTri", "Sebastian Lackner", "Allow NULL pointer for optional arguments of D3DXIntersectTri." },'; \
-	) > d3dx9_36-IntersectTri.ok
-
 # Patchset d3dx9_36-Texture_Align
 # |
 # | Included patches:
@@ -697,24 +677,6 @@ kernel32-GetVolumePathName.ok:
 	@( \
 		echo '+    { "kernel32-GetVolumePathName", "Erich E. Hoover", "Implement GetVolumePathName." },'; \
 	) > kernel32-GetVolumePathName.ok
-
-# Patchset kernel32-K32GetPerformanceInfo
-# |
-# | Included patches:
-# |   *	Fix implementation of K32GetPerformanceInfo. [by Sebastian Lackner]
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37512] Fix implementation of K32GetPerformanceInfo
-# |
-# | Modified files:
-# |   *	dlls/kernel32/cpu.c, dlls/psapi/tests/psapi_main.c
-# |
-.INTERMEDIATE: kernel32-K32GetPerformanceInfo.ok
-kernel32-K32GetPerformanceInfo.ok:
-	$(call APPLY_FILE,kernel32-K32GetPerformanceInfo/0001-kernel32-Fix-implementation-of-K32GetPerformanceInfo.patch)
-	@( \
-		echo '+    { "kernel32-K32GetPerformanceInfo", "Sebastian Lackner", "Fix implementation of K32GetPerformanceInfo." },'; \
-	) > kernel32-K32GetPerformanceInfo.ok
 
 # Patchset kernel32-Named_Pipe
 # |

@@ -212,13 +212,7 @@ def read_definition(revision, filename, name_to_id):
         elif key == "disabled":
             disabled = parse_int(val)
 
-        elif key == "author" or \
-             key == "subject" or \
-             key == "title" or \
-             key == "revision":
-            pass
-
-        else:
+        elif revision is None:
             print "WARNING: Ignoring unknown command in definition file %s: %s" % (filename, line)
 
     return depends, fixes, disabled
@@ -264,7 +258,7 @@ def read_patchset(revision = None):
             patch.depends, patch.fixes, patch.disabled = \
                 read_definition(revision, os.path.join(config.path_patches, patch.name), name_to_id)
         except IOError:
-            raise PatchUpdaterError("Missing definition file for %s" % patch.name)
+            patch.depends, patch.fixes, patch.disabled = set(), [], False
 
     return all_patches
 

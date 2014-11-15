@@ -302,14 +302,14 @@ def read_patch(filename):
         if r is not None:
             subject = r.group(2).strip()
             r = re.search("v([0-9]+)", r.group(1), re.IGNORECASE)
-            if r is not None: return "%s." % subject, int(r.group(1))
+            if r is not None: return subject, int(r.group(1))
         r = re.match("(.*)\\((v|try|rev|take) *([0-9]+)\\)", subject, re.IGNORECASE)
-        if r is not None: return "%s." % r.group(1).strip(), int(r.group(3))
+        if r is not None: return r.group(1).strip(), int(r.group(3))
         r = re.match("(.*)[.,] *(v|try|rev|take) *([0-9]+)", subject, re.IGNORECASE)
-        if r is not None: return "%s." % r.group(1).strip(), int(r.group(3))
+        if r is not None: return r.group(1).strip(), int(r.group(3))
         r = re.match("([^:]+) v([0-9])+: (.*)", subject, re.IGNORECASE)
-        if r is not None: return "%s: %s." % (r.group(1), r.group(3)), int(r.group(2))
-        return "%s." % subject, 1
+        if r is not None: return "%s: %s" % (r.group(1), r.group(3)), int(r.group(2))
+        return subject, 1
 
     header = {}
     with _FileReader(filename) as fp:
@@ -330,7 +330,9 @@ def read_patch(filename):
                     if not line.startswith(" "): break
                     subject += line.rstrip("\r\n")
                     assert fp.read() == line
-                header['subject'], header['revision'] = _parse_subject(subject)
+                subject, revision = _parse_subject(subject)
+                if not subject.endswith("."): subject += "."
+                header['subject'], header['revision'] = subject, revision
 
             elif line.startswith("diff --git "):
                 tmp = line.strip().split(" ")

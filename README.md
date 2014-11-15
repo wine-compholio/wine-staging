@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [17]:**
+**Bugfixes and features included in the next upcoming release [18]:**
 
 * Add stub for NtSetLdtEntries/ZwSetLdtEntries ([Wine Bug #26268](https://bugs.winehq.org/show_bug.cgi?id=26268))
 * Allow selection of audio device for PulseAudio backend
@@ -53,6 +53,7 @@ Included bug fixes and improvements
 * Fix crash of winedevice when relocation entry crosses page boundary ([Wine Bug #28254](https://bugs.winehq.org/show_bug.cgi?id=28254))
 * Fix handling of invert_y in DrawTextExW ([Wine Bug #22109](https://bugs.winehq.org/show_bug.cgi?id=22109))
 * Fix texture corruption in CSI: Fatal Conspiracy ([Wine Bug #33768](https://bugs.winehq.org/show_bug.cgi?id=33768))
+* Initialize irp.Tail.Overlay.OriginalFileObject with stub file object ([Wine Bug #37537](https://bugs.winehq.org/show_bug.cgi?id=37537))
 * MSVCRT crashes when NULL is passed as string to atof or strtod ([Wine Bug #32550](https://bugs.winehq.org/show_bug.cgi?id=32550))
 * Return correct values for GetThreadTimes function ([Wine Bug #20230](https://bugs.winehq.org/show_bug.cgi?id=20230))
 * Return more context attributes in schan_InitializeSecurityContextW ([Wine Bug #37527](https://bugs.winehq.org/show_bug.cgi?id=37527))

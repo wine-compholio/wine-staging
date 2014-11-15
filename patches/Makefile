@@ -192,7 +192,7 @@ Miscellaneous.ok:
 	$(call APPLY_FILE,Miscellaneous/0003-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch)
 	$(call APPLY_FILE,Miscellaneous/0004-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch)
 	@( \
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 1 },'; \
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },'; \
 		echo '+    { "Sebastian Lackner", "kernel32: Silence repeated CompareStringEx FIXME.", 1 },'; \
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },'; \
 		echo '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },'; \
@@ -212,7 +212,7 @@ Pipelight.ok:
 	$(call APPLY_FILE,Pipelight/0004-winex11.drv-Indicate-direct-rendering-through-OpenGL.patch)
 	@( \
 		echo '+    { "Sebastian Lackner", "winex11: Implement X11DRV_FLUSH_GDI_DISPLAY ExtEscape command.", 1 },'; \
-		echo '+    { "Michael Müller", "user32: Decrease minimum SetTimer interval to 5 ms.", 1 },'; \
+		echo '+    { "Michael Müller", "user32: Decrease minimum SetTimer interval to 5 ms.", 2 },'; \
 		echo '+    { "Michael Müller", "wined3d: allow changing strict drawing through an exported function.", 1 },'; \
 		echo '+    { "Michael Müller", "winex11.drv: Indicate direct rendering through OpenGL extension.", 1 },'; \
 	) > Pipelight.ok
@@ -293,7 +293,7 @@ configure-Absolute_RPATH.ok:
 configure-Detect_Gnutls.ok:
 	$(call APPLY_FILE,configure-Detect_Gnutls/0001-configure-Fix-detection-of-gnutls-on-Ubuntu-14.10.patch)
 	@( \
-		echo '+    { "Sebastian Lackner", "configure: Fix detection of gnutls on Ubuntu 14.10.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "configure: Fix detection of gnutls on Ubuntu 14.10.", 3 },'; \
 	) > configure-Detect_Gnutls.ok
 
 # Patchset d3d9-Surface_Refcount
@@ -340,7 +340,7 @@ d3dx9_36-DXTn.ok: wined3d-DXTn.ok
 d3dx9_36-Filter_Warnings.ok:
 	$(call APPLY_FILE,d3dx9_36-Filter_Warnings/0001-d3dx9_36-Filter-out-D3DCompile-warning-messages-that.patch)
 	@( \
-		echo '+    { "Christian Costa", "d3dx9_36: Filter out D3DCompile warning messages that are not present with D3DCompileShader.", 1 },'; \
+		echo '+    { "Christian Costa", "d3dx9_36: Filter out D3DCompile warning messages that are not present with D3DCompileShader.", 4 },'; \
 	) > d3dx9_36-Filter_Warnings.ok
 
 # Patchset d3dx9_36-GetShaderSemantics
@@ -430,7 +430,7 @@ fonts-Missing_Fonts.ok:
 	$(call APPLY_FILE,fonts-Missing_Fonts/0002-fonts-Add-WenQuanYi-Micro-Hei-as-a-Microsoft-Yahei-r.patch)
 	$(call APPLY_FILE,fonts-Missing_Fonts/0003-fonts-Add-Courier-Prime-as-a-Courier-New-replacement.patch)
 	@( \
-		echo '+    { "Torsten Kurbad", "fonts: Add Liberation Sans as an Arial replacement.", 1 },'; \
+		echo '+    { "Torsten Kurbad", "fonts: Add Liberation Sans as an Arial replacement.", 2 },'; \
 		echo '+    { "Erich E. Hoover", "fonts: Add WenQuanYi Micro Hei as a Microsoft Yahei replacement.", 1 },'; \
 		echo '+    { "Erich E. Hoover", "fonts: Add Courier Prime as a Courier New replacement.", 1 },'; \
 	) > fonts-Missing_Fonts.ok
@@ -583,7 +583,7 @@ kernel32-GetSystemTimes.ok:
 	$(call APPLY_FILE,kernel32-GetSystemTimes/0002-kernel32-Implement-GetSystemTimes.patch)
 	@( \
 		echo '+    { "Louis Lenders", "kernel32: Add tests for GetSystemTimes.", 1 },'; \
-		echo '+    { "Erich E. Hoover", "kernel32: Implement GetSystemTimes.", 1 },'; \
+		echo '+    { "Erich E. Hoover", "kernel32: Implement GetSystemTimes.", 3 },'; \
 	) > kernel32-GetSystemTimes.ok
 
 # Patchset kernel32-GetVolumePathName
@@ -633,8 +633,8 @@ kernel32-UTF7_Support.ok:
 	$(call APPLY_FILE,kernel32-UTF7_Support/0002-kernel32-Support-UTF-7-in-WideCharToMultiByte.patch)
 	$(call APPLY_FILE,kernel32-UTF7_Support/0003-kernel32-tests-Add-tests-for-UTF-7-conversion.patch)
 	@( \
-		echo '+    { "Alex Henrie", "kernel32: Support UTF-7 in MultiByteToWideChar.", 1 },'; \
-		echo '+    { "Alex Henrie", "kernel32: Support UTF-7 in WideCharToMultiByte.", 1 },'; \
+		echo '+    { "Alex Henrie", "kernel32: Support UTF-7 in MultiByteToWideChar.", 3 },'; \
+		echo '+    { "Alex Henrie", "kernel32: Support UTF-7 in WideCharToMultiByte.", 3 },'; \
 		echo '+    { "Alex Henrie", "kernel32/tests: Add tests for UTF-7 conversion.", 1 },'; \
 	) > kernel32-UTF7_Support.ok
 
@@ -787,7 +787,7 @@ ntdll-Exception.ok:
 ntdll-FD_Cache.ok:
 	$(call APPLY_FILE,ntdll-FD_Cache/0001-ntdll-Use-lockfree-implementation-for-get_cached_fd.patch)
 	@( \
-		echo '+    { "Sebastian Lackner", "ntdll: Use lockfree implementation for get_cached_fd.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: Use lockfree implementation for get_cached_fd.", 4 },'; \
 	) > ntdll-FD_Cache.ok
 
 # Patchset ntdll-FileDispositionInformation
@@ -821,7 +821,7 @@ ntdll-FileDispositionInformation.ok:
 ntdll-Fix_Alignment.ok:
 	$(call APPLY_FILE,ntdll-Fix_Alignment/0001-ntdll-Move-NtProtectVirtualMemory-and-NtCreateSectio.patch)
 	@( \
-		echo '+    { "Michael Müller", "ntdll: Move NtProtectVirtualMemory and NtCreateSection to separate pages on x86.", 1 },'; \
+		echo '+    { "Michael Müller", "ntdll: Move NtProtectVirtualMemory and NtCreateSection to separate pages on x86.", 2 },'; \
 	) > ntdll-Fix_Alignment.ok
 
 # Patchset ntdll-Fix_Free
@@ -833,7 +833,7 @@ ntdll-Fix_Alignment.ok:
 ntdll-Fix_Free.ok:
 	$(call APPLY_FILE,ntdll-Fix_Free/0001-kernel32-Fix-leaking-directory-handle-in-RemoveDirec.patch)
 	@( \
-		echo '+    { "Sebastian Lackner", "kernel32: Fix leaking directory handle in RemoveDirectoryW.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "kernel32: Fix leaking directory handle in RemoveDirectoryW.", 2 },'; \
 	) > ntdll-Fix_Free.ok
 
 # Patchset ntdll-Heap_FreeLists
@@ -912,8 +912,8 @@ ntdll-NtQuerySection.ok:
 	$(call APPLY_FILE,ntdll-NtQuerySection/0003-kernel32-tests-Add-tests-for-NtQuerySection.patch)
 	@( \
 		echo '+    { "Dmitry Timoshkov", "include: Fix definition of SECTION_BASIC_INFORMATION and SECTION_IMAGE_INFORMATION.", 1 },'; \
-		echo '+    { "Dmitry Timoshkov", "ntdll: Implement NtQuerySection.", 1 },'; \
-		echo '+    { "Dmitry Timoshkov", "kernel32/tests: Add tests for NtQuerySection.", 1 },'; \
+		echo '+    { "Dmitry Timoshkov", "ntdll: Implement NtQuerySection.", 2 },'; \
+		echo '+    { "Dmitry Timoshkov", "kernel32/tests: Add tests for NtQuerySection.", 2 },'; \
 	) > ntdll-NtQuerySection.ok
 
 # Patchset ntdll-NtSetLdtEntries
@@ -982,7 +982,7 @@ ntdll-WRITECOPY.ok:
 		echo '+    { "Sebastian Lackner", "ntdll: Trigger write watches before passing userdata pointer to wait_reply.", 1 },'; \
 		echo '+    { "Sebastian Lackner", "advapi: Trigger write watches before passing userdata pointer to read syscall.", 1 },'; \
 		echo '+    { "Michael Müller", "ntdll: Setup a temporary signal handler during process startup to handle page faults.", 1 },'; \
-		echo '+    { "Michael Müller", "ntdll: Properly handle PAGE_WRITECOPY protection.", 1 },'; \
+		echo '+    { "Michael Müller", "ntdll: Properly handle PAGE_WRITECOPY protection.", 4 },'; \
 		echo '+    { "Michael Müller", "ntdll: Only enable true WRITECOPY protection when a special environment variable is set.", 1 },'; \
 	) > ntdll-WRITECOPY.ok
 
@@ -1051,6 +1051,9 @@ ntoskrnl-KeSetSystemAffinityThread.ok:
 	) > ntoskrnl-KeSetSystemAffinityThread.ok
 
 # Patchset ntoskrnl-Stub_FileObject
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37537] Initialize irp.Tail.Overlay.OriginalFileObject with stub file object
 # |
 # | Modified files:
 # |   *	dlls/ntoskrnl.exe/ntoskrnl.c
@@ -1179,7 +1182,7 @@ secur32-Schannel_ContextAttr.ok:
 server-ACL_Compat.ok: server-Inherited_ACLs.ok
 	$(call APPLY_FILE,server-ACL_Compat/0001-server-Add-compatibility-code-for-handling-the-old-m.patch)
 	@( \
-		echo '+    { "Erich E. Hoover", "server: Add compatibility code for handling the old method of storing ACLs.", 1 },'; \
+		echo '+    { "Erich E. Hoover", "server: Add compatibility code for handling the old method of storing ACLs.", 6 },'; \
 	) > server-ACL_Compat.ok
 
 # Patchset server-Address_Change_Notification
@@ -1201,7 +1204,7 @@ server-Address_Change_Notification.ok:
 		echo '+    { "Erich E. Hoover", "server: Implement socket-specific ioctl() routine.", 1 },'; \
 		echo '+    { "Erich E. Hoover", "server: Add socket-side support for the interface change notification object.", 1 },'; \
 		echo '+    { "Erich E. Hoover", "server: Add blocked support for SIO_ADDRESS_LIST_CHANGE ioctl().", 1 },'; \
-		echo '+    { "Erich E. Hoover", "server: Implement the interface change notification object.", 1 },'; \
+		echo '+    { "Erich E. Hoover", "server: Implement the interface change notification object.", 2 },'; \
 		echo '+    { "Erich E. Hoover", "ws2_32: Add an interactive test for interface change notifications.", 1 },'; \
 	) > server-Address_Change_Notification.ok
 
@@ -1219,8 +1222,8 @@ server-CreateProcess_ACLs.ok:
 	$(call APPLY_FILE,server-CreateProcess_ACLs/0002-kernel32-Implement-passing-security-descriptors-from.patch)
 	$(call APPLY_FILE,server-CreateProcess_ACLs/0003-advapi32-tests-Add-additional-tests-for-passing-a-th.patch)
 	@( \
-		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 1 },'; \
-		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },'; \
+		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },'; \
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },'; \
 	) > server-CreateProcess_ACLs.ok
 
@@ -1249,8 +1252,8 @@ server-Inherited_ACLs.ok: server-Stored_ACLs.ok
 	$(call APPLY_FILE,server-Inherited_ACLs/0001-server-Inherit-security-attributes-from-parent-direc.patch)
 	$(call APPLY_FILE,server-Inherited_ACLs/0002-server-Inherit-security-attributes-from-parent-direc.patch)
 	@( \
-		echo '+    { "Erich E. Hoover", "server: Inherit security attributes from parent directories on creation.", 1 },'; \
-		echo '+    { "Erich E. Hoover", "server: Inherit security attributes from parent directories on SetSecurityInfo.", 1 },'; \
+		echo '+    { "Erich E. Hoover", "server: Inherit security attributes from parent directories on creation.", 7 },'; \
+		echo '+    { "Erich E. Hoover", "server: Inherit security attributes from parent directories on SetSecurityInfo.", 7 },'; \
 	) > server-Inherited_ACLs.ok
 
 # Patchset server-Misc_ACL
@@ -1282,7 +1285,7 @@ server-Misc_ACL.ok:
 server-OpenProcess.ok:
 	$(call APPLY_FILE,server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch)
 	@( \
-		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 1 },'; \
+		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },'; \
 	) > server-OpenProcess.ok
 
 # Patchset server-Stored_ACLs
@@ -1302,12 +1305,12 @@ server-Stored_ACLs.ok: ntdll-DOS_Attributes.ok
 	$(call APPLY_FILE,server-Stored_ACLs/0005-server-Retrieve-file-security-attributes-with-extend.patch)
 	$(call APPLY_FILE,server-Stored_ACLs/0006-server-Convert-return-of-file-security-masks-with-ge.patch)
 	@( \
-		echo '+    { "Erich E. Hoover", "server: Unify the storage of security attributes for files and directories.", 1 },'; \
-		echo '+    { "Erich E. Hoover", "server: Unify the retrieval of security attributes for files and directories.", 1 },'; \
-		echo '+    { "Erich E. Hoover", "server: Store file security attributes with extended file attributes.", 1 },'; \
-		echo '+    { "Erich E. Hoover", "server: Store user and group inside stored extended file attribute information.", 1 },'; \
-		echo '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes.", 1 },'; \
-		echo '+    { "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings.", 1 },'; \
+		echo '+    { "Erich E. Hoover", "server: Unify the storage of security attributes for files and directories.", 7 },'; \
+		echo '+    { "Erich E. Hoover", "server: Unify the retrieval of security attributes for files and directories.", 7 },'; \
+		echo '+    { "Erich E. Hoover", "server: Store file security attributes with extended file attributes.", 7 },'; \
+		echo '+    { "Erich E. Hoover", "server: Store user and group inside stored extended file attribute information.", 7 },'; \
+		echo '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes.", 7 },'; \
+		echo '+    { "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings.", 7 },'; \
 	) > server-Stored_ACLs.ok
 
 # Patchset setupapi-SetupPromptForDisk
@@ -1336,7 +1339,7 @@ setupapi-SetupPromptForDisk.ok:
 shdocvw-ParseURLFromOutsideSource_Tests.ok:
 	$(call APPLY_FILE,shdocvw-ParseURLFromOutsideSource_Tests/0001-shdocvw-Check-precisely-ParseURLFromOutsideSourceX-r.patch)
 	@( \
-		echo '+    { "Christian Costa", "shdocvw: Check precisely ParseURLFromOutsideSourceX returned values in tests and make code clearer about that..", 3 },'; \
+		echo '+    { "Christian Costa", "shdocvw: Check precisely ParseURLFromOutsideSourceX returned values in tests and make code clearer about that.", 3 },'; \
 	) > shdocvw-ParseURLFromOutsideSource_Tests.ok
 
 # Patchset shell32-Default_Folder_ACLs
@@ -1348,7 +1351,7 @@ shdocvw-ParseURLFromOutsideSource_Tests.ok:
 shell32-Default_Folder_ACLs.ok:
 	$(call APPLY_FILE,shell32-Default_Folder_ACLs/0001-shell32-Set-the-default-security-attributes-for-user.patch)
 	@( \
-		echo '+    { "Sebastian Lackner", "shell32: Set the default security attributes for user shell folders.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "shell32: Set the default security attributes for user shell folders.", 7 },'; \
 	) > shell32-Default_Folder_ACLs.ok
 
 # Patchset shell32-Default_Path
@@ -1735,7 +1738,7 @@ winepulse-PulseAudio_Support.ok:
 		echo '+    { "Maarten Lankhorst", "winepulse: fix the checks in IsFormatSupported.", 0 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: fixup IsFormatSupported calls.", 1 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: return early if padding didn'\''t update.", 1 },'; \
-		echo '+    { "Maarten Lankhorst", "winepulse: fix unneeded free in write..", 1 },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: fix unneeded free in write.", 1 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: fixup a invalid free in mmdevapi.", 3 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: use a pi-mutex for serialization.", 1 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: add support for IMarshal.", 1 },'; \
@@ -1756,7 +1759,7 @@ winepulse-PulseAudio_Support.ok:
 winex11-CandidateWindowPos.ok:
 	$(call APPLY_FILE,winex11-CandidateWindowPos/0001-winex11.drv-Update-a-candidate-window-s-position-wit.patch)
 	@( \
-		echo '+    { "Felix Yan", "winex11.drv: Update a candidate window'\''s position with over-the-spot style.", 1 },'; \
+		echo '+    { "Felix Yan", "winex11.drv: Update a candidate window'\''s position with over-the-spot style.", 2 },'; \
 	) > winex11-CandidateWindowPos.ok
 
 # Patchset winex11-Clipboard_HTML
@@ -1771,7 +1774,7 @@ winex11-CandidateWindowPos.ok:
 winex11-Clipboard_HTML.ok:
 	$(call APPLY_FILE,winex11-Clipboard_HTML/0001-winex11.drv-Import-X11-s-text-html-as-HTML-Format.patch)
 	@( \
-		echo '+    { "Damjan Jovanovic", "winex11.drv: Import X11'\''s \"text/html\" as \"HTML Format\".", 1 },'; \
+		echo '+    { "Damjan Jovanovic", "winex11.drv: Import X11'\''s \"text/html\" as \"HTML Format\".", 3 },'; \
 	) > winex11-Clipboard_HTML.ok
 
 # Patchset winex11-Limited_Resolutions
@@ -1849,7 +1852,7 @@ wpcap-Dynamic_Linking.ok:
 ws2_32-Connect_Time.ok:
 	$(call APPLY_FILE,ws2_32-Connect_Time/0001-ws2_32-Properly-implement-SO_CONNECT_TIME.patch)
 	@( \
-		echo '+    { "Bruno Jesus", "ws2_32: Properly implement SO_CONNECT_TIME.", 1 },'; \
+		echo '+    { "Bruno Jesus", "ws2_32: Properly implement SO_CONNECT_TIME.", 2 },'; \
 	) > ws2_32-Connect_Time.ok
 
 # Patchset ws2_32-TransmitFile

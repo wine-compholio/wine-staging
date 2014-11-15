@@ -31,6 +31,7 @@ PATCHLIST := \
 	d3dx9_36-DXTn.ok \
 	d3dx9_36-Filter_Warnings.ok \
 	d3dx9_36-GetShaderSemantics.ok \
+	d3dx9_36-Optimize_Inplace.ok \
 	d3dx9_36-Texture_Align.ok \
 	d3dx9_36-UpdateSkinnedMesh.ok \
 	dbghelp-KdHelp.ok \
@@ -357,6 +358,18 @@ d3dx9_36-GetShaderSemantics.ok:
 	@( \
 		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXGetShaderInputSemantics + tests.", 1 },'; \
 	) > d3dx9_36-GetShaderSemantics.ok
+
+# Patchset d3dx9_36-Optimize_Inplace
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/mesh.c
+# |
+.INTERMEDIATE: d3dx9_36-Optimize_Inplace.ok
+d3dx9_36-Optimize_Inplace.ok:
+	$(call APPLY_FILE,d3dx9_36-Optimize_Inplace/0001-d3dx9_36-No-need-to-fail-if-we-don-t-support-vertice.patch)
+	@( \
+		echo '+    { "Christian Costa", "d3dx9_36: No need to fail if we don'\''t support vertices reordering in D3DXMESHOPT_ATTRSORT.", 1 },'; \
+	) > d3dx9_36-Optimize_Inplace.ok
 
 # Patchset d3dx9_36-Texture_Align
 # |

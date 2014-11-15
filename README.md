@@ -65,7 +65,7 @@ Included bug fixes and improvements
 * ATL IOCS data should not be stored in GWLP_USERDATA ([Wine Bug #21767](https://bugs.winehq.org/show_bug.cgi?id=21767))
 * Add Dynamic DST exceptions for Israel Standard Time ([Wine Bug #36374](https://bugs.winehq.org/show_bug.cgi?id=36374))
 * Add default ACLs for user shell folders
-* Add partially support for sessionStorage
+* ~~Add partially support for sessionStorage~~
 * Adobe Reader needs ITextSelection_fnGetDuplicate implementation
 * Allow special characters in pipe names ([Wine Bug #28995](https://bugs.winehq.org/show_bug.cgi?id=28995))
 * Anno 1602 installer depends on Windows 98 behavior of SHFileOperationW

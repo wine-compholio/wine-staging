@@ -1738,21 +1738,21 @@ winepulse-PulseAudio_Support.ok:
 		echo '+    { "Maarten Lankhorst", "winepulse: Add audiostreamvolume.", 1 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: Add session support.", 1 },'; \
 		echo '+    { "Maarten Lankhorst", "fix fdels trailing whitespaces.", 1 },'; \
-		echo '+    { "Maarten Lankhorst", "winepulse v12.", 1 },'; \
-		echo '+    { "Maarten Lankhorst", "winepulse: Add support for missing formats, and silence an error for missing format tags.", 5 },'; \
-		echo '+    { "Maarten Lankhorst", "winepulse: Add official warning wine doesn'\''t want to support winepulse.", 6 },'; \
-		echo '+    { "Maarten Lankhorst", "winepulse: Fix winmm tests.", 7 },'; \
-		echo '+    { "Maarten Lankhorst", "winepulse: Latency and compilation improvements.", 8 },'; \
-		echo '+    { "Juergen Tretthahn", "winepulse: API Compatibility with 1.5.2 onward.", 2 },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse.", 12 },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: Add support for missing formats, and silence an error for missing format tags.", 15 },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: Add official warning wine doesn'\''t want to support winepulse.", 16 },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: Fix winmm tests.", 17 },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: Latency and compilation improvements.", 18 },'; \
+		echo '+    { "Juergen Tretthahn", "winepulse: API Compatibility with 1.5.2 onward,.", 2 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: Fix low latency support.", 1 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: drop realtime priority before thread destruction.", 1 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: remove bogus SetEvent from pulse_started_callback.", 1 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: disable the setevent part of the latency hack.", 1 },'; \
-		echo '+    { "Maarten Lankhorst", "winepulse: fix the checks in IsFormatSupported.", 0 },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: fix the checks in IsFormatSupported.", 20 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: fixup IsFormatSupported calls.", 1 },'; \
-		echo '+    { "Maarten Lankhorst", "winepulse: return early if padding didn'\''t update.", 1 },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: return early if padding didn'\''t update.", 21 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: fix unneeded free in write.", 1 },'; \
-		echo '+    { "Maarten Lankhorst", "winepulse: fixup a invalid free in mmdevapi.", 3 },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: fixup a invalid free in mmdevapi.", 23 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: use a pi-mutex for serialization.", 1 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: add support for IMarshal.", 1 },'; \
 		echo '+    { "Mark Harmstone", "winepulse: handle stream create failing correctly.", 1 },'; \

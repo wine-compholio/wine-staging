@@ -298,16 +298,16 @@ def read_patch(filename):
     def _parse_subject(subject):
         subject = subject.strip()
         if subject.endswith("."): subject = subject[:-1]
-        r = re.match("\\[PATCH([^]]*)\\](.*)", subject, re.IGNORECASE)
+        r = re.match("^\\[PATCH([^]]*)\\](.*)$", subject, re.IGNORECASE)
         if r is not None:
             subject = r.group(2).strip()
             r = re.search("v([0-9]+)", r.group(1), re.IGNORECASE)
             if r is not None: return subject, int(r.group(1))
-        r = re.match("(.*)\\((v|try|rev|take) *([0-9]+)\\)", subject, re.IGNORECASE)
+        r = re.match("^(.*)\\((v|try|rev|take) *([0-9]+)\\)$", subject, re.IGNORECASE)
         if r is not None: return r.group(1).strip(), int(r.group(3))
-        r = re.match("(.*)[.,] *(v|try|rev|take) *([0-9]+)", subject, re.IGNORECASE)
+        r = re.match("^(.*)[., ] *(v|try|rev|take) *([0-9]+)$", subject, re.IGNORECASE)
         if r is not None: return r.group(1).strip(), int(r.group(3))
-        r = re.match("([^:]+) v([0-9])+: (.*)", subject, re.IGNORECASE)
+        r = re.match("^([^:]+) v([0-9]+): (.*)$", subject, re.IGNORECASE)
         if r is not None: return "%s: %s" % (r.group(1), r.group(3)), int(r.group(2))
         return subject, 1
 

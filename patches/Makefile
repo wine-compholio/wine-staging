@@ -34,6 +34,7 @@ PATCHLIST := \
 	d3dx9_36-Optimize_Inplace.ok \
 	d3dx9_36-Texture_Align.ok \
 	d3dx9_36-UpdateSkinnedMesh.ok \
+	dbghelp-Debug_Symbols.ok \
 	dbghelp-KdHelp.ok \
 	dsound-Fast_Mixer.ok \
 	fonts-Missing_Fonts.ok \
@@ -398,6 +399,18 @@ d3dx9_36-UpdateSkinnedMesh.ok:
 	@( \
 		echo '+    { "Christian Costa", "d3dx9_36: Implement ID3DXSkinInfoImpl_UpdateSkinnedMesh.", 1 },'; \
 	) > d3dx9_36-UpdateSkinnedMesh.ok
+
+# Patchset dbghelp-Debug_Symbols
+# |
+# | Modified files:
+# |   *	dlls/dbghelp/Makefile.in, dlls/dbghelp/elf_module.c
+# |
+.INTERMEDIATE: dbghelp-Debug_Symbols.ok
+dbghelp-Debug_Symbols.ok:
+	$(call APPLY_FILE,dbghelp-Debug_Symbols/0001-dbghelp-Always-check-for-debug-symbols-in-BINDIR.patch)
+	@( \
+		echo '+    { "Sebastian Lackner", "dbghelp: Always check for debug symbols in BINDIR.", 1 },'; \
+	) > dbghelp-Debug_Symbols.ok
 
 # Patchset dbghelp-KdHelp
 # |

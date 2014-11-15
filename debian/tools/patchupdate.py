@@ -176,7 +176,7 @@ def read_definition(revision, filename, name_to_id):
         try:
             with open(os.devnull, 'w') as devnull:
                 content = subprocess.check_output(["git", "show", filename], stderr=devnull)
-        except CalledProcessError:
+        except subprocess.CalledProcessError:
             raise IOError("Failed to load %s" % filename)
 
     depends  = set()

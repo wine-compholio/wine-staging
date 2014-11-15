@@ -39,25 +39,26 @@ class PatchApplyError(RuntimeError):
 
 class PatchObject(object):
     def __init__(self, filename, header):
-        self.patch_author           = header['author']  if header else None
-        self.patch_email            = header['email']   if header else None
-        self.patch_subject          = header['subject'] if header else None
+        self.patch_author       = header['author']
+        self.patch_email        = header['email']
+        self.patch_subject      = header['subject']
+        self.patch_revision     = header['revision'] if header.has_key('revision') else 1
 
-        self.extracted_patch        = None
-        self.unique_hash            = None
+        self.extracted_patch    = None
+        self.unique_hash        = None
 
-        self.filename               = filename
-        self.offset_begin           = None
-        self.offset_end             = None
-        self.isbinary               = False
+        self.filename           = filename
+        self.offset_begin       = None
+        self.offset_end         = None
+        self.isbinary           = False
 
-        self.oldname                = None
-        self.newname                = None
-        self.modified_file          = None
+        self.oldname            = None
+        self.newname            = None
+        self.modified_file      = None
 
-        self.oldsha1                = None
-        self.newsha1                = None
-        self.newmode                = None
+        self.oldsha1            = None
+        self.newsha1            = None
+        self.newmode            = None
 
     def is_binary(self):
         return self.isbinary
@@ -287,6 +288,29 @@ def read_patch(filename):
         patch.offset_end = fp.tell()
         return patch
 
+    def _parse_author(author):
+        author = ' '.join([data.decode(format or 'utf-8').encode('utf-8') for \
+                          data, format in email.header.decode_header(author)])
+        r =  re.match("\"?([^\"]*)\"? <(.*)>", author)
+        if r is None: raise NotImplementedError("Failed to parse From - header.")
+        return r.group(1).strip(), r.group(2).strip()
+
+    def _parse_subject(subject):
+        subject = subject.strip()
+        if subject.endswith("."): subject = subject[:-1]
+        r = re.match("\\[PATCH([^]]*)\\](.*)", subject, re.IGNORECASE)
+        if r is not None:
+            subject = r.group(2).strip()
+            r = re.search("v([0-9]+)", r.group(1), re.IGNORECASE)
+            if r is not None: return "%s." % subject, int(r.group(1))
+        r = re.match("(.*)\\((v|try|rev|take) *([0-9]+)\\)", subject, re.IGNORECASE)
+        if r is not None: return "%s." % r.group(1).strip(), int(r.group(3))
+        r = re.match("(.*)[.,] *(v|try|rev|take) *([0-9]+)", subject, re.IGNORECASE)
+        if r is not None: return "%s." % r.group(1).strip(), int(r.group(3))
+        r = re.match("([^:]+) v([0-9])+: (.*)", subject, re.IGNORECASE)
+        if r is not None: return "%s: %s." % (r.group(1), r.group(3)), int(r.group(2))
+        return "%s." % subject, 1
+
     header = {}
     with _FileReader(filename) as fp:
         while True:
@@ -295,12 +319,7 @@ def read_patch(filename):
                 break
 
             elif line.startswith("From: "):
-                author = ' '.join([data.decode(format or 'utf-8').encode('utf-8') for \
-                                  data, format in email.header.decode_header(line[6:])])
-                r =  re.match("\"?([^\"]*)\"? <(.*)>", author)
-                if r is None: raise NotImplementedError("Failed to parse From - header.")
-                header['author'] = r.group(1).strip()
-                header['email']  = r.group(2).strip()
+                header['author'], header['email'] = _parse_author(line[6:])
                 assert fp.read() == line
 
             elif line.startswith("Subject: "):
@@ -311,15 +330,7 @@ def read_patch(filename):
                     if not line.startswith(" "): break
                     subject += line.rstrip("\r\n")
                     assert fp.read() == line
-                r = re.match("^\\[PATCH[^]]*\\](.*)", subject)
-                if r is not None: subject = r.group(1)
-                r = re.match("(.*)\\(try [0-9]+\\)$", subject)
-                if r is None: r = re.match("(.*), v[0-9]+$", subject)
-                if r is None: r = re.match("^[^:]+ v[0-9]+: (.*)", subject)
-                if r is not None: subject = r.group(1)
-                subject = subject.strip()
-                if not subject.endswith("."): subject += "."
-                header['subject'] = subject.strip()
+                header['subject'], header['revision'] = _parse_subject(subject)
 
             elif line.startswith("diff --git "):
                 tmp = line.strip().split(" ")

@@ -95,6 +95,7 @@ PATCHLIST := \
 	shell32-SHCreateSessionKey.ok \
 	shell32-SHFileOperation.ok \
 	shlwapi-PathIsDirectoryEmptyW.ok \
+	shlwapi-StrStrIW.ok \
 	shlwapi-UrlCombine.ok \
 	user32-Dialog_Paint_Event.ok \
 	user32-DrawTextExW.ok \
@@ -1453,6 +1454,18 @@ shlwapi-PathIsDirectoryEmptyW.ok:
 	@( \
 		echo '+    { "Michael Müller", "shlwapi: Correctly treat '\''.'\'' when enumerating files in PathIsDirectoryEmptyW.", 1 },'; \
 	) > shlwapi-PathIsDirectoryEmptyW.ok
+
+# Patchset shlwapi-StrStrIW
+# |
+# | Modified files:
+# |   *	dlls/shlwapi/string.c
+# |
+.INTERMEDIATE: shlwapi-StrStrIW.ok
+shlwapi-StrStrIW.ok:
+	$(call APPLY_FILE,shlwapi-StrStrIW/0001-shlwapi-Workaround-for-bugs-in-CompareStringW.patch)
+	@( \
+		echo '+    { "Sebastian Lackner", "shlwapi: Workaround for bugs in CompareStringW.", 1 },'; \
+	) > shlwapi-StrStrIW.ok
 
 # Patchset shlwapi-UrlCombine
 # |

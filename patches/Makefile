@@ -80,6 +80,7 @@ PATCHLIST := \
 	server-ACL_Compat.ok \
 	server-Address_Change_Notification.ok \
 	server-CreateProcess_ACLs.ok \
+	server-Fix_Leak.ok \
 	server-Inherited_ACLs.ok \
 	server-Misc_ACL.ok \
 	server-OpenProcess.ok \
@@ -1361,6 +1362,21 @@ server-CreateProcess_ACLs.ok:
 	@( \
 		echo '+    { "server-CreateProcess_ACLs", "Joris van der Wel / Sebastian Lackner", "Implement passing ACLs to CreateProcess. [rev 2]" },'; \
 	) > server-CreateProcess_ACLs.ok
+
+# Patchset server-Fix_Leak
+# |
+# | Included patches:
+# |   *	Close server fd if there is no space in thread inflight fd list. [by Sebastian Lackner]
+# |
+# | Modified files:
+# |   *	server/thread.c
+# |
+.INTERMEDIATE: server-Fix_Leak.ok
+server-Fix_Leak.ok:
+	$(call APPLY_FILE,server-Fix_Leak/0001-server-Close-fd-if-there-is-no-space-in-thread-infli.patch)
+	@( \
+		echo '+    { "server-Fix_Leak", "Sebastian Lackner", "Close server fd if there is no space in thread inflight fd list." },'; \
+	) > server-Fix_Leak.ok
 
 # Patchset server-Inherited_ACLs
 # |

@@ -19,6 +19,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 #
 
+import email.header
 import collections
 import difflib
 import hashlib
@@ -37,7 +38,11 @@ class PatchApplyError(RuntimeError):
     pass
 
 class PatchObject(object):
-    def __init__(self, filename):
+    def __init__(self, filename, header):
+        self.patch_author           = header['author']  if header else None
+        self.patch_email            = header['email']   if header else None
+        self.patch_subject          = header['subject'] if header else None
+
         self.extracted_patch        = None
         self.unique_hash            = None
 
@@ -134,10 +139,10 @@ def read_patch(filename):
             tmp, self.peeked = self.peeked, None
             return tmp[1]
 
-    def _read_single_patch(fp, oldname=None, newname=None):
+    def _read_single_patch(fp, header, oldname=None, newname=None):
         """Internal function to read a single patch from a file."""
 
-        patch = PatchObject(fp.filename)
+        patch = PatchObject(fp.filename, header)
         patch.offset_begin = fp.tell()
         patch.oldname = oldname
         patch.newname = newname
@@ -152,28 +157,39 @@ def read_patch(filename):
             line = fp.peek()
             if line is None:
                 break
+
             elif line.startswith("--- "):
                 patch.oldname = line[4:].strip()
+
             elif line.startswith("+++ "):
                 patch.newname = line[4:].strip()
+
             elif line.startswith("old mode") or line.startswith("deleted file mode"):
                 pass # ignore
+
             elif line.startswith("new mode "):
                 patch.newmode = line[9:].strip()
+
             elif line.startswith("new file mode "):
                 patch.newmode = line[14:].strip()
+
             elif line.startswith("new mode") or line.startswith("new file mode"):
                 raise PatchParserError("Unable to parse header line '%s'." % line)
+
             elif line.startswith("copy from") or line.startswith("copy to"):
                 raise NotImplementedError("Patch copy header not implemented yet.")
+
             elif line.startswith("rename "):
                 raise NotImplementedError("Patch rename header not implemented yet.")
+
             elif line.startswith("similarity index") or line.startswith("dissimilarity index"):
                 pass # ignore
+
             elif line.startswith("index "):
                 r = re.match("^index ([a-fA-F0-9]*)\.\.([a-fA-F0-9]*)", line)
                 if not r: raise PatchParserError("Unable to parse index header line '%s'." % line)
                 patch.oldsha1, patch.newsha1 = r.group(1), r.group(2)
+
             else:
                 break
             assert fp.read() == line
@@ -271,19 +287,51 @@ def read_patch(filename):
         patch.offset_end = fp.tell()
         return patch
 
+    header = {}
     with _FileReader(filename) as fp:
         while True:
             line = fp.peek()
             if line is None:
                 break
+
+            elif line.startswith("From: "):
+                author = ' '.join([data.decode(format or 'utf-8').encode('utf-8') for \
+                                  data, format in email.header.decode_header(line[6:])])
+                r =  re.match("\"?([^\"]*)\"? <(.*)>", author)
+                if r is None: raise NotImplementedError("Failed to parse From - header.")
+                header['author'] = r.group(1).strip()
+                header['email']  = r.group(2).strip()
+                assert fp.read() == line
+
+            elif line.startswith("Subject: "):
+                subject = line[9:].rstrip("\r\n")
+                assert fp.read() == line
+                while True:
+                    line = fp.peek()
+                    if not line.startswith(" "): break
+                    subject += line.rstrip("\r\n")
+                    assert fp.read() == line
+                r = re.match("^\\[PATCH[^]]*\\](.*)", subject)
+                if r is not None: subject = r.group(1)
+                r = re.match("(.*)\\(try [0-9]+\\)$", subject)
+                if r is None: r = re.match("(.*), v[0-9]+$", subject)
+                if r is None: r = re.match("^[^:]+ v[0-9]+: (.*)", subject)
+                if r is not None: subject = r.group(1)
+                subject = subject.strip()
+                if not subject.endswith("."): subject += "."
+                header['subject'] = subject.strip()
+
             elif line.startswith("diff --git "):
                 tmp = line.strip().split(" ")
                 if len(tmp) != 4: raise PatchParserError("Unable to parse git diff header line '%s'." % line)
-                yield _read_single_patch(fp, tmp[2].strip(), tmp[3].strip())
+                yield _read_single_patch(fp, header, tmp[2].strip(), tmp[3].strip())
+
             elif line.startswith("--- "):
-                yield _read_single_patch(fp)
+                yield _read_single_patch(fp, header)
+
             elif line.startswith("@@ -") or line.startswith("+++ "):
                 raise PatchParserError("Patch didn't start with a git or diff header.")
+
             else:
                 assert fp.read() == line
 

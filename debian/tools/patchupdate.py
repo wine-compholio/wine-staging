@@ -21,6 +21,7 @@
 
 import hashlib
 import itertools
+import operator
 import os
 import patchutils
 import pickle
@@ -54,16 +55,9 @@ class PatchUpdaterError(RuntimeError):
     """Failed to update patches."""
     pass
 
-class AuthorInfo(object):
-    def __init__(self):
-        self.author         = ""
-        self.subject        = ""
-        self.revision       = ""
-
 class PatchSet(object):
     def __init__(self, name):
         self.name           = name
-        self.authors        = []
         self.fixes          = []
         self.changes        = []
         self.disabled       = False
@@ -81,6 +75,16 @@ def _pairs(a):
     for i, j in enumerate(a):
         for k in a[i+1:]:
             yield (j, k)
+
+def _unique(iterable, key=None):
+    "List unique elements, preserving order. Remember only the element just seen."
+    # unique_justseen('AAAABBBCCDAABBB') --> A B C D A B
+    # unique_justseen('ABBCcAD', str.lower) --> A B C A D
+    return itertools.imap(next, itertools.imap(operator.itemgetter(1), itertools.groupby(iterable, key)))
+
+def _escape(s):
+    """Escape string inside of '...' quotes."""
+    return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("'", "'\\''")
 
 def _load_dict(filename):
     """Load a Python dictionary object from a file."""
@@ -161,7 +165,7 @@ def enum_directories(revision, path):
     return dirs
 
 def read_definition(revision, filename, name_to_id):
-    """Read a definition file and return information as tuple (authors, depends, fixes)."""
+    """Read a definition file and return information as tuple (depends, fixes)."""
 
     filename = os.path.join(filename, "definition")
     if revision is None:
@@ -175,10 +179,8 @@ def read_definition(revision, filename, name_to_id):
         except CalledProcessError:
             raise IOError("Failed to load %s" % filename)
 
-    authors  = []
     depends  = set()
     fixes    = []
-    info     = AuthorInfo()
     disabled = False
 
     for line in content.split("\n"):
@@ -187,25 +189,10 @@ def read_definition(revision, filename, name_to_id):
 
         tmp = line.split(":", 1)
         if len(tmp) != 2:
-            if len(info.author) and len(info.subject):
-                authors.append(info)
-                info = AuthorInfo()
             continue
 
         key, val = tmp[0].lower(), tmp[1].strip()
-        if key == "author":
-            if len(info.author): info.author += ", "
-            info.author += val
-
-        elif key == "subject" or key == "title":
-            if len(info.subject): info.subject += " "
-            info.subject += val
-
-        elif key == "revision":
-            if len(info.revision): info.revision += ", "
-            info.revision += val
-
-        elif key == "depends":
+        if key == "depends":
             if name_to_id is not None:
                 if not name_to_id.has_key(val):
                     raise PatchUpdaterError("Definition file %s references unknown dependency %s" % (filename, val))
@@ -225,12 +212,16 @@ def read_definition(revision, filename, name_to_id):
         elif key == "disabled":
             disabled = parse_int(val)
 
+        elif key == "author" or \
+             key == "subject" or \
+             key == "title" or \
+             key == "revision":
+            pass
+
         else:
             print "WARNING: Ignoring unknown command in definition file %s: %s" % (filename, line)
 
-    if len(info.author) and len(info.subject):
-        authors.append(info)
-    return authors, depends, fixes, disabled
+    return depends, fixes, disabled
 
 def read_patchset(revision = None):
     """Read information about all patchsets for a specific revision."""
@@ -270,7 +261,7 @@ def read_patchset(revision = None):
     # Now read the definition files in a second step
     for i, patch in all_patches.iteritems():
         try:
-            patch.authors, patch.depends, patch.fixes, patch.disabled = \
+            patch.depends, patch.fixes, patch.disabled = \
                 read_definition(revision, os.path.join(config.path_patches, patch.name), name_to_id)
         except IOError:
             raise PatchUpdaterError("Missing definition file for %s" % patch.name)
@@ -484,17 +475,6 @@ def generate_makefile(all_patches):
         for i, patch in all_patches.iteritems():
             fp.write("# Patchset %s\n" % patch.name)
             fp.write("# |\n")
-            fp.write("# | Included patches:\n")
-
-            # List all patches and their corresponding authors
-            for info in patch.authors:
-                if not info.subject: continue
-                s = []
-                if info.revision and info.revision != "1": s.append("rev %s" % info.revision)
-                if info.author: s.append("by %s" % info.author)
-                if len(s): s = " [%s]" % ", ".join(s)
-                fp.write("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap(info.subject + s, 120)))
-            fp.write("# |\n")
 
             # List all bugs fixed by this patchset
             if any([bugid is not None for bugid, bugname in patch.fixes]):
@@ -517,13 +497,11 @@ def generate_makefile(all_patches):
                 fp.write("\t$(call APPLY_FILE,%s)\n" % os.path.join(patch.name, f))
 
             # Create *.ok file (used to generate patchlist)
-            if len(patch.authors):
+            if len(patch.patches):
                 fp.write("\t@( \\\n")
-                for info in patch.authors:
-                    if not info.subject: continue
-                    s = info.subject.replace("\\", "\\\\").replace("\"", "\\\"").replace("'", "'\\''")
-                    if info.revision and info.revision != "1": s += " [rev %s]" % info.revision
-                    fp.write("\t\techo '+    { \"%s\", \"%s\", \"%s\" },'; \\\n" % (patch.name, info.author, s))
+                for p in _unique(patch.patches, key=lambda p: (p.patch_author, p.patch_subject)):
+                    fp.write("\t\techo '+    { \"%s\", \"%s\", \"%s\" },'; \\\n" % \
+                            (patch.name, _escape(p.patch_author), _escape(p.patch_subject)))
                 fp.write("\t) > %s.ok\n" % patch.name)
             else:
                 fp.write("\ttouch %s.ok\n" % patch.name)

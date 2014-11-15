@@ -176,7 +176,7 @@ clean:
 Exagear.ok:
 	$(call APPLY_FILE,Exagear/0001-ntdll-Implement-emulation-of-SIDT-instruction-when-u.patch)
 	@( \
-		echo '+    { "Exagear", "Sebastian Lackner", "ntdll: Implement emulation of SIDT instruction when using Exagear." },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: Implement emulation of SIDT instruction when using Exagear." },'; \
 	) > Exagear.ok
 
 # Patchset Miscellaneous
@@ -192,10 +192,10 @@ Miscellaneous.ok:
 	$(call APPLY_FILE,Miscellaneous/0003-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch)
 	$(call APPLY_FILE,Miscellaneous/0004-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch)
 	@( \
-		echo '+    { "Miscellaneous", "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME." },'; \
-		echo '+    { "Miscellaneous", "Sebastian Lackner", "kernel32: Silence repeated CompareStringEx FIXME." },'; \
-		echo '+    { "Miscellaneous", "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME." },'; \
-		echo '+    { "Miscellaneous", "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled." },'; \
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME." },'; \
+		echo '+    { "Sebastian Lackner", "kernel32: Silence repeated CompareStringEx FIXME." },'; \
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME." },'; \
+		echo '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled." },'; \
 	) > Miscellaneous.ok
 
 # Patchset Pipelight
@@ -211,10 +211,10 @@ Pipelight.ok:
 	$(call APPLY_FILE,Pipelight/0003-wined3d-allow-changing-strict-drawing-through-an-exp.patch)
 	$(call APPLY_FILE,Pipelight/0004-winex11.drv-Indicate-direct-rendering-through-OpenGL.patch)
 	@( \
-		echo '+    { "Pipelight", "Sebastian Lackner", "winex11: Implement X11DRV_FLUSH_GDI_DISPLAY ExtEscape command." },'; \
-		echo '+    { "Pipelight", "Michael Müller", "user32: Decrease minimum SetTimer interval to 5 ms." },'; \
-		echo '+    { "Pipelight", "Michael Müller", "wined3d: allow changing strict drawing through an exported function." },'; \
-		echo '+    { "Pipelight", "Michael Müller", "winex11.drv: Indicate direct rendering through OpenGL extension." },'; \
+		echo '+    { "Sebastian Lackner", "winex11: Implement X11DRV_FLUSH_GDI_DISPLAY ExtEscape command." },'; \
+		echo '+    { "Michael Müller", "user32: Decrease minimum SetTimer interval to 5 ms." },'; \
+		echo '+    { "Michael Müller", "wined3d: allow changing strict drawing through an exported function." },'; \
+		echo '+    { "Michael Müller", "winex11.drv: Indicate direct rendering through OpenGL extension." },'; \
 	) > Pipelight.ok
 
 # Patchset Staging
@@ -230,10 +230,10 @@ Staging.ok:
 	$(call APPLY_FILE,Staging/0003-loader-Add-commandline-option-patches-to-show-the-pa.patch)
 	$(call APPLY_FILE,Staging/0004-loader-Add-commandline-option-check-libs.patch)
 	@( \
-		echo '+    { "Staging", "Sebastian Lackner", "kernel32: Add winediag message to show warning, that this isn'\''t vanilla wine." },'; \
-		echo '+    { "Staging", "Sebastian Lackner", "winelib: Append '\''(Staging)'\'' at the end of the version string." },'; \
-		echo '+    { "Staging", "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list." },'; \
-		echo '+    { "Staging", "Michael Müller", "loader: Add commandline option --check-libs." },'; \
+		echo '+    { "Sebastian Lackner", "kernel32: Add winediag message to show warning, that this isn'\''t vanilla wine." },'; \
+		echo '+    { "Sebastian Lackner", "winelib: Append '\''(Staging)'\'' at the end of the version string." },'; \
+		echo '+    { "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list." },'; \
+		echo '+    { "Michael Müller", "loader: Add commandline option --check-libs." },'; \
 	) > Staging.ok
 
 # Patchset atl-IOCS_Property
@@ -248,7 +248,7 @@ Staging.ok:
 atl-IOCS_Property.ok:
 	$(call APPLY_FILE,atl-IOCS_Property/0001-atl-Don-t-use-GWLP_USERDATA-to-store-IOCS-to-avoid-c.patch)
 	@( \
-		echo '+    { "atl-IOCS_Property", "Qian Hong", "atl: Don'\''t use GWLP_USERDATA to store IOCS to avoid conflict with Apps." },'; \
+		echo '+    { "Qian Hong", "atl: Don'\''t use GWLP_USERDATA to store IOCS to avoid conflict with Apps." },'; \
 	) > atl-IOCS_Property.ok
 
 # Patchset comctl32-LoadIconMetric
@@ -265,8 +265,8 @@ comctl32-LoadIconMetric.ok:
 	$(call APPLY_FILE,comctl32-LoadIconMetric/0001-comctl32-Implement-LoadIconMetric-function.patch)
 	$(call APPLY_FILE,comctl32-LoadIconMetric/0002-comctl32-tests-Add-tests-for-LoadIconMetric-function.patch)
 	@( \
-		echo '+    { "comctl32-LoadIconMetric", "Michael Müller", "comctl32: Implement LoadIconMetric function." },'; \
-		echo '+    { "comctl32-LoadIconMetric", "Michael Müller", "comctl32/tests: Add tests for LoadIconMetric function." },'; \
+		echo '+    { "Michael Müller", "comctl32: Implement LoadIconMetric function." },'; \
+		echo '+    { "Michael Müller", "comctl32/tests: Add tests for LoadIconMetric function." },'; \
 	) > comctl32-LoadIconMetric.ok
 
 # Patchset configure-Absolute_RPATH
@@ -281,7 +281,7 @@ comctl32-LoadIconMetric.ok:
 configure-Absolute_RPATH.ok:
 	$(call APPLY_FILE,configure-Absolute_RPATH/0001-configure-Also-add-the-absolute-RPATH-when-linking-a.patch)
 	@( \
-		echo '+    { "configure-Absolute_RPATH", "Sebastian Lackner", "configure: Also add the absolute RPATH when linking against libwine." },'; \
+		echo '+    { "Sebastian Lackner", "configure: Also add the absolute RPATH when linking against libwine." },'; \
 	) > configure-Absolute_RPATH.ok
 
 # Patchset configure-Detect_Gnutls
@@ -293,7 +293,7 @@ configure-Absolute_RPATH.ok:
 configure-Detect_Gnutls.ok:
 	$(call APPLY_FILE,configure-Detect_Gnutls/0001-configure-Fix-detection-of-gnutls-on-Ubuntu-14.10.patch)
 	@( \
-		echo '+    { "configure-Detect_Gnutls", "Sebastian Lackner", "configure: Fix detection of gnutls on Ubuntu 14.10." },'; \
+		echo '+    { "Sebastian Lackner", "configure: Fix detection of gnutls on Ubuntu 14.10." },'; \
 	) > configure-Detect_Gnutls.ok
 
 # Patchset d3d9-Surface_Refcount
@@ -308,7 +308,7 @@ configure-Detect_Gnutls.ok:
 d3d9-Surface_Refcount.ok:
 	$(call APPLY_FILE,d3d9-Surface_Refcount/0001-d3d9-Don-t-decrease-surface-refcount-when-its-alread.patch)
 	@( \
-		echo '+    { "d3d9-Surface_Refcount", "Henri Verbeet", "d3d9: Don'\''t decrease surface refcount when its already zero." },'; \
+		echo '+    { "Henri Verbeet", "d3d9: Don'\''t decrease surface refcount when its already zero." },'; \
 	) > d3d9-Surface_Refcount.ok
 
 # Patchset d3dx9_36-DXTn
@@ -325,7 +325,7 @@ d3d9-Surface_Refcount.ok:
 d3dx9_36-DXTn.ok: wined3d-DXTn.ok
 	$(call APPLY_FILE,d3dx9_36-DXTn/0001-d3dx9_36-Add-dxtn-support.patch)
 	@( \
-		echo '+    { "d3dx9_36-DXTn", "Christian Costa", "d3dx9_36: Add dxtn support." },'; \
+		echo '+    { "Christian Costa", "d3dx9_36: Add dxtn support." },'; \
 	) > d3dx9_36-DXTn.ok
 
 # Patchset d3dx9_36-Filter_Warnings
@@ -340,7 +340,7 @@ d3dx9_36-DXTn.ok: wined3d-DXTn.ok
 d3dx9_36-Filter_Warnings.ok:
 	$(call APPLY_FILE,d3dx9_36-Filter_Warnings/0001-d3dx9_36-Filter-out-D3DCompile-warning-messages-that.patch)
 	@( \
-		echo '+    { "d3dx9_36-Filter_Warnings", "Christian Costa", "d3dx9_36: Filter out D3DCompile warning messages that are not present with D3DCompileShader." },'; \
+		echo '+    { "Christian Costa", "d3dx9_36: Filter out D3DCompile warning messages that are not present with D3DCompileShader." },'; \
 	) > d3dx9_36-Filter_Warnings.ok
 
 # Patchset d3dx9_36-GetShaderSemantics
@@ -355,7 +355,7 @@ d3dx9_36-Filter_Warnings.ok:
 d3dx9_36-GetShaderSemantics.ok:
 	$(call APPLY_FILE,d3dx9_36-GetShaderSemantics/0001-d3dx9_36-Implement-D3DXGetShaderInputSemantics-tests.patch)
 	@( \
-		echo '+    { "d3dx9_36-GetShaderSemantics", "Christian Costa", "d3dx9_36: Implement D3DXGetShaderInputSemantics + tests." },'; \
+		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXGetShaderInputSemantics + tests." },'; \
 	) > d3dx9_36-GetShaderSemantics.ok
 
 # Patchset d3dx9_36-Texture_Align
@@ -367,7 +367,7 @@ d3dx9_36-GetShaderSemantics.ok:
 d3dx9_36-Texture_Align.ok:
 	$(call APPLY_FILE,d3dx9_36-Texture_Align/0001-d3dx9_36-Align-texture-dimensions-to-block-size-for-.patch)
 	@( \
-		echo '+    { "d3dx9_36-Texture_Align", "Christian Costa", "d3dx9_36: Align texture dimensions to block size for compressed textures in D3DXCheckTextureRequirements." },'; \
+		echo '+    { "Christian Costa", "d3dx9_36: Align texture dimensions to block size for compressed textures in D3DXCheckTextureRequirements." },'; \
 	) > d3dx9_36-Texture_Align.ok
 
 # Patchset d3dx9_36-UpdateSkinnedMesh
@@ -382,7 +382,7 @@ d3dx9_36-Texture_Align.ok:
 d3dx9_36-UpdateSkinnedMesh.ok:
 	$(call APPLY_FILE,d3dx9_36-UpdateSkinnedMesh/0001-d3dx9_36-Implement-ID3DXSkinInfoImpl_UpdateSkinnedMe.patch)
 	@( \
-		echo '+    { "d3dx9_36-UpdateSkinnedMesh", "Christian Costa", "d3dx9_36: Implement ID3DXSkinInfoImpl_UpdateSkinnedMesh." },'; \
+		echo '+    { "Christian Costa", "d3dx9_36: Implement ID3DXSkinInfoImpl_UpdateSkinnedMesh." },'; \
 	) > d3dx9_36-UpdateSkinnedMesh.ok
 
 # Patchset dbghelp-KdHelp
@@ -397,7 +397,7 @@ d3dx9_36-UpdateSkinnedMesh.ok:
 dbghelp-KdHelp.ok:
 	$(call APPLY_FILE,dbghelp-KdHelp/0001-dbghelp-Don-t-fill-KdHelp-structure-for-usermode-app.patch)
 	@( \
-		echo '+    { "dbghelp-KdHelp", "Sebastian Lackner", "dbghelp: Don'\''t fill KdHelp structure for usermode applications." },'; \
+		echo '+    { "Sebastian Lackner", "dbghelp: Don'\''t fill KdHelp structure for usermode applications." },'; \
 	) > dbghelp-KdHelp.ok
 
 # Patchset dsound-Fast_Mixer
@@ -412,7 +412,7 @@ dbghelp-KdHelp.ok:
 dsound-Fast_Mixer.ok:
 	$(call APPLY_FILE,dsound-Fast_Mixer/0001-dsound-Add-a-linear-resampler-for-use-with-a-large-n.patch)
 	@( \
-		echo '+    { "dsound-Fast_Mixer", "Alexander E. Patrakov", "dsound: Add a linear resampler for use with a large number of mixing buffers." },'; \
+		echo '+    { "Alexander E. Patrakov", "dsound: Add a linear resampler for use with a large number of mixing buffers." },'; \
 	) > dsound-Fast_Mixer.ok
 
 # Patchset fonts-Missing_Fonts
@@ -430,9 +430,9 @@ fonts-Missing_Fonts.ok:
 	$(call APPLY_FILE,fonts-Missing_Fonts/0002-fonts-Add-WenQuanYi-Micro-Hei-as-a-Microsoft-Yahei-r.patch)
 	$(call APPLY_FILE,fonts-Missing_Fonts/0003-fonts-Add-Courier-Prime-as-a-Courier-New-replacement.patch)
 	@( \
-		echo '+    { "fonts-Missing_Fonts", "Torsten Kurbad", "fonts: Add Liberation Sans as an Arial replacement." },'; \
-		echo '+    { "fonts-Missing_Fonts", "Erich E. Hoover", "fonts: Add WenQuanYi Micro Hei as a Microsoft Yahei replacement." },'; \
-		echo '+    { "fonts-Missing_Fonts", "Erich E. Hoover", "fonts: Add Courier Prime as a Courier New replacement." },'; \
+		echo '+    { "Torsten Kurbad", "fonts: Add Liberation Sans as an Arial replacement." },'; \
+		echo '+    { "Erich E. Hoover", "fonts: Add WenQuanYi Micro Hei as a Microsoft Yahei replacement." },'; \
+		echo '+    { "Erich E. Hoover", "fonts: Add Courier Prime as a Courier New replacement." },'; \
 	) > fonts-Missing_Fonts.ok
 
 # Patchset gdi32-MaxPixelFormats
@@ -447,7 +447,7 @@ fonts-Missing_Fonts.ok:
 gdi32-MaxPixelFormats.ok:
 	$(call APPLY_FILE,gdi32-MaxPixelFormats/0001-gdi32-Return-maximum-number-of-pixel-formats-when-NU.patch)
 	@( \
-		echo '+    { "gdi32-MaxPixelFormats", "Sebastian Lackner", "gdi32: Return maximum number of pixel formats when NULL pointer is passed to wglDescribePixelFormat." },'; \
+		echo '+    { "Sebastian Lackner", "gdi32: Return maximum number of pixel formats when NULL pointer is passed to wglDescribePixelFormat." },'; \
 	) > gdi32-MaxPixelFormats.ok
 
 # Patchset gdi32-MultiMonitor
@@ -464,9 +464,9 @@ gdi32-MultiMonitor.ok:
 	$(call APPLY_FILE,gdi32-MultiMonitor/0002-winex11-Make-GetMonitorInfo-give-a-different-device-.patch)
 	$(call APPLY_FILE,gdi32-MultiMonitor/0003-user32-Implement-EnumDisplayDevicesW-based-on-EnumDi.patch)
 	@( \
-		echo '+    { "gdi32-MultiMonitor", "Ken Thomases", "gdi32: Also accept \"\\\\.\\DISPLAY<n>\" devices names with <n> other than 1 as display devices." },'; \
-		echo '+    { "gdi32-MultiMonitor", "Ken Thomases", "winex11: Make GetMonitorInfo() give a different device name (\\.\\DISPLAY<n>) to each monitor." },'; \
-		echo '+    { "gdi32-MultiMonitor", "Ken Thomases", "user32: Implement EnumDisplayDevicesW() based on EnumDisplayMonitors() and GetMonitorInfoW()." },'; \
+		echo '+    { "Ken Thomases", "gdi32: Also accept \"\\\\.\\DISPLAY<n>\" devices names with <n> other than 1 as display devices." },'; \
+		echo '+    { "Ken Thomases", "winex11: Make GetMonitorInfo() give a different device name (\\.\\DISPLAY<n>) to each monitor." },'; \
+		echo '+    { "Ken Thomases", "user32: Implement EnumDisplayDevicesW() based on EnumDisplayMonitors() and GetMonitorInfoW()." },'; \
 	) > gdi32-MultiMonitor.ok
 
 # Patchset gdiplus-GdipCreateRegionRgnData
@@ -481,7 +481,7 @@ gdi32-MultiMonitor.ok:
 gdiplus-GdipCreateRegionRgnData.ok:
 	$(call APPLY_FILE,gdiplus-GdipCreateRegionRgnData/0001-gdiplus-Implement-GdipCreateRegionRgnData.-Take-3.patch)
 	@( \
-		echo '+    { "gdiplus-GdipCreateRegionRgnData", "Dmitry Timoshkov", "gdiplus: Implement GdipCreateRegionRgnData. Take 3." },'; \
+		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipCreateRegionRgnData. Take 3." },'; \
 	) > gdiplus-GdipCreateRegionRgnData.ok
 
 # Patchset imagehlp-BindImageEx
@@ -496,7 +496,7 @@ gdiplus-GdipCreateRegionRgnData.ok:
 imagehlp-BindImageEx.ok:
 	$(call APPLY_FILE,imagehlp-BindImageEx/0001-imagehlp-Implement-parts-of-BindImageEx-to-make-free.patch)
 	@( \
-		echo '+    { "imagehlp-BindImageEx", "Bernhard Reiter", "imagehlp: Implement parts of BindImageEx to make freezing Python scripts work." },'; \
+		echo '+    { "Bernhard Reiter", "imagehlp: Implement parts of BindImageEx to make freezing Python scripts work." },'; \
 	) > imagehlp-BindImageEx.ok
 
 # Patchset imm32-Cross_Thread_Access
@@ -515,11 +515,11 @@ imm32-Cross_Thread_Access.ok:
 	$(call APPLY_FILE,imm32-Cross_Thread_Access/0004-imm32-Restrict-crossthread-Association-and-destructi.patch)
 	$(call APPLY_FILE,imm32-Cross_Thread_Access/0005-imm32-Limit-cross-thread-access-to-ImmSet-functions.patch)
 	@( \
-		echo '+    { "imm32-Cross_Thread_Access", "Aric Stewart", "imm32: Move thread data from TLSEntry to an internal list." },'; \
-		echo '+    { "imm32-Cross_Thread_Access", "Aric Stewart", "imm32: Do not let ImmDestroyContext destroy any default contexts." },'; \
-		echo '+    { "imm32-Cross_Thread_Access", "Aric Stewart", "imm32: Use thread data from target HWND." },'; \
-		echo '+    { "imm32-Cross_Thread_Access", "Aric Stewart", "imm32: Restrict crossthread Association and destruction." },'; \
-		echo '+    { "imm32-Cross_Thread_Access", "Aric Stewart", "imm32: Limit cross thread access to ImmSet* functions." },'; \
+		echo '+    { "Aric Stewart", "imm32: Move thread data from TLSEntry to an internal list." },'; \
+		echo '+    { "Aric Stewart", "imm32: Do not let ImmDestroyContext destroy any default contexts." },'; \
+		echo '+    { "Aric Stewart", "imm32: Use thread data from target HWND." },'; \
+		echo '+    { "Aric Stewart", "imm32: Restrict crossthread Association and destruction." },'; \
+		echo '+    { "Aric Stewart", "imm32: Limit cross thread access to ImmSet* functions." },'; \
 	) > imm32-Cross_Thread_Access.ok
 
 # Patchset iphlpapi-TCP_Table
@@ -534,7 +534,7 @@ imm32-Cross_Thread_Access.ok:
 iphlpapi-TCP_Table.ok:
 	$(call APPLY_FILE,iphlpapi-TCP_Table/0001-iphlpapi-Implement-AllocateAndGetTcpExTableFromStack.patch)
 	@( \
-		echo '+    { "iphlpapi-TCP_Table", "Erich E. Hoover", "iphlpapi: Implement AllocateAndGetTcpExTableFromStack." },'; \
+		echo '+    { "Erich E. Hoover", "iphlpapi: Implement AllocateAndGetTcpExTableFromStack." },'; \
 	) > iphlpapi-TCP_Table.ok
 
 # Patchset kernel32-GetFinalPathNameByHandle
@@ -550,8 +550,8 @@ kernel32-GetFinalPathNameByHandle.ok:
 	$(call APPLY_FILE,kernel32-GetFinalPathNameByHandle/0001-kernel32-Implement-GetFinalPathNameByHandle.patch)
 	$(call APPLY_FILE,kernel32-GetFinalPathNameByHandle/0002-kernel32-tests-Add-tests-for-GetFinalPathNameByHandl.patch)
 	@( \
-		echo '+    { "kernel32-GetFinalPathNameByHandle", "Michael Müller", "kernel32: Implement GetFinalPathNameByHandle." },'; \
-		echo '+    { "kernel32-GetFinalPathNameByHandle", "Michael Müller", "kernel32/tests: Add tests for GetFinalPathNameByHandle." },'; \
+		echo '+    { "Michael Müller", "kernel32: Implement GetFinalPathNameByHandle." },'; \
+		echo '+    { "Michael Müller", "kernel32/tests: Add tests for GetFinalPathNameByHandle." },'; \
 	) > kernel32-GetFinalPathNameByHandle.ok
 
 # Patchset kernel32-GetNumaProcessorNode
@@ -565,8 +565,8 @@ kernel32-GetNumaProcessorNode.ok:
 	$(call APPLY_FILE,kernel32-GetNumaProcessorNode/0001-kernel32-Implement-GetNumaProcessorNode.patch)
 	$(call APPLY_FILE,kernel32-GetNumaProcessorNode/0002-kernel32-tests-Add-tests-for-GetNumaProcessorNode.patch)
 	@( \
-		echo '+    { "kernel32-GetNumaProcessorNode", "Michael Müller", "kernel32: Implement GetNumaProcessorNode." },'; \
-		echo '+    { "kernel32-GetNumaProcessorNode", "Michael Müller", "kernel32/tests: Add tests for GetNumaProcessorNode." },'; \
+		echo '+    { "Michael Müller", "kernel32: Implement GetNumaProcessorNode." },'; \
+		echo '+    { "Michael Müller", "kernel32/tests: Add tests for GetNumaProcessorNode." },'; \
 	) > kernel32-GetNumaProcessorNode.ok
 
 # Patchset kernel32-GetSystemTimes
@@ -582,8 +582,8 @@ kernel32-GetSystemTimes.ok:
 	$(call APPLY_FILE,kernel32-GetSystemTimes/0001-kernel32-Add-tests-for-GetSystemTimes.patch)
 	$(call APPLY_FILE,kernel32-GetSystemTimes/0002-kernel32-Implement-GetSystemTimes.patch)
 	@( \
-		echo '+    { "kernel32-GetSystemTimes", "Louis Lenders", "kernel32: Add tests for GetSystemTimes." },'; \
-		echo '+    { "kernel32-GetSystemTimes", "Erich E. Hoover", "kernel32: Implement GetSystemTimes." },'; \
+		echo '+    { "Louis Lenders", "kernel32: Add tests for GetSystemTimes." },'; \
+		echo '+    { "Erich E. Hoover", "kernel32: Implement GetSystemTimes." },'; \
 	) > kernel32-GetSystemTimes.ok
 
 # Patchset kernel32-GetVolumePathName
@@ -598,10 +598,10 @@ kernel32-GetVolumePathName.ok:
 	$(call APPLY_FILE,kernel32-GetVolumePathName/0003-kernel32-Add-a-bunch-more-GetVolumePathName-tests.patch)
 	$(call APPLY_FILE,kernel32-GetVolumePathName/0004-kernel32-tests-Add-a-lot-of-picky-GetVolumePathName-.patch)
 	@( \
-		echo '+    { "kernel32-GetVolumePathName", "Erich E. Hoover", "kernel32: Implement GetVolumePathName." },'; \
-		echo '+    { "kernel32-GetVolumePathName", "Erich E. Hoover", "kernel32: Convert GetVolumePathName tests into a list." },'; \
-		echo '+    { "kernel32-GetVolumePathName", "Erich E. Hoover", "kernel32: Add a bunch more GetVolumePathName tests." },'; \
-		echo '+    { "kernel32-GetVolumePathName", "Sebastian Lackner", "kernel32/tests: Add a lot of picky GetVolumePathName tests." },'; \
+		echo '+    { "Erich E. Hoover", "kernel32: Implement GetVolumePathName." },'; \
+		echo '+    { "Erich E. Hoover", "kernel32: Convert GetVolumePathName tests into a list." },'; \
+		echo '+    { "Erich E. Hoover", "kernel32: Add a bunch more GetVolumePathName tests." },'; \
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Add a lot of picky GetVolumePathName tests." },'; \
 	) > kernel32-GetVolumePathName.ok
 
 # Patchset kernel32-Named_Pipe
@@ -616,7 +616,7 @@ kernel32-GetVolumePathName.ok:
 kernel32-Named_Pipe.ok:
 	$(call APPLY_FILE,kernel32-Named_Pipe/0001-kernel32-ConnectNamedPort-should-return-FALSE-and-se.patch)
 	@( \
-		echo '+    { "kernel32-Named_Pipe", "Dan Kegel", "kernel32: ConnectNamedPort should return FALSE and set ERROR_PIPE_CONNECTED on success in overlapped mode." },'; \
+		echo '+    { "Dan Kegel", "kernel32: ConnectNamedPort should return FALSE and set ERROR_PIPE_CONNECTED on success in overlapped mode." },'; \
 	) > kernel32-Named_Pipe.ok
 
 # Patchset kernel32-UTF7_Support
@@ -633,9 +633,9 @@ kernel32-UTF7_Support.ok:
 	$(call APPLY_FILE,kernel32-UTF7_Support/0002-kernel32-Support-UTF-7-in-WideCharToMultiByte.patch)
 	$(call APPLY_FILE,kernel32-UTF7_Support/0003-kernel32-tests-Add-tests-for-UTF-7-conversion.patch)
 	@( \
-		echo '+    { "kernel32-UTF7_Support", "Alex Henrie", "kernel32: Support UTF-7 in MultiByteToWideChar." },'; \
-		echo '+    { "kernel32-UTF7_Support", "Alex Henrie", "kernel32: Support UTF-7 in WideCharToMultiByte." },'; \
-		echo '+    { "kernel32-UTF7_Support", "Alex Henrie", "kernel32/tests: Add tests for UTF-7 conversion." },'; \
+		echo '+    { "Alex Henrie", "kernel32: Support UTF-7 in MultiByteToWideChar." },'; \
+		echo '+    { "Alex Henrie", "kernel32: Support UTF-7 in WideCharToMultiByte." },'; \
+		echo '+    { "Alex Henrie", "kernel32/tests: Add tests for UTF-7 conversion." },'; \
 	) > kernel32-UTF7_Support.ok
 
 # Patchset libs-Unicode_Collation
@@ -650,7 +650,7 @@ kernel32-UTF7_Support.ok:
 libs-Unicode_Collation.ok:
 	$(call APPLY_FILE,libs-Unicode_Collation/0001-libs-Fix-most-problems-with-CompareString.patch)
 	@( \
-		echo '+    { "libs-Unicode_Collation", "Dmitry Timoshkov", "libs: Fix most problems with CompareString." },'; \
+		echo '+    { "Dmitry Timoshkov", "libs: Fix most problems with CompareString." },'; \
 	) > libs-Unicode_Collation.ok
 
 # Patchset libwine-BSD_mmap_fixed
@@ -665,7 +665,7 @@ libs-Unicode_Collation.ok:
 libwine-BSD_mmap_fixed.ok:
 	$(call APPLY_FILE,libwine-BSD_mmap_fixed/0001-libwine-Use-try_mmap_fixed-for-wine64-on-FreeBSD.patch)
 	@( \
-		echo '+    { "libwine-BSD_mmap_fixed", "André Hentschel", "libwine: Use try_mmap_fixed for wine64 on FreeBSD." },'; \
+		echo '+    { "André Hentschel", "libwine: Use try_mmap_fixed for wine64 on FreeBSD." },'; \
 	) > libwine-BSD_mmap_fixed.ok
 
 # Patchset mshtml-sessionStorage
@@ -680,9 +680,9 @@ mshtml-sessionStorage.ok:
 	$(call APPLY_FILE,mshtml-sessionStorage/0002-mshtml-Fixed-create_storage-and-IHTMLStorage-Release.patch)
 	$(call APPLY_FILE,mshtml-sessionStorage/0003-mshtml-Added-IHTMLStorage-getItem-setItem-methods-im.patch)
 	@( \
-		echo '+    { "mshtml-sessionStorage", "Zhenbo Li", "mshtml: Added nsIDOMStorage declaration." },'; \
-		echo '+    { "mshtml-sessionStorage", "Zhenbo Li", "mshtml: Fixed create_storage() and IHTMLStorage::Release()." },'; \
-		echo '+    { "mshtml-sessionStorage", "Zhenbo Li", "mshtml: Added IHTMLStorage:: getItem/setItem methods implementation." },'; \
+		echo '+    { "Zhenbo Li", "mshtml: Added nsIDOMStorage declaration." },'; \
+		echo '+    { "Zhenbo Li", "mshtml: Fixed create_storage() and IHTMLStorage::Release()." },'; \
+		echo '+    { "Zhenbo Li", "mshtml: Added IHTMLStorage:: getItem/setItem methods implementation." },'; \
 	) > mshtml-sessionStorage.ok
 
 # Patchset msvcp90-basic_string_wchar_dtor
@@ -698,8 +698,8 @@ msvcp90-basic_string_wchar_dtor.ok:
 	$(call APPLY_FILE,msvcp90-basic_string_wchar_dtor/0001-msvcp90-basic_string_wchar_dtor-needs-to-return-NULL.patch)
 	$(call APPLY_FILE,msvcp90-basic_string_wchar_dtor/0002-msvcp90-tests-Add-tests-to-check-that-basic_string_w.patch)
 	@( \
-		echo '+    { "msvcp90-basic_string_wchar_dtor", "Michael Müller", "msvcp90: basic_string_wchar_dtor needs to return NULL." },'; \
-		echo '+    { "msvcp90-basic_string_wchar_dtor", "Michael Müller", "msvcp90/tests: Add tests to check that basic_string_wchar_dtor returns NULL." },'; \
+		echo '+    { "Michael Müller", "msvcp90: basic_string_wchar_dtor needs to return NULL." },'; \
+		echo '+    { "Michael Müller", "msvcp90/tests: Add tests to check that basic_string_wchar_dtor returns NULL." },'; \
 	) > msvcp90-basic_string_wchar_dtor.ok
 
 # Patchset msvcrt-atof_strtod
@@ -714,7 +714,7 @@ msvcp90-basic_string_wchar_dtor.ok:
 msvcrt-atof_strtod.ok:
 	$(call APPLY_FILE,msvcrt-atof_strtod/0001-msvcrt-Avoid-crash-when-NULL-pointer-is-passed-to-at.patch)
 	@( \
-		echo '+    { "msvcrt-atof_strtod", "Michael Müller", "msvcrt: Avoid crash when NULL pointer is passed to atof / strtod functions." },'; \
+		echo '+    { "Michael Müller", "msvcrt: Avoid crash when NULL pointer is passed to atof / strtod functions." },'; \
 	) > msvcrt-atof_strtod.ok
 
 # Patchset ntdll-DOS_Attributes
@@ -737,14 +737,14 @@ ntdll-DOS_Attributes.ok:
 	$(call APPLY_FILE,ntdll-DOS_Attributes/0007-libport-Add-support-for-FreeBSD-style-extended-attri.patch)
 	$(call APPLY_FILE,ntdll-DOS_Attributes/0008-ntdll-Perform-the-Unix-style-hidden-file-check-withi.patch)
 	@( \
-		echo '+    { "ntdll-DOS_Attributes", "Erich E. Hoover", "ntdll: Unify retrieving the attributes of a file." },'; \
-		echo '+    { "ntdll-DOS_Attributes", "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQueryInformationFile." },'; \
-		echo '+    { "ntdll-DOS_Attributes", "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQuery[Full]AttributesFile and NtQueryDirectoryFile." },'; \
-		echo '+    { "ntdll-DOS_Attributes", "Erich E. Hoover", "ntdll: Implement storing DOS attributes in NtSetInformationFile." },'; \
-		echo '+    { "ntdll-DOS_Attributes", "Erich E. Hoover", "ntdll: Implement storing DOS attributes in NtCreateFile." },'; \
-		echo '+    { "ntdll-DOS_Attributes", "Erich E. Hoover", "libport: Add support for Mac OS X style extended attributes." },'; \
-		echo '+    { "ntdll-DOS_Attributes", "Erich E. Hoover", "libport: Add support for FreeBSD style extended attributes." },'; \
-		echo '+    { "ntdll-DOS_Attributes", "Erich E. Hoover", "ntdll: Perform the Unix-style hidden file check within the unified file info grabbing routine." },'; \
+		echo '+    { "Erich E. Hoover", "ntdll: Unify retrieving the attributes of a file." },'; \
+		echo '+    { "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQueryInformationFile." },'; \
+		echo '+    { "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQuery[Full]AttributesFile and NtQueryDirectoryFile." },'; \
+		echo '+    { "Erich E. Hoover", "ntdll: Implement storing DOS attributes in NtSetInformationFile." },'; \
+		echo '+    { "Erich E. Hoover", "ntdll: Implement storing DOS attributes in NtCreateFile." },'; \
+		echo '+    { "Erich E. Hoover", "libport: Add support for Mac OS X style extended attributes." },'; \
+		echo '+    { "Erich E. Hoover", "libport: Add support for FreeBSD style extended attributes." },'; \
+		echo '+    { "Erich E. Hoover", "ntdll: Perform the Unix-style hidden file check within the unified file info grabbing routine." },'; \
 	) > ntdll-DOS_Attributes.ok
 
 # Patchset ntdll-Dynamic_DST
@@ -760,8 +760,8 @@ ntdll-Dynamic_DST.ok:
 	$(call APPLY_FILE,ntdll-Dynamic_DST/0001-ntdll-Add-support-for-Dynamic-DST-daylight-saving-ti.patch)
 	$(call APPLY_FILE,ntdll-Dynamic_DST/0002-wine.inf-Add-Dynamic-DST-exceptions-for-Israel-Stand.patch)
 	@( \
-		echo '+    { "ntdll-Dynamic_DST", "Michael Müller", "ntdll: Add support for Dynamic DST (daylight saving time) information in registry." },'; \
-		echo '+    { "ntdll-Dynamic_DST", "Sebastian Lackner", "wine.inf: Add Dynamic DST exceptions for Israel Standard Time." },'; \
+		echo '+    { "Michael Müller", "ntdll: Add support for Dynamic DST (daylight saving time) information in registry." },'; \
+		echo '+    { "Sebastian Lackner", "wine.inf: Add Dynamic DST exceptions for Israel Standard Time." },'; \
 	) > ntdll-Dynamic_DST.ok
 
 # Patchset ntdll-Exception
@@ -774,8 +774,8 @@ ntdll-Exception.ok:
 	$(call APPLY_FILE,ntdll-Exception/0001-ntdll-Throw-exception-if-invalid-handle-is-passed-to.patch)
 	$(call APPLY_FILE,ntdll-Exception/0002-ntdll-OutputDebugString-should-throw-the-exception-a.patch)
 	@( \
-		echo '+    { "ntdll-Exception", "Sebastian Lackner", "ntdll: Throw exception if invalid handle is passed to NtClose and debugger enabled." },'; \
-		echo '+    { "ntdll-Exception", "Sebastian Lackner", "ntdll: OutputDebugString should throw the exception a second time, if a debugger is attached." },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: Throw exception if invalid handle is passed to NtClose and debugger enabled." },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: OutputDebugString should throw the exception a second time, if a debugger is attached." },'; \
 	) > ntdll-Exception.ok
 
 # Patchset ntdll-FD_Cache
@@ -787,7 +787,7 @@ ntdll-Exception.ok:
 ntdll-FD_Cache.ok:
 	$(call APPLY_FILE,ntdll-FD_Cache/0001-ntdll-Use-lockfree-implementation-for-get_cached_fd.patch)
 	@( \
-		echo '+    { "ntdll-FD_Cache", "Sebastian Lackner", "ntdll: Use lockfree implementation for get_cached_fd." },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: Use lockfree implementation for get_cached_fd." },'; \
 	) > ntdll-FD_Cache.ok
 
 # Patchset ntdll-FileDispositionInformation
@@ -804,9 +804,9 @@ ntdll-FileDispositionInformation.ok:
 	$(call APPLY_FILE,ntdll-FileDispositionInformation/0002-server-Add-support-for-setting-file-disposition-info.patch)
 	$(call APPLY_FILE,ntdll-FileDispositionInformation/0003-server-Do-not-permit-FileDispositionInformation-to-d.patch)
 	@( \
-		echo '+    { "ntdll-FileDispositionInformation", "Dmitry Timoshkov", "server: Keep a pointer to parent'\''s fd unix_name in the closed_fd structure." },'; \
-		echo '+    { "ntdll-FileDispositionInformation", "Dmitry Timoshkov", "server: Add support for setting file disposition information." },'; \
-		echo '+    { "ntdll-FileDispositionInformation", "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access." },'; \
+		echo '+    { "Dmitry Timoshkov", "server: Keep a pointer to parent'\''s fd unix_name in the closed_fd structure." },'; \
+		echo '+    { "Dmitry Timoshkov", "server: Add support for setting file disposition information." },'; \
+		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access." },'; \
 	) > ntdll-FileDispositionInformation.ok
 
 # Patchset ntdll-Fix_Alignment
@@ -821,7 +821,7 @@ ntdll-FileDispositionInformation.ok:
 ntdll-Fix_Alignment.ok:
 	$(call APPLY_FILE,ntdll-Fix_Alignment/0001-ntdll-Move-NtProtectVirtualMemory-and-NtCreateSectio.patch)
 	@( \
-		echo '+    { "ntdll-Fix_Alignment", "Michael Müller", "ntdll: Move NtProtectVirtualMemory and NtCreateSection to separate pages on x86." },'; \
+		echo '+    { "Michael Müller", "ntdll: Move NtProtectVirtualMemory and NtCreateSection to separate pages on x86." },'; \
 	) > ntdll-Fix_Alignment.ok
 
 # Patchset ntdll-Fix_Free
@@ -833,7 +833,7 @@ ntdll-Fix_Alignment.ok:
 ntdll-Fix_Free.ok:
 	$(call APPLY_FILE,ntdll-Fix_Free/0001-kernel32-Fix-leaking-directory-handle-in-RemoveDirec.patch)
 	@( \
-		echo '+    { "ntdll-Fix_Free", "Sebastian Lackner", "kernel32: Fix leaking directory handle in RemoveDirectoryW." },'; \
+		echo '+    { "Sebastian Lackner", "kernel32: Fix leaking directory handle in RemoveDirectoryW." },'; \
 	) > ntdll-Fix_Free.ok
 
 # Patchset ntdll-Heap_FreeLists
@@ -845,7 +845,7 @@ ntdll-Fix_Free.ok:
 ntdll-Heap_FreeLists.ok:
 	$(call APPLY_FILE,ntdll-Heap_FreeLists/0001-ntdll-Improve-heap-allocation-performance-by-using-m.patch)
 	@( \
-		echo '+    { "ntdll-Heap_FreeLists", "Steaphan Greene", "ntdll: Improve heap allocation performance by using more fine-grained free lists." },'; \
+		echo '+    { "Steaphan Greene", "ntdll: Improve heap allocation performance by using more fine-grained free lists." },'; \
 	) > ntdll-Heap_FreeLists.ok
 
 # Patchset ntdll-Junction_Points
@@ -866,13 +866,13 @@ ntdll-Junction_Points.ok: ntdll-Fix_Free.ok
 	$(call APPLY_FILE,ntdll-Junction_Points/0006-kernel32-Advertise-junction-point-support.patch)
 	$(call APPLY_FILE,ntdll-Junction_Points/0007-ntdll-tests-Add-test-for-deleting-junction-point-tar.patch)
 	@( \
-		echo '+    { "ntdll-Junction_Points", "Erich E. Hoover", "ntdll: Add support for junction point creation." },'; \
-		echo '+    { "ntdll-Junction_Points", "Erich E. Hoover", "ntdll: Add support for reading junction points." },'; \
-		echo '+    { "ntdll-Junction_Points", "Erich E. Hoover", "ntdll: Add support for deleting junction points." },'; \
-		echo '+    { "ntdll-Junction_Points", "Erich E. Hoover", "ntdll: Add a test for junction point advertisement." },'; \
-		echo '+    { "ntdll-Junction_Points", "Erich E. Hoover", "kernel32,ntdll: Add support for deleting junction points with RemoveDirectory." },'; \
-		echo '+    { "ntdll-Junction_Points", "Erich E. Hoover", "kernel32: Advertise junction point support." },'; \
-		echo '+    { "ntdll-Junction_Points", "Erich E. Hoover", "ntdll/tests: Add test for deleting junction point target." },'; \
+		echo '+    { "Erich E. Hoover", "ntdll: Add support for junction point creation." },'; \
+		echo '+    { "Erich E. Hoover", "ntdll: Add support for reading junction points." },'; \
+		echo '+    { "Erich E. Hoover", "ntdll: Add support for deleting junction points." },'; \
+		echo '+    { "Erich E. Hoover", "ntdll: Add a test for junction point advertisement." },'; \
+		echo '+    { "Erich E. Hoover", "kernel32,ntdll: Add support for deleting junction points with RemoveDirectory." },'; \
+		echo '+    { "Erich E. Hoover", "kernel32: Advertise junction point support." },'; \
+		echo '+    { "Erich E. Hoover", "ntdll/tests: Add test for deleting junction point target." },'; \
 	) > ntdll-Junction_Points.ok
 
 # Patchset ntdll-LZNT1_Compression
@@ -890,10 +890,10 @@ ntdll-LZNT1_Compression.ok:
 	$(call APPLY_FILE,ntdll-LZNT1_Compression/0003-ntdll-Implement-LZNT1-algorithm-for-RtlDecompressBuf.patch)
 	$(call APPLY_FILE,ntdll-LZNT1_Compression/0004-ntdll-tests-Add-tests-for-Rtl-Decompress-Compress-Bu.patch)
 	@( \
-		echo '+    { "ntdll-LZNT1_Compression", "Sebastian Lackner", "ntdll: Implement semi-stub for RtlGetCompressionWorkSpaceSize." },'; \
-		echo '+    { "ntdll-LZNT1_Compression", "Sebastian Lackner", "ntdll: Implement semi-stub for RtlCompressBuffer." },'; \
-		echo '+    { "ntdll-LZNT1_Compression", "Sebastian Lackner", "ntdll: Implement LZNT1 algorithm for RtlDecompressBuffer." },'; \
-		echo '+    { "ntdll-LZNT1_Compression", "Sebastian Lackner", "ntdll/tests: Add tests for Rtl[Decompress|Compress]Buffer and RtlGetCompressionWorkSpaceSize." },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: Implement semi-stub for RtlGetCompressionWorkSpaceSize." },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: Implement semi-stub for RtlCompressBuffer." },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: Implement LZNT1 algorithm for RtlDecompressBuffer." },'; \
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for Rtl[Decompress|Compress]Buffer and RtlGetCompressionWorkSpaceSize." },'; \
 	) > ntdll-LZNT1_Compression.ok
 
 # Patchset ntdll-NtQuerySection
@@ -911,9 +911,9 @@ ntdll-NtQuerySection.ok:
 	$(call APPLY_FILE,ntdll-NtQuerySection/0002-ntdll-Implement-NtQuerySection.patch)
 	$(call APPLY_FILE,ntdll-NtQuerySection/0003-kernel32-tests-Add-tests-for-NtQuerySection.patch)
 	@( \
-		echo '+    { "ntdll-NtQuerySection", "Dmitry Timoshkov", "include: Fix definition of SECTION_BASIC_INFORMATION and SECTION_IMAGE_INFORMATION." },'; \
-		echo '+    { "ntdll-NtQuerySection", "Dmitry Timoshkov", "ntdll: Implement NtQuerySection." },'; \
-		echo '+    { "ntdll-NtQuerySection", "Dmitry Timoshkov", "kernel32/tests: Add tests for NtQuerySection." },'; \
+		echo '+    { "Dmitry Timoshkov", "include: Fix definition of SECTION_BASIC_INFORMATION and SECTION_IMAGE_INFORMATION." },'; \
+		echo '+    { "Dmitry Timoshkov", "ntdll: Implement NtQuerySection." },'; \
+		echo '+    { "Dmitry Timoshkov", "kernel32/tests: Add tests for NtQuerySection." },'; \
 	) > ntdll-NtQuerySection.ok
 
 # Patchset ntdll-NtSetLdtEntries
@@ -928,7 +928,7 @@ ntdll-NtQuerySection.ok:
 ntdll-NtSetLdtEntries.ok:
 	$(call APPLY_FILE,ntdll-NtSetLdtEntries/0001-ntdll-add-NtSetLdtEntries-ZwSetLdtEntries-stub-try-2.patch)
 	@( \
-		echo '+    { "ntdll-NtSetLdtEntries", "Austin English", "ntdll: add NtSetLdtEntries/ZwSetLdtEntries stub." },'; \
+		echo '+    { "Austin English", "ntdll: add NtSetLdtEntries/ZwSetLdtEntries stub." },'; \
 	) > ntdll-NtSetLdtEntries.ok
 
 # Patchset ntdll-Pipe_SpecialCharacters
@@ -943,7 +943,7 @@ ntdll-NtSetLdtEntries.ok:
 ntdll-Pipe_SpecialCharacters.ok:
 	$(call APPLY_FILE,ntdll-Pipe_SpecialCharacters/0001-ntdll-Allow-special-characters-in-pipe-names.patch)
 	@( \
-		echo '+    { "ntdll-Pipe_SpecialCharacters", "Michael Müller", "ntdll: Allow special characters in pipe names." },'; \
+		echo '+    { "Michael Müller", "ntdll: Allow special characters in pipe names." },'; \
 	) > ntdll-Pipe_SpecialCharacters.ok
 
 # Patchset ntdll-ThreadTime
@@ -958,7 +958,7 @@ ntdll-Pipe_SpecialCharacters.ok:
 ntdll-ThreadTime.ok:
 	$(call APPLY_FILE,ntdll-ThreadTime/0001-ntdll-Return-correct-values-in-GetThreadTimes-for-al.patch)
 	@( \
-		echo '+    { "ntdll-ThreadTime", "Sebastian Lackner", "ntdll: Return correct values in GetThreadTimes() for all threads." },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: Return correct values in GetThreadTimes() for all threads." },'; \
 	) > ntdll-ThreadTime.ok
 
 # Patchset ntdll-WRITECOPY
@@ -979,11 +979,11 @@ ntdll-WRITECOPY.ok:
 	$(call APPLY_FILE,ntdll-WRITECOPY/0004-ntdll-Properly-handle-PAGE_WRITECOPY-protection.patch)
 	$(call APPLY_FILE,ntdll-WRITECOPY/0005-ntdll-Only-enable-true-WRITECOPY-protection-when-a-s.patch)
 	@( \
-		echo '+    { "ntdll-WRITECOPY", "Sebastian Lackner", "ntdll: Trigger write watches before passing userdata pointer to wait_reply." },'; \
-		echo '+    { "ntdll-WRITECOPY", "Sebastian Lackner", "advapi: Trigger write watches before passing userdata pointer to read syscall." },'; \
-		echo '+    { "ntdll-WRITECOPY", "Michael Müller", "ntdll: Setup a temporary signal handler during process startup to handle page faults." },'; \
-		echo '+    { "ntdll-WRITECOPY", "Michael Müller", "ntdll: Properly handle PAGE_WRITECOPY protection." },'; \
-		echo '+    { "ntdll-WRITECOPY", "Michael Müller", "ntdll: Only enable true WRITECOPY protection when a special environment variable is set." },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: Trigger write watches before passing userdata pointer to wait_reply." },'; \
+		echo '+    { "Sebastian Lackner", "advapi: Trigger write watches before passing userdata pointer to read syscall." },'; \
+		echo '+    { "Michael Müller", "ntdll: Setup a temporary signal handler during process startup to handle page faults." },'; \
+		echo '+    { "Michael Müller", "ntdll: Properly handle PAGE_WRITECOPY protection." },'; \
+		echo '+    { "Michael Müller", "ntdll: Only enable true WRITECOPY protection when a special environment variable is set." },'; \
 	) > ntdll-WRITECOPY.ok
 
 # Patchset ntoskrnl-Emulator
@@ -1000,9 +1000,9 @@ ntoskrnl-Emulator.ok:
 	$(call APPLY_FILE,ntoskrnl-Emulator/0002-ntoskrnl-Emulate-memory-access-to-KI_USER_SHARED_DAT.patch)
 	$(call APPLY_FILE,ntoskrnl-Emulator/0003-ntoskrnl-Add-TRACEs-for-instruction-emulator-on-x86_.patch)
 	@( \
-		echo '+    { "ntoskrnl-Emulator", "Sebastian Lackner", "ntoskrnl: Emulate '\''mov Eb, Gb'\'' instruction on x86 processor architecture." },'; \
-		echo '+    { "ntoskrnl-Emulator", "Sebastian Lackner", "ntoskrnl: Emulate memory access to KI_USER_SHARED_DATA on x86_64." },'; \
-		echo '+    { "ntoskrnl-Emulator", "Sebastian Lackner", "ntoskrnl: Add TRACEs for instruction emulator on x86_64 to simplify debugging." },'; \
+		echo '+    { "Sebastian Lackner", "ntoskrnl: Emulate '\''mov Eb, Gb'\'' instruction on x86 processor architecture." },'; \
+		echo '+    { "Sebastian Lackner", "ntoskrnl: Emulate memory access to KI_USER_SHARED_DATA on x86_64." },'; \
+		echo '+    { "Sebastian Lackner", "ntoskrnl: Add TRACEs for instruction emulator on x86_64 to simplify debugging." },'; \
 	) > ntoskrnl-Emulator.ok
 
 # Patchset ntoskrnl-IoCsqInitialize
@@ -1017,7 +1017,7 @@ ntoskrnl-Emulator.ok:
 ntoskrnl-IoCsqInitialize.ok:
 	$(call APPLY_FILE,ntoskrnl-IoCsqInitialize/0001-ntoskrnl.exe-Add-a-stub-for-IoCsqInitialize.patch)
 	@( \
-		echo '+    { "ntoskrnl-IoCsqInitialize", "Austin English", "ntoskrnl.exe: Add a stub for IoCsqInitialize." },'; \
+		echo '+    { "Austin English", "ntoskrnl.exe: Add a stub for IoCsqInitialize." },'; \
 	) > ntoskrnl-IoCsqInitialize.ok
 
 # Patchset ntoskrnl-Irp_Status
@@ -1032,7 +1032,7 @@ ntoskrnl-IoCsqInitialize.ok:
 ntoskrnl-Irp_Status.ok:
 	$(call APPLY_FILE,ntoskrnl-Irp_Status/0001-ntoskrnl-Handle-issues-when-driver-returns-two-diffe.patch)
 	@( \
-		echo '+    { "ntoskrnl-Irp_Status", "Sebastian Lackner", "ntoskrnl: Handle issues when driver returns two different status codes from dispatcher." },'; \
+		echo '+    { "Sebastian Lackner", "ntoskrnl: Handle issues when driver returns two different status codes from dispatcher." },'; \
 	) > ntoskrnl-Irp_Status.ok
 
 # Patchset ntoskrnl-KeSetSystemAffinityThread
@@ -1047,7 +1047,7 @@ ntoskrnl-Irp_Status.ok:
 ntoskrnl-KeSetSystemAffinityThread.ok:
 	$(call APPLY_FILE,ntoskrnl-KeSetSystemAffinityThread/0001-ntoskrnl-Add-stub-for-KeSetSystemAffinityThread.patch)
 	@( \
-		echo '+    { "ntoskrnl-KeSetSystemAffinityThread", "Michael Müller", "ntoskrnl: Add stub for KeSetSystemAffinityThread." },'; \
+		echo '+    { "Michael Müller", "ntoskrnl: Add stub for KeSetSystemAffinityThread." },'; \
 	) > ntoskrnl-KeSetSystemAffinityThread.ok
 
 # Patchset ntoskrnl-Stub_FileObject
@@ -1059,7 +1059,7 @@ ntoskrnl-KeSetSystemAffinityThread.ok:
 ntoskrnl-Stub_FileObject.ok:
 	$(call APPLY_FILE,ntoskrnl-Stub_FileObject/0001-ntoskrnl-Initialize-irp.Tail.Overlay.OriginalFileObj.patch)
 	@( \
-		echo '+    { "ntoskrnl-Stub_FileObject", "Sebastian Lackner", "ntoskrnl: Initialize irp.Tail.Overlay.OriginalFileObject with stub file object." },'; \
+		echo '+    { "Sebastian Lackner", "ntoskrnl: Initialize irp.Tail.Overlay.OriginalFileObject with stub file object." },'; \
 	) > ntoskrnl-Stub_FileObject.ok
 
 # Patchset ntoskrnl-Write_CR4
@@ -1074,7 +1074,7 @@ ntoskrnl-Stub_FileObject.ok:
 ntoskrnl-Write_CR4.ok:
 	$(call APPLY_FILE,ntoskrnl-Write_CR4/0001-ntoskrnl.exe-Emulate-write-to-CR4-register.patch)
 	@( \
-		echo '+    { "ntoskrnl-Write_CR4", "Stefan Leichter", "ntoskrnl.exe: Emulate write to CR4 register." },'; \
+		echo '+    { "Stefan Leichter", "ntoskrnl.exe: Emulate write to CR4 register." },'; \
 	) > ntoskrnl-Write_CR4.ok
 
 # Patchset ole32-CoWaitForMultipleHandles
@@ -1091,9 +1091,9 @@ ole32-CoWaitForMultipleHandles.ok:
 	$(call APPLY_FILE,ole32-CoWaitForMultipleHandles/0002-ole32-Verify-arguments-for-CoWaitForMultipleHandles-.patch)
 	$(call APPLY_FILE,ole32-CoWaitForMultipleHandles/0003-ole32-Don-t-process-window-events-when-APC-calls-are.patch)
 	@( \
-		echo '+    { "ole32-CoWaitForMultipleHandles", "Sebastian Lackner", "ole32/tests: Add tests for CoWaitForMultipleHandles." },'; \
-		echo '+    { "ole32-CoWaitForMultipleHandles", "Sebastian Lackner", "ole32: Verify arguments for CoWaitForMultipleHandles, always initialize index to zero." },'; \
-		echo '+    { "ole32-CoWaitForMultipleHandles", "Sebastian Lackner", "ole32: Don'\''t process window events when APC calls are queued." },'; \
+		echo '+    { "Sebastian Lackner", "ole32/tests: Add tests for CoWaitForMultipleHandles." },'; \
+		echo '+    { "Sebastian Lackner", "ole32: Verify arguments for CoWaitForMultipleHandles, always initialize index to zero." },'; \
+		echo '+    { "Sebastian Lackner", "ole32: Don'\''t process window events when APC calls are queued." },'; \
 	) > ole32-CoWaitForMultipleHandles.ok
 
 # Patchset quartz-MediaSeeking_Positions
@@ -1111,10 +1111,10 @@ quartz-MediaSeeking_Positions.ok:
 	$(call APPLY_FILE,quartz-MediaSeeking_Positions/0003-quartz-Implement-MediaSeeking_GetStopPosition-on-top.patch)
 	$(call APPLY_FILE,quartz-MediaSeeking_Positions/0004-quartz-Remove-unused-cache-of-MediaSeeking-stop-posi.patch)
 	@( \
-		echo '+    { "quartz-MediaSeeking_Positions", "Erich E. Hoover", "quartz: Include the stream position in addition to the reference clock offset in the time returned by MediaSeeking_GetPositions." },'; \
-		echo '+    { "quartz-MediaSeeking_Positions", "Erich E. Hoover", "quartz: Implement MediaSeeking_GetCurrentPosition on top of MediaSeeking_GetPositions." },'; \
-		echo '+    { "quartz-MediaSeeking_Positions", "Erich E. Hoover", "quartz: Implement MediaSeeking_GetStopPosition on top of MediaSeeking_GetPositions." },'; \
-		echo '+    { "quartz-MediaSeeking_Positions", "Erich E. Hoover", "quartz: Remove unused cache of MediaSeeking stop position." },'; \
+		echo '+    { "Erich E. Hoover", "quartz: Include the stream position in addition to the reference clock offset in the time returned by MediaSeeking_GetPositions." },'; \
+		echo '+    { "Erich E. Hoover", "quartz: Implement MediaSeeking_GetCurrentPosition on top of MediaSeeking_GetPositions." },'; \
+		echo '+    { "Erich E. Hoover", "quartz: Implement MediaSeeking_GetStopPosition on top of MediaSeeking_GetPositions." },'; \
+		echo '+    { "Erich E. Hoover", "quartz: Remove unused cache of MediaSeeking stop position." },'; \
 	) > quartz-MediaSeeking_Positions.ok
 
 # Patchset riched20-IText_Interface
@@ -1141,18 +1141,18 @@ riched20-IText_Interface.ok:
 	$(call APPLY_FILE,riched20-IText_Interface/0011-riched20-Silence-repeated-FIXMEs-triggered-by-Adobe-.patch)
 	$(call APPLY_FILE,riched20-IText_Interface/0012-riched20-Implement-ITextSelection_fnGetDuplicate.patch)
 	@( \
-		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "riched20: Implement IText{Selection, Range}::Set{Start, End}." },'; \
-		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "riched20: Stub for ITextFont interface and implement ITextRange::GetFont and ITextSelection::GetFont." },'; \
-		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "riched20: Stub for ITextPara interface and implement ITextRange::GetPara." },'; \
-		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "riched20: Fix ME_RunOfsFromCharOfs() when nCharOfs > strlen()." },'; \
-		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "riched20: Implement ITextRange::GetText." },'; \
-		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "riched20: Implement ITextRange::SetRange." },'; \
-		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "riched20: Implement ITextRange::IsEqual." },'; \
-		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "riched20: Implement ITextRange::GetStoryLength." },'; \
-		echo '+    { "riched20-IText_Interface", "Jactry Zeng", "riched20: Implement ITextSelection::GetStoryLength." },'; \
-		echo '+    { "riched20-IText_Interface", "Sebastian Lackner", "riched20: Fix invalid memory access when parent object was destroyed earlier than child object." },'; \
-		echo '+    { "riched20-IText_Interface", "Sebastian Lackner", "riched20: Silence repeated FIXMEs triggered by Adobe Reader." },'; \
-		echo '+    { "riched20-IText_Interface", "Sebastian Lackner", "riched20: Implement ITextSelection_fnGetDuplicate." },'; \
+		echo '+    { "Jactry Zeng", "riched20: Implement IText{Selection, Range}::Set{Start, End}." },'; \
+		echo '+    { "Jactry Zeng", "riched20: Stub for ITextFont interface and implement ITextRange::GetFont and ITextSelection::GetFont." },'; \
+		echo '+    { "Jactry Zeng", "riched20: Stub for ITextPara interface and implement ITextRange::GetPara." },'; \
+		echo '+    { "Jactry Zeng", "riched20: Fix ME_RunOfsFromCharOfs() when nCharOfs > strlen()." },'; \
+		echo '+    { "Jactry Zeng", "riched20: Implement ITextRange::GetText." },'; \
+		echo '+    { "Jactry Zeng", "riched20: Implement ITextRange::SetRange." },'; \
+		echo '+    { "Jactry Zeng", "riched20: Implement ITextRange::IsEqual." },'; \
+		echo '+    { "Jactry Zeng", "riched20: Implement ITextRange::GetStoryLength." },'; \
+		echo '+    { "Jactry Zeng", "riched20: Implement ITextSelection::GetStoryLength." },'; \
+		echo '+    { "Sebastian Lackner", "riched20: Fix invalid memory access when parent object was destroyed earlier than child object." },'; \
+		echo '+    { "Sebastian Lackner", "riched20: Silence repeated FIXMEs triggered by Adobe Reader." },'; \
+		echo '+    { "Sebastian Lackner", "riched20: Implement ITextSelection_fnGetDuplicate." },'; \
 	) > riched20-IText_Interface.ok
 
 # Patchset secur32-Schannel_ContextAttr
@@ -1167,7 +1167,7 @@ riched20-IText_Interface.ok:
 secur32-Schannel_ContextAttr.ok:
 	$(call APPLY_FILE,secur32-Schannel_ContextAttr/0001-secur32-Return-more-context-attributes-in-schan_Init.patch)
 	@( \
-		echo '+    { "secur32-Schannel_ContextAttr", "Sebastian Lackner", "secur32: Return more context attributes in schan_InitializeSecurityContextW." },'; \
+		echo '+    { "Sebastian Lackner", "secur32: Return more context attributes in schan_InitializeSecurityContextW." },'; \
 	) > secur32-Schannel_ContextAttr.ok
 
 # Patchset server-ACL_Compat
@@ -1179,7 +1179,7 @@ secur32-Schannel_ContextAttr.ok:
 server-ACL_Compat.ok: server-Inherited_ACLs.ok
 	$(call APPLY_FILE,server-ACL_Compat/0001-server-Add-compatibility-code-for-handling-the-old-m.patch)
 	@( \
-		echo '+    { "server-ACL_Compat", "Erich E. Hoover", "server: Add compatibility code for handling the old method of storing ACLs." },'; \
+		echo '+    { "Erich E. Hoover", "server: Add compatibility code for handling the old method of storing ACLs." },'; \
 	) > server-ACL_Compat.ok
 
 # Patchset server-Address_Change_Notification
@@ -1198,11 +1198,11 @@ server-Address_Change_Notification.ok:
 	$(call APPLY_FILE,server-Address_Change_Notification/0004-server-Implement-the-interface-change-notification-o.patch)
 	$(call APPLY_FILE,server-Address_Change_Notification/0005-ws2_32-Add-an-interactive-test-for-interface-change-.patch)
 	@( \
-		echo '+    { "server-Address_Change_Notification", "Erich E. Hoover", "server: Implement socket-specific ioctl() routine." },'; \
-		echo '+    { "server-Address_Change_Notification", "Erich E. Hoover", "server: Add socket-side support for the interface change notification object." },'; \
-		echo '+    { "server-Address_Change_Notification", "Erich E. Hoover", "server: Add blocked support for SIO_ADDRESS_LIST_CHANGE ioctl()." },'; \
-		echo '+    { "server-Address_Change_Notification", "Erich E. Hoover", "server: Implement the interface change notification object." },'; \
-		echo '+    { "server-Address_Change_Notification", "Erich E. Hoover", "ws2_32: Add an interactive test for interface change notifications." },'; \
+		echo '+    { "Erich E. Hoover", "server: Implement socket-specific ioctl() routine." },'; \
+		echo '+    { "Erich E. Hoover", "server: Add socket-side support for the interface change notification object." },'; \
+		echo '+    { "Erich E. Hoover", "server: Add blocked support for SIO_ADDRESS_LIST_CHANGE ioctl()." },'; \
+		echo '+    { "Erich E. Hoover", "server: Implement the interface change notification object." },'; \
+		echo '+    { "Erich E. Hoover", "ws2_32: Add an interactive test for interface change notifications." },'; \
 	) > server-Address_Change_Notification.ok
 
 # Patchset server-CreateProcess_ACLs
@@ -1219,9 +1219,9 @@ server-CreateProcess_ACLs.ok:
 	$(call APPLY_FILE,server-CreateProcess_ACLs/0002-kernel32-Implement-passing-security-descriptors-from.patch)
 	$(call APPLY_FILE,server-CreateProcess_ACLs/0003-advapi32-tests-Add-additional-tests-for-passing-a-th.patch)
 	@( \
-		echo '+    { "server-CreateProcess_ACLs", "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call." },'; \
-		echo '+    { "server-CreateProcess_ACLs", "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver." },'; \
-		echo '+    { "server-CreateProcess_ACLs", "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess." },'; \
+		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call." },'; \
+		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver." },'; \
+		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess." },'; \
 	) > server-CreateProcess_ACLs.ok
 
 # Patchset server-Fix_Leak
@@ -1233,7 +1233,7 @@ server-CreateProcess_ACLs.ok:
 server-Fix_Leak.ok:
 	$(call APPLY_FILE,server-Fix_Leak/0001-server-Close-fd-if-there-is-no-space-in-thread-infli.patch)
 	@( \
-		echo '+    { "server-Fix_Leak", "Sebastian Lackner", "server: Close fd if there is no space in thread inflight fd list." },'; \
+		echo '+    { "Sebastian Lackner", "server: Close fd if there is no space in thread inflight fd list." },'; \
 	) > server-Fix_Leak.ok
 
 # Patchset server-Inherited_ACLs
@@ -1249,8 +1249,8 @@ server-Inherited_ACLs.ok: server-Stored_ACLs.ok
 	$(call APPLY_FILE,server-Inherited_ACLs/0001-server-Inherit-security-attributes-from-parent-direc.patch)
 	$(call APPLY_FILE,server-Inherited_ACLs/0002-server-Inherit-security-attributes-from-parent-direc.patch)
 	@( \
-		echo '+    { "server-Inherited_ACLs", "Erich E. Hoover", "server: Inherit security attributes from parent directories on creation." },'; \
-		echo '+    { "server-Inherited_ACLs", "Erich E. Hoover", "server: Inherit security attributes from parent directories on SetSecurityInfo." },'; \
+		echo '+    { "Erich E. Hoover", "server: Inherit security attributes from parent directories on creation." },'; \
+		echo '+    { "Erich E. Hoover", "server: Inherit security attributes from parent directories on SetSecurityInfo." },'; \
 	) > server-Inherited_ACLs.ok
 
 # Patchset server-Misc_ACL
@@ -1266,8 +1266,8 @@ server-Misc_ACL.ok:
 	$(call APPLY_FILE,server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch)
 	$(call APPLY_FILE,server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch)
 	@( \
-		echo '+    { "server-Misc_ACL", "Erich E. Hoover", "server: Add default security descriptor ownership for processes." },'; \
-		echo '+    { "server-Misc_ACL", "Erich E. Hoover", "server: Add default security descriptor DACL for processes." },'; \
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes." },'; \
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes." },'; \
 	) > server-Misc_ACL.ok
 
 # Patchset server-OpenProcess
@@ -1282,7 +1282,7 @@ server-Misc_ACL.ok:
 server-OpenProcess.ok:
 	$(call APPLY_FILE,server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch)
 	@( \
-		echo '+    { "server-OpenProcess", "Michael Müller", "server: Return error when opening a terminating process." },'; \
+		echo '+    { "Michael Müller", "server: Return error when opening a terminating process." },'; \
 	) > server-OpenProcess.ok
 
 # Patchset server-Stored_ACLs
@@ -1302,12 +1302,12 @@ server-Stored_ACLs.ok: ntdll-DOS_Attributes.ok
 	$(call APPLY_FILE,server-Stored_ACLs/0005-server-Retrieve-file-security-attributes-with-extend.patch)
 	$(call APPLY_FILE,server-Stored_ACLs/0006-server-Convert-return-of-file-security-masks-with-ge.patch)
 	@( \
-		echo '+    { "server-Stored_ACLs", "Erich E. Hoover", "server: Unify the storage of security attributes for files and directories." },'; \
-		echo '+    { "server-Stored_ACLs", "Erich E. Hoover", "server: Unify the retrieval of security attributes for files and directories." },'; \
-		echo '+    { "server-Stored_ACLs", "Erich E. Hoover", "server: Store file security attributes with extended file attributes." },'; \
-		echo '+    { "server-Stored_ACLs", "Erich E. Hoover", "server: Store user and group inside stored extended file attribute information." },'; \
-		echo '+    { "server-Stored_ACLs", "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes." },'; \
-		echo '+    { "server-Stored_ACLs", "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings." },'; \
+		echo '+    { "Erich E. Hoover", "server: Unify the storage of security attributes for files and directories." },'; \
+		echo '+    { "Erich E. Hoover", "server: Unify the retrieval of security attributes for files and directories." },'; \
+		echo '+    { "Erich E. Hoover", "server: Store file security attributes with extended file attributes." },'; \
+		echo '+    { "Erich E. Hoover", "server: Store user and group inside stored extended file attribute information." },'; \
+		echo '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes." },'; \
+		echo '+    { "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings." },'; \
 	) > server-Stored_ACLs.ok
 
 # Patchset setupapi-SetupPromptForDisk
@@ -1323,8 +1323,8 @@ setupapi-SetupPromptForDisk.ok:
 	$(call APPLY_FILE,setupapi-SetupPromptForDisk/0001-setupapi-Add-support-for-IDF_CHECKFIRST-flag-in-Setu.patch)
 	$(call APPLY_FILE,setupapi-SetupPromptForDisk/0002-setupapi-tests-Add-test-for-IDF_CHECKFIRST-and-Setup.patch)
 	@( \
-		echo '+    { "setupapi-SetupPromptForDisk", "Michael Müller", "setupapi: Add support for IDF_CHECKFIRST flag in SetupPromptForDiskW." },'; \
-		echo '+    { "setupapi-SetupPromptForDisk", "Michael Müller", "setupapi/tests: Add test for IDF_CHECKFIRST and SetupPromptForDiskA/W." },'; \
+		echo '+    { "Michael Müller", "setupapi: Add support for IDF_CHECKFIRST flag in SetupPromptForDiskW." },'; \
+		echo '+    { "Michael Müller", "setupapi/tests: Add test for IDF_CHECKFIRST and SetupPromptForDiskA/W." },'; \
 	) > setupapi-SetupPromptForDisk.ok
 
 # Patchset shdocvw-ParseURLFromOutsideSource_Tests
@@ -1336,7 +1336,7 @@ setupapi-SetupPromptForDisk.ok:
 shdocvw-ParseURLFromOutsideSource_Tests.ok:
 	$(call APPLY_FILE,shdocvw-ParseURLFromOutsideSource_Tests/0001-shdocvw-Check-precisely-ParseURLFromOutsideSourceX-r.patch)
 	@( \
-		echo '+    { "shdocvw-ParseURLFromOutsideSource_Tests", "Christian Costa", "shdocvw: Check precisely ParseURLFromOutsideSourceX returned values in tests and make code clearer about that." },'; \
+		echo '+    { "Christian Costa", "shdocvw: Check precisely ParseURLFromOutsideSourceX returned values in tests and make code clearer about that." },'; \
 	) > shdocvw-ParseURLFromOutsideSource_Tests.ok
 
 # Patchset shell32-Default_Folder_ACLs
@@ -1348,7 +1348,7 @@ shdocvw-ParseURLFromOutsideSource_Tests.ok:
 shell32-Default_Folder_ACLs.ok:
 	$(call APPLY_FILE,shell32-Default_Folder_ACLs/0001-shell32-Set-the-default-security-attributes-for-user.patch)
 	@( \
-		echo '+    { "shell32-Default_Folder_ACLs", "Sebastian Lackner", "shell32: Set the default security attributes for user shell folders." },'; \
+		echo '+    { "Sebastian Lackner", "shell32: Set the default security attributes for user shell folders." },'; \
 	) > shell32-Default_Folder_ACLs.ok
 
 # Patchset shell32-Default_Path
@@ -1363,7 +1363,7 @@ shell32-Default_Folder_ACLs.ok:
 shell32-Default_Path.ok:
 	$(call APPLY_FILE,shell32-Default_Path/0001-shell32-Implement-KF_FLAG_DEFAULT_PATH-flag-for-SHGe.patch)
 	@( \
-		echo '+    { "shell32-Default_Path", "Sebastian Lackner", "shell32: Implement KF_FLAG_DEFAULT_PATH flag for SHGetKnownFolderPath." },'; \
+		echo '+    { "Sebastian Lackner", "shell32: Implement KF_FLAG_DEFAULT_PATH flag for SHGetKnownFolderPath." },'; \
 	) > shell32-Default_Path.ok
 
 # Patchset shell32-Icons
@@ -1378,7 +1378,7 @@ shell32-Default_Path.ok:
 shell32-Icons.ok:
 	$(call APPLY_FILE,shell32-Icons/0001-shell32-Add-support-for-extra-large-and-jumbo-icon-l.patch)
 	@( \
-		echo '+    { "shell32-Icons", "Michael Müller", "shell32: Add support for extra large and jumbo icon lists." },'; \
+		echo '+    { "Michael Müller", "shell32: Add support for extra large and jumbo icon lists." },'; \
 	) > shell32-Icons.ok
 
 # Patchset shell32-RunDLL_CallEntry16
@@ -1393,7 +1393,7 @@ shell32-Icons.ok:
 shell32-RunDLL_CallEntry16.ok:
 	$(call APPLY_FILE,shell32-RunDLL_CallEntry16/0001-shell32-Use-manual-redirection-for-RunDLL_CallEntry1.patch)
 	@( \
-		echo '+    { "shell32-RunDLL_CallEntry16", "Michael Müller", "shell32: Use manual redirection for RunDLL_CallEntry16." },'; \
+		echo '+    { "Michael Müller", "shell32: Use manual redirection for RunDLL_CallEntry16." },'; \
 	) > shell32-RunDLL_CallEntry16.ok
 
 # Patchset shell32-SHCreateSessionKey
@@ -1408,7 +1408,7 @@ shell32-RunDLL_CallEntry16.ok:
 shell32-SHCreateSessionKey.ok:
 	$(call APPLY_FILE,shell32-SHCreateSessionKey/0001-shell32-Implement-SHCreateSessionKey.patch)
 	@( \
-		echo '+    { "shell32-SHCreateSessionKey", "Dmitry Timoshkov", "shell32: Implement SHCreateSessionKey." },'; \
+		echo '+    { "Dmitry Timoshkov", "shell32: Implement SHCreateSessionKey." },'; \
 	) > shell32-SHCreateSessionKey.ok
 
 # Patchset shell32-SHFileOperation
@@ -1420,7 +1420,7 @@ shell32-SHCreateSessionKey.ok:
 shell32-SHFileOperation.ok:
 	$(call APPLY_FILE,shell32-SHFileOperation/0001-shell32-Choose-return-value-for-SHFileOperationW-dep.patch)
 	@( \
-		echo '+    { "shell32-SHFileOperation", "Michael Müller", "shell32: Choose return value for SHFileOperationW depending on windows version." },'; \
+		echo '+    { "Michael Müller", "shell32: Choose return value for SHFileOperationW depending on windows version." },'; \
 	) > shell32-SHFileOperation.ok
 
 # Patchset shlwapi-PathIsDirectoryEmptyW
@@ -1435,7 +1435,7 @@ shell32-SHFileOperation.ok:
 shlwapi-PathIsDirectoryEmptyW.ok:
 	$(call APPLY_FILE,shlwapi-PathIsDirectoryEmptyW/0001-shlwapi-Correctly-treat-.-when-enumerating-files-in-.patch)
 	@( \
-		echo '+    { "shlwapi-PathIsDirectoryEmptyW", "Michael Müller", "shlwapi: Correctly treat '\''.'\'' when enumerating files in PathIsDirectoryEmptyW." },'; \
+		echo '+    { "Michael Müller", "shlwapi: Correctly treat '\''.'\'' when enumerating files in PathIsDirectoryEmptyW." },'; \
 	) > shlwapi-PathIsDirectoryEmptyW.ok
 
 # Patchset shlwapi-UrlCombine
@@ -1448,8 +1448,8 @@ shlwapi-UrlCombine.ok:
 	$(call APPLY_FILE,shlwapi-UrlCombine/0001-shlwapi-tests-Add-additional-tests-for-UrlCombine-and-.patch)
 	$(call APPLY_FILE,shlwapi-UrlCombine/0002-shlwapi-UrlCombineW-workaround-for-relative-paths.patch)
 	@( \
-		echo '+    { "shlwapi-UrlCombine", "Sebastian Lackner", "shlwapi/tests: Add additional tests for UrlCombine and UrlCanonicalize." },'; \
-		echo '+    { "shlwapi-UrlCombine", "Sebastian Lackner", "shlwapi: UrlCombineW workaround for relative paths." },'; \
+		echo '+    { "Sebastian Lackner", "shlwapi/tests: Add additional tests for UrlCombine and UrlCanonicalize." },'; \
+		echo '+    { "Sebastian Lackner", "shlwapi: UrlCombineW workaround for relative paths." },'; \
 	) > shlwapi-UrlCombine.ok
 
 # Patchset user32-Dialog_Paint_Event
@@ -1464,7 +1464,7 @@ shlwapi-UrlCombine.ok:
 user32-Dialog_Paint_Event.ok:
 	$(call APPLY_FILE,user32-Dialog_Paint_Event/0001-user32-Call-UpdateWindow-during-DIALOG_CreateIndirec.patch)
 	@( \
-		echo '+    { "user32-Dialog_Paint_Event", "Sebastian Lackner", "user32: Call UpdateWindow() during DIALOG_CreateIndirect." },'; \
+		echo '+    { "Sebastian Lackner", "user32: Call UpdateWindow() during DIALOG_CreateIndirect." },'; \
 	) > user32-Dialog_Paint_Event.ok
 
 # Patchset user32-DrawTextExW
@@ -1479,7 +1479,7 @@ user32-Dialog_Paint_Event.ok:
 user32-DrawTextExW.ok:
 	$(call APPLY_FILE,user32-DrawTextExW/0001-user32-Fix-handling-of-invert_y-in-DrawTextExW.patch)
 	@( \
-		echo '+    { "user32-DrawTextExW", "Sebastian Lackner", "user32: Fix handling of invert_y in DrawTextExW." },'; \
+		echo '+    { "Sebastian Lackner", "user32: Fix handling of invert_y in DrawTextExW." },'; \
 	) > user32-DrawTextExW.ok
 
 # Patchset user32-FindWindowEx
@@ -1496,9 +1496,9 @@ user32-FindWindowEx.ok:
 	$(call APPLY_FILE,user32-FindWindowEx/0002-user32-tests-Add-tests-for-Set-Get-WindowTextA-with-.patch)
 	$(call APPLY_FILE,user32-FindWindowEx/0003-user32-Avoid-sending-window-messages-in-FindWindowEx.patch)
 	@( \
-		echo '+    { "user32-FindWindowEx", "Sebastian Lackner", "user32/tests: Add tests to demonstrate FindWindow doesn'\''t send WM_GETTEXT messages." },'; \
-		echo '+    { "user32-FindWindowEx", "Sebastian Lackner", "user32/tests: Add tests for [Set|Get]WindowTextA with multiple threads." },'; \
-		echo '+    { "user32-FindWindowEx", "Sebastian Lackner", "user32: Avoid sending window messages in FindWindowExW." },'; \
+		echo '+    { "Sebastian Lackner", "user32/tests: Add tests to demonstrate FindWindow doesn'\''t send WM_GETTEXT messages." },'; \
+		echo '+    { "Sebastian Lackner", "user32/tests: Add tests for [Set|Get]WindowTextA with multiple threads." },'; \
+		echo '+    { "Sebastian Lackner", "user32: Avoid sending window messages in FindWindowExW." },'; \
 	) > user32-FindWindowEx.ok
 
 # Patchset user32-GetSystemMetrics
@@ -1513,7 +1513,7 @@ user32-FindWindowEx.ok:
 user32-GetSystemMetrics.ok:
 	$(call APPLY_FILE,user32-GetSystemMetrics/0001-user32-Allow-changing-the-tablet-media-center-status.patch)
 	@( \
-		echo '+    { "user32-GetSystemMetrics", "Michael Müller", "user32: Allow changing the tablet / media center status via wine registry key." },'; \
+		echo '+    { "Michael Müller", "user32: Allow changing the tablet / media center status via wine registry key." },'; \
 	) > user32-GetSystemMetrics.ok
 
 # Patchset user32-GetTipText
@@ -1529,8 +1529,8 @@ user32-GetTipText.ok:
 	$(call APPLY_FILE,user32-GetTipText/0001-Fix-TOOLTIPS_GetTipText-when-a-resource-cannot-be-fo.patch)
 	$(call APPLY_FILE,user32-GetTipText/0002-Fix-TOOLTIPS_GetTipText-when-a-NULL-instance-is-used.patch)
 	@( \
-		echo '+    { "user32-GetTipText", "Erich E. Hoover", "Fix TOOLTIPS_GetTipText when a resource cannot be found." },'; \
-		echo '+    { "user32-GetTipText", "Erich E. Hoover", "Fix TOOLTIPS_GetTipText when a NULL instance is used." },'; \
+		echo '+    { "Erich E. Hoover", "Fix TOOLTIPS_GetTipText when a resource cannot be found." },'; \
+		echo '+    { "Erich E. Hoover", "Fix TOOLTIPS_GetTipText when a NULL instance is used." },'; \
 	) > user32-GetTipText.ok
 
 # Patchset user32-WndProc
@@ -1545,7 +1545,7 @@ user32-GetTipText.ok:
 user32-WndProc.ok:
 	$(call APPLY_FILE,user32-WndProc/0001-user32-Increase-MAX_WINPROCS-to-16384.patch)
 	@( \
-		echo '+    { "user32-WndProc", "Sebastian Lackner", "user32: Increase MAX_WINPROCS to 16384." },'; \
+		echo '+    { "Sebastian Lackner", "user32: Increase MAX_WINPROCS to 16384." },'; \
 	) > user32-WndProc.ok
 
 # Patchset wine.inf-ProductId
@@ -1560,7 +1560,7 @@ user32-WndProc.ok:
 wine.inf-ProductId.ok:
 	$(call APPLY_FILE,wine.inf-ProductId/0001-wine.inf-Add-fake-ProductId-to-HKLM-CurrentVersionNT.patch)
 	@( \
-		echo '+    { "wine.inf-ProductId", "Yanis Lukes", "wine.inf: Add fake ProductId to HKLM\\CurrentVersionNT." },'; \
+		echo '+    { "Yanis Lukes", "wine.inf: Add fake ProductId to HKLM\\CurrentVersionNT." },'; \
 	) > wine.inf-ProductId.ok
 
 # Patchset wineboot-HKEY_DYN_DATA
@@ -1575,7 +1575,7 @@ wine.inf-ProductId.ok:
 wineboot-HKEY_DYN_DATA.ok:
 	$(call APPLY_FILE,wineboot-HKEY_DYN_DATA/0001-wineboot-Add-some-generic-hardware-in-HKEY_DYN_DATA-.patch)
 	@( \
-		echo '+    { "wineboot-HKEY_DYN_DATA", "Michael Müller", "wineboot: Add some generic hardware in HKEY_DYN_DATA\\Config Manager\\Enum." },'; \
+		echo '+    { "Michael Müller", "wineboot: Add some generic hardware in HKEY_DYN_DATA\\Config Manager\\Enum." },'; \
 	) > wineboot-HKEY_DYN_DATA.ok
 
 # Patchset winebuild-LinkerVersion
@@ -1590,7 +1590,7 @@ wineboot-HKEY_DYN_DATA.ok:
 winebuild-LinkerVersion.ok:
 	$(call APPLY_FILE,winebuild-LinkerVersion/0001-winebuild-Set-a-valid-major-and-minor-linker-version.patch)
 	@( \
-		echo '+    { "winebuild-LinkerVersion", "Michael Müller", "winebuild: Set a valid major and minor linker version." },'; \
+		echo '+    { "Michael Müller", "winebuild: Set a valid major and minor linker version." },'; \
 	) > winebuild-LinkerVersion.ok
 
 # Patchset wined3d-DXTn
@@ -1608,8 +1608,8 @@ wined3d-DXTn.ok:
 	$(call APPLY_FILE,wined3d-DXTn/0001-wined3d-Add-support-for-DXTn-software-decoding-throu.patch)
 	$(call APPLY_FILE,wined3d-DXTn/0002-wined3d-Improve-DXTn-support-and-export-conversion-f.patch)
 	@( \
-		echo '+    { "wined3d-DXTn", "Michael Müller", "wined3d: Add support for DXTn software decoding through libtxc_dxtn." },'; \
-		echo '+    { "wined3d-DXTn", "Christian Costa", "wined3d: Improve DXTn support and export conversion functions for d3dx9_36." },'; \
+		echo '+    { "Michael Müller", "wined3d: Add support for DXTn software decoding through libtxc_dxtn." },'; \
+		echo '+    { "Christian Costa", "wined3d: Improve DXTn support and export conversion functions for d3dx9_36." },'; \
 	) > wined3d-DXTn.ok
 
 # Patchset wined3d-Revert_PixelFormat
@@ -1636,14 +1636,14 @@ wined3d-Revert_PixelFormat.ok:
 	$(call APPLY_FILE,wined3d-Revert_PixelFormat/0007-d3d9-Mark-tests-which-no-longer-pass-due-to-reverts-.patch)
 	$(call APPLY_FILE,wined3d-Revert_PixelFormat/0008-ddraw-Mark-tests-which-no-longer-pass-due-to-reverts.patch)
 	@( \
-		echo '+    { "wined3d-Revert_PixelFormat", "Ken Thomases", "Revert \"wined3d: Track if a context'\''s private hdc has had its pixel format set, so we don'\''t need to check it.\"." },'; \
-		echo '+    { "wined3d-Revert_PixelFormat", "Ken Thomases", "Revert \"wined3d: Track if a context'\''s hdc is private so we never need to restore its pixel format.\"." },'; \
-		echo '+    { "wined3d-Revert_PixelFormat", "Ken Thomases", "Revert \"wined3d: When restoring pixel format in context_release(), mark the context as needing to be set on the next context_acquire().\"." },'; \
-		echo '+    { "wined3d-Revert_PixelFormat", "Ken Thomases", "Revert \"wined3d: Don'\''t call GetPixelFormat() to set a flag that'\''s already set.\"." },'; \
-		echo '+    { "wined3d-Revert_PixelFormat", "Ken Thomases", "Revert \"wined3d: Restore the pixel format of the window whose pixel format was actually changed.\"." },'; \
-		echo '+    { "wined3d-Revert_PixelFormat", "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine." },'; \
-		echo '+    { "wined3d-Revert_PixelFormat", "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine." },'; \
-		echo '+    { "wined3d-Revert_PixelFormat", "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine." },'; \
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s private hdc has had its pixel format set, so we don'\''t need to check it.\"." },'; \
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s hdc is private so we never need to restore its pixel format.\"." },'; \
+		echo '+    { "Ken Thomases", "Revert \"wined3d: When restoring pixel format in context_release(), mark the context as needing to be set on the next context_acquire().\"." },'; \
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Don'\''t call GetPixelFormat() to set a flag that'\''s already set.\"." },'; \
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Restore the pixel format of the window whose pixel format was actually changed.\"." },'; \
+		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine." },'; \
+		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine." },'; \
+		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine." },'; \
 	) > wined3d-Revert_PixelFormat.ok
 
 # Patchset winedevice-Fix_Relocation
@@ -1658,7 +1658,7 @@ wined3d-Revert_PixelFormat.ok:
 winedevice-Fix_Relocation.ok:
 	$(call APPLY_FILE,winedevice-Fix_Relocation/0001-winedevice-Avoid-invalid-memory-access-when-relocati.patch)
 	@( \
-		echo '+    { "winedevice-Fix_Relocation", "Sebastian Lackner", "winedevice: Avoid invalid memory access when relocation block addresses memory outside of the current page." },'; \
+		echo '+    { "Sebastian Lackner", "winedevice: Avoid invalid memory access when relocation block addresses memory outside of the current page." },'; \
 	) > winedevice-Fix_Relocation.ok
 
 # Patchset winemenubuilder-Desktop_Icon_Path
@@ -1670,7 +1670,7 @@ winedevice-Fix_Relocation.ok:
 winemenubuilder-Desktop_Icon_Path.ok:
 	$(call APPLY_FILE,winemenubuilder-Desktop_Icon_Path/0001-winemenubuilder-Create-desktop-shortcuts-with-absolu.patch)
 	@( \
-		echo '+    { "winemenubuilder-Desktop_Icon_Path", "Sebastian Lackner", "winemenubuilder: Create desktop shortcuts with absolute wine path." },'; \
+		echo '+    { "Sebastian Lackner", "winemenubuilder: Create desktop shortcuts with absolute wine path." },'; \
 	) > winemenubuilder-Desktop_Icon_Path.ok
 
 # Patchset winepulse-PulseAudio_Support
@@ -1713,34 +1713,34 @@ winepulse-PulseAudio_Support.ok:
 	$(call APPLY_FILE,winepulse-PulseAudio_Support/0027-winepulse-handle-stream-create-failing-correctly.patch)
 	$(call APPLY_FILE,winepulse-PulseAudio_Support/0028-winepulse-expose-audio-devices-directly-to-programs.patch)
 	@( \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "winmm: Load winealsa if winepulse is found." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "winepulse: Add initial stub for pulseaudio support." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "winepulse: Add format and period probing." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "winepulse: Add audioclient." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "winepulse: Add IAudioRenderClient and IAudioCaptureClient." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "winepulse: Add IAudioClock and IAudioClock2." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "winepulse: Add audiostreamvolume." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "winepulse: Add session support." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "fix fdels trailing whitespaces." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "winepulse v12." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "Add support for missing formats, and silence an error for missing format tags." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "Add official warning wine doesn'\''t want to support winepulse." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "Fix winmm tests." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "Latency and compilation improvements." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Juergen Tretthahn", "winepulse: API Compatibility with 1.5.2 onward." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "winepulse: Fix low latency support." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "winepulse: drop realtime priority before thread destruction." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "winepulse: remove bogus SetEvent from pulse_started_callback." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "winepulse: disable the setevent part of the latency hack." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "fix the checks in IsFormatSupported." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "winepulse: fixup IsFormatSupported calls." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "return early if padding didn'\''t update." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "winepulse: fix unneeded free in write.." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "fixup a invalid free in mmdevapi." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "winepulse: use a pi-mutex for serialization." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Maarten Lankhorst", "winepulse: add support for IMarshal." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Mark Harmstone", "winepulse: handle stream create failing correctly." },'; \
-		echo '+    { "winepulse-PulseAudio_Support", "Mark Harmstone", "winepulse: expose audio devices directly to programs." },'; \
+		echo '+    { "Maarten Lankhorst", "winmm: Load winealsa if winepulse is found." },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: Add initial stub for pulseaudio support." },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: Add format and period probing." },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: Add audioclient." },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: Add IAudioRenderClient and IAudioCaptureClient." },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: Add IAudioClock and IAudioClock2." },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: Add audiostreamvolume." },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: Add session support." },'; \
+		echo '+    { "Maarten Lankhorst", "fix fdels trailing whitespaces." },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse v12." },'; \
+		echo '+    { "Maarten Lankhorst", "Add support for missing formats, and silence an error for missing format tags." },'; \
+		echo '+    { "Maarten Lankhorst", "Add official warning wine doesn'\''t want to support winepulse." },'; \
+		echo '+    { "Maarten Lankhorst", "Fix winmm tests." },'; \
+		echo '+    { "Maarten Lankhorst", "Latency and compilation improvements." },'; \
+		echo '+    { "Juergen Tretthahn", "winepulse: API Compatibility with 1.5.2 onward." },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: Fix low latency support." },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: drop realtime priority before thread destruction." },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: remove bogus SetEvent from pulse_started_callback." },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: disable the setevent part of the latency hack." },'; \
+		echo '+    { "Maarten Lankhorst", "fix the checks in IsFormatSupported." },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: fixup IsFormatSupported calls." },'; \
+		echo '+    { "Maarten Lankhorst", "return early if padding didn'\''t update." },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: fix unneeded free in write.." },'; \
+		echo '+    { "Maarten Lankhorst", "fixup a invalid free in mmdevapi." },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: use a pi-mutex for serialization." },'; \
+		echo '+    { "Maarten Lankhorst", "winepulse: add support for IMarshal." },'; \
+		echo '+    { "Mark Harmstone", "winepulse: handle stream create failing correctly." },'; \
+		echo '+    { "Mark Harmstone", "winepulse: expose audio devices directly to programs." },'; \
 	) > winepulse-PulseAudio_Support.ok
 
 # Patchset winex11-CandidateWindowPos
@@ -1756,7 +1756,7 @@ winepulse-PulseAudio_Support.ok:
 winex11-CandidateWindowPos.ok:
 	$(call APPLY_FILE,winex11-CandidateWindowPos/0001-winex11.drv-Update-a-candidate-window-s-position-wit.patch)
 	@( \
-		echo '+    { "winex11-CandidateWindowPos", "Felix Yan", "winex11.drv: Update a candidate window'\''s position with over-the-spot style." },'; \
+		echo '+    { "Felix Yan", "winex11.drv: Update a candidate window'\''s position with over-the-spot style." },'; \
 	) > winex11-CandidateWindowPos.ok
 
 # Patchset winex11-Clipboard_HTML
@@ -1771,7 +1771,7 @@ winex11-CandidateWindowPos.ok:
 winex11-Clipboard_HTML.ok:
 	$(call APPLY_FILE,winex11-Clipboard_HTML/0001-winex11.drv-Import-X11-s-text-html-as-HTML-Format.patch)
 	@( \
-		echo '+    { "winex11-Clipboard_HTML", "Damjan Jovanovic", "winex11.drv: Import X11'\''s \"text/html\" as \"HTML Format\"." },'; \
+		echo '+    { "Damjan Jovanovic", "winex11.drv: Import X11'\''s \"text/html\" as \"HTML Format\"." },'; \
 	) > winex11-Clipboard_HTML.ok
 
 # Patchset winex11-Limited_Resolutions
@@ -1783,7 +1783,7 @@ winex11-Clipboard_HTML.ok:
 winex11-Limited_Resolutions.ok:
 	$(call APPLY_FILE,winex11-Limited_Resolutions/0001-winex11.drv-Update-the-check-for-broken-nVidia-RandR.patch)
 	@( \
-		echo '+    { "winex11-Limited_Resolutions", "Erich E. Hoover", "winex11.drv: Update the check for broken nVidia RandR to test for the number of resolutions instead of the number of modes." },'; \
+		echo '+    { "Erich E. Hoover", "winex11.drv: Update the check for broken nVidia RandR to test for the number of resolutions instead of the number of modes." },'; \
 	) > winex11-Limited_Resolutions.ok
 
 # Patchset winex11-Window_Groups
@@ -1798,7 +1798,7 @@ winex11-Limited_Resolutions.ok:
 winex11-Window_Groups.ok:
 	$(call APPLY_FILE,winex11-Window_Groups/0001-winex11-Prevent-window-managers-from-grouping-all-wi.patch)
 	@( \
-		echo '+    { "winex11-Window_Groups", "Michael Müller", "winex11: Prevent window managers from grouping all wine programs together." },'; \
+		echo '+    { "Michael Müller", "winex11: Prevent window managers from grouping all wine programs together." },'; \
 	) > winex11-Window_Groups.ok
 
 # Patchset winex11-XEMBED
@@ -1810,7 +1810,7 @@ winex11-Window_Groups.ok:
 winex11-XEMBED.ok:
 	$(call APPLY_FILE,winex11-XEMBED/0001-winex11-Enable-disable-windows-when-they-are-un-mapped.patch)
 	@( \
-		echo '+    { "winex11-XEMBED", "Sebastian Lackner", "winex11: Enable/disable windows when they are (un)mapped by foreign applications." },'; \
+		echo '+    { "Sebastian Lackner", "winex11: Enable/disable windows when they are (un)mapped by foreign applications." },'; \
 	) > winex11-XEMBED.ok
 
 # Patchset winex11-wglShareLists
@@ -1825,7 +1825,7 @@ winex11-XEMBED.ok:
 winex11-wglShareLists.ok:
 	$(call APPLY_FILE,winex11-wglShareLists/0001-winex11.drv-Only-warn-about-used-contexts-in-wglShar.patch)
 	@( \
-		echo '+    { "winex11-wglShareLists", "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists." },'; \
+		echo '+    { "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists." },'; \
 	) > winex11-wglShareLists.ok
 
 # Patchset wpcap-Dynamic_Linking
@@ -1837,7 +1837,7 @@ winex11-wglShareLists.ok:
 wpcap-Dynamic_Linking.ok:
 	$(call APPLY_FILE,wpcap-Dynamic_Linking/0001-wpcap-Load-libpcap-dynamically.patch)
 	@( \
-		echo '+    { "wpcap-Dynamic_Linking", "André Hentschel", "wpcap: Load libpcap dynamically." },'; \
+		echo '+    { "André Hentschel", "wpcap: Load libpcap dynamically." },'; \
 	) > wpcap-Dynamic_Linking.ok
 
 # Patchset ws2_32-Connect_Time
@@ -1849,7 +1849,7 @@ wpcap-Dynamic_Linking.ok:
 ws2_32-Connect_Time.ok:
 	$(call APPLY_FILE,ws2_32-Connect_Time/0001-ws2_32-Properly-implement-SO_CONNECT_TIME.patch)
 	@( \
-		echo '+    { "ws2_32-Connect_Time", "Bruno Jesus", "ws2_32: Properly implement SO_CONNECT_TIME." },'; \
+		echo '+    { "Bruno Jesus", "ws2_32: Properly implement SO_CONNECT_TIME." },'; \
 	) > ws2_32-Connect_Time.ok
 
 # Patchset ws2_32-TransmitFile
@@ -1868,11 +1868,11 @@ ws2_32-TransmitFile.ok:
 	$(call APPLY_FILE,ws2_32-TransmitFile/0004-ws2_32-Add-asynchronous-support-for-TransmitFile.patch)
 	$(call APPLY_FILE,ws2_32-TransmitFile/0005-ws2_32-Add-support-for-TF_DISCONNECT-and-TF_REUSE_SO.patch)
 	@( \
-		echo '+    { "ws2_32-TransmitFile", "Erich E. Hoover", "ws2_32: Add stub for TransmitFile." },'; \
-		echo '+    { "ws2_32-TransmitFile", "Erich E. Hoover", "ws2_32: Check for invalid parameters in TransmitFile." },'; \
-		echo '+    { "ws2_32-TransmitFile", "Erich E. Hoover", "ws2_32: Implement a basic synchronous TransmitFile." },'; \
-		echo '+    { "ws2_32-TransmitFile", "Erich E. Hoover", "ws2_32: Add asynchronous support for TransmitFile." },'; \
-		echo '+    { "ws2_32-TransmitFile", "Erich E. Hoover", "ws2_32: Add support for TF_DISCONNECT and TF_REUSE_SOCKET to TransmitFile." },'; \
+		echo '+    { "Erich E. Hoover", "ws2_32: Add stub for TransmitFile." },'; \
+		echo '+    { "Erich E. Hoover", "ws2_32: Check for invalid parameters in TransmitFile." },'; \
+		echo '+    { "Erich E. Hoover", "ws2_32: Implement a basic synchronous TransmitFile." },'; \
+		echo '+    { "Erich E. Hoover", "ws2_32: Add asynchronous support for TransmitFile." },'; \
+		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_DISCONNECT and TF_REUSE_SOCKET to TransmitFile." },'; \
 	) > ws2_32-TransmitFile.ok
 
 # Patchset wtsapi32-EnumerateProcesses
@@ -1887,6 +1887,6 @@ ws2_32-TransmitFile.ok:
 wtsapi32-EnumerateProcesses.ok:
 	$(call APPLY_FILE,wtsapi32-EnumerateProcesses/0001-wtsapi32-Partial-implementation-of-WTSEnumerateProce.patch)
 	@( \
-		echo '+    { "wtsapi32-EnumerateProcesses", "Sebastian Lackner", "wtsapi32: Partial implementation of WTSEnumerateProcessesW." },'; \
+		echo '+    { "Sebastian Lackner", "wtsapi32: Partial implementation of WTSEnumerateProcessesW." },'; \
 	) > wtsapi32-EnumerateProcesses.ok
 

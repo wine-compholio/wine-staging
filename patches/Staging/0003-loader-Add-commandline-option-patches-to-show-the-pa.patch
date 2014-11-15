@@ -1,19 +1,19 @@
-From d88eb32e40bff9b8279f57b13a5f2cc09a9273ea Mon Sep 17 00:00:00 2001
+From 378c383c738f097fd6fa81badca0cde5c6858970 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Thu, 29 May 2014 23:43:45 +0200
 Subject: loader: Add commandline option --patches to show the patch list.
 
 ---
- dlls/ntdll/misc.c     |    8 ++++++++
- dlls/ntdll/ntdll.spec |    1 +
- loader/main.c         |   19 ++++++++++++++++++-
- 3 files changed, 27 insertions(+), 1 deletion(-)
+ dlls/ntdll/misc.c     |  8 ++++++++
+ dlls/ntdll/ntdll.spec |  1 +
+ loader/main.c         | 32 +++++++++++++++++++++++++++++++-
+ 3 files changed, 40 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/misc.c b/dlls/ntdll/misc.c
-index 8bd4eb7..4b4c318 100644
+index ad1b43b..1f985e7 100644
 --- a/dlls/ntdll/misc.c
 +++ b/dlls/ntdll/misc.c
-@@ -60,6 +60,14 @@ const char * CDECL NTDLL_wine_get_version(void)
+@@ -55,6 +55,14 @@ const char * CDECL NTDLL_wine_get_version(void)
  }
  
  /*********************************************************************
@@ -29,10 +29,10 @@ index 8bd4eb7..4b4c318 100644
   */
  const char * CDECL NTDLL_wine_get_build_id(void)
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 5bac269..ab50882 100644
+index 7e95969..f9483aa 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -1419,6 +1419,7 @@
+@@ -1421,6 +1421,7 @@
  
  # Version
  @ cdecl wine_get_version() NTDLL_wine_get_version
@@ -41,23 +41,10 @@ index 5bac269..ab50882 100644
  @ cdecl wine_get_host_version(ptr ptr) NTDLL_wine_get_host_version
  
 diff --git a/loader/main.c b/loader/main.c
-index ac67290..71e5055 100644
+index ac67290..db9a176 100644
 --- a/loader/main.c
 +++ b/loader/main.c
-@@ -79,6 +79,12 @@ static inline void reserve_area( void *addr, size_t size )
- 
- #endif  /* __APPLE__ */
- 
-+struct wine_patch {
-+    const char *name;
-+    const char *author;
-+    const char *title;
-+};
-+
- /***********************************************************************
-  *           check_command_line
-  *
-@@ -89,7 +95,8 @@ static void check_command_line( int argc, char *argv[] )
+@@ -89,7 +89,8 @@ static void check_command_line( int argc, char *argv[] )
      static const char usage[] =
          "Usage: wine PROGRAM [ARGUMENTS...]   Run the specified program\n"
          "       wine --help                   Display this help and exit\n"
@@ -67,23 +54,42 @@ index ac67290..71e5055 100644
  
      if (argc <= 1)
      {
-@@ -106,6 +113,16 @@ static void check_command_line( int argc, char *argv[] )
+@@ -106,6 +107,35 @@ static void check_command_line( int argc, char *argv[] )
          printf( "%s\n", wine_get_build_id() );
          exit(0);
      }
 +    if (!strcmp( argv[1], "--patches" ))
 +    {
-+        const struct wine_patch *wine_patch_data = wine_get_patches();
-+        for(; wine_patch_data->name != NULL; wine_patch_data++)
++        const struct
 +        {
-+            printf( "%s :: %s :: %s\n", wine_patch_data->name, wine_patch_data->author,
-+                    wine_patch_data->title );
++            const char *author;
++            const char *subject;
 +        }
++        *next, *cur = wine_get_patches();
++
++        while (cur->author)
++        {
++            next = cur + 1;
++            while (next->author)
++            {
++                if (strcmp(cur->author, next->author)) break;
++                next++;
++            }
++
++            printf("%s (%d):\n", cur->author, next - cur);
++            while (cur < next)
++            {
++                printf("      %s\n", cur->subject);
++                cur++;
++            }
++            printf("\n");
++        }
++
 +        exit(0);
 +    }
  }
  
  
 -- 
-1.7.9.5
+2.1.3
 

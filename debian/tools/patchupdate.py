@@ -500,8 +500,8 @@ def generate_makefile(all_patches):
             if len(patch.patches):
                 fp.write("\t@( \\\n")
                 for p in _unique(patch.patches, key=lambda p: (p.patch_author, p.patch_subject)):
-                    fp.write("\t\techo '+    { \"%s\", \"%s\", \"%s\" },'; \\\n" % \
-                            (patch.name, _escape(p.patch_author), _escape(p.patch_subject)))
+                    fp.write("\t\techo '+    { \"%s\", \"%s\" },'; \\\n" % \
+                            (_escape(p.patch_author), _escape(p.patch_subject)))
                 fp.write("\t) > %s.ok\n" % patch.name)
             else:
                 fp.write("\ttouch %s.ok\n" % patch.name)

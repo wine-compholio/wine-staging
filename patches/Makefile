@@ -1743,7 +1743,7 @@ winepulse-PulseAudio_Support.ok:
 		echo '+    { "Maarten Lankhorst", "winepulse: Add official warning wine doesn'\''t want to support winepulse.", 16 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: Fix winmm tests.", 17 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: Latency and compilation improvements.", 18 },'; \
-		echo '+    { "Juergen Tretthahn", "winepulse: API Compatibility with 1.5.2 onward,.", 2 },'; \
+		echo '+    { "Juergen Tretthahn", "winepulse: API Compatibility with 1.5.2 onward.", 2 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: Fix low latency support.", 1 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: drop realtime priority before thread destruction.", 1 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: remove bogus SetEvent from pulse_started_callback.", 1 },'; \

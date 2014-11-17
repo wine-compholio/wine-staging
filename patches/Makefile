@@ -82,7 +82,6 @@ PATCHLIST := \
 	server-ACL_Compat.ok \
 	server-Address_Change_Notification.ok \
 	server-CreateProcess_ACLs.ok \
-	server-Fix_Leak.ok \
 	server-Inherited_ACLs.ok \
 	server-Misc_ACL.ok \
 	server-OpenProcess.ok \
@@ -96,7 +95,6 @@ PATCHLIST := \
 	shell32-SHCreateSessionKey.ok \
 	shell32-SHFileOperation.ok \
 	shlwapi-PathIsDirectoryEmptyW.ok \
-	shlwapi-StrStrIW.ok \
 	shlwapi-UrlCombine.ok \
 	user32-Dialog_Paint_Event.ok \
 	user32-DrawTextExW.ok \
@@ -1254,18 +1252,6 @@ server-CreateProcess_ACLs.ok:
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },'; \
 	) > server-CreateProcess_ACLs.ok
 
-# Patchset server-Fix_Leak
-# |
-# | Modified files:
-# |   *	server/thread.c
-# |
-.INTERMEDIATE: server-Fix_Leak.ok
-server-Fix_Leak.ok:
-	$(call APPLY_FILE,server-Fix_Leak/0001-server-Close-fd-if-there-is-no-space-in-thread-infli.patch)
-	@( \
-		echo '+    { "Sebastian Lackner", "server: Close fd if there is no space in thread inflight fd list.", 1 },'; \
-	) > server-Fix_Leak.ok
-
 # Patchset server-Inherited_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1467,18 +1453,6 @@ shlwapi-PathIsDirectoryEmptyW.ok:
 	@( \
 		echo '+    { "Michael Müller", "shlwapi: Correctly treat '\''.'\'' when enumerating files in PathIsDirectoryEmptyW.", 1 },'; \
 	) > shlwapi-PathIsDirectoryEmptyW.ok
-
-# Patchset shlwapi-StrStrIW
-# |
-# | Modified files:
-# |   *	dlls/shlwapi/string.c
-# |
-.INTERMEDIATE: shlwapi-StrStrIW.ok
-shlwapi-StrStrIW.ok:
-	$(call APPLY_FILE,shlwapi-StrStrIW/0001-shlwapi-Workaround-for-bugs-in-CompareStringW.patch)
-	@( \
-		echo '+    { "Sebastian Lackner", "shlwapi: Workaround for bugs in CompareStringW.", 1 },'; \
-	) > shlwapi-StrStrIW.ok
 
 # Patchset shlwapi-UrlCombine
 # |

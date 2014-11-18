@@ -1,0 +1,84 @@
+From 9a90ba84f54a08da2a74329cde6136c6c7aa0fdd Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Tue, 18 Nov 2014 18:35:31 +0000
+Subject: winepulse: implement exclusive mode
+
+---
+ dlls/winepulse.drv/mmdevdrv.c | 45 +++++++++++++++++--------------------------
+ 1 file changed, 18 insertions(+), 27 deletions(-)
+
+diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
+index 368c275..6134850 100644
+--- a/dlls/winepulse.drv/mmdevdrv.c
++++ b/dlls/winepulse.drv/mmdevdrv.c
+@@ -1421,8 +1421,6 @@ static HRESULT WINAPI AudioClient_Initialize(IAudioClient *iface,
+ 
+     if (mode != AUDCLNT_SHAREMODE_SHARED && mode != AUDCLNT_SHAREMODE_EXCLUSIVE)
+         return AUDCLNT_E_NOT_INITIALIZED;
+-    if (mode == AUDCLNT_SHAREMODE_EXCLUSIVE)
+-        return AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED;
+ 
+     if (flags & ~(AUDCLNT_STREAMFLAGS_CROSSPROCESS |
+                 AUDCLNT_STREAMFLAGS_LOOPBACK |
+@@ -1446,27 +1444,26 @@ static HRESULT WINAPI AudioClient_Initialize(IAudioClient *iface,
+     if (FAILED(hr))
+         goto exit;
+ 
+-    if (mode == AUDCLNT_SHAREMODE_SHARED) {
+-        REFERENCE_TIME def = pulse_def_period[This->dataflow == eCapture];
+-        REFERENCE_TIME min = pulse_min_period[This->dataflow == eCapture];
++    REFERENCE_TIME def = pulse_def_period[This->dataflow == eCapture];
++    REFERENCE_TIME min = pulse_min_period[This->dataflow == eCapture];
+ 
+-        /* Switch to low latency mode if below 2 default periods,
+-         * which is 20 ms by default, this will increase the amount
+-         * of interrupts but allows very low latency. In dsound I
+-         * managed to get a total latency of ~8ms, which is well below
+-         * default
+-         */
+-        if (duration < 2 * def)
+-            period = min;
+-        else
+-            period = def;
+-        if (duration < 2 * period)
+-            duration = 2 * period;
++    /* Switch to low latency mode if below 2 default periods,
++     * which is 20 ms by default, this will increase the amount
++     * of interrupts but allows very low latency. In dsound I
++     * managed to get a total latency of ~8ms, which is well below
++     * default
++     */
++    if (duration < 2 * def)
++        period = min;
++    else
++        period = def;
++    if (duration < 2 * period)
++        duration = 2 * period;
++
++    /* Uh oh, really low latency requested.. */
++    if (duration <= 2 * period)
++        period /= 2;
+ 
+-        /* Uh oh, really low latency requested.. */
+-        if (duration <= 2 * period)
+-            period /= 2;
+-    }
+     period_bytes = pa_frame_size(&This->ss) * MulDiv(period, This->ss.rate, 10000000);
+ 
+     if (duration < 20000000)
+@@ -1771,12 +1768,6 @@ static HRESULT WINAPI AudioClient_IsFormatSupported(IAudioClient *iface,
+     else
+         *out = closest;
+ 
+-    /* Winepulse does not currently support exclusive mode, if you know of an
+-     * application that uses it, I will correct this..
+-     */
+-    if (hr == S_OK && exclusive)
+-        return This->dataflow == eCapture ? AUDCLNT_E_UNSUPPORTED_FORMAT : AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED;
+-
+     TRACE("returning: %08x %p\n", hr, out ? *out : NULL);
+     return hr;
+ }
+-- 
+2.0.4
+

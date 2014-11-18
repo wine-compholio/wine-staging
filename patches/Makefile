@@ -1728,6 +1728,7 @@ winepulse-PulseAudio_Support.ok:
 	$(call APPLY_FILE,winepulse-PulseAudio_Support/0026-winepulse-add-support-for-IMarshal.patch)
 	$(call APPLY_FILE,winepulse-PulseAudio_Support/0027-winepulse-handle-stream-create-failing-correctly.patch)
 	$(call APPLY_FILE,winepulse-PulseAudio_Support/0028-winepulse-expose-audio-devices-directly-to-programs.patch)
+	$(call APPLY_FILE,winepulse-PulseAudio_Support/0029-winepulse-implement-exclusive-mode.patch)
 	@( \
 		echo '+    { "Maarten Lankhorst", "winmm: Load winealsa if winepulse is found.", 1 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: Add initial stub for pulseaudio support.", 1 },'; \
@@ -1757,6 +1758,7 @@ winepulse-PulseAudio_Support.ok:
 		echo '+    { "Maarten Lankhorst", "winepulse: add support for IMarshal.", 1 },'; \
 		echo '+    { "Mark Harmstone", "winepulse: handle stream create failing correctly.", 1 },'; \
 		echo '+    { "Mark Harmstone", "winepulse: expose audio devices directly to programs.", 1 },'; \
+		echo '+    { "Mark Harmstone", "winepulse: implement exclusive mode.", 1 },'; \
 	) > winepulse-PulseAudio_Support.ok
 
 # Patchset winex11-CandidateWindowPos

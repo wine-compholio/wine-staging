@@ -98,7 +98,6 @@ PATCHLIST := \
 	shlwapi-UrlCombine.ok \
 	user32-Dialog_Paint_Event.ok \
 	user32-DrawTextExW.ok \
-	user32-FindWindowEx.ok \
 	user32-GetSystemMetrics.ok \
 	user32-GetTipText.ok \
 	user32-WndProc.ok \
@@ -1497,25 +1496,6 @@ user32-DrawTextExW.ok:
 	@( \
 		echo '+    { "Sebastian Lackner", "user32: Fix handling of invert_y in DrawTextExW.", 1 },'; \
 	) > user32-DrawTextExW.ok
-
-# Patchset user32-FindWindowEx
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#27282] Avoid sending window messages in FindWindowExW
-# |
-# | Modified files:
-# |   *	dlls/user32/tests/win.c, dlls/user32/win.c
-# |
-.INTERMEDIATE: user32-FindWindowEx.ok
-user32-FindWindowEx.ok:
-	$(call APPLY_FILE,user32-FindWindowEx/0001-user32-tests-Add-tests-to-demonstrate-FindWindow-doe.patch)
-	$(call APPLY_FILE,user32-FindWindowEx/0002-user32-tests-Add-tests-for-Set-Get-WindowTextA-with-.patch)
-	$(call APPLY_FILE,user32-FindWindowEx/0003-user32-Avoid-sending-window-messages-in-FindWindowEx.patch)
-	@( \
-		echo '+    { "Sebastian Lackner", "user32/tests: Add tests to demonstrate FindWindow doesn'\''t send WM_GETTEXT messages.", 1 },'; \
-		echo '+    { "Sebastian Lackner", "user32/tests: Add tests for [Set|Get]WindowTextA with multiple threads.", 1 },'; \
-		echo '+    { "Sebastian Lackner", "user32: Avoid sending window messages in FindWindowExW.", 1 },'; \
-	) > user32-FindWindowEx.ok
 
 # Patchset user32-GetSystemMetrics
 # |

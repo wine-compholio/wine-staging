@@ -51,7 +51,7 @@ Included bug fixes and improvements
 * Anno 1602 installer depends on Windows 98 behavior of SHFileOperationW
 * Audio stuttering and performance drops in multiple applications ([Wine Bug #30639](https://bugs.winehq.org/show_bug.cgi?id=30639))
 * Avoid crashing when broken app tries to release surface although refcount is zero ([Wine Bug #18477](https://bugs.winehq.org/show_bug.cgi?id=18477))
-* Avoid sending window messages in FindWindowExW ([Wine Bug #27282](https://bugs.winehq.org/show_bug.cgi?id=27282))
+* ~~Avoid sending window messages in FindWindowExW~~ ([Wine Bug #27282](https://bugs.winehq.org/show_bug.cgi?id=27282))
 * CoWaitForMultipleHandles shouldn't process window events when APC calls are queued ([Wine Bug #32568](https://bugs.winehq.org/show_bug.cgi?id=32568))
 * Correctly treat '.' when checking for empty directories ([Wine Bug #26272](https://bugs.winehq.org/show_bug.cgi?id=26272))
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](https://bugs.winehq.org/show_bug.cgi?id=33770))

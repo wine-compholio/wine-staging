@@ -365,7 +365,7 @@ def apply_patch(content, patches, reverse=False, fuzz=2):
         for patch in patches:
 
             patchfile = patch.extract()
-            cmdline = ["patch", "--force", "--silent", "-r", "-"]
+            cmdline = ["patch", "--no-backup-if-mismatch", "--force", "--silent", "-r", "-"]
             if reverse:   cmdline.append("--reverse")
             if fuzz != 2: cmdline.append("--fuzz=%d" % fuzz)
             cmdline += [contentfile.name, patchfile.name]

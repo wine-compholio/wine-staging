@@ -1,4 +1,4 @@
-From d1b9346061b979dfa089e690f29618d67aff1c3d Mon Sep 17 00:00:00 2001
+From 0eecbf377f3e2f1457d09d532a6093743660f062 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 15 Oct 2014 10:02:22 +0200
 Subject: server: Support for thread and process security descriptors in
@@ -14,10 +14,10 @@ Needs ./tools/make_requests
  3 files changed, 56 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
-index 301c64a..5de8b59 100644
+index 0a087ab..4f0dee08 100644
 --- a/dlls/kernel32/process.c
 +++ b/dlls/kernel32/process.c
-@@ -2035,6 +2035,8 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
+@@ -2042,6 +2042,8 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
          req->thread_attr    = (tsa && (tsa->nLength >= sizeof(*tsa)) && tsa->bInheritHandle) ? OBJ_INHERIT : 0;
          req->cpu            = cpu;
          req->info_size      = startup_info_size;
@@ -27,7 +27,7 @@ index 301c64a..5de8b59 100644
          wine_server_add_data( req, startup_info, startup_info_size );
          wine_server_add_data( req, env, (env_end - env) * sizeof(WCHAR) );
 diff --git a/server/process.c b/server/process.c
-index 7b9a3b2..6020ca0 100644
+index 4a356b9..402aef0 100644
 --- a/server/process.c
 +++ b/server/process.c
 @@ -880,6 +880,7 @@ DECL_HANDLER(new_process)
@@ -38,16 +38,16 @@ index 7b9a3b2..6020ca0 100644
  
      if (socket_fd == -1)
      {
-@@ -920,7 +921,7 @@ DECL_HANDLER(new_process)
-         !(info->exe_file = get_file_obj( current->process, req->exe_file, FILE_READ_DATA )))
+@@ -927,7 +928,7 @@ DECL_HANDLER(new_process)
          goto done;
+     }
  
 -    info->data_size = get_req_data_size();
 +    info->data_size = min( get_req_data_size(), req->info_size + req->env_size );
      info->info_size = min( req->info_size, info->data_size );
  
      if (req->info_size < sizeof(*info->data))
-@@ -953,6 +954,34 @@ DECL_HANDLER(new_process)
+@@ -968,6 +969,34 @@ DECL_HANDLER(new_process)
  #undef FIXUP_LEN
      }
  
@@ -82,7 +82,7 @@ index 7b9a3b2..6020ca0 100644
      if (!(thread = create_process( socket_fd, current, req->inherit_all ))) goto done;
      process = thread->process;
      process->debug_children = (req->create_flags & DEBUG_PROCESS)
-@@ -1004,6 +1033,25 @@ DECL_HANDLER(new_process)
+@@ -1019,6 +1048,25 @@ DECL_HANDLER(new_process)
      reply->phandle = alloc_handle( parent, process, req->process_access, req->process_attr );
      reply->thandle = alloc_handle( parent, thread, req->thread_access, req->thread_attr );
  
@@ -109,7 +109,7 @@ index 7b9a3b2..6020ca0 100644
      release_object( info );
  }
 diff --git a/server/protocol.def b/server/protocol.def
-index 4854e3d..97f0623 100644
+index fc6bec5..37c5d87 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -671,8 +671,12 @@ struct rawinput_device
@@ -127,5 +127,5 @@ index 4854e3d..97f0623 100644
      obj_handle_t info;           /* new process info handle */
      process_id_t pid;            /* process id */
 -- 
-2.1.2
+2.1.3
 

@@ -1846,9 +1846,9 @@ wpcap-Dynamic_Linking.ok:
 # |
 .INTERMEDIATE: ws2_32-Connect_Time.ok
 ws2_32-Connect_Time.ok:
-	$(call APPLY_FILE,ws2_32-Connect_Time/0001-ws2_32-Properly-implement-SO_CONNECT_TIME.patch)
+	$(call APPLY_FILE,ws2_32-Connect_Time/0001-ws2_32-Implement-returning-the-proper-time-with-SO_C.patch)
 	@( \
-		echo '+    { "Bruno Jesus", "ws2_32: Properly implement SO_CONNECT_TIME.", 2 },'; \
+		echo '+    { "Sebastian Lackner", "ws2_32: Implement returning the proper time with SO_CONNECT_TIME.", 1 },'; \
 	) > ws2_32-Connect_Time.ok
 
 # Patchset ws2_32-TransmitFile

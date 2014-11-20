@@ -1,14 +1,18 @@
-From 89130c6066b4ee8ee478d33fca9fce79baea174a Mon Sep 17 00:00:00 2001
-From: Bruno Jesus <00cpxxx@gmail.com>
-Date: Wed, 30 Jul 2014 17:35:13 -0600
-Subject: ws2_32: Properly implement SO_CONNECT_TIME. (try 2)
+From 5cce90db6d3f5cc4dd4db2125bf4d2f3d2ec5b63 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Thu, 20 Nov 2014 13:27:24 +0100
+Subject: ws2_32: Implement returning the proper time with SO_CONNECT_TIME.
 
+Based on a patch by Erich Hoover.
+
+To avoid calculations on the client-side, the server sends the connect time as relative (negative) value.
+Needs tools/make_requests.
 ---
  dlls/ws2_32/socket.c     | 21 ++++++++++++++++-----
- dlls/ws2_32/tests/sock.c | 14 ++++++++++++++
+ dlls/ws2_32/tests/sock.c | 19 +++++++++++++++++++
  server/protocol.def      |  1 +
  server/sock.c            |  1 +
- 4 files changed, 32 insertions(+), 5 deletions(-)
+ 4 files changed, 37 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
 index b3db306..ac6d831 100644
@@ -57,33 +61,45 @@ index b3db306..ac6d831 100644
              return ret;
          }
 diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
-index 0c39545..2c065a8 100644
+index acc2783..422174f 100644
 --- a/dlls/ws2_32/tests/sock.c
 +++ b/dlls/ws2_32/tests/sock.c
 @@ -4254,6 +4254,8 @@ static void test_send(void)
      OVERLAPPED ov;
      BOOL bret;
      DWORD id, bytes_sent, dwRet;
++    DWORD expected_time, connect_time;
 +    socklen_t optlen;
-+    DWORD connect_time;
  
      memset(&ov, 0, sizeof(ov));
  
-@@ -4348,6 +4350,18 @@ static void test_send(void)
+@@ -4262,6 +4264,7 @@ static void test_send(void)
+         ok(0, "creating socket pair failed, skipping test\n");
+         return;
+     }
++    expected_time = GetTickCount();
+ 
+     set_blocking(dst, FALSE);
+     /* force disable buffering so we can get a pending overlapped request */
+@@ -4348,6 +4351,22 @@ static void test_send(void)
      ok(ret == SOCKET_ERROR && WSAGetLastError() == ERROR_IO_PENDING,
         "Failed to start overlapped send %d - %d\n", ret, WSAGetLastError());
  
-+    connect_time = 0;
++    expected_time = (GetTickCount() - expected_time) / 1000;
++
++    connect_time = 0xdeadbeef;
 +    optlen = sizeof(connect_time);
 +    ret = getsockopt(dst, SOL_SOCKET, SO_CONNECT_TIME, (char *)&connect_time, &optlen);
 +    ok(!ret, "getsockopt failed %d\n", WSAGetLastError());
-+    ok(connect_time > 0, "unexpected connect time %u\n", connect_time);
++    ok(connect_time >= expected_time && connect_time <= expected_time + 1,
++       "unexpected connect time %u, expected %u\n", connect_time, expected_time);
 +
-+    connect_time = 0;
++    connect_time = 0xdeadbeef;
 +    optlen = sizeof(connect_time);
 +    ret = getsockopt(src, SOL_SOCKET, SO_CONNECT_TIME, (char *)&connect_time, &optlen);
 +    ok(!ret, "getsockopt failed %d\n", WSAGetLastError());
-+    ok(connect_time > 0, "unexpected connect time %u\n", connect_time);
++    ok(connect_time >= expected_time && connect_time <= expected_time + 1,
++       "unexpected connect time %u, expected %u\n", connect_time, expected_time);
 +
  end:
      if (src != INVALID_SOCKET)

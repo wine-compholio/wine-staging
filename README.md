@@ -39,9 +39,10 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [2]:**
+**Bugfixes and features included in the next upcoming release [3]:**
 
 * Implement exclusive mode in PulseAudio backend ([Wine Bug #37042](https://bugs.winehq.org/show_bug.cgi?id=37042))
+* ShowWindow should avoid interthread no-op messages ([Wine Bug #11582](https://bugs.winehq.org/show_bug.cgi?id=11582))
 * Take abs() of vertex z coordinate as FFP fog coordinate
 
 

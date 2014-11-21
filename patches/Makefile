@@ -100,6 +100,7 @@ PATCHLIST := \
 	user32-DrawTextExW.ok \
 	user32-GetSystemMetrics.ok \
 	user32-GetTipText.ok \
+	user32-ShowWindow.ok \
 	user32-WndProc.ok \
 	wine.inf-ProductId.ok \
 	wineboot-HKEY_DYN_DATA.ok \
@@ -1529,6 +1530,23 @@ user32-GetTipText.ok:
 		echo '+    { "Erich E. Hoover", "Fix TOOLTIPS_GetTipText when a resource cannot be found.", 1 },'; \
 		echo '+    { "Erich E. Hoover", "Fix TOOLTIPS_GetTipText when a NULL instance is used.", 1 },'; \
 	) > user32-GetTipText.ok
+
+# Patchset user32-ShowWindow
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#11582] ShowWindow should avoid interthread no-op messages
+# |
+# | Modified files:
+# |   *	dlls/user32/tests/msg.c, dlls/user32/winpos.c
+# |
+.INTERMEDIATE: user32-ShowWindow.ok
+user32-ShowWindow.ok:
+	$(call APPLY_FILE,user32-ShowWindow/0001-user32-tests-Add-interthread-tests-for-calling-ShowW.patch)
+	$(call APPLY_FILE,user32-ShowWindow/0002-user32-Do-not-call-SendMessage-to-hide-a-window-that.patch)
+	@( \
+		echo '+    { "Drew Ronneberg", "user32/tests: Add interthread tests for calling ShowWindow(SW_HIDE) on a hidden window.", 1 },'; \
+		echo '+    { "Drew Ronneberg", "user32: Do not call SendMessage() to hide a window that is already hidden.", 3 },'; \
+	) > user32-ShowWindow.ok
 
 # Patchset user32-WndProc
 # |

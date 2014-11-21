@@ -1,0 +1,996 @@
+From 5180456ab36112ce0f12b0fd9eddc29b860430be Mon Sep 17 00:00:00 2001
+From: Joachim Priesner <joachim.priesner@web.de>
+Date: Fri, 14 Nov 2014 22:40:11 +0100
+Subject: wined3d: Take abs() of vertex z coordinate as FFP fog coordinate (try
+ 7)
+
+Take the absolute value of vertex.z as fog coordinate instead of just
+the z coordinate. This fixes e.g. fog for applications that use
+right-handed projection matrices.
+
+Also test the clamp behavior of the oFog vertex shader output.
+
+Tested on openSuse 13.1 and Windows 8.1 (VMware Player).
+
+Try 7: Also test fogstart=-1, fogend=0.
+---
+ dlls/d3d8/tests/visual.c   | 331 +++++++++++++++++++++++++++++++++++++
+ dlls/d3d9/tests/visual.c   | 399 +++++++++++++++++++++++++++++++++++++++++++++
+ dlls/ddraw/tests/ddraw7.c  | 174 ++++++++++++++++++++
+ dlls/wined3d/glsl_shader.c |   2 +-
+ 4 files changed, 905 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/d3d8/tests/visual.c b/dlls/d3d8/tests/visual.c
+index cbede9d..af4a16d 100644
+--- a/dlls/d3d8/tests/visual.c
++++ b/dlls/d3d8/tests/visual.c
+@@ -696,6 +696,336 @@ done:
+     DestroyWindow(window);
+ }
+ 
++/* This test tests fog in combination with negative vertex z coordinates. */
++static void fog_negative_z_test(void)
++{
++    enum
++    {
++        C_ALPHA_0x00  = 0x00000000,
++        C_CLEAR       = 0xffff00ff,
++        C_FOGGED      = 0x0000ff00,
++        C_HALF_FOGGED = 0x00808000,
++        C_UNFOGGED    = 0x00ff0000,
++        C_CLAMPED_FOG = 0xdeadbeef /* triggers special codepath when used as middle_color */
++    };
++
++    /* Fill the null-shader entry with the FVF (SetVertexShader is "overloaded" on d3d8). */
++    DWORD vertex_shader[3] = {D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_SPECULAR, 0, 0};
++    DWORD pixel_shader[2] = {0, 0};
++    IDirect3D8 *d3d;
++    IDirect3DDevice8 *device;
++    BOOL has_vs_support, has_ps_support, has_table_fog_support;
++    unsigned int i, ps, y;
++    D3DCOLOR color, expected_middle_color;
++    ULONG refcount;
++    D3DCAPS8 caps;
++    HWND window;
++    HRESULT hr;
++
++    static const DWORD vertex_decl[] =
++    {
++        D3DVSD_STREAM(0),
++        D3DVSD_REG(0, D3DVSDT_FLOAT3),   /* position, v0 */
++        D3DVSD_REG(1, D3DVSDT_D3DCOLOR), /* diffuse color, v1 */
++        D3DVSD_REG(2, D3DVSDT_D3DCOLOR), /* specular color, v2 */
++        D3DVSD_CONST(0, 1), 0x3f000000, 0x00000000, 0x00000000, 0x00000000,     /* def c0, 0.5, 0, 0, 0  */
++        D3DVSD_END()
++    };
++
++    /* Basic vertex shader without fog computation ("non foggy") */
++    static const DWORD vertex_shader_code1[] =
++    {
++        0xfffe0100,                                                             /* vs_1_0                */
++        /* output.Pos.z = input.Pos.z * 0.5 + 0.5 */
++        0x00000005, 0x80010000, 0x90aa0000, 0xa0000000,                         /* mul r0.x, v0.z, c0.x  */
++        0x00000002, 0xc0040000, 0x80000000, 0xa0000000,                         /* add oPos.z, r0.x c0.x */
++        /* output.Pos.xyw = input.Pos.xyw */
++        0x00000001, 0xc00b0000, 0x90e40000,                                     /* mov oPos.xyw, v0      */
++        /* output.Color = input.Color */
++        0x00000001, 0xd00f0000, 0x90e40001,                                     /* mov oD0, v1           */
++        0x0000ffff,                                                             /* END                   */
++    };
++
++    /* Basic vertex shader with fog computation ("foggy"). Outputs the z coordinate of the vertex
++     * as its fog intensity value. */
++    static const DWORD vertex_shader_code2[] =
++    {
++        0xfffe0100,                                                             /* vs_1_0                */
++        /* output.Pos.z = input.Pos.z * 0.5 + 0.5 */
++        0x00000005, 0x80010000, 0x90aa0000, 0xa0000000,                         /* mul r0.x, v0.z, c0.x  */
++        0x00000002, 0xc0040000, 0x80000000, 0xa0000000,                         /* add oPos.z, r0.x c0.x */
++        /* output.Pos.xyw = input.Pos.xyw */
++        0x00000001, 0xc00b0000, 0x90e40000,                                     /* mov oPos.xyw, v0      */
++        /* output.Color = input.Color */
++        0x00000001, 0xd00f0000, 0x90e40001,                                     /* mov oD0, v1           */
++        /* output.Fog = input.Pos.z */
++        0x00000001, 0xc00f0001, 0x90aa0000,                                     /* mov oFog, v0.z        */
++        0x0000ffff,                                                             /* END                   */
++    };
++
++    /* Basic pixel shader */
++    static const DWORD pixel_shader_code[] =
++    {
++        0xffff0101,                                                             /* ps_1_1     */
++        0x00000001, 0x800f0000, 0x90e40000,                                     /* mov r0, v0 */
++        0x0000ffff
++    };
++
++    static const struct
++    {
++        struct vec3 position;
++        DWORD diffuse;
++        DWORD specular;
++    }
++    top_quad[] =
++    {
++        {{-1.0f, -1.0f, -1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{-1.0f,  0.0f, -1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{ 1.0f, -1.0f,  1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{ 1.0f,  0.0f,  1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++    },
++    bottom_quad_1[] =
++    {
++        {{-1.0f,  0.0f, -1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{-1.0f,  1.0f, -1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{ 0.0f,  0.0f,  0.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{ 0.0f,  1.0f,  0.0f}, C_UNFOGGED, C_ALPHA_0x00},
++    },
++    bottom_quad_2[] =
++    {
++        {{ 0.0f,  0.0f,  0.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{ 0.0f,  1.0f,  0.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{ 1.0f,  0.0f,  1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{ 1.0f,  1.0f,  1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++    };
++    static const struct
++    {
++        int vshader;
++        float fog_start;
++        float fog_end;
++        D3DFOGMODE vfog;
++        D3DFOGMODE tfog;
++        DWORD color_left;
++        DWORD color_middle_top;
++        DWORD color_middle_bottom;
++        DWORD color_right;
++    }
++    test_data[] =
++    {
++        /* fogstart = 0, fogend = 1:
++         * Using z-based fog, the bottom quad should have a gradient UNFOGGED->FOGGED
++         * for table fog, and be completely fogged for vertex fog.
++         * When the fog coordinate returned by the vertex shader is used instead,
++         * the result is a gradient FOGGED->UNFOGGED.
++         *
++         * fogstart = -1, fogend = 0:
++         * Both quads are completely fogged, except in the cases where the foggy vertex shader
++         * with vertex fog or neither vertex nor table fog are used. Those are independent of
++         * fogstart/fogend, the result should therefore equal that of the
++         * corresponding (fogstart, fogend) == (0, 1) case. */
++
++        /* No vertex shader */
++        {0,  0.0f, 1.0f, D3DFOG_NONE,   D3DFOG_LINEAR, C_UNFOGGED, C_HALF_FOGGED, C_HALF_FOGGED, C_FOGGED},
++        {0,  0.0f, 1.0f, D3DFOG_LINEAR, D3DFOG_LINEAR, C_UNFOGGED, C_HALF_FOGGED, C_HALF_FOGGED, C_FOGGED},
++        {0,  0.0f, 1.0f, D3DFOG_LINEAR, D3DFOG_NONE,   C_FOGGED,   C_UNFOGGED,    C_FOGGED,      C_FOGGED},
++        {0,  0.0f, 1.0f, D3DFOG_NONE,   D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++
++        {0, -1.0f, 0.0f, D3DFOG_NONE,   D3DFOG_LINEAR, C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {0, -1.0f, 0.0f, D3DFOG_LINEAR, D3DFOG_LINEAR, C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {0, -1.0f, 0.0f, D3DFOG_LINEAR, D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {0, -1.0f, 0.0f, D3DFOG_NONE,   D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++
++        /* Vertex shader without vertex fog computation */
++        {1,  0.0f, 1.0f, D3DFOG_NONE,   D3DFOG_LINEAR, C_UNFOGGED, C_HALF_FOGGED, C_HALF_FOGGED, C_FOGGED},
++        {1,  0.0f, 1.0f, D3DFOG_LINEAR, D3DFOG_LINEAR, C_UNFOGGED, C_HALF_FOGGED, C_HALF_FOGGED, C_FOGGED},
++        {1,  0.0f, 1.0f, D3DFOG_LINEAR, D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {1,  0.0f, 1.0f, D3DFOG_NONE,   D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++
++        {1, -1.0f, 0.0f, D3DFOG_NONE,   D3DFOG_LINEAR, C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {1, -1.0f, 0.0f, D3DFOG_LINEAR, D3DFOG_LINEAR, C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {1, -1.0f, 0.0f, D3DFOG_LINEAR, D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {1, -1.0f, 0.0f, D3DFOG_NONE,   D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++
++        /* Vertex shader with vertex fog computation.
++         * As drivers inconsistently clamp or don't clamp the oFog output of vertex shaders,
++         * the special value C_CLAMPED_FOG allows both C_HALF_FOGGED (clamped) and C_FOGGED. */
++        {2,  0.0f, 1.0f, D3DFOG_NONE,   D3DFOG_LINEAR, C_UNFOGGED, C_HALF_FOGGED, C_HALF_FOGGED, C_FOGGED},
++        {2,  0.0f, 1.0f, D3DFOG_LINEAR, D3DFOG_LINEAR, C_UNFOGGED, C_HALF_FOGGED, C_HALF_FOGGED, C_FOGGED},
++        {2,  0.0f, 1.0f, D3DFOG_LINEAR, D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_CLAMPED_FOG, C_UNFOGGED},
++        {2,  0.0f, 1.0f, D3DFOG_NONE,   D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_CLAMPED_FOG, C_UNFOGGED},
++
++        {2, -1.0f, 0.0f, D3DFOG_NONE,   D3DFOG_LINEAR, C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {2, -1.0f, 0.0f, D3DFOG_LINEAR, D3DFOG_LINEAR, C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {2, -1.0f, 0.0f, D3DFOG_LINEAR, D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_CLAMPED_FOG, C_UNFOGGED},
++        {2, -1.0f, 0.0f, D3DFOG_NONE,   D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_CLAMPED_FOG, C_UNFOGGED},
++    };
++    /* Affine projection matrix for z-near = -1, z-far = 1.
++     * Note that for the tests with vertex shaders, this matrix is hard-coded in the shaders. */
++    static const D3DMATRIX proj_mat =
++    {{{
++        1.0f, 0.0f, 0.0f, 0.0f,
++        0.0f, 1.0f, 0.0f, 0.0f,
++        0.0f, 0.0f, 0.5f, 0.0f,
++        0.0f, 0.0f, 0.5f, 1.0f
++    }}};
++
++    window = CreateWindowA("static", "d3d8_test", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
++            0, 0, 640, 480, NULL, NULL, NULL, NULL);
++    d3d = Direct3DCreate8(D3D_SDK_VERSION);
++    ok(!!d3d, "Failed to create a D3D object\n");
++    if (!(device = create_device(d3d, window, window, TRUE)))
++    {
++        skip("Failed to create a D3D device, skipping tests\n");
++        goto done;
++    }
++
++    hr = IDirect3DDevice8_GetDeviceCaps(device, &caps);
++    ok(SUCCEEDED(hr), "Failed to get device caps (%#x)\n", hr);
++
++    has_table_fog_support = caps.RasterCaps & D3DPRASTERCAPS_FOGTABLE;
++    if (!has_table_fog_support)
++        skip("No table fog support, skipping some fog tests\n");
++
++    has_ps_support = caps.PixelShaderVersion >= D3DPS_VERSION(1, 1);
++    if (has_ps_support)
++    {
++        hr = IDirect3DDevice8_CreatePixelShader(device, pixel_shader_code, &pixel_shader[1]);
++        ok(SUCCEEDED(hr), "CreatePixelShader failed (%#x)\n", hr);
++    }
++    else
++    {
++        skip("No ps_1_1 support, skipping some fog tests\n");
++    }
++
++    has_vs_support = caps.VertexShaderVersion >= D3DVS_VERSION(1, 0);
++    if (has_vs_support)
++    {
++        hr = IDirect3DDevice8_CreateVertexShader(device, vertex_decl, vertex_shader_code1, &vertex_shader[1], 0);
++        ok(SUCCEEDED(hr), "CreateVertexShader failed (%#x)\n", hr);
++        hr = IDirect3DDevice8_CreateVertexShader(device, vertex_decl, vertex_shader_code2, &vertex_shader[2], 0);
++        ok(SUCCEEDED(hr), "CreateVertexShader failed (%#x)\n", hr);
++    }
++    else
++    {
++        skip("No vs_1_0 support, skipping some fog tests\n");
++    }
++
++    /* Setup initial states: No depth test, no lighting, fog on, fog color */
++    hr = IDirect3DDevice8_SetRenderState(device, D3DRS_ZENABLE, D3DZB_FALSE);
++    ok(SUCCEEDED(hr), "Turning off depth test failed (%#x)\n", hr);
++    hr = IDirect3DDevice8_SetRenderState(device, D3DRS_LIGHTING, FALSE);
++    ok(SUCCEEDED(hr), "Turning off lighting failed (%#x)\n", hr);
++    hr = IDirect3DDevice8_SetRenderState(device, D3DRS_FOGENABLE, TRUE);
++    ok(SUCCEEDED(hr), "Turning on fog calculations failed (%#x)\n", hr);
++    hr = IDirect3DDevice8_SetRenderState(device, D3DRS_FOGCOLOR, C_FOGGED);
++    ok(SUCCEEDED(hr), "Setting fog color failed (%#x)\n", hr);
++
++    hr = IDirect3DDevice8_SetTransform(device, D3DTS_PROJECTION, &proj_mat);
++    ok(SUCCEEDED(hr), "Failed to set projection transform (%#x)\n", hr);
++
++    for (i = 0; i < sizeof(test_data)/sizeof(test_data[0]); i++)
++    {
++        if (test_data[i].vshader != 0 && !vertex_shader[test_data[i].vshader])
++            continue;
++        if (test_data[i].tfog != D3DFOG_NONE && !has_table_fog_support)
++            continue;
++
++        hr = IDirect3DDevice8_SetVertexShader(device, vertex_shader[test_data[i].vshader]);
++        ok(SUCCEEDED(hr), "SetVertexShader failed (%#x)\n", hr);
++
++        for (ps = 0; ps < sizeof(pixel_shader)/sizeof(pixel_shader[0]); ps++)
++        {
++            if (ps != 0 && !pixel_shader[ps])
++                continue;
++
++            if (has_ps_support)
++            {
++                hr = IDirect3DDevice8_SetPixelShader(device, pixel_shader[ps]);
++                ok(SUCCEEDED(hr), "SetPixelShader failed (%#x)\n", hr);
++            }
++
++            hr = IDirect3DDevice8_SetRenderState(device, D3DRS_FOGVERTEXMODE, test_data[i].vfog);
++            ok(SUCCEEDED(hr), "Setting fog vertex mode to %d failed (%#x)\n", test_data[i].vfog, hr);
++            hr = IDirect3DDevice8_SetRenderState(device, D3DRS_FOGTABLEMODE, test_data[i].tfog);
++            ok(SUCCEEDED(hr), "Setting fog table mode to %d failed (%#x)\n", test_data[i].tfog, hr);
++
++            hr = IDirect3DDevice8_SetRenderState(device, D3DRS_FOGSTART,
++                    *(DWORD*)(&test_data[i].fog_start));
++            ok(SUCCEEDED(hr), "Setting fog start to %.1f failed (%#x)\n", test_data[i].fog_start, hr);
++            hr = IDirect3DDevice8_SetRenderState(device, D3DRS_FOGEND,
++                    *(DWORD*)(&test_data[i].fog_end));
++            ok(SUCCEEDED(hr), "Setting fog end to %.1f failed (%#x)\n", test_data[i].fog_end, hr);
++
++            hr = IDirect3DDevice8_Clear(device, 0, NULL, D3DCLEAR_TARGET, C_CLEAR, 1.0f, 0);
++            ok(SUCCEEDED(hr), "Clear failed (%#x)\n", hr);
++            hr = IDirect3DDevice8_BeginScene(device);
++            ok(SUCCEEDED(hr), "BeginScene failed (%#x)\n", hr);
++            hr = IDirect3DDevice8_DrawPrimitiveUP(
++                    device, D3DPT_TRIANGLESTRIP, 2, &top_quad[0], sizeof(top_quad[0]));
++            ok(SUCCEEDED(hr), "DrawPrimitiveUP failed (%#x)\n", hr);
++            hr = IDirect3DDevice8_DrawPrimitiveUP(
++                    device, D3DPT_TRIANGLESTRIP, 2, &bottom_quad_1[0], sizeof(bottom_quad_1[0]));
++            ok(SUCCEEDED(hr), "DrawPrimitiveUP failed (%#x)\n", hr);
++            hr = IDirect3DDevice8_DrawPrimitiveUP(
++                    device, D3DPT_TRIANGLESTRIP, 2, &bottom_quad_2[0], sizeof(bottom_quad_2[0]));
++            ok(SUCCEEDED(hr), "DrawPrimitiveUP failed (%#x)\n", hr);
++            hr = IDirect3DDevice8_EndScene(device);
++            ok(SUCCEEDED(hr), "EndScene failed (%#x)\n", hr);
++
++            /* Use 5% tolerance on the colors since there may be a gradient
++             * between left and right vertices. */
++            for (y = 120; y <= 360; y += 240)
++            {
++                color = getPixelColor(device, 2, y);
++                ok(color_match(color, test_data[i].color_left, 13),
++                        "fog %.1f-%.1f vs%i ps%i fvm%i ftm%i, y=%i: "
++                        "got left color %08x, expected %08x+-5%%\n",
++                        test_data[i].fog_start, test_data[i].fog_end, test_data[i].vshader, ps,
++                        test_data[i].vfog, test_data[i].tfog, y, color, test_data[i].color_left);
++                color = getPixelColor(device, 320, y);
++                expected_middle_color =
++                        y == 120 ? test_data[i].color_middle_top : test_data[i].color_middle_bottom;
++                if (expected_middle_color == C_CLAMPED_FOG)
++                {
++                    ok(color_match(color, C_HALF_FOGGED, 13) || color_match(color, C_FOGGED, 13),
++                            "fog %.1f-%.1f vs%i ps%i fvm%i ftm%i, y=%i: "
++                            "got middle color %08x, expected %08x+-5%% or %08x+-5%%\n",
++                            test_data[i].fog_start, test_data[i].fog_end, test_data[i].vshader, ps,
++                            test_data[i].vfog, test_data[i].tfog, y, color, C_HALF_FOGGED, C_FOGGED);
++                }
++                else
++                {
++                    ok(color_match(color, expected_middle_color, 13),
++                            "fog %.1f-%.1f vs%i ps%i fvm%i ftm%i, y=%i: "
++                            "got middle color %08x, expected %08x+-5%%\n",
++                            test_data[i].fog_start, test_data[i].fog_end, test_data[i].vshader, ps,
++                            test_data[i].vfog, test_data[i].tfog, y, color, expected_middle_color);
++                }
++                color = getPixelColor(device, 638, y);
++                ok(color_match(color, test_data[i].color_right, 13),
++                        "fog %.1f-%.1f vs%i ps%i fvm%i ftm%i, y=%i: "
++                        "got right color %08x, expected %08x+-5%%\n",
++                        test_data[i].fog_start, test_data[i].fog_end, test_data[i].vshader, ps,
++                        test_data[i].vfog, test_data[i].tfog, y, color, test_data[i].color_right);
++            }
++
++            hr = IDirect3DDevice8_Present(device, NULL, NULL, NULL, NULL);
++            ok(SUCCEEDED(hr), "Present failed (%#x)\n", hr);
++        }
++    }
++    for (i = 0; i < sizeof(vertex_shader)/sizeof(vertex_shader[0]); i++)
++        if (vertex_shader[i])
++            IDirect3DDevice8_DeleteVertexShader(device, vertex_shader[i]);
++    for (i = 0; i < sizeof(pixel_shader)/sizeof(pixel_shader[0]); i++)
++        if (pixel_shader[i])
++            IDirect3DDevice8_DeletePixelShader(device, pixel_shader[i]);
++    refcount = IDirect3DDevice8_Release(device);
++    ok(!refcount, "Device has %u references left\n", refcount);
++done:
++    IDirect3D8_Release(d3d);
++    DestroyWindow(window);
++}
++
+ /* This tests fog in combination with shaders.
+  * What's tested: linear fog (vertex and table) with pixel shader
+  *                linear table fog with non foggy vertex shader
+@@ -5395,6 +5725,7 @@ START_TEST(visual)
+     offscreen_test();
+     test_blend();
+     test_scalar_instructions();
++    fog_negative_z_test();
+     fog_with_shader_test();
+     cnd_test();
+     p8_texture_test();
+diff --git a/dlls/d3d9/tests/visual.c b/dlls/d3d9/tests/visual.c
+index fbab386..978e99d 100644
+--- a/dlls/d3d9/tests/visual.c
++++ b/dlls/d3d9/tests/visual.c
+@@ -1825,6 +1825,404 @@ done:
+     DestroyWindow(window);
+ }
+ 
++/* This test tests fog in combination with negative vertex z coordinates. */
++static void fog_negative_z_test(void)
++{
++    enum
++    {
++        C_ALPHA_0x00  = 0x00000000,
++        C_CLEAR       = 0xffff00ff,
++        C_FOGGED      = 0x0000ff00,
++        C_HALF_FOGGED = 0x00808000,
++        C_UNFOGGED    = 0x00ff0000,
++        C_CLAMPED_FOG = 0xdeadbeef /* triggers special codepath when used as middle_color */
++    };
++
++    IDirect3DVertexShader9 *vertex_shader[4] = {NULL, NULL, NULL, NULL};
++    IDirect3DPixelShader9 *pixel_shader[3] = {NULL, NULL, NULL};
++    IDirect3DVertexDeclaration9 *vertex_declaration = NULL;
++    IDirect3DDevice9 *device;
++    BOOL has_vs_support, has_ps_support, has_table_fog_support, is_fog_vertex_clamped;
++    unsigned int i, ps, y;
++    IDirect3D9 *d3d;
++    ULONG refcount;
++    D3DCAPS9 caps;
++    DWORD color, expected_middle_color;
++    HWND window;
++    HRESULT hr;
++
++    /* Basic vertex shader without fog computation ("non foggy") */
++    static const DWORD vertex_shader_code1[] =
++    {
++        0xfffe0101,                                                             /* vs_1_1                */
++        0x00000051, 0xa00f0000, 0x3f000000, 0x00000000, 0x00000000, 0x00000000, /* def c0, 0.5, 0, 0, 0  */
++        0x0000001f, 0x80000000, 0x900f0000,                                     /* dcl_position0 v0      */
++        0x0000001f, 0x8000000a, 0x900f0001,                                     /* dcl_color0 v1         */
++        /* output.Pos.z = input.Pos.z * 0.5 + 0.5 */
++        0x00000005, 0x80010000, 0x90aa0000, 0xa0000000,                         /* mul r0.x, v0.z, c0.x  */
++        0x00000002, 0xc0040000, 0x80000000, 0xa0000000,                         /* add oPos.z, r0.x c0.x */
++        /* output.Pos.xyw = input.Pos.xyw */
++        0x00000001, 0xc00b0000, 0x90e40000,                                     /* mov oPos.xyw, v0      */
++        /* output.Color = input.Color */
++        0x00000001, 0xd00f0000, 0x90e40001,                                     /* mov oD0, v1           */
++        0x0000ffff,                                                             /* END                   */
++    };
++
++    /* Basic vertex shader with fog computation ("foggy"). Outputs the z coordinate of the vertex
++     * as its fog intensity value. */
++    static const DWORD vertex_shader_code2[] =
++    {
++        0xfffe0101,                                                             /* vs_1_1                */
++        0x00000051, 0xa00f0000, 0x3f000000, 0x00000000, 0x00000000, 0x00000000, /* def c0, 0.5, 0, 0, 0  */
++        0x0000001f, 0x80000000, 0x900f0000,                                     /* dcl_position0 v0      */
++        0x0000001f, 0x8000000a, 0x900f0001,                                     /* dcl_color0 v1         */
++        /* output.Pos.z = input.Pos.z * 0.5 + 0.5 */
++        0x00000005, 0x80010000, 0x90aa0000, 0xa0000000,                         /* mul r0.x, v0.z, c0.x  */
++        0x00000002, 0xc0040000, 0x80000000, 0xa0000000,                         /* add oPos.z, r0.x c0.x */
++        /* output.Pos.xyw = input.Pos.xyw */
++        0x00000001, 0xc00b0000, 0x90e40000,                                     /* mov oPos.xyw, v0      */
++        /* output.Color = input.Color */
++        0x00000001, 0xd00f0000, 0x90e40001,                                     /* mov oD0, v1           */
++        /* output.Fog = input.Pos.z */
++        0x00000001, 0xc00f0001, 0x90aa0000,                                     /* mov oFog, v0.z        */
++        0x0000ffff,                                                             /* END                   */
++    };
++
++    /* Basic vertex shader with fog computation ("foggy"), vs_2_0 */
++    static const DWORD vertex_shader_code3[] =
++    {
++        0xfffe0200,                                                             /* vs_2_0                */
++        0x05000051, 0xa00f0000, 0x3f000000, 0x00000000, 0x00000000, 0x00000000, /* def c0, 0.5, 0, 0, 0  */
++        0x0200001f, 0x80000000, 0x900f0000,                                     /* dcl_position0 v0      */
++        0x0200001f, 0x8000000a, 0x900f0001,                                     /* dcl_color0 v1         */
++        /* output.Pos.z = input.Pos.z * 0.5 + 0.5 */
++        0x03000005, 0x80010000, 0x90aa0000, 0xa0000000,                         /* mul r0.x, v0.z, c0.x  */
++        0x03000002, 0xc0040000, 0x80000000, 0xa0000000,                         /* add oPos.z, r0.x c0.x */
++        /* output.Pos.xyw = input.Pos.xyw */
++        0x02000001, 0xc00b0000, 0x90e40000,                                     /* mov oPos.xyw, v0      */
++        /* output.Color = input.Color */
++        0x02000001, 0xd00f0000, 0x90e40001,                                     /* mov oD0, v1           */
++        /* output.Fog = input.Pos.z */
++        0x02000001, 0xc00f0001, 0x90aa0000,                                     /* mov oFog, v0.z        */
++        0x0000ffff,                                                             /* END                   */
++    };
++
++    /* Basic pixel shader */
++    static const DWORD pixel_shader_code[] =
++    {
++        0xffff0101,                                                             /* ps_1_1     */
++        0x00000001, 0x800f0000, 0x90e40000,                                     /* mov r0, v0 */
++        0x0000ffff
++    };
++    static const DWORD pixel_shader_code2[] =
++    {
++        0xffff0200,                                                             /* ps_2_0      */
++        0x0200001f, 0x80000000, 0x900f0000,                                     /* dcl v0      */
++        0x02000001, 0x800f0800, 0x90e40000,                                     /* mov oC0, v0 */
++        0x0000ffff
++    };
++    static const struct
++    {
++        struct vec3 position;
++        D3DCOLOR diffuse;
++        D3DCOLOR specular;
++    }
++    top_quad[] =
++    {
++        {{-1.0f, -1.0f, -1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{-1.0f,  0.0f, -1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{ 1.0f, -1.0f,  1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{ 1.0f,  0.0f,  1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++    },
++    bottom_quad_1[] =
++    {
++        {{-1.0f,  0.0f, -1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{-1.0f,  1.0f, -1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{ 0.0f,  0.0f,  0.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{ 0.0f,  1.0f,  0.0f}, C_UNFOGGED, C_ALPHA_0x00},
++    },
++    bottom_quad_2[] =
++    {
++        {{ 0.0f,  0.0f,  0.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{ 0.0f,  1.0f,  0.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{ 1.0f,  0.0f,  1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{ 1.0f,  1.0f,  1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++    };
++
++    static const D3DVERTEXELEMENT9 decl_elements[] =
++    {
++        {0,  0, D3DDECLTYPE_FLOAT3,   D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
++        {0, 12, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR,    0}, /* diffuse */
++        {0, 16, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR,    1}, /* specular */
++        D3DDECL_END()
++    };
++    static const struct
++    {
++        int vshader;
++        float fog_start;
++        float fog_end;
++        D3DFOGMODE vfog;
++        D3DFOGMODE tfog;
++        DWORD color_left;
++        DWORD color_middle_top;
++        DWORD color_middle_bottom;
++        DWORD color_right;
++    }
++    test_data[] =
++    {
++        /* fogstart = 0, fogend = 1:
++         * Using z-based fog, the bottom quad should have a gradient UNFOGGED->FOGGED
++         * for table fog, and be completely fogged for vertex fog.
++         * When the fog coordinate returned by the vertex shader is used instead,
++         * the result is a gradient FOGGED->UNFOGGED in the right half of the screen.
++         *
++         * fogstart = -1, fogend = 0:
++         * Both quads are completely fogged, except in the cases where a foggy vertex shader
++         * with vertex fog or neither vertex nor table fog are used. Those are independent of
++         * fogstart/fogend, the result should therefore equal that of the
++         * corresponding (fogstart, fogend) == (0, 1) case.
++         *
++         * C_CLAMPED_FOG will be replaced by the correct expected value based on
++         * the value of D3DPMISCCAPS_FOGVERTEXCLAMPED. If the driver clamps the oFog
++         * output of vertex shaders, it should be C_HALF_FOGGED, else C_FOGGED. */
++
++        /* No vertex shader */
++        {0,  0.0f, 1.0f, D3DFOG_NONE,   D3DFOG_LINEAR, C_UNFOGGED, C_HALF_FOGGED, C_HALF_FOGGED, C_FOGGED},
++        {0,  0.0f, 1.0f, D3DFOG_LINEAR, D3DFOG_LINEAR, C_UNFOGGED, C_HALF_FOGGED, C_HALF_FOGGED, C_FOGGED},
++        {0,  0.0f, 1.0f, D3DFOG_LINEAR, D3DFOG_NONE,   C_FOGGED,   C_UNFOGGED,    C_FOGGED,      C_FOGGED},
++        {0,  0.0f, 1.0f, D3DFOG_NONE,   D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++
++        {0, -1.0f, 0.0f, D3DFOG_NONE,   D3DFOG_LINEAR, C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {0, -1.0f, 0.0f, D3DFOG_LINEAR, D3DFOG_LINEAR, C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {0, -1.0f, 0.0f, D3DFOG_LINEAR, D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {0, -1.0f, 0.0f, D3DFOG_NONE,   D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++
++        /* Vertex shader without vertex fog computation */
++        {1,  0.0f, 1.0f, D3DFOG_NONE,   D3DFOG_LINEAR, C_UNFOGGED, C_HALF_FOGGED, C_HALF_FOGGED, C_FOGGED},
++        {1,  0.0f, 1.0f, D3DFOG_LINEAR, D3DFOG_LINEAR, C_UNFOGGED, C_HALF_FOGGED, C_HALF_FOGGED, C_FOGGED},
++        {1,  0.0f, 1.0f, D3DFOG_LINEAR, D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {1,  0.0f, 1.0f, D3DFOG_NONE,   D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++
++        {1, -1.0f, 0.0f, D3DFOG_NONE,   D3DFOG_LINEAR, C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {1, -1.0f, 0.0f, D3DFOG_LINEAR, D3DFOG_LINEAR, C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {1, -1.0f, 0.0f, D3DFOG_LINEAR, D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {1, -1.0f, 0.0f, D3DFOG_NONE,   D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++
++        /* Vertex shader vs_1_1 with vertex fog computation */
++        {2,  0.0f, 1.0f, D3DFOG_NONE,   D3DFOG_LINEAR, C_UNFOGGED, C_HALF_FOGGED, C_HALF_FOGGED, C_FOGGED},
++        {2,  0.0f, 1.0f, D3DFOG_LINEAR, D3DFOG_LINEAR, C_UNFOGGED, C_HALF_FOGGED, C_HALF_FOGGED, C_FOGGED},
++        {2,  0.0f, 1.0f, D3DFOG_LINEAR, D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_CLAMPED_FOG, C_UNFOGGED},
++        {2,  0.0f, 1.0f, D3DFOG_NONE,   D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_CLAMPED_FOG, C_UNFOGGED},
++
++        {2, -1.0f, 0.0f, D3DFOG_NONE,   D3DFOG_LINEAR, C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {2, -1.0f, 0.0f, D3DFOG_LINEAR, D3DFOG_LINEAR, C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {2, -1.0f, 0.0f, D3DFOG_LINEAR, D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_CLAMPED_FOG, C_UNFOGGED},
++        {2, -1.0f, 0.0f, D3DFOG_NONE,   D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_CLAMPED_FOG, C_UNFOGGED},
++
++        /* Vertex shader vs_2_0 with vertex fog computation */
++        {3,  0.0f, 1.0f, D3DFOG_NONE,   D3DFOG_LINEAR, C_UNFOGGED, C_HALF_FOGGED, C_HALF_FOGGED, C_FOGGED},
++        {3,  0.0f, 1.0f, D3DFOG_LINEAR, D3DFOG_LINEAR, C_UNFOGGED, C_HALF_FOGGED, C_HALF_FOGGED, C_FOGGED},
++        {3,  0.0f, 1.0f, D3DFOG_LINEAR, D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_CLAMPED_FOG, C_UNFOGGED},
++        {3,  0.0f, 1.0f, D3DFOG_NONE,   D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_CLAMPED_FOG, C_UNFOGGED},
++
++        {3, -1.0f, 0.0f, D3DFOG_NONE,   D3DFOG_LINEAR, C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {3, -1.0f, 0.0f, D3DFOG_LINEAR, D3DFOG_LINEAR, C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {3, -1.0f, 0.0f, D3DFOG_LINEAR, D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_CLAMPED_FOG, C_UNFOGGED},
++        {3, -1.0f, 0.0f, D3DFOG_NONE,   D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_CLAMPED_FOG, C_UNFOGGED},
++    };
++    /* Affine projection matrix for z-near = -1, z-far = 1.
++     * Note that for the tests with vertex shaders, this matrix is hard-coded in the shaders. */
++    static const D3DMATRIX proj_mat =
++    {{{
++        1.0f, 0.0f, 0.0f, 0.0f,
++        0.0f, 1.0f, 0.0f, 0.0f,
++        0.0f, 0.0f, 0.5f, 0.0f,
++        0.0f, 0.0f, 0.5f, 1.0f,
++    }}};
++
++    window = CreateWindowA("static", "d3d9_test", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
++            0, 0, 640, 480, NULL, NULL, NULL, NULL);
++    d3d = Direct3DCreate9(D3D_SDK_VERSION);
++    ok(!!d3d, "Failed to create a D3D object\n");
++    if (!(device = create_device(d3d, window, window, TRUE)))
++    {
++        skip("Failed to create a D3D device, skipping tests\n");
++        goto done;
++    }
++
++    hr = IDirect3DDevice9_GetDeviceCaps(device, &caps);
++    ok(SUCCEEDED(hr), "Failed to get device caps (%#x)\n", hr);
++
++    has_table_fog_support = caps.RasterCaps & D3DPRASTERCAPS_FOGTABLE;
++    if (!has_table_fog_support)
++        skip("No table fog support, skipping some fog tests\n");
++
++    has_vs_support = caps.VertexShaderVersion >= D3DVS_VERSION(1, 1);
++    if (has_vs_support)
++    {
++        hr = IDirect3DDevice9_CreateVertexShader(device, vertex_shader_code1, &vertex_shader[1]);
++        ok(SUCCEEDED(hr), "CreateVertexShader failed (%#x)\n", hr);
++        hr = IDirect3DDevice9_CreateVertexShader(device, vertex_shader_code2, &vertex_shader[2]);
++        ok(SUCCEEDED(hr), "CreateVertexShader failed (%#x)\n", hr);
++
++        if (caps.VertexShaderVersion >= D3DVS_VERSION(2, 0))
++        {
++            hr = IDirect3DDevice9_CreateVertexShader(device, vertex_shader_code3, &vertex_shader[3]);
++            ok(SUCCEEDED(hr), "CreateVertexShader failed (%#x)\n", hr);
++        }
++        else
++        {
++            skip("No vs_2_0 support, skipping some fog tests\n");
++        }
++    }
++    else
++    {
++        skip("No vs_1_1 support, skipping some fog tests\n");
++    }
++
++    has_ps_support = caps.PixelShaderVersion >= D3DPS_VERSION(1, 1);
++    if (has_ps_support)
++    {
++        hr = IDirect3DDevice9_CreatePixelShader(device, pixel_shader_code, &pixel_shader[1]);
++        ok(SUCCEEDED(hr), "CreatePixelShader failed (%#x)\n", hr);
++
++        if (caps.PixelShaderVersion >= D3DPS_VERSION(2, 0))
++        {
++            hr = IDirect3DDevice9_CreatePixelShader(device, pixel_shader_code2, &pixel_shader[2]);
++            ok(SUCCEEDED(hr), "CreatePixelShader failed (%#x)\n", hr);
++        }
++        else
++        {
++            skip("No ps_2_0 support, skipping some fog tests\n");
++        }
++    }
++    else
++    {
++        skip("No ps_1_1 support, skipping some fog tests\n");
++    }
++
++    is_fog_vertex_clamped = caps.PrimitiveMiscCaps & D3DPMISCCAPS_FOGVERTEXCLAMPED;
++
++    hr = IDirect3DDevice9_CreateVertexDeclaration(device, decl_elements, &vertex_declaration);
++    ok(SUCCEEDED(hr), "CreateVertexDeclaration failed (%#x)\n", hr);
++
++    /* Setup initial states: No depth test, no lighting, fog on, fog color */
++    hr = IDirect3DDevice9_SetRenderState(device, D3DRS_ZENABLE, D3DZB_FALSE);
++    ok(SUCCEEDED(hr), "Turning off depth test failed (%#x)\n", hr);
++    hr = IDirect3DDevice9_SetRenderState(device, D3DRS_LIGHTING, FALSE);
++    ok(SUCCEEDED(hr), "Turning off lighting failed (%#x)\n", hr);
++    hr = IDirect3DDevice9_SetRenderState(device, D3DRS_FOGENABLE, TRUE);
++    ok(SUCCEEDED(hr), "Turning on fog calculations failed (%#x)\n", hr);
++    hr = IDirect3DDevice9_SetRenderState(device, D3DRS_FOGCOLOR, C_FOGGED);
++    ok(SUCCEEDED(hr), "Setting fog color failed (%#x)\n", hr);
++    hr = IDirect3DDevice9_SetVertexDeclaration(device, vertex_declaration);
++    ok(SUCCEEDED(hr), "SetVertexDeclaration failed (%#x)\n", hr);
++
++    hr = IDirect3DDevice9_SetTransform(device, D3DTS_PROJECTION, &proj_mat);
++    ok(SUCCEEDED(hr), "Failed to set projection transform (%#x)\n", hr);
++
++    for (i = 0; i < sizeof(test_data)/sizeof(test_data[0]); i++)
++    {
++        if (test_data[i].vshader != 0 && !vertex_shader[test_data[i].vshader])
++            continue;
++        if (test_data[i].tfog != D3DFOG_NONE && !has_table_fog_support)
++            continue;
++
++        if (has_vs_support)
++        {
++            hr = IDirect3DDevice9_SetVertexShader(device, vertex_shader[test_data[i].vshader]);
++            ok(SUCCEEDED(hr), "SetVertexShader failed (%#x)\n", hr);
++        }
++
++        for (ps = 0; ps < sizeof(pixel_shader)/sizeof(pixel_shader[0]); ps++)
++        {
++            if (ps != 0 && !pixel_shader[ps])
++                continue;
++
++            if (has_ps_support)
++            {
++                hr = IDirect3DDevice9_SetPixelShader(device, pixel_shader[ps]);
++                ok(SUCCEEDED(hr), "SetPixelShader failed (%#x)\n", hr);
++            }
++
++            hr = IDirect3DDevice9_SetRenderState(device, D3DRS_FOGVERTEXMODE, test_data[i].vfog);
++            ok(SUCCEEDED(hr), "Setting fog vertex mode to %d failed (%#x)\n", test_data[i].vfog, hr);
++            hr = IDirect3DDevice9_SetRenderState(device, D3DRS_FOGTABLEMODE, test_data[i].tfog);
++            ok(SUCCEEDED(hr), "Setting fog table mode to %d failed (%#x)\n", test_data[i].tfog, hr);
++
++            hr = IDirect3DDevice9_SetRenderState(device, D3DRS_FOGSTART,
++                    *(DWORD*)(&test_data[i].fog_start));
++            ok(SUCCEEDED(hr), "Setting fog start to %.1f failed (%#x)\n", test_data[i].fog_start, hr);
++            hr = IDirect3DDevice9_SetRenderState(device, D3DRS_FOGEND,
++                    *(DWORD*)(&test_data[i].fog_end));
++            ok(SUCCEEDED(hr), "Setting fog end to %.1f failed (%#x)\n", test_data[i].fog_end, hr);
++
++            hr = IDirect3DDevice9_Clear(device, 0, NULL, D3DCLEAR_TARGET, C_CLEAR, 1.0f, 0);
++            ok(SUCCEEDED(hr), "Clear failed (%#x)\n", hr);
++            hr = IDirect3DDevice9_BeginScene(device);
++            ok(SUCCEEDED(hr), "BeginScene failed (%#x)\n", hr);
++            hr = IDirect3DDevice9_DrawPrimitiveUP(
++                    device, D3DPT_TRIANGLESTRIP, 2, &top_quad[0], sizeof(top_quad[0]));
++            ok(SUCCEEDED(hr), "DrawPrimitiveUP failed (%#x)\n", hr);
++            hr = IDirect3DDevice9_DrawPrimitiveUP(
++                    device, D3DPT_TRIANGLESTRIP, 2, &bottom_quad_1[0], sizeof(bottom_quad_1[0]));
++            ok(SUCCEEDED(hr), "DrawPrimitiveUP failed (%#x)\n", hr);
++            hr = IDirect3DDevice9_DrawPrimitiveUP(
++                    device, D3DPT_TRIANGLESTRIP, 2, &bottom_quad_2[0], sizeof(bottom_quad_2[0]));
++            ok(SUCCEEDED(hr), "DrawPrimitiveUP failed (%#x)\n", hr);
++            hr = IDirect3DDevice9_EndScene(device);
++            ok(SUCCEEDED(hr), "EndScene failed (%#x)\n", hr);
++
++            /* Use 5% tolerance on the colors since there may be a gradient
++             * between left and right vertices. */
++            for (y = 120; y <= 360; y += 240)
++            {
++                color = getPixelColor(device, 2, y);
++                ok(color_match(color, test_data[i].color_left, 13),
++                        "fog %.1f-%.1f vs%i ps%i fvm%i ftm%i, y=%i: "
++                        "got left color %08x, expected %08x+-5%%\n",
++                        test_data[i].fog_start, test_data[i].fog_end, test_data[i].vshader, ps,
++                        test_data[i].vfog, test_data[i].tfog, y, color, test_data[i].color_left);
++                color = getPixelColor(device, 320, y);
++                expected_middle_color =
++                        y == 120 ? test_data[i].color_middle_top : test_data[i].color_middle_bottom;
++                if (expected_middle_color == C_CLAMPED_FOG)
++                {
++                    expected_middle_color = is_fog_vertex_clamped ? C_HALF_FOGGED : C_FOGGED;
++                }
++                ok(color_match(color, expected_middle_color, 13),
++                        "fog %.1f-%.1f vs%i ps%i fvm%i ftm%i, y=%i: "
++                        "got middle color %08x, expected %08x+-5%%\n",
++                        test_data[i].fog_start, test_data[i].fog_end, test_data[i].vshader, ps,
++                        test_data[i].vfog, test_data[i].tfog, y, color, expected_middle_color);
++                color = getPixelColor(device, 638, y);
++                ok(color_match(color, test_data[i].color_right, 13),
++                        "fog %.1f-%.1f vs%i ps%i fvm%i ftm%i, y=%i: "
++                        "got right color %08x, expected %08x+-5%%\n",
++                        test_data[i].fog_start, test_data[i].fog_end, test_data[i].vshader, ps,
++                        test_data[i].vfog, test_data[i].tfog, y, color, test_data[i].color_right);
++
++            }
++
++            hr = IDirect3DDevice9_Present(device, NULL, NULL, NULL, NULL);
++            ok(SUCCEEDED(hr), "Present failed (%#x)\n", hr);
++        }
++    }
++
++    for (i = 0; i < sizeof(vertex_shader)/sizeof(vertex_shader[0]); i++)
++        if (vertex_shader[i])
++            IDirect3DVertexShader9_Release(vertex_shader[i]);
++    for (i = 0; i < sizeof(pixel_shader)/sizeof(pixel_shader[0]); i++)
++        if (pixel_shader[i])
++            IDirect3DPixelShader9_Release(pixel_shader[i]);
++    IDirect3DVertexDeclaration9_Release(vertex_declaration);
++    refcount = IDirect3DDevice9_Release(device);
++    ok(!refcount, "Device has %u references left\n", refcount);
++done:
++    IDirect3D9_Release(d3d);
++    DestroyWindow(window);
++}
++
+ /* This test tests fog in combination with shaders.
+  * What's tested: linear fog (vertex and table) with pixel shader
+  *                linear table fog with non foggy vertex shader
+@@ -17033,6 +17431,7 @@ START_TEST(visual)
+     test_vshader_input();
+     test_vshader_float16();
+     stream_test();
++    fog_negative_z_test();
+     fog_with_shader_test();
+     texbem_test();
+     texdepth_test();
+diff --git a/dlls/ddraw/tests/ddraw7.c b/dlls/ddraw/tests/ddraw7.c
+index 9263e1e..1d6585c 100644
+--- a/dlls/ddraw/tests/ddraw7.c
++++ b/dlls/ddraw/tests/ddraw7.c
+@@ -3636,6 +3636,179 @@ static void test_fog_special(void)
+     DestroyWindow(window);
+ }
+ 
++/* This test tests fog in combination with negative vertex z coordinates. */
++static void test_fog_negative_z(void)
++{
++    enum
++    {
++        C_ALPHA_0x00  = 0x00000000,
++        C_CLEAR       = 0xffff00ff,
++        C_FOGGED      = 0x0000ff00,
++        C_HALF_FOGGED = 0x00808000,
++        C_UNFOGGED    = 0x00ff0000
++    };
++
++    D3DCOLOR color, expected_middle_color;
++    HRESULT hr;
++    ULONG refcount;
++    BOOL has_table_fog_support;
++    unsigned int i, y;
++    HWND window;
++    IDirect3DDevice7 *device;
++    IDirectDrawSurface7 *rt;
++    D3DDEVICEDESC7 caps;
++
++    static struct
++    {
++        struct vec3 position;
++        D3DCOLOR diffuse;
++        D3DCOLOR specular;
++    }
++    top_quad[] =
++    {
++        {{-1.0f,  0.0f, -1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{ 1.0f,  0.0f,  1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{-1.0f, -1.0f, -1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{ 1.0f, -1.0f,  1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++    },
++    bottom_quad_1[] =
++    {
++        {{-1.0f,  1.0f, -1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{ 0.0f,  1.0f,  0.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{-1.0f,  0.0f, -1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{ 0.0f,  0.0f,  0.0f}, C_UNFOGGED, C_ALPHA_0x00},
++    },
++    bottom_quad_2[] =
++    {
++        {{ 0.0f,  1.0f,  0.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{ 1.0f,  1.0f,  1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{ 0.0f,  0.0f,  0.0f}, C_UNFOGGED, C_ALPHA_0x00},
++        {{ 1.0f,  0.0f,  1.0f}, C_UNFOGGED, C_ALPHA_0x00},
++    };
++    static const struct
++    {
++        float fog_start, fog_end;
++        DWORD vertexmode, tablemode;
++        D3DCOLOR color_left, color_middle_top, color_middle_bottom, color_right;
++    }
++    test_data[] =
++    {
++        { 0.0f, 1.0f, D3DFOG_NONE,   D3DFOG_LINEAR, C_UNFOGGED, C_HALF_FOGGED, C_HALF_FOGGED, C_FOGGED},
++        { 0.0f, 1.0f, D3DFOG_LINEAR, D3DFOG_LINEAR, C_UNFOGGED, C_HALF_FOGGED, C_HALF_FOGGED, C_FOGGED},
++        { 0.0f, 1.0f, D3DFOG_LINEAR, D3DFOG_NONE,   C_FOGGED,   C_UNFOGGED,    C_FOGGED,      C_FOGGED},
++        { 0.0f, 1.0f, D3DFOG_NONE,   D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++
++        {-1.0f, 0.0f, D3DFOG_NONE,   D3DFOG_LINEAR, C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {-1.0f, 0.0f, D3DFOG_LINEAR, D3DFOG_LINEAR, C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {-1.0f, 0.0f, D3DFOG_LINEAR, D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++        {-1.0f, 0.0f, D3DFOG_NONE,   D3DFOG_NONE,   C_FOGGED,   C_FOGGED,      C_FOGGED,      C_FOGGED},
++    };
++    /* Affine projection matrix for z-near = -1, z-far = 1. */
++    static D3DMATRIX proj_mat =
++    {
++        1.0f, 0.0f, 0.0f, 0.0f,
++        0.0f, 1.0f, 0.0f, 0.0f,
++        0.0f, 0.0f, 0.5f, 0.0f,
++        0.0f, 0.0f, 0.5f, 1.0f
++    };
++
++    window = CreateWindowA("static", "ddraw_test", WS_OVERLAPPEDWINDOW,
++            0, 0, 640, 480, 0, 0, 0, 0);
++
++    if (!(device = create_device(window, DDSCL_NORMAL)))
++    {
++        skip("Failed to create a 3D device, skipping test.\n");
++        DestroyWindow(window);
++        return;
++    }
++
++    memset(&caps, 0, sizeof(caps));
++    hr = IDirect3DDevice7_GetCaps(device, &caps);
++    ok(SUCCEEDED(hr), "IDirect3DDevice7_GetCaps failed, hr %#x.\n", hr);
++
++    has_table_fog_support = caps.dpcTriCaps.dwRasterCaps & D3DPRASTERCAPS_FOGTABLE;
++    if (!has_table_fog_support)
++        skip("No table fog support, skipping some fog tests.\n");
++
++    hr = IDirect3DDevice7_GetRenderTarget(device, &rt);
++    ok(SUCCEEDED(hr), "Failed to get render target, hr %#x.\n", hr);
++
++    hr = IDirect3DDevice7_SetRenderState(device, D3DRENDERSTATE_FOGENABLE, TRUE);
++    ok(SUCCEEDED(hr), "Failed to enable fog, hr %#x.\n", hr);
++    hr = IDirect3DDevice7_SetRenderState(device, D3DRENDERSTATE_FOGCOLOR, C_FOGGED);
++    ok(SUCCEEDED(hr), "Failed to set fog color, hr %#x.\n", hr);
++    hr = IDirect3DDevice7_SetRenderState(device, D3DRENDERSTATE_LIGHTING, FALSE);
++    ok(SUCCEEDED(hr), "Failed to disable lighting, hr %#x.\n", hr);
++    hr = IDirect3DDevice7_SetRenderState(device, D3DRENDERSTATE_ZENABLE, D3DZB_FALSE);
++    ok(SUCCEEDED(hr), "Failed to disable depth test, hr %#x.\n", hr);
++
++    hr = IDirect3DDevice7_SetTransform(device, D3DTRANSFORMSTATE_PROJECTION, &proj_mat);
++    ok(SUCCEEDED(hr), "Failed to set projection transform, hr %#x.\n", hr);
++
++    for (i = 0; i < sizeof(test_data)/sizeof(test_data[0]); i++)
++    {
++        if (test_data[i].tablemode != D3DFOG_NONE && !has_table_fog_support)
++            continue;
++
++        hr = IDirect3DDevice7_Clear(device, 0, NULL, D3DCLEAR_TARGET, C_CLEAR, 1.0f, 0);
++        ok(SUCCEEDED(hr), "Failed to clear render target, i=%d, hr %#x.\n", i, hr);
++
++        hr = IDirect3DDevice7_SetRenderState(device, D3DRENDERSTATE_FOGVERTEXMODE, test_data[i].vertexmode);
++        ok(SUCCEEDED(hr), "Failed to set fog vertex mode, i=%d, hr %#x.\n", i, hr);
++        hr = IDirect3DDevice7_SetRenderState(device, D3DRENDERSTATE_FOGTABLEMODE, test_data[i].tablemode);
++        ok(SUCCEEDED(hr), "Failed to set fog table mode, i=%d, hr %#x.\n", i, hr);
++
++        hr = IDirect3DDevice7_SetRenderState(device, D3DRENDERSTATE_FOGSTART,
++                *(DWORD*)(&test_data[i].fog_start));
++        ok(SUCCEEDED(hr), "Failed to set fog start, i=%d, hr %#x.\n", i, hr);
++        hr = IDirect3DDevice7_SetRenderState(device, D3DRENDERSTATE_FOGEND,
++                *(DWORD*)(&test_data[i].fog_end));
++        ok(SUCCEEDED(hr), "Failed to set fog end, i=%d, hr %#x.\n", i, hr);
++
++        hr = IDirect3DDevice7_BeginScene(device);
++        ok(SUCCEEDED(hr), "Failed to begin scene, i=%d, hr %#x.\n", i, hr);
++        hr = IDirect3DDevice7_DrawPrimitive(device, D3DPT_TRIANGLESTRIP,
++                D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_SPECULAR, top_quad, 4, 0);
++        ok(SUCCEEDED(hr), "Failed to draw, i=%d, hr %#x.\n", i, hr);
++        hr = IDirect3DDevice7_DrawPrimitive(device, D3DPT_TRIANGLESTRIP,
++                D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_SPECULAR, bottom_quad_1, 4, 0);
++        ok(SUCCEEDED(hr), "Failed to draw, i=%d, hr %#x.\n", i, hr);
++        hr = IDirect3DDevice7_DrawPrimitive(device, D3DPT_TRIANGLESTRIP,
++                D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_SPECULAR, bottom_quad_2, 4, 0);
++        ok(SUCCEEDED(hr), "Failed to draw, i=%d, hr %#x.\n", i, hr);
++        hr = IDirect3DDevice7_EndScene(device);
++        ok(SUCCEEDED(hr), "Failed to end scene, i=%d, hr %#x.\n", i, hr);
++
++        /* Use 5% tolerance on the colors since there may be a gradient
++         * between left and right vertices. */
++        for (y = 120; y <= 360; y += 240)
++        {
++            color = get_surface_color(rt, 2, y);
++            ok(compare_color(color, test_data[i].color_left, 13),
++                    "fog %.1f-%.1f fvm%i ftm%i y=%i: got left color %08x, expected %08x+-5%%.\n",
++                    test_data[i].fog_start, test_data[i].fog_end, test_data[i].vertexmode,
++                    test_data[i].tablemode, y, color, test_data[i].color_left);
++            color = get_surface_color(rt, 320, y);
++            expected_middle_color =
++                    y == 120 ? test_data[i].color_middle_top : test_data[i].color_middle_bottom;
++            ok(compare_color(color, expected_middle_color, 13),
++                    "fog %.1f-%.1f fvm%i ftm%i y=%i: got middle color %08x, expected %08x+-5%%.\n",
++                    test_data[i].fog_start, test_data[i].fog_end, test_data[i].vertexmode,
++                    test_data[i].tablemode, y, color, expected_middle_color);
++            color = get_surface_color(rt, 638, y);
++            ok(compare_color(color, test_data[i].color_right, 13),
++                    "fog %.1f-%.1f fvm%i ftm%i y=%i: got right color %08x, expected %08x+-5%%.\n",
++                    test_data[i].fog_start, test_data[i].fog_end, test_data[i].vertexmode,
++                    test_data[i].tablemode, y, color, test_data[i].color_right);
++        }
++    }
++
++    IDirectDrawSurface7_Release(rt);
++    refcount = IDirect3DDevice7_Release(device);
++    ok(!refcount, "Device has %u references left.\n", refcount);
++    DestroyWindow(window);
++}
++
+ static void test_lighting_interface_versions(void)
+ {
+     IDirect3DDevice7 *device;
+@@ -8060,6 +8233,7 @@ START_TEST(ddraw7)
+     test_clear_rect_count();
+     test_coop_level_versions();
+     test_fog_special();
++    test_fog_negative_z();
+     test_lighting_interface_versions();
+     test_coop_level_activateapp();
+     test_texturemanage();
+diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
+index 98239ef..fab7251 100644
+--- a/dlls/wined3d/glsl_shader.c
++++ b/dlls/wined3d/glsl_shader.c
+@@ -5007,7 +5007,7 @@ static GLhandleARB shader_glsl_generate_ffp_vertex_shader(struct wined3d_shader_
+                 /* Need to undo the [0.0 - 1.0] -> [-1.0 - 1.0] transformation from D3D to GL coordinates. */
+                 shader_addline(buffer, "gl_FogFragCoord = gl_Position.z * 0.5 + 0.5;\n");
+             else
+-                shader_addline(buffer, "gl_FogFragCoord = ec_pos.z;\n");
++                shader_addline(buffer, "gl_FogFragCoord = abs(ec_pos.z);\n");
+             break;
+ 
+         default:
+-- 
+2.1.3
+

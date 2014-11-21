@@ -105,6 +105,7 @@ PATCHLIST := \
 	wineboot-HKEY_DYN_DATA.ok \
 	winebuild-LinkerVersion.ok \
 	wined3d-DXTn.ok \
+	wined3d-FFP_Fog.ok \
 	wined3d-Revert_PixelFormat.ok \
 	winedevice-Fix_Relocation.ok \
 	winemenubuilder-Desktop_Icon_Path.ok \
@@ -1607,6 +1608,21 @@ wined3d-DXTn.ok:
 		echo '+    { "Michael Müller", "wined3d: Add support for DXTn software decoding through libtxc_dxtn.", 1 },'; \
 		echo '+    { "Christian Costa", "wined3d: Improve DXTn support and export conversion functions for d3dx9_36.", 1 },'; \
 	) > wined3d-DXTn.ok
+
+# Patchset wined3d-FFP_Fog
+# |
+# | Modified files:
+# |   *	dlls/d3d8/tests/visual.c, dlls/d3d9/tests/visual.c, dlls/ddraw/tests/ddraw7.c, dlls/wined3d/directx.c,
+# | 	dlls/wined3d/glsl_shader.c
+# |
+.INTERMEDIATE: wined3d-FFP_Fog.ok
+wined3d-FFP_Fog.ok:
+	$(call APPLY_FILE,wined3d-FFP_Fog/0001-wined3d-Set-D3DPMISCCAPS_FOGVERTEXCLAMPED-flag-in-ge.patch)
+	$(call APPLY_FILE,wined3d-FFP_Fog/0002-wined3d-Take-abs-of-vertex-z-coordinate-as-FFP-fog-c.patch)
+	@( \
+		echo '+    { "Joachim Priesner", "wined3d: Set D3DPMISCCAPS_FOGVERTEXCLAMPED flag in get_device_caps (resend).", 1 },'; \
+		echo '+    { "Joachim Priesner", "wined3d: Take abs() of vertex z coordinate as FFP fog coordinate.", 7 },'; \
+	) > wined3d-FFP_Fog.ok
 
 # Patchset wined3d-Revert_PixelFormat
 # |

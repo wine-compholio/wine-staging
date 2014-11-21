@@ -39,9 +39,10 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [1]:**
+**Bugfixes and features included in the next upcoming release [2]:**
 
 * Implement exclusive mode in PulseAudio backend ([Wine Bug #37042](https://bugs.winehq.org/show_bug.cgi?id=37042))
+* Take abs() of vertex z coordinate as FFP fog coordinate
 
 
 **Bugs fixed in Wine Staging 1.7.31 [101]:**

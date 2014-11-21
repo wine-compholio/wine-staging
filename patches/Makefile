@@ -75,7 +75,6 @@ PATCHLIST := \
 	ntoskrnl-KeSetSystemAffinityThread.ok \
 	ntoskrnl-Stub_FileObject.ok \
 	ntoskrnl-Write_CR4.ok \
-	ole32-CoWaitForMultipleHandles.ok \
 	quartz-MediaSeeking_Positions.ok \
 	riched20-IText_Interface.ok \
 	secur32-Schannel_ContextAttr.ok \
@@ -100,7 +99,6 @@ PATCHLIST := \
 	user32-DrawTextExW.ok \
 	user32-GetSystemMetrics.ok \
 	user32-GetTipText.ok \
-	user32-ShowWindow.ok \
 	user32-WndProc.ok \
 	wine.inf-ProductId.ok \
 	wineboot-HKEY_DYN_DATA.ok \
@@ -1106,25 +1104,6 @@ ntoskrnl-Write_CR4.ok:
 		echo '+    { "Stefan Leichter", "ntoskrnl.exe: Emulate write to CR4 register.", 1 },'; \
 	) > ntoskrnl-Write_CR4.ok
 
-# Patchset ole32-CoWaitForMultipleHandles
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#32568] CoWaitForMultipleHandles shouldn't process window events when APC calls are queued
-# |
-# | Modified files:
-# |   *	dlls/ole32/compobj.c, dlls/ole32/tests/compobj.c, include/objbase.h
-# |
-.INTERMEDIATE: ole32-CoWaitForMultipleHandles.ok
-ole32-CoWaitForMultipleHandles.ok:
-	$(call APPLY_FILE,ole32-CoWaitForMultipleHandles/0001-ole32-tests-Add-tests-for-CoWaitForMultipleHandles.patch)
-	$(call APPLY_FILE,ole32-CoWaitForMultipleHandles/0002-ole32-Verify-arguments-for-CoWaitForMultipleHandles-.patch)
-	$(call APPLY_FILE,ole32-CoWaitForMultipleHandles/0003-ole32-Don-t-process-window-events-when-APC-calls-are.patch)
-	@( \
-		echo '+    { "Sebastian Lackner", "ole32/tests: Add tests for CoWaitForMultipleHandles.", 1 },'; \
-		echo '+    { "Sebastian Lackner", "ole32: Verify arguments for CoWaitForMultipleHandles, always initialize index to zero.", 1 },'; \
-		echo '+    { "Sebastian Lackner", "ole32: Don'\''t process window events when APC calls are queued.", 1 },'; \
-	) > ole32-CoWaitForMultipleHandles.ok
-
 # Patchset quartz-MediaSeeking_Positions
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1530,23 +1509,6 @@ user32-GetTipText.ok:
 		echo '+    { "Erich E. Hoover", "Fix TOOLTIPS_GetTipText when a resource cannot be found.", 1 },'; \
 		echo '+    { "Erich E. Hoover", "Fix TOOLTIPS_GetTipText when a NULL instance is used.", 1 },'; \
 	) > user32-GetTipText.ok
-
-# Patchset user32-ShowWindow
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#11582] ShowWindow should avoid interthread no-op messages
-# |
-# | Modified files:
-# |   *	dlls/user32/tests/msg.c, dlls/user32/winpos.c
-# |
-.INTERMEDIATE: user32-ShowWindow.ok
-user32-ShowWindow.ok:
-	$(call APPLY_FILE,user32-ShowWindow/0001-user32-tests-Add-interthread-tests-for-calling-ShowW.patch)
-	$(call APPLY_FILE,user32-ShowWindow/0002-user32-Do-not-call-SendMessage-to-hide-a-window-that.patch)
-	@( \
-		echo '+    { "Drew Ronneberg", "user32/tests: Add interthread tests for calling ShowWindow(SW_HIDE) on a hidden window.", 1 },'; \
-		echo '+    { "Drew Ronneberg", "user32: Do not call SendMessage() to hide a window that is already hidden.", 3 },'; \
-	) > user32-ShowWindow.ok
 
 # Patchset user32-WndProc
 # |

@@ -39,10 +39,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [3]:**
+**Bugfixes and features included in the next upcoming release [2]:**
 
 * Implement exclusive mode in PulseAudio backend ([Wine Bug #37042](https://bugs.winehq.org/show_bug.cgi?id=37042))
-* ShowWindow should avoid interthread no-op messages ([Wine Bug #11582](https://bugs.winehq.org/show_bug.cgi?id=11582))
 * Take abs() of vertex z coordinate as FFP fog coordinate
 
 
@@ -59,7 +58,7 @@ Included bug fixes and improvements
 * Audio stuttering and performance drops in multiple applications ([Wine Bug #30639](https://bugs.winehq.org/show_bug.cgi?id=30639))
 * Avoid crashing when broken app tries to release surface although refcount is zero ([Wine Bug #18477](https://bugs.winehq.org/show_bug.cgi?id=18477))
 * ~~Avoid sending window messages in FindWindowExW~~ ([Wine Bug #27282](https://bugs.winehq.org/show_bug.cgi?id=27282))
-* CoWaitForMultipleHandles shouldn't process window events when APC calls are queued ([Wine Bug #32568](https://bugs.winehq.org/show_bug.cgi?id=32568))
+* ~~CoWaitForMultipleHandles shouldn't process window events when APC calls are queued~~ ([Wine Bug #32568](https://bugs.winehq.org/show_bug.cgi?id=32568))
 * Correctly treat '.' when checking for empty directories ([Wine Bug #26272](https://bugs.winehq.org/show_bug.cgi?id=26272))
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](https://bugs.winehq.org/show_bug.cgi?id=33770))
 * Do not fail when a used context is passed to wglShareLists ([Wine Bug #11436](https://bugs.winehq.org/show_bug.cgi?id=11436))

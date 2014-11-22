@@ -171,13 +171,15 @@ clean:
 # Patchset Exagear
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/ntdll/signal_i386.c
+# |   *	configure.ac, dlls/ntdll/signal_i386.c, dlls/ntdll/virtual.c
 # |
 .INTERMEDIATE: Exagear.ok
-Exagear.ok:
+Exagear.ok: ntdll-WRITECOPY.ok
 	$(call APPLY_FILE,Exagear/0001-ntdll-Implement-emulation-of-SIDT-instruction-when-u.patch)
+	$(call APPLY_FILE,Exagear/0002-ntdll-Fix-issues-with-write-watches-when-using-Exage.patch)
 	@( \
 		echo '+    { "Sebastian Lackner", "ntdll: Implement emulation of SIDT instruction when using Exagear.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: Fix issues with write watches when using Exagear.", 1 },'; \
 	) > Exagear.ok
 
 # Patchset Miscellaneous

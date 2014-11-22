@@ -39,8 +39,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [2]:**
+**Bugfixes and features included in the next upcoming release [3]:**
 
+* Avoid race-conditions of async WSARecv() operations with write watches.
 * Implement exclusive mode in PulseAudio backend ([Wine Bug #37042](https://bugs.winehq.org/show_bug.cgi?id=37042))
 * Take abs() of vertex z coordinate as FFP fog coordinate
 

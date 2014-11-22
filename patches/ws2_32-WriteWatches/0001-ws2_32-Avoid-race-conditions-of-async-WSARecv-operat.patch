@@ -1,0 +1,67 @@
+From dc07ceb5dff69b2a306278d5d3254c18c98205df Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 21 Nov 2014 12:22:46 +0100
+Subject: ws2_32: Avoid race-conditions of async WSARecv() operations with
+ write watches.
+
+Under specific circumstances Silverlight resets the write watch while the async
+WSARecv() operation is still pending:
+
+23723.867:003a:Call ws2_32.WSARecv(00000400,018eac80,00000001,0815df24,0815df28,0196132c,00000000) ret=7a3a8197
+[...]
+23723.868:003a:Call KERNEL32.IsBadWritePtr(028f3368,00015554) ret=205465c4
+23723.868:003a:Ret  KERNEL32.IsBadWritePtr() retval=00000000 ret=205465c4
+[...]
+23723.868:003a:Ret  ws2_32.WSARecv() retval=ffffffff ret=7a3a8197
+23723.868:003a:Call KERNEL32.GetLastError() ret=792be2fd
+23723.868:003a:Ret  KERNEL32.GetLastError() retval=00000102 ret=79259875
+[...]
+23723.874:003d:Call KERNEL32.ResetWriteWatch(028d1000,0009ce00) ret=792ca021
+23723.875:003d:Ret  KERNEL32.ResetWriteWatch() retval=00000000 ret=792ca021
+[...]
+23723.966:003a:Call ntdll.wine_server_handle_to_fd(00000400,00000001,0815de9c,00000000) ret=2053ec7c
+23723.966:003a:Ret  ntdll.wine_server_handle_to_fd() retval=00000000 ret=2053ec7c
+23723.966:003a:Call ntdll.wine_server_release_fd(00000400,00000081) ret=2053eca4
+23723.966:003a:Ret  ntdll.wine_server_release_fd() retval=00000000 ret=2053eca4
+23723.966:003a:warn:winsock:wsaErrStatus errno 14, (Bad address).
+
+This seems to work fine on Windows, most likely because the kernel handles write
+watches directly, without involving usermode. To workaround this issue we repeat
+recvmsg(...) when it looks like it might have failed because of write watches.
+
+Based on the Linux kernel code it seems to be save to assume, that on EFAULT
+no actually important data was lost:
+http://lxr.free-electrons.com/source/net/ipv4/tcp.c#L1940
+
+Based on the code it looks like we could savely remove the write-watch check
+at the beginning of WS2_recv_base, which might make the application think
+that data is immediately available.
+---
+ dlls/ws2_32/socket.c | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
+index b3db306..ef86b28 100644
+--- a/dlls/ws2_32/socket.c
++++ b/dlls/ws2_32/socket.c
+@@ -1930,7 +1930,16 @@ static int WS2_recv( int fd, struct ws2_async *wsa )
+ 
+     while ((n = recvmsg(fd, &hdr, wsa->flags)) == -1)
+     {
+-        if (errno != EINTR)
++        if (errno == EFAULT)
++        {
++            unsigned int i;
++            for (i = wsa->first_iovec; i < wsa->n_iovecs; i++)
++            {
++                if (IsBadWritePtr( wsa->iovec[i].iov_base, wsa->iovec[i].iov_len ))
++                    return -1;
++            }
++        }
++        else if (errno != EINTR)
+             return -1;
+     }
+ 
+-- 
+2.1.3
+

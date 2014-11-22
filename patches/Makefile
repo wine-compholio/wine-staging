@@ -118,6 +118,7 @@ PATCHLIST := \
 	wpcap-Dynamic_Linking.ok \
 	ws2_32-Connect_Time.ok \
 	ws2_32-TransmitFile.ok \
+	ws2_32-WriteWatches.ok \
 	wtsapi32-EnumerateProcesses.ok
 
 .PHONY: install
@@ -1869,6 +1870,18 @@ ws2_32-TransmitFile.ok:
 		echo '+    { "Erich E. Hoover", "ws2_32: Add asynchronous support for TransmitFile.", 1 },'; \
 		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_DISCONNECT and TF_REUSE_SOCKET to TransmitFile.", 1 },'; \
 	) > ws2_32-TransmitFile.ok
+
+# Patchset ws2_32-WriteWatches
+# |
+# | Modified files:
+# |   *	dlls/ws2_32/socket.c
+# |
+.INTERMEDIATE: ws2_32-WriteWatches.ok
+ws2_32-WriteWatches.ok:
+	$(call APPLY_FILE,ws2_32-WriteWatches/0001-ws2_32-Avoid-race-conditions-of-async-WSARecv-operat.patch)
+	@( \
+		echo '+    { "Sebastian Lackner", "ws2_32: Avoid race-conditions of async WSARecv() operations with write watches.", 1 },'; \
+	) > ws2_32-WriteWatches.ok
 
 # Patchset wtsapi32-EnumerateProcesses
 # |

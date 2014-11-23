@@ -171,15 +171,17 @@ clean:
 # Patchset Exagear
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/ntdll/signal_i386.c, dlls/ntdll/virtual.c
+# |   *	configure.ac, dlls/ntdll/signal_i386.c, dlls/ntdll/virtual.c, server/ptrace.c
 # |
 .INTERMEDIATE: Exagear.ok
 Exagear.ok: ntdll-WRITECOPY.ok
 	$(call APPLY_FILE,Exagear/0001-ntdll-Implement-emulation-of-SIDT-instruction-when-u.patch)
 	$(call APPLY_FILE,Exagear/0002-ntdll-Fix-issues-with-write-watches-when-using-Exage.patch)
+	$(call APPLY_FILE,Exagear/0003-server-Don-t-attempt-to-use-ptrace-when-running-with.patch)
 	@( \
 		echo '+    { "Sebastian Lackner", "ntdll: Implement emulation of SIDT instruction when using Exagear.", 1 },'; \
 		echo '+    { "Sebastian Lackner", "ntdll: Fix issues with write watches when using Exagear.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "server: Don'\''t attempt to use ptrace when running with Exagear.", 1 },'; \
 	) > Exagear.ok
 
 # Patchset Miscellaneous

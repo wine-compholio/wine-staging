@@ -43,6 +43,7 @@ PATCHLIST := \
 	gdiplus-GdipCreateRegionRgnData.ok \
 	imagehlp-BindImageEx.ok \
 	imm32-Cross_Thread_Access.ok \
+	include-Winetest.ok \
 	iphlpapi-TCP_Table.ok \
 	kernel32-GetFinalPathNameByHandle.ok \
 	kernel32-GetNumaProcessorNode.ok \
@@ -550,6 +551,18 @@ imm32-Cross_Thread_Access.ok:
 		echo '+    { "Aric Stewart", "imm32: Restrict crossthread Association and destruction.", 1 },'; \
 		echo '+    { "Aric Stewart", "imm32: Limit cross thread access to ImmSet* functions.", 1 },'; \
 	) > imm32-Cross_Thread_Access.ok
+
+# Patchset include-Winetest
+# |
+# | Modified files:
+# |   *	include/wine/test.h
+# |
+.INTERMEDIATE: include-Winetest.ok
+include-Winetest.ok:
+	$(call APPLY_FILE,include-Winetest/0001-include-Automatically-detect-if-tests-are-running-un.patch)
+	@( \
+		echo '+    { "Sebastian Lackner", "include: Automatically detect if tests are running under Wine when WINETEST_PLATFORM is not specified.", 1 },'; \
+	) > include-Winetest.ok
 
 # Patchset iphlpapi-TCP_Table
 # |

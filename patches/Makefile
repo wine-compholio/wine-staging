@@ -491,8 +491,8 @@ gdi32-MultiMonitor.ok:
 	$(call APPLY_FILE,gdi32-MultiMonitor/0002-winex11-Make-GetMonitorInfo-give-a-different-device-.patch)
 	$(call APPLY_FILE,gdi32-MultiMonitor/0003-user32-Implement-EnumDisplayDevicesW-based-on-EnumDi.patch)
 	@( \
-		echo '+    { "Ken Thomases", "gdi32: Also accept \"\\\\.\\DISPLAY<n>\" devices names with <n> other than 1 as display devices.", 1 },'; \
-		echo '+    { "Ken Thomases", "winex11: Make GetMonitorInfo() give a different device name (\\.\\DISPLAY<n>) to each monitor.", 1 },'; \
+		echo '+    { "Ken Thomases", "gdi32: Also accept \"\\\\\\\\.\\\\DISPLAY<n>\" devices names with <n> other than 1 as display devices.", 1 },'; \
+		echo '+    { "Ken Thomases", "winex11: Make GetMonitorInfo() give a different device name (\\\\.\\\\DISPLAY<n>) to each monitor.", 1 },'; \
 		echo '+    { "Ken Thomases", "user32: Implement EnumDisplayDevicesW() based on EnumDisplayMonitors() and GetMonitorInfoW().", 1 },'; \
 	) > gdi32-MultiMonitor.ok
 
@@ -1540,7 +1540,7 @@ user32-WndProc.ok:
 wine.inf-ProductId.ok:
 	$(call APPLY_FILE,wine.inf-ProductId/0001-wine.inf-Add-fake-ProductId-to-HKLM-CurrentVersionNT.patch)
 	@( \
-		echo '+    { "Yanis Lukes", "wine.inf: Add fake ProductId to HKLM\\CurrentVersionNT.", 1 },'; \
+		echo '+    { "Yanis Lukes", "wine.inf: Add fake ProductId to HKLM\\\\CurrentVersionNT.", 1 },'; \
 	) > wine.inf-ProductId.ok
 
 # Patchset wineboot-HKEY_DYN_DATA
@@ -1555,7 +1555,7 @@ wine.inf-ProductId.ok:
 wineboot-HKEY_DYN_DATA.ok:
 	$(call APPLY_FILE,wineboot-HKEY_DYN_DATA/0001-wineboot-Add-some-generic-hardware-in-HKEY_DYN_DATA-.patch)
 	@( \
-		echo '+    { "Michael Müller", "wineboot: Add some generic hardware in HKEY_DYN_DATA\\Config Manager\\Enum.", 1 },'; \
+		echo '+    { "Michael Müller", "wineboot: Add some generic hardware in HKEY_DYN_DATA\\\\Config Manager\\\\Enum.", 1 },'; \
 	) > wineboot-HKEY_DYN_DATA.ok
 
 # Patchset winebuild-LinkerVersion

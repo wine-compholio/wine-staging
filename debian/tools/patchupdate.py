@@ -78,13 +78,13 @@ def _pairs(a):
 
 def _unique(iterable, key=None):
     "List unique elements, preserving order. Remember only the element just seen."
-    # unique_justseen('AAAABBBCCDAABBB') --> A B C D A B
-    # unique_justseen('ABBCcAD', str.lower) --> A B C A D
+    # _unique('AAAABBBCCDAABBB') --> A B C D A B
+    # _unique('ABBCcAD', str.lower) --> A B C A D
     return itertools.imap(next, itertools.imap(operator.itemgetter(1), itertools.groupby(iterable, key)))
 
 def _escape(s):
     """Escape string inside of '...' quotes."""
-    return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("'", "'\\''")
+    return s.replace("\\", "\\\\\\\\").replace("\"", "\\\"").replace("'", "'\\''")
 
 def _load_dict(filename):
     """Load a Python dictionary object from a file."""

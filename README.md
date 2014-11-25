@@ -39,12 +39,13 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [4]:**
+**Bugfixes and features included in the next upcoming release [5]:**
 
 * Avoid race-conditions of async WSARecv() operations with write watches.
 * Fix issues with dragging layers between images in Adobe Photoshop 7.0 ([Wine Bug #12007](https://bugs.winehq.org/show_bug.cgi?id=12007))
 * Implement exclusive mode in PulseAudio backend ([Wine Bug #37042](https://bugs.winehq.org/show_bug.cgi?id=37042))
 * Take abs() of vertex z coordinate as FFP fog coordinate
+* Wintrust doesn't reset data->pWintrustData->u.pFile->hFile after closing handle ([Wine Bug #36257](https://bugs.winehq.org/show_bug.cgi?id=36257))
 
 
 **Bugs fixed in Wine Staging 1.7.31 [101]:**

@@ -118,6 +118,7 @@ PATCHLIST := \
 	winex11-Window_Groups.ok \
 	winex11-XEMBED.ok \
 	winex11-wglShareLists.ok \
+	wintrust-Reset_hFile.ok \
 	wpcap-Dynamic_Linking.ok \
 	ws2_32-Connect_Time.ok \
 	ws2_32-TransmitFile.ok \
@@ -1869,6 +1870,21 @@ winex11-wglShareLists.ok:
 	@( \
 		echo '+    { "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists.", 1 },'; \
 	) > winex11-wglShareLists.ok
+
+# Patchset wintrust-Reset_hFile
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36257] Wintrust doesn't reset data->pWintrustData->u.pFile->hFile after closing handle
+# |
+# | Modified files:
+# |   *	dlls/wintrust/softpub.c
+# |
+.INTERMEDIATE: wintrust-Reset_hFile.ok
+wintrust-Reset_hFile.ok:
+	$(call APPLY_FILE,wintrust-Reset_hFile/0001-wintrust-Reset-data-pWintrustData-u.pFile-hFile-afte.patch)
+	@( \
+		echo '+    { "Sebastian Lackner", "wintrust: Reset data->pWintrustData->u.pFile->hFile after closing handle.", 1 },'; \
+	) > wintrust-Reset_hFile.ok
 
 # Patchset wpcap-Dynamic_Linking
 # |

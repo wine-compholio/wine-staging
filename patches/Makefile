@@ -101,6 +101,7 @@ PATCHLIST := \
 	user32-DrawTextExW.ok \
 	user32-GetSystemMetrics.ok \
 	user32-GetTipText.ok \
+	user32-Mouse_Message_Hwnd.ok \
 	user32-WndProc.ok \
 	wine.inf-ProductId.ok \
 	wineboot-HKEY_DYN_DATA.ok \
@@ -1540,6 +1541,21 @@ user32-GetTipText.ok:
 		echo '+    { "Erich E. Hoover", "Fix TOOLTIPS_GetTipText when a resource cannot be found.", 1 },'; \
 		echo '+    { "Erich E. Hoover", "Fix TOOLTIPS_GetTipText when a NULL instance is used.", 1 },'; \
 	) > user32-GetTipText.ok
+
+# Patchset user32-Mouse_Message_Hwnd
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12007] Fix issues with dragging layers between images in Adobe Photoshop 7.0
+# |
+# | Modified files:
+# |   *	dlls/user32/message.c, dlls/user32/tests/input.c
+# |
+.INTERMEDIATE: user32-Mouse_Message_Hwnd.ok
+user32-Mouse_Message_Hwnd.ok:
+	$(call APPLY_FILE,user32-Mouse_Message_Hwnd/0001-user32-Try-harder-to-find-a-target-for-mouse-message.patch)
+	@( \
+		echo '+    { "Dmitry Timoshkov", "user32: Try harder to find a target for mouse messages.", 1 },'; \
+	) > user32-Mouse_Message_Hwnd.ok
 
 # Patchset user32-WndProc
 # |

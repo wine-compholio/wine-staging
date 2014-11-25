@@ -86,6 +86,7 @@ PATCHLIST := \
 	server-Misc_ACL.ok \
 	server-OpenProcess.ok \
 	server-Stored_ACLs.ok \
+	server-Unexpected_Wakeup.ok \
 	setupapi-SetupPromptForDisk.ok \
 	shdocvw-ParseURLFromOutsideSource_Tests.ok \
 	shell32-Default_Folder_ACLs.ok \
@@ -1323,6 +1324,18 @@ server-Stored_ACLs.ok: ntdll-DOS_Attributes.ok
 		echo '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes.", 7 },'; \
 		echo '+    { "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings.", 7 },'; \
 	) > server-Stored_ACLs.ok
+
+# Patchset server-Unexpected_Wakeup
+# |
+# | Modified files:
+# |   *	server/thread.c
+# |
+.INTERMEDIATE: server-Unexpected_Wakeup.ok
+server-Unexpected_Wakeup.ok:
+	$(call APPLY_FILE,server-Unexpected_Wakeup/0001-server-Avoid-sending-unexpected-wakeup-with-uninitia.patch)
+	@( \
+		echo '+    { "Sebastian Lackner", "server: Avoid sending unexpected wakeup with uninitialized cookie value.", 1 },'; \
+	) > server-Unexpected_Wakeup.ok
 
 # Patchset setupapi-SetupPromptForDisk
 # |

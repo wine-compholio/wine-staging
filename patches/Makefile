@@ -250,28 +250,34 @@ Staging.ok:
 # Patchset api-ms-win-core-Stubs
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/api-ms-win-core-datetime-l1-1-1/Makefile.in, dlls/api-ms-win-core-datetime-l1-1-1/api-ms-win-core-
-# | 	datetime-l1-1-1.spec, dlls/api-ms-win-core-fibers-l1-1-1/Makefile.in, dlls/api-ms-win-core-fibers-l1-1-1/api-ms-win-
-# | 	core-fibers-l1-1-1.spec, dlls/api-ms-win-core-file-l2-1-0/Makefile.in, dlls/api-ms-win-core-file-l2-1-0/api-ms-win-core-
-# | 	file-l2-1-0.spec, dlls/api-ms-win-core-localization-l1-2-1/Makefile.in, dlls/api-ms-win-core-localization-l1-2-1/api-ms-
-# | 	win-core-localization-l1-2-1.spec, dlls/api-ms-win-core-winrt-error-l1-1-1/Makefile.in, dlls/api-ms-win-core-winrt-
-# | 	error-l1-1-1/api-ms-win-core-winrt-error-l1-1-1.spec, dlls/api-ms-win-core-winrt-l1-1-0/Makefile.in, dlls/api-ms-win-
-# | 	core-winrt-l1-1-0/api-ms-win-core-winrt-l1-1-0.spec, dlls/api-ms-win-core-xstate-l2-1-0/Makefile.in, dlls/api-ms-win-
-# | 	core-xstate-l2-1-0/api-ms-win-core-xstate-l2-1-0.spec, tools/make_specfiles
+# |   *	configure.ac, dlls/api-ms-win-core-datetime-l1-1-0/Makefile.in, dlls/api-ms-win-core-datetime-l1-1-0/api-ms-win-core-
+# | 	datetime-l1-1-0.spec, dlls/api-ms-win-core-datetime-l1-1-1/Makefile.in, dlls/api-ms-win-core-datetime-l1-1-1/api-ms-win-
+# | 	core-datetime-l1-1-1.spec, dlls/api-ms-win-core-fibers-l1-1-0/Makefile.in, dlls/api-ms-win-core-fibers-l1-1-0/api-ms-
+# | 	win-core-fibers-l1-1-0.spec, dlls/api-ms-win-core-fibers-l1-1-1/Makefile.in, dlls/api-ms-win-core-fibers-l1-1-1/api-ms-
+# | 	win-core-fibers-l1-1-1.spec, dlls/api-ms-win-core-file-l2-1-0/Makefile.in, dlls/api-ms-win-core-file-l2-1-0/api-ms-win-
+# | 	core-file-l2-1-0.spec, dlls/api-ms-win-core-localization-l1-2-1/Makefile.in, dlls/api-ms-win-core-localization-l1-2-1
+# | 	/api-ms-win-core-localization-l1-2-1.spec, dlls/api-ms-win-core-winrt-error-l1-1-1/Makefile.in, dlls/api-ms-win-core-
+# | 	winrt-error-l1-1-1/api-ms-win-core-winrt-error-l1-1-1.spec, dlls/api-ms-win-core-winrt-l1-1-0/Makefile.in, dlls/api-ms-
+# | 	win-core-winrt-l1-1-0/api-ms-win-core-winrt-l1-1-0.spec, dlls/api-ms-win-core-xstate-l2-1-0/Makefile.in, dlls/api-ms-
+# | 	win-core-xstate-l2-1-0/api-ms-win-core-xstate-l2-1-0.spec, tools/make_specfiles
 # |
 .INTERMEDIATE: api-ms-win-core-Stubs.ok
 api-ms-win-core-Stubs.ok:
-	$(call APPLY_FILE,api-ms-win-core-Stubs/0001-api-ms-win-core-fibers-l1-1-1-Add-dll.patch)
-	$(call APPLY_FILE,api-ms-win-core-Stubs/0002-api-ms-win-core-file-l2-1-0-Add-dll.patch)
-	$(call APPLY_FILE,api-ms-win-core-Stubs/0003-api-ms-win-core-localization-l1-2-1-Add-dll.patch)
-	$(call APPLY_FILE,api-ms-win-core-Stubs/0004-api-ms-win-core-datetime-l1-1-1-Add-stub-dll.patch)
-	$(call APPLY_FILE,api-ms-win-core-Stubs/0005-api-ms-win-core-xstate-l2-1-0-Add-stub-dll.patch)
-	$(call APPLY_FILE,api-ms-win-core-Stubs/0006-api-ms-win-core-winrt-l1-1-0-Add-stub-dll.patch)
-	$(call APPLY_FILE,api-ms-win-core-Stubs/0007-api-ms-win-core-winrt-error-l1-1-1-Add-stub-dll.patch)
+	$(call APPLY_FILE,api-ms-win-core-Stubs/0001-api-ms-win-core-fibers-l1-1-0-Add-dll.patch)
+	$(call APPLY_FILE,api-ms-win-core-Stubs/0002-api-ms-win-core-fibers-l1-1-1-Add-dll.patch)
+	$(call APPLY_FILE,api-ms-win-core-Stubs/0003-api-ms-win-core-file-l2-1-0-Add-dll.patch)
+	$(call APPLY_FILE,api-ms-win-core-Stubs/0004-api-ms-win-core-localization-l1-2-1-Add-dll.patch)
+	$(call APPLY_FILE,api-ms-win-core-Stubs/0005-api-ms-win-core-datetime-l1-1-0-Add-dll.patch)
+	$(call APPLY_FILE,api-ms-win-core-Stubs/0006-api-ms-win-core-datetime-l1-1-1-Add-stub-dll.patch)
+	$(call APPLY_FILE,api-ms-win-core-Stubs/0007-api-ms-win-core-xstate-l2-1-0-Add-stub-dll.patch)
+	$(call APPLY_FILE,api-ms-win-core-Stubs/0008-api-ms-win-core-winrt-l1-1-0-Add-stub-dll.patch)
+	$(call APPLY_FILE,api-ms-win-core-Stubs/0009-api-ms-win-core-winrt-error-l1-1-1-Add-stub-dll.patch)
 	@( \
+		echo '+    { "Michael Müller", "api-ms-win-core-fibers-l1-1-0: Add dll.", 1 },'; \
 		echo '+    { "Michael Müller", "api-ms-win-core-fibers-l1-1-1: Add dll.", 1 },'; \
 		echo '+    { "Michael Müller", "api-ms-win-core-file-l2-1-0: Add dll.", 1 },'; \
 		echo '+    { "Michael Müller", "api-ms-win-core-localization-l1-2-1: Add dll.", 1 },'; \
+		echo '+    { "Michael Müller", "api-ms-win-core-datetime-l1-1-0: Add dll.", 1 },'; \
 		echo '+    { "Michael Müller", "api-ms-win-core-datetime-l1-1-1: Add stub dll.", 1 },'; \
 		echo '+    { "Michael Müller", "api-ms-win-core-xstate-l2-1-0: Add stub dll.", 1 },'; \
 		echo '+    { "Michael Müller", "api-ms-win-core-winrt-l1-1-0: Add stub dll.", 1 },'; \

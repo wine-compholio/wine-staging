@@ -589,7 +589,8 @@ iphlpapi-TCP_Table.ok:
 # |   *	[#36073] Support for GetFinalPathNameByHandle
 # |
 # | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/kernel32/kernel32.spec, dlls/kernel32/tests/file.c, include/fileapi.h
+# |   *	dlls/api-ms-win-core-file-l1-2-0/api-ms-win-core-file-l1-2-0.spec, dlls/kernel32/file.c, dlls/kernel32/kernel32.spec,
+# | 	dlls/kernel32/tests/file.c, include/fileapi.h
 # |
 .INTERMEDIATE: kernel32-GetFinalPathNameByHandle.ok
 kernel32-GetFinalPathNameByHandle.ok:
@@ -900,7 +901,8 @@ ntdll-Heap_FreeLists.ok:
 # |   *	[#12401] Support for Junction Points
 # |
 # | Modified files:
-# |   *	dlls/kernel32/path.c, dlls/kernel32/volume.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/ntifs.h
+# |   *	dlls/kernel32/path.c, dlls/kernel32/volume.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/Makefile.in,
+# | 	include/ntifs.h
 # |
 .INTERMEDIATE: ntdll-Junction_Points.ok
 ntdll-Junction_Points.ok: ntdll-Fix_Free.ok
@@ -927,7 +929,7 @@ ntdll-Junction_Points.ok: ntdll-Fix_Free.ok
 # |   *	[#37449] Support for RtlDecompressBuffer
 # |
 # | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntdll/tests/rtl.c, include/winnt.h
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntdll/tests/rtl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/winnt.h
 # |
 .INTERMEDIATE: ntdll-LZNT1_Compression.ok
 ntdll-LZNT1_Compression.ok:
@@ -1069,7 +1071,7 @@ ntoskrnl-Emulator.ok: ntdll-User_Shared_Data.ok
 # |   *	[#36777] vSphere needs IoCsqInitialize
 # |
 # | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/csq.h
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/Makefile.in, include/ddk/csq.h
 # |
 .INTERMEDIATE: ntoskrnl-IoCsqInitialize.ok
 ntoskrnl-IoCsqInitialize.ok:

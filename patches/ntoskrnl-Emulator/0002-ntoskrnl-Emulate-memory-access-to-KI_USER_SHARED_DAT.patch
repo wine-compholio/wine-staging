@@ -1,4 +1,4 @@
-From 015edd2598d688bdf15ef2f647042537423b15ce Mon Sep 17 00:00:00 2001
+From 0f2b6adbefd88a3600e223774cb4aa4765815e78 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 10 Nov 2014 21:27:39 +0100
 Subject: ntoskrnl: Emulate memory access to KI_USER_SHARED_DATA on x86_64.
@@ -10,7 +10,7 @@ Subject: ntoskrnl: Emulate memory access to KI_USER_SHARED_DATA on x86_64.
  2 files changed, 273 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/ntoskrnl.exe/instr.c b/dlls/ntoskrnl.exe/instr.c
-index 05cd238..eda16f4 100644
+index 05cd238..b6da767 100644
 --- a/dlls/ntoskrnl.exe/instr.c
 +++ b/dlls/ntoskrnl.exe/instr.c
 @@ -4,6 +4,7 @@
@@ -46,13 +46,13 @@ index 05cd238..eda16f4 100644
 +#define REX_R   4
 +#define REX_W   8
 +
-+#define REGMODRM_MOD(regmodrm, rex)     ((regmodrm) >> 6)
-+#define REGMODRM_REG(regmodrm, rex)     (((regmodrm) >> 3) & 7) | (((rex) & REX_R) ? 8 : 0)
-+#define REGMODRM_RM(regmodrm, rex)      (((regmodrm) & 7) | (((rex) & REX_B) ? 8 : 0))
++#define REGMODRM_MOD( regmodrm, rex )   ((regmodrm) >> 6)
++#define REGMODRM_REG( regmodrm, rex )   (((regmodrm) >> 3) & 7) | (((rex) & REX_R) ? 8 : 0)
++#define REGMODRM_RM( regmodrm, rex )    (((regmodrm) & 7) | (((rex) & REX_B) ? 8 : 0))
 +
-+#define SIB_SS(sib, rex)        ((sib) >> 6)
-+#define SIB_INDEX(sib, rex)     (((sib) >> 3) & 7) | (((rex) & REX_R) ? 8 : 0)
-+#define SIB_BASE(sib, rex)      (((sib) & 7) | (((rex) & REX_B) ? 8 : 0))
++#define SIB_SS( sib, rex )      ((sib) >> 6)
++#define SIB_INDEX( sib, rex )   (((sib) >> 3) & 7) | (((rex) & REX_R) ? 8 : 0)
++#define SIB_BASE( sib, rex )    (((sib) & 7) | (((rex) & REX_B) ? 8 : 0))
 +
 +#define KI_USER_SHARED_DATA 0xfffff78000000000
 +extern void* CDECL __wine_user_shared_data(void);
@@ -75,7 +75,7 @@ index 05cd238..eda16f4 100644
 +/* store an operand into a register */
 +static void store_reg_word( CONTEXT *context, BYTE regmodrm, const BYTE *addr, int long_op, int rex )
 +{
-+    int index = REGMODRM_REG(regmodrm, rex);
++    int index = REGMODRM_REG( regmodrm, rex );
 +    BYTE *reg = (BYTE *)get_int_reg( context, index );
 +    memcpy( reg, addr, get_op_size( long_op, rex ) );
 +}
@@ -83,7 +83,7 @@ index 05cd238..eda16f4 100644
 +/* store an operand into a byte register */
 +static void store_reg_byte( CONTEXT *context, BYTE regmodrm, const BYTE *addr, int rex )
 +{
-+    int index = REGMODRM_REG(regmodrm, rex);
++    int index = REGMODRM_REG( regmodrm, rex );
 +    BYTE *reg = (BYTE *)get_int_reg( context, index );
 +    if (!rex && index >= 4 && index < 8) reg -= (4 * sizeof(DWORD64) - 1); /* special case: ah, ch, dh, bh */
 +    *reg = *addr;
@@ -100,13 +100,13 @@ index 05cd238..eda16f4 100644
 +    int mod, rm, ss = 0, off, have_sib = 0;
 +    DWORD64 base = 0, index = 0;
 +
-+#define GET_VAL(val,type) \
++#define GET_VAL( val, type ) \
 +    { *val = *(type *)instr; instr += sizeof(type); *len += sizeof(type); }
 +
 +    *len = 0;
 +    GET_VAL( &mod, BYTE );
-+    rm  = REGMODRM_RM(mod, rex);
-+    mod = REGMODRM_MOD(mod, rex);
++    rm  = REGMODRM_RM( mod, rex );
++    mod = REGMODRM_MOD( mod, rex );
 +
 +    if (mod == 3)
 +        return (BYTE *)get_int_reg( context, rm );
@@ -117,9 +117,9 @@ index 05cd238..eda16f4 100644
 +        int id;
 +
 +        GET_VAL( &sib, BYTE );
-+        rm = SIB_BASE(sib, rex);
-+        id = SIB_INDEX(sib, rex);
-+        ss = SIB_SS(sib, rex);
++        rm = SIB_BASE( sib, rex );
++        id = SIB_INDEX( sib, rex );
++        ss = SIB_SS( sib, rex );
 +
 +        index = (id != 4) ? *get_int_reg( context, id ) : 0;
 +        if (!long_addr) index &= 0xffffffff;

@@ -832,7 +832,7 @@ ntdll-Exception.ok:
 ntdll-FD_Cache.ok:
 	$(call APPLY_FILE,ntdll-FD_Cache/0001-ntdll-Use-lockfree-implementation-for-get_cached_fd.patch)
 	@( \
-		echo '+    { "Sebastian Lackner", "ntdll: Use lockfree implementation for get_cached_fd.", 4 },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: Use lockfree implementation for get_cached_fd.", 5 },'; \
 	) > ntdll-FD_Cache.ok
 
 # Patchset ntdll-FileDispositionInformation

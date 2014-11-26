@@ -1,17 +1,17 @@
-From d1fa972e77cab4a5529631371dff0c80a04a8ad5 Mon Sep 17 00:00:00 2001
+From 2a47807bf3928c7827fbc32e87d4c964bc9fbf7c Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
-Date: Sat, 31 May 2014 21:02:04 +0200
-Subject: ntdll: Use lockfree implementation for get_cached_fd. (try 4)
+Date: Wed, 26 Nov 2014 09:03:17 +0100
+Subject: ntdll: Use lockfree implementation for get_cached_fd. (try 5)
 
 ---
- dlls/ntdll/server.c |   50 ++++++++++++++++++++++++++++++++++++++++++++++----
- 1 file changed, 46 insertions(+), 4 deletions(-)
+ dlls/ntdll/server.c | 73 ++++++++++++++++++++++++++++++++++++++++++++++++++---
+ 1 file changed, 69 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
-index f3c6b38..75988ec 100644
+index aabda4f..be90cde 100644
 --- a/dlls/ntdll/server.c
 +++ b/dlls/ntdll/server.c
-@@ -73,6 +73,8 @@
+@@ -75,6 +75,8 @@
  
  #include "ntstatus.h"
  #define WIN32_NO_STATUS
@@ -20,18 +20,60 @@ index f3c6b38..75988ec 100644
  #include "wine/library.h"
  #include "wine/server.h"
  #include "wine/debug.h"
-@@ -795,6 +797,10 @@ struct fd_cache_entry
+@@ -789,6 +791,7 @@ static int receive_fd( obj_handle_t *handle )
+ /***********************************************************************/
+ /* fd cache support */
+ 
++#include "pshpack1.h"
+ struct fd_cache_entry
+ {
+     int fd;
+@@ -796,6 +799,7 @@ struct fd_cache_entry
+     unsigned int        access : 3;
      unsigned int        options : 24;
  };
++#include "poppack.h"
  
-+#if !defined(__powerpc__)
-+C_ASSERT( sizeof(struct fd_cache_entry) == sizeof(LONG64) );
-+#endif
-+
  #define FD_CACHE_BLOCK_SIZE  (65536 / sizeof(struct fd_cache_entry))
  #define FD_CACHE_ENTRIES     128
+@@ -810,6 +814,36 @@ static inline unsigned int handle_to_index( HANDLE handle, unsigned int *entry )
+     return idx % FD_CACHE_BLOCK_SIZE;
+ }
  
-@@ -818,7 +824,6 @@ static BOOL add_fd_to_cache( HANDLE handle, int fd, enum server_fd_type type,
++#if !defined(__powerpc__)
++
++static inline LONG64 interlocked_xchg64( LONG64 *dest, LONG64 val )
++{
++#ifdef _WIN64
++    return (LONG64)interlocked_xchg_ptr( (void **)dest, (void *)val );
++#else
++    LONG64 cmp = *dest;
++    while (interlocked_cmpxchg64( dest, val, cmp ) != cmp) cmp = *dest;
++    return cmp;
++#endif
++}
++
++C_ASSERT( sizeof(struct fd_cache_entry) == sizeof(LONG64) );
++
++/* atomically updates a fd cache entry and fetches the old value */
++static inline void interlocked_xchg_fd_cache( struct fd_cache_entry *cache,
++                                              struct fd_cache_entry *val )
++{
++    *(LONG64 *)val = interlocked_xchg64( (LONG64 *)cache, *(LONG64 *)val );
++}
++
++/* atomically reads a fd cache entry */
++static inline void interlocked_read_fd_cache( struct fd_cache_entry *cache,
++                                              struct fd_cache_entry *val )
++{
++    *(LONG64 *)val = interlocked_cmpxchg64( (LONG64 *)cache, 0, 0 );
++}
++
++#endif /* !defined(__powerpc__) */
+ 
+ /***********************************************************************
+  *           add_fd_to_cache
+@@ -820,7 +854,6 @@ static BOOL add_fd_to_cache( HANDLE handle, int fd, enum server_fd_type type,
                              unsigned int access, unsigned int options )
  {
      unsigned int entry, idx = handle_to_index( handle, &entry );
@@ -39,7 +81,7 @@ index f3c6b38..75988ec 100644
  
      if (entry >= FD_CACHE_ENTRIES)
      {
-@@ -837,12 +842,31 @@ static BOOL add_fd_to_cache( HANDLE handle, int fd, enum server_fd_type type,
+@@ -839,12 +872,26 @@ static BOOL add_fd_to_cache( HANDLE handle, int fd, enum server_fd_type type,
              fd_cache[entry] = ptr;
          }
      }
@@ -48,32 +90,27 @@ index f3c6b38..75988ec 100644
      /* store fd+1 so that 0 can be used as the unset value */
 -    prev_fd = interlocked_xchg( &fd_cache[entry][idx].fd, fd + 1 ) - 1;
 +    fd = interlocked_xchg( &fd_cache[entry][idx].fd, fd + 1 );
-+    assert( !fd );
      fd_cache[entry][idx].type = type;
      fd_cache[entry][idx].access = access;
      fd_cache[entry][idx].options = options;
 -    if (prev_fd != -1) close( prev_fd );
++    assert( !fd );
 +#else
 +    {
-+        struct fd_cache_entry old_cache, new_cache;
-+
++        struct fd_cache_entry cache;
 +        /* store fd+1 so that 0 can be used as the unset value */
-+        new_cache.fd = fd + 1;
-+        new_cache.type = type;
-+        new_cache.access = access;
-+        new_cache.options = options;
-+
-+        /* we're holding the lock and have checked the content before, so the cache always contains the latest value */
-+        old_cache = fd_cache[entry][idx];
-+        assert( !old_cache.fd );
-+        *(LONG64 *)&new_cache = interlocked_cmpxchg64( (LONG64 *)&fd_cache[entry][idx], *(LONG64 *)&new_cache, *(LONG64 *)&old_cache );
-+        assert( !memcmp(&old_cache, &new_cache, sizeof(struct fd_cache_entry)) );
++        cache.fd = fd + 1;
++        cache.type = type;
++        cache.access = access;
++        cache.options = options;
++        interlocked_xchg_fd_cache( &fd_cache[entry][idx], &cache );
++        assert( !cache.fd );
 +    }
 +#endif
      return TRUE;
  }
  
-@@ -850,7 +874,7 @@ static BOOL add_fd_to_cache( HANDLE handle, int fd, enum server_fd_type type,
+@@ -852,7 +899,7 @@ static BOOL add_fd_to_cache( HANDLE handle, int fd, enum server_fd_type type,
  /***********************************************************************
   *           get_cached_fd
   *
@@ -82,7 +119,7 @@ index f3c6b38..75988ec 100644
   */
  static inline int get_cached_fd( HANDLE handle, enum server_fd_type *type,
                                   unsigned int *access, unsigned int *options )
-@@ -860,10 +884,19 @@ static inline int get_cached_fd( HANDLE handle, enum server_fd_type *type,
+@@ -862,10 +909,19 @@ static inline int get_cached_fd( HANDLE handle, enum server_fd_type *type,
  
      if (entry < FD_CACHE_ENTRIES && fd_cache[entry])
      {
@@ -93,7 +130,7 @@ index f3c6b38..75988ec 100644
          if (options) *options = fd_cache[entry][idx].options;
 +    #else
 +        struct fd_cache_entry cache;
-+        *(LONG64 *)&cache = interlocked_cmpxchg64( (LONG64 *)&fd_cache[entry][idx], 0, 0 );
++        interlocked_read_fd_cache( &fd_cache[entry][idx], &cache );
 +        fd = cache.fd - 1;
 +        if (type) *type = cache.type;
 +        if (access) *access = cache.access;
@@ -102,7 +139,7 @@ index f3c6b38..75988ec 100644
      }
      return fd;
  }
-@@ -901,6 +934,11 @@ int server_get_unix_fd( HANDLE handle, unsigned int wanted_access, int *unix_fd,
+@@ -903,6 +959,11 @@ int server_get_unix_fd( HANDLE handle, unsigned int wanted_access, int *unix_fd,
      *needs_close = 0;
      wanted_access &= FILE_READ_DATA | FILE_WRITE_DATA | FILE_APPEND_DATA;
  
@@ -114,7 +151,7 @@ index f3c6b38..75988ec 100644
      server_enter_uninterrupted_section( &fd_cache_section, &sigset );
  
      fd = get_cached_fd( handle, type, &access, options );
-@@ -928,6 +966,10 @@ int server_get_unix_fd( HANDLE handle, unsigned int wanted_access, int *unix_fd,
+@@ -930,6 +991,10 @@ int server_get_unix_fd( HANDLE handle, unsigned int wanted_access, int *unix_fd,
  
  done:
      server_leave_uninterrupted_section( &fd_cache_section, &sigset );
@@ -126,5 +163,5 @@ index f3c6b38..75988ec 100644
      {
          ret = STATUS_ACCESS_DENIED;
 -- 
-1.7.9.5
+2.1.3
 

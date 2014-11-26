@@ -69,6 +69,7 @@ PATCHLIST := \
 	ntdll-NtSetLdtEntries.ok \
 	ntdll-Pipe_SpecialCharacters.ok \
 	ntdll-ThreadTime.ok \
+	ntdll-User_Shared_Data.ok \
 	ntdll-WRITECOPY.ok \
 	ntoskrnl-Emulator.ok \
 	ntoskrnl-IoCsqInitialize.ok \
@@ -1006,6 +1007,18 @@ ntdll-ThreadTime.ok:
 		echo '+    { "Sebastian Lackner", "ntdll: Return correct values in GetThreadTimes() for all threads.", 1 },'; \
 	) > ntdll-ThreadTime.ok
 
+# Patchset ntdll-User_Shared_Data
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/thread.c
+# |
+.INTERMEDIATE: ntdll-User_Shared_Data.ok
+ntdll-User_Shared_Data.ok:
+	$(call APPLY_FILE,ntdll-User_Shared_Data/0001-ntdll-Move-code-to-update-user-shared-data-into-a-se.patch)
+	@( \
+		echo '+    { "Sebastian Lackner", "ntdll: Move code to update user shared data into a separate function.", 1 },'; \
+	) > ntdll-User_Shared_Data.ok
+
 # Patchset ntdll-WRITECOPY
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1040,13 +1053,13 @@ ntdll-WRITECOPY.ok:
 # |   *	dlls/ntoskrnl.exe/instr.c, dlls/ntoskrnl.exe/ntoskrnl.c
 # |
 .INTERMEDIATE: ntoskrnl-Emulator.ok
-ntoskrnl-Emulator.ok:
+ntoskrnl-Emulator.ok: ntdll-User_Shared_Data.ok
 	$(call APPLY_FILE,ntoskrnl-Emulator/0001-ntoskrnl-Emulate-mov-Eb-Gb-instruction-on-x86-proces.patch)
 	$(call APPLY_FILE,ntoskrnl-Emulator/0002-ntoskrnl-Emulate-memory-access-to-KI_USER_SHARED_DAT.patch)
 	$(call APPLY_FILE,ntoskrnl-Emulator/0003-ntoskrnl-Add-TRACEs-for-instruction-emulator-on-x86_.patch)
 	@( \
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Emulate '\''mov Eb, Gb'\'' instruction on x86 processor architecture.", 1 },'; \
-		echo '+    { "Sebastian Lackner", "ntoskrnl: Emulate memory access to KI_USER_SHARED_DATA on x86_64.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "ntoskrnl: Emulate memory access to KI_USER_SHARED_DATA on x86_64.", 2 },'; \
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Add TRACEs for instruction emulator on x86_64 to simplify debugging.", 1 },'; \
 	) > ntoskrnl-Emulator.ok
 

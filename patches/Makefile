@@ -1636,6 +1636,7 @@ winebuild-LinkerVersion.ok:
 # | This patchset fixes the following Wine bugs:
 # |   *	[#25486] Lego Stunt Rally requires DXTn software de/encoding support
 # |   *	[#29586] Tumblebugs 2 requires DXTn software encoding support
+# |   *	[#14939] Black & White needs DXTn software decoding support
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d/Makefile.in, dlls/wined3d/dxtn.c, dlls/wined3d/surface.c, dlls/wined3d/wined3d.spec,
@@ -1645,9 +1646,11 @@ winebuild-LinkerVersion.ok:
 wined3d-DXTn.ok:
 	$(call APPLY_FILE,wined3d-DXTn/0001-wined3d-Add-support-for-DXTn-software-decoding-throu.patch)
 	$(call APPLY_FILE,wined3d-DXTn/0002-wined3d-Improve-DXTn-support-and-export-conversion-f.patch)
+	$(call APPLY_FILE,wined3d-DXTn/0003-wined3d-add-DXT1-to-B4G4R4A4-DXT1-to-B5G5R5A1-and-DX.patch)
 	@( \
 		echo '+    { "Michael Müller", "wined3d: Add support for DXTn software decoding through libtxc_dxtn.", 1 },'; \
 		echo '+    { "Christian Costa", "wined3d: Improve DXTn support and export conversion functions for d3dx9_36.", 1 },'; \
+		echo '+    { "Michael Müller", "wined3d: add DXT1 to B4G4R4A4, DXT1 to B5G5R5A1 and DXT3 to B4G4R4A4 conversion.", 1 },'; \
 	) > wined3d-DXTn.ok
 
 # Patchset wined3d-FFP_Fog

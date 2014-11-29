@@ -231,16 +231,23 @@ Pipelight.ok:
 # |
 # | Modified files:
 # |   *	dlls/kernel32/process.c, dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec, include/wine/library.h, libs/wine/Makefile.in,
-# | 	libs/wine/config.c, libs/wine/loader.c, libs/wine/wine.def, libs/wine/wine.map, loader/main.c
+# | 	libs/wine/config.c, libs/wine/loader.c, libs/wine/wine.def, libs/wine/wine.map, loader/main.c, po/ar.po, po/bg.po,
+# | 	po/ca.po, po/cs.po, po/da.po, po/de.po, po/el.po, po/en.po, po/en_US.po, po/eo.po, po/es.po, po/fa.po, po/fi.po,
+# | 	po/fr.po, po/he.po, po/hi.po, po/hr.po, po/hu.po, po/it.po, po/ja.po, po/ko.po, po/lt.po, po/ml.po, po/nb_NO.po,
+# | 	po/nl.po, po/or.po, po/pa.po, po/pl.po, po/pt_BR.po, po/pt_PT.po, po/rm.po, po/ro.po, po/ru.po, po/sk.po, po/sl.po,
+# | 	po/sr_RS@cyrillic.po, po/sr_RS@latin.po, po/sv.po, po/te.po, po/th.po, po/tr.po, po/uk.po, po/wa.po, po/wine.pot,
+# | 	po/zh_CN.po, po/zh_TW.po, programs/winedbg/winedbg.rc
 # |
 .INTERMEDIATE: Staging.ok
 Staging.ok:
 	$(call APPLY_FILE,Staging/0001-kernel32-Add-winediag-message-to-show-warning-that-t.patch)
-	$(call APPLY_FILE,Staging/0002-winelib-Append-Staging-at-the-end-of-the-version-s.patch)
-	$(call APPLY_FILE,Staging/0003-loader-Add-commandline-option-patches-to-show-the-pa.patch)
-	$(call APPLY_FILE,Staging/0004-loader-Add-commandline-option-check-libs.patch)
+	$(call APPLY_FILE,Staging/0002-winedbg-Change-bug-reporting-URL-to-Wine-Staging.patch)
+	$(call APPLY_FILE,Staging/0003-winelib-Append-Staging-at-the-end-of-the-version-s.patch)
+	$(call APPLY_FILE,Staging/0004-loader-Add-commandline-option-patches-to-show-the-pa.patch)
+	$(call APPLY_FILE,Staging/0005-loader-Add-commandline-option-check-libs.patch)
 	@( \
 		echo '+    { "Sebastian Lackner", "kernel32: Add winediag message to show warning, that this isn'\''t vanilla wine.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "winedbg: Change bug reporting URL to Wine Staging.", 1 },'; \
 		echo '+    { "Sebastian Lackner", "winelib: Append '\''(Staging)'\'' at the end of the version string.", 1 },'; \
 		echo '+    { "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list.", 1 },'; \
 		echo '+    { "Michael Müller", "loader: Add commandline option --check-libs.", 1 },'; \

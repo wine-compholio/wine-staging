@@ -121,6 +121,7 @@ PATCHLIST := \
 	wintrust-Reset_hFile.ok \
 	wpcap-Dynamic_Linking.ok \
 	ws2_32-Connect_Time.ok \
+	ws2_32-Overlapping_FDS.ok \
 	ws2_32-TransmitFile.ok \
 	ws2_32-WriteWatches.ok \
 	wtsapi32-EnumerateProcesses.ok
@@ -1936,6 +1937,20 @@ ws2_32-Connect_Time.ok:
 	@( \
 		echo '+    { "Sebastian Lackner", "ws2_32: Implement returning the proper time with SO_CONNECT_TIME.", 1 },'; \
 	) > ws2_32-Connect_Time.ok
+
+# Patchset ws2_32-Overlapping_FDS
+# |
+# | Modified files:
+# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c
+# |
+.INTERMEDIATE: ws2_32-Overlapping_FDS.ok
+ws2_32-Overlapping_FDS.ok:
+	$(call APPLY_FILE,ws2_32-Overlapping_FDS/0001-ws2_32-tests-Fix-several-copy-and-paste-errors.patch)
+	$(call APPLY_FILE,ws2_32-Overlapping_FDS/0002-ws2_32-Improve-implementation-of-get_poll_results.patch)
+	@( \
+		echo '+    { "Sebastian Lackner", "ws2_32/tests: Fix several copy and paste errors.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "ws2_32: Improve implementation of get_poll_results.", 1 },'; \
+	) > ws2_32-Overlapping_FDS.ok
 
 # Patchset ws2_32-TransmitFile
 # |

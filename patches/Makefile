@@ -122,6 +122,7 @@ PATCHLIST := \
 	wintrust-Reset_hFile.ok \
 	wpcap-Dynamic_Linking.ok \
 	ws2_32-Connect_Time.ok \
+	ws2_32-IP_Ordering.ok \
 	ws2_32-Overlapping_FDS.ok \
 	ws2_32-TransmitFile.ok \
 	ws2_32-WriteWatches.ok \
@@ -1960,6 +1961,18 @@ ws2_32-Connect_Time.ok:
 	@( \
 		echo '+    { "Sebastian Lackner", "ws2_32: Implement returning the proper time with SO_CONNECT_TIME.", 1 },'; \
 	) > ws2_32-Connect_Time.ok
+
+# Patchset ws2_32-IP_Ordering
+# |
+# | Modified files:
+# |   *	dlls/ws2_32/socket.c
+# |
+.INTERMEDIATE: ws2_32-IP_Ordering.ok
+ws2_32-IP_Ordering.ok:
+	$(call APPLY_FILE,ws2_32-IP_Ordering/0001-ws2_32-WS_get_local_ips-Fix-ordering-of-IP-addresses.patch)
+	@( \
+		echo '+    { "Joachim Priesner", "ws2_32: WS_get_local_ips: Fix ordering of IP addresses by metric if two addresses have the same metric.", 2 },'; \
+	) > ws2_32-IP_Ordering.ok
 
 # Patchset ws2_32-Overlapping_FDS
 # |

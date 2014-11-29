@@ -19,24 +19,31 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 #
 
+import binascii
+import cPickle as pickle
 import hashlib
 import itertools
+import math
+import multiprocessing.pool
 import operator
 import os
 import patchutils
-import pickle
+import progressbar
 import re
+import signal
 import subprocess
+import sys
+import tempfile
 import textwrap
+
+_devnull = open(os.devnull, 'wb')
 
 # Cached information to speed up patch dependency checks
 latest_wine_commit  = None
 cached_patch_result = {}
-cached_original_src = {}
 
 class config(object):
-    path_depcache           = ".depcache"
-    path_srccache           = ".srccache"
+    path_depcache           = ".patchupdate.cache"
 
     path_patches            = "patches"
     path_changelog          = "debian/changelog"
@@ -82,6 +89,22 @@ def _unique(iterable, key=None):
     # _unique('ABBCcAD', str.lower) --> A B C A D
     return itertools.imap(next, itertools.imap(operator.itemgetter(1), itertools.groupby(iterable, key)))
 
+def _split_seq(iterable, size):
+    """Split an iterator into chunks of a given size."""
+    it = iter(iterable)
+    items = list(itertools.islice(it, size))
+    while items:
+        yield items
+        items = list(itertools.islice(it, size))
+
+def _merge_seq(iterable, callback=None):
+    """Merge lists/iterators into a new one. Call callback after each chunk"""
+    for i, items in enumerate(iterable):
+        if callback is not None:
+            callback(i)
+        for obj in items:
+            yield obj
+
 def _escape(s):
     """Escape string inside of '...' quotes."""
     return s.replace("\\", "\\\\\\\\").replace("\"", "\\\"").replace("'", "'\\''")
@@ -99,7 +122,17 @@ def _save_dict(filename, value):
     with open(filename, "wb") as fp:
         pickle.dump(value, fp, pickle.HIGHEST_PROTOCOL)
 
-def parse_int(val, default=0):
+def _sha256(fp):
+    """Calculate sha256sum from a file descriptor."""
+    m = hashlib.sha256()
+    fp.seek(0)
+    while True:
+        buf = fp.read(16384)
+        if buf == "": break
+        m.update(buf)
+    return m.digest()
+
+def _parse_int(val, default=0):
     """Parse an integer or boolean value."""
     r = re.match("^[0-9]+$", val)
     if r:
@@ -109,21 +142,21 @@ def parse_int(val, default=0):
     except AttributeError:
         return default
 
-# Read information from changelog
 def _read_changelog():
+    """Read information from changelog."""
     with open(config.path_changelog) as fp:
         for line in fp:
             r = re.match("^([a-zA-Z0-9][^(]*)\((.*)\) ([^;]*)", line)
             if r: yield (r.group(1).strip(), r.group(2).strip(), r.group(3).strip())
 
-# Get version number of the latest stable release
 def _stable_compholio_version():
+    """Get version number of the latest stable release."""
     for package, version, distro in _read_changelog():
         if distro.lower() != "unreleased":
             return version
 
-# Get latest wine commit
 def _latest_wine_commit():
+    """Get latest wine commit."""
     if not os.path.isdir(config.path_wine):
         raise PatchUpdaterError("Please create a symlink to the wine repository in %s" % config.path_wine)
     commit = subprocess.check_output(["git", "rev-parse", "origin/master"], cwd=config.path_wine).strip()
@@ -149,8 +182,7 @@ def enum_directories(revision, path):
     else:
         filename = "%s:%s" % (revision, path)
         try:
-            with open(os.devnull, 'w') as devnull:
-                content = subprocess.check_output(["git", "show", filename], stderr=devnull)
+            content = subprocess.check_output(["git", "show", filename], stderr=_devnull)
         except subprocess.CalledProcessError as e:
             if e.returncode != 128: raise
             return [] # ignore error
@@ -166,7 +198,6 @@ def enum_directories(revision, path):
 
 def read_definition(revision, filename, name_to_id):
     """Read a definition file and return information as tuple (depends, fixes)."""
-
     filename = os.path.join(filename, "definition")
     if revision is None:
         with open(filename) as fp:
@@ -174,8 +205,7 @@ def read_definition(revision, filename, name_to_id):
     else:
         filename = "%s:%s" % (revision, filename)
         try:
-            with open(os.devnull, 'w') as devnull:
-                content = subprocess.check_output(["git", "show", filename], stderr=devnull)
+            content = subprocess.check_output(["git", "show", filename], stderr=_devnull)
         except subprocess.CalledProcessError:
             raise IOError("Failed to load %s" % filename)
 
@@ -186,18 +216,15 @@ def read_definition(revision, filename, name_to_id):
     for line in content.split("\n"):
         if line.startswith("#"):
             continue
-
         tmp = line.split(":", 1)
         if len(tmp) != 2:
             continue
-
         key, val = tmp[0].lower(), tmp[1].strip()
         if key == "depends":
             if name_to_id is not None:
                 if not name_to_id.has_key(val):
                     raise PatchUpdaterError("Definition file %s references unknown dependency %s" % (filename, val))
                 depends.add(name_to_id[val])
-
         elif key == "fixes":
             r = re.match("^[0-9]+$", val)
             if r:
@@ -208,10 +235,8 @@ def read_definition(revision, filename, name_to_id):
                 fixes.append((int(r.group(1)), r.group(2).strip()))
                 continue
             fixes.append((None, val))
-
         elif key == "disabled":
-            disabled = parse_int(val)
-
+            disabled = _parse_int(val)
         elif revision is None:
             print "WARNING: Ignoring unknown command in definition file %s: %s" % (filename, line)
 
@@ -219,7 +244,6 @@ def read_definition(revision, filename, name_to_id):
 
 def read_patchset(revision = None):
     """Read information about all patchsets for a specific revision."""
-
     unique_id   = itertools.count()
     all_patches = {}
     name_to_id  = {}
@@ -285,15 +309,12 @@ def causal_time_relation_any(all_patches, indices):
             return False
     return True
 
-def causal_time_permutations(all_patches, indices, filename):
+def causal_time_permutations(all_patches, indices):
     """Iterate over all possible permutations of patches affecting
        a specific file, which are compatible with dependencies."""
     for permutation in itertools.permutations(indices):
         if causal_time_relation(all_patches, permutation):
-            selected_patches = []
-            for i in permutation:
-                selected_patches += [patch for patch in all_patches[i].patches if patch.modified_file == filename]
-            yield selected_patches
+            yield permutation
 
 def contains_binary_patch(all_patches, indices, filename):
     """Checks if any patch with given indices affecting filename is a binary patch."""
@@ -303,30 +324,43 @@ def contains_binary_patch(all_patches, indices, filename):
                 return True
     return False
 
-def get_wine_file(filename, force=False):
+def get_wine_file(filename):
     """Return the hash and optionally the content of a file."""
-
-    # If we're not forced, we try to save time and only lookup the cached checksum
-    entry = "%s:%s" % (latest_wine_commit, filename)
-    if not force and cached_original_src.has_key(entry):
-        return (cached_original_src[entry], None)
-
-    # Grab original file from the wine git repository
+    entry  = "%s:%s" % (latest_wine_commit, filename)
+    result = tempfile.NamedTemporaryFile()
     try:
-        with open(os.devnull, 'w') as devnull:
-            content = subprocess.check_output(["git", "show", entry], cwd=config.path_wine, stderr=devnull)
+        content = subprocess.check_call(["git", "show", entry], cwd=config.path_wine, \
+                                        stdout=result, stderr=_devnull)
     except subprocess.CalledProcessError as e:
         if e.returncode != 128: raise
-        content = ""
+    result.flush() # shouldn't be necessary because the subprocess writes directly to the fd
+    return result
 
-    content_hash = hashlib.sha256(content).digest()
-    cached_original_src[entry] = content_hash
-    return (content_hash, content)
+def select_patches(all_patches, indices, filename):
+    """Create a temporary patch file for each patchset and calculate the checksum."""
+    selected_patches = {}
 
-def verify_patch_order(all_patches, indices, filename):
+    for i in indices:
+        p = tempfile.NamedTemporaryFile()
+        m = hashlib.sha256()
+
+        for patch in all_patches[i].patches:
+            if patch.modified_file != filename:
+                continue
+            for chunk in patch.read_chunks():
+                p.write(chunk)
+                m.update(chunk)
+            p.write("\n")
+            m.update("\n")
+
+        p.flush()
+        selected_patches[i]  = (m.digest(), p)
+
+    return selected_patches
+
+def verify_patch_order(all_patches, indices, filename, pool):
     """Checks if the dependencies are defined correctly by applying
        the patches on a (temporary) copy from the git tree."""
-    global cached_patch_result
 
     # If one of patches is a binary patch, then we cannot / won't verify it - require dependencies in this case
     if contains_binary_patch(all_patches, indices, filename):
@@ -335,55 +369,99 @@ def verify_patch_order(all_patches, indices, filename):
                                     (filename, ", ".join([all_patches[i].name for i in indices])))
         return
 
-    # Get at least the checksum of the original file
-    original_content_hash, original_content = get_wine_file(filename)
+    original_content      = get_wine_file(filename)
+    original_content_hash = _sha256(original_content)
+    selected_patches      = select_patches(all_patches, indices, filename)
+    try:
 
-    # Check for possible ways to apply the patch
-    failed_to_apply   = False
-    last_result_hash  = None
-    for patches in causal_time_permutations(all_patches, indices, filename):
-
-        # Calculate unique hash based on the original content and the order in which the patches are applied
-        m = hashlib.sha256()
-        m.update(original_content_hash)
-        for patch in patches:
-            m.update(patch.hash())
-        unique_hash = m.digest()
-
-        # Fast path -> we know that it applies properly
-        if cached_patch_result.has_key(unique_hash):
-            result_hash = cached_patch_result[unique_hash]
-            assert result_hash is not None
-
-        else:
-            # Now really get the file, if we don't have it yet
-            if original_content is None:
-                original_content_hash, original_content = get_wine_file(filename, force=True)
-
-            # Apply the patches (without fuzz)
+        def _test_apply(permutations):
+            """Tests if specific permutations of patches apply on the wine source tree."""
+            patch_stack_indices = []
+            patch_stack_patches = []
             try:
-                content = patchutils.apply_patch(original_content, patches, fuzz=0)
-            except patchutils.PatchApplyError:
-                # Remember that we failed to apply the patches, but continue, if there is still a chance
-                # that it applies in a different order (to give a better error message).
-                failed_to_apply = True
-                if last_result_hash is None:
-                    continue
-                break
 
-            # Get hash of resulting file and add to cache
-            result_hash = hashlib.sha256(content).digest()
-            cached_patch_result[unique_hash] = result_hash
+                for permutation in permutations:
 
-        # No known hash yet, remember the result. If we failed applying before, we can stop now.
-        if last_result_hash is None:
-            last_result_hash = result_hash
-            if failed_to_apply: break
+                    # Calculate hash
+                    m = hashlib.sha256()
+                    m.update(original_content_hash)
+                    for i in permutation:
+                        m.update(selected_patches[i][0])
+                    input_hash = m.digest()
 
-        # Applied successful, but result has a different hash - also treat as failure.
-        elif last_result_hash != result_hash:
-            failed_to_apply = True
-            break
+                    # Fast path -> we know that it applies properly
+                    try:
+                        yield cached_patch_result[input_hash]
+                        continue
+
+                    except KeyError:
+                        pass
+
+                    # Remove unneeded patches from patch stack
+                    while list(permutation[:len(patch_stack_indices)]) != patch_stack_indices:
+                        patch_stack_indices.pop()
+                        patch_stack_patches.pop().close()
+
+                    # Apply the patches (without fuzz)
+                    try:
+                        while len(patch_stack_indices) < len(permutation):
+                            i = permutation[len(patch_stack_indices)]
+                            original  = patch_stack_patches[-1] if len(patch_stack_indices) else original_content
+                            patchfile = selected_patches[i][1]
+                            patch_stack_patches.append(patchutils.apply_patch(original, patchfile, fuzz=0))
+                            patch_stack_indices.append(i)
+                        output_hash = _sha256(patch_stack_patches[-1])
+
+                    except patchutils.PatchApplyError:
+                        output_hash = None
+
+                    cached_patch_result[input_hash] = output_hash
+                    yield output_hash
+
+            finally:
+                # Ensure temporary files are cleaned up properly
+                while len(patch_stack_patches):
+                    patch_stack_patches.pop().close()
+
+        # Show a progress bar while applying the patches - this task might take some time
+        chunk_size  = 20
+        total_tasks = (math.factorial(len(indices)) + chunk_size - 1) / chunk_size
+        with progressbar.ProgressBar(desc=filename, total=total_tasks) as progress:
+
+            failed_to_apply   = False
+            last_result_hash  = None
+
+            # Check for possible ways to apply the patch
+            it = _split_seq(causal_time_permutations(all_patches, indices), chunk_size)
+            for output_hash in _merge_seq(pool.imap_unordered(lambda seq: list(_test_apply(seq)), it), \
+                                          callback=progress.update):
+
+                # Failed to apply patch, continue checking the rest.
+                if output_hash is None:
+                    failed_to_apply = True
+                    if last_result_hash is None:
+                        continue
+                    break
+
+                # No known hash yet, remember the result. If we failed applying before, we can stop now.
+                elif last_result_hash is None:
+                    last_result_hash = output_hash
+                    if failed_to_apply: break
+
+                # Applied successful, but result has a different hash - also treat as failure.
+                elif last_result_hash != output_hash:
+                    failed_to_apply = True
+                    break
+
+            if failed_to_apply:
+                progress.finish("<failed to apply>")
+            elif verbose:
+                progress.finish(binascii.hexlify(last_result_hash))
+
+    finally:
+        original_content.close()
+        for _, (_, p) in selected_patches.iteritems():
+            p.close()
 
     # If something failed, then show the appropriate error message.
     if failed_to_apply and last_result_hash is None:
@@ -403,14 +481,11 @@ def verify_dependencies(all_patches):
     def _load_patch_cache():
         """Load dictionary for cached patch dependency tests."""
         global cached_patch_result
-        global cached_original_src
         cached_patch_result = _load_dict(config.path_depcache)
-        cached_original_src = _load_dict(config.path_srccache)
 
     def _save_patch_cache():
         """Save dictionary for cached patch dependency tests."""
-        _save_dict(config.path_depcache, cached_patch_result)
-        _save_dict(config.path_srccache, cached_original_src)
+        _save_dict(config.path_depcache, cached_patch_result.copy())
 
     enabled_patches = dict([(i, patch) for i, patch in all_patches.iteritems() if not patch.disabled])
     max_patches     = max(enabled_patches.keys()) + 1
@@ -450,11 +525,13 @@ def verify_dependencies(all_patches):
 
     # Check if patches always apply correctly
     _load_patch_cache()
+    pool = multiprocessing.pool.ThreadPool(processes=8)
     try:
         for f, indices in modified_files.iteritems():
-            verify_patch_order(enabled_patches, indices, f)
+            verify_patch_order(enabled_patches, indices, f, pool)
     finally:
         _save_patch_cache()
+        pool.close()
 
 def generate_makefile(all_patches):
     """Generate Makefile for a specific set of patches."""
@@ -464,9 +541,9 @@ def generate_makefile(all_patches):
 
     with open(config.path_Makefile, "w") as fp:
         fp.write(template.format(patchlist="\t" + " \\\n\t".join(
-            ["%s.ok" % patch.name for i, patch in all_patches.iteritems() if not patch.disabled])))
+            ["%s.ok" % patch.name for _, patch in all_patches.iteritems() if not patch.disabled])))
 
-        for i, patch in all_patches.iteritems():
+        for _, patch in all_patches.iteritems():
             fp.write("# Patchset %s\n" % patch.name)
             fp.write("# |\n")
 
@@ -513,13 +590,13 @@ def generate_markdown(all_patches, stable_patches, stable_compholio_version):
     all_fixes  = {}
 
     # Get fixes for current version
-    for i, patch in all_patches.iteritems():
+    for _, patch in all_patches.iteritems():
         for bugid, bugname in patch.fixes:
             key = bugid if bugid is not None else bugname
             all_fixes[key] = [1, bugid, bugname]
 
     # Compare with fixes for latest stable version
-    for i, patch in stable_patches.iteritems():
+    for _, patch in stable_patches.iteritems():
         for bugid, bugname in patch.fixes:
             key = bugid if bugid is not None else bugname
             if all_fixes.has_key(key):
@@ -565,6 +642,14 @@ def generate_markdown(all_patches, stable_patches, stable_compholio_version):
         fp.write(template.format(version=stable_compholio_version))
 
 if __name__ == "__main__":
+    verbose = "-v" in sys.argv[1:]
+
+    # Hack to avoid KeyboardInterrupts on worker threads
+    def _sig_int(signum=None, frame=None):
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        raise RuntimeError("CTRL+C pressed")
+    signal.signal(signal.SIGINT, _sig_int)
+
     try:
 
         # Get information about Wine and Compholio version

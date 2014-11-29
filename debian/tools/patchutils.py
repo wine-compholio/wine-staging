@@ -19,15 +19,18 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 #
 
-import email.header
 import collections
 import difflib
+import email.header
 import hashlib
 import itertools
 import os
 import re
+import shutil
 import subprocess
 import tempfile
+
+_devnull = open(os.devnull, 'wb')
 
 class PatchParserError(RuntimeError):
     """Unable to parse patch file - either an unimplemented feature, or corrupted patch."""
@@ -44,7 +47,7 @@ class PatchObject(object):
         self.patch_subject      = header['subject']
         self.patch_revision     = header['revision'] if header.has_key('revision') else 1
 
-        self.extracted_patch    = None
+        # self.extracted_patch    = None
         self.unique_hash        = None
 
         self.filename           = filename
@@ -70,75 +73,57 @@ class PatchObject(object):
             fp.seek(self.offset_begin)
             i = self.offset_end - self.offset_begin
             while i > 0:
-                buf = fp.read(4096 if i > 4096 else i)
+                buf = fp.read(16384 if i > 16384 else i)
                 if buf == "": raise IOError("Unable to extract patch.")
                 yield buf
                 i -= len(buf)
 
-    def extract(self):
-        """Create a temporary file containing the extracted patch."""
-        if not self.extracted_patch:
-            self.extracted_patch = tempfile.NamedTemporaryFile()
-            for chunk in self.read_chunks():
-                self.extracted_patch.write(chunk)
-            self.extracted_patch.flush()
-        return self.extracted_patch
+class _FileReader(object):
+    def __init__(self, filename):
+        self.filename = filename
+        self.fp       = open(self.filename)
+        self.peeked   = None
 
-    def hash(self):
-        """Hash the content of the patch."""
-        if not self.unique_hash:
-            m = hashlib.sha256()
-            for chunk in self.read_chunks():
-                m.update(chunk)
-            self.unique_hash = m.digest()
-        return self.unique_hash
+    def close(self):
+        self.fp.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+
+    def seek(self, pos):
+        """Change the file cursor position."""
+        self.fp.seek(pos)
+        self.peeked = None
+
+    def tell(self):
+        """Return the current file cursor position."""
+        if self.peeked is None:
+            return self.fp.tell()
+        return self.peeked[0]
+
+    def peek(self):
+        """Read one line without changing the file cursor."""
+        if self.peeked is None:
+            pos = self.fp.tell()
+            tmp = self.fp.readline()
+            if len(tmp) == 0: return None
+            self.peeked = (pos, tmp)
+        return self.peeked[1]
+
+    def read(self):
+        """Read one line from the file, and move the file cursor to the next line."""
+        if self.peeked is None:
+            tmp = self.fp.readline()
+            if len(tmp) == 0: return None
+            return tmp
+        tmp, self.peeked = self.peeked, None
+        return tmp[1]
 
 def read_patch(filename):
     """Iterates over all patches contained in a file, and returns PatchObject objects."""
-
-    class _FileReader(object):
-        def __init__(self, filename):
-            self.filename = filename
-            self.fp       = open(self.filename)
-            self.peeked   = None
-
-        def close(self):
-            self.fp.close()
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, type, value, traceback):
-            self.close()
-
-        def seek(self, pos):
-            """Change the file cursor position."""
-            self.fp.seek(pos)
-            self.peeked = None
-
-        def tell(self):
-            """Return the current file cursor position."""
-            if self.peeked is None:
-                return self.fp.tell()
-            return self.peeked[0]
-
-        def peek(self):
-            """Read one line without changing the file cursor."""
-            if self.peeked is None:
-                pos = self.fp.tell()
-                tmp = self.fp.readline()
-                if len(tmp) == 0: return None
-                self.peeked = (pos, tmp)
-            return self.peeked[1]
-
-        def read(self):
-            """Read one line from the file, and move the file cursor to the next line."""
-            if self.peeked is None:
-                tmp = self.fp.readline()
-                if len(tmp) == 0: return None
-                return tmp
-            tmp, self.peeked = self.peeked, None
-            return tmp[1]
 
     def _read_single_patch(fp, header, oldname=None, newname=None):
         """Internal function to read a single patch from a file."""
@@ -351,35 +336,29 @@ def read_patch(filename):
             else:
                 assert fp.read() == line
 
-def apply_patch(content, patches, reverse=False, fuzz=2):
+def apply_patch(original, patchfile, reverse=False, fuzz=2):
     """Apply a patch with optional fuzz - uses the commandline 'patch' utility."""
 
-    if not isinstance(patches, collections.Sequence):
-        patches = [patches]
-
-    contentfile = tempfile.NamedTemporaryFile(delete=False)
+    result = tempfile.NamedTemporaryFile(delete=False)
     try:
-        contentfile.write(content)
-        contentfile.close()
+        # We open the file again to avoid race-conditions with multithreaded reads
+        with open(original.name) as fp:
+            shutil.copyfileobj(fp, result)
+        result.close()
 
-        for patch in patches:
+        cmdline = ["patch", "--no-backup-if-mismatch", "--force", "--silent", "-r", "-"]
+        if reverse:   cmdline.append("--reverse")
+        if fuzz != 2: cmdline.append("--fuzz=%d" % fuzz)
+        cmdline += [result.name, patchfile.name]
 
-            patchfile = patch.extract()
-            cmdline = ["patch", "--no-backup-if-mismatch", "--force", "--silent", "-r", "-"]
-            if reverse:   cmdline.append("--reverse")
-            if fuzz != 2: cmdline.append("--fuzz=%d" % fuzz)
-            cmdline += [contentfile.name, patchfile.name]
+        exitcode = subprocess.call(cmdline, stdout=_devnull, stderr=_devnull)
+        if exitcode != 0:
+            raise PatchApplyError("Failed to apply patch (exitcode %d)." % exitcode)
 
-            with open(os.devnull, 'w') as devnull:
-                exitcode = subprocess.call(cmdline, stdout=devnull, stderr=devnull)
-            if exitcode != 0:
-                raise PatchApplyError("Failed to apply patch (exitcode %d)." % exitcode)
-
-        with open(contentfile.name) as fp:
-            content = fp.read()
-
-    finally:
-        os.unlink(contentfile.name)
-
-    return content
-
+        # Hack - we can't keep the file open while patching ('patch' might rename/replace
+        # the file), so create a new _TemporaryFileWrapper object for the existing path.
+        return tempfile._TemporaryFileWrapper(file=open(result.name, 'r+b'), \
+                                              name=result.name, delete=True)
+    except:
+        os.unlink(result.name)
+        raise

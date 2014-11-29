@@ -27,7 +27,6 @@ PATCHLIST := \
 	atl-IOCS_Property.ok \
 	comctl32-LoadIconMetric.ok \
 	configure-Absolute_RPATH.ok \
-	configure-Detect_Gnutls.ok \
 	d3d9-Surface_Refcount.ok \
 	d3dx9_36-DXTn.ok \
 	d3dx9_36-Filter_Warnings.ok \
@@ -109,7 +108,6 @@ PATCHLIST := \
 	wineboot-HKEY_DYN_DATA.ok \
 	winebuild-LinkerVersion.ok \
 	wined3d-DXTn.ok \
-	wined3d-FFP_Fog.ok \
 	wined3d-Revert_PixelFormat.ok \
 	winedevice-Fix_Relocation.ok \
 	winemenubuilder-Desktop_Icon_Path.ok \
@@ -331,18 +329,6 @@ configure-Absolute_RPATH.ok:
 	@( \
 		echo '+    { "Sebastian Lackner", "configure: Also add the absolute RPATH when linking against libwine.", 1 },'; \
 	) > configure-Absolute_RPATH.ok
-
-# Patchset configure-Detect_Gnutls
-# |
-# | Modified files:
-# |   *	configure.ac
-# |
-.INTERMEDIATE: configure-Detect_Gnutls.ok
-configure-Detect_Gnutls.ok:
-	$(call APPLY_FILE,configure-Detect_Gnutls/0001-configure-Fix-detection-of-gnutls-on-Ubuntu-14.10.patch)
-	@( \
-		echo '+    { "Sebastian Lackner", "configure: Fix detection of gnutls on Ubuntu 14.10.", 3 },'; \
-	) > configure-Detect_Gnutls.ok
 
 # Patchset d3d9-Surface_Refcount
 # |
@@ -1692,21 +1678,6 @@ wined3d-DXTn.ok:
 		echo '+    { "Christian Costa", "wined3d: Improve DXTn support and export conversion functions for d3dx9_36.", 1 },'; \
 		echo '+    { "Michael Müller", "wined3d: add DXT1 to B4G4R4A4, DXT1 to B5G5R5A1 and DXT3 to B4G4R4A4 conversion.", 1 },'; \
 	) > wined3d-DXTn.ok
-
-# Patchset wined3d-FFP_Fog
-# |
-# | Modified files:
-# |   *	dlls/d3d8/tests/visual.c, dlls/d3d9/tests/visual.c, dlls/ddraw/tests/ddraw7.c, dlls/wined3d/directx.c,
-# | 	dlls/wined3d/glsl_shader.c
-# |
-.INTERMEDIATE: wined3d-FFP_Fog.ok
-wined3d-FFP_Fog.ok:
-	$(call APPLY_FILE,wined3d-FFP_Fog/0001-wined3d-Set-D3DPMISCCAPS_FOGVERTEXCLAMPED-flag-in-ge.patch)
-	$(call APPLY_FILE,wined3d-FFP_Fog/0002-wined3d-Take-abs-of-vertex-z-coordinate-as-FFP-fog-c.patch)
-	@( \
-		echo '+    { "Joachim Priesner", "wined3d: Set D3DPMISCCAPS_FOGVERTEXCLAMPED flag in get_device_caps (resend).", 1 },'; \
-		echo '+    { "Joachim Priesner", "wined3d: Take abs() of vertex z coordinate as FFP fog coordinate.", 7 },'; \
-	) > wined3d-FFP_Fog.ok
 
 # Patchset wined3d-Revert_PixelFormat
 # |

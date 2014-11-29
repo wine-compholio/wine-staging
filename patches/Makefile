@@ -77,6 +77,7 @@ PATCHLIST := \
 	ntoskrnl-KeSetSystemAffinityThread.ok \
 	ntoskrnl-Stub_FileObject.ok \
 	ntoskrnl-Write_CR4.ok \
+	psapi-K32EnumProcessModulesEx.ok \
 	quartz-MediaSeeking_Positions.ok \
 	riched20-IText_Interface.ok \
 	secur32-Schannel_ContextAttr.ok \
@@ -1171,6 +1172,21 @@ ntoskrnl-Write_CR4.ok:
 	@( \
 		echo '+    { "Stefan Leichter", "ntoskrnl.exe: Emulate write to CR4 register.", 1 },'; \
 	) > ntoskrnl-Write_CR4.ok
+
+# Patchset psapi-K32EnumProcessModulesEx
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34864] Support for K32EnumProcessModulesEx
+# |
+# | Modified files:
+# |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/module.c, dlls/psapi/psapi.spec, include/psapi.h
+# |
+.INTERMEDIATE: psapi-K32EnumProcessModulesEx.ok
+psapi-K32EnumProcessModulesEx.ok:
+	$(call APPLY_FILE,psapi-K32EnumProcessModulesEx/0001-psapi-Implement-semi-stub-for-K32EnumProcessModulesE.patch)
+	@( \
+		echo '+    { "Sebastian Lackner", "psapi: Implement semi-stub for K32EnumProcessModulesEx.", 1 },'; \
+	) > psapi-K32EnumProcessModulesEx.ok
 
 # Patchset quartz-MediaSeeking_Positions
 # |

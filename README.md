@@ -37,20 +37,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [9]:**
-
-* Avoid race-conditions of async WSARecv() operations with write watches.
-* Black & White needs DXTn software decoding support ([Wine Bug #14939](https://bugs.winehq.org/show_bug.cgi?id=14939))
-* Fix handling of empty section and key name for profile files. ([Wine Bug #8036](https://bugs.winehq.org/show_bug.cgi?id=8036))
-* Fix issues with dragging layers between images in Adobe Photoshop 7.0 ([Wine Bug #12007](https://bugs.winehq.org/show_bug.cgi?id=12007))
-* Fix ordering of IP addresses by metric if two addresses have the same metric.
-* Fix passing of unicode environment from msvcrt to CreateProcessW. ([Wine Bug #37635](https://bugs.winehq.org/show_bug.cgi?id=37635))
-* Implement exclusive mode in PulseAudio backend ([Wine Bug #37042](https://bugs.winehq.org/show_bug.cgi?id=37042))
-* Support for K32EnumProcessModulesEx ([Wine Bug #34864](https://bugs.winehq.org/show_bug.cgi?id=34864))
-* Wintrust doesn't reset data->pWintrustData->u.pFile->hFile after closing handle ([Wine Bug #36257](https://bugs.winehq.org/show_bug.cgi?id=36257))
-
-
-**Bugs fixed in Wine Staging 1.7.31 [101]:**
+**Bugs fixed in Wine Staging 1.7.32 [108]:**
 
 * ATL IOCS data should not be stored in GWLP_USERDATA ([Wine Bug #21767](https://bugs.winehq.org/show_bug.cgi?id=21767))
 * Add Dynamic DST exceptions for Israel Standard Time ([Wine Bug #36374](https://bugs.winehq.org/show_bug.cgi?id=36374))
@@ -62,8 +49,8 @@ Included bug fixes and improvements
 * Anno 1602 installer depends on Windows 98 behavior of SHFileOperationW
 * Audio stuttering and performance drops in multiple applications ([Wine Bug #30639](https://bugs.winehq.org/show_bug.cgi?id=30639))
 * Avoid crashing when broken app tries to release surface although refcount is zero ([Wine Bug #18477](https://bugs.winehq.org/show_bug.cgi?id=18477))
-* ~~Avoid sending window messages in FindWindowExW~~ ([Wine Bug #27282](https://bugs.winehq.org/show_bug.cgi?id=27282))
-* ~~CoWaitForMultipleHandles shouldn't process window events when APC calls are queued~~ ([Wine Bug #32568](https://bugs.winehq.org/show_bug.cgi?id=32568))
+* Avoid race-conditions of async WSARecv() operations with write watches.
+* Black & White needs DXTn software decoding support ([Wine Bug #14939](https://bugs.winehq.org/show_bug.cgi?id=14939))
 * Correctly treat '.' when checking for empty directories ([Wine Bug #26272](https://bugs.winehq.org/show_bug.cgi?id=26272))
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](https://bugs.winehq.org/show_bug.cgi?id=33770))
 * Do not fail when a used context is passed to wglShareLists ([Wine Bug #11436](https://bugs.winehq.org/show_bug.cgi?id=11436))
@@ -82,9 +69,13 @@ Included bug fixes and improvements
 * Fix for ConnectNamedPort return value in overlapped mode ([Wine Bug #16550](https://bugs.winehq.org/show_bug.cgi?id=16550))
 * Fix for programs leaking wndproc slots ([Wine Bug #32451](https://bugs.winehq.org/show_bug.cgi?id=32451))
 * Fix gray screen on startup introduced by pixelformat changes. ([Wine Bug #35975](https://bugs.winehq.org/show_bug.cgi?id=35975))
+* Fix handling of empty section and key name for profile files. ([Wine Bug #8036](https://bugs.winehq.org/show_bug.cgi?id=8036))
 * Fix handling of invert_y in DrawTextExW ([Wine Bug #22109](https://bugs.winehq.org/show_bug.cgi?id=22109))
 * Fix issues when driver dispatch routine returns different status codes ([Wine Bug #30155](https://bugs.winehq.org/show_bug.cgi?id=30155))
+* Fix issues with dragging layers between images in Adobe Photoshop 7.0 ([Wine Bug #12007](https://bugs.winehq.org/show_bug.cgi?id=12007))
 * Fix missing video introduced by pixelformat changes. ([Wine Bug #36900](https://bugs.winehq.org/show_bug.cgi?id=36900))
+* Fix ordering of IP addresses by metric if two addresses have the same metric.
+* Fix passing of unicode environment from msvcrt to CreateProcessW. ([Wine Bug #37635](https://bugs.winehq.org/show_bug.cgi?id=37635))
 * Fix texture corruption in CSI: Fatal Conspiracy ([Wine Bug #33768](https://bugs.winehq.org/show_bug.cgi?id=33768))
 * Fix unintentional leaks with ntdll internals
 * Fix wined3d performance drop introduced by pixelformat changes. ([Wine Bug #35655](https://bugs.winehq.org/show_bug.cgi?id=35655))
@@ -92,6 +83,7 @@ Included bug fixes and improvements
 * GetSecurityInfo returns NULL DACL for process object ([Wine Bug #15980](https://bugs.winehq.org/show_bug.cgi?id=15980))
 * Implement a Microsoft Yahei replacement font ([Wine Bug #13829](https://bugs.winehq.org/show_bug.cgi?id=13829))
 * Implement an Arial replacement font ([Wine Bug #32323](https://bugs.winehq.org/show_bug.cgi?id=32323))
+* Implement exclusive mode in PulseAudio backend ([Wine Bug #37042](https://bugs.winehq.org/show_bug.cgi?id=37042))
 * Improvement for heap allocation performance
 * Initialize irp.Tail.Overlay.OriginalFileObject with stub file object ([Wine Bug #37537](https://bugs.winehq.org/show_bug.cgi?id=37537))
 * Lego Stunt Rally requires DXTn software de/encoding support ([Wine Bug #25486](https://bugs.winehq.org/show_bug.cgi?id=25486))
@@ -123,6 +115,7 @@ Included bug fixes and improvements
 * Support for ITextDocument_fnRange function ([Wine Bug #12458](https://bugs.winehq.org/show_bug.cgi?id=12458))
 * Support for ITextRange, ITextFont and ITextPara ([Wine Bug #18303](https://bugs.winehq.org/show_bug.cgi?id=18303))
 * Support for Junction Points ([Wine Bug #12401](https://bugs.winehq.org/show_bug.cgi?id=12401))
+* Support for K32EnumProcessModulesEx ([Wine Bug #34864](https://bugs.winehq.org/show_bug.cgi?id=34864))
 * Support for KF_FLAG_DEFAULT_PATH in SHGetKnownFolderPath ([Wine Bug #30385](https://bugs.winehq.org/show_bug.cgi?id=30385))
 * Support for LoadIconMetric ([Wine Bug #35375](https://bugs.winehq.org/show_bug.cgi?id=35375))
 * Support for NtQuerySection ([Wine Bug #37338](https://bugs.winehq.org/show_bug.cgi?id=37338))
@@ -148,6 +141,7 @@ Included bug fixes and improvements
 * Use manual relay for RunDLL_CallEntry16 in shell32 ([Wine Bug #23033](https://bugs.winehq.org/show_bug.cgi?id=23033))
 * Voobly expects correct handling of WRITECOPY memory protection ([Wine Bug #29384](https://bugs.winehq.org/show_bug.cgi?id=29384))
 * Wine ignores IDF_CHECKFIRST flag in SetupPromptForDisk ([Wine Bug #20465](https://bugs.winehq.org/show_bug.cgi?id=20465))
+* Wintrust doesn't reset data->pWintrustData->u.pFile->hFile after closing handle ([Wine Bug #36257](https://bugs.winehq.org/show_bug.cgi?id=36257))
 * Workaround for shlwapi URLs with relative paths
 * XEMBED support for embedding Wine windows inside Linux applications
 * nVidia driver for high-end laptop cards does not list all supported resolutions

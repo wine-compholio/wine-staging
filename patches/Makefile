@@ -197,7 +197,8 @@ Exagear.ok: ntdll-WRITECOPY.ok
 # |
 # | Modified files:
 # |   *	dlls/d3d9/tests/visual.c, dlls/kernel32/locale.c, dlls/netapi32/netapi32.c, dlls/winealsa.drv/mmdevdrv.c,
-# | 	dlls/wined3d/glsl_shader.c, dlls/wined3d/resource.c, dlls/wined3d/swapchain.c, tools/makedep.c
+# | 	dlls/wined3d/glsl_shader.c, dlls/wined3d/resource.c, dlls/wined3d/swapchain.c, programs/wordpad/registry.c,
+# | 	tools/makedep.c
 # |
 .INTERMEDIATE: Miscellaneous.ok
 Miscellaneous.ok:
@@ -205,11 +206,13 @@ Miscellaneous.ok:
 	$(call APPLY_FILE,Miscellaneous/0002-kernel32-Silence-repeated-CompareStringEx-FIXME.patch)
 	$(call APPLY_FILE,Miscellaneous/0003-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch)
 	$(call APPLY_FILE,Miscellaneous/0004-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch)
+	$(call APPLY_FILE,Miscellaneous/0005-wordpad-Check-for-array-index-before-using-it-in-reg.patch)
 	@( \
 		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },'; \
 		echo '+    { "Sebastian Lackner", "kernel32: Silence repeated CompareStringEx FIXME.", 1 },'; \
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },'; \
 		echo '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },'; \
+		echo '+    { "Gerald Pfeifer", "wordpad: Check for array index before using it in registry_set_filelist.", 1 },'; \
 	) > Miscellaneous.ok
 
 # Patchset Pipelight

@@ -2,9 +2,8 @@ What is Wine Staging?
 =====================
 
 **Warning: Do not report bugs at bugs.winehq.org when using this version!
-Please take a look at our
-[Wiki](https://github.com/wine-compholio/wine-staging/wiki/Reporting-bugs)
-for more information about how to report bugs.**
+Please take a look [here](http://bugs.wine-staging.com) for more information
+about how to report bugs.**
 
 **Wine Staging** (formerly wine-compholio) is a special wine version containing
 bug fixes and features that are not yet available in regular wine versions. The
@@ -24,8 +23,7 @@ How to install and use Wine Staging
 
 Ready-to-use packages for Wine Staging are available for a variety
 of different Linux distributions directly for download. Just follow the
-instructions available on the
-[Wiki](https://github.com/wine-compholio/wine-staging/wiki/Installation).
+instructions available on the [website](http://www.wine-staging.com/install.html).
 
 When using Wine Staging there are a few differences compared to regular
 Wine. The main difference is that it is not sufficient to type `wine` to

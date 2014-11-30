@@ -50,6 +50,7 @@ PATCHLIST := \
 	kernel32-GetSystemTimes.ok \
 	kernel32-GetVolumePathName.ok \
 	kernel32-Named_Pipe.ok \
+	kernel32-Profile.ok \
 	kernel32-UTF7_Support.ok \
 	libs-Unicode_Collation.ok \
 	libwine-BSD_mmap_fixed.ok \
@@ -699,6 +700,21 @@ kernel32-Named_Pipe.ok:
 	@( \
 		echo '+    { "Dan Kegel", "kernel32: ConnectNamedPort should return FALSE and set ERROR_PIPE_CONNECTED on success in overlapped mode.", 1 },'; \
 	) > kernel32-Named_Pipe.ok
+
+# Patchset kernel32-Profile
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#8036] Fix handling of empty section and key name for profile files.
+# |
+# | Modified files:
+# |   *	dlls/kernel32/profile.c, dlls/kernel32/tests/profile.c
+# |
+.INTERMEDIATE: kernel32-Profile.ok
+kernel32-Profile.ok:
+	$(call APPLY_FILE,kernel32-Profile/0001-kernel32-Allow-empty-profile-section-and-key-name-st.patch)
+	@( \
+		echo '+    { "Claudio Fontana", "kernel32: Allow empty profile section and key name strings.", 1 },'; \
+	) > kernel32-Profile.ok
 
 # Patchset kernel32-UTF7_Support
 # |

@@ -39,13 +39,14 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [8]:**
+**Bugfixes and features included in the next upcoming release [9]:**
 
 * Avoid race-conditions of async WSARecv() operations with write watches.
 * Black & White needs DXTn software decoding support ([Wine Bug #14939](https://bugs.winehq.org/show_bug.cgi?id=14939))
 * Fix handling of empty section and key name for profile files. ([Wine Bug #8036](https://bugs.winehq.org/show_bug.cgi?id=8036))
 * Fix issues with dragging layers between images in Adobe Photoshop 7.0 ([Wine Bug #12007](https://bugs.winehq.org/show_bug.cgi?id=12007))
 * Fix ordering of IP addresses by metric if two addresses have the same metric.
+* Fix passing of unicode environment from msvcrt to CreateProcessW. ([Wine Bug #37635](https://bugs.winehq.org/show_bug.cgi?id=37635))
 * Implement exclusive mode in PulseAudio backend ([Wine Bug #37042](https://bugs.winehq.org/show_bug.cgi?id=37042))
 * Support for K32EnumProcessModulesEx ([Wine Bug #34864](https://bugs.winehq.org/show_bug.cgi?id=34864))
 * Wintrust doesn't reset data->pWintrustData->u.pFile->hFile after closing handle ([Wine Bug #36257](https://bugs.winehq.org/show_bug.cgi?id=36257))

@@ -55,6 +55,7 @@ PATCHLIST := \
 	libs-Unicode_Collation.ok \
 	libwine-BSD_mmap_fixed.ok \
 	msvcp90-basic_string_wchar_dtor.ok \
+	msvcrt-Spawn_Process.ok \
 	msvcrt-atof_strtod.ok \
 	ntdll-DOS_Attributes.ok \
 	ntdll-Dynamic_DST.ok \
@@ -798,6 +799,21 @@ msvcp90-basic_string_wchar_dtor.ok:
 		echo '+    { "Michael Müller", "msvcp90: basic_string_wchar_dtor needs to return NULL.", 1 },'; \
 		echo '+    { "Michael Müller", "msvcp90/tests: Add tests to check that basic_string_wchar_dtor returns NULL.", 1 },'; \
 	) > msvcp90-basic_string_wchar_dtor.ok
+
+# Patchset msvcrt-Spawn_Process
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37635] Fix passing of unicode environment from msvcrt to CreateProcessW.
+# |
+# | Modified files:
+# |   *	dlls/msvcrt/process.c
+# |
+.INTERMEDIATE: msvcrt-Spawn_Process.ok
+msvcrt-Spawn_Process.ok:
+	$(call APPLY_FILE,msvcrt-Spawn_Process/0001-msvcrt-Fix-passing-of-explicit-environment-to-spawn-.patch)
+	@( \
+		echo '+    { "Ron Yorston", "msvcrt: Fix passing of explicit environment to spawn/exec calls.", 1 },'; \
+	) > msvcrt-Spawn_Process.ok
 
 # Patchset msvcrt-atof_strtod
 # |

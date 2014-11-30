@@ -1,0 +1,32 @@
+From 0e2b29c185f7ce92ac81cbc94d9da9604e5fbc08 Mon Sep 17 00:00:00 2001
+From: Ron Yorston <rmy@tigress.co.uk>
+Date: Wed, 26 Nov 2014 17:29:08 +0000
+Subject: msvcrt: Fix passing of explicit environment to spawn/exec calls
+
+Explicit sets of environment variables passed to spawn/exec are
+consistently converted to wide character environment blocks.  Because
+CREATE_UNICODE_ENVIRONMENT isn't included in the process creation flags
+the environment block is incorrectly passed through another conversion
+to wide characters in create_process_impl.
+---
+ dlls/msvcrt/process.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/msvcrt/process.c b/dlls/msvcrt/process.c
+index b782727..549c64a 100644
+--- a/dlls/msvcrt/process.c
++++ b/dlls/msvcrt/process.c
+@@ -149,8 +149,8 @@ static MSVCRT_intptr_t msvcrt_spawn(int flags, const MSVCRT_wchar_t* exe, MSVCRT
+   si.cb = sizeof(si);
+   msvcrt_create_io_inherit_block(&si.cbReserved2, &si.lpReserved2);
+   if (!CreateProcessW(fullname, cmdline, NULL, NULL, TRUE,
+-                     flags == MSVCRT__P_DETACH ? DETACHED_PROCESS : 0,
+-                     env, NULL, &si, &pi))
++                     (flags == MSVCRT__P_DETACH ? DETACHED_PROCESS : 0) |
++                     CREATE_UNICODE_ENVIRONMENT, env, NULL, &si, &pi))
+   {
+     msvcrt_set_errno(GetLastError());
+     MSVCRT_free(si.lpReserved2);
+-- 
+2.1.3
+

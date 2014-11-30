@@ -55,9 +55,6 @@ class config(object):
     path_README_md          = "README.md"
     path_template_README_md = "debian/tools/README.md.in"
 
-    path_DEVELOPER_md       = "DEVELOPER.md"
-    path_template_DEVELOPER_md = "debian/tools/DEVELOPER.md.in"
-
 class PatchUpdaterError(RuntimeError):
     """Failed to update patches."""
     pass
@@ -579,7 +576,7 @@ def generate_makefile(all_patches):
             fp.write("\n");
 
 def generate_markdown(all_patches, stable_patches, stable_compholio_version):
-    """Generate README.md and DEVELOPER.md including information about specific patches and bugfixes."""
+    """Generate README.md including information about specific patches and bugfixes."""
 
     def _format_bug(mode, bugid, bugname):
         if mode < 0: bugname = "~~%s~~" % bugname
@@ -635,12 +632,6 @@ def generate_markdown(all_patches, stable_patches, stable_compholio_version):
     with open(config.path_README_md, "w") as fp:
         fp.write(template.format(fixes="\n".join(lines)))
 
-    # Update DEVELOPER.md
-    with open(config.path_template_DEVELOPER_md) as template_fp:
-        template = template_fp.read()
-    with open(config.path_DEVELOPER_md, "w") as fp:
-        fp.write(template.format(version=stable_compholio_version))
-
 if __name__ == "__main__":
     verbose = "-v" in sys.argv[1:]
 
@@ -663,7 +654,7 @@ if __name__ == "__main__":
         # Check dependencies
         verify_dependencies(all_patches)
 
-        # Update Makefile, README.md and DEVELOPER.md
+        # Update Makefile and README.md
         generate_makefile(all_patches)
         generate_markdown(all_patches, stable_patches, stable_compholio_version)
 

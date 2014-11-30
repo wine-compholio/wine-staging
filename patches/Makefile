@@ -52,6 +52,7 @@ PATCHLIST := \
 	kernel32-Named_Pipe.ok \
 	kernel32-Profile.ok \
 	kernel32-UTF7_Support.ok \
+	kernel32-VerifyVersionInfo.ok \
 	libs-Unicode_Collation.ok \
 	libwine-BSD_mmap_fixed.ok \
 	msvcp90-basic_string_wchar_dtor.ok \
@@ -70,7 +71,6 @@ PATCHLIST := \
 	ntdll-NtQuerySection.ok \
 	ntdll-NtSetLdtEntries.ok \
 	ntdll-Pipe_SpecialCharacters.ok \
-	ntdll-RtlVerifyVersionInfo.ok \
 	ntdll-ThreadTime.ok \
 	ntdll-User_Shared_Data.ok \
 	ntdll-WRITECOPY.ok \
@@ -740,6 +740,18 @@ kernel32-UTF7_Support.ok:
 		echo '+    { "Alex Henrie", "kernel32/tests: Add tests for UTF-7 conversion.", 1 },'; \
 	) > kernel32-UTF7_Support.ok
 
+# Patchset kernel32-VerifyVersionInfo
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/version.c
+# |
+.INTERMEDIATE: kernel32-VerifyVersionInfo.ok
+kernel32-VerifyVersionInfo.ok:
+	$(call APPLY_FILE,kernel32-VerifyVersionInfo/0001-kernel32-tests-Add-additional-tests-for-VerifyVersio.patch)
+	@( \
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for VerifyVersionInfoA.", 1 },'; \
+	) > kernel32-VerifyVersionInfo.ok
+
 # Patchset libs-Unicode_Collation
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1063,21 +1075,6 @@ ntdll-Pipe_SpecialCharacters.ok:
 	@( \
 		echo '+    { "Michael Müller", "ntdll: Allow special characters in pipe names.", 1 },'; \
 	) > ntdll-Pipe_SpecialCharacters.ok
-
-# Patchset ntdll-RtlVerifyVersionInfo
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36143] Fix condition handling in RtlVerifyVersionInfo
-# |
-# | Modified files:
-# |   *	dlls/ntdll/version.c
-# |
-.INTERMEDIATE: ntdll-RtlVerifyVersionInfo.ok
-ntdll-RtlVerifyVersionInfo.ok:
-	$(call APPLY_FILE,ntdll-RtlVerifyVersionInfo/0001-ntdll-Fix-condition-handling-in-RtlVerifyVersionInfo.patch)
-	@( \
-		echo '+    { "Sebastian Lackner", "ntdll: Fix condition handling in RtlVerifyVersionInfo.", 1 },'; \
-	) > ntdll-RtlVerifyVersionInfo.ok
 
 # Patchset ntdll-ThreadTime
 # |

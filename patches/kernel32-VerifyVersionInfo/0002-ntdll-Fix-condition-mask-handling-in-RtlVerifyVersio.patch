@@ -1,0 +1,160 @@
+From ca7be85de4f395713f3b388d6eb1ce7399b5e2d8 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 1 Dec 2014 11:30:58 +0100
+Subject: ntdll: Fix condition mask handling in RtlVerifyVersionInfo.
+
+---
+ dlls/kernel32/tests/version.c |  7 ------
+ dlls/ntdll/version.c          | 50 ++++++++++++++++++++++++++++++++-----------
+ 2 files changed, 37 insertions(+), 20 deletions(-)
+
+diff --git a/dlls/kernel32/tests/version.c b/dlls/kernel32/tests/version.c
+index 248f01c..4d07176 100644
+--- a/dlls/kernel32/tests/version.c
++++ b/dlls/kernel32/tests/version.c
+@@ -360,7 +360,6 @@ static void test_VerifyVersionInfo(void)
+     info.dwMinorVersion++;
+     ret = pVerifyVersionInfoA(&info, VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR,
+         pVerSetConditionMask(pVerSetConditionMask(0, VER_MAJORVERSION, VER_EQUAL), VER_MINORVERSION, VER_LESS));
+-    todo_wine
+     ok(ret, "VerifyVersionInfoA failed with error %d\n", GetLastError());
+ 
+     info.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEXA);
+@@ -464,7 +463,6 @@ static void test_VerifyVersionInfo(void)
+     info.wServicePackMinor++;
+     ret = pVerifyVersionInfoA(&info, VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR,
+         pVerSetConditionMask(pVerSetConditionMask(0, VER_SERVICEPACKMAJOR, VER_EQUAL), VER_SERVICEPACKMINOR, VER_LESS));
+-    todo_wine
+     ok(ret, "VerifyVersionInfoA failed with error %d\n", GetLastError());
+ 
+     info.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEXA);
+@@ -484,7 +482,6 @@ static void test_VerifyVersionInfo(void)
+     ret = pVerifyVersionInfoA(&info, VER_MINORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR,
+         pVerSetConditionMask(pVerSetConditionMask(pVerSetConditionMask(0, VER_MINORVERSION, VER_EQUAL),
+         VER_SERVICEPACKMAJOR, VER_EQUAL), VER_SERVICEPACKMINOR, VER_LESS));
+-    todo_wine
+     ok(ret, "VerifyVersionInfoA failed with error %d\n", GetLastError());
+ 
+     info.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEXA);
+@@ -505,7 +502,6 @@ static void test_VerifyVersionInfo(void)
+     ret = pVerifyVersionInfoA(&info, VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR,
+         pVerSetConditionMask(pVerSetConditionMask(pVerSetConditionMask(pVerSetConditionMask(0, VER_MAJORVERSION, VER_EQUAL),
+         VER_MINORVERSION, VER_EQUAL), VER_SERVICEPACKMAJOR, VER_EQUAL), VER_SERVICEPACKMINOR, VER_LESS));
+-    todo_wine
+     ok(ret, "VerifyVersionInfoA failed with error %d\n", GetLastError());
+ 
+     info.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEXA);
+@@ -584,7 +580,6 @@ static void test_VerifyVersionInfo(void)
+     info.wServicePackMajor++;
+     ret = pVerifyVersionInfoA(&info, VER_MINORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR,
+         pVerSetConditionMask(pVerSetConditionMask(0, VER_MINORVERSION, VER_EQUAL), VER_SERVICEPACKMAJOR, VER_LESS));
+-    todo_wine
+     ok(ret, "VerifyVersionInfoA failed with error %d\n", GetLastError());
+ 
+     info.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEXA);
+@@ -603,7 +598,6 @@ static void test_VerifyVersionInfo(void)
+     info.wServicePackMajor++;
+     ret = pVerifyVersionInfoA(&info, VER_MAJORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR,
+         pVerSetConditionMask(pVerSetConditionMask(0, VER_MAJORVERSION, VER_EQUAL), VER_SERVICEPACKMAJOR, VER_LESS));
+-    todo_wine
+     ok(ret, "VerifyVersionInfoA failed with error %d\n", GetLastError());
+ 
+     info.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEXA);
+@@ -623,7 +617,6 @@ static void test_VerifyVersionInfo(void)
+     ret = pVerifyVersionInfoA(&info, VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR,
+         pVerSetConditionMask(pVerSetConditionMask(pVerSetConditionMask(0, VER_MAJORVERSION, VER_EQUAL),
+         VER_MINORVERSION, VER_EQUAL), VER_SERVICEPACKMAJOR, VER_LESS));
+-    todo_wine
+     ok(ret, "VerifyVersionInfoA failed with error %d\n", GetLastError());
+ 
+     info.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEXA);
+diff --git a/dlls/ntdll/version.c b/dlls/ntdll/version.c
+index a6340eb..5d1b445 100644
+--- a/dlls/ntdll/version.c
++++ b/dlls/ntdll/version.c
+@@ -657,6 +657,35 @@ BOOLEAN WINAPI RtlGetNtProductType( LPDWORD type )
+ }
+ 
+ 
++static inline UCHAR version_update_condition(PUCHAR last_condition, UCHAR condition)
++{
++    switch (*last_condition)
++    {
++        case 0:
++            *last_condition = condition;
++            break;
++        case VER_EQUAL:
++            if (condition >= VER_EQUAL && condition <= VER_LESS_EQUAL)
++            {
++                *last_condition = condition;
++                return condition;
++            }
++            break;
++        case VER_GREATER:
++        case VER_GREATER_EQUAL:
++            if (condition >= VER_EQUAL && condition <= VER_GREATER_EQUAL)
++                return condition;
++            break;
++        case VER_LESS:
++        case VER_LESS_EQUAL:
++            if (condition == VER_EQUAL || (condition >= VER_LESS && condition <= VER_LESS_EQUAL))
++                return condition;
++            break;
++    }
++    if (!condition) *last_condition |= 0x10;
++    return *last_condition & 0xf;
++}
++
+ static inline NTSTATUS version_compare_values(ULONG left, ULONG right, UCHAR condition)
+ {
+     switch (condition) {
+@@ -732,38 +761,33 @@ NTSTATUS WINAPI RtlVerifyVersionInfo( const RTL_OSVERSIONINFOEXW *info,
+ 
+     if(dwTypeMask & (VER_MAJORVERSION|VER_MINORVERSION|VER_SERVICEPACKMAJOR|VER_SERVICEPACKMINOR))
+     {
+-        unsigned char condition = 0;
++        unsigned char condition, last_condition = 0;
+         BOOLEAN do_next_check = TRUE;
+ 
+         if(dwTypeMask & VER_MAJORVERSION)
+-            condition = dwlConditionMask >> 1*3 & 0x07;
+-        else if(dwTypeMask & VER_MINORVERSION)
+-            condition = dwlConditionMask >> 0*3 & 0x07;
+-        else if(dwTypeMask & VER_SERVICEPACKMAJOR)
+-            condition = dwlConditionMask >> 5*3 & 0x07;
+-        else if(dwTypeMask & VER_SERVICEPACKMINOR)
+-            condition = dwlConditionMask >> 4*3 & 0x07;
+-
+-        if(dwTypeMask & VER_MAJORVERSION)
+         {
++            condition = version_update_condition(&last_condition, dwlConditionMask >> 1*3 & 0x07);
+             status = version_compare_values(ver.dwMajorVersion, info->dwMajorVersion, condition);
+             do_next_check = (ver.dwMajorVersion == info->dwMajorVersion) &&
+-                ((condition != VER_EQUAL) || (status == STATUS_SUCCESS));
++                ((condition >= VER_EQUAL) && (condition <= VER_LESS_EQUAL));
+         }
+         if((dwTypeMask & VER_MINORVERSION) && do_next_check)
+         {
++            condition = version_update_condition(&last_condition, dwlConditionMask >> 0*3 & 0x07);
+             status = version_compare_values(ver.dwMinorVersion, info->dwMinorVersion, condition);
+             do_next_check = (ver.dwMinorVersion == info->dwMinorVersion) &&
+-                ((condition != VER_EQUAL) || (status == STATUS_SUCCESS));
++                ((condition >= VER_EQUAL) && (condition <= VER_LESS_EQUAL));
+         }
+         if((dwTypeMask & VER_SERVICEPACKMAJOR) && do_next_check)
+         {
++            condition = version_update_condition(&last_condition, dwlConditionMask >> 5*3 & 0x07);
+             status = version_compare_values(ver.wServicePackMajor, info->wServicePackMajor, condition);
+             do_next_check = (ver.wServicePackMajor == info->wServicePackMajor) &&
+-                ((condition != VER_EQUAL) || (status == STATUS_SUCCESS));
++                ((condition >= VER_EQUAL) && (condition <= VER_LESS_EQUAL));
+         }
+         if((dwTypeMask & VER_SERVICEPACKMINOR) && do_next_check)
+         {
++            condition = version_update_condition(&last_condition, dwlConditionMask >> 4*3 & 0x07);
+             status = version_compare_values(ver.wServicePackMinor, info->wServicePackMinor, condition);
+         }
+ 
+-- 
+2.1.3
+

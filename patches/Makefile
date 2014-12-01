@@ -742,14 +742,19 @@ kernel32-UTF7_Support.ok:
 
 # Patchset kernel32-VerifyVersionInfo
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36143] Fix condition mask handling in RtlVerifyVersionInfo
+# |
 # | Modified files:
-# |   *	dlls/kernel32/tests/version.c
+# |   *	dlls/kernel32/tests/version.c, dlls/ntdll/version.c
 # |
 .INTERMEDIATE: kernel32-VerifyVersionInfo.ok
 kernel32-VerifyVersionInfo.ok:
-	$(call APPLY_FILE,kernel32-VerifyVersionInfo/0001-kernel32-tests-Add-additional-tests-for-VerifyVersio.patch)
+	$(call APPLY_FILE,kernel32-VerifyVersionInfo/0001-kernel32-tests-Add-additional-tests-for-condition-ma.patch)
+	$(call APPLY_FILE,kernel32-VerifyVersionInfo/0002-ntdll-Fix-condition-mask-handling-in-RtlVerifyVersio.patch)
 	@( \
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for VerifyVersionInfoA.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for condition mask of VerifyVersionInfoA.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: Fix condition mask handling in RtlVerifyVersionInfo.", 1 },'; \
 	) > kernel32-VerifyVersionInfo.ok
 
 # Patchset libs-Unicode_Collation

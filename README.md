@@ -79,7 +79,7 @@ Included bug fixes and improvements
 * Fix issues when driver dispatch routine returns different status codes ([Wine Bug #30155](https://bugs.winehq.org/show_bug.cgi?id=30155))
 * Fix issues with dragging layers between images in Adobe Photoshop 7.0 ([Wine Bug #12007](https://bugs.winehq.org/show_bug.cgi?id=12007))
 * Fix missing video introduced by pixelformat changes. ([Wine Bug #36900](https://bugs.winehq.org/show_bug.cgi?id=36900))
-* Fix ordering of IP addresses by metric if two addresses have the same metric.
+* ~~Fix ordering of IP addresses by metric if two addresses have the same metric.~~
 * Fix passing of unicode environment from msvcrt to CreateProcessW. ([Wine Bug #37635](https://bugs.winehq.org/show_bug.cgi?id=37635))
 * Fix texture corruption in CSI: Fatal Conspiracy ([Wine Bug #33768](https://bugs.winehq.org/show_bug.cgi?id=33768))
 * Fix unintentional leaks with ntdll internals
@@ -146,7 +146,7 @@ Included bug fixes and improvements
 * Use manual relay for RunDLL_CallEntry16 in shell32 ([Wine Bug #23033](https://bugs.winehq.org/show_bug.cgi?id=23033))
 * Voobly expects correct handling of WRITECOPY memory protection ([Wine Bug #29384](https://bugs.winehq.org/show_bug.cgi?id=29384))
 * Wine ignores IDF_CHECKFIRST flag in SetupPromptForDisk ([Wine Bug #20465](https://bugs.winehq.org/show_bug.cgi?id=20465))
-* Wintrust doesn't reset data->pWintrustData->u.pFile->hFile after closing handle ([Wine Bug #36257](https://bugs.winehq.org/show_bug.cgi?id=36257))
+* ~~Wintrust doesn't reset data->pWintrustData->u.pFile->hFile after closing handle~~ ([Wine Bug #36257](https://bugs.winehq.org/show_bug.cgi?id=36257))
 * Workaround for shlwapi URLs with relative paths
 * XEMBED support for embedding Wine windows inside Linux applications
 * nVidia driver for high-end laptop cards does not list all supported resolutions

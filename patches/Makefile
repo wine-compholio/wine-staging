@@ -122,11 +122,8 @@ PATCHLIST := \
 	winex11-Window_Groups.ok \
 	winex11-XEMBED.ok \
 	winex11-wglShareLists.ok \
-	wintrust-Reset_hFile.ok \
 	wpcap-Dynamic_Linking.ok \
 	ws2_32-Connect_Time.ok \
-	ws2_32-IP_Ordering.ok \
-	ws2_32-Overlapping_FDS.ok \
 	ws2_32-TransmitFile.ok \
 	ws2_32-WriteWatches.ok \
 	wtsapi32-EnumerateProcesses.ok
@@ -268,8 +265,7 @@ Staging.ok:
 # | 	win-core-fibers-l1-1-1.spec, dlls/api-ms-win-core-file-l2-1-0/Makefile.in, dlls/api-ms-win-core-file-l2-1-0/api-ms-win-
 # | 	core-file-l2-1-0.spec, dlls/api-ms-win-core-localization-l1-2-1/Makefile.in, dlls/api-ms-win-core-localization-l1-2-1
 # | 	/api-ms-win-core-localization-l1-2-1.spec, dlls/api-ms-win-core-winrt-error-l1-1-1/Makefile.in, dlls/api-ms-win-core-
-# | 	winrt-error-l1-1-1/api-ms-win-core-winrt-error-l1-1-1.spec, dlls/api-ms-win-core-winrt-l1-1-0/Makefile.in, dlls/api-ms-
-# | 	win-core-winrt-l1-1-0/api-ms-win-core-winrt-l1-1-0.spec, dlls/api-ms-win-core-xstate-l2-1-0/Makefile.in, dlls/api-ms-
+# | 	winrt-error-l1-1-1/api-ms-win-core-winrt-error-l1-1-1.spec, dlls/api-ms-win-core-xstate-l2-1-0/Makefile.in, dlls/api-ms-
 # | 	win-core-xstate-l2-1-0/api-ms-win-core-xstate-l2-1-0.spec, tools/make_specfiles
 # |
 .INTERMEDIATE: api-ms-win-core-Stubs.ok
@@ -281,8 +277,7 @@ api-ms-win-core-Stubs.ok:
 	$(call APPLY_FILE,api-ms-win-core-Stubs/0005-api-ms-win-core-datetime-l1-1-0-Add-dll.patch)
 	$(call APPLY_FILE,api-ms-win-core-Stubs/0006-api-ms-win-core-datetime-l1-1-1-Add-stub-dll.patch)
 	$(call APPLY_FILE,api-ms-win-core-Stubs/0007-api-ms-win-core-xstate-l2-1-0-Add-stub-dll.patch)
-	$(call APPLY_FILE,api-ms-win-core-Stubs/0008-api-ms-win-core-winrt-l1-1-0-Add-stub-dll.patch)
-	$(call APPLY_FILE,api-ms-win-core-Stubs/0009-api-ms-win-core-winrt-error-l1-1-1-Add-stub-dll.patch)
+	$(call APPLY_FILE,api-ms-win-core-Stubs/0008-api-ms-win-core-winrt-error-l1-1-1-Add-stub-dll.patch)
 	@( \
 		echo '+    { "Michael Müller", "api-ms-win-core-fibers-l1-1-0: Add dll.", 1 },'; \
 		echo '+    { "Michael Müller", "api-ms-win-core-fibers-l1-1-1: Add dll.", 1 },'; \
@@ -291,7 +286,6 @@ api-ms-win-core-Stubs.ok:
 		echo '+    { "Michael Müller", "api-ms-win-core-datetime-l1-1-0: Add dll.", 1 },'; \
 		echo '+    { "Michael Müller", "api-ms-win-core-datetime-l1-1-1: Add stub dll.", 1 },'; \
 		echo '+    { "Michael Müller", "api-ms-win-core-xstate-l2-1-0: Add stub dll.", 1 },'; \
-		echo '+    { "Michael Müller", "api-ms-win-core-winrt-l1-1-0: Add stub dll.", 1 },'; \
 		echo '+    { "Michael Müller", "api-ms-win-core-winrt-error-l1-1-1: Add stub dll.", 1 },'; \
 	) > api-ms-win-core-Stubs.ok
 
@@ -1973,21 +1967,6 @@ winex11-wglShareLists.ok:
 		echo '+    { "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists.", 1 },'; \
 	) > winex11-wglShareLists.ok
 
-# Patchset wintrust-Reset_hFile
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36257] Wintrust doesn't reset data->pWintrustData->u.pFile->hFile after closing handle
-# |
-# | Modified files:
-# |   *	dlls/wintrust/softpub.c
-# |
-.INTERMEDIATE: wintrust-Reset_hFile.ok
-wintrust-Reset_hFile.ok:
-	$(call APPLY_FILE,wintrust-Reset_hFile/0001-wintrust-Reset-data-pWintrustData-u.pFile-hFile-afte.patch)
-	@( \
-		echo '+    { "Sebastian Lackner", "wintrust: Reset data->pWintrustData->u.pFile->hFile after closing handle.", 1 },'; \
-	) > wintrust-Reset_hFile.ok
-
 # Patchset wpcap-Dynamic_Linking
 # |
 # | Modified files:
@@ -2011,30 +1990,6 @@ ws2_32-Connect_Time.ok:
 	@( \
 		echo '+    { "Sebastian Lackner", "ws2_32: Implement returning the proper time with SO_CONNECT_TIME.", 1 },'; \
 	) > ws2_32-Connect_Time.ok
-
-# Patchset ws2_32-IP_Ordering
-# |
-# | Modified files:
-# |   *	dlls/ws2_32/socket.c
-# |
-.INTERMEDIATE: ws2_32-IP_Ordering.ok
-ws2_32-IP_Ordering.ok:
-	$(call APPLY_FILE,ws2_32-IP_Ordering/0001-ws2_32-WS_get_local_ips-Fix-ordering-of-IP-addresses.patch)
-	@( \
-		echo '+    { "Joachim Priesner", "ws2_32: WS_get_local_ips: Fix ordering of IP addresses by metric if two addresses have the same metric.", 2 },'; \
-	) > ws2_32-IP_Ordering.ok
-
-# Patchset ws2_32-Overlapping_FDS
-# |
-# | Modified files:
-# |   *	dlls/ws2_32/socket.c
-# |
-.INTERMEDIATE: ws2_32-Overlapping_FDS.ok
-ws2_32-Overlapping_FDS.ok:
-	$(call APPLY_FILE,ws2_32-Overlapping_FDS/0001-ws2_32-Improve-implementation-of-get_poll_results.patch)
-	@( \
-		echo '+    { "Sebastian Lackner", "ws2_32: Improve implementation of get_poll_results.", 1 },'; \
-	) > ws2_32-Overlapping_FDS.ok
 
 # Patchset ws2_32-TransmitFile
 # |

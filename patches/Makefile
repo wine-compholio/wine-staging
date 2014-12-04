@@ -104,6 +104,7 @@ PATCHLIST := \
 	shlwapi-UrlCombine.ok \
 	user32-Dialog_Paint_Event.ok \
 	user32-DrawTextExW.ok \
+	user32-GetRawInputDeviceList.ok \
 	user32-GetSystemMetrics.ok \
 	user32-GetTipText.ok \
 	user32-Mouse_Message_Hwnd.ok \
@@ -1606,6 +1607,21 @@ user32-DrawTextExW.ok:
 	@( \
 		echo '+    { "Sebastian Lackner", "user32: Fix handling of invert_y in DrawTextExW.", 1 },'; \
 	) > user32-DrawTextExW.ok
+
+# Patchset user32-GetRawInputDeviceList
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37667] Set last error when GetRawInputDeviceList fails
+# |
+# | Modified files:
+# |   *	dlls/user32/input.c
+# |
+.INTERMEDIATE: user32-GetRawInputDeviceList.ok
+user32-GetRawInputDeviceList.ok:
+	$(call APPLY_FILE,user32-GetRawInputDeviceList/0001-user32-Set-last-error-when-GetRawInputDeviceList-fai.patch)
+	@( \
+		echo '+    { "Andrew Church", "user32: Set last error when GetRawInputDeviceList fails.", 1 },'; \
+	) > user32-GetRawInputDeviceList.ok
 
 # Patchset user32-GetSystemMetrics
 # |

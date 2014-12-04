@@ -23,7 +23,6 @@ PATCHLIST := \
 	Miscellaneous.ok \
 	Pipelight.ok \
 	Staging.ok \
-	api-ms-win-core-Stubs.ok \
 	atl-IOCS_Property.ok \
 	comctl32-LoadIconMetric.ok \
 	configure-Absolute_RPATH.ok \
@@ -56,7 +55,6 @@ PATCHLIST := \
 	libs-Unicode_Collation.ok \
 	libwine-BSD_mmap_fixed.ok \
 	msvcp90-basic_string_wchar_dtor.ok \
-	msvcrt-Spawn_Process.ok \
 	msvcrt-atof_strtod.ok \
 	ntdll-DOS_Attributes.ok \
 	ntdll-Dynamic_DST.ok \
@@ -255,28 +253,6 @@ Staging.ok:
 		echo '+    { "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list.", 1 },'; \
 		echo '+    { "Michael Müller", "loader: Add commandline option --check-libs.", 1 },'; \
 	) > Staging.ok
-
-# Patchset api-ms-win-core-Stubs
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/api-ms-win-core-datetime-l1-1-0/Makefile.in, dlls/api-ms-win-core-datetime-l1-1-0/api-ms-win-core-
-# | 	datetime-l1-1-0.spec, dlls/api-ms-win-core-fibers-l1-1-0/Makefile.in, dlls/api-ms-win-core-fibers-l1-1-0/api-ms-win-
-# | 	core-fibers-l1-1-0.spec, dlls/api-ms-win-core-winrt-error-l1-1-1/Makefile.in, dlls/api-ms-win-core-winrt-error-l1-1-1
-# | 	/api-ms-win-core-winrt-error-l1-1-1.spec, dlls/api-ms-win-core-xstate-l2-1-0/Makefile.in, dlls/api-ms-win-core-
-# | 	xstate-l2-1-0/api-ms-win-core-xstate-l2-1-0.spec, tools/make_specfiles
-# |
-.INTERMEDIATE: api-ms-win-core-Stubs.ok
-api-ms-win-core-Stubs.ok:
-	$(call APPLY_FILE,api-ms-win-core-Stubs/0001-api-ms-win-core-fibers-l1-1-0-Add-dll.patch)
-	$(call APPLY_FILE,api-ms-win-core-Stubs/0002-api-ms-win-core-datetime-l1-1-0-Add-dll.patch)
-	$(call APPLY_FILE,api-ms-win-core-Stubs/0003-api-ms-win-core-xstate-l2-1-0-Add-stub-dll.patch)
-	$(call APPLY_FILE,api-ms-win-core-Stubs/0004-api-ms-win-core-winrt-error-l1-1-1-Add-stub-dll.patch)
-	@( \
-		echo '+    { "Michael Müller", "api-ms-win-core-fibers-l1-1-0: Add dll.", 1 },'; \
-		echo '+    { "Michael Müller", "api-ms-win-core-datetime-l1-1-0: Add dll.", 1 },'; \
-		echo '+    { "Michael Müller", "api-ms-win-core-xstate-l2-1-0: Add stub dll.", 1 },'; \
-		echo '+    { "Michael Müller", "api-ms-win-core-winrt-error-l1-1-1: Add stub dll.", 1 },'; \
-	) > api-ms-win-core-Stubs.ok
 
 # Patchset atl-IOCS_Property
 # |
@@ -800,21 +776,6 @@ msvcp90-basic_string_wchar_dtor.ok:
 		echo '+    { "Michael Müller", "msvcp90: basic_string_wchar_dtor needs to return NULL.", 1 },'; \
 		echo '+    { "Michael Müller", "msvcp90/tests: Add tests to check that basic_string_wchar_dtor returns NULL.", 1 },'; \
 	) > msvcp90-basic_string_wchar_dtor.ok
-
-# Patchset msvcrt-Spawn_Process
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37635] Fix passing of unicode environment from msvcrt to CreateProcessW.
-# |
-# | Modified files:
-# |   *	dlls/msvcrt/process.c
-# |
-.INTERMEDIATE: msvcrt-Spawn_Process.ok
-msvcrt-Spawn_Process.ok:
-	$(call APPLY_FILE,msvcrt-Spawn_Process/0001-msvcrt-Fix-passing-of-explicit-environment-to-spawn-.patch)
-	@( \
-		echo '+    { "Ron Yorston", "msvcrt: Fix passing of explicit environment to spawn/exec calls.", 1 },'; \
-	) > msvcrt-Spawn_Process.ok
 
 # Patchset msvcrt-atof_strtod
 # |

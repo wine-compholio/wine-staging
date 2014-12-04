@@ -82,7 +82,7 @@ Included bug fixes and improvements
 * Fix issues with dragging layers between images in Adobe Photoshop 7.0 ([Wine Bug #12007](https://bugs.winehq.org/show_bug.cgi?id=12007))
 * Fix missing video introduced by pixelformat changes. ([Wine Bug #36900](https://bugs.winehq.org/show_bug.cgi?id=36900))
 * ~~Fix ordering of IP addresses by metric if two addresses have the same metric.~~
-* Fix passing of unicode environment from msvcrt to CreateProcessW. ([Wine Bug #37635](https://bugs.winehq.org/show_bug.cgi?id=37635))
+* ~~Fix passing of unicode environment from msvcrt to CreateProcessW.~~ ([Wine Bug #37635](https://bugs.winehq.org/show_bug.cgi?id=37635))
 * Fix texture corruption in CSI: Fatal Conspiracy ([Wine Bug #33768](https://bugs.winehq.org/show_bug.cgi?id=33768))
 * Fix unintentional leaks with ntdll internals
 * Fix wined3d performance drop introduced by pixelformat changes. ([Wine Bug #35655](https://bugs.winehq.org/show_bug.cgi?id=35655))

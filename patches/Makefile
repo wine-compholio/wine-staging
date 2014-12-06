@@ -1817,6 +1817,7 @@ winepulse-PulseAudio_Support.ok:
 	$(call APPLY_FILE,winepulse-PulseAudio_Support/0029-winepulse-implement-exclusive-mode.patch)
 	$(call APPLY_FILE,winepulse-PulseAudio_Support/0030-winepulse-fix-segfault-in-pulse_rd_loop.patch)
 	$(call APPLY_FILE,winepulse-PulseAudio_Support/0031-winepulse-implement-GetPropValue.patch)
+	$(call APPLY_FILE,winepulse-PulseAudio_Support/0032-winepulse-Replace-busyloop-with-condition-variable-a.patch)
 	@( \
 		echo '+    { "Maarten Lankhorst", "winmm: Load winealsa if winepulse is found.", 1 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: Add initial stub for pulseaudio support.", 1 },'; \
@@ -1849,6 +1850,7 @@ winepulse-PulseAudio_Support.ok:
 		echo '+    { "Mark Harmstone", "winepulse: implement exclusive mode.", 1 },'; \
 		echo '+    { "Mark Harmstone", "winepulse: fix segfault in pulse_rd_loop.", 1 },'; \
 		echo '+    { "Mark Harmstone", "winepulse: implement GetPropValue.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "winepulse: Replace busyloop with condition variable and minor style fixes.", 1 },'; \
 	) > winepulse-PulseAudio_Support.ok
 
 # Patchset winex11-CandidateWindowPos

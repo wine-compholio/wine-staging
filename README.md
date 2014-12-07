@@ -37,12 +37,13 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [4]:**
+**Bugfixes and features included in the next upcoming release [5]:**
 
 * Add support for GetPropValue to PulseAudio backend
 * Fix condition mask handling in RtlVerifyVersionInfo ([Wine Bug #36143](https://bugs.winehq.org/show_bug.cgi?id=36143))
 * Fix possible segfault in pulse_rd_loop of PulseAudio backend
 * Set last error when GetRawInputDeviceList fails ([Wine Bug #37667](https://bugs.winehq.org/show_bug.cgi?id=37667))
+* Support for StrCatChainW
 
 
 **Bugs fixed in Wine Staging 1.7.32 [108]:**

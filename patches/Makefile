@@ -99,6 +99,7 @@ PATCHLIST := \
 	shell32-SHCreateSessionKey.ok \
 	shell32-SHFileOperation.ok \
 	shlwapi-PathIsDirectoryEmptyW.ok \
+	shlwapi-StrCatChainW.ok \
 	shlwapi-UrlCombine.ok \
 	user32-Dialog_Paint_Event.ok \
 	user32-DrawTextExW.ok \
@@ -1524,6 +1525,18 @@ shlwapi-PathIsDirectoryEmptyW.ok:
 	@( \
 		echo '+    { "Michael Müller", "shlwapi: Correctly treat '\''.'\'' when enumerating files in PathIsDirectoryEmptyW.", 1 },'; \
 	) > shlwapi-PathIsDirectoryEmptyW.ok
+
+# Patchset shlwapi-StrCatChainW
+# |
+# | Modified files:
+# |   *	dlls/shlwapi/shlwapi.spec, dlls/shlwapi/string.c, dlls/shlwapi/tests/string.c
+# |
+.INTERMEDIATE: shlwapi-StrCatChainW.ok
+shlwapi-StrCatChainW.ok:
+	$(call APPLY_FILE,shlwapi-StrCatChainW/0001-shlwapi-Add-implementation-for-StrCatChainW.patch)
+	@( \
+		echo '+    { "Sebastian Lackner", "shlwapi: Add implementation for StrCatChainW.", 1 },'; \
+	) > shlwapi-StrCatChainW.ok
 
 # Patchset shlwapi-UrlCombine
 # |

@@ -122,6 +122,7 @@ PATCHLIST := \
 	winex11-Window_Groups.ok \
 	winex11-XEMBED.ok \
 	winex11-wglShareLists.ok \
+	wininet-encoding.ok \
 	wpcap-Dynamic_Linking.ok \
 	ws2_32-Connect_Time.ok \
 	ws2_32-TransmitFile.ok \
@@ -1950,6 +1951,21 @@ winex11-wglShareLists.ok:
 	@( \
 		echo '+    { "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists.", 1 },'; \
 	) > winex11-wglShareLists.ok
+
+# Patchset wininet-encoding
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37046] wininet should allow Accept-Encoding header for HTTP/1.0
+# |
+# | Modified files:
+# |   *	dlls/wininet/http.c, dlls/wininet/tests/http.c
+# |
+.INTERMEDIATE: wininet-encoding.ok
+wininet-encoding.ok:
+	$(call APPLY_FILE,wininet-encoding/0001-wininet-Allow-Accept-Encoding-for-HTTP-1.0-requests.patch)
+	@( \
+		echo '+    { "Michael Müller", "wininet: Allow Accept-Encoding for HTTP/1.0 requests.", 1 },'; \
+	) > wininet-encoding.ok
 
 # Patchset wpcap-Dynamic_Linking
 # |

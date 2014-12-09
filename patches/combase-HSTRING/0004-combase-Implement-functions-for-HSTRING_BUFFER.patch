@@ -1,0 +1,245 @@
+From 012a71baa669e6ead66a1d5f94c8ee81d8cfce58 Mon Sep 17 00:00:00 2001
+From: Martin Storsjo <martin@martin.st>
+Date: Tue, 9 Dec 2014 10:36:50 +0200
+Subject: combase: Implement functions for HSTRING_BUFFER.
+
+---
+ .../api-ms-win-core-winrt-string-l1-1-0.spec       |  6 +--
+ dlls/combase/combase.spec                          |  6 +--
+ dlls/combase/string.c                              | 60 +++++++++++++++++++++-
+ dlls/combase/tests/string.c                        | 56 ++++++++++++++++++++
+ 4 files changed, 121 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/api-ms-win-core-winrt-string-l1-1-0/api-ms-win-core-winrt-string-l1-1-0.spec b/dlls/api-ms-win-core-winrt-string-l1-1-0/api-ms-win-core-winrt-string-l1-1-0.spec
+index cb6bb5e..2361a1d 100644
+--- a/dlls/api-ms-win-core-winrt-string-l1-1-0/api-ms-win-core-winrt-string-l1-1-0.spec
++++ b/dlls/api-ms-win-core-winrt-string-l1-1-0/api-ms-win-core-winrt-string-l1-1-0.spec
+@@ -11,14 +11,14 @@
+ @ stdcall WindowsCreateString(ptr long ptr) combase.WindowsCreateString
+ @ stdcall WindowsCreateStringReference(wstr long ptr ptr) combase.WindowsCreateStringReference
+ @ stdcall WindowsDeleteString(ptr) combase.WindowsDeleteString
+-@ stub WindowsDeleteStringBuffer
++@ stdcall WindowsDeleteStringBuffer(ptr) combase.WindowsDeleteStringBuffer
+ @ stdcall WindowsDuplicateString(ptr ptr) combase.WindowsDuplicateString
+ @ stdcall WindowsGetStringLen(ptr) combase.WindowsGetStringLen
+ @ stdcall WindowsGetStringRawBuffer(ptr ptr) combase.WindowsGetStringRawBuffer
+ @ stub WindowsInspectString
+ @ stdcall WindowsIsStringEmpty(ptr) combase.WindowsIsStringEmpty
+-@ stub WindowsPreallocateStringBuffer
+-@ stub WindowsPromoteStringBuffer
++@ stdcall WindowsPreallocateStringBuffer(long ptr ptr) combase.WindowsPreallocateStringBuffer
++@ stdcall WindowsPromoteStringBuffer(ptr ptr) combase.WindowsPromoteStringBuffer
+ @ stub WindowsReplaceString
+ @ stdcall WindowsStringHasEmbeddedNull(ptr ptr) combase.WindowsStringHasEmbeddedNull
+ @ stub WindowsSubstring
+diff --git a/dlls/combase/combase.spec b/dlls/combase/combase.spec
+index e0136f0..ac095ce 100644
+--- a/dlls/combase/combase.spec
++++ b/dlls/combase/combase.spec
+@@ -292,14 +292,14 @@
+ @ stdcall WindowsCreateString(ptr long ptr)
+ @ stdcall WindowsCreateStringReference(wstr long ptr ptr)
+ @ stdcall WindowsDeleteString(ptr)
+-@ stub WindowsDeleteStringBuffer
++@ stdcall WindowsDeleteStringBuffer(ptr)
+ @ stdcall WindowsDuplicateString(ptr ptr)
+ @ stdcall WindowsGetStringLen(ptr)
+ @ stdcall WindowsGetStringRawBuffer(ptr ptr)
+ @ stub WindowsInspectString
+ @ stdcall WindowsIsStringEmpty(ptr)
+-@ stub WindowsPreallocateStringBuffer
+-@ stub WindowsPromoteStringBuffer
++@ stdcall WindowsPreallocateStringBuffer(long ptr ptr)
++@ stdcall WindowsPromoteStringBuffer(ptr ptr)
+ @ stub WindowsReplaceString
+ @ stdcall WindowsStringHasEmbeddedNull(ptr ptr)
+ @ stub WindowsSubstring
+diff --git a/dlls/combase/string.c b/dlls/combase/string.c
+index a451ed8..693d40a 100644
+--- a/dlls/combase/string.c
++++ b/dlls/combase/string.c
+@@ -32,6 +32,8 @@ struct hstring_private
+     LONG   refcount;
+ };
+ 
++static const WCHAR empty[] = { 0 };
++
+ C_ASSERT(sizeof(struct hstring_private) <= sizeof(HSTRING_HEADER));
+ 
+ static inline struct hstring_private *impl_from_HSTRING(HSTRING string)
+@@ -44,6 +46,11 @@ static inline struct hstring_private *impl_from_HSTRING_HEADER(HSTRING_HEADER *h
+    return (struct hstring_private *)header;
+ }
+ 
++static inline struct hstring_private *impl_from_HSTRING_BUFFER(HSTRING_BUFFER buffer)
++{
++   return (struct hstring_private *)buffer;
++}
++
+ static BOOL alloc_string(UINT32 len, HSTRING *out)
+ {
+     struct hstring_private *priv;
+@@ -143,6 +150,58 @@ HRESULT WINAPI WindowsDuplicateString(HSTRING str, HSTRING *out)
+ }
+ 
+ /***********************************************************************
++ *      WindowsPreallocateStringBuffer (combase.@)
++ */
++HRESULT WINAPI WindowsPreallocateStringBuffer(UINT32 len, WCHAR **outptr,
++                                              HSTRING_BUFFER *out)
++{
++    struct hstring_private *priv;
++    HSTRING str;
++    if (outptr == NULL || out == NULL)
++        return E_POINTER;
++    if (len == 0)
++    {
++        *outptr = (LPWSTR)empty;
++        *out = NULL;
++        return S_OK;
++    }
++
++    if (!alloc_string(len, &str))
++        return E_OUTOFMEMORY;
++    priv = impl_from_HSTRING(str);
++    *outptr = priv->buffer;
++    *out = (HSTRING_BUFFER)str;
++    return S_OK;
++}
++
++/***********************************************************************
++ *      WindowsDeleteStringBuffer (combase.@)
++ */
++HRESULT WINAPI WindowsDeleteStringBuffer(HSTRING_BUFFER buf)
++{
++    return WindowsDeleteString((HSTRING)buf);
++}
++
++/***********************************************************************
++ *      WindowsPromoteStringBuffer (combase.@)
++ */
++HRESULT WINAPI WindowsPromoteStringBuffer(HSTRING_BUFFER buf, HSTRING *out)
++{
++    struct hstring_private *priv = impl_from_HSTRING_BUFFER(buf);
++    if (out == NULL)
++        return E_POINTER;
++    if (buf == NULL)
++    {
++        *out = NULL;
++        return S_OK;
++    }
++    if (priv->buffer[priv->length] != 0 || priv->reference || priv->refcount != 1)
++        return E_INVALIDARG;
++    *out = (HSTRING)buf;
++    return S_OK;
++}
++
++/***********************************************************************
+  *      WindowsGetStringLen (combase.@)
+  */
+ UINT32 WINAPI WindowsGetStringLen(HSTRING str)
+@@ -158,7 +217,6 @@ UINT32 WINAPI WindowsGetStringLen(HSTRING str)
+  */
+ LPCWSTR WINAPI WindowsGetStringRawBuffer(HSTRING str, UINT32 *len)
+ {
+-    static const WCHAR empty[] = { 0 };
+     struct hstring_private *priv = impl_from_HSTRING(str);
+     if (str == NULL)
+     {
+diff --git a/dlls/combase/tests/string.c b/dlls/combase/tests/string.c
+index ec5e517..72eaa84 100644
+--- a/dlls/combase/tests/string.c
++++ b/dlls/combase/tests/string.c
+@@ -30,10 +30,13 @@
+ static HRESULT (WINAPI *pWindowsCreateString)(LPCWSTR, UINT32, HSTRING *);
+ static HRESULT (WINAPI *pWindowsCreateStringReference)(LPCWSTR, UINT32, HSTRING_HEADER *, HSTRING *);
+ static HRESULT (WINAPI *pWindowsDeleteString)(HSTRING);
++static HRESULT (WINAPI *pWindowsDeleteStringBuffer)(HSTRING_BUFFER);
+ static HRESULT (WINAPI *pWindowsDuplicateString)(HSTRING, HSTRING *);
+ static UINT32  (WINAPI *pWindowsGetStringLen)(HSTRING);
+ static LPCWSTR (WINAPI *pWindowsGetStringRawBuffer)(HSTRING, UINT32 *);
+ static BOOL    (WINAPI *pWindowsIsStringEmpty)(HSTRING);
++static HRESULT (WINAPI *pWindowsPreallocateStringBuffer)(UINT32, WCHAR **, HSTRING_BUFFER *);
++static HRESULT (WINAPI *pWindowsPromoteStringBuffer)(HSTRING_BUFFER, HSTRING *);
+ static HRESULT (WINAPI *pWindowsStringHasEmbeddedNull)(HSTRING, BOOL *);
+ 
+ #define SET(x) p##x = (void*)GetProcAddress(hmod, #x)
+@@ -49,10 +52,13 @@ static BOOL init_functions(void)
+     SET(WindowsCreateString);
+     SET(WindowsCreateStringReference);
+     SET(WindowsDeleteString);
++    SET(WindowsDeleteStringBuffer);
+     SET(WindowsDuplicateString);
+     SET(WindowsGetStringLen);
+     SET(WindowsGetStringRawBuffer);
+     SET(WindowsIsStringEmpty);
++    SET(WindowsPreallocateStringBuffer);
++    SET(WindowsPromoteStringBuffer);
+     SET(WindowsStringHasEmbeddedNull);
+     return TRUE;
+ }
+@@ -181,6 +187,55 @@ static void test_access(void)
+     ok(pWindowsDeleteString(str) == S_OK, "Failed to delete string ref\n");
+ }
+ 
++static void test_string_buffer(void)
++{
++    /* Initialize ptr to NULL to make sure it actually is set in the first
++     * test below. */
++    HSTRING_BUFFER buf = NULL;
++    WCHAR *ptr = NULL;
++    HSTRING str;
++
++    /* Test creation of an empty buffer */
++    ok(pWindowsPreallocateStringBuffer(0, &ptr, &buf) == S_OK, "Failed to preallocate string buffer\n");
++    ok(buf == NULL, "Empty string buffer isn't a null string\n");
++    ok(ptr != NULL, "Empty string didn't return a buffer pointer\n");
++    ok(pWindowsPromoteStringBuffer(buf, &str) == S_OK, "Failed to promote string buffer\n");
++    ok(str == NULL, "Empty string isn't a null string\n");
++    check_string(str, input_empty_string, 0, FALSE);
++    ok(pWindowsDeleteString(str) == S_OK, "Failed to delete string\n");
++
++    ok(pWindowsDeleteStringBuffer(NULL) == S_OK, "Failed to delete null string buffer\n");
++
++    /* Test creation and deletion of string buffers */
++    ok(pWindowsPreallocateStringBuffer(6, &ptr, &buf) == S_OK, "Failed to preallocate string buffer\n");
++    ok(pWindowsDeleteStringBuffer(buf) == S_OK, "Failed to delete string buffer\n");
++
++    /* Test creation and promotion of string buffers */
++    ok(pWindowsPreallocateStringBuffer(6, &ptr, &buf) == S_OK, "Failed to preallocate string buffer\n");
++    ok(ptr[6] == '\0', "Preallocated string buffer didn't have null termination\n");
++    memcpy(ptr, input_string, 6 * sizeof(*input_string));
++    ok(pWindowsPromoteStringBuffer(buf, NULL) == E_POINTER, "Incorrect error handling\n");
++    ok(pWindowsPromoteStringBuffer(buf, &str) == S_OK, "Failed to promote string buffer\n");
++    check_string(str, input_string, 6, FALSE);
++    ok(pWindowsDeleteString(str) == S_OK, "Failed to delete string\n");
++
++    /* Test error handling in preallocation */
++    ok(pWindowsPreallocateStringBuffer(6, NULL, &buf) == E_POINTER, "Incorrect error handling\n");
++    ok(pWindowsPreallocateStringBuffer(6, &ptr, NULL) == E_POINTER, "Incorrect error handling\n");
++
++    ok(pWindowsPreallocateStringBuffer(6, &ptr, &buf) == S_OK, "Failed to preallocate string buffer\n");
++    ptr[6] = 'a'; /* Overwrite the buffer's null termination, promotion should fail */
++    ok(pWindowsPromoteStringBuffer(buf, &str) == E_INVALIDARG, "Incorrect error handling\n");
++    ok(pWindowsDeleteStringBuffer(buf) == S_OK, "Failed to delete string buffer\n");
++
++    /* Test strings with trailing null chars */
++    ok(pWindowsPreallocateStringBuffer(7, &ptr, &buf) == S_OK, "Failed to preallocate string buffer\n");
++    memcpy(ptr, input_string, 7 * sizeof(*input_string));
++    ok(pWindowsPromoteStringBuffer(buf, &str) == S_OK, "Failed to promote string buffer\n");
++    check_string(str, input_string, 7, TRUE);
++    ok(pWindowsDeleteString(str) == S_OK, "Failed to delete string\n");
++}
++
+ START_TEST(string)
+ {
+     if (!init_functions())
+@@ -188,4 +243,5 @@ START_TEST(string)
+     test_create_delete();
+     test_duplicate();
+     test_access();
++    test_string_buffer();
+ }
+-- 
+2.1.3
+

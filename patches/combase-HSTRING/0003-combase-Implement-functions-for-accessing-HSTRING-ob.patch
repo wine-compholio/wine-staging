@@ -1,0 +1,257 @@
+From 64e2fd6cfd71aa4e1358086e8ee961a7c44e32e0 Mon Sep 17 00:00:00 2001
+From: Martin Storsjo <martin@martin.st>
+Date: Tue, 9 Dec 2014 10:36:49 +0200
+Subject: combase: Implement functions for accessing HSTRING objects.
+
+---
+ .../api-ms-win-core-winrt-string-l1-1-0.spec       |  8 +--
+ dlls/combase/combase.spec                          |  8 +--
+ dlls/combase/string.c                              | 66 ++++++++++++++++++++++
+ dlls/combase/tests/string.c                        | 65 ++++++++++++++++++++-
+ 4 files changed, 138 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/api-ms-win-core-winrt-string-l1-1-0/api-ms-win-core-winrt-string-l1-1-0.spec b/dlls/api-ms-win-core-winrt-string-l1-1-0/api-ms-win-core-winrt-string-l1-1-0.spec
+index 7658867..cb6bb5e 100644
+--- a/dlls/api-ms-win-core-winrt-string-l1-1-0/api-ms-win-core-winrt-string-l1-1-0.spec
++++ b/dlls/api-ms-win-core-winrt-string-l1-1-0/api-ms-win-core-winrt-string-l1-1-0.spec
+@@ -13,14 +13,14 @@
+ @ stdcall WindowsDeleteString(ptr) combase.WindowsDeleteString
+ @ stub WindowsDeleteStringBuffer
+ @ stdcall WindowsDuplicateString(ptr ptr) combase.WindowsDuplicateString
+-@ stub WindowsGetStringLen
+-@ stub WindowsGetStringRawBuffer
++@ stdcall WindowsGetStringLen(ptr) combase.WindowsGetStringLen
++@ stdcall WindowsGetStringRawBuffer(ptr ptr) combase.WindowsGetStringRawBuffer
+ @ stub WindowsInspectString
+-@ stub WindowsIsStringEmpty
++@ stdcall WindowsIsStringEmpty(ptr) combase.WindowsIsStringEmpty
+ @ stub WindowsPreallocateStringBuffer
+ @ stub WindowsPromoteStringBuffer
+ @ stub WindowsReplaceString
+-@ stub WindowsStringHasEmbeddedNull
++@ stdcall WindowsStringHasEmbeddedNull(ptr ptr) combase.WindowsStringHasEmbeddedNull
+ @ stub WindowsSubstring
+ @ stub WindowsSubstringWithSpecifiedLength
+ @ stub WindowsTrimStringEnd
+diff --git a/dlls/combase/combase.spec b/dlls/combase/combase.spec
+index f399d25..e0136f0 100644
+--- a/dlls/combase/combase.spec
++++ b/dlls/combase/combase.spec
+@@ -294,14 +294,14 @@
+ @ stdcall WindowsDeleteString(ptr)
+ @ stub WindowsDeleteStringBuffer
+ @ stdcall WindowsDuplicateString(ptr ptr)
+-@ stub WindowsGetStringLen
+-@ stub WindowsGetStringRawBuffer
++@ stdcall WindowsGetStringLen(ptr)
++@ stdcall WindowsGetStringRawBuffer(ptr ptr)
+ @ stub WindowsInspectString
+-@ stub WindowsIsStringEmpty
++@ stdcall WindowsIsStringEmpty(ptr)
+ @ stub WindowsPreallocateStringBuffer
+ @ stub WindowsPromoteStringBuffer
+ @ stub WindowsReplaceString
+-@ stub WindowsStringHasEmbeddedNull
++@ stdcall WindowsStringHasEmbeddedNull(ptr ptr)
+ @ stub WindowsSubstring
+ @ stub WindowsSubstringWithSpecifiedLength
+ @ stub WindowsTrimStringEnd
+diff --git a/dlls/combase/string.c b/dlls/combase/string.c
+index ee2f5c0..a451ed8 100644
+--- a/dlls/combase/string.c
++++ b/dlls/combase/string.c
+@@ -141,3 +141,69 @@ HRESULT WINAPI WindowsDuplicateString(HSTRING str, HSTRING *out)
+     *out = str;
+     return S_OK;
+ }
++
++/***********************************************************************
++ *      WindowsGetStringLen (combase.@)
++ */
++UINT32 WINAPI WindowsGetStringLen(HSTRING str)
++{
++    struct hstring_private *priv = impl_from_HSTRING(str);
++    if (str == NULL)
++        return 0;
++    return priv->length;
++}
++
++/***********************************************************************
++ *      WindowsGetStringRawBuffer (combase.@)
++ */
++LPCWSTR WINAPI WindowsGetStringRawBuffer(HSTRING str, UINT32 *len)
++{
++    static const WCHAR empty[] = { 0 };
++    struct hstring_private *priv = impl_from_HSTRING(str);
++    if (str == NULL)
++    {
++        if (len)
++            *len = 0;
++        return empty;
++    }
++    if (len)
++        *len = priv->length;
++    return priv->buffer;
++}
++
++/***********************************************************************
++ *      WindowsStringHasEmbeddedNull (combase.@)
++ */
++HRESULT WINAPI WindowsStringHasEmbeddedNull(HSTRING str, BOOL *out)
++{
++    UINT32 i;
++    struct hstring_private *priv = impl_from_HSTRING(str);
++    if (out == NULL)
++        return E_INVALIDARG;
++    if (str == NULL)
++    {
++        *out = FALSE;
++        return S_OK;
++    }
++    for (i = 0; i < priv->length; i++)
++    {
++        if (priv->buffer[i] == '\0')
++        {
++            *out = TRUE;
++            return S_OK;
++        }
++    }
++    *out = FALSE;
++    return S_OK;
++}
++
++/***********************************************************************
++ *      WindowsIsStringEmpty (combase.@)
++ */
++BOOL WINAPI WindowsIsStringEmpty(HSTRING str)
++{
++    struct hstring_private *priv = impl_from_HSTRING(str);
++    if (str == NULL)
++        return TRUE;
++    return priv->length == 0;
++}
+diff --git a/dlls/combase/tests/string.c b/dlls/combase/tests/string.c
+index 01a63f7..ec5e517 100644
+--- a/dlls/combase/tests/string.c
++++ b/dlls/combase/tests/string.c
+@@ -31,6 +31,10 @@ static HRESULT (WINAPI *pWindowsCreateString)(LPCWSTR, UINT32, HSTRING *);
+ static HRESULT (WINAPI *pWindowsCreateStringReference)(LPCWSTR, UINT32, HSTRING_HEADER *, HSTRING *);
+ static HRESULT (WINAPI *pWindowsDeleteString)(HSTRING);
+ static HRESULT (WINAPI *pWindowsDuplicateString)(HSTRING, HSTRING *);
++static UINT32  (WINAPI *pWindowsGetStringLen)(HSTRING);
++static LPCWSTR (WINAPI *pWindowsGetStringRawBuffer)(HSTRING, UINT32 *);
++static BOOL    (WINAPI *pWindowsIsStringEmpty)(HSTRING);
++static HRESULT (WINAPI *pWindowsStringHasEmbeddedNull)(HSTRING, BOOL *);
+ 
+ #define SET(x) p##x = (void*)GetProcAddress(hmod, #x)
+ 
+@@ -46,14 +50,42 @@ static BOOL init_functions(void)
+     SET(WindowsCreateStringReference);
+     SET(WindowsDeleteString);
+     SET(WindowsDuplicateString);
++    SET(WindowsGetStringLen);
++    SET(WindowsGetStringRawBuffer);
++    SET(WindowsIsStringEmpty);
++    SET(WindowsStringHasEmbeddedNull);
+     return TRUE;
+ }
+ 
+ #undef SET
+ 
+ 
+-static const WCHAR input_string[] = { 'a', 'b', 'c', 'd', 'e', 'f', '\0' };
++#define check_string(str, content, length, has_null) _check_string(__LINE__, str, content, length, has_null)
++static void _check_string(int line, HSTRING str, LPCWSTR content, UINT32 length, BOOL has_null)
++{
++    BOOL out_null;
++    BOOL empty = length == 0;
++    UINT32 out_length;
++    LPCWSTR ptr;
++
++    ok_(__FILE__, line)(pWindowsIsStringEmpty(str) == empty, "WindowsIsStringEmpty failed\n");
++    ok_(__FILE__, line)(pWindowsStringHasEmbeddedNull(str, &out_null) == S_OK, "pWindowsStringHasEmbeddedNull failed\n");
++    ok_(__FILE__, line)(out_null == has_null, "WindowsStringHasEmbeddedNull failed\n");
++    ok_(__FILE__, line)(pWindowsGetStringLen(str) == length, "WindowsGetStringLen failed\n");
++    ptr = pWindowsGetStringRawBuffer(str, &out_length);
++    /* WindowsGetStringRawBuffer should return a non-null, null terminated empty string
++     * even if str is NULL. */
++    ok_(__FILE__, line)(ptr != NULL, "WindowsGetStringRawBuffer returned null\n");
++    ok_(__FILE__, line)(out_length == length, "WindowsGetStringRawBuffer returned incorrect length\n");
++    ptr = pWindowsGetStringRawBuffer(str, NULL);
++    ok_(__FILE__, line)(ptr != NULL, "WindowsGetStringRawBuffer returned null\n");
++    ok_(__FILE__, line)(ptr[length] == '\0', "WindowsGetStringRawBuffer doesn't return a null terminated buffer\n");
++    ok_(__FILE__, line)(memcmp(ptr, content, sizeof(*content) * length) == 0, "Incorrect string content\n");
++}
++
++static const WCHAR input_string[] = { 'a', 'b', 'c', 'd', 'e', 'f', '\0', '\0' };
+ static const WCHAR input_empty_string[] = { '\0' };
++static const WCHAR input_embed_null[] = { 'a', '\0', 'c', '\0', 'e', 'f', '\0' };
+ 
+ static void test_create_delete(void)
+ {
+@@ -62,6 +94,7 @@ static void test_create_delete(void)
+ 
+     /* Test normal creation of a string */
+     ok(pWindowsCreateString(input_string, 6, &str) == S_OK, "Failed to create string\n");
++    check_string(str, input_string, 6, FALSE);
+     ok(pWindowsDeleteString(str) == S_OK, "Failed to delete string\n");
+     /* Test error handling in WindowsCreateString */
+     ok(pWindowsCreateString(input_string, 6, NULL) == E_INVALIDARG, "Incorrect error handling\n");
+@@ -72,6 +105,7 @@ static void test_create_delete(void)
+ 
+     /* Test creation of a string reference */
+     ok(pWindowsCreateStringReference(input_string, 6, &header, &str) == S_OK, "Failed to create string ref\n");
++    check_string(str, input_string, 6, FALSE);
+     ok(pWindowsDeleteString(str) == S_OK, "Failed to delete string ref\n");
+ 
+     /* Test error handling in WindowsCreateStringReference */
+@@ -85,6 +119,7 @@ static void test_create_delete(void)
+ 
+     /* Test creating a string without a null-termination at the specified length */
+     ok(pWindowsCreateString(input_string, 3, &str) == S_OK, "Failed to create string\n");
++    check_string(str, input_string, 3, FALSE);
+     ok(pWindowsDeleteString(str) == S_OK, "Failed to delete string\n");
+ 
+     /* Test an empty string */
+@@ -119,10 +154,38 @@ static void test_duplicate(void)
+     ok(pWindowsDeleteString(str2) == S_OK, "Failed to delete string\n");
+ }
+ 
++static void test_access(void)
++{
++    HSTRING str;
++    HSTRING_HEADER header;
++
++    /* Test handling of a NULL string */
++    check_string(NULL, NULL, 0, FALSE);
++
++    /* Test strings with embedded null chars */
++    ok(pWindowsCreateString(input_embed_null, 6, &str) == S_OK, "Failed to create string\n");
++    check_string(str, input_embed_null, 6, TRUE);
++    ok(pWindowsDeleteString(str) == S_OK, "Failed to delete string\n");
++
++    ok(pWindowsCreateStringReference(input_embed_null, 6, &header, &str) == S_OK, "Failed to create string ref\n");
++    check_string(str, input_embed_null, 6, TRUE);
++    ok(pWindowsDeleteString(str) == S_OK, "Failed to delete string ref\n");
++
++    /* Test normal creation of a string with trailing null */
++    ok(pWindowsCreateString(input_string, 7, &str) == S_OK, "Failed to create string\n");
++    check_string(str, input_string, 7, TRUE);
++    ok(pWindowsDeleteString(str) == S_OK, "Failed to delete string\n");
++
++    ok(pWindowsCreateStringReference(input_string, 7, &header, &str) == S_OK, "Failed to create string ref\n");
++    check_string(str, input_string, 7, TRUE);
++    ok(pWindowsDeleteString(str) == S_OK, "Failed to delete string ref\n");
++}
++
+ START_TEST(string)
+ {
+     if (!init_functions())
+         return;
+     test_create_delete();
+     test_duplicate();
++    test_access();
+ }
+-- 
+2.1.3
+

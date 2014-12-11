@@ -55,6 +55,7 @@ PATCHLIST := \
 	kernel32-VerifyVersionInfo.ok \
 	libs-Unicode_Collation.ok \
 	libwine-BSD_mmap_fixed.ok \
+	mfplat-Stubs.ok \
 	msvcp90-basic_string_wchar_dtor.ok \
 	msvcrt-atof_strtod.ok \
 	ntdll-DOS_Attributes.ok \
@@ -764,6 +765,20 @@ libwine-BSD_mmap_fixed.ok:
 		echo '+    { "André Hentschel", "libwine: Use try_mmap_fixed for wine64 on FreeBSD.", 1 },'; \
 	) > libwine-BSD_mmap_fixed.ok
 
+# Patchset mfplat-Stubs
+# |
+# | Modified files:
+# |   *	dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, include/Makefile.in, include/mferror.h
+# |
+.INTERMEDIATE: mfplat-Stubs.ok
+mfplat-Stubs.ok:
+	$(call APPLY_FILE,mfplat-Stubs/0001-include-Add-mferror.h-header.patch)
+	$(call APPLY_FILE,mfplat-Stubs/0002-mfplat-Implement-stubs-for-MFStartup-and-MFShutdown.patch)
+	@( \
+		echo '+    { "Sebastian Lackner", "include: Add mferror.h header.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "mfplat: Implement stubs for MFStartup and MFShutdown.", 1 },'; \
+	) > mfplat-Stubs.ok
+
 # Patchset mshtml-sessionStorage
 # |
 # | Modified files:
@@ -954,7 +969,7 @@ ntdll-Heap_FreeLists.ok:
 # | 	include/ntifs.h
 # |
 .INTERMEDIATE: ntdll-Junction_Points.ok
-ntdll-Junction_Points.ok: ntdll-Fix_Free.ok ntdll-DOS_Attributes.ok
+ntdll-Junction_Points.ok: ntdll-DOS_Attributes.ok ntdll-Fix_Free.ok
 	$(call APPLY_FILE,ntdll-Junction_Points/0001-ntdll-Add-support-for-junction-point-creation.patch)
 	$(call APPLY_FILE,ntdll-Junction_Points/0002-ntdll-Add-support-for-reading-junction-points.patch)
 	$(call APPLY_FILE,ntdll-Junction_Points/0003-ntdll-Add-support-for-deleting-junction-points.patch)

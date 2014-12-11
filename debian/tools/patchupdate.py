@@ -559,7 +559,7 @@ def generate_makefile(all_patches):
 
             # Generate dependencies and code to apply patches
             fp.write(".INTERMEDIATE: %s.ok\n" % patch.name)
-            depends = " ".join([""] + ["%s.ok" % all_patches[d].name for d in patch.depends]) if len(patch.depends) else ""
+            depends = " ".join([""] + sorted(["%s.ok" % all_patches[d].name for d in patch.depends])) if len(patch.depends) else ""
             fp.write("%s.ok:%s\n" % (patch.name, depends))
             for f in patch.files:
                 fp.write("\t$(call APPLY_FILE,%s)\n" % os.path.join(patch.name, f))

@@ -277,16 +277,14 @@ atl-IOCS_Property.ok:
 # | Modified files:
 # |   *	configure.ac, dlls/api-ms-win-core-winrt-string-l1-1-0/api-ms-win-core-winrt-string-l1-1-0.spec,
 # | 	dlls/combase/Makefile.in, dlls/combase/combase.spec, dlls/combase/string.c, dlls/combase/tests/Makefile.in,
-# | 	dlls/combase/tests/string.c, include/Makefile.in, include/hstring.h, include/winstring.h, tools/make_specfiles
+# | 	dlls/combase/tests/string.c, tools/make_specfiles
 # |
 .INTERMEDIATE: combase-HSTRING.ok
 combase-HSTRING.ok:
-	$(call APPLY_FILE,combase-HSTRING/0001-include-Add-hstring.h-and-winstring.h.patch)
-	$(call APPLY_FILE,combase-HSTRING/0002-combase-Implement-creation-and-deletion-of-HSTRING-o.patch)
-	$(call APPLY_FILE,combase-HSTRING/0003-combase-Implement-functions-for-accessing-HSTRING-ob.patch)
-	$(call APPLY_FILE,combase-HSTRING/0004-combase-Implement-functions-for-HSTRING_BUFFER.patch)
+	$(call APPLY_FILE,combase-HSTRING/0001-combase-Implement-creation-and-deletion-of-HSTRING-o.patch)
+	$(call APPLY_FILE,combase-HSTRING/0002-combase-Implement-functions-for-accessing-HSTRING-ob.patch)
+	$(call APPLY_FILE,combase-HSTRING/0003-combase-Implement-functions-for-HSTRING_BUFFER.patch)
 	@( \
-		echo '+    { "Martin Storsjo", "include: Add hstring.h and winstring.h.", 1 },'; \
 		echo '+    { "Martin Storsjo", "combase: Implement creation and deletion of HSTRING objects.", 1 },'; \
 		echo '+    { "Martin Storsjo", "combase: Implement functions for accessing HSTRING objects.", 1 },'; \
 		echo '+    { "Martin Storsjo", "combase: Implement functions for HSTRING_BUFFER.", 1 },'; \

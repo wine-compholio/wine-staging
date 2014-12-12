@@ -104,6 +104,7 @@ PATCHLIST := \
 	shlwapi-PathIsDirectoryEmptyW.ok \
 	shlwapi-StrCatChainW.ok \
 	shlwapi-UrlCombine.ok \
+	urlmon-CoInternetSetFeatureEnabled.ok \
 	user32-Dialog_Paint_Event.ok \
 	user32-DrawTextExW.ok \
 	user32-GetRawInputDeviceList.ok \
@@ -1600,6 +1601,21 @@ shlwapi-UrlCombine.ok:
 		echo '+    { "Sebastian Lackner", "shlwapi/tests: Add additional tests for UrlCombine and UrlCanonicalize.", 1 },'; \
 		echo '+    { "Sebastian Lackner", "shlwapi: UrlCombineW workaround for relative paths.", 1 },'; \
 	) > shlwapi-UrlCombine.ok
+
+# Patchset urlmon-CoInternetSetFeatureEnabled
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35197] Ignore unsupported flags for CoInternetSetFeatureEnabled
+# |
+# | Modified files:
+# |   *	dlls/urlmon/internet.c
+# |
+.INTERMEDIATE: urlmon-CoInternetSetFeatureEnabled.ok
+urlmon-CoInternetSetFeatureEnabled.ok:
+	$(call APPLY_FILE,urlmon-CoInternetSetFeatureEnabled/0001-urlmon-Ignore-unsupported-flags-for-CoInternetSetFea.patch)
+	@( \
+		echo '+    { "Bruno Jesus", "urlmon: Ignore unsupported flags for CoInternetSetFeatureEnabled.", 1 },'; \
+	) > urlmon-CoInternetSetFeatureEnabled.ok
 
 # Patchset user32-Dialog_Paint_Event
 # |

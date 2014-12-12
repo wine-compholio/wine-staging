@@ -110,6 +110,7 @@ PATCHLIST := \
 	user32-GetSystemMetrics.ok \
 	user32-GetTipText.ok \
 	user32-Mouse_Message_Hwnd.ok \
+	user32-ScrollWindowEx.ok \
 	user32-WndProc.ok \
 	wine.inf-ProductId.ok \
 	wineboot-HKEY_DYN_DATA.ok \
@@ -1691,6 +1692,21 @@ user32-Mouse_Message_Hwnd.ok:
 	@( \
 		echo '+    { "Dmitry Timoshkov", "user32: Try harder to find a target for mouse messages.", 1 },'; \
 	) > user32-Mouse_Message_Hwnd.ok
+
+# Patchset user32-ScrollWindowEx
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37706] Fix return value of ScrollWindowEx for invisible windows
+# |
+# | Modified files:
+# |   *	dlls/user32/painting.c
+# |
+.INTERMEDIATE: user32-ScrollWindowEx.ok
+user32-ScrollWindowEx.ok:
+	$(call APPLY_FILE,user32-ScrollWindowEx/0001-user32-Fix-return-value-of-ScrollWindowEx-for-invisi.patch)
+	@( \
+		echo '+    { "Dmitry Timoshkov", "user32: Fix return value of ScrollWindowEx for invisible windows.", 1 },'; \
+	) > user32-ScrollWindowEx.ok
 
 # Patchset user32-WndProc
 # |

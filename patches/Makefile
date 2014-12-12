@@ -80,6 +80,7 @@ PATCHLIST := \
 	ntoskrnl-KeSetSystemAffinityThread.ok \
 	ntoskrnl-Stub_FileObject.ok \
 	ntoskrnl-Write_CR4.ok \
+	ole32-CoWaitForMultipleHandles.ok \
 	psapi-K32EnumProcessModulesEx.ok \
 	quartz-MediaSeeking_Positions.ok \
 	riched20-IText_Interface.ok \
@@ -1203,6 +1204,18 @@ ntoskrnl-Write_CR4.ok:
 	@( \
 		echo '+    { "Stefan Leichter", "ntoskrnl.exe: Emulate write to CR4 register.", 1 },'; \
 	) > ntoskrnl-Write_CR4.ok
+
+# Patchset ole32-CoWaitForMultipleHandles
+# |
+# | Modified files:
+# |   *	dlls/ole32/tests/compobj.c
+# |
+.INTERMEDIATE: ole32-CoWaitForMultipleHandles.ok
+ole32-CoWaitForMultipleHandles.ok:
+	$(call APPLY_FILE,ole32-CoWaitForMultipleHandles/0001-ole32-tests-Add-additional-tests-for-CoWaitForMultip.patch)
+	@( \
+		echo '+    { "Sebastian Lackner", "ole32/tests: Add additional tests for CoWaitForMultipleHandles and WM_QUIT.", 1 },'; \
+	) > ole32-CoWaitForMultipleHandles.ok
 
 # Patchset psapi-K32EnumProcessModulesEx
 # |

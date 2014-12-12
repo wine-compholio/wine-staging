@@ -787,6 +787,9 @@ libwine-BSD_mmap_fixed.ok:
 
 # Patchset mfplat-Stubs
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37701] Implement stubs for mfplat.MFStartup and MFShutdown
+# |
 # | Modified files:
 # |   *	dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, include/Makefile.in, include/mferror.h
 # |

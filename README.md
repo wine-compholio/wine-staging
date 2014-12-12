@@ -37,13 +37,14 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [11]:**
+**Bugfixes and features included in the next upcoming release [12]:**
 
 * Add support for GetPropValue to PulseAudio backend
 * Fix condition mask handling in RtlVerifyVersionInfo ([Wine Bug #36143](https://bugs.winehq.org/show_bug.cgi?id=36143))
 * Fix possible segfault in pulse_rd_loop of PulseAudio backend
 * Fix return value of ScrollWindowEx for invisible windows ([Wine Bug #37706](https://bugs.winehq.org/show_bug.cgi?id=37706))
 * Ignore unsupported flags for CoInternetSetFeatureEnabled ([Wine Bug #35197](https://bugs.winehq.org/show_bug.cgi?id=35197))
+* Implement stubs for mfplat.MFStartup and MFShutdown ([Wine Bug #37701](https://bugs.winehq.org/show_bug.cgi?id=37701))
 * Provide named entry point shell32.SHILCreateFromPath for vista apps ([Wine Bug #37265](https://bugs.winehq.org/show_bug.cgi?id=37265))
 * Reallocate buffer when adding records to AVI files ([Wine Bug #5137](https://bugs.winehq.org/show_bug.cgi?id=5137))
 * Set last error when GetRawInputDeviceList fails ([Wine Bug #37667](https://bugs.winehq.org/show_bug.cgi?id=37667))

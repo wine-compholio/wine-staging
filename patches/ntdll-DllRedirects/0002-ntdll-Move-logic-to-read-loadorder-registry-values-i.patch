@@ -1,0 +1,85 @@
+From 659b7d1dce76b50a488472fd8fc53b1f4e9b48ce Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 13 Dec 2014 02:32:51 +0100
+Subject: ntdll: Move logic to read loadorder registry values into separate
+ function.
+
+---
+ dlls/ntdll/loadorder.c | 40 ++++++++++++++++++++++++++++------------
+ 1 file changed, 28 insertions(+), 12 deletions(-)
+
+diff --git a/dlls/ntdll/loadorder.c b/dlls/ntdll/loadorder.c
+index d45a85f..8250692 100644
+--- a/dlls/ntdll/loadorder.c
++++ b/dlls/ntdll/loadorder.c
+@@ -379,25 +379,41 @@ static HANDLE get_app_key( const WCHAR *app_name )
+ 
+ 
+ /***************************************************************************
+- *	get_registry_value
++ *	get_registry_string
+  *
+- * Load the registry loadorder value for a given module.
++ * Load a registry string for a given module.
+  */
+-static enum loadorder get_registry_value( HANDLE hkey, const WCHAR *module )
++static WCHAR* get_registry_string( HANDLE hkey, const WCHAR *module, BYTE *buffer,
++                                   ULONG size )
+ {
+     UNICODE_STRING valueW;
+-    char buffer[80];
+     DWORD count;
++    WCHAR *ret = NULL;
+ 
+     RtlInitUnicodeString( &valueW, module );
+-
+-    if (!NtQueryValueKey( hkey, &valueW, KeyValuePartialInformation,
+-                                 buffer, sizeof(buffer), &count ))
++    if (size >= sizeof(WCHAR) &&
++        !NtQueryValueKey( hkey, &valueW, KeyValuePartialInformation,
++                          buffer, size - sizeof(WCHAR), &count ))
+     {
+-        WCHAR *str = (WCHAR *)((KEY_VALUE_PARTIAL_INFORMATION *)buffer)->Data;
+-        return parse_load_order( str );
++        KEY_VALUE_PARTIAL_INFORMATION *info = (void *)buffer;
++        ret = (WCHAR *)info->Data;
++        ret[info->DataLength / sizeof(WCHAR)] = 0;
+     }
+-    return LO_INVALID;
++
++    return ret;
++}
++
++
++/***************************************************************************
++ *	get_registry_load_order
++ *
++ * Load the registry loadorder value for a given module.
++ */
++static enum loadorder get_registry_load_order( HANDLE hkey, const WCHAR *module )
++{
++    BYTE buffer[81];
++    WCHAR *str = get_registry_string( hkey, module, buffer, sizeof(buffer) );
++    return str ? parse_load_order( str ) : LO_INVALID;
+ }
+ 
+ 
+@@ -419,13 +435,13 @@ static enum loadorder get_load_order_value( HANDLE std_key, HANDLE app_key, cons
+         return ret;
+     }
+ 
+-    if (app_key && ((ret = get_registry_value( app_key, module )) != LO_INVALID))
++    if (app_key && ((ret = get_registry_load_order( app_key, module )) != LO_INVALID))
+     {
+         TRACE( "got app defaults %s for %s\n", debugstr_loadorder(ret), debugstr_w(module) );
+         return ret;
+     }
+ 
+-    if (std_key && ((ret = get_registry_value( std_key, module )) != LO_INVALID))
++    if (std_key && ((ret = get_registry_load_order( std_key, module )) != LO_INVALID))
+     {
+         TRACE( "got standard key %s for %s\n", debugstr_loadorder(ret), debugstr_w(module) );
+         return ret;
+-- 
+1.9.1
+

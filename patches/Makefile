@@ -60,6 +60,7 @@ PATCHLIST := \
 	msvcp90-basic_string_wchar_dtor.ok \
 	msvcrt-atof_strtod.ok \
 	ntdll-DOS_Attributes.ok \
+	ntdll-DllRedirects.ok \
 	ntdll-Dynamic_DST.ok \
 	ntdll-Exception.ok \
 	ntdll-FD_Cache.ok \
@@ -880,6 +881,26 @@ ntdll-DOS_Attributes.ok:
 		echo '+    { "Erich E. Hoover", "libport: Add support for FreeBSD style extended attributes.", 1 },'; \
 		echo '+    { "Erich E. Hoover", "ntdll: Perform the Unix-style hidden file check within the unified file info grabbing routine.", 1 },'; \
 	) > ntdll-DOS_Attributes.ok
+
+# Patchset ntdll-DllRedirects
+# |
+# | Modified files:
+# |   *	dlls/ntdll/loader.c, dlls/ntdll/loadorder.c, dlls/ntdll/ntdll_misc.h
+# |
+.INTERMEDIATE: ntdll-DllRedirects.ok
+ntdll-DllRedirects.ok:
+	$(call APPLY_FILE,ntdll-DllRedirects/0001-ntdll-Move-logic-to-determine-loadorder-HKCU-app-key.patch)
+	$(call APPLY_FILE,ntdll-DllRedirects/0002-ntdll-Move-logic-to-read-loadorder-registry-values-i.patch)
+	$(call APPLY_FILE,ntdll-DllRedirects/0003-ntdll-Move-code-to-determine-module-basename-into-se.patch)
+	$(call APPLY_FILE,ntdll-DllRedirects/0004-ntdll-Implement-get_redirect-function.patch)
+	$(call APPLY_FILE,ntdll-DllRedirects/0005-ntdll-Implement-loader-redirection-scheme.patch)
+	@( \
+		echo '+    { "Michael Müller", "ntdll: Move logic to determine loadorder HKCU/app key into separate functions.", 1 },'; \
+		echo '+    { "Michael Müller", "ntdll: Move logic to read loadorder registry values into separate function.", 1 },'; \
+		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },'; \
+		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },'; \
+		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },'; \
+	) > ntdll-DllRedirects.ok
 
 # Patchset ntdll-Dynamic_DST
 # |

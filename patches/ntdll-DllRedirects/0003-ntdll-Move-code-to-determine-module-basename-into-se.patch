@@ -1,0 +1,87 @@
+From 219c4257ae314f8e2abe1e1567232336cdbbbdb4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 13 Dec 2014 02:57:41 +0100
+Subject: ntdll: Move code to determine module basename into separate function.
+
+---
+ dlls/ntdll/loadorder.c | 48 ++++++++++++++++++++++++++++++++----------------
+ 1 file changed, 32 insertions(+), 16 deletions(-)
+
+diff --git a/dlls/ntdll/loadorder.c b/dlls/ntdll/loadorder.c
+index 8250692..fbaa2d6 100644
+--- a/dlls/ntdll/loadorder.c
++++ b/dlls/ntdll/loadorder.c
+@@ -452,25 +452,17 @@ static enum loadorder get_load_order_value( HANDLE std_key, HANDLE app_key, cons
+ 
+ 
+ /***************************************************************************
+- *	get_load_order   (internal)
++ *	get_module_basename
+  *
+- * Return the loadorder of a module.
+- * The system directory and '.dll' extension is stripped from the path.
++ * Determine the module basename. The caller is responsible for releasing
++ * the memory.
+  */
+-enum loadorder get_load_order( const WCHAR *app_name, const WCHAR *path )
++static WCHAR* get_module_basename( const WCHAR *path, WCHAR **basename )
+ {
+-    enum loadorder ret = LO_INVALID;
+-    HANDLE std_key, app_key = 0;
+-    WCHAR *module, *basename;
+     UNICODE_STRING path_str;
++    WCHAR *module;
+     int len;
+ 
+-    if (!init_done) init_load_order();
+-    std_key = get_standard_key();
+-    if (app_name) app_key = get_app_key( app_name );
+-
+-    TRACE("looking for %s\n", debugstr_w(path));
+-
+     /* Strip path information if the module resides in the system directory
+      */
+     RtlInitUnicodeString( &path_str, path );
+@@ -481,12 +473,36 @@ enum loadorder get_load_order( const WCHAR *app_name, const WCHAR *path )
+         if (!strchrW( p, '\\' ) && !strchrW( p, '/' )) path = p;
+     }
+ 
+-    if (!(len = strlenW(path))) return ret;
+-    if (!(module = RtlAllocateHeap( GetProcessHeap(), 0, (len + 2) * sizeof(WCHAR) ))) return ret;
++    if (!(len = strlenW(path))) return NULL;
++    if (!(module = RtlAllocateHeap( GetProcessHeap(), 0, (len + 2) * sizeof(WCHAR) ))) return NULL;
+     strcpyW( module+1, path );  /* reserve module[0] for the wildcard char */
+-    basename = (WCHAR *)get_basename( module+1 );
++    *basename = (WCHAR *)get_basename( module+1 );
+ 
+     if (len >= 4) remove_dll_ext( module + 1 + len - 4 );
++    return module;
++}
++
++
++/***************************************************************************
++ *	get_load_order   (internal)
++ *
++ * Return the loadorder of a module.
++ * The system directory and '.dll' extension is stripped from the path.
++ */
++enum loadorder get_load_order( const WCHAR *app_name, const WCHAR *path )
++{
++    enum loadorder ret = LO_INVALID;
++    HANDLE std_key, app_key = 0;
++    WCHAR *module, *basename;
++
++    if (!init_done) init_load_order();
++    std_key = get_standard_key();
++    if (app_name) app_key = get_app_key( app_name );
++
++    TRACE("looking for %s\n", debugstr_w(path));
++
++    if (!(module = get_module_basename(path, &basename)))
++        return ret;
+ 
+     /* first explicit module name */
+     if ((ret = get_load_order_value( std_key, app_key, module+1 )) != LO_INVALID)
+-- 
+1.9.1
+

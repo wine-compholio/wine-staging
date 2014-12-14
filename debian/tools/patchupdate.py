@@ -335,26 +335,28 @@ def get_wine_file(filename):
     result.flush() # shouldn't be necessary because the subprocess writes directly to the fd
     return result
 
+def extract_patch(patchset, filename):
+    """Extract all changes to a specific file from a patchset."""
+    p = tempfile.NamedTemporaryFile()
+    m = hashlib.sha256()
+
+    for patch in patchset.patches:
+        if patch.modified_file != filename:
+            continue
+        for chunk in patch.read_chunks():
+            p.write(chunk)
+            m.update(chunk)
+        p.write("\n")
+        m.update("\n")
+
+    p.flush()
+    return (m.digest(), p)
+
 def select_patches(all_patches, indices, filename):
     """Create a temporary patch file for each patchset and calculate the checksum."""
     selected_patches = {}
-
     for i in indices:
-        p = tempfile.NamedTemporaryFile()
-        m = hashlib.sha256()
-
-        for patch in all_patches[i].patches:
-            if patch.modified_file != filename:
-                continue
-            for chunk in patch.read_chunks():
-                p.write(chunk)
-                m.update(chunk)
-            p.write("\n")
-            m.update("\n")
-
-        p.flush()
-        selected_patches[i]  = (m.digest(), p)
-
+        selected_patches[i] = extract_patch(all_patches[i], filename)
     return selected_patches
 
 def verify_patch_order(all_patches, indices, filename, pool):

@@ -55,16 +55,20 @@ class config(object):
     path_README_md          = "README.md"
     path_template_README_md = "debian/tools/README.md.in"
 
+    path_IfDefined          = "9999-IfDefined.patch"
+
 class PatchUpdaterError(RuntimeError):
     """Failed to update patches."""
     pass
 
 class PatchSet(object):
-    def __init__(self, name):
+    def __init__(self, name, directory):
         self.name           = name
+        self.directory      = directory
         self.fixes          = []
         self.changes        = []
         self.disabled       = False
+        self.ifdefined      = None
 
         self.files          = []
         self.patches        = []
@@ -172,10 +176,10 @@ def enum_directories(revision, path):
     if revision is None:
         for name in os.listdir(path):
             if name in [".", ".."]: continue
-            subdirectory = os.path.join(path, name)
-            if not os.path.isdir(subdirectory):
+            directory = os.path.join(path, name)
+            if not os.path.isdir(directory):
                 continue
-            dirs.append((name, subdirectory))
+            dirs.append((name, directory))
     else:
         filename = "%s:%s" % (revision, path)
         try:
@@ -206,9 +210,10 @@ def read_definition(revision, filename, name_to_id):
         except subprocess.CalledProcessError:
             raise IOError("Failed to load %s" % filename)
 
-    depends  = set()
-    fixes    = []
-    disabled = False
+    depends   = set()
+    fixes     = []
+    disabled  = False
+    ifdefined = None
 
     for line in content.split("\n"):
         if line.startswith("#"):
@@ -216,12 +221,14 @@ def read_definition(revision, filename, name_to_id):
         tmp = line.split(":", 1)
         if len(tmp) != 2:
             continue
+
         key, val = tmp[0].lower(), tmp[1].strip()
         if key == "depends":
             if name_to_id is not None:
                 if not name_to_id.has_key(val):
                     raise PatchUpdaterError("Definition file %s references unknown dependency %s" % (filename, val))
                 depends.add(name_to_id[val])
+
         elif key == "fixes":
             r = re.match("^[0-9]+$", val)
             if r:
@@ -232,12 +239,17 @@ def read_definition(revision, filename, name_to_id):
                 fixes.append((int(r.group(1)), r.group(2).strip()))
                 continue
             fixes.append((None, val))
+
         elif key == "disabled":
             disabled = _parse_int(val)
+
+        elif key == "ifdefined":
+            ifdefined = val
+
         elif revision is None:
             print "WARNING: Ignoring unknown command in definition file %s: %s" % (filename, line)
 
-    return depends, fixes, disabled
+    return depends, fixes, disabled, ifdefined
 
 def read_patchset(revision = None):
     """Read information about all patchsets for a specific revision."""
@@ -246,23 +258,25 @@ def read_patchset(revision = None):
     name_to_id  = {}
 
     # Read in sorted order (to ensure created Makefile doesn't change too much)
-    for name, subdirectory in sorted(enum_directories(revision, config.path_patches)):
-        patch = PatchSet(name)
+    for name, directory in sorted(enum_directories(revision, config.path_patches)):
+        patch = PatchSet(name, directory)
 
         if revision is None:
 
             # If its the latest revision, then request additional information
-            if not os.path.isdir(subdirectory):
-                raise RuntimeError("Unable to open directory %s" % subdirectory)
+            if not os.path.isdir(directory):
+                raise RuntimeError("Unable to open directory %s" % directory)
 
             # Enumerate .patch files in the given directory, enumerate individual patches and affected files
-            for f in sorted(os.listdir(subdirectory)):
+            for f in sorted(os.listdir(directory)):
                 if not re.match("^[0-9]{4}-.*\\.patch$", f):
                     continue
-                if not os.path.isfile(os.path.join(subdirectory, f)):
+                if f.startswith(config.path_IfDefined):
+                    continue
+                if not os.path.isfile(os.path.join(directory, f)):
                     continue
                 patch.files.append(f)
-                for p in patchutils.read_patch(os.path.join(subdirectory, f)):
+                for p in patchutils.read_patch(os.path.join(directory, f)):
                     patch.modified_files.add(p.modified_file)
                     patch.patches.append(p)
 
@@ -278,10 +292,10 @@ def read_patchset(revision = None):
     # Now read the definition files in a second step
     for i, patch in all_patches.iteritems():
         try:
-            patch.depends, patch.fixes, patch.disabled = \
+            patch.depends, patch.fixes, patch.disabled, patch.ifdefined = \
                 read_definition(revision, os.path.join(config.path_patches, patch.name), name_to_id)
         except IOError:
-            patch.depends, patch.fixes, patch.disabled = set(), [], False
+            patch.depends, patch.fixes, patch.disabled, patch.ifdefined = set(), [], False, None
 
     return all_patches
 
@@ -476,6 +490,80 @@ def verify_patch_order(all_patches, indices, filename, pool):
     else:
         assert len(last_result_hash) == 32
 
+def resolve_dependencies(all_patches, index):
+    """Returns a sorted list with all dependencies for a given patch."""
+
+    def _resolve(depends):
+        for i in depends:
+            # Dependencies already resolved
+            if all_patches[i].verify_resolved > 0:
+                continue
+            # Detect circular dependency
+            if all_patches[i].verify_resolved < 0:
+                raise PatchUpdaterError("Circular dependency while trying to resolve dependencies of %s" % all_patches[index].name)
+
+            # Recusively resolve dependencies
+            all_patches[i].verify_resolved = -1
+            for sub_depends in all_patches[i].depends:
+                _resolve(sub_depends)
+            all_patches[i].verify_resolved = 1
+            resolved.append(i)
+
+    for _, patch in all_patches.iteritems():
+        patch.verify_resolved = 0
+
+    resolved = []
+    _resolve(all_patches[index].depends)
+    return resolved
+
+def generate_ifdefined(all_patches):
+    """Update autogenerated ifdefined patches, which can be used to selectively disable features at compile time."""
+    enabled_patches = dict([(i, patch) for i, patch in all_patches.iteritems() if not patch.disabled])
+
+    for i, patch in enabled_patches.iteritems():
+        if patch.ifdefined is None:
+            continue
+
+        filename = os.path.join(patch.directory, config.path_IfDefined)
+        with open(filename, "wb") as fp:
+            fp.write("From: Wine Staging Team <webmaster@fds-team.de>\n")
+            fp.write("Subject: Autogenerated #ifdef patch for %s.\n" % patch.name)
+            fp.write("\n")
+
+            depends = resolve_dependencies(enabled_patches, i)
+            for f in patch.modified_files:
+
+                # Reconstruct the state after applying the dependencies
+                original = get_wine_file(f)
+                for _, patchfile in select_patches(enabled_patches, depends, f):
+                    original = patchutils.apply_patch(original, patchfile, fuzz=0)
+
+                # Now apply the main patch
+                patchfile = extract_patch(patch, f)[1]
+                patched = patchutils.apply_patch(original, patchfile, fuzz=0)
+                patchfile.close()
+
+                # Now get the diff between both
+                diff = patchutils.generate_ifdef_patch(original, patched, ifdef=patch.ifdefined)
+                if diff is not None:
+                    fp.write("diff --git a/%s b/%s\n" % (f, f))
+                    fp.write("--- a/%s\n" % f)
+                    fp.write("+++ b/%s\n" % f)
+                    while True:
+                        buf = diff.read(16384)
+                        if buf == "": break
+                        fp.write(buf)
+                    diff.close()
+
+            # Close the file
+            fp.close()
+
+        # Add the autogenerated file as a last patch
+        patch.files.append(os.path.basename(filename))
+        for p in patchutils.read_patch(filename):
+            assert p.modified_file in patch.modified_files
+            patch.patches.append(p)
+
 def verify_dependencies(all_patches):
     """Resolve dependencies, and afterwards run verify_patch_order() to check if everything applies properly."""
 
@@ -491,7 +579,7 @@ def verify_dependencies(all_patches):
     enabled_patches = dict([(i, patch) for i, patch in all_patches.iteritems() if not patch.disabled])
     max_patches     = max(enabled_patches.keys()) + 1
 
-    for i, patch in enabled_patches.iteritems():
+    for _, patch in enabled_patches.iteritems():
         patch.verify_depends = set(patch.depends)
         patch.verify_time    = [0]*max_patches
 
@@ -654,6 +742,9 @@ if __name__ == "__main__":
         # Read current and stable patches
         all_patches    = read_patchset()
         stable_patches = read_patchset(revision="v%s" % stable_compholio_version)
+
+        # Update autogenerated ifdefined patches
+        generate_ifdefined(all_patches)
 
         # Check dependencies
         verify_dependencies(all_patches)

@@ -385,7 +385,7 @@ def generate_ifdef_patch(original, patched, ifdef):
         lines = []
         original.seek(0)
         for line in original:
-            lines.append(line.rstrip("\r\n"))
+            lines.append(line.rstrip("\n"))
 
         split = set([0])
         state = 0
@@ -510,7 +510,7 @@ def generate_ifdef_patch(original, patched, ifdef):
 
             try:
                 while srclines > 0 or dstlines > 0:
-                    line = diff.readline().rstrip("\r\n")
+                    line = diff.readline().rstrip("\n")
                     if line[0] == " ":
                         if srclines == 0 or dstlines == 0:
                             raise PatchParserError("Corrupted patch.")

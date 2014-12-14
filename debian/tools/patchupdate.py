@@ -421,9 +421,8 @@ def verify_patch_order(all_patches, indices, filename, pool):
                     try:
                         while len(patch_stack_indices) < len(permutation):
                             i = permutation[len(patch_stack_indices)]
-                            original  = patch_stack_patches[-1] if len(patch_stack_indices) else original_content
-                            patchfile = selected_patches[i][1]
-                            patch_stack_patches.append(patchutils.apply_patch(original, patchfile, fuzz=0))
+                            original = patch_stack_patches[-1] if len(patch_stack_indices) else original_content
+                            patch_stack_patches.append(patchutils.apply_patch(original, selected_patches[i][1], fuzz=0))
                             patch_stack_indices.append(i)
                         output_hash = _sha256(patch_stack_patches[-1])
 
@@ -535,13 +534,12 @@ def generate_ifdefined(all_patches):
 
                 # Reconstruct the state after applying the dependencies
                 original = get_wine_file(f)
-                for _, patchfile in select_patches(enabled_patches, depends, f):
-                    original = patchutils.apply_patch(original, patchfile, fuzz=0)
+                for _, (_, p) in select_patches(enabled_patches, depends, f).iteritems():
+                    original = patchutils.apply_patch(original, p, fuzz=0)
 
                 # Now apply the main patch
-                patchfile = extract_patch(patch, f)[1]
-                patched = patchutils.apply_patch(original, patchfile, fuzz=0)
-                patchfile.close()
+                p = extract_patch(patch, f)[1]
+                patched = patchutils.apply_patch(original, p, fuzz=0)
 
                 # Now get the diff between both
                 diff = patchutils.generate_ifdef_patch(original, patched, ifdef=patch.ifdefined)

@@ -257,7 +257,9 @@ def read_patchset(revision = None):
 
             # Enumerate .patch files in the given directory, enumerate individual patches and affected files
             for f in sorted(os.listdir(subdirectory)):
-                if not f.endswith(".patch") or not os.path.isfile(os.path.join(subdirectory, f)):
+                if not re.match("^[0-9]{4}-.*\\.patch$", f):
+                    continue
+                if not os.path.isfile(os.path.join(subdirectory, f)):
                     continue
                 patch.files.append(f)
                 for p in patchutils.read_patch(os.path.join(subdirectory, f)):

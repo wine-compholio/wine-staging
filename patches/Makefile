@@ -1859,9 +1859,9 @@ winecfg-Staging.ok: ntdll-DllRedirects.ok wined3d-CSMT_Main.ok
 # Patchset wined3d-CSMT_Helper
 # |
 # | Modified files:
-# |   *	configure, configure.ac, dlls/ddraw/surface.c, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc, dlls
-# | 	/wined3d-csmt/wined3d-csmt.spec, dlls/wined3d/resource.c, dlls/wined3d/surface.c, dlls/wined3d/volume.c,
-# | 	dlls/wined3d/wined3d.spec, dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
+# |   *	configure.ac, dlls/ddraw/surface.c, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc, dlls/wined3d-csmt
+# | 	/wined3d-csmt.spec, dlls/wined3d/resource.c, dlls/wined3d/surface.c, dlls/wined3d/volume.c, dlls/wined3d/wined3d.spec,
+# | 	dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
 # |
 .INTERMEDIATE: wined3d-CSMT_Helper.ok
 wined3d-CSMT_Helper.ok: wined3d-DXTn.ok

@@ -503,8 +503,7 @@ def resolve_dependencies(all_patches, index):
 
             # Recusively resolve dependencies
             all_patches[i].verify_resolved = -1
-            for sub_depends in all_patches[i].depends:
-                _resolve(sub_depends)
+            _resolve(all_patches[i].depends)
             all_patches[i].verify_resolved = 1
             resolved.append(i)
 

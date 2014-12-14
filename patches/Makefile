@@ -1845,14 +1845,17 @@ winebuild-LinkerVersion.ok:
 # Patchset wined3d-CSMT_Helper
 # |
 # | Modified files:
-# |   *	dlls/ddraw/surface.c, dlls/wined3d/resource.c, dlls/wined3d/surface.c, dlls/wined3d/volume.c, dlls/wined3d/wined3d.spec,
-# | 	dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
+# |   *	configure, configure.ac, dlls/ddraw/surface.c, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc, dlls
+# | 	/wined3d-csmt/wined3d-csmt.spec, dlls/wined3d/resource.c, dlls/wined3d/surface.c, dlls/wined3d/volume.c,
+# | 	dlls/wined3d/wined3d.spec, dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
 # |
 .INTERMEDIATE: wined3d-CSMT_Helper.ok
-wined3d-CSMT_Helper.ok:
+wined3d-CSMT_Helper.ok: wined3d-DXTn.ok
 	$(call APPLY_FILE,wined3d-CSMT_Helper/0001-wined3d-Merge-get_pitch-functions.patch)
+	$(call APPLY_FILE,wined3d-CSMT_Helper/0002-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch)
 	@( \
 		echo '+    { "Stefan Dösinger", "wined3d: Merge get_pitch functions.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },'; \
 	) > wined3d-CSMT_Helper.ok
 
 # Patchset wined3d-CSMT_Main

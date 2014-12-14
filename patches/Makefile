@@ -119,6 +119,7 @@ PATCHLIST := \
 	wine.inf-ProductId.ok \
 	wineboot-HKEY_DYN_DATA.ok \
 	winebuild-LinkerVersion.ok \
+	winecfg-Staging.ok \
 	wined3d-CSMT_Helper.ok \
 	wined3d-CSMT_Main.ok \
 	wined3d-DXTn.ok \
@@ -1841,6 +1842,19 @@ winebuild-LinkerVersion.ok:
 	@( \
 		echo '+    { "Michael Müller", "winebuild: Set a valid major and minor linker version.", 1 },'; \
 	) > winebuild-LinkerVersion.ok
+
+# Patchset winecfg-Staging
+# |
+# | Modified files:
+# |   *	programs/winecfg/Makefile.in, programs/winecfg/main.c, programs/winecfg/resource.h, programs/winecfg/staging.c,
+# | 	programs/winecfg/winecfg.h, programs/winecfg/winecfg.rc
+# |
+.INTERMEDIATE: winecfg-Staging.ok
+winecfg-Staging.ok: ntdll-DllRedirects.ok wined3d-CSMT_Main.ok
+	$(call APPLY_FILE,winecfg-Staging/0001-winecfg-Add-staging-tab-for-CSMT.patch)
+	@( \
+		echo '+    { "Michael Müller", "winecfg: Add staging tab for CSMT.", 1 },'; \
+	) > winecfg-Staging.ok
 
 # Patchset wined3d-CSMT_Helper
 # |

@@ -37,30 +37,13 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [14]:**
-
-* Add support for GetPropValue to PulseAudio backend
-* Fix condition mask handling in RtlVerifyVersionInfo ([Wine Bug #36143](https://bugs.winehq.org/show_bug.cgi?id=36143))
-* Fix possible segfault in pulse_rd_loop of PulseAudio backend
-* Fix return value of ScrollWindowEx for invisible windows ([Wine Bug #37706](https://bugs.winehq.org/show_bug.cgi?id=37706))
-* Ignore unsupported flags for CoInternetSetFeatureEnabled ([Wine Bug #35197](https://bugs.winehq.org/show_bug.cgi?id=35197))
-* Implement stubs for mfplat.MFStartup and MFShutdown ([Wine Bug #37701](https://bugs.winehq.org/show_bug.cgi?id=37701))
-* Provide named entry point shell32.SHILCreateFromPath for vista apps ([Wine Bug #37265](https://bugs.winehq.org/show_bug.cgi?id=37265))
-* Reallocate buffer when adding records to AVI files ([Wine Bug #5137](https://bugs.winehq.org/show_bug.cgi?id=5137))
-* Set last error when GetRawInputDeviceList fails ([Wine Bug #37667](https://bugs.winehq.org/show_bug.cgi?id=37667))
-* Support for CSMT (command stream) to increase graphic performance ([Wine Bug #11674](https://bugs.winehq.org/show_bug.cgi?id=11674))
-* Support for StrCatChainW
-* Support for combase HSTRING objects
-* Support for loader dll redirections
-* wininet should allow Accept-Encoding header for HTTP/1.0 ([Wine Bug #37046](https://bugs.winehq.org/show_bug.cgi?id=37046))
-
-
-**Bugs fixed in Wine Staging 1.7.32 [108]:**
+**Bugs fixed in Wine Staging 1.7.33 [119]:**
 
 * ATL IOCS data should not be stored in GWLP_USERDATA ([Wine Bug #21767](https://bugs.winehq.org/show_bug.cgi?id=21767))
 * Add Dynamic DST exceptions for Israel Standard Time ([Wine Bug #36374](https://bugs.winehq.org/show_bug.cgi?id=36374))
 * Add default ACLs for user shell folders
 * Add stub for NtSetLdtEntries/ZwSetLdtEntries ([Wine Bug #26268](https://bugs.winehq.org/show_bug.cgi?id=26268))
+* Add support for GetPropValue to PulseAudio backend
 * Adobe Reader needs ITextSelection_fnGetDuplicate implementation
 * Allow selection of audio device for PulseAudio backend
 * Allow special characters in pipe names ([Wine Bug #28995](https://bugs.winehq.org/show_bug.cgi?id=28995))
@@ -81,6 +64,7 @@ Included bug fixes and improvements
 * FairplayKD.sys needs KeSetSystemAffinityThread ([Wine Bug #36822](https://bugs.winehq.org/show_bug.cgi?id=36822))
 * Fix black screen on startup introduced by pixelformat changes. ([Wine Bug #35950](https://bugs.winehq.org/show_bug.cgi?id=35950))
 * Fix comparison of punctuation characters in lstrcmp ([Wine Bug #10767](https://bugs.winehq.org/show_bug.cgi?id=10767))
+* Fix condition mask handling in RtlVerifyVersionInfo ([Wine Bug #36143](https://bugs.winehq.org/show_bug.cgi?id=36143))
 * Fix crash of Trine Demo on start ([Wine Bug #19231](https://bugs.winehq.org/show_bug.cgi?id=19231))
 * Fix crash of winedevice when relocation entry crosses page boundary ([Wine Bug #28254](https://bugs.winehq.org/show_bug.cgi?id=28254))
 * Fix flickering introduced by pixelformat changes. ([Wine Bug #35718](https://bugs.winehq.org/show_bug.cgi?id=35718))
@@ -92,16 +76,18 @@ Included bug fixes and improvements
 * Fix issues when driver dispatch routine returns different status codes ([Wine Bug #30155](https://bugs.winehq.org/show_bug.cgi?id=30155))
 * Fix issues with dragging layers between images in Adobe Photoshop 7.0 ([Wine Bug #12007](https://bugs.winehq.org/show_bug.cgi?id=12007))
 * Fix missing video introduced by pixelformat changes. ([Wine Bug #36900](https://bugs.winehq.org/show_bug.cgi?id=36900))
-* ~~Fix ordering of IP addresses by metric if two addresses have the same metric.~~
-* ~~Fix passing of unicode environment from msvcrt to CreateProcessW.~~ ([Wine Bug #37635](https://bugs.winehq.org/show_bug.cgi?id=37635))
+* Fix possible segfault in pulse_rd_loop of PulseAudio backend
+* Fix return value of ScrollWindowEx for invisible windows ([Wine Bug #37706](https://bugs.winehq.org/show_bug.cgi?id=37706))
 * Fix texture corruption in CSI: Fatal Conspiracy ([Wine Bug #33768](https://bugs.winehq.org/show_bug.cgi?id=33768))
 * Fix unintentional leaks with ntdll internals
 * Fix wined3d performance drop introduced by pixelformat changes. ([Wine Bug #35655](https://bugs.winehq.org/show_bug.cgi?id=35655))
 * Games For Windows Live 1.x expects a valid linker version in the PE header ([Wine Bug #28768](https://bugs.winehq.org/show_bug.cgi?id=28768))
 * GetSecurityInfo returns NULL DACL for process object ([Wine Bug #15980](https://bugs.winehq.org/show_bug.cgi?id=15980))
+* Ignore unsupported flags for CoInternetSetFeatureEnabled ([Wine Bug #35197](https://bugs.winehq.org/show_bug.cgi?id=35197))
 * Implement a Microsoft Yahei replacement font ([Wine Bug #13829](https://bugs.winehq.org/show_bug.cgi?id=13829))
 * Implement an Arial replacement font ([Wine Bug #32323](https://bugs.winehq.org/show_bug.cgi?id=32323))
 * Implement exclusive mode in PulseAudio backend ([Wine Bug #37042](https://bugs.winehq.org/show_bug.cgi?id=37042))
+* Implement stubs for mfplat.MFStartup and MFShutdown ([Wine Bug #37701](https://bugs.winehq.org/show_bug.cgi?id=37701))
 * Improvement for heap allocation performance
 * Initialize irp.Tail.Overlay.OriginalFileObject with stub file object ([Wine Bug #37537](https://bugs.winehq.org/show_bug.cgi?id=37537))
 * Lego Stunt Rally requires DXTn software de/encoding support ([Wine Bug #25486](https://bugs.winehq.org/show_bug.cgi?id=25486))
@@ -113,6 +99,8 @@ Included bug fixes and improvements
 * Need for Speed 3 installer requires devices in HKEY_DYN_DATA ([Wine Bug #7115](https://bugs.winehq.org/show_bug.cgi?id=7115))
 * Other Pipelight-specific enhancements
 * Prevent window managers from grouping all wine programs together ([Wine Bug #32699](https://bugs.winehq.org/show_bug.cgi?id=32699))
+* Provide named entry point shell32.SHILCreateFromPath for vista apps ([Wine Bug #37265](https://bugs.winehq.org/show_bug.cgi?id=37265))
+* Reallocate buffer when adding records to AVI files ([Wine Bug #5137](https://bugs.winehq.org/show_bug.cgi?id=5137))
 * Reduced SetTimer minimum value from 10 ms to 5 ms (improves Silverlight framerates)
 * Return an error when trying to open a terminated process ([Wine Bug #37087](https://bugs.winehq.org/show_bug.cgi?id=37087))
 * Return correct IMediaSeeking stream positions in quartz ([Wine Bug #23174](https://bugs.winehq.org/show_bug.cgi?id=23174))
@@ -120,8 +108,10 @@ Included bug fixes and improvements
 * Return more context attributes in schan_InitializeSecurityContextW ([Wine Bug #37527](https://bugs.winehq.org/show_bug.cgi?id=37527))
 * SO_CONNECT_TIME returns the appropriate time
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](https://bugs.winehq.org/show_bug.cgi?id=35652))
+* Set last error when GetRawInputDeviceList fails ([Wine Bug #37667](https://bugs.winehq.org/show_bug.cgi?id=37667))
 * Support for AllocateAndGetTcpExTableFromStack ([Wine Bug #34372](https://bugs.winehq.org/show_bug.cgi?id=34372))
 * Support for BindImageEx ([Wine Bug #3591](https://bugs.winehq.org/show_bug.cgi?id=3591))
+* Support for CSMT (command stream) to increase graphic performance ([Wine Bug #11674](https://bugs.winehq.org/show_bug.cgi?id=11674))
 * Support for D3DXGetShaderInputSemantics ([Wine Bug #22682](https://bugs.winehq.org/show_bug.cgi?id=22682))
 * Support for DOS hidden/system file attributes ([Wine Bug #9158](https://bugs.winehq.org/show_bug.cgi?id=9158))
 * Support for Dynamic DST (daylight saving time) information in registry
@@ -141,13 +131,16 @@ Included bug fixes and improvements
 * Support for PulseAudio backend for audio ([Wine Bug #10495](https://bugs.winehq.org/show_bug.cgi?id=10495))
 * Support for RtlDecompressBuffer ([Wine Bug #37449](https://bugs.winehq.org/show_bug.cgi?id=37449))
 * Support for SHCreateSessionKey ([Wine Bug #35630](https://bugs.winehq.org/show_bug.cgi?id=35630))
+* Support for StrCatChainW
 * Support for TOOLTIPS_GetTipText edge cases ([Wine Bug #30648](https://bugs.winehq.org/show_bug.cgi?id=30648))
 * Support for TransmitFile ([Wine Bug #5048](https://bugs.winehq.org/show_bug.cgi?id=5048))
 * Support for UTF7 encoding/decoding ([Wine Bug #27388](https://bugs.winehq.org/show_bug.cgi?id=27388))
 * Support for WTSEnumerateProcessesW ([Wine Bug #29903](https://bugs.winehq.org/show_bug.cgi?id=29903))
+* Support for combase HSTRING objects
 * Support for extra large and jumbo icon lists in shell32 ([Wine Bug #24721](https://bugs.winehq.org/show_bug.cgi?id=24721))
 * Support for inherited file ACLs ([Wine Bug #34406](https://bugs.winehq.org/show_bug.cgi?id=34406))
 * Support for interface change notifications ([Wine Bug #32328](https://bugs.winehq.org/show_bug.cgi?id=32328))
+* Support for loader dll redirections
 * Support for pasting HTML from Unix applications ([Wine Bug #7372](https://bugs.winehq.org/show_bug.cgi?id=7372))
 * Support for process ACLs ([Wine Bug #22006](https://bugs.winehq.org/show_bug.cgi?id=22006))
 * Support for setcap on wine-preloader ([Wine Bug #26256](https://bugs.winehq.org/show_bug.cgi?id=26256))
@@ -159,10 +152,10 @@ Included bug fixes and improvements
 * Use manual relay for RunDLL_CallEntry16 in shell32 ([Wine Bug #23033](https://bugs.winehq.org/show_bug.cgi?id=23033))
 * Voobly expects correct handling of WRITECOPY memory protection ([Wine Bug #29384](https://bugs.winehq.org/show_bug.cgi?id=29384))
 * Wine ignores IDF_CHECKFIRST flag in SetupPromptForDisk ([Wine Bug #20465](https://bugs.winehq.org/show_bug.cgi?id=20465))
-* ~~Wintrust doesn't reset data->pWintrustData->u.pFile->hFile after closing handle~~ ([Wine Bug #36257](https://bugs.winehq.org/show_bug.cgi?id=36257))
 * Workaround for shlwapi URLs with relative paths
 * XEMBED support for embedding Wine windows inside Linux applications
 * nVidia driver for high-end laptop cards does not list all supported resolutions
 * vSphere needs IoCsqInitialize ([Wine Bug #36777](https://bugs.winehq.org/show_bug.cgi?id=36777))
 * wglDescribePixelFormat should return max index for NULL descriptor ([Wine Bug #6176](https://bugs.winehq.org/show_bug.cgi?id=6176))
+* wininet should allow Accept-Encoding header for HTTP/1.0 ([Wine Bug #37046](https://bugs.winehq.org/show_bug.cgi?id=37046))
 

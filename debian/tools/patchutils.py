@@ -40,6 +40,14 @@ class PatchApplyError(RuntimeError):
     """Failed to apply/merge patch."""
     pass
 
+class PatchDiffError(RuntimeError):
+    """Failed to compute diff."""
+    pass
+
+class CParserError(RuntimeError):
+    """Unable to parse C source."""
+    pass
+
 class PatchObject(object):
     def __init__(self, filename, header):
         self.patch_author       = header['author']
@@ -362,3 +370,299 @@ def apply_patch(original, patchfile, reverse=False, fuzz=2):
     except:
         os.unlink(result.name)
         raise
+
+def generate_ifdef_patch(original, patched, ifdef):
+    """Generate a patch which adds #ifdef where necessary to keep both the original and patched version."""
+
+    def _preprocess_source(fp):
+        """Simple C preprocessor to determine where we can savely add #ifdef instructions."""
+
+        _re_state0 = re.compile("(\"|/[/*])")
+        _re_state1 = re.compile("(\\\"|\")")
+        _re_state2 = re.compile("\\*/")
+
+        # We need to read the original file, and figure out where lines can be splitted
+        lines = []
+        original.seek(0)
+        for line in original:
+            lines.append(line.rstrip("\r\n"))
+
+        split = set([0])
+        state = 0
+
+        i = 0
+        while i < len(lines):
+
+            # Read a full line (and handle line continuation)
+            line = lines[i]
+            i += 1
+            while line.endswith("\\"):
+                if i >= len(lines):
+                    raise CParserError("Unexpected end of file.")
+                line = line[:-1] + lines[i]
+                i += 1
+
+            # To find out where we can add our #ifdef tags we use a simple
+            # statemachine. This allows finding the beginning of a multiline
+            # instruction or comment.
+            j = 0
+            while True:
+
+                # State 0: No context
+                if state == 0:
+                    match = _re_state0.search(line, j)
+                    if match is None: break
+
+                    if match.group(0) == "\"":
+                        state = 1 # Begin of string
+                    elif match.group(0) == "/*":
+                        state = 2 # Begin of comment
+                    elif match.group(0) == "//":
+                        break # Rest of the line is a comment, which can be savely ignored
+                    else:
+                        assert 0
+
+                # State 1: Inside of string
+                elif state == 1:
+                    match = _re_state1.search(line, j)
+                    if match is None:
+                        raise CParserError("Line ended in the middle of a string.")
+
+                    if match.group(0) == "\"":
+                        state = 0 # End of string
+                    elif match.group(0) != "\\\"":
+                        assert 0
+
+                # State 2: Multiline comment
+                elif state == 2:
+                    match = _re_state2.search(line, j)
+                    if match is None: break
+
+                    if match.group(0) == "*/":
+                        state = 0 # End of comment
+                    else:
+                        assert 0
+
+                else:
+                    raise CParserError("Internal state error.")
+                j = match.end()
+
+            # Only in state 0 (no context) we can split here
+            if state == 0:
+                split.add(i)
+
+        # Ensure that the last comment is properly terminated
+        if state != 0:
+            raise CParserError("Unexpected end of file.")
+        return lines, split
+
+    #
+    # The basic of idea of this algorithm is as following:
+    #
+    # (1) determine diff between original file and patched file
+    # (2) run the preprocessor, to determine where #ifdefs can be savely added
+    # (3) use diff and preprocessor information to create a merged version containing #ifdefs
+    # (4) create another diff to apply the changes on the patched version
+    #
+
+    with tempfile.NamedTemporaryFile() as diff:
+        exitcode = subprocess.call(["diff", "-u", original.name, patched.name],
+                                   stdout=diff, stderr=_devnull)
+        if exitcode == 0:
+            return None
+        elif exitcode != 1:
+            raise PatchDiffError("Failed to compute diff (exitcode %d)." % exitcode)
+
+        # Preprocess the original C source
+        lines, split = _preprocess_source(original)
+
+        # Parse the created diff file
+        diff.flush()
+        diff.seek(0)
+
+        # We expect this output format from 'diff', if this is not the case things might go wrong.
+        line = diff.readline()
+        assert line.startswith("--- ")
+        line = diff.readline()
+        assert line.startswith("+++ ")
+
+        hunks = []
+        while True:
+            line = diff.readline()
+            if line == "":
+                break
+
+            # Parse each hunk, and extract the srclines and dstlines. This algorithm is very
+            # similar to _read_single_patch.
+            if not line.startswith("@@ -"):
+                raise PatchParserError("Unable to parse line '%s'." % line)
+
+            r = re.match("^@@ -(([0-9]+),)?([0-9]+) \+(([0-9]+),)?([0-9]+) @@", line)
+            if not r: raise PatchParserError("Unable to parse hunk header '%s'." % line)
+            srcpos = max(int(r.group(2)) - 1, 0) if r.group(2) else 0
+            dstpos = max(int(r.group(5)) - 1, 0) if r.group(5) else 0
+            srclines, dstlines = int(r.group(3)), int(r.group(6))
+            if srclines <= 0 and dstlines <= 0:
+                raise PatchParserError("Empty hunk doesn't make sense.")
+
+            srcdata = []
+            dstdata = []
+
+            try:
+                while srclines > 0 or dstlines > 0:
+                    line = diff.readline().rstrip("\r\n")
+                    if line[0] == " ":
+                        if srclines == 0 or dstlines == 0:
+                            raise PatchParserError("Corrupted patch.")
+                        srcdata.append(line[1:])
+                        dstdata.append(line[1:])
+                        srclines -= 1
+                        dstlines -= 1
+                    elif line[0] == "-":
+                        if srclines == 0:
+                            raise PatchParserError("Corrupted patch.")
+                        srcdata.append(line[1:])
+                        srclines -= 1
+                    elif line[0] == "+":
+                        if dstlines == 0:
+                            raise PatchParserError("Corrupted patch.")
+                        dstdata.append(line[1:])
+                        dstlines -= 1
+                    elif line[0] == "\\":
+                        pass # ignore
+                    else:
+                        raise PatchParserError("Unexpected line in hunk.")
+            except IndexError: # triggered by ""[0]
+                raise PatchParserError("Truncated patch.")
+
+            # Ensure that the patch would really apply in practice
+            if lines[srcpos:srcpos + len(srcdata)] != srcdata:
+                raise PatchParserError("Patch failed to apply.")
+
+            # Strip common lines from the beginning and end
+            while len(srcdata) > 0 and len(dstdata) > 0 and \
+                    srcdata[0] == dstdata[0]:
+                srcdata.pop(0)
+                dstdata.pop(0)
+                srcpos += 1
+                dstpos += 1
+
+            while len(srcdata) > 0 and len(dstdata) > 0 and \
+                    srcdata[-1] == dstdata[-1]:
+                srcdata.pop()
+                dstdata.pop()
+
+            # Ensure that diff generated valid output
+            assert len(srcdata) > 0 or len(dstdata) > 0
+
+            # If this is the first hunk, then check if we have to extend it at the beginning
+            if len(hunks) == 0:
+                while srcpos > 0 and srcpos not in split:
+                    srcpos -= 1
+                    srcdata.insert(0, lines[srcpos])
+                    dstdata.insert(0, lines[srcpos])
+                hunks.append((srcpos, dstpos, srcdata, dstdata))
+
+            # Check if we can merge with the previous hunk
+            else:
+                prev_srcpos, prev_dstpos, prev_srcdata, prev_dstdata = hunks[-1]
+                prev_endpos = prev_srcpos + len(prev_srcdata)
+
+                found = 0
+                for i in xrange(prev_endpos, srcpos):
+                    if i in split:
+                        found += 1
+
+                # At least two possible splitting positions inbetween
+                if found >= 2:
+                    while prev_endpos not in split:
+                        prev_srcdata.append(lines[prev_endpos])
+                        prev_dstdata.append(lines[prev_endpos])
+                        prev_endpos += 1
+
+                    while srcpos not in split:
+                        srcpos -= 1
+                        srcdata.insert(0, lines[srcpos])
+                        dstdata.insert(0, lines[srcpos])
+                    hunks.append((srcpos, dstpos, srcdata, dstdata))
+
+                # Merge hunks
+                else:
+                    while prev_endpos < srcpos:
+                        prev_srcdata.append(lines[prev_endpos])
+                        prev_dstdata.append(lines[prev_endpos])
+                        prev_endpos += 1
+                    assert prev_dstpos + len(prev_dstdata) == dstpos
+                    hunks[-1][2] += srcdata
+                    hunks[-1][3] += dstdata
+
+            # Ready with this hunk
+            pass
+
+        # We might have to extend the last hunk
+        if len(hunks):
+            prev_srcpos, prev_dstpos, prev_srcdata, prev_dstdata = hunks[-1]
+            prev_endpos = prev_srcpos + len(prev_srcdata)
+
+            while prev_endpos < len(lines) and prev_endpos not in split:
+                prev_srcdata.append(lines[prev_endpos])
+                prev_dstdata.append(lines[prev_endpos])
+                prev_endpos += 1
+
+        # We don't need the diff anymore, all hunks are in memory
+        diff.close()
+
+    # Generate resulting file with #ifdefs
+    with tempfile.NamedTemporaryFile() as intermediate:
+
+        pos = 0
+        while len(hunks):
+            srcpos, dstpos, srcdata, dstdata = hunks.pop(0)
+            if pos < srcpos:
+                intermediate.write("\n".join(lines[pos:srcpos]))
+                intermediate.write("\n")
+
+            if len(srcdata) and len(dstdata):
+                intermediate.write("#if defined(%s)\n" % ifdef)
+                intermediate.write("\n".join(dstdata))
+                intermediate.write("\n#else  /* %s */\n" % ifdef)
+                intermediate.write("\n".join(srcdata))
+                intermediate.write("\n#endif /* %s */\n" % ifdef)
+
+            elif len(srcdata):
+                intermediate.write("#if !defined(%s)\n" % ifdef)
+                intermediate.write("\n".join(srcdata))
+                intermediate.write("\n#endif /* %s */\n" % ifdef)
+
+            elif len(dstdata):
+                intermediate.write("#if defined(%s)\n" % ifdef)
+                intermediate.write("\n".join(dstdata))
+                intermediate.write("\n#endif /* %s */\n" % ifdef)
+
+            else:
+                assert 0
+            pos = srcpos + len(srcdata)
+
+        if pos < len(lines):
+            intermediate.write("\n".join(lines[pos:]))
+            intermediate.write("\n")
+        intermediate.flush()
+
+        # Now we can finally compute the diff between the patched file and our intermediate file
+        diff = tempfile.NamedTemporaryFile()
+        exitcode = subprocess.call(["diff", "-u", patched.name, intermediate.name],
+                                   stdout=diff, stderr=_devnull)
+        if exitcode != 1: # exitcode 0 cannot (=shouldn't) happen in this situation
+            raise PatchDiffError("Failed to compute diff (exitcode %d)." % exitcode)
+
+        diff.flush()
+        diff.seek(0)
+
+        # We expect this output format from 'diff', if this is not the case things might go wrong.
+        line = diff.readline()
+        assert line.startswith("--- ")
+        line = diff.readline()
+        assert line.startswith("+++ ")
+
+    # Return the final diff
+    return diff

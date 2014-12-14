@@ -1,0 +1,31 @@
+From 210ed15c0132830fe2a6b4bf422fdc794982cf9c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Fri, 11 Oct 2013 12:09:37 +0200
+Subject: wined3d: Invoke surface_unload through the CS in
+ wined3d_surface_update_desc.
+
+This fixes another case where we use a GL context in the main thread and
+crash fglrx in doing so.
+---
+ dlls/wined3d/texture.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
+index f055d5e..09ac38f 100644
+--- a/dlls/wined3d/texture.c
++++ b/dlls/wined3d/texture.c
+@@ -769,7 +769,10 @@ HRESULT CDECL wined3d_texture_update_desc(struct wined3d_texture *texture, UINT
+     }
+ 
+     if (device->d3d_initialized)
+-        texture->resource.resource_ops->resource_unload(&texture->resource);
++    {
++        wined3d_cs_emit_evict_resource(device->cs, &surface->resource);
++        device->cs->ops->finish(device->cs);
++    }
+ 
+     texture->resource.format = format;
+     texture->resource.multisample_type = multisample_type;
+-- 
+2.1.3
+

@@ -1,0 +1,255 @@
+From d2d8473f40a3cd357c33b4804d3b2489eaf6d979 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Tue, 1 Oct 2013 15:30:26 +0200
+Subject: wined3d: Give the cs its own state
+
+---
+ dlls/wined3d/cs.c              | 108 +++++++++++++++++++++++++++++++++++------
+ dlls/wined3d/device.c          |   3 ++
+ dlls/wined3d/wined3d_private.h |   4 +-
+ 3 files changed, 99 insertions(+), 16 deletions(-)
+
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 8823c9a..d252773 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -62,6 +62,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_SET_CLIP_PLANE,
+     WINED3D_CS_OP_SET_MATERIAL,
+     WINED3D_CS_OP_RESET_STATE,
++    WINED3D_CS_OP_STATEBLOCK,
+     WINED3D_CS_OP_STOP,
+ };
+ 
+@@ -268,6 +269,13 @@ struct wined3d_cs_reset_state
+     enum wined3d_cs_op opcode;
+ };
+ 
++struct wined3d_cs_stateblock
++{
++    enum wined3d_cs_op opcode;
++    struct wined3d_state state;
++    float vs_consts_f[256 * 4], ps_consts_f[256 * 4];
++};
++
+ /* FIXME: The list synchronization probably isn't particularly fast. */
+ static void wined3d_cs_list_enqueue(struct wined3d_cs_list *list, struct wined3d_cs_block *block)
+ {
+@@ -451,7 +459,7 @@ static UINT wined3d_cs_exec_clear(struct wined3d_cs *cs, const void *data)
+     unsigned int extra_rects = op->rect_count ? op->rect_count - 1 : 0;
+ 
+     device = cs->device;
+-    wined3d_get_draw_rect(&device->state, &draw_rect);
++    wined3d_get_draw_rect(&cs->state, &draw_rect);
+     device_clear_render_targets(device, device->adapter->gl_info.limits.buffers,
+             &cs->state.fb, op->rect_count, op->rect_count ? op->rects : NULL, &draw_rect, op->flags,
+             &op->color, op->depth, op->stencil);
+@@ -482,7 +490,7 @@ static UINT wined3d_cs_exec_draw(struct wined3d_cs *cs, const void *data)
+ {
+     const struct wined3d_cs_draw *op = data;
+ 
+-    draw_primitive(cs->device, &cs->device->state, op->start_idx, op->index_count,
++    draw_primitive(cs->device, &cs->state, op->start_idx, op->index_count,
+             op->start_instance, op->instance_count, op->indexed);
+ 
+     return sizeof(*op);
+@@ -897,6 +905,72 @@ void wined3d_cs_emit_set_texture(struct wined3d_cs *cs, UINT stage, struct wined
+     op->opcode = WINED3D_CS_OP_SET_TEXTURE;
+     op->stage = stage;
+     op->texture = texture;
++    cs->ops->submit(cs);
++}
++
++static UINT wined3d_cs_exec_transfer_stateblock(struct wined3d_cs *cs, const void *data)
++{
++    const struct wined3d_adapter *adapter = cs->device->adapter;
++    const struct wined3d_cs_stateblock *op = data;
++    UINT num_vs_consts_f = sizeof(op->vs_consts_f) / sizeof(*op->vs_consts_f) / 4;
++    UINT num_ps_consts_f = sizeof(op->ps_consts_f) / sizeof(*op->ps_consts_f) / 4;
++
++    num_vs_consts_f = min(num_vs_consts_f, adapter->d3d_info.limits.vs_uniform_count);
++    num_ps_consts_f = min(num_ps_consts_f, adapter->d3d_info.limits.ps_uniform_count);
++
++    /* Don't memcpy the entire struct, we'll remove single items as we add dedicated
++     * ops for setting states */
++
++    cs->state.base_vertex_index = op->state.base_vertex_index;
++    cs->state.load_base_vertex_index = op->state.load_base_vertex_index;
++    cs->state.gl_primitive_type = op->state.gl_primitive_type;
++
++    memcpy(cs->state.vs_consts_b, op->state.vs_consts_b, sizeof(cs->state.vs_consts_b));
++    memcpy(cs->state.vs_consts_i, op->state.vs_consts_i, sizeof(cs->state.vs_consts_i));
++    memcpy(cs->state.vs_consts_f, op->state.vs_consts_f, sizeof(*cs->state.vs_consts_f) * num_vs_consts_f);
++
++    memcpy(cs->state.ps_consts_b, op->state.ps_consts_b, sizeof(cs->state.ps_consts_b));
++    memcpy(cs->state.ps_consts_i, op->state.ps_consts_i, sizeof(cs->state.ps_consts_i));
++    memcpy(cs->state.ps_consts_f, op->state.ps_consts_f, sizeof(*cs->state.ps_consts_f) * num_ps_consts_f);
++
++    memcpy(cs->state.lights, op->state.lights, sizeof(cs->state.lights));
++
++    return sizeof(*op);
++}
++
++void wined3d_cs_emit_transfer_stateblock(struct wined3d_cs *cs, const struct wined3d_state *state)
++{
++    const struct wined3d_device *device = cs->device;
++    const struct wined3d_adapter *adapter = device->adapter;
++    struct wined3d_cs_stateblock *op;
++    UINT num_vs_consts_f = sizeof(op->vs_consts_f) / sizeof(*op->vs_consts_f) / 4;
++    UINT num_ps_consts_f = sizeof(op->ps_consts_f) / sizeof(*op->ps_consts_f) / 4;
++
++    num_vs_consts_f = min(num_vs_consts_f, adapter->d3d_info.limits.vs_uniform_count);
++    num_ps_consts_f = min(num_ps_consts_f, adapter->d3d_info.limits.ps_uniform_count);
++
++    op = cs->ops->require_space(cs, sizeof(*op));
++    op->opcode = WINED3D_CS_OP_STATEBLOCK;
++
++    /* Don't memcpy the entire struct, we'll remove single items as we add dedicated
++     * ops for setting states */
++    op->state.base_vertex_index = state->base_vertex_index;
++    op->state.load_base_vertex_index = state->load_base_vertex_index;
++    op->state.gl_primitive_type = state->gl_primitive_type;
++
++    memcpy(op->state.vs_consts_b, state->vs_consts_b, sizeof(op->state.vs_consts_b));
++    memcpy(op->state.vs_consts_i, state->vs_consts_i, sizeof(op->state.vs_consts_i));
++    op->state.vs_consts_f = op->vs_consts_f;
++    memcpy(op->state.vs_consts_f, state->vs_consts_f, sizeof(*op->state.vs_consts_f) * num_vs_consts_f);
++
++    memcpy(op->state.ps_consts_b, state->ps_consts_b, sizeof(op->state.ps_consts_b));
++    memcpy(op->state.ps_consts_i, state->ps_consts_i, sizeof(op->state.ps_consts_i));
++    op->state.ps_consts_f = op->ps_consts_f;
++    memcpy(op->state.ps_consts_f, state->ps_consts_f, sizeof(*op->state.ps_consts_f) * num_ps_consts_f);
++
++    /* FIXME: This is not ideal. CS is still running synchronously, so this is ok.
++     * It will go away soon anyway. */
++    memcpy(op->state.lights, state->lights, sizeof(op->state.lights));
+ 
+     cs->ops->submit(cs);
+ }
+@@ -1158,6 +1232,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_SET_CLIP_PLANE             */ wined3d_cs_exec_set_clip_plane,
+     /* WINED3D_CS_OP_SET_MATERIAL               */ wined3d_cs_exec_set_material,
+     /* WINED3D_CS_OP_RESET_STATE                */ wined3d_cs_exec_reset_state,
++    /* WINED3D_CS_OP_STATEBLOCK                 */ wined3d_cs_exec_transfer_stateblock,
+ };
+ 
+ static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
+@@ -1247,7 +1322,7 @@ done:
+ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
+ {
+     const struct wined3d_gl_info *gl_info = &device->adapter->gl_info;
+-    struct wined3d_cs *cs;
++    struct wined3d_cs *cs = NULL;
+ 
+     if (!(cs = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*cs))))
+         return NULL;
+@@ -1255,8 +1330,7 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
+     if (FAILED(state_init(&cs->state, gl_info, &device->adapter->d3d_info,
+             WINED3D_STATE_NO_REF | WINED3D_STATE_INIT_DEFAULT)))
+     {
+-        HeapFree(GetProcessHeap(), 0, cs);
+-        return NULL;
++        goto err;
+     }
+ 
+     cs->ops = &wined3d_cs_st_ops;
+@@ -1265,16 +1339,13 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
+     cs->data_size = WINED3D_INITIAL_CS_SIZE;
+     if (!(cs->data = HeapAlloc(GetProcessHeap(), 0, cs->data_size)))
+     {
+-        HeapFree(GetProcessHeap(), 0, cs);
+-        return NULL;
++        goto err;
+     }
+ 
+     if ((cs->tls_idx = TlsAlloc()) == TLS_OUT_OF_INDEXES)
+     {
+         ERR("Failed to allocate cs TLS index, err %#x.\n", GetLastError());
+-        HeapFree(GetProcessHeap(), 0, cs->data);
+-        HeapFree(GetProcessHeap(), 0, cs);
+-        return NULL;
++        goto err;
+     }
+ 
+     if (wined3d_settings.cs_multithreaded)
+@@ -1287,15 +1358,22 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
+         if (!(cs->thread = CreateThread(NULL, 0, wined3d_cs_run, cs, 0, NULL)))
+         {
+             ERR("Failed to create wined3d command stream thread.\n");
+-            if (!TlsFree(cs->tls_idx))
+-                ERR("Failed to free cs TLS index, err %#x.\n", GetLastError());
+-            HeapFree(GetProcessHeap(), 0, cs->data);
+-            HeapFree(GetProcessHeap(), 0, cs);
+-            return NULL;
++            goto err;
+         }
+     }
+ 
+     return cs;
++
++err:
++    if (cs)
++    {
++        state_cleanup(&cs->state);
++        if (cs->tls_idx != TLS_OUT_OF_INDEXES && !TlsFree(cs->tls_idx))
++            ERR("Failed to free cs TLS index, err %#x.\n", GetLastError());
++        HeapFree(GetProcessHeap(), 0, cs->data);
++    }
++    HeapFree(GetProcessHeap(), 0, cs);
++    return NULL;
+ }
+ 
+ void wined3d_cs_destroy(struct wined3d_cs *cs)
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index 3bb3cf0..6ea0b9a 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -3391,6 +3391,7 @@ HRESULT CDECL wined3d_device_draw_primitive(struct wined3d_device *device, UINT
+         device_invalidate_state(device, STATE_BASEVERTEXINDEX);
+     }
+ 
++    wined3d_cs_emit_transfer_stateblock(device->cs, &device->state);
+     wined3d_cs_emit_draw(device->cs, start_vertex, vertex_count, 0, 0, FALSE);
+ 
+     return WINED3D_OK;
+@@ -3425,6 +3426,7 @@ HRESULT CDECL wined3d_device_draw_indexed_primitive(struct wined3d_device *devic
+         device_invalidate_state(device, STATE_BASEVERTEXINDEX);
+     }
+ 
++    wined3d_cs_emit_transfer_stateblock(device->cs, &device->state);
+     wined3d_cs_emit_draw(device->cs, start_idx, index_count, 0, 0, TRUE);
+ 
+     return WINED3D_OK;
+@@ -3435,6 +3437,7 @@ void CDECL wined3d_device_draw_indexed_primitive_instanced(struct wined3d_device
+ {
+     TRACE("device %p, start_idx %u, index_count %u.\n", device, start_idx, index_count);
+ 
++    wined3d_cs_emit_transfer_stateblock(device->cs, &device->state);
+     wined3d_cs_emit_draw(device->cs, start_idx, index_count, start_instance, instance_count, TRUE);
+ }
+ 
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index b856b6f..02104ce 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2537,7 +2537,7 @@ struct wined3d_cs_block
+ {
+     struct list entry;
+     UINT pos;
+-    BYTE data[4000]; /* FIXME? The size is somewhat arbitrary. */
++    BYTE data[sizeof(struct wined3d_state) * 2]; /* FIXME? The size is somewhat arbitrary. */
+ };
+ 
+ struct wined3d_cs_ops
+@@ -2577,6 +2577,8 @@ void wined3d_cs_emit_set_clip_plane(struct wined3d_cs *cs, UINT plane_idx,
+         const struct wined3d_vec4 *plane) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_set_constant_buffer(struct wined3d_cs *cs, enum wined3d_shader_type type,
+         UINT cb_idx, struct wined3d_buffer *buffer) DECLSPEC_HIDDEN;
++void wined3d_cs_emit_transfer_stateblock(struct wined3d_cs *cs,
++        const struct wined3d_state *state) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_set_depth_stencil_view(struct wined3d_cs *cs,
+         struct wined3d_rendertarget_view *view) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_set_index_buffer(struct wined3d_cs *cs, struct wined3d_buffer *buffer,
+-- 
+2.1.3
+

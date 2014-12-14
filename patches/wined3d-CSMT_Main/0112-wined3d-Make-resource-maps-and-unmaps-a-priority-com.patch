@@ -1,0 +1,80 @@
+From a14049c3703ec2f275f2ce21b45ba4bc32d6021d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Fri, 27 Sep 2013 17:58:25 +0200
+Subject: wined3d: Make resource maps and unmaps a priority command.
+
+---
+ dlls/wined3d/cs.c       | 14 +++++---------
+ dlls/wined3d/resource.c |  8 ++++++--
+ 2 files changed, 11 insertions(+), 11 deletions(-)
+
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 45dc5ce..054c000 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -1819,19 +1819,15 @@ void *wined3d_cs_emit_resource_map(struct wined3d_cs *cs, struct wined3d_resourc
+     struct wined3d_cs_resource_map *op;
+     void *ret;
+ 
+-    op = cs->ops->require_space(cs, sizeof(*op));
++    op = cs->ops->require_space_prio(cs, sizeof(*op));
+     op->opcode = WINED3D_CS_OP_RESOURCE_MAP;
+     op->resource = resource;
+     op->flags = flags;
+     op->mem = &ret;
+ 
+-    cs->ops->submit(cs, sizeof(*op));
++    cs->ops->submit_prio(cs, sizeof(*op));
+ 
+-    if (flags & (WINED3D_MAP_NOOVERWRITE | WINED3D_MAP_DISCARD))
+-    {
+-        FIXME("Dynamic resource map is inefficient\n");
+-    }
+-    cs->ops->finish(cs);
++    cs->ops->finish_prio(cs);
+ 
+     return ret;
+ }
+@@ -1850,11 +1846,11 @@ void wined3d_cs_emit_resource_unmap(struct wined3d_cs *cs, struct wined3d_resour
+ {
+     struct wined3d_cs_resource_unmap *op;
+ 
+-    op = cs->ops->require_space(cs, sizeof(*op));
++    op = cs->ops->require_space_prio(cs, sizeof(*op));
+     op->opcode = WINED3D_CS_OP_RESOURCE_UNMAP;
+     op->resource = resource;
+ 
+-    cs->ops->submit(cs, sizeof(*op));
++    cs->ops->submit_prio(cs, sizeof(*op));
+ }
+ 
+ static UINT wined3d_cs_exec_query_issue(struct wined3d_cs *cs, const void *data)
+diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
+index 73011f8..d2407a1 100644
+--- a/dlls/wined3d/resource.c
++++ b/dlls/wined3d/resource.c
+@@ -734,8 +734,7 @@ static void wined3d_resource_sync(struct wined3d_resource *resource)
+         default:
+             break;
+     }
+-    if (!real_res->access_fence)
+-        FIXME("Waiting for CS even though resource %p is idle.\n", resource);
++    wined3d_resource_wait_fence(real_res);
+ }
+ 
+ HRESULT wined3d_resource_map(struct wined3d_resource *resource,
+@@ -756,6 +755,11 @@ HRESULT wined3d_resource_map(struct wined3d_resource *resource,
+ 
+     flags = wined3d_resource_sanitize_map_flags(resource, flags);
+ 
++    if (flags & (WINED3D_MAP_NOOVERWRITE | WINED3D_MAP_DISCARD))
++    {
++        FIXME("Dynamic resource map is inefficient\n");
++    }
++
+     wined3d_resource_sync(resource);
+ 
+     base_memory = wined3d_cs_emit_resource_map(device->cs, resource, flags);
+-- 
+2.1.3
+

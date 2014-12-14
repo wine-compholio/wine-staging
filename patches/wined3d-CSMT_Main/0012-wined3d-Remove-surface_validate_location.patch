@@ -1,0 +1,217 @@
+From a15ccac8ee6ece2955548900f4e7b4a993a498b2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Sat, 4 Jan 2014 00:53:47 +0100
+Subject: wined3d: Remove surface_validate_location.
+
+---
+ dlls/wined3d/arb_program_shader.c |  2 +-
+ dlls/wined3d/device.c             |  2 +-
+ dlls/wined3d/surface.c            | 29 +++++++++++------------------
+ dlls/wined3d/swapchain.c          | 12 ++++++------
+ dlls/wined3d/wined3d_private.h    |  1 -
+ 5 files changed, 19 insertions(+), 27 deletions(-)
+
+diff --git a/dlls/wined3d/arb_program_shader.c b/dlls/wined3d/arb_program_shader.c
+index c1b3b6d..08f92cb 100644
+--- a/dlls/wined3d/arb_program_shader.c
++++ b/dlls/wined3d/arb_program_shader.c
+@@ -7686,7 +7686,7 @@ HRESULT arbfp_blit_surface(struct wined3d_device *device, DWORD filter,
+ 
+     context_release(context);
+ 
+-    surface_validate_location(dst_surface, dst_surface->container->resource.draw_binding);
++    wined3d_resource_validate_location(&dst_surface->resource, dst_surface->container->resource.draw_binding);
+     surface_invalidate_location(dst_surface, ~dst_surface->container->resource.draw_binding);
+ 
+     return WINED3D_OK;
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index 01ccd9d..e10ea1c 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -392,7 +392,7 @@ void device_clear_render_targets(struct wined3d_device *device, UINT rt_count, c
+ 
+             if (rt)
+             {
+-                surface_validate_location(rt, rt->container->resource.draw_binding);
++                wined3d_resource_validate_location(&rt->resource, rt->container->resource.draw_binding);
+                 surface_invalidate_location(rt, ~rt->container->resource.draw_binding);
+             }
+         }
+diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
+index c44179f..b56796e 100644
+--- a/dlls/wined3d/surface.c
++++ b/dlls/wined3d/surface.c
+@@ -1224,7 +1224,7 @@ static void surface_unload(struct wined3d_resource *resource)
+          * and all flags get lost */
+         surface_prepare_system_memory(surface);
+         memset(surface->resource.heap_memory, 0, surface->resource.size);
+-        surface_validate_location(surface, WINED3D_LOCATION_SYSMEM);
++        wined3d_resource_validate_location(&surface->resource, WINED3D_LOCATION_SYSMEM);
+         surface_invalidate_location(surface, ~WINED3D_LOCATION_SYSMEM);
+ 
+         /* We also get here when the ddraw swapchain is destroyed, for example
+@@ -1735,7 +1735,7 @@ HRESULT surface_upload_from_surface(struct wined3d_surface *dst_surface, const P
+ 
+     context_release(context);
+ 
+-    surface_validate_location(dst_surface, WINED3D_LOCATION_TEXTURE_RGB);
++    wined3d_resource_validate_location(&dst_surface->resource, WINED3D_LOCATION_TEXTURE_RGB);
+     surface_invalidate_location(dst_surface, ~WINED3D_LOCATION_TEXTURE_RGB);
+ 
+     return WINED3D_OK;
+@@ -2253,7 +2253,7 @@ HRESULT wined3d_surface_update_desc(struct wined3d_surface *surface,
+         valid_location = WINED3D_LOCATION_SYSMEM;
+     }
+ 
+-    surface_validate_location(surface, valid_location);
++    wined3d_resource_validate_location(&surface->resource, valid_location);
+ 
+     return WINED3D_OK;
+ }
+@@ -2645,7 +2645,7 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
+     {
+         TRACE("WINED3D_MAP_DISCARD flag passed, marking %s as up to date.\n",
+                 wined3d_debug_location(surface->resource.map_binding));
+-        surface_validate_location(surface, surface->resource.map_binding);
++        wined3d_resource_validate_location(&surface->resource, surface->resource.map_binding);
+     }
+     else
+     {
+@@ -3200,7 +3200,7 @@ static void fb_copy_to_texture_direct(struct wined3d_surface *dst_surface, struc
+ 
+     /* The texture is now most up to date - If the surface is a render target
+      * and has a drawable, this path is never entered. */
+-    surface_validate_location(dst_surface, WINED3D_LOCATION_TEXTURE_RGB);
++    wined3d_resource_validate_location(&dst_surface->resource, WINED3D_LOCATION_TEXTURE_RGB);
+     surface_invalidate_location(dst_surface, ~WINED3D_LOCATION_TEXTURE_RGB);
+ }
+ 
+@@ -3474,7 +3474,7 @@ static void fb_copy_to_texture_hwstretch(struct wined3d_surface *dst_surface, st
+ 
+     /* The texture is now most up to date - If the surface is a render target
+      * and has a drawable, this path is never entered. */
+-    surface_validate_location(dst_surface, WINED3D_LOCATION_TEXTURE_RGB);
++    wined3d_resource_validate_location(&dst_surface->resource, WINED3D_LOCATION_TEXTURE_RGB);
+     surface_invalidate_location(dst_surface, ~WINED3D_LOCATION_TEXTURE_RGB);
+ }
+ 
+@@ -3787,7 +3787,7 @@ static HRESULT surface_blt_special(struct wined3d_surface *dst_surface, const RE
+         wined3d_texture_set_color_key(src_surface->container, WINEDDSD_CKSRCBLT,
+                 (old_color_key_flags & WINEDDSD_CKSRCBLT) ? &old_blt_key : NULL);
+ 
+-        surface_validate_location(dst_surface, dst_surface->container->resource.draw_binding);
++        wined3d_resource_validate_location(&dst_surface->resource, dst_surface->container->resource.draw_binding);
+         surface_invalidate_location(dst_surface, ~dst_surface->container->resource.draw_binding);
+ 
+         return WINED3D_OK;
+@@ -4032,13 +4032,6 @@ void surface_load_ds_location(struct wined3d_surface *surface, struct wined3d_co
+     surface->ds_current_size.cy = surface->resource.height;
+ }
+ 
+-void surface_validate_location(struct wined3d_surface *surface, DWORD location)
+-{
+-    TRACE("surface %p, location %s.\n", surface, wined3d_debug_location(location));
+-
+-    surface->resource.locations |= location;
+-}
+-
+ void surface_invalidate_location(struct wined3d_surface *surface, DWORD location)
+ {
+     TRACE("surface %p, location %s.\n", surface, wined3d_debug_location(location));
+@@ -4433,7 +4426,7 @@ void surface_load_location(struct wined3d_surface *surface, struct wined3d_conte
+             break;
+     }
+ 
+-    surface_validate_location(surface, location);
++    wined3d_resource_validate_location(&surface->resource, location);
+ 
+     if (location != WINED3D_LOCATION_SYSMEM && (surface->resource.locations & WINED3D_LOCATION_SYSMEM))
+         surface_evict_sysmem(surface);
+@@ -5528,7 +5521,7 @@ HRESULT CDECL wined3d_surface_blt(struct wined3d_surface *dst_surface, const REC
+                         dst_surface, dst_surface->container->resource.draw_binding, &dst_rect);
+                 context_release(context);
+ 
+-                surface_validate_location(dst_surface, dst_surface->container->resource.draw_binding);
++                wined3d_resource_validate_location(&dst_surface->resource, dst_surface->container->resource.draw_binding);
+                 surface_invalidate_location(dst_surface, ~dst_surface->container->resource.draw_binding);
+ 
+                 return WINED3D_OK;
+@@ -5625,7 +5618,7 @@ static HRESULT surface_init(struct wined3d_surface *surface, struct wined3d_text
+     }
+ 
+     surface->container = container;
+-    surface_validate_location(surface, WINED3D_LOCATION_SYSMEM);
++    wined3d_resource_validate_location(&surface->resource, WINED3D_LOCATION_SYSMEM);
+     list_init(&surface->renderbuffers);
+     list_init(&surface->overlays);
+ 
+@@ -5657,7 +5650,7 @@ static HRESULT surface_init(struct wined3d_surface *surface, struct wined3d_text
+     if (surface->resource.map_binding == WINED3D_LOCATION_DIB)
+     {
+         wined3d_resource_free_sysmem(&surface->resource);
+-        surface_validate_location(surface, WINED3D_LOCATION_DIB);
++        wined3d_resource_validate_location(&surface->resource, WINED3D_LOCATION_DIB);
+         surface_invalidate_location(surface, WINED3D_LOCATION_SYSMEM);
+     }
+ 
+diff --git a/dlls/wined3d/swapchain.c b/dlls/wined3d/swapchain.c
+index 601d3ad..bdb4b67 100644
+--- a/dlls/wined3d/swapchain.c
++++ b/dlls/wined3d/swapchain.c
+@@ -569,19 +569,19 @@ static void swapchain_gl_present(struct wined3d_swapchain *swapchain, const RECT
+             /* Tell the front buffer surface that is has been modified. However,
+              * the other locations were preserved during that, so keep the flags.
+              * This serves to update the emulated overlay, if any. */
+-            surface_validate_location(front, WINED3D_LOCATION_DRAWABLE);
++            wined3d_resource_validate_location(&front->resource, WINED3D_LOCATION_DRAWABLE);
+         }
+         else
+         {
+-            surface_validate_location(front, WINED3D_LOCATION_DRAWABLE);
++            wined3d_resource_validate_location(&front->resource, WINED3D_LOCATION_DRAWABLE);
+             surface_invalidate_location(front, ~WINED3D_LOCATION_DRAWABLE);
+-            surface_validate_location(back_buffer, WINED3D_LOCATION_DRAWABLE);
++            wined3d_resource_validate_location(&back_buffer->resource, WINED3D_LOCATION_DRAWABLE);
+             surface_invalidate_location(back_buffer, ~WINED3D_LOCATION_DRAWABLE);
+         }
+     }
+     else
+     {
+-        surface_validate_location(front, WINED3D_LOCATION_DRAWABLE);
++        wined3d_resource_validate_location(&front->resource, WINED3D_LOCATION_DRAWABLE);
+         surface_invalidate_location(front, ~WINED3D_LOCATION_DRAWABLE);
+         /* If the swapeffect is DISCARD, the back buffer is undefined. That means the SYSMEM
+          * and INTEXTURE copies can keep their old content if they have any defined content.
+@@ -590,7 +590,7 @@ static void swapchain_gl_present(struct wined3d_swapchain *swapchain, const RECT
+          */
+         if (swapchain->desc.swap_effect == WINED3D_SWAP_EFFECT_FLIP)
+         {
+-            surface_validate_location(back_buffer, back_buffer->container->resource.draw_binding);
++            wined3d_resource_validate_location(&back_buffer->resource, back_buffer->container->resource.draw_binding);
+             surface_invalidate_location(back_buffer, ~back_buffer->container->resource.draw_binding);
+         }
+     }
+@@ -865,7 +865,7 @@ static HRESULT swapchain_init(struct wined3d_swapchain *swapchain, struct wined3
+     wined3d_texture_set_swapchain(swapchain->front_buffer, swapchain);
+     if (!(device->wined3d->flags & WINED3D_NO3D))
+     {
+-        surface_validate_location(front_buffer, WINED3D_LOCATION_DRAWABLE);
++        wined3d_resource_validate_location(&front_buffer->resource, WINED3D_LOCATION_DRAWABLE);
+         surface_invalidate_location(front_buffer, ~WINED3D_LOCATION_DRAWABLE);
+     }
+ 
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 4011833..5ca3ab8 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2368,7 +2368,6 @@ HRESULT wined3d_surface_update_desc(struct wined3d_surface *surface,
+         const struct wined3d_gl_info *gl_info, void *mem, unsigned int pitch) DECLSPEC_HIDDEN;
+ HRESULT surface_upload_from_surface(struct wined3d_surface *dst_surface, const POINT *dst_point,
+         struct wined3d_surface *src_surface, const RECT *src_rect) DECLSPEC_HIDDEN;
+-void surface_validate_location(struct wined3d_surface *surface, DWORD location) DECLSPEC_HIDDEN;
+ HRESULT wined3d_surface_create(struct wined3d_texture *container, const struct wined3d_resource_desc *desc,
+         GLenum target, unsigned int level, unsigned int layer, DWORD flags,
+         struct wined3d_surface **surface) DECLSPEC_HIDDEN;
+-- 
+2.1.3
+

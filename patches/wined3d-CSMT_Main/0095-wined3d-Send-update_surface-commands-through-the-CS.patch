@@ -1,0 +1,128 @@
+From 961a8cb3c42a2969dd1500b4fc16adb4d47b514f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Thu, 1 Aug 2013 00:00:26 +0200
+Subject: wined3d: Send update_surface commands through the CS
+
+---
+ dlls/wined3d/cs.c              | 48 ++++++++++++++++++++++++++++++++++++++++++
+ dlls/wined3d/device.c          |  9 ++------
+ dlls/wined3d/wined3d_private.h |  2 ++
+ 3 files changed, 52 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 3540cb7..3264d17 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -69,6 +69,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_RESOURCE_UNMAP,
+     WINED3D_CS_OP_QUERY_ISSUE,
+     WINED3D_CS_OP_QUERY_DESTROY,
++    WINED3D_CS_OP_UPDATE_SURFACE,
+     WINED3D_CS_OP_STOP,
+ };
+ 
+@@ -379,6 +380,15 @@ struct wined3d_cs_query_destroy
+     struct wined3d_query *query;
+ };
+ 
++struct wined3d_cs_update_surface
++{
++    enum wined3d_cs_op opcode;
++    struct wined3d_surface *src, *dst;
++    RECT src_rect;
++    POINT dst_point;
++    BOOL has_src_rect, has_dst_point;
++};
++
+ static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
+ {
+     LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
+@@ -1780,6 +1790,43 @@ void wined3d_cs_emit_query_destroy(struct wined3d_cs *cs, struct wined3d_query *
+     cs->ops->submit(cs, sizeof(*op));
+ }
+ 
++static UINT wined3d_cs_exec_update_surface(struct wined3d_cs *cs, const void *data)
++{
++    const struct wined3d_cs_update_surface *op = data;
++
++    surface_upload_from_surface(op->dst, op->has_dst_point ? &op->dst_point : NULL,
++            op->src, op->has_src_rect ? &op->src_rect : NULL);
++
++    return sizeof(*op);
++}
++
++void wined3d_cs_emit_update_surface(struct wined3d_cs *cs, struct wined3d_surface *src, const RECT *src_rect,
++        struct wined3d_surface *dst, const POINT *dst_point)
++{
++    struct wined3d_cs_update_surface *op;
++
++    op = cs->ops->require_space(cs, sizeof(*op));
++    op->opcode = WINED3D_CS_OP_UPDATE_SURFACE;
++    op->src = src;
++    op->dst = dst;
++    op->has_src_rect = FALSE;
++    op->has_dst_point = FALSE;
++
++    if (src_rect)
++    {
++        op->has_src_rect = TRUE;
++        op->src_rect = *src_rect;
++    }
++
++    if (dst_point)
++    {
++        op->has_dst_point = TRUE;
++        op->dst_point = *dst_point;
++    }
++
++    cs->ops->submit(cs, sizeof(*op));
++}
++
+ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
+ {
+     /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
+@@ -1827,6 +1874,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_RESOURCE_UNMAP             */ wined3d_cs_exec_resource_unmap,
+     /* WINED3D_CS_OP_QUERY_ISSUE                */ wined3d_cs_exec_query_issue,
+     /* WINED3D_CS_OP_QUERY_DESTROY              */ wined3d_cs_exec_query_destroy,
++    /* WINED3D_CS_OP_UPDATE_SURFACE             */ wined3d_cs_exec_update_surface,
+ };
+ 
+ static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index cd90c76..ed055f8 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -3796,14 +3796,9 @@ HRESULT CDECL wined3d_device_update_surface(struct wined3d_device *device,
+         return WINED3DERR_INVALIDCALL;
+     }
+ 
+-    if (wined3d_settings.cs_multithreaded)
+-    {
+-        FIXME("Waiting for cs.\n");
+-        wined3d_cs_emit_glfinish(device->cs);
+-        device->cs->ops->finish(device->cs);
+-    }
++    wined3d_cs_emit_update_surface(device->cs, src_surface, src_rect, dst_surface, dst_point);
+ 
+-    return surface_upload_from_surface(dst_surface, dst_point, src_surface, src_rect);
++    return WINED3D_OK;
+ }
+ 
+ void CDECL wined3d_device_copy_resource(struct wined3d_device *device,
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 8dd9786..07d1613 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2651,6 +2651,8 @@ void wined3d_cs_emit_query_issue(struct wined3d_cs *cs, struct wined3d_query *qu
+ void wined3d_cs_emit_query_get_data(struct wined3d_cs *cs, struct wined3d_query *query, void *data,
+         UINT data_size, DWORD flags, HRESULT *ret) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_query_destroy(struct wined3d_cs *cs, struct wined3d_query *query) DECLSPEC_HIDDEN;
++void wined3d_cs_emit_update_surface(struct wined3d_cs *cs, struct wined3d_surface *src,
++        const RECT *src_rect, struct wined3d_surface *dst, const POINT *dst_point) DECLSPEC_HIDDEN;
+ 
+ /* Direct3D terminology with little modifications. We do not have an issued state
+  * because only the driver knows about it, but we have a created state because d3d
+-- 
+2.1.3
+

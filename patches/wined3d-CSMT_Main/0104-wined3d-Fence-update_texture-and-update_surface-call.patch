@@ -1,0 +1,117 @@
+From a83b0e8543213b11848897ea954412ac0f06083a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Fri, 30 Aug 2013 10:41:42 +0200
+Subject: wined3d: Fence update_texture and update_surface calls
+
+---
+ dlls/wined3d/cs.c       | 26 ++++++++++++++++++++++++++
+ dlls/wined3d/resource.c | 28 ++++++++++++++++++++++++++++
+ 2 files changed, 54 insertions(+)
+
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 1197eef..9a7e6df 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -1844,6 +1844,16 @@ static UINT wined3d_cs_exec_update_surface(struct wined3d_cs *cs, const void *da
+     surface_upload_from_surface(op->dst, op->has_dst_point ? &op->dst_point : NULL,
+             op->src, op->has_src_rect ? &op->src_rect : NULL);
+ 
++    if (op->src->container)
++        wined3d_resource_dec_fence(&op->src->container->resource);
++    else
++        wined3d_resource_inc_fence(&op->src->resource);
++
++    if (op->dst->container)
++        wined3d_resource_dec_fence(&op->dst->container->resource);
++    else
++        wined3d_resource_inc_fence(&op->dst->resource);
++
+     return sizeof(*op);
+ }
+ 
+@@ -1871,6 +1881,16 @@ void wined3d_cs_emit_update_surface(struct wined3d_cs *cs, struct wined3d_surfac
+         op->dst_point = *dst_point;
+     }
+ 
++    if (src->container)
++        wined3d_resource_inc_fence(&src->container->resource);
++    else
++        wined3d_resource_inc_fence(&src->resource);
++
++    if (dst->container)
++        wined3d_resource_inc_fence(&dst->container->resource);
++    else
++        wined3d_resource_inc_fence(&dst->resource);
++
+     cs->ops->submit(cs, sizeof(*op));
+ }
+ 
+@@ -1930,6 +1950,9 @@ static UINT wined3d_cs_exec_update_texture(struct wined3d_cs *cs, const void *da
+     device_exec_update_texture(context, op->src, op->dst);
+     context_release(context);
+ 
++    wined3d_resource_dec_fence(&op->src->resource);
++    wined3d_resource_dec_fence(&op->dst->resource);
++
+     return sizeof(*op);
+ }
+ 
+@@ -1943,6 +1966,9 @@ void wined3d_cs_emit_update_texture(struct wined3d_cs *cs, struct wined3d_textur
+     op->src = src;
+     op->dst = dst;
+ 
++    wined3d_resource_inc_fence(&op->src->resource);
++    wined3d_resource_inc_fence(&op->dst->resource);
++
+     cs->ops->submit(cs, sizeof(*op));
+ }
+ 
+diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
+index af60d51..708b080 100644
+--- a/dlls/wined3d/resource.c
++++ b/dlls/wined3d/resource.c
+@@ -712,6 +712,32 @@ void *wined3d_resource_map_internal(struct wined3d_resource *resource, DWORD fla
+     return mem;
+ }
+ 
++static void wined3d_resource_sync(struct wined3d_resource *resource)
++{
++    struct wined3d_resource *real_res = resource;
++    struct wined3d_surface *surface;
++    struct wined3d_volume *volume;
++
++    switch (resource->type)
++    {
++        case WINED3D_RTYPE_SURFACE:
++            surface = surface_from_resource(resource);
++            if (surface->container)
++                real_res = &surface->container->resource;
++            break;
++
++        case WINED3D_RTYPE_VOLUME:
++            volume = volume_from_resource(resource);
++            real_res = &volume->container->resource;
++            break;
++
++        default:
++            break;
++    }
++    if (!real_res->access_fence)
++        FIXME("Waiting for CS even though resource %p is idle.\n", resource);
++}
++
+ HRESULT wined3d_resource_map(struct wined3d_resource *resource,
+         struct wined3d_map_desc *map_desc, const struct wined3d_box *box, DWORD flags)
+ {
+@@ -730,6 +756,8 @@ HRESULT wined3d_resource_map(struct wined3d_resource *resource,
+ 
+     flags = wined3d_resource_sanitize_map_flags(resource, flags);
+ 
++    wined3d_resource_sync(resource);
++
+     base_memory = wined3d_cs_emit_resource_map(device->cs, resource, flags);
+     if (!base_memory)
+     {
+-- 
+2.1.3
+

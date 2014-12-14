@@ -1,0 +1,273 @@
+From aebae1f8597794f2fab4b468f2573a8591f60615 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Thu, 26 Sep 2013 16:41:00 +0200
+Subject: wined3d: send resource maps through the command stream
+
+Slow version only. Good enough to dodge some Nvidia bugs in the ddraw tests.
+---
+ dlls/wined3d/cs.c              | 69 +++++++++++++++++++++++++++++++++++++
+ dlls/wined3d/resource.c        | 77 ++++++++++++++++++++++++------------------
+ dlls/wined3d/wined3d_private.h |  5 +++
+ 3 files changed, 119 insertions(+), 32 deletions(-)
+
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 366a4d3..b691924 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -75,6 +75,8 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_SET_LIGHT_ENABLE,
+     WINED3D_CS_OP_BLT,
+     WINED3D_CS_OP_CLEAR_RTV,
++    WINED3D_CS_OP_RESOURCE_MAP,
++    WINED3D_CS_OP_RESOURCE_UNMAP,
+     WINED3D_CS_OP_STOP,
+ };
+ 
+@@ -352,6 +354,20 @@ struct wined3d_cs_clear_rtv
+     struct wined3d_color color;
+ };
+ 
++struct wined3d_cs_resource_map
++{
++    enum wined3d_cs_op opcode;
++    struct wined3d_resource *resource;
++    DWORD flags;
++    void **mem;
++};
++
++struct wined3d_cs_resource_unmap
++{
++    enum wined3d_cs_op opcode;
++    struct wined3d_resource *resource;
++};
++
+ /* FIXME: The list synchronization probably isn't particularly fast. */
+ static void wined3d_cs_list_enqueue(struct wined3d_cs_list *list, struct wined3d_cs_block *block)
+ {
+@@ -1687,6 +1703,57 @@ void wined3d_cs_emit_clear_rtv(struct wined3d_cs *cs, struct wined3d_rendertarge
+     cs->ops->submit(cs);
+ }
+ 
++static UINT wined3d_cs_exec_resource_map(struct wined3d_cs *cs, const void *data)
++{
++    const struct wined3d_cs_resource_map *op = data;
++
++    *op->mem = wined3d_resource_map_internal(op->resource, op->flags);
++
++    return sizeof(*op);
++}
++
++void *wined3d_cs_emit_resource_map(struct wined3d_cs *cs, struct wined3d_resource *resource,
++        DWORD flags)
++{
++    struct wined3d_cs_resource_map *op;
++    void *ret;
++
++    op = cs->ops->require_space(cs, sizeof(*op));
++    op->opcode = WINED3D_CS_OP_RESOURCE_MAP;
++    op->resource = resource;
++    op->flags = flags;
++    op->mem = &ret;
++
++    cs->ops->finish(cs);
++
++    if (flags & (WINED3D_MAP_NOOVERWRITE | WINED3D_MAP_DISCARD))
++    {
++        FIXME("Dynamic resource map is inefficient\n");
++    }
++    return ret;
++}
++
++static UINT wined3d_cs_exec_resource_unmap(struct wined3d_cs *cs, const void *data)
++{
++    const struct wined3d_cs_resource_unmap *op = data;
++    struct wined3d_resource *resource = op->resource;
++
++    wined3d_resource_unmap_internal(resource);
++
++    return sizeof(*op);
++}
++
++void wined3d_cs_emit_resource_unmap(struct wined3d_cs *cs, struct wined3d_resource *resource)
++{
++    struct wined3d_cs_resource_unmap *op;
++
++    op = cs->ops->require_space(cs, sizeof(*op));
++    op->opcode = WINED3D_CS_OP_RESOURCE_UNMAP;
++    op->resource = resource;
++
++    cs->ops->submit(cs);
++}
++
+ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
+ {
+     /* WINED3D_CS_OP_FENCE                      */ wined3d_cs_exec_fence,
+@@ -1728,6 +1795,8 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_SET_LIGHT_ENABLE           */ wined3d_cs_exec_set_light_enable,
+     /* WINED3D_CS_OP_BLT                        */ wined3d_cs_exec_blt,
+     /* WINED3D_CS_OP_CLEAR_RTV                  */ wined3d_cs_exec_clear_rtv,
++    /* WINED3D_CS_OP_RESOURCE_MAP               */ wined3d_cs_exec_resource_map,
++    /* WINED3D_CS_OP_RESOURCE_UNMAP             */ wined3d_cs_exec_resource_unmap,
+ };
+ 
+ static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
+diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
+index bf228d1..af60d51 100644
+--- a/dlls/wined3d/resource.c
++++ b/dlls/wined3d/resource.c
+@@ -683,31 +683,11 @@ BOOL wined3d_resource_check_block_align(const struct wined3d_resource *resource,
+     return TRUE;
+ }
+ 
+-HRESULT wined3d_resource_map(struct wined3d_resource *resource,
+-        struct wined3d_map_desc *map_desc, const struct wined3d_box *box, DWORD flags)
++void *wined3d_resource_map_internal(struct wined3d_resource *resource, DWORD flags)
+ {
+     struct wined3d_device *device = resource->device;
+     struct wined3d_context *context = NULL;
+-    BYTE *base_memory;
+-    const struct wined3d_format *format = resource->format;
+-
+-    TRACE("resource %p, map_desc %p, box %p, flags %#x.\n",
+-            resource, map_desc, box, flags);
+-
+-    if (resource->map_count)
+-    {
+-        WARN("Volume is already mapped.\n");
+-        return WINED3DERR_INVALIDCALL;
+-    }
+-
+-    flags = wined3d_resource_sanitize_map_flags(resource, flags);
+-
+-    if (wined3d_settings.cs_multithreaded)
+-    {
+-        FIXME("Waiting for cs.\n");
+-        wined3d_cs_emit_glfinish(device->cs);
+-        device->cs->ops->finish(device->cs);
+-    }
++    void *mem;
+ 
+     if (device->d3d_initialized)
+         context = context_acquire(device, NULL);
+@@ -715,9 +695,8 @@ HRESULT wined3d_resource_map(struct wined3d_resource *resource,
+     if (!wined3d_resource_prepare_map_memory(resource, context))
+     {
+         WARN("Out of memory.\n");
+-        map_desc->data = NULL;
+         context_release(context);
+-        return E_OUTOFMEMORY;
++        return NULL;
+     }
+ 
+     if (flags & WINED3D_MAP_DISCARD)
+@@ -725,11 +704,39 @@ HRESULT wined3d_resource_map(struct wined3d_resource *resource,
+     else
+         wined3d_resource_load_location(resource, context, resource->map_binding);
+ 
+-    base_memory = wined3d_resource_get_map_ptr(resource, context, flags);
++    mem = wined3d_resource_get_map_ptr(resource, context, flags);
+ 
+     if (context)
+         context_release(context);
+ 
++    return mem;
++}
++
++HRESULT wined3d_resource_map(struct wined3d_resource *resource,
++        struct wined3d_map_desc *map_desc, const struct wined3d_box *box, DWORD flags)
++{
++    struct wined3d_device *device = resource->device;
++    BYTE *base_memory;
++    const struct wined3d_format *format = resource->format;
++
++    TRACE("resource %p, map_desc %p, box %p, flags %#x.\n",
++            resource, map_desc, box, flags);
++
++    if (resource->map_count)
++    {
++        WARN("Volume is already mapped.\n");
++        return WINED3DERR_INVALIDCALL;
++    }
++
++    flags = wined3d_resource_sanitize_map_flags(resource, flags);
++
++    base_memory = wined3d_cs_emit_resource_map(device->cs, resource, flags);
++    if (!base_memory)
++    {
++        WARN("Map failed.\n");
++        return WINED3DERR_INVALIDCALL;
++    }
++
+     TRACE("Base memory pointer %p.\n", base_memory);
+ 
+     if (format->flags & WINED3DFMT_FLAG_BROKEN_PITCH)
+@@ -781,10 +788,21 @@ HRESULT wined3d_resource_map(struct wined3d_resource *resource,
+     return WINED3D_OK;
+ }
+ 
+-HRESULT wined3d_resource_unmap(struct wined3d_resource *resource)
++void wined3d_resource_unmap_internal(struct wined3d_resource *resource)
+ {
+     struct wined3d_device *device = resource->device;
+     struct wined3d_context *context = NULL;
++
++    if (device->d3d_initialized)
++        context = context_acquire(device, NULL);
++    wined3d_resource_release_map_ptr(resource, context);
++    if (context)
++        context_release(context);
++}
++
++HRESULT wined3d_resource_unmap(struct wined3d_resource *resource)
++{
++    struct wined3d_device *device = resource->device;
+     TRACE("resource %p.\n", resource);
+ 
+     if (!resource->map_count)
+@@ -793,12 +811,7 @@ HRESULT wined3d_resource_unmap(struct wined3d_resource *resource)
+         return WINEDDERR_NOTLOCKED;
+     }
+ 
+-    if (device->d3d_initialized)
+-        context = context_acquire(device, NULL);
+-    wined3d_resource_release_map_ptr(resource, context);
+-    if (context)
+-        context_release(context);
+-
++    wined3d_cs_emit_resource_unmap(device->cs, resource);
+     resource->map_count--;
+ 
+     return WINED3D_OK;
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index e554099..6ee0c24 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2153,6 +2153,7 @@ void wined3d_resource_load_location(struct wined3d_resource *resource,
+         struct wined3d_context *context, DWORD location) DECLSPEC_HIDDEN;
+ HRESULT wined3d_resource_map(struct wined3d_resource *resource, struct wined3d_map_desc *map_desc,
+         const struct wined3d_box *box, DWORD flags) DECLSPEC_HIDDEN;
++void *wined3d_resource_map_internal(struct wined3d_resource *resource, DWORD flags) DECLSPEC_HIDDEN;
+ BOOL wined3d_resource_prepare_map_memory(struct wined3d_resource *resource,
+         struct wined3d_context *context) DECLSPEC_HIDDEN;
+ BOOL wined3d_resource_prepare_system_memory(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
+@@ -2160,6 +2161,7 @@ void wined3d_resource_release_map_ptr(const struct wined3d_resource *resource,
+         const struct wined3d_context *context) DECLSPEC_HIDDEN;
+ DWORD wined3d_resource_sanitize_map_flags(const struct wined3d_resource *resource, DWORD flags) DECLSPEC_HIDDEN;
+ HRESULT wined3d_resource_unmap(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
++void wined3d_resource_unmap_internal(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
+ void wined3d_resource_update_draw_binding(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
+ void wined3d_resource_validate_location(struct wined3d_resource *resource, DWORD location) DECLSPEC_HIDDEN;
+ 
+@@ -2640,6 +2642,9 @@ void wined3d_cs_emit_blt(struct wined3d_cs *cs, struct wined3d_surface *dst_surf
+         enum wined3d_texture_filter_type filter) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_clear_rtv(struct wined3d_cs *cs, struct wined3d_rendertarget_view *view,
+         const RECT *rect, const struct wined3d_color *color) DECLSPEC_HIDDEN;
++void *wined3d_cs_emit_resource_map(struct wined3d_cs *cs, struct wined3d_resource *resource,
++        DWORD flags) DECLSPEC_HIDDEN;
++void wined3d_cs_emit_resource_unmap(struct wined3d_cs *cs, struct wined3d_resource *resource) DECLSPEC_HIDDEN;
+ 
+ /* Direct3D terminology with little modifications. We do not have an issued state
+  * because only the driver knows about it, but we have a created state because d3d
+-- 
+2.1.3
+

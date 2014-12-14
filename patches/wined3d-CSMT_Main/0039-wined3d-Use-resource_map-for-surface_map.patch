@@ -1,0 +1,196 @@
+From 4f15b07cc64a3d364197a0ac73dd561c7b969183 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Thu, 19 Sep 2013 18:00:23 +0200
+Subject: wined3d: Use resource_map for surface_map.
+
+---
+ dlls/wined3d/resource.c |   2 +-
+ dlls/wined3d/surface.c  | 102 +++++++-----------------------------------------
+ dlls/wined3d/volume.c   |   7 +++-
+ 3 files changed, 22 insertions(+), 89 deletions(-)
+
+diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
+index 2443a9b..8486dc3 100644
+--- a/dlls/wined3d/resource.c
++++ b/dlls/wined3d/resource.c
+@@ -783,7 +783,7 @@ HRESULT wined3d_resource_unmap(struct wined3d_resource *resource)
+     if (!resource->map_count)
+     {
+         WARN("Trying to unlock an unlocked resource %p.\n", resource);
+-        return WINED3DERR_INVALIDCALL;
++        return WINEDDERR_NOTLOCKED;
+     }
+ 
+     if (device->d3d_initialized)
+diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
+index 5b2359e..16233d3 100644
+--- a/dlls/wined3d/surface.c
++++ b/dlls/wined3d/surface.c
+@@ -2394,46 +2394,25 @@ struct wined3d_surface * CDECL wined3d_surface_from_resource(struct wined3d_reso
+ 
+ HRESULT CDECL wined3d_surface_unmap(struct wined3d_surface *surface)
+ {
+-    struct wined3d_device *device = surface->resource.device;
+-    struct wined3d_context *context = NULL;
++    HRESULT hr;
+     TRACE("surface %p.\n", surface);
+ 
+-    if (!surface->resource.map_count)
+-    {
+-        WARN("Trying to unmap unmapped surface.\n");
+-        return WINEDDERR_NOTLOCKED;
+-    }
+-    --surface->resource.map_count;
+-
+-    if (device->d3d_initialized)
+-        context = context_acquire(device, NULL);
+-    wined3d_resource_release_map_ptr(&surface->resource, context);
+-    if (context)
+-        context_release(context);
++    hr = wined3d_resource_unmap(&surface->resource);
++    if (FAILED(hr))
++        return hr;
+ 
+     if (surface->container->swapchain && surface->container == surface->container->swapchain->front_buffer)
+         surface->surface_ops->surface_frontbuffer_updated(surface);
+     memset(&surface->lockedRect, 0, sizeof(surface->lockedRect));
+ 
+-    return WINED3D_OK;
++    return hr;
+ }
+ 
+ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
+         struct wined3d_map_desc *map_desc, const RECT *rect, DWORD flags)
+ {
++    struct wined3d_box box;
+     const struct wined3d_format *format = surface->resource.format;
+-    struct wined3d_device *device = surface->resource.device;
+-    struct wined3d_context *context = NULL;
+-    BYTE *base_memory;
+-
+-    TRACE("surface %p, map_desc %p, rect %s, flags %#x.\n",
+-            surface, map_desc, wine_dbgstr_rect(rect), flags);
+-
+-    if (surface->resource.map_count)
+-    {
+-        WARN("Surface is already mapped.\n");
+-        return WINED3DERR_INVALIDCALL;
+-    }
+ 
+     if ((format->flags & WINED3DFMT_FLAG_BLOCKS) && rect
+             && !surface_check_block_align(surface, rect))
+@@ -2445,11 +2424,6 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
+             return WINED3DERR_INVALIDCALL;
+     }
+ 
+-    ++surface->resource.map_count;
+-
+-    if (!(surface->resource.access_flags & WINED3D_RESOURCE_ACCESS_CPU))
+-        WARN("Trying to lock unlockable surface.\n");
+-
+     /* Performance optimization: Count how often a surface is mapped, if it is
+      * mapped regularly do not throw away the system memory copy. This avoids
+      * the need to download the surface from OpenGL all the time. The surface
+@@ -2465,72 +2439,26 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
+         }
+     }
+ 
+-    if (device->d3d_initialized)
+-        context = context_acquire(device, NULL);
+-
+-    wined3d_resource_prepare_map_memory(&surface->resource, context);
+-    if (flags & WINED3D_MAP_DISCARD)
+-    {
+-        TRACE("WINED3D_MAP_DISCARD flag passed, marking %s as up to date.\n",
+-                wined3d_debug_location(surface->resource.map_binding));
+-        wined3d_resource_validate_location(&surface->resource, surface->resource.map_binding);
+-    }
+-    else
++    if (rect)
+     {
+-        if (surface->resource.usage & WINED3DUSAGE_DYNAMIC)
+-            WARN_(d3d_perf)("Mapping a dynamic surface without WINED3D_MAP_DISCARD.\n");
++        surface->lockedRect = *rect;
+ 
+-        wined3d_resource_load_location(&surface->resource, context, surface->resource.map_binding);
++        box.left = rect->left;
++        box.top = rect->top;
++        box.front = 0;
++        box.right = rect->right;
++        box.bottom = rect->bottom;
++        box.back = 1;
+     }
+-
+-    if (!(flags & (WINED3D_MAP_NO_DIRTY_UPDATE | WINED3D_MAP_READONLY)))
+-        wined3d_resource_invalidate_location(&surface->resource, ~surface->resource.map_binding);
+-
+-    base_memory = wined3d_resource_get_map_ptr(&surface->resource, context, flags);
+-
+-    if (context)
+-        context_release(context);
+-
+-    if (format->flags & WINED3DFMT_FLAG_BROKEN_PITCH)
+-        map_desc->row_pitch = surface->resource.width * format->byte_count;
+     else
+-        wined3d_resource_get_pitch(&surface->resource, &map_desc->row_pitch, &map_desc->slice_pitch);
+-    map_desc->slice_pitch = 0;
+-
+-    if (!rect)
+     {
+-        map_desc->data = base_memory;
+         surface->lockedRect.left = 0;
+         surface->lockedRect.top = 0;
+         surface->lockedRect.right = surface->resource.width;
+         surface->lockedRect.bottom = surface->resource.height;
+     }
+-    else
+-    {
+-        if ((format->flags & (WINED3DFMT_FLAG_BLOCKS | WINED3DFMT_FLAG_BROKEN_PITCH)) == WINED3DFMT_FLAG_BLOCKS)
+-        {
+-            /* Compressed textures are block based, so calculate the offset of
+-             * the block that contains the top-left pixel of the locked rectangle. */
+-            map_desc->data = base_memory
+-                    + ((rect->top / format->block_height) * map_desc->row_pitch)
+-                    + ((rect->left / format->block_width) * format->block_byte_count);
+-        }
+-        else
+-        {
+-            map_desc->data = base_memory
+-                    + (map_desc->row_pitch * rect->top)
+-                    + (rect->left * format->byte_count);
+-        }
+-        surface->lockedRect.left = rect->left;
+-        surface->lockedRect.top = rect->top;
+-        surface->lockedRect.right = rect->right;
+-        surface->lockedRect.bottom = rect->bottom;
+-    }
+-
+-    TRACE("Locked rect %s.\n", wine_dbgstr_rect(&surface->lockedRect));
+-    TRACE("Returning memory %p, pitch %u.\n", map_desc->data, map_desc->row_pitch);
+ 
+-    return WINED3D_OK;
++    return wined3d_resource_map(&surface->resource, map_desc, rect ? &box : NULL, flags);
+ }
+ 
+ HRESULT CDECL wined3d_surface_getdc(struct wined3d_surface *surface, HDC *dc)
+diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
+index 7e5576b..7ce5331 100644
+--- a/dlls/wined3d/volume.c
++++ b/dlls/wined3d/volume.c
+@@ -422,7 +422,12 @@ struct wined3d_volume * CDECL wined3d_volume_from_resource(struct wined3d_resour
+ 
+ HRESULT CDECL wined3d_volume_unmap(struct wined3d_volume *volume)
+ {
+-    return wined3d_resource_unmap(&volume->resource);
++    HRESULT hr;
++
++    hr = wined3d_resource_unmap(&volume->resource);
++    if (hr == WINEDDERR_NOTLOCKED)
++        return WINED3DERR_INVALIDCALL;
++    return hr;
+ }
+ 
+ static ULONG volume_resource_incref(struct wined3d_resource *resource)
+-- 
+2.1.3
+

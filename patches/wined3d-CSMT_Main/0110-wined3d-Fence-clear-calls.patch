@@ -1,0 +1,72 @@
+From d95011df395938acfe6f6c7a33f7c5c094e7df83 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Fri, 27 Sep 2013 17:04:47 +0200
+Subject: wined3d: Fence clear calls.
+
+---
+ dlls/wined3d/cs.c | 27 +++++++++++++++++++++++++--
+ 1 file changed, 25 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index fb92286..bdb9279 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -540,7 +540,7 @@ static UINT wined3d_cs_exec_clear(struct wined3d_cs *cs, const void *data)
+     const struct wined3d_cs_clear *op = data;
+     struct wined3d_device *device;
+     RECT draw_rect;
+-    unsigned int extra_rects = op->rect_count ? op->rect_count - 1 : 0;
++    unsigned int extra_rects = op->rect_count ? op->rect_count - 1 : 0, i;
+ 
+     device = cs->device;
+     wined3d_get_draw_rect(&cs->state, &draw_rect);
+@@ -548,6 +548,17 @@ static UINT wined3d_cs_exec_clear(struct wined3d_cs *cs, const void *data)
+             &cs->state.fb, op->rect_count, op->rect_count ? op->rects : NULL, &draw_rect, op->flags,
+             &op->color, op->depth, op->stencil);
+ 
++    if (op->flags & WINED3DCLEAR_TARGET)
++    {
++        for (i = 0; i < sizeof(cs->state.fb.render_targets) / sizeof(*cs->state.fb.render_targets); i++)
++        {
++            if (cs->state.fb.render_targets[i])
++                wined3d_resource_dec_fence(cs->state.fb.render_targets[i]->resource);
++        }
++    }
++    if (op->flags & (WINED3DCLEAR_ZBUFFER | WINED3DCLEAR_STENCIL))
++        wined3d_resource_dec_fence(cs->state.fb.depth_stencil->resource);
++
+     return sizeof(*op) + sizeof(*op->rects) * extra_rects;
+ }
+ 
+@@ -555,8 +566,9 @@ void wined3d_cs_emit_clear(struct wined3d_cs *cs, DWORD rect_count, const RECT *
+         DWORD flags, const struct wined3d_color *color, float depth, DWORD stencil)
+ {
+     struct wined3d_cs_clear *op;
+-    unsigned int extra_rects = rect_count ? rect_count - 1 : 0;
++    unsigned int extra_rects = rect_count ? rect_count - 1 : 0, i;
+     size_t size = sizeof(*op) + sizeof(*op->rects) * extra_rects;
++    const struct wined3d_state *state = &cs->device->state;
+ 
+     op = cs->ops->require_space(cs, size);
+     op->opcode = WINED3D_CS_OP_CLEAR;
+@@ -568,6 +580,17 @@ void wined3d_cs_emit_clear(struct wined3d_cs *cs, DWORD rect_count, const RECT *
+     op->depth = depth;
+     op->stencil = stencil;
+ 
++    if (flags & WINED3DCLEAR_TARGET)
++    {
++        for (i = 0; i < sizeof(state->fb.render_targets) / sizeof(*state->fb.render_targets); i++)
++        {
++            if (state->fb.render_targets[i])
++                wined3d_resource_inc_fence(state->fb.render_targets[i]->resource);
++        }
++    }
++    if (flags & (WINED3DCLEAR_ZBUFFER | WINED3DCLEAR_STENCIL))
++        wined3d_resource_inc_fence(state->fb.depth_stencil->resource);
++
+     cs->ops->submit(cs, size);
+ }
+ 
+-- 
+2.1.3
+

@@ -1,0 +1,40 @@
+From d46500650ef16a6bd292705ce9896bc8b1427d99 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Wed, 24 Jul 2013 17:50:16 +0200
+Subject: wined3d: Remove restated queries from the poll list
+
+---
+ dlls/wined3d/cs.c | 17 ++++++++++++++---
+ 1 file changed, 14 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 4c0695a..5c19a17 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -1715,9 +1715,20 @@ static UINT wined3d_cs_exec_query_issue(struct wined3d_cs *cs, const void *data)
+ 
+     poll = query->query_ops->query_issue(query, op->flags);
+ 
+-    if (wined3d_settings.cs_multithreaded && poll
+-            && list_empty(&query->poll_list_entry))
+-        list_add_tail(&cs->query_poll_list, &query->poll_list_entry);
++    if (wined3d_settings.cs_multithreaded)
++    {
++        if (poll && list_empty(&query->poll_list_entry))
++        {
++            list_add_tail(&cs->query_poll_list, &query->poll_list_entry);
++        }
++        else if (!poll && !list_empty(&query->poll_list_entry))
++        {
++            /* Can happen if occlusion queries are restarted. This discards the old
++             * result, polling it could result in a GL error */
++            list_remove(&query->poll_list_entry);
++            list_init(&query->poll_list_entry);
++        }
++    }
+ 
+     return sizeof(*op);
+ }
+-- 
+2.1.3
+

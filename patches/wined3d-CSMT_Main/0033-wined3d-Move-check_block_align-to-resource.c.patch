@@ -1,0 +1,152 @@
+From 56c5228fce24415412c59b16744c1eab1fb6e038 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Thu, 19 Sep 2013 14:55:00 +0200
+Subject: wined3d: Move check_block_align to resource.c
+
+---
+ dlls/wined3d/resource.c        | 28 ++++++++++++++++++++++++++++
+ dlls/wined3d/surface.c         | 27 +++++++++++----------------
+ dlls/wined3d/volume.c          | 31 ++-----------------------------
+ dlls/wined3d/wined3d_private.h |  2 ++
+ 4 files changed, 43 insertions(+), 45 deletions(-)
+
+diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
+index 94c06ac..947fe8d 100644
+--- a/dlls/wined3d/resource.c
++++ b/dlls/wined3d/resource.c
+@@ -606,3 +606,31 @@ void CDECL wined3d_resource_get_pitch(const struct wined3d_resource *resource, U
+ 
+     TRACE("Returning row pitch %u, slice pitch %u.\n", *row_pitch, *slice_pitch);
+ }
++
++BOOL wined3d_resource_check_block_align(const struct wined3d_resource *resource,
++        const struct wined3d_box *box)
++{
++    UINT width_mask, height_mask;
++    const struct wined3d_format *format = resource->format;
++
++    if (!box)
++        return TRUE;
++
++    /* This assumes power of two block sizes, but NPOT block sizes would be
++     * silly anyway.
++     *
++     * This also assumes that the format's block depth is 1. */
++    width_mask = format->block_width - 1;
++    height_mask = format->block_height - 1;
++
++    if (box->left & width_mask)
++        return FALSE;
++    if (box->top & height_mask)
++        return FALSE;
++    if (box->right & width_mask && box->right != resource->width)
++        return FALSE;
++    if (box->bottom & height_mask && box->bottom != resource->height)
++        return FALSE;
++
++    return TRUE;
++}
+diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
+index 50d7e74..6fa2576 100644
+--- a/dlls/wined3d/surface.c
++++ b/dlls/wined3d/surface.c
+@@ -1531,23 +1531,18 @@ static void surface_upload_data(struct wined3d_surface *surface, const struct wi
+ 
+ static BOOL surface_check_block_align(struct wined3d_surface *surface, const RECT *rect)
+ {
+-    UINT width_mask, height_mask;
++    struct wined3d_box box;
+ 
+-    if (!rect->left && !rect->top
+-            && rect->right == surface->resource.width
+-            && rect->bottom == surface->resource.height)
+-        return TRUE;
+-
+-    /* This assumes power of two block sizes, but NPOT block sizes would be
+-     * silly anyway. */
+-    width_mask = surface->resource.format->block_width - 1;
+-    height_mask = surface->resource.format->block_height - 1;
+-
+-    if (!(rect->left & width_mask) && !(rect->top & height_mask)
+-            && !(rect->right & width_mask) && !(rect->bottom & height_mask))
+-        return TRUE;
+-
+-    return FALSE;
++    if (!rect)
++        return wined3d_resource_check_block_align(&surface->resource, NULL);
++
++    box.left = rect->left;
++    box.top = rect->top;
++    box.front = 0;
++    box.right = rect->right;
++    box.bottom = rect->bottom;
++    box.back = 1;
++    return wined3d_resource_check_block_align(&surface->resource, &box);
+ }
+ 
+ HRESULT surface_upload_from_surface(struct wined3d_surface *dst_surface, const POINT *dst_point,
+diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
+index 9ad7d75..c11c98c 100644
+--- a/dlls/wined3d/volume.c
++++ b/dlls/wined3d/volume.c
+@@ -361,34 +361,6 @@ struct wined3d_resource * CDECL wined3d_volume_get_resource(struct wined3d_volum
+     return &volume->resource;
+ }
+ 
+-static BOOL volume_check_block_align(const struct wined3d_volume *volume,
+-        const struct wined3d_box *box)
+-{
+-    UINT width_mask, height_mask;
+-    const struct wined3d_format *format = volume->resource.format;
+-
+-    if (!box)
+-        return TRUE;
+-
+-    /* This assumes power of two block sizes, but NPOT block sizes would be
+-     * silly anyway.
+-     *
+-     * This also assumes that the format's block depth is 1. */
+-    width_mask = format->block_width - 1;
+-    height_mask = format->block_height - 1;
+-
+-    if (box->left & width_mask)
+-        return FALSE;
+-    if (box->top & height_mask)
+-        return FALSE;
+-    if (box->right & width_mask && box->right != volume->resource.width)
+-        return FALSE;
+-    if (box->bottom & height_mask && box->bottom != volume->resource.height)
+-        return FALSE;
+-
+-    return TRUE;
+-}
+-
+ static BOOL wined3d_volume_check_box_dimensions(const struct wined3d_volume *volume,
+         const struct wined3d_box *box)
+ {
+@@ -438,7 +410,8 @@ HRESULT CDECL wined3d_volume_map(struct wined3d_volume *volume,
+         WARN("Map box is invalid.\n");
+         return WINED3DERR_INVALIDCALL;
+     }
+-    if ((format->flags & WINED3DFMT_FLAG_BLOCKS) && !volume_check_block_align(volume, box))
++    if ((format->flags & WINED3DFMT_FLAG_BLOCKS) &&
++            !wined3d_resource_check_block_align(&volume->resource, box))
+     {
+         WARN("Map box is misaligned for %ux%u blocks.\n",
+                 format->block_width, format->block_height);
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index d69a581..35f2445 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2113,6 +2113,8 @@ HRESULT resource_init(struct wined3d_resource *resource, struct wined3d_device *
+ void resource_unload(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
+ DWORD wined3d_resource_access_from_location(DWORD location) DECLSPEC_HIDDEN;
+ BOOL wined3d_resource_allocate_sysmem(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
++BOOL wined3d_resource_check_block_align(const struct wined3d_resource *resource,
++        const struct wined3d_box *box) DECLSPEC_HIDDEN;
+ void wined3d_resource_free_sysmem(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
+ BYTE *wined3d_resource_get_map_ptr(const struct wined3d_resource *resource,
+         const struct wined3d_context *context, DWORD flags) DECLSPEC_HIDDEN;
+-- 
+2.1.3
+

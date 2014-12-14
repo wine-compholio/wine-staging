@@ -1,0 +1,50 @@
+From b78bd76d80ff1d2edf5a9789e117ae003ec2c842 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Thu, 29 Aug 2013 22:25:14 +0200
+Subject: wined3d: Don't lock the src volume in device_update_volume
+
+This will attempt to wait for the CS, but this code is executed by the CS, so
+it will, among other problems, break the single producer, single consumer
+assumption of the work queue.
+
+FIXME: Maybe merge this with the previous patch or change their order.
+---
+ dlls/wined3d/device.c | 10 +---------
+ 1 file changed, 1 insertion(+), 9 deletions(-)
+
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index f1c284a..ae7ad31 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -3401,7 +3401,6 @@ void CDECL wined3d_device_draw_indexed_primitive_instanced(struct wined3d_device
+ static HRESULT device_update_volume(struct wined3d_context *context,
+         struct wined3d_volume *src_volume, struct wined3d_volume *dst_volume)
+ {
+-    struct wined3d_map_desc src;
+     HRESULT hr;
+     struct wined3d_bo_address data;
+ 
+@@ -3421,19 +3420,12 @@ static HRESULT device_update_volume(struct wined3d_context *context,
+         return WINED3DERR_INVALIDCALL;
+     }
+ 
+-    if (FAILED(hr = wined3d_volume_map(src_volume, &src, NULL, WINED3D_MAP_READONLY)))
+-        return hr;
+-
+     /* Only a prepare, since we're uploading the entire volume. */
+     wined3d_texture_prepare_texture(dst_volume->container, context, FALSE);
+-
+-    data.buffer_object = 0;
+-    data.addr = src.data;
++    wined3d_resource_get_memory(&src_volume->resource, src_volume->resource.map_binding, &data);
+     wined3d_volume_upload_data(dst_volume, context, &data);
+     wined3d_resource_invalidate_location(&dst_volume->resource, ~WINED3D_LOCATION_TEXTURE_RGB);
+ 
+-    hr = wined3d_volume_unmap(src_volume);
+-
+     return hr;
+ }
+ 
+-- 
+2.1.3
+

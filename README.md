@@ -37,7 +37,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [13]:**
+**Bugfixes and features included in the next upcoming release [14]:**
 
 * Add support for GetPropValue to PulseAudio backend
 * Fix condition mask handling in RtlVerifyVersionInfo ([Wine Bug #36143](https://bugs.winehq.org/show_bug.cgi?id=36143))
@@ -48,6 +48,7 @@ Included bug fixes and improvements
 * Provide named entry point shell32.SHILCreateFromPath for vista apps ([Wine Bug #37265](https://bugs.winehq.org/show_bug.cgi?id=37265))
 * Reallocate buffer when adding records to AVI files ([Wine Bug #5137](https://bugs.winehq.org/show_bug.cgi?id=5137))
 * Set last error when GetRawInputDeviceList fails ([Wine Bug #37667](https://bugs.winehq.org/show_bug.cgi?id=37667))
+* Support for CSMT (command stream) to increase graphic performance ([Wine Bug #11674](https://bugs.winehq.org/show_bug.cgi?id=11674))
 * Support for StrCatChainW
 * Support for combase HSTRING objects
 * Support for loader dll redirections

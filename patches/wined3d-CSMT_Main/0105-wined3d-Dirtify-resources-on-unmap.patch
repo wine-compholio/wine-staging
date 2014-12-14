@@ -1,0 +1,81 @@
+From 440a516b0908c7282e89fe73a788ca461d90d81e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Thu, 26 Sep 2013 17:25:01 +0200
+Subject: wined3d: Dirtify resources on unmap
+
+---
+ dlls/wined3d/resource.c        | 7 ++++++-
+ dlls/wined3d/surface.c         | 4 ++++
+ dlls/wined3d/volume.c          | 3 +++
+ dlls/wined3d/wined3d_private.h | 1 +
+ 4 files changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
+index 708b080..73011f8 100644
+--- a/dlls/wined3d/resource.c
++++ b/dlls/wined3d/resource.c
+@@ -806,7 +806,7 @@ HRESULT wined3d_resource_map(struct wined3d_resource *resource,
+     }
+ 
+     if (!(flags & (WINED3D_MAP_NO_DIRTY_UPDATE | WINED3D_MAP_READONLY)))
+-        wined3d_resource_invalidate_location(resource, ~resource->map_binding);
++        resource->unmap_dirtify = TRUE;
+ 
+     resource->map_count++;
+ 
+@@ -826,6 +826,11 @@ void wined3d_resource_unmap_internal(struct wined3d_resource *resource)
+     wined3d_resource_release_map_ptr(resource, context);
+     if (context)
+         context_release(context);
++
++    if (resource->unmap_dirtify)
++        wined3d_resource_invalidate_location(resource, ~resource->map_binding);
++    resource->unmap_dirtify = FALSE;
++
+ }
+ 
+ HRESULT wined3d_resource_unmap(struct wined3d_resource *resource)
+diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
+index 0c3313d..e661494 100644
+--- a/dlls/wined3d/surface.c
++++ b/dlls/wined3d/surface.c
+@@ -2405,6 +2405,10 @@ HRESULT CDECL wined3d_surface_unmap(struct wined3d_surface *surface)
+     HRESULT hr;
+     TRACE("surface %p.\n", surface);
+ 
++    if (surface->resource.unmap_dirtify && surface->container)
++        wined3d_texture_set_dirty(surface->container);
++
++
+     hr = wined3d_resource_unmap(&surface->resource);
+     if (FAILED(hr))
+         return hr;
+diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
+index 7ce5331..faadea1 100644
+--- a/dlls/wined3d/volume.c
++++ b/dlls/wined3d/volume.c
+@@ -424,6 +424,9 @@ HRESULT CDECL wined3d_volume_unmap(struct wined3d_volume *volume)
+ {
+     HRESULT hr;
+ 
++    if (volume->resource.unmap_dirtify)
++        wined3d_texture_set_dirty(volume->container);
++
+     hr = wined3d_resource_unmap(&volume->resource);
+     if (hr == WINEDDERR_NOTLOCKED)
+         return WINED3DERR_INVALIDCALL;
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index b4e5679..d670fe1 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2119,6 +2119,7 @@ struct wined3d_resource
+     struct list resource_list_entry;
+     DWORD locations;
+     LONG access_fence;
++    BOOL unmap_dirtify;
+ 
+     void *parent;
+     const struct wined3d_parent_ops *parent_ops;
+-- 
+2.1.3
+

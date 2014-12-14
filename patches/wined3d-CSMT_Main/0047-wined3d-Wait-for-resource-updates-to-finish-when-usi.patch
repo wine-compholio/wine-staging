@@ -1,0 +1,190 @@
+From 8eb60915d38e68c45223eafa534452fc4ffeb1fe Mon Sep 17 00:00:00 2001
+From: Henri Verbeet <hverbeet@codeweavers.com>
+Date: Sat, 8 Dec 2012 19:28:54 +0100
+Subject: wined3d: Wait for resource updates to finish when using the
+ multithreaded command stream.
+
+As opposed to just making sure they're submitted to the GPU for
+"StrictDrawOrdering". This will eventually be disabled by default, but even
+then it's probably useful for debugging.
+---
+ dlls/wined3d/arb_program_shader.c |  4 +++-
+ dlls/wined3d/buffer.c             |  4 +++-
+ dlls/wined3d/device.c             |  9 +++++++--
+ dlls/wined3d/drawprim.c           |  4 +++-
+ dlls/wined3d/surface.c            | 28 +++++++++++++++++++++-------
+ dlls/wined3d/swapchain.c          |  4 +++-
+ 6 files changed, 40 insertions(+), 13 deletions(-)
+
+diff --git a/dlls/wined3d/arb_program_shader.c b/dlls/wined3d/arb_program_shader.c
+index 2875fe1..ca456ad 100644
+--- a/dlls/wined3d/arb_program_shader.c
++++ b/dlls/wined3d/arb_program_shader.c
+@@ -7679,7 +7679,9 @@ HRESULT arbfp_blit_surface(struct wined3d_device *device, DWORD filter,
+     /* Leave the opengl state valid for blitting */
+     arbfp_blit_unset(context->gl_info);
+ 
+-    if (wined3d_settings.strict_draw_ordering
++    if (wined3d_settings.cs_multithreaded)
++        context->gl_info->gl_ops.gl.p_glFinish();
++    else if (wined3d_settings.strict_draw_ordering
+             || (dst_surface->container->swapchain
+             && (dst_surface->container->swapchain->front_buffer == dst_surface->container)))
+         context->gl_info->gl_ops.gl.p_glFlush(); /* Flush to ensure ordering across contexts. */
+diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
+index f335dfc..abad8b8 100644
+--- a/dlls/wined3d/buffer.c
++++ b/dlls/wined3d/buffer.c
+@@ -1100,7 +1100,9 @@ void CDECL wined3d_buffer_unmap(struct wined3d_buffer *buffer)
+         }
+ 
+         GL_EXTCALL(glUnmapBufferARB(buffer->buffer_type_hint));
+-        if (wined3d_settings.strict_draw_ordering)
++        if (wined3d_settings.cs_multithreaded)
++            gl_info->gl_ops.gl.p_glFinish();
++        else if (wined3d_settings.strict_draw_ordering)
+             gl_info->gl_ops.gl.p_glFlush(); /* Flush to ensure ordering across contexts. */
+         context_release(context);
+ 
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index 92478d7..08422ad 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -463,7 +463,9 @@ void device_clear_render_targets(struct wined3d_device *device, UINT rt_count, c
+         }
+     }
+ 
+-    if (wined3d_settings.strict_draw_ordering || (flags & WINED3DCLEAR_TARGET
++    if (wined3d_settings.cs_multithreaded)
++        gl_info->gl_ops.gl.p_glFinish();
++    else if (wined3d_settings.strict_draw_ordering || (flags & WINED3DCLEAR_TARGET
+             && target->container->swapchain && target->container->swapchain->front_buffer == target->container))
+         gl_info->gl_ops.gl.p_glFlush(); /* Flush to ensure ordering across contexts. */
+ 
+@@ -3247,7 +3249,10 @@ HRESULT CDECL wined3d_device_end_scene(struct wined3d_device *device)
+ 
+     context = context_acquire(device, NULL);
+     /* We only have to do this if we need to read the, swapbuffers performs a flush for us */
+-    context->gl_info->gl_ops.gl.p_glFlush();
++    if (wined3d_settings.cs_multithreaded)
++        context->gl_info->gl_ops.gl.p_glFinish();
++    else
++        context->gl_info->gl_ops.gl.p_glFlush();
+     /* No checkGLcall here to avoid locking the lock just for checking a call that hardly ever
+      * fails. */
+     context_release(context);
+diff --git a/dlls/wined3d/drawprim.c b/dlls/wined3d/drawprim.c
+index 98261f9..d3a9e03 100644
+--- a/dlls/wined3d/drawprim.c
++++ b/dlls/wined3d/drawprim.c
+@@ -781,7 +781,9 @@ void draw_primitive(struct wined3d_device *device, UINT start_idx, UINT index_co
+         wined3d_event_query_issue(context->buffer_queries[i], device);
+     }
+ 
+-    if (wined3d_settings.strict_draw_ordering)
++    if (wined3d_settings.cs_multithreaded)
++        gl_info->gl_ops.gl.p_glFinish();
++    else if (wined3d_settings.strict_draw_ordering)
+         gl_info->gl_ops.gl.p_glFlush(); /* Flush to ensure ordering across contexts. */
+ 
+     context_release(context);
+diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
+index 642210d..8fa2c9f 100644
+--- a/dlls/wined3d/surface.c
++++ b/dlls/wined3d/surface.c
+@@ -687,7 +687,9 @@ static void surface_depth_blt_fbo(const struct wined3d_device *device,
+             dst_rect->left, dst_rect->top, dst_rect->right, dst_rect->bottom, gl_mask, GL_NEAREST);
+     checkGLcall("glBlitFramebuffer()");
+ 
+-    if (wined3d_settings.strict_draw_ordering)
++    if (wined3d_settings.cs_multithreaded)
++        gl_info->gl_ops.gl.p_glFinish();
++    else if (wined3d_settings.strict_draw_ordering)
+         gl_info->gl_ops.gl.p_glFlush(); /* Flush to ensure ordering across contexts. */
+ 
+     context_release(context);
+@@ -816,7 +818,9 @@ static void surface_blt_fbo(const struct wined3d_device *device,
+             dst_rect.left, dst_rect.top, dst_rect.right, dst_rect.bottom, GL_COLOR_BUFFER_BIT, gl_filter);
+     checkGLcall("glBlitFramebuffer()");
+ 
+-    if (wined3d_settings.strict_draw_ordering
++    if (wined3d_settings.cs_multithreaded)
++        gl_info->gl_ops.gl.p_glFinish();
++    else if (wined3d_settings.strict_draw_ordering
+             || (dst_location == WINED3D_LOCATION_DRAWABLE
+             && dst_surface->container->swapchain->front_buffer == dst_surface->container))
+         gl_info->gl_ops.gl.p_glFlush();
+@@ -1393,7 +1397,9 @@ static void surface_upload_data(struct wined3d_surface *surface, const struct wi
+         checkGLcall("glBindBufferARB");
+     }
+ 
+-    if (wined3d_settings.strict_draw_ordering)
++    if (wined3d_settings.cs_multithreaded)
++        gl_info->gl_ops.gl.p_glFinish();
++    else if (wined3d_settings.strict_draw_ordering)
+         gl_info->gl_ops.gl.p_glFlush();
+ 
+     if (gl_info->quirks & WINED3D_QUIRK_FBO_TEX_UPDATE)
+@@ -3183,7 +3189,9 @@ static void fb_copy_to_texture_hwstretch(struct wined3d_surface *dst_surface, st
+         checkGLcall("glDeleteTextures(1, &backup)");
+     }
+ 
+-    if (wined3d_settings.strict_draw_ordering)
++    if (wined3d_settings.cs_multithreaded)
++        gl_info->gl_ops.gl.p_glFinish();
++    else if (wined3d_settings.strict_draw_ordering)
+         gl_info->gl_ops.gl.p_glFlush(); /* Flush to ensure ordering across contexts. */
+ 
+     context_release(context);
+@@ -3298,7 +3306,9 @@ static void surface_blt_to_drawable(const struct wined3d_device *device,
+     /* Leave the opengl state valid for blitting */
+     device->blitter->unset_shader(context->gl_info);
+ 
+-    if (wined3d_settings.strict_draw_ordering
++    if (wined3d_settings.cs_multithreaded)
++        gl_info->gl_ops.gl.p_glFinish();
++    else if (wined3d_settings.strict_draw_ordering
+             || (dst_surface->container->swapchain
+             && dst_surface->container->swapchain->front_buffer == dst_surface->container))
+         gl_info->gl_ops.gl.p_glFlush(); /* Flush to ensure ordering across contexts. */
+@@ -3719,7 +3729,9 @@ void surface_load_ds_location(struct wined3d_surface *surface, struct wined3d_co
+ 
+         context_invalidate_state(context, STATE_FRAMEBUFFER);
+ 
+-        if (wined3d_settings.strict_draw_ordering)
++        if (wined3d_settings.cs_multithreaded)
++            gl_info->gl_ops.gl.p_glFinish();
++        else if (wined3d_settings.strict_draw_ordering)
+             gl_info->gl_ops.gl.p_glFlush(); /* Flush to ensure ordering across contexts. */
+     }
+     else if (location == WINED3D_LOCATION_DRAWABLE)
+@@ -3735,7 +3747,9 @@ void surface_load_ds_location(struct wined3d_surface *surface, struct wined3d_co
+ 
+         context_invalidate_state(context, STATE_FRAMEBUFFER);
+ 
+-        if (wined3d_settings.strict_draw_ordering)
++        if (wined3d_settings.cs_multithreaded)
++            gl_info->gl_ops.gl.p_glFinish();
++        else if (wined3d_settings.strict_draw_ordering)
+             gl_info->gl_ops.gl.p_glFlush(); /* Flush to ensure ordering across contexts. */
+     }
+     else
+diff --git a/dlls/wined3d/swapchain.c b/dlls/wined3d/swapchain.c
+index ed2964e..60504ef 100644
+--- a/dlls/wined3d/swapchain.c
++++ b/dlls/wined3d/swapchain.c
+@@ -531,8 +531,10 @@ static void swapchain_gl_present(struct wined3d_swapchain *swapchain, const RECT
+         swapchain_blit(swapchain, context, &src_rect, &dst_rect);
+     }
+ 
+-    if (swapchain->num_contexts > 1)
++    if (wined3d_settings.cs_multithreaded)
+         gl_info->gl_ops.gl.p_glFinish();
++    else if (swapchain->num_contexts > 1)
++        gl_info->gl_ops.gl.p_glFlush();
+ 
+     /* call wglSwapBuffers through the gl table to avoid confusing the Steam overlay */
+     gl_info->gl_ops.wgl.p_wglSwapBuffers(context->hdc); /* TODO: cycle through the swapchain buffers */
+-- 
+2.1.3
+

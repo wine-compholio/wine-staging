@@ -1,0 +1,126 @@
+From 30ad009ccd9e681bab8813c09847c62bd9367916 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Wed, 31 Jul 2013 23:18:28 +0200
+Subject: wined3d: Destroy shaders through the CS
+
+---
+ dlls/wined3d/cs.c              | 29 +++++++++++++++++++++++++++++
+ dlls/wined3d/shader.c          | 12 ++++--------
+ dlls/wined3d/wined3d_private.h |  2 ++
+ 3 files changed, 35 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 38063d7..21d5b74 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -80,6 +80,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_EVICT_RESOURCE,
+     WINED3D_CS_OP_VIEW_DESTROY,
+     WINED3D_CS_OP_VDECL_DESTROY,
++    WINED3D_CS_OP_SHADER_CLEANUP,
+     WINED3D_CS_OP_STOP,
+ };
+ 
+@@ -463,6 +464,12 @@ struct wined3d_cs_vertex_declaration_destroy
+     struct wined3d_vertex_declaration *declaration;
+ };
+ 
++struct wined3d_cs_shader_cleanup
++{
++    enum wined3d_cs_op opcode;
++    struct wined3d_shader *shader;
++};
++
+ static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
+ {
+     LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
+@@ -2279,6 +2286,27 @@ void wined3d_cs_emit_vertex_declaration_destroy(struct wined3d_cs *cs,
+     cs->ops->submit(cs, sizeof(*op));
+ }
+ 
++static UINT wined3d_cs_exec_shader_cleanup(struct wined3d_cs *cs, const void *data)
++{
++    const struct wined3d_cs_shader_cleanup *op = data;
++
++    shader_cleanup(op->shader);
++    HeapFree(GetProcessHeap(), 0, op->shader);
++
++    return sizeof(*op);
++}
++
++void wined3d_cs_emit_shader_cleanup(struct wined3d_cs *cs, struct wined3d_shader *shader)
++{
++    struct wined3d_cs_shader_cleanup *op;
++
++    op = cs->ops->require_space(cs, sizeof(*op));
++    op->opcode = WINED3D_CS_OP_SHADER_CLEANUP;
++    op->shader = shader;
++
++    cs->ops->submit(cs, sizeof(*op));
++}
++
+ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
+ {
+     /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
+@@ -2337,6 +2365,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_EVICT_RESOURCE             */ wined3d_cs_exec_evict_resource,
+     /* WINED3D_CS_OP_VIEW_DESTROY               */ wined3d_cs_exec_view_destroy,
+     /* WINED3D_CS_OP_VDECL_DESTROY              */ wined3d_cs_exec_vertex_declaration_destroy,
++    /* WINED3D_CS_OP_SHADER_CLEANUP             */ wined3d_cs_exec_shader_cleanup,
+ };
+ 
+ static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
+diff --git a/dlls/wined3d/shader.c b/dlls/wined3d/shader.c
+index 0faabaa..8c9be69 100644
+--- a/dlls/wined3d/shader.c
++++ b/dlls/wined3d/shader.c
+@@ -1702,7 +1702,7 @@ static void shader_trace_init(const struct wined3d_shader_frontend *fe, void *fe
+     }
+ }
+ 
+-static void shader_cleanup(struct wined3d_shader *shader)
++void shader_cleanup(struct wined3d_shader *shader)
+ {
+     HeapFree(GetProcessHeap(), 0, shader->signature_strings);
+     shader->device->shader_backend->shader_destroy(shader);
+@@ -1957,14 +1957,10 @@ ULONG CDECL wined3d_shader_decref(struct wined3d_shader *shader)
+ 
+     if (!refcount)
+     {
+-        if (wined3d_settings.cs_multithreaded)
+-        {
+-            FIXME("Waiting for cs.\n");
+-            shader->device->cs->ops->finish(shader->device->cs);
+-        }
+-        shader_cleanup(shader);
++        const struct wined3d_device *device = shader->device;
++
+         shader->parent_ops->wined3d_object_destroyed(shader->parent);
+-        HeapFree(GetProcessHeap(), 0, shader);
++        wined3d_cs_emit_shader_cleanup(device->cs, shader);
+     }
+ 
+     return refcount;
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 5d3393c..86ee114 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2704,6 +2704,7 @@ void wined3d_cs_emit_buffer_preload(struct wined3d_cs *cs, struct wined3d_buffer
+ void wined3d_cs_emit_view_destroy(struct wined3d_cs *cs, struct wined3d_rendertarget_view *view) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_vertex_declaration_destroy(struct wined3d_cs *cs,
+         struct wined3d_vertex_declaration *declaration) DECLSPEC_HIDDEN;
++void wined3d_cs_emit_shader_cleanup(struct wined3d_cs *cs, struct wined3d_shader *shader) DECLSPEC_HIDDEN;
+ 
+ /* Direct3D terminology with little modifications. We do not have an issued state
+  * because only the driver knows about it, but we have a created state because d3d
+@@ -3103,6 +3104,7 @@ unsigned int shader_find_free_input_register(const struct wined3d_shader_reg_map
+ void shader_generate_main(const struct wined3d_shader *shader, struct wined3d_shader_buffer *buffer,
+         const struct wined3d_shader_reg_maps *reg_maps, const DWORD *byte_code, void *backend_ctx) DECLSPEC_HIDDEN;
+ BOOL shader_match_semantic(const char *semantic_name, enum wined3d_decl_usage usage) DECLSPEC_HIDDEN;
++void shader_cleanup(struct wined3d_shader *shader) DECLSPEC_HIDDEN;
+ 
+ static inline BOOL shader_is_scalar(const struct wined3d_shader_register *reg)
+ {
+-- 
+2.1.3
+

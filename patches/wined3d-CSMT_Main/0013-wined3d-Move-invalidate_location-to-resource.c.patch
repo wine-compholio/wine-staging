@@ -1,0 +1,161 @@
+From c7669f4cc8e98c81027cd1c2392d3435ec534206 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Thu, 3 Oct 2013 12:36:46 +0200
+Subject: wined3d: Move invalidate_location to resource.c.
+
+---
+ dlls/wined3d/device.c          |  2 +-
+ dlls/wined3d/resource.c        |  7 +++++++
+ dlls/wined3d/texture.c         |  4 +---
+ dlls/wined3d/volume.c          | 21 +++++++--------------
+ dlls/wined3d/wined3d_private.h |  2 +-
+ 5 files changed, 17 insertions(+), 19 deletions(-)
+
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index e10ea1c..600afed 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -3487,7 +3487,7 @@ static HRESULT device_update_volume(struct wined3d_device *device,
+     data.buffer_object = 0;
+     data.addr = src.data;
+     wined3d_volume_upload_data(dst_volume, context, &data);
+-    wined3d_volume_invalidate_location(dst_volume, ~WINED3D_LOCATION_TEXTURE_RGB);
++    wined3d_resource_invalidate_location(&dst_volume->resource, ~WINED3D_LOCATION_TEXTURE_RGB);
+ 
+     context_release(context);
+ 
+diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
+index bac15c0..1ec27d3 100644
+--- a/dlls/wined3d/resource.c
++++ b/dlls/wined3d/resource.c
+@@ -339,6 +339,13 @@ void wined3d_resource_validate_location(struct wined3d_resource *resource, DWORD
+     TRACE("new location flags are %s.\n", wined3d_debug_location(resource->locations));
+ }
+ 
++void wined3d_resource_invalidate_location(struct wined3d_resource *resource, DWORD location)
++{
++    TRACE("Resource %p, setting %s.\n", resource, wined3d_debug_location(location));
++    resource->locations &= ~location;
++    TRACE("new location flags are %s.\n", wined3d_debug_location(resource->locations));
++}
++
+ void CDECL wined3d_resource_get_pitch(const struct wined3d_resource *resource, UINT *row_pitch,
+         UINT *slice_pitch)
+ {
+diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
+index c173518..f003fa2 100644
+--- a/dlls/wined3d/texture.c
++++ b/dlls/wined3d/texture.c
+@@ -1286,9 +1286,7 @@ static void texture3d_sub_resource_cleanup(struct wined3d_resource *sub_resource
+ 
+ static void texture3d_sub_resource_invalidate_location(struct wined3d_resource *sub_resource, DWORD location)
+ {
+-    struct wined3d_volume *volume = volume_from_resource(sub_resource);
+-
+-    wined3d_volume_invalidate_location(volume, location);
++    wined3d_resource_invalidate_location(sub_resource, location);
+ }
+ 
+ static void texture3d_prepare_texture(struct wined3d_texture *texture, struct wined3d_context *context, BOOL srgb)
+diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
+index 6bc2724..3b742d2 100644
+--- a/dlls/wined3d/volume.c
++++ b/dlls/wined3d/volume.c
+@@ -98,13 +98,6 @@ void wined3d_volume_upload_data(struct wined3d_volume *volume, const struct wine
+         HeapFree(GetProcessHeap(), 0, mem);
+ }
+ 
+-void wined3d_volume_invalidate_location(struct wined3d_volume *volume, DWORD location)
+-{
+-    TRACE("Volume %p, clearing %s.\n", volume, wined3d_debug_location(location));
+-    volume->resource.locations &= ~location;
+-    TRACE("new location flags are %s.\n", wined3d_debug_location(volume->resource.locations));
+-}
+-
+ /* Context activation is done by the caller. */
+ static void wined3d_volume_download_data(struct wined3d_volume *volume,
+         const struct wined3d_context *context, const struct wined3d_bo_address *data)
+@@ -140,7 +133,7 @@ static void wined3d_volume_download_data(struct wined3d_volume *volume,
+ static void wined3d_volume_evict_sysmem(struct wined3d_volume *volume)
+ {
+     wined3d_resource_free_sysmem(&volume->resource);
+-    wined3d_volume_invalidate_location(volume, WINED3D_LOCATION_SYSMEM);
++    wined3d_resource_invalidate_location(&volume->resource, WINED3D_LOCATION_SYSMEM);
+ }
+ 
+ static DWORD volume_access_from_location(DWORD location)
+@@ -238,7 +231,7 @@ static void wined3d_volume_load_location(struct wined3d_volume *volume,
+             if (volume->resource.locations & WINED3D_LOCATION_DISCARDED)
+             {
+                 TRACE("Volume previously discarded, nothing to do.\n");
+-                wined3d_volume_invalidate_location(volume, WINED3D_LOCATION_DISCARDED);
++                wined3d_resource_invalidate_location(&volume->resource, WINED3D_LOCATION_DISCARDED);
+             }
+             else if (volume->resource.locations & WINED3D_LOCATION_SYSMEM)
+             {
+@@ -277,7 +270,7 @@ static void wined3d_volume_load_location(struct wined3d_volume *volume,
+             if (volume->resource.locations & WINED3D_LOCATION_DISCARDED)
+             {
+                 TRACE("Volume previously discarded, nothing to do.\n");
+-                wined3d_volume_invalidate_location(volume, WINED3D_LOCATION_DISCARDED);
++                wined3d_resource_invalidate_location(&volume->resource, WINED3D_LOCATION_DISCARDED);
+             }
+             else if (volume->resource.locations & (WINED3D_LOCATION_TEXTURE_RGB | WINED3D_LOCATION_TEXTURE_SRGB))
+             {
+@@ -307,7 +300,7 @@ static void wined3d_volume_load_location(struct wined3d_volume *volume,
+             if (volume->resource.locations & WINED3D_LOCATION_DISCARDED)
+             {
+                 TRACE("Volume previously discarded, nothing to do.\n");
+-                wined3d_volume_invalidate_location(volume, WINED3D_LOCATION_DISCARDED);
++                wined3d_resource_invalidate_location(&volume->resource, WINED3D_LOCATION_DISCARDED);
+             }
+             else if (volume->resource.locations & (WINED3D_LOCATION_TEXTURE_RGB | WINED3D_LOCATION_TEXTURE_SRGB))
+             {
+@@ -400,13 +393,13 @@ static void volume_unload(struct wined3d_resource *resource)
+         context = context_acquire(device, NULL);
+         wined3d_volume_load_location(volume, context, WINED3D_LOCATION_SYSMEM);
+         context_release(context);
+-        wined3d_volume_invalidate_location(volume, ~WINED3D_LOCATION_SYSMEM);
++        wined3d_resource_invalidate_location(&volume->resource, ~WINED3D_LOCATION_SYSMEM);
+     }
+     else
+     {
+         ERR("Out of memory when unloading volume %p.\n", volume);
+         wined3d_resource_validate_location(&volume->resource, WINED3D_LOCATION_DISCARDED);
+-        wined3d_volume_invalidate_location(volume, ~WINED3D_LOCATION_DISCARDED);
++        wined3d_resource_invalidate_location(&volume->resource, ~WINED3D_LOCATION_DISCARDED);
+     }
+ 
+     if (volume->pbo)
+@@ -640,7 +633,7 @@ HRESULT CDECL wined3d_volume_map(struct wined3d_volume *volume,
+     if (!(flags & (WINED3D_MAP_NO_DIRTY_UPDATE | WINED3D_MAP_READONLY)))
+     {
+         wined3d_texture_set_dirty(volume->container);
+-        wined3d_volume_invalidate_location(volume, ~volume->resource.map_binding);
++        wined3d_resource_invalidate_location(&volume->resource, ~volume->resource.map_binding);
+     }
+ 
+     volume->resource.map_count++;
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 5ca3ab8..fd28fa5 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2115,6 +2115,7 @@ BOOL wined3d_resource_is_offscreen(struct wined3d_resource *resource) DECLSPEC_H
+ DWORD wined3d_resource_sanitize_map_flags(const struct wined3d_resource *resource, DWORD flags) DECLSPEC_HIDDEN;
+ void wined3d_resource_update_draw_binding(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
+ void wined3d_resource_validate_location(struct wined3d_resource *resource, DWORD location) DECLSPEC_HIDDEN;
++void wined3d_resource_invalidate_location(struct wined3d_resource *resource, DWORD location) DECLSPEC_HIDDEN;
+ 
+ /* Tests show that the start address of resources is 32 byte aligned */
+ #define RESOURCE_ALIGNMENT 16
+@@ -2255,7 +2256,6 @@ HRESULT wined3d_volume_create(struct wined3d_texture *container, const struct wi
+ void wined3d_volume_destroy(struct wined3d_volume *volume) DECLSPEC_HIDDEN;
+ void wined3d_volume_load(struct wined3d_volume *volume, struct wined3d_context *context,
+         BOOL srgb_mode) DECLSPEC_HIDDEN;
+-void wined3d_volume_invalidate_location(struct wined3d_volume *volume, DWORD location) DECLSPEC_HIDDEN;
+ void wined3d_volume_upload_data(struct wined3d_volume *volume, const struct wined3d_context *context,
+         const struct wined3d_bo_address *data) DECLSPEC_HIDDEN;
+ 
+-- 
+2.1.3
+

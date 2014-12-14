@@ -1,0 +1,159 @@
+From 564052d9ce2b7450a97ca3310d54d1b416976978 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Mon, 16 Sep 2013 22:44:33 +0200
+Subject: wined3d: Introduce a function to retrieve resource memory.
+
+---
+ dlls/wined3d/resource.c        | 30 ++++++++++++++++++++++++++++
+ dlls/wined3d/surface.c         | 45 ++++++------------------------------------
+ dlls/wined3d/wined3d_private.h |  2 ++
+ 3 files changed, 38 insertions(+), 39 deletions(-)
+
+diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
+index 051297c..94c06ac 100644
+--- a/dlls/wined3d/resource.c
++++ b/dlls/wined3d/resource.c
+@@ -392,6 +392,36 @@ DWORD wined3d_resource_access_from_location(DWORD location)
+     }
+ }
+ 
++void wined3d_resource_get_memory(const struct wined3d_resource *resource,
++        DWORD location, struct wined3d_bo_address *data)
++{
++    if (location & WINED3D_LOCATION_BUFFER)
++    {
++        data->buffer_object = resource->buffer_object;
++        data->addr = NULL;
++        return;
++    }
++    if (location & WINED3D_LOCATION_USER_MEMORY)
++    {
++        data->buffer_object = 0;
++        data->addr = resource->user_memory;
++        return;
++    }
++    if (location & WINED3D_LOCATION_DIB)
++    {
++        data->buffer_object = 0;
++        data->addr = resource->bitmap_data;
++        return;
++    }
++    if (location & WINED3D_LOCATION_SYSMEM)
++    {
++        data->buffer_object = 0;
++        data->addr = resource->heap_memory;
++        return;
++    }
++    ERR("Unexpected location %s.\n", wined3d_debug_location(location));
++}
++
+ /* Context activation is optionally by the caller. Context may be NULL. */
+ void wined3d_resource_load_location(struct wined3d_resource *resource,
+         struct wined3d_context *context, DWORD location)
+diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
+index 29f4563..4815965 100644
+--- a/dlls/wined3d/surface.c
++++ b/dlls/wined3d/surface.c
+@@ -479,39 +479,6 @@ static HRESULT surface_create_dib_section(struct wined3d_surface *surface)
+     return WINED3D_OK;
+ }
+ 
+-static void surface_get_memory(const struct wined3d_surface *surface, struct wined3d_bo_address *data,
+-        DWORD location)
+-{
+-    if (location & WINED3D_LOCATION_BUFFER)
+-    {
+-        data->addr = NULL;
+-        data->buffer_object = surface->resource.buffer_object;
+-        return;
+-    }
+-    if (location & WINED3D_LOCATION_USER_MEMORY)
+-    {
+-        data->addr = surface->resource.user_memory;
+-        data->buffer_object = 0;
+-        return;
+-    }
+-    if (location & WINED3D_LOCATION_DIB)
+-    {
+-        data->addr = surface->resource.bitmap_data;
+-        data->buffer_object = 0;
+-        return;
+-    }
+-    if (location & WINED3D_LOCATION_SYSMEM)
+-    {
+-        data->addr = surface->resource.heap_memory;
+-        data->buffer_object = 0;
+-        return;
+-    }
+-
+-    ERR("Unexpected locations %s.\n", wined3d_debug_location(location));
+-    data->addr = NULL;
+-    data->buffer_object = 0;
+-}
+-
+ static void surface_prepare_buffer(struct wined3d_surface *surface)
+ {
+     struct wined3d_context *context;
+@@ -1328,7 +1295,7 @@ static void surface_download_data(struct wined3d_surface *surface, const struct
+         return;
+     }
+ 
+-    surface_get_memory(surface, &data, dst_location);
++    wined3d_resource_get_memory(&surface->resource, dst_location, &data);
+ 
+     if (format->flags & WINED3DFMT_FLAG_COMPRESSED)
+     {
+@@ -1694,7 +1661,7 @@ HRESULT surface_upload_from_surface(struct wined3d_surface *dst_surface, const P
+         wined3d_resource_load_location(&dst_surface->resource, context, WINED3D_LOCATION_TEXTURE_RGB);
+     wined3d_texture_bind(dst_surface->container, context, FALSE);
+ 
+-    surface_get_memory(src_surface, &data, src_surface->resource.locations);
++    wined3d_resource_get_memory(&src_surface->resource, src_surface->resource.locations, &data);
+     wined3d_resource_get_pitch(&src_surface->resource, &src_row_pitch, &src_slice_pitch);
+ 
+     surface_upload_data(dst_surface, gl_info, src_format, src_rect, src_row_pitch, dst_point, FALSE, &data);
+@@ -2794,7 +2761,7 @@ static void read_from_framebuffer(struct wined3d_surface *surface,
+     BOOL srcIsUpsideDown;
+     struct wined3d_bo_address data;
+ 
+-    surface_get_memory(surface, &data, dst_location);
++    wined3d_resource_get_memory(&surface->resource, dst_location, &data);
+ 
+     /* Context_release does not restore the original context in case of
+      * nested context_acquire calls. Only read_from_framebuffer and
+@@ -3986,8 +3953,8 @@ static void surface_copy_simple_location(struct wined3d_surface *surface, DWORD
+     struct wined3d_bo_address dst, src;
+     UINT size = surface->resource.size;
+ 
+-    surface_get_memory(surface, &dst, location);
+-    surface_get_memory(surface, &src, surface->resource.locations);
++    wined3d_resource_get_memory(&surface->resource, location, &dst);
++    wined3d_resource_get_memory(&surface->resource, surface->resource.locations, &src);
+ 
+     if (dst.buffer_object)
+     {
+@@ -4206,7 +4173,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
+         surface_remove_pbo(surface, gl_info);
+     }
+ 
+-    surface_get_memory(surface, &data, surface->resource.locations);
++    wined3d_resource_get_memory(&surface->resource, surface->resource.locations, &data);
+     if (format.convert)
+     {
+         /* This code is entered for texture formats which need a fixup. */
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 9353e57..df2031a 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2116,6 +2116,8 @@ BOOL wined3d_resource_allocate_sysmem(struct wined3d_resource *resource) DECLSPE
+ void wined3d_resource_free_sysmem(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
+ BYTE *wined3d_resource_get_map_ptr(const struct wined3d_resource *resource,
+         const struct wined3d_context *context, DWORD flags) DECLSPEC_HIDDEN;
++void wined3d_resource_get_memory(const struct wined3d_resource *resource,
++        DWORD location, struct wined3d_bo_address *data) DECLSPEC_HIDDEN;
+ GLbitfield wined3d_resource_gl_map_flags(DWORD d3d_flags) DECLSPEC_HIDDEN;
+ void wined3d_resource_invalidate_location(struct wined3d_resource *resource, DWORD location) DECLSPEC_HIDDEN;
+ BOOL wined3d_resource_is_offscreen(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
+-- 
+2.1.3
+

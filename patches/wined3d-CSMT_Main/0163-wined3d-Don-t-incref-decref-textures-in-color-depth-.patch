@@ -1,0 +1,134 @@
+From 54eb3e212afc243fef25a46017ae3d822014f336 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Thu, 28 Aug 2014 16:10:09 +0200
+Subject: wined3d: Don't incref / decref textures in color / depth fill blits.
+
+See comment in the code. The solution is not particularly nice. A better
+approach may be to handle them in ddraw, where we have a permanent view
+for the surface.
+---
+ dlls/wined3d/surface.c         | 52 +++++++++++++++++++++++++-----------------
+ dlls/wined3d/view.c            | 20 ----------------
+ dlls/wined3d/wined3d_private.h |  1 -
+ 3 files changed, 31 insertions(+), 42 deletions(-)
+
+diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
+index 1ccbe35..82485f3 100644
+--- a/dlls/wined3d/surface.c
++++ b/dlls/wined3d/surface.c
+@@ -4124,19 +4124,26 @@ static HRESULT ffp_blit_color_fill(struct wined3d_device *device, struct wined3d
+         const RECT *dst_rect, const struct wined3d_color *color)
+ {
+     const RECT draw_rect = {0, 0, dst_surface->resource.width, dst_surface->resource.height};
+-    struct wined3d_rendertarget_view *view;
+-    struct wined3d_fb_state fb = {&view, NULL};
+-    HRESULT hr;
+-
+-    if (FAILED(hr = wined3d_rendertarget_view_create_from_surface(dst_surface,
+-            NULL, &wined3d_null_parent_ops, &view)))
+-    {
+-        ERR("Failed to create rendertarget view, hr %#x.\n", hr);
+-        return hr;
+-    }
++    struct wined3d_rendertarget_view view, *view_ptr = &view;
++    struct wined3d_fb_state fb = {&view_ptr, NULL, 1};
++    struct wined3d_texture *texture = dst_surface->container;
++
++    /* Can't incref / decref the resource here. This is executed inside the worker
++     * thread. Playing with the refcount here makes the worker thread visible to
++     * the client lib. Problems occur when the worker thread happens to hold the
++     * last reference and the resource destruction callbacks are called from the
++     * wrong thread. */
++    view.resource = &texture->resource;
++    view.parent = NULL;
++    view.parent_ops = &wined3d_null_parent_ops;
++    view.format = dst_surface->resource.format;
++    view.buffer_offset = 0;
++    view.width = dst_surface->resource.width;
++    view.height = dst_surface->resource.height;
++    view.depth = 1;
++    view.sub_resource_idx = dst_surface->texture_layer * texture->level_count + dst_surface->texture_level;
+ 
+     device_clear_render_targets(device, 1, &fb, 1, dst_rect, &draw_rect, WINED3DCLEAR_TARGET, color, 0.0f, 0);
+-    wined3d_rendertarget_view_decref_worker(view);
+ 
+     return WINED3D_OK;
+ }
+@@ -4145,18 +4152,21 @@ static HRESULT ffp_blit_depth_fill(struct wined3d_device *device, struct wined3d
+         const RECT *dst_rect, float depth)
+ {
+     const RECT draw_rect = {0, 0, dst_surface->resource.width, dst_surface->resource.height};
+-    struct wined3d_fb_state fb = {NULL, NULL};
+-    HRESULT hr;
+-
+-    if (FAILED(hr = wined3d_rendertarget_view_create_from_surface(dst_surface,
+-            NULL, &wined3d_null_parent_ops, &fb.depth_stencil)))
+-    {
+-        ERR("Failed to create rendertarget view, hr %#x.\n", hr);
+-        return hr;
+-    }
++    struct wined3d_rendertarget_view view;
++    struct wined3d_fb_state fb = {NULL, &view};
++    struct wined3d_texture *texture = dst_surface->container;
++
++    view.resource = &dst_surface->container->resource;
++    view.parent = NULL;
++    view.parent_ops = &wined3d_null_parent_ops;
++    view.format = dst_surface->resource.format;
++    view.buffer_offset = 0;
++    view.width = dst_surface->resource.width;
++    view.height = dst_surface->resource.height;
++    view.depth = 1;
++    view.sub_resource_idx = dst_surface->texture_layer * texture->level_count + dst_surface->texture_level;
+ 
+     device_clear_render_targets(device, 0, &fb, 1, dst_rect, &draw_rect, WINED3DCLEAR_ZBUFFER, 0, depth, 0);
+-    wined3d_rendertarget_view_decref_worker(fb.depth_stencil);
+ 
+     return WINED3D_OK;
+ }
+diff --git a/dlls/wined3d/view.c b/dlls/wined3d/view.c
+index 56eb7b3..870f1df 100644
+--- a/dlls/wined3d/view.c
++++ b/dlls/wined3d/view.c
+@@ -58,26 +58,6 @@ ULONG CDECL wined3d_rendertarget_view_decref(struct wined3d_rendertarget_view *v
+     return refcount;
+ }
+ 
+-/* Ugly hack for ffp_blit_depth_fill that allows destroying a view from inside the
+- * worker thread. */
+-ULONG wined3d_rendertarget_view_decref_worker(struct wined3d_rendertarget_view *view)
+-{
+-    ULONG refcount = InterlockedDecrement(&view->refcount);
+-
+-    TRACE("%p decreasing refcount to %u.\n", view, refcount);
+-
+-    if (!refcount)
+-    {
+-        /* Call wined3d_object_destroyed() before releasing the resource,
+-         * since releasing the resource may end up destroying the parent. */
+-        view->parent_ops->wined3d_object_destroyed(view->parent);
+-        wined3d_resource_decref(view->resource);
+-        wined3d_rendertarget_view_destroy(view);
+-    }
+-
+-    return refcount;
+-}
+-
+ void * CDECL wined3d_rendertarget_view_get_parent(const struct wined3d_rendertarget_view *view)
+ {
+     TRACE("view %p.\n", view);
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 3abd0a8..88329e5 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2859,7 +2859,6 @@ static inline struct wined3d_surface *wined3d_rendertarget_view_get_surface(
+     return surface_from_resource(resource);
+ }
+ 
+-ULONG wined3d_rendertarget_view_decref_worker(struct wined3d_rendertarget_view *view) DECLSPEC_HIDDEN;
+ void wined3d_rendertarget_view_destroy(struct wined3d_rendertarget_view *view) DECLSPEC_HIDDEN;
+ 
+ struct wined3d_shader_resource_view
+-- 
+2.1.3
+

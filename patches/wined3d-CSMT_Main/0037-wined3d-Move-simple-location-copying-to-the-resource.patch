@@ -1,0 +1,158 @@
+From 15497169d7c01aa9cbe051377b8e7088daacf2b3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Tue, 21 Jan 2014 16:58:08 +0100
+Subject: wined3d: Move simple location copying to the resource.
+
+---
+ dlls/wined3d/resource.c | 38 ++++++++++++++++++++++++++++++++++++
+ dlls/wined3d/surface.c  | 51 ++++---------------------------------------------
+ 2 files changed, 42 insertions(+), 47 deletions(-)
+
+diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
+index 2a58a0c..d9e2216 100644
+--- a/dlls/wined3d/resource.c
++++ b/dlls/wined3d/resource.c
+@@ -423,6 +423,38 @@ void wined3d_resource_get_memory(const struct wined3d_resource *resource,
+ }
+ 
+ /* Context activation is optionally by the caller. Context may be NULL. */
++static void wined3d_resource_copy_simple_location(struct wined3d_resource *resource,
++        struct wined3d_context *context, DWORD location)
++{
++    const struct wined3d_gl_info *gl_info;
++    struct wined3d_bo_address dst, src;
++    UINT size = resource->size;
++
++    wined3d_resource_get_memory(resource, location, &dst);
++    wined3d_resource_get_memory(resource, resource->locations, &src);
++
++    if (dst.buffer_object)
++    {
++        gl_info = context->gl_info;
++        GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, dst.buffer_object));
++        GL_EXTCALL(glBufferSubDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0, size, src.addr));
++        GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0));
++        checkGLcall("Upload PBO");
++        return;
++    }
++    if (src.buffer_object)
++    {
++        gl_info = context->gl_info;
++        GL_EXTCALL(glBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, src.buffer_object));
++        GL_EXTCALL(glGetBufferSubDataARB(GL_PIXEL_PACK_BUFFER_ARB, 0, size, dst.addr));
++        GL_EXTCALL(glBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, 0));
++        checkGLcall("Download PBO");
++        return;
++    }
++    memcpy(dst.addr, src.addr, size);
++}
++
++/* Context activation is optionally by the caller. Context may be NULL. */
+ void wined3d_resource_load_location(struct wined3d_resource *resource,
+         struct wined3d_context *context, DWORD location)
+ {
+@@ -449,6 +481,12 @@ void wined3d_resource_load_location(struct wined3d_resource *resource,
+             resource->locations |= location;
+             return;
+         }
++        if (resource->locations & simple_locations)
++        {
++            wined3d_resource_copy_simple_location(resource, context, location);
++            resource->locations |= location;
++            return;
++        }
+     }
+ 
+     /* Context is NULL in ddraw-only operation without OpenGL. */
+diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
+index 91d9e59..5b2359e 100644
+--- a/dlls/wined3d/surface.c
++++ b/dlls/wined3d/surface.c
+@@ -36,10 +36,6 @@ WINE_DECLARE_DEBUG_CHANNEL(d3d);
+ 
+ #define MAXLOCKCOUNT 50 /* After this amount of locks do not free the sysmem copy. */
+ 
+-static const DWORD surface_simple_locations =
+-        WINED3D_LOCATION_SYSMEM | WINED3D_LOCATION_USER_MEMORY
+-        | WINED3D_LOCATION_DIB | WINED3D_LOCATION_BUFFER;
+-
+ static void surface_cleanup(struct wined3d_surface *surface)
+ {
+     struct wined3d_surface *overlay, *cur;
+@@ -3832,54 +3828,12 @@ void surface_load_ds_location(struct wined3d_surface *surface, struct wined3d_co
+     surface->ds_current_size.cy = surface->resource.height;
+ }
+ 
+-static void surface_copy_simple_location(struct wined3d_surface *surface, DWORD location)
+-{
+-    struct wined3d_device *device = surface->resource.device;
+-    struct wined3d_context *context;
+-    const struct wined3d_gl_info *gl_info;
+-    struct wined3d_bo_address dst, src;
+-    UINT size = surface->resource.size;
+-
+-    wined3d_resource_get_memory(&surface->resource, location, &dst);
+-    wined3d_resource_get_memory(&surface->resource, surface->resource.locations, &src);
+-
+-    if (dst.buffer_object)
+-    {
+-        context = context_acquire(device, NULL);
+-        gl_info = context->gl_info;
+-        GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, dst.buffer_object));
+-        GL_EXTCALL(glBufferSubDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0, size, src.addr));
+-        GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0));
+-        checkGLcall("Upload PBO");
+-        context_release(context);
+-        return;
+-    }
+-    if (src.buffer_object)
+-    {
+-        context = context_acquire(device, NULL);
+-        gl_info = context->gl_info;
+-        GL_EXTCALL(glBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, src.buffer_object));
+-        GL_EXTCALL(glGetBufferSubDataARB(GL_PIXEL_PACK_BUFFER_ARB, 0, size, dst.addr));
+-        GL_EXTCALL(glBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, 0));
+-        checkGLcall("Download PBO");
+-        context_release(context);
+-        return;
+-    }
+-    memcpy(dst.addr, src.addr, size);
+-}
+-
+ /* Context activation is done by the caller. */
+ static void surface_load_sysmem(struct wined3d_surface *surface,
+         struct wined3d_context *context, DWORD dst_location)
+ {
+     const struct wined3d_gl_info *gl_info = context->gl_info;
+ 
+-    if (surface->resource.locations & surface_simple_locations)
+-    {
+-        surface_copy_simple_location(surface, dst_location);
+-        return;
+-    }
+-
+     if (surface->resource.locations & (WINED3D_LOCATION_RB_MULTISAMPLE | WINED3D_LOCATION_RB_RESOLVED))
+         wined3d_resource_load_location(&surface->resource, context, WINED3D_LOCATION_TEXTURE_RGB);
+ 
+@@ -3943,6 +3897,9 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
+     struct wined3d_format format;
+     POINT dst_point = {0, 0};
+     BYTE *mem = NULL;
++    const DWORD simple_locations =
++            WINED3D_LOCATION_SYSMEM | WINED3D_LOCATION_USER_MEMORY
++            | WINED3D_LOCATION_DIB | WINED3D_LOCATION_BUFFER;
+ 
+     if (surface->resource.locations & WINED3D_LOCATION_DISCARDED)
+     {
+@@ -4018,7 +3975,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
+         }
+     }
+ 
+-    if (!(surface->resource.locations & surface_simple_locations))
++    if (!(surface->resource.locations & simple_locations))
+     {
+         WARN("Trying to load a texture from sysmem, but no simple location is valid.\n");
+         /* Lets hope we get it from somewhere... */
+-- 
+2.1.3
+

@@ -1,0 +1,69 @@
+From 71bd4bdb1014498b5877d04834bf58413220c408 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Fri, 30 Aug 2013 17:06:29 +0200
+Subject: wined3d: Separate resource map and draw buffers
+
+---
+ dlls/wined3d/resource.c        | 9 +++++++--
+ dlls/wined3d/wined3d_private.h | 2 +-
+ 2 files changed, 8 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
+index 4fc4ce9..65e8f55 100644
+--- a/dlls/wined3d/resource.c
++++ b/dlls/wined3d/resource.c
+@@ -146,8 +146,12 @@ void wined3d_resource_free_bo(struct wined3d_resource *resource)
+ {
+     struct wined3d_context *context = context_acquire(resource->device, NULL);
+ 
++    if (resource->buffer != resource->map_buffer)
++        ERR("Releasing resource buffer with buffer != map_buffer.\n");
++
+     wined3d_device_release_bo(resource->device, resource->buffer, context);
+     resource->buffer = NULL;
++    resource->map_buffer = NULL;
+ 
+     context_release(context);
+ }
+@@ -504,7 +508,7 @@ BYTE *wined3d_resource_get_map_ptr(const struct wined3d_resource *resource,
+     {
+         case WINED3D_LOCATION_BUFFER:
+             gl_info = context->gl_info;
+-            GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, resource->buffer->name));
++            GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, resource->map_buffer->name));
+ 
+             if (gl_info->supported[ARB_MAP_BUFFER_RANGE])
+             {
+@@ -547,7 +551,7 @@ void wined3d_resource_release_map_ptr(const struct wined3d_resource *resource,
+     {
+         case WINED3D_LOCATION_BUFFER:
+             gl_info = context->gl_info;
+-            GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, resource->buffer->name));
++            GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, resource->map_buffer->name));
+             GL_EXTCALL(glUnmapBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB));
+             GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0));
+             checkGLcall("Unmap GL buffer");
+@@ -572,6 +576,7 @@ static void wined3d_resource_prepare_bo(struct wined3d_resource *resource, struc
+ 
+     resource->buffer = wined3d_device_get_bo(resource->device, resource->size,
+             GL_STREAM_DRAW_ARB, GL_PIXEL_UNPACK_BUFFER_ARB, context);
++    resource->map_buffer = resource->buffer;
+     TRACE("Created GL buffer %u for resource %p.\n", resource->buffer->name, resource);
+ }
+ 
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 8477d0c..eb84cbc 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2127,7 +2127,7 @@ struct wined3d_resource
+     UINT size;
+     DWORD priority;
+     void *heap_memory, *user_memory, *bitmap_data;
+-    struct wined3d_gl_bo *buffer;
++    struct wined3d_gl_bo *buffer, *map_buffer;
+     UINT custom_row_pitch, custom_slice_pitch;
+     struct list resource_list_entry;
+     DWORD locations;
+-- 
+2.1.3
+

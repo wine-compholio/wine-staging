@@ -1,0 +1,81 @@
+From 259e98f79a3de596a4fb79227180106c47423aa8 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Tue, 21 Jan 2014 16:49:21 +0100
+Subject: wined3d: Use resource facilities to destroy PBOs.
+
+---
+ dlls/wined3d/resource.c        |  2 +-
+ dlls/wined3d/surface.c         | 17 ++---------------
+ dlls/wined3d/wined3d_private.h |  1 +
+ 3 files changed, 4 insertions(+), 16 deletions(-)
+
+diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
+index aa81c00..2a58a0c 100644
+--- a/dlls/wined3d/resource.c
++++ b/dlls/wined3d/resource.c
+@@ -142,7 +142,7 @@ HRESULT resource_init(struct wined3d_resource *resource, struct wined3d_device *
+     return WINED3D_OK;
+ }
+ 
+-static void wined3d_resource_free_bo(struct wined3d_resource *resource)
++void wined3d_resource_free_bo(struct wined3d_resource *resource)
+ {
+     struct wined3d_context *context = context_acquire(resource->device, NULL);
+     const struct wined3d_gl_info *gl_info = context->gl_info;
+diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
+index 7d2d1ea..91d9e59 100644
+--- a/dlls/wined3d/surface.c
++++ b/dlls/wined3d/surface.c
+@@ -1029,16 +1029,6 @@ HRESULT CDECL wined3d_surface_get_render_target_data(struct wined3d_surface *sur
+     return wined3d_surface_blt(surface, NULL, render_target, NULL, 0, NULL, WINED3D_TEXF_POINT);
+ }
+ 
+-/* Context activation is done by the caller. */
+-static void surface_remove_pbo(struct wined3d_surface *surface, const struct wined3d_gl_info *gl_info)
+-{
+-    GL_EXTCALL(glDeleteBuffersARB(1, &surface->resource.buffer_object));
+-    checkGLcall("glDeleteBuffersARB(1, &surface->resource.buffer_object)");
+-
+-    surface->resource.buffer_object = 0;
+-    wined3d_resource_invalidate_location(&surface->resource, WINED3D_LOCATION_BUFFER);
+-}
+-
+ static ULONG surface_resource_incref(struct wined3d_resource *resource)
+ {
+     return wined3d_surface_incref(surface_from_resource(resource));
+@@ -1084,10 +1074,6 @@ static void surface_unload(struct wined3d_resource *resource)
+         wined3d_resource_invalidate_location(&surface->resource, ~surface->resource.map_binding);
+     }
+ 
+-    /* Destroy PBOs, but load them into real sysmem before */
+-    if (surface->resource.buffer_object)
+-        surface_remove_pbo(surface, gl_info);
+-
+     /* Destroy fbo render buffers. This is needed for implicit render targets, for
+      * all application-created targets the application has to release the surface
+      * before calling _Reset
+@@ -4071,7 +4057,8 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
+ 
+         wined3d_resource_prepare_map_memory(&surface->resource, context);
+         wined3d_resource_load_location(&surface->resource, context, surface->resource.map_binding);
+-        surface_remove_pbo(surface, gl_info);
++        wined3d_resource_free_bo(&surface->resource);
++        wined3d_resource_invalidate_location(&surface->resource, WINED3D_LOCATION_BUFFER);
+     }
+ 
+     wined3d_resource_get_memory(&surface->resource, surface->resource.locations, &data);
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 51c957b..81c9cfe 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2115,6 +2115,7 @@ DWORD wined3d_resource_access_from_location(DWORD location) DECLSPEC_HIDDEN;
+ BOOL wined3d_resource_allocate_sysmem(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
+ BOOL wined3d_resource_check_block_align(const struct wined3d_resource *resource,
+         const struct wined3d_box *box) DECLSPEC_HIDDEN;
++void wined3d_resource_free_bo(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
+ void wined3d_resource_free_sysmem(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
+ BYTE *wined3d_resource_get_map_ptr(const struct wined3d_resource *resource,
+         const struct wined3d_context *context, DWORD flags) DECLSPEC_HIDDEN;
+-- 
+2.1.3
+

@@ -136,7 +136,7 @@ Included bug fixes and improvements
 * Support for TransmitFile ([Wine Bug #5048](https://bugs.winehq.org/show_bug.cgi?id=5048))
 * Support for UTF7 encoding/decoding ([Wine Bug #27388](https://bugs.winehq.org/show_bug.cgi?id=27388))
 * Support for WTSEnumerateProcessesW ([Wine Bug #29903](https://bugs.winehq.org/show_bug.cgi?id=29903))
-* Support for combase HSTRING objects
+* ~~Support for combase HSTRING objects~~
 * Support for extra large and jumbo icon lists in shell32 ([Wine Bug #24721](https://bugs.winehq.org/show_bug.cgi?id=24721))
 * Support for inherited file ACLs ([Wine Bug #34406](https://bugs.winehq.org/show_bug.cgi?id=34406))
 * Support for interface change notifications ([Wine Bug #32328](https://bugs.winehq.org/show_bug.cgi?id=32328))
@@ -147,7 +147,7 @@ Included bug fixes and improvements
 * Support for stored file ACLs ([Wine Bug #31858](https://bugs.winehq.org/show_bug.cgi?id=31858))
 * Support for wine64 on FreeBSD/PC-BSD ([Wine Bug #34330](https://bugs.winehq.org/show_bug.cgi?id=34330))
 * Tumblebugs 2 requires DXTn software encoding support ([Wine Bug #29586](https://bugs.winehq.org/show_bug.cgi?id=29586))
-* Unity3D Editor requires ProductId registry value ([Wine Bug #36964](https://bugs.winehq.org/show_bug.cgi?id=36964))
+* ~~Unity3D Editor requires ProductId registry value~~ ([Wine Bug #36964](https://bugs.winehq.org/show_bug.cgi?id=36964))
 * Update a XIM candidate position when cursor location changes ([Wine Bug #30938](https://bugs.winehq.org/show_bug.cgi?id=30938))
 * Use manual relay for RunDLL_CallEntry16 in shell32 ([Wine Bug #23033](https://bugs.winehq.org/show_bug.cgi?id=23033))
 * Voobly expects correct handling of WRITECOPY memory protection ([Wine Bug #29384](https://bugs.winehq.org/show_bug.cgi?id=29384))

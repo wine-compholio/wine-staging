@@ -25,7 +25,6 @@ PATCHLIST := \
 	Staging.ok \
 	atl-IOCS_Property.ok \
 	avifil32-Realloc_Records.ok \
-	combase-HSTRING.ok \
 	comctl32-LoadIconMetric.ok \
 	configure-Absolute_RPATH.ok \
 	d3d9-Surface_Refcount.ok \
@@ -116,7 +115,6 @@ PATCHLIST := \
 	user32-Mouse_Message_Hwnd.ok \
 	user32-ScrollWindowEx.ok \
 	user32-WndProc.ok \
-	wine.inf-ProductId.ok \
 	wineboot-HKEY_DYN_DATA.ok \
 	winebuild-LinkerVersion.ok \
 	winecfg-Staging.ok \
@@ -296,24 +294,6 @@ avifil32-Realloc_Records.ok:
 	@( \
 		echo '+    { "Sebastian Lackner", "avifil32: Reallocate buffer when adding records.", 1 },'; \
 	) > avifil32-Realloc_Records.ok
-
-# Patchset combase-HSTRING
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/api-ms-win-core-winrt-string-l1-1-0/api-ms-win-core-winrt-string-l1-1-0.spec,
-# | 	dlls/combase/Makefile.in, dlls/combase/combase.spec, dlls/combase/string.c, dlls/combase/tests/Makefile.in,
-# | 	dlls/combase/tests/string.c, tools/make_specfiles
-# |
-.INTERMEDIATE: combase-HSTRING.ok
-combase-HSTRING.ok:
-	$(call APPLY_FILE,combase-HSTRING/0001-combase-Implement-creation-and-deletion-of-HSTRING-o.patch)
-	$(call APPLY_FILE,combase-HSTRING/0002-combase-Implement-functions-for-accessing-HSTRING-ob.patch)
-	$(call APPLY_FILE,combase-HSTRING/0003-combase-Implement-functions-for-HSTRING_BUFFER.patch)
-	@( \
-		echo '+    { "Martin Storsjo", "combase: Implement creation and deletion of HSTRING objects.", 1 },'; \
-		echo '+    { "Martin Storsjo", "combase: Implement functions for accessing HSTRING objects.", 1 },'; \
-		echo '+    { "Martin Storsjo", "combase: Implement functions for HSTRING_BUFFER.", 1 },'; \
-	) > combase-HSTRING.ok
 
 # Patchset comctl32-LoadIconMetric
 # |
@@ -1797,21 +1777,6 @@ user32-WndProc.ok:
 	@( \
 		echo '+    { "Sebastian Lackner", "user32: Increase MAX_WINPROCS to 16384.", 1 },'; \
 	) > user32-WndProc.ok
-
-# Patchset wine.inf-ProductId
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36964] Unity3D Editor requires ProductId registry value
-# |
-# | Modified files:
-# |   *	loader/wine.inf.in
-# |
-.INTERMEDIATE: wine.inf-ProductId.ok
-wine.inf-ProductId.ok:
-	$(call APPLY_FILE,wine.inf-ProductId/0001-wine.inf-Add-fake-ProductId-to-HKLM-CurrentVersionNT.patch)
-	@( \
-		echo '+    { "Yanis Lukes", "wine.inf: Add fake ProductId to HKLM\\\\CurrentVersionNT.", 1 },'; \
-	) > wine.inf-ProductId.ok
 
 # Patchset wineboot-HKEY_DYN_DATA
 # |

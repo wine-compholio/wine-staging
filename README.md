@@ -37,9 +37,10 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [1]:**
+**Bugfixes and features included in the next upcoming release [2]:**
 
 * Fix handling of subdirectory in FtpFindFirstFile ([Wine Bug #16526](https://bugs.winehq.org/show_bug.cgi?id=16526))
+* Return proper charcount for GetLocaleInfo with LOCALE_IFIRSTDAYOFWEEK ([Wine Bug #32169](https://bugs.winehq.org/show_bug.cgi?id=32169))
 
 
 **Bugs fixed in Wine Staging 1.7.33 [119]:**

@@ -53,6 +53,7 @@ PATCHLIST := \
 	kernel32-Profile.ok \
 	kernel32-UTF7_Support.ok \
 	kernel32-VerifyVersionInfo.ok \
+	kernel32-get_registry_locale_info.ok \
 	libs-Unicode_Collation.ok \
 	libwine-BSD_mmap_fixed.ok \
 	mfplat-Stubs.ok \
@@ -739,6 +740,21 @@ kernel32-VerifyVersionInfo.ok:
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for condition mask of VerifyVersionInfoA.", 1 },'; \
 		echo '+    { "Sebastian Lackner", "ntdll: Fix condition mask handling in RtlVerifyVersionInfo.", 1 },'; \
 	) > kernel32-VerifyVersionInfo.ok
+
+# Patchset kernel32-get_registry_locale_info
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#32169] Return proper charcount for GetLocaleInfo with LOCALE_IFIRSTDAYOFWEEK
+# |
+# | Modified files:
+# |   *	dlls/kernel32/locale.c
+# |
+.INTERMEDIATE: kernel32-get_registry_locale_info.ok
+kernel32-get_registry_locale_info.ok:
+	$(call APPLY_FILE,kernel32-get_registry_locale_info/0001-kernel32-Return-proper-char-count-in-get_registry_lo.patch)
+	@( \
+		echo '+    { "Sebastian Lackner", "kernel32: Return proper char count in get_registry_locale_info.", 1 },'; \
+	) > kernel32-get_registry_locale_info.ok
 
 # Patchset libs-Unicode_Collation
 # |

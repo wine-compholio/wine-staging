@@ -37,10 +37,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [2]:**
+**Bugfixes and features included in the next upcoming release [1]:**
 
 * Fix handling of subdirectory in FtpFindFirstFile ([Wine Bug #16526](https://bugs.winehq.org/show_bug.cgi?id=16526))
-* Return proper charcount for GetLocaleInfo with LOCALE_IFIRSTDAYOFWEEK ([Wine Bug #32169](https://bugs.winehq.org/show_bug.cgi?id=32169))
 
 
 **Bugs fixed in Wine Staging 1.7.33 [119]:**
@@ -93,7 +92,7 @@ Included bug fixes and improvements
 * Implement a Microsoft Yahei replacement font ([Wine Bug #13829](https://bugs.winehq.org/show_bug.cgi?id=13829))
 * Implement an Arial replacement font ([Wine Bug #32323](https://bugs.winehq.org/show_bug.cgi?id=32323))
 * Implement exclusive mode in PulseAudio backend ([Wine Bug #37042](https://bugs.winehq.org/show_bug.cgi?id=37042))
-* Implement stubs for mfplat.MFStartup and MFShutdown ([Wine Bug #37701](https://bugs.winehq.org/show_bug.cgi?id=37701))
+* ~~Implement stubs for mfplat.MFStartup and MFShutdown~~ ([Wine Bug #37701](https://bugs.winehq.org/show_bug.cgi?id=37701))
 * Improvement for heap allocation performance
 * Initialize irp.Tail.Overlay.OriginalFileObject with stub file object ([Wine Bug #37537](https://bugs.winehq.org/show_bug.cgi?id=37537))
 * Lego Stunt Rally requires DXTn software de/encoding support ([Wine Bug #25486](https://bugs.winehq.org/show_bug.cgi?id=25486))
@@ -129,7 +128,7 @@ Included bug fixes and improvements
 * Support for ITextDocument_fnRange function ([Wine Bug #12458](https://bugs.winehq.org/show_bug.cgi?id=12458))
 * Support for ITextRange, ITextFont and ITextPara ([Wine Bug #18303](https://bugs.winehq.org/show_bug.cgi?id=18303))
 * Support for Junction Points ([Wine Bug #12401](https://bugs.winehq.org/show_bug.cgi?id=12401))
-* Support for K32EnumProcessModulesEx ([Wine Bug #34864](https://bugs.winehq.org/show_bug.cgi?id=34864))
+* ~~Support for K32EnumProcessModulesEx~~ ([Wine Bug #34864](https://bugs.winehq.org/show_bug.cgi?id=34864))
 * Support for KF_FLAG_DEFAULT_PATH in SHGetKnownFolderPath ([Wine Bug #30385](https://bugs.winehq.org/show_bug.cgi?id=30385))
 * Support for LoadIconMetric ([Wine Bug #35375](https://bugs.winehq.org/show_bug.cgi?id=35375))
 * Support for NtQuerySection ([Wine Bug #37338](https://bugs.winehq.org/show_bug.cgi?id=37338))
@@ -137,7 +136,7 @@ Included bug fixes and improvements
 * Support for PulseAudio backend for audio ([Wine Bug #10495](https://bugs.winehq.org/show_bug.cgi?id=10495))
 * Support for RtlDecompressBuffer ([Wine Bug #37449](https://bugs.winehq.org/show_bug.cgi?id=37449))
 * Support for SHCreateSessionKey ([Wine Bug #35630](https://bugs.winehq.org/show_bug.cgi?id=35630))
-* Support for StrCatChainW
+* ~~Support for StrCatChainW~~
 * Support for TOOLTIPS_GetTipText edge cases ([Wine Bug #30648](https://bugs.winehq.org/show_bug.cgi?id=30648))
 * Support for TransmitFile ([Wine Bug #5048](https://bugs.winehq.org/show_bug.cgi?id=5048))
 * Support for UTF7 encoding/decoding ([Wine Bug #27388](https://bugs.winehq.org/show_bug.cgi?id=27388))

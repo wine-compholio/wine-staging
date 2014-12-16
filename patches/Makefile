@@ -53,10 +53,8 @@ PATCHLIST := \
 	kernel32-Profile.ok \
 	kernel32-UTF7_Support.ok \
 	kernel32-VerifyVersionInfo.ok \
-	kernel32-get_registry_locale_info.ok \
 	libs-Unicode_Collation.ok \
 	libwine-BSD_mmap_fixed.ok \
-	mfplat-Stubs.ok \
 	msvcp90-basic_string_wchar_dtor.ok \
 	msvcrt-atof_strtod.ok \
 	ntdll-DOS_Attributes.ok \
@@ -83,7 +81,6 @@ PATCHLIST := \
 	ntoskrnl-Stub_FileObject.ok \
 	ntoskrnl-Write_CR4.ok \
 	ole32-CoWaitForMultipleHandles.ok \
-	psapi-K32EnumProcessModulesEx.ok \
 	quartz-MediaSeeking_Positions.ok \
 	riched20-IText_Interface.ok \
 	secur32-Schannel_ContextAttr.ok \
@@ -105,7 +102,6 @@ PATCHLIST := \
 	shell32-SHFileOperation.ok \
 	shell32-SHILCreateFromPath.ok \
 	shlwapi-PathIsDirectoryEmptyW.ok \
-	shlwapi-StrCatChainW.ok \
 	shlwapi-UrlCombine.ok \
 	urlmon-CoInternetSetFeatureEnabled.ok \
 	user32-Dialog_Paint_Event.ok \
@@ -741,21 +737,6 @@ kernel32-VerifyVersionInfo.ok:
 		echo '+    { "Sebastian Lackner", "ntdll: Fix condition mask handling in RtlVerifyVersionInfo.", 1 },'; \
 	) > kernel32-VerifyVersionInfo.ok
 
-# Patchset kernel32-get_registry_locale_info
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#32169] Return proper charcount for GetLocaleInfo with LOCALE_IFIRSTDAYOFWEEK
-# |
-# | Modified files:
-# |   *	dlls/kernel32/locale.c
-# |
-.INTERMEDIATE: kernel32-get_registry_locale_info.ok
-kernel32-get_registry_locale_info.ok:
-	$(call APPLY_FILE,kernel32-get_registry_locale_info/0001-kernel32-Return-proper-char-count-in-get_registry_lo.patch)
-	@( \
-		echo '+    { "Sebastian Lackner", "kernel32: Return proper char count in get_registry_locale_info.", 1 },'; \
-	) > kernel32-get_registry_locale_info.ok
-
 # Patchset libs-Unicode_Collation
 # |
 # | This patchset fixes the following Wine bugs:
@@ -785,23 +766,6 @@ libwine-BSD_mmap_fixed.ok:
 	@( \
 		echo '+    { "André Hentschel", "libwine: Use try_mmap_fixed for wine64 on FreeBSD.", 1 },'; \
 	) > libwine-BSD_mmap_fixed.ok
-
-# Patchset mfplat-Stubs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37701] Implement stubs for mfplat.MFStartup and MFShutdown
-# |
-# | Modified files:
-# |   *	dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, include/Makefile.in, include/mferror.h
-# |
-.INTERMEDIATE: mfplat-Stubs.ok
-mfplat-Stubs.ok:
-	$(call APPLY_FILE,mfplat-Stubs/0001-include-Add-mferror.h-header.patch)
-	$(call APPLY_FILE,mfplat-Stubs/0002-mfplat-Implement-stubs-for-MFStartup-and-MFShutdown.patch)
-	@( \
-		echo '+    { "Sebastian Lackner", "include: Add mferror.h header.", 1 },'; \
-		echo '+    { "Sebastian Lackner", "mfplat: Implement stubs for MFStartup and MFShutdown.", 1 },'; \
-	) > mfplat-Stubs.ok
 
 # Patchset mshtml-sessionStorage
 # |
@@ -1260,21 +1224,6 @@ ole32-CoWaitForMultipleHandles.ok:
 		echo '+    { "Sebastian Lackner", "ole32/tests: Add additional tests for CoWaitForMultipleHandles and WM_QUIT.", 1 },'; \
 	) > ole32-CoWaitForMultipleHandles.ok
 
-# Patchset psapi-K32EnumProcessModulesEx
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34864] Support for K32EnumProcessModulesEx
-# |
-# | Modified files:
-# |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/module.c, dlls/psapi/psapi.spec, include/psapi.h
-# |
-.INTERMEDIATE: psapi-K32EnumProcessModulesEx.ok
-psapi-K32EnumProcessModulesEx.ok:
-	$(call APPLY_FILE,psapi-K32EnumProcessModulesEx/0001-psapi-Implement-semi-stub-for-K32EnumProcessModulesE.patch)
-	@( \
-		echo '+    { "Sebastian Lackner", "psapi: Implement semi-stub for K32EnumProcessModulesEx.", 1 },'; \
-	) > psapi-K32EnumProcessModulesEx.ok
-
 # Patchset quartz-MediaSeeking_Positions
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1631,18 +1580,6 @@ shlwapi-PathIsDirectoryEmptyW.ok:
 	@( \
 		echo '+    { "Michael Müller", "shlwapi: Correctly treat '\''.'\'' when enumerating files in PathIsDirectoryEmptyW.", 1 },'; \
 	) > shlwapi-PathIsDirectoryEmptyW.ok
-
-# Patchset shlwapi-StrCatChainW
-# |
-# | Modified files:
-# |   *	dlls/shlwapi/shlwapi.spec, dlls/shlwapi/string.c, dlls/shlwapi/tests/string.c
-# |
-.INTERMEDIATE: shlwapi-StrCatChainW.ok
-shlwapi-StrCatChainW.ok:
-	$(call APPLY_FILE,shlwapi-StrCatChainW/0001-shlwapi-Add-implementation-for-StrCatChainW.patch)
-	@( \
-		echo '+    { "Sebastian Lackner", "shlwapi: Add implementation for StrCatChainW.", 1 },'; \
-	) > shlwapi-StrCatChainW.ok
 
 # Patchset shlwapi-UrlCombine
 # |

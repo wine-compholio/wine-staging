@@ -55,6 +55,7 @@ PATCHLIST := \
 	kernel32-VerifyVersionInfo.ok \
 	libs-Unicode_Collation.ok \
 	libwine-BSD_mmap_fixed.ok \
+	makedep-PARENTSPEC.ok \
 	msvcp90-basic_string_wchar_dtor.ok \
 	msvcrt-atof_strtod.ok \
 	ntdll-DOS_Attributes.ok \
@@ -766,6 +767,18 @@ libwine-BSD_mmap_fixed.ok:
 	@( \
 		echo '+    { "André Hentschel", "libwine: Use try_mmap_fixed for wine64 on FreeBSD.", 1 },'; \
 	) > libwine-BSD_mmap_fixed.ok
+
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+.INTERMEDIATE: makedep-PARENTSPEC.ok
+makedep-PARENTSPEC.ok:
+	$(call APPLY_FILE,makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch)
+	@( \
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },'; \
+	) > makedep-PARENTSPEC.ok
 
 # Patchset mshtml-sessionStorage
 # |
@@ -1778,12 +1791,12 @@ winecfg-Staging.ok: ntdll-DllRedirects.ok wined3d-CSMT_Main.ok
 # Patchset wined3d-CSMT_Helper
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/ddraw/surface.c, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc, dlls/wined3d-csmt
-# | 	/wined3d-csmt.spec, dlls/wined3d/resource.c, dlls/wined3d/surface.c, dlls/wined3d/volume.c, dlls/wined3d/wined3d.spec,
+# |   *	configure.ac, dlls/ddraw/surface.c, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc,
+# | 	dlls/wined3d/resource.c, dlls/wined3d/surface.c, dlls/wined3d/volume.c, dlls/wined3d/wined3d.spec,
 # | 	dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
 # |
 .INTERMEDIATE: wined3d-CSMT_Helper.ok
-wined3d-CSMT_Helper.ok: wined3d-DXTn.ok
+wined3d-CSMT_Helper.ok: makedep-PARENTSPEC.ok wined3d-DXTn.ok
 	$(call APPLY_FILE,wined3d-CSMT_Helper/0001-wined3d-Merge-get_pitch-functions.patch)
 	$(call APPLY_FILE,wined3d-CSMT_Helper/0002-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch)
 	@( \

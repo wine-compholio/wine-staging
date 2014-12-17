@@ -1,160 +1,65 @@
-From 047f470355885dff798b77061696de522bf03744 Mon Sep 17 00:00:00 2001
+From e07243c3f38d5a095d92de69dfdbd196a7e9cba4 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Tue, 19 Aug 2014 22:10:49 -0600
-Subject: ntdll: Implement retrieving DOS attributes in NtQueryInformationFile.
+Date: Wed, 20 Aug 2014 16:04:34 -0600
+Subject: ntdll: Implement retrieving DOS attributes in
+ NtQuery[Full]AttributesFile and NtQueryDirectoryFile.
 
 ---
- configure.ac          | 12 ++++++++++++
- dlls/ntdll/file.c     | 23 ++++++++++++++++++++++-
- include/wine/port.h   |  8 ++++++++
- libs/port/Makefile.in |  3 ++-
- libs/port/xattr.c     | 39 +++++++++++++++++++++++++++++++++++++++
- 5 files changed, 83 insertions(+), 2 deletions(-)
- create mode 100644 libs/port/xattr.c
+ dlls/ntdll/file.c   |  7 ++++++-
+ include/wine/port.h |  1 +
+ libs/port/xattr.c   | 10 ++++++++++
+ 3 files changed, 17 insertions(+), 1 deletion(-)
 
-diff --git a/configure.ac b/configure.ac
-index de6d2cc..9de4fa0 100644
---- a/configure.ac
-+++ b/configure.ac
-@@ -77,2 +77,3 @@ AC_ARG_WITH(tiff,      AS_HELP_STRING([--without-tiff],[do not use TIFF]))
- AC_ARG_WITH(v4l,       AS_HELP_STRING([--without-v4l],[do not use v4l1 (v4l support)]))
-+AC_ARG_WITH(xattr,     AS_HELP_STRING([--without-xattr],[do not use xattr (security attributes support)]))
- AC_ARG_WITH(xcomposite,AS_HELP_STRING([--without-xcomposite],[do not use the Xcomposite extension]),
-@@ -667,6 +668,17 @@ AC_CHECK_HEADERS([libprocstat.h],,,
- #include <sys/socket.h>
- #endif])
- 
-+if test "x$with_xattr" != "xno"
-+then
-+    AC_CHECK_HEADERS(attr/xattr.h, [HAVE_XATTR=1])
-+fi
-+if test "x$with_xattr" = "xyes"
-+then
-+    WINE_ERROR_WITH(xattr,[test "x$HAVE_XATTR" = "x"],[xattr ${notice_platform}development files \
-+not found. Wine will be built without extended attribute support, which probably isn't what you \
-+want. You will need to install ${notice_platform}development packages of libattr at the very least.])
-+fi
-+
- dnl **** Check for working dll ****
- 
- AC_SUBST(dlldir,"\${libdir}/wine")
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 1a69648..b0c3df8 100644
+index c775664..2331064 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -103,6 +103,22 @@ mode_t FILE_umask = 0;
- 
- static const WCHAR ntfsW[] = {'N','T','F','S'};
- 
-+/* Match the Samba conventions for storing DOS file attributes */
-+#define SAMBA_XATTR_DOS_ATTRIB XATTR_USER_PREFIX "DOSATTRIB"
-+/* We are only interested in some attributes, the others have corresponding Unix attributes */
-+#define XATTR_ATTRIBS_MASK     (FILE_ATTRIBUTE_HIDDEN|FILE_ATTRIBUTE_SYSTEM)
-+
-+/* decode the xattr-stored DOS attributes */
-+static inline int get_file_xattr( char *hexattr, int attrlen )
-+{
-+    if (attrlen > 2 && hexattr[0] == '0' && hexattr[1] == 'x')
-+    {
-+        hexattr[attrlen] = 0;
-+        return strtol( hexattr+2, NULL, 16 ) & XATTR_ATTRIBS_MASK;
-+    }
-+    return 0;
-+}
-+
- /* fetch the attributes of a file */
- static inline ULONG get_file_attributes( const struct stat *st )
- {
-@@ -120,13 +136,18 @@ static inline ULONG get_file_attributes( const struct stat *st )
- /* get the stat info and file attributes for a file (by file descriptor) */
- int fd_get_file_info( int fd, struct stat *st, ULONG *attr )
+@@ -153,7 +153,8 @@ int fd_get_file_info( int fd, struct stat *st, ULONG *attr )
+ /* get the stat info and file attributes for a file (by name) */
+ int get_file_info( const char *path, struct stat *st, ULONG *attr )
  {
 -    int ret;
 +    char hexattr[10];
 +    int len, ret;
  
      *attr = 0;
-     ret = fstat( fd, st );
-     if (ret == -1) return ret;
-     /* convert the Unix stat info into file attributes */
+     ret = lstat( path, st );
+@@ -166,6 +167,10 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
+         if (S_ISDIR( st->st_mode )) *attr |= FILE_ATTRIBUTE_REPARSE_POINT;
+     }
      *attr |= get_file_attributes( st );
 +    /* retrieve any stored DOS attributes */
-+    len = xattr_fget( fd, SAMBA_XATTR_DOS_ATTRIB, hexattr, sizeof(hexattr)-1 );
++    len = xattr_get( path, SAMBA_XATTR_DOS_ATTRIB, hexattr, sizeof(hexattr)-1 );
 +    if (len == -1) return ret;
 +    *attr |= get_file_xattr( hexattr, len );
      return ret;
  }
  
 diff --git a/include/wine/port.h b/include/wine/port.h
-index 3548a44..521246b 100644
+index 521246b..7977eb9 100644
 --- a/include/wine/port.h
 +++ b/include/wine/port.h
-@@ -363,6 +363,14 @@ extern int mkstemps(char *template, int suffix_len);
- extern int _spawnvp(int mode, const char *cmdname, const char * const argv[]);
+@@ -370,6 +370,7 @@ extern int _spawnvp(int mode, const char *cmdname, const char * const argv[]);
  #endif
  
-+/* Extended attribute functions */
-+
-+#ifndef XATTR_USER_PREFIX
-+# define XATTR_USER_PREFIX "user."
-+#endif
-+
-+extern int xattr_fget( int filedes, const char *name, void *value, size_t size );
-+
+ extern int xattr_fget( int filedes, const char *name, void *value, size_t size );
++extern int xattr_get( const char *path, const char *name, void *value, size_t size );
+ 
  /* Interlocked functions */
  
- #if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
-diff --git a/libs/port/Makefile.in b/libs/port/Makefile.in
-index 65f1714..67efbc7 100644
---- a/libs/port/Makefile.in
-+++ b/libs/port/Makefile.in
-@@ -23,4 +23,5 @@ C_SRCS = \
- 	strerror.c \
- 	strncasecmp.c \
- 	symlink.c \
--	usleep.c
-+	usleep.c \
-+	xattr.c
 diff --git a/libs/port/xattr.c b/libs/port/xattr.c
-new file mode 100644
-index 0000000..2d37be9
---- /dev/null
+index 2d37be9..6ddaa9c 100644
+--- a/libs/port/xattr.c
 +++ b/libs/port/xattr.c
-@@ -0,0 +1,39 @@
-+/*
-+ * extended attributes functions
-+ *
-+ * Copyright 2014 Erich E. Hoover
-+ *
-+ * This library is free software; you can redistribute it and/or
-+ * modify it under the terms of the GNU Lesser General Public
-+ * License as published by the Free Software Foundation; either
-+ * version 2.1 of the License, or (at your option) any later version.
-+ *
-+ * This library is distributed in the hope that it will be useful,
-+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
-+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-+ * Lesser General Public License for more details.
-+ *
-+ * You should have received a copy of the GNU Lesser General Public
-+ * License along with this library; if not, write to the Free Software
-+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
-+ */
+@@ -37,3 +37,13 @@ int xattr_fget( int filedes, const char *name, void *value, size_t size )
+     return -1;
+ #endif
+ }
 +
-+#include "config.h"
-+#include "wine/port.h"
-+
-+#if defined(HAVE_ATTR_XATTR_H)
-+# include <attr/xattr.h>
-+#endif
-+
-+#include <ctype.h>
-+#include <errno.h>
-+
-+int xattr_fget( int filedes, const char *name, void *value, size_t size )
++int xattr_get( const char *path, const char *name, void *value, size_t size )
 +{
 +#if defined(HAVE_ATTR_XATTR_H)
-+    return fgetxattr( filedes, name, value, size );
++    return getxattr( path, name, value, size );
 +#else
 +    errno = ENOTSUP;
 +    return -1;

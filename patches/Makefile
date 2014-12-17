@@ -840,16 +840,14 @@ msvcrt-atof_strtod.ok:
 # |
 .INTERMEDIATE: ntdll-DOS_Attributes.ok
 ntdll-DOS_Attributes.ok:
-	$(call APPLY_FILE,ntdll-DOS_Attributes/0001-ntdll-Unify-retrieving-the-attributes-of-a-file.patch)
+	$(call APPLY_FILE,ntdll-DOS_Attributes/0001-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch)
 	$(call APPLY_FILE,ntdll-DOS_Attributes/0002-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch)
-	$(call APPLY_FILE,ntdll-DOS_Attributes/0003-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch)
-	$(call APPLY_FILE,ntdll-DOS_Attributes/0004-ntdll-Implement-storing-DOS-attributes-in-NtSetInfor.patch)
-	$(call APPLY_FILE,ntdll-DOS_Attributes/0005-ntdll-Implement-storing-DOS-attributes-in-NtCreateFi.patch)
-	$(call APPLY_FILE,ntdll-DOS_Attributes/0006-libport-Add-support-for-Mac-OS-X-style-extended-attr.patch)
-	$(call APPLY_FILE,ntdll-DOS_Attributes/0007-libport-Add-support-for-FreeBSD-style-extended-attri.patch)
-	$(call APPLY_FILE,ntdll-DOS_Attributes/0008-ntdll-Perform-the-Unix-style-hidden-file-check-withi.patch)
+	$(call APPLY_FILE,ntdll-DOS_Attributes/0003-ntdll-Implement-storing-DOS-attributes-in-NtSetInfor.patch)
+	$(call APPLY_FILE,ntdll-DOS_Attributes/0004-ntdll-Implement-storing-DOS-attributes-in-NtCreateFi.patch)
+	$(call APPLY_FILE,ntdll-DOS_Attributes/0005-libport-Add-support-for-Mac-OS-X-style-extended-attr.patch)
+	$(call APPLY_FILE,ntdll-DOS_Attributes/0006-libport-Add-support-for-FreeBSD-style-extended-attri.patch)
+	$(call APPLY_FILE,ntdll-DOS_Attributes/0007-ntdll-Perform-the-Unix-style-hidden-file-check-withi.patch)
 	@( \
-		echo '+    { "Erich E. Hoover", "ntdll: Unify retrieving the attributes of a file.", 1 },'; \
 		echo '+    { "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQueryInformationFile.", 1 },'; \
 		echo '+    { "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQuery[Full]AttributesFile and NtQueryDirectoryFile.", 1 },'; \
 		echo '+    { "Erich E. Hoover", "ntdll: Implement storing DOS attributes in NtSetInformationFile.", 1 },'; \

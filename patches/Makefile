@@ -36,6 +36,7 @@ PATCHLIST := \
 	d3dx9_36-UpdateSkinnedMesh.ok \
 	dbghelp-Debug_Symbols.ok \
 	dbghelp-KdHelp.ok \
+	dinput-Events.ok \
 	dsound-Fast_Mixer.ok \
 	fonts-Missing_Fonts.ok \
 	gdi32-MaxPixelFormats.ok \
@@ -454,6 +455,21 @@ dbghelp-KdHelp.ok:
 	@( \
 		echo '+    { "Sebastian Lackner", "dbghelp: Don'\''t fill KdHelp structure for usermode applications.", 1 },'; \
 	) > dbghelp-KdHelp.ok
+
+# Patchset dinput-Events
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#8854] Ensure X11 input events are handled even without explicit message loop
+# |
+# | Modified files:
+# |   *	dlls/dinput/device.c, dlls/dinput/keyboard.c, dlls/user32/input.c, dlls/user32/user32.spec, include/winuser.h
+# |
+.INTERMEDIATE: dinput-Events.ok
+dinput-Events.ok:
+	$(call APPLY_FILE,dinput-Events/0001-dinput-Ensure-X11-input-events-are-handled-even-with.patch)
+	@( \
+		echo '+    { "Sebastian Lackner", "dinput: Ensure X11 input events are handled even without explicit message loop.", 1 },'; \
+	) > dinput-Events.ok
 
 # Patchset dsound-Fast_Mixer
 # |

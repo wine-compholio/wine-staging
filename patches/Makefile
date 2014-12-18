@@ -73,6 +73,7 @@ PATCHLIST := \
 	ntdll-NtQuerySection.ok \
 	ntdll-NtSetLdtEntries.ok \
 	ntdll-Pipe_SpecialCharacters.ok \
+	ntdll-RtlSetHeapInformation.ok \
 	ntdll-ThreadTime.ok \
 	ntdll-User_Shared_Data.ok \
 	ntdll-WRITECOPY.ok \
@@ -1091,6 +1092,18 @@ ntdll-Pipe_SpecialCharacters.ok:
 	@( \
 		echo '+    { "Michael Müller", "ntdll: Allow special characters in pipe names.", 1 },'; \
 	) > ntdll-Pipe_SpecialCharacters.ok
+
+# Patchset ntdll-RtlSetHeapInformation
+# |
+# | Modified files:
+# |   *	dlls/kernel32/heap.c, dlls/ntdll/heap.c, dlls/ntdll/ntdll.spec, include/winternl.h
+# |
+.INTERMEDIATE: ntdll-RtlSetHeapInformation.ok
+ntdll-RtlSetHeapInformation.ok:
+	$(call APPLY_FILE,ntdll-RtlSetHeapInformation/0001-ntdll-Add-stub-for-RtlSetHeapInformation.patch)
+	@( \
+		echo '+    { "Sergey Kalinichev", "ntdll: Add stub for RtlSetHeapInformation.", 1 },'; \
+	) > ntdll-RtlSetHeapInformation.ok
 
 # Patchset ntdll-ThreadTime
 # |

@@ -1,34 +1,33 @@
-From e07243c3f38d5a095d92de69dfdbd196a7e9cba4 Mon Sep 17 00:00:00 2001
+From f6b156b5bccac55814eeee4fd10013ea3a76f384 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 20 Aug 2014 16:04:34 -0600
 Subject: ntdll: Implement retrieving DOS attributes in
  NtQuery[Full]AttributesFile and NtQueryDirectoryFile.
 
 ---
- dlls/ntdll/file.c   |  7 ++++++-
+ dlls/ntdll/file.c   |  6 +++++-
  include/wine/port.h |  1 +
  libs/port/xattr.c   | 10 ++++++++++
- 3 files changed, 17 insertions(+), 1 deletion(-)
+ 3 files changed, 16 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index c775664..2331064 100644
+index 83d07e2..b977e45 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -153,7 +153,8 @@ int fd_get_file_info( int fd, struct stat *st, ULONG *attr )
+@@ -152,7 +152,8 @@ int fd_get_file_info( int fd, struct stat *st, ULONG *attr )
  /* get the stat info and file attributes for a file (by name) */
  int get_file_info( const char *path, struct stat *st, ULONG *attr )
  {
 -    int ret;
-+    char hexattr[10];
++    char hexattr[11];
 +    int len, ret;
  
      *attr = 0;
      ret = lstat( path, st );
-@@ -166,6 +167,10 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
+@@ -165,6 +166,9 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
          if (S_ISDIR( st->st_mode )) *attr |= FILE_ATTRIBUTE_REPARSE_POINT;
      }
      *attr |= get_file_attributes( st );
-+    /* retrieve any stored DOS attributes */
 +    len = xattr_get( path, SAMBA_XATTR_DOS_ATTRIB, hexattr, sizeof(hexattr)-1 );
 +    if (len == -1) return ret;
 +    *attr |= get_file_xattr( hexattr, len );
@@ -48,7 +47,7 @@ index 521246b..7977eb9 100644
  /* Interlocked functions */
  
 diff --git a/libs/port/xattr.c b/libs/port/xattr.c
-index 2d37be9..6ddaa9c 100644
+index 94b7713..88e900d 100644
 --- a/libs/port/xattr.c
 +++ b/libs/port/xattr.c
 @@ -37,3 +37,13 @@ int xattr_fget( int filedes, const char *name, void *value, size_t size )
@@ -61,10 +60,10 @@ index 2d37be9..6ddaa9c 100644
 +#if defined(HAVE_ATTR_XATTR_H)
 +    return getxattr( path, name, value, size );
 +#else
-+    errno = ENOTSUP;
++    errno = ENOSYS;
 +    return -1;
 +#endif
 +}
 -- 
-2.1.3
+1.9.1
 

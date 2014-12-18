@@ -1,26 +1,26 @@
-From 60887da43c880bb75169b394b5d3ecedd44278aa Mon Sep 17 00:00:00 2001
+From ac9076b71ddda6d430fe80fcfe62a47c2dcc9dc9 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 20 Aug 2014 15:28:00 -0600
 Subject: ntdll: Implement storing DOS attributes in NtCreateFile.
 
 ---
- dlls/ntdll/file.c            |   79 ++++++++++++++++++++++++++----------------
- dlls/ntdll/tests/directory.c |   22 +++++-------
- include/wine/port.h          |    2 ++
- libs/port/xattr.c            |   20 +++++++++++
+ dlls/ntdll/file.c            | 79 ++++++++++++++++++++++++++++----------------
+ dlls/ntdll/tests/directory.c | 22 +++++-------
+ include/wine/port.h          |  2 ++
+ libs/port/xattr.c            | 20 +++++++++++
  4 files changed, 80 insertions(+), 43 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 635a316..4f4dddb 100644
+index 521ab64..b4187d4 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -210,6 +210,21 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
+@@ -205,6 +205,21 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
      return ret;
  }
  
 +NTSTATUS set_file_info( const char *path, ULONG attr )
 +{
-+    char hexattr[10];
++    char hexattr[11];
 +    int len;
 +
 +    /* Note: unix mode already set when called this way */
@@ -36,7 +36,7 @@ index 635a316..4f4dddb 100644
  /**************************************************************************
   *                 FILE_CreateFile                    (internal)
   * Open a file.
-@@ -221,6 +236,8 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
+@@ -216,6 +231,8 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
                                   ULONG attributes, ULONG sharing, ULONG disposition,
                                   ULONG options, PVOID ea_buffer, ULONG ea_length )
  {
@@ -45,7 +45,7 @@ index 635a316..4f4dddb 100644
      ANSI_STRING unix_name;
      BOOL created = FALSE;
  
-@@ -264,39 +281,37 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
+@@ -259,39 +276,37 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
          io->u.Status = STATUS_SUCCESS;
      }
  
@@ -112,7 +112,7 @@ index 635a316..4f4dddb 100644
  
      if (io->u.Status == STATUS_SUCCESS)
      {
-@@ -318,6 +333,11 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
+@@ -313,6 +328,11 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
              io->Information = FILE_OVERWRITTEN;
              break;
          }
@@ -124,7 +124,7 @@ index 635a316..4f4dddb 100644
      }
      else if (io->u.Status == STATUS_TOO_MANY_OPENED_FILES)
      {
-@@ -325,6 +345,7 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
+@@ -320,6 +340,7 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
          if (!once++) ERR_(winediag)( "Too many open files, ulimit -n probably needs to be increased\n" );
      }
  
@@ -193,7 +193,7 @@ index cc572f3..9e2b8165 100644
  /* Interlocked functions */
  
 diff --git a/libs/port/xattr.c b/libs/port/xattr.c
-index 3ce5ffc..dc89a45 100644
+index 6918c99..683e7a6 100644
 --- a/libs/port/xattr.c
 +++ b/libs/port/xattr.c
 @@ -67,3 +67,23 @@ int xattr_get( const char *path, const char *name, void *value, size_t size )
@@ -206,7 +206,7 @@ index 3ce5ffc..dc89a45 100644
 +#if defined(HAVE_ATTR_XATTR_H)
 +    return removexattr( path, name );
 +#else
-+    errno = ENOTSUP;
++    errno = ENOSYS;
 +    return -1;
 +#endif
 +}
@@ -216,10 +216,10 @@ index 3ce5ffc..dc89a45 100644
 +#if defined(HAVE_ATTR_XATTR_H)
 +    return setxattr( path, name, value, size, 0 );
 +#else
-+    errno = ENOTSUP;
++    errno = ENOSYS;
 +    return -1;
 +#endif
 +}
 -- 
-1.7.9.5
+1.9.1
 

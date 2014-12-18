@@ -1,31 +1,29 @@
-From 764394b265187417d1123b975f05f955c461b774 Mon Sep 17 00:00:00 2001
+From c65dec8465c321f09ee3bfd0317994da8cd0c0c1 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 20 Aug 2014 00:08:52 -0600
 Subject: ntdll: Implement storing DOS attributes in NtSetInformationFile.
 
 ---
- dlls/ntdll/file.c       |   53 +++++++++++++++++++++++++++++------------------
- dlls/ntdll/tests/file.c |    8 +++----
- include/wine/port.h     |    2 ++
- libs/port/xattr.c       |   20 ++++++++++++++++++
- 4 files changed, 59 insertions(+), 24 deletions(-)
+ dlls/ntdll/file.c       | 54 +++++++++++++++++++++++++++++++------------------
+ dlls/ntdll/tests/file.c |  8 ++++----
+ include/wine/port.h     |  2 ++
+ libs/port/xattr.c       | 20 ++++++++++++++++++
+ 4 files changed, 60 insertions(+), 24 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index fbfe882..635a316 100644
+index b977e45..521ab64 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -151,6 +151,38 @@ int fd_get_file_info( int fd, struct stat *st, ULONG *attr )
+@@ -149,6 +149,39 @@ int fd_get_file_info( int fd, struct stat *st, ULONG *attr )
      return ret;
  }
  
 +/* set the stat info and file attributes for a file (by file descriptor) */
 +NTSTATUS fd_set_file_info( int fd, ULONG attr )
 +{
-+    char hexattr[10];
++    char hexattr[11];
 +    struct stat st;
-+    int len;
 +
-+    /* convert the file attributes into Unix stat info */
 +    if (fstat( fd, &st ) == -1) return FILE_GetNtStatus();
 +    if (attr & FILE_ATTRIBUTE_READONLY)
 +    {
@@ -41,10 +39,13 @@ index fbfe882..635a316 100644
 +    }
 +    if (fchmod( fd, st.st_mode ) == -1) return FILE_GetNtStatus();
 +    attr &= ~FILE_ATTRIBUTE_NORMAL; /* do not store everything, but keep everything Samba can use */
-+    /* store/unset any possible DOS attributes */
-+    len = sprintf( hexattr, "0x%x", attr );
 +    if (attr != 0)
++    {
++        int len;
++
++        len = sprintf( hexattr, "0x%x", attr );
 +        xattr_fset( fd, SAMBA_XATTR_DOS_ATTRIB, hexattr, len );
++    }
 +    else
 +        xattr_fremove( fd, SAMBA_XATTR_DOS_ATTRIB );
 +    return STATUS_SUCCESS;
@@ -53,7 +54,7 @@ index fbfe882..635a316 100644
  /* get the stat info and file attributes for a file (by name) */
  int get_file_info( const char *path, struct stat *st, ULONG *attr )
  {
-@@ -2326,7 +2358,6 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
+@@ -2320,7 +2353,6 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
      case FileBasicInformation:
          if (len >= sizeof(FILE_BASIC_INFORMATION))
          {
@@ -61,7 +62,7 @@ index fbfe882..635a316 100644
              const FILE_BASIC_INFORMATION *info = ptr;
  
              if ((io->u.Status = server_get_unix_fd( handle, 0, &fd, &needs_close, NULL, NULL )))
-@@ -2336,25 +2367,7 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
+@@ -2330,25 +2362,7 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
                  io->u.Status = set_file_times( fd, &info->LastWriteTime, &info->LastAccessTime );
  
              if (io->u.Status == STATUS_SUCCESS && info->FileAttributes)
@@ -142,7 +143,7 @@ index 7977eb9..cc572f3 100644
  
  /* Interlocked functions */
 diff --git a/libs/port/xattr.c b/libs/port/xattr.c
-index 6ddaa9c..3ce5ffc 100644
+index 88e900d..6918c99 100644
 --- a/libs/port/xattr.c
 +++ b/libs/port/xattr.c
 @@ -38,6 +38,26 @@ int xattr_fget( int filedes, const char *name, void *value, size_t size )
@@ -154,7 +155,7 @@ index 6ddaa9c..3ce5ffc 100644
 +#if defined(HAVE_ATTR_XATTR_H)
 +    return fremovexattr( filedes, name );
 +#else
-+    errno = ENOTSUP;
++    errno = ENOSYS;
 +    return -1;
 +#endif
 +}
@@ -164,7 +165,7 @@ index 6ddaa9c..3ce5ffc 100644
 +#if defined(HAVE_ATTR_XATTR_H)
 +    return fsetxattr( filedes, name, value, size, 0 );
 +#else
-+    errno = ENOTSUP;
++    errno = ENOSYS;
 +    return -1;
 +#endif
 +}
@@ -173,5 +174,5 @@ index 6ddaa9c..3ce5ffc 100644
  {
  #if defined(HAVE_ATTR_XATTR_H)
 -- 
-1.7.9.5
+1.9.1
 

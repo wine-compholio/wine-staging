@@ -1004,7 +1004,7 @@ ntdll-Heap_FreeLists.ok:
 # | 	include/ntifs.h
 # |
 .INTERMEDIATE: ntdll-Junction_Points.ok
-ntdll-Junction_Points.ok: ntdll-DOS_Attributes.ok ntdll-Fix_Free.ok
+ntdll-Junction_Points.ok: ntdll-Fix_Free.ok
 	$(call APPLY_FILE,ntdll-Junction_Points/0001-ntdll-Add-support-for-junction-point-creation.patch)
 	$(call APPLY_FILE,ntdll-Junction_Points/0002-ntdll-Add-support-for-reading-junction-points.patch)
 	$(call APPLY_FILE,ntdll-Junction_Points/0003-ntdll-Add-support-for-deleting-junction-points.patch)

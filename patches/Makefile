@@ -1456,13 +1456,15 @@ server-Stored_ACLs.ok: ntdll-DOS_Attributes.ok
 # Patchset server-Unexpected_Wakeup
 # |
 # | Modified files:
-# |   *	server/thread.c
+# |   *	dlls/kernel32/tests/sync.c, server/thread.c
 # |
 .INTERMEDIATE: server-Unexpected_Wakeup.ok
 server-Unexpected_Wakeup.ok:
 	$(call APPLY_FILE,server-Unexpected_Wakeup/0001-server-Avoid-sending-unexpected-wakeup-with-uninitia.patch)
+	$(call APPLY_FILE,server-Unexpected_Wakeup/0002-kernel32-tests-Repeat-test-for-SignalObjectAndWait-m.patch)
 	@( \
 		echo '+    { "Sebastian Lackner", "server: Avoid sending unexpected wakeup with uninitialized cookie value.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Repeat test for SignalObjectAndWait multiple times to test wineserver wakeup cookie management.", 1 },'; \
 	) > server-Unexpected_Wakeup.ok
 
 # Patchset setupapi-SetupPromptForDisk

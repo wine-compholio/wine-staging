@@ -105,7 +105,7 @@ Included bug fixes and improvements
 * Need for Speed 3 installer requires devices in HKEY_DYN_DATA ([Wine Bug #7115](https://bugs.winehq.org/show_bug.cgi?id=7115))
 * Other Pipelight-specific enhancements
 * Prevent window managers from grouping all wine programs together ([Wine Bug #32699](https://bugs.winehq.org/show_bug.cgi?id=32699))
-* Provide named entry point shell32.SHILCreateFromPath for vista apps ([Wine Bug #37265](https://bugs.winehq.org/show_bug.cgi?id=37265))
+* ~~Provide named entry point shell32.SHILCreateFromPath for vista apps~~ ([Wine Bug #37265](https://bugs.winehq.org/show_bug.cgi?id=37265))
 * Reallocate buffer when adding records to AVI files ([Wine Bug #5137](https://bugs.winehq.org/show_bug.cgi?id=5137))
 * Reduced SetTimer minimum value from 10 ms to 5 ms (improves Silverlight framerates)
 * Return an error when trying to open a terminated process ([Wine Bug #37087](https://bugs.winehq.org/show_bug.cgi?id=37087))

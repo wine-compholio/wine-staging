@@ -102,7 +102,6 @@ PATCHLIST := \
 	shell32-RunDLL_CallEntry16.ok \
 	shell32-SHCreateSessionKey.ok \
 	shell32-SHFileOperation.ok \
-	shell32-SHILCreateFromPath.ok \
 	shlwapi-PathIsDirectoryEmptyW.ok \
 	shlwapi-UrlCombine.ok \
 	urlmon-CoInternetSetFeatureEnabled.ok \
@@ -1579,21 +1578,6 @@ shell32-SHFileOperation.ok:
 	@( \
 		echo '+    { "Michael Müller", "shell32: Choose return value for SHFileOperationW depending on windows version.", 1 },'; \
 	) > shell32-SHFileOperation.ok
-
-# Patchset shell32-SHILCreateFromPath
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37265] Provide named entry point shell32.SHILCreateFromPath for vista apps
-# |
-# | Modified files:
-# |   *	dlls/shell32/shell32.spec
-# |
-.INTERMEDIATE: shell32-SHILCreateFromPath.ok
-shell32-SHILCreateFromPath.ok:
-	$(call APPLY_FILE,shell32-SHILCreateFromPath/0001-shell32-export-SHILCreateFromPath-by-name-too.patch)
-	@( \
-		echo '+    { "Stefan Leichter", "shell32: export SHILCreateFromPath by name too.", 1 },'; \
-	) > shell32-SHILCreateFromPath.ok
 
 # Patchset shlwapi-PathIsDirectoryEmptyW
 # |

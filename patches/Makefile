@@ -1749,13 +1749,13 @@ user32-ScrollWindowEx.ok:
 # |   *	[#32451] Fix for programs leaking wndproc slots
 # |
 # | Modified files:
-# |   *	dlls/user32/winproc.c
+# |   *	dlls/user.exe16/message.c, dlls/user32/winproc.c
 # |
 .INTERMEDIATE: user32-WndProc.ok
 user32-WndProc.ok:
 	$(call APPLY_FILE,user32-WndProc/0001-user32-Increase-MAX_WINPROCS-to-16384.patch)
 	@( \
-		echo '+    { "Sebastian Lackner", "user32: Increase MAX_WINPROCS to 16384.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "user32: Increase MAX_WINPROCS to 16384.", 2 },'; \
 	) > user32-WndProc.ok
 
 # Patchset wineboot-HKEY_DYN_DATA

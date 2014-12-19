@@ -30,6 +30,7 @@ PATCHLIST := \
 	d3d9-Surface_Refcount.ok \
 	d3dx9_36-DXTn.ok \
 	d3dx9_36-Filter_Warnings.ok \
+	d3dx9_36-FindNextValidTechnique.ok \
 	d3dx9_36-GetShaderSemantics.ok \
 	d3dx9_36-Optimize_Inplace.ok \
 	d3dx9_36-Texture_Align.ok \
@@ -375,6 +376,21 @@ d3dx9_36-Filter_Warnings.ok:
 	@( \
 		echo '+    { "Christian Costa", "d3dx9_36: Filter out D3DCompile warning messages that are not present with D3DCompileShader.", 4 },'; \
 	) > d3dx9_36-Filter_Warnings.ok
+
+# Patchset d3dx9_36-FindNextValidTechnique
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34101] Implement ID3DXEffect::FindNextValidTechnique
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/effect.c, dlls/d3dx9_36/tests/effect.c
+# |
+.INTERMEDIATE: d3dx9_36-FindNextValidTechnique.ok
+d3dx9_36-FindNextValidTechnique.ok:
+	$(call APPLY_FILE,d3dx9_36-FindNextValidTechnique/0001-d3dx9_36-Implement-ID3DXEffect_FindNextValidTechniqu.patch)
+	@( \
+		echo '+    { "Christian Costa", "d3dx9_36: Implement ID3DXEffect_FindNextValidTechnique + add tests.", 1 },'; \
+	) > d3dx9_36-FindNextValidTechnique.ok
 
 # Patchset d3dx9_36-GetShaderSemantics
 # |

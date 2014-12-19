@@ -38,6 +38,7 @@ PATCHLIST := \
 	dbghelp-KdHelp.ok \
 	dinput-Events.ok \
 	dsound-Fast_Mixer.ok \
+	dxgi-GetDesc.ok \
 	fonts-Missing_Fonts.ok \
 	gdi32-MaxPixelFormats.ok \
 	gdi32-MultiMonitor.ok \
@@ -485,6 +486,18 @@ dsound-Fast_Mixer.ok:
 	@( \
 		echo '+    { "Alexander E. Patrakov", "dsound: Add a linear resampler for use with a large number of mixing buffers.", 1 },'; \
 	) > dsound-Fast_Mixer.ok
+
+# Patchset dxgi-GetDesc
+# |
+# | Modified files:
+# |   *	dlls/dxgi/output.c
+# |
+.INTERMEDIATE: dxgi-GetDesc.ok
+dxgi-GetDesc.ok:
+	$(call APPLY_FILE,dxgi-GetDesc/0001-dxgi-Implement-IDXGIOutput-GetDesc.patch)
+	@( \
+		echo '+    { "Michael Müller", "dxgi: Implement IDXGIOutput::GetDesc.", 1 },'; \
+	) > dxgi-GetDesc.ok
 
 # Patchset fonts-Missing_Fonts
 # |

@@ -29,6 +29,7 @@ PATCHLIST := \
 	configure-Absolute_RPATH.ok \
 	d3d9-Surface_Refcount.ok \
 	d3dx9_36-D3DXComputeTangentFrameEx.ok \
+	d3dx9_36-D3DXIntersect.ok \
 	d3dx9_36-DXTn.ok \
 	d3dx9_36-Filter_Warnings.ok \
 	d3dx9_36-FindNextValidTechnique.ok \
@@ -364,6 +365,18 @@ d3dx9_36-D3DXComputeTangentFrameEx.ok:
 	@( \
 		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeTangentFrameEx.", 1 },'; \
 	) > d3dx9_36-D3DXComputeTangentFrameEx.ok
+
+# Patchset d3dx9_36-D3DXIntersect
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/mesh.c
+# |
+.INTERMEDIATE: d3dx9_36-D3DXIntersect.ok
+d3dx9_36-D3DXIntersect.ok: d3dx9_36-D3DXComputeTangentFrameEx.ok
+	$(call APPLY_FILE,d3dx9_36-D3DXIntersect/0001-d3dx9_36-Add-stub-for-D3DXIntersect.patch)
+	@( \
+		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXIntersect.", 1 },'; \
+	) > d3dx9_36-D3DXIntersect.ok
 
 # Patchset d3dx9_36-DXTn
 # |

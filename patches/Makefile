@@ -556,17 +556,20 @@ dxgi-GetDesc.ok:
 # |   *	[#13829] Implement a Microsoft Yahei replacement font
 # |
 # | Modified files:
-# |   *	fonts/Makefile.in, fonts/arial.sfd, fonts/arial.ttf, fonts/cour.sfd, fonts/cour.ttf, fonts/msyh.sfd, fonts/msyh.ttf
+# |   *	COPYING.arial, COPYING.cour, COPYING.msyh, LICENSE, fonts/Makefile.in, fonts/arial.sfd, fonts/arial.ttf, fonts/cour.sfd,
+# | 	fonts/cour.ttf, fonts/msyh.sfd, fonts/msyh.ttf
 # |
 .INTERMEDIATE: fonts-Missing_Fonts.ok
 fonts-Missing_Fonts.ok:
 	$(call APPLY_FILE,fonts-Missing_Fonts/0001-fonts-Add-Liberation-Sans-as-an-Arial-replacement.patch)
 	$(call APPLY_FILE,fonts-Missing_Fonts/0002-fonts-Add-WenQuanYi-Micro-Hei-as-a-Microsoft-Yahei-r.patch)
 	$(call APPLY_FILE,fonts-Missing_Fonts/0003-fonts-Add-Courier-Prime-as-a-Courier-New-replacement.patch)
+	$(call APPLY_FILE,fonts-Missing_Fonts/0004-Add-licenses-for-fonts-as-separate-files.patch)
 	@( \
 		echo '+    { "Torsten Kurbad", "fonts: Add Liberation Sans as an Arial replacement.", 2 },'; \
 		echo '+    { "Erich E. Hoover", "fonts: Add WenQuanYi Micro Hei as a Microsoft Yahei replacement.", 1 },'; \
 		echo '+    { "Erich E. Hoover", "fonts: Add Courier Prime as a Courier New replacement.", 1 },'; \
+		echo '+    { "Michael Müller", "Add licenses for fonts as separate files.", 1 },'; \
 	) > fonts-Missing_Fonts.ok
 
 # Patchset gdi32-MaxPixelFormats

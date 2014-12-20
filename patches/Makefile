@@ -28,6 +28,7 @@ PATCHLIST := \
 	comctl32-LoadIconMetric.ok \
 	configure-Absolute_RPATH.ok \
 	d3d9-Surface_Refcount.ok \
+	d3dx9_36-D3DXComputeTangentFrameEx.ok \
 	d3dx9_36-DXTn.ok \
 	d3dx9_36-Filter_Warnings.ok \
 	d3dx9_36-FindNextValidTechnique.ok \
@@ -343,6 +344,26 @@ d3d9-Surface_Refcount.ok:
 	@( \
 		echo '+    { "Henri Verbeet", "d3d9: Don'\''t decrease surface refcount when its already zero.", 1 },'; \
 	) > d3d9-Surface_Refcount.ok
+
+# Patchset d3dx9_36-D3DXComputeTangentFrameEx
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#31984] Add stub for D3DXComputeTangentFrameEx
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_24/d3dx9_24.spec, dlls/d3dx9_25/d3dx9_25.spec, dlls/d3dx9_26/d3dx9_26.spec, dlls/d3dx9_27/d3dx9_27.spec,
+# | 	dlls/d3dx9_28/d3dx9_28.spec, dlls/d3dx9_29/d3dx9_29.spec, dlls/d3dx9_30/d3dx9_30.spec, dlls/d3dx9_31/d3dx9_31.spec,
+# | 	dlls/d3dx9_32/d3dx9_32.spec, dlls/d3dx9_33/d3dx9_33.spec, dlls/d3dx9_34/d3dx9_34.spec, dlls/d3dx9_35/d3dx9_35.spec,
+# | 	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/mesh.c, dlls/d3dx9_37/d3dx9_37.spec, dlls/d3dx9_38/d3dx9_38.spec,
+# | 	dlls/d3dx9_39/d3dx9_39.spec, dlls/d3dx9_40/d3dx9_40.spec, dlls/d3dx9_41/d3dx9_41.spec, dlls/d3dx9_42/d3dx9_42.spec,
+# | 	dlls/d3dx9_43/d3dx9_43.spec
+# |
+.INTERMEDIATE: d3dx9_36-D3DXComputeTangentFrameEx.ok
+d3dx9_36-D3DXComputeTangentFrameEx.ok:
+	$(call APPLY_FILE,d3dx9_36-D3DXComputeTangentFrameEx/0001-d3dx9_36-Add-stub-for-D3DXComputeTangentFrameEx.patch)
+	@( \
+		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeTangentFrameEx.", 1 },'; \
+	) > d3dx9_36-D3DXComputeTangentFrameEx.ok
 
 # Patchset d3dx9_36-DXTn
 # |

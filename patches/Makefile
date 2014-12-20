@@ -77,6 +77,7 @@ PATCHLIST := \
 	ntdll-NtQuerySection.ok \
 	ntdll-NtSetLdtEntries.ok \
 	ntdll-Pipe_SpecialCharacters.ok \
+	ntdll-RtlIpv4StringToAddressExA.ok \
 	ntdll-ThreadTime.ok \
 	ntdll-User_Shared_Data.ok \
 	ntdll-WRITECOPY.ok \
@@ -1154,6 +1155,18 @@ ntdll-Pipe_SpecialCharacters.ok:
 	@( \
 		echo '+    { "Michael Müller", "ntdll: Allow special characters in pipe names.", 1 },'; \
 	) > ntdll-Pipe_SpecialCharacters.ok
+
+# Patchset ntdll-RtlIpv4StringToAddressExA
+# |
+# | Modified files:
+# |   *	dlls/ntdll/tests/rtl.c
+# |
+.INTERMEDIATE: ntdll-RtlIpv4StringToAddressExA.ok
+ntdll-RtlIpv4StringToAddressExA.ok:
+	$(call APPLY_FILE,ntdll-RtlIpv4StringToAddressExA/0001-ntdll-tests-Add-tests-for-RtlIpv4StringToAddressExA.patch)
+	@( \
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for RtlIpv4StringToAddressExA.", 1 },'; \
+	) > ntdll-RtlIpv4StringToAddressExA.ok
 
 # Patchset ntdll-ThreadTime
 # |

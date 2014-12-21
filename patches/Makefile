@@ -591,6 +591,7 @@ gdi32-MaxPixelFormats.ok:
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#34978] Multiple applications need EnumDisplayDevicesW implementation
+# |   *	[#37709] GetMonitorInfo returns the same name for all monitors
 # |
 # | Modified files:
 # |   *	dlls/gdi32/driver.c, dlls/user32/misc.c, dlls/winex11.drv/xinerama.c

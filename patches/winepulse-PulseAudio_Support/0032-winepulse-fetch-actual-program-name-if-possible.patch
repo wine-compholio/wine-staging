@@ -1,0 +1,180 @@
+From 085ca85b9ae31219641efb496028c5f25669a920 Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Sun, 21 Dec 2014 23:49:41 +0000
+Subject: [PATCH] winepulse: fetch actual program name if possible
+
+---
+ dlls/winepulse.drv/Makefile.in |   2 +-
+ dlls/winepulse.drv/mmdevdrv.c  | 126 +++++++++++++++++++++++++++++++++++++++--
+ 2 files changed, 123 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/winepulse.drv/Makefile.in b/dlls/winepulse.drv/Makefile.in
+index 158bbc0..27af076 100644
+--- a/dlls/winepulse.drv/Makefile.in
++++ b/dlls/winepulse.drv/Makefile.in
+@@ -1,5 +1,5 @@
+ MODULE    = winepulse.drv
+-IMPORTS   = dxguid uuid winmm user32 advapi32 ole32
++IMPORTS   = dxguid uuid winmm user32 advapi32 ole32 version
+ EXTRALIBS = @PULSELIBS@ $(PTHREAD_LIBS)
+ EXTRAINCL = @PULSEINCL@
+ 
+diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
+index ff5f58a..6e2f2df 100644
+--- a/dlls/winepulse.drv/mmdevdrv.c
++++ b/dlls/winepulse.drv/mmdevdrv.c
+@@ -60,6 +60,8 @@
+ 
+ #include "wine/list.h"
+ 
++#include "mimeole.h"
++
+ #define NULL_PTR_ERR MAKE_HRESULT(SEVERITY_ERROR, FACILITY_WIN32, RPC_X_NULL_REF_POINTER)
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(pulse);
+@@ -424,11 +426,117 @@ static void pulse_probe_settings(int render, WAVEFORMATEXTENSIBLE *fmt) {
+     fmt->dwChannelMask = pulse_channel_map_to_channel_mask(&map);
+ }
+ 
++static BOOL extract_ver_productname(void *data, WORD language, WORD codepage, LPVOID *productname, unsigned int *pnlen)
++{
++    WCHAR pn[37];
++    const WCHAR product_nameW[] = {'\\','S','t','r','i','n','g','F','i','l','e','I','n','f','o','\\','%','0','4','x','%','0','4','x','\\','P','r','o','d','u','c','t','N','a','m','e',0};
++
++    sprintfW(pn, product_nameW, language, codepage);
++
++    return VerQueryValueW(data, pn, productname, pnlen);
++}
++
++static char* get_program_name(WCHAR *path)
++{
++    DWORD datasize, translatesize;
++    char *ret;
++    void *data;
++    LPVOID productname;
++    unsigned int pnlen, len, i;
++    int item;
++    LCID locale;
++
++    struct LANGANDCODEPAGE {
++        WORD language;
++        WORD code_page;
++    } *translate;
++
++    const WCHAR translationW[] = {'\\','V','a','r','F','i','l','e','I','n','f','o','\\','T','r','a','n','s','l','a','t','i','o','n',0};
++
++    datasize = GetFileVersionInfoSizeW(path, NULL);
++    if (datasize == 0) {
++        TRACE("GetFileVersionInfoSize failed with error %d\n", GetLastError());
++        return NULL;
++    }
++
++    data = HeapAlloc(GetProcessHeap(), 0, datasize);
++    if (!data) {
++        WARN("Out of memory\n");
++        return NULL;
++    }
++
++    if (!GetFileVersionInfoW(path, 0, datasize, data)) {
++        TRACE("GetFileVersionInfo failed with error %d\n", GetLastError());
++        return NULL;
++    }
++
++    if (!VerQueryValueW(data, translationW, (LPVOID*)&translate, &translatesize)) {
++        return NULL;
++    }
++
++    productname = NULL;
++    pnlen = 0;
++
++    if (translatesize < sizeof(struct LANGANDCODEPAGE)) {
++        HeapFree(GetProcessHeap(), 0, data);
++        return NULL;
++    }
++
++    locale = GetThreadLocale();
++
++    if (extract_ver_productname(data, translate[0].language, translate[0].code_page, &productname, &pnlen)) {
++        item = 0;
++    } else {
++        item = -1;
++    }
++
++    if (item == -1 || translate[0].language != locale) {
++        for (i = 1; i < translatesize / sizeof(struct LANGANDCODEPAGE); i++) {
++            if (translate[i].language == locale) {
++                if (extract_ver_productname(data, translate[i].language, translate[i].code_page, &productname, &pnlen)) {
++                    item = i;
++                    break;
++                }
++            } else if (PRIMARYLANGID(translate[item].language) != PRIMARYLANGID(locale) &&
++                (PRIMARYLANGID(translate[i].language) == PRIMARYLANGID(locale) || PRIMARYLANGID(translate[i].language) == LANG_NEUTRAL))
++                if (extract_ver_productname(data, translate[i].language, translate[i].code_page, &productname, &pnlen)) {
++                    item = i;
++                }
++        }
++    } else {
++        item = 0;
++    }
++
++    if (item == -1 || pnlen == 0) {
++        HeapFree(GetProcessHeap(), 0, data);
++        return NULL;
++    }
++
++    /* If you change the code page of a version block in MSVC, it'll still encode it
++     * as UTF-16. It's not clear whether this is a bug in MSVC or just a quirk of
++     * Windows. In the absence of anything conclusive, we return NULL here if
++     * it's an unexpected code page - in practice, it seems to always be UTF-16
++     * anyway. */
++    if (translate[item].code_page != CP_UNICODE) {
++        WARN("Unexpected code page: %u\n", translate[item].code_page);
++        HeapFree(GetProcessHeap(), 0, data);
++        return NULL;
++    }
++
++    len = WideCharToMultiByte(CP_UTF8, 0, productname, -1, NULL, 0, NULL, NULL);
++    ret = HeapAlloc(GetProcessHeap(), 0, len);
++    WideCharToMultiByte(CP_UTF8, 0, productname, -1, ret, len, NULL, NULL);
++
++    HeapFree(GetProcessHeap(), 0, data);
++
++    return ret;
++}
++
+ static HRESULT pulse_connect(void)
+ {
+     int len;
+     WCHAR path[PATH_MAX], *name;
+-    char *str;
++    char *str, *vername;
+ 
+     if (!pulse_thread)
+     {
+@@ -452,10 +560,20 @@ static HRESULT pulse_connect(void)
+         name = path;
+     else
+         name++;
+-    len = WideCharToMultiByte(CP_UNIXCP, 0, name, -1, NULL, 0, NULL, NULL);
+-    str = pa_xmalloc(len);
+-    WideCharToMultiByte(CP_UNIXCP, 0, name, -1, str, len, NULL, NULL);
++
++    vername = get_program_name(path);
++
++    if (vername) {
++        str = pa_xmalloc(strlen(vername)+1);
++        strcpy(str, vername);
++        HeapFree(GetProcessHeap(), 0, vername);
++    } else {
++        len = WideCharToMultiByte(CP_UNIXCP, 0, name, -1, NULL, 0, NULL, NULL);
++        str = pa_xmalloc(len);
++        WideCharToMultiByte(CP_UNIXCP, 0, name, -1, str, len, NULL, NULL);
++    }
+     TRACE("Name: %s\n", str);
++
+     pulse_ctx = pa_context_new(pa_mainloop_get_api(pulse_ml), str);
+     pa_xfree(str);
+     if (!pulse_ctx) {
+-- 
+2.0.4
+

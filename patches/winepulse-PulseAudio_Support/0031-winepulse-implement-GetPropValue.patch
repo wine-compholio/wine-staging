@@ -1,15 +1,15 @@
-From b6c4b15d71542a567f6ca67fe4d0463b04c5fedc Mon Sep 17 00:00:00 2001
+From 0329e30fe4fe51ec5c7923d11987aa6c28cbd773 Mon Sep 17 00:00:00 2001
 From: Mark Harmstone <mark@harmstone.com>
 Date: Thu, 4 Dec 2014 21:36:42 +0000
-Subject: [PATCH] winepulse: implement GetPropValue
+Subject: winepulse: implement GetPropValue
 
 ---
- dlls/winepulse.drv/mmdevdrv.c         | 153 ++++++++++++++++++++++++++++++++++
+ dlls/winepulse.drv/mmdevdrv.c         | 155 ++++++++++++++++++++++++++++++++++
  dlls/winepulse.drv/winepulse.drv.spec |   1 +
- 2 files changed, 154 insertions(+)
+ 2 files changed, 156 insertions(+)
 
 diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
-index 37ff7ee..3acbca5 100644
+index ea20c2b..986584c 100644
 --- a/dlls/winepulse.drv/mmdevdrv.c
 +++ b/dlls/winepulse.drv/mmdevdrv.c
 @@ -52,6 +52,7 @@
@@ -20,7 +20,7 @@ index 37ff7ee..3acbca5 100644
  #include "mmdeviceapi.h"
  #include "audioclient.h"
  #include "endpointvolume.h"
-@@ -3430,3 +3431,155 @@ HRESULT WINAPI AUDDRV_GetAudioSessionManager(IMMDevice *device,
+@@ -3437,3 +3438,157 @@ HRESULT WINAPI AUDDRV_GetAudioSessionManager(IMMDevice *device,
      *out = &This->IAudioSessionManager2_iface;
      return S_OK;
  }
@@ -89,12 +89,12 @@ index 37ff7ee..3acbca5 100644
 +    return S_OK;
 +}
 +
-+typedef struct {
++struct pulse_prop_values_info_cb_data {
 +    const PROPERTYKEY *prop;
 +    PROPVARIANT *pv;
 +    GUID *guid;
 +    HRESULT hr;
-+} pulse_prop_values_info_cb_data;
++};
 +
 +static const PROPERTYKEY devicepath_key = { /* undocumented? - {b3f8fa53-0004-438e-9003-51a46e139bfc},2 */
 +    {0xb3f8fa53, 0x0004, 0x438e, {0x90, 0x03, 0x51, 0xa4, 0x6e, 0x13, 0x9b, 0xfc}}, 2
@@ -102,45 +102,46 @@ index 37ff7ee..3acbca5 100644
 +
 +static void pulse_prop_values_sink_info_cb(pa_context *c, const pa_sink_info *i, int eol, void *userdata)
 +{
-+    pulse_prop_values_info_cb_data *st = (pulse_prop_values_info_cb_data*)userdata;
++    struct pulse_prop_values_info_cb_data *st = userdata;
 +
-+    if (!i)
-+        return;
++    if (i) {
++        if (IsEqualPropertyKey(*st->prop, devicepath_key))
++            st->hr = pulse_set_device_path(i->proplist, i->index, st->guid, st->pv);
++        else if (IsEqualPropertyKey(*st->prop, PKEY_AudioEndpoint_FormFactor)) {
++            st->pv->vt = VT_UI4;
++            st->pv->u.ulVal = Speakers;
++            st->hr = S_OK;
++        } else
++            st->hr = E_NOTIMPL;
++    }
 +
-+    if (IsEqualPropertyKey(*st->prop, devicepath_key))
-+        st->hr = pulse_set_device_path(i->proplist, i->index, st->guid, st->pv);
-+    else if (IsEqualPropertyKey(*st->prop, PKEY_AudioEndpoint_FormFactor)) {
-+        st->pv->vt = VT_UI4;
-+        st->pv->u.ulVal = Speakers;
-+
-+        st->hr = S_OK;
-+    } else
-+        st->hr = E_NOTIMPL;
++    pthread_cond_signal(&pulse_cond);
 +}
 +
 +static void pulse_prop_values_source_info_cb(pa_context *c, const pa_source_info *i, int eol, void *userdata)
 +{
-+    pulse_prop_values_info_cb_data *st = (pulse_prop_values_info_cb_data*)userdata;
++    struct pulse_prop_values_info_cb_data *st = userdata;
 +
-+    if (!i)
-+        return;
++    if (i)
++    {
++        if (IsEqualPropertyKey(*st->prop, devicepath_key))
++            st->hr = pulse_set_device_path(i->proplist, i->index, st->guid, st->pv);
++        else if (IsEqualPropertyKey(*st->prop, PKEY_AudioEndpoint_FormFactor)) {
++            st->pv->vt = VT_UI4;
++            st->pv->u.ulVal = (i->monitor_of_sink == PA_INVALID_INDEX) ? Microphone : LineLevel;
++            st->hr = S_OK;
++        } else
++            st->hr = E_NOTIMPL;
++    }
 +
-+    if (IsEqualPropertyKey(*st->prop, devicepath_key)) {
-+        st->hr = pulse_set_device_path(i->proplist, i->index, st->guid, st->pv);
-+    } else if (IsEqualPropertyKey(*st->prop, PKEY_AudioEndpoint_FormFactor)) {
-+        st->pv->vt = VT_UI4;
-+        st->pv->u.ulVal = (i->monitor_of_sink == PA_INVALID_INDEX) ? Microphone : LineLevel;
-+
-+        st->hr = S_OK;
-+    } else
-+        st->hr = E_NOTIMPL;
++    pthread_cond_signal(&pulse_cond);
 +}
 +
 +HRESULT WINAPI AUDDRV_GetPropValue(GUID *guid, const PROPERTYKEY *prop, PROPVARIANT *out)
 +{
++    struct pulse_prop_values_info_cb_data userdata;
 +    char name[256];
 +    EDataFlow flow;
-+    pulse_prop_values_info_cb_data userdata;
 +    pa_operation *o;
 +
 +    TRACE("%s, (%s,%u), %p\n", wine_dbgstr_guid(guid), wine_dbgstr_guid(&prop->fmtid), prop->pid, out);
@@ -163,16 +164,17 @@ index 37ff7ee..3acbca5 100644
 +    userdata.guid = guid;
 +    userdata.hr = E_FAIL;
 +
++    pthread_mutex_lock(&pulse_lock);
 +    if (flow == eRender)
 +        o = pa_context_get_sink_info_by_name(pulse_ctx, name, &pulse_prop_values_sink_info_cb, &userdata);
 +     else
 +        o = pa_context_get_source_info_by_name(pulse_ctx, name, &pulse_prop_values_source_info_cb, &userdata);
-+
-+    if (!o)
-+        return E_FAIL;
-+
-+    while (pa_operation_get_state(o) == PA_OPERATION_RUNNING) { }
-+    pa_operation_unref(o);
++    if (o) {
++        while (pa_operation_get_state(o) == PA_OPERATION_RUNNING)
++            pthread_cond_wait(&pulse_cond, &pulse_lock);
++        pa_operation_unref(o);
++    }
++    pthread_mutex_unlock(&pulse_lock);
 +
 +    return userdata.hr;
 +}
@@ -186,5 +188,5 @@ index 612bf46..adda949 100644
  @ stdcall -private GetAudioSessionManager(ptr ptr) AUDDRV_GetAudioSessionManager
 +@ stdcall -private GetPropValue(ptr ptr ptr) AUDDRV_GetPropValue
 -- 
-2.0.4
+2.1.3
 

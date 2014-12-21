@@ -1,4 +1,4 @@
-From daf353964820e0c9c3b49a5dab3eb952f27d27c3 Mon Sep 17 00:00:00 2001
+From 195910962f9d93ee1cad8278ed0ba31d4efc5d34 Mon Sep 17 00:00:00 2001
 From: Mark Harmstone <mark@harmstone.com>
 Date: Mon, 3 Nov 2014 02:06:40 +0000
 Subject: winepulse: expose audio devices directly to programs
@@ -15,11 +15,11 @@ Changes by Sebastian Lackner <sebastian@fds-team.de>:
 * Fixed compiler warnings with -Werror
 * Some style fixes and better error handling
 ---
- dlls/winepulse.drv/mmdevdrv.c | 227 ++++++++++++++++++++++++++++++++++++++++--
- 1 file changed, 220 insertions(+), 7 deletions(-)
+ dlls/winepulse.drv/mmdevdrv.c | 233 ++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 226 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
-index e755e8a..f6688d8 100644
+index e755e8a..d29fa06 100644
 --- a/dlls/winepulse.drv/mmdevdrv.c
 +++ b/dlls/winepulse.drv/mmdevdrv.c
 @@ -85,6 +85,11 @@ const WCHAR pulse_keyW[] = {'S','o','f','t','w','a','r','e','\\',
@@ -78,7 +78,7 @@ index e755e8a..f6688d8 100644
      if (ret < 0) {
          WARN("Returns %i\n", ret);
          return AUDCLNT_E_ENDPOINT_CREATE_FAILED;
-@@ -740,11 +758,127 @@ static HRESULT pulse_stream_connect(ACImpl *This, UINT32 period_bytes) {
+@@ -740,11 +758,131 @@ static HRESULT pulse_stream_connect(ACImpl *This, UINT32 period_bytes) {
      return S_OK;
  }
  
@@ -140,61 +140,65 @@ index e755e8a..f6688d8 100644
 +};
 +
 +static void pulse_all_sink_info_cb(pa_context *c, const pa_sink_info *i, int eol, void *userdata) {
-+    struct pulse_all_info_cb_data *st = (struct pulse_all_info_cb_data*)userdata;
++    struct pulse_all_info_cb_data *st = userdata;
 +    void *tmp;
 +    DWORD len;
 +
-+    if (!i)
-+        return;
++    if (!i) goto out;
 +
 +    tmp = HeapReAlloc(GetProcessHeap(), 0, st->ids,  sizeof(WCHAR*) * (st->num + 1));
-+    if (!tmp) return;
++    if (!tmp) goto out;
 +    st->ids = tmp;
 +
 +    tmp = HeapReAlloc(GetProcessHeap(), 0, st->keys, sizeof(GUID) * (st->num + 1));
-+    if (!tmp) return;
++    if (!tmp) goto out;
 +    st->keys = tmp;
 +
 +    len = MultiByteToWideChar(CP_UTF8, 0, i->description, -1, NULL, 0);
-+    if (!len) return;
++    if (!len) goto out;
 +
 +    st->ids[st->num] = HeapAlloc(GetProcessHeap(), 0, len * sizeof(WCHAR));
-+    if (!st->ids[st->num]) return;
++    if (!st->ids[st->num]) goto out;
 +
 +    MultiByteToWideChar(CP_UTF8, 0, i->description, -1, st->ids[st->num], len);
 +    if (!get_device_guid(st->flow, i->name, &(st->keys[st->num])))
 +        CoCreateGuid(&(st->keys[st->num]));
 +
 +    st->num++;
++
++out:
++    pthread_cond_signal(&pulse_cond);
 +}
 +
 +static void pulse_all_source_info_cb(pa_context *c, const pa_source_info *i, int eol, void *userdata) {
-+    struct pulse_all_info_cb_data *st = (struct pulse_all_info_cb_data*)userdata;
++    struct pulse_all_info_cb_data *st = userdata;
 +    void *tmp;
 +    DWORD len;
 +
-+    if (!i)
-+        return;
++    if (!i) goto out;
 +
 +    tmp  = HeapReAlloc(GetProcessHeap(), 0, st->ids,  sizeof(WCHAR*) * (st->num + 1));
-+    if (!tmp) return;
++    if (!tmp) goto out;
 +    st->ids = tmp;
 +
 +    tmp = HeapReAlloc(GetProcessHeap(), 0, st->keys, sizeof(GUID) * (st->num + 1));
-+    if (!tmp) return;
++    if (!tmp) goto out;
 +    st->keys = tmp;
 +
 +    len = MultiByteToWideChar(CP_UTF8, 0, i->description, -1, NULL, 0);
-+    if (!len) return;
++    if (!len) goto out;
 +
 +    st->ids[st->num] = HeapAlloc(GetProcessHeap(), 0, len * sizeof(WCHAR));
-+    if (!st->ids[st->num]) return;
++    if (!st->ids[st->num]) goto out;
 +
 +    MultiByteToWideChar(CP_UTF8, 0, i->description, -1, st->ids[st->num], len);
 +    if (!get_device_guid(st->flow, i->name, &(st->keys[st->num])))
 +        CoCreateGuid(&(st->keys[st->num]));
 +
 +    st->num++;
++
++out:
++    pthread_cond_signal(&pulse_cond);
 +}
 +
 +HRESULT WINAPI AUDDRV_GetEndpointIDs(EDataFlow flow, WCHAR ***ids, GUID **keys,
@@ -207,7 +211,7 @@ index e755e8a..f6688d8 100644
  
      TRACE("%d %p %p %p\n", flow, ids, num, def_index);
  
-@@ -778,6 +912,25 @@ HRESULT WINAPI AUDDRV_GetEndpointIDs(EDataFlow flow, const WCHAR ***ids, GUID **
+@@ -778,6 +916,27 @@ HRESULT WINAPI AUDDRV_GetEndpointIDs(EDataFlow flow, const WCHAR ***ids, GUID **
      else
          (*keys)[0] = pulse_capture_guid;
  
@@ -216,15 +220,17 @@ index e755e8a..f6688d8 100644
 +    st.keys = *keys;
 +    st.num  = *num;
 +
++    pthread_mutex_lock(&pulse_lock);
 +    if (flow == eRender)
 +        o = pa_context_get_sink_info_list(pulse_ctx, &pulse_all_sink_info_cb, &st);
 +    else
 +        o = pa_context_get_source_info_list(pulse_ctx, &pulse_all_source_info_cb, &st);
-+
-+    if (o){
-+        while (pa_operation_get_state(o) == PA_OPERATION_RUNNING){ }
++    if (o) {
++        while (pa_operation_get_state(o) == PA_OPERATION_RUNNING)
++            pthread_cond_wait(&pulse_cond, &pulse_lock);
 +        pa_operation_unref(o);
 +    }
++    pthread_mutex_unlock(&pulse_lock);
 +
 +    *ids  = st.ids;
 +    *keys = st.keys;
@@ -233,7 +239,7 @@ index e755e8a..f6688d8 100644
      return S_OK;
  }
  
-@@ -794,8 +947,66 @@ int WINAPI AUDDRV_GetPriority(void)
+@@ -794,8 +953,66 @@ int WINAPI AUDDRV_GetPriority(void)
      return SUCCEEDED(hr) ? 3 : 0;
  }
  
@@ -300,7 +306,7 @@ index e755e8a..f6688d8 100644
      HRESULT hr;
      ACImpl *This;
      int i;
-@@ -813,12 +1024,13 @@ HRESULT WINAPI AUDDRV_GetAudioEndpoint(GUID *guid, IMMDevice *dev, IAudioClient
+@@ -813,12 +1030,13 @@ HRESULT WINAPI AUDDRV_GetAudioEndpoint(GUID *guid, IMMDevice *dev, IAudioClient
      }
  
      TRACE("%s %p %p\n", debugstr_guid(guid), dev, out);
@@ -316,7 +322,7 @@ index e755e8a..f6688d8 100644
  
      *out = NULL;
      pthread_mutex_lock(&pulse_lock);
-@@ -841,6 +1053,7 @@ HRESULT WINAPI AUDDRV_GetAudioEndpoint(GUID *guid, IMMDevice *dev, IAudioClient
+@@ -841,6 +1059,7 @@ HRESULT WINAPI AUDDRV_GetAudioEndpoint(GUID *guid, IMMDevice *dev, IAudioClient
      This->parent = dev;
      for (i = 0; i < PA_CHANNELS_MAX; ++i)
          This->vol[i] = 1.f;

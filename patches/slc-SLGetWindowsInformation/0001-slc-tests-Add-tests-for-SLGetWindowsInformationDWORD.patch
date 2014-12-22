@@ -1,0 +1,138 @@
+From 509bb7172754c95f340aacfeae365e6da7007305 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 22 Dec 2014 07:26:37 +0100
+Subject: slc/tests: Add tests for SLGetWindowsInformationDWORD.
+
+---
+ configure.ac               |  1 +
+ dlls/slc/tests/Makefile.in |  5 +++
+ dlls/slc/tests/slc.c       | 80 ++++++++++++++++++++++++++++++++++++++++++++++
+ include/slerror.h          |  1 +
+ 4 files changed, 87 insertions(+)
+ create mode 100644 dlls/slc/tests/Makefile.in
+ create mode 100644 dlls/slc/tests/slc.c
+
+diff --git a/configure.ac b/configure.ac
+index 2fa4dcc..0eaa26e 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -3228,6 +3228,7 @@ WINE_CONFIG_DLL(shlwapi,,[implib,po])
+ WINE_CONFIG_TEST(dlls/shlwapi/tests)
+ WINE_CONFIG_DLL(slbcsp)
+ WINE_CONFIG_DLL(slc,,[implib])
++WINE_CONFIG_TEST(dlls/slc/tests)
+ WINE_CONFIG_DLL(snmpapi,,[implib])
+ WINE_CONFIG_TEST(dlls/snmpapi/tests)
+ WINE_CONFIG_DLL(softpub)
+diff --git a/dlls/slc/tests/Makefile.in b/dlls/slc/tests/Makefile.in
+new file mode 100644
+index 0000000..51b648c
+--- /dev/null
++++ b/dlls/slc/tests/Makefile.in
+@@ -0,0 +1,5 @@
++TESTDLL   = slc.dll
++IMPORTS   = slc
++
++C_SRCS = \
++	slc.c
+diff --git a/dlls/slc/tests/slc.c b/dlls/slc/tests/slc.c
+new file mode 100644
+index 0000000..723cd4c
+--- /dev/null
++++ b/dlls/slc/tests/slc.c
+@@ -0,0 +1,80 @@
++/*
++ * Copyright 2014 Sebastian Lackner
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include <stdarg.h>
++
++#include "windef.h"
++#include "winbase.h"
++#include "winerror.h"
++
++#include "slpublic.h"
++#include "slerror.h"
++
++#include <wine/test.h>
++
++static void test_SLGetWindowsInformationDWORD(void)
++{
++    static const WCHAR NonexistentLicenseValueW[] = {'N','o','n','e','x','i','s','t','e','n','t','-',
++                                                     'L','i','c','e','n','s','e','-','V','a','l','u','e',0};
++    static const WCHAR KernelMUILanguageAllowedW[] = {'K','e','r','n','e','l','-','M','U','I','-',
++                                                      'L','a','n','g','u','a','g','e','-','A','l','l','o','w','e','d',0};
++    static const WCHAR KernelMUINumberAllowedW[] = {'K','e','r','n','e','l','-','M','U','I','-',
++                                                    'N','u','m','b','e','r','-','A','l','l','o','w','e','d',0};
++    static const WCHAR emptyW[] = {0};
++    DWORD value;
++    HRESULT res;
++
++    res = SLGetWindowsInformationDWORD(NonexistentLicenseValueW, NULL);
++    todo_wine
++    ok(res == E_INVALIDARG, "expected E_INVALIDARG, got %08x\n", res);
++
++    res = SLGetWindowsInformationDWORD(NULL, &value);
++    todo_wine
++    ok(res == E_INVALIDARG, "expected E_INVALIDARG, got %08x\n", res);
++
++    value = 0xdeadbeef;
++    res = SLGetWindowsInformationDWORD(NonexistentLicenseValueW, &value);
++    todo_wine
++    ok(res == SL_E_VALUE_NOT_FOUND, "expected SL_E_VALUE_NOT_FOUND, got %08x\n", res);
++    ok(value == 0xdeadbeef, "expected value = 0xdeadbeef, got %u\n", value);
++
++    value = 0xdeadbeef;
++    res = SLGetWindowsInformationDWORD(emptyW, &value);
++    ok(res == SL_E_RIGHT_NOT_GRANTED || broken(res == 0xd000000d) /* Win 8 */,
++       "expected SL_E_RIGHT_NOT_GRANTED, got %08x\n", res);
++    ok(value == 0xdeadbeef, "expected value = 0xdeadbeef, got %u\n", value);
++
++    value = 0xdeadbeef;
++    res = SLGetWindowsInformationDWORD(KernelMUILanguageAllowedW, &value);
++    todo_wine
++    ok(res == SL_E_DATATYPE_MISMATCHED, "expected SL_E_DATATYPE_MISMATCHED, got %08x\n", res);
++    ok(value == 0xdeadbeef, "expected value = 0xdeadbeef, got %u\n", value);
++
++    value = 0xdeadbeef;
++    res = SLGetWindowsInformationDWORD(KernelMUINumberAllowedW, &value);
++    todo_wine
++    ok(res == S_OK, "expected S_OK, got %u\n", res);
++    todo_wine
++    ok(value != 0xdeadbeef, "expected value != 0xdeadbeef\n");
++}
++
++
++START_TEST(slc)
++{
++    test_SLGetWindowsInformationDWORD();
++}
+diff --git a/include/slerror.h b/include/slerror.h
+index 9c800f6..8b45d99 100644
+--- a/include/slerror.h
++++ b/include/slerror.h
+@@ -19,6 +19,7 @@
+ #ifndef __WINE_SLERROR_H
+ #define __WINE_SLERROR_H
+ 
++#define SL_E_VALUE_NOT_FOUND          0xC004F012
+ #define SL_E_RIGHT_NOT_GRANTED        0xC004F013
+ #define SL_E_DATATYPE_MISMATCHED      0xC004F01E
+ 
+-- 
+2.2.1
+

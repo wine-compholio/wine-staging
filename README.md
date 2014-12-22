@@ -37,7 +37,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [7]:**
+**Bugfixes and features included in the next upcoming release [8]:**
 
 * Add stub for D3DXComputeTangentFrameEx ([Wine Bug #31984](https://bugs.winehq.org/show_bug.cgi?id=31984))
 * Add stub for D3DXIntersect
@@ -46,6 +46,7 @@ Included bug fixes and improvements
 * GetMonitorInfo returns the same name for all monitors ([Wine Bug #37709](https://bugs.winehq.org/show_bug.cgi?id=37709))
 * Implement ID3DXEffect::FindNextValidTechnique ([Wine Bug #34101](https://bugs.winehq.org/show_bug.cgi?id=34101))
 * Implement IDXGIOutput::GetDesc
+* Support for SLGetWindowsInformationDWORD ([Wine Bug #36709](https://bugs.winehq.org/show_bug.cgi?id=36709))
 
 
 **Bugs fixed in Wine Staging 1.7.33 [119]:**

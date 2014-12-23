@@ -1261,7 +1261,7 @@ ntoskrnl-Emulator.ok: ntdll-User_Shared_Data.ok
 # |   *	[#36777] vSphere needs IoCsqInitialize
 # |
 # | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/Makefile.in, include/ddk/csq.h
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec
 # |
 .INTERMEDIATE: ntoskrnl-IoCsqInitialize.ok
 ntoskrnl-IoCsqInitialize.ok:

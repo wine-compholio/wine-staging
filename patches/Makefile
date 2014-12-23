@@ -142,6 +142,7 @@ PATCHLIST := \
 	ws2_32-Connect_Time.ok \
 	ws2_32-TransmitFile.ok \
 	ws2_32-WriteWatches.ok \
+	ws2_32-getaddrinfo.ok \
 	wtsapi32-EnumerateProcesses.ok
 
 .PHONY: install
@@ -2625,6 +2626,21 @@ ws2_32-WriteWatches.ok:
 	@( \
 		echo '+    { "Sebastian Lackner", "ws2_32: Avoid race-conditions of async WSARecv() operations with write watches.", 1 },'; \
 	) > ws2_32-WriteWatches.ok
+
+# Patchset ws2_32-getaddrinfo
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#29609] Try harder to get the host name address in getaddrinfo()
+# |
+# | Modified files:
+# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c
+# |
+.INTERMEDIATE: ws2_32-getaddrinfo.ok
+ws2_32-getaddrinfo.ok:
+	$(call APPLY_FILE,ws2_32-getaddrinfo/0001-ws2_32-Try-harder-to-get-the-host-name-address-in-ge.patch)
+	@( \
+		echo '+    { "Bruno Jesus", "ws2_32: Try harder to get the host name address in getaddrinfo().", 1 },'; \
+	) > ws2_32-getaddrinfo.ok
 
 # Patchset wtsapi32-EnumerateProcesses
 # |

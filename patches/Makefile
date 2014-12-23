@@ -942,6 +942,9 @@ ntdll-DOS_Attributes.ok:
 
 # Patchset ntdll-DVD_Read_Size
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37767] IOCTL_DVD_READ_STRUCTURE expects the wrong size of output buffer for some requests
+# |
 # | Modified files:
 # |   *	dlls/ntdll/cdrom.c
 # |

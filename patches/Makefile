@@ -64,6 +64,7 @@ PATCHLIST := \
 	msvcp90-basic_string_wchar_dtor.ok \
 	msvcrt-atof_strtod.ok \
 	ntdll-DOS_Attributes.ok \
+	ntdll-DVD_Read_Size.ok \
 	ntdll-DllRedirects.ok \
 	ntdll-Dynamic_DST.ok \
 	ntdll-Exception.ok \
@@ -940,6 +941,18 @@ ntdll-DOS_Attributes.ok:
 		echo '+    { "Erich E. Hoover", "libport: Add support for FreeBSD style extended attributes.", 1 },'; \
 		echo '+    { "Erich E. Hoover", "ntdll: Perform the Unix-style hidden file check within the unified file info grabbing routine.", 1 },'; \
 	) > ntdll-DOS_Attributes.ok
+
+# Patchset ntdll-DVD_Read_Size
+# |
+# | Modified files:
+# |   *	dlls/ntdll/cdrom.c
+# |
+.INTERMEDIATE: ntdll-DVD_Read_Size.ok
+ntdll-DVD_Read_Size.ok:
+	$(call APPLY_FILE,ntdll-DVD_Read_Size/0001-ntdll-Fix-expected-IOCTL_DVD_READ_STRUCTURE-expected.patch)
+	@( \
+		echo '+    { "Erich E. Hoover", "ntdll: Fix expected IOCTL_DVD_READ_STRUCTURE expected output size.", 1 },'; \
+	) > ntdll-DVD_Read_Size.ok
 
 # Patchset ntdll-DllRedirects
 # |

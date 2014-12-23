@@ -1,0 +1,51 @@
+From 162a8926d371810046a9b651675672a4e9f6aeb2 Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Mon, 22 Dec 2014 20:32:29 -0700
+Subject: ntdll: Fix expected IOCTL_DVD_READ_STRUCTURE expected output size.
+
+---
+ dlls/ntdll/cdrom.c | 21 ++++++++++++++++++++-
+ 1 file changed, 20 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/cdrom.c b/dlls/ntdll/cdrom.c
+index 62c3d16..7101e43 100644
+--- a/dlls/ntdll/cdrom.c
++++ b/dlls/ntdll/cdrom.c
+@@ -2492,6 +2492,25 @@ static NTSTATUS DVD_GetRegion(int fd, PDVD_REGION region)
+ #endif
+ }
+ 
++static DWORD DVD_ReadStructureSize(const DVD_READ_STRUCTURE *structure)
++{
++    switch (structure->Format)
++    {
++    case DvdPhysicalDescriptor:
++        return sizeof(DVD_LAYER_DESCRIPTOR);
++    case DvdCopyrightDescriptor:
++        return sizeof(DVD_COPYRIGHT_DESCRIPTOR);
++    case DvdDiskKeyDescriptor:
++        return sizeof(DVD_DISK_KEY_DESCRIPTOR);
++    case DvdBCADescriptor:
++        return sizeof(DVD_BCA_DESCRIPTOR);
++    case DvdManufacturerDescriptor:
++        return sizeof(DVD_MANUFACTURER_DESCRIPTOR);
++    default:
++        return 0;
++    }
++}
++
+ /******************************************************************
+  *		DVD_ReadStructure
+  *
+@@ -3095,7 +3114,7 @@ NTSTATUS CDROM_DeviceIoControl(HANDLE hDevice,
+         status = DVD_GetRegion(fd, lpOutBuffer);
+         break;
+     case IOCTL_DVD_READ_STRUCTURE:
+-        sz = sizeof(DVD_LAYER_DESCRIPTOR);
++        sz = DVD_ReadStructureSize(lpInBuffer);
+         if (lpInBuffer == NULL || nInBufferSize != sizeof(DVD_READ_STRUCTURE)) status = STATUS_INVALID_PARAMETER;
+         else if (nOutBufferSize < sz || !lpOutBuffer) status = STATUS_BUFFER_TOO_SMALL;
+         else
+-- 
+1.9.1
+

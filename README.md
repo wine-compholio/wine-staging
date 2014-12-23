@@ -160,7 +160,7 @@ Included bug fixes and improvements
 * Support for process ACLs ([Wine Bug #22006](https://bugs.winehq.org/show_bug.cgi?id=22006))
 * Support for setcap on wine-preloader ([Wine Bug #26256](https://bugs.winehq.org/show_bug.cgi?id=26256))
 * Support for stored file ACLs ([Wine Bug #31858](https://bugs.winehq.org/show_bug.cgi?id=31858))
-* Support for wine64 on FreeBSD/PC-BSD ([Wine Bug #34330](https://bugs.winehq.org/show_bug.cgi?id=34330))
+* ~~Support for wine64 on FreeBSD/PC-BSD~~ ([Wine Bug #34330](https://bugs.winehq.org/show_bug.cgi?id=34330))
 * Tumblebugs 2 requires DXTn software encoding support ([Wine Bug #29586](https://bugs.winehq.org/show_bug.cgi?id=29586))
 * ~~Unity3D Editor requires ProductId registry value~~ ([Wine Bug #36964](https://bugs.winehq.org/show_bug.cgi?id=36964))
 * Update a XIM candidate position when cursor location changes ([Wine Bug #30938](https://bugs.winehq.org/show_bug.cgi?id=30938))

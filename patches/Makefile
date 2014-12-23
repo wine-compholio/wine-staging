@@ -59,7 +59,6 @@ PATCHLIST := \
 	kernel32-UTF7_Support.ok \
 	kernel32-VerifyVersionInfo.ok \
 	libs-Unicode_Collation.ok \
-	libwine-BSD_mmap_fixed.ok \
 	makedep-PARENTSPEC.ok \
 	msdmo-Fix_Typo.ok \
 	msvcp90-basic_string_wchar_dtor.ok \
@@ -839,21 +838,6 @@ libs-Unicode_Collation.ok:
 	@( \
 		echo '+    { "Dmitry Timoshkov", "libs: Fix most problems with CompareString.", 1 },'; \
 	) > libs-Unicode_Collation.ok
-
-# Patchset libwine-BSD_mmap_fixed
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34330] Support for wine64 on FreeBSD/PC-BSD
-# |
-# | Modified files:
-# |   *	libs/wine/mmap.c
-# |
-.INTERMEDIATE: libwine-BSD_mmap_fixed.ok
-libwine-BSD_mmap_fixed.ok:
-	$(call APPLY_FILE,libwine-BSD_mmap_fixed/0001-libwine-Use-try_mmap_fixed-for-wine64-on-FreeBSD.patch)
-	@( \
-		echo '+    { "André Hentschel", "libwine: Use try_mmap_fixed for wine64 on FreeBSD.", 1 },'; \
-	) > libwine-BSD_mmap_fixed.ok
 
 # Patchset makedep-PARENTSPEC
 # |

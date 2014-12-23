@@ -61,6 +61,7 @@ PATCHLIST := \
 	libs-Unicode_Collation.ok \
 	libwine-BSD_mmap_fixed.ok \
 	makedep-PARENTSPEC.ok \
+	msdmo-Fix_Typo.ok \
 	msvcp90-basic_string_wchar_dtor.ok \
 	msvcrt-atof_strtod.ok \
 	ntdll-DOS_Attributes.ok \
@@ -865,6 +866,18 @@ makedep-PARENTSPEC.ok:
 	@( \
 		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },'; \
 	) > makedep-PARENTSPEC.ok
+
+# Patchset msdmo-Fix_Typo
+# |
+# | Modified files:
+# |   *	dlls/msdmo/dmoreg.c
+# |
+.INTERMEDIATE: msdmo-Fix_Typo.ok
+msdmo-Fix_Typo.ok:
+	$(call APPLY_FILE,msdmo-Fix_Typo/0001-msdmo-Fix-invalid-usage-of-RegOpenKeyExW.patch)
+	@( \
+		echo '+    { "Mark Harmstone", "msdmo: Fix invalid usage of RegOpenKeyExW.", 1 },'; \
+	) > msdmo-Fix_Typo.ok
 
 # Patchset mshtml-sessionStorage
 # |

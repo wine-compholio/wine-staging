@@ -170,7 +170,7 @@ Included bug fixes and improvements
 * Workaround for shlwapi URLs with relative paths
 * XEMBED support for embedding Wine windows inside Linux applications
 * nVidia driver for high-end laptop cards does not list all supported resolutions
-* vSphere needs IoCsqInitialize ([Wine Bug #36777](https://bugs.winehq.org/show_bug.cgi?id=36777))
+* ~~vSphere needs IoCsqInitialize~~ ([Wine Bug #36777](https://bugs.winehq.org/show_bug.cgi?id=36777))
 * wglDescribePixelFormat should return max index for NULL descriptor ([Wine Bug #6176](https://bugs.winehq.org/show_bug.cgi?id=6176))
 * wininet should allow Accept-Encoding header for HTTP/1.0 ([Wine Bug #37046](https://bugs.winehq.org/show_bug.cgi?id=37046))
 

@@ -83,7 +83,6 @@ PATCHLIST := \
 	ntdll-User_Shared_Data.ok \
 	ntdll-WRITECOPY.ok \
 	ntoskrnl-Emulator.ok \
-	ntoskrnl-IoCsqInitialize.ok \
 	ntoskrnl-Irp_Status.ok \
 	ntoskrnl-KeSetSystemAffinityThread.ok \
 	ntoskrnl-Stub_FileObject.ok \
@@ -1257,21 +1256,6 @@ ntoskrnl-Emulator.ok: ntdll-User_Shared_Data.ok
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Emulate memory access to KI_USER_SHARED_DATA on x86_64.", 2 },'; \
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Add TRACEs for instruction emulator on x86_64 to simplify debugging.", 1 },'; \
 	) > ntoskrnl-Emulator.ok
-
-# Patchset ntoskrnl-IoCsqInitialize
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36777] vSphere needs IoCsqInitialize
-# |
-# | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec
-# |
-.INTERMEDIATE: ntoskrnl-IoCsqInitialize.ok
-ntoskrnl-IoCsqInitialize.ok:
-	$(call APPLY_FILE,ntoskrnl-IoCsqInitialize/0001-ntoskrnl.exe-Add-a-stub-for-IoCsqInitialize.patch)
-	@( \
-		echo '+    { "Austin English", "ntoskrnl.exe: Add a stub for IoCsqInitialize.", 1 },'; \
-	) > ntoskrnl-IoCsqInitialize.ok
 
 # Patchset ntoskrnl-Irp_Status
 # |

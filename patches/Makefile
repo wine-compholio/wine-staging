@@ -761,7 +761,7 @@ kernel32-GetVolumePathName.ok:
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#16550] Fix for ConnectNamedPort return value in overlapped mode
-# |   *	[#17195] Support for named pipe message mode
+# |   *	[#17195] Support for named pipe message mode (Linux only)
 # |
 # | Modified files:
 # |   *	dlls/kernel32/file.c, dlls/kernel32/sync.c, dlls/kernel32/tests/pipe.c, dlls/ntdll/file.c, server/named_pipe.c,

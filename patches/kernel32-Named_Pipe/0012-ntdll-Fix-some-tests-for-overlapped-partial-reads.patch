@@ -1,0 +1,85 @@
+From 87e6095901f7405efc256997f1e1d6f0338ab2b5 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 17 Aug 2014 01:13:44 +0200
+Subject: ntdll: Fix some tests for overlapped partial reads.
+
+Windows also sends as APC user notification for STATUS_BUFFER_OVERFLOW.
+Moreover in some cases STATUS_BUFFER_OVERFLOW is reported as success, not
+as failure.
+---
+ dlls/kernel32/file.c       | 7 ++++---
+ dlls/kernel32/tests/pipe.c | 5 -----
+ dlls/ntdll/file.c          | 4 ++--
+ 3 files changed, 6 insertions(+), 10 deletions(-)
+
+diff --git a/dlls/kernel32/file.c b/dlls/kernel32/file.c
+index 006db1c..78cfdb7 100644
+--- a/dlls/kernel32/file.c
++++ b/dlls/kernel32/file.c
+@@ -325,8 +325,9 @@ BOOL WINAPI AreFileApisANSI(void)
+ static void WINAPI FILE_ReadWriteApc(void* apc_user, PIO_STATUS_BLOCK io_status, ULONG reserved)
+ {
+     LPOVERLAPPED_COMPLETION_ROUTINE  cr = apc_user;
+-
+-    cr(RtlNtStatusToDosError(io_status->u.Status), io_status->Information, (LPOVERLAPPED)io_status);
++    NTSTATUS status = io_status->u.Status;
++    if (status == STATUS_BUFFER_OVERFLOW) status = STATUS_SUCCESS;
++    cr(RtlNtStatusToDosError(status), io_status->Information, (LPOVERLAPPED)io_status);
+ }
+ 
+ 
+@@ -358,7 +359,7 @@ BOOL WINAPI ReadFileEx(HANDLE hFile, LPVOID buffer, DWORD bytesToRead,
+     status = NtReadFile(hFile, NULL, FILE_ReadWriteApc, lpCompletionRoutine,
+                         io_status, buffer, bytesToRead, &offset, NULL);
+ 
+-    if (status && status != STATUS_PENDING)
++    if (status && status != STATUS_PENDING && status != STATUS_BUFFER_OVERFLOW)
+     {
+         SetLastError( RtlNtStatusToDosError(status) );
+         return FALSE;
+diff --git a/dlls/kernel32/tests/pipe.c b/dlls/kernel32/tests/pipe.c
+index ba49974..53f8f30 100644
+--- a/dlls/kernel32/tests/pipe.c
++++ b/dlls/kernel32/tests/pipe.c
+@@ -2489,7 +2489,6 @@ todo_wine
+     ok(wait == WAIT_IO_COMPLETION || wait == WAIT_OBJECT_0, "WaitForSingleObjectEx returned %x\n", wait);
+ 
+     ok(completion_called == 1, "completion not called after writing pipe\n");
+-    todo_wine
+     ok(completion_errorcode == 0, "completion called with error %x\n", completion_errorcode);
+     ok(completion_num_bytes == 4, "ReadFileEx returned only %d bytes\n", completion_num_bytes);
+     ok(completion_lpoverlapped == &overlapped, "completion called with wrong overlapped pointer\n");
+@@ -2513,15 +2512,11 @@ todo_wine
+     completion_called = 0;
+     ResetEvent(event);
+     ret = ReadFileEx(server, read_buf, 4, &overlapped, completion_routine);
+-    todo_wine
+     ok(ret == TRUE, "ReadFileEx failed, err=%i\n", GetLastError());
+     ok(completion_called == 0, "completion routine called before ReadFileEx returned\n");
+     wait = WaitForSingleObjectEx(event, 0, TRUE);
+-    todo_wine
+     ok(wait == WAIT_IO_COMPLETION || wait == WAIT_OBJECT_0, "WaitForSingleObjectEx returned %x\n", wait);
+-    todo_wine
+     ok(completion_called == 1, "completion not called after writing pipe\n");
+-    todo_wine
+     ok(completion_errorcode == 0, "completion called with error %x\n", completion_errorcode);
+     ok(completion_num_bytes == 4, "ReadFileEx returned only %d bytes\n", completion_num_bytes);
+     ok(completion_lpoverlapped == &overlapped, "completion called with wrong overlapped pointer\n");
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index 81f941d..d3f0c0e 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -885,8 +885,8 @@ err:
+         io_status->Information = total;
+         TRACE("= SUCCESS (%u)\n", total);
+         if (hEvent) NtSetEvent( hEvent, NULL );
+-        if (apc && !status) NtQueueApcThread( GetCurrentThread(), (PNTAPCFUNC)apc,
+-                                              (ULONG_PTR)apc_user, (ULONG_PTR)io_status, 0 );
++        if (apc && status != STATUS_END_OF_FILE) NtQueueApcThread( GetCurrentThread(), (PNTAPCFUNC)apc,
++                                                                   (ULONG_PTR)apc_user, (ULONG_PTR)io_status, 0 );
+     }
+     else
+     {
+-- 
+2.1.3
+

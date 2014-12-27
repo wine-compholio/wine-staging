@@ -1,22 +1,22 @@
-From 8acfd293ecd49b7cad340dc90e6ea6b0ed07289a Mon Sep 17 00:00:00 2001
+From 9986fca2fe9cc57f9c7a01f08fc6a826a398de47 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 19:08:30 -0700
 Subject: ws2_32: Add support for TF_DISCONNECT and TF_REUSE_SOCKET to
  TransmitFile.
 
 ---
- dlls/ws2_32/socket.c     |   17 ++++++++++--
- dlls/ws2_32/tests/sock.c |   11 +++++++-
- include/winsock.h        |    1 +
- server/protocol.def      |    6 +++++
- server/sock.c            |   66 +++++++++++++++++++++++++++++++++++++++-------
- 5 files changed, 89 insertions(+), 12 deletions(-)
+ dlls/ws2_32/socket.c     | 17 +++++++++++--
+ dlls/ws2_32/tests/sock.c | 11 +++++++-
+ include/winsock.h        |  1 +
+ server/protocol.def      |  6 +++++
+ server/sock.c            | 65 +++++++++++++++++++++++++++++++++++++++++-------
+ 5 files changed, 88 insertions(+), 12 deletions(-)
 
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index 42c7832..ddb50a5 100644
+index dbcadb3..e74aa7c 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
-@@ -2558,6 +2558,18 @@ static BOOL WS2_transmitfile_base( SOCKET s, HANDLE h, DWORD total_bytes, DWORD
+@@ -2560,6 +2560,18 @@ static BOOL WS2_transmitfile_base( SOCKET s, HANDLE h, DWORD total_bytes, DWORD
      if (buffers && WS_send( s, buffers->Tail, buffers->TailLength, 0 ) == SOCKET_ERROR)
          goto cleanup;
  
@@ -35,7 +35,7 @@ index 42c7832..ddb50a5 100644
      ret = TRUE;
  
  cleanup:
-@@ -2599,6 +2611,7 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD total_bytes, DWOR
+@@ -2601,6 +2613,7 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD total_bytes, DWOR
  {
      union generic_unix_sockaddr uaddr;
      unsigned int uaddrlen = sizeof(uaddr);
@@ -43,7 +43,7 @@ index 42c7832..ddb50a5 100644
      IO_STATUS_BLOCK *iosb = (IO_STATUS_BLOCK *)overlapped;
      struct ws2_transmitfile_async *wsa;
      int status, fd;
-@@ -2619,8 +2632,8 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD total_bytes, DWOR
+@@ -2621,8 +2634,8 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD total_bytes, DWOR
          return FALSE;
      }
      release_sock_fd( s, fd );
@@ -55,10 +55,10 @@ index 42c7832..ddb50a5 100644
      if (!overlapped)
          return WS2_transmitfile_base( s, h, total_bytes, bytes_per_send, overlapped, buffers, flags );
 diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
-index dbb762a..5bf23a0 100644
+index 9708cf1..cf9ba23 100644
 --- a/dlls/ws2_32/tests/sock.c
 +++ b/dlls/ws2_32/tests/sock.c
-@@ -6684,8 +6684,17 @@ static void test_TransmitFile(void)
+@@ -7008,8 +7008,17 @@ static void test_TransmitFile(void)
      ok(iret == WAIT_OBJECT_0, "Overlapped TransmitFile failed.\n");
      compare_file(file, dest, 10);
  
@@ -78,10 +78,10 @@ index dbb762a..5bf23a0 100644
      bret = pTransmitFile(client, NULL, 0, 0, NULL, NULL, 0);
      err = WSAGetLastError();
 diff --git a/include/winsock.h b/include/winsock.h
-index 06e6309..4426557 100644
+index 50237e8..e53aa1e 100644
 --- a/include/winsock.h
 +++ b/include/winsock.h
-@@ -810,6 +810,7 @@ typedef struct WS(WSAData)
+@@ -814,6 +814,7 @@ typedef struct WS(WSAData)
  
  /* internal per-socket flags */
  #ifdef __WINESRC__
@@ -90,7 +90,7 @@ index 06e6309..4426557 100644
  #define FD_WINE_NONBLOCKING        0x20000000
  #define FD_WINE_CONNECTED          0x40000000
 diff --git a/server/protocol.def b/server/protocol.def
-index c9270ea..328f8a8 100644
+index fc6bec5..64e3f18 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -1208,6 +1208,12 @@ enum server_fd_type
@@ -107,7 +107,7 @@ index c9270ea..328f8a8 100644
  @REQ(set_socket_event)
      obj_handle_t  handle;        /* handle to the socket */
 diff --git a/server/sock.c b/server/sock.c
-index 4adad0f..15afe81 100644
+index 7c0212e..4d51950 100644
 --- a/server/sock.c
 +++ b/server/sock.c
 @@ -80,6 +80,7 @@
@@ -118,16 +118,15 @@ index 4adad0f..15afe81 100644
  #define FD_WINE_LISTENING          0x10000000
  #define FD_WINE_NONBLOCKING        0x20000000
  #define FD_WINE_CONNECTED          0x40000000
-@@ -124,6 +125,8 @@ static void sock_queue_async( struct fd *fd, const async_data_t *data, int type,
+@@ -124,6 +125,7 @@ static enum server_fd_type sock_get_fd_type( struct fd *fd );
+ static void sock_queue_async( struct fd *fd, const async_data_t *data, int type, int count );
  static void sock_reselect_async( struct fd *fd, struct async_queue *queue );
  static void sock_cancel_async( struct fd *fd, struct process *process, struct thread *thread, client_ptr_t iosb );
- 
 +static int sock_close_handle( struct object *obj, struct process *process, obj_handle_t handle );
-+
+ 
  static int sock_get_ntstatus( int err );
  static int sock_get_error( int err );
- static void sock_set_error(void);
-@@ -144,7 +147,7 @@ static const struct object_ops sock_ops =
+@@ -145,7 +147,7 @@ static const struct object_ops sock_ops =
      default_set_sd,               /* set_sd */
      no_lookup_name,               /* lookup_name */
      no_open_file,                 /* open_file */
@@ -136,7 +135,7 @@ index 4adad0f..15afe81 100644
      sock_destroy                  /* destroy */
  };
  
-@@ -583,6 +586,47 @@ static struct fd *sock_get_fd( struct object *obj )
+@@ -585,6 +587,47 @@ static struct fd *sock_get_fd( struct object *obj )
      return (struct fd *)grab_object( sock->fd );
  }
  
@@ -184,7 +183,7 @@ index 4adad0f..15afe81 100644
  static void sock_destroy( struct object *obj )
  {
      struct sock *sock = (struct sock *)obj;
-@@ -630,15 +674,8 @@ static struct object *create_socket( int family, int type, int protocol, unsigne
+@@ -633,15 +676,8 @@ static struct object *create_socket( int family, int type, int protocol, unsigne
      struct sock *sock;
      int sockfd;
  
@@ -201,7 +200,7 @@ index 4adad0f..15afe81 100644
      if (!(sock = alloc_object( &sock_ops )))
      {
          close( sockfd );
-@@ -963,6 +1000,17 @@ DECL_HANDLER(accept_into_socket)
+@@ -969,6 +1005,17 @@ DECL_HANDLER(accept_into_socket)
      release_object( sock );
  }
  
@@ -220,5 +219,5 @@ index 4adad0f..15afe81 100644
  DECL_HANDLER(set_socket_event)
  {
 -- 
-1.7.9.5
+2.1.3
 

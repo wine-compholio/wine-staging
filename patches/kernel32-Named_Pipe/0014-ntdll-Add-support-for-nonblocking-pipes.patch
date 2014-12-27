@@ -1,0 +1,52 @@
+From fb6d82077a362f002300cd171547c292cbb5d0bd Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 17 Aug 2014 01:29:06 +0200
+Subject: ntdll: Add support for nonblocking pipes.
+
+---
+ dlls/ntdll/file.c | 15 +++++++++++++--
+ 1 file changed, 13 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index d3f0c0e..ba3814e 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -472,6 +472,10 @@ static NTSTATUS read_unix_fd(int fd, char *buf, ULONG *total, ULONG length,
+     {
+         if (pipe_flags & NAMED_PIPE_MESSAGE_STREAM_WRITE)
+         {
++            int recvmsg_flags = MSG_PEEK;
++            if (*total || (pipe_flags & NAMED_PIPE_NONBLOCKING_MODE))
++                recvmsg_flags |= MSG_DONTWAIT;
++
+             msg.msg_name        = NULL;
+             msg.msg_namelen     = 0;
+             msg.msg_iov         = &iov;
+@@ -483,7 +487,7 @@ static NTSTATUS read_unix_fd(int fd, char *buf, ULONG *total, ULONG length,
+             iov.iov_base = buf    + *total;
+             iov.iov_len  = length - *total;
+ 
+-            result = recvmsg( fd, &msg, MSG_PEEK | (*total ? MSG_DONTWAIT : 0) );
++            result = recvmsg( fd, &msg, recvmsg_flags );
+             if (result >= 0 && !(msg.msg_flags & MSG_TRUNC))
+             {
+                 int ret;
+@@ -527,7 +531,14 @@ static NTSTATUS read_unix_fd(int fd, char *buf, ULONG *total, ULONG length,
+                 return STATUS_PENDING;
+         }
+         else if (errno == EAGAIN)
+-            return (avail_mode && *total) ? STATUS_SUCCESS : STATUS_PENDING;
++        {
++            if (avail_mode && *total)
++                return STATUS_SUCCESS;
++            else if (pipe_flags & NAMED_PIPE_NONBLOCKING_MODE)
++                return *total ? STATUS_SUCCESS : STATUS_PIPE_EMPTY;
++            else
++                return STATUS_PENDING;
++        }
+         else if (errno != EINTR)
+             return FILE_GetNtStatus();
+     }
+-- 
+2.1.3
+

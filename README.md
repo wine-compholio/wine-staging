@@ -37,7 +37,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [11]:**
+**Bugfixes and features included in the next upcoming release [12]:**
 
 * Add stub for D3DXComputeTangentFrameEx ([Wine Bug #31984](https://bugs.winehq.org/show_bug.cgi?id=31984))
 * Add stub for D3DXIntersect
@@ -48,6 +48,7 @@ Included bug fixes and improvements
 * Implement ID3DXEffect::FindNextValidTechnique ([Wine Bug #34101](https://bugs.winehq.org/show_bug.cgi?id=34101))
 * Implement IDXGIOutput::GetDesc
 * Support for SLGetWindowsInformationDWORD ([Wine Bug #36709](https://bugs.winehq.org/show_bug.cgi?id=36709))
+* Support for named pipe message mode ([Wine Bug #17195](https://bugs.winehq.org/show_bug.cgi?id=17195))
 * Try harder to get the host name address in getaddrinfo() ([Wine Bug #29609](https://bugs.winehq.org/show_bug.cgi?id=29609))
 * Use actual program name if available to describe PulseAudio streams
 

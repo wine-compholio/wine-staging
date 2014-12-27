@@ -761,15 +761,49 @@ kernel32-GetVolumePathName.ok:
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#16550] Fix for ConnectNamedPort return value in overlapped mode
+# |   *	[#17195] Support for named pipe message mode
 # |
 # | Modified files:
-# |   *	dlls/kernel32/sync.c
+# |   *	dlls/kernel32/file.c, dlls/kernel32/sync.c, dlls/kernel32/tests/pipe.c, dlls/ntdll/file.c, server/named_pipe.c,
+# | 	server/protocol.def, server/sock.c, server/sock.h
 # |
 .INTERMEDIATE: kernel32-Named_Pipe.ok
 kernel32-Named_Pipe.ok:
 	$(call APPLY_FILE,kernel32-Named_Pipe/0001-kernel32-ConnectNamedPort-should-return-FALSE-and-se.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0002-kernel32-tests-Add-tests-for-PeekNamedPipe-with-part.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0003-kernel32-tests-Add-tests-for-sending-and-receiving-l.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0004-kernel32-tests-Add-tests-for-closing-named-pipes.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0005-server-Show-warning-if-message-mode-is-not-supported.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0006-ntdll-Unify-similar-code-in-NtReadFile-and-FILE_Asyn.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0007-ntdll-Move-logic-to-check-for-broken-pipe-into-a-sep.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0008-ntdll-Unify-similar-code-in-NtWriteFile-and-FILE_Asy.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0009-server-Use-SOCK_SEQPACKET-socket-in-combination-with.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0010-ntdll-Add-handling-for-partially-received-messages-i.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0011-kernel32-tests-Add-more-tests-with-overlapped-IO-and.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0012-ntdll-Fix-some-tests-for-overlapped-partial-reads.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0013-kernel32-tests-Test-sending-peeking-and-receiving-an.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0014-ntdll-Add-support-for-nonblocking-pipes.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0015-kernel32-tests-Add-tests-for-PIPE_NOWAIT-in-message-.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0016-ntdll-Allow-to-set-PIPE_NOWAIT-on-byte-mode-pipes.patch)
+	$(call APPLY_FILE,kernel32-Named_Pipe/0017-kernel32-tests-Add-additional-tests-for-PIPE_NOWAIT-.patch)
 	@( \
 		echo '+    { "Dan Kegel", "kernel32: ConnectNamedPort should return FALSE and set ERROR_PIPE_CONNECTED on success in overlapped mode.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for PeekNamedPipe with partial received messages.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for sending and receiving large messages.", 1 },'; \
+		echo '+    { "Adam Martinson", "kernel32/tests: Add tests for closing named pipes.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "server: Show warning if message mode is not supported.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: Unify similar code in NtReadFile and FILE_AsyncReadService.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: Move logic to check for broken pipe into a separate function.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: Unify similar code in NtWriteFile and FILE_AsyncWriteService.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "server: Use SOCK_SEQPACKET socket in combination with SO_PEEK_OFF to implement message mode on Unix.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: Add handling for partially received messages in NtReadFile.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Add more tests with overlapped IO and partial reads from named pipes.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: Fix some tests for overlapped partial reads.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Test sending, peeking and receiving an empty message.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: Add support for nonblocking pipes.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for PIPE_NOWAIT in message mode.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: Allow to set PIPE_NOWAIT on byte-mode pipes.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for PIPE_NOWAIT in overlapped mode.", 1 },'; \
 	) > kernel32-Named_Pipe.ok
 
 # Patchset kernel32-Profile

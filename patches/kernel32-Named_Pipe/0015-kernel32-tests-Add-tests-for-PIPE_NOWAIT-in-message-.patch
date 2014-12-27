@@ -1,0 +1,126 @@
+From bd5a5c11c29a52bd7891e8c3da6ff77846085ecd Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 11 Aug 2014 04:19:49 +0200
+Subject: kernel32/tests: Add tests for PIPE_NOWAIT in message mode.
+
+---
+ dlls/kernel32/tests/pipe.c | 96 ++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 96 insertions(+)
+
+diff --git a/dlls/kernel32/tests/pipe.c b/dlls/kernel32/tests/pipe.c
+index 89a13f5..49a1017 100644
+--- a/dlls/kernel32/tests/pipe.c
++++ b/dlls/kernel32/tests/pipe.c
+@@ -2527,6 +2527,101 @@ static void test_overlapped(void)
+     CloseHandle(thread);
+ }
+ 
++static void test_nowait(void)
++{
++    HANDLE hnp;
++    HANDLE hFile;
++    static const char obuf[] = "Bit Bucket";
++    char ibuf[32];
++    DWORD written;
++    DWORD readden;
++    DWORD lpmode;
++
++    hnp = CreateNamedPipeA(PIPENAME, PIPE_ACCESS_DUPLEX,
++                           PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_NOWAIT,
++                           /* nMaxInstances */ 1,
++                           /* nOutBufSize */ 1024,
++                           /* nInBufSize */ 1024,
++                           /* nDefaultWait */ NMPWAIT_USE_DEFAULT_WAIT,
++                           /* lpSecurityAttrib */ NULL);
++    ok(hnp != INVALID_HANDLE_VALUE, "CreateNamedPipe failed\n");
++
++    hFile = CreateFileA(PIPENAME, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, 0);
++    ok(hFile != INVALID_HANDLE_VALUE, "CreateFile failed (%d)\n", GetLastError());
++
++    /* don't try to do i/o if one side couldn't be opened, as it hangs */
++    if (hFile != INVALID_HANDLE_VALUE)
++    {
++        /* send message from client to server */
++        ok(WriteFile(hFile, obuf, sizeof(obuf), &written, NULL), "WriteFile\n");
++        ok(written == sizeof(obuf), "write file len\n");
++        ok(PeekNamedPipe(hnp, NULL, 0, NULL, &readden, NULL), "Peek\n");
++        ok(readden == sizeof(obuf), "got %d bytes\n", readden);
++
++        memset(ibuf, 0, sizeof(ibuf));
++        ok(ReadFile(hnp, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile() failed: %08x\n", GetLastError());
++        ok(readden == sizeof(obuf), "got %d bytes\n", readden);
++        ok(memcmp(obuf, ibuf, sizeof(obuf)) == 0, "content check\n");
++
++        readden = 0xdeadbeef;
++        SetLastError(0xdeadbeef);
++        ok(!ReadFile(hnp, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile() succeeded\n");
++        ok(readden == 0, "got %d bytes\n", readden);
++        ok(GetLastError() == ERROR_NO_DATA, "GetLastError() returned %08x, expected ERROR_NO_DATA\n", GetLastError());
++
++        lpmode = PIPE_READMODE_MESSAGE | PIPE_NOWAIT;
++        ok(SetNamedPipeHandleState(hFile, &lpmode, NULL, NULL), "Change mode\n");
++
++        /* send message from server to client */
++        ok(WriteFile(hnp, obuf, sizeof(obuf), &written, NULL), "WriteFile\n");
++        ok(written == sizeof(obuf), "write file len\n");
++        ok(PeekNamedPipe(hFile, NULL, 0, NULL, &readden, NULL), "Peek\n");
++        ok(readden == sizeof(obuf), "got %d bytes\n", readden);
++
++        memset(ibuf, 0, sizeof(ibuf));
++        ok(ReadFile(hFile, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile() failed: %08x\n", GetLastError());
++        ok(readden == sizeof(obuf), "got %d bytes\n", readden);
++        ok(memcmp(obuf, ibuf, sizeof(obuf)) == 0, "content check\n");
++
++        readden = 0xdeadbeef;
++        SetLastError(0xdeadbeef);
++        ok(!ReadFile(hFile, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile() succeeded\n");
++        ok(readden == 0, "got %d bytes\n", readden);
++        ok(GetLastError() == ERROR_NO_DATA, "GetLastError() returned %08x, expected ERROR_NO_DATA\n", GetLastError());
++
++        /* now again the bad zero byte message test */
++        ok(WriteFile(hFile, obuf, 0, &written, NULL), "WriteFile\n");
++        ok(written == 0, "write file len\n");
++
++        ok(ReadFile(hnp, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile() failed: %08x\n", GetLastError());
++        ok(readden == 0, "got %d bytes\n", readden);
++
++        readden = 0xdeadbeef;
++        SetLastError(0xdeadbeef);
++        ok(!ReadFile(hnp, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile() succeeded\n");
++        ok(readden == 0, "got %d bytes\n", readden);
++        ok(GetLastError() == ERROR_NO_DATA, "GetLastError() returned %08x, expected ERROR_NO_DATA\n", GetLastError());
++
++        /* and the same for the reverse direction */
++        ok(WriteFile(hnp, obuf, 0, &written, NULL), "WriteFile\n");
++        ok(written == 0, "write file len\n");
++
++        ok(ReadFile(hFile, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile() failed: %08x\n", GetLastError());
++        ok(readden == 0, "got %d bytes\n", readden);
++
++        readden = 0xdeadbeef;
++        SetLastError(0xdeadbeef);
++        ok(!ReadFile(hFile, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile() succeeded\n");
++        ok(readden == 0, "got %d bytes\n", readden);
++        ok(GetLastError() == ERROR_NO_DATA, "GetLastError() returned %08x, expected ERROR_NO_DATA\n", GetLastError());
++
++        ok(CloseHandle(hFile), "CloseHandle\n");
++    }
++
++    ok(CloseHandle(hnp), "CloseHandle\n");
++
++}
++
+ static void test_NamedPipeHandleState(void)
+ {
+     HANDLE server, client;
+@@ -2952,6 +3047,7 @@ START_TEST(pipe)
+     test_CreatePipe();
+     test_impersonation();
+     test_overlapped();
++    test_nowait();
+     test_NamedPipeHandleState();
+     test_readfileex_pending();
+ }
+-- 
+2.1.3
+

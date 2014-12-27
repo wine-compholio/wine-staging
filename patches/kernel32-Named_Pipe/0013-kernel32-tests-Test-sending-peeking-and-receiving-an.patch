@@ -1,0 +1,384 @@
+From 186746674015db7533c9b25c8b633c2e3881334e Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 11 Aug 2014 00:56:46 +0200
+Subject: kernel32/tests: Test sending, peeking and receiving an empty message.
+
+Changes in v2:
+  * As async handling is now working correctly, it breaks some tests :/
+    We need a lot of ugly code to prevent the tests from deadlocking...
+  * Fix issue in broken pipe check, should be moved into an earlier patch.
+---
+ dlls/kernel32/tests/pipe.c | 336 +++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 336 insertions(+)
+
+diff --git a/dlls/kernel32/tests/pipe.c b/dlls/kernel32/tests/pipe.c
+index 53f8f30..89a13f5 100644
+--- a/dlls/kernel32/tests/pipe.c
++++ b/dlls/kernel32/tests/pipe.c
+@@ -337,6 +337,146 @@ static void test_CreateNamedPipe(int pipemode)
+         ok(readden == sizeof(obuf2) - 8, "read got %d bytes\n", readden);
+         ok(memcmp(obuf2, ibuf, written) == 0, "content check\n");
+ 
++        /* Tests for sending empty messages */
++        memset(ibuf, 0, sizeof(ibuf));
++        ok(WriteFile(hnp, obuf, 0, &written, NULL), "WriteFile\n");
++        ok(written == 0, "write file len\n");
++        if (pipemode != PIPE_TYPE_BYTE)
++        {
++            ok(ReadFile(hFile, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile\n");
++            ok(readden == 0, "read got %d bytes\n", readden);
++        }
++
++        memset(ibuf, 0, sizeof(ibuf));
++        ok(WriteFile(hFile, obuf, 0, &written, NULL), "WriteFile\n");
++        ok(written == 0, "write file len\n");
++        if (pipemode != PIPE_TYPE_BYTE)
++        {
++            ok(ReadFile(hnp, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile\n");
++            ok(readden == 0, "read got %d bytes\n", readden);
++        }
++
++        /* similar to above, but with an additional call to PeekNamedPipe inbetween */
++        memset(ibuf, 0, sizeof(ibuf));
++        ok(WriteFile(hnp, obuf, 0, &written, NULL), "WriteFile\n");
++        ok(written == 0, "write file len\n");
++        ok(PeekNamedPipe(hFile, NULL, 0, NULL, &readden, NULL), "Peek\n");
++        ok(readden == 0, "peek got %d bytes\n", readden);
++        if (pipemode != PIPE_TYPE_BYTE)
++        {
++            struct rpcThreadArgs rpcargs;
++            HANDLE thread;
++            DWORD threadId;
++
++            rpcargs.returnValue = 0;
++            rpcargs.lastError = GetLastError();
++            rpcargs.op = RPC_READFILE;
++            rpcargs.args[0] = (ULONG_PTR)hFile;
++            rpcargs.args[1] = (ULONG_PTR)ibuf;
++            rpcargs.args[2] = (ULONG_PTR)sizeof(ibuf);
++            rpcargs.args[3] = (ULONG_PTR)&readden;
++            rpcargs.args[4] = (ULONG_PTR)NULL;
++
++            thread = CreateThread(NULL, 0, rpcThreadMain, (void *)&rpcargs, 0, &threadId);
++            ok(thread != NULL, "CreateThread failed. %d\n", GetLastError());
++            ret = WaitForSingleObject(thread, 200);
++            todo_wine
++            ok(ret == WAIT_OBJECT_0, "WaitForSingleObject returned %d instead of %d.\n", ret, WAIT_OBJECT_0);
++            if (ret == WAIT_TIMEOUT)
++            {
++                ok(WriteFile(hnp, obuf, 0, &written, NULL), "WriteFile\n");
++                ok(written == 0, "write file len\n");
++                ret = WaitForSingleObject(thread, 200);
++                ok(ret == WAIT_OBJECT_0, "WaitForSingleObject returned %d instead of %d.\n", ret, WAIT_OBJECT_0);
++            }
++            CloseHandle(thread);
++            ok((BOOL)rpcargs.returnValue, "ReadFile\n");
++            ok(readden == 0, "read got %d bytes\n", readden);
++        }
++
++        memset(ibuf, 0, sizeof(ibuf));
++        ok(WriteFile(hFile, obuf, 0, &written, NULL), "WriteFile\n");
++        ok(written == 0, "write file len\n");
++        ok(PeekNamedPipe(hnp, NULL, 0, NULL, &readden, NULL), "Peek\n");
++        ok(readden == 0, "peek got %d bytes\n", readden);
++        if (pipemode != PIPE_TYPE_BYTE)
++        {
++            struct rpcThreadArgs rpcargs;
++            HANDLE thread;
++            DWORD threadId;
++
++            rpcargs.returnValue = 0;
++            rpcargs.lastError = GetLastError();
++            rpcargs.op = RPC_READFILE;
++            rpcargs.args[0] = (ULONG_PTR)hnp;
++            rpcargs.args[1] = (ULONG_PTR)ibuf;
++            rpcargs.args[2] = (ULONG_PTR)sizeof(ibuf);
++            rpcargs.args[3] = (ULONG_PTR)&readden;
++            rpcargs.args[4] = (ULONG_PTR)NULL;
++
++            thread = CreateThread(NULL, 0, rpcThreadMain, (void *)&rpcargs, 0, &threadId);
++            ok(thread != NULL, "CreateThread failed. %d\n", GetLastError());
++            ret = WaitForSingleObject(thread, 200);
++            todo_wine
++            ok(ret == WAIT_OBJECT_0, "WaitForSingleObject returned %d instead of %d.\n", ret, WAIT_OBJECT_0);
++            if (ret == WAIT_TIMEOUT)
++            {
++                ok(WriteFile(hFile, obuf, 0, &written, NULL), "WriteFile\n");
++                ok(written == 0, "write file len\n");
++                ret = WaitForSingleObject(thread, 200);
++                ok(ret == WAIT_OBJECT_0, "WaitForSingleObject returned %d instead of %d.\n", ret, WAIT_OBJECT_0);
++            }
++            CloseHandle(thread);
++            ok((BOOL)rpcargs.returnValue, "ReadFile\n");
++            ok(readden == 0, "read got %d bytes\n", readden);
++        }
++
++        /* similar to above, but now with PeekNamedPipe and multiple messages */
++        memset(ibuf, 0, sizeof(ibuf));
++        ok(WriteFile(hnp, obuf, 0, &written, NULL), "WriteFile\n");
++        ok(written == 0, "write file len\n");
++        ok(WriteFile(hnp, obuf, sizeof(obuf), &written, NULL), "WriteFile\n");
++        ok(written == sizeof(obuf), "write file len\n");
++        ok(PeekNamedPipe(hFile, NULL, 0, NULL, &readden, &leftmsg), "Peek\n");
++        ok(readden == sizeof(obuf), "peek got %d bytes\n", readden);
++        ok(leftmsg == 0, "peek got %d bytes left in msg\n", leftmsg);
++        ok(PeekNamedPipe(hFile, NULL, 0, NULL, &readden, &leftmsg), "Peek\n");
++        ok(readden == sizeof(obuf), "peek got %d bytes\n", readden);
++        if (pipemode != PIPE_TYPE_BYTE)
++            todo_wine
++            ok(leftmsg == 0, "peek got %d bytes left in msg\n", leftmsg);
++        else
++            ok(leftmsg == 0, "peek got %d bytes left in msg\n", leftmsg);
++        ok(ReadFile(hFile, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile\n");
++        ok(readden == sizeof(obuf), "read got %d bytes\n", readden);
++        ok(memcmp(obuf, ibuf, sizeof(obuf)) == 0, "content check\n");
++
++        memset(ibuf, 0, sizeof(ibuf));
++        ok(WriteFile(hFile, obuf2, 0, &written, NULL), "WriteFile\n");
++        ok(written == 0, "write file len\n");
++        ok(WriteFile(hFile, obuf2, sizeof(obuf2), &written, NULL), "WriteFile\n");
++        ok(written == sizeof(obuf2), "write file len\n");
++        ok(PeekNamedPipe(hnp, NULL, 0, NULL, &readden, &leftmsg), "Peek\n");
++        ok(readden == sizeof(obuf2), "peek got %d bytes\n", readden);
++        ok(leftmsg == 0, "peek got %d bytes left in msg\n", leftmsg);
++        ok(PeekNamedPipe(hnp, NULL, 0, NULL, &readden, &leftmsg), "Peek\n");
++        ok(readden == sizeof(obuf2), "peek got %d bytes\n", readden);
++        if (pipemode != PIPE_TYPE_BYTE)
++            todo_wine
++            ok(leftmsg == 0, "peek got %d bytes left in msg\n", leftmsg);
++        else
++            ok(leftmsg == 0, "peek got %d bytes left in msg\n", leftmsg);
++        ok(ReadFile(hnp, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile\n");
++        if (pipemode != PIPE_TYPE_BYTE)
++        {
++            todo_wine
++            ok(readden == 0, "read got %d bytes\n", readden);
++            if (readden == 0)
++                ok(ReadFile(hnp, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile\n");
++        }
++        ok(readden == sizeof(obuf2), "read got %d bytes\n", readden);
++        ok(memcmp(obuf2, ibuf, sizeof(obuf2)) == 0, "content check\n");
++
+         /* Test reading of multiple writes */
+         memset(ibuf, 0, sizeof(ibuf));
+         ok(WriteFile(hnp, obuf, sizeof(obuf), &written, NULL), "WriteFile3a\n");
+@@ -455,6 +595,133 @@ static void test_CreateNamedPipe(int pipemode)
+             if (readden <= sizeof(obuf))
+                 ok(ReadFile(hnp, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile\n");
+ 
++            /* Tests for sending empty messages */
++            memset(ibuf, 0, sizeof(ibuf));
++            ok(WriteFile(hnp, obuf, 0, &written, NULL), "WriteFile\n");
++            ok(written == 0, "write file len\n");
++            ok(ReadFile(hFile, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile\n");
++            ok(readden == 0, "read got %d bytes\n", readden);
++
++            memset(ibuf, 0, sizeof(ibuf));
++            ok(WriteFile(hFile, obuf, 0, &written, NULL), "WriteFile\n");
++            ok(written == 0, "write file len\n");
++            ok(ReadFile(hnp, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile\n");
++            ok(readden == 0, "read got %d bytes\n", readden);
++
++            /* similar to above, but with an additional call to PeekNamedPipe inbetween */
++            memset(ibuf, 0, sizeof(ibuf));
++            ok(WriteFile(hnp, obuf, 0, &written, NULL), "WriteFile\n");
++            ok(written == 0, "write file len\n");
++            ok(PeekNamedPipe(hFile, NULL, 0, NULL, &readden, NULL), "Peek\n");
++            ok(readden == 0, "peek got %d bytes\n", readden);
++            {
++                struct rpcThreadArgs rpcargs;
++                HANDLE thread;
++                DWORD threadId;
++
++                rpcargs.returnValue = 0;
++                rpcargs.lastError = GetLastError();
++                rpcargs.op = RPC_READFILE;
++                rpcargs.args[0] = (ULONG_PTR)hFile;
++                rpcargs.args[1] = (ULONG_PTR)ibuf;
++                rpcargs.args[2] = (ULONG_PTR)sizeof(ibuf);
++                rpcargs.args[3] = (ULONG_PTR)&readden;
++                rpcargs.args[4] = (ULONG_PTR)NULL;
++
++                thread = CreateThread(NULL, 0, rpcThreadMain, (void *)&rpcargs, 0, &threadId);
++                ok(thread != NULL, "CreateThread failed. %d\n", GetLastError());
++                ret = WaitForSingleObject(thread, 200);
++                todo_wine
++                ok(ret == WAIT_OBJECT_0, "WaitForSingleObject returned %d instead of %d.\n", ret, WAIT_OBJECT_0);
++                if (ret == WAIT_TIMEOUT)
++                {
++                    ok(WriteFile(hnp, obuf, 0, &written, NULL), "WriteFile\n");
++                    ok(written == 0, "write file len\n");
++                    ret = WaitForSingleObject(thread, 200);
++                    ok(ret == WAIT_OBJECT_0, "WaitForSingleObject returned %d instead of %d.\n", ret, WAIT_OBJECT_0);
++                }
++                CloseHandle(thread);
++                ok((BOOL)rpcargs.returnValue, "ReadFile\n");
++                ok(readden == 0, "read got %d bytes\n", readden);
++            }
++
++            memset(ibuf, 0, sizeof(ibuf));
++            ok(WriteFile(hFile, obuf, 0, &written, NULL), "WriteFile\n");
++            ok(written == 0, "write file len\n");
++            ok(PeekNamedPipe(hnp, NULL, 0, NULL, &readden, NULL), "Peek\n");
++            ok(readden == 0, "peek got %d bytes\n", readden);
++            {
++                struct rpcThreadArgs rpcargs;
++                HANDLE thread;
++                DWORD threadId;
++
++                rpcargs.returnValue = 0;
++                rpcargs.lastError = GetLastError();
++                rpcargs.op = RPC_READFILE;
++                rpcargs.args[0] = (ULONG_PTR)hnp;
++                rpcargs.args[1] = (ULONG_PTR)ibuf;
++                rpcargs.args[2] = (ULONG_PTR)sizeof(ibuf);
++                rpcargs.args[3] = (ULONG_PTR)&readden;
++                rpcargs.args[4] = (ULONG_PTR)NULL;
++
++                thread = CreateThread(NULL, 0, rpcThreadMain, (void *)&rpcargs, 0, &threadId);
++                ok(thread != NULL, "CreateThread failed. %d\n", GetLastError());
++                ret = WaitForSingleObject(thread, 200);
++                todo_wine
++                ok(ret == WAIT_OBJECT_0, "WaitForSingleObject returned %d instead of %d.\n", ret, WAIT_OBJECT_0);
++                if (ret == WAIT_TIMEOUT)
++                {
++                    ok(WriteFile(hFile, obuf, 0, &written, NULL), "WriteFile\n");
++                    ok(written == 0, "write file len\n");
++                    ret = WaitForSingleObject(thread, 200);
++                    ok(ret == WAIT_OBJECT_0, "WaitForSingleObject returned %d instead of %d.\n", ret, WAIT_OBJECT_0);
++                }
++                CloseHandle(thread);
++                ok((BOOL)rpcargs.returnValue, "ReadFile\n");
++                ok(readden == 0, "read got %d bytes\n", readden);
++            }
++
++            /* similar to above, but now with PeekNamedPipe and multiple messages */
++            memset(ibuf, 0, sizeof(ibuf));
++            ok(WriteFile(hnp, obuf, 0, &written, NULL), "WriteFile\n");
++            ok(written == 0, "write file len\n");
++            ok(WriteFile(hnp, obuf, sizeof(obuf), &written, NULL), "WriteFile\n");
++            ok(written == sizeof(obuf), "write file len\n");
++            ok(PeekNamedPipe(hFile, NULL, 0, NULL, &readden, &leftmsg), "Peek\n");
++            ok(readden == sizeof(obuf), "peek got %d bytes\n", readden);
++            ok(leftmsg == 0, "peek got %d bytes left in msg\n", leftmsg);
++            ok(PeekNamedPipe(hFile, NULL, 0, NULL, &readden, &leftmsg), "Peek\n");
++            ok(readden == sizeof(obuf), "peek got %d bytes\n", readden);
++            todo_wine
++            ok(leftmsg == 0, "peek got %d bytes left in msg\n", leftmsg);
++            ok(ReadFile(hFile, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile\n");
++            todo_wine
++            ok(readden == 0, "read got %d bytes\n", readden);
++            if (readden == 0)
++                ok(ReadFile(hFile, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile\n");
++            ok(readden == sizeof(obuf), "read got %d bytes\n", readden);
++            ok(memcmp(obuf, ibuf, sizeof(obuf)) == 0, "content check\n");
++
++            memset(ibuf, 0, sizeof(ibuf));
++            ok(WriteFile(hFile, obuf2, 0, &written, NULL), "WriteFile\n");
++            ok(written == 0, "write file len\n");
++            ok(WriteFile(hFile, obuf2, sizeof(obuf2), &written, NULL), "WriteFile\n");
++            ok(written == sizeof(obuf2), "write file len\n");
++            ok(PeekNamedPipe(hnp, NULL, 0, NULL, &readden, &leftmsg), "Peek\n");
++            ok(readden == sizeof(obuf2), "peek got %d bytes\n", readden);
++            ok(leftmsg == 0, "peek got %d bytes left in msg\n", leftmsg);
++            ok(PeekNamedPipe(hnp, NULL, 0, NULL, &readden, &leftmsg), "Peek\n");
++            ok(readden == sizeof(obuf2), "peek got %d bytes\n", readden);
++            todo_wine
++            ok(leftmsg == 0, "peek got %d bytes left in msg\n", leftmsg);
++            ok(ReadFile(hnp, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile\n");
++            todo_wine
++            ok(readden == 0, "read got %d bytes\n", readden);
++            if (readden == 0)
++                ok(ReadFile(hnp, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile\n");
++            ok(readden == sizeof(obuf2), "read got %d bytes\n", readden);
++            ok(memcmp(obuf2, ibuf, sizeof(obuf2)) == 0, "content check\n");
++
+             /* Test how ReadFile behaves when the buffer is not big enough for the whole message */
+             memset(ibuf, 0, sizeof(ibuf));
+             ok(WriteFile(hnp, obuf2, sizeof(obuf2), &written, NULL), "WriteFile 7\n");
+@@ -938,6 +1205,41 @@ static void test_CloseNamedPipe(void)
+     hFile = CreateFileA(PIPENAME, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, 0);
+     ok(hFile != INVALID_HANDLE_VALUE, "CreateFile failed (%d)\n", GetLastError());
+ 
++    /* don't try to do i/o if one side couldn't be opened, as it hangs */
++    if (hFile != INVALID_HANDLE_VALUE)
++    {
++        ok(WriteFile(hnp, obuf, 0, &written, NULL), "WriteFile\n");
++        ok(written == 0, "write file len 1\n");
++
++        /* close server end without disconnecting */
++        ok(CloseHandle(hnp), "CloseHandle() failed: %08x\n", GetLastError());
++
++        todo_wine
++        ok(ReadFile(hFile, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile() failed: %08x\n", GetLastError());
++        ok(readden == 0, "got %d bytes\n", readden);
++        /* pipe is empty now */
++
++        SetLastError(0xdeadbeef);
++        ok(!ReadFile(hFile, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile() succeeded\n");
++        todo_wine
++        ok(GetLastError() == ERROR_BROKEN_PIPE, "GetLastError() returned %08x, expected ERROR_BROKEN_PIPE\n", GetLastError());
++        SetLastError(0);
++
++        CloseHandle(hFile);
++    }
++
++    hnp = CreateNamedPipeA(PIPENAME, PIPE_ACCESS_DUPLEX,
++                           PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
++                           /* nMaxInstances */ 1,
++                           /* nOutBufSize */ 1024,
++                           /* nInBufSize */ 1024,
++                           /* nDefaultWait */ NMPWAIT_USE_DEFAULT_WAIT,
++                           /* lpSecurityAttrib */ NULL);
++    ok(hnp != INVALID_HANDLE_VALUE, "CreateNamedPipe failed\n");
++
++    hFile = CreateFileA(PIPENAME, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, 0);
++    ok(hFile != INVALID_HANDLE_VALUE, "CreateFile failed (%d)\n", GetLastError());
++
+     if (hFile != INVALID_HANDLE_VALUE)
+     {
+         /* Make sure we can read and write a few bytes in both directions */
+@@ -966,6 +1268,40 @@ static void test_CloseNamedPipe(void)
+ 
+         CloseHandle(hnp);
+     }
++
++    hnp = CreateNamedPipeA(PIPENAME, PIPE_ACCESS_DUPLEX,
++                           PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
++                           /* nMaxInstances */ 1,
++                           /* nOutBufSize */ 1024,
++                           /* nInBufSize */ 1024,
++                           /* nDefaultWait */ NMPWAIT_USE_DEFAULT_WAIT,
++                           /* lpSecurityAttrib */ NULL);
++    ok(hnp != INVALID_HANDLE_VALUE, "CreateNamedPipe failed\n");
++
++    hFile = CreateFileA(PIPENAME, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, 0);
++    ok(hFile != INVALID_HANDLE_VALUE, "CreateFile failed (%d)\n", GetLastError());
++
++    /* don't try to do i/o if one side couldn't be opened, as it hangs */
++    if (hFile != INVALID_HANDLE_VALUE)
++    {
++        ok(WriteFile(hFile, obuf, 0, &written, NULL), "WriteFile\n");
++        ok(written == 0, "write file len 1\n");
++
++        /* close server end without disconnecting */
++        ok(CloseHandle(hFile), "CloseHandle() failed: %08x\n", GetLastError());
++
++        todo_wine
++        ok(ReadFile(hnp, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile() failed: %08x\n", GetLastError());
++        ok(readden == 0, "got %d bytes\n", readden);
++        /* pipe is empty now */
++
++        SetLastError(0xdeadbeef);
++        ok(!ReadFile(hnp, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile() succeeded\n");
++        ok(GetLastError() == ERROR_BROKEN_PIPE, "GetLastError() returned %08x, expected ERROR_BROKEN_PIPE\n", GetLastError());
++        SetLastError(0);
++
++        CloseHandle(hnp);
++    }
+ }
+ 
+ /** implementation of alarm() */
+-- 
+2.1.3
+

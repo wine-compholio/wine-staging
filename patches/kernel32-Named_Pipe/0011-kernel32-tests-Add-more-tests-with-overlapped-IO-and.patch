@@ -1,0 +1,188 @@
+From d94857ffb00c9e24dcaff68aed1e14a6b99745f5 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 17 Aug 2014 00:47:26 +0200
+Subject: kernel32/tests: Add more tests with overlapped IO and partial reads
+ from named pipes.
+
+---
+ dlls/kernel32/tests/pipe.c | 150 +++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 150 insertions(+)
+
+diff --git a/dlls/kernel32/tests/pipe.c b/dlls/kernel32/tests/pipe.c
+index 6a27826..ba49974 100644
+--- a/dlls/kernel32/tests/pipe.c
++++ b/dlls/kernel32/tests/pipe.c
+@@ -2300,6 +2300,7 @@ static void test_readfileex_pending(void)
+     OVERLAPPED overlapped;
+     char read_buf[1024];
+     char write_buf[1024];
++    const char long_test_string[] = "12test3456ab";
+     const char test_string[] = "test";
+     int i;
+ 
+@@ -2339,6 +2340,9 @@ static void test_readfileex_pending(void)
+     ret = ReadFileEx(server, read_buf, sizeof(read_buf), &overlapped, completion_routine);
+     ok(ret == TRUE, "ReadFileEx failed, err=%i\n", GetLastError());
+     ok(completion_called == 0, "completion routine called before ReadFileEx returned\n");
++    wait = WaitForSingleObject(event, 100);
++    ok(wait == WAIT_TIMEOUT, "WaitForSingleObjectEx returned %x\n", wait);
++    ok(completion_called == 0, "completion routine called before WriteFile started\n");
+ 
+     ret = WriteFile(client, test_string, strlen(test_string), &num_bytes, NULL);
+     ok(ret == TRUE, "WriteFile failed\n");
+@@ -2449,6 +2453,152 @@ todo_wine
+ 
+     CloseHandle(client);
+     CloseHandle(server);
++
++    server = CreateNamedPipeA(PIPENAME, FILE_FLAG_OVERLAPPED | PIPE_ACCESS_DUPLEX,
++        /* dwOpenMode */ PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
++        /* nMaxInstances */ 1,
++        /* nOutBufSize */ 1024,
++        /* nInBufSize */ 1024,
++        /* nDefaultWait */ NMPWAIT_USE_DEFAULT_WAIT,
++        /* lpSecurityAttrib */ NULL);
++    ok(server != INVALID_HANDLE_VALUE, "cf failed\n");
++
++    client = CreateFileA(PIPENAME, GENERIC_READ|GENERIC_WRITE, 0, NULL,
++        OPEN_EXISTING, 0, NULL);
++    ok(client != INVALID_HANDLE_VALUE, "cf failed\n");
++
++    memset(&overlapped, 0, sizeof(overlapped));
++    overlapped.hEvent = event;
++
++    /* Start a call to ReadFileEx which cannot complete immediately */
++    memset(read_buf, 0, sizeof(read_buf));
++    completion_called = 0;
++    ResetEvent(event);
++    ret = ReadFileEx(server, read_buf, 4, &overlapped, completion_routine);
++    ok(ret == TRUE, "ReadFileEx failed, err=%i\n", GetLastError());
++    ok(completion_called == 0, "completion routine called before ReadFileEx returned\n");
++    wait = WaitForSingleObject(event, 100);
++    ok(wait == WAIT_TIMEOUT, "WaitForSingleObject returned %x\n", wait);
++    ok(completion_called == 0, "completion routine called before WriteFile started\n");
++
++    ret = WriteFile(client, long_test_string, strlen(long_test_string), &num_bytes, NULL);
++    ok(ret == TRUE, "WriteFile failed\n");
++    ok(num_bytes == strlen(long_test_string), "only %i bytes written\n", num_bytes);
++    ok(completion_called == 0, "completion routine called during WriteFile\n");
++    wait = WaitForSingleObjectEx(event, 0, TRUE);
++    ok(wait == WAIT_IO_COMPLETION || wait == WAIT_OBJECT_0, "WaitForSingleObjectEx returned %x\n", wait);
++
++    ok(completion_called == 1, "completion not called after writing pipe\n");
++    todo_wine
++    ok(completion_errorcode == 0, "completion called with error %x\n", completion_errorcode);
++    ok(completion_num_bytes == 4, "ReadFileEx returned only %d bytes\n", completion_num_bytes);
++    ok(completion_lpoverlapped == &overlapped, "completion called with wrong overlapped pointer\n");
++    ok(!memcmp(long_test_string, read_buf, 4), "ReadFileEx read wrong bytes\n");
++
++    ret = ReadFile(server, read_buf + 4, 4, &num_bytes, NULL);
++    ok(ret == FALSE, "ReadFile succeeded\n");
++    ok(num_bytes == 4, "ReadFile returned only %d bytes\n", num_bytes);
++    ok(GetLastError() == ERROR_MORE_DATA, "wrong error\n");
++    ret = ReadFile(server, read_buf + 8, sizeof(read_buf) - 8, &num_bytes, NULL);
++    ok(ret == TRUE, "ReadFile failed\n");
++    ok(num_bytes == strlen(long_test_string)-8, "ReadFile returned only %d bytes\n", num_bytes);
++    ok(!memcmp(long_test_string, read_buf, strlen(long_test_string)), "ReadFile read wrong bytes\n");
++
++    /* Call ReadFileEx when there is already some content in the pipe */
++    ret = WriteFile(client, long_test_string, strlen(long_test_string), &num_bytes, NULL);
++    ok(ret == TRUE, "WriteFile failed\n");
++    ok(num_bytes == strlen(long_test_string), "only %i bytes written\n", num_bytes);
++
++    memset(read_buf, 0, sizeof(read_buf));
++    completion_called = 0;
++    ResetEvent(event);
++    ret = ReadFileEx(server, read_buf, 4, &overlapped, completion_routine);
++    todo_wine
++    ok(ret == TRUE, "ReadFileEx failed, err=%i\n", GetLastError());
++    ok(completion_called == 0, "completion routine called before ReadFileEx returned\n");
++    wait = WaitForSingleObjectEx(event, 0, TRUE);
++    todo_wine
++    ok(wait == WAIT_IO_COMPLETION || wait == WAIT_OBJECT_0, "WaitForSingleObjectEx returned %x\n", wait);
++    todo_wine
++    ok(completion_called == 1, "completion not called after writing pipe\n");
++    todo_wine
++    ok(completion_errorcode == 0, "completion called with error %x\n", completion_errorcode);
++    ok(completion_num_bytes == 4, "ReadFileEx returned only %d bytes\n", completion_num_bytes);
++    ok(completion_lpoverlapped == &overlapped, "completion called with wrong overlapped pointer\n");
++    ok(!memcmp(long_test_string, read_buf, 4), "ReadFileEx read wrong bytes\n");
++
++    ret = ReadFile(server, read_buf + 4, sizeof(read_buf) - 4, &num_bytes, NULL);
++    ok(ret == TRUE, "ReadFile failed\n");
++    ok(num_bytes == strlen(long_test_string)-4, "ReadFile returned only %d bytes\n", num_bytes);
++    ok(!memcmp(long_test_string, read_buf, strlen(long_test_string)), "ReadFile read wrong bytes\n");
++
++    /* Check content of overlapped structure */
++    memset(read_buf, 0, sizeof(read_buf));
++    S(U(overlapped)).Offset = 0;
++    S(U(overlapped)).OffsetHigh = 0;
++    overlapped.Internal = -1;
++    overlapped.InternalHigh = -1;
++    overlapped.hEvent = event;
++    num_bytes = 0xdeadbeef;
++    SetLastError(0xdeadbeef);
++    ret = ReadFile(server, read_buf, 4, &num_bytes, &overlapped);
++    ok(GetLastError() == ERROR_IO_PENDING, "expected ERROR_IO_PENDING, got %d\n", GetLastError());
++    ok(num_bytes == 0, "bytes %u\n", num_bytes);
++    ok((NTSTATUS)overlapped.Internal == STATUS_PENDING, "expected STATUS_PENDING, got %#lx\n", overlapped.Internal);
++    todo_wine
++    ok(overlapped.InternalHigh == -1, "expected -1, got %lu\n", overlapped.InternalHigh);
++    wait = WaitForSingleObject(event, 100);
++    ok(wait == WAIT_TIMEOUT, "WaitForSingleObject returned %x\n", wait);
++    ok((NTSTATUS)overlapped.Internal == STATUS_PENDING, "expected STATUS_PENDING, got %#lx\n", overlapped.Internal);
++
++    num_bytes = 0xdeadbeef;
++    ret = WriteFile(client, long_test_string, strlen(long_test_string), &num_bytes, NULL);
++    ok(ret, "WriteFile failed\n");
++    ok(num_bytes == strlen(long_test_string), "bytes %u\n", num_bytes);
++    wait = WaitForSingleObject(event, 100);
++    ok(wait == WAIT_OBJECT_0, "WaitForSingleObject returned %x\n", wait);
++    ok(num_bytes == strlen(long_test_string), "bytes %u\n", num_bytes);
++    ok((NTSTATUS)overlapped.Internal == STATUS_BUFFER_OVERFLOW, "expected STATUS_BUFFER_OVERFLOW, got %#lx\n", overlapped.Internal);
++    ok(overlapped.InternalHigh == 4, "expected 4, got %lu\n", overlapped.InternalHigh);
++
++    ret = ReadFile(server, read_buf + 4, sizeof(read_buf) - 4, &num_bytes, NULL);
++    ok(ret == TRUE, "ReadFile failed\n");
++    ok(num_bytes == strlen(long_test_string)-4, "ReadFile returned only %d bytes\n", num_bytes);
++    ok(!memcmp(long_test_string, read_buf, strlen(long_test_string)), "ReadFile read wrong bytes\n");
++
++    /* Call ReadFile when there is already some content in the pipe */
++    num_bytes = 0xdeadbeef;
++    ret = WriteFile(client, long_test_string, strlen(long_test_string), &num_bytes, NULL);
++    ok(ret, "WriteFile failed\n");
++    ok(num_bytes == strlen(long_test_string), "bytes %u\n", num_bytes);
++
++    memset(read_buf, 0, sizeof(read_buf));
++    S(U(overlapped)).Offset = 0;
++    S(U(overlapped)).OffsetHigh = 0;
++    overlapped.Internal = -1;
++    overlapped.InternalHigh = -1;
++    overlapped.hEvent = event;
++    num_bytes = 0xdeadbeef;
++    SetLastError(0xdeadbeef);
++    ret = ReadFile(server, read_buf, 4, &num_bytes, &overlapped);
++    ok(ret == FALSE, "ReadFile succeeded\n");
++    ok(GetLastError() == ERROR_MORE_DATA, "expected ERROR_MORE_DATA, got %d\n", GetLastError());
++    todo_wine
++    ok(num_bytes == 0, "ReadFile returned %d bytes\n", num_bytes);
++    wait = WaitForSingleObjectEx(event, 0, TRUE);
++    ok(wait == WAIT_OBJECT_0, "WaitForSingleObjectEx returned %x\n", wait);
++    todo_wine
++    ok(num_bytes == 0, "bytes %u\n", num_bytes);
++    ok((NTSTATUS)overlapped.Internal == STATUS_BUFFER_OVERFLOW, "expected STATUS_BUFFER_OVERFLOW, got %#lx\n", overlapped.Internal);
++    ok(overlapped.InternalHigh == 4, "expected 4, got %lu\n", overlapped.InternalHigh);
++
++    ret = ReadFile(server, read_buf + 4, sizeof(read_buf) - 4, &num_bytes, NULL);
++    ok(ret == TRUE, "ReadFile failed\n");
++    ok(num_bytes == strlen(long_test_string)-4, "ReadFile returned only %d bytes\n", num_bytes);
++    ok(!memcmp(long_test_string, read_buf, strlen(long_test_string)), "ReadFile read wrong bytes\n");
++
++    CloseHandle(client);
++    CloseHandle(server);
+     CloseHandle(event);
+ }
+ 
+-- 
+2.1.3
+

@@ -53,6 +53,7 @@ PATCHLIST := \
 	iphlpapi-TCP_Table.ok \
 	kernel32-GetFinalPathNameByHandle.ok \
 	kernel32-GetNumaProcessorNode.ok \
+	kernel32-GetStringTypeW.ok \
 	kernel32-GetSystemTimes.ok \
 	kernel32-GetVolumePathName.ok \
 	kernel32-Named_Pipe.ok \
@@ -734,6 +735,21 @@ kernel32-GetNumaProcessorNode.ok:
 		echo '+    { "Michael Müller", "kernel32: Implement GetNumaProcessorNode.", 1 },'; \
 		echo '+    { "Michael Müller", "kernel32/tests: Add tests for GetNumaProcessorNode.", 1 },'; \
 	) > kernel32-GetNumaProcessorNode.ok
+
+# Patchset kernel32-GetStringTypeW
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37759] Fix access violation when calling GetStringTypeW with NULL src.
+# |
+# | Modified files:
+# |   *	dlls/kernel32/locale.c, dlls/kernel32/tests/locale.c
+# |
+.INTERMEDIATE: kernel32-GetStringTypeW.ok
+kernel32-GetStringTypeW.ok:
+	$(call APPLY_FILE,kernel32-GetStringTypeW/0001-kernel32-Allow-empty-source-in-GetStringTypeW.patch)
+	@( \
+		echo '+    { "Christian Faure", "kernel32: Allow empty source in GetStringTypeW.", 1 },'; \
+	) > kernel32-GetStringTypeW.ok
 
 # Patchset kernel32-GetSystemTimes
 # |

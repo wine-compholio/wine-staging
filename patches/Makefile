@@ -39,6 +39,7 @@ PATCHLIST := \
 	d3dx9_36-UpdateSkinnedMesh.ok \
 	dbghelp-Debug_Symbols.ok \
 	dbghelp-KdHelp.ok \
+	ddraw-d3d_execute_buffer.ok \
 	dinput-Events.ok \
 	dsound-Fast_Mixer.ok \
 	dxgi-GetDesc.ok \
@@ -508,6 +509,18 @@ dbghelp-KdHelp.ok:
 	@( \
 		echo '+    { "Sebastian Lackner", "dbghelp: Don'\''t fill KdHelp structure for usermode applications.", 1 },'; \
 	) > dbghelp-KdHelp.ok
+
+# Patchset ddraw-d3d_execute_buffer
+# |
+# | Modified files:
+# |   *	dlls/ddraw/executebuffer.c
+# |
+.INTERMEDIATE: ddraw-d3d_execute_buffer.ok
+ddraw-d3d_execute_buffer.ok:
+	$(call APPLY_FILE,ddraw-d3d_execute_buffer/0001-ddraw-Don-t-call-IDirect3DDevice7_DrawIndexedPrimiti.patch)
+	@( \
+		echo '+    { "Christian Costa", "ddraw: Don'\''t call IDirect3DDevice7_DrawIndexedPrimitive if there is no primitive.", 1 },'; \
+	) > ddraw-d3d_execute_buffer.ok
 
 # Patchset dinput-Events
 # |

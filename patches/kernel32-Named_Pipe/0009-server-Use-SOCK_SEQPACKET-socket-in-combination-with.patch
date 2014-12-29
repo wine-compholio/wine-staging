@@ -1,4 +1,4 @@
-From b52ac9f6c1d7391d350e9b7cefbcbb0ac2b62516 Mon Sep 17 00:00:00 2001
+From b6ba775824b47bf58534d9f9b9cdc8a1261449f4 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 4 Aug 2014 05:01:11 +0200
 Subject: server: Use SOCK_SEQPACKET socket in combination with SO_PEEK_OFF to
@@ -25,11 +25,11 @@ Changes in v5:
 ---
  dlls/kernel32/sync.c       |   2 +-
  dlls/kernel32/tests/pipe.c |   9 ----
- dlls/ntdll/file.c          | 106 ++++++++++++++++++++++++++++++++++++-------
- server/named_pipe.c        | 109 ++++++++++++++++++++++++++++++++++++---------
+ dlls/ntdll/file.c          | 106 ++++++++++++++++++++++++++++++++++++------
+ server/named_pipe.c        | 113 ++++++++++++++++++++++++++++++++++++---------
  server/sock.c              |   4 +-
  server/sock.h              |  26 +++++++++++
- 6 files changed, 207 insertions(+), 49 deletions(-)
+ 6 files changed, 211 insertions(+), 49 deletions(-)
  create mode 100644 server/sock.h
 
 diff --git a/dlls/kernel32/sync.c b/dlls/kernel32/sync.c
@@ -290,7 +290,7 @@ index e8a1066..5cbfa40 100644
              if (needs_close) close( fd );
          }
 diff --git a/server/named_pipe.c b/server/named_pipe.c
-index 81741de..0631159 100644
+index 81741de..b720dd6 100644
 --- a/server/named_pipe.c
 +++ b/server/named_pipe.c
 @@ -42,6 +42,10 @@
@@ -362,7 +362,7 @@ index 81741de..0631159 100644
          {
              assert( !server->fd );
  
-@@ -840,32 +870,53 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
+@@ -840,32 +870,55 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
              if (is_overlapped( options )) fcntl( fds[1], F_SETFL, O_NONBLOCK );
              if (is_overlapped( server->options )) fcntl( fds[0], F_SETFL, O_NONBLOCK );
  
@@ -407,8 +407,10 @@ index 81741de..0631159 100644
 -                set_server_state( server, ps_connected_server );
 -                server->client = client;
 -                client->server = server;
++            #ifdef __linux__
 +                fcntl( fds[0], F_SETSIG, server->pipe_flags );
 +                fcntl( fds[1], F_SETSIG, client->pipe_flags );
++            #endif
 +
 +                client->fd = create_anonymous_fd( &pipe_client_fd_ops, fds[1], &client->obj, options );
 +                server->fd = create_anonymous_fd( &pipe_server_fd_ops, fds[0], &server->obj, server->options );
@@ -435,7 +437,7 @@ index 81741de..0631159 100644
                  release_object( client );
                  client = NULL;
              }
-@@ -965,7 +1016,10 @@ DECL_HANDLER(create_named_pipe)
+@@ -965,7 +1018,10 @@ DECL_HANDLER(create_named_pipe)
          return;
      }
  
@@ -447,15 +449,17 @@ index 81741de..0631159 100644
      reply->handle = 0;
  
      if (!objattr_is_valid( objattr, get_req_data_size() ))
-@@ -1065,6 +1119,7 @@ DECL_HANDLER(set_named_pipe_info)
+@@ -1065,6 +1121,9 @@ DECL_HANDLER(set_named_pipe_info)
  {
      struct pipe_server *server;
      struct pipe_client *client = NULL;
++#ifdef __linux__
 +    int unix_fd;
++#endif
  
      server = get_pipe_server_obj( current->process, req->handle, FILE_WRITE_ATTRIBUTES );
      if (!server)
-@@ -1087,10 +1142,20 @@ DECL_HANDLER(set_named_pipe_info)
+@@ -1087,10 +1146,20 @@ DECL_HANDLER(set_named_pipe_info)
      else if (client)
      {
          client->pipe_flags = server->pipe->flags | req->flags;
@@ -538,5 +542,5 @@ index 0000000..21551b4
 +
 +#endif  /* __WINE_SERVER_SOCK_H */
 -- 
-2.1.3
+2.2.1
 

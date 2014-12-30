@@ -41,7 +41,6 @@ PATCHLIST := \
 	dbghelp-KdHelp.ok \
 	ddraw-d3d_execute_buffer.ok \
 	dinput-Events.ok \
-	dsound-Fast_Mixer.ok \
 	dxgi-GetDesc.ok \
 	fonts-Missing_Fonts.ok \
 	gdi32-MaxPixelFormats.ok \
@@ -62,7 +61,6 @@ PATCHLIST := \
 	kernel32-VerifyVersionInfo.ok \
 	libs-Unicode_Collation.ok \
 	makedep-PARENTSPEC.ok \
-	msdmo-Fix_Typo.ok \
 	msvcp90-basic_string_wchar_dtor.ok \
 	msvcrt-atof_strtod.ok \
 	ntdll-DOS_Attributes.ok \
@@ -856,17 +854,15 @@ kernel32-Profile.ok:
 # |   *	[#27388] Support for UTF7 encoding/decoding
 # |
 # | Modified files:
-# |   *	dlls/kernel32/locale.c, dlls/kernel32/tests/codepage.c
+# |   *	dlls/kernel32/locale.c
 # |
 .INTERMEDIATE: kernel32-UTF7_Support.ok
 kernel32-UTF7_Support.ok:
 	$(call APPLY_FILE,kernel32-UTF7_Support/0001-kernel32-Support-UTF-7-in-MultiByteToWideChar.patch)
 	$(call APPLY_FILE,kernel32-UTF7_Support/0002-kernel32-Support-UTF-7-in-WideCharToMultiByte.patch)
-	$(call APPLY_FILE,kernel32-UTF7_Support/0003-kernel32-tests-Add-tests-for-UTF-7-conversion.patch)
 	@( \
 		echo '+    { "Alex Henrie", "kernel32: Support UTF-7 in MultiByteToWideChar.", 3 },'; \
 		echo '+    { "Alex Henrie", "kernel32: Support UTF-7 in WideCharToMultiByte.", 3 },'; \
-		echo '+    { "Alex Henrie", "kernel32/tests: Add tests for UTF-7 conversion.", 1 },'; \
 	) > kernel32-UTF7_Support.ok
 
 # Patchset kernel32-VerifyVersionInfo
@@ -912,18 +908,6 @@ makedep-PARENTSPEC.ok:
 	@( \
 		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },'; \
 	) > makedep-PARENTSPEC.ok
-
-# Patchset msdmo-Fix_Typo
-# |
-# | Modified files:
-# |   *	dlls/msdmo/dmoreg.c
-# |
-.INTERMEDIATE: msdmo-Fix_Typo.ok
-msdmo-Fix_Typo.ok:
-	$(call APPLY_FILE,msdmo-Fix_Typo/0001-msdmo-Fix-invalid-usage-of-RegOpenKeyExW.patch)
-	@( \
-		echo '+    { "Mark Harmstone", "msdmo: Fix invalid usage of RegOpenKeyExW.", 1 },'; \
-	) > msdmo-Fix_Typo.ok
 
 # Patchset mshtml-sessionStorage
 # |

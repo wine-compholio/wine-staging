@@ -31,6 +31,7 @@ PATCHLIST := \
 	d3dx9_36-D3DXComputeTangentFrameEx.ok \
 	d3dx9_36-D3DXIntersect.ok \
 	d3dx9_36-DXTn.ok \
+	d3dx9_36-DrawText.ok \
 	d3dx9_36-Filter_Warnings.ok \
 	d3dx9_36-FindNextValidTechnique.ok \
 	d3dx9_36-GetShaderSemantics.ok \
@@ -397,6 +398,21 @@ d3dx9_36-DXTn.ok: wined3d-DXTn.ok
 	@( \
 		echo '+    { "Christian Costa", "d3dx9_36: Add dxtn support.", 1 },'; \
 	) > d3dx9_36-DXTn.ok
+
+# Patchset d3dx9_36-DrawText
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#24754] Support for ID3DXFont::DrawTextA/W
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/font.c
+# |
+.INTERMEDIATE: d3dx9_36-DrawText.ok
+d3dx9_36-DrawText.ok:
+	$(call APPLY_FILE,d3dx9_36-DrawText/0001-d3dx9_36-Implement-ID3DXFontImpl_DrawText.patch)
+	@( \
+		echo '+    { "Christian Costa", "d3dx9_36: Implement ID3DXFontImpl_DrawText.", 1 },'; \
+	) > d3dx9_36-DrawText.ok
 
 # Patchset d3dx9_36-Filter_Warnings
 # |

@@ -42,6 +42,7 @@ PATCHLIST := \
 	dbghelp-KdHelp.ok \
 	ddraw-d3d_execute_buffer.ok \
 	dinput-Events.ok \
+	dsound-Fast_Mixer.ok \
 	dxgi-GetDesc.ok \
 	fonts-Missing_Fonts.ok \
 	gdi32-MaxPixelFormats.ok \

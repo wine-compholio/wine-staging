@@ -1,14 +1,14 @@
-From c62167818f1d4f14eb98e1590beec11056e5712f Mon Sep 17 00:00:00 2001
+From 0e40667469906fa6f8d25a9a0d6d45738ab62c3d Mon Sep 17 00:00:00 2001
 From: "Alexander E. Patrakov" <patrakov at gmail.com>
 Date: Thu, 7 Aug 2014 17:15:00 -0600
 Subject: dsound: Add a linear resampler for use with a large number of mixing
  buffers.
 
 ---
- dlls/dsound/dsound_main.c    |    5 +++++
- dlls/dsound/dsound_private.h |    1 +
- dlls/dsound/mixer.c          |   49 ++++++++++++++++++++++++++++++++++++++++--
- 3 files changed, 53 insertions(+), 2 deletions(-)
+ dlls/dsound/dsound_main.c    |  5 +++++
+ dlls/dsound/dsound_private.h |  1 +
+ dlls/dsound/mixer.c          | 49 +++++++++++++++++++++++++++++++++++++++++---
+ 3 files changed, 52 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/dsound/dsound_main.c b/dlls/dsound/dsound_main.c
 index 0e3a313..492df48 100644
@@ -39,10 +39,10 @@ index 0e3a313..492df48 100644
  
  static const char * get_device_id(LPCGUID pGuid)
 diff --git a/dlls/dsound/dsound_private.h b/dlls/dsound/dsound_private.h
-index a8f5f42..2db769d 100644
+index 66af81a..ab1a123 100644
 --- a/dlls/dsound/dsound_private.h
 +++ b/dlls/dsound/dsound_private.h
-@@ -32,6 +32,7 @@
+@@ -34,6 +34,7 @@
  
  extern int ds_hel_buflen DECLSPEC_HIDDEN;
  extern int ds_snd_queue_max DECLSPEC_HIDDEN;
@@ -51,35 +51,33 @@ index a8f5f42..2db769d 100644
  /*****************************************************************************
   * Predeclare the interface implementation structures
 diff --git a/dlls/dsound/mixer.c b/dlls/dsound/mixer.c
-index 43b7dca..7f16c59 100644
+index f6c2661..13c3c02 100644
 --- a/dlls/dsound/mixer.c
 +++ b/dlls/dsound/mixer.c
-@@ -247,7 +247,50 @@ static UINT cp_fields_noresample(IDirectSoundBufferImpl *dsb, UINT count)
+@@ -263,7 +263,48 @@ static UINT cp_fields_noresample(IDirectSoundBufferImpl *dsb, UINT count)
      return count;
  }
  
--static UINT cp_fields_resample(IDirectSoundBufferImpl *dsb, UINT count, float *freqAcc)
-+static UINT cp_fields_resample_lq(IDirectSoundBufferImpl *dsb, UINT count, float *freqAcc)
+-static UINT cp_fields_resample(IDirectSoundBufferImpl *dsb, UINT count, LONG64 *freqAccNum)
++static UINT cp_fields_resample_lq(IDirectSoundBufferImpl *dsb, UINT count, LONG64 *freqAccNum)
 +{
 +    UINT i, channel;
 +    UINT istride = dsb->pwfx->nBlockAlign;
 +    UINT ostride = dsb->device->pwfx->nChannels * sizeof(float);
 +    UINT channels = dsb->mix_channels;
 +
-+    float freqAdjust = dsb->freqAdjust;
-+    float freqAcc_start = *freqAcc;
++    float freqAdjust = (float)dsb->freqAdjustNum / dsb->freqAdjustDen;
++    float freqAcc_start = (float)*freqAccNum / dsb->freqAdjustDen;
 +    float freqAcc_end = freqAcc_start + count * freqAdjust;
 +    UINT max_ipos = freqAcc_end;
 +
-+    freqAcc_end -= (int)freqAcc_end;
-+
 +    for(i = 0; i < count; ++i) {
 +        float cur_freqAcc = freqAcc_start + i * freqAdjust;
-+	float cur_freqAcc2;
++        float cur_freqAcc2;
 +        UINT ipos = cur_freqAcc;
 +        UINT idx = dsb->sec_mixpos + ipos * istride;
 +        cur_freqAcc -= (int)cur_freqAcc;
-+        cur_freqAcc2 = 1.0 - cur_freqAcc;
++        cur_freqAcc2 = 1.0f - cur_freqAcc;
 +        for (channel = 0; channel < channels; channel++) {
 +            /**
 +             * Generally we cannot cache the result of get_current_sample().
@@ -98,26 +96,28 @@ index 43b7dca..7f16c59 100644
 +        }
 +    }
 +
-+    *freqAcc = freqAcc_end;
++    *freqAccNum = (LONG64)(freqAcc_end * dsb->freqAdjustDen) % dsb->freqAdjustDen;
 +    return max_ipos;
 +}
 +
-+static UINT cp_fields_resample_hq(IDirectSoundBufferImpl *dsb, UINT count, float *freqAcc)
++static UINT cp_fields_resample_hq(IDirectSoundBufferImpl *dsb, UINT count, LONG64 *freqAccNum)
  {
      UINT i, channel;
      UINT istride = dsb->pwfx->nBlockAlign;
-@@ -321,8 +364,10 @@ static void cp_fields(IDirectSoundBufferImpl *dsb, UINT count, float *freqAcc)
+@@ -334,9 +375,11 @@ static void cp_fields(IDirectSoundBufferImpl *dsb, UINT count, LONG64 *freqAccNu
+     DWORD ipos, adv;
  
-     if (dsb->freqAdjust == 1.0)
-         adv = cp_fields_noresample(dsb, count); /* *freqAcc is unmodified */
+     if (dsb->freqAdjustNum == dsb->freqAdjustDen)
+-        adv = cp_fields_noresample(dsb, count); /* *freqAccNum is unmodified */
++        adv = cp_fields_noresample(dsb, count); /* *freqAcc is unmodified */
 +    else if (dsb->device->nrofbuffers > ds_hq_buffers_max)
-+        adv = cp_fields_resample_lq(dsb, count, freqAcc);
++        adv = cp_fields_resample_lq(dsb, count, freqAccNum);
      else
--        adv = cp_fields_resample(dsb, count, freqAcc);
-+        adv = cp_fields_resample_hq(dsb, count, freqAcc);
+-        adv = cp_fields_resample(dsb, count, freqAccNum);
++        adv = cp_fields_resample_hq(dsb, count, freqAccNum);
  
      ipos = dsb->sec_mixpos + adv * dsb->pwfx->nBlockAlign;
      if (ipos >= dsb->buflen) {
 -- 
-1.7.9.5
+1.9.1
 

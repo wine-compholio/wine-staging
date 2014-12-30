@@ -2449,6 +2449,7 @@ winepulse-PulseAudio_Support.ok:
 	$(call APPLY_FILE,winepulse-PulseAudio_Support/0030-winepulse-fix-segfault-in-pulse_rd_loop.patch)
 	$(call APPLY_FILE,winepulse-PulseAudio_Support/0031-winepulse-implement-GetPropValue.patch)
 	$(call APPLY_FILE,winepulse-PulseAudio_Support/0032-winepulse-fetch-actual-program-name-if-possible.patch)
+	$(call APPLY_FILE,winepulse-PulseAudio_Support/0033-winepulse-return-PKEY_AudioEndpoint_PhysicalSpeakers.patch)
 	@( \
 		echo '+    { "Maarten Lankhorst", "winmm: Load winealsa if winepulse is found.", 1 },'; \
 		echo '+    { "Maarten Lankhorst", "winepulse: Add initial stub for pulseaudio support.", 1 },'; \
@@ -2482,6 +2483,7 @@ winepulse-PulseAudio_Support.ok:
 		echo '+    { "Mark Harmstone", "winepulse: fix segfault in pulse_rd_loop.", 1 },'; \
 		echo '+    { "Mark Harmstone", "winepulse: implement GetPropValue.", 1 },'; \
 		echo '+    { "Mark Harmstone", "winepulse: fetch actual program name if possible.", 1 },'; \
+		echo '+    { "Mark Harmstone", "winepulse: return PKEY_AudioEndpoint_PhysicalSpeakers device prop.", 1 },'; \
 	) > winepulse-PulseAudio_Support.ok
 
 # Patchset winex11-CandidateWindowPos

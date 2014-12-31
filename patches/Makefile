@@ -24,7 +24,6 @@ PATCHLIST := \
 	Pipelight.ok \
 	Staging.ok \
 	atl-IOCS_Property.ok \
-	avifil32-Realloc_Records.ok \
 	comctl32-LoadIconMetric.ok \
 	configure-Absolute_RPATH.ok \
 	d3d9-Surface_Refcount.ok \
@@ -287,21 +286,6 @@ atl-IOCS_Property.ok:
 	@( \
 		echo '+    { "Qian Hong", "atl: Don'\''t use GWLP_USERDATA to store IOCS to avoid conflict with Apps.", 1 },'; \
 	) > atl-IOCS_Property.ok
-
-# Patchset avifil32-Realloc_Records
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#5137] Reallocate buffer when adding records to AVI files
-# |
-# | Modified files:
-# |   *	dlls/avifil32/avifile.c
-# |
-.INTERMEDIATE: avifil32-Realloc_Records.ok
-avifil32-Realloc_Records.ok:
-	$(call APPLY_FILE,avifil32-Realloc_Records/0001-avifil32-Reallocate-buffer-when-adding-records.patch)
-	@( \
-		echo '+    { "Sebastian Lackner", "avifil32: Reallocate buffer when adding records.", 1 },'; \
-	) > avifil32-Realloc_Records.ok
 
 # Patchset comctl32-LoadIconMetric
 # |

@@ -27,6 +27,7 @@ PATCHLIST := \
 	comctl32-LoadIconMetric.ok \
 	configure-Absolute_RPATH.ok \
 	d3d9-Surface_Refcount.ok \
+	d3dx9_36-ConvertToIndexedBlended.ok \
 	d3dx9_36-D3DXComputeTangentFrameEx.ok \
 	d3dx9_36-D3DXIntersect.ok \
 	d3dx9_36-DXTn.ok \
@@ -334,6 +335,21 @@ d3d9-Surface_Refcount.ok:
 	@( \
 		echo '+    { "Henri Verbeet", "d3d9: Don'\''t decrease surface refcount when its already zero.", 1 },'; \
 	) > d3d9-Surface_Refcount.ok
+
+# Patchset d3dx9_36-ConvertToIndexedBlended
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36449] Fix parameters for ConvertToIndexedBlendedMesh stub
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/skin.c, include/d3dx9mesh.h
+# |
+.INTERMEDIATE: d3dx9_36-ConvertToIndexedBlended.ok
+d3dx9_36-ConvertToIndexedBlended.ok:
+	$(call APPLY_FILE,d3dx9_36-ConvertToIndexedBlended/0001-d3dx9_36-Fix-d3dx9_skin_info_ConvertToIndexedBlended.patch)
+	@( \
+		echo '+    { "Christian Costa", "d3dx9_36: Fix d3dx9_skin_info_ConvertToIndexedBlendedMesh stub.", 1 },'; \
+	) > d3dx9_36-ConvertToIndexedBlended.ok
 
 # Patchset d3dx9_36-D3DXComputeTangentFrameEx
 # |

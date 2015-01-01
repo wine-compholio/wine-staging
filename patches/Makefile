@@ -89,6 +89,7 @@ PATCHLIST := \
 	ntoskrnl-KeSetSystemAffinityThread.ok \
 	ntoskrnl-Stub_FileObject.ok \
 	ntoskrnl-Write_CR4.ok \
+	nvcuda.ok \
 	ole32-CoWaitForMultipleHandles.ok \
 	quartz-MediaSeeking_Positions.ok \
 	riched20-IText_Interface.ok \
@@ -1380,6 +1381,19 @@ ntoskrnl-Write_CR4.ok:
 	@( \
 		echo '+    { "Stefan Leichter", "ntoskrnl.exe: Emulate write to CR4 register.", 1 },'; \
 	) > ntoskrnl-Write_CR4.ok
+
+# Patchset nvcuda
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/nvcuda/Makefile.in, dlls/nvcuda/internal.c, dlls/nvcuda/nvcuda.c, dlls/nvcuda/nvcuda.h,
+# | 	dlls/nvcuda/nvcuda.rc, dlls/nvcuda/nvcuda.spec, dlls/nvcuda/tests/Makefile.in, dlls/nvcuda/tests/nvcuda.c
+# |
+.INTERMEDIATE: nvcuda.ok
+nvcuda.ok:
+	$(call APPLY_FILE,nvcuda/0001-nvcuda-First-implementation.patch)
+	@( \
+		echo '+    { "Michael Müller", "nvcuda: First implementation.", 1 },'; \
+	) > nvcuda.ok
 
 # Patchset ole32-CoWaitForMultipleHandles
 # |

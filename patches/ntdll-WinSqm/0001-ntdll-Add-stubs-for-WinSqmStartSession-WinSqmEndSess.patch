@@ -1,0 +1,136 @@
+From ffb4e21271797190bd8c5b6be3054ac2f693be8b Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Thu, 25 Dec 2014 12:36:28 -0700
+Subject: ntdll: Add stubs for WinSqmStartSession / WinSqmEndSession.
+
+Based on a patch by Detlef Riekenberg.
+---
+ dlls/ntdll/ntdll.spec  |  2 ++
+ dlls/ntdll/rtl.c       | 18 ++++++++++++++++++
+ dlls/ntdll/tests/rtl.c | 50 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 70 insertions(+)
+
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index 51de6e7..44dfc22 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -968,6 +968,8 @@
+ @ stdcall RtlxUnicodeStringToAnsiSize(ptr) RtlUnicodeStringToAnsiSize
+ @ stdcall RtlxUnicodeStringToOemSize(ptr) RtlUnicodeStringToOemSize
+ @ stdcall -ret64 VerSetConditionMask(int64 long long)
++@ stdcall WinSqmEndSession(ptr)
++@ stdcall WinSqmStartSession(ptr long long)
+ @ stdcall ZwAcceptConnectPort(ptr long ptr long long ptr) NtAcceptConnectPort
+ @ stdcall ZwAccessCheck(ptr long long ptr ptr ptr ptr ptr) NtAccessCheck
+ @ stdcall ZwAccessCheckAndAuditAlarm(ptr long ptr ptr ptr long ptr long ptr ptr ptr) NtAccessCheckAndAuditAlarm
+diff --git a/dlls/ntdll/rtl.c b/dlls/ntdll/rtl.c
+index 8f6f386..2e87beb 100644
+--- a/dlls/ntdll/rtl.c
++++ b/dlls/ntdll/rtl.c
+@@ -1311,3 +1311,21 @@ BOOL WINAPI RtlSetCurrentTransaction(HANDLE new_transaction)
+     FIXME("(%p) :stub\n", new_transaction);
+     return FALSE;
+ }
++
++/******************************************************************************
++ * WinSqmEndSession [NTDLL.@]
++ */
++NTSTATUS WINAPI WinSqmEndSession(PVOID unknown1)
++{
++    FIXME("(%p) stub!\n", unknown1);
++    return STATUS_NOT_IMPLEMENTED;
++}
++
++/******************************************************************************
++ * WinSqmStartSession [NTDLL.@]
++ */
++PVOID WINAPI WinSqmStartSession(PVOID unknown1, DWORD unknown2, DWORD unknown3)
++{
++    FIXME("(%p, 0x%x, 0x%x) stub!\n", unknown1, unknown2, unknown3);
++    return NULL;
++}
+diff --git a/dlls/ntdll/tests/rtl.c b/dlls/ntdll/tests/rtl.c
+index e8eb04a..1e6c6f8 100644
+--- a/dlls/ntdll/tests/rtl.c
++++ b/dlls/ntdll/tests/rtl.c
+@@ -62,6 +62,8 @@ static inline USHORT __my_ushort_swap(USHORT s)
+ 
+ /* Function ptrs for ntdll calls */
+ static HMODULE hntdll = 0;
++static PVOID     (WINAPI *pWinSqmStartSession)(PVOID unknown1, DWORD unknown2, DWORD unknown3);
++static NTSTATUS  (WINAPI *pWinSqmEndSession)(PVOID unknown1);
+ static SIZE_T    (WINAPI  *pRtlCompareMemory)(LPCVOID,LPCVOID,SIZE_T);
+ static SIZE_T    (WINAPI  *pRtlCompareMemoryUlong)(PULONG, SIZE_T, ULONG);
+ static NTSTATUS  (WINAPI  *pRtlDeleteTimer)(HANDLE, HANDLE, HANDLE);
+@@ -109,6 +111,8 @@ static void InitFunctionPtrs(void)
+     hntdll = LoadLibraryA("ntdll.dll");
+     ok(hntdll != 0, "LoadLibrary failed\n");
+     if (hntdll) {
++        pWinSqmStartSession = (void *)GetProcAddress(hntdll, "WinSqmStartSession");
++        pWinSqmEndSession = (void *)GetProcAddress(hntdll, "WinSqmEndSession");
+ 	pRtlCompareMemory = (void *)GetProcAddress(hntdll, "RtlCompareMemory");
+ 	pRtlCompareMemoryUlong = (void *)GetProcAddress(hntdll, "RtlCompareMemoryUlong");
+         pRtlDeleteTimer = (void *)GetProcAddress(hntdll, "RtlDeleteTimer");
+@@ -149,6 +153,46 @@ static void InitFunctionPtrs(void)
+     ok(strlen(src) == 15, "Source must be 16 bytes long!\n");
+ }
+ 
++#ifdef __i386__
++const char stdcall3_thunk[] =
++    "\x56"              /* push %esi */
++    "\x89\xE6"          /* mov %esp, %esi */
++    "\xFF\x74\x24\x14"  /* pushl 20(%esp) */
++    "\xFF\x74\x24\x14"  /* pushl 20(%esp) */
++    "\xFF\x74\x24\x14"  /* pushl 20(%esp) */
++    "\xFF\x54\x24\x14"  /* calll 20(%esp) */
++    "\x89\xF0"          /* mov %esi, %eax */
++    "\x29\xE0"          /* sub %esp, %eax */
++    "\x89\xF4"          /* mov %esi, %esp */
++    "\x5E"              /* pop %esi */
++    "\xC2\x10\x00"      /* ret $16 */
++;
++
++static INT (WINAPI *call_stdcall_func3)(PVOID func, PVOID arg0, DWORD arg1, DWORD arg2) = NULL;
++
++static void test_WinSqm(void)
++{
++    INT args;
++
++    if (!pWinSqmStartSession)
++    {
++        win_skip("WinSqmStartSession() is not available\n");
++        return;
++    }
++
++    call_stdcall_func3 = (void*) VirtualAlloc( NULL, sizeof(stdcall3_thunk) - 1, MEM_COMMIT,
++                                               PAGE_EXECUTE_READWRITE );
++    memcpy( call_stdcall_func3, stdcall3_thunk, sizeof(stdcall3_thunk) - 1 );
++
++    args = 3 - call_stdcall_func3( pWinSqmStartSession, NULL, 0, 0 ) / 4;
++    ok(args == 3, "WinSqmStartSession expected to take %d arguments instead of 3\n", args);
++    args = 3 - call_stdcall_func3( pWinSqmEndSession, NULL, 0, 0 ) / 4;
++    ok(args == 1, "WinSqmEndSession expected to take %d arguments instead of 1\n", args);
++
++    VirtualFree( call_stdcall_func3, 0, MEM_RELEASE );
++}
++#endif
++
+ #define COMP(str1,str2,cmplen,len) size = pRtlCompareMemory(str1, str2, cmplen); \
+   ok(size == len, "Expected %ld, got %ld\n", size, (SIZE_T)len)
+ 
+@@ -1603,6 +1647,12 @@ START_TEST(rtl)
+ {
+     InitFunctionPtrs();
+ 
++#ifdef __i386__
++    test_WinSqm();
++#else
++    skip("stdcall-style parameter checks are not supported on this platform.\n");
++#endif
++
+     test_RtlCompareMemory();
+     test_RtlCompareMemoryUlong();
+     test_RtlMoveMemory();
+-- 
+1.9.1
+

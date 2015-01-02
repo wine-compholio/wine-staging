@@ -83,6 +83,7 @@ PATCHLIST := \
 	ntdll-ThreadTime.ok \
 	ntdll-User_Shared_Data.ok \
 	ntdll-WRITECOPY.ok \
+	ntdll-WinSqm.ok \
 	ntoskrnl-Emulator.ok \
 	ntoskrnl-Irp_Status.ok \
 	ntoskrnl-KeSetSystemAffinityThread.ok \
@@ -1296,6 +1297,21 @@ ntdll-WRITECOPY.ok:
 		echo '+    { "Michael Müller", "ntdll: Properly handle PAGE_WRITECOPY protection.", 4 },'; \
 		echo '+    { "Michael Müller", "ntdll: Only enable true WRITECOPY protection when a special environment variable is set.", 1 },'; \
 	) > ntdll-WRITECOPY.ok
+
+# Patchset ntdll-WinSqm
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#31971] ntdll is missing WinSqm[Start|End]Session implementation
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntdll/tests/rtl.c
+# |
+.INTERMEDIATE: ntdll-WinSqm.ok
+ntdll-WinSqm.ok:
+	$(call APPLY_FILE,ntdll-WinSqm/0001-ntdll-Add-stubs-for-WinSqmStartSession-WinSqmEndSess.patch)
+	@( \
+		echo '+    { "Erich E. Hoover", "ntdll: Add stubs for WinSqmStartSession / WinSqmEndSession.", 1 },'; \
+	) > ntdll-WinSqm.ok
 
 # Patchset ntoskrnl-Emulator
 # |

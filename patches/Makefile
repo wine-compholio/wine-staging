@@ -1402,9 +1402,11 @@ ntoskrnl-Write_CR4.ok:
 nvcuda-CUDA_Support.ok:
 	$(call APPLY_FILE,nvcuda-CUDA_Support/0001-nvcuda-First-implementation.patch)
 	$(call APPLY_FILE,nvcuda-CUDA_Support/0002-nvcuda-Add-Unknown5-internal-interface.patch)
+	$(call APPLY_FILE,nvcuda-CUDA_Support/0003-nvcuda-Emulate-two-d3d9-initialization-functions.patch)
 	@( \
 		echo '+    { "Michael Müller", "nvcuda: First implementation.", 1 },'; \
 		echo '+    { "Michael Müller", "nvcuda: Add Unknown5 internal interface.", 1 },'; \
+		echo '+    { "Michael Müller", "nvcuda: Emulate two d3d9 initialization functions.", 1 },'; \
 	) > nvcuda-CUDA_Support.ok
 
 # Patchset ole32-CoWaitForMultipleHandles

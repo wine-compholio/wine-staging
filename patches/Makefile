@@ -28,8 +28,7 @@ PATCHLIST := \
 	configure-Absolute_RPATH.ok \
 	d3d9-Surface_Refcount.ok \
 	d3dx9_36-ConvertToIndexedBlended.ok \
-	d3dx9_36-D3DXComputeTangentFrameEx.ok \
-	d3dx9_36-D3DXIntersect.ok \
+	d3dx9_36-D3DXStubs.ok \
 	d3dx9_36-DXTn.ok \
 	d3dx9_36-DrawText.ok \
 	d3dx9_36-Filter_Warnings.ok \
@@ -352,10 +351,11 @@ d3dx9_36-ConvertToIndexedBlended.ok:
 		echo '+    { "Christian Costa", "d3dx9_36: Fix d3dx9_skin_info_ConvertToIndexedBlendedMesh stub.", 1 },'; \
 	) > d3dx9_36-ConvertToIndexedBlended.ok
 
-# Patchset d3dx9_36-D3DXComputeTangentFrameEx
+# Patchset d3dx9_36-D3DXStubs
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#31984] Add stub for D3DXComputeTangentFrameEx
+# |   *	[#26379] Support for D3DXComputeNormals
 # |
 # | Modified files:
 # |   *	dlls/d3dx9_24/d3dx9_24.spec, dlls/d3dx9_25/d3dx9_25.spec, dlls/d3dx9_26/d3dx9_26.spec, dlls/d3dx9_27/d3dx9_27.spec,
@@ -365,24 +365,18 @@ d3dx9_36-ConvertToIndexedBlended.ok:
 # | 	dlls/d3dx9_39/d3dx9_39.spec, dlls/d3dx9_40/d3dx9_40.spec, dlls/d3dx9_41/d3dx9_41.spec, dlls/d3dx9_42/d3dx9_42.spec,
 # | 	dlls/d3dx9_43/d3dx9_43.spec
 # |
-.INTERMEDIATE: d3dx9_36-D3DXComputeTangentFrameEx.ok
-d3dx9_36-D3DXComputeTangentFrameEx.ok:
-	$(call APPLY_FILE,d3dx9_36-D3DXComputeTangentFrameEx/0001-d3dx9_36-Add-stub-for-D3DXComputeTangentFrameEx.patch)
+.INTERMEDIATE: d3dx9_36-D3DXStubs.ok
+d3dx9_36-D3DXStubs.ok:
+	$(call APPLY_FILE,d3dx9_36-D3DXStubs/0001-d3dx9_36-Add-stub-for-D3DXComputeTangentFrameEx.patch)
+	$(call APPLY_FILE,d3dx9_36-D3DXStubs/0002-d3dx9_36-Add-stub-for-D3DXIntersect.patch)
+	$(call APPLY_FILE,d3dx9_36-D3DXStubs/0003-d3dx9_36-Implement-D3DXComputeNormals.patch)
+	$(call APPLY_FILE,d3dx9_36-D3DXStubs/0004-d3dx9_36-Add-stub-for-D3DXComputeNormalMap.patch)
 	@( \
 		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeTangentFrameEx.", 1 },'; \
-	) > d3dx9_36-D3DXComputeTangentFrameEx.ok
-
-# Patchset d3dx9_36-D3DXIntersect
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/mesh.c
-# |
-.INTERMEDIATE: d3dx9_36-D3DXIntersect.ok
-d3dx9_36-D3DXIntersect.ok: d3dx9_36-D3DXComputeTangentFrameEx.ok
-	$(call APPLY_FILE,d3dx9_36-D3DXIntersect/0001-d3dx9_36-Add-stub-for-D3DXIntersect.patch)
-	@( \
 		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXIntersect.", 1 },'; \
-	) > d3dx9_36-D3DXIntersect.ok
+		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXComputeNormals.", 1 },'; \
+		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeNormalMap.", 1 },'; \
+	) > d3dx9_36-D3DXStubs.ok
 
 # Patchset d3dx9_36-DXTn
 # |

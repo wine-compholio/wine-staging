@@ -1,4 +1,4 @@
-From e1097bc3e63a9d06d8fde8362a79fdda286c0ddb Mon Sep 17 00:00:00 2001
+From 14d9c88106f41c54b8e4bb642bdc0b448b676e02 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Wed, 31 Dec 2014 01:37:02 +0100
 Subject: nvcuda: First implementation.
@@ -6,14 +6,14 @@ Subject: nvcuda: First implementation.
 ---
  configure.ac                  |   22 +
  dlls/nvcuda/Makefile.in       |    8 +
- dlls/nvcuda/internal.c        |  468 +++++++++
- dlls/nvcuda/nvcuda.c          | 2124 +++++++++++++++++++++++++++++++++++++++++
+ dlls/nvcuda/internal.c        |  493 ++++++++++
+ dlls/nvcuda/nvcuda.c          | 2127 +++++++++++++++++++++++++++++++++++++++++
  dlls/nvcuda/nvcuda.h          |   29 +
  dlls/nvcuda/nvcuda.rc         |   33 +
  dlls/nvcuda/nvcuda.spec       |  308 ++++++
  dlls/nvcuda/tests/Makefile.in |    4 +
  dlls/nvcuda/tests/nvcuda.c    |  176 ++++
- 9 files changed, 3172 insertions(+)
+ 9 files changed, 3200 insertions(+)
  create mode 100644 dlls/nvcuda/Makefile.in
  create mode 100755 dlls/nvcuda/internal.c
  create mode 100644 dlls/nvcuda/nvcuda.c
@@ -24,7 +24,7 @@ Subject: nvcuda: First implementation.
  create mode 100644 dlls/nvcuda/tests/nvcuda.c
 
 diff --git a/configure.ac b/configure.ac
-index 2fa4dcc..bb59339 100644
+index 94b83ab..254d2be 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -39,6 +39,7 @@ AC_ARG_WITH(capi,      AS_HELP_STRING([--without-capi],[do not use CAPI (ISDN su
@@ -61,7 +61,7 @@ index 2fa4dcc..bb59339 100644
  dnl **** Check for OpenCL ****
  if test "$ac_cv_header_CL_cl_h" = "yes"
  then
-@@ -3124,6 +3144,8 @@ WINE_CONFIG_TEST(dlls/ntdsapi/tests)
+@@ -3125,6 +3145,8 @@ WINE_CONFIG_TEST(dlls/ntdsapi/tests)
  WINE_CONFIG_DLL(ntoskrnl.exe,,[implib])
  WINE_CONFIG_DLL(ntprint)
  WINE_CONFIG_TEST(dlls/ntprint/tests)
@@ -86,10 +86,10 @@ index 0000000..7b7e2ad
 +RC_SRCS = nvcuda.rc
 diff --git a/dlls/nvcuda/internal.c b/dlls/nvcuda/internal.c
 new file mode 100755
-index 0000000..a5f1449
+index 0000000..6e4f0e0
 --- /dev/null
 +++ b/dlls/nvcuda/internal.c
-@@ -0,0 +1,468 @@
+@@ -0,0 +1,493 @@
 +/*
 + * Copyright (C) 2014-2015 Michael Müller
 + * Copyright (C) 2014-2015 Sebastian Lackner
@@ -130,6 +130,7 @@ index 0000000..a5f1449
 +    struct list entry;
 +    void (*callback)(DWORD, void *);
 +    void *userdata;
++    ULONG count;
 +};
 +
 +static struct list tls_callbacks = LIST_INIT( tls_callbacks );
@@ -145,6 +146,7 @@ index 0000000..a5f1449
 +
 +void cuda_process_tls_callbacks(DWORD reason)
 +{
++    struct tls_callback_entry *to_free = NULL;
 +    struct list *ptr;
 +
 +    TRACE("(%d)\n", reason);
@@ -153,12 +155,29 @@ index 0000000..a5f1449
 +        return;
 +
 +    EnterCriticalSection( &tls_callback_section );
-+    LIST_FOR_EACH( ptr, &tls_callbacks )
++    ptr = list_head( &tls_callbacks );
++    while (ptr)
 +    {
 +        struct tls_callback_entry *callback = LIST_ENTRY( ptr, struct tls_callback_entry, entry );
++        callback->count++;
++        LeaveCriticalSection( &tls_callback_section );
++        HeapFree( GetProcessHeap(), 0, to_free );
++        to_free = NULL;
++
++        TRACE("calling handler %p(0, %p)\n", callback->callback, callback->userdata);
 +        callback->callback(0, callback->userdata);
++        TRACE("handler %p returned\n", callback->callback);
++
++        EnterCriticalSection( &tls_callback_section );
++        ptr = list_next( &tls_callbacks, ptr );
++        if (!--callback->count)  /* removed during execution */
++        {
++            list_remove( &callback->entry );
++            to_free = callback;
++        }
 +    }
 +    LeaveCriticalSection( &tls_callback_section );
++    HeapFree( GetProcessHeap(), 0, to_free );
 +}
 +
 +static const CUuuid UUID_Unknown1                   = {{0x6B, 0xD5, 0xFB, 0x6C, 0x5B, 0xF4, 0xE7, 0x4A,
@@ -421,9 +440,10 @@ index 0000000..a5f1449
 +
 +    new_entry->callback = callback;
 +    new_entry->userdata = userdata;
++    new_entry->count = 1;
 +
 +    EnterCriticalSection( &tls_callback_section );
-+    list_add_head( &tls_callbacks, &new_entry->entry );
++    list_add_tail( &tls_callbacks, &new_entry->entry );
 +    LeaveCriticalSection( &tls_callback_section );
 +
 +    *handle = new_entry;
@@ -433,6 +453,7 @@ index 0000000..a5f1449
 +CUresult WINAPI TlsNotifyInterface_Remove(void *handle, void *param1)
 +{
 +    CUresult ret = CUDA_ERROR_INVALID_VALUE;
++    struct tls_callback_entry *to_free = NULL;
 +    struct list *ptr;
 +
 +    TRACE("(%p, %p)\n", handle, param1);
@@ -446,13 +467,17 @@ index 0000000..a5f1449
 +        struct tls_callback_entry *callback = LIST_ENTRY( ptr, struct tls_callback_entry, entry );
 +        if (callback == handle)
 +        {
-+            list_remove( ptr );
-+            HeapFree( GetProcessHeap(), 0, callback );
++            if (!--callback->count)
++            {
++                list_remove( ptr );
++                to_free = callback;
++            }
 +            ret = CUDA_SUCCESS;
 +            break;
 +        }
 +    }
 +    LeaveCriticalSection( &tls_callback_section );
++    HeapFree( GetProcessHeap(), 0, to_free );
 +    return ret;
 +}
 +
@@ -560,10 +585,10 @@ index 0000000..a5f1449
 +}
 diff --git a/dlls/nvcuda/nvcuda.c b/dlls/nvcuda/nvcuda.c
 new file mode 100644
-index 0000000..3a498ff
+index 0000000..e074f90
 --- /dev/null
 +++ b/dlls/nvcuda/nvcuda.c
-@@ -0,0 +1,2124 @@
+@@ -0,0 +1,2127 @@
 +/*
 + * Copyright (C) 2014-2015 Michael Müller
 + * Copyright (C) 2014-2015 Sebastian Lackner
@@ -2344,7 +2369,10 @@ index 0000000..3a498ff
 +    struct stream_callback *wrapper = userData;
 +    TRACE("(%p, %d, %p)\n", hStream, status, userData);
 +
++    TRACE("calling stream callback %p(%p, %d, %p)", wrapper->callback, hStream, status, wrapper->userData);
 +    wrapper->callback(hStream, status, wrapper->userData);
++    TRACE("stream callback %p returned\n", wrapper->callback);
++
 +    HeapFree( GetProcessHeap(), 0, wrapper );
 +}
 +
@@ -3269,5 +3297,5 @@ index 0000000..e62fb9c
 +    test_TlsNotifyInterface();
 +}
 -- 
-1.9.1
+2.2.1
 

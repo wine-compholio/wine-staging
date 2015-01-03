@@ -1,8 +1,8 @@
-From dc07ceb5dff69b2a306278d5d3254c18c98205df Mon Sep 17 00:00:00 2001
+From ae757e6bb862919e3b5a59bdb590555c462258ee Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 21 Nov 2014 12:22:46 +0100
 Subject: ws2_32: Avoid race-conditions of async WSARecv() operations with
- write watches.
+ write watches. (try 2)
 
 Under specific circumstances Silverlight resets the write watch while the async
 WSARecv() operation is still pending:
@@ -37,14 +37,14 @@ Based on the code it looks like we could savely remove the write-watch check
 at the beginning of WS2_recv_base, which might make the application think
 that data is immediately available.
 ---
- dlls/ws2_32/socket.c | 11 ++++++++++-
- 1 file changed, 10 insertions(+), 1 deletion(-)
+ dlls/ws2_32/socket.c | 12 +++++++++++-
+ 1 file changed, 11 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index b3db306..ef86b28 100644
+index a9ab0a5..9d94893 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
-@@ -1930,7 +1930,16 @@ static int WS2_recv( int fd, struct ws2_async *wsa )
+@@ -1930,7 +1930,17 @@ static int WS2_recv( int fd, struct ws2_async *wsa )
  
      while ((n = recvmsg(fd, &hdr, wsa->flags)) == -1)
      {
@@ -54,7 +54,8 @@ index b3db306..ef86b28 100644
 +            unsigned int i;
 +            for (i = wsa->first_iovec; i < wsa->n_iovecs; i++)
 +            {
-+                if (IsBadWritePtr( wsa->iovec[i].iov_base, wsa->iovec[i].iov_len ))
++                struct iovec *iov = &wsa->iovec[i];
++                if (wine_uninterrupted_write_memory( iov->iov_base, NULL, iov->iov_len ) < iov->iov_len)
 +                    return -1;
 +            }
 +        }
@@ -63,5 +64,5 @@ index b3db306..ef86b28 100644
      }
  
 -- 
-2.1.3
+2.2.1
 

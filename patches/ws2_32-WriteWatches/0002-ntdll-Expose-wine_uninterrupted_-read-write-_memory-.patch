@@ -1,0 +1,169 @@
+From 32e36972905ea820ac557c37b6d3a02dd32fd795 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 3 Jan 2015 20:07:08 +0100
+Subject: ntdll: Expose wine_uninterrupted_[read|write]_memory as exports.
+
+---
+ dlls/ntdll/ntdll.spec    |  4 ++++
+ dlls/ntdll/ntdll_misc.h  |  2 --
+ dlls/ntdll/signal_i386.c | 10 +++++-----
+ dlls/ntdll/virtual.c     | 34 ++++++++++++++++++++++------------
+ include/winternl.h       |  3 +++
+ 5 files changed, 34 insertions(+), 19 deletions(-)
+
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index 51de6e7..1e91089 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -1430,6 +1430,10 @@
+ # signal handling
+ @ cdecl __wine_set_signal_handler(long ptr)
+ 
++# Virtual memory management
++@ cdecl wine_uninterrupted_read_memory(ptr ptr long)
++@ cdecl wine_uninterrupted_write_memory(ptr ptr long)
++
+ # Filesystem
+ @ cdecl wine_nt_to_unix_file_name(ptr ptr long long)
+ @ cdecl wine_unix_to_nt_file_name(ptr ptr)
+diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
+index b7ea6dc..e56e78b 100644
+--- a/dlls/ntdll/ntdll_misc.h
++++ b/dlls/ntdll/ntdll_misc.h
+@@ -171,8 +171,6 @@ extern BOOL virtual_is_valid_code_address( const void *addr, SIZE_T size ) DECLS
+ extern NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err ) DECLSPEC_HIDDEN;
+ extern BOOL virtual_check_buffer_for_read( const void *ptr, SIZE_T size ) DECLSPEC_HIDDEN;
+ extern BOOL virtual_check_buffer_for_write( void *ptr, SIZE_T size ) DECLSPEC_HIDDEN;
+-extern SIZE_T virtual_uninterrupted_read_memory( const void *addr, void *buffer, SIZE_T size ) DECLSPEC_HIDDEN;
+-extern SIZE_T virtual_uninterrupted_write_memory( void *addr, const void *buffer, SIZE_T size ) DECLSPEC_HIDDEN;
+ extern void VIRTUAL_SetForceExec( BOOL enable ) DECLSPEC_HIDDEN;
+ extern void virtual_release_address_space(void) DECLSPEC_HIDDEN;
+ extern void virtual_set_large_address_space(void) DECLSPEC_HIDDEN;
+diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
+index 1a69bc0..de55c31 100644
+--- a/dlls/ntdll/signal_i386.c
++++ b/dlls/ntdll/signal_i386.c
+@@ -1669,13 +1669,13 @@ static BOOL check_atl_thunk( EXCEPTION_RECORD *rec, CONTEXT *context )
+     union atl_thunk thunk_copy;
+     SIZE_T thunk_len;
+ 
+-    thunk_len = virtual_uninterrupted_read_memory( thunk, &thunk_copy, sizeof(*thunk) );
++    thunk_len = wine_uninterrupted_read_memory( thunk, &thunk_copy, sizeof(*thunk) );
+     if (!thunk_len) return FALSE;
+ 
+     if (thunk_len >= sizeof(thunk_copy.t1) && thunk_copy.t1.movl == 0x042444c7 &&
+                                               thunk_copy.t1.jmp == 0xe9)
+     {
+-        if (virtual_uninterrupted_write_memory( (DWORD *)context->Esp + 1,
++        if (wine_uninterrupted_write_memory( (DWORD *)context->Esp + 1,
+             &thunk_copy.t1.this, sizeof(DWORD) ) == sizeof(DWORD))
+         {
+             context->Eip = (DWORD_PTR)(&thunk->t1.func + 1) + thunk_copy.t1.func;
+@@ -1719,11 +1719,11 @@ static BOOL check_atl_thunk( EXCEPTION_RECORD *rec, CONTEXT *context )
+                                                    thunk_copy.t5.inst2 == 0x0460)
+     {
+         DWORD func, stack[2];
+-        if (virtual_uninterrupted_read_memory( (DWORD *)context->Esp,
++        if (wine_uninterrupted_read_memory( (DWORD *)context->Esp,
+             stack, sizeof(stack) ) == sizeof(stack) &&
+-            virtual_uninterrupted_read_memory( (DWORD *)stack[1] + 1,
++            wine_uninterrupted_read_memory( (DWORD *)stack[1] + 1,
+             &func, sizeof(DWORD) ) == sizeof(DWORD) &&
+-            virtual_uninterrupted_write_memory( (DWORD *)context->Esp + 1,
++            wine_uninterrupted_write_memory( (DWORD *)context->Esp + 1,
+             &stack[0], sizeof(stack[0]) ) == sizeof(stack[0]))
+         {
+             context->Ecx = stack[0];
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index 8823164..17792e1 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -1672,13 +1672,14 @@ BOOL virtual_check_buffer_for_write( void *ptr, SIZE_T size )
+ 
+ 
+ /***********************************************************************
+- *           virtual_uninterrupted_read_memory
++ *           wine_uninterrupted_read_memory  (NTDLL.@)
+  *
+  * Similar to NtReadVirtualMemory, but without wineserver calls. Moreover
+  * permissions are checked before accessing each page, to ensure that no
+- * exceptions can happen.
++ * exceptions can happen. When a NULL pointer is passed as buffer the
++ * permissions are only checked and no actual memcpy is performed.
+  */
+-SIZE_T virtual_uninterrupted_read_memory( const void *addr, void *buffer, SIZE_T size )
++SIZE_T CDECL wine_uninterrupted_read_memory( const void *addr, void *buffer, SIZE_T size )
+ {
+     struct file_view *view;
+     sigset_t sigset;
+@@ -1697,10 +1698,14 @@ SIZE_T virtual_uninterrupted_read_memory( const void *addr, void *buffer, SIZE_T
+             while (bytes_read < size && (VIRTUAL_GetUnixProt( *p++ ) & PROT_READ))
+             {
+                 SIZE_T block_size = min( size, page_size - ((UINT_PTR)addr & page_mask) );
+-                memcpy( buffer, addr, block_size );
+ 
+-                addr   = (const void *)((const char *)addr + block_size);
+-                buffer = (void *)((char *)buffer + block_size);
++                if (buffer)
++                {
++                    memcpy( buffer, addr, block_size );
++                    buffer = (void *)((char *)buffer + block_size);
++                }
++
++                addr = (const void *)((const char *)addr + block_size);
+                 bytes_read += block_size;
+             }
+         }
+@@ -1711,13 +1716,14 @@ SIZE_T virtual_uninterrupted_read_memory( const void *addr, void *buffer, SIZE_T
+ 
+ 
+ /***********************************************************************
+- *           virtual_uninterrupted_write_memory
++ *           wine_uninterrupted_write_memory  (NTDLL.@)
+  *
+  * Similar to NtWriteVirtualMemory, but without wineserver calls. Moreover
+  * permissions are checked before accessing each page, to ensure that no
+- * exceptions can happen.
++ * exceptions can happen. When a NULL pointer is passed as buffer the
++ * permissions are only checked and no actual memcpy is performed.
+  */
+-SIZE_T virtual_uninterrupted_write_memory( void *addr, const void *buffer, SIZE_T size )
++SIZE_T CDECL wine_uninterrupted_write_memory( void *addr, const void *buffer, SIZE_T size )
+ {
+     struct file_view *view;
+     sigset_t sigset;
+@@ -1756,10 +1762,14 @@ SIZE_T virtual_uninterrupted_write_memory( void *addr, const void *buffer, SIZE_
+                 }
+ 
+                 block_size = min( size, page_size - ((UINT_PTR)addr & page_mask) );
+-                memcpy( addr, buffer, block_size );
+ 
+-                addr   = (void *)((char *)addr + block_size);
+-                buffer = (const void *)((const char *)buffer + block_size);
++                if (buffer)
++                {
++                    memcpy( addr, buffer, block_size );
++                    buffer = (const void *)((const char *)buffer + block_size);
++                }
++
++                addr = (void *)((char *)addr + block_size);
+                 bytes_written += block_size;
+             }
+         }
+diff --git a/include/winternl.h b/include/winternl.h
+index 1a694da..02dda9a 100644
+--- a/include/winternl.h
++++ b/include/winternl.h
+@@ -2605,6 +2605,9 @@ NTSYSAPI NTSTATUS CDECL wine_nt_to_unix_file_name( const UNICODE_STRING *nameW,
+                                                    UINT disposition, BOOLEAN check_case );
+ NTSYSAPI NTSTATUS CDECL wine_unix_to_nt_file_name( const ANSI_STRING *name, UNICODE_STRING *nt );
+ 
++NTSYSAPI SIZE_T CDECL wine_uninterrupted_read_memory( const void *addr, void *buffer, SIZE_T size );
++NTSYSAPI SIZE_T CDECL wine_uninterrupted_write_memory( void *addr, const void *buffer, SIZE_T size );
++
+ 
+ /***********************************************************************
+  * Inline functions
+-- 
+2.2.1
+

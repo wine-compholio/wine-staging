@@ -1284,17 +1284,17 @@ ntdll-User_Shared_Data.ok:
 # | 	dlls/ntdll/signal_x86_64.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c
 # |
 .INTERMEDIATE: ntdll-WRITECOPY.ok
-ntdll-WRITECOPY.ok:
+ntdll-WRITECOPY.ok: ws2_32-WriteWatches.ok
 	$(call APPLY_FILE,ntdll-WRITECOPY/0001-ntdll-Trigger-write-watches-before-passing-userdata-.patch)
 	$(call APPLY_FILE,ntdll-WRITECOPY/0002-advapi-Trigger-write-watches-before-passing-userdata.patch)
 	$(call APPLY_FILE,ntdll-WRITECOPY/0003-ntdll-Setup-a-temporary-signal-handler-during-proces.patch)
-	$(call APPLY_FILE,ntdll-WRITECOPY/0004-ntdll-Properly-handle-PAGE_WRITECOPY-protection.patch)
+	$(call APPLY_FILE,ntdll-WRITECOPY/0004-ntdll-Properly-handle-PAGE_WRITECOPY-protection.-try.patch)
 	$(call APPLY_FILE,ntdll-WRITECOPY/0005-ntdll-Only-enable-true-WRITECOPY-protection-when-a-s.patch)
 	@( \
 		echo '+    { "Sebastian Lackner", "ntdll: Trigger write watches before passing userdata pointer to wait_reply.", 1 },'; \
 		echo '+    { "Sebastian Lackner", "advapi: Trigger write watches before passing userdata pointer to read syscall.", 1 },'; \
 		echo '+    { "Michael Müller", "ntdll: Setup a temporary signal handler during process startup to handle page faults.", 1 },'; \
-		echo '+    { "Michael Müller", "ntdll: Properly handle PAGE_WRITECOPY protection.", 4 },'; \
+		echo '+    { "Michael Müller", "ntdll: Properly handle PAGE_WRITECOPY protection.", 5 },'; \
 		echo '+    { "Michael Müller", "ntdll: Only enable true WRITECOPY protection when a special environment variable is set.", 1 },'; \
 	) > ntdll-WRITECOPY.ok
 
@@ -2701,13 +2701,18 @@ ws2_32-TransmitFile.ok:
 # Patchset ws2_32-WriteWatches
 # |
 # | Modified files:
-# |   *	dlls/ws2_32/socket.c
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/signal_i386.c, dlls/ntdll/virtual.c, dlls/ws2_32/socket.c,
+# | 	include/winternl.h
 # |
 .INTERMEDIATE: ws2_32-WriteWatches.ok
 ws2_32-WriteWatches.ok:
-	$(call APPLY_FILE,ws2_32-WriteWatches/0001-ws2_32-Avoid-race-conditions-of-async-WSARecv-operat.patch)
+	$(call APPLY_FILE,ws2_32-WriteWatches/0001-ntdll-Handle-write-watches-in-virtual_uninterrupted_.patch)
+	$(call APPLY_FILE,ws2_32-WriteWatches/0002-ntdll-Expose-wine_uninterrupted_-read-write-_memory-.patch)
+	$(call APPLY_FILE,ws2_32-WriteWatches/0003-ws2_32-Avoid-race-conditions-of-async-WSARecv-operat.patch)
 	@( \
-		echo '+    { "Sebastian Lackner", "ws2_32: Avoid race-conditions of async WSARecv() operations with write watches.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: Handle write watches in virtual_uninterrupted_write_memory.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "ntdll: Expose wine_uninterrupted_[read|write]_memory as exports.", 1 },'; \
+		echo '+    { "Sebastian Lackner", "ws2_32: Avoid race-conditions of async WSARecv() operations with write watches.", 2 },'; \
 	) > ws2_32-WriteWatches.ok
 
 # Patchset ws2_32-getaddrinfo

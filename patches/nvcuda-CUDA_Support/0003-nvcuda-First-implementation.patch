@@ -1,92 +1,51 @@
-From 14d9c88106f41c54b8e4bb642bdc0b448b676e02 Mon Sep 17 00:00:00 2001
+From eeabd124863a2a20d453af1ee2afe94c4ffb5ebd Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
-Date: Wed, 31 Dec 2014 01:37:02 +0100
+Date: Sat, 3 Jan 2015 03:39:11 +0100
 Subject: nvcuda: First implementation.
 
 ---
- configure.ac                  |   22 +
- dlls/nvcuda/Makefile.in       |    8 +
+ configure.ac                  |    1 +
+ dlls/nvcuda/Makefile.in       |    3 +-
  dlls/nvcuda/internal.c        |  493 ++++++++++
- dlls/nvcuda/nvcuda.c          | 2127 +++++++++++++++++++++++++++++++++++++++++
+ dlls/nvcuda/nvcuda.c          | 2095 ++++++++++++++++++++++++++++++++++++++++-
  dlls/nvcuda/nvcuda.h          |   29 +
- dlls/nvcuda/nvcuda.rc         |   33 +
- dlls/nvcuda/nvcuda.spec       |  308 ++++++
+ dlls/nvcuda/nvcuda.spec       |  492 +++++-----
  dlls/nvcuda/tests/Makefile.in |    4 +
- dlls/nvcuda/tests/nvcuda.c    |  176 ++++
- 9 files changed, 3200 insertions(+)
- create mode 100644 dlls/nvcuda/Makefile.in
+ dlls/nvcuda/tests/nvcuda.c    |  168 ++++
+ 8 files changed, 3035 insertions(+), 250 deletions(-)
  create mode 100755 dlls/nvcuda/internal.c
- create mode 100644 dlls/nvcuda/nvcuda.c
  create mode 100644 dlls/nvcuda/nvcuda.h
- create mode 100644 dlls/nvcuda/nvcuda.rc
- create mode 100644 dlls/nvcuda/nvcuda.spec
  create mode 100644 dlls/nvcuda/tests/Makefile.in
  create mode 100644 dlls/nvcuda/tests/nvcuda.c
 
 diff --git a/configure.ac b/configure.ac
-index 94b83ab..254d2be 100644
+index feeb027..dfe3ac5 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -39,6 +39,7 @@ AC_ARG_WITH(capi,      AS_HELP_STRING([--without-capi],[do not use CAPI (ISDN su
- AC_ARG_WITH(cms,       AS_HELP_STRING([--without-cms],[do not use CMS (color management support)]))
- AC_ARG_WITH(coreaudio, AS_HELP_STRING([--without-coreaudio],[do not use the CoreAudio sound support]),
-             [if test "x$withval" = "xno"; then ac_cv_header_CoreAudio_CoreAudio_h=no; fi])
-+AC_ARG_WITH(cuda,      AS_HELP_STRING([--without-cuda],[do not use the CUDA library]))
- AC_ARG_WITH(cups,      AS_HELP_STRING([--without-cups],[do not use CUPS]))
- AC_ARG_WITH(curses,    AS_HELP_STRING([--without-curses],[do not use (n)curses]),
-             [if test "x$withval" = "xno"; then ac_cv_header_ncurses_h=no; ac_cv_header_curses_h=no; fi])
-@@ -1261,6 +1262,25 @@ to install ${notice_platform}development packages of Xlib/Xfree86 at the very le
- 
- test "x$ac_cv_lib_GLU_gluLookAt" != xyes && enable_glu32=${enable_glu32:-no}
- 
-+dnl **** Check for libcuda ****
-+if test "x$with_cuda" != "xno"
-+then
-+    ac_save_CPPFLAGS="$CPPFLAGS"
-+    ac_cuda_incl=""
-+    test -f "/opt/cuda/include/cuda.h" -o -f "/opt/cuda/include/cudaGL.h" && ac_cuda_incl="$ac_cuda_incl -I/opt/cuda/include"
-+    CPPFLAGS="$CPPFLAGS -Iinclude -I$srcdir/include $ac_cuda_incl"
-+    AC_SUBST(CUDA_CFLAGS,"$ac_cuda_incl")
-+    AC_CHECK_HEADERS([cuda.h])
-+    AC_CHECK_HEADERS([cudaGL.h],,,
-+        [#include <windef.h>
-+         #include <wine/wgl.h>
-+         #include <cuda.h>])
-+    CPPFLAGS="$ac_save_CPPFLAGS"
-+fi
-+WINE_NOTICE_WITH(cuda,[test "x$ac_cv_header_cuda_h" != "xyes" -o "x$ac_cv_header_cudaGL_h" != "xyes"],
-+                 [cuda ${notice_platform}development files not found, nvcuda won't be supported.])
-+test "x$ac_cv_header_cuda_h" != "xyes" -o "x$ac_cv_header_cudaGL_h" != "xyes" && enable_nvcuda=${enable_nvcuda:-no}
-+
- dnl **** Check for OpenCL ****
- if test "$ac_cv_header_CL_cl_h" = "yes"
- then
-@@ -3125,6 +3145,8 @@ WINE_CONFIG_TEST(dlls/ntdsapi/tests)
- WINE_CONFIG_DLL(ntoskrnl.exe,,[implib])
+@@ -3126,6 +3126,7 @@ WINE_CONFIG_DLL(ntoskrnl.exe,,[implib])
  WINE_CONFIG_DLL(ntprint)
  WINE_CONFIG_TEST(dlls/ntprint/tests)
-+WINE_CONFIG_DLL(nvcuda)
+ WINE_CONFIG_DLL(nvcuda)
 +WINE_CONFIG_TEST(dlls/nvcuda/tests)
  WINE_CONFIG_DLL(objsel,,[clean])
  WINE_CONFIG_DLL(odbc32,,[implib])
  WINE_CONFIG_DLL(odbccp32,,[implib])
 diff --git a/dlls/nvcuda/Makefile.in b/dlls/nvcuda/Makefile.in
-new file mode 100644
-index 0000000..7b7e2ad
---- /dev/null
+index 4b33278..6322fb2 100644
+--- a/dlls/nvcuda/Makefile.in
 +++ b/dlls/nvcuda/Makefile.in
-@@ -0,0 +1,8 @@
-+MODULE    = nvcuda.dll
-+EXTRAINCL = $(CUDA_CFLAGS)
-+
-+C_SRCS = \
+@@ -1,6 +1,7 @@
+ MODULE    = nvcuda.dll
+ 
+ C_SRCS = \
+-	nvcuda.c
 +	nvcuda.c \
 +	internal.c
-+
-+RC_SRCS = nvcuda.rc
+ 
+ RC_SRCS = nvcuda.rc
 diff --git a/dlls/nvcuda/internal.c b/dlls/nvcuda/internal.c
 new file mode 100755
-index 0000000..6e4f0e0
+index 0000000..839d85c
 --- /dev/null
 +++ b/dlls/nvcuda/internal.c
 @@ -0,0 +1,493 @@
@@ -120,7 +79,7 @@ index 0000000..6e4f0e0
 +#include "wine/library.h"
 +#include "wine/debug.h"
 +#include "wine/list.h"
-+#include <cuda.h>
++#include "cuda.h"
 +#include "nvcuda.h"
 +
 +WINE_DEFAULT_DEBUG_CHANNEL(nvcuda);
@@ -584,42 +543,31 @@ index 0000000..6e4f0e0
 +    return CUDA_ERROR_UNKNOWN;
 +}
 diff --git a/dlls/nvcuda/nvcuda.c b/dlls/nvcuda/nvcuda.c
-new file mode 100644
-index 0000000..e074f90
---- /dev/null
+index eb1c67e..8c134cb 100644
+--- a/dlls/nvcuda/nvcuda.c
 +++ b/dlls/nvcuda/nvcuda.c
-@@ -0,0 +1,2127 @@
-+/*
+@@ -1,4 +1,5 @@
+ /*
 + * Copyright (C) 2014-2015 Michael Müller
-+ * Copyright (C) 2014-2015 Sebastian Lackner
-+ *
-+ * This library is free software; you can redistribute it and/or
-+ * modify it under the terms of the GNU Lesser General Public
-+ * License as published by the Free Software Foundation; either
-+ * version 2.1 of the License, or (at your option) any later version.
-+ *
-+ * This library is distributed in the hope that it will be useful,
-+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
-+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-+ * Lesser General Public License for more details.
-+ *
-+ * You should have received a copy of the GNU Lesser General Public
-+ * License along with this library; if not, write to the Free Software
-+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
-+ */
-+
-+#include "config.h"
+  * Copyright (C) 2014-2015 Sebastian Lackner
+  *
+  * This library is free software; you can redistribute it and/or
+@@ -17,19 +18,2107 @@
+  */
+ 
+ #include "config.h"
 +#include "wine/port.h"
 +
-+#include <stdarg.h>
-+
+ #include <stdarg.h>
+ 
+-#include "windef.h"
+-#include "winbase.h"
 +#include "windef.h"
 +#include "winbase.h"
 +#include "wine/library.h"
 +#include "wine/debug.h"
 +#include "wine/wgl.h"
-+#include <cuda.h>
-+#include <cudaGL.h>
++#include "cuda.h"
 +#include "nvcuda.h"
 +
 +#if defined(__x86_64) || defined(AMD64) || defined(_M_AMD64)
@@ -2692,16 +2640,17 @@ index 0000000..e074f90
 +    TRACE("(%p, %p, %u)\n", hTexRef, hMipmappedArray, Flags);
 +    return pcuTexRefSetMipmappedArray(hTexRef, hMipmappedArray, Flags);
 +}
-+
-+BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
-+{
+ 
+ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
+ {
 +    TRACE("(%p, %u, %p)\n", instance, reason, reserved);
 +
-+    switch (reason)
-+    {
-+        case DLL_WINE_PREATTACH:
-+            return TRUE;    /* prefer native version */
-+        case DLL_PROCESS_ATTACH:
+     switch (reason)
+     {
+         case DLL_WINE_PREATTACH:
+             return TRUE;    /* prefer native version */
+         case DLL_PROCESS_ATTACH:
+-            DisableThreadLibraryCalls(instance);
 +            if (!load_functions()) return FALSE;
 +            break;
 +        case DLL_PROCESS_DETACH:
@@ -2711,19 +2660,17 @@ index 0000000..e074f90
 +        case DLL_THREAD_ATTACH:
 +        case DLL_THREAD_DETACH:
 +            cuda_process_tls_callbacks(reason);
-+            break;
-+    }
-+
-+    return TRUE;
-+}
+             break;
+     }
+ 
 diff --git a/dlls/nvcuda/nvcuda.h b/dlls/nvcuda/nvcuda.h
 new file mode 100644
-index 0000000..30861b6
+index 0000000..aaffe13
 --- /dev/null
 +++ b/dlls/nvcuda/nvcuda.h
 @@ -0,0 +1,29 @@
 +/*
-+ * Copyright (C) 20014 Michael Müller
++ * Copyright (C) 2014-2015 Michael Müller
 + *
 + * This library is free software; you can redistribute it and/or
 + * modify it under the terms of the GNU Lesser General Public
@@ -2745,57 +2692,50 @@ index 0000000..30861b6
 +
 +#include "windef.h"
 +#include "winbase.h"
-+#include <cuda.h>
++#include "cuda.h"
 +
 +void cuda_process_tls_callbacks(DWORD reason) DECLSPEC_HIDDEN;
 +CUresult cuda_get_table(const void **table, const CUuuid *id, const void *orig_table, CUresult orig_result) DECLSPEC_HIDDEN;
 +
 +#endif
-diff --git a/dlls/nvcuda/nvcuda.rc b/dlls/nvcuda/nvcuda.rc
-new file mode 100644
-index 0000000..f135e83
---- /dev/null
-+++ b/dlls/nvcuda/nvcuda.rc
-@@ -0,0 +1,33 @@
-+/*
-+ * Top level resource file for nvcuda.dll
-+ *
-+ * Copyright (C) 2014-2015 Michael Müller
-+ *
-+ * This library is free software; you can redistribute it and/or
-+ * modify it under the terms of the GNU Lesser General Public
-+ * License as published by the Free Software Foundation; either
-+ * version 2.1 of the License, or (at your option) any later version.
-+ *
-+ * This library is distributed in the hope that it will be useful,
-+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
-+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-+ * Lesser General Public License for more details.
-+ *
-+ * You should have received a copy of the GNU Lesser General Public
-+ * License along with this library; if not, write to the Free Software
-+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
-+ *
-+ */
-+
-+#include "winver.h"
-+
-+#define WINE_FILENAME_STR "nvcuda.dll"
-+#define WINE_FILEDESCRIPTION_STR "NVIDIA CUDA Driver, Version 337.88"
-+
-+#define WINE_FILEVERSION      8,17,13,3788
-+#define WINE_FILEVERSION_STR "8.17.13.3788"
-+
-+#define WINE_PRODUCTVERSION      8,17,13,3788
-+#define WINE_PRODUCTVERSION_STR "8.17.13.3788"
-+
-+#include "wine/wine_common_ver.rc"
 diff --git a/dlls/nvcuda/nvcuda.spec b/dlls/nvcuda/nvcuda.spec
-new file mode 100644
-index 0000000..720cebf
---- /dev/null
+index 279f7ab..621b8d5 100644
+--- a/dlls/nvcuda/nvcuda.spec
 +++ b/dlls/nvcuda/nvcuda.spec
-@@ -0,0 +1,308 @@
+@@ -1,36 +1,36 @@
+-@ stub cuArray3DCreate
+-@ stub cuArray3DCreate_v2
+-@ stub cuArray3DGetDescriptor
+-@ stub cuArray3DGetDescriptor_v2
+-@ stub cuArrayCreate
+-@ stub cuArrayCreate_v2
+-@ stub cuArrayDestroy
+-@ stub cuArrayGetDescriptor
+-@ stub cuArrayGetDescriptor_v2
+-@ stub cuCtxAttach
+-@ stub cuCtxCreate
+-@ stub cuCtxCreate_v2
+-@ stub cuCtxDestroy
+-@ stub cuCtxDestroy_v2
+-@ stub cuCtxDetach
+-@ stub cuCtxDisablePeerAccess
+-@ stub cuCtxEnablePeerAccess
+-@ stub cuCtxGetApiVersion
+-@ stub cuCtxGetCacheConfig
+-@ stub cuCtxGetCurrent
+-@ stub cuCtxGetDevice
+-@ stub cuCtxGetLimit
+-@ stub cuCtxGetSharedMemConfig
+-@ stub cuCtxGetStreamPriorityRange
+-@ stub cuCtxPopCurrent
+-@ stub cuCtxPopCurrent_v2
+-@ stub cuCtxPushCurrent
+-@ stub cuCtxPushCurrent_v2
+-@ stub cuCtxSetCacheConfig
+-@ stub cuCtxSetCurrent
+-@ stub cuCtxSetLimit
+-@ stub cuCtxSetSharedMemConfig
+-@ stub cuCtxSynchronize
 +@ stdcall cuArray3DCreate(ptr ptr) wine_cuArray3DCreate
 +@ stdcall cuArray3DCreate_v2(ptr ptr) wine_cuArray3DCreate_v2
 +@ stdcall cuArray3DGetDescriptor(ptr ptr) wine_cuArray3DGetDescriptor
@@ -2829,59 +2769,53 @@ index 0000000..720cebf
 +@ stdcall cuCtxSetLimit(long long) wine_cuCtxSetLimit
 +@ stdcall cuCtxSetSharedMemConfig(long) wine_cuCtxSetSharedMemConfig
 +@ stdcall cuCtxSynchronize() wine_cuCtxSynchronize
-+34 stub cuD3D10CtxCreate
-+35 stub cuD3D10CtxCreateOnDevice
-+36 stub cuD3D10CtxCreate_v2
-+37 stub cuD3D10GetDevice
-+38 stub cuD3D10GetDevices
-+39 stub cuD3D10GetDirect3DDevice
-+40 stub cuD3D10MapResources
-+41 stub cuD3D10RegisterResource
-+42 stub cuD3D10ResourceGetMappedArray
-+43 stub cuD3D10ResourceGetMappedPitch
-+44 stub cuD3D10ResourceGetMappedPitch_v2
-+45 stub cuD3D10ResourceGetMappedPointer
-+46 stub cuD3D10ResourceGetMappedPointer_v2
-+47 stub cuD3D10ResourceGetMappedSize
-+48 stub cuD3D10ResourceGetMappedSize_v2
-+49 stub cuD3D10ResourceGetSurfaceDimensions
-+50 stub cuD3D10ResourceGetSurfaceDimensions_v2
-+51 stub cuD3D10ResourceSetMapFlags
-+52 stub cuD3D10UnmapResources
-+53 stub cuD3D10UnregisterResource
-+54 stub cuD3D11CtxCreate
-+55 stub cuD3D11CtxCreateOnDevice
-+56 stub cuD3D11CtxCreate_v2
-+57 stub cuD3D11GetDevice
-+58 stub cuD3D11GetDevices
-+59 stub cuD3D11GetDirect3DDevice
-+60 stub cuD3D9Begin
-+61 stub cuD3D9CtxCreate
-+62 stub cuD3D9CtxCreateOnDevice
-+63 stub cuD3D9CtxCreate_v2
-+64 stub cuD3D9End
-+65 stub cuD3D9GetDevice
-+66 stub cuD3D9GetDevices
-+67 stub cuD3D9GetDirect3DDevice
-+68 stub cuD3D9MapResources
-+69 stub cuD3D9MapVertexBuffer
-+70 stub cuD3D9MapVertexBuffer_v2
-+71 stub cuD3D9RegisterResource
-+72 stub cuD3D9RegisterVertexBuffer
-+73 stub cuD3D9ResourceGetMappedArray
-+74 stub cuD3D9ResourceGetMappedPitch
-+75 stub cuD3D9ResourceGetMappedPitch_v2
-+76 stub cuD3D9ResourceGetMappedPointer
-+77 stub cuD3D9ResourceGetMappedPointer_v2
-+78 stub cuD3D9ResourceGetMappedSize
-+79 stub cuD3D9ResourceGetMappedSize_v2
-+80 stub cuD3D9ResourceGetSurfaceDimensions
-+81 stub cuD3D9ResourceGetSurfaceDimensions_v2
-+82 stub cuD3D9ResourceSetMapFlags
-+83 stub cuD3D9UnmapResources
-+84 stub cuD3D9UnmapVertexBuffer
-+85 stub cuD3D9UnregisterResource
-+86 stub cuD3D9UnregisterVertexBuffer
+ @ stub cuD3D10CtxCreate
+ @ stub cuD3D10CtxCreateOnDevice
+ @ stub cuD3D10CtxCreate_v2
+@@ -84,225 +84,225 @@
+ @ stub cuD3D9UnmapVertexBuffer
+ @ stub cuD3D9UnregisterResource
+ @ stub cuD3D9UnregisterVertexBuffer
+-@ stub cuDeviceCanAccessPeer
+-@ stub cuDeviceComputeCapability
+-@ stub cuDeviceGet
+-@ stub cuDeviceGetAttribute
+-@ stub cuDeviceGetByPCIBusId
+-@ stub cuDeviceGetCount
+-@ stub cuDeviceGetName
+-@ stub cuDeviceGetPCIBusId
+-@ stub cuDeviceGetProperties
+-@ stub cuDeviceTotalMem
+-@ stub cuDeviceTotalMem_v2
+-@ stub cuDriverGetVersion
+-@ stub cuEventCreate
+-@ stub cuEventDestroy
+-@ stub cuEventDestroy_v2
+-@ stub cuEventElapsedTime
+-@ stub cuEventQuery
+-@ stub cuEventRecord
+-@ stub cuEventSynchronize
+-@ stub cuFuncGetAttribute
+-@ stub cuFuncSetBlockShape
+-@ stub cuFuncSetCacheConfig
+-@ stub cuFuncSetSharedMemConfig
+-@ stub cuFuncSetSharedSize
+-@ stub cuGLCtxCreate
+-@ stub cuGLCtxCreate_v2
+-@ stub cuGLGetDevices
+-@ stub cuGLInit
+-@ stub cuGLMapBufferObject
+-@ stub cuGLMapBufferObjectAsync
+-@ stub cuGLMapBufferObjectAsync_v2
+-@ stub cuGLMapBufferObject_v2
+-@ stub cuGLRegisterBufferObject
+-@ stub cuGLSetBufferObjectMapFlags
+-@ stub cuGLUnmapBufferObject
+-@ stub cuGLUnmapBufferObjectAsync
+-@ stub cuGLUnregisterBufferObject
+-@ stub cuGetErrorName
+-@ stub cuGetErrorString
+-@ stub cuGetExportTable
 +@ stdcall cuDeviceCanAccessPeer(ptr long long) wine_cuDeviceCanAccessPeer
 +@ stdcall cuDeviceComputeCapability(ptr ptr long) wine_cuDeviceComputeCapability
 +@ stdcall cuDeviceGet(ptr long) wine_cuDeviceGet
@@ -2922,9 +2856,30 @@ index 0000000..720cebf
 +@ stdcall cuGetErrorName(long ptr) wine_cuGetErrorName
 +@ stdcall cuGetErrorString(long ptr) wine_cuGetErrorString
 +@ stdcall cuGetExportTable(ptr ptr) wine_cuGetExportTable
-+127 stub cuGraphicsD3D10RegisterResource
-+128 stub cuGraphicsD3D11RegisterResource
-+129 stub cuGraphicsD3D9RegisterResource
+ @ stub cuGraphicsD3D10RegisterResource
+ @ stub cuGraphicsD3D11RegisterResource
+ @ stub cuGraphicsD3D9RegisterResource
+-@ stub cuGraphicsGLRegisterBuffer
+-@ stub cuGraphicsGLRegisterImage
+-@ stub cuGraphicsMapResources
+-@ stub cuGraphicsResourceGetMappedMipmappedArray
+-@ stub cuGraphicsResourceGetMappedPointer
+-@ stub cuGraphicsResourceGetMappedPointer_v2
+-@ stub cuGraphicsResourceSetMapFlags
+-@ stub cuGraphicsSubResourceGetMappedArray
+-@ stub cuGraphicsUnmapResources
+-@ stub cuGraphicsUnregisterResource
+-@ stub cuInit
+-@ stub cuIpcCloseMemHandle
+-@ stub cuIpcGetEventHandle
+-@ stub cuIpcGetMemHandle
+-@ stub cuIpcOpenEventHandle
+-@ stub cuIpcOpenMemHandle
+-@ stub cuLaunch
+-@ stub cuLaunchGrid
+-@ stub cuLaunchGridAsync
+-@ stub cuLaunchKernel
+-@ stub cuLinkAddData
 +@ stdcall cuGraphicsGLRegisterBuffer(ptr long long) wine_cuGraphicsGLRegisterBuffer
 +@ stdcall cuGraphicsGLRegisterImage(ptr long long long) wine_cuGraphicsGLRegisterImage
 +@ stdcall cuGraphicsMapResources(long ptr ptr) wine_cuGraphicsMapResources
@@ -2946,7 +2901,98 @@ index 0000000..720cebf
 +@ stdcall cuLaunchGridAsync(ptr long long ptr) wine_cuLaunchGridAsync
 +@ stdcall cuLaunchKernel(ptr long long long long long long long ptr ptr ptr) wine_cuLaunchKernel
 +@ stdcall cuLinkAddData(ptr long ptr long str long ptr ptr) wine_cuLinkAddData
-+151 stub cuLinkAddFile
+ @ stub cuLinkAddFile
+-@ stub cuLinkComplete
+-@ stub cuLinkCreate
+-@ stub cuLinkDestroy
+-@ stub cuMemAlloc
+-@ stub cuMemAllocHost
+-@ stub cuMemAllocHost_v2
+-@ stub cuMemAllocManaged
+-@ stub cuMemAllocPitch
+-@ stub cuMemAllocPitch_v2
+-@ stub cuMemAlloc_v2
+-@ stub cuMemFree
+-@ stub cuMemFreeHost
+-@ stub cuMemFree_v2
+-@ stub cuMemGetAddressRange
+-@ stub cuMemGetAddressRange_v2
+-@ stub cuMemGetInfo
+-@ stub cuMemGetInfo_v2
+-@ stub cuMemHostAlloc
+-@ stub cuMemHostGetDevicePointer
+-@ stub cuMemHostGetDevicePointer_v2
+-@ stub cuMemHostGetFlags
+-@ stub cuMemHostRegister
+-@ stub cuMemHostUnregister
+-@ stub cuMemcpy
+-@ stub cuMemcpy2D
+-@ stub cuMemcpy2DAsync
+-@ stub cuMemcpy2DAsync_v2
+-@ stub cuMemcpy2DUnaligned
+-@ stub cuMemcpy2DUnaligned_v2
+-@ stub cuMemcpy2D_v2
+-@ stub cuMemcpy3D
+-@ stub cuMemcpy3DAsync
+-@ stub cuMemcpy3DAsync_v2
+-@ stub cuMemcpy3DPeer
+-@ stub cuMemcpy3DPeerAsync
+-@ stub cuMemcpy3D_v2
+-@ stub cuMemcpyAsync
+-@ stub cuMemcpyAtoA
+-@ stub cuMemcpyAtoA_v2
+-@ stub cuMemcpyAtoD
+-@ stub cuMemcpyAtoD_v2
+-@ stub cuMemcpyAtoH
+-@ stub cuMemcpyAtoHAsync
+-@ stub cuMemcpyAtoHAsync_v2
+-@ stub cuMemcpyAtoH_v2
+-@ stub cuMemcpyDtoA
+-@ stub cuMemcpyDtoA_v2
+-@ stub cuMemcpyDtoD
+-@ stub cuMemcpyDtoDAsync
+-@ stub cuMemcpyDtoDAsync_v2
+-@ stub cuMemcpyDtoD_v2
+-@ stub cuMemcpyDtoH
+-@ stub cuMemcpyDtoHAsync
+-@ stub cuMemcpyDtoHAsync_v2
+-@ stub cuMemcpyDtoH_v2
+-@ stub cuMemcpyHtoA
+-@ stub cuMemcpyHtoAAsync
+-@ stub cuMemcpyHtoAAsync_v2
+-@ stub cuMemcpyHtoA_v2
+-@ stub cuMemcpyHtoD
+-@ stub cuMemcpyHtoDAsync
+-@ stub cuMemcpyHtoDAsync_v2
+-@ stub cuMemcpyHtoD_v2
+-@ stub cuMemcpyPeer
+-@ stub cuMemcpyPeerAsync
+-@ stub cuMemsetD16
+-@ stub cuMemsetD16Async
+-@ stub cuMemsetD16_v2
+-@ stub cuMemsetD2D16
+-@ stub cuMemsetD2D16Async
+-@ stub cuMemsetD2D16_v2
+-@ stub cuMemsetD2D32
+-@ stub cuMemsetD2D32Async
+-@ stub cuMemsetD2D32_v2
+-@ stub cuMemsetD2D8
+-@ stub cuMemsetD2D8Async
+-@ stub cuMemsetD2D8_v2
+-@ stub cuMemsetD32
+-@ stub cuMemsetD32Async
+-@ stub cuMemsetD32_v2
+-@ stub cuMemsetD8
+-@ stub cuMemsetD8Async
+-@ stub cuMemsetD8_v2
+-@ stub cuMipmappedArrayCreate
+-@ stub cuMipmappedArrayDestroy
+-@ stub cuMipmappedArrayGetLevel
+-@ stub cuModuleGetFunction
+-@ stub cuModuleGetGlobal
+-@ stub cuModuleGetGlobal_v2
+-@ stub cuModuleGetSurfRef
+-@ stub cuModuleGetTexRef
 +@ stdcall cuLinkComplete(ptr ptr ptr) wine_cuLinkComplete
 +@ stdcall cuLinkCreate(long ptr ptr ptr) wine_cuLinkCreate
 +@ stdcall cuLinkDestroy(ptr) wine_cuLinkDestroy
@@ -3038,7 +3084,18 @@ index 0000000..720cebf
 +@ stdcall cuModuleGetGlobal_v2(ptr ptr ptr str) wine_cuModuleGetGlobal_v2
 +@ stdcall cuModuleGetSurfRef(ptr ptr str) wine_cuModuleGetSurfRef
 +@ stdcall cuModuleGetTexRef(ptr ptr str) wine_cuModuleGetTexRef
-+243 stub cuModuleLoad
+ @ stub cuModuleLoad
+-@ stub cuModuleLoadData
+-@ stub cuModuleLoadDataEx
+-@ stub cuModuleLoadFatBinary
+-@ stub cuModuleUnload
+-@ stub cuParamSetSize
+-@ stub cuParamSetTexRef
+-@ stub cuParamSetf
+-@ stub cuParamSeti
+-@ stub cuParamSetv
+-@ stub cuPointerGetAttribute
+-@ stub cuPointerSetAttribute
 +@ stdcall cuModuleLoadData(ptr ptr) wine_cuModuleLoadData
 +@ stdcall cuModuleLoadDataEx(ptr ptr long ptr ptr) wine_cuModuleLoadDataEx
 +@ stdcall cuModuleLoadFatBinary(ptr ptr) wine_cuModuleLoadFatBinary
@@ -3050,9 +3107,59 @@ index 0000000..720cebf
 +@ stdcall cuParamSetv(ptr long ptr long) wine_cuParamSetv
 +@ stdcall cuPointerGetAttribute(ptr long long) wine_cuPointerGetAttribute
 +@ stdcall cuPointerSetAttribute(ptr long long) wine_cuPointerSetAttribute
-+255 stub cuProfilerInitialize
-+256 stub cuProfilerStart
-+257 stub cuProfilerStop
+ @ stub cuProfilerInitialize
+ @ stub cuProfilerStart
+ @ stub cuProfilerStop
+-@ stub cuStreamAddCallback
+-@ stub cuStreamAttachMemAsync
+-@ stub cuStreamCreate
+-@ stub cuStreamCreateWithPriority
+-@ stub cuStreamDestroy
+-@ stub cuStreamDestroy_v2
+-@ stub cuStreamGetFlags
+-@ stub cuStreamGetPriority
+-@ stub cuStreamQuery
+-@ stub cuStreamSynchronize
+-@ stub cuStreamWaitEvent
+-@ stub cuSurfObjectCreate
+-@ stub cuSurfObjectDestroy
+-@ stub cuSurfObjectGetResourceDesc
+-@ stub cuSurfRefGetArray
+-@ stub cuSurfRefSetArray
+-@ stub cuTexObjectCreate
+-@ stub cuTexObjectDestroy
+-@ stub cuTexObjectGetResourceDesc
+-@ stub cuTexObjectGetResourceViewDesc
+-@ stub cuTexObjectGetTextureDesc
+-@ stub cuTexRefCreate
+-@ stub cuTexRefDestroy
+-@ stub cuTexRefGetAddress
+-@ stub cuTexRefGetAddressMode
+-@ stub cuTexRefGetAddress_v2
+-@ stub cuTexRefGetArray
+-@ stub cuTexRefGetFilterMode
+-@ stub cuTexRefGetFlags
+-@ stub cuTexRefGetFormat
+-@ stub cuTexRefGetMaxAnisotropy
+-@ stub cuTexRefGetMipmapFilterMode
+-@ stub cuTexRefGetMipmapLevelBias
+-@ stub cuTexRefGetMipmapLevelClamp
+-@ stub cuTexRefGetMipmappedArray
+-@ stub cuTexRefSetAddress
+-@ stub cuTexRefSetAddress2D
+-@ stub cuTexRefSetAddress2D_v2
+-@ stub cuTexRefSetAddress2D_v3
+-@ stub cuTexRefSetAddressMode
+-@ stub cuTexRefSetAddress_v2
+-@ stub cuTexRefSetArray
+-@ stub cuTexRefSetFilterMode
+-@ stub cuTexRefSetFlags
+-@ stub cuTexRefSetFormat
+-@ stub cuTexRefSetMaxAnisotropy
+-@ stub cuTexRefSetMipmapFilterMode
+-@ stub cuTexRefSetMipmapLevelBias
+-@ stub cuTexRefSetMipmapLevelClamp
+-@ stub cuTexRefSetMipmappedArray
 +@ stdcall cuStreamAddCallback(ptr ptr ptr long) wine_cuStreamAddCallback
 +@ stdcall cuStreamAttachMemAsync(ptr long long long) wine_cuStreamAttachMemAsync
 +@ stdcall cuStreamCreate(ptr long) wine_cuStreamCreate
@@ -3103,7 +3210,7 @@ index 0000000..720cebf
 +@ stdcall cuTexRefSetMipmapLevelBias(ptr float) wine_cuTexRefSetMipmapLevelBias
 +@ stdcall cuTexRefSetMipmapLevelClamp(ptr float float) wine_cuTexRefSetMipmapLevelClamp
 +@ stdcall cuTexRefSetMipmappedArray(ptr ptr long) wine_cuTexRefSetMipmappedArray
-+308 stub cuWGLGetDevice
+ @ stub cuWGLGetDevice
 diff --git a/dlls/nvcuda/tests/Makefile.in b/dlls/nvcuda/tests/Makefile.in
 new file mode 100644
 index 0000000..81f9290
@@ -3116,10 +3223,10 @@ index 0000000..81f9290
 +	nvcuda.c
 diff --git a/dlls/nvcuda/tests/nvcuda.c b/dlls/nvcuda/tests/nvcuda.c
 new file mode 100644
-index 0000000..e62fb9c
+index 0000000..3b00c5d
 --- /dev/null
 +++ b/dlls/nvcuda/tests/nvcuda.c
-@@ -0,0 +1,176 @@
+@@ -0,0 +1,168 @@
 +/*
 + * Copyright (C) 2014-2015 Michael Müller
 + *
@@ -3143,17 +3250,9 @@ index 0000000..e62fb9c
 +#include "windef.h"
 +#include "winbase.h"
 +#include "winerror.h"
++#include "cuda.h"
 +
 +#include "wine/test.h"
-+
-+/* some small definitions necessary for our tests */
-+#define CUresult int
-+#define CUDA_SUCCESS 0
-+
-+typedef struct CUuuid_st
-+{
-+    char bytes[16];
-+} CUuuid;
 +
 +static CUresult (WINAPI *pcuInit)(unsigned int);
 +static CUresult (WINAPI *pcuGetExportTable)(const void**, const CUuuid*);

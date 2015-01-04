@@ -1,26 +1,53 @@
-From d0bb3326c980625e1b5424a3603928380878599f Mon Sep 17 00:00:00 2001
+From d15f6c220c9892be869e50e4a5f52a1bbc2e5b60 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Sat, 3 Jan 2015 23:37:42 -0700
 Subject: kernel32: Allocate console handles for new consoles at long as the
  process is not detached.
 
 ---
- dlls/kernel32/process.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ dlls/kernel32/console.c | 3 ++-
+ dlls/kernel32/process.c | 8 +++++++-
+ 2 files changed, 9 insertions(+), 2 deletions(-)
 
+diff --git a/dlls/kernel32/console.c b/dlls/kernel32/console.c
+index 303b638..8243de2 100644
+--- a/dlls/kernel32/console.c
++++ b/dlls/kernel32/console.c
+@@ -3061,7 +3061,8 @@ DWORD WINAPI GetConsoleProcessList(LPDWORD processlist, DWORD processcount)
+ BOOL CONSOLE_Init(RTL_USER_PROCESS_PARAMETERS *params)
+ {
+     memset(&S_termios, 0, sizeof(S_termios));
+-    if (params->ConsoleHandle == KERNEL32_CONSOLE_SHELL)
++    if (params->ConsoleHandle == KERNEL32_CONSOLE_SHELL ||
++        params->ConsoleHandle == KERNEL32_CONSOLE_ALLOC)
+     {
+         HANDLE  conin;
+ 
 diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
-index 0a087ab..ba59244 100644
+index 0a087ab..0979978 100644
 --- a/dlls/kernel32/process.c
 +++ b/dlls/kernel32/process.c
-@@ -1679,7 +1679,7 @@ static startup_info_t *create_startup_info( LPCWSTR filename, LPCWSTR cmdline,
+@@ -1679,13 +1679,19 @@ static startup_info_t *create_startup_info( LPCWSTR filename, LPCWSTR cmdline,
      info->hstdin  = wine_server_obj_handle( hstdin );
      info->hstdout = wine_server_obj_handle( hstdout );
      info->hstderr = wine_server_obj_handle( hstderr );
 -    if ((flags & (CREATE_NEW_CONSOLE | DETACHED_PROCESS)) != 0)
-+    if (flags & DETACHED_PROCESS) /* FIXME: probably not correct, needs more tests */
++    if (flags & DETACHED_PROCESS)
      {
          /* this is temporary (for console handles). We have no way to control that the handle is invalid in child process otherwise */
          if (is_console_handle(hstdin))  info->hstdin  = wine_server_obj_handle( INVALID_HANDLE_VALUE );
+         if (is_console_handle(hstdout)) info->hstdout = wine_server_obj_handle( INVALID_HANDLE_VALUE );
+         if (is_console_handle(hstderr)) info->hstderr = wine_server_obj_handle( INVALID_HANDLE_VALUE );
+     }
++    else if (flags & CREATE_NEW_CONSOLE)
++    {
++        info->hstdin = 0;
++        info->hstdout = 0;
++        info->hstderr = 0;
++    }
+     else
+     {
+         if (is_console_handle(hstdin))  info->hstdin  = console_handle_unmap(hstdin);
 -- 
 1.9.1
 

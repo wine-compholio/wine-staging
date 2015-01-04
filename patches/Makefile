@@ -722,7 +722,7 @@ iphlpapi-TCP_Table.ok:
 # |   *	[#36216] Hearthstone fails to start
 # |
 # | Modified files:
-# |   *	dlls/kernel32/process.c
+# |   *	dlls/kernel32/console.c, dlls/kernel32/process.c
 # |
 .INTERMEDIATE: kernel32-Create_Handles_for_New_Consoles.ok
 kernel32-Create_Handles_for_New_Consoles.ok:

@@ -726,9 +726,9 @@ iphlpapi-TCP_Table.ok:
 # |
 .INTERMEDIATE: kernel32-Create_Handles_for_New_Consoles.ok
 kernel32-Create_Handles_for_New_Consoles.ok:
-	$(call APPLY_FILE,kernel32-Create_Handles_for_New_Consoles/0001-kernel32-Allocate-console-handles-for-new-consoles-a.patch)
+	$(call APPLY_FILE,kernel32-Create_Handles_for_New_Consoles/0001-kernel32-Allocate-console-handles-when-creating-a-pr.patch)
 	@( \
-		echo '+    { "Erich E. Hoover", "kernel32: Allocate console handles for new consoles at long as the process is not detached.", 1 },'; \
+		echo '+    { "Erich E. Hoover", "kernel32: Allocate console handles when creating a process with a new console.", 1 },'; \
 	) > kernel32-Create_Handles_for_New_Consoles.ok
 
 # Patchset kernel32-GetFinalPathNameByHandle

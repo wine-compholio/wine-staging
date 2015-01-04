@@ -57,6 +57,7 @@ PATCHLIST := \
 	kernel32-GetSystemTimes.ok \
 	kernel32-GetVolumePathName.ok \
 	kernel32-Named_Pipe.ok \
+	kernel32-NeedCurrentDirectoryForExePath.ok \
 	kernel32-Profile.ok \
 	kernel32-UTF7_Support.ok \
 	kernel32-VerifyVersionInfo.ok \
@@ -845,6 +846,25 @@ kernel32-Named_Pipe.ok:
 		echo '+    { "Sebastian Lackner", "ntdll: Allow to set PIPE_NOWAIT on byte-mode pipes.", 1 },'; \
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for PIPE_NOWAIT in overlapped mode.", 1 },'; \
 	) > kernel32-Named_Pipe.ok
+
+# Patchset kernel32-NeedCurrentDirectoryForExePath
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#23934] CreateProcess does not prioritize the working directory over the system search path
+# |
+# | Modified files:
+# |   *	dlls/kernel32/path.c, dlls/kernel32/process.c, dlls/kernel32/tests/path.c
+# |
+.INTERMEDIATE: kernel32-NeedCurrentDirectoryForExePath.ok
+kernel32-NeedCurrentDirectoryForExePath.ok:
+	$(call APPLY_FILE,kernel32-NeedCurrentDirectoryForExePath/0001-kernel32-Add-SearchPath-test-demonstrating-the-prior.patch)
+	$(call APPLY_FILE,kernel32-NeedCurrentDirectoryForExePath/0002-kernel32-NeedCurrentDirectoryForExePath-does-not-use.patch)
+	$(call APPLY_FILE,kernel32-NeedCurrentDirectoryForExePath/0003-kernel32-Consider-the-working-directory-first-when-l.patch)
+	@( \
+		echo '+    { "Erich E. Hoover", "kernel32: Add SearchPath test demonstrating the priority of the working directory.", 1 },'; \
+		echo '+    { "Erich E. Hoover", "kernel32: NeedCurrentDirectoryForExePath does not use the registry.", 1 },'; \
+		echo '+    { "Erich E. Hoover", "kernel32: Consider the working directory first when launching executables with CreateProcess.", 1 },'; \
+	) > kernel32-NeedCurrentDirectoryForExePath.ok
 
 # Patchset kernel32-Profile
 # |

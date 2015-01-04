@@ -409,8 +409,10 @@ d3dx9_36-DXTn.ok: wined3d-DXTn.ok
 .INTERMEDIATE: d3dx9_36-DrawText.ok
 d3dx9_36-DrawText.ok:
 	$(call APPLY_FILE,d3dx9_36-DrawText/0001-d3dx9_36-Implement-ID3DXFontImpl_DrawText.patch)
+	$(call APPLY_FILE,d3dx9_36-DrawText/0002-d3dx9_36-Fix-horizontal-centering-in-ID3DXFont_DrawT.patch)
 	@( \
 		echo '+    { "Christian Costa", "d3dx9_36: Implement ID3DXFontImpl_DrawText.", 1 },'; \
+		echo '+    { "Christian Costa", "d3dx9_36: Fix horizontal centering in ID3DXFont_DrawText.", 1 },'; \
 	) > d3dx9_36-DrawText.ok
 
 # Patchset d3dx9_36-Filter_Warnings

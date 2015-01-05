@@ -1,0 +1,187 @@
+From 6dbc9cf8b80fa44d77b1017b6932251d6ff12fe7 Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Sat, 3 Jan 2015 23:37:42 -0700
+Subject: kernel32: Invalid console handles for new processes are 0, not
+ INVALID_HANDLE_VALUE.
+
+---
+ dlls/kernel32/console.c       | 15 +++++++------
+ dlls/kernel32/environ.c       | 12 +++++-----
+ dlls/kernel32/tests/process.c | 52 ++++++++++++++++++++++++++++++++++++++++++-
+ 3 files changed, 65 insertions(+), 14 deletions(-)
+
+diff --git a/dlls/kernel32/console.c b/dlls/kernel32/console.c
+index 303b638..14f1189 100644
+--- a/dlls/kernel32/console.c
++++ b/dlls/kernel32/console.c
+@@ -3119,24 +3119,25 @@ BOOL CONSOLE_Init(RTL_USER_PROCESS_PARAMETERS *params)
+     }
+ 
+     /* convert value from server:
+-     * + 0 => INVALID_HANDLE_VALUE
++     * + INVALID_HANDLE_VALUE => TEB: 0, STARTUPINFO: INVALID_HANDLE_VALUE
++     * + 0                    => TEB: 0, STARTUPINFO: INVALID_HANDLE_VALUE
+      * + console handle needs to be mapped
+      */
+-    if (!params->hStdInput)
+-        params->hStdInput = INVALID_HANDLE_VALUE;
++    if (!params->hStdInput || params->hStdInput == INVALID_HANDLE_VALUE)
++        params->hStdInput = 0;
+     else if (VerifyConsoleIoHandle(console_handle_map(params->hStdInput)))
+     {
+         params->hStdInput = console_handle_map(params->hStdInput);
+         save_console_mode(params->hStdInput);
+     }
+ 
+-    if (!params->hStdOutput)
+-        params->hStdOutput = INVALID_HANDLE_VALUE;
++    if (!params->hStdOutput || params->hStdOutput == INVALID_HANDLE_VALUE)
++        params->hStdOutput = 0;
+     else if (VerifyConsoleIoHandle(console_handle_map(params->hStdOutput)))
+         params->hStdOutput = console_handle_map(params->hStdOutput);
+ 
+-    if (!params->hStdError)
+-        params->hStdError = INVALID_HANDLE_VALUE;
++    if (!params->hStdError || params->hStdError == INVALID_HANDLE_VALUE)
++        params->hStdError = 0;
+     else if (VerifyConsoleIoHandle(console_handle_map(params->hStdError)))
+         params->hStdError = console_handle_map(params->hStdError);
+ 
+diff --git a/dlls/kernel32/environ.c b/dlls/kernel32/environ.c
+index 57b6a1f..99bf706 100644
+--- a/dlls/kernel32/environ.c
++++ b/dlls/kernel32/environ.c
+@@ -464,9 +464,9 @@ void ENV_CopyStartupInformation(void)
+     startup_infoW.wShowWindow          = rupp->wShowWindow;
+     startup_infoW.cbReserved2          = rupp->RuntimeInfo.MaximumLength;
+     startup_infoW.lpReserved2          = rupp->RuntimeInfo.MaximumLength ? (void*)rupp->RuntimeInfo.Buffer : NULL;
+-    startup_infoW.hStdInput            = rupp->hStdInput;
+-    startup_infoW.hStdOutput           = rupp->hStdOutput;
+-    startup_infoW.hStdError            = rupp->hStdError;
++    startup_infoW.hStdInput            = rupp->hStdInput ? rupp->hStdInput : INVALID_HANDLE_VALUE;
++    startup_infoW.hStdOutput           = rupp->hStdOutput ? rupp->hStdOutput : INVALID_HANDLE_VALUE;
++    startup_infoW.hStdError            = rupp->hStdError ? rupp->hStdError : INVALID_HANDLE_VALUE;
+ 
+     startup_infoA.cb                   = sizeof(startup_infoA);
+     startup_infoA.lpReserved           = NULL;
+@@ -485,9 +485,9 @@ void ENV_CopyStartupInformation(void)
+     startup_infoA.wShowWindow          = rupp->wShowWindow;
+     startup_infoA.cbReserved2          = rupp->RuntimeInfo.MaximumLength;
+     startup_infoA.lpReserved2          = rupp->RuntimeInfo.MaximumLength ? (void*)rupp->RuntimeInfo.Buffer : NULL;
+-    startup_infoA.hStdInput            = rupp->hStdInput;
+-    startup_infoA.hStdOutput           = rupp->hStdOutput;
+-    startup_infoA.hStdError            = rupp->hStdError;
++    startup_infoA.hStdInput            = rupp->hStdInput ? rupp->hStdInput : INVALID_HANDLE_VALUE;
++    startup_infoA.hStdOutput           = rupp->hStdOutput ? rupp->hStdOutput : INVALID_HANDLE_VALUE;
++    startup_infoA.hStdError            = rupp->hStdError ? rupp->hStdError : INVALID_HANDLE_VALUE;
+ 
+     RtlReleasePebLock();
+ }
+diff --git a/dlls/kernel32/tests/process.c b/dlls/kernel32/tests/process.c
+index 218a0d3..e621689 100644
+--- a/dlls/kernel32/tests/process.c
++++ b/dlls/kernel32/tests/process.c
+@@ -57,7 +57,7 @@
+           wine_dbgstr_w(expected), wine_dbgstr_w(value)); \
+     } while (0)
+ 
+-static HINSTANCE hkernel32;
++static HINSTANCE hkernel32, hntdll;
+ static void   (WINAPI *pGetNativeSystemInfo)(LPSYSTEM_INFO);
+ static BOOL   (WINAPI *pGetSystemRegistryQuota)(PDWORD, PDWORD);
+ static BOOL   (WINAPI *pIsWow64Process)(HANDLE,PBOOL);
+@@ -66,6 +66,7 @@ static BOOL   (WINAPI *pVirtualFreeEx)(HANDLE, LPVOID, SIZE_T, DWORD);
+ static BOOL   (WINAPI *pQueryFullProcessImageNameA)(HANDLE hProcess, DWORD dwFlags, LPSTR lpExeName, PDWORD lpdwSize);
+ static BOOL   (WINAPI *pQueryFullProcessImageNameW)(HANDLE hProcess, DWORD dwFlags, LPWSTR lpExeName, PDWORD lpdwSize);
+ static DWORD  (WINAPI *pK32GetProcessImageFileNameA)(HANDLE,LPSTR,DWORD);
++static struct _TEB * (WINAPI *pNtCurrentTeb)(void);
+ 
+ /* ############################### */
+ static char     base[MAX_PATH];
+@@ -201,6 +202,8 @@ static BOOL init(void)
+     if ((p = strrchr(exename, '/')) != NULL) exename = p + 1;
+ 
+     hkernel32 = GetModuleHandleA("kernel32");
++    hntdll    = GetModuleHandleA("ntdll.dll");
++
+     pGetNativeSystemInfo = (void *) GetProcAddress(hkernel32, "GetNativeSystemInfo");
+     pGetSystemRegistryQuota = (void *) GetProcAddress(hkernel32, "GetSystemRegistryQuota");
+     pIsWow64Process = (void *) GetProcAddress(hkernel32, "IsWow64Process");
+@@ -209,6 +212,7 @@ static BOOL init(void)
+     pQueryFullProcessImageNameA = (void *) GetProcAddress(hkernel32, "QueryFullProcessImageNameA");
+     pQueryFullProcessImageNameW = (void *) GetProcAddress(hkernel32, "QueryFullProcessImageNameW");
+     pK32GetProcessImageFileNameA = (void *) GetProcAddress(hkernel32, "K32GetProcessImageFileNameA");
++    pNtCurrentTeb = (void *)GetProcAddress( hntdll, "NtCurrentTeb" );
+     return TRUE;
+ }
+ 
+@@ -277,6 +281,16 @@ static void     doChild(const char* file, const char* option)
+                 siA.dwFlags, siA.wShowWindow,
+                 (DWORD_PTR)siA.hStdInput, (DWORD_PTR)siA.hStdOutput, (DWORD_PTR)siA.hStdError);
+ 
++    if (pNtCurrentTeb)
++    {
++        RTL_USER_PROCESS_PARAMETERS *params = pNtCurrentTeb()->Peb->ProcessParameters;
++
++        /* check the console handles in the TEB */
++        childPrintf(hFile, "[TEB]\nhStdInput=%lu\nhStdOutput=%lu\nhStdError=%lu\n\n",
++                    (DWORD_PTR)params->hStdInput, (DWORD_PTR)params->hStdOutput,
++                    (DWORD_PTR)params->hStdError);
++    }
++
+     /* since GetStartupInfoW is only implemented in win2k,
+      * zero out before calling so we can notice the difference
+      */
+@@ -2063,6 +2077,41 @@ static void test_DuplicateHandle(void)
+     CloseHandle(out);
+ }
+ 
++void test_StartupNoConsole(void)
++{
++    char                buffer[MAX_PATH];
++    PROCESS_INFORMATION	info;
++    STARTUPINFOA	    startup;
++    DWORD               code;
++
++    if (!pNtCurrentTeb)
++    {
++        win_skip( "NtCurrentTeb not supported\n" );
++        return;
++    }
++
++    memset(&startup, 0, sizeof(startup));
++    startup.cb = sizeof(startup);
++    startup.dwFlags = STARTF_USESHOWWINDOW;
++    startup.wShowWindow = SW_SHOWNORMAL;
++    get_file_name(resfile);
++    sprintf(buffer, "\"%s\" tests/process.c \"%s\"", selfname, resfile);
++    ok(CreateProcessA(NULL, buffer, NULL, NULL, TRUE, DETACHED_PROCESS, NULL, NULL, &startup,
++                      &info), "CreateProcess\n");
++    ok(WaitForSingleObject(info.hProcess, 30000) == WAIT_OBJECT_0, "Child process termination\n");
++    ok(GetExitCodeProcess(info.hProcess, &code), "Getting exit code\n");
++    WritePrivateProfileStringA(NULL, NULL, NULL, resfile);
++    okChildInt("StartupInfoA", "hStdInput", (DWORD_PTR)INVALID_HANDLE_VALUE);
++    okChildInt("StartupInfoA", "hStdOutput", (DWORD_PTR)INVALID_HANDLE_VALUE);
++    okChildInt("StartupInfoA", "hStdError", (DWORD_PTR)INVALID_HANDLE_VALUE);
++    okChildInt("TEB", "hStdInput", (DWORD_PTR)0);
++    okChildInt("TEB", "hStdOutput", (DWORD_PTR)0);
++    okChildInt("TEB", "hStdError", (DWORD_PTR)0);
++    release_memory();
++    assert(DeleteFileA(resfile) != 0);
++
++}
++
+ START_TEST(process)
+ {
+     BOOL b = init();
+@@ -2092,6 +2141,7 @@ START_TEST(process)
+     test_SystemInfo();
+     test_RegistryQuota();
+     test_DuplicateHandle();
++    test_StartupNoConsole();
+     /* things that can be tested:
+      *  lookup:         check the way program to be executed is searched
+      *  handles:        check the handle inheritance stuff (+sec options)
+-- 
+1.9.1
+

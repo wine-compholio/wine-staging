@@ -51,6 +51,7 @@ PATCHLIST := \
 	imm32-Cross_Thread_Access.ok \
 	include-Winetest.ok \
 	iphlpapi-TCP_Table.ok \
+	kernel32-Console_Handles.ok \
 	kernel32-GetFinalPathNameByHandle.ok \
 	kernel32-GetNumaProcessorNode.ok \
 	kernel32-GetStringTypeW.ok \
@@ -716,6 +717,21 @@ iphlpapi-TCP_Table.ok:
 	@( \
 		echo '+    { "Erich E. Hoover", "iphlpapi: Implement AllocateAndGetTcpExTableFromStack.", 1 },'; \
 	) > iphlpapi-TCP_Table.ok
+
+# Patchset kernel32-Console_Handles
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36216] Hearthstone fails to start
+# |
+# | Modified files:
+# |   *	dlls/kernel32/console.c, dlls/kernel32/environ.c, dlls/kernel32/tests/process.c
+# |
+.INTERMEDIATE: kernel32-Console_Handles.ok
+kernel32-Console_Handles.ok:
+	$(call APPLY_FILE,kernel32-Console_Handles/0001-kernel32-Invalid-console-handles-for-new-processes-a.patch)
+	@( \
+		echo '+    { "Erich E. Hoover", "kernel32: Invalid console handles for new processes are 0, not INVALID_HANDLE_VALUE.", 1 },'; \
+	) > kernel32-Console_Handles.ok
 
 # Patchset kernel32-GetFinalPathNameByHandle
 # |

@@ -37,8 +37,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [22]:**
+**Bugfixes and features included in the next upcoming release [23]:**
 
+* Add nvapi stubs required for GPU PhysX support
 * Add stub for D3DXComputeNormalMap
 * Add stub for D3DXComputeTangentFrameEx ([Wine Bug #31984](https://bugs.winehq.org/show_bug.cgi?id=31984))
 * Add stub for D3DXIntersect

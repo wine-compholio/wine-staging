@@ -89,6 +89,7 @@ PATCHLIST := \
 	ntoskrnl-Emulator.ok \
 	ntoskrnl-Irp_Status.ok \
 	ntoskrnl-Stub_FileObject.ok \
+	nvapi-Stub_DLL.ok \
 	nvcuda-CUDA_Support.ok \
 	ole32-CoWaitForMultipleHandles.ok \
 	quartz-MediaSeeking_Positions.ok \
@@ -1397,6 +1398,19 @@ ntoskrnl-Stub_FileObject.ok:
 	@( \
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Initialize irp.Tail.Overlay.OriginalFileObject with stub file object.", 1 },'; \
 	) > ntoskrnl-Stub_FileObject.ok
+
+# Patchset nvapi-Stub_DLL
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/nvapi/Makefile.in, dlls/nvapi/nvapi.c, dlls/nvapi/nvapi.spec, dlls/nvapi/tests/Makefile.in,
+# | 	dlls/nvapi/tests/nvapi.c, dlls/nvapi64/Makefile.in, dlls/nvapi64/nvapi64.spec, include/Makefile.in, include/nvapi.h
+# |
+.INTERMEDIATE: nvapi-Stub_DLL.ok
+nvapi-Stub_DLL.ok: nvcuda-CUDA_Support.ok
+	$(call APPLY_FILE,nvapi-Stub_DLL/0001-nvapi-First-implementation.patch)
+	@( \
+		echo '+    { "Michael Müller", "nvapi: First implementation.", 1 },'; \
+	) > nvapi-Stub_DLL.ok
 
 # Patchset nvcuda-CUDA_Support
 # |

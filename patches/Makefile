@@ -88,9 +88,7 @@ PATCHLIST := \
 	ntdll-WinSqm.ok \
 	ntoskrnl-Emulator.ok \
 	ntoskrnl-Irp_Status.ok \
-	ntoskrnl-KeSetSystemAffinityThread.ok \
 	ntoskrnl-Stub_FileObject.ok \
-	ntoskrnl-Write_CR4.ok \
 	nvcuda-CUDA_Support.ok \
 	ole32-CoWaitForMultipleHandles.ok \
 	quartz-MediaSeeking_Positions.ok \
@@ -1385,21 +1383,6 @@ ntoskrnl-Irp_Status.ok:
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Handle issues when driver returns two different status codes from dispatcher.", 1 },'; \
 	) > ntoskrnl-Irp_Status.ok
 
-# Patchset ntoskrnl-KeSetSystemAffinityThread
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36822] FairplayKD.sys needs KeSetSystemAffinityThread
-# |
-# | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec
-# |
-.INTERMEDIATE: ntoskrnl-KeSetSystemAffinityThread.ok
-ntoskrnl-KeSetSystemAffinityThread.ok:
-	$(call APPLY_FILE,ntoskrnl-KeSetSystemAffinityThread/0001-ntoskrnl-Add-stub-for-KeSetSystemAffinityThread.patch)
-	@( \
-		echo '+    { "Michael Müller", "ntoskrnl: Add stub for KeSetSystemAffinityThread.", 1 },'; \
-	) > ntoskrnl-KeSetSystemAffinityThread.ok
-
 # Patchset ntoskrnl-Stub_FileObject
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1414,21 +1397,6 @@ ntoskrnl-Stub_FileObject.ok:
 	@( \
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Initialize irp.Tail.Overlay.OriginalFileObject with stub file object.", 1 },'; \
 	) > ntoskrnl-Stub_FileObject.ok
-
-# Patchset ntoskrnl-Write_CR4
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#30220] Emulate write to CR4 register
-# |
-# | Modified files:
-# |   *	dlls/ntoskrnl.exe/instr.c
-# |
-.INTERMEDIATE: ntoskrnl-Write_CR4.ok
-ntoskrnl-Write_CR4.ok:
-	$(call APPLY_FILE,ntoskrnl-Write_CR4/0001-ntoskrnl.exe-Emulate-write-to-CR4-register.patch)
-	@( \
-		echo '+    { "Stefan Leichter", "ntoskrnl.exe: Emulate write to CR4 register.", 1 },'; \
-	) > ntoskrnl-Write_CR4.ok
 
 # Patchset nvcuda-CUDA_Support
 # |
@@ -2028,8 +1996,8 @@ winecfg-Staging.ok: ntdll-DllRedirects.ok wined3d-CSMT_Main.ok
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/ddraw/surface.c, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc,
-# | 	dlls/wined3d/resource.c, dlls/wined3d/surface.c, dlls/wined3d/volume.c, dlls/wined3d/wined3d.spec,
-# | 	dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
+# | 	dlls/wined3d/resource.c, dlls/wined3d/surface.c, dlls/wined3d/texture.c, dlls/wined3d/volume.c,
+# | 	dlls/wined3d/wined3d.spec, dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
 # |
 .INTERMEDIATE: wined3d-CSMT_Helper.ok
 wined3d-CSMT_Helper.ok: makedep-PARENTSPEC.ok wined3d-DXTn.ok

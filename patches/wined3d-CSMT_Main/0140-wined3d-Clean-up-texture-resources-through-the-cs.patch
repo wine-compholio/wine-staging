@@ -1,4 +1,4 @@
-From 92b80eca71961fa3669d9da8cb64a62e6f556184 Mon Sep 17 00:00:00 2001
+From 76c15351903191f31484a66c498dbfc39e763a5a Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Sun, 6 Oct 2013 16:20:32 +0200
 Subject: wined3d: Clean up texture resources through the cs.
@@ -70,7 +70,7 @@ index 7675214..5e4aa53 100644
  
  static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index f7988e5..f055d5e 100644
+index 3fc020e..49bd366 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
 @@ -131,17 +131,26 @@ static void wined3d_texture_unload_gl_texture(struct wined3d_texture *texture)
@@ -127,7 +127,7 @@ index f7988e5..f055d5e 100644
      }
  
      return refcount;
-@@ -1040,12 +1047,14 @@ static HRESULT cubetexture_init(struct wined3d_texture *texture, const struct wi
+@@ -1092,12 +1099,14 @@ static HRESULT cubetexture_init(struct wined3d_texture *texture, const struct wi
      if (WINED3DFMT_UNKNOWN >= desc->format)
      {
          WARN("(%p) : Texture cannot be created with a format of WINED3DFMT_UNKNOWN.\n", texture);
@@ -142,7 +142,7 @@ index f7988e5..f055d5e 100644
          return WINED3DERR_INVALIDCALL;
      }
  
-@@ -1055,12 +1064,14 @@ static HRESULT cubetexture_init(struct wined3d_texture *texture, const struct wi
+@@ -1107,12 +1116,14 @@ static HRESULT cubetexture_init(struct wined3d_texture *texture, const struct wi
          if (!gl_info->supported[SGIS_GENERATE_MIPMAP])
          {
              WARN("No mipmap generation support, returning D3DERR_INVALIDCALL.\n");
@@ -150,14 +150,14 @@ index f7988e5..f055d5e 100644
              return WINED3DERR_INVALIDCALL;
          }
  
-         if (levels > 1)
+         if (levels != 1)
          {
-             WARN("D3DUSAGE_AUTOGENMIPMAP is set, and level count > 1, returning D3DERR_INVALIDCALL.\n");
+             WARN("WINED3DUSAGE_AUTOGENMIPMAP is set, and level count != 1, returning D3DERR_INVALIDCALL.\n");
 +            HeapFree(GetProcessHeap(), 0, texture);
              return WINED3DERR_INVALIDCALL;
          }
- 
-@@ -1088,6 +1099,7 @@ static HRESULT cubetexture_init(struct wined3d_texture *texture, const struct wi
+     }
+@@ -1133,6 +1144,7 @@ static HRESULT cubetexture_init(struct wined3d_texture *texture, const struct wi
              else
              {
                  WARN("Attempted to create a NPOT cube texture (edge length %u) without GL support.\n", desc->width);
@@ -165,7 +165,7 @@ index f7988e5..f055d5e 100644
                  return WINED3DERR_INVALIDCALL;
              }
          }
-@@ -1097,6 +1109,7 @@ static HRESULT cubetexture_init(struct wined3d_texture *texture, const struct wi
+@@ -1142,6 +1154,7 @@ static HRESULT cubetexture_init(struct wined3d_texture *texture, const struct wi
              surface_flags, device, parent, parent_ops, &texture_resource_ops)))
      {
          WARN("Failed to initialize texture, returning %#x\n", hr);
@@ -173,7 +173,7 @@ index f7988e5..f055d5e 100644
          return hr;
      }
  
-@@ -1159,6 +1172,7 @@ static HRESULT texture_init(struct wined3d_texture *texture, const struct wined3
+@@ -1204,6 +1217,7 @@ static HRESULT texture_init(struct wined3d_texture *texture, const struct wined3
      if (WINED3DFMT_UNKNOWN >= desc->format)
      {
          WARN("(%p) : Texture cannot be created with a format of WINED3DFMT_UNKNOWN.\n", texture);
@@ -181,7 +181,7 @@ index f7988e5..f055d5e 100644
          return WINED3DERR_INVALIDCALL;
      }
  
-@@ -1189,6 +1203,7 @@ static HRESULT texture_init(struct wined3d_texture *texture, const struct wined3
+@@ -1234,6 +1248,7 @@ static HRESULT texture_init(struct wined3d_texture *texture, const struct wined3
                  else
                  {
                      WARN("Attempted to create a mipmapped NPOT texture without unconditional NPOT support.\n");
@@ -189,7 +189,7 @@ index f7988e5..f055d5e 100644
                      return WINED3DERR_INVALIDCALL;
                  }
              }
-@@ -1201,12 +1216,14 @@ static HRESULT texture_init(struct wined3d_texture *texture, const struct wined3
+@@ -1246,12 +1261,14 @@ static HRESULT texture_init(struct wined3d_texture *texture, const struct wined3
          if (!gl_info->supported[SGIS_GENERATE_MIPMAP])
          {
              WARN("No mipmap generation support, returning WINED3DERR_INVALIDCALL.\n");
@@ -197,14 +197,14 @@ index f7988e5..f055d5e 100644
              return WINED3DERR_INVALIDCALL;
          }
  
-         if (levels > 1)
+         if (levels != 1)
          {
-             WARN("D3DUSAGE_AUTOGENMIPMAP is set, and level count > 1, returning WINED3DERR_INVALIDCALL.\n");
+             WARN("WINED3DUSAGE_AUTOGENMIPMAP is set, and level count != 1, returning WINED3DERR_INVALIDCALL.\n");
 +            HeapFree(GetProcessHeap(), 0, texture);
              return WINED3DERR_INVALIDCALL;
          }
- 
-@@ -1222,6 +1239,7 @@ static HRESULT texture_init(struct wined3d_texture *texture, const struct wined3
+     }
+@@ -1260,6 +1277,7 @@ static HRESULT texture_init(struct wined3d_texture *texture, const struct wined3
              surface_flags, device, parent, parent_ops, &texture_resource_ops)))
      {
          WARN("Failed to initialize texture, returning %#x.\n", hr);
@@ -212,7 +212,7 @@ index f7988e5..f055d5e 100644
          return hr;
      }
  
-@@ -1382,12 +1400,14 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
+@@ -1446,12 +1464,14 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
      if (WINED3DFMT_UNKNOWN >= desc->format)
      {
          WARN("(%p) : Texture cannot be created with a format of WINED3DFMT_UNKNOWN.\n", texture);
@@ -227,7 +227,7 @@ index f7988e5..f055d5e 100644
          return WINED3DERR_INVALIDCALL;
      }
  
-@@ -1397,12 +1417,14 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
+@@ -1461,12 +1481,14 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
          if (!gl_info->supported[SGIS_GENERATE_MIPMAP])
          {
              WARN("No mipmap generation support, returning D3DERR_INVALIDCALL.\n");
@@ -235,14 +235,14 @@ index f7988e5..f055d5e 100644
              return WINED3DERR_INVALIDCALL;
          }
  
-         if (levels > 1)
+         if (levels != 1)
          {
-             WARN("D3DUSAGE_AUTOGENMIPMAP is set, and level count > 1, returning D3DERR_INVALIDCALL.\n");
+             WARN("WINED3DUSAGE_AUTOGENMIPMAP is set, and level count != 1, returning D3DERR_INVALIDCALL.\n");
 +            HeapFree(GetProcessHeap(), 0, texture);
              return WINED3DERR_INVALIDCALL;
          }
- 
-@@ -1437,6 +1459,7 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
+     }
+@@ -1494,6 +1516,7 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
              {
                  WARN("Attempted to create a NPOT volume texture (%u, %u, %u) without GL support.\n",
                          desc->width, desc->height, desc->depth);
@@ -250,7 +250,7 @@ index f7988e5..f055d5e 100644
                  return WINED3DERR_INVALIDCALL;
              }
          }
-@@ -1446,6 +1469,7 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
+@@ -1503,6 +1526,7 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
              0, device, parent, parent_ops, &texture_resource_ops)))
      {
          WARN("Failed to initialize texture, returning %#x.\n", hr);
@@ -258,7 +258,7 @@ index f7988e5..f055d5e 100644
          return hr;
      }
  
-@@ -1516,7 +1540,6 @@ HRESULT CDECL wined3d_texture_create(struct wined3d_device *device, const struct
+@@ -1579,7 +1603,6 @@ HRESULT CDECL wined3d_texture_create(struct wined3d_device *device, const struct
      if (FAILED(hr))
      {
          WARN("Failed to initialize texture, returning %#x.\n", hr);
@@ -267,10 +267,10 @@ index f7988e5..f055d5e 100644
      }
  
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index afb31c2..6382375 100644
+index 5b1a286..2f5fbf3 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2293,6 +2293,7 @@ static inline struct gl_texture *wined3d_texture_get_gl_texture(struct wined3d_t
+@@ -2307,6 +2307,7 @@ static inline struct gl_texture *wined3d_texture_get_gl_texture(struct wined3d_t
  void wined3d_texture_apply_state_changes(struct wined3d_texture *texture,
          const DWORD samplerStates[WINED3D_HIGHEST_SAMPLER_STATE + 1],
          const struct wined3d_gl_info *gl_info) DECLSPEC_HIDDEN;
@@ -278,7 +278,7 @@ index afb31c2..6382375 100644
  void wined3d_texture_bind(struct wined3d_texture *texture,
          struct wined3d_context *context, BOOL srgb) DECLSPEC_HIDDEN;
  void wined3d_texture_bind_and_dirtify(struct wined3d_texture *texture,
-@@ -2714,6 +2715,7 @@ void wined3d_cs_emit_resource_cleanup(struct wined3d_cs *cs,
+@@ -2732,6 +2733,7 @@ void wined3d_cs_emit_resource_cleanup(struct wined3d_cs *cs,
  void wined3d_cs_emit_buffer_cleanup(struct wined3d_cs *cs, struct wined3d_buffer *buffer) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_volume_cleanup(struct wined3d_cs *cs, struct wined3d_volume *volume) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_surface_cleanup(struct wined3d_cs *cs, struct wined3d_surface *surface) DECLSPEC_HIDDEN;
@@ -287,5 +287,5 @@ index afb31c2..6382375 100644
  /* Direct3D terminology with little modifications. We do not have an issued state
   * because only the driver knows about it, but we have a created state because d3d
 -- 
-2.1.3
+1.9.1
 

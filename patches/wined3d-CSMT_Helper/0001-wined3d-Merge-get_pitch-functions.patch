@@ -1,4 +1,4 @@
-From e40fbe3feb09e745a7cb95413b23f3087a2859af Mon Sep 17 00:00:00 2001
+From 366b6fe7fb45ebe1010417aedfa3dfab9cd6360b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 19 Sep 2013 14:22:24 +0200
 Subject: wined3d: Merge get_pitch functions.
@@ -7,14 +7,15 @@ Subject: wined3d: Merge get_pitch functions.
  dlls/ddraw/surface.c           | 12 ++++++--
  dlls/wined3d/resource.c        | 31 +++++++++++++++++++
  dlls/wined3d/surface.c         | 70 +++++++++++++++++-------------------------
- dlls/wined3d/volume.c          | 29 ++---------------
+ dlls/wined3d/texture.c         |  2 +-
+ dlls/wined3d/volume.c          | 28 ++---------------
  dlls/wined3d/wined3d.spec      |  2 +-
  dlls/wined3d/wined3d_private.h |  2 +-
  include/wine/wined3d.h         |  3 +-
- 7 files changed, 74 insertions(+), 75 deletions(-)
+ 8 files changed, 75 insertions(+), 75 deletions(-)
 
 diff --git a/dlls/ddraw/surface.c b/dlls/ddraw/surface.c
-index a4184b8..a0d7f2d 100644
+index a387d12..9a8d94f 100644
 --- a/dlls/ddraw/surface.c
 +++ b/dlls/ddraw/surface.c
 @@ -6158,6 +6158,10 @@ void ddraw_surface_init(struct ddraw_surface *surface, struct ddraw *ddraw, stru
@@ -96,7 +97,7 @@ index 0ab55dc..8032a4c 100644
 +    TRACE("Returning row pitch %u, slice pitch %u.\n", *row_pitch, *slice_pitch);
 +}
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index 092cbe6..d9b1846 100644
+index fb27c8a..3ffec05 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
 @@ -364,6 +364,7 @@ static HRESULT surface_create_dib_section(struct wined3d_surface *surface)
@@ -164,19 +165,20 @@ index 092cbe6..d9b1846 100644
      POINT p;
  
      TRACE("dst_surface %p, dst_point %s, src_surface %p, src_rect %s.\n",
-@@ -1698,9 +1700,9 @@ HRESULT surface_upload_from_surface(struct wined3d_surface *dst_surface, const P
+@@ -1698,10 +1700,10 @@ HRESULT surface_upload_from_surface(struct wined3d_surface *dst_surface, const P
      wined3d_texture_bind(dst_surface->container, context, FALSE);
  
      surface_get_memory(src_surface, &data, src_surface->locations);
 -    src_pitch = wined3d_surface_get_pitch(src_surface);
 +    wined3d_resource_get_pitch(&src_surface->resource, &src_row_pitch, &src_slice_pitch);
  
--    surface_upload_data(dst_surface, gl_info, src_format, src_rect, src_pitch, dst_point, FALSE, &data);
-+    surface_upload_data(dst_surface, gl_info, src_format, src_rect, src_row_pitch, dst_point, FALSE, &data);
+     wined3d_surface_upload_data(dst_surface, gl_info, src_format, src_rect,
+-            src_pitch, dst_point, FALSE, wined3d_const_bo_address(&data));
++            src_row_pitch, dst_point, FALSE, wined3d_const_bo_address(&data));
  
      context_invalidate_active_texture(context);
  
-@@ -2008,25 +2010,6 @@ HRESULT CDECL wined3d_surface_restore(struct wined3d_surface *surface)
+@@ -2009,25 +2011,6 @@ HRESULT CDECL wined3d_surface_restore(struct wined3d_surface *surface)
      return WINED3D_OK;
  }
  
@@ -202,7 +204,7 @@ index 092cbe6..d9b1846 100644
  HRESULT CDECL wined3d_surface_set_overlay_position(struct wined3d_surface *surface, LONG x, LONG y)
  {
      LONG w, h;
-@@ -2207,12 +2190,13 @@ HRESULT wined3d_surface_update_desc(struct wined3d_surface *surface,
+@@ -2208,12 +2191,13 @@ HRESULT wined3d_surface_update_desc(struct wined3d_surface *surface,
          surface->resource.map_binding = WINED3D_LOCATION_USER_MEMORY;
          valid_location = WINED3D_LOCATION_USER_MEMORY;
      }
@@ -219,7 +221,7 @@ index 092cbe6..d9b1846 100644
      else
          surface->resource.size = wined3d_format_calculate_size(texture_resource->format,
                  texture_resource->device->surface_alignment, width, height, 1);
-@@ -2680,7 +2664,7 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
+@@ -2681,7 +2665,7 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
      if (format->flags & WINED3DFMT_FLAG_BROKEN_PITCH)
          map_desc->row_pitch = surface->resource.width * format->byte_count;
      else
@@ -228,7 +230,7 @@ index 092cbe6..d9b1846 100644
      map_desc->slice_pitch = 0;
  
      if (!rect)
-@@ -2860,7 +2844,9 @@ static void read_from_framebuffer(struct wined3d_surface *surface, DWORD dst_loc
+@@ -2861,7 +2845,9 @@ static void read_from_framebuffer(struct wined3d_surface *surface, DWORD dst_loc
      {
          /* glReadPixels returns the image upside down, and there is no way to prevent this.
           * Flip the lines in software. */
@@ -239,7 +241,7 @@ index 092cbe6..d9b1846 100644
  
          if (!(row = HeapAlloc(GetProcessHeap(), 0, pitch)))
              goto error;
-@@ -4092,7 +4078,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
+@@ -4093,7 +4079,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
      const struct wined3d_color_key_conversion *conversion;
      struct wined3d_texture *texture = surface->container;
      struct wined3d_context *context;
@@ -248,7 +250,7 @@ index 092cbe6..d9b1846 100644
      struct wined3d_bo_address data;
      struct wined3d_format format;
      POINT dst_point = {0, 0};
-@@ -4187,7 +4173,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
+@@ -4188,7 +4174,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
      else surface->flags &= ~SFLAG_GLCKEY;
  
      width = surface->resource.width;
@@ -257,7 +259,7 @@ index 092cbe6..d9b1846 100644
  
      format = *texture->resource.format;
      if ((conversion = wined3d_format_get_color_key_conversion(texture, TRUE)))
-@@ -4226,9 +4212,9 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
+@@ -4227,9 +4213,9 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
              context_release(context);
              return E_OUTOFMEMORY;
          }
@@ -269,7 +271,7 @@ index 092cbe6..d9b1846 100644
          data.addr = mem;
      }
      else if (conversion)
-@@ -4248,13 +4234,13 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
+@@ -4249,14 +4235,14 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
          }
          if (texture->swapchain && texture->swapchain->palette)
              palette = texture->swapchain->palette;
@@ -281,21 +283,34 @@ index 092cbe6..d9b1846 100644
          data.addr = mem;
      }
  
--    surface_upload_data(surface, gl_info, &format, &src_rect, src_pitch, &dst_point, srgb, &data);
-+    surface_upload_data(surface, gl_info, &format, &src_rect, src_row_pitch, &dst_point, srgb, &data);
+     wined3d_surface_upload_data(surface, gl_info, &format, &src_rect,
+-            src_pitch, &dst_point, srgb, wined3d_const_bo_address(&data));
++            src_row_pitch, &dst_point, srgb, wined3d_const_bo_address(&data));
  
      context_release(context);
  
+diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
+index d33bad1..0a8a550 100644
+--- a/dlls/wined3d/texture.c
++++ b/dlls/wined3d/texture.c
+@@ -1340,7 +1340,7 @@ static void texture3d_sub_resource_upload_data(struct wined3d_resource *sub_reso
+     struct wined3d_const_bo_address addr;
+     unsigned int row_pitch, slice_pitch;
+ 
+-    wined3d_volume_get_pitch(volume, &row_pitch, &slice_pitch);
++    wined3d_resource_get_pitch(&volume->resource, &row_pitch, &slice_pitch);
+     if (row_pitch != data->row_pitch || slice_pitch != data->slice_pitch)
+         FIXME("Ignoring row/slice pitch (%u/%u).\n", data->row_pitch, data->slice_pitch);
+ 
 diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
-index 58d7321..af99825 100644
+index b5ab862..87b6ab6 100644
 --- a/dlls/wined3d/volume.c
 +++ b/dlls/wined3d/volume.c
-@@ -40,31 +40,6 @@ BOOL volume_prepare_system_memory(struct wined3d_volume *volume)
+@@ -40,30 +40,6 @@ BOOL volume_prepare_system_memory(struct wined3d_volume *volume)
      return TRUE;
  }
  
--static void wined3d_volume_get_pitch(const struct wined3d_volume *volume, UINT *row_pitch,
--        UINT *slice_pitch)
+-void wined3d_volume_get_pitch(const struct wined3d_volume *volume, UINT *row_pitch, UINT *slice_pitch)
 -{
 -    const struct wined3d_format *format = volume->resource.format;
 -
@@ -321,17 +336,17 @@ index 58d7321..af99825 100644
 -
  /* Context activation is done by the caller. */
  void wined3d_volume_upload_data(struct wined3d_volume *volume, const struct wined3d_context *context,
-         const struct wined3d_bo_address *data)
-@@ -95,7 +70,7 @@ void wined3d_volume_upload_data(struct wined3d_volume *volume, const struct wine
+         const struct wined3d_const_bo_address *data)
+@@ -95,7 +71,7 @@ void wined3d_volume_upload_data(struct wined3d_volume *volume, const struct wine
          dst_row_pitch = (dst_row_pitch + alignment - 1) & ~(alignment - 1);
          dst_slice_pitch = dst_row_pitch * height;
  
 -        wined3d_volume_get_pitch(volume, &src_row_pitch, &src_slice_pitch);
 +        wined3d_resource_get_pitch(&volume->resource, &src_row_pitch, &src_slice_pitch);
  
-         mem = HeapAlloc(GetProcessHeap(), 0, dst_slice_pitch * depth);
-         format->convert(data->addr, mem, src_row_pitch, src_slice_pitch,
-@@ -638,7 +613,7 @@ HRESULT CDECL wined3d_volume_map(struct wined3d_volume *volume,
+         converted_mem = HeapAlloc(GetProcessHeap(), 0, dst_slice_pitch * depth);
+         format->convert(data->addr, converted_mem, src_row_pitch, src_slice_pitch,
+@@ -638,7 +614,7 @@ HRESULT CDECL wined3d_volume_map(struct wined3d_volume *volume,
      }
      else
      {
@@ -361,10 +376,10 @@ index 7a77003..95885c7 100644
  @ cdecl wined3d_surface_get_resource(ptr)
  @ cdecl wined3d_surface_getdc(ptr ptr)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 7935a5d..abd8d2b 100644
+index 047946b..d3af1c0 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2080,6 +2080,7 @@ struct wined3d_resource
+@@ -2091,6 +2091,7 @@ struct wined3d_resource
      UINT size;
      DWORD priority;
      void *heap_memory;
@@ -372,7 +387,7 @@ index 7935a5d..abd8d2b 100644
      struct list resource_list_entry;
  
      void *parent;
-@@ -2298,7 +2299,6 @@ struct wined3d_surface
+@@ -2314,7 +2315,6 @@ struct wined3d_surface
  
      DWORD flags;
  
@@ -381,10 +396,10 @@ index 7935a5d..abd8d2b 100644
      UINT pow2Height;
  
 diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
-index 0cf26e1..3d24b98 100644
+index 6e06388..cd8fd28 100644
 --- a/include/wine/wined3d.h
 +++ b/include/wine/wined3d.h
-@@ -2411,6 +2411,8 @@ static inline HRESULT wined3d_private_store_set_private_data(struct wined3d_priv
+@@ -2418,6 +2418,8 @@ static inline HRESULT wined3d_private_store_set_private_data(struct wined3d_priv
  void __cdecl wined3d_resource_get_desc(const struct wined3d_resource *resource,
          struct wined3d_resource_desc *desc);
  void * __cdecl wined3d_resource_get_parent(const struct wined3d_resource *resource);
@@ -393,7 +408,7 @@ index 0cf26e1..3d24b98 100644
  DWORD __cdecl wined3d_resource_get_priority(const struct wined3d_resource *resource);
  void __cdecl wined3d_resource_set_parent(struct wined3d_resource *resource, void *parent);
  DWORD __cdecl wined3d_resource_set_priority(struct wined3d_resource *resource, DWORD priority);
-@@ -2468,7 +2470,6 @@ HRESULT __cdecl wined3d_surface_get_blt_status(const struct wined3d_surface *sur
+@@ -2475,7 +2477,6 @@ HRESULT __cdecl wined3d_surface_get_blt_status(const struct wined3d_surface *sur
  HRESULT __cdecl wined3d_surface_get_flip_status(const struct wined3d_surface *surface, DWORD flags);
  HRESULT __cdecl wined3d_surface_get_overlay_position(const struct wined3d_surface *surface, LONG *x, LONG *y);
  void * __cdecl wined3d_surface_get_parent(const struct wined3d_surface *surface);
@@ -402,5 +417,5 @@ index 0cf26e1..3d24b98 100644
          struct wined3d_surface *render_target);
  struct wined3d_resource * __cdecl wined3d_surface_get_resource(struct wined3d_surface *surface);
 -- 
-2.1.3
+1.9.1
 

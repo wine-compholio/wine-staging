@@ -1,4 +1,4 @@
-From d66a88dca92c1e409b6a51781f8b0330eae61623 Mon Sep 17 00:00:00 2001
+From bf2433b8c878cfeb86a2822d799bb1975edb36e4 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 5 Jan 2015 18:11:53 +0100
 Subject: nvapi: First implementation.
@@ -6,15 +6,15 @@ Subject: nvapi: First implementation.
 ---
  configure.ac                 |   3 +
  dlls/nvapi/Makefile.in       |   4 +
- dlls/nvapi/nvapi.c           | 460 +++++++++++++++++++++++++++++++++++++++++++
+ dlls/nvapi/nvapi.c           | 459 +++++++++++++++++++++++++++++++++++++++++++
  dlls/nvapi/nvapi.spec        |   5 +
  dlls/nvapi/tests/Makefile.in |   5 +
- dlls/nvapi/tests/nvapi.c     | 265 +++++++++++++++++++++++++
+ dlls/nvapi/tests/nvapi.c     | 276 ++++++++++++++++++++++++++
  dlls/nvapi64/Makefile.in     |   5 +
  dlls/nvapi64/nvapi64.spec    |   5 +
  include/Makefile.in          |   1 +
- include/nvapi.h              |  74 +++++++
- 10 files changed, 827 insertions(+)
+ include/nvapi.h              |  76 +++++++
+ 10 files changed, 839 insertions(+)
  create mode 100644 dlls/nvapi/Makefile.in
  create mode 100644 dlls/nvapi/nvapi.c
  create mode 100644 dlls/nvapi/nvapi.spec
@@ -50,10 +50,10 @@ index 0000000..606177f
 +	nvapi.c
 diff --git a/dlls/nvapi/nvapi.c b/dlls/nvapi/nvapi.c
 new file mode 100644
-index 0000000..fdaf21d
+index 0000000..7b352d8
 --- /dev/null
 +++ b/dlls/nvapi/nvapi.c
-@@ -0,0 +1,460 @@
+@@ -0,0 +1,459 @@
 +/*
 + * Copyright (C) 2015 Michael Müller
 + * Copyright (C) 2015 Sebastian Lackner
@@ -295,11 +295,10 @@ index 0000000..fdaf21d
 +    if (param->version != NV_UNKNOWN_1_VER)
 +        return NVAPI_INCOMPATIBLE_STRUCT_VERSION;
 +
-+    param->unknown1 = 1;
-+    param->gpuHandle = (void *)0xdead0001;
-+    param->unknown2 = 11;
++    param->gpu_count = 1;
++    param->gpus[0].gpuHandle = (void *)0xdead0001;
++    param->gpus[0].unknown2 = 11;
 +
-+    memset(param->zeros, 0, sizeof(param->zeros));
 +    return NVAPI_OK;
 +}
 +
@@ -538,10 +537,10 @@ index 0000000..a94df01
 +	nvapi.c
 diff --git a/dlls/nvapi/tests/nvapi.c b/dlls/nvapi/tests/nvapi.c
 new file mode 100644
-index 0000000..0e0fd2a
+index 0000000..d760a18
 --- /dev/null
 +++ b/dlls/nvapi/tests/nvapi.c
-@@ -0,0 +1,265 @@
+@@ -0,0 +1,276 @@
 +/*
 + * Copyright (C) 2015 Michael Müller
 + *
@@ -681,6 +680,7 @@ index 0000000..0e0fd2a
 +{
 +    NV_UNKNOWN_1 test;
 +    NvAPI_Status status;
++    int i;
 +
 +    if (!pNvAPI_unknown1)
 +    {
@@ -696,9 +696,19 @@ index 0000000..0e0fd2a
 +    status = pNvAPI_unknown1(&test);
 +
 +    ok(!status, "Expected status NVAPI_OK, got %d\n", status);
-+    ok(test.unknown1 == 1, "Expected unknown1 == 1, got %d\n", test.unknown1);
-+    ok(test.gpuHandle != NULL, "Expected gpuHandle != 0, got %p\n", test.gpuHandle);
-+    ok(test.unknown2 == 11, "Expected unknown2 == 11, got %d\n", test.unknown2);
++    ok(test.gpu_count > 0, "Expected gpu_count > 0, got %d\n", test.gpu_count);
++
++    for (i = 0; i < test.gpu_count; i++)
++    {
++        ok(test.gpus[i].gpuHandle != NULL, "Expected gpus[%d].gpuHandle != 0, got %p\n", i, test.gpus[i].gpuHandle);
++        ok(test.gpus[i].unknown2 != 0, "Expected gpus[%d].unknown2 != 0, got %d\n", i, test.gpus[i].unknown2);
++    }
++
++    for (; i < sizeof(test.gpus) / sizeof(test.gpus[0]); i++)
++    {
++        ok(test.gpus[i].gpuHandle == NULL, "Expected gpus[%d].gpuHandle == NULL, got %p\n", i, test.gpus[i].gpuHandle);
++        ok(test.gpus[i].unknown2 == 0, "Expected gpus[%d].unknown2 == 0, got %d\n", i, test.gpus[i].unknown2);
++    }
 +}
 +
 +static void test_unknown2(void)
@@ -727,7 +737,7 @@ index 0000000..0e0fd2a
 +    status = pNvAPI_unknown1(&test);
 +    ok(!status, "Expected status NVAPI_OK, got %d\n", status);
 +
-+    status = pNvAPI_unknown2(test.gpuHandle, NULL);
++    status = pNvAPI_unknown2(test.gpus[0].gpuHandle, NULL);
 +    ok(status == NVAPI_INVALID_ARGUMENT, "Expected status NVAPI_INVALID_ARGUMENT, got %d\n", status);
 +
 +    status = pNvAPI_unknown2(NULL, &test2);
@@ -739,9 +749,9 @@ index 0000000..0e0fd2a
 +    ok(test2 == (void*)0xffffffff, "Expected handle 0xffffffff, got %p\n", test2);
 +
 +    test2 = NULL;
-+    status = pNvAPI_unknown2(test.gpuHandle, &test2);
++    status = pNvAPI_unknown2(test.gpus[0].gpuHandle, &test2);
 +    ok(!status, "Expected status NVAPI_OK, got %d\n", status);
-+    ok(test2 == test.gpuHandle, "Expected handle %p, got %p\n", test.gpuHandle, test2);
++    ok(test2 == test.gpus[0].gpuHandle, "Expected handle %p, got %p\n", test.gpus[0].gpuHandle, test2);
 +}
 +
 +static void test_unknown3(void)
@@ -777,7 +787,7 @@ index 0000000..0e0fd2a
 +    status = pNvAPI_unknown1(&test);
 +    ok(!status, "Expected status NVAPI_OK, got %d\n", status);
 +
-+    status = pNvAPI_unknown2(test.gpuHandle, &test2);
++    status = pNvAPI_unknown2(test.gpus[0].gpuHandle, &test2);
 +    ok(!status, "Expected status NVAPI_OK, got %d\n", status);
 +
 +    status = pNvAPI_unknown3(test2, NULL);
@@ -843,10 +853,10 @@ index 84c3ea7..f9eaf44 100644
  	odbcinst.h \
 diff --git a/include/nvapi.h b/include/nvapi.h
 new file mode 100644
-index 0000000..1980895
+index 0000000..4204256
 --- /dev/null
 +++ b/include/nvapi.h
-@@ -0,0 +1,74 @@
+@@ -0,0 +1,76 @@
 +/*
 + * Copyright (C) 2015 Michael Müller
 + *
@@ -910,10 +920,12 @@ index 0000000..1980895
 +typedef struct
 +{
 +    NvU32 version;
-+    NvU32 unknown1;
-+    NvPhysicalGpuHandle gpuHandle;
-+    NvU32 unknown2;
-+    void* zeros[14];
++    NvU32 gpu_count;
++    struct
++    {
++        NvPhysicalGpuHandle gpuHandle;
++        NvU32 unknown2;
++    } gpus[8];
 +}NV_UNKNOWN_1;
 +
 +#define NV_UNKNOWN_1_VER MAKE_NVAPI_VERSION(NV_UNKNOWN_1, 1)
@@ -922,5 +934,5 @@ index 0000000..1980895
 +
 +#endif /* __WINE_NVAPI_H */
 -- 
-2.2.1
+1.9.1
 

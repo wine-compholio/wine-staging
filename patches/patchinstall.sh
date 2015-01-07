@@ -127,6 +127,7 @@ patch_enable_all ()
 	enable_ntoskrnl_Stub_FileObject="$1"
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvapi_Stub_DLL="$1"
+	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_ole32_CoWaitForMultipleHandles="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_riched20_IText_Interface="$1"
@@ -413,6 +414,9 @@ patch_enable ()
 		nvapi-Stub_DLL)
 			enable_nvapi_Stub_DLL="$2"
 			;;
+		nvcuvid-CUDA_Video_Support)
+			enable_nvcuvid_CUDA_Video_Support="$2"
+			;;
 		ole32-CoWaitForMultipleHandles)
 			enable_ole32_CoWaitForMultipleHandles="$2"
 			;;
@@ -694,10 +698,10 @@ if [ "$enable_wined3d_CSMT_Main" -eq 1 ]; then
 fi
 
 if [ "$enable_wined3d_CSMT_Helper" -eq 1 ]; then
-	[ "$enable_makedep_PARENTSPEC" -gt 1 ] && abort "ERROR: Patchset makedep-PARENTSPEC disabled, but wined3d-CSMT_Helper depends on that." >&2
 	[ "$enable_wined3d_DXTn" -gt 1 ] && abort "ERROR: Patchset wined3d-DXTn disabled, but wined3d-CSMT_Helper depends on that." >&2
-	enable_makedep_PARENTSPEC=1
+	[ "$enable_makedep_PARENTSPEC" -gt 1 ] && abort "ERROR: Patchset makedep-PARENTSPEC disabled, but wined3d-CSMT_Helper depends on that." >&2
 	enable_wined3d_DXTn=1
+	enable_makedep_PARENTSPEC=1
 fi
 
 if [ "$enable_server_ACL_Compat" -eq 1 ]; then
@@ -713,6 +717,11 @@ fi
 if [ "$enable_server_Stored_ACLs" -eq 1 ]; then
 	[ "$enable_ntdll_DOS_Attributes" -gt 1 ] && abort "ERROR: Patchset ntdll-DOS_Attributes disabled, but server-Stored_ACLs depends on that." >&2
 	enable_ntdll_DOS_Attributes=1
+fi
+
+if [ "$enable_nvcuvid_CUDA_Video_Support" -eq 1 ]; then
+	[ "$enable_nvapi_Stub_DLL" -gt 1 ] && abort "ERROR: Patchset nvapi-Stub_DLL disabled, but nvcuvid-CUDA_Video_Support depends on that." >&2
+	enable_nvapi_Stub_DLL=1
 fi
 
 if [ "$enable_nvapi_Stub_DLL" -eq 1 ]; then
@@ -2043,6 +2052,19 @@ if [ "$enable_nvapi_Stub_DLL" -eq 1 ]; then
 	patch_apply nvapi-Stub_DLL/0001-nvapi-First-implementation.patch
 	(
 		echo '+    { "Michael Müller", "nvapi: First implementation.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset nvcuvid-CUDA_Video_Support
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/nvcuvid/Makefile.in, dlls/nvcuvid/nvcuvid.c, dlls/nvcuvid/nvcuvid.spec, include/Makefile.in,
+# | 	include/cuviddec.h, include/nvcuvid.h
+# |
+if [ "$enable_nvcuvid_CUDA_Video_Support" -eq 1 ]; then
+	patch_apply nvcuvid-CUDA_Video_Support/0001-nvcuvid-First-implementation.patch
+	(
+		echo '+    { "Michael Müller", "nvcuvid: First implementation.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -125,6 +125,7 @@ patch_enable_all ()
 	enable_ntoskrnl_Irp_Status="$1"
 	enable_ntoskrnl_Stub_FileObject="$1"
 	enable_nvcuda_CUDA_Support="$1"
+	enable_nvapi_Stub_DLL="$1"
 	enable_ole32_CoWaitForMultipleHandles="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_riched20_IText_Interface="$1"
@@ -403,6 +404,9 @@ patch_enable ()
 			;;
 		nvcuda-CUDA_Support)
 			enable_nvcuda_CUDA_Support="$2"
+			;;
+		nvapi-Stub_DLL)
+			enable_nvapi_Stub_DLL="$2"
 			;;
 		ole32-CoWaitForMultipleHandles)
 			enable_ole32_CoWaitForMultipleHandles="$2"
@@ -701,6 +705,11 @@ fi
 if [ "$enable_server_Stored_ACLs" -eq 1 ]; then
 	[ "$enable_ntdll_DOS_Attributes" -gt 1 ] && abort "ERROR: Patchset ntdll-DOS_Attributes disabled, but server-Stored_ACLs depends on that." >&2
 	enable_ntdll_DOS_Attributes=1
+fi
+
+if [ "$enable_nvapi_Stub_DLL" -eq 1 ]; then
+	[ "$enable_nvcuda_CUDA_Support" -gt 1 ] && abort "ERROR: Patchset nvcuda-CUDA_Support disabled, but nvapi-Stub_DLL depends on that." >&2
+	enable_nvcuda_CUDA_Support=1
 fi
 
 if [ "$enable_ntoskrnl_Emulator" -eq 1 ]; then
@@ -1998,6 +2007,19 @@ if [ "$enable_nvcuda_CUDA_Support" -eq 1 ]; then
 		echo '+    { "Michael Müller", "nvcuda: First implementation.", 1 },';
 		echo '+    { "Michael Müller", "nvcuda: Add Unknown5 internal interface.", 1 },';
 		echo '+    { "Michael Müller", "nvcuda: Emulate two d3d9 initialization functions.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset nvapi-Stub_DLL
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/nvapi/Makefile.in, dlls/nvapi/nvapi.c, dlls/nvapi/nvapi.spec, dlls/nvapi/tests/Makefile.in,
+# | 	dlls/nvapi/tests/nvapi.c, dlls/nvapi64/Makefile.in, dlls/nvapi64/nvapi64.spec, include/Makefile.in, include/nvapi.h
+# |
+if [ "$enable_nvapi_Stub_DLL" -eq 1 ]; then
+	patch_apply nvapi-Stub_DLL/0001-nvapi-First-implementation.patch
+	(
+		echo '+    { "Michael Müller", "nvapi: First implementation.", 1 },';
 	) >> "$patchlist"
 fi
 

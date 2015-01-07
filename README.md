@@ -37,7 +37,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [26]:**
+**Bugfixes and features included in the next upcoming release [27]:**
 
 * Add nvapi stubs required for GPU PhysX support
 * Add stub for D3DXComputeNormalMap
@@ -49,6 +49,7 @@ Included bug fixes and improvements
 * Expose PKEY_AudioEndpoint_PhysicalSpeakers device property in PulseAudio driver
 * Fix NULL dereference in ICSeqCompressFrameStart ([Wine Bug #27595](https://bugs.winehq.org/show_bug.cgi?id=27595))
 * Fix access violation when calling GetStringTypeW with NULL src. ([Wine Bug #37759](https://bugs.winehq.org/show_bug.cgi?id=37759))
+* Fix color key regression causing pink rectangles around text ([Wine Bug #37748](https://bugs.winehq.org/show_bug.cgi?id=37748))
 * Fix handling of subdirectory in FtpFindFirstFile ([Wine Bug #16526](https://bugs.winehq.org/show_bug.cgi?id=16526))
 * Fix parameters for ConvertToIndexedBlendedMesh stub ([Wine Bug #36449](https://bugs.winehq.org/show_bug.cgi?id=36449))
 * GetMonitorInfo returns the same name for all monitors ([Wine Bug #37709](https://bugs.winehq.org/show_bug.cgi?id=37709))

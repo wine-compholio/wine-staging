@@ -165,6 +165,7 @@ patch_enable_all ()
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
 	enable_winecfg_Staging="$1"
+	enable_wined3d_Color_Key="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
@@ -527,6 +528,9 @@ patch_enable ()
 			;;
 		winecfg-Staging)
 			enable_winecfg_Staging="$2"
+			;;
+		wined3d-Color_Key)
+			enable_wined3d_Color_Key="$2"
 			;;
 		wined3d-Revert_PixelFormat)
 			enable_wined3d_Revert_PixelFormat="$2"
@@ -3053,6 +3057,21 @@ if [ "$enable_winecfg_Staging" -eq 1 ]; then
 	patch_apply winecfg-Staging/0001-winecfg-Add-staging-tab-for-CSMT.patch
 	(
 		echo '+    { "Michael Müller", "winecfg: Add staging tab for CSMT.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Color_Key
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37748] Fix color key regression causing pink rectangles around text
+# |
+# | Modified files:
+# |   *	dlls/wined3d/surface.c
+# |
+if [ "$enable_wined3d_Color_Key" -eq 1 ]; then
+	patch_apply wined3d-Color_Key/0001-wined3d-Use-proper-color-key-type-define-when-callin.patch
+	(
+		echo '+    { "Christian Costa", "wined3d: Use proper color key type define when calling wined3d_texture_set_color_key.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -37,7 +37,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [24]:**
+**Bugfixes and features included in the next upcoming release [25]:**
 
 * Add nvapi stubs required for GPU PhysX support
 * Add stub for D3DXComputeNormalMap
@@ -62,6 +62,7 @@ Included bug fixes and improvements
 * Support for named pipe message mode (Linux only) ([Wine Bug #17195](https://bugs.winehq.org/show_bug.cgi?id=17195))
 * Try harder to get the host name address in getaddrinfo() ([Wine Bug #29609](https://bugs.winehq.org/show_bug.cgi?id=29609))
 * Use actual program name if available to describe PulseAudio streams
+* WSARecv should call SetLastError on success ([Wine Bug #31438](https://bugs.winehq.org/show_bug.cgi?id=31438))
 * ntdll is missing WinSqm[Start|End]Session implementation ([Wine Bug #31971](https://bugs.winehq.org/show_bug.cgi?id=31971))
 
 

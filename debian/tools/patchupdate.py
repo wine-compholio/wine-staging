@@ -1,8 +1,8 @@
 #!/usr/bin/python2
 #
-# Automatic patch dependency checker and Makefile/README.md generator.
+# Automatic patch dependency checker and apply script/README.md generator.
 #
-# Copyright (C) 2014 Sebastian Lackner
+# Copyright (C) 2014-2015 Sebastian Lackner
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -43,17 +43,15 @@ latest_wine_commit  = None
 cached_patch_result = {}
 
 class config(object):
-    path_depcache           = ".patchupdate.cache"
-
     path_patches            = "patches"
     path_changelog          = "debian/changelog"
     path_wine               = "debian/tools/wine"
 
-    path_template_Makefile  = "debian/tools/Makefile.in"
-    path_Makefile           = "patches/Makefile"
+    path_template_script    = "debian/tools/patchinstall.sh.in"
+    path_script             = "patches/patchinstall.sh"
 
-    path_README_md          = "README.md"
     path_template_README_md = "debian/tools/README.md.in"
+    path_README_md          = "README.md"
 
     path_IfDefined          = "9999-IfDefined.patch"
 
@@ -64,6 +62,7 @@ class PatchUpdaterError(RuntimeError):
 class PatchSet(object):
     def __init__(self, name, directory):
         self.name           = name
+        self.variable       = None
         self.directory      = directory
         self.fixes          = []
         self.changes        = []
@@ -75,7 +74,6 @@ class PatchSet(object):
         self.modified_files = set()
         self.depends        = set()
 
-        self.verify_depends = set()
         self.verify_time    = None
 
 def _pairs(a):
@@ -97,14 +95,6 @@ def _split_seq(iterable, size):
     while items:
         yield items
         items = list(itertools.islice(it, size))
-
-def _merge_seq(iterable, callback=None):
-    """Merge lists/iterators into a new one. Call callback after each chunk"""
-    for i, items in enumerate(iterable):
-        if callback is not None:
-            callback(i)
-        for obj in items:
-            yield obj
 
 def _escape(s):
     """Escape string inside of '...' quotes."""
@@ -322,13 +312,6 @@ def causal_time_relation_any(all_patches, indices):
             return False
     return True
 
-def causal_time_permutations(all_patches, indices):
-    """Iterate over all possible permutations of patches affecting
-       a specific file, which are compatible with dependencies."""
-    for permutation in itertools.permutations(indices):
-        if causal_time_relation(all_patches, permutation):
-            yield permutation
-
 def contains_binary_patch(all_patches, indices, filename):
     """Checks if any patch with given indices affecting filename is a binary patch."""
     for i in indices:
@@ -373,133 +356,20 @@ def select_patches(all_patches, indices, filename):
         selected_patches[i] = extract_patch(all_patches[i], filename)
     return selected_patches
 
-def verify_patch_order(all_patches, indices, filename, pool):
-    """Checks if the dependencies are defined correctly by applying
-       the patches on a (temporary) copy from the git tree."""
-
-    # If one of patches is a binary patch, then we cannot / won't verify it - require dependencies in this case
-    if contains_binary_patch(all_patches, indices, filename):
-        if not causal_time_relation_any(all_patches, indices):
-            raise PatchUpdaterError("Because of binary patch modifying file %s the following patches need explicit dependencies: %s" %
-                                    (filename, ", ".join([all_patches[i].name for i in indices])))
-        return
-
-    original_content      = get_wine_file(filename)
-    original_content_hash = _sha256(original_content)
-    selected_patches      = select_patches(all_patches, indices, filename)
-    try:
-
-        def _test_apply(permutations):
-            """Tests if specific permutations of patches apply on the wine source tree."""
-            patch_stack_indices = []
-            patch_stack_patches = []
-            try:
-
-                for permutation in permutations:
-
-                    # Calculate hash
-                    m = hashlib.sha256()
-                    m.update(original_content_hash)
-                    for i in permutation:
-                        m.update(selected_patches[i][0])
-                    input_hash = m.digest()
-
-                    # Fast path -> we know that it applies properly
-                    try:
-                        yield cached_patch_result[input_hash]
-                        continue
-
-                    except KeyError:
-                        pass
-
-                    # Remove unneeded patches from patch stack
-                    while list(permutation[:len(patch_stack_indices)]) != patch_stack_indices:
-                        patch_stack_indices.pop()
-                        patch_stack_patches.pop().close()
-
-                    # Apply the patches (without fuzz)
-                    try:
-                        while len(patch_stack_indices) < len(permutation):
-                            i = permutation[len(patch_stack_indices)]
-                            original = patch_stack_patches[-1] if len(patch_stack_indices) else original_content
-                            patch_stack_patches.append(patchutils.apply_patch(original, selected_patches[i][1], fuzz=0))
-                            patch_stack_indices.append(i)
-                        output_hash = _sha256(patch_stack_patches[-1])
-
-                    except patchutils.PatchApplyError:
-                        output_hash = None
-
-                    cached_patch_result[input_hash] = output_hash
-                    yield output_hash
-
-            finally:
-                # Ensure temporary files are cleaned up properly
-                while len(patch_stack_patches):
-                    patch_stack_patches.pop().close()
-
-        # Show a progress bar while applying the patches - this task might take some time
-        chunk_size  = 20
-        total_tasks = (math.factorial(len(indices)) + chunk_size - 1) / chunk_size
-        with progressbar.ProgressBar(desc=filename, total=total_tasks) as progress:
-
-            failed_to_apply   = False
-            last_result_hash  = None
-
-            # Check for possible ways to apply the patch
-            it = _split_seq(causal_time_permutations(all_patches, indices), chunk_size)
-            for output_hash in _merge_seq(pool.imap_unordered(lambda seq: list(_test_apply(seq)), it), \
-                                          callback=progress.update):
-
-                # Failed to apply patch, continue checking the rest.
-                if output_hash is None:
-                    failed_to_apply = True
-                    if last_result_hash is None:
-                        continue
-                    break
-
-                # No known hash yet, remember the result. If we failed applying before, we can stop now.
-                elif last_result_hash is None:
-                    last_result_hash = output_hash
-                    if failed_to_apply: break
-
-                # Applied successful, but result has a different hash - also treat as failure.
-                elif last_result_hash != output_hash:
-                    failed_to_apply = True
-                    break
-
-            if failed_to_apply:
-                progress.finish("<failed to apply>")
-            elif verbose:
-                progress.finish(binascii.hexlify(last_result_hash))
-
-    finally:
-        original_content.close()
-        for _, (_, p) in selected_patches.iteritems():
-            p.close()
-
-    # If something failed, then show the appropriate error message.
-    if failed_to_apply and last_result_hash is None:
-        raise PatchUpdaterError("Changes to file %s don't apply on git source tree: %s" %
-                                (filename, ", ".join([all_patches[i].name for i in indices])))
-
-    elif failed_to_apply:
-        raise PatchUpdaterError("Depending on the order some changes to file %s don't apply / lead to different results: %s" %
-                                (filename, ", ".join([all_patches[i].name for i in indices])))
-
-    else:
-        assert len(last_result_hash) == 32
-
-def resolve_dependencies(all_patches, index):
+def resolve_dependencies(all_patches, index = None, depends = None):
     """Returns a sorted list with all dependencies for a given patch."""
 
     def _resolve(depends):
         for i in depends:
+            # Check for disabled patch
+            if all_patches[i].disabled:
+                raise PatchUpdaterError("Encountered dependency on disabled patchset %s" % all_patches[i].name)
             # Dependencies already resolved
             if all_patches[i].verify_resolved > 0:
                 continue
             # Detect circular dependency
             if all_patches[i].verify_resolved < 0:
-                raise PatchUpdaterError("Circular dependency while trying to resolve dependencies of %s" % all_patches[index].name)
+                raise PatchUpdaterError("Circular dependency while trying to resolve %s" % all_patches[i].name)
 
             # Recusively resolve dependencies
             all_patches[i].verify_resolved = -1
@@ -511,7 +381,9 @@ def resolve_dependencies(all_patches, index):
         patch.verify_resolved = 0
 
     resolved = []
-    _resolve(all_patches[index].depends)
+    if depends is None:
+        depends = all_patches[index].depends
+    _resolve(depends)
     return resolved
 
 def generate_ifdefined(all_patches):
@@ -564,111 +436,138 @@ def generate_ifdefined(all_patches):
             assert p.modified_file in patch.modified_files
             patch.patches.append(p)
 
-def verify_dependencies(all_patches):
-    """Resolve dependencies, and afterwards run verify_patch_order() to check if everything applies properly."""
+def generate_script(all_patches):
+    """Resolve dependencies, and afterwards check if everything applies properly."""
+    depends     = sorted([i for i, patch in all_patches.iteritems() if not patch.disabled])
+    resolved    = resolve_dependencies(all_patches, depends=depends)
+    max_patches = max(resolved) + 1
 
-    def _load_patch_cache():
-        """Load dictionary for cached patch dependency tests."""
-        global cached_patch_result
-        cached_patch_result = _load_dict(config.path_depcache)
-
-    def _save_patch_cache():
-        """Save dictionary for cached patch dependency tests."""
-        _save_dict(config.path_depcache, cached_patch_result.copy())
-
-    enabled_patches = dict([(i, patch) for i, patch in all_patches.iteritems() if not patch.disabled])
-    max_patches     = max(enabled_patches.keys()) + 1
-
-    for _, patch in enabled_patches.iteritems():
-        patch.verify_depends = set(patch.depends)
-        patch.verify_time    = [0]*max_patches
-
-    # Check for circular dependencies and perform modified vector clock algorithm
-    patches = dict(enabled_patches)
-    while len(patches):
-
-        to_delete = []
-        for i, patch in patches.iteritems():
-            if len(patch.verify_depends) == 0:
-                patch.verify_time[i] += 1
-                to_delete.append(i)
-
-        if len(to_delete) == 0:
-            raise PatchUpdaterError("Circular dependency (or disabled dependency) in set of patches: %s" %
-                                    ", ".join([patch.name for i, patch in patches.iteritems()]))
-
-        for j in to_delete:
-            for i, patch in patches.iteritems():
-                if i != j and j in patch.verify_depends:
-                    patch.verify_time = causal_time_combine(patch.verify_time, patches[j].verify_time)
-                    patch.verify_depends.remove(j)
-            del patches[j]
-
+    # Generate timestamps based on dependencies, still required for binary patches
     # Find out which files are modified by multiple patches
     modified_files = {}
-    for i, patch in enabled_patches.iteritems():
+    for i, patch in [(i, all_patches[i]) for i in resolved]:
+        patch.verify_time = [0]*max_patches
+        patch.verify_time[i] += 1
+        for j in patch.depends:
+            patch.verify_time = causal_time_combine(patch.verify_time, all_patches[j].verify_time)
+
         for f in patch.modified_files:
             if f not in modified_files:
                 modified_files[f] = []
             modified_files[f].append(i)
 
-    # Check if patches always apply correctly
-    _load_patch_cache()
-    pool = multiprocessing.pool.ThreadPool(processes=8)
-    try:
-        for f, indices in modified_files.iteritems():
-            verify_patch_order(enabled_patches, indices, f, pool)
-    finally:
-        _save_patch_cache()
-        pool.close()
+    # Check dependencies
+    for filename, indices in modified_files.iteritems():
 
-def generate_makefile(all_patches):
-    """Generate Makefile for a specific set of patches."""
+        # If one of patches is a binary patch, then we cannot / won't verify it - require dependencies in this case
+        if contains_binary_patch(all_patches, indices, filename):
+            if not causal_time_relation_any(all_patches, indices):
+                raise PatchUpdaterError("Because of binary patch modifying file %s the following patches need explicit dependencies: %s" %
+                                        (filename, ", ".join([all_patches[i].name for i in indices])))
+            continue
 
-    with open(config.path_template_Makefile) as template_fp:
+        original_content = get_wine_file(filename)
+        selected_patches = select_patches(all_patches, indices, filename)
+
+        # Show a progress bar while applying the patches - this task might take some time
+        with progressbar.ProgressBar(desc=filename, total=2 ** len(indices)) as progress:
+            for k, bitstring in enumerate(itertools.product([0,1], repeat=len(indices))):
+                progress.update(k)
+
+                to_apply = [i for u, i in zip(bitstring, indices) if u]
+                applied  = set()
+                for i, patch in [(i, all_patches[i]) for i in to_apply]:
+                    if not applied.issuperset(patch.depends):
+                        break
+                    applied.add(i)
+                else:
+                    try:
+                        original = original_content
+                        for i, patch in [(i, all_patches[i]) for i in to_apply]:
+                            original = patchutils.apply_patch(original, selected_patches[i][1], fuzz=0)
+                    except patchutils.PatchApplyError:
+                        progress.finish("<failed to apply>")
+                        raise PatchUpdaterError("Changes to file %s don't apply: %s" %
+                                                (filename, ", ".join([all_patches[i].name for i in indices])))
+
+    # Generate code for helper functions
+    lines = []
+    lines.append("# Enable or disable all patchsets\n")
+    lines.append("patch_enable_all ()\n")
+    lines.append("{\n")
+    for i, patch in [(i, all_patches[i]) for i in resolved]:
+        patch.variable = "enable_%s" % patch.name.replace("-","_")
+        lines.append("\t%s=\"$1\"\n" % patch.variable)
+    lines.append("}\n")
+    lines.append("\n")
+    lines.append("# Enable or disable a specific patchset\n")
+    lines.append("patch_enable ()\n")
+    lines.append("{\n")
+    lines.append("\tcase \"$1\" in\n")
+    for i, patch in [(i, all_patches[i]) for i in resolved]:
+        lines.append("\t\t%s)\n" % patch.name)
+        lines.append("\t\t\t%s=\"$2\"\n" % patch.variable)
+        lines.append("\t\t\t;;\n")
+    lines.append("\t\t*)\n")
+    lines.append("\t\t\treturn 1\n")
+    lines.append("\t\t\t;;\n")
+    lines.append("\tesac\n")
+    lines.append("\treturn 0\n")
+    lines.append("}\n")
+    lines_helpers = lines
+
+    # Generate code for dependency resolver
+    lines = []
+    for i, patch in [(i, all_patches[i]) for i in reversed(resolved)]:
+        if len(patch.depends):
+            lines.append("if [ \"$%s\" -eq 1 ]; then\n" % patch.variable)
+            for j in patch.depends:
+                lines.append("\t[ \"$%s\" -gt 1 ] && abort \"ERROR: Patchset %s disabled, but %s depends on that.\" >&2\n" %
+                                     (all_patches[j].variable, all_patches[j].name, patch.name))
+            for j in patch.depends:
+                lines.append("\t%s=1\n" % all_patches[j].variable)
+            lines.append("fi\n\n")
+    lines_resolver = lines
+
+    # Generate code for applying all patchsets
+    lines = []
+    for i, patch in [(i, all_patches[i]) for i in resolved]:
+        lines.append("# Patchset %s\n" % patch.name)
+        lines.append("# |\n")
+
+        # List all bugs fixed by this patchset
+        if any([bugid is not None for bugid, bugname in patch.fixes]):
+            lines.append("# | This patchset fixes the following Wine bugs:\n")
+            for bugid, bugname in patch.fixes:
+                if bugid is not None:
+                    lines.append("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap("[#%d] %s" % (bugid, bugname), 120)))
+            lines.append("# |\n")
+
+        # List all modified files
+        lines.append("# | Modified files:\n")
+        lines.append("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap(", ".join(sorted(patch.modified_files)), 120)))
+        lines.append("# |\n")
+        lines.append("if [ \"$%s\" -eq 1 ]; then\n" % patch.variable)
+        for f in patch.files:
+            lines.append("\tpatch_apply %s\n" % os.path.join(patch.name, f))
+        if len(patch.patches):
+            lines.append("\t(\n")
+            for p in _unique(patch.patches, key=lambda p: (p.patch_author, p.patch_subject, p.patch_revision)):
+                lines.append("\t\techo '+    { \"%s\", \"%s\", %d },';\n" % \
+                                   (_escape(p.patch_author), _escape(p.patch_subject), p.patch_revision))
+            lines.append("\t) >> \"$patchlist\"\n")
+        lines.append("fi\n\n")
+    lines_apply = lines
+
+    with open(config.path_template_script) as template_fp:
         template = template_fp.read()
-
-    with open(config.path_Makefile, "w") as fp:
-        fp.write(template.format(patchlist="\t" + " \\\n\t".join(
-            ["%s.ok" % patch.name for _, patch in all_patches.iteritems() if not patch.disabled])))
-
-        for _, patch in all_patches.iteritems():
-            fp.write("# Patchset %s\n" % patch.name)
-            fp.write("# |\n")
-
-            # List all bugs fixed by this patchset
-            if any([bugid is not None for bugid, bugname in patch.fixes]):
-                fp.write("# | This patchset fixes the following Wine bugs:\n")
-                for bugid, bugname in patch.fixes:
-                    if bugid is not None:
-                        fp.write("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap("[#%d] %s" % (bugid, bugname), 120)))
-                fp.write("# |\n")
-
-            # List all modified files
-            fp.write("# | Modified files:\n")
-            fp.write("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap(", ".join(sorted(patch.modified_files)), 120)))
-            fp.write("# |\n")
-
-            # Generate dependencies and code to apply patches
-            fp.write(".INTERMEDIATE: %s.ok\n" % patch.name)
-            depends = " ".join([""] + sorted(["%s.ok" % all_patches[d].name for d in patch.depends])) if len(patch.depends) else ""
-            fp.write("%s.ok:%s\n" % (patch.name, depends))
-            for f in patch.files:
-                fp.write("\t$(call APPLY_FILE,%s)\n" % os.path.join(patch.name, f))
-
-            # Create *.ok file (used to generate patchlist)
-            if len(patch.patches):
-                fp.write("\t@( \\\n")
-                for p in _unique(patch.patches, key=lambda p: (p.patch_author, p.patch_subject, p.patch_revision)):
-                    fp.write("\t\techo '+    { \"%s\", \"%s\", %d },'; \\\n" % \
-                            (_escape(p.patch_author), _escape(p.patch_subject), p.patch_revision))
-                fp.write("\t) > %s.ok\n" % patch.name)
-            else:
-                fp.write("\ttouch %s.ok\n" % patch.name)
-            fp.write("\n");
+    with open(config.path_script, "w") as fp:
+        fp.write(template.format(patch_helpers="".join(lines_helpers).rstrip("\n"),
+                                 patch_resolver="".join(lines_resolver).rstrip("\n"),
+                                 patch_apply="".join(lines_apply).rstrip("\n")))
 
     # Add changes to git
-    subprocess.call(["git", "add", config.path_Makefile])
+    subprocess.call(["git", "add", config.path_script])
 
 def generate_markdown(all_patches, stable_patches, stable_compholio_version):
     """Generate README.md including information about specific patches and bugfixes."""
@@ -731,9 +630,8 @@ def generate_markdown(all_patches, stable_patches, stable_compholio_version):
     subprocess.call(["git", "add", config.path_README_md])
 
 if __name__ == "__main__":
-    verbose = "-v" in sys.argv[1:]
 
-    # Hack to avoid KeyboardInterrupts on worker threads
+    # Hack to avoid KeyboardInterrupts on different threads
     def _sig_int(signum=None, frame=None):
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         raise RuntimeError("CTRL+C pressed")
@@ -749,14 +647,8 @@ if __name__ == "__main__":
         all_patches    = read_patchset()
         stable_patches = read_patchset(revision="v%s" % stable_compholio_version)
 
-        # Update autogenerated ifdefined patches
         generate_ifdefined(all_patches)
-
-        # Check dependencies
-        verify_dependencies(all_patches)
-
-        # Update Makefile and README.md
-        generate_makefile(all_patches)
+        generate_script(all_patches)
         generate_markdown(all_patches, stable_patches, stable_compholio_version)
 
     except PatchUpdaterError as e:

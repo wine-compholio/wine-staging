@@ -2,7 +2,7 @@
 #
 # Wrapper to apply binary patches without git.
 #
-# Copyright (C) 2014 Sebastian Lackner
+# Copyright (C) 2014-2015 Sebastian Lackner
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -75,7 +75,7 @@ filesize()
 
 
 # Parse environment variables
-while [[ $# > 0 ]]; do
+while [ "$#" -gt 0 ]; do
 	cmd="$1"; shift
 	case "$cmd" in
 

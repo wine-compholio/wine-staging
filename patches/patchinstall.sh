@@ -686,71 +686,101 @@ fi
 
 
 if [ "$enable_winecfg_Staging" -eq 1 ]; then
-	[ "$enable_ntdll_DllRedirects" -gt 1 ] && abort "ERROR: Patchset ntdll-DllRedirects disabled, but winecfg-Staging depends on that." >&2
-	[ "$enable_wined3d_CSMT_Main" -gt 1 ] && abort "ERROR: Patchset wined3d-CSMT_Main disabled, but winecfg-Staging depends on that." >&2
+	if [ "$enable_ntdll_DllRedirects" -gt 1 ]; then
+		abort "Patchset ntdll-DllRedirects disabled, but winecfg-Staging depends on that."
+	fi
+	if [ "$enable_wined3d_CSMT_Main" -gt 1 ]; then
+		abort "Patchset wined3d-CSMT_Main disabled, but winecfg-Staging depends on that."
+	fi
 	enable_ntdll_DllRedirects=1
 	enable_wined3d_CSMT_Main=1
 fi
 
 if [ "$enable_wined3d_CSMT_Main" -eq 1 ]; then
-	[ "$enable_wined3d_CSMT_Helper" -gt 1 ] && abort "ERROR: Patchset wined3d-CSMT_Helper disabled, but wined3d-CSMT_Main depends on that." >&2
+	if [ "$enable_wined3d_CSMT_Helper" -gt 1 ]; then
+		abort "Patchset wined3d-CSMT_Helper disabled, but wined3d-CSMT_Main depends on that."
+	fi
 	enable_wined3d_CSMT_Helper=1
 fi
 
 if [ "$enable_wined3d_CSMT_Helper" -eq 1 ]; then
-	[ "$enable_wined3d_DXTn" -gt 1 ] && abort "ERROR: Patchset wined3d-DXTn disabled, but wined3d-CSMT_Helper depends on that." >&2
-	[ "$enable_makedep_PARENTSPEC" -gt 1 ] && abort "ERROR: Patchset makedep-PARENTSPEC disabled, but wined3d-CSMT_Helper depends on that." >&2
-	enable_wined3d_DXTn=1
+	if [ "$enable_makedep_PARENTSPEC" -gt 1 ]; then
+		abort "Patchset makedep-PARENTSPEC disabled, but wined3d-CSMT_Helper depends on that."
+	fi
+	if [ "$enable_wined3d_DXTn" -gt 1 ]; then
+		abort "Patchset wined3d-DXTn disabled, but wined3d-CSMT_Helper depends on that."
+	fi
 	enable_makedep_PARENTSPEC=1
+	enable_wined3d_DXTn=1
 fi
 
 if [ "$enable_server_ACL_Compat" -eq 1 ]; then
-	[ "$enable_server_Inherited_ACLs" -gt 1 ] && abort "ERROR: Patchset server-Inherited_ACLs disabled, but server-ACL_Compat depends on that." >&2
+	if [ "$enable_server_Inherited_ACLs" -gt 1 ]; then
+		abort "Patchset server-Inherited_ACLs disabled, but server-ACL_Compat depends on that."
+	fi
 	enable_server_Inherited_ACLs=1
 fi
 
 if [ "$enable_server_Inherited_ACLs" -eq 1 ]; then
-	[ "$enable_server_Stored_ACLs" -gt 1 ] && abort "ERROR: Patchset server-Stored_ACLs disabled, but server-Inherited_ACLs depends on that." >&2
+	if [ "$enable_server_Stored_ACLs" -gt 1 ]; then
+		abort "Patchset server-Stored_ACLs disabled, but server-Inherited_ACLs depends on that."
+	fi
 	enable_server_Stored_ACLs=1
 fi
 
 if [ "$enable_server_Stored_ACLs" -eq 1 ]; then
-	[ "$enable_ntdll_DOS_Attributes" -gt 1 ] && abort "ERROR: Patchset ntdll-DOS_Attributes disabled, but server-Stored_ACLs depends on that." >&2
+	if [ "$enable_ntdll_DOS_Attributes" -gt 1 ]; then
+		abort "Patchset ntdll-DOS_Attributes disabled, but server-Stored_ACLs depends on that."
+	fi
 	enable_ntdll_DOS_Attributes=1
 fi
 
 if [ "$enable_nvcuvid_CUDA_Video_Support" -eq 1 ]; then
-	[ "$enable_nvapi_Stub_DLL" -gt 1 ] && abort "ERROR: Patchset nvapi-Stub_DLL disabled, but nvcuvid-CUDA_Video_Support depends on that." >&2
+	if [ "$enable_nvapi_Stub_DLL" -gt 1 ]; then
+		abort "Patchset nvapi-Stub_DLL disabled, but nvcuvid-CUDA_Video_Support depends on that."
+	fi
 	enable_nvapi_Stub_DLL=1
 fi
 
 if [ "$enable_nvapi_Stub_DLL" -eq 1 ]; then
-	[ "$enable_nvcuda_CUDA_Support" -gt 1 ] && abort "ERROR: Patchset nvcuda-CUDA_Support disabled, but nvapi-Stub_DLL depends on that." >&2
+	if [ "$enable_nvcuda_CUDA_Support" -gt 1 ]; then
+		abort "Patchset nvcuda-CUDA_Support disabled, but nvapi-Stub_DLL depends on that."
+	fi
 	enable_nvcuda_CUDA_Support=1
 fi
 
 if [ "$enable_ntoskrnl_Emulator" -eq 1 ]; then
-	[ "$enable_ntdll_User_Shared_Data" -gt 1 ] && abort "ERROR: Patchset ntdll-User_Shared_Data disabled, but ntoskrnl-Emulator depends on that." >&2
+	if [ "$enable_ntdll_User_Shared_Data" -gt 1 ]; then
+		abort "Patchset ntdll-User_Shared_Data disabled, but ntoskrnl-Emulator depends on that."
+	fi
 	enable_ntdll_User_Shared_Data=1
 fi
 
 if [ "$enable_ntdll_Junction_Points" -eq 1 ]; then
-	[ "$enable_ntdll_Fix_Free" -gt 1 ] && abort "ERROR: Patchset ntdll-Fix_Free disabled, but ntdll-Junction_Points depends on that." >&2
+	if [ "$enable_ntdll_Fix_Free" -gt 1 ]; then
+		abort "Patchset ntdll-Fix_Free disabled, but ntdll-Junction_Points depends on that."
+	fi
 	enable_ntdll_Fix_Free=1
 fi
 
 if [ "$enable_d3dx9_36_DXTn" -eq 1 ]; then
-	[ "$enable_wined3d_DXTn" -gt 1 ] && abort "ERROR: Patchset wined3d-DXTn disabled, but d3dx9_36-DXTn depends on that." >&2
+	if [ "$enable_wined3d_DXTn" -gt 1 ]; then
+		abort "Patchset wined3d-DXTn disabled, but d3dx9_36-DXTn depends on that."
+	fi
 	enable_wined3d_DXTn=1
 fi
 
 if [ "$enable_Exagear" -eq 1 ]; then
-	[ "$enable_ntdll_WRITECOPY" -gt 1 ] && abort "ERROR: Patchset ntdll-WRITECOPY disabled, but Exagear depends on that." >&2
+	if [ "$enable_ntdll_WRITECOPY" -gt 1 ]; then
+		abort "Patchset ntdll-WRITECOPY disabled, but Exagear depends on that."
+	fi
 	enable_ntdll_WRITECOPY=1
 fi
 
 if [ "$enable_ntdll_WRITECOPY" -eq 1 ]; then
-	[ "$enable_ws2_32_WriteWatches" -gt 1 ] && abort "ERROR: Patchset ws2_32-WriteWatches disabled, but ntdll-WRITECOPY depends on that." >&2
+	if [ "$enable_ws2_32_WriteWatches" -gt 1 ]; then
+		abort "Patchset ws2_32-WriteWatches disabled, but ntdll-WRITECOPY depends on that."
+	fi
 	enable_ws2_32_WriteWatches=1
 fi
 

@@ -521,10 +521,12 @@ def generate_script(all_patches):
     for i, patch in [(i, all_patches[i]) for i in reversed(resolved)]:
         if len(patch.depends):
             lines.append("if [ \"$%s\" -eq 1 ]; then\n" % patch.variable)
-            for j in patch.depends:
-                lines.append("\t[ \"$%s\" -gt 1 ] && abort \"ERROR: Patchset %s disabled, but %s depends on that.\" >&2\n" %
-                                     (all_patches[j].variable, all_patches[j].name, patch.name))
-            for j in patch.depends:
+            for j in sorted(patch.depends):
+                lines.append("\tif [ \"$%s\" -gt 1 ]; then\n" % all_patches[j].variable)
+                lines.append("\t\tabort \"Patchset %s disabled, but %s depends on that.\"\n" %
+                             (all_patches[j].name, patch.name))
+                lines.append("\tfi\n")
+            for j in sorted(patch.depends):
                 lines.append("\t%s=1\n" % all_patches[j].variable)
             lines.append("fi\n\n")
     lines_resolver = lines
@@ -553,8 +555,8 @@ def generate_script(all_patches):
         if len(patch.patches):
             lines.append("\t(\n")
             for p in _unique(patch.patches, key=lambda p: (p.patch_author, p.patch_subject, p.patch_revision)):
-                lines.append("\t\techo '+    { \"%s\", \"%s\", %d },';\n" % \
-                                   (_escape(p.patch_author), _escape(p.patch_subject), p.patch_revision))
+                lines.append("\t\techo '+    { \"%s\", \"%s\", %d },';\n" %
+                             (_escape(p.patch_author), _escape(p.patch_subject), p.patch_revision))
             lines.append("\t) >> \"$patchlist\"\n")
         lines.append("fi\n\n")
     lines_apply = lines

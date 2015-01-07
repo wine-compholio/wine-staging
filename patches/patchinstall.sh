@@ -102,6 +102,7 @@ patch_enable_all ()
 	enable_makedep_PARENTSPEC="$1"
 	enable_msvcp90_basic_string_wchar_dtor="$1"
 	enable_msvcrt_atof_strtod="$1"
+	enable_msvfw32_Image_Size="$1"
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_DVD_Read_Size="$1"
 	enable_ntdll_DllRedirects="$1"
@@ -335,6 +336,9 @@ patch_enable ()
 			;;
 		msvcrt-atof_strtod)
 			enable_msvcrt_atof_strtod="$2"
+			;;
+		msvfw32-Image_Size)
+			enable_msvfw32_Image_Size="$2"
 			;;
 		ntdll-DOS_Attributes)
 			enable_ntdll_DOS_Attributes="$2"
@@ -1619,6 +1623,21 @@ if [ "$enable_msvcrt_atof_strtod" -eq 1 ]; then
 	patch_apply msvcrt-atof_strtod/0001-msvcrt-Avoid-crash-when-NULL-pointer-is-passed-to-at.patch
 	(
 		echo '+    { "Michael Müller", "msvcrt: Avoid crash when NULL pointer is passed to atof / strtod functions.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msvfw32-Image_Size
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#27595] Fix NULL dereference in ICSeqCompressFrameStart
+# |
+# | Modified files:
+# |   *	dlls/msvfw32/msvideo_main.c
+# |
+if [ "$enable_msvfw32_Image_Size" -eq 1 ]; then
+	patch_apply msvfw32-Image_Size/0001-msvfw32-Derive-image-size-from-input-image-to-avoid-.patch
+	(
+		echo '+    { "Bruno Jesus", "msvfw32: Derive image size from input image to avoid NULL dereference.", 1 },';
 	) >> "$patchlist"
 fi
 

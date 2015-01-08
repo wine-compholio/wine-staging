@@ -474,16 +474,24 @@ def generate_script(all_patches):
             for k, bitstring in enumerate(itertools.product([0,1], repeat=len(indices))):
                 progress.update(k)
 
-                to_apply = [i for u, i in zip(bitstring, indices) if u]
-                applied  = set()
-                for i, patch in [(i, all_patches[i]) for i in to_apply]:
-                    if not applied.issuperset(patch.depends):
+                set_apply = [(i, all_patches[i]) for u, i in zip(bitstring, indices) if u]
+                set_skip  = [(i, all_patches[i]) for u, i in zip(bitstring, indices) if not u]
+                test_apply = True
+
+                # Check if there is any patch2 which depends directly or indirectly on patch1.
+                # If this is the case we found an impossible situation, we can be skipped in this test.
+                for i, patch1 in set_apply:
+                    for j, patch2 in set_skip:
+                        if causal_time_smaller(patch2.verify_time, patch1.verify_time):
+                            test_apply = False
+                            break
+                    if not test_apply:
                         break
-                    applied.add(i)
-                else:
+
+                if test_apply:
                     try:
                         original = original_content
-                        for i, patch in [(i, all_patches[i]) for i in to_apply]:
+                        for i, patch in set_apply:
                             original = patchutils.apply_patch(original, selected_patches[i][1], fuzz=0)
                     except patchutils.PatchApplyError:
                         progress.finish("<failed to apply>")
@@ -495,7 +503,7 @@ def generate_script(all_patches):
     lines.append("# Enable or disable all patchsets\n")
     lines.append("patch_enable_all ()\n")
     lines.append("{\n")
-    for i, patch in [(i, all_patches[i]) for i in resolved]:
+    for i, patch in sorted([(i, all_patches[i]) for i in resolved], key=lambda x:x[1].name):
         patch.variable = "enable_%s" % patch.name.replace("-","_")
         lines.append("\t%s=\"$1\"\n" % patch.variable)
     lines.append("}\n")
@@ -504,7 +512,7 @@ def generate_script(all_patches):
     lines.append("patch_enable ()\n")
     lines.append("{\n")
     lines.append("\tcase \"$1\" in\n")
-    for i, patch in [(i, all_patches[i]) for i in resolved]:
+    for i, patch in sorted([(i, all_patches[i]) for i in resolved], key=lambda x:x[1].name):
         lines.append("\t\t%s)\n" % patch.name)
         lines.append("\t\t\t%s=\"$2\"\n" % patch.variable)
         lines.append("\t\t\t;;\n")

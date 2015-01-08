@@ -52,8 +52,6 @@ abort()
 # Enable or disable all patchsets
 patch_enable_all ()
 {
-	enable_ws2_32_WriteWatches="$1"
-	enable_ntdll_WRITECOPY="$1"
 	enable_Exagear="$1"
 	enable_Miscellaneous="$1"
 	enable_Pipelight="$1"
@@ -64,7 +62,6 @@ patch_enable_all ()
 	enable_d3d9_Surface_Refcount="$1"
 	enable_d3dx9_36_ConvertToIndexedBlended="$1"
 	enable_d3dx9_36_D3DXStubs="$1"
-	enable_wined3d_DXTn="$1"
 	enable_d3dx9_36_DXTn="$1"
 	enable_d3dx9_36_DrawText="$1"
 	enable_d3dx9_36_Filter_Warnings="$1"
@@ -121,24 +118,25 @@ patch_enable_all ()
 	enable_ntdll_RtlIpv4StringToAddressExA="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_User_Shared_Data="$1"
+	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_WinSqm="$1"
 	enable_ntoskrnl_Emulator="$1"
 	enable_ntoskrnl_Irp_Status="$1"
 	enable_ntoskrnl_Stub_FileObject="$1"
-	enable_nvcuda_CUDA_Support="$1"
 	enable_nvapi_Stub_DLL="$1"
+	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_ole32_CoWaitForMultipleHandles="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_secur32_Schannel_ContextAttr="$1"
-	enable_server_Stored_ACLs="$1"
-	enable_server_Inherited_ACLs="$1"
 	enable_server_ACL_Compat="$1"
 	enable_server_Address_Change_Notification="$1"
 	enable_server_CreateProcess_ACLs="$1"
+	enable_server_Inherited_ACLs="$1"
 	enable_server_Misc_ACL="$1"
 	enable_server_OpenProcess="$1"
+	enable_server_Stored_ACLs="$1"
 	enable_server_Unexpected_Wakeup="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
@@ -162,10 +160,11 @@ patch_enable_all ()
 	enable_user32_WndProc="$1"
 	enable_wineboot_HKEY_DYN_DATA="$1"
 	enable_winebuild_LinkerVersion="$1"
+	enable_winecfg_Staging="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
-	enable_winecfg_Staging="$1"
 	enable_wined3d_Color_Key="$1"
+	enable_wined3d_DXTn="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
@@ -182,6 +181,7 @@ patch_enable_all ()
 	enable_ws2_32_Connect_Time="$1"
 	enable_ws2_32_TransmitFile="$1"
 	enable_ws2_32_WSARecv_Last_Error="$1"
+	enable_ws2_32_WriteWatches="$1"
 	enable_ws2_32_getaddrinfo="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
 }
@@ -190,12 +190,6 @@ patch_enable_all ()
 patch_enable ()
 {
 	case "$1" in
-		ws2_32-WriteWatches)
-			enable_ws2_32_WriteWatches="$2"
-			;;
-		ntdll-WRITECOPY)
-			enable_ntdll_WRITECOPY="$2"
-			;;
 		Exagear)
 			enable_Exagear="$2"
 			;;
@@ -225,9 +219,6 @@ patch_enable ()
 			;;
 		d3dx9_36-D3DXStubs)
 			enable_d3dx9_36_D3DXStubs="$2"
-			;;
-		wined3d-DXTn)
-			enable_wined3d_DXTn="$2"
 			;;
 		d3dx9_36-DXTn)
 			enable_d3dx9_36_DXTn="$2"
@@ -397,6 +388,9 @@ patch_enable ()
 		ntdll-User_Shared_Data)
 			enable_ntdll_User_Shared_Data="$2"
 			;;
+		ntdll-WRITECOPY)
+			enable_ntdll_WRITECOPY="$2"
+			;;
 		ntdll-WinSqm)
 			enable_ntdll_WinSqm="$2"
 			;;
@@ -409,11 +403,11 @@ patch_enable ()
 		ntoskrnl-Stub_FileObject)
 			enable_ntoskrnl_Stub_FileObject="$2"
 			;;
-		nvcuda-CUDA_Support)
-			enable_nvcuda_CUDA_Support="$2"
-			;;
 		nvapi-Stub_DLL)
 			enable_nvapi_Stub_DLL="$2"
+			;;
+		nvcuda-CUDA_Support)
+			enable_nvcuda_CUDA_Support="$2"
 			;;
 		nvcuvid-CUDA_Video_Support)
 			enable_nvcuvid_CUDA_Video_Support="$2"
@@ -430,12 +424,6 @@ patch_enable ()
 		secur32-Schannel_ContextAttr)
 			enable_secur32_Schannel_ContextAttr="$2"
 			;;
-		server-Stored_ACLs)
-			enable_server_Stored_ACLs="$2"
-			;;
-		server-Inherited_ACLs)
-			enable_server_Inherited_ACLs="$2"
-			;;
 		server-ACL_Compat)
 			enable_server_ACL_Compat="$2"
 			;;
@@ -445,11 +433,17 @@ patch_enable ()
 		server-CreateProcess_ACLs)
 			enable_server_CreateProcess_ACLs="$2"
 			;;
+		server-Inherited_ACLs)
+			enable_server_Inherited_ACLs="$2"
+			;;
 		server-Misc_ACL)
 			enable_server_Misc_ACL="$2"
 			;;
 		server-OpenProcess)
 			enable_server_OpenProcess="$2"
+			;;
+		server-Stored_ACLs)
+			enable_server_Stored_ACLs="$2"
 			;;
 		server-Unexpected_Wakeup)
 			enable_server_Unexpected_Wakeup="$2"
@@ -520,17 +514,20 @@ patch_enable ()
 		winebuild-LinkerVersion)
 			enable_winebuild_LinkerVersion="$2"
 			;;
+		winecfg-Staging)
+			enable_winecfg_Staging="$2"
+			;;
 		wined3d-CSMT_Helper)
 			enable_wined3d_CSMT_Helper="$2"
 			;;
 		wined3d-CSMT_Main)
 			enable_wined3d_CSMT_Main="$2"
 			;;
-		winecfg-Staging)
-			enable_winecfg_Staging="$2"
-			;;
 		wined3d-Color_Key)
 			enable_wined3d_Color_Key="$2"
+			;;
+		wined3d-DXTn)
+			enable_wined3d_DXTn="$2"
 			;;
 		wined3d-Revert_PixelFormat)
 			enable_wined3d_Revert_PixelFormat="$2"
@@ -579,6 +576,9 @@ patch_enable ()
 			;;
 		ws2_32-WSARecv_Last_Error)
 			enable_ws2_32_WSARecv_Last_Error="$2"
+			;;
+		ws2_32-WriteWatches)
+			enable_ws2_32_WriteWatches="$2"
 			;;
 		ws2_32-getaddrinfo)
 			enable_ws2_32_getaddrinfo="$2"
@@ -704,7 +704,11 @@ if [ "$enable_wined3d_CSMT_Main" -eq 1 ]; then
 	if [ "$enable_wined3d_CSMT_Helper" -gt 1 ]; then
 		abort "Patchset wined3d-CSMT_Helper disabled, but wined3d-CSMT_Main depends on that."
 	fi
+	if [ "$enable_wined3d_Color_Key" -gt 1 ]; then
+		abort "Patchset wined3d-Color_Key disabled, but wined3d-CSMT_Main depends on that."
+	fi
 	enable_wined3d_CSMT_Helper=1
+	enable_wined3d_Color_Key=1
 fi
 
 if [ "$enable_wined3d_CSMT_Helper" -eq 1 ]; then
@@ -2665,6 +2669,21 @@ if [ "$enable_winebuild_LinkerVersion" -eq 1 ]; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-Color_Key
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37748] Fix color key regression causing pink rectangles around text
+# |
+# | Modified files:
+# |   *	dlls/wined3d/surface.c
+# |
+if [ "$enable_wined3d_Color_Key" -eq 1 ]; then
+	patch_apply wined3d-Color_Key/0001-wined3d-Use-proper-color-key-type-define-when-callin.patch
+	(
+		echo '+    { "Christian Costa", "wined3d: Use proper color key type define when calling wined3d_texture_set_color_key.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-CSMT_Helper
 # |
 # | Modified files:
@@ -3061,21 +3080,6 @@ if [ "$enable_winecfg_Staging" -eq 1 ]; then
 	patch_apply winecfg-Staging/0001-winecfg-Add-staging-tab-for-CSMT.patch
 	(
 		echo '+    { "Michael Müller", "winecfg: Add staging tab for CSMT.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Color_Key
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37748] Fix color key regression causing pink rectangles around text
-# |
-# | Modified files:
-# |   *	dlls/wined3d/surface.c
-# |
-if [ "$enable_wined3d_Color_Key" -eq 1 ]; then
-	patch_apply wined3d-Color_Key/0001-wined3d-Use-proper-color-key-type-define-when-callin.patch
-	(
-		echo '+    { "Christian Costa", "wined3d: Use proper color key type define when calling wined3d_texture_set_color_key.", 1 },';
 	) >> "$patchlist"
 fi
 

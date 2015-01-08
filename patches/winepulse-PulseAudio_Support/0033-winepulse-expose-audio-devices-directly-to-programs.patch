@@ -1,4 +1,4 @@
-From 195910962f9d93ee1cad8278ed0ba31d4efc5d34 Mon Sep 17 00:00:00 2001
+From c70a0c4b7242ae062876ee1a6b74f03f7e60c0d6 Mon Sep 17 00:00:00 2001
 From: Mark Harmstone <mark@harmstone.com>
 Date: Mon, 3 Nov 2014 02:06:40 +0000
 Subject: winepulse: expose audio devices directly to programs
@@ -19,12 +19,12 @@ Changes by Sebastian Lackner <sebastian@fds-team.de>:
  1 file changed, 226 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
-index e755e8a..d29fa06 100644
+index 063b1db..8a75f0e 100644
 --- a/dlls/winepulse.drv/mmdevdrv.c
 +++ b/dlls/winepulse.drv/mmdevdrv.c
-@@ -85,6 +85,11 @@ const WCHAR pulse_keyW[] = {'S','o','f','t','w','a','r','e','\\',
-     'W','i','n','e','\\','P','u','l','s','e',0};
- const WCHAR pulse_streamW[] = { 'S','t','r','e','a','m','V','o','l',0 };
+@@ -84,6 +84,11 @@ static struct list g_sessions = LIST_INIT(g_sessions);
+ static WAVEFORMATEXTENSIBLE pulse_fmt[2];
+ static REFERENCE_TIME pulse_min_period[2], pulse_def_period[2];
  
 +static const WCHAR drv_key_devicesW[] = {'S','o','f','t','w','a','r','e','\\',
 +    'W','i','n','e','\\','D','r','i','v','e','r','s','\\',
@@ -34,7 +34,7 @@ index e755e8a..d29fa06 100644
  static GUID pulse_render_guid =
  { 0xfd47d9cc, 0x4218, 0x4135, { 0x9c, 0xe2, 0x0c, 0x19, 0x5c, 0x87, 0x40, 0x5b } };
  static GUID pulse_capture_guid =
-@@ -173,6 +178,7 @@ struct ACImpl {
+@@ -161,6 +166,7 @@ struct ACImpl {
      IMMDevice *parent;
      struct list entry;
      float vol[PA_CHANNELS_MAX];
@@ -42,7 +42,7 @@ index e755e8a..d29fa06 100644
  
      LONG ref;
      EDataFlow dataflow;
-@@ -692,6 +698,9 @@ static HRESULT pulse_stream_connect(ACImpl *This, UINT32 period_bytes) {
+@@ -679,6 +685,9 @@ static HRESULT pulse_stream_connect(ACImpl *This, UINT32 period_bytes) {
      char buffer[64];
      static LONG number;
      pa_buffer_attr attr;
@@ -52,7 +52,7 @@ index e755e8a..d29fa06 100644
      if (This->stream) {
          pa_stream_disconnect(This->stream);
          while (pa_stream_get_state(This->stream) == PA_STREAM_READY)
-@@ -716,12 +725,21 @@ static HRESULT pulse_stream_connect(ACImpl *This, UINT32 period_bytes) {
+@@ -703,12 +712,21 @@ static HRESULT pulse_stream_connect(ACImpl *This, UINT32 period_bytes) {
      attr.maxlength = attr.tlength = This->bufsize_bytes;
      attr.prebuf = pa_frame_size(&This->ss);
      dump_attr(&attr);
@@ -78,7 +78,7 @@ index e755e8a..d29fa06 100644
      if (ret < 0) {
          WARN("Returns %i\n", ret);
          return AUDCLNT_E_ENDPOINT_CREATE_FAILED;
-@@ -740,11 +758,131 @@ static HRESULT pulse_stream_connect(ACImpl *This, UINT32 period_bytes) {
+@@ -727,11 +745,131 @@ static HRESULT pulse_stream_connect(ACImpl *This, UINT32 period_bytes) {
      return S_OK;
  }
  
@@ -211,7 +211,7 @@ index e755e8a..d29fa06 100644
  
      TRACE("%d %p %p %p\n", flow, ids, num, def_index);
  
-@@ -778,6 +916,27 @@ HRESULT WINAPI AUDDRV_GetEndpointIDs(EDataFlow flow, const WCHAR ***ids, GUID **
+@@ -765,6 +903,27 @@ HRESULT WINAPI AUDDRV_GetEndpointIDs(EDataFlow flow, const WCHAR ***ids, GUID **
      else
          (*keys)[0] = pulse_capture_guid;
  
@@ -239,8 +239,8 @@ index e755e8a..d29fa06 100644
      return S_OK;
  }
  
-@@ -794,8 +953,66 @@ int WINAPI AUDDRV_GetPriority(void)
-     return SUCCEEDED(hr) ? 3 : 0;
+@@ -777,20 +936,79 @@ int WINAPI AUDDRV_GetPriority(void)
+     return SUCCEEDED(hr) ? Priority_Preferred : Priority_Unavailable;
  }
  
 +static BOOL get_pulse_name_by_guid(const GUID *guid, char *name, DWORD name_size, EDataFlow *flow)
@@ -306,8 +306,7 @@ index e755e8a..d29fa06 100644
      HRESULT hr;
      ACImpl *This;
      int i;
-@@ -813,12 +1030,13 @@ HRESULT WINAPI AUDDRV_GetAudioEndpoint(GUID *guid, IMMDevice *dev, IAudioClient
-     }
+     EDataFlow dataflow;
  
      TRACE("%s %p %p\n", debugstr_guid(guid), dev, out);
 +
@@ -322,7 +321,7 @@ index e755e8a..d29fa06 100644
  
      *out = NULL;
      pthread_mutex_lock(&pulse_lock);
-@@ -841,6 +1059,7 @@ HRESULT WINAPI AUDDRV_GetAudioEndpoint(GUID *guid, IMMDevice *dev, IAudioClient
+@@ -813,6 +1031,7 @@ HRESULT WINAPI AUDDRV_GetAudioEndpoint(GUID *guid, IMMDevice *dev, IAudioClient
      This->parent = dev;
      for (i = 0; i < PA_CHANNELS_MAX; ++i)
          This->vol[i] = 1.f;
@@ -331,5 +330,5 @@ index e755e8a..d29fa06 100644
      hr = CoCreateFreeThreadedMarshaler((IUnknown*)This, &This->marshal);
      if (hr) {
 -- 
-2.1.3
+2.2.1
 

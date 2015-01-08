@@ -3173,44 +3173,48 @@ fi
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/mmdevapi/main.c, dlls/mmdevapi/tests/render.c, dlls/winepulse.drv/Makefile.in,
-# | 	dlls/winepulse.drv/mmdevdrv.c, dlls/winepulse.drv/winepulse.drv.spec, dlls/winmm/lolvldrv.c
+# | 	dlls/winepulse.drv/mmdevdrv.c, dlls/winepulse.drv/winepulse.drv.spec
 # |
 if [ "$enable_winepulse_PulseAudio_Support" -eq 1 ]; then
-	patch_apply winepulse-PulseAudio_Support/0001-winmm-Load-winealsa-if-winepulse-is-found.patch
-	patch_apply winepulse-PulseAudio_Support/0002-winepulse-Add-initial-stub-for-pulseaudio-support.patch
-	patch_apply winepulse-PulseAudio_Support/0003-winepulse-Add-format-and-period-probing.patch
-	patch_apply winepulse-PulseAudio_Support/0004-winepulse-Add-audioclient.patch
-	patch_apply winepulse-PulseAudio_Support/0005-winepulse-Add-IAudioRenderClient-and-IAudioCaptureCl.patch
-	patch_apply winepulse-PulseAudio_Support/0006-winepulse-Add-IAudioClock-and-IAudioClock2.patch
-	patch_apply winepulse-PulseAudio_Support/0007-winepulse-Add-audiostreamvolume.patch
-	patch_apply winepulse-PulseAudio_Support/0008-winepulse-Add-session-support.patch
-	patch_apply winepulse-PulseAudio_Support/0009-fix-fdels-trailing-whitespaces.patch
-	patch_apply winepulse-PulseAudio_Support/0010-winepulse-v12.patch
-	patch_apply winepulse-PulseAudio_Support/0011-winepulse-v15-Add-support-for-missing-formats-and-si.patch
-	patch_apply winepulse-PulseAudio_Support/0012-winepulse-v16-Add-official-warning-wine-doesn-t-want.patch
-	patch_apply winepulse-PulseAudio_Support/0013-winepulse-v17-Fix-winmm-tests.patch
-	patch_apply winepulse-PulseAudio_Support/0014-winepulse-v18-Latency-and-compilation-improvements.patch
-	patch_apply winepulse-PulseAudio_Support/0015-winepulse-API-Compatibility-with-1.5.2-onward-v2.patch
-	patch_apply winepulse-PulseAudio_Support/0016-winepulse-Fix-low-latency-support.patch
-	patch_apply winepulse-PulseAudio_Support/0017-winepulse-drop-realtime-priority-before-thread-destr.patch
-	patch_apply winepulse-PulseAudio_Support/0018-winepulse-remove-bogus-SetEvent-from-pulse_started_c.patch
-	patch_apply winepulse-PulseAudio_Support/0019-winepulse-disable-the-setevent-part-of-the-latency-h.patch
-	patch_apply winepulse-PulseAudio_Support/0020-winepulse-v20-fix-the-checks-in-IsFormatSupported.patch
-	patch_apply winepulse-PulseAudio_Support/0021-winepulse-fixup-IsFormatSupported-calls.patch
-	patch_apply winepulse-PulseAudio_Support/0022-winepulse-v21-return-early-if-padding-didn-t-update.patch
-	patch_apply winepulse-PulseAudio_Support/0023-winepulse-fix-unneeded-free-in-write.patch
-	patch_apply winepulse-PulseAudio_Support/0024-winepulse-v23-fixup-a-invalid-free-in-mmdevapi.patch
-	patch_apply winepulse-PulseAudio_Support/0025-winepulse-use-a-pi-mutex-for-serialization.patch
-	patch_apply winepulse-PulseAudio_Support/0026-winepulse-add-support-for-IMarshal.patch
-	patch_apply winepulse-PulseAudio_Support/0027-winepulse-handle-stream-create-failing-correctly.patch
-	patch_apply winepulse-PulseAudio_Support/0028-winepulse-expose-audio-devices-directly-to-programs.patch
-	patch_apply winepulse-PulseAudio_Support/0029-winepulse-implement-exclusive-mode.patch
-	patch_apply winepulse-PulseAudio_Support/0030-winepulse-fix-segfault-in-pulse_rd_loop.patch
-	patch_apply winepulse-PulseAudio_Support/0031-winepulse-implement-GetPropValue.patch
-	patch_apply winepulse-PulseAudio_Support/0032-winepulse-fetch-actual-program-name-if-possible.patch
-	patch_apply winepulse-PulseAudio_Support/0033-winepulse-return-PKEY_AudioEndpoint_PhysicalSpeakers.patch
+	patch_apply winepulse-PulseAudio_Support/0001-winepulse-Add-initial-stub-for-pulseaudio-support.patch
+	patch_apply winepulse-PulseAudio_Support/0002-winepulse-Add-format-and-period-probing.patch
+	patch_apply winepulse-PulseAudio_Support/0003-winepulse-Add-audioclient.patch
+	patch_apply winepulse-PulseAudio_Support/0004-winepulse-Add-IAudioRenderClient-and-IAudioCaptureCl.patch
+	patch_apply winepulse-PulseAudio_Support/0005-winepulse-Add-IAudioClock-and-IAudioClock2.patch
+	patch_apply winepulse-PulseAudio_Support/0006-winepulse-Add-audiostreamvolume.patch
+	patch_apply winepulse-PulseAudio_Support/0007-winepulse-Add-session-support.patch
+	patch_apply winepulse-PulseAudio_Support/0008-fix-fdels-trailing-whitespaces.patch
+	patch_apply winepulse-PulseAudio_Support/0009-winepulse-v12.patch
+	patch_apply winepulse-PulseAudio_Support/0010-winepulse-v15-Add-support-for-missing-formats-and-si.patch
+	patch_apply winepulse-PulseAudio_Support/0011-winepulse-v16-Add-official-warning-wine-doesn-t-want.patch
+	patch_apply winepulse-PulseAudio_Support/0012-winepulse-v17-Fix-winmm-tests.patch
+	patch_apply winepulse-PulseAudio_Support/0013-winepulse-v18-Latency-and-compilation-improvements.patch
+	patch_apply winepulse-PulseAudio_Support/0014-winepulse-API-Compatibility-with-1.5.2-onward-v2.patch
+	patch_apply winepulse-PulseAudio_Support/0015-winepulse-Fix-low-latency-support.patch
+	patch_apply winepulse-PulseAudio_Support/0016-winepulse-drop-realtime-priority-before-thread-destr.patch
+	patch_apply winepulse-PulseAudio_Support/0017-winepulse-remove-bogus-SetEvent-from-pulse_started_c.patch
+	patch_apply winepulse-PulseAudio_Support/0018-winepulse-disable-the-setevent-part-of-the-latency-h.patch
+	patch_apply winepulse-PulseAudio_Support/0019-winepulse-v20-fix-the-checks-in-IsFormatSupported.patch
+	patch_apply winepulse-PulseAudio_Support/0020-winepulse-fixup-IsFormatSupported-calls.patch
+	patch_apply winepulse-PulseAudio_Support/0021-winepulse-v21-return-early-if-padding-didn-t-update.patch
+	patch_apply winepulse-PulseAudio_Support/0022-winepulse-fix-unneeded-free-in-write.patch
+	patch_apply winepulse-PulseAudio_Support/0023-winepulse-v23-fixup-a-invalid-free-in-mmdevapi.patch
+	patch_apply winepulse-PulseAudio_Support/0024-winepulse-use-a-pi-mutex-for-serialization.patch
+	patch_apply winepulse-PulseAudio_Support/0025-winepulse-add-support-for-IMarshal.patch
+	patch_apply winepulse-PulseAudio_Support/0026-winepulse-handle-stream-create-failing-correctly.patch
+	patch_apply winepulse-PulseAudio_Support/0027-winepulse-Trivial-cleanups-and-changes-for-consisten.patch
+	patch_apply winepulse-PulseAudio_Support/0028-winepulse-Sync-default-channel-masks-with-other-driv.patch
+	patch_apply winepulse-PulseAudio_Support/0029-winepulse-In-Shared-mode-track-device-position-in-by.patch
+	patch_apply winepulse-PulseAudio_Support/0030-winepulse-Always-mute-buffer.patch
+	patch_apply winepulse-PulseAudio_Support/0031-winepulse-Remove-volume-support.patch
+	patch_apply winepulse-PulseAudio_Support/0032-winepulse-Forward-winmm-functions-to-winealsa.patch
+	patch_apply winepulse-PulseAudio_Support/0033-winepulse-expose-audio-devices-directly-to-programs.patch
+	patch_apply winepulse-PulseAudio_Support/0034-winepulse-implement-exclusive-mode.patch
+	patch_apply winepulse-PulseAudio_Support/0035-winepulse-fix-segfault-in-pulse_rd_loop.patch
+	patch_apply winepulse-PulseAudio_Support/0036-winepulse-implement-GetPropValue.patch
+	patch_apply winepulse-PulseAudio_Support/0037-winepulse-fetch-actual-program-name-if-possible.patch
+	patch_apply winepulse-PulseAudio_Support/0038-winepulse-return-PKEY_AudioEndpoint_PhysicalSpeakers.patch
 	(
-		echo '+    { "Maarten Lankhorst", "winmm: Load winealsa if winepulse is found.", 1 },';
 		echo '+    { "Maarten Lankhorst", "winepulse: Add initial stub for pulseaudio support.", 1 },';
 		echo '+    { "Maarten Lankhorst", "winepulse: Add format and period probing.", 1 },';
 		echo '+    { "Maarten Lankhorst", "winepulse: Add audioclient.", 1 },';
@@ -3237,6 +3241,12 @@ if [ "$enable_winepulse_PulseAudio_Support" -eq 1 ]; then
 		echo '+    { "Maarten Lankhorst", "winepulse: use a pi-mutex for serialization.", 1 },';
 		echo '+    { "Maarten Lankhorst", "winepulse: add support for IMarshal.", 1 },';
 		echo '+    { "Mark Harmstone", "winepulse: handle stream create failing correctly.", 1 },';
+		echo '+    { "Andrew Eikum", "winepulse: Trivial cleanups and changes for consistency with other drivers.", 1 },';
+		echo '+    { "Andrew Eikum", "winepulse: Sync default channel masks with other drivers.", 1 },';
+		echo '+    { "Andrew Eikum", "winepulse: In Shared mode, track device position in bytes.", 1 },';
+		echo '+    { "Andrew Eikum", "winepulse: Always mute buffer.", 1 },';
+		echo '+    { "Andrew Eikum", "winepulse: Remove volume support.", 1 },';
+		echo '+    { "Maarten Lankhorst", "winepulse: Forward winmm functions to winealsa.", 1 },';
 		echo '+    { "Mark Harmstone", "winepulse: expose audio devices directly to programs.", 1 },';
 		echo '+    { "Mark Harmstone", "winepulse: implement exclusive mode.", 1 },';
 		echo '+    { "Mark Harmstone", "winepulse: fix segfault in pulse_rd_loop.", 1 },';

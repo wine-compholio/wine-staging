@@ -30,15 +30,16 @@ usage()
 	echo "using a Makefile."
 	echo ""
 	echo "Configuration:"
-	echo "  DESTDIR=path        Specify the path to the wine source tree"
-	echo "  --all          		Select all patches"
-	echo "  --help    	     	Display this help and exit"
-	echo "  --no-autoupdate  	Do not apply patchlist and don't auto-update files"
-	echo "  -W patchset        	Exclude a specific patchset"
+	echo "  DESTDIR=path         Specify the path to the wine source tree"
+	echo "  --all          		 Select all patches"
+	echo "  --help    	     	 Display this help and exit"
+	echo "  --no-autoupdate  	 Do not apply patchlist and don't auto-update files"
+	echo "  -W patchset        	 Exclude a specific patchset"
 	echo ""
 	echo "Backends:"
-	echo "  --backend=patch     Use regular 'patch' utility to apply patches (default)"
-	echo "  --backend=git       Use 'git am' to apply patches"
+	echo "  --backend=patch      Use regular 'patch' utility to apply patches (default)"
+	echo "  --backend=git-am     Use 'git am' to apply patches"
+	echo "  --backend=git-apply  Use 'git apply' to apply patches"
 	echo ""
 }
 
@@ -668,12 +669,23 @@ if [ "$backend" == "patch" ]; then
 	}
 
 # GIT backend - apply patches using 'git am'
-elif [ "$backend" == "git" ]; then
+elif [ "$backend" == "git" -o "$backend" == "git-am" ]; then
 
 	patch_apply ()
 	{
 		echo "Applying $1"
 		if ! cat "$1" | (cd "$DESTDIR" && git am); then
+			abort "Failed to apply patch, aborting!"
+		fi
+	}
+
+# Git apply backend
+elif [ "$backend" == "git-apply" ]; then
+
+	patch_apply ()
+	{
+		echo "Applying $1"
+		if ! cat "$1" | (cd "$DESTDIR" && git apply); then
 			abort "Failed to apply patch, aborting!"
 		fi
 	}

@@ -13,7 +13,7 @@ install:
 .PHONY: install-git
 install-git:
 	@echo "WARNING: Using this Makefile is deprecated!" >&2
-	"$(CURDIR)/patchinstall.sh" DESTDIR="$(DESTDIR)" --all --backend=git
+	"$(CURDIR)/patchinstall.sh" DESTDIR="$(DESTDIR)" --all --backend=git-am
 
 .PHONY: series
 series:

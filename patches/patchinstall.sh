@@ -2085,9 +2085,11 @@ fi
 if [ "$enable_nvapi_Stub_DLL" -eq 1 ]; then
 	patch_apply nvapi-Stub_DLL/0001-nvapi-First-implementation.patch
 	patch_apply nvapi-Stub_DLL/0002-nvapi-Add-stubs-for-NvAPI_EnumLogicalGPUs-and-undocu.patch
+	patch_apply nvapi-Stub_DLL/0003-nvapi-Add-NvAPI_GetPhysicalGPUsFromLogicalGPU.patch
 	(
 		echo '+    { "Michael Müller", "nvapi: First implementation.", 1 },';
 		echo '+    { "Michael Müller", "nvapi: Add stubs for NvAPI_EnumLogicalGPUs and undocumented equivalent.", 1 },';
+		echo '+    { "Michael Müller", "nvapi: Add NvAPI_GetPhysicalGPUsFromLogicalGPU.", 1 },';
 	) >> "$patchlist"
 fi
 

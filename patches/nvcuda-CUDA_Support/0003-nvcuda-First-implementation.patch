@@ -1,4 +1,4 @@
-From 0680ea1241458e18340e352cd84a9e4e721236ef Mon Sep 17 00:00:00 2001
+From 81fe2ed75ea9e0f282c496f0c8183a4e316fb78d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 3 Jan 2015 03:39:11 +0100
 Subject: nvcuda: First implementation.
@@ -6,20 +6,20 @@ Subject: nvcuda: First implementation.
 ---
  configure.ac                  |    1 +
  dlls/nvcuda/Makefile.in       |    3 +-
- dlls/nvcuda/internal.c        |  493 ++++++++++
+ dlls/nvcuda/internal.c        |  521 ++++++++++
  dlls/nvcuda/nvcuda.c          | 2097 ++++++++++++++++++++++++++++++++++++++++-
  dlls/nvcuda/nvcuda.h          |   29 +
  dlls/nvcuda/nvcuda.spec       |  492 +++++-----
  dlls/nvcuda/tests/Makefile.in |    4 +
  dlls/nvcuda/tests/nvcuda.c    |  168 ++++
- 8 files changed, 3035 insertions(+), 252 deletions(-)
+ 8 files changed, 3063 insertions(+), 252 deletions(-)
  create mode 100755 dlls/nvcuda/internal.c
  create mode 100644 dlls/nvcuda/nvcuda.h
  create mode 100644 dlls/nvcuda/tests/Makefile.in
  create mode 100644 dlls/nvcuda/tests/nvcuda.c
 
 diff --git a/configure.ac b/configure.ac
-index 6e3108b..43c33bf 100644
+index a4248d0..73e67bb 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -3126,6 +3126,7 @@ WINE_CONFIG_DLL(ntoskrnl.exe,,[implib])
@@ -45,10 +45,10 @@ index 4b33278..6322fb2 100644
  RC_SRCS = nvcuda.rc
 diff --git a/dlls/nvcuda/internal.c b/dlls/nvcuda/internal.c
 new file mode 100755
-index 0000000..6e2470a
+index 0000000..4e733eb
 --- /dev/null
 +++ b/dlls/nvcuda/internal.c
-@@ -0,0 +1,493 @@
+@@ -0,0 +1,521 @@
 +/*
 + * Copyright (C) 2014-2015 Michael Müller
 + * Copyright (C) 2014-2015 Sebastian Lackner
@@ -147,6 +147,8 @@ index 0000000..6e2470a
 +                                                        0x82, 0x98, 0xF6, 0xE7, 0x8A, 0x3A, 0xEC, 0xDC}};
 +static const CUuuid UUID_Unknown4                   = {{0xC6, 0x93, 0x33, 0x6E, 0x11, 0x21, 0xDF, 0x11,
 +                                                        0xA8, 0xC3, 0x68, 0xF3, 0x55, 0xD8, 0x95, 0x93}};
++static const CUuuid UUID_Unknown5                   = {{0x0C, 0xA5, 0x0B, 0x8C, 0x10, 0x04, 0x92, 0x9A,
++                                                        0x89, 0xA7, 0xD0, 0xDF, 0x10, 0xE7, 0x72, 0x86}};
 +static const CUuuid UUID_TlsNotifyInterface         = {{0x19, 0x5B, 0xCB, 0xF4, 0xD6, 0x7D, 0x02, 0x4A,
 +                                                        0xAC, 0xC5, 0x1D, 0x29, 0xCE, 0xA6, 0x31, 0xAE}};
 +
@@ -162,7 +164,7 @@ index 0000000..6e2470a
 +struct Unknown1_table
 +{
 +    int size;
-+    void* (WINAPI *func0)(void *param0, void *param1);
++    void* (WINAPI *func0)(CUmodule *hmod, void *param1);
 +    void* (WINAPI *func1)(void *param0, void *param1);
 +    void* (WINAPI *func2)(void *param0, void *param1);
 +    void* (WINAPI *func3)(void *param0, void *param1);
@@ -171,7 +173,7 @@ index 0000000..6e2470a
 +static const struct
 +{
 +    int size;
-+    void* (*func0)(void *param0, void *param1);
++    void* (*func0)(CUmodule *hmod, void *param1);
 +    void* (*func1)(void *param0, void *param1);
 +    void* (*func2)(void *param0, void *param1);
 +    void* (*func3)(void *param0, void *param1);
@@ -244,10 +246,25 @@ index 0000000..6e2470a
 +    CUresult (WINAPI *Remove)(void *handle, void *param1);
 +};
 +
-+void* WINAPI Unknown1_func0_relay(void *param0, void *param1)
++/*
++ * Unknown5
++ */
++struct Unknown5_table
 +{
-+    TRACE("(%p, %p)\n", param0, param1);
-+    return Unknown1_orig->func0(param0, param1);
++    int size;
++    void* (WINAPI *func0)(void *param0, void *param1, void *param2);
++};
++static const struct
++{
++    int size;
++    void* (*func0)(void *param0, void *param1, void *param2);
++} *Unknown5_orig = NULL;
++
++
++void* WINAPI Unknown1_func0_relay(CUmodule *hmod, void *param1)
++{
++    TRACE("(%p, %p)\n", hmod, param1);
++    return Unknown1_orig->func0(hmod, param1);
 +}
 +
 +void* WINAPI Unknown1_func1_relay(void *param0, void *param1)
@@ -271,19 +288,7 @@ index 0000000..6e2470a
 +void* WINAPI Unknown1_func4_relay(void *param0)
 +{
 +    FIXME("(%p)\n", param0);
-+
-+    /*
-+     * For some reason this function causes a segementation fault.
-+     * The function is called during the deinitilization of cuda
-+     * and the parameter seems to be some kind of device id.
-+     * For programs using 2 GPUs you will see the values 0 and 1.
-+     * The logic of this functions does not seem to be critical
-+     * for a working cuda implementation and is therefore stubbed
-+     * till we find a way to prevent the crash.
-+     */
-+    return CUDA_SUCCESS;
-+
-+    /* return Unknown1_orig->func4(param0); */
++    return Unknown1_orig->func4(param0);
 +}
 +
 +struct Unknown1_table Unknown1_Impl =
@@ -385,6 +390,18 @@ index 0000000..6e2470a
 +    Unknown4_func0_relay,
 +    Unknown4_func1_relay,
 +    Unknown4_func2_relay,
++};
++
++void* WINAPI Unknown5_func0_relay(void *param0, void *param1, void *param2)
++{
++    TRACE("(%p, %p, %p)\n", param0, param1, param2);
++    return Unknown5_orig->func0(param0, param1, param2);
++}
++
++struct Unknown5_table Unknown5_Impl =
++{
++    sizeof(struct Unknown5_table),
++    Unknown5_func0_relay,
 +};
 +
 +CUresult WINAPI TlsNotifyInterface_Set(void **handle, void *callback, void *userdata)
@@ -531,6 +548,17 @@ index 0000000..6e2470a
 +        *table = (void *)&Unknown4_Impl;
 +        return CUDA_SUCCESS;
 +    }
++    else if (cuda_equal_uuid(uuid, &UUID_Unknown5))
++    {
++        if (orig_result)
++            return orig_result;
++        if (!cuda_check_table(orig_table, (void *)&Unknown5_Impl, "Unknown5"))
++            return CUDA_ERROR_UNKNOWN;
++
++        Unknown5_orig = orig_table;
++        *table = (void *)&Unknown5_Impl;
++        return CUDA_SUCCESS;
++    }
 +    else if (cuda_equal_uuid(uuid, &UUID_TlsNotifyInterface))
 +    {
 +        /* the following interface is not implemented in the Linux
@@ -539,7 +567,7 @@ index 0000000..6e2470a
 +        return CUDA_SUCCESS;
 +    }
 +
-+    FIXME("Unknown UUID: %s\n", cuda_print_uuid(uuid, buffer, sizeof(buffer)));
++    FIXME("Unknown UUID: %s, error: %d\n", cuda_print_uuid(uuid, buffer, sizeof(buffer)), orig_result);
 +    return CUDA_ERROR_UNKNOWN;
 +}
 diff --git a/dlls/nvcuda/nvcuda.c b/dlls/nvcuda/nvcuda.c

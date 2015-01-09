@@ -2090,13 +2090,13 @@ if [ "$enable_nvcuda_CUDA_Support" -eq 1 ]; then
 	patch_apply nvcuda-CUDA_Support/0001-include-Add-cuda.h.h.patch
 	patch_apply nvcuda-CUDA_Support/0002-nvcuda-Add-stub-dll.patch
 	patch_apply nvcuda-CUDA_Support/0003-nvcuda-First-implementation.patch
-	patch_apply nvcuda-CUDA_Support/0004-nvcuda-Add-Unknown5-internal-interface.patch
+	patch_apply nvcuda-CUDA_Support/0004-nvcuda-Workaround-for-segmentation-fault-caused-by-m.patch
 	patch_apply nvcuda-CUDA_Support/0005-nvcuda-Emulate-two-d3d9-initialization-functions.patch
 	(
 		echo '+    { "Sebastian Lackner", "include: Add cuda.h.h.", 1 },';
 		echo '+    { "Sebastian Lackner", "nvcuda: Add stub dll.", 1 },';
 		echo '+    { "Michael Müller", "nvcuda: First implementation.", 1 },';
-		echo '+    { "Michael Müller", "nvcuda: Add Unknown5 internal interface.", 1 },';
+		echo '+    { "Sebastian Lackner", "nvcuda: Workaround for segmentation fault caused by missing callback relay.", 1 },';
 		echo '+    { "Michael Müller", "nvcuda: Emulate two d3d9 initialization functions.", 1 },';
 	) >> "$patchlist"
 fi

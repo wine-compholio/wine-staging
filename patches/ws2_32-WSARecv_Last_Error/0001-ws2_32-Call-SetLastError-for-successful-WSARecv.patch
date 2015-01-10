@@ -1,15 +1,15 @@
-From b95464321386d1255dc803d4a7b02a47564177fc Mon Sep 17 00:00:00 2001
+From b226c98c4f411fed903003c92fb8f8662f61333b Mon Sep 17 00:00:00 2001
 From: Heiko Przybyl <lil_tux@web.de>
 Date: Tue, 6 Jan 2015 14:03:14 -0700
 Subject: ws2_32: Call SetLastError for successful WSARecv.
 
 ---
- dlls/ws2_32/socket.c     |   2 +-
- dlls/ws2_32/tests/sock.c | 129 +++++++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 130 insertions(+), 1 deletion(-)
+ dlls/ws2_32/socket.c     | 2 +-
+ dlls/ws2_32/tests/sock.c | 8 --------
+ 2 files changed, 1 insertion(+), 9 deletions(-)
 
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index 4edc38f..9b25e23 100644
+index e1b2a05..af79562 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
 @@ -6776,7 +6776,7 @@ static int WS2_recv_base( SOCKET s, LPWSABUF lpBuffers, DWORD dwBufferCount,
@@ -22,152 +22,71 @@ index 4edc38f..9b25e23 100644
  
  error:
 diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
-index d87f326..490be4c 100644
+index ce47712..78ae609 100644
 --- a/dlls/ws2_32/tests/sock.c
 +++ b/dlls/ws2_32/tests/sock.c
-@@ -5806,6 +5806,134 @@ end:
-         WSACloseEvent(ov.hEvent);
- }
+@@ -5136,14 +5136,12 @@ static void test_events(int useMessages)
+     SetLastError(0xdeadbeef);
+     ret = recv(src, buffer, 1, MSG_PEEK);
+     ok(ret == 1, "Failed to peek at recv buffer %d err %d\n", ret, GetLastError());
+-todo_wine
+     ok(GetLastError() == ERROR_SUCCESS, "Expected 0, got %d\n", GetLastError());
+     ok_event_seq(src, hEvent, read_seq, NULL, 0);
  
-+static DWORD WINAPI recv_thread_non_overlapped(LPVOID arg)
-+{
-+    SOCKET sock = *(SOCKET *)arg;
-+    char buffer[32];
-+    WSABUF wsa;
-+    DWORD flags = 0;
-+    int c = 0, ret;
-+
-+    wsa.buf = buffer;
-+    wsa.len = sizeof(buffer);
-+
-+    /* For non-blocking sockets this can cause WSAEWOULDBLOCK */
-+    do {
-+	ret = WSARecv(sock, &wsa, 1, NULL, &flags, NULL, NULL);
-+	Sleep(1);
-+    }
-+    while (ret == SOCKET_ERROR && c++ < NUM_QUERIES);
-+
-+    /* Some applications do check error code even on success and choke if
-+       there's still an error value set */
-+    if (c < NUM_QUERIES)
-+	ok(!WSAGetLastError(), "WSAGetLastError() should return zero after "
-+            "a successful call to WSARecv()\n");
-+    else
-+	ok(0, "WSARecv() failed\n");
-+
-+    return 0;
-+}
-+
-+static void test_WSARecv_non_overlapped(void)
-+{
-+    SOCKET src, dest, server = INVALID_SOCKET;
-+    char buf[20];
-+    WSABUF bufs;
-+    DWORD bytesReturned, flags, id;
-+    struct linger ling;
-+    struct sockaddr_in addr;
-+    int iret, len;
-+    DWORD dwret;
-+    BOOL bret;
-+    HANDLE thread;
-+
-+    tcp_socketpair(&src, &dest);
-+    if (src == INVALID_SOCKET || dest == INVALID_SOCKET)
-+    {
-+        skip("failed to create sockets\n");
-+        goto end;
-+    }
-+
-+    bufs.len = sizeof(buf);
-+    bufs.buf = buf;
-+    flags = 0;
-+
-+    ling.l_onoff = 1;
-+    ling.l_linger = 0;
-+    iret = setsockopt (src, SOL_SOCKET, SO_LINGER, (char *) &ling, sizeof(ling));
-+    ok(!iret, "Failed to set linger %d\n", GetLastError());
-+
-+    if (set_blocking(dest, FALSE)) {
-+        skip("couldn't make socket non-blocking, error %d\n", WSAGetLastError());
-+        goto end;
-+    }
-+    iret = WSARecv(dest, &bufs, 1, NULL, &flags, NULL, NULL);
-+    ok(iret == SOCKET_ERROR && GetLastError() == WSAEWOULDBLOCK, "WSARecv failed - %d error %d\n", iret, GetLastError());
-+
-+    iret = WSARecv(dest, &bufs, 1, &bytesReturned, &flags, NULL, NULL);
-+    ok(iret == SOCKET_ERROR && GetLastError() == WSAEWOULDBLOCK, "WSARecv failed - %d error %d\n", iret, GetLastError());
-+
-+    closesocket(src);
-+    src = INVALID_SOCKET;
-+
-+    ok(bytesReturned == 0, "non-overlapped Bytes received is %d\n", bytesReturned);
-+    closesocket(dest);
-+    dest = INVALID_SOCKET;
-+
-+    src = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, 0);
-+    ok(src != INVALID_SOCKET, "failed to create socket %d\n", WSAGetLastError());
-+    if (src == INVALID_SOCKET) goto end;
-+    if (set_blocking(src, FALSE)) {
-+        skip("couldn't make socket non-blocking, error %d\n", WSAGetLastError());
-+        goto end;
-+    }
-+
-+    server = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, 0);
-+    ok(server != INVALID_SOCKET, "failed to create socket %d\n", WSAGetLastError());
-+    if (server == INVALID_SOCKET) goto end;
-+
-+    memset(&addr, 0, sizeof(addr));
-+    addr.sin_family = AF_INET;
-+    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-+    iret = bind(server, (struct sockaddr *)&addr, sizeof(addr));
-+    if (iret) goto end;
-+
-+    len = sizeof(addr);
-+    iret = getsockname(server, (struct sockaddr *)&addr, &len);
-+    if (iret) goto end;
-+
-+    iret = listen(server, 1);
-+    if (iret) goto end;
-+
-+    iret = connect(src, (struct sockaddr *)&addr, sizeof(addr));
-+    ok(iret == SOCKET_ERROR && GetLastError() == WSAEWOULDBLOCK, "failed to connect socket %d\n", WSAGetLastError());
-+    if (iret && GetLastError() != WSAEWOULDBLOCK) goto end;
-+
-+    len = sizeof(addr);
-+    dest = accept(server, (struct sockaddr *)&addr, &len);
-+    ok(dest != INVALID_SOCKET, "failed to create socket %d\n", WSAGetLastError());
-+    if (dest == INVALID_SOCKET) goto end;
-+    if (set_blocking(dest, FALSE)) {
-+        skip("couldn't make socket non-blocking, error %d\n", WSAGetLastError());
-+        goto end;
-+    }
-+
-+    thread = CreateThread(NULL, 0, recv_thread_non_overlapped, &dest, 0, &id);
-+    Sleep(10); /* enforce some WSAEWOULDBLOCK to happen */
-+    send(src, "test message", sizeof("test message"), 0);
-+    WaitForSingleObject(thread, 3000);
-+    CloseHandle(thread);
-+
-+end:
-+    if (server != INVALID_SOCKET)
-+        closesocket(server);
-+    if (dest != INVALID_SOCKET)
-+        closesocket(dest);
-+    if (src != INVALID_SOCKET)
-+        closesocket(src);
-+}
-+
- static void test_GetAddrInfoW(void)
- {
-     static const WCHAR port[] = {'8','0',0};
-@@ -8117,6 +8245,7 @@ START_TEST( sock )
-     test_WSASendMsg();
-     test_WSASendTo();
-     test_WSARecv();
-+    test_WSARecv_non_overlapped();
+     SetLastError(0xdeadbeef);
+     ret = recv(src, buffer, 50, 0);
+     ok(ret == 50, "Failed to recv buffer %d err %d\n", ret, GetLastError());
+-todo_wine
+     ok(GetLastError() == ERROR_SUCCESS, "Expected 0, got %d\n", GetLastError());
+     ok_event_seq(src, hEvent, read_seq, NULL, 0);
  
-     test_events(0);
-     test_events(1);
+@@ -5171,7 +5169,6 @@ todo_wine
+     SetLastError(0xdeadbeef);
+     ret = recv(src, buffer, 1, 0);
+     ok(ret == 1, "Failed to recv buffer %d err %d\n", ret, GetLastError());
+-todo_wine
+     ok(GetLastError() == ERROR_SUCCESS, "Expected 0, got %d\n", GetLastError());
+     ok_event_seq(src, hEvent, empty_seq, NULL, 0);
+ 
+@@ -5603,7 +5600,6 @@ static void test_WSASendMsg(void)
+     ret = recvfrom(dst, buffer, sizeof(buffer), 0, (struct sockaddr *) &sockaddr, &addrlen);
+     ok(ret == bytesSent, "got %d, expected %d\n",
+        ret, bytesSent);
+-todo_wine
+     ok(GetLastError() == ERROR_SUCCESS, "Expected 0, got %d\n", GetLastError());
+ 
+     /* A successful call to WSASendMsg must have bound the socket */
+@@ -5634,7 +5630,6 @@ todo_wine
+     ret = recvfrom(dst, buffer, sizeof(buffer), 0, (struct sockaddr *) &sockaddr, &addrlen);
+     ok(ret == bytesSent, "got %d, expected %d\n",
+        ret, bytesSent);
+-todo_wine
+     ok(GetLastError() == ERROR_SUCCESS, "Expected 0, got %d\n", GetLastError());
+ 
+     closesocket(sock);
+@@ -5770,14 +5765,12 @@ static void test_WSARecv(void)
+     iret = WSARecv(dest, &bufs, 1, &bytesReturned, &flags, NULL, NULL);
+     ok(!iret, "Expected 0, got %d\n", iret);
+     ok(bytesReturned, "Expected 2, got %d\n", bytesReturned);
+-todo_wine
+     ok(GetLastError() == ERROR_SUCCESS, "Expected 0, got %d\n", GetLastError());
+     SetLastError(0xdeadbeef);
+     bytesReturned = 0xdeadbeef;
+     iret = WSARecv(dest, &bufs, 1, &bytesReturned, &flags, NULL, NULL);
+     ok(!iret, "Expected 0, got %d\n", iret);
+     ok(bytesReturned, "Expected 2, got %d\n", bytesReturned);
+-todo_wine
+     ok(GetLastError() == ERROR_SUCCESS, "Expected 0, got %d\n", GetLastError());
+ 
+     bufs.len = 4;
+@@ -5790,7 +5783,6 @@ todo_wine
+     iret = WSARecv(dest, &bufs, 1, &bytesReturned, &flags, NULL, NULL);
+     ok(!iret, "Expected 0, got %d\n", iret);
+     ok(bytesReturned, "Expected 4, got %d\n", bytesReturned);
+-todo_wine
+     ok(GetLastError() == ERROR_SUCCESS, "Expected 0, got %d\n", GetLastError());
+ 
+     bufs.len = sizeof(buf);
 -- 
-1.9.1
+2.2.1
 

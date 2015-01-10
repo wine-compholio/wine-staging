@@ -528,9 +528,9 @@ def generate_script(all_patches):
     lines = []
     for i, patch in [(i, all_patches[i]) for i in reversed(resolved)]:
         if len(patch.depends):
-            lines.append("if [ \"$%s\" -eq 1 ]; then\n" % patch.variable)
+            lines.append("if test \"$%s\" -eq 1; then\n" % patch.variable)
             for j in sorted(patch.depends):
-                lines.append("\tif [ \"$%s\" -gt 1 ]; then\n" % all_patches[j].variable)
+                lines.append("\tif test \"$%s\" -gt 1; then\n" % all_patches[j].variable)
                 lines.append("\t\tabort \"Patchset %s disabled, but %s depends on that.\"\n" %
                              (all_patches[j].name, patch.name))
                 lines.append("\tfi\n")
@@ -557,7 +557,7 @@ def generate_script(all_patches):
         lines.append("# | Modified files:\n")
         lines.append("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap(", ".join(sorted(patch.modified_files)), 120)))
         lines.append("# |\n")
-        lines.append("if [ \"$%s\" -eq 1 ]; then\n" % patch.variable)
+        lines.append("if test \"$%s\" -eq 1; then\n" % patch.variable)
         for f in patch.files:
             lines.append("\tpatch_apply %s\n" % os.path.join(patch.name, f))
         if len(patch.patches):

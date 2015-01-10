@@ -1559,7 +1559,7 @@ if test "$enable_kernel32_Named_Pipe" -eq 1; then
 		echo '+    { "Sebastian Lackner", "ntdll: Unify similar code in NtReadFile and FILE_AsyncReadService.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Move logic to check for broken pipe into a separate function.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Unify similar code in NtWriteFile and FILE_AsyncWriteService.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Use SOCK_SEQPACKET socket in combination with SO_PEEK_OFF to implement message mode on Unix.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Use SOCK_SEQPACKET socket in combination with SO_PEEK_OFF to implement message mode on Unix.", 6 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Add handling for partially received messages in NtReadFile.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add more tests with overlapped IO and partial reads from named pipes.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Fix some tests for overlapped partial reads.", 1 },';

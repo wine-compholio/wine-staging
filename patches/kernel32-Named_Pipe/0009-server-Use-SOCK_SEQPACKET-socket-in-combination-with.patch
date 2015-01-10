@@ -1,8 +1,8 @@
-From b6ba775824b47bf58534d9f9b9cdc8a1261449f4 Mon Sep 17 00:00:00 2001
+From 53e57218a4c5c71efc15656bd8a55fc5dbf05f6a Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 4 Aug 2014 05:01:11 +0200
 Subject: server: Use SOCK_SEQPACKET socket in combination with SO_PEEK_OFF to
- implement message mode on Unix.
+ implement message mode on Unix. (rev 6)
 
 Based on ideas by Erich E. Hoover.
 
@@ -22,14 +22,17 @@ Changes in v4:
 
 Changes in v5:
   * Rebased, merged with following patch.
+
+Changes in v6:
+  * When running on an older kernel make sure that ntdll doesn't try to use message mode features.
 ---
  dlls/kernel32/sync.c       |   2 +-
  dlls/kernel32/tests/pipe.c |   9 ----
- dlls/ntdll/file.c          | 106 ++++++++++++++++++++++++++++++++++++------
- server/named_pipe.c        | 113 ++++++++++++++++++++++++++++++++++++---------
+ dlls/ntdll/file.c          | 106 ++++++++++++++++++++++++++++++++++------
+ server/named_pipe.c        | 117 ++++++++++++++++++++++++++++++++++++---------
  server/sock.c              |   4 +-
- server/sock.h              |  26 +++++++++++
- 6 files changed, 211 insertions(+), 49 deletions(-)
+ server/sock.h              |  26 ++++++++++
+ 6 files changed, 215 insertions(+), 49 deletions(-)
  create mode 100644 server/sock.h
 
 diff --git a/dlls/kernel32/sync.c b/dlls/kernel32/sync.c
@@ -290,7 +293,7 @@ index e8a1066..5cbfa40 100644
              if (needs_close) close( fd );
          }
 diff --git a/server/named_pipe.c b/server/named_pipe.c
-index 81741de..b720dd6 100644
+index 81741de..999221f 100644
 --- a/server/named_pipe.c
 +++ b/server/named_pipe.c
 @@ -42,6 +42,10 @@
@@ -312,12 +315,12 @@ index 81741de..b720dd6 100644
  #include "handle.h"
  #include "thread.h"
  #include "request.h"
-@@ -804,14 +809,36 @@ static struct pipe_server *find_available_server( struct named_pipe *pipe )
+@@ -804,14 +809,43 @@ static struct pipe_server *find_available_server( struct named_pipe *pipe )
      return NULL;
  }
  
 +/* check if message mode named pipes are supported */
-+static int check_messagemode(void)
++static int is_messagemode_supported(void)
 +{
 +#ifdef __linux__
 +    static const int zero = 0;
@@ -337,6 +340,13 @@ index 81741de..b720dd6 100644
 +#endif
 +}
 +
++static inline int messagemode_flags( int flags )
++{
++    if (!is_messagemode_supported())
++        flags &= ~(NAMED_PIPE_MESSAGE_STREAM_WRITE | NAMED_PIPE_MESSAGE_STREAM_READ);
++    return flags;
++}
++
  static struct object *named_pipe_open_file( struct object *obj, unsigned int access,
                                              unsigned int sharing, unsigned int options )
  {
@@ -350,19 +360,19 @@ index 81741de..b720dd6 100644
  
      if (!(server = find_available_server( pipe )))
      {
-@@ -830,7 +857,10 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
+@@ -830,7 +864,10 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
  
      if ((client = create_pipe_client( options, pipe->flags )))
      {
 -        if (!socketpair( PF_UNIX, SOCK_STREAM, 0, fds ))
-+        type = ((pipe->flags & NAMED_PIPE_MESSAGE_STREAM_WRITE) && check_messagemode()) ?
++        type = ((pipe->flags & NAMED_PIPE_MESSAGE_STREAM_WRITE) && is_messagemode_supported()) ?
 +               SOCK_SEQPACKET : SOCK_STREAM;
 +
 +        if (!socketpair( PF_UNIX, type, 0, fds ))
          {
              assert( !server->fd );
  
-@@ -840,32 +870,55 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
+@@ -840,32 +877,55 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
              if (is_overlapped( options )) fcntl( fds[1], F_SETFL, O_NONBLOCK );
              if (is_overlapped( server->options )) fcntl( fds[0], F_SETFL, O_NONBLOCK );
  
@@ -408,8 +418,8 @@ index 81741de..b720dd6 100644
 -                server->client = client;
 -                client->server = server;
 +            #ifdef __linux__
-+                fcntl( fds[0], F_SETSIG, server->pipe_flags );
-+                fcntl( fds[1], F_SETSIG, client->pipe_flags );
++                fcntl( fds[0], F_SETSIG, messagemode_flags( server->pipe_flags ) );
++                fcntl( fds[1], F_SETSIG, messagemode_flags( client->pipe_flags ) );
 +            #endif
 +
 +                client->fd = create_anonymous_fd( &pipe_client_fd_ops, fds[1], &client->obj, options );
@@ -437,19 +447,16 @@ index 81741de..b720dd6 100644
                  release_object( client );
                  client = NULL;
              }
-@@ -965,7 +1018,10 @@ DECL_HANDLER(create_named_pipe)
+@@ -965,7 +1025,7 @@ DECL_HANDLER(create_named_pipe)
          return;
      }
  
 -    reply->flags = req->flags & ~(NAMED_PIPE_MESSAGE_STREAM_WRITE | NAMED_PIPE_MESSAGE_STREAM_READ);
-+    reply->flags = req->flags;
-+    if (!check_messagemode())
-+        reply->flags &= ~(NAMED_PIPE_MESSAGE_STREAM_WRITE | NAMED_PIPE_MESSAGE_STREAM_READ);
-+
++    reply->flags = messagemode_flags(req->flags);
      reply->handle = 0;
  
      if (!objattr_is_valid( objattr, get_req_data_size() ))
-@@ -1065,6 +1121,9 @@ DECL_HANDLER(set_named_pipe_info)
+@@ -1065,6 +1125,9 @@ DECL_HANDLER(set_named_pipe_info)
  {
      struct pipe_server *server;
      struct pipe_client *client = NULL;
@@ -459,13 +466,13 @@ index 81741de..b720dd6 100644
  
      server = get_pipe_server_obj( current->process, req->handle, FILE_WRITE_ATTRIBUTES );
      if (!server)
-@@ -1087,10 +1146,20 @@ DECL_HANDLER(set_named_pipe_info)
+@@ -1087,10 +1150,20 @@ DECL_HANDLER(set_named_pipe_info)
      else if (client)
      {
          client->pipe_flags = server->pipe->flags | req->flags;
 +    #ifdef __linux__
 +        if (client->fd && (unix_fd = get_unix_fd( client->fd )) != -1)
-+            fcntl( unix_fd, F_SETSIG, client->pipe_flags );
++            fcntl( unix_fd, F_SETSIG, messagemode_flags( client->pipe_flags ) );
 +        clear_error();
 +    #endif
      }
@@ -474,7 +481,7 @@ index 81741de..b720dd6 100644
          server->pipe_flags = server->pipe->flags | req->flags;
 +    #ifdef __linux__
 +        if (server->fd && (unix_fd = get_unix_fd( server->fd )) != -1)
-+            fcntl( unix_fd, F_SETSIG, server->pipe_flags );
++            fcntl( unix_fd, F_SETSIG, messagemode_flags( server->pipe_flags ) );
 +        clear_error();
 +    #endif
      }

@@ -1081,7 +1081,7 @@ if [ "$enable_wined3d_DXTn" -eq 1 ]; then
 	patch_apply wined3d-DXTn/0002-wined3d-Improve-DXTn-support-and-export-conversion-f.patch
 	patch_apply wined3d-DXTn/0003-wined3d-add-DXT1-to-B4G4R4A4-DXT1-to-B5G5R5A1-and-DX.patch
 	(
-		echo '+    { "Michael Müller", "wined3d: Add support for DXTn software decoding through libtxc_dxtn.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Add support for DXTn software decoding through libtxc_dxtn.", 2 },';
 		echo '+    { "Christian Costa", "wined3d: Improve DXTn support and export conversion functions for d3dx9_36.", 1 },';
 		echo '+    { "Michael Müller", "wined3d: add DXT1 to B4G4R4A4, DXT1 to B5G5R5A1 and DXT3 to B4G4R4A4 conversion.", 1 },';
 	) >> "$patchlist"

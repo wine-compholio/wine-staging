@@ -64,6 +64,7 @@ patch_enable_all ()
 	enable_d3d9_Surface_Refcount="$1"
 	enable_d3dx9_36_ConvertToIndexedBlended="$1"
 	enable_d3dx9_36_D3DXStubs="$1"
+	enable_d3dx9_36_DDS="$1"
 	enable_d3dx9_36_DXTn="$1"
 	enable_d3dx9_36_DrawText="$1"
 	enable_d3dx9_36_Filter_Warnings="$1"
@@ -221,6 +222,9 @@ patch_enable ()
 			;;
 		d3dx9_36-D3DXStubs)
 			enable_d3dx9_36_D3DXStubs="$2"
+			;;
+		d3dx9_36-DDS)
+			enable_d3dx9_36_DDS="$2"
 			;;
 		d3dx9_36-DXTn)
 			enable_d3dx9_36_DXTn="$2"
@@ -1083,6 +1087,25 @@ if test "$enable_d3dx9_36_D3DXStubs" -eq 1; then
 		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXIntersect.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXComputeNormals.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeNormalMap.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3dx9_36-DDS
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#26898] Support for DDS file format in D3DXSaveTextureToFileInMemory
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/d3dx9_36_private.h, dlls/d3dx9_36/surface.c, dlls/d3dx9_36/texture.c
+# |
+if test "$enable_d3dx9_36_DDS" -eq 1; then
+	patch_apply d3dx9_36-DDS/0001-d3dx9_36-Fix-several-issues-in-save_dds_surface_to_m.patch
+	patch_apply d3dx9_36-DDS/0002-d3dx9_36-Add-support-for-FOURCC-surface-to-save_dds_.patch
+	patch_apply d3dx9_36-DDS/0003-d3dx9_36-Improve-D3DXSaveTextureToFile-to-save-simpl.patch
+	(
+		echo '+    { "Christian Costa", "d3dx9_36: Fix several issues in save_dds_surface_to_memory.", 1 },';
+		echo '+    { "Christian Costa", "d3dx9_36: Add support for FOURCC surface to save_dds_surface_to_memory.", 1 },';
+		echo '+    { "Christian Costa", "d3dx9_36: Improve D3DXSaveTextureToFile to save simple texture to dds file.", 1 },';
 	) >> "$patchlist"
 fi
 

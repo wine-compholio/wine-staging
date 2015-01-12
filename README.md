@@ -37,6 +37,11 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
+**Bugfixes and features included in the next upcoming release [1]:**
+
+* Support for DDS file format in D3DXSaveTextureToFileInMemory ([Wine Bug #26898](https://bugs.winehq.org/show_bug.cgi?id=26898))
+
+
 **Bugs fixed in Wine Staging 1.7.34-1 [135]:**
 
 * ATL IOCS data should not be stored in GWLP_USERDATA ([Wine Bug #21767](https://bugs.winehq.org/show_bug.cgi?id=21767))

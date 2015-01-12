@@ -1140,7 +1140,7 @@ fi
 # |   *	[#37391] Exception during start of fr-043 caused by missing DXTn support
 # |
 # | Modified files:
-# |   *	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/surface.c
+# |   *	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/surface.c, dlls/d3dx9_36/tests/surface.c
 # |
 if test "$enable_d3dx9_36_DXTn" -eq 1; then
 	patch_apply d3dx9_36-DXTn/0001-d3dx9_36-Add-dxtn-support.patch

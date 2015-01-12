@@ -668,6 +668,23 @@ if test "$backend" = "patch"; then
 		fi
 	}
 
+# 'epatch' backend - used on Gentoo
+elif test "$backend" = "epatch"; then
+
+	patch_apply ()
+	{
+		if grep -q "^GIT binary patch" "$1"; then
+			if ! ../debian/tools/gitapply.sh -d "$DESTDIR" < "$1"; then
+				abort "Failed to apply patch, aborting!"
+			fi
+		else
+			local patch="$(readlink -f "$1")"
+			if ! (cd "$DESTDIR" && epatch "$patch"); then
+				abort "Failed to apply patch, aborting!"
+			fi
+		fi
+	}
+
 # GIT backend - apply patches using 'git am'
 elif test "$backend" = "git" -o "$backend" = "git-am"; then
 
@@ -824,8 +841,12 @@ fi
 # To make sure we find all the patches and tools switch to the patches directory now
 script="$(readlink -f "$0")"
 curdir="$(dirname "$script")"
-if ! cd "$curdir"; then
-	abort "Failed to change working directory to $curdir."
+if test -f "$curdir/patchinstall.sh"; then
+	if ! cd "$curdir"; then
+		abort "Failed to change working directory to $curdir."
+	fi
+elif test ! -f ./patchinstall.sh; then
+	abort "Failed to find patch directory."
 fi
 
 # If autoupdate is enabled then create a tempfile to keep track of all patches

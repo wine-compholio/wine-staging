@@ -172,7 +172,7 @@ Included bug fixes and improvements
 * Use actual program name if available to describe PulseAudio streams
 * Use manual relay for RunDLL_CallEntry16 in shell32 ([Wine Bug #23033](https://bugs.winehq.org/show_bug.cgi?id=23033))
 * Voobly expects correct handling of WRITECOPY memory protection ([Wine Bug #29384](https://bugs.winehq.org/show_bug.cgi?id=29384))
-* WSARecv should call SetLastError on success ([Wine Bug #31438](https://bugs.winehq.org/show_bug.cgi?id=31438))
+* ~~WSARecv should call SetLastError on success~~ ([Wine Bug #31438](https://bugs.winehq.org/show_bug.cgi?id=31438))
 * Wine ignores IDF_CHECKFIRST flag in SetupPromptForDisk ([Wine Bug #20465](https://bugs.winehq.org/show_bug.cgi?id=20465))
 * Workaround for shlwapi URLs with relative paths
 * XEMBED support for embedding Wine windows inside Linux applications

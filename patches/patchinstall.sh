@@ -186,7 +186,6 @@ patch_enable_all ()
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_Connect_Time="$1"
 	enable_ws2_32_TransmitFile="$1"
-	enable_ws2_32_WSARecv_Last_Error="$1"
 	enable_ws2_32_WriteWatches="$1"
 	enable_ws2_32_getaddrinfo="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
@@ -585,9 +584,6 @@ patch_enable ()
 			;;
 		ws2_32-TransmitFile)
 			enable_ws2_32_TransmitFile="$2"
-			;;
-		ws2_32-WSARecv_Last_Error)
-			enable_ws2_32_WSARecv_Last_Error="$2"
 			;;
 		ws2_32-WriteWatches)
 			enable_ws2_32_WriteWatches="$2"
@@ -3505,21 +3501,6 @@ if test "$enable_ws2_32_TransmitFile" -eq 1; then
 		echo '+    { "Erich E. Hoover", "ws2_32: Implement a basic synchronous TransmitFile.", 1 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Add asynchronous support for TransmitFile.", 1 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_DISCONNECT and TF_REUSE_SOCKET to TransmitFile.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ws2_32-WSARecv_Last_Error
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#31438] WSARecv should call SetLastError on success
-# |
-# | Modified files:
-# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c
-# |
-if test "$enable_ws2_32_WSARecv_Last_Error" -eq 1; then
-	patch_apply ws2_32-WSARecv_Last_Error/0001-ws2_32-Call-SetLastError-for-successful-WSARecv.patch
-	(
-		echo '+    { "Heiko Przybyl", "ws2_32: Call SetLastError for successful WSARecv.", 1 },';
 	) >> "$patchlist"
 fi
 

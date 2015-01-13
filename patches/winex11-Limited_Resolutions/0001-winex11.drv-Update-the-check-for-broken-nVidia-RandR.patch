@@ -1,22 +1,22 @@
-From 67db1e9c71c4fbc74790f91f00cd96e09fedd6d6 Mon Sep 17 00:00:00 2001
+From 590ab2d6042e4af966bae9dc9f8ada3d68d9825d Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Sat, 9 Aug 2014 13:15:09 -0600
-Subject: winex11.drv: Update the check for broken nVidia RandR to test for
- the number of resolutions instead of the number of modes.
+Subject: winex11.drv: Update the check for broken nVidia RandR to test for the
+ number of resolutions instead of the number of modes.
 
 ---
- dlls/winex11.drv/xrandr.c |   50 +++++++++++++++++++++++++++++++--------------
- 1 file changed, 35 insertions(+), 15 deletions(-)
+ dlls/winex11.drv/xrandr.c | 42 +++++++++++++++++++++++++++---------------
+ 1 file changed, 27 insertions(+), 15 deletions(-)
 
 diff --git a/dlls/winex11.drv/xrandr.c b/dlls/winex11.drv/xrandr.c
-index fc09020..50c769c 100644
+index fc09020..e9670c3 100644
 --- a/dlls/winex11.drv/xrandr.c
 +++ b/dlls/winex11.drv/xrandr.c
 @@ -386,6 +386,7 @@ static XRRCrtcInfo *xrandr12_get_primary_crtc_info( XRRScreenResources *resource
  
  static int xrandr12_init_modes(void)
  {
-+    unsigned int resolution_count, modes;
++    unsigned int only_one_resolution = 1, mode_count;
      XRRScreenResources *resources;
      XRROutputInfo *output_info;
      XRRCrtcInfo *crtc_info;
@@ -42,26 +42,18 @@ index fc09020..50c769c 100644
      if (!(xrandr12_modes = HeapAlloc( GetProcessHeap(), 0, sizeof(*xrandr12_modes) * output_info->nmode )))
      {
          ERR("Failed to allocate xrandr mode info array.\n");
-@@ -480,6 +466,40 @@ static int xrandr12_init_modes(void)
+@@ -480,6 +466,32 @@ static int xrandr12_init_modes(void)
          }
      }
  
-+    resolution_count = 0;
-+    modes = X11DRV_Settings_GetModeCount();
-+    for (i = 0; i < modes; ++i)
++    mode_count = X11DRV_Settings_GetModeCount();
++    for (i = 1; i < mode_count; ++i)
 +    {
-+        int duplicate_resolution = 0;
-+
-+        for (j = 0; j < i; ++j)
++        if (dd_modes[i].width != dd_modes[0].width || dd_modes[i].height != dd_modes[0].height)
 +        {
-+            if(dd_modes[i].width == dd_modes[j].width && dd_modes[i].height == dd_modes[j].height)
-+            {
-+                duplicate_resolution = 1;
-+                break;
-+            }
++            only_one_resolution = 0;
++            break;
 +        }
-+
-+        if (!duplicate_resolution) resolution_count++;
 +    }
 +
 +    /* Recent (304.64, possibly earlier) versions of the nvidia driver only
@@ -71,7 +63,7 @@ index fc09020..50c769c 100644
 +     * best we can do is to fall back to RandR 1.0 and encourage users to
 +     * consider more cooperative driver vendors when we detect such a
 +     * configuration. */
-+    if (resolution_count == 1 && XQueryExtension( gdi_display, "NV-CONTROL", &i, &j, &ret ))
++    if (only_one_resolution && XQueryExtension( gdi_display, "NV-CONTROL", &i, &j, &ret ))
 +    {
 +        ERR_(winediag)("Broken NVIDIA RandR detected, falling back to RandR 1.0. "
 +                       "Please consider using the Nouveau driver instead.\n");
@@ -84,5 +76,5 @@ index fc09020..50c769c 100644
      ret = 0;
  
 -- 
-1.7.9.5
+1.9.1
 

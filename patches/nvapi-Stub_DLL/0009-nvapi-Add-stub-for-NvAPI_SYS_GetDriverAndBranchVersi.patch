@@ -1,0 +1,126 @@
+From 13ee123115eef55e23ab7574e13f9e8f68b34555 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Tue, 13 Jan 2015 00:39:43 +0100
+Subject: nvapi: Add stub for NvAPI_SYS_GetDriverAndBranchVersion.
+
+---
+ dlls/nvapi/nvapi.c       | 18 +++++++++++++++++-
+ dlls/nvapi/tests/nvapi.c | 40 ++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 57 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/nvapi/nvapi.c b/dlls/nvapi/nvapi.c
+index 4c009b5..43c0375 100644
+--- a/dlls/nvapi/nvapi.c
++++ b/dlls/nvapi/nvapi.c
+@@ -516,6 +516,21 @@ static NvAPI_Status CDECL NvAPI_EnumNvidiaDisplayHandle(NvU32 thisEnum, NvDispla
+     return NVAPI_OK;
+ }
+ 
++static NvAPI_Status CDECL NvAPI_SYS_GetDriverAndBranchVersion(NvU32* pDriverVersion, NvAPI_ShortString szBuildBranchString)
++{
++    NvAPI_ShortString build_str = {'r','3','3','7','_','0','0',0};
++
++    TRACE("(%p, %p)\n", pDriverVersion, szBuildBranchString);
++
++    if (!pDriverVersion || !szBuildBranchString)
++        return NVAPI_INVALID_POINTER;
++
++    memcpy(szBuildBranchString, build_str, sizeof(build_str));
++    *pDriverVersion = 33788;
++
++    return NVAPI_OK;
++}
++
+ void* CDECL nvapi_QueryInterface(unsigned int offset)
+ {
+     static const struct
+@@ -551,7 +566,8 @@ void* CDECL nvapi_QueryInterface(unsigned int offset)
+         {0x33c7358c, NULL}, /* This functions seems to be optional */
+         {0x593e8644, NULL}, /* This functions seems to be optional */
+         {0x1e9d8a31, NvAPI_DISP_GetGDIPrimaryDisplayId},
+-        {0x9abdd40d, NvAPI_EnumNvidiaDisplayHandle}
++        {0x9abdd40d, NvAPI_EnumNvidiaDisplayHandle},
++        {0x2926aaad, NvAPI_SYS_GetDriverAndBranchVersion}
+     };
+     unsigned int i;
+     TRACE("(%x)\n", offset);
+diff --git a/dlls/nvapi/tests/nvapi.c b/dlls/nvapi/tests/nvapi.c
+index 8d15382..aeca45f 100644
+--- a/dlls/nvapi/tests/nvapi.c
++++ b/dlls/nvapi/tests/nvapi.c
+@@ -40,6 +40,7 @@
+ #define NvAPI_GPU_GetFullName_Offset 0xceee8e9f
+ #define NvAPI_DISP_GetGDIPrimaryDisplayId_Offset 0x1e9d8a31
+ #define NvAPI_EnumNvidiaDisplayHandle_Offset 0x9abdd40d
++#define NvAPI_SYS_GetDriverAndBranchVersion_Offset 0x2926aaad
+ 
+ static void* (CDECL *pnvapi_QueryInterface)(unsigned int offset);
+ static NvAPI_Status (CDECL *pNvAPI_Initialize)(void);
+@@ -54,6 +55,7 @@ static NvAPI_Status (CDECL *pNvAPI_EnumPhysicalGPUs)(NvPhysicalGpuHandle nvGPUHa
+ static NvAPI_Status (CDECL* pNvAPI_GPU_GetFullName)(NvPhysicalGpuHandle hPhysicalGpu, NvAPI_ShortString szName);
+ static NvAPI_Status (CDECL* pNvAPI_DISP_GetGDIPrimaryDisplayId)(NvU32* displayId);
+ static NvAPI_Status (CDECL* pNvAPI_EnumNvidiaDisplayHandle)(NvU32 thisEnum, NvDisplayHandle *pNvDispHandle);
++static NvAPI_Status (CDECL* pNvAPI_SYS_GetDriverAndBranchVersion)(NvU32* pDriverVersion, NvAPI_ShortString szBuildBranchString);
+ 
+ static BOOL init(void)
+ {
+@@ -88,6 +90,7 @@ static BOOL init(void)
+     pNvAPI_GPU_GetFullName = pnvapi_QueryInterface(NvAPI_GPU_GetFullName_Offset);
+     pNvAPI_DISP_GetGDIPrimaryDisplayId = pnvapi_QueryInterface(NvAPI_DISP_GetGDIPrimaryDisplayId_Offset);
+     pNvAPI_EnumNvidiaDisplayHandle = pnvapi_QueryInterface(NvAPI_EnumNvidiaDisplayHandle_Offset);
++    pNvAPI_SYS_GetDriverAndBranchVersion = pnvapi_QueryInterface(NvAPI_SYS_GetDriverAndBranchVersion_Offset);
+ 
+     if (!pNvAPI_Initialize)
+     {
+@@ -526,6 +529,42 @@ static void test_NvAPI_EnumNvidiaDisplayHandle(void)
+     ok(disp == NULL, "Expected disp to be null");
+ }
+ 
++static void test_NvAPI_SYS_GetDriverAndBranchVersion(void)
++{
++    NvAPI_Status status;
++    NvU32 version;
++    NvAPI_ShortString branch;
++
++    if (!pNvAPI_SYS_GetDriverAndBranchVersion)
++    {
++        win_skip("NvAPI_SYS_GetDriverAndBranchVersion export not found.\n");
++        return;
++    }
++
++    status = pNvAPI_SYS_GetDriverAndBranchVersion(NULL, NULL);
++    ok(status == NVAPI_INVALID_POINTER, "Expected status NVAPI_INVALID_POINTER, got %d\n", status);
++
++    status = pNvAPI_SYS_GetDriverAndBranchVersion(NULL, branch);
++    ok(status == NVAPI_INVALID_POINTER, "Expected status NVAPI_INVALID_POINTER, got %d\n", status);
++
++    if (0) /* crashes on windows */
++    {
++        status = pNvAPI_SYS_GetDriverAndBranchVersion(&version, NULL);
++        ok(status == NVAPI_INVALID_ARGUMENT, "Expected status NVAPI_INVALID_ARGUMENT, got %d\n", status);
++    }
++
++    version = 0;
++    memset(branch, 0, sizeof(branch));
++    status = pNvAPI_SYS_GetDriverAndBranchVersion(&version, branch);
++    ok(status == NVAPI_OK, "Expected status NVAPI_OK, got %d\n", status);
++    ok(version != 0, "Expected non null version");
++    ok(branch[0] != 0, "Expected non emptry branch string");
++
++    trace("Version: %d\n", version);
++    trace("Branch: %s\n", branch);
++}
++
++
+ START_TEST( nvapi )
+ {
+     if (!init())
+@@ -541,4 +580,5 @@ START_TEST( nvapi )
+     test_NvAPI_GPU_GetFullName();
+     test_NvAPI_DISP_GetGDIPrimaryDisplayId();
+     test_NvAPI_EnumNvidiaDisplayHandle();
++    test_NvAPI_SYS_GetDriverAndBranchVersion();
+ }
+-- 
+1.9.1
+

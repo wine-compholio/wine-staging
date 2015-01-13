@@ -2158,10 +2158,28 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 	patch_apply nvapi-Stub_DLL/0001-nvapi-First-implementation.patch
 	patch_apply nvapi-Stub_DLL/0002-nvapi-Add-stubs-for-NvAPI_EnumLogicalGPUs-and-undocu.patch
 	patch_apply nvapi-Stub_DLL/0003-nvapi-Add-NvAPI_GetPhysicalGPUsFromLogicalGPU.patch
+	patch_apply nvapi-Stub_DLL/0004-nvapi-Add-stub-for-NvAPI_EnumPhysicalGPUs.patch
+	patch_apply nvapi-Stub_DLL/0005-nvapi-Add-stubs-for-NvAPI_GPU_GetFullName.patch
+	patch_apply nvapi-Stub_DLL/0006-nvapi-Explicity-return-NULL-for-0x33c7358c-and-0x593.patch
+	patch_apply nvapi-Stub_DLL/0007-nvapi-Add-stub-for-NvAPI_DISP_GetGDIPrimaryDisplayId.patch
+	patch_apply nvapi-Stub_DLL/0008-nvapi-Add-stub-for-EnumNvidiaDisplayHandle.patch
+	patch_apply nvapi-Stub_DLL/0009-nvapi-Add-stub-for-NvAPI_SYS_GetDriverAndBranchVersi.patch
+	patch_apply nvapi-Stub_DLL/0010-nvapi-Add-stub-for-NvAPI_Unload.patch
+	patch_apply nvapi-Stub_DLL/0011-nvapi-Add-stub-for-NvAPI_D3D_GetCurrentSLIState.patch
+	patch_apply nvapi-Stub_DLL/0012-nvapi-Print-fixme-message-for-NvAPI_D3D9_StretchRect.patch
 	(
 		echo '+    { "Michael Müller", "nvapi: First implementation.", 1 },';
 		echo '+    { "Michael Müller", "nvapi: Add stubs for NvAPI_EnumLogicalGPUs and undocumented equivalent.", 1 },';
 		echo '+    { "Michael Müller", "nvapi: Add NvAPI_GetPhysicalGPUsFromLogicalGPU.", 1 },';
+		echo '+    { "Michael Müller", "nvapi: Add stub for NvAPI_EnumPhysicalGPUs.", 1 },';
+		echo '+    { "Michael Müller", "nvapi: Add stubs for NvAPI_GPU_GetFullName.", 1 },';
+		echo '+    { "Michael Müller", "nvapi: Explicity return NULL for 0x33c7358c and 0x593e8644.", 1 },';
+		echo '+    { "Michael Müller", "nvapi: Add stub for NvAPI_DISP_GetGDIPrimaryDisplayId.", 1 },';
+		echo '+    { "Michael Müller", "nvapi: Add stub for EnumNvidiaDisplayHandle.", 1 },';
+		echo '+    { "Michael Müller", "nvapi: Add stub for NvAPI_SYS_GetDriverAndBranchVersion.", 1 },';
+		echo '+    { "Michael Müller", "nvapi: Add stub for NvAPI_Unload.", 1 },';
+		echo '+    { "Michael Müller", "nvapi: Add stub for NvAPI_D3D_GetCurrentSLIState.", 1 },';
+		echo '+    { "Michael Müller", "nvapi: Print fixme message for NvAPI_D3D9_StretchRectEx.", 1 },';
 	) >> "$patchlist"
 fi
 

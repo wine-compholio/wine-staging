@@ -132,6 +132,7 @@ patch_enable_all ()
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_ole32_CoWaitForMultipleHandles="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
+	enable_regedit_String_Termination="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_secur32_Schannel_ContextAttr="$1"
 	enable_server_ACL_Compat="$1"
@@ -424,6 +425,9 @@ patch_enable ()
 			;;
 		quartz-MediaSeeking_Positions)
 			enable_quartz_MediaSeeking_Positions="$2"
+			;;
+		regedit-String_Termination)
+			enable_regedit_String_Termination="$2"
 			;;
 		riched20-IText_Interface)
 			enable_riched20_IText_Interface="$2"
@@ -2229,6 +2233,21 @@ if test "$enable_quartz_MediaSeeking_Positions" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset regedit-String_Termination
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37575] Do not append duplicate NULL characters when importing keys with regedit
+# |
+# | Modified files:
+# |   *	programs/regedit/regproc.c
+# |
+if test "$enable_regedit_String_Termination" -eq 1; then
+	patch_apply regedit-String_Termination/0001-regedit-Avoid-appending-and-0-to-string-value-of-imp.patch
+	(
+		echo '+    { "Jiaxing Wang", "regedit: Avoid appending '\''\\\\0'\'' to string value of imported key.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset riched20-IText_Interface
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2755,21 +2774,6 @@ if test "$enable_winebuild_LinkerVersion" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Color_Key
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37748] Fix color key regression causing pink rectangles around text
-# |
-# | Modified files:
-# |   *	dlls/wined3d/surface.c
-# |
-if test "$enable_wined3d_Color_Key" -eq 1; then
-	patch_apply wined3d-Color_Key/0001-wined3d-Use-proper-color-key-type-define-when-callin.patch
-	(
-		echo '+    { "Christian Costa", "wined3d: Use proper color key type define when calling wined3d_texture_set_color_key.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-CSMT_Helper
 # |
 # | Modified files:
@@ -2783,6 +2787,21 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	(
 		echo '+    { "Stefan Dösinger", "wined3d: Merge get_pitch functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Color_Key
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37748] Fix color key regression causing pink rectangles around text
+# |
+# | Modified files:
+# |   *	dlls/wined3d/surface.c
+# |
+if test "$enable_wined3d_Color_Key" -eq 1; then
+	patch_apply wined3d-Color_Key/0001-wined3d-Use-proper-color-key-type-define-when-callin.patch
+	(
+		echo '+    { "Christian Costa", "wined3d: Use proper color key type define when calling wined3d_texture_set_color_key.", 1 },';
 	) >> "$patchlist"
 fi
 

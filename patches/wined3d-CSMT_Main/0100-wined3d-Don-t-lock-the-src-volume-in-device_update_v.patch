@@ -1,4 +1,4 @@
-From 25b2ad076f6f9725353b5b7413ee062c68a89d6f Mon Sep 17 00:00:00 2001
+From c2397e25c4bce8e65cddb924047ee0fff1c7a397 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 29 Aug 2013 22:25:14 +0200
 Subject: wined3d: Don't lock the src volume in device_update_volume
@@ -9,15 +9,19 @@ assumption of the work queue.
 
 FIXME: Maybe merge this with the previous patch or change their order.
 ---
- dlls/wined3d/device.c | 17 ++++-------------
- 1 file changed, 4 insertions(+), 13 deletions(-)
+ dlls/wined3d/device.c | 31 +++++++------------------------
+ 1 file changed, 7 insertions(+), 24 deletions(-)
 
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 5333f23..b2e3db7 100644
+index 5333f23..4a54025 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -3401,9 +3401,7 @@ void CDECL wined3d_device_draw_indexed_primitive_instanced(struct wined3d_device
- static HRESULT device_update_volume(struct wined3d_context *context,
+@@ -3398,12 +3398,10 @@ void CDECL wined3d_device_draw_indexed_primitive_instanced(struct wined3d_device
+ }
+ 
+ /* This is a helper function for UpdateTexture, there is no UpdateVolume method in D3D. */
+-static HRESULT device_update_volume(struct wined3d_context *context,
++static void device_update_volume(struct wined3d_context *context,
          struct wined3d_volume *src_volume, struct wined3d_volume *dst_volume)
  {
 -    struct wined3d_const_bo_address data;
@@ -27,8 +31,20 @@ index 5333f23..b2e3db7 100644
  
      TRACE("src_volume %p, dst_volume %p.\n",
              src_volume, dst_volume);
-@@ -3421,20 +3419,13 @@ static HRESULT device_update_volume(struct wined3d_context *context,
-         return WINED3DERR_INVALIDCALL;
+@@ -3411,30 +3409,21 @@ static HRESULT device_update_volume(struct wined3d_context *context,
+     if (src_volume->resource.format != dst_volume->resource.format)
+     {
+         FIXME("Source and destination formats do not match.\n");
+-        return WINED3DERR_INVALIDCALL;
++        return;
+     }
+     if (src_volume->resource.width != dst_volume->resource.width
+             || src_volume->resource.height != dst_volume->resource.height
+             || src_volume->resource.depth != dst_volume->resource.depth)
+     {
+         FIXME("Source and destination sizes do not match.\n");
+-        return WINED3DERR_INVALIDCALL;
++        return;
      }
  
 -    if (FAILED(hr = wined3d_volume_map(src_volume, &src, NULL, WINED3D_MAP_READONLY)))
@@ -43,14 +59,30 @@ index 5333f23..b2e3db7 100644
 +    wined3d_resource_get_memory(&src_volume->resource, src_volume->resource.map_binding, &data);
 +    wined3d_volume_upload_data(dst_volume, context, wined3d_const_bo_address(&data));
      wined3d_resource_invalidate_location(&dst_volume->resource, ~WINED3D_LOCATION_TEXTURE_RGB);
- 
+-
 -    hr = wined3d_volume_unmap(src_volume);
 -
 -    return hr;
-+    return WINED3D_OK;
  }
  
  /* Context activation is done by the caller */
+@@ -3483,15 +3472,9 @@ void device_exec_update_texture(struct wined3d_context *context, struct wined3d_
+         {
+             for (i = 0; i < level_count; ++i)
+             {
+-                HRESULT hr;
+-                hr = device_update_volume(context,
++                device_update_volume(context,
+                         volume_from_resource(wined3d_texture_get_sub_resource(src_texture, i)),
+                         volume_from_resource(wined3d_texture_get_sub_resource(dst_texture, i)));
+-                if (FAILED(hr))
+-                {
+-                    WARN("Failed to update volume, hr %#x.\n", hr);
+-                    return;
+-                }
+             }
+             break;
+         }
 -- 
 2.2.1
 

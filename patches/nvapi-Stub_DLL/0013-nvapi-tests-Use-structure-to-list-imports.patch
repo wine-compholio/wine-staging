@@ -1,0 +1,94 @@
+From 8a87b993e11b00c4e78bf11cc424534957b48aac Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Wed, 14 Jan 2015 21:30:53 +0100
+Subject: nvapi/tests: Use structure to list imports.
+
+---
+ dlls/nvapi/tests/nvapi.c | 55 +++++++++++++++++++++++-------------------------
+ 1 file changed, 26 insertions(+), 29 deletions(-)
+
+diff --git a/dlls/nvapi/tests/nvapi.c b/dlls/nvapi/tests/nvapi.c
+index f4edcab..4db576e 100644
+--- a/dlls/nvapi/tests/nvapi.c
++++ b/dlls/nvapi/tests/nvapi.c
+@@ -29,21 +29,6 @@
+ 
+ #include "wine/test.h"
+ 
+-#define NvAPI_Initialize_Offset 0x0150E828
+-#define NvAPI_GetDisplayDriverVersion_Offset 0xF951A4D1
+-#define NvAPI_unknown1_Offset 0x5786cc6e
+-#define NvAPI_unknown2_Offset 0x6533ea3e
+-#define NvAPI_unknown3_Offset 0x5380ad1a
+-#define NvAPI_EnumLogicalGPUs_unknown_Offset 0xfb9bc2ab
+-#define NvAPI_EnumLogicalGPUs_Offset 0x48b3ea59
+-#define NvAPI_GetPhysicalGPUsFromLogicalGPU_Offset 0xaea3fa32
+-#define NvAPI_EnumPhysicalGPUs_Offset 0xe5ac921f
+-#define NvAPI_GPU_GetFullName_Offset 0xceee8e9f
+-#define NvAPI_DISP_GetGDIPrimaryDisplayId_Offset 0x1e9d8a31
+-#define NvAPI_EnumNvidiaDisplayHandle_Offset 0x9abdd40d
+-#define NvAPI_SYS_GetDriverAndBranchVersion_Offset 0x2926aaad
+-#define NvAPI_D3D_GetCurrentSLIState_Offset 0x4b708b54
+-
+ static void* (CDECL *pnvapi_QueryInterface)(unsigned int offset);
+ static NvAPI_Status (CDECL *pNvAPI_Initialize)(void);
+ static NvAPI_Status (CDECL *pNvAPI_GetDisplayDriverVersion)(NvDisplayHandle hNvDisplay, NV_DISPLAY_DRIVER_VERSION *pVersion);
+@@ -60,8 +45,32 @@ static NvAPI_Status (CDECL* pNvAPI_EnumNvidiaDisplayHandle)(NvU32 thisEnum, NvDi
+ static NvAPI_Status (CDECL* pNvAPI_SYS_GetDriverAndBranchVersion)(NvU32* pDriverVersion, NvAPI_ShortString szBuildBranchString);
+ static NvAPI_Status (CDECL* pNvAPI_D3D_GetCurrentSLIState)(IUnknown *pDevice, NV_GET_CURRENT_SLI_STATE *pSliState);
+ 
++static const struct
++{
++    unsigned int offset;
++    void **function;
++}
++function_list[] =
++{
++    {0x0150E828, (void**) &pNvAPI_Initialize},
++    {0xF951A4D1, (void**) &pNvAPI_GetDisplayDriverVersion},
++    {0x5786cc6e, (void**) &pNvAPI_unknown1},
++    {0x6533ea3e, (void**) &pNvAPI_unknown2},
++    {0x5380ad1a, (void**) &pNvAPI_unknown3},
++    {0xfb9bc2ab, (void**) &pNvAPI_EnumLogicalGPUs_unknown},
++    {0x48b3ea59, (void**) &pNvAPI_EnumLogicalGPUs},
++    {0xaea3fa32, (void**) &pNvAPI_GetPhysicalGPUsFromLogicalGPU},
++    {0xe5ac921f, (void**) &pNvAPI_EnumPhysicalGPUs},
++    {0xceee8e9f, (void**) &pNvAPI_GPU_GetFullName},
++    {0x1e9d8a31, (void**) &pNvAPI_DISP_GetGDIPrimaryDisplayId},
++    {0x9abdd40d, (void**) &pNvAPI_EnumNvidiaDisplayHandle},
++    {0x2926aaad, (void**) &pNvAPI_SYS_GetDriverAndBranchVersion},
++    {0x4b708b54, (void**) &pNvAPI_D3D_GetCurrentSLIState}
++};
++
+ static BOOL init(void)
+ {
++    int i;
+     #ifdef __x86_64__
+     HMODULE nvapi = LoadLibraryA("nvapi64.dll");
+     #else
+@@ -81,20 +90,8 @@ static BOOL init(void)
+         return FALSE;
+     }
+ 
+-    pNvAPI_Initialize = pnvapi_QueryInterface(NvAPI_Initialize_Offset);
+-    pNvAPI_GetDisplayDriverVersion = pnvapi_QueryInterface(NvAPI_GetDisplayDriverVersion_Offset);
+-    pNvAPI_unknown1 = pnvapi_QueryInterface(NvAPI_unknown1_Offset);
+-    pNvAPI_unknown2 = pnvapi_QueryInterface(NvAPI_unknown2_Offset);
+-    pNvAPI_unknown3 = pnvapi_QueryInterface(NvAPI_unknown3_Offset);
+-    pNvAPI_EnumLogicalGPUs_unknown = pnvapi_QueryInterface(NvAPI_EnumLogicalGPUs_unknown_Offset);
+-    pNvAPI_EnumLogicalGPUs = pnvapi_QueryInterface(NvAPI_EnumLogicalGPUs_Offset);
+-    pNvAPI_GetPhysicalGPUsFromLogicalGPU = pnvapi_QueryInterface(NvAPI_GetPhysicalGPUsFromLogicalGPU_Offset);
+-    pNvAPI_EnumPhysicalGPUs = pnvapi_QueryInterface(NvAPI_EnumPhysicalGPUs_Offset);
+-    pNvAPI_GPU_GetFullName = pnvapi_QueryInterface(NvAPI_GPU_GetFullName_Offset);
+-    pNvAPI_DISP_GetGDIPrimaryDisplayId = pnvapi_QueryInterface(NvAPI_DISP_GetGDIPrimaryDisplayId_Offset);
+-    pNvAPI_EnumNvidiaDisplayHandle = pnvapi_QueryInterface(NvAPI_EnumNvidiaDisplayHandle_Offset);
+-    pNvAPI_SYS_GetDriverAndBranchVersion = pnvapi_QueryInterface(NvAPI_SYS_GetDriverAndBranchVersion_Offset);
+-    pNvAPI_D3D_GetCurrentSLIState = pnvapi_QueryInterface(NvAPI_D3D_GetCurrentSLIState_Offset);
++    for (i = 0; i < sizeof(function_list) / sizeof(function_list[0]); i++)
++        *function_list[i].function = pnvapi_QueryInterface(function_list[i].offset);
+ 
+     if (!pNvAPI_Initialize)
+     {
+-- 
+1.9.1
+

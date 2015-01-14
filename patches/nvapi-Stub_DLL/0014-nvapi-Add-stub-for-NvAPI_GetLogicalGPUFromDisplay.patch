@@ -1,0 +1,141 @@
+From 40f42d36dac8ea38381f05158daa97346059a61f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Wed, 14 Jan 2015 21:48:53 +0100
+Subject: nvapi: Add stub for NvAPI_GetLogicalGPUFromDisplay.
+
+---
+ dlls/nvapi/nvapi.c       | 17 ++++++++++++++++-
+ dlls/nvapi/tests/nvapi.c | 48 +++++++++++++++++++++++++++++++++++++++++++++++-
+ include/nvapi.h          |  1 +
+ 3 files changed, 64 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/nvapi/nvapi.c b/dlls/nvapi/nvapi.c
+index 6852e24..98658a6 100644
+--- a/dlls/nvapi/nvapi.c
++++ b/dlls/nvapi/nvapi.c
+@@ -550,6 +550,20 @@ static NvAPI_Status CDECL NvAPI_D3D_GetCurrentSLIState(IUnknown *pDevice, NV_GET
+     return NVAPI_NO_ACTIVE_SLI_TOPOLOGY;
+ }
+ 
++static NvAPI_Status CDECL NvAPI_GetLogicalGPUFromDisplay(NvDisplayHandle hNvDisp, NvLogicalGpuHandle *pLogicalGPU)
++{
++    TRACE("(%p, %p)\n", hNvDisp, pLogicalGPU);
++
++    if (!pLogicalGPU)
++        return NVAPI_INVALID_POINTER;
++
++    if (hNvDisp && hNvDisp != FAKE_DISPLAY)
++        return NVAPI_NVIDIA_DEVICE_NOT_FOUND;
++
++    *pLogicalGPU = FAKE_LOGICAL_GPU;
++    return NVAPI_OK;
++}
++
+ void* CDECL nvapi_QueryInterface(unsigned int offset)
+ {
+     static const struct
+@@ -588,7 +602,8 @@ void* CDECL nvapi_QueryInterface(unsigned int offset)
+         {0x9abdd40d, NvAPI_EnumNvidiaDisplayHandle},
+         {0x2926aaad, NvAPI_SYS_GetDriverAndBranchVersion},
+         {0xd22bdd7e, NvAPI_Unload},
+-        {0x4b708b54, NvAPI_D3D_GetCurrentSLIState}
++        {0x4b708b54, NvAPI_D3D_GetCurrentSLIState},
++        {0xee1370cf, NvAPI_GetLogicalGPUFromDisplay}
+     };
+     unsigned int i;
+     TRACE("(%x)\n", offset);
+diff --git a/dlls/nvapi/tests/nvapi.c b/dlls/nvapi/tests/nvapi.c
+index 4db576e..297a335 100644
+--- a/dlls/nvapi/tests/nvapi.c
++++ b/dlls/nvapi/tests/nvapi.c
+@@ -44,6 +44,7 @@ static NvAPI_Status (CDECL* pNvAPI_DISP_GetGDIPrimaryDisplayId)(NvU32* displayId
+ static NvAPI_Status (CDECL* pNvAPI_EnumNvidiaDisplayHandle)(NvU32 thisEnum, NvDisplayHandle *pNvDispHandle);
+ static NvAPI_Status (CDECL* pNvAPI_SYS_GetDriverAndBranchVersion)(NvU32* pDriverVersion, NvAPI_ShortString szBuildBranchString);
+ static NvAPI_Status (CDECL* pNvAPI_D3D_GetCurrentSLIState)(IUnknown *pDevice, NV_GET_CURRENT_SLI_STATE *pSliState);
++static NvAPI_Status (CDECL* pNvAPI_GetLogicalGPUFromDisplay)(NvDisplayHandle hNvDisp, NvLogicalGpuHandle *pLogicalGPU);
+ 
+ static const struct
+ {
+@@ -65,7 +66,8 @@ function_list[] =
+     {0x1e9d8a31, (void**) &pNvAPI_DISP_GetGDIPrimaryDisplayId},
+     {0x9abdd40d, (void**) &pNvAPI_EnumNvidiaDisplayHandle},
+     {0x2926aaad, (void**) &pNvAPI_SYS_GetDriverAndBranchVersion},
+-    {0x4b708b54, (void**) &pNvAPI_D3D_GetCurrentSLIState}
++    {0x4b708b54, (void**) &pNvAPI_D3D_GetCurrentSLIState},
++    {0xee1370cf, (void**) &pNvAPI_GetLogicalGPUFromDisplay}
+ };
+ 
+ static BOOL init(void)
+@@ -565,6 +567,49 @@ static void test_NvAPI_SYS_GetDriverAndBranchVersion(void)
+     trace("Branch: %s\n", branch);
+ }
+ 
++static void test_NvAPI_GetLogicalGPUFromDisplay(void)
++{
++    NvAPI_Status status;
++    NvDisplayHandle disp;
++    NvLogicalGpuHandle gpuHandle;
++
++    if (!pNvAPI_GetLogicalGPUFromDisplay)
++    {
++        win_skip("NvAPI_SYS_GetDriverAndBranchVersion export not found.\n");
++        return;
++    }
++
++    if (!pNvAPI_EnumNvidiaDisplayHandle)
++    {
++        win_skip("NvAPI_EnumNvidiaDisplayHandle export not found.\n");
++        return;
++    }
++
++    disp = NULL;
++    status = pNvAPI_EnumNvidiaDisplayHandle(0, &disp);
++    ok(status == NVAPI_OK, "Expected status NVAPI_OK, got %d\n", status);
++    ok(disp != NULL, "Expected disp to be non null");
++
++    status = pNvAPI_GetLogicalGPUFromDisplay(NULL, NULL);
++    ok(status == NVAPI_INVALID_POINTER, "Expected status NVAPI_INVALID_POINTER, got %d\n", status);
++
++    status = pNvAPI_GetLogicalGPUFromDisplay(disp, NULL);
++    ok(status == NVAPI_INVALID_POINTER, "Expected status NVAPI_INVALID_POINTER, got %d\n", status);
++
++    status = pNvAPI_GetLogicalGPUFromDisplay((void*)0xdeadbeef, &gpuHandle);
++    ok(status == NVAPI_NVIDIA_DEVICE_NOT_FOUND, "Expected status NVAPI_NVIDIA_DEVICE_NOT_FOUND, got %d\n", status);
++
++    gpuHandle = NULL;
++    status = pNvAPI_GetLogicalGPUFromDisplay(NULL, &gpuHandle);
++    ok(status == NVAPI_OK, "Expected status NVAPI_OK, got %d\n", status);
++    ok(gpuHandle != NULL, "Expected gpuHandle to be non null");
++
++    gpuHandle = NULL;
++    status = pNvAPI_GetLogicalGPUFromDisplay(disp, &gpuHandle);
++    ok(status == NVAPI_OK, "Expected status NVAPI_OK, got %d\n", status);
++    ok(gpuHandle != NULL, "Expected gpuHandle to be non null");
++}
++
+ static IDirect3DDevice9 *create_device(IDirect3D9 *d3d9, HWND focus_window)
+ {
+     D3DPRESENT_PARAMETERS present_parameters = {0};
+@@ -678,6 +723,7 @@ START_TEST( nvapi )
+     test_NvAPI_DISP_GetGDIPrimaryDisplayId();
+     test_NvAPI_EnumNvidiaDisplayHandle();
+     test_NvAPI_SYS_GetDriverAndBranchVersion();
++    test_NvAPI_GetLogicalGPUFromDisplay();
+ 
+     /* d3d9 tests */
+     wc.lpfnWndProc = DefWindowProcA;
+diff --git a/include/nvapi.h b/include/nvapi.h
+index 30c02cd..e52e9b1 100644
+--- a/include/nvapi.h
++++ b/include/nvapi.h
+@@ -29,6 +29,7 @@ typedef unsigned int NvU32;
+ #define NVAPI_OK 0
+ #define NVAPI_ERROR -1
+ #define NVAPI_INVALID_ARGUMENT -5
++#define NVAPI_NVIDIA_DEVICE_NOT_FOUND -6
+ #define NVAPI_END_ENUMERATION -7
+ #define NVAPI_INVALID_HANDLE -8
+ #define NVAPI_INCOMPATIBLE_STRUCT_VERSION -9
+-- 
+1.9.1
+

@@ -105,6 +105,7 @@ patch_enable_all ()
 	enable_msvcp90_basic_string_wchar_dtor="$1"
 	enable_msvcrt_atof_strtod="$1"
 	enable_msvfw32_Image_Size="$1"
+	enable_netprofm_IConnectionPoint="$1"
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_DVD_Read_Size="$1"
 	enable_ntdll_DllRedirects="$1"
@@ -341,6 +342,9 @@ patch_enable ()
 			;;
 		msvfw32-Image_Size)
 			enable_msvfw32_Image_Size="$2"
+			;;
+		netprofm-IConnectionPoint)
+			enable_netprofm_IConnectionPoint="$2"
 			;;
 		ntdll-DOS_Attributes)
 			enable_ntdll_DOS_Attributes="$2"
@@ -1763,6 +1767,22 @@ if test "$enable_msvfw32_Image_Size" -eq 1; then
 	patch_apply msvfw32-Image_Size/0001-msvfw32-Derive-image-size-from-input-image-to-avoid-.patch
 	(
 		echo '+    { "Bruno Jesus", "msvfw32: Derive image size from input image to avoid NULL dereference.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset netprofm-IConnectionPoint
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36408] Child of Light expects FindConnectionPoint to succeed and increase the refcount
+# |
+# | Modified files:
+# |   *	dlls/netprofm/Makefile.in, dlls/netprofm/connectionpoint.c, dlls/netprofm/list.c, dlls/netprofm/netprofm_private.h,
+# | 	dlls/netprofm/tests/list.c, include/netlistmgr.idl
+# |
+if test "$enable_netprofm_IConnectionPoint" -eq 1; then
+	patch_apply netprofm-IConnectionPoint/0001-netprofm-Add-IConnectionPoint-INetworkListManagerEve.patch
+	(
+		echo '+    { "Michael Müller", "netprofm: Add IConnectionPoint/INetworkListManagerEvents stub interface.", 1 },';
 	) >> "$patchlist"
 fi
 

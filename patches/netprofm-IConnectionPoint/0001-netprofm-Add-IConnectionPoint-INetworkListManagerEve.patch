@@ -1,0 +1,340 @@
+From e6440ecead9570620b4aa0e6dda1ac16b5058d6c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Wed, 14 Jan 2015 05:22:21 +0100
+Subject: netprofm: Add IConnectionPoint/INetworkListManagerEvents stub
+ interface.
+
+---
+ dlls/netprofm/Makefile.in        |   1 +
+ dlls/netprofm/connectionpoint.c  | 183 +++++++++++++++++++++++++++++++++++++++
+ dlls/netprofm/list.c             |  15 +++-
+ dlls/netprofm/netprofm_private.h |   3 +
+ dlls/netprofm/tests/list.c       |  28 +++++-
+ include/netlistmgr.idl           |  12 +++
+ 6 files changed, 239 insertions(+), 3 deletions(-)
+ create mode 100644 dlls/netprofm/connectionpoint.c
+
+diff --git a/dlls/netprofm/Makefile.in b/dlls/netprofm/Makefile.in
+index 4dadfb0..cedb7dc 100644
+--- a/dlls/netprofm/Makefile.in
++++ b/dlls/netprofm/Makefile.in
+@@ -2,6 +2,7 @@ MODULE    = netprofm.dll
+ 
+ C_SRCS = \
+ 	list.c \
++	connectionpoint.c \
+ 	main.c
+ 
+ IDL_SRCS = netprofm.idl
+diff --git a/dlls/netprofm/connectionpoint.c b/dlls/netprofm/connectionpoint.c
+new file mode 100644
+index 0000000..b3ff688
+--- /dev/null
++++ b/dlls/netprofm/connectionpoint.c
+@@ -0,0 +1,183 @@
++/*
++ * Copyright 2015 Michael Müller
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#define COBJMACROS
++
++#include "config.h"
++#include <stdarg.h>
++#include "windef.h"
++#include "winbase.h"
++#include "objbase.h"
++#include "ocidl.h"
++#include "netlistmgr.h"
++#include "olectl.h"
++
++#include "wine/debug.h"
++#include "netprofm_private.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(netprofm);
++
++struct connection_point
++{
++    IConnectionPoint IConnectionPoint_iface;
++    IConnectionPointContainer *container;
++    LONG refs;
++    IID iid;
++};
++
++static inline struct connection_point *impl_from_IConnectionPoint(
++    IConnectionPoint *iface )
++{
++    return CONTAINING_RECORD( iface, struct connection_point, IConnectionPoint_iface );
++}
++
++static ULONG WINAPI connection_point_AddRef(
++    IConnectionPoint *iface )
++{
++    struct connection_point *cp = impl_from_IConnectionPoint( iface );
++    return InterlockedIncrement( &cp->refs );
++}
++
++static ULONG WINAPI connection_point_Release(
++    IConnectionPoint *iface )
++{
++    struct connection_point *cp = impl_from_IConnectionPoint( iface );
++    LONG refs = InterlockedDecrement( &cp->refs );
++    if (!refs)
++    {
++        TRACE( "destroying %p\n", cp );
++        IConnectionPointContainer_Release( cp->container );
++        HeapFree( GetProcessHeap(), 0, cp );
++    }
++    return refs;
++}
++
++static HRESULT WINAPI connection_point_QueryInterface(
++    IConnectionPoint *iface,
++    REFIID riid,
++    void **obj )
++{
++    struct connection_point *cp = impl_from_IConnectionPoint( iface );
++    TRACE( "%p, %s, %p\n", cp, debugstr_guid(riid), obj );
++
++    if (IsEqualGUID( riid, &IID_IConnectionPoint ) ||
++        IsEqualGUID( riid, &IID_IUnknown ))
++    {
++        *obj = iface;
++    }
++    else
++    {
++        FIXME( "interface %s not implemented\n", debugstr_guid(riid) );
++        return E_NOINTERFACE;
++    }
++    IConnectionPoint_AddRef( iface );
++    return S_OK;
++}
++
++static HRESULT WINAPI connection_point_GetConnectionInterface(
++    IConnectionPoint *iface,
++    IID *pIID )
++{
++    struct connection_point *cp = impl_from_IConnectionPoint( iface );
++    TRACE( "%p, %p\n", cp, pIID );
++
++    if (!pIID)
++        return E_POINTER;
++
++    memcpy(pIID, &cp->iid, sizeof(IID));
++    return S_OK;
++}
++
++static HRESULT WINAPI connection_point_GetConnectionPointContainer(
++    IConnectionPoint *iface,
++    IConnectionPointContainer **ppCPC )
++{
++    struct connection_point *cp = impl_from_IConnectionPoint( iface );
++    TRACE( "%p, %p\n", cp, ppCPC );
++
++    if (!ppCPC)
++        return E_POINTER;
++
++    IConnectionPointContainer_AddRef(cp->container);
++    *ppCPC = cp->container;
++    return S_OK;
++}
++
++static HRESULT WINAPI connection_point_Advise(
++    IConnectionPoint *iface,
++    IUnknown *pUnkSink,
++    DWORD *pdwCookie )
++{
++    struct connection_point *cp = impl_from_IConnectionPoint( iface );
++    FIXME( "%p, %p, %p - stub\n", cp, pUnkSink, pdwCookie);
++
++    if (!pUnkSink || !pdwCookie)
++        return E_POINTER;
++
++    return CONNECT_E_CANNOTCONNECT;
++}
++
++static HRESULT WINAPI connection_point_Unadvise(
++    IConnectionPoint *iface,
++    DWORD dwCookie )
++{
++    struct connection_point *cp = impl_from_IConnectionPoint( iface );
++    FIXME( "%p, %d - stub\n", cp, dwCookie);
++
++    return E_POINTER;
++}
++
++static HRESULT WINAPI connection_point_EnumConnections(
++    IConnectionPoint *iface,
++    IEnumConnections **ppEnum )
++{
++    struct connection_point *cp = impl_from_IConnectionPoint( iface );
++    FIXME( "%p, %p - stub\n", cp, ppEnum);
++
++    return E_NOTIMPL;
++}
++
++static const IConnectionPointVtbl connection_point_vtbl =
++{
++    connection_point_QueryInterface,
++    connection_point_AddRef,
++    connection_point_Release,
++    connection_point_GetConnectionInterface,
++    connection_point_GetConnectionPointContainer,
++    connection_point_Advise,
++    connection_point_Unadvise,
++    connection_point_EnumConnections
++};
++
++HRESULT connection_point_create( IConnectionPoint **obj, REFIID riid, IConnectionPointContainer *container )
++{
++    struct connection_point *cp;
++    TRACE( "%p, %s, %p\n", obj, debugstr_guid(riid), container );
++
++    if (!(cp = HeapAlloc( GetProcessHeap(), 0, sizeof(*cp) ))) return E_OUTOFMEMORY;
++    cp->IConnectionPoint_iface.lpVtbl = &connection_point_vtbl;
++    cp->container = container;
++    cp->refs = 1;
++
++    memcpy(&cp->iid, riid, sizeof(IID));
++    IConnectionPointContainer_AddRef(container);
++
++    *obj = &cp->IConnectionPoint_iface;
++    TRACE( "returning iface %p\n", *obj );
++    return S_OK;
++}
+diff --git a/dlls/netprofm/list.c b/dlls/netprofm/list.c
+index b9ab1cc..2f31a1f 100644
+--- a/dlls/netprofm/list.c
++++ b/dlls/netprofm/list.c
+@@ -328,8 +328,19 @@ static HRESULT WINAPI ConnectionPointContainer_FindConnectionPoint(IConnectionPo
+         REFIID riid, IConnectionPoint **cp)
+ {
+     struct list_manager *This = impl_from_IConnectionPointContainer( iface );
+-    FIXME("(%p)->(%s %p): stub\n", This, debugstr_guid(riid), cp);
+-    return E_NOTIMPL;
++
++    TRACE("%p, %s, %p\n", This, debugstr_guid(riid), cp);
++
++    if (!riid || !cp)
++        return E_POINTER;
++
++    if (IsEqualGUID( riid, &IID_INetworkListManagerEvents ))
++        return connection_point_create( cp, riid, iface );
++
++    FIXME( "interface %s not implemented\n", debugstr_guid(riid) );
++
++    *cp = NULL;
++    return E_NOINTERFACE;
+ }
+ 
+ static const struct IConnectionPointContainerVtbl cpc_vtbl =
+diff --git a/dlls/netprofm/netprofm_private.h b/dlls/netprofm/netprofm_private.h
+index 5e863c4..d1de3d7 100644
+--- a/dlls/netprofm/netprofm_private.h
++++ b/dlls/netprofm/netprofm_private.h
+@@ -15,5 +15,8 @@
+  * License along with this library; if not, write to the Free Software
+  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+  */
++#include "ocidl.h"
+ 
+ HRESULT list_manager_create(void **) DECLSPEC_HIDDEN;
++HRESULT connection_point_create( IConnectionPoint **obj, REFIID riid,
++                                 IConnectionPointContainer *container ) DECLSPEC_HIDDEN;
+\ No newline at end of file
+diff --git a/dlls/netprofm/tests/list.c b/dlls/netprofm/tests/list.c
+index ce4891a..91b4cf6 100644
+--- a/dlls/netprofm/tests/list.c
++++ b/dlls/netprofm/tests/list.c
+@@ -27,12 +27,15 @@
+ 
+ static void test_INetworkListManager( void )
+ {
+-    IConnectionPointContainer *cpc;
++    IConnectionPointContainer *cpc, *cpc2;
+     INetworkListManager *mgr;
+     INetworkCostManager *cost_mgr;
+     NLM_CONNECTIVITY connectivity;
+     VARIANT_BOOL connected;
++    IConnectionPoint *pt;
+     HRESULT hr;
++    ULONG ref1, ref2;
++    IID iid;
+ 
+     hr = CoCreateInstance( &CLSID_NetworkListManager, NULL, CLSCTX_INPROC_SERVER,
+                            &IID_INetworkListManager, (void **)&mgr );
+@@ -78,8 +81,31 @@ static void test_INetworkListManager( void )
+ 
+     hr = INetworkListManager_QueryInterface( mgr, &IID_IConnectionPointContainer, (void**)&cpc );
+     ok( hr == S_OK, "got %08x\n", hr );
++
++    ref1 = IConnectionPointContainer_AddRef( cpc );
++
++    hr = IConnectionPointContainer_FindConnectionPoint( cpc, &IID_INetworkListManagerEvents, &pt );
++    ok( hr == S_OK, "got %08x\n", hr );
++
++    ref2 = IConnectionPointContainer_AddRef( cpc );
++    ok( ref2 == ref1 + 2, "Expected refcount %d, got %d\n", ref1 + 2, ref2 );
++
++    IConnectionPointContainer_Release( cpc );
+     IConnectionPointContainer_Release( cpc );
+ 
++    hr = IConnectionPoint_GetConnectionPointContainer( pt, &cpc2 );
++    ok( hr == S_OK, "got %08x\n", hr );
++    ok( cpc == cpc2, "Expected cpc == cpc2, but got %p != %p\n", cpc, cpc2 );
++    IConnectionPointContainer_Release( cpc2 );
++
++    memset( &iid, 0, sizeof(iid) );
++    hr = IConnectionPoint_GetConnectionInterface( pt, &iid );
++    ok( hr == S_OK, "got %08x\n", hr );
++    ok( !memcmp( &iid, &IID_INetworkListManagerEvents, sizeof(IID) ),
++        "Expected iid to be IID_INetworkListManagerEvents\n" );
++
++    IConnectionPoint_Release( pt );
++    IConnectionPointContainer_Release( cpc );
+     INetworkListManager_Release( mgr );
+ }
+ 
+diff --git a/include/netlistmgr.idl b/include/netlistmgr.idl
+index 5be6e28..5152668 100644
+--- a/include/netlistmgr.idl
++++ b/include/netlistmgr.idl
+@@ -29,6 +29,7 @@ interface INetwork;
+ interface INetworkConnection;
+ interface INetworkCostManager;
+ interface INetworkListManager;
++interface INetworkListManagerEvents;
+ 
+ typedef [v1_enum] enum NLM_CONNECTIVITY
+ {
+@@ -145,3 +146,14 @@ interface INetworkListManager : IDispatch
+     uuid(dcb00c01-570f-4a9b-8d69-199fdba5723b)
+ ]
+ coclass NetworkListManager { interface INetworkListManager; }
++
++[
++    object,
++    oleautomation,
++    pointer_default(unique),
++    uuid(DCB00001-570F-4A9B-8D69-199FDBA5723B)
++]
++interface INetworkListManagerEvents : IUnknown
++{
++    HRESULT ConnectivityChanged ([in] NLM_CONNECTIVITY newConnectivity);
++}
+-- 
+1.9.1
+

@@ -2194,6 +2194,7 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 	patch_apply nvapi-Stub_DLL/0013-nvapi-tests-Use-structure-to-list-imports.patch
 	patch_apply nvapi-Stub_DLL/0014-nvapi-Add-stub-for-NvAPI_GetLogicalGPUFromDisplay.patch
 	patch_apply nvapi-Stub_DLL/0015-nvapi-Add-stub-for-NvAPI_D3D_GetObjectHandleForResou.patch
+	patch_apply nvapi-Stub_DLL/0016-nvapi-Add-stub-for-NvAPI_D3D9_RegisterResource.patch
 	(
 		echo '+    { "Michael Müller", "nvapi: First implementation.", 1 },';
 		echo '+    { "Michael Müller", "nvapi: Add stubs for NvAPI_EnumLogicalGPUs and undocumented equivalent.", 1 },';
@@ -2210,6 +2211,7 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 		echo '+    { "Michael Müller", "nvapi/tests: Use structure to list imports.", 1 },';
 		echo '+    { "Michael Müller", "nvapi: Add stub for NvAPI_GetLogicalGPUFromDisplay.", 1 },';
 		echo '+    { "Michael Müller", "nvapi: Add stub for NvAPI_D3D_GetObjectHandleForResource.", 1 },';
+		echo '+    { "Michael Müller", "nvapi: Add stub for NvAPI_D3D9_RegisterResource.", 1 },';
 	) >> "$patchlist"
 fi
 

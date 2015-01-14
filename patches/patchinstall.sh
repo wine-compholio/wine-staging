@@ -182,7 +182,6 @@ patch_enable_all ()
 	enable_winex11_Window_Groups="$1"
 	enable_winex11_XEMBED="$1"
 	enable_winex11_wglShareLists="$1"
-	enable_wininet_FtpFindFirstFile="$1"
 	enable_wininet_encoding="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_Connect_Time="$1"
@@ -573,9 +572,6 @@ patch_enable ()
 			;;
 		winex11-wglShareLists)
 			enable_winex11_wglShareLists="$2"
-			;;
-		wininet-FtpFindFirstFile)
-			enable_wininet_FtpFindFirstFile="$2"
 			;;
 		wininet-encoding)
 			enable_wininet_encoding="$2"
@@ -3444,21 +3440,6 @@ if test "$enable_winex11_wglShareLists" -eq 1; then
 	patch_apply winex11-wglShareLists/0001-winex11.drv-Only-warn-about-used-contexts-in-wglShar.patch
 	(
 		echo '+    { "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wininet-FtpFindFirstFile
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#16526] Fix handling of subdirectory in FtpFindFirstFile
-# |
-# | Modified files:
-# |   *	dlls/wininet/ftp.c, dlls/wininet/tests/ftp.c
-# |
-if test "$enable_wininet_FtpFindFirstFile" -eq 1; then
-	patch_apply wininet-FtpFindFirstFile/0001-wininet-Fix-handling-of-subdirectory-in-FtpFindFirst.patch
-	(
-		echo '+    { "Sebastian Lackner", "wininet: Fix handling of subdirectory in FtpFindFirstFile.", 1 },';
 	) >> "$patchlist"
 fi
 

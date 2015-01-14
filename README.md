@@ -89,7 +89,7 @@ Included bug fixes and improvements
 * Fix gray screen on startup introduced by pixelformat changes. ([Wine Bug #35975](https://bugs.winehq.org/show_bug.cgi?id=35975))
 * Fix handling of empty section and key name for profile files. ([Wine Bug #8036](https://bugs.winehq.org/show_bug.cgi?id=8036))
 * Fix handling of invert_y in DrawTextExW ([Wine Bug #22109](https://bugs.winehq.org/show_bug.cgi?id=22109))
-* Fix handling of subdirectory in FtpFindFirstFile ([Wine Bug #16526](https://bugs.winehq.org/show_bug.cgi?id=16526))
+* ~~Fix handling of subdirectory in FtpFindFirstFile~~ ([Wine Bug #16526](https://bugs.winehq.org/show_bug.cgi?id=16526))
 * Fix issues when driver dispatch routine returns different status codes ([Wine Bug #30155](https://bugs.winehq.org/show_bug.cgi?id=30155))
 * Fix issues with dragging layers between images in Adobe Photoshop 7.0 ([Wine Bug #12007](https://bugs.winehq.org/show_bug.cgi?id=12007))
 * Fix missing video introduced by pixelformat changes. ([Wine Bug #36900](https://bugs.winehq.org/show_bug.cgi?id=36900))

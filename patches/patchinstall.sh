@@ -2224,7 +2224,7 @@ fi
 if test "$enable_nvcuvid_CUDA_Video_Support" -eq 1; then
 	patch_apply nvcuvid-CUDA_Video_Support/0001-nvcuvid-First-implementation.patch
 	(
-		echo '+    { "Michael Müller", "nvcuvid: First implementation.", 1 },';
+		echo '+    { "Michael Müller", "nvcuvid: First implementation.", 2 },';
 	) >> "$patchlist"
 fi
 

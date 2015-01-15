@@ -173,6 +173,7 @@ patch_enable_all ()
 	enable_wined3d_Color_Key="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
+	enable_wined3d_TextureAllocation="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
 	enable_winepulse_PulseAudio_Support="$1"
@@ -547,6 +548,9 @@ patch_enable ()
 		wined3d-Revert_PixelFormat)
 			enable_wined3d_Revert_PixelFormat="$2"
 			;;
+		wined3d-TextureAllocation)
+			enable_wined3d_TextureAllocation="$2"
+			;;
 		winedevice-Fix_Relocation)
 			enable_winedevice_Fix_Relocation="$2"
 			;;
@@ -744,6 +748,13 @@ else
 	abort "Selected backend $backend not supported."
 fi
 
+
+if test "$enable_wined3d_TextureAllocation" -eq 1; then
+	if test "$enable_wined3d_CSMT_Main" -gt 1; then
+		abort "Patchset wined3d-CSMT_Main disabled, but wined3d-TextureAllocation depends on that."
+	fi
+	enable_wined3d_CSMT_Main=1
+fi
 
 if test "$enable_winecfg_Staging" -eq 1; then
 	if test "$enable_ntdll_DllRedirects" -gt 1; then
@@ -3241,6 +3252,23 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-TextureAllocation
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34480] Fix multiple games crash during attempt to write past the end of mip level, expecting contiguous mipchain
+# | 	allocation (League of Legends, Warlock Master of the Arcane)
+# |
+# | Modified files:
+# |   *	dlls/d3d9/tests/device.c, dlls/wined3d/resource.c, dlls/wined3d/texture.c, dlls/wined3d/utils.c,
+# | 	dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_TextureAllocation" -eq 1; then
+	patch_apply wined3d-TextureAllocation/0001-Allocate-memory-for-textures-in-texture-resource.patch
+	(
+		echo '+    { "Riccardo (C10uD)", "Allocate memory for textures in texture->resource.", 1 },';
 	) >> "$patchlist"
 fi
 

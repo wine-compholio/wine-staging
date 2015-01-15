@@ -165,6 +165,7 @@ patch_enable_all ()
 	enable_user32_Mouse_Message_Hwnd="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_WndProc="$1"
+	enable_windowscodecs_TGA_Decoder="$1"
 	enable_wineboot_HKEY_DYN_DATA="$1"
 	enable_winebuild_LinkerVersion="$1"
 	enable_winecfg_Staging="$1"
@@ -521,6 +522,9 @@ patch_enable ()
 			;;
 		user32-WndProc)
 			enable_user32_WndProc="$2"
+			;;
+		windowscodecs-TGA_Decoder)
+			enable_windowscodecs_TGA_Decoder="$2"
 			;;
 		wineboot-HKEY_DYN_DATA)
 			enable_wineboot_HKEY_DYN_DATA="$2"
@@ -2804,6 +2808,18 @@ if test "$enable_user32_WndProc" -eq 1; then
 	patch_apply user32-WndProc/0001-user32-Increase-MAX_WINPROCS-to-16384.patch
 	(
 		echo '+    { "Sebastian Lackner", "user32: Increase MAX_WINPROCS to 16384.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windowscodecs-TGA_Decoder
+# |
+# | Modified files:
+# |   *	dlls/windowscodecs/tgaformat.c
+# |
+if test "$enable_windowscodecs_TGA_Decoder" -eq 1; then
+	patch_apply windowscodecs-TGA_Decoder/0001-windowscodecs-Fix-init-of-LONGLONG-variable-with-a-n.patch
+	(
+		echo '+    { "Christian Costa", "windowscodecs: Fix init of LONGLONG variable with a negative value in TGA decoder.", 1 },';
 	) >> "$patchlist"
 fi
 

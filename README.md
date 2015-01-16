@@ -47,7 +47,7 @@ Included bug fixes and improvements
 
 **Bugs fixed in Wine Staging 1.7.34-1 [135]:**
 
-* ATL IOCS data should not be stored in GWLP_USERDATA ([Wine Bug #21767](https://bugs.winehq.org/show_bug.cgi?id=21767))
+* ~~ATL IOCS data should not be stored in GWLP_USERDATA~~ ([Wine Bug #21767](https://bugs.winehq.org/show_bug.cgi?id=21767))
 * Add Dynamic DST exceptions for Israel Standard Time ([Wine Bug #36374](https://bugs.winehq.org/show_bug.cgi?id=36374))
 * Add default ACLs for user shell folders
 * Add nvapi stubs required for GPU PhysX support
@@ -65,7 +65,7 @@ Included bug fixes and improvements
 * Avoid race-conditions of async WSARecv() operations with write watches.
 * Basic support for CUDA
 * Black & White needs DXTn software decoding support ([Wine Bug #14939](https://bugs.winehq.org/show_bug.cgi?id=14939))
-* Correctly treat '.' when checking for empty directories ([Wine Bug #26272](https://bugs.winehq.org/show_bug.cgi?id=26272))
+* ~~Correctly treat '.' when checking for empty directories~~ ([Wine Bug #26272](https://bugs.winehq.org/show_bug.cgi?id=26272))
 * CreateProcess does not prioritize the working directory over the system search path ([Wine Bug #23934](https://bugs.winehq.org/show_bug.cgi?id=23934))
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](https://bugs.winehq.org/show_bug.cgi?id=33770))
 * Do not fail when a used context is passed to wglShareLists ([Wine Bug #11436](https://bugs.winehq.org/show_bug.cgi?id=11436))
@@ -112,7 +112,7 @@ Included bug fixes and improvements
 * Implement an Arial replacement font ([Wine Bug #32323](https://bugs.winehq.org/show_bug.cgi?id=32323))
 * Implement exclusive mode in PulseAudio backend ([Wine Bug #37042](https://bugs.winehq.org/show_bug.cgi?id=37042))
 * Improvement for heap allocation performance
-* Initialize irp.Tail.Overlay.OriginalFileObject with stub file object ([Wine Bug #37537](https://bugs.winehq.org/show_bug.cgi?id=37537))
+* ~~Initialize irp.Tail.Overlay.OriginalFileObject with stub file object~~ ([Wine Bug #37537](https://bugs.winehq.org/show_bug.cgi?id=37537))
 * Lego Stunt Rally requires DXTn software de/encoding support ([Wine Bug #25486](https://bugs.winehq.org/show_bug.cgi?id=25486))
 * Limit cross thread access to ImmSet* functions ([Wine Bug #35361](https://bugs.winehq.org/show_bug.cgi?id=35361))
 * Lockfree algorithm for filedescriptor cache (improves file access speed)

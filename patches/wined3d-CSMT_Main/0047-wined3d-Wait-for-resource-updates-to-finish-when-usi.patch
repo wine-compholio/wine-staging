@@ -1,4 +1,4 @@
-From 8eb60915d38e68c45223eafa534452fc4ffeb1fe Mon Sep 17 00:00:00 2001
+From ff3ebefd7ff7834c3c1a7c9b7998592929e40714 Mon Sep 17 00:00:00 2001
 From: Henri Verbeet <hverbeet@codeweavers.com>
 Date: Sat, 8 Dec 2012 19:28:54 +0100
 Subject: wined3d: Wait for resource updates to finish when using the
@@ -17,7 +17,7 @@ then it's probably useful for debugging.
  6 files changed, 40 insertions(+), 13 deletions(-)
 
 diff --git a/dlls/wined3d/arb_program_shader.c b/dlls/wined3d/arb_program_shader.c
-index 2875fe1..ca456ad 100644
+index 9f29aa4..59c3409 100644
 --- a/dlls/wined3d/arb_program_shader.c
 +++ b/dlls/wined3d/arb_program_shader.c
 @@ -7679,7 +7679,9 @@ HRESULT arbfp_blit_surface(struct wined3d_device *device, DWORD filter,
@@ -32,13 +32,13 @@ index 2875fe1..ca456ad 100644
              && (dst_surface->container->swapchain->front_buffer == dst_surface->container)))
          context->gl_info->gl_ops.gl.p_glFlush(); /* Flush to ensure ordering across contexts. */
 diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
-index f335dfc..abad8b8 100644
+index 3de580e..41bc6f0 100644
 --- a/dlls/wined3d/buffer.c
 +++ b/dlls/wined3d/buffer.c
 @@ -1100,7 +1100,9 @@ void CDECL wined3d_buffer_unmap(struct wined3d_buffer *buffer)
          }
  
-         GL_EXTCALL(glUnmapBufferARB(buffer->buffer_type_hint));
+         GL_EXTCALL(glUnmapBuffer(buffer->buffer_type_hint));
 -        if (wined3d_settings.strict_draw_ordering)
 +        if (wined3d_settings.cs_multithreaded)
 +            gl_info->gl_ops.gl.p_glFinish();
@@ -47,7 +47,7 @@ index f335dfc..abad8b8 100644
          context_release(context);
  
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 92478d7..08422ad 100644
+index e33d0c0..b9935e0 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
 @@ -463,7 +463,9 @@ void device_clear_render_targets(struct wined3d_device *device, UINT rt_count, c
@@ -89,7 +89,7 @@ index 98261f9..d3a9e03 100644
  
      context_release(context);
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index 642210d..8fa2c9f 100644
+index 1aafda1..caf9618 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
 @@ -687,7 +687,9 @@ static void surface_depth_blt_fbo(const struct wined3d_device *device,
@@ -114,8 +114,8 @@ index 642210d..8fa2c9f 100644
              || (dst_location == WINED3D_LOCATION_DRAWABLE
              && dst_surface->container->swapchain->front_buffer == dst_surface->container))
          gl_info->gl_ops.gl.p_glFlush();
-@@ -1393,7 +1397,9 @@ static void surface_upload_data(struct wined3d_surface *surface, const struct wi
-         checkGLcall("glBindBufferARB");
+@@ -1393,7 +1397,9 @@ void wined3d_surface_upload_data(struct wined3d_surface *surface, const struct w
+         checkGLcall("glBindBuffer");
      }
  
 -    if (wined3d_settings.strict_draw_ordering)
@@ -125,7 +125,7 @@ index 642210d..8fa2c9f 100644
          gl_info->gl_ops.gl.p_glFlush();
  
      if (gl_info->quirks & WINED3D_QUIRK_FBO_TEX_UPDATE)
-@@ -3183,7 +3189,9 @@ static void fb_copy_to_texture_hwstretch(struct wined3d_surface *dst_surface, st
+@@ -3337,7 +3343,9 @@ static void fb_copy_to_texture_hwstretch(struct wined3d_surface *dst_surface, st
          checkGLcall("glDeleteTextures(1, &backup)");
      }
  
@@ -136,7 +136,7 @@ index 642210d..8fa2c9f 100644
          gl_info->gl_ops.gl.p_glFlush(); /* Flush to ensure ordering across contexts. */
  
      context_release(context);
-@@ -3298,7 +3306,9 @@ static void surface_blt_to_drawable(const struct wined3d_device *device,
+@@ -3452,7 +3460,9 @@ static void surface_blt_to_drawable(const struct wined3d_device *device,
      /* Leave the opengl state valid for blitting */
      device->blitter->unset_shader(context->gl_info);
  
@@ -147,7 +147,7 @@ index 642210d..8fa2c9f 100644
              || (dst_surface->container->swapchain
              && dst_surface->container->swapchain->front_buffer == dst_surface->container))
          gl_info->gl_ops.gl.p_glFlush(); /* Flush to ensure ordering across contexts. */
-@@ -3719,7 +3729,9 @@ void surface_load_ds_location(struct wined3d_surface *surface, struct wined3d_co
+@@ -3873,7 +3883,9 @@ void surface_load_ds_location(struct wined3d_surface *surface, struct wined3d_co
  
          context_invalidate_state(context, STATE_FRAMEBUFFER);
  
@@ -158,7 +158,7 @@ index 642210d..8fa2c9f 100644
              gl_info->gl_ops.gl.p_glFlush(); /* Flush to ensure ordering across contexts. */
      }
      else if (location == WINED3D_LOCATION_DRAWABLE)
-@@ -3735,7 +3747,9 @@ void surface_load_ds_location(struct wined3d_surface *surface, struct wined3d_co
+@@ -3889,7 +3901,9 @@ void surface_load_ds_location(struct wined3d_surface *surface, struct wined3d_co
  
          context_invalidate_state(context, STATE_FRAMEBUFFER);
  
@@ -186,5 +186,5 @@ index ed2964e..60504ef 100644
      /* call wglSwapBuffers through the gl table to avoid confusing the Steam overlay */
      gl_info->gl_ops.wgl.p_wglSwapBuffers(context->hdc); /* TODO: cycle through the swapchain buffers */
 -- 
-2.1.3
+2.2.1
 

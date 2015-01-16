@@ -1,4 +1,4 @@
-From 7690fa9323a0c910cb788ae09f474657d298acf6 Mon Sep 17 00:00:00 2001
+From 4f37cdd5e369a388229874ba94a0390e809f3aae Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Fri, 30 Aug 2013 17:00:35 +0200
 Subject: wined3d: Wrap GL BOs in a structure
@@ -14,7 +14,7 @@ them for DISCARD maps.
  5 files changed, 86 insertions(+), 28 deletions(-)
 
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 6a5fc5a..bd53a1f 100644
+index d051974..3aec1dd 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
 @@ -4981,3 +4981,56 @@ LRESULT device_process_message(struct wined3d_device *device, HWND window, BOOL
@@ -41,12 +41,12 @@ index 6a5fc5a..bd53a1f 100644
 +
 +    gl_info = context->gl_info;
 +
-+    GL_EXTCALL(glGenBuffersARB(1, &ret->name));
++    GL_EXTCALL(glGenBuffers(1, &ret->name));
 +    if (type_hint == GL_ELEMENT_ARRAY_BUFFER_ARB)
 +        context_invalidate_state(context, STATE_INDEXBUFFER);
-+    GL_EXTCALL(glBindBufferARB(type_hint, ret->name));
-+    GL_EXTCALL(glBufferDataARB(type_hint, size, NULL, gl_usage));
-+    GL_EXTCALL(glBindBufferARB(type_hint, 0));
++    GL_EXTCALL(glBindBuffer(type_hint, ret->name));
++    GL_EXTCALL(glBufferData(type_hint, size, NULL, gl_usage));
++    GL_EXTCALL(glBindBuffer(type_hint, 0));
 +    checkGLcall("Create buffer object");
 +
 +    TRACE("Successfully created and set up buffer %u\n", ret->name);
@@ -60,8 +60,8 @@ index 6a5fc5a..bd53a1f 100644
 +    const struct wined3d_gl_info *gl_info = context->gl_info;
 +    TRACE("device %p, bo %p, GL bo %u\n", device, bo, bo->name);
 +
-+    GL_EXTCALL(glDeleteBuffersARB(1, &bo->name));
-+    checkGLcall("glDeleteBuffersARB");
++    GL_EXTCALL(glDeleteBuffers(1, &bo->name));
++    checkGLcall("glDeleteBuffers");
 +
 +    HeapFree(GetProcessHeap(), 0, bo);
 +}
@@ -75,7 +75,7 @@ index 6a5fc5a..bd53a1f 100644
 +    wined3d_device_destroy_bo(device, context, bo);
 +}
 diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
-index 788c8e6..ba4b85b 100644
+index 2dc25bf..8fb95a1 100644
 --- a/dlls/wined3d/resource.c
 +++ b/dlls/wined3d/resource.c
 @@ -145,12 +145,10 @@ HRESULT resource_init(struct wined3d_resource *resource, struct wined3d_device *
@@ -85,8 +85,8 @@ index 788c8e6..ba4b85b 100644
 -    const struct wined3d_gl_info *gl_info = context->gl_info;
  
 -    TRACE("Deleting GL buffer %u belonging to resource %p.\n", resource->buffer_object, resource);
--    GL_EXTCALL(glDeleteBuffersARB(1, &resource->buffer_object));
--    checkGLcall("glDeleteBuffersARB");
+-    GL_EXTCALL(glDeleteBuffers(1, &resource->buffer_object));
+-    checkGLcall("glDeleteBuffers");
 -    resource->buffer_object = 0;
 +    wined3d_device_release_bo(resource->device, resource->buffer, context);
 +    resource->buffer = NULL;
@@ -125,8 +125,8 @@ index 788c8e6..ba4b85b 100644
      {
          case WINED3D_LOCATION_BUFFER:
              gl_info = context->gl_info;
--            GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, resource->buffer_object));
-+            GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, resource->buffer->name));
+-            GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, resource->buffer_object));
++            GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, resource->buffer->name));
  
              if (gl_info->supported[ARB_MAP_BUFFER_RANGE])
              {
@@ -134,10 +134,10 @@ index 788c8e6..ba4b85b 100644
      {
          case WINED3D_LOCATION_BUFFER:
              gl_info = context->gl_info;
--            GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, resource->buffer_object));
-+            GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, resource->buffer->name));
-             GL_EXTCALL(glUnmapBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB));
-             GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0));
+-            GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, resource->buffer_object));
++            GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, resource->buffer->name));
+             GL_EXTCALL(glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER));
+             GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
              checkGLcall("Unmap GL buffer");
 @@ -598,20 +596,14 @@ void wined3d_resource_release_map_ptr(const struct wined3d_resource *resource,
  }
@@ -152,21 +152,21 @@ index 788c8e6..ba4b85b 100644
 +    if (resource->buffer)
          return;
  
--    GL_EXTCALL(glGenBuffersARB(1, &resource->buffer_object));
--    GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, resource->buffer_object));
--    GL_EXTCALL(glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, resource->size, NULL, GL_STREAM_DRAW_ARB));
--    GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0));
+-    GL_EXTCALL(glGenBuffers(1, &resource->buffer_object));
+-    GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, resource->buffer_object));
+-    GL_EXTCALL(glBufferData(GL_PIXEL_UNPACK_BUFFER, resource->size, NULL, GL_STREAM_DRAW));
+-    GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
 -    checkGLcall("Create GL buffer");
 -
 -    TRACE("Created GL buffer %u for resource %p.\n", resource->buffer_object, resource);
 +    resource->buffer = wined3d_device_get_bo(resource->device, resource->size,
-+            GL_STREAM_DRAW_ARB, GL_PIXEL_UNPACK_BUFFER_ARB, context);
++            GL_STREAM_DRAW, GL_PIXEL_UNPACK_BUFFER, context);
 +    TRACE("Created GL buffer %u for resource %p.\n", resource->buffer->name, resource);
  }
  
  BOOL wined3d_resource_prepare_system_memory(struct wined3d_resource *resource)
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index d093744..4d8dd01 100644
+index 1392745..90fa582 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
 @@ -48,7 +48,7 @@ static void surface_cleanup(struct wined3d_surface *surface)
@@ -197,7 +197,7 @@ index d093744..4d8dd01 100644
          TRACE("Removing the pbo attached to surface %p.\n", surface);
  
 diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
-index 53d73e3..7b040f0 100644
+index 6b41ca1..28985a4 100644
 --- a/dlls/wined3d/volume.c
 +++ b/dlls/wined3d/volume.c
 @@ -216,7 +216,7 @@ static void wined3d_volume_load_location(struct wined3d_resource *resource,

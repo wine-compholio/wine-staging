@@ -60,7 +60,6 @@ patch_enable_all ()
 	enable_Miscellaneous="$1"
 	enable_Pipelight="$1"
 	enable_Staging="$1"
-	enable_atl_IOCS_Property="$1"
 	enable_comctl32_LoadIconMetric="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_d3d9_Surface_Refcount="$1"
@@ -128,7 +127,6 @@ patch_enable_all ()
 	enable_ntdll_WinSqm="$1"
 	enable_ntoskrnl_Emulator="$1"
 	enable_ntoskrnl_Irp_Status="$1"
-	enable_ntoskrnl_Stub_FileObject="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
@@ -153,7 +151,6 @@ patch_enable_all ()
 	enable_shell32_RunDLL_CallEntry16="$1"
 	enable_shell32_SHCreateSessionKey="$1"
 	enable_shell32_SHFileOperation="$1"
-	enable_shlwapi_PathIsDirectoryEmptyW="$1"
 	enable_shlwapi_UrlCombine="$1"
 	enable_slc_SLGetWindowsInformation="$1"
 	enable_urlmon_CoInternetSetFeatureEnabled="$1"
@@ -207,9 +204,6 @@ patch_enable ()
 			;;
 		Staging)
 			enable_Staging="$2"
-			;;
-		atl-IOCS_Property)
-			enable_atl_IOCS_Property="$2"
 			;;
 		comctl32-LoadIconMetric)
 			enable_comctl32_LoadIconMetric="$2"
@@ -412,9 +406,6 @@ patch_enable ()
 		ntoskrnl-Irp_Status)
 			enable_ntoskrnl_Irp_Status="$2"
 			;;
-		ntoskrnl-Stub_FileObject)
-			enable_ntoskrnl_Stub_FileObject="$2"
-			;;
 		nvapi-Stub_DLL)
 			enable_nvapi_Stub_DLL="$2"
 			;;
@@ -486,9 +477,6 @@ patch_enable ()
 			;;
 		shell32-SHFileOperation)
 			enable_shell32_SHFileOperation="$2"
-			;;
-		shlwapi-PathIsDirectoryEmptyW)
-			enable_shlwapi_PathIsDirectoryEmptyW="$2"
 			;;
 		shlwapi-UrlCombine)
 			enable_shlwapi_UrlCombine="$2"
@@ -1030,21 +1018,6 @@ if test "$enable_Staging" -eq 1; then
 		echo '+    { "Sebastian Lackner", "winelib: Append '\''(Staging)'\'' at the end of the version string.", 1 },';
 		echo '+    { "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list.", 1 },';
 		echo '+    { "Michael Müller", "loader: Add commandline option --check-libs.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset atl-IOCS_Property
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#21767] ATL IOCS data should not be stored in GWLP_USERDATA
-# |
-# | Modified files:
-# |   *	dlls/atl/atl_ax.c
-# |
-if test "$enable_atl_IOCS_Property" -eq 1; then
-	patch_apply atl-IOCS_Property/0001-atl-Don-t-use-GWLP_USERDATA-to-store-IOCS-to-avoid-c.patch
-	(
-		echo '+    { "Qian Hong", "atl: Don'\''t use GWLP_USERDATA to store IOCS to avoid conflict with Apps.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2172,21 +2145,6 @@ if test "$enable_ntoskrnl_Irp_Status" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntoskrnl-Stub_FileObject
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37537] Initialize irp.Tail.Overlay.OriginalFileObject with stub file object
-# |
-# | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c
-# |
-if test "$enable_ntoskrnl_Stub_FileObject" -eq 1; then
-	patch_apply ntoskrnl-Stub_FileObject/0001-ntoskrnl-Initialize-irp.Tail.Overlay.OriginalFileObj.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntoskrnl: Initialize irp.Tail.Overlay.OriginalFileObject with stub file object.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset nvcuda-CUDA_Support
 # |
 # | Modified files:
@@ -2623,21 +2581,6 @@ if test "$enable_shell32_SHFileOperation" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset shlwapi-PathIsDirectoryEmptyW
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#26272] Correctly treat '.' when checking for empty directories
-# |
-# | Modified files:
-# |   *	dlls/shlwapi/path.c
-# |
-if test "$enable_shlwapi_PathIsDirectoryEmptyW" -eq 1; then
-	patch_apply shlwapi-PathIsDirectoryEmptyW/0001-shlwapi-Correctly-treat-.-when-enumerating-files-in-.patch
-	(
-		echo '+    { "Michael Müller", "shlwapi: Correctly treat '\''.'\'' when enumerating files in PathIsDirectoryEmptyW.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset shlwapi-UrlCombine
 # |
 # | Modified files:
@@ -2853,6 +2796,21 @@ if test "$enable_winebuild_LinkerVersion" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-Color_Key
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37748] Fix color key regression causing pink rectangles around text
+# |
+# | Modified files:
+# |   *	dlls/wined3d/surface.c
+# |
+if test "$enable_wined3d_Color_Key" -eq 1; then
+	patch_apply wined3d-Color_Key/0001-wined3d-Use-proper-color-key-type-define-when-callin.patch
+	(
+		echo '+    { "Christian Costa", "wined3d: Use proper color key type define when calling wined3d_texture_set_color_key.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-CSMT_Helper
 # |
 # | Modified files:
@@ -2866,21 +2824,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	(
 		echo '+    { "Stefan Dösinger", "wined3d: Merge get_pitch functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Color_Key
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37748] Fix color key regression causing pink rectangles around text
-# |
-# | Modified files:
-# |   *	dlls/wined3d/surface.c
-# |
-if test "$enable_wined3d_Color_Key" -eq 1; then
-	patch_apply wined3d-Color_Key/0001-wined3d-Use-proper-color-key-type-define-when-callin.patch
-	(
-		echo '+    { "Christian Costa", "wined3d: Use proper color key type define when calling wined3d_texture_set_color_key.", 1 },';
 	) >> "$patchlist"
 fi
 

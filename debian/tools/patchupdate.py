@@ -146,11 +146,12 @@ def _stable_compholio_version():
         if distro.lower() != "unreleased":
             return version
 
-def _latest_wine_commit():
+def _latest_wine_commit(commit=None):
     """Get latest wine commit."""
     if not os.path.isdir(config.path_wine):
         raise PatchUpdaterError("Please create a symlink to the wine repository in %s" % config.path_wine)
-    commit = subprocess.check_output(["git", "rev-parse", "origin/master"], cwd=config.path_wine).strip()
+    if commit is None:
+        commit = subprocess.check_output(["git", "rev-parse", "origin/master"], cwd=config.path_wine).strip()
     assert len(commit) == 40
     return commit
 
@@ -650,7 +651,7 @@ if __name__ == "__main__":
     try:
 
         # Get information about Wine and Compholio version
-        latest_wine_commit       = _latest_wine_commit()
+        latest_wine_commit       = _latest_wine_commit(sys.argv[1] if len(sys.argv) >= 2 else None)
         stable_compholio_version = _stable_compholio_version()
 
         # Read current and stable patches

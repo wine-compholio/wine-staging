@@ -1,4 +1,4 @@
-From f6dd61b4db19ba22e8e8f7d9d6bcf92e4419dc0f Mon Sep 17 00:00:00 2001
+From ba5c51ffdfff3be025ace2dd52218bd845c9d851 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 16 Jan 2014 22:07:17 +0100
 Subject: wined3d: Move volume PBO infrastructure into the resource.
@@ -10,7 +10,7 @@ Subject: wined3d: Move volume PBO infrastructure into the resource.
  3 files changed, 82 insertions(+), 79 deletions(-)
 
 diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
-index 7f283f5..c1ec97b 100644
+index 7f283f5..c907424 100644
 --- a/dlls/wined3d/resource.c
 +++ b/dlls/wined3d/resource.c
 @@ -292,7 +292,7 @@ GLbitfield wined3d_resource_gl_map_flags(DWORD d3d_flags)
@@ -37,22 +37,22 @@ index 7f283f5..c1ec97b 100644
 +    {
 +        case WINED3D_LOCATION_BUFFER:
 +            gl_info = context->gl_info;
-+            GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, resource->buffer_object));
++            GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, resource->buffer_object));
 +
 +            if (gl_info->supported[ARB_MAP_BUFFER_RANGE])
 +            {
 +                GLbitfield mapflags = wined3d_resource_gl_map_flags(flags);
 +                mapflags &= ~GL_MAP_FLUSH_EXPLICIT_BIT;
-+                ptr = GL_EXTCALL(glMapBufferRange(GL_PIXEL_UNPACK_BUFFER_ARB,
++                ptr = GL_EXTCALL(glMapBufferRange(GL_PIXEL_UNPACK_BUFFER,
 +                        0, resource->size, mapflags));
 +            }
 +            else
 +            {
 +                GLenum access = wined3d_resource_gl_legacy_map_flags(flags);
-+                ptr = GL_EXTCALL(glMapBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, access));
++                ptr = GL_EXTCALL(glMapBuffer(GL_PIXEL_UNPACK_BUFFER, access));
 +            }
 +
-+            GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0));
++            GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
 +            checkGLcall("Map GL buffer");
 +            return ptr;
 +
@@ -74,9 +74,9 @@ index 7f283f5..c1ec97b 100644
 +    {
 +        case WINED3D_LOCATION_BUFFER:
 +            gl_info = context->gl_info;
-+            GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, resource->buffer_object));
-+            GL_EXTCALL(glUnmapBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB));
-+            GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0));
++            GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, resource->buffer_object));
++            GL_EXTCALL(glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER));
++            GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
 +            checkGLcall("Unmap GL buffer");
 +            return;
 +
@@ -89,7 +89,7 @@ index 7f283f5..c1ec97b 100644
 +    }
 +}
 diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
-index 2e92dd7..c538e08 100644
+index ad37cce..db3a68c 100644
 --- a/dlls/wined3d/volume.c
 +++ b/dlls/wined3d/volume.c
 @@ -216,7 +216,7 @@ static void wined3d_volume_load_location(struct wined3d_resource *resource,
@@ -127,12 +127,12 @@ index 2e92dd7..c538e08 100644
 +    if (volume->resource.buffer_object)
          return;
  
--    GL_EXTCALL(glGenBuffersARB(1, &volume->pbo));
--    GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, volume->pbo));
-+    GL_EXTCALL(glGenBuffersARB(1, &volume->resource.buffer_object));
-+    GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, volume->resource.buffer_object));
-     GL_EXTCALL(glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, volume->resource.size, NULL, GL_STREAM_DRAW_ARB));
-     GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0));
+-    GL_EXTCALL(glGenBuffers(1, &volume->pbo));
+-    GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, volume->pbo));
++    GL_EXTCALL(glGenBuffers(1, &volume->resource.buffer_object));
++    GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, volume->resource.buffer_object));
+     GL_EXTCALL(glBufferData(GL_PIXEL_UNPACK_BUFFER, volume->resource.size, NULL, GL_STREAM_DRAW));
+     GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
      checkGLcall("Create PBO");
  
 -    TRACE("Created PBO %u for volume %p.\n", volume->pbo, volume);
@@ -145,10 +145,10 @@ index 2e92dd7..c538e08 100644
      const struct wined3d_gl_info *gl_info = context->gl_info;
  
 -    TRACE("Deleting PBO %u belonging to volume %p.\n", volume->pbo, volume);
--    GL_EXTCALL(glDeleteBuffersARB(1, &volume->pbo));
+-    GL_EXTCALL(glDeleteBuffers(1, &volume->pbo));
 +    TRACE("Deleting PBO %u belonging to volume %p.\n", volume->resource.buffer_object, volume);
-+    GL_EXTCALL(glDeleteBuffersARB(1, &volume->resource.buffer_object));
-     checkGLcall("glDeleteBuffersARB");
++    GL_EXTCALL(glDeleteBuffers(1, &volume->resource.buffer_object));
+     checkGLcall("glDeleteBuffers");
 -    volume->pbo = 0;
 +    volume->resource.buffer_object = 0;
      context_release(context);
@@ -186,22 +186,22 @@ index 2e92dd7..c538e08 100644
 -    {
 -        case WINED3D_LOCATION_BUFFER:
 -            gl_info = context->gl_info;
--            GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, volume->pbo));
+-            GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, volume->pbo));
 -
 -            if (gl_info->supported[ARB_MAP_BUFFER_RANGE])
 -            {
 -                GLbitfield mapflags = wined3d_resource_gl_map_flags(flags);
 -                mapflags &= ~GL_MAP_FLUSH_EXPLICIT_BIT;
--                ptr = GL_EXTCALL(glMapBufferRange(GL_PIXEL_UNPACK_BUFFER_ARB,
+-                ptr = GL_EXTCALL(glMapBufferRange(GL_PIXEL_UNPACK_BUFFER,
 -                        0, volume->resource.size, mapflags));
 -            }
 -            else
 -            {
 -                GLenum access = wined3d_resource_gl_legacy_map_flags(flags);
--                ptr = GL_EXTCALL(glMapBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, access));
+-                ptr = GL_EXTCALL(glMapBuffer(GL_PIXEL_UNPACK_BUFFER, access));
 -            }
 -
--            GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0));
+-            GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
 -            checkGLcall("Map PBO");
 -            return ptr;
 -
@@ -239,9 +239,9 @@ index 2e92dd7..c538e08 100644
 -    {
 -        case WINED3D_LOCATION_BUFFER:
 -            gl_info = context->gl_info;
--            GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, volume->pbo));
--            GL_EXTCALL(glUnmapBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB));
--            GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0));
+-            GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, volume->pbo));
+-            GL_EXTCALL(glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER));
+-            GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
 -            checkGLcall("Unmap PBO");
 -            return;
 -

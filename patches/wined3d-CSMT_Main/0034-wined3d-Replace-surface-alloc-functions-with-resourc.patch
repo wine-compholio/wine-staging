@@ -1,4 +1,4 @@
-From 94dbd1a23471584d1f837ebc10f071d0ea09f9cf Mon Sep 17 00:00:00 2001
+From ee8e2567fab13b3f0f0d88d905d0fd8dc1cdb622 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Tue, 21 Jan 2014 16:40:56 +0100
 Subject: wined3d: Replace surface alloc functions with resource ones.
@@ -11,10 +11,10 @@ Subject: wined3d: Replace surface alloc functions with resource ones.
  4 files changed, 20 insertions(+), 87 deletions(-)
 
 diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
-index 0093c6a..59626f7 100644
+index 78441e6..c6b3945 100644
 --- a/dlls/wined3d/resource.c
 +++ b/dlls/wined3d/resource.c
-@@ -573,6 +573,16 @@ BOOL wined3d_resource_prepare_map_memory(struct wined3d_resource *resource, stru
+@@ -601,6 +601,16 @@ BOOL wined3d_resource_prepare_map_memory(struct wined3d_resource *resource, stru
          case WINED3D_LOCATION_SYSMEM:
              return wined3d_resource_prepare_system_memory(resource);
  
@@ -32,7 +32,7 @@ index 0093c6a..59626f7 100644
              ERR("Unexpected map binding %s.\n", wined3d_debug_location(resource->map_binding));
              return FALSE;
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index b0f6ec9..85b1fd6 100644
+index c65a723..48de325 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
 @@ -479,81 +479,6 @@ static HRESULT surface_create_dib_section(struct wined3d_surface *surface)
@@ -51,22 +51,22 @@ index b0f6ec9..85b1fd6 100644
 -    context = context_acquire(surface->resource.device, NULL);
 -    gl_info = context->gl_info;
 -
--    GL_EXTCALL(glGenBuffersARB(1, &surface->resource.buffer_object));
+-    GL_EXTCALL(glGenBuffers(1, &surface->resource.buffer_object));
 -    error = gl_info->gl_ops.gl.p_glGetError();
 -    if (!surface->resource.buffer_object || error != GL_NO_ERROR)
 -        ERR("Failed to create a PBO with error %s (%#x).\n", debug_glerror(error), error);
 -
 -    TRACE("Binding PBO %u.\n", surface->resource.buffer_object);
 -
--    GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, surface->resource.buffer_object));
--    checkGLcall("glBindBufferARB");
+-    GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, surface->resource.buffer_object));
+-    checkGLcall("glBindBuffer");
 -
--    GL_EXTCALL(glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, surface->resource.size + 4,
--            NULL, GL_STREAM_DRAW_ARB));
--    checkGLcall("glBufferDataARB");
+-    GL_EXTCALL(glBufferData(GL_PIXEL_UNPACK_BUFFER, surface->resource.size + 4,
+-            NULL, GL_STREAM_DRAW));
+-    checkGLcall("glBufferData");
 -
--    GL_EXTCALL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0));
--    checkGLcall("glBindBufferARB");
+-    GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
+-    checkGLcall("glBindBuffer");
 -
 -    context_release(context);
 -}
@@ -144,7 +144,7 @@ index b0f6ec9..85b1fd6 100644
          valid_location = WINED3D_LOCATION_SYSMEM;
      }
  
-@@ -2712,7 +2637,7 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
+@@ -2721,7 +2646,7 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
      if (device->d3d_initialized)
          context = context_acquire(device, NULL);
  
@@ -153,7 +153,7 @@ index b0f6ec9..85b1fd6 100644
      if (flags & WINED3D_MAP_DISCARD)
      {
          TRACE("WINED3D_MAP_DISCARD flag passed, marking %s as up to date.\n",
-@@ -4242,7 +4167,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
+@@ -4251,7 +4176,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
          {
              /* Performance warning... */
              FIXME("Downloading RGB surface %p to reload it as sRGB.\n", surface);
@@ -162,7 +162,7 @@ index b0f6ec9..85b1fd6 100644
              wined3d_resource_load_location(&surface->resource, context, surface->resource.map_binding);
          }
      }
-@@ -4253,7 +4178,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
+@@ -4262,7 +4187,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
          {
              /* Performance warning... */
              FIXME("Downloading sRGB surface %p to reload it as RGB.\n", surface);
@@ -171,7 +171,7 @@ index b0f6ec9..85b1fd6 100644
              wined3d_resource_load_location(&surface->resource, context, surface->resource.map_binding);
          }
      }
-@@ -4262,7 +4187,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
+@@ -4271,7 +4196,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
      {
          WARN("Trying to load a texture from sysmem, but no simple location is valid.\n");
          /* Lets hope we get it from somewhere... */
@@ -180,7 +180,7 @@ index b0f6ec9..85b1fd6 100644
          wined3d_resource_load_location(&surface->resource, context, WINED3D_LOCATION_SYSMEM);
      }
  
-@@ -4295,7 +4220,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
+@@ -4304,7 +4229,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
          else
              surface->resource.map_binding = WINED3D_LOCATION_SYSMEM;
  
@@ -190,7 +190,7 @@ index b0f6ec9..85b1fd6 100644
          surface_remove_pbo(surface, gl_info);
      }
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index 0c3fe95..06a041c 100644
+index aee50f6..869c44f 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
 @@ -851,8 +851,8 @@ static void texture2d_sub_resource_add_dirty_region(struct wined3d_resource *sub
@@ -203,7 +203,7 @@ index 0c3fe95..06a041c 100644
      wined3d_resource_load_location(&surface->resource, context, surface->resource.map_binding);
      context_release(context);
      wined3d_resource_invalidate_location(&surface->resource, ~surface->resource.map_binding);
-@@ -966,8 +966,7 @@ static void texture2d_prepare_texture(struct wined3d_texture *texture, struct wi
+@@ -964,8 +964,7 @@ static void texture2d_prepare_texture(struct wined3d_texture *texture, struct wi
              }
              else
              {
@@ -214,10 +214,10 @@ index 0c3fe95..06a041c 100644
                  surface->flags |= SFLAG_CLIENT;
                  mem = surface->resource.heap_memory;
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 7ea1374..b9d77f3 100644
+index e32d650..beaf9bc 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2395,7 +2395,6 @@ HRESULT wined3d_surface_create(struct wined3d_texture *container, const struct w
+@@ -2394,7 +2394,6 @@ HRESULT wined3d_surface_create(struct wined3d_texture *container, const struct w
          GLenum target, unsigned int level, unsigned int layer, DWORD flags,
          struct wined3d_surface **surface) DECLSPEC_HIDDEN;
  void wined3d_surface_destroy(struct wined3d_surface *surface) DECLSPEC_HIDDEN;
@@ -226,5 +226,5 @@ index 7ea1374..b9d77f3 100644
          const struct wined3d_format *format, const RECT *src_rect, UINT src_pitch, const POINT *dst_point,
          BOOL srgb, const struct wined3d_const_bo_address *data) DECLSPEC_HIDDEN;
 -- 
-1.9.1
+2.2.1
 

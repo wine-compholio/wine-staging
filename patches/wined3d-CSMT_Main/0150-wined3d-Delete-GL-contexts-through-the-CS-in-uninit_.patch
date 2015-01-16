@@ -1,17 +1,17 @@
-From cdfd2659beba10a60a6535bb489c976b97f28ec5 Mon Sep 17 00:00:00 2001
+From 07c7bd93784b29a1b75f701b9a358c85babfc003 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Fri, 11 Oct 2013 10:17:42 +0200
 Subject: wined3d: Delete GL contexts through the CS in uninit_3d.
 
 ---
- dlls/wined3d/device.c | 27 ++-------------------------
- 1 file changed, 2 insertions(+), 25 deletions(-)
+ dlls/wined3d/device.c | 31 ++++---------------------------
+ 1 file changed, 4 insertions(+), 27 deletions(-)
 
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index b96f20f..278bbdc 100644
+index f171df8..2d00ada 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -997,8 +997,6 @@ err_out:
+@@ -1014,8 +1014,6 @@ static void device_free_sampler(struct wine_rb_entry *entry, void *context)
  HRESULT CDECL wined3d_device_uninit_3d(struct wined3d_device *device)
  {
      struct wined3d_resource *resource, *cursor;
@@ -20,7 +20,7 @@ index b96f20f..278bbdc 100644
      struct wined3d_surface *surface;
      UINT i;
  
-@@ -1010,12 +1008,6 @@ HRESULT CDECL wined3d_device_uninit_3d(struct wined3d_device *device)
+@@ -1027,12 +1025,6 @@ HRESULT CDECL wined3d_device_uninit_3d(struct wined3d_device *device)
      if (wined3d_settings.cs_multithreaded)
          device->cs->ops->finish(device->cs);
  
@@ -33,12 +33,14 @@ index b96f20f..278bbdc 100644
      if (device->logo_texture)
          wined3d_texture_decref(device->logo_texture);
  
-@@ -1045,22 +1037,8 @@ HRESULT CDECL wined3d_device_uninit_3d(struct wined3d_device *device)
+@@ -1062,24 +1054,8 @@ HRESULT CDECL wined3d_device_uninit_3d(struct wined3d_device *device)
          TRACE("Unloading resource %p.\n", resource);
          wined3d_cs_emit_evict_resource(device->cs, resource);
      }
 -    if (wined3d_settings.cs_multithreaded)
 -        device->cs->ops->finish(device->cs);
+-
+-    wine_rb_for_each_entry(&device->samplers, device_free_sampler, device);
 -
 -    /* Destroy the depth blt resources, they will be invalid after the reset. Also free shader
 -     * private data, it might contain opengl pointers
@@ -57,7 +59,7 @@ index b96f20f..278bbdc 100644
  
      if (device->back_buffer_view)
      {
-@@ -1068,8 +1046,6 @@ HRESULT CDECL wined3d_device_uninit_3d(struct wined3d_device *device)
+@@ -1087,8 +1063,6 @@ HRESULT CDECL wined3d_device_uninit_3d(struct wined3d_device *device)
          device->back_buffer_view = NULL;
      }
  
@@ -66,7 +68,16 @@ index b96f20f..278bbdc 100644
      for (i = 0; i < device->swapchain_count; ++i)
      {
          TRACE("Releasing the implicit swapchain %u.\n", i);
-@@ -4175,6 +4151,7 @@ void device_delete_opengl_contexts_cs(struct wined3d_device *device, struct wine
+@@ -4166,6 +4140,8 @@ void device_delete_opengl_contexts_cs(struct wined3d_device *device, struct wine
+     context = context_acquire(device, NULL);
+     gl_info = context->gl_info;
+ 
++    wine_rb_for_each_entry(&device->samplers, device_free_sampler, device);
++
+     if (device->depth_blt_texture)
+     {
+         gl_info->gl_ops.gl.p_glDeleteTextures(1, &device->depth_blt_texture);
+@@ -4185,6 +4161,7 @@ void device_delete_opengl_contexts_cs(struct wined3d_device *device, struct wine
  
      HeapFree(GetProcessHeap(), 0, swapchain->context);
      swapchain->context = NULL;
@@ -75,5 +86,5 @@ index b96f20f..278bbdc 100644
  
  static void delete_opengl_contexts(struct wined3d_device *device, struct wined3d_swapchain *swapchain)
 -- 
-2.1.3
+2.2.1
 

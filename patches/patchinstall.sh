@@ -63,8 +63,8 @@ patch_enable_all ()
 	enable_comctl32_LoadIconMetric="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_d3d9_Surface_Refcount="$1"
+	enable_d3dx9_36_AnimationController="$1"
 	enable_d3dx9_36_ConvertToIndexedBlended="$1"
-	enable_d3dx9_36_D3DXCreateAnimationController="$1"
 	enable_d3dx9_36_D3DXStubs="$1"
 	enable_d3dx9_36_DDS="$1"
 	enable_d3dx9_36_DXTn="$1"
@@ -214,11 +214,11 @@ patch_enable ()
 		d3d9-Surface_Refcount)
 			enable_d3d9_Surface_Refcount="$2"
 			;;
+		d3dx9_36-AnimationController)
+			enable_d3dx9_36_AnimationController="$2"
+			;;
 		d3dx9_36-ConvertToIndexedBlended)
 			enable_d3dx9_36_ConvertToIndexedBlended="$2"
-			;;
-		d3dx9_36-D3DXCreateAnimationController)
-			enable_d3dx9_36_D3DXCreateAnimationController="$2"
 			;;
 		d3dx9_36-D3DXStubs)
 			enable_d3dx9_36_D3DXStubs="$2"
@@ -857,9 +857,9 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	enable_ntdll_Fix_Free=1
 fi
 
-if test "$enable_d3dx9_36_D3DXCreateAnimationController" -eq 1; then
+if test "$enable_d3dx9_36_AnimationController" -eq 1; then
 	if test "$enable_d3dx9_36_DXTn" -gt 1; then
-		abort "Patchset d3dx9_36-DXTn disabled, but d3dx9_36-D3DXCreateAnimationController depends on that."
+		abort "Patchset d3dx9_36-DXTn disabled, but d3dx9_36-AnimationController depends on that."
 	fi
 	enable_d3dx9_36_DXTn=1
 fi
@@ -1076,21 +1076,6 @@ if test "$enable_d3d9_Surface_Refcount" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset d3dx9_36-ConvertToIndexedBlended
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36449] Fix parameters for ConvertToIndexedBlendedMesh stub
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_36/skin.c, include/d3dx9mesh.h
-# |
-if test "$enable_d3dx9_36_ConvertToIndexedBlended" -eq 1; then
-	patch_apply d3dx9_36-ConvertToIndexedBlended/0001-d3dx9_36-Fix-d3dx9_skin_info_ConvertToIndexedBlended.patch
-	(
-		echo '+    { "Christian Costa", "d3dx9_36: Fix d3dx9_skin_info_ConvertToIndexedBlendedMesh stub.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-DXTn
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1133,15 +1118,30 @@ if test "$enable_d3dx9_36_DXTn" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset d3dx9_36-D3DXCreateAnimationController
+# Patchset d3dx9_36-AnimationController
 # |
 # | Modified files:
-# |   *	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/animation.c, dlls/d3dx9_36/d3dx9_36.spec
+# |   *	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/animation.c, dlls/d3dx9_36/d3dx9_36.spec, include/d3dx9anim.h
 # |
-if test "$enable_d3dx9_36_D3DXCreateAnimationController" -eq 1; then
-	patch_apply d3dx9_36-D3DXCreateAnimationController/0001-d3dx9_36-Implement-D3DXCreateAnimationController-wit.patch
+if test "$enable_d3dx9_36_AnimationController" -eq 1; then
+	patch_apply d3dx9_36-AnimationController/0001-d3dx9_36-Implement-D3DXCreateAnimationController-wit.patch
 	(
 		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXCreateAnimationController with a stubbed ID3DXAnimationController interface.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3dx9_36-ConvertToIndexedBlended
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36449] Fix parameters for ConvertToIndexedBlendedMesh stub
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/skin.c, include/d3dx9mesh.h
+# |
+if test "$enable_d3dx9_36_ConvertToIndexedBlended" -eq 1; then
+	patch_apply d3dx9_36-ConvertToIndexedBlended/0001-d3dx9_36-Fix-d3dx9_skin_info_ConvertToIndexedBlended.patch
+	(
+		echo '+    { "Christian Costa", "d3dx9_36: Fix d3dx9_skin_info_ConvertToIndexedBlendedMesh stub.", 1 },';
 	) >> "$patchlist"
 fi
 

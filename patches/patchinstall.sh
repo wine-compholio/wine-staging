@@ -126,7 +126,6 @@ patch_enable_all ()
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_WinSqm="$1"
 	enable_ntoskrnl_Emulator="$1"
-	enable_ntoskrnl_Irp_Status="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
@@ -402,9 +401,6 @@ patch_enable ()
 			;;
 		ntoskrnl-Emulator)
 			enable_ntoskrnl_Emulator="$2"
-			;;
-		ntoskrnl-Irp_Status)
-			enable_ntoskrnl_Irp_Status="$2"
 			;;
 		nvapi-Stub_DLL)
 			enable_nvapi_Stub_DLL="$2"
@@ -1136,6 +1132,8 @@ fi
 # |   *	[#25486] Lego Stunt Rally requires DXTn software de/encoding support
 # |   *	[#29586] Tumblebugs 2 requires DXTn software encoding support
 # |   *	[#14939] Black & White needs DXTn software decoding support
+# |   *	[#17913] Port Royale doesn't display ocean correctly
+# |   *	[#29598] eRacer Demo doesn't correctly display text
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d/Makefile.in, dlls/wined3d/dxtn.c, dlls/wined3d/surface.c, dlls/wined3d/wined3d.spec,
@@ -1158,6 +1156,7 @@ fi
 # |   *	[#33768] Fix texture corruption in CSI: Fatal Conspiracy
 # |   *	[#19231] Fix crash of Trine Demo on start
 # |   *	[#37391] Exception during start of fr-043 caused by missing DXTn support
+# |   *	[#34692] Fix wrong colors in Wolfenstein (2009)
 # |
 # | Modified files:
 # |   *	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/surface.c, dlls/d3dx9_36/tests/surface.c
@@ -1313,6 +1312,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#8854] Ensure X11 input events are handled even without explicit message loop
+# |   *	[#34559] Scrolling causes mouse and screen to lock in Call to Power II
 # |
 # | Modified files:
 # |   *	dlls/dinput/device.c, dlls/dinput/keyboard.c, dlls/user32/input.c, dlls/user32/user32.spec, include/winuser.h
@@ -1340,6 +1340,9 @@ if test "$enable_dsound_Fast_Mixer" -eq 1; then
 fi
 
 # Patchset dxgi-GetDesc
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#31998] Avseq crashes when multisampling is enabled
 # |
 # | Modified files:
 # |   *	dlls/dxgi/output.c
@@ -1708,6 +1711,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#10767] Fix comparison of punctuation characters in lstrcmp
+# |   *	[#32490] Graphical issues in Inquisitor
 # |
 # | Modified files:
 # |   *	dlls/kernel32/tests/locale.c, libs/wine/collation.c
@@ -2127,21 +2131,6 @@ if test "$enable_ntoskrnl_Emulator" -eq 1; then
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Emulate '\''mov Eb, Gb'\'' instruction on x86 processor architecture.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Emulate memory access to KI_USER_SHARED_DATA on x86_64.", 2 },';
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Add TRACEs for instruction emulator on x86_64 to simplify debugging.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntoskrnl-Irp_Status
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#30155] Fix issues when driver dispatch routine returns different status codes
-# |
-# | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c
-# |
-if test "$enable_ntoskrnl_Irp_Status" -eq 1; then
-	patch_apply ntoskrnl-Irp_Status/0001-ntoskrnl-Handle-issues-when-driver-returns-two-diffe.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntoskrnl: Handle issues when driver returns two different status codes from dispatcher.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2570,6 +2559,9 @@ if test "$enable_shell32_SHCreateSessionKey" -eq 1; then
 fi
 
 # Patchset shell32-SHFileOperation
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37916] Anno 1602 installer depends on Windows 98 behavior of SHFileOperationW
 # |
 # | Modified files:
 # |   *	dlls/shell32/shlfileop.c

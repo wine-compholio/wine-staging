@@ -64,6 +64,7 @@ patch_enable_all ()
 	enable_configure_Absolute_RPATH="$1"
 	enable_d3d9_Surface_Refcount="$1"
 	enable_d3dx9_36_ConvertToIndexedBlended="$1"
+	enable_d3dx9_36_D3DXCreateAnimationController="$1"
 	enable_d3dx9_36_D3DXStubs="$1"
 	enable_d3dx9_36_DDS="$1"
 	enable_d3dx9_36_DXTn="$1"
@@ -215,6 +216,9 @@ patch_enable ()
 			;;
 		d3dx9_36-ConvertToIndexedBlended)
 			enable_d3dx9_36_ConvertToIndexedBlended="$2"
+			;;
+		d3dx9_36-D3DXCreateAnimationController)
+			enable_d3dx9_36_D3DXCreateAnimationController="$2"
 			;;
 		d3dx9_36-D3DXStubs)
 			enable_d3dx9_36_D3DXStubs="$2"
@@ -853,6 +857,13 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	enable_ntdll_Fix_Free=1
 fi
 
+if test "$enable_d3dx9_36_D3DXCreateAnimationController" -eq 1; then
+	if test "$enable_d3dx9_36_DXTn" -gt 1; then
+		abort "Patchset d3dx9_36-DXTn disabled, but d3dx9_36-D3DXCreateAnimationController depends on that."
+	fi
+	enable_d3dx9_36_DXTn=1
+fi
+
 if test "$enable_d3dx9_36_DXTn" -eq 1; then
 	if test "$enable_wined3d_DXTn" -gt 1; then
 		abort "Patchset wined3d-DXTn disabled, but d3dx9_36-DXTn depends on that."
@@ -1080,6 +1091,60 @@ if test "$enable_d3dx9_36_ConvertToIndexedBlended" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-DXTn
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#25486] Lego Stunt Rally requires DXTn software de/encoding support
+# |   *	[#29586] Tumblebugs 2 requires DXTn software encoding support
+# |   *	[#14939] Black & White needs DXTn software decoding support
+# |   *	[#17913] Port Royale doesn't display ocean correctly
+# |   *	[#29598] eRacer Demo doesn't correctly display text
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/wined3d/Makefile.in, dlls/wined3d/dxtn.c, dlls/wined3d/surface.c, dlls/wined3d/wined3d.spec,
+# | 	dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
+# |
+if test "$enable_wined3d_DXTn" -eq 1; then
+	patch_apply wined3d-DXTn/0001-wined3d-Add-support-for-DXTn-software-decoding-throu.patch
+	patch_apply wined3d-DXTn/0002-wined3d-Improve-DXTn-support-and-export-conversion-f.patch
+	patch_apply wined3d-DXTn/0003-wined3d-add-DXT1-to-B4G4R4A4-DXT1-to-B5G5R5A1-and-DX.patch
+	(
+		echo '+    { "Michael Müller", "wined3d: Add support for DXTn software decoding through libtxc_dxtn.", 2 },';
+		echo '+    { "Christian Costa", "wined3d: Improve DXTn support and export conversion functions for d3dx9_36.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: add DXT1 to B4G4R4A4, DXT1 to B5G5R5A1 and DXT3 to B4G4R4A4 conversion.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3dx9_36-DXTn
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33768] Fix texture corruption in CSI: Fatal Conspiracy
+# |   *	[#19231] Fix crash of Trine Demo on start
+# |   *	[#37391] Exception during start of fr-043 caused by missing DXTn support
+# |   *	[#34692] Fix wrong colors in Wolfenstein (2009)
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/surface.c, dlls/d3dx9_36/tests/surface.c
+# |
+if test "$enable_d3dx9_36_DXTn" -eq 1; then
+	patch_apply d3dx9_36-DXTn/0001-d3dx9_36-Add-dxtn-support.patch
+	(
+		echo '+    { "Christian Costa", "d3dx9_36: Add dxtn support.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3dx9_36-D3DXCreateAnimationController
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/animation.c, dlls/d3dx9_36/d3dx9_36.spec
+# |
+if test "$enable_d3dx9_36_D3DXCreateAnimationController" -eq 1; then
+	patch_apply d3dx9_36-D3DXCreateAnimationController/0001-d3dx9_36-Implement-D3DXCreateAnimationController-wit.patch
+	(
+		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXCreateAnimationController with a stubbed ID3DXAnimationController interface.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset d3dx9_36-D3DXStubs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1123,48 +1188,6 @@ if test "$enable_d3dx9_36_DDS" -eq 1; then
 		echo '+    { "Christian Costa", "d3dx9_36: Fix several issues in save_dds_surface_to_memory.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Add support for FOURCC surface to save_dds_surface_to_memory.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Improve D3DXSaveTextureToFile to save simple texture to dds file.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-DXTn
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#25486] Lego Stunt Rally requires DXTn software de/encoding support
-# |   *	[#29586] Tumblebugs 2 requires DXTn software encoding support
-# |   *	[#14939] Black & White needs DXTn software decoding support
-# |   *	[#17913] Port Royale doesn't display ocean correctly
-# |   *	[#29598] eRacer Demo doesn't correctly display text
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/wined3d/Makefile.in, dlls/wined3d/dxtn.c, dlls/wined3d/surface.c, dlls/wined3d/wined3d.spec,
-# | 	dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
-# |
-if test "$enable_wined3d_DXTn" -eq 1; then
-	patch_apply wined3d-DXTn/0001-wined3d-Add-support-for-DXTn-software-decoding-throu.patch
-	patch_apply wined3d-DXTn/0002-wined3d-Improve-DXTn-support-and-export-conversion-f.patch
-	patch_apply wined3d-DXTn/0003-wined3d-add-DXT1-to-B4G4R4A4-DXT1-to-B5G5R5A1-and-DX.patch
-	(
-		echo '+    { "Michael Müller", "wined3d: Add support for DXTn software decoding through libtxc_dxtn.", 2 },';
-		echo '+    { "Christian Costa", "wined3d: Improve DXTn support and export conversion functions for d3dx9_36.", 1 },';
-		echo '+    { "Michael Müller", "wined3d: add DXT1 to B4G4R4A4, DXT1 to B5G5R5A1 and DXT3 to B4G4R4A4 conversion.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3dx9_36-DXTn
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#33768] Fix texture corruption in CSI: Fatal Conspiracy
-# |   *	[#19231] Fix crash of Trine Demo on start
-# |   *	[#37391] Exception during start of fr-043 caused by missing DXTn support
-# |   *	[#34692] Fix wrong colors in Wolfenstein (2009)
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/surface.c, dlls/d3dx9_36/tests/surface.c
-# |
-if test "$enable_d3dx9_36_DXTn" -eq 1; then
-	patch_apply d3dx9_36-DXTn/0001-d3dx9_36-Add-dxtn-support.patch
-	(
-		echo '+    { "Christian Costa", "d3dx9_36: Add dxtn support.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2788,21 +2811,6 @@ if test "$enable_winebuild_LinkerVersion" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Color_Key
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37748] Fix color key regression causing pink rectangles around text
-# |
-# | Modified files:
-# |   *	dlls/wined3d/surface.c
-# |
-if test "$enable_wined3d_Color_Key" -eq 1; then
-	patch_apply wined3d-Color_Key/0001-wined3d-Use-proper-color-key-type-define-when-callin.patch
-	(
-		echo '+    { "Christian Costa", "wined3d: Use proper color key type define when calling wined3d_texture_set_color_key.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-CSMT_Helper
 # |
 # | Modified files:
@@ -2816,6 +2824,21 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	(
 		echo '+    { "Stefan Dösinger", "wined3d: Merge get_pitch functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Color_Key
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37748] Fix color key regression causing pink rectangles around text
+# |
+# | Modified files:
+# |   *	dlls/wined3d/surface.c
+# |
+if test "$enable_wined3d_Color_Key" -eq 1; then
+	patch_apply wined3d-Color_Key/0001-wined3d-Use-proper-color-key-type-define-when-callin.patch
+	(
+		echo '+    { "Christian Costa", "wined3d: Use proper color key type define when calling wined3d_texture_set_color_key.", 1 },';
 	) >> "$patchlist"
 fi
 

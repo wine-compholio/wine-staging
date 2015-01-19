@@ -2811,6 +2811,21 @@ if test "$enable_winebuild_LinkerVersion" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-Color_Key
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37748] Fix color key regression causing pink rectangles around text
+# |
+# | Modified files:
+# |   *	dlls/wined3d/surface.c
+# |
+if test "$enable_wined3d_Color_Key" -eq 1; then
+	patch_apply wined3d-Color_Key/0001-wined3d-Use-proper-color-key-type-define-when-callin.patch
+	(
+		echo '+    { "Christian Costa", "wined3d: Use proper color key type define when calling wined3d_texture_set_color_key.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-CSMT_Helper
 # |
 # | Modified files:
@@ -2824,21 +2839,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	(
 		echo '+    { "Stefan Dösinger", "wined3d: Merge get_pitch functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Color_Key
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37748] Fix color key regression causing pink rectangles around text
-# |
-# | Modified files:
-# |   *	dlls/wined3d/surface.c
-# |
-if test "$enable_wined3d_Color_Key" -eq 1; then
-	patch_apply wined3d-Color_Key/0001-wined3d-Use-proper-color-key-type-define-when-callin.patch
-	(
-		echo '+    { "Christian Costa", "wined3d: Use proper color key type define when calling wined3d_texture_set_color_key.", 1 },';
 	) >> "$patchlist"
 fi
 

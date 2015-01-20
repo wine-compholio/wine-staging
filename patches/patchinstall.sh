@@ -168,7 +168,6 @@ patch_enable_all ()
 	enable_winecfg_Staging="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
-	enable_wined3d_Color_Key="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_winedevice_Fix_Relocation="$1"
@@ -529,9 +528,6 @@ patch_enable ()
 		wined3d-CSMT_Main)
 			enable_wined3d_CSMT_Main="$2"
 			;;
-		wined3d-Color_Key)
-			enable_wined3d_Color_Key="$2"
-			;;
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
 			;;
@@ -790,11 +786,7 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	if test "$enable_wined3d_CSMT_Helper" -gt 1; then
 		abort "Patchset wined3d-CSMT_Helper disabled, but wined3d-CSMT_Main depends on that."
 	fi
-	if test "$enable_wined3d_Color_Key" -gt 1; then
-		abort "Patchset wined3d-Color_Key disabled, but wined3d-CSMT_Main depends on that."
-	fi
 	enable_wined3d_CSMT_Helper=1
-	enable_wined3d_Color_Key=1
 fi
 
 if test "$enable_wined3d_CSMT_Helper" -eq 1; then
@@ -2808,21 +2800,6 @@ if test "$enable_winebuild_LinkerVersion" -eq 1; then
 	patch_apply winebuild-LinkerVersion/0001-winebuild-Set-a-valid-major-and-minor-linker-version.patch
 	(
 		echo '+    { "Michael Müller", "winebuild: Set a valid major and minor linker version.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Color_Key
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37748] Fix color key regression causing pink rectangles around text
-# |
-# | Modified files:
-# |   *	dlls/wined3d/surface.c
-# |
-if test "$enable_wined3d_Color_Key" -eq 1; then
-	patch_apply wined3d-Color_Key/0001-wined3d-Use-proper-color-key-type-define-when-callin.patch
-	(
-		echo '+    { "Christian Costa", "wined3d: Use proper color key type define when calling wined3d_texture_set_color_key.", 1 },';
 	) >> "$patchlist"
 fi
 

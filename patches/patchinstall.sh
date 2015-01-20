@@ -148,6 +148,7 @@ patch_enable_all ()
 	enable_shell32_Default_Folder_ACLs="$1"
 	enable_shell32_Default_Path="$1"
 	enable_shell32_Icons="$1"
+	enable_shell32_Quoted_ShellExecute="$1"
 	enable_shell32_RunDLL_CallEntry16="$1"
 	enable_shell32_SHCreateSessionKey="$1"
 	enable_shell32_SHFileOperation="$1"
@@ -467,6 +468,9 @@ patch_enable ()
 			;;
 		shell32-Icons)
 			enable_shell32_Icons="$2"
+			;;
+		shell32-Quoted_ShellExecute)
+			enable_shell32_Quoted_ShellExecute="$2"
 			;;
 		shell32-RunDLL_CallEntry16)
 			enable_shell32_RunDLL_CallEntry16="$2"
@@ -2556,6 +2560,21 @@ if test "$enable_shell32_Icons" -eq 1; then
 	patch_apply shell32-Icons/0001-shell32-Add-support-for-extra-large-and-jumbo-icon-l.patch
 	(
 		echo '+    { "Michael Müller", "shell32: Add support for extra large and jumbo icon lists.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shell32-Quoted_ShellExecute
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#19666] Multiple applications start wrong executable if whitespace present in name
+# |
+# | Modified files:
+# |   *	dlls/shell32/shlexec.c, dlls/shell32/tests/shlexec.c
+# |
+if test "$enable_shell32_Quoted_ShellExecute" -eq 1; then
+	patch_apply shell32-Quoted_ShellExecute/0001-shell32-Quote-program-name-in-ShellExecuteEx-if-it-c.patch
+	(
+		echo '+    { "Stefan Leichter", "shell32: Quote program name in ShellExecuteEx if it contains spaces.", 1 },';
 	) >> "$patchlist"
 fi
 

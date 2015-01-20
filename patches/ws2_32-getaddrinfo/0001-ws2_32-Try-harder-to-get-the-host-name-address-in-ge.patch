@@ -1,4 +1,4 @@
-From aef4dcbdd1b94d187d21588d4d74385b7dd46c5f Mon Sep 17 00:00:00 2001
+From 0fe24554c569c1c99248015e6ecb3af3e7cc5c17 Mon Sep 17 00:00:00 2001
 From: Bruno Jesus <00cpxxx@gmail.com>
 Date: Sat, 13 Dec 2014 17:36:40 -0200
 Subject: ws2_32: Try harder to get the host name address in getaddrinfo()
@@ -26,10 +26,10 @@ Fixes bug https://bugs.winehq.org/show_bug.cgi?id=29609 for some people.
  2 files changed, 60 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index b6aad67..d5404b7 100644
+index faf2ec1..311295d 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
-@@ -5621,19 +5621,19 @@ int WINAPI WS_getaddrinfo(LPCSTR nodename, LPCSTR servname, const struct WS_addr
+@@ -5624,7 +5624,7 @@ int WINAPI WS_getaddrinfo(LPCSTR nodename, LPCSTR servname, const struct WS_addr
      struct addrinfo *unixaires = NULL;
      int   result;
      struct addrinfo unixhints, *punixhints = NULL;
@@ -38,7 +38,9 @@ index b6aad67..d5404b7 100644
      const char *node;
  
      *res = NULL;
-     if (!nodename && !servname) return WSAHOST_NOT_FOUND;
+@@ -5634,13 +5634,13 @@ int WINAPI WS_getaddrinfo(LPCSTR nodename, LPCSTR servname, const struct WS_addr
+         return WSAHOST_NOT_FOUND;
+     }
  
 +    hostname = get_hostname();
 +    if (!hostname) return WSA_NOT_ENOUGH_MEMORY;
@@ -54,7 +56,7 @@ index b6aad67..d5404b7 100644
      else
          node = nodename;
  
-@@ -5677,6 +5677,14 @@ int WINAPI WS_getaddrinfo(LPCSTR nodename, LPCSTR servname, const struct WS_addr
+@@ -5684,6 +5684,14 @@ int WINAPI WS_getaddrinfo(LPCSTR nodename, LPCSTR servname, const struct WS_addr
      /* getaddrinfo(3) is thread safe, no need to wrap in CS */
      result = getaddrinfo(node, servname, punixhints, &unixaires);
  
@@ -70,10 +72,10 @@ index b6aad67..d5404b7 100644
      HeapFree(GetProcessHeap(), 0, hostname);
  
 diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
-index 49ebbf5..c322e73 100644
+index 7288b5c..08d5b88 100644
 --- a/dlls/ws2_32/tests/sock.c
 +++ b/dlls/ws2_32/tests/sock.c
-@@ -5802,12 +5802,17 @@ static void test_GetAddrInfoW(void)
+@@ -5871,12 +5871,17 @@ static void test_GetAddrInfoW(void)
      static const WCHAR zero[] = {'0',0};
      int i, ret;
      ADDRINFOW *result, *result2, *p, hint;
@@ -91,7 +93,7 @@ index 49ebbf5..c322e73 100644
      memset(&hint, 0, sizeof(ADDRINFOW));
  
      result = (ADDRINFOW *)0xdeadbeef;
-@@ -5867,6 +5872,25 @@ static void test_GetAddrInfoW(void)
+@@ -5941,6 +5946,25 @@ static void test_GetAddrInfoW(void)
      ok(!ret, "GetAddrInfoW failed with %d\n", WSAGetLastError());
      pFreeAddrInfoW(result);
  
@@ -117,7 +119,7 @@ index 49ebbf5..c322e73 100644
      result = NULL;
      ret = pGetAddrInfoW(localhost, NULL, &hint, &result);
      ok(!ret, "GetAddrInfoW failed with %d\n", WSAGetLastError());
-@@ -5953,12 +5977,15 @@ static void test_getaddrinfo(void)
+@@ -6033,12 +6057,15 @@ static void test_getaddrinfo(void)
  {
      int i, ret;
      ADDRINFOA *result, *result2, *p, hint;
@@ -133,7 +135,7 @@ index 49ebbf5..c322e73 100644
      memset(&hint, 0, sizeof(ADDRINFOA));
  
      result = (ADDRINFOA *)0xdeadbeef;
-@@ -6019,6 +6046,26 @@ static void test_getaddrinfo(void)
+@@ -6105,6 +6132,26 @@ static void test_getaddrinfo(void)
      pfreeaddrinfo(result);
  
      result = NULL;

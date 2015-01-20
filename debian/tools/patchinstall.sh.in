@@ -63,11 +63,21 @@ patchlist="/dev/null"
 backend="patch"
 enable=1
 
+# Find location of patches
+patchdir="$(dirname "$(readlink -f "$0")")"
+if ! test -f "$patchdir/patchinstall.sh"; then
+	if test -f ./patchinstall.sh; then
+		patchdir="$(pwd)"
+	else
+		abort "Failed to find patch directory."
+	fi
+fi
+
+# Parse commandline arguments
 if test "$#" -eq 0; then
 	abort "No commandline arguments given, don't know what to do."
 fi
 
-# Parse commandline arguments
 while test "$#" -gt 0; do
 	if patch_enable "$1" "$enable"; then
 		shift
@@ -133,6 +143,11 @@ elif test ! -f "$DESTDIR/tools/make_requests"; then
 	abort "DESTDIR does not point to the Wine source tree."
 fi
 
+# Change directory to DESTDIR, epatch depends on that
+if ! cd "$DESTDIR"; then
+	abort "Unable to change directory to $DESTDIR."
+fi
+
 # Most backends will try to use git, either directly or indirectly.
 # Unfortunately this does not work when "$DESTDIR" points to a
 # subdirectory of a git tree, which has the effect that no patches
@@ -151,10 +166,10 @@ if test "$backend" = "patch"; then
 		gitapply_args=""
 	fi
 
-	patch_apply ()
+	patch_apply_file ()
 	{{
 		echo "Applying $1"
-		if ! ../debian/tools/gitapply.sh $gitapply_args -d "$DESTDIR" < "$1"; then
+		if ! "$patchdir/../debian/tools/gitapply.sh" $gitapply_args < "$1"; then
 			abort "Failed to apply patch, aborting!"
 		fi
 	}}
@@ -168,17 +183,23 @@ elif test "$backend" = "epatch"; then
 		gitapply_args=""
 	fi
 
-	patch_apply ()
+	if ! command -v epatch &> /dev/null || \
+	   ! command -v ebegin &> /dev/null || \
+	   ! command -v eend &> /dev/null; then
+		abort "Shell functions epatch/ebegin/eend not found. You have to source this script from your ebuild."
+	fi
+
+	patch_apply_file ()
 	{{
+		shortname="$(basename "$1")"
 		if grep -q "^GIT binary patch" "$1"; then
-			if ! ../debian/tools/gitapply.sh $gitapply_args -d "$DESTDIR" < "$1"; then
-				abort "Failed to apply patch, aborting!"
-			fi
+			ebegin "Applying $shortname"
+			"$patchdir/../debian/tools/gitapply.sh" $gitapply_args < "$1" || \
+				die "Failed Patch: $1!"
+			eend
+
 		else
-			current_patch="$(readlink -f "$1")"
-			if ! (cd "$DESTDIR" && epatch "$current_patch"); then
-				abort "Failed to apply patch, aborting!"
-			fi
+			epatch "$1" # epatch calls die upon failure
 		fi
 	}}
 
@@ -189,10 +210,10 @@ elif test "$backend" = "git" -o "$backend" = "git-am"; then
 		abort "Backend 'git-am' not possible when DESTDIR points to a git subdirectory."
 	fi
 
-	patch_apply ()
+	patch_apply_file ()
 	{{
 		echo "Applying $1"
-		if ! cat "$1" | (cd "$DESTDIR" && git am); then
+		if ! git am "$1"; then
 			abort "Failed to apply patch, aborting!"
 		fi
 	}}
@@ -204,10 +225,10 @@ elif test "$backend" = "git-apply"; then
 		abort "Backend 'git-apply' not possible when DESTDIR points to a git subdirectory."
 	fi
 
-	patch_apply ()
+	patch_apply_file ()
 	{{
 		echo "Applying $1"
-		if ! cat "$1" | (cd "$DESTDIR" && git apply); then
+		if ! git apply "$1"; then
 			abort "Failed to apply patch, aborting!"
 		fi
 	}}
@@ -224,10 +245,11 @@ elif test "$backend" = "stg"; then
 	enable_patchlist=0
 	enable_autoconf=0
 
-	patch_apply ()
+	patch_apply_file ()
 	{{
 		echo "Applying $1"
-		if ! echo "staging/$1" | cat - "$1" | (cd "$DESTDIR" && stg import); then
+		shortname="$(basename "$1")"
+		if ! echo "staging/$shortname" | cat - "$1" | stg import; then
 			abort "Failed to apply patch, aborting!"
 		fi
 	}}
@@ -236,20 +258,14 @@ else
 	abort "Selected backend $backend not supported."
 fi
 
+patch_apply ()
+{{
+	patch_apply_file "$patchdir/$1"
+}}
+
 
 {patch_resolver}
 
-
-# To make sure we find all the patches and tools switch to the patches directory now
-script="$(readlink -f "$0")"
-curdir="$(dirname "$script")"
-if test -f "$curdir/patchinstall.sh"; then
-	if ! cd "$curdir"; then
-		abort "Failed to change working directory to $curdir."
-	fi
-elif test ! -f ./patchinstall.sh; then
-	abort "Failed to find patch directory."
-fi
 
 # If autoupdate is enabled then create a tempfile to keep track of all patches
 if test "$enable_patchlist" -eq 1; then
@@ -339,16 +355,16 @@ index 2159fac..7cb2918 100644
      wine_init_argv0_path;
      wine_is_dbcs_leadbyte;
 EOF
-		patch_apply "$patchlist"
+		patch_apply_file "$patchlist"
 	fi
 	rm "$patchlist"
 fi
 
 if test "$enable_autoconf" -eq 1; then
-	if ! (cd "$DESTDIR" && autoreconf -f); then
+	if ! autoreconf -f; then
 		abort "'autoreconf -f' failed."
 	fi
-	if ! (cd "$DESTDIR" && ./tools/make_requests); then
+	if ! ./tools/make_requests; then
 		abort "'./tools/make_requests' failed."
 	fi
 fi

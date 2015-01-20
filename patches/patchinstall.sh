@@ -79,6 +79,7 @@ patch_enable_all ()
 	enable_dbghelp_KdHelp="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
 	enable_dinput_Events="$1"
+	enable_dpvoice_GetCompressionTypes="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dxgi_GetDesc="$1"
 	enable_fonts_Missing_Fonts="$1"
@@ -261,6 +262,9 @@ patch_enable ()
 			;;
 		dinput-Events)
 			enable_dinput_Events="$2"
+			;;
+		dpvoice-GetCompressionTypes)
+			enable_dpvoice_GetCompressionTypes="$2"
 			;;
 		dsound-Fast_Mixer)
 			enable_dsound_Fast_Mixer="$2"
@@ -1356,6 +1360,23 @@ if test "$enable_dinput_Events" -eq 1; then
 	patch_apply dinput-Events/0001-dinput-Ensure-X11-input-events-are-handled-even-with.patch
 	(
 		echo '+    { "Sebastian Lackner", "dinput: Ensure X11 input events are handled even without explicit message loop.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dpvoice-GetCompressionTypes
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#29238] Implement semi-stub for IDirectPlayVoiceClient::GetCompressionTypes
+# |
+# | Modified files:
+# |   *	dlls/dpvoice/client.c, dlls/dpvoice/dvoice_private.h, dlls/dpvoice/server.c, dlls/dpvoice/tests/voice.c
+# |
+if test "$enable_dpvoice_GetCompressionTypes" -eq 1; then
+	patch_apply dpvoice-GetCompressionTypes/0001-dpvoice-tests-Add-GetCompressionTypes-tests.patch
+	patch_apply dpvoice-GetCompressionTypes/0002-dpvoice-Turn-GetCompressionTypes-into-a-semi-stub.patch
+	(
+		echo '+    { "Alex Henrie", "dpvoice/tests: Add GetCompressionTypes tests.", 1 },';
+		echo '+    { "Alex Henrie", "dpvoice: Turn GetCompressionTypes into a semi-stub.", 1 },';
 	) >> "$patchlist"
 fi
 

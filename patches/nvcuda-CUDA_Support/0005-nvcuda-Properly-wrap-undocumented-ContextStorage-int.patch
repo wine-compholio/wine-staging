@@ -1,4 +1,4 @@
-From 9890ed7c2dcde12d86180d9c65d398d43a2cffca Mon Sep 17 00:00:00 2001
+From 39568b59352627db2c0ec1235c71cfcba05141a8 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 9 Jan 2015 07:42:32 +0100
 Subject: nvcuda: Properly wrap undocumented 'ContextStorage' interface and add
@@ -11,10 +11,10 @@ Subject: nvcuda: Properly wrap undocumented 'ContextStorage' interface and add
  3 files changed, 319 insertions(+), 33 deletions(-)
 
 diff --git a/dlls/nvcuda/internal.c b/dlls/nvcuda/internal.c
-index 4e733eb..4ba42b3 100755
+index 611e310..8a2dffd 100755
 --- a/dlls/nvcuda/internal.c
 +++ b/dlls/nvcuda/internal.c
-@@ -94,7 +94,7 @@ static const CUuuid UUID_Unknown2                   = {{0xA0, 0x94, 0x79, 0x8C,
+@@ -88,7 +88,7 @@ static const CUuuid UUID_Unknown2                   = {{0xA0, 0x94, 0x79, 0x8C,
                                                          0x93, 0xF2, 0x08, 0x00, 0x20, 0x0C, 0x0A, 0x66}};
  static const CUuuid UUID_Unknown3                   = {{0x42, 0xD8, 0x5A, 0x81, 0x23, 0xF6, 0xCB, 0x47,
                                                          0x82, 0x98, 0xF6, 0xE7, 0x8A, 0x3A, 0xEC, 0xDC}};
@@ -23,7 +23,7 @@ index 4e733eb..4ba42b3 100755
                                                          0xA8, 0xC3, 0x68, 0xF3, 0x55, 0xD8, 0x95, 0x93}};
  static const CUuuid UUID_Unknown5                   = {{0x0C, 0xA5, 0x0B, 0x8C, 0x10, 0x04, 0x92, 0x9A,
                                                          0x89, 0xA7, 0xD0, 0xDF, 0x10, 0xE7, 0x72, 0x86}};
-@@ -170,20 +170,20 @@ static const struct
+@@ -164,20 +164,20 @@ static const struct
  } *Unknown3_orig = NULL;
  
  /*
@@ -53,11 +53,11 @@ index 4e733eb..4ba42b3 100755
  
  /*
   * TlsNotifyInterface
-@@ -316,29 +316,80 @@ struct Unknown3_table Unknown3_Impl =
+@@ -310,29 +310,80 @@ static struct Unknown3_table Unknown3_Impl =
      Unknown3_func1_relay,
  };
  
--void* WINAPI Unknown4_func0_relay(void *param0, void *param1, void *param2, void *param3)
+-static void* WINAPI Unknown4_func0_relay(void *param0, void *param1, void *param2, void *param3)
 +struct context_storage
  {
 -    TRACE("(%p, %p, %p, %p)\n", param0, param1, param2, param3);
@@ -83,8 +83,8 @@ index 4e733eb..4ba42b3 100755
 +    HeapFree( GetProcessHeap(), 0, storage );
  }
  
--void* WINAPI Unknown4_func1_relay(void *param0, void *param1)
-+CUresult WINAPI ContextStorage_Set(CUcontext ctx, void *key, void *value, void *callback)
+-static void* WINAPI Unknown4_func1_relay(void *param0, void *param1)
++static CUresult WINAPI ContextStorage_Set(CUcontext ctx, void *key, void *value, void *callback)
  {
 -    TRACE("(%p, %p)\n", param0, param1);
 -    return Unknown4_orig->func1(param0, param1);
@@ -105,8 +105,8 @@ index 4e733eb..4ba42b3 100755
 +    return ret;
  }
  
--void* WINAPI Unknown4_func2_relay(void *param0, void *param1, void *param2)
-+CUresult WINAPI ContextStorage_Remove(CUcontext ctx, void *key)
+-static void* WINAPI Unknown4_func2_relay(void *param0, void *param1, void *param2)
++static CUresult WINAPI ContextStorage_Remove(CUcontext ctx, void *key)
  {
 -    TRACE("(%p, %p, %p)\n", param0, param1, param2);
 -    return Unknown4_orig->func2(param0, param1, param2);
@@ -123,7 +123,7 @@ index 4e733eb..4ba42b3 100755
 +    return ContextStorage_orig->Remove(ctx, key);
 +}
 +
-+CUresult WINAPI ContextStorage_Get(void **value, CUcontext ctx, void *key)
++static CUresult WINAPI ContextStorage_Get(void **value, CUcontext ctx, void *key)
 +{
 +    struct context_storage *storage;
 +    CUresult ret;
@@ -146,8 +146,8 @@ index 4e733eb..4ba42b3 100755
 +    ContextStorage_Get,
  };
  
- void* WINAPI Unknown5_func0_relay(void *param0, void *param1, void *param2)
-@@ -486,15 +537,15 @@ CUresult cuda_get_table(const void **table, const CUuuid *uuid, const void *orig
+ static void* WINAPI Unknown5_func0_relay(void *param0, void *param1, void *param2)
+@@ -480,15 +531,15 @@ CUresult cuda_get_table(const void **table, const CUuuid *uuid, const void *orig
          *table = (void *)&Unknown3_Impl;
          return CUDA_SUCCESS;
      }
@@ -167,7 +167,7 @@ index 4e733eb..4ba42b3 100755
      }
      else if (cuda_equal_uuid(uuid, &UUID_Unknown5))
 diff --git a/dlls/nvcuda/tests/nvcuda.c b/dlls/nvcuda/tests/nvcuda.c
-index 3b00c5d..93aaa49 100644
+index fc8f300..9c30c37 100644
 --- a/dlls/nvcuda/tests/nvcuda.c
 +++ b/dlls/nvcuda/tests/nvcuda.c
 @@ -27,10 +27,24 @@

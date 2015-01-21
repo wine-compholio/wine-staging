@@ -2207,7 +2207,7 @@ if test "$enable_nvcuda_CUDA_Support" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "include: Add cuda.h.h.", 1 },';
 		echo '+    { "Sebastian Lackner", "nvcuda: Add stub dll.", 1 },';
-		echo '+    { "Michael Müller", "nvcuda: First implementation.", 1 },';
+		echo '+    { "Michael Müller", "nvcuda: First implementation.", 2 },';
 		echo '+    { "Sebastian Lackner", "nvcuda: Implement new functions added in CUDA 6.5.", 1 },';
 		echo '+    { "Michael Müller", "nvcuda: Properly wrap undocumented '\''ContextStorage'\'' interface and add tests.", 1 },';
 		echo '+    { "Michael Müller", "nvcuda: Emulate two d3d9 initialization functions.", 1 },';

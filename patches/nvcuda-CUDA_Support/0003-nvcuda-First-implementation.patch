@@ -1,28 +1,32 @@
-From 81fe2ed75ea9e0f282c496f0c8183a4e316fb78d Mon Sep 17 00:00:00 2001
+From 3a96e7ad09c6ad0ad31313634688c5c374d5d89f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 3 Jan 2015 03:39:11 +0100
-Subject: nvcuda: First implementation.
+Subject: nvcuda: First implementation. (rev 2)
 
+Changes by Sebastian Lackner <sebastian@fds-team.de>:
+* Add static to a couple of functions
+* TLS callbacks should be declared as CDECL
+* Do not unlock the critical section while processing TLS callbacks
 ---
  configure.ac                  |    1 +
  dlls/nvcuda/Makefile.in       |    3 +-
- dlls/nvcuda/internal.c        |  521 ++++++++++
+ dlls/nvcuda/internal.c        |  515 ++++++++++
  dlls/nvcuda/nvcuda.c          | 2097 ++++++++++++++++++++++++++++++++++++++++-
  dlls/nvcuda/nvcuda.h          |   29 +
  dlls/nvcuda/nvcuda.spec       |  492 +++++-----
  dlls/nvcuda/tests/Makefile.in |    4 +
  dlls/nvcuda/tests/nvcuda.c    |  168 ++++
- 8 files changed, 3063 insertions(+), 252 deletions(-)
+ 8 files changed, 3057 insertions(+), 252 deletions(-)
  create mode 100755 dlls/nvcuda/internal.c
  create mode 100644 dlls/nvcuda/nvcuda.h
  create mode 100644 dlls/nvcuda/tests/Makefile.in
  create mode 100644 dlls/nvcuda/tests/nvcuda.c
 
 diff --git a/configure.ac b/configure.ac
-index a4248d0..73e67bb 100644
+index 48bd58c..dc03595 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -3126,6 +3126,7 @@ WINE_CONFIG_DLL(ntoskrnl.exe,,[implib])
+@@ -3127,6 +3127,7 @@ WINE_CONFIG_DLL(ntoskrnl.exe,,[implib])
  WINE_CONFIG_DLL(ntprint)
  WINE_CONFIG_TEST(dlls/ntprint/tests)
  WINE_CONFIG_DLL(nvcuda)
@@ -45,10 +49,10 @@ index 4b33278..6322fb2 100644
  RC_SRCS = nvcuda.rc
 diff --git a/dlls/nvcuda/internal.c b/dlls/nvcuda/internal.c
 new file mode 100755
-index 0000000..4e733eb
+index 0000000..611e310
 --- /dev/null
 +++ b/dlls/nvcuda/internal.c
-@@ -0,0 +1,521 @@
+@@ -0,0 +1,515 @@
 +/*
 + * Copyright (C) 2014-2015 Michael Müller
 + * Copyright (C) 2014-2015 Sebastian Lackner
@@ -87,7 +91,7 @@ index 0000000..4e733eb
 +struct tls_callback_entry
 +{
 +    struct list entry;
-+    void (*callback)(DWORD, void *);
++    void (CDECL *callback)(DWORD, void *);
 +    void *userdata;
 +    ULONG count;
 +};
@@ -105,7 +109,6 @@ index 0000000..4e733eb
 +
 +void cuda_process_tls_callbacks(DWORD reason)
 +{
-+    struct tls_callback_entry *to_free = NULL;
 +    struct list *ptr;
 +
 +    TRACE("(%d)\n", reason);
@@ -119,24 +122,19 @@ index 0000000..4e733eb
 +    {
 +        struct tls_callback_entry *callback = LIST_ENTRY( ptr, struct tls_callback_entry, entry );
 +        callback->count++;
-+        LeaveCriticalSection( &tls_callback_section );
-+        HeapFree( GetProcessHeap(), 0, to_free );
-+        to_free = NULL;
 +
 +        TRACE("calling handler %p(0, %p)\n", callback->callback, callback->userdata);
 +        callback->callback(0, callback->userdata);
 +        TRACE("handler %p returned\n", callback->callback);
 +
-+        EnterCriticalSection( &tls_callback_section );
 +        ptr = list_next( &tls_callbacks, ptr );
 +        if (!--callback->count)  /* removed during execution */
 +        {
 +            list_remove( &callback->entry );
-+            to_free = callback;
++            HeapFree( GetProcessHeap(), 0, callback );
 +        }
 +    }
 +    LeaveCriticalSection( &tls_callback_section );
-+    HeapFree( GetProcessHeap(), 0, to_free );
 +}
 +
 +static const CUuuid UUID_Unknown1                   = {{0x6B, 0xD5, 0xFB, 0x6C, 0x5B, 0xF4, 0xE7, 0x4A,
@@ -261,31 +259,31 @@ index 0000000..4e733eb
 +} *Unknown5_orig = NULL;
 +
 +
-+void* WINAPI Unknown1_func0_relay(void *param0, void *param1)
++static void* WINAPI Unknown1_func0_relay(void *param0, void *param1)
 +{
 +    TRACE("(%p, %p)\n", param0, param1);
 +    return Unknown1_orig->func0(param0, param1);
 +}
 +
-+void* WINAPI Unknown1_func1_relay(void *param0, void *param1)
++static void* WINAPI Unknown1_func1_relay(void *param0, void *param1)
 +{
 +    TRACE("(%p, %p)\n", param0, param1);
 +    return Unknown1_orig->func1(param0, param1);
 +}
 +
-+void* WINAPI Unknown1_func2_relay(void *param0, void *param1)
++static void* WINAPI Unknown1_func2_relay(void *param0, void *param1)
 +{
 +    TRACE("(%p, %p)\n", param0, param1);
 +    return Unknown1_orig->func2(param0, param1);
 +}
 +
-+void* WINAPI Unknown1_func3_relay(void *param0, void *param1)
++static void* WINAPI Unknown1_func3_relay(void *param0, void *param1)
 +{
 +    TRACE("(%p, %p)\n", param0, param1);
 +    return Unknown1_orig->func3(param0, param1);
 +}
 +
-+void* WINAPI Unknown1_func4_relay(void *param0)
++static void* WINAPI Unknown1_func4_relay(void *param0)
 +{
 +    TRACE("(%p)\n", param0);
 +    return Unknown1_orig->func4(param0);
@@ -301,37 +299,37 @@ index 0000000..4e733eb
 +    Unknown1_func4_relay,
 +};
 +
-+void* WINAPI Unknown2_func0_relay(void *param0, void *param1)
++static void* WINAPI Unknown2_func0_relay(void *param0, void *param1)
 +{
 +    TRACE("(%p, %p)\n", param0, param1);
 +    return Unknown2_orig->func0(param0, param1);
 +}
 +
-+void* WINAPI Unknown2_func1_relay(void *param0, void *param1)
++static void* WINAPI Unknown2_func1_relay(void *param0, void *param1)
 +{
 +    TRACE("(%p, %p)\n", param0, param1);
 +    return Unknown2_orig->func1(param0, param1);
 +}
 +
-+void* WINAPI Unknown2_func2_relay(void *param0, void *param1, void *param2)
++static void* WINAPI Unknown2_func2_relay(void *param0, void *param1, void *param2)
 +{
 +    TRACE("(%p, %p, %p)\n", param0, param1, param2);
 +    return Unknown2_orig->func2(param0, param1, param2);
 +}
 +
-+void* WINAPI Unknown2_func3_relay(void *param0, void *param1)
++static void* WINAPI Unknown2_func3_relay(void *param0, void *param1)
 +{
 +    TRACE("(%p, %p)\n", param0, param1);
 +    return Unknown2_orig->func3(param0, param1);
 +}
 +
-+void* WINAPI Unknown2_func4_relay(void *param0, void *param1)
++static void* WINAPI Unknown2_func4_relay(void *param0, void *param1)
 +{
 +    TRACE("(%p, %p)\n", param0, param1);
 +    return Unknown2_orig->func4(param0, param1);
 +}
 +
-+void* WINAPI Unknown2_func5_relay(void *param0, void *param1)
++static void* WINAPI Unknown2_func5_relay(void *param0, void *param1)
 +{
 +    TRACE("(%p, %p)\n", param0, param1);
 +    return Unknown2_orig->func5(param0, param1);
@@ -348,38 +346,38 @@ index 0000000..4e733eb
 +    Unknown2_func5_relay,
 +};
 +
-+void* WINAPI Unknown3_func0_relay(void *param0)
++static void* WINAPI Unknown3_func0_relay(void *param0)
 +{
 +    TRACE("(%p)\n", param0);
 +    return Unknown3_orig->func0(param0);
 +}
 +
-+void* WINAPI Unknown3_func1_relay(void *param0)
++static void* WINAPI Unknown3_func1_relay(void *param0)
 +{
 +    TRACE("(%p)\n", param0);
 +    return Unknown3_orig->func1(param0);
 +}
 +
-+struct Unknown3_table Unknown3_Impl =
++static struct Unknown3_table Unknown3_Impl =
 +{
 +    sizeof(struct Unknown3_table),
 +    Unknown3_func0_relay,
 +    Unknown3_func1_relay,
 +};
 +
-+void* WINAPI Unknown4_func0_relay(void *param0, void *param1, void *param2, void *param3)
++static void* WINAPI Unknown4_func0_relay(void *param0, void *param1, void *param2, void *param3)
 +{
 +    TRACE("(%p, %p, %p, %p)\n", param0, param1, param2, param3);
 +    return Unknown4_orig->func0(param0, param1, param2, param3);
 +}
 +
-+void* WINAPI Unknown4_func1_relay(void *param0, void *param1)
++static void* WINAPI Unknown4_func1_relay(void *param0, void *param1)
 +{
 +    TRACE("(%p, %p)\n", param0, param1);
 +    return Unknown4_orig->func1(param0, param1);
 +}
 +
-+void* WINAPI Unknown4_func2_relay(void *param0, void *param1, void *param2)
++static void* WINAPI Unknown4_func2_relay(void *param0, void *param1, void *param2)
 +{
 +    TRACE("(%p, %p, %p)\n", param0, param1, param2);
 +    return Unknown4_orig->func2(param0, param1, param2);
@@ -392,7 +390,7 @@ index 0000000..4e733eb
 +    Unknown4_func2_relay,
 +};
 +
-+void* WINAPI Unknown5_func0_relay(void *param0, void *param1, void *param2)
++static void* WINAPI Unknown5_func0_relay(void *param0, void *param1, void *param2)
 +{
 +    TRACE("(%p, %p, %p)\n", param0, param1, param2);
 +    return Unknown5_orig->func0(param0, param1, param2);
@@ -404,7 +402,7 @@ index 0000000..4e733eb
 +    Unknown5_func0_relay,
 +};
 +
-+CUresult WINAPI TlsNotifyInterface_Set(void **handle, void *callback, void *userdata)
++static CUresult WINAPI TlsNotifyInterface_Set(void **handle, void *callback, void *userdata)
 +{
 +    struct tls_callback_entry *new_entry;
 +
@@ -426,7 +424,7 @@ index 0000000..4e733eb
 +    return CUDA_SUCCESS;
 +}
 +
-+CUresult WINAPI TlsNotifyInterface_Remove(void *handle, void *param1)
++static CUresult WINAPI TlsNotifyInterface_Remove(void *handle, void *param1)
 +{
 +    CUresult ret = CUDA_ERROR_INVALID_VALUE;
 +    struct tls_callback_entry *to_free = NULL;
@@ -571,7 +569,7 @@ index 0000000..4e733eb
 +    return CUDA_ERROR_UNKNOWN;
 +}
 diff --git a/dlls/nvcuda/nvcuda.c b/dlls/nvcuda/nvcuda.c
-index 8b7eb9c..5b9eed6 100644
+index 8b7eb9c..3ef7c35 100644
 --- a/dlls/nvcuda/nvcuda.c
 +++ b/dlls/nvcuda/nvcuda.c
 @@ -1,4 +1,5 @@
@@ -3251,7 +3249,7 @@ index 0000000..81f9290
 +	nvcuda.c
 diff --git a/dlls/nvcuda/tests/nvcuda.c b/dlls/nvcuda/tests/nvcuda.c
 new file mode 100644
-index 0000000..3b00c5d
+index 0000000..fc8f300
 --- /dev/null
 +++ b/dlls/nvcuda/tests/nvcuda.c
 @@ -0,0 +1,168 @@
@@ -3329,7 +3327,7 @@ index 0000000..3b00c5d
 +    DWORD threadid;
 +};
 +
-+static void tls_callback_test(DWORD reason, void *data)
++static void CDECL tls_callback_test(DWORD reason, void *data)
 +{
 +    struct tls_test_data *test_data = data;
 +    trace("reason: %d, data: %p\n", reason, data);

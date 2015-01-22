@@ -128,6 +128,7 @@ patch_enable_all ()
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_WinSqm="$1"
 	enable_ntoskrnl_Emulator="$1"
+	enable_ntoskrnl_KeWaitForMultipleObjects="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
@@ -410,6 +411,9 @@ patch_enable ()
 			;;
 		ntoskrnl-Emulator)
 			enable_ntoskrnl_Emulator="$2"
+			;;
+		ntoskrnl-KeWaitForMultipleObjects)
+			enable_ntoskrnl_KeWaitForMultipleObjects="$2"
 			;;
 		nvapi-Stub_DLL)
 			enable_nvapi_Stub_DLL="$2"
@@ -2192,6 +2196,18 @@ if test "$enable_ntoskrnl_Emulator" -eq 1; then
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Emulate '\''mov Eb, Gb'\'' instruction on x86 processor architecture.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Emulate memory access to KI_USER_SHARED_DATA on x86_64.", 2 },';
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Add TRACEs for instruction emulator on x86_64 to simplify debugging.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntoskrnl-KeWaitForMultipleObjects
+# |
+# | Modified files:
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/ntddk.h
+# |
+if test "$enable_ntoskrnl_KeWaitForMultipleObjects" -eq 1; then
+	patch_apply ntoskrnl-KeWaitForMultipleObjects/0001-ntoskrnl.exe-add-KeWaitForMultipleObjects-stub.patch
+	(
+		echo '+    { "Austin English", "ntoskrnl.exe: add KeWaitForMultipleObjects stub.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -138,6 +138,7 @@ patch_enable_all ()
 	enable_secur32_Schannel_ContextAttr="$1"
 	enable_server_ACL_Compat="$1"
 	enable_server_Address_Change_Notification="$1"
+	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
 	enable_server_Inherited_ACLs="$1"
 	enable_server_Misc_ACL="$1"
@@ -439,6 +440,9 @@ patch_enable ()
 			;;
 		server-Address_Change_Notification)
 			enable_server_Address_Change_Notification="$2"
+			;;
+		server-ClipCursor)
+			enable_server_ClipCursor="$2"
 			;;
 		server-CreateProcess_ACLs)
 			enable_server_CreateProcess_ACLs="$2"
@@ -2447,6 +2451,21 @@ if test "$enable_server_Address_Change_Notification" -eq 1; then
 		echo '+    { "Erich E. Hoover", "server: Add blocked support for SIO_ADDRESS_LIST_CHANGE ioctl().", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Implement the interface change notification object.", 2 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Add an interactive test for interface change notifications.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-ClipCursor
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33479] Fix cursor clip regression / broken raw input in multiple games
+# |
+# | Modified files:
+# |   *	dlls/user32/message.c, server/queue.c
+# |
+if test "$enable_server_ClipCursor" -eq 1; then
+	patch_apply server-ClipCursor/0001-server-Only-send-WM_WINE_CLIPCURSOR-for-forced-clip-.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Only send WM_WINE_CLIPCURSOR for forced clip resets.", 1 },';
 	) >> "$patchlist"
 fi
 

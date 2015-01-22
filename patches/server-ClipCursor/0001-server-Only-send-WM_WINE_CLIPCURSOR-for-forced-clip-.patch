@@ -1,0 +1,72 @@
+From 9fc973740aac7d4eac1995f30c9dbb8bbbdc1ce5 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Thu, 22 Jan 2015 16:34:58 +0100
+Subject: server: Only send WM_WINE_CLIPCURSOR for forced clip resets.
+
+---
+ dlls/user32/message.c |  6 ------
+ server/queue.c        | 10 +++++-----
+ 2 files changed, 5 insertions(+), 11 deletions(-)
+
+diff --git a/dlls/user32/message.c b/dlls/user32/message.c
+index eac4e4d..70d95a6 100644
+--- a/dlls/user32/message.c
++++ b/dlls/user32/message.c
+@@ -1881,12 +1881,6 @@ static LRESULT handle_internal_message( HWND hwnd, UINT msg, WPARAM wparam, LPAR
+         return call_current_hook( h_extra->handle, HC_ACTION, wparam, h_extra->lparam );
+     }
+     case WM_WINE_CLIPCURSOR:
+-        if (wparam)
+-        {
+-            RECT rect;
+-            GetClipCursor( &rect );
+-            return USER_Driver->pClipCursor( &rect );
+-        }
+         return USER_Driver->pClipCursor( NULL );
+     default:
+         if (msg >= WM_WINE_FIRST_DRIVER_MSG && msg <= WM_WINE_LAST_DRIVER_MSG)
+diff --git a/server/queue.c b/server/queue.c
+index 5f87203..fce2e42 100644
+--- a/server/queue.c
++++ b/server/queue.c
+@@ -362,7 +362,7 @@ static void set_cursor_pos( struct desktop *desktop, int x, int y )
+ }
+ 
+ /* set the cursor clip rectangle */
+-static void set_clip_rectangle( struct desktop *desktop, const rectangle_t *rect )
++static void set_clip_rectangle( struct desktop *desktop, const rectangle_t *rect, int send_clip_msg )
+ {
+     rectangle_t top_rect;
+     int x, y;
+@@ -380,8 +380,8 @@ static void set_clip_rectangle( struct desktop *desktop, const rectangle_t *rect
+     }
+     else desktop->cursor.clip = top_rect;
+ 
+-    if (desktop->cursor.clip_msg)
+-        post_desktop_message( desktop, desktop->cursor.clip_msg, rect != NULL, 0 );
++    if (desktop->cursor.clip_msg && send_clip_msg)
++        post_desktop_message( desktop, desktop->cursor.clip_msg, 0, 0 );
+ 
+     /* warp the mouse to be inside the clip rect */
+     x = min( max( desktop->cursor.x, desktop->cursor.clip.left ), desktop->cursor.clip.right-1 );
+@@ -393,7 +393,7 @@ static void set_clip_rectangle( struct desktop *desktop, const rectangle_t *rect
+ static void set_foreground_input( struct desktop *desktop, struct thread_input *input )
+ {
+     if (desktop->foreground_input == input) return;
+-    set_clip_rectangle( desktop, NULL );
++    set_clip_rectangle( desktop, NULL, 1 );
+     desktop->foreground_input = input;
+ }
+ 
+@@ -3024,7 +3024,7 @@ DECL_HANDLER(set_cursor)
+         if (req->clip_msg && get_top_window_owner(desktop) == current->process)
+             desktop->cursor.clip_msg = req->clip_msg;
+ 
+-        set_clip_rectangle( desktop, (req->flags & SET_CURSOR_NOCLIP) ? NULL : &req->clip );
++        set_clip_rectangle( desktop, (req->flags & SET_CURSOR_NOCLIP) ? NULL : &req->clip, 0 );
+     }
+ 
+     reply->new_x       = input->desktop->cursor.x;
+-- 
+2.2.1
+

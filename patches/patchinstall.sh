@@ -1127,6 +1127,7 @@ fi
 # |   *	[#19231] Fix crash of Trine Demo on start
 # |   *	[#37391] Exception during start of fr-043 caused by missing DXTn support
 # |   *	[#34692] Fix wrong colors in Wolfenstein (2009)
+# |   *	[#24983] Fix crash in Space Rangers2 caused by missing DXTn support
 # |
 # | Modified files:
 # |   *	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/surface.c, dlls/d3dx9_36/tests/surface.c

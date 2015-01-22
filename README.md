@@ -191,7 +191,7 @@ Included bug fixes and improvements
 * Wine ignores IDF_CHECKFIRST flag in SetupPromptForDisk ([Wine Bug #20465](https://bugs.winehq.org/show_bug.cgi?id=20465))
 * Workaround for shlwapi URLs with relative paths
 * XEMBED support for embedding Wine windows inside Linux applications
-* nVidia driver for high-end laptop cards does not list all supported resolutions
+* ~~nVidia driver for high-end laptop cards does not list all supported resolutions~~
 * ntdll is missing WinSqm[Start|End]Session implementation ([Wine Bug #31971](https://bugs.winehq.org/show_bug.cgi?id=31971))
 * wglDescribePixelFormat should return max index for NULL descriptor ([Wine Bug #6176](https://bugs.winehq.org/show_bug.cgi?id=6176))
 * wininet should allow Accept-Encoding header for HTTP/1.0 ([Wine Bug #37046](https://bugs.winehq.org/show_bug.cgi?id=37046))

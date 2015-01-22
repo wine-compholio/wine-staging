@@ -179,7 +179,6 @@ patch_enable_all ()
 	enable_winepulse_PulseAudio_Support="$1"
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_Clipboard_HTML="$1"
-	enable_winex11_Limited_Resolutions="$1"
 	enable_winex11_Window_Groups="$1"
 	enable_winex11_XEMBED="$1"
 	enable_winex11_wglShareLists="$1"
@@ -564,9 +563,6 @@ patch_enable ()
 			;;
 		winex11-Clipboard_HTML)
 			enable_winex11_Clipboard_HTML="$2"
-			;;
-		winex11-Limited_Resolutions)
-			enable_winex11_Limited_Resolutions="$2"
 			;;
 		winex11-Window_Groups)
 			enable_winex11_Window_Groups="$2"
@@ -3474,18 +3470,6 @@ if test "$enable_winex11_Clipboard_HTML" -eq 1; then
 	patch_apply winex11-Clipboard_HTML/0001-winex11.drv-Import-X11-s-text-html-as-HTML-Format.patch
 	(
 		echo '+    { "Damjan Jovanovic", "winex11.drv: Import X11'\''s \"text/html\" as \"HTML Format\".", 3 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winex11-Limited_Resolutions
-# |
-# | Modified files:
-# |   *	dlls/winex11.drv/xrandr.c
-# |
-if test "$enable_winex11_Limited_Resolutions" -eq 1; then
-	patch_apply winex11-Limited_Resolutions/0001-winex11.drv-Update-the-check-for-broken-nVidia-RandR.patch
-	(
-		echo '+    { "Erich E. Hoover", "winex11.drv: Update the check for broken nVidia RandR to test for the number of resolutions instead of the number of modes.", 1 },';
 	) >> "$patchlist"
 fi
 

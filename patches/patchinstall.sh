@@ -2195,7 +2195,7 @@ if test "$enable_ntoskrnl_DriverTest" -eq 1; then
 	patch_apply ntoskrnl-DriverTest/0001-ntoskrnl.exe-tests-Add-initial-driver-testing-framew.patch
 	patch_apply ntoskrnl-DriverTest/0002-ntoskrnl.exe-tests-Add-kernel-compliant-test-functio.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntoskrnl.exe/tests: Add initial driver testing framework and corrsponding changes to Makefile system.", 2 },';
+		echo '+    { "Sebastian Lackner", "ntoskrnl.exe/tests: Add initial driver testing framework and corresponding changes to Makefile system.", 2 },';
 		echo '+    { "Michael Müller", "ntoskrnl.exe/tests: Add kernel compliant test functions.", 1 },';
 	) >> "$patchlist"
 fi

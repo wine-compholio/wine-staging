@@ -127,6 +127,7 @@ patch_enable_all ()
 	enable_ntdll_User_Shared_Data="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_WinSqm="$1"
+	enable_ntoskrnl_DriverTest="$1"
 	enable_ntoskrnl_Emulator="$1"
 	enable_ntoskrnl_KeWaitForMultipleObjects="$1"
 	enable_nvapi_Stub_DLL="$1"
@@ -407,6 +408,9 @@ patch_enable ()
 			;;
 		ntdll-WinSqm)
 			enable_ntdll_WinSqm="$2"
+			;;
+		ntoskrnl-DriverTest)
+			enable_ntoskrnl_DriverTest="$2"
 			;;
 		ntoskrnl-Emulator)
 			enable_ntoskrnl_Emulator="$2"
@@ -2174,6 +2178,25 @@ if test "$enable_ntdll_WinSqm" -eq 1; then
 	patch_apply ntdll-WinSqm/0001-ntdll-Add-stubs-for-WinSqmStartSession-WinSqmEndSess.patch
 	(
 		echo '+    { "Erich E. Hoover", "ntdll: Add stubs for WinSqmStartSession / WinSqmEndSession.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntoskrnl-DriverTest
+# |
+# | Modified files:
+# |   *	aclocal.m4, configure.ac, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/tests/Makefile.in,
+# | 	dlls/ntoskrnl.exe/tests/driver.sys/Makefile.in, dlls/ntoskrnl.exe/tests/driver.sys/driver.c,
+# | 	dlls/ntoskrnl.exe/tests/driver.sys/driver.h, dlls/ntoskrnl.exe/tests/driver.sys/driver.sys.spec,
+# | 	dlls/ntoskrnl.exe/tests/driver.sys/test.c, dlls/ntoskrnl.exe/tests/driver.sys/test.h,
+# | 	dlls/ntoskrnl.exe/tests/driver.sys/util.h, dlls/ntoskrnl.exe/tests/ntoskrnl.c, include/wine/test.h,
+# | 	tools/make_makefiles, tools/makedep.c
+# |
+if test "$enable_ntoskrnl_DriverTest" -eq 1; then
+	patch_apply ntoskrnl-DriverTest/0001-ntoskrnl.exe-tests-Add-initial-driver-testing-framew.patch
+	patch_apply ntoskrnl-DriverTest/0002-ntoskrnl.exe-tests-Add-kernel-compliant-test-functio.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntoskrnl.exe/tests: Add initial driver testing framework and corrsponding changes to Makefile system.", 2 },';
+		echo '+    { "Michael Müller", "ntoskrnl.exe/tests: Add kernel compliant test functions.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -37,7 +37,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [18]:**
+**Bugfixes and features included in the next upcoming release [19]:**
 
 * Add stub for KeWaitForMultipleObjects
 * Add stubs for D3DXCreateAnimationController interface
@@ -50,6 +50,7 @@ Included bug fixes and improvements
 * Fix init of LONGLONG variable with a negative value in TGA decoder
 * Fix wrong colors in Wolfenstein (2009) ([Wine Bug #34692](https://bugs.winehq.org/show_bug.cgi?id=34692))
 * Graphical issues in Inquisitor ([Wine Bug #32490](https://bugs.winehq.org/show_bug.cgi?id=32490))
+* Implement ntoskrnl driver testing framework.
 * Implement semi-stub for IDirectPlayVoiceClient::GetCompressionTypes ([Wine Bug #29238](https://bugs.winehq.org/show_bug.cgi?id=29238))
 * Multiple applications start wrong executable if whitespace present in name ([Wine Bug #19666](https://bugs.winehq.org/show_bug.cgi?id=19666))
 * Port Royale doesn't display ocean correctly ([Wine Bug #17913](https://bugs.winehq.org/show_bug.cgi?id=17913))

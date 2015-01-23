@@ -1,0 +1,752 @@
+From 2532d093c1ae0f4846879cca9c8e08f04a1e7bfc Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Tue, 20 Jan 2015 18:39:36 +0100
+Subject: ntoskrnl.exe/tests: Add kernel compliant test functions.
+
+---
+ dlls/ntoskrnl.exe/ntoskrnl.exe.spec            |   2 +-
+ dlls/ntoskrnl.exe/tests/driver.sys/Makefile.in |   3 +-
+ dlls/ntoskrnl.exe/tests/driver.sys/driver.c    |  38 ++---
+ dlls/ntoskrnl.exe/tests/driver.sys/driver.h    |  18 ++-
+ dlls/ntoskrnl.exe/tests/driver.sys/test.c      | 195 ++++++++++++++++++++++++
+ dlls/ntoskrnl.exe/tests/driver.sys/test.h      | 197 +++++++++++++++++++++++++
+ dlls/ntoskrnl.exe/tests/driver.sys/util.h      |  47 ++++++
+ dlls/ntoskrnl.exe/tests/ntoskrnl.c             |  53 +++++--
+ include/wine/test.h                            |  39 ++++-
+ 9 files changed, 551 insertions(+), 41 deletions(-)
+ create mode 100644 dlls/ntoskrnl.exe/tests/driver.sys/test.c
+ create mode 100644 dlls/ntoskrnl.exe/tests/driver.sys/test.h
+ create mode 100644 dlls/ntoskrnl.exe/tests/driver.sys/util.h
+
+diff --git a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
+index b824250..c104002 100644
+--- a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
++++ b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
+@@ -1423,7 +1423,7 @@
+ @ cdecl -private _strrev(str) msvcrt._strrev
+ @ cdecl -private _strset(str long) msvcrt._strset
+ @ cdecl -private _strupr(str) msvcrt._strupr
+-@ cdecl -private _vsnprintf(ptr long str ptr) msvcrt._vsnprintf
++@ cdecl _vsnprintf(ptr long str ptr) msvcrt._vsnprintf
+ @ cdecl -private _vsnwprintf(ptr long wstr ptr) msvcrt._vsnwprintf
+ @ cdecl -private _wcsicmp(wstr wstr) msvcrt._wcsicmp
+ @ cdecl -private _wcslwr(wstr) msvcrt._wcslwr
+diff --git a/dlls/ntoskrnl.exe/tests/driver.sys/Makefile.in b/dlls/ntoskrnl.exe/tests/driver.sys/Makefile.in
+index bc040e4..b3a6839 100644
+--- a/dlls/ntoskrnl.exe/tests/driver.sys/Makefile.in
++++ b/dlls/ntoskrnl.exe/tests/driver.sys/Makefile.in
+@@ -8,4 +8,5 @@ CROSSFLAGS = -nostartfiles -nostdlib -nodefaultlibs \
+              -Wl,-entry,_DriverEntry@8
+ 
+ C_SRCS = \
+-	driver.c
++	driver.c \
++	test.c
+diff --git a/dlls/ntoskrnl.exe/tests/driver.sys/driver.c b/dlls/ntoskrnl.exe/tests/driver.sys/driver.c
+index 5756090..81f938d 100644
+--- a/dlls/ntoskrnl.exe/tests/driver.sys/driver.c
++++ b/dlls/ntoskrnl.exe/tests/driver.sys/driver.c
+@@ -30,6 +30,9 @@
+ #include "winioctl.h"
+ #include "ddk/wdm.h"
+ 
++#define WINE_KERNEL
++#include "util.h"
++#include "test.h"
+ #include "driver.h"
+ 
+ const WCHAR driver_device[] = {'\\','D','e','v','i','c','e',
+@@ -37,24 +40,17 @@ const WCHAR driver_device[] = {'\\','D','e','v','i','c','e',
+ const WCHAR driver_link[] = {'\\','D','o','s','D','e','v','i','c','e','s',
+                              '\\','W','i','n','e','T','e','s','t','D','r','i','v','e','r',0};
+ 
+-
+-static NTSTATUS test_basic_ioctl(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
++KERNEL_TESTCASE(PsGetCurrentProcessId)
+ {
+-    const char str[] = "Wine is not an emulator";
+-    ULONG length = stack->Parameters.DeviceIoControl.OutputBufferLength;
+-    char *buffer = irp->AssociatedIrp.SystemBuffer;
+-    int i;
+-
+-    if (!buffer)
+-        return STATUS_ACCESS_VIOLATION;
+-
+-    if (length < sizeof(str)-1)
+-        return STATUS_BUFFER_TOO_SMALL;
+-
+-    for (i = 0; i < sizeof(str)-1; i++)
+-        buffer[i] = str[i];
++    test->processid = (DWORD)PsGetCurrentProcessId();
++    ok(test->processid, "Expected processid to be non zero\n");
++    return STATUS_SUCCESS;
++}
+ 
+-    *info = sizeof(str)-1;
++KERNEL_TESTCASE(PsGetCurrentThread)
++{
++    PETHREAD thread = PsGetCurrentThread();
++    todo_wine ok(thread != NULL, "Expected thread to be non-NULL\n");
+     return STATUS_SUCCESS;
+ }
+ 
+@@ -70,16 +66,20 @@ static NTSTATUS WINAPI driver_IoControl(DEVICE_OBJECT *device, IRP *irp)
+     NTSTATUS status = STATUS_NOT_SUPPORTED;
+     ULONG_PTR information = 0;
+ 
++#define DECLARE_TEST(name) \
++    case WINE_IOCTL_##name: status = RUN_TESTCASE(name, irp, stack, &information); break;
++
+     switch (stack->Parameters.DeviceIoControl.IoControlCode)
+     {
+-        case IOCTL_WINETEST_BASIC_IOCTL:
+-            status = test_basic_ioctl(irp, stack, &information);
+-            break;
++        DECLARE_TEST(PsGetCurrentProcessId);
++        DECLARE_TEST(PsGetCurrentThread);
+ 
+         default:
+             break;
+     }
+ 
++#undef DECLARE_TEST
++
+     irp->IoStatus.Status = status;
+     irp->IoStatus.Information = information;
+     IoCompleteRequest(irp, IO_NO_INCREMENT);
+diff --git a/dlls/ntoskrnl.exe/tests/driver.sys/driver.h b/dlls/ntoskrnl.exe/tests/driver.sys/driver.h
+index 372e908..e48bbdd 100644
+--- a/dlls/ntoskrnl.exe/tests/driver.sys/driver.h
++++ b/dlls/ntoskrnl.exe/tests/driver.sys/driver.h
+@@ -20,9 +20,19 @@
+  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+  */
+ 
++#include "test.h"
+ 
+-/*
+- * All custom IOCTLs need to have a function value >= 0x800.
+- */
++#define WINE_IOCTL_PsGetCurrentProcessId WINE_TEST_IOCTL(0)
++#define WINE_IOCTL_PsGetCurrentThread    WINE_TEST_IOCTL(1)
++
++struct test_PsGetCurrentProcessId_state
++{
++    struct kernel_test_state __state;
++    DWORD processid; /* output */
++};
++
++struct test_PsGetCurrentThread_state
++{
++    struct kernel_test_state __state;
++};
+ 
+-#define IOCTL_WINETEST_BASIC_IOCTL 			CTL_CODE(FILE_DEVICE_UNKNOWN, 0x800, METHOD_BUFFERED, FILE_ANY_ACCESS)
+diff --git a/dlls/ntoskrnl.exe/tests/driver.sys/test.c b/dlls/ntoskrnl.exe/tests/driver.sys/test.c
+new file mode 100644
+index 0000000..5e17c90
+--- /dev/null
++++ b/dlls/ntoskrnl.exe/tests/driver.sys/test.c
+@@ -0,0 +1,195 @@
++/*
++ * ntoskrnl.exe testing framework
++ *
++ * Copyright 2015 Michael Müller
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include <stdarg.h>
++
++#include "ntstatus.h"
++#define WIN32_NO_STATUS
++#include "windef.h"
++#include "winbase.h"
++#include "winternl.h"
++#include "winioctl.h"
++#include "ddk/wdm.h"
++
++#define WINE_KERNEL
++#include "util.h"
++#include "test.h"
++
++extern int _vsnprintf(char *buffer, size_t count, const char *format, __ms_va_list argptr);
++
++static void safe_vsnprintf(struct kernel_test_state *state, const char *msg, __ms_va_list args)
++{
++    int remaining;
++    int length;
++
++    if (state->output.overflow)
++        return;
++
++    if (state->output.offset >= sizeof(state->output.debug) - 1)
++    {
++        state->output.overflow = TRUE;
++        return;
++    }
++
++    remaining = (sizeof(state->output.debug) - 1) - state->output.offset;
++    length    = _vsnprintf(&state->output.debug[state->output.offset], remaining, msg, args);
++    if (length < 0)
++    {
++        state->output.debug[state->output.offset] = 0;
++        state->output.overflow = TRUE;
++        return;
++    }
++
++    state->output.offset += length;
++}
++
++static void __winetest_cdecl safe_snprintf(struct kernel_test_state *state, const char *msg, ...)
++{
++    __ms_va_list valist;
++
++    __ms_va_start(valist, msg);
++    safe_vsnprintf(state, msg, valist);
++    __ms_va_end(valist);
++}
++
++void winetest_set_location(struct kernel_test_state *state, const char *file, int line)
++{
++    state->temp.file = kernel_strrchr(file, '/');
++    if (state->temp.file == NULL)
++        state->temp.file = kernel_strrchr(file, '\\');
++    if (state->temp.file == NULL)
++        state->temp.file = file;
++    else
++        state->temp.file++;
++    state->temp.line = line;
++}
++
++int winetest_vok(struct kernel_test_state *state, int condition, const char *msg, __ms_va_list args)
++{
++    if (state->temp.todo_level)
++    {
++        if (condition)
++        {
++            safe_snprintf( state, "%s:%d: Test succeeded inside todo block: ",
++                           state->temp.file, state->temp.line );
++            safe_vsnprintf(state, msg, args);
++            state->output.todo_failures++;
++            return 0;
++        }
++        else
++        {
++            if (state->input.debug_level > 0)
++            {
++                safe_snprintf( state, "%s:%d: Test marked todo: ",
++                               state->temp.file, state->temp.line );
++                safe_vsnprintf(state, msg, args);
++            }
++            state->output.todo_successes++;
++            return 1;
++        }
++    }
++    else
++    {
++        if (!condition)
++        {
++            safe_snprintf( state, "%s:%d: Test failed: ",
++                           state->temp.file, state->temp.line );
++            safe_vsnprintf(state, msg, args);
++            state->output.failures++;
++            return 0;
++        }
++        else
++        {
++            if (state->input.report_success)
++                safe_snprintf( state, "%s:%d: Test succeeded\n",
++                               state->temp.file, state->temp.line);
++            state->output.successes++;
++            return 1;
++        }
++    }
++}
++
++void __winetest_cdecl winetest_ok(struct kernel_test_state *state, int condition, const char *msg, ...)
++{
++    __ms_va_list valist;
++
++    __ms_va_start(valist, msg);
++    winetest_vok(state, condition, msg, valist);
++    __ms_va_end(valist);
++}
++
++void __winetest_cdecl winetest_trace(struct kernel_test_state *state, const char *msg, ...)
++{
++    __ms_va_list valist;
++
++    if (state->input.debug_level > 0)
++    {
++        safe_snprintf( state, "%s:%d: ", state->temp.file, state->temp.line );
++        __ms_va_start(valist, msg);
++        safe_vsnprintf(state, msg, valist);
++        __ms_va_end(valist);
++    }
++}
++
++void winetest_vskip(struct kernel_test_state *state, const char *msg, __ms_va_list args)
++{
++    safe_snprintf( state, "%s:%d: Tests skipped: ", state->temp.file, state->temp.line );
++    safe_vsnprintf(state, msg, args);
++    state->output.skipped++;
++}
++
++void __winetest_cdecl winetest_skip(struct kernel_test_state *state, const char *msg, ...)
++{
++    __ms_va_list valist;
++    __ms_va_start(valist, msg);
++    winetest_vskip(state, msg, valist);
++    __ms_va_end(valist);
++}
++
++void __winetest_cdecl winetest_win_skip(struct kernel_test_state *state, const char *msg, ...)
++{
++    __ms_va_list valist;
++    __ms_va_start(valist, msg);
++    if (!state->input.windows)
++        winetest_vskip(state, msg, valist);
++    else
++        winetest_vok(state, 0, msg, valist);
++    __ms_va_end(valist);
++}
++
++void winetest_start_todo(struct kernel_test_state *state, int windows)
++{
++    if (state->input.windows == windows)
++        state->temp.todo_level++;
++    state->temp.todo_do_loop=1;
++}
++
++int winetest_loop_todo(struct kernel_test_state *state)
++{
++    int do_loop=state->temp.todo_do_loop;
++    state->temp.todo_do_loop=0;
++    return do_loop;
++}
++
++void winetest_end_todo(struct kernel_test_state *state, int windows)
++{
++    if (state->input.windows == windows)
++        state->temp.todo_level--;
++}
+diff --git a/dlls/ntoskrnl.exe/tests/driver.sys/test.h b/dlls/ntoskrnl.exe/tests/driver.sys/test.h
+new file mode 100644
+index 0000000..eca3b46
+--- /dev/null
++++ b/dlls/ntoskrnl.exe/tests/driver.sys/test.h
+@@ -0,0 +1,197 @@
++/*
++ * ntoskrnl.exe testing framework
++ *
++ * Copyright 2015 Michael Müller
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#ifndef _WINE_KERNEL_TEST_
++#define _WINE_KERNEL_TEST_
++
++struct kernel_test_state
++{
++    struct
++    {
++        int debug_level;
++        int report_success;
++        BOOL windows;
++    } input;
++    struct
++    {
++        const char *file;
++        int line;
++        int todo_level;
++        int todo_do_loop;
++    } temp;
++    struct
++    {
++        LONG failures;
++        LONG successes;
++        LONG todo_failures;
++        LONG todo_successes;
++        LONG skipped;
++
++        BOOL overflow;
++        DWORD offset;
++        char debug[4096];
++    } output;
++};
++
++#define WINE_TEST_IOCTL(index) CTL_CODE(FILE_DEVICE_UNKNOWN, (index) + 0x800, METHOD_BUFFERED, FILE_ANY_ACCESS)
++
++#ifdef WINE_KERNEL
++
++#if defined(__x86_64__) && defined(__GNUC__) && defined(__WINE_USE_MSVCRT)
++# define __ms_va_start(list,arg) __builtin_ms_va_start(list,arg)
++# define __ms_va_end(list) __builtin_ms_va_end(list)
++#else
++# define __ms_va_start(list,arg) va_start(list,arg)
++# define __ms_va_end(list) va_end(list)
++#endif
++
++#if defined(__x86_64__) && defined(__GNUC__) && defined(__WINE_USE_MSVCRT)
++#define __winetest_cdecl __cdecl
++#define __ms_va_list __builtin_ms_va_list
++#else
++#define __winetest_cdecl
++#define __ms_va_list va_list
++#endif
++
++#ifdef __GNUC__
++void __winetest_cdecl winetest_ok(struct kernel_test_state *state, int condition, const char *msg, ...) __attribute__((format (printf,3,4) ));
++void __winetest_cdecl winetest_skip(struct kernel_test_state *state, const char *msg, ...) __attribute__((format (printf,2,3)));
++void __winetest_cdecl winetest_win_skip(struct kernel_test_state *state, const char *msg, ...) __attribute__((format (printf,2,3)));
++void __winetest_cdecl winetest_trace(struct kernel_test_state *state, const char *msg, ...) __attribute__((format (printf,2,3)));
++#else
++void __winetest_cdecl winetest_ok(struct kernel_test_state *state, int condition, const char *msg, ...);
++void __winetest_cdecl winetest_skip(struct kernel_test_state *state, const char *msg, ...);
++void __winetest_cdecl winetest_win_skip(struct kernel_test_state *state, const char *msg, ...);
++void __winetest_cdecl winetest_trace(struct kernel_test_state *state, const char *msg, ...);
++#endif /* __GNUC__ */
++
++void winetest_set_location(struct kernel_test_state *state, const char* file, int line);
++void winetest_start_todo(struct kernel_test_state *state, int windows);
++int winetest_loop_todo(struct kernel_test_state *state);
++void winetest_end_todo(struct kernel_test_state *state, int windows);
++
++#define ok_(file, line)       (winetest_set_location(__state, file, line), 0) ? (void)0 : winetest_ok
++#define skip_(file, line)     (winetest_set_location(__state, file, line), 0) ? (void)0 : winetest_skip
++#define win_skip_(file, line) (winetest_set_location(__state, file, line), 0) ? (void)0 : winetest_win_skip
++#define trace_(file, line)    (winetest_set_location(__state, file, line), 0) ? (void)0 : winetest_trace
++
++#define _ok       ok_(__FILE__, __LINE__)
++#define _skip     skip_(__FILE__, __LINE__)
++#define _win_skip win_skip_(__FILE__, __LINE__)
++#define _trace    trace_(__FILE__, __LINE__)
++
++/* Variadic Macros */
++#define ok(...)       _ok(__state, __VA_ARGS__)
++#define skip(...)     _skip(__state, __VA_ARGS__)
++#define win_skip(...) _win_skip(__state, __VA_ARGS__)
++#define trace(...)    _trace(__state, __VA_ARGS__)
++
++#define todo(windows) for (winetest_start_todo(__state, windows); \
++                            winetest_loop_todo(__state); \
++                            winetest_end_todo(__state, windows))
++#define todo_wine      todo(0)
++
++#define KERNEL_TESTCASE(name)                                                                   \
++    static NTSTATUS test_##name(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info,            \
++                                struct test_##name##_state *test, struct kernel_test_state *__state); \
++                                                                                                \
++    static NTSTATUS __test_##name(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)          \
++    {                                                                                           \
++        ULONG input_length  = stack->Parameters.DeviceIoControl.InputBufferLength;              \
++        ULONG output_length = stack->Parameters.DeviceIoControl.OutputBufferLength;             \
++        struct kernel_test_state *state = irp->AssociatedIrp.SystemBuffer;                      \
++        NTSTATUS status;                                                                        \
++                                                                                                \
++        if (!state)                                                                             \
++            return STATUS_ACCESS_VIOLATION;                                                     \
++                                                                                                \
++        if (input_length < sizeof(struct test_##name##_state) ||                                \
++            output_length < sizeof(struct test_##name##_state))                                 \
++            return STATUS_BUFFER_TOO_SMALL;                                                     \
++                                                                                                \
++        kernel_memset(&state->temp,   0, sizeof(state->temp));                                  \
++        kernel_memset(&state->output, 0, sizeof(state->output));                                \
++        status = test_##name(irp, stack, info, irp->AssociatedIrp.SystemBuffer, state);         \
++                                                                                                \
++        kernel_memset(&state->temp, 0, sizeof(state->temp));                                    \
++        *info = sizeof(struct test_##name##_state);                                             \
++        return status;                                                                          \
++    }                                                                                           \
++                                                                                                \
++    static NTSTATUS test_##name(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info,            \
++                                struct test_##name##_state *test, struct kernel_test_state *__state)
++
++#define RUN_TESTCASE(name, irp, stack, info) \
++    __test_##name(irp, stack, info)
++
++#else
++
++#include <stdio.h>
++
++#define wine_run_kernel_test(device, ioctl, state, size, returned) \
++    __wine_run_kernel_test(__FILE__, __LINE__, device, ioctl, state, size, returned)
++
++static BOOL __wine_run_kernel_test(const char* file, int line, HANDLE device, DWORD ioctl,
++                                   void *data, DWORD size, DWORD *returned)
++{
++    struct kernel_test_state *state = data;
++    DWORD bytes_returned;
++    BOOL res;
++
++    if (!returned)
++        returned = &bytes_returned;
++
++    memset(state, 0, sizeof(*state));
++    state->input.debug_level    = winetest_get_debug();
++    state->input.report_success = winetest_get_report_success();
++    state->input.windows        = !strcmp(winetest_platform, "windows");
++
++    res = DeviceIoControl(device, ioctl, data, size, data, size, returned, NULL);
++
++    if (returned == &bytes_returned)
++        ok_(file, line)(bytes_returned == size,
++            "DeviceIoControl returned %u bytes, expected %u bytes\n", bytes_returned, size);
++
++    if (state->output.offset >= sizeof(state->output.debug))
++        state->output.offset = sizeof(state->output.debug) - 1;
++
++    if (state->output.offset)
++    {
++        state->output.debug[state->output.offset] = 0;
++        fprintf(stdout, "%s", state->output.debug);
++        if (state->output.debug[state->output.offset - 1] != '\n')
++            fprintf(stdout, "<line truncated>\n");
++    }
++
++    if (state->output.overflow)
++        skip_(file, line)("Buffer was too small, kernel debug output is truncated!\n");
++
++    winetest_add_failures(state->output.failures);
++    winetest_add_successes(state->output.successes);
++    winetest_add_todo_failures(state->output.todo_failures);
++    winetest_add_todo_successes(state->output.todo_successes);
++    winetest_add_skipped(state->output.skipped);
++
++    return res;
++}
++
++#endif
++
++#endif /* _WINE_KERNEL_TEST_ */
+diff --git a/dlls/ntoskrnl.exe/tests/driver.sys/util.h b/dlls/ntoskrnl.exe/tests/driver.sys/util.h
+new file mode 100644
+index 0000000..881a4a2
+--- /dev/null
++++ b/dlls/ntoskrnl.exe/tests/driver.sys/util.h
+@@ -0,0 +1,47 @@
++/*
++ * ntoskrnl.exe testing framework
++ *
++ * Copyright 2015 Sebastian Lackner
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include <stddef.h>
++
++static inline const char* kernel_strrchr(const char *str, int character)
++{
++    const char *ret = NULL;
++    for (; *str; str++)
++    {
++        if (*str == character)
++            ret = str;
++    }
++    return ret;
++}
++
++static inline void* kernel_memcpy(void *destination, const void *source, size_t num)
++{
++    const char *src = source;
++    char *dst = destination;
++    while (num--) *dst++ = *src++;
++    return destination;
++}
++
++static inline void* kernel_memset(void *ptr, int value, size_t num)
++{
++    char *dst = ptr;
++    while (num--) *dst++ = value;
++    return ptr;
++}
+diff --git a/dlls/ntoskrnl.exe/tests/ntoskrnl.c b/dlls/ntoskrnl.exe/tests/ntoskrnl.c
+index 9b8a6a7..64e9d97 100644
+--- a/dlls/ntoskrnl.exe/tests/ntoskrnl.c
++++ b/dlls/ntoskrnl.exe/tests/ntoskrnl.c
+@@ -25,6 +25,7 @@
+ #include "winioctl.h"
+ #include "wine/test.h"
+ 
++#include "driver.sys/test.h"
+ #include "driver.sys/driver.h"
+ 
+ static const char driver_name[] = "WineTestDriver";
+@@ -184,29 +185,52 @@ err:
+     return NULL;
+ }
+ 
+-static void test_basic_ioctl(void)
++static void test_PsGetCurrentProcessId(void)
+ {
+-    const char str[] = "Wine is not an emulator";
+-    DWORD bytes_returned;
+-    char buf[32];
+-    HANDLE file;
++    struct test_PsGetCurrentProcessId_state state;
++    DWORD processid;
++    HANDLE device;
+     BOOL res;
+ 
+-    file = CreateFileA(device_path, GENERIC_READ | GENERIC_WRITE,
+-                       0, NULL, OPEN_EXISTING, 0, NULL);
+-    if (file == INVALID_HANDLE_VALUE)
++    trace("Running tests for PsGetCurrentProcessId\n");
++
++    device = CreateFileA(device_path, GENERIC_READ | GENERIC_WRITE,
++                         0, NULL, OPEN_EXISTING, 0, NULL);
++    if (device == INVALID_HANDLE_VALUE)
+     {
+         ok(0, "Connecting to driver failed with %x\n", GetLastError());
+         return;
+     }
+ 
+-    res = DeviceIoControl(file, IOCTL_WINETEST_BASIC_IOCTL, NULL, 0, buf,
+-                          sizeof(buf), &bytes_returned, NULL);
++    res = wine_run_kernel_test(device, WINE_IOCTL_PsGetCurrentProcessId, &state, sizeof(state), NULL);
+     ok(res, "DeviceIoControl failed with %x\n", GetLastError());
+-    ok(bytes_returned == sizeof(str)-1, "Unexpected number of bytes\n");
+-    ok(!memcmp(buf, str, sizeof(str)-1), "Unexpected response data\n");
+ 
+-    CloseHandle(file);
++    processid = GetCurrentProcessId();
++    ok(state.processid == processid, "Expected processid %u, got %u\n", processid, state.processid);
++
++    CloseHandle(device);
++}
++
++static void test_PsGetCurrentThread(void)
++{
++    struct test_PsGetCurrentThread_state state;
++    HANDLE device;
++    BOOL res;
++
++    trace("Running tests for PsGetCurrentThread\n");
++
++    device = CreateFileA(device_path, GENERIC_READ | GENERIC_WRITE,
++                         0, NULL, OPEN_EXISTING, 0, NULL);
++    if (device == INVALID_HANDLE_VALUE)
++    {
++        ok(0, "Connecting to driver failed with %x\n", GetLastError());
++        return;
++    }
++
++    res = wine_run_kernel_test(device, WINE_IOCTL_PsGetCurrentThread, &state, sizeof(state), NULL);
++    ok(res, "DeviceIoControl failed with %x\n", GetLastError());
++
++    CloseHandle(device);
+ }
+ 
+ START_TEST(ntoskrnl)
+@@ -220,7 +244,8 @@ START_TEST(ntoskrnl)
+         return;
+     }
+ 
+-    test_basic_ioctl();
++    test_PsGetCurrentProcessId();
++    test_PsGetCurrentThread();
+ 
+     unload_driver(service, filename);
+ }
+diff --git a/include/wine/test.h b/include/wine/test.h
+index f8b608f..b7ef81a 100644
+--- a/include/wine/test.h
++++ b/include/wine/test.h
+@@ -61,7 +61,13 @@ extern int winetest_loop_todo(void);
+ extern void winetest_end_todo( const char* platform );
+ extern int winetest_get_mainargs( char*** pargv );
+ extern LONG winetest_get_failures(void);
++extern int winetest_get_report_success(void);
++extern int winetest_get_debug(void);
+ extern void winetest_add_failures( LONG new_failures );
++extern void winetest_add_successes( LONG new_successes );
++extern void winetest_add_todo_failures( LONG new_todo_failures );
++extern void winetest_add_todo_successes( LONG new_todo_successes );
++extern void winetest_add_skipped( LONG new_skipped );
+ extern void winetest_wait_child_process( HANDLE process );
+ 
+ extern const char *wine_dbgstr_wn( const WCHAR *str, int n );
+@@ -436,10 +442,39 @@ LONG winetest_get_failures(void)
+     return failures;
+ }
+ 
++int winetest_get_report_success(void)
++{
++    return report_success;
++}
++
++int winetest_get_debug(void)
++{
++    return winetest_debug;
++}
++
+ void winetest_add_failures( LONG new_failures )
+ {
+-    while (new_failures-- > 0)
+-        InterlockedIncrement( &failures );
++    InterlockedExchangeAdd( &failures, new_failures );
++}
++
++void winetest_add_successes( LONG new_successes )
++{
++    InterlockedExchangeAdd( &successes, new_successes );
++}
++
++void winetest_add_todo_failures( LONG new_todo_failures )
++{
++    InterlockedExchangeAdd( &todo_failures, new_todo_failures );
++}
++
++void winetest_add_todo_successes( LONG new_todo_successes )
++{
++    InterlockedExchangeAdd( &todo_successes, new_todo_successes );
++}
++
++void winetest_add_skipped( LONG new_skipped )
++{
++    InterlockedExchangeAdd( &skipped, new_skipped );
+ }
+ 
+ void winetest_wait_child_process( HANDLE process )
+-- 
+2.2.1
+

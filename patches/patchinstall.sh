@@ -1723,6 +1723,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#8036] Fix handling of empty section and key name for profile files.
+# |   *	[#18099] Super Mario 3: Mario Forever fails to load keyboard mapping from profile files.
 # |
 # | Modified files:
 # |   *	dlls/kernel32/profile.c, dlls/kernel32/tests/profile.c

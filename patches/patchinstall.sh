@@ -815,13 +815,9 @@ patch_apply ()
 
 
 if test "$enable_winecfg_Staging" -eq 1; then
-	if test "$enable_ntdll_DllRedirects" -gt 1; then
-		abort "Patchset ntdll-DllRedirects disabled, but winecfg-Staging depends on that."
-	fi
 	if test "$enable_wined3d_CSMT_Main" -gt 1; then
 		abort "Patchset wined3d-CSMT_Main disabled, but winecfg-Staging depends on that."
 	fi
-	enable_ntdll_DllRedirects=1
 	enable_wined3d_CSMT_Main=1
 fi
 
@@ -836,10 +832,14 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_makedep_PARENTSPEC" -gt 1; then
 		abort "Patchset makedep-PARENTSPEC disabled, but wined3d-CSMT_Helper depends on that."
 	fi
+	if test "$enable_ntdll_DllRedirects" -gt 1; then
+		abort "Patchset ntdll-DllRedirects disabled, but wined3d-CSMT_Helper depends on that."
+	fi
 	if test "$enable_wined3d_DXTn" -gt 1; then
 		abort "Patchset wined3d-DXTn disabled, but wined3d-CSMT_Helper depends on that."
 	fi
 	enable_makedep_PARENTSPEC=1
+	enable_ntdll_DllRedirects=1
 	enable_wined3d_DXTn=1
 fi
 

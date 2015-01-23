@@ -1,4 +1,4 @@
-From 59b1380d74f70b875c9e4642131b0fdbf06ec820 Mon Sep 17 00:00:00 2001
+From 50aadbdd128d6cf1489abdceb91302c53a144cbd Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 8 Nov 2014 22:39:28 +0100
 Subject: msvcrt: Avoid crash when NULL pointer is passed to atof / strtod
@@ -6,8 +6,8 @@ Subject: msvcrt: Avoid crash when NULL pointer is passed to atof / strtod
 
 ---
  dlls/msvcrt/string.c       |  6 +++++
- dlls/msvcrt/tests/string.c | 64 ++++++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 70 insertions(+)
+ dlls/msvcrt/tests/string.c | 57 ++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 63 insertions(+)
 
 diff --git a/dlls/msvcrt/string.c b/dlls/msvcrt/string.c
 index 6f9280f..d933643 100644
@@ -27,7 +27,7 @@ index 6f9280f..d933643 100644
  }
  
 diff --git a/dlls/msvcrt/tests/string.c b/dlls/msvcrt/tests/string.c
-index e2d53d4..d40d8d8 100644
+index e2d53d4..187d2b9 100644
 --- a/dlls/msvcrt/tests/string.c
 +++ b/dlls/msvcrt/tests/string.c
 @@ -89,6 +89,8 @@ static int (__cdecl *p_tolower)(int);
@@ -39,87 +39,73 @@ index e2d53d4..d40d8d8 100644
  static int (__cdecl *p__strnset_s)(char*,size_t,int,size_t);
  static int (__cdecl *p__wcsset_s)(wchar_t*,size_t,wchar_t);
  
-@@ -1553,6 +1555,31 @@ static void test__strtod(void)
-     char *end;
-     double d;
+@@ -1580,6 +1582,28 @@ static void test__strtod(void)
+     ok(almost_equal(d, 0), "d = %lf\n", d);
+     ok(end == white_chars, "incorrect end (%d)\n", (int)(end-white_chars));
  
-+    errno = EBADF;
-+    d = strtod(NULL, NULL);
-+    ok(almost_equal(d, 0.0), "strtod(NULL, NULL) = %lf\n", d);
-+    ok(errno == EINVAL, "errno = %d\n", errno);
-+
-+    d = strtod("1.0", NULL);
-+    ok(almost_equal(d, 1.0), "strtod(\"1.0\", NULL) = %lf\n", d);
-+
-+    errno = EBADF;
-+    end = (char *)0xdeadbeef;
-+    d = strtod(NULL, &end);
-+    ok(almost_equal(d, 0.0), "strtod(NULL, &end) = %lf\n", d);
-+    ok(errno == EINVAL, "errno = %d\n", errno);
-+    ok(!end, "ptr = %p\n", end);
-+
 +    if (!p__strtod_l)
 +        win_skip("_strtod_l not found\n");
 +    else
 +    {
 +        errno = EBADF;
++        d = strtod(NULL, NULL);
++        ok(almost_equal(d, 0.0), "d =  %lf\n", d);
++        ok(errno == EINVAL, "errno = %x\n", errno);
++
++        errno = EBADF;
++        end = (char *)0xdeadbeef;
++        d = strtod(NULL, &end);
++        ok(almost_equal(d, 0.0), "d = %lf\n", d);
++        ok(errno == EINVAL, "errno = %x\n", errno);
++        ok(!end, "incorrect end ptr %p\n", end);
++
++        errno = EBADF;
 +        d = p__strtod_l(NULL, NULL, NULL);
-+        ok(almost_equal(d, 0.0), "_strtod_l(NULL, NULL, NULL) = %lf\n", d);
-+        ok(errno == EINVAL, "errno = %d\n", errno);
++        ok(almost_equal(d, 0.0), "d = %lf\n", d);
++        ok(errno == EINVAL, "errno = %x\n", errno);
 +    }
 +
-     d = strtod(double1, &end);
-     ok(almost_equal(d, 12.1), "d = %lf\n", d);
-     ok(end == double1+4, "incorrect end (%d)\n", (int)(end-double1));
-@@ -2610,6 +2637,11 @@ static void test_atoi(void)
- {
-     int r;
- 
-+    errno = EBADF;
-+    r = atoi(NULL);
-+    ok(r == 0, "atoi(NULL) = %d\n", r);
-+    ok(errno == EBADF, "errno = %d\n", errno);
-+
-     r = atoi("0");
-     ok(r == 0, "atoi(0) = %d\n", r);
- 
-@@ -2623,6 +2655,35 @@ static void test_atoi(void)
+     /* Set locale with non '.' decimal point (',') */
+     if(!setlocale(LC_ALL, "Polish")) {
+         win_skip("system with limited locales\n");
+@@ -2623,6 +2647,36 @@ static void test_atoi(void)
      ok(r == 0, "atoi(4294967296) = %d\n", r);
  }
  
 +static void test_atof(void)
 +{
-+    double r;
++    double d;
 +
-+    errno = EBADF;
-+    r = atof(NULL);
-+    ok(almost_equal(r, 0.0), "atof(NULL) = %lf\n", r);
-+    ok(errno == EINVAL, "errno = %d\n", errno);
++    d = atof("0.0");
++    ok(almost_equal(d, 0.0), "d = %lf\n", d);
 +
-+    r = atof("0.0");
-+    ok(almost_equal(r, 0.0), "atof(0.0) = %lf\n", r);
++    d = atof("1.0");
++    ok(almost_equal(d, 1.0), "d = %lf\n", d);
 +
-+    r = atof("-1.0");
-+    ok(almost_equal(r, -1.0), "atof(-1.0) = %lf\n", r);
-+
-+    r = atof("1.0");
-+    ok(almost_equal(r, 1.0), "atof(1.0) = %lf\n", r);
++    d = atof("-1.0");
++    ok(almost_equal(d, -1.0), "d = %lf\n", d);
 +
 +    if (!p__atof_l)
-+        win_skip("_atof_l not found\n");
-+    else
 +    {
-+        errno = EBADF;
-+        r = p__atof_l(NULL, NULL);
-+        ok(r == 0.0, "_atof_l(NULL, NULL) = %lf\n", r);
-+        ok(errno == EINVAL, "errno = %d\n", errno);
++        win_skip("_atof_l not found\n");
++        return;
 +    }
++
++    errno = EBADF;
++    d = atof(NULL);
++    ok(almost_equal(d, 0.0), "d = %lf\n", d);
++    ok(errno == EINVAL, "errno = %x\n", errno);
++
++    errno = EBADF;
++    d = p__atof_l(NULL, NULL);
++    ok(almost_equal(d, 0.0), "d = %lf\n", d);
++    ok(errno == EINVAL, "errno = %x\n", errno);
 +}
 +
  static void test_strncpy(void)
  {
  #define TEST_STRNCPY_LEN 10
-@@ -2831,6 +2892,8 @@ START_TEST(string)
+@@ -2831,6 +2885,8 @@ START_TEST(string)
      p_mbrtowc = (void*)GetProcAddress(hMsvcrt, "mbrtowc");
      p_mbsrtowcs = (void*)GetProcAddress(hMsvcrt, "mbsrtowcs");
      p__atodbl_l = (void*)GetProcAddress(hMsvcrt, "_atodbl_l");
@@ -128,7 +114,7 @@ index e2d53d4..d40d8d8 100644
      p__strnset_s = (void*)GetProcAddress(hMsvcrt, "_strnset_s");
      p__wcsset_s = (void*)GetProcAddress(hMsvcrt, "_wcsset_s");
  
-@@ -2884,6 +2947,7 @@ START_TEST(string)
+@@ -2884,6 +2940,7 @@ START_TEST(string)
      test__stricmp();
      test__wcstoi64();
      test_atoi();

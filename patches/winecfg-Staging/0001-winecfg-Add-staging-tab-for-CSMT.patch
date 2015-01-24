@@ -1,4 +1,4 @@
-From 54437590d58e0181cbeac3a55cac81b32f1485de Mon Sep 17 00:00:00 2001
+From 3c9eab9f6e96d05a6e5ca0f82d6b52a07092c526 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 14 Dec 2014 20:42:45 +0100
 Subject: winecfg: Add staging tab for CSMT.
@@ -7,10 +7,10 @@ Subject: winecfg: Add staging tab for CSMT.
  programs/winecfg/Makefile.in |  1 +
  programs/winecfg/main.c      | 12 +++++-
  programs/winecfg/resource.h  |  5 +++
- programs/winecfg/staging.c   | 98 ++++++++++++++++++++++++++++++++++++++++++++
+ programs/winecfg/staging.c   | 89 ++++++++++++++++++++++++++++++++++++++++++++
  programs/winecfg/winecfg.h   |  1 +
  programs/winecfg/winecfg.rc  | 10 +++++
- 6 files changed, 126 insertions(+), 1 deletion(-)
+ 6 files changed, 117 insertions(+), 1 deletion(-)
  create mode 100644 programs/winecfg/staging.c
 
 diff --git a/programs/winecfg/Makefile.in b/programs/winecfg/Makefile.in
@@ -56,7 +56,7 @@ index 6ac5f89..17909dc 100644
       * Fill out the (General) PROPSHEETPAGE data structure 
       * for the property sheet
 diff --git a/programs/winecfg/resource.h b/programs/winecfg/resource.h
-index fffc4da..7fb90f4 100644
+index fffc4da..7d11050 100644
 --- a/programs/winecfg/resource.h
 +++ b/programs/winecfg/resource.h
 @@ -45,6 +45,7 @@
@@ -79,22 +79,23 @@ index fffc4da..7fb90f4 100644
  #define IDC_SYSPARAMS_MENU_HILIGHT      8430
  #define IDC_SYSPARAMS_MENUBAR           8431
  
-+/* graphics */
-+#define IDC_ENABLE_CSMT              9001
++/* Staging tab */
++#define IDC_ENABLE_CSMT                 9001
 +
  /* About tab */
  #define IDC_ABT_OWNER                8432
  #define IDC_ABT_ORG                  8433
 diff --git a/programs/winecfg/staging.c b/programs/winecfg/staging.c
 new file mode 100644
-index 0000000..1d6cef9
+index 0000000..09c0d3f
 --- /dev/null
 +++ b/programs/winecfg/staging.c
-@@ -0,0 +1,98 @@
+@@ -0,0 +1,89 @@
 +/*
 + * WineCfg Staging panel
 + *
 + * Copyright 2014 Michael Müller
++ * Copyright 2015 Sebastian Lackner
 + *
 + * This library is free software; you can redistribute it and/or
 + * modify it under the terms of the GNU Lesser General Public
@@ -125,38 +126,24 @@ index 0000000..1d6cef9
 +
 +WINE_DEFAULT_DEBUG_CHANNEL(winecfg);
 +
-+static WCHAR redirects_keyW[] = {'S','o','f','t','w','a','r','e','\\','W','i','n','e','\\',
-+                                 'D','l','l','R','e','d','i','r','e','c','t','s',0};
-+static WCHAR wined3dW[] = {'w','i','n','e','d','3','d',0};
-+static WCHAR wined3d_csmtW[] = {'w','i','n','e','d','3','d','-','c','s','m','t','.','d','l','l',0};
-+
++/*
++ * Command stream multithreading
++ */
 +static BOOL csmt_get(void)
 +{
-+    BOOL ret = FALSE;
-+    WCHAR *redirect = get_reg_keyW(HKEY_CURRENT_USER, redirects_keyW, wined3dW, NULL);
-+    if (!redirect) return FALSE;
-+
-+    if (strcmpW(redirect, wined3d_csmtW) == 0)
-+        ret = TRUE;
-+
-+    HeapFree(GetProcessHeap(), 0, redirect);
++    BOOL ret;
++    char *value = get_reg_key(config_key, keypath("DllRedirects"), "wined3d", NULL);
++    ret = (value && !strcmp(value, "wined3d-csmt.dll"));
++    HeapFree(GetProcessHeap(), 0, value);
 +    return ret;
 +}
-+
 +static void csmt_set(BOOL status)
 +{
-+    if (csmt_get() == status)
-+        return;
-+
-+    set_reg_keyW(HKEY_CURRENT_USER, redirects_keyW, wined3dW, status ? wined3d_csmtW : NULL);
++    set_reg_key(config_key, keypath("DllRedirects"), "wined3d", status ? "wined3d-csmt.dll" : NULL);
 +}
 +
-+static void csmt_clicked(HWND dialog)
-+{
-+    csmt_set(IsDlgButtonChecked(dialog, IDC_ENABLE_CSMT) == BST_CHECKED);
-+}
 +
-+static void initStagingDlg(HWND dialog)
++static void load_staging_settings(HWND dialog)
 +{
 +    CheckDlgButton(dialog, IDC_ENABLE_CSMT, csmt_get() ? BST_CHECKED : BST_UNCHECKED);
 +}
@@ -165,14 +152,15 @@ index 0000000..1d6cef9
 +{
 +    switch (uMsg)
 +    {
-+    case WM_NOTIFY:
++    case WM_INITDIALOG:
 +        break;
 +
-+    case WM_INITDIALOG:
-+        initStagingDlg(hDlg);
-+        return TRUE;
++    case WM_NOTIFY:
++        if (((LPNMHDR)lParam)->code == PSN_SETACTIVE)
++            load_staging_settings(hDlg);
++        break;
 +
-+  case WM_SHOWWINDOW:
++    case WM_SHOWWINDOW:
 +        set_window_title(hDlg);
 +        break;
 +
@@ -180,10 +168,13 @@ index 0000000..1d6cef9
 +        break;
 +
 +    case WM_COMMAND:
-+        if (LOWORD(wParam) == IDC_ENABLE_CSMT && HIWORD(wParam) == BN_CLICKED)
++        if (HIWORD(wParam) != BN_CLICKED) break;
++        switch (LOWORD(wParam))
 +        {
-+            csmt_clicked(hDlg);
++        case IDC_ENABLE_CSMT:
++            csmt_set(IsDlgButtonChecked(hDlg, IDC_ENABLE_CSMT) == BST_CHECKED);
 +            SendMessageW(GetParent(hDlg), PSM_CHANGED, 0, 0);
++            return TRUE;
 +        }
 +        break;
 +    }
@@ -230,5 +221,5 @@ index 9f763a7..ad3e842 100644
  
  /* @makedep: winecfg.ico */
 -- 
-2.1.3
+2.2.1
 

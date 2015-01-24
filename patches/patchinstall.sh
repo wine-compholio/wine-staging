@@ -181,6 +181,7 @@ patch_enable_all ()
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_Clipboard_HTML="$1"
 	enable_winex11_Window_Groups="$1"
+	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
 	enable_winex11_wglShareLists="$1"
 	enable_wininet_encoding="$1"
@@ -570,6 +571,9 @@ patch_enable ()
 			;;
 		winex11-Window_Groups)
 			enable_winex11_Window_Groups="$2"
+			;;
+		winex11-Window_Style)
+			enable_winex11_Window_Style="$2"
 			;;
 		winex11-XEMBED)
 			enable_winex11_XEMBED="$2"
@@ -3509,6 +3513,21 @@ if test "$enable_winex11_Window_Groups" -eq 1; then
 	patch_apply winex11-Window_Groups/0001-winex11-Prevent-window-managers-from-grouping-all-wi.patch
 	(
 		echo '+    { "Michael Müller", "winex11: Prevent window managers from grouping all wine programs together.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11-Window_Style
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37876] Fix handling of window attributes for WS_EX_LAYERED | WS_EX_COMPOSITED
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/window.c
+# |
+if test "$enable_winex11_Window_Style" -eq 1; then
+	patch_apply winex11-Window_Style/0001-winex11-Fix-handling-of-window-attributes-for-WS_EX_.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "winex11: Fix handling of window attributes for WS_EX_LAYERED | WS_EX_COMPOSITED.", 1 },';
 	) >> "$patchlist"
 fi
 

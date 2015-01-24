@@ -1,4 +1,4 @@
-From 2532d093c1ae0f4846879cca9c8e08f04a1e7bfc Mon Sep 17 00:00:00 2001
+From 1ac9ade86eb8d0bed84f4d8ed7ddfec738b0da8f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Tue, 20 Jan 2015 18:39:36 +0100
 Subject: ntoskrnl.exe/tests: Add kernel compliant test functions.
@@ -8,12 +8,12 @@ Subject: ntoskrnl.exe/tests: Add kernel compliant test functions.
  dlls/ntoskrnl.exe/tests/driver.sys/Makefile.in |   3 +-
  dlls/ntoskrnl.exe/tests/driver.sys/driver.c    |  38 ++---
  dlls/ntoskrnl.exe/tests/driver.sys/driver.h    |  18 ++-
- dlls/ntoskrnl.exe/tests/driver.sys/test.c      | 195 ++++++++++++++++++++++++
- dlls/ntoskrnl.exe/tests/driver.sys/test.h      | 197 +++++++++++++++++++++++++
+ dlls/ntoskrnl.exe/tests/driver.sys/test.c      | 195 +++++++++++++++++++++++++
+ dlls/ntoskrnl.exe/tests/driver.sys/test.h      | 193 ++++++++++++++++++++++++
  dlls/ntoskrnl.exe/tests/driver.sys/util.h      |  47 ++++++
  dlls/ntoskrnl.exe/tests/ntoskrnl.c             |  53 +++++--
  include/wine/test.h                            |  39 ++++-
- 9 files changed, 551 insertions(+), 41 deletions(-)
+ 9 files changed, 547 insertions(+), 41 deletions(-)
  create mode 100644 dlls/ntoskrnl.exe/tests/driver.sys/test.c
  create mode 100644 dlls/ntoskrnl.exe/tests/driver.sys/test.h
  create mode 100644 dlls/ntoskrnl.exe/tests/driver.sys/util.h
@@ -144,7 +144,7 @@ index 372e908..e48bbdd 100644
 -#define IOCTL_WINETEST_BASIC_IOCTL 			CTL_CODE(FILE_DEVICE_UNKNOWN, 0x800, METHOD_BUFFERED, FILE_ANY_ACCESS)
 diff --git a/dlls/ntoskrnl.exe/tests/driver.sys/test.c b/dlls/ntoskrnl.exe/tests/driver.sys/test.c
 new file mode 100644
-index 0000000..5e17c90
+index 0000000..8f9bebf
 --- /dev/null
 +++ b/dlls/ntoskrnl.exe/tests/driver.sys/test.c
 @@ -0,0 +1,195 @@
@@ -182,9 +182,9 @@ index 0000000..5e17c90
 +#include "util.h"
 +#include "test.h"
 +
-+extern int _vsnprintf(char *buffer, size_t count, const char *format, __ms_va_list argptr);
++extern int CDECL _vsnprintf(char *buffer, size_t count, const char *format, __ms_va_list argptr);
 +
-+static void safe_vsnprintf(struct kernel_test_state *state, const char *msg, __ms_va_list args)
++static void safe_vsnprintf(struct kernel_test_state *state, const char *msg, __winetest_va_list args)
 +{
 +    int remaining;
 +    int length;
@@ -212,11 +212,11 @@ index 0000000..5e17c90
 +
 +static void __winetest_cdecl safe_snprintf(struct kernel_test_state *state, const char *msg, ...)
 +{
-+    __ms_va_list valist;
++    __winetest_va_list valist;
 +
-+    __ms_va_start(valist, msg);
++    __winetest_va_start(valist, msg);
 +    safe_vsnprintf(state, msg, valist);
-+    __ms_va_end(valist);
++    __winetest_va_end(valist);
 +}
 +
 +void winetest_set_location(struct kernel_test_state *state, const char *file, int line)
@@ -231,7 +231,7 @@ index 0000000..5e17c90
 +    state->temp.line = line;
 +}
 +
-+int winetest_vok(struct kernel_test_state *state, int condition, const char *msg, __ms_va_list args)
++int winetest_vok(struct kernel_test_state *state, int condition, const char *msg, __winetest_va_list args)
 +{
 +    if (state->temp.todo_level)
 +    {
@@ -278,27 +278,27 @@ index 0000000..5e17c90
 +
 +void __winetest_cdecl winetest_ok(struct kernel_test_state *state, int condition, const char *msg, ...)
 +{
-+    __ms_va_list valist;
++    __winetest_va_list valist;
 +
-+    __ms_va_start(valist, msg);
++    __winetest_va_start(valist, msg);
 +    winetest_vok(state, condition, msg, valist);
-+    __ms_va_end(valist);
++    __winetest_va_end(valist);
 +}
 +
 +void __winetest_cdecl winetest_trace(struct kernel_test_state *state, const char *msg, ...)
 +{
-+    __ms_va_list valist;
++    __winetest_va_list valist;
 +
 +    if (state->input.debug_level > 0)
 +    {
 +        safe_snprintf( state, "%s:%d: ", state->temp.file, state->temp.line );
-+        __ms_va_start(valist, msg);
++        __winetest_va_start(valist, msg);
 +        safe_vsnprintf(state, msg, valist);
-+        __ms_va_end(valist);
++        __winetest_va_end(valist);
 +    }
 +}
 +
-+void winetest_vskip(struct kernel_test_state *state, const char *msg, __ms_va_list args)
++void winetest_vskip(struct kernel_test_state *state, const char *msg, __winetest_va_list args)
 +{
 +    safe_snprintf( state, "%s:%d: Tests skipped: ", state->temp.file, state->temp.line );
 +    safe_vsnprintf(state, msg, args);
@@ -307,21 +307,21 @@ index 0000000..5e17c90
 +
 +void __winetest_cdecl winetest_skip(struct kernel_test_state *state, const char *msg, ...)
 +{
-+    __ms_va_list valist;
-+    __ms_va_start(valist, msg);
++    __winetest_va_list valist;
++    __winetest_va_start(valist, msg);
 +    winetest_vskip(state, msg, valist);
-+    __ms_va_end(valist);
++    __winetest_va_end(valist);
 +}
 +
 +void __winetest_cdecl winetest_win_skip(struct kernel_test_state *state, const char *msg, ...)
 +{
-+    __ms_va_list valist;
-+    __ms_va_start(valist, msg);
++    __winetest_va_list valist;
++    __winetest_va_start(valist, msg);
 +    if (!state->input.windows)
 +        winetest_vskip(state, msg, valist);
 +    else
 +        winetest_vok(state, 0, msg, valist);
-+    __ms_va_end(valist);
++    __winetest_va_end(valist);
 +}
 +
 +void winetest_start_todo(struct kernel_test_state *state, int windows)
@@ -345,10 +345,10 @@ index 0000000..5e17c90
 +}
 diff --git a/dlls/ntoskrnl.exe/tests/driver.sys/test.h b/dlls/ntoskrnl.exe/tests/driver.sys/test.h
 new file mode 100644
-index 0000000..eca3b46
+index 0000000..0b98b3d
 --- /dev/null
 +++ b/dlls/ntoskrnl.exe/tests/driver.sys/test.h
-@@ -0,0 +1,197 @@
+@@ -0,0 +1,193 @@
 +/*
 + * ntoskrnl.exe testing framework
 + *
@@ -406,19 +406,15 @@ index 0000000..eca3b46
 +#ifdef WINE_KERNEL
 +
 +#if defined(__x86_64__) && defined(__GNUC__) && defined(__WINE_USE_MSVCRT)
-+# define __ms_va_start(list,arg) __builtin_ms_va_start(list,arg)
-+# define __ms_va_end(list) __builtin_ms_va_end(list)
++# define __winetest_cdecl __cdecl
++# define __winetest_va_list __builtin_ms_va_list
++# define __winetest_va_start(list,arg) __builtin_ms_va_start(list,arg)
++# define __winetest_va_end(list) __builtin_ms_va_end(list)
 +#else
-+# define __ms_va_start(list,arg) va_start(list,arg)
-+# define __ms_va_end(list) va_end(list)
-+#endif
-+
-+#if defined(__x86_64__) && defined(__GNUC__) && defined(__WINE_USE_MSVCRT)
-+#define __winetest_cdecl __cdecl
-+#define __ms_va_list __builtin_ms_va_list
-+#else
-+#define __winetest_cdecl
-+#define __ms_va_list va_list
++# define __winetest_cdecl
++# define __winetest_va_list va_list
++# define __winetest_va_start(list,arg) va_start(list,arg)
++# define __winetest_va_end(list) va_end(list)
 +#endif
 +
 +#ifdef __GNUC__
@@ -455,8 +451,8 @@ index 0000000..eca3b46
 +#define trace(...)    _trace(__state, __VA_ARGS__)
 +
 +#define todo(windows) for (winetest_start_todo(__state, windows); \
-+                            winetest_loop_todo(__state); \
-+                            winetest_end_todo(__state, windows))
++                           winetest_loop_todo(__state); \
++                           winetest_end_todo(__state, windows))
 +#define todo_wine      todo(0)
 +
 +#define KERNEL_TESTCASE(name)                                                                   \

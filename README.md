@@ -23,11 +23,12 @@ How to install and use Wine Staging
 
 Ready-to-use packages for Wine Staging are available for a variety
 of different Linux distributions directly for download. Just follow the
-instructions available on the [website](http://www.wine-staging.com/install.html).
+instructions available on the
+[Wiki](https://github.com/wine-compholio/wine-staging/wiki/Installation).
 
 When using Wine Staging there are a few differences compared to regular
 Wine. The main difference is that it is not sufficient to type `wine` to
-run it, but instead you will have to type `/opt/wine-compholio/bin/wine`.
+run it, but instead you will have to type `/opt/wine-staging/bin/wine`.
 Besides that there are also some other differences, for example additional
 configuration options to tweak performance, which are not available in regular
 Wine. All those differences are also documented on the

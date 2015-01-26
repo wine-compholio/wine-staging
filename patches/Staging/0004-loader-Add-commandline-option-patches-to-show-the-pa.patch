@@ -1,13 +1,17 @@
-From 6661529d2422f99287336b764fe7a5b61484b8ad Mon Sep 17 00:00:00 2001
+From f23512417cb3d149a8be4f757282d17cc1f99f9a Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Thu, 29 May 2014 23:43:45 +0200
 Subject: loader: Add commandline option --patches to show the patch list.
 
 ---
- dlls/ntdll/misc.c     |  8 ++++++++
- dlls/ntdll/ntdll.spec |  1 +
- loader/main.c         | 36 +++++++++++++++++++++++++++++++++++-
- 3 files changed, 44 insertions(+), 1 deletion(-)
+ dlls/ntdll/misc.c      |  8 ++++++++
+ dlls/ntdll/ntdll.spec  |  1 +
+ include/wine/library.h |  1 +
+ libs/wine/config.c     |  6 ++++++
+ libs/wine/wine.def     |  1 +
+ libs/wine/wine.map     |  1 +
+ loader/main.c          | 42 +++++++++++++++++++++++++++++++++++++++++-
+ 7 files changed, 59 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/misc.c b/dlls/ntdll/misc.c
 index ad1b43b..1f985e7 100644
@@ -29,7 +33,7 @@ index ad1b43b..1f985e7 100644
   */
  const char * CDECL NTDLL_wine_get_build_id(void)
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 7e95969..f9483aa 100644
+index 51de6e7..ee4ed49 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
 @@ -1421,6 +1421,7 @@
@@ -40,8 +44,61 @@ index 7e95969..f9483aa 100644
  @ cdecl wine_get_build_id() NTDLL_wine_get_build_id
  @ cdecl wine_get_host_version(ptr ptr) NTDLL_wine_get_host_version
  
+diff --git a/include/wine/library.h b/include/wine/library.h
+index 242bb69..fae73fe 100644
+--- a/include/wine/library.h
++++ b/include/wine/library.h
+@@ -43,6 +43,7 @@ extern const char *wine_get_data_dir(void);
+ extern const char *wine_get_server_dir(void);
+ extern const char *wine_get_user_name(void);
+ extern const char *wine_get_version(void);
++extern const void *wine_get_patches(void);
+ extern const char *wine_get_build_id(void);
+ extern void wine_init_argv0_path( const char *argv0 );
+ extern void wine_exec_wine_binary( const char *name, char **argv, const char *env_var );
+diff --git a/libs/wine/config.c b/libs/wine/config.c
+index a273502..5262c76 100644
+--- a/libs/wine/config.c
++++ b/libs/wine/config.c
+@@ -478,6 +478,12 @@ const char *wine_get_version(void)
+     return PACKAGE_VERSION;
+ }
+ 
++/* return the applied non-standard patches */
++const void *wine_get_patches(void)
++{
++    return NULL;
++}
++
+ /* return the build id string */
+ const char *wine_get_build_id(void)
+ {
+diff --git a/libs/wine/wine.def b/libs/wine/wine.def
+index ed315bd..5b42029 100644
+--- a/libs/wine/wine.def
++++ b/libs/wine/wine.def
+@@ -83,6 +83,7 @@ EXPORTS
+     wine_get_sortkey
+     wine_get_user_name
+     wine_get_version
++    wine_get_patches
+     wine_init
+     wine_init_argv0_path
+     wine_is_dbcs_leadbyte
+diff --git a/libs/wine/wine.map b/libs/wine/wine.map
+index 2159fac..7cb2918 100644
+--- a/libs/wine/wine.map
++++ b/libs/wine/wine.map
+@@ -90,6 +90,7 @@ WINE_1.0
+     wine_get_ss;
+     wine_get_user_name;
+     wine_get_version;
++    wine_get_patches;
+     wine_init;
+     wine_init_argv0_path;
+     wine_is_dbcs_leadbyte;
 diff --git a/loader/main.c b/loader/main.c
-index ac67290..b1df463 100644
+index ce21173..4794e51 100644
 --- a/loader/main.c
 +++ b/loader/main.c
 @@ -89,7 +89,8 @@ static void check_command_line( int argc, char *argv[] )
@@ -54,7 +111,7 @@ index ac67290..b1df463 100644
  
      if (argc <= 1)
      {
-@@ -106,6 +107,39 @@ static void check_command_line( int argc, char *argv[] )
+@@ -106,6 +107,45 @@ static void check_command_line( int argc, char *argv[] )
          printf( "%s\n", wine_get_build_id() );
          exit(0);
      }
@@ -67,6 +124,12 @@ index ac67290..b1df463 100644
 +            int revision;
 +        }
 +        *next, *cur = wine_get_patches();
++
++        if (!cur)
++        {
++            fprintf( stderr, "Patchlist not available.\n" );
++            exit(1);
++        }
 +
 +        while (cur->author)
 +        {
@@ -95,5 +158,5 @@ index ac67290..b1df463 100644
  
  
 -- 
-2.1.3
+2.2.1
 

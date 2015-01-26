@@ -708,7 +708,7 @@ fi
 # are applied, but the exitcode is zero. To avoid broken builds we
 # will workaround this issue or abort. For more information see
 # https://github.com/wine-compholio/wine-staging/issues/7
-test ! -d "$DESTDIR/.git" && (cd "$DESTDIR"; git rev-parse --git-dir) &> /dev/null
+test ! -d ".git" && git rev-parse --git-dir >/dev/null 2>&1
 workaround_git_bug="$?"
 
 # Apply the patches using gitapply.sh, a small wrapper around 'patch'
@@ -737,9 +737,9 @@ elif test "$backend" = "epatch"; then
 		gitapply_args=""
 	fi
 
-	if ! command -v epatch &> /dev/null || \
-	   ! command -v ebegin &> /dev/null || \
-	   ! command -v eend &> /dev/null; then
+	if ! command -v epatch >/dev/null 2>&1 || \
+	   ! command -v ebegin >/dev/null 2>&1 || \
+	   ! command -v eend   >/dev/null 2>&1; then
 		abort "Shell functions epatch/ebegin/eend not found. You have to source this script from your ebuild."
 	fi
 

@@ -129,6 +129,7 @@ patch_enable_all ()
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_RtlIpv4StringToAddressExA="$1"
+	enable_ntdll_RtlUnwindEx="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_User_Shared_Data="$1"
 	enable_ntdll_WRITECOPY="$1"
@@ -404,6 +405,9 @@ patch_enable ()
 			;;
 		ntdll-RtlIpv4StringToAddressExA)
 			enable_ntdll_RtlIpv4StringToAddressExA="$2"
+			;;
+		ntdll-RtlUnwindEx)
+			enable_ntdll_RtlUnwindEx="$2"
 			;;
 		ntdll-ThreadTime)
 			enable_ntdll_ThreadTime="$2"
@@ -2155,6 +2159,21 @@ if test "$enable_ntdll_RtlIpv4StringToAddressExA" -eq 1; then
 	patch_apply ntdll-RtlIpv4StringToAddressExA/0001-ntdll-tests-Add-tests-for-RtlIpv4StringToAddressExA.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for RtlIpv4StringToAddressExA.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-RtlUnwindEx
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34254] Fix check for end_frame in RtlUnwindEx on x86_64.
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_x86_64.c
+# |
+if test "$enable_ntdll_RtlUnwindEx" -eq 1; then
+	patch_apply ntdll-RtlUnwindEx/0001-ntdll-Fix-check-for-end_frame-in-RtlUnwindEx-on-x86_.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Fix check for end_frame in RtlUnwindEx on x86_64.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -188,6 +188,7 @@ patch_enable_all ()
 	enable_winepulse_PulseAudio_Support="$1"
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_Clipboard_HTML="$1"
+	enable_winex11_RawEventWarp="$1"
 	enable_winex11_Window_Groups="$1"
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
@@ -582,6 +583,9 @@ patch_enable ()
 			;;
 		winex11-Clipboard_HTML)
 			enable_winex11_Clipboard_HTML="$2"
+			;;
+		winex11-RawEventWarp)
+			enable_winex11_RawEventWarp="$2"
 			;;
 		winex11-Window_Groups)
 			enable_winex11_Window_Groups="$2"
@@ -3544,6 +3548,21 @@ if test "$enable_winex11_Clipboard_HTML" -eq 1; then
 	patch_apply winex11-Clipboard_HTML/0001-winex11.drv-Import-X11-s-text-html-as-HTML-Format.patch
 	(
 		echo '+    { "Damjan Jovanovic", "winex11.drv: Import X11'\''s \"text/html\" as \"HTML Format\".", 3 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11-RawEventWarp
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#32913] Fix mouse jittering in Planetside 2
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/mouse.c
+# |
+if test "$enable_winex11_RawEventWarp" -eq 1; then
+	patch_apply winex11-RawEventWarp/0001-winex11-Only-enable-XInput2-cursor-warp-workaround-i.patch
+	(
+		echo '+    { "Sebastian Lackner", "winex11: Only enable XInput2 cursor warp workaround if necessary.", 1 },';
 	) >> "$patchlist"
 fi
 

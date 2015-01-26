@@ -181,6 +181,7 @@ patch_enable_all ()
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
+	enable_winedevice_DriverUnload="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
 	enable_winepulse_PulseAudio_Support="$1"
@@ -559,6 +560,9 @@ patch_enable ()
 			;;
 		wined3d-Revert_PixelFormat)
 			enable_wined3d_Revert_PixelFormat="$2"
+			;;
+		winedevice-DriverUnload)
+			enable_winedevice_DriverUnload="$2"
 			;;
 		winedevice-Fix_Relocation)
 			enable_winedevice_Fix_Relocation="$2"
@@ -3360,6 +3364,18 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winedevice-DriverUnload
+# |
+# | Modified files:
+# |   *	programs/winedevice/device.c
+# |
+if test "$enable_winedevice_DriverUnload" -eq 1; then
+	patch_apply winedevice-DriverUnload/0001-winedevice-Call-DriverUnload-function-when-unloading.patch
+	(
+		echo '+    { "Michael Müller", "winedevice: Call DriverUnload function when unloading a driver.", 1 },';
 	) >> "$patchlist"
 fi
 

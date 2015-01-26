@@ -38,6 +38,11 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
+**Bugfixes and features included in the next upcoming release [1]:**
+
+* Call DriverUnload function when unloading a driver.
+
+
 **Bugs fixed in Wine Staging 1.7.35 [146]:**
 
 * Add Dynamic DST exceptions for Israel Standard Time ([Wine Bug #36374](https://bugs.winehq.org/show_bug.cgi?id=36374))

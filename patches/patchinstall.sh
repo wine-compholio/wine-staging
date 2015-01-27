@@ -2264,11 +2264,13 @@ fi
 # Patchset ntoskrnl-KeWaitForMultipleObjects
 # |
 # | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/ntddk.h
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/ntddk.h, include/ntdef.h
 # |
 if test "$enable_ntoskrnl_KeWaitForMultipleObjects" -eq 1; then
-	patch_apply ntoskrnl-KeWaitForMultipleObjects/0001-ntoskrnl.exe-add-KeWaitForMultipleObjects-stub.patch
+	patch_apply ntoskrnl-KeWaitForMultipleObjects/0001-include-Remove-several-duplicate-definitions-from-nt.patch
+	patch_apply ntoskrnl-KeWaitForMultipleObjects/0002-ntoskrnl.exe-add-KeWaitForMultipleObjects-stub.patch
 	(
+		echo '+    { "Sebastian Lackner", "include: Remove several duplicate definitions from ntdef.h.", 1 },';
 		echo '+    { "Austin English", "ntoskrnl.exe: add KeWaitForMultipleObjects stub.", 1 },';
 	) >> "$patchlist"
 fi

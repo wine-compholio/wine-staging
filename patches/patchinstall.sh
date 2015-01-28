@@ -174,6 +174,7 @@ patch_enable_all ()
 	enable_user32_Mouse_Message_Hwnd="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_WndProc="$1"
+	enable_vcomp_Stub_Functions="$1"
 	enable_windowscodecs_TGA_Decoder="$1"
 	enable_wineboot_HKEY_DYN_DATA="$1"
 	enable_winebuild_LinkerVersion="$1"
@@ -541,6 +542,9 @@ patch_enable ()
 			;;
 		user32-WndProc)
 			enable_user32_WndProc="$2"
+			;;
+		vcomp-Stub_Functions)
+			enable_vcomp_Stub_Functions="$2"
 			;;
 		windowscodecs-TGA_Decoder)
 			enable_windowscodecs_TGA_Decoder="$2"
@@ -2916,6 +2920,36 @@ if test "$enable_user32_WndProc" -eq 1; then
 	patch_apply user32-WndProc/0001-user32-Increase-MAX_WINPROCS-to-16384.patch
 	(
 		echo '+    { "Sebastian Lackner", "user32: Increase MAX_WINPROCS to 16384.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset vcomp-Stub_Functions
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#31640] Implement additional stubs for vcomp dlls
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/vcomp/Makefile.in, dlls/vcomp/fork.c, dlls/vcomp/main.c, dlls/vcomp/tests/Makefile.in,
+# | 	dlls/vcomp/tests/fork.c, dlls/vcomp/tests/vcomp.manifest, dlls/vcomp/tests/vcomp.rc, dlls/vcomp/tests/work.c,
+# | 	dlls/vcomp/vcomp.spec, dlls/vcomp/vcomp_private.h, dlls/vcomp/work.c, dlls/vcomp100/vcomp100.spec,
+# | 	dlls/vcomp90/vcomp90.spec
+# |
+if test "$enable_vcomp_Stub_Functions" -eq 1; then
+	patch_apply vcomp-Stub_Functions/0001-vcomp-single-threaded-implementation-of-_vcomp_fork.patch
+	patch_apply vcomp-Stub_Functions/0002-vcomp-better-stubs-for-_vcomp_for_static_simple_init.patch
+	patch_apply vcomp-Stub_Functions/0003-vcomp-better-stub-for-_vcomp_for_static_init.patch
+	patch_apply vcomp-Stub_Functions/0004-vcomp-implement-omp_in_parallel.patch
+	patch_apply vcomp-Stub_Functions/0005-vcomp-better-stubs-for-_vcomp_for_dynamic_init-_vcom.patch
+	patch_apply vcomp-Stub_Functions/0006-vcomp-better-stubs-for-_vcomp_sections_init-_vcomp_s.patch
+	patch_apply vcomp-Stub_Functions/0007-vcomp-Add-a-warning-that-multithreading-is-not-yet-s.patch
+	(
+		echo '+    { "Dan Kegel", "vcomp: single-threaded implementation of _vcomp_fork.", 1 },';
+		echo '+    { "Dan Kegel", "vcomp: better stubs for _vcomp_for_static_simple_init, _vcomp_for_static_end.", 1 },';
+		echo '+    { "Dan Kegel", "vcomp: better stub for _vcomp_for_static_init.", 1 },';
+		echo '+    { "Dan Kegel", "vcomp: implement omp_in_parallel.", 1 },';
+		echo '+    { "Dan Kegel", "vcomp: better stubs for _vcomp_for_dynamic_init, _vcomp_for_dynamic_next.", 1 },';
+		echo '+    { "Dan Kegel", "vcomp: better stubs for _vcomp_sections_init, _vcomp_sections_next.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp: Add a warning that multithreading is not yet supported.", 1 },';
 	) >> "$patchlist"
 fi
 

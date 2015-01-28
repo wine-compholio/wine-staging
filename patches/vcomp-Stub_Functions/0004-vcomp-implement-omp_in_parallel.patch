@@ -1,0 +1,254 @@
+From 659f7394d0c3e4c969e0b0f66689433fd133febd Mon Sep 17 00:00:00 2001
+From: Dan Kegel <dank@kegel.com>
+Date: Wed, 17 Oct 2012 09:15:06 -0700
+Subject: vcomp: implement omp_in_parallel
+
+---
+ dlls/vcomp/fork.c           | 32 +++++++++++++++++++++++++++++
+ dlls/vcomp/main.c           | 12 +++++++++++
+ dlls/vcomp/tests/fork.c     | 50 +++++++++++++++++++++++++++++++++++++++++++++
+ dlls/vcomp/vcomp.spec       |  2 +-
+ dlls/vcomp/vcomp_private.h  | 19 +++++++++++++++++
+ dlls/vcomp100/vcomp100.spec |  2 +-
+ dlls/vcomp90/vcomp90.spec   |  2 +-
+ 7 files changed, 116 insertions(+), 3 deletions(-)
+ create mode 100644 dlls/vcomp/vcomp_private.h
+
+diff --git a/dlls/vcomp/fork.c b/dlls/vcomp/fork.c
+index 13a7b56..49399c6 100644
+--- a/dlls/vcomp/fork.c
++++ b/dlls/vcomp/fork.c
+@@ -25,6 +25,22 @@
+ #include "windef.h"
+ #include "winbase.h"
+ #include "wine/debug.h"
++#include "vcomp_private.h"
++
++struct vcomp_team
++{
++    struct vcomp_team *parent;
++};
++
++static inline struct vcomp_team *vcomp_get_team(void)
++{
++    return (struct vcomp_team *)TlsGetValue(vcomp_context_tls);
++}
++
++static inline void vcomp_set_team(struct vcomp_team *team)
++{
++    TlsSetValue(vcomp_context_tls, team);
++}
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(vcomp);
+ 
+@@ -75,10 +91,18 @@ void CDECL _vcomp_fork_call_wrapper(void *wrapper, int nargs, __ms_va_list args)
+ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
+ {
+     __ms_va_list valist;
++    struct vcomp_team team;
++
+     TRACE("(%d, %d, %p, ...)\n", ifval, nargs, wrapper);
++
++    team.parent = vcomp_get_team();
++    vcomp_set_team(&team);
++
+     __ms_va_start(valist, wrapper);
+     _vcomp_fork_call_wrapper(wrapper, nargs, valist);
+     __ms_va_end(valist);
++
++    vcomp_set_team(team.parent);
+ }
+ 
+ #if defined(__i386__)
+@@ -159,3 +183,11 @@ void CDECL _vcomp_fork_call_wrapper(void *wrapper, int nargs, __ms_va_list args)
+ }
+ 
+ #endif
++
++int CDECL omp_in_parallel(void)
++{
++    int val = (vcomp_get_team() != NULL);
++
++    TRACE("returning %d\n", val);
++    return val;
++}
+diff --git a/dlls/vcomp/main.c b/dlls/vcomp/main.c
+index ab2a372..e37cf16 100644
+--- a/dlls/vcomp/main.c
++++ b/dlls/vcomp/main.c
+@@ -26,9 +26,12 @@
+ #include "windef.h"
+ #include "winbase.h"
+ #include "wine/debug.h"
++#include "vcomp_private.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(vcomp);
+ 
++DWORD vcomp_context_tls;
++
+ int CDECL omp_get_dynamic(void)
+ {
+     TRACE("stub\n");
+@@ -117,6 +120,15 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
+             return FALSE;    /* prefer native version */
+         case DLL_PROCESS_ATTACH:
+             DisableThreadLibraryCalls(hinstDLL);
++
++            if ((vcomp_context_tls = TlsAlloc()) == TLS_OUT_OF_INDEXES)
++            {
++                ERR("Failed to allocate TLS index\n");
++                return FALSE;
++            }
++            break;
++        case DLL_PROCESS_DETACH:
++            TlsFree(vcomp_context_tls);
+             break;
+     }
+ 
+diff --git a/dlls/vcomp/tests/fork.c b/dlls/vcomp/tests/fork.c
+index a6f176c..3d11504 100644
+--- a/dlls/vcomp/tests/fork.c
++++ b/dlls/vcomp/tests/fork.c
+@@ -24,6 +24,9 @@ static const int is_win64 = (sizeof(void *) > sizeof(int));
+ 
+ static void WINAPIV (*p_vcomp_fork)(BOOL ifval, int nargs, void *wrapper, ...);
+ static int CDECL (*pomp_get_max_threads)(void);
++static int CDECL (*pomp_get_num_threads)(void);
++static int CDECL (*pomp_in_parallel)(void);
++static void CDECL (*pomp_set_num_threads)(int);
+ 
+ #define GETFUNC(x) do { p##x = (void*)GetProcAddress(vcomp, #x); ok(p##x != NULL, "Export '%s' not found\n", #x); } while(0)
+ 
+@@ -36,6 +39,9 @@ static BOOL init(void)
+         return FALSE;
+     }
+ 
++    GETFUNC(omp_get_num_threads);
++    GETFUNC(omp_in_parallel);
++    GETFUNC(omp_set_num_threads);
+     GETFUNC(_vcomp_fork);
+     GETFUNC(omp_get_max_threads);
+ 
+@@ -142,6 +148,49 @@ static void test_vcomp_fork_float(void)
+     p_vcomp_fork_f5(TRUE, 5, _test_vcomp_fork_float_worker, 1.5f, 2.5f, 3.5f, 4.5f, 5.5f);
+ }
+ 
++#define NLOOPS_SHORT 5
++#define SLEEP_MS_SHORT 50
++
++static void CDECL _test_omp_in_parallel_nested_worker(LONG volatile *psum)
++{
++    if (pomp_in_parallel())
++        InterlockedIncrement(psum);
++}
++
++static void CDECL _test_omp_in_parallel_worker(LONG volatile *psum)
++{
++    int i;
++    InterlockedIncrement(psum);
++    for (i=0; i<NLOOPS_SHORT; i++)
++    {
++        p_vcomp_fork(1, 1, _test_omp_in_parallel_nested_worker, psum);
++        if (pomp_in_parallel())
++            InterlockedIncrement(psum);
++        Sleep(SLEEP_MS_SHORT);
++    }
++}
++
++static void test_omp_in_parallel(void)
++{
++    int par;
++    int old_nt;
++    LONG volatile ncalls;
++
++    old_nt = pomp_get_num_threads();
++    pomp_set_num_threads(1);
++
++    ncalls = 0;
++    p_vcomp_fork(1, 1, _test_omp_in_parallel_worker, &ncalls);
++
++    ok(ncalls == 1 + 2 * NLOOPS_SHORT,
++        "omp_in_parallel false in parallel region?!\n");
++
++    par = pomp_in_parallel();
++    ok(par == 0, "omp_in_parallel true outside parallel region?!\n");
++
++    pomp_set_num_threads(old_nt);
++}
++
+ START_TEST(fork)
+ {
+     if (!init())
+@@ -150,4 +199,5 @@ START_TEST(fork)
+     test_vcomp_fork_ptr();
+     test_vcomp_fork_uintptr();
+     test_vcomp_fork_float();
++    test_omp_in_parallel();
+ }
+diff --git a/dlls/vcomp/vcomp.spec b/dlls/vcomp/vcomp.spec
+index 8bc66e8..156233f 100644
+--- a/dlls/vcomp/vcomp.spec
++++ b/dlls/vcomp/vcomp.spec
+@@ -98,7 +98,7 @@
+ @ cdecl omp_get_thread_num()
+ @ stub omp_get_wtick
+ @ cdecl omp_get_wtime()
+-@ stub omp_in_parallel
++@ cdecl omp_in_parallel()
+ @ stub omp_init_lock
+ @ stub omp_init_nest_lock
+ @ cdecl omp_set_dynamic(long)
+diff --git a/dlls/vcomp/vcomp_private.h b/dlls/vcomp/vcomp_private.h
+new file mode 100644
+index 0000000..50c4643
+--- /dev/null
++++ b/dlls/vcomp/vcomp_private.h
+@@ -0,0 +1,19 @@
++/*
++ * Copyright 2015 Sebastian Lackner
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++extern DWORD vcomp_context_tls DECLSPEC_HIDDEN;
+diff --git a/dlls/vcomp100/vcomp100.spec b/dlls/vcomp100/vcomp100.spec
+index f008e2e..dd276d0 100644
+--- a/dlls/vcomp100/vcomp100.spec
++++ b/dlls/vcomp100/vcomp100.spec
+@@ -98,7 +98,7 @@
+ @ cdecl omp_get_thread_num() vcomp.omp_get_thread_num
+ @ stub omp_get_wtick
+ @ cdecl omp_get_wtime() vcomp.omp_get_wtime
+-@ stub omp_in_parallel
++@ cdecl omp_in_parallel() vcomp.omp_in_parallel
+ @ stub omp_init_lock
+ @ stub omp_init_nest_lock
+ @ cdecl omp_set_dynamic(long) vcomp.omp_set_dynamic
+diff --git a/dlls/vcomp90/vcomp90.spec b/dlls/vcomp90/vcomp90.spec
+index f008e2e..dd276d0 100644
+--- a/dlls/vcomp90/vcomp90.spec
++++ b/dlls/vcomp90/vcomp90.spec
+@@ -98,7 +98,7 @@
+ @ cdecl omp_get_thread_num() vcomp.omp_get_thread_num
+ @ stub omp_get_wtick
+ @ cdecl omp_get_wtime() vcomp.omp_get_wtime
+-@ stub omp_in_parallel
++@ cdecl omp_in_parallel() vcomp.omp_in_parallel
+ @ stub omp_init_lock
+ @ stub omp_init_nest_lock
+ @ cdecl omp_set_dynamic(long) vcomp.omp_set_dynamic
+-- 
+2.2.1
+

@@ -1,0 +1,309 @@
+From 26d179bd36c65f9f416eafa4b9245f51a6ba6ecd Mon Sep 17 00:00:00 2001
+From: Dan Kegel <dank@kegel.com>
+Date: Mon, 15 Oct 2012 21:01:30 -0700
+Subject: vcomp: better stubs for _vcomp_for_dynamic_init,
+ _vcomp_for_dynamic_next
+
+---
+ dlls/vcomp/fork.c           | 15 -----------
+ dlls/vcomp/tests/work.c     | 66 +++++++++++++++++++++++++++++++++++++++++++++
+ dlls/vcomp/vcomp.spec       |  4 +--
+ dlls/vcomp/vcomp_private.h  | 37 +++++++++++++++++++++++++
+ dlls/vcomp/work.c           | 47 ++++++++++++++++++++++++++++++++
+ dlls/vcomp100/vcomp100.spec |  4 +--
+ dlls/vcomp90/vcomp90.spec   |  4 +--
+ 7 files changed, 156 insertions(+), 21 deletions(-)
+
+diff --git a/dlls/vcomp/fork.c b/dlls/vcomp/fork.c
+index 49399c6..5af2021 100644
+--- a/dlls/vcomp/fork.c
++++ b/dlls/vcomp/fork.c
+@@ -27,21 +27,6 @@
+ #include "wine/debug.h"
+ #include "vcomp_private.h"
+ 
+-struct vcomp_team
+-{
+-    struct vcomp_team *parent;
+-};
+-
+-static inline struct vcomp_team *vcomp_get_team(void)
+-{
+-    return (struct vcomp_team *)TlsGetValue(vcomp_context_tls);
+-}
+-
+-static inline void vcomp_set_team(struct vcomp_team *team)
+-{
+-    TlsSetValue(vcomp_context_tls, team);
+-}
+-
+ WINE_DEFAULT_DEBUG_CHANNEL(vcomp);
+ 
+ void CDECL _vcomp_fork_call_wrapper(void *wrapper, int nargs, __ms_va_list args);
+diff --git a/dlls/vcomp/tests/work.c b/dlls/vcomp/tests/work.c
+index 2a76227..5abe0e1 100644
+--- a/dlls/vcomp/tests/work.c
++++ b/dlls/vcomp/tests/work.c
+@@ -21,12 +21,18 @@
+ #include "wine/test.h"
+ 
+ static void WINAPIV (*p_vcomp_fork)(DWORD parallel, int nargs, void *helper, ...);
++static void CDECL (*p_vcomp_for_dynamic_init)(int flags, int first, int last, int mystep, int chunksize);
++static int CDECL (*p_vcomp_for_dynamic_next)(int *pcounter, int *pchunklimit);
+ static void CDECL (*p_vcomp_for_static_end)(void);
+ static void CDECL (*p_vcomp_for_static_init)(int first, int last, int mystep, int chunksize, int *pnloops, int *pfirst, int *plast, int *pchunksize, int *pfinalchunkstart);
+ static void CDECL (*p_vcomp_for_static_simple_init)(int first, int last, int mystep, int step, int *pfirst, int *plast);
+ 
+ #define GETFUNC(x) do { p##x = (void*)GetProcAddress(vcomp, #x); ok(p##x != NULL, "Export '%s' not found\n", #x); } while(0)
+ 
++/* Matches definitions in ../vcomp_private.h */
++#define VCOMP_DYNAMIC_FOR_FLAGS_DOWN 0x0
++#define VCOMP_DYNAMIC_FOR_FLAGS_UP 0x40
++
+ static BOOL init(void)
+ {
+     HMODULE vcomp = LoadLibraryA("vcomp.dll");
+@@ -37,6 +43,8 @@ static BOOL init(void)
+     }
+ 
+     GETFUNC(_vcomp_fork);
++    GETFUNC(_vcomp_for_dynamic_init);
++    GETFUNC(_vcomp_for_dynamic_next);
+     GETFUNC(_vcomp_for_static_end);
+     GETFUNC(_vcomp_for_static_init);
+     GETFUNC(_vcomp_for_static_simple_init);
+@@ -47,6 +55,63 @@ static BOOL init(void)
+ static LONG volatile ncalls;
+ static LONG volatile nsum;
+ 
++static void CDECL _test_vcomp_for_dynamic_worker_up(void)
++{
++    int i, limit;
++
++    InterlockedIncrement(&ncalls);
++
++    /* pragma omp schedule(dynamic,16) */
++    /* for (i=0; i<=17; i++) */
++    p_vcomp_for_dynamic_init(VCOMP_DYNAMIC_FOR_FLAGS_UP, 0, 17, 1, 16);
++    while (p_vcomp_for_dynamic_next(&i, &limit))
++    {
++        for (; i<=limit; i++)
++        {
++            int j;
++            for (j=0; j<i; j++)
++                InterlockedIncrement(&nsum);
++        }
++    }
++}
++
++static void CDECL _test_vcomp_for_dynamic_worker_down(void)
++{
++    int i, limit;
++
++    InterlockedIncrement(&ncalls);
++
++    /* pragma omp schedule(dynamic,16) */
++    /* for (i=17; i>=0; i--) */
++    p_vcomp_for_dynamic_init(VCOMP_DYNAMIC_FOR_FLAGS_DOWN, 17, 0, 1, 16);
++    while (p_vcomp_for_dynamic_next(&i, &limit))
++    {
++        for (; i>=limit; i--)
++        {
++            int j;
++            for (j=0; j<i; j++)
++                InterlockedIncrement(&nsum);
++        }
++    }
++}
++
++static void test_vcomp_for_dynamic(void)
++{
++    /* for (i=0; i<=17; i++) nsum += i; */
++    ncalls = 0;
++    nsum = 0;
++    p_vcomp_fork(1, 0, _test_vcomp_for_dynamic_worker_up);
++    ok(ncalls >= 1, "expected >= 1 call, got %d\n", ncalls);
++    ok(nsum == 9*17, "expected sum 9*17, got %d\n", nsum);
++
++    /* for (i=17; i>=0; i--) nsum += i; */
++    ncalls = 0;
++    nsum = 0;
++    p_vcomp_fork(1, 0, _test_vcomp_for_dynamic_worker_down);
++    ok(ncalls >= 1, "expected >= 1 call, got %d\n", ncalls);
++    ok(nsum == 9*17, "expected sum 9*17, got %d\n", nsum);
++}
++
+ static void CDECL _test_vcomp_for_static_init_worker(void)
+ {
+     const int my_start = 0;
+@@ -123,6 +188,7 @@ START_TEST(work)
+     if (!init())
+         return;
+ 
++    test_vcomp_for_dynamic();
+     test_vcomp_for_static_init();
+     test_vcomp_for_static_simple_init();
+ }
+diff --git a/dlls/vcomp/vcomp.spec b/dlls/vcomp/vcomp.spec
+index 156233f..f603660 100644
+--- a/dlls/vcomp/vcomp.spec
++++ b/dlls/vcomp/vcomp.spec
+@@ -55,9 +55,9 @@
+ @ stub _vcomp_copyprivate_receive
+ @ stub _vcomp_enter_critsect
+ @ stub _vcomp_flush
+-@ stub _vcomp_for_dynamic_init
++@ cdecl _vcomp_for_dynamic_init(long long long long long)
+ @ stub _vcomp_for_dynamic_init_i8
+-@ stub _vcomp_for_dynamic_next
++@ cdecl _vcomp_for_dynamic_next(ptr ptr)
+ @ stub _vcomp_for_dynamic_next_i8
+ @ cdecl _vcomp_for_static_end()
+ @ cdecl _vcomp_for_static_init(long long long long ptr ptr ptr ptr ptr)
+diff --git a/dlls/vcomp/vcomp_private.h b/dlls/vcomp/vcomp_private.h
+index 50c4643..d3a7005 100644
+--- a/dlls/vcomp/vcomp_private.h
++++ b/dlls/vcomp/vcomp_private.h
+@@ -1,4 +1,7 @@
+ /*
++ * vcmp wine internal private include file
++ *
++ * Copyright 2012 Dan Kegel
+  * Copyright 2015 Sebastian Lackner
+  *
+  * This library is free software; you can redistribute it and/or
+@@ -16,4 +19,38 @@
+  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+  */
+ 
++#ifndef __WINE_VCOMP_PRIVATE_H
++#define __WINE_VCOMP_PRIVATE_H
++
++struct vcomp_team
++{
++    struct vcomp_team *parent;
++    union
++    {
++        struct
++        {
++            int counter;
++            int step;
++            int iterations_remaining;
++            int chunksize;
++            int flags;
++        } dyn_for;
++    } work;
++};
++
+ extern DWORD vcomp_context_tls DECLSPEC_HIDDEN;
++
++static inline struct vcomp_team *vcomp_get_team(void)
++{
++    return (struct vcomp_team *)TlsGetValue(vcomp_context_tls);
++}
++
++static inline void vcomp_set_team(struct vcomp_team *team)
++{
++    TlsSetValue(vcomp_context_tls, team);
++}
++
++#define VCOMP_DYNAMIC_FOR_FLAGS_DOWN 0x0
++#define VCOMP_DYNAMIC_FOR_FLAGS_UP 0x40
++
++#endif
+diff --git a/dlls/vcomp/work.c b/dlls/vcomp/work.c
+index 82df26e..87bce93 100644
+--- a/dlls/vcomp/work.c
++++ b/dlls/vcomp/work.c
+@@ -25,9 +25,56 @@
+ #include "windef.h"
+ #include "winbase.h"
+ #include "wine/debug.h"
++#include "vcomp_private.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(vcomp);
+ 
++void CDECL _vcomp_for_dynamic_init(int flags, int first, int last, int mystep, int chunksize)
++{
++    struct vcomp_team *pt = vcomp_get_team();
++
++    TRACE("(%d, %d, %d, %d, %d): stub\n", flags, first, last, mystep, chunksize);
++
++    pt->work.dyn_for.counter = first;
++    pt->work.dyn_for.chunksize = chunksize;
++    pt->work.dyn_for.flags = flags;
++    pt->work.dyn_for.step = mystep;
++    if (flags & VCOMP_DYNAMIC_FOR_FLAGS_UP)
++        pt->work.dyn_for.iterations_remaining = 1 + (last - first) / mystep;
++    else
++        pt->work.dyn_for.iterations_remaining = 1 + (first - last) / mystep;
++}
++
++int CDECL _vcomp_for_dynamic_next(int *pcounter, int *pchunklimit)
++{
++    struct vcomp_team *pt = vcomp_get_team();
++    int n;
++
++    TRACE("(%p, %p): stub.\n", pcounter, pchunklimit);
++
++    n = pt->work.dyn_for.chunksize;
++    if (n > pt->work.dyn_for.iterations_remaining)
++        n = pt->work.dyn_for.iterations_remaining;
++
++    *pcounter = pt->work.dyn_for.counter;
++
++    if (pt->work.dyn_for.flags & VCOMP_DYNAMIC_FOR_FLAGS_UP)
++    {
++        pt->work.dyn_for.counter += pt->work.dyn_for.step * n;
++        *pchunklimit = pt->work.dyn_for.counter - 1;
++    }
++    else
++    {
++        pt->work.dyn_for.counter -= pt->work.dyn_for.step * n;
++        *pchunklimit = pt->work.dyn_for.counter + 1;
++    }
++    pt->work.dyn_for.iterations_remaining -= n;
++
++    TRACE("counter %d, iterations_remaining %d, n %d, returning %d\n",
++          pt->work.dyn_for.counter, pt->work.dyn_for.iterations_remaining, n, (n > 0));
++    return (n > 0);
++}
++
+ void CDECL _vcomp_for_static_init(int first, int last, int mystep, int chunksize, int *pnloops, int *pfirst, int *plast, int *pchunksize, int *pfinalchunkstart)
+ {
+     TRACE("(%d, %d, %d, %d, %p, %p, %p, %p, %p): stub\n",
+diff --git a/dlls/vcomp100/vcomp100.spec b/dlls/vcomp100/vcomp100.spec
+index dd276d0..48d5e3f 100644
+--- a/dlls/vcomp100/vcomp100.spec
++++ b/dlls/vcomp100/vcomp100.spec
+@@ -55,9 +55,9 @@
+ @ stub _vcomp_copyprivate_receive
+ @ stub _vcomp_enter_critsect
+ @ stub _vcomp_flush
+-@ stub _vcomp_for_dynamic_init
++@ cdecl _vcomp_for_dynamic_init(long long long long long) vcomp._vcomp_for_dynamic_init
+ @ stub _vcomp_for_dynamic_init_i8
+-@ stub _vcomp_for_dynamic_next
++@ cdecl _vcomp_for_dynamic_next(ptr ptr) vcomp._vcomp_for_dynamic_next
+ @ stub _vcomp_for_dynamic_next_i8
+ @ cdecl _vcomp_for_static_end() vcomp._vcomp_for_static_end
+ @ cdecl _vcomp_for_static_init(long long long long ptr ptr ptr ptr ptr) vcomp._vcomp_for_static_init
+diff --git a/dlls/vcomp90/vcomp90.spec b/dlls/vcomp90/vcomp90.spec
+index dd276d0..48d5e3f 100644
+--- a/dlls/vcomp90/vcomp90.spec
++++ b/dlls/vcomp90/vcomp90.spec
+@@ -55,9 +55,9 @@
+ @ stub _vcomp_copyprivate_receive
+ @ stub _vcomp_enter_critsect
+ @ stub _vcomp_flush
+-@ stub _vcomp_for_dynamic_init
++@ cdecl _vcomp_for_dynamic_init(long long long long long) vcomp._vcomp_for_dynamic_init
+ @ stub _vcomp_for_dynamic_init_i8
+-@ stub _vcomp_for_dynamic_next
++@ cdecl _vcomp_for_dynamic_next(ptr ptr) vcomp._vcomp_for_dynamic_next
+ @ stub _vcomp_for_dynamic_next_i8
+ @ cdecl _vcomp_for_static_end() vcomp._vcomp_for_static_end
+ @ cdecl _vcomp_for_static_init(long long long long ptr ptr ptr ptr ptr) vcomp._vcomp_for_static_init
+-- 
+2.2.1
+

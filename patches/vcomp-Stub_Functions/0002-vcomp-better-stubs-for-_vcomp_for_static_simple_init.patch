@@ -1,0 +1,233 @@
+From c0369b34efc51c992be270a9e4eaef33b3cbf3d5 Mon Sep 17 00:00:00 2001
+From: Dan Kegel <dank@kegel.com>
+Date: Sun, 14 Oct 2012 20:40:31 -0700
+Subject: vcomp: better stubs for _vcomp_for_static_simple_init,
+ _vcomp_for_static_end
+
+---
+ dlls/vcomp/Makefile.in       |  3 +-
+ dlls/vcomp/tests/Makefile.in |  3 +-
+ dlls/vcomp/tests/work.c      | 83 ++++++++++++++++++++++++++++++++++++++++++++
+ dlls/vcomp/vcomp.spec        |  4 +--
+ dlls/vcomp/work.c            | 41 ++++++++++++++++++++++
+ dlls/vcomp100/vcomp100.spec  |  4 +--
+ dlls/vcomp90/vcomp90.spec    |  4 +--
+ 7 files changed, 134 insertions(+), 8 deletions(-)
+ create mode 100644 dlls/vcomp/tests/work.c
+ create mode 100644 dlls/vcomp/work.c
+
+diff --git a/dlls/vcomp/Makefile.in b/dlls/vcomp/Makefile.in
+index 5bd0074..dfff21a 100644
+--- a/dlls/vcomp/Makefile.in
++++ b/dlls/vcomp/Makefile.in
+@@ -2,4 +2,5 @@ MODULE = vcomp.dll
+ 
+ C_SRCS = \
+ 	fork.c \
+-	main.c
++	main.c \
++	work.c
+diff --git a/dlls/vcomp/tests/Makefile.in b/dlls/vcomp/tests/Makefile.in
+index 81430a3..f1479ab 100644
+--- a/dlls/vcomp/tests/Makefile.in
++++ b/dlls/vcomp/tests/Makefile.in
+@@ -2,7 +2,8 @@ TESTDLL = vcomp.dll
+ IMPORTS = vcomp
+ 
+ C_SRCS = \
+-	fork.c
++	fork.c \
++	work.c
+ 
+ RC_SRCS = \
+ 	vcomp.rc
+diff --git a/dlls/vcomp/tests/work.c b/dlls/vcomp/tests/work.c
+new file mode 100644
+index 0000000..e8d3f2c
+--- /dev/null
++++ b/dlls/vcomp/tests/work.c
+@@ -0,0 +1,83 @@
++/*
++ * Unit test suite for vcomp work-sharing implementation
++ *
++ * Copyright 2012 Dan Kegel
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "wine/test.h"
++
++static void WINAPIV (*p_vcomp_fork)(DWORD parallel, int nargs, void *helper, ...);
++static void CDECL (*p_vcomp_for_static_end)(void);
++static void CDECL (*p_vcomp_for_static_simple_init)(int first, int last, int mystep, int step, int *pfirst, int *plast);
++
++#define GETFUNC(x) do { p##x = (void*)GetProcAddress(vcomp, #x); ok(p##x != NULL, "Export '%s' not found\n", #x); } while(0)
++
++static BOOL init(void)
++{
++    HMODULE vcomp = LoadLibraryA("vcomp.dll");
++    if (!vcomp)
++    {
++        win_skip("vcomp.dll not installed\n");
++        return FALSE;
++    }
++
++    GETFUNC(_vcomp_fork);
++    GETFUNC(_vcomp_for_static_end);
++    GETFUNC(_vcomp_for_static_simple_init);
++
++    return TRUE;
++}
++
++static LONG volatile ncalls;
++static LONG volatile nsum;
++
++static void CDECL _test_vcomp_for_static_simple_init_worker(void)
++{
++    int i, my_limit;
++
++    InterlockedIncrement(&ncalls);
++
++    /* for (i=0; i<=12; i++) */
++    p_vcomp_for_static_simple_init(0, 12, 1, 1, &i, &my_limit);
++
++    while (i <= my_limit)
++    {
++        int j;
++        for (j=0; j<i; j++)
++            InterlockedIncrement(&nsum);
++        i++;
++    }
++
++    p_vcomp_for_static_end();
++}
++
++static void test_vcomp_for_static_simple_init(void)
++{
++    ncalls = 0;
++    nsum = 0;
++    p_vcomp_fork(1, 0, _test_vcomp_for_static_simple_init_worker);
++    ok(ncalls >= 1, "expected >= 1 call, got %d\n", ncalls);
++    ok(nsum == 6*13, "expected sum 6*13, got %d\n", nsum);
++}
++
++START_TEST(work)
++{
++    if (!init())
++        return;
++
++    test_vcomp_for_static_simple_init();
++}
+diff --git a/dlls/vcomp/vcomp.spec b/dlls/vcomp/vcomp.spec
+index d446574..b14edca 100644
+--- a/dlls/vcomp/vcomp.spec
++++ b/dlls/vcomp/vcomp.spec
+@@ -59,10 +59,10 @@
+ @ stub _vcomp_for_dynamic_init_i8
+ @ stub _vcomp_for_dynamic_next
+ @ stub _vcomp_for_dynamic_next_i8
+-@ stub _vcomp_for_static_end
++@ cdecl _vcomp_for_static_end()
+ @ stub _vcomp_for_static_init
+ @ stub _vcomp_for_static_init_i8
+-@ stub _vcomp_for_static_simple_init
++@ cdecl _vcomp_for_static_simple_init(long long long long ptr ptr)
+ @ stub _vcomp_for_static_simple_init_i8
+ @ varargs _vcomp_fork(long long ptr)
+ @ stub _vcomp_get_thread_num
+diff --git a/dlls/vcomp/work.c b/dlls/vcomp/work.c
+new file mode 100644
+index 0000000..0f9ff78
+--- /dev/null
++++ b/dlls/vcomp/work.c
+@@ -0,0 +1,41 @@
++/*
++ * vcomp work-sharing implementation
++ *
++ * Copyright 2012 Dan Kegel
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "config.h"
++
++#include <stdarg.h>
++
++#include "windef.h"
++#include "winbase.h"
++#include "wine/debug.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(vcomp);
++
++void CDECL _vcomp_for_static_simple_init(int first, int last, int mystep, int step, int *pfirst, int *plast)
++{
++    TRACE("(%d, %d, %d, %d, %p, %p): stub\n", first, last, mystep, step, pfirst, plast);
++    *pfirst = first;
++    *plast = last;
++}
++
++void CDECL _vcomp_for_static_end(void)
++{
++    TRACE("stub\n");
++}
+diff --git a/dlls/vcomp100/vcomp100.spec b/dlls/vcomp100/vcomp100.spec
+index 2c04e91..89e0972 100644
+--- a/dlls/vcomp100/vcomp100.spec
++++ b/dlls/vcomp100/vcomp100.spec
+@@ -59,10 +59,10 @@
+ @ stub _vcomp_for_dynamic_init_i8
+ @ stub _vcomp_for_dynamic_next
+ @ stub _vcomp_for_dynamic_next_i8
+-@ stub _vcomp_for_static_end
++@ cdecl _vcomp_for_static_end() vcomp._vcomp_for_static_end
+ @ stub _vcomp_for_static_init
+ @ stub _vcomp_for_static_init_i8
+-@ stub _vcomp_for_static_simple_init
++@ cdecl _vcomp_for_static_simple_init(long long long long ptr ptr) vcomp._vcomp_for_static_simple_init
+ @ stub _vcomp_for_static_simple_init_i8
+ @ varargs _vcomp_fork(long long ptr) vcomp._vcomp_fork
+ @ stub _vcomp_get_thread_num
+diff --git a/dlls/vcomp90/vcomp90.spec b/dlls/vcomp90/vcomp90.spec
+index 2c04e91..89e0972 100644
+--- a/dlls/vcomp90/vcomp90.spec
++++ b/dlls/vcomp90/vcomp90.spec
+@@ -59,10 +59,10 @@
+ @ stub _vcomp_for_dynamic_init_i8
+ @ stub _vcomp_for_dynamic_next
+ @ stub _vcomp_for_dynamic_next_i8
+-@ stub _vcomp_for_static_end
++@ cdecl _vcomp_for_static_end() vcomp._vcomp_for_static_end
+ @ stub _vcomp_for_static_init
+ @ stub _vcomp_for_static_init_i8
+-@ stub _vcomp_for_static_simple_init
++@ cdecl _vcomp_for_static_simple_init(long long long long ptr ptr) vcomp._vcomp_for_static_simple_init
+ @ stub _vcomp_for_static_simple_init_i8
+ @ varargs _vcomp_fork(long long ptr) vcomp._vcomp_fork
+ @ stub _vcomp_get_thread_num
+-- 
+2.2.1
+

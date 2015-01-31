@@ -1,0 +1,109 @@
+From 0281a800898e1c5f5e0a8f1825a0f8ae6a184a8c Mon Sep 17 00:00:00 2001
+From: David Heidelberger <david.heidelberger@ixit.cz>
+Date: Thu, 11 Sep 2014 21:15:51 +0200
+Subject: [PATCH 05/21] d3dadapter: allow simple configuration through winecfg
+
+Help us with diagnostic - if is patched wine installed properly.
+
+Signed-off-by: David Heidelberger <david.heidelberger@ixit.cz>
+Signed-off-by: Tiziano Bacocco <tizbac2@gmail.com>
+---
+ programs/winecfg/resource.h  |  1 +
+ programs/winecfg/winecfg.rc  |  3 +++
+ programs/winecfg/x11drvdlg.c | 26 ++++++++++++++++++++++++++
+ 3 files changed, 30 insertions(+)
+
+diff --git a/programs/winecfg/resource.h b/programs/winecfg/resource.h
+index fffc4da..e752834 100644
+--- a/programs/winecfg/resource.h
++++ b/programs/winecfg/resource.h
+@@ -59,6 +59,7 @@
+ #define IDC_DESKTOP_HEIGHT              1024
+ #define IDC_DESKTOP_SIZE                1025
+ #define IDC_DESKTOP_BY                  1026
++#define IDC_ENABLE_NATIVE_D3D9          1027
+ 
+ /* dll editing  */
+ #define IDC_RAD_BUILTIN                 1029
+diff --git a/programs/winecfg/winecfg.rc b/programs/winecfg/winecfg.rc
+index 9f763a7..7e71b60 100644
+--- a/programs/winecfg/winecfg.rc
++++ b/programs/winecfg/winecfg.rc
+@@ -170,6 +170,9 @@ BEGIN
+     EDITTEXT    IDC_DESKTOP_WIDTH,84,68,40,12,ES_AUTOHSCROLL | ES_NUMBER | WS_DISABLED
+     EDITTEXT    IDC_DESKTOP_HEIGHT,137,68,40,12,ES_AUTOHSCROLL | ES_NUMBER | WS_DISABLED
+ 
++    GROUPBOX    "3D Acceleration",IDC_STATIC,8,180,244,32
++    CONTROL     "Prefer native Direct3D 9 (requires Mesa with Nine state tracker)",IDC_ENABLE_NATIVE_D3D9,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,196,230,8
++
+     GROUPBOX    "Screen resolution",IDC_STATIC,8,95,244,84
+     CONTROL     "", IDC_RES_TRACKBAR, "msctls_trackbar32",WS_TABSTOP,12,105,171,15
+     EDITTEXT    IDC_RES_DPIEDIT,188,105,23,13,ES_NUMBER|WS_TABSTOP
+diff --git a/programs/winecfg/x11drvdlg.c b/programs/winecfg/x11drvdlg.c
+index 809068e..0837569 100644
+--- a/programs/winecfg/x11drvdlg.c
++++ b/programs/winecfg/x11drvdlg.c
+@@ -46,6 +46,9 @@ WINE_DEFAULT_DEBUG_CHANNEL(winecfg);
+ static const WCHAR logpixels_reg[] = {'S','y','s','t','e','m','\\','C','u','r','r','e','n','t','C','o','n','t','r','o','l','S','e','t','\\','H','a','r','d','w','a','r','e',' ','P','r','o','f','i','l','e','s','\\','C','u','r','r','e','n','t','\\','S','o','f','t','w','a','r','e','\\','F','o','n','t','s',0};
+ static const WCHAR logpixels[] = {'L','o','g','P','i','x','e','l','s',0};
+ 
++static const WCHAR d3d9_reg[] = {'S','o','f','t','w','a','r','e','\\','W','i','n','e','\\','D','i','r','e','c','t','3','D',0};
++static const WCHAR d3d9[] = {'U','s','e','N','a','t','i','v','e',0};
++
+ static const WCHAR desktopW[] = {'D','e','s','k','t','o','p',0};
+ static const WCHAR defaultW[] = {'D','e','f','a','u','l','t',0};
+ static const WCHAR explorerW[] = {'E','x','p','l','o','r','e','r',0};
+@@ -67,6 +70,15 @@ static void convert_x11_desktop_key(void)
+     HeapFree(GetProcessHeap(), 0, buf);
+ }
+ 
++static INT read_Direct3D_reg(void)
++{
++    DWORD useNative;
++    WCHAR *buf = get_reg_keyW(HKEY_CURRENT_USER, d3d9_reg, d3d9, NULL);
++    useNative = buf ? *buf : 0;
++    HeapFree(GetProcessHeap(), 0, buf);
++    return useNative;
++}
++
+ static void update_gui_for_desktop_mode(HWND dialog)
+ {
+     WCHAR *buf, *bufindex;
+@@ -142,6 +154,11 @@ static void init_dialog(HWND dialog)
+ 	CheckDlgButton(dialog, IDC_ENABLE_DECORATED, BST_UNCHECKED);
+     HeapFree(GetProcessHeap(), 0, buf);
+ 
++    if (read_Direct3D_reg())
++	CheckDlgButton(dialog, IDC_ENABLE_NATIVE_D3D9, BST_CHECKED);
++    else
++	CheckDlgButton(dialog, IDC_ENABLE_NATIVE_D3D9, BST_UNCHECKED);
++
+     updating_ui = FALSE;
+ }
+ 
+@@ -233,6 +250,14 @@ static void on_fullscreen_grab_clicked(HWND dialog)
+         set_reg_key(config_key, keypath("X11 Driver"), "GrabFullscreen", "N");
+ }
+ 
++static void on_enable_native_d3d9_clicked(HWND dialog)
++{
++    if (IsDlgButtonChecked(dialog, IDC_ENABLE_NATIVE_D3D9) == BST_CHECKED)
++        set_reg_key_dwordW(HKEY_CURRENT_USER, d3d9_reg, d3d9, 1);
++    else
++        set_reg_key_dwordW(HKEY_CURRENT_USER, d3d9_reg, d3d9, 0);
++}
++
+ static INT read_logpixels_reg(void)
+ {
+     DWORD dwLogPixels;
+@@ -385,6 +410,7 @@ GraphDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
+                         case IDC_ENABLE_MANAGED: on_enable_managed_clicked(hDlg); break;
+                         case IDC_ENABLE_DECORATED: on_enable_decorated_clicked(hDlg); break;
+ 			case IDC_FULLSCREEN_GRAB:  on_fullscreen_grab_clicked(hDlg); break;
++			case IDC_ENABLE_NATIVE_D3D9: on_enable_native_d3d9_clicked(hDlg); break;
+ 		    }
+ 		    break;
+ 		}
+-- 
+2.2.2
+

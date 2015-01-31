@@ -1,0 +1,316 @@
+From 7308c569af6b19854315d244be7334ef4c1f300c Mon Sep 17 00:00:00 2001
+From: Emil Velikov <emil.l.velikov@gmail.com>
+Date: Tue, 18 Nov 2014 12:19:17 +0100
+Subject: [PATCH 15/21] d3dadapter: restore basic autoconfiguration, use
+ pkg-config
+
+At this moment we should be able detect d3d directory.
+
+Signed-off-by: David Heidelberg <david@ixit.cz>
+
+TODO:
+
+1. Get the "WINE_CHECK_SONAME" working ? Perhaps one would like to drop that
+   and use PKG_CHECK_MODULES(d3d...)
+4. If WINE_CHECK_SONAME is dropped, audit the SONAME_LIBD3D....
+
+Signed-off-by: Emil Velikov <emil.l.velikov@gmail.com>
+---
+ configure                     | 69 ++++++++-----------------------------------
+ configure.ac                  | 11 ++++---
+ dlls/d3d9/d3dadapter9.c       |  4 +--
+ dlls/winex11.drv/d3dadapter.c | 22 +++++++-------
+ include/config.h.in           |  9 ++++--
+ include/wine/d3dadapter.h     |  4 +--
+ 6 files changed, 40 insertions(+), 79 deletions(-)
+
+diff --git a/configure b/configure
+index 8a47811..6b70150 100755
+--- a/configure
++++ b/configure
+@@ -677,6 +677,8 @@ XSLT_CFLAGS
+ XML2_LIBS
+ XML2_CFLAGS
+ LIBPCAP
++D3D_LIBS
++D3D_CFLAGS
+ X_EXTRA_LIBS
+ X_LIBS
+ X_PRE_LIBS
+@@ -10279,7 +10281,7 @@ if ac_fn_c_try_link "$LINENO"; then :
+     dll) ac_cv_lib_soname_Xfixes=`$ac_cv_path_LDD conftest.exe | grep "Xfixes" | sed -e "s/dll.*/dll/"';2,$d'` ;;
+     dylib) ac_cv_lib_soname_Xfixes=`otool -L conftest$ac_exeext | grep "libXfixes\\.[0-9A-Za-z.]*dylib" | sed -e "s/^.*\/\(libXfixes\.[0-9A-Za-z.]*dylib\).*$/\1/"';2,$d'` ;;
+     *) ac_cv_lib_soname_Xfixes=`$READELF -d conftest$ac_exeext | grep "NEEDED.*libXfixes\\.$LIBEXT" | sed -e "s/^.*\\[\\(libXfixes\\.$LIBEXT[^	 ]*\\)\\].*$/\1/"';2,$d'`
+-       if test "x$ac_cv_lib_soname_Xfixes" = x; then :
++       if ${ac_cv_lib_soname_Xfixes:+false} :; then :
+   ac_cv_lib_soname_Xfixes=`$LDD conftest$ac_exeext | grep "libXfixes\\.$LIBEXT" | sed -e "s/^.*\(libXfixes\.$LIBEXT[^	 ]*\).*$/\1/"';2,$d'`
+ fi ;;
+   esac
+@@ -10288,7 +10290,7 @@ rm -f core conftest.err conftest.$ac_objext \
+     conftest$ac_exeext conftest.$ac_ext
+   LIBS=$ac_check_soname_save_LIBS
+ fi
+-if test "x$ac_cv_lib_soname_Xfixes" = "x"; then :
++if ${ac_cv_lib_soname_Xfixes:+false} :; then :
+   { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+ $as_echo "not found" >&6; }
+ 
+@@ -10583,67 +10585,18 @@ fi
+ 
+         if test "x$with_d3dadapter" != "xno"
+     then
+-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for -ld3dadapter9" >&5
+-$as_echo_n "checking for -ld3dadapter9... " >&6; }
+-if ${ac_cv_lib_soname_d3dadapter9+:} false; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-  ac_check_soname_save_LIBS=$LIBS
+-LIBS="-ld3dadapter9  $LIBS"
+-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
++         D3D_CFLAGS=`pkg-config --cflags d3d`
++         D3D_LIBS=`pkg-config --libs d3d`
+ 
+-/* Override any GCC internal prototype to avoid an error.
+-   Use char because int might match the return type of a GCC
+-   builtin and then its argument prototype would still apply.  */
+-#ifdef __cplusplus
+-extern "C"
+-#endif
+-char D3DAdapter9GetProc ();
+-int
+-main ()
+-{
+-return D3DAdapter9GetProc ();
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_link "$LINENO"; then :
+-  case "$LIBEXT" in
+-    dll) ac_cv_lib_soname_d3dadapter9=`$ac_cv_path_LDD conftest.exe | grep "d3dadapter9" | sed -e "s/dll.*/dll/"';2,$d'` ;;
+-    dylib) ac_cv_lib_soname_d3dadapter9=`otool -L conftest$ac_exeext | grep "libd3dadapter9\\.[0-9A-Za-z.]*dylib" | sed -e "s/^.*\/\(libd3dadapter9\.[0-9A-Za-z.]*dylib\).*$/\1/"';2,$d'` ;;
+-    *) ac_cv_lib_soname_d3dadapter9=`$READELF -d conftest$ac_exeext | grep "NEEDED.*libd3dadapter9\\.$LIBEXT" | sed -e "s/^.*\\[\\(libd3dadapter9\\.$LIBEXT[^	 ]*\\)\\].*$/\1/"';2,$d'`
+-       if test "x$ac_cv_lib_soname_d3dadapter9" = x; then :
+-  ac_cv_lib_soname_d3dadapter9=`$LDD conftest$ac_exeext | grep "libd3dadapter9\\.$LIBEXT" | sed -e "s/^.*\(libd3dadapter9\.$LIBEXT[^	 ]*\).*$/\1/"';2,$d'`
+-fi ;;
+-  esac
+-fi
+-rm -f core conftest.err conftest.$ac_objext \
+-    conftest$ac_exeext conftest.$ac_ext
+-  LIBS=$ac_check_soname_save_LIBS
+-fi
+-if test "x$ac_cv_lib_soname_d3dadapter9" = "x"; then :
+-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+-$as_echo "not found" >&6; }
+ 
+-else
+-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_soname_d3dadapter9" >&5
+-$as_echo "$ac_cv_lib_soname_d3dadapter9" >&6; }
++
++$as_echo "#define SONAME_D3DADAPTER9 \"d3dadapter9.so.1\"" >>confdefs.h
++
+ 
+ cat >>confdefs.h <<_ACEOF
+-#define SONAME_LIBD3DADAPTER9 "$ac_cv_lib_soname_d3dadapter9"
++#define D3D_MODULE_DIR "`pkg-config --variable=moduledir d3d`"
+ _ACEOF
+ 
+-
+-fi
+-        if test "x$ac_cv_lib_soname_d3dadapter9" = "x"; then :
+-  case "x$with_d3dadapter9" in
+-  x)   as_fn_append wine_notices "|libd3dadapter9 ${notice_platform}development files not found. Native Direct3D9 won't be supported." ;;
+-  xno) ;;
+-  *)   as_fn_error $? "libd3dadapter9 ${notice_platform}development files not found. Native Direct3D9 won't be supported.
+-This is an error since --with-d3dadapter9 was requested." "$LINENO" 5 ;;
+-esac
+-fi
+     fi
+ 
+     CPPFLAGS="$ac_save_CPPFLAGS"
+@@ -16901,6 +16854,8 @@ X_CFLAGS = $X_CFLAGS
+ X_PRE_LIBS = $X_PRE_LIBS
+ X_LIBS = $X_LIBS
+ X_EXTRA_LIBS = $X_EXTRA_LIBS
++D3D_CFLAGS = $D3D_CFLAGS
++D3D_LIBS = $D3D_LIBS
+ XML2_CFLAGS = $XML2_CFLAGS
+ XML2_LIBS = $XML2_LIBS
+ XSLT_CFLAGS = $XSLT_CFLAGS
+diff --git a/configure.ac b/configure.ac
+index f7678e6..ad256a6 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1261,12 +1261,15 @@ This probably prevents linking to OpenGL. Try deleting the file and restarting c
+     WINE_WARNING_WITH(opengl,[test -n "$opengl_msg"],[$opengl_msg
+ OpenGL and Direct3D won't be supported.])
+ 
+-    dnl Check for libd3dadapter9
++    dnl Check for d3dadapter
+     if test "x$with_d3dadapter" != "xno"
+     then
+-        WINE_CHECK_SONAME(d3dadapter9,D3DAdapter9GetProc)
+-        WINE_NOTICE_WITH(d3dadapter9,[test "x$ac_cv_lib_soname_d3dadapter9" = "x"],
+-                         [libd3dadapter9 ${notice_platform}development files not found. Native Direct3D9 won't be supported.])
++         D3D_CFLAGS=`pkg-config --cflags d3d`
++         D3D_LIBS=`pkg-config --libs d3d`
++         AC_SUBST(D3D_CFLAGS)
++         AC_SUBST(D3D_LIBS)
++         AC_DEFINE(SONAME_D3DADAPTER9, ["d3dadapter9.so.1"], ["temporary hack"])
++         AC_DEFINE_UNQUOTED(D3D_MODULE_DIR, ["`pkg-config --variable=moduledir d3d`"], ["module dir"])
+     fi
+ 
+     CPPFLAGS="$ac_save_CPPFLAGS"
+diff --git a/dlls/d3d9/d3dadapter9.c b/dlls/d3d9/d3dadapter9.c
+index 8c456d5..68f318f 100644
+--- a/dlls/d3d9/d3dadapter9.c
++++ b/dlls/d3d9/d3dadapter9.c
+@@ -24,7 +24,7 @@
+ 
+ #include <d3d9.h>
+ 
+-#ifdef SONAME_LIBD3DADAPTER9
++#ifdef SONAME_D3DADAPTER9
+ 
+ #include "wine/d3dadapter.h"
+ #include "wine/gdi_driver.h"
+@@ -934,4 +934,4 @@ d3dadapter9_destroy( HINSTANCE hinst )
+ {
+ }
+ 
+-#endif /* SONAME_LIBD3DADAPTER9 */
++#endif /* SONAME_D3DADAPTER9 */
+diff --git a/dlls/winex11.drv/d3dadapter.c b/dlls/winex11.drv/d3dadapter.c
+index 3dac2eb..5ea876b 100644
+--- a/dlls/winex11.drv/d3dadapter.c
++++ b/dlls/winex11.drv/d3dadapter.c
+@@ -28,7 +28,7 @@ WINE_DEFAULT_DEBUG_CHANNEL(d3dadapter);
+ 
+ #if defined(SONAME_LIBXEXT) && \
+     defined(SONAME_LIBXFIXES) && \
+-    defined(SONAME_LIBD3DADAPTER9)
++    defined(SONAME_D3DADAPTER9)
+ 
+ #include "wine/d3dadapter.h"
+ #include "wine/library.h"
+@@ -841,23 +841,23 @@ has_d3dadapter( void )
+ 
+     /*  */
+     if (!usexfixes) {
+-        ERR("%s needs Xfixes.\n", SONAME_LIBD3DADAPTER9);
++        ERR("%s needs Xfixes.\n", SONAME_D3DADAPTER9);
+         return FALSE;
+     }
+ 
+-    handle = wine_dlopen(SONAME_LIBD3DADAPTER9, RTLD_GLOBAL|RTLD_NOW,
+-                         errbuf, sizeof(errbuf));
++    handle = wine_dlopen(D3D_MODULE_DIR "/" SONAME_D3DADAPTER9,
++                         RTLD_GLOBAL | RTLD_NOW, errbuf, sizeof(errbuf));
+     if (!handle) {
+-        ERR("Failed to load %s: %s\n", SONAME_LIBD3DADAPTER9, errbuf);
++        ERR("Failed to load %s: %s\n", SONAME_D3DADAPTER9, errbuf);
+         goto cleanup;
+     }
+ 
+-    /* find our entry point in libd3dadapter9 */
++    /* find our entry point in d3dadapter9 */
+     pD3DAdapter9GetProc = wine_dlsym(handle, "D3DAdapter9GetProc",
+                                      errbuf, sizeof(errbuf));
+     if (!pD3DAdapter9GetProc) {
+         ERR("Failed to get the entry point from %s: %s",
+-            SONAME_LIBD3DADAPTER9, errbuf);
++            SONAME_D3DADAPTER9, errbuf);
+         goto cleanup;
+     }
+ 
+@@ -865,14 +865,14 @@ has_d3dadapter( void )
+     d3d9_drm = pD3DAdapter9GetProc(D3DADAPTER9DRM_NAME);
+     if (!d3d9_drm) {
+         ERR("%s doesn't support the `%s' backend.\n",
+-            SONAME_LIBD3DADAPTER9, D3DADAPTER9DRM_NAME);
++            SONAME_D3DADAPTER9, D3DADAPTER9DRM_NAME);
+         goto cleanup;
+     }
+ 
+     /* verify that we're binary compatible */
+     if (d3d9_drm->major_version != D3DADAPTER9DRM_MAJOR) {
+         ERR("Version mismatch. %s has %d.%d, was expecting %d.x\n",
+-            SONAME_LIBD3DADAPTER9, d3d9_drm->major_version,
++            SONAME_D3DADAPTER9, d3d9_drm->major_version,
+             d3d9_drm->minor_version, D3DADAPTER9DRM_MAJOR);
+         goto cleanup;
+     }
+@@ -924,7 +924,7 @@ get_d3d_dri3_driver(UINT version)
+ 
+ #else /* defined(SONAME_LIBXEXT) && \
+          defined(SONAME_LIBXFIXES) && \
+-         defined(SONAME_LIBD3DADAPTER9) */
++         defined(SONAME_D3DADAPTER9) */
+ 
+ struct d3dadapter_funcs;
+ 
+@@ -949,4 +949,4 @@ get_d3d_dri3_driver(UINT version)
+ 
+ #endif /* defined(SONAME_LIBXEXT) && \
+           defined(SONAME_LIBXFIXES) && \
+-          defined(SONAME_LIBD3DADAPTER9) */
++          defined(SONAME_D3DADAPTER9) */
+diff --git a/include/config.h.in b/include/config.h.in
+index 13ff99e..a33c138 100644
+--- a/include/config.h.in
++++ b/include/config.h.in
+@@ -4,6 +4,9 @@
+ #define __WINE_CONFIG_H
+ #ifndef WINE_CROSSTEST
+ 
++/* "module dir" */
++#undef D3D_MODULE_DIR
++
+ /* Define to a function attribute for Microsoft hotpatch assembly prefix. */
+ #undef DECLSPEC_HOTPATCH
+ 
+@@ -1311,6 +1314,9 @@
+ /* Define to the version of this package. */
+ #undef PACKAGE_VERSION
+ 
++/* "temporary hack" */
++#undef SONAME_D3DADAPTER9
++
+ /* Define to the soname of the libcapi20 library. */
+ #undef SONAME_LIBCAPI20
+ 
+@@ -1320,9 +1326,6 @@
+ /* Define to the soname of the libcurses library. */
+ #undef SONAME_LIBCURSES
+ 
+-/* Define to the soname of the libd3dadapter9 library. */
+-#undef SONAME_LIBD3DADAPTER9
+-
+ /* Define to the soname of the libdbus-1 library. */
+ #undef SONAME_LIBDBUS_1
+ 
+diff --git a/include/wine/d3dadapter.h b/include/wine/d3dadapter.h
+index 126dd58..6f90338 100644
+--- a/include/wine/d3dadapter.h
++++ b/include/wine/d3dadapter.h
+@@ -25,7 +25,7 @@
+ # error You must include config.h to use this header
+ #endif
+ 
+-#ifdef SONAME_LIBD3DADAPTER9
++#ifdef SONAME_D3DADAPTER9
+ 
+ #include <d3dadapter/d3dadapter9.h>
+ 
+@@ -37,6 +37,6 @@ struct d3dadapter_funcs
+     HRESULT (*create_adapter9)(HDC hdc, ID3DAdapter9 **adapter);
+ };
+ 
+-#endif /* SONAME_LIBD3DADAPTER9 */
++#endif /* SONAME_D3DADAPTER9 */
+ 
+ #endif /* __WINE_D3DADAPTER_H */
+-- 
+2.2.2
+

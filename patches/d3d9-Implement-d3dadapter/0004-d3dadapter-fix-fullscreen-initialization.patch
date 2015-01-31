@@ -1,0 +1,75 @@
+From 9b33f94835f67b34f3e5c07ca8901a03d7dcfb62 Mon Sep 17 00:00:00 2001
+From: Tiziano Bacocco <tizbac2@gmail.com>
+Date: Thu, 4 Sep 2014 22:36:19 +0200
+Subject: [PATCH 04/21] d3dadapter: fix fullscreen initialization
+
+Fix inspired by wined3d/device.c
+Fixed games: Bioshock, AoE3, EE3, Mafia 2, SC: Chaos Theory.
+
+Tested-by: Nick Sarnie <commendsarnex@gmail.com>
+Tested-by: David Heidelberger <david.heidelberger@ixit.cz>
+Signed-off-by: Tiziano Bacocco <tizbac2@gmail.com>
+---
+ dlls/winex11.drv/d3dadapter.c | 39 +++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 39 insertions(+)
+
+diff --git a/dlls/winex11.drv/d3dadapter.c b/dlls/winex11.drv/d3dadapter.c
+index 20fe4c6..91ebdbb 100644
+--- a/dlls/winex11.drv/d3dadapter.c
++++ b/dlls/winex11.drv/d3dadapter.c
+@@ -542,6 +542,27 @@ DRI2Present_GetWindowRect( struct DRI2Present *This,
+     return GetClientRect(hWnd, pRect) ? D3D_OK : D3DERR_INVALIDCALL;
+ }
+ 
++static LONG fullscreen_style(LONG style)
++{
++    /* Make sure the window is managed, otherwise we won't get keyboard input. */
++    style |= WS_POPUP | WS_SYSMENU;
++    style &= ~(WS_CAPTION | WS_THICKFRAME);
++
++    return style;
++}
++
++static LONG fullscreen_exstyle(LONG exstyle)
++{
++    /* Filter out window decorations. */
++    exstyle &= ~(WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE);
++
++    return exstyle;
++}
++
++
++/*----------*/
++
++
+ static ID3DPresentVtbl DRI2Present_vtable = {
+     (void *)DRI2Present_QueryInterface,
+     (void *)DRI2Present_AddRef,
+@@ -623,6 +644,24 @@ DRI2Present_new( Display *dpy,
+     if (params->BackBufferHeight == 0) {
+         params->BackBufferHeight = rect.bottom;
+     }
++
++    if (!params->Windowed) {
++        LONG style, exstyle;
++        DEVMODEW newMode;
++
++        newMode.dmPelsWidth = params->BackBufferWidth;
++        newMode.dmPelsHeight = params->BackBufferHeight;
++        newMode.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT;
++        ChangeDisplaySettingsExW(devname,&newMode,0,CDS_FULLSCREEN,NULL);
++
++        style = fullscreen_style(0);
++        exstyle = fullscreen_exstyle(0);
++
++        SetWindowLongW(focus_wnd, GWL_STYLE, style);
++        SetWindowLongW(focus_wnd, GWL_EXSTYLE, exstyle);
++        SetWindowPos(focus_wnd,HWND_TOPMOST,0,0,params->BackBufferWidth,params->BackBufferHeight,SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOACTIVATE);
++    }
++
+     This->params = *params;
+     strcpyW(This->devname, devname);
+ 
+-- 
+2.2.2
+

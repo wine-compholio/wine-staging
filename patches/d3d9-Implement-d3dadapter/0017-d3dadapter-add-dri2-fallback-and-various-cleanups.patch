@@ -1,0 +1,1233 @@
+From 0d0c450d043f6678cb183296c2e8e57cfe870573 Mon Sep 17 00:00:00 2001
+From: Axel Davy <axel.davy@ens.fr>
+Date: Thu, 18 Dec 2014 10:49:37 +0100
+Subject: [PATCH 17/21] d3dadapter: add dri2 fallback and various cleanups
+
+Signed-off-by: Axel Davy <axel.davy@ens.fr>
+---
+ configure                     | 153 +++++++++++-
+ configure.ac                  |  14 ++
+ dlls/winex11.drv/Makefile.in  |   2 +-
+ dlls/winex11.drv/d3dadapter.c |  72 +++++-
+ dlls/winex11.drv/dri3.c       | 536 +++++++++++++++++++++++++++++++++++++++++-
+ dlls/winex11.drv/dri3.h       |  27 ++-
+ include/config.h.in           |   6 +
+ 7 files changed, 784 insertions(+), 26 deletions(-)
+
+diff --git a/configure b/configure
+index 6b70150..c801356 100755
+--- a/configure
++++ b/configure
+@@ -714,6 +714,7 @@ DLLFLAGS
+ DLLPREFIX
+ dlldir
+ CPP
++D3DADAPTER9_LIBS
+ OPENGL_LIBS
+ ICOTOOL
+ CONVERT
+@@ -824,6 +825,7 @@ with_openal
+ with_opencl
+ with_opengl
+ with_d3dadapter
++with_d3dadapter_dri2_fallback
+ with_osmesa
+ with_oss
+ with_pcap
+@@ -2125,6 +2127,8 @@ Optional Packages:
+   --without-opencl        do not use OpenCL
+   --without-opengl        do not use OpenGL
+   --without-d3dadapter    do not use native Direct3D
++  --without-d3dadapter-dri2-fallback
++                          add a DRI2 fallback to d3dadapter DRI3 code
+   --without-osmesa        do not use the OSMesa library
+   --without-oss           do not use the OSS sound support
+   --without-pcap          do not use the Packet Capture library
+@@ -3354,6 +3358,12 @@ if test "${with_d3dadapter+set}" = set; then :
+ fi
+ 
+ 
++# Check whether --with-d3dadapter-dri2-fallback was given.
++if test "${with_d3dadapter_dri2_fallback+set}" = set; then :
++  withval=$with_d3dadapter_dri2_fallback;
++fi
++
++
+ # Check whether --with-osmesa was given.
+ if test "${with_osmesa+set}" = set; then :
+   withval=$with_osmesa;
+@@ -6012,6 +6022,9 @@ fi
+ OPENGL_LIBS=""
+ 
+ 
++D3DADAPTER9_LIBS=""
++
++
+ 
+ # Check whether --enable-largefile was given.
+ if test "${enable_largefile+set}" = set; then :
+@@ -6038,7 +6051,7 @@ else
+     We can't simply define LARGE_OFF_T to be 9223372036854775807,
+     since some C++ compilers masquerading as C compilers
+     incorrectly reject 9223372036854775807.  */
+-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
++#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+ 		       && LARGE_OFF_T % 2147483647 == 1)
+ 		      ? 1 : -1];
+@@ -6084,7 +6097,7 @@ else
+     We can't simply define LARGE_OFF_T to be 9223372036854775807,
+     since some C++ compilers masquerading as C compilers
+     incorrectly reject 9223372036854775807.  */
+-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
++#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+ 		       && LARGE_OFF_T % 2147483647 == 1)
+ 		      ? 1 : -1];
+@@ -6108,7 +6121,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+     We can't simply define LARGE_OFF_T to be 9223372036854775807,
+     since some C++ compilers masquerading as C compilers
+     incorrectly reject 9223372036854775807.  */
+-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
++#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+ 		       && LARGE_OFF_T % 2147483647 == 1)
+ 		      ? 1 : -1];
+@@ -6153,7 +6166,7 @@ else
+     We can't simply define LARGE_OFF_T to be 9223372036854775807,
+     since some C++ compilers masquerading as C compilers
+     incorrectly reject 9223372036854775807.  */
+-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
++#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+ 		       && LARGE_OFF_T % 2147483647 == 1)
+ 		      ? 1 : -1];
+@@ -6177,7 +6190,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+     We can't simply define LARGE_OFF_T to be 9223372036854775807,
+     since some C++ compilers masquerading as C compilers
+     incorrectly reject 9223372036854775807.  */
+-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
++#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+ 		       && LARGE_OFF_T % 2147483647 == 1)
+ 		      ? 1 : -1];
+@@ -10583,6 +10596,8 @@ This is an error since --with-opengl was requested." "$LINENO" 5 ;;
+ esac
+ fi
+ 
++
++
+         if test "x$with_d3dadapter" != "xno"
+     then
+          D3D_CFLAGS=`pkg-config --cflags d3d`
+@@ -10597,6 +10612,133 @@ cat >>confdefs.h <<_ACEOF
+ #define D3D_MODULE_DIR "`pkg-config --variable=moduledir d3d`"
+ _ACEOF
+ 
++         D3DADAPTER9_LIBS="-lxcb -lxcb-dri3 -lxcb-present -lX11-xcb -lxcb-xfixes -lpthread"
++         if test "x$D3DADAPTER9_LIBS" != "x-lxcb -lxcb-dri3 -lxcb-present -lX11-xcb -lxcb-xfixes -lpthread"; then :
++  case "x$with_d3dadapter" in
++  xno) ;;
++  *)   as_fn_error $? "D3Dadapter9 requirements not met
++Use the --without-d3dadapter option if you really want this." "$LINENO" 5 ;;
++esac
++fi
++         if test "x$with_d3dadapter_dri2_fallback" != "xno"
++         then
++
++$as_echo "#define D3DADAPTER9_DRI2 1" >>confdefs.h
++
++             { $as_echo "$as_me:${as_lineno-$LINENO}: checking for -lGL" >&5
++$as_echo_n "checking for -lGL... " >&6; }
++if ${ac_cv_lib_soname_GL+:} false; then :
++  $as_echo_n "(cached) " >&6
++else
++  ac_check_soname_save_LIBS=$LIBS
++LIBS="-lGL  $LIBS"
++  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
++/* end confdefs.h.  */
++
++/* Override any GCC internal prototype to avoid an error.
++   Use char because int might match the return type of a GCC
++   builtin and then its argument prototype would still apply.  */
++#ifdef __cplusplus
++extern "C"
++#endif
++char glGenFramebuffers ();
++int
++main ()
++{
++return glGenFramebuffers ();
++  ;
++  return 0;
++}
++_ACEOF
++if ac_fn_c_try_link "$LINENO"; then :
++  case "$LIBEXT" in
++    dll) ac_cv_lib_soname_GL=`$ac_cv_path_LDD conftest.exe | grep "GL" | sed -e "s/dll.*/dll/"';2,$d'` ;;
++    dylib) ac_cv_lib_soname_GL=`otool -L conftest$ac_exeext | grep "libGL\\.[0-9A-Za-z.]*dylib" | sed -e "s/^.*\/\(libGL\.[0-9A-Za-z.]*dylib\).*$/\1/"';2,$d'` ;;
++    *) ac_cv_lib_soname_GL=`$READELF -d conftest$ac_exeext | grep "NEEDED.*libGL\\.$LIBEXT" | sed -e "s/^.*\\[\\(libGL\\.$LIBEXT[^	 ]*\\)\\].*$/\1/"';2,$d'`
++       if ${ac_cv_lib_soname_GL:+false} :; then :
++  ac_cv_lib_soname_GL=`$LDD conftest$ac_exeext | grep "libGL\\.$LIBEXT" | sed -e "s/^.*\(libGL\.$LIBEXT[^	 ]*\).*$/\1/"';2,$d'`
++fi ;;
++  esac
++fi
++rm -f core conftest.err conftest.$ac_objext \
++    conftest$ac_exeext conftest.$ac_ext
++  LIBS=$ac_check_soname_save_LIBS
++fi
++if ${ac_cv_lib_soname_GL:+false} :; then :
++  { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
++$as_echo "not found" >&6; }
++
++else
++  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_soname_GL" >&5
++$as_echo "$ac_cv_lib_soname_GL" >&6; }
++
++cat >>confdefs.h <<_ACEOF
++#define SONAME_LIBGL "$ac_cv_lib_soname_GL"
++_ACEOF
++
++       D3DADAPTER9_LIBS="-lGL $D3DADAPTER9_LIBS"
++fi
++             { $as_echo "$as_me:${as_lineno-$LINENO}: checking for -lEGL" >&5
++$as_echo_n "checking for -lEGL... " >&6; }
++if ${ac_cv_lib_soname_EGL+:} false; then :
++  $as_echo_n "(cached) " >&6
++else
++  ac_check_soname_save_LIBS=$LIBS
++LIBS="-lEGL  $LIBS"
++  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
++/* end confdefs.h.  */
++
++/* Override any GCC internal prototype to avoid an error.
++   Use char because int might match the return type of a GCC
++   builtin and then its argument prototype would still apply.  */
++#ifdef __cplusplus
++extern "C"
++#endif
++char eglCreateContext ();
++int
++main ()
++{
++return eglCreateContext ();
++  ;
++  return 0;
++}
++_ACEOF
++if ac_fn_c_try_link "$LINENO"; then :
++  case "$LIBEXT" in
++    dll) ac_cv_lib_soname_EGL=`$ac_cv_path_LDD conftest.exe | grep "EGL" | sed -e "s/dll.*/dll/"';2,$d'` ;;
++    dylib) ac_cv_lib_soname_EGL=`otool -L conftest$ac_exeext | grep "libEGL\\.[0-9A-Za-z.]*dylib" | sed -e "s/^.*\/\(libEGL\.[0-9A-Za-z.]*dylib\).*$/\1/"';2,$d'` ;;
++    *) ac_cv_lib_soname_EGL=`$READELF -d conftest$ac_exeext | grep "NEEDED.*libEGL\\.$LIBEXT" | sed -e "s/^.*\\[\\(libEGL\\.$LIBEXT[^	 ]*\\)\\].*$/\1/"';2,$d'`
++       if ${ac_cv_lib_soname_EGL:+false} :; then :
++  ac_cv_lib_soname_EGL=`$LDD conftest$ac_exeext | grep "libEGL\\.$LIBEXT" | sed -e "s/^.*\(libEGL\.$LIBEXT[^	 ]*\).*$/\1/"';2,$d'`
++fi ;;
++  esac
++fi
++rm -f core conftest.err conftest.$ac_objext \
++    conftest$ac_exeext conftest.$ac_ext
++  LIBS=$ac_check_soname_save_LIBS
++fi
++if ${ac_cv_lib_soname_EGL:+false} :; then :
++  { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
++$as_echo "not found" >&6; }
++
++else
++  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_soname_EGL" >&5
++$as_echo "$ac_cv_lib_soname_EGL" >&6; }
++
++cat >>confdefs.h <<_ACEOF
++#define SONAME_LIBEGL "$ac_cv_lib_soname_EGL"
++_ACEOF
++
++       D3DADAPTER9_LIBS="-lEGL $D3DADAPTER9_LIBS"
++fi
++             if test "x$D3DADAPTER9_LIBS" != "x-lEGL -lGL -lxcb -lxcb-dri3 -lxcb-present -lX11-xcb -lxcb-xfixes -lpthread"; then :
++  case "x$with_d3dadapter" in
++  xno) ;;
++  *)   as_fn_error $? "D3Dadapter9 DRI2 fallback requirements not met
++Use the --without-d3dadapter option if you really want this." "$LINENO" 5 ;;
++esac
++fi
++         fi
+     fi
+ 
+     CPPFLAGS="$ac_save_CPPFLAGS"
+@@ -16835,6 +16977,7 @@ ac_config_commands="$ac_config_commands include/stamp-h"
+ $as_echo_n "creating Makefile rules..." >&6
+ 
+ ALL_VARS_RULES="OPENGL_LIBS = $OPENGL_LIBS
++D3DADAPTER9_LIBS = $D3DADAPTER9_LIBS
+ SOCKET_LIBS = $SOCKET_LIBS
+ COREFOUNDATION_LIBS = $COREFOUNDATION_LIBS
+ IOKIT_LIBS = $IOKIT_LIBS
+diff --git a/configure.ac b/configure.ac
+index ad256a6..940f3f6 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -66,6 +66,7 @@ AC_ARG_WITH(opencl,    AS_HELP_STRING([--without-opencl],[do not use OpenCL]),
+             [if test "x$withval" = "xno"; then ac_cv_header_CL_cl_h=no; ac_cv_header_OpenCL_opencl_h=no; fi])
+ AC_ARG_WITH(opengl,    AS_HELP_STRING([--without-opengl],[do not use OpenGL]))
+ AC_ARG_WITH(d3dadapter,AS_HELP_STRING([--without-d3dadapter],[do not use native Direct3D]))
++AC_ARG_WITH(d3dadapter-dri2-fallback, AS_HELP_STRING([--without-d3dadapter-dri2-fallback],[add a DRI2 fallback to d3dadapter DRI3 code]))
+ AC_ARG_WITH(osmesa,     AS_HELP_STRING([--without-osmesa],[do not use the OSMesa library]))
+ AC_ARG_WITH(oss,       AS_HELP_STRING([--without-oss],[do not use the OSS sound support]))
+ AC_ARG_WITH(pcap,      AS_HELP_STRING([--without-pcap],[do not use the Packet Capture library]),
+@@ -379,6 +380,8 @@ AC_CHECK_LIB(ossaudio,_oss_ioctl)
+ 
+ AC_SUBST(OPENGL_LIBS,"")
+ 
++AC_SUBST(D3DADAPTER9_LIBS,"")
++
+ dnl **** Check for header files ****
+ 
+ AC_SYS_LARGEFILE()
+@@ -1261,6 +1264,8 @@ This probably prevents linking to OpenGL. Try deleting the file and restarting c
+     WINE_WARNING_WITH(opengl,[test -n "$opengl_msg"],[$opengl_msg
+ OpenGL and Direct3D won't be supported.])
+ 
++
++
+     dnl Check for d3dadapter
+     if test "x$with_d3dadapter" != "xno"
+     then
+@@ -1270,6 +1275,15 @@ OpenGL and Direct3D won't be supported.])
+          AC_SUBST(D3D_LIBS)
+          AC_DEFINE(SONAME_D3DADAPTER9, ["d3dadapter9.so.1"], ["temporary hack"])
+          AC_DEFINE_UNQUOTED(D3D_MODULE_DIR, ["`pkg-config --variable=moduledir d3d`"], ["module dir"])
++         D3DADAPTER9_LIBS="-lxcb -lxcb-dri3 -lxcb-present -lX11-xcb -lxcb-xfixes -lpthread"
++         WINE_ERROR_WITH(d3dadapter,[test "x$D3DADAPTER9_LIBS" != "x-lxcb -lxcb-dri3 -lxcb-present -lX11-xcb -lxcb-xfixes -lpthread"],[D3Dadapter9 requirements not met])
++         if test "x$with_d3dadapter_dri2_fallback" != "xno"
++         then
++             AC_DEFINE(D3DADAPTER9_DRI2, 1, [Whether d3dadapter9 DRI2 fallback is compiled])
++             WINE_CHECK_SONAME(GL,glGenFramebuffers, [D3DADAPTER9_LIBS="-lGL $D3DADAPTER9_LIBS"])
++             WINE_CHECK_SONAME(EGL,eglCreateContext, [D3DADAPTER9_LIBS="-lEGL $D3DADAPTER9_LIBS"])
++             WINE_ERROR_WITH(d3dadapter,[test "x$D3DADAPTER9_LIBS" != "x-lEGL -lGL -lxcb -lxcb-dri3 -lxcb-present -lX11-xcb -lxcb-xfixes -lpthread"],[D3Dadapter9 DRI2 fallback requirements not met])
++         fi
+     fi
+ 
+     CPPFLAGS="$ac_save_CPPFLAGS"
+diff --git a/dlls/winex11.drv/Makefile.in b/dlls/winex11.drv/Makefile.in
+index 41cced8..65d32ed 100644
+--- a/dlls/winex11.drv/Makefile.in
++++ b/dlls/winex11.drv/Makefile.in
+@@ -2,7 +2,7 @@ MODULE    = winex11.drv
+ IMPORTS   = uuid user32 gdi32 advapi32
+ DELAYIMPORTS = comctl32 ole32 shell32 imm32
+ EXTRAINCL = $(X_CFLAGS)
+-EXTRALIBS = $(X_LIBS) $(X_EXTRA_LIBS) -lxcb -lxcb-dri3 -lxcb-present -lX11-xcb -lxcb-xfixes -lpthread
++EXTRALIBS = $(X_LIBS) $(X_EXTRA_LIBS) $(D3DADAPTER9_LIBS)
+ 
+ C_SRCS = \
+ 	bitblt.c \
+diff --git a/dlls/winex11.drv/d3dadapter.c b/dlls/winex11.drv/d3dadapter.c
+index c8624c5..c2355a5 100644
+--- a/dlls/winex11.drv/d3dadapter.c
++++ b/dlls/winex11.drv/d3dadapter.c
+@@ -54,6 +54,9 @@ WINE_DEFAULT_DEBUG_CHANNEL(d3dadapter);
+ #define WINE_D3DADAPTER_DRIVER_PRESENT_VERSION_MINOR 0
+ 
+ static const struct D3DAdapter9DRM *d3d9_drm = NULL;
++#ifdef D3DADAPTER9_DRI2
++static int is_dri2_fallback = 0;
++#endif
+ 
+ static XContext d3d_hwnd_context;
+ static CRITICAL_SECTION context_section;
+@@ -86,6 +89,9 @@ struct DRI3Present
+     D3DPRESENT_PARAMETERS params;
+     HWND focus_wnd;
+     PRESENTpriv *present_priv;
++#ifdef D3DADAPTER9_DRI2
++    struct DRI2priv *dri2_priv;
++#endif
+ 
+     WCHAR devname[32];
+     HCURSOR hCursor;
+@@ -95,7 +101,6 @@ struct DRI3Present
+ 
+ struct D3DWindowBuffer
+ {
+-    Pixmap pixmap;
+     PRESENTPixmapPriv *present_pixmap_priv;
+ };
+ 
+@@ -213,6 +218,9 @@ DRI3Present_Release( struct DRI3Present *This )
+         /* dtor */
+         ChangeDisplaySettingsExW(This->devname, &(This->initial_mode), 0, CDS_FULLSCREEN, NULL);
+         PRESENTDestroy(gdi_display, This->present_priv);
++#ifdef D3DADAPTER9_DRI2
++        DRI2FallbackDestroy(This->dri2_priv);
++#endif
+         HeapFree(GetProcessHeap(), 0, This);
+     }
+     return refs;
+@@ -249,7 +257,7 @@ DRI3Present_SetPresentParameters( struct DRI3Present *This,
+                                   D3DDISPLAYMODEEX *pFullscreenDisplayMode )
+ {
+     if (pFullscreenDisplayMode)
+-        WARN("Ignoring pFullscreenDisplayMode\n");
++        FIXME("Ignoring pFullscreenDisplayMode\n");
+     DRI3Present_ChangePresentParameters(This, pPresentationParameters, FALSE);
+     return D3D_OK;
+ }
+@@ -266,6 +274,17 @@ DRI3Present_D3DWindowBufferFromDmaBuf( struct DRI3Present *This,
+ {
+     Pixmap pixmap;
+ 
++#ifdef D3DADAPTER9_DRI2
++    if (is_dri2_fallback) {
++        *out = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY,
++                    sizeof(struct D3DWindowBuffer));
++        DRI2FallbackPRESENTPixmap(This->present_priv, This->dri2_priv,
++                                  dmaBufFd, width, height, stride, depth,
++                                  bpp,
++                                  &((*out)->present_pixmap_priv));
++        return D3D_OK;
++    }
++#endif
+     if (!DRI3PixmapFromDmaBuf(gdi_display, DefaultScreen(gdi_display),
+                               dmaBufFd, width, height, stride, depth,
+                               bpp, &pixmap ))
+@@ -273,7 +292,6 @@ DRI3Present_D3DWindowBufferFromDmaBuf( struct DRI3Present *This,
+ 
+     *out = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY,
+                     sizeof(struct D3DWindowBuffer));
+-    (*out)->pixmap = pixmap;
+     PRESENTPixmapInit(This->present_priv, pixmap, &((*out)->present_pixmap_priv));
+     return D3D_OK;
+ }
+@@ -285,7 +303,7 @@ DRI3Present_DestroyD3DWindowBuffer( struct DRI3Present *This,
+     /* the pixmap is managed by the PRESENT backend.
+      * But if it can delete it right away, we may have
+      * better performance */
+-    PRESENTTryFreePixmap(buffer->present_pixmap_priv);
++    PRESENTTryFreePixmap(gdi_display, buffer->present_pixmap_priv);
+     HeapFree(GetProcessHeap(), 0, buffer);
+     return D3D_OK;
+ }
+@@ -302,6 +320,10 @@ static HRESULT WINAPI
+ DRI3Present_FrontBufferCopy( struct DRI3Present *This,
+                              struct D3DWindowBuffer *buffer )
+ {
++#ifdef D3DADAPTER9_DRI2
++    if (is_dri2_fallback)
++        return D3DERR_DRIVERINTERNALERROR;
++#endif
+     /* TODO: use dc_rect */
+     if (PRESENTHelperCopyFront(gdi_display, buffer->present_pixmap_priv))
+         return D3D_OK;
+@@ -624,7 +646,9 @@ DRI3Present_new( Display *dpy,
+     DRI3Present_ChangePresentParameters(This, params, TRUE);
+ 
+     PRESENTInit(dpy, &(This->present_priv));
+-
++#ifdef D3DADAPTER9_DRI2
++    DRI2FallbackInit(dpy, &(This->dri2_priv));
++#endif
+     *out = This;
+ 
+     return D3D_OK;
+@@ -802,23 +826,32 @@ dri3_create_adapter9( HDC hdc,
+     int fd;
+ 
+     if (!d3d9_drm) {
+-        WARN("DRM drivers are not supported on your system.\n");
++        ERR("DRM drivers are not supported on your system.\n");
+         return D3DERR_DRIVERINTERNALERROR;
+     }
+ 
+     if (ExtEscape(hdc, X11DRV_ESCAPE, sizeof(extesc), (LPCSTR)&extesc,
+                   sizeof(extesc), (LPSTR)&extesc) <= 0) {
+-        WARN("X11 drawable lookup failed (hdc=%p)\n", hdc);
++        ERR("X11 drawable lookup failed (hdc=%p)\n", hdc);
+     }
+ 
++#ifdef D3DADAPTER9_DRI2
++    if (!is_dri2_fallback && !DRI3Open(gdi_display, DefaultScreen(gdi_display), &fd)) {
++#else
+     if (!DRI3Open(gdi_display, DefaultScreen(gdi_display), &fd)) {
+-        WARN("DRI3Open failed (fd=%d)\n", fd);
++#endif
++        ERR("DRI3Open failed (fd=%d)\n", fd);
+         return D3DERR_DRIVERINTERNALERROR;
+     }
+-
++#ifdef D3DADAPTER9_DRI2
++    if (is_dri2_fallback && !DRI2FallbackOpen(gdi_display, DefaultScreen(gdi_display), &fd)) {
++        ERR("DRI2Open failed (fd=%d)\n", fd);
++        return D3DERR_DRIVERINTERNALERROR;
++    }
++#endif
+     hr = d3d9_drm->create_adapter(fd, out);
+     if (FAILED(hr)) {
+-        WARN("Unable to create ID3DAdapter9 (fd=%d)\n", fd);
++        ERR("Unable to create ID3DAdapter9 (fd=%d)\n", fd);
+         return hr;
+     }
+ 
+@@ -882,12 +915,25 @@ has_d3dadapter( void )
+     /* this will be used to store d3d_drawables */
+     d3d_hwnd_context = XUniqueContext();
+ 
+-    if (!DRI3CheckExtension(gdi_display, 1, 0) ||
+-        !PRESENTCheckExtension(gdi_display, 1, 0)) {
+-        ERR("Unable to query DRI3 or PRESENT\n");
++    if (!PRESENTCheckExtension(gdi_display, 1, 0)) {
++        ERR("Unable to query PRESENT.\n");
+         goto cleanup;
+     }
+ 
++    if (!DRI3CheckExtension(gdi_display, 1, 0)) {
++#ifndef D3DADAPTER9_DRI2
++        ERR("Unable to query DRI3.\n");
++        goto cleanup;
++#else
++        ERR("Unable to query DRI3. Trying DRI2 fallback (slower performance).\n");
++        is_dri2_fallback = 1;
++        if (!DRI2FallbackCheckSupport(gdi_display)) {
++            ERR("DRI2 fallback unsupported\n");
++            goto cleanup;
++        }
++#endif
++    }
++
+     /* query XFixes */
+     if (!pXFixesQueryVersion(gdi_display, &xfmaj, &xfmin)) {
+         ERR("Unable to query XFixes extension.\n");
+diff --git a/dlls/winex11.drv/dri3.c b/dlls/winex11.drv/dri3.c
+index e3936d3..ef5953d 100644
+--- a/dlls/winex11.drv/dri3.c
++++ b/dlls/winex11.drv/dri3.c
+@@ -29,8 +29,10 @@ WINE_DEFAULT_DEBUG_CHANNEL(x11drv);
+ #include "x11drv.h"
+ #include "wine/d3dadapter.h"
+ 
++
+ #include <stdlib.h>
+ #include <fcntl.h>
++
+ #include <X11/Xlib.h>
+ #include <X11/extensions/Xfixes.h>
+ #include <X11/Xlib-xcb.h>
+@@ -40,6 +42,44 @@ WINE_DEFAULT_DEBUG_CHANNEL(x11drv);
+ #include <pthread.h>
+ #include "winbase.h" /* for Sleep */
+ 
++#ifdef D3DADAPTER9_DRI2
++#include <unistd.h>
++#include <sys/ioctl.h>
++#include <stdio.h>
++#include <string.h>
++#include "x11drv.h"
++#include <X11/Xlibint.h>
++#include <X11/extensions/dri2tokens.h>
++#include <X11/extensions/dri2proto.h>
++#include <X11/extensions/extutil.h>
++#define GL_GLEXT_PROTOTYPES 1
++#define EGL_EGLEXT_PROTOTYPES 1
++#define GL_GLEXT_LEGACY 1
++#include <GL/gl.h>
++/* workaround gl header bug */
++#define glBlendColor glBlendColorLEV
++#define glBlendEquation glBlendEquationLEV
++#include <GL/glext.h>
++#include <EGL/egl.h>
++#include <EGL/eglext.h>
++#include <libdrm/drm_fourcc.h>
++#include <libdrm/drm.h>
++/*GLAPI void GLAPIENTRY glFlush( void );
++
++GLAPI void APIENTRY glGenFramebuffers (GLsizei n, GLuint *framebuffers);
++GLAPI void APIENTRY glBindFramebufferEXT (GLenum target, GLuint framebuffer);
++GLAPI void APIENTRY glBlitFramebuffer (GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter);
++GLAPI void APIENTRY glFramebufferTexture2DEXT (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
++GLAPI void APIENTRY glBindFramebuffer (GLenum target, GLuint framebuffer);
++GLAPI void APIENTRY glFramebufferTexture2D (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
++GLAPI void APIENTRY glDeleteTexturesEXT (GLsizei n, const GLuint *textures);
++EGLAPI EGLBoolean EGLAPIENTRY eglDestroyImageKHR (EGLDisplay dpy, EGLImageKHR image);*/
++
++typedef void (APIENTRYP PFNGLEGLIMAGETARGETTEXTURE2DOESPROC) (GLenum target, GLeglImageOES image);
++typedef EGLImageKHR (EGLAPIENTRYP PFNEGLCREATEIMAGEKHRPROC) (EGLDisplay dpy, EGLContext ctx, EGLenum target, EGLClientBuffer buffer, const EGLint *attrib_list);
++typedef EGLDisplay (EGLAPIENTRYP PFNEGLGETPLATFORMDISPLAYEXTPROC) (EGLenum platform, void *native_display, const EGLint *attrib_list);
++
++#endif
+ 
+ BOOL
+ DRI3CheckExtension(Display *dpy, int major, int minor)
+@@ -54,7 +94,7 @@ DRI3CheckExtension(Display *dpy, int major, int minor)
+ 
+     extension = xcb_get_extension_data(xcb_connection, &xcb_dri3_id);
+     if (!(extension && extension->present)) {
+-        TRACE("DRI3 extension is not present\n");
++        ERR("DRI3 extension is not present\n");
+         return FALSE;
+     }
+ 
+@@ -63,7 +103,7 @@ DRI3CheckExtension(Display *dpy, int major, int minor)
+     dri3_reply = xcb_dri3_query_version_reply(xcb_connection, dri3_cookie, &error);
+     if (!dri3_reply) {
+         free(error);
+-        TRACE("Issue getting requested version of DRI3: %d,%d\n", major, minor);
++        ERR("Issue getting requested version of DRI3: %d,%d\n", major, minor);
+         return FALSE;
+     }
+ 
+@@ -73,6 +113,115 @@ DRI3CheckExtension(Display *dpy, int major, int minor)
+     return TRUE;
+ }
+ 
++#ifdef D3DADAPTER9_DRI2
++
++struct DRI2priv {
++    Display *dpy;
++    EGLDisplay display;
++    EGLContext context;
++    PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES_func;
++    PFNEGLCREATEIMAGEKHRPROC eglCreateImageKHR_func;
++};
++
++/* TODO: We don't free memory properly. When exiting, eglTerminate doesn't work well(crash), and things are freed automatically. Rely on it */
++
++BOOL
++DRI2FallbackInit(Display *dpy, struct DRI2priv **priv)
++{
++    PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES_func;
++    PFNEGLCREATEIMAGEKHRPROC eglCreateImageKHR_func;
++    PFNEGLGETPLATFORMDISPLAYEXTPROC eglGetPlatformDisplayEXT_func;
++    EGLDisplay display;
++    EGLint major, minor;
++    EGLConfig config;
++    EGLContext context;
++    EGLint i;
++    const char *extensions;
++    EGLint config_attribs[] = {
++        EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
++        EGL_NONE
++    };
++    EGLint context_compatibility_attribs[] = {
++        EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR, EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT_KHR,
++        EGL_NONE
++    };
++
++    eglGetPlatformDisplayEXT_func = (PFNEGLGETPLATFORMDISPLAYEXTPROC) eglGetProcAddress("eglGetPlatformDisplayEXT");
++    if (!eglGetPlatformDisplayEXT_func)
++        return FALSE;
++    display = eglGetPlatformDisplayEXT_func(EGL_PLATFORM_X11_EXT, dpy, NULL);
++    if (!display)
++        return FALSE;
++    if (eglInitialize(display, &major, &minor) != EGL_TRUE)
++        goto clean_egl_display;
++
++    extensions = eglQueryString(display, EGL_CLIENT_APIS);
++    if (!extensions || !strstr(extensions, "OpenGL"))
++        goto clean_egl_display;
++
++    extensions = eglQueryString(display, EGL_EXTENSIONS);
++    if (!extensions || !strstr(extensions, "EGL_EXT_image_dma_buf_import") ||
++        !strstr(extensions, "EGL_KHR_create_context") ||
++        !strstr(extensions, "EGL_KHR_surfaceless_context"))
++        goto clean_egl_display;
++
++    if (!eglChooseConfig(display, config_attribs, &config, 1, &i))
++        goto clean_egl_display;
++
++    eglBindAPI(EGL_OPENGL_API);
++    context = eglCreateContext(display, config, EGL_NO_CONTEXT, context_compatibility_attribs);
++    if (context == EGL_NO_CONTEXT)
++        goto clean_egl_display;
++
++    glEGLImageTargetTexture2DOES_func = (PFNGLEGLIMAGETARGETTEXTURE2DOESPROC) eglGetProcAddress("glEGLImageTargetTexture2DOES");
++    eglCreateImageKHR_func = (PFNEGLCREATEIMAGEKHRPROC) eglGetProcAddress("eglCreateImageKHR");
++    if (!eglCreateImageKHR_func || !glEGLImageTargetTexture2DOES_func)
++        goto clean_egl_display;
++
++    eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
++
++    *priv = calloc(1, sizeof(struct DRI2priv));
++    if (!*priv)
++        goto clean_egl;
++    (*priv)->dpy = dpy;
++    (*priv)->display = display;
++    (*priv)->context = context;
++    (*priv)->glEGLImageTargetTexture2DOES_func = glEGLImageTargetTexture2DOES_func;
++    (*priv)->eglCreateImageKHR_func = eglCreateImageKHR_func;
++    return TRUE;
++
++clean_egl:
++clean_egl_display:
++    eglTerminate(display);
++    return FALSE;
++}
++
++/* hypothesis: at this step all textures, etc are destroyed */
++void
++DRI2FallbackDestroy(struct DRI2priv *priv)
++{
++    eglMakeCurrent(priv->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
++    eglDestroyContext(priv->display, priv->context);
++    eglTerminate(priv->display);
++    free(priv);
++}
++
++BOOL
++DRI2FallbackCheckSupport(Display *dpy)
++{
++    struct DRI2priv *priv;
++    int fd;
++    if (!DRI2FallbackInit(dpy, &priv))
++        return FALSE;
++    DRI2FallbackDestroy(priv);
++    if (!DRI2FallbackOpen(dpy, DefaultScreen(dpy), &fd))
++        return FALSE;
++    close(fd);
++    return TRUE;
++}
++
++#endif
++
+ BOOL
+ PRESENTCheckExtension(Display *dpy, int major, int minor)
+ {
+@@ -86,7 +235,7 @@ PRESENTCheckExtension(Display *dpy, int major, int minor)
+ 
+     extension = xcb_get_extension_data(xcb_connection, &xcb_present_id);
+     if (!(extension && extension->present)) {
+-        TRACE("PRESENT extension is not present\n");
++        ERR("PRESENT extension is not present\n");
+         return FALSE;
+     }
+ 
+@@ -95,7 +244,7 @@ PRESENTCheckExtension(Display *dpy, int major, int minor)
+     present_reply = xcb_present_query_version_reply(xcb_connection, present_cookie, &error);
+     if (!present_reply) {
+         free(error);
+-        TRACE("Issue getting requested version of PRESENT: %d,%d\n", major, minor);
++        ERR("Issue getting requested version of PRESENT: %d,%d\n", major, minor);
+         return FALSE;
+     }
+ 
+@@ -133,6 +282,206 @@ DRI3Open(Display *dpy, int screen, int *device_fd)
+     return TRUE;
+ }
+ 
++#ifdef D3DADAPTER9_DRI2
++
++static XExtensionInfo _dri2_info_data;
++static XExtensionInfo *dri2_info = &_dri2_info_data;
++static char dri2_name[] = DRI2_NAME;
++
++#define DRI2CheckExtension(dpy, i, val) \
++  XextCheckExtension(dpy, i, dri2_name, val)
++
++
++static int
++close_display(Display *dpy,
++              XExtCodes *codes);
++static Bool
++wire_to_event(Display *dpy,
++              XEvent *re,
++              xEvent *event);
++static Status
++event_to_wire(Display *dpy,
++              XEvent *re,
++              xEvent *event);
++static int
++error( Display *dpy,
++       xError *err,
++       XExtCodes *codes,
++       int *ret_code );
++static XExtensionHooks dri2_hooks = {
++    NULL, /* create_gc */
++    NULL, /* copy_gc */
++    NULL, /* flush_gc */
++    NULL, /* free_gc */
++    NULL, /* create_font */
++    NULL, /* free_font */
++    close_display, /* close_display */
++    wire_to_event, /* wire_to_event */
++    event_to_wire, /* event_to_wire */
++    error, /* error */
++    NULL, /* error_string */
++};
++static XEXT_GENERATE_CLOSE_DISPLAY(close_display, dri2_info);
++static XEXT_GENERATE_FIND_DISPLAY(find_display, dri2_info,
++                                  dri2_name, &dri2_hooks, 0, NULL);
++static Bool
++wire_to_event(Display *dpy,
++              XEvent *re,
++              xEvent *event)
++{
++    XExtDisplayInfo *info = find_display(dpy);
++    DRI2CheckExtension(dpy, info, False);
++    TRACE("dri2 wire_to_event\n");
++    return False;
++}
++static Status
++event_to_wire(Display *dpy,
++              XEvent *re,
++              xEvent *event)
++{
++    XExtDisplayInfo *info = find_display(dpy);
++    DRI2CheckExtension(dpy, info, False);
++    TRACE("dri2 event_to_wire\n");
++    return False;
++}
++static int
++error(Display *dpy,
++      xError *err,
++      XExtCodes *codes,
++      int *ret_code)
++{
++    TRACE("dri2 error\n");
++    return False;
++}
++
++#define XALIGN(x) (((x) + 3) & (~3))
++
++static BOOL
++DRI2Connect(Display *dpy,
++            XID window,
++            unsigned driver_type,
++            char **device )
++{
++    XExtDisplayInfo *info = find_display(dpy);
++    xDRI2ConnectReply rep;
++    xDRI2ConnectReq *req;
++    int dev_len, driv_len;
++    char *driver;
++
++    DRI2CheckExtension(dpy, info, False);
++
++    LockDisplay(dpy);
++    GetReq(DRI2Connect, req);
++    req->reqType = info->codes->major_opcode;
++    req->dri2ReqType = X_DRI2Connect;
++    req->window = window;
++    req->driverType = driver_type;
++    if (!_XReply(dpy, (xReply *)&rep, 0, xFalse)) {
++        UnlockDisplay(dpy);
++        SyncHandle();
++        return False;
++    }
++
++    /* check string lengths */
++    dev_len = rep.deviceNameLength;
++    driv_len = rep.driverNameLength;
++    if (dev_len == 0 || driv_len == 0) {
++        _XEatData(dpy, XALIGN(dev_len) + XALIGN(driv_len));
++        UnlockDisplay(dpy);
++        SyncHandle();
++        return False;
++    }
++
++    /* read out driver */
++    driver = HeapAlloc(GetProcessHeap(), 0, driv_len + 1);
++    if (!driver) {
++        _XEatData(dpy, XALIGN(dev_len) + XALIGN(driv_len));
++        UnlockDisplay(dpy);
++        SyncHandle();
++        return False;
++    }
++    _XReadPad(dpy, driver, driv_len);
++    HeapFree(GetProcessHeap(), 0, driver); /* we don't need the driver */
++
++    /* read out device */
++    *device = HeapAlloc(GetProcessHeap(), 0, dev_len + 1);
++    if (!*device) {
++        _XEatData(dpy, XALIGN(dev_len));
++        UnlockDisplay(dpy);
++        SyncHandle();
++        return False;
++    }
++    _XReadPad(dpy, *device, dev_len);
++    (*device)[dev_len] = '\0';
++
++    UnlockDisplay(dpy);
++    SyncHandle();
++
++    return True;
++}
++
++static Bool
++DRI2Authenticate(Display *dpy,
++                 XID window,
++                 uint32_t token)
++{
++    XExtDisplayInfo *info = find_display(dpy);
++    xDRI2AuthenticateReply rep;
++    xDRI2AuthenticateReq *req;
++
++    DRI2CheckExtension(dpy, info, False);
++
++    LockDisplay(dpy);
++    GetReq(DRI2Authenticate, req);
++    req->reqType = info->codes->major_opcode;
++    req->dri2ReqType = X_DRI2Authenticate;
++    req->window = window;
++    req->magic = token;
++    if (!_XReply(dpy, (xReply *)&rep, 0, xFalse)) {
++        UnlockDisplay(dpy);
++        SyncHandle();
++        return False;
++    }
++    UnlockDisplay(dpy);
++    SyncHandle();
++
++    return rep.authenticated ? True : False;
++}
++
++BOOL
++DRI2FallbackOpen(Display *dpy, int screen, int *device_fd)
++{
++    char *device;
++    int fd;
++    Window root = RootWindow(dpy, screen);
++    drm_auth_t auth;
++
++    if (!DRI2Connect(dpy, root, DRI2DriverDRI, &device))
++        return FALSE;
++
++    fd = open(device, O_RDWR);
++    HeapFree(GetProcessHeap(), 0, device);
++    if (fd < 0)
++        return FALSE;
++
++    if (ioctl(fd, DRM_IOCTL_GET_MAGIC, &auth) != 0) {
++        close(fd);
++        return FALSE;
++    }
++
++    if (!DRI2Authenticate(dpy, root, auth.magic)) {
++        close(fd);
++        return FALSE;
++    }
++
++    *device_fd = fd;
++
++    return TRUE;
++}
++
++#endif
++
++
+ BOOL
+ DRI3PixmapFromDmaBuf(Display *dpy, int screen, int fd, int width, int height, int stride, int depth, int bpp, Pixmap *pixmap)
+ {
+@@ -200,6 +549,16 @@ struct PRESENTPixmapPriv {
+     unsigned int depth;
+     BOOL present_complete_pending;
+     uint32_t serial;
++#ifdef D3DADAPTER9_DRI2
++    struct {
++        BOOL is_dri2;
++        struct DRI2priv *dri2_priv;
++        GLuint fbo_read;
++        GLuint fbo_write;
++        GLuint texture_read;
++        GLuint texture_write;
++    } dri2_info;
++#endif
+     BOOL last_present_was_flip;
+     PRESENTPixmapPriv *next;
+ };
+@@ -444,6 +803,24 @@ static BOOL PRESENTPrivChangeWindow(PRESENTpriv *present_priv, XID window)
+     return (present_priv->window != 0);
+ }
+ 
++/* Destroy the content, except the link and the struct mem */
++static void
++PRESENTDestroyPixmapContent(Display *dpy, PRESENTPixmapPriv *present_pixmap)
++{
++    XFreePixmap(dpy, present_pixmap->pixmap);
++#ifdef D3DADAPTER9_DRI2
++    if (present_pixmap->dri2_info.is_dri2) {
++        struct DRI2priv *dri2_priv = present_pixmap->dri2_info.dri2_priv;
++        eglMakeCurrent(dri2_priv->display, EGL_NO_SURFACE, EGL_NO_SURFACE, dri2_priv->context);
++        glDeleteFramebuffers(1, &present_pixmap->dri2_info.fbo_read);
++        glDeleteFramebuffers(1, &present_pixmap->dri2_info.fbo_write);
++        glDeleteTextures(1, &present_pixmap->dri2_info.texture_read);
++        glDeleteTextures(1, &present_pixmap->dri2_info.texture_write);
++        eglMakeCurrent(dri2_priv->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
++    }
++#endif
++}
++
+ void
+ PRESENTDestroy(Display *dpy, PRESENTpriv *present_priv)
+ {
+@@ -456,7 +833,7 @@ PRESENTDestroy(Display *dpy, PRESENTpriv *present_priv)
+     current = present_priv->first_present_priv;
+     while (current) {
+         PRESENTPixmapPriv *next = current->next;
+-        XFreePixmap(dpy, current->pixmap);
++        PRESENTDestroyPixmapContent(dpy, current);
+         free(current);
+         current = next;
+     }
+@@ -498,6 +875,9 @@ PRESENTPixmapInit(PRESENTpriv *present_priv, Pixmap pixmap, PRESENTPixmapPriv **
+     (*present_pixmap_priv)->width = reply->width;
+     (*present_pixmap_priv)->height = reply->height;
+     (*present_pixmap_priv)->depth = reply->depth;
++#ifdef D3DADAPTER9_DRI2
++    (*present_pixmap_priv)->dri2_info.is_dri2 = FALSE;
++#endif
+     free(reply);
+ 
+     present_priv->last_serial_given++;
+@@ -508,8 +888,134 @@ PRESENTPixmapInit(PRESENTpriv *present_priv, Pixmap pixmap, PRESENTPixmapPriv **
+     return TRUE;
+ }
+ 
++#ifdef D3DADAPTER9_DRI2
++
++BOOL
++DRI2FallbackPRESENTPixmap(PRESENTpriv *present_priv, struct DRI2priv *dri2_priv,
++                          int fd, int width, int height, int stride, int depth,
++                          int bpp, PRESENTPixmapPriv **present_pixmap_priv)
++{
++    Window root = RootWindow(dri2_priv->dpy, DefaultScreen(dri2_priv->dpy));
++    Pixmap pixmap;
++    EGLImageKHR image;
++    GLuint texture_read, texture_write, fbo_read, fbo_write;
++    EGLint attribs[] = {
++        EGL_WIDTH, 0,
++        EGL_HEIGHT, 0,
++        EGL_LINUX_DRM_FOURCC_EXT, DRM_FORMAT_ARGB8888,
++        EGL_DMA_BUF_PLANE0_FD_EXT, 0,
++        EGL_DMA_BUF_PLANE0_OFFSET_EXT, 0,
++        EGL_DMA_BUF_PLANE0_PITCH_EXT, 0,
++        EGL_NONE
++    };
++    int status;
++
++    pthread_mutex_lock(&present_priv->mutex_present);
++
++    pixmap = XCreatePixmap(dri2_priv->dpy, root, width, height, 24);
++    if (!pixmap)
++        goto fail;
++
++    attribs[1] = width;
++    attribs[3] = height;
++    attribs[7] = fd;
++    attribs[11] = stride;
++
++    /* We bind the dma-buf to a EGLImage, then to a texture, and then to a fbo.
++     * Note that we can delete the EGLImage, but we shouldn't delete the texture,
++     * else the fbo is invalid */
++
++    image = dri2_priv->eglCreateImageKHR_func(dri2_priv->display,
++                              EGL_NO_CONTEXT,
++                              EGL_LINUX_DMA_BUF_EXT,
++                              NULL, attribs);
++
++    if (image == EGL_NO_IMAGE_KHR)
++        goto fail;
++    close(fd);
++
++    eglMakeCurrent(dri2_priv->display, EGL_NO_SURFACE, EGL_NO_SURFACE, dri2_priv->context);
++
++    glGenTextures(1, &texture_read);
++    glBindTexture(GL_TEXTURE_2D, texture_read);
++    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
++    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
++    dri2_priv->glEGLImageTargetTexture2DOES_func(GL_TEXTURE_2D, image);
++    glGenFramebuffers(1, &fbo_read);
++    glBindFramebuffer(GL_FRAMEBUFFER, fbo_read);
++    glFramebufferTexture2D(GL_FRAMEBUFFER,
++                           GL_COLOR_ATTACHMENT0,
++                           GL_TEXTURE_2D, texture_read,
++                           0);
++    status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
++    if (status != GL_FRAMEBUFFER_COMPLETE)
++        goto fail;
++    glBindTexture(GL_TEXTURE_2D, 0);
++    eglDestroyImageKHR(dri2_priv->display, image);
++
++    /* We bind a newly created pixmap (to which we want to copy the content)
++     * to an EGLImage, then to a texture, then to a fbo. */
++    image = dri2_priv->eglCreateImageKHR_func(dri2_priv->display,
++                                              dri2_priv->context,
++                                              EGL_NATIVE_PIXMAP_KHR,
++                                              (void *)pixmap, NULL);
++    if (image == EGL_NO_IMAGE_KHR)
++        goto fail;
++
++    glGenTextures(1, &texture_write);
++    glBindTexture(GL_TEXTURE_2D, texture_write);
++    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
++    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
++    dri2_priv->glEGLImageTargetTexture2DOES_func(GL_TEXTURE_2D, image);
++    glGenFramebuffers(1, &fbo_write);
++    glBindFramebuffer(GL_FRAMEBUFFER, fbo_write);
++    glFramebufferTexture2D(GL_FRAMEBUFFER,
++                           GL_COLOR_ATTACHMENT0,
++                           GL_TEXTURE_2D, texture_write,
++                           0);
++    status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
++    if (status != GL_FRAMEBUFFER_COMPLETE)
++        goto fail;
++    glBindTexture(GL_TEXTURE_2D, 0);
++    eglDestroyImageKHR(dri2_priv->display, image);
++
++    eglMakeCurrent(dri2_priv->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
++
++    *present_pixmap_priv = (PRESENTPixmapPriv *) calloc(1, sizeof(PRESENTPixmapPriv));
++    if (!*present_pixmap_priv) {
++        goto fail;
++    }
++
++    (*present_pixmap_priv)->released = TRUE;
++    (*present_pixmap_priv)->pixmap = pixmap;
++    (*present_pixmap_priv)->present_priv = present_priv;
++    (*present_pixmap_priv)->next = present_priv->first_present_priv;
++    (*present_pixmap_priv)->width = width;
++    (*present_pixmap_priv)->height = height;
++    (*present_pixmap_priv)->depth = depth;
++    (*present_pixmap_priv)->dri2_info.is_dri2 = TRUE;
++    (*present_pixmap_priv)->dri2_info.dri2_priv = dri2_priv;
++    (*present_pixmap_priv)->dri2_info.fbo_read = fbo_read;
++    (*present_pixmap_priv)->dri2_info.fbo_write = fbo_write;
++    (*present_pixmap_priv)->dri2_info.texture_read = texture_read;
++    (*present_pixmap_priv)->dri2_info.texture_write = texture_write;
++
++    present_priv->last_serial_given++;
++    (*present_pixmap_priv)->serial = present_priv->last_serial_given;
++    present_priv->first_present_priv = *present_pixmap_priv;
++
++    pthread_mutex_unlock(&present_priv->mutex_present);
++    return TRUE;
++fail:
++    eglMakeCurrent(dri2_priv->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
++    pthread_mutex_unlock(&present_priv->mutex_present);
++    return FALSE;
++}
++
++#endif
++
+ BOOL
+-PRESENTTryFreePixmap(PRESENTPixmapPriv *present_pixmap_priv)
++PRESENTTryFreePixmap(Display *dpy, PRESENTPixmapPriv *present_pixmap_priv)
+ {
+     PRESENTpriv *present_priv = present_pixmap_priv->present_priv;
+     PRESENTPixmapPriv *current;
+@@ -531,6 +1037,7 @@ PRESENTTryFreePixmap(PRESENTPixmapPriv *present_pixmap_priv)
+         current = current->next;
+     current->next = present_pixmap_priv->next;
+ free_priv:
++    PRESENTDestroyPixmapContent(dpy, present_pixmap_priv);
+     free(present_pixmap_priv);
+     pthread_mutex_unlock(&present_priv->mutex_present);
+     return TRUE;
+@@ -577,6 +1084,9 @@ PRESENTPixmap(Display *dpy, XID window,
+               const RECT *pSourceRect, const RECT *pDestRect, const RGNDATA *pDirtyRegion)
+ {
+     PRESENTpriv *present_priv = present_pixmap_priv->present_priv;
++#ifdef D3DADAPTER9_DRI2
++    struct DRI2priv *dri2_priv = present_pixmap_priv->dri2_info.dri2_priv;
++#endif
+     xcb_void_cookie_t cookie;
+     xcb_generic_error_t *error;
+     int64_t target_msc, presentationInterval;
+@@ -601,7 +1111,21 @@ PRESENTPixmap(Display *dpy, XID window,
+         pthread_mutex_unlock(&present_priv->mutex_present);
+         return FALSE;
+     }
++#ifdef D3DADAPTER9_DRI2
++    if (present_pixmap_priv->dri2_info.is_dri2) {
++        eglMakeCurrent(dri2_priv->display, EGL_NO_SURFACE, EGL_NO_SURFACE, dri2_priv->context);
+ 
++        glBindFramebuffer(GL_READ_FRAMEBUFFER, present_pixmap_priv->dri2_info.fbo_read);
++        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, present_pixmap_priv->dri2_info.fbo_write);
++
++        glBlitFramebuffer(0, 0, present_pixmap_priv->width, present_pixmap_priv->height,
++                          0, 0, present_pixmap_priv->width, present_pixmap_priv->height,
++                          GL_COLOR_BUFFER_BIT, GL_NEAREST);
++        glFlush(); /* Perhaps useless */
++
++        eglMakeCurrent(dri2_priv->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
++    }
++#endif
+     target_msc = present_priv->last_msc;
+     switch(pPresentationParameters->PresentationInterval) {
+         case D3DPRESENT_INTERVAL_DEFAULT:
+diff --git a/dlls/winex11.drv/dri3.h b/dlls/winex11.drv/dri3.h
+index cfea9db..220e1b9 100644
+--- a/dlls/winex11.drv/dri3.h
++++ b/dlls/winex11.drv/dri3.h
+@@ -37,12 +37,30 @@
+ BOOL
+ DRI3CheckExtension(Display *dpy, int major, int minor);
+ 
++#ifdef D3DADAPTER9_DRI2
++struct DRI2priv;
++
++BOOL
++DRI2FallbackInit(Display *dpy, struct DRI2priv **priv);
++
++void
++DRI2FallbackDestroy(struct DRI2priv *priv);
++
++BOOL
++DRI2FallbackCheckSupport(Display *dpy);
++#endif
++
+ BOOL
+ PRESENTCheckExtension(Display *dpy, int major, int minor);
+ 
+ BOOL
+ DRI3Open(Display *dpy, int screen, int *device_fd);
+ 
++#ifdef D3DADAPTER9_DRI2
++BOOL
++DRI2FallbackOpen(Display *dpy, int screen, int *device_fd);
++#endif
++
+ BOOL
+ DRI3PixmapFromDmaBuf(Display *dpy, int screen, int fd, int width, int height, int stride, int depth, int bpp, Pixmap *pixmap);
+ 
+@@ -66,8 +84,15 @@ PRESENTDestroy(Display *dpy, PRESENTpriv *present_priv);
+ BOOL
+ PRESENTPixmapInit(PRESENTpriv *present_priv, Pixmap pixmap, PRESENTPixmapPriv **present_pixmap_priv);
+ 
++#ifdef D3DADAPTER9_DRI2
++BOOL
++DRI2FallbackPRESENTPixmap(PRESENTpriv *present_priv, struct DRI2priv *priv,
++                          int fd, int width, int height, int stride, int depth,
++                          int bpp, PRESENTPixmapPriv **present_pixmap_priv);
++#endif
++
+ BOOL
+-PRESENTTryFreePixmap(PRESENTPixmapPriv *present_pixmap_priv);
++PRESENTTryFreePixmap(Display *dpy, PRESENTPixmapPriv *present_pixmap_priv);
+ 
+ BOOL
+ PRESENTHelperCopyFront(Display *dpy, PRESENTPixmapPriv *present_pixmap_priv);
+diff --git a/include/config.h.in b/include/config.h.in
+index a33c138..255e9eb 100644
+--- a/include/config.h.in
++++ b/include/config.h.in
+@@ -4,6 +4,9 @@
+ #define __WINE_CONFIG_H
+ #ifndef WINE_CROSSTEST
+ 
++/* Whether d3dadapter9 DRI2 fallback is compiled */
++#undef D3DADAPTER9_DRI2
++
+ /* "module dir" */
+ #undef D3D_MODULE_DIR
+ 
+@@ -1329,6 +1332,9 @@
+ /* Define to the soname of the libdbus-1 library. */
+ #undef SONAME_LIBDBUS_1
+ 
++/* Define to the soname of the libEGL library. */
++#undef SONAME_LIBEGL
++
+ /* Define to the soname of the libfontconfig library. */
+ #undef SONAME_LIBFONTCONFIG
+ 
+-- 
+2.2.2
+

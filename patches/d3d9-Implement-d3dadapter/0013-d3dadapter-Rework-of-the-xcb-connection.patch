@@ -1,0 +1,276 @@
+From f0caeafef4298cd7ba2fe7a7bd81e29bcbead6ff Mon Sep 17 00:00:00 2001
+From: Axel Davy <axel.davy@ens.fr>
+Date: Wed, 5 Nov 2014 15:33:26 +0100
+Subject: [PATCH 13/21] d3dadapter: Rework of the xcb connection
+
+. Remove the Xlib calls by Xcb ones
+. Use two xcb connections to avoid libxcb threading bugs
+
+Signed-off-by: Axel Davy <axel.davy@ens.fr>
+---
+ dlls/winex11.drv/dri3.c | 131 ++++++++++++++++++++++++++++++------------------
+ 1 file changed, 81 insertions(+), 50 deletions(-)
+
+diff --git a/dlls/winex11.drv/dri3.c b/dlls/winex11.drv/dri3.c
+index 17eb114..e3936d3 100644
+--- a/dlls/winex11.drv/dri3.c
++++ b/dlls/winex11.drv/dri3.c
+@@ -177,6 +177,7 @@ DRI3DmaBufFromPixmap(Display *dpy, Pixmap pixmap, int *fd, int *width, int *heig
+ 
+ struct PRESENTPriv {
+     xcb_connection_t *xcb_connection;
++    xcb_connection_t *xcb_connection_bis; /* to avoid libxcb thread bugs, use a different connection to present pixmaps */
+     XID window;
+     uint64_t last_msc;
+     uint64_t last_target;
+@@ -194,6 +195,9 @@ struct PRESENTPixmapPriv {
+     PRESENTpriv *present_priv;
+     Pixmap pixmap;
+     BOOL released;
++    unsigned int width;
++    unsigned int height;
++    unsigned int depth;
+     BOOL present_complete_pending;
+     uint32_t serial;
+     BOOL last_present_was_flip;
+@@ -296,6 +300,22 @@ static BOOL PRESENTwait_events(PRESENTpriv *present_priv, BOOL allow_other_threa
+     return TRUE;
+ }
+ 
++static struct xcb_connection_t *
++create_xcb_connection(Display *dpy)
++{
++    int screen_num = DefaultScreen(dpy);
++    xcb_connection_t *ret;
++    xcb_xfixes_query_version_cookie_t cookie;
++    xcb_xfixes_query_version_reply_t *rep;
++
++    ret = xcb_connect(DisplayString(dpy), &screen_num);
++    cookie = xcb_xfixes_query_version_unchecked(ret, XCB_XFIXES_MAJOR_VERSION, XCB_XFIXES_MINOR_VERSION);
++    rep = xcb_xfixes_query_version_reply(ret, cookie, NULL);
++    if (rep)
++        free(rep);
++    return ret;
++}
++
+ BOOL
+ PRESENTInit(Display *dpy, PRESENTpriv **present_priv)
+ {
+@@ -303,7 +323,8 @@ PRESENTInit(Display *dpy, PRESENTpriv **present_priv)
+     if (!*present_priv) {
+         return FALSE;
+     }
+-    (*present_priv)->xcb_connection = XGetXCBConnection(dpy);
++    (*present_priv)->xcb_connection = create_xcb_connection(dpy);
++    (*present_priv)->xcb_connection_bis = create_xcb_connection(dpy);
+     pthread_mutex_init(&(*present_priv)->mutex_present, NULL);
+     pthread_mutex_init(&(*present_priv)->mutex_xcb_wait, NULL);
+     return TRUE;
+@@ -442,6 +463,8 @@ PRESENTDestroy(Display *dpy, PRESENTpriv *present_priv)
+ 
+     PRESENTFreeXcbQueue(present_priv);
+ 
++    xcb_disconnect(present_priv->xcb_connection);
++    xcb_disconnect(present_priv->xcb_connection_bis);
+     pthread_mutex_unlock(&present_priv->mutex_present);
+     pthread_mutex_destroy(&present_priv->mutex_present);
+     pthread_mutex_destroy(&present_priv->mutex_xcb_wait);
+@@ -452,18 +475,35 @@ PRESENTDestroy(Display *dpy, PRESENTpriv *present_priv)
+ BOOL
+ PRESENTPixmapInit(PRESENTpriv *present_priv, Pixmap pixmap, PRESENTPixmapPriv **present_pixmap_priv)
+ {
++    xcb_get_geometry_cookie_t cookie;
++    xcb_get_geometry_reply_t *reply;
++
++    cookie = xcb_get_geometry(present_priv->xcb_connection, pixmap);
++    reply = xcb_get_geometry_reply(present_priv->xcb_connection, cookie, NULL);
++
++    if (!reply)
++        return FALSE;
++
+     *present_pixmap_priv = (PRESENTPixmapPriv *) calloc(1, sizeof(PRESENTPixmapPriv));
+     if (!*present_pixmap_priv) {
++        free(reply);
+         return FALSE;
+     }
+     pthread_mutex_lock(&present_priv->mutex_present);
++
+     (*present_pixmap_priv)->released = TRUE;
+     (*present_pixmap_priv)->pixmap = pixmap;
+     (*present_pixmap_priv)->present_priv = present_priv;
+     (*present_pixmap_priv)->next = present_priv->first_present_priv;
++    (*present_pixmap_priv)->width = reply->width;
++    (*present_pixmap_priv)->height = reply->height;
++    (*present_pixmap_priv)->depth = reply->depth;
++    free(reply);
++
+     present_priv->last_serial_given++;
+     (*present_pixmap_priv)->serial = present_priv->last_serial_given;
+     present_priv->first_present_priv = *present_pixmap_priv;
++
+     pthread_mutex_unlock(&present_priv->mutex_present);
+     return TRUE;
+ }
+@@ -502,12 +542,8 @@ PRESENTHelperCopyFront(Display *dpy, PRESENTPixmapPriv *present_pixmap_priv)
+     PRESENTpriv *present_priv = present_pixmap_priv->present_priv;
+     xcb_void_cookie_t cookie;
+     xcb_generic_error_t *error;
+-    Window root_return;
+-    int x_return, y_return;
+-    unsigned int width_return, height_return;
+-    unsigned int border_width_return;
+-    unsigned int depth_return;
+-    uint32_t v;
++
++    uint32_t v = 0;
+     xcb_gcontext_t gc;
+ 
+     pthread_mutex_lock(&present_priv->mutex_present);
+@@ -516,9 +552,7 @@ PRESENTHelperCopyFront(Display *dpy, PRESENTPixmapPriv *present_pixmap_priv)
+         pthread_mutex_unlock(&present_priv->mutex_present);
+         return FALSE;
+     }
+-    XGetGeometry(dpy, present_pixmap_priv->pixmap, &root_return, &x_return, &y_return, &width_return,
+-                 &height_return, &border_width_return, &depth_return);
+-    v = 0;
++
+     xcb_create_gc(present_priv->xcb_connection,
+                   (gc = xcb_generate_id(present_priv->xcb_connection)),
+                   present_priv->window,
+@@ -529,7 +563,8 @@ PRESENTHelperCopyFront(Display *dpy, PRESENTPixmapPriv *present_pixmap_priv)
+                                    present_pixmap_priv->pixmap,
+                                    gc,
+                                    0, 0, 0, 0,
+-                                   width_return, height_return);
++                                   present_pixmap_priv->width,
++                                   present_pixmap_priv->height);
+     error = xcb_request_check(present_priv->xcb_connection, cookie);
+     xcb_free_gc(present_priv->xcb_connection, gc);
+     pthread_mutex_unlock(&present_priv->mutex_present);
+@@ -567,16 +602,6 @@ PRESENTPixmap(Display *dpy, XID window,
+         return FALSE;
+     }
+ 
+-    /* workaround an libxcb bug: xcb_request_check won't work
+-     * if a thread is listening the special queue. So wake the
+-     * other thread by provoking an event */
+-    if (present_priv->xcb_wait) {
+-        xcb_present_notify_msc(present_priv->xcb_connection, present_priv->window, 0, 0, 0, 0);
+-        xcb_flush(present_priv->xcb_connection);
+-        pthread_mutex_lock(&present_priv->mutex_xcb_wait);
+-        pthread_mutex_unlock(&present_priv->mutex_xcb_wait);
+-    }
+-
+     target_msc = present_priv->last_msc;
+     switch(pPresentationParameters->PresentationInterval) {
+         case D3DPRESENT_INTERVAL_DEFAULT:
+@@ -614,19 +639,12 @@ PRESENTPixmap(Display *dpy, XID window,
+     } else {
+         xcb_rectangle_t rect_update;
+         xcb_rectangle_t *rect_updates;
+-        /* Get pixmap size */
+-        Window root_return;
+-        int x_return, y_return;
+-        unsigned int width_return, height_return;
+-        unsigned int border_width_return;
+-        unsigned int depth_return;
+         int i;
+-        XGetGeometry(dpy, present_pixmap_priv->pixmap, &root_return, &x_return, &y_return, &width_return,
+-                     &height_return, &border_width_return, &depth_return);
++
+         rect_update.x = 0;
+         rect_update.y = 0;
+-        rect_update.width = width_return;
+-        rect_update.height = height_return;
++        rect_update.width = present_pixmap_priv->width;
++        rect_update.height = present_pixmap_priv->height;
+         x_off = 0;
+         y_off = 0;
+         if (pSourceRect) {
+@@ -645,9 +663,9 @@ PRESENTPixmap(Display *dpy, XID window,
+             /* Note: the size of pDestRect and pSourceRect are supposed to be the same size
+              * because the driver would have done things to assure that. */
+         }
+-        valid = xcb_generate_id(present_priv->xcb_connection);
+-        update = xcb_generate_id(present_priv->xcb_connection);
+-        xcb_xfixes_create_region(present_priv->xcb_connection, valid, 1, &rect_update);
++        valid = xcb_generate_id(present_priv->xcb_connection_bis);
++        update = xcb_generate_id(present_priv->xcb_connection_bis);
++        xcb_xfixes_create_region(present_priv->xcb_connection_bis, valid, 1, &rect_update);
+         if (pDirtyRegion && pDirtyRegion->rdh.nCount) {
+             rect_updates = (void *) calloc(pDirtyRegion->rdh.nCount, sizeof(xcb_rectangle_t));
+             for (i = 0; i < pDirtyRegion->rdh.nCount; i++)
+@@ -660,41 +678,54 @@ PRESENTPixmap(Display *dpy, XID window,
+                 rect_update.height = rc.bottom - rc.top;
+                 memcpy(rect_updates + i * sizeof(xcb_rectangle_t), &rect_update, sizeof(xcb_rectangle_t));
+             }
+-            xcb_xfixes_create_region(present_priv->xcb_connection, update, pDirtyRegion->rdh.nCount, rect_updates);
++            xcb_xfixes_create_region(present_priv->xcb_connection_bis, update, pDirtyRegion->rdh.nCount, rect_updates);
+             free(rect_updates);
+         } else
+-            xcb_xfixes_create_region(present_priv->xcb_connection, update, 1, &rect_update);
++            xcb_xfixes_create_region(present_priv->xcb_connection_bis, update, 1, &rect_update);
+     }
+     if (pPresentationParameters->SwapEffect == D3DSWAPEFFECT_COPY)
+         options |= XCB_PRESENT_OPTION_COPY;
+-    cookie = xcb_present_pixmap_checked(present_priv->xcb_connection,
++    cookie = xcb_present_pixmap_checked(present_priv->xcb_connection_bis,
+                                         window,
+                                         present_pixmap_priv->pixmap,
+                                         present_pixmap_priv->serial,
+                                         valid, update, x_off, y_off,
+                                         None, None, None, options,
+                                         target_msc, 0, 0, 0, NULL);
+-    error = xcb_request_check(present_priv->xcb_connection, cookie); /* performs a flush */
++    error = xcb_request_check(present_priv->xcb_connection_bis, cookie); /* performs a flush */
++
++    if (update)
++        xcb_xfixes_destroy_region(present_priv->xcb_connection_bis, update);
++    if (valid)
++        xcb_xfixes_destroy_region(present_priv->xcb_connection_bis, valid);
++
+     if (error) {
+-        Window root_return;
+-        int x_pixmap, x_window, y_pixmap, y_window;
+-        unsigned int width_pixmap, width_window, height_pixmap, height_window;
+-        unsigned int border_width_return;
+-        unsigned int depth_pixmap, depth_window;
+-        XGetGeometry(dpy, present_pixmap_priv->pixmap, &root_return, &x_pixmap, &y_pixmap, &width_pixmap,
+-                     &height_pixmap, &border_width_return, &depth_pixmap);
+-        XGetGeometry(dpy, window, &root_return, &x_window, &y_window, &width_window,
+-                     &height_window, &border_width_return, &depth_window);
++        xcb_get_geometry_cookie_t cookie_geom;
++        xcb_get_geometry_reply_t *reply;
++
++        cookie_geom = xcb_get_geometry(present_priv->xcb_connection_bis, window);
++        reply = xcb_get_geometry_reply(present_priv->xcb_connection_bis, cookie_geom, NULL);
++
+         ERR("Error using PRESENT. Here some debug info\n");
+-        ERR("Pixmap: width=%d, height=%d, depth=%d, x=%d, y=%d\n", width_pixmap, height_pixmap, depth_pixmap, x_pixmap, y_pixmap);
+-        ERR("Window: width=%d, height=%d, depth=%d, x=%d, y=%d\n", width_window, height_window, depth_window, x_window, y_window);
++        if (!reply) {
++            ERR("Error querying window info. Perhaps it doesn't exist anymore\n");
++            pthread_mutex_unlock(&present_priv->mutex_present);
++            return FALSE;
++        }
++        ERR("Pixmap: width=%d, height=%d, depth=%d\n",
++            present_pixmap_priv->width, present_pixmap_priv->height,
++            present_pixmap_priv->depth);
++        ERR("Window: width=%d, height=%d, depth=%d, x=%d, y=%d\n",
++            (int) reply->width, (int) reply->height,
++            (int) reply->depth, (int) reply->x, (int) reply->y);
+         ERR("Present parameter: PresentationInterval=%d, BackBufferCount=%d, Pending presentations=%d\n",
+             pPresentationParameters->PresentationInterval,
+             pPresentationParameters->BackBufferCount,
+             present_priv->pixmap_present_pending
+            );
+-        if (depth_pixmap != depth_window)
++        if (present_pixmap_priv->depth != reply->depth)
+             ERR("Depths are different. PRESENT needs the pixmap and the window have same depth\n");
++        free(reply);
+         pthread_mutex_unlock(&present_priv->mutex_present);
+         return FALSE;
+     }
+-- 
+2.2.2
+

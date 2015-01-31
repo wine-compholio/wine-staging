@@ -1,0 +1,127 @@
+From 2f4237a4c5af04e16c6f5a3b46aef886cc968800 Mon Sep 17 00:00:00 2001
+From: Axel Davy <axel.davy@ens.fr>
+Date: Wed, 22 Oct 2014 23:43:06 +0200
+Subject: [PATCH 10/21] d3dadapter: Rework serial handling
+
+Signed-off-by: Axel Davy <axel.davy@ens.fr>
+---
+ dlls/winex11.drv/dri3.c | 24 ++++++++----------------
+ 1 file changed, 8 insertions(+), 16 deletions(-)
+
+diff --git a/dlls/winex11.drv/dri3.c b/dlls/winex11.drv/dri3.c
+index c226aa5..8cafafc 100644
+--- a/dlls/winex11.drv/dri3.c
++++ b/dlls/winex11.drv/dri3.c
+@@ -180,7 +180,7 @@ struct PRESENTPriv {
+     XID window;
+     uint64_t last_msc;
+     uint64_t last_target;
+-    uint32_t last_serial;
++    uint32_t last_serial_given;
+     xcb_special_event_t *special_event;
+     PRESENTPixmapPriv *first_present_priv;
+     int pixmap_present_pending;
+@@ -195,7 +195,7 @@ struct PRESENTPixmapPriv {
+     Pixmap pixmap;
+     BOOL released;
+     BOOL present_complete_pending;
+-    uint32_t present_pending_serial;
++    uint32_t serial;
+     BOOL last_present_was_flip;
+     PRESENTPixmapPriv *next;
+ };
+@@ -205,7 +205,7 @@ static PRESENTPixmapPriv *PRESENTFindPixmapPriv(PRESENTpriv *present_priv, uint3
+     PRESENTPixmapPriv *current = present_priv->first_present_priv;
+ 
+     while (current) {
+-        if (current->present_pending_serial == serial)
++        if (current->serial == serial)
+             return current;
+         current = current->next;
+     }
+@@ -240,9 +240,6 @@ static void PRESENThandle_events(PRESENTpriv *present_priv, xcb_present_generic_
+                     present_pixmap_priv->last_present_was_flip = FALSE;
+                     break;
+             }
+-            if (present_pixmap_priv->released)
+-                present_pixmap_priv->present_pending_serial = 0;
+-
+             present_priv->pixmap_present_pending--;
+             present_priv->last_msc = ce->msc;
+             break;
+@@ -256,8 +253,6 @@ static void PRESENThandle_events(PRESENTpriv *present_priv, xcb_present_generic_
+                 return;
+             }
+             present_pixmap_priv->released = TRUE;
+-            if (!present_pixmap_priv->present_complete_pending)
+-                present_pixmap_priv->present_pending_serial = 0;
+             break;
+         }
+     }
+@@ -393,7 +388,6 @@ static void PRESENTFreeXcbQueue(PRESENTpriv *present_priv)
+         xcb_unregister_for_special_event(present_priv->xcb_connection, present_priv->special_event);
+         present_priv->last_msc = 0;
+         present_priv->last_target = 0;
+-        present_priv->last_serial = 0;
+         present_priv->special_event = NULL;
+     }
+ }
+@@ -467,6 +461,8 @@ PRESENTPixmapInit(PRESENTpriv *present_priv, Pixmap pixmap, PRESENTPixmapPriv **
+     (*present_pixmap_priv)->pixmap = pixmap;
+     (*present_pixmap_priv)->present_priv = present_priv;
+     (*present_pixmap_priv)->next = present_priv->first_present_priv;
++    present_priv->last_serial_given++;
++    (*present_pixmap_priv)->serial = present_priv->last_serial_given;
+     present_priv->first_present_priv = *present_pixmap_priv;
+     pthread_mutex_unlock(&present_priv->mutex_present);
+     return TRUE;
+@@ -549,7 +545,6 @@ PRESENTPixmap(Display *dpy, XID window,
+     xcb_void_cookie_t cookie;
+     xcb_generic_error_t *error;
+     int64_t target_msc, presentationInterval;
+-    int32_t serial;
+     xcb_xfixes_region_t valid, update;
+     int16_t x_off, y_off;
+     uint32_t options = XCB_PRESENT_OPTION_NONE;
+@@ -599,7 +594,6 @@ PRESENTPixmap(Display *dpy, XID window,
+             break;
+     }
+     target_msc += presentationInterval * (present_priv->pixmap_present_pending + 1);
+-    serial = present_priv->last_serial + 1;
+ 
+     /* Note: PRESENT defines some way to do partial copy:
+      * presentproto:
+@@ -671,8 +665,9 @@ PRESENTPixmap(Display *dpy, XID window,
+     cookie = xcb_present_pixmap_checked(present_priv->xcb_connection,
+                                         window,
+                                         present_pixmap_priv->pixmap,
+-                                        serial, valid, update, x_off,
+-                                        y_off, None, None, None, options,
++                                        present_pixmap_priv->serial,
++                                        valid, update, x_off, y_off,
++                                        None, None, None, options,
+                                         target_msc, 0, 0, 0, NULL);
+     error = xcb_request_check(present_priv->xcb_connection, cookie); /* performs a flush */
+     if (error) {
+@@ -681,7 +676,6 @@ PRESENTPixmap(Display *dpy, XID window,
+         unsigned int width_pixmap, width_window, height_pixmap, height_window;
+         unsigned int border_width_return;
+         unsigned int depth_pixmap, depth_window;
+-        int i;
+         XGetGeometry(dpy, present_pixmap_priv->pixmap, &root_return, &x_pixmap, &y_pixmap, &width_pixmap,
+                      &height_pixmap, &border_width_return, &depth_pixmap);
+         XGetGeometry(dpy, window, &root_return, &x_window, &y_window, &width_window,
+@@ -700,10 +694,8 @@ PRESENTPixmap(Display *dpy, XID window,
+         return FALSE;
+     }
+     present_priv->last_target = target_msc;
+-    present_priv->last_serial = serial;
+     present_priv->pixmap_present_pending++;
+     present_pixmap_priv->present_complete_pending = TRUE;
+-    present_pixmap_priv->present_pending_serial = serial;
+     present_pixmap_priv->released = FALSE;
+     pthread_mutex_unlock(&present_priv->mutex_present);
+     return TRUE;
+-- 
+2.2.2
+

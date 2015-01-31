@@ -1,0 +1,149 @@
+From d3bac88774493479e345d1fdfb47e0fc294360fe Mon Sep 17 00:00:00 2001
+From: Axel Davy <axel.davy@ens.fr>
+Date: Sun, 21 Dec 2014 22:49:05 +0100
+Subject: [PATCH 18/21] d3dadapter: Restore EGL api bound when using EGL
+
+Do not disturb apps using EGL
+
+Signed-off-by: Axel Davy <axel.davy@ens.fr>
+---
+ dlls/winex11.drv/dri3.c | 28 +++++++++++++++++++++++++++-
+ 1 file changed, 27 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/winex11.drv/dri3.c b/dlls/winex11.drv/dri3.c
+index ef5953d..e2f20b0 100644
+--- a/dlls/winex11.drv/dri3.c
++++ b/dlls/winex11.drv/dri3.c
+@@ -136,6 +136,8 @@ DRI2FallbackInit(Display *dpy, struct DRI2priv **priv)
+     EGLConfig config;
+     EGLContext context;
+     EGLint i;
++    EGLBoolean b;
++    EGLenum current_api;
+     const char *extensions;
+     EGLint config_attribs[] = {
+         EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
+@@ -146,6 +148,7 @@ DRI2FallbackInit(Display *dpy, struct DRI2priv **priv)
+         EGL_NONE
+     };
+ 
++    current_api = eglQueryAPI();
+     eglGetPlatformDisplayEXT_func = (PFNEGLGETPLATFORMDISPLAYEXTPROC) eglGetProcAddress("eglGetPlatformDisplayEXT");
+     if (!eglGetPlatformDisplayEXT_func)
+         return FALSE;
+@@ -168,7 +171,9 @@ DRI2FallbackInit(Display *dpy, struct DRI2priv **priv)
+     if (!eglChooseConfig(display, config_attribs, &config, 1, &i))
+         goto clean_egl_display;
+ 
+-    eglBindAPI(EGL_OPENGL_API);
++    b = eglBindAPI(EGL_OPENGL_API);
++    if (b == EGL_FALSE)
++        goto clean_egl_display;
+     context = eglCreateContext(display, config, EGL_NO_CONTEXT, context_compatibility_attribs);
+     if (context == EGL_NO_CONTEXT)
+         goto clean_egl_display;
+@@ -188,11 +193,13 @@ DRI2FallbackInit(Display *dpy, struct DRI2priv **priv)
+     (*priv)->context = context;
+     (*priv)->glEGLImageTargetTexture2DOES_func = glEGLImageTargetTexture2DOES_func;
+     (*priv)->eglCreateImageKHR_func = eglCreateImageKHR_func;
++    eglBindAPI(current_api);
+     return TRUE;
+ 
+ clean_egl:
+ clean_egl_display:
+     eglTerminate(display);
++    eglBindAPI(current_api);
+     return FALSE;
+ }
+ 
+@@ -200,9 +207,13 @@ clean_egl_display:
+ void
+ DRI2FallbackDestroy(struct DRI2priv *priv)
+ {
++    EGLenum current_api;
++    current_api = eglQueryAPI();
++    eglBindAPI(EGL_OPENGL_API);
+     eglMakeCurrent(priv->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+     eglDestroyContext(priv->display, priv->context);
+     eglTerminate(priv->display);
++    eglBindAPI(current_api);
+     free(priv);
+ }
+ 
+@@ -811,12 +822,16 @@ PRESENTDestroyPixmapContent(Display *dpy, PRESENTPixmapPriv *present_pixmap)
+ #ifdef D3DADAPTER9_DRI2
+     if (present_pixmap->dri2_info.is_dri2) {
+         struct DRI2priv *dri2_priv = present_pixmap->dri2_info.dri2_priv;
++        EGLenum current_api;
++        current_api = eglQueryAPI();
++        eglBindAPI(EGL_OPENGL_API);
+         eglMakeCurrent(dri2_priv->display, EGL_NO_SURFACE, EGL_NO_SURFACE, dri2_priv->context);
+         glDeleteFramebuffers(1, &present_pixmap->dri2_info.fbo_read);
+         glDeleteFramebuffers(1, &present_pixmap->dri2_info.fbo_write);
+         glDeleteTextures(1, &present_pixmap->dri2_info.texture_read);
+         glDeleteTextures(1, &present_pixmap->dri2_info.texture_write);
+         eglMakeCurrent(dri2_priv->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
++        eglBindAPI(current_api);
+     }
+ #endif
+ }
+@@ -908,6 +923,7 @@ DRI2FallbackPRESENTPixmap(PRESENTpriv *present_priv, struct DRI2priv *dri2_priv,
+         EGL_DMA_BUF_PLANE0_PITCH_EXT, 0,
+         EGL_NONE
+     };
++    EGLenum current_api;
+     int status;
+ 
+     pthread_mutex_lock(&present_priv->mutex_present);
+@@ -921,6 +937,9 @@ DRI2FallbackPRESENTPixmap(PRESENTpriv *present_priv, struct DRI2priv *dri2_priv,
+     attribs[7] = fd;
+     attribs[11] = stride;
+ 
++    current_api = eglQueryAPI();
++    eglBindAPI(EGL_OPENGL_API);
++
+     /* We bind the dma-buf to a EGLImage, then to a texture, and then to a fbo.
+      * Note that we can delete the EGLImage, but we shouldn't delete the texture,
+      * else the fbo is invalid */
+@@ -1004,10 +1023,13 @@ DRI2FallbackPRESENTPixmap(PRESENTpriv *present_priv, struct DRI2priv *dri2_priv,
+     (*present_pixmap_priv)->serial = present_priv->last_serial_given;
+     present_priv->first_present_priv = *present_pixmap_priv;
+ 
++    eglBindAPI(current_api);
++
+     pthread_mutex_unlock(&present_priv->mutex_present);
+     return TRUE;
+ fail:
+     eglMakeCurrent(dri2_priv->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
++    eglBindAPI(current_api);
+     pthread_mutex_unlock(&present_priv->mutex_present);
+     return FALSE;
+ }
+@@ -1086,6 +1108,7 @@ PRESENTPixmap(Display *dpy, XID window,
+     PRESENTpriv *present_priv = present_pixmap_priv->present_priv;
+ #ifdef D3DADAPTER9_DRI2
+     struct DRI2priv *dri2_priv = present_pixmap_priv->dri2_info.dri2_priv;
++    EGLenum current_api;
+ #endif
+     xcb_void_cookie_t cookie;
+     xcb_generic_error_t *error;
+@@ -1113,6 +1136,8 @@ PRESENTPixmap(Display *dpy, XID window,
+     }
+ #ifdef D3DADAPTER9_DRI2
+     if (present_pixmap_priv->dri2_info.is_dri2) {
++        current_api = eglQueryAPI();
++        eglBindAPI(EGL_OPENGL_API);
+         eglMakeCurrent(dri2_priv->display, EGL_NO_SURFACE, EGL_NO_SURFACE, dri2_priv->context);
+ 
+         glBindFramebuffer(GL_READ_FRAMEBUFFER, present_pixmap_priv->dri2_info.fbo_read);
+@@ -1124,6 +1149,7 @@ PRESENTPixmap(Display *dpy, XID window,
+         glFlush(); /* Perhaps useless */
+ 
+         eglMakeCurrent(dri2_priv->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
++        eglBindAPI(current_api);
+     }
+ #endif
+     target_msc = present_priv->last_msc;
+-- 
+2.2.2
+

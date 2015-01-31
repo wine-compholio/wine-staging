@@ -69,6 +69,7 @@ patch_enable_all ()
 	enable_comctl32_LoadIconMetric="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_d3d9_Surface_Refcount="$1"
+	enable_d3d9_Implement_d3dadapter="$1"
 	enable_d3dx9_36_AnimationController="$1"
 	enable_d3dx9_36_ConvertToIndexedBlended="$1"
 	enable_d3dx9_36_D3DXStubs="$1"
@@ -227,6 +228,9 @@ patch_enable ()
 			;;
 		d3d9-Surface_Refcount)
 			enable_d3d9_Surface_Refcount="$2"
+			;;
+		d3d9-Implement-d3dadapter)
+			enable_d3d9_Implement_d3dadapter="$2"
 			;;
 		d3dx9_36-AnimationController)
 			enable_d3dx9_36_AnimationController="$2"
@@ -1128,6 +1132,69 @@ if test "$enable_d3d9_Surface_Refcount" -eq 1; then
 	patch_apply d3d9-Surface_Refcount/0001-d3d9-Don-t-decrease-surface-refcount-when-its-alread.patch
 	(
 		echo '+    { "Henri Verbeet", "d3d9: Don'\''t decrease surface refcount when its already zero.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3d9-Implement-d3dadapter
+# |
+# | This patchset implements usage of Mesa nine state tracker
+# |   * Maintained on and taken from https://github.com/iXit/wine
+# |
+# | Modified files:
+# |   * configure, configure.ac, dlls/d3d9/Makefile.in, dlls/d3d9/d3d9_main.c, dlls/d3d9/d3d9_private.h,
+# |     dlls/d3d9/d3dadapter9.c, dlls/dbghelp/dwarf.c, dlls/gdi32/Makefile.in, dlls/gdi32/d3dadapter.c,
+# |     dlls/gdi32/dibdrv/dc.c, dlls/gdi32/driver.c, dlls/gdi32/enhmfdrv/init.c, dlls/gdi32/freetype.c,
+# |     dlls/gdi32/gdi32.spec, dlls/gdi32/mfdrv/init.c, dlls/gdi32/path.c, dlls/winemac.drv/gdi.c,
+# |     dlls/wineps.drv/init.c, dlls/winex11.drv/Makefile.in, dlls/winex11.drv/d3dadapter.c, dlls/winex11.drv/dri3.c,
+# |     dlls/winex11.drv/dri3.h, dlls/winex11.drv/init.c, dlls/winex11.drv/window.c, dlls/winex11.drv/x11drv.h,
+# |     dlls/winex11.drv/x11drv_main.c, dlls/winex11.drv/xfixes.h, dlls/winex11.drv/xrender.c, include/config.h.in,
+# |     include/wine/d3dadapter.h, include/wine/gdi_driver.h, programs/winecfg/resource.h, programs/winecfg/winecfg.rc,
+# |     programs/winecfg/x11drvdlg.c
+# |
+if test "$enable_d3d9_Implement_d3dadapter" -eq 1; then
+	patch_apply d3d9-Implement-d3dadapter/0001-dbghelp-implement-DW_TAG_unspecified_type-v2.patch
+	patch_apply d3d9-Implement-d3dadapter/0002-d3dadapter-Add-ID3DAdapter9-support.patch
+	patch_apply d3d9-Implement-d3dadapter/0003-d3dadapter-Respect-wined3d-s-PCI-ID-overrides.patch
+	patch_apply d3d9-Implement-d3dadapter/0004-d3dadapter-fix-fullscreen-initialization.patch
+	patch_apply d3d9-Implement-d3dadapter/0005-d3dadapter-allow-simple-configuration-through-winecf.patch
+	patch_apply d3d9-Implement-d3dadapter/0006-d3dadapter-make-state-and-setting-more-visible-to-us.patch
+	patch_apply d3d9-Implement-d3dadapter/0007-d3dadapter-Begin-DRI3-implementation.patch
+	patch_apply d3d9-Implement-d3dadapter/0008-d3dadapter-typo-fixes-trivial.patch
+	patch_apply d3d9-Implement-d3dadapter/0009-d3dadapter-workaround-libxcb-bug.patch
+	patch_apply d3d9-Implement-d3dadapter/0010-d3dadapter-Rework-serial-handling.patch
+	patch_apply d3d9-Implement-d3dadapter/0011-d3dadapter-Fix-a-bug-when-the-pixmap-is-released-bef.patch
+	patch_apply d3d9-Implement-d3dadapter/0012-d3dadapter-Use-new-interface.patch
+	patch_apply d3d9-Implement-d3dadapter/0013-d3dadapter-Rework-of-the-xcb-connection.patch
+	patch_apply d3d9-Implement-d3dadapter/0014-d3dadapter-Implement-new-interface.patch
+	patch_apply d3d9-Implement-d3dadapter/0015-d3dadapter-restore-basic-autoconfiguration-use-pkg-c.patch
+	patch_apply d3d9-Implement-d3dadapter/0016-d3dadapter-implement-DRI3PresentGroup_CreateAddition.patch
+	patch_apply d3d9-Implement-d3dadapter/0017-d3dadapter-add-dri2-fallback-and-various-cleanups.patch
+	patch_apply d3d9-Implement-d3dadapter/0018-d3dadapter-Restore-EGL-api-bound-when-using-EGL.patch
+	patch_apply d3d9-Implement-d3dadapter/0019-d3dadapter-Add-better-check-for-DRI3.patch
+	patch_apply d3d9-Implement-d3dadapter/0020-d3dadapter-don-t-initialize-dri2-fallback-if-we-use-.patch
+	patch_apply d3d9-Implement-d3dadapter/0021-d3dadapter-Fix-uninitialized-dmSize-field-of-the-DEV.patch
+	(
+		echo '+    { "David Heidelberger", "dbghelp: implement DW_TAG_unspecified_type", 2 },';
+		echo '+    { "Joakim Sindholt", "d3dadapter: Add ID3DAdapter9 support", 1 },';
+		echo '+    { "Joakim Sindholt", "d3dadapter: Respect wined3d'\''s PCI ID overrides", 1 },';
+		echo '+    { "Tiziano Bacocco", "d3dadapter: fix fullscreen initialization", 1 },';
+		echo '+    { "David Heidelberger", "d3dadapter: allow simple configuration through winecfg", 1 },';
+		echo '+    { "David Heidelberger", "d3dadapter: make state and setting more visible to users", 1 },';
+		echo '+    { "Axel Davy", "d3dadapter: Begin DRI3 implementation", 1 },';
+		echo '+    { "Axel Davy", "d3dadapter: typo fixes '\('trivial'\)'", 1 },';
+		echo '+    { "Axel Davy", "d3dadapter: workaround libxcb bug", 1 },';
+		echo '+    { "Axel Davy", "d3dadapter: Rework serial handling", 1 },';
+		echo '+    { "Axel Davy", "d3dadapter: Fix a bug when the pixmap is released before being presented", 1 },';
+		echo '+    { "Axel Davy", "d3dadapter: Use new interface", 1 },';
+		echo '+    { "Axel Davy", "d3dadapter: Rework of the xcb connection", 1 },';
+		echo '+    { "Axel Davy", "d3dadapter: Implement new interface", 1 },';
+		echo '+    { "Emil Velikov", "d3dadapter: restore basic autoconfiguration, use pkg-config", 1 },';
+		echo '+    { "Axel Davy", "d3dadapter: implement DRI3PresentGroup_CreateAdditionalPresent", 1 },';
+		echo '+    { "Axel Davy", "d3dadapter: add dri2 fallback and various cleanups", 1 },';
+		echo '+    { "Axel Davy", "d3dadapter: Restore EGL api bound when using EGL", 1 },';
+		echo '+    { "Axel Davy", "d3dadapter: Add better check for DRI3", 1 },';
+		echo '+    { "Axel Davy", "d3dadapter: don'\''t initialize dri2 fallback if we use dri3", 1 },';
+		echo '+    { "Tiziano Bacocco", "d3dadapter: Fix uninitialized dmSize field of the DEVMODEW structure", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,63 @@
+From 71cc7aa6f2d4ef8858c68e78e83a69e5f096314d Mon Sep 17 00:00:00 2001
+From: David Heidelberg <david@ixit.cz>
+Date: Thu, 4 Dec 2014 14:58:05 +0100
+Subject: [PATCH 01/21] dbghelp: implement DW_TAG_unspecified_type (v2)
+
+based on dwarf2_parse_base_type
+
+v2: incorporated changes from mstefani
+
+Signed-off-by: David Heidelberg <david@ixit.cz>
+---
+ dlls/dbghelp/dwarf.c | 28 ++++++++++++++++++++++++++++
+ 1 file changed, 28 insertions(+)
+
+diff --git a/dlls/dbghelp/dwarf.c b/dlls/dbghelp/dwarf.c
+index f1bd6cb..c54bfd3 100644
+--- a/dlls/dbghelp/dwarf.c
++++ b/dlls/dbghelp/dwarf.c
+@@ -1337,6 +1337,31 @@ static struct symt* dwarf2_parse_volatile_type(dwarf2_parse_context_t* ctx,
+     return ref_type;
+ }
+ 
++static struct symt* dwarf2_parse_unspecified_type(dwarf2_parse_context_t* ctx,
++                                           dwarf2_debug_info_t* di)
++{
++    struct attribute name;
++    struct attribute size;
++    struct symt_basic *basic;
++
++    TRACE("%s, for %s\n", dwarf2_debug_ctx(ctx), dwarf2_debug_di(di));
++
++    if (di->symt) return di->symt;
++
++    if (!dwarf2_find_attribute(ctx, di, DW_AT_name, &name))
++        name.u.string = "void";
++    size.u.uvalue = sizeof(void *);
++
++    basic = symt_new_basic(ctx->module, btVoid, name.u.string, size.u.uvalue);
++    di->symt = &basic->symt;
++
++    if (!ctx->symt_cache[sc_void])
++        ctx->symt_cache[sc_void] = di->symt;
++
++    if (dwarf2_get_di_children(ctx, di)) FIXME("Unsupported children\n");
++    return di->symt;
++}
++
+ static struct symt* dwarf2_parse_reference_type(dwarf2_parse_context_t* ctx,
+                                                 dwarf2_debug_info_t* di)
+ {
+@@ -2084,6 +2109,9 @@ static void dwarf2_load_one_entry(dwarf2_parse_context_t* ctx,
+     case DW_TAG_volatile_type:
+         dwarf2_parse_volatile_type(ctx, di);
+         break;
++    case DW_TAG_unspecified_type:
++        dwarf2_parse_unspecified_type(ctx, di);
++        break;
+     case DW_TAG_reference_type:
+         dwarf2_parse_reference_type(ctx, di);
+         break;
+-- 
+2.2.2
+

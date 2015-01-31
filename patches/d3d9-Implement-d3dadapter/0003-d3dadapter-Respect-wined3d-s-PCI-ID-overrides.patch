@@ -1,0 +1,45 @@
+From 2b8b5a2cfc550b1c6d1fdda0e61579347331160f Mon Sep 17 00:00:00 2001
+From: Joakim Sindholt <opensource@zhasha.com>
+Date: Fri, 21 Mar 2014 14:40:06 +0100
+Subject: [PATCH 03/21] d3dadapter: Respect wined3d's PCI ID overrides
+
+---
+ dlls/d3d9/d3dadapter9.c | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/dlls/d3d9/d3dadapter9.c b/dlls/d3d9/d3dadapter9.c
+index 37d0e00..a5c6eb0 100644
+--- a/dlls/d3d9/d3dadapter9.c
++++ b/dlls/d3d9/d3dadapter9.c
+@@ -193,6 +193,7 @@ d3dadapter9_GetAdapterIdentifier( struct d3dadapter9 *This,
+                                   D3DADAPTER_IDENTIFIER9 *pIdentifier )
+ {
+     HRESULT hr;
++    HKEY regkey;
+ 
+     if (Adapter >= d3dadapter9_GetAdapterCount(This)) { return D3DERR_INVALIDCALL; }
+ 
+@@ -208,6 +209,20 @@ d3dadapter9_GetAdapterIdentifier( struct d3dadapter9 *This,
+             return D3DERR_INVALIDCALL;
+         }
+         TRACE("DeviceName overriden: %s\n", pIdentifier->DeviceName);
++
++        /* Override PCI IDs when wined3d registry keys are set */
++        if (!RegOpenKeyA(HKEY_CURRENT_USER, "Software\\Wine\\Direct3D", &regkey)) {
++            DWORD type, data;
++            DWORD size = sizeof(DWORD);
++
++            if (!RegQueryValueExA(regkey, "VideoPciDeviceID", 0, &type, (BYTE *)&data, &size) && (type == REG_DWORD))
++                pIdentifier->DeviceId = data;
++            if (!RegQueryValueExA(regkey, "VideoPciVendorID", 0, &type, (BYTE *)&data, &size) && (type == REG_DWORD))
++                pIdentifier->VendorId = data;
++            RegCloseKey(regkey);
++
++            TRACE("DeviceId:VendorId overridden: %04X:%04X\n", pIdentifier->DeviceId, pIdentifier->VendorId);
++        }
+     }
+     return hr;
+ }
+-- 
+2.2.2
+

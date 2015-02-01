@@ -132,6 +132,7 @@ patch_enable_all ()
 	enable_ntdll_RtlUnwindEx="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_User_Shared_Data="$1"
+	enable_ntdll_Vista_Threadpool="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_WinSqm="$1"
 	enable_ntoskrnl_DriverTest="$1"
@@ -416,6 +417,9 @@ patch_enable ()
 			;;
 		ntdll-User_Shared_Data)
 			enable_ntdll_User_Shared_Data="$2"
+			;;
+		ntdll-Vista_Threadpool)
+			enable_ntdll_Vista_Threadpool="$2"
 			;;
 		ntdll-WRITECOPY)
 			enable_ntdll_WRITECOPY="$2"
@@ -2209,6 +2213,35 @@ if test "$enable_ntdll_User_Shared_Data" -eq 1; then
 	patch_apply ntdll-User_Shared_Data/0001-ntdll-Move-code-to-update-user-shared-data-into-a-se.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Move code to update user shared data into a separate function.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Vista_Threadpool
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35192] Add implementation for CreateThreadpool
+# |   *	[#32531] Implement threadpool work items
+# |   *	[#37306] Implement threadpool timers
+# |
+# | Modified files:
+# |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/tests/thread.c, dlls/kernel32/thread.c, dlls/ntdll/Makefile.in,
+# | 	dlls/ntdll/ntdll.spec, dlls/ntdll/tests/Makefile.in, dlls/ntdll/tests/threadpool.c, dlls/ntdll/threadpool2.c,
+# | 	include/winternl.h
+# |
+if test "$enable_ntdll_Vista_Threadpool" -eq 1; then
+	patch_apply ntdll-Vista_Threadpool/0001-ntdll-Add-threadpool-stub-functions-to-specfile.patch
+	patch_apply ntdll-Vista_Threadpool/0002-ntdll-Implement-threadpool-cleanup-group-and-callbac.patch
+	patch_apply ntdll-Vista_Threadpool/0003-ntdll-Implement-additional-threadpool-work-item-func.patch
+	patch_apply ntdll-Vista_Threadpool/0004-ntdll-Implement-threadpool-timer-functions.patch
+	patch_apply ntdll-Vista_Threadpool/0005-ntdll-tests-Add-tests-for-Tp-threadpool-functions.patch
+	patch_apply ntdll-Vista_Threadpool/0006-kernel32-Forward-various-threadpool-functions-to-ntd.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Add threadpool stub functions to specfile.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement threadpool, cleanup group and callback instance functions.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement additional threadpool work item functions.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement threadpool timer functions.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for Tp* threadpool functions.", 1 },';
+		echo '+    { "Sebastian Lackner", "kernel32: Forward various threadpool functions to ntdll.", 1 },';
 	) >> "$patchlist"
 fi
 

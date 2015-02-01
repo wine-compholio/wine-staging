@@ -1,0 +1,551 @@
+From 248c2929e4cef9d57b6ae641cbf428cfb73efe0f Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 1 Feb 2015 18:21:28 +0100
+Subject: ntdll: Implement threadpool timer functions.
+
+---
+ dlls/ntdll/ntdll.spec    |  10 +-
+ dlls/ntdll/threadpool2.c | 387 ++++++++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 391 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index bf9e795..f4328a9 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -973,7 +973,7 @@
+ # @ stub TpAllocIoCompletion
+ # @ stub TpAllocJobNotification
+ @ stdcall TpAllocPool(ptr ptr)
+-# @ stub TpAllocTimer
++@ stdcall TpAllocTimer(ptr ptr ptr)
+ # @ stub TpAllocWait
+ @ stdcall TpAllocWork(ptr ptr ptr ptr)
+ # @ stub TpAlpcRegisterCompletionList
+@@ -995,7 +995,7 @@
+ # @ stub TpDbgSetLogRoutine
+ # @ stub TpDisablePoolCallbackChecks
+ @ stdcall TpDisassociateCallback(ptr)
+-# @ stub TpIsTimerSet
++@ stdcall TpIsTimerSet(ptr)
+ @ stdcall TpPostWork(ptr)
+ # @ stub TpQueryPoolStackInformation
+ # @ stub TpReleaseAlpcCompletion
+@@ -1004,7 +1004,7 @@
+ # @ stub TpReleaseIoCompletion
+ # @ stub TpReleaseJobNotification
+ @ stdcall TpReleasePool(ptr)
+-# @ stub TpReleaseTimer
++@ stdcall TpReleaseTimer(ptr)
+ # @ stub TpReleaseWait
+ @ stdcall TpReleaseWork(ptr)
+ # @ stub TpSetDefaultPoolMaxThreads
+@@ -1015,7 +1015,7 @@
+ # @ stub TpSetPoolStackInformation
+ # @ stub TpSetPoolThreadBasePriority
+ # @ stub TpSetPoolWorkerThreadIdleTimeout
+-# @ stub TpSetTimer
++@ stdcall TpSetTimer(ptr ptr long long)
+ # @ stub TpSetTimerEx
+ # @ stub TpSetWait
+ # @ stub TpSetWaitEx
+@@ -1026,7 +1026,7 @@
+ # @ stub TpWaitForAlpcCompletion
+ # @ stub TpWaitForIoCompletion
+ # @ stub TpWaitForJobNotification
+-# @ stub TpWaitForTimer
++@ stdcall TpWaitForTimer(ptr long)
+ # @ stub TpWaitForWait
+ @ stdcall TpWaitForWork(ptr long)
+ @ stdcall -ret64 VerSetConditionMask(int64 long long)
+diff --git a/dlls/ntdll/threadpool2.c b/dlls/ntdll/threadpool2.c
+index acc477f..4fa22bb 100644
+--- a/dlls/ntdll/threadpool2.c
++++ b/dlls/ntdll/threadpool2.c
+@@ -124,7 +124,8 @@ struct threadpool_object
+     {
+         TP_OBJECT_TYPE_UNDEFINED,
+         TP_OBJECT_TYPE_SIMPLE,
+-        TP_OBJECT_TYPE_WORK
++        TP_OBJECT_TYPE_WORK,
++        TP_OBJECT_TYPE_TIMER
+     } type;
+ 
+     /* arguments for callback */
+@@ -140,6 +141,19 @@ struct threadpool_object
+         {
+             PTP_WORK_CALLBACK callback;
+         } work;
++        /* timer callback */
++        struct
++        {
++            PTP_TIMER_CALLBACK callback;
++
++            /* information about the timer, locked via timerqueue.cs */
++            BOOL is_timer_set;
++            BOOL timer_pending;
++            struct list timer_entry;
++            ULONGLONG timeout;
++            LONG period;
++            LONG window_length;
++        } timer;
+     } u;
+ };
+ 
+@@ -154,6 +168,35 @@ struct threadpool_group
+     struct list members;
+ };
+ 
++/* global timerqueue object */
++static RTL_CRITICAL_SECTION_DEBUG timerqueue_debug;
++static struct
++{
++    CRITICAL_SECTION cs;
++    BOOL thread_running;
++
++    /* number of timer objects total */
++    LONG num_timers;
++
++    /* list of pending timers */
++    struct list pending_timers;
++    RTL_CONDITION_VARIABLE update_event;
++}
++timerqueue =
++{
++    { &timerqueue_debug, -1, 0, 0, 0, 0 },
++    FALSE,
++    0,
++    LIST_INIT( timerqueue.pending_timers ),
++    RTL_CONDITION_VARIABLE_INIT
++};
++static RTL_CRITICAL_SECTION_DEBUG timerqueue_debug =
++{
++    0, 0, &timerqueue.cs,
++    { &timerqueue_debug.ProcessLocksList, &timerqueue_debug.ProcessLocksList },
++    0, 0, { (DWORD_PTR)(__FILE__ ": timerqueue.cs") }
++};
++
+ static inline struct threadpool *impl_from_TP_POOL( TP_POOL *pool )
+ {
+     return (struct threadpool *)pool;
+@@ -166,6 +209,13 @@ static inline struct threadpool_object *impl_from_TP_WORK( TP_WORK *work )
+     return object;
+ }
+ 
++static inline struct threadpool_object *impl_from_TP_TIMER( TP_TIMER *timer )
++{
++    struct threadpool_object *object = (struct threadpool_object *)timer;
++    assert( !object || object->type == TP_OBJECT_TYPE_TIMER );
++    return object;
++}
++
+ static inline struct threadpool_group *impl_from_TP_CLEANUP_GROUP( TP_CLEANUP_GROUP *group )
+ {
+     return (struct threadpool_group *)group;
+@@ -177,6 +227,7 @@ static inline struct threadpool_instance *impl_from_TP_CALLBACK_INSTANCE( TP_CAL
+ }
+ 
+ static void CALLBACK threadpool_worker_proc( void *param );
++static void CALLBACK timerqueue_thread_proc( void *param );
+ 
+ static NTSTATUS tp_threadpool_alloc( struct threadpool **out );
+ static BOOL tp_threadpool_release( struct threadpool *pool );
+@@ -189,6 +240,222 @@ static void tp_object_shutdown( struct threadpool_object *object );
+ static BOOL tp_group_release( struct threadpool_group *group );
+ 
+ /***********************************************************************
++ * TIMERQUEUE IMPLEMENTATION
++ ***********************************************************************
++ *
++ * Based on [1] there is only one (persistent) thread which handles
++ * timer events. There is a similar implementation in ntdll/
++ * threadpool.c, but its not directly possible to merge them because of
++ * specific implementation differences, like handling several events at
++ * once using a windowlength parameter. */
++
++static NTSTATUS tp_timerqueue_acquire( void )
++{
++    NTSTATUS status = STATUS_SUCCESS;
++    RtlEnterCriticalSection( &timerqueue.cs );
++
++    if (!timerqueue.thread_running)
++    {
++        HANDLE thread;
++        status = RtlCreateUserThread( GetCurrentProcess(), NULL, FALSE, NULL, 0, 0,
++                                      timerqueue_thread_proc, NULL, &thread, NULL );
++        if (status == STATUS_SUCCESS)
++        {
++            NtClose( thread );
++            timerqueue.thread_running = TRUE;
++        }
++    }
++
++    if (!status) timerqueue.num_timers++;
++    RtlLeaveCriticalSection( &timerqueue.cs );
++    return status;
++}
++
++static void tp_timerqueue_release( void )
++{
++    RtlEnterCriticalSection( &timerqueue.cs );
++    if (!--timerqueue.num_timers)
++    {
++        assert( list_empty( &timerqueue.pending_timers ) );
++        RtlWakeAllConditionVariable( &timerqueue.update_event );
++    }
++    RtlLeaveCriticalSection( &timerqueue.cs );
++}
++
++static void tp_timerqueue_update_timer( struct threadpool_object *new_timer, LARGE_INTEGER *timeout,
++                                        LONG period, LONG window_length )
++{
++    BOOL queue_timer = FALSE, delete_timer = FALSE;
++    struct threadpool_object *timer;
++    ULONGLONG when;
++
++    assert( new_timer->type == TP_OBJECT_TYPE_TIMER );
++    RtlEnterCriticalSection( &timerqueue.cs );
++
++    /* Remember if the timer is set or unset */
++    new_timer->u.timer.is_timer_set = timeout != NULL;
++
++    if (!timeout)
++        goto update_timer;
++
++    /* A timeout of zero is a special case, it means that the callback is queued immediately */
++    if ((when = timeout->QuadPart) == 0)
++    {
++        queue_timer = TRUE;
++
++        if (!period)
++        {
++            timeout = NULL;
++            goto update_timer;
++        }
++
++        when = (ULONGLONG)period * -10000;
++    }
++
++    /* Convert relative timeouts into absolute timeouts */
++    if ((LONGLONG)when < 0)
++    {
++        LARGE_INTEGER now;
++        NtQuerySystemTime( &now );
++        when = now.QuadPart - when;
++    }
++
++update_timer:
++
++    /* If timer is still pending, then remove the old one  */
++    if (new_timer->u.timer.timer_pending)
++    {
++        list_remove( &new_timer->u.timer.timer_entry );
++        new_timer->u.timer.timer_pending = FALSE;
++
++        /* defer calls to tp_object_release until we are done */
++        delete_timer = TRUE;
++    }
++
++    /* Timer should be enabled again, add it to the queue */
++    if (timeout)
++    {
++        interlocked_inc( &new_timer->refcount );
++        new_timer->u.timer.timeout       = when;
++        new_timer->u.timer.period        = period;
++        new_timer->u.timer.window_length = window_length;
++
++        /* insert new_timer into the timer queue */
++        LIST_FOR_EACH_ENTRY( timer, &timerqueue.pending_timers, struct threadpool_object, u.timer.timer_entry )
++        {
++            assert( timer->type == TP_OBJECT_TYPE_TIMER );
++            if (new_timer->u.timer.timeout < timer->u.timer.timeout)
++                break;
++        }
++        list_add_before( &timer->u.timer.timer_entry, &new_timer->u.timer.timer_entry );
++
++        /* wake up thread if it should expire earlier than before */
++        if (list_head( &timerqueue.pending_timers ) == &new_timer->u.timer.timer_entry )
++            RtlWakeAllConditionVariable( &timerqueue.update_event );
++
++        new_timer->u.timer.timer_pending = TRUE;
++    }
++
++    RtlLeaveCriticalSection( &timerqueue.cs );
++    if (queue_timer)
++        tp_object_submit( new_timer );
++    if (delete_timer)
++        tp_object_release( new_timer );
++}
++
++static void CALLBACK timerqueue_thread_proc( void *param )
++{
++    LARGE_INTEGER now, timeout;
++    ULONGLONG timeout_lower, timeout_upper;
++    struct threadpool_object *other_timer;
++    struct list *ptr;
++
++    RtlEnterCriticalSection( &timerqueue.cs );
++
++    for (;;)
++    {
++        NtQuerySystemTime( &now );
++
++        while ((ptr = list_head( &timerqueue.pending_timers )))
++        {
++            struct threadpool_object *timer = LIST_ENTRY( ptr, struct threadpool_object, u.timer.timer_entry );
++            assert( timer->type == TP_OBJECT_TYPE_TIMER );
++
++            /* Timeout didn't expire yet, nothing to do */
++            if (timer->u.timer.timeout > now.QuadPart)
++                break;
++
++            /* Queue a new callback in one of the worker threads */
++            list_remove( &timer->u.timer.timer_entry );
++            tp_object_submit( timer );
++
++            /* Requeue the timer, except its marked for shutdown */
++            if (!timer->shutdown && timer->u.timer.period)
++            {
++                /* Update the timeout, make sure its at least the current time (to avoid too many work items) */
++                timer->u.timer.timeout += (ULONGLONG)timer->u.timer.period * 10000;
++                if (timer->u.timer.timeout <= now.QuadPart)
++                    timer->u.timer.timeout = now.QuadPart + 1;
++
++                /* Insert timer back into the timer queue */
++                LIST_FOR_EACH_ENTRY( other_timer, &timerqueue.pending_timers, struct threadpool_object, u.timer.timer_entry )
++                {
++                    assert( other_timer->type == TP_OBJECT_TYPE_TIMER );
++                    if (timer->u.timer.timeout < other_timer->u.timer.timeout)
++                        break;
++                }
++                list_add_before( &other_timer->u.timer.timer_entry, &timer->u.timer.timer_entry );
++            }
++            else
++            {
++                /* We no longer need the reference to this timer object */
++                timer->u.timer.timer_pending = FALSE;
++                tp_object_release( timer );
++            }
++        }
++
++        /* Determine next timeout - we use the window_length arguments to optimize wakeup times */
++        timeout_lower = timeout_upper = TIMEOUT_INFINITE;
++        LIST_FOR_EACH_ENTRY( other_timer, &timerqueue.pending_timers, struct threadpool_object, u.timer.timer_entry )
++        {
++            ULONGLONG new_timeout_upper;
++            assert( other_timer->type == TP_OBJECT_TYPE_TIMER );
++            if (other_timer->u.timer.timeout >= timeout_upper)
++                break;
++
++            timeout_lower     = other_timer->u.timer.timeout;
++            new_timeout_upper = timeout_lower + (ULONGLONG)other_timer->u.timer.window_length * 10000;
++
++            if (timeout_upper > new_timeout_upper)
++                timeout_upper = new_timeout_upper;
++        }
++
++
++        if (!timerqueue.num_timers)
++        {
++            /* All timers have been destroyed, if no new timers are created within some amount of
++             * time, then we can shutdown this thread. */
++            timeout.QuadPart = (ULONGLONG)THREADPOOL_WORKER_TIMEOUT * -10000;
++            if (RtlSleepConditionVariableCS( &timerqueue.update_event,
++                &timerqueue.cs, &timeout ) == STATUS_TIMEOUT && !timerqueue.num_timers)
++            {
++                break;
++            }
++        }
++        else
++        {
++            /* Wait for timer update events or until the next timer expires. */
++            timeout.QuadPart = timeout_lower;
++            RtlSleepConditionVariableCS( &timerqueue.update_event, &timerqueue.cs, &timeout );
++        }
++    }
++
++    timerqueue.thread_running = FALSE;
++    RtlLeaveCriticalSection( &timerqueue.cs );
++}
++
++
++/***********************************************************************
+  * THREADPOOL INSTANCE IMPLEMENTATION
+  ***********************************************************************/
+ 
+@@ -433,6 +700,16 @@ static void CALLBACK threadpool_worker_proc( void *param )
+                     break;
+                 }
+ 
++                case TP_OBJECT_TYPE_TIMER:
++                {
++                    TP_CALLBACK_INSTANCE *cb_instance = (TP_CALLBACK_INSTANCE *)&instance;
++                    TRACE( "executing callback %p(%p, %p)\n",
++                           object->u.timer.callback, cb_instance, object->userdata );
++                    object->u.timer.callback( cb_instance, object->userdata, (TP_TIMER *)object );
++                    TRACE( "callback %p returned\n", object->u.timer.callback );
++                    break;
++                }
++
+                 default:
+                     FIXME( "callback type %u not implemented\n", object->type );
+                     break;
+@@ -602,6 +879,48 @@ static NTSTATUS tp_object_alloc_work( struct threadpool_object **out, PTP_WORK_C
+     return STATUS_SUCCESS;
+ }
+ 
++static NTSTATUS tp_object_alloc_timer( struct threadpool_object **out, PTP_TIMER_CALLBACK callback,
++                                       PVOID userdata, TP_CALLBACK_ENVIRON *environment )
++{
++    struct threadpool_object *object;
++    struct threadpool *pool;
++    NTSTATUS status;
++
++    /* determine threadpool */
++    pool = environment ? (struct threadpool *)environment->Pool : NULL;
++    if (!pool) pool = get_default_threadpool();
++    if (!pool) return STATUS_NO_MEMORY;
++
++    object = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*object) );
++    if (!object)
++        return STATUS_NO_MEMORY;
++
++    status = tp_timerqueue_acquire();
++    if (status)
++    {
++        RtlFreeHeap( GetProcessHeap(), 0, object );
++        return status;
++    }
++
++    object->type = TP_OBJECT_TYPE_TIMER;
++    object->u.timer.callback = callback;
++
++    object->u.timer.timer_pending = FALSE;
++    memset( &object->u.timer.timer_entry, 0, sizeof(object->u.timer.timer_entry));
++
++    object->u.timer.is_timer_set = FALSE;
++    object->u.timer.timeout = 0;
++    object->u.timer.period = 0;
++    object->u.timer.window_length = 0;
++
++    tp_object_initialize( object, pool, userdata, environment );
++
++    TRACE("allocated object %p of type %u\n", object, object->type);
++
++    *out = object;
++    return STATUS_SUCCESS;
++}
++
+ static BOOL tp_object_release( struct threadpool_object *object )
+ {
+     struct threadpool_group *group;
+@@ -624,6 +943,13 @@ static BOOL tp_object_release( struct threadpool_object *object )
+         tp_group_release( group );
+     }
+ 
++    /* release reference on the timerqueue */
++    if (object->type == TP_OBJECT_TYPE_TIMER)
++    {
++        assert( !object->u.timer.timer_pending );
++        tp_timerqueue_release();
++    }
++
+     /* release reference to library */
+     if (object->race_dll)
+         LdrUnloadDll( object->race_dll );
+@@ -843,6 +1169,16 @@ NTSTATUS WINAPI TpAllocPool( TP_POOL **out, PVOID reserved )
+ }
+ 
+ /***********************************************************************
++ *           TpAllocTimer    (NTDLL.@)
++ */
++NTSTATUS WINAPI TpAllocTimer( TP_TIMER **out, PTP_TIMER_CALLBACK callback, PVOID userdata,
++                              TP_CALLBACK_ENVIRON *environment )
++{
++    TRACE("%p %p %p %p\n", out, callback, userdata, environment);
++    return tp_object_alloc_timer( (struct threadpool_object **)out, callback, userdata, environment );
++}
++
++/***********************************************************************
+  *           TpAllocWork    (NTDLL.@)
+  */
+ NTSTATUS WINAPI TpAllocWork( TP_WORK **out, PTP_WORK_CALLBACK callback, PVOID userdata,
+@@ -947,6 +1283,16 @@ VOID WINAPI TpDisassociateCallback( TP_CALLBACK_INSTANCE *instance )
+ }
+ 
+ /***********************************************************************
++ *           TpIsTimerSet    (NTDLL.@)
++ */
++BOOL WINAPI TpIsTimerSet( TP_TIMER *timer )
++{
++    struct threadpool_object *this = impl_from_TP_TIMER( timer );
++    TRACE("%p\n", timer);
++    return this ? this->u.timer.is_timer_set : FALSE;
++}
++
++/***********************************************************************
+  *           TpPostWork    (NTDLL.@)
+  */
+ VOID WINAPI TpPostWork( TP_WORK *work )
+@@ -995,6 +1341,20 @@ VOID WINAPI TpReleasePool( TP_POOL *pool )
+ }
+ 
+ /***********************************************************************
++ *           TpReleaseTimer     (NTDLL.@)
++ */
++VOID WINAPI TpReleaseTimer( TP_TIMER *timer )
++{
++    struct threadpool_object *this = impl_from_TP_TIMER( timer );
++    TRACE("%p\n", timer);
++    if (this)
++    {
++        tp_object_shutdown( this );
++        tp_object_release( this );
++    }
++}
++
++/***********************************************************************
+  *           TpReleaseWork    (NTDLL.@)
+  */
+ VOID WINAPI TpReleaseWork( TP_WORK *work )
+@@ -1030,6 +1390,16 @@ BOOL WINAPI TpSetPoolMinThreads( TP_POOL *pool, DWORD minimum )
+ }
+ 
+ /***********************************************************************
++ *           TpSetTimer    (NTDLL.@)
++ */
++VOID WINAPI TpSetTimer( TP_TIMER *timer, LARGE_INTEGER *timeout, LONG period, LONG window_length )
++{
++    struct threadpool_object *this = impl_from_TP_TIMER( timer );
++    TRACE("%p %p %u %u\n", timer, timeout, period, window_length);
++    if (this) tp_timerqueue_update_timer( this, timeout, period, window_length );
++}
++
++/***********************************************************************
+  *           TpSimpleTryPost    (NTDLL.@)
+  */
+ NTSTATUS WINAPI TpSimpleTryPost( PTP_SIMPLE_CALLBACK callback, PVOID userdata, TP_CALLBACK_ENVIRON *environment )
+@@ -1048,6 +1418,21 @@ NTSTATUS WINAPI TpSimpleTryPost( PTP_SIMPLE_CALLBACK callback, PVOID userdata, T
+ }
+ 
+ /***********************************************************************
++ *           TpWaitForTimer    (NTDLL.@)
++ */
++VOID WINAPI TpWaitForTimer( TP_TIMER *timer, BOOL cancel_pending )
++{
++    struct threadpool_object *this = impl_from_TP_TIMER( timer );
++    TRACE("%p %d\n", timer, cancel_pending);
++    if (this)
++    {
++        if (cancel_pending)
++            tp_object_cancel( this, FALSE, NULL );
++        tp_object_wait( this );
++    }
++}
++
++/***********************************************************************
+  *           TpWaitForWork    (NTDLL.@)
+  */
+ VOID WINAPI TpWaitForWork( TP_WORK *work, BOOL cancel_pending )
+-- 
+2.2.2
+

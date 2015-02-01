@@ -1,0 +1,342 @@
+From 3477bdc9e48312f6188f9c9beb8d062291f8b81f Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 1 Feb 2015 19:41:13 +0100
+Subject: kernel32: Forward various threadpool functions to ntdll.
+
+---
+ dlls/kernel32/kernel32.spec  |  48 ++++++++++----------
+ dlls/kernel32/tests/thread.c |   6 +--
+ dlls/kernel32/thread.c       | 101 +++++++++++++++++++++++++++++++++++++++++++
+ include/winternl.h           |  27 ++++++++++++
+ 4 files changed, 155 insertions(+), 27 deletions(-)
+
+diff --git a/dlls/kernel32/kernel32.spec b/dlls/kernel32/kernel32.spec
+index 3719505..4d170d5 100644
+--- a/dlls/kernel32/kernel32.spec
++++ b/dlls/kernel32/kernel32.spec
+@@ -204,7 +204,7 @@
+ @ stdcall BuildCommDCBAndTimeoutsA(str ptr ptr)
+ @ stdcall BuildCommDCBAndTimeoutsW(wstr ptr ptr)
+ @ stdcall BuildCommDCBW(wstr ptr)
+-# @ stub CallbackMayRunLong
++@ stdcall CallbackMayRunLong(ptr) ntdll.TpCallbackMayRunLong
+ @ stdcall CallNamedPipeA(str ptr long ptr long ptr long)
+ @ stdcall CallNamedPipeW(wstr ptr long ptr long ptr long)
+ @ stub CancelDeviceWakeupRequest
+@@ -228,13 +228,13 @@
+ # @ stub ClosePrivateNamespace
+ @ stdcall CloseProfileUserMapping()
+ @ stub CloseSystemHandle
+-# @ stub CloseThreadpool
+-# @ stub CloseThreadpoolCleanupGroup
+-# @ stub CloseThreadpoolCleanupGroupMembers
++@ stdcall CloseThreadpool(ptr) ntdll.TpReleasePool
++@ stdcall CloseThreadpoolCleanupGroup(ptr) ntdll.TpReleaseCleanupGroup
++@ stdcall CloseThreadpoolCleanupGroupMembers(ptr long ptr) ntdll.TpReleaseCleanupGroupMembers
+ # @ stub CloseThreadpoolIo
+-# @ stub CloseThreadpoolTimer
++@ stdcall CloseThreadpoolTimer(ptr) ntdll.TpReleaseTimer
+ # @ stub CloseThreadpoolWait
+-# @ stub CloseThreadpoolWork
++@ stdcall CloseThreadpoolWork(ptr) ntdll.TpReleaseWork
+ @ stdcall CmdBatNotification(long)
+ @ stdcall CommConfigDialogA(str long ptr)
+ @ stdcall CommConfigDialogW(wstr long ptr)
+@@ -331,12 +331,12 @@
+ @ stdcall CreateSymbolicLinkW(wstr wstr long)
+ @ stdcall CreateTapePartition(long long long long)
+ @ stdcall CreateThread(ptr long ptr long long ptr)
+-# @ stub CreateThreadpool
+-# @ stub CreateThreadpoolCleanupGroup
++@ stdcall CreateThreadpool(ptr)
++@ stdcall CreateThreadpoolCleanupGroup()
+ # @ stub CreateThreadpoolIo
+-# @ stub CreateThreadpoolTimer
++@ stdcall CreateThreadpoolTimer(ptr ptr ptr)
+ # @ stub CreateThreadpoolWait
+-# @ stub CreateThreadpoolWork
++@ stdcall CreateThreadpoolWork(ptr ptr ptr)
+ @ stdcall CreateTimerQueue ()
+ @ stdcall CreateTimerQueueTimer(ptr long ptr ptr long long long)
+ @ stdcall CreateToolhelp32Snapshot(long long)
+@@ -369,7 +369,7 @@
+ @ stdcall DeleteFileW(wstr)
+ # @ stub DeleteProcThreadAttributeList
+ # @ stub DisableThreadProfiling
+-# @ stub DisassociateCurrentThreadFromCallback
++@ stdcall DisassociateCurrentThreadFromCallback(ptr) ntdll.TpDisassociateCallback
+ @ stdcall DeleteTimerQueue(long)
+ @ stdcall DeleteTimerQueueEx (long long)
+ @ stdcall DeleteTimerQueueTimer(long long long)
+@@ -495,7 +495,6 @@
+ @ stdcall FindFirstVolumeMountPointA(str ptr long)
+ @ stdcall FindFirstVolumeMountPointW(wstr ptr long)
+ @ stdcall FindFirstVolumeW(ptr long)
+-# @ stub FreeLibraryWhenCallbackReturns
+ @ stdcall FindNextChangeNotification(long)
+ @ stdcall FindNextFileA(long ptr)
+ # @ stub FindNextFileNameW
+@@ -533,6 +532,7 @@
+ @ stub -i386 FreeLSCallback
+ @ stdcall FreeLibrary(long)
+ @ stdcall FreeLibraryAndExitThread(long long)
++@ stdcall FreeLibraryWhenCallbackReturns(ptr ptr) ntdll.TpCallbackUnloadDllOnCompletion
+ @ stdcall FreeResource(long)
+ @ stdcall -i386 -private FreeSLCallback(long) krnl386.exe16.FreeSLCallback
+ @ stub FreeUserPhysicalPages
+@@ -980,7 +980,7 @@
+ @ stub -i386 IsSLCallback
+ @ stdcall IsSystemResumeAutomatic()
+ @ stdcall IsThreadAFiber()
+-# @ stub IsThreadpoolTimerSet
++@ stdcall IsThreadpoolTimerSet(ptr) ntdll.TpIsTimerSet
+ # @ stub IsTimeZoneRedirectionEnabled
+ # @ stub IsValidCalDateTime
+ @ stdcall IsValidCodePage(long)
+@@ -1034,7 +1034,7 @@
+ @ stdcall LZSeek(long long long)
+ @ stdcall LZStart()
+ @ stdcall LeaveCriticalSection(ptr) ntdll.RtlLeaveCriticalSection
+-# @ stub LeaveCriticalSectionWhenCallbackReturns
++@ stdcall LeaveCriticalSectionWhenCallbackReturns(ptr ptr) ntdll.TpCallbackLeaveCriticalSectionOnCompletion
+ # @ stub LoadAppInitDlls
+ @ stdcall LoadLibraryA(str)
+ @ stdcall LoadLibraryExA( str long long)
+@@ -1251,9 +1251,9 @@
+ @ stdcall ReinitializeCriticalSection(ptr)
+ @ stdcall ReleaseActCtx(ptr)
+ @ stdcall ReleaseMutex(long)
+-# @ stub ReleaseMutexWhenCallbackReturns
++@ stdcall ReleaseMutexWhenCallbackReturns(ptr long) ntdll.TpCallbackReleaseMutexOnCompletion
+ @ stdcall ReleaseSemaphore(long long ptr)
+-# @ stub ReleaseSemaphoreWhenCallbackReturns
++@ stdcall ReleaseSemaphoreWhenCallbackReturns(ptr long long) ntdll.TpCallbackReleaseSemaphoreOnCompletion
+ @ stdcall ReleaseSRWLockExclusive(ptr) ntdll.RtlReleaseSRWLockExclusive
+ @ stdcall ReleaseSRWLockShared(ptr) ntdll.RtlReleaseSRWLockShared
+ @ stdcall RemoveDirectoryA(str)
+@@ -1384,7 +1384,7 @@
+ @ stdcall SetEnvironmentVariableW(wstr wstr)
+ @ stdcall SetErrorMode(long)
+ @ stdcall SetEvent(long)
+-# @ stub SetEventWhenCallbackReturns
++@ stdcall SetEventWhenCallbackReturns(ptr long) ntdll.TpCallbackSetEventOnCompletion
+ @ stdcall SetFileApisToANSI()
+ @ stdcall SetFileApisToOEM()
+ @ stdcall SetFileAttributesA(str long)
+@@ -1453,9 +1453,9 @@
+ # @ stub SetThreadToken
+ @ stdcall SetThreadUILanguage(long)
+ # @ stub SetThreadpoolStackInformation
+-# @ stub SetThreadpoolThreadMaximum
+-# @ stub SetThreadpoolThreadMinimum
+-# @ stub SetThreadpoolTimer
++@ stdcall SetThreadpoolThreadMaximum(ptr long) ntdll.TpSetPoolMaxThreads
++@ stdcall SetThreadpoolThreadMinimum(ptr long) ntdll.TpSetPoolMinThreads
++@ stdcall SetThreadpoolTimer(ptr ptr long long)
+ # @ stub SetThreadpoolWait
+ @ stdcall SetTimeZoneInformation(ptr)
+ @ stub SetTimerQueueTimer
+@@ -1481,7 +1481,7 @@
+ # @ stub SortCloseHandle
+ # @ stub SortGetHandle
+ # @ stub StartThreadpoolIo
+-# @ stub SubmitThreadpoolWork
++@ stdcall SubmitThreadpoolWork(ptr) ntdll.TpPostWork
+ @ stdcall SuspendThread(long)
+ @ stdcall SwitchToFiber(ptr)
+ @ stdcall SwitchToThread()
+@@ -1508,7 +1508,7 @@
+ @ stdcall TryAcquireSRWLockExclusive(ptr) ntdll.RtlTryAcquireSRWLockExclusive
+ @ stdcall TryAcquireSRWLockShared(ptr) ntdll.RtlTryAcquireSRWLockShared
+ @ stdcall TryEnterCriticalSection(ptr) ntdll.RtlTryEnterCriticalSection
+-# @ stub TrySubmitThreadpoolCallback
++@ stdcall TrySubmitThreadpoolCallback(ptr ptr ptr) ntdll.TpSimpleTryPost
+ @ stdcall TzSpecificLocalTimeToSystemTime(ptr ptr ptr)
+ # @ stub TzSpecificLocalTimeToSystemTimeEx
+ # @ stub -arch=x86_64 uaw_lstrcmpW
+@@ -1570,9 +1570,9 @@
+ @ stdcall WaitForSingleObject(long long)
+ @ stdcall WaitForSingleObjectEx(long long long)
+ # @ stub WaitForThreadpoolIoCallbacks
+-# @ stub WaitForThreadpoolTimerCallbacks
++@ stdcall WaitForThreadpoolTimerCallbacks(ptr long) ntdll.TpWaitForTimer
+ # @ stub WaitForThreadpoolWaitCallbacks
+-# @ stub WaitForThreadpoolWorkCallbacks
++@ stdcall WaitForThreadpoolWorkCallbacks(ptr long) ntdll.TpWaitForWork
+ @ stdcall WaitNamedPipeA (str long)
+ @ stdcall WaitNamedPipeW (wstr long)
+ @ stdcall WakeAllConditionVariable(ptr) ntdll.RtlWakeAllConditionVariable
+diff --git a/dlls/kernel32/tests/thread.c b/dlls/kernel32/tests/thread.c
+index d3ecd2a..25801b2 100644
+--- a/dlls/kernel32/tests/thread.c
++++ b/dlls/kernel32/tests/thread.c
+@@ -1627,8 +1627,8 @@ static void test_threadpool(void)
+     int workcalled = 0;
+ 
+     if (!pCreateThreadpool) {
+-        todo_wine win_skip("thread pool apis not supported.\n");
+-	return;
++        win_skip("thread pool apis not supported.\n");
++        return;
+     }
+ 
+     work = pCreateThreadpoolWork(threadpool_workcallback, &workcalled, NULL);
+@@ -1640,7 +1640,7 @@ static void test_threadpool(void)
+     ok (workcalled == 1, "expected work to be called once, got %d\n", workcalled);
+ 
+     pool = pCreateThreadpool(NULL);
+-    todo_wine ok (pool != NULL, "CreateThreadpool failed\n");
++    ok (pool != NULL, "CreateThreadpool failed\n");
+ }
+ 
+ static void test_reserved_tls(void)
+diff --git a/dlls/kernel32/thread.c b/dlls/kernel32/thread.c
+index 0abfdf1..085b011 100644
+--- a/dlls/kernel32/thread.c
++++ b/dlls/kernel32/thread.c
+@@ -831,3 +831,104 @@ BOOL WINAPI GetThreadPreferredUILanguages( DWORD flags, PULONG count, PCZZWSTR b
+     *buffersize = 0;
+     return TRUE;
+ }
++
++/***********************************************************************
++ *              CreateThreadpool (KERNEL32.@)
++ */
++PTP_POOL WINAPI CreateThreadpool( PVOID reserved )
++{
++    TP_POOL *pool;
++    NTSTATUS status;
++
++    TRACE( "%p\n", reserved );
++
++    status = TpAllocPool( &pool, reserved );
++    if (status)
++    {
++        SetLastError( RtlNtStatusToDosError(status) );
++        return NULL;
++    }
++
++    return pool;
++}
++
++/***********************************************************************
++ *              CreateThreadpoolCleanupGroup (KERNEL32.@)
++ */
++PTP_CLEANUP_GROUP WINAPI CreateThreadpoolCleanupGroup( void )
++{
++    TP_CLEANUP_GROUP *group;
++    NTSTATUS status;
++
++    TRACE( "\n" );
++
++    status = TpAllocCleanupGroup( &group );
++    if (status)
++    {
++        SetLastError( RtlNtStatusToDosError(status) );
++        return NULL;
++    }
++
++    return group;
++}
++
++/***********************************************************************
++ *              CreateThreadpoolTimer (KERNEL32.@)
++ */
++PTP_TIMER WINAPI CreateThreadpoolTimer( PTP_TIMER_CALLBACK callback, PVOID userdata,
++                                        TP_CALLBACK_ENVIRON *environment )
++{
++    TP_TIMER *timer;
++    NTSTATUS status;
++
++    TRACE( "%p, %p, %p\n", callback, userdata, environment );
++
++    status = TpAllocTimer( &timer, callback, userdata, environment );
++    if (status)
++    {
++        SetLastError( RtlNtStatusToDosError(status) );
++        return NULL;
++    }
++
++    return timer;
++}
++
++/***********************************************************************
++ *              CreateThreadpoolWork (KERNEL32.@)
++ */
++PTP_WORK WINAPI CreateThreadpoolWork( PTP_WORK_CALLBACK callback, PVOID userdata,
++                                      TP_CALLBACK_ENVIRON *environment )
++{
++    TP_WORK *work;
++    NTSTATUS status;
++
++    TRACE( "%p, %p, %p\n", callback, userdata, environment );
++
++    status = TpAllocWork( &work, callback, userdata, environment );
++    if (status)
++    {
++        SetLastError( RtlNtStatusToDosError(status) );
++        return NULL;
++    }
++
++    return work;
++}
++
++/***********************************************************************
++ *              SetThreadpoolTimer (KERNEL32.@)
++ */
++VOID WINAPI SetThreadpoolTimer( TP_TIMER *timer, FILETIME *due_time,
++                                DWORD period, DWORD window_length )
++{
++    LARGE_INTEGER timeout;
++
++    TRACE( "%p, %p, %u, %u\n", timer, due_time, period, window_length );
++
++    if (due_time)
++    {
++        timeout.u.LowPart = due_time->dwLowDateTime;
++        timeout.u.HighPart = due_time->dwHighDateTime;
++    }
++
++    TpSetTimer( timer, due_time ? &timeout : NULL, period, window_length );
++}
+diff --git a/include/winternl.h b/include/winternl.h
+index 1a694da..a534bd1 100644
+--- a/include/winternl.h
++++ b/include/winternl.h
+@@ -2599,6 +2599,33 @@ NTSYSAPI LONGLONG  WINAPI RtlLargeIntegerSubtract(LONGLONG,LONGLONG);
+ NTSYSAPI NTSTATUS  WINAPI RtlLargeIntegerToChar(const ULONGLONG *,ULONG,ULONG,PCHAR);
+ #endif
+ 
++/* Threadpool functions */
++
++NTSYSAPI NTSTATUS  WINAPI TpAllocCleanupGroup(TP_CLEANUP_GROUP **);
++NTSYSAPI NTSTATUS  WINAPI TpAllocPool(TP_POOL **,PVOID);
++NTSYSAPI NTSTATUS  WINAPI TpAllocTimer(TP_TIMER **,PTP_TIMER_CALLBACK,PVOID,TP_CALLBACK_ENVIRON *);
++NTSYSAPI NTSTATUS  WINAPI TpAllocWork(TP_WORK **,PTP_WORK_CALLBACK,PVOID,TP_CALLBACK_ENVIRON *);
++NTSYSAPI void      WINAPI TpCallbackLeaveCriticalSectionOnCompletion(TP_CALLBACK_INSTANCE *,RTL_CRITICAL_SECTION *);
++NTSYSAPI NTSTATUS  WINAPI TpCallbackMayRunLong(TP_CALLBACK_INSTANCE *);
++NTSYSAPI void      WINAPI TpCallbackReleaseMutexOnCompletion(TP_CALLBACK_INSTANCE *,HANDLE);
++NTSYSAPI void      WINAPI TpCallbackReleaseSemaphoreOnCompletion(TP_CALLBACK_INSTANCE *,HANDLE,DWORD);
++NTSYSAPI void      WINAPI TpCallbackSetEventOnCompletion(TP_CALLBACK_INSTANCE *,HANDLE);
++NTSYSAPI void      WINAPI TpCallbackUnloadDllOnCompletion(TP_CALLBACK_INSTANCE *,HMODULE);
++NTSYSAPI void      WINAPI TpDisassociateCallback(TP_CALLBACK_INSTANCE *);
++NTSYSAPI BOOL      WINAPI TpIsTimerSet(TP_TIMER *);
++NTSYSAPI void      WINAPI TpPostWork(TP_WORK *);
++NTSYSAPI void      WINAPI TpReleaseCleanupGroup(TP_CLEANUP_GROUP *);
++NTSYSAPI void      WINAPI TpReleaseCleanupGroupMembers(TP_CLEANUP_GROUP *,BOOL,PVOID);
++NTSYSAPI void      WINAPI TpReleasePool(TP_POOL *);
++NTSYSAPI void      WINAPI TpReleaseTimer(TP_TIMER *);
++NTSYSAPI void      WINAPI TpReleaseWork(TP_WORK *);
++NTSYSAPI void      WINAPI TpSetPoolMaxThreads(TP_POOL *,DWORD);
++NTSYSAPI BOOL      WINAPI TpSetPoolMinThreads(TP_POOL *,DWORD);
++NTSYSAPI void      WINAPI TpSetTimer(TP_TIMER *, LARGE_INTEGER *,LONG,LONG);
++NTSYSAPI NTSTATUS  WINAPI TpSimpleTryPost(PTP_SIMPLE_CALLBACK,PVOID,TP_CALLBACK_ENVIRON *);
++NTSYSAPI void      WINAPI TpWaitForTimer(TP_TIMER *,BOOL);
++NTSYSAPI void      WINAPI TpWaitForWork(TP_WORK *,BOOL);
++
+ /* Wine internal functions */
+ 
+ NTSYSAPI NTSTATUS CDECL wine_nt_to_unix_file_name( const UNICODE_STRING *nameW, ANSI_STRING *unix_name_ret,
+-- 
+2.2.2
+

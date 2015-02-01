@@ -1,0 +1,1077 @@
+From ceedfdb35e4ee398e3a36aba16778a1fa0d3d58a Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 1 Feb 2015 17:38:16 +0100
+Subject: ntdll: Implement threadpool, cleanup group and callback instance
+ functions.
+
+---
+ dlls/ntdll/Makefile.in   |   1 +
+ dlls/ntdll/ntdll.spec    |  30 +-
+ dlls/ntdll/threadpool2.c | 966 +++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 982 insertions(+), 15 deletions(-)
+ create mode 100644 dlls/ntdll/threadpool2.c
+
+diff --git a/dlls/ntdll/Makefile.in b/dlls/ntdll/Makefile.in
+index ed4bb94..2cecac6 100644
+--- a/dlls/ntdll/Makefile.in
++++ b/dlls/ntdll/Makefile.in
+@@ -47,6 +47,7 @@ C_SRCS = \
+ 	tape.c \
+ 	thread.c \
+ 	threadpool.c \
++	threadpool2.c \
+ 	time.c \
+ 	version.c \
+ 	virtual.c \
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index 771f669..256ec6d 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -969,10 +969,10 @@
+ @ stdcall RtlxUnicodeStringToOemSize(ptr) RtlUnicodeStringToOemSize
+ # @ stub TpAllocAlpcCompletion
+ # @ stub TpAllocAlpcCompletionEx
+-# @ stub TpAllocCleanupGroup
++@ stdcall TpAllocCleanupGroup(ptr)
+ # @ stub TpAllocIoCompletion
+ # @ stub TpAllocJobNotification
+-# @ stub TpAllocPool
++@ stdcall TpAllocPool(ptr ptr)
+ # @ stub TpAllocTimer
+ # @ stub TpAllocWait
+ # @ stub TpAllocWork
+@@ -980,38 +980,38 @@
+ # @ stub TpAlpcUnregisterCompletionList
+ # @ stub TpCallbackDetectedUnrecoverableError
+ # @ stub TpCallbackIndependent
+-# @ stub TpCallbackLeaveCriticalSectionOnCompletion
+-# @ stub TpCallbackMayRunLong
+-# @ stub TpCallbackReleaseMutexOnCompletion
+-# @ stub TpCallbackReleaseSemaphoreOnCompletion
++@ stdcall TpCallbackLeaveCriticalSectionOnCompletion(ptr ptr)
++@ stdcall TpCallbackMayRunLong(ptr)
++@ stdcall TpCallbackReleaseMutexOnCompletion(ptr long)
++@ stdcall TpCallbackReleaseSemaphoreOnCompletion(ptr long long)
+ # @ stub TpCallbackSendAlpcMessageOnCompletion
+ # @ stub TpCallbackSendPendingAlpcMessage
+-# @ stub TpCallbackSetEventOnCompletion
+-# @ stub TpCallbackUnloadDllOnCompletion
++@ stdcall TpCallbackSetEventOnCompletion(ptr long)
++@ stdcall TpCallbackUnloadDllOnCompletion(ptr long)
+ # @ stub TpCancelAsyncIoOperation
+ # @ stub TpCaptureCaller
+ # @ stub TpCheckTerminateWorker
+ # @ stub TpDbgDumpHeapUsage
+ # @ stub TpDbgSetLogRoutine
+ # @ stub TpDisablePoolCallbackChecks
+-# @ stub TpDisassociateCallback
++@ stdcall TpDisassociateCallback(ptr)
+ # @ stub TpIsTimerSet
+ # @ stub TpPostWork
+ # @ stub TpQueryPoolStackInformation
+ # @ stub TpReleaseAlpcCompletion
+-# @ stub TpReleaseCleanupGroup
+-# @ stub TpReleaseCleanupGroupMembers
++@ stdcall TpReleaseCleanupGroup(ptr)
++@ stdcall TpReleaseCleanupGroupMembers(ptr long ptr)
+ # @ stub TpReleaseIoCompletion
+ # @ stub TpReleaseJobNotification
+-# @ stub TpReleasePool
++@ stdcall TpReleasePool(ptr)
+ # @ stub TpReleaseTimer
+ # @ stub TpReleaseWait
+ # @ stub TpReleaseWork
+ # @ stub TpSetDefaultPoolMaxThreads
+ # @ stub TpSetDefaultPoolStackInformation
+-# @ stub TpSetPoolMaxThreads
++@ stdcall TpSetPoolMaxThreads(ptr long)
+ # @ stub TpSetPoolMaxThreadsSoftLimit
+-# @ stub TpSetPoolMinThreads
++@ stdcall TpSetPoolMinThreads(ptr long)
+ # @ stub TpSetPoolStackInformation
+ # @ stub TpSetPoolThreadBasePriority
+ # @ stub TpSetPoolWorkerThreadIdleTimeout
+@@ -1019,7 +1019,7 @@
+ # @ stub TpSetTimerEx
+ # @ stub TpSetWait
+ # @ stub TpSetWaitEx
+-# @ stub TpSimpleTryPost
++@ stdcall TpSimpleTryPost(ptr ptr ptr)
+ # @ stub TpStartAsyncIoOperation
+ # @ stub TpTimerOutstandingCallbackCount
+ # @ stub TpTrimPools
+diff --git a/dlls/ntdll/threadpool2.c b/dlls/ntdll/threadpool2.c
+new file mode 100644
+index 0000000..c4f54af
+--- /dev/null
++++ b/dlls/ntdll/threadpool2.c
+@@ -0,0 +1,966 @@
++/*
++ * Vista Threadpool implementation
++ *
++ * Copyright 2014-2015 Sebastian Lackner
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "config.h"
++#include "wine/port.h"
++
++#include <assert.h>
++#include <stdarg.h>
++#include <limits.h>
++
++#define NONAMELESSUNION
++#include "ntstatus.h"
++#define WIN32_NO_STATUS
++#include "winternl.h"
++
++#include "wine/debug.h"
++#include "wine/list.h"
++
++#include "ntdll_misc.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(threadpool);
++
++/* Besides winetests the following resources were used to implement some
++ * internal details of the threadpool implementation:
++ *
++ *   [1] Concurrent Programming on Windows, by Joe Duffy
++ */
++
++static inline LONG interlocked_inc( PLONG dest )
++{
++    return interlocked_xchg_add( dest, 1 ) + 1;
++}
++
++static inline LONG interlocked_dec( PLONG dest )
++{
++    return interlocked_xchg_add( dest, -1 ) - 1;
++}
++
++#define THREADPOOL_WORKER_TIMEOUT 5000
++
++/* allocated on the stack while a callback is running */
++struct threadpool_instance
++{
++    struct threadpool_object *object;
++    DWORD threadid;
++    LONG disassociated;
++    LONG may_run_long;
++
++    /* cleanup actions */
++    struct
++    {
++        CRITICAL_SECTION *critical_section;
++        HANDLE mutex;
++        HANDLE semaphore;
++        LONG   semaphore_count;
++        HANDLE event;
++        HMODULE library;
++    } cleanup;
++};
++
++/* internal threadpool representation */
++struct threadpool
++{
++    LONG refcount;
++    BOOL shutdown;
++    CRITICAL_SECTION cs;
++
++    /* user-defined preferences for number of works */
++    int max_workers;
++    int min_workers;
++
++    /* pool of work items, locked via .cs */
++    struct list pool;
++    RTL_CONDITION_VARIABLE update_event;
++
++    /* information about worker threads, locked via .cs */
++    int num_workers;
++    int num_busy_workers;
++};
++
++/* internal threadpool object representation */
++struct threadpool_object
++{
++    LONG refcount;
++    BOOL shutdown;
++
++    /* read-only information */
++    struct threadpool *pool;
++    struct threadpool_group *group;
++    PVOID userdata;
++    PTP_CLEANUP_GROUP_CANCEL_CALLBACK group_cancel_callback;
++    PTP_SIMPLE_CALLBACK finalization_callback;
++    LONG may_run_long;
++    HMODULE race_dll;
++
++    /* information about the group, locked via .group->cs */
++    struct list group_entry; /* only used when .group != NULL */
++
++    /* information about the pool, locked via .pool->cs */
++    struct list pool_entry;  /* only used when .num_pending_callbacks != 0 */
++    LONG num_pending_callbacks;
++    LONG num_running_callbacks;
++    RTL_CONDITION_VARIABLE finished_event;
++
++    /* type of this object */
++    enum
++    {
++        TP_OBJECT_TYPE_UNDEFINED,
++        TP_OBJECT_TYPE_SIMPLE
++    } type;
++
++    /* arguments for callback */
++    union
++    {
++        /* simple callback */
++        struct
++        {
++            PTP_SIMPLE_CALLBACK callback;
++        } simple;
++    } u;
++};
++
++/* internal threadpool group representation */
++struct threadpool_group
++{
++    LONG refcount;
++    BOOL shutdown;
++    CRITICAL_SECTION cs;
++
++    /* locked via .cs */
++    struct list members;
++};
++
++static inline struct threadpool *impl_from_TP_POOL( TP_POOL *pool )
++{
++    return (struct threadpool *)pool;
++}
++
++static inline struct threadpool_group *impl_from_TP_CLEANUP_GROUP( TP_CLEANUP_GROUP *group )
++{
++    return (struct threadpool_group *)group;
++}
++
++static inline struct threadpool_instance *impl_from_TP_CALLBACK_INSTANCE( TP_CALLBACK_INSTANCE *instance )
++{
++    return (struct threadpool_instance *)instance;
++}
++
++static void CALLBACK threadpool_worker_proc( void *param );
++
++static NTSTATUS tp_threadpool_alloc( struct threadpool **out );
++static BOOL tp_threadpool_release( struct threadpool *pool );
++static void tp_threadpool_shutdown( struct threadpool *pool );
++
++static NTSTATUS tp_object_submit( struct threadpool_object *object );
++static BOOL tp_object_release( struct threadpool_object *object );
++static void tp_object_shutdown( struct threadpool_object *object );
++
++static BOOL tp_group_release( struct threadpool_group *group );
++
++/***********************************************************************
++ * THREADPOOL INSTANCE IMPLEMENTATION
++ ***********************************************************************/
++
++static void tp_instance_initialize( struct threadpool_instance *instance, struct threadpool_object *object )
++{
++    instance->object                    = object;
++    instance->threadid                  = GetCurrentThreadId();
++    instance->disassociated             = FALSE;
++    instance->may_run_long              = object->may_run_long;
++    instance->cleanup.critical_section  = NULL;
++    instance->cleanup.mutex             = NULL;
++    instance->cleanup.semaphore         = NULL;
++    instance->cleanup.semaphore_count   = 0;
++    instance->cleanup.event             = NULL;
++    instance->cleanup.library           = NULL;
++}
++
++static NTSTATUS tp_instance_cleanup( struct threadpool_instance *instance )
++{
++    NTSTATUS status;
++
++    /* According to [1] subsequent functions are not executed if one of the
++     * cleanup steps fails. The order is also based on the description in [1]. */
++    if (instance->cleanup.critical_section)
++    {
++        RtlLeaveCriticalSection( instance->cleanup.critical_section );
++    }
++    if (instance->cleanup.mutex)
++    {
++        status = NtReleaseMutant( instance->cleanup.mutex, NULL );
++        if (status != STATUS_SUCCESS)
++            return status;
++    }
++    if (instance->cleanup.semaphore)
++    {
++        status = NtReleaseSemaphore( instance->cleanup.semaphore, instance->cleanup.semaphore_count, NULL );
++        if (status != STATUS_SUCCESS)
++            return status;
++    }
++    if (instance->cleanup.event)
++    {
++        status = NtSetEvent( instance->cleanup.event, NULL );
++        if (status != STATUS_SUCCESS)
++            return status;
++    }
++    if (instance->cleanup.library)
++    {
++        status = LdrUnloadDll( instance->cleanup.library );
++        if (status != STATUS_SUCCESS)
++            return status;
++    }
++
++    return STATUS_SUCCESS;
++}
++
++static void tp_instance_disassociate_thread( struct threadpool_instance *instance )
++{
++    struct threadpool_object *object;
++    struct threadpool *pool;
++
++    if (instance->threadid != GetCurrentThreadId())
++    {
++        ERR("called from wrong thread, ignoring\n");
++        return;
++    }
++    if (instance->disassociated)
++        return;
++
++    object = instance->object;
++    pool   = object->pool;
++    RtlEnterCriticalSection( &pool->cs );
++
++    object->num_running_callbacks--;
++    if (!object->num_pending_callbacks && !object->num_running_callbacks)
++        RtlWakeAllConditionVariable( &object->finished_event );
++
++    RtlLeaveCriticalSection( &pool->cs );
++    instance->disassociated = TRUE;
++}
++
++static BOOL tp_instance_may_run_long( struct threadpool_instance *instance )
++{
++    struct threadpool_object *object;
++    struct threadpool *pool;
++    NTSTATUS status = STATUS_SUCCESS;
++
++    if (instance->threadid != GetCurrentThreadId())
++    {
++        ERR("called from wrong thread, ignoring\n");
++        return FALSE;
++    }
++    if (instance->may_run_long)
++        return TRUE;
++
++    object = instance->object;
++    pool   = object->pool;
++    RtlEnterCriticalSection( &pool->cs );
++
++    if (pool->num_busy_workers >= pool->num_workers && pool->num_workers < pool->max_workers)
++    {
++        HANDLE thread;
++        status = RtlCreateUserThread( GetCurrentProcess(), NULL, FALSE, NULL, 0, 0,
++                                      threadpool_worker_proc, pool, &thread, NULL );
++        if (status == STATUS_SUCCESS)
++        {
++            interlocked_inc( &pool->refcount );
++            pool->num_workers++;
++            NtClose( thread );
++        }
++    }
++
++    RtlLeaveCriticalSection( &pool->cs );
++    instance->may_run_long = TRUE;
++    return !status;
++}
++
++/***********************************************************************
++ * THREADPOOL IMPLEMENTATION
++ ***********************************************************************/
++
++static struct threadpool *default_threadpool = NULL;
++static struct threadpool *get_default_threadpool( void )
++{
++    if (!default_threadpool)
++    {
++        struct threadpool *pool;
++
++        if (tp_threadpool_alloc( &pool ) != STATUS_SUCCESS)
++            return NULL;
++
++        if (interlocked_cmpxchg_ptr( (void *)&default_threadpool, pool, NULL ) != NULL)
++        {
++            tp_threadpool_shutdown( pool );
++            tp_threadpool_release( pool );
++        }
++    }
++    return default_threadpool;
++}
++
++static NTSTATUS tp_threadpool_alloc( struct threadpool **out )
++{
++    struct threadpool *pool;
++
++    pool = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*pool) );
++    if (!pool)
++        return STATUS_NO_MEMORY;
++
++    pool->refcount              = 1;
++    pool->shutdown              = FALSE;
++
++    RtlInitializeCriticalSection( &pool->cs );
++    pool->cs.DebugInfo->Spare[0] = (DWORD_PTR)(__FILE__ ": threadpool.cs");
++
++    list_init( &pool->pool );
++    RtlInitializeConditionVariable( &pool->update_event );
++
++    pool->max_workers           = 500;
++    pool->min_workers           = 1;
++
++    pool->num_workers           = 0;
++    pool->num_busy_workers      = 0;
++
++    TRACE("allocated threadpool %p\n", pool);
++
++    *out = pool;
++    return STATUS_SUCCESS;
++}
++
++static BOOL tp_threadpool_release( struct threadpool *pool )
++{
++    if (interlocked_dec( &pool->refcount ))
++        return FALSE;
++
++    TRACE("destroying threadpool %p\n", pool);
++
++    assert( pool != default_threadpool );
++    assert( pool->shutdown );
++    assert( list_empty( &pool->pool ) );
++
++    pool->cs.DebugInfo->Spare[0] = 0;
++    RtlDeleteCriticalSection( &pool->cs );
++
++    RtlFreeHeap( GetProcessHeap(), 0, pool );
++    return TRUE;
++}
++
++static void tp_threadpool_shutdown( struct threadpool *pool )
++{
++    assert( pool != default_threadpool );
++
++    pool->shutdown = TRUE;
++    RtlWakeAllConditionVariable( &pool->update_event );
++}
++
++static void CALLBACK threadpool_worker_proc( void *param )
++{
++    struct threadpool *pool = param;
++    LARGE_INTEGER timeout;
++    struct list *ptr;
++
++    RtlEnterCriticalSection( &pool->cs );
++    for (;;)
++    {
++        while ((ptr = list_head( &pool->pool )))
++        {
++            struct threadpool_object *object = LIST_ENTRY( ptr, struct threadpool_object, pool_entry );
++            struct threadpool_instance instance;
++            assert( object->num_pending_callbacks > 0 );
++
++            /* If further pending callbacks are queued, move the work item to
++             * the end of the pool list. Otherwise remove it from the pool. */
++            list_remove( &object->pool_entry );
++            if (--object->num_pending_callbacks)
++                list_add_tail( &pool->pool, &object->pool_entry );
++            object->num_running_callbacks++;
++
++            /* Leave critical section and do the actual callback. */
++            pool->num_busy_workers++;
++            RtlLeaveCriticalSection( &pool->cs );
++            tp_instance_initialize( &instance, object );
++
++            /* Execute regular worker callback */
++            switch (object->type)
++            {
++                case TP_OBJECT_TYPE_SIMPLE:
++                {
++                    TP_CALLBACK_INSTANCE *cb_instance = (TP_CALLBACK_INSTANCE *)&instance;
++                    TRACE( "executing callback %p(%p, %p)\n",
++                           object->u.simple.callback, cb_instance, object->userdata );
++                    object->u.simple.callback( cb_instance, object->userdata );
++                    TRACE( "callback %p returned\n", object->u.simple.callback );
++                    break;
++                }
++
++                default:
++                    FIXME( "callback type %u not implemented\n", object->type );
++                    break;
++            }
++
++            /* Execute finalization callback */
++            if (object->finalization_callback)
++            {
++                TP_CALLBACK_INSTANCE *cb_instance = (TP_CALLBACK_INSTANCE *)&instance;
++                TRACE( "executing finalization callback %p(%p, %p)\n",
++                       object->finalization_callback, cb_instance, object->userdata );
++                object->finalization_callback( cb_instance, object->userdata );
++                TRACE( "finalization callback %p returned\n", object->finalization_callback );
++            }
++
++            /* Clean up any other resources */
++            tp_instance_cleanup( &instance );
++            RtlEnterCriticalSection( &pool->cs );
++            pool->num_busy_workers--;
++
++            /* If instance was not disassociated, then wake up waiting objects. */
++            if (!instance.disassociated)
++            {
++                object->num_running_callbacks--;
++                if (!object->num_pending_callbacks && !object->num_running_callbacks)
++                    RtlWakeAllConditionVariable( &object->finished_event );
++            }
++
++            tp_object_release( object );
++        }
++
++        /* Shutdown worker thread if requested. */
++        if (pool->shutdown)
++            break;
++
++        /* Wait for new tasks or until timeout expires. */
++        timeout.QuadPart = (ULONGLONG)THREADPOOL_WORKER_TIMEOUT * -10000;
++        if (RtlSleepConditionVariableCS( &pool->update_event, &pool->cs,
++            &timeout ) == STATUS_TIMEOUT && !list_head( &pool->pool ))
++        {
++            break;
++        }
++    }
++    pool->num_workers--;
++    RtlLeaveCriticalSection( &pool->cs );
++    tp_threadpool_release( pool );
++}
++
++/***********************************************************************
++ * THREADPOOL OBJECT IMPLEMENTATION
++ ***********************************************************************/
++
++static void tp_object_initialize( struct threadpool_object *object, struct threadpool *pool,
++                                  PVOID userdata, TP_CALLBACK_ENVIRON *environment )
++{
++    object->refcount                = 1;
++    object->shutdown                = FALSE;
++
++    /* Read-only information */
++    object->pool                    = pool;
++    object->group                   = NULL;
++    object->userdata                = userdata;
++    object->group_cancel_callback   = NULL;
++    object->finalization_callback   = NULL;
++    object->may_run_long            = 0;
++    object->race_dll                = NULL;
++
++    /* Information about the group */
++    memset( &object->group_entry, 0, sizeof(object->group_entry) );
++
++    /* Information about the pool */
++    memset( &object->pool_entry, 0, sizeof(object->pool_entry) );
++    object->num_pending_callbacks      = 0;
++    object->num_running_callbacks      = 0;
++    RtlInitializeConditionVariable( &object->finished_event );
++
++    /* Set properties according to environment, if given */
++    if (environment)
++    {
++
++        /* Windows doesn't abort when the version field contains garbage */
++        if (environment->Version != 1)
++            FIXME("unsupported environment version %d\n", environment->Version);
++
++        /* object->pool was already set */
++        object->group                   = impl_from_TP_CLEANUP_GROUP( environment->CleanupGroup );
++        object->group_cancel_callback   = environment->CleanupGroupCancelCallback;
++        object->finalization_callback   = environment->FinalizationCallback;
++        object->may_run_long            = environment->u.s.LongFunction != 0;
++        object->race_dll                = environment->RaceDll;
++
++        if (environment->ActivationContext)
++            FIXME("activation context not supported yet\n");
++
++        if (environment->u.s.Persistent)
++            FIXME("persistent thread support not supported yet\n");
++    }
++
++    /* Increase dll refcount */
++    if (object->race_dll)
++        LdrAddRefDll( 0, object->race_dll );
++
++    /* Increase reference-count on the pool */
++    interlocked_inc( &pool->refcount );
++
++    /* Assign this object to a specific group. Please note that this has to be done
++     * as the last step before returning a pointer to the application, otherwise
++     * there is a risk of having race-conditions. */
++    if (object->group)
++    {
++        struct threadpool_group *group = object->group;
++        interlocked_inc( &group->refcount );
++
++        RtlEnterCriticalSection( &group->cs );
++        list_add_tail( &group->members, &object->group_entry );
++        RtlLeaveCriticalSection( &group->cs );
++    }
++}
++
++static NTSTATUS tp_object_alloc_simple( struct threadpool_object **out, PTP_SIMPLE_CALLBACK callback,
++                                        PVOID userdata, TP_CALLBACK_ENVIRON *environment )
++{
++    struct threadpool_object *object;
++    struct threadpool *pool;
++
++    /* determine threadpool */
++    pool = environment ? (struct threadpool *)environment->Pool : NULL;
++    if (!pool) pool = get_default_threadpool();
++    if (!pool) return STATUS_NO_MEMORY;
++
++    object = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*object) );
++    if (!object)
++        return STATUS_NO_MEMORY;
++
++    object->type = TP_OBJECT_TYPE_SIMPLE;
++    object->u.simple.callback = callback;
++    tp_object_initialize( object, pool, userdata, environment );
++
++    TRACE("allocated object %p of type %u\n", object, object->type);
++
++    *out = object;
++    return STATUS_SUCCESS;
++}
++
++static BOOL tp_object_release( struct threadpool_object *object )
++{
++    struct threadpool_group *group;
++
++    if (interlocked_dec( &object->refcount ))
++        return FALSE;
++
++    TRACE("destroying object %p of type %u\n", object, object->type);
++
++    assert( object->shutdown );
++    assert( !object->num_pending_callbacks );
++    assert( !object->num_running_callbacks );
++
++    /* release reference on the group */
++    if ((group = object->group))
++    {
++        RtlEnterCriticalSection( &group->cs );
++        list_remove( &object->group_entry );
++        RtlLeaveCriticalSection( &group->cs );
++        tp_group_release( group );
++    }
++
++    /* release reference to library */
++    if (object->race_dll)
++        LdrUnloadDll( object->race_dll );
++
++    /* release reference to threadpool */
++    tp_threadpool_release( object->pool );
++
++    RtlFreeHeap( GetProcessHeap(), 0, object );
++    return TRUE;
++}
++
++static void tp_object_shutdown( struct threadpool_object *object )
++{
++    object->shutdown = TRUE;
++}
++
++static void tp_object_cancel( struct threadpool_object *object, BOOL group_cancel, PVOID userdata )
++{
++    struct threadpool *pool = object->pool;
++    LONG pending_callbacks = 0;
++
++    /* Remove the pending callbacks from the pool */
++    RtlEnterCriticalSection( &pool->cs );
++    if (object->num_pending_callbacks)
++    {
++        pending_callbacks = object->num_pending_callbacks;
++        list_remove( &object->pool_entry );
++        object->num_pending_callbacks = 0;
++    }
++    RtlLeaveCriticalSection( &pool->cs );
++
++    /* Execute group cancellation callback if defined, and if this was actually a group cancel. */
++    if (pending_callbacks && group_cancel && object->group_cancel_callback)
++    {
++        TRACE( "executing group cancel callback %p(%p, %p)\n", object->group_cancel_callback, object, userdata );
++        object->group_cancel_callback( object, userdata );
++        TRACE( "group cancel callback %p returned\n", object->group_cancel_callback );
++    }
++
++    /* remove references for removed pending callbacks */
++    while (pending_callbacks--)
++        tp_object_release( object );
++}
++
++static void tp_object_wait( struct threadpool_object *object )
++{
++    struct threadpool *pool = object->pool;
++    RtlEnterCriticalSection( &pool->cs );
++
++    while (object->num_pending_callbacks || object->num_running_callbacks)
++        RtlSleepConditionVariableCS( &object->finished_event, &pool->cs, NULL );
++
++    RtlLeaveCriticalSection( &pool->cs );
++}
++
++static NTSTATUS tp_object_submit( struct threadpool_object *object )
++{
++    struct threadpool *pool = object->pool;
++    NTSTATUS status = STATUS_SUCCESS;
++
++    assert( !object->shutdown );
++    assert( !pool->shutdown );
++
++    RtlEnterCriticalSection( &pool->cs );
++
++    /* Start new worker threads if required (and allowed) */
++    if (pool->num_busy_workers >= pool->num_workers && pool->num_workers < pool->max_workers)
++    {
++        HANDLE thread;
++        status = RtlCreateUserThread( GetCurrentProcess(), NULL, FALSE, NULL, 0, 0,
++                                      threadpool_worker_proc, pool, &thread, NULL );
++        if (status == STATUS_SUCCESS)
++        {
++            interlocked_inc( &pool->refcount );
++            pool->num_workers++;
++            NtClose( thread );
++        }
++        else if (pool->num_workers)
++        {
++            RtlWakeConditionVariable( &pool->update_event );
++            status = STATUS_SUCCESS;
++        }
++    }
++    else RtlWakeConditionVariable( &pool->update_event );
++
++    /* Queue work item into pool and increment refcount */
++    if (!status)
++    {
++        if (!object->num_pending_callbacks++)
++            list_add_tail( &pool->pool, &object->pool_entry );
++
++        interlocked_inc(&object->refcount);
++    }
++
++    RtlLeaveCriticalSection( &pool->cs );
++    return status;
++}
++
++/***********************************************************************
++ * THREADPOOL GROUP IMPLEMENTATION
++ ***********************************************************************/
++
++static NTSTATUS tp_group_alloc( struct threadpool_group **out )
++{
++    struct threadpool_group *group;
++
++    group = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*group) );
++    if (!group)
++        return STATUS_NO_MEMORY;
++
++    group->refcount     = 1;
++    group->shutdown     = FALSE;
++
++    RtlInitializeCriticalSection( &group->cs );
++    group->cs.DebugInfo->Spare[0] = (DWORD_PTR)(__FILE__ ": threadpool_group.cs");
++
++    list_init( &group->members );
++
++    TRACE("allocated group %p\n", group);
++
++    *out = group;
++    return STATUS_SUCCESS;
++}
++
++static BOOL tp_group_release( struct threadpool_group *group )
++{
++    if (interlocked_dec( &group->refcount ))
++        return FALSE;
++
++    TRACE("destroying group %p\n", group);
++
++    assert( group->shutdown );
++    assert( list_empty( &group->members ) );
++
++    group->cs.DebugInfo->Spare[0] = 0;
++    RtlDeleteCriticalSection( &group->cs );
++
++    RtlFreeHeap( GetProcessHeap(), 0, group );
++    return TRUE;
++}
++
++static void tp_group_shutdown( struct threadpool_group *group )
++{
++    group->shutdown = TRUE;
++}
++
++static void tp_group_release_members( struct threadpool_group *group, BOOL cancel_pending, PVOID userdata )
++{
++    struct threadpool_object *object, *next;
++    struct list members;
++
++    /* We cannot keep the group locked until all tasks have finished.
++     * Create a temporary list containing all tasks which were member of the group. */
++
++    RtlEnterCriticalSection( &group->cs );
++    LIST_FOR_EACH_ENTRY( object, &group->members, struct threadpool_object, group_entry )
++    {
++        /* reset the group - objects do no longer to remove manually from the group on destruction. */
++        assert( object->group == group );
++        object->group = NULL;
++
++        /* Simple callbacks are very special. The user doesn't hold any reference, so
++         * they would be released too early. Add one additional temporary reference. */
++        if (object->type == TP_OBJECT_TYPE_SIMPLE)
++            interlocked_inc(&object->refcount);
++
++        /* Do not allow to submit new tasks for this object. */
++        tp_object_shutdown( object );
++    }
++
++    list_init( &members );
++    list_move_tail( &members, &group->members );
++    RtlLeaveCriticalSection( &group->cs );
++
++    /* Cancel pending tasks, execute the group cancel callback. */
++    if (cancel_pending)
++    {
++        LIST_FOR_EACH_ENTRY( object, &members, struct threadpool_object, group_entry )
++            tp_object_cancel( object, TRUE, userdata );
++    }
++
++    LIST_FOR_EACH_ENTRY_SAFE( object, next, &members, struct threadpool_object, group_entry )
++    {
++        /* Wait for tasks to finish, afterwards release one reference. This could destroy
++         * the object, so we use LIST_FOR_EACH_ENTRY_SAFE. If the object is not destroyed,
++         * then ->group_entry contains garbage, but that doesn't matter. It will not be
++         * used anymore because ->group == NULL. */
++        tp_object_wait( object );
++        tp_object_release( object );
++
++        /* Manually release the group reference */
++        tp_group_release( group );
++    }
++}
++
++
++
++/***********************************************************************
++ *           TpAllocCleanupGroup    (NTDLL.@)
++ */
++NTSTATUS WINAPI TpAllocCleanupGroup( TP_CLEANUP_GROUP **out )
++{
++    TRACE("%p\n", out);
++    if (!out) return STATUS_ACCESS_VIOLATION;
++    return tp_group_alloc( (struct threadpool_group **)out );
++}
++
++/***********************************************************************
++ *           TpAllocPool    (NTDLL.@)
++ */
++NTSTATUS WINAPI TpAllocPool( TP_POOL **out, PVOID reserved )
++{
++    TRACE("%p %p\n", out, reserved);
++    if (reserved) FIXME("reserved argument is nonzero (%p)", reserved);
++    if (!out) return STATUS_ACCESS_VIOLATION;
++    return tp_threadpool_alloc( (struct threadpool **)out );
++}
++
++/***********************************************************************
++ *           TpCallbackLeaveCriticalSectionOnCompletion    (NTDLL.@)
++ */
++VOID WINAPI TpCallbackLeaveCriticalSectionOnCompletion( TP_CALLBACK_INSTANCE *instance, CRITICAL_SECTION *crit )
++{
++    struct threadpool_instance *this = impl_from_TP_CALLBACK_INSTANCE( instance );
++    TRACE("%p %p\n", instance, crit);
++    if (!this) return;
++    if (this->cleanup.critical_section)
++        FIXME("attempt to set multiple cleanup critical sections\n");
++    else
++        this->cleanup.critical_section = crit;
++}
++
++/***********************************************************************
++ *           TpCallbackMayRunLong    (NTDLL.@)
++ */
++NTSTATUS WINAPI TpCallbackMayRunLong( TP_CALLBACK_INSTANCE *instance )
++{
++    struct threadpool_instance *this = impl_from_TP_CALLBACK_INSTANCE( instance );
++    TRACE("%p\n", instance);
++    if (!this) return STATUS_ACCESS_VIOLATION;
++    return tp_instance_may_run_long( this );
++}
++
++/***********************************************************************
++ *           TpCallbackReleaseMutexOnCompletion    (NTDLL.@)
++ */
++VOID WINAPI TpCallbackReleaseMutexOnCompletion( TP_CALLBACK_INSTANCE *instance, HANDLE mutex )
++{
++    struct threadpool_instance *this = impl_from_TP_CALLBACK_INSTANCE( instance );
++    TRACE("%p %p\n", instance, mutex);
++    if (!this) return;
++    if (this->cleanup.mutex)
++        FIXME("attempt to set multiple cleanup mutexes\n");
++    else
++        this->cleanup.mutex = mutex;
++}
++
++/***********************************************************************
++ *           TpCallbackReleaseSemaphoreOnCompletion    (NTDLL.@)
++ */
++VOID WINAPI TpCallbackReleaseSemaphoreOnCompletion( TP_CALLBACK_INSTANCE *instance, HANDLE semaphore, DWORD count )
++{
++    struct threadpool_instance *this = impl_from_TP_CALLBACK_INSTANCE( instance );
++    TRACE("%p %p %u\n", instance, semaphore, count);
++    if (!this) return;
++    if (this->cleanup.semaphore)
++        FIXME("attempt to set multiple cleanup semaphores\n");
++    else
++    {
++        this->cleanup.semaphore = semaphore;
++        this->cleanup.semaphore_count = count;
++    }
++}
++
++/***********************************************************************
++ *           TpCallbackSetEventOnCompletion    (NTDLL.@)
++ */
++VOID WINAPI TpCallbackSetEventOnCompletion( TP_CALLBACK_INSTANCE *instance, HANDLE event )
++{
++    struct threadpool_instance *this = impl_from_TP_CALLBACK_INSTANCE( instance );
++    TRACE("%p %p\n", instance, event);
++    if (!this) return;
++    if (this->cleanup.event)
++        FIXME("attempt to set multiple cleanup events\n");
++    else
++        this->cleanup.event = event;
++}
++
++/***********************************************************************
++ *           TpCallbackUnloadDllOnCompletion    (NTDLL.@)
++ */
++VOID WINAPI TpCallbackUnloadDllOnCompletion( TP_CALLBACK_INSTANCE *instance, HMODULE module )
++{
++    struct threadpool_instance *this = impl_from_TP_CALLBACK_INSTANCE( instance );
++    TRACE("%p %p\n", instance, module);
++    if (!this) return;
++    if (this->cleanup.library)
++        FIXME("attempt to set multiple cleanup libraries\n");
++    else
++        this->cleanup.library = module;
++}
++
++/***********************************************************************
++ *           TpDisassociateCallback    (NTDLL.@)
++ */
++VOID WINAPI TpDisassociateCallback( TP_CALLBACK_INSTANCE *instance )
++{
++    struct threadpool_instance *this = impl_from_TP_CALLBACK_INSTANCE( instance );
++    TRACE("%p\n", instance);
++    if (this) tp_instance_disassociate_thread( this );
++}
++
++/***********************************************************************
++ *           TpReleaseCleanupGroup    (NTDLL.@)
++ */
++VOID WINAPI TpReleaseCleanupGroup( TP_CLEANUP_GROUP *group )
++{
++    struct threadpool_group *this = impl_from_TP_CLEANUP_GROUP( group );
++    TRACE("%p\n", group);
++    if (this)
++    {
++        tp_group_shutdown( this );
++        tp_group_release( this );
++    }
++}
++
++/***********************************************************************
++ *           TpReleaseCleanupGroupMembers    (NTDLL.@)
++ */
++VOID WINAPI TpReleaseCleanupGroupMembers( TP_CLEANUP_GROUP *group, BOOL cancel_pending, PVOID userdata )
++{
++    struct threadpool_group *this = impl_from_TP_CLEANUP_GROUP( group );
++    TRACE("%p %d %p\n", group, cancel_pending, userdata);
++    if (this) tp_group_release_members( this, cancel_pending, userdata );
++}
++
++/***********************************************************************
++ *           TpReleasePool    (NTDLL.@)
++ */
++VOID WINAPI TpReleasePool( TP_POOL *pool )
++{
++    struct threadpool *this = impl_from_TP_POOL( pool );
++    TRACE("%p\n", pool);
++    if (this)
++    {
++        tp_threadpool_shutdown( this );
++        tp_threadpool_release( this );
++    }
++}
++
++/***********************************************************************
++ *           TpSetPoolMaxThreads    (NTDLL.@)
++ */
++VOID WINAPI TpSetPoolMaxThreads( TP_POOL *pool, DWORD maximum )
++{
++    struct threadpool *this = impl_from_TP_POOL( pool );
++    TRACE("%p %d\n", pool, maximum);
++    if (this) this->max_workers = max(maximum, 1);
++}
++
++/***********************************************************************
++ *           TpSetPoolMinThreads    (NTDLL.@)
++ */
++BOOL WINAPI TpSetPoolMinThreads( TP_POOL *pool, DWORD minimum )
++{
++    struct threadpool *this = impl_from_TP_POOL( pool );
++    FIXME("%p %d: semi-stub\n", pool, minimum);
++    if (this) this->min_workers = max(minimum, 1);
++    return TRUE;
++}
++
++/***********************************************************************
++ *           TpSimpleTryPost    (NTDLL.@)
++ */
++NTSTATUS WINAPI TpSimpleTryPost( PTP_SIMPLE_CALLBACK callback, PVOID userdata, TP_CALLBACK_ENVIRON *environment )
++{
++    struct threadpool_object *object;
++    NTSTATUS status;
++    TRACE("%p %p %p\n", callback, userdata, environment);
++    status = tp_object_alloc_simple( &object, callback, userdata, environment );
++    if (!status)
++    {
++        status = tp_object_submit( object );
++        tp_object_shutdown( object );
++        tp_object_release( object );
++    }
++    return status;
++}
+-- 
+2.2.2
+

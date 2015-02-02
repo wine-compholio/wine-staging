@@ -1,0 +1,143 @@
+From 1cd9f0a44db192fb1add9989d040c96fd4f537a3 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 2 Feb 2015 13:26:06 +0100
+Subject: ntdll: Make sure that threadpools have always at least one worker
+ thread.
+
+Since various functions are declared as VOID on Windows, we always have
+to make sure that tasks can be processed. We do that by spawning the first
+worker immediately when the threadpool is created.
+---
+ dlls/ntdll/threadpool2.c | 45 ++++++++++++++++++++++++++++-----------------
+ 1 file changed, 28 insertions(+), 17 deletions(-)
+
+diff --git a/dlls/ntdll/threadpool2.c b/dlls/ntdll/threadpool2.c
+index 76aee5a..7829212 100644
+--- a/dlls/ntdll/threadpool2.c
++++ b/dlls/ntdll/threadpool2.c
+@@ -233,7 +233,7 @@ static NTSTATUS tp_threadpool_alloc( struct threadpool **out );
+ static BOOL tp_threadpool_release( struct threadpool *pool );
+ static void tp_threadpool_shutdown( struct threadpool *pool );
+ 
+-static NTSTATUS tp_object_submit( struct threadpool_object *object );
++static void tp_object_submit( struct threadpool_object *object );
+ static BOOL tp_object_release( struct threadpool_object *object );
+ static void tp_object_shutdown( struct threadpool_object *object );
+ 
+@@ -598,12 +598,14 @@ static struct threadpool *get_default_threadpool( void )
+ static NTSTATUS tp_threadpool_alloc( struct threadpool **out )
+ {
+     struct threadpool *pool;
++    NTSTATUS status;
++    HANDLE thread;
+ 
+     pool = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*pool) );
+     if (!pool)
+         return STATUS_NO_MEMORY;
+ 
+-    pool->refcount              = 1;
++    pool->refcount              = 2; /* this thread + worker proc */
+     pool->shutdown              = FALSE;
+ 
+     RtlInitializeCriticalSection( &pool->cs );
+@@ -615,9 +617,20 @@ static NTSTATUS tp_threadpool_alloc( struct threadpool **out )
+     pool->max_workers           = 500;
+     pool->min_workers           = 1;
+ 
+-    pool->num_workers           = 0;
++    pool->num_workers           = 1;
+     pool->num_busy_workers      = 0;
+ 
++    status = RtlCreateUserThread( GetCurrentProcess(), NULL, FALSE, NULL, 0, 0,
++                                  threadpool_worker_proc, pool, &thread, NULL );
++    if (status != STATUS_SUCCESS)
++    {
++        pool->cs.DebugInfo->Spare[0] = 0;
++        RtlDeleteCriticalSection( &pool->cs );
++        RtlFreeHeap( GetProcessHeap(), 0, pool );
++        return status;
++    }
++    NtClose( thread );
++
+     TRACE("allocated threadpool %p\n", pool);
+ 
+     *out = pool;
+@@ -745,10 +758,10 @@ static void CALLBACK threadpool_worker_proc( void *param )
+         if (pool->shutdown)
+             break;
+ 
+-        /* Wait for new tasks or until timeout expires. */
++        /* Wait for new tasks or until timeout expires. Never terminate the last worker. */
+         timeout.QuadPart = (ULONGLONG)THREADPOOL_WORKER_TIMEOUT * -10000;
+         if (RtlSleepConditionVariableCS( &pool->update_event, &pool->cs,
+-            &timeout ) == STATUS_TIMEOUT && !list_head( &pool->pool ))
++            &timeout ) == STATUS_TIMEOUT && !list_head( &pool->pool ) && pool->num_workers > 1)
+         {
+             break;
+         }
+@@ -1005,10 +1018,9 @@ static void tp_object_wait( struct threadpool_object *object )
+     RtlLeaveCriticalSection( &pool->cs );
+ }
+ 
+-static NTSTATUS tp_object_submit( struct threadpool_object *object )
++static void tp_object_submit( struct threadpool_object *object )
+ {
+     struct threadpool *pool = object->pool;
+-    NTSTATUS status = STATUS_SUCCESS;
+ 
+     assert( !object->shutdown );
+     assert( !pool->shutdown );
+@@ -1018,7 +1030,9 @@ static NTSTATUS tp_object_submit( struct threadpool_object *object )
+     /* Start new worker threads if required (and allowed) */
+     if (pool->num_busy_workers >= pool->num_workers && pool->num_workers < pool->max_workers)
+     {
++        NTSTATUS status;
+         HANDLE thread;
++
+         status = RtlCreateUserThread( GetCurrentProcess(), NULL, FALSE, NULL, 0, 0,
+                                       threadpool_worker_proc, pool, &thread, NULL );
+         if (status == STATUS_SUCCESS)
+@@ -1027,25 +1041,21 @@ static NTSTATUS tp_object_submit( struct threadpool_object *object )
+             pool->num_workers++;
+             NtClose( thread );
+         }
+-        else if (pool->num_workers)
++        else
+         {
++            assert( pool->num_workers > 0 );
+             RtlWakeConditionVariable( &pool->update_event );
+-            status = STATUS_SUCCESS;
+         }
+     }
+     else RtlWakeConditionVariable( &pool->update_event );
+ 
+     /* Queue work item into pool and increment refcount */
+-    if (!status)
+-    {
+-        if (!object->num_pending_callbacks++)
+-            list_add_tail( &pool->pool, &object->pool_entry );
++    if (!object->num_pending_callbacks++)
++        list_add_tail( &pool->pool, &object->pool_entry );
+ 
+-        interlocked_inc(&object->refcount);
+-    }
++    interlocked_inc( &object->refcount );
+ 
+     RtlLeaveCriticalSection( &pool->cs );
+-    return status;
+ }
+ 
+ /***********************************************************************
+@@ -1410,7 +1420,8 @@ NTSTATUS WINAPI TpSimpleTryPost( PTP_SIMPLE_CALLBACK callback, PVOID userdata, T
+     status = tp_object_alloc_simple( &object, callback, userdata, environment );
+     if (!status)
+     {
+-        status = tp_object_submit( object );
++        tp_object_submit( object );
++
+         tp_object_shutdown( object );
+         tp_object_release( object );
+     }
+-- 
+2.2.2
+

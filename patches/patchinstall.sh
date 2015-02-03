@@ -2236,6 +2236,7 @@ if test "$enable_ntdll_Vista_Threadpool" -eq 1; then
 	patch_apply ntdll-Vista_Threadpool/0005-ntdll-tests-Add-tests-for-Tp-threadpool-functions.patch
 	patch_apply ntdll-Vista_Threadpool/0006-kernel32-Forward-various-threadpool-functions-to-ntd.patch
 	patch_apply ntdll-Vista_Threadpool/0007-ntdll-Make-sure-that-threadpools-have-always-at-leas.patch
+	patch_apply ntdll-Vista_Threadpool/0008-ntdll-Avoid-race-conditions-between-tp_object_-submi.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Add threadpool stub functions to specfile.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Implement threadpool, cleanup group and callback instance functions.", 1 },';
@@ -2244,6 +2245,7 @@ if test "$enable_ntdll_Vista_Threadpool" -eq 1; then
 		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for Tp* threadpool functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Forward various threadpool functions to ntdll.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Make sure that threadpools have always at least one worker thread.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Avoid race-conditions between tp_object_{submit,shutdown} for simple callbacks.", 1 },';
 	) >> "$patchlist"
 fi
 

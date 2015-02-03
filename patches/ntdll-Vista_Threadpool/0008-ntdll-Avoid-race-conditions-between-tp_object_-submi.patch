@@ -1,0 +1,115 @@
+From d4de8e6120cac3e8c8862424a369fa90c4d73153 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 2 Feb 2015 23:28:45 +0100
+Subject: ntdll: Avoid race-conditions between tp_object_{submit,shutdown} for
+ simple callbacks.
+
+---
+ dlls/ntdll/threadpool2.c | 45 +++++++++++++++++++++------------------------
+ 1 file changed, 21 insertions(+), 24 deletions(-)
+
+diff --git a/dlls/ntdll/threadpool2.c b/dlls/ntdll/threadpool2.c
+index 7829212..9a9bf6a 100644
+--- a/dlls/ntdll/threadpool2.c
++++ b/dlls/ntdll/threadpool2.c
+@@ -776,7 +776,7 @@ static void CALLBACK threadpool_worker_proc( void *param )
+  ***********************************************************************/
+ 
+ static void tp_object_initialize( struct threadpool_object *object, struct threadpool *pool,
+-                                  PVOID userdata, TP_CALLBACK_ENVIRON *environment )
++                                  PVOID userdata, TP_CALLBACK_ENVIRON *environment, BOOL submit_and_release )
+ {
+     object->refcount                = 1;
+     object->shutdown                = FALSE;
+@@ -828,6 +828,14 @@ static void tp_object_initialize( struct threadpool_object *object, struct threa
+     /* Increase reference-count on the pool */
+     interlocked_inc( &pool->refcount );
+ 
++    TRACE("allocated object %p of type %u\n", object, object->type);
++
++    /* For simple callbacks we have to run tp_object_submit before adding this object
++     * to the cleanup group. As soon as the cleanup group members are released ->shutdown
++     * will be set, and tp_object_submit would fail with an assertion. */
++    if (submit_and_release)
++        tp_object_submit( object );
++
+     /* Assign this object to a specific group. Please note that this has to be done
+      * as the last step before returning a pointer to the application, otherwise
+      * there is a risk of having race-conditions. */
+@@ -840,10 +848,16 @@ static void tp_object_initialize( struct threadpool_object *object, struct threa
+         list_add_tail( &group->members, &object->group_entry );
+         RtlLeaveCriticalSection( &group->cs );
+     }
++
++    if (submit_and_release)
++    {
++        tp_object_shutdown( object );
++        tp_object_release( object );
++    }
+ }
+ 
+-static NTSTATUS tp_object_alloc_simple( struct threadpool_object **out, PTP_SIMPLE_CALLBACK callback,
+-                                        PVOID userdata, TP_CALLBACK_ENVIRON *environment )
++static NTSTATUS tp_object_submit_simple( PTP_SIMPLE_CALLBACK callback, PVOID userdata,
++                                         TP_CALLBACK_ENVIRON *environment )
+ {
+     struct threadpool_object *object;
+     struct threadpool *pool;
+@@ -859,11 +873,8 @@ static NTSTATUS tp_object_alloc_simple( struct threadpool_object **out, PTP_SIMP
+ 
+     object->type = TP_OBJECT_TYPE_SIMPLE;
+     object->u.simple.callback = callback;
+-    tp_object_initialize( object, pool, userdata, environment );
+-
+-    TRACE("allocated object %p of type %u\n", object, object->type);
++    tp_object_initialize( object, pool, userdata, environment, TRUE );
+ 
+-    *out = object;
+     return STATUS_SUCCESS;
+ }
+ 
+@@ -884,9 +895,7 @@ static NTSTATUS tp_object_alloc_work( struct threadpool_object **out, PTP_WORK_C
+ 
+     object->type = TP_OBJECT_TYPE_WORK;
+     object->u.work.callback = callback;
+-    tp_object_initialize( object, pool, userdata, environment );
+-
+-    TRACE("allocated object %p of type %u\n", object, object->type);
++    tp_object_initialize( object, pool, userdata, environment, FALSE );
+ 
+     *out = object;
+     return STATUS_SUCCESS;
+@@ -926,9 +935,7 @@ static NTSTATUS tp_object_alloc_timer( struct threadpool_object **out, PTP_TIMER
+     object->u.timer.period = 0;
+     object->u.timer.window_length = 0;
+ 
+-    tp_object_initialize( object, pool, userdata, environment );
+-
+-    TRACE("allocated object %p of type %u\n", object, object->type);
++    tp_object_initialize( object, pool, userdata, environment, FALSE );
+ 
+     *out = object;
+     return STATUS_SUCCESS;
+@@ -1414,18 +1421,8 @@ VOID WINAPI TpSetTimer( TP_TIMER *timer, LARGE_INTEGER *timeout, LONG period, LO
+  */
+ NTSTATUS WINAPI TpSimpleTryPost( PTP_SIMPLE_CALLBACK callback, PVOID userdata, TP_CALLBACK_ENVIRON *environment )
+ {
+-    struct threadpool_object *object;
+-    NTSTATUS status;
+     TRACE("%p %p %p\n", callback, userdata, environment);
+-    status = tp_object_alloc_simple( &object, callback, userdata, environment );
+-    if (!status)
+-    {
+-        tp_object_submit( object );
+-
+-        tp_object_shutdown( object );
+-        tp_object_release( object );
+-    }
+-    return status;
++    return tp_object_submit_simple( callback, userdata, environment );
+ }
+ 
+ /***********************************************************************
+-- 
+2.2.2
+

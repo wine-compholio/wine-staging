@@ -196,6 +196,7 @@ patch_enable_all ()
 	enable_winex11_XEMBED="$1"
 	enable_winex11_wglShareLists="$1"
 	enable_wininet_encoding="$1"
+	enable_winmm_Delay_Import_Depends="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_Connect_Time="$1"
 	enable_ws2_32_TransmitFile="$1"
@@ -609,6 +610,9 @@ patch_enable ()
 			;;
 		wininet-encoding)
 			enable_wininet_encoding="$2"
+			;;
+		winmm-Delay_Import_Depends)
+			enable_winmm_Delay_Import_Depends="$2"
 			;;
 		wpcap-Dynamic_Linking)
 			enable_wpcap_Dynamic_Linking="$2"
@@ -3708,6 +3712,21 @@ if test "$enable_wininet_encoding" -eq 1; then
 	patch_apply wininet-encoding/0001-wininet-Allow-Accept-Encoding-for-HTTP-1.0-requests.patch
 	(
 		echo '+    { "Michael Müller", "wininet: Allow Accept-Encoding for HTTP/1.0 requests.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winmm-Delay_Import_Depends
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37983] Jedi Knight: Dark Forces II crashes with winmm set to native
+# |
+# | Modified files:
+# |   *	dlls/winmm/Makefile.in
+# |
+if test "$enable_winmm_Delay_Import_Depends" -eq 1; then
+	patch_apply winmm-Delay_Import_Depends/0001-winmm-Delay-import-ole32-msacm32-to-workaround-bug-w.patch
+	(
+		echo '+    { "Michael Müller", "winmm: Delay import ole32 msacm32 to workaround bug when loading multiple winmm versions.", 1 },';
 	) >> "$patchlist"
 fi
 

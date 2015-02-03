@@ -82,7 +82,6 @@ patch_enable_all ()
 	enable_d3dx9_36_Texture_Align="$1"
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
 	enable_dbghelp_Debug_Symbols="$1"
-	enable_dbghelp_KdHelp="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
 	enable_dinput_Events="$1"
 	enable_dpvoice_GetCompressionTypes="$1"
@@ -269,9 +268,6 @@ patch_enable ()
 			;;
 		dbghelp-Debug_Symbols)
 			enable_dbghelp_Debug_Symbols="$2"
-			;;
-		dbghelp-KdHelp)
-			enable_dbghelp_KdHelp="$2"
 			;;
 		ddraw-d3d_execute_buffer)
 			enable_ddraw_d3d_execute_buffer="$2"
@@ -1369,21 +1365,6 @@ if test "$enable_dbghelp_Debug_Symbols" -eq 1; then
 	patch_apply dbghelp-Debug_Symbols/0001-dbghelp-Always-check-for-debug-symbols-in-BINDIR.patch
 	(
 		echo '+    { "Sebastian Lackner", "dbghelp: Always check for debug symbols in BINDIR.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset dbghelp-KdHelp
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37272] Don't fill KdHelp structure for usermode applications
-# |
-# | Modified files:
-# |   *	dlls/dbghelp/stack.c
-# |
-if test "$enable_dbghelp_KdHelp" -eq 1; then
-	patch_apply dbghelp-KdHelp/0001-dbghelp-Don-t-fill-KdHelp-structure-for-usermode-app.patch
-	(
-		echo '+    { "Sebastian Lackner", "dbghelp: Don'\''t fill KdHelp structure for usermode applications.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2827,16 +2808,14 @@ fi
 # |   *	[#36709] Support for SLGetWindowsInformationDWORD
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/ntdll/ntdll.spec, dlls/ntdll/reg.c, dlls/ntdll/tests/reg.c, dlls/slc/slc.c,
-# | 	dlls/slc/tests/Makefile.in, dlls/slc/tests/slc.c, include/slerror.h, include/winternl.h, loader/wine.inf.in
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/reg.c, dlls/ntdll/tests/reg.c, dlls/slc/slc.c, dlls/slc/tests/slc.c,
+# | 	include/winternl.h, loader/wine.inf.in
 # |
 if test "$enable_slc_SLGetWindowsInformation" -eq 1; then
-	patch_apply slc-SLGetWindowsInformation/0001-slc-tests-Add-tests-for-SLGetWindowsInformationDWORD.patch
-	patch_apply slc-SLGetWindowsInformation/0002-ntdll-tests-Add-tests-for-NtQueryLicenseKey.patch
-	patch_apply slc-SLGetWindowsInformation/0003-ntdll-Implement-Nt-Zw-QueryLicenseValue.patch
-	patch_apply slc-SLGetWindowsInformation/0004-slc-Implement-SLGetWindowsInformationDWORD.patch
+	patch_apply slc-SLGetWindowsInformation/0001-ntdll-tests-Add-tests-for-NtQueryLicenseKey.patch
+	patch_apply slc-SLGetWindowsInformation/0002-ntdll-Implement-Nt-Zw-QueryLicenseValue.patch
+	patch_apply slc-SLGetWindowsInformation/0003-slc-Implement-SLGetWindowsInformationDWORD.patch
 	(
-		echo '+    { "Sebastian Lackner", "slc/tests: Add tests for SLGetWindowsInformationDWORD.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for NtQueryLicenseKey.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Implement [Nt|Zw]QueryLicenseValue.", 1 },';
 		echo '+    { "Sebastian Lackner", "slc: Implement SLGetWindowsInformationDWORD.", 1 },';

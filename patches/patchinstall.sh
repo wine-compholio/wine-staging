@@ -91,6 +91,7 @@ patch_enable_all ()
 	enable_fonts_Missing_Fonts="$1"
 	enable_gdi32_MaxPixelFormats="$1"
 	enable_gdi32_MultiMonitor="$1"
+	enable_gdi32_OSMesaMakeCurrent="$1"
 	enable_gdiplus_GdipCreateRegionRgnData="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imm32_Cross_Thread_Access="$1"
@@ -295,6 +296,9 @@ patch_enable ()
 			;;
 		gdi32-MultiMonitor)
 			enable_gdi32_MultiMonitor="$2"
+			;;
+		gdi32-OSMesaMakeCurrent)
+			enable_gdi32_OSMesaMakeCurrent="$2"
 			;;
 		gdiplus-GdipCreateRegionRgnData)
 			enable_gdiplus_GdipCreateRegionRgnData="$2"
@@ -1513,6 +1517,18 @@ if test "$enable_gdi32_MultiMonitor" -eq 1; then
 		echo '+    { "Ken Thomases", "gdi32: Also accept \"\\\\\\\\.\\\\DISPLAY<n>\" devices names with <n> other than 1 as display devices.", 1 },';
 		echo '+    { "Ken Thomases", "winex11: Make GetMonitorInfo() give a different device name (\\\\.\\\\DISPLAY<n>) to each monitor.", 1 },';
 		echo '+    { "Ken Thomases", "user32: Implement EnumDisplayDevicesW() based on EnumDisplayMonitors() and GetMonitorInfoW().", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset gdi32-OSMesaMakeCurrent
+# |
+# | Modified files:
+# |   *	dlls/gdi32/dibdrv/opengl.c
+# |
+if test "$enable_gdi32_OSMesaMakeCurrent" -eq 1; then
+	patch_apply gdi32-OSMesaMakeCurrent/0001-gdi32-Fix-arguments-for-OSMesaMakeCurrent-when-using.patch
+	(
+		echo '+    { "Michael Müller", "gdi32: Fix arguments for OSMesaMakeCurrent when using 16 bit formats.", 1 },';
 	) >> "$patchlist"
 fi
 

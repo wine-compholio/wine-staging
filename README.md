@@ -38,10 +38,11 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [8]:**
+**Bugfixes and features included in the next upcoming release [9]:**
 
 * Add implementation for CreateThreadpool ([Wine Bug #35192](https://bugs.winehq.org/show_bug.cgi?id=35192))
 * Call DriverUnload function when unloading a device driver.
+* Fix arguments for OSMesaMakeCurrent when using 16 bit formats
 * Fix check for end_frame in RtlUnwindEx on x86_64. ([Wine Bug #34254](https://bugs.winehq.org/show_bug.cgi?id=34254))
 * Fix mouse jittering in Planetside 2 ([Wine Bug #32913](https://bugs.winehq.org/show_bug.cgi?id=32913))
 * Implement additional stubs for vcomp dlls ([Wine Bug #31640](https://bugs.winehq.org/show_bug.cgi?id=31640))

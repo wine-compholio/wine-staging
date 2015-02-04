@@ -1387,12 +1387,12 @@ fi
 # |   *	[#34559] Scrolling causes mouse and screen to lock in Call to Power II
 # |
 # | Modified files:
-# |   *	dlls/dinput/device.c, dlls/dinput/keyboard.c, dlls/user32/input.c, dlls/user32/user32.spec, include/winuser.h
+# |   *	dlls/dinput/keyboard.c, dlls/dinput/mouse.c, dlls/user32/input.c, dlls/user32/user32.spec, include/winuser.h
 # |
 if test "$enable_dinput_Events" -eq 1; then
 	patch_apply dinput-Events/0001-dinput-Ensure-X11-input-events-are-handled-even-with.patch
 	(
-		echo '+    { "Sebastian Lackner", "dinput: Ensure X11 input events are handled even without explicit message loop.", 1 },';
+		echo '+    { "Sebastian Lackner", "dinput: Ensure X11 input events are handled even without explicit message loop.", 2 },';
 	) >> "$patchlist"
 fi
 

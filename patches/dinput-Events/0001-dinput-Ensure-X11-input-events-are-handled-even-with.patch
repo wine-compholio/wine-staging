@@ -1,8 +1,8 @@
-From 0d67e99a59e4b4378797368545980751d39e0198 Mon Sep 17 00:00:00 2001
+From 6a575f8176ff60cc4703e6299c38e15e5778881d Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Thu, 18 Dec 2014 01:04:34 +0100
 Subject: dinput: Ensure X11 input events are handled even without explicit
- message loop.
+ message loop. (try 2)
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -25,29 +25,13 @@ that this isn't a complete fix. Please note that not only hooks are affected by
 this issue, also *RawInput* functions show the same issue - which is the reason why
 native dinput will still not work (already tested).
 ---
- dlls/dinput/device.c    |  5 +++--
  dlls/dinput/keyboard.c  |  2 ++
+ dlls/dinput/mouse.c     |  2 ++
  dlls/user32/input.c     | 14 ++++++++++----
  dlls/user32/user32.spec |  1 +
  include/winuser.h       |  1 +
- 5 files changed, 17 insertions(+), 6 deletions(-)
+ 5 files changed, 16 insertions(+), 4 deletions(-)
 
-diff --git a/dlls/dinput/device.c b/dlls/dinput/device.c
-index 08ebfd7..064cdbb 100644
---- a/dlls/dinput/device.c
-+++ b/dlls/dinput/device.c
-@@ -1631,8 +1631,9 @@ HRESULT WINAPI IDirectInputDevice2WImpl_Poll(LPDIRECTINPUTDEVICE8W iface)
-     IDirectInputDeviceImpl *This = impl_from_IDirectInputDevice8W(iface);
- 
-     if (!This->acquired) return DIERR_NOTACQUIRED;
--    /* Because wine devices do not need to be polled, just return DI_NOEFFECT */
--    return DI_NOEFFECT;
-+
-+    __wine_check_for_events( QS_ALLINPUT );
-+    return DI_OK;
- }
- 
- HRESULT WINAPI IDirectInputDevice2AImpl_Poll(LPDIRECTINPUTDEVICE8A iface)
 diff --git a/dlls/dinput/keyboard.c b/dlls/dinput/keyboard.c
 index a5967d7..9e78257 100644
 --- a/dlls/dinput/keyboard.c
@@ -61,8 +45,21 @@ index a5967d7..9e78257 100644
      EnterCriticalSection(&This->base.crit);
  
      if (TRACE_ON(dinput)) {
+diff --git a/dlls/dinput/mouse.c b/dlls/dinput/mouse.c
+index 132efce..44e1d57 100644
+--- a/dlls/dinput/mouse.c
++++ b/dlls/dinput/mouse.c
+@@ -552,6 +552,8 @@ static HRESULT WINAPI SysMouseWImpl_GetDeviceState(LPDIRECTINPUTDEVICE8W iface,
+ 
+     if(This->base.acquired == 0) return DIERR_NOTACQUIRED;
+ 
++    __wine_check_for_events( QS_ALLINPUT );
++
+     TRACE("(this=%p,0x%08x,%p):\n", This, len, ptr);
+     _dump_mouse_state(&This->m_state);
+ 
 diff --git a/dlls/user32/input.c b/dlls/user32/input.c
-index ec81e60..5791473 100644
+index 1f05f34..23f5da8 100644
 --- a/dlls/user32/input.c
 +++ b/dlls/user32/input.c
 @@ -353,12 +353,18 @@ HWND WINAPI GetCapture(void)
@@ -136,5 +133,5 @@ index 3d9b937..7c5c01e 100644
  #endif
  
 -- 
-2.1.3
+2.2.2
 

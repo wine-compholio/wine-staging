@@ -1,0 +1,140 @@
+From 67ad3c12465ea23c508534d7dc660a3d03a69caf Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 6 Feb 2015 20:24:27 +0100
+Subject: kernel32: Forward threadpool wait functions to ntdll.
+
+---
+ dlls/kernel32/kernel32.spec |  8 ++++----
+ dlls/kernel32/thread.c      | 43 +++++++++++++++++++++++++++++++++++++++++++
+ include/winternl.h          |  4 ++++
+ 3 files changed, 51 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/kernel32/kernel32.spec b/dlls/kernel32/kernel32.spec
+index 4d170d5..b4af160 100644
+--- a/dlls/kernel32/kernel32.spec
++++ b/dlls/kernel32/kernel32.spec
+@@ -233,7 +233,7 @@
+ @ stdcall CloseThreadpoolCleanupGroupMembers(ptr long ptr) ntdll.TpReleaseCleanupGroupMembers
+ # @ stub CloseThreadpoolIo
+ @ stdcall CloseThreadpoolTimer(ptr) ntdll.TpReleaseTimer
+-# @ stub CloseThreadpoolWait
++@ stdcall CloseThreadpoolWait(ptr) ntdll.TpReleaseWait
+ @ stdcall CloseThreadpoolWork(ptr) ntdll.TpReleaseWork
+ @ stdcall CmdBatNotification(long)
+ @ stdcall CommConfigDialogA(str long ptr)
+@@ -335,7 +335,7 @@
+ @ stdcall CreateThreadpoolCleanupGroup()
+ # @ stub CreateThreadpoolIo
+ @ stdcall CreateThreadpoolTimer(ptr ptr ptr)
+-# @ stub CreateThreadpoolWait
++@ stdcall CreateThreadpoolWait(ptr ptr ptr)
+ @ stdcall CreateThreadpoolWork(ptr ptr ptr)
+ @ stdcall CreateTimerQueue ()
+ @ stdcall CreateTimerQueueTimer(ptr long ptr ptr long long long)
+@@ -1456,7 +1456,7 @@
+ @ stdcall SetThreadpoolThreadMaximum(ptr long) ntdll.TpSetPoolMaxThreads
+ @ stdcall SetThreadpoolThreadMinimum(ptr long) ntdll.TpSetPoolMinThreads
+ @ stdcall SetThreadpoolTimer(ptr ptr long long)
+-# @ stub SetThreadpoolWait
++@ stdcall SetThreadpoolWait(ptr long ptr)
+ @ stdcall SetTimeZoneInformation(ptr)
+ @ stub SetTimerQueueTimer
+ # @ stub -arch=x86_64 SetUmsThreadInformation
+@@ -1571,7 +1571,7 @@
+ @ stdcall WaitForSingleObjectEx(long long long)
+ # @ stub WaitForThreadpoolIoCallbacks
+ @ stdcall WaitForThreadpoolTimerCallbacks(ptr long) ntdll.TpWaitForTimer
+-# @ stub WaitForThreadpoolWaitCallbacks
++@ stdcall WaitForThreadpoolWaitCallbacks(ptr long) ntdll.TpWaitForWait
+ @ stdcall WaitForThreadpoolWorkCallbacks(ptr long) ntdll.TpWaitForWork
+ @ stdcall WaitNamedPipeA (str long)
+ @ stdcall WaitNamedPipeW (wstr long)
+diff --git a/dlls/kernel32/thread.c b/dlls/kernel32/thread.c
+index 085b011..77037ef 100644
+--- a/dlls/kernel32/thread.c
++++ b/dlls/kernel32/thread.c
+@@ -894,6 +894,27 @@ PTP_TIMER WINAPI CreateThreadpoolTimer( PTP_TIMER_CALLBACK callback, PVOID userd
+ }
+ 
+ /***********************************************************************
++ *              CreateThreadpoolWait (KERNEL32.@)
++ */
++PTP_WAIT WINAPI CreateThreadpoolWait( PTP_WAIT_CALLBACK callback, PVOID userdata,
++                                      TP_CALLBACK_ENVIRON *environment )
++{
++    TP_WAIT *wait;
++    NTSTATUS status;
++
++    TRACE( "%p, %p, %p\n", callback, userdata, environment );
++
++    status = TpAllocWait( &wait, callback, userdata, environment );
++    if (status)
++    {
++        SetLastError( RtlNtStatusToDosError(status) );
++        return NULL;
++    }
++
++    return wait;
++}
++
++/***********************************************************************
+  *              CreateThreadpoolWork (KERNEL32.@)
+  */
+ PTP_WORK WINAPI CreateThreadpoolWork( PTP_WORK_CALLBACK callback, PVOID userdata,
+@@ -932,3 +953,25 @@ VOID WINAPI SetThreadpoolTimer( TP_TIMER *timer, FILETIME *due_time,
+ 
+     TpSetTimer( timer, due_time ? &timeout : NULL, period, window_length );
+ }
++
++/***********************************************************************
++ *              SetThreadpoolWait (KERNEL32.@)
++ */
++VOID WINAPI SetThreadpoolWait( TP_WAIT *wait, HANDLE handle, FILETIME *due_time )
++{
++    LARGE_INTEGER timeout;
++
++    TRACE( "%p, %p, %p\n", wait, handle, due_time );
++
++    if (!handle)
++    {
++        due_time = NULL;
++    }
++    else if (due_time)
++    {
++        timeout.u.LowPart = due_time->dwLowDateTime;
++        timeout.u.HighPart = due_time->dwHighDateTime;
++    }
++
++    TpSetWait( wait, handle, due_time ? &timeout : NULL );
++}
+diff --git a/include/winternl.h b/include/winternl.h
+index a534bd1..c93931b 100644
+--- a/include/winternl.h
++++ b/include/winternl.h
+@@ -2604,6 +2604,7 @@ NTSYSAPI NTSTATUS  WINAPI RtlLargeIntegerToChar(const ULONGLONG *,ULONG,ULONG,PC
+ NTSYSAPI NTSTATUS  WINAPI TpAllocCleanupGroup(TP_CLEANUP_GROUP **);
+ NTSYSAPI NTSTATUS  WINAPI TpAllocPool(TP_POOL **,PVOID);
+ NTSYSAPI NTSTATUS  WINAPI TpAllocTimer(TP_TIMER **,PTP_TIMER_CALLBACK,PVOID,TP_CALLBACK_ENVIRON *);
++NTSYSAPI NTSTATUS  WINAPI TpAllocWait(TP_WAIT **,PTP_WAIT_CALLBACK,PVOID,TP_CALLBACK_ENVIRON *);
+ NTSYSAPI NTSTATUS  WINAPI TpAllocWork(TP_WORK **,PTP_WORK_CALLBACK,PVOID,TP_CALLBACK_ENVIRON *);
+ NTSYSAPI void      WINAPI TpCallbackLeaveCriticalSectionOnCompletion(TP_CALLBACK_INSTANCE *,RTL_CRITICAL_SECTION *);
+ NTSYSAPI NTSTATUS  WINAPI TpCallbackMayRunLong(TP_CALLBACK_INSTANCE *);
+@@ -2618,12 +2619,15 @@ NTSYSAPI void      WINAPI TpReleaseCleanupGroup(TP_CLEANUP_GROUP *);
+ NTSYSAPI void      WINAPI TpReleaseCleanupGroupMembers(TP_CLEANUP_GROUP *,BOOL,PVOID);
+ NTSYSAPI void      WINAPI TpReleasePool(TP_POOL *);
+ NTSYSAPI void      WINAPI TpReleaseTimer(TP_TIMER *);
++NTSYSAPI void      WINAPI TpReleaseWait(TP_WAIT *);
+ NTSYSAPI void      WINAPI TpReleaseWork(TP_WORK *);
+ NTSYSAPI void      WINAPI TpSetPoolMaxThreads(TP_POOL *,DWORD);
+ NTSYSAPI BOOL      WINAPI TpSetPoolMinThreads(TP_POOL *,DWORD);
+ NTSYSAPI void      WINAPI TpSetTimer(TP_TIMER *, LARGE_INTEGER *,LONG,LONG);
++NTSYSAPI void      WINAPI TpSetWait(TP_WAIT *,HANDLE,LARGE_INTEGER *);
+ NTSYSAPI NTSTATUS  WINAPI TpSimpleTryPost(PTP_SIMPLE_CALLBACK,PVOID,TP_CALLBACK_ENVIRON *);
+ NTSYSAPI void      WINAPI TpWaitForTimer(TP_TIMER *,BOOL);
++NTSYSAPI void      WINAPI TpWaitForWait(TP_WAIT *,BOOL);
+ NTSYSAPI void      WINAPI TpWaitForWork(TP_WORK *,BOOL);
+ 
+ /* Wine internal functions */
+-- 
+2.2.2
+

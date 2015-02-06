@@ -1,12 +1,12 @@
-From 1dc1074ad196b6d869028d3dea283dbab8a8a707 Mon Sep 17 00:00:00 2001
+From f0c8d1f64679e4777439ffc1b9d74d47287d72eb Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 1 Feb 2015 18:06:08 +0100
 Subject: ntdll: Implement additional threadpool work item functions.
 
 ---
  dlls/ntdll/ntdll.spec    |  8 ++--
- dlls/ntdll/threadpool2.c | 99 +++++++++++++++++++++++++++++++++++++++++++++++-
- 2 files changed, 102 insertions(+), 5 deletions(-)
+ dlls/ntdll/threadpool2.c | 97 +++++++++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 100 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
 index 256ec6d..bf9e795 100644
@@ -45,7 +45,7 @@ index 256ec6d..bf9e795 100644
 +@ stdcall TpWaitForWork(ptr long)
  @ stdcall -ret64 VerSetConditionMask(int64 long long)
 diff --git a/dlls/ntdll/threadpool2.c b/dlls/ntdll/threadpool2.c
-index c4f54af..acc477f 100644
+index c4e2d21..a6fd141 100644
 --- a/dlls/ntdll/threadpool2.c
 +++ b/dlls/ntdll/threadpool2.c
 @@ -123,7 +123,8 @@ struct threadpool_object
@@ -84,15 +84,15 @@ index c4f54af..acc477f 100644
  static inline struct threadpool_group *impl_from_TP_CLEANUP_GROUP( TP_CLEANUP_GROUP *group )
  {
      return (struct threadpool_group *)group;
-@@ -410,6 +423,16 @@ static void CALLBACK threadpool_worker_proc( void *param )
+@@ -423,6 +436,16 @@ static void CALLBACK threadpool_worker_proc( void *param )
                      break;
                  }
  
 +                case TP_OBJECT_TYPE_WORK:
 +                {
 +                    TP_CALLBACK_INSTANCE *cb_instance = (TP_CALLBACK_INSTANCE *)&instance;
-+                    TRACE( "executing callback %p(%p, %p)\n",
-+                           object->u.work.callback, cb_instance, object->userdata );
++                    TRACE( "executing callback %p(%p, %p, %p)\n",
++                           object->u.work.callback, cb_instance, object->userdata, object );
 +                    object->u.work.callback( cb_instance, object->userdata, (TP_WORK *)object );
 +                    TRACE( "callback %p returned\n", object->u.work.callback );
 +                    break;
@@ -101,7 +101,7 @@ index c4f54af..acc477f 100644
                  default:
                      FIXME( "callback type %u not implemented\n", object->type );
                      break;
-@@ -554,6 +577,31 @@ static NTSTATUS tp_object_alloc_simple( struct threadpool_object **out, PTP_SIMP
+@@ -578,6 +601,29 @@ static NTSTATUS tp_object_submit_simple( PTP_SIMPLE_CALLBACK callback, PVOID use
      return STATUS_SUCCESS;
  }
  
@@ -122,9 +122,7 @@ index c4f54af..acc477f 100644
 +
 +    object->type = TP_OBJECT_TYPE_WORK;
 +    object->u.work.callback = callback;
-+    tp_object_initialize( object, pool, userdata, environment );
-+
-+    TRACE("allocated object %p of type %u\n", object, object->type);
++    tp_object_initialize( object, pool, userdata, environment, FALSE );
 +
 +    *out = object;
 +    return STATUS_SUCCESS;
@@ -133,7 +131,7 @@ index c4f54af..acc477f 100644
  static BOOL tp_object_release( struct threadpool_object *object )
  {
      struct threadpool_group *group;
-@@ -795,6 +843,16 @@ NTSTATUS WINAPI TpAllocPool( TP_POOL **out, PVOID reserved )
+@@ -816,6 +862,16 @@ NTSTATUS WINAPI TpAllocPool( TP_POOL **out, PVOID reserved )
  }
  
  /***********************************************************************
@@ -150,7 +148,7 @@ index c4f54af..acc477f 100644
   *           TpCallbackLeaveCriticalSectionOnCompletion    (NTDLL.@)
   */
  VOID WINAPI TpCallbackLeaveCriticalSectionOnCompletion( TP_CALLBACK_INSTANCE *instance, CRITICAL_SECTION *crit )
-@@ -889,6 +947,16 @@ VOID WINAPI TpDisassociateCallback( TP_CALLBACK_INSTANCE *instance )
+@@ -910,6 +966,16 @@ VOID WINAPI TpDisassociateCallback( TP_CALLBACK_INSTANCE *instance )
  }
  
  /***********************************************************************
@@ -167,7 +165,7 @@ index c4f54af..acc477f 100644
   *           TpReleaseCleanupGroup    (NTDLL.@)
   */
  VOID WINAPI TpReleaseCleanupGroup( TP_CLEANUP_GROUP *group )
-@@ -927,6 +995,20 @@ VOID WINAPI TpReleasePool( TP_POOL *pool )
+@@ -948,6 +1014,20 @@ VOID WINAPI TpReleasePool( TP_POOL *pool )
  }
  
  /***********************************************************************
@@ -188,9 +186,9 @@ index c4f54af..acc477f 100644
   *           TpSetPoolMaxThreads    (NTDLL.@)
   */
  VOID WINAPI TpSetPoolMaxThreads( TP_POOL *pool, DWORD maximum )
-@@ -964,3 +1046,18 @@ NTSTATUS WINAPI TpSimpleTryPost( PTP_SIMPLE_CALLBACK callback, PVOID userdata, T
-     }
-     return status;
+@@ -976,3 +1056,18 @@ NTSTATUS WINAPI TpSimpleTryPost( PTP_SIMPLE_CALLBACK callback, PVOID userdata, T
+     TRACE("%p %p %p\n", callback, userdata, environment);
+     return tp_object_submit_simple( callback, userdata, environment );
  }
 +
 +/***********************************************************************

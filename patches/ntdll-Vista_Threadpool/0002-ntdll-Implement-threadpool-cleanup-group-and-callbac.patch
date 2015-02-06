@@ -1,14 +1,17 @@
-From ceedfdb35e4ee398e3a36aba16778a1fa0d3d58a Mon Sep 17 00:00:00 2001
+From 45bd5d08b3663253eb51f167176f94111aa389bb Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 1 Feb 2015 17:38:16 +0100
 Subject: ntdll: Implement threadpool, cleanup group and callback instance
- functions.
+ functions. (rev 2)
 
+Changes in try 2:
+  * Make sure that always at least one worker thread is present.
+  * Merge a fix for a race condition between tp_object_{submit,shutdown}.
 ---
  dlls/ntdll/Makefile.in   |   1 +
  dlls/ntdll/ntdll.spec    |  30 +-
- dlls/ntdll/threadpool2.c | 966 +++++++++++++++++++++++++++++++++++++++++++++++
- 3 files changed, 982 insertions(+), 15 deletions(-)
+ dlls/ntdll/threadpool2.c | 978 +++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 994 insertions(+), 15 deletions(-)
  create mode 100644 dlls/ntdll/threadpool2.c
 
 diff --git a/dlls/ntdll/Makefile.in b/dlls/ntdll/Makefile.in
@@ -102,10 +105,10 @@ index 771f669..256ec6d 100644
  # @ stub TpTrimPools
 diff --git a/dlls/ntdll/threadpool2.c b/dlls/ntdll/threadpool2.c
 new file mode 100644
-index 0000000..c4f54af
+index 0000000..c4e2d21
 --- /dev/null
 +++ b/dlls/ntdll/threadpool2.c
-@@ -0,0 +1,966 @@
+@@ -0,0 +1,978 @@
 +/*
 + * Vista Threadpool implementation
 + *
@@ -277,7 +280,7 @@ index 0000000..c4f54af
 +static BOOL tp_threadpool_release( struct threadpool *pool );
 +static void tp_threadpool_shutdown( struct threadpool *pool );
 +
-+static NTSTATUS tp_object_submit( struct threadpool_object *object );
++static void tp_object_submit( struct threadpool_object *object );
 +static BOOL tp_object_release( struct threadpool_object *object );
 +static void tp_object_shutdown( struct threadpool_object *object );
 +
@@ -426,12 +429,14 @@ index 0000000..c4f54af
 +static NTSTATUS tp_threadpool_alloc( struct threadpool **out )
 +{
 +    struct threadpool *pool;
++    NTSTATUS status;
++    HANDLE thread;
 +
 +    pool = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*pool) );
 +    if (!pool)
 +        return STATUS_NO_MEMORY;
 +
-+    pool->refcount              = 1;
++    pool->refcount              = 2; /* this thread + worker proc */
 +    pool->shutdown              = FALSE;
 +
 +    RtlInitializeCriticalSection( &pool->cs );
@@ -443,8 +448,19 @@ index 0000000..c4f54af
 +    pool->max_workers           = 500;
 +    pool->min_workers           = 1;
 +
-+    pool->num_workers           = 0;
++    pool->num_workers           = 1;
 +    pool->num_busy_workers      = 0;
++
++    status = RtlCreateUserThread( GetCurrentProcess(), NULL, FALSE, NULL, 0, 0,
++                                  threadpool_worker_proc, pool, &thread, NULL );
++    if (status != STATUS_SUCCESS)
++    {
++        pool->cs.DebugInfo->Spare[0] = 0;
++        RtlDeleteCriticalSection( &pool->cs );
++        RtlFreeHeap( GetProcessHeap(), 0, pool );
++        return status;
++    }
++    NtClose( thread );
 +
 +    TRACE("allocated threadpool %p\n", pool);
 +
@@ -553,10 +569,10 @@ index 0000000..c4f54af
 +        if (pool->shutdown)
 +            break;
 +
-+        /* Wait for new tasks or until timeout expires. */
++        /* Wait for new tasks or until timeout expires. Never terminate the last worker. */
 +        timeout.QuadPart = (ULONGLONG)THREADPOOL_WORKER_TIMEOUT * -10000;
 +        if (RtlSleepConditionVariableCS( &pool->update_event, &pool->cs,
-+            &timeout ) == STATUS_TIMEOUT && !list_head( &pool->pool ))
++            &timeout ) == STATUS_TIMEOUT && !list_head( &pool->pool ) && pool->num_workers > 1)
 +        {
 +            break;
 +        }
@@ -571,7 +587,7 @@ index 0000000..c4f54af
 + ***********************************************************************/
 +
 +static void tp_object_initialize( struct threadpool_object *object, struct threadpool *pool,
-+                                  PVOID userdata, TP_CALLBACK_ENVIRON *environment )
++                                  PVOID userdata, TP_CALLBACK_ENVIRON *environment, BOOL submit_and_release )
 +{
 +    object->refcount                = 1;
 +    object->shutdown                = FALSE;
@@ -623,6 +639,14 @@ index 0000000..c4f54af
 +    /* Increase reference-count on the pool */
 +    interlocked_inc( &pool->refcount );
 +
++    TRACE("allocated object %p of type %u\n", object, object->type);
++
++    /* For simple callbacks we have to run tp_object_submit before adding this object
++     * to the cleanup group. As soon as the cleanup group members are released ->shutdown
++     * will be set, and tp_object_submit would fail with an assertion. */
++    if (submit_and_release)
++        tp_object_submit( object );
++
 +    /* Assign this object to a specific group. Please note that this has to be done
 +     * as the last step before returning a pointer to the application, otherwise
 +     * there is a risk of having race-conditions. */
@@ -635,10 +659,16 @@ index 0000000..c4f54af
 +        list_add_tail( &group->members, &object->group_entry );
 +        RtlLeaveCriticalSection( &group->cs );
 +    }
++
++    if (submit_and_release)
++    {
++        tp_object_shutdown( object );
++        tp_object_release( object );
++    }
 +}
 +
-+static NTSTATUS tp_object_alloc_simple( struct threadpool_object **out, PTP_SIMPLE_CALLBACK callback,
-+                                        PVOID userdata, TP_CALLBACK_ENVIRON *environment )
++static NTSTATUS tp_object_submit_simple( PTP_SIMPLE_CALLBACK callback, PVOID userdata,
++                                         TP_CALLBACK_ENVIRON *environment )
 +{
 +    struct threadpool_object *object;
 +    struct threadpool *pool;
@@ -654,11 +684,8 @@ index 0000000..c4f54af
 +
 +    object->type = TP_OBJECT_TYPE_SIMPLE;
 +    object->u.simple.callback = callback;
-+    tp_object_initialize( object, pool, userdata, environment );
++    tp_object_initialize( object, pool, userdata, environment, TRUE );
 +
-+    TRACE("allocated object %p of type %u\n", object, object->type);
-+
-+    *out = object;
 +    return STATUS_SUCCESS;
 +}
 +
@@ -739,10 +766,9 @@ index 0000000..c4f54af
 +    RtlLeaveCriticalSection( &pool->cs );
 +}
 +
-+static NTSTATUS tp_object_submit( struct threadpool_object *object )
++static void tp_object_submit( struct threadpool_object *object )
 +{
 +    struct threadpool *pool = object->pool;
-+    NTSTATUS status = STATUS_SUCCESS;
 +
 +    assert( !object->shutdown );
 +    assert( !pool->shutdown );
@@ -752,7 +778,9 @@ index 0000000..c4f54af
 +    /* Start new worker threads if required (and allowed) */
 +    if (pool->num_busy_workers >= pool->num_workers && pool->num_workers < pool->max_workers)
 +    {
++        NTSTATUS status;
 +        HANDLE thread;
++
 +        status = RtlCreateUserThread( GetCurrentProcess(), NULL, FALSE, NULL, 0, 0,
 +                                      threadpool_worker_proc, pool, &thread, NULL );
 +        if (status == STATUS_SUCCESS)
@@ -761,25 +789,21 @@ index 0000000..c4f54af
 +            pool->num_workers++;
 +            NtClose( thread );
 +        }
-+        else if (pool->num_workers)
++        else
 +        {
++            assert( pool->num_workers > 0 );
 +            RtlWakeConditionVariable( &pool->update_event );
-+            status = STATUS_SUCCESS;
 +        }
 +    }
 +    else RtlWakeConditionVariable( &pool->update_event );
 +
 +    /* Queue work item into pool and increment refcount */
-+    if (!status)
-+    {
-+        if (!object->num_pending_callbacks++)
-+            list_add_tail( &pool->pool, &object->pool_entry );
++    if (!object->num_pending_callbacks++)
++        list_add_tail( &pool->pool, &object->pool_entry );
 +
-+        interlocked_inc(&object->refcount);
-+    }
++    interlocked_inc( &object->refcount );
 +
 +    RtlLeaveCriticalSection( &pool->cs );
-+    return status;
 +}
 +
 +/***********************************************************************
@@ -1060,17 +1084,8 @@ index 0000000..c4f54af
 + */
 +NTSTATUS WINAPI TpSimpleTryPost( PTP_SIMPLE_CALLBACK callback, PVOID userdata, TP_CALLBACK_ENVIRON *environment )
 +{
-+    struct threadpool_object *object;
-+    NTSTATUS status;
 +    TRACE("%p %p %p\n", callback, userdata, environment);
-+    status = tp_object_alloc_simple( &object, callback, userdata, environment );
-+    if (!status)
-+    {
-+        status = tp_object_submit( object );
-+        tp_object_shutdown( object );
-+        tp_object_release( object );
-+    }
-+    return status;
++    return tp_object_submit_simple( callback, userdata, environment );
 +}
 -- 
 2.2.2

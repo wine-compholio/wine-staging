@@ -38,9 +38,10 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [10]:**
+**Bugfixes and features included in the next upcoming release [11]:**
 
 * Add implementation for CreateThreadpool ([Wine Bug #35192](https://bugs.winehq.org/show_bug.cgi?id=35192))
+* Add library override instead of closing winecfg when pressing ENTER over the combobox ([Wine Bug #12804](https://bugs.winehq.org/show_bug.cgi?id=12804))
 * Call DriverUnload function when unloading a device driver.
 * Fix arguments for OSMesaMakeCurrent when using 16 bit formats
 * Fix check for end_frame in RtlUnwindEx on x86_64. ([Wine Bug #34254](https://bugs.winehq.org/show_bug.cgi?id=34254))

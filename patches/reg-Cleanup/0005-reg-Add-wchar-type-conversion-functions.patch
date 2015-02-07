@@ -1,0 +1,136 @@
+From c7ea9e4dfd765ca4221d39276d09ec872d45ba9a Mon Sep 17 00:00:00 2001
+From: Jonathan Vollebregt <jnvsor@gmail.com>
+Date: Wed, 14 Jan 2015 18:12:25 +0100
+Subject: reg: Add wchar/type conversion functions
+
+---
+ programs/reg/reg.c  | 65 ++++++++++++++++++++++++++++++++++-------------------
+ programs/reg/reg.h  |  1 +
+ programs/reg/reg.rc |  1 +
+ 3 files changed, 44 insertions(+), 23 deletions(-)
+
+diff --git a/programs/reg/reg.c b/programs/reg/reg.c
+index e9b5b68..3ffcc25 100755
+--- a/programs/reg/reg.c
++++ b/programs/reg/reg.c
+@@ -52,6 +52,32 @@ root_rels[] =
+     {HKEY_CURRENT_CONFIG, short_hkcc, long_hkcc},
+ };
+ 
++static const WCHAR type_none[] = {'R','E','G','_','N','O','N','E',0};
++static const WCHAR type_sz[] = {'R','E','G','_','S','Z',0};
++static const WCHAR type_expand_sz[] = {'R','E','G','_','E','X','P','A','N','D','_','S','Z',0};
++static const WCHAR type_binary[] = {'R','E','G','_','B','I','N','A','R','Y',0};
++static const WCHAR type_dword[] = {'R','E','G','_','D','W','O','R','D',0};
++static const WCHAR type_dword_le[] = {'R','E','G','_','D','W','O','R','D','_','L','I','T','T','L','E','_','E','N','D','I','A','N',0};
++static const WCHAR type_dword_be[] = {'R','E','G','_','D','W','O','R','D','_','B','I','G','_','E','N','D','I','A','N',0};
++static const WCHAR type_multi_sz[] = {'R','E','G','_','M','U','L','T','I','_','S','Z',0};
++
++static const struct
++{
++    DWORD type;
++    const WCHAR *name;
++}
++type_rels[] =
++{
++    {REG_NONE, type_none},
++    {REG_SZ, type_sz},
++    {REG_EXPAND_SZ, type_expand_sz},
++    {REG_BINARY, type_binary},
++    {REG_DWORD, type_dword},
++    {REG_DWORD_LITTLE_ENDIAN, type_dword_le},
++    {REG_DWORD_BIG_ENDIAN, type_dword_be},
++    {REG_MULTI_SZ, type_multi_sz},
++};
++
+ static int reg_printfW(const WCHAR *msg, ...)
+ {
+     va_list va_args;
+@@ -117,6 +143,9 @@ static void reg_print_error(LSTATUS error_code)
+         case ERROR_FILE_NOT_FOUND:
+             reg_message(STRING_CANNOT_FIND);
+             return;
++        case ERROR_UNSUPPORTED_TYPE:
++            reg_message(STRING_UNSUPPORTED_TYPE);
++            return;
+         default:
+         {
+             static const WCHAR error_string[] = {'%','0','5','d',':',' ','%','s',0};
+@@ -168,30 +197,20 @@ static LSTATUS path_open(const WCHAR *path, HKEY *out, BOOL create)
+         return RegOpenKeyW(*out, path, out);
+ }
+ 
+-static DWORD get_regtype(LPWSTR type)
++static DWORD wchar_get_type(const WCHAR *type_name)
+ {
+-    static const WCHAR szREG_SZ[] = {'R','E','G','_','S','Z',0};
+-    static const WCHAR szREG_MULTI_SZ[] = {'R','E','G','_','M','U','L','T','I','_','S','Z',0};
+-    static const WCHAR szREG_DWORD_BIG_ENDIAN[] = {'R','E','G','_','D','W','O','R','D','_','B','I','G','_','E','N','D','I','A','N',0};
+-    static const WCHAR szREG_DWORD[] = {'R','E','G','_','D','W','O','R','D',0};
+-    static const WCHAR szREG_BINARY[] = {'R','E','G','_','B','I','N','A','R','Y',0};
+-    static const WCHAR szREG_DWORD_LITTLE_ENDIAN[] = {'R','E','G','_','D','W','O','R','D','_','L','I','T','T','L','E','_','E','N','D','I','A','N',0};
+-    static const WCHAR szREG_NONE[] = {'R','E','G','_','N','O','N','E',0};
+-    static const WCHAR szREG_EXPAND_SZ[] = {'R','E','G','_','E','X','P','A','N','D','_','S','Z',0};
+-
+-    if (!type)
++    DWORD i;
++
++    if (!type_name)
+         return REG_SZ;
+ 
+-    if (lstrcmpiW(type,szREG_SZ)==0) return REG_SZ;
+-    if (lstrcmpiW(type,szREG_DWORD)==0) return REG_DWORD;
+-    if (lstrcmpiW(type,szREG_MULTI_SZ)==0) return REG_MULTI_SZ;
+-    if (lstrcmpiW(type,szREG_EXPAND_SZ)==0) return REG_EXPAND_SZ;
+-    if (lstrcmpiW(type,szREG_DWORD_BIG_ENDIAN)==0) return REG_DWORD_BIG_ENDIAN;
+-    if (lstrcmpiW(type,szREG_DWORD_LITTLE_ENDIAN)==0) return REG_DWORD_LITTLE_ENDIAN;
+-    if (lstrcmpiW(type,szREG_BINARY)==0) return REG_BINARY;
+-    if (lstrcmpiW(type,szREG_NONE)==0) return REG_NONE;
++    for (i = 0; i < ARRAY_SIZE(type_rels); i++)
++    {
++        if (!strcmpiW(type_rels[i].name, type_name))
++            return type_rels[i].type;
++    }
+ 
+-    return -1;
++    return ~0u;
+ }
+ 
+ static LPBYTE get_regdata(LPWSTR data, DWORD reg_type, WCHAR separator, DWORD *reg_count)
+@@ -284,11 +303,11 @@ static int reg_add(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
+             }
+         }
+ 
+-        reg_type = get_regtype(type);
+-        if (reg_type == -1)
++        reg_type = wchar_get_type(type);
++        if (reg_type == ~0u)
+         {
+             RegCloseKey(subkey);
+-            reg_message(STRING_INVALID_CMDLINE);
++            reg_print_error(ERROR_UNSUPPORTED_TYPE);
+             return 1;
+         }
+ 
+diff --git a/programs/reg/reg.h b/programs/reg/reg.h
+index 1c2ae83..42de422 100644
+--- a/programs/reg/reg.h
++++ b/programs/reg/reg.h
+@@ -31,3 +31,4 @@
+ #define STRING_NO_REMOTE        108
+ #define STRING_CANNOT_FIND      109
+ #define STRING_ERROR            110
++#define STRING_UNSUPPORTED_TYPE 111
+diff --git a/programs/reg/reg.rc b/programs/reg/reg.rc
+index 5fc5a76..beafd4f 100644
+--- a/programs/reg/reg.rc
++++ b/programs/reg/reg.rc
+@@ -36,4 +36,5 @@ STRINGTABLE
+     STRING_NO_REMOTE, "Error: Unable to access remote machine\n"
+     STRING_CANNOT_FIND, "Error: The system was unable to find the specified registry key or value\n"
+     STRING_ERROR, "Unexpected error: "
++    STRING_UNSUPPORTED_TYPE, "Error: Unsupported type\n"
+ }
+-- 
+2.2.2
+

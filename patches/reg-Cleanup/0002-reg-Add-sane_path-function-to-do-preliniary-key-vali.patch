@@ -1,0 +1,104 @@
+From f33dbf947516c606d9215f182224a00e027e5750 Mon Sep 17 00:00:00 2001
+From: Jonathan Vollebregt <jnvsor@gmail.com>
+Date: Wed, 14 Jan 2015 18:12:22 +0100
+Subject: reg: Add sane_path function to do preliniary key validation
+
+---
+ programs/reg/reg.c  | 25 +++++++++++++++++++++----
+ programs/reg/reg.rc |  2 +-
+ 2 files changed, 22 insertions(+), 5 deletions(-)
+ mode change 100644 => 100755 programs/reg/reg.c
+
+diff --git a/programs/reg/reg.c b/programs/reg/reg.c
+old mode 100644
+new mode 100755
+index a88512d..fef9313
+--- a/programs/reg/reg.c
++++ b/programs/reg/reg.c
+@@ -20,6 +20,8 @@
+ #include <wine/unicode.h>
+ #include "reg.h"
+ 
++#define ERROR_NO_REMOTE         20000
++
+ static int reg_printfW(const WCHAR *msg, ...)
+ {
+     va_list va_args;
+@@ -76,6 +78,9 @@ static void reg_print_error(LSTATUS error_code)
+         case ERROR_BAD_COMMAND:
+             reg_message(STRING_INVALID_CMDLINE);
+             return;
++        case ERROR_NO_REMOTE:
++            reg_message(STRING_NO_REMOTE);
++            return;
+         default:
+         {
+             static const WCHAR error_string[] = {'%','0','5','d',':',' ','%','s',0};
+@@ -203,6 +208,14 @@ static LPBYTE get_regdata(LPWSTR data, DWORD reg_type, WCHAR separator, DWORD *r
+     return out_data;
+ }
+ 
++static LSTATUS sane_path(const WCHAR *key)
++{
++    if (key[0] == '\\' && key[1] == '\\' && key[2] != '\\')
++        return ERROR_NO_REMOTE;
++
++    return ERROR_SUCCESS;
++}
++
+ static int reg_add(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
+     WCHAR *type, WCHAR separator, WCHAR *data, BOOL force)
+ {
+@@ -210,12 +223,14 @@ static int reg_add(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
+         ' ','%','s',' ','%','d',' ','%','s',' ','%','s',' ','%','d','\n',0};
+     LPWSTR p;
+     HKEY root,subkey;
++    LONG err;
+ 
+     reg_printfW(stubW, key_name, value_name, value_empty, type, data, force);
+ 
+-    if (key_name[0]=='\\' && key_name[1]=='\\')
++    err = sane_path(key_name);
++    if (err != ERROR_SUCCESS)
+     {
+-        reg_message(STRING_NO_REMOTE);
++        reg_print_error(err);
+         return 1;
+     }
+ 
+@@ -280,15 +295,17 @@ static int reg_delete(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
+ {
+     LPWSTR p;
+     HKEY root,subkey;
++    LONG err;
+ 
+     static const WCHAR stubW[] = {'D','E','L','E','T','E',
+         ' ','-',' ','%','s',' ','%','s',' ','%','d',' ','%','d',' ','%','d','\n'
+         ,0};
+     reg_printfW(stubW, key_name, value_name, value_empty, value_all, force);
+ 
+-    if (key_name[0]=='\\' && key_name[1]=='\\')
++    err = sane_path(key_name);
++    if (err != ERROR_SUCCESS)
+     {
+-        reg_message(STRING_NO_REMOTE);
++        reg_print_error(err);
+         return 1;
+     }
+ 
+diff --git a/programs/reg/reg.rc b/programs/reg/reg.rc
+index 6183aaa..5fc5a76 100644
+--- a/programs/reg/reg.rc
++++ b/programs/reg/reg.rc
+@@ -33,7 +33,7 @@ STRINGTABLE
+     STRING_SUCCESS, "The operation completed successfully\n"
+     STRING_INVALID_KEY, "Error: Invalid key name\n"
+     STRING_INVALID_CMDLINE, "Error: Invalid command line parameters\n"
+-    STRING_NO_REMOTE, "Error: Unable to add keys to remote machine\n"
++    STRING_NO_REMOTE, "Error: Unable to access remote machine\n"
+     STRING_CANNOT_FIND, "Error: The system was unable to find the specified registry key or value\n"
+     STRING_ERROR, "Unexpected error: "
+ }
+-- 
+2.2.2
+

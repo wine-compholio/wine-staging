@@ -137,6 +137,7 @@ patch_enable_all ()
 	enable_ntdll_WinSqm="$1"
 	enable_ntoskrnl_DriverTest="$1"
 	enable_ntoskrnl_Emulator="$1"
+	enable_ntoskrnl_IoGetAttachedDeviceReference="$1"
 	enable_ntoskrnl_KeWaitForMultipleObjects="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
@@ -437,6 +438,9 @@ patch_enable ()
 			;;
 		ntoskrnl-Emulator)
 			enable_ntoskrnl_Emulator="$2"
+			;;
+		ntoskrnl-IoGetAttachedDeviceReference)
+			enable_ntoskrnl_IoGetAttachedDeviceReference="$2"
 			;;
 		ntoskrnl-KeWaitForMultipleObjects)
 			enable_ntoskrnl_KeWaitForMultipleObjects="$2"
@@ -2325,6 +2329,18 @@ if test "$enable_ntoskrnl_Emulator" -eq 1; then
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Emulate '\''mov Eb, Gb'\'' instruction on x86 processor architecture.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Emulate memory access to KI_USER_SHARED_DATA on x86_64.", 2 },';
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Add TRACEs for instruction emulator on x86_64 to simplify debugging.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntoskrnl-IoGetAttachedDeviceReference
+# |
+# | Modified files:
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h
+# |
+if test "$enable_ntoskrnl_IoGetAttachedDeviceReference" -eq 1; then
+	patch_apply ntoskrnl-IoGetAttachedDeviceReference/0001-ntoskrnl.exe-Add-stub-for-IoGetAttachedDeviceReferen.patch
+	(
+		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for IoGetAttachedDeviceReference.", 1 },';
 	) >> "$patchlist"
 fi
 

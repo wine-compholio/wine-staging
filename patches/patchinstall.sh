@@ -2357,6 +2357,7 @@ if test "$enable_nvcuda_CUDA_Support" -eq 1; then
 	patch_apply nvcuda-CUDA_Support/0005-nvcuda-Properly-wrap-undocumented-ContextStorage-int.patch
 	patch_apply nvcuda-CUDA_Support/0006-nvcuda-Emulate-two-d3d9-initialization-functions.patch
 	patch_apply nvcuda-CUDA_Support/0007-nvcuda-Properly-wrap-stream-callbacks-by-forwarding-.patch
+	patch_apply nvcuda-CUDA_Support/0008-nvcuda-Add-support-for-CUDA-7.0.patch
 	(
 		echo '+    { "Sebastian Lackner", "include: Add cuda.h.h.", 1 },';
 		echo '+    { "Sebastian Lackner", "nvcuda: Add stub dll.", 1 },';
@@ -2365,6 +2366,7 @@ if test "$enable_nvcuda_CUDA_Support" -eq 1; then
 		echo '+    { "Michael Müller", "nvcuda: Properly wrap undocumented '\''ContextStorage'\'' interface and add tests.", 1 },';
 		echo '+    { "Michael Müller", "nvcuda: Emulate two d3d9 initialization functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "nvcuda: Properly wrap stream callbacks by forwarding them to a worker thread.", 1 },';
+		echo '+    { "Sebastian Lackner", "nvcuda: Add support for CUDA 7.0.", 1 },';
 	) >> "$patchlist"
 fi
 

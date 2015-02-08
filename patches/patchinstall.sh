@@ -2344,6 +2344,9 @@ fi
 
 # Patchset nvcuda-CUDA_Support
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37664] MediaCoder needs CUDA for video encoding
+# |
 # | Modified files:
 # |   *	configure.ac, dlls/nvcuda/Makefile.in, dlls/nvcuda/internal.c, dlls/nvcuda/nvcuda.c, dlls/nvcuda/nvcuda.h,
 # | 	dlls/nvcuda/nvcuda.rc, dlls/nvcuda/nvcuda.spec, dlls/nvcuda/tests/Makefile.in, dlls/nvcuda/tests/nvcuda.c,
@@ -2371,6 +2374,9 @@ if test "$enable_nvcuda_CUDA_Support" -eq 1; then
 fi
 
 # Patchset nvapi-Stub_DLL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35062] Fix graphical corruption in FarCry 3 with NVIDIA drivers
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/nvapi/Makefile.in, dlls/nvapi/nvapi.c, dlls/nvapi/nvapi.spec, dlls/nvapi/tests/Makefile.in,
@@ -2569,7 +2575,8 @@ fi
 # Patchset server-Stored_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#31858] Support for stored file ACLs
+# |   *	[#31858] Silverlight needs support for file ACLs
+# |   *	[#33576] Support for stored file ACLs
 # |
 # | Modified files:
 # |   *	dlls/advapi32/tests/security.c, include/wine/port.h, server/change.c, server/file.c, server/file.h

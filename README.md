@@ -38,7 +38,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [13]:**
+**Bugfixes and features included in the next upcoming release [16]:**
 
 * Add implementation for CreateThreadpool ([Wine Bug #35192](https://bugs.winehq.org/show_bug.cgi?id=35192))
 * Add library override instead of closing winecfg when pressing ENTER over the combobox ([Wine Bug #12804](https://bugs.winehq.org/show_bug.cgi?id=12804))
@@ -46,13 +46,16 @@ Included bug fixes and improvements
 * Call DriverUnload function when unloading a device driver.
 * Fix arguments for OSMesaMakeCurrent when using 16 bit formats
 * Fix check for end_frame in RtlUnwindEx on x86_64. ([Wine Bug #34254](https://bugs.winehq.org/show_bug.cgi?id=34254))
+* Fix graphical corruption in FarCry 3 with NVIDIA drivers ([Wine Bug #35062](https://bugs.winehq.org/show_bug.cgi?id=35062))
 * Fix mouse jittering in Planetside 2 ([Wine Bug #32913](https://bugs.winehq.org/show_bug.cgi?id=32913))
 * Implement additional stubs for vcomp dlls ([Wine Bug #31640](https://bugs.winehq.org/show_bug.cgi?id=31640))
 * Implement threadpool timers ([Wine Bug #37306](https://bugs.winehq.org/show_bug.cgi?id=37306))
 * Implement threadpool wait objects
 * Implement threadpool work items ([Wine Bug #32531](https://bugs.winehq.org/show_bug.cgi?id=32531))
 * Jedi Knight: Dark Forces II crashes with winmm set to native ([Wine Bug #37983](https://bugs.winehq.org/show_bug.cgi?id=37983))
+* MediaCoder needs CUDA for video encoding ([Wine Bug #37664](https://bugs.winehq.org/show_bug.cgi?id=37664))
 * Support for NVIDIA video encoder library (nvencodeapi)
+* Support for stored file ACLs ([Wine Bug #33576](https://bugs.winehq.org/show_bug.cgi?id=33576))
 
 
 **Bugs fixed in Wine Staging 1.7.35 [146]:**
@@ -150,6 +153,7 @@ Included bug fixes and improvements
 * Scrolling causes mouse and screen to lock in Call to Power II ([Wine Bug #34559](https://bugs.winehq.org/show_bug.cgi?id=34559))
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](https://bugs.winehq.org/show_bug.cgi?id=35652))
 * Set last error when GetRawInputDeviceList fails ([Wine Bug #37667](https://bugs.winehq.org/show_bug.cgi?id=37667))
+* Silverlight needs support for file ACLs ([Wine Bug #31858](https://bugs.winehq.org/show_bug.cgi?id=31858))
 * Super Mario 3: Mario Forever fails to load keyboard mapping from profile files. ([Wine Bug #18099](https://bugs.winehq.org/show_bug.cgi?id=18099))
 * Support for AllocateAndGetTcpExTableFromStack ([Wine Bug #34372](https://bugs.winehq.org/show_bug.cgi?id=34372))
 * Support for BindImageEx ([Wine Bug #3591](https://bugs.winehq.org/show_bug.cgi?id=3591))
@@ -189,7 +193,6 @@ Included bug fixes and improvements
 * Support for pasting HTML from Unix applications ([Wine Bug #7372](https://bugs.winehq.org/show_bug.cgi?id=7372))
 * Support for process ACLs ([Wine Bug #22006](https://bugs.winehq.org/show_bug.cgi?id=22006))
 * Support for setcap on wine-preloader ([Wine Bug #26256](https://bugs.winehq.org/show_bug.cgi?id=26256))
-* Support for stored file ACLs ([Wine Bug #31858](https://bugs.winehq.org/show_bug.cgi?id=31858))
 * Try harder to get the host name address in getaddrinfo() ([Wine Bug #29609](https://bugs.winehq.org/show_bug.cgi?id=29609))
 * Tumblebugs 2 requires DXTn software encoding support ([Wine Bug #29586](https://bugs.winehq.org/show_bug.cgi?id=29586))
 * Update a XIM candidate position when cursor location changes ([Wine Bug #30938](https://bugs.winehq.org/show_bug.cgi?id=30938))

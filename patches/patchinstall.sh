@@ -137,8 +137,7 @@ patch_enable_all ()
 	enable_ntdll_WinSqm="$1"
 	enable_ntoskrnl_DriverTest="$1"
 	enable_ntoskrnl_Emulator="$1"
-	enable_ntoskrnl_IoGetAttachedDeviceReference="$1"
-	enable_ntoskrnl_KeWaitForMultipleObjects="$1"
+	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
@@ -439,11 +438,8 @@ patch_enable ()
 		ntoskrnl-Emulator)
 			enable_ntoskrnl_Emulator="$2"
 			;;
-		ntoskrnl-IoGetAttachedDeviceReference)
-			enable_ntoskrnl_IoGetAttachedDeviceReference="$2"
-			;;
-		ntoskrnl-KeWaitForMultipleObjects)
-			enable_ntoskrnl_KeWaitForMultipleObjects="$2"
+		ntoskrnl-Stubs)
+			enable_ntoskrnl_Stubs="$2"
 			;;
 		nvapi-Stub_DLL)
 			enable_nvapi_Stub_DLL="$2"
@@ -2332,29 +2328,21 @@ if test "$enable_ntoskrnl_Emulator" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntoskrnl-IoGetAttachedDeviceReference
+# Patchset ntoskrnl-Stubs
 # |
 # | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h, include/ntdef.h
 # |
-if test "$enable_ntoskrnl_IoGetAttachedDeviceReference" -eq 1; then
-	patch_apply ntoskrnl-IoGetAttachedDeviceReference/0001-ntoskrnl.exe-Add-stub-for-IoGetAttachedDeviceReferen.patch
-	(
-		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for IoGetAttachedDeviceReference.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntoskrnl-KeWaitForMultipleObjects
-# |
-# | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ntdef.h
-# |
-if test "$enable_ntoskrnl_KeWaitForMultipleObjects" -eq 1; then
-	patch_apply ntoskrnl-KeWaitForMultipleObjects/0001-include-Remove-several-duplicate-definitions-from-nt.patch
-	patch_apply ntoskrnl-KeWaitForMultipleObjects/0002-ntoskrnl.exe-add-KeWaitForMultipleObjects-stub.patch
+if test "$enable_ntoskrnl_Stubs" -eq 1; then
+	patch_apply ntoskrnl-Stubs/0001-include-Remove-several-duplicate-definitions-from-nt.patch
+	patch_apply ntoskrnl-Stubs/0002-ntoskrnl.exe-add-KeWaitForMultipleObjects-stub.patch
+	patch_apply ntoskrnl-Stubs/0003-ntoskrnl.exe-Add-stub-for-IoGetAttachedDeviceReferen.patch
+	patch_apply ntoskrnl-Stubs/0004-ntoskrnl.exe-Add-stubs-for-ExAcquireFastMutexUnsafe-.patch
 	(
 		echo '+    { "Sebastian Lackner", "include: Remove several duplicate definitions from ntdef.h.", 1 },';
 		echo '+    { "Austin English", "ntoskrnl.exe: add KeWaitForMultipleObjects stub.", 1 },';
+		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for IoGetAttachedDeviceReference.", 1 },';
+		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ExAcquireFastMutexUnsafe and ExReleaseFastMutexUnsafe.", 1 },';
 	) >> "$patchlist"
 fi
 

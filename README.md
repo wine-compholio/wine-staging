@@ -38,11 +38,12 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [17]:**
+**Bugfixes and features included in the next upcoming release [19]:**
 
 * Add implementation for CreateThreadpool ([Wine Bug #35192](https://bugs.winehq.org/show_bug.cgi?id=35192))
 * Add library override instead of closing winecfg when pressing ENTER over the combobox ([Wine Bug #12804](https://bugs.winehq.org/show_bug.cgi?id=12804))
 * Add performance library registry keys needed by MS SQL Server Management Studio Express 2008 R2 ([Wine Bug #33661](https://bugs.winehq.org/show_bug.cgi?id=33661))
+* Add stub for ntoskrnl.KeWaitForMultipleObjects
 * Call DriverUnload function when unloading a device driver.
 * Fix arguments for OSMesaMakeCurrent when using 16 bit formats
 * Fix check for end_frame in RtlUnwindEx on x86_64. ([Wine Bug #34254](https://bugs.winehq.org/show_bug.cgi?id=34254))
@@ -50,6 +51,7 @@ Included bug fixes and improvements
 * Fix mouse jittering in Planetside 2 ([Wine Bug #32913](https://bugs.winehq.org/show_bug.cgi?id=32913))
 * Implement additional stubs for vcomp dlls ([Wine Bug #31640](https://bugs.winehq.org/show_bug.cgi?id=31640))
 * Implement stub for ntoskrnl.IoGetAttachedDeviceReference
+* Implement stubs for ntoskrnl.Ex{Acquire,Release}FastMutexUnsafe
 * Implement threadpool timers ([Wine Bug #37306](https://bugs.winehq.org/show_bug.cgi?id=37306))
 * Implement threadpool wait objects
 * Implement threadpool work items ([Wine Bug #32531](https://bugs.winehq.org/show_bug.cgi?id=32531))
@@ -67,7 +69,7 @@ Included bug fixes and improvements
 * Add stub for D3DXComputeNormalMap
 * Add stub for D3DXComputeTangentFrameEx ([Wine Bug #31984](https://bugs.winehq.org/show_bug.cgi?id=31984))
 * Add stub for D3DXIntersect
-* Add stub for KeWaitForMultipleObjects
+* ~~Add stub for KeWaitForMultipleObjects~~
 * Add stub for NtSetLdtEntries/ZwSetLdtEntries ([Wine Bug #26268](https://bugs.winehq.org/show_bug.cgi?id=26268))
 * Add stubs for D3DXCreateAnimationController interface
 * Add support for GetPropValue to PulseAudio backend

@@ -2340,6 +2340,9 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0004-ntoskrnl.exe-Add-stubs-for-ExAcquireFastMutexUnsafe-.patch
 	patch_apply ntoskrnl-Stubs/0005-ntoskrnl.exe-Add-stubs-for-ObReferenceObjectByPointe.patch
 	patch_apply ntoskrnl-Stubs/0006-ntoskrnl.exe-Add-stub-for-KeDelayExecutionThread.patch
+	patch_apply ntoskrnl-Stubs/0007-ntoskrnl.exe-Improve-KeReleaseMutex-stub.patch
+	patch_apply ntoskrnl-Stubs/0008-ntoskrnl.exe-Improve-KeInitializeSemaphore-stub.patch
+	patch_apply ntoskrnl-Stubs/0009-ntoskrnl.exe-Improve-KeInitializeTimerEx-stub.patch
 	(
 		echo '+    { "Sebastian Lackner", "include: Remove several duplicate definitions from ntdef.h.", 1 },';
 		echo '+    { "Austin English", "ntoskrnl.exe: add KeWaitForMultipleObjects stub.", 1 },';
@@ -2347,6 +2350,9 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ExAcquireFastMutexUnsafe and ExReleaseFastMutexUnsafe.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ObReferenceObjectByPointer and ObDereferenceObject.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for KeDelayExecutionThread.", 1 },';
+		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeReleaseMutex stub.", 1 },';
+		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeSemaphore stub.", 1 },';
+		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeTimerEx stub.", 1 },';
 	) >> "$patchlist"
 fi
 

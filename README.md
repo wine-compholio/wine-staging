@@ -38,7 +38,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [22]:**
+**Bugfixes and features included in the next upcoming release [23]:**
 
 * Add implementation for CreateThreadpool ([Wine Bug #35192](https://bugs.winehq.org/show_bug.cgi?id=35192))
 * Add library override instead of closing winecfg when pressing ENTER over the combobox ([Wine Bug #12804](https://bugs.winehq.org/show_bug.cgi?id=12804))
@@ -58,6 +58,7 @@ Included bug fixes and improvements
 * Implement threadpool timers ([Wine Bug #37306](https://bugs.winehq.org/show_bug.cgi?id=37306))
 * Implement threadpool wait objects
 * Implement threadpool work items ([Wine Bug #32531](https://bugs.winehq.org/show_bug.cgi?id=32531))
+* Improve stub for AEV_GetVolumeRange ([Wine Bug #35658](https://bugs.winehq.org/show_bug.cgi?id=35658))
 * Jedi Knight: Dark Forces II crashes with winmm set to native ([Wine Bug #37983](https://bugs.winehq.org/show_bug.cgi?id=37983))
 * MediaCoder needs CUDA for video encoding ([Wine Bug #37664](https://bugs.winehq.org/show_bug.cgi?id=37664))
 * Support for NVIDIA video encoder library (nvencodeapi)

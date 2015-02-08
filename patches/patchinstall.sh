@@ -2338,11 +2338,13 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0002-ntoskrnl.exe-add-KeWaitForMultipleObjects-stub.patch
 	patch_apply ntoskrnl-Stubs/0003-ntoskrnl.exe-Add-stub-for-IoGetAttachedDeviceReferen.patch
 	patch_apply ntoskrnl-Stubs/0004-ntoskrnl.exe-Add-stubs-for-ExAcquireFastMutexUnsafe-.patch
+	patch_apply ntoskrnl-Stubs/0005-ntoskrnl.exe-Add-stubs-for-ObReferenceObjectByPointe.patch
 	(
 		echo '+    { "Sebastian Lackner", "include: Remove several duplicate definitions from ntdef.h.", 1 },';
 		echo '+    { "Austin English", "ntoskrnl.exe: add KeWaitForMultipleObjects stub.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for IoGetAttachedDeviceReference.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ExAcquireFastMutexUnsafe and ExReleaseFastMutexUnsafe.", 1 },';
+		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ObReferenceObjectByPointer and ObDereferenceObject.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -141,6 +141,7 @@ patch_enable_all ()
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
+	enable_nvencodeapi_Video_Encoder="$1"
 	enable_ole32_CoWaitForMultipleHandles="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_reg_Cleanup="$1"
@@ -448,6 +449,9 @@ patch_enable ()
 			;;
 		nvcuvid-CUDA_Video_Support)
 			enable_nvcuvid_CUDA_Video_Support="$2"
+			;;
+		nvencodeapi-Video_Encoder)
+			enable_nvencodeapi_Video_Encoder="$2"
 			;;
 		ole32-CoWaitForMultipleHandles)
 			enable_ole32_CoWaitForMultipleHandles="$2"
@@ -908,6 +912,13 @@ if test "$enable_server_Stored_ACLs" -eq 1; then
 		abort "Patchset ntdll-DOS_Attributes disabled, but server-Stored_ACLs depends on that."
 	fi
 	enable_ntdll_DOS_Attributes=1
+fi
+
+if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
+	if test "$enable_nvcuvid_CUDA_Video_Support" -gt 1; then
+		abort "Patchset nvcuvid-CUDA_Video_Support disabled, but nvencodeapi-Video_Encoder depends on that."
+	fi
+	enable_nvcuvid_CUDA_Video_Support=1
 fi
 
 if test "$enable_nvcuvid_CUDA_Video_Support" -eq 1; then
@@ -2410,6 +2421,19 @@ if test "$enable_nvcuvid_CUDA_Video_Support" -eq 1; then
 	patch_apply nvcuvid-CUDA_Video_Support/0001-nvcuvid-First-implementation.patch
 	(
 		echo '+    { "Michael Müller", "nvcuvid: First implementation.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset nvencodeapi-Video_Encoder
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/nvencodeapi/Makefile.in, dlls/nvencodeapi/nvencodeapi.c, dlls/nvencodeapi/nvencodeapi.spec,
+# | 	dlls/nvencodeapi64/Makefile.in, dlls/nvencodeapi64/nvencodeapi64.spec, include/Makefile.in, include/nvencodeapi.h
+# |
+if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
+	patch_apply nvencodeapi-Video_Encoder/0001-nvencodeapi-First-implementation.patch
+	(
+		echo '+    { "Michael Müller", "nvencodeapi: First implementation.", 1 },';
 	) >> "$patchlist"
 fi
 

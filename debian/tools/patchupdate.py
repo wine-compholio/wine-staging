@@ -505,7 +505,7 @@ def generate_script(all_patches):
     lines.append("patch_enable_all ()\n")
     lines.append("{\n")
     for i, patch in sorted([(i, all_patches[i]) for i in resolved], key=lambda x:x[1].name):
-        patch.variable = "enable_%s" % patch.name.replace("-","_")
+        patch.variable = "enable_%s" % patch.name.replace("-","_").replace(".","_")
         lines.append("\t%s=\"$1\"\n" % patch.variable)
     lines.append("}\n")
     lines.append("\n")

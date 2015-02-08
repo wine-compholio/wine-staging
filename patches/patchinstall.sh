@@ -179,7 +179,7 @@ patch_enable_all ()
 	enable_user32_WndProc="$1"
 	enable_vcomp_Stub_Functions="$1"
 	enable_windowscodecs_TGA_Decoder="$1"
-	enable_wine.inf_Performance="$1"
+	enable_wine_inf_Performance="$1"
 	enable_wineboot_HKEY_DYN_DATA="$1"
 	enable_winebuild_LinkerVersion="$1"
 	enable_winecfg_Libraries="$1"
@@ -565,7 +565,7 @@ patch_enable ()
 			enable_windowscodecs_TGA_Decoder="$2"
 			;;
 		wine.inf-Performance)
-			enable_wine.inf_Performance="$2"
+			enable_wine_inf_Performance="$2"
 			;;
 		wineboot-HKEY_DYN_DATA)
 			enable_wineboot_HKEY_DYN_DATA="$2"
@@ -3075,7 +3075,7 @@ fi
 # | Modified files:
 # |   *	loader/wine.inf.in
 # |
-if test "$enable_wine.inf_Performance" -eq 1; then
+if test "$enable_wine_inf_Performance" -eq 1; then
 	patch_apply wine.inf-Performance/0001-wine.inf-Add-registry-keys-for-Windows-Performance-L.patch
 	(
 		echo '+    { "Daniel Jelinski", "wine.inf: Add registry keys for Windows Performance Library.", 1 },';

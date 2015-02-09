@@ -2207,7 +2207,7 @@ fi
 if test "$enable_ntdll_RtlUnwindEx" -eq 1; then
 	patch_apply ntdll-RtlUnwindEx/0001-ntdll-Fix-check-for-end_frame-in-RtlUnwindEx-on-x86_.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Fix check for end_frame in RtlUnwindEx on x86_64.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Fix check for end_frame in RtlUnwindEx on x86_64.", 2 },';
 	) >> "$patchlist"
 fi
 

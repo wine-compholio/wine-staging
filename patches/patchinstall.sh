@@ -105,7 +105,6 @@ patch_enable_all ()
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_Profile="$1"
-	enable_kernel32_UTF7_Support="$1"
 	enable_kernel32_VerifyVersionInfo="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_makedep_PARENTSPEC="$1"
@@ -342,9 +341,6 @@ patch_enable ()
 			;;
 		kernel32-Profile)
 			enable_kernel32_Profile="$2"
-			;;
-		kernel32-UTF7_Support)
-			enable_kernel32_UTF7_Support="$2"
 			;;
 		kernel32-VerifyVersionInfo)
 			enable_kernel32_VerifyVersionInfo="$2"
@@ -1799,23 +1795,6 @@ if test "$enable_kernel32_Profile" -eq 1; then
 	patch_apply kernel32-Profile/0001-kernel32-Allow-empty-profile-section-and-key-name-st.patch
 	(
 		echo '+    { "Claudio Fontana", "kernel32: Allow empty profile section and key name strings.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-UTF7_Support
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#27388] Support for UTF7 encoding/decoding
-# |
-# | Modified files:
-# |   *	dlls/kernel32/locale.c
-# |
-if test "$enable_kernel32_UTF7_Support" -eq 1; then
-	patch_apply kernel32-UTF7_Support/0001-kernel32-Support-UTF-7-in-MultiByteToWideChar.patch
-	patch_apply kernel32-UTF7_Support/0002-kernel32-Support-UTF-7-in-WideCharToMultiByte.patch
-	(
-		echo '+    { "Alex Henrie", "kernel32: Support UTF-7 in MultiByteToWideChar.", 3 },';
-		echo '+    { "Alex Henrie", "kernel32: Support UTF-7 in WideCharToMultiByte.", 3 },';
 	) >> "$patchlist"
 fi
 

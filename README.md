@@ -38,10 +38,11 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [2]:**
+**Bugfixes and features included in the next upcoming release [3]:**
 
 * Avoid race-conditions in NtReadFile() operations with write watches.
 * Avoid race-conditions with write watches in WS2_async_accept.
+* Implement D3DXGetShaderOutputSemantics
 
 
 **Bugs fixed in Wine Staging 1.7.36 [167]:**

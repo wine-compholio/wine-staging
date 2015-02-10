@@ -1,0 +1,82 @@
+From a3f87586958bbc1c1bb2df30b7605705254f7655 Mon Sep 17 00:00:00 2001
+From: Christian Costa <titan.costa@gmail.com>
+Date: Tue, 10 Feb 2015 00:45:05 +0100
+Subject: d3dx9_36: Implement D3DXGetShaderOutputSemantics.
+
+---
+ dlls/d3dx9_36/d3dx9_36.spec |  2 +-
+ dlls/d3dx9_36/shader.c      | 27 +++++++++++++++++++++------
+ 2 files changed, 22 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/d3dx9_36/d3dx9_36.spec b/dlls/d3dx9_36/d3dx9_36.spec
+index 1fb2aaf..13b1684 100644
+--- a/dlls/d3dx9_36/d3dx9_36.spec
++++ b/dlls/d3dx9_36/d3dx9_36.spec
+@@ -160,7 +160,7 @@
+ @ stdcall D3DXGetShaderConstantTable(ptr ptr)
+ @ stdcall D3DXGetShaderConstantTableEx(ptr long ptr)
+ @ stdcall D3DXGetShaderInputSemantics(ptr ptr ptr)
+-@ stub D3DXGetShaderOutputSemantics(ptr ptr ptr)
++@ stdcall D3DXGetShaderOutputSemantics(ptr ptr ptr)
+ @ stdcall D3DXGetShaderSamplers(ptr ptr ptr)
+ @ stdcall D3DXGetShaderSize(ptr)
+ @ stdcall D3DXGetShaderVersion(ptr)
+diff --git a/dlls/d3dx9_36/shader.c b/dlls/d3dx9_36/shader.c
+index 63852d0..c3f02d2 100644
+--- a/dlls/d3dx9_36/shader.c
++++ b/dlls/d3dx9_36/shader.c
+@@ -2166,7 +2166,7 @@ static UINT get_shader_semantics(const DWORD *byte_code, D3DXSEMANTIC *semantics
+     {
+         if (*ptr & (1 << 31))
+         {
+-            FIXME("Opcode expected\n");
++            FIXME("Opcode expected but got %#x\n", *ptr);
+             return 0;
+         }
+         else if ((*ptr & D3DSI_OPCODE_MASK) == D3DSIO_DCL)
+@@ -2180,7 +2180,7 @@ static UINT get_shader_semantics(const DWORD *byte_code, D3DXSEMANTIC *semantics
+             TRACE("D3DSIO_DCL param1: %#x, param2: %#x, usage: %u, usage_index: %u, reg_type: %u\n",
+                    param1, param2, usage, usage_index, reg_type);
+ 
+-            if (input && (reg_type == D3DSPR_INPUT))
++            if ((input && (reg_type == D3DSPR_INPUT)) || (!input && (reg_type == D3DSPR_OUTPUT)))
+             {
+                 if (semantics)
+                 {
+@@ -2189,10 +2189,7 @@ static UINT get_shader_semantics(const DWORD *byte_code, D3DXSEMANTIC *semantics
+                 }
+                 i++;
+             }
+-            else
+-            {
+-                /* FIXME: Support for output semantics */
+-            }
++
+             ptr++;
+         }
+         else
+@@ -2220,3 +2217,21 @@ HRESULT WINAPI D3DXGetShaderInputSemantics(const DWORD *byte_code, D3DXSEMANTIC
+ 
+     return D3D_OK;
+ }
++
++
++HRESULT WINAPI D3DXGetShaderOutputSemantics(const DWORD *byte_code, D3DXSEMANTIC *semantics, UINT *count)
++{
++    UINT nb_semantics;
++
++    TRACE("byte_code %p, semantics %p, count %p\n", byte_code, semantics, count);
++
++    if (!byte_code)
++        return D3DERR_INVALIDCALL;
++
++    nb_semantics = get_shader_semantics(byte_code, semantics, FALSE);
++
++    if (count)
++        *count = nb_semantics;
++
++    return D3D_OK;
++}
+-- 
+2.2.2
+

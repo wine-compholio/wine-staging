@@ -1348,8 +1348,10 @@ fi
 # |
 if test "$enable_d3dx9_36_GetShaderSemantics" -eq 1; then
 	patch_apply d3dx9_36-GetShaderSemantics/0001-d3dx9_36-Implement-D3DXGetShaderInputSemantics-tests.patch
+	patch_apply d3dx9_36-GetShaderSemantics/0002-d3dx9_36-Implement-D3DXGetShaderOutputSemantics.patch
 	(
 		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXGetShaderInputSemantics + tests.", 1 },';
+		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXGetShaderOutputSemantics.", 1 },';
 	) >> "$patchlist"
 fi
 

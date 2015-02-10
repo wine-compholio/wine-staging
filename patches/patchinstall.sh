@@ -135,6 +135,7 @@ patch_enable_all ()
 	enable_ntdll_Vista_Threadpool="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_WinSqm="$1"
+	enable_ntdll_WriteWatches="$1"
 	enable_ntoskrnl_DriverTest="$1"
 	enable_ntoskrnl_Emulator="$1"
 	enable_ntoskrnl_Stubs="$1"
@@ -431,6 +432,9 @@ patch_enable ()
 			;;
 		ntdll-WinSqm)
 			enable_ntdll_WinSqm="$2"
+			;;
+		ntdll-WriteWatches)
+			enable_ntdll_WriteWatches="$2"
 			;;
 		ntoskrnl-DriverTest)
 			enable_ntoskrnl_DriverTest="$2"
@@ -940,6 +944,17 @@ if test "$enable_ntoskrnl_Emulator" -eq 1; then
 		abort "Patchset ntdll-User_Shared_Data disabled, but ntoskrnl-Emulator depends on that."
 	fi
 	enable_ntdll_User_Shared_Data=1
+fi
+
+if test "$enable_ntdll_WriteWatches" -eq 1; then
+	if test "$enable_kernel32_Named_Pipe" -gt 1; then
+		abort "Patchset kernel32-Named_Pipe disabled, but ntdll-WriteWatches depends on that."
+	fi
+	if test "$enable_ws2_32_WriteWatches" -gt 1; then
+		abort "Patchset ws2_32-WriteWatches disabled, but ntdll-WriteWatches depends on that."
+	fi
+	enable_kernel32_Named_Pipe=1
+	enable_ws2_32_WriteWatches=1
 fi
 
 if test "$enable_ntdll_Junction_Points" -eq 1; then
@@ -2285,6 +2300,18 @@ if test "$enable_ntdll_WinSqm" -eq 1; then
 	patch_apply ntdll-WinSqm/0001-ntdll-Add-stubs-for-WinSqmStartSession-WinSqmEndSess.patch
 	(
 		echo '+    { "Erich E. Hoover", "ntdll: Add stubs for WinSqmStartSession / WinSqmEndSession.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-WriteWatches
+# |
+# | Modified files:
+# |   *	dlls/ntdll/file.c
+# |
+if test "$enable_ntdll_WriteWatches" -eq 1; then
+	patch_apply ntdll-WriteWatches/0001-ntdll-Avoid-race-conditions-with-write-watches-in-Nt.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "ntdll: Avoid race-conditions with write watches in NtReadFile.", 1 },';
 	) >> "$patchlist"
 fi
 

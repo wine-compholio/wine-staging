@@ -1,0 +1,36 @@
+From 36c5307ddaea9ee5f0b1709ed14f3ec4b580acae Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Tue, 10 Feb 2015 06:36:52 +0100
+Subject: ntdll: Avoid race-conditions with write watches in NtReadFile.
+
+Rebased against kernel32-NamedPipe patchset by Sebastian Lackner <sebastian@fds-team.de>.
+---
+ dlls/ntdll/file.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index e564bdd..10e17d8 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -541,6 +541,8 @@ static NTSTATUS read_unix_fd(int fd, char *buf, ULONG *total, ULONG length,
+             else
+                 return STATUS_PENDING;
+         }
++        else if (errno == EFAULT && wine_uninterrupted_write_memory( buf + *total, NULL, length - *total ) >= (length - *total))
++            continue;
+         else if (errno != EINTR)
+             return FILE_GetNtStatus();
+     }
+@@ -780,6 +782,9 @@ NTSTATUS WINAPI NtReadFile(HANDLE hFile, HANDLE hEvent,
+             /* async I/O doesn't make sense on regular files */
+             while ((result = pread( unix_handle, buffer, length, offset->QuadPart )) == -1)
+             {
++                if (errno == EFAULT && virtual_check_buffer_for_write( buffer, length ))
++                    continue;
++
+                 if (errno != EINTR)
+                 {
+                     status = FILE_GetNtStatus();
+-- 
+2.2.2
+

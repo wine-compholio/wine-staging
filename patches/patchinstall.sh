@@ -1975,7 +1975,7 @@ fi
 if test "$enable_ntdll_DVD_Read_Size" -eq 1; then
 	patch_apply ntdll-DVD_Read_Size/0001-ntdll-Fix-expected-IOCTL_DVD_READ_STRUCTURE-expected.patch
 	(
-		echo '+    { "Erich E. Hoover", "ntdll: Fix expected IOCTL_DVD_READ_STRUCTURE expected output size.", 1 },';
+		echo '+    { "Erich E. Hoover", "ntdll: Fix expected IOCTL_DVD_READ_STRUCTURE expected output size.", 2 },';
 	) >> "$patchlist"
 fi
 

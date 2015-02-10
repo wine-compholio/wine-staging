@@ -193,7 +193,7 @@ Included bug fixes and improvements
 * Support for WTSEnumerateProcessesW ([Wine Bug #29903](https://bugs.winehq.org/show_bug.cgi?id=29903))
 * Support for extra large and jumbo icon lists in shell32 ([Wine Bug #24721](https://bugs.winehq.org/show_bug.cgi?id=24721))
 * Support for inherited file ACLs ([Wine Bug #34406](https://bugs.winehq.org/show_bug.cgi?id=34406))
-* Support for interface change notifications ([Wine Bug #32328](https://bugs.winehq.org/show_bug.cgi?id=32328))
+* ~~Support for interface change notifications~~ ([Wine Bug #32328](https://bugs.winehq.org/show_bug.cgi?id=32328))
 * Support for loader dll redirections
 * Support for named pipe message mode (Linux only) ([Wine Bug #17195](https://bugs.winehq.org/show_bug.cgi?id=17195))
 * Support for pasting HTML from Unix applications ([Wine Bug #7372](https://bugs.winehq.org/show_bug.cgi?id=7372))

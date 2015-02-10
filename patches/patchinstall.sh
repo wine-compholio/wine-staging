@@ -150,7 +150,6 @@ patch_enable_all ()
 	enable_riched20_IText_Interface="$1"
 	enable_secur32_Schannel_ContextAttr="$1"
 	enable_server_ACL_Compat="$1"
-	enable_server_Address_Change_Notification="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
 	enable_server_Inherited_ACLs="$1"
@@ -477,9 +476,6 @@ patch_enable ()
 			;;
 		server-ACL_Compat)
 			enable_server_ACL_Compat="$2"
-			;;
-		server-Address_Change_Notification)
-			enable_server_Address_Change_Notification="$2"
 			;;
 		server-ClipCursor)
 			enable_server_ClipCursor="$2"
@@ -2667,29 +2663,6 @@ if test "$enable_server_ACL_Compat" -eq 1; then
 	patch_apply server-ACL_Compat/0001-server-Add-compatibility-code-for-handling-the-old-m.patch
 	(
 		echo '+    { "Erich E. Hoover", "server: Add compatibility code for handling the old method of storing ACLs.", 6 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Address_Change_Notification
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#32328] Support for interface change notifications
-# |
-# | Modified files:
-# |   *	Makefile.in, dlls/ws2_32/tests/sock.c, server/event.c, server/named_pipe.c, server/object.h, server/sock.c
-# |
-if test "$enable_server_Address_Change_Notification" -eq 1; then
-	patch_apply server-Address_Change_Notification/0001-server-Implement-socket-specific-ioctl-routine.patch
-	patch_apply server-Address_Change_Notification/0002-server-Add-socket-side-support-for-the-interface-cha.patch
-	patch_apply server-Address_Change_Notification/0003-server-Add-blocked-support-for-SIO_ADDRESS_LIST_CHAN.patch
-	patch_apply server-Address_Change_Notification/0004-server-Implement-the-interface-change-notification-o.patch
-	patch_apply server-Address_Change_Notification/0005-ws2_32-Add-an-interactive-test-for-interface-change-.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Implement socket-specific ioctl() routine.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add socket-side support for the interface change notification object.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add blocked support for SIO_ADDRESS_LIST_CHANGE ioctl().", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Implement the interface change notification object.", 2 },';
-		echo '+    { "Erich E. Hoover", "ws2_32: Add an interactive test for interface change notifications.", 1 },';
 	) >> "$patchlist"
 fi
 

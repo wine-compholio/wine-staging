@@ -1017,10 +1017,12 @@ if test "$enable_ws2_32_WriteWatches" -eq 1; then
 	patch_apply ws2_32-WriteWatches/0001-ntdll-Handle-write-watches-in-virtual_uninterrupted_.patch
 	patch_apply ws2_32-WriteWatches/0002-ntdll-Expose-wine_uninterrupted_-read-write-_memory-.patch
 	patch_apply ws2_32-WriteWatches/0003-ws2_32-Avoid-race-conditions-of-async-WSARecv-operat.patch
+	patch_apply ws2_32-WriteWatches/0004-ws2_32-Avoid-race-condition-with-write-watches-in-WS.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Handle write watches in virtual_uninterrupted_write_memory.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Expose wine_uninterrupted_[read|write]_memory as exports.", 1 },';
 		echo '+    { "Sebastian Lackner", "ws2_32: Avoid race-conditions of async WSARecv() operations with write watches.", 2 },';
+		echo '+    { "Sebastian Lackner", "ws2_32: Avoid race-condition with write watches in WS2_async_accept.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,150 @@
+From d20c4092f475898e7f5236bceb4604bb8c76ab09 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Tue, 10 Feb 2015 14:54:25 +0100
+Subject: ntdll: Try to handle write-watches while we're on the signal stack.
+ (try 2)
+
+Yes, this patch is really necessary. DotNet somehow thinks its a good idea
+to store the IO status block in a write-watch protected memory area. If we
+do not want to add wine_uninterrupted_write_memory _EVERYWHERE_ in the wine
+code, we unfortunately really have to implement exception handling on the
+signal stack. This is just a very basic hacky implementation of write-watch
+handling, all other kind of exceptions are not handled properly yet.
+---
+ dlls/ntdll/ntdll_misc.h     |  2 +-
+ dlls/ntdll/signal_arm.c     |  2 +-
+ dlls/ntdll/signal_arm64.c   |  2 +-
+ dlls/ntdll/signal_i386.c    | 11 ++++++++++-
+ dlls/ntdll/signal_powerpc.c |  4 ++--
+ dlls/ntdll/signal_x86_64.c  |  2 +-
+ dlls/ntdll/virtual.c        |  4 ++--
+ 7 files changed, 18 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
+index afd1980..79eea52 100644
+--- a/dlls/ntdll/ntdll_misc.h
++++ b/dlls/ntdll/ntdll_misc.h
+@@ -169,7 +169,7 @@ extern NTSTATUS virtual_alloc_thread_stack( TEB *teb, SIZE_T reserve_size, SIZE_
+ extern void virtual_clear_thread_stack(void) DECLSPEC_HIDDEN;
+ extern BOOL virtual_handle_stack_fault( void *addr ) DECLSPEC_HIDDEN;
+ extern BOOL virtual_is_valid_code_address( const void *addr, SIZE_T size ) DECLSPEC_HIDDEN;
+-extern NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err ) DECLSPEC_HIDDEN;
++extern NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack ) DECLSPEC_HIDDEN;
+ extern BOOL virtual_check_buffer_for_read( const void *ptr, SIZE_T size ) DECLSPEC_HIDDEN;
+ extern BOOL virtual_check_buffer_for_write( void *ptr, SIZE_T size ) DECLSPEC_HIDDEN;
+ extern void VIRTUAL_SetForceExec( BOOL enable ) DECLSPEC_HIDDEN;
+diff --git a/dlls/ntdll/signal_arm.c b/dlls/ntdll/signal_arm.c
+index e3ae7bd..53a2663 100644
+--- a/dlls/ntdll/signal_arm.c
++++ b/dlls/ntdll/signal_arm.c
+@@ -443,7 +443,7 @@ static void WINAPI raise_segv_exception( EXCEPTION_RECORD *rec, CONTEXT *context
+         if (rec->NumberParameters == 2)
+         {
+             if (!(rec->ExceptionCode = virtual_handle_fault( (void *)rec->ExceptionInformation[1],
+-                                                             rec->ExceptionInformation[0] )))
++                                                             rec->ExceptionInformation[0], FALSE )))
+                 goto done;
+         }
+         break;
+diff --git a/dlls/ntdll/signal_arm64.c b/dlls/ntdll/signal_arm64.c
+index 8c8f7af..ccbdf4c 100644
+--- a/dlls/ntdll/signal_arm64.c
++++ b/dlls/ntdll/signal_arm64.c
+@@ -326,7 +326,7 @@ static void WINAPI raise_segv_exception( EXCEPTION_RECORD *rec, CONTEXT *context
+         if (rec->NumberParameters == 2)
+         {
+             if (!(rec->ExceptionCode = virtual_handle_fault( (void *)rec->ExceptionInformation[1],
+-                                                             rec->ExceptionInformation[0] )))
++                                                             rec->ExceptionInformation[0], FALSE )))
+                 goto done;
+         }
+         break;
+diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
+index de55c31..cf20483 100644
+--- a/dlls/ntdll/signal_i386.c
++++ b/dlls/ntdll/signal_i386.c
+@@ -1907,7 +1907,7 @@ static void WINAPI raise_segv_exception( EXCEPTION_RECORD *rec, CONTEXT *context
+             if (rec->ExceptionInformation[1] == 0xffffffff && check_invalid_gs( context ))
+                 goto done;
+             if (!(rec->ExceptionCode = virtual_handle_fault( (void *)rec->ExceptionInformation[1],
+-                                                             rec->ExceptionInformation[0] )))
++                                                             rec->ExceptionInformation[0], FALSE )))
+                 goto done;
+             if (rec->ExceptionCode == EXCEPTION_ACCESS_VIOLATION &&
+                 rec->ExceptionInformation[0] == EXCEPTION_EXECUTE_FAULT)
+@@ -2046,6 +2046,15 @@ static void segv_handler( int signal, siginfo_t *siginfo, void *sigcontext )
+     ucontext_t *context = sigcontext;
+     void *stack = init_handler( sigcontext, &fs, &gs );
+ 
++    /* check for exceptions on the signal stack caused by write watches */
++    if (get_trap_code(context) == TRAP_x86_PAGEFLT &&
++        (char *)stack >= (char *)get_signal_stack() &&
++        (char *)stack < (char *)get_signal_stack() + signal_stack_size &&
++        !virtual_handle_fault( siginfo->si_addr, (get_error_code(context) >> 1) & 0x09, TRUE ))
++    {
++        return;
++    }
++
+     /* check for page fault inside the thread stack */
+     if (get_trap_code(context) == TRAP_x86_PAGEFLT &&
+         (char *)siginfo->si_addr >= (char *)NtCurrentTeb()->DeallocationStack &&
+diff --git a/dlls/ntdll/signal_powerpc.c b/dlls/ntdll/signal_powerpc.c
+index 0fca342..886da86 100644
+--- a/dlls/ntdll/signal_powerpc.c
++++ b/dlls/ntdll/signal_powerpc.c
+@@ -678,7 +678,7 @@ static void segv_handler( int signal, siginfo_t *siginfo, void *sigcontext )
+             rec.NumberParameters = 2;
+             rec.ExceptionInformation[0] = 0; /* FIXME ? */
+             rec.ExceptionInformation[1] = (ULONG_PTR)siginfo->si_addr;
+-            if (!(rec.ExceptionCode = virtual_handle_fault(siginfo->si_addr, rec.ExceptionInformation[0])))
++            if (!(rec.ExceptionCode = virtual_handle_fault(siginfo->si_addr, rec.ExceptionInformation[0], FALSE)))
+                 goto done;
+             break;
+ 	default:
+@@ -701,7 +701,7 @@ static void segv_handler( int signal, siginfo_t *siginfo, void *sigcontext )
+             rec.NumberParameters = 2;
+             rec.ExceptionInformation[0] = 0; /* FIXME ? */
+             rec.ExceptionInformation[1] = (ULONG_PTR)siginfo->si_addr;
+-            if (!(rec.ExceptionCode = virtual_handle_fault(siginfo->si_addr, rec.ExceptionInformation[0])))
++            if (!(rec.ExceptionCode = virtual_handle_fault(siginfo->si_addr, rec.ExceptionInformation[0], FALSE)))
+                 goto done;
+             break;
+ #endif
+diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
+index c71069d..551687f 100644
+--- a/dlls/ntdll/signal_x86_64.c
++++ b/dlls/ntdll/signal_x86_64.c
+@@ -2286,7 +2286,7 @@ static void raise_segv_exception( EXCEPTION_RECORD *rec, CONTEXT *context )
+         if (rec->NumberParameters == 2)
+         {
+             if (!(rec->ExceptionCode = virtual_handle_fault( (void *)rec->ExceptionInformation[1],
+-                                                             rec->ExceptionInformation[0] )))
++                                                             rec->ExceptionInformation[0], FALSE )))
+                 set_cpu_context( context );
+         }
+         break;
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index 36b7662..4392c3e 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -1521,7 +1521,7 @@ void virtual_clear_thread_stack(void)
+ /***********************************************************************
+  *           virtual_handle_fault
+  */
+-NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err )
++NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+ {
+     struct file_view *view;
+     NTSTATUS ret = STATUS_ACCESS_VIOLATION;
+@@ -1542,7 +1542,7 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err )
+             /* ignore fault if page is writable now */
+             if (VIRTUAL_GetUnixProt( *vprot ) & PROT_WRITE) ret = STATUS_SUCCESS;
+         }
+-        if (*vprot & VPROT_GUARD)
++        if (!on_signal_stack && (*vprot & VPROT_GUARD))
+         {
+             VIRTUAL_SetProt( view, page, page_size, *vprot & ~VPROT_GUARD );
+             ret = STATUS_GUARD_PAGE_VIOLATION;
+-- 
+2.2.2
+

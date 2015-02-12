@@ -2374,6 +2374,7 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0010-ntoskrnl.exe-Fix-IoReleaseCancelSpinLock-argument.patch
 	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Add-stub-for-ExAcquireResourceExclusive.patch
 	patch_apply ntoskrnl-Stubs/0012-ntoskrnl.exe-Add-stub-for-ExReleaseResourceForThread.patch
+	patch_apply ntoskrnl-Stubs/0013-ntoskrnl.exe-Add-stub-for-ExDeleteResourceLite.patch
 	(
 		echo '+    { "Sebastian Lackner", "include: Remove several duplicate definitions from ntdef.h.", 1 },';
 		echo '+    { "Austin English", "ntoskrnl.exe: add KeWaitForMultipleObjects stub.", 1 },';
@@ -2387,6 +2388,7 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 		echo '+    { "Christian Costa", "ntoskrnl.exe: Fix IoReleaseCancelSpinLock argument.", 1 },';
 		echo '+    { "Christian Costa", "ntoskrnl.exe: Add stub for ExAcquireResourceExclusiveLite.", 1 },';
 		echo '+    { "Christian Costa", "ntoskrnl.exe: Add stub for ExReleaseResourceForThreadLite.", 1 },';
+		echo '+    { "Christian Costa", "ntoskrnl.exe: Add stub for ExDeleteResourceLite.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -38,9 +38,10 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [6]:**
+**Bugfixes and features included in the next upcoming release [7]:**
 
 * Add stub for ntoskrnl.ExAcquireResourceExclusiveLite
+* Add stub for ntoskrnl.ExDeleteResourceLite
 * Add stub for ntoskrnl.ExReleaseResourceForThread
 * Avoid race-conditions in NtReadFile() operations with write watches.
 * Avoid race-conditions with write watches in WS2_async_accept.

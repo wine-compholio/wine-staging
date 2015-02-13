@@ -182,6 +182,7 @@ patch_enable_all ()
 	enable_wine_inf_Performance="$1"
 	enable_wineboot_HKEY_DYN_DATA="$1"
 	enable_winebuild_LinkerVersion="$1"
+	enable_winebuild_Restore_Context="$1"
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
 	enable_wined3d_CSMT_Helper="$1"
@@ -572,6 +573,9 @@ patch_enable ()
 			;;
 		winebuild-LinkerVersion)
 			enable_winebuild_LinkerVersion="$2"
+			;;
+		winebuild-Restore_Context)
+			enable_winebuild_Restore_Context="$2"
 			;;
 		winecfg-Libraries)
 			enable_winecfg_Libraries="$2"
@@ -3143,6 +3147,18 @@ if test "$enable_winebuild_LinkerVersion" -eq 1; then
 	patch_apply winebuild-LinkerVersion/0001-winebuild-Set-a-valid-major-and-minor-linker-version.patch
 	(
 		echo '+    { "Michael Müller", "winebuild: Set a valid major and minor linker version.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winebuild-Restore_Context
+# |
+# | Modified files:
+# |   *	tools/winebuild/relay.c
+# |
+if test "$enable_winebuild_Restore_Context" -eq 1; then
+	patch_apply winebuild-Restore_Context/0001-winebuild-Do-not-access-memory-below-ESP-when-restor.patch
+	(
+		echo '+    { "Sebastian Lackner", "winebuild: Do not access memory below ESP when restoring thread contexts.", 1 },';
 	) >> "$patchlist"
 fi
 

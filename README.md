@@ -38,7 +38,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [7]:**
+**Bugfixes and features included in the next upcoming release [8]:**
 
 * Add stub for ntoskrnl.ExAcquireResourceExclusiveLite
 * Add stub for ntoskrnl.ExDeleteResourceLite
@@ -46,6 +46,7 @@ Included bug fixes and improvements
 * Avoid race-conditions in NtReadFile() operations with write watches.
 * Avoid race-conditions with write watches in WS2_async_accept.
 * Basic handling of write watches triggered while we're on the signal stack.
+* Do not access stack below ESP when restoring thread context.
 * Implement D3DXGetShaderOutputSemantics
 
 

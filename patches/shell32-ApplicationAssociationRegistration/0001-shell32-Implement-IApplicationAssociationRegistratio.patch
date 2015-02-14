@@ -1,0 +1,239 @@
+From 417742abf41feab095fc2e642e535a16755237f4 Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Fri, 13 Feb 2015 18:53:25 +1100
+Subject: shell32: Implement IApplicationAssociationRegistration
+ QueryCurrentDefault (try 7)
+
+Fixes: https://bugs.winehq.org/show_bug.cgi?id=34654
+
+Changes by Sebastian Lackner <sebastian@fds-team.de>:
+* Some coding style fixes
+* Avoid using strlenW when we only check if a string is non-empty
+* Fix leak when RegGetValueW fails
+---
+ dlls/shell32/assoc.c       | 100 +++++++++++++++++++++++++++++++++++++++++++--
+ dlls/shell32/tests/assoc.c |  66 +++++++++++++++++++++++-------
+ 2 files changed, 149 insertions(+), 17 deletions(-)
+
+diff --git a/dlls/shell32/assoc.c b/dlls/shell32/assoc.c
+index f3c8e65..e79eeae 100644
+--- a/dlls/shell32/assoc.c
++++ b/dlls/shell32/assoc.c
+@@ -873,11 +873,105 @@ static ULONG WINAPI ApplicationAssociationRegistration_Release(IApplicationAssoc
+     return ref;
+ }
+ 
+-static HRESULT WINAPI ApplicationAssociationRegistration_QueryCurrentDefault(IApplicationAssociationRegistration* This, LPCWSTR query,
++static HRESULT WINAPI ApplicationAssociationRegistration_QueryCurrentDefault(IApplicationAssociationRegistration *iface, LPCWSTR query,
+                                                                              ASSOCIATIONTYPE type, ASSOCIATIONLEVEL level, LPWSTR *association)
+ {
+-    FIXME("(%p)->(%s, %d, %d, %p)\n", This, debugstr_w(query), type, level, association);
+-    return E_NOTIMPL;
++    IApplicationAssociationRegistrationImpl *This = impl_from_IApplicationAssociationRegistration(iface);
++    static WCHAR urlassoc[] = {'U','r','l','A','s','s','o','c','i','a','t','i','o','n','s',0};
++    static WCHAR mimeassoc[] = {'M','I','M','E','A','s','s','o','c','i','a','t','i','o','n','s',0};
++    static WCHAR assocations[] = {'S','o','f','t','w','a','r','e','\\','M','i','c','r','o','s','o','f','t','\\',
++                                'W','i','n','d','o','w','s','\\','S','h','e','l','l','\\',
++                                'A','s','s','o','c','i','a','t','i','o','n','s',0};
++    static WCHAR slash[] = {'\\',0};
++    static WCHAR choice[] = {'U','s','e','r','C','h','o','i','c','e',0};
++    static WCHAR propid[] = {'P','r','o','g','i','d',0};
++    WCHAR path[MAX_PATH] = {0};
++    DWORD ret, keytype, size;
++    HKEY hkey = NULL;
++    HRESULT hr = HRESULT_FROM_WIN32(ERROR_NO_ASSOCIATION);
++
++    TRACE("(%p)->(%s, %d, %d, %p)\n", This, debugstr_w(query), type, level, association);
++
++    if (!query || !association)
++        return E_INVALIDARG;
++
++    *association = NULL;
++
++    if (type == AT_FILEEXTENSION)
++    {
++        if (query[0] != '.')
++            return E_INVALIDARG;
++
++        ret = RegOpenKeyExW(HKEY_CLASSES_ROOT, query, 0, KEY_READ, &hkey);
++        if (ret == ERROR_SUCCESS)
++        {
++            ret = RegGetValueW(hkey, NULL, NULL, RRF_RT_REG_SZ, &keytype, NULL, &size);
++            if (ret == ERROR_SUCCESS)
++            {
++                *association = CoTaskMemAlloc(size);
++                if (*association)
++                {
++                    ret = RegGetValueW(hkey, NULL, NULL, RRF_RT_REG_SZ, &keytype, *association, &size);
++                    if (ret == ERROR_SUCCESS)
++                        hr = S_OK;
++                    else
++                    {
++                        CoTaskMemFree(*association);
++                        *association = NULL;
++                    }
++                }
++                else
++                    hr = E_OUTOFMEMORY;
++            }
++        }
++    }
++    else
++    {
++        if (type == AT_URLPROTOCOL && !query[0])
++            return E_INVALIDARG;
++
++        ret = RegOpenKeyExW(HKEY_CURRENT_USER, assocations, 0, KEY_READ, &hkey);
++        if (ret == ERROR_SUCCESS)
++        {
++            if (type == AT_URLPROTOCOL)
++                lstrcpyW(path, urlassoc);
++            else if (type == AT_MIMETYPE)
++                lstrcpyW(path, mimeassoc);
++            else
++            {
++                WARN("Unsupported type (%d).\n", type);
++                RegCloseKey(hkey);
++                return hr;
++            }
++
++            lstrcatW(path, slash);
++            lstrcatW(path, query);
++            lstrcatW(path, slash);
++            lstrcatW(path, choice);
++
++            ret = RegGetValueW(hkey, path, propid, RRF_RT_REG_SZ, &keytype, NULL, &size);
++            if (ret == ERROR_SUCCESS)
++            {
++                *association = CoTaskMemAlloc(size);
++                if (*association)
++                {
++                    ret = RegGetValueW(hkey, path, propid, RRF_RT_REG_SZ, &keytype, *association, &size);
++                    if (ret == ERROR_SUCCESS)
++                        hr = S_OK;
++                    else
++                    {
++                        CoTaskMemFree(*association);
++                        *association = NULL;
++                    }
++                }
++                else
++                    hr = E_OUTOFMEMORY;
++            }
++        }
++    }
++
++    RegCloseKey(hkey);
++    return hr;
+ }
+ 
+ static HRESULT WINAPI ApplicationAssociationRegistration_QueryAppIsDefault(IApplicationAssociationRegistration* This, LPCWSTR query,
+diff --git a/dlls/shell32/tests/assoc.c b/dlls/shell32/tests/assoc.c
+index f35938b..0092081 100644
+--- a/dlls/shell32/tests/assoc.c
++++ b/dlls/shell32/tests/assoc.c
+@@ -57,22 +57,12 @@ static void test_IQueryAssociations_QueryInterface(void)
+ }
+ 
+ 
+-static void test_IApplicationAssociationRegistration_QueryInterface(void)
++static void test_IApplicationAssociationRegistration_QueryInterface(IApplicationAssociationRegistration *appreg)
+ {
+-    IApplicationAssociationRegistration *appreg;
+     IApplicationAssociationRegistration *appreg2;
+     IUnknown *unk;
+     HRESULT hr;
+ 
+-    /* this works since Vista */
+-    hr = CoCreateInstance(&CLSID_ApplicationAssociationRegistration, NULL, CLSCTX_INPROC_SERVER,
+-                          &IID_IApplicationAssociationRegistration, (LPVOID*)&appreg);
+-
+-    if (FAILED(hr)) {
+-        skip("IApplicationAssociationRegistration not created: 0x%x\n", hr);
+-        return;
+-    }
+-
+     hr = IApplicationAssociationRegistration_QueryInterface(appreg, &IID_IApplicationAssociationRegistration,
+        (void**)&appreg2);
+     ok(hr == S_OK, "QueryInterface (IApplicationAssociationRegistration) returned 0x%x\n", hr);
+@@ -88,8 +78,6 @@ static void test_IApplicationAssociationRegistration_QueryInterface(void)
+ 
+     hr = IApplicationAssociationRegistration_QueryInterface(appreg, &IID_IUnknown, NULL);
+     ok(hr == E_POINTER, "got 0x%x (expected E_POINTER)\n", hr);
+-
+-    IApplicationAssociationRegistration_Release(appreg);
+ }
+ 
+ struct assoc_getstring_test
+@@ -189,9 +177,48 @@ static void test_IQueryAssociations_Init(void)
+     IQueryAssociations_Release(assoc);
+ }
+ 
++static void test_IApplicationAssociationRegistration_QueryCurrentDefault(IApplicationAssociationRegistration *appreg)
++{
++    static const WCHAR emptyW[] = {0};
++    static const WCHAR txtW[] = {'.','t','x','t',0};
++    static const WCHAR spacetxtW[] = {' ','.','t','x','t',0};
++    HRESULT hr;
++    LPWSTR assocprog = NULL;
++
++    hr = IApplicationAssociationRegistration_QueryCurrentDefault(appreg, emptyW, AT_URLPROTOCOL, AL_EFFECTIVE, &assocprog);
++    ok(hr == E_INVALIDARG, "got 0x%x\n", hr);
++
++    hr = IApplicationAssociationRegistration_QueryCurrentDefault(appreg, emptyW, AT_FILEEXTENSION, AL_EFFECTIVE, &assocprog);
++    ok(hr == E_INVALIDARG, "got 0x%x\n", hr);
++
++    hr = IApplicationAssociationRegistration_QueryCurrentDefault(appreg, spacetxtW, AT_FILEEXTENSION, AL_EFFECTIVE, &assocprog);
++    ok(hr == E_INVALIDARG || hr == HRESULT_FROM_WIN32(ERROR_NO_ASSOCIATION) /* Win8 */, "got 0x%x\n", hr);
++
++    hr = IApplicationAssociationRegistration_QueryCurrentDefault(appreg, httpW, AT_URLPROTOCOL, AL_EFFECTIVE, NULL);
++    ok(hr == E_INVALIDARG, "got 0x%x\n", hr);
++
++    /* AT_FILEEXTENSION must start with a period */
++    hr = IApplicationAssociationRegistration_QueryCurrentDefault(appreg, txtW, AT_FILEEXTENSION, AL_EFFECTIVE, &assocprog);
++    ok(hr == S_OK, "got 0x%x\n", hr);
++    trace("%s\n", wine_dbgstr_w(assocprog));
++    CoTaskMemFree(assocprog);
++
++    hr = IApplicationAssociationRegistration_QueryCurrentDefault(appreg, emptyW, AT_STARTMENUCLIENT, AL_EFFECTIVE, &assocprog);
++    ok(hr == HRESULT_FROM_WIN32(ERROR_NO_ASSOCIATION), "got 0x%x\n", hr);
++
++    hr = IApplicationAssociationRegistration_QueryCurrentDefault(appreg, emptyW, AT_MIMETYPE, AL_EFFECTIVE, &assocprog);
++    ok(hr == HRESULT_FROM_WIN32(ERROR_NO_ASSOCIATION), "got 0x%x\n", hr);
++
++    hr = IApplicationAssociationRegistration_QueryCurrentDefault(appreg, httpW, AT_URLPROTOCOL, AL_EFFECTIVE, &assocprog);
++    todo_wine ok(hr == S_OK, "got 0x%x\n", hr);
++    trace("%s\n", wine_dbgstr_w(assocprog));
++    CoTaskMemFree(assocprog);
++}
++
+ START_TEST(assoc)
+ {
+     IQueryAssociations *qa;
++    IApplicationAssociationRegistration *appreg;
+     HRESULT hr;
+ 
+     CoInitialize(NULL);
+@@ -209,7 +236,18 @@ START_TEST(assoc)
+     else
+         win_skip("IQueryAssociations not supported, 0x%x\n", hr);
+ 
+-    test_IApplicationAssociationRegistration_QueryInterface();
++    /* this works since Vista */
++    hr = CoCreateInstance(&CLSID_ApplicationAssociationRegistration, NULL, CLSCTX_INPROC_SERVER,
++                          &IID_IApplicationAssociationRegistration, (LPVOID *)&appreg);
++    if (hr == S_OK)
++    {
++        test_IApplicationAssociationRegistration_QueryInterface(appreg);
++        test_IApplicationAssociationRegistration_QueryCurrentDefault(appreg);
++
++        IApplicationAssociationRegistration_Release(appreg);
++    }
++    else
++        win_skip("IApplicationAssociationRegistration not supported: 0x%x\n", hr);
+ 
+     CoUninitialize();
+ }
+-- 
+2.3.0
+

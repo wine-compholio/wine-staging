@@ -159,6 +159,7 @@ patch_enable_all ()
 	enable_server_Unexpected_Wakeup="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
+	enable_shell32_ApplicationAssociationRegistration="$1"
 	enable_shell32_Default_Folder_ACLs="$1"
 	enable_shell32_Default_Path="$1"
 	enable_shell32_Icons="$1"
@@ -504,6 +505,9 @@ patch_enable ()
 			;;
 		shdocvw-ParseURLFromOutsideSource_Tests)
 			enable_shdocvw_ParseURLFromOutsideSource_Tests="$2"
+			;;
+		shell32-ApplicationAssociationRegistration)
+			enable_shell32_ApplicationAssociationRegistration="$2"
 			;;
 		shell32-Default_Folder_ACLs)
 			enable_shell32_Default_Folder_ACLs="$2"
@@ -2787,6 +2791,21 @@ if test "$enable_shdocvw_ParseURLFromOutsideSource_Tests" -eq 1; then
 	patch_apply shdocvw-ParseURLFromOutsideSource_Tests/0001-shdocvw-Check-precisely-ParseURLFromOutsideSourceX-r.patch
 	(
 		echo '+    { "Christian Costa", "shdocvw: Check precisely ParseURLFromOutsideSourceX returned values in tests and make code clearer about that.", 3 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shell32-ApplicationAssociationRegistration
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34654] Implement IApplicationAssociationRegistration::QueryCurrentDefault.
+# |
+# | Modified files:
+# |   *	dlls/shell32/assoc.c, dlls/shell32/tests/assoc.c
+# |
+if test "$enable_shell32_ApplicationAssociationRegistration" -eq 1; then
+	patch_apply shell32-ApplicationAssociationRegistration/0001-shell32-Implement-IApplicationAssociationRegistratio.patch
+	(
+		echo '+    { "Alistair Leslie-Hughes", "shell32: Implement IApplicationAssociationRegistration QueryCurrentDefault.", 7 },';
 	) >> "$patchlist"
 fi
 

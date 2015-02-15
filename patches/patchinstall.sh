@@ -108,7 +108,7 @@ patch_enable_all ()
 	enable_kernel32_VerifyVersionInfo="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_makedep_PARENTSPEC="$1"
-	enable_mmdevapi_AEV_GetVolumeRange="$1"
+	enable_mmdevapi_AEV_Stubs="$1"
 	enable_msvcp90_basic_string_wchar_dtor="$1"
 	enable_msvcrt_atof_strtod="$1"
 	enable_msvfw32_Image_Size="$1"
@@ -353,8 +353,8 @@ patch_enable ()
 		makedep-PARENTSPEC)
 			enable_makedep_PARENTSPEC="$2"
 			;;
-		mmdevapi-AEV_GetVolumeRange)
-			enable_mmdevapi_AEV_GetVolumeRange="$2"
+		mmdevapi-AEV_Stubs)
+			enable_mmdevapi_AEV_Stubs="$2"
 			;;
 		msvcp90-basic_string_wchar_dtor)
 			enable_msvcp90_basic_string_wchar_dtor="$2"
@@ -1869,7 +1869,7 @@ if test "$enable_makedep_PARENTSPEC" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset mmdevapi-AEV_GetVolumeRange
+# Patchset mmdevapi-AEV_Stubs
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#35658] Improve stub for AEV_GetVolumeRange
@@ -1877,10 +1877,14 @@ fi
 # | Modified files:
 # |   *	dlls/mmdevapi/audiovolume.c
 # |
-if test "$enable_mmdevapi_AEV_GetVolumeRange" -eq 1; then
-	patch_apply mmdevapi-AEV_GetVolumeRange/0001-mmdevapi-Improve-AEV_GetVolumeRange-stub.patch
+if test "$enable_mmdevapi_AEV_Stubs" -eq 1; then
+	patch_apply mmdevapi-AEV_Stubs/0001-mmdevapi-Improve-AEV_GetVolumeRange-stub.patch
+	patch_apply mmdevapi-AEV_Stubs/0002-mmdevapi-Improve-AEV_SetMasterVolumeLevel-and-AEV_Ge.patch
+	patch_apply mmdevapi-AEV_Stubs/0003-mmdevapi-Improve-AEV_SetMute-and-AEV_GetMute-stubs.patch
 	(
 		echo '+    { "Christian Costa", "mmdevapi: Improve AEV_GetVolumeRange stub.", 1 },';
+		echo '+    { "Christian Costa", "mmdevapi: Improve AEV_SetMasterVolumeLevel and AEV_GetMasterVolumeLevel stubs.", 1 },';
+		echo '+    { "Christian Costa", "mmdevapi: Improve AEV_SetMute and AEV_GetMute stubs.", 1 },';
 	) >> "$patchlist"
 fi
 

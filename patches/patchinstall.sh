@@ -2800,16 +2800,13 @@ fi
 
 # Patchset shell32-ApplicationAssociationRegistration
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34654] Implement IApplicationAssociationRegistration::QueryCurrentDefault.
-# |
 # | Modified files:
 # |   *	dlls/shell32/assoc.c, dlls/shell32/tests/assoc.c
 # |
 if test "$enable_shell32_ApplicationAssociationRegistration" -eq 1; then
-	patch_apply shell32-ApplicationAssociationRegistration/0001-shell32-Implement-IApplicationAssociationRegistratio.patch
+	patch_apply shell32-ApplicationAssociationRegistration/0001-shell32-Various-style-fixes-and-memory-leak-fix-in-I.patch
 	(
-		echo '+    { "Alistair Leslie-Hughes", "shell32: Implement IApplicationAssociationRegistration QueryCurrentDefault.", 7 },';
+		echo '+    { "Sebastian Lackner", "shell32: Various style fixes and memory leak fix in IApplicationAssociationRegistration.", 1 },';
 	) >> "$patchlist"
 fi
 

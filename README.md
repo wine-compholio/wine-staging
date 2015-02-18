@@ -38,7 +38,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [11]:**
+**Bugfixes and features included in the next upcoming release [10]:**
 
 * Add stub for ntoskrnl.ExAcquireResourceExclusiveLite
 * Add stub for ntoskrnl.ExDeleteResourceLite
@@ -48,7 +48,6 @@ Included bug fixes and improvements
 * Basic handling of write watches triggered while we're on the signal stack.
 * Do not access stack below ESP when restoring thread context.
 * Implement D3DXGetShaderOutputSemantics
-* Implement IApplicationAssociationRegistration::QueryCurrentDefault. ([Wine Bug #34654](https://bugs.winehq.org/show_bug.cgi?id=34654))
 * Improve stubs for AEV_{Get,Set}MasterVolumeLevel
 * Improve stubs for AEV_{Get,Set}Mute
 

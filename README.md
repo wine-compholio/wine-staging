@@ -134,7 +134,7 @@ Included bug fixes and improvements
 * Implement an Arial replacement font ([Wine Bug #32323](https://bugs.winehq.org/show_bug.cgi?id=32323))
 * Implement exclusive mode in PulseAudio backend ([Wine Bug #37042](https://bugs.winehq.org/show_bug.cgi?id=37042))
 * Implement ntoskrnl driver testing framework.
-* Implement semi-stub for IDirectPlayVoiceClient::GetCompressionTypes ([Wine Bug #29238](https://bugs.winehq.org/show_bug.cgi?id=29238))
+* ~~Implement semi-stub for IDirectPlayVoiceClient::GetCompressionTypes~~ ([Wine Bug #29238](https://bugs.winehq.org/show_bug.cgi?id=29238))
 * Implement stub for ntoskrnl.IoGetAttachedDeviceReference
 * Implement stub for ntoskrnl.KeDelayExecutionThread.
 * Implement stubs for ntoskrnl.Ex{Acquire,Release}FastMutexUnsafe

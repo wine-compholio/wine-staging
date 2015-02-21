@@ -149,6 +149,7 @@ patch_enable_all ()
 	enable_riched20_IText_Interface="$1"
 	enable_secur32_Schannel_ContextAttr="$1"
 	enable_server_ACL_Compat="$1"
+	enable_server_Address_List_Change="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
 	enable_server_Inherited_ACLs="$1"
@@ -476,6 +477,9 @@ patch_enable ()
 			;;
 		server-ACL_Compat)
 			enable_server_ACL_Compat="$2"
+			;;
+		server-Address_List_Change)
+			enable_server_Address_List_Change="$2"
 			;;
 		server-ClipCursor)
 			enable_server_ClipCursor="$2"
@@ -2677,6 +2681,21 @@ if test "$enable_server_ACL_Compat" -eq 1; then
 	patch_apply server-ACL_Compat/0001-server-Add-compatibility-code-for-handling-the-old-m.patch
 	(
 		echo '+    { "Erich E. Hoover", "server: Add compatibility code for handling the old method of storing ACLs.", 6 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Address_List_Change
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38062] Support for non-blocking SIO_ADDRESS_LIST_CHANGE requests
+# |
+# | Modified files:
+# |   *	server/sock.c
+# |
+if test "$enable_server_Address_List_Change" -eq 1; then
+	patch_apply server-Address_List_Change/0001-server-Return-STATUS_CANT_WAIT-WSAEWOULDBLOCK-for-no.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Return STATUS_CANT_WAIT/WSAEWOULDBLOCK for non-overlapped SIO_ADDRESS_LIST_CHANGE requests on non-blocking sockets.", 1 },';
 	) >> "$patchlist"
 fi
 

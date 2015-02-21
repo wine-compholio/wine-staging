@@ -180,6 +180,7 @@ patch_enable_all ()
 	enable_vcomp_Stub_Functions="$1"
 	enable_version_VersionInfoEx="$1"
 	enable_windowscodecs_TGA_Decoder="$1"
+	enable_windowscodecs_TIFF_Decoder="$1"
 	enable_wine_inf_Performance="$1"
 	enable_wineboot_HKEY_DYN_DATA="$1"
 	enable_winebuild_LinkerVersion="$1"
@@ -568,6 +569,9 @@ patch_enable ()
 			;;
 		windowscodecs-TGA_Decoder)
 			enable_windowscodecs_TGA_Decoder="$2"
+			;;
+		windowscodecs-TIFF_Decoder)
+			enable_windowscodecs_TIFF_Decoder="$2"
 			;;
 		wine.inf-Performance)
 			enable_wine_inf_Performance="$2"
@@ -3123,6 +3127,21 @@ if test "$enable_windowscodecs_TGA_Decoder" -eq 1; then
 	patch_apply windowscodecs-TGA_Decoder/0001-windowscodecs-Fix-init-of-LONGLONG-variable-with-a-n.patch
 	(
 		echo '+    { "Christian Costa", "windowscodecs: Fix init of LONGLONG variable with a negative value in TGA decoder.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windowscodecs-TIFF_Decoder
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38027] Ignore unsupported alpha channels in TIFF decoder
+# |
+# | Modified files:
+# |   *	dlls/windowscodecs/tiffformat.c
+# |
+if test "$enable_windowscodecs_TIFF_Decoder" -eq 1; then
+	patch_apply windowscodecs-TIFF_Decoder/0001-windowscodecs-Ignore-unsupported-alpha-channel-in-ti.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Ignore unsupported alpha channel in tiff_get_decode_info.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,46 +1,36 @@
-From 6d4d989e34576a46c5b513b92bd8dbc84aaf199a Mon Sep 17 00:00:00 2001
+From c769170fe1e0ba441add74dc4dc23bdee6182699 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 20 Sep 2014 02:48:07 +0200
 Subject: wined3d: Add support for DXTn software decoding through libtxc_dxtn.
- (rev 2)
+ (rev 3)
 
 Changes in rev 2:
 * Do not use dxtn library when some imports are missing.
 * Do not advertise dxtn converter functions when they are not supported (because
   of missing library or support not compiled in).
+
+Changes in rev 3:
+* Do not require txc_dxtn at compile time by trying some fallback paths.
 ---
- configure.ac                   |   9 ++
+ configure.ac                   |   3 +
  dlls/wined3d/Makefile.in       |   1 +
- dlls/wined3d/dxtn.c            | 332 +++++++++++++++++++++++++++++++++++++++++
- dlls/wined3d/surface.c         |  80 ++++++++++
+ dlls/wined3d/dxtn.c            | 299 +++++++++++++++++++++++++++++++++++++++++
+ dlls/wined3d/surface.c         |  80 +++++++++++
  dlls/wined3d/wined3d_main.c    |   5 +
  dlls/wined3d/wined3d_private.h |  13 ++
- 6 files changed, 440 insertions(+)
+ 6 files changed, 401 insertions(+)
  create mode 100644 dlls/wined3d/dxtn.c
 
 diff --git a/configure.ac b/configure.ac
-index 8263c66..dd89c17 100644
+index f611fa5..a172206 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -74,6 +74,7 @@ AC_ARG_WITH(pthread,   AS_HELP_STRING([--without-pthread],[do not use the pthrea
-             [if test "x$withval" = "xno"; then ac_cv_header_pthread_h=no; fi])
- AC_ARG_WITH(sane,      AS_HELP_STRING([--without-sane],[do not use SANE (scanner support)]))
- AC_ARG_WITH(tiff,      AS_HELP_STRING([--without-tiff],[do not use TIFF]))
-+AC_ARG_WITH(txc_dxtn,  AS_HELP_STRING([--without-txc_dxtn],[do not use txc_dxtn lib (DXTn software support)]))
- AC_ARG_WITH(v4l,       AS_HELP_STRING([--without-v4l],[do not use v4l1 (v4l support)]))
- AC_ARG_WITH(xcomposite,AS_HELP_STRING([--without-xcomposite],[do not use the Xcomposite extension]),
-             [if test "x$withval" = "xno"; then ac_cv_header_X11_extensions_Xcomposite_h=no; fi])
-@@ -1698,6 +1699,14 @@ fi
+@@ -1710,6 +1710,9 @@ fi
  WINE_NOTICE_WITH(tiff,[test "x$ac_cv_lib_soname_tiff" = "x"],
                   [libtiff ${notice_platform}development files not found, TIFF won't be supported.])
  
 +dnl **** Check for libtxc_dxtn ****
-+if test "x$with_txc_dxtn" != "xno"
-+then
-+   WINE_CHECK_SONAME(txc_dxtn,tx_compress_dxtn,,,,[[libtxc_dxtn\\(_s2tc\\)\\{0,1\\}]])
-+fi
-+WINE_NOTICE_WITH(txc_dxtn,[test "x$ac_cv_lib_soname_txc_dxtn" = "x"],
-+                 [libtxc_dxtn ${notice_platform}development files not found, DXTn software (de)compression won't be supported.])
++WINE_CHECK_SONAME(txc_dxtn,tx_compress_dxtn,,,,[[libtxc_dxtn\\(_s2tc\\)\\{0,1\\}]])
 +
  dnl **** Check for mpg123 ****
  if test "x$with_mpg123" != "xno"
@@ -59,10 +49,10 @@ index 655800b..ee0615f 100644
  	nvidia_texture_shader.c \
 diff --git a/dlls/wined3d/dxtn.c b/dlls/wined3d/dxtn.c
 new file mode 100644
-index 0000000..eccce4e
+index 0000000..ce98949
 --- /dev/null
 +++ b/dlls/wined3d/dxtn.c
-@@ -0,0 +1,332 @@
+@@ -0,0 +1,299 @@
 +/*
 + * Copyright 2014 Michael Müller
 + *
@@ -87,8 +77,6 @@ index 0000000..eccce4e
 +#include "wine/library.h"
 +
 +WINE_DEFAULT_DEBUG_CHANNEL(d3d);
-+
-+#ifdef SONAME_LIBTXC_DXTN
 +
 +static void* txc_dxtn_handle;
 +static void (*pfetch_2d_texel_rgba_dxt1)(int srcRowStride, const BYTE *pixData, int i, int j, DWORD *texel);
@@ -313,17 +301,32 @@ index 0000000..eccce4e
 +
 +BOOL wined3d_dxtn_init(void)
 +{
-+    txc_dxtn_handle = wine_dlopen(SONAME_LIBTXC_DXTN, RTLD_NOW, NULL, 0);
++    static const char *soname[] =
++    {
++#ifdef SONAME_LIBTXC_DXTN
++        SONAME_LIBTXC_DXTN,
++#endif
++        "libtxc_dxtn.so",
++        "libtxc_dxtn_s2tc.so.0"
++    };
++    int i;
++
++    for (i = 0; i < sizeof(soname)/sizeof(soname[0]); i++)
++    {
++        txc_dxtn_handle = wine_dlopen(soname[i], RTLD_NOW, NULL, 0);
++        if (txc_dxtn_handle) break;
++    }
++
 +    if (!txc_dxtn_handle)
 +    {
-+        FIXME("Wine cannot find the library %s, DXTn software support unavailable.\n", SONAME_LIBTXC_DXTN);
++        FIXME("Wine cannot find the txc_dxtn library, DXTn software support unavailable.\n");
 +        return FALSE;
 +    }
 +
 +    #define LOAD_FUNCPTR(f) \
 +        if (!(p##f = wine_dlsym(txc_dxtn_handle, #f, NULL, 0))) \
 +        { \
-+            ERR("Can't find symbol %s in %s, DXTn software support unavailable.\n", #f, SONAME_LIBTXC_DXTN); \
++            ERR("Can't find symbol %s , DXTn software support unavailable.\n", #f); \
 +            goto error; \
 +        }
 +
@@ -349,58 +352,11 @@ index 0000000..eccce4e
 +    if (txc_dxtn_handle)
 +        wine_dlclose(txc_dxtn_handle, NULL, 0);
 +}
-+
-+#else
-+
-+BOOL wined3d_dxt1_decode(const BYTE *src, BYTE *dst, DWORD pitch_in, DWORD pitch_out,
-+        enum wined3d_format_id format, unsigned int w, unsigned int h)
-+{
-+    return FALSE;
-+}
-+
-+
-+BOOL wined3d_dxt1_encode(const BYTE *src, BYTE *dst, DWORD pitch_in, DWORD pitch_out,
-+        enum wined3d_format_id format, unsigned int w, unsigned int h)
-+{
-+    return FALSE;
-+}
-+
-+BOOL wined3d_dxt3_encode(const BYTE *src, BYTE *dst, DWORD pitch_in, DWORD pitch_out,
-+        enum wined3d_format_id format, unsigned int w, unsigned int h)
-+{
-+    return FALSE;
-+}
-+
-+BOOL wined3d_dxt5_encode(const BYTE *src, BYTE *dst, DWORD pitch_in, DWORD pitch_out,
-+        enum wined3d_format_id format, unsigned int w, unsigned int h)
-+{
-+    return FALSE;
-+}
-+
-+BOOL wined3d_dxtn_init(void)
-+{
-+    return FALSE;
-+}
-+
-+BOOL wined3d_dxtn_supported(void)
-+{
-+    static int once;
-+    if (!once++) FIXME("Wine is compiled without DXTn support, expect texture problems.\n");
-+    return FALSE;
-+}
-+
-+void wined3d_dxtn_free(void)
-+{
-+    /* nothing to do */
-+}
-+
-+#endif
-\ No newline at end of file
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index fb27c8a..b9f6a12 100644
+index 36806ec..03b5f4f 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
-@@ -2416,6 +2416,66 @@ static void convert_yuy2_r5g6b5(const BYTE *src, BYTE *dst,
+@@ -2396,6 +2396,66 @@ static void convert_yuy2_r5g6b5(const BYTE *src, BYTE *dst,
      }
  }
  
@@ -467,7 +423,7 @@ index fb27c8a..b9f6a12 100644
  struct d3dfmt_converter_desc
  {
      enum wined3d_format_id from, to;
-@@ -2432,6 +2492,20 @@ static const struct d3dfmt_converter_desc converters[] =
+@@ -2412,6 +2472,20 @@ static const struct d3dfmt_converter_desc converters[] =
      {WINED3DFMT_YUY2,           WINED3DFMT_B5G6R5_UNORM,    convert_yuy2_r5g6b5},
  };
  
@@ -488,7 +444,7 @@ index fb27c8a..b9f6a12 100644
  static inline const struct d3dfmt_converter_desc *find_converter(enum wined3d_format_id from,
          enum wined3d_format_id to)
  {
-@@ -2443,6 +2517,12 @@ static inline const struct d3dfmt_converter_desc *find_converter(enum wined3d_fo
+@@ -2423,6 +2497,12 @@ static inline const struct d3dfmt_converter_desc *find_converter(enum wined3d_fo
              return &converters[i];
      }
  
@@ -525,10 +481,10 @@ index 758ba43..08021a2 100644
  }
  
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 047946b..75ec61d 100644
+index b0c7a53..67105f4 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3170,6 +3170,19 @@ static inline void context_apply_state(struct wined3d_context *context,
+@@ -3176,6 +3176,19 @@ static inline void context_apply_state(struct wined3d_context *context,
      state_table[rep].apply(context, state, rep);
  }
  
@@ -549,5 +505,5 @@ index 047946b..75ec61d 100644
  #define WINED3D_OPENGL_WINDOW_CLASS_NAME "WineD3D_OpenGL"
  
 -- 
-2.2.1
+2.3.0
 

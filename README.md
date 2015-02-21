@@ -38,7 +38,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [14]:**
+**Bugfixes and features included in the next upcoming release [15]:**
 
 * Add semi-stub for GetFileVersionInfoExA/W ([Wine Bug #38098](https://bugs.winehq.org/show_bug.cgi?id=38098))
 * Add semi-stub for GetFileVersionInfoSizeExA/W ([Wine Bug #38090](https://bugs.winehq.org/show_bug.cgi?id=38090))
@@ -52,6 +52,7 @@ Included bug fixes and improvements
 * Do not access stack below ESP when restoring thread context.
 * Ignore unsupported alpha channels in TIFF decoder ([Wine Bug #38027](https://bugs.winehq.org/show_bug.cgi?id=38027))
 * Implement D3DXGetShaderOutputSemantics
+* Implement ntoskrnl.KeInitializeMutex
 * Improve stubs for AEV_{Get,Set}MasterVolumeLevel
 * Improve stubs for AEV_{Get,Set}Mute
 

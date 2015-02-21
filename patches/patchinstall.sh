@@ -178,6 +178,7 @@ patch_enable_all ()
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_WndProc="$1"
 	enable_vcomp_Stub_Functions="$1"
+	enable_version_VersionInfoEx="$1"
 	enable_windowscodecs_TGA_Decoder="$1"
 	enable_wine_inf_Performance="$1"
 	enable_wineboot_HKEY_DYN_DATA="$1"
@@ -561,6 +562,9 @@ patch_enable ()
 			;;
 		vcomp-Stub_Functions)
 			enable_vcomp_Stub_Functions="$2"
+			;;
+		version-VersionInfoEx)
+			enable_version_VersionInfoEx="$2"
 			;;
 		windowscodecs-TGA_Decoder)
 			enable_windowscodecs_TGA_Decoder="$2"
@@ -3089,6 +3093,24 @@ if test "$enable_vcomp_Stub_Functions" -eq 1; then
 		echo '+    { "Dan Kegel", "vcomp: better stubs for _vcomp_for_dynamic_init, _vcomp_for_dynamic_next.", 1 },';
 		echo '+    { "Dan Kegel", "vcomp: better stubs for _vcomp_sections_init, _vcomp_sections_next.", 1 },';
 		echo '+    { "Sebastian Lackner", "vcomp: Add a warning that multithreading is not yet supported.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset version-VersionInfoEx
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38098] Add semi-stub for GetFileVersionInfoExA/W
+# |   *	[#38090] Add semi-stub for GetFileVersionInfoSizeExA/W
+# |
+# | Modified files:
+# |   *	dlls/version/version.c
+# |
+if test "$enable_version_VersionInfoEx" -eq 1; then
+	patch_apply version-VersionInfoEx/0001-version-Partially-implement-GetFileVersionInfoSizeEx.patch
+	patch_apply version-VersionInfoEx/0002-version-Partially-implement-GetFileVersionInfoExA-W.patch
+	(
+		echo '+    { "Sebastian Lackner", "version: Partially implement GetFileVersionInfoSizeExA/W.", 1 },';
+		echo '+    { "Sebastian Lackner", "version: Partially implement GetFileVersionInfoExA/W.", 1 },';
 	) >> "$patchlist"
 fi
 

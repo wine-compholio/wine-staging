@@ -38,7 +38,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [16]:**
+**Bugfixes and features included in the next upcoming release [18]:**
 
 * Add semi-stub for GetFileVersionInfoExA/W ([Wine Bug #38098](https://bugs.winehq.org/show_bug.cgi?id=38098))
 * Add semi-stub for GetFileVersionInfoSizeExA/W ([Wine Bug #38090](https://bugs.winehq.org/show_bug.cgi?id=38090))
@@ -55,6 +55,8 @@ Included bug fixes and improvements
 * Implement ntoskrnl.KeInitializeMutex
 * Improve stubs for AEV_{Get,Set}MasterVolumeLevel
 * Improve stubs for AEV_{Get,Set}Mute
+* Support for H264 DXVA2 GPU video decoding through vaapi
+* Support for MPEG2 DXVA2 GPU video decoding through vaapi
 * Support for non-blocking SIO_ADDRESS_LIST_CHANGE requests ([Wine Bug #38062](https://bugs.winehq.org/show_bug.cgi?id=38062))
 
 

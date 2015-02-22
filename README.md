@@ -38,29 +38,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [18]:**
-
-* Add semi-stub for GetFileVersionInfoExA/W ([Wine Bug #38098](https://bugs.winehq.org/show_bug.cgi?id=38098))
-* Add semi-stub for GetFileVersionInfoSizeExA/W ([Wine Bug #38090](https://bugs.winehq.org/show_bug.cgi?id=38090))
-* Add stub for ntoskrnl.ExAcquireResourceExclusiveLite
-* Add stub for ntoskrnl.ExDeleteResourceLite
-* Add stub for ntoskrnl.ExReleaseResourceForThread
-* Add stub for ntoskrnl.Mm{Map,Unmap}LockedPages
-* Avoid race-conditions in NtReadFile() operations with write watches.
-* Avoid race-conditions with write watches in WS2_async_accept.
-* Basic handling of write watches triggered while we're on the signal stack.
-* Do not access stack below ESP when restoring thread context.
-* Ignore unsupported alpha channels in TIFF decoder ([Wine Bug #38027](https://bugs.winehq.org/show_bug.cgi?id=38027))
-* Implement D3DXGetShaderOutputSemantics
-* Implement ntoskrnl.KeInitializeMutex
-* Improve stubs for AEV_{Get,Set}MasterVolumeLevel
-* Improve stubs for AEV_{Get,Set}Mute
-* Support for H264 DXVA2 GPU video decoding through vaapi
-* Support for MPEG2 DXVA2 GPU video decoding through vaapi
-* Support for non-blocking SIO_ADDRESS_LIST_CHANGE requests ([Wine Bug #38062](https://bugs.winehq.org/show_bug.cgi?id=38062))
-
-
-**Bugs fixed in Wine Staging 1.7.36 [167]:**
+**Bugs fixed in Wine Staging 1.7.37 [182]:**
 
 * Add Dynamic DST exceptions for Israel Standard Time ([Wine Bug #36374](https://bugs.winehq.org/show_bug.cgi?id=36374))
 * Add default ACLs for user shell folders
@@ -68,11 +46,17 @@ Included bug fixes and improvements
 * Add library override instead of closing winecfg when pressing ENTER over the combobox ([Wine Bug #12804](https://bugs.winehq.org/show_bug.cgi?id=12804))
 * Add nvapi stubs required for GPU PhysX support
 * Add performance library registry keys needed by MS SQL Server Management Studio Express 2008 R2 ([Wine Bug #33661](https://bugs.winehq.org/show_bug.cgi?id=33661))
+* Add semi-stub for GetFileVersionInfoExA/W ([Wine Bug #38098](https://bugs.winehq.org/show_bug.cgi?id=38098))
+* Add semi-stub for GetFileVersionInfoSizeExA/W ([Wine Bug #38090](https://bugs.winehq.org/show_bug.cgi?id=38090))
 * Add stub for D3DXComputeNormalMap
 * Add stub for D3DXComputeTangentFrameEx ([Wine Bug #31984](https://bugs.winehq.org/show_bug.cgi?id=31984))
 * Add stub for D3DXIntersect
 * Add stub for NtSetLdtEntries/ZwSetLdtEntries ([Wine Bug #26268](https://bugs.winehq.org/show_bug.cgi?id=26268))
+* Add stub for ntoskrnl.ExAcquireResourceExclusiveLite
+* Add stub for ntoskrnl.ExDeleteResourceLite
+* Add stub for ntoskrnl.ExReleaseResourceForThread
 * Add stub for ntoskrnl.KeWaitForMultipleObjects
+* Add stub for ntoskrnl.Mm{Map,Unmap}LockedPages
 * Add stubs for D3DXCreateAnimationController interface
 * Add support for GetPropValue to PulseAudio backend
 * Adobe Reader needs ITextSelection_fnGetDuplicate implementation
@@ -81,14 +65,18 @@ Included bug fixes and improvements
 * Anno 1602 installer depends on Windows 98 behavior of SHFileOperationW ([Wine Bug #37916](https://bugs.winehq.org/show_bug.cgi?id=37916))
 * Audio stuttering and performance drops in multiple applications ([Wine Bug #30639](https://bugs.winehq.org/show_bug.cgi?id=30639))
 * Avoid crashing when broken app tries to release surface although refcount is zero ([Wine Bug #18477](https://bugs.winehq.org/show_bug.cgi?id=18477))
+* Avoid race-conditions in NtReadFile() operations with write watches.
 * Avoid race-conditions of async WSARecv() operations with write watches.
+* Avoid race-conditions with write watches in WS2_async_accept.
 * Avseq crashes when multisampling is enabled ([Wine Bug #31998](https://bugs.winehq.org/show_bug.cgi?id=31998))
+* Basic handling of write watches triggered while we're on the signal stack.
 * Basic support for CUDA
 * Black & White needs DXTn software decoding support ([Wine Bug #14939](https://bugs.winehq.org/show_bug.cgi?id=14939))
 * Call DriverUnload function when unloading a device driver.
 * Child of Light expects FindConnectionPoint to succeed and increase the refcount ([Wine Bug #36408](https://bugs.winehq.org/show_bug.cgi?id=36408))
 * CreateProcess does not prioritize the working directory over the system search path ([Wine Bug #23934](https://bugs.winehq.org/show_bug.cgi?id=23934))
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](https://bugs.winehq.org/show_bug.cgi?id=33770))
+* Do not access stack below ESP when restoring thread context.
 * Do not append duplicate NULL characters when importing keys with regedit ([Wine Bug #37575](https://bugs.winehq.org/show_bug.cgi?id=37575))
 * Do not fail when a used context is passed to wglShareLists ([Wine Bug #11436](https://bugs.winehq.org/show_bug.cgi?id=11436))
 * Emulate access to KI_USER_SHARED_DATA kernel page on x86_64 ([Wine Bug #33849](https://bugs.winehq.org/show_bug.cgi?id=33849))
@@ -134,7 +122,9 @@ Included bug fixes and improvements
 * Graphical issues in Inquisitor ([Wine Bug #32490](https://bugs.winehq.org/show_bug.cgi?id=32490))
 * Hearthstone fails to start ([Wine Bug #36216](https://bugs.winehq.org/show_bug.cgi?id=36216))
 * IOCTL_DVD_READ_STRUCTURE expects the wrong size of output buffer for some requests ([Wine Bug #37767](https://bugs.winehq.org/show_bug.cgi?id=37767))
+* Ignore unsupported alpha channels in TIFF decoder ([Wine Bug #38027](https://bugs.winehq.org/show_bug.cgi?id=38027))
 * Ignore unsupported flags for CoInternetSetFeatureEnabled ([Wine Bug #35197](https://bugs.winehq.org/show_bug.cgi?id=35197))
+* Implement D3DXGetShaderOutputSemantics
 * Implement ID3DXEffect::FindNextValidTechnique ([Wine Bug #34101](https://bugs.winehq.org/show_bug.cgi?id=34101))
 * Implement IDXGIOutput::GetDesc
 * Implement a Microsoft Yahei replacement font ([Wine Bug #13829](https://bugs.winehq.org/show_bug.cgi?id=13829))
@@ -142,7 +132,7 @@ Included bug fixes and improvements
 * Implement an Arial replacement font ([Wine Bug #32323](https://bugs.winehq.org/show_bug.cgi?id=32323))
 * Implement exclusive mode in PulseAudio backend ([Wine Bug #37042](https://bugs.winehq.org/show_bug.cgi?id=37042))
 * Implement ntoskrnl driver testing framework.
-* ~~Implement semi-stub for IDirectPlayVoiceClient::GetCompressionTypes~~ ([Wine Bug #29238](https://bugs.winehq.org/show_bug.cgi?id=29238))
+* Implement ntoskrnl.KeInitializeMutex
 * Implement stub for ntoskrnl.IoGetAttachedDeviceReference
 * Implement stub for ntoskrnl.KeDelayExecutionThread.
 * Implement stubs for ntoskrnl.Ex{Acquire,Release}FastMutexUnsafe
@@ -151,6 +141,8 @@ Included bug fixes and improvements
 * Implement threadpool wait objects
 * Implement threadpool work items ([Wine Bug #32531](https://bugs.winehq.org/show_bug.cgi?id=32531))
 * Improve stub for AEV_GetVolumeRange ([Wine Bug #35658](https://bugs.winehq.org/show_bug.cgi?id=35658))
+* Improve stubs for AEV_{Get,Set}MasterVolumeLevel
+* Improve stubs for AEV_{Get,Set}Mute
 * Improvement for heap allocation performance
 * Jedi Knight: Dark Forces II crashes with winmm set to native ([Wine Bug #37983](https://bugs.winehq.org/show_bug.cgi?id=37983))
 * Lego Stunt Rally requires DXTn software de/encoding support ([Wine Bug #25486](https://bugs.winehq.org/show_bug.cgi?id=25486))
@@ -189,6 +181,7 @@ Included bug fixes and improvements
 * Support for GetFinalPathNameByHandle ([Wine Bug #36073](https://bugs.winehq.org/show_bug.cgi?id=36073))
 * Support for GetSystemTimes ([Wine Bug #19813](https://bugs.winehq.org/show_bug.cgi?id=19813))
 * Support for GetVolumePathName
+* Support for H264 DXVA2 GPU video decoding through vaapi
 * Support for ID3DXFont::DrawTextA/W ([Wine Bug #24754](https://bugs.winehq.org/show_bug.cgi?id=24754))
 * Support for ID3DXSkinInfoImpl_UpdateSkinnedMesh ([Wine Bug #32572](https://bugs.winehq.org/show_bug.cgi?id=32572))
 * Support for ITextDocument_fnRange function ([Wine Bug #12458](https://bugs.winehq.org/show_bug.cgi?id=12458))
@@ -196,6 +189,7 @@ Included bug fixes and improvements
 * Support for Junction Points ([Wine Bug #12401](https://bugs.winehq.org/show_bug.cgi?id=12401))
 * Support for KF_FLAG_DEFAULT_PATH in SHGetKnownFolderPath ([Wine Bug #30385](https://bugs.winehq.org/show_bug.cgi?id=30385))
 * Support for LoadIconMetric ([Wine Bug #35375](https://bugs.winehq.org/show_bug.cgi?id=35375))
+* Support for MPEG2 DXVA2 GPU video decoding through vaapi
 * Support for NVIDIA video encoder library (nvencodeapi)
 * Support for NtQuerySection ([Wine Bug #37338](https://bugs.winehq.org/show_bug.cgi?id=37338))
 * Support for NtSetInformationFile class FileDispositionInformation ([Wine Bug #30397](https://bugs.winehq.org/show_bug.cgi?id=30397))
@@ -205,13 +199,12 @@ Included bug fixes and improvements
 * Support for SLGetWindowsInformationDWORD ([Wine Bug #36709](https://bugs.winehq.org/show_bug.cgi?id=36709))
 * Support for TOOLTIPS_GetTipText edge cases ([Wine Bug #30648](https://bugs.winehq.org/show_bug.cgi?id=30648))
 * Support for TransmitFile ([Wine Bug #5048](https://bugs.winehq.org/show_bug.cgi?id=5048))
-* ~~Support for UTF7 encoding/decoding~~ ([Wine Bug #27388](https://bugs.winehq.org/show_bug.cgi?id=27388))
 * Support for WTSEnumerateProcessesW ([Wine Bug #29903](https://bugs.winehq.org/show_bug.cgi?id=29903))
 * Support for extra large and jumbo icon lists in shell32 ([Wine Bug #24721](https://bugs.winehq.org/show_bug.cgi?id=24721))
 * Support for inherited file ACLs ([Wine Bug #34406](https://bugs.winehq.org/show_bug.cgi?id=34406))
-* ~~Support for interface change notifications~~ ([Wine Bug #32328](https://bugs.winehq.org/show_bug.cgi?id=32328))
 * Support for loader dll redirections
 * Support for named pipe message mode (Linux only) ([Wine Bug #17195](https://bugs.winehq.org/show_bug.cgi?id=17195))
+* Support for non-blocking SIO_ADDRESS_LIST_CHANGE requests ([Wine Bug #38062](https://bugs.winehq.org/show_bug.cgi?id=38062))
 * Support for pasting HTML from Unix applications ([Wine Bug #7372](https://bugs.winehq.org/show_bug.cgi?id=7372))
 * Support for process ACLs ([Wine Bug #22006](https://bugs.winehq.org/show_bug.cgi?id=22006))
 * Support for setcap on wine-preloader ([Wine Bug #26256](https://bugs.winehq.org/show_bug.cgi?id=26256))

@@ -21,6 +21,7 @@
 
 import binascii
 import cPickle as pickle
+import fnmatch
 import hashlib
 import itertools
 import math
@@ -73,6 +74,7 @@ class PatchSet(object):
         self.patches        = []
         self.modified_files = set()
         self.depends        = set()
+        self.auto_depends   = set()
 
         self.verify_time    = None
 
@@ -188,60 +190,6 @@ def enum_directories(revision, path):
 
     return dirs
 
-def read_definition(revision, filename, name_to_id):
-    """Read a definition file and return information as tuple (depends, fixes)."""
-    filename = os.path.join(filename, "definition")
-    if revision is None:
-        with open(filename) as fp:
-            content = fp.read()
-    else:
-        filename = "%s:%s" % (revision, filename)
-        try:
-            content = subprocess.check_output(["git", "show", filename], stderr=_devnull)
-        except subprocess.CalledProcessError:
-            raise IOError("Failed to load %s" % filename)
-
-    depends   = set()
-    fixes     = []
-    disabled  = False
-    ifdefined = None
-
-    for line in content.split("\n"):
-        if line.startswith("#"):
-            continue
-        tmp = line.split(":", 1)
-        if len(tmp) != 2:
-            continue
-
-        key, val = tmp[0].lower(), tmp[1].strip()
-        if key == "depends":
-            if name_to_id is not None:
-                if not name_to_id.has_key(val):
-                    raise PatchUpdaterError("Definition file %s references unknown dependency %s" % (filename, val))
-                depends.add(name_to_id[val])
-
-        elif key == "fixes":
-            r = re.match("^[0-9]+$", val)
-            if r:
-                fixes.append((int(val), None))
-                continue
-            r = re.match("^\\[ *([0-9]+) *\\](.*)$", val)
-            if r:
-                fixes.append((int(r.group(1)), r.group(2).strip()))
-                continue
-            fixes.append((None, val))
-
-        elif key == "disabled":
-            disabled = _parse_int(val)
-
-        elif key == "ifdefined":
-            ifdefined = val
-
-        elif revision is None:
-            print "WARNING: Ignoring unknown command in definition file %s: %s" % (filename, line)
-
-    return depends, fixes, disabled, ifdefined
-
 def read_patchset(revision = None):
     """Read information about all patchsets for a specific revision."""
     unique_id   = itertools.count()
@@ -283,10 +231,53 @@ def read_patchset(revision = None):
     # Now read the definition files in a second step
     for i, patch in all_patches.iteritems():
         try:
-            patch.depends, patch.fixes, patch.disabled, patch.ifdefined = \
-                read_definition(revision, os.path.join(config.path_patches, patch.name), name_to_id)
-        except IOError:
-            patch.depends, patch.fixes, patch.disabled, patch.ifdefined = set(), [], False, None
+            filename = os.path.join(os.path.join(config.path_patches, patch.name), "definition")
+            if revision is None:
+                with open(filename) as fp:
+                    content = fp.read()
+            else:
+                filename = "%s:%s" % (revision, filename)
+                content = subprocess.check_output(["git", "show", filename], stderr=_devnull)
+        except (IOError, subprocess.CalledProcessError):
+            continue # Skip this definition file
+
+        for line in content.split("\n"):
+            if line.startswith("#"):
+                continue
+            tmp = line.split(":", 1)
+            if len(tmp) != 2:
+                continue
+
+            key, val = tmp[0].lower(), tmp[1].strip()
+            if key == "depends":
+                if not name_to_id.has_key(val):
+                    raise PatchUpdaterError("Definition file %s references unknown dependency %s" % (filename, val))
+                patch.depends.add(name_to_id[val])
+
+            elif key == "apply-after":
+                for j, other_patch in all_patches.iteritems():
+                    if i != j and any([fnmatch.fnmatch(f, val) for f in other_patch.modified_files]):
+                        patch.auto_depends.add(j)
+
+            elif key == "fixes":
+                r = re.match("^[0-9]+$", val)
+                if r:
+                    patch.fixes.append((int(val), None))
+                    continue
+                r = re.match("^\\[ *([0-9]+) *\\](.*)$", val)
+                if r:
+                    patch.fixes.append((int(r.group(1)), r.group(2).strip()))
+                    continue
+                patch.fixes.append((None, val))
+
+            elif key == "disabled":
+                patch.disabled = _parse_int(val)
+
+            elif key == "ifdefined":
+                patch.ifdefined = val
+
+            elif revision is None:
+                print "WARNING: Ignoring unknown command in definition file %s: %s" % (filename, line)
 
     return all_patches
 
@@ -375,6 +366,7 @@ def resolve_dependencies(all_patches, index = None, depends = None):
             # Recusively resolve dependencies
             all_patches[i].verify_resolved = -1
             _resolve(all_patches[i].depends)
+            _resolve(all_patches[i].auto_depends)
             all_patches[i].verify_resolved = 1
             resolved.append(i)
 

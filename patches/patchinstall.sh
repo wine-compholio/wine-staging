@@ -685,7 +685,7 @@ enable=1
 
 # Find location of patches
 patchdir="$(dirname "$(readlink -f "$0")")"
-if ! test -f "$patchdir/patchinstall.sh"; then
+if test ! -f "$patchdir/patchinstall.sh"; then
 	if test -f ./patchinstall.sh; then
 		patchdir="$(pwd)"
 	else
@@ -805,7 +805,8 @@ elif test "$backend" = "epatch"; then
 
 	if ! command -v epatch >/dev/null 2>&1 || \
 	   ! command -v ebegin >/dev/null 2>&1 || \
-	   ! command -v eend   >/dev/null 2>&1; then
+	   ! command -v eend   >/dev/null 2>&1 || \
+	   ! command -v die    >/dev/null 2>&1; then
 		abort "Shell functions epatch/ebegin/eend not found. You have to source this script from your ebuild."
 	fi
 
@@ -1539,6 +1540,40 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	(
 		echo '+    { "Stefan Dösinger", "wined3d: Merge get_pitch functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Revert_PixelFormat
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35655] Fix wined3d performance drop introduced by pixelformat changes.
+# |   *	[#35718] Fix flickering introduced by pixelformat changes.
+# |   *	[#35950] Fix black screen on startup introduced by pixelformat changes.
+# |   *	[#35975] Fix gray screen on startup introduced by pixelformat changes.
+# |   *	[#36900] Fix missing video introduced by pixelformat changes.
+# |
+# | Modified files:
+# |   *	dlls/d3d8/tests/device.c, dlls/d3d9/tests/device.c, dlls/ddraw/tests/ddraw1.c, dlls/ddraw/tests/ddraw2.c,
+# | 	dlls/ddraw/tests/ddraw4.c, dlls/ddraw/tests/ddraw7.c, dlls/wined3d/context.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
+	patch_apply wined3d-Revert_PixelFormat/0001-Revert-wined3d-Track-if-a-context-s-private-hdc-has-.patch
+	patch_apply wined3d-Revert_PixelFormat/0002-Revert-wined3d-Track-if-a-context-s-hdc-is-private-s.patch
+	patch_apply wined3d-Revert_PixelFormat/0003-Revert-wined3d-When-restoring-pixel-format-in-contex.patch
+	patch_apply wined3d-Revert_PixelFormat/0004-Revert-wined3d-Don-t-call-GetPixelFormat-to-set-a-fl.patch
+	patch_apply wined3d-Revert_PixelFormat/0005-Revert-wined3d-Restore-the-pixel-format-of-the-windo.patch
+	patch_apply wined3d-Revert_PixelFormat/0006-d3d8-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
+	patch_apply wined3d-Revert_PixelFormat/0007-d3d9-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
+	patch_apply wined3d-Revert_PixelFormat/0008-ddraw-Mark-tests-which-no-longer-pass-due-to-reverts.patch
+	(
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s private hdc has had its pixel format set, so we don'\''t need to check it.\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s hdc is private so we never need to restore its pixel format.\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: When restoring pixel format in context_release(), mark the context as needing to be set on the next context_acquire().\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Don'\''t call GetPixelFormat() to set a flag that'\''s already set.\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Restore the pixel format of the window whose pixel format was actually changed.\".", 1 },';
+		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3679,40 +3714,6 @@ if test "$enable_winecfg_Libraries" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Revert_PixelFormat
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35655] Fix wined3d performance drop introduced by pixelformat changes.
-# |   *	[#35718] Fix flickering introduced by pixelformat changes.
-# |   *	[#35950] Fix black screen on startup introduced by pixelformat changes.
-# |   *	[#35975] Fix gray screen on startup introduced by pixelformat changes.
-# |   *	[#36900] Fix missing video introduced by pixelformat changes.
-# |
-# | Modified files:
-# |   *	dlls/d3d8/tests/device.c, dlls/d3d9/tests/device.c, dlls/ddraw/tests/ddraw1.c, dlls/ddraw/tests/ddraw2.c,
-# | 	dlls/ddraw/tests/ddraw4.c, dlls/ddraw/tests/ddraw7.c, dlls/wined3d/context.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
-	patch_apply wined3d-Revert_PixelFormat/0001-Revert-wined3d-Track-if-a-context-s-private-hdc-has-.patch
-	patch_apply wined3d-Revert_PixelFormat/0002-Revert-wined3d-Track-if-a-context-s-hdc-is-private-s.patch
-	patch_apply wined3d-Revert_PixelFormat/0003-Revert-wined3d-When-restoring-pixel-format-in-contex.patch
-	patch_apply wined3d-Revert_PixelFormat/0004-Revert-wined3d-Don-t-call-GetPixelFormat-to-set-a-fl.patch
-	patch_apply wined3d-Revert_PixelFormat/0005-Revert-wined3d-Restore-the-pixel-format-of-the-windo.patch
-	patch_apply wined3d-Revert_PixelFormat/0006-d3d8-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
-	patch_apply wined3d-Revert_PixelFormat/0007-d3d9-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
-	patch_apply wined3d-Revert_PixelFormat/0008-ddraw-Mark-tests-which-no-longer-pass-due-to-reverts.patch
-	(
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s private hdc has had its pixel format set, so we don'\''t need to check it.\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s hdc is private so we never need to restore its pixel format.\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: When restoring pixel format in context_release(), mark the context as needing to be set on the next context_acquire().\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Don'\''t call GetPixelFormat() to set a flag that'\''s already set.\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Restore the pixel format of the window whose pixel format was actually changed.\".", 1 },';
-		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset winedevice-DriverUnload
 # |
 # | Modified files:
@@ -4058,8 +4059,8 @@ if test "$enable_patchlist" -eq 1; then
 
 	# Generate a temporary patch containing the patchlist and apply it
 	patch_data=$(cat "$patchlist" | sort)
-	patch_lines=$(echo "$patch_data" | wc -l)
 	if test ! -z "$patch_data"; then
+		patch_lines=$(echo "$patch_data" | wc -l)
 		patch_lines=$((${patch_lines}+21))
 		cat > "$patchlist" <<EOF
 From: Wine Staging Team <webmaster@fds-team.de>

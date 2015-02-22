@@ -375,7 +375,7 @@ def generate_ifdef_patch(original, patched, ifdef):
     """Generate a patch which adds #ifdef where necessary to keep both the original and patched version."""
 
     def _preprocess_source(fp):
-        """Simple C preprocessor to determine where we can savely add #ifdef instructions."""
+        """Simple C preprocessor to determine where we can safely add #ifdef instructions."""
 
         _re_state0 = re.compile("(\"|/[/*])")
         _re_state1 = re.compile("(\\\"|\")")
@@ -418,7 +418,7 @@ def generate_ifdef_patch(original, patched, ifdef):
                     elif match.group(0) == "/*":
                         state = 2 # Begin of comment
                     elif match.group(0) == "//":
-                        break # Rest of the line is a comment, which can be savely ignored
+                        break # Rest of the line is a comment, which can be safely ignored
                     else:
                         assert 0
 
@@ -460,7 +460,7 @@ def generate_ifdef_patch(original, patched, ifdef):
     # The basic of idea of this algorithm is as following:
     #
     # (1) determine diff between original file and patched file
-    # (2) run the preprocessor, to determine where #ifdefs can be savely added
+    # (2) run the preprocessor, to determine where #ifdefs can be safely added
     # (3) use diff and preprocessor information to create a merged version containing #ifdefs
     # (4) create another diff to apply the changes on the patched version
     #

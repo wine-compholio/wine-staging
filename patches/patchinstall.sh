@@ -69,6 +69,7 @@ patch_enable_all ()
 	enable_comctl32_LoadIconMetric="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_d3d9_Surface_Refcount="$1"
+	enable_d3drm_Specfile="$1"
 	enable_d3dx9_36_AnimationController="$1"
 	enable_d3dx9_36_ConvertToIndexedBlended="$1"
 	enable_d3dx9_36_D3DXStubs="$1"
@@ -237,6 +238,9 @@ patch_enable ()
 			;;
 		d3d9-Surface_Refcount)
 			enable_d3d9_Surface_Refcount="$2"
+			;;
+		d3drm-Specfile)
+			enable_d3drm_Specfile="$2"
 			;;
 		d3dx9_36-AnimationController)
 			enable_d3dx9_36_AnimationController="$2"
@@ -1202,6 +1206,18 @@ if test "$enable_d3d9_Surface_Refcount" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset d3drm-Specfile
+# |
+# | Modified files:
+# |   *	dlls/d3drm/d3drm.spec
+# |
+if test "$enable_d3drm_Specfile" -eq 1; then
+	patch_apply d3drm-Specfile/0001-d3drm-Mark-DllCanUnloadNow-and-DllGetClassObject-as-.patch
+	(
+		echo '+    { "Amine Khaldi", "d3drm: Mark DllCanUnloadNow and DllGetClassObject as private.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-DXTn
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1491,18 +1507,6 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -1520,6 +1524,18 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 

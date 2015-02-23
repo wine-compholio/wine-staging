@@ -145,7 +145,6 @@ patch_enable_all ()
 	enable_nvencodeapi_Video_Encoder="$1"
 	enable_ole32_CoWaitForMultipleHandles="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
-	enable_reg_Cleanup="$1"
 	enable_regedit_String_Termination="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_secur32_Schannel_ContextAttr="$1"
@@ -466,9 +465,6 @@ patch_enable ()
 			;;
 		quartz-MediaSeeking_Positions)
 			enable_quartz_MediaSeeking_Positions="$2"
-			;;
-		reg-Cleanup)
-			enable_reg_Cleanup="$2"
 			;;
 		regedit-String_Termination)
 			enable_regedit_String_Termination="$2"
@@ -3006,32 +3002,6 @@ if test "$enable_quartz_MediaSeeking_Positions" -eq 1; then
 		echo '+    { "Erich E. Hoover", "quartz: Implement MediaSeeking_GetCurrentPosition on top of MediaSeeking_GetPositions.", 1 },';
 		echo '+    { "Erich E. Hoover", "quartz: Implement MediaSeeking_GetStopPosition on top of MediaSeeking_GetPositions.", 1 },';
 		echo '+    { "Erich E. Hoover", "quartz: Remove unused cache of MediaSeeking stop position.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset reg-Cleanup
-# |
-# | Modified files:
-# |   *	programs/reg/reg.c, programs/reg/reg.h, programs/reg/reg.rc, programs/reg/tests/reg.c
-# |
-if test "$enable_reg_Cleanup" -eq 1; then
-	patch_apply reg-Cleanup/0001-reg-Add-system-error-printing-function.patch
-	patch_apply reg-Cleanup/0002-reg-Add-sane_path-function-to-do-preliniary-key-vali.patch
-	patch_apply reg-Cleanup/0003-reg-Add-check-for-multiple-backslashes-at-the-end-of.patch
-	patch_apply reg-Cleanup/0004-reg-Add-path-key-conversion-functions.patch
-	patch_apply reg-Cleanup/0005-reg-Add-wchar-type-conversion-functions.patch
-	patch_apply reg-Cleanup/0006-reg-Add-wchar-raw-data-conversion-functions.patch
-	patch_apply reg-Cleanup/0007-reg-Clean-up-reg_add.patch
-	patch_apply reg-Cleanup/0008-reg-Clean-up-reg_delete.patch
-	(
-		echo '+    { "Jonathan Vollebregt", "reg: Add system error printing function.", 1 },';
-		echo '+    { "Jonathan Vollebregt", "reg: Add sane_path function to do preliniary key validation.", 1 },';
-		echo '+    { "Jonathan Vollebregt", "reg: Add check for multiple backslashes at the end of the key.", 1 },';
-		echo '+    { "Jonathan Vollebregt", "reg: Add path/key conversion functions.", 1 },';
-		echo '+    { "Jonathan Vollebregt", "reg: Add wchar/type conversion functions.", 1 },';
-		echo '+    { "Jonathan Vollebregt", "reg: Add wchar/raw data conversion functions.", 1 },';
-		echo '+    { "Jonathan Vollebregt", "reg: Clean up reg_add.", 1 },';
-		echo '+    { "Jonathan Vollebregt", "reg: Clean up reg_delete.", 1 },';
 	) >> "$patchlist"
 fi
 

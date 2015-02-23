@@ -450,46 +450,59 @@ def generate_script(all_patches):
             modified_files[f].append(i)
 
     # Check dependencies
-    for filename, indices in modified_files.iteritems():
+    pool = multiprocessing.pool.ThreadPool(processes=4)
+    try:
+        for filename, indices in modified_files.iteritems():
 
-        # If one of patches is a binary patch, then we cannot / won't verify it - require dependencies in this case
-        if contains_binary_patch(all_patches, indices, filename):
-            if not causal_time_relation_any(all_patches, indices):
-                raise PatchUpdaterError("Because of binary patch modifying file %s the following patches need explicit dependencies: %s" %
-                                        (filename, ", ".join([all_patches[i].name for i in indices])))
-            continue
+            # If one of patches is a binary patch, then we cannot / won't verify it - require dependencies in this case
+            if contains_binary_patch(all_patches, indices, filename):
+                if not causal_time_relation_any(all_patches, indices):
+                    raise PatchUpdaterError("Because of binary patch modifying file %s the following patches need explicit dependencies: %s" %
+                                            (filename, ", ".join([all_patches[i].name for i in indices])))
+                continue
 
-        original_content = get_wine_file(filename)
-        selected_patches = select_patches(all_patches, indices, filename)
+            original_content = get_wine_file(filename)
+            selected_patches = select_patches(all_patches, indices, filename)
 
-        # Show a progress bar while applying the patches - this task might take some time
-        with progressbar.ProgressBar(desc=filename, total=2 ** len(indices)) as progress:
-            for k, bitstring in enumerate(itertools.product([0,1], repeat=len(indices))):
-                progress.update(k)
+            # Show a progress bar while applying the patches - this task might take some time
+            chunk_size = 20
+            with progressbar.ProgressBar(desc=filename, total=2 ** len(indices) / chunk_size) as progress:
 
-                set_apply = [(i, all_patches[i]) for u, i in zip(bitstring, indices) if u]
-                set_skip  = [(i, all_patches[i]) for u, i in zip(bitstring, indices) if not u]
-                test_apply = True
+                def test_apply(bitstring):
+                    set_apply = [(i, all_patches[i]) for u, i in zip(bitstring, indices) if u]
+                    set_skip  = [(i, all_patches[i]) for u, i in zip(bitstring, indices) if not u]
 
-                # Check if there is any patch2 which depends directly or indirectly on patch1.
-                # If this is the case we found an impossible situation, we can be skipped in this test.
-                for i, patch1 in set_apply:
-                    for j, patch2 in set_skip:
-                        if causal_time_smaller(patch2.verify_time, patch1.verify_time):
-                            test_apply = False
-                            break
-                    if not test_apply:
-                        break
+                    # Check if there is any patch2 which depends directly or indirectly on patch1.
+                    # If this is the case we found an impossible situation, we can be skipped in this test.
+                    for i, patch1 in set_apply:
+                        for j, patch2 in set_skip:
+                            if causal_time_smaller(patch2.verify_time, patch1.verify_time):
+                                return True # we can skip this test
 
-                if test_apply:
                     try:
                         original = original_content
                         for i, patch in set_apply:
                             original = patchutils.apply_patch(original, selected_patches[i][1], fuzz=0)
                     except patchutils.PatchApplyError:
+                        return False
+
+                    return True # everything is fine
+
+                def test_apply_seq(bitstrings):
+                    for bitstring in bitstrings:
+                        if not test_apply(bitstring):
+                            return False
+                    return True
+
+                it = _split_seq(itertools.product([0,1], repeat=len(indices)), chunk_size)
+                for k, res in enumerate(pool.imap_unordered(test_apply_seq, it)):
+                    if not res:
                         progress.finish("<failed to apply>")
                         raise PatchUpdaterError("Changes to file %s don't apply: %s" %
                                                 (filename, ", ".join([all_patches[i].name for i in indices])))
+                    progress.update(k)
+    finally:
+        pool.close()
 
     # Generate code for helper functions
     lines = []

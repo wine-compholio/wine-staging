@@ -1472,8 +1472,10 @@ fi
 # |
 if test "$enable_dinput_Events" -eq 1; then
 	patch_apply dinput-Events/0001-dinput-Ensure-X11-input-events-are-handled-even-with.patch
+	patch_apply dinput-Events/0002-dinput-Skip-Wine-specific-__wine_check_for_events-ca.patch
 	(
 		echo '+    { "Sebastian Lackner", "dinput: Ensure X11 input events are handled even without explicit message loop.", 2 },';
+		echo '+    { "Amine Khaldi", "dinput: Skip Wine specific __wine_check_for_events calls in ReactOS.", 1 },';
 	) >> "$patchlist"
 fi
 

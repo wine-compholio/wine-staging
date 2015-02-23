@@ -84,6 +84,7 @@ patch_enable_all ()
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
 	enable_dbghelp_Debug_Symbols="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
+	enable_dinput_Compile_Fix="$1"
 	enable_dinput_Events="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dxgi_GetDesc="$1"
@@ -283,6 +284,9 @@ patch_enable ()
 			;;
 		ddraw-d3d_execute_buffer)
 			enable_ddraw_d3d_execute_buffer="$2"
+			;;
+		dinput-Compile_Fix)
+			enable_dinput_Compile_Fix="$2"
 			;;
 		dinput-Events)
 			enable_dinput_Events="$2"
@@ -1458,6 +1462,18 @@ if test "$enable_ddraw_d3d_execute_buffer" -eq 1; then
 	patch_apply ddraw-d3d_execute_buffer/0001-ddraw-Don-t-call-IDirect3DDevice7_DrawIndexedPrimiti.patch
 	(
 		echo '+    { "Christian Costa", "ddraw: Don'\''t call IDirect3DDevice7_DrawIndexedPrimitive if there is no primitive.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dinput-Compile_Fix
+# |
+# | Modified files:
+# |   *	dlls/dinput/tests/dinput.c
+# |
+if test "$enable_dinput_Compile_Fix" -eq 1; then
+	patch_apply dinput-Compile_Fix/0001-dinput-tests-Declare-pDirectInputCreateEx-in-a-MSVC-.patch
+	(
+		echo '+    { "Amine Khaldi", "dinput/tests: Declare pDirectInputCreateEx in a MSVC compatible way.", 1 },';
 	) >> "$patchlist"
 fi
 

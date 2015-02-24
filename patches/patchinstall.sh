@@ -84,7 +84,6 @@ patch_enable_all ()
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
 	enable_dbghelp_Debug_Symbols="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
-	enable_dinput_Compile_Fix="$1"
 	enable_dinput_Events="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dxgi_GetDesc="$1"
@@ -195,7 +194,6 @@ patch_enable_all ()
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
-	enable_winedevice_DriverUnload="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
 	enable_winepulse_PulseAudio_Support="$1"
@@ -206,7 +204,6 @@ patch_enable_all ()
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
 	enable_winex11_wglShareLists="$1"
-	enable_wininet_encoding="$1"
 	enable_winmm_Delay_Import_Depends="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_Connect_Time="$1"
@@ -285,9 +282,6 @@ patch_enable ()
 			;;
 		ddraw-d3d_execute_buffer)
 			enable_ddraw_d3d_execute_buffer="$2"
-			;;
-		dinput-Compile_Fix)
-			enable_dinput_Compile_Fix="$2"
 			;;
 		dinput-Events)
 			enable_dinput_Events="$2"
@@ -619,9 +613,6 @@ patch_enable ()
 		wined3d-Revert_PixelFormat)
 			enable_wined3d_Revert_PixelFormat="$2"
 			;;
-		winedevice-DriverUnload)
-			enable_winedevice_DriverUnload="$2"
-			;;
 		winedevice-Fix_Relocation)
 			enable_winedevice_Fix_Relocation="$2"
 			;;
@@ -651,9 +642,6 @@ patch_enable ()
 			;;
 		winex11-wglShareLists)
 			enable_winex11_wglShareLists="$2"
-			;;
-		wininet-encoding)
-			enable_wininet_encoding="$2"
 			;;
 		winmm-Delay_Import_Depends)
 			enable_winmm_Delay_Import_Depends="$2"
@@ -1469,18 +1457,6 @@ if test "$enable_ddraw_d3d_execute_buffer" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dinput-Compile_Fix
-# |
-# | Modified files:
-# |   *	dlls/dinput/tests/dinput.c
-# |
-if test "$enable_dinput_Compile_Fix" -eq 1; then
-	patch_apply dinput-Compile_Fix/0001-dinput-tests-Declare-pDirectInputCreateEx-in-a-MSVC-.patch
-	(
-		echo '+    { "Amine Khaldi", "dinput/tests: Declare pDirectInputCreateEx in a MSVC compatible way.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dinput-Events
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1529,18 +1505,6 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -1558,6 +1522,18 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3734,18 +3710,6 @@ if test "$enable_winecfg_Libraries" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset winedevice-DriverUnload
-# |
-# | Modified files:
-# |   *	programs/winedevice/device.c
-# |
-if test "$enable_winedevice_DriverUnload" -eq 1; then
-	patch_apply winedevice-DriverUnload/0001-winedevice-Call-DriverUnload-function-when-unloading.patch
-	(
-		echo '+    { "Michael Müller", "winedevice: Call DriverUnload function when unloading a driver.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset winedevice-Fix_Relocation
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3964,21 +3928,6 @@ if test "$enable_winex11_wglShareLists" -eq 1; then
 	patch_apply winex11-wglShareLists/0001-winex11.drv-Only-warn-about-used-contexts-in-wglShar.patch
 	(
 		echo '+    { "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wininet-encoding
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37046] wininet should allow Accept-Encoding header for HTTP/1.0
-# |
-# | Modified files:
-# |   *	dlls/wininet/http.c, dlls/wininet/tests/http.c
-# |
-if test "$enable_wininet_encoding" -eq 1; then
-	patch_apply wininet-encoding/0001-wininet-Allow-Accept-Encoding-for-HTTP-1.0-requests.patch
-	(
-		echo '+    { "Michael Müller", "wininet: Allow Accept-Encoding for HTTP/1.0 requests.", 1 },';
 	) >> "$patchlist"
 fi
 

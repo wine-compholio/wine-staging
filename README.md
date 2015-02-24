@@ -72,7 +72,7 @@ Included bug fixes and improvements
 * Basic handling of write watches triggered while we're on the signal stack.
 * Basic support for CUDA
 * Black & White needs DXTn software decoding support ([Wine Bug #14939](https://bugs.winehq.org/show_bug.cgi?id=14939))
-* Call DriverUnload function when unloading a device driver.
+* ~~Call DriverUnload function when unloading a device driver.~~
 * Child of Light expects FindConnectionPoint to succeed and increase the refcount ([Wine Bug #36408](https://bugs.winehq.org/show_bug.cgi?id=36408))
 * CreateProcess does not prioritize the working directory over the system search path ([Wine Bug #23934](https://bugs.winehq.org/show_bug.cgi?id=23934))
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](https://bugs.winehq.org/show_bug.cgi?id=33770))
@@ -221,5 +221,5 @@ Included bug fixes and improvements
 * eRacer Demo doesn't correctly display text ([Wine Bug #29598](https://bugs.winehq.org/show_bug.cgi?id=29598))
 * ntdll is missing WinSqm[Start|End]Session implementation ([Wine Bug #31971](https://bugs.winehq.org/show_bug.cgi?id=31971))
 * wglDescribePixelFormat should return max index for NULL descriptor ([Wine Bug #6176](https://bugs.winehq.org/show_bug.cgi?id=6176))
-* wininet should allow Accept-Encoding header for HTTP/1.0 ([Wine Bug #37046](https://bugs.winehq.org/show_bug.cgi?id=37046))
+* ~~wininet should allow Accept-Encoding header for HTTP/1.0~~ ([Wine Bug #37046](https://bugs.winehq.org/show_bug.cgi?id=37046))
 

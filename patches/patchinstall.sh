@@ -2750,12 +2750,14 @@ fi
 # Patchset ntdll-Threading
 # |
 # | Modified files:
-# |   *	dlls/ntdll/thread.c
+# |   *	dlls/ntdll/process.c, dlls/ntdll/thread.c
 # |
 if test "$enable_ntdll_Threading" -eq 1; then
 	patch_apply ntdll-Threading/0001-ntdll-Fix-race-condition-when-threads-are-killed-dur.patch
+	patch_apply ntdll-Threading/0002-ntdll-Avoid-deadlock-by-using-_exit-in-NtTerminatePr.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Fix race-condition when threads are killed during shutdown.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Avoid deadlock by using _exit() in NtTerminateProcess.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,55 @@
+From f7a85ba8219c46b226376aed23f2d81bfff902dc Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 25 Feb 2015 22:45:42 +0100
+Subject: ntdll: Fix race-condition when threads are killed during shutdown.
+
+When exit_thread is executed, nb_threads is decremented before the thread is
+fully shutdown. When another thread runs ExitProcess() this will cause a SIGQUIT
+signal to all threads, effectively decrementing nb_threads twice. The process
+will terminate with a wrong exitcode then because the refcount reaches zero too
+early.
+
+Currently Wine has no locking protection of LdrShutdownProcess(), so it can
+only be executed safely when all other threads have terminated before. Most
+likely there are more Wine bugs in this area, but the attached patch should
+fix the most critical one (messed up refcounting of threads) for now.
+---
+ dlls/ntdll/thread.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
+index 3696c8e..74e64c9 100644
+--- a/dlls/ntdll/thread.c
++++ b/dlls/ntdll/thread.c
+@@ -370,6 +370,7 @@ void terminate_thread( int status )
+ void exit_thread( int status )
+ {
+     static void *prev_teb;
++    sigset_t sigset;
+     TEB *teb;
+ 
+     if (status)  /* send the exit code to the server (0 is already the default) */
+@@ -383,7 +384,7 @@ void exit_thread( int status )
+         SERVER_END_REQ;
+     }
+ 
+-    if (interlocked_xchg_add( &nb_threads, -1 ) <= 1)
++    if (interlocked_xchg_add( &nb_threads, 0 ) <= 1)
+     {
+         LdrShutdownProcess();
+         exit( status );
+@@ -405,6 +406,11 @@ void exit_thread( int status )
+         }
+     }
+ 
++    sigemptyset( &sigset );
++    sigaddset( &sigset, SIGQUIT );
++    pthread_sigmask( SIG_BLOCK, &sigset, NULL );
++    if (interlocked_xchg_add( &nb_threads, -1 ) <= 1) _exit( status );
++
+     close( ntdll_get_thread_data()->wait_fd[0] );
+     close( ntdll_get_thread_data()->wait_fd[1] );
+     close( ntdll_get_thread_data()->reply_fd );
+-- 
+2.3.0
+

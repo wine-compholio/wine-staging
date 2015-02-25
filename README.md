@@ -38,6 +38,11 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
+**Bugfixes and features included in the next upcoming release [1]:**
+
+* Fix race-condition when threads are killed during shutdown
+
+
 **Bugs fixed in Wine Staging 1.7.37 [182]:**
 
 * Add Dynamic DST exceptions for Israel Standard Time ([Wine Bug #36374](https://bugs.winehq.org/show_bug.cgi?id=36374))

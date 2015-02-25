@@ -133,6 +133,7 @@ patch_enable_all ()
 	enable_ntdll_RtlIpv4StringToAddressExA="$1"
 	enable_ntdll_RtlUnwindEx="$1"
 	enable_ntdll_ThreadTime="$1"
+	enable_ntdll_Threading="$1"
 	enable_ntdll_User_Shared_Data="$1"
 	enable_ntdll_Vista_Threadpool="$1"
 	enable_ntdll_WRITECOPY="$1"
@@ -429,6 +430,9 @@ patch_enable ()
 			;;
 		ntdll-ThreadTime)
 			enable_ntdll_ThreadTime="$2"
+			;;
+		ntdll-Threading)
+			enable_ntdll_Threading="$2"
 			;;
 		ntdll-User_Shared_Data)
 			enable_ntdll_User_Shared_Data="$2"
@@ -2740,6 +2744,18 @@ if test "$enable_ntdll_ThreadTime" -eq 1; then
 	patch_apply ntdll-ThreadTime/0001-ntdll-Return-correct-values-in-GetThreadTimes-for-al.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Return correct values in GetThreadTimes() for all threads.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Threading
+# |
+# | Modified files:
+# |   *	dlls/ntdll/thread.c
+# |
+if test "$enable_ntdll_Threading" -eq 1; then
+	patch_apply ntdll-Threading/0001-ntdll-Fix-race-condition-when-threads-are-killed-dur.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Fix race-condition when threads are killed during shutdown.", 1 },';
 	) >> "$patchlist"
 fi
 

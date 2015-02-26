@@ -1,14 +1,14 @@
-From 27594f22cdf94cef9f3bca905e42f61566c1d489 Mon Sep 17 00:00:00 2001
+From a8dd7b9fd0ffbcba8a5e4e69c32c1fa1143d6965 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 26 Feb 2015 06:41:26 +0100
 Subject: kernel32: Add support for progress callback in CopyFileEx.
 
 ---
- dlls/kernel32/path.c | 52 ++++++++++++++++++++++++++++++++++++++++++++++++++--
- 1 file changed, 50 insertions(+), 2 deletions(-)
+ dlls/kernel32/path.c | 60 ++++++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 58 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/kernel32/path.c b/dlls/kernel32/path.c
-index 475b1f6..c91f741 100644
+index 475b1f6..2e521a5 100644
 --- a/dlls/kernel32/path.c
 +++ b/dlls/kernel32/path.c
 @@ -1092,6 +1092,9 @@ BOOL WINAPI CopyFileExW(LPCWSTR source, LPCWSTR dest,
@@ -45,7 +45,7 @@ index 475b1f6..c91f741 100644
                               (flags & COPY_FILE_FAIL_IF_EXISTS) ? CREATE_NEW : CREATE_ALWAYS,
                               info.dwFileAttributes, h1 )) == INVALID_HANDLE_VALUE)
      {
-@@ -1152,6 +1161,27 @@ BOOL WINAPI CopyFileExW(LPCWSTR source, LPCWSTR dest,
+@@ -1152,6 +1161,31 @@ BOOL WINAPI CopyFileExW(LPCWSTR source, LPCWSTR dest,
          return FALSE;
      }
  
@@ -60,12 +60,16 @@ index 475b1f6..c91f741 100644
 +        if (cbret == PROGRESS_QUIET)
 +            progress = NULL;
 +        else if (cbret == PROGRESS_STOP)
++        {
++            SetLastError( ERROR_REQUEST_ABORTED );
 +            goto done;
++        }
 +        else if (cbret == PROGRESS_CANCEL)
 +        {
 +            FILE_DISPOSITION_INFO disp;
 +            disp.DoDeleteFile = TRUE;
 +            SetFileInformationByHandle( h2, FileDispositionInfo, &disp, sizeof(disp) );
++            SetLastError( ERROR_REQUEST_ABORTED );
 +            goto done;
 +        }
 +    }
@@ -73,7 +77,7 @@ index 475b1f6..c91f741 100644
      while (ReadFile( h1, buffer, buffer_size, &count, NULL ) && count)
      {
          char *p = buffer;
-@@ -1161,6 +1191,24 @@ BOOL WINAPI CopyFileExW(LPCWSTR source, LPCWSTR dest,
+@@ -1161,6 +1195,28 @@ BOOL WINAPI CopyFileExW(LPCWSTR source, LPCWSTR dest,
              if (!WriteFile( h2, p, count, &res, NULL ) || !res) goto done;
              p += res;
              count -= res;
@@ -86,12 +90,16 @@ index 475b1f6..c91f741 100644
 +                if (cbret == PROGRESS_QUIET)
 +                    progress = NULL;
 +                else if (cbret == PROGRESS_STOP)
++                {
++                    SetLastError( ERROR_REQUEST_ABORTED );
 +                    goto done;
++                }
 +                else if (cbret == PROGRESS_CANCEL)
 +                {
 +                    FILE_DISPOSITION_INFO disp;
 +                    disp.DoDeleteFile = TRUE;
 +                    SetFileInformationByHandle( h2, FileDispositionInfo, &disp, sizeof(disp) );
++                    SetLastError( ERROR_REQUEST_ABORTED );
 +                    goto done;
 +                }
 +            }
@@ -99,5 +107,5 @@ index 475b1f6..c91f741 100644
      }
      ret =  TRUE;
 -- 
-2.3.0
+2.1.0
 

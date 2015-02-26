@@ -96,6 +96,7 @@ patch_enable_all ()
 	enable_include_Winetest="$1"
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_Console_Handles="$1"
+	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_GetNumaProcessorNode="$1"
 	enable_kernel32_GetStringTypeW="$1"
@@ -113,7 +114,6 @@ patch_enable_all ()
 	enable_msvcrt_atof_strtod="$1"
 	enable_msvfw32_Image_Size="$1"
 	enable_netprofm_IConnectionPoint="$1"
-	enable_ntdll_CopyFileEx="$1"
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_DVD_Read_Size="$1"
 	enable_ntdll_DllRedirects="$1"
@@ -319,6 +319,9 @@ patch_enable ()
 		kernel32-Console_Handles)
 			enable_kernel32_Console_Handles="$2"
 			;;
+		kernel32-CopyFileEx)
+			enable_kernel32_CopyFileEx="$2"
+			;;
 		kernel32-GetFinalPathNameByHandle)
 			enable_kernel32_GetFinalPathNameByHandle="$2"
 			;;
@@ -369,9 +372,6 @@ patch_enable ()
 			;;
 		netprofm-IConnectionPoint)
 			enable_netprofm_IConnectionPoint="$2"
-			;;
-		ntdll-CopyFileEx)
-			enable_ntdll_CopyFileEx="$2"
 			;;
 		ntdll-DOS_Attributes)
 			enable_ntdll_DOS_Attributes="$2"
@@ -948,12 +948,12 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	enable_ntdll_Fix_Free=1
 fi
 
-if test "$enable_ntdll_CopyFileEx" -eq 1; then
+if test "$enable_kernel32_CopyFileEx" -eq 1; then
 	if test "$enable_kernel32_SetFileInformationByHandle" -gt 1; then
-		abort "Patchset kernel32-SetFileInformationByHandle disabled, but ntdll-CopyFileEx depends on that."
+		abort "Patchset kernel32-SetFileInformationByHandle disabled, but kernel32-CopyFileEx depends on that."
 	fi
 	if test "$enable_ntdll_FileDispositionInformation" -gt 1; then
-		abort "Patchset ntdll-FileDispositionInformation disabled, but ntdll-CopyFileEx depends on that."
+		abort "Patchset ntdll-FileDispositionInformation disabled, but kernel32-CopyFileEx depends on that."
 	fi
 	enable_kernel32_SetFileInformationByHandle=1
 	enable_ntdll_FileDispositionInformation=1
@@ -1516,18 +1516,6 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -1545,6 +1533,18 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2140,6 +2140,57 @@ if test "$enable_kernel32_Console_Handles" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-FileDispositionInformation
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#30397] Support for NtSetInformationFile class FileDispositionInformation
+# |
+# | Modified files:
+# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c, server/fd.c, server/file.c, server/file.h, server/protocol.def
+# |
+if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
+	patch_apply ntdll-FileDispositionInformation/0001-server-Keep-a-pointer-to-parent-s-fd-unix_name-in-th.patch
+	patch_apply ntdll-FileDispositionInformation/0002-server-Add-support-for-setting-file-disposition-info.patch
+	patch_apply ntdll-FileDispositionInformation/0003-server-Do-not-permit-FileDispositionInformation-to-d.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "server: Keep a pointer to parent'\''s fd unix_name in the closed_fd structure.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "server: Add support for setting file disposition information.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, include/winbase.h, include/winternl.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-ntdll-Define-a-couple-more-information-classes.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0003-kernel32-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Define a couple more information classes.", 1 },';
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-CopyFileEx
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#22692] Add support for CopyFileEx progress callback
+# |   *	[#22690] Allow to cancel a file operation via progress callback
+# |
+# | Modified files:
+# |   *	dlls/kernel32/path.c
+# |
+if test "$enable_kernel32_CopyFileEx" -eq 1; then
+	patch_apply kernel32-CopyFileEx/0001-kernel32-Add-support-for-progress-callback-in-CopyFi.patch
+	(
+		echo '+    { "Michael Müller", "kernel32: Add support for progress callback in CopyFileEx.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset kernel32-GetFinalPathNameByHandle
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2307,22 +2358,6 @@ if test "$enable_kernel32_Profile" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, include/winbase.h, include/winternl.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-ntdll-Define-a-couple-more-information-classes.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0003-kernel32-Implement-SetFileInformationByHandle.patch
-	(
-		echo '+    { "Michael Müller", "ntdll: Define a couple more information classes.", 1 },';
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-VerifyVersionInfo
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2435,41 +2470,6 @@ if test "$enable_netprofm_IConnectionPoint" -eq 1; then
 	patch_apply netprofm-IConnectionPoint/0001-netprofm-Add-IConnectionPoint-INetworkListManagerEve.patch
 	(
 		echo '+    { "Michael Müller", "netprofm: Add IConnectionPoint/INetworkListManagerEvents stub interface.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-FileDispositionInformation
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#30397] Support for NtSetInformationFile class FileDispositionInformation
-# |
-# | Modified files:
-# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c, server/fd.c, server/file.c, server/file.h, server/protocol.def
-# |
-if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
-	patch_apply ntdll-FileDispositionInformation/0001-server-Keep-a-pointer-to-parent-s-fd-unix_name-in-th.patch
-	patch_apply ntdll-FileDispositionInformation/0002-server-Add-support-for-setting-file-disposition-info.patch
-	patch_apply ntdll-FileDispositionInformation/0003-server-Do-not-permit-FileDispositionInformation-to-d.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "server: Keep a pointer to parent'\''s fd unix_name in the closed_fd structure.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "server: Add support for setting file disposition information.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-CopyFileEx
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#22692] Add support for CopyFileEx progress callback
-# |   *	[#22690] Allow to cancel a file operation via progress callback
-# |
-# | Modified files:
-# |   *	dlls/kernel32/path.c
-# |
-if test "$enable_ntdll_CopyFileEx" -eq 1; then
-	patch_apply ntdll-CopyFileEx/0001-kernel32-Add-support-for-progress-callback-in-CopyFi.patch
-	(
-		echo '+    { "Michael Müller", "kernel32: Add support for progress callback in CopyFileEx.", 1 },';
 	) >> "$patchlist"
 fi
 

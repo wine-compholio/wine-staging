@@ -115,6 +115,7 @@ patch_enable_all ()
 	enable_msvcrt_atof_strtod="$1"
 	enable_msvfw32_Image_Size="$1"
 	enable_netprofm_IConnectionPoint="$1"
+	enable_ntdll_CopyFileEx="$1"
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_DVD_Read_Size="$1"
 	enable_ntdll_DllRedirects="$1"
@@ -378,6 +379,9 @@ patch_enable ()
 			;;
 		netprofm-IConnectionPoint)
 			enable_netprofm_IConnectionPoint="$2"
+			;;
+		ntdll-CopyFileEx)
+			enable_ntdll_CopyFileEx="$2"
 			;;
 		ntdll-DOS_Attributes)
 			enable_ntdll_DOS_Attributes="$2"
@@ -958,6 +962,17 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 		abort "Patchset ntdll-Fix_Free disabled, but ntdll-Junction_Points depends on that."
 	fi
 	enable_ntdll_Fix_Free=1
+fi
+
+if test "$enable_ntdll_CopyFileEx" -eq 1; then
+	if test "$enable_ntdll_FileDispositionInformation" -gt 1; then
+		abort "Patchset ntdll-FileDispositionInformation disabled, but ntdll-CopyFileEx depends on that."
+	fi
+	if test "$enable_ntdll_SetFileInformationByHandle" -gt 1; then
+		abort "Patchset ntdll-SetFileInformationByHandle disabled, but ntdll-CopyFileEx depends on that."
+	fi
+	enable_ntdll_FileDispositionInformation=1
+	enable_ntdll_SetFileInformationByHandle=1
 fi
 
 if test "$enable_dxva2_Video_Decoder" -eq 1; then
@@ -2470,6 +2485,57 @@ if test "$enable_netprofm_IConnectionPoint" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-FileDispositionInformation
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#30397] Support for NtSetInformationFile class FileDispositionInformation
+# |
+# | Modified files:
+# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c, server/fd.c, server/file.c, server/file.h, server/protocol.def
+# |
+if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
+	patch_apply ntdll-FileDispositionInformation/0001-server-Keep-a-pointer-to-parent-s-fd-unix_name-in-th.patch
+	patch_apply ntdll-FileDispositionInformation/0002-server-Add-support-for-setting-file-disposition-info.patch
+	patch_apply ntdll-FileDispositionInformation/0003-server-Do-not-permit-FileDispositionInformation-to-d.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "server: Keep a pointer to parent'\''s fd unix_name in the closed_fd structure.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "server: Add support for setting file disposition information.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, include/winbase.h, include/winternl.h
+# |
+if test "$enable_ntdll_SetFileInformationByHandle" -eq 1; then
+	patch_apply ntdll-SetFileInformationByHandle/0001-ntdll-Define-a-couple-more-information-classes.patch
+	patch_apply ntdll-SetFileInformationByHandle/0002-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply ntdll-SetFileInformationByHandle/0003-ntdll-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Define a couple more information classes.", 1 },';
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "ntdll: Implement SetFileInformationByHandle.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-CopyFileEx
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#22692] Add support for CopyFileEx progress callback
+# |   *	[#22690] Allow to cancel a file operation via progress callback
+# |
+# | Modified files:
+# |   *	dlls/kernel32/path.c
+# |
+if test "$enable_ntdll_CopyFileEx" -eq 1; then
+	patch_apply ntdll-CopyFileEx/0001-kernel32-Add-support-for-progress-callback-in-CopyFi.patch
+	(
+		echo '+    { "Michael Müller", "kernel32: Add support for progress callback in CopyFileEx.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-DOS_Attributes
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2553,25 +2619,6 @@ if test "$enable_ntdll_FD_Cache" -eq 1; then
 	patch_apply ntdll-FD_Cache/0001-ntdll-Use-lockfree-implementation-for-get_cached_fd.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Use lockfree implementation for get_cached_fd.", 5 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-FileDispositionInformation
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#30397] Support for NtSetInformationFile class FileDispositionInformation
-# |
-# | Modified files:
-# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c, server/fd.c, server/file.c, server/file.h, server/protocol.def
-# |
-if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
-	patch_apply ntdll-FileDispositionInformation/0001-server-Keep-a-pointer-to-parent-s-fd-unix_name-in-th.patch
-	patch_apply ntdll-FileDispositionInformation/0002-server-Add-support-for-setting-file-disposition-info.patch
-	patch_apply ntdll-FileDispositionInformation/0003-server-Do-not-permit-FileDispositionInformation-to-d.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "server: Keep a pointer to parent'\''s fd unix_name in the closed_fd structure.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "server: Add support for setting file disposition information.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2737,22 +2784,6 @@ if test "$enable_ntdll_RtlUnwindEx" -eq 1; then
 	patch_apply ntdll-RtlUnwindEx/0001-ntdll-Fix-check-for-end_frame-in-RtlUnwindEx-on-x86_.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Fix check for end_frame in RtlUnwindEx on x86_64.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, include/winbase.h, include/winternl.h
-# |
-if test "$enable_ntdll_SetFileInformationByHandle" -eq 1; then
-	patch_apply ntdll-SetFileInformationByHandle/0001-ntdll-Define-a-couple-more-information-classes.patch
-	patch_apply ntdll-SetFileInformationByHandle/0002-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply ntdll-SetFileInformationByHandle/0003-ntdll-Implement-SetFileInformationByHandle.patch
-	(
-		echo '+    { "Michael Müller", "ntdll: Define a couple more information classes.", 1 },';
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "ntdll: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 

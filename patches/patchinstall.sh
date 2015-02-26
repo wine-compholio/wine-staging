@@ -107,6 +107,7 @@ patch_enable_all ()
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_Profile="$1"
+	enable_kernel32_SetFileInformationByHandle="$1"
 	enable_kernel32_VerifyVersionInfo="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_makedep_PARENTSPEC="$1"
@@ -133,7 +134,6 @@ patch_enable_all ()
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_RtlIpv4StringToAddressExA="$1"
 	enable_ntdll_RtlUnwindEx="$1"
-	enable_ntdll_SetFileInformationByHandle="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
 	enable_ntdll_User_Shared_Data="$1"
@@ -356,6 +356,9 @@ patch_enable ()
 		kernel32-Profile)
 			enable_kernel32_Profile="$2"
 			;;
+		kernel32-SetFileInformationByHandle)
+			enable_kernel32_SetFileInformationByHandle="$2"
+			;;
 		kernel32-VerifyVersionInfo)
 			enable_kernel32_VerifyVersionInfo="$2"
 			;;
@@ -433,9 +436,6 @@ patch_enable ()
 			;;
 		ntdll-RtlUnwindEx)
 			enable_ntdll_RtlUnwindEx="$2"
-			;;
-		ntdll-SetFileInformationByHandle)
-			enable_ntdll_SetFileInformationByHandle="$2"
 			;;
 		ntdll-ThreadTime)
 			enable_ntdll_ThreadTime="$2"
@@ -965,14 +965,14 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 fi
 
 if test "$enable_ntdll_CopyFileEx" -eq 1; then
+	if test "$enable_kernel32_SetFileInformationByHandle" -gt 1; then
+		abort "Patchset kernel32-SetFileInformationByHandle disabled, but ntdll-CopyFileEx depends on that."
+	fi
 	if test "$enable_ntdll_FileDispositionInformation" -gt 1; then
 		abort "Patchset ntdll-FileDispositionInformation disabled, but ntdll-CopyFileEx depends on that."
 	fi
-	if test "$enable_ntdll_SetFileInformationByHandle" -gt 1; then
-		abort "Patchset ntdll-SetFileInformationByHandle disabled, but ntdll-CopyFileEx depends on that."
-	fi
+	enable_kernel32_SetFileInformationByHandle=1
 	enable_ntdll_FileDispositionInformation=1
-	enable_ntdll_SetFileInformationByHandle=1
 fi
 
 if test "$enable_dxva2_Video_Decoder" -eq 1; then
@@ -1532,6 +1532,18 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -1549,18 +1561,6 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2370,6 +2370,22 @@ if test "$enable_kernel32_Profile" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, include/winbase.h, include/winternl.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-ntdll-Define-a-couple-more-information-classes.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0003-kernel32-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Define a couple more information classes.", 1 },';
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset kernel32-VerifyVersionInfo
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2501,22 +2517,6 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "server: Keep a pointer to parent'\''s fd unix_name in the closed_fd structure.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "server: Add support for setting file disposition information.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, include/winbase.h, include/winternl.h
-# |
-if test "$enable_ntdll_SetFileInformationByHandle" -eq 1; then
-	patch_apply ntdll-SetFileInformationByHandle/0001-ntdll-Define-a-couple-more-information-classes.patch
-	patch_apply ntdll-SetFileInformationByHandle/0002-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply ntdll-SetFileInformationByHandle/0003-ntdll-Implement-SetFileInformationByHandle.patch
-	(
-		echo '+    { "Michael Müller", "ntdll: Define a couple more information classes.", 1 },';
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "ntdll: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 

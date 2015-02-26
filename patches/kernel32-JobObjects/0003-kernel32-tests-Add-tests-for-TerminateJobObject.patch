@@ -1,0 +1,80 @@
+From 6d3ab61226d2b6439edf14e67570adfca9ae02dd Mon Sep 17 00:00:00 2001
+From: Andrew Cook <ariscop@gmail.com>
+Date: Thu, 26 Feb 2015 08:13:08 +0100
+Subject: kernel32/tests: Add tests for TerminateJobObject.
+
+Cleanup and improvements by Sebastian Lackner <sebastian@fds-team.de>.
+---
+ dlls/kernel32/tests/process.c | 37 +++++++++++++++++++++++++++++++++++++
+ 1 file changed, 37 insertions(+)
+
+diff --git a/dlls/kernel32/tests/process.c b/dlls/kernel32/tests/process.c
+index d0d5f46..bb9053a 100644
+--- a/dlls/kernel32/tests/process.c
++++ b/dlls/kernel32/tests/process.c
+@@ -70,6 +70,7 @@ static struct _TEB * (WINAPI *pNtCurrentTeb)(void);
+ static HANDLE (WINAPI *pCreateJobObjectW)(LPSECURITY_ATTRIBUTES sa, LPCWSTR name);
+ static BOOL   (WINAPI *pAssignProcessToJobObject)(HANDLE job, HANDLE process);
+ static BOOL   (WINAPI *pIsProcessInJob)(HANDLE process, HANDLE job, PBOOL result);
++static BOOL   (WINAPI *pTerminateJobObject)(HANDLE job, UINT exit_code);
+ 
+ /* ############################### */
+ static char     base[MAX_PATH];
+@@ -219,6 +220,7 @@ static BOOL init(void)
+     pCreateJobObjectW = (void *)GetProcAddress(hkernel32, "CreateJobObjectW");
+     pAssignProcessToJobObject = (void *)GetProcAddress(hkernel32, "AssignProcessToJobObject");
+     pIsProcessInJob = (void *)GetProcAddress(hkernel32, "IsProcessInJob");
++    pTerminateJobObject = (void *)GetProcAddress(hkernel32, "TerminateJobObject");
+     return TRUE;
+ }
+ 
+@@ -2236,6 +2238,40 @@ static void test_IsProcessInJob(void)
+     CloseHandle(job);
+ }
+ 
++static void test_TerminateJobObject(void)
++{
++    HANDLE job;
++    PROCESS_INFORMATION pi;
++    BOOL ret;
++    DWORD dwret;
++
++    job = pCreateJobObjectW(NULL, NULL);
++    ok(job != NULL, "CreateJobObject error %u\n", GetLastError());
++
++    create_process("wait", &pi);
++
++    ret = pAssignProcessToJobObject(job, pi.hProcess);
++    ok(ret, "AssignProcessToJobObject error %u\n", GetLastError());
++
++    ret = pTerminateJobObject(job, 123);
++    ok(ret, "TerminateJobObject error %u\n", GetLastError());
++
++    dwret = WaitForSingleObject(pi.hProcess, 500);
++    todo_wine
++    ok(dwret == WAIT_OBJECT_0, "WaitForSingleObject returned %u\n", dwret);
++    if (dwret == WAIT_TIMEOUT) TerminateProcess(pi.hProcess, 0);
++
++    ret = GetExitCodeProcess(pi.hProcess, &dwret);
++    ok(ret, "GetExitCodeProcess error %u\n", GetLastError());
++    todo_wine
++    ok(dwret == 123 || broken(dwret == 0) /* randomly fails on Win 2000 / XP */,
++       "wrong exitcode %u\n", dwret);
++
++    CloseHandle(pi.hProcess);
++    CloseHandle(pi.hThread);
++    CloseHandle(job);
++}
++
+ START_TEST(process)
+ {
+     BOOL b = init();
+@@ -2292,4 +2328,5 @@ START_TEST(process)
+     }
+ 
+     test_IsProcessInJob();
++    test_TerminateJobObject();
+ }
+-- 
+2.3.0
+

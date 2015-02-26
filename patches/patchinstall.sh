@@ -102,6 +102,7 @@ patch_enable_all ()
 	enable_kernel32_GetStringTypeW="$1"
 	enable_kernel32_GetSystemTimes="$1"
 	enable_kernel32_GetVolumePathName="$1"
+	enable_kernel32_JobObjects="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_Profile="$1"
@@ -336,6 +337,9 @@ patch_enable ()
 			;;
 		kernel32-GetVolumePathName)
 			enable_kernel32_GetVolumePathName="$2"
+			;;
+		kernel32-JobObjects)
+			enable_kernel32_JobObjects="$2"
 			;;
 		kernel32-Named_Pipe)
 			enable_kernel32_Named_Pipe="$2"
@@ -946,6 +950,13 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 		abort "Patchset ntdll-Fix_Free disabled, but ntdll-Junction_Points depends on that."
 	fi
 	enable_ntdll_Fix_Free=1
+fi
+
+if test "$enable_kernel32_JobObjects" -eq 1; then
+	if test "$enable_kernel32_Console_Handles" -gt 1; then
+		abort "Patchset kernel32-Console_Handles disabled, but kernel32-JobObjects depends on that."
+	fi
+	enable_kernel32_Console_Handles=1
 fi
 
 if test "$enable_kernel32_CopyFileEx" -eq 1; then
@@ -2271,6 +2282,34 @@ if test "$enable_kernel32_GetVolumePathName" -eq 1; then
 		echo '+    { "Erich E. Hoover", "kernel32: Convert GetVolumePathName tests into a list.", 1 },';
 		echo '+    { "Erich E. Hoover", "kernel32: Add a bunch more GetVolumePathName tests.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add a lot of picky GetVolumePathName tests.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-JobObjects
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/process.c
+# |
+if test "$enable_kernel32_JobObjects" -eq 1; then
+	patch_apply kernel32-JobObjects/0001-kernel32-tests-Allow-multiple-subprocess-commands-in.patch
+	patch_apply kernel32-JobObjects/0002-kernel32-tests-Add-tests-for-IsProcessInJob.patch
+	patch_apply kernel32-JobObjects/0003-kernel32-tests-Add-tests-for-TerminateJobObject.patch
+	patch_apply kernel32-JobObjects/0004-kernel32-tests-Add-tests-for-QueryInformationJobObje.patch
+	patch_apply kernel32-JobObjects/0005-kernel32-tests-Add-tests-for-job-object-completion-p.patch
+	patch_apply kernel32-JobObjects/0006-kernel32-tests-Add-tests-for-JOB_OBJECT_LIMIT_KILL_O.patch
+	patch_apply kernel32-JobObjects/0007-kernel32-tests-Add-tests-for-JOB_OBJECT_LIMIT_ACTIVE.patch
+	patch_apply kernel32-JobObjects/0008-kernel32-tests-Add-tests-for-JOB_OBJECT_LIMIT_BREAKA.patch
+	patch_apply kernel32-JobObjects/0009-kernel32-tests-Add-tests-for-job-inheritance.patch
+	(
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Allow multiple subprocess commands in process tests.", 1 },';
+		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for IsProcessInJob.", 1 },';
+		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for TerminateJobObject.", 1 },';
+		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for QueryInformationJobObject.", 1 },';
+		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for job object completion ports.", 1 },';
+		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.", 1 },';
+		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for JOB_OBJECT_LIMIT_ACTIVE_PROCESS.", 1 },';
+		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for JOB_OBJECT_LIMIT_BREAKAWAY_OK.", 1 },';
+		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for job inheritance.", 1 },';
 	) >> "$patchlist"
 fi
 

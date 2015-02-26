@@ -1,0 +1,66 @@
+From 8f95a75edbefe3c181d8513784b6c46efcc3ebbc Mon Sep 17 00:00:00 2001
+From: Andrew Cook <ariscop@gmail.com>
+Date: Thu, 26 Feb 2015 18:06:59 +0100
+Subject: kernel32/tests: Add tests for JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.
+
+Cleanup and improvements by Sebastian Lackner <sebastian@fds-team.de>.
+---
+ dlls/kernel32/tests/process.c | 37 +++++++++++++++++++++++++++++++++++++
+ 1 file changed, 37 insertions(+)
+
+diff --git a/dlls/kernel32/tests/process.c b/dlls/kernel32/tests/process.c
+index 89a0b05..1779c81 100644
+--- a/dlls/kernel32/tests/process.c
++++ b/dlls/kernel32/tests/process.c
+@@ -2422,6 +2422,42 @@ static void test_CompletionPort(void)
+     CloseHandle(port);
+ }
+ 
++static void test_KillOnJobClose(void)
++{
++    JOBOBJECT_EXTENDED_LIMIT_INFORMATION limit_info;
++    PROCESS_INFORMATION pi;
++    DWORD dwret;
++    HANDLE job;
++    BOOL ret;
++
++    job = pCreateJobObjectW(NULL, NULL);
++    ok(job != NULL, "CreateJobObject error %u\n", GetLastError());
++
++    limit_info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
++    ret = pSetInformationJobObject(job, JobObjectExtendedLimitInformation, &limit_info, sizeof(limit_info));
++    if (!ret && GetLastError() == ERROR_INVALID_PARAMETER)
++    {
++        win_skip("Kill on job close limit not available\n");
++        return;
++    }
++    ok(ret, "SetInformationJobObject error %u\n", GetLastError());
++
++    create_process("wait", &pi);
++
++    ret = pAssignProcessToJobObject(job, pi.hProcess);
++    ok(ret, "AssignProcessToJobObject error %u\n", GetLastError());
++
++    CloseHandle(job);
++
++    dwret = WaitForSingleObject(pi.hProcess, 500);
++    todo_wine
++    ok(dwret == WAIT_OBJECT_0, "WaitForSingleObject returned %u\n", dwret);
++    if (dwret == WAIT_TIMEOUT) TerminateProcess(pi.hProcess, 0);
++
++    CloseHandle(pi.hProcess);
++    CloseHandle(pi.hThread);
++}
++
+ START_TEST(process)
+ {
+     BOOL b = init();
+@@ -2485,4 +2521,5 @@ START_TEST(process)
+     test_TerminateJobObject();
+     test_QueryInformationJobObject();
+     test_CompletionPort();
++    test_KillOnJobClose();
+ }
+-- 
+2.3.0
+

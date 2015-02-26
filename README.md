@@ -96,7 +96,7 @@ Included bug fixes and improvements
 * FEAR 1 installer expects basic_string_wchar_dtor to return NULL ([Wine Bug #37358](https://bugs.winehq.org/show_bug.cgi?id=37358))
 * Fix NULL dereference in ICSeqCompressFrameStart ([Wine Bug #27595](https://bugs.winehq.org/show_bug.cgi?id=27595))
 * Fix access violation when calling GetStringTypeW with NULL src. ([Wine Bug #37759](https://bugs.winehq.org/show_bug.cgi?id=37759))
-* Fix arguments for OSMesaMakeCurrent when using 16 bit formats
+* ~~Fix arguments for OSMesaMakeCurrent when using 16 bit formats~~
 * Fix black screen on startup introduced by pixelformat changes. ([Wine Bug #35950](https://bugs.winehq.org/show_bug.cgi?id=35950))
 * Fix check for end_frame in RtlUnwindEx on x86_64. ([Wine Bug #34254](https://bugs.winehq.org/show_bug.cgi?id=34254))
 * Fix comparison of punctuation characters in lstrcmp ([Wine Bug #10767](https://bugs.winehq.org/show_bug.cgi?id=10767))
@@ -155,7 +155,7 @@ Included bug fixes and improvements
 * Improvement for heap allocation performance
 * Jedi Knight: Dark Forces II crashes with winmm set to native ([Wine Bug #37983](https://bugs.winehq.org/show_bug.cgi?id=37983))
 * Lego Stunt Rally requires DXTn software de/encoding support ([Wine Bug #25486](https://bugs.winehq.org/show_bug.cgi?id=25486))
-* Limit cross thread access to ImmSet* functions ([Wine Bug #35361](https://bugs.winehq.org/show_bug.cgi?id=35361))
+* ~~Limit cross thread access to ImmSet* functions~~ ([Wine Bug #35361](https://bugs.winehq.org/show_bug.cgi?id=35361))
 * Lockfree algorithm for filedescriptor cache (improves file access speed)
 * MSVCRT crashes when NULL is passed as string to atof or strtod ([Wine Bug #32550](https://bugs.winehq.org/show_bug.cgi?id=32550))
 * Make it possible to change media center / tablet pc status ([Wine Bug #18732](https://bugs.winehq.org/show_bug.cgi?id=18732))

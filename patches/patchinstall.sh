@@ -91,12 +91,9 @@ patch_enable_all ()
 	enable_fonts_Missing_Fonts="$1"
 	enable_gdi32_MaxPixelFormats="$1"
 	enable_gdi32_MultiMonitor="$1"
-	enable_gdi32_OSMesaMakeCurrent="$1"
 	enable_gdiplus_GdipCreateRegionRgnData="$1"
 	enable_imagehlp_BindImageEx="$1"
-	enable_imm32_Cross_Thread_Access="$1"
 	enable_include_Winetest="$1"
-	enable_include_windns="$1"
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_Console_Handles="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
@@ -165,7 +162,6 @@ patch_enable_all ()
 	enable_server_Unexpected_Wakeup="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
-	enable_shell32_ApplicationAssociationRegistration="$1"
 	enable_shell32_Default_Folder_ACLs="$1"
 	enable_shell32_Default_Path="$1"
 	enable_shell32_Icons="$1"
@@ -308,23 +304,14 @@ patch_enable ()
 		gdi32-MultiMonitor)
 			enable_gdi32_MultiMonitor="$2"
 			;;
-		gdi32-OSMesaMakeCurrent)
-			enable_gdi32_OSMesaMakeCurrent="$2"
-			;;
 		gdiplus-GdipCreateRegionRgnData)
 			enable_gdiplus_GdipCreateRegionRgnData="$2"
 			;;
 		imagehlp-BindImageEx)
 			enable_imagehlp_BindImageEx="$2"
 			;;
-		imm32-Cross_Thread_Access)
-			enable_imm32_Cross_Thread_Access="$2"
-			;;
 		include-Winetest)
 			enable_include_Winetest="$2"
-			;;
-		include-windns)
-			enable_include_windns="$2"
 			;;
 		iphlpapi-TCP_Table)
 			enable_iphlpapi_TCP_Table="$2"
@@ -529,9 +516,6 @@ patch_enable ()
 			;;
 		shdocvw-ParseURLFromOutsideSource_Tests)
 			enable_shdocvw_ParseURLFromOutsideSource_Tests="$2"
-			;;
-		shell32-ApplicationAssociationRegistration)
-			enable_shell32_ApplicationAssociationRegistration="$2"
 			;;
 		shell32-Default_Folder_ACLs)
 			enable_shell32_Default_Folder_ACLs="$2"
@@ -2084,18 +2068,6 @@ if test "$enable_gdi32_MultiMonitor" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset gdi32-OSMesaMakeCurrent
-# |
-# | Modified files:
-# |   *	dlls/gdi32/dibdrv/opengl.c
-# |
-if test "$enable_gdi32_OSMesaMakeCurrent" -eq 1; then
-	patch_apply gdi32-OSMesaMakeCurrent/0001-gdi32-Fix-arguments-for-OSMesaMakeCurrent-when-using.patch
-	(
-		echo '+    { "Michael Müller", "gdi32: Fix arguments for OSMesaMakeCurrent when using 16 bit formats.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset gdiplus-GdipCreateRegionRgnData
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2126,29 +2098,6 @@ if test "$enable_imagehlp_BindImageEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset imm32-Cross_Thread_Access
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35361] Limit cross thread access to ImmSet* functions
-# |
-# | Modified files:
-# |   *	dlls/imm32/imm.c, dlls/imm32/tests/imm32.c
-# |
-if test "$enable_imm32_Cross_Thread_Access" -eq 1; then
-	patch_apply imm32-Cross_Thread_Access/0001-imm32-Move-thread-data-from-TLSEntry-to-an-internal-.patch
-	patch_apply imm32-Cross_Thread_Access/0002-imm32-Do-not-let-ImmDestroyContext-destroy-any-defau.patch
-	patch_apply imm32-Cross_Thread_Access/0003-imm32-Use-thread-data-from-target-HWND.patch
-	patch_apply imm32-Cross_Thread_Access/0004-imm32-Restrict-crossthread-Association-and-destructi.patch
-	patch_apply imm32-Cross_Thread_Access/0005-imm32-Limit-cross-thread-access-to-ImmSet-functions.patch
-	(
-		echo '+    { "Aric Stewart", "imm32: Move thread data from TLSEntry to an internal list.", 1 },';
-		echo '+    { "Aric Stewart", "imm32: Do not let ImmDestroyContext destroy any default contexts.", 1 },';
-		echo '+    { "Aric Stewart", "imm32: Use thread data from target HWND.", 1 },';
-		echo '+    { "Aric Stewart", "imm32: Restrict crossthread Association and destruction.", 1 },';
-		echo '+    { "Aric Stewart", "imm32: Limit cross thread access to ImmSet* functions.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset include-Winetest
 # |
 # | Modified files:
@@ -2158,18 +2107,6 @@ if test "$enable_include_Winetest" -eq 1; then
 	patch_apply include-Winetest/0001-include-Automatically-detect-if-tests-are-running-un.patch
 	(
 		echo '+    { "Sebastian Lackner", "include: Automatically detect if tests are running under Wine when WINETEST_PLATFORM is not specified.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset include-windns
-# |
-# | Modified files:
-# |   *	include/windns.h
-# |
-if test "$enable_include_windns" -eq 1; then
-	patch_apply include-windns/0001-include-windns.h-Complete-and-properly-pack-DNS_HEAD.patch
-	(
-		echo '+    { "Amine Khaldi", "include/windns.h: Complete and properly pack DNS_HEADER structure.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3363,18 +3300,6 @@ if test "$enable_shdocvw_ParseURLFromOutsideSource_Tests" -eq 1; then
 	patch_apply shdocvw-ParseURLFromOutsideSource_Tests/0001-shdocvw-Check-precisely-ParseURLFromOutsideSourceX-r.patch
 	(
 		echo '+    { "Christian Costa", "shdocvw: Check precisely ParseURLFromOutsideSourceX returned values in tests and make code clearer about that.", 3 },';
-	) >> "$patchlist"
-fi
-
-# Patchset shell32-ApplicationAssociationRegistration
-# |
-# | Modified files:
-# |   *	dlls/shell32/assoc.c, dlls/shell32/tests/assoc.c
-# |
-if test "$enable_shell32_ApplicationAssociationRegistration" -eq 1; then
-	patch_apply shell32-ApplicationAssociationRegistration/0001-shell32-Various-style-fixes-and-memory-leak-fix-in-I.patch
-	(
-		echo '+    { "Sebastian Lackner", "shell32: Various style fixes and memory leak fix in IApplicationAssociationRegistration.", 1 },';
 	) >> "$patchlist"
 fi
 

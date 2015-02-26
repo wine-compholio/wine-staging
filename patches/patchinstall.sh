@@ -156,6 +156,7 @@ patch_enable_all ()
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
 	enable_server_Inherited_ACLs="$1"
+	enable_server_Key_State="$1"
 	enable_server_Misc_ACL="$1"
 	enable_server_OpenProcess="$1"
 	enable_server_Stored_ACLs="$1"
@@ -499,6 +500,9 @@ patch_enable ()
 			;;
 		server-Inherited_ACLs)
 			enable_server_Inherited_ACLs="$2"
+			;;
+		server-Key_State)
+			enable_server_Key_State="$2"
 			;;
 		server-Misc_ACL)
 			enable_server_Misc_ACL="$2"
@@ -3218,6 +3222,21 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Key_State
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#27238] Fallback to global key state for threads without a queue
+# |
+# | Modified files:
+# |   *	server/queue.c
+# |
+if test "$enable_server_Key_State" -eq 1; then
+	patch_apply server-Key_State/0001-server-Fall-back-to-global-key-state-when-thread-doe.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Fall back to global key state when thread doesn'\''t have a queue.", 1 },';
 	) >> "$patchlist"
 fi
 

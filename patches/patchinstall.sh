@@ -132,6 +132,7 @@ patch_enable_all ()
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_RtlIpv4StringToAddressExA="$1"
 	enable_ntdll_RtlUnwindEx="$1"
+	enable_ntdll_SetFileInformationByHandle="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
 	enable_ntdll_User_Shared_Data="$1"
@@ -428,6 +429,9 @@ patch_enable ()
 			;;
 		ntdll-RtlUnwindEx)
 			enable_ntdll_RtlUnwindEx="$2"
+			;;
+		ntdll-SetFileInformationByHandle)
+			enable_ntdll_SetFileInformationByHandle="$2"
 			;;
 		ntdll-ThreadTime)
 			enable_ntdll_ThreadTime="$2"
@@ -2733,6 +2737,22 @@ if test "$enable_ntdll_RtlUnwindEx" -eq 1; then
 	patch_apply ntdll-RtlUnwindEx/0001-ntdll-Fix-check-for-end_frame-in-RtlUnwindEx-on-x86_.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Fix check for end_frame in RtlUnwindEx on x86_64.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, include/winbase.h, include/winternl.h
+# |
+if test "$enable_ntdll_SetFileInformationByHandle" -eq 1; then
+	patch_apply ntdll-SetFileInformationByHandle/0001-ntdll-Define-a-couple-more-information-classes.patch
+	patch_apply ntdll-SetFileInformationByHandle/0002-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply ntdll-SetFileInformationByHandle/0003-ntdll-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Define a couple more information classes.", 1 },';
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "ntdll: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 

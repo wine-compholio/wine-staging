@@ -103,7 +103,6 @@ patch_enable_all ()
 	enable_kernel32_GetStringTypeW="$1"
 	enable_kernel32_GetSystemTimes="$1"
 	enable_kernel32_GetVolumePathName="$1"
-	enable_kernel32_JobObjects="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_Profile="$1"
@@ -157,6 +156,7 @@ patch_enable_all ()
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
 	enable_server_Inherited_ACLs="$1"
+	enable_server_JobObjects="$1"
 	enable_server_Key_State="$1"
 	enable_server_Misc_ACL="$1"
 	enable_server_OpenProcess="$1"
@@ -341,9 +341,6 @@ patch_enable ()
 		kernel32-GetVolumePathName)
 			enable_kernel32_GetVolumePathName="$2"
 			;;
-		kernel32-JobObjects)
-			enable_kernel32_JobObjects="$2"
-			;;
 		kernel32-Named_Pipe)
 			enable_kernel32_Named_Pipe="$2"
 			;;
@@ -502,6 +499,9 @@ patch_enable ()
 			;;
 		server-Inherited_ACLs)
 			enable_server_Inherited_ACLs="$2"
+			;;
+		server-JobObjects)
+			enable_server_JobObjects="$2"
 			;;
 		server-Key_State)
 			enable_server_Key_State="$2"
@@ -899,6 +899,21 @@ if test "$enable_shell32_Progress_Dialog" -eq 1; then
 	enable_kernel32_CopyFileEx=1
 fi
 
+if test "$enable_server_JobObjects" -eq 1; then
+	if test "$enable_kernel32_Console_Handles" -gt 1; then
+		abort "Patchset kernel32-Console_Handles disabled, but server-JobObjects depends on that."
+	fi
+	if test "$enable_server_Misc_ACL" -gt 1; then
+		abort "Patchset server-Misc_ACL disabled, but server-JobObjects depends on that."
+	fi
+	if test "$enable_server_OpenProcess" -gt 1; then
+		abort "Patchset server-OpenProcess disabled, but server-JobObjects depends on that."
+	fi
+	enable_kernel32_Console_Handles=1
+	enable_server_Misc_ACL=1
+	enable_server_OpenProcess=1
+fi
+
 if test "$enable_server_ACL_Compat" -eq 1; then
 	if test "$enable_server_Inherited_ACLs" -gt 1; then
 		abort "Patchset server-Inherited_ACLs disabled, but server-ACL_Compat depends on that."
@@ -964,13 +979,6 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 		abort "Patchset ntdll-Fix_Free disabled, but ntdll-Junction_Points depends on that."
 	fi
 	enable_ntdll_Fix_Free=1
-fi
-
-if test "$enable_kernel32_JobObjects" -eq 1; then
-	if test "$enable_kernel32_Console_Handles" -gt 1; then
-		abort "Patchset kernel32-Console_Handles disabled, but kernel32-JobObjects depends on that."
-	fi
-	enable_kernel32_Console_Handles=1
 fi
 
 if test "$enable_kernel32_CopyFileEx" -eq 1; then
@@ -1538,18 +1546,6 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -1567,6 +1563,18 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2308,34 +2316,6 @@ if test "$enable_kernel32_GetVolumePathName" -eq 1; then
 		echo '+    { "Erich E. Hoover", "kernel32: Convert GetVolumePathName tests into a list.", 1 },';
 		echo '+    { "Erich E. Hoover", "kernel32: Add a bunch more GetVolumePathName tests.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add a lot of picky GetVolumePathName tests.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-JobObjects
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/process.c
-# |
-if test "$enable_kernel32_JobObjects" -eq 1; then
-	patch_apply kernel32-JobObjects/0001-kernel32-tests-Allow-multiple-subprocess-commands-in.patch
-	patch_apply kernel32-JobObjects/0002-kernel32-tests-Add-tests-for-IsProcessInJob.patch
-	patch_apply kernel32-JobObjects/0003-kernel32-tests-Add-tests-for-TerminateJobObject.patch
-	patch_apply kernel32-JobObjects/0004-kernel32-tests-Add-tests-for-QueryInformationJobObje.patch
-	patch_apply kernel32-JobObjects/0005-kernel32-tests-Add-tests-for-job-object-completion-p.patch
-	patch_apply kernel32-JobObjects/0006-kernel32-tests-Add-tests-for-JOB_OBJECT_LIMIT_KILL_O.patch
-	patch_apply kernel32-JobObjects/0007-kernel32-tests-Add-tests-for-JOB_OBJECT_LIMIT_ACTIVE.patch
-	patch_apply kernel32-JobObjects/0008-kernel32-tests-Add-tests-for-JOB_OBJECT_LIMIT_BREAKA.patch
-	patch_apply kernel32-JobObjects/0009-kernel32-tests-Add-tests-for-job-inheritance.patch
-	(
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Allow multiple subprocess commands in process tests.", 1 },';
-		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for IsProcessInJob.", 1 },';
-		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for TerminateJobObject.", 1 },';
-		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for QueryInformationJobObject.", 1 },';
-		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for job object completion ports.", 1 },';
-		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.", 1 },';
-		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for JOB_OBJECT_LIMIT_ACTIVE_PROCESS.", 1 },';
-		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for JOB_OBJECT_LIMIT_BREAKAWAY_OK.", 1 },';
-		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for job inheritance.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3285,18 +3265,18 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Key_State
+# Patchset server-OpenProcess
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#27238] Fallback to global key state for threads without a queue
+# |   *	[#37087] Return an error when trying to open a terminated process
 # |
 # | Modified files:
-# |   *	server/queue.c
+# |   *	server/process.c, server/process.h
 # |
-if test "$enable_server_Key_State" -eq 1; then
-	patch_apply server-Key_State/0001-server-Fall-back-to-global-key-state-when-thread-doe.patch
+if test "$enable_server_OpenProcess" -eq 1; then
+	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
 	(
-		echo '+    { "Sebastian Lackner", "server: Fall back to global key state when thread doesn'\''t have a queue.", 1 },';
+		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
 	) >> "$patchlist"
 fi
 
@@ -3317,18 +3297,49 @@ if test "$enable_server_Misc_ACL" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-OpenProcess
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37087] Return an error when trying to open a terminated process
+# Patchset server-JobObjects
 # |
 # | Modified files:
-# |   *	server/process.c, server/process.h
+# |   *	dlls/kernel32/tests/process.c, dlls/ntdll/sync.c, include/winnt.h, server/process.c, server/process.h,
+# | 	server/protocol.def
 # |
-if test "$enable_server_OpenProcess" -eq 1; then
-	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
+if test "$enable_server_JobObjects" -eq 1; then
+	patch_apply server-JobObjects/0001-kernel32-tests-Allow-multiple-subprocess-commands-in.patch
+	patch_apply server-JobObjects/0002-kernel32-tests-Add-tests-for-IsProcessInJob.patch
+	patch_apply server-JobObjects/0003-kernel32-tests-Add-tests-for-TerminateJobObject.patch
+	patch_apply server-JobObjects/0004-kernel32-tests-Add-tests-for-QueryInformationJobObje.patch
+	patch_apply server-JobObjects/0005-kernel32-tests-Add-tests-for-job-object-completion-p.patch
+	patch_apply server-JobObjects/0006-kernel32-tests-Add-tests-for-JOB_OBJECT_LIMIT_KILL_O.patch
+	patch_apply server-JobObjects/0007-kernel32-tests-Add-tests-for-JOB_OBJECT_LIMIT_ACTIVE.patch
+	patch_apply server-JobObjects/0008-kernel32-tests-Add-tests-for-JOB_OBJECT_LIMIT_BREAKA.patch
+	patch_apply server-JobObjects/0009-kernel32-tests-Add-tests-for-job-inheritance.patch
+	patch_apply server-JobObjects/0010-server-Basic-implementation-of-job-objects.patch
 	(
-		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Allow multiple subprocess commands in process tests.", 1 },';
+		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for IsProcessInJob.", 1 },';
+		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for TerminateJobObject.", 1 },';
+		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for QueryInformationJobObject.", 1 },';
+		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for job object completion ports.", 1 },';
+		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.", 1 },';
+		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for JOB_OBJECT_LIMIT_ACTIVE_PROCESS.", 1 },';
+		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for JOB_OBJECT_LIMIT_BREAKAWAY_OK.", 1 },';
+		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for job inheritance.", 1 },';
+		echo '+    { "Andrew Cook", "server: Basic implementation of job objects.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Key_State
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#27238] Fallback to global key state for threads without a queue
+# |
+# | Modified files:
+# |   *	server/queue.c
+# |
+if test "$enable_server_Key_State" -eq 1; then
+	patch_apply server-Key_State/0001-server-Fall-back-to-global-key-state-when-thread-doe.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Fall back to global key state when thread doesn'\''t have a queue.", 1 },';
 	) >> "$patchlist"
 fi
 

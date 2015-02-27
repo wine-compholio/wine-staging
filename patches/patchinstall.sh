@@ -181,6 +181,7 @@ patch_enable_all ()
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_GetTipText="$1"
 	enable_user32_Mouse_Message_Hwnd="$1"
+	enable_user32_Painting="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_WndProc="$1"
 	enable_vcomp_Stub_Functions="$1"
@@ -574,6 +575,9 @@ patch_enable ()
 			;;
 		user32-Mouse_Message_Hwnd)
 			enable_user32_Mouse_Message_Hwnd="$2"
+			;;
+		user32-Painting)
+			enable_user32_Painting="$2"
 			;;
 		user32-ScrollWindowEx)
 			enable_user32_ScrollWindowEx="$2"
@@ -3644,6 +3648,18 @@ if test "$enable_user32_Mouse_Message_Hwnd" -eq 1; then
 	patch_apply user32-Mouse_Message_Hwnd/0001-user32-Try-harder-to-find-a-target-for-mouse-message.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "user32: Try harder to find a target for mouse messages.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-Painting
+# |
+# | Modified files:
+# |   *	dlls/user32/painting.c, dlls/user32/win.c
+# |
+if test "$enable_user32_Painting" -eq 1; then
+	patch_apply user32-Painting/0001-user32-Enforce-that-surfaces-are-flushed-after-Relea.patch
+	(
+		echo '+    { "Sebastian Lackner", "user32: Enforce that surfaces are flushed after ReleaseDC.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,41 @@
+From c4a8e65a698c608dd491a0318116fa875b8362ba Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 27 Feb 2015 22:37:16 +0100
+Subject: user32: Enforce that surfaces are flushed after ReleaseDC.
+
+If a second thread draws on the surfaces while the main thread is idle then
+the window doesn't update properly. Can be reproduced for example with:
+https://www-user.tu-chemnitz.de/~heha/petzold/ch20c.htm
+---
+ dlls/user32/painting.c | 1 +
+ dlls/user32/win.c      | 2 +-
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/user32/painting.c b/dlls/user32/painting.c
+index 5c1dc69..7be594f 100644
+--- a/dlls/user32/painting.c
++++ b/dlls/user32/painting.c
+@@ -1116,6 +1116,7 @@ HDC WINAPI GetWindowDC( HWND hwnd )
+  */
+ INT WINAPI ReleaseDC( HWND hwnd, HDC hdc )
+ {
++    flush_window_surfaces( FALSE );
+     return release_dc( hwnd, hdc, FALSE );
+ }
+ 
+diff --git a/dlls/user32/win.c b/dlls/user32/win.c
+index 0516193..5f99e43 100644
+--- a/dlls/user32/win.c
++++ b/dlls/user32/win.c
+@@ -598,7 +598,7 @@ void flush_window_surfaces( BOOL idle )
+     now = GetTickCount();
+     if (idle) last_idle = now;
+     /* if not idle, we only flush if there's evidence that the app never goes idle */
+-    else if ((int)(now - last_idle) < 1000) goto done;
++    else if ((int)(now - last_idle) < 100) goto done;
+ 
+     LIST_FOR_EACH_ENTRY( surface, &window_surfaces, struct window_surface, entry )
+         surface->funcs->flush( surface );
+-- 
+2.3.0
+

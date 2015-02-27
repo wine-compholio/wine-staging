@@ -2944,6 +2944,8 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0013-ntoskrnl.exe-Add-stub-for-ExDeleteResourceLite.patch
 	patch_apply ntoskrnl-Stubs/0014-ntoskrnl.exe-Implement-MmMapLockedPages-and-MmUnmapL.patch
 	patch_apply ntoskrnl-Stubs/0015-ntoskrnl.exe-Implement-KeInitializeMutex.patch
+	patch_apply ntoskrnl-Stubs/0016-ntoskrnl.exe-Add-stub-for-ProbeForRead.patch
+	patch_apply ntoskrnl-Stubs/0017-ntoskrnl.exe-Add-stub-for-ProbeForWrite.patch
 	(
 		echo '+    { "Sebastian Lackner", "include: Remove several duplicate definitions from ntdef.h.", 1 },';
 		echo '+    { "Austin English", "ntoskrnl.exe: add KeWaitForMultipleObjects stub.", 1 },';
@@ -2960,6 +2962,8 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 		echo '+    { "Christian Costa", "ntoskrnl.exe: Add stub for ExDeleteResourceLite.", 1 },';
 		echo '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Implement KeInitializeMutex.", 1 },';
+		echo '+    { "Austin English", "ntoskrnl.exe: Add stub for ProbeForRead.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntoskrnl.exe: Add stub for ProbeForWrite.", 1 },';
 	) >> "$patchlist"
 fi
 

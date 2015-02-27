@@ -1,0 +1,80 @@
+From 6e90ea5d3a677b1f073effab2eef34edc328075b Mon Sep 17 00:00:00 2001
+From: Austin English <austinenglish@gmail.com>
+Date: Sat, 28 Feb 2015 00:34:07 +0100
+Subject: wined3d: Allow to specify multisampling AA quality levels via
+ registry.
+
+---
+ dlls/wined3d/directx.c         | 11 +++++++++--
+ dlls/wined3d/wined3d_main.c    | 12 ++++++++++++
+ dlls/wined3d/wined3d_private.h |  1 +
+ 3 files changed, 22 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/wined3d/directx.c b/dlls/wined3d/directx.c
+index 4ca13f4..94a2f7b 100644
+--- a/dlls/wined3d/directx.c
++++ b/dlls/wined3d/directx.c
+@@ -4231,9 +4231,16 @@ HRESULT CDECL wined3d_check_device_multisample_type(const struct wined3d *wined3
+ 
+     if (quality_levels)
+     {
+-        if (multisample_type == WINED3D_MULTISAMPLE_NON_MASKABLE)
+-            /* FIXME: This is probably wrong. */
++        if (wined3d_settings.msaa_quality_levels)
++        {
++            *quality_levels = wined3d_settings.msaa_quality_levels;
++            TRACE("Overriding MSAA quality levels to %i\n", *quality_levels);
++        }
++        else if (multisample_type == WINED3D_MULTISAMPLE_NON_MASKABLE)
++        {
+             *quality_levels = gl_info->limits.samples;
++            WARN("probably wrong, setting quality_levels to %d\n", *quality_levels);
++        }
+         else
+             *quality_levels = 1;
+     }
+diff --git a/dlls/wined3d/wined3d_main.c b/dlls/wined3d/wined3d_main.c
+index 758ba43..0bf6c9f 100644
+--- a/dlls/wined3d/wined3d_main.c
++++ b/dlls/wined3d/wined3d_main.c
+@@ -76,6 +76,7 @@ struct wined3d_settings wined3d_settings =
+     ORM_FBO,        /* Use FBOs to do offscreen rendering */
+     PCI_VENDOR_NONE,/* PCI Vendor ID */
+     PCI_DEVICE_NONE,/* PCI Device ID */
++    0,              /* Multisampling AA Quality Levels */
+     0,              /* The default of memory is set in init_driver_info */
+     NULL,           /* No wine logo by default */
+     TRUE,           /* Multisampling enabled by default. */
+@@ -251,6 +252,17 @@ static BOOL wined3d_dll_init(HINSTANCE hInstDLL)
+                 wined3d_settings.pci_vendor_id = pci_vendor_id;
+             }
+         }
++        if (!get_config_key( hkey, appkey, "MultisamplingAAQualityLevels", buffer, size ))
++        {
++            int quality_levels = atoi(buffer);
++            if(quality_levels > 0)
++            {
++                wined3d_settings.msaa_quality_levels = quality_levels;
++                TRACE("Setting MultisamplingAAQualityLevels to %i\n", quality_levels);
++            }
++            else
++                ERR("MultisamplingAAQualityLevels is %i but must be >0\n", quality_levels);
++        }
+         if ( !get_config_key( hkey, appkey, "VideoMemorySize", buffer, size) )
+         {
+             int TmpVideoMemorySize = atoi(buffer);
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index b0c7a53..2f2511e 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -269,6 +269,7 @@ struct wined3d_settings
+     unsigned short pci_vendor_id;
+     unsigned short pci_device_id;
+     /* Memory tracking and object counting. */
++    unsigned int msaa_quality_levels;
+     UINT64 emulated_textureram;
+     char *logo;
+     int allow_multisampling;
+-- 
+2.3.0
+

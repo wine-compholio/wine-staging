@@ -2925,6 +2925,9 @@ fi
 
 # Patchset ntoskrnl-Stubs
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38103] Process Hacker 2.x needs ntoskrnl.ProbeForRead
+# |
 # | Modified files:
 # |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h, include/ntdef.h
 # |

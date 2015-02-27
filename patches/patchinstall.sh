@@ -190,7 +190,6 @@ patch_enable_all ()
 	enable_wine_inf_Performance="$1"
 	enable_wineboot_HKEY_DYN_DATA="$1"
 	enable_winebuild_LinkerVersion="$1"
-	enable_winebuild_Restore_Context="$1"
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
 	enable_wined3d_CSMT_Helper="$1"
@@ -202,7 +201,6 @@ patch_enable_all ()
 	enable_winepulse_PulseAudio_Support="$1"
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_Clipboard_HTML="$1"
-	enable_winex11_RawEventWarp="$1"
 	enable_winex11_Window_Groups="$1"
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
@@ -604,9 +602,6 @@ patch_enable ()
 		winebuild-LinkerVersion)
 			enable_winebuild_LinkerVersion="$2"
 			;;
-		winebuild-Restore_Context)
-			enable_winebuild_Restore_Context="$2"
-			;;
 		winecfg-Libraries)
 			enable_winecfg_Libraries="$2"
 			;;
@@ -639,9 +634,6 @@ patch_enable ()
 			;;
 		winex11-Clipboard_HTML)
 			enable_winex11_Clipboard_HTML="$2"
-			;;
-		winex11-RawEventWarp)
-			enable_winex11_RawEventWarp="$2"
 			;;
 		winex11-Window_Groups)
 			enable_winex11_Window_Groups="$2"
@@ -1074,22 +1066,19 @@ fi
 # Patchset ws2_32-WriteWatches
 # |
 # | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c,
-# | 	dlls/ntdll/signal_i386.c, dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/virtual.c,
-# | 	dlls/ws2_32/socket.c, include/winternl.h
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/signal_i386.c, dlls/ntdll/virtual.c, dlls/ws2_32/socket.c,
+# | 	include/winternl.h
 # |
 if test "$enable_ws2_32_WriteWatches" -eq 1; then
 	patch_apply ws2_32-WriteWatches/0001-ntdll-Handle-write-watches-in-virtual_uninterrupted_.patch
 	patch_apply ws2_32-WriteWatches/0002-ntdll-Expose-wine_uninterrupted_-read-write-_memory-.patch
 	patch_apply ws2_32-WriteWatches/0003-ws2_32-Avoid-race-conditions-of-async-WSARecv-operat.patch
 	patch_apply ws2_32-WriteWatches/0004-ws2_32-Avoid-race-condition-with-write-watches-in-WS.patch
-	patch_apply ws2_32-WriteWatches/0005-ntdll-Try-to-handle-write-watches-while-we-re-on-the.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Handle write watches in virtual_uninterrupted_write_memory.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Expose wine_uninterrupted_[read|write]_memory as exports.", 1 },';
 		echo '+    { "Sebastian Lackner", "ws2_32: Avoid race-conditions of async WSARecv() operations with write watches.", 2 },';
 		echo '+    { "Sebastian Lackner", "ws2_32: Avoid race-condition with write watches in WS2_async_accept.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Try to handle write-watches while we'\''re on the signal stack.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -3795,18 +3784,6 @@ if test "$enable_winebuild_LinkerVersion" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset winebuild-Restore_Context
-# |
-# | Modified files:
-# |   *	tools/winebuild/relay.c
-# |
-if test "$enable_winebuild_Restore_Context" -eq 1; then
-	patch_apply winebuild-Restore_Context/0001-winebuild-Do-not-access-memory-below-ESP-when-restor.patch
-	(
-		echo '+    { "Sebastian Lackner", "winebuild: Do not access memory below ESP when restoring thread contexts.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset winecfg-Libraries
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3968,21 +3945,6 @@ if test "$enable_winex11_Clipboard_HTML" -eq 1; then
 	patch_apply winex11-Clipboard_HTML/0001-winex11.drv-Import-X11-s-text-html-as-HTML-Format.patch
 	(
 		echo '+    { "Damjan Jovanovic", "winex11.drv: Import X11'\''s \"text/html\" as \"HTML Format\".", 3 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winex11-RawEventWarp
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#32913] Fix mouse jittering in Planetside 2
-# |
-# | Modified files:
-# |   *	dlls/winex11.drv/mouse.c
-# |
-if test "$enable_winex11_RawEventWarp" -eq 1; then
-	patch_apply winex11-RawEventWarp/0001-winex11-Only-enable-XInput2-cursor-warp-workaround-i.patch
-	(
-		echo '+    { "Sebastian Lackner", "winex11: Only enable XInput2 cursor warp workaround if necessary.", 1 },';
 	) >> "$patchlist"
 fi
 

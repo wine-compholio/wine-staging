@@ -88,7 +88,7 @@ Included bug fixes and improvements
 * Child of Light expects FindConnectionPoint to succeed and increase the refcount ([Wine Bug #36408](https://bugs.winehq.org/show_bug.cgi?id=36408))
 * CreateProcess does not prioritize the working directory over the system search path ([Wine Bug #23934](https://bugs.winehq.org/show_bug.cgi?id=23934))
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](https://bugs.winehq.org/show_bug.cgi?id=33770))
-* Do not access stack below ESP when restoring thread context.
+* ~~Do not access stack below ESP when restoring thread context.~~
 * Do not append duplicate NULL characters when importing keys with regedit ([Wine Bug #37575](https://bugs.winehq.org/show_bug.cgi?id=37575))
 * Do not fail when a used context is passed to wglShareLists ([Wine Bug #11436](https://bugs.winehq.org/show_bug.cgi?id=11436))
 * Emulate access to KI_USER_SHARED_DATA kernel page on x86_64 ([Wine Bug #33849](https://bugs.winehq.org/show_bug.cgi?id=33849))
@@ -119,7 +119,7 @@ Included bug fixes and improvements
 * Fix init of LONGLONG variable with a negative value in TGA decoder
 * Fix issues with dragging layers between images in Adobe Photoshop 7.0 ([Wine Bug #12007](https://bugs.winehq.org/show_bug.cgi?id=12007))
 * Fix missing video introduced by pixelformat changes. ([Wine Bug #36900](https://bugs.winehq.org/show_bug.cgi?id=36900))
-* Fix mouse jittering in Planetside 2 ([Wine Bug #32913](https://bugs.winehq.org/show_bug.cgi?id=32913))
+* ~~Fix mouse jittering in Planetside 2~~ ([Wine Bug #32913](https://bugs.winehq.org/show_bug.cgi?id=32913))
 * Fix parameters for ConvertToIndexedBlendedMesh stub ([Wine Bug #36449](https://bugs.winehq.org/show_bug.cgi?id=36449))
 * Fix possible segfault in pulse_rd_loop of PulseAudio backend
 * Fix return value of ScrollWindowEx for invisible windows ([Wine Bug #37706](https://bugs.winehq.org/show_bug.cgi?id=37706))

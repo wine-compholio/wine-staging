@@ -3437,10 +3437,12 @@ if test "$enable_shell32_Progress_Dialog" -eq 1; then
 	patch_apply shell32-Progress_Dialog/0001-shell32-Correct-indentation-in-shfileop.c.patch
 	patch_apply shell32-Progress_Dialog/0002-shell32-Pass-FILE_INFORMATION-into-SHNotify-function.patch
 	patch_apply shell32-Progress_Dialog/0003-shell32-Implement-file-operation-progress-dialog.patch
+	patch_apply shell32-Progress_Dialog/0004-shell32-Show-animation-during-SHFileOperation.patch
 	(
 		echo '+    { "Michael Müller", "shell32: Correct indentation in shfileop.c.", 1 },';
 		echo '+    { "Michael Müller", "shell32: Pass FILE_INFORMATION into SHNotify* functions.", 1 },';
 		echo '+    { "Michael Müller", "shell32: Implement file operation progress dialog.", 1 },';
+		echo '+    { "Michael Müller", "shell32: Show animation during SHFileOperation.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -167,6 +167,7 @@ patch_enable_all ()
 	enable_shell32_Default_Folder_ACLs="$1"
 	enable_shell32_Default_Path="$1"
 	enable_shell32_Icons="$1"
+	enable_shell32_Progress_Dialog="$1"
 	enable_shell32_Quoted_ShellExecute="$1"
 	enable_shell32_RunDLL_CallEntry16="$1"
 	enable_shell32_SHCreateSessionKey="$1"
@@ -534,6 +535,9 @@ patch_enable ()
 		shell32-Icons)
 			enable_shell32_Icons="$2"
 			;;
+		shell32-Progress_Dialog)
+			enable_shell32_Progress_Dialog="$2"
+			;;
 		shell32-Quoted_ShellExecute)
 			enable_shell32_Quoted_ShellExecute="$2"
 			;;
@@ -888,6 +892,20 @@ patch_apply ()
 	patch_apply_file "$patchdir/$1"
 }
 
+
+if test "$enable_shell32_SHFileOperation" -eq 1; then
+	if test "$enable_shell32_Progress_Dialog" -gt 1; then
+		abort "Patchset shell32-Progress_Dialog disabled, but shell32-SHFileOperation depends on that."
+	fi
+	enable_shell32_Progress_Dialog=1
+fi
+
+if test "$enable_shell32_Progress_Dialog" -eq 1; then
+	if test "$enable_kernel32_CopyFileEx" -gt 1; then
+		abort "Patchset kernel32-CopyFileEx disabled, but shell32-Progress_Dialog depends on that."
+	fi
+	enable_kernel32_CopyFileEx=1
+fi
 
 if test "$enable_server_ACL_Compat" -eq 1; then
 	if test "$enable_server_Inherited_ACLs" -gt 1; then
@@ -3407,6 +3425,22 @@ if test "$enable_shell32_Icons" -eq 1; then
 	patch_apply shell32-Icons/0001-shell32-Add-support-for-extra-large-and-jumbo-icon-l.patch
 	(
 		echo '+    { "Michael Müller", "shell32: Add support for extra large and jumbo icon lists.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shell32-Progress_Dialog
+# |
+# | Modified files:
+# |   *	dlls/shell32/shell32.rc, dlls/shell32/shlfileop.c, dlls/shell32/shresdef.h
+# |
+if test "$enable_shell32_Progress_Dialog" -eq 1; then
+	patch_apply shell32-Progress_Dialog/0001-shell32-Correct-indentation-in-shfileop.c.patch
+	patch_apply shell32-Progress_Dialog/0002-shell32-Pass-FILE_INFORMATION-into-SHNotify-function.patch
+	patch_apply shell32-Progress_Dialog/0003-shell32-Implement-file-operation-progress-dialog.patch
+	(
+		echo '+    { "Michael Müller", "shell32: Correct indentation in shfileop.c.", 1 },';
+		echo '+    { "Michael Müller", "shell32: Pass FILE_INFORMATION into SHNotify* functions.", 1 },';
+		echo '+    { "Michael Müller", "shell32: Implement file operation progress dialog.", 1 },';
 	) >> "$patchlist"
 fi
 

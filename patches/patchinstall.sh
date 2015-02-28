@@ -3342,8 +3342,8 @@ fi
 # |   *	[#33723] EA Origin needs support for job objects
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/process.c, dlls/ntdll/sync.c, include/winnt.h, server/process.c, server/process.h,
-# | 	server/protocol.def
+# |   *	dlls/kernel32/tests/process.c, dlls/ntdll/om.c, dlls/ntdll/sync.c, include/winnt.h, server/handle.c, server/object.c,
+# | 	server/object.h, server/process.c, server/process.h, server/protocol.def
 # |
 if test "$enable_server_JobObjects" -eq 1; then
 	patch_apply server-JobObjects/0001-kernel32-tests-Allow-multiple-subprocess-commands-in.patch
@@ -3357,6 +3357,7 @@ if test "$enable_server_JobObjects" -eq 1; then
 	patch_apply server-JobObjects/0009-kernel32-tests-Add-tests-for-job-inheritance.patch
 	patch_apply server-JobObjects/0010-server-Basic-implementation-of-job-objects.patch
 	patch_apply server-JobObjects/0011-server-Implement-completion-messages-for-job-objects.patch
+	patch_apply server-JobObjects/0012-server-Properly-track-handle-count-of-objects.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Allow multiple subprocess commands in process tests.", 1 },';
 		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for IsProcessInJob.", 1 },';
@@ -3369,6 +3370,7 @@ if test "$enable_server_JobObjects" -eq 1; then
 		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for job inheritance.", 1 },';
 		echo '+    { "Andrew Cook", "server: Basic implementation of job objects.", 1 },';
 		echo '+    { "Andrew Cook", "server: Implement completion messages for job objects.", 1 },';
+		echo '+    { "Andrew Cook", "server: Properly track handle count of objects.", 1 },';
 	) >> "$patchlist"
 fi
 

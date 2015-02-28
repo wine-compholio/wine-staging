@@ -1,0 +1,144 @@
+From d6cd5fe2c7acf2359e96c065254015b5f39fcb2e Mon Sep 17 00:00:00 2001
+From: Andrew Cook <ariscop@gmail.com>
+Date: Thu, 26 Feb 2015 10:51:16 +1100
+Subject: server: Properly track handle count of objects.
+
+---
+ dlls/ntdll/om.c     |  2 +-
+ server/handle.c     | 25 +++++++++++++++++++++----
+ server/object.c     |  2 ++
+ server/object.h     |  1 +
+ server/protocol.def |  1 +
+ 5 files changed, 26 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/ntdll/om.c b/dlls/ntdll/om.c
+index 47a2614..05f18c0 100644
+--- a/dlls/ntdll/om.c
++++ b/dlls/ntdll/om.c
+@@ -78,7 +78,7 @@ NTSTATUS WINAPI NtQueryObject(IN HANDLE handle,
+                     memset( p, 0, sizeof(*p) );
+                     p->GrantedAccess = reply->access;
+                     p->PointerCount = reply->ref_count;
+-                    p->HandleCount = 1; /* at least one */
++                    p->HandleCount = reply->handle_count;
+                     if (used_len) *used_len = sizeof(*p);
+                 }
+             }
+diff --git a/server/handle.c b/server/handle.c
+index 0293ed6..3b994c5 100644
+--- a/server/handle.c
++++ b/server/handle.c
+@@ -97,6 +97,22 @@ static inline obj_handle_t handle_global_to_local( obj_handle_t handle )
+     return handle ^ HANDLE_OBFUSCATOR;
+ }
+ 
++/* grab an object and increment its handle count */
++static struct object *grab_object_for_handle( void *ptr )
++{
++    struct object *obj = (struct object *)ptr;
++    obj->handlecount++;
++    return grab_object( obj );
++}
++
++/* release an object and decrement its handle count */
++static void release_object_from_handle( void *ptr )
++{
++    struct object *obj = (struct object *)ptr;
++    assert( obj->handlecount );
++    obj->handlecount--;
++    release_object( obj );
++}
+ 
+ static void handle_table_dump( struct object *obj, int verbose );
+ static void handle_table_destroy( struct object *obj );
+@@ -166,7 +182,7 @@ static void handle_table_destroy( struct object *obj )
+     {
+         struct object *obj = entry->ptr;
+         entry->ptr = NULL;
+-        if (obj) release_object( obj );
++        if (obj) release_object_from_handle( obj );
+     }
+     free( table->entries );
+ }
+@@ -229,7 +245,7 @@ static obj_handle_t alloc_entry( struct handle_table *table, void *obj, unsigned
+     table->last = i;
+  found:
+     table->free = i + 1;
+-    entry->ptr    = grab_object( obj );
++    entry->ptr    = grab_object_for_handle( obj );
+     entry->access = access;
+     return index_to_handle(i);
+ }
+@@ -355,7 +371,7 @@ struct handle_table *copy_handle_table( struct process *process, struct process
+         for (i = 0; i <= table->last; i++, ptr++)
+         {
+             if (!ptr->ptr) continue;
+-            if (ptr->access & RESERVED_INHERIT) grab_object( ptr->ptr );
++            if (ptr->access & RESERVED_INHERIT) grab_object_for_handle( ptr->ptr );
+             else ptr->ptr = NULL; /* don't inherit this entry */
+         }
+     }
+@@ -379,7 +395,7 @@ unsigned int close_handle( struct process *process, obj_handle_t handle )
+     table = handle_is_global(handle) ? global_table : process->handles;
+     if (entry < table->entries + table->free) table->free = entry - table->entries;
+     if (entry == table->entries + table->last) shrink_handle_table( table );
+-    release_object( obj );
++    release_object_from_handle( obj );
+     return STATUS_SUCCESS;
+ }
+ 
+@@ -630,6 +646,7 @@ DECL_HANDLER(get_object_info)
+ 
+     reply->access = get_handle_access( current->process, req->handle );
+     reply->ref_count = obj->refcount;
++    reply->handle_count = obj->handlecount;
+     if ((name = get_object_full_name( obj, &reply->total )))
+         set_reply_data_ptr( name, min( reply->total, get_reply_max_size() ));
+     release_object( obj );
+diff --git a/server/object.c b/server/object.c
+index d4afefd..1912576 100644
+--- a/server/object.c
++++ b/server/object.c
+@@ -207,6 +207,7 @@ void *alloc_object( const struct object_ops *ops )
+     if (obj)
+     {
+         obj->refcount = 1;
++        obj->handlecount = 0;
+         obj->ops      = ops;
+         obj->name     = NULL;
+         obj->sd       = NULL;
+@@ -306,6 +307,7 @@ void release_object( void *ptr )
+     assert( obj->refcount );
+     if (!--obj->refcount)
+     {
++        assert( !obj->handlecount );
+         /* if the refcount is 0, nobody can be in the wait queue */
+         assert( list_empty( &obj->wait_queue ));
+         obj->ops->destroy( obj );
+diff --git a/server/object.h b/server/object.h
+index 3817c75..978baeb 100644
+--- a/server/object.h
++++ b/server/object.h
+@@ -95,6 +95,7 @@ struct object_ops
+ struct object
+ {
+     unsigned int              refcount;    /* reference count */
++    unsigned int              handlecount; /* handle count */
+     const struct object_ops  *ops;
+     struct list               wait_queue;
+     struct object_name       *name;
+diff --git a/server/protocol.def b/server/protocol.def
+index 126c2a7..2c5af48 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -3292,6 +3292,7 @@ enum coords_relative
+ @REPLY
+     unsigned int   access;        /* granted access mask */
+     unsigned int   ref_count;     /* object ref count */
++    unsigned int   handle_count;  /* object handle count */
+     data_size_t    total;         /* total needed size for name */
+     VARARG(name,unicode_str);     /* object name */
+ @END
+-- 
+2.3.0
+

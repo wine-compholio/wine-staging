@@ -1,0 +1,71 @@
+From 19f32ec2fdf40218519cd34bbcbe782c4517c2fb Mon Sep 17 00:00:00 2001
+From: Andrew Cook <ariscop@gmail.com>
+Date: Sat, 28 Feb 2015 13:37:47 +1100
+Subject: server: Support NULL job handles in IsProcessInJob.
+
+---
+ dlls/kernel32/tests/process.c | 10 ++++++++++
+ server/process.c              | 14 +++++++++-----
+ 2 files changed, 19 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/kernel32/tests/process.c b/dlls/kernel32/tests/process.c
+index 3c7d9f6..110a770 100644
+--- a/dlls/kernel32/tests/process.c
++++ b/dlls/kernel32/tests/process.c
+@@ -2238,6 +2238,11 @@ static void test_IsProcessInJob(void)
+     ok(ret, "IsProcessInJob error %u\n", GetLastError());
+     ok(!out, "IsProcessInJob returned out=%u\n", out);
+ 
++    out = TRUE;
++    ret = pIsProcessInJob(pi.hProcess, NULL, &out);
++    ok(ret, "IsProcessInJob error %u\n", GetLastError());
++    ok(!out, "IsProcessInJob returned out=%u\n", out);
++
+     ret = pAssignProcessToJobObject(job, pi.hProcess);
+     ok(ret, "AssignProcessToJobObject error %u\n", GetLastError());
+ 
+@@ -2246,6 +2251,11 @@ static void test_IsProcessInJob(void)
+     ok(ret, "IsProcessInJob error %u\n", GetLastError());
+     ok(out, "IsProcessInJob returned out=%u\n", out);
+ 
++    out = FALSE;
++    ret = pIsProcessInJob(pi.hProcess, NULL, &out);
++    ok(ret, "IsProcessInJob error %u\n", GetLastError());
++    ok(out, "IsProcessInJob returned out=%u\n", out);
++
+     TerminateProcess(pi.hProcess, 0);
+ 
+     dwret = WaitForSingleObject(pi.hProcess, 500);
+diff --git a/server/process.c b/server/process.c
+index 28f872d..c8c680f 100644
+--- a/server/process.c
++++ b/server/process.c
+@@ -1622,16 +1622,20 @@ DECL_HANDLER(job_assign)
+ DECL_HANDLER(process_in_job)
+ {
+     struct process *process;
+-    struct job *job = get_job_obj( current->process, req->job_handle, JOB_OBJECT_ASSIGN_PROCESS );
++    struct job *job;
+ 
+-    if (job)
++    if ((process = get_process_from_handle( req->process_handle, PROCESS_QUERY_INFORMATION )))
+     {
+-        if ((process = get_process_from_handle( req->process_handle, PROCESS_QUERY_INFORMATION )))
++        if (!req->job_handle)
++        {
++            set_error( (process->job) ? STATUS_PROCESS_IN_JOB : STATUS_PROCESS_NOT_IN_JOB );
++        }
++        else if ((job = get_job_obj( current->process, req->job_handle, JOB_OBJECT_QUERY )))
+         {
+             set_error( (process->job == job) ? STATUS_PROCESS_IN_JOB : STATUS_PROCESS_NOT_IN_JOB );
+-            release_object( process );
++            release_object( job );
+         }
+-        release_object(job);
++        release_object( process );
+     }
+ }
+ 
+-- 
+2.3.0
+

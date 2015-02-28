@@ -1,7 +1,7 @@
-From bc3809dc809edebc43305826f2a687de1089ca26 Mon Sep 17 00:00:00 2001
+From 91a03090c8aafda8f47004734a04a0ac8d83a901 Mon Sep 17 00:00:00 2001
 From: Andrew Cook <ariscop@gmail.com>
 Date: Thu, 26 Feb 2015 12:25:23 +1100
-Subject: server: Basic implementation of job objects.
+Subject: server: Basic implementation of job objects. (rev 2)
 
 This patch includes a (hopefully) complete implementation of process
 tracking in job objects, but no limits or events outside of those.
@@ -11,17 +11,20 @@ This does not implement nested jobs as found in windows 8.
 Changes by Sebastian Lackner <sebastian@fds-team.de>:
 * Only use a single list instead of two for active / all processes.
 * Various cleanups to fit with the rest of the wineserver coding style.
+
+Changes in revision 2:
+* Fix a wineserver crash when terminated processes are added to a job.
 ---
- dlls/kernel32/tests/process.c |   8 +-
+ dlls/kernel32/tests/process.c |  10 +-
  dlls/ntdll/sync.c             | 139 ++++++++++++++++++++---
  include/winnt.h               |   4 +
- server/process.c              | 254 ++++++++++++++++++++++++++++++++++++++++++
+ server/process.c              | 259 ++++++++++++++++++++++++++++++++++++++++++
  server/process.h              |   3 +
  server/protocol.def           |  27 +++++
- 6 files changed, 415 insertions(+), 20 deletions(-)
+ 6 files changed, 420 insertions(+), 22 deletions(-)
 
 diff --git a/dlls/kernel32/tests/process.c b/dlls/kernel32/tests/process.c
-index 9d7d8b8..3f78d74 100644
+index a464db2..e23d046 100644
 --- a/dlls/kernel32/tests/process.c
 +++ b/dlls/kernel32/tests/process.c
 @@ -2244,7 +2244,6 @@ static void test_IsProcessInJob(void)
@@ -40,7 +43,17 @@ index 9d7d8b8..3f78d74 100644
      ok(out, "IsProcessInJob returned out=%u\n", out);
  
      CloseHandle(pi.hProcess);
-@@ -2282,13 +2280,11 @@ static void test_TerminateJobObject(void)
+@@ -2269,9 +2267,7 @@ static void test_IsProcessInJob(void)
+ 
+     SetLastError(0xdeadbeef);
+     ret = pAssignProcessToJobObject(job, pi.hProcess);
+-    todo_wine
+     ok(!ret, "AssignProcessToJobObject unexpectedly succeeded\n");
+-    todo_wine
+     expect_eq_d(ERROR_ACCESS_DENIED, GetLastError());
+ 
+     CloseHandle(pi.hProcess);
+@@ -2299,13 +2295,11 @@ static void test_TerminateJobObject(void)
      ok(ret, "TerminateJobObject error %u\n", GetLastError());
  
      dwret = WaitForSingleObject(pi.hProcess, 500);
@@ -54,7 +67,7 @@ index 9d7d8b8..3f78d74 100644
      ok(dwret == 123 || broken(dwret == 0) /* randomly fails on Win 2000 / XP */,
         "wrong exitcode %u\n", dwret);
  
-@@ -2397,6 +2393,7 @@ static void test_CompletionPort(void)
+@@ -2414,6 +2408,7 @@ static void test_CompletionPort(void)
      port_info.CompletionKey = job;
      port_info.CompletionPort = port;
      ret = pSetInformationJobObject(job, JobObjectAssociateCompletionPortInformation, &port_info, sizeof(port_info));
@@ -62,7 +75,7 @@ index 9d7d8b8..3f78d74 100644
      ok(ret, "SetInformationJobObject error %u\n", GetLastError());
  
      create_process("wait", &pi);
-@@ -2564,7 +2561,6 @@ static HANDLE test_LimitActiveProcesses(void)
+@@ -2581,7 +2576,6 @@ static HANDLE test_LimitActiveProcesses(void)
      out = FALSE;
      ret = pIsProcessInJob(pi[0].hProcess, job, &out);
      ok(ret, "IsProcessInJob error %u\n", GetLastError());
@@ -70,7 +83,7 @@ index 9d7d8b8..3f78d74 100644
      ok(out, "IsProcessInJob returned out=%u\n", out);
  
      dwret = WaitForSingleObject(pi[0].hProcess, 500);
-@@ -2595,9 +2591,7 @@ static void test_BreakawayOk(HANDLE job)
+@@ -2612,9 +2606,7 @@ static void test_BreakawayOk(HANDLE job)
      snprintf(buffer, MAX_PATH, "\"%s\" tests/process.c %s", selfname, "exit");
  
      ret = CreateProcessA(NULL, buffer, NULL, NULL, FALSE, CREATE_BREAKAWAY_FROM_JOB, NULL, NULL, &si, &pi);
@@ -288,7 +301,7 @@ index 4b06b2c..c2aa50e 100644
  {
      RelationProcessorCore    = 0,
 diff --git a/server/process.c b/server/process.c
-index 0712a5b..5770f0e 100644
+index 0712a5b..6384203 100644
 --- a/server/process.c
 +++ b/server/process.c
 @@ -65,6 +65,7 @@ static unsigned int process_map_access( struct object *obj, unsigned int access
@@ -299,7 +312,7 @@ index 0712a5b..5770f0e 100644
  
  static const struct object_ops process_ops =
  {
-@@ -134,6 +135,152 @@ static const struct object_ops startup_info_ops =
+@@ -134,6 +135,157 @@ static const struct object_ops startup_info_ops =
      startup_info_destroy           /* destroy */
  };
  
@@ -386,9 +399,14 @@ index 0712a5b..5770f0e 100644
 +{
 +    assert( job->obj.ops == &job_ops );
 +
++    if (!process->running_threads)
++    {
++        set_error( STATUS_PROCESS_IS_TERMINATING );
++        return 0;
++    }
 +    if (process->job)
 +    {
-+        set_error(STATUS_ACCESS_DENIED);
++        set_error( STATUS_ACCESS_DENIED );
 +        return 0;
 +    }
 +
@@ -452,7 +470,7 @@ index 0712a5b..5770f0e 100644
  
  struct ptid_entry
  {
-@@ -327,6 +474,7 @@ struct thread *create_process( int fd, struct thread *parent_thread, int inherit
+@@ -327,6 +479,7 @@ struct thread *create_process( int fd, struct thread *parent_thread, int inherit
      process->debug_children  = 0;
      process->is_terminating  = 0;
      process->is_terminated   = 0;
@@ -460,7 +478,7 @@ index 0712a5b..5770f0e 100644
      process->console         = NULL;
      process->startup_state   = STARTUP_IN_PROGRESS;
      process->startup_info    = NULL;
-@@ -425,6 +573,12 @@ static void process_destroy( struct object *obj )
+@@ -425,6 +578,12 @@ static void process_destroy( struct object *obj )
  
      close_process_handles( process );
      set_process_startup_state( process, STARTUP_ABORTED );
@@ -473,7 +491,7 @@ index 0712a5b..5770f0e 100644
      if (process->console) release_object( process->console );
      if (process->parent) release_object( process->parent );
      if (process->msg_fd) release_object( process->msg_fd );
-@@ -709,6 +863,7 @@ static void process_killed( struct process *process )
+@@ -709,6 +868,7 @@ static void process_killed( struct process *process )
      remove_process_locks( process );
      set_process_startup_state( process, STARTUP_ABORTED );
      finish_process_tracing( process );
@@ -481,7 +499,7 @@ index 0712a5b..5770f0e 100644
      start_sigkill_timer( process );
      wake_up( &process->obj, 0 );
  }
-@@ -954,6 +1109,14 @@ DECL_HANDLER(new_process)
+@@ -954,6 +1114,14 @@ DECL_HANDLER(new_process)
          return;
      }
  
@@ -496,7 +514,7 @@ index 0712a5b..5770f0e 100644
      if (!req->info_size)  /* create an orphaned process */
      {
          create_process( socket_fd, NULL, 0 );
-@@ -1024,6 +1187,12 @@ DECL_HANDLER(new_process)
+@@ -1024,6 +1192,12 @@ DECL_HANDLER(new_process)
          && !(req->create_flags & DEBUG_ONLY_THIS_PROCESS);
      process->startup_info = (struct startup_info *)grab_object( info );
  
@@ -509,7 +527,7 @@ index 0712a5b..5770f0e 100644
      /* connect to the window station */
      connect_process_winstation( process, current );
  
-@@ -1361,3 +1530,88 @@ DECL_HANDLER(make_process_system)
+@@ -1361,3 +1535,88 @@ DECL_HANDLER(make_process_system)
              shutdown_timeout = add_timeout_user( master_socket_timeout, server_shutdown_timeout, NULL );
      }
  }

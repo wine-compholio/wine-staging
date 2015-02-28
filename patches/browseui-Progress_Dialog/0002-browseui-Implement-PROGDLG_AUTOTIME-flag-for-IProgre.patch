@@ -1,0 +1,161 @@
+From 61fce27e29e7e61b76916d0e1014a3294217fb54 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 28 Feb 2015 02:28:08 +0100
+Subject: browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog.
+
+---
+ dlls/browseui/browseui.rc   |  5 ++++
+ dlls/browseui/progressdlg.c | 64 +++++++++++++++++++++++++++++++++++++++++----
+ dlls/browseui/resids.h      |  5 ++++
+ 3 files changed, 69 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/browseui/browseui.rc b/dlls/browseui/browseui.rc
+index 833b139..64b859d 100644
+--- a/dlls/browseui/browseui.rc
++++ b/dlls/browseui/browseui.rc
+@@ -25,6 +25,11 @@ LANGUAGE LANG_ENGLISH, SUBLANG_DEFAULT
+ STRINGTABLE
+ {
+     IDS_CANCELLING    "Canceling..."
++    IDS_REMAINING1    "%u %s remaining"
++    IDS_REMAINING2    "%u %s and %u %s remaining"
++    IDS_SECONDS       "seconds"
++    IDS_MINUTES       "minutes"
++    IDS_HOURS         "hours"
+ }
+ 
+ IDD_PROGRESS_DLG DIALOG 0, 0, 260, 85
+diff --git a/dlls/browseui/progressdlg.c b/dlls/browseui/progressdlg.c
+index 598197b..d632860 100644
+--- a/dlls/browseui/progressdlg.c
++++ b/dlls/browseui/progressdlg.c
+@@ -73,6 +73,9 @@ typedef struct tagProgressDialog {
+     ULONGLONG ullCompleted;
+     ULONGLONG ullTotal;
+     HWND hwndDisabledParent;    /* For modal dialog: the parent that need to be re-enabled when the dialog ends */
++    ULONGLONG startTime;
++    LPWSTR remainingMsg[2];
++    LPWSTR timeMsg[3];
+ } ProgressDialog;
+ 
+ static inline ProgressDialog *impl_from_IProgressDialog(IProgressDialog *iface)
+@@ -257,14 +260,18 @@ static DWORD WINAPI dialog_thread(LPVOID lpParameter)
+ 
+ static void ProgressDialog_Destructor(ProgressDialog *This)
+ {
++    int i;
+     TRACE("destroying %p\n", This);
+     if (This->hwnd)
+         end_dialog(This);
+-    heap_free(This->lines[0]);
+-    heap_free(This->lines[1]);
+-    heap_free(This->lines[2]);
++    for (i = 0; i < 3; i++)
++        heap_free(This->lines[i]);
+     heap_free(This->cancelMsg);
+     heap_free(This->title);
++    for (i = 0; i < 2; i++)
++        heap_free(This->remainingMsg[i]);
++    for (i = 0; i < 3; i++)
++        heap_free(This->timeMsg[i]);
+     This->cs.DebugInfo->Spare[0] = 0;
+     DeleteCriticalSection(&This->cs);
+     heap_free(This);
+@@ -326,8 +333,6 @@ static HRESULT WINAPI ProgressDialog_StartProgressDialog(IProgressDialog *iface,
+     TRACE("(%p, %p, %x, %p)\n", iface, punkEnableModeless, dwFlags, reserved);
+     if (punkEnableModeless || reserved)
+         FIXME("Reserved parameters not null (%p, %p)\n", punkEnableModeless, reserved);
+-    if (dwFlags & PROGDLG_AUTOTIME)
+-        FIXME("Flags PROGDLG_AUTOTIME not supported\n");
+     if (dwFlags & PROGDLG_NOTIME)
+         FIXME("Flags PROGDLG_NOTIME not supported\n");
+ 
+@@ -358,6 +363,7 @@ static HRESULT WINAPI ProgressDialog_StartProgressDialog(IProgressDialog *iface,
+             This->hwndDisabledParent = hwndDisable;
+     }
+ 
++    This->startTime = GetTickCount64();
+     LeaveCriticalSection(&This->cs);
+ 
+     return S_OK;
+@@ -406,6 +412,52 @@ static BOOL WINAPI ProgressDialog_HasUserCancelled(IProgressDialog *iface)
+     return This->isCancelled;
+ }
+ 
++static void load_time_strings(ProgressDialog *This)
++{
++    int i;
++
++    for (i = 0; i < 2; i++)
++    {
++        if (!This->remainingMsg[i])
++            This->remainingMsg[i] = load_string(BROWSEUI_hinstance, IDS_REMAINING1 + i);
++    }
++    for (i = 0; i < 3; i++)
++    {
++        if (!This->timeMsg[i])
++            This->timeMsg[i] = load_string(BROWSEUI_hinstance, IDS_SECONDS + i);
++    }
++}
++
++static void update_time_remaining(ProgressDialog *This, ULONGLONG ullCompleted, ULONGLONG ullTotal)
++{
++    unsigned int remaining, remainder = 0;
++    ULONGLONG elapsed;
++    WCHAR line[128];
++    int i;
++
++    if (!This->startTime || !ullCompleted || !ullTotal)
++        return;
++
++    load_time_strings(This);
++
++    elapsed = GetTickCount64() - This->startTime;
++    remaining = (elapsed * ullTotal / ullCompleted - elapsed) / 1000;
++
++    for (i = 0; remaining >= 60 && i < 2; i++)
++    {
++        remainder = remaining % 60;
++        remaining /= 60;
++    }
++
++    if (i > 0 && remaining < 2 && remainder != 0)
++        wsprintfW(line, This->remainingMsg[1], remaining, This->timeMsg[i], remainder, This->timeMsg[i-1]);
++    else
++        wsprintfW(line, This->remainingMsg[0], remaining, This->timeMsg[i]);
++
++    set_buffer(&This->lines[2], line);
++    This->dwUpdate |= UPDATE_LINE3;
++}
++
+ static HRESULT WINAPI ProgressDialog_SetProgress64(IProgressDialog *iface, ULONGLONG ullCompleted, ULONGLONG ullTotal)
+ {
+     ProgressDialog *This = impl_from_IProgressDialog(iface);
+@@ -418,6 +470,8 @@ static HRESULT WINAPI ProgressDialog_SetProgress64(IProgressDialog *iface, ULONG
+     This->ullCompleted = ullCompleted;
+     This->dwUpdate |= UPDATE_PROGRESS;
+     hwnd = This->hwnd;
++    if (This->dwFlags & PROGDLG_AUTOTIME)
++        update_time_remaining(This, ullCompleted, ullTotal);
+     LeaveCriticalSection(&This->cs);
+ 
+     if (hwnd)
+diff --git a/dlls/browseui/resids.h b/dlls/browseui/resids.h
+index cd44a8e..865cdd1 100644
+--- a/dlls/browseui/resids.h
++++ b/dlls/browseui/resids.h
+@@ -21,6 +21,11 @@
+ #include "commctrl.h"
+ 
+ #define IDS_CANCELLING      16
++#define IDS_REMAINING1      17
++#define IDS_REMAINING2      18
++#define IDS_SECONDS         19
++#define IDS_MINUTES         20
++#define IDS_HOURS           21
+ 
+ #define IDC_ANIMATION           100
+ #define IDC_PROGRESS_BAR        102
+-- 
+2.3.0
+

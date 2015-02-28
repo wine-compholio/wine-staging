@@ -1210,12 +1210,14 @@ fi
 # Patchset browseui-Progress_Dialog
 # |
 # | Modified files:
-# |   *	dlls/browseui/progressdlg.c
+# |   *	dlls/browseui/browseui.rc, dlls/browseui/progressdlg.c, dlls/browseui/resids.h
 # |
 if test "$enable_browseui_Progress_Dialog" -eq 1; then
 	patch_apply browseui-Progress_Dialog/0001-browseui-Implement-IProgressDialog-SetAnimation.patch
+	patch_apply browseui-Progress_Dialog/0002-browseui-Implement-PROGDLG_AUTOTIME-flag-for-IProgre.patch
 	(
 		echo '+    { "Michael Müller", "browseui: Implement IProgressDialog::SetAnimation.", 1 },';
+		echo '+    { "Michael Müller", "browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog.", 1 },';
 	) >> "$patchlist"
 fi
 

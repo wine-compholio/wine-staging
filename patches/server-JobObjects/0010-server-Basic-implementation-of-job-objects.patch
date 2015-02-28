@@ -1,4 +1,4 @@
-From 42af9f44c92dbe151b3ec5b4f57e941133349648 Mon Sep 17 00:00:00 2001
+From bc3809dc809edebc43305826f2a687de1089ca26 Mon Sep 17 00:00:00 2001
 From: Andrew Cook <ariscop@gmail.com>
 Date: Thu, 26 Feb 2015 12:25:23 +1100
 Subject: server: Basic implementation of job objects.
@@ -15,10 +15,10 @@ Changes by Sebastian Lackner <sebastian@fds-team.de>:
  dlls/kernel32/tests/process.c |   8 +-
  dlls/ntdll/sync.c             | 139 ++++++++++++++++++++---
  include/winnt.h               |   4 +
- server/process.c              | 256 ++++++++++++++++++++++++++++++++++++++++++
+ server/process.c              | 254 ++++++++++++++++++++++++++++++++++++++++++
  server/process.h              |   3 +
  server/protocol.def           |  27 +++++
- 6 files changed, 417 insertions(+), 20 deletions(-)
+ 6 files changed, 415 insertions(+), 20 deletions(-)
 
 diff --git a/dlls/kernel32/tests/process.c b/dlls/kernel32/tests/process.c
 index 9d7d8b8..3f78d74 100644
@@ -288,7 +288,7 @@ index 4b06b2c..c2aa50e 100644
  {
      RelationProcessorCore    = 0,
 diff --git a/server/process.c b/server/process.c
-index 0712a5b..850a9c8 100644
+index 0712a5b..5770f0e 100644
 --- a/server/process.c
 +++ b/server/process.c
 @@ -65,6 +65,7 @@ static unsigned int process_map_access( struct object *obj, unsigned int access
@@ -509,7 +509,7 @@ index 0712a5b..850a9c8 100644
      /* connect to the window station */
      connect_process_winstation( process, current );
  
-@@ -1361,3 +1530,90 @@ DECL_HANDLER(make_process_system)
+@@ -1361,3 +1530,88 @@ DECL_HANDLER(make_process_system)
              shutdown_timeout = add_timeout_user( master_socket_timeout, server_shutdown_timeout, NULL );
      }
  }
@@ -545,59 +545,57 @@ index 0712a5b..850a9c8 100644
 +DECL_HANDLER(job_assign)
 +{
 +    struct process *process;
-+    struct job *job;
++    struct job *job = get_job_obj( current->process, req->job_handle, JOB_OBJECT_ASSIGN_PROCESS );
 +
-+    if (!(job = get_job_obj( current->process, req->job_handle, JOB_OBJECT_ASSIGN_PROCESS )))
-+        return;
-+
-+    if ((process = get_process_from_handle( req->process_handle, PROCESS_SET_QUOTA | PROCESS_TERMINATE )))
++    if (job)
 +    {
-+        add_job_process( job, process );
-+        release_object(process);
++        if ((process = get_process_from_handle( req->process_handle, PROCESS_SET_QUOTA | PROCESS_TERMINATE )))
++        {
++            add_job_process( job, process );
++            release_object(process);
++        }
++        release_object(job);
 +    }
-+
-+    release_object(job);
 +}
 +
 +/* check if a process is associated with a job */
 +DECL_HANDLER(process_in_job)
 +{
 +    struct process *process;
-+    struct job *job;
++    struct job *job = get_job_obj( current->process, req->job_handle, JOB_OBJECT_ASSIGN_PROCESS );
 +
-+    if (!(job = get_job_obj( current->process, req->job_handle, JOB_OBJECT_ASSIGN_PROCESS )))
-+        return;
-+
-+    if ((process = get_process_from_handle( req->process_handle, PROCESS_QUERY_INFORMATION )))
++    if (job)
 +    {
-+        set_error((process->job == job) ? STATUS_PROCESS_IN_JOB : STATUS_PROCESS_NOT_IN_JOB);
-+        release_object(process);
++        if ((process = get_process_from_handle( req->process_handle, PROCESS_QUERY_INFORMATION )))
++        {
++            set_error( (process->job == job) ? STATUS_PROCESS_IN_JOB : STATUS_PROCESS_NOT_IN_JOB );
++            release_object( process );
++        }
++        release_object(job);
 +    }
-+
-+    release_object(job);
 +}
 +
 +/* terminate all processes associated with the job */
 +DECL_HANDLER(terminate_job)
 +{
-+    struct job *job;
++    struct job *job = get_job_obj( current->process, req->handle, JOB_OBJECT_TERMINATE );
 +
-+    if ((job = get_job_obj( current->process, req->handle, JOB_OBJECT_TERMINATE )))
++    if (job)
 +    {
-+        terminate_job(job, req->status);
-+        release_object(job);
++        terminate_job( job, req->status );
++        release_object( job );
 +    }
 +}
 +
 +/* update limits of the job object */
 +DECL_HANDLER(job_set_limits)
 +{
-+    struct job *job;
++    struct job *job = get_job_obj( current->process, req->handle, JOB_OBJECT_SET_ATTRIBUTES );
 +
-+    if ((job = get_job_obj( current->process, req->handle, JOB_OBJECT_SET_ATTRIBUTES )))
++    if (job)
 +    {
 +        job->limit_flags = req->limit_flags;
-+        release_object(job);
++        release_object( job );
 +    }
 +}
 diff --git a/server/process.h b/server/process.h

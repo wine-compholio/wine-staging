@@ -69,6 +69,7 @@ patch_enable_all ()
 	enable_browseui_Progress_Dialog="$1"
 	enable_comctl32_LoadIconMetric="$1"
 	enable_configure_Absolute_RPATH="$1"
+	enable_d3d8_Hotpatch="$1"
 	enable_d3d9_Surface_Refcount="$1"
 	enable_d3drm_Specfile="$1"
 	enable_d3dx9_36_AnimationController="$1"
@@ -84,6 +85,7 @@ patch_enable_all ()
 	enable_d3dx9_36_Texture_Align="$1"
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
 	enable_dbghelp_Debug_Symbols="$1"
+	enable_ddraw_Hotpatch="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
 	enable_dinput_Events="$1"
 	enable_dsound_Fast_Mixer="$1"
@@ -243,6 +245,9 @@ patch_enable ()
 		configure-Absolute_RPATH)
 			enable_configure_Absolute_RPATH="$2"
 			;;
+		d3d8-Hotpatch)
+			enable_d3d8_Hotpatch="$2"
+			;;
 		d3d9-Surface_Refcount)
 			enable_d3d9_Surface_Refcount="$2"
 			;;
@@ -287,6 +292,9 @@ patch_enable ()
 			;;
 		dbghelp-Debug_Symbols)
 			enable_dbghelp_Debug_Symbols="$2"
+			;;
+		ddraw-Hotpatch)
+			enable_ddraw_Hotpatch="$2"
 			;;
 		ddraw-d3d_execute_buffer)
 			enable_ddraw_d3d_execute_buffer="$2"
@@ -1258,6 +1266,18 @@ if test "$enable_configure_Absolute_RPATH" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset d3d8-Hotpatch
+# |
+# | Modified files:
+# |   *	dlls/d3d8/swapchain.c
+# |
+if test "$enable_d3d8_Hotpatch" -eq 1; then
+	patch_apply d3d8-Hotpatch/0001-d3d8-Make-IDirect3DSwapChain8-Present-hotpachable.patch
+	(
+		echo '+    { "Michael Müller", "d3d8: Make IDirect3DSwapChain8::Present hotpachable.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset d3d9-Surface_Refcount
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1516,6 +1536,18 @@ if test "$enable_dbghelp_Debug_Symbols" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ddraw-Hotpatch
+# |
+# | Modified files:
+# |   *	dlls/ddraw/surface.c
+# |
+if test "$enable_ddraw_Hotpatch" -eq 1; then
+	patch_apply ddraw-Hotpatch/0001-ddraw-Make-some-functions-hotpachable.patch
+	(
+		echo '+    { "Michael Müller", "ddraw: Make some functions hotpachable.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ddraw-d3d_execute_buffer
 # |
 # | Modified files:
@@ -1576,18 +1608,6 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -1605,6 +1625,18 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3310,6 +3342,21 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-OpenProcess
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37087] Return an error when trying to open a terminated process
+# |
+# | Modified files:
+# |   *	server/process.c, server/process.h
+# |
+if test "$enable_server_OpenProcess" -eq 1; then
+	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
+	(
+		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3324,21 +3371,6 @@ if test "$enable_server_Misc_ACL" -eq 1; then
 	(
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-OpenProcess
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37087] Return an error when trying to open a terminated process
-# |
-# | Modified files:
-# |   *	server/process.c, server/process.h
-# |
-if test "$enable_server_OpenProcess" -eq 1; then
-	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
-	(
-		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
 	) >> "$patchlist"
 fi
 

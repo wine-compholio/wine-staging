@@ -204,6 +204,7 @@ patch_enable_all ()
 	enable_winepulse_PulseAudio_Support="$1"
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_Clipboard_HTML="$1"
+	enable_winex11_Thread_Data="$1"
 	enable_winex11_Window_Groups="$1"
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
@@ -646,6 +647,9 @@ patch_enable ()
 			;;
 		winex11-Clipboard_HTML)
 			enable_winex11_Clipboard_HTML="$2"
+			;;
+		winex11-Thread_Data)
+			enable_winex11_Thread_Data="$2"
 			;;
 		winex11-Window_Groups)
 			enable_winex11_Window_Groups="$2"
@@ -4028,6 +4032,18 @@ if test "$enable_winex11_Clipboard_HTML" -eq 1; then
 	patch_apply winex11-Clipboard_HTML/0001-winex11.drv-Import-X11-s-text-html-as-HTML-Format.patch
 	(
 		echo '+    { "Damjan Jovanovic", "winex11.drv: Import X11'\''s \"text/html\" as \"HTML Format\".", 3 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11-Thread_Data
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/mouse.c
+# |
+if test "$enable_winex11_Thread_Data" -eq 1; then
+	patch_apply winex11-Thread_Data/0001-winex11-Initialize-thread-data-in-clip_cursor_notify.patch
+	(
+		echo '+    { "Sebastian Lackner", "winex11: Initialize thread data in clip_cursor_notify.", 1 },';
 	) >> "$patchlist"
 fi
 

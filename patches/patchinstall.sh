@@ -116,6 +116,7 @@ patch_enable_all ()
 	enable_libs_Unicode_Collation="$1"
 	enable_makedep_PARENTSPEC="$1"
 	enable_mmdevapi_AEV_Stubs="$1"
+	enable_msctf_DllCanUnloadNow="$1"
 	enable_msvcp90_basic_string_wchar_dtor="$1"
 	enable_msvcrt_atof_strtod="$1"
 	enable_msvfw32_Image_Size="$1"
@@ -387,6 +388,9 @@ patch_enable ()
 			;;
 		mmdevapi-AEV_Stubs)
 			enable_mmdevapi_AEV_Stubs="$2"
+			;;
+		msctf-DllCanUnloadNow)
+			enable_msctf_DllCanUnloadNow="$2"
 			;;
 		msvcp90-basic_string_wchar_dtor)
 			enable_msvcp90_basic_string_wchar_dtor="$2"
@@ -2566,6 +2570,23 @@ if test "$enable_mmdevapi_AEV_Stubs" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset msctf-DllCanUnloadNow
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#31579] Avoid unloading msctf library while textservices are activated
+# |
+# | Modified files:
+# |   *	dlls/msctf/msctf.c
+# |
+if test "$enable_msctf_DllCanUnloadNow" -eq 1; then
+	patch_apply msctf-DllCanUnloadNow/0001-msctf-Always-use-interlocked-functions-when-accessin.patch
+	patch_apply msctf-DllCanUnloadNow/0002-msctf-Avoid-unloading-library-while-textservices-are.patch
+	(
+		echo '+    { "Sebastian Lackner", "msctf: Always use interlocked functions when accessing MSCTF_refCount.", 1 },';
+		echo '+    { "Sebastian Lackner", "msctf: Avoid unloading library while textservices are activated.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset msvcp90-basic_string_wchar_dtor
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3376,21 +3397,6 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-OpenProcess
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37087] Return an error when trying to open a terminated process
-# |
-# | Modified files:
-# |   *	server/process.c, server/process.h
-# |
-if test "$enable_server_OpenProcess" -eq 1; then
-	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
-	(
-		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3405,6 +3411,21 @@ if test "$enable_server_Misc_ACL" -eq 1; then
 	(
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-OpenProcess
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37087] Return an error when trying to open a terminated process
+# |
+# | Modified files:
+# |   *	server/process.c, server/process.h
+# |
+if test "$enable_server_OpenProcess" -eq 1; then
+	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
+	(
+		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
 	) >> "$patchlist"
 fi
 

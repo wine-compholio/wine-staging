@@ -99,6 +99,7 @@ patch_enable_all ()
 	enable_gdiplus_GdipCreateRegionRgnData="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_include_Winetest="$1"
+	enable_include_ddraw="$1"
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_Console_Handles="$1"
 	enable_kernel32_CopyFileEx="$1"
@@ -337,6 +338,9 @@ patch_enable ()
 			;;
 		include-Winetest)
 			enable_include_Winetest="$2"
+			;;
+		include-ddraw)
+			enable_include_ddraw="$2"
 			;;
 		iphlpapi-TCP_Table)
 			enable_iphlpapi_TCP_Table="$2"
@@ -1634,18 +1638,6 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -1663,6 +1655,18 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2255,6 +2259,19 @@ if test "$enable_include_Winetest" -eq 1; then
 	patch_apply include-Winetest/0001-include-Automatically-detect-if-tests-are-running-un.patch
 	(
 		echo '+    { "Sebastian Lackner", "include: Automatically detect if tests are running under Wine when WINETEST_PLATFORM is not specified.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset include-ddraw
+# |
+# | Modified files:
+# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/device.c, dlls/ddraw/surface.c, dlls/ddraw/tests/ddraw4.c, dlls/ddraw/tests/ddraw7.c,
+# | 	dlls/ddraw/utils.c, dlls/ddrawex/ddraw.c, dlls/dxdiagn/provider.c, include/ddraw.h
+# |
+if test "$enable_include_ddraw" -eq 1; then
+	patch_apply include-ddraw/0001-include-Correct-DDSCAPS2-and-DDSURFACEDESC2-structur.patch
+	(
+		echo '+    { "Amine Khaldi", "include: Correct DDSCAPS2 and DDSURFACEDESC2 structures and their uses.", 1 },';
 	) >> "$patchlist"
 fi
 

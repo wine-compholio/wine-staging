@@ -67,6 +67,7 @@ patch_enable_all ()
 	enable_Pipelight="$1"
 	enable_Staging="$1"
 	enable_browseui_Progress_Dialog="$1"
+	enable_browseui_Race_Conditions="$1"
 	enable_comctl32_LoadIconMetric="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_d3d8_Hotpatch="$1"
@@ -239,6 +240,9 @@ patch_enable ()
 			;;
 		browseui-Progress_Dialog)
 			enable_browseui_Progress_Dialog="$2"
+			;;
+		browseui-Race_Conditions)
+			enable_browseui_Race_Conditions="$2"
 			;;
 		comctl32-LoadIconMetric)
 			enable_comctl32_LoadIconMetric="$2"
@@ -1234,6 +1238,20 @@ if test "$enable_browseui_Progress_Dialog" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "browseui: Implement IProgressDialog::SetAnimation.", 1 },';
 		echo '+    { "Michael Müller", "browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset browseui-Race_Conditions
+# |
+# | Modified files:
+# |   *	dlls/browseui/browseui_main.c, dlls/browseui/compcatcachedaemon.c, dlls/browseui/progressdlg.c
+# |
+if test "$enable_browseui_Race_Conditions" -eq 1; then
+	patch_apply browseui-Race_Conditions/0001-browseui-Always-use-interlocked-functions-when-acces.patch
+	patch_apply browseui-Race_Conditions/0002-browseui-Avoid-race-conditions-when-progress-dialog-.patch
+	(
+		echo '+    { "Sebastian Lackner", "browseui: Always use interlocked functions when accessing variable BROWSEUI_refCount.", 1 },';
+		echo '+    { "Sebastian Lackner", "browseui: Avoid race-conditions when progress dialog is released before thread terminates.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2266,22 +2284,6 @@ if test "$enable_kernel32_Console_Handles" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, include/winbase.h, include/winternl.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-ntdll-Define-a-couple-more-information-classes.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0003-kernel32-Implement-SetFileInformationByHandle.patch
-	(
-		echo '+    { "Michael Müller", "ntdll: Define a couple more information classes.", 1 },';
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-FileDispositionInformation
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2298,6 +2300,22 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "server: Keep a pointer to parent'\''s fd unix_name in the closed_fd structure.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "server: Add support for setting file disposition information.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, include/winbase.h, include/winternl.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-ntdll-Define-a-couple-more-information-classes.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0003-kernel32-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Define a couple more information classes.", 1 },';
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3358,6 +3376,21 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-OpenProcess
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37087] Return an error when trying to open a terminated process
+# |
+# | Modified files:
+# |   *	server/process.c, server/process.h
+# |
+if test "$enable_server_OpenProcess" -eq 1; then
+	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
+	(
+		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3372,21 +3405,6 @@ if test "$enable_server_Misc_ACL" -eq 1; then
 	(
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-OpenProcess
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37087] Return an error when trying to open a terminated process
-# |
-# | Modified files:
-# |   *	server/process.c, server/process.h
-# |
-if test "$enable_server_OpenProcess" -eq 1; then
-	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
-	(
-		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
 	) >> "$patchlist"
 fi
 

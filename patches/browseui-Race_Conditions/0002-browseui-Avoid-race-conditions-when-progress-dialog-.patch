@@ -1,0 +1,48 @@
+From da4415d947b792fc5e0de978cf22e68d2b6b8601 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 1 Mar 2015 03:52:06 +0100
+Subject: browseui: Avoid race-conditions when progress dialog is released
+ before thread terminates.
+
+---
+ dlls/browseui/progressdlg.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/dlls/browseui/progressdlg.c b/dlls/browseui/progressdlg.c
+index e61a4cc..7d07ee9 100644
+--- a/dlls/browseui/progressdlg.c
++++ b/dlls/browseui/progressdlg.c
+@@ -235,6 +235,7 @@ static DWORD WINAPI dialog_thread(LPVOID lpParameter)
+     /* Note: until we set the hEvent in WM_INITDIALOG, the ProgressDialog object
+      * is protected by the critical section held by StartProgress */
+     struct create_params *params = lpParameter;
++    ProgressDialog *This = params->This;
+     HWND hwnd;
+     MSG msg;
+ 
+@@ -252,6 +253,7 @@ static DWORD WINAPI dialog_thread(LPVOID lpParameter)
+         }
+     }
+ 
++    IProgressDialog_Release(&This->IProgressDialog_iface);
+     return 0;
+ }
+ 
+@@ -341,10 +343,14 @@ static HRESULT WINAPI ProgressDialog_StartProgressDialog(IProgressDialog *iface,
+         return S_OK;  /* as on XP */
+     }
+     This->dwFlags = dwFlags;
++
+     params.This = This;
+     params.hwndParent = hwndParent;
+     params.hEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
+ 
++    /* thread holds one reference to ensure clean shutdown */
++    IProgressDialog_AddRef(&This->IProgressDialog_iface);
++
+     hThread = CreateThread(NULL, 0, dialog_thread, &params, 0, NULL);
+     WaitForSingleObject(params.hEvent, INFINITE);
+     CloseHandle(params.hEvent);
+-- 
+2.3.0
+

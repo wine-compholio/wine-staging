@@ -1,0 +1,118 @@
+From 771d35e63a5f64f82ac9f16d790033763fa82002 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 2 Mar 2015 01:59:00 +0100
+Subject: winebuild: Conditionally use different code for restoring the context
+ structure.
+
+Fixes a regression introduced by 44fbc018eda12bdee5c2c1e2e40dbdc6a81b27fd.
+See for example: https://bugs.winehq.org/show_bug.cgi?id=26344#c9
+
+The previous code was not completely correct for the situation when switching
+back to a 16-bit stack. If ESP contains garbage in the high word, then accessing
+the memory on the target stack fails. We could theoretically use only the lower
+16-bits for accessing the memory, but there is no good way to determine if a
+segment if 16- or 32-bit. To ensure that the original issue stays fixed this
+patch adds a check, to decide at runtime if we can safely copy values on the target
+stack or not. If not then we use again the "old" method of restoring the thread
+context.
+---
+ tools/winebuild/relay.c | 57 +++++++++++++++++++++++++++++++++++--------------
+ 1 file changed, 41 insertions(+), 16 deletions(-)
+
+diff --git a/tools/winebuild/relay.c b/tools/winebuild/relay.c
+index 63c2ca4..cb4b0ca 100644
+--- a/tools/winebuild/relay.c
++++ b/tools/winebuild/relay.c
+@@ -852,36 +852,35 @@ static void build_call_from_regs_x86(void)
+ 
+     /* Restore the context structure */
+ 
+-    output( "2:\n" );
++    output( "2:\tpushl 0x94(%%ecx)\n" );    /* SegEs */
++    output( "\tpopl %%es\n" );
++    output( "\tpushl 0x90(%%ecx)\n" );      /* SegFs */
++    output( "\tpopl %%fs\n" );
++    output( "\tpushl 0x8c(%%ecx)\n" );      /* SegGs */
++    output( "\tpopl %%gs\n" );
++
++    output( "\tmovw %%ss,%%ax\n" );
++    output( "\tcmpw 0xc8(%%ecx),%%ax\n" );  /* SegSs */
++    output( "\tjne 3f\n" );
+ 
+     /* As soon as we have switched stacks the context structure could
+      * be invalid (when signal handlers are executed for example). Copy
+      * values on the target stack before changing ESP. */
+ 
+-    output( "\tpushl 0xc8(%%ecx)\n" );      /* SegSs */
+-    output( "\tpopl %%es\n" );
+     output( "\tmovl 0xc4(%%ecx),%%eax\n" ); /* Esp */
+     output( "\tleal -4*4(%%eax),%%eax\n" );
+ 
+     output( "\tmovl 0xc0(%%ecx),%%edx\n" ); /* EFlags */
+-    output( "\t.byte 0x26\n\tmovl %%edx,3*4(%%eax)\n" );
++    output( "\t.byte 0x36\n\tmovl %%edx,3*4(%%eax)\n" );
+     output( "\tmovl 0xbc(%%ecx),%%edx\n" ); /* SegCs */
+-    output( "\t.byte 0x26\n\tmovl %%edx,2*4(%%eax)\n" );
++    output( "\t.byte 0x36\n\tmovl %%edx,2*4(%%eax)\n" );
+     output( "\tmovl 0xb8(%%ecx),%%edx\n" ); /* Eip */
+-    output( "\t.byte 0x26\n\tmovl %%edx,1*4(%%eax)\n" );
++    output( "\t.byte 0x36\n\tmovl %%edx,1*4(%%eax)\n" );
+     output( "\tmovl 0xb0(%%ecx),%%edx\n" ); /* Eax */
+-    output( "\t.byte 0x26\n\tmovl %%edx,0*4(%%eax)\n" );
++    output( "\t.byte 0x36\n\tmovl %%edx,0*4(%%eax)\n" );
+ 
+-    output( "\tpushl %%es\n" );
+     output( "\tpushl 0x98(%%ecx)\n" );      /* SegDs */
+ 
+-    output(" \tpushl 0x94(%%ecx)\n" );      /* SegEs */
+-    output( "\tpopl %%es\n" );
+-    output( "\tpushl 0x90(%%ecx)\n");       /* SegFs */
+-    output( "\tpopl %%fs\n" );
+-    output( "\tpushl 0x8c(%%ecx)\n");       /* SegGs */
+-    output( "\tpopl %%gs\n" );
+-
+     output( "\tmovl 0x9c(%%ecx),%%edi\n" ); /* Edi */
+     output( "\tmovl 0xa0(%%ecx),%%esi\n" ); /* Esi */
+     output( "\tmovl 0xa4(%%ecx),%%ebx\n" ); /* Ebx */
+@@ -890,11 +889,37 @@ static void build_call_from_regs_x86(void)
+     output( "\tmovl 0xac(%%ecx),%%ecx\n" ); /* Ecx */
+ 
+     output( "\tpopl %%ds\n" );
+-    output( "\tpopl %%ss\n" );
+     output( "\tmovl %%eax,%%esp\n" );
+ 
+     output( "\tpopl %%eax\n" );
+     output( "\tiret\n" );
++
++    output("3:\n");
++
++    /* Restore the context when the stack segment changes. We can't use
++     * the same code as above because we do not know if the stack segment
++     * is 16 or 32 bit, and 'movl' will throw an exception when we try to
++     * access memory above the limit. */
++
++    output( "\tmovl 0x9c(%%ecx),%%edi\n" ); /* Edi */
++    output( "\tmovl 0xa0(%%ecx),%%esi\n" ); /* Esi */
++    output( "\tmovl 0xa4(%%ecx),%%ebx\n" ); /* Ebx */
++    output( "\tmovl 0xa8(%%ecx),%%edx\n" ); /* Edx */
++    output( "\tmovl 0xb0(%%ecx),%%eax\n" ); /* Eax */
++    output( "\tmovl 0xb4(%%ecx),%%ebp\n" ); /* Ebp */
++
++    output( "\tpushl 0xc8(%%ecx)\n" );      /* SegSs */
++    output( "\tpopl %%ss\n" );
++    output( "\tmovl 0xc4(%%ecx),%%esp\n" ); /* Esp */
++
++    output( "\tpushl 0xc0(%%ecx)\n" );      /* EFlags */
++    output( "\tpushl 0xbc(%%ecx)\n" );      /* SegCs */
++    output( "\tpushl 0xb8(%%ecx)\n" );      /* Eip */
++    output( "\tpushl 0x98(%%ecx)\n" );      /* SegDs */
++    output( "\tmovl 0xac(%%ecx),%%ecx\n" ); /* Ecx */
++
++    output( "\tpopl %%ds\n" );
++    output( "\tiret\n" );
+     output_cfi( ".cfi_endproc" );
+     output_function_size( "__wine_call_from_regs" );
+ 
+-- 
+2.3.0
+

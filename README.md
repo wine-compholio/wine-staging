@@ -38,7 +38,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [15]:**
+**Bugfixes and features included in the next upcoming release [16]:**
 
 * Add stub for gdiplus.GdipCreateEffect ([Wine Bug #32163](https://bugs.winehq.org/show_bug.cgi?id=32163))
 * Add support for CopyFileEx progress callback ([Wine Bug #22692](https://bugs.winehq.org/show_bug.cgi?id=22692))
@@ -50,6 +50,7 @@ Included bug fixes and improvements
 * Enforce that surfaces are flushed after ReleaseDC
 * Fallback to global key state for threads without a queue ([Wine Bug #27238](https://bugs.winehq.org/show_bug.cgi?id=27238))
 * Fix crash in clip_cursor_notify caused by uninitialized TLS
+* Fix crash when trying to switch back to a 16-bit stack
 * Fix race-condition when threads are killed during shutdown
 * Implement SetFileInformationByHandle
 * Process Hacker 2.x needs ntoskrnl.ProbeForRead ([Wine Bug #38103](https://bugs.winehq.org/show_bug.cgi?id=38103))

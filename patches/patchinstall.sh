@@ -3210,14 +3210,16 @@ fi
 # |   *	[#23174] Return correct IMediaSeeking stream positions in quartz
 # |
 # | Modified files:
-# |   *	dlls/quartz/filtergraph.c
+# |   *	dlls/quartz/filtergraph.c, dlls/strmbase/pospass.c
 # |
 if test "$enable_quartz_MediaSeeking_Positions" -eq 1; then
-	patch_apply quartz-MediaSeeking_Positions/0001-quartz-Include-the-stream-position-in-addition-to-th.patch
-	patch_apply quartz-MediaSeeking_Positions/0002-quartz-Implement-MediaSeeking_GetCurrentPosition-on-.patch
-	patch_apply quartz-MediaSeeking_Positions/0003-quartz-Implement-MediaSeeking_GetStopPosition-on-top.patch
-	patch_apply quartz-MediaSeeking_Positions/0004-quartz-Remove-unused-cache-of-MediaSeeking-stop-posi.patch
+	patch_apply quartz-MediaSeeking_Positions/0001-strmbase-Fix-MediaSeekingPassThru_GetPositions-retur.patch
+	patch_apply quartz-MediaSeeking_Positions/0002-quartz-Include-the-stream-position-in-addition-to-th.patch
+	patch_apply quartz-MediaSeeking_Positions/0003-quartz-Implement-MediaSeeking_GetCurrentPosition-on-.patch
+	patch_apply quartz-MediaSeeking_Positions/0004-quartz-Implement-MediaSeeking_GetStopPosition-on-top.patch
+	patch_apply quartz-MediaSeeking_Positions/0005-quartz-Remove-unused-cache-of-MediaSeeking-stop-posi.patch
 	(
+		echo '+    { "Erich E. Hoover", "strmbase: Fix MediaSeekingPassThru_GetPositions return when the pins are unconnected.", 1 },';
 		echo '+    { "Erich E. Hoover", "quartz: Include the stream position in addition to the reference clock offset in the time returned by MediaSeeking_GetPositions.", 1 },';
 		echo '+    { "Erich E. Hoover", "quartz: Implement MediaSeeking_GetCurrentPosition on top of MediaSeeking_GetPositions.", 1 },';
 		echo '+    { "Erich E. Hoover", "quartz: Implement MediaSeeking_GetStopPosition on top of MediaSeeking_GetPositions.", 1 },';

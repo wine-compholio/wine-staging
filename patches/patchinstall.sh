@@ -99,7 +99,6 @@ patch_enable_all ()
 	enable_gdiplus_GdipCreateRegionRgnData="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_include_Winetest="$1"
-	enable_include_ddraw="$1"
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_Console_Handles="$1"
 	enable_kernel32_CopyFileEx="$1"
@@ -338,9 +337,6 @@ patch_enable ()
 			;;
 		include-Winetest)
 			enable_include_Winetest="$2"
-			;;
-		include-ddraw)
-			enable_include_ddraw="$2"
 			;;
 		iphlpapi-TCP_Table)
 			enable_iphlpapi_TCP_Table="$2"
@@ -1252,13 +1248,11 @@ fi
 # Patchset browseui-Race_Conditions
 # |
 # | Modified files:
-# |   *	dlls/browseui/browseui_main.c, dlls/browseui/compcatcachedaemon.c, dlls/browseui/progressdlg.c
+# |   *	dlls/browseui/progressdlg.c
 # |
 if test "$enable_browseui_Race_Conditions" -eq 1; then
-	patch_apply browseui-Race_Conditions/0001-browseui-Always-use-interlocked-functions-when-acces.patch
-	patch_apply browseui-Race_Conditions/0002-browseui-Avoid-race-conditions-when-progress-dialog-.patch
+	patch_apply browseui-Race_Conditions/0001-browseui-Avoid-race-conditions-when-progress-dialog-.patch
 	(
-		echo '+    { "Sebastian Lackner", "browseui: Always use interlocked functions when accessing variable BROWSEUI_refCount.", 1 },';
 		echo '+    { "Sebastian Lackner", "browseui: Avoid race-conditions when progress dialog is released before thread terminates.", 1 },';
 	) >> "$patchlist"
 fi
@@ -1638,6 +1632,18 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -1655,18 +1661,6 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2262,19 +2256,6 @@ if test "$enable_include_Winetest" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset include-ddraw
-# |
-# | Modified files:
-# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/device.c, dlls/ddraw/surface.c, dlls/ddraw/tests/ddraw4.c, dlls/ddraw/tests/ddraw7.c,
-# | 	dlls/ddraw/utils.c, dlls/ddrawex/ddraw.c, dlls/dxdiagn/provider.c, include/ddraw.h
-# |
-if test "$enable_include_ddraw" -eq 1; then
-	patch_apply include-ddraw/0001-include-Correct-DDSCAPS2-and-DDSURFACEDESC2-structur.patch
-	(
-		echo '+    { "Amine Khaldi", "include: Correct DDSCAPS2 and DDSURFACEDESC2 structures and their uses.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset iphlpapi-TCP_Table
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2596,10 +2577,8 @@ fi
 # |   *	dlls/msctf/msctf.c
 # |
 if test "$enable_msctf_DllCanUnloadNow" -eq 1; then
-	patch_apply msctf-DllCanUnloadNow/0001-msctf-Always-use-interlocked-functions-when-accessin.patch
-	patch_apply msctf-DllCanUnloadNow/0002-msctf-Avoid-unloading-library-while-textservices-are.patch
+	patch_apply msctf-DllCanUnloadNow/0001-msctf-Avoid-unloading-library-while-textservices-are.patch
 	(
-		echo '+    { "Sebastian Lackner", "msctf: Always use interlocked functions when accessing MSCTF_refCount.", 1 },';
 		echo '+    { "Sebastian Lackner", "msctf: Avoid unloading library while textservices are activated.", 1 },';
 	) >> "$patchlist"
 fi

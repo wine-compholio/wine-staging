@@ -121,6 +121,7 @@ patch_enable_all ()
 	enable_msvcrt_atof_strtod="$1"
 	enable_msvfw32_Image_Size="$1"
 	enable_netprofm_IConnectionPoint="$1"
+	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_DVD_Read_Size="$1"
 	enable_ntdll_DllRedirects="$1"
@@ -216,6 +217,7 @@ patch_enable_all ()
 	enable_winex11_wglShareLists="$1"
 	enable_winmm_Delay_Import_Depends="$1"
 	enable_wpcap_Dynamic_Linking="$1"
+	enable_ws2_32_APC_Performance="$1"
 	enable_ws2_32_Connect_Time="$1"
 	enable_ws2_32_WriteWatches="$1"
 	enable_ws2_32_getaddrinfo="$1"
@@ -402,6 +404,9 @@ patch_enable ()
 			;;
 		netprofm-IConnectionPoint)
 			enable_netprofm_IConnectionPoint="$2"
+			;;
+		ntdll-APC_Performance)
+			enable_ntdll_APC_Performance="$2"
 			;;
 		ntdll-DOS_Attributes)
 			enable_ntdll_DOS_Attributes="$2"
@@ -687,6 +692,9 @@ patch_enable ()
 			;;
 		wpcap-Dynamic_Linking)
 			enable_wpcap_Dynamic_Linking="$2"
+			;;
+		ws2_32-APC_Performance)
+			enable_ws2_32_APC_Performance="$2"
 			;;
 		ws2_32-Connect_Time)
 			enable_ws2_32_Connect_Time="$2"
@@ -2280,6 +2288,22 @@ if test "$enable_kernel32_Console_Handles" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, include/winbase.h, include/winternl.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-ntdll-Define-a-couple-more-information-classes.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0003-kernel32-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Define a couple more information classes.", 1 },';
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-FileDispositionInformation
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2296,22 +2320,6 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "server: Keep a pointer to parent'\''s fd unix_name in the closed_fd structure.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "server: Add support for setting file disposition information.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, include/winbase.h, include/winternl.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-ntdll-Define-a-couple-more-information-classes.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0003-kernel32-Implement-SetFileInformationByHandle.patch
-	(
-		echo '+    { "Michael Müller", "ntdll: Define a couple more information classes.", 1 },';
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2637,6 +2645,18 @@ if test "$enable_netprofm_IConnectionPoint" -eq 1; then
 	patch_apply netprofm-IConnectionPoint/0001-netprofm-Add-IConnectionPoint-INetworkListManagerEve.patch
 	(
 		echo '+    { "Michael Müller", "netprofm: Add IConnectionPoint/INetworkListManagerEvents stub interface.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-APC_Performance
+# |
+# | Modified files:
+# |   *	dlls/ntdll/file.c
+# |
+if test "$enable_ntdll_APC_Performance" -eq 1; then
+	patch_apply ntdll-APC_Performance/0001-ntdll-Reuse-old-async-fileio-structures-if-possible.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Reuse old async fileio structures if possible.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4202,6 +4222,18 @@ if test "$enable_wpcap_Dynamic_Linking" -eq 1; then
 	patch_apply wpcap-Dynamic_Linking/0001-wpcap-Load-libpcap-dynamically.patch
 	(
 		echo '+    { "André Hentschel", "wpcap: Load libpcap dynamically.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ws2_32-APC_Performance
+# |
+# | Modified files:
+# |   *	dlls/ws2_32/socket.c
+# |
+if test "$enable_ws2_32_APC_Performance" -eq 1; then
+	patch_apply ws2_32-APC_Performance/0001-ws2_32-Reuse-old-async-ws2_async_io-structures-if-po.patch
+	(
+		echo '+    { "Sebastian Lackner", "ws2_32: Reuse old async ws2_async_io structures if possible.", 1 },';
 	) >> "$patchlist"
 fi
 

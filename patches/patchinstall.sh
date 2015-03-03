@@ -197,7 +197,6 @@ patch_enable_all ()
 	enable_wine_inf_Performance="$1"
 	enable_wineboot_HKEY_DYN_DATA="$1"
 	enable_winebuild_LinkerVersion="$1"
-	enable_winebuild_Restore_Context="$1"
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
 	enable_wined3d_CSMT_Helper="$1"
@@ -218,7 +217,6 @@ patch_enable_all ()
 	enable_winmm_Delay_Import_Depends="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_Connect_Time="$1"
-	enable_ws2_32_TransmitFile="$1"
 	enable_ws2_32_WriteWatches="$1"
 	enable_ws2_32_getaddrinfo="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
@@ -633,9 +631,6 @@ patch_enable ()
 		winebuild-LinkerVersion)
 			enable_winebuild_LinkerVersion="$2"
 			;;
-		winebuild-Restore_Context)
-			enable_winebuild_Restore_Context="$2"
-			;;
 		winecfg-Libraries)
 			enable_winecfg_Libraries="$2"
 			;;
@@ -695,9 +690,6 @@ patch_enable ()
 			;;
 		ws2_32-Connect_Time)
 			enable_ws2_32_Connect_Time="$2"
-			;;
-		ws2_32-TransmitFile)
-			enable_ws2_32_TransmitFile="$2"
 			;;
 		ws2_32-WriteWatches)
 			enable_ws2_32_WriteWatches="$2"
@@ -1121,12 +1113,10 @@ if test "$enable_ws2_32_WriteWatches" -eq 1; then
 	patch_apply ws2_32-WriteWatches/0001-ntdll-Handle-write-watches-in-virtual_uninterrupted_.patch
 	patch_apply ws2_32-WriteWatches/0002-ntdll-Expose-wine_uninterrupted_-read-write-_memory-.patch
 	patch_apply ws2_32-WriteWatches/0003-ws2_32-Avoid-race-conditions-of-async-WSARecv-operat.patch
-	patch_apply ws2_32-WriteWatches/0004-ws2_32-Avoid-race-condition-with-write-watches-in-WS.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Handle write watches in virtual_uninterrupted_write_memory.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Expose wine_uninterrupted_[read|write]_memory as exports.", 1 },';
 		echo '+    { "Sebastian Lackner", "ws2_32: Avoid race-conditions of async WSARecv() operations with write watches.", 2 },';
-		echo '+    { "Sebastian Lackner", "ws2_32: Avoid race-condition with write watches in WS2_async_accept.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2830,15 +2820,13 @@ fi
 # |   *	[#37338] Support for NtQuerySection
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, dlls/ntdll/virtual.c, include/winternl.h,
-# | 	server/mapping.c, server/protocol.def
+# |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, dlls/ntdll/virtual.c, server/mapping.c,
+# | 	server/protocol.def
 # |
 if test "$enable_ntdll_NtQuerySection" -eq 1; then
-	patch_apply ntdll-NtQuerySection/0001-include-Fix-definition-of-SECTION_BASIC_INFORMATION-.patch
-	patch_apply ntdll-NtQuerySection/0002-ntdll-Implement-NtQuerySection.patch
-	patch_apply ntdll-NtQuerySection/0003-kernel32-tests-Add-tests-for-NtQuerySection.patch
+	patch_apply ntdll-NtQuerySection/0001-ntdll-Implement-NtQuerySection.patch
+	patch_apply ntdll-NtQuerySection/0002-kernel32-tests-Add-tests-for-NtQuerySection.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "include: Fix definition of SECTION_BASIC_INFORMATION and SECTION_IMAGE_INFORMATION.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "ntdll: Implement NtQuerySection.", 2 },';
 		echo '+    { "Dmitry Timoshkov", "kernel32/tests: Add tests for NtQuerySection.", 2 },';
 	) >> "$patchlist"
@@ -2951,8 +2939,7 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/tests/thread.c, dlls/kernel32/thread.c, dlls/ntdll/Makefile.in,
-# | 	dlls/ntdll/ntdll.spec, dlls/ntdll/tests/Makefile.in, dlls/ntdll/tests/threadpool.c, dlls/ntdll/threadpool2.c,
-# | 	include/winternl.h
+# | 	dlls/ntdll/ntdll.spec, dlls/ntdll/tests/threadpool.c, dlls/ntdll/threadpool2.c, include/winternl.h
 # |
 if test "$enable_ntdll_Vista_Threadpool" -eq 1; then
 	patch_apply ntdll-Vista_Threadpool/0001-ntdll-Add-threadpool-stub-functions-to-specfile.patch
@@ -3681,11 +3668,9 @@ fi
 # | 	include/winternl.h, loader/wine.inf.in
 # |
 if test "$enable_slc_SLGetWindowsInformation" -eq 1; then
-	patch_apply slc-SLGetWindowsInformation/0001-ntdll-tests-Add-tests-for-NtQueryLicenseKey.patch
-	patch_apply slc-SLGetWindowsInformation/0002-ntdll-Implement-Nt-Zw-QueryLicenseValue.patch
-	patch_apply slc-SLGetWindowsInformation/0003-slc-Implement-SLGetWindowsInformationDWORD.patch
+	patch_apply slc-SLGetWindowsInformation/0001-ntdll-Implement-Nt-Zw-QueryLicenseValue.patch
+	patch_apply slc-SLGetWindowsInformation/0002-slc-Implement-SLGetWindowsInformationDWORD.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for NtQueryLicenseKey.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Implement [Nt|Zw]QueryLicenseValue.", 1 },';
 		echo '+    { "Sebastian Lackner", "slc: Implement SLGetWindowsInformationDWORD.", 1 },';
 	) >> "$patchlist"
@@ -3960,18 +3945,6 @@ if test "$enable_winebuild_LinkerVersion" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset winebuild-Restore_Context
-# |
-# | Modified files:
-# |   *	tools/winebuild/relay.c
-# |
-if test "$enable_winebuild_Restore_Context" -eq 1; then
-	patch_apply winebuild-Restore_Context/0001-winebuild-Conditionally-use-different-code-for-resto.patch
-	(
-		echo '+    { "Sebastian Lackner", "winebuild: Conditionally use different code for restoring the context structure.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset winecfg-Libraries
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4241,29 +4214,6 @@ if test "$enable_ws2_32_Connect_Time" -eq 1; then
 	patch_apply ws2_32-Connect_Time/0001-ws2_32-Implement-returning-the-proper-time-with-SO_C.patch
 	(
 		echo '+    { "Sebastian Lackner", "ws2_32: Implement returning the proper time with SO_CONNECT_TIME.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ws2_32-TransmitFile
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#5048] Support for TransmitFile
-# |
-# | Modified files:
-# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c
-# |
-if test "$enable_ws2_32_TransmitFile" -eq 1; then
-	patch_apply ws2_32-TransmitFile/0001-ws2_32-Add-stub-for-TransmitFile.patch
-	patch_apply ws2_32-TransmitFile/0002-ws2_32-Check-for-invalid-parameters-in-TransmitFile.patch
-	patch_apply ws2_32-TransmitFile/0003-ws2_32-Implement-a-basic-synchronous-TransmitFile.patch
-	patch_apply ws2_32-TransmitFile/0004-ws2_32-Add-asynchronous-support-for-TransmitFile.patch
-	patch_apply ws2_32-TransmitFile/0005-ws2_32-Add-support-for-TF_DISCONNECT-and-TF_REUSE_SO.patch
-	(
-		echo '+    { "Erich E. Hoover", "ws2_32: Add stub for TransmitFile.", 1 },';
-		echo '+    { "Erich E. Hoover", "ws2_32: Check for invalid parameters in TransmitFile.", 1 },';
-		echo '+    { "Erich E. Hoover", "ws2_32: Implement a basic synchronous TransmitFile.", 1 },';
-		echo '+    { "Erich E. Hoover", "ws2_32: Add asynchronous support for TransmitFile.", 1 },';
-		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_DISCONNECT and TF_REUSE_SOCKET to TransmitFile.", 1 },';
 	) >> "$patchlist"
 fi
 

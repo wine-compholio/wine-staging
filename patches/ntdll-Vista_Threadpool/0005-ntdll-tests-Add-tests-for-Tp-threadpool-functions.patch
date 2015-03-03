@@ -1,55 +1,23 @@
-From b2606e85a68efcaf3e3b3a0011c44900c5641359 Mon Sep 17 00:00:00 2001
+From 12070adf96edad008609db450efcc2e01b052f87 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 1 Feb 2015 18:14:09 +0100
 Subject: ntdll/tests: Add tests for Tp* threadpool functions.
 
 ---
- dlls/ntdll/tests/Makefile.in  |   1 +
- dlls/ntdll/tests/threadpool.c | 780 ++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 781 insertions(+)
- create mode 100644 dlls/ntdll/tests/threadpool.c
+ dlls/ntdll/tests/threadpool.c | 664 +++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 663 insertions(+), 1 deletion(-)
 
-diff --git a/dlls/ntdll/tests/Makefile.in b/dlls/ntdll/tests/Makefile.in
-index 81b4466..fc352dd 100644
---- a/dlls/ntdll/tests/Makefile.in
-+++ b/dlls/ntdll/tests/Makefile.in
-@@ -21,4 +21,5 @@ C_SRCS = \
- 	rtlbitmap.c \
- 	rtlstr.c \
- 	string.c \
-+	threadpool.c \
- 	time.c
 diff --git a/dlls/ntdll/tests/threadpool.c b/dlls/ntdll/tests/threadpool.c
-new file mode 100644
-index 0000000..61f72ec
---- /dev/null
+index 2e31b34..d27627e 100644
+--- a/dlls/ntdll/tests/threadpool.c
 +++ b/dlls/ntdll/tests/threadpool.c
-@@ -0,0 +1,780 @@
-+/* Unit test suite for Threadpool functions
-+ *
-+ * Copyright 2015 Sebastian Lackner
-+ *
-+ * This library is free software; you can redistribute it and/or
-+ * modify it under the terms of the GNU Lesser General Public
-+ * License as published by the Free Software Foundation; either
-+ * version 2.1 of the License, or (at your option) any later version.
-+ *
-+ * This library is distributed in the hope that it will be useful,
-+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
-+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-+ * Lesser General Public License for more details.
-+ *
-+ * You should have received a copy of the GNU Lesser General Public
-+ * License along with this library; if not, write to the Free Software
-+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
-+ */
-+
-+#include "ntdll_test.h"
-+
-+static HMODULE hntdll = 0;
+@@ -21,9 +21,39 @@
+ #include "ntdll_test.h"
+ 
+ static HMODULE hntdll = 0;
 +static NTSTATUS (WINAPI *pTpAllocCleanupGroup)(TP_CLEANUP_GROUP **);
 +static NTSTATUS (WINAPI *pTpAllocIoCompletion)(TP_IO **,HANDLE,PTP_WIN32_IO_CALLBACK,PVOID,TP_CALLBACK_ENVIRON *);
-+static NTSTATUS (WINAPI *pTpAllocPool)(TP_POOL **,PVOID);
+ static NTSTATUS (WINAPI *pTpAllocPool)(TP_POOL **,PVOID);
 +static NTSTATUS (WINAPI *pTpAllocTimer)(TP_TIMER **,PTP_TIMER_CALLBACK,PVOID,TP_CALLBACK_ENVIRON *);
 +static NTSTATUS (WINAPI *pTpAllocWait)(TP_WAIT **,PTP_WAIT_CALLBACK,PVOID,TP_CALLBACK_ENVIRON *);
 +static NTSTATUS (WINAPI *pTpAllocWork)(TP_WORK **,PTP_WORK_CALLBACK,PVOID,TP_CALLBACK_ENVIRON *);
@@ -66,7 +34,7 @@ index 0000000..61f72ec
 +static VOID     (WINAPI *pTpReleaseCleanupGroup)(TP_CLEANUP_GROUP *);
 +static VOID     (WINAPI *pTpReleaseCleanupGroupMembers)(TP_CLEANUP_GROUP *,BOOL,PVOID);
 +static VOID     (WINAPI *pTpReleaseIoCompletion)(TP_IO *);
-+static VOID     (WINAPI *pTpReleasePool)(TP_POOL *);
+ static VOID     (WINAPI *pTpReleasePool)(TP_POOL *);
 +static VOID     (WINAPI *pTpReleaseTimer)(TP_TIMER *);
 +static VOID     (WINAPI *pTpReleaseWait)(TP_WAIT *);
 +static VOID     (WINAPI *pTpReleaseWork)(TP_WORK *);
@@ -74,33 +42,22 @@ index 0000000..61f72ec
 +static BOOL     (WINAPI *pTpSetPoolMinThreads)(TP_POOL *,DWORD);
 +static VOID     (WINAPI *pTpSetTimer)(TP_TIMER *,LARGE_INTEGER *,LONG,LONG);
 +static VOID     (WINAPI *pTpSetWait)(TP_WAIT *,HANDLE,LARGE_INTEGER *);
-+static NTSTATUS (WINAPI *pTpSimpleTryPost)(PTP_SIMPLE_CALLBACK,PVOID,TP_CALLBACK_ENVIRON *);
+ static NTSTATUS (WINAPI *pTpSimpleTryPost)(PTP_SIMPLE_CALLBACK,PVOID,TP_CALLBACK_ENVIRON *);
 +static VOID     (WINAPI *pTpStartAsyncIoOperation)(TP_IO *);
 +static VOID     (WINAPI *pTpWaitForIoCompletion)(TP_IO *,BOOL);
 +static VOID     (WINAPI *pTpWaitForTimer)(TP_TIMER *,BOOL);
 +static VOID     (WINAPI *pTpWaitForWait)(TP_WAIT *,BOOL);
 +static VOID     (WINAPI *pTpWaitForWork)(TP_WORK *,BOOL);
-+
-+#define NTDLL_GET_PROC(func) \
-+    do \
-+    { \
-+        p ## func = (void *)GetProcAddress(hntdll, #func); \
-+        if (!p ## func) trace("Failed to get address for %s\n", #func); \
-+    } \
-+    while (0)
-+
-+static BOOL init_threadpool(void)
-+{
-+    hntdll = GetModuleHandleA("ntdll");
-+    if (!hntdll)
-+    {
-+        win_skip("Could not load ntdll\n");
-+        return FALSE;
-+    }
-+
+ 
+ #define NTDLL_GET_PROC(func) \
+     do \
+@@ -42,13 +72,43 @@ static BOOL init_threadpool(void)
+         return FALSE;
+     }
+ 
 +    NTDLL_GET_PROC(TpAllocCleanupGroup);
 +    NTDLL_GET_PROC(TpAllocIoCompletion);
-+    NTDLL_GET_PROC(TpAllocPool);
+     NTDLL_GET_PROC(TpAllocPool);
 +    NTDLL_GET_PROC(TpAllocTimer);
 +    NTDLL_GET_PROC(TpAllocWait);
 +    NTDLL_GET_PROC(TpAllocWork);
@@ -117,7 +74,7 @@ index 0000000..61f72ec
 +    NTDLL_GET_PROC(TpReleaseCleanupGroup);
 +    NTDLL_GET_PROC(TpReleaseCleanupGroupMembers);
 +    NTDLL_GET_PROC(TpReleaseIoCompletion);
-+    NTDLL_GET_PROC(TpReleasePool);
+     NTDLL_GET_PROC(TpReleasePool);
 +    NTDLL_GET_PROC(TpReleaseTimer);
 +    NTDLL_GET_PROC(TpReleaseWait);
 +    NTDLL_GET_PROC(TpReleaseWork);
@@ -125,84 +82,57 @@ index 0000000..61f72ec
 +    NTDLL_GET_PROC(TpSetPoolMinThreads);
 +    NTDLL_GET_PROC(TpSetTimer);
 +    NTDLL_GET_PROC(TpSetWait);
-+    NTDLL_GET_PROC(TpSimpleTryPost);
+     NTDLL_GET_PROC(TpSimpleTryPost);
 +    NTDLL_GET_PROC(TpStartAsyncIoOperation);
 +    NTDLL_GET_PROC(TpWaitForIoCompletion);
 +    NTDLL_GET_PROC(TpWaitForTimer);
 +    NTDLL_GET_PROC(TpWaitForWait);
 +    NTDLL_GET_PROC(TpWaitForWork);
-+
-+    if (!pTpAllocPool)
-+    {
+ 
+     if (!pTpAllocPool)
+     {
+-        skip("Threadpool functions not supported, skipping tests\n");
 +        win_skip("Threadpool functions not supported, skipping tests\n");
-+        return FALSE;
-+    }
-+
-+    return TRUE;
-+}
-+
-+#undef NTDLL_GET_PROC
-+
-+
-+static void CALLBACK simple_cb(TP_CALLBACK_INSTANCE *instance, void *userdata)
+         return FALSE;
+     }
+ 
+@@ -65,13 +125,23 @@ static void CALLBACK simple_cb(TP_CALLBACK_INSTANCE *instance, void *userdata)
+     ReleaseSemaphore(semaphore, 1, NULL);
+ }
+ 
++static void CALLBACK simple2_cb(TP_CALLBACK_INSTANCE *instance, void *userdata)
 +{
 +    trace("Running simple callback\n");
 +    Sleep(100);
-+    InterlockedIncrement( (LONG *)userdata );
++    InterlockedIncrement((LONG *)userdata);
 +}
 +
-+static void test_default_threadpool(void)
-+{
-+    TP_CALLBACK_ENVIRON environment;
-+    NTSTATUS status;
-+    LONG userdata;
-+
-+    /* Post the callback and manually wait until it has finished */
-+    userdata = 0;
-+    memset(&environment, 0, sizeof(environment));
-+    environment.Version = 1;
-+    status = pTpSimpleTryPost(simple_cb, &userdata, &environment);
-+    ok(!status, "TpSimpleTryPost failed with status %x\n", status);
-+    while (userdata == 0) Sleep(10);
-+    ok(userdata == 1, "expected userdata = 1, got %u\n", userdata);
-+}
-+
-+static void test_tp_simple(void)
-+{
-+    TP_CALLBACK_ENVIRON environment;
+ static void test_tp_simple(void)
+ {
+     TP_CALLBACK_ENVIRON environment;
 +    TP_CLEANUP_GROUP *group;
-+    TP_POOL *pool;
-+    NTSTATUS status;
+     HANDLE semaphore;
+     NTSTATUS status;
+     TP_POOL *pool;
 +    LONG userdata;
+     DWORD result;
 +    int i;
-+
-+    /* Allocate new threadpool */
-+    pool = NULL;
-+    status = pTpAllocPool(&pool, NULL);
-+    ok(!status, "TpAllocPool failed with status %x\n", status);
-+    ok(pool != NULL, "expected pool != NULL\n");
-+
-+    /* Post the callback and manually wait until it has finished */
-+    userdata = 0;
-+    memset(&environment, 0, sizeof(environment));
-+    environment.Version = 1;
-+    environment.Pool = pool;
-+    status = pTpSimpleTryPost(simple_cb, &userdata, &environment);
-+    ok(!status, "TpSimpleTryPost failed with status %x\n", status);
-+    while (userdata == 0) Sleep(10);
-+    ok(userdata == 1, "expected userdata = 1, got %u\n", userdata);
-+
-+    /* Test with invalid version number */
-+    userdata = 0;
-+    memset(&environment, 0, sizeof(environment));
-+    environment.Version = 9999;
-+    environment.Pool = pool;
-+    status = pTpSimpleTryPost(simple_cb, &userdata, &environment);
-+    ok(!status, "TpSimpleTryPost failed with status %x\n", status);
-+    while (userdata == 0) Sleep(10);
-+    ok(userdata == 1, "expected userdata = 1, got %u\n", userdata);
-+
-+    /* Allocate a cleanup group for synchronization */
+ 
+     semaphore = CreateSemaphoreA(NULL, 0, 1, NULL);
+     ok(semaphore != NULL, "CreateSemaphoreA failed %u\n", GetLastError());
+@@ -105,6 +175,7 @@ static void test_tp_simple(void)
+     environment.Version = 9999;
+     environment.Pool = pool;
+     status = pTpSimpleTryPost(simple_cb, semaphore, &environment);
++    todo_wine
+     ok(status == STATUS_INVALID_PARAMETER || broken(!status) /* Vista/2008 */,
+        "TpSimpleTryPost unexpectedly returned status %x\n", status);
+     if (!status)
+@@ -113,9 +184,591 @@ static void test_tp_simple(void)
+         ok(result == WAIT_OBJECT_0, "WaitForSingleObject returned %u\n", result);
+     }
+ 
++    /* allocate a cleanup group for synchronization */
 +    group = NULL;
 +    status = pTpAllocCleanupGroup(&group);
 +    ok(!status, "TpAllocCleanupGroup failed with status %x\n", status);
@@ -213,7 +143,7 @@ index 0000000..61f72ec
 +    environment.Version = 1;
 +    environment.Pool = pool;
 +    environment.CleanupGroup = group;
-+    status = pTpSimpleTryPost(simple_cb, &userdata, &environment);
++    status = pTpSimpleTryPost(simple2_cb, &userdata, &environment);
 +    ok(!status, "TpSimpleTryPost failed with status %x\n", status);
 +
 +    pTpReleaseCleanupGroupMembers(group, FALSE, NULL);
@@ -227,16 +157,17 @@ index 0000000..61f72ec
 +    environment.CleanupGroup = group;
 +    for (i = 0; i < 100; i++)
 +    {
-+        status = pTpSimpleTryPost(simple_cb, &userdata, &environment);
++        status = pTpSimpleTryPost(simple2_cb, &userdata, &environment);
 +        ok(!status, "TpSimpleTryPost failed with status %x\n", status);
 +    }
 +
 +    pTpReleaseCleanupGroupMembers(group, TRUE, NULL);
 +    ok(userdata < 100, "expected userdata < 100, got %u\n", userdata);
 +
-+    /* Cleanup */
+     /* cleanup */
 +    pTpReleaseCleanupGroup(group);
 +    pTpReleasePool(pool);
++    CloseHandle(semaphore);
 +}
 +
 +static void CALLBACK work_cb(TP_CALLBACK_INSTANCE *instance, void *userdata, TP_WORK *work)
@@ -366,7 +297,7 @@ index 0000000..61f72ec
 +    /* Cleanup */
 +    pTpReleaseWork(work);
 +    pTpReleaseCleanupGroup(group);
-+    pTpReleasePool(pool);
+     pTpReleasePool(pool);
 +}
 +
 +static void CALLBACK instance_cb(TP_CALLBACK_INSTANCE *instance, void *userdata)
@@ -496,7 +427,7 @@ index 0000000..61f72ec
 +    ok(ret == WAIT_OBJECT_0, "expected ret = WAIT_OBJECT_0, got %u\n", ret);
 +    while (userdata != 2) Sleep(10);
 +
-+    CloseHandle(semaphore);
+     CloseHandle(semaphore);
 +
 +    /* Cleanup */
 +    pTpReleasePool(pool);
@@ -786,15 +717,13 @@ index 0000000..61f72ec
 +    pTpReleaseTimer(timer);
 +    pTpReleaseTimer(timer2);
 +    pTpReleasePool(pool);
-+}
-+
-+START_TEST(threadpool)
-+{
-+    if(!init_threadpool())
-+        return;
-+
-+    test_default_threadpool();
-+    test_tp_simple();
+ }
+ 
+ START_TEST(threadpool)
+@@ -124,4 +777,13 @@ START_TEST(threadpool)
+         return;
+ 
+     test_tp_simple();
 +    test_tp_work();
 +    test_tp_work_scheduler();
 +    test_tp_instance();
@@ -804,7 +733,7 @@ index 0000000..61f72ec
 +
 +    /* FIXME: Make sure worker threads have terminated before. */
 +    Sleep(100);
-+}
+ }
 -- 
-2.2.2
+2.3.0
 

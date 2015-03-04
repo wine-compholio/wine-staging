@@ -198,6 +198,7 @@ patch_enable_all ()
 	enable_wineboot_HKEY_DYN_DATA="$1"
 	enable_winebuild_LinkerVersion="$1"
 	enable_winecfg_Staging="$1"
+	enable_wineconsole_Buffer_Size="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
@@ -633,6 +634,9 @@ patch_enable ()
 			;;
 		winecfg-Staging)
 			enable_winecfg_Staging="$2"
+			;;
+		wineconsole-Buffer_Size)
+			enable_wineconsole_Buffer_Size="$2"
 			;;
 		wined3d-CSMT_Helper)
 			enable_wined3d_CSMT_Helper="$2"
@@ -3970,6 +3974,21 @@ if test "$enable_winebuild_LinkerVersion" -eq 1; then
 	patch_apply winebuild-LinkerVersion/0001-winebuild-Set-a-valid-major-and-minor-linker-version.patch
 	(
 		echo '+    { "Michael Müller", "winebuild: Set a valid major and minor linker version.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wineconsole-Buffer_Size
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34814] Increase wineconsole commandline buffer size
+# |
+# | Modified files:
+# |   *	programs/wineconsole/wineconsole.c
+# |
+if test "$enable_wineconsole_Buffer_Size" -eq 1; then
+	patch_apply wineconsole-Buffer_Size/0001-wineconsole-Increase-buffer-to-allow-larger-commandl.patch
+	(
+		echo '+    { "Sebastian Lackner", "wineconsole: Increase buffer to allow larger commandline strings.", 1 },';
 	) >> "$patchlist"
 fi
 

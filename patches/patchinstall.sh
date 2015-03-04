@@ -2962,19 +2962,41 @@ fi
 # | 	dlls/ntdll/ntdll.spec, dlls/ntdll/tests/threadpool.c, dlls/ntdll/threadpool2.c, include/winternl.h
 # |
 if test "$enable_ntdll_Vista_Threadpool" -eq 1; then
-	patch_apply ntdll-Vista_Threadpool/0001-ntdll-Add-threadpool-stub-functions-to-specfile.patch
-	patch_apply ntdll-Vista_Threadpool/0002-ntdll-Implement-threadpool-cleanup-group-and-callbac.patch
-	patch_apply ntdll-Vista_Threadpool/0003-ntdll-Implement-additional-threadpool-work-item-func.patch
-	patch_apply ntdll-Vista_Threadpool/0004-ntdll-Implement-threadpool-timer-functions.-rev-2.patch
-	patch_apply ntdll-Vista_Threadpool/0005-ntdll-tests-Add-tests-for-Tp-threadpool-functions.patch
-	patch_apply ntdll-Vista_Threadpool/0006-kernel32-Forward-various-threadpool-functions-to-ntd.patch
-	patch_apply ntdll-Vista_Threadpool/0007-ntdll-Implement-threadpool-wait-objects.patch
-	patch_apply ntdll-Vista_Threadpool/0008-ntdll-tests-Add-tests-for-threadpool-wait-objects.patch
-	patch_apply ntdll-Vista_Threadpool/0009-kernel32-Forward-threadpool-wait-functions-to-ntdll.patch
+	patch_apply ntdll-Vista_Threadpool/0001-ntdll-Implement-TpSimpleTryPost-and-basic-threadpool.patch
+	patch_apply ntdll-Vista_Threadpool/0002-ntdll-Implement-TpSetPool-Min-Max-Threads.patch
+	patch_apply ntdll-Vista_Threadpool/0003-ntdll-Implement-threadpool-cleanup-group-functions.patch
+	patch_apply ntdll-Vista_Threadpool/0004-ntdll-tests-Add-tests-for-TpAllocCleanupGroup-and-re.patch
+	patch_apply ntdll-Vista_Threadpool/0005-ntdll-Implement-threadpool-work-item-functions.patch
+	patch_apply ntdll-Vista_Threadpool/0006-ntdll-tests-Add-basic-tests-for-threadpool-work-item.patch
+	patch_apply ntdll-Vista_Threadpool/0007-ntdll-tests-Add-threadpool-scheduler-tests-for-work-.patch
+	patch_apply ntdll-Vista_Threadpool/0008-ntdll-Add-support-for-threadpool-group-cancel-callba.patch
+	patch_apply ntdll-Vista_Threadpool/0009-ntdll-Add-support-for-threadpool-finalization-callba.patch
+	patch_apply ntdll-Vista_Threadpool/0010-ntdll-Implement-threadpool-RaceDll-environment-varia.patch
+	patch_apply ntdll-Vista_Threadpool/0011-ntdll-Implement-TpCallbackMayRunLong-and-instance-st.patch
+	patch_apply ntdll-Vista_Threadpool/0012-ntdll-Implement-TpDisassociateCallback.patch
+	patch_apply ntdll-Vista_Threadpool/0013-ntdll-Implement-various-TpCallback-OnCompletion-func.patch
+	patch_apply ntdll-Vista_Threadpool/0014-ntdll-Add-remaining-threadpool-functions-to-specfile.patch
+	patch_apply ntdll-Vista_Threadpool/0015-ntdll-Implement-threadpool-timer-functions.-rev-2.patch
+	patch_apply ntdll-Vista_Threadpool/0016-ntdll-tests-Add-tests-for-Tp-threadpool-functions.patch
+	patch_apply ntdll-Vista_Threadpool/0017-kernel32-Forward-various-threadpool-functions-to-ntd.patch
+	patch_apply ntdll-Vista_Threadpool/0018-ntdll-Implement-threadpool-wait-objects.patch
+	patch_apply ntdll-Vista_Threadpool/0019-ntdll-tests-Add-tests-for-threadpool-wait-objects.patch
+	patch_apply ntdll-Vista_Threadpool/0020-kernel32-Forward-threadpool-wait-functions-to-ntdll.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Add threadpool stub functions to specfile.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Implement threadpool, cleanup group and callback instance functions.", 2 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Implement additional threadpool work item functions.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement TpSimpleTryPost and basic threadpool infrastructure.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement TpSetPool[Min|Max]Threads.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement threadpool cleanup group functions.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for TpAllocCleanupGroup and related functions.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement threadpool work item functions.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Add basic tests for threadpool work items.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Add threadpool scheduler tests for work items.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Add support for threadpool group cancel callback.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Add support for threadpool finalization callback.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement threadpool RaceDll environment variable.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement TpCallbackMayRunLong and instance structure.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement TpDisassociateCallback.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement various TpCallback*OnCompletion functions.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Add remaining threadpool functions to specfile.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Implement threadpool timer functions.", 2 },';
 		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for Tp* threadpool functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Forward various threadpool functions to ntdll.", 1 },';

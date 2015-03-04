@@ -1,15 +1,15 @@
-From 9c751685e15f98981a26275d2102b839fbee3472 Mon Sep 17 00:00:00 2001
+From 59afc4395781ac5bddc1c846605771529eb2055b Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
-Date: Fri, 6 Feb 2015 00:32:26 +0100
+Date: Wed, 4 Mar 2015 13:33:25 +0100
 Subject: ntdll: Implement threadpool wait objects.
 
 ---
  dlls/ntdll/ntdll.spec    |   8 +-
- dlls/ntdll/threadpool2.c | 490 ++++++++++++++++++++++++++++++++++++++++++++++-
- 2 files changed, 487 insertions(+), 11 deletions(-)
+ dlls/ntdll/threadpool2.c | 486 ++++++++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 483 insertions(+), 11 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index f4328a9..17c71bc 100644
+index 24b4c30..b4cfe69 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
 @@ -974,7 +974,7 @@
@@ -39,80 +39,76 @@ index f4328a9..17c71bc 100644
  # @ stub TpSetWaitEx
  @ stdcall TpSimpleTryPost(ptr ptr ptr)
  # @ stub TpStartAsyncIoOperation
-@@ -1028,5 +1028,5 @@
+@@ -1027,7 +1027,7 @@
+ # @ stub TpWaitForIoCompletion
  # @ stub TpWaitForJobNotification
  @ stdcall TpWaitForTimer(ptr long)
 -# @ stub TpWaitForWait
 +@ stdcall TpWaitForWait(ptr long)
  @ stdcall TpWaitForWork(ptr long)
  @ stdcall -ret64 VerSetConditionMask(int64 long long)
+ @ stdcall ZwAcceptConnectPort(ptr long ptr long long ptr) NtAcceptConnectPort
 diff --git a/dlls/ntdll/threadpool2.c b/dlls/ntdll/threadpool2.c
-index 19096a0..ae98d7a 100644
+index a1089a4..9b2a0c8 100644
 --- a/dlls/ntdll/threadpool2.c
 +++ b/dlls/ntdll/threadpool2.c
-@@ -54,6 +54,7 @@ static inline LONG interlocked_dec( PLONG dest )
+@@ -48,6 +48,7 @@ static inline LONG interlocked_dec( PLONG dest )
  }
  
  #define THREADPOOL_WORKER_TIMEOUT 5000
 +#define MAXIMUM_WAITQUEUE_OBJECTS (MAXIMUM_WAIT_OBJECTS - 1)
  
- /* allocated on the stack while a callback is running */
- struct threadpool_instance
-@@ -125,7 +126,8 @@ struct threadpool_object
-         TP_OBJECT_TYPE_UNDEFINED,
-         TP_OBJECT_TYPE_SIMPLE,
-         TP_OBJECT_TYPE_WORK,
--        TP_OBJECT_TYPE_TIMER
-+        TP_OBJECT_TYPE_TIMER,
-+        TP_OBJECT_TYPE_WAIT
-     } type;
+ /* internal threadpool representation */
+ struct threadpool
+@@ -69,7 +70,8 @@ enum threadpool_objtype
+ {
+     TP_OBJECT_TYPE_SIMPLE,
+     TP_OBJECT_TYPE_WORK,
+-    TP_OBJECT_TYPE_TIMER
++    TP_OBJECT_TYPE_TIMER,
++    TP_OBJECT_TYPE_WAIT
+ };
  
-     /* arguments for callback */
-@@ -156,6 +158,20 @@ struct threadpool_object
-             LONG period;
-             LONG window_length;
+ /* internal threadpool object representation */
+@@ -117,6 +119,17 @@ struct threadpool_object
+             LONG            period;
+             LONG            window_length;
          } timer;
-+        /* wait callback */
 +        struct
 +        {
 +            PTP_WAIT_CALLBACK callback;
-+            LONG signaled;
-+
++            LONG            signaled;
 +            /* information about the wait, locked via waitqueue.cs */
 +            struct waitqueue_bucket *bucket;
-+            BOOL wait_pending;
-+            struct list wait_entry;
-+
-+            ULONGLONG timeout;
-+            HANDLE handle;
++            BOOL            wait_pending;
++            struct list     wait_entry;
++            ULONGLONG       timeout;
++            HANDLE          handle;
 +        } wait;
      } u;
  };
  
-@@ -199,6 +215,40 @@ static RTL_CRITICAL_SECTION_DEBUG timerqueue_debug =
+@@ -175,6 +188,38 @@ static RTL_CRITICAL_SECTION_DEBUG timerqueue_debug =
      0, 0, { (DWORD_PTR)(__FILE__ ": timerqueue.cs") }
  };
  
 +struct waitqueue_bucket
 +{
-+    struct list bucket_entry;
-+
-+    /* list of reserved slots / pending waits */
-+    LONG num_waits;
-+    struct list reserved;
-+    struct list waits;
-+    HANDLE update_event;
++    struct list             bucket_entry;
++    LONG                    num_waits;
++    struct list             reserved;
++    struct list             waits;
++    HANDLE                  update_event;
 +};
 +
 +/* global waitqueue object */
 +static RTL_CRITICAL_SECTION_DEBUG waitqueue_debug;
++
 +static struct
 +{
-+    CRITICAL_SECTION cs;
-+
-+    /* list of buckets */
-+    LONG num_buckets;
-+    struct list buckets;
++    CRITICAL_SECTION        cs;
++    LONG                    num_buckets;
++    struct list             buckets;
 +}
 +waitqueue =
 +{
@@ -120,6 +116,7 @@ index 19096a0..ae98d7a 100644
 +    0,
 +    LIST_INIT( waitqueue.buckets )
 +};
++
 +static RTL_CRITICAL_SECTION_DEBUG waitqueue_debug =
 +{
 +    0, 0, &waitqueue.cs,
@@ -130,7 +127,7 @@ index 19096a0..ae98d7a 100644
  static inline struct threadpool *impl_from_TP_POOL( TP_POOL *pool )
  {
      return (struct threadpool *)pool;
-@@ -218,6 +268,13 @@ static inline struct threadpool_object *impl_from_TP_TIMER( TP_TIMER *timer )
+@@ -194,6 +239,13 @@ static inline struct threadpool_object *impl_from_TP_TIMER( TP_TIMER *timer )
      return object;
  }
  
@@ -144,31 +141,29 @@ index 19096a0..ae98d7a 100644
  static inline struct threadpool_group *impl_from_TP_CLEANUP_GROUP( TP_CLEANUP_GROUP *group )
  {
      return (struct threadpool_group *)group;
-@@ -230,12 +287,13 @@ static inline struct threadpool_instance *impl_from_TP_CALLBACK_INSTANCE( TP_CAL
+@@ -206,10 +258,11 @@ static inline struct threadpool_instance *impl_from_TP_CALLBACK_INSTANCE( TP_CAL
  
  static void CALLBACK threadpool_worker_proc( void *param );
  static void CALLBACK timerqueue_thread_proc( void *param );
 +static void CALLBACK waitqueue_thread_proc( void *param );
- 
  static NTSTATUS tp_threadpool_alloc( struct threadpool **out );
- static BOOL tp_threadpool_release( struct threadpool *pool );
  static void tp_threadpool_shutdown( struct threadpool *pool );
- 
+ static BOOL tp_threadpool_release( struct threadpool *pool );
 -static void tp_object_submit( struct threadpool_object *object );
 +static void tp_object_submit( struct threadpool_object *object, BOOL success );
- static BOOL tp_object_release( struct threadpool_object *object );
  static void tp_object_shutdown( struct threadpool_object *object );
- 
-@@ -384,7 +442,7 @@ update_timer:
+ static BOOL tp_object_release( struct threadpool_object *object );
+ static void tp_instance_initialize( struct threadpool_instance *instance, struct threadpool_object *object );
+@@ -347,7 +400,7 @@ update_timer:
      RtlLeaveCriticalSection( &timerqueue.cs );
  
      if (submit_timer)
--        tp_object_submit( new_timer );
-+        tp_object_submit( new_timer, FALSE );
+-       tp_object_submit( new_timer );
++       tp_object_submit( new_timer, FALSE );
  }
  
  static void CALLBACK timerqueue_thread_proc( void *param )
-@@ -411,7 +469,7 @@ static void CALLBACK timerqueue_thread_proc( void *param )
+@@ -374,7 +427,7 @@ static void CALLBACK timerqueue_thread_proc( void *param )
  
              /* Queue a new callback in one of the worker threads */
              list_remove( &timer->u.timer.timer_entry );
@@ -177,14 +172,10 @@ index 19096a0..ae98d7a 100644
  
              /* Requeue the timer, except its marked for shutdown */
              if (!timer->shutdown && timer->u.timer.period)
-@@ -477,6 +535,306 @@ static void CALLBACK timerqueue_thread_proc( void *param )
+@@ -440,6 +493,301 @@ static void CALLBACK timerqueue_thread_proc( void *param )
      RtlLeaveCriticalSection( &timerqueue.cs );
  }
  
-+/***********************************************************************
-+ * WAITQUEUE IMPLEMENTATION
-+ ***********************************************************************/
-+
 +static NTSTATUS tp_waitqueue_acquire( struct threadpool_object *wait )
 +{
 +    struct waitqueue_bucket *bucket;
@@ -192,14 +183,12 @@ index 19096a0..ae98d7a 100644
 +    HANDLE thread;
 +    assert( wait->type = TP_OBJECT_TYPE_WAIT );
 +
-+    wait->u.wait.signaled = 0;
-+
-+    wait->u.wait.bucket = NULL;
-+    wait->u.wait.wait_pending = FALSE;
++    wait->u.wait.signaled       = 0;
++    wait->u.wait.bucket         = NULL;
++    wait->u.wait.wait_pending   = FALSE;
 +    memset( &wait->u.wait.wait_entry, 0, sizeof(wait->u.wait.wait_entry) );
-+
-+    wait->u.wait.timeout = 0;
-+    wait->u.wait.handle = INVALID_HANDLE_VALUE;
++    wait->u.wait.timeout        = 0;
++    wait->u.wait.handle         = INVALID_HANDLE_VALUE;
 +
 +    RtlEnterCriticalSection( &waitqueue.cs );
 +
@@ -481,20 +470,21 @@ index 19096a0..ae98d7a 100644
 +    NtClose( bucket->update_event );
 +    RtlFreeHeap( GetProcessHeap(), 0, bucket );
 +}
++
+ static struct threadpool *default_threadpool = NULL;
  
- /***********************************************************************
-  * THREADPOOL INSTANCE IMPLEMENTATION
-@@ -689,6 +1047,7 @@ static void tp_threadpool_shutdown( struct threadpool *pool )
- static void CALLBACK threadpool_worker_proc( void *param )
- {
+ /* allocates or returns the default threadpool */
+@@ -536,6 +884,7 @@ static void CALLBACK threadpool_worker_proc( void *param )
+     struct threadpool_instance instance;
+     TP_CALLBACK_INSTANCE *cb_instance = (TP_CALLBACK_INSTANCE *)&instance;
      struct threadpool *pool = param;
 +    TP_WAIT_RESULT wait_result;
      LARGE_INTEGER timeout;
      struct list *ptr;
  
-@@ -708,6 +1067,18 @@ static void CALLBACK threadpool_worker_proc( void *param )
+@@ -553,6 +902,18 @@ static void CALLBACK threadpool_worker_proc( void *param )
+             if (--object->num_pending_callbacks)
                  list_add_tail( &pool->pool, &object->pool_entry );
-             object->num_running_callbacks++;
  
 +            /* for wait objects, determine if the object was signaled or if this
 +             * is a timeout. */
@@ -509,16 +499,15 @@ index 19096a0..ae98d7a 100644
 +            }
 +
              /* Leave critical section and do the actual callback. */
+             object->num_running_callbacks++;
              pool->num_busy_workers++;
-             RtlLeaveCriticalSection( &pool->cs );
-@@ -746,6 +1117,16 @@ static void CALLBACK threadpool_worker_proc( void *param )
+@@ -588,6 +949,15 @@ static void CALLBACK threadpool_worker_proc( void *param )
                      break;
                  }
  
 +                case TP_OBJECT_TYPE_WAIT:
 +                {
-+                    TP_CALLBACK_INSTANCE *cb_instance = (TP_CALLBACK_INSTANCE *)&instance;
-+                    TRACE( "executing callback %p(%p, %p, %p, %u)\n",
++                    TRACE( "executing wait callback %p(%p, %p, %p, %u)\n",
 +                           object->u.wait.callback, cb_instance, object->userdata, object, wait_result );
 +                    object->u.wait.callback( cb_instance, object->userdata, (TP_WAIT *)object, wait_result );
 +                    TRACE( "callback %p returned\n", object->u.wait.callback );
@@ -526,18 +515,18 @@ index 19096a0..ae98d7a 100644
 +                }
 +
                  default:
-                     FIXME( "callback type %u not implemented\n", object->type );
+                     assert(0);
                      break;
-@@ -857,7 +1238,7 @@ static void tp_object_initialize( struct threadpool_object *object, struct threa
+@@ -687,7 +1057,7 @@ static void tp_object_initialize( struct threadpool_object *object, struct threa
       * to the cleanup group. As soon as the cleanup group members are released ->shutdown
       * will be set, and tp_object_submit would fail with an assertion. */
-     if (submit_and_release)
+     if (simple_cb)
 -        tp_object_submit( object );
 +        tp_object_submit( object, FALSE );
  
-     /* Assign this object to a specific group. Please note that this has to be done
-      * as the last step before returning a pointer to the application, otherwise
-@@ -956,6 +1337,38 @@ static NTSTATUS tp_object_alloc_timer( struct threadpool_object **out, PTP_TIMER
+     if (object->group)
+     {
+@@ -800,8 +1170,45 @@ static NTSTATUS tp_object_alloc_timer( struct threadpool_object **out, PTP_TIMER
      return STATUS_SUCCESS;
  }
  
@@ -545,13 +534,18 @@ index 19096a0..ae98d7a 100644
 +                                      PVOID userdata, TP_CALLBACK_ENVIRON *environment )
 +{
 +    struct threadpool_object *object;
-+    struct threadpool *pool;
++    struct threadpool *pool = NULL;
 +    NTSTATUS status;
 +
-+    /* determine threadpool */
-+    pool = environment ? (struct threadpool *)environment->Pool : NULL;
-+    if (!pool) pool = get_default_threadpool();
-+    if (!pool) return STATUS_NO_MEMORY;
++    if (environment)
++        pool = (struct threadpool *)environment->Pool;
++
++    if (!pool)
++    {
++        pool = get_default_threadpool();
++        if (!pool)
++            return STATUS_NO_MEMORY;
++    }
 +
 +    object = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*object) );
 +    if (!object)
@@ -567,57 +561,21 @@ index 19096a0..ae98d7a 100644
 +        return status;
 +    }
 +
-+    tp_object_initialize( object, pool, userdata, environment, FALSE );
++    tp_object_initialize( object, pool, userdata, environment );
 +
 +    *out = object;
 +    return STATUS_SUCCESS;
 +}
 +
- static BOOL tp_object_release( struct threadpool_object *object )
- {
-     struct threadpool_group *group;
-@@ -996,6 +1409,11 @@ static void tp_object_shutdown( struct threadpool_object *object )
-         /* release reference on the timerqueue */
-         tp_timerqueue_release( object );
-     }
-+    else if (object->type == TP_OBJECT_TYPE_WAIT)
-+    {
-+        /* release reference to the waitqueue */
-+        tp_waitqueue_release( object );
-+    }
- 
-     object->shutdown = TRUE;
- }
-@@ -1007,12 +1425,17 @@ static void tp_object_cancel( struct threadpool_object *object, BOOL group_cance
- 
-     /* Remove the pending callbacks from the pool */
-     RtlEnterCriticalSection( &pool->cs );
-+
-     if (object->num_pending_callbacks)
-     {
-         pending_callbacks = object->num_pending_callbacks;
-         list_remove( &object->pool_entry );
-         object->num_pending_callbacks = 0;
-     }
-+
-+    if (object->type == TP_OBJECT_TYPE_WAIT)
-+        object->u.wait.signaled = 0;
-+
-     RtlLeaveCriticalSection( &pool->cs );
- 
-     /* Execute group cancellation callback if defined, and if this was actually a group cancel. */
-@@ -1039,7 +1462,7 @@ static void tp_object_wait( struct threadpool_object *object )
-     RtlLeaveCriticalSection( &pool->cs );
- }
- 
+ /* submits an object to a threadpool */
 -static void tp_object_submit( struct threadpool_object *object )
 +static void tp_object_submit( struct threadpool_object *object, BOOL success )
  {
      struct threadpool *pool = object->pool;
  
-@@ -1076,6 +1499,10 @@ static void tp_object_submit( struct threadpool_object *object )
- 
-     interlocked_inc( &object->refcount );
+@@ -836,6 +1243,10 @@ out:
+     if (!object->num_pending_callbacks++)
+         list_add_tail( &pool->pool, &object->pool_entry );
  
 +    /* increment success counter by one */
 +    if (object->type == TP_OBJECT_TYPE_WAIT && success)
@@ -626,7 +584,26 @@ index 19096a0..ae98d7a 100644
      RtlLeaveCriticalSection( &pool->cs );
  }
  
-@@ -1210,6 +1637,16 @@ NTSTATUS WINAPI TpAllocTimer( TP_TIMER **out, PTP_TIMER_CALLBACK callback, PVOID
+@@ -854,6 +1265,9 @@ static void tp_object_cancel( struct threadpool_object *object, BOOL group_cance
+         list_remove( &object->pool_entry );
+     }
+ 
++    if (object->type == TP_OBJECT_TYPE_WAIT)
++        object->u.wait.signaled = 0;
++
+     RtlLeaveCriticalSection( &pool->cs );
+ 
+     /* Execute group cancellation callback if defined, and if this was actually a group cancel. */
+@@ -887,6 +1301,8 @@ static void tp_object_shutdown( struct threadpool_object *object )
+ {
+     if (object->type == TP_OBJECT_TYPE_TIMER)
+         tp_timerqueue_release( object );
++    else if (object->type == TP_OBJECT_TYPE_WAIT)
++        tp_waitqueue_release( object );
+ 
+     object->shutdown = TRUE;
+ }
+@@ -1191,6 +1607,18 @@ NTSTATUS WINAPI TpAllocTimer( TP_TIMER **out, PTP_TIMER_CALLBACK callback, PVOID
  }
  
  /***********************************************************************
@@ -636,23 +613,25 @@ index 19096a0..ae98d7a 100644
 +                             TP_CALLBACK_ENVIRON *environment )
 +{
 +    TRACE("%p %p %p %p\n", out, callback, userdata, environment);
-+    return tp_object_alloc_wait( (struct threadpool_object **)out, callback, userdata, environment );
++
++    return tp_object_alloc_wait( (struct threadpool_object **)out, callback,
++                                 userdata, environment );
 +}
 +
 +/***********************************************************************
   *           TpAllocWork    (NTDLL.@)
   */
  NTSTATUS WINAPI TpAllocWork( TP_WORK **out, PTP_WORK_CALLBACK callback, PVOID userdata,
-@@ -1330,7 +1767,7 @@ VOID WINAPI TpPostWork( TP_WORK *work )
- {
-     struct threadpool_object *this = impl_from_TP_WORK( work );
-     TRACE("%p\n", work);
--    if (this) tp_object_submit( this );
-+    if (this) tp_object_submit( this, FALSE );
+@@ -1352,7 +1780,7 @@ VOID WINAPI TpPostWork( TP_WORK *work )
+ 
+     if (this)
+     {
+-        tp_object_submit( this );
++        tp_object_submit( this, FALSE );
+     }
  }
  
- /***********************************************************************
-@@ -1386,6 +1823,20 @@ VOID WINAPI TpReleaseTimer( TP_TIMER *timer )
+@@ -1416,6 +1844,21 @@ VOID WINAPI TpReleaseTimer( TP_TIMER *timer )
  }
  
  /***********************************************************************
@@ -662,6 +641,7 @@ index 19096a0..ae98d7a 100644
 +{
 +    struct threadpool_object *this = impl_from_TP_WAIT( wait );
 +    TRACE("%p\n", wait);
++
 +    if (this)
 +    {
 +        tp_object_shutdown( this );
@@ -673,7 +653,7 @@ index 19096a0..ae98d7a 100644
   *           TpReleaseWork    (NTDLL.@)
   */
  VOID WINAPI TpReleaseWork( TP_WORK *work )
-@@ -1431,6 +1882,16 @@ VOID WINAPI TpSetTimer( TP_TIMER *timer, LARGE_INTEGER *timeout, LONG period, LO
+@@ -1478,6 +1921,20 @@ VOID WINAPI TpSetTimer( TP_TIMER *timer, LARGE_INTEGER *timeout, LONG period, LO
  }
  
  /***********************************************************************
@@ -683,14 +663,18 @@ index 19096a0..ae98d7a 100644
 +{
 +    struct threadpool_object *this = impl_from_TP_WAIT( wait );
 +    TRACE("%p %p %p\n", wait, handle, timeout);
-+    if (this) tp_waitqueue_update_wait( this, handle, timeout );
++
++    if (this)
++    {
++        tp_waitqueue_update_wait( this, handle, timeout );
++    }
 +}
 +
 +/***********************************************************************
   *           TpSimpleTryPost    (NTDLL.@)
   */
- NTSTATUS WINAPI TpSimpleTryPost( PTP_SIMPLE_CALLBACK callback, PVOID userdata, TP_CALLBACK_ENVIRON *environment )
-@@ -1455,6 +1916,21 @@ VOID WINAPI TpWaitForTimer( TP_TIMER *timer, BOOL cancel_pending )
+ NTSTATUS WINAPI TpSimpleTryPost( PTP_SIMPLE_CALLBACK callback, PVOID userdata,
+@@ -1504,6 +1961,21 @@ VOID WINAPI TpWaitForTimer( TP_TIMER *timer, BOOL cancel_pending )
  }
  
  /***********************************************************************
@@ -713,5 +697,5 @@ index 19096a0..ae98d7a 100644
   */
  VOID WINAPI TpWaitForWork( TP_WORK *work, BOOL cancel_pending )
 -- 
-2.2.2
+2.3.0
 

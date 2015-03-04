@@ -1,0 +1,112 @@
+From c3f8e7288538d526ece6b07ff69790e6ff7b1d9d Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 4 Mar 2015 07:31:27 +0100
+Subject: ntdll: Implement TpDisassociateCallback.
+
+---
+ dlls/ntdll/ntdll.spec    |  1 +
+ dlls/ntdll/threadpool2.c | 52 +++++++++++++++++++++++++++++++++++++++++++++---
+ 2 files changed, 50 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index 38e6fe8..aaf1c64 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -971,6 +971,7 @@
+ @ stdcall TpAllocPool(ptr ptr)
+ @ stdcall TpAllocWork(ptr ptr ptr ptr)
+ @ stdcall TpCallbackMayRunLong(ptr)
++@ stdcall TpDisassociateCallback(ptr)
+ @ stdcall TpPostWork(ptr)
+ @ stdcall TpReleaseCleanupGroup(ptr)
+ @ stdcall TpReleaseCleanupGroupMembers(ptr long ptr)
+diff --git a/dlls/ntdll/threadpool2.c b/dlls/ntdll/threadpool2.c
+index 90f2ab7..c40c06a 100644
+--- a/dlls/ntdll/threadpool2.c
++++ b/dlls/ntdll/threadpool2.c
+@@ -112,6 +112,7 @@ struct threadpool_instance
+ {
+     struct threadpool_object *object;
+     DWORD                   threadid;
++    BOOL                    disassociated;
+     BOOL                    may_run_long;
+ };
+ 
+@@ -312,9 +313,12 @@ static void CALLBACK threadpool_worker_proc( void *param )
+ 
+             RtlEnterCriticalSection( &pool->cs );
+             pool->num_busy_workers--;
+-            object->num_running_callbacks--;
+-            if (!object->num_pending_callbacks && !object->num_running_callbacks)
+-                RtlWakeAllConditionVariable( &object->finished_event );
++            if (!instance.disassociated)
++            {
++                object->num_running_callbacks--;
++                if (!object->num_pending_callbacks && !object->num_running_callbacks)
++                    RtlWakeAllConditionVariable( &object->finished_event );
++            }
+             tp_object_release( object );
+         }
+ 
+@@ -599,9 +603,37 @@ static void tp_instance_initialize( struct threadpool_instance *instance, struct
+ {
+     instance->object                    = object;
+     instance->threadid                  = GetCurrentThreadId();
++    instance->disassociated             = FALSE;
+     instance->may_run_long              = object->may_run_long;
+ }
+ 
++/* disassociates the current thread from the threadpool object */
++static void tp_instance_disassociate_thread( struct threadpool_instance *instance )
++{
++    struct threadpool_object *object;
++    struct threadpool *pool;
++
++    if (instance->threadid != GetCurrentThreadId())
++    {
++        ERR("called from wrong thread, ignoring\n");
++        return;
++    }
++
++    if (instance->disassociated)
++        return;
++
++    object = instance->object;
++    pool   = object->pool;
++    RtlEnterCriticalSection( &pool->cs );
++
++    object->num_running_callbacks--;
++    if (!object->num_pending_callbacks && !object->num_running_callbacks)
++        RtlWakeAllConditionVariable( &object->finished_event );
++
++    RtlLeaveCriticalSection( &pool->cs );
++    instance->disassociated = TRUE;
++}
++
+ /* hint for the threadpool that the execution might take long, spawn additional workers */
+ static BOOL tp_instance_may_run_long( struct threadpool_instance *instance )
+ {
+@@ -799,6 +831,20 @@ NTSTATUS WINAPI TpCallbackMayRunLong( TP_CALLBACK_INSTANCE *instance )
+ }
+ 
+ /***********************************************************************
++ *           TpDisassociateCallback    (NTDLL.@)
++ */
++VOID WINAPI TpDisassociateCallback( TP_CALLBACK_INSTANCE *instance )
++{
++    struct threadpool_instance *this = impl_from_TP_CALLBACK_INSTANCE( instance );
++    TRACE("%p\n", instance);
++
++    if (this)
++    {
++        tp_instance_disassociate_thread( this );
++    }
++}
++
++/***********************************************************************
+  *           TpPostWork    (NTDLL.@)
+  */
+ VOID WINAPI TpPostWork( TP_WORK *work )
+-- 
+2.3.0
+

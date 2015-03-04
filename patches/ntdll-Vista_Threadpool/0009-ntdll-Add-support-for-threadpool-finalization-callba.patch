@@ -1,0 +1,56 @@
+From 7fb1d9cfd7dbae474fa0965a143be2408240eeb2 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 4 Mar 2015 07:03:15 +0100
+Subject: ntdll: Add support for threadpool finalization callback.
+
+---
+ dlls/ntdll/threadpool2.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/dlls/ntdll/threadpool2.c b/dlls/ntdll/threadpool2.c
+index 5233271..d9e08ac 100644
+--- a/dlls/ntdll/threadpool2.c
++++ b/dlls/ntdll/threadpool2.c
+@@ -82,6 +82,7 @@ struct threadpool_object
+     struct threadpool_group *group;
+     PVOID                   userdata;
+     PTP_CLEANUP_GROUP_CANCEL_CALLBACK group_cancel_callback;
++    PTP_SIMPLE_CALLBACK     finalization_callback;
+     /* information about the group, locked via .group->cs */
+     struct list             group_entry;
+     BOOL                    is_group_member;
+@@ -281,6 +282,15 @@ static void CALLBACK threadpool_worker_proc( void *param )
+                     break;
+             }
+ 
++            /* Execute finalization callback */
++            if (object->finalization_callback)
++            {
++                TRACE( "executing finalization callback %p(NULL, %p)\n",
++                       object->finalization_callback, object->userdata );
++                object->finalization_callback( NULL, object->userdata );
++                TRACE( "callback %p returned\n", object->finalization_callback );
++            }
++
+             RtlEnterCriticalSection( &pool->cs );
+             pool->num_busy_workers--;
+             object->num_running_callbacks--;
+@@ -319,6 +329,7 @@ static void tp_object_initialize( struct threadpool_object *object, struct threa
+     object->group                   = NULL;
+     object->userdata                = userdata;
+     object->group_cancel_callback   = NULL;
++    object->finalization_callback   = NULL;
+ 
+     memset( &object->group_entry, 0, sizeof(object->group_entry) );
+     object->is_group_member         = FALSE;
+@@ -335,6 +346,7 @@ static void tp_object_initialize( struct threadpool_object *object, struct threa
+ 
+         object->group = impl_from_TP_CLEANUP_GROUP( environment->CleanupGroup );
+         object->group_cancel_callback   = environment->CleanupGroupCancelCallback;
++        object->finalization_callback   = environment->FinalizationCallback;
+ 
+         WARN("environment not fully implemented yet\n");
+     }
+-- 
+2.3.0
+

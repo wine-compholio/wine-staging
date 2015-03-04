@@ -1,0 +1,223 @@
+From 750a6fed12e8b667325b93919a05daf6cbc648b4 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 4 Mar 2015 07:25:35 +0100
+Subject: ntdll: Implement TpCallbackMayRunLong and instance structure.
+
+---
+ dlls/ntdll/ntdll.spec    |   1 +
+ dlls/ntdll/threadpool2.c | 104 ++++++++++++++++++++++++++++++++++++++++++-----
+ 2 files changed, 95 insertions(+), 10 deletions(-)
+
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index 1c768c9..38e6fe8 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -970,6 +970,7 @@
+ @ stdcall TpAllocCleanupGroup(ptr)
+ @ stdcall TpAllocPool(ptr ptr)
+ @ stdcall TpAllocWork(ptr ptr ptr ptr)
++@ stdcall TpCallbackMayRunLong(ptr)
+ @ stdcall TpPostWork(ptr)
+ @ stdcall TpReleaseCleanupGroup(ptr)
+ @ stdcall TpReleaseCleanupGroupMembers(ptr long ptr)
+diff --git a/dlls/ntdll/threadpool2.c b/dlls/ntdll/threadpool2.c
+index a5203f0..90f2ab7 100644
+--- a/dlls/ntdll/threadpool2.c
++++ b/dlls/ntdll/threadpool2.c
+@@ -83,6 +83,7 @@ struct threadpool_object
+     PVOID                   userdata;
+     PTP_CLEANUP_GROUP_CANCEL_CALLBACK group_cancel_callback;
+     PTP_SIMPLE_CALLBACK     finalization_callback;
++    BOOL                    may_run_long;
+     HMODULE                 race_dll;
+     /* information about the group, locked via .group->cs */
+     struct list             group_entry;
+@@ -106,6 +107,14 @@ struct threadpool_object
+     } u;
+ };
+ 
++/* internal threadpool instance representation */
++struct threadpool_instance
++{
++    struct threadpool_object *object;
++    DWORD                   threadid;
++    BOOL                    may_run_long;
++};
++
+ /* internal threadpool group representation */
+ struct threadpool_group
+ {
+@@ -133,6 +142,11 @@ static inline struct threadpool_group *impl_from_TP_CLEANUP_GROUP( TP_CLEANUP_GR
+     return (struct threadpool_group *)group;
+ }
+ 
++static inline struct threadpool_instance *impl_from_TP_CALLBACK_INSTANCE( TP_CALLBACK_INSTANCE *instance )
++{
++    return (struct threadpool_instance *)instance;
++}
++
+ static void CALLBACK threadpool_worker_proc( void *param );
+ static NTSTATUS tp_threadpool_alloc( struct threadpool **out );
+ static void tp_threadpool_shutdown( struct threadpool *pool );
+@@ -140,6 +154,7 @@ static BOOL tp_threadpool_release( struct threadpool *pool );
+ static void tp_object_submit( struct threadpool_object *object );
+ static void tp_object_shutdown( struct threadpool_object *object );
+ static BOOL tp_object_release( struct threadpool_object *object );
++static void tp_instance_initialize( struct threadpool_instance *instance, struct threadpool_object *object );
+ static BOOL tp_group_release( struct threadpool_group *group );
+ 
+ static struct threadpool *default_threadpool = NULL;
+@@ -235,6 +250,8 @@ static BOOL tp_threadpool_release( struct threadpool *pool )
+ /* threadpool worker function */
+ static void CALLBACK threadpool_worker_proc( void *param )
+ {
++    struct threadpool_instance instance;
++    TP_CALLBACK_INSTANCE *cb_instance = (TP_CALLBACK_INSTANCE *)&instance;
+     struct threadpool *pool = param;
+     LARGE_INTEGER timeout;
+     struct list *ptr;
+@@ -257,23 +274,24 @@ static void CALLBACK threadpool_worker_proc( void *param )
+             object->num_running_callbacks++;
+             pool->num_busy_workers++;
+             RtlLeaveCriticalSection( &pool->cs );
++            tp_instance_initialize( &instance, object );
+ 
+             switch (object->type)
+             {
+                 case TP_OBJECT_TYPE_SIMPLE:
+                 {
+-                    TRACE( "executing simple callback %p(NULL, %p)\n",
+-                           object->u.simple.callback, object->userdata );
+-                    object->u.simple.callback( NULL, object->userdata );
++                    TRACE( "executing simple callback %p(%p, %p)\n",
++                           object->u.simple.callback, cb_instance, object->userdata );
++                    object->u.simple.callback( cb_instance, object->userdata );
+                     TRACE( "callback %p returned\n", object->u.simple.callback );
+                     break;
+                 }
+ 
+                 case TP_OBJECT_TYPE_WORK:
+                 {
+-                    TRACE( "executing work callback %p(NULL, %p, %p)\n",
+-                           object->u.work.callback, object->userdata, object );
+-                    object->u.work.callback( NULL, object->userdata, (TP_WORK *)object );
++                    TRACE( "executing work callback %p(%p, %p, %p)\n",
++                           object->u.work.callback, cb_instance, object->userdata, object );
++                    object->u.work.callback( cb_instance, object->userdata, (TP_WORK *)object );
+                     TRACE( "callback %p returned\n", object->u.work.callback );
+                     break;
+                 }
+@@ -286,9 +304,9 @@ static void CALLBACK threadpool_worker_proc( void *param )
+             /* Execute finalization callback */
+             if (object->finalization_callback)
+             {
+-                TRACE( "executing finalization callback %p(NULL, %p)\n",
+-                       object->finalization_callback, object->userdata );
+-                object->finalization_callback( NULL, object->userdata );
++                TRACE( "executing finalization callback %p(%p, %p)\n",
++                       object->finalization_callback, cb_instance, object->userdata );
++                object->finalization_callback( cb_instance, object->userdata );
+                 TRACE( "callback %p returned\n", object->finalization_callback );
+             }
+ 
+@@ -331,6 +349,7 @@ static void tp_object_initialize( struct threadpool_object *object, struct threa
+     object->userdata                = userdata;
+     object->group_cancel_callback   = NULL;
+     object->finalization_callback   = NULL;
++    object->may_run_long            = 0;
+     object->race_dll                = NULL;
+ 
+     memset( &object->group_entry, 0, sizeof(object->group_entry) );
+@@ -349,9 +368,14 @@ static void tp_object_initialize( struct threadpool_object *object, struct threa
+         object->group = impl_from_TP_CLEANUP_GROUP( environment->CleanupGroup );
+         object->group_cancel_callback   = environment->CleanupGroupCancelCallback;
+         object->finalization_callback   = environment->FinalizationCallback;
++        object->may_run_long            = environment->u.s.LongFunction != 0;
+         object->race_dll                = environment->RaceDll;
+ 
+-        WARN("environment not fully implemented yet\n");
++        if (environment->ActivationContext)
++            FIXME("activation context not supported yet\n");
++
++        if (environment->u.s.Persistent)
++            FIXME("persistent thread support not supported yet\n");
+     }
+ 
+     /* Increase dll refcount */
+@@ -570,6 +594,52 @@ static BOOL tp_object_release( struct threadpool_object *object )
+     return TRUE;
+ }
+ 
++/* initializes a threadpool instance structure */
++static void tp_instance_initialize( struct threadpool_instance *instance, struct threadpool_object *object )
++{
++    instance->object                    = object;
++    instance->threadid                  = GetCurrentThreadId();
++    instance->may_run_long              = object->may_run_long;
++}
++
++/* hint for the threadpool that the execution might take long, spawn additional workers */
++static BOOL tp_instance_may_run_long( struct threadpool_instance *instance )
++{
++    struct threadpool_object *object;
++    struct threadpool *pool;
++    NTSTATUS status = STATUS_SUCCESS;
++
++    if (instance->threadid != GetCurrentThreadId())
++    {
++        ERR("called from wrong thread, ignoring\n");
++        return FALSE;
++    }
++
++    if (instance->may_run_long)
++        return TRUE;
++
++    object = instance->object;
++    pool   = object->pool;
++    RtlEnterCriticalSection( &pool->cs );
++
++    if (pool->num_busy_workers >= pool->num_workers && pool->num_workers < pool->max_workers)
++    {
++        HANDLE thread;
++        status = RtlCreateUserThread( GetCurrentProcess(), NULL, FALSE, NULL, 0, 0,
++                                      threadpool_worker_proc, pool, &thread, NULL );
++        if (status == STATUS_SUCCESS)
++        {
++            interlocked_inc( &pool->refcount );
++            pool->num_workers++;
++            NtClose( thread );
++        }
++    }
++
++    RtlLeaveCriticalSection( &pool->cs );
++    instance->may_run_long = TRUE;
++    return !status;
++}
++
+ /* allocates a new cleanup group */
+ static NTSTATUS tp_group_alloc( struct threadpool_group **out )
+ {
+@@ -715,6 +785,20 @@ NTSTATUS WINAPI TpAllocWork( TP_WORK **out, PTP_WORK_CALLBACK callback, PVOID us
+ }
+ 
+ /***********************************************************************
++ *           TpCallbackMayRunLong    (NTDLL.@)
++ */
++NTSTATUS WINAPI TpCallbackMayRunLong( TP_CALLBACK_INSTANCE *instance )
++{
++    struct threadpool_instance *this = impl_from_TP_CALLBACK_INSTANCE( instance );
++    TRACE("%p\n", instance);
++
++    if (!this)
++        return STATUS_ACCESS_VIOLATION;
++
++    return tp_instance_may_run_long( this );
++}
++
++/***********************************************************************
+  *           TpPostWork    (NTDLL.@)
+  */
+ VOID WINAPI TpPostWork( TP_WORK *work )
+-- 
+2.3.0
+

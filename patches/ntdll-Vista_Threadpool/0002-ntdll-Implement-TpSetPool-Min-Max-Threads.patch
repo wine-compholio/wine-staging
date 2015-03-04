@@ -1,0 +1,70 @@
+From b2f107dc3bbde6a242f2ce0fc4b350728f8135f5 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 4 Mar 2015 00:16:20 +0100
+Subject: ntdll: Implement TpSetPool[Min|Max]Threads.
+
+---
+ dlls/ntdll/ntdll.spec    |  2 ++
+ dlls/ntdll/threadpool2.c | 33 +++++++++++++++++++++++++++++++++
+ 2 files changed, 35 insertions(+)
+
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index aa16021..9a7ddeb 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -969,6 +969,8 @@
+ @ stdcall RtlxUnicodeStringToOemSize(ptr) RtlUnicodeStringToOemSize
+ @ stdcall TpAllocPool(ptr ptr)
+ @ stdcall TpReleasePool(ptr)
++@ stdcall TpSetPoolMaxThreads(ptr long)
++@ stdcall TpSetPoolMinThreads(ptr long)
+ @ stdcall TpSimpleTryPost(ptr ptr ptr)
+ @ stdcall -ret64 VerSetConditionMask(int64 long long)
+ @ stdcall ZwAcceptConnectPort(ptr long ptr long long ptr) NtAcceptConnectPort
+diff --git a/dlls/ntdll/threadpool2.c b/dlls/ntdll/threadpool2.c
+index e912729..08bcde0 100644
+--- a/dlls/ntdll/threadpool2.c
++++ b/dlls/ntdll/threadpool2.c
+@@ -413,6 +413,39 @@ VOID WINAPI TpReleasePool( TP_POOL *pool )
+ }
+ 
+ /***********************************************************************
++ *           TpSetPoolMaxThreads    (NTDLL.@)
++ */
++VOID WINAPI TpSetPoolMaxThreads( TP_POOL *pool, DWORD maximum )
++{
++    struct threadpool *this = impl_from_TP_POOL( pool );
++    TRACE("%p %d\n", pool, maximum);
++
++    if (this)
++    {
++        RtlEnterCriticalSection( &this->cs );
++        this->max_workers = max(maximum, 1);
++        RtlLeaveCriticalSection( &this->cs );
++    }
++}
++
++/***********************************************************************
++ *           TpSetPoolMinThreads    (NTDLL.@)
++ */
++BOOL WINAPI TpSetPoolMinThreads( TP_POOL *pool, DWORD minimum )
++{
++    struct threadpool *this = impl_from_TP_POOL( pool );
++    FIXME("%p %d: semi-stub\n", pool, minimum);
++
++    if (this)
++    {
++        RtlEnterCriticalSection( &this->cs );
++        this->min_workers = max(minimum, 1);
++        RtlLeaveCriticalSection( &this->cs );
++    }
++    return TRUE;
++}
++
++/***********************************************************************
+  *           TpSimpleTryPost    (NTDLL.@)
+  */
+ NTSTATUS WINAPI TpSimpleTryPost( PTP_SIMPLE_CALLBACK callback, PVOID userdata,
+-- 
+2.3.0
+

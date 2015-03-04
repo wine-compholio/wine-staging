@@ -1,4 +1,4 @@
-From 8d70c149974dafbdabc76cf2fb9daf9108a853f2 Mon Sep 17 00:00:00 2001
+From 24ad6b8855d6739be102ed3d1cd3d18b39e3fceb Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 11 Aug 2014 18:20:52 +0200
 Subject: ntdll: Add handling for partially received messages in NtReadFile.
@@ -18,10 +18,10 @@ Changes in v4:
  2 files changed, 27 insertions(+), 54 deletions(-)
 
 diff --git a/dlls/kernel32/tests/pipe.c b/dlls/kernel32/tests/pipe.c
-index 743144e..6a27826 100644
+index dff00c9..81b4581 100644
 --- a/dlls/kernel32/tests/pipe.c
 +++ b/dlls/kernel32/tests/pipe.c
-@@ -304,9 +304,7 @@ static void test_CreateNamedPipe(int pipemode)
+@@ -305,9 +305,7 @@ static void test_CreateNamedPipe(int pipemode)
          else
          {
              SetLastError(0xdeadbeef);
@@ -31,7 +31,7 @@ index 743144e..6a27826 100644
              ok(GetLastError() == ERROR_MORE_DATA, "wrong error\n");
          }
          ok(readden == 4, "read got %d bytes\n", readden);
-@@ -327,15 +325,11 @@ static void test_CreateNamedPipe(int pipemode)
+@@ -328,15 +326,11 @@ static void test_CreateNamedPipe(int pipemode)
          else
          {
              SetLastError(0xdeadbeef);
@@ -47,7 +47,7 @@ index 743144e..6a27826 100644
              ok(GetLastError() == ERROR_MORE_DATA, "wrong error\n");
          }
          ok(readden == 4, "read got %d bytes\n", readden);
-@@ -397,9 +391,7 @@ static void test_CreateNamedPipe(int pipemode)
+@@ -398,9 +392,7 @@ static void test_CreateNamedPipe(int pipemode)
              ok(readden == sizeof(obuf) + sizeof(obuf2), "read 4 got %d bytes\n", readden);
          }
          else {
@@ -58,7 +58,7 @@ index 743144e..6a27826 100644
          }
          pbuf = ibuf;
          ok(memcmp(obuf, pbuf, sizeof(obuf)) == 0, "content 4a check\n");
-@@ -429,9 +421,7 @@ static void test_CreateNamedPipe(int pipemode)
+@@ -430,9 +422,7 @@ static void test_CreateNamedPipe(int pipemode)
              pbuf = ibuf;
              ok(memcmp(obuf, pbuf, sizeof(obuf)) == 0, "content 5a check\n");
              ok(ReadFile(hFile, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile\n");
@@ -69,7 +69,7 @@ index 743144e..6a27826 100644
              pbuf = ibuf;
              ok(memcmp(obuf, pbuf, sizeof(obuf)) == 0, "content 5a check\n");
              if (readden <= sizeof(obuf))
-@@ -440,10 +430,8 @@ static void test_CreateNamedPipe(int pipemode)
+@@ -441,10 +431,8 @@ static void test_CreateNamedPipe(int pipemode)
              /* Multiple writes in the reverse direction */
              /* the write of obuf2 from write4 should still be in the buffer */
              ok(PeekNamedPipe(hnp, ibuf, sizeof(ibuf), &readden, &avail, NULL), "Peek6a\n");
@@ -82,7 +82,7 @@ index 743144e..6a27826 100644
              if (avail > 0) {
                  ok(ReadFile(hnp, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile\n");
                  ok(readden == sizeof(obuf2), "read 6a got %d bytes\n", readden);
-@@ -461,9 +449,7 @@ static void test_CreateNamedPipe(int pipemode)
+@@ -462,9 +450,7 @@ static void test_CreateNamedPipe(int pipemode)
              pbuf = ibuf;
              ok(memcmp(obuf, pbuf, sizeof(obuf)) == 0, "content 6a check\n");
              ok(ReadFile(hnp, ibuf, sizeof(ibuf), &readden, NULL), "ReadFile\n");
@@ -93,7 +93,7 @@ index 743144e..6a27826 100644
              pbuf = ibuf;
              ok(memcmp(obuf, pbuf, sizeof(obuf)) == 0, "content 6a check\n");
              if (readden <= sizeof(obuf))
-@@ -474,9 +460,7 @@ static void test_CreateNamedPipe(int pipemode)
+@@ -475,9 +461,7 @@ static void test_CreateNamedPipe(int pipemode)
              ok(WriteFile(hnp, obuf2, sizeof(obuf2), &written, NULL), "WriteFile 7\n");
              ok(written == sizeof(obuf2), "write file len 7\n");
              SetLastError(0xdeadbeef);
@@ -103,7 +103,7 @@ index 743144e..6a27826 100644
              ok(GetLastError() == ERROR_MORE_DATA, "wrong error 7\n");
              ok(readden == 4, "read got %d bytes 7\n", readden);
              ok(ReadFile(hFile, ibuf + 4, sizeof(ibuf) - 4, &readden, NULL), "ReadFile 7\n");
-@@ -487,9 +471,7 @@ static void test_CreateNamedPipe(int pipemode)
+@@ -488,9 +472,7 @@ static void test_CreateNamedPipe(int pipemode)
              ok(WriteFile(hFile, obuf, sizeof(obuf), &written, NULL), "WriteFile 8\n");
              ok(written == sizeof(obuf), "write file len 8\n");
              SetLastError(0xdeadbeef);
@@ -113,7 +113,7 @@ index 743144e..6a27826 100644
              ok(GetLastError() == ERROR_MORE_DATA, "wrong error 8\n");
              ok(readden == 4, "read got %d bytes 8\n", readden);
              ok(ReadFile(hnp, ibuf + 4, sizeof(ibuf) - 4, &readden, NULL), "ReadFile 8\n");
-@@ -514,16 +496,12 @@ static void test_CreateNamedPipe(int pipemode)
+@@ -515,16 +497,12 @@ static void test_CreateNamedPipe(int pipemode)
              ok(readden == sizeof(obuf) + sizeof(obuf2), "peek got %d bytes total 9\n", readden);
              ok(leftmsg == sizeof(obuf), "peek got %d bytes left in message 9\n", leftmsg);
              SetLastError(0xdeadbeef);
@@ -130,7 +130,7 @@ index 743144e..6a27826 100644
              ok(GetLastError() == ERROR_MORE_DATA, "wrong error 9\n");
              ok(readden == 4, "read got %d bytes 9\n", readden);
              readden = leftmsg = -1;
-@@ -536,7 +514,6 @@ static void test_CreateNamedPipe(int pipemode)
+@@ -537,7 +515,6 @@ static void test_CreateNamedPipe(int pipemode)
              ok(leftmsg == sizeof(obuf) - 8, "peek got %d bytes left in message 9\n", leftmsg);
              ret = RpcReadFile(hFile, ibuf + 8, sizeof(ibuf), &readden, NULL);
              ok(ret, "RpcReadFile 9\n");
@@ -138,7 +138,7 @@ index 743144e..6a27826 100644
              ok(readden == sizeof(obuf) - 8, "read got %d bytes 9\n", readden);
              ok(memcmp(obuf, ibuf, sizeof(obuf)) == 0, "content check 9\n");
              if (readden <= sizeof(obuf) - 8) /* blocks forever if second part was already received */
-@@ -553,13 +530,10 @@ static void test_CreateNamedPipe(int pipemode)
+@@ -554,13 +531,10 @@ static void test_CreateNamedPipe(int pipemode)
                  SetLastError(0xdeadbeef);
                  ret = RpcReadFile(hFile, ibuf, 4, &readden, NULL);
                  ok(!ret, "RpcReadFile 9\n");
@@ -152,7 +152,7 @@ index 743144e..6a27826 100644
                  ok(GetLastError() == ERROR_MORE_DATA, "wrong error 9\n");
                  ok(readden == 4, "read got %d bytes 9\n", readden);
                  readden = leftmsg = -1;
-@@ -599,16 +573,12 @@ static void test_CreateNamedPipe(int pipemode)
+@@ -600,16 +574,12 @@ static void test_CreateNamedPipe(int pipemode)
              ok(readden == sizeof(obuf) + sizeof(obuf2), "peek got %d bytes total 10\n", readden);
              ok(leftmsg == sizeof(obuf2), "peek got %d bytes left in message 10\n", leftmsg);
              SetLastError(0xdeadbeef);
@@ -169,7 +169,7 @@ index 743144e..6a27826 100644
              ok(GetLastError() == ERROR_MORE_DATA, "wrong error 10\n");
              ok(readden == 4, "read got %d bytes 10\n", readden);
              readden = leftmsg = -1;
-@@ -621,7 +591,6 @@ static void test_CreateNamedPipe(int pipemode)
+@@ -622,7 +592,6 @@ static void test_CreateNamedPipe(int pipemode)
              ok(leftmsg == sizeof(obuf2) - 8, "peek got %d bytes left in message 10\n", leftmsg);
              ret = RpcReadFile(hnp, ibuf + 8, sizeof(ibuf), &readden, NULL);
              ok(ret, "RpcReadFile 10\n");
@@ -177,7 +177,7 @@ index 743144e..6a27826 100644
              ok(readden == sizeof(obuf2) - 8, "read got %d bytes 10\n", readden);
              ok(memcmp(obuf2, ibuf, sizeof(obuf2)) == 0, "content check 10\n");
              if (readden <= sizeof(obuf2) - 8) /* blocks forever if second part was already received */
-@@ -638,13 +607,10 @@ static void test_CreateNamedPipe(int pipemode)
+@@ -639,13 +608,10 @@ static void test_CreateNamedPipe(int pipemode)
                  SetLastError(0xdeadbeef);
                  ret = RpcReadFile(hnp, ibuf, 4, &readden, NULL);
                  ok(!ret, "RpcReadFile 10\n");
@@ -191,7 +191,7 @@ index 743144e..6a27826 100644
                  ok(GetLastError() == ERROR_MORE_DATA, "wrong error 10\n");
                  ok(readden == 4, "read got %d bytes 10\n", readden);
                  readden = leftmsg = -1;
-@@ -750,15 +716,11 @@ static void test_CreateNamedPipe(int pipemode)
+@@ -751,15 +717,11 @@ static void test_CreateNamedPipe(int pipemode)
              else
              {
                  SetLastError(0xdeadbeef);
@@ -207,7 +207,7 @@ index 743144e..6a27826 100644
                  ok(GetLastError() == ERROR_MORE_DATA, "wrong error\n");
              }
              ok(readden == 32, "read got %d bytes\n", readden);
-@@ -948,7 +910,6 @@ static void test_CloseNamedPipe(void)
+@@ -949,7 +911,6 @@ static void test_CloseNamedPipe(void)
          /* close server end without disconnecting */
          ok(CloseHandle(hnp), "CloseHandle() failed: %08x\n", GetLastError());
  
@@ -215,7 +215,7 @@ index 743144e..6a27826 100644
          ok(ReadFile(hFile, ibuf, 0, &readden, NULL), "ReadFile() failed: %08x\n", GetLastError());
          ok(readden == 0, "got %d bytes\n", readden);
  
-@@ -990,7 +951,6 @@ static void test_CloseNamedPipe(void)
+@@ -991,7 +952,6 @@ static void test_CloseNamedPipe(void)
          ok(CloseHandle(hFile), "CloseHandle() failed: %08x\n", GetLastError());
  
          /* you'd think ERROR_MORE_DATA, but no */
@@ -223,15 +223,15 @@ index 743144e..6a27826 100644
          ok(ReadFile(hnp, ibuf, 0, &readden, NULL), "ReadFile() failed: %08x\n", GetLastError());
          ok(readden == 0, "got %d bytes\n", readden);
  
-@@ -2460,7 +2420,6 @@ static void test_readfileex_pending(void)
-     num_bytes = 0xdeadbeef;
+@@ -2459,7 +2419,6 @@ static void test_readfileex_pending(void)
      SetLastError(0xdeadbeef);
      ret = ReadFile(server, read_buf, 0, &num_bytes, &overlapped);
+     ok(!ret, "ReadFile should fail\n");
 -todo_wine
      ok(GetLastError() == ERROR_IO_PENDING, "expected ERROR_IO_PENDING, got %d\n", GetLastError());
      ok(num_bytes == 0, "bytes %u\n", num_bytes);
      ok((NTSTATUS)overlapped.Internal == STATUS_PENDING, "expected STATUS_PENDING, got %#lx\n", overlapped.Internal);
-@@ -2476,11 +2435,9 @@ todo_wine
+@@ -2475,11 +2434,9 @@ todo_wine
      ok(num_bytes == 1, "bytes %u\n", num_bytes);
  
      wait = WaitForSingleObject(event, 100);
@@ -244,10 +244,10 @@ index 743144e..6a27826 100644
      ok(overlapped.InternalHigh == 0, "expected 0, got %lu\n", overlapped.InternalHigh);
  
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 5cbfa40..81f941d 100644
+index d8579a9..2c8855c 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -415,7 +415,7 @@ NTSTATUS FILE_GetNtStatus(void)
+@@ -441,7 +441,7 @@ NTSTATUS FILE_GetNtStatus(void)
      }
  }
  
@@ -256,7 +256,7 @@ index 5cbfa40..81f941d 100644
  static NTSTATUS unix_fd_avail(int fd, int *avail)
  {
      struct pollfd pollfd;
-@@ -444,7 +444,14 @@ static NTSTATUS unix_fd_avail(int fd, int *avail)
+@@ -470,7 +470,14 @@ static NTSTATUS unix_fd_avail(int fd, int *avail)
  static inline int get_pipe_flags(int fd)
  {
  #ifdef __linux__
@@ -272,7 +272,7 @@ index 5cbfa40..81f941d 100644
  #else
      return 0;
  #endif
-@@ -490,10 +497,12 @@ static NTSTATUS read_unix_fd(int fd, char *buf, ULONG *total, ULONG length,
+@@ -516,10 +523,12 @@ static NTSTATUS read_unix_fd(int fd, char *buf, ULONG *total, ULONG length,
          if (result >= 0)
          {
              *total += result;
@@ -287,7 +287,7 @@ index 5cbfa40..81f941d 100644
                  switch (type)
                  {
                  case FD_TYPE_FILE:
-@@ -501,11 +510,18 @@ static NTSTATUS read_unix_fd(int fd, char *buf, ULONG *total, ULONG length,
+@@ -527,11 +536,18 @@ static NTSTATUS read_unix_fd(int fd, char *buf, ULONG *total, ULONG length,
                      return length ? STATUS_END_OF_FILE : STATUS_SUCCESS;
                  case FD_TYPE_SERIAL:
                      return STATUS_PENDING;
@@ -307,7 +307,7 @@ index 5cbfa40..81f941d 100644
                  continue;
              else if (type != FD_TYPE_FILE) /* no async I/O on regular files */
                  return STATUS_PENDING;
-@@ -863,7 +879,7 @@ done:
+@@ -890,7 +906,7 @@ done:
  
  err:
      if (needs_close) close( unix_handle );
@@ -317,5 +317,5 @@ index 5cbfa40..81f941d 100644
          io_status->u.Status = status;
          io_status->Information = total;
 -- 
-2.1.3
+2.3.0
 

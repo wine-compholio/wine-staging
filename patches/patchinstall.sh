@@ -193,12 +193,10 @@ patch_enable_all ()
 	enable_user32_WndProc="$1"
 	enable_vcomp_Stub_Functions="$1"
 	enable_version_VersionInfoEx="$1"
-	enable_windowscodecs_TGA_Decoder="$1"
 	enable_windowscodecs_TIFF_Decoder="$1"
 	enable_wine_inf_Performance="$1"
 	enable_wineboot_HKEY_DYN_DATA="$1"
 	enable_winebuild_LinkerVersion="$1"
-	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
@@ -621,9 +619,6 @@ patch_enable ()
 		version-VersionInfoEx)
 			enable_version_VersionInfoEx="$2"
 			;;
-		windowscodecs-TGA_Decoder)
-			enable_windowscodecs_TGA_Decoder="$2"
-			;;
 		windowscodecs-TIFF_Decoder)
 			enable_windowscodecs_TIFF_Decoder="$2"
 			;;
@@ -635,9 +630,6 @@ patch_enable ()
 			;;
 		winebuild-LinkerVersion)
 			enable_winebuild_LinkerVersion="$2"
-			;;
-		winecfg-Libraries)
-			enable_winecfg_Libraries="$2"
 			;;
 		winecfg-Staging)
 			enable_winecfg_Staging="$2"
@@ -3915,18 +3907,6 @@ if test "$enable_version_VersionInfoEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset windowscodecs-TGA_Decoder
-# |
-# | Modified files:
-# |   *	dlls/windowscodecs/tgaformat.c
-# |
-if test "$enable_windowscodecs_TGA_Decoder" -eq 1; then
-	patch_apply windowscodecs-TGA_Decoder/0001-windowscodecs-Fix-init-of-LONGLONG-variable-with-a-n.patch
-	(
-		echo '+    { "Christian Costa", "windowscodecs: Fix init of LONGLONG variable with a negative value in TGA decoder.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset windowscodecs-TIFF_Decoder
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3984,21 +3964,6 @@ if test "$enable_winebuild_LinkerVersion" -eq 1; then
 	patch_apply winebuild-LinkerVersion/0001-winebuild-Set-a-valid-major-and-minor-linker-version.patch
 	(
 		echo '+    { "Michael Müller", "winebuild: Set a valid major and minor linker version.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winecfg-Libraries
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12804] Add library override instead of closing winecfg when pressing ENTER over the combobox
-# |
-# | Modified files:
-# |   *	programs/winecfg/libraries.c
-# |
-if test "$enable_winecfg_Libraries" -eq 1; then
-	patch_apply winecfg-Libraries/0001-winecfg-Add-library-override-instead-of-closing-wine.patch
-	(
-		echo '+    { "Sebastian Lackner", "winecfg: Add library override instead of closing winecfg when pressing ENTER.", 1 },';
 	) >> "$patchlist"
 fi
 

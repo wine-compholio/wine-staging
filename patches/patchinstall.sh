@@ -1556,9 +1556,9 @@ fi
 # |   *	dlls/d3dxof/d3dxof.c
 # |
 if test "$enable_d3dxof_Cleanup" -eq 1; then
-	patch_apply d3dxof-Cleanup/0001-d3dxof-Use-sizeof-GUID-instead-of-hardcoding-the-val.patch
+	patch_apply d3dxof-Cleanup/0001-d3dxof-Use-straight-assignement-instead-of-using-mem.patch
 	(
-		echo '+    { "Christian Costa", "d3dxof: Use sizeof(GUID) instead of hardcoding the value.", 1 },';
+		echo '+    { "Christian Costa", "d3dxof: Use straight assignement instead of using memcpy with hardcoded size.", 1 },';
 	) >> "$patchlist"
 fi
 

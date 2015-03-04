@@ -2123,6 +2123,9 @@ if test "$enable_dxva2_Video_Decoder" -eq 1; then
 	patch_apply dxva2-Video_Decoder/0006-dxva2-tests-Add-tests-for-dxva2-decoder.patch
 	patch_apply dxva2-Video_Decoder/0007-dxva2-Initial-implementation-of-MPEG2-decoder-using-.patch
 	patch_apply dxva2-Video_Decoder/0008-dxva2-Implement-h264-decoder.patch
+	patch_apply dxva2-Video_Decoder/0009-dxva2-Add-DRM-mode-for-vaapi.patch
+	patch_apply dxva2-Video_Decoder/0010-dxva2-Fill-h264-luma-and-chroma-weights-offsets-with.patch
+	patch_apply dxva2-Video_Decoder/0011-dxva2-Always-destroy-buffers-when-calling-vaRenderPi.patch
 	(
 		echo '+    { "Sebastian Lackner", "dxva2: Implement semi-stub for Direct3DDeviceManager9 interface.", 1 },';
 		echo '+    { "Michael Müller", "dxva2: Implement stubbed interfaces for IDirectXVideo{Acceleration,Decoder,Processor}Service.", 1 },';
@@ -2132,6 +2135,9 @@ if test "$enable_dxva2_Video_Decoder" -eq 1; then
 		echo '+    { "Michael Müller", "dxva2/tests: Add tests for dxva2 decoder.", 1 },';
 		echo '+    { "Michael Müller", "dxva2: Initial implementation of MPEG2 decoder using vaapi backend.", 1 },';
 		echo '+    { "Michael Müller", "dxva2: Implement h264 decoder.", 1 },';
+		echo '+    { "Michael Müller", "dxva2: Add DRM mode for vaapi.", 1 },';
+		echo '+    { "Michael Müller", "dxva2: Fill h264 luma and chroma weights / offsets with default values in case they are not specified.", 1 },';
+		echo '+    { "Michael Müller", "dxva2: Always destroy buffers when calling vaRenderPicture.", 1 },';
 	) >> "$patchlist"
 fi
 

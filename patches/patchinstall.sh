@@ -85,6 +85,7 @@ patch_enable_all ()
 	enable_d3dx9_36_Optimize_Inplace="$1"
 	enable_d3dx9_36_Texture_Align="$1"
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
+	enable_d3dxof_Cleanup="$1"
 	enable_dbghelp_Debug_Symbols="$1"
 	enable_ddraw_Hotpatch="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
@@ -295,6 +296,9 @@ patch_enable ()
 			;;
 		d3dx9_36-UpdateSkinnedMesh)
 			enable_d3dx9_36_UpdateSkinnedMesh="$2"
+			;;
+		d3dxof-Cleanup)
+			enable_d3dxof_Cleanup="$2"
 			;;
 		dbghelp-Debug_Symbols)
 			enable_dbghelp_Debug_Symbols="$2"
@@ -1543,6 +1547,18 @@ if test "$enable_d3dx9_36_UpdateSkinnedMesh" -eq 1; then
 	patch_apply d3dx9_36-UpdateSkinnedMesh/0001-d3dx9_36-Implement-ID3DXSkinInfoImpl_UpdateSkinnedMe.patch
 	(
 		echo '+    { "Christian Costa", "d3dx9_36: Implement ID3DXSkinInfoImpl_UpdateSkinnedMesh.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3dxof-Cleanup
+# |
+# | Modified files:
+# |   *	dlls/d3dxof/d3dxof.c
+# |
+if test "$enable_d3dxof_Cleanup" -eq 1; then
+	patch_apply d3dxof-Cleanup/0001-d3dxof-Use-sizeof-GUID-instead-of-hardcoding-the-val.patch
+	(
+		echo '+    { "Christian Costa", "d3dxof: Use sizeof(GUID) instead of hardcoding the value.", 1 },';
 	) >> "$patchlist"
 fi
 

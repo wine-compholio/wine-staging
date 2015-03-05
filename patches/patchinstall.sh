@@ -219,6 +219,7 @@ patch_enable_all ()
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_APC_Performance="$1"
 	enable_ws2_32_Connect_Time="$1"
+	enable_ws2_32_TransmitFile="$1"
 	enable_ws2_32_WriteWatches="$1"
 	enable_ws2_32_getaddrinfo="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
@@ -698,6 +699,9 @@ patch_enable ()
 			;;
 		ws2_32-Connect_Time)
 			enable_ws2_32_Connect_Time="$2"
+			;;
+		ws2_32-TransmitFile)
+			enable_ws2_32_TransmitFile="$2"
 			;;
 		ws2_32-WriteWatches)
 			enable_ws2_32_WriteWatches="$2"
@@ -4277,6 +4281,33 @@ if test "$enable_ws2_32_Connect_Time" -eq 1; then
 	patch_apply ws2_32-Connect_Time/0001-ws2_32-Implement-returning-the-proper-time-with-SO_C.patch
 	(
 		echo '+    { "Sebastian Lackner", "ws2_32: Implement returning the proper time with SO_CONNECT_TIME.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ws2_32-TransmitFile
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#5048] Support for TransmitFile
+# |
+# | Modified files:
+# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c
+# |
+if test "$enable_ws2_32_TransmitFile" -eq 1; then
+	patch_apply ws2_32-TransmitFile/0001-ws2_32-Add-stub-for-TransmitFile.patch
+	patch_apply ws2_32-TransmitFile/0002-ws2_32-Check-for-invalid-parameters-in-TransmitFile.patch
+	patch_apply ws2_32-TransmitFile/0003-ws2_32-Implement-a-basic-synchronous-TransmitFile.patch
+	patch_apply ws2_32-TransmitFile/0004-ws2_32-Add-support-for-TransmitFile-headers-and-foot.patch
+	patch_apply ws2_32-TransmitFile/0005-ws2_32-Add-asynchronous-support-for-TransmitFile.patch
+	patch_apply ws2_32-TransmitFile/0006-ws2_32-Add-support-for-TF_DISCONNECT-to-TransmitFile.patch
+	patch_apply ws2_32-TransmitFile/0007-ws2_32-Add-support-for-TF_REUSE_SOCKET-to-TransmitFi.patch
+	(
+		echo '+    { "Erich E. Hoover", "ws2_32: Add stub for TransmitFile.", 1 },';
+		echo '+    { "Erich E. Hoover", "ws2_32: Check for invalid parameters in TransmitFile.", 1 },';
+		echo '+    { "Erich E. Hoover", "ws2_32: Implement a basic synchronous TransmitFile.", 1 },';
+		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TransmitFile headers and footers.", 1 },';
+		echo '+    { "Erich E. Hoover", "ws2_32: Add asynchronous support for TransmitFile.", 1 },';
+		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_DISCONNECT to TransmitFile.", 1 },';
+		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_REUSE_SOCKET to TransmitFile.", 1 },';
 	) >> "$patchlist"
 fi
 

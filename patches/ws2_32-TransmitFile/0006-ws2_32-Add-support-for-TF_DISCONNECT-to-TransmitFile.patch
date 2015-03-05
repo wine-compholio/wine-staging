@@ -1,0 +1,79 @@
+From b9da4e6bcf31ebb5669faa7a35fd85c907e4eed7 Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@wine-staging.com>
+Date: Wed, 4 Mar 2015 13:16:20 -0700
+Subject: ws2_32: Add support for TF_DISCONNECT to TransmitFile.
+
+---
+ dlls/ws2_32/socket.c     | 19 ++++++++++++++++---
+ dlls/ws2_32/tests/sock.c | 11 +++++++++++
+ 2 files changed, 27 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
+index de04d9b..b5b14c2 100644
+--- a/dlls/ws2_32/socket.c
++++ b/dlls/ws2_32/socket.c
+@@ -2635,7 +2635,19 @@ static NTSTATUS WS2_transmitfile_base( int fd, struct ws2_transmitfile_async *ws
+             return wsaErrStatus();
+         if (iosb) iosb->Information += n;
+     }
+-    return status;
++    if (status != STATUS_SUCCESS)
++        return status;
++
++    if (wsa->flags & TF_DISCONNECT)
++    {
++        if (WS_closesocket( HANDLE2SOCKET(wsa->write.hSocket) ) != 0)
++        {
++            status = wsaErrStatus();
++            return status;
++        }
++    }
++
++    return STATUS_SUCCESS;
+ }
+ 
+ /***********************************************************************
+@@ -2674,6 +2686,7 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
+                                      LPOVERLAPPED overlapped, LPTRANSMIT_FILE_BUFFERS buffers,
+                                      DWORD flags )
+ {
++    DWORD unsupported_flags = flags & ~(TF_DISCONNECT);
+     IO_STATUS_BLOCK *iosb = (IO_STATUS_BLOCK *)overlapped;
+     union generic_unix_sockaddr uaddr;
+     unsigned int uaddrlen = sizeof(uaddr);
+@@ -2696,8 +2709,8 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
+         WSASetLastError( WSAENOTCONN );
+         return FALSE;
+     }
+-    if (flags)
+-        FIXME("Flags are not currently supported (0x%x).\n", flags);
++    if (unsupported_flags)
++        FIXME("Flags are not currently supported (0x%x).\n", unsupported_flags);
+ 
+     /* set reasonable defaults when requested */
+     if (!bytes_per_send)
+diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
+index 4716b61..36920a7 100644
+--- a/dlls/ws2_32/tests/sock.c
++++ b/dlls/ws2_32/tests/sock.c
+@@ -7141,6 +7141,17 @@ static void test_TransmitFile(void)
+     ok(memcmp(buf, &footer_msg[0], sizeof(footer_msg)+1) == 0,
+        "TransmitFile footer buffer did not match!\n");
+ 
++    /* Test TransmitFile w/ TF_DISCONNECT */
++    SetFilePointer(file, 0, NULL, FILE_BEGIN);
++    bret = pTransmitFile(client, file, 0, 0, NULL, NULL, TF_DISCONNECT);
++    ok(bret, "TransmitFile failed unexpectedly.\n");
++    compare_file(file, dest, 0);
++    closesocket(client);
++    ok(send(client, "test", 4, 0) == -1, "send() after TF_DISCONNECT succeeded unexpectedly.\n");
++    err = WSAGetLastError();
++    todo_wine ok(err == WSAENOTSOCK, "send() after TF_DISCONNECT triggered unexpected errno (%d != %d)\n",
++                 err, WSAENOTSOCK);
++
+     /* Test TransmitFile with a UDP datagram socket */
+     closesocket(client);
+     client = socket(AF_INET, SOCK_DGRAM, 0);
+-- 
+1.9.1
+

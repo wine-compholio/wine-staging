@@ -1,0 +1,278 @@
+From 33df3649a18892fb9da00fc0b545213dbe847f3b Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@wine-staging.com>
+Date: Tue, 3 Mar 2015 23:19:40 -0700
+Subject: ws2_32: Add asynchronous support for TransmitFile.
+
+---
+ dlls/ws2_32/socket.c     | 71 ++++++++++++++++++++++++++++++++-----
+ dlls/ws2_32/tests/sock.c | 91 ++++++++++++++++++++++++++++++++++++++++++++----
+ 2 files changed, 147 insertions(+), 15 deletions(-)
+
+diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
+index 115101c..de04d9b 100644
+--- a/dlls/ws2_32/socket.c
++++ b/dlls/ws2_32/socket.c
+@@ -2627,36 +2627,60 @@ static NTSTATUS WS2_transmitfile_base( int fd, struct ws2_transmitfile_async *ws
+     status = WS2_transmitfile_getbuffer( fd, wsa );
+     if (status == STATUS_PENDING)
+     {
++        IO_STATUS_BLOCK *iosb = (IO_STATUS_BLOCK *)wsa->write.user_overlapped;
+         DWORD n;
+ 
+         n = WS2_send( fd, &wsa->write );
+         if (n == -1)
+             return wsaErrStatus();
++        if (iosb) iosb->Information += n;
+     }
+     return status;
+ }
+ 
+ /***********************************************************************
++ *     WS2_async_transmitfile           (INTERNAL)
++ *
++ * Asynchronous callback for overlapped TransmitFile operations.
++ */
++static NTSTATUS WS2_async_transmitfile( void *user, IO_STATUS_BLOCK *iosb,
++                                        NTSTATUS status, void **apc, void **arg )
++{
++    struct ws2_transmitfile_async *wsa = user;
++    int fd;
++
++    if (status != STATUS_ALERTED)
++        goto cleanup;
++
++    if ((status = wine_server_handle_to_fd( wsa->write.hSocket, FILE_WRITE_DATA, &fd, NULL ) ))
++        goto cleanup;
++    status = WS2_transmitfile_base( fd, wsa );
++    wine_server_release_fd( wsa->write.hSocket, fd );
++    if (status == STATUS_PENDING)
++        return iosb->u.Status;
++
++    if (wsa->write.user_overlapped->hEvent)
++        SetEvent(wsa->write.user_overlapped->hEvent);
++cleanup:
++    iosb->u.Status = status;
++    release_async_io( &wsa->io );
++    return iosb->u.Status;
++}
++
++/***********************************************************************
+  *     TransmitFile
+  */
+ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD bytes_per_send,
+                                      LPOVERLAPPED overlapped, LPTRANSMIT_FILE_BUFFERS buffers,
+                                      DWORD flags )
+ {
++    IO_STATUS_BLOCK *iosb = (IO_STATUS_BLOCK *)overlapped;
+     union generic_unix_sockaddr uaddr;
+     unsigned int uaddrlen = sizeof(uaddr);
+     struct ws2_transmitfile_async *wsa;
+     NTSTATUS status;
+     int fd;
+ 
+-    if (overlapped)
+-    {
+-        FIXME("(%lx, %p, %d, %d, %p, %p, %d): stub !\n", s, h, file_bytes, bytes_per_send,
+-               overlapped, buffers, flags);
+-        WSASetLastError( WSAEOPNOTSUPP );
+-        return FALSE;
+-    }
+-
+     TRACE("(%lx, %p, %d, %d, %p, %p, %d)\n", s, h, file_bytes, bytes_per_send, overlapped,
+             buffers, flags );
+ 
+@@ -2703,7 +2727,36 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
+     wsa->write.control         = NULL;
+     wsa->write.n_iovecs        = 0;
+     wsa->write.first_iovec     = 0;
+-    wsa->write.user_overlapped = NULL;
++    wsa->write.user_overlapped = overlapped;
++
++    if (overlapped)
++    {
++        LARGE_INTEGER offset;
++        int status;
++
++        /* set the file offset to the desired point */
++        offset.u.LowPart = overlapped->u.s.Offset;
++        offset.u.HighPart = overlapped->u.s.OffsetHigh;
++        SetFilePointerEx( wsa->file, offset, NULL, FILE_BEGIN );
++
++        iosb->u.Status = STATUS_PENDING;
++        iosb->Information = 0;
++        SERVER_START_REQ( register_async )
++        {
++            req->type           = ASYNC_TYPE_WRITE;
++            req->async.handle   = wine_server_obj_handle( SOCKET2HANDLE(s) );
++            req->async.callback = wine_server_client_ptr( WS2_async_transmitfile );
++            req->async.iosb     = wine_server_client_ptr( iosb );
++            req->async.arg      = wine_server_client_ptr( wsa );
++            status = wine_server_call( req );
++        }
++        SERVER_END_REQ;
++
++        if(status != STATUS_PENDING) HeapFree( GetProcessHeap(), 0, wsa );
++        release_sock_fd( s, fd );
++        WSASetLastError( NtStatusToWSAError(status) );
++        return FALSE;
++    }
+ 
+     do
+     {
+diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
+index a93dbe3..4716b61 100644
+--- a/dlls/ws2_32/tests/sock.c
++++ b/dlls/ws2_32/tests/sock.c
+@@ -6906,15 +6906,15 @@ end:
+         closesocket(connector2);
+ }
+ 
+-#define compare_file(h,s) compare_file2(h,s,__FILE__,__LINE__)
++#define compare_file(h,s,o) compare_file2(h,s,o,__FILE__,__LINE__)
+ 
+-static void compare_file2(HANDLE handle, SOCKET sock, const char *file, int line)
++static void compare_file2(HANDLE handle, SOCKET sock, int offset, const char *file, int line)
+ {
+     char buf1[256], buf2[256];
+     BOOL success;
+     int i = 0;
+ 
+-    SetFilePointer(handle, 0, NULL, FILE_BEGIN);
++    SetFilePointer(handle, offset, NULL, FILE_BEGIN);
+     while (1)
+     {
+         DWORD n1 = 0, n2 = 0;
+@@ -6934,6 +6934,7 @@ static void compare_file2(HANDLE handle, SOCKET sock, const char *file, int line
+ 
+ static void test_TransmitFile(void)
+ {
++    DWORD num_bytes, err, file_size, total_sent;
+     GUID transmitFileGuid = WSAID_TRANSMITFILE;
+     LPFN_TRANSMITFILE pTransmitFile = NULL;
+     HANDLE file = INVALID_HANDLE_VALUE;
+@@ -6943,11 +6944,13 @@ static void test_TransmitFile(void)
+     struct sockaddr_in bindAddress;
+     TRANSMIT_FILE_BUFFERS buffers;
+     SOCKET client, server, dest;
+-    DWORD num_bytes, err;
++    WSAOVERLAPPED ov;
+     char buf[256];
+     int iret, len;
+     BOOL bret;
+ 
++    memset( &ov, 0, sizeof(ov) );
++
+     /* Setup sockets for testing TransmitFile */
+     client = socket(AF_INET, SOCK_STREAM, 0);
+     server = socket(AF_INET, SOCK_STREAM, 0);
+@@ -6971,6 +6974,7 @@ static void test_TransmitFile(void)
+         skip("Unable to open a file to transmit.\n");
+         goto cleanup;
+     }
++    file_size = GetFileSize(file, NULL);
+ 
+     /* Test TransmitFile with an invalid socket */
+     bret = pTransmitFile(INVALID_SOCKET, file, 0, 0, NULL, NULL, 0);
+@@ -7045,7 +7049,7 @@ static void test_TransmitFile(void)
+     /* Test TransmitFile with only file data */
+     bret = pTransmitFile(client, file, 0, 0, NULL, NULL, 0);
+     ok(bret, "TransmitFile failed unexpectedly.\n");
+-    compare_file(file, dest);
++    compare_file(file, dest, 0);
+ 
+     /* Test TransmitFile with both file and buffer data */
+     buffers.Head = &header_msg[0];
+@@ -7058,7 +7062,81 @@ static void test_TransmitFile(void)
+     iret = recv(dest, buf, sizeof(header_msg)+1, 0);
+     ok(memcmp(buf, &header_msg[0], sizeof(header_msg)+1) == 0,
+        "TransmitFile header buffer did not match!\n");
+-    compare_file(file, dest);
++    compare_file(file, dest, 0);
++    iret = recv(dest, buf, sizeof(footer_msg)+1, 0);
++    ok(memcmp(buf, &footer_msg[0], sizeof(footer_msg)+1) == 0,
++       "TransmitFile footer buffer did not match!\n");
++
++    /* Test overlapped TransmitFile */
++    ov.hEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
++    if (ov.hEvent == INVALID_HANDLE_VALUE)
++    {
++        skip("Could not create event object, some tests will be skipped. errno = %d\n",
++             GetLastError());
++        goto cleanup;
++    }
++    SetFilePointer(file, 0, NULL, FILE_BEGIN);
++    bret = pTransmitFile(client, file, 0, 0, &ov, NULL, 0);
++    err = WSAGetLastError();
++    ok(!bret, "TransmitFile succeeded unexpectedly.\n");
++    ok(err == ERROR_IO_PENDING, "TransmitFile triggered unexpected errno (%d != %d)\n",
++       err, ERROR_IO_PENDING);
++    iret = WaitForSingleObject(ov.hEvent, 2000);
++    ok(iret == WAIT_OBJECT_0, "Overlapped TransmitFile failed.\n");
++    WSAGetOverlappedResult(client, &ov, &total_sent, FALSE, NULL);
++    ok(total_sent == file_size,
++       "Overlapped TransmitFile sent an unexpected number of bytes (%d != %d).\n",
++       total_sent, file_size);
++    compare_file(file, dest, 0);
++
++    /* Test overlapped TransmitFile w/ start offset */
++    ov.hEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
++    if (ov.hEvent == INVALID_HANDLE_VALUE)
++    {
++        skip("Could not create event object, some tests will be skipped. errno = %d\n", GetLastError());
++        goto cleanup;
++    }
++    SetFilePointer(file, 0, NULL, FILE_BEGIN);
++    ov.Offset = 10;
++    bret = pTransmitFile(client, file, 0, 0, &ov, NULL, 0);
++    err = WSAGetLastError();
++    ok(!bret, "TransmitFile succeeded unexpectedly.\n");
++    ok(err == ERROR_IO_PENDING, "TransmitFile triggered unexpected errno (%d != %d)\n", err, ERROR_IO_PENDING);
++    iret = WaitForSingleObject(ov.hEvent, 2000);
++    ok(iret == WAIT_OBJECT_0, "Overlapped TransmitFile failed.\n");
++    WSAGetOverlappedResult(client, &ov, &total_sent, FALSE, NULL);
++    ok(total_sent == (file_size - ov.Offset),
++       "Overlapped TransmitFile sent an unexpected number of bytes (%d != %d).\n",
++       total_sent, file_size - ov.Offset);
++    compare_file(file, dest, ov.Offset);
++
++    /* Test overlapped TransmitFile w/ file and buffer data */
++    ov.hEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
++    if (ov.hEvent == INVALID_HANDLE_VALUE)
++    {
++        skip("Could not create event object, some tests will be skipped. errno = %d\n", GetLastError());
++        goto cleanup;
++    }
++    buffers.Head = &header_msg[0];
++    buffers.HeadLength = sizeof(header_msg)+1;
++    buffers.Tail = &footer_msg[0];
++    buffers.TailLength = sizeof(footer_msg)+1;
++    SetFilePointer(file, 0, NULL, FILE_BEGIN);
++    ov.Offset = 0;
++    bret = pTransmitFile(client, file, 0, 0, &ov, &buffers, 0);
++    err = WSAGetLastError();
++    ok(!bret, "TransmitFile succeeded unexpectedly.\n");
++    ok(err == ERROR_IO_PENDING, "TransmitFile triggered unexpected errno (%d != %d)\n", err, ERROR_IO_PENDING);
++    iret = WaitForSingleObject(ov.hEvent, 2000);
++    ok(iret == WAIT_OBJECT_0, "Overlapped TransmitFile failed.\n");
++    WSAGetOverlappedResult(client, &ov, &total_sent, FALSE, NULL);
++    ok(total_sent == (file_size + buffers.HeadLength + buffers.TailLength),
++       "Overlapped TransmitFile sent an unexpected number of bytes (%d != %d).\n",
++       total_sent, file_size  + buffers.HeadLength + buffers.TailLength);
++    iret = recv(dest, buf, sizeof(header_msg)+1, 0);
++    ok(memcmp(buf, &header_msg[0], sizeof(header_msg)+1) == 0,
++       "TransmitFile header buffer did not match!\n");
++    compare_file(file, dest, 0);
+     iret = recv(dest, buf, sizeof(footer_msg)+1, 0);
+     ok(memcmp(buf, &footer_msg[0], sizeof(footer_msg)+1) == 0,
+        "TransmitFile footer buffer did not match!\n");
+@@ -7073,6 +7151,7 @@ static void test_TransmitFile(void)
+ 
+ cleanup:
+     CloseHandle(file);
++    CloseHandle(ov.hEvent);
+     closesocket(client);
+     closesocket(server);
+ }
+-- 
+1.9.1
+

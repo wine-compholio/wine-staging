@@ -4159,6 +4159,9 @@ fi
 
 # Patchset winex11-Thread_Data
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36915] Fix crash in clip_cursor_notify caused by uninitialized TLS
+# |
 # | Modified files:
 # |   *	dlls/winex11.drv/mouse.c
 # |

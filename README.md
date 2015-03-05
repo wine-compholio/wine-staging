@@ -49,7 +49,7 @@ Included bug fixes and improvements
 * EA Origin needs support for job objects ([Wine Bug #33723](https://bugs.winehq.org/show_bug.cgi?id=33723))
 * Enforce that surfaces are flushed after ReleaseDC
 * Fallback to global key state for threads without a queue ([Wine Bug #27238](https://bugs.winehq.org/show_bug.cgi?id=27238))
-* Fix crash in clip_cursor_notify caused by uninitialized TLS
+* Fix crash in clip_cursor_notify caused by uninitialized TLS ([Wine Bug #36915](https://bugs.winehq.org/show_bug.cgi?id=36915))
 * Fix race-condition when threads are killed during shutdown
 * Implement SetFileInformationByHandle
 * Increase wineconsole commandline buffer size ([Wine Bug #34814](https://bugs.winehq.org/show_bug.cgi?id=34814))

@@ -1,14 +1,14 @@
-From 2a47807bf3928c7827fbc32e87d4c964bc9fbf7c Mon Sep 17 00:00:00 2001
+From d27bb6018ce273ab2aa29d436a64dc2507992f84 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 26 Nov 2014 09:03:17 +0100
 Subject: ntdll: Use lockfree implementation for get_cached_fd. (try 5)
 
 ---
- dlls/ntdll/server.c | 73 ++++++++++++++++++++++++++++++++++++++++++++++++++---
- 1 file changed, 69 insertions(+), 4 deletions(-)
+ dlls/ntdll/server.c | 67 ++++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 66 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
-index 69d01be..94d0544 100644
+index 69d01be..29cfcb5 100644
 --- a/dlls/ntdll/server.c
 +++ b/dlls/ntdll/server.c
 @@ -75,6 +75,8 @@
@@ -73,34 +73,40 @@ index 69d01be..94d0544 100644
  
  /***********************************************************************
   *           add_fd_to_cache
-@@ -839,12 +873,26 @@ static BOOL add_fd_to_cache( HANDLE handle, int fd, enum server_fd_type type,
+@@ -821,6 +855,9 @@ static BOOL add_fd_to_cache( HANDLE handle, int fd, enum server_fd_type type,
+                             unsigned int access, unsigned int options )
+ {
+     unsigned int entry, idx = handle_to_index( handle, &entry );
++#if !defined(__powerpc__)
++    struct fd_cache_entry cache;
++#endif
+ 
+     if (entry >= FD_CACHE_ENTRIES)
+     {
+@@ -839,12 +876,22 @@ static BOOL add_fd_to_cache( HANDLE handle, int fd, enum server_fd_type type,
              fd_cache[entry] = ptr;
          }
      }
 +
-+#if defined(__powerpc__)
      /* store fd+1 so that 0 can be used as the unset value */
++#if defined(__powerpc__)
      fd = interlocked_xchg( &fd_cache[entry][idx].fd, fd + 1 );
      fd_cache[entry][idx].type = type;
      fd_cache[entry][idx].access = access;
      fd_cache[entry][idx].options = options;
      assert( !fd );
 +#else
-+    {
-+        struct fd_cache_entry cache;
-+        /* store fd+1 so that 0 can be used as the unset value */
-+        cache.fd = fd + 1;
-+        cache.type = type;
-+        cache.access = access;
-+        cache.options = options;
-+        interlocked_xchg_fd_cache( &fd_cache[entry][idx], &cache );
-+        assert( !cache.fd );
-+    }
++    cache.fd = fd + 1;
++    cache.type = type;
++    cache.access = access;
++    cache.options = options;
++    interlocked_xchg_fd_cache( &fd_cache[entry][idx], &cache );
++    assert( !cache.fd );
 +#endif
      return TRUE;
  }
  
-@@ -852,7 +900,7 @@ static BOOL add_fd_to_cache( HANDLE handle, int fd, enum server_fd_type type,
+@@ -852,7 +899,7 @@ static BOOL add_fd_to_cache( HANDLE handle, int fd, enum server_fd_type type,
  /***********************************************************************
   *           get_cached_fd
   *
@@ -109,7 +115,7 @@ index 69d01be..94d0544 100644
   */
  static inline int get_cached_fd( HANDLE handle, enum server_fd_type *type,
                                   unsigned int *access, unsigned int *options )
-@@ -862,10 +910,19 @@ static inline int get_cached_fd( HANDLE handle, enum server_fd_type *type,
+@@ -862,10 +909,19 @@ static inline int get_cached_fd( HANDLE handle, enum server_fd_type *type,
  
      if (entry < FD_CACHE_ENTRIES && fd_cache[entry])
      {
@@ -129,7 +135,7 @@ index 69d01be..94d0544 100644
      }
      return fd;
  }
-@@ -903,6 +960,11 @@ int server_get_unix_fd( HANDLE handle, unsigned int wanted_access, int *unix_fd,
+@@ -903,6 +959,11 @@ int server_get_unix_fd( HANDLE handle, unsigned int wanted_access, int *unix_fd,
      *needs_close = 0;
      wanted_access &= FILE_READ_DATA | FILE_WRITE_DATA | FILE_APPEND_DATA;
  
@@ -141,7 +147,7 @@ index 69d01be..94d0544 100644
      server_enter_uninterrupted_section( &fd_cache_section, &sigset );
  
      fd = get_cached_fd( handle, type, &access, options );
-@@ -930,6 +992,10 @@ int server_get_unix_fd( HANDLE handle, unsigned int wanted_access, int *unix_fd,
+@@ -930,6 +991,10 @@ int server_get_unix_fd( HANDLE handle, unsigned int wanted_access, int *unix_fd,
  
  done:
      server_leave_uninterrupted_section( &fd_cache_section, &sigset );
@@ -152,3 +158,6 @@ index 69d01be..94d0544 100644
      if (!ret && ((access & wanted_access) != wanted_access))
      {
          ret = STATUS_ACCESS_DENIED;
+-- 
+2.3.0
+

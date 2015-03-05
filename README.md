@@ -128,7 +128,7 @@ Included bug fixes and improvements
 * Fix issues with dragging layers between images in Adobe Photoshop 7.0 ([Wine Bug #12007](https://bugs.winehq.org/show_bug.cgi?id=12007))
 * Fix missing video introduced by pixelformat changes. ([Wine Bug #36900](https://bugs.winehq.org/show_bug.cgi?id=36900))
 * ~~Fix mouse jittering in Planetside 2~~ ([Wine Bug #32913](https://bugs.winehq.org/show_bug.cgi?id=32913))
-* Fix parameters for ConvertToIndexedBlendedMesh stub ([Wine Bug #36449](https://bugs.winehq.org/show_bug.cgi?id=36449))
+* ~~Fix parameters for ConvertToIndexedBlendedMesh stub~~ ([Wine Bug #36449](https://bugs.winehq.org/show_bug.cgi?id=36449))
 * Fix possible segfault in pulse_rd_loop of PulseAudio backend
 * Fix return value of ScrollWindowEx for invisible windows ([Wine Bug #37706](https://bugs.winehq.org/show_bug.cgi?id=37706))
 * Fix texture corruption in CSI: Fatal Conspiracy ([Wine Bug #33768](https://bugs.winehq.org/show_bug.cgi?id=33768))

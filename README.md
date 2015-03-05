@@ -38,7 +38,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [16]:**
+**Bugfixes and features included in the next upcoming release [17]:**
 
 * Add stub for gdiplus.GdipCreateEffect ([Wine Bug #32163](https://bugs.winehq.org/show_bug.cgi?id=32163))
 * Add support for CopyFileEx progress callback ([Wine Bug #22692](https://bugs.winehq.org/show_bug.cgi?id=22692))
@@ -55,6 +55,7 @@ Included bug fixes and improvements
 * Increase wineconsole commandline buffer size ([Wine Bug #34814](https://bugs.winehq.org/show_bug.cgi?id=34814))
 * Process Hacker 2.x needs ntoskrnl.ProbeForRead ([Wine Bug #38103](https://bugs.winehq.org/show_bug.cgi?id=38103))
 * Properly track handle count of wineserver objects
+* Support for GetFinalPathNameByHandle ([Wine Bug #34851](https://bugs.winehq.org/show_bug.cgi?id=34851))
 * Support for shell32 file operation progress dialog
 
 
@@ -186,7 +187,7 @@ Included bug fixes and improvements
 * Scrolling causes mouse and screen to lock in Call to Power II ([Wine Bug #34559](https://bugs.winehq.org/show_bug.cgi?id=34559))
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](https://bugs.winehq.org/show_bug.cgi?id=35652))
 * Set last error when GetRawInputDeviceList fails ([Wine Bug #37667](https://bugs.winehq.org/show_bug.cgi?id=37667))
-* Silverlight needs support for file ACLs ([Wine Bug #31858](https://bugs.winehq.org/show_bug.cgi?id=31858))
+* ~~Silverlight needs support for file ACLs~~ ([Wine Bug #31858](https://bugs.winehq.org/show_bug.cgi?id=31858))
 * Super Mario 3: Mario Forever fails to load keyboard mapping from profile files. ([Wine Bug #18099](https://bugs.winehq.org/show_bug.cgi?id=18099))
 * Support for AllocateAndGetTcpExTableFromStack ([Wine Bug #34372](https://bugs.winehq.org/show_bug.cgi?id=34372))
 * Support for BindImageEx ([Wine Bug #3591](https://bugs.winehq.org/show_bug.cgi?id=3591))
@@ -198,7 +199,7 @@ Included bug fixes and improvements
 * Support for DOS hidden/system file attributes ([Wine Bug #9158](https://bugs.winehq.org/show_bug.cgi?id=9158))
 * Support for Dynamic DST (daylight saving time) information in registry
 * Support for GdipCreateRegionRgnData ([Wine Bug #34843](https://bugs.winehq.org/show_bug.cgi?id=34843))
-* Support for GetFinalPathNameByHandle ([Wine Bug #36073](https://bugs.winehq.org/show_bug.cgi?id=36073))
+* ~~Support for GetFinalPathNameByHandle~~ ([Wine Bug #36073](https://bugs.winehq.org/show_bug.cgi?id=36073))
 * Support for GetSystemTimes ([Wine Bug #19813](https://bugs.winehq.org/show_bug.cgi?id=19813))
 * Support for GetVolumePathName
 * Support for H264 DXVA2 GPU video decoding through vaapi

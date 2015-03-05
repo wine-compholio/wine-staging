@@ -2345,7 +2345,7 @@ fi
 # Patchset kernel32-GetFinalPathNameByHandle
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#36073] Support for GetFinalPathNameByHandle
+# |   *	[#34851] Support for GetFinalPathNameByHandle
 # |
 # | Modified files:
 # |   *	dlls/api-ms-win-core-file-l1-2-0/api-ms-win-core-file-l1-2-0.spec, dlls/kernel32/file.c, dlls/kernel32/kernel32.spec,
@@ -3330,7 +3330,6 @@ fi
 # Patchset server-Stored_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#31858] Silverlight needs support for file ACLs
 # |   *	[#33576] Support for stored file ACLs
 # |
 # | Modified files:

@@ -21,6 +21,7 @@
 
 import binascii
 import cPickle as pickle
+import contextlib
 import fnmatch
 import hashlib
 import itertools
@@ -36,6 +37,8 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+import urllib
+import xml.dom.minidom
 
 _devnull = open(os.devnull, 'wb')
 
@@ -135,6 +138,34 @@ def _parse_int(val, default=0):
     except AttributeError:
         return default
 
+def _winebugs_query(bugids):
+    """Query short_desc from multiple wine bugzilla bugs at the same time."""
+    bugids = list(set(bugids)) # Remove duplicates and convert to fixed order
+    if len(bugids) == 0: return {}
+
+    # Query bugzilla
+    url = "http://bugs.winehq.org/show_bug.cgi?%s&ctype=xml&field=short_desc&field=bug_status&field=resolution" % \
+          "&".join(["id=%d" % bugid for bugid in bugids])
+    with contextlib.closing(urllib.urlopen(url)) as fp:
+        data = xml.dom.minidom.parseString(fp.read())
+
+    # convert xml in a dictionary containing all bugs we found
+    result = {}
+    for element in data.getElementsByTagName('bug_id'):
+        bugids.remove(int(element.firstChild.data))
+
+    def _get_text(n):
+        return n.firstChild.data if (n and n.firstChild) else None
+
+    for bugid, element in zip(bugids, data.getElementsByTagName('bug')):
+        if element.getElementsByTagName('bug_id'): continue
+        result[bugid] = {
+            'short_desc': _get_text(element.getElementsByTagName('short_desc')[0]),
+            'bug_status': _get_text(element.getElementsByTagName('bug_status')[0]),
+            'resolution': _get_text(element.getElementsByTagName('resolution')[0]) }
+
+    return result
+
 def _read_changelog():
     """Read information from changelog."""
     with open(config.path_changelog) as fp:
@@ -195,6 +226,7 @@ def read_patchset(revision = None):
     unique_id   = itertools.count()
     all_patches = {}
     name_to_id  = {}
+    all_bugids  = set()
 
     # Read in sorted order (to ensure created Makefile doesn't change too much)
     for name, directory in sorted(enum_directories(revision, config.path_patches)):
@@ -262,11 +294,15 @@ def read_patchset(revision = None):
             elif key == "fixes":
                 r = re.match("^[0-9]+$", val)
                 if r:
-                    patch.fixes.append((int(val), None))
+                    bugid = int(val)
+                    patch.fixes.append((bugid, None))
+                    all_bugids.add(bugid)
                     continue
                 r = re.match("^\\[ *([0-9]+) *\\](.*)$", val)
                 if r:
-                    patch.fixes.append((int(r.group(1)), r.group(2).strip()))
+                    bugid = int(r.group(1))
+                    patch.fixes.append((bugid, r.group(2).strip()))
+                    all_bugids.add(bugid)
                     continue
                 patch.fixes.append((None, val))
 
@@ -278,6 +314,21 @@ def read_patchset(revision = None):
 
             elif revision is None:
                 print "WARNING: Ignoring unknown command in definition file %s: %s" % (filename, line)
+
+    # To simplify the task of keeping the bug list up-to-date, list all bugs
+    # which might require attention.
+    if revision is None:
+        once = True
+        for bugid, bug in sorted(_winebugs_query(all_bugids).items()):
+            if bug['bug_status'] not in ["UNCONFIRMED", "NEW", "REOPENED"]:
+                if once:
+                    print ""
+                    print "WARNING: The following bugs might require attention:"
+                    print ""
+                    once = False
+                print " #%d - \"%s\" - %s %s" % (bugid, bug['short_desc'], bug['bug_status'],
+                                                 bug['resolution'] if bug['resolution'] else "")
+        print ""
 
     return all_patches
 
@@ -594,7 +645,7 @@ def generate_markdown(all_patches, stable_patches, stable_compholio_version):
         return "* %s ([Wine Bug #%d](https://bugs.winehq.org/show_bug.cgi?id=%d))" % \
                (bugname, bugid, bugid) #, short_desc.replace("\\", "\\\\").replace("\"", "\\\""))
 
-    all_fixes  = {}
+    all_fixes = {}
 
     # Get fixes for current version
     for _, patch in all_patches.iteritems():

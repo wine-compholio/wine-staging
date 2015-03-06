@@ -209,6 +209,7 @@ patch_enable_all ()
 	enable_winepulse_PulseAudio_Support="$1"
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_Clipboard_HTML="$1"
+	enable_winex11_Limited_Resolutions="$1"
 	enable_winex11_Thread_Data="$1"
 	enable_winex11_Window_Groups="$1"
 	enable_winex11_Window_Style="$1"
@@ -668,6 +669,9 @@ patch_enable ()
 			;;
 		winex11-Clipboard_HTML)
 			enable_winex11_Clipboard_HTML="$2"
+			;;
+		winex11-Limited_Resolutions)
+			enable_winex11_Limited_Resolutions="$2"
 			;;
 		winex11-Thread_Data)
 			enable_winex11_Thread_Data="$2"
@@ -4138,6 +4142,23 @@ if test "$enable_winex11_Clipboard_HTML" -eq 1; then
 	patch_apply winex11-Clipboard_HTML/0001-winex11.drv-Import-X11-s-text-html-as-HTML-Format.patch
 	(
 		echo '+    { "Damjan Jovanovic", "winex11.drv: Import X11'\''s \"text/html\" as \"HTML Format\".", 3 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11-Limited_Resolutions
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34348] Some NVIDIA cards report fake refresh rates
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/winex11.drv/xrandr.c
+# |
+if test "$enable_winex11_Limited_Resolutions" -eq 1; then
+	patch_apply winex11-Limited_Resolutions/0001-winex11-Display-a-helpful-warning-when-Dynamic-TwinV.patch
+	patch_apply winex11-Limited_Resolutions/0002-winex11-Return-the-actual-refresh-rate-for-NVIDIA-ca.patch
+	(
+		echo '+    { "Erich E. Hoover", "winex11: Display a helpful warning when Dynamic TwinView is enabled.", 1 },';
+		echo '+    { "Erich E. Hoover", "winex11: Return the actual refresh rate for NVIDIA cards with Dynamic TwinView enabled.", 1 },';
 	) >> "$patchlist"
 fi
 

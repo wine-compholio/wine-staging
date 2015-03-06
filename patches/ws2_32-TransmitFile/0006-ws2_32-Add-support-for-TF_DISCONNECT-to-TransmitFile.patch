@@ -1,39 +1,36 @@
-From b9da4e6bcf31ebb5669faa7a35fd85c907e4eed7 Mon Sep 17 00:00:00 2001
+From 08bff2c19fbe3ac44b8c1323d50c0aabc8bb0ddc Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@wine-staging.com>
 Date: Wed, 4 Mar 2015 13:16:20 -0700
 Subject: ws2_32: Add support for TF_DISCONNECT to TransmitFile.
 
 ---
- dlls/ws2_32/socket.c     | 19 ++++++++++++++++---
+ dlls/ws2_32/socket.c     | 16 +++++++++++++---
  dlls/ws2_32/tests/sock.c | 11 +++++++++++
- 2 files changed, 27 insertions(+), 3 deletions(-)
+ 2 files changed, 24 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index de04d9b..b5b14c2 100644
+index f9cac67..6cc0a79 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
-@@ -2635,7 +2635,19 @@ static NTSTATUS WS2_transmitfile_base( int fd, struct ws2_transmitfile_async *ws
-             return wsaErrStatus();
+@@ -2642,7 +2642,16 @@ static NTSTATUS WS2_transmitfile_base( int fd, struct ws2_transmitfile_async *ws
          if (iosb) iosb->Information += n;
      }
+ 
 -    return status;
 +    if (status != STATUS_SUCCESS)
 +        return status;
 +
 +    if (wsa->flags & TF_DISCONNECT)
 +    {
-+        if (WS_closesocket( HANDLE2SOCKET(wsa->write.hSocket) ) != 0)
-+        {
-+            status = wsaErrStatus();
-+            return status;
-+        }
++        /* we can't use WS_closesocket because it modifies the last error */
++        NtClose( SOCKET2HANDLE(wsa->write.hSocket) );
 +    }
 +
 +    return STATUS_SUCCESS;
  }
  
  /***********************************************************************
-@@ -2674,6 +2686,7 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
+@@ -2681,6 +2690,7 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
                                       LPOVERLAPPED overlapped, LPTRANSMIT_FILE_BUFFERS buffers,
                                       DWORD flags )
  {
@@ -41,7 +38,7 @@ index de04d9b..b5b14c2 100644
      IO_STATUS_BLOCK *iosb = (IO_STATUS_BLOCK *)overlapped;
      union generic_unix_sockaddr uaddr;
      unsigned int uaddrlen = sizeof(uaddr);
-@@ -2696,8 +2709,8 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
+@@ -2703,8 +2713,8 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
          WSASetLastError( WSAENOTCONN );
          return FALSE;
      }
@@ -75,5 +72,5 @@ index 4716b61..36920a7 100644
      closesocket(client);
      client = socket(AF_INET, SOCK_DGRAM, 0);
 -- 
-1.9.1
+2.3.0
 

@@ -1,4 +1,4 @@
-From ccfa39a3110cf7fe425bb37fe4a9528215abacf4 Mon Sep 17 00:00:00 2001
+From 408befce279d57fe2f5e3e5ba12bae4a09456fda Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@wine-staging.com>
 Date: Wed, 4 Mar 2015 15:10:43 -0700
 Subject: ws2_32: Add support for TransmitFile headers and footers.
@@ -9,17 +9,17 @@ Subject: ws2_32: Add support for TransmitFile headers and footers.
  2 files changed, 64 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index 6598f7c..115101c 100644
+index 36ce0dd..e45c838 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
-@@ -386,6 +386,7 @@ typedef struct ws2_transmitfile_async
+@@ -386,6 +386,7 @@ struct ws2_transmitfile_async
      DWORD                 file_read;
      DWORD                 file_bytes;
      DWORD                 bytes_per_send;
 +    TRANSMIT_FILE_BUFFERS buffers;
      DWORD                 flags;
      struct ws2_async      write;
- } ws2_transmitfile_async;
+ };
 @@ -2560,6 +2561,17 @@ static NTSTATUS WS2_transmitfile_getbuffer( int fd, struct ws2_transmitfile_asyn
      if (wsa->write.first_iovec < wsa->write.n_iovecs)
          return STATUS_PENDING;
@@ -41,13 +41,13 @@ index 6598f7c..115101c 100644
 @@ -2573,7 +2585,7 @@ static NTSTATUS WS2_transmitfile_getbuffer( int fd, struct ws2_transmitfile_asyn
          status = NtReadFile( wsa->file, 0, NULL, NULL, &iosb, wsa->buffer, bytes_per_send,
                               NULL, NULL );
-         if(status == STATUS_END_OF_FILE)
+         if (status == STATUS_END_OF_FILE)
 -            return STATUS_SUCCESS;
 +            wsa->file = NULL; /* continue on to the footer */
-         else if(status != STATUS_SUCCESS)
+         else if (status != STATUS_SUCCESS)
              return status;
          else
-@@ -2589,6 +2601,17 @@ static NTSTATUS WS2_transmitfile_getbuffer( int fd, struct ws2_transmitfile_asyn
+@@ -2594,6 +2606,17 @@ static NTSTATUS WS2_transmitfile_getbuffer( int fd, struct ws2_transmitfile_asyn
          }
      }
  
@@ -65,7 +65,7 @@ index 6598f7c..115101c 100644
      return STATUS_SUCCESS;
  }
  
-@@ -2626,7 +2649,7 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
+@@ -2632,7 +2655,7 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
      NTSTATUS status;
      int fd;
  
@@ -74,7 +74,7 @@ index 6598f7c..115101c 100644
      {
          FIXME("(%lx, %p, %d, %d, %p, %p, %d): stub !\n", s, h, file_bytes, bytes_per_send,
                 overlapped, buffers, flags);
-@@ -2662,6 +2685,10 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
+@@ -2668,6 +2691,10 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
          WSASetLastError( WSAEFAULT );
          return FALSE;
      }
@@ -146,5 +146,5 @@ index 1288694..a93dbe3 100644
      closesocket(client);
      client = socket(AF_INET, SOCK_DGRAM, 0);
 -- 
-1.9.1
+2.3.0
 

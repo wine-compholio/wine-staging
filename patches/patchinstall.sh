@@ -4275,17 +4275,17 @@ fi
 if test "$enable_ws2_32_TransmitFile" -eq 1; then
 	patch_apply ws2_32-TransmitFile/0001-ws2_32-Add-stub-for-TransmitFile.patch
 	patch_apply ws2_32-TransmitFile/0002-ws2_32-Check-for-invalid-parameters-in-TransmitFile.patch
-	patch_apply ws2_32-TransmitFile/0003-ws2_32-Implement-a-basic-synchronous-TransmitFile.patch
+	patch_apply ws2_32-TransmitFile/0003-ws2_32-Implement-a-basic-synchronous-TransmitFile.-r.patch
 	patch_apply ws2_32-TransmitFile/0004-ws2_32-Add-support-for-TransmitFile-headers-and-foot.patch
-	patch_apply ws2_32-TransmitFile/0005-ws2_32-Add-asynchronous-support-for-TransmitFile.patch
+	patch_apply ws2_32-TransmitFile/0005-ws2_32-Add-asynchronous-support-for-TransmitFile.-re.patch
 	patch_apply ws2_32-TransmitFile/0006-ws2_32-Add-support-for-TF_DISCONNECT-to-TransmitFile.patch
 	patch_apply ws2_32-TransmitFile/0007-ws2_32-Add-support-for-TF_REUSE_SOCKET-to-TransmitFi.patch
 	(
 		echo '+    { "Erich E. Hoover", "ws2_32: Add stub for TransmitFile.", 1 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Check for invalid parameters in TransmitFile.", 1 },';
-		echo '+    { "Erich E. Hoover", "ws2_32: Implement a basic synchronous TransmitFile.", 1 },';
+		echo '+    { "Erich E. Hoover", "ws2_32: Implement a basic synchronous TransmitFile.", 2 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TransmitFile headers and footers.", 1 },';
-		echo '+    { "Erich E. Hoover", "ws2_32: Add asynchronous support for TransmitFile.", 1 },';
+		echo '+    { "Erich E. Hoover", "ws2_32: Add asynchronous support for TransmitFile.", 2 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_DISCONNECT to TransmitFile.", 1 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_REUSE_SOCKET to TransmitFile.", 1 },';
 	) >> "$patchlist"

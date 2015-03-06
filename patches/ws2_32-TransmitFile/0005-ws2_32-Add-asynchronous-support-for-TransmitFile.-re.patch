@@ -1,18 +1,18 @@
-From 33df3649a18892fb9da00fc0b545213dbe847f3b Mon Sep 17 00:00:00 2001
+From 3ff267363ed9aa032ec26f14cd9f05b6c6af2113 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@wine-staging.com>
 Date: Tue, 3 Mar 2015 23:19:40 -0700
-Subject: ws2_32: Add asynchronous support for TransmitFile.
+Subject: ws2_32: Add asynchronous support for TransmitFile. (rev 2)
 
 ---
- dlls/ws2_32/socket.c     | 71 ++++++++++++++++++++++++++++++++-----
+ dlls/ws2_32/socket.c     | 72 +++++++++++++++++++++++++++++++++-----
  dlls/ws2_32/tests/sock.c | 91 ++++++++++++++++++++++++++++++++++++++++++++----
- 2 files changed, 147 insertions(+), 15 deletions(-)
+ 2 files changed, 148 insertions(+), 15 deletions(-)
 
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index 115101c..de04d9b 100644
+index e45c838..f9cac67 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
-@@ -2627,36 +2627,60 @@ static NTSTATUS WS2_transmitfile_base( int fd, struct ws2_transmitfile_async *ws
+@@ -2632,13 +2632,45 @@ static NTSTATUS WS2_transmitfile_base( int fd, struct ws2_transmitfile_async *ws
      status = WS2_transmitfile_getbuffer( fd, wsa );
      if (status == STATUS_PENDING)
      {
@@ -20,14 +20,16 @@ index 115101c..de04d9b 100644
          DWORD n;
  
          n = WS2_send( fd, &wsa->write );
-         if (n == -1)
+         if (n == -1 && errno != EAGAIN)
              return wsaErrStatus();
++
 +        if (iosb) iosb->Information += n;
-     }
-     return status;
- }
- 
- /***********************************************************************
++    }
++
++    return status;
++}
++
++/***********************************************************************
 + *     WS2_async_transmitfile           (INTERNAL)
 + *
 + * Asynchronous callback for overlapped TransmitFile operations.
@@ -38,28 +40,25 @@ index 115101c..de04d9b 100644
 +    struct ws2_transmitfile_async *wsa = user;
 +    int fd;
 +
-+    if (status != STATUS_ALERTED)
-+        goto cleanup;
-+
-+    if ((status = wine_server_handle_to_fd( wsa->write.hSocket, FILE_WRITE_DATA, &fd, NULL ) ))
-+        goto cleanup;
-+    status = WS2_transmitfile_base( fd, wsa );
-+    wine_server_release_fd( wsa->write.hSocket, fd );
-+    if (status == STATUS_PENDING)
-+        return iosb->u.Status;
-+
-+    if (wsa->write.user_overlapped->hEvent)
-+        SetEvent(wsa->write.user_overlapped->hEvent);
-+cleanup:
++    if (status == STATUS_ALERTED)
++    {
++        if (!(status = wine_server_handle_to_fd( wsa->write.hSocket, FILE_WRITE_DATA, &fd, NULL )))
++        {
++            status = WS2_transmitfile_base( fd, wsa );
++            wine_server_release_fd( wsa->write.hSocket, fd );
++        }
++        if (status == STATUS_PENDING)
++            return status;
+     }
+ 
 +    iosb->u.Status = status;
++    if (wsa->write.user_overlapped->hEvent)
++        NtSetEvent(wsa->write.user_overlapped->hEvent, NULL);
 +    release_async_io( &wsa->io );
-+    return iosb->u.Status;
-+}
-+
-+/***********************************************************************
-  *     TransmitFile
-  */
- static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD bytes_per_send,
+     return status;
+ }
+ 
+@@ -2649,20 +2681,13 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
                                       LPOVERLAPPED overlapped, LPTRANSMIT_FILE_BUFFERS buffers,
                                       DWORD flags )
  {
@@ -81,7 +80,7 @@ index 115101c..de04d9b 100644
      TRACE("(%lx, %p, %d, %d, %p, %p, %d)\n", s, h, file_bytes, bytes_per_send, overlapped,
              buffers, flags );
  
-@@ -2703,7 +2727,36 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
+@@ -2709,7 +2734,36 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
      wsa->write.control         = NULL;
      wsa->write.n_iovecs        = 0;
      wsa->write.first_iovec     = 0;
@@ -274,5 +273,5 @@ index a93dbe3..4716b61 100644
      closesocket(server);
  }
 -- 
-1.9.1
+2.3.0
 

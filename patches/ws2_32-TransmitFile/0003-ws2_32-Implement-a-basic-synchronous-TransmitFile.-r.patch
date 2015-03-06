@@ -1,22 +1,22 @@
-From a48693d8345a2e8d45083e0746e1bf801f086aa6 Mon Sep 17 00:00:00 2001
+From 3174cffa6b4d0e934004db80506a153422c5af94 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 18:24:27 -0700
-Subject: ws2_32: Implement a basic synchronous TransmitFile.
+Subject: ws2_32: Implement a basic synchronous TransmitFile. (rev 2)
 
 ---
- dlls/ws2_32/socket.c     | 138 ++++++++++++++++++++++++++++++++++++++++++++---
- dlls/ws2_32/tests/sock.c |  36 ++++++++++++-
- 2 files changed, 167 insertions(+), 7 deletions(-)
+ dlls/ws2_32/socket.c     | 144 +++++++++++++++++++++++++++++++++++++++++++++--
+ dlls/ws2_32/tests/sock.c |  36 +++++++++++-
+ 2 files changed, 173 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index 5b4996e..6598f7c 100644
+index 96335cd..36ce0dd 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
 @@ -378,6 +378,18 @@ struct ws2_accept_async
      struct ws2_async    *read;
  };
  
-+typedef struct ws2_transmitfile_async
++struct ws2_transmitfile_async
 +{
 +    struct ws2_async_io   io;
 +    char                  *buffer;
@@ -26,12 +26,12 @@ index 5b4996e..6598f7c 100644
 +    DWORD                 bytes_per_send;
 +    DWORD                 flags;
 +    struct ws2_async      write;
-+} ws2_transmitfile_async;
++};
 +
  static struct ws2_async_io *async_io_freelist;
  
  static void release_async_io( struct ws2_async_io *io )
-@@ -2538,6 +2550,70 @@ static BOOL WINAPI WS2_AcceptEx(SOCKET listener, SOCKET acceptor, PVOID dest, DW
+@@ -2538,6 +2550,76 @@ static BOOL WINAPI WS2_AcceptEx(SOCKET listener, SOCKET acceptor, PVOID dest, DW
  }
  
  /***********************************************************************
@@ -54,22 +54,27 @@ index 5b4996e..6598f7c 100644
 +
 +        /* when the size of the transfer is limited ensure that we don't go past that limit */
 +        if (wsa->file_bytes != 0)
-+            bytes_per_send = min(wsa->bytes_per_send, wsa->file_bytes - wsa->file_read);
++            bytes_per_send = min(bytes_per_send, wsa->file_bytes - wsa->file_read);
 +        status = NtReadFile( wsa->file, 0, NULL, NULL, &iosb, wsa->buffer, bytes_per_send,
 +                             NULL, NULL );
-+        if(status == STATUS_END_OF_FILE)
++        if (status == STATUS_END_OF_FILE)
 +            return STATUS_SUCCESS;
-+        else if(status != STATUS_SUCCESS)
++        else if (status != STATUS_SUCCESS)
 +            return status;
 +        else
 +        {
-+            wsa->write.first_iovec       = 0;
-+            wsa->write.n_iovecs          = 1;
-+            wsa->write.iovec[0].iov_base = wsa->buffer;
-+            wsa->write.iovec[0].iov_len  = iosb.Information;
-+            wsa->file_read += iosb.Information;
++            if (iosb.Information)
++            {
++                wsa->write.first_iovec       = 0;
++                wsa->write.n_iovecs          = 1;
++                wsa->write.iovec[0].iov_base = wsa->buffer;
++                wsa->write.iovec[0].iov_len  = iosb.Information;
++                wsa->file_read += iosb.Information;
++            }
++
 +            if (wsa->file_bytes != 0 && wsa->file_read >= wsa->file_bytes)
 +                wsa->file = NULL;
++
 +            return STATUS_PENDING;
 +        }
 +    }
@@ -92,9 +97,10 @@ index 5b4996e..6598f7c 100644
 +        DWORD n;
 +
 +        n = WS2_send( fd, &wsa->write );
-+        if (n == -1)
++        if (n == -1 && errno != EAGAIN)
 +            return wsaErrStatus();
 +    }
++
 +    return status;
 +}
 +
@@ -102,7 +108,7 @@ index 5b4996e..6598f7c 100644
   *     TransmitFile
   */
  static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD bytes_per_send,
-@@ -2546,12 +2622,22 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
+@@ -2546,12 +2628,22 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
  {
      union generic_unix_sockaddr uaddr;
      unsigned int uaddrlen = sizeof(uaddr);
@@ -128,7 +134,7 @@ index 5b4996e..6598f7c 100644
      if (fd == -1)
      {
          WSASetLastError( WSAENOTSOCK );
-@@ -2563,12 +2649,52 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
+@@ -2563,12 +2655,52 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
          WSASetLastError( WSAENOTCONN );
          return FALSE;
      }
@@ -246,5 +252,5 @@ index 0991e54..1288694 100644
      /* Test TransmitFile with a UDP datagram socket */
      closesocket(client);
 -- 
-1.9.1
+2.3.0
 

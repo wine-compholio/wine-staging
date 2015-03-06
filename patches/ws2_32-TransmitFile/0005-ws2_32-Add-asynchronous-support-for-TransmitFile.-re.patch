@@ -1,35 +1,38 @@
-From 3ff267363ed9aa032ec26f14cd9f05b6c6af2113 Mon Sep 17 00:00:00 2001
+From 8d15a4846ee5d8cfc5632e350e12caa73a79515a Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@wine-staging.com>
 Date: Tue, 3 Mar 2015 23:19:40 -0700
 Subject: ws2_32: Add asynchronous support for TransmitFile. (rev 2)
 
 ---
- dlls/ws2_32/socket.c     | 72 +++++++++++++++++++++++++++++++++-----
+ dlls/ws2_32/socket.c     | 76 ++++++++++++++++++++++++++++++++++------
  dlls/ws2_32/tests/sock.c | 91 ++++++++++++++++++++++++++++++++++++++++++++----
- 2 files changed, 148 insertions(+), 15 deletions(-)
+ 2 files changed, 151 insertions(+), 16 deletions(-)
 
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index e45c838..f9cac67 100644
+index 896397c..244f723 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
-@@ -2632,13 +2632,45 @@ static NTSTATUS WS2_transmitfile_base( int fd, struct ws2_transmitfile_async *ws
+@@ -2632,10 +2632,15 @@ static NTSTATUS WS2_transmitfile_base( int fd, struct ws2_transmitfile_async *ws
      status = WS2_transmitfile_getbuffer( fd, wsa );
      if (status == STATUS_PENDING)
      {
 +        IO_STATUS_BLOCK *iosb = (IO_STATUS_BLOCK *)wsa->write.user_overlapped;
-         DWORD n;
+         int n;
  
          n = WS2_send( fd, &wsa->write );
-         if (n == -1 && errno != EAGAIN)
+-        if (n == -1 && errno != EAGAIN)
++        if (n >= 0)
++        {
++            if (iosb) iosb->Information += n;
++        }
++        else if (errno != EAGAIN)
              return wsaErrStatus();
-+
-+        if (iosb) iosb->Information += n;
-+    }
-+
-+    return status;
-+}
-+
-+/***********************************************************************
+     }
+ 
+@@ -2643,26 +2648,48 @@ static NTSTATUS WS2_transmitfile_base( int fd, struct ws2_transmitfile_async *ws
+ }
+ 
+ /***********************************************************************
 + *     WS2_async_transmitfile           (INTERNAL)
 + *
 + * Asynchronous callback for overlapped TransmitFile operations.
@@ -49,16 +52,19 @@ index e45c838..f9cac67 100644
 +        }
 +        if (status == STATUS_PENDING)
 +            return status;
-     }
- 
++    }
++
 +    iosb->u.Status = status;
 +    if (wsa->write.user_overlapped->hEvent)
 +        NtSetEvent(wsa->write.user_overlapped->hEvent, NULL);
 +    release_async_io( &wsa->io );
-     return status;
- }
- 
-@@ -2649,20 +2681,13 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
++    return status;
++}
++
++/***********************************************************************
+  *     TransmitFile
+  */
+ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD bytes_per_send,
                                       LPOVERLAPPED overlapped, LPTRANSMIT_FILE_BUFFERS buffers,
                                       DWORD flags )
  {
@@ -80,7 +86,7 @@ index e45c838..f9cac67 100644
      TRACE("(%lx, %p, %d, %d, %p, %p, %d)\n", s, h, file_bytes, bytes_per_send, overlapped,
              buffers, flags );
  
-@@ -2709,7 +2734,36 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
+@@ -2709,7 +2736,36 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
      wsa->write.control         = NULL;
      wsa->write.n_iovecs        = 0;
      wsa->write.first_iovec     = 0;

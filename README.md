@@ -38,7 +38,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [19]:**
+**Bugfixes and features included in the next upcoming release [20]:**
 
 * Add stub for gdiplus.GdipCreateEffect ([Wine Bug #32163](https://bugs.winehq.org/show_bug.cgi?id=32163))
 * Add support for CopyFileEx progress callback ([Wine Bug #22692](https://bugs.winehq.org/show_bug.cgi?id=22692))
@@ -53,6 +53,7 @@ Included bug fixes and improvements
 * Fix race-condition when threads are killed during shutdown
 * Implement SetFileInformationByHandle
 * Increase wineconsole commandline buffer size ([Wine Bug #34814](https://bugs.winehq.org/show_bug.cgi?id=34814))
+* MSYS2 expects correct handling of WRITECOPY memory protection ([Wine Bug #35561](https://bugs.winehq.org/show_bug.cgi?id=35561))
 * Process APC calls before starting process
 * Process Hacker 2.x needs ntoskrnl.ProbeForRead ([Wine Bug #38103](https://bugs.winehq.org/show_bug.cgi?id=38103))
 * Properly track handle count of wineserver objects

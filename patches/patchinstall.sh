@@ -1140,6 +1140,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#29384] Voobly expects correct handling of WRITECOPY memory protection
+# |   *	[#35561] MSYS2 expects correct handling of WRITECOPY memory protection
 # |
 # | Modified files:
 # |   *	dlls/advapi32/crypt.c, dlls/kernel32/tests/virtual.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c,

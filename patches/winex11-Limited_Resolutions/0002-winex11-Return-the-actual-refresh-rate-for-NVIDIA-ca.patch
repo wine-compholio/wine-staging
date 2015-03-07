@@ -1,22 +1,23 @@
-From 92b4fb41e72479b418046098aa67fb5d24ebdab7 Mon Sep 17 00:00:00 2001
+From c9b051454c99fbf712a0ebce5f6b46f7bf32ca38 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@wine-staging.com>
 Date: Tue, 3 Mar 2015 10:33:38 -0700
 Subject: winex11: Return the actual refresh rate for NVIDIA cards with Dynamic
  TwinView enabled.
 
 ---
- dlls/winex11.drv/xrandr.c | 55 +++++++++++++++++++++++++++++++++++------------
- 1 file changed, 41 insertions(+), 14 deletions(-)
+ dlls/winex11.drv/xrandr.c | 58 +++++++++++++++++++++++++++++++++++------------
+ 1 file changed, 44 insertions(+), 14 deletions(-)
 
 diff --git a/dlls/winex11.drv/xrandr.c b/dlls/winex11.drv/xrandr.c
-index e7fbf91..d073c67 100644
+index e7fbf91..8e8be24 100644
 --- a/dlls/winex11.drv/xrandr.c
 +++ b/dlls/winex11.drv/xrandr.c
-@@ -68,8 +68,12 @@ static int primary_crtc;
+@@ -68,8 +68,13 @@ static int primary_crtc;
  
  #undef MAKE_FUNCPTR
  
-+struct xrandr10_mode {
++struct xrandr10_mode
++{
 +    SizeID id;
 +    short  rate;
 +};
@@ -26,7 +27,7 @@ index e7fbf91..d073c67 100644
  static unsigned int xrandr_mode_count;
  static int xrandr_current_mode = -1;
  
-@@ -139,7 +143,7 @@ static int xrandr10_get_current_mode(void)
+@@ -139,7 +144,7 @@ static int xrandr10_get_current_mode(void)
  
      for (i = 0; i < xrandr_mode_count; ++i)
      {
@@ -35,7 +36,7 @@ index e7fbf91..d073c67 100644
          {
              res = i;
              break;
-@@ -174,8 +178,8 @@ static LONG xrandr10_set_current_mode( int mode )
+@@ -174,8 +179,8 @@ static LONG xrandr10_set_current_mode( int mode )
            dd_modes[mode].height,
            dd_modes[mode].refresh_rate);
  
@@ -46,7 +47,7 @@ index e7fbf91..d073c67 100644
  
      if (rate)
          stat = pXRRSetScreenConfigAndRate( gdi_display, sc, root, size, rot, rate, CurrentTime );
-@@ -195,10 +199,10 @@ static LONG xrandr10_set_current_mode( int mode )
+@@ -195,10 +200,10 @@ static LONG xrandr10_set_current_mode( int mode )
      return DISP_CHANGE_FAILED;
  }
  
@@ -59,7 +60,7 @@ index e7fbf91..d073c67 100644
  
      if (!XNVCTRLIsNvScreen( gdi_display, DefaultScreen(gdi_display) )) return;
      if (!XNVCTRLQueryVersion( gdi_display, &major, &minor )) return;
-@@ -206,6 +210,25 @@ static void xrandr10_nvidia_rate(void)
+@@ -206,6 +211,27 @@ static void xrandr10_nvidia_rate(void)
                                  NV_CTRL_DYNAMIC_TWINVIEW, &twinview )) return;
      if (!twinview) return;
  
@@ -73,19 +74,21 @@ index e7fbf91..d073c67 100644
 +
 +        if (!XNVCTRLQueryAttribute( gdi_display, DefaultScreen(gdi_display), mask,
 +                                    NV_CTRL_REFRESH_RATE, &refresh_rate)) goto failed;
-+        *override_rate = (short) round(refresh_rate / 100.0f);
++
 +        /* The first device gives us the true refresh rate of the primary display, use this to
 +         * override the false refresh rate the driver reports to XRandR. */
++        *override_rate = (short) round(refresh_rate / 100.0f);
++
++        ERR_(winediag)("NVIDIA Dynamic TwinView detected, replacing inaccurate XRandR refresh rates "
++                       "with the true rate of the primary display.\n");
 +        return;
 +    }
-+    ERR_(winediag)("NVIDIA Dynamic TwinView detected, replacing inaccurate XRandR refresh rates "
-+                   "with the true rate of the primary display.\n");
 +
 +failed:
      ERR_(winediag)("NVIDIA Dynamic TwinView detected, XRandR will report inaccurate refresh rates. "
                     "Please consider disabling the \"DynamicTwinView\" option in your X config.\n");
  #endif
-@@ -213,6 +236,7 @@ static void xrandr10_nvidia_rate(void)
+@@ -213,6 +239,7 @@ static void xrandr10_nvidia_rate(void)
  
  static void xrandr10_init_modes(void)
  {
@@ -93,7 +96,7 @@ index e7fbf91..d073c67 100644
      XRRScreenSize *sizes;
      int sizes_count;
      int i, j, nmodes = 0;
-@@ -221,7 +245,7 @@ static void xrandr10_init_modes(void)
+@@ -221,7 +248,7 @@ static void xrandr10_init_modes(void)
      if (sizes_count <= 0) return;
  
      /* Output a warning about nVidia Dynamic TwinView (if applicable) */
@@ -102,7 +105,7 @@ index e7fbf91..d073c67 100644
  
      TRACE("XRandR: found %d sizes.\n", sizes_count);
      for (i = 0; i < sizes_count; ++i)
-@@ -230,15 +254,15 @@ static void xrandr10_init_modes(void)
+@@ -230,15 +257,15 @@ static void xrandr10_init_modes(void)
          short *rates;
  
          rates = pXRRRates( gdi_display, DefaultScreen(gdi_display), i, &rates_count );
@@ -121,7 +124,7 @@ index e7fbf91..d073c67 100644
              }
          }
          else
-@@ -269,19 +293,22 @@ static void xrandr10_init_modes(void)
+@@ -269,19 +296,22 @@ static void xrandr10_init_modes(void)
          short *rates;
  
          rates = pXRRRates( gdi_display, DefaultScreen(gdi_display), i, &rates_count );
@@ -149,5 +152,5 @@ index e7fbf91..d073c67 100644
      }
  
 -- 
-1.9.1
+2.3.0
 

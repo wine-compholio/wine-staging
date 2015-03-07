@@ -1,0 +1,117 @@
+From 7ed5f1e7150ea0d397633ff1b44518567eddcf5d Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 7 Mar 2015 06:20:55 +0100
+Subject: nvcuda: Implement cuModuleLoad wrapper function.
+
+---
+ dlls/nvcuda/nvcuda.c    | 46 ++++++++++++++++++++++++++++++++++++++++++++++
+ dlls/nvcuda/nvcuda.spec |  2 +-
+ include/cuda.h          |  1 +
+ 3 files changed, 48 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/nvcuda/nvcuda.c b/dlls/nvcuda/nvcuda.c
+index 3262afd..ec32da2 100644
+--- a/dlls/nvcuda/nvcuda.c
++++ b/dlls/nvcuda/nvcuda.c
+@@ -29,6 +29,7 @@
+ 
+ #include "windef.h"
+ #include "winbase.h"
++#include "winternl.h"
+ #include "wine/library.h"
+ #include "wine/debug.h"
+ #include "wine/list.h"
+@@ -261,6 +262,7 @@ static CUresult (*pcuModuleGetGlobal)(CUdeviceptr *dptr, size_t *bytes, CUmodule
+ static CUresult (*pcuModuleGetGlobal_v2)(CUdeviceptr *dptr, size_t *bytes, CUmodule hmod, const char *name);
+ static CUresult (*pcuModuleGetSurfRef)(CUsurfref *pSurfRef, CUmodule hmod, const char *name);
+ static CUresult (*pcuModuleGetTexRef)(CUtexref *pTexRef, CUmodule hmod, const char *name);
++static CUresult (*pcuModuleLoad)(CUmodule *module, const char *fname);
+ static CUresult (*pcuModuleLoadData)(CUmodule *module, const void *image);
+ static CUresult (*pcuModuleLoadDataEx)(CUmodule *module, const void *image, unsigned int numOptions, CUjit_option *options, void **optionValues);
+ static CUresult (*pcuModuleLoadFatBinary)(CUmodule *module, const void *fatCubin);
+@@ -606,6 +608,7 @@ static BOOL load_functions(void)
+     LOAD_FUNCPTR(cuModuleGetGlobal_v2);
+     LOAD_FUNCPTR(cuModuleGetSurfRef);
+     LOAD_FUNCPTR(cuModuleGetTexRef);
++    LOAD_FUNCPTR(cuModuleLoad);
+     LOAD_FUNCPTR(cuModuleLoadData);
+     LOAD_FUNCPTR(cuModuleLoadDataEx);
+     LOAD_FUNCPTR(cuModuleLoadFatBinary);
+@@ -1883,6 +1886,49 @@ CUresult WINAPI wine_cuModuleGetTexRef(CUtexref *pTexRef, CUmodule hmod, const c
+     return pcuModuleGetTexRef(pTexRef, hmod, name);
+ }
+ 
++/* FIXME: Should we pay attention to AreFileApisANSI() ? */
++static BOOL get_unix_path(ANSI_STRING *unix_name, const char *filename)
++{
++    UNICODE_STRING dospathW, ntpathW;
++    ANSI_STRING dospath;
++    NTSTATUS status;
++
++    RtlInitAnsiString(&dospath, filename);
++
++    if (RtlAnsiStringToUnicodeString(&dospathW, &dospath, TRUE))
++        return FALSE;
++
++    if (!RtlDosPathNameToNtPathName_U(dospathW.Buffer, &ntpathW, NULL, NULL))
++    {
++        RtlFreeUnicodeString(&dospathW);
++        return FALSE;
++    }
++
++    status = wine_nt_to_unix_file_name(&ntpathW, unix_name, FILE_OPEN, FALSE);
++
++    RtlFreeUnicodeString(&ntpathW);
++    RtlFreeUnicodeString(&dospathW);
++    return !status;
++}
++
++CUresult WINAPI wine_cuModuleLoad(CUmodule *module, const char *fname)
++{
++    ANSI_STRING unix_name;
++    CUresult ret;
++
++    TRACE("(%p, %s)\n", module, fname);
++
++    if (!fname)
++        return CUDA_ERROR_INVALID_VALUE;
++
++    if (!get_unix_path(&unix_name, fname))
++        return CUDA_ERROR_FILE_NOT_FOUND;
++
++    ret = pcuModuleLoad(module, unix_name.Buffer);
++    RtlFreeAnsiString(&unix_name);
++    return ret;
++}
++
+ CUresult WINAPI wine_cuModuleLoadData(CUmodule *module, const void *image)
+ {
+     TRACE("(%p, %p)\n", module, image);
+diff --git a/dlls/nvcuda/nvcuda.spec b/dlls/nvcuda/nvcuda.spec
+index 84b5fcd..492d6c1 100644
+--- a/dlls/nvcuda/nvcuda.spec
++++ b/dlls/nvcuda/nvcuda.spec
+@@ -240,7 +240,7 @@
+ @ stdcall cuModuleGetGlobal_v2(ptr ptr ptr str) wine_cuModuleGetGlobal_v2
+ @ stdcall cuModuleGetSurfRef(ptr ptr str) wine_cuModuleGetSurfRef
+ @ stdcall cuModuleGetTexRef(ptr ptr str) wine_cuModuleGetTexRef
+-@ stub cuModuleLoad
++@ stdcall cuModuleLoad(ptr str) wine_cuModuleLoad
+ @ stdcall cuModuleLoadData(ptr ptr) wine_cuModuleLoadData
+ @ stdcall cuModuleLoadDataEx(ptr ptr long ptr ptr) wine_cuModuleLoadDataEx
+ @ stdcall cuModuleLoadFatBinary(ptr ptr) wine_cuModuleLoadFatBinary
+diff --git a/include/cuda.h b/include/cuda.h
+index 327fe4d..2bf20f9 100644
+--- a/include/cuda.h
++++ b/include/cuda.h
+@@ -23,6 +23,7 @@
+ #define CUDA_ERROR_INVALID_VALUE    1
+ #define CUDA_ERROR_OUT_OF_MEMORY    2
+ #define CUDA_ERROR_INVALID_CONTEXT  201
++#define CUDA_ERROR_FILE_NOT_FOUND   301
+ #define CUDA_ERROR_INVALID_HANDLE   400
+ #define CUDA_ERROR_NOT_SUPPORTED    801
+ #define CUDA_ERROR_UNKNOWN          999
+-- 
+2.3.0
+

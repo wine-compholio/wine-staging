@@ -122,6 +122,7 @@ patch_enable_all ()
 	enable_msvfw32_Image_Size="$1"
 	enable_netprofm_IConnectionPoint="$1"
 	enable_ntdll_APC_Performance="$1"
+	enable_ntdll_APC_Start_Process="$1"
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_DVD_Read_Size="$1"
 	enable_ntdll_DllRedirects="$1"
@@ -408,6 +409,9 @@ patch_enable ()
 			;;
 		ntdll-APC_Performance)
 			enable_ntdll_APC_Performance="$2"
+			;;
+		ntdll-APC_Start_Process)
+			enable_ntdll_APC_Start_Process="$2"
 			;;
 		ntdll-DOS_Attributes)
 			enable_ntdll_DOS_Attributes="$2"
@@ -2664,6 +2668,18 @@ if test "$enable_ntdll_APC_Performance" -eq 1; then
 	patch_apply ntdll-APC_Performance/0001-ntdll-Reuse-old-async-fileio-structures-if-possible.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Reuse old async fileio structures if possible.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-APC_Start_Process
+# |
+# | Modified files:
+# |   *	dlls/ntdll/loader.c
+# |
+if test "$enable_ntdll_APC_Start_Process" -eq 1; then
+	patch_apply ntdll-APC_Start_Process/0001-ntdll-Process-APC-calls-before-starting-process.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Process APC calls before starting process.", 1 },';
 	) >> "$patchlist"
 fi
 

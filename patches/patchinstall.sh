@@ -138,7 +138,7 @@ patch_enable_all ()
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
-	enable_ntdll_RtlIpv4StringToAddressExA="$1"
+	enable_ntdll_RtlIpStringToAddress="$1"
 	enable_ntdll_RtlUnwindEx="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
@@ -457,8 +457,8 @@ patch_enable ()
 		ntdll-Pipe_SpecialCharacters)
 			enable_ntdll_Pipe_SpecialCharacters="$2"
 			;;
-		ntdll-RtlIpv4StringToAddressExA)
-			enable_ntdll_RtlIpv4StringToAddressExA="$2"
+		ntdll-RtlIpStringToAddress)
+			enable_ntdll_RtlIpStringToAddress="$2"
 			;;
 		ntdll-RtlUnwindEx)
 			enable_ntdll_RtlUnwindEx="$2"
@@ -1016,6 +1016,13 @@ if test "$enable_ntdll_WriteWatches" -eq 1; then
 	fi
 	enable_kernel32_Named_Pipe=1
 	enable_ws2_32_WriteWatches=1
+fi
+
+if test "$enable_ntdll_LZNT1_Compression" -eq 1; then
+	if test "$enable_ntdll_RtlIpStringToAddress" -gt 1; then
+		abort "Patchset ntdll-RtlIpStringToAddress disabled, but ntdll-LZNT1_Compression depends on that."
+	fi
+	enable_ntdll_RtlIpStringToAddress=1
 fi
 
 if test "$enable_ntdll_Junction_Points" -eq 1; then
@@ -2833,6 +2840,22 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-RtlIpStringToAddress
+# |
+# | Modified files:
+# |   *	dlls/ntdll/tests/rtl.c
+# |
+if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
+	patch_apply ntdll-RtlIpStringToAddress/0001-ntdll-tests-Tests-for-RtlIpv6StringToAddress-try-6.patch
+	patch_apply ntdll-RtlIpStringToAddress/0002-ntdll-tests-Tests-for-RtlIpv6StringToAddressEx-try-6.patch
+	patch_apply ntdll-RtlIpStringToAddress/0003-ntdll-tests-Tests-for-RtlIpv4StringToAddressEx-try-5.patch
+	(
+		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddress.", 6 },';
+		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddressEx.", 6 },';
+		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv4StringToAddressEx (try 5, resend).", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-LZNT1_Compression
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2899,18 +2922,6 @@ if test "$enable_ntdll_Pipe_SpecialCharacters" -eq 1; then
 	patch_apply ntdll-Pipe_SpecialCharacters/0001-ntdll-Allow-special-characters-in-pipe-names.patch
 	(
 		echo '+    { "Michael Müller", "ntdll: Allow special characters in pipe names.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-RtlIpv4StringToAddressExA
-# |
-# | Modified files:
-# |   *	dlls/ntdll/tests/rtl.c
-# |
-if test "$enable_ntdll_RtlIpv4StringToAddressExA" -eq 1; then
-	patch_apply ntdll-RtlIpv4StringToAddressExA/0001-ntdll-tests-Add-tests-for-RtlIpv4StringToAddressExA.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for RtlIpv4StringToAddressExA.", 1 },';
 	) >> "$patchlist"
 fi
 

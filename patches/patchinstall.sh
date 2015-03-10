@@ -193,6 +193,7 @@ patch_enable_all ()
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_WndProc="$1"
 	enable_vcomp_Stub_Functions="$1"
+	enable_version_VerQueryValue="$1"
 	enable_version_VersionInfoEx="$1"
 	enable_windowscodecs_TIFF_Decoder="$1"
 	enable_wine_inf_Performance="$1"
@@ -621,6 +622,9 @@ patch_enable ()
 			;;
 		vcomp-Stub_Functions)
 			enable_vcomp_Stub_Functions="$2"
+			;;
+		version-VerQueryValue)
+			enable_version_VerQueryValue="$2"
 			;;
 		version-VersionInfoEx)
 			enable_version_VersionInfoEx="$2"
@@ -1643,18 +1647,6 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -1672,6 +1664,18 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3929,6 +3933,18 @@ if test "$enable_vcomp_Stub_Functions" -eq 1; then
 		echo '+    { "Dan Kegel", "vcomp: better stubs for _vcomp_for_dynamic_init, _vcomp_for_dynamic_next.", 1 },';
 		echo '+    { "Dan Kegel", "vcomp: better stubs for _vcomp_sections_init, _vcomp_sections_next.", 1 },';
 		echo '+    { "Sebastian Lackner", "vcomp: Add a warning that multithreading is not yet supported.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset version-VerQueryValue
+# |
+# | Modified files:
+# |   *	dlls/version/tests/info.c
+# |
+if test "$enable_version_VerQueryValue" -eq 1; then
+	patch_apply version-VerQueryValue/0001-version-Test-for-VerQueryValueA-try-2.patch
+	(
+		echo '+    { "Mark Jansen", "version: Test for VerQueryValueA.", 2 },';
 	) >> "$patchlist"
 fi
 

@@ -3430,14 +3430,17 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#33479] Fix cursor clip regression / broken raw input in multiple games
+# |   *	[#38087] Fix multithreading issues with fullscreen clipping
 # |
 # | Modified files:
-# |   *	dlls/user32/message.c, server/queue.c
+# |   *	dlls/user32/message.c, dlls/winex11.drv/mouse.c, server/queue.c
 # |
 if test "$enable_server_ClipCursor" -eq 1; then
 	patch_apply server-ClipCursor/0001-server-Only-send-WM_WINE_CLIPCURSOR-for-forced-clip-.patch
+	patch_apply server-ClipCursor/0002-winex11-Forward-all-clipping-requests-to-the-right-t.patch
 	(
 		echo '+    { "Sebastian Lackner", "server: Only send WM_WINE_CLIPCURSOR for forced clip resets.", 1 },';
+		echo '+    { "Sebastian Lackner", "winex11: Forward all clipping requests to the right thread (including fullscreen clipping).", 1 },';
 	) >> "$patchlist"
 fi
 

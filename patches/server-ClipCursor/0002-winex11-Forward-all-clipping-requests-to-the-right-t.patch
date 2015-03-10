@@ -1,0 +1,75 @@
+From ee44b1946cb7001cb47d43a60b3e37d9185705de Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Tue, 10 Mar 2015 04:29:04 +0100
+Subject: winex11: Forward all clipping requests to the right thread (including
+ fullscreen clipping).
+
+---
+ dlls/winex11.drv/mouse.c | 30 +++++++++++++++---------------
+ 1 file changed, 15 insertions(+), 15 deletions(-)
+
+diff --git a/dlls/winex11.drv/mouse.c b/dlls/winex11.drv/mouse.c
+index 5f5bdeb..bc20965 100644
+--- a/dlls/winex11.drv/mouse.c
++++ b/dlls/winex11.drv/mouse.c
+@@ -446,6 +446,8 @@ void reset_clipping_window(void)
+     ClipCursor( NULL );  /* make sure the clip rectangle is reset too */
+ }
+ 
++BOOL CDECL X11DRV_ClipCursor( LPCRECT clip );
++
+ /***********************************************************************
+  *             clip_cursor_notify
+  *
+@@ -474,12 +476,10 @@ LRESULT clip_cursor_notify( HWND hwnd, HWND new_clip_hwnd )
+     }
+     else if (hwnd == GetForegroundWindow())  /* request to clip */
+     {
+-        RECT clip, virtual_rect = get_virtual_screen_rect();
++        RECT clip;
+ 
+         GetClipCursor( &clip );
+-        if (clip.left > virtual_rect.left || clip.right < virtual_rect.right ||
+-            clip.top > virtual_rect.top   || clip.bottom < virtual_rect.bottom)
+-            return grab_clipping_window( &clip );
++        X11DRV_ClipCursor( &clip );
+     }
+     return 0;
+ }
+@@ -1391,22 +1391,22 @@ BOOL CDECL X11DRV_ClipCursor( LPCRECT clip )
+     if (grab_pointer)
+     {
+         HWND foreground = GetForegroundWindow();
++        DWORD tid, pid;
++
++        /* forward request to the foreground window if it's in a different thread */
++        tid = GetWindowThreadProcessId( foreground, &pid );
++        if (tid && tid != GetCurrentThreadId() && pid == GetCurrentProcessId())
++        {
++            TRACE( "forwarding clip request to %p\n", foreground );
++            SendNotifyMessageW( foreground, WM_X11DRV_CLIP_CURSOR, 0, 0 );
++            return TRUE;
++        }
+ 
+         /* we are clipping if the clip rectangle is smaller than the screen */
+         if (clip->left > virtual_rect.left || clip->right < virtual_rect.right ||
+             clip->top > virtual_rect.top || clip->bottom < virtual_rect.bottom)
+         {
+-            DWORD tid, pid;
+-
+-            /* forward request to the foreground window if it's in a different thread */
+-            tid = GetWindowThreadProcessId( foreground, &pid );
+-            if (tid && tid != GetCurrentThreadId() && pid == GetCurrentProcessId())
+-            {
+-                TRACE( "forwarding clip request to %p\n", foreground );
+-                SendNotifyMessageW( foreground, WM_X11DRV_CLIP_CURSOR, 0, 0 );
+-                return TRUE;
+-            }
+-            else if (grab_clipping_window( clip )) return TRUE;
++            if (grab_clipping_window( clip )) return TRUE;
+         }
+         else /* if currently clipping, check if we should switch to fullscreen clipping */
+         {
+-- 
+2.3.1
+

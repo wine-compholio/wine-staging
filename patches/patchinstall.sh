@@ -1022,11 +1022,11 @@ if test "$enable_ntdll_WriteWatches" -eq 1; then
 	enable_ws2_32_WriteWatches=1
 fi
 
-if test "$enable_ntdll_LZNT1_Compression" -eq 1; then
-	if test "$enable_ntdll_RtlIpStringToAddress" -gt 1; then
-		abort "Patchset ntdll-RtlIpStringToAddress disabled, but ntdll-LZNT1_Compression depends on that."
+if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
+	if test "$enable_ntdll_LZNT1_Compression" -gt 1; then
+		abort "Patchset ntdll-LZNT1_Compression disabled, but ntdll-RtlIpStringToAddress depends on that."
 	fi
-	enable_ntdll_RtlIpStringToAddress=1
+	enable_ntdll_LZNT1_Compression=1
 fi
 
 if test "$enable_ntdll_Junction_Points" -eq 1; then
@@ -2844,22 +2844,6 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-RtlIpStringToAddress
-# |
-# | Modified files:
-# |   *	dlls/ntdll/tests/rtl.c
-# |
-if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
-	patch_apply ntdll-RtlIpStringToAddress/0001-ntdll-tests-Tests-for-RtlIpv6StringToAddress-try-6.patch
-	patch_apply ntdll-RtlIpStringToAddress/0002-ntdll-tests-Tests-for-RtlIpv6StringToAddressEx-try-6.patch
-	patch_apply ntdll-RtlIpStringToAddress/0003-ntdll-tests-Tests-for-RtlIpv4StringToAddressEx-try-5.patch
-	(
-		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddress.", 6 },';
-		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddressEx.", 6 },';
-		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv4StringToAddressEx (try 5, resend).", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-LZNT1_Compression
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2926,6 +2910,22 @@ if test "$enable_ntdll_Pipe_SpecialCharacters" -eq 1; then
 	patch_apply ntdll-Pipe_SpecialCharacters/0001-ntdll-Allow-special-characters-in-pipe-names.patch
 	(
 		echo '+    { "Michael Müller", "ntdll: Allow special characters in pipe names.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-RtlIpStringToAddress
+# |
+# | Modified files:
+# |   *	dlls/ntdll/tests/rtl.c
+# |
+if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
+	patch_apply ntdll-RtlIpStringToAddress/0001-ntdll-tests-Tests-for-RtlIpv6StringToAddress-try-6.patch
+	patch_apply ntdll-RtlIpStringToAddress/0002-ntdll-tests-Tests-for-RtlIpv6StringToAddressEx-try-6.patch
+	patch_apply ntdll-RtlIpStringToAddress/0003-ntdll-tests-Tests-for-RtlIpv4StringToAddressEx-try-5.patch
+	(
+		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddress.", 6 },';
+		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddressEx.", 6 },';
+		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv4StringToAddressEx (try 5, resend).", 1 },';
 	) >> "$patchlist"
 fi
 

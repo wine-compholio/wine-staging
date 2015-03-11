@@ -84,7 +84,6 @@ patch_enable_all ()
 	enable_d3dx9_36_Optimize_Inplace="$1"
 	enable_d3dx9_36_Texture_Align="$1"
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
-	enable_d3dxof_Cleanup="$1"
 	enable_dbghelp_Debug_Symbols="$1"
 	enable_ddraw_Hotpatch="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
@@ -295,9 +294,6 @@ patch_enable ()
 			;;
 		d3dx9_36-UpdateSkinnedMesh)
 			enable_d3dx9_36_UpdateSkinnedMesh="$2"
-			;;
-		d3dxof-Cleanup)
-			enable_d3dxof_Cleanup="$2"
 			;;
 		dbghelp-Debug_Symbols)
 			enable_dbghelp_Debug_Symbols="$2"
@@ -1551,18 +1547,6 @@ if test "$enable_d3dx9_36_UpdateSkinnedMesh" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset d3dxof-Cleanup
-# |
-# | Modified files:
-# |   *	dlls/d3dxof/d3dxof.c
-# |
-if test "$enable_d3dxof_Cleanup" -eq 1; then
-	patch_apply d3dxof-Cleanup/0001-d3dxof-Use-straight-assignement-instead-of-using-mem.patch
-	(
-		echo '+    { "Christian Costa", "d3dxof: Use straight assignement instead of using memcpy with hardcoded size.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dbghelp-Debug_Symbols
 # |
 # | Modified files:
@@ -1647,6 +1631,18 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -1664,18 +1660,6 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 

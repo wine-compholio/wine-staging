@@ -1,0 +1,88 @@
+From b575a8659eb9daa7af14c15f9f564a19e4b5dbd5 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Thu, 12 Mar 2015 00:44:25 +0100
+Subject: server: Introduce a helper function to update the thread_input key
+ state.
+
+---
+ server/queue.c | 22 ++++++++++++++--------
+ 1 file changed, 14 insertions(+), 8 deletions(-)
+
+diff --git a/server/queue.c b/server/queue.c
+index 3a321cd..85c0786 100644
+--- a/server/queue.c
++++ b/server/queue.c
+@@ -1215,9 +1215,9 @@ static void set_input_key_state( unsigned char *keystate, unsigned char key, int
+     else keystate[key] &= ~0x80;
+ }
+ 
+-/* update the input key state for a keyboard message */
+-static void update_input_key_state( struct desktop *desktop, unsigned char *keystate,
+-                                    const struct message *msg )
++/* update the key state for a keyboard message */
++static void update_key_state( struct desktop *desktop, unsigned char *keystate,
++                              const struct message *msg )
+ {
+     unsigned char key;
+     int down = 0;
+@@ -1279,6 +1279,12 @@ static void update_input_key_state( struct desktop *desktop, unsigned char *keys
+     }
+ }
+ 
++/* update the thread input key state for a keyboard message */
++static void update_input_key_state( struct thread_input *input, const struct message *msg )
++{
++    update_key_state( input->desktop, input->keystate, msg );
++}
++
+ /* release the hardware message currently being processed by the given thread */
+ static void release_hardware_message( struct msg_queue *queue, unsigned int hw_id,
+                                       int remove )
+@@ -1309,7 +1315,7 @@ static void release_hardware_message( struct msg_queue *queue, unsigned int hw_i
+         }
+         if (clr_bit) clear_queue_bits( queue, clr_bit );
+ 
+-        update_input_key_state( input->desktop, input->keystate, msg );
++        update_input_key_state( input, msg );
+         list_remove( &msg->entry );
+         free_message( msg );
+     }
+@@ -1430,7 +1436,7 @@ static void queue_hardware_message( struct desktop *desktop, struct message *msg
+     unsigned int msg_code;
+     struct hardware_msg_data *data = msg->data;
+ 
+-    update_input_key_state( desktop, desktop->keystate, msg );
++    update_key_state( desktop, desktop->keystate, msg );
+     last_input_time = get_tick_count();
+     if (msg->msg != WM_MOUSEMOVE) always_queue = 1;
+ 
+@@ -1473,7 +1479,7 @@ static void queue_hardware_message( struct desktop *desktop, struct message *msg
+     win = find_hardware_message_window( desktop, input, msg, &msg_code, &thread );
+     if (!win || !thread)
+     {
+-        if (input) update_input_key_state( input->desktop, input->keystate, msg );
++        if (input) update_input_key_state( input, msg );
+         free_message( msg );
+         return;
+     }
+@@ -1911,7 +1917,7 @@ static int get_hardware_message( struct thread *thread, unsigned int hw_id, user
+         if (!win || !win_thread)
+         {
+             /* no window at all, remove it */
+-            update_input_key_state( input->desktop, input->keystate, msg );
++            update_input_key_state( input, msg );
+             list_remove( &msg->entry );
+             free_message( msg );
+             continue;
+@@ -1927,7 +1933,7 @@ static int get_hardware_message( struct thread *thread, unsigned int hw_id, user
+             else
+             {
+                 /* for another thread input, drop it */
+-                update_input_key_state( input->desktop, input->keystate, msg );
++                update_input_key_state( input, msg );
+                 list_remove( &msg->entry );
+                 free_message( msg );
+             }
+-- 
+2.3.1
+

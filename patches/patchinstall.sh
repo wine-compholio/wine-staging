@@ -3537,14 +3537,18 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#27238] Fallback to global key state for threads without a queue
+# |   *	[#31899] Implement locking and synchronization of key states
+# |   *	[#35907] Fix caps lock state issues with multiple processes
 # |
 # | Modified files:
 # |   *	server/queue.c
 # |
 if test "$enable_server_Key_State" -eq 1; then
-	patch_apply server-Key_State/0001-server-Fall-back-to-global-key-state-when-thread-doe.patch
+	patch_apply server-Key_State/0001-server-Introduce-a-helper-function-to-update-the-thr.patch
+	patch_apply server-Key_State/0002-server-Implement-locking-and-synchronization-of-keys.patch
 	(
-		echo '+    { "Sebastian Lackner", "server: Fall back to global key state when thread doesn'\''t have a queue.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Introduce a helper function to update the thread_input key state.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Implement locking and synchronization of keystate buffer.", 1 },';
 	) >> "$patchlist"
 fi
 

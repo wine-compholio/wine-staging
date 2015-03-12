@@ -38,9 +38,11 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [1]:**
+**Bugfixes and features included in the next upcoming release [3]:**
 
+* Fix caps lock state issues with multiple processes ([Wine Bug #35907](https://bugs.winehq.org/show_bug.cgi?id=35907))
 * Fix multithreading issues with fullscreen clipping ([Wine Bug #38087](https://bugs.winehq.org/show_bug.cgi?id=38087))
+* Implement locking and synchronization of key states ([Wine Bug #31899](https://bugs.winehq.org/show_bug.cgi?id=31899))
 
 
 **Bugs fixed in Wine Staging 1.7.38 [190]:**

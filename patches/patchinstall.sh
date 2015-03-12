@@ -3512,6 +3512,7 @@ if test "$enable_server_JobObjects" -eq 1; then
 	patch_apply server-JobObjects/0015-server-Support-NULL-job-handles-in-IsProcessInJob.patch
 	patch_apply server-JobObjects/0016-kernel32-tests-Add-tests-for-waiting-on-an-job-objec.patch
 	patch_apply server-JobObjects/0017-server-Implement-waiting-for-job-objects.patch
+	patch_apply server-JobObjects/0018-ntdll-Implement-NtQueryInformationJobObject-stub-fun.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Allow multiple subprocess commands in process tests.", 1 },';
 		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for IsProcessInJob.", 1 },';
@@ -3530,6 +3531,7 @@ if test "$enable_server_JobObjects" -eq 1; then
 		echo '+    { "Andrew Cook", "server: Support NULL job handles in IsProcessInJob.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for waiting on an job object.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement waiting for job objects.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement NtQueryInformationJobObject stub function.", 1 },';
 	) >> "$patchlist"
 fi
 

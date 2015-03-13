@@ -180,7 +180,6 @@ patch_enable_all ()
 	enable_shell32_SHCreateSessionKey="$1"
 	enable_shell32_SHFileOperation="$1"
 	enable_shlwapi_UrlCombine="$1"
-	enable_slc_SLGetWindowsInformation="$1"
 	enable_urlmon_CoInternetSetFeatureEnabled="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawTextExW="$1"
@@ -582,9 +581,6 @@ patch_enable ()
 			;;
 		shlwapi-UrlCombine)
 			enable_shlwapi_UrlCombine="$2"
-			;;
-		slc-SLGetWindowsInformation)
-			enable_slc_SLGetWindowsInformation="$2"
 			;;
 		urlmon-CoInternetSetFeatureEnabled)
 			enable_urlmon_CoInternetSetFeatureEnabled="$2"
@@ -3728,24 +3724,6 @@ if test "$enable_shlwapi_UrlCombine" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "shlwapi/tests: Add additional tests for UrlCombine and UrlCanonicalize.", 1 },';
 		echo '+    { "Sebastian Lackner", "shlwapi: UrlCombineW workaround for relative paths.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset slc-SLGetWindowsInformation
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36709] Support for SLGetWindowsInformationDWORD
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/reg.c, dlls/ntdll/tests/reg.c, dlls/slc/slc.c, dlls/slc/tests/slc.c,
-# | 	include/winternl.h, loader/wine.inf.in
-# |
-if test "$enable_slc_SLGetWindowsInformation" -eq 1; then
-	patch_apply slc-SLGetWindowsInformation/0001-ntdll-Implement-Nt-Zw-QueryLicenseValue.patch
-	patch_apply slc-SLGetWindowsInformation/0002-slc-Implement-SLGetWindowsInformationDWORD.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Implement [Nt|Zw]QueryLicenseValue.", 1 },';
-		echo '+    { "Sebastian Lackner", "slc: Implement SLGetWindowsInformationDWORD.", 1 },';
 	) >> "$patchlist"
 fi
 

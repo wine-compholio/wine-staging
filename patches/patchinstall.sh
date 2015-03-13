@@ -3094,28 +3094,26 @@ fi
 # |   *	[#38103] Process Hacker 2.x needs ntoskrnl.ProbeForRead
 # |
 # | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h, include/ntdef.h
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h
 # |
 if test "$enable_ntoskrnl_Stubs" -eq 1; then
-	patch_apply ntoskrnl-Stubs/0001-include-Remove-several-duplicate-definitions-from-nt.patch
-	patch_apply ntoskrnl-Stubs/0002-ntoskrnl.exe-add-KeWaitForMultipleObjects-stub.patch
-	patch_apply ntoskrnl-Stubs/0003-ntoskrnl.exe-Add-stub-for-IoGetAttachedDeviceReferen.patch
-	patch_apply ntoskrnl-Stubs/0004-ntoskrnl.exe-Add-stubs-for-ExAcquireFastMutexUnsafe-.patch
-	patch_apply ntoskrnl-Stubs/0005-ntoskrnl.exe-Add-stubs-for-ObReferenceObjectByPointe.patch
-	patch_apply ntoskrnl-Stubs/0006-ntoskrnl.exe-Add-stub-for-KeDelayExecutionThread.patch
-	patch_apply ntoskrnl-Stubs/0007-ntoskrnl.exe-Improve-KeReleaseMutex-stub.patch
-	patch_apply ntoskrnl-Stubs/0008-ntoskrnl.exe-Improve-KeInitializeSemaphore-stub.patch
-	patch_apply ntoskrnl-Stubs/0009-ntoskrnl.exe-Improve-KeInitializeTimerEx-stub.patch
-	patch_apply ntoskrnl-Stubs/0010-ntoskrnl.exe-Fix-IoReleaseCancelSpinLock-argument.patch
-	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Add-stub-for-ExAcquireResourceExclusive.patch
-	patch_apply ntoskrnl-Stubs/0012-ntoskrnl.exe-Add-stub-for-ExReleaseResourceForThread.patch
-	patch_apply ntoskrnl-Stubs/0013-ntoskrnl.exe-Add-stub-for-ExDeleteResourceLite.patch
-	patch_apply ntoskrnl-Stubs/0014-ntoskrnl.exe-Implement-MmMapLockedPages-and-MmUnmapL.patch
-	patch_apply ntoskrnl-Stubs/0015-ntoskrnl.exe-Implement-KeInitializeMutex.patch
-	patch_apply ntoskrnl-Stubs/0016-ntoskrnl.exe-Add-stub-for-ProbeForRead.patch
-	patch_apply ntoskrnl-Stubs/0017-ntoskrnl.exe-Add-stub-for-ProbeForWrite.patch
+	patch_apply ntoskrnl-Stubs/0001-ntoskrnl.exe-add-KeWaitForMultipleObjects-stub.patch
+	patch_apply ntoskrnl-Stubs/0002-ntoskrnl.exe-Add-stub-for-IoGetAttachedDeviceReferen.patch
+	patch_apply ntoskrnl-Stubs/0003-ntoskrnl.exe-Add-stubs-for-ExAcquireFastMutexUnsafe-.patch
+	patch_apply ntoskrnl-Stubs/0004-ntoskrnl.exe-Add-stubs-for-ObReferenceObjectByPointe.patch
+	patch_apply ntoskrnl-Stubs/0005-ntoskrnl.exe-Add-stub-for-KeDelayExecutionThread.patch
+	patch_apply ntoskrnl-Stubs/0006-ntoskrnl.exe-Improve-KeReleaseMutex-stub.patch
+	patch_apply ntoskrnl-Stubs/0007-ntoskrnl.exe-Improve-KeInitializeSemaphore-stub.patch
+	patch_apply ntoskrnl-Stubs/0008-ntoskrnl.exe-Improve-KeInitializeTimerEx-stub.patch
+	patch_apply ntoskrnl-Stubs/0009-ntoskrnl.exe-Fix-IoReleaseCancelSpinLock-argument.patch
+	patch_apply ntoskrnl-Stubs/0010-ntoskrnl.exe-Add-stub-for-ExAcquireResourceExclusive.patch
+	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Add-stub-for-ExReleaseResourceForThread.patch
+	patch_apply ntoskrnl-Stubs/0012-ntoskrnl.exe-Add-stub-for-ExDeleteResourceLite.patch
+	patch_apply ntoskrnl-Stubs/0013-ntoskrnl.exe-Implement-MmMapLockedPages-and-MmUnmapL.patch
+	patch_apply ntoskrnl-Stubs/0014-ntoskrnl.exe-Implement-KeInitializeMutex.patch
+	patch_apply ntoskrnl-Stubs/0015-ntoskrnl.exe-Add-stub-for-ProbeForRead.patch
+	patch_apply ntoskrnl-Stubs/0016-ntoskrnl.exe-Add-stub-for-ProbeForWrite.patch
 	(
-		echo '+    { "Sebastian Lackner", "include: Remove several duplicate definitions from ntdef.h.", 1 },';
 		echo '+    { "Austin English", "ntoskrnl.exe: add KeWaitForMultipleObjects stub.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for IoGetAttachedDeviceReference.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ExAcquireFastMutexUnsafe and ExReleaseFastMutexUnsafe.", 1 },';

@@ -74,6 +74,7 @@ patch_enable_all ()
 	enable_d3d9_Skip_Tests="$1"
 	enable_d3d9_Surface_Refcount="$1"
 	enable_d3drm_Specfile="$1"
+	enable_d3dx9_24_ID3DXEffect="$1"
 	enable_d3dx9_25_ID3DXEffect="$1"
 	enable_d3dx9_36_AnimationController="$1"
 	enable_d3dx9_36_D3DXStubs="$1"
@@ -265,6 +266,9 @@ patch_enable ()
 			;;
 		d3drm-Specfile)
 			enable_d3drm_Specfile="$2"
+			;;
+		d3dx9_24-ID3DXEffect)
+			enable_d3dx9_24_ID3DXEffect="$2"
 			;;
 		d3dx9_25-ID3DXEffect)
 			enable_d3dx9_25_ID3DXEffect="$2"
@@ -1097,6 +1101,13 @@ if test "$enable_d3dx9_36_DXTn" -eq 1; then
 	enable_wined3d_DXTn=1
 fi
 
+if test "$enable_d3dx9_24_ID3DXEffect" -eq 1; then
+	if test "$enable_d3dx9_25_ID3DXEffect" -gt 1; then
+		abort "Patchset d3dx9_25-ID3DXEffect disabled, but d3dx9_24-ID3DXEffect depends on that."
+	fi
+	enable_d3dx9_25_ID3DXEffect=1
+fi
+
 if test "$enable_Exagear" -eq 1; then
 	if test "$enable_ntdll_WRITECOPY" -gt 1; then
 		abort "Patchset ntdll-WRITECOPY disabled, but Exagear depends on that."
@@ -1368,6 +1379,18 @@ if test "$enable_d3dx9_25_ID3DXEffect" -eq 1; then
 	patch_apply d3dx9_25-ID3DXEffect/0001-d3dx9_25-Add-an-interface-wrapper-for-different-vers.patch
 	(
 		echo '+    { "Sebastian Lackner", "d3dx9_25: Add an interface wrapper for different version of ID3DXEffect.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3dx9_24-ID3DXEffect
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_24/d3dx9_24.spec
+# |
+if test "$enable_d3dx9_24_ID3DXEffect" -eq 1; then
+	patch_apply d3dx9_24-ID3DXEffect/0001-d3dx9_24-Add-an-interface-wrapper-for-different-vers.patch
+	(
+		echo '+    { "Sebastian Lackner", "d3dx9_24: Add an interface wrapper for different version of ID3DXEffect.", 1 },';
 	) >> "$patchlist"
 fi
 

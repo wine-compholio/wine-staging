@@ -1373,7 +1373,7 @@ fi
 # Patchset d3dx9_25-ID3DXEffect
 # |
 # | Modified files:
-# |   *	dlls/d3dx9_25/Makefile.in, dlls/d3dx9_25/d3dx9_25.spec, dlls/d3dx9_25/effect.c
+# |   *	dlls/d3dx9_25/Makefile.in, dlls/d3dx9_25/d3dx9_25.spec, dlls/d3dx9_25/effect.c, include/d3dx9effect.h
 # |
 if test "$enable_d3dx9_25_ID3DXEffect" -eq 1; then
 	patch_apply d3dx9_25-ID3DXEffect/0001-d3dx9_25-Add-an-interface-wrapper-for-different-vers.patch

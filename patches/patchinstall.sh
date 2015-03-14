@@ -76,6 +76,7 @@ patch_enable_all ()
 	enable_d3drm_Specfile="$1"
 	enable_d3dx9_24_ID3DXEffect="$1"
 	enable_d3dx9_25_ID3DXEffect="$1"
+	enable_d3dx9_26_ID3DXEffect="$1"
 	enable_d3dx9_36_AnimationController="$1"
 	enable_d3dx9_36_D3DXStubs="$1"
 	enable_d3dx9_36_DDS="$1"
@@ -272,6 +273,9 @@ patch_enable ()
 			;;
 		d3dx9_25-ID3DXEffect)
 			enable_d3dx9_25_ID3DXEffect="$2"
+			;;
+		d3dx9_26-ID3DXEffect)
+			enable_d3dx9_26_ID3DXEffect="$2"
 			;;
 		d3dx9_36-AnimationController)
 			enable_d3dx9_36_AnimationController="$2"
@@ -1391,6 +1395,18 @@ if test "$enable_d3dx9_24_ID3DXEffect" -eq 1; then
 	patch_apply d3dx9_24-ID3DXEffect/0001-d3dx9_24-Add-an-interface-wrapper-for-different-vers.patch
 	(
 		echo '+    { "Sebastian Lackner", "d3dx9_24: Add an interface wrapper for different version of ID3DXEffect.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3dx9_26-ID3DXEffect
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/effect.c
+# |
+if test "$enable_d3dx9_26_ID3DXEffect" -eq 1; then
+	patch_apply d3dx9_26-ID3DXEffect/0001-d3dx9_36-Allow-to-query-for-d3dx9_26-specific-ID3DXE.patch
+	(
+		echo '+    { "Sebastian Lackner", "d3dx9_36: Allow to query for d3dx9_26 specific ID3DXEffect interface.", 1 },';
 	) >> "$patchlist"
 fi
 

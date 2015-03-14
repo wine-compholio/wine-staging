@@ -71,6 +71,7 @@ patch_enable_all ()
 	enable_comctl32_LoadIconMetric="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_d3d8_Hotpatch="$1"
+	enable_d3d9_Skip_Tests="$1"
 	enable_d3d9_Surface_Refcount="$1"
 	enable_d3drm_Specfile="$1"
 	enable_d3dx9_36_AnimationController="$1"
@@ -254,6 +255,9 @@ patch_enable ()
 			;;
 		d3d8-Hotpatch)
 			enable_d3d8_Hotpatch="$2"
+			;;
+		d3d9-Skip_Tests)
+			enable_d3d9_Skip_Tests="$2"
 			;;
 		d3d9-Surface_Refcount)
 			enable_d3d9_Surface_Refcount="$2"
@@ -1309,6 +1313,18 @@ if test "$enable_d3d8_Hotpatch" -eq 1; then
 	patch_apply d3d8-Hotpatch/0001-d3d8-Make-IDirect3DSwapChain8-Present-hotpachable.patch
 	(
 		echo '+    { "Michael Müller", "d3d8: Make IDirect3DSwapChain8::Present hotpachable.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3d9-Skip_Tests
+# |
+# | Modified files:
+# |   *	dlls/d3d9/tests/device.c
+# |
+if test "$enable_d3d9_Skip_Tests" -eq 1; then
+	patch_apply d3d9-Skip_Tests/0001-d3d9-tests-Avoid-crash-when-surface-and-texture-crea.patch
+	(
+		echo '+    { "Christian Costa", "d3d9/tests: Avoid crash when surface and texture creation fails.", 1 },';
 	) >> "$patchlist"
 fi
 

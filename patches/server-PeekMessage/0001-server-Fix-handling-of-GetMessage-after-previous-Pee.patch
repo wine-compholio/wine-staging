@@ -1,0 +1,136 @@
+From 70ce4b833309abb3df0751a01d88b3655e77d7a8 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 15 Mar 2015 01:05:48 +0100
+Subject: server: Fix handling of GetMessage after previous PeekMessage call.
+
+---
+ server/queue.c | 31 ++++++++++++++++++++++++++-----
+ 1 file changed, 26 insertions(+), 5 deletions(-)
+
+diff --git a/server/queue.c b/server/queue.c
+index 3a321cd..ce78e4d 100644
+--- a/server/queue.c
++++ b/server/queue.c
+@@ -138,6 +138,7 @@ struct msg_queue
+     struct thread_input   *input;           /* thread input descriptor */
+     struct hook_table     *hooks;           /* hook table */
+     timeout_t              last_get_msg;    /* time of last get message call */
++    unsigned int           ignore_post_msg; /* ignore post messages newer than this unique id */
+ };
+ 
+ struct hotkey
+@@ -292,6 +293,7 @@ static struct msg_queue *create_msg_queue( struct thread *thread, struct thread_
+         queue->input           = (struct thread_input *)grab_object( input );
+         queue->hooks           = NULL;
+         queue->last_get_msg    = current_time;
++        queue->ignore_post_msg = 0;
+         list_init( &queue->send_result );
+         list_init( &queue->callback_result );
+         list_init( &queue->pending_timers );
+@@ -479,13 +481,21 @@ static inline struct msg_queue *get_current_queue(void)
+ }
+ 
+ /* get a (pseudo-)unique id to tag hardware messages */
+-static inline unsigned int get_unique_id(void)
++static inline unsigned int get_unique_hw_id(void)
+ {
+     static unsigned int id;
+     if (!++id) id = 1;  /* avoid an id of 0 */
+     return id;
+ }
+ 
++/* get unique increasing id to tag post messages */
++static inline unsigned int get_unique_post_id(void)
++{
++    static unsigned int id;
++    if (!++id) id = 1;
++    return id;
++}
++
+ /* try to merge a message with the last in the list; return 1 if successful */
+ static int merge_message( struct thread_input *input, const struct message *msg )
+ {
+@@ -772,6 +782,7 @@ static int get_posted_message( struct msg_queue *queue, user_handle_t win,
+     {
+         if (!match_window( win, msg->win )) continue;
+         if (!check_msg_filter( msg->msg, first, last )) continue;
++        if (queue->ignore_post_msg && (int)(msg->unique_id - queue->ignore_post_msg) >= 0) continue;
+         goto found; /* found one */
+     }
+     return 0;
+@@ -1341,6 +1352,7 @@ found:
+     msg->msg       = WM_HOTKEY;
+     msg->wparam    = hotkey->id;
+     msg->lparam    = ((hotkey->vkey & 0xffff) << 16) | modifiers;
++    msg->unique_id = get_unique_post_id();
+ 
+     free( msg->data );
+     msg->data      = NULL;
+@@ -1944,7 +1956,7 @@ static int get_hardware_message( struct thread *thread, unsigned int hw_id, user
+             continue;
+         }
+         /* now we can return it */
+-        if (!msg->unique_id) msg->unique_id = get_unique_id();
++        if (!msg->unique_id) msg->unique_id = get_unique_hw_id();
+         reply->type   = MSG_HARDWARE;
+         reply->win    = win;
+         reply->msg    = msg_code;
+@@ -2049,6 +2061,7 @@ void post_message( user_handle_t win, unsigned int message, lparam_t wparam, lpa
+         msg->result    = NULL;
+         msg->data      = NULL;
+         msg->data_size = 0;
++        msg->unique_id = get_unique_post_id();
+ 
+         list_add_tail( &thread->queue->msg_list[POST_MESSAGE], &msg->entry );
+         set_queue_bits( thread->queue, QS_POSTMESSAGE|QS_ALLPOSTMESSAGE );
+@@ -2263,6 +2276,7 @@ DECL_HANDLER(send_message)
+             set_queue_bits( recv_queue, QS_SENDMESSAGE );
+             break;
+         case MSG_POSTED:
++            msg->unique_id = get_unique_post_id();
+             list_add_tail( &recv_queue->msg_list[POST_MESSAGE], &msg->entry );
+             set_queue_bits( recv_queue, QS_POSTMESSAGE|QS_ALLPOSTMESSAGE );
+             if (msg->msg == WM_HOTKEY)
+@@ -2392,7 +2406,7 @@ DECL_HANDLER(get_message)
+     if ((filter & QS_INPUT) &&
+         filter_contains_hw_range( req->get_first, req->get_last ) &&
+         get_hardware_message( current, req->hw_id, get_win, req->get_first, req->get_last, req->flags, reply ))
+-        return;
++        goto found_msg;
+ 
+     /* now check for WM_PAINT */
+     if ((filter & QS_PAINT) &&
+@@ -2405,7 +2419,7 @@ DECL_HANDLER(get_message)
+         reply->wparam = 0;
+         reply->lparam = 0;
+         reply->time   = get_tick_count();
+-        return;
++        goto found_msg;
+     }
+ 
+     /* now check for timer */
+@@ -2421,13 +2435,20 @@ DECL_HANDLER(get_message)
+         reply->time   = get_tick_count();
+         if (!(req->flags & PM_NOYIELD) && current->process->idle_event)
+             set_event( current->process->idle_event );
+-        return;
++        goto found_msg;
+     }
+ 
+     if (get_win == -1 && current->process->idle_event) set_event( current->process->idle_event );
+     queue->wake_mask = req->wake_mask;
+     queue->changed_mask = req->changed_mask;
+     set_error( STATUS_PENDING );  /* FIXME */
++    return;
++
++found_msg:
++    if (req->flags & PM_REMOVE)
++        queue->ignore_post_msg = 0;
++    else if (!queue->ignore_post_msg)
++        queue->ignore_post_msg = get_unique_post_id();
+ }
+ 
+ 
+-- 
+2.3.2
+

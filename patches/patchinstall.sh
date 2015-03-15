@@ -171,6 +171,7 @@ patch_enable_all ()
 	enable_server_Key_State="$1"
 	enable_server_Misc_ACL="$1"
 	enable_server_OpenProcess="$1"
+	enable_server_PeekMessage="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Unexpected_Wakeup="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
@@ -558,6 +559,9 @@ patch_enable ()
 			;;
 		server-OpenProcess)
 			enable_server_OpenProcess="$2"
+			;;
+		server-PeekMessage)
+			enable_server_PeekMessage="$2"
 			;;
 		server-Stored_ACLs)
 			enable_server_Stored_ACLs="$2"
@@ -3616,6 +3620,21 @@ if test "$enable_server_Key_State" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "server: Introduce a helper function to update the thread_input key state.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement locking and synchronization of keystate buffer.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-PeekMessage
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#28884] GetMessage should remove already seen messages with higher priority
+# |
+# | Modified files:
+# |   *	server/queue.c
+# |
+if test "$enable_server_PeekMessage" -eq 1; then
+	patch_apply server-PeekMessage/0001-server-Fix-handling-of-GetMessage-after-previous-Pee.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Fix handling of GetMessage after previous PeekMessage call.", 1 },';
 	) >> "$patchlist"
 fi
 

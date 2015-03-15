@@ -192,6 +192,7 @@ patch_enable_all ()
 	enable_user32_GetRawInputDeviceList="$1"
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_GetTipText="$1"
+	enable_user32_Key_State="$1"
 	enable_user32_Mouse_Message_Hwnd="$1"
 	enable_user32_Painting="$1"
 	enable_user32_ScrollWindowEx="$1"
@@ -624,6 +625,9 @@ patch_enable ()
 			;;
 		user32-GetTipText)
 			enable_user32_GetTipText="$2"
+			;;
+		user32-Key_State)
+			enable_user32_Key_State="$2"
 			;;
 		user32-Mouse_Message_Hwnd)
 			enable_user32_Mouse_Message_Hwnd="$2"
@@ -3936,6 +3940,21 @@ if test "$enable_user32_GetTipText" -eq 1; then
 	(
 		echo '+    { "Erich E. Hoover", "Fix TOOLTIPS_GetTipText when a resource cannot be found.", 1 },';
 		echo '+    { "Erich E. Hoover", "Fix TOOLTIPS_GetTipText when a NULL instance is used.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-Key_State
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#29871] Invalidate key state cache globally after calling LL hooks
+# |
+# | Modified files:
+# |   *	dlls/user32/hook.c, dlls/user32/input.c, dlls/user32/message.c, dlls/user32/user_private.h
+# |
+if test "$enable_user32_Key_State" -eq 1; then
+	patch_apply user32-Key_State/0001-user32-After-calling-LL-hooks-the-key-state-cache-ha.patch
+	(
+		echo '+    { "Sebastian Lackner", "user32: After calling LL hooks the key state cache has to be invalidated globally.", 1 },';
 	) >> "$patchlist"
 fi
 

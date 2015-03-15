@@ -38,7 +38,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [8]:**
+**Bugfixes and features included in the next upcoming release [9]:**
 
 * Add stub for PowerCreateRequest
 * Fix caps lock state issues with multiple processes ([Wine Bug #35907](https://bugs.winehq.org/show_bug.cgi?id=35907))
@@ -47,6 +47,7 @@ Included bug fixes and improvements
 * Fix wrong version of ID3DXEffect interface for d3dx9_25
 * GetMessage should remove already seen messages with higher priority ([Wine Bug #28884](https://bugs.winehq.org/show_bug.cgi?id=28884))
 * Implement locking and synchronization of key states ([Wine Bug #31899](https://bugs.winehq.org/show_bug.cgi?id=31899))
+* Invalidate key state cache globally after calling LL hooks ([Wine Bug #29871](https://bugs.winehq.org/show_bug.cgi?id=29871))
 * Python PIP needs better NtQueryInformationJobObject stub
 
 

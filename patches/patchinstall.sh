@@ -209,6 +209,7 @@ patch_enable_all ()
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Multisampling="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
+	enable_wined3d_UnhandledBlendFactor="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
 	enable_winepulse_PulseAudio_Support="$1"
@@ -673,6 +674,9 @@ patch_enable ()
 			;;
 		wined3d-Revert_PixelFormat)
 			enable_wined3d_Revert_PixelFormat="$2"
+			;;
+		wined3d-UnhandledBlendFactor)
+			enable_wined3d_UnhandledBlendFactor="$2"
 			;;
 		winedevice-Fix_Relocation)
 			enable_winedevice_Fix_Relocation="$2"
@@ -1796,6 +1800,18 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 

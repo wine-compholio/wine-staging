@@ -2377,11 +2377,13 @@ fi
 # |   *	[#36216] Hearthstone fails to start
 # |
 # | Modified files:
-# |   *	dlls/kernel32/console.c, dlls/kernel32/environ.c, dlls/kernel32/tests/process.c
+# |   *	dlls/kernel32/console.c, dlls/kernel32/environ.c, dlls/kernel32/tests/process.c, dlls/krnl386.exe16/file.c
 # |
 if test "$enable_kernel32_Console_Handles" -eq 1; then
-	patch_apply kernel32-Console_Handles/0001-kernel32-Invalid-console-handles-for-new-processes-a.patch
+	patch_apply kernel32-Console_Handles/0001-krnl386-Invalid-console-handles-should-translate-int.patch
+	patch_apply kernel32-Console_Handles/0002-kernel32-Invalid-console-handles-for-new-processes-a.patch
 	(
+		echo '+    { "Erich E. Hoover", "krnl386: Invalid console handles should translate into real handles when creating a new process.", 1 },';
 		echo '+    { "Erich E. Hoover", "kernel32: Invalid console handles for new processes are 0, not INVALID_HANDLE_VALUE.", 1 },';
 	) >> "$patchlist"
 fi

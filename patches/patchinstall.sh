@@ -113,6 +113,7 @@ patch_enable_all ()
 	enable_kernel32_GetVolumePathName="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
+	enable_kernel32_PowerRequest="$1"
 	enable_kernel32_Profile="$1"
 	enable_kernel32_SetFileInformationByHandle="$1"
 	enable_kernel32_VerifyVersionInfo="$1"
@@ -386,6 +387,9 @@ patch_enable ()
 			;;
 		kernel32-NeedCurrentDirectoryForExePath)
 			enable_kernel32_NeedCurrentDirectoryForExePath="$2"
+			;;
+		kernel32-PowerRequest)
+			enable_kernel32_PowerRequest="$2"
 			;;
 		kernel32-Profile)
 			enable_kernel32_Profile="$2"
@@ -1706,6 +1710,18 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -1723,18 +1739,6 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2589,6 +2593,18 @@ if test "$enable_kernel32_NeedCurrentDirectoryForExePath" -eq 1; then
 		echo '+    { "Erich E. Hoover", "kernel32: Add SearchPath test demonstrating the priority of the working directory.", 1 },';
 		echo '+    { "Erich E. Hoover", "kernel32: NeedCurrentDirectoryForExePath does not use the registry.", 1 },';
 		echo '+    { "Erich E. Hoover", "kernel32: Consider the working directory first when launching executables with CreateProcess.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-PowerRequest
+# |
+# | Modified files:
+# |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/powermgnt.c
+# |
+if test "$enable_kernel32_PowerRequest" -eq 1; then
+	patch_apply kernel32-PowerRequest/0001-kernel32-Add-stub-for-PowerCreateRequest.patch
+	(
+		echo '+    { "Sebastian Lackner", "kernel32: Add stub for PowerCreateRequest.", 1 },';
 	) >> "$patchlist"
 fi
 

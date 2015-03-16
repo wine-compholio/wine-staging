@@ -78,6 +78,7 @@ patch_enable_all ()
 	enable_d3dx9_25_ID3DXEffect="$1"
 	enable_d3dx9_26_ID3DXEffect="$1"
 	enable_d3dx9_36_AnimationController="$1"
+	enable_d3dx9_36_CloneEffect="$1"
 	enable_d3dx9_36_D3DXStubs="$1"
 	enable_d3dx9_36_DDS="$1"
 	enable_d3dx9_36_DXTn="$1"
@@ -285,6 +286,9 @@ patch_enable ()
 			;;
 		d3dx9_36-AnimationController)
 			enable_d3dx9_36_AnimationController="$2"
+			;;
+		d3dx9_36-CloneEffect)
+			enable_d3dx9_36_CloneEffect="$2"
 			;;
 		d3dx9_36-D3DXStubs)
 			enable_d3dx9_36_D3DXStubs="$2"
@@ -1400,6 +1404,9 @@ fi
 
 # Patchset d3dx9_25-ID3DXEffect
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#25138] Fix wrong version of ID3DXEffect interface for d3dx9_25
+# |
 # | Modified files:
 # |   *	dlls/d3dx9_25/Makefile.in, dlls/d3dx9_25/d3dx9_25.spec, dlls/d3dx9_25/effect.c, include/d3dx9effect.h
 # |
@@ -1486,6 +1493,18 @@ if test "$enable_d3dx9_36_AnimationController" -eq 1; then
 	patch_apply d3dx9_36-AnimationController/0001-d3dx9_36-Implement-D3DXCreateAnimationController-wit.patch
 	(
 		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXCreateAnimationController with a stubbed ID3DXAnimationController interface.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3dx9_36-CloneEffect
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/effect.c
+# |
+if test "$enable_d3dx9_36_CloneEffect" -eq 1; then
+	patch_apply d3dx9_36-CloneEffect/0001-d3dx9_36-Improve-stub-for-ID3DXEffectImpl_CloneEffec.patch
+	(
+		echo '+    { "Sebastian Lackner", "d3dx9_36: Improve stub for ID3DXEffectImpl_CloneEffect.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,8 +1,8 @@
-From 6a575f8176ff60cc4703e6299c38e15e5778881d Mon Sep 17 00:00:00 2001
+From c9ecfe26ac53dc015f02b91948db35cdc141b5d9 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Thu, 18 Dec 2014 01:04:34 +0100
 Subject: dinput: Ensure X11 input events are handled even without explicit
- message loop. (try 2)
+ message loop. (try 3)
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -24,14 +24,36 @@ till a better solution is found. This workaround will have no disadvantage, exce
 that this isn't a complete fix. Please note that not only hooks are affected by
 this issue, also *RawInput* functions show the same issue - which is the reason why
 native dinput will still not work (already tested).
+
+Since games use very different code in order to query for input events, we have to
+call __wine_check_for_events from multiple locations in the code. See:
+* https://bugs.wine-staging.com/show_bug.cgi?id=42
+* https://bugs.wine-staging.com/show_bug.cgi?id=149
 ---
+ dlls/dinput/device.c    |  5 +++--
  dlls/dinput/keyboard.c  |  2 ++
  dlls/dinput/mouse.c     |  2 ++
  dlls/user32/input.c     | 14 ++++++++++----
  dlls/user32/user32.spec |  1 +
  include/winuser.h       |  1 +
- 5 files changed, 16 insertions(+), 4 deletions(-)
+ 6 files changed, 19 insertions(+), 6 deletions(-)
 
+diff --git a/dlls/dinput/device.c b/dlls/dinput/device.c
+index ab43029..60678be 100644
+--- a/dlls/dinput/device.c
++++ b/dlls/dinput/device.c
+@@ -1631,8 +1631,9 @@ HRESULT WINAPI IDirectInputDevice2WImpl_Poll(LPDIRECTINPUTDEVICE8W iface)
+     IDirectInputDeviceImpl *This = impl_from_IDirectInputDevice8W(iface);
+ 
+     if (!This->acquired) return DIERR_NOTACQUIRED;
+-    /* Because wine devices do not need to be polled, just return DI_NOEFFECT */
+-    return DI_NOEFFECT;
++
++    __wine_check_for_events( QS_ALLINPUT );
++    return DI_OK;
+ }
+ 
+ HRESULT WINAPI IDirectInputDevice2AImpl_Poll(LPDIRECTINPUTDEVICE8A iface)
 diff --git a/dlls/dinput/keyboard.c b/dlls/dinput/keyboard.c
 index a5967d7..9e78257 100644
 --- a/dlls/dinput/keyboard.c
@@ -133,5 +155,5 @@ index 3d9b937..7c5c01e 100644
  #endif
  
 -- 
-2.2.2
+2.3.2
 

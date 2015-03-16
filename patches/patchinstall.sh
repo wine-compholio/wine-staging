@@ -123,7 +123,6 @@ patch_enable_all ()
 	enable_mmdevapi_AEV_Stubs="$1"
 	enable_msctf_DllCanUnloadNow="$1"
 	enable_msvcp90_basic_string_wchar_dtor="$1"
-	enable_msvcrt_Kata_Hira="$1"
 	enable_msvcrt_atof_strtod="$1"
 	enable_msvfw32_Image_Size="$1"
 	enable_netprofm_IConnectionPoint="$1"
@@ -421,9 +420,6 @@ patch_enable ()
 			;;
 		msvcp90-basic_string_wchar_dtor)
 			enable_msvcp90_basic_string_wchar_dtor="$2"
-			;;
-		msvcrt-Kata_Hira)
-			enable_msvcrt_Kata_Hira="$2"
 			;;
 		msvcrt-atof_strtod)
 			enable_msvcrt_atof_strtod="$2"
@@ -2739,23 +2735,6 @@ if test "$enable_msvcp90_basic_string_wchar_dtor" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "msvcp90: basic_string_wchar_dtor needs to return NULL.", 1 },';
 		echo '+    { "Michael Müller", "msvcp90/tests: Add tests to check that basic_string_wchar_dtor returns NULL.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset msvcrt-Kata_Hira
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38226] Implement _ismbckata and _mbctohira
-# |
-# | Modified files:
-# |   *	dlls/msvcr100/msvcr100.spec, dlls/msvcr110/msvcr110.spec, dlls/msvcr120/msvcr120.spec, dlls/msvcr70/msvcr70.spec,
-# | 	dlls/msvcr71/msvcr71.spec, dlls/msvcr80/msvcr80.spec, dlls/msvcr90/msvcr90.spec, dlls/msvcrt/mbcs.c,
-# | 	dlls/msvcrt/msvcrt.spec, dlls/msvcrt/tests/string.c
-# |
-if test "$enable_msvcrt_Kata_Hira" -eq 1; then
-	patch_apply msvcrt-Kata_Hira/0001-msvcrt-Implement-_mbctokata-and-_mbctohira.patch
-	(
-		echo '+    { "Michael Müller", "msvcrt: Implement _mbctokata and _mbctohira.", 1 },';
 	) >> "$patchlist"
 fi
 

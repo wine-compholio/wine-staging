@@ -2819,7 +2819,7 @@ if test "$enable_ntdll_Activation_Context" -eq 1; then
 	patch_apply ntdll-Activation_Context/0002-ntdll-RtlFindActivationContextSectionString-should-a.patch
 	patch_apply ntdll-Activation_Context/0003-ntdll-Fix-return-value-for-missing-ACTIVATION_CONTEX.patch
 	(
-		echo '+    { "Mark Jansen", "kernel32: Parameter validation tests for FindActCtxSectionString.", 1 },';
+		echo '+    { "Mark Jansen", "kernel32/tests: Parameter validation tests for FindActCtxSectionString.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: RtlFindActivationContextSectionString should accept a NULL pointer as data.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Fix return value for missing ACTIVATION_CONTEXT_SECTION_ASSEMBLY_INFORMATION key.", 1 },';
 	) >> "$patchlist"

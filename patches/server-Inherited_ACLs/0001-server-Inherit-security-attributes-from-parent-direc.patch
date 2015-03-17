@@ -1,4 +1,4 @@
-From 36c98dd468a20204bc12809b6f290340a5f8c010 Mon Sep 17 00:00:00 2001
+From 342e7b54a72ca30753ee0b7e2651582574869887 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 14:08:36 -0600
 Subject: server: Inherit security attributes from parent directories on
@@ -6,14 +6,14 @@ Subject: server: Inherit security attributes from parent directories on
 
 ---
  dlls/advapi32/tests/security.c |  40 +++++++++++-
- server/file.c                  | 136 +++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 175 insertions(+), 1 deletion(-)
+ server/file.c                  | 137 +++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 176 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index 82c0639..3e88c2e 100644
+index df6f8ca..b2f6052 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -3117,10 +3117,11 @@ static void test_CreateDirectoryA(void)
+@@ -3116,10 +3116,11 @@ static void test_CreateDirectoryA(void)
      ACL_SIZE_INFORMATION acl_size;
      ACCESS_ALLOWED_ACE *ace;
      SECURITY_ATTRIBUTES sa;
@@ -26,7 +26,7 @@ index 82c0639..3e88c2e 100644
      DWORD error;
      PACL pDacl;
  
-@@ -3213,6 +3214,43 @@ static void test_CreateDirectoryA(void)
+@@ -3212,6 +3213,43 @@ static void test_CreateDirectoryA(void)
      }
      LocalFree(pSD);
  
@@ -71,7 +71,7 @@ index 82c0639..3e88c2e 100644
      HeapFree(GetProcessHeap(), 0, user);
      bret = RemoveDirectoryA(tmpdir);
 diff --git a/server/file.c b/server/file.c
-index 57100c1..431b8a1 100644
+index 09b7811..188e352 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -71,6 +71,7 @@ struct file
@@ -82,7 +82,7 @@ index 57100c1..431b8a1 100644
  
  static void file_dump( struct object *obj, int verbose );
  static struct fd *file_get_fd( struct object *obj );
-@@ -248,11 +249,141 @@ void set_xattr_sd( int fd, const struct security_descriptor *sd, const SID *user
+@@ -252,11 +253,142 @@ void set_xattr_sd( int fd, const struct security_descriptor *sd, const SID *user
      xattr_fset( fd, WINE_XATTR_SD, buffer, len );
  }
  
@@ -175,8 +175,9 @@ index 57100c1..431b8a1 100644
 +    struct fd *parent_fd;
 +    int unix_fd;
 +
-+    parent_name = strndup( child_name, child_len );
-+    if (!parent_name) return NULL;
++    if (!(parent_name = mem_alloc( child_len + 1 ))) return NULL;
++    memcpy( parent_name, child_name, child_len );
++    parent_name[child_len] = 0;
 +
 +    /* skip trailing slashes */
 +    p = parent_name + strlen( parent_name ) - 1;
@@ -224,7 +225,7 @@ index 57100c1..431b8a1 100644
      const SID *owner = NULL, *group = NULL;
      struct object *obj = NULL;
      struct fd *fd;
-@@ -282,6 +413,10 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+@@ -286,6 +418,10 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
      default:                set_error( STATUS_INVALID_PARAMETER ); goto done;
      }
  
@@ -235,7 +236,7 @@ index 57100c1..431b8a1 100644
      if (sd)
      {
          owner = sd_get_owner( sd );
-@@ -325,6 +460,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+@@ -329,6 +465,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
      release_object( fd );
  
  done:
@@ -244,5 +245,5 @@ index 57100c1..431b8a1 100644
      return obj;
  }
 -- 
-2.1.0
+2.3.2
 

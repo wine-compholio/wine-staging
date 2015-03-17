@@ -1,19 +1,33 @@
-From 3c89d2a189c2cc869c7ce81293ab752e3fa57708 Mon Sep 17 00:00:00 2001
+From d5cbae7de46fb8b334cda913d6f141669424d2c0 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 25 Jan 2015 15:46:05 +0100
-Subject: ntdll: Fix check for end_frame in RtlUnwindEx on x86_64. (rev 2)
+Subject: ntdll: Fix check for end_frame in RtlUnwindEx on x86_64. (rev 3)
 
 Changes in v2:
 * Calling wine internal handlers should not mess up the EstablisherFrame.
+
+Changes in v3:
+* Fix dwarf_virtual_unwind too, to be compatible with RtlVirtualUnwind we
+  have to set the frame pointer _before_ doing the unwind.
 ---
- dlls/ntdll/signal_x86_64.c | 5 +++--
- 1 file changed, 3 insertions(+), 2 deletions(-)
+ dlls/ntdll/signal_x86_64.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
-index 05581c2..7072569 100644
+index 551687f..493a9f7 100644
 --- a/dlls/ntdll/signal_x86_64.c
 +++ b/dlls/ntdll/signal_x86_64.c
-@@ -3167,6 +3167,7 @@ void WINAPI RtlUnwindEx( PVOID end_frame, PVOID target_ip, EXCEPTION_RECORD *rec
+@@ -1407,8 +1407,8 @@ static NTSTATUS dwarf_virtual_unwind( ULONG64 ip, ULONG64 *frame,CONTEXT *contex
+     TRACE( "fde %p len %x personality %p lsda %p code %lx-%lx\n",
+            fde, fde->length, *handler, *handler_data, info.ip, code_end );
+     execute_cfa_instructions( ptr, end, ip, &info );
+-    apply_frame_state( context, &info.state );
+     *frame = context->Rsp;
++    apply_frame_state( context, &info.state );
+ 
+     TRACE( "next function rip=%016lx\n", context->Rip );
+     TRACE( "  rax=%016lx rbx=%016lx rcx=%016lx rdx=%016lx\n",
+@@ -3214,6 +3214,7 @@ void WINAPI RtlUnwindEx( PVOID end_frame, PVOID target_ip, EXCEPTION_RECORD *rec
          }
          else  /* hack: call builtin handlers registered in the tib list */
          {
@@ -21,7 +35,7 @@ index 05581c2..7072569 100644
              while ((ULONG64)teb_frame < new_context.Rsp && (ULONG64)teb_frame < (ULONG64)end_frame)
              {
                  TRACE( "found builtin frame %p handler %p\n", teb_frame, teb_frame->Handler );
-@@ -3175,10 +3176,10 @@ void WINAPI RtlUnwindEx( PVOID end_frame, PVOID target_ip, EXCEPTION_RECORD *rec
+@@ -3222,10 +3223,10 @@ void WINAPI RtlUnwindEx( PVOID end_frame, PVOID target_ip, EXCEPTION_RECORD *rec
                  teb_frame = __wine_pop_frame( teb_frame );
              }
              if ((ULONG64)teb_frame == (ULONG64)end_frame && (ULONG64)end_frame < new_context.Rsp) break;
@@ -35,5 +49,5 @@ index 05581c2..7072569 100644
      }
  
 -- 
-2.2.2
+2.3.2
 

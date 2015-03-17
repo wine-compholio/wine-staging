@@ -3707,11 +3707,13 @@ fi
 # |   *	[#28884] GetMessage should remove already seen messages with higher priority
 # |
 # | Modified files:
-# |   *	server/queue.c
+# |   *	dlls/user32/tests/msg.c, server/queue.c
 # |
 if test "$enable_server_PeekMessage" -eq 1; then
-	patch_apply server-PeekMessage/0001-server-Fix-handling-of-GetMessage-after-previous-Pee.patch
+	patch_apply server-PeekMessage/0001-user32-tests-Add-tests-for-removing-already-seen-mes.patch
+	patch_apply server-PeekMessage/0002-server-Fix-handling-of-GetMessage-after-previous-Pee.patch
 	(
+		echo '+    { "Sebastian Lackner", "user32/tests: Add tests for removing already seen messages from the queue.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Fix handling of GetMessage after previous PeekMessage call.", 1 },';
 	) >> "$patchlist"
 fi

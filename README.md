@@ -38,7 +38,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [10]:**
+**Bugfixes and features included in the next upcoming release [11]:**
 
 * Add stub for PowerCreateRequest
 * Fix caps lock state issues with multiple processes ([Wine Bug #35907](https://bugs.winehq.org/show_bug.cgi?id=35907))
@@ -49,6 +49,7 @@ Included bug fixes and improvements
 * Implement locking and synchronization of key states ([Wine Bug #31899](https://bugs.winehq.org/show_bug.cgi?id=31899))
 * Improve stub for ID3DXEffectImpl_CloneEffect
 * Invalidate key state cache globally after calling LL hooks ([Wine Bug #29871](https://bugs.winehq.org/show_bug.cgi?id=29871))
+* Only zero the buffer up 32767 bytes in GetTempPathW ([Wine Bug #38220](https://bugs.winehq.org/show_bug.cgi?id=38220))
 * Python PIP needs better NtQueryInformationJobObject stub
 
 

@@ -2811,15 +2811,11 @@ fi
 # Patchset ntdll-Activation_Context
 # |
 # | Modified files:
-# |   *	dlls/kernel32/actctx.c, dlls/kernel32/tests/actctx.c, dlls/ntdll/actctx.c
+# |   *	dlls/kernel32/tests/actctx.c, dlls/ntdll/actctx.c
 # |
 if test "$enable_ntdll_Activation_Context" -eq 1; then
-	patch_apply ntdll-Activation_Context/0001-kernel32-Parameter-validation-tests-for-FindActCtxSe.patch
-	patch_apply ntdll-Activation_Context/0002-ntdll-RtlFindActivationContextSectionString-should-a.patch
-	patch_apply ntdll-Activation_Context/0003-ntdll-Fix-return-value-for-missing-ACTIVATION_CONTEX.patch
+	patch_apply ntdll-Activation_Context/0001-ntdll-Fix-return-value-for-missing-ACTIVATION_CONTEX.patch
 	(
-		echo '+    { "Mark Jansen", "kernel32/tests: Parameter validation tests for FindActCtxSectionString.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: RtlFindActivationContextSectionString should accept a NULL pointer as data.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Fix return value for missing ACTIVATION_CONTEXT_SECTION_ASSEMBLY_INFORMATION key.", 1 },';
 	) >> "$patchlist"
 fi
@@ -3710,10 +3706,8 @@ fi
 # |   *	dlls/user32/tests/msg.c, server/queue.c
 # |
 if test "$enable_server_PeekMessage" -eq 1; then
-	patch_apply server-PeekMessage/0001-user32-tests-Add-tests-for-removing-already-seen-mes.patch
-	patch_apply server-PeekMessage/0002-server-Fix-handling-of-GetMessage-after-previous-Pee.patch
+	patch_apply server-PeekMessage/0001-server-Fix-handling-of-GetMessage-after-previous-Pee.patch
 	(
-		echo '+    { "Sebastian Lackner", "user32/tests: Add tests for removing already seen messages from the queue.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Fix handling of GetMessage after previous PeekMessage call.", 1 },';
 	) >> "$patchlist"
 fi

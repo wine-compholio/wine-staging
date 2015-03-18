@@ -1,14 +1,15 @@
-From 230ab0ec85f3f175396876907fed42ef285d0f64 Mon Sep 17 00:00:00 2001
+From 75ba790099722f2abb6fc408def81611ca93ddc0 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Thu, 12 Mar 2015 02:56:21 +0100
 Subject: server: Implement locking and synchronization of keystate buffer.
+ (rev 2)
 
 ---
- server/queue.c | 56 +++++++++++++++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 55 insertions(+), 1 deletion(-)
+ server/queue.c | 58 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 57 insertions(+), 1 deletion(-)
 
 diff --git a/server/queue.c b/server/queue.c
-index 85c0786..426f626 100644
+index 85c0786..f3c8c81 100644
 --- a/server/queue.c
 +++ b/server/queue.c
 @@ -111,6 +111,7 @@ struct thread_input
@@ -27,14 +28,14 @@ index 85c0786..426f626 100644
      int                    paint_count;     /* pending paint messages count */
      int                    hotkey_count;    /* pending hotkey messages count */
      int                    quit_message;    /* is there a pending quit message? */
-@@ -250,6 +252,7 @@ static struct thread_input *create_thread_input( struct thread *thread )
+@@ -249,6 +251,7 @@ static struct thread_input *create_thread_input( struct thread *thread )
+         input->move_size    = 0;
          input->cursor       = 0;
          input->cursor_count = 0;
-         list_init( &input->msg_list );
 +        input->lock_count   = 0;
+         list_init( &input->msg_list );
          set_caret_window( input, 0 );
          memset( input->keystate, 0, sizeof(input->keystate) );
- 
 @@ -282,6 +285,7 @@ static struct msg_queue *create_msg_queue( struct thread *thread, struct thread_
          queue->wake_mask       = 0;
          queue->changed_bits    = 0;
@@ -43,7 +44,18 @@ index 85c0786..426f626 100644
          queue->paint_count     = 0;
          queue->hotkey_count    = 0;
          queue->quit_message    = 0;
-@@ -970,6 +974,7 @@ static void msg_queue_destroy( struct object *obj )
+@@ -325,8 +329,10 @@ static int assign_thread_input( struct thread *thread, struct thread_input *new_
+     }
+     if (queue->input)
+     {
++        if (queue->keystate_locked) queue->input->lock_count--;
+         queue->input->cursor_count -= queue->cursor_count;
+         release_object( queue->input );
++        queue->keystate_locked = 0;
+     }
+     queue->input = (struct thread_input *)grab_object( new_input );
+     new_input->cursor_count += queue->cursor_count;
+@@ -970,6 +976,7 @@ static void msg_queue_destroy( struct object *obj )
          free( timer );
      }
      if (queue->timeout) remove_timeout_user( queue->timeout );
@@ -51,7 +63,7 @@ index 85c0786..426f626 100644
      queue->input->cursor_count -= queue->cursor_count;
      release_object( queue->input );
      if (queue->hooks) release_object( queue->hooks );
-@@ -1279,9 +1284,22 @@ static void update_key_state( struct desktop *desktop, unsigned char *keystate,
+@@ -1279,9 +1286,22 @@ static void update_key_state( struct desktop *desktop, unsigned char *keystate,
      }
  }
  
@@ -74,7 +86,7 @@ index 85c0786..426f626 100644
      update_key_state( input->desktop, input->keystate, msg );
  }
  
-@@ -1492,6 +1510,15 @@ static void queue_hardware_message( struct desktop *desktop, struct message *msg
+@@ -1492,6 +1512,15 @@ static void queue_hardware_message( struct desktop *desktop, struct message *msg
      else
      {
          msg->unique_id = 0;  /* will be set once we return it to the app */
@@ -90,7 +102,7 @@ index 85c0786..426f626 100644
          list_add_tail( &input->msg_list, &msg->entry );
          set_queue_bits( thread->queue, get_hardware_msg_bit(msg) );
      }
-@@ -2363,6 +2390,13 @@ DECL_HANDLER(get_message)
+@@ -2363,6 +2392,13 @@ DECL_HANDLER(get_message)
      queue->last_get_msg = current_time;
      if (!filter) filter = QS_ALLINPUT;
  
@@ -104,7 +116,7 @@ index 85c0786..426f626 100644
      /* first check for sent messages */
      if ((ptr = list_head( &queue->msg_list[SEND_MESSAGE] )))
      {
-@@ -2802,13 +2836,33 @@ DECL_HANDLER(get_key_state)
+@@ -2802,13 +2838,33 @@ DECL_HANDLER(get_key_state)
      }
      else
      {
@@ -140,5 +152,5 @@ index 85c0786..426f626 100644
  }
  
 -- 
-2.3.1
+2.3.2
 

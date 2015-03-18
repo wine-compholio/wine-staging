@@ -3712,7 +3712,7 @@ if test "$enable_server_Key_State" -eq 1; then
 	patch_apply server-Key_State/0002-server-Implement-locking-and-synchronization-of-keys.patch
 	(
 		echo '+    { "Sebastian Lackner", "server: Introduce a helper function to update the thread_input key state.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Implement locking and synchronization of keystate buffer.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Implement locking and synchronization of keystate buffer.", 2 },';
 	) >> "$patchlist"
 fi
 

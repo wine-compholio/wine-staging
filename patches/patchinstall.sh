@@ -111,7 +111,6 @@ patch_enable_all ()
 	enable_kernel32_GetNumaProcessorNode="$1"
 	enable_kernel32_GetStringTypeW="$1"
 	enable_kernel32_GetSystemTimes="$1"
-	enable_kernel32_GetTempPathW="$1"
 	enable_kernel32_GetVolumePathName="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
@@ -385,9 +384,6 @@ patch_enable ()
 			;;
 		kernel32-GetSystemTimes)
 			enable_kernel32_GetSystemTimes="$2"
-			;;
-		kernel32-GetTempPathW)
-			enable_kernel32_GetTempPathW="$2"
 			;;
 		kernel32-GetVolumePathName)
 			enable_kernel32_GetVolumePathName="$2"
@@ -2541,21 +2537,6 @@ if test "$enable_kernel32_GetSystemTimes" -eq 1; then
 	(
 		echo '+    { "Louis Lenders", "kernel32: Add tests for GetSystemTimes.", 1 },';
 		echo '+    { "Erich E. Hoover", "kernel32: Implement GetSystemTimes.", 3 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-GetTempPathW
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38220] Only zero the buffer up 32767 bytes in GetTempPathW
-# |
-# | Modified files:
-# |   *	dlls/kernel32/path.c, dlls/kernel32/tests/path.c
-# |
-if test "$enable_kernel32_GetTempPathW" -eq 1; then
-	patch_apply kernel32-GetTempPathW/0001-kernel32-Only-zero-the-buffer-up-32767-bytes-in-GetT.patch
-	(
-		echo '+    { "Bruno Jesus", "kernel32: Only zero the buffer up 32767 bytes in GetTempPathW.", 1 },';
 	) >> "$patchlist"
 fi
 

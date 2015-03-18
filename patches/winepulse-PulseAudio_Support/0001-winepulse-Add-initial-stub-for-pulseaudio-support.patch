@@ -1,30 +1,32 @@
-From c6b3ebf94a0713ab7c5cd10ca0021d9f1359a62a Mon Sep 17 00:00:00 2001
+From 191d506cfbc49ad6a43632609e1f396ae10a6ca7 Mon Sep 17 00:00:00 2001
 From: Maarten Lankhorst <m.b.lankhorst@gmail.com>
 Date: Mon, 14 Jul 2014 09:50:02 +0200
-Subject: [PATCH 09/42] winepulse: Add initial stub for pulseaudio support
+Subject: winepulse: Add initial stub for pulseaudio support
 
 ---
- configure.ac                          |   31 +++-
- dlls/mmdevapi/main.c                  |    2 +-
- dlls/winepulse.drv/Makefile.in        |    7 +
- dlls/winepulse.drv/mmdevdrv.c         |  290 +++++++++++++++++++++++++++++++++
- dlls/winepulse.drv/winepulse.drv.spec |    5 +
+ configure.ac                          |  31 +++-
+ dlls/mmdevapi/main.c                  |   2 +-
+ dlls/winepulse.drv/Makefile.in        |   7 +
+ dlls/winepulse.drv/mmdevdrv.c         | 290 ++++++++++++++++++++++++++++++++++
+ dlls/winepulse.drv/winepulse.drv.spec |   5 +
  5 files changed, 332 insertions(+), 3 deletions(-)
  create mode 100644 dlls/winepulse.drv/Makefile.in
  create mode 100644 dlls/winepulse.drv/mmdevdrv.c
  create mode 100644 dlls/winepulse.drv/winepulse.drv.spec
 
 diff --git a/configure.ac b/configure.ac
-index 7de7a87..84ec52f 100644
+index d23227a..76aed78 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -73,4 +73,5 @@ AC_ARG_WITH(png,       AS_HELP_STRING([--without-png],[do not use PNG]))
+@@ -72,6 +72,7 @@ AC_ARG_WITH(pcap,      AS_HELP_STRING([--without-pcap],[do not use the Packet Ca
+ AC_ARG_WITH(png,       AS_HELP_STRING([--without-png],[do not use PNG]))
  AC_ARG_WITH(pthread,   AS_HELP_STRING([--without-pthread],[do not use the pthread library]),
              [if test "x$withval" = "xno"; then ac_cv_header_pthread_h=no; fi])
 +AC_ARG_WITH(pulse,     AC_HELP_STRING([--without-pulse],[do not use PulseAudio sound support]))
  AC_ARG_WITH(sane,      AS_HELP_STRING([--without-sane],[do not use SANE (scanner support)]))
  AC_ARG_WITH(tiff,      AS_HELP_STRING([--without-tiff],[do not use TIFF]))
-@@ -1537,6 +1538,30 @@ then
+ AC_ARG_WITH(v4l,       AS_HELP_STRING([--without-v4l],[do not use v4l1 (v4l support)]))
+@@ -1548,6 +1549,30 @@ then
            [GetText ${notice_platform}development files not found (or too old), po files can't be rebuilt.])
  fi
  
@@ -55,13 +57,13 @@ index 7de7a87..84ec52f 100644
  dnl **** Check for gstreamer ****
  if test "x$with_gstreamer" != "xno"
  then
-@@ -1755,13 +1780,14 @@ fi
+@@ -1766,13 +1791,14 @@ fi
  dnl **** Disable unsupported winmm drivers ****
  test -n "$ALSA_LIBS" || enable_winealsa_drv=${enable_winealsa_drv:-no}
  test -n "$COREAUDIO_LIBS" || enable_winecoreaudio_drv=${enable_winecoreaudio_drv:-no}
 +test -n "$PULSELIBS" || enable_winepulse_drv=${enable_winepulse_drv:-no}
  test "x$ac_cv_member_oss_sysinfo_numaudioengines" = xyes || enable_wineoss_drv=${enable_wineoss_drv:-no}
- test "$ac_cv_header_linux_joystick_h" = "yes" || enable_winejoystick_drv=${enable_winejoystick_drv:-no}
+ test "$ac_cv_header_linux_joystick_h" = "yes" -o "$ac_cv_header_IOKit_hid_IOHIDLib_h" = "yes" || enable_winejoystick_drv=${enable_winejoystick_drv:-no}
  
  dnl **** Check for any sound system ****
 -if test "x$ALSA_LIBS$COREAUDIO_LIBS" = "x" -a \
@@ -72,7 +74,7 @@ index 7de7a87..84ec52f 100644
  then
      WINE_WARNING([No sound system was found. Windows applications will be silent.])
  fi
-@@ -3258,6 +3284,7 @@ WINE_CONFIG_DLL(winemp3.acm)
+@@ -3339,6 +3365,7 @@ WINE_CONFIG_DLL(winemp3.acm)
  WINE_CONFIG_DLL(wineoss.drv)
  WINE_CONFIG_DLL(wineps.drv,,[clean,po])
  WINE_CONFIG_DLL(wineps16.drv16,enable_win16)
@@ -81,10 +83,10 @@ index 7de7a87..84ec52f 100644
  WINE_CONFIG_DLL(winex11.drv)
  WINE_CONFIG_DLL(wing.dll16,enable_win16)
 diff --git a/dlls/mmdevapi/main.c b/dlls/mmdevapi/main.c
-index 447813f..b9ae99e 100644
+index 52cf6f1..aa4baa5 100644
 --- a/dlls/mmdevapi/main.c
 +++ b/dlls/mmdevapi/main.c
-@@ -110,7 +110,7 @@ static BOOL init_driver(void)
+@@ -113,7 +113,7 @@ static BOOL init_driver(void)
  {
      static const WCHAR drv_value[] = {'A','u','d','i','o',0};
  
@@ -414,5 +416,5 @@ index 0000000..a089166
 +@ stdcall -private GetAudioEndpoint(ptr ptr long ptr) AUDDRV_GetAudioEndpoint
 +@ stdcall -private GetAudioSessionManager(ptr ptr) AUDDRV_GetAudioSessionManager
 -- 
-1.7.9.5
+2.3.2
 

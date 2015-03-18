@@ -1,17 +1,17 @@
-From fa6437785e10e647df1af29b1ac544d2d1f3466f Mon Sep 17 00:00:00 2001
+From 10e5f290ec6e90c6a53df8b0e60fe69e6bbee6aa Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Tue, 24 Sep 2013 00:31:39 +0200
 Subject: wined3d: Don't call the public map function in surface_cpu_blt.
 
 ---
- dlls/wined3d/surface.c | 111 ++++++++++++++++++++++++++++++++-----------------
- 1 file changed, 74 insertions(+), 37 deletions(-)
+ dlls/wined3d/surface.c | 107 +++++++++++++++++++++++++++++++++----------------
+ 1 file changed, 72 insertions(+), 35 deletions(-)
 
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index 045ede5..3702866 100644
+index 50faee0..9647c2a 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
-@@ -4359,21 +4359,36 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4489,21 +4489,36 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
      int bpp, srcheight, srcwidth, dstheight, dstwidth, width;
      const struct wined3d_format *src_format, *dst_format;
      struct wined3d_texture *src_texture = NULL;
@@ -51,7 +51,7 @@ index 045ede5..3702866 100644
          src_format = dst_surface->resource.format;
          dst_format = src_format;
      }
-@@ -4382,6 +4397,12 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4512,6 +4527,12 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
          dst_format = dst_surface->resource.format;
          if (src_surface)
          {
@@ -64,7 +64,7 @@ index 045ede5..3702866 100644
              if (dst_surface->resource.format->id != src_surface->resource.format->id)
              {
                  if (!(src_texture = surface_convert_format(src_surface, dst_format->id)))
-@@ -4392,7 +4413,9 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4522,7 +4543,9 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
                  }
                  src_surface = surface_from_resource(wined3d_texture_get_sub_resource(src_texture, 0));
              }
@@ -75,7 +75,7 @@ index 045ede5..3702866 100644
              src_format = src_surface->resource.format;
          }
          else
-@@ -4400,7 +4423,8 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4530,7 +4553,8 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
              src_format = dst_format;
          }
  
@@ -85,7 +85,7 @@ index 045ede5..3702866 100644
      }
  
      bpp = dst_surface->resource.format->byte_count;
-@@ -4411,15 +4435,12 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4541,15 +4565,12 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
      width = (dst_rect->right - dst_rect->left) * bpp;
  
      if (src_surface)
@@ -106,7 +106,7 @@ index 045ede5..3702866 100644
  
      if (src_format->flags & dst_format->flags & WINED3DFMT_FLAG_BLOCKS)
      {
-@@ -4454,7 +4475,7 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4584,7 +4605,7 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
          }
  
          hr = surface_cpu_blt_compressed(sbase, dbuf,
@@ -115,7 +115,7 @@ index 045ede5..3702866 100644
                  src_format, flags, fx);
          goto release;
      }
-@@ -4462,7 +4483,7 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4592,7 +4613,7 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
      /* First, all the 'source-less' blits */
      if (flags & WINEDDBLT_COLORFILL)
      {
@@ -124,22 +124,7 @@ index 045ede5..3702866 100644
          flags &= ~WINEDDBLT_COLORFILL;
      }
  
-@@ -4476,12 +4497,12 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
-         switch (fx->dwROP)
-         {
-             case BLACKNESS:
--                hr = _Blt_ColorFill(dbuf, dstwidth, dstheight, bpp, dst_map.row_pitch, 0);
-+                hr = _Blt_ColorFill(dbuf, dstwidth, dstheight, bpp, dst_row_pitch, 0);
-                 break;
-             case 0xaa0029: /* No-op */
-                 break;
-             case WHITENESS:
--                hr = _Blt_ColorFill(dbuf, dstwidth, dstheight, bpp, dst_map.row_pitch, ~0U);
-+                hr = _Blt_ColorFill(dbuf, dstwidth, dstheight, bpp, dst_row_pitch, ~0U);
-                 break;
-             case SRCCOPY: /* Well, we do that below? */
-                 break;
-@@ -4532,19 +4553,19 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4641,19 +4662,19 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
                          for (y = 0; y < dstheight; ++y)
                          {
                              memcpy(dbuf, sbuf, width);
@@ -165,7 +150,7 @@ index 045ede5..3702866 100644
                              memcpy(dbuf, sbuf, width);
                          }
                      }
-@@ -4554,8 +4575,8 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4663,8 +4684,8 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
                          for (y = 0; y < dstheight; ++y)
                          {
                              memmove(dbuf, sbuf, width);
@@ -176,7 +161,7 @@ index 045ede5..3702866 100644
                          }
                      }
                  }
-@@ -4564,9 +4585,9 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4673,9 +4694,9 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
                      /* Stretching in y direction only. */
                      for (y = sy = 0; y < dstheight; ++y, sy += yinc)
                      {
@@ -188,7 +173,7 @@ index 045ede5..3702866 100644
                      }
                  }
              }
-@@ -4576,13 +4597,13 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4685,13 +4706,13 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
                  int last_sy = -1;
                  for (y = sy = 0; y < dstheight; ++y, sy += yinc)
                  {
@@ -204,7 +189,7 @@ index 045ede5..3702866 100644
                      }
                      else
                      {
-@@ -4629,14 +4650,14 @@ do { \
+@@ -4738,14 +4759,14 @@ do { \
                          }
  #undef STRETCH_ROW
                      }
@@ -221,7 +206,7 @@ index 045ede5..3702866 100644
              DWORD keylow = 0xffffffff, keyhigh = 0, keymask = 0xffffffff;
              DWORD destkeylow = 0x0, destkeyhigh = 0xffffffff, destkeymask = 0xffffffff;
              if (flags & (WINEDDBLT_KEYSRC | WINEDDBLT_KEYDEST | WINEDDBLT_KEYSRCOVERRIDE | WINEDDBLT_KEYDESTOVERRIDE))
-@@ -4686,7 +4707,7 @@ do { \
+@@ -4795,7 +4816,7 @@ do { \
                  LONG tmpxy;
                  dTopLeft     = dbuf;
                  dTopRight    = dbuf + ((dstwidth - 1) * bpp);
@@ -230,7 +215,7 @@ index 045ede5..3702866 100644
                  dBottomRight = dBottomLeft + ((dstwidth - 1) * bpp);
  
                  if (fx->dwDDFX & WINEDDBLTFX_ARITHSTRETCHY)
-@@ -4769,7 +4790,7 @@ do { \
+@@ -4878,7 +4899,7 @@ do { \
      type *d = (type *)dbuf, *dx, tmp; \
      for (y = sy = 0; y < dstheight; ++y, sy += yinc) \
      { \
@@ -239,7 +224,7 @@ index 045ede5..3702866 100644
          dx = d; \
          for (x = sx = 0; x < dstwidth; ++x, sx += xinc) \
          { \
-@@ -4802,7 +4823,7 @@ do { \
+@@ -4911,7 +4932,7 @@ do { \
                      BYTE *d = dbuf, *dx;
                      for (y = sy = 0; y < dstheight; ++y, sy += yinc)
                      {
@@ -248,7 +233,7 @@ index 045ede5..3702866 100644
                          dx = d;
                          for (x = sx = 0; x < dstwidth; ++x, sx+= xinc)
                          {
-@@ -4833,6 +4854,10 @@ do { \
+@@ -4942,6 +4963,10 @@ do { \
          }
      }
  
@@ -259,7 +244,7 @@ index 045ede5..3702866 100644
  error:
      if (flags && FIXME_ON(d3d_surface))
      {
-@@ -4840,12 +4865,24 @@ error:
+@@ -4949,12 +4974,24 @@ error:
      }
  
  release:
@@ -288,5 +273,5 @@ index 045ede5..3702866 100644
      return hr;
  }
 -- 
-2.1.3
+2.3.2
 

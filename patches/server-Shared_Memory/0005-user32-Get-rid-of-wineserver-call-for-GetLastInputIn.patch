@@ -1,0 +1,57 @@
+From 4ea257275cb1453288507cf536974ee3c013d449 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 19 Mar 2015 02:18:37 +0100
+Subject: user32: Get rid of wineserver call for GetLastInputInfo.
+
+---
+ dlls/user32/input.c | 7 +++++++
+ server/protocol.def | 4 ++--
+ 2 files changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/user32/input.c b/dlls/user32/input.c
+index ace4fb8..2512887 100644
+--- a/dlls/user32/input.c
++++ b/dlls/user32/input.c
+@@ -477,6 +477,7 @@ done:
+ BOOL WINAPI GetLastInputInfo(PLASTINPUTINFO plii)
+ {
+     BOOL ret;
++    shmglobal_t *shm = wine_get_shmglobal();
+ 
+     TRACE("%p\n", plii);
+ 
+@@ -486,6 +487,12 @@ BOOL WINAPI GetLastInputInfo(PLASTINPUTINFO plii)
+         return FALSE;
+     }
+ 
++    if (shm)
++    {
++        plii->dwTime = shm->last_input_time;
++        return TRUE;
++    }
++
+     SERVER_START_REQ( get_last_input_time )
+     {
+         ret = !wine_server_call_err( req );
+diff --git a/server/protocol.def b/server/protocol.def
+index 7d077d7..cf6d783 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -71,12 +71,12 @@ struct request_max_size
+ 
+ typedef struct
+ {
+-    int dummy;
++    unsigned int last_input_time;   /* last input time */
+ } shmglobal_t;
+ 
+ typedef struct
+ {
+-    int queue_bits;     /* queue wake bits */
++    int queue_bits;                 /* queue wake bits */
+ } shmlocal_t;
+ 
+ /* debug event data */
+-- 
+2.3.2
+

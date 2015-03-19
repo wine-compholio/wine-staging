@@ -1,0 +1,59 @@
+From 07da6f20d2cb5decee8362297af6c27a83da0137 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Thu, 19 Mar 2015 02:07:24 +0100
+Subject: user32: Avoid unnecessary wineserver calls in PeekMessage/GetMessage.
+
+---
+ dlls/user32/message.c      | 13 +++++++++++++
+ dlls/user32/user_private.h |  3 ++-
+ 2 files changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/user32/message.c b/dlls/user32/message.c
+index d59e342..4bc17e9 100644
+--- a/dlls/user32/message.c
++++ b/dlls/user32/message.c
+@@ -2734,6 +2734,18 @@ static BOOL peek_message( MSG *msg, HWND hwnd, UINT first, UINT last, UINT flags
+     unsigned int hw_id = 0;  /* id of previous hardware message */
+     void *buffer;
+     size_t buffer_size = 256;
++    shmlocal_t *shm = wine_get_shmlocal();
++
++    /* From time to time we are forced to do a wineserver call in
++     * order to update last_msg_time stored for each server thread. */
++    if (shm && GetTickCount() - thread_info->last_get_msg < 500)
++    {
++        int filter = flags >> 16;
++        if (!filter) filter = QS_ALLINPUT;
++        filter |= QS_SENDMESSAGE;
++        if (filter & QS_INPUT) filter |= QS_INPUT;
++        if (!(shm->queue_bits & filter)) return FALSE;
++    }
+ 
+     if (!(buffer = HeapAlloc( GetProcessHeap(), 0, buffer_size ))) return FALSE;
+ 
+@@ -2746,6 +2758,7 @@ static BOOL peek_message( MSG *msg, HWND hwnd, UINT first, UINT last, UINT flags
+         size_t size = 0;
+         const message_data_t *msg_data = buffer;
+ 
++        if (shm) thread_info->last_get_msg = GetTickCount();
+         SERVER_START_REQ( get_message )
+         {
+             req->flags     = flags;
+diff --git a/dlls/user32/user_private.h b/dlls/user32/user_private.h
+index aa43578..7b8c425 100644
+--- a/dlls/user32/user_private.h
++++ b/dlls/user32/user_private.h
+@@ -190,8 +190,9 @@ struct user_thread_info
+     HWND                          top_window;             /* Desktop window */
+     HWND                          msg_window;             /* HWND_MESSAGE parent window */
+     RAWINPUT                     *rawinput;
++    DWORD                         last_get_msg;           /* Last message time */
+ 
+-    ULONG                         pad[5];                 /* Available for more data */
++    ULONG                         pad[4];                 /* Available for more data */
+ };
+ 
+ extern INT global_key_state_epoch DECLSPEC_HIDDEN;
+-- 
+2.3.2
+

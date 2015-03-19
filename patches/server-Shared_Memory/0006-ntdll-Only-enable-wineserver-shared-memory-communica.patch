@@ -1,0 +1,49 @@
+From c7b1b681995a397cfc3fa9e9bba3415102217da1 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Thu, 19 Mar 2015 02:55:36 +0100
+Subject: ntdll: Only enable wineserver shared memory communication when a
+ special environment variable is set.
+
+---
+ dlls/ntdll/server.c | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
+index 0b8e007..349fcc7 100644
+--- a/dlls/ntdll/server.c
++++ b/dlls/ntdll/server.c
+@@ -968,6 +968,21 @@ static int server_get_shared_memory_fd( HANDLE thread, int *unix_fd )
+     return ret;
+ }
+ 
++/* The shared memory wineserver communication is still highly experimental
++ * and might cause unexpected results when the client/server status gets
++ * out of synchronization. The feature will be disabled by default until it
++ * is tested a bit more. */
++static inline BOOL experimental_SHARED_MEMORY( void )
++{
++    static int enabled = -1;
++    if (enabled == -1)
++    {
++        const char *str = getenv( "STAGING_SHARED_MEMORY" );
++        enabled = str && (atoi(str) != 0);
++    }
++    return enabled;
++}
++
+ 
+ /***********************************************************************
+  *           server_get_shared_memory
+@@ -980,6 +995,9 @@ void *server_get_shared_memory( HANDLE thread )
+     void *mem = NULL;
+     int fd = -1;
+ 
++    if (!experimental_SHARED_MEMORY())
++        return NULL;
++
+     /* The global memory block is only requested once. No locking is
+      * required because this function is called very early during the
+      * process initialization for the first time. */
+-- 
+2.3.2
+

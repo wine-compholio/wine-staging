@@ -175,6 +175,7 @@ patch_enable_all ()
 	enable_server_Misc_ACL="$1"
 	enable_server_OpenProcess="$1"
 	enable_server_PeekMessage="$1"
+	enable_server_Shared_Memory="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Unexpected_Wakeup="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
@@ -577,6 +578,9 @@ patch_enable ()
 		server-PeekMessage)
 			enable_server_PeekMessage="$2"
 			;;
+		server-Shared_Memory)
+			enable_server_Shared_Memory="$2"
+			;;
 		server-Stored_ACLs)
 			enable_server_Stored_ACLs="$2"
 			;;
@@ -977,6 +981,21 @@ if test "$enable_shell32_Progress_Dialog" -eq 1; then
 		abort "Patchset kernel32-CopyFileEx disabled, but shell32-Progress_Dialog depends on that."
 	fi
 	enable_kernel32_CopyFileEx=1
+fi
+
+if test "$enable_server_Shared_Memory" -eq 1; then
+	if test "$enable_dinput_Events" -gt 1; then
+		abort "Patchset dinput-Events disabled, but server-Shared_Memory depends on that."
+	fi
+	if test "$enable_ntdll_Threading" -gt 1; then
+		abort "Patchset ntdll-Threading disabled, but server-Shared_Memory depends on that."
+	fi
+	if test "$enable_user32_Key_State" -gt 1; then
+		abort "Patchset user32-Key_State disabled, but server-Shared_Memory depends on that."
+	fi
+	enable_dinput_Events=1
+	enable_ntdll_Threading=1
+	enable_user32_Key_State=1
 fi
 
 if test "$enable_server_JobObjects" -eq 1; then
@@ -3712,6 +3731,47 @@ if test "$enable_server_PeekMessage" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset user32-Key_State
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#29871] Invalidate key state cache globally after calling LL hooks
+# |
+# | Modified files:
+# |   *	dlls/user32/hook.c, dlls/user32/input.c, dlls/user32/message.c, dlls/user32/user_private.h
+# |
+if test "$enable_user32_Key_State" -eq 1; then
+	patch_apply user32-Key_State/0001-user32-After-calling-LL-hooks-the-key-state-cache-ha.patch
+	(
+		echo '+    { "Sebastian Lackner", "user32: After calling LL hooks the key state cache has to be invalidated globally.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Shared_Memory
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c, dlls/user32/input.c,
+# | 	dlls/user32/message.c, dlls/user32/user_private.h, include/wine/server.h, include/winternl.h, server/fd.c,
+# | 	server/file.h, server/main.c, server/mapping.c, server/protocol.def, server/queue.c, server/thread.c, server/thread.h
+# |
+if test "$enable_server_Shared_Memory" -eq 1; then
+	patch_apply server-Shared_Memory/0001-ntdll-Implement-virtual_map_shared_memory.patch
+	patch_apply server-Shared_Memory/0002-server-Implement-support-for-global-and-local-shared.patch
+	patch_apply server-Shared_Memory/0003-user32-Get-rid-of-wineserver-call-for-GetInputState.patch
+	patch_apply server-Shared_Memory/0004-user32-Avoid-unnecessary-wineserver-calls-in-PeekMes.patch
+	patch_apply server-Shared_Memory/0005-user32-Get-rid-of-wineserver-call-for-GetLastInputIn.patch
+	patch_apply server-Shared_Memory/0006-ntdll-Only-enable-wineserver-shared-memory-communica.patch
+	patch_apply server-Shared_Memory/0007-server-Use-syscall-number-from-sys-syscall.h-if-poss.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Implement virtual_map_shared_memory.", 1 },';
+		echo '+    { "Michael Müller", "server: Implement support for global and local shared memory blocks based on memfd.", 1 },';
+		echo '+    { "Sebastian Lackner", "user32: Get rid of wineserver call for GetInputState.", 1 },';
+		echo '+    { "Sebastian Lackner", "user32: Avoid unnecessary wineserver calls in PeekMessage/GetMessage.", 1 },';
+		echo '+    { "Michael Müller", "user32: Get rid of wineserver call for GetLastInputInfo.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Only enable wineserver shared memory communication when a special environment variable is set.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Use syscall number from sys/syscall.h if possible.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-Unexpected_Wakeup
 # |
 # | Modified files:
@@ -3978,21 +4038,6 @@ if test "$enable_user32_GetTipText" -eq 1; then
 	(
 		echo '+    { "Erich E. Hoover", "Fix TOOLTIPS_GetTipText when a resource cannot be found.", 1 },';
 		echo '+    { "Erich E. Hoover", "Fix TOOLTIPS_GetTipText when a NULL instance is used.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-Key_State
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#29871] Invalidate key state cache globally after calling LL hooks
-# |
-# | Modified files:
-# |   *	dlls/user32/hook.c, dlls/user32/input.c, dlls/user32/message.c, dlls/user32/user_private.h
-# |
-if test "$enable_user32_Key_State" -eq 1; then
-	patch_apply user32-Key_State/0001-user32-After-calling-LL-hooks-the-key-state-cache-ha.patch
-	(
-		echo '+    { "Sebastian Lackner", "user32: After calling LL hooks the key state cache has to be invalidated globally.", 1 },';
 	) >> "$patchlist"
 fi
 

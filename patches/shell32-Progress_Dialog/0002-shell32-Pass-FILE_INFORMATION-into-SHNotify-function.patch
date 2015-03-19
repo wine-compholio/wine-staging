@@ -1,15 +1,15 @@
-From 8442c70f08cd95cf592ec4232489ea93c5d0a038 Mon Sep 17 00:00:00 2001
+From 950a0c1fd7d57bf0724135e3ffd7848182df59ee Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 26 Feb 2015 23:21:26 +0100
 Subject: shell32: Pass FILE_INFORMATION into SHNotify* functions.
 
 Preparation of the progressbar work. Based on a patch by Huw Campbell.
 ---
- dlls/shell32/shlfileop.c | 222 +++++++++++++++++++++++------------------------
- 1 file changed, 111 insertions(+), 111 deletions(-)
+ dlls/shell32/shlfileop.c | 201 +++++++++++++++++++++++------------------------
+ 1 file changed, 98 insertions(+), 103 deletions(-)
 
 diff --git a/dlls/shell32/shlfileop.c b/dlls/shell32/shlfileop.c
-index ee40e39..ed8ff38 100644
+index 08a0515..665e74c 100644
 --- a/dlls/shell32/shlfileop.c
 +++ b/dlls/shell32/shlfileop.c
 @@ -59,16 +59,6 @@ WINE_DEFAULT_DEBUG_CHANNEL(shell);
@@ -380,37 +380,7 @@ index ee40e39..ed8ff38 100644
  
          if (ret)
              return ret;
-@@ -1389,10 +1386,10 @@ static DWORD delete_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom)
-     return ERROR_SUCCESS;
- }
- 
--static void move_dir_to_dir(LPSHFILEOPSTRUCTW lpFileOp, const FILE_ENTRY *feFrom, LPCWSTR szDestPath)
-+static void move_dir_to_dir(FILE_OPERATION *op, const FILE_ENTRY *feFrom, LPCWSTR szDestPath)
- {
-     WCHAR szFrom[MAX_PATH], szTo[MAX_PATH];
--    SHFILEOPSTRUCTW fileOp;
-+    FILE_LIST flFromNew, flToNew;
- 
-     static const WCHAR wildCardFiles[] = {'*','.','*',0};
- 
-@@ -1407,28 +1404,33 @@ static void move_dir_to_dir(LPSHFILEOPSTRUCTW lpFileOp, const FILE_ENTRY *feFrom
-     lstrcpyW(szTo, szDestPath);
-     szTo[lstrlenW(szDestPath) + 1] = '\0';
- 
--    fileOp = *lpFileOp;
--    fileOp.pFrom = szFrom;
--    fileOp.pTo = szTo;
-+    ZeroMemory(&flFromNew, sizeof(FILE_LIST));
-+    ZeroMemory(&flToNew, sizeof(FILE_LIST));
-+
-+    parse_file_list(&flFromNew, szFrom);
-+    parse_file_list(&flToNew, szTo);
- 
--    SHFileOperationW(&fileOp);
-+    move_files(op, FALSE, &flFromNew, &flToNew);
-+
-+    destroy_file_list(&flFromNew);
-+    destroy_file_list(&flToNew);
+@@ -1390,16 +1387,16 @@ static DWORD delete_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom)
  }
  
  /* moves a file or directory to another directory */
@@ -420,14 +390,8 @@ index ee40e39..ed8ff38 100644
      WCHAR szDestPath[MAX_PATH];
  
      PathCombineW(szDestPath, feTo->szFullPath, feFrom->szFilename);
- 
-     if (IsAttribFile(feFrom->attributes))
--        SHNotifyMoveFileW(feFrom->szFullPath, szDestPath);
--    else if (!(lpFileOp->fFlags & FOF_FILESONLY && feFrom->bFromWildcard))
--        move_dir_to_dir(lpFileOp, feFrom, szDestPath);
-+        SHNotifyMoveFileW(op, feFrom->szFullPath, szDestPath);
-+    else if (!(op->req->fFlags & FOF_FILESONLY && feFrom->bFromWildcard))
-+        move_dir_to_dir(op, feFrom, szDestPath);
+-    SHNotifyMoveFileW(feFrom->szFullPath, szDestPath);
++    SHNotifyMoveFileW(op, feFrom->szFullPath, szDestPath);
  }
  
  /* the FO_MOVE operation */
@@ -436,7 +400,7 @@ index ee40e39..ed8ff38 100644
  {
      DWORD i;
      INT mismatched = 0;
-@@ -1441,14 +1443,12 @@ static DWORD move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, con
+@@ -1412,14 +1409,12 @@ static DWORD move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, con
      if (!flTo->dwNumFiles)
          return ERROR_FILE_NOT_FOUND;
  
@@ -453,7 +417,7 @@ index ee40e39..ed8ff38 100644
          flFrom->dwNumFiles > flTo->dwNumFiles)
      {
          return ERROR_CANCELLED;
-@@ -1457,7 +1457,7 @@ static DWORD move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, con
+@@ -1428,7 +1423,7 @@ static DWORD move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, con
      if (!PathFileExistsW(flTo->feFiles[0].szDirectory))
          return ERROR_CANCELLED;
  
@@ -462,7 +426,7 @@ index ee40e39..ed8ff38 100644
          mismatched = flFrom->dwNumFiles - flTo->dwNumFiles;
  
      fileDest = &flTo->feFiles[0];
-@@ -1468,7 +1468,7 @@ static DWORD move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, con
+@@ -1439,7 +1434,7 @@ static DWORD move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, con
          if (!PathFileExistsW(fileDest->szDirectory))
              return ERROR_CANCELLED;
  
@@ -471,7 +435,7 @@ index ee40e39..ed8ff38 100644
          {
              if (i >= flTo->dwNumFiles)
                  break;
-@@ -1482,9 +1482,9 @@ static DWORD move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, con
+@@ -1453,9 +1448,9 @@ static DWORD move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, con
          }
  
          if (fileDest->bExists && IsAttribDir(fileDest->attributes))
@@ -483,7 +447,7 @@ index ee40e39..ed8ff38 100644
      }
  
      if (mismatched > 0)
-@@ -1499,7 +1499,7 @@ static DWORD move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, con
+@@ -1470,7 +1465,7 @@ static DWORD move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, con
  }
  
  /* the FO_RENAME files */
@@ -492,7 +456,7 @@ index ee40e39..ed8ff38 100644
  {
      const FILE_ENTRY *feFrom;
      const FILE_ENTRY *feTo;
-@@ -1521,7 +1521,7 @@ static DWORD rename_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, c
+@@ -1492,7 +1487,7 @@ static DWORD rename_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, c
      if (feTo->bExists)
          return ERROR_ALREADY_EXISTS;
  
@@ -501,7 +465,7 @@ index ee40e39..ed8ff38 100644
  }
  
  /* alert the user if an unsupported flag is used */
-@@ -1568,16 +1568,16 @@ int WINAPI SHFileOperationW(LPSHFILEOPSTRUCTW lpFileOp)
+@@ -1539,16 +1534,16 @@ int WINAPI SHFileOperationW(LPSHFILEOPSTRUCTW lpFileOp)
      switch (lpFileOp->wFunc)
      {
          case FO_COPY:
@@ -523,5 +487,5 @@ index ee40e39..ed8ff38 100644
          default:
              ret = ERROR_INVALID_PARAMETER;
 -- 
-2.3.0
+2.3.2
 

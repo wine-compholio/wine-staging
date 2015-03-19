@@ -1,4 +1,4 @@
-From 9e5ef34f4cbfb381528750caabd4ba6a3da439f6 Mon Sep 17 00:00:00 2001
+From fe342bf68517ea538ccde914094c744e3dfc5192 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 4 Oct 2014 02:56:08 +0200
 Subject: ntdll: Properly handle PAGE_WRITECOPY protection. (try 5)
@@ -39,10 +39,10 @@ index 75e91d5..3520546 100644
  
      UnmapViewOfFile(base);
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 17792e1..36d8836 100644
+index 675e723..1744e35 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -179,8 +179,13 @@ static int VIRTUAL_GetUnixProt( BYTE vprot )
+@@ -178,8 +178,13 @@ static int VIRTUAL_GetUnixProt( BYTE vprot )
      {
          if (vprot & VPROT_READ) prot |= PROT_READ;
          if (vprot & VPROT_WRITE) prot |= PROT_WRITE | PROT_READ;
@@ -57,7 +57,7 @@ index 17792e1..36d8836 100644
          if (vprot & VPROT_WRITEWATCH) prot &= ~PROT_WRITE;
      }
      if (!prot) prot = PROT_NONE;
-@@ -1532,13 +1537,18 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err )
+@@ -1531,13 +1536,18 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
      {
          void *page = ROUND_ADDR( addr, page_mask );
          BYTE *vprot = &view->prot[((const char *)page - (const char *)view->base) >> page_shift];
@@ -78,8 +78,8 @@ index 17792e1..36d8836 100644
              /* ignore fault if page is writable now */
              if (VIRTUAL_GetUnixProt( *vprot ) & PROT_WRITE) ret = STATUS_SUCCESS;
          }
-@@ -1748,14 +1758,16 @@ SIZE_T CDECL wine_uninterrupted_write_memory( void *addr, const void *buffer, SI
-                  * handle guard pages here. */
+@@ -1746,14 +1756,16 @@ SIZE_T CDECL wine_uninterrupted_write_memory( void *addr, const void *buffer, SI
+                  * exception. Similar to virtual_handle_fault. */
                  if (!(VIRTUAL_GetUnixProt( *p ) & PROT_WRITE))
                  {
 -                    if (!(view->protect & VPROT_WRITEWATCH))
@@ -100,5 +100,5 @@ index 17792e1..36d8836 100644
                      if (!(VIRTUAL_GetUnixProt( *p ) & PROT_WRITE))
                          break;
 -- 
-2.2.1
+2.3.2
 

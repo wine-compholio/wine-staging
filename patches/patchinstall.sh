@@ -92,6 +92,7 @@ patch_enable_all ()
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
 	enable_dbghelp_Debug_Symbols="$1"
 	enable_ddraw_Hotpatch="$1"
+	enable_ddraw_Palette="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
 	enable_dinput_Events="$1"
 	enable_dsound_Fast_Mixer="$1"
@@ -332,6 +333,9 @@ patch_enable ()
 			;;
 		ddraw-Hotpatch)
 			enable_ddraw_Hotpatch="$2"
+			;;
+		ddraw-Palette)
+			enable_ddraw_Palette="$2"
 			;;
 		ddraw-d3d_execute_buffer)
 			enable_ddraw_d3d_execute_buffer="$2"
@@ -1723,6 +1727,21 @@ if test "$enable_ddraw_Hotpatch" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ddraw-Palette
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38248] Fix regression causing black screen on startup
+# |
+# | Modified files:
+# |   *	dlls/ddraw/surface.c
+# |
+if test "$enable_ddraw_Palette" -eq 1; then
+	patch_apply ddraw-Palette/0001-ddraw-Update-the-palette-before-presents-to-the-NULL.patch
+	(
+		echo '+    { "Stefan Dösinger", "ddraw: Update the palette before presents to the NULL window.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ddraw-d3d_execute_buffer
 # |
 # | Modified files:
@@ -2473,6 +2492,22 @@ if test "$enable_kernel32_Console_Handles" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, include/winbase.h, include/winternl.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-ntdll-Define-a-couple-more-information-classes.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0003-kernel32-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Define a couple more information classes.", 1 },';
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-FileDispositionInformation
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2489,22 +2524,6 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "server: Keep a pointer to parent'\''s fd unix_name in the closed_fd structure.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "server: Add support for setting file disposition information.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, include/winbase.h, include/winternl.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-ntdll-Define-a-couple-more-information-classes.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0003-kernel32-Implement-SetFileInformationByHandle.patch
-	(
-		echo '+    { "Michael Müller", "ntdll: Define a couple more information classes.", 1 },';
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 

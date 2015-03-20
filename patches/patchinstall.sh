@@ -68,6 +68,7 @@ patch_enable_all ()
 	enable_Staging="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_browseui_Race_Conditions="$1"
+	enable_combase_String="$1"
 	enable_comctl32_LoadIconMetric="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_d3d8_Hotpatch="$1"
@@ -256,6 +257,9 @@ patch_enable ()
 			;;
 		browseui-Race_Conditions)
 			enable_browseui_Race_Conditions="$2"
+			;;
+		combase-String)
+			enable_combase_String="$2"
 			;;
 		comctl32-LoadIconMetric)
 			enable_comctl32_LoadIconMetric="$2"
@@ -1328,6 +1332,19 @@ if test "$enable_browseui_Race_Conditions" -eq 1; then
 	patch_apply browseui-Race_Conditions/0001-browseui-Avoid-race-conditions-when-progress-dialog-.patch
 	(
 		echo '+    { "Sebastian Lackner", "browseui: Avoid race-conditions when progress dialog is released before thread terminates.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset combase-String
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-winrt-string-l1-1-0/api-ms-win-core-winrt-string-l1-1-0.spec, dlls/combase/combase.spec,
+# | 	dlls/combase/string.c, dlls/combase/tests/string.c, include/winerror.h
+# |
+if test "$enable_combase_String" -eq 1; then
+	patch_apply combase-String/0001-combase-implement-WindowsSubstring-try-2.patch
+	(
+		echo '+    { "Thomas Pointhuber", "combase: implement WindowsSubstring.", 2 },';
 	) >> "$patchlist"
 fi
 

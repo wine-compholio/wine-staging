@@ -181,6 +181,7 @@ patch_enable_all ()
 	enable_server_Shared_Memory="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Unexpected_Wakeup="$1"
+	enable_setupapi_SetupLog="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
 	enable_shell32_Default_Folder_ACLs="$1"
@@ -601,6 +602,9 @@ patch_enable ()
 			;;
 		server-Unexpected_Wakeup)
 			enable_server_Unexpected_Wakeup="$2"
+			;;
+		setupapi-SetupLog)
+			enable_setupapi_SetupLog="$2"
 			;;
 		setupapi-SetupPromptForDisk)
 			enable_setupapi_SetupPromptForDisk="$2"
@@ -1855,6 +1859,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-Multisampling
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1916,18 +1932,6 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3860,6 +3864,19 @@ if test "$enable_server_Unexpected_Wakeup" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "server: Avoid sending unexpected wakeup with uninitialized cookie value.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Repeat test for SignalObjectAndWait multiple times to test wineserver wakeup cookie management.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset setupapi-SetupLog
+# |
+# | Modified files:
+# |   *	dlls/setupapi/Makefile.in, dlls/setupapi/log.c, dlls/setupapi/setupapi.spec, dlls/setupapi/setupcab.c,
+# | 	dlls/setupapi/stubs.c, dlls/setupapi/tests/Makefile.in, dlls/setupapi/tests/log.c
+# |
+if test "$enable_setupapi_SetupLog" -eq 1; then
+	patch_apply setupapi-SetupLog/0001-setupapi-Implement-SetupOpenLog-SetupLogErrorA-Setup.patch
+	(
+		echo '+    { "Pierre Schweitzer", "setupapi: Implement SetupOpenLog(), SetupLogErrorA(), SetupLogErrorW(), SetupCloseLog().", 1 },';
 	) >> "$patchlist"
 fi
 

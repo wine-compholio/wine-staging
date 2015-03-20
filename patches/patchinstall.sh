@@ -215,6 +215,7 @@ patch_enable_all ()
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Multisampling="$1"
+	enable_wined3d_NormalMatrix="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_UnhandledBlendFactor="$1"
 	enable_winedevice_Fix_Relocation="$1"
@@ -700,6 +701,9 @@ patch_enable ()
 			;;
 		wined3d-Multisampling)
 			enable_wined3d_Multisampling="$2"
+			;;
+		wined3d-NormalMatrix)
+			enable_wined3d_NormalMatrix="$2"
 			;;
 		wined3d-Revert_PixelFormat)
 			enable_wined3d_Revert_PixelFormat="$2"
@@ -1840,6 +1844,21 @@ if test "$enable_wined3d_Multisampling" -eq 1; then
 	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
 	(
 		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-NormalMatrix
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38256] Fix regression causing too dark/missing textures in several games
+# |
+# | Modified files:
+# |   *	dlls/wined3d/glsl_shader.c
+# |
+if test "$enable_wined3d_NormalMatrix" -eq 1; then
+	patch_apply wined3d-NormalMatrix/0001-wined3d-Don-t-use-the-builtin-FFP-uniform-for-the-no.patch
+	(
+		echo '+    { "Matteo Bruni", "wined3d: Don'\''t use the builtin FFP uniform for the normal matrix.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -38,13 +38,14 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [13]:**
+**Bugfixes and features included in the next upcoming release [14]:**
 
 * Add stub for PowerCreateRequest
 * Add stub for wininet.ParseX509EncodedCertificateForListBoxEntry ([Wine Bug #29842](https://bugs.winehq.org/show_bug.cgi?id=29842))
 * Allow to edit winecfg library override by double clicking
 * Fix caps lock state issues with multiple processes ([Wine Bug #35907](https://bugs.winehq.org/show_bug.cgi?id=35907))
 * Fix multithreading issues with fullscreen clipping ([Wine Bug #38087](https://bugs.winehq.org/show_bug.cgi?id=38087))
+* Fix regression causing too dark/missing textures in several games ([Wine Bug #38256](https://bugs.winehq.org/show_bug.cgi?id=38256))
 * Fix wrong version of ID3DXEffect interface for d3dx9_24
 * Fix wrong version of ID3DXEffect interface for d3dx9_25 ([Wine Bug #25138](https://bugs.winehq.org/show_bug.cgi?id=25138))
 * GetMessage should remove already seen messages with higher priority ([Wine Bug #28884](https://bugs.winehq.org/show_bug.cgi?id=28884))

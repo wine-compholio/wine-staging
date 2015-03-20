@@ -226,6 +226,7 @@ patch_enable_all ()
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
 	enable_winex11_wglShareLists="$1"
+	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
 	enable_winmm_Delay_Import_Depends="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_APC_Performance="$1"
@@ -731,6 +732,9 @@ patch_enable ()
 			;;
 		winex11-wglShareLists)
 			enable_winex11_wglShareLists="$2"
+			;;
+		wininet-ParseX509EncodedCertificateForListBoxEntry)
+			enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$2"
 			;;
 		winmm-Delay_Import_Depends)
 			enable_winmm_Delay_Import_Depends="$2"
@@ -4466,6 +4470,21 @@ if test "$enable_winex11_wglShareLists" -eq 1; then
 	patch_apply winex11-wglShareLists/0001-winex11.drv-Only-warn-about-used-contexts-in-wglShar.patch
 	(
 		echo '+    { "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wininet-ParseX509EncodedCertificateForListBoxEntry
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#29842] Add stub for wininet.ParseX509EncodedCertificateForListBoxEntry
+# |
+# | Modified files:
+# |   *	dlls/wininet/dialogs.c, dlls/wininet/wininet.spec, include/winineti.h
+# |
+if test "$enable_wininet_ParseX509EncodedCertificateForListBoxEntry" -eq 1; then
+	patch_apply wininet-ParseX509EncodedCertificateForListBoxEntry/0001-wininet-add-ParseX509EncodedCertificateForListBoxEnt.patch
+	(
+		echo '+    { "Austin English", "wininet: add ParseX509EncodedCertificateForListBoxEntry stub.", 2 },';
 	) >> "$patchlist"
 fi
 

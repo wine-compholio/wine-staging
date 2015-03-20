@@ -1,4 +1,4 @@
-From 52d65729080fcbc24bda5578d81eff7414d9ca5e Mon Sep 17 00:00:00 2001
+From d4226297d14857b3b5d069af8ba7437fc2504939 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 19 Mar 2015 01:22:34 +0100
 Subject: server: Implement support for global and local shared memory blocks
@@ -6,18 +6,18 @@ Subject: server: Implement support for global and local shared memory blocks
 
 ---
  dlls/ntdll/ntdll_misc.h |  1 +
- dlls/ntdll/server.c     | 64 +++++++++++++++++++++++++++++++++++++++++++++++++
- dlls/ntdll/thread.c     |  4 ++++
- include/wine/server.h   | 11 +++++++++
+ dlls/ntdll/server.c     | 64 ++++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/thread.c     |  4 +++
+ include/wine/server.h   | 11 ++++++++
  include/winternl.h      |  2 +-
- server/fd.c             | 27 +++++++++++++++++++++
- server/file.h           |  8 +++++++
+ server/fd.c             | 27 ++++++++++++++++++
+ server/file.h           |  8 ++++++
  server/main.c           |  1 +
- server/mapping.c        | 64 +++++++++++++++++++++++++++++++++++++++++++++++++
- server/protocol.def     | 15 ++++++++++++
- server/thread.c         |  7 ++++++
+ server/mapping.c        | 74 +++++++++++++++++++++++++++++++++++++++++++++++++
+ server/protocol.def     | 15 ++++++++++
+ server/thread.c         |  7 +++++
  server/thread.h         |  2 ++
- 12 files changed, 205 insertions(+), 1 deletion(-)
+ 12 files changed, 215 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
 index 41ef5cb..18e00c9 100644
@@ -240,31 +240,43 @@ index 7aed338..f984bfc 100644
      return 0;
  }
 diff --git a/server/mapping.c b/server/mapping.c
-index 64b3003..be624e5 100644
+index 64b3003..063dbb8 100644
 --- a/server/mapping.c
 +++ b/server/mapping.c
-@@ -31,6 +31,20 @@
+@@ -29,8 +29,32 @@
+ #ifdef HAVE_SYS_MMAN_H
+ # include <sys/mman.h>
  #endif
++#ifdef HAVE_SYS_SYSCALL_H
++# include <sys/syscall.h>
++#endif
  #include <unistd.h>
  
 +#if defined(__linux__) && (defined(__i386__) || defined(__x86_64__))
++
++/* __NR_memfd_create might not yet be available when buildservers use an old kernel */
++#ifndef __NR_memfd_create
 +#ifdef __x86_64__
 +#define __NR_memfd_create 319
 +#else
 +#define __NR_memfd_create 356
 +#endif
++#endif
++
++/* the following declarations are only available in linux/fcntl.h, but not fcntl.h */
 +#define F_LINUX_SPECIFIC_BASE   1024
 +#define F_ADD_SEALS             (F_LINUX_SPECIFIC_BASE + 9)
 +#define MFD_ALLOW_SEALING       0x0002U
 +#define F_SEAL_SEAL             0x0001
 +#define F_SEAL_SHRINK           0x0002
 +#define F_SEAL_GROW             0x0004
++
 +#endif
 +
  #include "ntstatus.h"
  #define WIN32_NO_STATUS
  #include "windef.h"
-@@ -112,6 +126,10 @@ static struct list shared_list = LIST_INIT(shared_list);
+@@ -112,6 +136,10 @@ static struct list shared_list = LIST_INIT(shared_list);
  
  static size_t page_mask;
  
@@ -275,7 +287,7 @@ index 64b3003..be624e5 100644
  #define ROUND_SIZE(size)  (((size) + page_mask) & ~page_mask)
  
  
-@@ -156,6 +174,52 @@ static int check_current_dir_for_exec(void)
+@@ -156,6 +184,52 @@ static int check_current_dir_for_exec(void)
      return (ret != MAP_FAILED);
  }
  

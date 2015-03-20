@@ -3841,7 +3841,6 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 	patch_apply server-Shared_Memory/0004-user32-Avoid-unnecessary-wineserver-calls-in-PeekMes.patch
 	patch_apply server-Shared_Memory/0005-user32-Get-rid-of-wineserver-call-for-GetLastInputIn.patch
 	patch_apply server-Shared_Memory/0006-ntdll-Only-enable-wineserver-shared-memory-communica.patch
-	patch_apply server-Shared_Memory/0007-server-Use-syscall-number-from-sys-syscall.h-if-poss.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Implement virtual_map_shared_memory.", 1 },';
 		echo '+    { "Michael Müller", "server: Implement support for global and local shared memory blocks based on memfd.", 1 },';
@@ -3849,7 +3848,6 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 		echo '+    { "Sebastian Lackner", "user32: Avoid unnecessary wineserver calls in PeekMessage/GetMessage.", 1 },';
 		echo '+    { "Michael Müller", "user32: Get rid of wineserver call for GetLastInputInfo.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Only enable wineserver shared memory communication when a special environment variable is set.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Use syscall number from sys/syscall.h if possible.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,159 @@
+From 66fe18ed16b77c3f69511ea9b41e6ed729624fcd Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 21 Mar 2015 08:09:03 +0100
+Subject: user32: Move key_state cache into separate structure.
+
+We're running soon out of TEB space, so just move other key_state related fields
+into the allocated memory block.
+---
+ dlls/user32/input.c        | 26 +++++++++++++++++---------
+ dlls/user32/message.c      |  9 +++++----
+ dlls/user32/user_private.h | 17 ++++++++++++-----
+ dlls/user32/winstation.c   |  3 ++-
+ 4 files changed, 36 insertions(+), 19 deletions(-)
+
+diff --git a/dlls/user32/input.c b/dlls/user32/input.c
+index 2512887..8608f75 100644
+--- a/dlls/user32/input.c
++++ b/dlls/user32/input.c
+@@ -376,6 +376,7 @@ void CDECL __wine_check_for_events( UINT flags )
+ SHORT WINAPI DECLSPEC_HOTPATCH GetAsyncKeyState( INT key )
+ {
+     struct user_thread_info *thread_info = get_user_thread_info();
++    struct user_key_state_info *key_state_info = thread_info->key_state;
+     INT epoch = global_key_state_epoch;
+     SHORT ret;
+ 
+@@ -385,26 +386,33 @@ SHORT WINAPI DECLSPEC_HOTPATCH GetAsyncKeyState( INT key )
+ 
+     if ((ret = USER_Driver->pGetAsyncKeyState( key )) == -1)
+     {
+-        if (thread_info->key_state &&
+-            !(thread_info->key_state[key] & 0xc0) &&
+-            GetTickCount() - thread_info->key_state_time < 50 &&
+-            thread_info->key_state_epoch == epoch)
++        if (key_state_info && !(key_state_info->key_state[key] & 0xc0) &&
++            GetTickCount() - key_state_info->key_state_time < 50 &&
++            key_state_info->key_state_epoch == epoch)
++        {
+             return 0;
+-
+-        if (!thread_info->key_state) thread_info->key_state = HeapAlloc( GetProcessHeap(), 0, 256 );
++        }
++        else if (!key_state_info)
++        {
++            key_state_info = HeapAlloc( GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*key_state_info) );
++            if (key_state_info) thread_info->key_state = key_state_info;
++        }
+ 
+         ret = 0;
+         SERVER_START_REQ( get_key_state )
+         {
+             req->tid = 0;
+             req->key = key;
+-            if (thread_info->key_state) wine_server_set_reply( req, thread_info->key_state, 256 );
++            if (key_state_info) wine_server_set_reply( req, key_state_info->key_state, sizeof(key_state_info->key_state) );
+             if (!wine_server_call( req ))
+             {
+                 if (reply->state & 0x40) ret |= 0x0001;
+                 if (reply->state & 0x80) ret |= 0x8000;
+-                thread_info->key_state_time  = GetTickCount();
+-                thread_info->key_state_epoch = epoch;
++                if (key_state_info)
++                {
++                    key_state_info->key_state_time  = GetTickCount();
++                    key_state_info->key_state_epoch = epoch;
++                }
+             }
+         }
+         SERVER_END_REQ;
+diff --git a/dlls/user32/message.c b/dlls/user32/message.c
+index 4bc17e9..33e826e 100644
+--- a/dlls/user32/message.c
++++ b/dlls/user32/message.c
+@@ -3304,6 +3304,7 @@ static BOOL send_message( struct send_message_info *info, DWORD_PTR *res_ptr, BO
+ NTSTATUS send_hardware_message( HWND hwnd, const INPUT *input, UINT flags )
+ {
+     struct user_thread_info *thread_info = get_user_thread_info();
++    struct user_key_state_info *key_state_info = thread_info->key_state;
+     struct send_message_info info;
+     int prev_x, prev_y, new_x, new_y;
+     NTSTATUS ret;
+@@ -3343,7 +3344,7 @@ NTSTATUS send_hardware_message( HWND hwnd, const INPUT *input, UINT flags )
+             req->input.hw.lparam = MAKELONG( input->u.hi.wParamL, input->u.hi.wParamH );
+             break;
+         }
+-        if (thread_info->key_state) wine_server_set_reply( req, thread_info->key_state, 256 );
++        if (key_state_info) wine_server_set_reply( req, key_state_info->key_state, sizeof(key_state_info->key_state) );
+         ret = wine_server_call( req );
+         wait = reply->wait;
+         prev_x = reply->prev_x;
+@@ -3355,10 +3356,10 @@ NTSTATUS send_hardware_message( HWND hwnd, const INPUT *input, UINT flags )
+ 
+     if (!ret)
+     {
+-        if (thread_info->key_state)
++        if (key_state_info)
+         {
+-            thread_info->key_state_time  = GetTickCount();
+-            thread_info->key_state_epoch = epoch;
++            key_state_info->key_state_time  = GetTickCount();
++            key_state_info->key_state_epoch = epoch;
+         }
+         if ((flags & SEND_HWMSG_INJECTED) && (prev_x != new_x || prev_y != new_y))
+             USER_Driver->pSetCursorPos( new_x, new_y );
+diff --git a/dlls/user32/user_private.h b/dlls/user32/user_private.h
+index adf73ff..a35ebf3 100644
+--- a/dlls/user32/user_private.h
++++ b/dlls/user32/user_private.h
+@@ -184,19 +184,26 @@ struct user_thread_info
+     DWORD                         GetMessageTimeVal;      /* Value for GetMessageTime */
+     DWORD                         GetMessagePosVal;       /* Value for GetMessagePos */
+     ULONG_PTR                     GetMessageExtraInfoVal; /* Value for GetMessageExtraInfo */
+-    UINT                          active_hooks;           /* Bitmap of active hooks */
+-    UINT                          key_state_time;         /* Time of last key state refresh */
+-    BYTE                         *key_state;              /* Cache of global key state */
+     HWND                          top_window;             /* Desktop window */
+     HWND                          msg_window;             /* HWND_MESSAGE parent window */
+     RAWINPUT                     *rawinput;
+-    INT                           key_state_epoch;        /* Counter to invalidate the key state */
++    struct user_key_state_info   *key_state;              /* Cache of global key state */
++    UINT                          active_hooks;           /* Bitmap of active hooks */
+     DWORD                         last_get_msg;           /* Last message time */
+ 
+-    ULONG                         pad[3];                 /* Available for more data */
++    ULONG                         pad[5];                 /* Available for more data */
+ };
+ #include <poppack.h>
+ 
++C_ASSERT( sizeof(struct user_thread_info) <= sizeof(((TEB *)0)->Win32ClientInfo) );
++
++struct user_key_state_info
++{
++    UINT                          key_state_time;         /* Time of last key state refresh */
++    INT                           key_state_epoch;        /* Counter to invalidate the key state */
++    BYTE                          key_state[256];         /* State for each key */
++};
++
+ extern INT global_key_state_epoch DECLSPEC_HIDDEN;
+ 
+ struct hook_extra_info
+diff --git a/dlls/user32/winstation.c b/dlls/user32/winstation.c
+index 12b9edc..0e8260a 100644
+--- a/dlls/user32/winstation.c
++++ b/dlls/user32/winstation.c
+@@ -399,9 +399,10 @@ BOOL WINAPI SetThreadDesktop( HDESK handle )
+     if (ret)  /* reset the desktop windows */
+     {
+         struct user_thread_info *thread_info = get_user_thread_info();
++        struct user_key_state_info *key_state_info = thread_info->key_state;
+         thread_info->top_window = 0;
+         thread_info->msg_window = 0;
+-        thread_info->key_state_time = 0;
++        if (key_state_info) key_state_info->key_state_time = 0;
+     }
+     return ret;
+ }
+-- 
+2.3.2
+

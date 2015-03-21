@@ -1022,6 +1022,9 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 	if test "$enable_ntdll_Threading" -gt 1; then
 		abort "Patchset ntdll-Threading disabled, but server-Shared_Memory depends on that."
 	fi
+	if test "$enable_server_ClipCursor" -gt 1; then
+		abort "Patchset server-ClipCursor disabled, but server-Shared_Memory depends on that."
+	fi
 	if test "$enable_server_Key_State" -gt 1; then
 		abort "Patchset server-Key_State disabled, but server-Shared_Memory depends on that."
 	fi
@@ -1033,6 +1036,7 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 	fi
 	enable_dinput_Events=1
 	enable_ntdll_Threading=1
+	enable_server_ClipCursor=1
 	enable_server_Key_State=1
 	enable_server_PeekMessage=1
 	enable_user32_Key_State=1
@@ -3876,6 +3880,7 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 	patch_apply server-Shared_Memory/0007-user32-Move-key_state-cache-into-separate-structure.patch
 	patch_apply server-Shared_Memory/0008-server-Store-a-list-of-associated-queues-for-each-th.patch
 	patch_apply server-Shared_Memory/0009-user32-Get-rid-of-wineserver-call-for-GetActiveWindo.patch
+	patch_apply server-Shared_Memory/0010-user32-Cache-the-result-of-GetForegroundWindow.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Implement virtual_map_shared_memory.", 1 },';
 		echo '+    { "Michael Müller", "server: Implement support for global and local shared memory blocks based on memfd.", 1 },';
@@ -3886,6 +3891,7 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 		echo '+    { "Sebastian Lackner", "user32: Move key_state cache into separate structure.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Store a list of associated queues for each thread input.", 1 },';
 		echo '+    { "Sebastian Lackner", "user32: Get rid of wineserver call for GetActiveWindow, GetFocus, GetCapture.", 1 },';
+		echo '+    { "Sebastian Lackner", "user32: Cache the result of GetForegroundWindow.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -92,7 +92,6 @@ patch_enable_all ()
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
 	enable_dbghelp_Debug_Symbols="$1"
 	enable_ddraw_Hotpatch="$1"
-	enable_ddraw_Palette="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
 	enable_dinput_Events="$1"
 	enable_dsound_Fast_Mixer="$1"
@@ -101,7 +100,6 @@ patch_enable_all ()
 	enable_fonts_Missing_Fonts="$1"
 	enable_gdi32_MaxPixelFormats="$1"
 	enable_gdi32_MultiMonitor="$1"
-	enable_gdiplus_Coverity="$1"
 	enable_gdiplus_GdipCreateEffect="$1"
 	enable_gdiplus_GdipCreateRegionRgnData="$1"
 	enable_imagehlp_BindImageEx="$1"
@@ -204,7 +202,6 @@ patch_enable_all ()
 	enable_user32_Painting="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_WndProc="$1"
-	enable_user32_user_thread_info="$1"
 	enable_vcomp_Stub_Functions="$1"
 	enable_version_VerQueryValue="$1"
 	enable_version_VersionInfoEx="$1"
@@ -337,9 +334,6 @@ patch_enable ()
 		ddraw-Hotpatch)
 			enable_ddraw_Hotpatch="$2"
 			;;
-		ddraw-Palette)
-			enable_ddraw_Palette="$2"
-			;;
 		ddraw-d3d_execute_buffer)
 			enable_ddraw_d3d_execute_buffer="$2"
 			;;
@@ -363,9 +357,6 @@ patch_enable ()
 			;;
 		gdi32-MultiMonitor)
 			enable_gdi32_MultiMonitor="$2"
-			;;
-		gdiplus-Coverity)
-			enable_gdiplus_Coverity="$2"
 			;;
 		gdiplus-GdipCreateEffect)
 			enable_gdiplus_GdipCreateEffect="$2"
@@ -672,9 +663,6 @@ patch_enable ()
 			;;
 		user32-WndProc)
 			enable_user32_WndProc="$2"
-			;;
-		user32-user_thread_info)
-			enable_user32_user_thread_info="$2"
 			;;
 		vcomp-Stub_Functions)
 			enable_vcomp_Stub_Functions="$2"
@@ -1040,13 +1028,6 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 	enable_server_Key_State=1
 	enable_server_PeekMessage=1
 	enable_user32_Key_State=1
-fi
-
-if test "$enable_user32_Key_State" -eq 1; then
-	if test "$enable_user32_user_thread_info" -gt 1; then
-		abort "Patchset user32-user_thread_info disabled, but user32-Key_State depends on that."
-	fi
-	enable_user32_user_thread_info=1
 fi
 
 if test "$enable_server_JobObjects" -eq 1; then
@@ -1758,21 +1739,6 @@ if test "$enable_ddraw_Hotpatch" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ddraw-Palette
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38248] Fix regression causing black screen on startup
-# |
-# | Modified files:
-# |   *	dlls/ddraw/surface.c
-# |
-if test "$enable_ddraw_Palette" -eq 1; then
-	patch_apply ddraw-Palette/0001-ddraw-Update-the-palette-before-presents-to-the-NULL.patch
-	(
-		echo '+    { "Stefan Dösinger", "ddraw: Update the palette before presents to the NULL window.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ddraw-d3d_execute_buffer
 # |
 # | Modified files:
@@ -1834,6 +1800,18 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -1854,18 +1832,6 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-CSMT_Helper
 # |
 # | Modified files:
@@ -1879,6 +1845,36 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	(
 		echo '+    { "Stefan Dösinger", "wined3d: Merge get_pitch functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Multisampling
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Multisampling" -eq 1; then
+	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+	(
+		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-NormalMatrix
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38256] Fix regression causing too dark/missing textures in several games
+# |
+# | Modified files:
+# |   *	dlls/wined3d/glsl_shader.c
+# |
+if test "$enable_wined3d_NormalMatrix" -eq 1; then
+	patch_apply wined3d-NormalMatrix/0001-wined3d-Don-t-use-the-builtin-FFP-uniform-for-the-no.patch
+	(
+		echo '+    { "Matteo Bruni", "wined3d: Don'\''t use the builtin FFP uniform for the normal matrix.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -1925,36 +1921,6 @@ if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
 	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Multisampling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
-	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-NormalMatrix
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38256] Fix regression causing too dark/missing textures in several games
-# |
-# | Modified files:
-# |   *	dlls/wined3d/glsl_shader.c
-# |
-if test "$enable_wined3d_NormalMatrix" -eq 1; then
-	patch_apply wined3d-NormalMatrix/0001-wined3d-Don-t-use-the-builtin-FFP-uniform-for-the-no.patch
-	(
-		echo '+    { "Matteo Bruni", "wined3d: Don'\''t use the builtin FFP uniform for the normal matrix.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2434,18 +2400,6 @@ if test "$enable_gdi32_MultiMonitor" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset gdiplus-Coverity
-# |
-# | Modified files:
-# |   *	dlls/gdiplus/image.c
-# |
-if test "$enable_gdiplus_Coverity" -eq 1; then
-	patch_apply gdiplus-Coverity/0001-gdiplus-Add-missing-returns-in-initialize_decoder_wi.patch
-	(
-		echo '+    { "Sebastian Lackner", "gdiplus: Add missing returns in initialize_decoder_wic (Coverity).", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset gdiplus-GdipCreateEffect
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2535,22 +2489,6 @@ if test "$enable_kernel32_Console_Handles" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, include/winbase.h, include/winternl.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-ntdll-Define-a-couple-more-information-classes.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0003-kernel32-Implement-SetFileInformationByHandle.patch
-	(
-		echo '+    { "Michael Müller", "ntdll: Define a couple more information classes.", 1 },';
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-FileDispositionInformation
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2567,6 +2505,22 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "server: Keep a pointer to parent'\''s fd unix_name in the closed_fd structure.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "server: Add support for setting file disposition information.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, include/winbase.h, include/winternl.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-ntdll-Define-a-couple-more-information-classes.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0003-kernel32-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Define a couple more information classes.", 1 },';
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3832,18 +3786,6 @@ if test "$enable_server_PeekMessage" -eq 1; then
 	patch_apply server-PeekMessage/0001-server-Fix-handling-of-GetMessage-after-previous-Pee.patch
 	(
 		echo '+    { "Sebastian Lackner", "server: Fix handling of GetMessage after previous PeekMessage call.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-user_thread_info
-# |
-# | Modified files:
-# |   *	dlls/user32/user_private.h
-# |
-if test "$enable_user32_user_thread_info" -eq 1; then
-	patch_apply user32-user_thread_info/0001-user32-Fix-padding-in-user_thread_info-structure.patch
-	(
-		echo '+    { "Sebastian Lackner", "user32: Fix padding in user_thread_info structure.", 1 },';
 	) >> "$patchlist"
 fi
 

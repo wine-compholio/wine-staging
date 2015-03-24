@@ -1,20 +1,20 @@
-From 0e40667469906fa6f8d25a9a0d6d45738ab62c3d Mon Sep 17 00:00:00 2001
+From 208155a225fef8613f9ef033ba0c895a4e71f409 Mon Sep 17 00:00:00 2001
 From: "Alexander E. Patrakov" <patrakov at gmail.com>
 Date: Thu, 7 Aug 2014 17:15:00 -0600
 Subject: dsound: Add a linear resampler for use with a large number of mixing
- buffers.
+ buffers. (rev 2)
 
 ---
  dlls/dsound/dsound_main.c    |  5 +++++
  dlls/dsound/dsound_private.h |  1 +
- dlls/dsound/mixer.c          | 49 +++++++++++++++++++++++++++++++++++++++++---
- 3 files changed, 52 insertions(+), 3 deletions(-)
+ dlls/dsound/mixer.c          | 48 +++++++++++++++++++++++++++++++++++++++++---
+ 3 files changed, 51 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/dsound/dsound_main.c b/dlls/dsound/dsound_main.c
-index 0e3a313..492df48 100644
+index cb46301..1f512a4 100644
 --- a/dlls/dsound/dsound_main.c
 +++ b/dlls/dsound/dsound_main.c
-@@ -93,6 +93,7 @@ WCHAR wine_vxd_drv[] = { 'w','i','n','e','m','m','.','v','x','d', 0 };
+@@ -94,6 +94,7 @@ WCHAR wine_vxd_drv[] = { 'w','i','n','e','m','m','.','v','x','d', 0 };
  /* All default settings, you most likely don't want to touch these, see wiki on UsefulRegistryKeys */
  int ds_hel_buflen = 32768 * 2;
  int ds_snd_queue_max = 10;
@@ -22,7 +22,7 @@ index 0e3a313..492df48 100644
  static HINSTANCE instance;
  
  /*
-@@ -149,11 +150,15 @@ void setup_dsound_options(void)
+@@ -150,11 +151,15 @@ void setup_dsound_options(void)
          ds_snd_queue_max = atoi(buffer);
  
  
@@ -39,10 +39,10 @@ index 0e3a313..492df48 100644
  
  static const char * get_device_id(LPCGUID pGuid)
 diff --git a/dlls/dsound/dsound_private.h b/dlls/dsound/dsound_private.h
-index 66af81a..ab1a123 100644
+index 9c001ed..726452c 100644
 --- a/dlls/dsound/dsound_private.h
 +++ b/dlls/dsound/dsound_private.h
-@@ -34,6 +34,7 @@
+@@ -36,6 +36,7 @@
  
  extern int ds_hel_buflen DECLSPEC_HIDDEN;
  extern int ds_snd_queue_max DECLSPEC_HIDDEN;
@@ -51,10 +51,10 @@ index 66af81a..ab1a123 100644
  /*****************************************************************************
   * Predeclare the interface implementation structures
 diff --git a/dlls/dsound/mixer.c b/dlls/dsound/mixer.c
-index f6c2661..13c3c02 100644
+index 85ab14a..4f22f85 100644
 --- a/dlls/dsound/mixer.c
 +++ b/dlls/dsound/mixer.c
-@@ -263,7 +263,48 @@ static UINT cp_fields_noresample(IDirectSoundBufferImpl *dsb, UINT count)
+@@ -278,7 +278,47 @@ static UINT cp_fields_noresample(IDirectSoundBufferImpl *dsb, UINT count)
      return count;
  }
  
@@ -66,13 +66,12 @@ index f6c2661..13c3c02 100644
 +    UINT ostride = dsb->device->pwfx->nChannels * sizeof(float);
 +    UINT channels = dsb->mix_channels;
 +
-+    float freqAdjust = (float)dsb->freqAdjustNum / dsb->freqAdjustDen;
-+    float freqAcc_start = (float)*freqAccNum / dsb->freqAdjustDen;
-+    float freqAcc_end = freqAcc_start + count * freqAdjust;
-+    UINT max_ipos = freqAcc_end;
++    LONG64 freqAcc_start = *freqAccNum;
++    LONG64 freqAcc_end = freqAcc_start + count * dsb->freqAdjustNum;
++    UINT max_ipos = freqAcc_end / dsb->freqAdjustDen;
 +
-+    for(i = 0; i < count; ++i) {
-+        float cur_freqAcc = freqAcc_start + i * freqAdjust;
++    for (i = 0; i < count; ++i) {
++        float cur_freqAcc = (freqAcc_start + i * dsb->freqAdjustNum) / (float)dsb->freqAdjustDen;
 +        float cur_freqAcc2;
 +        UINT ipos = cur_freqAcc;
 +        UINT idx = dsb->sec_mixpos + ipos * istride;
@@ -96,7 +95,7 @@ index f6c2661..13c3c02 100644
 +        }
 +    }
 +
-+    *freqAccNum = (LONG64)(freqAcc_end * dsb->freqAdjustDen) % dsb->freqAdjustDen;
++    *freqAccNum = freqAcc_end % dsb->freqAdjustDen;
 +    return max_ipos;
 +}
 +
@@ -104,7 +103,7 @@ index f6c2661..13c3c02 100644
  {
      UINT i, channel;
      UINT istride = dsb->pwfx->nBlockAlign;
-@@ -334,9 +375,11 @@ static void cp_fields(IDirectSoundBufferImpl *dsb, UINT count, LONG64 *freqAccNu
+@@ -349,9 +389,11 @@ static void cp_fields(IDirectSoundBufferImpl *dsb, UINT count, LONG64 *freqAccNu
      DWORD ipos, adv;
  
      if (dsb->freqAdjustNum == dsb->freqAdjustDen)
@@ -119,5 +118,5 @@ index f6c2661..13c3c02 100644
      ipos = dsb->sec_mixpos + adv * dsb->pwfx->nBlockAlign;
      if (ipos >= dsb->buflen) {
 -- 
-1.9.1
+2.3.3
 

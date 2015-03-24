@@ -1777,7 +1777,7 @@ fi
 if test "$enable_dsound_Fast_Mixer" -eq 1; then
 	patch_apply dsound-Fast_Mixer/0001-dsound-Add-a-linear-resampler-for-use-with-a-large-n.patch
 	(
-		echo '+    { "Alexander E. Patrakov", "dsound: Add a linear resampler for use with a large number of mixing buffers.", 1 },';
+		echo '+    { "Alexander E. Patrakov", "dsound: Add a linear resampler for use with a large number of mixing buffers.", 2 },';
 	) >> "$patchlist"
 fi
 

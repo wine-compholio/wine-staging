@@ -220,7 +220,7 @@ Included bug fixes and improvements
 * Support for PulseAudio backend for audio ([Wine Bug #10495](https://bugs.winehq.org/show_bug.cgi?id=10495))
 * Support for RtlDecompressBuffer ([Wine Bug #37449](https://bugs.winehq.org/show_bug.cgi?id=37449))
 * Support for SHCreateSessionKey ([Wine Bug #35630](https://bugs.winehq.org/show_bug.cgi?id=35630))
-* Support for TOOLTIPS_GetTipText edge cases ([Wine Bug #30648](https://bugs.winehq.org/show_bug.cgi?id=30648))
+* ~~Support for TOOLTIPS_GetTipText edge cases~~ ([Wine Bug #30648](https://bugs.winehq.org/show_bug.cgi?id=30648))
 * Support for TransmitFile ([Wine Bug #5048](https://bugs.winehq.org/show_bug.cgi?id=5048))
 * Support for WTSEnumerateProcessesW ([Wine Bug #29903](https://bugs.winehq.org/show_bug.cgi?id=29903))
 * Support for extra large and jumbo icon lists in shell32 ([Wine Bug #24721](https://bugs.winehq.org/show_bug.cgi?id=24721))

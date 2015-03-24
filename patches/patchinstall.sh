@@ -196,7 +196,6 @@ patch_enable_all ()
 	enable_user32_DrawTextExW="$1"
 	enable_user32_GetRawInputDeviceList="$1"
 	enable_user32_GetSystemMetrics="$1"
-	enable_user32_GetTipText="$1"
 	enable_user32_Key_State="$1"
 	enable_user32_Mouse_Message_Hwnd="$1"
 	enable_user32_Painting="$1"
@@ -645,9 +644,6 @@ patch_enable ()
 			;;
 		user32-GetSystemMetrics)
 			enable_user32_GetSystemMetrics="$2"
-			;;
-		user32-GetTipText)
-			enable_user32_GetTipText="$2"
 			;;
 		user32-Key_State)
 			enable_user32_Key_State="$2"
@@ -4099,23 +4095,6 @@ if test "$enable_user32_GetSystemMetrics" -eq 1; then
 	patch_apply user32-GetSystemMetrics/0001-user32-Allow-changing-the-tablet-media-center-status.patch
 	(
 		echo '+    { "Michael Müller", "user32: Allow changing the tablet / media center status via wine registry key.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-GetTipText
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#30648] Support for TOOLTIPS_GetTipText edge cases
-# |
-# | Modified files:
-# |   *	dlls/comctl32/tooltips.c
-# |
-if test "$enable_user32_GetTipText" -eq 1; then
-	patch_apply user32-GetTipText/0001-Fix-TOOLTIPS_GetTipText-when-a-resource-cannot-be-fo.patch
-	patch_apply user32-GetTipText/0002-Fix-TOOLTIPS_GetTipText-when-a-NULL-instance-is-used.patch
-	(
-		echo '+    { "Erich E. Hoover", "Fix TOOLTIPS_GetTipText when a resource cannot be found.", 1 },';
-		echo '+    { "Erich E. Hoover", "Fix TOOLTIPS_GetTipText when a NULL instance is used.", 1 },';
 	) >> "$patchlist"
 fi
 

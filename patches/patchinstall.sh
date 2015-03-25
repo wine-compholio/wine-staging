@@ -2847,13 +2847,14 @@ fi
 # |   *	[#36408] Child of Light expects FindConnectionPoint to succeed and increase the refcount
 # |
 # | Modified files:
-# |   *	dlls/netprofm/Makefile.in, dlls/netprofm/connectionpoint.c, dlls/netprofm/list.c, dlls/netprofm/netprofm_private.h,
-# | 	dlls/netprofm/tests/list.c, include/netlistmgr.idl
+# |   *	dlls/netprofm/list.c, dlls/netprofm/tests/list.c, include/netlistmgr.idl
 # |
 if test "$enable_netprofm_IConnectionPoint" -eq 1; then
-	patch_apply netprofm-IConnectionPoint/0001-netprofm-Add-IConnectionPoint-INetworkListManagerEve.patch
+	patch_apply netprofm-IConnectionPoint/0001-netprofm-Add-stubbed-IConnectionPoint-interface.patch
+	patch_apply netprofm-IConnectionPoint/0002-netprofm-tests-Add-tests-for-ConnectionPointContaine.patch
 	(
-		echo '+    { "Michael Müller", "netprofm: Add IConnectionPoint/INetworkListManagerEvents stub interface.", 1 },';
+		echo '+    { "Michael Müller", "netprofm: Add stubbed IConnectionPoint interface.", 1 },';
+		echo '+    { "Michael Müller", "netprofm/tests: Add tests for ConnectionPointContainer::FindConnectionPoint.", 1 },';
 	) >> "$patchlist"
 fi
 

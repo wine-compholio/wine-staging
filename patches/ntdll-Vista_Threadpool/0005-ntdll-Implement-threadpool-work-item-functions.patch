@@ -1,18 +1,18 @@
-From 5e0c3a3b77b95434e19f273da7dcadc7cd224cea Mon Sep 17 00:00:00 2001
+From d4b4fc976cad98a6e483584da8de8f011f029c20 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 4 Mar 2015 01:30:57 +0100
 Subject: ntdll: Implement threadpool work item functions.
 
 ---
- dlls/ntdll/ntdll.spec    |   4 ++
- dlls/ntdll/threadpool2.c | 108 ++++++++++++++++++++++++++++++++++++++++++++++-
- 2 files changed, 111 insertions(+), 1 deletion(-)
+ dlls/ntdll/ntdll.spec   |   4 ++
+ dlls/ntdll/threadpool.c | 101 +++++++++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 104 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 6dad2bb..1c768c9 100644
+index 853ca09..96edd67 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -969,12 +969,16 @@
+@@ -970,12 +970,16 @@
  @ stdcall RtlxUnicodeStringToOemSize(ptr) RtlUnicodeStringToOemSize
  @ stdcall TpAllocCleanupGroup(ptr)
  @ stdcall TpAllocPool(ptr ptr)
@@ -29,11 +29,11 @@ index 6dad2bb..1c768c9 100644
  @ stdcall -ret64 VerSetConditionMask(int64 long long)
  @ stdcall ZwAcceptConnectPort(ptr long ptr long long ptr) NtAcceptConnectPort
  @ stdcall ZwAccessCheck(ptr long long ptr ptr ptr ptr ptr) NtAccessCheck
-diff --git a/dlls/ntdll/threadpool2.c b/dlls/ntdll/threadpool2.c
-index 30f1e6d..31b5e2e 100644
---- a/dlls/ntdll/threadpool2.c
-+++ b/dlls/ntdll/threadpool2.c
-@@ -67,7 +67,8 @@ struct threadpool
+diff --git a/dlls/ntdll/threadpool.c b/dlls/ntdll/threadpool.c
+index 092fa6f..1989d56 100644
+--- a/dlls/ntdll/threadpool.c
++++ b/dlls/ntdll/threadpool.c
+@@ -156,7 +156,8 @@ struct threadpool
  
  enum threadpool_objtype
  {
@@ -43,7 +43,7 @@ index 30f1e6d..31b5e2e 100644
  };
  
  /* internal threadpool object representation */
-@@ -95,6 +96,10 @@ struct threadpool_object
+@@ -184,6 +185,10 @@ struct threadpool_object
          {
              PTP_SIMPLE_CALLBACK callback;
          } simple;
@@ -54,7 +54,7 @@ index 30f1e6d..31b5e2e 100644
      } u;
  };
  
-@@ -113,6 +118,13 @@ static inline struct threadpool *impl_from_TP_POOL( TP_POOL *pool )
+@@ -202,6 +207,13 @@ static inline struct threadpool *impl_from_TP_POOL( TP_POOL *pool )
      return (struct threadpool *)pool;
  }
  
@@ -68,7 +68,7 @@ index 30f1e6d..31b5e2e 100644
  static inline struct threadpool_group *impl_from_TP_CLEANUP_GROUP( TP_CLEANUP_GROUP *group )
  {
      return (struct threadpool_group *)group;
-@@ -254,6 +266,15 @@ static void CALLBACK threadpool_worker_proc( void *param )
+@@ -1478,6 +1490,15 @@ static void CALLBACK threadpool_worker_proc( void *param )
                      break;
                  }
  
@@ -84,15 +84,19 @@ index 30f1e6d..31b5e2e 100644
                  default:
                      assert(0);
                      break;
-@@ -372,6 +393,34 @@ static NTSTATUS tp_object_submit_simple( PTP_SIMPLE_CALLBACK callback, PVOID use
-     return STATUS_SUCCESS;
+@@ -1539,6 +1560,53 @@ NTSTATUS WINAPI TpAllocPool( TP_POOL **out, PVOID reserved )
  }
  
-+static NTSTATUS tp_object_alloc_work( struct threadpool_object **out, PTP_WORK_CALLBACK callback,
-+                                      PVOID userdata, TP_CALLBACK_ENVIRON *environment )
+ /***********************************************************************
++ *           TpAllocWork    (NTDLL.@)
++ */
++NTSTATUS WINAPI TpAllocWork( TP_WORK **out, PTP_WORK_CALLBACK callback, PVOID userdata,
++                             TP_CALLBACK_ENVIRON *environment )
 +{
 +    struct threadpool_object *object;
 +    struct threadpool *pool = NULL;
++
++    TRACE("%p %p %p %p\n", out, callback, userdata, environment);
 +
 +    if (environment)
 +        pool = (struct threadpool *)environment->Pool;
@@ -112,26 +116,8 @@ index 30f1e6d..31b5e2e 100644
 +    object->u.work.callback = callback;
 +    tp_object_initialize( object, pool, userdata, environment );
 +
-+    *out = object;
++    *out = (TP_WORK *)object;
 +    return STATUS_SUCCESS;
-+}
-+
- /* submits an object to a threadpool */
- static void tp_object_submit( struct threadpool_object *object )
- {
-@@ -620,6 +669,32 @@ NTSTATUS WINAPI TpAllocPool( TP_POOL **out, PVOID reserved )
- }
- 
- /***********************************************************************
-+ *           TpAllocWork    (NTDLL.@)
-+ */
-+NTSTATUS WINAPI TpAllocWork( TP_WORK **out, PTP_WORK_CALLBACK callback, PVOID userdata,
-+                             TP_CALLBACK_ENVIRON *environment )
-+{
-+    TRACE("%p %p %p %p\n", out, callback, userdata, environment);
-+
-+    return tp_object_alloc_work( (struct threadpool_object **)out, callback,
-+                                 userdata, environment );
 +}
 +
 +/***********************************************************************
@@ -152,7 +138,7 @@ index 30f1e6d..31b5e2e 100644
   *           TpReleaseCleanupGroup    (NTDLL.@)
   */
  VOID WINAPI TpReleaseCleanupGroup( TP_CLEANUP_GROUP *group )
-@@ -664,6 +739,21 @@ VOID WINAPI TpReleasePool( TP_POOL *pool )
+@@ -1633,6 +1701,21 @@ VOID WINAPI TpReleasePool( TP_POOL *pool )
  }
  
  /***********************************************************************
@@ -174,9 +160,9 @@ index 30f1e6d..31b5e2e 100644
   *           TpSetPoolMaxThreads    (NTDLL.@)
   */
  VOID WINAPI TpSetPoolMaxThreads( TP_POOL *pool, DWORD maximum )
-@@ -706,3 +796,19 @@ NTSTATUS WINAPI TpSimpleTryPost( PTP_SIMPLE_CALLBACK callback, PVOID userdata,
+@@ -1696,3 +1779,19 @@ NTSTATUS WINAPI TpSimpleTryPost( PTP_SIMPLE_CALLBACK callback, PVOID userdata,
  
-     return tp_object_submit_simple( callback, userdata, environment );
+     return STATUS_SUCCESS;
  }
 +
 +/***********************************************************************
@@ -195,5 +181,5 @@ index 30f1e6d..31b5e2e 100644
 +    }
 +}
 -- 
-2.3.0
+2.3.3
 

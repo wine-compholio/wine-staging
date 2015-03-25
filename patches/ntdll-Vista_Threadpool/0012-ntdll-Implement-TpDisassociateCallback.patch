@@ -1,18 +1,18 @@
-From c3f8e7288538d526ece6b07ff69790e6ff7b1d9d Mon Sep 17 00:00:00 2001
+From 472f35764b63622fd5887ac16194e8b5089f0fc6 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 4 Mar 2015 07:31:27 +0100
 Subject: ntdll: Implement TpDisassociateCallback.
 
 ---
- dlls/ntdll/ntdll.spec    |  1 +
- dlls/ntdll/threadpool2.c | 52 +++++++++++++++++++++++++++++++++++++++++++++---
+ dlls/ntdll/ntdll.spec   |  1 +
+ dlls/ntdll/threadpool.c | 52 ++++++++++++++++++++++++++++++++++++++++++++++---
  2 files changed, 50 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 38e6fe8..aaf1c64 100644
+index b7f1555..63426c5 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -971,6 +971,7 @@
+@@ -972,6 +972,7 @@
  @ stdcall TpAllocPool(ptr ptr)
  @ stdcall TpAllocWork(ptr ptr ptr ptr)
  @ stdcall TpCallbackMayRunLong(ptr)
@@ -20,11 +20,11 @@ index 38e6fe8..aaf1c64 100644
  @ stdcall TpPostWork(ptr)
  @ stdcall TpReleaseCleanupGroup(ptr)
  @ stdcall TpReleaseCleanupGroupMembers(ptr long ptr)
-diff --git a/dlls/ntdll/threadpool2.c b/dlls/ntdll/threadpool2.c
-index 90f2ab7..c40c06a 100644
---- a/dlls/ntdll/threadpool2.c
-+++ b/dlls/ntdll/threadpool2.c
-@@ -112,6 +112,7 @@ struct threadpool_instance
+diff --git a/dlls/ntdll/threadpool.c b/dlls/ntdll/threadpool.c
+index d1733c8..4861ba6 100644
+--- a/dlls/ntdll/threadpool.c
++++ b/dlls/ntdll/threadpool.c
+@@ -201,6 +201,7 @@ struct threadpool_instance
  {
      struct threadpool_object *object;
      DWORD                   threadid;
@@ -32,23 +32,7 @@ index 90f2ab7..c40c06a 100644
      BOOL                    may_run_long;
  };
  
-@@ -312,9 +313,12 @@ static void CALLBACK threadpool_worker_proc( void *param )
- 
-             RtlEnterCriticalSection( &pool->cs );
-             pool->num_busy_workers--;
--            object->num_running_callbacks--;
--            if (!object->num_pending_callbacks && !object->num_running_callbacks)
--                RtlWakeAllConditionVariable( &object->finished_event );
-+            if (!instance.disassociated)
-+            {
-+                object->num_running_callbacks--;
-+                if (!object->num_pending_callbacks && !object->num_running_callbacks)
-+                    RtlWakeAllConditionVariable( &object->finished_event );
-+            }
-             tp_object_release( object );
-         }
- 
-@@ -599,9 +603,37 @@ static void tp_instance_initialize( struct threadpool_instance *instance, struct
+@@ -1503,9 +1504,37 @@ static void tp_instance_initialize( struct threadpool_instance *instance, struct
  {
      instance->object                    = object;
      instance->threadid                  = GetCurrentThreadId();
@@ -86,7 +70,23 @@ index 90f2ab7..c40c06a 100644
  /* hint for the threadpool that the execution might take long, spawn additional workers */
  static BOOL tp_instance_may_run_long( struct threadpool_instance *instance )
  {
-@@ -799,6 +831,20 @@ NTSTATUS WINAPI TpCallbackMayRunLong( TP_CALLBACK_INSTANCE *instance )
+@@ -1609,9 +1638,12 @@ static void CALLBACK threadpool_worker_proc( void *param )
+ 
+             RtlEnterCriticalSection( &pool->cs );
+             pool->num_busy_workers--;
+-            object->num_running_callbacks--;
+-            if (!object->num_pending_callbacks && !object->num_running_callbacks)
+-                RtlWakeAllConditionVariable( &object->finished_event );
++            if (!instance.disassociated)
++            {
++                object->num_running_callbacks--;
++                if (!object->num_pending_callbacks && !object->num_running_callbacks)
++                    RtlWakeAllConditionVariable( &object->finished_event );
++            }
+             tp_object_release( object );
+         }
+ 
+@@ -1710,6 +1742,20 @@ NTSTATUS WINAPI TpCallbackMayRunLong( TP_CALLBACK_INSTANCE *instance )
  }
  
  /***********************************************************************
@@ -108,5 +108,5 @@ index 90f2ab7..c40c06a 100644
   */
  VOID WINAPI TpPostWork( TP_WORK *work )
 -- 
-2.3.0
+2.3.3
 

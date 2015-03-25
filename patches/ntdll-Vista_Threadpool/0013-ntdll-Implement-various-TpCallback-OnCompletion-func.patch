@@ -1,18 +1,18 @@
-From 6229d9139d7b30f00e78c6f1f8410c1c99712295 Mon Sep 17 00:00:00 2001
+From 16d0eb264d85a90fa7faf1b429dec1f4efe385a2 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 4 Mar 2015 07:40:02 +0100
 Subject: ntdll: Implement various TpCallback*OnCompletion functions.
 
 ---
- dlls/ntdll/ntdll.spec    |   5 ++
- dlls/ntdll/threadpool2.c | 154 +++++++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 159 insertions(+)
+ dlls/ntdll/ntdll.spec   |   5 ++
+ dlls/ntdll/threadpool.c | 153 ++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 158 insertions(+)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index aaf1c64..0c5ad39 100644
+index 63426c5..6100a7e 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -970,7 +970,12 @@
+@@ -971,7 +971,12 @@
  @ stdcall TpAllocCleanupGroup(ptr)
  @ stdcall TpAllocPool(ptr ptr)
  @ stdcall TpAllocWork(ptr ptr ptr ptr)
@@ -25,11 +25,11 @@ index aaf1c64..0c5ad39 100644
  @ stdcall TpDisassociateCallback(ptr)
  @ stdcall TpPostWork(ptr)
  @ stdcall TpReleaseCleanupGroup(ptr)
-diff --git a/dlls/ntdll/threadpool2.c b/dlls/ntdll/threadpool2.c
-index c40c06a..ebf8b94 100644
---- a/dlls/ntdll/threadpool2.c
-+++ b/dlls/ntdll/threadpool2.c
-@@ -114,6 +114,15 @@ struct threadpool_instance
+diff --git a/dlls/ntdll/threadpool.c b/dlls/ntdll/threadpool.c
+index 4861ba6..aa2d8e9 100644
+--- a/dlls/ntdll/threadpool.c
++++ b/dlls/ntdll/threadpool.c
+@@ -203,6 +203,15 @@ struct threadpool_instance
      DWORD                   threadid;
      BOOL                    disassociated;
      BOOL                    may_run_long;
@@ -45,23 +45,7 @@ index c40c06a..ebf8b94 100644
  };
  
  /* internal threadpool group representation */
-@@ -156,6 +165,7 @@ static void tp_object_submit( struct threadpool_object *object );
- static void tp_object_shutdown( struct threadpool_object *object );
- static BOOL tp_object_release( struct threadpool_object *object );
- static void tp_instance_initialize( struct threadpool_instance *instance, struct threadpool_object *object );
-+static NTSTATUS tp_instance_cleanup( struct threadpool_instance *instance );
- static BOOL tp_group_release( struct threadpool_group *group );
- 
- static struct threadpool *default_threadpool = NULL;
-@@ -311,6 +321,7 @@ static void CALLBACK threadpool_worker_proc( void *param )
-                 TRACE( "callback %p returned\n", object->finalization_callback );
-             }
- 
-+            tp_instance_cleanup( &instance );
-             RtlEnterCriticalSection( &pool->cs );
-             pool->num_busy_workers--;
-             if (!instance.disassociated)
-@@ -605,6 +616,48 @@ static void tp_instance_initialize( struct threadpool_instance *instance, struct
+@@ -1506,8 +1515,50 @@ static void tp_instance_initialize( struct threadpool_instance *instance, struct
      instance->threadid                  = GetCurrentThreadId();
      instance->disassociated             = FALSE;
      instance->may_run_long              = object->may_run_long;
@@ -71,8 +55,8 @@ index c40c06a..ebf8b94 100644
 +    instance->cleanup.semaphore_count   = 0;
 +    instance->cleanup.event             = NULL;
 +    instance->cleanup.library           = NULL;
-+}
-+
+ }
+ 
 +static NTSTATUS tp_instance_cleanup( struct threadpool_instance *instance )
 +{
 +    NTSTATUS status;
@@ -107,10 +91,20 @@ index c40c06a..ebf8b94 100644
 +    }
 +
 +    return STATUS_SUCCESS;
- }
- 
++ }
++
  /* disassociates the current thread from the threadpool object */
-@@ -817,6 +870,26 @@ NTSTATUS WINAPI TpAllocWork( TP_WORK **out, PTP_WORK_CALLBACK callback, PVOID us
+ static void tp_instance_disassociate_thread( struct threadpool_instance *instance )
+ {
+@@ -1636,6 +1687,7 @@ static void CALLBACK threadpool_worker_proc( void *param )
+                 TRACE( "callback %p returned\n", object->finalization_callback );
+             }
+ 
++            tp_instance_cleanup( &instance );
+             RtlEnterCriticalSection( &pool->cs );
+             pool->num_busy_workers--;
+             if (!instance.disassociated)
+@@ -1728,6 +1780,26 @@ NTSTATUS WINAPI TpAllocWork( TP_WORK **out, PTP_WORK_CALLBACK callback, PVOID us
  }
  
  /***********************************************************************
@@ -137,7 +131,7 @@ index c40c06a..ebf8b94 100644
   *           TpCallbackMayRunLong    (NTDLL.@)
   */
  NTSTATUS WINAPI TpCallbackMayRunLong( TP_CALLBACK_INSTANCE *instance )
-@@ -831,6 +904,87 @@ NTSTATUS WINAPI TpCallbackMayRunLong( TP_CALLBACK_INSTANCE *instance )
+@@ -1742,6 +1814,87 @@ NTSTATUS WINAPI TpCallbackMayRunLong( TP_CALLBACK_INSTANCE *instance )
  }
  
  /***********************************************************************
@@ -226,5 +220,5 @@ index c40c06a..ebf8b94 100644
   */
  VOID WINAPI TpDisassociateCallback( TP_CALLBACK_INSTANCE *instance )
 -- 
-2.3.0
+2.3.3
 

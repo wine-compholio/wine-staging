@@ -3197,8 +3197,8 @@ fi
 # |   *	[#37306] Implement threadpool timers
 # |
 # | Modified files:
-# |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/tests/thread.c, dlls/kernel32/thread.c, dlls/ntdll/Makefile.in,
-# | 	dlls/ntdll/ntdll.spec, dlls/ntdll/tests/threadpool.c, dlls/ntdll/threadpool2.c, include/winternl.h
+# |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/tests/thread.c, dlls/kernel32/thread.c, dlls/ntdll/ntdll.spec,
+# | 	dlls/ntdll/tests/threadpool.c, dlls/ntdll/threadpool.c, include/winternl.h
 # |
 if test "$enable_ntdll_Vista_Threadpool" -eq 1; then
 	patch_apply ntdll-Vista_Threadpool/0001-ntdll-Implement-TpSimpleTryPost-and-basic-threadpool.patch

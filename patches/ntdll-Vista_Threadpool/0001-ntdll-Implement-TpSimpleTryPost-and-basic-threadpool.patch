@@ -1,33 +1,19 @@
-From 674272bb028c74d513416d2f776c1ecd6b229c7f Mon Sep 17 00:00:00 2001
+From 4693a9204a3131172e0d1be292ecbe70777057de Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Tue, 24 Feb 2015 05:42:07 +0100
 Subject: ntdll: Implement TpSimpleTryPost and basic threadpool infrastructure.
 
 ---
- dlls/ntdll/Makefile.in        |   1 +
  dlls/ntdll/ntdll.spec         |   3 +
  dlls/ntdll/tests/threadpool.c |   3 +-
- dlls/ntdll/threadpool2.c      | 424 ++++++++++++++++++++++++++++++++++++++++++
- 4 files changed, 430 insertions(+), 1 deletion(-)
- create mode 100644 dlls/ntdll/threadpool2.c
+ dlls/ntdll/threadpool.c       | 370 ++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 375 insertions(+), 1 deletion(-)
 
-diff --git a/dlls/ntdll/Makefile.in b/dlls/ntdll/Makefile.in
-index ed4bb94..2cecac6 100644
---- a/dlls/ntdll/Makefile.in
-+++ b/dlls/ntdll/Makefile.in
-@@ -47,6 +47,7 @@ C_SRCS = \
- 	tape.c \
- 	thread.c \
- 	threadpool.c \
-+	threadpool2.c \
- 	time.c \
- 	version.c \
- 	virtual.c \
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 9355d04..aa16021 100644
+index c3307b2..d9aafdd 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -967,6 +967,9 @@
+@@ -968,6 +968,9 @@
  @ stdcall RtlxOemStringToUnicodeSize(ptr) RtlOemStringToUnicodeSize
  @ stdcall RtlxUnicodeStringToAnsiSize(ptr) RtlUnicodeStringToAnsiSize
  @ stdcall RtlxUnicodeStringToOemSize(ptr) RtlUnicodeStringToOemSize
@@ -58,60 +44,36 @@ index 2e31b34..6f164e9 100644
      ok(status == STATUS_INVALID_PARAMETER || broken(!status) /* Vista/2008 */,
         "TpSimpleTryPost unexpectedly returned status %x\n", status);
      if (!status)
-diff --git a/dlls/ntdll/threadpool2.c b/dlls/ntdll/threadpool2.c
-new file mode 100644
-index 0000000..e912729
---- /dev/null
-+++ b/dlls/ntdll/threadpool2.c
-@@ -0,0 +1,424 @@
+diff --git a/dlls/ntdll/threadpool.c b/dlls/ntdll/threadpool.c
+index 513c13d..df92ef2 100644
+--- a/dlls/ntdll/threadpool.c
++++ b/dlls/ntdll/threadpool.c
+@@ -2,6 +2,7 @@
+  * Thread pooling
+  *
+  * Copyright (c) 2006 Robert Shearman
++ * Copyright (c) 2014-2015 Sebastian Lackner
+  *
+  * This library is free software; you can redistribute it and/or
+  * modify it under the terms of the GNU Lesser General Public
+@@ -37,6 +38,10 @@
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(threadpool);
+ 
 +/*
-+ * Object-oriented thread pool API
-+ *
-+ * Copyright 2014-2015 Sebastian Lackner
-+ *
-+ * This library is free software; you can redistribute it and/or
-+ * modify it under the terms of the GNU Lesser General Public
-+ * License as published by the Free Software Foundation; either
-+ * version 2.1 of the License, or (at your option) any later version.
-+ *
-+ * This library is distributed in the hope that it will be useful,
-+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
-+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-+ * Lesser General Public License for more details.
-+ *
-+ * You should have received a copy of the GNU Lesser General Public
-+ * License along with this library; if not, write to the Free Software
-+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ * Old thread pooling API
 + */
 +
-+#include "config.h"
-+#include "wine/port.h"
-+
-+#include <assert.h>
-+#include <stdarg.h>
-+#include <limits.h>
-+
-+#define NONAMELESSUNION
-+#include "ntstatus.h"
-+#define WIN32_NO_STATUS
-+#include "winternl.h"
-+
-+#include "wine/debug.h"
-+#include "wine/list.h"
-+
-+#include "ntdll_misc.h"
-+
-+WINE_DEFAULT_DEBUG_CHANNEL(threadpool);
-+
-+static inline LONG interlocked_inc( PLONG dest )
-+{
-+    return interlocked_xchg_add( dest, 1 ) + 1;
-+}
-+
-+static inline LONG interlocked_dec( PLONG dest )
-+{
-+    return interlocked_xchg_add( dest, -1 ) - 1;
-+}
+ #define OLD_WORKER_TIMEOUT 30000        /* 30 seconds */
+ #define EXPIRE_NEVER       (~(ULONGLONG)0)
+ #define TIMER_QUEUE_MAGIC  0x516d6954   /* TimQ */
+@@ -127,6 +132,64 @@ struct timer_queue
+     HANDLE thread;
+ };
+ 
++/*
++ * New object-oriented thread pooling API
++ */
 +
 +#define THREADPOOL_WORKER_TIMEOUT 5000
 +
@@ -165,33 +127,15 @@ index 0000000..e912729
 +}
 +
 +static void CALLBACK threadpool_worker_proc( void *param );
-+static NTSTATUS tp_threadpool_alloc( struct threadpool **out );
-+static void tp_threadpool_shutdown( struct threadpool *pool );
-+static BOOL tp_threadpool_release( struct threadpool *pool );
-+static void tp_object_submit( struct threadpool_object *object );
-+static void tp_object_shutdown( struct threadpool_object *object );
-+static BOOL tp_object_release( struct threadpool_object *object );
-+
 +static struct threadpool *default_threadpool = NULL;
 +
-+/* allocates or returns the default threadpool */
-+static struct threadpool *get_default_threadpool( void )
-+{
-+    if (!default_threadpool)
-+    {
-+        struct threadpool *pool;
-+
-+        if (tp_threadpool_alloc( &pool ) != STATUS_SUCCESS)
-+            return NULL;
-+
-+        if (interlocked_cmpxchg_ptr( (void *)&default_threadpool, pool, NULL ) != NULL)
-+        {
-+            tp_threadpool_shutdown( pool );
-+            tp_threadpool_release( pool );
-+        }
-+    }
-+    return default_threadpool;
-+}
+ static inline LONG interlocked_inc( PLONG dest )
+ {
+     return interlocked_xchg_add( dest, 1 ) + 1;
+@@ -1044,3 +1107,310 @@ NTSTATUS WINAPI RtlDeleteTimer(HANDLE TimerQueue, HANDLE Timer,
+ 
+     return status;
+ }
 +
 +/* allocate a new threadpool (with at least one worker thread) */
 +static NTSTATUS tp_threadpool_alloc( struct threadpool **out )
@@ -262,69 +206,23 @@ index 0000000..e912729
 +    return TRUE;
 +}
 +
-+/* threadpool worker function */
-+static void CALLBACK threadpool_worker_proc( void *param )
++/* allocates or returns the default threadpool */
++static struct threadpool *get_default_threadpool( void )
 +{
-+    struct threadpool *pool = param;
-+    LARGE_INTEGER timeout;
-+    struct list *ptr;
-+
-+    RtlEnterCriticalSection( &pool->cs );
-+    for (;;)
++    if (!default_threadpool)
 +    {
-+        while ((ptr = list_head( &pool->pool )))
++        struct threadpool *pool;
++
++        if (tp_threadpool_alloc( &pool ) != STATUS_SUCCESS)
++            return NULL;
++
++        if (interlocked_cmpxchg_ptr( (void *)&default_threadpool, pool, NULL ) != NULL)
 +        {
-+            struct threadpool_object *object = LIST_ENTRY( ptr, struct threadpool_object, pool_entry );
-+            assert( object->num_pending_callbacks > 0 );
-+
-+            /* If further pending callbacks are queued, move the work item to
-+             * the end of the pool list. Otherwise remove it from the pool. */
-+            list_remove( &object->pool_entry );
-+            if (--object->num_pending_callbacks)
-+                list_add_tail( &pool->pool, &object->pool_entry );
-+
-+            /* Leave critical section and do the actual callback. */
-+            object->num_running_callbacks++;
-+            pool->num_busy_workers++;
-+            RtlLeaveCriticalSection( &pool->cs );
-+
-+            switch (object->type)
-+            {
-+                case TP_OBJECT_TYPE_SIMPLE:
-+                {
-+                    TRACE( "executing simple callback %p(NULL, %p)\n",
-+                           object->u.simple.callback, object->userdata );
-+                    object->u.simple.callback( NULL, object->userdata );
-+                    TRACE( "callback %p returned\n", object->u.simple.callback );
-+                    break;
-+                }
-+
-+                default:
-+                    assert(0);
-+                    break;
-+            }
-+
-+            RtlEnterCriticalSection( &pool->cs );
-+            pool->num_busy_workers--;
-+            object->num_running_callbacks--;
-+            tp_object_release( object );
-+        }
-+
-+        /* Shutdown worker thread if requested. */
-+        if (pool->shutdown)
-+            break;
-+
-+        /* Wait for new tasks or until timeout expires. Never terminate the last worker. */
-+        timeout.QuadPart = (ULONGLONG)THREADPOOL_WORKER_TIMEOUT * -10000;
-+        if (RtlSleepConditionVariableCS( &pool->update_event, &pool->cs, &timeout ) == STATUS_TIMEOUT &&
-+            !list_head( &pool->pool ) && pool->num_workers > 1)
-+        {
-+            break;
++            tp_threadpool_shutdown( pool );
++            tp_threadpool_release( pool );
 +        }
 +    }
-+    pool->num_workers--;
-+    RtlLeaveCriticalSection( &pool->cs );
-+    tp_threadpool_release( pool );
++    return default_threadpool;
 +}
 +
 +/* initializes a new threadpool object */
@@ -348,38 +246,6 @@ index 0000000..e912729
 +    interlocked_inc( &pool->refcount );
 +
 +    TRACE("allocated object %p of type %u\n", object, object->type);
-+}
-+
-+/* allocates and submits a 'simple' threadpool task. */
-+static NTSTATUS tp_object_submit_simple( PTP_SIMPLE_CALLBACK callback, PVOID userdata,
-+                                         TP_CALLBACK_ENVIRON *environment )
-+{
-+    struct threadpool_object *object;
-+    struct threadpool *pool = NULL;
-+
-+    if (environment)
-+        pool = (struct threadpool *)environment->Pool;
-+
-+    if (!pool)
-+    {
-+        pool = get_default_threadpool();
-+        if (!pool)
-+            return STATUS_NO_MEMORY;
-+    }
-+
-+    object = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*object) );
-+    if (!object)
-+        return STATUS_NO_MEMORY;
-+
-+    object->type = TP_OBJECT_TYPE_SIMPLE;
-+    object->u.simple.callback = callback;
-+    tp_object_initialize( object, pool, userdata, environment );
-+
-+    tp_object_submit( object );
-+
-+    tp_object_shutdown( object );
-+    tp_object_release( object );
-+    return STATUS_SUCCESS;
 +}
 +
 +/* submits an object to a threadpool */
@@ -446,6 +312,70 @@ index 0000000..e912729
 +    return TRUE;
 +}
 +
++/* threadpool worker function */
++static void CALLBACK threadpool_worker_proc( void *param )
++{
++    struct threadpool *pool = param;
++    LARGE_INTEGER timeout;
++    struct list *ptr;
++
++    RtlEnterCriticalSection( &pool->cs );
++    for (;;)
++    {
++        while ((ptr = list_head( &pool->pool )))
++        {
++            struct threadpool_object *object = LIST_ENTRY( ptr, struct threadpool_object, pool_entry );
++            assert( object->num_pending_callbacks > 0 );
++
++            /* If further pending callbacks are queued, move the work item to
++             * the end of the pool list. Otherwise remove it from the pool. */
++            list_remove( &object->pool_entry );
++            if (--object->num_pending_callbacks)
++                list_add_tail( &pool->pool, &object->pool_entry );
++
++            /* Leave critical section and do the actual callback. */
++            object->num_running_callbacks++;
++            pool->num_busy_workers++;
++            RtlLeaveCriticalSection( &pool->cs );
++
++            switch (object->type)
++            {
++                case TP_OBJECT_TYPE_SIMPLE:
++                {
++                    TRACE( "executing simple callback %p(NULL, %p)\n",
++                           object->u.simple.callback, object->userdata );
++                    object->u.simple.callback( NULL, object->userdata );
++                    TRACE( "callback %p returned\n", object->u.simple.callback );
++                    break;
++                }
++
++                default:
++                    assert(0);
++                    break;
++            }
++
++            RtlEnterCriticalSection( &pool->cs );
++            pool->num_busy_workers--;
++            object->num_running_callbacks--;
++            tp_object_release( object );
++        }
++
++        /* Shutdown worker thread if requested. */
++        if (pool->shutdown)
++            break;
++
++        /* Wait for new tasks or until timeout expires. Never terminate the last worker. */
++        timeout.QuadPart = (ULONGLONG)THREADPOOL_WORKER_TIMEOUT * -10000;
++        if (RtlSleepConditionVariableCS( &pool->update_event, &pool->cs, &timeout ) == STATUS_TIMEOUT &&
++            !list_head( &pool->pool ) && pool->num_workers > 1)
++        {
++            break;
++        }
++    }
++    pool->num_workers--;
++    RtlLeaveCriticalSection( &pool->cs );
++    tp_threadpool_release( pool );
++}
 +
 +/***********************************************************************
 + *           TpAllocPool    (NTDLL.@)
@@ -484,10 +414,35 @@ index 0000000..e912729
 +NTSTATUS WINAPI TpSimpleTryPost( PTP_SIMPLE_CALLBACK callback, PVOID userdata,
 +                                 TP_CALLBACK_ENVIRON *environment )
 +{
++    struct threadpool_object *object;
++    struct threadpool *pool = NULL;
++
 +    TRACE("%p %p %p\n", callback, userdata, environment);
 +
-+    return tp_object_submit_simple( callback, userdata, environment );
++    if (environment)
++        pool = (struct threadpool *)environment->Pool;
++
++    if (!pool)
++    {
++        pool = get_default_threadpool();
++        if (!pool)
++            return STATUS_NO_MEMORY;
++    }
++
++    object = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*object) );
++    if (!object)
++        return STATUS_NO_MEMORY;
++
++    object->type = TP_OBJECT_TYPE_SIMPLE;
++    object->u.simple.callback = callback;
++    tp_object_initialize( object, pool, userdata, environment );
++
++    tp_object_submit( object );
++
++    tp_object_shutdown( object );
++    tp_object_release( object );
++    return STATUS_SUCCESS;
 +}
 -- 
-2.3.0
+2.3.3
 

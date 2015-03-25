@@ -1,4 +1,4 @@
-From 4693a9204a3131172e0d1be292ecbe70777057de Mon Sep 17 00:00:00 2001
+From 05e4482c93eec3e57ca2c6d83357c85b240494b2 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Tue, 24 Feb 2015 05:42:07 +0100
 Subject: ntdll: Implement TpSimpleTryPost and basic threadpool infrastructure.
@@ -45,7 +45,7 @@ index 2e31b34..6f164e9 100644
         "TpSimpleTryPost unexpectedly returned status %x\n", status);
      if (!status)
 diff --git a/dlls/ntdll/threadpool.c b/dlls/ntdll/threadpool.c
-index 513c13d..df92ef2 100644
+index 513c13d..cc5f8e9 100644
 --- a/dlls/ntdll/threadpool.c
 +++ b/dlls/ntdll/threadpool.c
 @@ -2,6 +2,7 @@
@@ -206,13 +206,19 @@ index 513c13d..df92ef2 100644
 +    return TRUE;
 +}
 +
-+/* allocates or returns the default threadpool */
-+static struct threadpool *get_default_threadpool( void )
++/* returns the threadpool based on the environment structure */
++static struct threadpool *get_threadpool( TP_CALLBACK_ENVIRON *environment )
 +{
++    struct threadpool *pool;
++
++    if (environment)
++    {
++        pool = (struct threadpool *)environment->Pool;
++        if (pool) return pool;
++    }
++
 +    if (!default_threadpool)
 +    {
-+        struct threadpool *pool;
-+
 +        if (tp_threadpool_alloc( &pool ) != STATUS_SUCCESS)
 +            return NULL;
 +
@@ -222,6 +228,7 @@ index 513c13d..df92ef2 100644
 +            tp_threadpool_release( pool );
 +        }
 +    }
++
 +    return default_threadpool;
 +}
 +
@@ -415,19 +422,12 @@ index 513c13d..df92ef2 100644
 +                                 TP_CALLBACK_ENVIRON *environment )
 +{
 +    struct threadpool_object *object;
-+    struct threadpool *pool = NULL;
++    struct threadpool *pool;
 +
 +    TRACE("%p %p %p\n", callback, userdata, environment);
 +
-+    if (environment)
-+        pool = (struct threadpool *)environment->Pool;
-+
-+    if (!pool)
-+    {
-+        pool = get_default_threadpool();
-+        if (!pool)
-+            return STATUS_NO_MEMORY;
-+    }
++    if (!(pool = get_threadpool( environment )))
++        return STATUS_NO_MEMORY;
 +
 +    object = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*object) );
 +    if (!object)

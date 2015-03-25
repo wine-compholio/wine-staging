@@ -80,7 +80,7 @@ Included bug fixes and improvements
 * Basic support for CUDA
 * Black & White needs DXTn software decoding support ([Wine Bug #14939](https://bugs.winehq.org/show_bug.cgi?id=14939))
 * CPU-Z fails to start because GetLogicalProcessorInformationEx returns FALSE
-* Child of Light expects FindConnectionPoint to succeed and increase the refcount ([Wine Bug #36408](https://bugs.winehq.org/show_bug.cgi?id=36408))
+* ~~Child of Light expects FindConnectionPoint to succeed and increase the refcount~~ ([Wine Bug #36408](https://bugs.winehq.org/show_bug.cgi?id=36408))
 * CreateProcess does not prioritize the working directory over the system search path ([Wine Bug #23934](https://bugs.winehq.org/show_bug.cgi?id=23934))
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](https://bugs.winehq.org/show_bug.cgi?id=33770))
 * Do not append duplicate NULL characters when importing keys with regedit ([Wine Bug #37575](https://bugs.winehq.org/show_bug.cgi?id=37575))

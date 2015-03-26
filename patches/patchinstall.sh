@@ -67,7 +67,6 @@ patch_enable_all ()
 	enable_Pipelight="$1"
 	enable_Staging="$1"
 	enable_browseui_Progress_Dialog="$1"
-	enable_browseui_Race_Conditions="$1"
 	enable_combase_String="$1"
 	enable_comctl32_LoadIconMetric="$1"
 	enable_configure_Absolute_RPATH="$1"
@@ -178,7 +177,6 @@ patch_enable_all ()
 	enable_server_Shared_Memory="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Unexpected_Wakeup="$1"
-	enable_setupapi_SetupLog="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
 	enable_shell32_Default_Folder_ACLs="$1"
@@ -256,9 +254,6 @@ patch_enable ()
 			;;
 		browseui-Progress_Dialog)
 			enable_browseui_Progress_Dialog="$2"
-			;;
-		browseui-Race_Conditions)
-			enable_browseui_Race_Conditions="$2"
 			;;
 		combase-String)
 			enable_combase_String="$2"
@@ -589,9 +584,6 @@ patch_enable ()
 			;;
 		server-Unexpected_Wakeup)
 			enable_server_Unexpected_Wakeup="$2"
-			;;
-		setupapi-SetupLog)
-			enable_setupapi_SetupLog="$2"
 			;;
 		setupapi-SetupPromptForDisk)
 			enable_setupapi_SetupPromptForDisk="$2"
@@ -1340,18 +1332,6 @@ if test "$enable_browseui_Progress_Dialog" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "browseui: Implement IProgressDialog::SetAnimation.", 1 },';
 		echo '+    { "Michael Müller", "browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset browseui-Race_Conditions
-# |
-# | Modified files:
-# |   *	dlls/browseui/progressdlg.c
-# |
-if test "$enable_browseui_Race_Conditions" -eq 1; then
-	patch_apply browseui-Race_Conditions/0001-browseui-Avoid-race-conditions-when-progress-dialog-.patch
-	(
-		echo '+    { "Sebastian Lackner", "browseui: Avoid race-conditions when progress dialog is released before thread terminates.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2503,14 +2483,12 @@ fi
 # Patchset kernel32-SetFileInformationByHandle
 # |
 # | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, include/winbase.h, include/winternl.h
+# |   *	dlls/kernel32/file.c, include/winbase.h
 # |
 if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-ntdll-Define-a-couple-more-information-classes.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0003-kernel32-Implement-SetFileInformationByHandle.patch
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
 	(
-		echo '+    { "Michael Müller", "ntdll: Define a couple more information classes.", 1 },';
 		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
 		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
@@ -2538,15 +2516,12 @@ fi
 # |   *	[#34851] Support for GetFinalPathNameByHandle
 # |
 # | Modified files:
-# |   *	dlls/api-ms-win-core-file-l1-2-0/api-ms-win-core-file-l1-2-0.spec, dlls/kernel32/file.c, dlls/kernel32/kernel32.spec,
-# | 	dlls/kernel32/tests/file.c, include/fileapi.h
+# |   *	dlls/api-ms-win-core-file-l1-2-0/api-ms-win-core-file-l1-2-0.spec, dlls/kernel32/file.c, dlls/kernel32/kernel32.spec
 # |
 if test "$enable_kernel32_GetFinalPathNameByHandle" -eq 1; then
 	patch_apply kernel32-GetFinalPathNameByHandle/0001-kernel32-Implement-GetFinalPathNameByHandle.patch
-	patch_apply kernel32-GetFinalPathNameByHandle/0002-kernel32-tests-Add-tests-for-GetFinalPathNameByHandl.patch
 	(
 		echo '+    { "Michael Müller", "kernel32: Implement GetFinalPathNameByHandle.", 1 },';
-		echo '+    { "Michael Müller", "kernel32/tests: Add tests for GetFinalPathNameByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3280,11 +3255,9 @@ fi
 # |   *	dlls/ntoskrnl.exe/instr.c, dlls/ntoskrnl.exe/ntoskrnl.c
 # |
 if test "$enable_ntoskrnl_Emulator" -eq 1; then
-	patch_apply ntoskrnl-Emulator/0001-ntoskrnl-Emulate-mov-Eb-Gb-instruction-on-x86-proces.patch
-	patch_apply ntoskrnl-Emulator/0002-ntoskrnl-Emulate-memory-access-to-KI_USER_SHARED_DAT.patch
-	patch_apply ntoskrnl-Emulator/0003-ntoskrnl-Add-TRACEs-for-instruction-emulator-on-x86_.patch
+	patch_apply ntoskrnl-Emulator/0001-ntoskrnl-Emulate-memory-access-to-KI_USER_SHARED_DAT.patch
+	patch_apply ntoskrnl-Emulator/0002-ntoskrnl-Add-TRACEs-for-instruction-emulator-on-x86_.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntoskrnl: Emulate '\''mov Eb, Gb'\'' instruction on x86 processor architecture.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Emulate memory access to KI_USER_SHARED_DATA on x86_64.", 2 },';
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Add TRACEs for instruction emulator on x86_64 to simplify debugging.", 1 },';
 	) >> "$patchlist"
@@ -3649,6 +3622,21 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-OpenProcess
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37087] Return an error when trying to open a terminated process
+# |
+# | Modified files:
+# |   *	server/process.c, server/process.h
+# |
+if test "$enable_server_OpenProcess" -eq 1; then
+	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
+	(
+		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3663,21 +3651,6 @@ if test "$enable_server_Misc_ACL" -eq 1; then
 	(
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-OpenProcess
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37087] Return an error when trying to open a terminated process
-# |
-# | Modified files:
-# |   *	server/process.c, server/process.h
-# |
-if test "$enable_server_OpenProcess" -eq 1; then
-	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
-	(
-		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
 	) >> "$patchlist"
 fi
 
@@ -3824,19 +3797,6 @@ if test "$enable_server_Unexpected_Wakeup" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "server: Avoid sending unexpected wakeup with uninitialized cookie value.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Repeat test for SignalObjectAndWait multiple times to test wineserver wakeup cookie management.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset setupapi-SetupLog
-# |
-# | Modified files:
-# |   *	dlls/setupapi/Makefile.in, dlls/setupapi/log.c, dlls/setupapi/setupapi.spec, dlls/setupapi/setupcab.c,
-# | 	dlls/setupapi/stubs.c, dlls/setupapi/tests/Makefile.in, dlls/setupapi/tests/log.c
-# |
-if test "$enable_setupapi_SetupLog" -eq 1; then
-	patch_apply setupapi-SetupLog/0001-setupapi-Implement-SetupOpenLog-SetupLogErrorA-Setup.patch
-	(
-		echo '+    { "Pierre Schweitzer", "setupapi: Implement SetupOpenLog(), SetupLogErrorA(), SetupLogErrorW(), SetupCloseLog().", 1 },';
 	) >> "$patchlist"
 fi
 

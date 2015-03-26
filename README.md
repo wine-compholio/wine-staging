@@ -142,7 +142,7 @@ Included bug fixes and improvements
 * Implement ID3DXEffect::FindNextValidTechnique ([Wine Bug #34101](https://bugs.winehq.org/show_bug.cgi?id=34101))
 * Implement IDXGIOutput::GetDesc
 * Implement SetFileInformationByHandle
-* Implement SetupLogError[A|W] and Setup[Open|Close]Log
+* ~~Implement SetupLogError[A|W] and Setup[Open|Close]Log~~
 * Implement a Microsoft Yahei replacement font ([Wine Bug #13829](https://bugs.winehq.org/show_bug.cgi?id=13829))
 * Implement additional stubs for vcomp dlls ([Wine Bug #31640](https://bugs.winehq.org/show_bug.cgi?id=31640))
 * Implement an Arial replacement font ([Wine Bug #32323](https://bugs.winehq.org/show_bug.cgi?id=32323))

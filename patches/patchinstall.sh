@@ -66,6 +66,7 @@ patch_enable_all ()
 	enable_Miscellaneous="$1"
 	enable_Pipelight="$1"
 	enable_Staging="$1"
+	enable_advapi32_Revert_DACL="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_combase_String="$1"
 	enable_comctl32_LoadIconMetric="$1"
@@ -216,7 +217,6 @@ patch_enable_all ()
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Multisampling="$1"
-	enable_wined3d_NormalMatrix="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_UnhandledBlendFactor="$1"
 	enable_winedevice_Fix_Relocation="$1"
@@ -255,6 +255,9 @@ patch_enable ()
 			;;
 		Staging)
 			enable_Staging="$2"
+			;;
+		advapi32-Revert_DACL)
+			enable_advapi32_Revert_DACL="$2"
 			;;
 		browseui-Progress_Dialog)
 			enable_browseui_Progress_Dialog="$2"
@@ -706,9 +709,6 @@ patch_enable ()
 		wined3d-Multisampling)
 			enable_wined3d_Multisampling="$2"
 			;;
-		wined3d-NormalMatrix)
-			enable_wined3d_NormalMatrix="$2"
-			;;
 		wined3d-Revert_PixelFormat)
 			enable_wined3d_Revert_PixelFormat="$2"
 			;;
@@ -1060,9 +1060,13 @@ if test "$enable_server_Inherited_ACLs" -eq 1; then
 fi
 
 if test "$enable_server_Stored_ACLs" -eq 1; then
+	if test "$enable_advapi32_Revert_DACL" -gt 1; then
+		abort "Patchset advapi32-Revert_DACL disabled, but server-Stored_ACLs depends on that."
+	fi
 	if test "$enable_ntdll_DOS_Attributes" -gt 1; then
 		abort "Patchset ntdll-DOS_Attributes disabled, but server-Stored_ACLs depends on that."
 	fi
+	enable_advapi32_Revert_DACL=1
 	enable_ntdll_DOS_Attributes=1
 fi
 
@@ -1334,6 +1338,26 @@ if test "$enable_Staging" -eq 1; then
 		echo '+    { "Sebastian Lackner", "winelib: Append '\''(Staging)'\'' at the end of the version string.", 1 },';
 		echo '+    { "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list.", 1 },';
 		echo '+    { "Michael Müller", "loader: Add commandline option --check-libs.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset advapi32-Revert_DACL
+# |
+# | Modified files:
+# |   *	dlls/advapi32/security.c, dlls/advapi32/tests/security.c, server/file.c
+# |
+if test "$enable_advapi32_Revert_DACL" -eq 1; then
+	patch_apply advapi32-Revert_DACL/0001-Revert-advapi32-Add-DACL-inheritance-support-in-SetS.patch
+	patch_apply advapi32-Revert_DACL/0002-Revert-advapi32-tests-Add-test-for-mapping-DACL-to-p.patch
+	patch_apply advapi32-Revert_DACL/0003-Revert-advapi32-Add-SetNamedSecurityInfo-test-with-e.patch
+	patch_apply advapi32-Revert_DACL/0004-Revert-server-Make-directory-DACL-entries-inheritabl.patch
+	patch_apply advapi32-Revert_DACL/0005-Revert-advapi-Don-t-use-CreateFile-when-opening-file.patch
+	(
+		echo '+    { "Sebastian Lackner", "Revert \"advapi32: Add DACL inheritance support in SetSecurityInfo.\".", 1 },';
+		echo '+    { "Sebastian Lackner", "Revert \"advapi32/tests: Add test for mapping DACL to permission.\".", 1 },';
+		echo '+    { "Sebastian Lackner", "Revert \"advapi32: Add SetNamedSecurityInfo test with empty DACL.\".", 1 },';
+		echo '+    { "Sebastian Lackner", "Revert \"server: Make directory DACL entries inheritable.\".", 1 },';
+		echo '+    { "Sebastian Lackner", "Revert \"advapi: Don'\''t use CreateFile when opening file with possibly empty DACL.\".", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -1848,21 +1872,6 @@ if test "$enable_wined3d_Multisampling" -eq 1; then
 	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
 	(
 		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-NormalMatrix
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38256] Fix regression causing too dark/missing textures in several games
-# |
-# | Modified files:
-# |   *	dlls/wined3d/glsl_shader.c
-# |
-if test "$enable_wined3d_NormalMatrix" -eq 1; then
-	patch_apply wined3d-NormalMatrix/0001-wined3d-Don-t-use-the-builtin-FFP-uniform-for-the-no.patch
-	(
-		echo '+    { "Matteo Bruni", "wined3d: Don'\''t use the builtin FFP uniform for the normal matrix.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3685,21 +3694,6 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-OpenProcess
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37087] Return an error when trying to open a terminated process
-# |
-# | Modified files:
-# |   *	server/process.c, server/process.h
-# |
-if test "$enable_server_OpenProcess" -eq 1; then
-	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
-	(
-		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3714,6 +3708,21 @@ if test "$enable_server_Misc_ACL" -eq 1; then
 	(
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-OpenProcess
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37087] Return an error when trying to open a terminated process
+# |
+# | Modified files:
+# |   *	server/process.c, server/process.h
+# |
+if test "$enable_server_OpenProcess" -eq 1; then
+	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
+	(
+		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
 	) >> "$patchlist"
 fi
 
@@ -4224,14 +4233,11 @@ fi
 # |   *	[#27775] Implement empty enumerator for IWiaDevMgr::EnumDeviceInfo
 # |
 # | Modified files:
-# |   *	dlls/wiaservc/Makefile.in, dlls/wiaservc/enumwiadevinfo.c, dlls/wiaservc/factory.c, dlls/wiaservc/wiadevmgr.c,
-# | 	dlls/wiaservc/wiaservc_private.h
+# |   *	dlls/wiaservc/Makefile.in, dlls/wiaservc/enumwiadevinfo.c, dlls/wiaservc/wiadevmgr.c, dlls/wiaservc/wiaservc_private.h
 # |
 if test "$enable_wiaservc_IEnumWIA_DEV_INFO" -eq 1; then
-	patch_apply wiaservc-IEnumWIA_DEV_INFO/0001-wiaservc-Return-pointer-to-vtbl-instead-of-implement.patch
-	patch_apply wiaservc-IEnumWIA_DEV_INFO/0002-wiaservc-Implement-IWiaDevMgr-EnumDeviceInfo-by-retu.patch
+	patch_apply wiaservc-IEnumWIA_DEV_INFO/0001-wiaservc-Implement-IWiaDevMgr-EnumDeviceInfo-by-retu.patch
 	(
-		echo '+    { "Sebastian Lackner", "wiaservc: Return pointer to vtbl instead of implementation in wiadevmgr_Constructor.", 1 },';
 		echo '+    { "Mikael Ståldal", "wiaservc: Implement IWiaDevMgr::EnumDeviceInfo by returning an empty enumeration of devices.", 1 },';
 	) >> "$patchlist"
 fi

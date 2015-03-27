@@ -129,7 +129,7 @@ Included bug fixes and improvements
 * Fix possible segfault in pulse_rd_loop of PulseAudio backend
 * Fix race-condition when threads are killed during shutdown
 * ~~Fix regression causing black screen on startup~~ ([Wine Bug #38248](https://bugs.winehq.org/show_bug.cgi?id=38248))
-* Fix regression causing too dark/missing textures in several games ([Wine Bug #38256](https://bugs.winehq.org/show_bug.cgi?id=38256))
+* ~~Fix regression causing too dark/missing textures in several games~~ ([Wine Bug #38256](https://bugs.winehq.org/show_bug.cgi?id=38256))
 * Fix return value of ScrollWindowEx for invisible windows ([Wine Bug #37706](https://bugs.winehq.org/show_bug.cgi?id=37706))
 * Fix texture corruption in CSI: Fatal Conspiracy ([Wine Bug #33768](https://bugs.winehq.org/show_bug.cgi?id=33768))
 * Fix unintentional leaks with ntdll internals

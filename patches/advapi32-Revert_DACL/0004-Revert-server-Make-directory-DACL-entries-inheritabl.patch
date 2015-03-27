@@ -1,0 +1,84 @@
+From e2eaeb0bfc7411c74f1387e59c121f5cee6c013a Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 27 Mar 2015 15:32:44 +0100
+Subject: Revert "server: Make directory DACL entries inheritable."
+
+This reverts commit 3eb448cf33b6b6635bac4e06ea7fddd190e26450.
+---
+ dlls/advapi32/tests/security.c | 12 ++++++------
+ server/file.c                  |  8 ++++----
+ 2 files changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
+index e3c1659..04a88ae 100644
+--- a/dlls/advapi32/tests/security.c
++++ b/dlls/advapi32/tests/security.c
+@@ -3192,9 +3192,9 @@ static void test_CreateDirectoryA(void)
+         ok(bret, "Failed to get Current User ACE.\n");
+         bret = EqualSid(&ace->SidStart, user_sid);
+         todo_wine ok(bret, "Current User ACE != Current User SID.\n");
+-        ok(((ACE_HEADER *)ace)->AceFlags == (OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE),
+-                "Current User ACE has unexpected flags (0x%x != 0x03)\n",
+-                ((ACE_HEADER *)ace)->AceFlags);
++        todo_wine ok(((ACE_HEADER *)ace)->AceFlags == (OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE),
++                     "Current User ACE has unexpected flags (0x%x != 0x03)\n",
++                     ((ACE_HEADER *)ace)->AceFlags);
+         ok(ace->Mask == 0x1f01ff, "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n",
+                                   ace->Mask);
+     }
+@@ -3204,9 +3204,9 @@ static void test_CreateDirectoryA(void)
+         ok(bret, "Failed to get Administators Group ACE.\n");
+         bret = EqualSid(&ace->SidStart, admin_sid);
+         todo_wine ok(bret, "Administators Group ACE != Administators Group SID.\n");
+-        ok(((ACE_HEADER *)ace)->AceFlags == (OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE),
+-                "Administators Group ACE has unexpected flags (0x%x != 0x03)\n",
+-                ((ACE_HEADER *)ace)->AceFlags);
++        todo_wine ok(((ACE_HEADER *)ace)->AceFlags == (OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE),
++                     "Administators Group ACE has unexpected flags (0x%x != 0x03)\n",
++                     ((ACE_HEADER *)ace)->AceFlags);
+         ok(ace->Mask == 0x1f01ff, "Administators Group ACE has unexpected mask (0x%x != 0x1f01ff)\n",
+                                   ace->Mask);
+     }
+diff --git a/server/file.c b/server/file.c
+index f565f5a..abda2c3 100644
+--- a/server/file.c
++++ b/server/file.c
+@@ -367,7 +367,7 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID
+     aaa = (ACCESS_ALLOWED_ACE *)(dacl + 1);
+     current_ace = &aaa->Header;
+     aaa->Header.AceType = ACCESS_ALLOWED_ACE_TYPE;
+-    aaa->Header.AceFlags = (mode & S_IFDIR) ? OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE : 0;
++    aaa->Header.AceFlags = 0;
+     aaa->Header.AceSize = FIELD_OFFSET(ACCESS_ALLOWED_ACE, SidStart) + security_sid_len( local_system_sid );
+     aaa->Mask = FILE_ALL_ACCESS;
+     sid = (SID *)&aaa->SidStart;
+@@ -379,7 +379,7 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID
+         aaa = (ACCESS_ALLOWED_ACE *)ace_next( current_ace );
+         current_ace = &aaa->Header;
+         aaa->Header.AceType = ACCESS_ALLOWED_ACE_TYPE;
+-        aaa->Header.AceFlags = (mode & S_IFDIR) ? OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE : 0;
++        aaa->Header.AceFlags = 0;
+         aaa->Header.AceSize = FIELD_OFFSET(ACCESS_ALLOWED_ACE, SidStart) + security_sid_len( user );
+         aaa->Mask = WRITE_DAC | WRITE_OWNER;
+         if (mode & S_IRUSR)
+@@ -397,7 +397,7 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID
+         ACCESS_DENIED_ACE *ada = (ACCESS_DENIED_ACE *)ace_next( current_ace );
+         current_ace = &ada->Header;
+         ada->Header.AceType = ACCESS_DENIED_ACE_TYPE;
+-        ada->Header.AceFlags = (mode & S_IFDIR) ? OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE : 0;
++        ada->Header.AceFlags = 0;
+         ada->Header.AceSize = FIELD_OFFSET(ACCESS_DENIED_ACE, SidStart) + security_sid_len( user );
+         ada->Mask = 0;
+         if (!(mode & S_IRUSR) && (mode & (S_IRGRP|S_IROTH)))
+@@ -414,7 +414,7 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID
+         aaa = (ACCESS_ALLOWED_ACE *)ace_next( current_ace );
+         current_ace = &aaa->Header;
+         aaa->Header.AceType = ACCESS_ALLOWED_ACE_TYPE;
+-        aaa->Header.AceFlags = (mode & S_IFDIR) ? OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE : 0;
++        aaa->Header.AceFlags = 0;
+         aaa->Header.AceSize = FIELD_OFFSET(ACCESS_ALLOWED_ACE, SidStart) + security_sid_len( world_sid );
+         aaa->Mask = 0;
+         if (mode & S_IROTH)
+-- 
+2.3.3
+

@@ -1,0 +1,77 @@
+From 59067deb0ad4afb77deca29300133bff9d49f9f7 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 27 Mar 2015 15:32:56 +0100
+Subject: Revert "advapi: Don't use CreateFile when opening file with possibly
+ empty DACL."
+
+This reverts commit f956bb4caa442ccde1ddaf483c5cb619bbf4049a.
+---
+ dlls/advapi32/security.c | 22 +++++++++-------------
+ 1 file changed, 9 insertions(+), 13 deletions(-)
+
+diff --git a/dlls/advapi32/security.c b/dlls/advapi32/security.c
+index e8cdcc5..097b0da 100644
+--- a/dlls/advapi32/security.c
++++ b/dlls/advapi32/security.c
+@@ -397,7 +397,7 @@ static inline BOOL set_ntstatus( NTSTATUS status )
+ }
+ 
+ /* helper function for SE_FILE_OBJECT objects in [Get|Set]NamedSecurityInfo */
+-static inline DWORD get_security_file( LPCWSTR full_file_name, DWORD access, HANDLE *file )
++static inline DWORD get_security_file( LPWSTR full_file_name, DWORD access, HANDLE *file )
+ {
+     UNICODE_STRING file_nameW;
+     OBJECT_ATTRIBUTES attr;
+@@ -2029,7 +2029,7 @@ GetFileSecurityW( LPCWSTR lpFileName,
+ {
+     HANDLE hfile;
+     NTSTATUS status;
+-    DWORD access = 0, err;
++    DWORD access = 0;
+ 
+     TRACE("(%s,%d,%p,%d,%p)\n", debugstr_w(lpFileName),
+           RequestedInformation, pSecurityDescriptor,
+@@ -2041,12 +2041,10 @@ GetFileSecurityW( LPCWSTR lpFileName,
+     if (RequestedInformation & SACL_SECURITY_INFORMATION)
+         access |= ACCESS_SYSTEM_SECURITY;
+ 
+-    err = get_security_file( lpFileName, access, &hfile);
+-    if (err)
+-    {
+-        SetLastError(err);
++    hfile = CreateFileW( lpFileName, access, FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
++                         NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0 );
++    if ( hfile == INVALID_HANDLE_VALUE )
+         return FALSE;
+-    }
+ 
+     status = NtQuerySecurityObject( hfile, RequestedInformation, pSecurityDescriptor,
+                                     nLength, lpnLengthNeeded );
+@@ -2327,7 +2325,7 @@ SetFileSecurityW( LPCWSTR lpFileName,
+                     PSECURITY_DESCRIPTOR pSecurityDescriptor )
+ {
+     HANDLE file;
+-    DWORD access = 0, err;
++    DWORD access = 0;
+     NTSTATUS status;
+ 
+     TRACE("(%s, 0x%x, %p)\n", debugstr_w(lpFileName), RequestedInformation,
+@@ -2341,12 +2339,10 @@ SetFileSecurityW( LPCWSTR lpFileName,
+     if (RequestedInformation & DACL_SECURITY_INFORMATION)
+         access |= WRITE_DAC;
+ 
+-    err = get_security_file( lpFileName, access, &file);
+-    if (err)
+-    {
+-        SetLastError(err);
++    file = CreateFileW( lpFileName, access, FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
++                        NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL );
++    if (file == INVALID_HANDLE_VALUE)
+         return FALSE;
+-    }
+ 
+     status = NtSetSecurityObject( file, RequestedInformation, pSecurityDescriptor );
+     CloseHandle( file );
+-- 
+2.3.3
+

@@ -154,6 +154,7 @@ patch_enable_all ()
 	enable_ntdll_WriteWatches="$1"
 	enable_ntoskrnl_DriverTest="$1"
 	enable_ntoskrnl_Emulator="$1"
+	enable_ntoskrnl_PsLookupProcessByProcessId="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
@@ -515,6 +516,9 @@ patch_enable ()
 			;;
 		ntoskrnl-Emulator)
 			enable_ntoskrnl_Emulator="$2"
+			;;
+		ntoskrnl-PsLookupProcessByProcessId)
+			enable_ntoskrnl_PsLookupProcessByProcessId="$2"
 			;;
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
@@ -3265,6 +3269,21 @@ if test "$enable_ntoskrnl_Emulator" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntoskrnl-PsLookupProcessByProcessId
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36821] Avoid spam of FIXME messages for PsLookupProcessByProcessId stub
+# |
+# | Modified files:
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c
+# |
+if test "$enable_ntoskrnl_PsLookupProcessByProcessId" -eq 1; then
+	patch_apply ntoskrnl-PsLookupProcessByProcessId/0001-ntoskrnl-Avoid-repeated-FIXME-messages-in-PsLookupPr.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntoskrnl: Avoid repeated FIXME messages in PsLookupProcessByProcessId.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntoskrnl-Stubs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3624,21 +3643,6 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-OpenProcess
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37087] Return an error when trying to open a terminated process
-# |
-# | Modified files:
-# |   *	server/process.c, server/process.h
-# |
-if test "$enable_server_OpenProcess" -eq 1; then
-	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
-	(
-		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3653,6 +3657,21 @@ if test "$enable_server_Misc_ACL" -eq 1; then
 	(
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-OpenProcess
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37087] Return an error when trying to open a terminated process
+# |
+# | Modified files:
+# |   *	server/process.c, server/process.h
+# |
+if test "$enable_server_OpenProcess" -eq 1; then
+	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
+	(
+		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
 	) >> "$patchlist"
 fi
 

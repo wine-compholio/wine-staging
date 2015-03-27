@@ -202,6 +202,7 @@ patch_enable_all ()
 	enable_vcomp_Stub_Functions="$1"
 	enable_version_VerQueryValue="$1"
 	enable_version_VersionInfoEx="$1"
+	enable_wiaservc_IEnumWIA_DEV_INFO="$1"
 	enable_windowscodecs_TIFF_Decoder="$1"
 	enable_wine_inf_Performance="$1"
 	enable_wineboot_HKEY_DYN_DATA="$1"
@@ -660,6 +661,9 @@ patch_enable ()
 			;;
 		version-VersionInfoEx)
 			enable_version_VersionInfoEx="$2"
+			;;
+		wiaservc-IEnumWIA_DEV_INFO)
+			enable_wiaservc_IEnumWIA_DEV_INFO="$2"
 			;;
 		windowscodecs-TIFF_Decoder)
 			enable_windowscodecs_TIFF_Decoder="$2"
@@ -4173,6 +4177,21 @@ if test "$enable_version_VersionInfoEx" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "version: Partially implement GetFileVersionInfoSizeExA/W.", 1 },';
 		echo '+    { "Sebastian Lackner", "version: Partially implement GetFileVersionInfoExA/W.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wiaservc-IEnumWIA_DEV_INFO
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#27775] Implement empty enumerator for IWiaDevMgr::EnumDeviceInfo
+# |
+# | Modified files:
+# |   *	dlls/wiaservc/Makefile.in, dlls/wiaservc/enumwiadevinfo.c, dlls/wiaservc/wiadevmgr.c, dlls/wiaservc/wiaservc_private.h
+# |
+if test "$enable_wiaservc_IEnumWIA_DEV_INFO" -eq 1; then
+	patch_apply wiaservc-IEnumWIA_DEV_INFO/0001-wiaservc-Implement-IWiaDevMgr-EnumDeviceInfo-by-retu.patch
+	(
+		echo '+    { "Mikael Ståldal", "wiaservc: Implement IWiaDevMgr::EnumDeviceInfo by returning an empty enumeration of devices.", 1 },';
 	) >> "$patchlist"
 fi
 

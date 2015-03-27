@@ -1,0 +1,221 @@
+From 8a333a76ccdf50d3073f546a3b104d404e476377 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mikael=20St=C3=A5ldal?= <mikael@staldal.nu>
+Date: Sun, 11 May 2014 12:07:20 +0200
+Subject: wiaservc: Implement IWiaDevMgr::EnumDeviceInfo by returning an empty
+ enumeration of devices.
+
+Implement IWiaDevMgr::EnumDeviceInfo by returning an empty enumeration
+of devices. Fix for bug bug 27775.
+---
+ dlls/wiaservc/Makefile.in        |   1 +
+ dlls/wiaservc/enumwiadevinfo.c   | 140 +++++++++++++++++++++++++++++++++++++++
+ dlls/wiaservc/wiadevmgr.c        |  14 +++-
+ dlls/wiaservc/wiaservc_private.h |   8 +++
+ 4 files changed, 161 insertions(+), 2 deletions(-)
+ create mode 100644 dlls/wiaservc/enumwiadevinfo.c
+
+diff --git a/dlls/wiaservc/Makefile.in b/dlls/wiaservc/Makefile.in
+index b40c8f0..0bdbff1 100644
+--- a/dlls/wiaservc/Makefile.in
++++ b/dlls/wiaservc/Makefile.in
+@@ -4,6 +4,7 @@ IMPORTS   = uuid ole32 advapi32
+ C_SRCS = \
+ 	factory.c \
+ 	service.c \
++	enumwiadevinfo.c \
+ 	wiadevmgr.c \
+ 	wiaservc_main.c
+ 
+diff --git a/dlls/wiaservc/enumwiadevinfo.c b/dlls/wiaservc/enumwiadevinfo.c
+new file mode 100644
+index 0000000..724a218
+--- /dev/null
++++ b/dlls/wiaservc/enumwiadevinfo.c
+@@ -0,0 +1,140 @@
++/*
++ * IEnumWIA_DEV_INFO implementation.
++ *
++ * Copyright 2014 Mikael Ståldal
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#define COBJMACROS
++
++#include "objbase.h"
++#include "wia_lh.h"
++
++#include "wiaservc_private.h"
++
++#include "wine/debug.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(wia);
++
++static inline enumwiadevinfo *impl_from_IEnumWIA_DEV_INFO(IEnumWIA_DEV_INFO *iface)
++{
++    return CONTAINING_RECORD(iface, enumwiadevinfo, IEnumWIA_DEV_INFO_iface);
++}
++
++static HRESULT WINAPI enumwiadevinfo_QueryInterface(IEnumWIA_DEV_INFO *iface, REFIID riid, void **ppvObject)
++{
++    enumwiadevinfo *This = impl_from_IEnumWIA_DEV_INFO(iface);
++
++    TRACE("(%p, %s, %p)\n", This, debugstr_guid(riid), ppvObject);
++
++    if (IsEqualGUID(riid, &IID_IUnknown) || IsEqualGUID(riid, &IID_IEnumWIA_DEV_INFO))
++        *ppvObject = iface;
++    else
++    {
++        FIXME("interface %s not implemented\n", debugstr_guid(riid));
++        *ppvObject = NULL;
++        return E_NOINTERFACE;
++    }
++    IUnknown_AddRef((IUnknown*) *ppvObject);
++    return S_OK;
++}
++
++static ULONG WINAPI enumwiadevinfo_AddRef(IEnumWIA_DEV_INFO *iface)
++{
++    enumwiadevinfo *This = impl_from_IEnumWIA_DEV_INFO(iface);
++    return InterlockedIncrement(&This->ref);
++}
++
++static ULONG WINAPI enumwiadevinfo_Release(IEnumWIA_DEV_INFO *iface)
++{
++    enumwiadevinfo *This = impl_from_IEnumWIA_DEV_INFO(iface);
++    ULONG ref;
++
++    ref = InterlockedDecrement(&This->ref);
++    if (ref == 0)
++        HeapFree(GetProcessHeap(), 0, This);
++    return ref;
++}
++
++static HRESULT WINAPI enumwiadevinfo_Next(IEnumWIA_DEV_INFO *iface, ULONG celt, IWiaPropertyStorage **rgelt, ULONG *pceltFetched)
++{
++    enumwiadevinfo *This = impl_from_IEnumWIA_DEV_INFO(iface);
++    TRACE("(%p, %d, %p, %p)\n", This, celt, rgelt, pceltFetched);
++
++    *pceltFetched = 0;
++    return S_FALSE;
++}
++
++static HRESULT WINAPI enumwiadevinfo_Skip(IEnumWIA_DEV_INFO *iface, ULONG celt)
++{
++    enumwiadevinfo *This = impl_from_IEnumWIA_DEV_INFO(iface);
++    TRACE("(%p, %u)\n", This, celt);
++
++    return S_FALSE;
++}
++
++static HRESULT WINAPI enumwiadevinfo_Reset(IEnumWIA_DEV_INFO *iface)
++{
++    enumwiadevinfo *This = impl_from_IEnumWIA_DEV_INFO(iface);
++    TRACE("(%p)\n", This);
++
++    return S_OK;
++}
++
++static HRESULT WINAPI enumwiadevinfo_Clone(IEnumWIA_DEV_INFO *iface, IEnumWIA_DEV_INFO **ppIEnum)
++{
++    enumwiadevinfo *This = impl_from_IEnumWIA_DEV_INFO(iface);
++    FIXME("(%p, %p): stub\n", This, ppIEnum);
++
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI enumwiadevinfo_GetCount(IEnumWIA_DEV_INFO *iface, ULONG *celt)
++{
++    enumwiadevinfo *This = impl_from_IEnumWIA_DEV_INFO(iface);
++    TRACE("(%p, %p)\n", This, celt);
++
++    *celt = 0;
++    return S_OK;
++}
++
++static const IEnumWIA_DEV_INFOVtbl WIASERVC_IEnumWIA_DEV_INFO_Vtbl =
++{
++    enumwiadevinfo_QueryInterface,
++    enumwiadevinfo_AddRef,
++    enumwiadevinfo_Release,
++    enumwiadevinfo_Next,
++    enumwiadevinfo_Skip,
++    enumwiadevinfo_Reset,
++    enumwiadevinfo_Clone,
++    enumwiadevinfo_GetCount
++};
++
++HRESULT enumwiadevinfo_Constructor(LPVOID *ppObj)
++{
++    enumwiadevinfo *This;
++    TRACE("(%p)\n", ppObj);
++    This = HeapAlloc(GetProcessHeap(), 0, sizeof(enumwiadevinfo));
++    if (This)
++    {
++        This->IEnumWIA_DEV_INFO_iface.lpVtbl = &WIASERVC_IEnumWIA_DEV_INFO_Vtbl;
++        This->ref = 1;
++        *ppObj = This;
++        return S_OK;
++    }
++    *ppObj = NULL;
++    return E_OUTOFMEMORY;
++}
+diff --git a/dlls/wiaservc/wiadevmgr.c b/dlls/wiaservc/wiadevmgr.c
+index 2f0907b..bcef9ef 100644
+--- a/dlls/wiaservc/wiadevmgr.c
++++ b/dlls/wiaservc/wiadevmgr.c
+@@ -72,8 +72,18 @@ static ULONG WINAPI wiadevmgr_Release(IWiaDevMgr *iface)
+ static HRESULT WINAPI wiadevmgr_EnumDeviceInfo(IWiaDevMgr *iface, LONG lFlag, IEnumWIA_DEV_INFO **ppIEnum)
+ {
+     wiadevmgr *This = impl_from_IWiaDevMgr(iface);
+-    FIXME("(%p, %d, %p): stub\n", This, lFlag, ppIEnum);
+-    return E_NOTIMPL;
++    HRESULT res;
++    IUnknown *punk = NULL;
++
++    FIXME("(%p, %d, %p): returning empty IEnumWIA_DEV_INFO\n", This, lFlag, ppIEnum);
++
++    res = enumwiadevinfo_Constructor((LPVOID*) &punk);
++    if (FAILED(res))
++        return res;
++
++    res = IUnknown_QueryInterface(punk, &IID_IEnumWIA_DEV_INFO, (void **)ppIEnum);
++    IUnknown_Release(punk);
++    return res;
+ }
+ 
+ static HRESULT WINAPI wiadevmgr_CreateDevice(IWiaDevMgr *iface, BSTR bstrDeviceID, IWiaItem **ppWiaItemRoot)
+diff --git a/dlls/wiaservc/wiaservc_private.h b/dlls/wiaservc/wiaservc_private.h
+index b7faf89..08b7d9b 100644
+--- a/dlls/wiaservc/wiaservc_private.h
++++ b/dlls/wiaservc/wiaservc_private.h
+@@ -36,6 +36,14 @@ typedef struct
+ 
+ HRESULT wiadevmgr_Constructor(LPVOID *ppObj) DECLSPEC_HIDDEN;
+ 
++typedef struct
++{
++    IEnumWIA_DEV_INFO IEnumWIA_DEV_INFO_iface;
++    LONG ref;
++} enumwiadevinfo;
++
++HRESULT enumwiadevinfo_Constructor(LPVOID *ppObj) DECLSPEC_HIDDEN;
++
+ /* Little helper functions */
+ static inline char *
+ wiaservc_strdup(const char *s)
+-- 
+2.3.3
+

@@ -2673,12 +2673,14 @@ fi
 # Patchset kernel32-PowerRequest
 # |
 # | Modified files:
-# |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/powermgnt.c
+# |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/powermgnt.c, include/winbase.h
 # |
 if test "$enable_kernel32_PowerRequest" -eq 1; then
 	patch_apply kernel32-PowerRequest/0001-kernel32-Add-stub-for-PowerCreateRequest.patch
+	patch_apply kernel32-PowerRequest/0002-kernel32-Add-stubs-for-Power-Set-Clear-Request.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32: Add stub for PowerCreateRequest.", 1 },';
+		echo '+    { "Sebastian Lackner", "kernel32: Add stubs for Power{Set,Clear}Request.", 1 },';
 	) >> "$patchlist"
 fi
 

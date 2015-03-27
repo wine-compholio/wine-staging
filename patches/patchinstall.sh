@@ -4186,11 +4186,14 @@ fi
 # |   *	[#27775] Implement empty enumerator for IWiaDevMgr::EnumDeviceInfo
 # |
 # | Modified files:
-# |   *	dlls/wiaservc/Makefile.in, dlls/wiaservc/enumwiadevinfo.c, dlls/wiaservc/wiadevmgr.c, dlls/wiaservc/wiaservc_private.h
+# |   *	dlls/wiaservc/Makefile.in, dlls/wiaservc/enumwiadevinfo.c, dlls/wiaservc/factory.c, dlls/wiaservc/wiadevmgr.c,
+# | 	dlls/wiaservc/wiaservc_private.h
 # |
 if test "$enable_wiaservc_IEnumWIA_DEV_INFO" -eq 1; then
-	patch_apply wiaservc-IEnumWIA_DEV_INFO/0001-wiaservc-Implement-IWiaDevMgr-EnumDeviceInfo-by-retu.patch
+	patch_apply wiaservc-IEnumWIA_DEV_INFO/0001-wiaservc-Return-pointer-to-vtbl-instead-of-implement.patch
+	patch_apply wiaservc-IEnumWIA_DEV_INFO/0002-wiaservc-Implement-IWiaDevMgr-EnumDeviceInfo-by-retu.patch
 	(
+		echo '+    { "Sebastian Lackner", "wiaservc: Return pointer to vtbl instead of implementation in wiadevmgr_Constructor.", 1 },';
 		echo '+    { "Mikael Ståldal", "wiaservc: Implement IWiaDevMgr::EnumDeviceInfo by returning an empty enumeration of devices.", 1 },';
 	) >> "$patchlist"
 fi

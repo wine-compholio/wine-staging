@@ -1,0 +1,78 @@
+From 18b3c656e19464999313d19ddee1d8168d87cb3a Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 27 Mar 2015 09:14:37 +0100
+Subject: wiaservc: Return pointer to vtbl instead of implementation in
+ wiadevmgr_Constructor.
+
+---
+ dlls/wiaservc/factory.c          | 8 ++++----
+ dlls/wiaservc/wiadevmgr.c        | 4 ++--
+ dlls/wiaservc/wiaservc_private.h | 2 +-
+ 3 files changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/wiaservc/factory.c b/dlls/wiaservc/factory.c
+index c76a363..9a607d5 100644
+--- a/dlls/wiaservc/factory.c
++++ b/dlls/wiaservc/factory.c
+@@ -70,19 +70,19 @@ WIASERVC_IClassFactory_CreateInstance(LPCLASSFACTORY iface, LPUNKNOWN pUnkOuter,
+                                       REFIID riid, LPVOID *ppvObj)
+ {
+     HRESULT res;
+-    IUnknown *punk = NULL;
++    IWiaDevMgr *devmgr = NULL;
+ 
+     TRACE("IID: %s\n", debugstr_guid(riid));
+ 
+     if (pUnkOuter)
+         return CLASS_E_NOAGGREGATION;
+ 
+-    res = wiadevmgr_Constructor((LPVOID*) &punk);
++    res = wiadevmgr_Constructor(&devmgr);
+     if (FAILED(res))
+         return res;
+ 
+-    res = IUnknown_QueryInterface(punk, riid, ppvObj);
+-    IUnknown_Release(punk);
++    res = IWiaDevMgr_QueryInterface(devmgr, riid, ppvObj);
++    IWiaDevMgr_Release(devmgr);
+     return res;
+ }
+ 
+diff --git a/dlls/wiaservc/wiadevmgr.c b/dlls/wiaservc/wiadevmgr.c
+index 2f0907b..6eb82aa 100644
+--- a/dlls/wiaservc/wiadevmgr.c
++++ b/dlls/wiaservc/wiadevmgr.c
+@@ -164,7 +164,7 @@ static const IWiaDevMgrVtbl WIASERVC_IWiaDevMgr_Vtbl =
+     wiadevmgr_AddDeviceDlg
+ };
+ 
+-HRESULT wiadevmgr_Constructor(LPVOID *ppObj)
++HRESULT wiadevmgr_Constructor(IWiaDevMgr **ppObj)
+ {
+     wiadevmgr *This;
+     TRACE("(%p)\n", ppObj);
+@@ -173,7 +173,7 @@ HRESULT wiadevmgr_Constructor(LPVOID *ppObj)
+     {
+         This->IWiaDevMgr_iface.lpVtbl = &WIASERVC_IWiaDevMgr_Vtbl;
+         This->ref = 1;
+-        *ppObj = This;
++        *ppObj = &This->IWiaDevMgr_iface;
+         return S_OK;
+     }
+     *ppObj = NULL;
+diff --git a/dlls/wiaservc/wiaservc_private.h b/dlls/wiaservc/wiaservc_private.h
+index b7faf89..33c9ba1 100644
+--- a/dlls/wiaservc/wiaservc_private.h
++++ b/dlls/wiaservc/wiaservc_private.h
+@@ -34,7 +34,7 @@ typedef struct
+     LONG ref;
+ } wiadevmgr;
+ 
+-HRESULT wiadevmgr_Constructor(LPVOID *ppObj) DECLSPEC_HIDDEN;
++HRESULT wiadevmgr_Constructor(IWiaDevMgr **ppObj) DECLSPEC_HIDDEN;
+ 
+ /* Little helper functions */
+ static inline char *
+-- 
+2.3.3
+

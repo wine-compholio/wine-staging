@@ -1,4 +1,4 @@
-From 8a333a76ccdf50d3073f546a3b104d404e476377 Mon Sep 17 00:00:00 2001
+From 5b772e16b29cb0831e5e431c78e2bd7e601d162e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Mikael=20St=C3=A5ldal?= <mikael@staldal.nu>
 Date: Sun, 11 May 2014 12:07:20 +0200
 Subject: wiaservc: Implement IWiaDevMgr::EnumDeviceInfo by returning an empty
@@ -28,7 +28,7 @@ index b40c8f0..0bdbff1 100644
  
 diff --git a/dlls/wiaservc/enumwiadevinfo.c b/dlls/wiaservc/enumwiadevinfo.c
 new file mode 100644
-index 0000000..724a218
+index 0000000..85c75ce
 --- /dev/null
 +++ b/dlls/wiaservc/enumwiadevinfo.c
 @@ -0,0 +1,140 @@
@@ -157,7 +157,7 @@ index 0000000..724a218
 +    enumwiadevinfo_GetCount
 +};
 +
-+HRESULT enumwiadevinfo_Constructor(LPVOID *ppObj)
++HRESULT enumwiadevinfo_Constructor(IEnumWIA_DEV_INFO **ppObj)
 +{
 +    enumwiadevinfo *This;
 +    TRACE("(%p)\n", ppObj);
@@ -166,14 +166,14 @@ index 0000000..724a218
 +    {
 +        This->IEnumWIA_DEV_INFO_iface.lpVtbl = &WIASERVC_IEnumWIA_DEV_INFO_Vtbl;
 +        This->ref = 1;
-+        *ppObj = This;
++        *ppObj = &This->IEnumWIA_DEV_INFO_iface;
 +        return S_OK;
 +    }
 +    *ppObj = NULL;
 +    return E_OUTOFMEMORY;
 +}
 diff --git a/dlls/wiaservc/wiadevmgr.c b/dlls/wiaservc/wiadevmgr.c
-index 2f0907b..bcef9ef 100644
+index 6eb82aa..8305ae2 100644
 --- a/dlls/wiaservc/wiadevmgr.c
 +++ b/dlls/wiaservc/wiadevmgr.c
 @@ -72,8 +72,18 @@ static ULONG WINAPI wiadevmgr_Release(IWiaDevMgr *iface)
@@ -183,27 +183,27 @@ index 2f0907b..bcef9ef 100644
 -    FIXME("(%p, %d, %p): stub\n", This, lFlag, ppIEnum);
 -    return E_NOTIMPL;
 +    HRESULT res;
-+    IUnknown *punk = NULL;
++    IEnumWIA_DEV_INFO *enumdevinfo = NULL;
 +
 +    FIXME("(%p, %d, %p): returning empty IEnumWIA_DEV_INFO\n", This, lFlag, ppIEnum);
 +
-+    res = enumwiadevinfo_Constructor((LPVOID*) &punk);
++    res = enumwiadevinfo_Constructor(&enumdevinfo);
 +    if (FAILED(res))
 +        return res;
 +
-+    res = IUnknown_QueryInterface(punk, &IID_IEnumWIA_DEV_INFO, (void **)ppIEnum);
-+    IUnknown_Release(punk);
++    res = IEnumWIA_DEV_INFO_QueryInterface(enumdevinfo, &IID_IEnumWIA_DEV_INFO, (void **)ppIEnum);
++    IEnumWIA_DEV_INFO_Release(enumdevinfo);
 +    return res;
  }
  
  static HRESULT WINAPI wiadevmgr_CreateDevice(IWiaDevMgr *iface, BSTR bstrDeviceID, IWiaItem **ppWiaItemRoot)
 diff --git a/dlls/wiaservc/wiaservc_private.h b/dlls/wiaservc/wiaservc_private.h
-index b7faf89..08b7d9b 100644
+index 33c9ba1..22ad553 100644
 --- a/dlls/wiaservc/wiaservc_private.h
 +++ b/dlls/wiaservc/wiaservc_private.h
 @@ -36,6 +36,14 @@ typedef struct
  
- HRESULT wiadevmgr_Constructor(LPVOID *ppObj) DECLSPEC_HIDDEN;
+ HRESULT wiadevmgr_Constructor(IWiaDevMgr **ppObj) DECLSPEC_HIDDEN;
  
 +typedef struct
 +{
@@ -211,7 +211,7 @@ index b7faf89..08b7d9b 100644
 +    LONG ref;
 +} enumwiadevinfo;
 +
-+HRESULT enumwiadevinfo_Constructor(LPVOID *ppObj) DECLSPEC_HIDDEN;
++HRESULT enumwiadevinfo_Constructor(IEnumWIA_DEV_INFO **ppObj) DECLSPEC_HIDDEN;
 +
  /* Little helper functions */
  static inline char *

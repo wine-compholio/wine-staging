@@ -1,0 +1,107 @@
+From d417a8b92faa9cef33db57fc259186facce51c12 Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Fri, 27 Mar 2015 20:27:37 +0000
+Subject: [PATCH 01/18] dsound: Add cp_fields_proc variable for buffers.
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="------------2.0.5"
+
+This is a multi-part message in MIME format.
+--------------2.0.5
+Content-Type: text/plain; charset=UTF-8; format=fixed
+Content-Transfer-Encoding: 8bit
+
+---
+ dlls/dsound/dsound_private.h |  3 +++
+ dlls/dsound/mixer.c          | 20 +++++++++++++++-----
+ 2 files changed, 18 insertions(+), 5 deletions(-)
+
+
+--------------2.0.5
+Content-Type: text/x-patch; name="0001-dsound-Add-cp_fields_proc-variable-for-buffers.patch"
+Content-Transfer-Encoding: 8bit
+Content-Disposition: attachment; filename="0001-dsound-Add-cp_fields_proc-variable-for-buffers.patch"
+
+diff --git a/dlls/dsound/dsound_private.h b/dlls/dsound/dsound_private.h
+index 9c001ed..c10f1dc 100644
+--- a/dlls/dsound/dsound_private.h
++++ b/dlls/dsound/dsound_private.h
+@@ -126,6 +126,8 @@ HRESULT DirectSoundDevice_AddBuffer(
+     IDirectSoundBufferImpl * pDSB) DECLSPEC_HIDDEN;
+ void DirectSoundDevice_RemoveBuffer(DirectSoundDevice * device, IDirectSoundBufferImpl * pDSB) DECLSPEC_HIDDEN;
+ 
++typedef UINT (*CPFIELDSPROC)(IDirectSoundBufferImpl*, UINT, LONG64*);
++
+ /*****************************************************************************
+  * IDirectSoundBuffer implementation structure
+  */
+@@ -171,6 +173,7 @@ struct IDirectSoundBufferImpl
+     bitsputfunc put, put_aux;
+     int                         num_filters;
+     DSFilter*                   filters;
++    CPFIELDSPROC                cp_fields_proc;
+ 
+     struct list entry;
+ };
+diff --git a/dlls/dsound/mixer.c b/dlls/dsound/mixer.c
+index 85ab14a..ef8f053 100644
+--- a/dlls/dsound/mixer.c
++++ b/dlls/dsound/mixer.c
+@@ -43,6 +43,9 @@
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(dsound);
+ 
++static UINT cp_fields_noresample(IDirectSoundBufferImpl *dsb, UINT count, LONG64 *freqAccNum);
++static UINT cp_fields_resample(IDirectSoundBufferImpl *dsb, UINT count, LONG64 *freqAccNum);
++
+ void DSOUND_RecalcVolPan(PDSVOLUMEPAN volpan)
+ {
+ 	double temp;
+@@ -87,6 +90,14 @@ void DSOUND_AmpFactorToVolPan(PDSVOLUMEPAN volpan)
+     TRACE("Vol=%d Pan=%d\n", volpan->lVolume, volpan->lPan);
+ }
+ 
++static void DSOUND_RefreshCPFieldsProc(IDirectSoundBufferImpl *dsb)
++{
++    if (dsb->freqAdjustNum == dsb->freqAdjustDen)
++        dsb->cp_fields_proc = cp_fields_noresample;
++    else
++        dsb->cp_fields_proc = cp_fields_resample;
++}
++
+ /**
+  * Recalculate the size for temporary buffer, and new writelead
+  * Should be called when one of the following things occur:
+@@ -179,6 +190,8 @@ void DSOUND_RecalcFormat(IDirectSoundBufferImpl *dsb)
+ 			FIXME("Conversion from %u to %u channels is not implemented, falling back to stereo\n", ichannels, ochannels);
+ 		dsb->mix_channels = 2;
+ 	}
++
++	DSOUND_RefreshCPFieldsProc(dsb);
+ }
+ 
+ /**
+@@ -266,7 +279,7 @@ static inline float get_current_sample(const IDirectSoundBufferImpl *dsb,
+     return dsb->get(dsb, mixpos % dsb->buflen, channel);
+ }
+ 
+-static UINT cp_fields_noresample(IDirectSoundBufferImpl *dsb, UINT count)
++static UINT cp_fields_noresample(IDirectSoundBufferImpl *dsb, UINT count, LONG64 *freqAccNum)
+ {
+     UINT istride = dsb->pwfx->nBlockAlign;
+     UINT ostride = dsb->device->pwfx->nChannels * sizeof(float);
+@@ -348,10 +361,7 @@ static void cp_fields(IDirectSoundBufferImpl *dsb, UINT count, LONG64 *freqAccNu
+ {
+     DWORD ipos, adv;
+ 
+-    if (dsb->freqAdjustNum == dsb->freqAdjustDen)
+-        adv = cp_fields_noresample(dsb, count); /* *freqAccNum is unmodified */
+-    else
+-        adv = cp_fields_resample(dsb, count, freqAccNum);
++    adv = dsb->cp_fields_proc(dsb, count, freqAccNum);
+ 
+     ipos = dsb->sec_mixpos + adv * dsb->pwfx->nBlockAlign;
+     if (ipos >= dsb->buflen) {
+
+--------------2.0.5--
+
+

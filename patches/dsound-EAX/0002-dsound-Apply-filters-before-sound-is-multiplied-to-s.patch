@@ -1,0 +1,270 @@
+From bb619d6e5ee74714f2f524fb91dbe1da697dc977 Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Fri, 27 Mar 2015 20:39:43 +0000
+Subject: [PATCH 02/18] dsound: Apply filters before sound is multiplied to
+ speakers.
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="------------2.0.5"
+
+This is a multi-part message in MIME format.
+--------------2.0.5
+Content-Type: text/plain; charset=UTF-8; format=fixed
+Content-Transfer-Encoding: 8bit
+
+---
+ dlls/dsound/buffer.c         |   3 +
+ dlls/dsound/dsound_private.h |   1 +
+ dlls/dsound/mixer.c          | 151 ++++++++++++++++++++++++++++++++++++++-----
+ 3 files changed, 138 insertions(+), 17 deletions(-)
+
+
+--------------2.0.5
+Content-Type: text/x-patch; name="0002-dsound-Apply-filters-before-sound-is-multiplied-to-s.patch"
+Content-Transfer-Encoding: 8bit
+Content-Disposition: attachment; filename="0002-dsound-Apply-filters-before-sound-is-multiplied-to-s.patch"
+
+diff --git a/dlls/dsound/buffer.c b/dlls/dsound/buffer.c
+index 4e84d17..7df6348 100644
+--- a/dlls/dsound/buffer.c
++++ b/dlls/dsound/buffer.c
+@@ -739,6 +739,7 @@ static HRESULT WINAPI IDirectSoundBufferImpl_SetFX(IDirectSoundBuffer8 *iface, D
+ 			This->num_filters = 0;
+ 		}
+ 
++		DSOUND_RefreshCPFieldsProc(This);
+ 		return DS_OK;
+ 	}
+ 
+@@ -824,6 +825,8 @@ static HRESULT WINAPI IDirectSoundBufferImpl_SetFX(IDirectSoundBuffer8 *iface, D
+ 		This->num_filters = dwEffectsCount;
+ 	}
+ 
++	DSOUND_RefreshCPFieldsProc(This);
++
+ 	return hr;
+ }
+ 
+diff --git a/dlls/dsound/dsound_private.h b/dlls/dsound/dsound_private.h
+index c10f1dc..5219dbb 100644
+--- a/dlls/dsound/dsound_private.h
++++ b/dlls/dsound/dsound_private.h
+@@ -236,6 +236,7 @@ void DSOUND_RecalcVolPan(PDSVOLUMEPAN volpan) DECLSPEC_HIDDEN;
+ void DSOUND_AmpFactorToVolPan(PDSVOLUMEPAN volpan) DECLSPEC_HIDDEN;
+ void DSOUND_RecalcFormat(IDirectSoundBufferImpl *dsb) DECLSPEC_HIDDEN;
+ DWORD DSOUND_secpos_to_bufpos(const IDirectSoundBufferImpl *dsb, DWORD secpos, DWORD secmixpos, float *overshot) DECLSPEC_HIDDEN;
++void DSOUND_RefreshCPFieldsProc(IDirectSoundBufferImpl *dsb) DECLSPEC_HIDDEN;
+ 
+ DWORD CALLBACK DSOUND_mixthread(void *ptr) DECLSPEC_HIDDEN;
+ 
+diff --git a/dlls/dsound/mixer.c b/dlls/dsound/mixer.c
+index ef8f053..7327b5f 100644
+--- a/dlls/dsound/mixer.c
++++ b/dlls/dsound/mixer.c
+@@ -44,7 +44,9 @@
+ WINE_DEFAULT_DEBUG_CHANNEL(dsound);
+ 
+ static UINT cp_fields_noresample(IDirectSoundBufferImpl *dsb, UINT count, LONG64 *freqAccNum);
++static UINT cp_fields_noresample_dsp(IDirectSoundBufferImpl *dsb, UINT count, LONG64 *freqAccNum);
+ static UINT cp_fields_resample(IDirectSoundBufferImpl *dsb, UINT count, LONG64 *freqAccNum);
++static UINT cp_fields_resample_dsp(IDirectSoundBufferImpl *dsb, UINT count, LONG64 *freqAccNum);
+ 
+ void DSOUND_RecalcVolPan(PDSVOLUMEPAN volpan)
+ {
+@@ -90,12 +92,14 @@ void DSOUND_AmpFactorToVolPan(PDSVOLUMEPAN volpan)
+     TRACE("Vol=%d Pan=%d\n", volpan->lVolume, volpan->lPan);
+ }
+ 
+-static void DSOUND_RefreshCPFieldsProc(IDirectSoundBufferImpl *dsb)
++void DSOUND_RefreshCPFieldsProc(IDirectSoundBufferImpl *dsb)
+ {
++    BOOL using_filters = dsb->num_filters > 0;
++
+     if (dsb->freqAdjustNum == dsb->freqAdjustDen)
+-        dsb->cp_fields_proc = cp_fields_noresample;
++        dsb->cp_fields_proc = using_filters ? cp_fields_noresample_dsp : cp_fields_noresample;
+     else
+-        dsb->cp_fields_proc = cp_fields_resample;
++        dsb->cp_fields_proc = using_filters ? cp_fields_resample_dsp : cp_fields_resample;
+ }
+ 
+ /**
+@@ -279,6 +283,25 @@ static inline float get_current_sample(const IDirectSoundBufferImpl *dsb,
+     return dsb->get(dsb, mixpos % dsb->buflen, channel);
+ }
+ 
++static void apply_filters(IDirectSoundBufferImpl *dsb, float* buf, UINT count)
++{
++    int i;
++    HRESULT hr;
++
++    if (count > 0) {
++        for (i = 0; i < dsb->num_filters; i++) {
++            if (dsb->filters[i].inplace) {
++                hr = IMediaObjectInPlace_Process(dsb->filters[i].inplace, count * dsb->mix_channels * sizeof(float),
++                                                (BYTE*)buf, 0, DMO_INPLACE_NORMAL);
++
++                if (FAILED(hr))
++                    WARN("IMediaObjectInPlace_Process failed for filter %u\n", i);
++            } else
++                WARN("filter %u has no inplace object - unsupported\n", i);
++        }
++    }
++}
++
+ static UINT cp_fields_noresample(IDirectSoundBufferImpl *dsb, UINT count, LONG64 *freqAccNum)
+ {
+     UINT istride = dsb->pwfx->nBlockAlign;
+@@ -291,6 +314,33 @@ static UINT cp_fields_noresample(IDirectSoundBufferImpl *dsb, UINT count, LONG64
+     return count;
+ }
+ 
++static UINT cp_fields_noresample_dsp(IDirectSoundBufferImpl *dsb, UINT count, LONG64 *freqAccNum)
++{
++    UINT istride = dsb->pwfx->nBlockAlign;
++    UINT ostride = dsb->device->pwfx->nChannels * sizeof(float);
++    DWORD channel, i;
++    float* buf;
++
++    buf = HeapAlloc(GetProcessHeap(), 0, count * dsb->mix_channels * sizeof(float));
++    for (i = 0; i < count; i++) {
++        for (channel = 0; channel < dsb->mix_channels; channel++) {
++            buf[(i*dsb->mix_channels)+channel] = get_current_sample(dsb, dsb->sec_mixpos + i*istride, channel);
++        }
++    }
++
++    apply_filters(dsb, buf, count);
++
++    for (i = 0; i < count; i++) {
++        for (channel = 0; channel < dsb->mix_channels; channel++) {
++            dsb->put(dsb, i * ostride, channel, buf[(i*dsb->mix_channels)+channel]);
++        }
++    }
++
++    HeapFree(GetProcessHeap(), 0, buf);
++
++    return count;
++}
++
+ static UINT cp_fields_resample(IDirectSoundBufferImpl *dsb, UINT count, LONG64 *freqAccNum)
+ {
+     UINT i, channel;
+@@ -357,6 +407,87 @@ static UINT cp_fields_resample(IDirectSoundBufferImpl *dsb, UINT count, LONG64 *
+     return max_ipos;
+ }
+ 
++static UINT cp_fields_resample_dsp(IDirectSoundBufferImpl *dsb, UINT count, LONG64 *freqAccNum)
++{
++    UINT i, channel;
++    UINT istride = dsb->pwfx->nBlockAlign;
++    UINT ostride = dsb->device->pwfx->nChannels * sizeof(float);
++
++    LONG64 freqAcc_start = *freqAccNum;
++    LONG64 freqAcc_end = freqAcc_start + count * dsb->freqAdjustNum;
++    UINT dsbfirstep = dsb->firstep;
++    UINT channels = dsb->mix_channels;
++    UINT max_ipos = (freqAcc_start + count * dsb->freqAdjustNum) / dsb->freqAdjustDen;
++
++    UINT fir_cachesize = (fir_len + dsbfirstep - 2) / dsbfirstep;
++    UINT required_input = max_ipos + fir_cachesize;
++
++    float* intermediate = HeapAlloc(GetProcessHeap(), 0,
++            sizeof(float) * required_input * channels);
++
++    float* fir_copy = HeapAlloc(GetProcessHeap(), 0,
++            sizeof(float) * fir_cachesize);
++
++    float* buf = HeapAlloc(GetProcessHeap(), 0,
++            sizeof(float) * count * dsb->mix_channels);
++    float* buftmp = buf;
++
++    /* Important: this buffer MUST be non-interleaved
++     * if you want -msse3 to have any effect.
++     * This is good for CPU cache effects, too.
++     */
++    float* itmp = intermediate;
++    for (channel = 0; channel < channels; channel++)
++        for (i = 0; i < required_input; i++)
++            *(itmp++) = get_current_sample(dsb,
++                    dsb->sec_mixpos + i * istride, channel);
++
++    for(i = 0; i < count; ++i) {
++        UINT int_fir_steps = (freqAcc_start + i * dsb->freqAdjustNum) * dsbfirstep / dsb->freqAdjustDen;
++        float total_fir_steps = (freqAcc_start + i * dsb->freqAdjustNum) * dsbfirstep / (float)dsb->freqAdjustDen;
++        UINT ipos = int_fir_steps / dsbfirstep;
++
++        UINT idx = (ipos + 1) * dsbfirstep - int_fir_steps - 1;
++        float rem = int_fir_steps + 1.0 - total_fir_steps;
++
++        int fir_used = 0;
++        while (idx < fir_len - 1) {
++            fir_copy[fir_used++] = fir[idx] * (1.0 - rem) + fir[idx + 1] * rem;
++            idx += dsb->firstep;
++        }
++
++        assert(fir_used <= fir_cachesize);
++        assert(ipos + fir_used <= required_input);
++
++        for (channel = 0; channel < dsb->mix_channels; channel++) {
++            int j;
++            float sum = 0.0;
++            float* cache = &intermediate[channel * required_input + ipos];
++            for (j = 0; j < fir_used; j++)
++                sum += fir_copy[j] * cache[j];
++            *(buftmp++) = sum * dsb->firgain;
++        }
++    }
++
++    apply_filters(dsb, buf, count);
++
++    buftmp = buf;
++    for(i = 0; i < count; ++i) {
++        for (channel = 0; channel < dsb->mix_channels; channel++) {
++            dsb->put(dsb, i * ostride, channel, *buftmp);
++            buftmp++;
++        }
++    }
++
++    *freqAccNum = freqAcc_end % dsb->freqAdjustDen;
++
++    HeapFree(GetProcessHeap(), 0, fir_copy);
++    HeapFree(GetProcessHeap(), 0, intermediate);
++    HeapFree(GetProcessHeap(), 0, buf);
++
++    return max_ipos;
++}
++
+ static void cp_fields(IDirectSoundBufferImpl *dsb, UINT count, LONG64 *freqAccNum)
+ {
+     DWORD ipos, adv;
+@@ -407,8 +538,6 @@ static inline DWORD DSOUND_BufPtrDiff(DWORD buflen, DWORD ptr1, DWORD ptr2)
+ static void DSOUND_MixToTemporary(IDirectSoundBufferImpl *dsb, DWORD frames)
+ {
+ 	UINT size_bytes = frames * sizeof(float) * dsb->device->pwfx->nChannels;
+-	HRESULT hr;
+-	int i;
+ 
+ 	if (dsb->device->tmp_buffer_len < size_bytes || !dsb->device->tmp_buffer)
+ 	{
+@@ -420,18 +549,6 @@ static void DSOUND_MixToTemporary(IDirectSoundBufferImpl *dsb, DWORD frames)
+ 	}
+ 
+ 	cp_fields(dsb, frames, &dsb->freqAccNum);
+-
+-	if (size_bytes > 0) {
+-		for (i = 0; i < dsb->num_filters; i++) {
+-			if (dsb->filters[i].inplace) {
+-				hr = IMediaObjectInPlace_Process(dsb->filters[i].inplace, size_bytes, (BYTE*)dsb->device->tmp_buffer, 0, DMO_INPLACE_NORMAL);
+-
+-				if (FAILED(hr))
+-					WARN("IMediaObjectInPlace_Process failed for filter %u\n", i);
+-			} else
+-				WARN("filter %u has no inplace object - unsupported\n", i);
+-		}
+-	}
+ }
+ 
+ static void DSOUND_MixerVol(const IDirectSoundBufferImpl *dsb, INT frames)
+
+--------------2.0.5--
+
+

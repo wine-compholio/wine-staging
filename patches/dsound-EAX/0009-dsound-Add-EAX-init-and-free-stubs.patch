@@ -1,0 +1,133 @@
+From 5b3eccbf7a66a21dbb38d4115f01389102775116 Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Fri, 27 Mar 2015 20:58:37 +0000
+Subject: [PATCH 09/18] dsound: Add EAX init and free stubs.
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="------------2.0.5"
+
+This is a multi-part message in MIME format.
+--------------2.0.5
+Content-Type: text/plain; charset=UTF-8; format=fixed
+Content-Transfer-Encoding: 8bit
+
+---
+ dlls/dsound/buffer.c         |  6 ++++++
+ dlls/dsound/dsound_private.h |  2 ++
+ dlls/dsound/eax.c            | 30 +++++++++++++++++++++++++++++-
+ dlls/dsound/mixer.c          |  2 +-
+ 4 files changed, 38 insertions(+), 2 deletions(-)
+
+
+--------------2.0.5
+Content-Type: text/x-patch; name="0009-dsound-Add-EAX-init-and-free-stubs.patch"
+Content-Transfer-Encoding: 8bit
+Content-Disposition: attachment; filename="0009-dsound-Add-EAX-init-and-free-stubs.patch"
+
+diff --git a/dlls/dsound/buffer.c b/dlls/dsound/buffer.c
+index 9ebf213..a62ca40 100644
+--- a/dlls/dsound/buffer.c
++++ b/dlls/dsound/buffer.c
+@@ -1133,6 +1133,10 @@ HRESULT IDirectSoundBufferImpl_Create(
+ 			HeapFree(GetProcessHeap(),0,dsb);
+ 			dsb = NULL;
+ 		}
++
++		if (dsb->device->eax.using_eax) {
++			init_eax_buffer(dsb);
++		}
+ 	}
+ 
+         IDirectSoundBuffer8_AddRef(&dsb->IDirectSoundBuffer8_iface);
+@@ -1172,6 +1176,8 @@ void secondarybuffer_destroy(IDirectSoundBufferImpl *This)
+         HeapFree(GetProcessHeap(), 0, This->filters);
+     }
+ 
++    free_eax_buffer(This);
++
+     HeapFree(GetProcessHeap(), 0, This);
+ 
+     TRACE("(%p) released\n", This);
+diff --git a/dlls/dsound/dsound_private.h b/dlls/dsound/dsound_private.h
+index 0aef20f..e041526 100644
+--- a/dlls/dsound/dsound_private.h
++++ b/dlls/dsound/dsound_private.h
+@@ -242,6 +242,8 @@ HRESULT WINAPI EAX_Get(IDirectSoundBufferImpl *buf, REFGUID guidPropSet,
+ HRESULT WINAPI EAX_Set(IDirectSoundBufferImpl *buf, REFGUID guidPropSet,
+         ULONG dwPropID, void *pInstanceData, ULONG cbInstanceData, void *pPropData,
+         ULONG cbPropData) DECLSPEC_HIDDEN;
++void free_eax_buffer(IDirectSoundBufferImpl* dsb) DECLSPEC_HIDDEN;
++void init_eax_buffer(IDirectSoundBufferImpl* dsb) DECLSPEC_HIDDEN;
+ 
+ /* mixer.c */
+ void DSOUND_CheckEvent(const IDirectSoundBufferImpl *dsb, DWORD playpos, int len) DECLSPEC_HIDDEN;
+diff --git a/dlls/dsound/eax.c b/dlls/dsound/eax.c
+index 56a76f6..f0c17ff 100644
+--- a/dlls/dsound/eax.c
++++ b/dlls/dsound/eax.c
+@@ -91,20 +91,48 @@ static const EFXEAXREVERBPROPERTIES efx_presets[] = {
+     { 0.0625f, 0.5000f, 0.3162f, 0.8404f, 1.0000f, 7.5600f, 0.9100f, 1.0000f, 0.4864f, 0.0200f, { 0.0000f, 0.0000f, 0.0000f }, 2.4378f, 0.0300f, { 0.0000f, 0.0000f, 0.0000f }, 0.2500f, 0.0000f, 4.0000f, 1.0000f, 0.9943f, 5000.0000f, 250.0000f, 0.0000f, 0x0 } /* psychotic */
+ };
+ 
+-static BOOL ReverbDeviceUpdate(DirectSoundDevice *dev)
++static void ReverbUpdate(IDirectSoundBufferImpl* dsb)
+ {
+     /* stub */
++}
++
++static BOOL ReverbDeviceUpdate(DirectSoundDevice *dev)
++{
++    int i;
++
++    for (i = 0; i < dev->nrofbuffers; i++) {
++        ReverbUpdate(dev->buffers[i]);
++    }
++
+     return TRUE;
+ }
+ 
++void init_eax_buffer(IDirectSoundBufferImpl* dsb)
++{
++    ReverbUpdate(dsb);
++
++    DSOUND_RefreshCPFieldsProc(dsb);
++}
++
+ static void init_eax(DirectSoundDevice *dev)
+ {
++    int i;
++
+     dev->eax.using_eax = TRUE;
+     dev->eax.environment = presets[0].environment;
+     dev->eax.volume = presets[0].fVolume;
+     dev->eax.damping = presets[0].fDamping;
+     memcpy(&dev->eax.eax_props, &efx_presets[0], sizeof(dev->eax.eax_props));
+     dev->eax.eax_props.flDecayTime = presets[0].fDecayTime_sec;
++
++    for (i = 0; i < dev->nrofbuffers; i++) {
++        init_eax_buffer(dev->buffers[i]);
++    }
++}
++
++void free_eax_buffer(IDirectSoundBufferImpl* dsb)
++{
++    /* stub */
+ }
+ 
+ HRESULT WINAPI EAX_Get(IDirectSoundBufferImpl *buf, REFGUID guidPropSet,
+diff --git a/dlls/dsound/mixer.c b/dlls/dsound/mixer.c
+index 7327b5f..da5a174 100644
+--- a/dlls/dsound/mixer.c
++++ b/dlls/dsound/mixer.c
+@@ -94,7 +94,7 @@ void DSOUND_AmpFactorToVolPan(PDSVOLUMEPAN volpan)
+ 
+ void DSOUND_RefreshCPFieldsProc(IDirectSoundBufferImpl *dsb)
+ {
+-    BOOL using_filters = dsb->num_filters > 0;
++    BOOL using_filters = dsb->num_filters > 0 || dsb->device->eax.using_eax;
+ 
+     if (dsb->freqAdjustNum == dsb->freqAdjustDen)
+         dsb->cp_fields_proc = using_filters ? cp_fields_noresample_dsp : cp_fields_noresample;
+
+--------------2.0.5--
+
+

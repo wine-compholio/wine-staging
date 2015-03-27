@@ -164,6 +164,7 @@ patch_enable_all ()
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_regedit_String_Termination="$1"
 	enable_riched20_IText_Interface="$1"
+	enable_secur32_ANSI_NTLM_Credentials="$1"
 	enable_secur32_Schannel_ContextAttr="$1"
 	enable_server_ACL_Compat="$1"
 	enable_server_Address_List_Change="$1"
@@ -547,6 +548,9 @@ patch_enable ()
 			;;
 		riched20-IText_Interface)
 			enable_riched20_IText_Interface="$2"
+			;;
+		secur32-ANSI_NTLM_Credentials)
+			enable_secur32_ANSI_NTLM_Credentials="$2"
 			;;
 		secur32-Schannel_ContextAttr)
 			enable_secur32_Schannel_ContextAttr="$2"
@@ -1780,18 +1784,6 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -1809,6 +1801,18 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3523,6 +3527,21 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 		echo '+    { "Sebastian Lackner", "riched20: Fix invalid memory access when parent object was destroyed earlier than child object.", 1 },';
 		echo '+    { "Sebastian Lackner", "riched20: Silence repeated FIXMEs triggered by Adobe Reader.", 1 },';
 		echo '+    { "Sebastian Lackner", "riched20: Implement ITextSelection_fnGetDuplicate.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset secur32-ANSI_NTLM_Credentials
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37063] Fix handling of ANSI NTLM credentials
+# |
+# | Modified files:
+# |   *	dlls/secur32/ntlm.c
+# |
+if test "$enable_secur32_ANSI_NTLM_Credentials" -eq 1; then
+	patch_apply secur32-ANSI_NTLM_Credentials/0001-secur32-Fix-handling-of-ANSI-NTLM-credentials.patch
+	(
+		echo '+    { "David Woodhouse", "secur32: Fix handling of ANSI NTLM credentials.", 1 },';
 	) >> "$patchlist"
 fi
 

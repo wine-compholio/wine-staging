@@ -3284,7 +3284,7 @@ if test "$enable_ntdll_Vista_Threadpool" -eq 1; then
 	patch_apply ntdll-Vista_Threadpool/0020-kernel32-Forward-threadpool-wait-functions-to-ntdll.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Implement TpSimpleTryPost and basic threadpool infrastructure.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Implement TpSetPool[Min|Max]Threads.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement TpSetPool[Min|Max]Threads.", 2 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Implement threadpool cleanup group functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for TpAllocCleanupGroup and related functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Implement threadpool work item functions.", 1 },';

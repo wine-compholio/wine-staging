@@ -1,0 +1,184 @@
+From 213aef0ba57c925f48c36e6167584a4ee0b7587b Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Fri, 27 Mar 2015 21:06:42 +0000
+Subject: dsound: Allocate EAX delay lines.
+
+---
+ dlls/dsound/dsound_eax.h | 16 ++++++++
+ dlls/dsound/eax.c        | 98 +++++++++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 112 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/dsound/dsound_eax.h b/dlls/dsound/dsound_eax.h
+index 2ee83b9..132f060 100644
+--- a/dlls/dsound/dsound_eax.h
++++ b/dlls/dsound/dsound_eax.h
+@@ -85,6 +85,9 @@ typedef struct {
+ 
+ #define EAX_REVERBMIX_USEDISTANCE -1.0f
+ 
++#define AL_EAXREVERB_MAX_REFLECTIONS_DELAY       (0.3f)
++#define AL_EAXREVERB_MAX_LATE_REVERB_DELAY       (0.1f)
++
+ typedef struct {
+     float flDensity;
+     float flDiffusion;
+@@ -111,6 +114,12 @@ typedef struct {
+     int   iDecayHFLimit;
+ } EFXEAXREVERBPROPERTIES, *LPEFXEAXREVERBPROPERTIES;
+ 
++typedef struct DelayLine
++{
++    unsigned int Mask;
++    float *Line;
++} DelayLine;
++
+ typedef struct {
+     BOOL using_eax;
+     unsigned long environment;
+@@ -121,6 +130,13 @@ typedef struct {
+ 
+ typedef struct {
+     float reverb_mix;
++
++    float *SampleBuffer;
++    unsigned int TotalSamples;
++
++    DelayLine Delay;
++
++    unsigned int Offset;
+ } eax_buffer_info;
+ 
+ #ifdef __cplusplus
+diff --git a/dlls/dsound/eax.c b/dlls/dsound/eax.c
+index 4368594..babc2a7 100644
+--- a/dlls/dsound/eax.c
++++ b/dlls/dsound/eax.c
+@@ -92,14 +92,99 @@ static const EFXEAXREVERBPROPERTIES efx_presets[] = {
+     { 0.0625f, 0.5000f, 0.3162f, 0.8404f, 1.0000f, 7.5600f, 0.9100f, 1.0000f, 0.4864f, 0.0200f, { 0.0000f, 0.0000f, 0.0000f }, 2.4378f, 0.0300f, { 0.0000f, 0.0000f, 0.0000f }, 0.2500f, 0.0000f, 4.0000f, 1.0000f, 0.9943f, 5000.0000f, 250.0000f, 0.0000f, 0x0 } /* psychotic */
+ };
+ 
++static unsigned int fastf2u(float f)
++{
++    return (unsigned int)f;
++}
++
+ void process_eax_buffer(IDirectSoundBufferImpl *dsb, float *buf, DWORD count)
+ {
+     /* stub */
+ }
+ 
++static unsigned int NextPowerOf2(unsigned int value)
++{
++    if (value > 0)
++    {
++        value--;
++        value |= value>>1;
++        value |= value>>2;
++        value |= value>>4;
++        value |= value>>8;
++        value |= value>>16;
++    }
++    return value+1;
++}
++
++static unsigned int CalcLineLength(float length, unsigned int offset, unsigned int frequency, DelayLine *Delay)
++{
++    unsigned int samples;
++
++    /* All line lengths are powers of 2, calculated from their lengths, with
++     * an additional sample in case of rounding errors. */
++    samples = NextPowerOf2(fastf2u(length * frequency) + 1);
++    /* All lines share a single sample buffer. */
++    Delay->Mask = samples - 1;
++    Delay->Line = (float*)offset;
++    /* Return the sample count for accumulation. */
++    return samples;
++}
++
++static void RealizeLineOffset(float *sampleBuffer, DelayLine *Delay)
++{
++    Delay->Line = &sampleBuffer[(unsigned int)Delay->Line];
++}
++
++static BOOL AllocLines(unsigned int frequency, IDirectSoundBufferImpl *dsb)
++{
++    unsigned int totalSamples, index;
++    float length;
++    float *newBuffer = NULL;
++
++    /* All delay line lengths are calculated to accomodate the full range of
++     * lengths given their respective paramters. */
++    totalSamples = 0;
++
++    /* The initial delay is the sum of the reflections and late reverb
++     * delays. */
++    length = AL_EAXREVERB_MAX_REFLECTIONS_DELAY +
++             AL_EAXREVERB_MAX_LATE_REVERB_DELAY;
++    totalSamples += CalcLineLength(length, totalSamples, frequency,
++                                   &dsb->eax.Delay);
++
++    if (totalSamples != dsb->eax.TotalSamples)
++    {
++        TRACE("New reverb buffer length: %u samples (%f sec)\n", totalSamples, totalSamples/(float)frequency);
++
++        if (dsb->eax.SampleBuffer)
++            newBuffer = HeapReAlloc(GetProcessHeap(), 0, dsb->eax.SampleBuffer, sizeof(float) * totalSamples);
++        else
++            newBuffer = HeapAlloc(GetProcessHeap(), 0, sizeof(float) * totalSamples);
++
++        if (newBuffer == NULL)
++            return FALSE;
++        dsb->eax.SampleBuffer = newBuffer;
++        dsb->eax.TotalSamples = totalSamples;
++    }
++
++    /* Update all delays to reflect the new sample buffer. */
++    RealizeLineOffset(dsb->eax.SampleBuffer, &dsb->eax.Delay);
++
++    /* Clear the sample buffer. */
++    for (index = 0; index < dsb->eax.TotalSamples; index++)
++        dsb->eax.SampleBuffer[index] = 0.0f;
++
++    return TRUE;
++}
++
+ static void ReverbUpdate(IDirectSoundBufferImpl *dsb)
+ {
+-    /* stub */
++    /* avoid segfaults in mixing thread when we recalculate the line offsets */
++    EnterCriticalSection(&dsb->device->mixlock);
++
++    AllocLines(dsb->device->pwfx->nSamplesPerSec, dsb);
++
++    LeaveCriticalSection(&dsb->device->mixlock);
+ }
+ 
+ static BOOL ReverbDeviceUpdate(DirectSoundDevice *dev)
+@@ -115,6 +200,14 @@ static BOOL ReverbDeviceUpdate(DirectSoundDevice *dev)
+ 
+ void init_eax_buffer(IDirectSoundBufferImpl *dsb)
+ {
++    dsb->eax.TotalSamples = 0;
++    dsb->eax.SampleBuffer = NULL;
++
++    dsb->eax.Delay.Mask = 0;
++    dsb->eax.Delay.Line = NULL;
++
++    dsb->eax.Offset = 0;
++
+     ReverbUpdate(dsb);
+ }
+ 
+@@ -136,7 +229,8 @@ static void init_eax(DirectSoundDevice *dev)
+ 
+ void free_eax_buffer(IDirectSoundBufferImpl *dsb)
+ {
+-    /* stub */
++    if (dsb->eax.SampleBuffer)
++        HeapFree(GetProcessHeap(), 0, dsb->eax.SampleBuffer);
+ }
+ 
+ HRESULT WINAPI EAX_Get(IDirectSoundBufferImpl *buf, REFGUID guidPropSet,
+-- 
+2.3.3
+

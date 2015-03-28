@@ -1,0 +1,227 @@
+From bb7edc0e1283a60b1cfc121356d6a8702f96f689 Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Sun, 22 Mar 2015 18:09:34 +0000
+Subject: dsound: Implement EAX early reflections.
+
+---
+ dlls/dsound/dsound_eax.h |   7 +++
+ dlls/dsound/eax.c        | 114 +++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 121 insertions(+)
+
+diff --git a/dlls/dsound/dsound_eax.h b/dlls/dsound/dsound_eax.h
+index bd002d7..184f7ce 100644
+--- a/dlls/dsound/dsound_eax.h
++++ b/dlls/dsound/dsound_eax.h
+@@ -144,6 +144,13 @@ typedef struct {
+     DelayLine Delay;
+     unsigned int DelayTap[2];
+ 
++    struct {
++        float Gain;
++        float Coeff[4];
++        DelayLine Delay[4];
++        unsigned int Offset[4];
++    } Early;
++
+     unsigned int Offset;
+ } eax_buffer_info;
+ 
+diff --git a/dlls/dsound/eax.c b/dlls/dsound/eax.c
+index 9569c33..964e5f8 100644
+--- a/dlls/dsound/eax.c
++++ b/dlls/dsound/eax.c
+@@ -92,6 +92,11 @@ static const EFXEAXREVERBPROPERTIES efx_presets[] = {
+     { 0.0625f, 0.5000f, 0.3162f, 0.8404f, 1.0000f, 7.5600f, 0.9100f, 1.0000f, 0.4864f, 0.0200f, { 0.0000f, 0.0000f, 0.0000f }, 2.4378f, 0.0300f, { 0.0000f, 0.0000f, 0.0000f }, 0.2500f, 0.0000f, 4.0000f, 1.0000f, 0.9943f, 5000.0000f, 250.0000f, 0.0000f, 0x0 } /* psychotic */
+ };
+ 
++static const float EARLY_LINE_LENGTH[4] =
++{
++    0.0015f, 0.0045f, 0.0135f, 0.0405f
++};
++
+ static float lpFilter2P(FILTER *iir, unsigned int offset, float input)
+ {
+     float *history = &iir->history[offset*2];
+@@ -116,6 +121,62 @@ static float DelayLineOut(DelayLine *Delay, unsigned int offset)
+     return Delay->Line[offset&Delay->Mask];
+ }
+ 
++static float AttenuatedDelayLineOut(DelayLine *Delay, unsigned int offset, float coeff)
++{
++    return coeff * Delay->Line[offset&Delay->Mask];
++}
++
++static float EarlyDelayLineOut(IDirectSoundBufferImpl* dsb, unsigned int index)
++{
++    return AttenuatedDelayLineOut(&dsb->eax.Early.Delay[index],
++                                  dsb->eax.Offset - dsb->eax.Early.Offset[index],
++                                  dsb->eax.Early.Coeff[index]);
++}
++
++static void EarlyReflection(IDirectSoundBufferImpl* dsb, float in, float *out)
++{
++    float d[4], v, f[4];
++
++    /* Obtain the decayed results of each early delay line. */
++    d[0] = EarlyDelayLineOut(dsb, 0);
++    d[1] = EarlyDelayLineOut(dsb, 1);
++    d[2] = EarlyDelayLineOut(dsb, 2);
++    d[3] = EarlyDelayLineOut(dsb, 3);
++
++    /* The following uses a lossless scattering junction from waveguide
++     * theory.  It actually amounts to a householder mixing matrix, which
++     * will produce a maximally diffuse response, and means this can probably
++     * be considered a simple feed-back delay network (FDN).
++     *          N
++     *         ---
++     *         \
++     * v = 2/N /   d_i
++     *         ---
++     *         i=1
++     */
++    v = (d[0] + d[1] + d[2] + d[3]) * 0.5f;
++    /* The junction is loaded with the input here. */
++    v += in;
++
++    /* Calculate the feed values for the delay lines. */
++    f[0] = v - d[0];
++    f[1] = v - d[1];
++    f[2] = v - d[2];
++    f[3] = v - d[3];
++
++    /* Re-feed the delay lines. */
++    DelayLineIn(&dsb->eax.Early.Delay[0], dsb->eax.Offset, f[0]);
++    DelayLineIn(&dsb->eax.Early.Delay[1], dsb->eax.Offset, f[1]);
++    DelayLineIn(&dsb->eax.Early.Delay[2], dsb->eax.Offset, f[2]);
++    DelayLineIn(&dsb->eax.Early.Delay[3], dsb->eax.Offset, f[3]);
++
++    /* Output the results of the junction for all four channels. */
++    out[0] = dsb->eax.Early.Gain * f[0];
++    out[1] = dsb->eax.Early.Gain * f[1];
++    out[2] = dsb->eax.Early.Gain * f[2];
++    out[3] = dsb->eax.Early.Gain * f[3];
++}
++
+ static void VerbPass(IDirectSoundBufferImpl* dsb, float in, float* out)
+ {
+     /* Low-pass filter the incoming sample. */
+@@ -124,7 +185,9 @@ static void VerbPass(IDirectSoundBufferImpl* dsb, float in, float* out)
+     /* Feed the initial delay line. */
+     DelayLineIn(&dsb->eax.Delay, dsb->eax.Offset, in);
+ 
++    /* Calculate the early reflection from the first delay tap. */
+     in = DelayLineOut(&dsb->eax.Delay, dsb->eax.Offset - dsb->eax.DelayTap[0]);
++    EarlyReflection(dsb, in, out);
+ 
+     /* Step all delays forward one sample. */
+     dsb->eax.Offset++;
+@@ -173,6 +236,27 @@ static void UpdateDelayLine(float earlyDelay, float lateDelay, unsigned int freq
+     State->DelayTap[1] = fastf2u((earlyDelay + lateDelay) * frequency);
+ }
+ 
++static float CalcDecayCoeff(float length, float decayTime)
++{
++    return powf(0.001f/*-60 dB*/, length/decayTime);
++}
++
++static void UpdateEarlyLines(float reverbGain, float earlyGain, float lateDelay, eax_buffer_info *State)
++{
++    unsigned int index;
++
++    /* Calculate the early reflections gain (from the master effect gain, and
++     * reflections gain parameters) with a constant attenuation of 0.5. */
++    State->Early.Gain = 0.5f * reverbGain * earlyGain;
++
++    /* Calculate the gain (coefficient) for each early delay line using the
++     * late delay time.  This expands the early reflections to the start of
++     * the late reverb. */
++    for(index = 0; index < 4; index++)
++        State->Early.Coeff[index] = CalcDecayCoeff(EARLY_LINE_LENGTH[index],
++                                                   lateDelay);
++}
++
+ static float lpCoeffCalc(float g, float cw)
+ {
+     float a = 0.0f;
+@@ -244,6 +328,11 @@ static BOOL AllocLines(unsigned int frequency, IDirectSoundBufferImpl *dsb)
+     totalSamples += CalcLineLength(length, totalSamples, frequency,
+                                    &dsb->eax.Delay);
+ 
++    /* The early reflection lines. */
++    for (index = 0; index < 4; index++)
++        totalSamples += CalcLineLength(EARLY_LINE_LENGTH[index], totalSamples,
++                                       frequency, &dsb->eax.Early.Delay[index]);
++
+     if (totalSamples != dsb->eax.TotalSamples)
+     {
+         TRACE("New reverb buffer length: %u samples (%f sec)\n", totalSamples, totalSamples/(float)frequency);
+@@ -261,6 +350,10 @@ static BOOL AllocLines(unsigned int frequency, IDirectSoundBufferImpl *dsb)
+ 
+     /* Update all delays to reflect the new sample buffer. */
+     RealizeLineOffset(dsb->eax.SampleBuffer, &dsb->eax.Delay);
++    for(index = 0; index < 4; index++)
++    {
++        RealizeLineOffset(dsb->eax.SampleBuffer, &dsb->eax.Early.Delay[index]);
++    }
+ 
+     /* Clear the sample buffer. */
+     for (index = 0; index < dsb->eax.TotalSamples; index++)
+@@ -271,6 +364,7 @@ static BOOL AllocLines(unsigned int frequency, IDirectSoundBufferImpl *dsb)
+ 
+ static void ReverbUpdate(IDirectSoundBufferImpl *dsb)
+ {
++    unsigned int index;
+     float cw;
+ 
+     /* avoid segfaults in mixing thread when we recalculate the line offsets */
+@@ -280,6 +374,11 @@ static void ReverbUpdate(IDirectSoundBufferImpl *dsb)
+ 
+     LeaveCriticalSection(&dsb->device->mixlock);
+ 
++    for(index = 0; index < 4; index++)
++    {
++        dsb->eax.Early.Offset[index] = fastf2u(EARLY_LINE_LENGTH[index] * dsb->device->pwfx->nSamplesPerSec);
++    }
++
+     cw = CalcI3DL2HFreq(dsb->device->eax.eax_props.flHFReference, dsb->device->pwfx->nSamplesPerSec);
+ 
+     dsb->eax.LpFilter.coeff = lpCoeffCalc(dsb->device->eax.eax_props.flGainHF, cw);
+@@ -287,6 +386,10 @@ static void ReverbUpdate(IDirectSoundBufferImpl *dsb)
+     UpdateDelayLine(dsb->device->eax.eax_props.flReflectionsDelay,
+                     dsb->device->eax.eax_props.flLateReverbDelay,
+                     dsb->device->pwfx->nSamplesPerSec, &dsb->eax);
++
++    UpdateEarlyLines(dsb->device->eax.eax_props.flGain,
++                    dsb->device->eax.eax_props.flReflectionsGain,
++                    dsb->device->eax.eax_props.flLateReverbDelay, &dsb->eax);
+ }
+ 
+ static BOOL ReverbDeviceUpdate(DirectSoundDevice *dev)
+@@ -302,6 +405,8 @@ static BOOL ReverbDeviceUpdate(DirectSoundDevice *dev)
+ 
+ void init_eax_buffer(IDirectSoundBufferImpl *dsb)
+ {
++    unsigned int index;
++
+     dsb->eax.TotalSamples = 0;
+     dsb->eax.SampleBuffer = NULL;
+ 
+@@ -314,6 +419,15 @@ void init_eax_buffer(IDirectSoundBufferImpl *dsb)
+     dsb->eax.DelayTap[0] = 0;
+     dsb->eax.DelayTap[1] = 0;
+ 
++    dsb->eax.Early.Gain = 0.0f;
++    for(index = 0; index < 4; index++)
++    {
++        dsb->eax.Early.Coeff[index] = 0.0f;
++        dsb->eax.Early.Delay[index].Mask = 0;
++        dsb->eax.Early.Delay[index].Line = NULL;
++        dsb->eax.Early.Offset[index] = 0;
++    }
++
+     dsb->eax.Offset = 0;
+ 
+     ReverbUpdate(dsb);
+-- 
+2.3.3
+

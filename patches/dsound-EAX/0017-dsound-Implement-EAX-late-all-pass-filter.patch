@@ -1,0 +1,151 @@
+From 510838b8d83a085bda82ac87c0f22ee856eb0f67 Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Sun, 22 Mar 2015 18:21:18 +0000
+Subject: dsound: Implement EAX late all-pass filter.
+
+---
+ dlls/dsound/dsound_eax.h |  5 +++++
+ dlls/dsound/eax.c        | 55 ++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 60 insertions(+)
+
+diff --git a/dlls/dsound/dsound_eax.h b/dlls/dsound/dsound_eax.h
+index fac4d9b..a650108 100644
+--- a/dlls/dsound/dsound_eax.h
++++ b/dlls/dsound/dsound_eax.h
+@@ -157,8 +157,13 @@ typedef struct {
+     struct {
+         float Gain;
+         float DensityGain;
++        float ApFeedCoeff;
+         float MixCoeff;
+ 
++        float ApCoeff[4];
++        DelayLine ApDelay[4];
++        unsigned int ApOffset[4];
++
+         float Coeff[4];
+         DelayLine Delay[4];
+         unsigned int Offset[4];
+diff --git a/dlls/dsound/eax.c b/dlls/dsound/eax.c
+index c9a5eb6..a05b00e 100644
+--- a/dlls/dsound/eax.c
++++ b/dlls/dsound/eax.c
+@@ -100,6 +100,11 @@ static const float EARLY_LINE_LENGTH[4] =
+     0.0015f, 0.0045f, 0.0135f, 0.0405f
+ };
+ 
++static const float ALLPASS_LINE_LENGTH[4] =
++{
++    0.0151f, 0.0167f, 0.0183f, 0.0200f,
++};
++
+ static const float LATE_LINE_LENGTH[4] =
+ {
+     0.0211f, 0.0311f, 0.0461f, 0.0680f
+@@ -194,6 +199,28 @@ static void EarlyReflection(IDirectSoundBufferImpl* dsb, float in, float *out)
+     out[3] = dsb->eax.Early.Gain * f[3];
+ }
+ 
++static float AllpassInOut(DelayLine *Delay, unsigned int outOffset, unsigned int inOffset, float in, float feedCoeff, float coeff)
++{
++    float out, feed;
++
++    out = DelayLineOut(Delay, outOffset);
++    feed = feedCoeff * in;
++    DelayLineIn(Delay, inOffset, (feedCoeff * (out - feed)) + in);
++
++    /* The time-based attenuation is only applied to the delay output to
++     * keep it from affecting the feed-back path (which is already controlled
++     * by the all-pass feed coefficient). */
++    return (coeff * out) - feed;
++}
++
++static float LateAllPassInOut(IDirectSoundBufferImpl* dsb, unsigned int index, float in)
++{
++    return AllpassInOut(&dsb->eax.Late.ApDelay[index],
++                        dsb->eax.Offset - dsb->eax.Late.ApOffset[index],
++                        dsb->eax.Offset, in, dsb->eax.Late.ApFeedCoeff,
++                        dsb->eax.Late.ApCoeff[index]);
++}
++
+ static float LateDelayLineOut(IDirectSoundBufferImpl* dsb, unsigned int index)
+ {
+     return AttenuatedDelayLineOut(&dsb->eax.Late.Delay[index],
+@@ -223,6 +250,14 @@ static void LateReverb(IDirectSoundBufferImpl* dsb, const float *in, float *out)
+     d[2] = LateLowPassInOut(dsb, 3, in[3] + LateDelayLineOut(dsb, 3));
+     d[3] = LateLowPassInOut(dsb, 1, in[1] + LateDelayLineOut(dsb, 1));
+ 
++    /* To help increase diffusion, run each line through an all-pass filter.
++     * When there is no diffusion, the shortest all-pass filter will feed the
++     * shortest delay line. */
++    d[0] = LateAllPassInOut(dsb, 0, d[0]);
++    d[1] = LateAllPassInOut(dsb, 1, d[1]);
++    d[2] = LateAllPassInOut(dsb, 2, d[2]);
++    d[3] = LateAllPassInOut(dsb, 3, d[3]);
++
+     /* Late reverb is done with a modified feed-back delay network (FDN)
+      * topology.  Four input lines are each fed through their own all-pass
+      * filter and then into the mixing matrix.  The four outputs of the
+@@ -465,8 +500,15 @@ static void UpdateLateLines(float reverbGain, float lateGain, float xMix, float
+     State->Late.DensityGain = CalcDensityGain(CalcDecayCoeff(length,
+                                                              decayTime));
+ 
++    /* Calculate the all-pass feed-back and feed-forward coefficient. */
++    State->Late.ApFeedCoeff = 0.5f * powf(diffusion, 2.0f);
++
+     for(index = 0; index < 4; index++)
+     {
++        /* Calculate the gain (coefficient) for each all-pass line. */
++        State->Late.ApCoeff[index] = CalcDecayCoeff(ALLPASS_LINE_LENGTH[index],
++                                                    decayTime);
++
+         /* Calculate the length (in seconds) of each cyclical delay line. */
+         length = LATE_LINE_LENGTH[index] * (1.0f + (density * LATE_LINE_MULTIPLIER));
+ 
+@@ -562,6 +604,11 @@ static BOOL AllocLines(unsigned int frequency, IDirectSoundBufferImpl *dsb)
+     totalSamples += CalcLineLength(length, totalSamples, frequency,
+                                    &dsb->eax.Decorrelator);
+ 
++    /* The late all-pass lines. */
++    for(index = 0;index < 4;index++)
++        totalSamples += CalcLineLength(ALLPASS_LINE_LENGTH[index], totalSamples,
++                                       frequency, &dsb->eax.Late.ApDelay[index]);
++
+     /* The late delay lines are calculated from the lowest reverb density. */
+     for (index = 0; index < 4; index++)
+     {
+@@ -591,6 +638,7 @@ static BOOL AllocLines(unsigned int frequency, IDirectSoundBufferImpl *dsb)
+     for(index = 0; index < 4; index++)
+     {
+         RealizeLineOffset(dsb->eax.SampleBuffer, &dsb->eax.Early.Delay[index]);
++        RealizeLineOffset(dsb->eax.SampleBuffer, &dsb->eax.Late.ApDelay[index]);
+         RealizeLineOffset(dsb->eax.SampleBuffer, &dsb->eax.Late.Delay[index]);
+     }
+ 
+@@ -641,6 +689,7 @@ static void ReverbUpdate(IDirectSoundBufferImpl *dsb)
+     for(index = 0; index < 4; index++)
+     {
+         dsb->eax.Early.Offset[index] = fastf2u(EARLY_LINE_LENGTH[index] * dsb->device->pwfx->nSamplesPerSec);
++        dsb->eax.Late.ApOffset[index] = fastf2u(ALLPASS_LINE_LENGTH[index] * dsb->device->pwfx->nSamplesPerSec);
+     }
+ 
+     cw = CalcI3DL2HFreq(dsb->device->eax.eax_props.flHFReference, dsb->device->pwfx->nSamplesPerSec);
+@@ -716,9 +765,15 @@ void init_eax_buffer(IDirectSoundBufferImpl *dsb)
+ 
+     dsb->eax.Late.Gain = 0.0f;
+     dsb->eax.Late.DensityGain = 0.0f;
++    dsb->eax.Late.ApFeedCoeff = 0.0f;
+     dsb->eax.Late.MixCoeff = 0.0f;
+     for(index = 0; index < 4; index++)
+     {
++        dsb->eax.Late.ApCoeff[index] = 0.0f;
++        dsb->eax.Late.ApDelay[index].Mask = 0;
++        dsb->eax.Late.ApDelay[index].Line = NULL;
++        dsb->eax.Late.ApOffset[index] = 0;
++
+         dsb->eax.Late.Coeff[index] = 0.0f;
+         dsb->eax.Late.Delay[index].Mask = 0;
+         dsb->eax.Late.Delay[index].Line = NULL;
+-- 
+2.3.3
+

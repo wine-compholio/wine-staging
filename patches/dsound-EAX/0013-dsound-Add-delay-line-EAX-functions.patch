@@ -1,0 +1,89 @@
+From 687ccff7f8b336d29eb72b7975500de8cedbae93 Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Sun, 22 Mar 2015 18:00:10 +0000
+Subject: dsound: Add delay line EAX functions.
+
+---
+ dlls/dsound/dsound_eax.h |  1 +
+ dlls/dsound/eax.c        | 27 +++++++++++++++++++++++++++
+ 2 files changed, 28 insertions(+)
+
+diff --git a/dlls/dsound/dsound_eax.h b/dlls/dsound/dsound_eax.h
+index 82b1408..bd002d7 100644
+--- a/dlls/dsound/dsound_eax.h
++++ b/dlls/dsound/dsound_eax.h
+@@ -142,6 +142,7 @@ typedef struct {
+     FILTER LpFilter;
+ 
+     DelayLine Delay;
++    unsigned int DelayTap[2];
+ 
+     unsigned int Offset;
+ } eax_buffer_info;
+diff --git a/dlls/dsound/eax.c b/dlls/dsound/eax.c
+index bbb5dad..9569c33 100644
+--- a/dlls/dsound/eax.c
++++ b/dlls/dsound/eax.c
+@@ -106,11 +106,26 @@ static float lpFilter2P(FILTER *iir, unsigned int offset, float input)
+     return output;
+ }
+ 
++static void DelayLineIn(DelayLine *Delay, unsigned int offset, float in)
++{
++    Delay->Line[offset&Delay->Mask] = in;
++}
++
++static float DelayLineOut(DelayLine *Delay, unsigned int offset)
++{
++    return Delay->Line[offset&Delay->Mask];
++}
++
+ static void VerbPass(IDirectSoundBufferImpl* dsb, float in, float* out)
+ {
+     /* Low-pass filter the incoming sample. */
+     in = lpFilter2P(&dsb->eax.LpFilter, 0, in);
+ 
++    /* Feed the initial delay line. */
++    DelayLineIn(&dsb->eax.Delay, dsb->eax.Offset, in);
++
++    in = DelayLineOut(&dsb->eax.Delay, dsb->eax.Offset - dsb->eax.DelayTap[0]);
++
+     /* Step all delays forward one sample. */
+     dsb->eax.Offset++;
+ }
+@@ -152,6 +167,12 @@ void process_eax_buffer(IDirectSoundBufferImpl *dsb, float *buf, DWORD count)
+     HeapFree(GetProcessHeap(), 0, out);
+ }
+ 
++static void UpdateDelayLine(float earlyDelay, float lateDelay, unsigned int frequency, eax_buffer_info *State)
++{
++    State->DelayTap[0] = fastf2u(earlyDelay * frequency);
++    State->DelayTap[1] = fastf2u((earlyDelay + lateDelay) * frequency);
++}
++
+ static float lpCoeffCalc(float g, float cw)
+ {
+     float a = 0.0f;
+@@ -262,6 +283,10 @@ static void ReverbUpdate(IDirectSoundBufferImpl *dsb)
+     cw = CalcI3DL2HFreq(dsb->device->eax.eax_props.flHFReference, dsb->device->pwfx->nSamplesPerSec);
+ 
+     dsb->eax.LpFilter.coeff = lpCoeffCalc(dsb->device->eax.eax_props.flGainHF, cw);
++
++    UpdateDelayLine(dsb->device->eax.eax_props.flReflectionsDelay,
++                    dsb->device->eax.eax_props.flLateReverbDelay,
++                    dsb->device->pwfx->nSamplesPerSec, &dsb->eax);
+ }
+ 
+ static BOOL ReverbDeviceUpdate(DirectSoundDevice *dev)
+@@ -286,6 +311,8 @@ void init_eax_buffer(IDirectSoundBufferImpl *dsb)
+ 
+     dsb->eax.Delay.Mask = 0;
+     dsb->eax.Delay.Line = NULL;
++    dsb->eax.DelayTap[0] = 0;
++    dsb->eax.DelayTap[1] = 0;
+ 
+     dsb->eax.Offset = 0;
+ 
+-- 
+2.3.3
+

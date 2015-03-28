@@ -1,0 +1,65 @@
+From 735da63bda0fed9b01779bd8922a4cc13b05d598 Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Fri, 27 Mar 2015 20:59:57 +0000
+Subject: dsound: Feed data through EAX function.
+
+---
+ dlls/dsound/dsound_private.h | 1 +
+ dlls/dsound/eax.c            | 5 +++++
+ dlls/dsound/mixer.c          | 5 ++++-
+ 3 files changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/dsound/dsound_private.h b/dlls/dsound/dsound_private.h
+index a918cd2..cc55d70 100644
+--- a/dlls/dsound/dsound_private.h
++++ b/dlls/dsound/dsound_private.h
+@@ -242,6 +242,7 @@ HRESULT WINAPI EAX_Set(IDirectSoundBufferImpl *buf, REFGUID guidPropSet,
+         ULONG cbPropData) DECLSPEC_HIDDEN;
+ void free_eax_buffer(IDirectSoundBufferImpl *dsb) DECLSPEC_HIDDEN;
+ void init_eax_buffer(IDirectSoundBufferImpl *dsb) DECLSPEC_HIDDEN;
++void process_eax_buffer(IDirectSoundBufferImpl *dsb, float *buf, DWORD count) DECLSPEC_HIDDEN;
+ 
+ /* mixer.c */
+ void DSOUND_CheckEvent(const IDirectSoundBufferImpl *dsb, DWORD playpos, int len) DECLSPEC_HIDDEN;
+diff --git a/dlls/dsound/eax.c b/dlls/dsound/eax.c
+index c0afb0f..4368594 100644
+--- a/dlls/dsound/eax.c
++++ b/dlls/dsound/eax.c
+@@ -92,6 +92,11 @@ static const EFXEAXREVERBPROPERTIES efx_presets[] = {
+     { 0.0625f, 0.5000f, 0.3162f, 0.8404f, 1.0000f, 7.5600f, 0.9100f, 1.0000f, 0.4864f, 0.0200f, { 0.0000f, 0.0000f, 0.0000f }, 2.4378f, 0.0300f, { 0.0000f, 0.0000f, 0.0000f }, 0.2500f, 0.0000f, 4.0000f, 1.0000f, 0.9943f, 5000.0000f, 250.0000f, 0.0000f, 0x0 } /* psychotic */
+ };
+ 
++void process_eax_buffer(IDirectSoundBufferImpl *dsb, float *buf, DWORD count)
++{
++    /* stub */
++}
++
+ static void ReverbUpdate(IDirectSoundBufferImpl *dsb)
+ {
+     /* stub */
+diff --git a/dlls/dsound/mixer.c b/dlls/dsound/mixer.c
+index ff92cc1..b159834 100644
+--- a/dlls/dsound/mixer.c
++++ b/dlls/dsound/mixer.c
+@@ -453,7 +453,7 @@ static void putieee32_dsp(const IDirectSoundBufferImpl *dsb, DWORD pos, DWORD ch
+  */
+ static void DSOUND_MixToTemporary(IDirectSoundBufferImpl *dsb, DWORD frames)
+ {
+-    BOOL using_filters = dsb->num_filters > 0;
++    BOOL using_filters = dsb->num_filters > 0 || dsb->device->eax.using_eax;
+     UINT istride, ostride, size_bytes;
+     DWORD channel, i;
+     bitsputfunc put;
+@@ -500,6 +500,9 @@ static void DSOUND_MixToTemporary(IDirectSoundBufferImpl *dsb, DWORD frames)
+             }
+         }
+ 
++        if (dsb->device->eax.using_eax)
++            process_eax_buffer(dsb, dsb->device->dsp_buffer, frames * dsb->mix_channels);
++
+         istride = ostride;
+         ostride = dsb->device->pwfx->nChannels * sizeof(float);
+         for (i = 0; i < frames; i++) {
+-- 
+2.3.3
+

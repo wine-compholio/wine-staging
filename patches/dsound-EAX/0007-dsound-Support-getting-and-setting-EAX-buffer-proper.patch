@@ -1,0 +1,138 @@
+From 43637cb46c48e84e7f1b127ba4427900c76f2470 Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Fri, 27 Mar 2015 20:48:19 +0000
+Subject: dsound: Support getting and setting EAX buffer properties.
+
+---
+ dlls/dsound/buffer.c         |  2 ++
+ dlls/dsound/dsound_eax.h     |  4 +++
+ dlls/dsound/dsound_private.h |  2 ++
+ dlls/dsound/eax.c            | 64 ++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 72 insertions(+)
+
+diff --git a/dlls/dsound/buffer.c b/dlls/dsound/buffer.c
+index 0596ce3..1c318f5 100644
+--- a/dlls/dsound/buffer.c
++++ b/dlls/dsound/buffer.c
+@@ -1092,6 +1092,8 @@ HRESULT IDirectSoundBufferImpl_Create(
+ 	/* calculate fragment size and write lead */
+ 	DSOUND_RecalcFormat(dsb);
+ 
++	dsb->eax.reverb_mix = EAX_REVERBMIX_USEDISTANCE;
++
+ 	if (dsb->dsbd.dwFlags & DSBCAPS_CTRL3D) {
+ 		dsb->ds3db_ds3db.dwSize = sizeof(DS3DBUFFER);
+ 		dsb->ds3db_ds3db.vPosition.x = 0.0;
+diff --git a/dlls/dsound/dsound_eax.h b/dlls/dsound/dsound_eax.h
+index c90d82d..2ee83b9 100644
+--- a/dlls/dsound/dsound_eax.h
++++ b/dlls/dsound/dsound_eax.h
+@@ -119,6 +119,10 @@ typedef struct {
+     EFXEAXREVERBPROPERTIES eax_props;
+ } eax_info;
+ 
++typedef struct {
++    float reverb_mix;
++} eax_buffer_info;
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/dlls/dsound/dsound_private.h b/dlls/dsound/dsound_private.h
+index c16f770..c732b52 100644
+--- a/dlls/dsound/dsound_private.h
++++ b/dlls/dsound/dsound_private.h
+@@ -176,6 +176,8 @@ struct IDirectSoundBufferImpl
+     int                         num_filters;
+     DSFilter*                   filters;
+ 
++    eax_buffer_info             eax;
++
+     struct list entry;
+ };
+ 
+diff --git a/dlls/dsound/eax.c b/dlls/dsound/eax.c
+index cdd03be..3931681 100644
+--- a/dlls/dsound/eax.c
++++ b/dlls/dsound/eax.c
+@@ -179,6 +179,38 @@ HRESULT WINAPI EAX_Get(IDirectSoundBufferImpl *buf, REFGUID guidPropSet,
+         }
+ 
+         return S_OK;
++    } else if (IsEqualGUID(&DSPROPSETID_EAXBUFFER_ReverbProperties, guidPropSet)) {
++        EAXBUFFER_REVERBPROPERTIES *props;
++
++        if (!buf->device->eax.using_eax)
++            init_eax(buf->device);
++
++        switch (dwPropID) {
++            case DSPROPERTY_EAXBUFFER_ALL:
++                if (cbPropData < sizeof(EAXBUFFER_REVERBPROPERTIES))
++                    return E_FAIL;
++
++                props = pPropData;
++
++                props->fMix = buf->eax.reverb_mix;
++
++                *pcbReturned = sizeof(EAXBUFFER_REVERBPROPERTIES);
++            break;
++
++            case DSPROPERTY_EAXBUFFER_REVERBMIX:
++                if (cbPropData < sizeof(float))
++                    return E_FAIL;
++
++                *(float*)pPropData = buf->eax.reverb_mix;
++
++                *pcbReturned = sizeof(float);
++            break;
++
++            default:
++                return E_PROP_ID_UNSUPPORTED;
++        }
++
++        return S_OK;
+     }
+ 
+     return E_PROP_ID_UNSUPPORTED;
+@@ -276,6 +308,38 @@ HRESULT WINAPI EAX_Set(IDirectSoundBufferImpl *buf, REFGUID guidPropSet,
+         }
+ 
+         return S_OK;
++    } else if (IsEqualGUID(&DSPROPSETID_EAXBUFFER_ReverbProperties, guidPropSet)) {
++        EAXBUFFER_REVERBPROPERTIES *props;
++
++        if (!buf->device->eax.using_eax)
++            init_eax(buf->device);
++
++        switch (dwPropID) {
++            case DSPROPERTY_EAXBUFFER_ALL:
++                if (cbPropData != sizeof(EAXBUFFER_REVERBPROPERTIES))
++                    return E_FAIL;
++
++                props = pPropData;
++
++                TRACE("setting reverb mix to %f\n", props->fMix);
++
++                buf->eax.reverb_mix = props->fMix;
++            break;
++
++            case DSPROPERTY_EAXBUFFER_REVERBMIX:
++                if (cbPropData != sizeof(float))
++                    return E_FAIL;
++
++                TRACE("setting reverb mix to %f\n", *(float*)pPropData);
++
++                buf->eax.reverb_mix = *(float*)pPropData;
++            break;
++
++            default:
++                return E_PROP_ID_UNSUPPORTED;
++        }
++
++        return S_OK;
+     }
+ 
+     return E_PROP_ID_UNSUPPORTED;
+-- 
+2.3.3
+

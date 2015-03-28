@@ -94,6 +94,7 @@ patch_enable_all ()
 	enable_ddraw_Hotpatch="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
 	enable_dinput_Events="$1"
+	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dxgi_GetDesc="$1"
 	enable_dxva2_Video_Decoder="$1"
@@ -339,6 +340,9 @@ patch_enable ()
 			;;
 		dinput-Events)
 			enable_dinput_Events="$2"
+			;;
+		dsound-EAX)
+			enable_dsound_EAX="$2"
 			;;
 		dsound-Fast_Mixer)
 			enable_dsound_Fast_Mixer="$2"
@@ -1170,6 +1174,13 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	enable_wined3d_DXTn=1
 fi
 
+if test "$enable_dsound_EAX" -eq 1; then
+	if test "$enable_dsound_Fast_Mixer" -gt 1; then
+		abort "Patchset dsound-Fast_Mixer disabled, but dsound-EAX depends on that."
+	fi
+	enable_dsound_Fast_Mixer=1
+fi
+
 if test "$enable_d3dx9_36_AnimationController" -eq 1; then
 	if test "$enable_d3dx9_36_DXTn" -gt 1; then
 		abort "Patchset d3dx9_36-DXTn disabled, but d3dx9_36-AnimationController depends on that."
@@ -1794,6 +1805,51 @@ if test "$enable_dsound_Fast_Mixer" -eq 1; then
 	patch_apply dsound-Fast_Mixer/0001-dsound-Add-a-linear-resampler-for-use-with-a-large-n.patch
 	(
 		echo '+    { "Alexander E. Patrakov", "dsound: Add a linear resampler for use with a large number of mixing buffers.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dsound-EAX
+# |
+# | Modified files:
+# |   *	dlls/dsound/Makefile.in, dlls/dsound/buffer.c, dlls/dsound/dsound.c, dlls/dsound/dsound_eax.h,
+# | 	dlls/dsound/dsound_private.h, dlls/dsound/eax.c, dlls/dsound/mixer.c
+# |
+if test "$enable_dsound_EAX" -eq 1; then
+	patch_apply dsound-EAX/0001-dsound-Apply-filters-before-sound-is-multiplied-to-s.patch
+	patch_apply dsound-EAX/0002-dsound-Add-EAX-v1-constants-and-structs.patch
+	patch_apply dsound-EAX/0003-dsound-Report-that-we-support-EAX-v1.patch
+	patch_apply dsound-EAX/0004-dsound-Add-EAX-propset-stubs.patch
+	patch_apply dsound-EAX/0005-dsound-Add-EAX-presets.patch
+	patch_apply dsound-EAX/0006-dsound-Support-getting-and-setting-EAX-properties.patch
+	patch_apply dsound-EAX/0007-dsound-Support-getting-and-setting-EAX-buffer-proper.patch
+	patch_apply dsound-EAX/0008-dsound-Add-EAX-init-and-free-stubs.patch
+	patch_apply dsound-EAX/0009-dsound-Feed-data-through-EAX-function.patch
+	patch_apply dsound-EAX/0010-dsound-Allocate-EAX-delay-lines.patch
+	patch_apply dsound-EAX/0011-dsound-Add-EAX-VerbPass-stub.patch
+	patch_apply dsound-EAX/0012-dsound-Implement-EAX-lowpass-filter.patch
+	patch_apply dsound-EAX/0013-dsound-Add-delay-line-EAX-functions.patch
+	patch_apply dsound-EAX/0014-dsound-Implement-EAX-early-reflections.patch
+	patch_apply dsound-EAX/0015-dsound-Implement-EAX-decorrelator.patch
+	patch_apply dsound-EAX/0016-dsound-Implement-EAX-late-reverb.patch
+	patch_apply dsound-EAX/0017-dsound-Implement-EAX-late-all-pass-filter.patch
+	(
+		echo '+    { "Sebastian Lackner", "dsound: Apply filters before sound is multiplied to speakers.", 1 },';
+		echo '+    { "Mark Harmstone", "dsound: Add EAX v1 constants and structs.", 1 },';
+		echo '+    { "Mark Harmstone", "dsound: Report that we support EAX.", 1 },';
+		echo '+    { "Mark Harmstone", "dsound: Add EAX propset stubs.", 1 },';
+		echo '+    { "Mark Harmstone", "dsound: Add EAX presets.", 1 },';
+		echo '+    { "Mark Harmstone", "dsound: Support getting and setting EAX properties.", 1 },';
+		echo '+    { "Mark Harmstone", "dsound: Support getting and setting EAX buffer properties.", 1 },';
+		echo '+    { "Mark Harmstone", "dsound: Add EAX init and free stubs.", 1 },';
+		echo '+    { "Mark Harmstone", "dsound: Feed data through EAX function.", 1 },';
+		echo '+    { "Mark Harmstone", "dsound: Allocate EAX delay lines.", 1 },';
+		echo '+    { "Mark Harmstone", "dsound: Add EAX VerbPass stub.", 1 },';
+		echo '+    { "Mark Harmstone", "dsound: Implement EAX lowpass filter.", 1 },';
+		echo '+    { "Mark Harmstone", "dsound: Add delay line EAX functions.", 1 },';
+		echo '+    { "Mark Harmstone", "dsound: Implement EAX early reflections.", 1 },';
+		echo '+    { "Mark Harmstone", "dsound: Implement EAX decorrelator.", 1 },';
+		echo '+    { "Mark Harmstone", "dsound: Implement EAX late reverb.", 1 },';
+		echo '+    { "Mark Harmstone", "dsound: Implement EAX late all-pass filter.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2486,6 +2542,20 @@ if test "$enable_kernel32_Console_Handles" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-FileDispositionInformation
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2502,20 +2572,6 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "server: Keep a pointer to parent'\''s fd unix_name in the closed_fd structure.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "server: Add support for setting file disposition information.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 

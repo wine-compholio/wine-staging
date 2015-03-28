@@ -38,13 +38,14 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [5]:**
+**Bugfixes and features included in the next upcoming release [6]:**
 
 * Add stubs for Power[Set|Clear]Request
 * Avoid spam of FIXME messages for PsLookupProcessByProcessId stub ([Wine Bug #36821](https://bugs.winehq.org/show_bug.cgi?id=36821))
 * Fix compatibility of Uplay with gnutls28 ([Wine Bug #38134](https://bugs.winehq.org/show_bug.cgi?id=38134))
 * Fix handling of ANSI NTLM credentials ([Wine Bug #37063](https://bugs.winehq.org/show_bug.cgi?id=37063))
 * Implement empty enumerator for IWiaDevMgr::EnumDeviceInfo ([Wine Bug #27775](https://bugs.winehq.org/show_bug.cgi?id=27775))
+* Software support for Environmental Audio Extensions (EAX)
 
 
 **Bugs fixed in Wine Staging 1.7.39 [205]:**

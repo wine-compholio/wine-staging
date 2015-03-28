@@ -99,6 +99,7 @@ patch_enable_all ()
 	enable_dsound_Fast_Mixer="$1"
 	enable_dxgi_GetDesc="$1"
 	enable_dxva2_Video_Decoder="$1"
+	enable_fltmgr_Stub_SYS="$1"
 	enable_fonts_Missing_Fonts="$1"
 	enable_gdi32_MaxPixelFormats="$1"
 	enable_gdi32_MultiMonitor="$1"
@@ -357,6 +358,9 @@ patch_enable ()
 			;;
 		dxva2-Video_Decoder)
 			enable_dxva2_Video_Decoder="$2"
+			;;
+		fltmgr-Stub_SYS)
+			enable_fltmgr_Stub_SYS="$2"
 			;;
 		fonts-Missing_Fonts)
 			enable_fonts_Missing_Fonts="$2"
@@ -1891,18 +1895,6 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -1923,6 +1915,18 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-CSMT_Helper
 # |
 # | Modified files:
@@ -1936,33 +1940,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	(
 		echo '+    { "Stefan Dösinger", "wined3d: Merge get_pitch functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Multisampling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
-	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -1997,6 +1974,33 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Multisampling
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Multisampling" -eq 1; then
+	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+	(
+		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2415,6 +2419,21 @@ if test "$enable_dxva2_Video_Decoder" -eq 1; then
 		echo '+    { "Michael Müller", "dxva2: Add DRM mode for vaapi.", 1 },';
 		echo '+    { "Michael Müller", "dxva2: Fill h264 luma and chroma weights / offsets with default values in case they are not specified.", 1 },';
 		echo '+    { "Michael Müller", "dxva2: Always destroy buffers when calling vaRenderPicture.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset fltmgr-Stub_SYS
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#23583] Add stub fltmgr.sys (filter manager driver)
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/fltmgr.sys/Makefile.in, dlls/fltmgr.sys/fltmgr.sys.spec, dlls/fltmgr.sys/main.c, loader/wine.inf.in
+# |
+if test "$enable_fltmgr_Stub_SYS" -eq 1; then
+	patch_apply fltmgr-Stub_SYS/0001-fltmgr.sys-add-stub-dll-try-3.patch
+	(
+		echo '+    { "Austin English", "fltmgr.sys: add stub dll.", 3 },';
 	) >> "$patchlist"
 fi
 
@@ -3773,21 +3792,6 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-OpenProcess
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37087] Return an error when trying to open a terminated process
-# |
-# | Modified files:
-# |   *	server/process.c, server/process.h
-# |
-if test "$enable_server_OpenProcess" -eq 1; then
-	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
-	(
-		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3802,6 +3806,21 @@ if test "$enable_server_Misc_ACL" -eq 1; then
 	(
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-OpenProcess
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37087] Return an error when trying to open a terminated process
+# |
+# | Modified files:
+# |   *	server/process.c, server/process.h
+# |
+if test "$enable_server_OpenProcess" -eq 1; then
+	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
+	(
+		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
 	) >> "$patchlist"
 fi
 

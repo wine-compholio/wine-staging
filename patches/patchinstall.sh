@@ -94,6 +94,7 @@ patch_enable_all ()
 	enable_ddraw_Hotpatch="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
 	enable_dinput_Events="$1"
+	enable_dsound_3DSound="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dxgi_GetDesc="$1"
@@ -341,6 +342,9 @@ patch_enable ()
 			;;
 		dinput-Events)
 			enable_dinput_Events="$2"
+			;;
+		dsound-3DSound)
+			enable_dsound_3DSound="$2"
 			;;
 		dsound-EAX)
 			enable_dsound_EAX="$2"
@@ -1797,6 +1801,21 @@ if test "$enable_dinput_Events" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset dsound-3DSound
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38041] Fix calculation of 3D sound source
+# |
+# | Modified files:
+# |   *	dlls/dsound/sound3d.c
+# |
+if test "$enable_dsound_3DSound" -eq 1; then
+	patch_apply dsound-3DSound/0001-dsound-Fix-angle-to-sound-source-calculation.patch
+	(
+		echo '+    { "Stas Cymbalov", "dsound: Fix angle to sound source calculation.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset dsound-Fast_Mixer
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1920,6 +1939,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-Multisampling
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1966,18 +1997,6 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3754,6 +3773,21 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-OpenProcess
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37087] Return an error when trying to open a terminated process
+# |
+# | Modified files:
+# |   *	server/process.c, server/process.h
+# |
+if test "$enable_server_OpenProcess" -eq 1; then
+	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
+	(
+		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3768,21 +3802,6 @@ if test "$enable_server_Misc_ACL" -eq 1; then
 	(
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-OpenProcess
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37087] Return an error when trying to open a terminated process
-# |
-# | Modified files:
-# |   *	server/process.c, server/process.h
-# |
-if test "$enable_server_OpenProcess" -eq 1; then
-	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
-	(
-		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
 	) >> "$patchlist"
 fi
 

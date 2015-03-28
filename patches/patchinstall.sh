@@ -236,6 +236,7 @@ patch_enable_all ()
 	enable_ws2_32_APC_Performance="$1"
 	enable_ws2_32_Connect_Time="$1"
 	enable_ws2_32_TransmitFile="$1"
+	enable_ws2_32_WS_select="$1"
 	enable_ws2_32_WriteWatches="$1"
 	enable_ws2_32_getaddrinfo="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
@@ -766,6 +767,9 @@ patch_enable ()
 			;;
 		ws2_32-TransmitFile)
 			enable_ws2_32_TransmitFile="$2"
+			;;
+		ws2_32-WS_select)
+			enable_ws2_32_WS_select="$2"
 			;;
 		ws2_32-WriteWatches)
 			enable_ws2_32_WriteWatches="$2"
@@ -4696,6 +4700,18 @@ if test "$enable_ws2_32_TransmitFile" -eq 1; then
 		echo '+    { "Erich E. Hoover", "ws2_32: Add asynchronous support for TransmitFile.", 2 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_DISCONNECT to TransmitFile.", 1 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_REUSE_SOCKET to TransmitFile.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ws2_32-WS_select
+# |
+# | Modified files:
+# |   *	dlls/ws2_32/socket.c
+# |
+if test "$enable_ws2_32_WS_select" -eq 1; then
+	patch_apply ws2_32-WS_select/0001-ws2_32-Don-t-return-an-error-in-WS_select-when-EINTR.patch
+	(
+		echo '+    { "Michael Müller", "ws2_32: Don'\''t return an error in WS_select when EINTR happens during timeout.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -3869,35 +3869,15 @@ fi
 # | 	server/object.h, server/process.c, server/process.h, server/protocol.def
 # |
 if test "$enable_server_JobObjects" -eq 1; then
-	patch_apply server-JobObjects/0001-kernel32-tests-Allow-multiple-subprocess-commands-in.patch
-	patch_apply server-JobObjects/0002-kernel32-tests-Add-tests-for-IsProcessInJob.patch
-	patch_apply server-JobObjects/0003-kernel32-tests-Add-tests-for-TerminateJobObject.patch
-	patch_apply server-JobObjects/0004-kernel32-tests-Add-tests-for-QueryInformationJobObje.patch
-	patch_apply server-JobObjects/0005-kernel32-tests-Add-tests-for-job-object-completion-p.patch
-	patch_apply server-JobObjects/0006-kernel32-tests-Add-tests-for-JOB_OBJECT_LIMIT_KILL_O.patch
-	patch_apply server-JobObjects/0007-kernel32-tests-Add-tests-for-JOB_OBJECT_LIMIT_ACTIVE.patch
-	patch_apply server-JobObjects/0008-kernel32-tests-Add-tests-for-JOB_OBJECT_LIMIT_BREAKA.patch
-	patch_apply server-JobObjects/0009-kernel32-tests-Add-tests-for-job-inheritance.patch
-	patch_apply server-JobObjects/0010-kernel32-tests-Add-tests-for-adding-a-terminated-pro.patch
-	patch_apply server-JobObjects/0011-server-Basic-implementation-of-job-objects.-rev-2.patch
-	patch_apply server-JobObjects/0012-server-Implement-completion-messages-for-job-objects.patch
-	patch_apply server-JobObjects/0013-server-Properly-track-handle-count-of-objects.patch
-	patch_apply server-JobObjects/0014-server-Implement-JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.patch
-	patch_apply server-JobObjects/0015-server-Support-NULL-job-handles-in-IsProcessInJob.patch
-	patch_apply server-JobObjects/0016-kernel32-tests-Add-tests-for-waiting-on-an-job-objec.patch
-	patch_apply server-JobObjects/0017-server-Implement-waiting-for-job-objects.patch
-	patch_apply server-JobObjects/0018-ntdll-Implement-NtQueryInformationJobObject-stub-fun.patch
+	patch_apply server-JobObjects/0001-server-Basic-implementation-of-job-objects.-rev-2.patch
+	patch_apply server-JobObjects/0002-server-Implement-completion-messages-for-job-objects.patch
+	patch_apply server-JobObjects/0003-server-Properly-track-handle-count-of-objects.patch
+	patch_apply server-JobObjects/0004-server-Implement-JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.patch
+	patch_apply server-JobObjects/0005-server-Support-NULL-job-handles-in-IsProcessInJob.patch
+	patch_apply server-JobObjects/0006-kernel32-tests-Add-tests-for-waiting-on-an-job-objec.patch
+	patch_apply server-JobObjects/0007-server-Implement-waiting-for-job-objects.patch
+	patch_apply server-JobObjects/0008-ntdll-Implement-NtQueryInformationJobObject-stub-fun.patch
 	(
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Allow multiple subprocess commands in process tests.", 1 },';
-		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for IsProcessInJob.", 1 },';
-		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for TerminateJobObject.", 1 },';
-		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for QueryInformationJobObject.", 1 },';
-		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for job object completion ports.", 1 },';
-		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.", 1 },';
-		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for JOB_OBJECT_LIMIT_ACTIVE_PROCESS.", 1 },';
-		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for JOB_OBJECT_LIMIT_BREAKAWAY_OK.", 1 },';
-		echo '+    { "Andrew Cook", "kernel32/tests: Add tests for job inheritance.", 1 },';
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for adding a terminated process to a job object.", 1 },';
 		echo '+    { "Andrew Cook", "server: Basic implementation of job objects.", 2 },';
 		echo '+    { "Andrew Cook", "server: Implement completion messages for job objects.", 1 },';
 		echo '+    { "Andrew Cook", "server: Properly track handle count of objects.", 1 },';

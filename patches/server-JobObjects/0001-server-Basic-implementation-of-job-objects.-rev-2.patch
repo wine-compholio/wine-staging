@@ -1,4 +1,4 @@
-From 91a03090c8aafda8f47004734a04a0ac8d83a901 Mon Sep 17 00:00:00 2001
+From fdec43a9ec165284f52d8ecd734abd6e2fe93d90 Mon Sep 17 00:00:00 2001
 From: Andrew Cook <ariscop@gmail.com>
 Date: Thu, 26 Feb 2015 12:25:23 +1100
 Subject: server: Basic implementation of job objects. (rev 2)
@@ -24,10 +24,10 @@ Changes in revision 2:
  6 files changed, 420 insertions(+), 22 deletions(-)
 
 diff --git a/dlls/kernel32/tests/process.c b/dlls/kernel32/tests/process.c
-index a464db2..e23d046 100644
+index 15ebd6e..6c2f86d 100644
 --- a/dlls/kernel32/tests/process.c
 +++ b/dlls/kernel32/tests/process.c
-@@ -2244,7 +2244,6 @@ static void test_IsProcessInJob(void)
+@@ -2209,7 +2209,6 @@ static void test_IsProcessInJob(void)
      out = FALSE;
      ret = pIsProcessInJob(pi.hProcess, job, &out);
      ok(ret, "IsProcessInJob error %u\n", GetLastError());
@@ -35,7 +35,7 @@ index a464db2..e23d046 100644
      ok(out, "IsProcessInJob returned out=%u\n", out);
  
      TerminateProcess(pi.hProcess, 0);
-@@ -2255,7 +2254,6 @@ static void test_IsProcessInJob(void)
+@@ -2220,7 +2219,6 @@ static void test_IsProcessInJob(void)
      out = FALSE;
      ret = pIsProcessInJob(pi.hProcess, job, &out);
      ok(ret, "IsProcessInJob error %u\n", GetLastError());
@@ -43,20 +43,10 @@ index a464db2..e23d046 100644
      ok(out, "IsProcessInJob returned out=%u\n", out);
  
      CloseHandle(pi.hProcess);
-@@ -2269,9 +2267,7 @@ static void test_IsProcessInJob(void)
- 
-     SetLastError(0xdeadbeef);
-     ret = pAssignProcessToJobObject(job, pi.hProcess);
--    todo_wine
-     ok(!ret, "AssignProcessToJobObject unexpectedly succeeded\n");
--    todo_wine
-     expect_eq_d(ERROR_ACCESS_DENIED, GetLastError());
- 
-     CloseHandle(pi.hProcess);
-@@ -2299,13 +2295,11 @@ static void test_TerminateJobObject(void)
+@@ -2247,13 +2245,11 @@ static void test_TerminateJobObject(void)
      ok(ret, "TerminateJobObject error %u\n", GetLastError());
  
-     dwret = WaitForSingleObject(pi.hProcess, 500);
+     dwret = WaitForSingleObject(pi.hProcess, 1000);
 -    todo_wine
      ok(dwret == WAIT_OBJECT_0, "WaitForSingleObject returned %u\n", dwret);
      if (dwret == WAIT_TIMEOUT) TerminateProcess(pi.hProcess, 0);
@@ -67,7 +57,17 @@ index a464db2..e23d046 100644
      ok(dwret == 123 || broken(dwret == 0) /* randomly fails on Win 2000 / XP */,
         "wrong exitcode %u\n", dwret);
  
-@@ -2414,6 +2408,7 @@ static void test_CompletionPort(void)
+@@ -2268,9 +2264,7 @@ static void test_TerminateJobObject(void)
+ 
+     SetLastError(0xdeadbeef);
+     ret = pAssignProcessToJobObject(job, pi.hProcess);
+-    todo_wine
+     ok(!ret, "AssignProcessToJobObject unexpectedly succeeded\n");
+-    todo_wine
+     expect_eq_d(ERROR_ACCESS_DENIED, GetLastError());
+ 
+     CloseHandle(pi.hProcess);
+@@ -2381,6 +2375,7 @@ static void test_CompletionPort(void)
      port_info.CompletionKey = job;
      port_info.CompletionPort = port;
      ret = pSetInformationJobObject(job, JobObjectAssociateCompletionPortInformation, &port_info, sizeof(port_info));
@@ -75,15 +75,15 @@ index a464db2..e23d046 100644
      ok(ret, "SetInformationJobObject error %u\n", GetLastError());
  
      create_process("wait", &pi);
-@@ -2581,7 +2576,6 @@ static HANDLE test_LimitActiveProcesses(void)
+@@ -2478,7 +2473,6 @@ static void test_jobInheritance(HANDLE job)
      out = FALSE;
-     ret = pIsProcessInJob(pi[0].hProcess, job, &out);
+     ret = pIsProcessInJob(pi.hProcess, job, &out);
      ok(ret, "IsProcessInJob error %u\n", GetLastError());
 -    todo_wine
      ok(out, "IsProcessInJob returned out=%u\n", out);
  
-     dwret = WaitForSingleObject(pi[0].hProcess, 500);
-@@ -2612,9 +2606,7 @@ static void test_BreakawayOk(HANDLE job)
+     dwret = WaitForSingleObject(pi.hProcess, 1000);
+@@ -2506,9 +2500,7 @@ static void test_BreakawayOk(HANDLE job)
      snprintf(buffer, MAX_PATH, "\"%s\" tests/process.c %s", selfname, "exit");
  
      ret = CreateProcessA(NULL, buffer, NULL, NULL, FALSE, CREATE_BREAKAWAY_FROM_JOB, NULL, NULL, &si, &pi);
@@ -94,10 +94,10 @@ index a464db2..e23d046 100644
  
      if (ret)
 diff --git a/dlls/ntdll/sync.c b/dlls/ntdll/sync.c
-index 08fab44..56714ef 100644
+index 7d44e60..a0b8c15 100644
 --- a/dlls/ntdll/sync.c
 +++ b/dlls/ntdll/sync.c
-@@ -58,6 +58,7 @@
+@@ -56,6 +56,7 @@
  #include "wine/server.h"
  #include "wine/debug.h"
  #include "ntdll_misc.h"
@@ -105,7 +105,7 @@ index 08fab44..56714ef 100644
  
  WINE_DEFAULT_DEBUG_CHANNEL(ntdll);
  
-@@ -567,9 +568,36 @@ NTSTATUS WINAPI NtQueryMutant(IN HANDLE handle,
+@@ -565,9 +566,36 @@ NTSTATUS WINAPI NtQueryMutant(IN HANDLE handle,
   */
  NTSTATUS WINAPI NtCreateJobObject( PHANDLE handle, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr )
  {
@@ -145,7 +145,7 @@ index 08fab44..56714ef 100644
  }
  
  /******************************************************************************
-@@ -588,8 +616,19 @@ NTSTATUS WINAPI NtOpenJobObject( PHANDLE handle, ACCESS_MASK access, const OBJEC
+@@ -586,8 +614,19 @@ NTSTATUS WINAPI NtOpenJobObject( PHANDLE handle, ACCESS_MASK access, const OBJEC
   */
  NTSTATUS WINAPI NtTerminateJobObject( HANDLE handle, NTSTATUS status )
  {
@@ -167,7 +167,7 @@ index 08fab44..56714ef 100644
  }
  
  /******************************************************************************
-@@ -599,8 +638,17 @@ NTSTATUS WINAPI NtTerminateJobObject( HANDLE handle, NTSTATUS status )
+@@ -597,8 +636,17 @@ NTSTATUS WINAPI NtTerminateJobObject( HANDLE handle, NTSTATUS status )
  NTSTATUS WINAPI NtQueryInformationJobObject( HANDLE handle, JOBOBJECTINFOCLASS class, PVOID info,
                                               ULONG len, PULONG ret_len )
  {
@@ -187,7 +187,7 @@ index 08fab44..56714ef 100644
  }
  
  /******************************************************************************
-@@ -609,8 +657,51 @@ NTSTATUS WINAPI NtQueryInformationJobObject( HANDLE handle, JOBOBJECTINFOCLASS c
+@@ -607,8 +655,51 @@ NTSTATUS WINAPI NtQueryInformationJobObject( HANDLE handle, JOBOBJECTINFOCLASS c
   */
  NTSTATUS WINAPI NtSetInformationJobObject( HANDLE handle, JOBOBJECTINFOCLASS class, PVOID info, ULONG len )
  {
@@ -241,7 +241,7 @@ index 08fab44..56714ef 100644
  }
  
  /******************************************************************************
-@@ -619,8 +710,19 @@ NTSTATUS WINAPI NtSetInformationJobObject( HANDLE handle, JOBOBJECTINFOCLASS cla
+@@ -617,8 +708,19 @@ NTSTATUS WINAPI NtSetInformationJobObject( HANDLE handle, JOBOBJECTINFOCLASS cla
   */
  NTSTATUS WINAPI NtIsProcessInJob( HANDLE process, HANDLE job )
  {
@@ -263,7 +263,7 @@ index 08fab44..56714ef 100644
  }
  
  /******************************************************************************
-@@ -629,8 +731,19 @@ NTSTATUS WINAPI NtIsProcessInJob( HANDLE process, HANDLE job )
+@@ -627,8 +729,19 @@ NTSTATUS WINAPI NtIsProcessInJob( HANDLE process, HANDLE job )
   */
  NTSTATUS WINAPI NtAssignProcessToJobObject( HANDLE job, HANDLE process )
  {
@@ -638,10 +638,10 @@ index da6d3da..ae83b0e 100644
      struct list          classes;         /* window classes owned by the process */
      struct console_input*console;         /* console input */
 diff --git a/server/protocol.def b/server/protocol.def
-index fc6bec5..cc39ef1 100644
+index a34dde9..655a9ac 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -681,6 +681,33 @@ struct rawinput_device
+@@ -682,6 +682,33 @@ struct rawinput_device
      obj_handle_t thandle;        /* thread handle (in the current process) */
  @END
  
@@ -676,5 +676,5 @@ index fc6bec5..cc39ef1 100644
  /* Retrieve information about a newly started process */
  @REQ(get_new_process_info)
 -- 
-2.3.0
+2.3.3
 

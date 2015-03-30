@@ -1,4 +1,4 @@
-From f33f2fb03259b0218b83c1f6891b88cd5fe4336f Mon Sep 17 00:00:00 2001
+From 2dc3e01bbb999ff93918375bdc5071eb9439a011 Mon Sep 17 00:00:00 2001
 From: Andrew Cook <ariscop@gmail.com>
 Date: Thu, 26 Feb 2015 13:02:36 +1100
 Subject: server: Implement completion messages for job objects.
@@ -15,10 +15,10 @@ coding style by Sebastian Lackner <sebastian@fds-team.de>.
  4 files changed, 65 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/kernel32/tests/process.c b/dlls/kernel32/tests/process.c
-index e23d046..97ad297 100644
+index 6c2f86d..911fad7 100644
 --- a/dlls/kernel32/tests/process.c
 +++ b/dlls/kernel32/tests/process.c
-@@ -2408,7 +2408,6 @@ static void test_CompletionPort(void)
+@@ -2375,7 +2375,6 @@ static void test_CompletionPort(void)
      port_info.CompletionKey = job;
      port_info.CompletionPort = port;
      ret = pSetInformationJobObject(job, JobObjectAssociateCompletionPortInformation, &port_info, sizeof(port_info));
@@ -26,28 +26,28 @@ index e23d046..97ad297 100644
      ok(ret, "SetInformationJobObject error %u\n", GetLastError());
  
      create_process("wait", &pi);
-@@ -2416,16 +2415,13 @@ static void test_CompletionPort(void)
+@@ -2383,16 +2382,13 @@ static void test_CompletionPort(void)
      ret = pAssignProcessToJobObject(job, pi.hProcess);
      ok(ret, "AssignProcessToJobObject error %u\n", GetLastError());
  
 -    todo_wine
-     test_completion(port, JOB_OBJECT_MSG_NEW_PROCESS, (DWORD_PTR)job, (LPOVERLAPPED)pi.dwProcessId, 0);
+     test_completion(port, JOB_OBJECT_MSG_NEW_PROCESS, (DWORD_PTR)job, pi.dwProcessId, 0);
  
      TerminateProcess(pi.hProcess, 0);
-     dwret = WaitForSingleObject(pi.hProcess, 500);
+     dwret = WaitForSingleObject(pi.hProcess, 1000);
      ok(dwret == WAIT_OBJECT_0, "WaitForSingleObject returned %u\n", dwret);
  
 -    todo_wine
-     test_completion(port, JOB_OBJECT_MSG_EXIT_PROCESS, (DWORD_PTR)job, (LPOVERLAPPED)pi.dwProcessId, 0);
+     test_completion(port, JOB_OBJECT_MSG_EXIT_PROCESS, (DWORD_PTR)job, pi.dwProcessId, 0);
 -    todo_wine
-     test_completion(port, JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO, (DWORD_PTR)job, NULL, 100);
+     test_completion(port, JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO, (DWORD_PTR)job, 0, 100);
  
      CloseHandle(pi.hProcess);
 diff --git a/dlls/ntdll/sync.c b/dlls/ntdll/sync.c
-index 56714ef..ef4a4cb 100644
+index a0b8c15..c754df6 100644
 --- a/dlls/ntdll/sync.c
 +++ b/dlls/ntdll/sync.c
-@@ -696,6 +696,21 @@ NTSTATUS WINAPI NtSetInformationJobObject( HANDLE handle, JOBOBJECTINFOCLASS cla
+@@ -694,6 +694,21 @@ NTSTATUS WINAPI NtSetInformationJobObject( HANDLE handle, JOBOBJECTINFOCLASS cla
          SERVER_END_REQ;
          break;
  
@@ -175,10 +175,10 @@ index 6384203..e02b7af 100644
 +    }
 +}
 diff --git a/server/protocol.def b/server/protocol.def
-index cc39ef1..126c2a7 100644
+index 655a9ac..deaaa7b 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -709,6 +709,12 @@ struct rawinput_device
+@@ -710,6 +710,12 @@ struct rawinput_device
      unsigned int limit_flags;
  @END
  
@@ -192,5 +192,5 @@ index cc39ef1..126c2a7 100644
  @REQ(get_new_process_info)
      obj_handle_t info;           /* info handle returned from new_process_request */
 -- 
-2.3.0
+2.3.3
 

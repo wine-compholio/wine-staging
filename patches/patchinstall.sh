@@ -110,6 +110,7 @@ patch_enable_all ()
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_Console_Handles="$1"
 	enable_kernel32_CopyFileEx="$1"
+	enable_kernel32_GetDriveTypeW="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_GetLogicalProcessorInformationEx="$1"
 	enable_kernel32_GetNumaProcessorNode="$1"
@@ -391,6 +392,9 @@ patch_enable ()
 			;;
 		kernel32-CopyFileEx)
 			enable_kernel32_CopyFileEx="$2"
+			;;
+		kernel32-GetDriveTypeW)
+			enable_kernel32_GetDriveTypeW="$2"
 			;;
 		kernel32-GetFinalPathNameByHandle)
 			enable_kernel32_GetFinalPathNameByHandle="$2"
@@ -1943,6 +1947,21 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-Multisampling
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Multisampling" -eq 1; then
+	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+	(
+		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-Revert_PixelFormat
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1986,21 +2005,6 @@ if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
 	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Multisampling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
-	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2630,6 +2634,18 @@ if test "$enable_kernel32_CopyFileEx" -eq 1; then
 	patch_apply kernel32-CopyFileEx/0001-kernel32-Add-support-for-progress-callback-in-CopyFi.patch
 	(
 		echo '+    { "Michael Müller", "kernel32: Add support for progress callback in CopyFileEx.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-GetDriveTypeW
+# |
+# | Modified files:
+# |   *	dlls/kernel32/volume.c
+# |
+if test "$enable_kernel32_GetDriveTypeW" -eq 1; then
+	patch_apply kernel32-GetDriveTypeW/0001-kernel32-Return-correct-device-type-for-cd-devices-w.patch
+	(
+		echo '+    { "Michael Müller", "kernel32: Return correct device type for cd devices without medium.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3792,6 +3808,21 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-OpenProcess
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37087] Return an error when trying to open a terminated process
+# |
+# | Modified files:
+# |   *	server/process.c, server/process.h
+# |
+if test "$enable_server_OpenProcess" -eq 1; then
+	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
+	(
+		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3806,21 +3837,6 @@ if test "$enable_server_Misc_ACL" -eq 1; then
 	(
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-OpenProcess
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37087] Return an error when trying to open a terminated process
-# |
-# | Modified files:
-# |   *	server/process.c, server/process.h
-# |
-if test "$enable_server_OpenProcess" -eq 1; then
-	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
-	(
-		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
 	) >> "$patchlist"
 fi
 

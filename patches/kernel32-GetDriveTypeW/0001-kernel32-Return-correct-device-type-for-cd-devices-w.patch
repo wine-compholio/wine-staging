@@ -1,0 +1,33 @@
+From 1af79e37413d3d89f5290649d8e2b040ec0942af Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Mon, 30 Mar 2015 03:03:03 +0200
+Subject: kernel32: Return correct device type for cd devices without medium.
+
+---
+ dlls/kernel32/volume.c | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/kernel32/volume.c b/dlls/kernel32/volume.c
+index 59eda44..38a72c5 100644
+--- a/dlls/kernel32/volume.c
++++ b/dlls/kernel32/volume.c
+@@ -1610,7 +1610,15 @@ UINT WINAPI GetDriveTypeW(LPCWSTR root) /* [in] String describing drive */
+     HANDLE handle;
+     UINT ret;
+ 
+-    if (!open_device_root( root, &handle )) return DRIVE_NO_ROOT_DIR;
++    if (!open_device_root( root, &handle ))
++    {
++        /* CD ROM devices do not necessarily have a volume, but a drive type */
++        ret = get_mountmgr_drive_type( root );
++        if (ret == DRIVE_CDROM || ret == DRIVE_REMOVABLE)
++            return ret;
++
++        return DRIVE_NO_ROOT_DIR;
++    }
+ 
+     status = NtQueryVolumeInformationFile( handle, &io, &info, sizeof(info), FileFsDeviceInformation );
+     NtClose( handle );
+-- 
+2.3.3
+

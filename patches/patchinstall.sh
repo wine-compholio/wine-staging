@@ -1412,20 +1412,23 @@ fi
 # |   *	[#33576] Support for stored file ACLs
 # |
 # | Modified files:
-# |   *	dlls/advapi32/tests/security.c, include/wine/port.h, server/change.c, server/file.c, server/file.h
+# |   *	dlls/advapi32/tests/security.c, include/wine/port.h, server/change.c, server/file.c, server/file.h, server/object.c,
+# | 	server/object.h
 # |
 if test "$enable_server_Stored_ACLs" -eq 1; then
 	patch_apply server-Stored_ACLs/0001-server-Unify-the-storage-of-security-attributes-for-.patch
 	patch_apply server-Stored_ACLs/0002-server-Unify-the-retrieval-of-security-attributes-fo.patch
-	patch_apply server-Stored_ACLs/0003-server-Store-file-security-attributes-with-extended-.patch
-	patch_apply server-Stored_ACLs/0004-server-Store-user-and-group-inside-stored-extended-f.patch
-	patch_apply server-Stored_ACLs/0005-server-Retrieve-file-security-attributes-with-extend.patch
-	patch_apply server-Stored_ACLs/0006-server-Convert-return-of-file-security-masks-with-ge.patch
+	patch_apply server-Stored_ACLs/0003-server-Add-a-helper-function-set_sd_from_token_inter.patch
+	patch_apply server-Stored_ACLs/0004-server-Temporarily-store-the-full-security-descripto.patch
+	patch_apply server-Stored_ACLs/0005-server-Store-file-security-attributes-with-extended-.patch
+	patch_apply server-Stored_ACLs/0006-server-Retrieve-file-security-attributes-with-extend.patch
+	patch_apply server-Stored_ACLs/0007-server-Convert-return-of-file-security-masks-with-ge.patch
 	(
 		echo '+    { "Erich E. Hoover", "server: Unify the storage of security attributes for files and directories.", 7 },';
 		echo '+    { "Erich E. Hoover", "server: Unify the retrieval of security attributes for files and directories.", 7 },';
-		echo '+    { "Erich E. Hoover", "server: Store file security attributes with extended file attributes.", 7 },';
-		echo '+    { "Erich E. Hoover", "server: Store user and group inside stored extended file attribute information.", 7 },';
+		echo '+    { "Sebastian Lackner", "server: Add a helper function set_sd_from_token_internal to merge two security descriptors.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Temporarily store the full security descriptor for file objects.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Store file security attributes with extended file attributes.", 8 },';
 		echo '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes.", 7 },';
 		echo '+    { "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings.", 7 },';
 	) >> "$patchlist"

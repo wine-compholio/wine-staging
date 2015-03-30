@@ -1,12 +1,12 @@
-From 687e5f2a153a1fbbac2631bea088b0237f2d4a20 Mon Sep 17 00:00:00 2001
+From be825014ca6fcdd6ecbad7e7270a5f949056b24b Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Fri, 18 Apr 2014 15:34:47 -0600
-Subject: server: Store file security attributes with extended file
- attributes. (try 7)
+Date: Mon, 30 Mar 2015 13:04:23 +0200
+Subject: server: Store file security attributes with extended file attributes.
+ (v8)
 
 ---
- include/wine/port.h |    3 +++
- server/file.c       |   34 ++++++++++++++++++++++++++++++++++
+ include/wine/port.h |  3 +++
+ server/file.c       | 34 ++++++++++++++++++++++++++++++++++
  2 files changed, 37 insertions(+)
 
 diff --git a/include/wine/port.h b/include/wine/port.h
@@ -24,7 +24,7 @@ index 9e2b8165..71be265 100644
  extern int xattr_fget( int filedes, const char *name, void *value, size_t size );
  extern int xattr_fremove( int filedes, const char *name );
 diff --git a/server/file.c b/server/file.c
-index 1f008ea..502951c 100644
+index 7493735..be07f4e 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -32,6 +32,7 @@
@@ -50,11 +50,11 @@ index 1f008ea..502951c 100644
  struct file
  {
      struct object       obj;        /* object header */
-@@ -178,6 +187,28 @@ static struct object *create_file_obj( struct fd *fd, unsigned int access, mode_
+@@ -189,6 +198,28 @@ static struct object *create_file_obj( struct fd *fd, unsigned int access, mode_
      return &file->obj;
  }
  
-+void set_xattr_sd( int fd, const struct security_descriptor *sd )
++static void set_xattr_sd( int fd, const struct security_descriptor *sd )
 +{
 +    char buffer[XATTR_SIZE_MAX];
 +    int present, len;
@@ -65,8 +65,8 @@ index 1f008ea..502951c 100644
 +    dacl = sd_get_dacl( sd, &present );
 +    if (!present || !dacl) return;
 +
-+    len = 2 + sizeof(struct security_descriptor) + sd->owner_len + sd->group_len + sd->sacl_len
-+          + sd->dacl_len;
++    len = 2 + sizeof(struct security_descriptor) + sd->owner_len +
++          sd->group_len + sd->sacl_len + sd->dacl_len;
 +    if (len > XATTR_SIZE_MAX) return;
 +
 +    /* include the descriptor revision and resource manager control bits */
@@ -79,23 +79,16 @@ index 1f008ea..502951c 100644
  static struct object *create_file( struct fd *root, const char *nameptr, data_size_t len,
                                     unsigned int access, unsigned int sharing, int create,
                                     unsigned int options, unsigned int attrs,
-@@ -239,6 +270,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
-     /* FIXME: should set error to STATUS_OBJECT_NAME_COLLISION if file existed before */
-     fd = open_fd( root, name, flags | O_NONBLOCK | O_LARGEFILE, &mode, access, sharing, options );
-     if (!fd) goto done;
-+    set_xattr_sd( get_unix_fd( fd ), sd );
+@@ -612,6 +643,9 @@ int set_file_sd( struct object *obj, struct fd *fd, mode_t *mode, uid_t *uid,
+             *mode = new_mode;
+         }
  
-     if (S_ISDIR(mode))
-         obj = create_dir_obj( fd, access, mode );
-@@ -580,6 +612,8 @@ int set_file_sd( struct object *obj, struct fd *fd, const struct security_descri
-         mode = st.st_mode & (S_ISUID|S_ISGID|S_ISVTX);
-         mode |= sd_to_mode( sd, owner );
- 
-+        set_xattr_sd( unix_fd, sd );
++        /* extended attributes are set after the file mode, to ensure it stays in sync */
++        set_xattr_sd( unix_fd, new_sd );
 +
-         if (((st.st_mode ^ mode) & (S_IRWXU|S_IRWXG|S_IRWXO)) && fchmod( unix_fd, mode ) == -1)
-         {
-             file_set_error();
+         free( obj->sd );
+         obj->sd = new_sd;
+         return 1;
 -- 
-1.7.9.5
+2.3.3
 

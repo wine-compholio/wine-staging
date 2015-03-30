@@ -1,4 +1,4 @@
-From bab9a36e823c7d0227bcc72d691eac90a5ff405d Mon Sep 17 00:00:00 2001
+From 2b904b005f24af58f0b74a7b4d4f3e4db31f2553 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 14:08:36 -0600
 Subject: server: Inherit security attributes from parent directories on
@@ -10,7 +10,7 @@ Subject: server: Inherit security attributes from parent directories on
  2 files changed, 137 insertions(+), 10 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index f98bf2b..8eed015 100644
+index 137ac5a..fc666f4 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
 @@ -3230,7 +3230,6 @@ static void test_CreateDirectoryA(void)
@@ -70,22 +70,22 @@ index f98bf2b..8eed015 100644
             "Inherited Administators Group ACE has unexpected flags (0x%x != 0x10)\n", ((ACE_HEADER *)ace)->AceFlags);
          ok(ace->Mask == 0x1f01ff, "Administators Group ACE has unexpected mask (0x%x != 0x1f01ff)\n",
 diff --git a/server/file.c b/server/file.c
-index 09b7811..188e352 100644
+index d479440..14de2c5 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -71,6 +71,7 @@ struct file
  };
  
  static unsigned int generic_file_map_access( unsigned int access );
-+struct security_descriptor *get_xattr_sd( int fd );
++static struct security_descriptor *get_xattr_sd( int fd );
  
  static void file_dump( struct object *obj, int verbose );
  static struct fd *file_get_fd( struct object *obj );
-@@ -252,11 +253,142 @@ void set_xattr_sd( int fd, const struct security_descriptor *sd, const SID *user
+@@ -220,11 +221,142 @@ static void set_xattr_sd( int fd, const struct security_descriptor *sd )
      xattr_fset( fd, WINE_XATTR_SD, buffer, len );
  }
  
-+struct security_descriptor *inherit_sd( const struct security_descriptor *parent_sd, int is_dir )
++static struct security_descriptor *inherit_sd( const struct security_descriptor *parent_sd, int is_dir )
 +{
 +    const DWORD inheritance_mask = INHERIT_ONLY_ACE | OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE;
 +    struct security_descriptor *sd = NULL;
@@ -221,10 +221,10 @@ index 09b7811..188e352 100644
                                     const struct security_descriptor *sd )
  {
 +    struct security_descriptor *temp_sd = NULL;
-     const SID *owner = NULL, *group = NULL;
      struct object *obj = NULL;
      struct fd *fd;
-@@ -286,6 +418,10 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+     int flags;
+@@ -253,6 +385,10 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
      default:                set_error( STATUS_INVALID_PARAMETER ); goto done;
      }
  
@@ -234,8 +234,8 @@ index 09b7811..188e352 100644
 +
      if (sd)
      {
-         owner = sd_get_owner( sd );
-@@ -329,6 +465,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+         const SID *owner = sd_get_owner( sd );
+@@ -292,6 +428,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
      release_object( fd );
  
  done:

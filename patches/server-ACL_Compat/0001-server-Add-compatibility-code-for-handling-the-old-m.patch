@@ -1,26 +1,26 @@
-From c7ee69405e7f18058ca0b1c05e8dfa7ee669df13 Mon Sep 17 00:00:00 2001
+From e474515fe1624147bde11553c701462b14d7850b Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 15:21:00 -0600
 Subject: server: Add compatibility code for handling the old method of storing
  ACLs. (try 6)
 
 ---
- server/file.c | 167 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++--
- 1 file changed, 164 insertions(+), 3 deletions(-)
+ server/file.c | 170 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 167 insertions(+), 3 deletions(-)
 
 diff --git a/server/file.c b/server/file.c
-index 146ea68..4c72775 100644
+index 9031de3..4150d42 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -72,6 +72,7 @@ struct file
  
  static unsigned int generic_file_map_access( unsigned int access );
- struct security_descriptor *get_xattr_sd( int fd );
-+struct security_descriptor *get_xattr_acls( int fd, const SID *user, const SID *group );
+ static struct security_descriptor *get_xattr_sd( int fd );
++static struct security_descriptor *get_xattr_acls( int fd, const SID *user, const SID *group );
  
  static void file_dump( struct object *obj, int verbose );
  static struct fd *file_get_fd( struct object *obj );
-@@ -440,6 +441,7 @@ static struct security_descriptor *file_get_parent_sd( struct fd *root, const ch
+@@ -408,6 +409,7 @@ static struct security_descriptor *file_get_parent_sd( struct fd *root, const ch
      mode_t parent_mode = 0555;
      char *p, *parent_name;
      struct fd *parent_fd;
@@ -28,7 +28,7 @@ index 146ea68..4c72775 100644
      int unix_fd;
  
      if (!(parent_name = mem_alloc( child_len + 1 ))) return NULL;
-@@ -472,6 +474,9 @@ static struct security_descriptor *file_get_parent_sd( struct fd *root, const ch
+@@ -440,6 +442,9 @@ static struct security_descriptor *file_get_parent_sd( struct fd *root, const ch
          if (unix_fd != -1)
          {
              parent_sd = get_xattr_sd( unix_fd );
@@ -38,11 +38,11 @@ index 146ea68..4c72775 100644
              if (parent_sd)
              {
                  sd = inherit_sd( parent_sd, is_dir );
-@@ -759,6 +764,160 @@ struct security_descriptor *get_xattr_sd( int fd )
-     return sd;
+@@ -723,6 +728,163 @@ static void convert_generic_sd( struct security_descriptor *sd )
+     }
  }
  
-+struct security_descriptor *get_xattr_acls( int fd, const SID *user, const SID *group )
++static struct security_descriptor *get_xattr_acls( int fd, const SID *user, const SID *group )
 +{
 +    int dacl_size = sizeof(ACL), n;
 +    int offset, type, flags, mask, rev, ia, sa;
@@ -189,17 +189,20 @@ index 146ea68..4c72775 100644
 +    while (*p);
 +
 +    if (sd_is_valid( sd, n ))
++    {
++        convert_generic_sd( sd );
 +        return sd;
++    }
 +
 +err:
 +    free( sd );
 +    return NULL;
 +}
 +
- /* Convert generic rights into standard access rights */
- void convert_generic_sd( struct security_descriptor *sd )
+ static struct security_descriptor *get_xattr_sd( int fd )
  {
-@@ -786,6 +945,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
+     struct security_descriptor *sd;
+@@ -752,6 +914,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
      int unix_fd = get_unix_fd( fd );
      struct stat st;
      struct security_descriptor *sd;
@@ -207,22 +210,21 @@ index 146ea68..4c72775 100644
  
      if (unix_fd == -1 || fstat( unix_fd, &st ) == -1)
          return obj->sd;
-@@ -795,11 +955,12 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
+@@ -761,10 +924,11 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
          (st.st_uid == *uid))
          return obj->sd;
  
 +    user = security_unix_uid_to_sid( st.st_uid );
 +    group = token_get_primary_group( current->process->token );
      sd = get_xattr_sd( unix_fd );
-+    if (!sd) sd = get_xattr_acls( unix_fd, user, group );
-     if (sd) convert_generic_sd( sd );
 -    if (!sd) sd = mode_to_sd( st.st_mode,
 -                              security_unix_uid_to_sid( st.st_uid ),
 -                              token_get_primary_group( current->process->token ));
++    if (!sd) sd = get_xattr_acls( unix_fd, user, group );
 +    if (!sd) sd = mode_to_sd( st.st_mode, user, group );
      if (!sd) return obj->sd;
  
      *mode = st.st_mode;
 -- 
-2.3.2
+2.3.3
 

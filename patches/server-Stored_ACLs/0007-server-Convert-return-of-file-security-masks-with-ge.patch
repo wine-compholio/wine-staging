@@ -1,16 +1,16 @@
-From 20110e2294539cba86a259a6b5fc6749f2e5cdd4 Mon Sep 17 00:00:00 2001
+From c544c9af2e3f6526b871d6d9e22ca77ee1bd7690 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 14:05:32 -0600
 Subject: server: Convert return of file security masks with generic access
  mappings. (try 7)
 
 ---
- dlls/advapi32/tests/security.c | 16 ++++++++--------
- server/file.c                  | 22 ++++++++++++++++++++++
- 2 files changed, 30 insertions(+), 8 deletions(-)
+ dlls/advapi32/tests/security.c | 20 ++++++++++----------
+ server/file.c                  | 29 ++++++++++++++++++++++++++++-
+ 2 files changed, 38 insertions(+), 11 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index 3457fbc..c256753 100644
+index 98b3f43..fa4c86d 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
 @@ -3197,8 +3197,8 @@ static void test_CreateDirectoryA(void)
@@ -57,16 +57,34 @@ index 3457fbc..c256753 100644
      }
      LocalFree(pSD);
  
+@@ -4150,7 +4150,7 @@ static void test_GetSecurityInfo(void)
+         ok(bret, "Current User ACE != Current User SID.\n");
+         ok(((ACE_HEADER *)ace)->AceFlags == 0,
+            "Current User ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
+-        todo_wine ok(ace->Mask == 0x1f01ff,
++        ok(ace->Mask == 0x1f01ff,
+                      "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n", ace->Mask);
+     }
+     if (acl_size.AceCount > 1)
+@@ -4161,7 +4161,7 @@ static void test_GetSecurityInfo(void)
+         ok(bret, "Administators Group ACE != Administators Group SID.\n");
+         ok(((ACE_HEADER *)ace)->AceFlags == 0,
+            "Administators Group ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
+-        todo_wine ok(ace->Mask == 0x1f01ff,
++        ok(ace->Mask == 0x1f01ff,
+                      "Administators Group ACE has unexpected mask (0x%x != 0x1f01ff)\n", ace->Mask);
+     }
+     LocalFree(pSD);
 diff --git a/server/file.c b/server/file.c
-index 33f9483..a50276e 100644
+index a2cea64..d3a97af 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -522,6 +522,27 @@ struct security_descriptor *get_xattr_sd( int fd )
+@@ -466,6 +466,26 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID
      return sd;
  }
  
 +/* Convert generic rights into standard access rights */
-+void convert_generic_sd( struct security_descriptor *sd )
++static void convert_generic_sd( struct security_descriptor *sd )
 +{
 +    const ACL *dacl;
 +    int present;
@@ -80,23 +98,37 @@ index 33f9483..a50276e 100644
 +        for (i = 0; i < dacl->AceCount; i++, ace = ace_next( ace ))
 +        {
 +            DWORD *mask = (DWORD *)(ace + 1);
-+
 +            *mask = generic_file_map_access( *mask );
 +        }
 +    }
 +}
 +
- struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode_t *mode,
-                                          uid_t *uid )
+ static struct security_descriptor *get_xattr_sd( int fd )
  {
-@@ -538,6 +559,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
-         return obj->sd;
+     struct security_descriptor *sd;
+@@ -481,7 +501,11 @@ static struct security_descriptor *get_xattr_sd( int fd )
+         return NULL;
  
-     sd = get_xattr_sd( unix_fd );
-+    if (sd) convert_generic_sd( sd );
-     if (!sd) sd = mode_to_sd( st.st_mode,
-                               security_unix_uid_to_sid( st.st_uid ),
-                               token_get_primary_group( current->process->token ));
+     sd = mem_alloc( n - 2 );
+-    if (sd) memcpy( sd, &buffer[2], n - 2 );
++    if (sd)
++    {
++        memcpy( sd, &buffer[2], n - 2 );
++        convert_generic_sd( sd ); /* for backwards compatibility */
++    }
+     return sd;
+ }
+ 
+@@ -622,6 +646,9 @@ int set_file_sd( struct object *obj, struct fd *fd, mode_t *mode, uid_t *uid,
+     new_sd = set_sd_from_token_internal( sd, obj->sd, set_info, current->process->token );
+     if (new_sd)
+     {
++        /* convert generic rights into standard access rights */
++        convert_generic_sd( new_sd );
++
+         if (set_info & OWNER_SECURITY_INFORMATION)
+         {
+             owner = sd_get_owner( new_sd );
 -- 
 2.3.3
 

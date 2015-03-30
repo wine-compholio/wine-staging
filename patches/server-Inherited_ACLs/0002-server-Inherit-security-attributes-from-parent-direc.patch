@@ -1,15 +1,36 @@
-From 72d852c01753120da3503f97dc1b9ab7d7c4d8f9 Mon Sep 17 00:00:00 2001
+From 5d79bee5c5ee1e9a17fb60a53c4ab0c489f17943 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 14:10:49 -0600
 Subject: server: Inherit security attributes from parent directories on
  SetSecurityInfo. (try 7)
 
 ---
- server/fd.c   |  13 +++++-
- server/file.c | 133 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++--
- server/file.h |   1 +
- 3 files changed, 141 insertions(+), 6 deletions(-)
+ dlls/advapi32/tests/security.c |   2 +
+ server/fd.c                    |  13 ++++-
+ server/file.c                  | 121 +++++++++++++++++++++++++++++++++++++++++
+ server/file.h                  |   1 +
+ 4 files changed, 135 insertions(+), 2 deletions(-)
 
+diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
+index fc666f4..2bc7e56 100644
+--- a/dlls/advapi32/tests/security.c
++++ b/dlls/advapi32/tests/security.c
+@@ -3230,6 +3230,7 @@ static void test_CreateDirectoryA(void)
+     ok(error == ERROR_SUCCESS, "Failed to get permissions on file.\n");
+     bret = pGetAclInformation(pDacl, &acl_size, sizeof(acl_size), AclSizeInformation);
+     ok(bret, "GetAclInformation failed\n");
++    todo_wine
+     ok(acl_size.AceCount == 2, "GetAclInformation returned unexpected entry count (%d != 2).\n",
+                                acl_size.AceCount);
+     if (acl_size.AceCount > 0)
+@@ -3277,6 +3278,7 @@ static void test_CreateDirectoryA(void)
+     ok(error == ERROR_SUCCESS, "Failed to get permissions on file.\n");
+     bret = pGetAclInformation(pDacl, &acl_size, sizeof(acl_size), AclSizeInformation);
+     ok(bret, "GetAclInformation failed\n");
++    todo_wine
+     ok(acl_size.AceCount == 2, "GetAclInformation returned unexpected entry count (%d != 2).\n",
+                                acl_size.AceCount);
+     if (acl_size.AceCount > 0)
 diff --git a/server/fd.c b/server/fd.c
 index e3b722c..e6ec90a 100644
 --- a/server/fd.c
@@ -42,10 +63,10 @@ index e3b722c..e6ec90a 100644
  
      if (orig->inode)
 diff --git a/server/file.c b/server/file.c
-index 188e352..146ea68 100644
+index 14de2c5..9031de3 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -333,6 +333,106 @@ struct security_descriptor *inherit_sd( const struct security_descriptor *parent
+@@ -301,6 +301,106 @@ static struct security_descriptor *inherit_sd( const struct security_descriptor
      return sd;
  }
  
@@ -152,18 +173,17 @@ index 188e352..146ea68 100644
  static struct security_descriptor *file_get_parent_sd( struct fd *root, const char *child_name,
                                                         int child_len, int is_dir )
  {
-@@ -805,20 +905,41 @@ mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner )
- int set_file_sd( struct object *obj, struct fd *fd, const struct security_descriptor *sd,
-                  unsigned int set_info )
+@@ -770,6 +870,7 @@ mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner )
+ int set_file_sd( struct object *obj, struct fd *fd, mode_t *mode, uid_t *uid,
+                  const struct security_descriptor *sd, unsigned int set_info )
  {
 +    struct security_descriptor *tmp_sd = NULL;
+     struct security_descriptor *new_sd;
      int unix_fd = get_unix_fd( fd );
      const SID *owner, *group;
-     struct stat st;
-     mode_t mode;
-+    int ret = 1;
- 
-     if (unix_fd == -1 || fstat( unix_fd, &st ) == -1) return 1;
+@@ -779,8 +880,28 @@ int set_file_sd( struct object *obj, struct fd *fd, mode_t *mode, uid_t *uid,
+     if (!set_info || unix_fd == -1 || fstat( unix_fd, &st ) == -1) return 1;
+     if (!obj->sd) get_file_sd( obj, fd, mode, uid );
  
 +    if (!(set_info & PROTECTED_DACL_SECURITY_INFORMATION))
 +    {
@@ -183,46 +203,15 @@ index 188e352..146ea68 100644
 +        }
 +    }
 +
-     if (set_info & OWNER_SECURITY_INFORMATION)
-     {
-         owner = sd_get_owner( sd );
-         if (!owner)
-         {
-             set_error( STATUS_INVALID_SECURITY_DESCR );
--            return 0;
-+            ret = 0;
-+            goto err;
-         }
-         if (!obj->sd || !security_equal_sid( owner, sd_get_owner( obj->sd ) ))
-         {
-@@ -836,7 +957,8 @@ int set_file_sd( struct object *obj, struct fd *fd, const struct security_descri
-         if (!group)
-         {
-             set_error( STATUS_INVALID_SECURITY_DESCR );
--            return 0;
-+            ret = 0;
-+            goto err;
-         }
-         if (!obj->sd || !security_equal_sid( group, sd_get_group( obj->sd ) ))
-         {
-@@ -861,10 +983,13 @@ int set_file_sd( struct object *obj, struct fd *fd, const struct security_descri
-         if (((st.st_mode ^ mode) & (S_IRWXU|S_IRWXG|S_IRWXO)) && fchmod( unix_fd, mode ) == -1)
-         {
-             file_set_error();
--            return 0;
-+            ret = 0;
-         }
-     }
--    return 1;
-+
-+err:
+     /* calculate the new sd, save to a temporary variable before assigning */
+     new_sd = set_sd_from_token_internal( sd, obj->sd, set_info, current->process->token );
 +    free( tmp_sd );
-+    return ret;
- }
- 
- static int file_set_sd( struct object *obj, const struct security_descriptor *sd,
++
+     if (new_sd)
+     {
+         /* convert generic rights into standard access rights */
 diff --git a/server/file.h b/server/file.h
-index e15fa2a..00bfa7a 100644
+index 16883b2..cf49b08 100644
 --- a/server/file.h
 +++ b/server/file.h
 @@ -79,6 +79,7 @@ extern void allow_fd_caching( struct fd *fd );

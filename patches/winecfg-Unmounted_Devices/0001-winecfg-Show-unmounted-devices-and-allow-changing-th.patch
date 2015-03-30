@@ -1,0 +1,154 @@
+From 3cdf8418055efc6fc1d1e0b290ad02a6e0ed2128 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Mon, 30 Mar 2015 04:38:21 +0200
+Subject: winecfg: Show unmounted devices and allow changing the device value.
+
+---
+ programs/winecfg/drive.c   | 24 ++++++++++++------------
+ programs/winecfg/driveui.c | 27 ++++++++++++++++++---------
+ 2 files changed, 30 insertions(+), 21 deletions(-)
+
+diff --git a/programs/winecfg/drive.c b/programs/winecfg/drive.c
+index 8cad14a..a740d74 100644
+--- a/programs/winecfg/drive.c
++++ b/programs/winecfg/drive.c
+@@ -106,7 +106,7 @@ BOOL add_drive(char letter, const char *targetpath, const char *device, const WC
+                wine_dbgstr_w(label), serial, type);
+ 
+     drives[driveIndex].letter   = toupper(letter);
+-    drives[driveIndex].unixpath = strdupA(targetpath);
++    drives[driveIndex].unixpath = targetpath ? strdupA(targetpath) : NULL;
+     drives[driveIndex].device   = device ? strdupA(device) : NULL;
+     drives[driveIndex].label    = label ? strdupW(label) : NULL;
+     drives[driveIndex].serial   = serial;
+@@ -290,8 +290,7 @@ BOOL load_drives(void)
+                 volname[0] = 0;
+                 serial = 0;
+             }
+-            if (unixpath)  /* FIXME: handle unmounted drives too */
+-                add_drive( root[0], unixpath, device, volname, serial, get_drive_type(root[0]) );
++            add_drive( root[0], unixpath, device, volname, serial, get_drive_type(root[0]) );
+             root[0]++;
+         }
+         else
+@@ -331,32 +330,33 @@ void apply_drive_changes(void)
+         len = sizeof(*ioctl);
+         if (drives[i].in_use)
+         {
+-            len += strlen(drives[i].unixpath) + 1;
++            if (drives[i].unixpath) len += strlen(drives[i].unixpath) + 1;
+             if (drives[i].device) len += strlen(drives[i].device) + 1;
+         }
+         if (!(ioctl = HeapAlloc( GetProcessHeap(), 0, len ))) continue;
+         ioctl->size = len;
++        ioctl->type = DRIVE_NO_ROOT_DIR;
+         ioctl->letter = 'a' + i;
++        ioctl->mount_point_offset = 0;
+         ioctl->device_offset = 0;
+         if (drives[i].in_use)
+         {
+             char *ptr = (char *)(ioctl + 1);
+ 
+             ioctl->type = drives[i].type;
+-            strcpy( ptr, drives[i].unixpath );
+-            ioctl->mount_point_offset = ptr - (char *)ioctl;
+-            if (drives[i].device)
++            if (drives[i].unixpath)
+             {
++                strcpy( ptr, drives[i].unixpath );
++                ioctl->mount_point_offset = ptr - (char *)ioctl;
+                 ptr += strlen(ptr) + 1;
++            }
++
++            if (drives[i].device)
++            {
+                 strcpy( ptr, drives[i].device );
+                 ioctl->device_offset = ptr - (char *)ioctl;
+             }
+         }
+-        else
+-        {
+-            ioctl->type = DRIVE_NO_ROOT_DIR;
+-            ioctl->mount_point_offset = 0;
+-        }
+ 
+         if (DeviceIoControl( mgr, IOCTL_MOUNTMGR_DEFINE_UNIX_DRIVE, ioctl, len, NULL, 0, NULL, NULL ))
+         {
+diff --git a/programs/winecfg/driveui.c b/programs/winecfg/driveui.c
+index 98e057b..fcd7ac3 100644
+--- a/programs/winecfg/driveui.c
++++ b/programs/winecfg/driveui.c
+@@ -176,14 +176,12 @@ static void enable_labelserial_box(HWND dialog, int mode)
+     {
+         case BOX_MODE_DEVICE:
+             /* FIXME: enable device editing */
+-            disable(IDC_EDIT_DEVICE);
+             disable(IDC_BUTTON_BROWSE_DEVICE);
+             disable(IDC_EDIT_SERIAL);
+             disable(IDC_EDIT_LABEL);
+             break;
+ 
+         case BOX_MODE_NORMAL:
+-            disable(IDC_EDIT_DEVICE);
+             disable(IDC_BUTTON_BROWSE_DEVICE);
+             enable(IDC_EDIT_SERIAL);
+             enable(IDC_EDIT_LABEL);
+@@ -234,7 +232,7 @@ static int fill_drives_list(HWND dialog)
+         lv_insert_item(dialog, &item);
+         HeapFree(GetProcessHeap(), 0, item.pszText);
+ 
+-        path = strdupU2W(drives[i].unixpath);
++        path = strdupU2W(drives[i].unixpath ? drives[i].unixpath : "");
+         lv_set_item_text(dialog, count, 1, path);
+         HeapFree(GetProcessHeap(), 0, path);
+ 
+@@ -433,7 +431,7 @@ static void update_controls(HWND dialog)
+ 
+     /* path */
+     WINE_TRACE("set path control text to '%s'\n", current_drive->unixpath);
+-    path = strdupU2W(current_drive->unixpath);
++    path = strdupU2W(current_drive->unixpath ? current_drive->unixpath : "");
+     set_textW(dialog, IDC_EDIT_PATH, path);
+     HeapFree(GetProcessHeap(), 0, path);
+ 
+@@ -518,11 +516,11 @@ static void on_edit_changed(HWND dialog, WORD id)
+             else
+             {
+                 path = NULL;
+-                wpath = strdupU2W("drive_c");
++                wpath = strdupU2W("");
+             }
+ 
+             HeapFree(GetProcessHeap(), 0, current_drive->unixpath);
+-            current_drive->unixpath = path ? path : strdupA("drive_c");
++            current_drive->unixpath = path;
+             current_drive->modified = TRUE;
+ 
+             WINE_TRACE("set path to %s\n", current_drive->unixpath);
+@@ -554,9 +552,20 @@ static void on_edit_changed(HWND dialog, WORD id)
+ 
+         case IDC_EDIT_DEVICE:
+         {
+-            char *device = get_text(dialog, id);
+-            /* TODO: handle device if/when it makes sense to do so.... */
+-            HeapFree(GetProcessHeap(), 0, device);
++            WCHAR *wdevice = get_textW(dialog, id);
++            char *device;
++            int lenW;
++
++            HeapFree(GetProcessHeap(), 0, current_drive->device);
++
++            if ((lenW = WideCharToMultiByte(CP_UNIXCP, 0, wdevice, -1, NULL, 0, NULL, NULL)))
++            {
++                device = HeapAlloc(GetProcessHeap(), 0, lenW);
++                WideCharToMultiByte(CP_UNIXCP, 0, wdevice, -1, device, lenW, NULL, NULL);
++                current_drive->device = device;
++            }
++            else
++                current_drive->device = NULL;
+             break;
+         }
+     }
+-- 
+2.3.3
+

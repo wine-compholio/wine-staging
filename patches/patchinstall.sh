@@ -126,6 +126,7 @@ patch_enable_all ()
 	enable_libs_Unicode_Collation="$1"
 	enable_makedep_PARENTSPEC="$1"
 	enable_mmdevapi_AEV_Stubs="$1"
+	enable_mountmgr_DosDevices="$1"
 	enable_msctf_DllCanUnloadNow="$1"
 	enable_msvcp90_basic_string_wchar_dtor="$1"
 	enable_msvcrt_atof_strtod="$1"
@@ -440,6 +441,9 @@ patch_enable ()
 			;;
 		mmdevapi-AEV_Stubs)
 			enable_mmdevapi_AEV_Stubs="$2"
+			;;
+		mountmgr-DosDevices)
+			enable_mountmgr_DosDevices="$2"
 			;;
 		msctf-DllCanUnloadNow)
 			enable_msctf_DllCanUnloadNow="$2"
@@ -1947,6 +1951,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-Multisampling
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1993,18 +2009,6 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2888,6 +2892,21 @@ if test "$enable_mmdevapi_AEV_Stubs" -eq 1; then
 		echo '+    { "Christian Costa", "mmdevapi: Improve AEV_GetVolumeRange stub.", 1 },';
 		echo '+    { "Christian Costa", "mmdevapi: Improve AEV_SetMasterVolumeLevel and AEV_GetMasterVolumeLevel stubs.", 1 },';
 		echo '+    { "Christian Costa", "mmdevapi: Improve AEV_SetMute and AEV_GetMute stubs.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset mountmgr-DosDevices
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38235] Fix device paths in HKLM\SYSTEM\MountedDevices
+# |
+# | Modified files:
+# |   *	dlls/mountmgr.sys/device.c, dlls/mountmgr.sys/mountmgr.c, dlls/mountmgr.sys/mountmgr.h
+# |
+if test "$enable_mountmgr_DosDevices" -eq 1; then
+	patch_apply mountmgr-DosDevices/0001-mountmgr.sys-Write-usable-device-paths-into-HKLM-SYS.patch
+	(
+		echo '+    { "Michael Müller", "mountmgr.sys: Write usable device paths into HKLM\\\\SYSTEM\\\\MountedDevices.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3808,21 +3827,6 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-OpenProcess
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37087] Return an error when trying to open a terminated process
-# |
-# | Modified files:
-# |   *	server/process.c, server/process.h
-# |
-if test "$enable_server_OpenProcess" -eq 1; then
-	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
-	(
-		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3837,6 +3841,21 @@ if test "$enable_server_Misc_ACL" -eq 1; then
 	(
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-OpenProcess
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37087] Return an error when trying to open a terminated process
+# |
+# | Modified files:
+# |   *	server/process.c, server/process.h
+# |
+if test "$enable_server_OpenProcess" -eq 1; then
+	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
+	(
+		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
 	) >> "$patchlist"
 fi
 

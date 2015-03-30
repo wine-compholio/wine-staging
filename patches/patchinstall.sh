@@ -1069,21 +1069,10 @@ if test "$enable_server_ACL_Compat" -eq 1; then
 fi
 
 if test "$enable_server_Inherited_ACLs" -eq 1; then
-	if test "$enable_server_Stored_ACLs" -gt 1; then
-		abort "Patchset server-Stored_ACLs disabled, but server-Inherited_ACLs depends on that."
-	fi
-	enable_server_Stored_ACLs=1
-fi
-
-if test "$enable_server_Stored_ACLs" -eq 1; then
 	if test "$enable_advapi32_Revert_DACL" -gt 1; then
-		abort "Patchset advapi32-Revert_DACL disabled, but server-Stored_ACLs depends on that."
-	fi
-	if test "$enable_ntdll_DOS_Attributes" -gt 1; then
-		abort "Patchset ntdll-DOS_Attributes disabled, but server-Stored_ACLs depends on that."
+		abort "Patchset advapi32-Revert_DACL disabled, but server-Inherited_ACLs depends on that."
 	fi
 	enable_advapi32_Revert_DACL=1
-	enable_ntdll_DOS_Attributes=1
 fi
 
 if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
@@ -1212,6 +1201,20 @@ if test "$enable_d3dx9_24_ID3DXEffect" -eq 1; then
 		abort "Patchset d3dx9_25-ID3DXEffect disabled, but d3dx9_24-ID3DXEffect depends on that."
 	fi
 	enable_d3dx9_25_ID3DXEffect=1
+fi
+
+if test "$enable_advapi32_Revert_DACL" -eq 1; then
+	if test "$enable_server_Stored_ACLs" -gt 1; then
+		abort "Patchset server-Stored_ACLs disabled, but advapi32-Revert_DACL depends on that."
+	fi
+	enable_server_Stored_ACLs=1
+fi
+
+if test "$enable_server_Stored_ACLs" -eq 1; then
+	if test "$enable_ntdll_DOS_Attributes" -gt 1; then
+		abort "Patchset ntdll-DOS_Attributes disabled, but server-Stored_ACLs depends on that."
+	fi
+	enable_ntdll_DOS_Attributes=1
 fi
 
 if test "$enable_Exagear" -eq 1; then
@@ -1361,6 +1364,59 @@ if test "$enable_Staging" -eq 1; then
 		echo '+    { "Sebastian Lackner", "winelib: Append '\''(Staging)'\'' at the end of the version string.", 1 },';
 		echo '+    { "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list.", 1 },';
 		echo '+    { "Michael Müller", "loader: Add commandline option --check-libs.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-DOS_Attributes
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#9158] Support for DOS hidden/system file attributes
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/ntdll/directory.c, dlls/ntdll/file.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/directory.c,
+# | 	dlls/ntdll/tests/file.c, include/wine/port.h, libs/port/Makefile.in, libs/port/xattr.c
+# |
+if test "$enable_ntdll_DOS_Attributes" -eq 1; then
+	patch_apply ntdll-DOS_Attributes/0001-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch
+	patch_apply ntdll-DOS_Attributes/0002-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch
+	patch_apply ntdll-DOS_Attributes/0003-ntdll-Implement-storing-DOS-attributes-in-NtSetInfor.patch
+	patch_apply ntdll-DOS_Attributes/0004-ntdll-Implement-storing-DOS-attributes-in-NtCreateFi.patch
+	patch_apply ntdll-DOS_Attributes/0005-libport-Add-support-for-Mac-OS-X-style-extended-attr.patch
+	patch_apply ntdll-DOS_Attributes/0006-libport-Add-support-for-FreeBSD-style-extended-attri.patch
+	patch_apply ntdll-DOS_Attributes/0007-ntdll-Perform-the-Unix-style-hidden-file-check-withi.patch
+	(
+		echo '+    { "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQueryInformationFile.", 1 },';
+		echo '+    { "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQuery[Full]AttributesFile and NtQueryDirectoryFile.", 1 },';
+		echo '+    { "Erich E. Hoover", "ntdll: Implement storing DOS attributes in NtSetInformationFile.", 1 },';
+		echo '+    { "Erich E. Hoover", "ntdll: Implement storing DOS attributes in NtCreateFile.", 1 },';
+		echo '+    { "Erich E. Hoover", "libport: Add support for Mac OS X style extended attributes.", 1 },';
+		echo '+    { "Erich E. Hoover", "libport: Add support for FreeBSD style extended attributes.", 1 },';
+		echo '+    { "Erich E. Hoover", "ntdll: Perform the Unix-style hidden file check within the unified file info grabbing routine.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Stored_ACLs
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33576] Support for stored file ACLs
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, include/wine/port.h, server/change.c, server/file.c, server/file.h
+# |
+if test "$enable_server_Stored_ACLs" -eq 1; then
+	patch_apply server-Stored_ACLs/0001-server-Unify-the-storage-of-security-attributes-for-.patch
+	patch_apply server-Stored_ACLs/0002-server-Unify-the-retrieval-of-security-attributes-fo.patch
+	patch_apply server-Stored_ACLs/0003-server-Store-file-security-attributes-with-extended-.patch
+	patch_apply server-Stored_ACLs/0004-server-Store-user-and-group-inside-stored-extended-f.patch
+	patch_apply server-Stored_ACLs/0005-server-Retrieve-file-security-attributes-with-extend.patch
+	patch_apply server-Stored_ACLs/0006-server-Convert-return-of-file-security-masks-with-ge.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Unify the storage of security attributes for files and directories.", 7 },';
+		echo '+    { "Erich E. Hoover", "server: Unify the retrieval of security attributes for files and directories.", 7 },';
+		echo '+    { "Erich E. Hoover", "server: Store file security attributes with extended file attributes.", 7 },';
+		echo '+    { "Erich E. Hoover", "server: Store user and group inside stored extended file attribute information.", 7 },';
+		echo '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes.", 7 },';
+		echo '+    { "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings.", 7 },';
 	) >> "$patchlist"
 fi
 
@@ -2973,34 +3029,6 @@ if test "$enable_ntdll_Activation_Context" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-DOS_Attributes
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#9158] Support for DOS hidden/system file attributes
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/ntdll/directory.c, dlls/ntdll/file.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/directory.c,
-# | 	dlls/ntdll/tests/file.c, include/wine/port.h, libs/port/Makefile.in, libs/port/xattr.c
-# |
-if test "$enable_ntdll_DOS_Attributes" -eq 1; then
-	patch_apply ntdll-DOS_Attributes/0001-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch
-	patch_apply ntdll-DOS_Attributes/0002-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch
-	patch_apply ntdll-DOS_Attributes/0003-ntdll-Implement-storing-DOS-attributes-in-NtSetInfor.patch
-	patch_apply ntdll-DOS_Attributes/0004-ntdll-Implement-storing-DOS-attributes-in-NtCreateFi.patch
-	patch_apply ntdll-DOS_Attributes/0005-libport-Add-support-for-Mac-OS-X-style-extended-attr.patch
-	patch_apply ntdll-DOS_Attributes/0006-libport-Add-support-for-FreeBSD-style-extended-attri.patch
-	patch_apply ntdll-DOS_Attributes/0007-ntdll-Perform-the-Unix-style-hidden-file-check-withi.patch
-	(
-		echo '+    { "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQueryInformationFile.", 1 },';
-		echo '+    { "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQuery[Full]AttributesFile and NtQueryDirectoryFile.", 1 },';
-		echo '+    { "Erich E. Hoover", "ntdll: Implement storing DOS attributes in NtSetInformationFile.", 1 },';
-		echo '+    { "Erich E. Hoover", "ntdll: Implement storing DOS attributes in NtCreateFile.", 1 },';
-		echo '+    { "Erich E. Hoover", "libport: Add support for Mac OS X style extended attributes.", 1 },';
-		echo '+    { "Erich E. Hoover", "libport: Add support for FreeBSD style extended attributes.", 1 },';
-		echo '+    { "Erich E. Hoover", "ntdll: Perform the Unix-style hidden file check within the unified file info grabbing routine.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-DVD_Read_Size
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3683,31 +3711,6 @@ if test "$enable_secur32_Schannel_ContextAttr" -eq 1; then
 	patch_apply secur32-Schannel_ContextAttr/0001-secur32-Return-more-context-attributes-in-schan_Init.patch
 	(
 		echo '+    { "Sebastian Lackner", "secur32: Return more context attributes in schan_InitializeSecurityContextW.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Stored_ACLs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#33576] Support for stored file ACLs
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, include/wine/port.h, server/change.c, server/file.c, server/file.h
-# |
-if test "$enable_server_Stored_ACLs" -eq 1; then
-	patch_apply server-Stored_ACLs/0001-server-Unify-the-storage-of-security-attributes-for-.patch
-	patch_apply server-Stored_ACLs/0002-server-Unify-the-retrieval-of-security-attributes-fo.patch
-	patch_apply server-Stored_ACLs/0003-server-Store-file-security-attributes-with-extended-.patch
-	patch_apply server-Stored_ACLs/0004-server-Store-user-and-group-inside-stored-extended-f.patch
-	patch_apply server-Stored_ACLs/0005-server-Retrieve-file-security-attributes-with-extend.patch
-	patch_apply server-Stored_ACLs/0006-server-Convert-return-of-file-security-masks-with-ge.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Unify the storage of security attributes for files and directories.", 7 },';
-		echo '+    { "Erich E. Hoover", "server: Unify the retrieval of security attributes for files and directories.", 7 },';
-		echo '+    { "Erich E. Hoover", "server: Store file security attributes with extended file attributes.", 7 },';
-		echo '+    { "Erich E. Hoover", "server: Store user and group inside stored extended file attribute information.", 7 },';
-		echo '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes.", 7 },';
-		echo '+    { "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings.", 7 },';
 	) >> "$patchlist"
 fi
 

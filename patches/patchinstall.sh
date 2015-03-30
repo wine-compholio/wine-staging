@@ -66,6 +66,7 @@ patch_enable_all ()
 	enable_Miscellaneous="$1"
 	enable_Pipelight="$1"
 	enable_Staging="$1"
+	enable_advapi32_ACL_Tests="$1"
 	enable_advapi32_Revert_DACL="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_combase_String="$1"
@@ -259,6 +260,9 @@ patch_enable ()
 			;;
 		Staging)
 			enable_Staging="$2"
+			;;
+		advapi32-ACL_Tests)
+			enable_advapi32_ACL_Tests="$2"
 			;;
 		advapi32-Revert_DACL)
 			enable_advapi32_Revert_DACL="$2"
@@ -1204,8 +1208,15 @@ if test "$enable_d3dx9_24_ID3DXEffect" -eq 1; then
 fi
 
 if test "$enable_advapi32_Revert_DACL" -eq 1; then
+	if test "$enable_advapi32_ACL_Tests" -gt 1; then
+		abort "Patchset advapi32-ACL_Tests disabled, but advapi32-Revert_DACL depends on that."
+	fi
+	enable_advapi32_ACL_Tests=1
+fi
+
+if test "$enable_advapi32_ACL_Tests" -eq 1; then
 	if test "$enable_server_Stored_ACLs" -gt 1; then
-		abort "Patchset server-Stored_ACLs disabled, but advapi32-Revert_DACL depends on that."
+		abort "Patchset server-Stored_ACLs disabled, but advapi32-ACL_Tests depends on that."
 	fi
 	enable_server_Stored_ACLs=1
 fi
@@ -1417,6 +1428,22 @@ if test "$enable_server_Stored_ACLs" -eq 1; then
 		echo '+    { "Erich E. Hoover", "server: Store user and group inside stored extended file attribute information.", 7 },';
 		echo '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes.", 7 },';
 		echo '+    { "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings.", 7 },';
+	) >> "$patchlist"
+fi
+
+# Patchset advapi32-ACL_Tests
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, include/winnt.h
+# |
+if test "$enable_advapi32_ACL_Tests" -eq 1; then
+	patch_apply advapi32-ACL_Tests/0001-advapi32-tests-Add-tests-for-inheriting-ACL-attribut.patch
+	patch_apply advapi32-ACL_Tests/0002-advapi32-tests-Repeat-ACL-inheritance-tests-for-NtCr.patch
+	patch_apply advapi32-ACL_Tests/0003-advapi32-tests-Add-tests-for-PROTECTED_DACL_SECURITY.patch
+	(
+		echo '+    { "Erich E. Hoover", "advapi32/tests: Add tests for inheriting ACL attributes.", 1 },';
+		echo '+    { "Sebastian Lackner", "advapi32/tests: Repeat ACL inheritance tests for NtCreateFile.", 1 },';
+		echo '+    { "Erich E. Hoover", "advapi32/tests: Add tests for PROTECTED_DACL_SECURITY_INFORMATION.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -1999,6 +2026,21 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-Multisampling
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Multisampling" -eq 1; then
+	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+	(
+		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-Revert_PixelFormat
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2042,21 +2084,6 @@ if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
 	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Multisampling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
-	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3720,7 +3747,7 @@ fi
 # |   *	[#34406] Support for inherited file ACLs
 # |
 # | Modified files:
-# |   *	dlls/advapi32/tests/security.c, include/winnt.h, server/fd.c, server/file.c, server/file.h
+# |   *	dlls/advapi32/tests/security.c, server/fd.c, server/file.c, server/file.h
 # |
 if test "$enable_server_Inherited_ACLs" -eq 1; then
 	patch_apply server-Inherited_ACLs/0001-server-Inherit-security-attributes-from-parent-direc.patch
@@ -3795,6 +3822,21 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-OpenProcess
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37087] Return an error when trying to open a terminated process
+# |
+# | Modified files:
+# |   *	server/process.c, server/process.h
+# |
+if test "$enable_server_OpenProcess" -eq 1; then
+	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
+	(
+		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3809,21 +3851,6 @@ if test "$enable_server_Misc_ACL" -eq 1; then
 	(
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-OpenProcess
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37087] Return an error when trying to open a terminated process
-# |
-# | Modified files:
-# |   *	server/process.c, server/process.h
-# |
-if test "$enable_server_OpenProcess" -eq 1; then
-	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
-	(
-		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
 	) >> "$patchlist"
 fi
 

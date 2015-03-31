@@ -1,4 +1,4 @@
-From fdb144e28efeb027f51fa7719ad5e95c757aea46 Mon Sep 17 00:00:00 2001
+From 146d61e6b045ffe102d05910fef73003f47e3a67 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 18:24:27 -0700
 Subject: ws2_32: Implement a basic synchronous TransmitFile. (rev 2)
@@ -9,7 +9,7 @@ Subject: ws2_32: Implement a basic synchronous TransmitFile. (rev 2)
  2 files changed, 173 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index 96335cd..779f618 100644
+index 049b9dc..5267e59 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
 @@ -378,6 +378,18 @@ struct ws2_accept_async
@@ -31,7 +31,7 @@ index 96335cd..779f618 100644
  static struct ws2_async_io *async_io_freelist;
  
  static void release_async_io( struct ws2_async_io *io )
-@@ -2538,6 +2550,76 @@ static BOOL WINAPI WS2_AcceptEx(SOCKET listener, SOCKET acceptor, PVOID dest, DW
+@@ -2575,6 +2587,76 @@ static BOOL WINAPI WS2_AcceptEx(SOCKET listener, SOCKET acceptor, PVOID dest, DW
  }
  
  /***********************************************************************
@@ -96,7 +96,7 @@ index 96335cd..779f618 100644
 +    {
 +        int n;
 +
-+        n = WS2_send( fd, &wsa->write );
++        n = WS2_send( fd, &wsa->write, convert_flags(wsa->write.flags) );
 +        if (n == -1 && errno != EAGAIN)
 +            return wsaErrStatus();
 +    }
@@ -108,7 +108,7 @@ index 96335cd..779f618 100644
   *     TransmitFile
   */
  static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD bytes_per_send,
-@@ -2546,12 +2628,22 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
+@@ -2583,12 +2665,22 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
  {
      union generic_unix_sockaddr uaddr;
      unsigned int uaddrlen = sizeof(uaddr);
@@ -134,7 +134,7 @@ index 96335cd..779f618 100644
      if (fd == -1)
      {
          WSASetLastError( WSAENOTSOCK );
-@@ -2563,12 +2655,52 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
+@@ -2600,12 +2692,52 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
          WSASetLastError( WSAENOTCONN );
          return FALSE;
      }
@@ -191,10 +191,10 @@ index 96335cd..779f618 100644
  
  /***********************************************************************
 diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
-index 0991e54..1288694 100644
+index 4180fb1..fb0b325 100644
 --- a/dlls/ws2_32/tests/sock.c
 +++ b/dlls/ws2_32/tests/sock.c
-@@ -6906,6 +6906,32 @@ end:
+@@ -7115,6 +7115,32 @@ end:
          closesocket(connector2);
  }
  
@@ -227,7 +227,7 @@ index 0991e54..1288694 100644
  static void test_TransmitFile(void)
  {
      GUID transmitFileGuid = WSAID_TRANSMITFILE;
-@@ -6915,6 +6941,7 @@ static void test_TransmitFile(void)
+@@ -7124,6 +7150,7 @@ static void test_TransmitFile(void)
      struct sockaddr_in bindAddress;
      SOCKET client, server, dest;
      DWORD num_bytes, err;
@@ -235,7 +235,7 @@ index 0991e54..1288694 100644
      int iret, len;
      BOOL bret;
  
-@@ -6992,7 +7019,14 @@ static void test_TransmitFile(void)
+@@ -7201,7 +7228,14 @@ static void test_TransmitFile(void)
  
      /* Test TransmitFile with no possible buffer */
      bret = pTransmitFile(client, NULL, 0, 0, NULL, NULL, 0);
@@ -252,5 +252,5 @@ index 0991e54..1288694 100644
      /* Test TransmitFile with a UDP datagram socket */
      closesocket(client);
 -- 
-2.3.0
+2.3.3
 

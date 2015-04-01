@@ -1,4 +1,4 @@
-From 2dc3e01bbb999ff93918375bdc5071eb9439a011 Mon Sep 17 00:00:00 2001
+From 3babb8a2681bd530008b0d268cde0b5788177097 Mon Sep 17 00:00:00 2001
 From: Andrew Cook <ariscop@gmail.com>
 Date: Thu, 26 Feb 2015 13:02:36 +1100
 Subject: server: Implement completion messages for job objects.
@@ -10,15 +10,15 @@ coding style by Sebastian Lackner <sebastian@fds-team.de>.
 ---
  dlls/kernel32/tests/process.c |  4 ----
  dlls/ntdll/sync.c             | 15 +++++++++++++++
- server/process.c              | 44 +++++++++++++++++++++++++++++++++++++++++++
- server/protocol.def           |  6 ++++++
- 4 files changed, 65 insertions(+), 4 deletions(-)
+ server/process.c              | 45 +++++++++++++++++++++++++++++++++++++++++++
+ server/protocol.def           |  8 ++++++++
+ 4 files changed, 68 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/kernel32/tests/process.c b/dlls/kernel32/tests/process.c
-index 6c2f86d..911fad7 100644
+index 8c9a6ef..a86e331 100644
 --- a/dlls/kernel32/tests/process.c
 +++ b/dlls/kernel32/tests/process.c
-@@ -2375,7 +2375,6 @@ static void test_CompletionPort(void)
+@@ -2399,7 +2399,6 @@ static void test_CompletionPort(void)
      port_info.CompletionKey = job;
      port_info.CompletionPort = port;
      ret = pSetInformationJobObject(job, JobObjectAssociateCompletionPortInformation, &port_info, sizeof(port_info));
@@ -26,7 +26,7 @@ index 6c2f86d..911fad7 100644
      ok(ret, "SetInformationJobObject error %u\n", GetLastError());
  
      create_process("wait", &pi);
-@@ -2383,16 +2382,13 @@ static void test_CompletionPort(void)
+@@ -2407,16 +2406,13 @@ static void test_CompletionPort(void)
      ret = pAssignProcessToJobObject(job, pi.hProcess);
      ok(ret, "AssignProcessToJobObject error %u\n", GetLastError());
  
@@ -44,7 +44,7 @@ index 6c2f86d..911fad7 100644
  
      CloseHandle(pi.hProcess);
 diff --git a/dlls/ntdll/sync.c b/dlls/ntdll/sync.c
-index a0b8c15..c754df6 100644
+index e001e28..87ff3e0 100644
 --- a/dlls/ntdll/sync.c
 +++ b/dlls/ntdll/sync.c
 @@ -694,6 +694,21 @@ NTSTATUS WINAPI NtSetInformationJobObject( HANDLE handle, JOBOBJECTINFOCLASS cla
@@ -55,12 +55,12 @@ index a0b8c15..c754df6 100644
 +        if (len != sizeof(JOBOBJECT_ASSOCIATE_COMPLETION_PORT))
 +            return STATUS_INVALID_PARAMETER;
 +
-+        SERVER_START_REQ( job_set_completion )
++        SERVER_START_REQ( set_job_completion )
 +        {
 +            JOBOBJECT_ASSOCIATE_COMPLETION_PORT *port_info = info;
 +            req->handle = wine_server_obj_handle( handle );
-+            req->port = wine_server_obj_handle( port_info->CompletionPort );
-+            req->key = wine_server_client_ptr( port_info->CompletionKey );
++            req->port   = wine_server_obj_handle( port_info->CompletionPort );
++            req->key    = wine_server_client_ptr( port_info->CompletionKey );
 +            status = wine_server_call(req);
 +        }
 +        SERVER_END_REQ;
@@ -70,7 +70,7 @@ index a0b8c15..c754df6 100644
          FIXME( "stub: %p %u %p %u\n", handle, class, info, len );
          return STATUS_NOT_IMPLEMENTED;
 diff --git a/server/process.c b/server/process.c
-index 6384203..e02b7af 100644
+index a1ab8c7..10193ef 100644
 --- a/server/process.c
 +++ b/server/process.c
 @@ -149,6 +149,9 @@ struct job
@@ -103,19 +103,20 @@ index 6384203..e02b7af 100644
 +        add_completion(job->completion_port, job->completion_key, pid, STATUS_SUCCESS, msg);
 +}
 +
- static int add_job_process( struct job *job, struct process *process )
+ static void add_job_process( struct job *job, struct process *process )
  {
-     assert( job->obj.ops == &job_ops );
-@@ -233,6 +245,7 @@ static int add_job_process( struct job *job, struct process *process )
+     if (!process->running_threads)
+@@ -230,6 +242,8 @@ static void add_job_process( struct job *job, struct process *process )
+     process->job = (struct job *)grab_object( job );
      list_add_tail( &job->process_list, &process->job_entry );
      job->num_processes++;
- 
++
 +    add_job_completion( job, JOB_OBJECT_MSG_NEW_PROCESS, get_process_id(process) );
-     return 1;
  }
  
-@@ -247,10 +260,20 @@ static void release_job_process( struct process *process )
-     assert( job->obj.ops == &job_ops );
+ /* called when a process has terminated, allow one additional process */
+@@ -241,10 +255,20 @@ static void release_job_process( struct process *process )
+ 
      assert( job->num_processes );
      job->num_processes--;
 +
@@ -135,7 +136,7 @@ index 6384203..e02b7af 100644
      for (;;)  /* restart from the beginning of the list every time */
      {
          struct process *process;
-@@ -264,6 +287,8 @@ static void terminate_job( struct job *job, int exit_code )
+@@ -258,6 +282,8 @@ static void terminate_job( struct job *job, int exit_code )
          assert( process->job == job );
          terminate_process( process, NULL, exit_code );
      }
@@ -144,7 +145,7 @@ index 6384203..e02b7af 100644
  }
  
  static void job_destroy( struct object *obj )
-@@ -273,6 +298,9 @@ static void job_destroy( struct object *obj )
+@@ -267,6 +293,9 @@ static void job_destroy( struct object *obj )
  
      assert( !job->num_processes );
      assert( list_empty(&job->process_list) );
@@ -154,12 +155,12 @@ index 6384203..e02b7af 100644
  }
  
  static void job_dump( struct object *obj, int verbose )
-@@ -1620,3 +1648,19 @@ DECL_HANDLER(job_set_limits)
+@@ -1618,3 +1647,19 @@ DECL_HANDLER(set_job_limits)
          release_object( job );
      }
  }
 +
-+DECL_HANDLER(job_set_completion)
++DECL_HANDLER(set_job_completion)
 +{
 +    struct job *job = get_job_obj( current->process, req->handle, JOB_OBJECT_SET_ATTRIBUTES );
 +
@@ -175,22 +176,21 @@ index 6384203..e02b7af 100644
 +    }
 +}
 diff --git a/server/protocol.def b/server/protocol.def
-index 655a9ac..deaaa7b 100644
+index 0077aa4..c88c970 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -710,6 +710,12 @@ struct rawinput_device
-     unsigned int limit_flags;
+@@ -3542,3 +3542,11 @@ enum coords_relative
+     obj_handle_t handle;          /* handle to the job */
+     unsigned int limit_flags;     /* limit flags */
  @END
- 
-+@REQ(job_set_completion)
-+    obj_handle_t handle;
-+    obj_handle_t port;
-+    client_ptr_t key;
-+@END
 +
- /* Retrieve information about a newly started process */
- @REQ(get_new_process_info)
-     obj_handle_t info;           /* info handle returned from new_process_request */
++
++/* Set a job completion port/key */
++@REQ(set_job_completion)
++    obj_handle_t handle;          /* handle to the job */
++    obj_handle_t port;            /* completion port */
++    client_ptr_t key;             /* completion key */
++@END
 -- 
 2.3.3
 

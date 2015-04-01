@@ -1,41 +1,93 @@
-From 9364028096235e2f64b9fe070170b5e4bb2311ca Mon Sep 17 00:00:00 2001
+From 3779a55c15d92da1974ff1520e20bc5accc8e4b6 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 14:05:32 -0600
 Subject: server: Convert return of file security masks with generic access
  mappings. (try 7)
 
 ---
- dlls/advapi32/tests/security.c |   24 ++++++++++++------------
- server/file.c                  |   22 ++++++++++++++++++++++
- 2 files changed, 34 insertions(+), 12 deletions(-)
+ dlls/advapi32/tests/security.c | 48 ++++++++++++++++--------------------------
+ server/file.c                  | 22 +++++++++++++++++++
+ 2 files changed, 40 insertions(+), 30 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index 02094a4..82c0639 100644
+index 3f97a82..a530a3f 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -3196,8 +3196,8 @@ static void test_CreateDirectoryA(void)
-         ok(((ACE_HEADER *)ace)->AceFlags == (OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE),
-            "Current User ACE has unexpected flags (0x%x != 0x03)\n",
-            ((ACE_HEADER *)ace)->AceFlags);
--        todo_wine ok(ace->Mask == 0x1f01ff,
--                     "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n", ace->Mask);
-+        ok(ace->Mask == 0x1f01ff, "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n",
-+                                  ace->Mask);
+@@ -3109,7 +3109,7 @@ static void get_nt_pathW(const char *name, UNICODE_STRING *nameW)
+ }
+ 
+ static void test_inherited_dacl(PACL dacl, PSID admin_sid, PSID user_sid, DWORD flags, DWORD mask,
+-                                BOOL todo_count, BOOL todo_sid, BOOL todo_flags, BOOL todo_mask, int line)
++                                BOOL todo_count, BOOL todo_sid, BOOL todo_flags, int line)
+ {
+     ACL_SIZE_INFORMATION acl_size;
+     ACCESS_ALLOWED_ACE *ace;
+@@ -3150,15 +3150,9 @@ static void test_inherited_dacl(PACL dacl, PSID admin_sid, PSID user_sid, DWORD
+                 "Current User ACE has unexpected flags (0x%x != 0x%x)\n",
+                 ((ACE_HEADER *)ace)->AceFlags, flags);
+ 
+-        if (todo_mask)
+-            todo_wine
+-            ok_(__FILE__, line)(ace->Mask == mask,
+-                "Current User ACE has unexpected mask (0x%x != 0x%x)\n",
+-                ace->Mask, mask);
+-        else
+-            ok_(__FILE__, line)(ace->Mask == mask,
+-                "Current User ACE has unexpected mask (0x%x != 0x%x)\n",
+-                ace->Mask, mask);
++        ok_(__FILE__, line)(ace->Mask == mask,
++            "Current User ACE has unexpected mask (0x%x != 0x%x)\n",
++            ace->Mask, mask);
      }
      if (acl_size.AceCount > 1)
      {
-@@ -3208,8 +3208,8 @@ static void test_CreateDirectoryA(void)
-         ok(((ACE_HEADER *)ace)->AceFlags == (OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE),
-            "Administators Group ACE has unexpected flags (0x%x != 0x03)\n",
-            ((ACE_HEADER *)ace)->AceFlags);
--        todo_wine ok(ace->Mask == 0x1f01ff,
--                     "Administators Group ACE has unexpected mask (0x%x != 0x1f01ff)\n", ace->Mask);
-+        ok(ace->Mask == 0x1f01ff, "Administators Group ACE has unexpected mask (0x%x != 0x1f01ff)\n",
-+                                  ace->Mask);
+@@ -3182,15 +3176,9 @@ static void test_inherited_dacl(PACL dacl, PSID admin_sid, PSID user_sid, DWORD
+                 "Administators Group ACE has unexpected flags (0x%x != 0x%x)\n",
+                 ((ACE_HEADER *)ace)->AceFlags, flags);
+ 
+-        if (todo_mask)
+-            todo_wine
+-            ok_(__FILE__, line)(ace->Mask == mask,
+-                "Administators Group ACE has unexpected mask (0x%x != 0x%x)\n",
+-                ace->Mask, mask);
+-        else
+-            ok_(__FILE__, line)(ace->Mask == mask,
+-                "Administators Group ACE has unexpected mask (0x%x != 0x%x)\n",
+-                ace->Mask, mask);
++        ok_(__FILE__, line)(ace->Mask == mask,
++            "Administators Group ACE has unexpected mask (0x%x != 0x%x)\n",
++            ace->Mask, mask);
      }
+ }
+ 
+@@ -3274,7 +3262,7 @@ static void test_CreateDirectoryA(void)
+     }
+     ok(!error, "GetNamedSecurityInfo failed with error %d\n", error);
+     test_inherited_dacl(pDacl, admin_sid, user_sid, OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE,
+-                        0x1f01ff, FALSE, FALSE, FALSE, TRUE, __LINE__);
++                        0x1f01ff, FALSE, FALSE, FALSE, __LINE__);
      LocalFree(pSD);
  
-@@ -3387,8 +3387,8 @@ static void test_GetNamedSecurityInfoA(void)
+     /* Test inheritance of ACLs in CreateFile without security descriptor */
+@@ -3290,7 +3278,7 @@ static void test_CreateDirectoryA(void)
+                                    (PSID *)&owner, NULL, &pDacl, NULL, &pSD);
+     ok(error == ERROR_SUCCESS, "Failed to get permissions on file\n");
+     test_inherited_dacl(pDacl, admin_sid, user_sid, INHERITED_ACE,
+-                        0x1f01ff, TRUE, TRUE, TRUE, FALSE, __LINE__);
++                        0x1f01ff, TRUE, TRUE, TRUE, __LINE__);
+     LocalFree(pSD);
+     CloseHandle(hTemp);
+ 
+@@ -3364,7 +3352,7 @@ static void test_CreateDirectoryA(void)
+                                    (PSID *)&owner, NULL, &pDacl, NULL, &pSD);
+     ok(error == ERROR_SUCCESS, "Failed to get permissions on file\n");
+     test_inherited_dacl(pDacl, admin_sid, user_sid, INHERITED_ACE,
+-                        0x1f01ff, TRUE, TRUE, TRUE, FALSE, __LINE__);
++                        0x1f01ff, TRUE, TRUE, TRUE, __LINE__);
+     LocalFree(pSD);
+     CloseHandle(hTemp);
+ 
+@@ -3596,8 +3584,8 @@ static void test_GetNamedSecurityInfoA(void)
          ok(bret, "Current User ACE != Current User SID.\n");
          ok(((ACE_HEADER *)ace)->AceFlags == 0,
             "Current User ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
@@ -46,7 +98,7 @@ index 02094a4..82c0639 100644
      }
      if (acl_size.AceCount > 1)
      {
-@@ -3398,8 +3398,8 @@ static void test_GetNamedSecurityInfoA(void)
+@@ -3607,8 +3595,8 @@ static void test_GetNamedSecurityInfoA(void)
          ok(bret || broken(!bret) /* win2k */, "Administators Group ACE != Administators Group SID.\n");
          ok(((ACE_HEADER *)ace)->AceFlags == 0,
             "Administators Group ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
@@ -57,7 +109,7 @@ index 02094a4..82c0639 100644
      }
      LocalFree(pSD);
      HeapFree(GetProcessHeap(), 0, user);
-@@ -4052,8 +4052,8 @@ static void test_GetSecurityInfo(void)
+@@ -4261,8 +4249,8 @@ static void test_GetSecurityInfo(void)
          ok(bret, "Current User ACE != Current User SID.\n");
          ok(((ACE_HEADER *)ace)->AceFlags == 0,
             "Current User ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
@@ -68,7 +120,7 @@ index 02094a4..82c0639 100644
      }
      if (acl_size.AceCount > 1)
      {
-@@ -4063,8 +4063,8 @@ static void test_GetSecurityInfo(void)
+@@ -4272,8 +4260,8 @@ static void test_GetSecurityInfo(void)
          ok(bret, "Administators Group ACE != Administators Group SID.\n");
          ok(((ACE_HEADER *)ace)->AceFlags == 0,
             "Administators Group ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
@@ -80,10 +132,10 @@ index 02094a4..82c0639 100644
      LocalFree(pSD);
      CloseHandle(obj);
 diff --git a/server/file.c b/server/file.c
-index ff72273..38eda5c 100644
+index e84331d..b6435d1 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -521,6 +521,27 @@ struct security_descriptor *get_xattr_sd( int fd )
+@@ -522,6 +522,27 @@ struct security_descriptor *get_xattr_sd( int fd )
      return sd;
  }
  
@@ -111,7 +163,7 @@ index ff72273..38eda5c 100644
  struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode_t *mode,
                                           uid_t *uid )
  {
-@@ -537,6 +558,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
+@@ -538,6 +559,7 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
          return obj->sd;
  
      sd = get_xattr_sd( unix_fd );
@@ -120,5 +172,5 @@ index ff72273..38eda5c 100644
                                security_unix_uid_to_sid( st.st_uid ),
                                token_get_primary_group( current->process->token ));
 -- 
-1.7.9.5
+2.3.3
 

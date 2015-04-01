@@ -3873,20 +3873,18 @@ fi
 # | 	server/object.h, server/process.c, server/process.h, server/protocol.def
 # |
 if test "$enable_server_JobObjects" -eq 1; then
-	patch_apply server-JobObjects/0001-server-Basic-implementation-of-job-objects.-rev-2.patch
+	patch_apply server-JobObjects/0001-server-Implement-remaining-wineserver-calls-for-job-.patch
 	patch_apply server-JobObjects/0002-server-Implement-completion-messages-for-job-objects.patch
 	patch_apply server-JobObjects/0003-server-Properly-track-handle-count-of-objects.patch
 	patch_apply server-JobObjects/0004-server-Implement-JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.patch
-	patch_apply server-JobObjects/0005-server-Support-NULL-job-handles-in-IsProcessInJob.patch
-	patch_apply server-JobObjects/0006-kernel32-tests-Add-tests-for-waiting-on-an-job-objec.patch
-	patch_apply server-JobObjects/0007-server-Implement-waiting-for-job-objects.patch
-	patch_apply server-JobObjects/0008-ntdll-Implement-NtQueryInformationJobObject-stub-fun.patch
+	patch_apply server-JobObjects/0005-kernel32-tests-Add-tests-for-waiting-on-an-job-objec.patch
+	patch_apply server-JobObjects/0006-server-Implement-waiting-for-job-objects.patch
+	patch_apply server-JobObjects/0007-ntdll-Implement-NtQueryInformationJobObject-stub-fun.patch
 	(
-		echo '+    { "Andrew Cook", "server: Basic implementation of job objects.", 2 },';
+		echo '+    { "Andrew Cook", "server: Implement remaining wineserver calls for job objects.", 1 },';
 		echo '+    { "Andrew Cook", "server: Implement completion messages for job objects.", 1 },';
 		echo '+    { "Andrew Cook", "server: Properly track handle count of objects.", 1 },';
 		echo '+    { "Andrew Cook", "server: Implement JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.", 1 },';
-		echo '+    { "Andrew Cook", "server: Support NULL job handles in IsProcessInJob.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for waiting on an job object.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement waiting for job objects.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Implement NtQueryInformationJobObject stub function.", 1 },';

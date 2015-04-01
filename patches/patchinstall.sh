@@ -4362,15 +4362,15 @@ fi
 # Patchset windowscodecs-TIFF_Decoder
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#38027] Ignore unsupported alpha channels in TIFF decoder
+# |   *	[#38027] Support for 8bpp grayscale TIFF images with 8bpp alpha channel
 # |
 # | Modified files:
-# |   *	dlls/windowscodecs/tiffformat.c
+# |   *	dlls/windowscodecs/tests/tiffformat.c, dlls/windowscodecs/tiffformat.c
 # |
 if test "$enable_windowscodecs_TIFF_Decoder" -eq 1; then
-	patch_apply windowscodecs-TIFF_Decoder/0001-windowscodecs-Ignore-unsupported-alpha-channel-in-ti.patch
+	patch_apply windowscodecs-TIFF_Decoder/0001-windowscodecs-Add-support-for-8bpp-grayscale-TIFF-im.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Ignore unsupported alpha channel in tiff_get_decode_info.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 8bpp grayscale TIFF images with 8bpp alpha channel.", 1 },';
 	) >> "$patchlist"
 fi
 

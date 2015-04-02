@@ -29,9 +29,14 @@ import termios
 def _sig_winch(signum=None, frame=None):
     """Signal handler for SIGWINCH."""
     global _term_width
-    h, w, hp, wp = struct.unpack('HHHH', fcntl.ioctl(sys.stdout.fileno(),
-                   termios.TIOCGWINSZ, struct.pack('HHHH', 0, 0, 0, 0)))
-    _term_width  = w
+    try:
+        h, w, hp, wp = struct.unpack('HHHH', fcntl.ioctl(sys.stdout.fileno(),
+                       termios.TIOCGWINSZ, struct.pack('HHHH', 0, 0, 0, 0)))
+        _term_width  = w
+    except IOError:
+        # ignore 'IOError: [Errno 25] Inappropriate ioctl for device',
+        # which can occur when resizing the window while the output is redirected
+        pass
 
 try:
     _sig_winch()

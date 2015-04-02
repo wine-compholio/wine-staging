@@ -503,13 +503,36 @@ def generate_script(all_patches):
     # Check dependencies
     pool = multiprocessing.pool.ThreadPool(processes=4)
     try:
+
+        # Checking all dependencies takes a very long time, so to improve development speed,
+        # run a first quick check with all patches enabled.
+        with progressbar.ProgressBar(desc="pre-check ...", total=len(modified_files)) as progress:
+            for k, (filename, indices) in enumerate(modified_files.iteritems()):
+
+                # If one of patches is a binary patch, then we cannot / won't verify it - require dependencies in this case
+                if contains_binary_patch(all_patches, indices, filename):
+                    if not causal_time_relation_any(all_patches, indices):
+                        raise PatchUpdaterError("Because of binary patch modifying file %s the following patches need explicit dependencies: %s" %
+                                                (filename, ", ".join([all_patches[i].name for i in indices])))
+                    continue
+
+                original         = get_wine_file(filename)
+                selected_patches = select_patches(all_patches, indices, filename)
+                set_apply        = [(i, all_patches[i]) for i in indices]
+
+                try:
+                    for i, patch in set_apply:
+                        original = patchutils.apply_patch(original, selected_patches[i][1], fuzz=0)
+                except patchutils.PatchApplyError:
+                    progress.finish("<failed to apply>")
+                    raise PatchUpdaterError("Changes to file %s don't apply: %s" %
+                                            (filename, ", ".join([all_patches[i].name for i in indices])))
+                progress.update(k)
+
+        # More detailed checks, required to make sure that dependencies are set correctly
         for filename, indices in modified_files.iteritems():
 
-            # If one of patches is a binary patch, then we cannot / won't verify it - require dependencies in this case
             if contains_binary_patch(all_patches, indices, filename):
-                if not causal_time_relation_any(all_patches, indices):
-                    raise PatchUpdaterError("Because of binary patch modifying file %s the following patches need explicit dependencies: %s" %
-                                            (filename, ", ".join([all_patches[i].name for i in indices])))
                 continue
 
             original_content = get_wine_file(filename)

@@ -93,7 +93,7 @@ Included bug fixes and improvements
 * Avoid race-conditions in NtReadFile() operations with write watches.
 * Avoid race-conditions of async WSARecv() operations with write watches.
 * Avoid race-conditions with write watches in WS2_async_accept.
-* Avoid unloading msctf library while textservices are activated ([Wine Bug #31579](https://bugs.winehq.org/show_bug.cgi?id=31579))
+* ~~Avoid unloading msctf library while textservices are activated~~ ([Wine Bug #31579](https://bugs.winehq.org/show_bug.cgi?id=31579))
 * Avseq crashes when multisampling is enabled ([Wine Bug #31998](https://bugs.winehq.org/show_bug.cgi?id=31998))
 * Basic handling of write watches triggered while we're on the signal stack.
 * Basic support for CUDA

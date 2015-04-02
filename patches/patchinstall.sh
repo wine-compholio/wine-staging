@@ -128,7 +128,6 @@ patch_enable_all ()
 	enable_mmdevapi_AEV_Stubs="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
-	enable_msctf_DllCanUnloadNow="$1"
 	enable_msvcp90_basic_string_wchar_dtor="$1"
 	enable_msvcrt_atof_strtod="$1"
 	enable_msvfw32_Image_Size="$1"
@@ -451,9 +450,6 @@ patch_enable ()
 			;;
 		mscoree-CorValidateImage)
 			enable_mscoree_CorValidateImage="$2"
-			;;
-		msctf-DllCanUnloadNow)
-			enable_msctf_DllCanUnloadNow="$2"
 			;;
 		msvcp90-basic_string_wchar_dtor)
 			enable_msvcp90_basic_string_wchar_dtor="$2"
@@ -2615,6 +2611,20 @@ if test "$enable_kernel32_Console_Handles" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-FileDispositionInformation
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2631,20 +2641,6 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "server: Keep a pointer to parent'\''s fd unix_name in the closed_fd structure.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "server: Add support for setting file disposition information.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2942,21 +2938,6 @@ if test "$enable_mscoree_CorValidateImage" -eq 1; then
 	patch_apply mscoree-CorValidateImage/0001-mscoree-Implement-_CorValidateImage.patch
 	(
 		echo '+    { "Michael Müller", "mscoree: Implement _CorValidateImage.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset msctf-DllCanUnloadNow
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#31579] Avoid unloading msctf library while textservices are activated
-# |
-# | Modified files:
-# |   *	dlls/msctf/msctf.c
-# |
-if test "$enable_msctf_DllCanUnloadNow" -eq 1; then
-	patch_apply msctf-DllCanUnloadNow/0001-msctf-Avoid-unloading-library-while-textservices-are.patch
-	(
-		echo '+    { "Sebastian Lackner", "msctf: Avoid unloading library while textservices are activated.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3912,20 +3893,18 @@ fi
 # |   *	[#33723] EA Origin needs support for job objects
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/process.c, dlls/ntdll/om.c, dlls/ntdll/sync.c, include/winnt.h, server/handle.c, server/object.c,
-# | 	server/object.h, server/process.c, server/process.h, server/protocol.def
+# |   *	dlls/kernel32/tests/process.c, dlls/ntdll/om.c, dlls/ntdll/sync.c, server/handle.c, server/object.c, server/object.h,
+# | 	server/process.c, server/process.h, server/protocol.def
 # |
 if test "$enable_server_JobObjects" -eq 1; then
 	patch_apply server-JobObjects/0001-server-Implement-remaining-wineserver-calls-for-job-.patch
-	patch_apply server-JobObjects/0002-server-Implement-completion-messages-for-job-objects.patch
-	patch_apply server-JobObjects/0003-server-Properly-track-handle-count-of-objects.patch
-	patch_apply server-JobObjects/0004-server-Implement-JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.patch
-	patch_apply server-JobObjects/0005-kernel32-tests-Add-tests-for-waiting-on-an-job-objec.patch
-	patch_apply server-JobObjects/0006-server-Implement-waiting-for-job-objects.patch
-	patch_apply server-JobObjects/0007-ntdll-Implement-NtQueryInformationJobObject-stub-fun.patch
+	patch_apply server-JobObjects/0002-server-Properly-track-handle-count-of-objects.patch
+	patch_apply server-JobObjects/0003-server-Implement-JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.patch
+	patch_apply server-JobObjects/0004-kernel32-tests-Add-tests-for-waiting-on-an-job-objec.patch
+	patch_apply server-JobObjects/0005-server-Implement-waiting-for-job-objects.patch
+	patch_apply server-JobObjects/0006-ntdll-Implement-NtQueryInformationJobObject-stub-fun.patch
 	(
 		echo '+    { "Andrew Cook", "server: Implement remaining wineserver calls for job objects.", 1 },';
-		echo '+    { "Andrew Cook", "server: Implement completion messages for job objects.", 1 },';
 		echo '+    { "Andrew Cook", "server: Properly track handle count of objects.", 1 },';
 		echo '+    { "Andrew Cook", "server: Implement JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for waiting on an job object.", 1 },';

@@ -1,0 +1,209 @@
+From 16bb8ba07739f3c189920cdbf56f87aa520456c0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Wed, 1 Apr 2015 04:34:20 +0200
+Subject: ntdll: Load CLI/.NET images in the same way as Windows XP and above.
+
+---
+ dlls/kernel32/process.c |  11 ++--
+ dlls/ntdll/loader.c     | 132 +++++++++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 133 insertions(+), 10 deletions(-)
+
+diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
+index 2c8074b..5810080 100644
+--- a/dlls/kernel32/process.c
++++ b/dlls/kernel32/process.c
+@@ -1079,16 +1079,11 @@ static inline DWORD call_process_entry( PEB *peb, LPTHREAD_START_ROUTINE entry )
+  *
+  * Startup routine of a new process. Runs on the new process stack.
+  */
+-static DWORD WINAPI start_process( PEB *peb )
++static DWORD WINAPI start_process( LPTHREAD_START_ROUTINE entry )
+ {
+-    IMAGE_NT_HEADERS *nt;
+-    LPTHREAD_START_ROUTINE entry;
+-
+-    nt = RtlImageNtHeader( peb->ImageBaseAddress );
+-    entry = (LPTHREAD_START_ROUTINE)((char *)peb->ImageBaseAddress +
+-                                     nt->OptionalHeader.AddressOfEntryPoint);
++    PEB *peb = NtCurrentTeb()->Peb;
+ 
+-    if (!nt->OptionalHeader.AddressOfEntryPoint)
++    if (!entry)
+     {
+         ERR( "%s doesn't have an entry point, it cannot be executed\n",
+              debugstr_w(peb->ProcessParameters->ImagePathName.Buffer) );
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index 9810f07..18f20fe 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -97,6 +97,10 @@ static UINT tls_module_count;      /* number of modules with TLS directory */
+ static const IMAGE_TLS_DIRECTORY **tls_dirs;  /* array of TLS directories */
+ LIST_ENTRY tls_links = { &tls_links, &tls_links };
+ 
++static HRESULT (WINAPI *p_CorValidateImage)(PVOID* ImageBase, LPCWSTR FileName);
++static __int32 (WINAPI *p_CorExeMain)(void);
++static BOOL    (WINAPI *p_CorDllMain)(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved);
++
+ static RTL_CRITICAL_SECTION loader_section;
+ static RTL_CRITICAL_SECTION_DEBUG critsect_debug =
+ {
+@@ -330,6 +334,78 @@ static inline ULONG_PTR allocate_stub( const char *dll, const char *name ) { ret
+ 
+ 
+ /*************************************************************************
++ *      is_cli_only_image
++ *
++ * Checks if an image is a CLI/.NET image which does not contain any
++ * native code.
++ */
++static BOOL is_cli_only_image( HMODULE image )
++{
++    IMAGE_COR20_HEADER *cliheader;
++    ULONG size;
++
++    cliheader = RtlImageDirectoryEntryToData( image, TRUE, IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR, &size );
++    if (!cliheader || size < sizeof(*cliheader))
++        return FALSE;
++
++    return (cliheader->Flags & COMIMAGE_FLAGS_ILONLY) != 0;
++}
++
++
++/*************************************************************************
++ *      load_mscoree
++ *
++ * Load _CorValidateImage and the _Cor{Exe,Dll}Main functions from mscoree.
++ * The loader_section must be locked while calling this function.
++ */
++static BOOL load_mscoree( void )
++{
++    static const WCHAR mscoree_dllW[] = {'m','s','c','o','r','e','e','.','d','l','l',0};
++    UNICODE_STRING unicode_str;
++    ANSI_STRING ansi_str;
++    HMODULE module;
++
++    if (p_CorValidateImage)
++        return TRUE;
++
++    RtlInitUnicodeString( &unicode_str, mscoree_dllW );
++    if (LdrLoadDll( NULL, LOAD_LIBRARY_SEARCH_SYSTEM32, &unicode_str, &module ))
++    {
++        ERR( "Failed to load mscoree.dll\n" );
++        return FALSE;
++    }
++
++    /* Load _CorValidateImage */
++    RtlInitAnsiString( &ansi_str, "_CorValidateImage" );
++    if (LdrGetProcedureAddress( module, &ansi_str, 0, (void **)&p_CorValidateImage) )
++    {
++        ERR( "Failed to get import for _CorValidateImage\n" );
++        LdrUnloadDll( module );
++        return FALSE;
++    }
++
++    /* Load _CorExeMain */
++    RtlInitAnsiString( &ansi_str, "_CorExeMain" );
++    if (LdrGetProcedureAddress( module, &ansi_str, 0, (void **)&p_CorExeMain) )
++    {
++        ERR( "Failed to get import for _CorExeMain\n" );
++        p_CorExeMain = NULL;
++    }
++
++    /* Load _CorDllMain */
++    RtlInitAnsiString( &ansi_str, "_CorDllMain" );
++    if (LdrGetProcedureAddress( module, &ansi_str, 0, (void **)&p_CorDllMain) )
++    {
++        ERR( "Failed to get import for _CorDllMain\n" );
++        p_CorDllMain = NULL;
++    }
++
++    /* FIXME: Unload mscoree again when no longer needed */
++    return TRUE;
++}
++
++
++/*************************************************************************
+  *		get_modref
+  *
+  * Looks for the referenced HMODULE in the current process
+@@ -863,6 +939,10 @@ static NTSTATUS fixup_imports( WINE_MODREF *wm, LPCWSTR load_path )
+     if (!(wm->ldr.Flags & LDR_DONT_RESOLVE_REFS)) return STATUS_SUCCESS;  /* already done */
+     wm->ldr.Flags &= ~LDR_DONT_RESOLVE_REFS;
+ 
++    /* For a CLI-only image there is nothing to do. Do not allocate a TLS slot
++     * and do not resolve any external dependencies. */
++    if (is_cli_only_image( wm->ldr.BaseAddress )) return STATUS_SUCCESS;
++
+     wm->ldr.TlsIndex = alloc_tls_slot( &wm->ldr );
+ 
+     if (!(imports = RtlImageDirectoryEntryToData( wm->ldr.BaseAddress, TRUE,
+@@ -1058,8 +1138,43 @@ static NTSTATUS MODULE_InitDLL( WINE_MODREF *wm, UINT reason, LPVOID lpReserved
+     BOOL retv = FALSE;
+ 
+     /* Skip calls for modules loaded with special load flags */
+-
+     if (wm->ldr.Flags & LDR_DONT_RESOLVE_REFS) return STATUS_SUCCESS;
++
++    /* Yes, Windows also has hardcoded exceptions for mscoree in ntdll */
++    if (is_cli_only_image( module ))
++    {
++    #ifndef __x86_64__
++        IMAGE_NT_HEADERS *nt = RtlImageNtHeader( module );
++    #endif
++
++        if (reason == DLL_WINE_PREATTACH)
++            return STATUS_SUCCESS;
++
++        if (reason == DLL_PROCESS_ATTACH)
++        {
++            HRESULT hr;
++
++            if (!load_mscoree())
++                return STATUS_DLL_INIT_FAILED;
++
++            hr = p_CorValidateImage( &module, wm->ldr.FullDllName.Buffer );
++            if (hr)
++            {
++                ERR( "failed to validate CLI image, error 0x%x\n", hr );
++                wm->ldr.EntryPoint = NULL;
++                return STATUS_DLL_INIT_FAILED;
++            }
++
++        #ifdef __x86_64__
++            wm->ldr.EntryPoint = (wm->ldr.Flags & LDR_IMAGE_IS_DLL) ?
++                                 (void *)p_CorDllMain : (void *)p_CorExeMain;
++        #else
++            wm->ldr.EntryPoint = (char *)module + nt->OptionalHeader.AddressOfEntryPoint;
++        #endif
++            entry = wm->ldr.EntryPoint;
++        }
++    }
++
+     if (wm->ldr.TlsIndex != -1) call_tls_callbacks( wm->ldr.BaseAddress, reason );
+     if (!entry || !(wm->ldr.Flags & LDR_IMAGE_IS_DLL)) return STATUS_SUCCESS;
+ 
+@@ -2865,7 +2980,20 @@ static void load_global_options(void)
+  */
+ static void start_process( void *kernel_start )
+ {
+-    call_thread_entry_point( kernel_start, NtCurrentTeb()->Peb );
++    IMAGE_NT_HEADERS *nt;
++    LPTHREAD_START_ROUTINE entry;
++    PEB *peb = NtCurrentTeb()->Peb;
++
++    nt = RtlImageNtHeader( peb->ImageBaseAddress );
++    entry = (LPTHREAD_START_ROUTINE)((char *)peb->ImageBaseAddress +
++                                     nt->OptionalHeader.AddressOfEntryPoint);
++
++#ifdef __x86_64__
++    if (is_cli_only_image( peb->ImageBaseAddress ))
++        entry = (LPTHREAD_START_ROUTINE)p_CorExeMain;
++#endif
++
++    call_thread_entry_point( kernel_start, entry );
+ }
+ 
+ /******************************************************************
+-- 
+2.3.3
+

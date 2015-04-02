@@ -135,6 +135,7 @@ patch_enable_all ()
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_APC_Start_Process="$1"
 	enable_ntdll_Activation_Context="$1"
+	enable_ntdll_CLI_Images="$1"
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_DVD_Read_Size="$1"
 	enable_ntdll_DllRedirects="$1"
@@ -471,6 +472,9 @@ patch_enable ()
 			;;
 		ntdll-Activation_Context)
 			enable_ntdll_Activation_Context="$2"
+			;;
+		ntdll-CLI_Images)
+			enable_ntdll_CLI_Images="$2"
 			;;
 		ntdll-DOS_Attributes)
 			enable_ntdll_DOS_Attributes="$2"
@@ -1157,6 +1161,13 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 		abort "Patchset ntdll-Fix_Free disabled, but ntdll-Junction_Points depends on that."
 	fi
 	enable_ntdll_Fix_Free=1
+fi
+
+if test "$enable_ntdll_CLI_Images" -eq 1; then
+	if test "$enable_mscoree_CorValidateImage" -gt 1; then
+		abort "Patchset mscoree-CorValidateImage disabled, but ntdll-CLI_Images depends on that."
+	fi
+	enable_mscoree_CorValidateImage=1
 fi
 
 if test "$enable_kernel32_CopyFileEx" -eq 1; then
@@ -2604,20 +2615,6 @@ if test "$enable_kernel32_Console_Handles" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-FileDispositionInformation
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2634,6 +2631,20 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "server: Keep a pointer to parent'\''s fd unix_name in the closed_fd structure.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "server: Add support for setting file disposition information.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3029,6 +3040,18 @@ if test "$enable_ntdll_Activation_Context" -eq 1; then
 	patch_apply ntdll-Activation_Context/0001-ntdll-Fix-return-value-for-missing-ACTIVATION_CONTEX.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Fix return value for missing ACTIVATION_CONTEXT_SECTION_ASSEMBLY_INFORMATION key.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-CLI_Images
+# |
+# | Modified files:
+# |   *	dlls/kernel32/process.c, dlls/ntdll/loader.c
+# |
+if test "$enable_ntdll_CLI_Images" -eq 1; then
+	patch_apply ntdll-CLI_Images/0001-ntdll-Load-CLI-.NET-images-in-the-same-way-as-Window.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Load CLI/.NET images in the same way as Windows XP and above.", 1 },';
 	) >> "$patchlist"
 fi
 

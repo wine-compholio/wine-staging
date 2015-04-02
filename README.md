@@ -38,7 +38,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [12]:**
+**Bugfixes and features included in the next upcoming release [13]:**
 
 * Add stub fltmgr.sys (filter manager driver) ([Wine Bug #23583](https://bugs.winehq.org/show_bug.cgi?id=23583))
 * Add stubs for Power[Set|Clear]Request
@@ -52,6 +52,7 @@ Included bug fixes and improvements
 * Return correct device type for cd devices without medium
 * Show unmounted devices in winecfg and allow changing the unix path
 * Software support for Environmental Audio Extensions (EAX)
+* Support for linux priority levels for faster performance
 
 
 **Bugs fixed in Wine Staging 1.7.39 [205]:**

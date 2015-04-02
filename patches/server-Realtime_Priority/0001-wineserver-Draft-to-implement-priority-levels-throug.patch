@@ -1,0 +1,250 @@
+From 4460f2d66676f03b492cd0d54951a3bc3dab9bf8 Mon Sep 17 00:00:00 2001
+From: Joakim Hernberg <jhernberg@alchemy.lu>
+Date: Tue, 31 Mar 2015 20:58:20 +0200
+Subject: wineserver: Draft to implement priority levels through POSIX
+ scheduling policies on linux.
+
+Changes by Sebastian Lackner <sebastian@fds-team.de>:
+* Move scheduler related logic into a separate file.
+* Use SCHED_RESET_ON_FORK to avoid leaking high priority threads.
+* Simplify logic to parse environment variables using a helper function.
+* Clean up error messages.
+---
+ server/Makefile.in |   1 +
+ server/main.c      |   2 +
+ server/scheduler.c | 160 +++++++++++++++++++++++++++++++++++++++++++++++++++++
+ server/thread.c    |   3 +
+ server/thread.h    |   5 ++
+ 5 files changed, 171 insertions(+)
+ create mode 100644 server/scheduler.c
+
+diff --git a/server/Makefile.in b/server/Makefile.in
+index 19a4fac..0fe5cbb 100644
+--- a/server/Makefile.in
++++ b/server/Makefile.in
+@@ -30,6 +30,7 @@ C_SRCS = \
+ 	region.c \
+ 	registry.c \
+ 	request.c \
++	scheduler.c \
+ 	semaphore.c \
+ 	serial.c \
+ 	signal.c \
+diff --git a/server/main.c b/server/main.c
+index 7aed338..ee8cadd 100644
+--- a/server/main.c
++++ b/server/main.c
+@@ -44,6 +44,7 @@ int foreground = 0;
+ timeout_t master_socket_timeout = 3 * -TICKS_PER_SEC;  /* master socket timeout, default is 3 seconds */
+ const char *server_argv0;
+ 
++
+ /* parse-line args */
+ 
+ static void usage( FILE *fh )
+@@ -142,6 +143,7 @@ int main( int argc, char *argv[] )
+     open_master_socket();
+ 
+     if (debug_level) fprintf( stderr, "wineserver: starting (pid=%ld)\n", (long) getpid() );
++    init_scheduler();
+     init_signals();
+     init_directories();
+     init_registry();
+diff --git a/server/scheduler.c b/server/scheduler.c
+new file mode 100644
+index 0000000..b20c8bf
+--- /dev/null
++++ b/server/scheduler.c
+@@ -0,0 +1,160 @@
++/*
++ * Scheduler priority management
++ *
++ * Copyright (C) 2015 Joakim Hernberg
++ * Copyright (C) 2015 Sebastian Lackner
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "config.h"
++
++#define _GNU_SOURCE  /* for SCHED_BATCH, SCHED_IDLE */
++#include <assert.h>
++#include <stdio.h>
++#ifdef HAVE_SYS_RESOURCE_H
++# include <sys/resource.h>
++#endif
++#ifdef HAVE_SCHED_H
++# include <sched.h>
++#endif
++#ifndef SCHED_RESET_ON_FORK
++# define SCHED_RESET_ON_FORK 0x40000000
++#endif
++
++#include "ntstatus.h"
++#define WIN32_NO_STATUS
++#include "winternl.h"
++#include "thread.h"
++
++#if defined(__linux__) && defined(HAVE_SYS_RESOURCE_H) && defined(HAVE_SCHED_H)
++
++static int thread_base_priority = -1;
++
++/* gets the priority value from an environment variable */
++static int get_priority( const char *variable, int min, int max )
++{
++    const char *env;
++    int val;
++
++    env = getenv( variable );
++    if (!env) return -1;
++
++    val = atoi( env );
++    if (val >= min && val <= max) return val;
++    fprintf( stderr, "wineserver: %s should be between %d and %d\n", variable, min, max );
++    return -1;
++}
++
++/* initializes the scheduler */
++void init_scheduler( void )
++{
++    int min, max, priority;
++
++    min = sched_get_priority_min( SCHED_FIFO );
++    max = sched_get_priority_max( SCHED_FIFO );
++    if (min == -1 || max == -1)
++        return;
++
++    /* change the wineserver priority */
++    if ((priority = get_priority( "STAGING_RT_PRIORITY_SERVER", min, max )) != -1)
++    {
++        struct sched_param param;
++        memset( &param, 0, sizeof(param) );
++        param.sched_priority = priority;
++        if (sched_setscheduler( 0, SCHED_FIFO | SCHED_RESET_ON_FORK, &param ) == -1 &&
++            sched_setscheduler( 0, SCHED_FIFO, &param ) == -1)
++        {
++            fprintf( stderr, "wineserver: failed to change priority to SCHED_FIFO/%d\n",
++                     param.sched_priority );
++            /* do not bother to check the rest */
++            return;
++        }
++
++        if (debug_level) fprintf( stderr, "wineserver: changed priority to SCHED_FIFO/%d\n",
++                                  param.sched_priority );
++    }
++
++    /* determine base priority which will be used for all threads */
++    if ((priority = get_priority( "STAGING_RT_PRIORITY_BASE", min, max - 4 )) != -1)
++    {
++        thread_base_priority = priority;
++
++        if (debug_level) fprintf( stderr, "wineserver: initialized thread base priority to %d\n",
++                                  thread_base_priority );
++    }
++}
++
++/* sets the scheduler priority of a windows thread */
++void set_scheduler_priority( struct thread *thread )
++{
++    struct sched_param param;
++    int policy;
++
++    if (thread_base_priority == -1) return;
++    if (thread->unix_tid == -1) return;
++
++    memset( &param, 0, sizeof(param) );
++    if (thread->priority >= THREAD_PRIORITY_TIME_CRITICAL)
++    {
++        policy = SCHED_FIFO;
++        param.sched_priority = thread_base_priority + 4;
++    }
++    else if (thread->priority >= THREAD_PRIORITY_HIGHEST)
++    {
++        policy = SCHED_FIFO;
++        param.sched_priority = thread_base_priority + 2;
++    }
++    else if (thread->priority >= THREAD_PRIORITY_ABOVE_NORMAL)
++    {
++        policy = SCHED_FIFO;
++        param.sched_priority = thread_base_priority;
++    }
++    else if (thread->priority >= THREAD_PRIORITY_NORMAL)
++    {
++        policy = SCHED_OTHER;
++    }
++    else if (thread->priority >= THREAD_PRIORITY_LOWEST)
++    {
++        policy = SCHED_BATCH;
++    }
++    else
++    {
++        policy = SCHED_IDLE;
++    }
++
++    if (sched_setscheduler(thread->unix_tid, policy | SCHED_RESET_ON_FORK, &param) == -1 &&
++        sched_setscheduler(thread->unix_tid, policy, &param) == -1)
++    {
++        if (debug_level) fprintf( stderr, "%04x: failed to change priority to %d/%d\n",
++                                  thread->id, policy, param.sched_priority );
++        return;
++    }
++
++    if (debug_level) fprintf( stderr, "%04x: changed priority to %d/%d\n",
++                              thread->id, policy, param.sched_priority );
++}
++
++#else
++
++void init_scheduler( void )
++{
++}
++
++void scheduler_update_priority( struct thread *thread, int priority )
++{
++}
++
++#endif
+diff --git a/server/thread.c b/server/thread.c
+index 906b79d..22c22d5 100644
+--- a/server/thread.c
++++ b/server/thread.c
+@@ -482,7 +482,10 @@ static void set_thread_info( struct thread *thread,
+         if ((req->priority >= min && req->priority <= max) ||
+             req->priority == THREAD_PRIORITY_IDLE ||
+             req->priority == THREAD_PRIORITY_TIME_CRITICAL)
++        {
+             thread->priority = req->priority;
++            set_scheduler_priority( thread );
++        }
+         else
+             set_error( STATUS_INVALID_PARAMETER );
+     }
+diff --git a/server/thread.h b/server/thread.h
+index 996d95b..01bcc59 100644
+--- a/server/thread.h
++++ b/server/thread.h
+@@ -145,4 +145,9 @@ static inline void set_win32_error( unsigned int err ) { set_error( 0xc0010000 |
+ 
+ static inline thread_id_t get_thread_id( struct thread *thread ) { return thread->id; }
+ 
++/* scheduler functions */
++
++extern void init_scheduler( void );
++extern void set_scheduler_priority( struct thread *thread );
++
+ #endif  /* __WINE_SERVER_THREAD_H */
+-- 
+2.3.3
+

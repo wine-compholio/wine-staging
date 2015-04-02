@@ -183,6 +183,7 @@ patch_enable_all ()
 	enable_server_Misc_ACL="$1"
 	enable_server_OpenProcess="$1"
 	enable_server_PeekMessage="$1"
+	enable_server_Realtime_Priority="$1"
 	enable_server_Shared_Memory="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Unexpected_Wakeup="$1"
@@ -613,6 +614,9 @@ patch_enable ()
 			;;
 		server-PeekMessage)
 			enable_server_PeekMessage="$2"
+			;;
+		server-Realtime_Priority)
+			enable_server_Realtime_Priority="$2"
 			;;
 		server-Shared_Memory)
 			enable_server_Shared_Memory="$2"
@@ -1955,6 +1959,21 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-Multisampling
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Multisampling" -eq 1; then
+	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+	(
+		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-Revert_PixelFormat
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1998,21 +2017,6 @@ if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
 	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Multisampling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
-	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3922,6 +3926,18 @@ if test "$enable_server_PeekMessage" -eq 1; then
 	patch_apply server-PeekMessage/0001-server-Fix-handling-of-GetMessage-after-previous-Pee.patch
 	(
 		echo '+    { "Sebastian Lackner", "server: Fix handling of GetMessage after previous PeekMessage call.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Realtime_Priority
+# |
+# | Modified files:
+# |   *	server/Makefile.in, server/main.c, server/scheduler.c, server/thread.c, server/thread.h
+# |
+if test "$enable_server_Realtime_Priority" -eq 1; then
+	patch_apply server-Realtime_Priority/0001-wineserver-Draft-to-implement-priority-levels-throug.patch
+	(
+		echo '+    { "Joakim Hernberg", "wineserver: Draft to implement priority levels through POSIX scheduling policies on linux.", 1 },';
 	) >> "$patchlist"
 fi
 

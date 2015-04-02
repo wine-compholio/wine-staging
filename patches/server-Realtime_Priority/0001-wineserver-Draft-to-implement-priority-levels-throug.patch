@@ -1,4 +1,4 @@
-From 4460f2d66676f03b492cd0d54951a3bc3dab9bf8 Mon Sep 17 00:00:00 2001
+From 3dca4fe127be7ea76adc5452aa0a417a847aea7a Mon Sep 17 00:00:00 2001
 From: Joakim Hernberg <jhernberg@alchemy.lu>
 Date: Tue, 31 Mar 2015 20:58:20 +0200
 Subject: wineserver: Draft to implement priority levels through POSIX
@@ -12,10 +12,10 @@ Changes by Sebastian Lackner <sebastian@fds-team.de>:
 ---
  server/Makefile.in |   1 +
  server/main.c      |   2 +
- server/scheduler.c | 160 +++++++++++++++++++++++++++++++++++++++++++++++++++++
+ server/scheduler.c | 162 +++++++++++++++++++++++++++++++++++++++++++++++++++++
  server/thread.c    |   3 +
  server/thread.h    |   5 ++
- 5 files changed, 171 insertions(+)
+ 5 files changed, 173 insertions(+)
  create mode 100644 server/scheduler.c
 
 diff --git a/server/Makefile.in b/server/Makefile.in
@@ -52,10 +52,10 @@ index 7aed338..ee8cadd 100644
      init_registry();
 diff --git a/server/scheduler.c b/server/scheduler.c
 new file mode 100644
-index 0000000..b20c8bf
+index 0000000..04ae4b5
 --- /dev/null
 +++ b/server/scheduler.c
-@@ -0,0 +1,160 @@
+@@ -0,0 +1,162 @@
 +/*
 + * Scheduler priority management
 + *
@@ -196,8 +196,10 @@ index 0000000..b20c8bf
 +    if (sched_setscheduler(thread->unix_tid, policy | SCHED_RESET_ON_FORK, &param) == -1 &&
 +        sched_setscheduler(thread->unix_tid, policy, &param) == -1)
 +    {
-+        if (debug_level) fprintf( stderr, "%04x: failed to change priority to %d/%d\n",
-+                                  thread->id, policy, param.sched_priority );
++        static int once;
++        if (debug_level || !once++)
++            fprintf( stderr, "%04x: failed to change priority to %d/%d\n",
++                     thread->id, policy, param.sched_priority );
 +        return;
 +    }
 +

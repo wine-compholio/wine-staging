@@ -699,13 +699,20 @@ def generate_markdown(all_patches, stable_patches, stable_compholio_version):
     # Generate information for current version
     lines = []
     if len(new_fixes):
-        lines.append("**Bugfixes and features included in the next upcoming release [%d]:**" % len(new_fixes))
+        lines.append("**Bug fixes and features included in the next upcoming release [%d]:**" % len(new_fixes))
         lines.append("")
         for mode, bugid, bugname in sorted(new_fixes, key=lambda x: x[2]):
             lines.append(_format_bug(mode, bugid, bugname))
         lines.append("")
         lines.append("")
-    lines.append("**Bugs fixed in Wine Staging %s [%d]:**" % (stable_compholio_version, len(old_fixes)))
+    lines.append("**Bug fixes and features in Wine Staging %s [%d]:**" % (stable_compholio_version, len(old_fixes)))
+    lines.append("")
+    lines.append("*Note: The following list only contains features and bug fixes which are not")
+    lines.append("yet available in vanilla Wine. They are removed from the list as soon as they")
+    lines.append("are included upstream. The list also includes features and fixes from previous")
+    lines.append("releases, take a look at the")
+    lines.append("[changelog](https://github.com/wine-compholio/wine-staging/blob/master/debian/changelog)")
+    lines.append("for more details.*")
     lines.append("")
     for mode, bugid, bugname in sorted(old_fixes, key=lambda x: x[2]):
         lines.append(_format_bug(mode, bugid, bugname))

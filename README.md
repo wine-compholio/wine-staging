@@ -1,25 +1,26 @@
 What is Wine Staging?
-=====================
+---------------------
 
 **Warning: Do not report bugs at bugs.winehq.org when using this version!
 Please take a look [here](http://bugs.wine-staging.com) for more information
 about how to report bugs.**
 
 **Wine Staging** (formerly wine-compholio) is a special wine version containing
-bug fixes and features that are not yet available in regular wine versions. The
-idea behind Wine Staging is to provide new features faster to end users and to
+bug fixes and features, which are not yet available in regular wine versions.
+The idea of Wine Staging is to provide new features faster to end users and to
 give developers the possibility to discuss and improve their patches before
 they are sent upstream. We also intend to create a community of wine developers
 to share experience and to make it easier for beginners to start hacking on
-wine.
+wine. More information about Wine Staging can also be found on our website
+[wine-staging.com](http://wine-staging.com).
 
-Although we are reviewing all patches before adding them, you may encounter
-additional bugs, which are not present in regular wine. Make sure to report
-such issues in our bug tracker instead of winehq.org so that we can try to
-solve them in future versions. Thanks!
+Although we are reviewing and testing all patches before adding them, you may
+encounter additional bugs, which are not present in vanilla wine. Make sure to
+report such issues in our bug tracker instead of winehq.org so that we can try
+to solve them in future versions. Thanks!
 
 How to install and use Wine Staging
-===================================
+-----------------------------------
 
 Ready-to-use packages for Wine Staging are available for a variety
 of different Linux distributions directly for download. Just follow the
@@ -36,9 +37,9 @@ Wine. All those differences are also documented on the
 
 
 Included bug fixes and improvements
-===================================
+-----------------------------------
 
-**Bugfixes and features included in the next upcoming release [15]:**
+**Bug fixes and features included in the next upcoming release [15]:**
 
 * Add stub fltmgr.sys (filter manager driver) ([Wine Bug #23583](https://bugs.winehq.org/show_bug.cgi?id=23583))
 * Add stubs for Power[Set|Clear]Request
@@ -57,7 +58,14 @@ Included bug fixes and improvements
 * Support for linux priority levels for faster performance
 
 
-**Bugs fixed in Wine Staging 1.7.39 [205]:**
+**Bug fixes and features in Wine Staging 1.7.39 [205]:**
+
+*Note: The following list only contains features and bug fixes which are not
+yet available in vanilla Wine. They are removed from the list as soon as they
+are included upstream. The list also includes features and fixes from previous
+releases, take a look at the
+[changelog](https://github.com/wine-compholio/wine-staging/blob/master/debian/changelog)
+for more details.*
 
 * Add Dynamic DST exceptions for Israel Standard Time ([Wine Bug #36374](https://bugs.winehq.org/show_bug.cgi?id=36374))
 * Add default ACLs for user shell folders

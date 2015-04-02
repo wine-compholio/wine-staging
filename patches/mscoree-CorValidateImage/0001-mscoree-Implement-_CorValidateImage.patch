@@ -1,0 +1,106 @@
+From 813e87c2f979a552a0573abfd6afcfcec8584edf Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 2 Apr 2015 02:38:29 +0200
+Subject: mscoree: Implement _CorValidateImage.
+
+---
+ dlls/mscoree/mscoree_main.c | 71 +++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 69 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/mscoree/mscoree_main.c b/dlls/mscoree/mscoree_main.c
+index 8b46fd5..6e02c79 100644
+--- a/dlls/mscoree/mscoree_main.c
++++ b/dlls/mscoree/mscoree_main.c
+@@ -21,11 +21,14 @@
+ 
+ #include <stdarg.h>
+ 
++#include "ntstatus.h"
++#define WIN32_NO_STATUS
+ #define COBJMACROS
+ #include "wine/unicode.h"
+ #include "wine/library.h"
+ #include "windef.h"
+ #include "winbase.h"
++#include "winternl.h"
+ #include "winuser.h"
+ #include "winnls.h"
+ #include "winreg.h"
+@@ -259,8 +262,72 @@ VOID WINAPI _CorImageUnloading(PVOID imageBase)
+ 
+ HRESULT WINAPI _CorValidateImage(PVOID* imageBase, LPCWSTR imageName)
+ {
+-    TRACE("(%p, %s): stub\n", imageBase, debugstr_w(imageName));
+-    return E_FAIL;
++    IMAGE_COR20_HEADER *cliheader;
++    IMAGE_NT_HEADERS *nt;
++    ULONG size;
++
++    TRACE("(%p, %s)\n", imageBase, debugstr_w(imageName));
++
++    if (!imageBase)
++        return E_INVALIDARG;
++
++    nt = RtlImageNtHeader(*imageBase);
++    if (!nt) return STATUS_INVALID_IMAGE_FORMAT;
++
++    cliheader = RtlImageDirectoryEntryToData(*imageBase, TRUE, IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR, &size);
++    if (!cliheader || size < sizeof(*cliheader))
++        return STATUS_INVALID_IMAGE_FORMAT;
++
++#ifdef __x86_64__
++    if (cliheader->Flags & COMIMAGE_FLAGS_32BITREQUIRED)
++            return STATUS_INVALID_IMAGE_FORMAT;
++
++    if (nt->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC)
++    {
++        /* Clear out the entrypoint if nonzero */
++        if ((cliheader->Flags & COMIMAGE_FLAGS_ILONLY) && nt->OptionalHeader.AddressOfEntryPoint)
++        {
++            DWORD *entry = &nt->OptionalHeader.AddressOfEntryPoint;
++            DWORD old_protect;
++
++            if (!VirtualProtect(entry, sizeof(*entry), PAGE_READWRITE, &old_protect))
++                return E_UNEXPECTED;
++            *entry = 0;
++            if (!VirtualProtect(entry, sizeof(*entry), old_protect, &old_protect))
++                return E_UNEXPECTED;
++        }
++
++        return STATUS_SUCCESS;
++    }
++
++    if (nt->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR32_MAGIC)
++    {
++        if (!(cliheader->Flags & COMIMAGE_FLAGS_ILONLY))
++            return STATUS_INVALID_IMAGE_FORMAT;
++
++        FIXME("conversion of IMAGE_NT_HEADERS32 -> IMAGE_NT_HEADERS64 header not implemented\n");
++        return STATUS_NOT_IMPLEMENTED;
++    }
++
++#else
++    if (nt->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR32_MAGIC)
++    {
++        DWORD *entry = &nt->OptionalHeader.AddressOfEntryPoint;
++        DWORD old_protect;
++
++        if (!VirtualProtect(entry, sizeof(*entry), PAGE_READWRITE, &old_protect))
++            return E_UNEXPECTED;
++        *entry = (nt->FileHeader.Characteristics & IMAGE_FILE_DLL) ?
++            ((DWORD)&_CorDllMain - (DWORD)*imageBase) : (DWORD)&_CorExeMain - (DWORD)*imageBase;
++        if (!VirtualProtect(entry, sizeof(*entry), old_protect, &old_protect))
++            return E_UNEXPECTED;
++
++        return STATUS_SUCCESS;
++    }
++
++#endif
++
++    return STATUS_INVALID_IMAGE_FORMAT;
+ }
+ 
+ HRESULT WINAPI GetCORSystemDirectory(LPWSTR pbuffer, DWORD cchBuffer, DWORD *dwLength)
+-- 
+2.3.3
+

@@ -38,7 +38,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 ===================================
 
-**Bugfixes and features included in the next upcoming release [13]:**
+**Bugfixes and features included in the next upcoming release [14]:**
 
 * Add stub fltmgr.sys (filter manager driver) ([Wine Bug #23583](https://bugs.winehq.org/show_bug.cgi?id=23583))
 * Add stubs for Power[Set|Clear]Request
@@ -49,6 +49,7 @@ Included bug fixes and improvements
 * Fix device paths in HKLM\SYSTEM\MountedDevices ([Wine Bug #38235](https://bugs.winehq.org/show_bug.cgi?id=38235))
 * Fix handling of ANSI NTLM credentials ([Wine Bug #37063](https://bugs.winehq.org/show_bug.cgi?id=37063))
 * Implement empty enumerator for IWiaDevMgr::EnumDeviceInfo ([Wine Bug #27775](https://bugs.winehq.org/show_bug.cgi?id=27775))
+* Implement mscoree._CorValidateImage for mono runtime
 * Return correct device type for cd devices without medium
 * Show unmounted devices in winecfg and allow changing the unix path
 * Software support for Environmental Audio Extensions (EAX)

@@ -127,6 +127,7 @@ patch_enable_all ()
 	enable_makedep_PARENTSPEC="$1"
 	enable_mmdevapi_AEV_Stubs="$1"
 	enable_mountmgr_DosDevices="$1"
+	enable_mscoree_CorValidateImage="$1"
 	enable_msctf_DllCanUnloadNow="$1"
 	enable_msvcp90_basic_string_wchar_dtor="$1"
 	enable_msvcrt_atof_strtod="$1"
@@ -446,6 +447,9 @@ patch_enable ()
 			;;
 		mountmgr-DosDevices)
 			enable_mountmgr_DosDevices="$2"
+			;;
+		mscoree-CorValidateImage)
+			enable_mscoree_CorValidateImage="$2"
 			;;
 		msctf-DllCanUnloadNow)
 			enable_msctf_DllCanUnloadNow="$2"
@@ -2915,6 +2919,18 @@ if test "$enable_mountmgr_DosDevices" -eq 1; then
 	patch_apply mountmgr-DosDevices/0001-mountmgr.sys-Write-usable-device-paths-into-HKLM-SYS.patch
 	(
 		echo '+    { "Michael Müller", "mountmgr.sys: Write usable device paths into HKLM\\\\SYSTEM\\\\MountedDevices.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset mscoree-CorValidateImage
+# |
+# | Modified files:
+# |   *	dlls/mscoree/mscoree_main.c
+# |
+if test "$enable_mscoree_CorValidateImage" -eq 1; then
+	patch_apply mscoree-CorValidateImage/0001-mscoree-Implement-_CorValidateImage.patch
+	(
+		echo '+    { "Michael Müller", "mscoree: Implement _CorValidateImage.", 1 },';
 	) >> "$patchlist"
 fi
 

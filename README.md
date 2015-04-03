@@ -39,11 +39,12 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [17]:**
+**Bug fixes and features included in the next upcoming release [18]:**
 
 * Add stub fltmgr.sys (filter manager driver) ([Wine Bug #23583](https://bugs.winehq.org/show_bug.cgi?id=23583))
 * Add stub for ntoskrnl.PsRemoveLoadImageNotifyRoutine
 * Add stubs for Power[Set|Clear]Request
+* Allow to open files/directories without any access rights in order to query attributes
 * Avoid spam of FIXME messages for PsLookupProcessByProcessId stub ([Wine Bug #36821](https://bugs.winehq.org/show_bug.cgi?id=36821))
 * Don't return an error in WS_select when EINTR happens during timeout
 * Fix calculation of 3D sound source ([Wine Bug #38041](https://bugs.winehq.org/show_bug.cgi?id=38041))

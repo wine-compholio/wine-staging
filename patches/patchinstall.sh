@@ -178,6 +178,7 @@ patch_enable_all ()
 	enable_server_Address_List_Change="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
+	enable_server_File_Permissions="$1"
 	enable_server_Inherited_ACLs="$1"
 	enable_server_JobObjects="$1"
 	enable_server_Key_State="$1"
@@ -600,6 +601,9 @@ patch_enable ()
 			;;
 		server-CreateProcess_ACLs)
 			enable_server_CreateProcess_ACLs="$2"
+			;;
+		server-File_Permissions)
+			enable_server_File_Permissions="$2"
 			;;
 		server-Inherited_ACLs)
 			enable_server_Inherited_ACLs="$2"
@@ -1089,9 +1093,13 @@ if test "$enable_server_ACL_Compat" -eq 1; then
 fi
 
 if test "$enable_server_Inherited_ACLs" -eq 1; then
+	if test "$enable_server_File_Permissions" -gt 1; then
+		abort "Patchset server-File_Permissions disabled, but server-Inherited_ACLs depends on that."
+	fi
 	if test "$enable_server_Stored_ACLs" -gt 1; then
 		abort "Patchset server-Stored_ACLs disabled, but server-Inherited_ACLs depends on that."
 	fi
+	enable_server_File_Permissions=1
 	enable_server_Stored_ACLs=1
 fi
 
@@ -1175,6 +1183,13 @@ if test "$enable_kernel32_CopyFileEx" -eq 1; then
 	fi
 	enable_kernel32_SetFileInformationByHandle=1
 	enable_ntdll_FileDispositionInformation=1
+fi
+
+if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
+	if test "$enable_server_File_Permissions" -gt 1; then
+		abort "Patchset server-File_Permissions disabled, but ntdll-FileDispositionInformation depends on that."
+	fi
+	enable_server_File_Permissions=1
 fi
 
 if test "$enable_dxva2_Video_Decoder" -eq 1; then
@@ -2608,6 +2623,24 @@ if test "$enable_kernel32_Console_Handles" -eq 1; then
 	(
 		echo '+    { "Erich E. Hoover", "krnl386: Invalid console handles should translate into real handles when creating a new process.", 1 },';
 		echo '+    { "Erich E. Hoover", "kernel32: Invalid console handles for new processes are 0, not INVALID_HANDLE_VALUE.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-File_Permissions
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/fd.c
+# |
+if test "$enable_server_File_Permissions" -eq 1; then
+	patch_apply server-File_Permissions/0001-server-Allow-to-open-files-without-any-permission-bi.patch
+	patch_apply server-File_Permissions/0002-server-When-creating-new-directories-temporarily-giv.patch
+	patch_apply server-File_Permissions/0003-advapi32-tests-Add-tests-for-ACL-inheritance-in-Crea.patch
+	patch_apply server-File_Permissions/0004-advapi32-tests-Add-ACL-inheritance-tests-for-creatin.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Allow to open files without any permission bits.", 2 },';
+		echo '+    { "Sebastian Lackner", "server: When creating new directories temporarily give read-permissions until they are opened.", 1 },';
+		echo '+    { "Sebastian Lackner", "advapi32/tests: Add tests for ACL inheritance in CreateDirectoryA.", 1 },';
+		echo '+    { "Sebastian Lackner", "advapi32/tests: Add ACL inheritance tests for creating subdirectories with NtCreateFile.", 1 },';
 	) >> "$patchlist"
 fi
 

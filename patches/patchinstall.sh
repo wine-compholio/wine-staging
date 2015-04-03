@@ -151,7 +151,6 @@ patch_enable_all ()
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_RtlIpStringToAddress="$1"
-	enable_ntdll_RtlUnwindEx="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
 	enable_ntdll_User_Shared_Data="$1"
@@ -519,9 +518,6 @@ patch_enable ()
 			;;
 		ntdll-RtlIpStringToAddress)
 			enable_ntdll_RtlIpStringToAddress="$2"
-			;;
-		ntdll-RtlUnwindEx)
-			enable_ntdll_RtlUnwindEx="$2"
 			;;
 		ntdll-ThreadTime)
 			enable_ntdll_ThreadTime="$2"
@@ -3276,21 +3272,6 @@ if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-RtlUnwindEx
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34254] Fix check for end_frame in RtlUnwindEx on x86_64.
-# |
-# | Modified files:
-# |   *	dlls/ntdll/signal_x86_64.c
-# |
-if test "$enable_ntdll_RtlUnwindEx" -eq 1; then
-	patch_apply ntdll-RtlUnwindEx/0001-ntdll-Fix-check-for-end_frame-in-RtlUnwindEx-on-x86_.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Fix check for end_frame in RtlUnwindEx on x86_64.", 3 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-ThreadTime
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3893,19 +3874,16 @@ fi
 # |   *	[#33723] EA Origin needs support for job objects
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/process.c, dlls/ntdll/om.c, dlls/ntdll/sync.c, server/handle.c, server/object.c, server/object.h,
-# | 	server/process.c, server/process.h, server/protocol.def
+# |   *	dlls/kernel32/tests/process.c, dlls/ntdll/sync.c, server/process.c, server/process.h, server/protocol.def
 # |
 if test "$enable_server_JobObjects" -eq 1; then
 	patch_apply server-JobObjects/0001-server-Implement-remaining-wineserver-calls-for-job-.patch
-	patch_apply server-JobObjects/0002-server-Properly-track-handle-count-of-objects.patch
-	patch_apply server-JobObjects/0003-server-Implement-JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.patch
-	patch_apply server-JobObjects/0004-kernel32-tests-Add-tests-for-waiting-on-an-job-objec.patch
-	patch_apply server-JobObjects/0005-server-Implement-waiting-for-job-objects.patch
-	patch_apply server-JobObjects/0006-ntdll-Implement-NtQueryInformationJobObject-stub-fun.patch
+	patch_apply server-JobObjects/0002-server-Implement-JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.patch
+	patch_apply server-JobObjects/0003-kernel32-tests-Add-tests-for-waiting-on-an-job-objec.patch
+	patch_apply server-JobObjects/0004-server-Implement-waiting-for-job-objects.patch
+	patch_apply server-JobObjects/0005-ntdll-Implement-NtQueryInformationJobObject-stub-fun.patch
 	(
 		echo '+    { "Andrew Cook", "server: Implement remaining wineserver calls for job objects.", 1 },';
-		echo '+    { "Andrew Cook", "server: Properly track handle count of objects.", 1 },';
 		echo '+    { "Andrew Cook", "server: Implement JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for waiting on an job object.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement waiting for job objects.", 1 },';

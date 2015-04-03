@@ -3472,6 +3472,7 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0014-ntoskrnl.exe-Implement-KeInitializeMutex.patch
 	patch_apply ntoskrnl-Stubs/0015-ntoskrnl.exe-Add-stub-for-ProbeForRead.patch
 	patch_apply ntoskrnl-Stubs/0016-ntoskrnl.exe-Add-stub-for-ProbeForWrite.patch
+	patch_apply ntoskrnl-Stubs/0017-ntoskrnl.exe-Add-stub-for-PsRemoveLoadImageNotifyRou.patch
 	(
 		echo '+    { "Austin English", "ntoskrnl.exe: add KeWaitForMultipleObjects stub.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for IoGetAttachedDeviceReference.", 1 },';
@@ -3489,6 +3490,7 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Implement KeInitializeMutex.", 1 },';
 		echo '+    { "Austin English", "ntoskrnl.exe: Add stub for ProbeForRead.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntoskrnl.exe: Add stub for ProbeForWrite.", 1 },';
+		echo '+    { "Michael Müller", "ntoskrnl.exe: Add stub for PsRemoveLoadImageNotifyRoutine.", 1 },';
 	) >> "$patchlist"
 fi
 

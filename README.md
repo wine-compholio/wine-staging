@@ -39,9 +39,10 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [15]:**
+**Bug fixes and features included in the next upcoming release [16]:**
 
 * Add stub fltmgr.sys (filter manager driver) ([Wine Bug #23583](https://bugs.winehq.org/show_bug.cgi?id=23583))
+* Add stub for ntoskrnl.PsRemoveLoadImageNotifyRoutine
 * Add stubs for Power[Set|Clear]Request
 * Avoid spam of FIXME messages for PsLookupProcessByProcessId stub ([Wine Bug #36821](https://bugs.winehq.org/show_bug.cgi?id=36821))
 * Don't return an error in WS_select when EINTR happens during timeout

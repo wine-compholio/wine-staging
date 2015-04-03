@@ -123,6 +123,7 @@ patch_enable_all ()
 	enable_kernel32_Profile="$1"
 	enable_kernel32_SetFileInformationByHandle="$1"
 	enable_kernel32_VerifyVersionInfo="$1"
+	enable_kernel32_get_registry_locale_info="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_makedep_PARENTSPEC="$1"
 	enable_mmdevapi_AEV_Stubs="$1"
@@ -434,6 +435,9 @@ patch_enable ()
 			;;
 		kernel32-VerifyVersionInfo)
 			enable_kernel32_VerifyVersionInfo="$2"
+			;;
+		kernel32-get_registry_locale_info)
+			enable_kernel32_get_registry_locale_info="$2"
 			;;
 		libs-Unicode_Collation)
 			enable_libs_Unicode_Collation="$2"
@@ -2607,20 +2611,6 @@ if test "$enable_kernel32_Console_Handles" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-FileDispositionInformation
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2637,6 +2627,20 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "server: Keep a pointer to parent'\''s fd unix_name in the closed_fd structure.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "server: Add support for setting file disposition information.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2872,6 +2876,21 @@ if test "$enable_kernel32_VerifyVersionInfo" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for condition mask of VerifyVersionInfoA.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Fix condition mask handling in RtlVerifyVersionInfo.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-get_registry_locale_info
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38344] Fix invalid memory access in get_registry_locale_info
+# |
+# | Modified files:
+# |   *	dlls/kernel32/locale.c
+# |
+if test "$enable_kernel32_get_registry_locale_info" -eq 1; then
+	patch_apply kernel32-get_registry_locale_info/0001-kernel32-Fix-calculation-of-returned-buffer-in-get_r.patch
+	(
+		echo '+    { "Sebastian Lackner", "kernel32: Fix calculation of returned buffer in get_registry_locale_info.", 1 },';
 	) >> "$patchlist"
 fi
 

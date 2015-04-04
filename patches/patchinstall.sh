@@ -3947,6 +3947,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#33723] EA Origin needs support for job objects
+# |   *	[#38351] Ignore unsupported job object restrictions
 # |
 # | Modified files:
 # |   *	dlls/kernel32/tests/process.c, dlls/ntdll/sync.c, server/process.c, server/process.h, server/protocol.def
@@ -3957,12 +3958,14 @@ if test "$enable_server_JobObjects" -eq 1; then
 	patch_apply server-JobObjects/0003-kernel32-tests-Add-tests-for-waiting-on-an-job-objec.patch
 	patch_apply server-JobObjects/0004-server-Implement-waiting-for-job-objects.patch
 	patch_apply server-JobObjects/0005-ntdll-Implement-NtQueryInformationJobObject-stub-fun.patch
+	patch_apply server-JobObjects/0006-ntdll-Return-STATUS_SUCCESS-from-SetInformationJobOb.patch
 	(
 		echo '+    { "Andrew Cook", "server: Implement remaining wineserver calls for job objects.", 1 },';
 		echo '+    { "Andrew Cook", "server: Implement JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for waiting on an job object.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement waiting for job objects.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Implement NtQueryInformationJobObject stub function.", 1 },';
+		echo '+    { "Andrew Cook", "ntdll: Return STATUS_SUCCESS from SetInformationJobObject.", 1 },';
 	) >> "$patchlist"
 fi
 

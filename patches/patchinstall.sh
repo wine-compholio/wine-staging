@@ -190,6 +190,7 @@ patch_enable_all ()
 	enable_server_Shared_Memory="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Unexpected_Wakeup="$1"
+	enable_setupapi_SetupDiSelectBestCompatDrv="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
 	enable_shell32_Default_Folder_ACLs="$1"
@@ -639,6 +640,9 @@ patch_enable ()
 			;;
 		server-Unexpected_Wakeup)
 			enable_server_Unexpected_Wakeup="$2"
+			;;
+		setupapi-SetupDiSelectBestCompatDrv)
+			enable_setupapi_SetupDiSelectBestCompatDrv="$2"
 			;;
 		setupapi-SetupPromptForDisk)
 			enable_setupapi_SetupPromptForDisk="$2"
@@ -4078,6 +4082,21 @@ if test "$enable_server_Unexpected_Wakeup" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "server: Avoid sending unexpected wakeup with uninitialized cookie value.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Repeat test for SignalObjectAndWait multiple times to test wineserver wakeup cookie management.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset setupapi-SetupDiSelectBestCompatDrv
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#32088] Add stub for setupapi.SetupDiSelectBestCompatDrv
+# |
+# | Modified files:
+# |   *	dlls/setupapi/setupapi.spec, dlls/setupapi/stubs.c
+# |
+if test "$enable_setupapi_SetupDiSelectBestCompatDrv" -eq 1; then
+	patch_apply setupapi-SetupDiSelectBestCompatDrv/0001-setupapi-Add-stub-for-SetupDiSelectBestCompatDrv.patch
+	(
+		echo '+    { "Austin English", "setupapi: Add stub for SetupDiSelectBestCompatDrv.", 1 },';
 	) >> "$patchlist"
 fi
 

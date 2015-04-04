@@ -39,10 +39,11 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [21]:**
+**Bug fixes and features included in the next upcoming release [22]:**
 
 * Add stub fltmgr.sys (filter manager driver) ([Wine Bug #23583](https://bugs.winehq.org/show_bug.cgi?id=23583))
 * Add stub for ntoskrnl.PsRemoveLoadImageNotifyRoutine
+* Add stub for setupapi.SetupDiSelectBestCompatDrv ([Wine Bug #32088](https://bugs.winehq.org/show_bug.cgi?id=32088))
 * Add stubs for Power[Set|Clear]Request
 * Allow NULL pointer as keystate argument in ToUnicodeEx ([Wine Bug #38353](https://bugs.winehq.org/show_bug.cgi?id=38353))
 * Allow to open files/directories without any access rights in order to query attributes

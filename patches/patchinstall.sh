@@ -235,6 +235,7 @@ patch_enable_all ()
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_Clipboard_HTML="$1"
 	enable_winex11_Thread_Data="$1"
+	enable_winex11_ToUnicodeEx="$1"
 	enable_winex11_Window_Groups="$1"
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
@@ -773,6 +774,9 @@ patch_enable ()
 			;;
 		winex11-Thread_Data)
 			enable_winex11_Thread_Data="$2"
+			;;
+		winex11-ToUnicodeEx)
+			enable_winex11_ToUnicodeEx="$2"
 			;;
 		winex11-Window_Groups)
 			enable_winex11_Window_Groups="$2"
@@ -4707,6 +4711,21 @@ if test "$enable_winex11_Thread_Data" -eq 1; then
 	patch_apply winex11-Thread_Data/0001-winex11-Initialize-thread-data-in-clip_cursor_notify.patch
 	(
 		echo '+    { "Sebastian Lackner", "winex11: Initialize thread data in clip_cursor_notify.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11-ToUnicodeEx
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38353] Allow NULL pointer as keystate argument in ToUnicodeEx
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/keyboard.c
+# |
+if test "$enable_winex11_ToUnicodeEx" -eq 1; then
+	patch_apply winex11-ToUnicodeEx/0001-winex11-Allow-NULL-pointer-as-keystate-in-X11DRV_ToU.patch
+	(
+		echo '+    { "Sebastian Lackner", "winex11: Allow NULL pointer as keystate in X11DRV_ToUnicodeEx.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -91,6 +91,7 @@ patch_enable_all ()
 	enable_d3dx9_36_Texture_Align="$1"
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
 	enable_dbghelp_Debug_Symbols="$1"
+	enable_ddraw_EnumSurfaces="$1"
 	enable_ddraw_Hotpatch="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
 	enable_dinput_Events="$1"
@@ -340,6 +341,9 @@ patch_enable ()
 			;;
 		dbghelp-Debug_Symbols)
 			enable_dbghelp_Debug_Symbols="$2"
+			;;
+		ddraw-EnumSurfaces)
+			enable_ddraw_EnumSurfaces="$2"
 			;;
 		ddraw-Hotpatch)
 			enable_ddraw_Hotpatch="$2"
@@ -1804,6 +1808,21 @@ if test "$enable_dbghelp_Debug_Symbols" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ddraw-EnumSurfaces
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#17233] Implement DDENUMSURFACES_CANBECREATED in IDirectDraw7::EnumSurfaces
+# |
+# | Modified files:
+# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/tests/d3d.c
+# |
+if test "$enable_ddraw_EnumSurfaces" -eq 1; then
+	patch_apply ddraw-EnumSurfaces/0001-ddraw-Implement-DDENUMSURFACES_CANBECREATED-in-IDire.patch
+	(
+		echo '+    { "Michael Müller", "ddraw: Implement DDENUMSURFACES_CANBECREATED in IDirectDraw7::EnumSurfaces and fix some bugs.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ddraw-Hotpatch
 # |
 # | Modified files:
@@ -1937,6 +1956,18 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -1954,18 +1985,6 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,268 @@
+From 3b8dcd1ce62f9eed3e3571288101b4897ed42fc0 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 4 Apr 2015 21:09:18 +0200
+Subject: dsound: Various improvements to EAX support.
+
+The previous version had several problems (see wine-staging bug 195):
+* IDirectSoundBufferImpl_Duplicate doesn't initialize EAX properties
+* Various race-conditions between initializing EAX and setting buffer properties
+* Missing locks while iterating through the list of sound buffers
+
+To fix problems 2 and 3 it might seem useful to introduce additional locking,
+but testing reveals that it slows down the mixer thread too much. Some applications
+use a huge amount of buffers, and its a waste of time to update them all immediately.
+Thats why this patch adds a 'reverb_update' variable, the mixer thread will
+update it later when necessary (-> much faster). Moreover, to avoid unnecessary
+locking, we initialize the EAX-specific properties always (for both the device and
+the buffers).
+---
+ dlls/dsound/buffer.c         | 11 ++++----
+ dlls/dsound/dsound.c         |  2 ++
+ dlls/dsound/dsound_eax.h     |  1 +
+ dlls/dsound/dsound_private.h |  1 +
+ dlls/dsound/eax.c            | 66 +++++++++++++++++++-------------------------
+ 5 files changed, 38 insertions(+), 43 deletions(-)
+
+diff --git a/dlls/dsound/buffer.c b/dlls/dsound/buffer.c
+index c098043..3641e32 100644
+--- a/dlls/dsound/buffer.c
++++ b/dlls/dsound/buffer.c
+@@ -1092,8 +1092,6 @@ HRESULT IDirectSoundBufferImpl_Create(
+ 	/* calculate fragment size and write lead */
+ 	DSOUND_RecalcFormat(dsb);
+ 
+-	dsb->eax.reverb_mix = EAX_REVERBMIX_USEDISTANCE;
+-
+ 	if (dsb->dsbd.dwFlags & DSBCAPS_CTRL3D) {
+ 		dsb->ds3db_ds3db.dwSize = sizeof(DS3DBUFFER);
+ 		dsb->ds3db_ds3db.vPosition.x = 0.0;
+@@ -1121,6 +1119,8 @@ HRESULT IDirectSoundBufferImpl_Create(
+ 
+ 	/* register buffer if not primary */
+ 	if (!(dsbd->dwFlags & DSBCAPS_PRIMARYBUFFER)) {
++        init_eax_buffer(dsb);
++
+ 		err = DirectSoundDevice_AddBuffer(device, dsb);
+ 		if (err != DS_OK) {
+ 			HeapFree(GetProcessHeap(),0,dsb->buffer->memory);
+@@ -1130,9 +1130,6 @@ HRESULT IDirectSoundBufferImpl_Create(
+ 			HeapFree(GetProcessHeap(),0,dsb);
+ 			dsb = NULL;
+ 		}
+-
+-		if (dsb->device->eax.using_eax)
+-			init_eax_buffer(dsb);
+ 	}
+ 
+         IDirectSoundBuffer8_AddRef(&dsb->IDirectSoundBuffer8_iface);
+@@ -1188,7 +1185,7 @@ HRESULT IDirectSoundBufferImpl_Duplicate(
+     HRESULT hres = DS_OK;
+     TRACE("(%p,%p,%p)\n", device, ppdsb, pdsb);
+ 
+-    dsb = HeapAlloc(GetProcessHeap(),0,sizeof(*dsb));
++    dsb = HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY,sizeof(*dsb));
+     if (dsb == NULL) {
+         WARN("out of memory\n");
+         *ppdsb = NULL;
+@@ -1225,6 +1222,8 @@ HRESULT IDirectSoundBufferImpl_Duplicate(
+ 
+     RtlInitializeResource(&dsb->lock);
+ 
++    init_eax_buffer(dsb); /* FIXME: should we duplicate EAX properties? */
++
+     /* register buffer */
+     hres = DirectSoundDevice_AddBuffer(device, dsb);
+     if (hres != DS_OK) {
+diff --git a/dlls/dsound/dsound.c b/dlls/dsound/dsound.c
+index ed0bbba..48470b7 100644
+--- a/dlls/dsound/dsound.c
++++ b/dlls/dsound/dsound.c
+@@ -186,6 +186,8 @@ static HRESULT DirectSoundDevice_Create(DirectSoundDevice ** ppDevice)
+ 
+     RtlInitializeResource(&(device->buffer_list_lock));
+ 
++    init_eax_device(device);
++
+    *ppDevice = device;
+ 
+     return DS_OK;
+diff --git a/dlls/dsound/dsound_eax.h b/dlls/dsound/dsound_eax.h
+index a650108..a555a75 100644
+--- a/dlls/dsound/dsound_eax.h
++++ b/dlls/dsound/dsound_eax.h
+@@ -134,6 +134,7 @@ typedef struct {
+ } eax_info;
+ 
+ typedef struct {
++    BOOL reverb_update;
+     float reverb_mix;
+ 
+     float *SampleBuffer;
+diff --git a/dlls/dsound/dsound_private.h b/dlls/dsound/dsound_private.h
+index cc55d70..a9987d0 100644
+--- a/dlls/dsound/dsound_private.h
++++ b/dlls/dsound/dsound_private.h
+@@ -240,6 +240,7 @@ HRESULT WINAPI EAX_Get(IDirectSoundBufferImpl *buf, REFGUID guidPropSet,
+ HRESULT WINAPI EAX_Set(IDirectSoundBufferImpl *buf, REFGUID guidPropSet,
+         ULONG dwPropID, void *pInstanceData, ULONG cbInstanceData, void *pPropData,
+         ULONG cbPropData) DECLSPEC_HIDDEN;
++void init_eax_device(DirectSoundDevice *dev) DECLSPEC_HIDDEN;
+ void free_eax_buffer(IDirectSoundBufferImpl *dsb) DECLSPEC_HIDDEN;
+ void init_eax_buffer(IDirectSoundBufferImpl *dsb) DECLSPEC_HIDDEN;
+ void process_eax_buffer(IDirectSoundBufferImpl *dsb, float *buf, DWORD count) DECLSPEC_HIDDEN;
+diff --git a/dlls/dsound/eax.c b/dlls/dsound/eax.c
+index a05b00e..4e98812 100644
+--- a/dlls/dsound/eax.c
++++ b/dlls/dsound/eax.c
+@@ -114,6 +114,8 @@ static const float LATE_LINE_MULTIPLIER = 4.0f;
+ 
+ #define SPEEDOFSOUNDMETRESPERSEC 343.3f
+ 
++static void ReverbUpdate(IDirectSoundBufferImpl *dsb);
++
+ static float lpFilter2P(FILTER *iir, unsigned int offset, float input)
+ {
+     float *history = &iir->history[offset*2];
+@@ -360,6 +362,11 @@ void process_eax_buffer(IDirectSoundBufferImpl *dsb, float *buf, DWORD count)
+         return;
+     }
+ 
++    if (dsb->eax.reverb_update) {
++        dsb->eax.reverb_update = FALSE;
++        ReverbUpdate(dsb);
++    }
++
+     out = HeapAlloc(GetProcessHeap(), 0, sizeof(float)*count*4);
+ 
+     for (i = 0; i < count; i++) {
+@@ -572,7 +579,7 @@ static unsigned int CalcLineLength(float length, unsigned int offset, unsigned i
+ 
+ static void RealizeLineOffset(float *sampleBuffer, DelayLine *Delay)
+ {
+-    Delay->Line = &sampleBuffer[(unsigned int)Delay->Line];
++    Delay->Line = &sampleBuffer[(unsigned int)(ULONG_PTR)Delay->Line];
+ }
+ 
+ static BOOL AllocLines(unsigned int frequency, IDirectSoundBufferImpl *dsb)
+@@ -679,13 +686,9 @@ static void ReverbUpdate(IDirectSoundBufferImpl *dsb)
+     unsigned int index;
+     float cw, hfRatio, x, y;
+ 
+-    /* avoid segfaults in mixing thread when we recalculate the line offsets */
+-    EnterCriticalSection(&dsb->device->mixlock);
+-
++    /* only called from the mixer thread, no race-conditions possible */
+     AllocLines(dsb->device->pwfx->nSamplesPerSec, dsb);
+ 
+-    LeaveCriticalSection(&dsb->device->mixlock);
+-
+     for(index = 0; index < 4; index++)
+     {
+         dsb->eax.Early.Offset[index] = fastf2u(EARLY_LINE_LENGTH[index] * dsb->device->pwfx->nSamplesPerSec);
+@@ -725,19 +728,33 @@ static BOOL ReverbDeviceUpdate(DirectSoundDevice *dev)
+ {
+     int i;
+ 
++    RtlAcquireResourceShared(&dev->buffer_list_lock, TRUE);
+     for (i = 0; i < dev->nrofbuffers; i++) {
+-        ReverbUpdate(dev->buffers[i]);
++        dev->buffers[i]->eax.reverb_update = TRUE;
+     }
++    RtlReleaseResource(&dev->buffer_list_lock);
+ 
+     return TRUE;
+ }
+ 
++void init_eax_device(DirectSoundDevice *dev)
++{
++    dev->eax.environment = presets[0].environment;
++    dev->eax.volume = presets[0].fVolume;
++    dev->eax.damping = presets[0].fDamping;
++    memcpy(&dev->eax.eax_props, &efx_presets[0], sizeof(dev->eax.eax_props));
++    dev->eax.eax_props.flDecayTime = presets[0].fDecayTime_sec;
++}
++
+ void init_eax_buffer(IDirectSoundBufferImpl *dsb)
+ {
+     unsigned int index;
+ 
+-    dsb->eax.TotalSamples = 0;
++    dsb->eax.reverb_update = TRUE;
++    dsb->eax.reverb_mix = EAX_REVERBMIX_USEDISTANCE;
++
+     dsb->eax.SampleBuffer = NULL;
++    dsb->eax.TotalSamples = 0;
+ 
+     dsb->eax.LpFilter.coeff = 0.0f;
+     dsb->eax.LpFilter.history[0] = 0.0f;
+@@ -784,24 +801,6 @@ void init_eax_buffer(IDirectSoundBufferImpl *dsb)
+     }
+ 
+     dsb->eax.Offset = 0;
+-
+-    ReverbUpdate(dsb);
+-}
+-
+-static void init_eax(DirectSoundDevice *dev)
+-{
+-    int i;
+-
+-    dev->eax.using_eax = TRUE;
+-    dev->eax.environment = presets[0].environment;
+-    dev->eax.volume = presets[0].fVolume;
+-    dev->eax.damping = presets[0].fDamping;
+-    memcpy(&dev->eax.eax_props, &efx_presets[0], sizeof(dev->eax.eax_props));
+-    dev->eax.eax_props.flDecayTime = presets[0].fDecayTime_sec;
+-
+-    for (i = 0; i < dev->nrofbuffers; i++) {
+-        init_eax_buffer(dev->buffers[i]);
+-    }
+ }
+ 
+ void free_eax_buffer(IDirectSoundBufferImpl *dsb)
+@@ -821,9 +820,7 @@ HRESULT WINAPI EAX_Get(IDirectSoundBufferImpl *buf, REFGUID guidPropSet,
+ 
+     if (IsEqualGUID(&DSPROPSETID_EAX_ReverbProperties, guidPropSet)) {
+         EAX_REVERBPROPERTIES *props;
+-
+-        if (!buf->device->eax.using_eax)
+-            init_eax(buf->device);
++        buf->device->eax.using_eax = TRUE;
+ 
+         switch (dwPropID) {
+             case DSPROPERTY_EAX_ALL:
+@@ -883,9 +880,7 @@ HRESULT WINAPI EAX_Get(IDirectSoundBufferImpl *buf, REFGUID guidPropSet,
+         return S_OK;
+     } else if (IsEqualGUID(&DSPROPSETID_EAXBUFFER_ReverbProperties, guidPropSet)) {
+         EAXBUFFER_REVERBPROPERTIES *props;
+-
+-        if (!buf->device->eax.using_eax)
+-            init_eax(buf->device);
++        buf->device->eax.using_eax = TRUE;
+ 
+         switch (dwPropID) {
+             case DSPROPERTY_EAXBUFFER_ALL:
+@@ -928,8 +923,7 @@ HRESULT WINAPI EAX_Set(IDirectSoundBufferImpl *buf, REFGUID guidPropSet,
+         buf, debugstr_guid(guidPropSet), dwPropID, pInstanceData, cbInstanceData, pPropData, cbPropData);
+ 
+     if (IsEqualGUID(&DSPROPSETID_EAX_ReverbProperties, guidPropSet)) {
+-        if (!buf->device->eax.using_eax)
+-            init_eax(buf->device);
++        buf->device->eax.using_eax = TRUE;
+ 
+         switch (dwPropID) {
+             case DSPROPERTY_EAX_ALL:
+@@ -1012,9 +1006,7 @@ HRESULT WINAPI EAX_Set(IDirectSoundBufferImpl *buf, REFGUID guidPropSet,
+         return S_OK;
+     } else if (IsEqualGUID(&DSPROPSETID_EAXBUFFER_ReverbProperties, guidPropSet)) {
+         EAXBUFFER_REVERBPROPERTIES *props;
+-
+-        if (!buf->device->eax.using_eax)
+-            init_eax(buf->device);
++        buf->device->eax.using_eax = TRUE;
+ 
+         switch (dwPropID) {
+             case DSPROPERTY_EAXBUFFER_ALL:
+-- 
+2.3.3
+

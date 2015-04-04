@@ -1920,6 +1920,7 @@ if test "$enable_dsound_EAX" -eq 1; then
 	patch_apply dsound-EAX/0015-dsound-Implement-EAX-decorrelator.patch
 	patch_apply dsound-EAX/0016-dsound-Implement-EAX-late-reverb.patch
 	patch_apply dsound-EAX/0017-dsound-Implement-EAX-late-all-pass-filter.patch
+	patch_apply dsound-EAX/0018-dsound-Various-improvements-to-EAX-support.patch
 	(
 		echo '+    { "Sebastian Lackner", "dsound: Apply filters before sound is multiplied to speakers.", 1 },';
 		echo '+    { "Mark Harmstone", "dsound: Add EAX v1 constants and structs.", 1 },';
@@ -1938,6 +1939,7 @@ if test "$enable_dsound_EAX" -eq 1; then
 		echo '+    { "Mark Harmstone", "dsound: Implement EAX decorrelator.", 1 },';
 		echo '+    { "Mark Harmstone", "dsound: Implement EAX late reverb.", 1 },';
 		echo '+    { "Mark Harmstone", "dsound: Implement EAX late all-pass filter.", 1 },';
+		echo '+    { "Sebastian Lackner", "dsound: Various improvements to EAX support.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,13 +1,13 @@
-From 9741c7941627cf4a0aba5e6dcd02bc1d991cea7f Mon Sep 17 00:00:00 2001
+From f54357a1e2246b37b1f69938d2c4f0ed7ee8822d Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 21 Feb 2015 23:37:26 +0100
 Subject: winecfg: Add checkbox to enable/disable vaapi GPU decoder.
 
 ---
  programs/winecfg/resource.h |  1 +
- programs/winecfg/staging.c  | 20 ++++++++++++++++++++
+ programs/winecfg/staging.c  | 30 ++++++++++++++++++++++++++++++
  programs/winecfg/winecfg.rc |  1 +
- 3 files changed, 22 insertions(+)
+ 3 files changed, 32 insertions(+)
 
 diff --git a/programs/winecfg/resource.h b/programs/winecfg/resource.h
 index 02d90fd..4b21d16 100644
@@ -22,10 +22,10 @@ index 02d90fd..4b21d16 100644
  /* About tab */
  #define IDC_ABT_OWNER                8432
 diff --git a/programs/winecfg/staging.c b/programs/winecfg/staging.c
-index 09c0d3f..bda2e6e 100644
+index 09c0d3f..40b6642 100644
 --- a/programs/winecfg/staging.c
 +++ b/programs/winecfg/staging.c
-@@ -49,10 +49,26 @@ static void csmt_set(BOOL status)
+@@ -49,10 +49,36 @@ static void csmt_set(BOOL status)
      set_reg_key(config_key, keypath("DllRedirects"), "wined3d", status ? "wined3d-csmt.dll" : NULL);
  }
  
@@ -34,25 +34,35 @@ index 09c0d3f..bda2e6e 100644
 + */
 +static BOOL vaapi_get(void)
 +{
++#ifdef HAVE_VAAPI
 +    BOOL ret;
 +    char *value = get_reg_key(config_key, keypath("DXVA2"), "backend", NULL);
 +    ret = (value && !strcmp(value, "va"));
 +    HeapFree(GetProcessHeap(), 0, value);
 +    return ret;
++#else
++    return FALSE;
++#endif
 +}
 +static void vaapi_set(BOOL status)
 +{
++#ifdef HAVE_VAAPI
 +    set_reg_key(config_key, keypath("DXVA2"), "backend", status ? "va" : NULL);
++#endif
 +}
  
  static void load_staging_settings(HWND dialog)
  {
      CheckDlgButton(dialog, IDC_ENABLE_CSMT, csmt_get() ? BST_CHECKED : BST_UNCHECKED);
 +    CheckDlgButton(dialog, IDC_ENABLE_VAAPI, vaapi_get() ? BST_CHECKED : BST_UNCHECKED);
++
++#ifndef HAVE_VAAPI
++    disable(IDC_ENABLE_VAAPI);
++#endif
  }
  
  INT_PTR CALLBACK StagingDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
-@@ -82,6 +98,10 @@ INT_PTR CALLBACK StagingDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPar
+@@ -82,6 +108,10 @@ INT_PTR CALLBACK StagingDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPar
              csmt_set(IsDlgButtonChecked(hDlg, IDC_ENABLE_CSMT) == BST_CHECKED);
              SendMessageW(GetParent(hDlg), PSM_CHANGED, 0, 0);
              return TRUE;
@@ -64,7 +74,7 @@ index 09c0d3f..bda2e6e 100644
          break;
      }
 diff --git a/programs/winecfg/winecfg.rc b/programs/winecfg/winecfg.rc
-index a723880..694bd73 100644
+index 5ceed16..171672d 100644
 --- a/programs/winecfg/winecfg.rc
 +++ b/programs/winecfg/winecfg.rc
 @@ -314,6 +314,7 @@ BEGIN
@@ -76,5 +86,5 @@ index a723880..694bd73 100644
  
  LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 -- 
-2.1.0
+2.3.5
 

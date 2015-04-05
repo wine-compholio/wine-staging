@@ -1105,13 +1105,9 @@ if test "$enable_server_ACL_Compat" -eq 1; then
 fi
 
 if test "$enable_server_Inherited_ACLs" -eq 1; then
-	if test "$enable_server_File_Permissions" -gt 1; then
-		abort "Patchset server-File_Permissions disabled, but server-Inherited_ACLs depends on that."
-	fi
 	if test "$enable_server_Stored_ACLs" -gt 1; then
 		abort "Patchset server-Stored_ACLs disabled, but server-Inherited_ACLs depends on that."
 	fi
-	enable_server_File_Permissions=1
 	enable_server_Stored_ACLs=1
 fi
 
@@ -1122,8 +1118,12 @@ if test "$enable_server_Stored_ACLs" -eq 1; then
 	if test "$enable_ntdll_DOS_Attributes" -gt 1; then
 		abort "Patchset ntdll-DOS_Attributes disabled, but server-Stored_ACLs depends on that."
 	fi
+	if test "$enable_server_File_Permissions" -gt 1; then
+		abort "Patchset server-File_Permissions disabled, but server-Stored_ACLs depends on that."
+	fi
 	enable_advapi32_Revert_DACL=1
 	enable_ntdll_DOS_Attributes=1
+	enable_server_File_Permissions=1
 fi
 
 if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
@@ -1421,20 +1421,16 @@ fi
 # Patchset advapi32-Revert_DACL
 # |
 # | Modified files:
-# |   *	dlls/advapi32/security.c, dlls/advapi32/tests/security.c, server/file.c
+# |   *	dlls/advapi32/security.c, dlls/advapi32/tests/security.c
 # |
 if test "$enable_advapi32_Revert_DACL" -eq 1; then
 	patch_apply advapi32-Revert_DACL/0001-Revert-advapi32-Add-DACL-inheritance-support-in-SetS.patch
 	patch_apply advapi32-Revert_DACL/0002-Revert-advapi32-tests-Add-test-for-mapping-DACL-to-p.patch
 	patch_apply advapi32-Revert_DACL/0003-Revert-advapi32-Add-SetNamedSecurityInfo-test-with-e.patch
-	patch_apply advapi32-Revert_DACL/0004-Revert-server-Make-directory-DACL-entries-inheritabl.patch
-	patch_apply advapi32-Revert_DACL/0005-Revert-advapi-Don-t-use-CreateFile-when-opening-file.patch
 	(
 		echo '+    { "Sebastian Lackner", "Revert \"advapi32: Add DACL inheritance support in SetSecurityInfo.\".", 1 },';
 		echo '+    { "Sebastian Lackner", "Revert \"advapi32/tests: Add test for mapping DACL to permission.\".", 1 },';
 		echo '+    { "Sebastian Lackner", "Revert \"advapi32: Add SetNamedSecurityInfo test with empty DACL.\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"server: Make directory DACL entries inheritable.\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"advapi: Don'\''t use CreateFile when opening file with possibly empty DACL.\".", 1 },';
 	) >> "$patchlist"
 fi
 

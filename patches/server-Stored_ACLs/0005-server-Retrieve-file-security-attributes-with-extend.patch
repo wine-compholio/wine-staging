@@ -1,16 +1,16 @@
-From 148550ffa4aeae7903d6654373011ad282ce59dc Mon Sep 17 00:00:00 2001
+From fabc68cb1fd383d6f4eb31885a7aafbc572198af Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 14:01:35 -0600
 Subject: server: Retrieve file security attributes with extended file
  attributes. (try 7)
 
 ---
- dlls/advapi32/tests/security.c | 57 +++++++++++++++++++++++++-----------------
- server/file.c                  | 26 ++++++++++++++++---
- 2 files changed, 57 insertions(+), 26 deletions(-)
+ dlls/advapi32/tests/security.c | 61 +++++++++++++++++++++++++-----------------
+ server/file.c                  | 26 +++++++++++++++---
+ 2 files changed, 59 insertions(+), 28 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index a757c22..3f97a82 100644
+index d13e54d..29daf60 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
 @@ -3109,7 +3109,7 @@ static void get_nt_pathW(const char *name, UNICODE_STRING *nameW)
@@ -64,7 +64,7 @@ index a757c22..3f97a82 100644
      }
      ok(!error, "GetNamedSecurityInfo failed with error %d\n", error);
      test_inherited_dacl(pDacl, admin_sid, user_sid, OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE,
--                        0x1f01ff, FALSE, TRUE, TRUE, __LINE__);
+-                        0x1f01ff, FALSE, TRUE, FALSE, __LINE__);
 +                        0x1f01ff, FALSE, FALSE, FALSE, TRUE, __LINE__);
      LocalFree(pSD);
  
@@ -78,7 +78,7 @@ index a757c22..3f97a82 100644
      LocalFree(pSD);
      CloseHandle(hTemp);
  
-@@ -3352,7 +3364,7 @@ static void test_CreateDirectoryA(void)
+@@ -3348,7 +3360,7 @@ static void test_CreateDirectoryA(void)
                                     (PSID *)&owner, NULL, &pDacl, NULL, &pSD);
      ok(error == ERROR_SUCCESS, "Failed to get permissions on file\n");
      test_inherited_dacl(pDacl, admin_sid, user_sid, INHERITED_ACE,
@@ -87,7 +87,25 @@ index a757c22..3f97a82 100644
      LocalFree(pSD);
      CloseHandle(hTemp);
  
-@@ -3581,23 +3593,22 @@ static void test_GetNamedSecurityInfoA(void)
+@@ -3414,7 +3426,7 @@ static void test_CreateDirectoryA(void)
+     ok(error == ERROR_SUCCESS, "Failed to get permissions on file\n");
+     test_inherited_dacl(pDacl, admin_sid, user_sid,
+                         OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE | INHERITED_ACE,
+-                        0x1f01ff, TRUE, TRUE, TRUE, __LINE__);
++                        0x1f01ff, TRUE, TRUE, TRUE, FALSE, __LINE__);
+     LocalFree(pSD);
+     bret = RemoveDirectoryA(tmpfile);
+     ok(bret == TRUE, "RemoveDirectoryA failed with error %u\n", GetLastError());
+@@ -3495,7 +3507,7 @@ static void test_CreateDirectoryA(void)
+     ok(error == ERROR_SUCCESS, "Failed to get permissions on file\n");
+     test_inherited_dacl(pDacl, admin_sid, user_sid,
+                         OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE | INHERITED_ACE,
+-                        0x1f01ff, TRUE, TRUE, TRUE, __LINE__);
++                        0x1f01ff, TRUE, TRUE, TRUE, FALSE, __LINE__);
+     LocalFree(pSD);
+     CloseHandle(hTemp);
+ 
+@@ -3719,23 +3731,22 @@ static void test_GetNamedSecurityInfoA(void)
          bret = pGetAce(pDacl, 0, (VOID **)&ace);
          ok(bret, "Failed to get Current User ACE.\n");
          bret = EqualSid(&ace->SidStart, user_sid);
@@ -117,7 +135,7 @@ index a757c22..3f97a82 100644
      }
      LocalFree(pSD);
      HeapFree(GetProcessHeap(), 0, user);
-@@ -4247,22 +4258,22 @@ static void test_GetSecurityInfo(void)
+@@ -4385,22 +4396,22 @@ static void test_GetSecurityInfo(void)
          bret = pGetAce(pDacl, 0, (VOID **)&ace);
          ok(bret, "Failed to get Current User ACE.\n");
          bret = EqualSid(&ace->SidStart, user_sid);
@@ -147,7 +165,7 @@ index a757c22..3f97a82 100644
      LocalFree(pSD);
      CloseHandle(obj);
 diff --git a/server/file.c b/server/file.c
-index a1455ff..e84331d 100644
+index 07971a1..828bd86 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -503,6 +503,25 @@ struct security_descriptor *mode_to_sd( mode_t mode, const SID *user, const SID

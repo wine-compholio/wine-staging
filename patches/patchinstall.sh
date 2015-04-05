@@ -62,8 +62,8 @@ warning()
 # Enable or disable all patchsets
 patch_enable_all ()
 {
+	enable_Compiler_Warnings="$1"
 	enable_Exagear="$1"
-	enable_Miscellaneous="$1"
 	enable_Pipelight="$1"
 	enable_Staging="$1"
 	enable_advapi32_Revert_DACL="$1"
@@ -109,6 +109,7 @@ patch_enable_all ()
 	enable_imagehlp_BindImageEx="$1"
 	enable_include_Winetest="$1"
 	enable_iphlpapi_TCP_Table="$1"
+	enable_kernel32_CompareStringEx="$1"
 	enable_kernel32_Console_Handles="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_GetDriveTypeW="$1"
@@ -230,6 +231,8 @@ patch_enable_all ()
 	enable_wined3d_Multisampling="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_UnhandledBlendFactor="$1"
+	enable_wined3d_resource_check_usage="$1"
+	enable_wined3d_wined3d_swapchain_present="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
 	enable_winepulse_PulseAudio_Support="$1"
@@ -257,11 +260,11 @@ patch_enable_all ()
 patch_enable ()
 {
 	case "$1" in
+		Compiler_Warnings)
+			enable_Compiler_Warnings="$2"
+			;;
 		Exagear)
 			enable_Exagear="$2"
-			;;
-		Miscellaneous)
-			enable_Miscellaneous="$2"
 			;;
 		Pipelight)
 			enable_Pipelight="$2"
@@ -397,6 +400,9 @@ patch_enable ()
 			;;
 		iphlpapi-TCP_Table)
 			enable_iphlpapi_TCP_Table="$2"
+			;;
+		kernel32-CompareStringEx)
+			enable_kernel32_CompareStringEx="$2"
 			;;
 		kernel32-Console_Handles)
 			enable_kernel32_Console_Handles="$2"
@@ -760,6 +766,12 @@ patch_enable ()
 			;;
 		wined3d-UnhandledBlendFactor)
 			enable_wined3d_UnhandledBlendFactor="$2"
+			;;
+		wined3d-resource_check_usage)
+			enable_wined3d_resource_check_usage="$2"
+			;;
+		wined3d-wined3d_swapchain_present)
+			enable_wined3d_wined3d_swapchain_present="$2"
 			;;
 		winedevice-Fix_Relocation)
 			enable_winedevice_Fix_Relocation="$2"
@@ -1297,6 +1309,19 @@ if test "$enable_patchlist" -eq 1; then
 fi
 
 
+# Patchset Compiler_Warnings
+# |
+# | Modified files:
+# |   *	dlls/d3d9/tests/visual.c, dlls/netapi32/netapi32.c, dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c,
+# | 	tools/makedep.c
+# |
+if test "$enable_Compiler_Warnings" -eq 1; then
+	patch_apply Compiler_Warnings/0001-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch
+	(
+		echo '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ws2_32-WriteWatches
 # |
 # | Modified files:
@@ -1351,25 +1376,6 @@ if test "$enable_Exagear" -eq 1; then
 		echo '+    { "Sebastian Lackner", "ntdll: Implement emulation of SIDT instruction when using Exagear.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Fix issues with write watches when using Exagear.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Don'\''t attempt to use ptrace when running with Exagear.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset Miscellaneous
-# |
-# | Modified files:
-# |   *	dlls/d3d9/tests/visual.c, dlls/kernel32/locale.c, dlls/netapi32/netapi32.c, dlls/winealsa.drv/mmdevdrv.c,
-# | 	dlls/wined3d/glsl_shader.c, dlls/wined3d/resource.c, dlls/wined3d/swapchain.c, tools/makedep.c
-# |
-if test "$enable_Miscellaneous" -eq 1; then
-	patch_apply Miscellaneous/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	patch_apply Miscellaneous/0002-kernel32-Silence-repeated-CompareStringEx-FIXME.patch
-	patch_apply Miscellaneous/0003-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	patch_apply Miscellaneous/0004-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch
-	(
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-		echo '+    { "Sebastian Lackner", "kernel32: Silence repeated CompareStringEx FIXME.", 1 },';
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
-		echo '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2071,6 +2077,30 @@ if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-resource_check_usage
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c
+# |
+if test "$enable_wined3d_resource_check_usage" -eq 1; then
+	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	(
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-wined3d_swapchain_present
+# |
+# | Modified files:
+# |   *	dlls/wined3d/swapchain.c
+# |
+if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
+	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-CSMT_Main
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2631,6 +2661,18 @@ if test "$enable_iphlpapi_TCP_Table" -eq 1; then
 	patch_apply iphlpapi-TCP_Table/0001-iphlpapi-Implement-AllocateAndGetTcpExTableFromStack.patch
 	(
 		echo '+    { "Erich E. Hoover", "iphlpapi: Implement AllocateAndGetTcpExTableFromStack.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-CompareStringEx
+# |
+# | Modified files:
+# |   *	dlls/kernel32/locale.c
+# |
+if test "$enable_kernel32_CompareStringEx" -eq 1; then
+	patch_apply kernel32-CompareStringEx/0001-kernel32-Silence-repeated-CompareStringEx-FIXME.patch
+	(
+		echo '+    { "Sebastian Lackner", "kernel32: Silence repeated CompareStringEx FIXME.", 1 },';
 	) >> "$patchlist"
 fi
 

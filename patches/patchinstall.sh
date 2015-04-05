@@ -1910,7 +1910,7 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/dsound/Makefile.in, dlls/dsound/buffer.c, dlls/dsound/dsound.c, dlls/dsound/dsound_eax.h,
-# | 	dlls/dsound/dsound_private.h, dlls/dsound/eax.c, dlls/dsound/mixer.c
+# | 	dlls/dsound/dsound_main.c, dlls/dsound/dsound_private.h, dlls/dsound/eax.c, dlls/dsound/mixer.c
 # |
 if test "$enable_dsound_EAX" -eq 1; then
 	patch_apply dsound-EAX/0001-dsound-Apply-filters-before-sound-is-multiplied-to-s.patch
@@ -1931,6 +1931,7 @@ if test "$enable_dsound_EAX" -eq 1; then
 	patch_apply dsound-EAX/0016-dsound-Implement-EAX-late-reverb.patch
 	patch_apply dsound-EAX/0017-dsound-Implement-EAX-late-all-pass-filter.patch
 	patch_apply dsound-EAX/0018-dsound-Various-improvements-to-EAX-support.patch
+	patch_apply dsound-EAX/0019-dsound-Allow-disabling-of-EAX-support-in-the-registr.patch
 	(
 		echo '+    { "Sebastian Lackner", "dsound: Apply filters before sound is multiplied to speakers.", 1 },';
 		echo '+    { "Mark Harmstone", "dsound: Add EAX v1 constants and structs.", 1 },';
@@ -1950,6 +1951,7 @@ if test "$enable_dsound_EAX" -eq 1; then
 		echo '+    { "Mark Harmstone", "dsound: Implement EAX late reverb.", 1 },';
 		echo '+    { "Mark Harmstone", "dsound: Implement EAX late all-pass filter.", 1 },';
 		echo '+    { "Sebastian Lackner", "dsound: Various improvements to EAX support.", 1 },';
+		echo '+    { "Sebastian Lackner", "dsound: Allow disabling of EAX support in the registry.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2478,9 +2480,11 @@ fi
 if test "$enable_winecfg_Staging" -eq 1; then
 	patch_apply winecfg-Staging/0001-winecfg-Add-staging-tab-for-CSMT.patch
 	patch_apply winecfg-Staging/0002-winecfg-Add-checkbox-to-enable-disable-vaapi-GPU-dec.patch
+	patch_apply winecfg-Staging/0003-winecfg-Add-checkbox-to-enable-disable-EAX-support.patch
 	(
 		echo '+    { "Michael Müller", "winecfg: Add staging tab for CSMT.", 1 },';
 		echo '+    { "Sebastian Lackner", "winecfg: Add checkbox to enable/disable vaapi GPU decoder.", 1 },';
+		echo '+    { "Mark Harmstone", "winecfg: Add checkbox to enable/disable EAX support.", 1 },';
 	) >> "$patchlist"
 fi
 

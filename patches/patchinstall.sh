@@ -4570,7 +4570,7 @@ fi
 if test "$enable_winebuild_LinkerVersion" -eq 1; then
 	patch_apply winebuild-LinkerVersion/0001-winebuild-Set-a-valid-major-and-minor-linker-version.patch
 	(
-		echo '+    { "Michael Müller", "winebuild: Set a valid major and minor linker version.", 1 },';
+		echo '+    { "Michael Müller", "winebuild: Set a valid major and minor linker version.", 2 },';
 	) >> "$patchlist"
 fi
 

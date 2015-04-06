@@ -95,7 +95,6 @@ patch_enable_all ()
 	enable_ddraw_Hotpatch="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
 	enable_dinput_Events="$1"
-	enable_dsound_3DSound="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dxgi_GetDesc="$1"
@@ -107,7 +106,6 @@ patch_enable_all ()
 	enable_gdiplus_GdipCreateEffect="$1"
 	enable_gdiplus_GdipCreateRegionRgnData="$1"
 	enable_imagehlp_BindImageEx="$1"
-	enable_include_Winetest="$1"
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_CompareStringEx="$1"
 	enable_kernel32_Console_Handles="$1"
@@ -125,7 +123,6 @@ patch_enable_all ()
 	enable_kernel32_Profile="$1"
 	enable_kernel32_SetFileInformationByHandle="$1"
 	enable_kernel32_VerifyVersionInfo="$1"
-	enable_kernel32_get_registry_locale_info="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_makedep_PARENTSPEC="$1"
 	enable_mmdevapi_AEV_Stubs="$1"
@@ -163,7 +160,6 @@ patch_enable_all ()
 	enable_ntdll_WriteWatches="$1"
 	enable_ntoskrnl_DriverTest="$1"
 	enable_ntoskrnl_Emulator="$1"
-	enable_ntoskrnl_PsLookupProcessByProcessId="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
@@ -175,7 +171,6 @@ patch_enable_all ()
 	enable_riched20_IText_Interface="$1"
 	enable_secur32_ANSI_NTLM_Credentials="$1"
 	enable_secur32_Gnutls28_Compat="$1"
-	enable_secur32_Schannel_ContextAttr="$1"
 	enable_server_ACL_Compat="$1"
 	enable_server_Address_List_Change="$1"
 	enable_server_ClipCursor="$1"
@@ -239,7 +234,6 @@ patch_enable_all ()
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_Clipboard_HTML="$1"
 	enable_winex11_Thread_Data="$1"
-	enable_winex11_ToUnicodeEx="$1"
 	enable_winex11_Window_Groups="$1"
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
@@ -250,7 +244,6 @@ patch_enable_all ()
 	enable_ws2_32_APC_Performance="$1"
 	enable_ws2_32_Connect_Time="$1"
 	enable_ws2_32_TransmitFile="$1"
-	enable_ws2_32_WS_select="$1"
 	enable_ws2_32_WriteWatches="$1"
 	enable_ws2_32_getaddrinfo="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
@@ -359,9 +352,6 @@ patch_enable ()
 		dinput-Events)
 			enable_dinput_Events="$2"
 			;;
-		dsound-3DSound)
-			enable_dsound_3DSound="$2"
-			;;
 		dsound-EAX)
 			enable_dsound_EAX="$2"
 			;;
@@ -394,9 +384,6 @@ patch_enable ()
 			;;
 		imagehlp-BindImageEx)
 			enable_imagehlp_BindImageEx="$2"
-			;;
-		include-Winetest)
-			enable_include_Winetest="$2"
 			;;
 		iphlpapi-TCP_Table)
 			enable_iphlpapi_TCP_Table="$2"
@@ -448,9 +435,6 @@ patch_enable ()
 			;;
 		kernel32-VerifyVersionInfo)
 			enable_kernel32_VerifyVersionInfo="$2"
-			;;
-		kernel32-get_registry_locale_info)
-			enable_kernel32_get_registry_locale_info="$2"
 			;;
 		libs-Unicode_Collation)
 			enable_libs_Unicode_Collation="$2"
@@ -563,9 +547,6 @@ patch_enable ()
 		ntoskrnl-Emulator)
 			enable_ntoskrnl_Emulator="$2"
 			;;
-		ntoskrnl-PsLookupProcessByProcessId)
-			enable_ntoskrnl_PsLookupProcessByProcessId="$2"
-			;;
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
 			;;
@@ -598,9 +579,6 @@ patch_enable ()
 			;;
 		secur32-Gnutls28_Compat)
 			enable_secur32_Gnutls28_Compat="$2"
-			;;
-		secur32-Schannel_ContextAttr)
-			enable_secur32_Schannel_ContextAttr="$2"
 			;;
 		server-ACL_Compat)
 			enable_server_ACL_Compat="$2"
@@ -791,9 +769,6 @@ patch_enable ()
 		winex11-Thread_Data)
 			enable_winex11_Thread_Data="$2"
 			;;
-		winex11-ToUnicodeEx)
-			enable_winex11_ToUnicodeEx="$2"
-			;;
 		winex11-Window_Groups)
 			enable_winex11_Window_Groups="$2"
 			;;
@@ -823,9 +798,6 @@ patch_enable ()
 			;;
 		ws2_32-TransmitFile)
 			enable_ws2_32_TransmitFile="$2"
-			;;
-		ws2_32-WS_select)
-			enable_ws2_32_WS_select="$2"
 			;;
 		ws2_32-WriteWatches)
 			enable_ws2_32_WriteWatches="$2"
@@ -1876,21 +1848,6 @@ if test "$enable_dinput_Events" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dsound-3DSound
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38041] Fix calculation of 3D sound source
-# |
-# | Modified files:
-# |   *	dlls/dsound/sound3d.c
-# |
-if test "$enable_dsound_3DSound" -eq 1; then
-	patch_apply dsound-3DSound/0001-dsound-Fix-angle-to-sound-source-calculation.patch
-	(
-		echo '+    { "Stas Cymbalov", "dsound: Fix angle to sound source calculation.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dsound-Fast_Mixer
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1970,18 +1927,6 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -1999,6 +1944,18 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2641,18 +2598,6 @@ if test "$enable_imagehlp_BindImageEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset include-Winetest
-# |
-# | Modified files:
-# |   *	include/wine/test.h
-# |
-if test "$enable_include_Winetest" -eq 1; then
-	patch_apply include-Winetest/0001-include-Automatically-detect-if-tests-are-running-un.patch
-	(
-		echo '+    { "Sebastian Lackner", "include: Automatically detect if tests are running under Wine when WINETEST_PLATFORM is not specified.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset iphlpapi-TCP_Table
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2697,6 +2642,20 @@ if test "$enable_kernel32_Console_Handles" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-File_Permissions
 # |
 # | Modified files:
@@ -2731,20 +2690,6 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "server: Keep a pointer to parent'\''s fd unix_name in the closed_fd structure.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "server: Add support for setting file disposition information.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2980,21 +2925,6 @@ if test "$enable_kernel32_VerifyVersionInfo" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for condition mask of VerifyVersionInfoA.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Fix condition mask handling in RtlVerifyVersionInfo.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-get_registry_locale_info
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38344] Fix invalid memory access in get_registry_locale_info
-# |
-# | Modified files:
-# |   *	dlls/kernel32/locale.c
-# |
-if test "$enable_kernel32_get_registry_locale_info" -eq 1; then
-	patch_apply kernel32-get_registry_locale_info/0001-kernel32-Fix-calculation-of-returned-buffer-in-get_r.patch
-	(
-		echo '+    { "Sebastian Lackner", "kernel32: Fix calculation of returned buffer in get_registry_locale_info.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3557,21 +3487,6 @@ if test "$enable_ntoskrnl_Emulator" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntoskrnl-PsLookupProcessByProcessId
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36821] Avoid spam of FIXME messages for PsLookupProcessByProcessId stub
-# |
-# | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c
-# |
-if test "$enable_ntoskrnl_PsLookupProcessByProcessId" -eq 1; then
-	patch_apply ntoskrnl-PsLookupProcessByProcessId/0001-ntoskrnl-Avoid-repeated-FIXME-messages-in-PsLookupPr.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntoskrnl: Avoid repeated FIXME messages in PsLookupProcessByProcessId.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntoskrnl-Stubs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3842,21 +3757,6 @@ if test "$enable_secur32_Gnutls28_Compat" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset secur32-Schannel_ContextAttr
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37527] Return more context attributes in schan_InitializeSecurityContextW
-# |
-# | Modified files:
-# |   *	dlls/secur32/schannel.c
-# |
-if test "$enable_secur32_Schannel_ContextAttr" -eq 1; then
-	patch_apply secur32-Schannel_ContextAttr/0001-secur32-Return-more-context-attributes-in-schan_Init.patch
-	(
-		echo '+    { "Sebastian Lackner", "secur32: Return more context attributes in schan_InitializeSecurityContextW.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-Stored_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3963,6 +3863,21 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-OpenProcess
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37087] Return an error when trying to open a terminated process
+# |
+# | Modified files:
+# |   *	server/process.c, server/process.h
+# |
+if test "$enable_server_OpenProcess" -eq 1; then
+	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
+	(
+		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3977,21 +3892,6 @@ if test "$enable_server_Misc_ACL" -eq 1; then
 	(
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-OpenProcess
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37087] Return an error when trying to open a terminated process
-# |
-# | Modified files:
-# |   *	server/process.c, server/process.h
-# |
-if test "$enable_server_OpenProcess" -eq 1; then
-	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
-	(
-		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
 	) >> "$patchlist"
 fi
 
@@ -4010,14 +3910,12 @@ if test "$enable_server_JobObjects" -eq 1; then
 	patch_apply server-JobObjects/0003-kernel32-tests-Add-tests-for-waiting-on-an-job-objec.patch
 	patch_apply server-JobObjects/0004-server-Implement-waiting-for-job-objects.patch
 	patch_apply server-JobObjects/0005-ntdll-Implement-NtQueryInformationJobObject-stub-fun.patch
-	patch_apply server-JobObjects/0006-ntdll-Return-STATUS_SUCCESS-from-SetInformationJobOb.patch
 	(
 		echo '+    { "Andrew Cook", "server: Implement remaining wineserver calls for job objects.", 1 },';
 		echo '+    { "Andrew Cook", "server: Implement JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for waiting on an job object.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement waiting for job objects.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Implement NtQueryInformationJobObject stub function.", 1 },';
-		echo '+    { "Andrew Cook", "ntdll: Return STATUS_SUCCESS from SetInformationJobObject.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4777,21 +4675,6 @@ if test "$enable_winex11_Thread_Data" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset winex11-ToUnicodeEx
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38353] Allow NULL pointer as keystate argument in ToUnicodeEx
-# |
-# | Modified files:
-# |   *	dlls/winex11.drv/keyboard.c
-# |
-if test "$enable_winex11_ToUnicodeEx" -eq 1; then
-	patch_apply winex11-ToUnicodeEx/0001-winex11-Allow-NULL-pointer-as-keystate-in-X11DRV_ToU.patch
-	(
-		echo '+    { "Sebastian Lackner", "winex11: Allow NULL pointer as keystate in X11DRV_ToUnicodeEx.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset winex11-Window_Groups
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4939,18 +4822,6 @@ if test "$enable_ws2_32_TransmitFile" -eq 1; then
 		echo '+    { "Erich E. Hoover", "ws2_32: Add asynchronous support for TransmitFile.", 2 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_DISCONNECT to TransmitFile.", 1 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_REUSE_SOCKET to TransmitFile.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ws2_32-WS_select
-# |
-# | Modified files:
-# |   *	dlls/ws2_32/socket.c
-# |
-if test "$enable_ws2_32_WS_select" -eq 1; then
-	patch_apply ws2_32-WS_select/0001-ws2_32-Don-t-return-an-error-in-WS_select-when-EINTR.patch
-	(
-		echo '+    { "Michael Müller", "ws2_32: Don'\''t return an error in WS_select when EINTR happens during timeout.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -75,7 +75,7 @@ for more details.*
 * Add support for CopyFileEx progress callback ([Wine Bug #22692](https://bugs.winehq.org/show_bug.cgi?id=22692))
 * Add support for GetPropValue to PulseAudio backend
 * Adobe Reader needs ITextSelection_fnGetDuplicate implementation
-* Allow NULL pointer as keystate argument in ToUnicodeEx ([Wine Bug #38353](https://bugs.winehq.org/show_bug.cgi?id=38353))
+* ~~Allow NULL pointer as keystate argument in ToUnicodeEx~~ ([Wine Bug #38353](https://bugs.winehq.org/show_bug.cgi?id=38353))
 * Allow selection of audio device for PulseAudio backend
 * Allow special characters in pipe names ([Wine Bug #28995](https://bugs.winehq.org/show_bug.cgi?id=28995))
 * Allow to cancel a file operation via progress callback ([Wine Bug #22690](https://bugs.winehq.org/show_bug.cgi?id=22690))
@@ -88,7 +88,7 @@ for more details.*
 * Avoid race-conditions in NtReadFile() operations with write watches.
 * Avoid race-conditions of async WSARecv() operations with write watches.
 * Avoid race-conditions with write watches in WS2_async_accept.
-* Avoid spam of FIXME messages for PsLookupProcessByProcessId stub ([Wine Bug #36821](https://bugs.winehq.org/show_bug.cgi?id=36821))
+* ~~Avoid spam of FIXME messages for PsLookupProcessByProcessId stub~~ ([Wine Bug #36821](https://bugs.winehq.org/show_bug.cgi?id=36821))
 * Avseq crashes when multisampling is enabled ([Wine Bug #31998](https://bugs.winehq.org/show_bug.cgi?id=31998))
 * Basic handling of write watches triggered while we're on the signal stack.
 * Basic support for CUDA
@@ -98,7 +98,7 @@ for more details.*
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](https://bugs.winehq.org/show_bug.cgi?id=33770))
 * Do not append duplicate NULL characters when importing keys with regedit ([Wine Bug #37575](https://bugs.winehq.org/show_bug.cgi?id=37575))
 * Do not fail when a used context is passed to wglShareLists ([Wine Bug #11436](https://bugs.winehq.org/show_bug.cgi?id=11436))
-* Don't return an error in WS_select when EINTR happens during timeout
+* ~~Don't return an error in WS_select when EINTR happens during timeout~~
 * EA Origin needs support for job objects ([Wine Bug #33723](https://bugs.winehq.org/show_bug.cgi?id=33723))
 * Emulate access to KI_USER_SHARED_DATA kernel page on x86_64 ([Wine Bug #33849](https://bugs.winehq.org/show_bug.cgi?id=33849))
 * Enforce that surfaces are flushed after ReleaseDC
@@ -111,7 +111,7 @@ for more details.*
 * Fix NULL dereference in ICSeqCompressFrameStart ([Wine Bug #27595](https://bugs.winehq.org/show_bug.cgi?id=27595))
 * Fix access violation when calling GetStringTypeW with NULL src. ([Wine Bug #37759](https://bugs.winehq.org/show_bug.cgi?id=37759))
 * Fix black screen on startup introduced by pixelformat changes. ([Wine Bug #35950](https://bugs.winehq.org/show_bug.cgi?id=35950))
-* Fix calculation of 3D sound source ([Wine Bug #38041](https://bugs.winehq.org/show_bug.cgi?id=38041))
+* ~~Fix calculation of 3D sound source~~ ([Wine Bug #38041](https://bugs.winehq.org/show_bug.cgi?id=38041))
 * Fix caps lock state issues with multiple processes ([Wine Bug #35907](https://bugs.winehq.org/show_bug.cgi?id=35907))
 * Fix comparison of punctuation characters in lstrcmp ([Wine Bug #10767](https://bugs.winehq.org/show_bug.cgi?id=10767))
 * Fix compatibility of Uplay with gnutls28 ([Wine Bug #38134](https://bugs.winehq.org/show_bug.cgi?id=38134))
@@ -131,7 +131,7 @@ for more details.*
 * Fix handling of empty section and key name for profile files. ([Wine Bug #8036](https://bugs.winehq.org/show_bug.cgi?id=8036))
 * Fix handling of invert_y in DrawTextExW ([Wine Bug #22109](https://bugs.winehq.org/show_bug.cgi?id=22109))
 * Fix handling of window attributes for WS_EX_LAYERED | WS_EX_COMPOSITED ([Wine Bug #37876](https://bugs.winehq.org/show_bug.cgi?id=37876))
-* Fix invalid memory access in get_registry_locale_info ([Wine Bug #38344](https://bugs.winehq.org/show_bug.cgi?id=38344))
+* ~~Fix invalid memory access in get_registry_locale_info~~ ([Wine Bug #38344](https://bugs.winehq.org/show_bug.cgi?id=38344))
 * Fix issues with dragging layers between images in Adobe Photoshop 7.0 ([Wine Bug #12007](https://bugs.winehq.org/show_bug.cgi?id=12007))
 * Fix missing video introduced by pixelformat changes. ([Wine Bug #36900](https://bugs.winehq.org/show_bug.cgi?id=36900))
 * Fix multithreading issues with fullscreen clipping ([Wine Bug #38087](https://bugs.winehq.org/show_bug.cgi?id=38087))
@@ -206,7 +206,7 @@ for more details.*
 * Return correct IMediaSeeking stream positions in quartz ([Wine Bug #23174](https://bugs.winehq.org/show_bug.cgi?id=23174))
 * Return correct device type for cd devices without medium
 * Return correct values for GetThreadTimes function ([Wine Bug #20230](https://bugs.winehq.org/show_bug.cgi?id=20230))
-* Return more context attributes in schan_InitializeSecurityContextW ([Wine Bug #37527](https://bugs.winehq.org/show_bug.cgi?id=37527))
+* ~~Return more context attributes in schan_InitializeSecurityContextW~~ ([Wine Bug #37527](https://bugs.winehq.org/show_bug.cgi?id=37527))
 * SO_CONNECT_TIME returns the appropriate time
 * Scrolling causes mouse and screen to lock in Call to Power II ([Wine Bug #34559](https://bugs.winehq.org/show_bug.cgi?id=34559))
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](https://bugs.winehq.org/show_bug.cgi?id=35652))

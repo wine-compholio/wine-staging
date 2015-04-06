@@ -3388,10 +3388,12 @@ if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
 	patch_apply ntdll-RtlIpStringToAddress/0001-ntdll-tests-Tests-for-RtlIpv6StringToAddress-try-6.patch
 	patch_apply ntdll-RtlIpStringToAddress/0002-ntdll-tests-Tests-for-RtlIpv6StringToAddressEx-try-6.patch
 	patch_apply ntdll-RtlIpStringToAddress/0003-ntdll-tests-Tests-for-RtlIpv4StringToAddressEx-try-5.patch
+	patch_apply ntdll-RtlIpStringToAddress/0004-ntdll-tests-Add-tests-for-RtlIpv6AddressToString-and.patch
 	(
 		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddress.", 6 },';
 		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddressEx.", 6 },';
 		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv4StringToAddressEx (try 5, resend).", 1 },';
+		echo '+    { "Mark Jansen", "ntdll/tests: Add tests for RtlIpv6AddressToString and RtlIpv6AddressToStringEx.", 1 },';
 	) >> "$patchlist"
 fi
 

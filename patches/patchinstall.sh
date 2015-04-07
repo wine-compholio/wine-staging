@@ -119,7 +119,6 @@ patch_enable_all ()
 	enable_kernel32_GetVolumePathName="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
-	enable_kernel32_PowerRequest="$1"
 	enable_kernel32_Profile="$1"
 	enable_kernel32_SetFileInformationByHandle="$1"
 	enable_kernel32_VerifyVersionInfo="$1"
@@ -203,7 +202,6 @@ patch_enable_all ()
 	enable_user32_DrawTextExW="$1"
 	enable_user32_GetRawInputDeviceList="$1"
 	enable_user32_GetSystemMetrics="$1"
-	enable_user32_Key_State="$1"
 	enable_user32_Mouse_Message_Hwnd="$1"
 	enable_user32_Painting="$1"
 	enable_user32_ScrollWindowEx="$1"
@@ -423,9 +421,6 @@ patch_enable ()
 			;;
 		kernel32-NeedCurrentDirectoryForExePath)
 			enable_kernel32_NeedCurrentDirectoryForExePath="$2"
-			;;
-		kernel32-PowerRequest)
-			enable_kernel32_PowerRequest="$2"
 			;;
 		kernel32-Profile)
 			enable_kernel32_Profile="$2"
@@ -675,9 +670,6 @@ patch_enable ()
 			;;
 		user32-GetSystemMetrics)
 			enable_user32_GetSystemMetrics="$2"
-			;;
-		user32-Key_State)
-			enable_user32_Key_State="$2"
 			;;
 		user32-Mouse_Message_Hwnd)
 			enable_user32_Mouse_Message_Hwnd="$2"
@@ -1055,15 +1047,11 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 	if test "$enable_server_PeekMessage" -gt 1; then
 		abort "Patchset server-PeekMessage disabled, but server-Shared_Memory depends on that."
 	fi
-	if test "$enable_user32_Key_State" -gt 1; then
-		abort "Patchset user32-Key_State disabled, but server-Shared_Memory depends on that."
-	fi
 	enable_dinput_Events=1
 	enable_ntdll_Threading=1
 	enable_server_ClipCursor=1
 	enable_server_Key_State=1
 	enable_server_PeekMessage=1
-	enable_user32_Key_State=1
 fi
 
 if test "$enable_server_JobObjects" -eq 1; then
@@ -1975,6 +1963,42 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-resource_check_usage
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c
+# |
+if test "$enable_wined3d_resource_check_usage" -eq 1; then
+	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	(
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-wined3d_swapchain_present
+# |
+# | Modified files:
+# |   *	dlls/wined3d/swapchain.c
+# |
+if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
+	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-Multisampling
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2021,42 +2045,6 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-resource_check_usage
-# |
-# | Modified files:
-# |   *	dlls/wined3d/resource.c
-# |
-if test "$enable_wined3d_resource_check_usage" -eq 1; then
-	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	(
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-wined3d_swapchain_present
-# |
-# | Modified files:
-# |   *	dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
-	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2878,20 +2866,6 @@ if test "$enable_kernel32_NeedCurrentDirectoryForExePath" -eq 1; then
 		echo '+    { "Erich E. Hoover", "kernel32: Add SearchPath test demonstrating the priority of the working directory.", 1 },';
 		echo '+    { "Erich E. Hoover", "kernel32: NeedCurrentDirectoryForExePath does not use the registry.", 1 },';
 		echo '+    { "Erich E. Hoover", "kernel32: Consider the working directory first when launching executables with CreateProcess.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-PowerRequest
-# |
-# | Modified files:
-# |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/powermgnt.c, include/winbase.h
-# |
-if test "$enable_kernel32_PowerRequest" -eq 1; then
-	patch_apply kernel32-PowerRequest/0001-kernel32-Add-stub-for-PowerCreateRequest.patch
-	patch_apply kernel32-PowerRequest/0002-kernel32-Add-stubs-for-Power-Set-Clear-Request.patch
-	(
-		echo '+    { "Sebastian Lackner", "kernel32: Add stub for PowerCreateRequest.", 1 },';
-		echo '+    { "Sebastian Lackner", "kernel32: Add stubs for Power{Set,Clear}Request.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3863,21 +3837,6 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-OpenProcess
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37087] Return an error when trying to open a terminated process
-# |
-# | Modified files:
-# |   *	server/process.c, server/process.h
-# |
-if test "$enable_server_OpenProcess" -eq 1; then
-	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
-	(
-		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3895,26 +3854,31 @@ if test "$enable_server_Misc_ACL" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-JobObjects
+# Patchset server-OpenProcess
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#33723] EA Origin needs support for job objects
-# |   *	[#38351] Ignore unsupported job object restrictions
+# |   *	[#37087] Return an error when trying to open a terminated process
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/process.c, dlls/ntdll/sync.c, server/process.c, server/process.h, server/protocol.def
+# |   *	server/process.c, server/process.h
+# |
+if test "$enable_server_OpenProcess" -eq 1; then
+	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
+	(
+		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-JobObjects
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/process.c, dlls/ntdll/sync.c, server/process.c
 # |
 if test "$enable_server_JobObjects" -eq 1; then
-	patch_apply server-JobObjects/0001-server-Implement-remaining-wineserver-calls-for-job-.patch
-	patch_apply server-JobObjects/0002-server-Implement-JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.patch
-	patch_apply server-JobObjects/0003-kernel32-tests-Add-tests-for-waiting-on-an-job-objec.patch
-	patch_apply server-JobObjects/0004-server-Implement-waiting-for-job-objects.patch
-	patch_apply server-JobObjects/0005-ntdll-Implement-NtQueryInformationJobObject-stub-fun.patch
+	patch_apply server-JobObjects/0001-server-Implement-JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.patch
+	patch_apply server-JobObjects/0002-ntdll-Implement-NtQueryInformationJobObject-stub-fun.patch
 	(
-		echo '+    { "Andrew Cook", "server: Implement remaining wineserver calls for job objects.", 1 },';
 		echo '+    { "Andrew Cook", "server: Implement JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.", 1 },';
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for waiting on an job object.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Implement waiting for job objects.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Implement NtQueryInformationJobObject stub function.", 1 },';
 	) >> "$patchlist"
 fi
@@ -3965,28 +3929,13 @@ if test "$enable_server_Realtime_Priority" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset user32-Key_State
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#29871] Invalidate key state cache globally after calling LL hooks
-# |
-# | Modified files:
-# |   *	dlls/user32/hook.c, dlls/user32/input.c, dlls/user32/message.c, dlls/user32/user_private.h
-# |
-if test "$enable_user32_Key_State" -eq 1; then
-	patch_apply user32-Key_State/0001-user32-After-calling-LL-hooks-the-key-state-cache-ha.patch
-	(
-		echo '+    { "Sebastian Lackner", "user32: After calling LL hooks the key state cache has to be invalidated globally.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-Shared_Memory
 # |
 # | Modified files:
 # |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c, dlls/user32/focus.c,
-# | 	dlls/user32/input.c, dlls/user32/message.c, dlls/user32/user_private.h, dlls/user32/winstation.c, include/wine/server.h,
-# | 	include/winternl.h, server/fd.c, server/file.h, server/main.c, server/mapping.c, server/protocol.def, server/queue.c,
-# | 	server/thread.c, server/thread.h
+# | 	dlls/user32/input.c, dlls/user32/message.c, dlls/user32/user_private.h, include/wine/server.h, include/winternl.h,
+# | 	server/fd.c, server/file.h, server/main.c, server/mapping.c, server/protocol.def, server/queue.c, server/thread.c,
+# | 	server/thread.h
 # |
 if test "$enable_server_Shared_Memory" -eq 1; then
 	patch_apply server-Shared_Memory/0001-ntdll-Implement-virtual_map_shared_memory.patch
@@ -3995,10 +3944,9 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 	patch_apply server-Shared_Memory/0004-user32-Avoid-unnecessary-wineserver-calls-in-PeekMes.patch
 	patch_apply server-Shared_Memory/0005-user32-Get-rid-of-wineserver-call-for-GetLastInputIn.patch
 	patch_apply server-Shared_Memory/0006-ntdll-Only-enable-wineserver-shared-memory-communica.patch
-	patch_apply server-Shared_Memory/0007-user32-Move-key_state-cache-into-separate-structure.patch
-	patch_apply server-Shared_Memory/0008-server-Store-a-list-of-associated-queues-for-each-th.patch
-	patch_apply server-Shared_Memory/0009-user32-Get-rid-of-wineserver-call-for-GetActiveWindo.patch
-	patch_apply server-Shared_Memory/0010-user32-Cache-the-result-of-GetForegroundWindow.patch
+	patch_apply server-Shared_Memory/0007-server-Store-a-list-of-associated-queues-for-each-th.patch
+	patch_apply server-Shared_Memory/0008-user32-Get-rid-of-wineserver-call-for-GetActiveWindo.patch
+	patch_apply server-Shared_Memory/0009-user32-Cache-the-result-of-GetForegroundWindow.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Implement virtual_map_shared_memory.", 1 },';
 		echo '+    { "Michael Müller", "server: Implement support for global and local shared memory blocks based on memfd.", 1 },';
@@ -4006,7 +3954,6 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 		echo '+    { "Sebastian Lackner", "user32: Avoid unnecessary wineserver calls in PeekMessage/GetMessage.", 1 },';
 		echo '+    { "Michael Müller", "user32: Get rid of wineserver call for GetLastInputInfo.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Only enable wineserver shared memory communication when a special environment variable is set.", 1 },';
-		echo '+    { "Sebastian Lackner", "user32: Move key_state cache into separate structure.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Store a list of associated queues for each thread input.", 1 },';
 		echo '+    { "Sebastian Lackner", "user32: Get rid of wineserver call for GetActiveWindow, GetFocus, GetCapture.", 1 },';
 		echo '+    { "Sebastian Lackner", "user32: Cache the result of GetForegroundWindow.", 1 },';

@@ -60,7 +60,7 @@ for more details.*
 * Add stub for D3DXComputeTangentFrameEx ([Wine Bug #31984](https://bugs.winehq.org/show_bug.cgi?id=31984))
 * Add stub for D3DXIntersect
 * Add stub for NtSetLdtEntries/ZwSetLdtEntries ([Wine Bug #26268](https://bugs.winehq.org/show_bug.cgi?id=26268))
-* Add stub for PowerCreateRequest
+* ~~Add stub for PowerCreateRequest~~
 * Add stub for gdiplus.GdipCreateEffect ([Wine Bug #32163](https://bugs.winehq.org/show_bug.cgi?id=32163))
 * Add stub for ntoskrnl.ExAcquireResourceExclusiveLite
 * Add stub for ntoskrnl.ExDeleteResourceLite
@@ -71,7 +71,7 @@ for more details.*
 * Add stub for setupapi.SetupDiSelectBestCompatDrv ([Wine Bug #32088](https://bugs.winehq.org/show_bug.cgi?id=32088))
 * Add stub for wininet.ParseX509EncodedCertificateForListBoxEntry ([Wine Bug #29842](https://bugs.winehq.org/show_bug.cgi?id=29842))
 * Add stubs for D3DXCreateAnimationController interface
-* Add stubs for Power[Set|Clear]Request
+* ~~Add stubs for Power[Set|Clear]Request~~
 * Add support for CopyFileEx progress callback ([Wine Bug #22692](https://bugs.winehq.org/show_bug.cgi?id=22692))
 * Add support for GetPropValue to PulseAudio backend
 * Adobe Reader needs ITextSelection_fnGetDuplicate implementation
@@ -99,7 +99,7 @@ for more details.*
 * Do not append duplicate NULL characters when importing keys with regedit ([Wine Bug #37575](https://bugs.winehq.org/show_bug.cgi?id=37575))
 * Do not fail when a used context is passed to wglShareLists ([Wine Bug #11436](https://bugs.winehq.org/show_bug.cgi?id=11436))
 * ~~Don't return an error in WS_select when EINTR happens during timeout~~
-* EA Origin needs support for job objects ([Wine Bug #33723](https://bugs.winehq.org/show_bug.cgi?id=33723))
+* ~~EA Origin needs support for job objects~~ ([Wine Bug #33723](https://bugs.winehq.org/show_bug.cgi?id=33723))
 * Emulate access to KI_USER_SHARED_DATA kernel page on x86_64 ([Wine Bug #33849](https://bugs.winehq.org/show_bug.cgi?id=33849))
 * Enforce that surfaces are flushed after ReleaseDC
 * Ensure NtProtectVirtualMemory and NtCreateSection are on separate pages ([Wine Bug #33162](https://bugs.winehq.org/show_bug.cgi?id=33162))
@@ -153,7 +153,7 @@ for more details.*
 * Hearthstone fails to start ([Wine Bug #36216](https://bugs.winehq.org/show_bug.cgi?id=36216))
 * IOCTL_DVD_READ_STRUCTURE expects the wrong size of output buffer for some requests ([Wine Bug #37767](https://bugs.winehq.org/show_bug.cgi?id=37767))
 * Ignore unsupported flags for CoInternetSetFeatureEnabled ([Wine Bug #35197](https://bugs.winehq.org/show_bug.cgi?id=35197))
-* Ignore unsupported job object restrictions ([Wine Bug #38351](https://bugs.winehq.org/show_bug.cgi?id=38351))
+* ~~Ignore unsupported job object restrictions~~ ([Wine Bug #38351](https://bugs.winehq.org/show_bug.cgi?id=38351))
 * Implement D3DXGetShaderOutputSemantics
 * Implement DDENUMSURFACES_CANBECREATED in IDirectDraw7::EnumSurfaces ([Wine Bug #17233](https://bugs.winehq.org/show_bug.cgi?id=17233))
 * Implement ID3DXEffect::FindNextValidTechnique ([Wine Bug #34101](https://bugs.winehq.org/show_bug.cgi?id=34101))
@@ -183,7 +183,7 @@ for more details.*
 * Improve stubs for AEV_{Get,Set}Mute
 * Improvement for heap allocation performance
 * Increase wineconsole commandline buffer size ([Wine Bug #34814](https://bugs.winehq.org/show_bug.cgi?id=34814))
-* Invalidate key state cache globally after calling LL hooks ([Wine Bug #29871](https://bugs.winehq.org/show_bug.cgi?id=29871))
+* ~~Invalidate key state cache globally after calling LL hooks~~ ([Wine Bug #29871](https://bugs.winehq.org/show_bug.cgi?id=29871))
 * Jedi Knight: Dark Forces II crashes with winmm set to native ([Wine Bug #37983](https://bugs.winehq.org/show_bug.cgi?id=37983))
 * Lego Stunt Rally requires DXTn software de/encoding support ([Wine Bug #25486](https://bugs.winehq.org/show_bug.cgi?id=25486))
 * Lockfree algorithm for filedescriptor cache (improves file access speed)
@@ -199,7 +199,7 @@ for more details.*
 * Prevent window managers from grouping all wine programs together ([Wine Bug #32699](https://bugs.winehq.org/show_bug.cgi?id=32699))
 * Process APC calls before starting process
 * Process Hacker 2.x needs ntoskrnl.ProbeForRead ([Wine Bug #38103](https://bugs.winehq.org/show_bug.cgi?id=38103))
-* Properly track handle count of wineserver objects
+* ~~Properly track handle count of wineserver objects~~
 * Python PIP needs better NtQueryInformationJobObject stub
 * Reduced SetTimer minimum value from 10 ms to 5 ms (improves Silverlight framerates)
 * Return an error when trying to open a terminated process ([Wine Bug #37087](https://bugs.winehq.org/show_bug.cgi?id=37087))

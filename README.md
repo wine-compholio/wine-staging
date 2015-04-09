@@ -114,7 +114,7 @@ for more details.*
 * ~~Fix calculation of 3D sound source~~ ([Wine Bug #38041](https://bugs.winehq.org/show_bug.cgi?id=38041))
 * Fix caps lock state issues with multiple processes ([Wine Bug #35907](https://bugs.winehq.org/show_bug.cgi?id=35907))
 * Fix comparison of punctuation characters in lstrcmp ([Wine Bug #10767](https://bugs.winehq.org/show_bug.cgi?id=10767))
-* Fix compatibility of Uplay with gnutls28 ([Wine Bug #38134](https://bugs.winehq.org/show_bug.cgi?id=38134))
+* ~~Fix compatibility of Uplay with gnutls28~~ ([Wine Bug #38134](https://bugs.winehq.org/show_bug.cgi?id=38134))
 * Fix condition mask handling in RtlVerifyVersionInfo ([Wine Bug #36143](https://bugs.winehq.org/show_bug.cgi?id=36143))
 * Fix crash in Space Rangers2 caused by missing DXTn support ([Wine Bug #24983](https://bugs.winehq.org/show_bug.cgi?id=24983))
 * Fix crash in clip_cursor_notify caused by uninitialized TLS ([Wine Bug #36915](https://bugs.winehq.org/show_bug.cgi?id=36915))

@@ -185,6 +185,7 @@ patch_enable_all ()
 	enable_server_Stored_ACLs="$1"
 	enable_server_Unexpected_Wakeup="$1"
 	enable_setupapi_SetupDiSelectBestCompatDrv="$1"
+	enable_setupapi_SetupDiSetDeviceInstallParamsW="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
 	enable_shell32_Default_Folder_ACLs="$1"
@@ -618,6 +619,9 @@ patch_enable ()
 			;;
 		setupapi-SetupDiSelectBestCompatDrv)
 			enable_setupapi_SetupDiSelectBestCompatDrv="$2"
+			;;
+		setupapi-SetupDiSetDeviceInstallParamsW)
+			enable_setupapi_SetupDiSetDeviceInstallParamsW="$2"
 			;;
 		setupapi-SetupPromptForDisk)
 			enable_setupapi_SetupPromptForDisk="$2"
@@ -1961,18 +1965,15 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Multisampling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# Patchset wined3d-UnhandledBlendFactor
 # |
 # | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |   *	dlls/wined3d/state.c
 # |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
 	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -1997,6 +1998,21 @@ if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
 	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Multisampling
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Multisampling" -eq 1; then
+	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+	(
+		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2031,18 +2047,6 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3969,6 +3973,21 @@ if test "$enable_setupapi_SetupDiSelectBestCompatDrv" -eq 1; then
 	patch_apply setupapi-SetupDiSelectBestCompatDrv/0001-setupapi-Add-stub-for-SetupDiSelectBestCompatDrv.patch
 	(
 		echo '+    { "Austin English", "setupapi: Add stub for SetupDiSelectBestCompatDrv.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset setupapi-SetupDiSetDeviceInstallParamsW
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#29903] Add stub for setupapi.SetupDiSetDeviceInstallParamsW
+# |
+# | Modified files:
+# |   *	dlls/setupapi/devinst.c, dlls/setupapi/setupapi.spec
+# |
+if test "$enable_setupapi_SetupDiSetDeviceInstallParamsW" -eq 1; then
+	patch_apply setupapi-SetupDiSetDeviceInstallParamsW/0001-setupapi-add-SetupDiSetDeviceInstallParamsW-stub.patch
+	(
+		echo '+    { "Austin English", "setupapi: add SetupDiSetDeviceInstallParamsW stub.", 1 },';
 	) >> "$patchlist"
 fi
 

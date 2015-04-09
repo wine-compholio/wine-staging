@@ -1784,11 +1784,13 @@ fi
 # |   *	[#17233] Implement DDENUMSURFACES_CANBECREATED in IDirectDraw7::EnumSurfaces
 # |
 # | Modified files:
-# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/tests/d3d.c
+# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/main.c, dlls/ddraw/tests/d3d.c
 # |
 if test "$enable_ddraw_EnumSurfaces" -eq 1; then
-	patch_apply ddraw-EnumSurfaces/0001-ddraw-Implement-DDENUMSURFACES_CANBECREATED-in-IDire.patch
+	patch_apply ddraw-EnumSurfaces/0001-ddraw-Fix-arguments-to-IDirectDraw7-EnumSurfaces-in-.patch
+	patch_apply ddraw-EnumSurfaces/0002-ddraw-Implement-DDENUMSURFACES_CANBECREATED-in-IDire.patch
 	(
+		echo '+    { "Michael Müller", "ddraw: Fix arguments to IDirectDraw7::EnumSurfaces in DllMain.", 1 },';
 		echo '+    { "Michael Müller", "ddraw: Implement DDENUMSURFACES_CANBECREATED in IDirectDraw7::EnumSurfaces and fix some bugs.", 1 },';
 	) >> "$patchlist"
 fi

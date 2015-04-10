@@ -1,15 +1,18 @@
-From 514cdcbb66a3123b7f3922a54b16e8aa8ecd387f Mon Sep 17 00:00:00 2001
+From 97a7b572e7556d8867f025d94b9d361c3dd19a5a Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 15 Mar 2015 01:05:48 +0100
 Subject: server: Fix handling of GetMessage after previous PeekMessage call.
+ (v2)
 
+Changes in v2:
+* accept_hardware_message should also reset ignore_post_msg
 ---
  dlls/user32/tests/msg.c |  9 ---------
- server/queue.c          | 31 ++++++++++++++++++++++++++-----
- 2 files changed, 26 insertions(+), 14 deletions(-)
+ server/queue.c          | 34 +++++++++++++++++++++++++++++-----
+ 2 files changed, 29 insertions(+), 14 deletions(-)
 
 diff --git a/dlls/user32/tests/msg.c b/dlls/user32/tests/msg.c
-index c297e40..19ddfde 100644
+index 5f10a89..dfb002e 100644
 --- a/dlls/user32/tests/msg.c
 +++ b/dlls/user32/tests/msg.c
 @@ -10459,13 +10459,10 @@ static void test_PeekMessage3(void)
@@ -60,7 +63,7 @@ index c297e40..19ddfde 100644
      ret = PeekMessageA(&msg, NULL, 0, 0, 0);
      ok(!ret, "expected PeekMessage to return FALSE, got %u\n", ret);
 diff --git a/server/queue.c b/server/queue.c
-index 3a321cd..ce78e4d 100644
+index 3a321cd..68b6a19 100644
 --- a/server/queue.c
 +++ b/server/queue.c
 @@ -138,6 +138,7 @@ struct msg_queue
@@ -183,6 +186,17 @@ index 3a321cd..ce78e4d 100644
  }
  
  
+@@ -2445,7 +2466,10 @@ DECL_HANDLER(reply_message)
+ DECL_HANDLER(accept_hardware_message)
+ {
+     if (current->queue)
++    {
+         release_hardware_message( current->queue, req->hw_id, req->remove );
++        if (req->remove) current->queue->ignore_post_msg = 0;
++    }
+     else
+         set_error( STATUS_ACCESS_DENIED );
+ }
 -- 
-2.3.2
+2.3.5
 

@@ -167,6 +167,7 @@ patch_enable_all ()
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
 	enable_ole32_CoWaitForMultipleHandles="$1"
+	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_regedit_String_Termination="$1"
 	enable_riched20_IText_Interface="$1"
@@ -567,6 +568,9 @@ patch_enable ()
 			;;
 		ole32-CoWaitForMultipleHandles)
 			enable_ole32_CoWaitForMultipleHandles="$2"
+			;;
+		opengl32-Revert_Disable_Ext)
+			enable_opengl32_Revert_Disable_Ext="$2"
 			;;
 		quartz-MediaSeeking_Positions)
 			enable_quartz_MediaSeeking_Positions="$2"
@@ -3666,6 +3670,21 @@ if test "$enable_ole32_CoWaitForMultipleHandles" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset opengl32-Revert_Disable_Ext
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38264] Fix regression caused by blacklisting supported OpenGL extensions
+# |
+# | Modified files:
+# |   *	dlls/opengl32/wgl.c
+# |
+if test "$enable_opengl32_Revert_Disable_Ext" -eq 1; then
+	patch_apply opengl32-Revert_Disable_Ext/0001-Revert-opengl32-Return-a-NULL-pointer-for-functions-.patch
+	(
+		echo '+    { "Sebastian Lackner", "Revert \"opengl32: Return a NULL pointer for functions requiring unsupported or disabled extensions.\".", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset quartz-MediaSeeking_Positions
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3863,21 +3882,6 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-OpenProcess
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37087] Return an error when trying to open a terminated process
-# |
-# | Modified files:
-# |   *	server/process.c, server/process.h
-# |
-if test "$enable_server_OpenProcess" -eq 1; then
-	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
-	(
-		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3892,6 +3896,21 @@ if test "$enable_server_Misc_ACL" -eq 1; then
 	(
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-OpenProcess
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37087] Return an error when trying to open a terminated process
+# |
+# | Modified files:
+# |   *	server/process.c, server/process.h
+# |
+if test "$enable_server_OpenProcess" -eq 1; then
+	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
+	(
+		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
 	) >> "$patchlist"
 fi
 

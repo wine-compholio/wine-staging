@@ -1,0 +1,47 @@
+From 246cb6b72666dcb77fb2f553d318d7dabbe8811d Mon Sep 17 00:00:00 2001
+From: Qian Hong <qhong@codeweavers.com>
+Date: Tue, 7 Apr 2015 13:18:47 +0800
+Subject: advapi32: Prepend a hidden LSA_TRUST_INFORMATION in LsaLookupSids to
+ avoid crash when Domains[-1] incorrectly accessed by application. (try 2)
+
+---
+ dlls/advapi32/lsa.c | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/advapi32/lsa.c b/dlls/advapi32/lsa.c
+index 69c29c5..dfe25b3 100644
+--- a/dlls/advapi32/lsa.c
++++ b/dlls/advapi32/lsa.c
+@@ -488,14 +488,17 @@ NTSTATUS WINAPI LsaLookupSids(
+     if (!(*Names = heap_alloc(name_fullsize))) return STATUS_NO_MEMORY;
+     /* maximum count of stored domain infos is Count, allocate it like that cause really needed
+        count could only be computed after sid data is retrieved */
+-    domain_fullsize = sizeof(LSA_REFERENCED_DOMAIN_LIST) + sizeof(LSA_TRUST_INFORMATION)*Count;
++    domain_fullsize = sizeof(LSA_REFERENCED_DOMAIN_LIST) + sizeof(LSA_TRUST_INFORMATION) * (Count + 1);
+     if (!(*ReferencedDomains = heap_alloc(domain_fullsize)))
+     {
+         heap_free(*Names);
+         return STATUS_NO_MEMORY;
+     }
+     (*ReferencedDomains)->Entries = 0;
+-    (*ReferencedDomains)->Domains = (LSA_TRUST_INFORMATION*)((char*)*ReferencedDomains + sizeof(LSA_REFERENCED_DOMAIN_LIST));
++    (*ReferencedDomains)->Domains = (LSA_TRUST_INFORMATION*)((char*)*ReferencedDomains +
++                                    sizeof(LSA_REFERENCED_DOMAIN_LIST) + sizeof(LSA_TRUST_INFORMATION));
++    (*ReferencedDomains)->Domains[-1].Sid = NULL;
++    RtlInitUnicodeStringEx(&(*ReferencedDomains)->Domains[-1].Name, NULL);
+ 
+     /* Get full names data length and full length needed to store domain name and SID */
+     for (i = 0; i < Count; i++)
+@@ -555,7 +558,8 @@ NTSTATUS WINAPI LsaLookupSids(
+ 
+     *ReferencedDomains = heap_realloc(*ReferencedDomains, domain_fullsize);
+     /* fix pointer after reallocation */
+-    (*ReferencedDomains)->Domains = (LSA_TRUST_INFORMATION*)((char*)*ReferencedDomains + sizeof(LSA_REFERENCED_DOMAIN_LIST));
++    (*ReferencedDomains)->Domains = (LSA_TRUST_INFORMATION*)((char*)*ReferencedDomains +
++                                    sizeof(LSA_REFERENCED_DOMAIN_LIST) + sizeof(LSA_TRUST_INFORMATION));
+     domain_data = (char*)(*ReferencedDomains)->Domains + sizeof(LSA_TRUST_INFORMATION)*Count;
+ 
+     mapped = 0;
+-- 
+2.3.5
+

@@ -39,10 +39,11 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [2]:**
+**Bug fixes and features included in the next upcoming release [3]:**
 
 * Calculate msvcrt exponential math operations with higher precision ([Wine Bug #37149](https://bugs.winehq.org/show_bug.cgi?id=37149))
 * Fix regression caused by blacklisting supported OpenGL extensions ([Wine Bug #38264](https://bugs.winehq.org/show_bug.cgi?id=38264))
+* Reset device state in SysKeyboard*Impl_Acquire ([Wine Bug #11607](https://bugs.winehq.org/show_bug.cgi?id=11607))
 
 
 **Bug fixes and features in Wine Staging 1.7.40 [220]:**

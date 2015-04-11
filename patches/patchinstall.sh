@@ -95,6 +95,7 @@ patch_enable_all ()
 	enable_ddraw_EnumSurfaces="$1"
 	enable_ddraw_Hotpatch="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
+	enable_dinput_DeviceState="$1"
 	enable_dinput_Events="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
@@ -352,6 +353,9 @@ patch_enable ()
 			;;
 		ddraw-d3d_execute_buffer)
 			enable_ddraw_d3d_execute_buffer="$2"
+			;;
+		dinput-DeviceState)
+			enable_dinput_DeviceState="$2"
 			;;
 		dinput-Events)
 			enable_dinput_Events="$2"
@@ -1844,6 +1848,21 @@ if test "$enable_ddraw_d3d_execute_buffer" -eq 1; then
 	patch_apply ddraw-d3d_execute_buffer/0001-ddraw-Don-t-call-IDirect3DDevice7_DrawIndexedPrimiti.patch
 	(
 		echo '+    { "Christian Costa", "ddraw: Don'\''t call IDirect3DDevice7_DrawIndexedPrimitive if there is no primitive.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dinput-DeviceState
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#11607] Reset device state in SysKeyboard*Impl_Acquire
+# |
+# | Modified files:
+# |   *	dlls/dinput/keyboard.c, dlls/dinput/tests/keyboard.c
+# |
+if test "$enable_dinput_DeviceState" -eq 1; then
+	patch_apply dinput-DeviceState/0001-dinput-Reset-device-state-in-SysKeyboard-Impl_Acquir.patch
+	(
+		echo '+    { "Sebastian Lackner", "dinput: Reset device state in SysKeyboard*Impl_Acquire.", 1 },';
 	) >> "$patchlist"
 fi
 

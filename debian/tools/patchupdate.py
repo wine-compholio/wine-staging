@@ -47,6 +47,8 @@ latest_wine_commit  = None
 cached_patch_result = {}
 
 class config(object):
+    path_cache              = ".patchupdate.cache"
+
     path_patches            = "patches"
     path_changelog          = "debian/changelog"
     path_wine               = "debian/tools/wine"
@@ -115,8 +117,9 @@ def _load_dict(filename):
 
 def _save_dict(filename, value):
     """Save a Python dictionary object to a file."""
-    with open(filename, "wb") as fp:
+    with open("%s.new" % filename, "wb") as fp:
         pickle.dump(value, fp, pickle.HIGHEST_PROTOCOL)
+    os.rename("%s.new" % filename, filename)
 
 def _sha256(fp):
     """Calculate sha256sum from a file descriptor."""
@@ -364,7 +367,7 @@ def contains_binary_patch(all_patches, indices, filename):
     return False
 
 def get_wine_file(filename):
-    """Return the hash and optionally the content of a file."""
+    """Return the content of a file."""
     entry  = "%s:%s" % (latest_wine_commit, filename)
     result = tempfile.NamedTemporaryFile()
     try:
@@ -501,42 +504,40 @@ def generate_script(all_patches):
             modified_files[f].append(i)
 
     # Check dependencies
+    dependency_cache = _load_dict(config.path_cache)
     pool = multiprocessing.pool.ThreadPool(processes=4)
     try:
-
-        # Checking all dependencies takes a very long time, so to improve development speed,
-        # run a first quick check with all patches enabled.
-        with progressbar.ProgressBar(desc="pre-check ...", total=len(modified_files)) as progress:
-            for k, (filename, indices) in enumerate(modified_files.iteritems()):
-
-                # If one of patches is a binary patch, then we cannot / won't verify it - require dependencies in this case
-                if contains_binary_patch(all_patches, indices, filename):
-                    if not causal_time_relation_any(all_patches, indices):
-                        raise PatchUpdaterError("Because of binary patch modifying file %s the following patches need explicit dependencies: %s" %
-                                                (filename, ", ".join([all_patches[i].name for i in indices])))
-                    continue
-
-                original         = get_wine_file(filename)
-                selected_patches = select_patches(all_patches, indices, filename)
-                set_apply        = [(i, all_patches[i]) for i in indices]
-
-                try:
-                    for i, patch in set_apply:
-                        original = patchutils.apply_patch(original, selected_patches[i][1], fuzz=0)
-                except patchutils.PatchApplyError:
-                    progress.finish("<failed to apply>")
-                    raise PatchUpdaterError("Changes to file %s don't apply: %s" %
-                                            (filename, ", ".join([all_patches[i].name for i in indices])))
-                progress.update(k)
-
-        # More detailed checks, required to make sure that dependencies are set correctly
         for filename, indices in modified_files.iteritems():
 
+            # If one of patches is a binary patch, then we cannot / won't verify it - require dependencies in this case
             if contains_binary_patch(all_patches, indices, filename):
+                if not causal_time_relation_any(all_patches, indices):
+                    raise PatchUpdaterError("Because of binary patch modifying file %s the following patches need explicit dependencies: %s" %
+                                            (filename, ", ".join([all_patches[i].name for i in indices])))
                 continue
 
             original_content = get_wine_file(filename)
+            original_hash    = _sha256(original_content)
             selected_patches = select_patches(all_patches, indices, filename)
+
+            # Generate a unique id based on the original content, the selected patches
+            # and the dependency information. Since this information only has to be compared
+            # we can throw it into a single hash.
+            m = hashlib.sha256()
+            m.update(original_hash)
+            for i in indices:
+                m.update("P%s" % selected_patches[i][0])
+                for j in indices:
+                    if causal_time_smaller(all_patches[j].verify_time, all_patches[i].verify_time):
+                        m.update("D%s" % selected_patches[j][0])
+            unique_hash = m.digest()
+
+            # Skip checks if it matches the information from the cache
+            try:
+                if dependency_cache[filename] == unique_hash:
+                    continue
+            except KeyError:
+                pass
 
             # Show a progress bar while applying the patches - this task might take some time
             chunk_size = 20
@@ -555,7 +556,7 @@ def generate_script(all_patches):
 
                     try:
                         original = original_content
-                        for i, patch in set_apply:
+                        for i, _ in set_apply:
                             original = patchutils.apply_patch(original, selected_patches[i][1], fuzz=0)
                     except patchutils.PatchApplyError:
                         return False
@@ -575,8 +576,13 @@ def generate_script(all_patches):
                         raise PatchUpdaterError("Changes to file %s don't apply: %s" %
                                                 (filename, ", ".join([all_patches[i].name for i in indices])))
                     progress.update(k)
+
+            # Update the dependency cache
+            dependency_cache[filename] = unique_hash
+
     finally:
         pool.close()
+        _save_dict(config.path_cache, dependency_cache)
 
     # Generate code for helper functions
     lines = []

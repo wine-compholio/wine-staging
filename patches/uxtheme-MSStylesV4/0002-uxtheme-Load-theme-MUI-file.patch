@@ -1,0 +1,175 @@
+From 47cc6bfb75acca58c2dc9f01829b5069d693bc76 Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Sat, 11 Apr 2015 20:18:58 +0100
+Subject: [PATCH 02/19] uxtheme: Load theme MUI file.
+
+---
+ dlls/uxtheme/msstyles.c | 97 ++++++++++++++++++++++++++++++++++++++++++++++++-
+ dlls/uxtheme/msstyles.h |  1 +
+ 2 files changed, 97 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/uxtheme/msstyles.c b/dlls/uxtheme/msstyles.c
+index e62b95d..b022edc 100644
+--- a/dlls/uxtheme/msstyles.c
++++ b/dlls/uxtheme/msstyles.c
+@@ -48,6 +48,8 @@ static BOOL MSSTYLES_GetNextToken(LPCWSTR lpStringStart, LPCWSTR lpStringEnd, LP
+ static void MSSTYLES_ParseThemeIni(PTHEME_FILE tf, BOOL setMetrics);
+ static HRESULT MSSTYLES_GetFont (LPCWSTR lpStringStart, LPCWSTR lpStringEnd, LPCWSTR *lpValEnd, LOGFONTW* logfont);
+ 
++INT WINAPI GetSystemDefaultLocaleName(LPWSTR localename, INT len);
++
+ extern int alphaBlendMode;
+ 
+ #define MSSTYLES_VERSION 0x0003
+@@ -60,6 +62,93 @@ static PTHEME_FILE tfActiveTheme;
+ 
+ /***********************************************************************/
+ 
++static HMODULE try_opening_mui_file(LPCWSTR locale, LPCWSTR path, LPCWSTR filename)
++{
++    WCHAR muipath[MAX_PATH];
++    static WCHAR backslash[] = {'\\',0};
++    static WCHAR muiext[] = {'.','m','u','i',0};
++
++    strcpyW(muipath, path);
++    strcatW(muipath, locale);
++    strcatW(muipath, backslash);
++    strcatW(muipath, filename);
++    strcatW(muipath, muiext);
++
++    return LoadLibraryExW(muipath, NULL, LOAD_LIBRARY_AS_DATAFILE);
++}
++
++static inline void get_lang_from_locale(WCHAR* locale, WCHAR* lang)
++{
++    static WCHAR dash[] = {'-',0};
++    WCHAR* dashstr = strstrW(locale, dash);
++
++    if (dashstr) {
++        memcpy(lang, locale, (dashstr - locale)*sizeof(WCHAR));
++        lang[dashstr - locale] = 0;
++    } else {
++        strcpyW(lang, locale);
++    }
++}
++
++static HMODULE load_mui_file(LPCWSTR lpThemeFile)
++{
++    int i, len = strlenW(lpThemeFile);
++    WCHAR path[MAX_PATH], locale[LOCALE_NAME_MAX_LENGTH], searchstring[MAX_PATH], lang[LOCALE_NAME_MAX_LENGTH];
++    const WCHAR* filename = NULL;
++    HMODULE muifile;
++    HANDLE fff;
++    WIN32_FIND_DATAW finddata;
++
++    static WCHAR wildcard[] = {'*',0};
++    static WCHAR default_locale[] = {'e','n','-','U','S',0};
++
++    for (i = len - 1; i >= 0; i--) {
++        if (lpThemeFile[i] == '\\' || lpThemeFile[i] == '/') {
++            memcpy(path, lpThemeFile, i * sizeof(WCHAR));
++            path[i] = '\\';
++            path[i+1] = 0;
++            filename = &lpThemeFile[i+1];
++            break;
++        }
++    }
++
++    /* Just filename, no path */
++    if (i == -1) {
++        path[0] = 0;
++        filename = lpThemeFile;
++    }
++
++    if (!GetSystemDefaultLocaleName(locale, sizeof(locale)/sizeof(*locale)))
++        goto failsafe;
++
++    if ((muifile = try_opening_mui_file(locale, path, filename)))
++        return muifile;
++
++    /* If exact language match not found, try the available sublangs */
++    get_lang_from_locale(locale, lang);
++    strcpyW(searchstring, path);
++    strcatW(searchstring, wildcard);
++    fff = FindFirstFileW(searchstring, &finddata);
++
++    do {
++        if (finddata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY && finddata.cFileName[0] != '.') {
++            WCHAR filelang[MAX_PATH];
++
++            get_lang_from_locale(finddata.cFileName, filelang);
++
++            if (!strcmpiW(lang, filelang) && (muifile = try_opening_mui_file(finddata.cFileName, path, filename))) {
++                FindClose(fff);
++                return muifile;
++            }
++        }
++    } while (FindNextFileW(fff, &finddata));
++
++    FindClose(fff);
++
++failsafe:
++    return try_opening_mui_file(default_locale, path, filename);
++}
++
+ /**********************************************************************
+  *      MSSTYLES_OpenThemeFile
+  *
+@@ -77,7 +166,7 @@ static PTHEME_FILE tfActiveTheme;
+  */
+ HRESULT MSSTYLES_OpenThemeFile(LPCWSTR lpThemeFile, LPCWSTR pszColorName, LPCWSTR pszSizeName, PTHEME_FILE *tf)
+ {
+-    HMODULE hTheme;
++    HMODULE hTheme, hMUIFile = NULL;
+     HRSRC hrsc;
+     HRESULT hr = S_OK;
+     static const WCHAR szPackThemVersionResource[] = {
+@@ -118,6 +207,9 @@ HRESULT MSSTYLES_OpenThemeFile(LPCWSTR lpThemeFile, LPCWSTR pszColorName, LPCWST
+         hr = HRESULT_FROM_WIN32(ERROR_BAD_FORMAT);
+         goto invalid_theme;
+     }
++
++    hMUIFile = load_mui_file(lpThemeFile);
++
+     version = *(WORD*)LoadResource(hTheme, hrsc);
+     if(version != MSSTYLES_VERSION)
+     {
+@@ -177,6 +269,7 @@ HRESULT MSSTYLES_OpenThemeFile(LPCWSTR lpThemeFile, LPCWSTR pszColorName, LPCWST
+ 
+     *tf = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(THEME_FILE));
+     (*tf)->hTheme = hTheme;
++    (*tf)->hMUIFile = hMUIFile;
+     
+     GetFullPathNameW(lpThemeFile, MAX_PATH, (*tf)->szThemeFile, NULL);
+     
+@@ -189,6 +282,7 @@ HRESULT MSSTYLES_OpenThemeFile(LPCWSTR lpThemeFile, LPCWSTR pszColorName, LPCWST
+ 
+ invalid_theme:
+     if(hTheme) FreeLibrary(hTheme);
++    if(hMUIFile) FreeLibrary(hMUIFile);
+     return hr;
+ }
+ 
+@@ -203,6 +297,7 @@ void MSSTYLES_CloseThemeFile(PTHEME_FILE tf)
+         tf->dwRefCount--;
+         if(!tf->dwRefCount) {
+             if(tf->hTheme) FreeLibrary(tf->hTheme);
++            if(tf->hMUIFile) FreeLibrary(tf->hMUIFile);
+             if(tf->classes) {
+                 while(tf->classes) {
+                     PTHEME_CLASS pcls = tf->classes;
+diff --git a/dlls/uxtheme/msstyles.h b/dlls/uxtheme/msstyles.h
+index 0b7e1ab..6dab7f8 100644
+--- a/dlls/uxtheme/msstyles.h
++++ b/dlls/uxtheme/msstyles.h
+@@ -70,6 +70,7 @@ typedef struct _THEME_IMAGE {
+ typedef struct _THEME_FILE {
+     DWORD dwRefCount;
+     HMODULE hTheme;
++    HMODULE hMUIFile;
+     WCHAR szThemeFile[MAX_PATH];
+     LPWSTR pszAvailColors;
+     LPWSTR pszAvailSizes;
+-- 
+2.0.5
+

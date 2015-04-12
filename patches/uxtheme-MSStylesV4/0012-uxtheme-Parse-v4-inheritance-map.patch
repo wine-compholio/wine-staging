@@ -1,0 +1,143 @@
+From 196445e2f18e113bb7476d7616eec476047cd054 Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Sat, 11 Apr 2015 23:05:23 +0100
+Subject: [PATCH 12/19] uxtheme: Parse v4 inheritance map.
+
+---
+ dlls/uxtheme/msstyles.c | 75 +++++++++++++++++++++++++++++++++++++++++++++++--
+ dlls/uxtheme/msstyles.h |  1 +
+ 2 files changed, 74 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/uxtheme/msstyles.c b/dlls/uxtheme/msstyles.c
+index f4b7568..b672adc 100644
+--- a/dlls/uxtheme/msstyles.c
++++ b/dlls/uxtheme/msstyles.c
+@@ -633,6 +633,7 @@ static PTHEME_CLASS MSSTYLES_AddClass(PTHEME_FILE tf, LPCWSTR pszAppName, LPCWST
+     cur->next = tf->classes;
+     cur->partstate = NULL;
+     cur->overrides = NULL;
++    cur->parent = NULL;
+     tf->classes = cur;
+     return cur;
+ }
+@@ -902,6 +903,63 @@ void MSSTYLES_ParseV4ClassMap(PTHEME_FILE tf)
+     }
+ }
+ 
++static void MSSTYLES_ParseV4InheritanceMap(PTHEME_FILE tf)
++{
++    HRSRC hrsc;
++    DWORD size, *buf;
++    int imsize, imoffset, i;
++    THEME_CLASS **classes, *cls;
++
++    static const WCHAR BCMAPResource[] = {
++        'B','C','M','A','P',0
++    };
++
++    if(!(hrsc = FindResourceW(tf->hTheme, BCMAPResource, BCMAPResource))) {
++        WARN("No BCMAP resource found\n");
++        return;
++    }
++
++    size = SizeofResource(tf->hTheme, hrsc);
++    if (size < sizeof(DWORD)) {
++        WARN("Invalid inheritance map\n");
++        return;
++    }
++
++    buf = (DWORD*)LoadResource(tf->hTheme, hrsc);
++    if (!buf) {
++        WARN("Could not open inheritance map\n");
++        return;
++    }
++
++    if (size < ((buf[0] + 1) * sizeof(DWORD))) {
++        WARN("Inheritance map is truncated\n");
++        return;
++    }
++
++    imsize = buf[0];
++    imoffset = tf->numclassesv4 - imsize;
++    buf = &buf[1];
++
++    classes = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(THEME_CLASS*) * imsize);
++
++    cls = tf->classes;
++    while (cls) {
++        if (cls->classv4 >= imoffset && (cls->classv4 - imoffset) < imsize) {
++            classes[cls->classv4 - imoffset] = cls;
++        }
++        cls = cls->next;
++    }
++
++    for (i = 0; i < imsize; i++) {
++        if (classes[i] && buf[i] != 0xFFFFFFFF && classes[buf[i]]) {
++            classes[i]->parent = classes[buf[i]];
++            TRACE("%s has parent %s\n", debugstr_w(classes[i]->szClassName), debugstr_w(classes[i]->parent->szClassName));
++        }
++    }
++
++    HeapFree(GetProcessHeap(), 0, classes);
++}
++
+ void MSSTYLES_ParseV4Properties(PTHEME_FILE tf, const WCHAR* variant_name)
+ {
+     HRSRC hrsc;
+@@ -1232,6 +1290,7 @@ static void MSSTYLES_ParseV4Theme(PTHEME_FILE tf, BOOL setMetrics)
+ 
+     MSSTYLES_ParseV4ClassMap(tf);
+     MSSTYLES_ParseV4Properties(tf, variant_name);
++    MSSTYLES_ParseV4InheritanceMap(tf);
+ }
+ 
+ /***********************************************************************
+@@ -1433,7 +1492,7 @@ HRESULT MSSTYLES_CloseThemeClass(PTHEME_CLASS tc)
+  * preference, but may be ignored in the attempt to locate the property.
+  * Will scan the entire chain of overrides for this class.
+  */
+-PTHEME_PROPERTY MSSTYLES_FindProperty(PTHEME_CLASS tc, int iPartId, int iStateId, int iPropertyPrimitive, int iPropertyId)
++static PTHEME_PROPERTY MSSTYLES_FindProperty2(PTHEME_CLASS tc, int iPartId, int iStateId, int iPropertyPrimitive, int iPropertyId)
+ {
+     PTHEME_CLASS next = tc;
+     PTHEME_PARTSTATE ps;
+@@ -1455,11 +1514,23 @@ PTHEME_PROPERTY MSSTYLES_FindProperty(PTHEME_CLASS tc, int iPartId, int iStateId
+     else
+         return NULL;
+ 
+-    if((tp = MSSTYLES_FindProperty(tc, iPartId, iStateId, iPropertyPrimitive, iPropertyId)))
++    if((tp = MSSTYLES_FindProperty2(tc, iPartId, iStateId, iPropertyPrimitive, iPropertyId)))
+         return tp;
+     return NULL;
+ }
+ 
++PTHEME_PROPERTY MSSTYLES_FindProperty(PTHEME_CLASS tc, int iPartId, int iStateId, int iPropertyPrimitive, int iPropertyId)
++{
++    PTHEME_PROPERTY tp;
++
++    if ((tp = MSSTYLES_FindProperty2(tc, iPartId, iStateId, iPropertyPrimitive, iPropertyId)))
++        return tp;
++    else if (tc->parent)
++        return MSSTYLES_FindProperty(tc->parent, iPartId, iStateId, iPropertyPrimitive, iPropertyId);
++    else
++        return NULL;
++}
++
+ /* Prepare a bitmap to be used for alpha blending */
+ static BOOL prepare_alpha (HBITMAP bmp, BOOL* hasAlpha)
+ {
+diff --git a/dlls/uxtheme/msstyles.h b/dlls/uxtheme/msstyles.h
+index 822aae8..61a4e78 100644
+--- a/dlls/uxtheme/msstyles.h
++++ b/dlls/uxtheme/msstyles.h
+@@ -63,6 +63,7 @@ typedef struct _THEME_CLASS {
+     PTHEME_PARTSTATE partstate;
+     struct _THEME_CLASS *overrides;
+     int classv4;
++    struct _THEME_CLASS *parent;
+ 
+     struct _THEME_CLASS *next;
+ } THEME_CLASS, *PTHEME_CLASS;
+-- 
+2.0.5
+

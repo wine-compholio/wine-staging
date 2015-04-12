@@ -1,0 +1,126 @@
+From b6003b3faa852e0bafda4ea8e04af0f751c879f2 Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Sat, 11 Apr 2015 21:18:59 +0100
+Subject: [PATCH 04/19] uxtheme: Load v4 class map.
+
+---
+ dlls/uxtheme/msstyles.c | 61 ++++++++++++++++++++++++++++++++++++++++++++++++-
+ dlls/uxtheme/msstyles.h |  2 ++
+ 2 files changed, 62 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/uxtheme/msstyles.c b/dlls/uxtheme/msstyles.c
+index 76c069b..40a0d4c 100644
+--- a/dlls/uxtheme/msstyles.c
++++ b/dlls/uxtheme/msstyles.c
+@@ -46,6 +46,7 @@ WINE_DEFAULT_DEBUG_CHANNEL(uxtheme);
+ static BOOL MSSTYLES_GetNextInteger(LPCWSTR lpStringStart, LPCWSTR lpStringEnd, LPCWSTR *lpValEnd, int *value);
+ static BOOL MSSTYLES_GetNextToken(LPCWSTR lpStringStart, LPCWSTR lpStringEnd, LPCWSTR *lpValEnd, LPWSTR lpBuff, DWORD buffSize);
+ static void MSSTYLES_ParseThemeIni(PTHEME_FILE tf, BOOL setMetrics);
++static void MSSTYLES_ParseV4Theme(PTHEME_FILE tf, BOOL setMetrics);
+ static HRESULT MSSTYLES_GetFont (LPCWSTR lpStringStart, LPCWSTR lpStringEnd, LPCWSTR *lpValEnd, LOGFONTW* logfont);
+ 
+ INT WINAPI GetSystemDefaultLocaleName(LPWSTR localename, INT len);
+@@ -382,6 +383,8 @@ void MSSTYLES_CloseThemeFile(PTHEME_FILE tf)
+                 DeleteObject (img->image);
+                 HeapFree (GetProcessHeap(), 0, img);
+             }
++            if (tf->classesv4)
++                HeapFree(GetProcessHeap(), 0, tf->classesv4);
+             HeapFree(GetProcessHeap(), 0, tf);
+         }
+     }
+@@ -400,7 +403,10 @@ HRESULT MSSTYLES_SetActiveTheme(PTHEME_FILE tf, BOOL setMetrics)
+     if (tfActiveTheme)
+     {
+ 	tfActiveTheme->dwRefCount++;
+-        if (tfActiveTheme->version != 4) {
++        if (tfActiveTheme->version == 4) {
++            if (!tfActiveTheme->classesv4)
++                MSSTYLES_ParseV4Theme(tfActiveTheme, setMetrics);
++        } else {
+             if(!tfActiveTheme->classes)
+                 MSSTYLES_ParseThemeIni(tfActiveTheme, setMetrics);
+         }
+@@ -832,6 +838,54 @@ static PTHEME_PROPERTY MSSTYLES_AddMetric(PTHEME_FILE tf, int iPropertyPrimitive
+     return cur;
+ }
+ 
++void MSSTYLES_ParseV4ClassMap(PTHEME_FILE tf)
++{
++    HRSRC hrsc;
++    DWORD size;
++    WCHAR* buf;
++    int i, j;
++
++    static const WCHAR CMAPResource[] = {
++        'C','M','A','P',0
++    };
++
++    tf->numclassesv4 = 0;
++    if(!(hrsc = FindResourceW(tf->hTheme, CMAPResource, CMAPResource))) {
++        WARN("No CMAP resource found\n");
++        return;
++    }
++
++    size = SizeofResource(tf->hTheme, hrsc);
++
++    buf = (WCHAR*)LoadResource(tf->hTheme, hrsc);
++    if (!buf) {
++        WARN("Could not open class map\n");
++        return;
++    }
++
++    for (i = 1; i < size/2; i++) {
++        if (buf[i] == 0 && buf[i-1] != 0) {
++            tf->numclassesv4++;
++        }
++    }
++
++    if (tf->numclassesv4 == 0) {
++        WARN("No classes found\n");
++        return;
++    }
++
++    tf->classesv4 = HeapAlloc(GetProcessHeap(), 0, tf->numclassesv4 * sizeof(WCHAR*));
++
++    j = 0;
++    tf->classesv4[0] = buf;
++    for (i = 1; i < size/2; i++) {
++        if (buf[i] != 0 && buf[i-1] == 0) {
++            j++;
++            tf->classesv4[j] = &buf[i];
++        }
++    }
++}
++
+ /* Color-related state for theme ini parsing */
+ struct PARSECOLORSTATE
+ {
+@@ -1011,6 +1065,11 @@ static void parse_apply_nonclient (struct PARSENONCLIENTSTATE* state)
+     }
+ }
+ 
++static void MSSTYLES_ParseV4Theme(PTHEME_FILE tf, BOOL setMetrics)
++{
++    MSSTYLES_ParseV4ClassMap(tf);
++}
++
+ /***********************************************************************
+  *      MSSTYLES_ParseThemeIni
+  *
+diff --git a/dlls/uxtheme/msstyles.h b/dlls/uxtheme/msstyles.h
+index c72ac8d..cc6deea 100644
+--- a/dlls/uxtheme/msstyles.h
++++ b/dlls/uxtheme/msstyles.h
+@@ -89,6 +89,8 @@ typedef struct _THEME_FILE {
+     PTHEME_PROPERTY metrics;
+     PTHEME_IMAGE images;
+ 
++    int numclassesv4;
++    WCHAR** classesv4;
+     variant_map vmap;
+ } THEME_FILE, *PTHEME_FILE;
+ 
+-- 
+2.0.5
+

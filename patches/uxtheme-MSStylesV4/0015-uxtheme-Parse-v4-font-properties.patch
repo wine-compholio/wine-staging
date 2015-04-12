@@ -1,0 +1,67 @@
+From 7854530ca7ae21490c0a750ff705833a277b94a4 Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Sun, 12 Apr 2015 18:42:24 +0100
+Subject: [PATCH 15/19] uxtheme: Parse v4 font properties.
+
+---
+ dlls/uxtheme/msstyles.c | 24 ++++++++++++++++++++++--
+ dlls/uxtheme/msstyles.h |  1 +
+ 2 files changed, 23 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/uxtheme/msstyles.c b/dlls/uxtheme/msstyles.c
+index 75766f7..eae4a74 100644
+--- a/dlls/uxtheme/msstyles.c
++++ b/dlls/uxtheme/msstyles.c
+@@ -1096,6 +1096,26 @@ void MSSTYLES_ParseV4Properties(PTHEME_FILE tf, const WCHAR* variant_name)
+                     break;
+                 }
+ 
++                case TMT_FONT:
++                {
++                    WCHAR *lpCur = s, *lpEnd;
++
++                    LoadStringW(tf->hMUIFile, ph->resref, s, sizeof(s)/sizeof(*s));
++
++                    lpEnd = s + strlenW(s);
++
++                    memset(&prop->u.font, 0, sizeof(LOGFONTW));
++                    if (SUCCEEDED(MSSTYLES_GetFont(lpCur, lpEnd, (LPCWSTR*)&lpCur, &prop->u.font))) {
++                        HDC dc = GetDC(NULL);
++
++                        prop->u.font.lfHeight = -MulDiv(prop->u.font.lfHeight, GetDeviceCaps(dc, LOGPIXELSY), 72);
++
++                        ReleaseDC(NULL, dc);
++                    }
++
++                    break;
++                }
++
+                 default:
+                     FIXME("Unprocessed resource property type %u\n", ph->type);
+                 break;
+@@ -1925,8 +1945,8 @@ HRESULT MSSTYLES_GetPropertyFont(PTHEME_PROPERTY tp, HDC hdc, LOGFONTW *pFont)
+     HRESULT hr; 
+ 
+     if (tp->version == 4) {
+-        FIXME("Not yet supported for v4 themes\n");
+-        return E_NOTIMPL;
++        memcpy(pFont, &tp->u.font, sizeof(LOGFONTW));
++        return S_OK;
+     }
+ 
+     ZeroMemory(pFont, sizeof(LOGFONTW));
+diff --git a/dlls/uxtheme/msstyles.h b/dlls/uxtheme/msstyles.h
+index 27e085f..45d1e91 100644
+--- a/dlls/uxtheme/msstyles.h
++++ b/dlls/uxtheme/msstyles.h
+@@ -40,6 +40,7 @@ typedef struct _THEME_PROPERTY {
+         signed long integer;
+         COLORREF colour;
+         MARGINS margins;
++        LOGFONTW font;
+         SIZE size;
+         RECT rect;
+     } u;
+-- 
+2.0.5
+

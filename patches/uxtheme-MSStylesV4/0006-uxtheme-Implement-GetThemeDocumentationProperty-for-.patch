@@ -1,0 +1,147 @@
+From ba7d60033f0c6778dce3b30375dbfbcf522dc035 Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Sat, 11 Apr 2015 21:55:28 +0100
+Subject: [PATCH 06/19] uxtheme: Implement GetThemeDocumentationProperty for v4
+ themes.
+
+---
+ dlls/uxtheme/msstyles.c |  2 +-
+ dlls/uxtheme/msstyles.h |  3 +++
+ dlls/uxtheme/system.c   | 67 ++++++++++++++++++++++++++++++++++---------------
+ 3 files changed, 51 insertions(+), 21 deletions(-)
+
+diff --git a/dlls/uxtheme/msstyles.c b/dlls/uxtheme/msstyles.c
+index a65e94f..bad9682 100644
+--- a/dlls/uxtheme/msstyles.c
++++ b/dlls/uxtheme/msstyles.c
+@@ -586,7 +586,7 @@ static BOOL MSSTYLES_ParseIniSectionName(LPCWSTR lpSection, DWORD dwLen, LPWSTR
+  * RETURNS
+  *  The class found, or NULL
+  */
+-static PTHEME_CLASS MSSTYLES_FindClass(PTHEME_FILE tf, LPCWSTR pszAppName, LPCWSTR pszClassName)
++PTHEME_CLASS MSSTYLES_FindClass(PTHEME_FILE tf, LPCWSTR pszAppName, LPCWSTR pszClassName)
+ {
+     PTHEME_CLASS cur = tf->classes;
+     while(cur) {
+diff --git a/dlls/uxtheme/msstyles.h b/dlls/uxtheme/msstyles.h
+index b1a5666..6bf7454 100644
+--- a/dlls/uxtheme/msstyles.h
++++ b/dlls/uxtheme/msstyles.h
+@@ -121,6 +121,9 @@ HRESULT MSSTYLES_GetPropertyPosition(PTHEME_PROPERTY tp, POINT *pPoint) DECLSPEC
+ HRESULT MSSTYLES_GetPropertyString(PTHEME_PROPERTY tp, LPWSTR pszBuff, int cchMaxBuffChars) DECLSPEC_HIDDEN;
+ HRESULT MSSTYLES_GetPropertyRect(PTHEME_PROPERTY tp, RECT *pRect) DECLSPEC_HIDDEN;
+ HRESULT MSSTYLES_GetPropertyMargins(PTHEME_PROPERTY tp, RECT *prc, MARGINS *pMargins) DECLSPEC_HIDDEN;
++void MSSTYLES_ParseV4Properties(PTHEME_FILE tf, const WCHAR* variant_name) DECLSPEC_HIDDEN;
++void MSSTYLES_ParseV4ClassMap(PTHEME_FILE tf) DECLSPEC_HIDDEN;
++PTHEME_CLASS MSSTYLES_FindClass(PTHEME_FILE tf, LPCWSTR pszAppName, LPCWSTR pszClassName) DECLSPEC_HIDDEN;
+ 
+ PUXINI_FILE UXINI_LoadINI(HMODULE hTheme, LPCWSTR lpName) DECLSPEC_HIDDEN;
+ void UXINI_CloseINI(PUXINI_FILE uf) DECLSPEC_HIDDEN;
+diff --git a/dlls/uxtheme/system.c b/dlls/uxtheme/system.c
+index 8947587..6ded6b3 100644
+--- a/dlls/uxtheme/system.c
++++ b/dlls/uxtheme/system.c
+@@ -30,12 +30,13 @@
+ #include "winreg.h"
+ #include "vfwmsgs.h"
+ #include "uxtheme.h"
+-#include "tmschema.h"
++#include "vssym32.h"
+ 
+ #include "uxthemedll.h"
+ #include "msstyles.h"
+ 
+ #include "wine/debug.h"
++#include "wine/unicode.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(uxtheme);
+ 
+@@ -802,40 +803,66 @@ HRESULT WINAPI GetThemeDocumentationProperty(LPCWSTR pszThemeName,
+         TMT_DESCRIPTION,5007
+     };
+ 
++    const WCHAR documentationW[] = { 'd','o','c','u','m','e','n','t','a','t','i','o','n',0 };
++
+     PTHEME_FILE pt;
++    PTHEME_CLASS ptc;
+     HRESULT hr;
+     unsigned int i;
+     int iDocId;
++
+     TRACE("(%s,%s,%p,%d)\n", debugstr_w(pszThemeName), debugstr_w(pszPropertyName),
+           pszValueBuff, cchMaxValChars);
+ 
+     hr = MSSTYLES_OpenThemeFile(pszThemeName, NULL, NULL, &pt);
+     if(FAILED(hr)) return hr;
+ 
+-    /* Try to load from string resources */
+-    hr = E_PROP_ID_UNSUPPORTED;
+-    if(MSSTYLES_LookupProperty(pszPropertyName, NULL, &iDocId)) {
+-        for(i=0; i<sizeof(wDocToRes)/sizeof(wDocToRes[0]); i+=2) {
+-            if(wDocToRes[i] == iDocId) {
+-                if(LoadStringW(pt->hTheme, wDocToRes[i+1], pszValueBuff, cchMaxValChars)) {
+-                    hr = S_OK;
+-                    break;
++    if (pt->version == 4) {
++        if (!strcmpiW(pszPropertyName, SZ_THDOCPROP_DISPLAYNAME))
++            iDocId = TMT_DISPLAYNAME;
++        else if (!strcmpiW(pszPropertyName, SZ_THDOCPROP_CANONICALNAME))
++            iDocId = TMT_NAME;
++        else if (!strcmpiW(pszPropertyName, SZ_THDOCPROP_TOOLTIP))
++            iDocId = TMT_TOOLTIP;
++        else if (!strcmpiW(pszPropertyName, SZ_THDOCPROP_AUTHOR))
++            iDocId = TMT_AUTHOR;
++        else {
++            MSSTYLES_CloseThemeFile(pt);
++            return E_PROP_ID_UNSUPPORTED;
++        }
++
++        MSSTYLES_ParseV4ClassMap(pt);
++        MSSTYLES_ParseV4Properties(pt, NULL);
++
++        ptc = MSSTYLES_FindClass(pt, NULL, documentationW);
++
++        hr = GetThemeString(ptc, 0, 0, iDocId, pszValueBuff, cchMaxValChars);
++    } else {
++        /* Try to load from string resources */
++        hr = E_PROP_ID_UNSUPPORTED;
++        if(MSSTYLES_LookupProperty(pszPropertyName, NULL, &iDocId)) {
++            for(i=0; i<sizeof(wDocToRes)/sizeof(wDocToRes[0]); i+=2) {
++                if(wDocToRes[i] == iDocId) {
++                    if(LoadStringW(pt->hTheme, wDocToRes[i+1], pszValueBuff, cchMaxValChars)) {
++                        hr = S_OK;
++                        break;
++                    }
+                 }
+             }
+         }
+-    }
+-    /* If loading from string resource failed, try getting it from the theme.ini */
+-    if(FAILED(hr)) {
+-        PUXINI_FILE uf = MSSTYLES_GetThemeIni(pt);
+-        if(UXINI_FindSection(uf, szIniDocumentation)) {
+-            LPCWSTR lpValue;
+-            DWORD dwLen;
+-            if(UXINI_FindValue(uf, pszPropertyName, &lpValue, &dwLen)) {
+-                lstrcpynW(pszValueBuff, lpValue, min(dwLen+1,cchMaxValChars));
+-                hr = S_OK;
++        /* If loading from string resource failed, try getting it from the theme.ini */
++        if(FAILED(hr)) {
++            PUXINI_FILE uf = MSSTYLES_GetThemeIni(pt);
++            if(UXINI_FindSection(uf, szIniDocumentation)) {
++                LPCWSTR lpValue;
++                DWORD dwLen;
++                if(UXINI_FindValue(uf, pszPropertyName, &lpValue, &dwLen)) {
++                    lstrcpynW(pszValueBuff, lpValue, min(dwLen+1,cchMaxValChars));
++                    hr = S_OK;
++                }
+             }
++            UXINI_CloseINI(uf);
+         }
+-        UXINI_CloseINI(uf);
+     }
+ 
+     MSSTYLES_CloseThemeFile(pt);
+-- 
+2.0.5
+

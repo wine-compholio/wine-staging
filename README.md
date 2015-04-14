@@ -189,7 +189,7 @@ for more details.*
 * Improve stubs for AEV_{Get,Set}MasterVolumeLevel
 * Improve stubs for AEV_{Get,Set}Mute
 * Improvement for heap allocation performance
-* Increase wineconsole commandline buffer size ([Wine Bug #34814](https://bugs.winehq.org/show_bug.cgi?id=34814))
+* ~~Increase wineconsole commandline buffer size~~ ([Wine Bug #34814](https://bugs.winehq.org/show_bug.cgi?id=34814))
 * ~~Invalidate key state cache globally after calling LL hooks~~ ([Wine Bug #29871](https://bugs.winehq.org/show_bug.cgi?id=29871))
 * Jedi Knight: Dark Forces II crashes with winmm set to native ([Wine Bug #37983](https://bugs.winehq.org/show_bug.cgi?id=37983))
 * Lego Stunt Rally requires DXTn software de/encoding support ([Wine Bug #25486](https://bugs.winehq.org/show_bug.cgi?id=25486))

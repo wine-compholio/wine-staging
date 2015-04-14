@@ -221,7 +221,6 @@ patch_enable_all ()
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
 	enable_winecfg_Unmounted_Devices="$1"
-	enable_wineconsole_Buffer_Size="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
@@ -731,9 +730,6 @@ patch_enable ()
 			;;
 		winecfg-Unmounted_Devices)
 			enable_winecfg_Unmounted_Devices="$2"
-			;;
-		wineconsole-Buffer_Size)
-			enable_wineconsole_Buffer_Size="$2"
 			;;
 		wined3d-CSMT_Helper)
 			enable_wined3d_CSMT_Helper="$2"
@@ -4519,21 +4515,6 @@ if test "$enable_winecfg_Unmounted_Devices" -eq 1; then
 	patch_apply winecfg-Unmounted_Devices/0001-winecfg-Show-unmounted-devices-and-allow-changing-th.patch
 	(
 		echo '+    { "Michael Müller", "winecfg: Show unmounted devices and allow changing the device value.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wineconsole-Buffer_Size
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34814] Increase wineconsole commandline buffer size
-# |
-# | Modified files:
-# |   *	programs/wineconsole/wineconsole.c
-# |
-if test "$enable_wineconsole_Buffer_Size" -eq 1; then
-	patch_apply wineconsole-Buffer_Size/0001-wineconsole-Increase-buffer-to-allow-larger-commandl.patch
-	(
-		echo '+    { "Sebastian Lackner", "wineconsole: Increase buffer to allow larger commandline strings.", 1 },';
 	) >> "$patchlist"
 fi
 

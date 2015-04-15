@@ -1,0 +1,110 @@
+From ea6969acf3f5e79a39bb461f78b4f0785a2b8843 Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Fri, 18 Apr 2014 14:01:35 -0600
+Subject: server: Retrieve file security attributes with extended file
+ attributes. (try 7)
+
+---
+ dlls/advapi32/tests/security.c | 15 +++++++--------
+ server/file.c                  | 30 +++++++++++++++++++++++++++---
+ 2 files changed, 34 insertions(+), 11 deletions(-)
+
+diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
+index 0013c3c..945542e 100644
+--- a/dlls/advapi32/tests/security.c
++++ b/dlls/advapi32/tests/security.c
+@@ -3264,7 +3264,7 @@ static void test_CreateDirectoryA(void)
+     }
+     ok(!error, "GetNamedSecurityInfo failed with error %d\n", error);
+     test_inherited_dacl(pDacl, admin_sid, user_sid, OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE,
+-                        0x1f01ff, FALSE, TRUE, FALSE, __LINE__);
++                        0x1f01ff, FALSE, FALSE, FALSE, __LINE__);
+     LocalFree(pSD);
+ 
+     /* Test inheritance of ACLs in CreateFile without security descriptor */
+@@ -3719,19 +3719,18 @@ static void test_GetNamedSecurityInfoA(void)
+         bret = pGetAce(pDacl, 0, (VOID **)&ace);
+         ok(bret, "Failed to get Current User ACE.\n");
+         bret = EqualSid(&ace->SidStart, user_sid);
+-        todo_wine ok(bret, "Current User ACE != Current User SID.\n");
++        ok(bret, "Current User ACE != Current User SID.\n");
+         ok(((ACE_HEADER *)ace)->AceFlags == 0,
+            "Current User ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
+-        ok(ace->Mask == 0x1f01ff, "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n",
+-                                  ace->Mask);
++        ok(ace->Mask == 0x1f01ff,
++           "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n", ace->Mask);
+     }
+     if (acl_size.AceCount > 1)
+     {
+         bret = pGetAce(pDacl, 1, (VOID **)&ace);
+         ok(bret, "Failed to get Administators Group ACE.\n");
+         bret = EqualSid(&ace->SidStart, admin_sid);
+-        todo_wine ok(bret || broken(!bret) /* win2k */,
+-                     "Administators Group ACE != Administators Group SID.\n");
++        ok(bret || broken(!bret) /* win2k */, "Administators Group ACE != Administators Group SID.\n");
+         ok(((ACE_HEADER *)ace)->AceFlags == 0,
+            "Administators Group ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
+         ok(ace->Mask == 0x1f01ff || broken(ace->Mask == GENERIC_ALL) /* win2k */,
+@@ -3758,8 +3757,8 @@ static void test_GetNamedSecurityInfoA(void)
+     {
+         bret = pGetAce(pDacl, 0, (VOID **)&ace);
+         ok(bret, "Failed to get ACE.\n");
+-        todo_wine ok(((ACE_HEADER *)ace)->AceFlags & INHERITED_ACE,
+-                "ACE has unexpected flags: 0x%x\n", ((ACE_HEADER *)ace)->AceFlags);
++        ok(((ACE_HEADER *)ace)->AceFlags & INHERITED_ACE,
++           "ACE has unexpected flags: 0x%x\n", ((ACE_HEADER *)ace)->AceFlags);
+     }
+     LocalFree(pSD);
+ 
+diff --git a/server/file.c b/server/file.c
+index 6663927..8bcf6ee 100644
+--- a/server/file.c
++++ b/server/file.c
+@@ -486,6 +486,29 @@ static void convert_generic_sd( struct security_descriptor *sd )
+     }
+ }
+ 
++static struct security_descriptor *get_xattr_sd( int fd )
++{
++    struct security_descriptor *sd;
++    char buffer[XATTR_SIZE_MAX];
++    int n;
++
++    n = xattr_fget( fd, WINE_XATTR_SD, buffer, sizeof(buffer) );
++    if (n == -1 || n < 2 + sizeof(struct security_descriptor)) return NULL;
++
++    /* validate that we can handle the descriptor */
++    if (buffer[0] != SECURITY_DESCRIPTOR_REVISION || buffer[1] != 0 ||
++            !sd_is_valid( (struct security_descriptor *)&buffer[2], n - 2 ))
++        return NULL;
++
++    sd = mem_alloc( n - 2 );
++    if (sd)
++    {
++        memcpy( sd, &buffer[2], n - 2 );
++        convert_generic_sd( sd ); /* for backwards compatibility */
++    }
++    return sd;
++}
++
+ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode_t *mode,
+                                          uid_t *uid )
+ {
+@@ -501,9 +524,10 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
+         (st.st_uid == *uid))
+         return obj->sd;
+ 
+-    sd = mode_to_sd( st.st_mode,
+-                     security_unix_uid_to_sid( st.st_uid ),
+-                     token_get_primary_group( current->process->token ));
++    sd = get_xattr_sd( unix_fd );
++    if (!sd) sd = mode_to_sd( st.st_mode,
++                              security_unix_uid_to_sid( st.st_uid ),
++                              token_get_primary_group( current->process->token ));
+     if (!sd) return obj->sd;
+ 
+     *mode = st.st_mode;
+-- 
+2.3.5
+

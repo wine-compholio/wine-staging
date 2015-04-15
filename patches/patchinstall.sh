@@ -67,7 +67,6 @@ patch_enable_all ()
 	enable_Pipelight="$1"
 	enable_Staging="$1"
 	enable_advapi32_LsaLookupSids="$1"
-	enable_advapi32_Revert_DACL="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_combase_String="$1"
 	enable_comctl32_LoadIconMetric="$1"
@@ -268,9 +267,6 @@ patch_enable ()
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
-			;;
-		advapi32-Revert_DACL)
-			enable_advapi32_Revert_DACL="$2"
 			;;
 		browseui-Progress_Dialog)
 			enable_browseui_Progress_Dialog="$2"
@@ -1096,16 +1092,12 @@ if test "$enable_server_Inherited_ACLs" -eq 1; then
 fi
 
 if test "$enable_server_Stored_ACLs" -eq 1; then
-	if test "$enable_advapi32_Revert_DACL" -gt 1; then
-		abort "Patchset advapi32-Revert_DACL disabled, but server-Stored_ACLs depends on that."
-	fi
 	if test "$enable_ntdll_DOS_Attributes" -gt 1; then
 		abort "Patchset ntdll-DOS_Attributes disabled, but server-Stored_ACLs depends on that."
 	fi
 	if test "$enable_server_File_Permissions" -gt 1; then
 		abort "Patchset server-File_Permissions disabled, but server-Stored_ACLs depends on that."
 	fi
-	enable_advapi32_Revert_DACL=1
 	enable_ntdll_DOS_Attributes=1
 	enable_server_File_Permissions=1
 fi
@@ -1409,22 +1401,6 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 		echo '+    { "Qian Hong", "advapi32: Initialize buffer length to zero in LsaLookupSids to prevent crash.", 2 },';
 		echo '+    { "Qian Hong", "advapi32: Prepend a hidden LSA_TRUST_INFORMATION in LsaLookupSids to avoid crash when Domains[-1] incorrectly accessed by application.", 2 },';
 		echo '+    { "Qian Hong", "advapi32: Prepend a hidden LSA_TRUST_INFORMATION in LsaLookupNames2 to avoid crash when Domains[-1] incorrectly accessed by application.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset advapi32-Revert_DACL
-# |
-# | Modified files:
-# |   *	dlls/advapi32/security.c, dlls/advapi32/tests/security.c
-# |
-if test "$enable_advapi32_Revert_DACL" -eq 1; then
-	patch_apply advapi32-Revert_DACL/0001-Revert-advapi32-Add-DACL-inheritance-support-in-SetS.patch
-	patch_apply advapi32-Revert_DACL/0002-Revert-advapi32-tests-Add-test-for-mapping-DACL-to-p.patch
-	patch_apply advapi32-Revert_DACL/0003-Revert-advapi32-Add-SetNamedSecurityInfo-test-with-e.patch
-	(
-		echo '+    { "Sebastian Lackner", "Revert \"advapi32: Add DACL inheritance support in SetSecurityInfo.\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"advapi32/tests: Add test for mapping DACL to permission.\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"advapi32: Add SetNamedSecurityInfo test with empty DACL.\".", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3797,22 +3773,25 @@ fi
 # |   *	[#33576] Support for stored file ACLs
 # |
 # | Modified files:
-# |   *	dlls/advapi32/tests/security.c, include/wine/port.h, server/change.c, server/file.c, server/file.h
+# |   *	dlls/advapi32/tests/security.c, include/wine/port.h, server/change.c, server/file.c, server/file.h, server/object.c,
+# | 	server/object.h
 # |
 if test "$enable_server_Stored_ACLs" -eq 1; then
 	patch_apply server-Stored_ACLs/0001-server-Unify-the-storage-of-security-attributes-for-.patch
 	patch_apply server-Stored_ACLs/0002-server-Unify-the-retrieval-of-security-attributes-fo.patch
-	patch_apply server-Stored_ACLs/0003-server-Store-file-security-attributes-with-extended-.patch
-	patch_apply server-Stored_ACLs/0004-server-Store-user-and-group-inside-stored-extended-f.patch
-	patch_apply server-Stored_ACLs/0005-server-Retrieve-file-security-attributes-with-extend.patch
+	patch_apply server-Stored_ACLs/0003-server-Add-a-helper-function-set_sd_from_token_inter.patch
+	patch_apply server-Stored_ACLs/0004-server-Temporarily-store-the-full-security-descripto.patch
+	patch_apply server-Stored_ACLs/0005-server-Store-file-security-attributes-with-extended-.patch
 	patch_apply server-Stored_ACLs/0006-server-Convert-return-of-file-security-masks-with-ge.patch
+	patch_apply server-Stored_ACLs/0007-server-Retrieve-file-security-attributes-with-extend.patch
 	(
 		echo '+    { "Erich E. Hoover", "server: Unify the storage of security attributes for files and directories.", 7 },';
 		echo '+    { "Erich E. Hoover", "server: Unify the retrieval of security attributes for files and directories.", 7 },';
-		echo '+    { "Erich E. Hoover", "server: Store file security attributes with extended file attributes.", 7 },';
-		echo '+    { "Erich E. Hoover", "server: Store user and group inside stored extended file attribute information.", 7 },';
-		echo '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes.", 7 },';
+		echo '+    { "Sebastian Lackner", "server: Add a helper function set_sd_from_token_internal to merge two security descriptors.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Temporarily store the full security descriptor for file objects.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Store file security attributes with extended file attributes.", 8 },';
 		echo '+    { "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings.", 7 },';
+		echo '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes.", 7 },';
 	) >> "$patchlist"
 fi
 
@@ -3822,14 +3801,12 @@ fi
 # |   *	[#34406] Support for inherited file ACLs
 # |
 # | Modified files:
-# |   *	dlls/advapi32/tests/security.c, include/winnt.h, server/fd.c, server/file.c, server/file.h
+# |   *	dlls/advapi32/tests/security.c, server/file.c
 # |
 if test "$enable_server_Inherited_ACLs" -eq 1; then
 	patch_apply server-Inherited_ACLs/0001-server-Inherit-security-attributes-from-parent-direc.patch
-	patch_apply server-Inherited_ACLs/0002-server-Inherit-security-attributes-from-parent-direc.patch
 	(
 		echo '+    { "Erich E. Hoover", "server: Inherit security attributes from parent directories on creation.", 7 },';
-		echo '+    { "Erich E. Hoover", "server: Inherit security attributes from parent directories on SetSecurityInfo.", 7 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,258 @@
+From 7a54a4e7c856d5df1075b55eaa823c9c1826fd0b Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 30 Mar 2015 12:50:21 +0200
+Subject: server: Temporarily store the full security descriptor for file
+ objects.
+
+---
+ dlls/advapi32/tests/security.c | 15 +++----
+ server/change.c                |  8 +++-
+ server/file.c                  | 88 ++++++++++++++++++++++++++++--------------
+ server/file.h                  |  3 +-
+ 4 files changed, 74 insertions(+), 40 deletions(-)
+
+diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
+index a0532f6..f7ae089 100644
+--- a/dlls/advapi32/tests/security.c
++++ b/dlls/advapi32/tests/security.c
+@@ -3311,7 +3311,6 @@ static void test_CreateDirectoryA(void)
+     ok(error == ERROR_SUCCESS, "GetNamedSecurityInfo failed with error %d\n", error);
+     bret = pGetAclInformation(pDacl, &acl_size, sizeof(acl_size), AclSizeInformation);
+     ok(bret, "GetAclInformation failed\n");
+-    todo_wine
+     ok(acl_size.AceCount == 0, "GetAclInformation returned unexpected entry count (%d != 0).\n",
+                                acl_size.AceCount);
+     LocalFree(pSD);
+@@ -3387,7 +3386,6 @@ static void test_CreateDirectoryA(void)
+     ok(error == ERROR_SUCCESS, "GetNamedSecurityInfo failed with error %d\n", error);
+     bret = pGetAclInformation(pDacl, &acl_size, sizeof(acl_size), AclSizeInformation);
+     ok(bret, "GetAclInformation failed\n");
+-    todo_wine
+     ok(acl_size.AceCount == 0, "GetAclInformation returned unexpected entry count (%d != 0).\n",
+                                acl_size.AceCount);
+     LocalFree(pSD);
+@@ -3533,7 +3531,6 @@ static void test_CreateDirectoryA(void)
+     ok(error == ERROR_SUCCESS, "GetNamedSecurityInfo failed with error %d\n", error);
+     bret = pGetAclInformation(pDacl, &acl_size, sizeof(acl_size), AclSizeInformation);
+     ok(bret, "GetAclInformation failed\n");
+-    todo_wine
+     ok(acl_size.AceCount == 0, "GetAclInformation returned unexpected entry count (%d != 0).\n",
+                                acl_size.AceCount);
+     LocalFree(pSD);
+@@ -4501,22 +4498,22 @@ static void test_GetSecurityInfo(void)
+         bret = pGetAce(pDacl, 0, (VOID **)&ace);
+         ok(bret, "Failed to get Current User ACE.\n");
+         bret = EqualSid(&ace->SidStart, user_sid);
+-        todo_wine ok(bret, "Current User ACE != Current User SID.\n");
++        ok(bret, "Current User ACE != Current User SID.\n");
+         ok(((ACE_HEADER *)ace)->AceFlags == 0,
+            "Current User ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
+-        ok(ace->Mask == 0x1f01ff, "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n",
+-                                    ace->Mask);
++        todo_wine ok(ace->Mask == 0x1f01ff,
++                     "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n", ace->Mask);
+     }
+     if (acl_size.AceCount > 1)
+     {
+         bret = pGetAce(pDacl, 1, (VOID **)&ace);
+         ok(bret, "Failed to get Administators Group ACE.\n");
+         bret = EqualSid(&ace->SidStart, admin_sid);
+-        todo_wine ok(bret, "Administators Group ACE != Administators Group SID.\n");
++        ok(bret, "Administators Group ACE != Administators Group SID.\n");
+         ok(((ACE_HEADER *)ace)->AceFlags == 0,
+            "Administators Group ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
+-        ok(ace->Mask == 0x1f01ff, "Administators Group ACE has unexpected mask (0x%x != 0x1f01ff)\n",
+-                                  ace->Mask);
++        todo_wine ok(ace->Mask == 0x1f01ff,
++                     "Administators Group ACE has unexpected mask (0x%x != 0x1f01ff)\n", ace->Mask);
+     }
+     LocalFree(pSD);
+     CloseHandle(obj);
+diff --git a/server/change.c b/server/change.c
+index 29a48b3..87b45f8 100644
+--- a/server/change.c
++++ b/server/change.c
+@@ -1020,7 +1020,8 @@ static int dir_add_to_existing_notify( struct dir *dir )
+ 
+ #endif  /* USE_INOTIFY */
+ 
+-struct object *create_dir_obj( struct fd *fd, unsigned int access, mode_t mode )
++struct object *create_dir_obj( struct fd *fd, unsigned int access, mode_t mode,
++                               const struct security_descriptor *sd )
+ {
+     struct dir *dir;
+ 
+@@ -1039,6 +1040,11 @@ struct object *create_dir_obj( struct fd *fd, unsigned int access, mode_t mode )
+     dir->uid  = ~(uid_t)0;
+     set_fd_user( fd, &dir_fd_ops, &dir->obj );
+ 
++    if (sd) dir_set_sd( &dir->obj, sd, OWNER_SECURITY_INFORMATION |
++                                       GROUP_SECURITY_INFORMATION |
++                                       DACL_SECURITY_INFORMATION |
++                                       SACL_SECURITY_INFORMATION );
++
+     dir_add_to_existing_notify( dir );
+ 
+     return &dir->obj;
+diff --git a/server/file.c b/server/file.c
+index 58906c0..1b16526 100644
+--- a/server/file.c
++++ b/server/file.c
+@@ -168,7 +168,8 @@ struct file *create_file_for_fd_obj( struct fd *fd, unsigned int access, unsigne
+     return file;
+ }
+ 
+-static struct object *create_file_obj( struct fd *fd, unsigned int access, mode_t mode )
++static struct object *create_file_obj( struct fd *fd, unsigned int access, mode_t mode,
++                                       const struct security_descriptor *sd )
+ {
+     struct file *file = alloc_object( &file_ops );
+ 
+@@ -179,6 +180,12 @@ static struct object *create_file_obj( struct fd *fd, unsigned int access, mode_
+     file->fd      = fd;
+     grab_object( fd );
+     set_fd_user( fd, &file_fd_ops, &file->obj );
++
++    if (sd) file_set_sd( &file->obj, sd, OWNER_SECURITY_INFORMATION |
++                                         GROUP_SECURITY_INFORMATION |
++                                         DACL_SECURITY_INFORMATION |
++                                         SACL_SECURITY_INFORMATION );
++
+     return &file->obj;
+ }
+ 
+@@ -245,11 +252,11 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+     if (!fd) goto done;
+ 
+     if (S_ISDIR(mode))
+-        obj = create_dir_obj( fd, access, mode );
++        obj = create_dir_obj( fd, access, mode, sd );
+     else if (S_ISCHR(mode) && is_serial_fd( fd ))
+         obj = create_serial( fd );
+     else
+-        obj = create_file_obj( fd, access, mode );
++        obj = create_file_obj( fd, access, mode, sd );
+ 
+     release_object( fd );
+ 
+@@ -557,46 +564,66 @@ mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner )
+ int set_file_sd( struct object *obj, struct fd *fd, mode_t *mode, uid_t *uid,
+                  const struct security_descriptor *sd, unsigned int set_info )
+ {
++    struct security_descriptor *new_sd;
+     int unix_fd = get_unix_fd( fd );
+-    const SID *owner;
++    const SID *owner, *group;
+     struct stat st;
+     mode_t new_mode;
+ 
+-    if (unix_fd == -1 || fstat( unix_fd, &st ) == -1) return 1;
++    if (!set_info || unix_fd == -1 || fstat( unix_fd, &st ) == -1) return 1;
++    if (!obj->sd) get_file_sd( obj, fd, mode, uid );
+ 
+-    if (set_info & OWNER_SECURITY_INFORMATION)
++    /* calculate the new sd, save to a temporary variable before assigning */
++    new_sd = set_sd_from_token_internal( sd, obj->sd, set_info, current->process->token );
++    if (new_sd)
+     {
+-        owner = sd_get_owner( sd );
+-        if (!owner)
++        if (set_info & OWNER_SECURITY_INFORMATION)
+         {
+-            set_error( STATUS_INVALID_SECURITY_DESCR );
+-            return 0;
++            owner = sd_get_owner( new_sd );
++            assert( owner );
++
++            if (!obj->sd || !security_equal_sid( owner, sd_get_owner( obj->sd ) ))
++            {
++                /* FIXME: get Unix uid and call fchown */
++            }
+         }
+-        if (!obj->sd || !security_equal_sid( owner, sd_get_owner( obj->sd ) ))
++
++        if (set_info & GROUP_SECURITY_INFORMATION)
+         {
+-            /* FIXME: get Unix uid and call fchown */
++            group = sd_get_group( new_sd );
++            assert( group );
++
++            if (!obj->sd || !security_equal_sid( group, sd_get_group( obj->sd ) ))
++            {
++                /* FIXME: get Unix uid and call fchown */
++            }
+         }
+-    }
+-    else if (obj->sd)
+-        owner = sd_get_owner( obj->sd );
+-    else
+-        owner = token_get_user( current->process->token );
+ 
+-    /* group and sacl not supported */
++        if (set_info & DACL_SECURITY_INFORMATION)
++        {
++            owner = sd_get_owner( new_sd );
++            assert( owner );
+ 
+-    if (set_info & DACL_SECURITY_INFORMATION)
+-    {
+-        /* keep the bits that we don't map to access rights in the ACL */
+-        new_mode = st.st_mode & (S_ISUID|S_ISGID|S_ISVTX);
+-        new_mode |= sd_to_mode( sd, owner );
++            /* keep the bits that we don't map to access rights in the ACL */
++            new_mode = st.st_mode & (S_ISUID|S_ISGID|S_ISVTX);
++            new_mode |= sd_to_mode( new_sd, owner );
+ 
+-        if (((st.st_mode ^ new_mode) & (S_IRWXU|S_IRWXG|S_IRWXO)) && fchmod( unix_fd, new_mode ) == -1)
+-        {
+-            file_set_error();
+-            return 0;
++            if (((st.st_mode ^ new_mode) & (S_IRWXU|S_IRWXG|S_IRWXO)) && fchmod( unix_fd, new_mode ) == -1)
++            {
++                free( new_sd );
++                file_set_error();
++                return 0;
++            }
++
++            *mode = new_mode;
+         }
++
++        free( obj->sd );
++        obj->sd = new_sd;
++        return 1;
+     }
+-    return 1;
++
++    return 0;
+ }
+ 
+ static int file_set_sd( struct object *obj, const struct security_descriptor *sd,
+@@ -709,7 +736,10 @@ DECL_HANDLER(create_file)
+     if ((file = create_file( root_fd, name, name_len, req->access, req->sharing,
+                              req->create, req->options, req->attrs, sd )))
+     {
+-        reply->handle = alloc_handle( current->process, file, req->access, req->attributes );
++        if (get_error() == STATUS_OBJECT_NAME_EXISTS)
++            reply->handle = alloc_handle( current->process, file, req->access, req->attributes );
++        else
++            reply->handle = alloc_handle_no_access_check( current->process, file, req->access, req->attributes );
+         release_object( file );
+     }
+     if (root_fd) release_object( root_fd );
+diff --git a/server/file.h b/server/file.h
+index c866312..16883b2 100644
+--- a/server/file.h
++++ b/server/file.h
+@@ -142,7 +142,8 @@ extern int get_page_size(void);
+ 
+ extern void do_change_notify( int unix_fd );
+ extern void sigio_callback(void);
+-extern struct object *create_dir_obj( struct fd *fd, unsigned int access, mode_t mode );
++extern struct object *create_dir_obj( struct fd *fd, unsigned int access, mode_t mode,
++                                      const struct security_descriptor *sd );
+ extern struct dir *get_dir_obj( struct process *process, obj_handle_t handle, unsigned int access );
+ 
+ /* completion */
+-- 
+2.3.5
+

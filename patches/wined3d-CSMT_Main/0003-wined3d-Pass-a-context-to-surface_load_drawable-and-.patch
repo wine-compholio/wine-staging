@@ -1,4 +1,4 @@
-From 9d762900cb2a33e8dc4ee3c174533bfaa7687a47 Mon Sep 17 00:00:00 2001
+From f322a8e12cfa32650bcbb970f41a84c2430ac00e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Sun, 17 Nov 2013 19:34:26 +0100
 Subject: wined3d: Pass a context to surface_load_drawable and
@@ -9,7 +9,7 @@ Subject: wined3d: Pass a context to surface_load_drawable and
  1 file changed, 34 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index ac7df27..e05a402 100644
+index 4e2063f..1f97857 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
 @@ -3533,19 +3533,35 @@ void surface_translate_drawable_coords(const struct wined3d_surface *surface, HW
@@ -63,28 +63,7 @@ index ac7df27..e05a402 100644
  }
  
  HRESULT surface_color_fill(struct wined3d_surface *s, const RECT *rect, const struct wined3d_color *color)
-@@ -3750,6 +3771,7 @@ static HRESULT surface_blt_special(struct wined3d_surface *dst_surface, const RE
-         /* Blit from offscreen surface to render target */
-         struct wined3d_color_key old_blt_key = src_surface->container->async.src_blt_color_key;
-         DWORD old_color_key_flags = src_surface->container->async.color_key_flags;
-+        struct wined3d_context *context;
- 
-         TRACE("Blt from surface %p to rendertarget %p\n", src_surface, dst_surface);
- 
-@@ -3783,9 +3805,11 @@ static HRESULT surface_blt_special(struct wined3d_surface *dst_surface, const RE
-             wined3d_texture_set_color_key(src_surface->container, WINED3D_CKEY_SRC_BLT, NULL);
-         }
- 
--        surface_blt_to_drawable(device, filter,
-+        context = context_acquire(device, dst_surface);
-+        surface_blt_to_drawable(device, context, filter,
-                 flags & (WINEDDBLT_KEYSRC | WINEDDBLT_KEYSRCOVERRIDE | WINEDDBLT_ALPHATEST),
-                 src_surface, src_rect, dst_surface, dst_rect);
-+        context_release(context);
- 
-         /* Restore the color key parameters */
-         wined3d_texture_set_color_key(src_surface->container, WINED3D_CKEY_SRC_BLT,
-@@ -4148,8 +4172,9 @@ static void surface_load_sysmem(struct wined3d_surface *surface,
+@@ -4095,8 +4116,9 @@ static void surface_load_sysmem(struct wined3d_surface *surface,
              surface, wined3d_debug_location(surface->locations));
  }
  
@@ -95,7 +74,7 @@ index ac7df27..e05a402 100644
  {
      RECT r;
  
-@@ -4162,7 +4187,7 @@ static HRESULT surface_load_drawable(struct wined3d_surface *surface,
+@@ -4109,7 +4131,7 @@ static HRESULT surface_load_drawable(struct wined3d_surface *surface,
  
      surface_get_rect(surface, NULL, &r);
      surface_load_location(surface, WINED3D_LOCATION_TEXTURE_RGB);
@@ -104,7 +83,7 @@ index ac7df27..e05a402 100644
              WINED3D_TEXF_POINT, FALSE, surface, &r, surface, &r);
  
      return WINED3D_OK;
-@@ -4420,7 +4445,10 @@ HRESULT surface_load_location(struct wined3d_surface *surface, DWORD location)
+@@ -4367,7 +4389,10 @@ HRESULT surface_load_location(struct wined3d_surface *surface, DWORD location)
              break;
  
          case WINED3D_LOCATION_DRAWABLE:
@@ -116,6 +95,24 @@ index ac7df27..e05a402 100644
                  return hr;
              break;
  
+@@ -4546,13 +4571,16 @@ static void ffp_blit_blit_surface(struct wined3d_device *device, DWORD filter,
+     /* Blit from offscreen surface to render target */
+     struct wined3d_color_key old_blt_key = src_surface->container->async.src_blt_color_key;
+     DWORD old_color_key_flags = src_surface->container->async.color_key_flags;
++    struct wined3d_context *context;
+ 
+     TRACE("Blt from surface %p to rendertarget %p\n", src_surface, dst_surface);
+ 
+     wined3d_texture_set_color_key(src_surface->container, WINED3D_CKEY_SRC_BLT, color_key);
+ 
+-    surface_blt_to_drawable(device, filter,
++    context = context_acquire(device, dst_surface);
++    surface_blt_to_drawable(device, context, filter,
+             !!color_key, src_surface, src_rect, dst_surface, dst_rect);
++    context_release(context);
+ 
+     /* Restore the color key parameters */
+     wined3d_texture_set_color_key(src_surface->container, WINED3D_CKEY_SRC_BLT,
 -- 
 2.3.5
 

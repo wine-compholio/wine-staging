@@ -1,4 +1,4 @@
-From ba5c51ffdfff3be025ace2dd52218bd845c9d851 Mon Sep 17 00:00:00 2001
+From 4dedb87fa2626251d0c7c0d5f861f8665bfa289b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 16 Jan 2014 22:07:17 +0100
 Subject: wined3d: Move volume PBO infrastructure into the resource.
@@ -10,10 +10,10 @@ Subject: wined3d: Move volume PBO infrastructure into the resource.
  3 files changed, 82 insertions(+), 79 deletions(-)
 
 diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
-index 7f283f5..c907424 100644
+index 61a829d..1fb2370 100644
 --- a/dlls/wined3d/resource.c
 +++ b/dlls/wined3d/resource.c
-@@ -292,7 +292,7 @@ GLbitfield wined3d_resource_gl_map_flags(DWORD d3d_flags)
+@@ -301,7 +301,7 @@ GLbitfield wined3d_resource_gl_map_flags(DWORD d3d_flags)
      return ret;
  }
  
@@ -22,7 +22,7 @@ index 7f283f5..c907424 100644
  {
      if (d3d_flags & WINED3D_MAP_READONLY)
          return GL_READ_ONLY_ARB;
-@@ -428,3 +428,65 @@ void wined3d_resource_load_location(struct wined3d_resource *resource,
+@@ -437,3 +437,65 @@ void wined3d_resource_load_location(struct wined3d_resource *resource,
  
      resource->resource_ops->resource_load_location(resource, context, location);
  }
@@ -89,19 +89,19 @@ index 7f283f5..c907424 100644
 +    }
 +}
 diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
-index ad37cce..db3a68c 100644
+index 99caab8..5fe223b 100644
 --- a/dlls/wined3d/volume.c
 +++ b/dlls/wined3d/volume.c
-@@ -216,7 +216,7 @@ static void wined3d_volume_load_location(struct wined3d_resource *resource,
+@@ -218,7 +218,7 @@ static void wined3d_volume_load_location(struct wined3d_resource *resource,
              }
              else if (volume->resource.locations & WINED3D_LOCATION_BUFFER)
              {
 -                struct wined3d_const_bo_address data = {volume->pbo, NULL};
 +                struct wined3d_const_bo_address data = {volume->resource.buffer_object, NULL};
+                 wined3d_texture_bind_and_dirtify(volume->container, context,
+                         location == WINED3D_LOCATION_TEXTURE_SRGB);
                  wined3d_volume_upload_data(volume, context, &data);
-             }
-             else if (volume->resource.locations & WINED3D_LOCATION_TEXTURE_RGB)
-@@ -270,7 +270,7 @@ static void wined3d_volume_load_location(struct wined3d_resource *resource,
+@@ -274,7 +274,7 @@ static void wined3d_volume_load_location(struct wined3d_resource *resource,
              break;
  
          case WINED3D_LOCATION_BUFFER:
@@ -110,7 +110,7 @@ index ad37cce..db3a68c 100644
                  ERR("Trying to load WINED3D_LOCATION_BUFFER without setting it up first.\n");
  
              if (volume->resource.locations & WINED3D_LOCATION_DISCARDED)
-@@ -280,7 +280,7 @@ static void wined3d_volume_load_location(struct wined3d_resource *resource,
+@@ -284,7 +284,7 @@ static void wined3d_volume_load_location(struct wined3d_resource *resource,
              }
              else if (volume->resource.locations & (WINED3D_LOCATION_TEXTURE_RGB | WINED3D_LOCATION_TEXTURE_SRGB))
              {
@@ -119,7 +119,7 @@ index ad37cce..db3a68c 100644
  
                  if (volume->resource.locations & WINED3D_LOCATION_TEXTURE_RGB)
                      wined3d_texture_bind_and_dirtify(volume->container, context, FALSE);
-@@ -317,16 +317,16 @@ static void wined3d_volume_prepare_pbo(struct wined3d_volume *volume, struct win
+@@ -321,16 +321,16 @@ static void wined3d_volume_prepare_pbo(struct wined3d_volume *volume, struct win
  {
      const struct wined3d_gl_info *gl_info = context->gl_info;
  
@@ -140,7 +140,7 @@ index ad37cce..db3a68c 100644
  }
  
  static void wined3d_volume_free_pbo(struct wined3d_volume *volume)
-@@ -334,10 +334,10 @@ static void wined3d_volume_free_pbo(struct wined3d_volume *volume)
+@@ -338,10 +338,10 @@ static void wined3d_volume_free_pbo(struct wined3d_volume *volume)
      struct wined3d_context *context = context_acquire(volume->resource.device, NULL);
      const struct wined3d_gl_info *gl_info = context->gl_info;
  
@@ -154,7 +154,7 @@ index ad37cce..db3a68c 100644
      context_release(context);
  }
  
-@@ -345,7 +345,7 @@ void wined3d_volume_destroy(struct wined3d_volume *volume)
+@@ -349,7 +349,7 @@ void wined3d_volume_destroy(struct wined3d_volume *volume)
  {
      TRACE("volume %p.\n", volume);
  
@@ -163,7 +163,7 @@ index ad37cce..db3a68c 100644
          wined3d_volume_free_pbo(volume);
  
      resource_cleanup(&volume->resource);
-@@ -378,7 +378,7 @@ static void volume_unload(struct wined3d_resource *resource)
+@@ -382,7 +382,7 @@ static void volume_unload(struct wined3d_resource *resource)
          wined3d_resource_invalidate_location(&volume->resource, ~WINED3D_LOCATION_DISCARDED);
      }
  
@@ -172,7 +172,7 @@ index ad37cce..db3a68c 100644
      {
          /* Should not happen because only dynamic default pool volumes
           * have a buffer, and those are not evicted by device_evit_managed_resources
-@@ -494,44 +494,6 @@ static BOOL wined3d_volume_prepare_map_memory(struct wined3d_volume *volume, str
+@@ -498,44 +498,6 @@ static BOOL wined3d_volume_prepare_map_memory(struct wined3d_volume *volume, str
      }
  }
  
@@ -217,7 +217,7 @@ index ad37cce..db3a68c 100644
  HRESULT CDECL wined3d_volume_map(struct wined3d_volume *volume,
          struct wined3d_map_desc *map_desc, const struct wined3d_box *box, DWORD flags)
  {
-@@ -582,7 +544,7 @@ HRESULT CDECL wined3d_volume_map(struct wined3d_volume *volume,
+@@ -586,7 +548,7 @@ HRESULT CDECL wined3d_volume_map(struct wined3d_volume *volume,
      else
          wined3d_resource_load_location(&volume->resource, context, volume->resource.map_binding);
  
@@ -226,7 +226,7 @@ index ad37cce..db3a68c 100644
      context_release(context);
  
      TRACE("Base memory pointer %p.\n", base_memory);
-@@ -641,30 +603,6 @@ struct wined3d_volume * CDECL wined3d_volume_from_resource(struct wined3d_resour
+@@ -645,30 +607,6 @@ struct wined3d_volume * CDECL wined3d_volume_from_resource(struct wined3d_resour
      return volume_from_resource(resource);
  }
  
@@ -257,7 +257,7 @@ index ad37cce..db3a68c 100644
  HRESULT CDECL wined3d_volume_unmap(struct wined3d_volume *volume)
  {
      struct wined3d_device *device = volume->resource.device;
-@@ -678,7 +616,7 @@ HRESULT CDECL wined3d_volume_unmap(struct wined3d_volume *volume)
+@@ -682,7 +620,7 @@ HRESULT CDECL wined3d_volume_unmap(struct wined3d_volume *volume)
      }
  
      context = context_acquire(device, NULL);
@@ -267,10 +267,10 @@ index ad37cce..db3a68c 100644
  
      volume->resource.map_count--;
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 4934dc8..8cce2d9 100644
+index b8dbde3..460e861 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2095,6 +2095,7 @@ struct wined3d_resource
+@@ -2125,6 +2125,7 @@ struct wined3d_resource
      DWORD priority;
      void *heap_memory, *user_memory, *bitmap_data;
      UINT custom_row_pitch, custom_slice_pitch;
@@ -278,7 +278,7 @@ index 4934dc8..8cce2d9 100644
      struct list resource_list_entry;
      DWORD locations;
  
-@@ -2124,12 +2125,15 @@ void resource_unload(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
+@@ -2154,12 +2155,15 @@ void resource_unload(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
  DWORD wined3d_resource_access_from_location(DWORD location) DECLSPEC_HIDDEN;
  BOOL wined3d_resource_allocate_sysmem(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
  void wined3d_resource_free_sysmem(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
@@ -295,7 +295,7 @@ index 4934dc8..8cce2d9 100644
  DWORD wined3d_resource_sanitize_map_flags(const struct wined3d_resource *resource, DWORD flags) DECLSPEC_HIDDEN;
  void wined3d_resource_update_draw_binding(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
  void wined3d_resource_validate_location(struct wined3d_resource *resource, DWORD location) DECLSPEC_HIDDEN;
-@@ -2262,7 +2266,6 @@ struct wined3d_volume
+@@ -2283,7 +2287,6 @@ struct wined3d_volume
      DWORD flags;
      GLint texture_level;
      DWORD download_count;
@@ -304,5 +304,5 @@ index 4934dc8..8cce2d9 100644
  
  static inline struct wined3d_volume *volume_from_resource(struct wined3d_resource *resource)
 -- 
-2.2.1
+2.3.5
 

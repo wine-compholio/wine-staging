@@ -323,7 +323,7 @@ def read_patchset(revision = None):
     if revision is None:
         once = True
         for bugid, bug in sorted(_winebugs_query(all_bugids).items()):
-            if bug['bug_status'] not in ["UNCONFIRMED", "NEW", "REOPENED"]:
+            if bug['bug_status'] not in ["UNCONFIRMED", "NEW", "ASSIGNED", "REOPENED"]:
                 if once:
                     print ""
                     print "WARNING: The following bugs might require attention:"

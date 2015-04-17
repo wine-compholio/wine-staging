@@ -4459,6 +4459,9 @@ fi
 
 # Patchset wbemprox-Win32_SystemEnclosure
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34517] Add support for wbemprox Win32_SystemEnclosure table
+# |
 # | Modified files:
 # |   *	dlls/wbemprox/builtin.c, dlls/wbemprox/table.c, dlls/wbemprox/tests/query.c
 # |

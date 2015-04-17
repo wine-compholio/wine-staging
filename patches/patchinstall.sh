@@ -213,6 +213,7 @@ patch_enable_all ()
 	enable_vcomp_Stub_Functions="$1"
 	enable_version_VerQueryValue="$1"
 	enable_version_VersionInfoEx="$1"
+	enable_wbemprox_Localhost="$1"
 	enable_wiaservc_IEnumWIA_DEV_INFO="$1"
 	enable_windowscodecs_TIFF_Decoder="$1"
 	enable_wine_inf_Performance="$1"
@@ -707,6 +708,9 @@ patch_enable ()
 			;;
 		version-VersionInfoEx)
 			enable_version_VersionInfoEx="$2"
+			;;
+		wbemprox-Localhost)
+			enable_wbemprox_Localhost="$2"
 			;;
 		wiaservc-IEnumWIA_DEV_INFO)
 			enable_wiaservc_IEnumWIA_DEV_INFO="$2"
@@ -4413,6 +4417,18 @@ if test "$enable_version_VersionInfoEx" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "version: Partially implement GetFileVersionInfoSizeExA/W.", 1 },';
 		echo '+    { "Sebastian Lackner", "version: Partially implement GetFileVersionInfoExA/W.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wbemprox-Localhost
+# |
+# | Modified files:
+# |   *	dlls/wbemprox/wbemlocator.c
+# |
+if test "$enable_wbemprox_Localhost" -eq 1; then
+	patch_apply wbemprox-Localhost/0001-wbemprox-Allow-connecting-to-localhost.patch
+	(
+		echo '+    { "Michael Müller", "wbemprox: Allow connecting to localhost.", 1 },';
 	) >> "$patchlist"
 fi
 

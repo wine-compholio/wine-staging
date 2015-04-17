@@ -39,9 +39,10 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [6]:**
+**Bug fixes and features included in the next upcoming release [7]:**
 
 * Add support for process specific debug channels
+* Add support for wbemprox Win32_SystemEnclosure table
 * Calculate msvcrt exponential math operations with higher precision ([Wine Bug #37149](https://bugs.winehq.org/show_bug.cgi?id=37149))
 * Fix regression caused by blacklisting supported OpenGL extensions ([Wine Bug #38264](https://bugs.winehq.org/show_bug.cgi?id=38264))
 * Properly handle closing sockets during a select call ([Wine Bug #38399](https://bugs.winehq.org/show_bug.cgi?id=38399))

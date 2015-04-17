@@ -1,0 +1,75 @@
+From 97f87fdced630139111ed66af70a0ce01b7a28d8 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 17 Apr 2015 09:38:15 +0200
+Subject: wbemprox: Fix handling of arrays as query results.
+
+---
+ dlls/wbemprox/builtin.c | 22 ++++++++++++++++------
+ dlls/wbemprox/table.c   |  7 ++++++-
+ 2 files changed, 22 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/wbemprox/builtin.c b/dlls/wbemprox/builtin.c
+index 8ba2642..f1f51c5 100644
+--- a/dlls/wbemprox/builtin.c
++++ b/dlls/wbemprox/builtin.c
+@@ -938,7 +938,7 @@ struct record_service
+ struct record_sid
+ {
+     const WCHAR *accountname;
+-    const UINT8 *binaryrepresentation;
++    const struct array *binaryrepresentation;
+     const WCHAR *referenceddomainname;
+     const WCHAR *sid;
+     UINT32       sidlength;
+@@ -2614,12 +2614,22 @@ static WCHAR *get_accountname( LSA_TRANSLATED_NAME *name )
+     if (!name || !name->Name.Buffer) return NULL;
+     return heap_strdupW( name->Name.Buffer );
+ }
+-static UINT8 *get_binaryrepresentation( PSID sid, UINT len )
++static struct array *get_binaryrepresentation( PSID sid, UINT len )
+ {
+-    UINT8 *ret = heap_alloc( len );
+-    if (!ret) return NULL;
+-    memcpy( ret, sid, len );
+-    return ret;
++    struct array *array = heap_alloc( sizeof(struct array) );
++    if (array)
++    {
++        UINT8 *ret = heap_alloc( len );
++        if (ret)
++        {
++            memcpy( ret, sid, len );
++            array->count = len;
++            array->ptr = ret;
++            return array;
++        }
++        heap_free( array );
++    }
++    return NULL;
+ }
+ static WCHAR *get_referenceddomainname( LSA_REFERENCED_DOMAIN_LIST *domain )
+ {
+diff --git a/dlls/wbemprox/table.c b/dlls/wbemprox/table.c
+index 0c57f26..273b8cb 100644
+--- a/dlls/wbemprox/table.c
++++ b/dlls/wbemprox/table.c
+@@ -288,10 +288,15 @@ void free_row_values( const struct table *table, UINT row )
+         if (!(table->columns[i].type & COL_FLAG_DYNAMIC)) continue;
+ 
+         type = table->columns[i].type & COL_TYPE_MASK;
+-        if (type == CIM_STRING || type == CIM_DATETIME || (type & CIM_FLAG_ARRAY))
++        if (type == CIM_STRING || type == CIM_DATETIME)
+         {
+             if (get_value( table, row, i, &val ) == S_OK) heap_free( (void *)(INT_PTR)val );
+         }
++        else if (type & CIM_FLAG_ARRAY)
++        {
++            if (get_value( table, row, i, &val ) == S_OK)
++                destroy_array( (void *)(INT_PTR)val, type & CIM_TYPE_MASK );
++        }
+     }
+ }
+ 
+-- 
+2.3.5
+

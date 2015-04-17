@@ -214,6 +214,7 @@ patch_enable_all ()
 	enable_version_VerQueryValue="$1"
 	enable_version_VersionInfoEx="$1"
 	enable_wbemprox_Localhost="$1"
+	enable_wbemprox_Win32_SystemEnclosure="$1"
 	enable_wiaservc_IEnumWIA_DEV_INFO="$1"
 	enable_windowscodecs_TIFF_Decoder="$1"
 	enable_wine_inf_Performance="$1"
@@ -711,6 +712,9 @@ patch_enable ()
 			;;
 		wbemprox-Localhost)
 			enable_wbemprox_Localhost="$2"
+			;;
+		wbemprox-Win32_SystemEnclosure)
+			enable_wbemprox_Win32_SystemEnclosure="$2"
 			;;
 		wiaservc-IEnumWIA_DEV_INFO)
 			enable_wiaservc_IEnumWIA_DEV_INFO="$2"
@@ -4429,6 +4433,24 @@ if test "$enable_wbemprox_Localhost" -eq 1; then
 	patch_apply wbemprox-Localhost/0001-wbemprox-Allow-connecting-to-localhost.patch
 	(
 		echo '+    { "Michael Müller", "wbemprox: Allow connecting to localhost.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wbemprox-Win32_SystemEnclosure
+# |
+# | Modified files:
+# |   *	dlls/wbemprox/builtin.c, dlls/wbemprox/table.c, dlls/wbemprox/tests/query.c
+# |
+if test "$enable_wbemprox_Win32_SystemEnclosure" -eq 1; then
+	patch_apply wbemprox-Win32_SystemEnclosure/0001-wbemprox-tests-Actually-test-the-return-value-of-IEn.patch
+	patch_apply wbemprox-Win32_SystemEnclosure/0002-wbemprox-tests-Fix-memory-leak-when-tests-are-skippe.patch
+	patch_apply wbemprox-Win32_SystemEnclosure/0003-wbemprox-Fix-handling-of-arrays-as-query-results.patch
+	patch_apply wbemprox-Win32_SystemEnclosure/0004-wbemprox-Add-support-for-Win32_SystemEnclosure.patch
+	(
+		echo '+    { "Sebastian Lackner", "wbemprox/tests: Actually test the return value of IEnumWbemClassObject_Next.", 1 },';
+		echo '+    { "Sebastian Lackner", "wbemprox/tests: Fix memory leak when tests are skipped.", 1 },';
+		echo '+    { "Sebastian Lackner", "wbemprox: Fix handling of arrays as query results.", 1 },';
+		echo '+    { "Michael Müller", "wbemprox: Add support for Win32_SystemEnclosure.", 1 },';
 	) >> "$patchlist"
 fi
 

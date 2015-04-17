@@ -1,0 +1,58 @@
+From 4090895abe5dafae64a25987bc1878dc5d727a67 Mon Sep 17 00:00:00 2001
+From: Qian Hong <qhong@codeweavers.com>
+Date: Fri, 17 Apr 2015 00:59:02 +0800
+Subject: ntdll/tests: Added tests to set disposition on file which is mapped
+ to memory
+
+---
+ dlls/ntdll/tests/file.c | 23 ++++++++++++++++++++++-
+ 1 file changed, 22 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index 05ce517..6408eaa 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -1355,11 +1355,12 @@ static void test_file_disposition_information(void)
+ {
+     char tmp_path[MAX_PATH], buffer[MAX_PATH + 16];
+     DWORD dirpos;
+-    HANDLE handle, handle2;
++    HANDLE handle, handle2, mapping;
+     NTSTATUS res;
+     IO_STATUS_BLOCK io;
+     FILE_DISPOSITION_INFORMATION fdi;
+     BOOL fileDeleted;
++    void *ptr;
+ 
+     GetTempPathA( MAX_PATH, tmp_path );
+ 
+@@ -1523,6 +1524,26 @@ static void test_file_disposition_information(void)
+     todo_wine
+     ok( !fileDeleted, "Directory shouldn't have been deleted\n" );
+     RemoveDirectoryA( buffer );
++
++    /* cannot set disposition on file which is mapped to memory */
++    GetTempFileNameA( tmp_path, "dis", 0, buffer );
++    handle = CreateFileA(buffer, GENERIC_READ | GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, 0, 0);
++    ok( handle != INVALID_HANDLE_VALUE, "failed to create temp file\n" );
++    mapping = CreateFileMappingA( handle, NULL, PAGE_READWRITE, 0, 64 * 1024, "DelFileTest" );
++    ok( mapping != NULL, "failed to create file mapping\n");
++    ptr = MapViewOfFile( mapping, FILE_MAP_READ, 0, 0, 4096 );
++    ok( ptr != NULL, "MapViewOfFile failed\n");
++    fdi.DoDeleteFile = TRUE;
++    res = pNtSetInformationFile( handle, &io, &fdi, sizeof fdi, FileDispositionInformation );
++todo_wine
++    ok( res == STATUS_CANNOT_DELETE, "unexpected FileDispositionInformation result (expected STATUS_CANNOT_DELETE, got %x)\n", res );
++    CloseHandle( handle );
++    UnmapViewOfFile( ptr );
++    CloseHandle( mapping );
++    fileDeleted = GetFileAttributesA( buffer ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
++todo_wine
++    ok( !fileDeleted, "File shouldn't have been deleted\n" );
++    DeleteFileA( buffer );
+ }
+ 
+ static void test_iocompletion(void)
+-- 
+2.3.5
+

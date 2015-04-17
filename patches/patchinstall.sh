@@ -2705,10 +2705,14 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 	patch_apply ntdll-FileDispositionInformation/0001-server-Keep-a-pointer-to-parent-s-fd-unix_name-in-th.patch
 	patch_apply ntdll-FileDispositionInformation/0002-server-Add-support-for-setting-file-disposition-info.patch
 	patch_apply ntdll-FileDispositionInformation/0003-server-Do-not-permit-FileDispositionInformation-to-d.patch
+	patch_apply ntdll-FileDispositionInformation/0004-ntdll-tests-Added-tests-to-set-disposition-on-file-w.patch
+	patch_apply ntdll-FileDispositionInformation/0005-server-Do-not-allow-to-set-disposition-on-file-which.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "server: Keep a pointer to parent'\''s fd unix_name in the closed_fd structure.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "server: Add support for setting file disposition information.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
+		echo '+    { "Qian Hong", "ntdll/tests: Added tests to set disposition on file which is mapped to memory.", 1 },';
+		echo '+    { "Qian Hong", "server: Do not allow to set disposition on file which has a file mapping.", 1 },';
 	) >> "$patchlist"
 fi
 

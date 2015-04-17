@@ -1,0 +1,65 @@
+From 7e203fc3b7ef5b5a69fa60f99b57ca02a9a63033 Mon Sep 17 00:00:00 2001
+From: Qian Hong <qhong@codeweavers.com>
+Date: Fri, 17 Apr 2015 18:39:59 +0800
+Subject: server: Do not allow to set disposition on file which has a file
+ mapping.
+
+---
+ dlls/ntdll/tests/file.c |  2 --
+ server/fd.c             | 15 +++++++++++++++
+ 2 files changed, 15 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index 6408eaa..5620815 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -1535,13 +1535,11 @@ static void test_file_disposition_information(void)
+     ok( ptr != NULL, "MapViewOfFile failed\n");
+     fdi.DoDeleteFile = TRUE;
+     res = pNtSetInformationFile( handle, &io, &fdi, sizeof fdi, FileDispositionInformation );
+-todo_wine
+     ok( res == STATUS_CANNOT_DELETE, "unexpected FileDispositionInformation result (expected STATUS_CANNOT_DELETE, got %x)\n", res );
+     CloseHandle( handle );
+     UnmapViewOfFile( ptr );
+     CloseHandle( mapping );
+     fileDeleted = GetFileAttributesA( buffer ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+-todo_wine
+     ok( !fileDeleted, "File shouldn't have been deleted\n" );
+     DeleteFileA( buffer );
+ }
+diff --git a/server/fd.c b/server/fd.c
+index 036478a..90487cc 100644
+--- a/server/fd.c
++++ b/server/fd.c
+@@ -1951,6 +1951,7 @@ unsigned int get_fd_options( struct fd *fd )
+ void set_fd_disposition( struct fd *fd, int unlink )
+ {
+     struct stat st;
++    struct list *ptr;
+ 
+     if (fd->unix_fd == -1)
+     {
+@@ -1978,6 +1979,20 @@ void set_fd_disposition( struct fd *fd, int unlink )
+         return;
+     }
+ 
++    LIST_FOR_EACH( ptr, &fd->inode->open )
++    {
++        struct fd *fd_ptr = LIST_ENTRY( ptr, struct fd, inode_entry );
++        if (fd_ptr != fd)
++        {
++            if (fd_ptr->access & FILE_MAPPING_ACCESS)
++            {
++                /* can't unlink files which are mapped to memory */
++                set_error( STATUS_CANNOT_DELETE );
++                return;
++            }
++        }
++    }
++
+     if (unlink)
+         fd->closed->unlink = 1;
+     else if (!(fd->options & FILE_DELETE_ON_CLOSE))
+-- 
+2.3.5
+

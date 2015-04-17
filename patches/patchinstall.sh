@@ -126,6 +126,7 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_makedep_PARENTSPEC="$1"
+	enable_mfplat_MFTRegister="$1"
 	enable_mmdevapi_AEV_Stubs="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -449,6 +450,9 @@ patch_enable ()
 			;;
 		makedep-PARENTSPEC)
 			enable_makedep_PARENTSPEC="$2"
+			;;
+		mfplat-MFTRegister)
+			enable_mfplat_MFTRegister="$2"
 			;;
 		mmdevapi-AEV_Stubs)
 			enable_mmdevapi_AEV_Stubs="$2"
@@ -1956,6 +1960,18 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -1973,18 +1989,6 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2968,6 +2972,21 @@ if test "$enable_libs_Unicode_Collation" -eq 1; then
 	patch_apply libs-Unicode_Collation/0001-libs-Fix-most-problems-with-CompareString.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "libs: Fix most problems with CompareString.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset mfplat-MFTRegister
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37811] Add implementation for mfplat.MFTRegister
+# |
+# | Modified files:
+# |   *	dlls/mfplat/Makefile.in, dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, include/mfapi.h, loader/wine.inf.in
+# |
+if test "$enable_mfplat_MFTRegister" -eq 1; then
+	patch_apply mfplat-MFTRegister/0001-mfplat-Implement-MFTRegister.patch
+	(
+		echo '+    { "Michael Müller", "mfplat: Implement MFTRegister.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -123,6 +123,7 @@ patch_enable_all ()
 	enable_kernel32_Profile="$1"
 	enable_kernel32_SetFileInformationByHandle="$1"
 	enable_kernel32_VerifyVersionInfo="$1"
+	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_makedep_PARENTSPEC="$1"
 	enable_mmdevapi_AEV_Stubs="$1"
@@ -436,6 +437,9 @@ patch_enable ()
 			;;
 		kernel32-VerifyVersionInfo)
 			enable_kernel32_VerifyVersionInfo="$2"
+			;;
+		libs-Debug_Channel)
+			enable_libs_Debug_Channel="$2"
 			;;
 		libs-Unicode_Collation)
 			enable_libs_Unicode_Collation="$2"
@@ -2924,6 +2928,18 @@ if test "$enable_kernel32_VerifyVersionInfo" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for condition mask of VerifyVersionInfoA.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Fix condition mask handling in RtlVerifyVersionInfo.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset libs-Debug_Channel
+# |
+# | Modified files:
+# |   *	libs/wine/debug.c
+# |
+if test "$enable_libs_Debug_Channel" -eq 1; then
+	patch_apply libs-Debug_Channel/0001-libwine-Add-process-specific-debug-channels.patch
+	(
+		echo '+    { "Michael Müller", "libwine: Add process specific debug channels.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -177,6 +177,7 @@ patch_enable_all ()
 	enable_server_Address_List_Change="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
+	enable_server_Delete_On_Close="$1"
 	enable_server_File_Permissions="$1"
 	enable_server_Inherited_ACLs="$1"
 	enable_server_JobObjects="$1"
@@ -601,6 +602,9 @@ patch_enable ()
 			;;
 		server-CreateProcess_ACLs)
 			enable_server_CreateProcess_ACLs="$2"
+			;;
+		server-Delete_On_Close)
+			enable_server_Delete_On_Close="$2"
 			;;
 		server-File_Permissions)
 			enable_server_File_Permissions="$2"
@@ -3899,6 +3903,23 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Delete_On_Close
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38417] Fix handling of opening read-only files for FILE_DELETE_ON_CLOSE
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, dlls/kernel32/tests/file.c, server/fd.c
+# |
+if test "$enable_server_Delete_On_Close" -eq 1; then
+	patch_apply server-Delete_On_Close/0001-kernel32-tests-Add-tests-for-deleting-readonly-files.patch
+	patch_apply server-Delete_On_Close/0002-server-Fix-handling-of-opening-read-only-files-with-.patch
+	(
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for deleting readonly files with NtCreateFile.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Fix handling of opening read-only files with FILE_DELETE_ON_CLOSE.", 1 },';
 	) >> "$patchlist"
 fi
 

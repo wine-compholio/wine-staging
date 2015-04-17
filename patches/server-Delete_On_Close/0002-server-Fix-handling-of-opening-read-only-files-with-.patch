@@ -1,0 +1,84 @@
+From 6f4c5f44d93d38b4b71aa56fe2ad0eb4b31fbe7f Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 17 Apr 2015 12:40:38 +0200
+Subject: server: Fix handling of opening read-only files with
+ FILE_DELETE_ON_CLOSE.
+
+---
+ dlls/kernel32/file.c       |  3 +--
+ dlls/kernel32/tests/file.c |  6 ------
+ server/fd.c                | 10 ++++++++++
+ 3 files changed, 11 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/kernel32/file.c b/dlls/kernel32/file.c
+index 006db1c..d16a0a1 100644
+--- a/dlls/kernel32/file.c
++++ b/dlls/kernel32/file.c
+@@ -1602,8 +1602,7 @@ BOOL WINAPI DeleteFileW( LPCWSTR path )
+     attr.SecurityDescriptor = NULL;
+     attr.SecurityQualityOfService = NULL;
+ 
+-    status = NtCreateFile(&hFile, GENERIC_READ | GENERIC_WRITE | DELETE,
+-			  &attr, &io, NULL, 0,
++    status = NtCreateFile(&hFile, DELETE, &attr, &io, NULL, 0,
+ 			  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+ 			  FILE_OPEN, FILE_DELETE_ON_CLOSE | FILE_NON_DIRECTORY_FILE, NULL, 0);
+     if (status == STATUS_SUCCESS) status = NtClose(hFile);
+diff --git a/dlls/kernel32/tests/file.c b/dlls/kernel32/tests/file.c
+index 3a82364..0f5ac52 100644
+--- a/dlls/kernel32/tests/file.c
++++ b/dlls/kernel32/tests/file.c
+@@ -355,14 +355,10 @@ static void test__lcreat( void )
+     status = NtCreateFile( &file, DELETE, &attr, &io, NULL, 0,
+                            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                            FILE_OPEN, FILE_DELETE_ON_CLOSE | FILE_NON_DIRECTORY_FILE, NULL, 0 );
+-    todo_wine
+     ok( status == STATUS_CANNOT_DELETE, "expected STATUS_CANNOT_DELETE, got %08x\n", status );
+     if (!status) CloseHandle( file );
+-    todo_wine
+     ok( GetFileAttributesA( filename ) != INVALID_FILE_ATTRIBUTES, "file was deleted\n" );
+-    todo_wine
+     ok( SetFileAttributesA(filename, FILE_ATTRIBUTE_NORMAL ) != 0, "couldn't change attributes on file\n" );
+-    todo_wine
+     ok( DeleteFileA( filename ) != 0, "now it should be possible to delete the file!\n" );
+ 
+     filehandle = _lcreat( filename, 2 );
+@@ -1718,14 +1714,12 @@ static void test_DeleteFileA( void )
+ 
+     SetLastError(0xdeadbeef);
+     ret = DeleteFileA(temp_file);
+-todo_wine
+     ok(ret, "DeleteFile error %d\n", GetLastError());
+ 
+     SetLastError(0xdeadbeef);
+     ret = CloseHandle(hfile);
+     ok(ret, "CloseHandle error %d\n", GetLastError());
+     ret = DeleteFileA(temp_file);
+-todo_wine
+     ok(!ret, "DeleteFile should fail\n");
+ 
+     SetLastError(0xdeadbeef);
+diff --git a/server/fd.c b/server/fd.c
+index 9a4aac4..ca68e49 100644
+--- a/server/fd.c
++++ b/server/fd.c
+@@ -1858,6 +1858,16 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+         fd->cacheable = !inode->device->removable;
+         list_add_head( &inode->open, &fd->inode_entry );
+ 
++        /* can't unlink files we don't have permission to access */
++        if ((options & FILE_DELETE_ON_CLOSE) && S_ISREG(st.st_mode) &&
++            !(flags & O_CREAT) && !(st.st_mode & (S_IWUSR | S_IWGRP | S_IWOTH)))
++        {
++            /* FIXME: instead of checking for O_CREAT it should check if the file was created */
++            release_object( fd );
++            set_error( STATUS_CANNOT_DELETE );
++            return NULL;
++        }
++
+         /* check directory options */
+         if ((options & FILE_DIRECTORY_FILE) && !S_ISDIR(st.st_mode))
+         {
+-- 
+2.3.5
+

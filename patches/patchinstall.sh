@@ -135,6 +135,7 @@ patch_enable_all ()
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvcrt_atof_strtod="$1"
 	enable_msvfw32_Image_Size="$1"
+	enable_msxml3_Coverity="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_APC_Start_Process="$1"
 	enable_ntdll_Activation_Context="$1"
@@ -479,6 +480,9 @@ patch_enable ()
 			;;
 		msvfw32-Image_Size)
 			enable_msvfw32_Image_Size="$2"
+			;;
+		msxml3-Coverity)
+			enable_msxml3_Coverity="$2"
 			;;
 		ntdll-APC_Performance)
 			enable_ntdll_APC_Performance="$2"
@@ -3124,6 +3128,18 @@ if test "$enable_msvfw32_Image_Size" -eq 1; then
 	patch_apply msvfw32-Image_Size/0001-msvfw32-Derive-image-size-from-input-image-to-avoid-.patch
 	(
 		echo '+    { "Bruno Jesus", "msvfw32: Derive image size from input image to avoid NULL dereference.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msxml3-Coverity
+# |
+# | Modified files:
+# |   *	dlls/msxml3/node.c
+# |
+if test "$enable_msxml3_Coverity" -eq 1; then
+	patch_apply msxml3-Coverity/0001-msxml3-Add-a-missing-break-Coverity.patch
+	(
+		echo '+    { "Sebastian Lackner", "msxml3: Add a missing break (Coverity).", 1 },';
 	) >> "$patchlist"
 fi
 

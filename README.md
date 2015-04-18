@@ -39,8 +39,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [10]:**
+**Bug fixes and features included in the next upcoming release [11]:**
 
+* Add a ProfileList\<UserSID> registry subkey ([Wine Bug #15670](https://bugs.winehq.org/show_bug.cgi?id=15670))
 * Add implementation for mfplat.MFTRegister ([Wine Bug #37811](https://bugs.winehq.org/show_bug.cgi?id=37811))
 * Add stub for WinSqmIsOptedIn ([Wine Bug #38388](https://bugs.winehq.org/show_bug.cgi?id=38388))
 * Add support for process specific debug channels

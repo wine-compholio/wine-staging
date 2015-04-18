@@ -220,6 +220,7 @@ patch_enable_all ()
 	enable_wiaservc_IEnumWIA_DEV_INFO="$1"
 	enable_windowscodecs_TIFF_Decoder="$1"
 	enable_wine_inf_Performance="$1"
+	enable_wine_inf_ProfileList_UserSID="$1"
 	enable_wineboot_HKEY_DYN_DATA="$1"
 	enable_winebuild_LinkerVersion="$1"
 	enable_winecfg_Libraries="$1"
@@ -732,6 +733,9 @@ patch_enable ()
 			;;
 		wine.inf-Performance)
 			enable_wine_inf_Performance="$2"
+			;;
+		wine.inf-ProfileList_UserSID)
+			enable_wine_inf_ProfileList_UserSID="$2"
 			;;
 		wineboot-HKEY_DYN_DATA)
 			enable_wineboot_HKEY_DYN_DATA="$2"
@@ -1960,18 +1964,6 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -1989,6 +1981,18 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4546,6 +4550,21 @@ if test "$enable_wine_inf_Performance" -eq 1; then
 	patch_apply wine.inf-Performance/0001-wine.inf-Add-registry-keys-for-Windows-Performance-L.patch
 	(
 		echo '+    { "Daniel Jelinski", "wine.inf: Add registry keys for Windows Performance Library.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wine.inf-ProfileList_UserSID
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15670] Add a ProfileList\<UserSID> registry subkey
+# |
+# | Modified files:
+# |   *	loader/wine.inf.in
+# |
+if test "$enable_wine_inf_ProfileList_UserSID" -eq 1; then
+	patch_apply wine.inf-ProfileList_UserSID/0001-wine.inf-Add-a-ProfileList-UserSID-registry-subkey.patch
+	(
+		echo '+    { "Sebastian Lackner", "wine.inf: Add a ProfileList\\\\<UserSID> registry subkey.", 1 },';
 	) >> "$patchlist"
 fi
 

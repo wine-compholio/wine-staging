@@ -1425,10 +1425,12 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 	patch_apply advapi32-LsaLookupSids/0001-advapi32-Initialize-buffer-length-to-zero-in-LsaLook.patch
 	patch_apply advapi32-LsaLookupSids/0002-advapi32-Prepend-a-hidden-LSA_TRUST_INFORMATION-in-L.patch
 	patch_apply advapi32-LsaLookupSids/0003-advapi32-Prepend-a-hidden-LSA_TRUST_INFORMATION-in-L.patch
+	patch_apply advapi32-LsaLookupSids/0004-advapi32-Fallback-to-Sid-string-when-LookupAccountSi.patch
 	(
 		echo '+    { "Qian Hong", "advapi32: Initialize buffer length to zero in LsaLookupSids to prevent crash.", 2 },';
 		echo '+    { "Qian Hong", "advapi32: Prepend a hidden LSA_TRUST_INFORMATION in LsaLookupSids to avoid crash when Domains[-1] incorrectly accessed by application.", 2 },';
 		echo '+    { "Qian Hong", "advapi32: Prepend a hidden LSA_TRUST_INFORMATION in LsaLookupNames2 to avoid crash when Domains[-1] incorrectly accessed by application.", 2 },';
+		echo '+    { "Qian Hong", "advapi32: Fallback to Sid string when LookupAccountSid fails.", 1 },';
 	) >> "$patchlist"
 fi
 

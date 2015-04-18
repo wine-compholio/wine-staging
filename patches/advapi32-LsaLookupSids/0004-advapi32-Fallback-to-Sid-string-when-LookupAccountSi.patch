@@ -1,0 +1,67 @@
+From 9a19e77a0334f91e370e73099066484f20b24321 Mon Sep 17 00:00:00 2001
+From: Qian Hong <qhong@codeweavers.com>
+Date: Tue, 7 Apr 2015 11:23:34 +0800
+Subject: advapi32: Fallback to Sid string when LookupAccountSid fails.
+
+---
+ dlls/advapi32/lsa.c | 30 ++++++++++++++++++++++++++++++
+ 1 file changed, 30 insertions(+)
+
+diff --git a/dlls/advapi32/lsa.c b/dlls/advapi32/lsa.c
+index 258b8ca..2b2c6b6 100644
+--- a/dlls/advapi32/lsa.c
++++ b/dlls/advapi32/lsa.c
+@@ -29,6 +29,7 @@
+ #include "winbase.h"
+ #include "winreg.h"
+ #include "winternl.h"
++#include "sddl.h"
+ #include "advapi32_misc.h"
+ 
+ #include "wine/debug.h"
+@@ -554,6 +555,21 @@ NTSTATUS WINAPI LsaLookupSids(
+                 heap_free(name);
+             }
+         }
++        else
++        {
++            WCHAR *strsid = NULL;
++
++            if (ConvertSidToStringSidW(Sids[i], &strsid))
++            {
++                name_size = strlenW(strsid) + 1;
++
++                (*Names)[i].Name.Length = (name_size - 1) * sizeof(WCHAR);
++                (*Names)[i].Name.MaximumLength = name_size * sizeof(WCHAR);
++                name_fullsize += (*Names)[i].Name.MaximumLength;
++
++                LocalFree(strsid);
++            }
++        }
+     }
+ 
+     /* now we have full length needed for both */
+@@ -593,6 +609,20 @@ NTSTATUS WINAPI LsaLookupSids(
+                 heap_free(domain.Buffer);
+             }
+         }
++        else
++        {
++            WCHAR *strsid = NULL;
++
++            if (ConvertSidToStringSidW(Sids[i], &strsid))
++            {
++                name_size = strlenW(strsid) + 1;
++
++                (*Names)[i].Name.Buffer = name_buffer;
++                memcpy((*Names)[i].Name.Buffer, strsid, name_size * sizeof(WCHAR));
++
++                LocalFree(strsid);
++            }
++        }
+ 
+         name_buffer += name_size;
+     }
+-- 
+2.3.5
+

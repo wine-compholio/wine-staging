@@ -130,6 +130,7 @@ patch_enable_all ()
 	enable_mmdevapi_AEV_Stubs="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
+	enable_mshtml_Event_Scripts="$1"
 	enable_msvcp90_basic_string_wchar_dtor="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvcrt_atof_strtod="$1"
@@ -463,6 +464,9 @@ patch_enable ()
 			;;
 		mscoree-CorValidateImage)
 			enable_mscoree_CorValidateImage="$2"
+			;;
+		mshtml-Event_Scripts)
+			enable_mshtml_Event_Scripts="$2"
 			;;
 		msvcp90-basic_string_wchar_dtor)
 			enable_msvcp90_basic_string_wchar_dtor="$2"
@@ -2681,6 +2685,20 @@ if test "$enable_kernel32_Console_Handles" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-File_Permissions
 # |
 # | Modified files:
@@ -2719,20 +2737,6 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Added tests to set disposition on file which is mapped to memory.", 1 },';
 		echo '+    { "Qian Hong", "server: Do not allow to set disposition on file which has a file mapping.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3043,6 +3047,21 @@ if test "$enable_mscoree_CorValidateImage" -eq 1; then
 	patch_apply mscoree-CorValidateImage/0001-mscoree-Implement-_CorValidateImage.patch
 	(
 		echo '+    { "Michael Müller", "mscoree: Implement _CorValidateImage.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset mshtml-Event_Scripts
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38419] Avoid crash when trying to bind mshtml event scripts to window
+# |
+# | Modified files:
+# |   *	dlls/mshtml/script.c
+# |
+if test "$enable_mshtml_Event_Scripts" -eq 1; then
+	patch_apply mshtml-Event_Scripts/0001-mshtml-Avoid-crash-when-trying-to-bind-event-scripts.patch
+	(
+		echo '+    { "Jacek Caban", "mshtml: Avoid crash when trying to bind event scripts to window.", 1 },';
 	) >> "$patchlist"
 fi
 

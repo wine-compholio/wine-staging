@@ -39,13 +39,14 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [11]:**
+**Bug fixes and features included in the next upcoming release [12]:**
 
 * Add a ProfileList\<UserSID> registry subkey ([Wine Bug #15670](https://bugs.winehq.org/show_bug.cgi?id=15670))
 * Add implementation for mfplat.MFTRegister ([Wine Bug #37811](https://bugs.winehq.org/show_bug.cgi?id=37811))
 * Add stub for WinSqmIsOptedIn ([Wine Bug #38388](https://bugs.winehq.org/show_bug.cgi?id=38388))
 * Add support for process specific debug channels
 * Add support for wbemprox Win32_SystemEnclosure table ([Wine Bug #34517](https://bugs.winehq.org/show_bug.cgi?id=34517))
+* Avoid crash when trying to bind mshtml event scripts to window ([Wine Bug #38419](https://bugs.winehq.org/show_bug.cgi?id=38419))
 * Calculate msvcrt exponential math operations with higher precision ([Wine Bug #37149](https://bugs.winehq.org/show_bug.cgi?id=37149))
 * Fix handling of opening read-only files for FILE_DELETE_ON_CLOSE ([Wine Bug #38417](https://bugs.winehq.org/show_bug.cgi?id=38417))
 * Fix regression caused by blacklisting supported OpenGL extensions ([Wine Bug #38264](https://bugs.winehq.org/show_bug.cgi?id=38264))

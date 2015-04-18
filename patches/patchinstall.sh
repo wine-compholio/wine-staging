@@ -3493,14 +3493,17 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#31971] ntdll is missing WinSqm[Start|End]Session implementation
+# |   *	[#38388] Add stub for WinSqmIsOptedIn
 # |
 # | Modified files:
 # |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntdll/tests/rtl.c
 # |
 if test "$enable_ntdll_WinSqm" -eq 1; then
 	patch_apply ntdll-WinSqm/0001-ntdll-Add-stubs-for-WinSqmStartSession-WinSqmEndSess.patch
+	patch_apply ntdll-WinSqm/0002-ntdll-Add-stub-for-WinSqmIsOptedIn.patch
 	(
 		echo '+    { "Erich E. Hoover", "ntdll: Add stubs for WinSqmStartSession / WinSqmEndSession.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Add stub for WinSqmIsOptedIn.", 1 },';
 	) >> "$patchlist"
 fi
 

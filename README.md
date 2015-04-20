@@ -86,7 +86,7 @@ for more details.*
 * Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE. ([Wine Bug #12652](https://bugs.winehq.org/show_bug.cgi?id=12652))
 * Anno 1602 installer depends on Windows 98 behavior of SHFileOperationW ([Wine Bug #37916](https://bugs.winehq.org/show_bug.cgi?id=37916))
 * Audio stuttering and performance drops in multiple applications ([Wine Bug #30639](https://bugs.winehq.org/show_bug.cgi?id=30639))
-* Avoid crash when trying to bind mshtml event scripts to window ([Wine Bug #38419](https://bugs.winehq.org/show_bug.cgi?id=38419))
+* ~~Avoid crash when trying to bind mshtml event scripts to window~~ ([Wine Bug #38419](https://bugs.winehq.org/show_bug.cgi?id=38419))
 * Avoid crashing when broken app tries to release surface although refcount is zero ([Wine Bug #18477](https://bugs.winehq.org/show_bug.cgi?id=18477))
 * Avoid race-conditions in NtReadFile() operations with write watches.
 * Avoid race-conditions of async WSARecv() operations with write watches.

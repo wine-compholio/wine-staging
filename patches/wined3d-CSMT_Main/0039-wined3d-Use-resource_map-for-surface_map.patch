@@ -1,4 +1,4 @@
-From 4f15b07cc64a3d364197a0ac73dd561c7b969183 Mon Sep 17 00:00:00 2001
+From a63cedcd66546c8005162c860211ce39e7e4cbcd Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 19 Sep 2013 18:00:23 +0200
 Subject: wined3d: Use resource_map for surface_map.
@@ -10,10 +10,10 @@ Subject: wined3d: Use resource_map for surface_map.
  3 files changed, 22 insertions(+), 89 deletions(-)
 
 diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
-index 2443a9b..8486dc3 100644
+index b497955..12a26d8 100644
 --- a/dlls/wined3d/resource.c
 +++ b/dlls/wined3d/resource.c
-@@ -783,7 +783,7 @@ HRESULT wined3d_resource_unmap(struct wined3d_resource *resource)
+@@ -795,7 +795,7 @@ HRESULT wined3d_resource_unmap(struct wined3d_resource *resource)
      if (!resource->map_count)
      {
          WARN("Trying to unlock an unlocked resource %p.\n", resource);
@@ -23,10 +23,10 @@ index 2443a9b..8486dc3 100644
  
      if (device->d3d_initialized)
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index 5b2359e..16233d3 100644
+index 334335f..cf9c938 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
-@@ -2394,46 +2394,25 @@ struct wined3d_surface * CDECL wined3d_surface_from_resource(struct wined3d_reso
+@@ -2474,47 +2474,26 @@ struct wined3d_surface * CDECL wined3d_surface_from_resource(struct wined3d_reso
  
  HRESULT CDECL wined3d_surface_unmap(struct wined3d_surface *surface)
  {
@@ -64,6 +64,7 @@ index 5b2359e..16233d3 100644
  {
 +    struct wined3d_box box;
      const struct wined3d_format *format = surface->resource.format;
+     unsigned int fmt_flags = surface->resource.format_flags;
 -    struct wined3d_device *device = surface->resource.device;
 -    struct wined3d_context *context = NULL;
 -    BYTE *base_memory;
@@ -77,9 +78,9 @@ index 5b2359e..16233d3 100644
 -        return WINED3DERR_INVALIDCALL;
 -    }
  
-     if ((format->flags & WINED3DFMT_FLAG_BLOCKS) && rect
+     if ((fmt_flags & WINED3DFMT_FLAG_BLOCKS) && rect
              && !surface_check_block_align(surface, rect))
-@@ -2445,11 +2424,6 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
+@@ -2526,11 +2505,6 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
              return WINED3DERR_INVALIDCALL;
      }
  
@@ -91,7 +92,7 @@ index 5b2359e..16233d3 100644
      /* Performance optimization: Count how often a surface is mapped, if it is
       * mapped regularly do not throw away the system memory copy. This avoids
       * the need to download the surface from OpenGL all the time. The surface
-@@ -2465,72 +2439,26 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
+@@ -2546,72 +2520,26 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
          }
      }
  
@@ -129,7 +130,7 @@ index 5b2359e..16233d3 100644
 -    if (context)
 -        context_release(context);
 -
--    if (format->flags & WINED3DFMT_FLAG_BROKEN_PITCH)
+-    if (fmt_flags & WINED3DFMT_FLAG_BROKEN_PITCH)
 -        map_desc->row_pitch = surface->resource.width * format->byte_count;
      else
 -        wined3d_resource_get_pitch(&surface->resource, &map_desc->row_pitch, &map_desc->slice_pitch);
@@ -145,7 +146,7 @@ index 5b2359e..16233d3 100644
      }
 -    else
 -    {
--        if ((format->flags & (WINED3DFMT_FLAG_BLOCKS | WINED3DFMT_FLAG_BROKEN_PITCH)) == WINED3DFMT_FLAG_BLOCKS)
+-        if ((fmt_flags & (WINED3DFMT_FLAG_BLOCKS | WINED3DFMT_FLAG_BROKEN_PITCH)) == WINED3DFMT_FLAG_BLOCKS)
 -        {
 -            /* Compressed textures are block based, so calculate the offset of
 -             * the block that contains the top-left pixel of the locked rectangle. */
@@ -174,10 +175,10 @@ index 5b2359e..16233d3 100644
  
  HRESULT CDECL wined3d_surface_getdc(struct wined3d_surface *surface, HDC *dc)
 diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
-index 7e5576b..7ce5331 100644
+index 3a85103..a656736 100644
 --- a/dlls/wined3d/volume.c
 +++ b/dlls/wined3d/volume.c
-@@ -422,7 +422,12 @@ struct wined3d_volume * CDECL wined3d_volume_from_resource(struct wined3d_resour
+@@ -441,7 +441,12 @@ struct wined3d_volume * CDECL wined3d_volume_from_resource(struct wined3d_resour
  
  HRESULT CDECL wined3d_volume_unmap(struct wined3d_volume *volume)
  {
@@ -192,5 +193,5 @@ index 7e5576b..7ce5331 100644
  
  static ULONG volume_resource_incref(struct wined3d_resource *resource)
 -- 
-2.1.3
+2.3.5
 

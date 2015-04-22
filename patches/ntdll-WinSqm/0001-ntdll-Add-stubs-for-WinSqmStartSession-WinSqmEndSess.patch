@@ -1,35 +1,33 @@
-From ffb4e21271797190bd8c5b6be3054ac2f693be8b Mon Sep 17 00:00:00 2001
+From ff1be4d15b2114de6b785c164ddc27fd6993c6f8 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 25 Dec 2014 12:36:28 -0700
 Subject: ntdll: Add stubs for WinSqmStartSession / WinSqmEndSession.
 
 Based on a patch by Detlef Riekenberg.
 ---
+ dlls/ntdll/misc.c      | 20 +++++++++++++++++++
  dlls/ntdll/ntdll.spec  |  2 ++
- dlls/ntdll/rtl.c       | 18 ++++++++++++++++++
- dlls/ntdll/tests/rtl.c | 50 ++++++++++++++++++++++++++++++++++++++++++++++++++
- 3 files changed, 70 insertions(+)
+ dlls/ntdll/tests/rtl.c | 54 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 76 insertions(+)
 
-diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 51de6e7..44dfc22 100644
---- a/dlls/ntdll/ntdll.spec
-+++ b/dlls/ntdll/ntdll.spec
-@@ -970,2 +970,4 @@
- @ stdcall -ret64 VerSetConditionMask(int64 long long)
-+@ stdcall WinSqmEndSession(ptr)
-+@ stdcall WinSqmStartSession(ptr long long)
- @ stdcall ZwAcceptConnectPort(ptr long ptr long long ptr) NtAcceptConnectPort
-diff --git a/dlls/ntdll/rtl.c b/dlls/ntdll/rtl.c
-index 8f6f386..2e87beb 100644
---- a/dlls/ntdll/rtl.c
-+++ b/dlls/ntdll/rtl.c
-@@ -1311,3 +1311,21 @@ BOOL WINAPI RtlSetCurrentTransaction(HANDLE new_transaction)
-     FIXME("(%p) :stub\n", new_transaction);
-     return FALSE;
+diff --git a/dlls/ntdll/misc.c b/dlls/ntdll/misc.c
+index 2cfa900..7832d37 100644
+--- a/dlls/ntdll/misc.c
++++ b/dlls/ntdll/misc.c
+@@ -27,6 +27,8 @@
+ #include <sys/utsname.h>
+ #endif
+ 
++#include "ntstatus.h"
++#define WIN32_NO_STATUS
+ #include "wine/library.h"
+ #include "wine/debug.h"
+ #include "ntdll_misc.h"
+@@ -328,6 +330,15 @@ void * __cdecl _lfind( const void *key, const void *base, unsigned int *nmemb,
  }
-+
-+/******************************************************************************
-+ * WinSqmEndSession [NTDLL.@]
+ 
+ /*********************************************************************
++ *                  WinSqmEndSession   (NTDLL.@)
 + */
 +NTSTATUS WINAPI WinSqmEndSession(PVOID unknown1)
 +{
@@ -37,37 +35,58 @@ index 8f6f386..2e87beb 100644
 +    return STATUS_NOT_IMPLEMENTED;
 +}
 +
-+/******************************************************************************
-+ * WinSqmStartSession [NTDLL.@]
++/*********************************************************************
+  *                  WinSqmIsOptedIn   (NTDLL.@)
+  */
+ BOOL WINAPI WinSqmIsOptedIn(void)
+@@ -335,3 +346,12 @@ BOOL WINAPI WinSqmIsOptedIn(void)
+     FIXME("() stub\n");
+     return FALSE;
+ }
++
++/*********************************************************************
++ *                  WinSqmStartSession   (NTDLL.@)
 + */
 +PVOID WINAPI WinSqmStartSession(PVOID unknown1, DWORD unknown2, DWORD unknown3)
 +{
 +    FIXME("(%p, 0x%x, 0x%x) stub!\n", unknown1, unknown2, unknown3);
 +    return NULL;
 +}
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index 28165ef..9225898 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -971,3 +971,5 @@
+ @ stdcall -ret64 VerSetConditionMask(int64 long long)
++@ stdcall WinSqmEndSession(ptr)
+ @ stdcall WinSqmIsOptedIn()
++@ stdcall WinSqmStartSession(ptr long long)
+ @ stdcall ZwAcceptConnectPort(ptr long ptr long long ptr) NtAcceptConnectPort
 diff --git a/dlls/ntdll/tests/rtl.c b/dlls/ntdll/tests/rtl.c
-index e8eb04a..1e6c6f8 100644
+index e8eb04a..7b5f07d 100644
 --- a/dlls/ntdll/tests/rtl.c
 +++ b/dlls/ntdll/tests/rtl.c
-@@ -62,6 +62,8 @@ static inline USHORT __my_ushort_swap(USHORT s)
+@@ -62,6 +62,9 @@ static inline USHORT __my_ushort_swap(USHORT s)
  
  /* Function ptrs for ntdll calls */
  static HMODULE hntdll = 0;
 +static PVOID     (WINAPI *pWinSqmStartSession)(PVOID unknown1, DWORD unknown2, DWORD unknown3);
++static BOOL      (WINAPI *pWinSqmIsOptedIn)(void);
 +static NTSTATUS  (WINAPI *pWinSqmEndSession)(PVOID unknown1);
  static SIZE_T    (WINAPI  *pRtlCompareMemory)(LPCVOID,LPCVOID,SIZE_T);
  static SIZE_T    (WINAPI  *pRtlCompareMemoryUlong)(PULONG, SIZE_T, ULONG);
  static NTSTATUS  (WINAPI  *pRtlDeleteTimer)(HANDLE, HANDLE, HANDLE);
-@@ -109,6 +111,8 @@ static void InitFunctionPtrs(void)
+@@ -109,6 +112,9 @@ static void InitFunctionPtrs(void)
      hntdll = LoadLibraryA("ntdll.dll");
      ok(hntdll != 0, "LoadLibrary failed\n");
      if (hntdll) {
 +        pWinSqmStartSession = (void *)GetProcAddress(hntdll, "WinSqmStartSession");
++        pWinSqmIsOptedIn = (void *)GetProcAddress(hntdll, "WinSqmIsOptedIn");
 +        pWinSqmEndSession = (void *)GetProcAddress(hntdll, "WinSqmEndSession");
  	pRtlCompareMemory = (void *)GetProcAddress(hntdll, "RtlCompareMemory");
  	pRtlCompareMemoryUlong = (void *)GetProcAddress(hntdll, "RtlCompareMemoryUlong");
          pRtlDeleteTimer = (void *)GetProcAddress(hntdll, "RtlDeleteTimer");
-@@ -149,6 +153,46 @@ static void InitFunctionPtrs(void)
+@@ -149,6 +155,48 @@ static void InitFunctionPtrs(void)
      ok(strlen(src) == 15, "Source must be 16 bytes long!\n");
  }
  
@@ -104,6 +123,8 @@ index e8eb04a..1e6c6f8 100644
 +
 +    args = 3 - call_stdcall_func3( pWinSqmStartSession, NULL, 0, 0 ) / 4;
 +    ok(args == 3, "WinSqmStartSession expected to take %d arguments instead of 3\n", args);
++    args = 3 - call_stdcall_func3( pWinSqmIsOptedIn, NULL, 0, 0 ) / 4;
++    ok(args == 0, "WinSqmIsOptedIn expected to take %d arguments instead of 0\n", args);
 +    args = 3 - call_stdcall_func3( pWinSqmEndSession, NULL, 0, 0 ) / 4;
 +    ok(args == 1, "WinSqmEndSession expected to take %d arguments instead of 1\n", args);
 +
@@ -114,7 +135,7 @@ index e8eb04a..1e6c6f8 100644
  #define COMP(str1,str2,cmplen,len) size = pRtlCompareMemory(str1, str2, cmplen); \
    ok(size == len, "Expected %ld, got %ld\n", size, (SIZE_T)len)
  
-@@ -1603,6 +1647,12 @@ START_TEST(rtl)
+@@ -1603,6 +1651,12 @@ START_TEST(rtl)
  {
      InitFunctionPtrs();
  
@@ -128,5 +149,5 @@ index e8eb04a..1e6c6f8 100644
      test_RtlCompareMemoryUlong();
      test_RtlMoveMemory();
 -- 
-1.9.1
+2.3.5
 

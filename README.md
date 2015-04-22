@@ -62,7 +62,7 @@ for more details.*
 * Add stub for D3DXComputeTangentFrameEx ([Wine Bug #31984](https://bugs.winehq.org/show_bug.cgi?id=31984))
 * Add stub for D3DXIntersect
 * Add stub for NtSetLdtEntries/ZwSetLdtEntries ([Wine Bug #26268](https://bugs.winehq.org/show_bug.cgi?id=26268))
-* Add stub for WinSqmIsOptedIn ([Wine Bug #38388](https://bugs.winehq.org/show_bug.cgi?id=38388))
+* ~~Add stub for WinSqmIsOptedIn~~ ([Wine Bug #38388](https://bugs.winehq.org/show_bug.cgi?id=38388))
 * Add stub for gdiplus.GdipCreateEffect ([Wine Bug #32163](https://bugs.winehq.org/show_bug.cgi?id=32163))
 * Add stub for ntoskrnl.ExAcquireResourceExclusiveLite
 * Add stub for ntoskrnl.ExDeleteResourceLite

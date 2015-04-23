@@ -1,4 +1,4 @@
-From 508b1263e74afaaaf7586d17a11054f9bd6d9bb9 Mon Sep 17 00:00:00 2001
+From cb26dcfdc62218fd2064799771b5c02d79049dcb Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 21 Mar 2015 22:35:24 +0100
 Subject: user32: Cache the result of GetForegroundWindow.
@@ -7,8 +7,8 @@ Subject: user32: Cache the result of GetForegroundWindow.
  dlls/user32/focus.c        | 21 ++++++++++++++++++++-
  dlls/user32/user_private.h |  2 ++
  server/protocol.def        |  5 ++++-
- server/queue.c             | 10 +++++++++-
- 4 files changed, 35 insertions(+), 3 deletions(-)
+ server/queue.c             | 17 +++++++++++++++--
+ 4 files changed, 41 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/user32/focus.c b/dlls/user32/focus.c
 index 35fe89b..8b17d1f 100644
@@ -61,7 +61,7 @@ index 1c87de4..26c771e 100644
  
  C_ASSERT( sizeof(struct user_thread_info) <= sizeof(((TEB *)0)->Win32ClientInfo) );
 diff --git a/server/protocol.def b/server/protocol.def
-index 15df669..fb579e1 100644
+index 5ec2485..0e4d3d8 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -69,11 +69,14 @@ struct request_max_size
@@ -81,7 +81,7 @@ index 15df669..fb579e1 100644
  {
      int             queue_bits;     /* queue wake bits */
 diff --git a/server/queue.c b/server/queue.c
-index 6fa076d..764ba11 100644
+index 33c2758..b770456 100644
 --- a/server/queue.c
 +++ b/server/queue.c
 @@ -436,6 +436,7 @@ static void set_foreground_input( struct desktop *desktop, struct thread_input *
@@ -106,7 +106,21 @@ index 6fa076d..764ba11 100644
      if (window == input->menu_owner) input->menu_owner = 0;
      if (window == input->move_size) input->move_size = 0;
      if (window == input->caret) set_caret_window( input, 0 );
-@@ -3018,6 +3024,8 @@ DECL_HANDLER(set_active_window)
+@@ -1131,7 +1137,12 @@ int attach_thread_input( struct thread *thread_from, struct thread *thread_to )
+     if (thread_from->queue)
+     {
+         if (!input->focus) input->focus = thread_from->queue->input->focus;
+-        if (!input->active) input->active = thread_from->queue->input->active;
++        if (!input->active)
++        {
++            input->active = thread_from->queue->input->active;
++            if (shmglobal && input->desktop->foreground_input == input)
++                interlocked_xchg_add( (int *)&shmglobal->foreground_wnd_epoch, 1 );
++        }
+     }
+ 
+     ret = assign_thread_input( thread_from, input );
+@@ -3028,6 +3039,8 @@ DECL_HANDLER(set_active_window)
              reply->previous = queue->input->active;
              queue->input->active = get_user_full_handle( req->handle );
              update_shm_thread_input( queue->input );

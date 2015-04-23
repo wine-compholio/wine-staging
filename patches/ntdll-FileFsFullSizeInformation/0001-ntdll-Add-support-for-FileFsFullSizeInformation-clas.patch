@@ -1,0 +1,116 @@
+From 2703e7fa48675a6ab553c98fbe87e8cb6c171bbe Mon Sep 17 00:00:00 2001
+From: Jianqiu Zhang <zhangjianqiu_133@yeah.net>
+Date: Fri, 17 Apr 2015 14:33:41 +0800
+Subject: ntdll: Add support for FileFsFullSizeInformation class in
+ NtQueryVolumeInformationFile(try 2)
+
+---
+ dlls/ntdll/file.c       | 54 ++++++++++++++++++++++++++++++++++++++++++++++++-
+ dlls/ntdll/tests/file.c |  8 +-------
+ 2 files changed, 54 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index 0dc5c13..f0e1c91 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -3047,7 +3047,59 @@ NTSTATUS WINAPI NtQueryVolumeInformationFile( HANDLE handle, PIO_STATUS_BLOCK io
+         FIXME( "%p: control info not supported\n", handle );
+         break;
+     case FileFsFullSizeInformation:
+-        FIXME( "%p: full size info not supported\n", handle );
++        if(length < sizeof(FILE_FS_FULL_SIZE_INFORMATION))
++            io->u.Status = STATUS_BUFFER_TOO_SMALL;
++        else
++        {
++            FILE_FS_FULL_SIZE_INFORMATION *info = buffer;
++
++            if (fstat( fd, &st ) < 0)
++            {
++                io->u.Status = FILE_GetNtStatus();
++                break;
++            }
++            if(!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
++            {
++                io->u.Status = STATUS_INVALID_DEVICE_REQUEST;
++            }
++            else
++            {
++                ULONGLONG bsize;
++#if !defined(linux) || !defined(HAVE_FSTATFS)
++                struct statvfs stfs;
++
++                if(fstatvfs( fd, &stfs ) < 0)
++                {
++                    io->u.Status = FILE_GetNtStatus();
++                    break;
++                }
++                bsize = stfs.f_frsize;
++#else
++                struct statfs stfs;
++                if(fstatfs( fd, &stfs ) < 0)
++                {
++                    io->u.Status = FILE_GetNtStatus();
++                    break;
++                }
++                bsize = stfs.f_bsize;
++#endif
++                if(bsize == 2048)   /* assume CD-ROM */
++                {
++                    info->BytesPerSector = 2048;
++                    info->SectorsPerAllocationUnit = 1;
++                }
++                else
++                {
++                    info->BytesPerSector = 512;
++                    info->SectorsPerAllocationUnit = 8;
++                }
++                info->TotalAllocationUnits.QuadPart = bsize * stfs.f_blocks / (info->BytesPerSector * info->SectorsPerAllocationUnit);
++                info->CallerAvailableAllocationUnits.QuadPart = bsize * stfs.f_bavail / (info->BytesPerSector * info->SectorsPerAllocationUnit);
++                info->ActualAvailableAllocationUnits.QuadPart = bsize * stfs.f_bfree / (info->BytesPerSector * info->SectorsPerAllocationUnit);
++                io->Information = sizeof(*info);
++                io->u.Status = STATUS_SUCCESS;
++            }
++        }
+         break;
+     case FileFsObjectIdInformation:
+         FIXME( "%p: object id info not supported\n", handle );
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index c02c926..f96a7ff 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -1230,7 +1230,7 @@ static void test_file_full_size_information(void)
+ 
+     /* Assume No Quota Settings configured on Wine Testbot */
+     res = pNtQueryVolumeInformationFile(h, &io, &ffsi, sizeof ffsi, FileFsFullSizeInformation);
+-    todo_wine ok(res == STATUS_SUCCESS, "cannot get attributes, res %x\n", res);
++    ok(res == STATUS_SUCCESS, "cannot get attributes, res %x\n", res);
+     res = pNtQueryVolumeInformationFile(h, &io, &fsi, sizeof fsi, FileFsSizeInformation);
+     ok(res == STATUS_SUCCESS, "cannot get attributes, res %x\n", res);
+ 
+@@ -1246,8 +1246,6 @@ static void test_file_full_size_information(void)
+     ok(fsi.BytesPerSector == 512, "[fsi] BytesPerSector expected 512, got %d\n",fsi.BytesPerSector);
+     ok(fsi.SectorsPerAllocationUnit == 8, "[fsi] SectorsPerAllocationUnit expected 8, got %d\n",fsi.SectorsPerAllocationUnit);
+ 
+-    todo_wine
+-    {
+     ok(ffsi.TotalAllocationUnits.QuadPart > 0,
+         "[ffsi] TotalAllocationUnits expected positive, got negative value 0x%s\n",
+         debugstr_longlong(ffsi.TotalAllocationUnits.QuadPart));
+@@ -1265,14 +1263,10 @@ static void test_file_full_size_information(void)
+         "[ffsi] CallerAvailableAllocationUnits error fsi:0x%s, ffsi: 0x%s\n",
+         debugstr_longlong(fsi.AvailableAllocationUnits.QuadPart),
+         debugstr_longlong(ffsi.CallerAvailableAllocationUnits.QuadPart));
+-    }
+ 
+     /* Assume file system is NTFS */
+-    todo_wine
+-    {
+     ok(ffsi.BytesPerSector == 512, "[ffsi] BytesPerSector expected 512, got %d\n",ffsi.BytesPerSector);
+     ok(ffsi.SectorsPerAllocationUnit == 8, "[ffsi] SectorsPerAllocationUnit expected 8, got %d\n",ffsi.SectorsPerAllocationUnit);
+-    }
+ 
+     CloseHandle( h );
+ }
+-- 
+2.3.5
+

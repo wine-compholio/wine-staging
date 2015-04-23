@@ -145,6 +145,7 @@ patch_enable_all ()
 	enable_ntdll_Exception="$1"
 	enable_ntdll_FD_Cache="$1"
 	enable_ntdll_FileDispositionInformation="$1"
+	enable_ntdll_FileFsFullSizeInformation="$1"
 	enable_ntdll_Fix_Alignment="$1"
 	enable_ntdll_Fix_Free="$1"
 	enable_ntdll_Heap_FreeLists="$1"
@@ -508,6 +509,9 @@ patch_enable ()
 			;;
 		ntdll-FileDispositionInformation)
 			enable_ntdll_FileDispositionInformation="$2"
+			;;
+		ntdll-FileFsFullSizeInformation)
+			enable_ntdll_FileFsFullSizeInformation="$2"
 			;;
 		ntdll-Fix_Alignment)
 			enable_ntdll_Fix_Alignment="$2"
@@ -3234,6 +3238,18 @@ if test "$enable_ntdll_FD_Cache" -eq 1; then
 	patch_apply ntdll-FD_Cache/0001-ntdll-Use-lockfree-implementation-for-get_cached_fd.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Use lockfree implementation for get_cached_fd.", 5 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-FileFsFullSizeInformation
+# |
+# | Modified files:
+# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
+# |
+if test "$enable_ntdll_FileFsFullSizeInformation" -eq 1; then
+	patch_apply ntdll-FileFsFullSizeInformation/0001-ntdll-Add-support-for-FileFsFullSizeInformation-clas.patch
+	(
+		echo '+    { "Jianqiu Zhang", "ntdll: Add support for FileFsFullSizeInformation class in NtQueryVolumeInformationFile.", 2 },';
 	) >> "$patchlist"
 fi
 

@@ -39,8 +39,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [1]:**
+**Bug fixes and features included in the next upcoming release [2]:**
 
+* Fix regression caused by blacklisting supported OpenGL extensions ([Wine Bug #38480](https://bugs.winehq.org/show_bug.cgi?id=38480))
 * Support for FileFsFullSizeInformation information class
 
 
@@ -141,7 +142,7 @@ for more details.*
 * Fix multithreading issues with fullscreen clipping ([Wine Bug #38087](https://bugs.winehq.org/show_bug.cgi?id=38087))
 * Fix possible segfault in pulse_rd_loop of PulseAudio backend
 * Fix race-condition when threads are killed during shutdown
-* Fix regression caused by blacklisting supported OpenGL extensions ([Wine Bug #38264](https://bugs.winehq.org/show_bug.cgi?id=38264))
+* ~~Fix regression caused by blacklisting supported OpenGL extensions~~ ([Wine Bug #38264](https://bugs.winehq.org/show_bug.cgi?id=38264))
 * Fix return value of ScrollWindowEx for invisible windows ([Wine Bug #37706](https://bugs.winehq.org/show_bug.cgi?id=37706))
 * Fix texture corruption in CSI: Fatal Conspiracy ([Wine Bug #33768](https://bugs.winehq.org/show_bug.cgi?id=33768))
 * Fix unintentional leaks with ntdll internals

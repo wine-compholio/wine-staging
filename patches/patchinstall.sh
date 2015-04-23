@@ -3736,7 +3736,7 @@ fi
 # Patchset opengl32-Revert_Disable_Ext
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#38264] Fix regression caused by blacklisting supported OpenGL extensions
+# |   *	[#38480] Fix regression caused by blacklisting supported OpenGL extensions
 # |
 # | Modified files:
 # |   *	dlls/opengl32/wgl.c

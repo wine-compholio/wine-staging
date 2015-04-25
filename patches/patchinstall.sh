@@ -109,7 +109,6 @@ patch_enable_all ()
 	enable_imagehlp_BindImageEx="$1"
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_CompareStringEx="$1"
-	enable_kernel32_Console_Handles="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_GetDriveTypeW="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
@@ -401,9 +400,6 @@ patch_enable ()
 			;;
 		kernel32-CompareStringEx)
 			enable_kernel32_CompareStringEx="$2"
-			;;
-		kernel32-Console_Handles)
-			enable_kernel32_Console_Handles="$2"
 			;;
 		kernel32-CopyFileEx)
 			enable_kernel32_CopyFileEx="$2"
@@ -1095,16 +1091,12 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 fi
 
 if test "$enable_server_JobObjects" -eq 1; then
-	if test "$enable_kernel32_Console_Handles" -gt 1; then
-		abort "Patchset kernel32-Console_Handles disabled, but server-JobObjects depends on that."
-	fi
 	if test "$enable_server_Misc_ACL" -gt 1; then
 		abort "Patchset server-Misc_ACL disabled, but server-JobObjects depends on that."
 	fi
 	if test "$enable_server_OpenProcess" -gt 1; then
 		abort "Patchset server-OpenProcess disabled, but server-JobObjects depends on that."
 	fi
-	enable_kernel32_Console_Handles=1
 	enable_server_Misc_ACL=1
 	enable_server_OpenProcess=1
 fi
@@ -1313,8 +1305,10 @@ fi
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0001-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch
+	patch_apply Compiler_Warnings/0002-d3d9-tests-Avoid-warning-with-gcc-4.9.patch
 	(
 		echo '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },';
+		echo '+    { "Sebastian Lackner", "d3d9/tests: Avoid warning with gcc 4.9.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2665,18 +2659,6 @@ if test "$enable_kernel32_CompareStringEx" -eq 1; then
 	patch_apply kernel32-CompareStringEx/0001-kernel32-Silence-repeated-CompareStringEx-FIXME.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32: Silence repeated CompareStringEx FIXME.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-Console_Handles
-# |
-# | Modified files:
-# |   *	dlls/krnl386.exe16/file.c
-# |
-if test "$enable_kernel32_Console_Handles" -eq 1; then
-	patch_apply kernel32-Console_Handles/0001-krnl386-Invalid-console-handles-should-translate-int.patch
-	(
-		echo '+    { "Erich E. Hoover", "krnl386: Invalid console handles should translate into real handles when creating a new process.", 1 },';
 	) >> "$patchlist"
 fi
 

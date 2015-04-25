@@ -1,4 +1,4 @@
-From a161dbd1575b744e34b6282b0c7a21cab0668407 Mon Sep 17 00:00:00 2001
+From db0594c57b82e50612dab5008f8947aa6a15fd18 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 19 Sep 2013 17:51:38 +0200
 Subject: wined3d: Move most of volume_map to resource.c
@@ -7,16 +7,16 @@ The CPU access check can be moved once surfaces don't have to lock for
 sysmem blits. Surfaces and volume have different block alignment and
 boundary check behaviours.
 ---
- dlls/wined3d/resource.c        | 114 +++++++++++++++++++++++++++++++++++++++++
+ dlls/wined3d/resource.c        | 115 +++++++++++++++++++++++++++++++++++++++++
  dlls/wined3d/volume.c          | 101 +++---------------------------------
  dlls/wined3d/wined3d_private.h |   3 ++
- 3 files changed, 123 insertions(+), 95 deletions(-)
+ 3 files changed, 124 insertions(+), 95 deletions(-)
 
 diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
-index 8903353..b497955 100644
+index 8903353..4ca8189 100644
 --- a/dlls/wined3d/resource.c
 +++ b/dlls/wined3d/resource.c
-@@ -694,3 +694,117 @@ BOOL wined3d_resource_check_block_align(const struct wined3d_resource *resource,
+@@ -694,3 +694,118 @@ BOOL wined3d_resource_check_block_align(const struct wined3d_resource *resource,
  
      return TRUE;
  }
@@ -28,6 +28,7 @@ index 8903353..b497955 100644
 +    struct wined3d_context *context = NULL;
 +    BYTE *base_memory;
 +    const struct wined3d_format *format = resource->format;
++    const unsigned int fmt_flags = resource->format_flags;
 +
 +    TRACE("resource %p, map_desc %p, box %p, flags %#x.\n",
 +            resource, map_desc, box, flags);
@@ -63,7 +64,7 @@ index 8903353..b497955 100644
 +
 +    TRACE("Base memory pointer %p.\n", base_memory);
 +
-+    if (format->flags & WINED3DFMT_FLAG_BROKEN_PITCH)
++    if (fmt_flags & WINED3DFMT_FLAG_BROKEN_PITCH)
 +    {
 +        map_desc->row_pitch = resource->width * format->byte_count;
 +        map_desc->slice_pitch = map_desc->row_pitch * resource->height;
@@ -83,7 +84,7 @@ index 8903353..b497955 100644
 +        TRACE("Lock Box (%p) = l %u, t %u, r %u, b %u, fr %u, ba %u\n",
 +                box, box->left, box->top, box->right, box->bottom, box->front, box->back);
 +
-+        if ((format->flags & (WINED3DFMT_FLAG_BLOCKS | WINED3DFMT_FLAG_BROKEN_PITCH)) == WINED3DFMT_FLAG_BLOCKS)
++        if ((fmt_flags & (WINED3DFMT_FLAG_BLOCKS | WINED3DFMT_FLAG_BROKEN_PITCH)) == WINED3DFMT_FLAG_BLOCKS)
 +        {
 +            /* Compressed textures are block based, so calculate the offset of
 +             * the block that contains the top-left pixel of the locked rectangle. */
@@ -271,10 +272,10 @@ index 4d7b349..3a85103 100644
  
  static ULONG volume_resource_incref(struct wined3d_resource *resource)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index f504555..1d0d644 100644
+index f51a7bf..de55416 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2168,12 +2168,15 @@ void wined3d_resource_invalidate_location(struct wined3d_resource *resource, DWO
+@@ -2166,12 +2166,15 @@ void wined3d_resource_invalidate_location(struct wined3d_resource *resource, DWO
  BOOL wined3d_resource_is_offscreen(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
  void wined3d_resource_load_location(struct wined3d_resource *resource,
          struct wined3d_context *context, DWORD location) DECLSPEC_HIDDEN;

@@ -3190,10 +3190,10 @@ fi
 # |
 if test "$enable_ntdll_Dynamic_DST" -eq 1; then
 	patch_apply ntdll-Dynamic_DST/0001-ntdll-Add-support-for-Dynamic-DST-daylight-saving-ti.patch
-	patch_apply ntdll-Dynamic_DST/0002-wine.inf-Add-Dynamic-DST-exceptions-for-Israel-Stand.patch
+	patch_apply ntdll-Dynamic_DST/0002-wine.inf-Update-timezone-information.patch
 	(
 		echo '+    { "Michael Müller", "ntdll: Add support for Dynamic DST (daylight saving time) information in registry.", 1 },';
-		echo '+    { "Sebastian Lackner", "wine.inf: Add Dynamic DST exceptions for Israel Standard Time.", 1 },';
+		echo '+    { "Sebastian Lackner", "wine.inf: Update timezone information.", 1 },';
 	) >> "$patchlist"
 fi
 

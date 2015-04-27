@@ -218,6 +218,7 @@ patch_enable_all ()
 	enable_wbemprox_Localhost="$1"
 	enable_wbemprox_Win32_SystemEnclosure="$1"
 	enable_wiaservc_IEnumWIA_DEV_INFO="$1"
+	enable_windowscodecs_GIF_Decoder="$1"
 	enable_windowscodecs_TIFF_Decoder="$1"
 	enable_wine_inf_Performance="$1"
 	enable_wine_inf_ProfileList_UserSID="$1"
@@ -728,6 +729,9 @@ patch_enable ()
 			;;
 		wiaservc-IEnumWIA_DEV_INFO)
 			enable_wiaservc_IEnumWIA_DEV_INFO="$2"
+			;;
+		windowscodecs-GIF_Decoder)
+			enable_windowscodecs_GIF_Decoder="$2"
 			;;
 		windowscodecs-TIFF_Decoder)
 			enable_windowscodecs_TIFF_Decoder="$2"
@@ -4535,6 +4539,21 @@ if test "$enable_wiaservc_IEnumWIA_DEV_INFO" -eq 1; then
 	patch_apply wiaservc-IEnumWIA_DEV_INFO/0001-wiaservc-Implement-IWiaDevMgr-EnumDeviceInfo-by-retu.patch
 	(
 		echo '+    { "Mikael Ståldal", "wiaservc: Implement IWiaDevMgr::EnumDeviceInfo by returning an empty enumeration of devices.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windowscodecs-GIF_Decoder
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#32227] Ignore garbage after decoding gif lines
+# |
+# | Modified files:
+# |   *	dlls/windowscodecs/ungif.c
+# |
+if test "$enable_windowscodecs_GIF_Decoder" -eq 1; then
+	patch_apply windowscodecs-GIF_Decoder/0001-windowscodecs-Don-t-fail-to-decode-GIF-if-an-image-h.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Don'\''t fail to decode GIF if an image has been already loaded.", 1 },';
 	) >> "$patchlist"
 fi
 

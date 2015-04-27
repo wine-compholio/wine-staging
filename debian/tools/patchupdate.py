@@ -230,6 +230,7 @@ def read_patchset(revision = None):
     all_patches = {}
     name_to_id  = {}
     all_bugids  = set()
+    categories  = {}
 
     # Read in sorted order (to ensure created Makefile doesn't change too much)
     for name, directory in sorted(enum_directories(revision, config.path_patches)):
@@ -294,6 +295,14 @@ def read_patchset(revision = None):
                     if i != j and any([fnmatch.fnmatch(f, val) for f in other_patch.modified_files]):
                         patch.auto_depends.add(j)
 
+            elif key == "category":
+                val = "category-%s" % val
+                if name_to_id.has_key(val):
+                    raise PatchUpdaterError("Category name in definition file %s collides with patchset %s" % (filename, val))
+                if not categories.has_key(val):
+                    categories[val] = set()
+                categories[val].add(i)
+
             elif key == "fixes":
                 r = re.match("^[0-9]+$", val)
                 if r:
@@ -317,6 +326,15 @@ def read_patchset(revision = None):
 
             elif revision is None:
                 print "WARNING: Ignoring unknown command in definition file %s: %s" % (filename, line)
+
+    # Add virtual targets for all the categories
+    for category, indices in categories.iteritems():
+        patch = PatchSet(category, directory)
+        patch.depends = indices
+
+        i = next(unique_id)
+        all_patches[i] = patch
+        name_to_id[name] = i
 
     # To simplify the task of keeping the bug list up-to-date, list all bugs
     # which might require attention.
@@ -628,6 +646,11 @@ def generate_script(all_patches):
     # Generate code for applying all patchsets
     lines = []
     for i, patch in [(i, all_patches[i]) for i in resolved]:
+
+        # Categories do not have any files associated, so just skip over
+        if len(patch.files) == 0:
+            continue
+
         lines.append("# Patchset %s\n" % patch.name)
         lines.append("# |\n")
 

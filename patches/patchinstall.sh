@@ -1879,6 +1879,7 @@ fi
 # | This patchset fixes the following Wine bugs:
 # |   *	[#31984] Add stub for D3DXComputeTangentFrameEx
 # |   *	[#26379] Support for D3DXComputeNormals
+# |   *	[#38334] Add stub for D3DXFrameFind
 # |
 # | Modified files:
 # |   *	dlls/d3dx9_24/d3dx9_24.spec, dlls/d3dx9_25/d3dx9_25.spec, dlls/d3dx9_26/d3dx9_26.spec, dlls/d3dx9_27/d3dx9_27.spec,
@@ -1893,11 +1894,13 @@ if test "$enable_d3dx9_36_D3DXStubs" -eq 1; then
 	patch_apply d3dx9_36-D3DXStubs/0002-d3dx9_36-Add-stub-for-D3DXIntersect.patch
 	patch_apply d3dx9_36-D3DXStubs/0003-d3dx9_36-Implement-D3DXComputeNormals.patch
 	patch_apply d3dx9_36-D3DXStubs/0004-d3dx9_36-Add-stub-for-D3DXComputeNormalMap.patch
+	patch_apply d3dx9_36-D3DXStubs/0005-d3dx9_36-Add-D3DXFrameFind-stub.patch
 	(
 		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeTangentFrameEx.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXIntersect.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXComputeNormals.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeNormalMap.", 1 },';
+		echo '+    { "Andrey Gusev", "d3dx9_36: Add D3DXFrameFind stub.", 1 },';
 	) >> "$patchlist"
 fi
 

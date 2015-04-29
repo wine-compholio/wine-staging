@@ -72,6 +72,7 @@ patch_enable_all ()
 	enable_combase_String="$1"
 	enable_comctl32_LoadIconMetric="$1"
 	enable_configure_Absolute_RPATH="$1"
+	enable_d3d11_D3D11CreateDeviceAndSwapChain="$1"
 	enable_d3d8_Hotpatch="$1"
 	enable_d3d9_Skip_Tests="$1"
 	enable_d3d9_Surface_Refcount="$1"
@@ -290,6 +291,9 @@ patch_enable ()
 			;;
 		configure-Absolute_RPATH)
 			enable_configure_Absolute_RPATH="$2"
+			;;
+		d3d11-D3D11CreateDeviceAndSwapChain)
+			enable_d3d11_D3D11CreateDeviceAndSwapChain="$2"
 			;;
 		d3d8-Hotpatch)
 			enable_d3d8_Hotpatch="$2"
@@ -1695,6 +1699,21 @@ if test "$enable_configure_Absolute_RPATH" -eq 1; then
 	patch_apply configure-Absolute_RPATH/0001-configure-Also-add-the-absolute-RPATH-when-linking-a.patch
 	(
 		echo '+    { "Sebastian Lackner", "configure: Also add the absolute RPATH when linking against libwine.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3d11-D3D11CreateDeviceAndSwapChain
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33153] Add stub for d3d11.D3D11CreateDeviceAndSwapChain
+# |
+# | Modified files:
+# |   *	dlls/d3d11/d3d11.spec, dlls/d3d11/d3d11_main.c
+# |
+if test "$enable_d3d11_D3D11CreateDeviceAndSwapChain" -eq 1; then
+	patch_apply d3d11-D3D11CreateDeviceAndSwapChain/0001-d3d11-add-a-stub-for-D3D11CreateDeviceAndSwapChain.patch
+	(
+		echo '+    { "Austin English", "d3d11: add a stub for D3D11CreateDeviceAndSwapChain.", 1 },';
 	) >> "$patchlist"
 fi
 

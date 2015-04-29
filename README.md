@@ -39,8 +39,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [4]:**
+**Bug fixes and features included in the next upcoming release [5]:**
 
+* Add stub for d3d11.D3D11CreateDeviceAndSwapChain ([Wine Bug #33153](https://bugs.winehq.org/show_bug.cgi?id=33153))
 * Fix check for texture levels in wined3d_device_update_texture ([Wine Bug #38048](https://bugs.winehq.org/show_bug.cgi?id=38048))
 * Fix regression caused by blacklisting supported OpenGL extensions ([Wine Bug #38480](https://bugs.winehq.org/show_bug.cgi?id=38480))
 * Ignore garbage after decoding gif lines ([Wine Bug #32227](https://bugs.winehq.org/show_bug.cgi?id=32227))

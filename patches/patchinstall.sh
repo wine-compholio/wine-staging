@@ -66,6 +66,7 @@ patch_enable_all ()
 	enable_Exagear="$1"
 	enable_Pipelight="$1"
 	enable_Staging="$1"
+	enable_advapi32_ImpersonateAnonymousToken="$1"
 	enable_advapi32_LsaLookupSids="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_category_stable="$1"
@@ -273,6 +274,9 @@ patch_enable ()
 			;;
 		Staging)
 			enable_Staging="$2"
+			;;
+		advapi32-ImpersonateAnonymousToken)
+			enable_advapi32_ImpersonateAnonymousToken="$2"
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
@@ -1582,6 +1586,18 @@ if test "$enable_Staging" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset advapi32-ImpersonateAnonymousToken
+# |
+# | Modified files:
+# |   *	dlls/advapi32/advapi32.spec, dlls/advapi32/security.c
+# |
+if test "$enable_advapi32_ImpersonateAnonymousToken" -eq 1; then
+	patch_apply advapi32-ImpersonateAnonymousToken/0001-advapi32-Add-stub-for-ImpersonateAnonymousToken.patch
+	(
+		echo '+    { "Sebastian Lackner", "advapi32: Add stub for ImpersonateAnonymousToken.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2192,6 +2208,18 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-Level_Count
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2224,18 +2252,6 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 

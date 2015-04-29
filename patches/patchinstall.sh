@@ -141,7 +141,6 @@ patch_enable_all ()
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_DVD_Read_Size="$1"
 	enable_ntdll_DllRedirects="$1"
-	enable_ntdll_Dynamic_DST="$1"
 	enable_ntdll_Exception="$1"
 	enable_ntdll_FD_Cache="$1"
 	enable_ntdll_FileDispositionInformation="$1"
@@ -216,7 +215,6 @@ patch_enable_all ()
 	enable_vcomp_Stub_Functions="$1"
 	enable_version_VerQueryValue="$1"
 	enable_version_VersionInfoEx="$1"
-	enable_wbemprox_Localhost="$1"
 	enable_wbemprox_Win32_SystemEnclosure="$1"
 	enable_wiaservc_IEnumWIA_DEV_INFO="$1"
 	enable_windowscodecs_GIF_Decoder="$1"
@@ -500,9 +498,6 @@ patch_enable ()
 		ntdll-DllRedirects)
 			enable_ntdll_DllRedirects="$2"
 			;;
-		ntdll-Dynamic_DST)
-			enable_ntdll_Dynamic_DST="$2"
-			;;
 		ntdll-Exception)
 			enable_ntdll_Exception="$2"
 			;;
@@ -724,9 +719,6 @@ patch_enable ()
 			;;
 		version-VersionInfoEx)
 			enable_version_VersionInfoEx="$2"
-			;;
-		wbemprox-Localhost)
-			enable_wbemprox_Localhost="$2"
 			;;
 		wbemprox-Win32_SystemEnclosure)
 			enable_wbemprox_Win32_SystemEnclosure="$2"
@@ -1099,9 +1091,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_ntdll_APC_Start_Process" -gt 1; then
 		abort "Patchset ntdll-APC_Start_Process disabled, but category-stable depends on that."
 	fi
-	if test "$enable_ntdll_Dynamic_DST" -gt 1; then
-		abort "Patchset ntdll-Dynamic_DST disabled, but category-stable depends on that."
-	fi
 	if test "$enable_ntdll_Heap_FreeLists" -gt 1; then
 		abort "Patchset ntdll-Heap_FreeLists disabled, but category-stable depends on that."
 	fi
@@ -1188,7 +1177,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_kernel32_GetStringTypeW=1
 	enable_libs_Unicode_Collation=1
 	enable_ntdll_APC_Start_Process=1
-	enable_ntdll_Dynamic_DST=1
 	enable_ntdll_Heap_FreeLists=1
 	enable_ntdll_NtSetLdtEntries=1
 	enable_ntdll_Pipe_SpecialCharacters=1
@@ -3413,21 +3401,6 @@ if test "$enable_ntdll_DVD_Read_Size" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-Dynamic_DST
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36374] Add Dynamic DST exceptions for Israel Standard Time
-# |
-# | Modified files:
-# |   *	loader/wine.inf.in
-# |
-if test "$enable_ntdll_Dynamic_DST" -eq 1; then
-	patch_apply ntdll-Dynamic_DST/0001-wine.inf-Update-timezone-information.patch
-	(
-		echo '+    { "Sebastian Lackner", "wine.inf: Update timezone information.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Exception
 # |
 # | Modified files:
@@ -4659,18 +4632,6 @@ if test "$enable_version_VersionInfoEx" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "version: Partially implement GetFileVersionInfoSizeExA/W.", 1 },';
 		echo '+    { "Sebastian Lackner", "version: Partially implement GetFileVersionInfoExA/W.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wbemprox-Localhost
-# |
-# | Modified files:
-# |   *	dlls/wbemprox/wbemlocator.c
-# |
-if test "$enable_wbemprox_Localhost" -eq 1; then
-	patch_apply wbemprox-Localhost/0001-wbemprox-Allow-connecting-to-localhost.patch
-	(
-		echo '+    { "Michael Müller", "wbemprox: Allow connecting to localhost.", 1 },';
 	) >> "$patchlist"
 fi
 

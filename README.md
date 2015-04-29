@@ -56,7 +56,7 @@ releases, take a look at the
 [changelog](https://github.com/wine-compholio/wine-staging/blob/master/debian/changelog)
 for more details.*
 
-* Add Dynamic DST exceptions for Israel Standard Time ([Wine Bug #36374](https://bugs.winehq.org/show_bug.cgi?id=36374))
+* ~~Add Dynamic DST exceptions for Israel Standard Time~~ ([Wine Bug #36374](https://bugs.winehq.org/show_bug.cgi?id=36374))
 * Add a ProfileList\<UserSID> registry subkey ([Wine Bug #15670](https://bugs.winehq.org/show_bug.cgi?id=15670))
 * Add default ACLs for user shell folders
 * Add implementation for CreateThreadpool ([Wine Bug #35192](https://bugs.winehq.org/show_bug.cgi?id=35192))
@@ -206,7 +206,7 @@ for more details.*
 * Process Hacker 2.x needs ntoskrnl.ProbeForRead ([Wine Bug #38103](https://bugs.winehq.org/show_bug.cgi?id=38103))
 * Properly handle closing sockets during a select call ([Wine Bug #38399](https://bugs.winehq.org/show_bug.cgi?id=38399))
 * Python PIP needs better NtQueryInformationJobObject stub
-* Recognize localhost as local machine in wbemprox
+* ~~Recognize localhost as local machine in wbemprox~~
 * Reduced SetTimer minimum value from 10 ms to 5 ms (improves Silverlight framerates)
 * Reset device state in SysKeyboard*Impl_Acquire ([Wine Bug #11607](https://bugs.winehq.org/show_bug.cgi?id=11607))
 * Return an error when trying to open a terminated process ([Wine Bug #37087](https://bugs.winehq.org/show_bug.cgi?id=37087))
@@ -229,7 +229,7 @@ for more details.*
 * Support for D3DXGetShaderInputSemantics ([Wine Bug #22682](https://bugs.winehq.org/show_bug.cgi?id=22682))
 * Support for DDS file format in D3DXSaveTextureToFileInMemory ([Wine Bug #26898](https://bugs.winehq.org/show_bug.cgi?id=26898))
 * Support for DOS hidden/system file attributes ([Wine Bug #9158](https://bugs.winehq.org/show_bug.cgi?id=9158))
-* Support for Dynamic DST (daylight saving time) information in registry
+* ~~Support for Dynamic DST (daylight saving time) information in registry~~
 * Support for GdipCreateRegionRgnData ([Wine Bug #34843](https://bugs.winehq.org/show_bug.cgi?id=34843))
 * Support for GetFinalPathNameByHandle ([Wine Bug #34851](https://bugs.winehq.org/show_bug.cgi?id=34851))
 * Support for GetSystemTimes ([Wine Bug #19813](https://bugs.winehq.org/show_bug.cgi?id=19813))

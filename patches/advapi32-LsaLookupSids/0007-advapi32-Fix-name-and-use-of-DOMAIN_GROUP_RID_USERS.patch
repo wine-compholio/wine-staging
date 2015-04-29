@@ -1,0 +1,53 @@
+From 83517396c266c2de290670128d678770f5d79cc9 Mon Sep 17 00:00:00 2001
+From: Qian Hong <qhong@codeweavers.com>
+Date: Tue, 28 Apr 2015 23:00:08 +0800
+Subject: advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.
+
+---
+ dlls/advapi32/security.c       | 7 +++++--
+ dlls/advapi32/tests/security.c | 4 ++--
+ 2 files changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/advapi32/security.c b/dlls/advapi32/security.c
+index d27b2e7..2362dd5 100644
+--- a/dlls/advapi32/security.c
++++ b/dlls/advapi32/security.c
+@@ -191,7 +191,7 @@ static const WCHAR Domain_Admins[] = { 'D','o','m','a','i','n',' ','A','d','m','
+ static const WCHAR Domain_Computers[] = { 'D','o','m','a','i','n',' ','C','o','m','p','u','t','e','r','s',0 };
+ static const WCHAR Domain_Controllers[] = { 'D','o','m','a','i','n',' ','C','o','n','t','r','o','l','l','e','r','s',0 };
+ static const WCHAR Domain_Guests[] = { 'D','o','m','a','i','n',' ','G','u','e','s','t','s',0 };
+-static const WCHAR Domain_Users[] = { 'D','o','m','a','i','n',' ','U','s','e','r','s',0 };
++static const WCHAR None[] = { 'N','o','n','e',0 };
+ static const WCHAR Enterprise_Admins[] = { 'E','n','t','e','r','p','r','i','s','e',' ','A','d','m','i','n','s',0 };
+ static const WCHAR ENTERPRISE_DOMAIN_CONTROLLERS[] = { 'E','N','T','E','R','P','R','I','S','E',' ','D','O','M','A','I','N',' ','C','O','N','T','R','O','L','L','E','R','S',0 };
+ static const WCHAR Everyone[] = { 'E','v','e','r','y','o','n','e',0 };
+@@ -2206,7 +2206,10 @@ LookupAccountSidW(
+                             ac = Domain_Admins;
+                             break;
+                         case DOMAIN_GROUP_RID_USERS:
+-                            ac = Domain_Users;
++                            /* MSDN says the name of DOMAIN_GROUP_RID_USERS is Domain Users,
++                             * tests show that MSDN seems to be wrong. */
++                            ac = None;
++                            use = 2;
+                             break;
+                         case DOMAIN_GROUP_RID_GUESTS:
+                             ac = Domain_Guests;
+diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
+index 573119f..490ce26 100644
+--- a/dlls/advapi32/tests/security.c
++++ b/dlls/advapi32/tests/security.c
+@@ -2578,8 +2578,8 @@ static void test_process_security(void)
+     dom_size = sizeof(domain);
+     ret = LookupAccountSidA( NULL, UsersSid, account, &acc_size, domain, &dom_size, &use );
+     ok(ret, "LookupAccountSid failed with %d\n", ret);
+-    todo_wine ok(use == SidTypeGroup, "expect SidTypeGroup, got %d\n", use);
+-    todo_wine ok(!strcmp(account, "None"), "expect None, got %s\n", account);
++    ok(use == SidTypeGroup, "expect SidTypeGroup, got %d\n", use);
++    ok(!strcmp(account, "None"), "expect None, got %s\n", account);
+ 
+     res = GetTokenInformation( token, TokenUser, NULL, 0, &size );
+     ok(!res, "Expected failure, got %d\n", res);
+-- 
+2.3.5
+

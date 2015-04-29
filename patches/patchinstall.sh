@@ -1435,6 +1435,17 @@ if test "$enable_d3dx9_24_ID3DXEffect" -eq 1; then
 	enable_d3dx9_25_ID3DXEffect=1
 fi
 
+if test "$enable_advapi32_LsaLookupSids" -eq 1; then
+	if test "$enable_server_CreateProcess_ACLs" -gt 1; then
+		abort "Patchset server-CreateProcess_ACLs disabled, but advapi32-LsaLookupSids depends on that."
+	fi
+	if test "$enable_server_Misc_ACL" -gt 1; then
+		abort "Patchset server-Misc_ACL disabled, but advapi32-LsaLookupSids depends on that."
+	fi
+	enable_server_CreateProcess_ACLs=1
+	enable_server_Misc_ACL=1
+fi
+
 if test "$enable_Exagear" -eq 1; then
 	if test "$enable_ntdll_WRITECOPY" -gt 1; then
 		abort "Patchset ntdll-WRITECOPY disabled, but Exagear depends on that."
@@ -1579,21 +1590,63 @@ if test "$enable_Staging" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-CreateProcess_ACLs
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#22006] Support for process ACLs
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, dlls/kernel32/process.c, server/process.c, server/protocol.def
+# |
+if test "$enable_server_CreateProcess_ACLs" -eq 1; then
+	patch_apply server-CreateProcess_ACLs/0001-server-Support-for-thread-and-process-security-descr.patch
+	patch_apply server-CreateProcess_ACLs/0002-kernel32-Implement-passing-security-descriptors-from.patch
+	patch_apply server-CreateProcess_ACLs/0003-advapi32-tests-Add-additional-tests-for-passing-a-th.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
+		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
+		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset advapi32-LsaLookupSids
 # |
 # | Modified files:
-# |   *	dlls/advapi32/lsa.c
+# |   *	dlls/advapi32/lsa.c, dlls/advapi32/security.c, dlls/advapi32/tests/security.c, server/token.c
 # |
 if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 	patch_apply advapi32-LsaLookupSids/0001-advapi32-Initialize-buffer-length-to-zero-in-LsaLook.patch
 	patch_apply advapi32-LsaLookupSids/0002-advapi32-Prepend-a-hidden-LSA_TRUST_INFORMATION-in-L.patch
 	patch_apply advapi32-LsaLookupSids/0003-advapi32-Prepend-a-hidden-LSA_TRUST_INFORMATION-in-L.patch
 	patch_apply advapi32-LsaLookupSids/0004-advapi32-Fallback-to-Sid-string-when-LookupAccountSi.patch
+	patch_apply advapi32-LsaLookupSids/0005-advapi32-tests-Test-prefix-and-use-of-TokenPrimaryGr.patch
+	patch_apply advapi32-LsaLookupSids/0006-server-Create-primary-group-using-DOMAIN_GROUP_RID_U.patch
+	patch_apply advapi32-LsaLookupSids/0007-advapi32-Fix-name-and-use-of-DOMAIN_GROUP_RID_USERS.patch
 	(
 		echo '+    { "Qian Hong", "advapi32: Initialize buffer length to zero in LsaLookupSids to prevent crash.", 2 },';
 		echo '+    { "Qian Hong", "advapi32: Prepend a hidden LSA_TRUST_INFORMATION in LsaLookupSids to avoid crash when Domains[-1] incorrectly accessed by application.", 2 },';
 		echo '+    { "Qian Hong", "advapi32: Prepend a hidden LSA_TRUST_INFORMATION in LsaLookupNames2 to avoid crash when Domains[-1] incorrectly accessed by application.", 2 },';
 		echo '+    { "Qian Hong", "advapi32: Fallback to Sid string when LookupAccountSid fails.", 1 },';
+		echo '+    { "Qian Hong", "advapi32/tests: Test prefix and use of TokenPrimaryGroup Sid.", 1 },';
+		echo '+    { "Qian Hong", "server: Create primary group using DOMAIN_GROUP_RID_USERS.", 1 },';
+		echo '+    { "Qian Hong", "advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4087,25 +4140,6 @@ if test "$enable_server_ClipCursor" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-CreateProcess_ACLs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#22006] Support for process ACLs
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, dlls/kernel32/process.c, server/process.c, server/protocol.def
-# |
-if test "$enable_server_CreateProcess_ACLs" -eq 1; then
-	patch_apply server-CreateProcess_ACLs/0001-server-Support-for-thread-and-process-security-descr.patch
-	patch_apply server-CreateProcess_ACLs/0002-kernel32-Implement-passing-security-descriptors-from.patch
-	patch_apply server-CreateProcess_ACLs/0003-advapi32-tests-Add-additional-tests-for-passing-a-th.patch
-	(
-		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
-		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
-		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-Delete_On_Close
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4120,23 +4154,6 @@ if test "$enable_server_Delete_On_Close" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for deleting readonly files with NtCreateFile.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Fix handling of opening read-only files with FILE_DELETE_ON_CLOSE.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 

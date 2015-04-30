@@ -1,4 +1,4 @@
-From e6796ac98c5263a0cec410ecaf7392f2a22ff4da Mon Sep 17 00:00:00 2001
+From 76b683f536da9f8465eca14ed1505dff8596bf5c Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 4 Apr 2013 11:50:09 +0200
 Subject: wined3d: Request a glFinish before modifying resources outside the cs
@@ -13,7 +13,7 @@ Subject: wined3d: Request a glFinish before modifying resources outside the cs
  6 files changed, 104 insertions(+)
 
 diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
-index bc34050..d2c1d62 100644
+index df82bd2..e1c40bb 100644
 --- a/dlls/wined3d/buffer.c
 +++ b/dlls/wined3d/buffer.c
 @@ -931,6 +931,15 @@ void buffer_internal_preload(struct wined3d_buffer *buffer, struct wined3d_conte
@@ -51,10 +51,10 @@ index bc34050..d2c1d62 100644
      /* Filter redundant WINED3D_MAP_DISCARD maps. The 3DMark2001 multitexture
       * fill rate test seems to depend on this. When we map a buffer with
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 56cbcb6..8b24e73 100644
+index 410a431..b2d087d 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -65,6 +65,7 @@ enum wined3d_cs_op
+@@ -66,6 +66,7 @@ enum wined3d_cs_op
      WINED3D_CS_OP_STATEBLOCK,
      WINED3D_CS_OP_SET_VS_CONSTS_F,
      WINED3D_CS_OP_SET_PS_CONSTS_F,
@@ -62,7 +62,7 @@ index 56cbcb6..8b24e73 100644
      WINED3D_CS_OP_STOP,
  };
  
-@@ -284,6 +285,11 @@ struct wined3d_cs_set_consts_f
+@@ -294,6 +295,11 @@ struct wined3d_cs_set_consts_f
      float constants[4];
  };
  
@@ -74,7 +74,7 @@ index 56cbcb6..8b24e73 100644
  /* FIXME: The list synchronization probably isn't particularly fast. */
  static void wined3d_cs_list_enqueue(struct wined3d_cs_list *list, struct wined3d_cs_block *block)
  {
-@@ -1250,6 +1256,29 @@ void wined3d_cs_emit_reset_state(struct wined3d_cs *cs)
+@@ -1363,6 +1369,29 @@ void wined3d_cs_emit_reset_state(struct wined3d_cs *cs)
      cs->ops->submit(cs);
  }
  
@@ -104,7 +104,7 @@ index 56cbcb6..8b24e73 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_FENCE                      */ wined3d_cs_exec_fence,
-@@ -1281,6 +1310,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -1395,6 +1424,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_STATEBLOCK                 */ wined3d_cs_exec_transfer_stateblock,
      /* WINED3D_CS_OP_SET_VS_CONSTS_F            */ wined3d_cs_exec_set_vs_consts_f,
      /* WINED3D_CS_OP_SET_PS_CONSTS_F            */ wined3d_cs_exec_set_ps_consts_f,
@@ -113,10 +113,10 @@ index 56cbcb6..8b24e73 100644
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 2aba2a4..4d15518 100644
+index a6a88ae..7ab8fc0 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -2737,6 +2737,13 @@ static HRESULT process_vertices_strided(const struct wined3d_device *device, DWO
+@@ -2759,6 +2759,13 @@ static HRESULT process_vertices_strided(const struct wined3d_device *device, DWO
          return hr;
      }
  
@@ -130,8 +130,8 @@ index 2aba2a4..4d15518 100644
      wined3d_device_get_transform(device, WINED3D_TS_VIEW, &view_mat);
      wined3d_device_get_transform(device, WINED3D_TS_PROJECTION, &proj_mat);
      wined3d_device_get_transform(device, WINED3D_TS_WORLD_MATRIX(0), &world_mat);
-@@ -3531,6 +3538,13 @@ HRESULT CDECL wined3d_device_update_texture(struct wined3d_device *device,
-         return WINED3DERR_INVALIDCALL;
+@@ -3572,6 +3579,13 @@ HRESULT CDECL wined3d_device_update_texture(struct wined3d_device *device,
+         ++src_skip_levels;
      }
  
 +    if (wined3d_settings.cs_multithreaded)
@@ -144,7 +144,7 @@ index 2aba2a4..4d15518 100644
      /* Make sure that the destination texture is loaded. */
      context = context_acquire(device, NULL);
      wined3d_texture_load(dst_texture, context, FALSE);
-@@ -3768,6 +3782,13 @@ HRESULT CDECL wined3d_device_update_surface(struct wined3d_device *device,
+@@ -3818,6 +3832,13 @@ HRESULT CDECL wined3d_device_update_surface(struct wined3d_device *device,
          return WINED3DERR_INVALIDCALL;
      }
  
@@ -158,7 +158,7 @@ index 2aba2a4..4d15518 100644
      return surface_upload_from_surface(dst_surface, dst_point, src_surface, src_rect);
  }
  
-@@ -3870,6 +3891,13 @@ HRESULT CDECL wined3d_device_clear_rendertarget_view(struct wined3d_device *devi
+@@ -3920,6 +3941,13 @@ HRESULT CDECL wined3d_device_clear_rendertarget_view(struct wined3d_device *devi
          rect = &r;
      }
  
@@ -172,7 +172,7 @@ index 2aba2a4..4d15518 100644
      resource = wined3d_texture_get_sub_resource(wined3d_texture_from_resource(resource), view->sub_resource_idx);
  
      return surface_color_fill(surface_from_resource(resource), rect, color);
-@@ -4200,6 +4228,13 @@ void CDECL wined3d_device_evict_managed_resources(struct wined3d_device *device)
+@@ -4233,6 +4261,13 @@ void CDECL wined3d_device_evict_managed_resources(struct wined3d_device *device)
  
      TRACE("device %p.\n", device);
  
@@ -186,7 +186,7 @@ index 2aba2a4..4d15518 100644
      LIST_FOR_EACH_ENTRY_SAFE(resource, cursor, &device->resources, struct wined3d_resource, resource_list_entry)
      {
          TRACE("Checking resource %p for eviction.\n", resource);
-@@ -4324,6 +4359,13 @@ HRESULT CDECL wined3d_device_reset(struct wined3d_device *device,
+@@ -4358,6 +4393,13 @@ HRESULT CDECL wined3d_device_reset(struct wined3d_device *device,
  
      TRACE("device %p, swapchain_desc %p, mode %p, callback %p.\n", device, swapchain_desc, mode, callback);
  
@@ -201,10 +201,10 @@ index 2aba2a4..4d15518 100644
      {
          ERR("Failed to get the first implicit swapchain.\n");
 diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
-index 8486dc3..bf228d1 100644
+index 568f2cb..f379bbc 100644
 --- a/dlls/wined3d/resource.c
 +++ b/dlls/wined3d/resource.c
-@@ -702,6 +702,13 @@ HRESULT wined3d_resource_map(struct wined3d_resource *resource,
+@@ -716,6 +716,13 @@ HRESULT wined3d_resource_map(struct wined3d_resource *resource,
  
      flags = wined3d_resource_sanitize_map_flags(resource, flags);
  
@@ -219,10 +219,10 @@ index 8486dc3..bf228d1 100644
          context = context_acquire(device, NULL);
  
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index 8f8af4d..97450ef 100644
+index ef683f7..b81d137 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
-@@ -5051,6 +5051,13 @@ HRESULT CDECL wined3d_surface_blt(struct wined3d_surface *dst_surface, const REC
+@@ -5119,6 +5119,13 @@ HRESULT CDECL wined3d_surface_blt(struct wined3d_surface *dst_surface, const REC
          flags &= ~WINEDDBLT_DONOTWAIT;
      }
  
@@ -237,10 +237,10 @@ index 8f8af4d..97450ef 100644
      {
          WARN("D3D not initialized, using fallback.\n");
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index d673a8f..ba0ce26 100644
+index 4f232be..6116a5a 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2615,6 +2615,7 @@ void wined3d_cs_emit_set_vertex_declaration(struct wined3d_cs *cs,
+@@ -2663,6 +2663,7 @@ void wined3d_cs_emit_set_vertex_declaration(struct wined3d_cs *cs,
  void wined3d_cs_emit_set_viewport(struct wined3d_cs *cs, const struct wined3d_viewport *viewport) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_consts_f(struct wined3d_cs *cs, UINT start_register, const float *constants,
          UINT vector4f_count, enum wined3d_shader_type type) DECLSPEC_HIDDEN;
@@ -249,5 +249,5 @@ index d673a8f..ba0ce26 100644
  /* Direct3D terminology with little modifications. We do not have an issued state
   * because only the driver knows about it, but we have a created state because d3d
 -- 
-2.1.3
+2.3.5
 

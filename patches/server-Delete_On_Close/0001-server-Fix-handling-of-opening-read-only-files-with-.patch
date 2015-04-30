@@ -1,4 +1,4 @@
-From 6f4c5f44d93d38b4b71aa56fe2ad0eb4b31fbe7f Mon Sep 17 00:00:00 2001
+From d6491287dccc2e5cc97c160bce8c39555e478044 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 17 Apr 2015 12:40:38 +0200
 Subject: server: Fix handling of opening read-only files with
@@ -25,25 +25,28 @@ index 006db1c..d16a0a1 100644
  			  FILE_OPEN, FILE_DELETE_ON_CLOSE | FILE_NON_DIRECTORY_FILE, NULL, 0);
      if (status == STATUS_SUCCESS) status = NtClose(hFile);
 diff --git a/dlls/kernel32/tests/file.c b/dlls/kernel32/tests/file.c
-index 3a82364..0f5ac52 100644
+index 9a6e972..d54b45d 100644
 --- a/dlls/kernel32/tests/file.c
 +++ b/dlls/kernel32/tests/file.c
-@@ -355,14 +355,10 @@ static void test__lcreat( void )
+@@ -355,17 +355,13 @@ static void test__lcreat( void )
      status = NtCreateFile( &file, DELETE, &attr, &io, NULL, 0,
                             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                             FILE_OPEN, FILE_DELETE_ON_CLOSE | FILE_NON_DIRECTORY_FILE, NULL, 0 );
 -    todo_wine
      ok( status == STATUS_CANNOT_DELETE, "expected STATUS_CANNOT_DELETE, got %08x\n", status );
      if (!status) CloseHandle( file );
+ 
+     RtlFreeUnicodeString( &filenameW );
+ 
 -    todo_wine
      ok( GetFileAttributesA( filename ) != INVALID_FILE_ATTRIBUTES, "file was deleted\n" );
 -    todo_wine
      ok( SetFileAttributesA(filename, FILE_ATTRIBUTE_NORMAL ) != 0, "couldn't change attributes on file\n" );
 -    todo_wine
-     ok( DeleteFileA( filename ) != 0, "now it should be possible to delete the file!\n" );
+     ok( DeleteFileA( filename ) != 0, "now it should be possible to delete the file\n" );
  
      filehandle = _lcreat( filename, 2 );
-@@ -1718,14 +1714,12 @@ static void test_DeleteFileA( void )
+@@ -1721,14 +1717,12 @@ static void test_DeleteFileA( void )
  
      SetLastError(0xdeadbeef);
      ret = DeleteFileA(temp_file);
@@ -59,10 +62,10 @@ index 3a82364..0f5ac52 100644
  
      SetLastError(0xdeadbeef);
 diff --git a/server/fd.c b/server/fd.c
-index 9a4aac4..ca68e49 100644
+index e3b722c..eeb3055 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -1858,6 +1858,16 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+@@ -1832,6 +1832,16 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
          fd->cacheable = !inode->device->removable;
          list_add_head( &inode->open, &fd->inode_entry );
  

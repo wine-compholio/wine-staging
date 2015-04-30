@@ -231,7 +231,6 @@ patch_enable_all ()
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
-	enable_wined3d_Level_Count="$1"
 	enable_wined3d_Multisampling="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_UnhandledBlendFactor="$1"
@@ -769,9 +768,6 @@ patch_enable ()
 			;;
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
-			;;
-		wined3d-Level_Count)
-			enable_wined3d_Level_Count="$2"
 			;;
 		wined3d-Multisampling)
 			enable_wined3d_Multisampling="$2"
@@ -1394,13 +1390,9 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_wined3d_DXTn" -gt 1; then
 		abort "Patchset wined3d-DXTn disabled, but wined3d-CSMT_Helper depends on that."
 	fi
-	if test "$enable_wined3d_Level_Count" -gt 1; then
-		abort "Patchset wined3d-Level_Count disabled, but wined3d-CSMT_Helper depends on that."
-	fi
 	enable_makedep_PARENTSPEC=1
 	enable_ntdll_DllRedirects=1
 	enable_wined3d_DXTn=1
-	enable_wined3d_Level_Count=1
 fi
 
 if test "$enable_dsound_EAX" -eq 1; then
@@ -2217,21 +2209,6 @@ if test "$enable_makedep_PARENTSPEC" -eq 1; then
 	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
 	(
 		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Level_Count
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38048] Fix check for texture levels in wined3d_device_update_texture
-# |
-# | Modified files:
-# |   *	dlls/wined3d/device.c
-# |
-if test "$enable_wined3d_Level_Count" -eq 1; then
-	patch_apply wined3d-Level_Count/0001-wined3d-Fix-check-for-texture-levels-in-wined3d_devi.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Fix check for texture levels in wined3d_device_update_texture.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4160,10 +4137,8 @@ fi
 # |   *	dlls/kernel32/file.c, dlls/kernel32/tests/file.c, server/fd.c
 # |
 if test "$enable_server_Delete_On_Close" -eq 1; then
-	patch_apply server-Delete_On_Close/0001-kernel32-tests-Add-tests-for-deleting-readonly-files.patch
-	patch_apply server-Delete_On_Close/0002-server-Fix-handling-of-opening-read-only-files-with-.patch
+	patch_apply server-Delete_On_Close/0001-server-Fix-handling-of-opening-read-only-files-with-.patch
 	(
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for deleting readonly files with NtCreateFile.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Fix handling of opening read-only files with FILE_DELETE_ON_CLOSE.", 1 },';
 	) >> "$patchlist"
 fi

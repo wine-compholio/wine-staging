@@ -1,0 +1,68 @@
+From 0c9bbd27acb0df45ec7e6a501cb5e2b14bd69161 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 2 May 2015 18:43:05 +0200
+Subject: krnl386.exe16: Do not omit mandatory argument for VirtualProtect.
+
+---
+ dlls/krnl386.exe16/dosmem.c | 6 ++++--
+ dlls/krnl386.exe16/dosvm.c  | 3 ++-
+ 2 files changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/krnl386.exe16/dosmem.c b/dlls/krnl386.exe16/dosmem.c
+index f0feba9..b899f7b 100644
+--- a/dlls/krnl386.exe16/dosmem.c
++++ b/dlls/krnl386.exe16/dosmem.c
+@@ -302,6 +302,7 @@ BOOL DOSMEM_InitDosMemory(void)
+ {
+     static BOOL done;
+     static HANDLE hRunOnce;
++    DWORD old_prot;
+ 
+     if (done) return TRUE;
+ 
+@@ -317,7 +318,7 @@ BOOL DOSMEM_InitDosMemory(void)
+ 	    /* ok, we're the winning thread */
+             if (!(ret = VirtualProtect( DOSMEM_dosmem + DOSMEM_protect,
+                                         DOSMEM_SIZE - DOSMEM_protect,
+-                                        PAGE_READWRITE, NULL )))
++                                        PAGE_READWRITE, &old_prot )))
+                 ERR("Cannot load access low 1Mb, DOS subsystem unavailable\n");
+             RemoveVectoredExceptionHandler( vectored_handler );
+ 
+@@ -650,10 +651,11 @@ UINT DOSMEM_Available(void)
+ BOOL DOSMEM_MapDosLayout(void)
+ {
+     static BOOL already_mapped;
++    DWORD old_prot;
+ 
+     if (!already_mapped)
+     {
+-        if (DOSMEM_dosmem || !VirtualProtect( NULL, DOSMEM_SIZE, PAGE_EXECUTE_READWRITE, NULL ))
++        if (DOSMEM_dosmem || !VirtualProtect( NULL, DOSMEM_SIZE, PAGE_EXECUTE_READWRITE, &old_prot ))
+         {
+             ERR( "Need full access to the first megabyte for DOS mode\n" );
+             ExitProcess(1);
+diff --git a/dlls/krnl386.exe16/dosvm.c b/dlls/krnl386.exe16/dosvm.c
+index 87adf33..4e76215 100644
+--- a/dlls/krnl386.exe16/dosvm.c
++++ b/dlls/krnl386.exe16/dosvm.c
+@@ -827,6 +827,7 @@ LPVOID DOSVM_AllocDataUMB( DWORD size, WORD *segment, WORD *selector )
+  */
+ void DOSVM_InitSegments(void)
+ {
++    DWORD old_prot;
+     LPSTR ptr;
+     int   i;
+ 
+@@ -966,7 +967,7 @@ void DOSVM_InitSegments(void)
+     /*
+      * As we store code in UMB we should make sure it is executable
+      */
+-    VirtualProtect((void *)DOSVM_UMB_BOTTOM, DOSVM_UMB_TOP - DOSVM_UMB_BOTTOM, PAGE_EXECUTE_READWRITE, NULL);
++    VirtualProtect((void *)DOSVM_UMB_BOTTOM, DOSVM_UMB_TOP - DOSVM_UMB_BOTTOM, PAGE_EXECUTE_READWRITE, &old_prot);
+ 
+     event_notifier = CreateEventW(NULL, FALSE, FALSE, NULL);
+ }
+-- 
+2.3.5
+

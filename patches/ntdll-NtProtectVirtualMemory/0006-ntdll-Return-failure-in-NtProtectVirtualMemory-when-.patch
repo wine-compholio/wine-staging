@@ -1,0 +1,58 @@
+From 4fa917bcdc3685a9181df8d1d7c1b3b07d816fc6 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 2 May 2015 18:46:38 +0200
+Subject: ntdll: Return failure in NtProtectVirtualMemory when last argument is
+ omitted.
+
+---
+ dlls/kernel32/tests/virtual.c | 5 -----
+ dlls/ntdll/virtual.c          | 3 +++
+ 2 files changed, 3 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/kernel32/tests/virtual.c b/dlls/kernel32/tests/virtual.c
+index 311e87b..1c70eca 100644
+--- a/dlls/kernel32/tests/virtual.c
++++ b/dlls/kernel32/tests/virtual.c
+@@ -2492,25 +2492,20 @@ static void test_VirtualProtect(void)
+ 
+     SetLastError(0xdeadbeef);
+     ret = VirtualProtect(base, si.dwPageSize, PAGE_READONLY, NULL);
+-    todo_wine
+     ok(!ret, "VirtualProtect should fail\n");
+-    todo_wine
+     ok(GetLastError() == ERROR_NOACCESS, "expected ERROR_NOACCESS, got %d\n", GetLastError());
+     old_prot = 0xdeadbeef;
+     ret = VirtualProtect(base, si.dwPageSize, PAGE_NOACCESS, &old_prot);
+     ok(ret, "VirtualProtect failed %d\n", GetLastError());
+-    todo_wine
+     ok(old_prot == PAGE_NOACCESS, "got %#x != expected PAGE_NOACCESS\n", old_prot);
+ 
+     addr = base; size = si.dwPageSize;
+     status = pNtProtectVirtualMemory(GetCurrentProcess(), &addr, &size, PAGE_READONLY, NULL);
+-    todo_wine
+     ok(status == STATUS_ACCESS_VIOLATION, "NtProtectVirtualMemory should fail, got %08x\n", status);
+     old_prot = 0xdeadbeef;
+     addr = base; size = si.dwPageSize;
+     status = pNtProtectVirtualMemory(GetCurrentProcess(), &addr, &size, PAGE_NOACCESS, &old_prot);
+     ok(status == STATUS_SUCCESS, "NtProtectVirtualMemory should succeed, got %08x\n", status);
+-    todo_wine
+     ok(old_prot == PAGE_NOACCESS, "got %#x != expected PAGE_NOACCESS\n", old_prot);
+ 
+     for (i = 0; i < sizeof(td)/sizeof(td[0]); i++)
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index 9d29c33..0629816 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -2164,6 +2164,9 @@ NTSTATUS WINAPI NtProtectVirtualMemory( HANDLE process, PVOID *addr_ptr, SIZE_T
+ 
+     TRACE("%p %p %08lx %08x\n", process, addr, size, new_prot );
+ 
++    if (!old_prot)
++        return STATUS_ACCESS_VIOLATION;
++
+     if (process != NtCurrentProcess())
+     {
+         apc_call_t call;
+-- 
+2.3.5
+

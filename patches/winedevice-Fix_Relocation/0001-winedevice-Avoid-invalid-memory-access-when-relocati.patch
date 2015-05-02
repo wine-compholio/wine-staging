@@ -1,4 +1,4 @@
-From 3257b681aade105c7356f18f95cfedc49c1b3045 Mon Sep 17 00:00:00 2001
+From d0620ed863ec0155f65ef1844ee75127aa003f07 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 10 Nov 2014 04:05:38 +0100
 Subject: winedevice: Avoid invalid memory access when relocation block
@@ -9,7 +9,7 @@ Subject: winedevice: Avoid invalid memory access when relocation block
  1 file changed, 43 insertions(+), 6 deletions(-)
 
 diff --git a/programs/winedevice/device.c b/programs/winedevice/device.c
-index 9677a82..28a252d 100644
+index ef1e1ef..101fdf9 100644
 --- a/programs/winedevice/device.c
 +++ b/programs/winedevice/device.c
 @@ -61,6 +61,39 @@ static LDR_MODULE *find_ldr_module( HMODULE module )
@@ -77,7 +77,7 @@ index 9677a82..28a252d 100644
 +                virtual_protect_save( page, 0xfff + 8, PAGE_EXECUTE_READWRITE, old_prot );
                  rel = LdrProcessRelocationBlock( page, (rel->SizeOfBlock - sizeof(*rel)) / sizeof(USHORT),
                                                   (USHORT *)(rel + 1), delta );
--                if (old != PAGE_EXECUTE_READWRITE) VirtualProtect( page, info.PageSize, old, NULL );
+-                if (old != PAGE_EXECUTE_READWRITE) VirtualProtect( page, info.PageSize, old, &old );
 +                virtual_protect_load( page, 0xfff + 8, old_prot );
                  if (!rel) goto error;
              }
@@ -86,8 +86,8 @@ index 9677a82..28a252d 100644
 -            VirtualProtect( nt, size, PAGE_READWRITE, &old );
 +            VirtualProtect( nt, size, PAGE_READWRITE, &old_prot[0] );
              nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress = 0;
--            VirtualProtect( nt, size, old, NULL );
-+            VirtualProtect( nt, size, old_prot[0], NULL );
+-            VirtualProtect( nt, size, old, &old );
++            VirtualProtect( nt, size, old_prot[0], &old_prot[0] );
          }
      }
  

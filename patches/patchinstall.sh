@@ -152,6 +152,7 @@ patch_enable_all ()
 	enable_ntdll_Heap_FreeLists="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_LZNT1_Compression="$1"
+	enable_ntdll_NtProtectVirtualMemory="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
@@ -531,6 +532,9 @@ patch_enable ()
 			;;
 		ntdll-LZNT1_Compression)
 			enable_ntdll_LZNT1_Compression="$2"
+			;;
+		ntdll-NtProtectVirtualMemory)
+			enable_ntdll_NtProtectVirtualMemory="$2"
 			;;
 		ntdll-NtQuerySection)
 			enable_ntdll_NtQuerySection="$2"
@@ -1208,6 +1212,13 @@ if test "$enable_category_stable" -eq 1; then
 	enable_ws2_32_Select=1
 fi
 
+if test "$enable_winedevice_Fix_Relocation" -eq 1; then
+	if test "$enable_ntdll_NtProtectVirtualMemory" -gt 1; then
+		abort "Patchset ntdll-NtProtectVirtualMemory disabled, but winedevice-Fix_Relocation depends on that."
+	fi
+	enable_ntdll_NtProtectVirtualMemory=1
+fi
+
 if test "$enable_shell32_SHFileOperation" -eq 1; then
 	if test "$enable_shell32_Progress_Dialog" -gt 1; then
 		abort "Patchset shell32-Progress_Dialog disabled, but shell32-SHFileOperation depends on that."
@@ -1325,6 +1336,13 @@ if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
 		abort "Patchset ntdll-LZNT1_Compression disabled, but ntdll-RtlIpStringToAddress depends on that."
 	fi
 	enable_ntdll_LZNT1_Compression=1
+fi
+
+if test "$enable_ntdll_NtQuerySection" -eq 1; then
+	if test "$enable_ntdll_NtProtectVirtualMemory" -gt 1; then
+		abort "Patchset ntdll-NtProtectVirtualMemory disabled, but ntdll-NtQuerySection depends on that."
+	fi
+	enable_ntdll_NtProtectVirtualMemory=1
 fi
 
 if test "$enable_ntdll_Junction_Points" -eq 1; then
@@ -3543,6 +3561,32 @@ if test "$enable_ntdll_LZNT1_Compression" -eq 1; then
 		echo '+    { "Sebastian Lackner", "ntdll: Implement LZNT1 algorithm for RtlDecompressBuffer.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for Rtl[Decompress|Compress]Buffer and RtlGetCompressionWorkSpaceSize.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll/tests: Fix various test failures caused by broken RtlDecompressBuffer results.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtProtectVirtualMemory
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38495] Return failure in NtProtectVirtualMemory when last argument is omitted
+# |
+# | Modified files:
+# |   *	dlls/kernel32/except.c, dlls/kernel32/tests/virtual.c, dlls/krnl386.exe16/dosmem.c, dlls/krnl386.exe16/dosvm.c,
+# | 	dlls/ntdll/loader.c, dlls/ntdll/virtual.c, programs/winedevice/device.c
+# |
+if test "$enable_ntdll_NtProtectVirtualMemory" -eq 1; then
+	patch_apply ntdll-NtProtectVirtualMemory/0001-kernel32-tests-Add-tests-for-calling-VirtualProtect-.patch
+	patch_apply ntdll-NtProtectVirtualMemory/0002-kernel32-Do-not-omit-mandatory-argument-for-VirtualP.patch
+	patch_apply ntdll-NtProtectVirtualMemory/0003-krnl386.exe16-Do-not-omit-mandatory-argument-for-Vir.patch
+	patch_apply ntdll-NtProtectVirtualMemory/0004-ntdll-Do-not-omit-mandatory-argument-for-VirtualProt.patch
+	patch_apply ntdll-NtProtectVirtualMemory/0005-winedevice-Do-not-omit-mandatory-argument-for-Virtua.patch
+	patch_apply ntdll-NtProtectVirtualMemory/0006-ntdll-Return-failure-in-NtProtectVirtualMemory-when-.patch
+	(
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for calling VirtualProtect with NULL as last argument.", 1 },';
+		echo '+    { "Sebastian Lackner", "kernel32: Do not omit mandatory argument for VirtualProtect.", 1 },';
+		echo '+    { "Sebastian Lackner", "krnl386.exe16: Do not omit mandatory argument for VirtualProtect.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Do not omit mandatory argument for VirtualProtect.", 1 },';
+		echo '+    { "Sebastian Lackner", "winedevice: Do not omit mandatory argument for VirtualProtect.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Return failure in NtProtectVirtualMemory when last argument is omitted.", 1 },';
 	) >> "$patchlist"
 fi
 

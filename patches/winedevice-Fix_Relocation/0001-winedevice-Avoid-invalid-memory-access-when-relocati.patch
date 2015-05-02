@@ -1,18 +1,18 @@
-From 2e1fed5c492efaeaab25f61ed0640230f8415750 Mon Sep 17 00:00:00 2001
+From 3257b681aade105c7356f18f95cfedc49c1b3045 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 10 Nov 2014 04:05:38 +0100
 Subject: winedevice: Avoid invalid memory access when relocation block
  addresses memory outside of the current page.
 
 ---
- programs/winedevice/device.c | 48 ++++++++++++++++++++++++++++++++++++++------
- 1 file changed, 42 insertions(+), 6 deletions(-)
+ programs/winedevice/device.c | 49 ++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 43 insertions(+), 6 deletions(-)
 
 diff --git a/programs/winedevice/device.c b/programs/winedevice/device.c
-index 72bc124..b4736b3 100644
+index 9677a82..28a252d 100644
 --- a/programs/winedevice/device.c
 +++ b/programs/winedevice/device.c
-@@ -61,6 +61,38 @@ static LDR_MODULE *find_ldr_module( HMODULE module )
+@@ -61,6 +61,39 @@ static LDR_MODULE *find_ldr_module( HMODULE module )
      return NULL;
  }
  
@@ -36,13 +36,14 @@ index 72bc124..b4736b3 100644
 +static void virtual_protect_load( void *addr, SIZE_T size, ULONG *old_prot )
 +{
 +    SYSTEM_BASIC_INFORMATION info;
++    DWORD dummy;
 +    UINT i = 0;
 +
 +    NtQuerySystemInformation( SystemBasicInformation, &info, sizeof(info), NULL );
 +    while (size)
 +    {
 +        SIZE_T block_size = min( size, info.PageSize - ((UINT_PTR)addr & (info.PageSize - 1)) );
-+        VirtualProtect( addr, block_size, old_prot[i++], NULL );
++        VirtualProtect( addr, block_size, old_prot[i++], &dummy );
 +        addr  = (void *)((char *)addr + block_size);
 +        size -= block_size;
 +    }
@@ -51,7 +52,7 @@ index 72bc124..b4736b3 100644
  /* load the driver module file */
  static HMODULE load_driver_module( const WCHAR *name )
  {
-@@ -84,7 +116,7 @@ static HMODULE load_driver_module( const WCHAR *name )
+@@ -84,7 +117,7 @@ static HMODULE load_driver_module( const WCHAR *name )
      if (nt->OptionalHeader.SectionAlignment < info.PageSize ||
          !(nt->FileHeader.Characteristics & IMAGE_FILE_DLL))
      {
@@ -60,7 +61,7 @@ index 72bc124..b4736b3 100644
          IMAGE_BASE_RELOCATION *rel, *end;
  
          if ((rel = RtlImageDirectoryEntryToData( module, TRUE, IMAGE_DIRECTORY_ENTRY_BASERELOC, &size )))
-@@ -92,20 +124,24 @@ static HMODULE load_driver_module( const WCHAR *name )
+@@ -92,20 +125,24 @@ static HMODULE load_driver_module( const WCHAR *name )
              WINE_TRACE( "%s: relocating from %p to %p\n",
                          wine_dbgstr_w(name), (char *)module - delta, module );
              end = (IMAGE_BASE_RELOCATION *)((char *)rel + size);
@@ -91,5 +92,5 @@ index 72bc124..b4736b3 100644
      }
  
 -- 
-2.1.3
+2.3.5
 

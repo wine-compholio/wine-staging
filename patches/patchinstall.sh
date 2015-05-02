@@ -131,6 +131,7 @@ patch_enable_all ()
 	enable_mfplat_MFTRegister="$1"
 	enable_mmdevapi_AEV_Stubs="$1"
 	enable_mountmgr_DosDevices="$1"
+	enable_mountmgr_Null_Device="$1"
 	enable_mscoree_CorValidateImage="$1"
 	enable_msvcp90_basic_string_wchar_dtor="$1"
 	enable_msvcrt_Math_Precision="$1"
@@ -469,6 +470,9 @@ patch_enable ()
 			;;
 		mountmgr-DosDevices)
 			enable_mountmgr_DosDevices="$2"
+			;;
+		mountmgr-Null_Device)
+			enable_mountmgr_Null_Device="$2"
 			;;
 		mscoree-CorValidateImage)
 			enable_mscoree_CorValidateImage="$2"
@@ -1359,6 +1363,13 @@ if test "$enable_ntdll_CLI_Images" -eq 1; then
 	enable_mscoree_CorValidateImage=1
 fi
 
+if test "$enable_mountmgr_Null_Device" -eq 1; then
+	if test "$enable_ntdll_Pipe_SpecialCharacters" -gt 1; then
+		abort "Patchset ntdll-Pipe_SpecialCharacters disabled, but mountmgr-Null_Device depends on that."
+	fi
+	enable_ntdll_Pipe_SpecialCharacters=1
+fi
+
 if test "$enable_kernel32_CopyFileEx" -eq 1; then
 	if test "$enable_kernel32_SetFileInformationByHandle" -gt 1; then
 		abort "Patchset kernel32-SetFileInformationByHandle disabled, but kernel32-CopyFileEx depends on that."
@@ -1608,23 +1619,6 @@ if test "$enable_advapi32_ImpersonateAnonymousToken" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1641,6 +1635,23 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3269,6 +3280,38 @@ if test "$enable_mountmgr_DosDevices" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-Pipe_SpecialCharacters
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#28995] Allow special characters in pipe names
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/pipe.c, dlls/ntdll/directory.c
+# |
+if test "$enable_ntdll_Pipe_SpecialCharacters" -eq 1; then
+	patch_apply ntdll-Pipe_SpecialCharacters/0001-ntdll-Allow-special-characters-in-pipe-names.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Allow special characters in pipe names.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset mountmgr-Null_Device
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38107] Emulate \Device\Null using /dev/null
+# |
+# | Modified files:
+# |   *	dlls/mountmgr.sys/device.c, dlls/mountmgr.sys/mountmgr.c, dlls/mountmgr.sys/mountmgr.h, dlls/ntdll/directory.c
+# |
+if test "$enable_mountmgr_Null_Device" -eq 1; then
+	patch_apply mountmgr-Null_Device/0001-mountmgr.sys-Added-Null-Device.patch
+	patch_apply mountmgr-Null_Device/0002-ntdll-Emulate-Device-Null-using-dev-null-in-wine_nt_.patch
+	(
+		echo '+    { "Qian Hong", "mountmgr.sys: Added Null Device.", 1 },';
+		echo '+    { "Qian Hong", "ntdll: Emulate \\\\Device\\\\Null using /dev/null in wine_nt_to_unix_file_name.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset mscoree-CorValidateImage
 # |
 # | Modified files:
@@ -3620,21 +3663,6 @@ if test "$enable_ntdll_NtSetLdtEntries" -eq 1; then
 	patch_apply ntdll-NtSetLdtEntries/0001-ntdll-add-NtSetLdtEntries-ZwSetLdtEntries-stub-try-2.patch
 	(
 		echo '+    { "Austin English", "ntdll: add NtSetLdtEntries/ZwSetLdtEntries stub.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Pipe_SpecialCharacters
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#28995] Allow special characters in pipe names
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/pipe.c, dlls/ntdll/directory.c
-# |
-if test "$enable_ntdll_Pipe_SpecialCharacters" -eq 1; then
-	patch_apply ntdll-Pipe_SpecialCharacters/0001-ntdll-Allow-special-characters-in-pipe-names.patch
-	(
-		echo '+    { "Michael Müller", "ntdll: Allow special characters in pipe names.", 1 },';
 	) >> "$patchlist"
 fi
 

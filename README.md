@@ -39,11 +39,12 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [7]:**
+**Bug fixes and features included in the next upcoming release [8]:**
 
 * Add stub for D3DXFrameFind ([Wine Bug #38334](https://bugs.winehq.org/show_bug.cgi?id=38334))
 * Add stub for advapi32.ImpersonateAnonymousToken
 * Add stub for d3d11.D3D11CreateDeviceAndSwapChain ([Wine Bug #33153](https://bugs.winehq.org/show_bug.cgi?id=33153))
+* Emulate \Device\Null using /dev/null ([Wine Bug #38107](https://bugs.winehq.org/show_bug.cgi?id=38107))
 * Fix regression caused by blacklisting supported OpenGL extensions ([Wine Bug #38480](https://bugs.winehq.org/show_bug.cgi?id=38480))
 * Ignore garbage after decoding gif lines ([Wine Bug #32227](https://bugs.winehq.org/show_bug.cgi?id=32227))
 * Return failure in NtProtectVirtualMemory when last argument is omitted ([Wine Bug #38495](https://bugs.winehq.org/show_bug.cgi?id=38495))

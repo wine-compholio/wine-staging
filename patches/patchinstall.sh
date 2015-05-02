@@ -3433,12 +3433,14 @@ fi
 # Patchset ntdll-FD_Cache
 # |
 # | Modified files:
-# |   *	dlls/ntdll/server.c
+# |   *	dlls/ntdll/server.c, libs/port/interlocked.c
 # |
 if test "$enable_ntdll_FD_Cache" -eq 1; then
-	patch_apply ntdll-FD_Cache/0001-ntdll-Use-lockfree-implementation-for-get_cached_fd.patch
+	patch_apply ntdll-FD_Cache/0001-libs-Implement-interlocked_cmpxchg64-on-PowerPC-usin.patch
+	patch_apply ntdll-FD_Cache/0002-ntdll-Use-lockfree-implementation-for-get_cached_fd..patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Use lockfree implementation for get_cached_fd.", 5 },';
+		echo '+    { "Sebastian Lackner", "libs: Implement interlocked_cmpxchg64 on PowerPC using pthread mutex.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Use lockfree implementation for get_cached_fd.", 2 },';
 	) >> "$patchlist"
 fi
 

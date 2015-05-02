@@ -1,0 +1,50 @@
+From 27e4c293824d5e133f2b30e7cda68d96142b8fb5 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 2 May 2015 07:04:17 +0200
+Subject: libs: Implement interlocked_cmpxchg64 on PowerPC using pthread mutex.
+
+---
+ libs/port/interlocked.c | 19 ++++++++++++++++---
+ 1 file changed, 16 insertions(+), 3 deletions(-)
+
+diff --git a/libs/port/interlocked.c b/libs/port/interlocked.c
+index f5e405c..80e43cf 100644
+--- a/libs/port/interlocked.c
++++ b/libs/port/interlocked.c
+@@ -181,6 +181,11 @@ __ASM_GLOBAL_FUNC(interlocked_cmpxchg128,
+                   "ret")
+ 
+ #elif defined(__powerpc__)
++
++#include <pthread.h>
++
++static pthread_mutex_t interlocked_mutex = PTHREAD_MUTEX_INITIALIZER;
++
+ void* interlocked_cmpxchg_ptr( void **dest, void* xchg, void* compare)
+ {
+     void *ret = 0;
+@@ -199,10 +204,18 @@ void* interlocked_cmpxchg_ptr( void **dest, void* xchg, void* compare)
+     return ret;
+ }
+ 
+-__int64 interlocked_cmpxchg64( __int64 *dest, __int64 xchg, __int64 compare)
++/* FIXME: replace with assembler implementation */
++__int64 interlocked_cmpxchg64( __int64 *dest, __int64 xchg, __int64 compare )
+ {
+-    /* FIXME: add code */
+-    assert(0);
++    pthread_mutex_lock( &interlocked_mutex );
++
++    if (*dest == compare)
++        *dest = xchg;
++    else
++        compare = *dest;
++
++    pthread_mutex_unlock( &interlocked_mutex );
++    return compare;
+ }
+ 
+ int interlocked_cmpxchg( int *dest, int xchg, int compare)
+-- 
+2.3.5
+

@@ -1,34 +1,33 @@
-From 2c467089a7cbb58f76375226314bd37d3e832e4d Mon Sep 17 00:00:00 2001
+From b474b9b40dc95c477890ef0b1407e647b46a22d0 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
-Date: Thu, 16 Apr 2015 12:59:51 +0200
-Subject: ws2_32: Properly handle closing sockets during a select call.
+Date: Thu, 30 Apr 2015 05:43:21 +0200
+Subject: ntdll: Introduce a helper function to check for existance of server
+ handles.
 
-Based on a patch by Bruno Jesus.
 ---
- dlls/ntdll/ntdll.spec    |  1 +
- dlls/ntdll/server.c      | 21 +++++++++++++++++++++
- dlls/ws2_32/socket.c     |  8 +++++++-
- dlls/ws2_32/tests/sock.c |  1 -
- include/wine/server.h    |  1 +
- 5 files changed, 30 insertions(+), 2 deletions(-)
+ dlls/ntdll/ntdll.spec |  1 +
+ dlls/ntdll/server.c   | 21 +++++++++++++++++++++
+ dlls/ws2_32/socket.c  | 13 ++++---------
+ include/wine/server.h |  1 +
+ 4 files changed, 27 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index c3307b2..f47a24b 100644
+index 28165ef..0c73380 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -1416,6 +1416,7 @@
+@@ -1417,6 +1417,7 @@
  # Server interface
  @ cdecl -norelay wine_server_call(ptr)
  @ cdecl wine_server_fd_to_handle(long long long ptr)
-+@ cdecl wine_server_handle_exists(long)
++@ cdecl wine_server_handle_exists(long long)
  @ cdecl wine_server_handle_to_fd(long long ptr ptr)
  @ cdecl wine_server_release_fd(long long)
  @ cdecl wine_server_send_fd(long)
 diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
-index 29cfcb5..237f439 100644
+index 69d01be..03f85ff 100644
 --- a/dlls/ntdll/server.c
 +++ b/dlls/ntdll/server.c
-@@ -1039,6 +1039,27 @@ int CDECL wine_server_fd_to_handle( int fd, unsigned int access, unsigned int at
+@@ -974,6 +974,27 @@ int CDECL wine_server_fd_to_handle( int fd, unsigned int access, unsigned int at
  
  
  /***********************************************************************
@@ -57,36 +56,32 @@ index 29cfcb5..237f439 100644
   *
   * Retrieve the file descriptor corresponding to a file handle.
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index 95ea83c..ff21577 100644
+index ef43186..22dd084 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
-@@ -4788,7 +4788,13 @@ static void release_poll_fds( const WS_fd_set *readfds, const WS_fd_set *writefd
-     if (exceptfds)
+@@ -2940,18 +2940,13 @@ int WINAPI WS_bind(SOCKET s, const struct WS_sockaddr* name, int namelen)
+  */
+ int WINAPI WS_closesocket(SOCKET s)
+ {
+-    int res = SOCKET_ERROR, fd;
++    int res = SOCKET_ERROR;
+     if (num_startup)
      {
-         for (i = 0; i < exceptfds->fd_count; i++, j++)
--            if (fds[j].fd != -1) release_sock_fd( exceptfds->fd_array[i], fds[j].fd );
-+        {
-+            if (fds[j].fd == -1) continue;
-+            release_sock_fd( exceptfds->fd_array[i], fds[j].fd );
-+            if (!(fds[j].revents & POLLHUP)) continue;
-+            if (wine_server_handle_exists( SOCKET2HANDLE( exceptfds->fd_array[i] ), 0 )) continue;
-+            fds[j].revents = 0;
-+        }
+-        fd = get_sock_fd(s, FILE_READ_DATA, NULL);
+-        if (fd >= 0)
+-        {
+-            release_sock_fd(s, fd);
+-            if (CloseHandle(SOCKET2HANDLE(s)))
+-                res = 0;
+-        }
+-        else
++        if (!wine_server_handle_exists(SOCKET2HANDLE(s), FILE_READ_DATA))
+             SetLastError(WSAENOTSOCK);
++        else if (CloseHandle(SOCKET2HANDLE(s)))
++            res = 0;
      }
- }
- 
-diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
-index aa06a08..d276867 100644
---- a/dlls/ws2_32/tests/sock.c
-+++ b/dlls/ws2_32/tests/sock.c
-@@ -3834,7 +3834,6 @@ todo_wine
-     FD_ZERO_ALL();
-     FD_SET_ALL(fdWrite);
-     ret = select(0, &readfds, NULL, &exceptfds, &select_timeout);
--todo_wine
-     ok(ret == 1, "expected 1, got %d\n", ret);
-     ok(FD_ISSET(fdWrite, &readfds), "fdWrite socket is not in the set\n");
-     WaitForSingleObject (thread_handle, 1000);
+     else
+         SetLastError(WSANOTINITIALISED);
 diff --git a/include/wine/server.h b/include/wine/server.h
 index d573d1f..a114cf9 100644
 --- a/include/wine/server.h

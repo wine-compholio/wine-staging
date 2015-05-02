@@ -5094,8 +5094,10 @@ fi
 # |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/server.c, dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/wine/server.h
 # |
 if test "$enable_ws2_32_Select" -eq 1; then
-	patch_apply ws2_32-Select/0001-ws2_32-Properly-handle-closing-sockets-during-a-sele.patch
+	patch_apply ws2_32-Select/0001-ntdll-Introduce-a-helper-function-to-check-for-exist.patch
+	patch_apply ws2_32-Select/0002-ws2_32-Properly-handle-closing-sockets-during-a-sele.patch
 	(
+		echo '+    { "Sebastian Lackner", "ntdll: Introduce a helper function to check for existance of server handles.", 1 },';
 		echo '+    { "Sebastian Lackner", "ws2_32: Properly handle closing sockets during a select call.", 1 },';
 	) >> "$patchlist"
 fi

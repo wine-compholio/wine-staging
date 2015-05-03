@@ -227,6 +227,7 @@ patch_enable_all ()
 	enable_wine_inf_Performance="$1"
 	enable_wine_inf_ProfileList_UserSID="$1"
 	enable_wineboot_HKEY_DYN_DATA="$1"
+	enable_wineboot_MachineGuid="$1"
 	enable_winebuild_LinkerVersion="$1"
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
@@ -759,6 +760,9 @@ patch_enable ()
 			;;
 		wineboot-HKEY_DYN_DATA)
 			enable_wineboot_HKEY_DYN_DATA="$2"
+			;;
+		wineboot-MachineGuid)
+			enable_wineboot_MachineGuid="$2"
 			;;
 		winebuild-LinkerVersion)
 			enable_winebuild_LinkerVersion="$2"
@@ -4849,6 +4853,21 @@ if test "$enable_wineboot_HKEY_DYN_DATA" -eq 1; then
 	patch_apply wineboot-HKEY_DYN_DATA/0001-wineboot-Add-some-generic-hardware-in-HKEY_DYN_DATA-.patch
 	(
 		echo '+    { "Michael Müller", "wineboot: Add some generic hardware in HKEY_DYN_DATA\\\\Config Manager\\\\Enum.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wineboot-MachineGuid
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38508] Create HKLM\Software\Microsoft\Cryptography\MachineGuid registry key
+# |
+# | Modified files:
+# |   *	programs/wineboot/Makefile.in, programs/wineboot/wineboot.c
+# |
+if test "$enable_wineboot_MachineGuid" -eq 1; then
+	patch_apply wineboot-MachineGuid/0001-wineboot-Create-MachineGuid-registry-value.patch
+	(
+		echo '+    { "Michael Müller", "wineboot: Create MachineGuid registry value.", 1 },';
 	) >> "$patchlist"
 fi
 

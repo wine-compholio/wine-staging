@@ -1,0 +1,65 @@
+From 224f0263e0d56336f6baaafd09baddff64679a9b Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 3 May 2015 07:34:10 +0200
+Subject: server: OpenClipboard() with current owner shouldn't fail.
+
+Based on a patch by Nikolay Sivov.
+---
+ dlls/user32/tests/clipboard.c | 16 +++++++++++++++-
+ server/clipboard.c            |  3 ++-
+ 2 files changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/user32/tests/clipboard.c b/dlls/user32/tests/clipboard.c
+index 40218be..8fd4963 100644
+--- a/dlls/user32/tests/clipboard.c
++++ b/dlls/user32/tests/clipboard.c
+@@ -35,9 +35,18 @@ static BOOL is_win9x = FALSE;
+                 expected_error, GetLastError()); \
+     } while (0)
+ 
++static DWORD WINAPI open_clipboard_thread(LPVOID arg)
++{
++    HWND hWnd = arg;
++    ok(OpenClipboard(hWnd), "OpenClipboard second time in the same hwnd failed\n");
++    return 0;
++}
++
+ static void test_ClipboardOwner(void)
+ {
++    HANDLE thread;
+     HWND hWnd1, hWnd2;
++    DWORD dwret;
+     BOOL ret;
+ 
+     SetLastError(0xdeadbeef);
+@@ -66,7 +75,12 @@ static void test_ClipboardOwner(void)
+     ok( ret, "CloseClipboard error %d\n", GetLastError());
+ 
+     ok(OpenClipboard(hWnd1), "OpenClipboard failed\n");
+-    todo_wine ok(OpenClipboard(hWnd1), "OpenClipboard second time in the same hwnd failed\n");
++    thread = CreateThread(NULL, 0, open_clipboard_thread, hWnd1, 0, NULL);
++    ok(thread != NULL, "CreateThread failed with error %d\n", GetLastError());
++    dwret = WaitForSingleObject(thread, 1000);
++    ok(dwret == WAIT_OBJECT_0, "expected WAIT_OBJECT_0, got %u\n", dwret);
++    CloseHandle(thread);
++    ok(OpenClipboard(hWnd1), "OpenClipboard second time in the same hwnd failed\n");
+ 
+     SetLastError(0xdeadbeef);
+     ret = OpenClipboard(hWnd2);
+diff --git a/server/clipboard.c b/server/clipboard.c
+index 0c39319..7f94103 100644
+--- a/server/clipboard.c
++++ b/server/clipboard.c
+@@ -204,7 +204,8 @@ DECL_HANDLER(set_clipboard_info)
+         if (clipboard->open_thread)
+         {
+             /* clipboard already opened */
+-            set_error(STATUS_WAS_LOCKED);
++            if (clipboard->open_win != req->clipboard)
++                set_error(STATUS_WAS_LOCKED);
+             return;
+         }
+ 
+-- 
+2.3.5
+

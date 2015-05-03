@@ -188,6 +188,7 @@ patch_enable_all ()
 	enable_server_JobObjects="$1"
 	enable_server_Key_State="$1"
 	enable_server_Misc_ACL="$1"
+	enable_server_OpenClipboard="$1"
 	enable_server_OpenProcess="$1"
 	enable_server_PeekMessage="$1"
 	enable_server_Realtime_Priority="$1"
@@ -641,6 +642,9 @@ patch_enable ()
 			;;
 		server-Misc_ACL)
 			enable_server_Misc_ACL="$2"
+			;;
+		server-OpenClipboard)
+			enable_server_OpenClipboard="$2"
 			;;
 		server-OpenProcess)
 			enable_server_OpenProcess="$2"
@@ -4262,6 +4266,21 @@ if test "$enable_server_Key_State" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "server: Introduce a helper function to update the thread_input key state.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement locking and synchronization of keystate buffer.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-OpenClipboard
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#2805] OpenClipboard with current owner shouldn't fail
+# |
+# | Modified files:
+# |   *	dlls/user32/tests/clipboard.c, server/clipboard.c
+# |
+if test "$enable_server_OpenClipboard" -eq 1; then
+	patch_apply server-OpenClipboard/0001-server-OpenClipboard-with-current-owner-shouldn-t-fa.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: OpenClipboard() with current owner shouldn'\''t fail.", 1 },';
 	) >> "$patchlist"
 fi
 

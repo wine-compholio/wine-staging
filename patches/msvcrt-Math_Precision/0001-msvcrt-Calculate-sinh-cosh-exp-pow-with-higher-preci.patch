@@ -1,117 +1,98 @@
-From af8345987e58c2a5e6df44590e677a65ca71594c Mon Sep 17 00:00:00 2001
+From 4a1a9adcee0e4c3bf81437ebd0a1361ac2b8ce3d Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 10 Apr 2015 07:51:16 +0200
-Subject: msvcrt: Calculate sinh/cosh/exp/pow with higher precision.
+Subject: msvcrt: Calculate sinh/cosh/exp/pow with higher precision. (v2)
 
 Based on a patch by Zheng Chen.
 ---
- configure.ac       | 32 ++++++++++++++++++++++++++++++++
- dlls/msvcrt/math.c | 21 +++++++++++++++++----
- 2 files changed, 49 insertions(+), 4 deletions(-)
+ dlls/msvcrt/math.c | 44 ++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 44 insertions(+)
 
-diff --git a/configure.ac b/configure.ac
-index 688ab26..30e8ef2 100644
---- a/configure.ac
-+++ b/configure.ac
-@@ -2586,6 +2586,38 @@ then
-     AC_DEFINE(HAVE_ISNAN, 1, [Define to 1 if you have the `isnan' function.])
- fi
- 
-+dnl Check for coshl
-+AC_CACHE_CHECK([for coshl], ac_cv_have_coshl,
-+               AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <math.h>]], [[float f = 0.0; return coshl(f)]])],[ac_cv_have_coshl="yes"],[ac_cv_have_coshl="no"]))
-+if test "$ac_cv_have_coshl" = "yes"
-+then
-+    AC_DEFINE(HAVE_COSHL, 1, [Define to 1 if you have the `coshl' function.])
-+fi
-+
-+dnl Check for sinhl
-+AC_CACHE_CHECK([for sinhl], ac_cv_have_sinhl,
-+               AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <math.h>]], [[float f = 0.0; return sinhl(f)]])],[ac_cv_have_sinhl="yes"],[ac_cv_have_sinhl="no"]))
-+if test "$ac_cv_have_sinhl" = "yes"
-+then
-+    AC_DEFINE(HAVE_SINHL, 1, [Define to 1 if you have the `sinhl' function.])
-+fi
-+
-+dnl Check for expl
-+AC_CACHE_CHECK([for expl], ac_cv_have_expl,
-+               AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <math.h>]], [[float f = 0.0; return expl(f)]])],[ac_cv_have_expl="yes"],[ac_cv_have_expl="no"]))
-+if test "$ac_cv_have_expl" = "yes"
-+then
-+    AC_DEFINE(HAVE_EXPL, 1, [Define to 1 if you have the `expl' function.])
-+fi
-+
-+dnl Check for powl
-+AC_CACHE_CHECK([for powl], ac_cv_have_powl,
-+               AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <math.h>]], [[float f = 0.0; return powl(f, f)]])],[ac_cv_have_powl="yes"],[ac_cv_have_powl="no"]))
-+if test "$ac_cv_have_powl" = "yes"
-+then
-+    AC_DEFINE(HAVE_POWL, 1, [Define to 1 if you have the `powl' function.])
-+fi
-+
- AC_CHECK_FUNCS(\
- 	cbrt \
- 	cbrtf \
 diff --git a/dlls/msvcrt/math.c b/dlls/msvcrt/math.c
-index 7c971d3..d48199e 100644
+index 7c971d3..0e62215 100644
 --- a/dlls/msvcrt/math.c
 +++ b/dlls/msvcrt/math.c
-@@ -51,6 +51,19 @@ WINE_DEFAULT_DEBUG_CHANNEL(msvcrt);
- #define signbit(x) ((x) < 0)
- #endif
- 
-+#ifndef HAVE_COSHL
-+#define coshl(x) cosh(x)
-+#endif
-+#ifndef HAVE_SINHL
-+#define sinhl(x) sinh(x)
-+#endif
-+#ifndef HAVE_EXPL
-+#define expl(x) exp(x)
-+#endif
-+#ifndef HAVE_POWL
-+#define powl(x,y) pow(x,y)
-+#endif
-+
- typedef int (CDECL *MSVCRT_matherr_func)(struct MSVCRT__exception *);
- typedef double LDOUBLE;  /* long double is just a double */
- 
-@@ -394,7 +407,7 @@ double CDECL MSVCRT_cos( double x )
+@@ -393,8 +393,19 @@ double CDECL MSVCRT_cos( double x )
+  */
  double CDECL MSVCRT_cosh( double x )
  {
++#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
++  WORD precise_cw = 0x37f, pre_cw;
++  double z;
++  if (!isfinite(x)) *MSVCRT__errno() = MSVCRT_EDOM;
++  __asm__ __volatile__( "fnstcw %0" : "=m" (pre_cw) );
++  __asm__ __volatile__( "fldcw %0" : : "m" (precise_cw) );
++  z = cosh(x);
++  __asm__ __volatile__( "fldcw %0" : : "m" (pre_cw) );
++  return z;
++#else
    if (!isfinite(x)) *MSVCRT__errno() = MSVCRT_EDOM;
--  return cosh(x);
-+  return coshl(x);
+   return cosh(x);
++#endif
  }
  
  /*********************************************************************
-@@ -403,7 +416,7 @@ double CDECL MSVCRT_cosh( double x )
+@@ -402,8 +413,19 @@ double CDECL MSVCRT_cosh( double x )
+  */
  double CDECL MSVCRT_exp( double x )
  {
++#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
++  WORD precise_cw = 0x37f, pre_cw;
++  double z;
++  if (isnan(x)) *MSVCRT__errno() = MSVCRT_EDOM;
++  __asm__ __volatile__( "fnstcw %0" : "=m" (pre_cw) );
++  __asm__ __volatile__( "fldcw %0" : : "m" (precise_cw) );
++  z = exp(x);
++  __asm__ __volatile__( "fldcw %0" : : "m" (pre_cw) );
++  return z;
++#else
    if (isnan(x)) *MSVCRT__errno() = MSVCRT_EDOM;
--  return exp(x);
-+  return expl(x);
+   return exp(x);
++#endif
  }
  
  /*********************************************************************
-@@ -441,7 +454,7 @@ double CDECL MSVCRT_log10( double x )
+@@ -441,9 +463,20 @@ double CDECL MSVCRT_log10( double x )
  double CDECL MSVCRT_pow( double x, double y )
  {
    /* FIXME: If x < 0 and y is not integral, set EDOM */
--  double z = pow(x,y);
-+  double z = powl(x,y);
++#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
++  WORD precise_cw = 0x37f, pre_cw;
++  double z;
++  __asm__ __volatile__( "fnstcw %0" : "=m" (pre_cw) );
++  __asm__ __volatile__( "fldcw %0" : : "m" (precise_cw) );
++  z = pow(x,y);
++  __asm__ __volatile__( "fldcw %0" : : "m" (pre_cw) );
++  if (!isfinite(z)) *MSVCRT__errno() = MSVCRT_EDOM;
++  return z;
++#else
+   double z = pow(x,y);
    if (!isfinite(z)) *MSVCRT__errno() = MSVCRT_EDOM;
    return z;
++#endif
  }
-@@ -461,7 +474,7 @@ double CDECL MSVCRT_sin( double x )
+ 
+ /*********************************************************************
+@@ -460,8 +493,19 @@ double CDECL MSVCRT_sin( double x )
+  */
  double CDECL MSVCRT_sinh( double x )
  {
++#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
++  WORD precise_cw = 0x37f, pre_cw;
++  double z;
++  if (!isfinite(x)) *MSVCRT__errno() = MSVCRT_EDOM;
++  __asm__ __volatile__( "fnstcw %0" : "=m" (pre_cw) );
++  __asm__ __volatile__( "fldcw %0" : : "m" (precise_cw) );
++  z = sinh(x);
++  __asm__ __volatile__( "fldcw %0" : : "m" (pre_cw) );
++  return z;
++#else
    if (!isfinite(x)) *MSVCRT__errno() = MSVCRT_EDOM;
--  return sinh(x);
-+  return sinhl(x);
+   return sinh(x);
++#endif
  }
  
  /*********************************************************************
 -- 
-2.3.5
+2.3.7
 

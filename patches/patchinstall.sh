@@ -3353,12 +3353,12 @@ fi
 # |   *	[#37149] Calculate msvcrt exponential math operations with higher precision
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/msvcrt/math.c
+# |   *	dlls/msvcrt/math.c
 # |
 if test "$enable_msvcrt_Math_Precision" -eq 1; then
 	patch_apply msvcrt-Math_Precision/0001-msvcrt-Calculate-sinh-cosh-exp-pow-with-higher-preci.patch
 	(
-		echo '+    { "Sebastian Lackner", "msvcrt: Calculate sinh/cosh/exp/pow with higher precision.", 1 },';
+		echo '+    { "Sebastian Lackner", "msvcrt: Calculate sinh/cosh/exp/pow with higher precision.", 2 },';
 	) >> "$patchlist"
 fi
 

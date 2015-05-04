@@ -199,7 +199,6 @@ patch_enable_all ()
 	enable_setupapi_SetupDiSetDeviceInstallParamsW="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
-	enable_shell32_Default_Folder_ACLs="$1"
 	enable_shell32_Default_Path="$1"
 	enable_shell32_Icons="$1"
 	enable_shell32_Progress_Dialog="$1"
@@ -676,9 +675,6 @@ patch_enable ()
 			;;
 		shdocvw-ParseURLFromOutsideSource_Tests)
 			enable_shdocvw_ParseURLFromOutsideSource_Tests="$2"
-			;;
-		shell32-Default_Folder_ACLs)
-			enable_shell32_Default_Folder_ACLs="$2"
 			;;
 		shell32-Default_Path)
 			enable_shell32_Default_Path="$2"
@@ -4405,18 +4401,6 @@ if test "$enable_shdocvw_ParseURLFromOutsideSource_Tests" -eq 1; then
 	patch_apply shdocvw-ParseURLFromOutsideSource_Tests/0001-shdocvw-Check-precisely-ParseURLFromOutsideSourceX-r.patch
 	(
 		echo '+    { "Christian Costa", "shdocvw: Check precisely ParseURLFromOutsideSourceX returned values in tests and make code clearer about that.", 3 },';
-	) >> "$patchlist"
-fi
-
-# Patchset shell32-Default_Folder_ACLs
-# |
-# | Modified files:
-# |   *	dlls/shell32/shellpath.c
-# |
-if test "$enable_shell32_Default_Folder_ACLs" -eq 1; then
-	patch_apply shell32-Default_Folder_ACLs/0001-shell32-Set-the-default-security-attributes-for-user.patch
-	(
-		echo '+    { "Sebastian Lackner", "shell32: Set the default security attributes for user shell folders.", 7 },';
 	) >> "$patchlist"
 fi
 

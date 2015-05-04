@@ -49,7 +49,7 @@ releases, take a look at the
 for more details.*
 
 * Add a ProfileList\<UserSID> registry subkey ([Wine Bug #15670](https://bugs.winehq.org/show_bug.cgi?id=15670))
-* Add default ACLs for user shell folders
+* ~~Add default ACLs for user shell folders~~
 * Add implementation for CreateThreadpool ([Wine Bug #35192](https://bugs.winehq.org/show_bug.cgi?id=35192))
 * Add implementation for mfplat.MFTRegister ([Wine Bug #37811](https://bugs.winehq.org/show_bug.cgi?id=37811))
 * Add nvapi stubs required for GPU PhysX support

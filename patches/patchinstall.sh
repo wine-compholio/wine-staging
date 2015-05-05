@@ -1474,14 +1474,12 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/d3d9/tests/visual.c, dlls/netapi32/netapi32.c, dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c,
-# | 	programs/explorer/Makefile.in, programs/explorer/explorer.c, tools/makedep.c
+# | 	tools/makedep.c
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0001-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch
-	patch_apply Compiler_Warnings/0002-programs-explorer-Fix-build-failure-with-gcc-4.9.patch
 	(
 		echo '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },';
-		echo '+    { "Sebastian Lackner", "programs/explorer: Fix build failure with gcc 4.9.", 1 },';
 	) >> "$patchlist"
 fi
 

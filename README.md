@@ -199,7 +199,7 @@ for more details.*
 * Prevent window managers from grouping all wine programs together ([Wine Bug #32699](https://bugs.winehq.org/show_bug.cgi?id=32699))
 * Process APC calls before starting process
 * Process Hacker 2.x needs ntoskrnl.ProbeForRead ([Wine Bug #38103](https://bugs.winehq.org/show_bug.cgi?id=38103))
-* Properly handle closing sockets during a select call ([Wine Bug #38399](https://bugs.winehq.org/show_bug.cgi?id=38399))
+* ~~Properly handle closing sockets during a select call~~ ([Wine Bug #38399](https://bugs.winehq.org/show_bug.cgi?id=38399))
 * Python PIP needs better NtQueryInformationJobObject stub
 * Reduced SetTimer minimum value from 10 ms to 5 ms (improves Silverlight framerates)
 * Reset device state in SysKeyboard*Impl_Acquire ([Wine Bug #11607](https://bugs.winehq.org/show_bug.cgi?id=11607))
@@ -207,7 +207,7 @@ for more details.*
 * Return correct IMediaSeeking stream positions in quartz ([Wine Bug #23174](https://bugs.winehq.org/show_bug.cgi?id=23174))
 * Return correct device type for cd devices without medium
 * Return correct values for GetThreadTimes function ([Wine Bug #20230](https://bugs.winehq.org/show_bug.cgi?id=20230))
-* Return failure in NtProtectVirtualMemory when last argument is omitted ([Wine Bug #38495](https://bugs.winehq.org/show_bug.cgi?id=38495))
+* ~~Return failure in NtProtectVirtualMemory when last argument is omitted~~ ([Wine Bug #38495](https://bugs.winehq.org/show_bug.cgi?id=38495))
 * SO_CONNECT_TIME returns the appropriate time
 * Scrolling causes mouse and screen to lock in Call to Power II ([Wine Bug #34559](https://bugs.winehq.org/show_bug.cgi?id=34559))
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](https://bugs.winehq.org/show_bug.cgi?id=35652))

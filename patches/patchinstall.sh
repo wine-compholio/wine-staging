@@ -153,7 +153,6 @@ patch_enable_all ()
 	enable_ntdll_Heap_FreeLists="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_LZNT1_Compression="$1"
-	enable_ntdll_NtProtectVirtualMemory="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
@@ -254,7 +253,6 @@ patch_enable_all ()
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_APC_Performance="$1"
 	enable_ws2_32_Connect_Time="$1"
-	enable_ws2_32_Select="$1"
 	enable_ws2_32_TransmitFile="$1"
 	enable_ws2_32_WriteWatches="$1"
 	enable_ws2_32_getaddrinfo="$1"
@@ -537,9 +535,6 @@ patch_enable ()
 			;;
 		ntdll-LZNT1_Compression)
 			enable_ntdll_LZNT1_Compression="$2"
-			;;
-		ntdll-NtProtectVirtualMemory)
-			enable_ntdll_NtProtectVirtualMemory="$2"
 			;;
 		ntdll-NtQuerySection)
 			enable_ntdll_NtQuerySection="$2"
@@ -840,9 +835,6 @@ patch_enable ()
 			;;
 		ws2_32-Connect_Time)
 			enable_ws2_32_Connect_Time="$2"
-			;;
-		ws2_32-Select)
-			enable_ws2_32_Select="$2"
 			;;
 		ws2_32-TransmitFile)
 			enable_ws2_32_TransmitFile="$2"
@@ -1179,9 +1171,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_ws2_32_Connect_Time" -gt 1; then
 		abort "Patchset ws2_32-Connect_Time disabled, but category-stable depends on that."
 	fi
-	if test "$enable_ws2_32_Select" -gt 1; then
-		abort "Patchset ws2_32-Select disabled, but category-stable depends on that."
-	fi
 	enable_Staging=1
 	enable_configure_Absolute_RPATH=1
 	enable_d3d9_Surface_Refcount=1
@@ -1217,14 +1206,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry=1
 	enable_winmm_Delay_Import_Depends=1
 	enable_ws2_32_Connect_Time=1
-	enable_ws2_32_Select=1
-fi
-
-if test "$enable_winedevice_Fix_Relocation" -eq 1; then
-	if test "$enable_ntdll_NtProtectVirtualMemory" -gt 1; then
-		abort "Patchset ntdll-NtProtectVirtualMemory disabled, but winedevice-Fix_Relocation depends on that."
-	fi
-	enable_ntdll_NtProtectVirtualMemory=1
 fi
 
 if test "$enable_shell32_SHFileOperation" -eq 1; then
@@ -1344,13 +1325,6 @@ if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
 		abort "Patchset ntdll-LZNT1_Compression disabled, but ntdll-RtlIpStringToAddress depends on that."
 	fi
 	enable_ntdll_LZNT1_Compression=1
-fi
-
-if test "$enable_ntdll_NtQuerySection" -eq 1; then
-	if test "$enable_ntdll_NtProtectVirtualMemory" -gt 1; then
-		abort "Patchset ntdll-NtProtectVirtualMemory disabled, but ntdll-NtQuerySection depends on that."
-	fi
-	enable_ntdll_NtProtectVirtualMemory=1
 fi
 
 if test "$enable_ntdll_Junction_Points" -eq 1; then
@@ -1625,6 +1599,23 @@ if test "$enable_advapi32_ImpersonateAnonymousToken" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1641,23 +1632,6 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3611,21 +3585,6 @@ if test "$enable_ntdll_LZNT1_Compression" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-NtProtectVirtualMemory
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38495] Return failure in NtProtectVirtualMemory when last argument is omitted
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/virtual.c
-# |
-if test "$enable_ntdll_NtProtectVirtualMemory" -eq 1; then
-	patch_apply ntdll-NtProtectVirtualMemory/0001-ntdll-Return-failure-in-NtProtectVirtualMemory-when-.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Return failure in NtProtectVirtualMemory when last argument is omitted.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-NtQuerySection
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4724,16 +4683,12 @@ fi
 # |   *	[#34517] Add support for wbemprox Win32_SystemEnclosure table
 # |
 # | Modified files:
-# |   *	dlls/wbemprox/builtin.c, dlls/wbemprox/table.c, dlls/wbemprox/tests/query.c
+# |   *	dlls/wbemprox/builtin.c, dlls/wbemprox/table.c
 # |
 if test "$enable_wbemprox_Win32_SystemEnclosure" -eq 1; then
-	patch_apply wbemprox-Win32_SystemEnclosure/0001-wbemprox-tests-Actually-test-the-return-value-of-IEn.patch
-	patch_apply wbemprox-Win32_SystemEnclosure/0002-wbemprox-tests-Fix-memory-leak-when-tests-are-skippe.patch
-	patch_apply wbemprox-Win32_SystemEnclosure/0003-wbemprox-Fix-handling-of-arrays-as-query-results.patch
-	patch_apply wbemprox-Win32_SystemEnclosure/0004-wbemprox-Add-support-for-Win32_SystemEnclosure.patch
+	patch_apply wbemprox-Win32_SystemEnclosure/0001-wbemprox-Fix-handling-of-arrays-as-query-results.patch
+	patch_apply wbemprox-Win32_SystemEnclosure/0002-wbemprox-Add-support-for-Win32_SystemEnclosure.patch
 	(
-		echo '+    { "Sebastian Lackner", "wbemprox/tests: Actually test the return value of IEnumWbemClassObject_Next.", 1 },';
-		echo '+    { "Sebastian Lackner", "wbemprox/tests: Fix memory leak when tests are skipped.", 1 },';
 		echo '+    { "Sebastian Lackner", "wbemprox: Fix handling of arrays as query results.", 1 },';
 		echo '+    { "Michael Müller", "wbemprox: Add support for Win32_SystemEnclosure.", 1 },';
 	) >> "$patchlist"
@@ -5167,23 +5122,6 @@ if test "$enable_ws2_32_Connect_Time" -eq 1; then
 	patch_apply ws2_32-Connect_Time/0001-ws2_32-Implement-returning-the-proper-time-with-SO_C.patch
 	(
 		echo '+    { "Sebastian Lackner", "ws2_32: Implement returning the proper time with SO_CONNECT_TIME.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ws2_32-Select
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38399] Properly handle closing sockets during a select call
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/server.c, dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/wine/server.h
-# |
-if test "$enable_ws2_32_Select" -eq 1; then
-	patch_apply ws2_32-Select/0001-ntdll-Introduce-a-helper-function-to-check-for-exist.patch
-	patch_apply ws2_32-Select/0002-ws2_32-Properly-handle-closing-sockets-during-a-sele.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Introduce a helper function to check for existance of server handles.", 1 },';
-		echo '+    { "Sebastian Lackner", "ws2_32: Properly handle closing sockets during a select call.", 1 },';
 	) >> "$patchlist"
 fi
 

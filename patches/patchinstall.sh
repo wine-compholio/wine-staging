@@ -205,6 +205,7 @@ patch_enable_all ()
 	enable_shell32_RunDLL_CallEntry16="$1"
 	enable_shell32_SHCreateSessionKey="$1"
 	enable_shell32_SHFileOperation="$1"
+	enable_shlwapi_AssocGetPerceivedType="$1"
 	enable_shlwapi_UrlCombine="$1"
 	enable_urlmon_CoInternetSetFeatureEnabled="$1"
 	enable_user32_Dialog_Paint_Event="$1"
@@ -691,6 +692,9 @@ patch_enable ()
 			;;
 		shell32-SHFileOperation)
 			enable_shell32_SHFileOperation="$2"
+			;;
+		shlwapi-AssocGetPerceivedType)
+			enable_shlwapi_AssocGetPerceivedType="$2"
 			;;
 		shlwapi-UrlCombine)
 			enable_shlwapi_UrlCombine="$2"
@@ -4468,6 +4472,18 @@ if test "$enable_shell32_SHFileOperation" -eq 1; then
 	patch_apply shell32-SHFileOperation/0001-shell32-Choose-return-value-for-SHFileOperationW-dep.patch
 	(
 		echo '+    { "Michael Müller", "shell32: Choose return value for SHFileOperationW depending on windows version.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shlwapi-AssocGetPerceivedType
+# |
+# | Modified files:
+# |   *	dlls/shlwapi/assoc.c, dlls/shlwapi/tests/assoc.c
+# |
+if test "$enable_shlwapi_AssocGetPerceivedType" -eq 1; then
+	patch_apply shlwapi-AssocGetPerceivedType/0001-shlwapi-tests-Add-tests-for-AssocGetPerceivedType.patch
+	(
+		echo '+    { "Mark Jansen", "shlwapi/tests: Add tests for AssocGetPerceivedType.", 1 },';
 	) >> "$patchlist"
 fi
 

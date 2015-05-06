@@ -1,17 +1,26 @@
-From 5514f8e7f8421577dc300c146ed1943d254d903c Mon Sep 17 00:00:00 2001
+From 98cd419f1bea2a0002ff4d768680862e88bdcad0 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 9 Oct 2014 17:35:50 +0200
 Subject: msvcp90/tests: Add tests to check that basic_string_wchar_dtor
  returns NULL.
 
 ---
- dlls/msvcp90/tests/string.c | 79 +++++++++++++++++++++++++++++----------------
- 1 file changed, 52 insertions(+), 27 deletions(-)
+ dlls/msvcp90/tests/string.c | 90 +++++++++++++++++++++++++++++++--------------
+ 1 file changed, 62 insertions(+), 28 deletions(-)
 
 diff --git a/dlls/msvcp90/tests/string.c b/dlls/msvcp90/tests/string.c
-index f1aa92a..a2cd46f 100644
+index f1aa92a..68a432f 100644
 --- a/dlls/msvcp90/tests/string.c
 +++ b/dlls/msvcp90/tests/string.c
+@@ -63,7 +63,7 @@ static basic_string_char* (__cdecl *p_basic_string_char_concatenate_cstr)(basic_
+ static basic_string_char* (__thiscall *p_basic_string_char_ctor)(basic_string_char*);
+ static basic_string_char* (__thiscall *p_basic_string_char_copy_ctor)(basic_string_char*, basic_string_char*);
+ static basic_string_char* (__thiscall *p_basic_string_char_ctor_cstr)(basic_string_char*, const char*);
+-static void (__thiscall *p_basic_string_char_dtor)(basic_string_char*);
++static void* (__thiscall *p_basic_string_char_dtor)(basic_string_char*);
+ static basic_string_char* (__thiscall *p_basic_string_char_erase)(basic_string_char*, size_t, size_t);
+ static basic_string_char* (__thiscall *p_basic_string_char_assign_cstr_len)(basic_string_char*, const char*, size_t);
+ static const char* (__thiscall *p_basic_string_char_cstr)(basic_string_char*);
 @@ -85,7 +85,7 @@ static size_t *p_basic_string_char_npos;
  static basic_string_wchar* (__thiscall *p_basic_string_wchar_ctor)(basic_string_wchar*);
  static basic_string_wchar* (__thiscall *p_basic_string_wchar_copy_ctor)(basic_string_wchar*, basic_string_wchar*);
@@ -100,13 +109,14 @@ index f1aa92a..a2cd46f 100644
  
  #else
  
-@@ -767,6 +771,26 @@ static void test_basic_string_char_find_last_not_of(void) {
+@@ -767,6 +771,35 @@ static void test_basic_string_char_find_last_not_of(void) {
      }
  }
  
 +static void test_basic_string_dtor_eax(void) {
 +#ifdef __i386__
 +    basic_string_wchar str1;
++    basic_string_char str2;
 +    void *ret;
 +    wchar_t wtmp1[32];
 +
@@ -115,19 +125,27 @@ index f1aa92a..a2cd46f 100644
 +    /* eax = 0x1337 */
 +    call_func2(p_basic_string_wchar_ctor_cstr, &str1, wtmp1);
 +    ret = call_func1_eax(p_basic_string_wchar_dtor, 0x1337, &str1);
-+    ok (ret == (void *)0x0, "Expected eax value 0x%x, got 0x%x\n", 0x0, (unsigned int)ret);
++    ok(ret == (void *)0x0, "Expected eax value 0x%x, got 0x%x\n", 0x0, (unsigned int)ret);
++
++    call_func2(p_basic_string_char_ctor_cstr, &str2, "qwerty");
++    ret = call_func1_eax(p_basic_string_char_dtor, 0x1337, &str2);
++    ok(ret == (void *)0x0, "Expected eax value 0x%x, got 0x%x\n", 0x0, (unsigned int)ret);
 +
 +    /* eax = 0xdeadbeef */
 +    call_func2(p_basic_string_wchar_ctor_cstr, &str1, wtmp1);
 +    ret = call_func1_eax(p_basic_string_wchar_dtor, 0xdeadbeef, &str1);
-+    ok (ret == (void *)0x0, "Expected eax value 0x%x, got 0x%x\n", 0x0, (unsigned int)ret);
++    ok(ret == (void *)0x0, "Expected eax value 0x%x, got 0x%x\n", 0x0, (unsigned int)ret);
++
++    call_func2(p_basic_string_char_ctor_cstr, &str2, "qwerty");
++    ret = call_func1_eax(p_basic_string_char_dtor, 0xdeadbeef, &str2);
++    ok(ret == (void *)0x0, "Expected eax value 0x%x, got 0x%x\n", 0x0, (unsigned int)ret);
 +#endif
 +}
 +
  START_TEST(string)
  {
      if(!init())
-@@ -783,6 +807,7 @@ START_TEST(string)
+@@ -783,6 +816,7 @@ START_TEST(string)
      test_basic_string_wchar();
      test_basic_string_wchar_swap();
      test_basic_string_char_find_last_not_of();
@@ -136,5 +154,5 @@ index f1aa92a..a2cd46f 100644
      ok(!invalid_parameter, "invalid_parameter_handler was invoked too many times\n");
  
 -- 
-1.9.1
+2.3.7
 

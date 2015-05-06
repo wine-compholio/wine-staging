@@ -133,7 +133,7 @@ patch_enable_all ()
 	enable_mountmgr_DosDevices="$1"
 	enable_mountmgr_Null_Device="$1"
 	enable_mscoree_CorValidateImage="$1"
-	enable_msvcp90_basic_string_wchar_dtor="$1"
+	enable_msvcp90_basic_string_dtor="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvcrt_atof_strtod="$1"
 	enable_msvfw32_Image_Size="$1"
@@ -477,8 +477,8 @@ patch_enable ()
 		mscoree-CorValidateImage)
 			enable_mscoree_CorValidateImage="$2"
 			;;
-		msvcp90-basic_string_wchar_dtor)
-			enable_msvcp90_basic_string_wchar_dtor="$2"
+		msvcp90-basic_string_dtor)
+			enable_msvcp90_basic_string_dtor="$2"
 			;;
 		msvcrt-Math_Precision)
 			enable_msvcrt_Math_Precision="$2"
@@ -3308,7 +3308,7 @@ if test "$enable_mscoree_CorValidateImage" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset msvcp90-basic_string_wchar_dtor
+# Patchset msvcp90-basic_string_dtor
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#37358] FEAR 1 installer expects basic_string_wchar_dtor to return NULL
@@ -3316,9 +3316,9 @@ fi
 # | Modified files:
 # |   *	dlls/msvcp90/msvcp90.h, dlls/msvcp90/string.c, dlls/msvcp90/tests/string.c
 # |
-if test "$enable_msvcp90_basic_string_wchar_dtor" -eq 1; then
-	patch_apply msvcp90-basic_string_wchar_dtor/0001-msvcp90-basic_string_wchar_dtor-needs-to-return-NULL.patch
-	patch_apply msvcp90-basic_string_wchar_dtor/0002-msvcp90-tests-Add-tests-to-check-that-basic_string_w.patch
+if test "$enable_msvcp90_basic_string_dtor" -eq 1; then
+	patch_apply msvcp90-basic_string_dtor/0001-msvcp90-basic_string_wchar_dtor-needs-to-return-NULL.patch
+	patch_apply msvcp90-basic_string_dtor/0002-msvcp90-tests-Add-tests-to-check-that-basic_string_w.patch
 	(
 		echo '+    { "Michael Müller", "msvcp90: basic_string_wchar_dtor needs to return NULL.", 1 },';
 		echo '+    { "Michael Müller", "msvcp90/tests: Add tests to check that basic_string_wchar_dtor returns NULL.", 1 },';

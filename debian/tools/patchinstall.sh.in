@@ -80,7 +80,6 @@ enable_patchlist=1
 enable_autoconf=1
 patchlist="/dev/null"
 backend="patch"
-enable=1
 
 # Find location of patches
 patchdir="$(dirname "$(readlink -f "$0")")"
@@ -98,16 +97,6 @@ if test "$#" -eq 0; then
 fi
 
 while test "$#" -gt 0; do
-	if patch_enable "$1" "$enable"; then
-		shift
-		enable=1
-		continue
-	fi
-
-	if test "$enable" -ne 1; then
-		abort "Wrong use of -W commandline argument, expected patchname."
-	fi
-
 	case "$1" in
 		DESTDIR=*)
 			DESTDIR="${{1#*=}}"
@@ -150,19 +139,23 @@ while test "$#" -gt 0; do
 			;;
 
 		-W)
-			enable=2
+			# Disable patchset
+			if ! patch_enable "$2" 2; then
+				abort "Wrong usage of -W commandline argument, expected patchname."
+			fi
+			shift
 			shift
 			;;
 
 		*)
-			abort "Unknown commandline argument $1"
-			exit 1
+			# Enable patchset
+			if ! patch_enable "$1" 1; then
+				abort "Unknown commandline argument $1."
+			fi
+			shift
+			;;
 	esac
 done
-
-if test "$enable" -ne 1; then
-	abort "Missing argument for -W, expected patchname."
-fi
 
 # Determine DESTDIR if not explicitly specified
 if test -z "$DESTDIR" -a -f ./tools/make_requests; then

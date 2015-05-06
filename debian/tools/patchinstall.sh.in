@@ -154,6 +154,80 @@ if ! cd "$DESTDIR"; then
 	abort "Unable to change directory to $DESTDIR."
 fi
 
+# Helper to update configure / the wineserver protocol if required
+if ! command -v diff >/dev/null 2>&1 ||
+   ! command -v grep >/dev/null 2>&1 ||
+   ! command -v cmp >/dev/null 2>&1; then
+
+	update_configure ()
+	{{
+		autoreconf -f
+	}}
+
+	update_protocol ()
+	{{
+		./tools/make_requests
+	}}
+
+else
+
+	update_configure ()
+	{{
+		file="./configure"
+
+		if ! cp -a "$file" "$file.old"; then
+			abort "failed to create $file.old"
+		fi
+
+		if ! autoreconf -f; then
+			rm "$file.old"
+			return 1
+		fi
+
+		# Shifting by 62 bits is undefined behaviour when off_t is 32-bit, see also
+		# https://launchpad.net/ubuntu/+source/autoconf/2.69-6 - the bug is still
+		# present in some other distros (including Archlinux).
+		large_off_old="^#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))$"
+		large_off_new="#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))"
+		sed -i'' -e "s|$large_off_old|$large_off_new|g" "$file"
+
+		# Restore original timestamp when nothing changed
+		if ! cmp "$file.old" "$file" >/dev/null; then
+			rm "$file.old"
+		else
+			mv "$file.old" "$file"
+		fi
+
+		return 0
+	}}
+
+	update_protocol ()
+	{{
+		file="./include/wine/server_protocol.h"
+
+		if ! cp -a "$file" "$file.old"; then
+			abort "failed to create $file.old"
+		fi
+
+		if ! ./tools/make_requests; then
+			rm "$file.old"
+			return 1
+		fi
+
+		# Restore original timestamp when nothing changed
+		if diff -u "$file.old" "$file" |
+		   grep -v "^[+-]#define SERVER_PROTOCOL_VERSION" |
+		   grep -v "^\(+++\|---\)" | grep -q "^[+-]"; then
+			rm "$file.old"
+		else
+			mv "$file.old" "$file"
+		fi
+
+		return 0
+	}}
+fi
+
+
 # Most backends will try to use git, either directly or indirectly.
 # Unfortunately this does not work when "$DESTDIR" points to a
 # subdirectory of a git tree, which has the effect that no patches
@@ -337,13 +411,8 @@ EOF
 fi
 
 if test "$enable_autoconf" -eq 1; then
-	if ! autoreconf -f; then
-		abort "'autoreconf -f' failed."
-	fi
-	if ! ./tools/make_requests; then
-		abort "'./tools/make_requests' failed."
-	fi
+	update_configure || abort "'autoreconf -f' failed."
+	update_protocol  || abort "'./tools/make_requests' failed."
 fi
-
 # Success
 exit 0

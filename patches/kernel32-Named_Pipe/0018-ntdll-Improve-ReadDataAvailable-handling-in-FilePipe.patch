@@ -1,0 +1,46 @@
+From b2c20a6b49fdd1ec392b8a7406401343555da73a Mon Sep 17 00:00:00 2001
+From: Qian Hong <qhong@codeweavers.com>
+Date: Mon, 30 Mar 2015 07:25:35 +0800
+Subject: ntdll: Improve ReadDataAvailable handling in FilePipeLocalInformation
+ class support.
+
+---
+ dlls/ntdll/file.c | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index 0dc5c13..a1ca1d1 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -2367,6 +2367,7 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
+     case FilePipeLocalInformation:
+         {
+             FILE_PIPE_LOCAL_INFORMATION* pli = ptr;
++            int avail, fd, needs_close;
+ 
+             SERVER_START_REQ( get_named_pipe_info )
+             {
+@@ -2390,12 +2391,19 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
+                     pli->MaximumInstances = reply->maxinstances;
+                     pli->CurrentInstances = reply->instances;
+                     pli->InboundQuota = reply->insize;
+-                    pli->ReadDataAvailable = 0; /* FIXME */
++                    pli->ReadDataAvailable = 0;
+                     pli->OutboundQuota = reply->outsize;
+                     pli->WriteQuotaAvailable = 0; /* FIXME */
+                     pli->NamedPipeState = 0; /* FIXME */
+                     pli->NamedPipeEnd = (reply->flags & NAMED_PIPE_SERVER_END) ?
+                         FILE_PIPE_SERVER_END : FILE_PIPE_CLIENT_END;
++
++                    if (!server_get_unix_fd( hFile, FILE_READ_DATA, &fd, &needs_close, NULL, NULL ))
++                    {
++                        if (!unix_fd_avail( fd, &avail ))
++                            pli->ReadDataAvailable = min(avail, reply->outsize); /* FIXME */
++                        if (needs_close) close( fd );
++                    }
+                 }
+             }
+             SERVER_END_REQ;
+-- 
+2.3.7
+

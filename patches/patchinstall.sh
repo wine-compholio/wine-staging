@@ -3108,6 +3108,7 @@ if test "$enable_kernel32_Named_Pipe" -eq 1; then
 	patch_apply kernel32-Named_Pipe/0015-kernel32-tests-Add-tests-for-PIPE_NOWAIT-in-message-.patch
 	patch_apply kernel32-Named_Pipe/0016-ntdll-Allow-to-set-PIPE_NOWAIT-on-byte-mode-pipes.patch
 	patch_apply kernel32-Named_Pipe/0017-kernel32-tests-Add-additional-tests-for-PIPE_NOWAIT-.patch
+	patch_apply kernel32-Named_Pipe/0018-ntdll-Improve-ReadDataAvailable-handling-in-FilePipe.patch
 	(
 		echo '+    { "Dan Kegel", "kernel32: ConnectNamedPort should return FALSE and set ERROR_PIPE_CONNECTED on success in overlapped mode.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for PeekNamedPipe with partial received messages.", 1 },';
@@ -3126,6 +3127,7 @@ if test "$enable_kernel32_Named_Pipe" -eq 1; then
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for PIPE_NOWAIT in message mode.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Allow to set PIPE_NOWAIT on byte-mode pipes.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for PIPE_NOWAIT in overlapped mode.", 1 },';
+		echo '+    { "Qian Hong", "ntdll: Improve ReadDataAvailable handling in FilePipeLocalInformation class support.", 1 },';
 	) >> "$patchlist"
 fi
 

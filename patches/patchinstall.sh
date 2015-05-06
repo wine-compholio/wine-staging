@@ -36,6 +36,7 @@ usage()
 	echo "  --help               Display this help and exit"
 	echo "  --no-patchlist       Do not apply patchlist (needed for 'wine --patches')"
 	echo "  --no-autoconf        Do not run autoreconf and tools/make_requests"
+	echo "  --version            Show version information"
 	echo "  -W patchset          Exclude a specific patchset"
 	echo ""
 	echo "Backends:"
@@ -44,6 +45,17 @@ usage()
 	echo "  --backend=git-am     Use 'git am' to apply patches"
 	echo "  --backend=git-apply  Use 'git apply' to apply patches"
 	echo "  --backend=stg        Import the patches using stacked git"
+	echo ""
+}
+
+# Show version information
+version()
+{
+	echo "Wine Staging 1.7.43 (unreleased)"
+	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
+	echo ""
+	echo "Patchset to be applied on upstream Wine:"
+	echo "  commit 3599f956e2bfe3dd76d7134ddd06b1e5cf5be4d5"
 	echo ""
 }
 
@@ -928,6 +940,11 @@ while test "$#" -gt 0; do
 		--no-autoconf)
 			enable_autoconf=0
 			shift
+			;;
+
+		--version)
+			version
+			exit 0
 			;;
 
 		-W)

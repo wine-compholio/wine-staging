@@ -43,8 +43,9 @@ import xml.dom.minidom
 _devnull = open(os.devnull, 'wb')
 
 # Cached information to speed up patch dependency checks
-latest_wine_commit  = None
-cached_patch_result = {}
+latest_wine_commit     = None
+latest_staging_version = None
+cached_patch_result    = {}
 
 class config(object):
     path_cache              = ".patchupdate.cache"
@@ -176,11 +177,13 @@ def _read_changelog():
             r = re.match("^([a-zA-Z0-9][^(]*)\((.*)\) ([^;]*)", line)
             if r: yield (r.group(1).strip(), r.group(2).strip(), r.group(3).strip())
 
-def _stable_compholio_version():
+def _latest_staging_version(only_stable=False):
     """Get version number of the latest stable release."""
     for package, version, distro in _read_changelog():
         if distro.lower() != "unreleased":
             return version
+        elif not only_stable:
+            return "%s (unreleased)" % version
 
 def _latest_wine_commit(commit=None):
     """Get latest wine commit."""
@@ -188,7 +191,7 @@ def _latest_wine_commit(commit=None):
         raise PatchUpdaterError("Please create a symlink to the wine repository in %s" % config.path_wine)
     if commit is None:
         commit = subprocess.check_output(["git", "rev-parse", "origin/master"], cwd=config.path_wine).strip()
-    assert len(commit) == 40
+    assert len(commit) == 40 and commit == commit.lower()
     return commit
 
 def enum_directories(revision, path):
@@ -681,14 +684,16 @@ def generate_script(all_patches):
     with open(config.path_template_script) as template_fp:
         template = template_fp.read()
     with open(config.path_script, "w") as fp:
-        fp.write(template.format(patch_helpers="".join(lines_helpers).rstrip("\n"),
+        fp.write(template.format(latest_staging_version=_latest_staging_version(),
+                                 latest_wine_commit=latest_wine_commit,
+                                 patch_helpers="".join(lines_helpers).rstrip("\n"),
                                  patch_resolver="".join(lines_resolver).rstrip("\n"),
                                  patch_apply="".join(lines_apply).rstrip("\n")))
 
     # Add changes to git
     subprocess.call(["git", "add", config.path_script])
 
-def generate_markdown(all_patches, stable_patches, stable_compholio_version):
+def generate_markdown(all_patches, stable_patches):
     """Generate README.md including information about specific patches and bugfixes."""
 
     def _format_bug(mode, bugid, bugname):
@@ -734,7 +739,7 @@ def generate_markdown(all_patches, stable_patches, stable_compholio_version):
             lines.append(_format_bug(mode, bugid, bugname))
         lines.append("")
         lines.append("")
-    lines.append("**Bug fixes and features in Wine Staging %s [%d]:**" % (stable_compholio_version, len(old_fixes)))
+    lines.append("**Bug fixes and features in Wine Staging %s [%d]:**" % (latest_staging_version, len(old_fixes)))
     lines.append("")
     lines.append("*Note: The following list only contains features and bug fixes which are not")
     lines.append("yet available in vanilla Wine. They are removed from the list as soon as they")
@@ -765,17 +770,17 @@ if __name__ == "__main__":
 
     try:
 
-        # Get information about Wine and Compholio version
+        # Get information about Wine and Staging version
         latest_wine_commit       = _latest_wine_commit(sys.argv[1] if len(sys.argv) >= 2 else None)
-        stable_compholio_version = _stable_compholio_version()
+        latest_staging_version   = _latest_staging_version(only_stable=True)
 
         # Read current and stable patches
         all_patches    = read_patchset()
-        stable_patches = read_patchset(revision="v%s" % stable_compholio_version)
+        stable_patches = read_patchset(revision="v%s" % latest_staging_version)
 
         generate_ifdefined(all_patches)
         generate_script(all_patches)
-        generate_markdown(all_patches, stable_patches, stable_compholio_version)
+        generate_markdown(all_patches, stable_patches)
 
     except PatchUpdaterError as e:
         print ""

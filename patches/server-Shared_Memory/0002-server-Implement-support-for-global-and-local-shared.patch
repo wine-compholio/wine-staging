@@ -1,4 +1,4 @@
-From d4226297d14857b3b5d069af8ba7437fc2504939 Mon Sep 17 00:00:00 2001
+From 6b5e2bec64faa4a6f8ba22c1607a9eef762cf039 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 19 Mar 2015 01:22:34 +0100
 Subject: server: Implement support for global and local shared memory blocks
@@ -20,7 +20,7 @@ Subject: server: Implement support for global and local shared memory blocks
  12 files changed, 215 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 41ef5cb..18e00c9 100644
+index 7eded42..79cc2c1 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
 @@ -97,6 +97,7 @@ extern int server_remove_fd_from_cache( HANDLE handle ) DECLSPEC_HIDDEN;
@@ -32,10 +32,10 @@ index 41ef5cb..18e00c9 100644
  /* security descriptors */
  NTSTATUS NTDLL_create_struct_sd(PSECURITY_DESCRIPTOR nt_sd, struct security_descriptor **server_sd,
 diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
-index 69d01be..0b8e007 100644
+index 652a1aa..2e4fc6e 100644
 --- a/dlls/ntdll/server.c
 +++ b/dlls/ntdll/server.c
-@@ -941,6 +941,66 @@ done:
+@@ -972,6 +972,66 @@ done:
  
  
  /***********************************************************************
@@ -102,7 +102,7 @@ index 69d01be..0b8e007 100644
   *           wine_server_fd_to_handle   (NTDLL.@)
   *
   * Allocate a file handle for a Unix file descriptor.
-@@ -1472,6 +1532,10 @@ size_t server_init_thread( void *entry_point )
+@@ -1503,6 +1563,10 @@ size_t server_init_thread( void *entry_point )
      }
      SERVER_END_REQ;
  
@@ -158,7 +158,7 @@ index d573d1f..695389a 100644
  /* macros for server requests */
  
 diff --git a/include/winternl.h b/include/winternl.h
-index f88001f..f1cc143 100644
+index 9231468..3ecaef7 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
 @@ -353,7 +353,7 @@ typedef struct _TEB
@@ -171,10 +171,10 @@ index f88001f..f1cc143 100644
      ULONG                        ImpersonationLocale;               /* f98/1788 */
      ULONG                        IsImpersonating;                   /* f9c/178c */
 diff --git a/server/fd.c b/server/fd.c
-index e3b722c..14c473b 100644
+index 1253b3d..08c052d 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -2293,6 +2293,33 @@ DECL_HANDLER(get_handle_fd)
+@@ -2328,6 +2328,33 @@ DECL_HANDLER(write)
      }
  }
  
@@ -209,10 +209,10 @@ index e3b722c..14c473b 100644
  DECL_HANDLER(ioctl)
  {
 diff --git a/server/file.h b/server/file.h
-index 85e4257..9c110bc 100644
+index 603b686..c0debbd 100644
 --- a/server/file.h
 +++ b/server/file.h
-@@ -134,6 +134,14 @@ extern obj_handle_t open_mapping_file( struct process *process, struct mapping *
+@@ -138,6 +138,14 @@ extern obj_handle_t open_mapping_file( struct process *process, struct mapping *
  extern struct mapping *grab_mapping_unless_removable( struct mapping *mapping );
  extern int get_page_size(void);
  
@@ -240,7 +240,7 @@ index 7aed338..f984bfc 100644
      return 0;
  }
 diff --git a/server/mapping.c b/server/mapping.c
-index 64b3003..063dbb8 100644
+index 16e7c1c..c180ae5 100644
 --- a/server/mapping.c
 +++ b/server/mapping.c
 @@ -29,8 +29,32 @@
@@ -276,7 +276,7 @@ index 64b3003..063dbb8 100644
  #include "ntstatus.h"
  #define WIN32_NO_STATUS
  #include "windef.h"
-@@ -112,6 +136,10 @@ static struct list shared_list = LIST_INIT(shared_list);
+@@ -114,6 +138,10 @@ static struct list shared_list = LIST_INIT(shared_list);
  
  static size_t page_mask;
  
@@ -287,7 +287,7 @@ index 64b3003..063dbb8 100644
  #define ROUND_SIZE(size)  (((size) + page_mask) & ~page_mask)
  
  
-@@ -156,6 +184,52 @@ static int check_current_dir_for_exec(void)
+@@ -158,6 +186,52 @@ static int check_current_dir_for_exec(void)
      return (ret != MAP_FAILED);
  }
  
@@ -341,7 +341,7 @@ index 64b3003..063dbb8 100644
  static int create_temp_file( file_pos_t size )
  {
 diff --git a/server/protocol.def b/server/protocol.def
-index 2cd8272..91ba01d 100644
+index 9c4dab4..495365b 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -69,6 +69,15 @@ struct request_max_size
@@ -360,7 +360,7 @@ index 2cd8272..91ba01d 100644
  
  /* debug event data */
  typedef union
-@@ -1150,6 +1159,12 @@ enum server_fd_type
+@@ -1170,6 +1179,12 @@ enum server_fd_type
  };
  
  
@@ -371,10 +371,10 @@ index 2cd8272..91ba01d 100644
 +
 +
  /* Flush a file buffers */
- @REQ(flush_file)
-     obj_handle_t handle;        /* handle to the file */
+ @REQ(flush)
+     int            blocking;    /* whether it's a blocking flush */
 diff --git a/server/thread.c b/server/thread.c
-index 906b79d..f99a677 100644
+index 6c5d12d..d692a77 100644
 --- a/server/thread.c
 +++ b/server/thread.c
 @@ -194,6 +194,8 @@ static inline void init_thread_structure( struct thread *thread )
@@ -419,5 +419,5 @@ index 996d95b..0107a45 100644
  
  struct thread_snapshot
 -- 
-2.3.2
+2.3.7
 

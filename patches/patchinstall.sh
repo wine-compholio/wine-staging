@@ -81,6 +81,7 @@ patch_enable_all ()
 	enable_Staging="$1"
 	enable_advapi32_ImpersonateAnonymousToken="$1"
 	enable_advapi32_LsaLookupSids="$1"
+	enable_atl_AtlIPersistPropertyBag_Save="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_category_stable="$1"
 	enable_combase_String="$1"
@@ -294,6 +295,9 @@ patch_enable ()
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
+			;;
+		atl-AtlIPersistPropertyBag_Save)
+			enable_atl_AtlIPersistPropertyBag_Save="$2"
 			;;
 		browseui-Progress_Dialog)
 			enable_browseui_Progress_Dialog="$2"
@@ -1746,23 +1750,6 @@ if test "$enable_advapi32_ImpersonateAnonymousToken" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1779,6 +1766,23 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -1803,6 +1807,22 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 		echo '+    { "Qian Hong", "advapi32/tests: Test prefix and use of TokenPrimaryGroup Sid.", 1 },';
 		echo '+    { "Qian Hong", "server: Create primary group using DOMAIN_GROUP_RID_USERS.", 1 },';
 		echo '+    { "Qian Hong", "advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset atl-AtlIPersistPropertyBag_Save
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33888] Add stub for atl80.AtlIPersistPropertyBag_Save
+# |
+# | Modified files:
+# |   *	dlls/atl/atl.c, dlls/atl/atl.spec, dlls/atl100/atl100.spec, dlls/atl110/atl110.spec, dlls/atl80/atl80.spec,
+# | 	dlls/atl90/atl90.spec
+# |
+if test "$enable_atl_AtlIPersistPropertyBag_Save" -eq 1; then
+	patch_apply atl-AtlIPersistPropertyBag_Save/0001-atl-Added-stub-AtlIPersistPropertyBag_Save.patch
+	(
+		echo '+    { "Qian Hong", "atl: Added stub AtlIPersistPropertyBag_Save.", 1 },';
 	) >> "$patchlist"
 fi
 

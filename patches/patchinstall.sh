@@ -267,6 +267,7 @@ patch_enable_all ()
 	enable_winex11_wglShareLists="$1"
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
 	enable_winmm_Delay_Import_Depends="$1"
+	enable_winsta_WinStationEnumerateW="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_APC_Performance="$1"
 	enable_ws2_32_Connect_Time="$1"
@@ -855,6 +856,9 @@ patch_enable ()
 			;;
 		winmm-Delay_Import_Depends)
 			enable_winmm_Delay_Import_Depends="$2"
+			;;
+		winsta-WinStationEnumerateW)
+			enable_winsta_WinStationEnumerateW="$2"
 			;;
 		wpcap-Dynamic_Linking)
 			enable_wpcap_Dynamic_Linking="$2"
@@ -5299,6 +5303,21 @@ if test "$enable_winmm_Delay_Import_Depends" -eq 1; then
 	patch_apply winmm-Delay_Import_Depends/0001-winmm-Delay-import-ole32-msacm32-to-workaround-bug-w.patch
 	(
 		echo '+    { "Michael Müller", "winmm: Delay import ole32 msacm32 to workaround bug when loading multiple winmm versions.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winsta-WinStationEnumerateW
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38102] Add stub for winsta.WinStationEnumerateW
+# |
+# | Modified files:
+# |   *	dlls/winsta/main.c, dlls/winsta/winsta.spec
+# |
+if test "$enable_winsta_WinStationEnumerateW" -eq 1; then
+	patch_apply winsta-WinStationEnumerateW/0001-winsta-Add-stub-for-WinStationEnumerateW.patch
+	(
+		echo '+    { "Austin English", "winsta: Add stub for WinStationEnumerateW.", 1 },';
 	) >> "$patchlist"
 fi
 

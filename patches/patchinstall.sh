@@ -119,6 +119,7 @@ patch_enable_all ()
 	enable_dxva2_Video_Decoder="$1"
 	enable_fltmgr_Stub_SYS="$1"
 	enable_fonts_Missing_Fonts="$1"
+	enable_gdi32_Default_Palette="$1"
 	enable_gdi32_MaxPixelFormats="$1"
 	enable_gdi32_MultiMonitor="$1"
 	enable_gdiplus_GdipCreateEffect="$1"
@@ -410,6 +411,9 @@ patch_enable ()
 			;;
 		fonts-Missing_Fonts)
 			enable_fonts_Missing_Fonts="$2"
+			;;
+		gdi32-Default_Palette)
+			enable_gdi32_Default_Palette="$2"
 			;;
 		gdi32-MaxPixelFormats)
 			enable_gdi32_MaxPixelFormats="$2"
@@ -1754,6 +1758,23 @@ if test "$enable_advapi32_ImpersonateAnonymousToken" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1770,23 +1791,6 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2968,6 +2972,18 @@ if test "$enable_fonts_Missing_Fonts" -eq 1; then
 		echo '+    { "Erich E. Hoover", "fonts: Add WenQuanYi Micro Hei as a Microsoft Yahei replacement.", 1 },';
 		echo '+    { "Erich E. Hoover", "fonts: Add Courier Prime as a Courier New replacement.", 1 },';
 		echo '+    { "Michael Müller", "Add licenses for fonts as separate files.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset gdi32-Default_Palette
+# |
+# | Modified files:
+# |   *	dlls/gdi32/palette.c, dlls/gdi32/tests/palette.c
+# |
+if test "$enable_gdi32_Default_Palette" -eq 1; then
+	patch_apply gdi32-Default_Palette/0001-gdi32-Return-default-palette-entries-from-GetSystemP.patch
+	(
+		echo '+    { "Anton Baskanov", "gdi32: Return default palette entries from GetSystemPaletteEntries for non-palette-based devices.", 1 },';
 	) >> "$patchlist"
 fi
 

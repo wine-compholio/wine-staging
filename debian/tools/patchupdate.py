@@ -760,6 +760,25 @@ def generate_markdown(all_patches, stable_patches):
     # Add changes to git
     subprocess.call(["git", "add", config.path_README_md])
 
+def wrap_changelog():
+
+    lines = []
+    with open(config.path_changelog) as fp:
+        for line in fp:
+            if line.startswith("  *") and len(line.rstrip("\n")) > 80:
+                wrapped = textwrap.wrap(line[3:].strip(), 80 - 4)
+                lines.append("  * %s\n" % "\n    ".join(wrapped))
+            else:
+                lines.append(line)
+
+    with open(config.path_changelog, "w") as fp:
+        for line in lines:
+            fp.write(line)
+
+    # Add changes to git
+    subprocess.call(["git", "add", config.path_changelog])
+
+
 if __name__ == "__main__":
 
     # Hack to avoid KeyboardInterrupts on different threads
@@ -781,6 +800,7 @@ if __name__ == "__main__":
         generate_ifdefined(all_patches)
         generate_script(all_patches)
         generate_markdown(all_patches, stable_patches)
+        wrap_changelog()
 
     except PatchUpdaterError as e:
         print ""

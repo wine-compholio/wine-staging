@@ -1,0 +1,37 @@
+From 5591da91355f5d1ed7238deaaa9939e36101b5e1 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Thu, 7 May 2015 01:26:49 +0200
+Subject: ntdll: Mimic the Windows heap management and delay reusing freed
+ blocks.
+
+---
+ dlls/ntdll/heap.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/ntdll/heap.c b/dlls/ntdll/heap.c
+index 95c3554..a5fb206 100644
+--- a/dlls/ntdll/heap.c
++++ b/dlls/ntdll/heap.c
+@@ -628,7 +628,8 @@ static void HEAP_MakeInUseBlockFree( SUBHEAP *subheap, ARENA_INUSE *pArena )
+     ARENA_FREE *pFree;
+     SIZE_T size;
+ 
+-    if (heap->pending_free)
++    if (heap->pending_free && ((pArena->size & ARENA_SIZE_MASK) < 0x1000 ||
++        (heap->flags & HEAP_FREE_CHECKING_ENABLED) || RUNNING_ON_VALGRIND))
+     {
+         ARENA_INUSE *prev = heap->pending_free[heap->pending_pos];
+         heap->pending_free[heap->pending_pos] = pArena;
+@@ -1506,8 +1507,7 @@ void heap_set_debug_flags( HANDLE handle )
+                              large->block_size - sizeof(*large) - large->data_size, flags );
+     }
+ 
+-    if ((heap->flags & HEAP_GROWABLE) && !heap->pending_free &&
+-        ((flags & HEAP_FREE_CHECKING_ENABLED) || RUNNING_ON_VALGRIND))
++    if ((heap->flags & HEAP_GROWABLE) && !heap->pending_free)
+     {
+         void *ptr = NULL;
+         SIZE_T size = MAX_FREE_PENDING * sizeof(*heap->pending_free);
+-- 
+2.3.7
+

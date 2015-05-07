@@ -164,6 +164,7 @@ patch_enable_all ()
 	enable_ntdll_FileFsFullSizeInformation="$1"
 	enable_ntdll_Fix_Alignment="$1"
 	enable_ntdll_Fix_Free="$1"
+	enable_ntdll_Heap_Delay_Free="$1"
 	enable_ntdll_Heap_FreeLists="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_LZNT1_Compression="$1"
@@ -544,6 +545,9 @@ patch_enable ()
 			;;
 		ntdll-Fix_Free)
 			enable_ntdll_Fix_Free="$2"
+			;;
+		ntdll-Heap_Delay_Free)
+			enable_ntdll_Heap_Delay_Free="$2"
 			;;
 		ntdll-Heap_FreeLists)
 			enable_ntdll_Heap_FreeLists="$2"
@@ -3688,6 +3692,18 @@ if test "$enable_ntdll_Fix_Free" -eq 1; then
 	patch_apply ntdll-Fix_Free/0001-kernel32-Fix-leaking-directory-handle-in-RemoveDirec.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32: Fix leaking directory handle in RemoveDirectoryW.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Heap_Delay_Free
+# |
+# | Modified files:
+# |   *	dlls/ntdll/heap.c
+# |
+if test "$enable_ntdll_Heap_Delay_Free" -eq 1; then
+	patch_apply ntdll-Heap_Delay_Free/0001-ntdll-Mimic-the-Windows-heap-management-and-delay-re.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Mimic the Windows heap management and delay reusing freed blocks.", 1 },';
 	) >> "$patchlist"
 fi
 

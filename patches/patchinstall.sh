@@ -81,6 +81,7 @@ patch_enable_all ()
 	enable_Staging="$1"
 	enable_advapi32_ImpersonateAnonymousToken="$1"
 	enable_advapi32_LsaLookupSids="$1"
+	enable_advapi32_OpenSCManagerW="$1"
 	enable_atl_AtlIPersistPropertyBag_Save="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_category_stable="$1"
@@ -300,6 +301,9 @@ patch_enable ()
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
+			;;
+		advapi32-OpenSCManagerW)
+			enable_advapi32_OpenSCManagerW="$2"
 			;;
 		atl-AtlIPersistPropertyBag_Save)
 			enable_atl_AtlIPersistPropertyBag_Save="$2"
@@ -1521,6 +1525,13 @@ if test "$enable_mountmgr_Null_Device" -eq 1; then
 	enable_ntdll_Pipe_SpecialCharacters=1
 fi
 
+if test "$enable_kernel32_Named_Pipe" -eq 1; then
+	if test "$enable_advapi32_OpenSCManagerW" -gt 1; then
+		abort "Patchset advapi32-OpenSCManagerW disabled, but kernel32-Named_Pipe depends on that."
+	fi
+	enable_advapi32_OpenSCManagerW=1
+fi
+
 if test "$enable_kernel32_CopyFileEx" -eq 1; then
 	if test "$enable_kernel32_SetFileInformationByHandle" -gt 1; then
 		abort "Patchset kernel32-SetFileInformationByHandle disabled, but kernel32-CopyFileEx depends on that."
@@ -1827,6 +1838,18 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 		echo '+    { "Qian Hong", "advapi32/tests: Test prefix and use of TokenPrimaryGroup Sid.", 1 },';
 		echo '+    { "Qian Hong", "server: Create primary group using DOMAIN_GROUP_RID_USERS.", 1 },';
 		echo '+    { "Qian Hong", "advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset advapi32-OpenSCManagerW
+# |
+# | Modified files:
+# |   *	dlls/advapi32/service.c
+# |
+if test "$enable_advapi32_OpenSCManagerW" -eq 1; then
+	patch_apply advapi32-OpenSCManagerW/0001-advapi32-Fix-error-handling-in-OpenSCManagerW.patch
+	(
+		echo '+    { "Sebastian Lackner", "advapi32: Fix error handling in OpenSCManagerW.", 1 },';
 	) >> "$patchlist"
 fi
 

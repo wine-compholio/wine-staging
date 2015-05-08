@@ -75,6 +75,7 @@ class PatchSet(object):
         self.changes        = []
         self.disabled       = False
         self.ifdefined      = None
+        self.categories     = []
 
         self.files          = []
         self.patches        = []
@@ -302,9 +303,7 @@ def read_patchset(revision = None):
                 val = "category-%s" % val
                 if name_to_id.has_key(val):
                     raise PatchUpdaterError("Category name in definition file %s collides with patchset %s" % (filename, val))
-                if not categories.has_key(val):
-                    categories[val] = set()
-                categories[val].add(i)
+                patch.categories.append(val)
 
             elif key == "fixes":
                 r = re.match("^[0-9]+$", val)
@@ -329,6 +328,14 @@ def read_patchset(revision = None):
 
             elif revision is None:
                 print "WARNING: Ignoring unknown command in definition file %s: %s" % (filename, line)
+
+        # If patch is not disabled then finally add it to the category
+        if not patch.disabled:
+            for category in patch.categories:
+                if not categories.has_key(category):
+                    categories[category] = set()
+                categories[category].add(i)
+
 
     # Add virtual targets for all the categories
     for category, indices in categories.iteritems():

@@ -1,0 +1,241 @@
+From 01286698557b8f3b0515d94fd03d3866f0a3ede9 Mon Sep 17 00:00:00 2001
+From: Qian Hong <qhong@codeweavers.com>
+Date: Fri, 8 May 2015 18:03:24 +0800
+Subject: ntdll: Implemenent ObjectTypeInformation class support in
+ NtQueryObject.
+
+---
+ dlls/ntdll/om.c       | 64 +++++++++++++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/tests/om.c | 28 +++++++++++-----------
+ server/directory.c    |  5 ----
+ server/handle.c       | 18 +++++++++++++++
+ server/object.h       |  5 ++++
+ server/protocol.def   |  9 ++++++++
+ 6 files changed, 110 insertions(+), 19 deletions(-)
+
+diff --git a/dlls/ntdll/om.c b/dlls/ntdll/om.c
+index b337444..00820ce 100644
+--- a/dlls/ntdll/om.c
++++ b/dlls/ntdll/om.c
+@@ -150,6 +150,70 @@ NTSTATUS WINAPI NtQueryObject(IN HANDLE handle,
+             SERVER_END_REQ;
+         }
+         break;
++    case ObjectTypeInformation:
++        {
++            OBJECT_TYPE_INFORMATION *p = ptr;
++            ANSI_STRING unix_name;
++
++            /* first try as a file object */
++
++            if (!(status = server_get_unix_name( handle, &unix_name )))
++            {
++                static const WCHAR type_fileW[] = {'F','i','l','e','\0'};
++                int type_size = sizeof(type_fileW);
++
++                if (len < sizeof(*p))
++                    status = STATUS_INFO_LENGTH_MISMATCH;
++                else if (len < sizeof(*p) + type_size)
++                    status = STATUS_BUFFER_OVERFLOW;
++                else
++                {
++                    p->TypeName.Buffer = (WCHAR *)(p + 1);
++                    p->TypeName.Length = type_size - sizeof(WCHAR);
++                    p->TypeName.MaximumLength = type_size;
++                    memcpy( p->TypeName.Buffer, type_fileW, type_size );
++
++                }
++                if (used_len) *used_len = sizeof(*p) + type_size;
++                RtlFreeAnsiString( &unix_name );
++                break;
++            }
++            else if (status != STATUS_OBJECT_TYPE_MISMATCH) break;
++
++            /* not a file, treat as a generic object */
++
++            SERVER_START_REQ( get_object_typename )
++            {
++                req->handle = wine_server_obj_handle( handle );
++                if (len > sizeof(*p)) wine_server_set_reply( req, p + 1, len - sizeof(*p) );
++                status = wine_server_call( req );
++                if (status == STATUS_SUCCESS)
++                {
++                    if (!reply->total)  /* no name */
++                    {
++                        if (sizeof(*p) > len) status = STATUS_INFO_LENGTH_MISMATCH;
++                        else memset( p, 0, sizeof(*p) );
++                        if (used_len) *used_len = sizeof(*p);
++                    }
++                    else if (sizeof(*p) + reply->total + sizeof(WCHAR) > len)
++                    {
++                        if (used_len) *used_len = sizeof(*p) + reply->total + sizeof(WCHAR);
++                        status = STATUS_INFO_LENGTH_MISMATCH;
++                    }
++                    else
++                    {
++                        ULONG res = wine_server_reply_size( reply );
++                        p->TypeName.Buffer = (WCHAR *)(p + 1);
++                        p->TypeName.Length = res;
++                        p->TypeName.MaximumLength = res + sizeof(WCHAR);
++                        p->TypeName.Buffer[res / sizeof(WCHAR)] = 0;
++                        if (used_len) *used_len = sizeof(*p) + p->TypeName.MaximumLength;
++                    }
++                }
++            }
++            SERVER_END_REQ;
++        }
++        break;
+     case ObjectDataInformation:
+         {
+             OBJECT_DATA_INFORMATION* p = ptr;
+diff --git a/dlls/ntdll/tests/om.c b/dlls/ntdll/tests/om.c
+index 96e1e6e..d3bdbdc 100644
+--- a/dlls/ntdll/tests/om.c
++++ b/dlls/ntdll/tests/om.c
+@@ -688,8 +688,8 @@ static void test_query_object(void)
+ 
+     len = 0;
+     status = pNtQueryObject( handle, ObjectTypeInformation, buffer, 0, &len );
+-    todo_wine ok( status == STATUS_INFO_LENGTH_MISMATCH, "NtQueryObject failed %x\n", status );
+-    todo_wine ok( len >= sizeof(OBJECT_TYPE_INFORMATION) + sizeof(type_event) + sizeof(WCHAR), "unexpected len %u\n", len );
++    ok( status == STATUS_INFO_LENGTH_MISMATCH, "NtQueryObject failed %x\n", status );
++    ok( len >= sizeof(OBJECT_TYPE_INFORMATION) + sizeof(type_event) + sizeof(WCHAR), "unexpected len %u\n", len );
+ 
+     len = 0;
+     status = pNtQueryObject( handle, ObjectNameInformation, buffer, sizeof(UNICODE_STRING), &len );
+@@ -698,8 +698,8 @@ static void test_query_object(void)
+ 
+     len = 0;
+     status = pNtQueryObject( handle, ObjectTypeInformation, buffer, sizeof(OBJECT_TYPE_INFORMATION), &len );
+-    todo_wine ok( status == STATUS_INFO_LENGTH_MISMATCH, "NtQueryObject failed %x\n", status );
+-    todo_wine ok( len >= sizeof(OBJECT_TYPE_INFORMATION) + sizeof(type_event) + sizeof(WCHAR), "unexpected len %u\n", len );
++    ok( status == STATUS_INFO_LENGTH_MISMATCH, "NtQueryObject failed %x\n", status );
++    ok( len >= sizeof(OBJECT_TYPE_INFORMATION) + sizeof(type_event) + sizeof(WCHAR), "unexpected len %u\n", len );
+ 
+     len = 0;
+     status = pNtQueryObject( handle, ObjectNameInformation, buffer, sizeof(buffer), &len );
+@@ -720,17 +720,17 @@ static void test_query_object(void)
+     len = 0;
+     memset( buffer, 0, sizeof(buffer) );
+     status = pNtQueryObject( handle, ObjectTypeInformation, buffer, sizeof(buffer), &len );
+-    todo_wine ok( status == STATUS_SUCCESS, "NtQueryObject failed %x\n", status );
+-    todo_wine ok( len > sizeof(OBJECT_TYPE_INFORMATION), "unexpected len %u\n", len );
++    ok( status == STATUS_SUCCESS, "NtQueryObject failed %x\n", status );
++    ok( len > sizeof(OBJECT_TYPE_INFORMATION), "unexpected len %u\n", len );
+     str = (UNICODE_STRING *)buffer;
+-    todo_wine ok( len >= sizeof(OBJECT_TYPE_INFORMATION) + str->Length + sizeof(WCHAR), "unexpected len %u\n", len );
+-    todo_wine ok( str->Buffer && !memcmp( str->Buffer, type_event, sizeof(type_event) ),
++    ok( len >= sizeof(OBJECT_TYPE_INFORMATION) + str->Length + sizeof(WCHAR), "unexpected len %u\n", len );
++    ok( str->Buffer && !memcmp( str->Buffer, type_event, sizeof(type_event) ),
+                   "wrong/bad type name %s (%p)\n", wine_dbgstr_w(str->Buffer), str->Buffer );
+ 
+     len -= sizeof(WCHAR);
+     status = pNtQueryObject( handle, ObjectTypeInformation, buffer, len, &len );
+-    todo_wine ok( status == STATUS_INFO_LENGTH_MISMATCH, "NtQueryObject failed %x\n", status );
+-    todo_wine ok( len >= sizeof(OBJECT_TYPE_INFORMATION) + sizeof(type_event) + sizeof(WCHAR), "unexpected len %u\n", len );
++    ok( status == STATUS_INFO_LENGTH_MISMATCH, "NtQueryObject failed %x\n", status );
++    ok( len >= sizeof(OBJECT_TYPE_INFORMATION) + sizeof(type_event) + sizeof(WCHAR), "unexpected len %u\n", len );
+ 
+     pNtClose( handle );
+ 
+@@ -775,12 +775,12 @@ static void test_query_object(void)
+     len = 0;
+     memset( buffer, 0, sizeof(buffer) );
+     status = pNtQueryObject( handle, ObjectTypeInformation, buffer, sizeof(buffer), &len );
+-    todo_wine ok( status == STATUS_SUCCESS, "NtQueryObject failed %x\n", status );
+-    todo_wine ok( len > sizeof(OBJECT_TYPE_INFORMATION), "unexpected len %u\n", len );
++    ok( status == STATUS_SUCCESS, "NtQueryObject failed %x\n", status );
++    ok( len > sizeof(OBJECT_TYPE_INFORMATION), "unexpected len %u\n", len );
+     str = (UNICODE_STRING *)buffer;
+     expected_len = sizeof(OBJECT_TYPE_INFORMATION) + str->Length + sizeof(WCHAR);
+-    todo_wine ok( len >= expected_len, "unexpected len %u\n", len );
+-    todo_wine ok( str->Buffer && !memcmp( str->Buffer, type_file, sizeof(type_file) ),
++    ok( len >= expected_len, "unexpected len %u\n", len );
++    ok( str->Buffer && !memcmp( str->Buffer, type_file, sizeof(type_file) ),
+                   "wrong/bad type name %s (%p)\n", wine_dbgstr_w(str->Buffer), str->Buffer );
+ 
+     pNtClose( handle );
+diff --git a/server/directory.c b/server/directory.c
+index 7c5e7db..00cac46 100644
+--- a/server/directory.c
++++ b/server/directory.c
+@@ -41,11 +41,6 @@
+ 
+ #define HASH_SIZE 7  /* default hash size */
+ 
+-struct object_type
+-{
+-    struct object     obj;        /* object header */
+-};
+-
+ static void object_type_dump( struct object *obj, int verbose );
+ static struct object_type *object_type_get_type( struct object *obj );
+ 
+diff --git a/server/handle.c b/server/handle.c
+index 5043ff7..3fc608d 100644
+--- a/server/handle.c
++++ b/server/handle.c
+@@ -650,6 +650,24 @@ DECL_HANDLER(get_object_info)
+     release_object( obj );
+ }
+ 
++DECL_HANDLER(get_object_typename)
++{
++    struct object *obj;
++    struct object_type *type;
++    const WCHAR *name;
++
++    if (!(obj = get_handle_obj( current->process, req->handle, 0, NULL ))) return;
++
++    reply->total = 0;
++    if ((type = obj->ops->get_type( obj )))
++    {
++        if ((name = get_object_name( &type->obj, &reply->total )))
++            set_reply_data( name, min( reply->total, get_reply_max_size() ) );
++        release_object( type );
++    }
++    release_object( obj );
++}
++
+ DECL_HANDLER(set_security_object)
+ {
+     data_size_t sd_size = get_req_data_size();
+diff --git a/server/object.h b/server/object.h
+index 00bef38..50f19b7 100644
+--- a/server/object.h
++++ b/server/object.h
+@@ -105,6 +105,11 @@ struct object
+ #endif
+ };
+ 
++struct object_type
++{
++    struct object     obj;        /* object header */
++};
++
+ struct wait_queue_entry
+ {
+     struct list         entry;
+diff --git a/server/protocol.def b/server/protocol.def
+index 9c4dab4..7d2a345 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -3325,6 +3325,15 @@ enum coords_relative
+ @END
+ 
+ 
++/* Query object type name information */
++@REQ(get_object_typename)
++    obj_handle_t   handle;        /* handle to the object */
++@REPLY
++    data_size_t    total;         /* needed size for type name */
++    VARARG(typename,unicode_str); /* type name */
++@END
++
++
+ /* Unlink a named object */
+ @REQ(unlink_object)
+     obj_handle_t   handle;        /* handle to the object */
+-- 
+2.4.0
+

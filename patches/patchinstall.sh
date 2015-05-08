@@ -204,6 +204,7 @@ patch_enable_all ()
 	enable_server_JobObjects="$1"
 	enable_server_Key_State="$1"
 	enable_server_Misc_ACL="$1"
+	enable_server_ObjectTypeInformation="$1"
 	enable_server_OpenClipboard="$1"
 	enable_server_OpenProcess="$1"
 	enable_server_PeekMessage="$1"
@@ -668,6 +669,9 @@ patch_enable ()
 			;;
 		server-Misc_ACL)
 			enable_server_Misc_ACL="$2"
+			;;
+		server-ObjectTypeInformation)
+			enable_server_ObjectTypeInformation="$2"
 			;;
 		server-OpenClipboard)
 			enable_server_OpenClipboard="$2"
@@ -2392,18 +2396,6 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -2421,6 +2413,18 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4435,6 +4439,18 @@ if test "$enable_server_Key_State" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "server: Introduce a helper function to update the thread_input key state.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement locking and synchronization of keystate buffer.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-ObjectTypeInformation
+# |
+# | Modified files:
+# |   *	dlls/ntdll/om.c, dlls/ntdll/tests/om.c, server/directory.c, server/handle.c, server/object.h, server/protocol.def
+# |
+if test "$enable_server_ObjectTypeInformation" -eq 1; then
+	patch_apply server-ObjectTypeInformation/0001-ntdll-Implemenent-ObjectTypeInformation-class-suppor.patch
+	(
+		echo '+    { "Qian Hong", "ntdll: Implemenent ObjectTypeInformation class support in NtQueryObject.", 1 },';
 	) >> "$patchlist"
 fi
 

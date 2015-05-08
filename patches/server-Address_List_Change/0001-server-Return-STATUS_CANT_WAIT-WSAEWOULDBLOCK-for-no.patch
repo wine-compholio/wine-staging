@@ -1,26 +1,29 @@
-From 899fa865b1e299e275e119e03843894e022290bf Mon Sep 17 00:00:00 2001
+From 9d55100d71863cfcbf71114d3578be1d58f74377 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@wine-staging.com>
 Date: Fri, 20 Feb 2015 14:03:34 -0700
 Subject: server: Return STATUS_CANT_WAIT/WSAEWOULDBLOCK for non-overlapped
  SIO_ADDRESS_LIST_CHANGE requests on non-blocking sockets.
 
 ---
- server/sock.c | 2 ++
- 1 file changed, 2 insertions(+)
+ server/sock.c | 5 +++++
+ 1 file changed, 5 insertions(+)
 
 diff --git a/server/sock.c b/server/sock.c
-index f3bab85..05d2e9e 100644
+index 67d6416..1767dea 100644
 --- a/server/sock.c
 +++ b/server/sock.c
-@@ -558,6 +558,8 @@ obj_handle_t sock_ioctl( struct fd *fd, ioctl_code_t code, const async_data_t *a
-             close_handle( current->process, wait_handle );
-             return 0;
-         }
+@@ -546,6 +546,11 @@ obj_handle_t sock_ioctl( struct fd *fd, ioctl_code_t code, const async_data_t *a
+     switch(code)
+     {
+     case WS_SIO_ADDRESS_LIST_CHANGE:
 +        if ((sock->state & FD_WINE_NONBLOCKING) && !blocking)
++        {
 +            set_error( STATUS_CANT_WAIT );
-         return wait_handle;
-     default:
-         set_error( STATUS_NOT_SUPPORTED );
++            return 0;
++        }
+         if (!(ifchange_q = sock_get_ifchange_q( sock ))) return 0;
+         if (!(async = create_async( current, ifchange_q, async_data ))) return 0;
+         if (blocking) wait_handle = alloc_handle( current->process, async, SYNCHRONIZE, 0 );
 -- 
-2.3.0
+2.4.0
 

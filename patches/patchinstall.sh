@@ -3191,11 +3191,13 @@ fi
 # |   *	[#22690] Allow to cancel a file operation via progress callback
 # |
 # | Modified files:
-# |   *	dlls/kernel32/path.c
+# |   *	dlls/kernel32/path.c, dlls/kernel32/tests/file.c
 # |
 if test "$enable_kernel32_CopyFileEx" -eq 1; then
-	patch_apply kernel32-CopyFileEx/0001-kernel32-Add-support-for-progress-callback-in-CopyFi.patch
+	patch_apply kernel32-CopyFileEx/0001-kernel32-tests-Add-tests-for-delete-behaviour-of-Cop.patch
+	patch_apply kernel32-CopyFileEx/0002-kernel32-Add-support-for-progress-callback-in-CopyFi.patch
 	(
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for delete behaviour of CopyFileEx.", 1 },';
 		echo '+    { "Michael Müller", "kernel32: Add support for progress callback in CopyFileEx.", 1 },';
 	) >> "$patchlist"
 fi

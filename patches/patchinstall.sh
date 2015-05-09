@@ -3850,8 +3850,8 @@ fi
 # |   *	[#37338] Support for NtQuerySection
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, dlls/ntdll/virtual.c, server/mapping.c,
-# | 	server/protocol.def
+# |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, dlls/ntdll/virtual.c,
+# | 	dlls/ntoskrnl.exe/ntoskrnl.exe.spec, server/mapping.c, server/protocol.def
 # |
 if test "$enable_ntdll_NtQuerySection" -eq 1; then
 	patch_apply ntdll-NtQuerySection/0001-ntdll-Implement-NtQuerySection.patch

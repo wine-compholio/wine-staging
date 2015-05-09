@@ -1,19 +1,20 @@
-From d63e7cedab22d7b1b7f5f51e993f813f4bfb8737 Mon Sep 17 00:00:00 2001
+From b46067fb4e438d40d2145449132da6769399576a Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Thu, 16 Oct 2014 23:24:37 +0200
 Subject: ntdll: Implement NtQuerySection. (try 2)
 
 Some small modifications by Sebastian Lackner <sebastian@fds-team.de>
 ---
- dlls/ntdll/nt.c       | 19 -----------
- dlls/ntdll/ntdll.spec |  4 +--
- dlls/ntdll/virtual.c  | 95 +++++++++++++++++++++++++++++++++++++++++++++++++++
- server/mapping.c      | 42 +++++++++++++++++++++++
- server/protocol.def   |  7 ++++
- 5 files changed, 146 insertions(+), 21 deletions(-)
+ dlls/ntdll/nt.c                     | 19 --------
+ dlls/ntdll/ntdll.spec               |  4 +-
+ dlls/ntdll/virtual.c                | 95 +++++++++++++++++++++++++++++++++++++
+ dlls/ntoskrnl.exe/ntoskrnl.exe.spec |  2 +-
+ server/mapping.c                    | 42 ++++++++++++++++
+ server/protocol.def                 |  7 +++
+ 6 files changed, 147 insertions(+), 22 deletions(-)
 
 diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
-index 73d9383..f0433db 100644
+index 3601c0f..76786ef 100644
 --- a/dlls/ntdll/nt.c
 +++ b/dlls/ntdll/nt.c
 @@ -646,25 +646,6 @@ NTSTATUS WINAPI NtPrivilegeCheck(
@@ -43,10 +44,10 @@ index 73d9383..f0433db 100644
   */
  
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 9355d04..f175465 100644
+index 28165ef..7476fd6 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -262,7 +262,7 @@
+@@ -263,7 +263,7 @@
  @ stdcall NtQueryPerformanceCounter(ptr ptr)
  # @ stub NtQueryPortInformationProcess
  # @ stub NtQueryQuotaInformationFile
@@ -55,7 +56,7 @@ index 9355d04..f175465 100644
  @ stdcall NtQuerySecurityObject (long long long long long)
  @ stdcall NtQuerySemaphore (long long ptr long ptr)
  @ stdcall NtQuerySymbolicLinkObject(long ptr ptr)
-@@ -1141,7 +1141,7 @@
+@@ -1144,7 +1144,7 @@
  @ stdcall ZwQueryPerformanceCounter (long long) NtQueryPerformanceCounter
  # @ stub ZwQueryPortInformationProcess
  # @ stub ZwQueryQuotaInformationFile
@@ -65,10 +66,10 @@ index 9355d04..f175465 100644
  @ stdcall ZwQuerySemaphore (long long long long long) NtQuerySemaphore
  @ stdcall ZwQuerySymbolicLinkObject(long ptr ptr) NtQuerySymbolicLinkObject
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index dc5db00..1dbe964 100644
+index 0629816..f1e71ac 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -2553,6 +2553,101 @@ NTSTATUS WINAPI NtOpenSection( HANDLE *handle, ACCESS_MASK access, const OBJECT_
+@@ -2574,6 +2574,101 @@ NTSTATUS WINAPI NtOpenSection( HANDLE *handle, ACCESS_MASK access, const OBJECT_
  
  
  /***********************************************************************
@@ -170,8 +171,21 @@ index dc5db00..1dbe964 100644
   *             NtMapViewOfSection   (NTDLL.@)
   *             ZwMapViewOfSection   (NTDLL.@)
   */
+diff --git a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
+index 11d1c62..39325ad 100644
+--- a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
++++ b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
+@@ -1351,7 +1351,7 @@
+ @ stdcall ZwQueryInstallUILanguage(ptr) ntdll.ZwQueryInstallUILanguage
+ @ stdcall ZwQueryKey(long long ptr long ptr) ntdll.ZwQueryKey
+ @ stdcall ZwQueryObject(long long long long long) ntdll.ZwQueryObject
+-@ stdcall ZwQuerySection(long long long long long) ntdll.ZwQuerySection
++@ stdcall ZwQuerySection(long long ptr long ptr) ntdll.ZwQuerySection
+ @ stdcall ZwQuerySecurityObject(long long long long long) ntdll.ZwQuerySecurityObject
+ @ stdcall ZwQuerySymbolicLinkObject(long ptr ptr) ntdll.ZwQuerySymbolicLinkObject
+ @ stdcall ZwQuerySystemInformation(long long long long) ntdll.ZwQuerySystemInformation
 diff --git a/server/mapping.c b/server/mapping.c
-index 64b3003..a701944 100644
+index 16e7c1c..ba26d1e 100644
 --- a/server/mapping.c
 +++ b/server/mapping.c
 @@ -64,6 +64,15 @@ struct mapping
@@ -190,7 +204,7 @@ index 64b3003..a701944 100644
      struct ranges  *committed;       /* list of committed ranges in this mapping */
      struct file    *shared_file;     /* temp file for shared PE mapping */
      struct list     shared_entry;    /* entry in global shared PE mappings list */
-@@ -430,17 +439,34 @@ static unsigned int get_image_params( struct mapping *mapping, int unix_fd, int
+@@ -432,17 +441,34 @@ static unsigned int get_image_params( struct mapping *mapping, int unix_fd, int
          return STATUS_INVALID_IMAGE_FORMAT;
      }
  
@@ -225,7 +239,7 @@ index 64b3003..a701944 100644
          break;
      }
  
-@@ -490,6 +516,15 @@ static struct object *create_mapping( struct directory *root, const struct unico
+@@ -492,6 +518,15 @@ static struct object *create_mapping( struct directory *root, const struct unico
                                                 SACL_SECURITY_INFORMATION );
      mapping->header_size = 0;
      mapping->base        = 0;
@@ -241,7 +255,7 @@ index 64b3003..a701944 100644
      mapping->fd          = NULL;
      mapping->shared_file = NULL;
      mapping->committed   = NULL;
-@@ -727,6 +762,13 @@ DECL_HANDLER(get_mapping_info)
+@@ -729,6 +764,13 @@ DECL_HANDLER(get_mapping_info)
      reply->protect     = mapping->protect;
      reply->header_size = mapping->header_size;
      reply->base        = mapping->base;
@@ -256,10 +270,10 @@ index 64b3003..a701944 100644
      if ((fd = get_obj_fd( &mapping->obj )))
      {
 diff --git a/server/protocol.def b/server/protocol.def
-index fc6bec5..8837ca4 100644
+index 9c4dab4..2513098 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -1619,6 +1619,13 @@ enum char_info_mode
+@@ -1641,6 +1641,13 @@ enum char_info_mode
      int          protect;       /* protection flags */
      int          header_size;   /* header size (for VPROT_IMAGE mapping) */
      client_ptr_t base;          /* default base addr (for VPROT_IMAGE mapping) */
@@ -274,5 +288,5 @@ index fc6bec5..8837ca4 100644
      obj_handle_t shared_file;   /* shared mapping file handle */
  @END
 -- 
-2.3.0
+2.4.0
 

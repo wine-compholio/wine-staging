@@ -1776,7 +1776,8 @@ fi
 # Patchset advapi32-ImpersonateAnonymousToken
 # |
 # | Modified files:
-# |   *	dlls/advapi32/advapi32.spec, dlls/advapi32/security.c
+# |   *	dlls/advapi32/advapi32.spec, dlls/advapi32/security.c, dlls/api-ms-win-security-base-l1-1-0/api-ms-win-security-
+# | 	base-l1-1-0.spec, dlls/api-ms-win-security-base-l1-2-0/api-ms-win-security-base-l1-2-0.spec
 # |
 if test "$enable_advapi32_ImpersonateAnonymousToken" -eq 1; then
 	patch_apply advapi32-ImpersonateAnonymousToken/0001-advapi32-Add-stub-for-ImpersonateAnonymousToken.patch

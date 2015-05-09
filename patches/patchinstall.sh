@@ -253,6 +253,7 @@ patch_enable_all ()
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
+	enable_wined3d_Dirtify_Vertex_Shader="$1"
 	enable_wined3d_Multisampling="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_UnhandledBlendFactor="$1"
@@ -817,6 +818,9 @@ patch_enable ()
 			;;
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
+			;;
+		wined3d-Dirtify_Vertex_Shader)
+			enable_wined3d_Dirtify_Vertex_Shader="$2"
 			;;
 		wined3d-Multisampling)
 			enable_wined3d_Multisampling="$2"
@@ -2464,6 +2468,21 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	(
 		echo '+    { "Stefan Dösinger", "wined3d: Merge get_pitch functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Dirtify_Vertex_Shader
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38539] Dirtify vertex shader on transformed update to fix graphical corruption
+# |
+# | Modified files:
+# |   *	dlls/wined3d/glsl_shader.c
+# |
+if test "$enable_wined3d_Dirtify_Vertex_Shader" -eq 1; then
+	patch_apply wined3d-Dirtify_Vertex_Shader/0001-wined3d-Dirtify-vertex-shader-on-transformed-untrans.patch
+	(
+		echo '+    { "Matteo Bruni", "wined3d: Dirtify vertex shader on transformed <-> untransformed transition.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -3239,7 +3239,8 @@ fi
 # |   *	[#34851] Support for GetFinalPathNameByHandle
 # |
 # | Modified files:
-# |   *	dlls/api-ms-win-core-file-l1-2-0/api-ms-win-core-file-l1-2-0.spec, dlls/kernel32/file.c, dlls/kernel32/kernel32.spec
+# |   *	dlls/api-ms-win-core-file-l1-1-0/api-ms-win-core-file-l1-1-0.spec, dlls/api-ms-win-core-file-l1-2-0/api-ms-win-core-
+# | 	file-l1-2-0.spec, dlls/kernel32/file.c, dlls/kernel32/kernel32.spec
 # |
 if test "$enable_kernel32_GetFinalPathNameByHandle" -eq 1; then
 	patch_apply kernel32-GetFinalPathNameByHandle/0001-kernel32-Implement-GetFinalPathNameByHandle.patch

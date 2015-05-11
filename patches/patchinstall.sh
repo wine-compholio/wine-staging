@@ -118,6 +118,7 @@ patch_enable_all ()
 	enable_dsound_Fast_Mixer="$1"
 	enable_dxgi_GetDesc="$1"
 	enable_dxva2_Video_Decoder="$1"
+	enable_fltlib_FilterLoad="$1"
 	enable_fltmgr_Stub_SYS="$1"
 	enable_fonts_Missing_Fonts="$1"
 	enable_gdi32_Default_Palette="$1"
@@ -413,6 +414,9 @@ patch_enable ()
 			;;
 		dxva2-Video_Decoder)
 			enable_dxva2_Video_Decoder="$2"
+			;;
+		fltlib-FilterLoad)
+			enable_fltlib_FilterLoad="$2"
 			;;
 		fltmgr-Stub_SYS)
 			enable_fltmgr_Stub_SYS="$2"
@@ -2992,6 +2996,21 @@ if test "$enable_dxva2_Video_Decoder" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset fltlib-FilterLoad
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38435] Add stub for fltlib.FilterLoad
+# |
+# | Modified files:
+# |   *	dlls/fltlib/fltlib.c, dlls/fltlib/fltlib.spec
+# |
+if test "$enable_fltlib_FilterLoad" -eq 1; then
+	patch_apply fltlib-FilterLoad/0001-fltlib-Add-stub-for-FilterLoad.patch
+	(
+		echo '+    { "Michael Müller", "fltlib: Add stub for FilterLoad.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset fltmgr-Stub_SYS
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3149,6 +3168,20 @@ if test "$enable_kernel32_CompareStringEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-File_Permissions
 # |
 # | Modified files:
@@ -3187,20 +3220,6 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Added tests to set disposition on file which is mapped to memory.", 1 },';
 		echo '+    { "Qian Hong", "server: Do not allow to set disposition on file which has a file mapping.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 3ec3fa5eb7d4eefd3157dfce31dbe561a6cda474"
+	echo "  commit 6d323d81b2a604b89c612928a573b290c945df75"
 	echo ""
 }
 
@@ -197,7 +197,6 @@ patch_enable_all ()
 	enable_secur32_ANSI_NTLM_Credentials="$1"
 	enable_server_ACL_Compat="$1"
 	enable_server_Address_List_Change="$1"
-	enable_server_Async_Leak="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
 	enable_server_Delete_On_Close="$1"
@@ -651,9 +650,6 @@ patch_enable ()
 			;;
 		server-Address_List_Change)
 			enable_server_Address_List_Change="$2"
-			;;
-		server-Async_Leak)
-			enable_server_Async_Leak="$2"
 			;;
 		server-ClipCursor)
 			enable_server_ClipCursor="$2"
@@ -4411,18 +4407,6 @@ if test "$enable_server_Address_List_Change" -eq 1; then
 	patch_apply server-Address_List_Change/0001-server-Return-STATUS_CANT_WAIT-WSAEWOULDBLOCK-for-no.patch
 	(
 		echo '+    { "Erich E. Hoover", "server: Return STATUS_CANT_WAIT/WSAEWOULDBLOCK for non-overlapped SIO_ADDRESS_LIST_CHANGE requests on non-blocking sockets.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Async_Leak
-# |
-# | Modified files:
-# |   *	server/named_pipe.c
-# |
-if test "$enable_server_Async_Leak" -eq 1; then
-	patch_apply server-Async_Leak/0001-server-Fix-leak-of-async-handle-in-pipe_server_flush.patch
-	(
-		echo '+    { "Sebastian Lackner", "server: Fix leak of async handle in pipe_server_flush.", 1 },';
 	) >> "$patchlist"
 fi
 

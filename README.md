@@ -39,13 +39,14 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [10]:**
+**Bug fixes and features included in the next upcoming release [11]:**
 
 * Add implementation for shlwapi.AssocGetPerceivedType
 * Add stub for atl80.AtlIPersistPropertyBag_Save ([Wine Bug #33888](https://bugs.winehq.org/show_bug.cgi?id=33888))
 * Add stub for fltlib.FilterLoad ([Wine Bug #38435](https://bugs.winehq.org/show_bug.cgi?id=38435))
 * Add stub for winsta.WinStationEnumerateW ([Wine Bug #38102](https://bugs.winehq.org/show_bug.cgi?id=38102))
 * Dirtify vertex shader on transformed update to fix graphical corruption ([Wine Bug #38539](https://bugs.winehq.org/show_bug.cgi?id=38539))
+* Do not create foreign thread queues for attach_thread_input requests ([Wine Bug #38562](https://bugs.winehq.org/show_bug.cgi?id=38562))
 * Improve ReadDataAvailable handling in FilePipeLocalInformation class
 * Return default palette entries from GetSystemPaletteEntries for non-palette-based devices
 * Support for ObjectTypeInformation class support in NtQueryObject

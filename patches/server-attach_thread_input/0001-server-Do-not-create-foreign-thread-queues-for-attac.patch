@@ -1,0 +1,184 @@
+From 1ee8a05ba250bb7ca37b68f0d80085c231351ee1 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Tue, 12 May 2015 05:15:59 +0200
+Subject: server: Do not create foreign thread queues for attach_thread_input
+ requests.
+
+---
+ dlls/user32/tests/input.c | 109 ++++++++++++++++++++++++++++++++++++++++++++++
+ server/queue.c            |   8 ++++
+ 2 files changed, 117 insertions(+)
+
+diff --git a/dlls/user32/tests/input.c b/dlls/user32/tests/input.c
+index 30b91a0..4a67c74 100644
+--- a/dlls/user32/tests/input.c
++++ b/dlls/user32/tests/input.c
+@@ -2040,7 +2040,10 @@ static LRESULT WINAPI MsgCheckProcA(HWND hwnd, UINT message, WPARAM wParam, LPAR
+ struct wnd_event
+ {
+     HWND hwnd;
++    HANDLE wait_event;
+     HANDLE start_event;
++    DWORD attach_from;
++    DWORD attach_to;
+     BOOL setWindows;
+ };
+ 
+@@ -2048,6 +2051,26 @@ static DWORD WINAPI thread_proc(void *param)
+ {
+     MSG msg;
+     struct wnd_event *wnd_event = param;
++    BOOL ret;
++
++    if (wnd_event->wait_event)
++    {
++        ok(WaitForSingleObject(wnd_event->wait_event, INFINITE) == WAIT_OBJECT_0,
++           "WaitForSingleObject failed\n");
++        CloseHandle(wnd_event->wait_event);
++    }
++
++    if (wnd_event->attach_from)
++    {
++        ret = AttachThreadInput(wnd_event->attach_from, GetCurrentThreadId(), TRUE);
++        ok(ret, "AttachThreadInput error %d\n", GetLastError());
++    }
++
++    if (wnd_event->attach_to)
++    {
++        ret = AttachThreadInput(GetCurrentThreadId(), wnd_event->attach_to, TRUE);
++        ok(ret, "AttachThreadInput error %d\n", GetLastError());
++    }
+ 
+     wnd_event->hwnd = CreateWindowExA(0, "TestWindowClass", "window caption text", WS_OVERLAPPEDWINDOW,
+                                       100, 100, 200, 200, 0, 0, 0, NULL);
+@@ -2090,7 +2113,10 @@ static void test_attach_input(void)
+     cls.lpszClassName = "TestWindowClass";
+     if(!RegisterClassA(&cls)) return;
+ 
++    wnd_event.wait_event = NULL;
+     wnd_event.start_event = CreateEventW(NULL, 0, 0, NULL);
++    wnd_event.attach_from = 0;
++    wnd_event.attach_to = 0;
+     wnd_event.setWindows = FALSE;
+     if (!wnd_event.start_event)
+     {
+@@ -2157,7 +2183,10 @@ static void test_attach_input(void)
+     ok(WaitForSingleObject(hThread, INFINITE) == WAIT_OBJECT_0, "WaitForSingleObject failed\n");
+     CloseHandle(hThread);
+ 
++    wnd_event.wait_event = NULL;
+     wnd_event.start_event = CreateEventW(NULL, 0, 0, NULL);
++    wnd_event.attach_from = 0;
++    wnd_event.attach_to = 0;
+     wnd_event.setWindows = TRUE;
+ 
+     hThread = CreateThread(NULL, 0, thread_proc, &wnd_event, 0, &tid);
+@@ -2213,6 +2242,86 @@ static void test_attach_input(void)
+ 
+     ok(WaitForSingleObject(hThread, INFINITE) == WAIT_OBJECT_0, "WaitForSingleObject failed\n");
+     CloseHandle(hThread);
++
++    wnd_event.wait_event = CreateEventW(NULL, 0, 0, NULL);
++    wnd_event.start_event = CreateEventW(NULL, 0, 0, NULL);
++    wnd_event.attach_from = 0;
++    wnd_event.attach_to = 0;
++    wnd_event.setWindows = TRUE;
++
++    hThread = CreateThread(NULL, 0, thread_proc, &wnd_event, 0, &tid);
++    ok(hThread != NULL, "CreateThread failed, error %d\n", GetLastError());
++
++    SetLastError(0xdeadbeef);
++    ret = AttachThreadInput(GetCurrentThreadId(), tid, TRUE);
++    ok(!ret, "AttachThreadInput succeeded\n");
++    ok(GetLastError() == ERROR_INVALID_PARAMETER || broken(GetLastError() == 0xdeadbeef) /* <= Win XP */,
++       "expected ERROR_INVALID_PARAMETER, got %d\n", GetLastError());
++
++    SetLastError(0xdeadbeef);
++    ret = AttachThreadInput(tid, GetCurrentThreadId(), TRUE);
++    ok(!ret, "AttachThreadInput succeeded\n");
++    ok(GetLastError() == ERROR_INVALID_PARAMETER || broken(GetLastError() == 0xdeadbeef) /* <= Win XP */,
++       "expected ERROR_INVALID_PARAMETER, got %d\n", GetLastError());
++
++    SetEvent(wnd_event.wait_event);
++
++    ok(WaitForSingleObject(wnd_event.start_event, INFINITE) == WAIT_OBJECT_0, "WaitForSingleObject failed\n");
++    CloseHandle(wnd_event.start_event);
++
++    ret = PostMessageA(wnd_event.hwnd, WM_QUIT, 0, 0);
++    ok(ret, "PostMessageA(WM_QUIT) error %d\n", GetLastError());
++
++    ok(WaitForSingleObject(hThread, INFINITE) == WAIT_OBJECT_0, "WaitForSingleObject failed\n");
++    CloseHandle(hThread);
++
++    wnd_event.wait_event = NULL;
++    wnd_event.start_event = CreateEventW(NULL, 0, 0, NULL);
++    wnd_event.attach_from = GetCurrentThreadId();
++    wnd_event.attach_to = 0;
++    wnd_event.setWindows = FALSE;
++
++    SetFocus(ourWnd);
++    SetActiveWindow(ourWnd);
++
++    hThread = CreateThread(NULL, 0, thread_proc, &wnd_event, 0, &tid);
++    ok(hThread != NULL, "CreateThread failed, error %d\n", GetLastError());
++
++    ok(WaitForSingleObject(wnd_event.start_event, INFINITE) == WAIT_OBJECT_0, "WaitForSingleObject failed\n");
++    CloseHandle(wnd_event.start_event);
++
++    ok(GetActiveWindow() == ourWnd, "expected active %p, got %p\n", ourWnd, GetActiveWindow());
++    ok(GetFocus() == ourWnd, "expected focus %p, got %p\n", ourWnd, GetFocus());
++
++    ret = PostMessageA(wnd_event.hwnd, WM_QUIT, 0, 0);
++    ok(ret, "PostMessageA(WM_QUIT) error %d\n", GetLastError());
++
++    ok(WaitForSingleObject(hThread, INFINITE) == WAIT_OBJECT_0, "WaitForSingleObject failed\n");
++    CloseHandle(hThread);
++
++    wnd_event.wait_event = NULL;
++    wnd_event.start_event = CreateEventW(NULL, 0, 0, NULL);
++    wnd_event.attach_from = 0;
++    wnd_event.attach_to = GetCurrentThreadId();
++    wnd_event.setWindows = FALSE;
++
++    SetFocus(ourWnd);
++    SetActiveWindow(ourWnd);
++
++    hThread = CreateThread(NULL, 0, thread_proc, &wnd_event, 0, &tid);
++    ok(hThread != NULL, "CreateThread failed, error %d\n", GetLastError());
++
++    ok(WaitForSingleObject(wnd_event.start_event, INFINITE) == WAIT_OBJECT_0, "WaitForSingleObject failed\n");
++    CloseHandle(wnd_event.start_event);
++
++    ok(GetActiveWindow() == ourWnd, "expected active %p, got %p\n", ourWnd, GetActiveWindow());
++    ok(GetFocus() == ourWnd, "expected focus %p, got %p\n", ourWnd, GetFocus());
++
++    ret = PostMessageA(wnd_event.hwnd, WM_QUIT, 0, 0);
++    ok(ret, "PostMessageA(WM_QUIT) error %d\n", GetLastError());
++
++    ok(WaitForSingleObject(hThread, INFINITE) == WAIT_OBJECT_0, "WaitForSingleObject failed\n");
++    CloseHandle(hThread);
+     DestroyWindow(ourWnd);
+     DestroyWindow(Wnd2);
+ }
+diff --git a/server/queue.c b/server/queue.c
+index 30869a0..374a965 100644
+--- a/server/queue.c
++++ b/server/queue.c
+@@ -1068,6 +1068,14 @@ int attach_thread_input( struct thread *thread_from, struct thread *thread_to )
+     struct thread_input *input;
+     int ret;
+ 
++    /* do not create a message queue for foreign threads */
++    if ((!thread_to->queue && thread_to != current) ||
++        (!thread_from->queue && thread_from != current))
++    {
++        set_error( STATUS_INVALID_PARAMETER );
++        return 0;
++    }
++
+     if (!thread_to->queue && !(thread_to->queue = create_msg_queue( thread_to, NULL ))) return 0;
+     if (!(desktop = get_thread_desktop( thread_from, 0 ))) return 0;
+     input = (struct thread_input *)grab_object( thread_to->queue->input );
+-- 
+2.4.0
+

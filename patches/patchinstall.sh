@@ -214,6 +214,7 @@ patch_enable_all ()
 	enable_server_Shared_Memory="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Unexpected_Wakeup="$1"
+	enable_server_attach_thread_input="$1"
 	enable_setupapi_SetupDiSelectBestCompatDrv="$1"
 	enable_setupapi_SetupDiSetDeviceInstallParamsW="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
@@ -702,6 +703,9 @@ patch_enable ()
 			;;
 		server-Unexpected_Wakeup)
 			enable_server_Unexpected_Wakeup="$2"
+			;;
+		server-attach_thread_input)
+			enable_server_attach_thread_input="$2"
 			;;
 		setupapi-SetupDiSelectBestCompatDrv)
 			enable_setupapi_SetupDiSelectBestCompatDrv="$2"
@@ -4606,6 +4610,21 @@ if test "$enable_server_Unexpected_Wakeup" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "server: Avoid sending unexpected wakeup with uninitialized cookie value.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Repeat test for SignalObjectAndWait multiple times to test wineserver wakeup cookie management.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-attach_thread_input
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38562] Do not create foreign thread queues for attach_thread_input requests
+# |
+# | Modified files:
+# |   *	dlls/user32/tests/input.c, server/queue.c
+# |
+if test "$enable_server_attach_thread_input" -eq 1; then
+	patch_apply server-attach_thread_input/0001-server-Do-not-create-foreign-thread-queues-for-attac.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Do not create foreign thread queues for attach_thread_input requests.", 1 },';
 	) >> "$patchlist"
 fi
 

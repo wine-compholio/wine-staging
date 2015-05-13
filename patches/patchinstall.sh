@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 5f35f1a8dbbc9dc3fa629a7f123e045e3320f562"
+	echo "  commit f920dfd6984ca9227900d0f0406afb3ceb892cc5"
 	echo ""
 }
 
@@ -254,6 +254,7 @@ patch_enable_all ()
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
 	enable_winecfg_Unmounted_Devices="$1"
+	enable_wineconsole_Curses_Fake_Wnd="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
@@ -825,6 +826,9 @@ patch_enable ()
 			;;
 		winecfg-Unmounted_Devices)
 			enable_winecfg_Unmounted_Devices="$2"
+			;;
+		wineconsole-Curses_Fake_Wnd)
+			enable_wineconsole_Curses_Fake_Wnd="$2"
 			;;
 		wined3d-CSMT_Helper)
 			enable_wined3d_CSMT_Helper="$2"
@@ -5211,6 +5215,21 @@ if test "$enable_winecfg_Unmounted_Devices" -eq 1; then
 	patch_apply winecfg-Unmounted_Devices/0001-winecfg-Show-unmounted-devices-and-allow-changing-th.patch
 	(
 		echo '+    { "Michael Müller", "winecfg: Show unmounted devices and allow changing the device value.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wineconsole-Curses_Fake_Wnd
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34930] Allocate fake hWnd for wineconsole curses backend
+# |
+# | Modified files:
+# |   *	programs/wineconsole/curses.c
+# |
+if test "$enable_wineconsole_Curses_Fake_Wnd" -eq 1; then
+	patch_apply wineconsole-Curses_Fake_Wnd/0001-wineconsole-Allocate-fake-hwnds-for-curses-backend.patch
+	(
+		echo '+    { "Sebastian Lackner", "wineconsole: Allocate fake hwnds for curses backend.", 1 },';
 	) >> "$patchlist"
 fi
 

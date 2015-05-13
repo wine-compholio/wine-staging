@@ -249,6 +249,7 @@ patch_enable_all ()
 	enable_wine_inf_ProfileList_UserSID="$1"
 	enable_wineboot_HKEY_DYN_DATA="$1"
 	enable_wineboot_MachineGuid="$1"
+	enable_wineboot_drivers_etc_Stubs="$1"
 	enable_winebuild_LinkerVersion="$1"
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
@@ -809,6 +810,9 @@ patch_enable ()
 			;;
 		wineboot-MachineGuid)
 			enable_wineboot_MachineGuid="$2"
+			;;
+		wineboot-drivers_etc_Stubs)
+			enable_wineboot_drivers_etc_Stubs="$2"
 			;;
 		winebuild-LinkerVersion)
 			enable_winebuild_LinkerVersion="$2"
@@ -5153,6 +5157,21 @@ if test "$enable_wineboot_MachineGuid" -eq 1; then
 	patch_apply wineboot-MachineGuid/0001-wineboot-Create-MachineGuid-registry-value.patch
 	(
 		echo '+    { "Michael Müller", "wineboot: Create MachineGuid registry value.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wineboot-drivers_etc_Stubs
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12076] Create stub files for system32/drivers/etc/{services,hosts,networks,protocol}
+# |
+# | Modified files:
+# |   *	programs/wineboot/wineboot.c
+# |
+if test "$enable_wineboot_drivers_etc_Stubs" -eq 1; then
+	patch_apply wineboot-drivers_etc_Stubs/0001-wineboot-Init-system32-drivers-etc-host-networks-pro.patch
+	(
+		echo '+    { "Sebastian Lackner", "wineboot: Init system32/drivers/etc/{host,networks,protocol,services}.", 1 },';
 	) >> "$patchlist"
 fi
 

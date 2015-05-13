@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 6d323d81b2a604b89c612928a573b290c945df75"
+	echo "  commit 5f35f1a8dbbc9dc3fa629a7f123e045e3320f562"
 	echo ""
 }
 
@@ -83,6 +83,7 @@ patch_enable_all ()
 	enable_advapi32_LsaLookupSids="$1"
 	enable_advapi32_OpenSCManagerW="$1"
 	enable_atl_AtlIPersistPropertyBag_Save="$1"
+	enable_browseui_ACLShell_IEnumString="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_category_stable="$1"
 	enable_combase_String="$1"
@@ -310,6 +311,9 @@ patch_enable ()
 			;;
 		atl-AtlIPersistPropertyBag_Save)
 			enable_atl_AtlIPersistPropertyBag_Save="$2"
+			;;
+		browseui-ACLShell_IEnumString)
+			enable_browseui_ACLShell_IEnumString="$2"
 			;;
 		browseui-Progress_Dialog)
 			enable_browseui_Progress_Dialog="$2"
@@ -1882,6 +1886,21 @@ if test "$enable_atl_AtlIPersistPropertyBag_Save" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset browseui-ACLShell_IEnumString
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#18019] Add IEnumString stub interface for ACLShellSource
+# |
+# | Modified files:
+# |   *	dlls/browseui/aclsource.c
+# |
+if test "$enable_browseui_ACLShell_IEnumString" -eq 1; then
+	patch_apply browseui-ACLShell_IEnumString/0001-browseui-Add-IEnumString-stub-interface-for-ACLShell.patch
+	(
+		echo '+    { "Michael Müller", "browseui: Add IEnumString stub interface for ACLShellSource.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset browseui-Progress_Dialog
 # |
 # | Modified files:
@@ -2432,6 +2451,18 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -2449,18 +2480,6 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3172,20 +3191,6 @@ if test "$enable_kernel32_CompareStringEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-File_Permissions
 # |
 # | Modified files:
@@ -3224,6 +3229,20 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Added tests to set disposition on file which is mapped to memory.", 1 },';
 		echo '+    { "Qian Hong", "server: Do not allow to set disposition on file which has a file mapping.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 

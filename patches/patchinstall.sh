@@ -136,6 +136,7 @@ patch_enable_all ()
 	enable_kernel32_GetLogicalProcessorInformationEx="$1"
 	enable_kernel32_GetNumaProcessorNode="$1"
 	enable_kernel32_GetStringTypeW="$1"
+	enable_kernel32_GetSystemTimePreciseAsFileTime="$1"
 	enable_kernel32_GetSystemTimes="$1"
 	enable_kernel32_GetVolumePathName="$1"
 	enable_kernel32_Named_Pipe="$1"
@@ -472,6 +473,9 @@ patch_enable ()
 			;;
 		kernel32-GetStringTypeW)
 			enable_kernel32_GetStringTypeW="$2"
+			;;
+		kernel32-GetSystemTimePreciseAsFileTime)
+			enable_kernel32_GetSystemTimePreciseAsFileTime="$2"
 			;;
 		kernel32-GetSystemTimes)
 			enable_kernel32_GetSystemTimes="$2"
@@ -2459,18 +2463,6 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -2488,6 +2480,18 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3339,6 +3343,22 @@ if test "$enable_kernel32_GetStringTypeW" -eq 1; then
 	patch_apply kernel32-GetStringTypeW/0001-kernel32-Allow-empty-source-in-GetStringTypeW.patch
 	(
 		echo '+    { "Christian Faure", "kernel32: Allow empty source in GetStringTypeW.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-GetSystemTimePreciseAsFileTime
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38513] Implement kernel32.GetSystemTimePreciseAsFileTime
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-sysinfo-l1-2-0/api-ms-win-core-sysinfo-l1-2-0.spec, dlls/api-ms-win-core-sysinfo-l1-2-1/api-ms-win-
+# | 	core-sysinfo-l1-2-1.spec, dlls/kernel32/kernel32.spec, dlls/kernel32/time.c, include/winbase.h
+# |
+if test "$enable_kernel32_GetSystemTimePreciseAsFileTime" -eq 1; then
+	patch_apply kernel32-GetSystemTimePreciseAsFileTime/0001-kernel32-Implement-GetSystemTimePreciseAsFileTime.patch
+	(
+		echo '+    { "Martin Storsjo", "kernel32: Implement GetSystemTimePreciseAsFileTime.", 1 },';
 	) >> "$patchlist"
 fi
 

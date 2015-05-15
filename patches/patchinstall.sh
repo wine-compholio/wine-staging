@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 14c53a58632f89a4d3a6ae449f339806b4c094a0"
+	echo "  commit 566077a2cdb7ea6ee17eedc1b1f8395c02643633"
 	echo ""
 }
 
@@ -276,6 +276,7 @@ patch_enable_all ()
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
 	enable_winex11_wglShareLists="$1"
+	enable_wininet_Memory_Leak="$1"
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
 	enable_winmm_Delay_Import_Depends="$1"
 	enable_winsta_WinStationEnumerateW="$1"
@@ -894,6 +895,9 @@ patch_enable ()
 			;;
 		winex11-wglShareLists)
 			enable_winex11_wglShareLists="$2"
+			;;
+		wininet-Memory_Leak)
+			enable_wininet_Memory_Leak="$2"
 			;;
 		wininet-ParseX509EncodedCertificateForListBoxEntry)
 			enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$2"
@@ -5489,6 +5493,18 @@ if test "$enable_winex11_wglShareLists" -eq 1; then
 	patch_apply winex11-wglShareLists/0001-winex11.drv-Only-warn-about-used-contexts-in-wglShar.patch
 	(
 		echo '+    { "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wininet-Memory_Leak
+# |
+# | Modified files:
+# |   *	dlls/wininet/http.c
+# |
+if test "$enable_wininet_Memory_Leak" -eq 1; then
+	patch_apply wininet-Memory_Leak/0001-wininet-Fix-memory-leak-by-not-calling-get_cookie_he.patch
+	(
+		echo '+    { "Michael Müller", "wininet: Fix memory leak by not calling get_cookie_header twice.", 1 },';
 	) >> "$patchlist"
 fi
 

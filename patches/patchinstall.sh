@@ -151,7 +151,6 @@ patch_enable_all ()
 	enable_mfplat_MFTRegister="$1"
 	enable_mmdevapi_AEV_Stubs="$1"
 	enable_mountmgr_DosDevices="$1"
-	enable_mountmgr_Null_Device="$1"
 	enable_mscoree_CorValidateImage="$1"
 	enable_msvcp90_basic_string_dtor="$1"
 	enable_msvcrt_Math_Precision="$1"
@@ -189,6 +188,7 @@ patch_enable_all ()
 	enable_ntoskrnl_DriverTest="$1"
 	enable_ntoskrnl_Emulator="$1"
 	enable_ntoskrnl_Stubs="$1"
+	enable_null_Null_Device="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
@@ -522,9 +522,6 @@ patch_enable ()
 		mountmgr-DosDevices)
 			enable_mountmgr_DosDevices="$2"
 			;;
-		mountmgr-Null_Device)
-			enable_mountmgr_Null_Device="$2"
-			;;
 		mscoree-CorValidateImage)
 			enable_mscoree_CorValidateImage="$2"
 			;;
@@ -635,6 +632,9 @@ patch_enable ()
 			;;
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
+			;;
+		null-Null_Device)
+			enable_null_Null_Device="$2"
 			;;
 		nvapi-Stub_DLL)
 			enable_nvapi_Stub_DLL="$2"
@@ -1519,6 +1519,13 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 	enable_nvcuda_CUDA_Support=1
 fi
 
+if test "$enable_nvcuda_CUDA_Support" -eq 1; then
+	if test "$enable_null_Null_Device" -gt 1; then
+		abort "Patchset null-Null_Device disabled, but nvcuda-CUDA_Support depends on that."
+	fi
+	enable_null_Null_Device=1
+fi
+
 if test "$enable_ntoskrnl_Emulator" -eq 1; then
 	if test "$enable_ntdll_User_Shared_Data" -gt 1; then
 		abort "Patchset ntdll-User_Shared_Data disabled, but ntoskrnl-Emulator depends on that."
@@ -1556,13 +1563,6 @@ if test "$enable_ntdll_CLI_Images" -eq 1; then
 		abort "Patchset mscoree-CorValidateImage disabled, but ntdll-CLI_Images depends on that."
 	fi
 	enable_mscoree_CorValidateImage=1
-fi
-
-if test "$enable_mountmgr_Null_Device" -eq 1; then
-	if test "$enable_ntdll_Pipe_SpecialCharacters" -gt 1; then
-		abort "Patchset ntdll-Pipe_SpecialCharacters disabled, but mountmgr-Null_Device depends on that."
-	fi
-	enable_ntdll_Pipe_SpecialCharacters=1
 fi
 
 if test "$enable_kernel32_Named_Pipe" -eq 1; then
@@ -3603,38 +3603,6 @@ if test "$enable_mountmgr_DosDevices" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-Pipe_SpecialCharacters
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#28995] Allow special characters in pipe names
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/pipe.c, dlls/ntdll/directory.c
-# |
-if test "$enable_ntdll_Pipe_SpecialCharacters" -eq 1; then
-	patch_apply ntdll-Pipe_SpecialCharacters/0001-ntdll-Allow-special-characters-in-pipe-names.patch
-	(
-		echo '+    { "Michael Müller", "ntdll: Allow special characters in pipe names.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset mountmgr-Null_Device
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38107] Emulate \Device\Null using /dev/null
-# |
-# | Modified files:
-# |   *	dlls/mountmgr.sys/device.c, dlls/mountmgr.sys/mountmgr.c, dlls/mountmgr.sys/mountmgr.h, dlls/ntdll/directory.c
-# |
-if test "$enable_mountmgr_Null_Device" -eq 1; then
-	patch_apply mountmgr-Null_Device/0001-mountmgr.sys-Added-Null-Device.patch
-	patch_apply mountmgr-Null_Device/0002-ntdll-Emulate-Device-Null-using-dev-null-in-wine_nt_.patch
-	(
-		echo '+    { "Qian Hong", "mountmgr.sys: Added Null Device.", 1 },';
-		echo '+    { "Qian Hong", "ntdll: Emulate \\\\Device\\\\Null using /dev/null in wine_nt_to_unix_file_name.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset mscoree-CorValidateImage
 # |
 # | Modified files:
@@ -3988,6 +3956,21 @@ if test "$enable_ntdll_NtSetLdtEntries" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-Pipe_SpecialCharacters
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#28995] Allow special characters in pipe names
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/pipe.c, dlls/ntdll/directory.c
+# |
+if test "$enable_ntdll_Pipe_SpecialCharacters" -eq 1; then
+	patch_apply ntdll-Pipe_SpecialCharacters/0001-ntdll-Allow-special-characters-in-pipe-names.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Allow special characters in pipe names.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-RtlIpStringToAddress
 # |
 # | Modified files:
@@ -4210,6 +4193,26 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 		echo '+    { "Austin English", "ntoskrnl.exe: Add stub for ProbeForRead.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntoskrnl.exe: Add stub for ProbeForWrite.", 1 },';
 		echo '+    { "Michael Müller", "ntoskrnl.exe: Add stub for PsRemoveLoadImageNotifyRoutine.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset null-Null_Device
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38107] Implement null.sys to provide \Device\Null
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/ntdll/tests/om.c, dlls/null.sys/Makefile.in, dlls/null.sys/main.c, dlls/null.sys/null.sys.spec,
+# | 	loader/wine.inf.in
+# |
+if test "$enable_null_Null_Device" -eq 1; then
+	patch_apply null-Null_Device/0001-ntdll-tests-Add-tests-for-accessing-Device-Null.patch
+	patch_apply null-Null_Device/0002-null.sys-Added-stub-dll.patch
+	patch_apply null-Null_Device/0003-null.sys-Implement-device-ioctl-read-write-functions.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for accessing \\\\\\\\Device\\\\\\\\Null.", 1 },';
+		echo '+    { "Qian Hong", "null.sys: Added stub dll.", 1 },';
+		echo '+    { "Sebastian Lackner", "null.sys: Implement device ioctl/read/write functions.", 1 },';
 	) >> "$patchlist"
 fi
 

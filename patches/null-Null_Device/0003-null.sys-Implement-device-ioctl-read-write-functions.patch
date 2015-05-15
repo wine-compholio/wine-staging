@@ -1,0 +1,209 @@
+From e2577e4c0c0637e22da03eeee33331495eb6d177 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 15 May 2015 22:23:52 +0200
+Subject: null.sys: Implement device ioctl/read/write functions.
+
+Based on a patch by Qian Hong.
+---
+ dlls/ntdll/tests/om.c     |  7 ++----
+ dlls/null.sys/Makefile.in |  1 +
+ dlls/null.sys/main.c      | 63 +++++++++++++++++++++++++++++++++++++++++++++++
+ loader/wine.inf.in        | 11 +++++++++
+ 4 files changed, 77 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/ntdll/tests/om.c b/dlls/ntdll/tests/om.c
+index 71b7ca8..f92069c 100644
+--- a/dlls/ntdll/tests/om.c
++++ b/dlls/ntdll/tests/om.c
+@@ -1051,18 +1051,17 @@ static void test_null_device(void)
+     pRtlCreateUnicodeStringFromAsciiz(&str, "\\Device\\Null");
+     InitializeObjectAttributes(&attr, &str, OBJ_CASE_INSENSITIVE, 0, NULL);
+     status = pNtOpenSymbolicLinkObject(&null, SYMBOLIC_LINK_QUERY, &attr);
+-    todo_wine
+     ok(status == STATUS_OBJECT_TYPE_MISMATCH,
+        "expected STATUS_OBJECT_TYPE_MISMATCH, got %08x\n", status);
+ 
+     status = pNtOpenFile(&null, GENERIC_READ | GENERIC_WRITE, &attr, &iosb,
+                          FILE_SHARE_READ | FILE_SHARE_WRITE, FILE_OPEN);
+-    todo_wine
+     ok(status == STATUS_SUCCESS,
+        "expected STATUS_SUCCESS, got %08x\n", status);
+ 
+     SetLastError(0xdeadbeef);
+     ret = WriteFile(null, buf, sizeof(buf), &num_bytes, NULL);
++    todo_wine
+     ok(!ret, "WriteFile unexpectedly succeeded\n");
+     todo_wine
+     ok(GetLastError() == ERROR_INVALID_PARAMETER,
+@@ -1070,6 +1069,7 @@ static void test_null_device(void)
+ 
+     SetLastError(0xdeadbeef);
+     ret = ReadFile(null, buf, sizeof(buf), &num_bytes, NULL);
++    todo_wine
+     ok(!ret, "ReadFile unexpectedly succeeded\n");
+     todo_wine
+     ok(GetLastError() == ERROR_INVALID_PARAMETER,
+@@ -1080,7 +1080,6 @@ static void test_null_device(void)
+     ret = WriteFile(null, buf, sizeof(buf), &num_bytes, &ov);
+     if (ret || GetLastError() != ERROR_IO_PENDING)
+     {
+-        todo_wine
+         ok(ret, "WriteFile failed with error %u\n", GetLastError());
+     }
+     else
+@@ -1089,7 +1088,6 @@ static void test_null_device(void)
+         ret = GetOverlappedResult(null, &ov, &num_bytes, TRUE);
+         ok(ret, "GetOverlappedResult failed with error %u\n", GetLastError());
+     }
+-    todo_wine
+     ok(num_bytes == sizeof(buf), "expected num_bytes = %u, got %u\n",
+        (DWORD)sizeof(buf), num_bytes);
+ 
+@@ -1106,7 +1104,6 @@ static void test_null_device(void)
+         ret = GetOverlappedResult(null, &ov, &num_bytes, TRUE);
+         ok(!ret, "GetOverlappedResult unexpectedly succeeded\n");
+     }
+-    todo_wine
+     ok(GetLastError() == ERROR_HANDLE_EOF,
+        "expected ERROR_HANDLE_EOF, got %u\n", GetLastError());
+ 
+diff --git a/dlls/null.sys/Makefile.in b/dlls/null.sys/Makefile.in
+index 4ea3b55..95c249d 100644
+--- a/dlls/null.sys/Makefile.in
++++ b/dlls/null.sys/Makefile.in
+@@ -1,4 +1,5 @@
+ MODULE    = null.sys
++IMPORTS   = ntoskrnl.exe
+ EXTRADLLFLAGS = -Wb,--subsystem,native
+ 
+ C_SRCS = \
+diff --git a/dlls/null.sys/main.c b/dlls/null.sys/main.c
+index 141c218..ecbb7cf 100644
+--- a/dlls/null.sys/main.c
++++ b/dlls/null.sys/main.c
+@@ -20,6 +20,7 @@
+ 
+ #include <stdarg.h>
+ 
++#define NONAMELESSUNION
+ #include "ntstatus.h"
+ #define WIN32_NO_STATUS
+ #include "windef.h"
+@@ -30,9 +31,71 @@
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(null);
+ 
++static NTSTATUS WINAPI null_ioctl( DEVICE_OBJECT *device, IRP *irp )
++{
++    IO_STACK_LOCATION *irpsp = IoGetCurrentIrpStackLocation( irp );
++    ULONG code = irpsp->Parameters.DeviceIoControl.IoControlCode;
++
++    FIXME("Unsupported ioctl %x (device=%x access=%x func=%x method=%x)\n",
++        code, code >> 16, (code >> 14) & 3, (code >> 2) & 0xfff, code & 3);
++    irp->IoStatus.u.Status = STATUS_NOT_SUPPORTED;
++
++    IoCompleteRequest( irp, IO_NO_INCREMENT );
++    return STATUS_SUCCESS;
++}
++
++static NTSTATUS WINAPI null_read( DEVICE_OBJECT *device, IRP *irp )
++{
++    IO_STACK_LOCATION *irpsp = IoGetCurrentIrpStackLocation( irp );
++
++    TRACE( "length %u key %u byteoffset %u\n",
++           irpsp->Parameters.Read.Length,
++           irpsp->Parameters.Read.Key,
++           irpsp->Parameters.Read.ByteOffset.u.LowPart);
++
++    irp->IoStatus.u.Status = STATUS_END_OF_FILE;
++
++    IoCompleteRequest( irp, IO_NO_INCREMENT );
++    return STATUS_END_OF_FILE;
++}
++
++static NTSTATUS WINAPI null_write( DEVICE_OBJECT *device, IRP *irp )
++{
++    IO_STACK_LOCATION *irpsp = IoGetCurrentIrpStackLocation( irp );
++
++    TRACE( "length %u key %u byteoffset %u\n",
++           irpsp->Parameters.Read.Length,
++           irpsp->Parameters.Read.Key,
++           irpsp->Parameters.Read.ByteOffset.u.LowPart);
++
++    irp->IoStatus.Information = irpsp->Parameters.Read.Length;
++    irp->IoStatus.u.Status = STATUS_SUCCESS;
++
++    IoCompleteRequest( irp, IO_NO_INCREMENT );
++    return STATUS_SUCCESS;
++}
++
+ NTSTATUS WINAPI DriverEntry(DRIVER_OBJECT *driver, UNICODE_STRING *path)
+ {
++    static const WCHAR device_nullW[] = {'\\','D','e','v','i','c','e','\\','N','u','l','l',0};
++    UNICODE_STRING nameW;
++    DEVICE_OBJECT *device;
++    NTSTATUS status;
++
+     TRACE("(%p, %s)\n", driver, debugstr_w(path->Buffer));
+ 
++    driver->MajorFunction[IRP_MJ_DEVICE_CONTROL] = null_ioctl;
++    driver->MajorFunction[IRP_MJ_READ]           = null_read;
++    driver->MajorFunction[IRP_MJ_WRITE]          = null_write;
++
++    RtlInitUnicodeString( &nameW, device_nullW );
++
++    status = IoCreateDevice( driver, 0, &nameW, 0, 0, FALSE, &device );
++    if (status)
++    {
++        FIXME( "failed to create device error %x\n", status );
++        return status;
++    }
++
+     return STATUS_SUCCESS;
+ }
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 8a6c767..057d047 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -121,6 +121,7 @@ AddReg=\
+ AddService=BITS,0,BITSService
+ AddService=MSIServer,0,MSIService
+ AddService=MountMgr,0x800,MountMgrService
++AddService=Null,0x800,NullService
+ AddService=Spooler,0,SpoolerService
+ AddService=StiSvc,0,StiService
+ AddService=TermService,0,TerminalServices
+@@ -134,6 +135,7 @@ AddService=Schedule,0,TaskSchedulerService
+ AddService=BITS,0,BITSService
+ AddService=MSIServer,0,MSIService
+ AddService=MountMgr,0x800,MountMgrService
++AddService=Null,0x800,NullService
+ AddService=Spooler,0,SpoolerService
+ AddService=StiSvc,0,StiService
+ AddService=TermService,0,TerminalServices
+@@ -147,6 +149,7 @@ AddService=Schedule,0,TaskSchedulerService
+ AddService=BITS,0,BITSService
+ AddService=MSIServer,0,MSIService
+ AddService=MountMgr,0x800,MountMgrService
++AddService=Null,0x800,NullService
+ AddService=Spooler,0,SpoolerService
+ AddService=StiSvc,0,StiService
+ AddService=TermService,0,TerminalServices
+@@ -3128,6 +3131,14 @@ ServiceType=1
+ StartType=2
+ ErrorControl=1
+ 
++[NullService]
++Description="Null service"
++DisplayName="Null"
++ServiceBinary="%12%\null.sys"
++ServiceType=1
++StartType=2
++ErrorControl=1
++
+ [SpoolerService]
+ Description="Loads files to memory for later printing"
+ DisplayName="Print Spooler"
+-- 
+2.4.0
+

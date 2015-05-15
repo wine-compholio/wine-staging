@@ -121,7 +121,6 @@ for more details.*
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](https://bugs.winehq.org/show_bug.cgi?id=33770))
 * Do not append duplicate NULL characters when importing keys with regedit ([Wine Bug #37575](https://bugs.winehq.org/show_bug.cgi?id=37575))
 * Do not fail when a used context is passed to wglShareLists ([Wine Bug #11436](https://bugs.winehq.org/show_bug.cgi?id=11436))
-* Emulate \Device\Null using /dev/null ([Wine Bug #38107](https://bugs.winehq.org/show_bug.cgi?id=38107))
 * Emulate access to KI_USER_SHARED_DATA kernel page on x86_64 ([Wine Bug #33849](https://bugs.winehq.org/show_bug.cgi?id=33849))
 * Enforce that surfaces are flushed after ReleaseDC
 * Ensure NtProtectVirtualMemory and NtCreateSection are on separate pages ([Wine Bug #33162](https://bugs.winehq.org/show_bug.cgi?id=33162))
@@ -189,6 +188,7 @@ for more details.*
 * Implement mscoree._CorValidateImage for mono runtime
 * Implement ntoskrnl driver testing framework.
 * Implement ntoskrnl.KeInitializeMutex
+* Implement null.sys to provide \Device\Null ([Wine Bug #38107](https://bugs.winehq.org/show_bug.cgi?id=38107))
 * Implement proper handling of CLI .NET images in Wine library loader
 * Implement stub for ntoskrnl.IoGetAttachedDeviceReference
 * Implement stub for ntoskrnl.KeDelayExecutionThread.

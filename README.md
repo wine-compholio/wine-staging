@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [17]:**
+**Bug fixes and features included in the next upcoming release [18]:**
 
 * Add HTTP Host header in HttpSendRequest instead of HttpOpenRequest ([Wine Bug #28911](https://bugs.winehq.org/show_bug.cgi?id=28911))
 * Add IEnumString stub interface for ACLShellSource ([Wine Bug #18019](https://bugs.winehq.org/show_bug.cgi?id=18019))
@@ -56,6 +56,7 @@ Included bug fixes and improvements
 * Implement kernel32.GetSystemTimePreciseAsFileTime ([Wine Bug #38513](https://bugs.winehq.org/show_bug.cgi?id=38513))
 * Improve ReadDataAvailable handling in FilePipeLocalInformation class
 * Return default palette entries from GetSystemPaletteEntries for non-palette-based devices
+* Skip unknown item when decoding a CMS certificate ([Wine Bug #34388](https://bugs.winehq.org/show_bug.cgi?id=34388))
 * Support for ObjectTypeInformation class support in NtQueryObject
 * Use POSIX implementation to enumerate directory content on FreeBSD ([Wine Bug #35397](https://bugs.winehq.org/show_bug.cgi?id=35397))
 

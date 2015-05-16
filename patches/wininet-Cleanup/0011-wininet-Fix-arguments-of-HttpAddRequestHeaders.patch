@@ -1,0 +1,74 @@
+From 60e158b648b47ce743f5ceabdad0354324ee7391 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 16 May 2015 02:29:42 +0200
+Subject: wininet: Fix arguments of HttpAddRequestHeaders.
+
+---
+ dlls/wininet/http.c | 16 ++++++++++------
+ 1 file changed, 10 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/wininet/http.c b/dlls/wininet/http.c
+index cfeb7ac..6681100 100644
+--- a/dlls/wininet/http.c
++++ b/dlls/wininet/http.c
+@@ -1661,7 +1661,8 @@ static BOOL HTTP_InsertAuthorization( http_request_t *request, struct HttpAuthIn
+ 
+         TRACE("Inserting authorization: %s\n", debugstr_w(authorization));
+ 
+-        HTTP_ProcessHeader(request, header, authorization, HTTP_ADDHDR_FLAG_REQ | HTTP_ADDHDR_FLAG_REPLACE);
++        HTTP_ProcessHeader(request, header, authorization,
++                           HTTP_ADDHDR_FLAG_REQ | HTTP_ADDHDR_FLAG_REPLACE | HTTP_ADDREQ_FLAG_ADD);
+         heap_free(authorization);
+     }
+     else if (!strcmpW(header, szAuthorization) && (host = get_host_header(request)))
+@@ -1682,7 +1683,8 @@ static BOOL HTTP_InsertAuthorization( http_request_t *request, struct HttpAuthIn
+ 
+             TRACE("Inserting authorization: %s\n", debugstr_w(authorization));
+ 
+-            HTTP_ProcessHeader(request, header, authorization, HTTP_ADDHDR_FLAG_REQ | HTTP_ADDHDR_FLAG_REPLACE);
++            HTTP_ProcessHeader(request, header, authorization,
++                               HTTP_ADDHDR_FLAG_REQ | HTTP_ADDHDR_FLAG_REPLACE | HTTP_ADDHDR_FLAG_ADD);
+             heap_free(data);
+             heap_free(authorization);
+         }
+@@ -3397,7 +3399,7 @@ static DWORD HTTP_HttpOpenRequestW(http_session_t *session,
+             HTTP_ProcessHeader(request, HTTP_ACCEPT, lpszAcceptTypes[i],
+                                HTTP_ADDHDR_FLAG_COALESCE_WITH_COMMA |
+                                HTTP_ADDHDR_FLAG_REQ |
+-                               (i == 0 ? HTTP_ADDHDR_FLAG_REPLACE : 0));
++                               (i == 0 ? (HTTP_ADDHDR_FLAG_REPLACE | HTTP_ADDHDR_FLAG_ADD) : 0));
+         }
+     }
+ 
+@@ -4235,7 +4237,8 @@ static void HTTP_InsertCookies(http_request_t *request)
+     if(res != ERROR_SUCCESS || !cookies)
+         return;
+ 
+-    HTTP_HttpAddRequestHeadersW(request, cookies, strlenW(cookies), HTTP_ADDREQ_FLAG_REPLACE);
++    HTTP_HttpAddRequestHeadersW(request, cookies, strlenW(cookies),
++                                HTTP_ADDREQ_FLAG_REPLACE | HTTP_ADDREQ_FLAG_ADD);
+     heap_free(cookies);
+ }
+ 
+@@ -4959,7 +4962,8 @@ static DWORD HTTP_HttpSendRequestW(http_request_t *request, LPCWSTR lpszHeaders,
+         HTTP_FixURL(request);
+         if (request->hdr.dwFlags & INTERNET_FLAG_KEEP_CONNECTION)
+         {
+-            HTTP_ProcessHeader(request, szConnection, szKeepAlive, HTTP_ADDHDR_FLAG_REQ | HTTP_ADDHDR_FLAG_REPLACE);
++            HTTP_ProcessHeader(request, szConnection, szKeepAlive,
++                               HTTP_ADDHDR_FLAG_REQ | HTTP_ADDHDR_FLAG_REPLACE | HTTP_ADDHDR_FLAG_ADD);
+         }
+         HTTP_InsertAuthorization(request, request->authInfo, szAuthorization);
+         HTTP_InsertAuthorization(request, request->proxyAuthInfo, szProxy_Authorization);
+@@ -5976,7 +5980,7 @@ static DWORD HTTP_GetResponseHeaders(http_request_t *request, INT *len)
+ 
+     /* Add status code */
+     HTTP_ProcessHeader(request, szStatus, status_code,
+-            HTTP_ADDHDR_FLAG_REPLACE);
++                       HTTP_ADDHDR_FLAG_REPLACE | HTTP_ADDHDR_FLAG_ADD);
+ 
+     heap_free(request->version);
+     heap_free(request->statusText);
+-- 
+2.4.0
+

@@ -277,7 +277,6 @@ patch_enable_all ()
 	enable_winex11_XEMBED="$1"
 	enable_winex11_wglShareLists="$1"
 	enable_wininet_Cleanup="$1"
-	enable_wininet_Memory_Leak="$1"
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
 	enable_winmm_Delay_Import_Depends="$1"
 	enable_winsta_WinStationEnumerateW="$1"
@@ -899,9 +898,6 @@ patch_enable ()
 			;;
 		wininet-Cleanup)
 			enable_wininet_Cleanup="$2"
-			;;
-		wininet-Memory_Leak)
-			enable_wininet_Memory_Leak="$2"
 			;;
 		wininet-ParseX509EncodedCertificateForListBoxEntry)
 			enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$2"
@@ -5509,18 +5505,23 @@ fi
 # |   *	[#28911] Add HTTP Host header in HttpSendRequest instead of HttpOpenRequest
 # |
 # | Modified files:
-# |   *	dlls/wininet/http.c, dlls/wininet/tests/http.c
+# |   *	dlls/rpcrt4/rpc_transport.c, dlls/wininet/http.c, dlls/wininet/tests/http.c
 # |
 if test "$enable_wininet_Cleanup" -eq 1; then
-	patch_apply wininet-Cleanup/0001-wininet-tests-Add-more-tests-for-cookies.patch
-	patch_apply wininet-Cleanup/0002-wininet-tests-Add-tests-for-overriding-host-header.patch
-	patch_apply wininet-Cleanup/0003-wininet-tests-Test-auth-credential-reusage-with-host.patch
-	patch_apply wininet-Cleanup/0004-wininet-tests-Check-cookie-behaviour-when-overriding.patch
-	patch_apply wininet-Cleanup/0005-wininet-Use-request-server-name-when-processing-cook.patch
-	patch_apply wininet-Cleanup/0006-wininet-Delay-setting-the-http-host-header.patch
-	patch_apply wininet-Cleanup/0007-wininet-Use-request-server-canon_host_port-in-authen.patch
-	patch_apply wininet-Cleanup/0008-wininet-Use-request-server-canon_host_port-when-quer.patch
+	patch_apply wininet-Cleanup/0001-wininet-Fix-memory-leak-by-not-calling-get_cookie_he.patch
+	patch_apply wininet-Cleanup/0002-wininet-tests-Add-more-tests-for-cookies.patch
+	patch_apply wininet-Cleanup/0003-wininet-tests-Add-tests-for-overriding-host-header.patch
+	patch_apply wininet-Cleanup/0004-wininet-tests-Test-auth-credential-reusage-with-host.patch
+	patch_apply wininet-Cleanup/0005-wininet-tests-Check-cookie-behaviour-when-overriding.patch
+	patch_apply wininet-Cleanup/0006-wininet-Use-request-server-name-when-processing-cook.patch
+	patch_apply wininet-Cleanup/0007-wininet-Delay-setting-the-http-host-header.patch
+	patch_apply wininet-Cleanup/0008-wininet-Use-request-server-canon_host_port-in-authen.patch
+	patch_apply wininet-Cleanup/0009-wininet-Use-request-server-canon_host_port-when-quer.patch
+	patch_apply wininet-Cleanup/0010-rpcrt4-Fix-arguments-of-HttpAddRequestHeaders.patch
+	patch_apply wininet-Cleanup/0011-wininet-Fix-arguments-of-HttpAddRequestHeaders.patch
+	patch_apply wininet-Cleanup/0012-wininet-Strip-filename-if-no-path-is-set-in-cookie.patch
 	(
+		echo '+    { "Michael Müller", "wininet: Fix memory leak by not calling get_cookie_header twice.", 1 },';
 		echo '+    { "Michael Müller", "wininet/tests: Add more tests for cookies.", 1 },';
 		echo '+    { "Michael Müller", "wininet/tests: Add tests for overriding host header.", 1 },';
 		echo '+    { "Michael Müller", "wininet/tests: Test auth credential reusage with host override.", 1 },';
@@ -5529,18 +5530,9 @@ if test "$enable_wininet_Cleanup" -eq 1; then
 		echo '+    { "Michael Müller", "wininet: Delay setting the http host header.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Use request->server->canon_host_port in authentication process.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Use request->server->canon_host_port when querying for INTERNET_OPTION_URL.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wininet-Memory_Leak
-# |
-# | Modified files:
-# |   *	dlls/wininet/http.c
-# |
-if test "$enable_wininet_Memory_Leak" -eq 1; then
-	patch_apply wininet-Memory_Leak/0001-wininet-Fix-memory-leak-by-not-calling-get_cookie_he.patch
-	(
-		echo '+    { "Michael Müller", "wininet: Fix memory leak by not calling get_cookie_header twice.", 1 },';
+		echo '+    { "Michael Müller", "rpcrt4: Fix arguments of HttpAddRequestHeaders.", 1 },';
+		echo '+    { "Michael Müller", "wininet: Fix arguments of HttpAddRequestHeaders.", 1 },';
+		echo '+    { "Michael Müller", "wininet: Strip filename if no path is set in cookie.", 1 },';
 	) >> "$patchlist"
 fi
 

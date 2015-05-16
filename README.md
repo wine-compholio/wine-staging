@@ -39,8 +39,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [15]:**
+**Bug fixes and features included in the next upcoming release [16]:**
 
+* Add HTTP Host header in HttpSendRequest instead of HttpOpenRequest ([Wine Bug #28911](https://bugs.winehq.org/show_bug.cgi?id=28911))
 * Add IEnumString stub interface for ACLShellSource ([Wine Bug #18019](https://bugs.winehq.org/show_bug.cgi?id=18019))
 * Add implementation for shlwapi.AssocGetPerceivedType
 * Add stub for atl80.AtlIPersistPropertyBag_Save ([Wine Bug #33888](https://bugs.winehq.org/show_bug.cgi?id=33888))

@@ -5505,17 +5505,30 @@ fi
 
 # Patchset wininet-Cleanup
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#28911] Add HTTP Host header in HttpSendRequest instead of HttpOpenRequest
+# |
 # | Modified files:
-# |   *	dlls/wininet/tests/http.c
+# |   *	dlls/wininet/http.c, dlls/wininet/tests/http.c
 # |
 if test "$enable_wininet_Cleanup" -eq 1; then
 	patch_apply wininet-Cleanup/0001-wininet-tests-Add-more-tests-for-cookies.patch
 	patch_apply wininet-Cleanup/0002-wininet-tests-Add-tests-for-overriding-host-header.patch
 	patch_apply wininet-Cleanup/0003-wininet-tests-Test-auth-credential-reusage-with-host.patch
+	patch_apply wininet-Cleanup/0004-wininet-tests-Check-cookie-behaviour-when-overriding.patch
+	patch_apply wininet-Cleanup/0005-wininet-Use-request-server-name-when-processing-cook.patch
+	patch_apply wininet-Cleanup/0006-wininet-Delay-setting-the-http-host-header.patch
+	patch_apply wininet-Cleanup/0007-wininet-Use-request-server-canon_host_port-in-authen.patch
+	patch_apply wininet-Cleanup/0008-wininet-Use-request-server-canon_host_port-when-quer.patch
 	(
 		echo '+    { "Michael Müller", "wininet/tests: Add more tests for cookies.", 1 },';
 		echo '+    { "Michael Müller", "wininet/tests: Add tests for overriding host header.", 1 },';
 		echo '+    { "Michael Müller", "wininet/tests: Test auth credential reusage with host override.", 1 },';
+		echo '+    { "Michael Müller", "wininet/tests: Check cookie behaviour when overriding host.", 1 },';
+		echo '+    { "Michael Müller", "wininet: Use request->server->name when processing cookies instead of Host header field.", 1 },';
+		echo '+    { "Michael Müller", "wininet: Delay setting the http host header.", 1 },';
+		echo '+    { "Michael Müller", "wininet: Use request->server->canon_host_port in authentication process.", 1 },';
+		echo '+    { "Michael Müller", "wininet: Use request->server->canon_host_port when querying for INTERNET_OPTION_URL.", 1 },';
 	) >> "$patchlist"
 fi
 

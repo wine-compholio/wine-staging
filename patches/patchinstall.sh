@@ -5520,6 +5520,7 @@ if test "$enable_wininet_Cleanup" -eq 1; then
 	patch_apply wininet-Cleanup/0010-rpcrt4-Fix-arguments-of-HttpAddRequestHeaders.patch
 	patch_apply wininet-Cleanup/0011-wininet-Fix-arguments-of-HttpAddRequestHeaders.patch
 	patch_apply wininet-Cleanup/0012-wininet-Strip-filename-if-no-path-is-set-in-cookie.patch
+	patch_apply wininet-Cleanup/0013-wininet-Replacing-header-fields-should-fail-if-they-.patch
 	(
 		echo '+    { "Michael Müller", "wininet: Fix memory leak by not calling get_cookie_header twice.", 1 },';
 		echo '+    { "Michael Müller", "wininet/tests: Add more tests for cookies.", 1 },';
@@ -5533,6 +5534,7 @@ if test "$enable_wininet_Cleanup" -eq 1; then
 		echo '+    { "Michael Müller", "rpcrt4: Fix arguments of HttpAddRequestHeaders.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Fix arguments of HttpAddRequestHeaders.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Strip filename if no path is set in cookie.", 1 },';
+		echo '+    { "Michael Müller", "wininet: Replacing header fields should fail if they do not exist yet.", 1 },';
 	) >> "$patchlist"
 fi
 

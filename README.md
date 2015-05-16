@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [15]:**
+**Bug fixes and features included in the next upcoming release [16]:**
 
 * Add HTTP Host header in HttpSendRequest instead of HttpOpenRequest ([Wine Bug #28911](https://bugs.winehq.org/show_bug.cgi?id=28911))
 * Add IEnumString stub interface for ACLShellSource ([Wine Bug #18019](https://bugs.winehq.org/show_bug.cgi?id=18019))
@@ -51,6 +51,7 @@ Included bug fixes and improvements
 * Create stub files for system32/drivers/etc/{services,hosts,networks,protocol} ([Wine Bug #12076](https://bugs.winehq.org/show_bug.cgi?id=12076))
 * Dirtify vertex shader on transformed update to fix graphical corruption ([Wine Bug #38539](https://bugs.winehq.org/show_bug.cgi?id=38539))
 * Do not create foreign thread queues for attach_thread_input requests ([Wine Bug #38562](https://bugs.winehq.org/show_bug.cgi?id=38562))
+* Free RPC parameters allocated by application before anything else ([Wine Bug #36743](https://bugs.winehq.org/show_bug.cgi?id=36743))
 * Implement kernel32.GetSystemTimePreciseAsFileTime ([Wine Bug #38513](https://bugs.winehq.org/show_bug.cgi?id=38513))
 * Improve ReadDataAvailable handling in FilePipeLocalInformation class
 * Return default palette entries from GetSystemPaletteEntries for non-palette-based devices

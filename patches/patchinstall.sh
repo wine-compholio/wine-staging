@@ -197,6 +197,7 @@ patch_enable_all ()
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_regedit_String_Termination="$1"
 	enable_riched20_IText_Interface="$1"
+	enable_rpcrt4_Use_After_Free="$1"
 	enable_secur32_ANSI_NTLM_Credentials="$1"
 	enable_server_ACL_Compat="$1"
 	enable_server_Address_List_Change="$1"
@@ -657,6 +658,9 @@ patch_enable ()
 			;;
 		riched20-IText_Interface)
 			enable_riched20_IText_Interface="$2"
+			;;
+		rpcrt4-Use_After_Free)
+			enable_rpcrt4_Use_After_Free="$2"
 			;;
 		secur32-ANSI_NTLM_Credentials)
 			enable_secur32_ANSI_NTLM_Credentials="$2"
@@ -2515,6 +2519,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-resource_check_usage
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c
+# |
+if test "$enable_wined3d_resource_check_usage" -eq 1; then
+	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	(
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-wined3d_swapchain_present
 # |
 # | Modified files:
@@ -2600,18 +2616,6 @@ if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
 	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-resource_check_usage
-# |
-# | Modified files:
-# |   *	dlls/wined3d/resource.c
-# |
-if test "$enable_wined3d_resource_check_usage" -eq 1; then
-	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	(
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -4401,6 +4405,21 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 		echo '+    { "Sebastian Lackner", "riched20: Fix invalid memory access when parent object was destroyed earlier than child object.", 1 },';
 		echo '+    { "Sebastian Lackner", "riched20: Silence repeated FIXMEs triggered by Adobe Reader.", 1 },';
 		echo '+    { "Sebastian Lackner", "riched20: Implement ITextSelection_fnGetDuplicate.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset rpcrt4-Use_After_Free
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36743] Free RPC parameters allocated by application before anything else
+# |
+# | Modified files:
+# |   *	dlls/rpcrt4/ndr_stubless.c
+# |
+if test "$enable_rpcrt4_Use_After_Free" -eq 1; then
+	patch_apply rpcrt4-Use_After_Free/0001-rpcrt4-Free-parameters-allocated-by-application-befo.patch
+	(
+		echo '+    { "Jérôme Gardou", "rpcrt4: Free parameters allocated by application before anything else.", 1 },';
 	) >> "$patchlist"
 fi
 

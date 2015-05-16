@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [16]:**
+**Bug fixes and features included in the next upcoming release [15]:**
 
 * Add HTTP Host header in HttpSendRequest instead of HttpOpenRequest ([Wine Bug #28911](https://bugs.winehq.org/show_bug.cgi?id=28911))
 * Add IEnumString stub interface for ACLShellSource ([Wine Bug #18019](https://bugs.winehq.org/show_bug.cgi?id=18019))
@@ -56,7 +56,6 @@ Included bug fixes and improvements
 * Return default palette entries from GetSystemPaletteEntries for non-palette-based devices
 * Support for ObjectTypeInformation class support in NtQueryObject
 * Use POSIX implementation to enumerate directory content on FreeBSD ([Wine Bug #35397](https://bugs.winehq.org/show_bug.cgi?id=35397))
-* Wait before reusing recently freed memory
 
 
 **Bug fixes and features in Wine Staging 1.7.42 [221]:**

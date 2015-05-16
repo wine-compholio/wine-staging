@@ -170,7 +170,6 @@ patch_enable_all ()
 	enable_ntdll_Fix_Alignment="$1"
 	enable_ntdll_Fix_Free="$1"
 	enable_ntdll_FreeBSD_Directory="$1"
-	enable_ntdll_Heap_Delay_Free="$1"
 	enable_ntdll_Heap_FreeLists="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_LZNT1_Compression="$1"
@@ -577,9 +576,6 @@ patch_enable ()
 			;;
 		ntdll-FreeBSD_Directory)
 			enable_ntdll_FreeBSD_Directory="$2"
-			;;
-		ntdll-Heap_Delay_Free)
-			enable_ntdll_Heap_Delay_Free="$2"
 			;;
 		ntdll-Heap_FreeLists)
 			enable_ntdll_Heap_FreeLists="$2"
@@ -3841,18 +3837,6 @@ if test "$enable_ntdll_FreeBSD_Directory" -eq 1; then
 	patch_apply ntdll-FreeBSD_Directory/0001-ntdll-Use-POSIX-implementation-to-enumerate-director.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Use POSIX implementation to enumerate directory content.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Heap_Delay_Free
-# |
-# | Modified files:
-# |   *	dlls/ntdll/heap.c
-# |
-if test "$enable_ntdll_Heap_Delay_Free" -eq 1; then
-	patch_apply ntdll-Heap_Delay_Free/0001-ntdll-Mimic-the-Windows-heap-management-and-delay-re.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Mimic the Windows heap management and delay reusing freed blocks.", 1 },';
 	) >> "$patchlist"
 fi
 

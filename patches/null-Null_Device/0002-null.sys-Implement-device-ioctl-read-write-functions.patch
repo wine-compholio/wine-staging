@@ -1,21 +1,21 @@
-From e2577e4c0c0637e22da03eeee33331495eb6d177 Mon Sep 17 00:00:00 2001
+From f5ebb97d978d8418e1034ea58af16e6a0aa0216d Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 15 May 2015 22:23:52 +0200
 Subject: null.sys: Implement device ioctl/read/write functions.
 
 Based on a patch by Qian Hong.
 ---
- dlls/ntdll/tests/om.c     |  7 ++----
+ dlls/ntdll/tests/om.c     | 12 +++------
  dlls/null.sys/Makefile.in |  1 +
  dlls/null.sys/main.c      | 63 +++++++++++++++++++++++++++++++++++++++++++++++
  loader/wine.inf.in        | 11 +++++++++
- 4 files changed, 77 insertions(+), 5 deletions(-)
+ 4 files changed, 79 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/ntdll/tests/om.c b/dlls/ntdll/tests/om.c
-index 71b7ca8..f92069c 100644
+index 71380a7..ca32577 100644
 --- a/dlls/ntdll/tests/om.c
 +++ b/dlls/ntdll/tests/om.c
-@@ -1051,18 +1051,17 @@ static void test_null_device(void)
+@@ -1053,30 +1053,27 @@ static void test_null_device(void)
      pRtlCreateUnicodeStringFromAsciiz(&str, "\\Device\\Null");
      InitializeObjectAttributes(&attr, &str, OBJ_CASE_INSENSITIVE, 0, NULL);
      status = pNtOpenSymbolicLinkObject(&null, SYMBOLIC_LINK_QUERY, &attr);
@@ -24,49 +24,40 @@ index 71b7ca8..f92069c 100644
         "expected STATUS_OBJECT_TYPE_MISMATCH, got %08x\n", status);
  
      status = pNtOpenFile(&null, GENERIC_READ | GENERIC_WRITE, &attr, &iosb,
-                          FILE_SHARE_READ | FILE_SHARE_WRITE, FILE_OPEN);
+                          FILE_SHARE_READ | FILE_SHARE_WRITE, 0);
 -    todo_wine
      ok(status == STATUS_SUCCESS,
         "expected STATUS_SUCCESS, got %08x\n", status);
+-    if (status != STATUS_SUCCESS)
+-    {
+-        skip("opening \\Device\\Null failed, skipping read/write tests\n");
+-        goto out;
+-    }
  
      SetLastError(0xdeadbeef);
      ret = WriteFile(null, buf, sizeof(buf), &num_bytes, NULL);
 +    todo_wine
      ok(!ret, "WriteFile unexpectedly succeeded\n");
-     todo_wine
++    todo_wine
      ok(GetLastError() == ERROR_INVALID_PARAMETER,
-@@ -1070,6 +1069,7 @@ static void test_null_device(void)
+        "expected ERROR_INVALID_PARAMETER, got %u\n", GetLastError());
  
      SetLastError(0xdeadbeef);
      ret = ReadFile(null, buf, sizeof(buf), &num_bytes, NULL);
 +    todo_wine
      ok(!ret, "ReadFile unexpectedly succeeded\n");
-     todo_wine
++    todo_wine
      ok(GetLastError() == ERROR_INVALID_PARAMETER,
-@@ -1080,7 +1080,6 @@ static void test_null_device(void)
-     ret = WriteFile(null, buf, sizeof(buf), &num_bytes, &ov);
-     if (ret || GetLastError() != ERROR_IO_PENDING)
-     {
--        todo_wine
-         ok(ret, "WriteFile failed with error %u\n", GetLastError());
-     }
-     else
-@@ -1089,7 +1088,6 @@ static void test_null_device(void)
-         ret = GetOverlappedResult(null, &ov, &num_bytes, TRUE);
-         ok(ret, "GetOverlappedResult failed with error %u\n", GetLastError());
-     }
--    todo_wine
-     ok(num_bytes == sizeof(buf), "expected num_bytes = %u, got %u\n",
-        (DWORD)sizeof(buf), num_bytes);
+        "expected ERROR_INVALID_PARAMETER, got %u\n", GetLastError());
  
-@@ -1106,7 +1104,6 @@ static void test_null_device(void)
-         ret = GetOverlappedResult(null, &ov, &num_bytes, TRUE);
-         ok(!ret, "GetOverlappedResult unexpectedly succeeded\n");
-     }
--    todo_wine
-     ok(GetLastError() == ERROR_HANDLE_EOF,
-        "expected ERROR_HANDLE_EOF, got %u\n", GetLastError());
+@@ -1114,7 +1111,6 @@ static void test_null_device(void)
  
+     pNtClose(null);
+ 
+-out:
+     null = CreateFileA("\\\\.\\Null", GENERIC_READ | GENERIC_WRITE,
+                        FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+                        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 diff --git a/dlls/null.sys/Makefile.in b/dlls/null.sys/Makefile.in
 index 4ea3b55..95c249d 100644
 --- a/dlls/null.sys/Makefile.in

@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 566077a2cdb7ea6ee17eedc1b1f8395c02643633"
+	echo "  commit 0d91274defcf65093957cf8e43985b9be55642d5"
 	echo ""
 }
 
@@ -114,7 +114,6 @@ patch_enable_all ()
 	enable_ddraw_EnumSurfaces="$1"
 	enable_ddraw_Hotpatch="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
-	enable_dinput_DeviceState="$1"
 	enable_dinput_Events="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
@@ -137,7 +136,6 @@ patch_enable_all ()
 	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_GetLogicalProcessorInformationEx="$1"
 	enable_kernel32_GetNumaProcessorNode="$1"
-	enable_kernel32_GetStringTypeW="$1"
 	enable_kernel32_GetSystemTimePreciseAsFileTime="$1"
 	enable_kernel32_GetSystemTimes="$1"
 	enable_kernel32_GetVolumePathName="$1"
@@ -219,7 +217,6 @@ patch_enable_all ()
 	enable_server_Shared_Memory="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Unexpected_Wakeup="$1"
-	enable_server_attach_thread_input="$1"
 	enable_setupapi_SetupDiSelectBestCompatDrv="$1"
 	enable_setupapi_SetupDiSetDeviceInstallParamsW="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
@@ -412,9 +409,6 @@ patch_enable ()
 		ddraw-d3d_execute_buffer)
 			enable_ddraw_d3d_execute_buffer="$2"
 			;;
-		dinput-DeviceState)
-			enable_dinput_DeviceState="$2"
-			;;
 		dinput-Events)
 			enable_dinput_Events="$2"
 			;;
@@ -480,9 +474,6 @@ patch_enable ()
 			;;
 		kernel32-GetNumaProcessorNode)
 			enable_kernel32_GetNumaProcessorNode="$2"
-			;;
-		kernel32-GetStringTypeW)
-			enable_kernel32_GetStringTypeW="$2"
 			;;
 		kernel32-GetSystemTimePreciseAsFileTime)
 			enable_kernel32_GetSystemTimePreciseAsFileTime="$2"
@@ -726,9 +717,6 @@ patch_enable ()
 			;;
 		server-Unexpected_Wakeup)
 			enable_server_Unexpected_Wakeup="$2"
-			;;
-		server-attach_thread_input)
-			enable_server_attach_thread_input="$2"
 			;;
 		setupapi-SetupDiSelectBestCompatDrv)
 			enable_setupapi_SetupDiSelectBestCompatDrv="$2"
@@ -1356,9 +1344,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_ddraw_Hotpatch" -gt 1; then
 		abort "Patchset ddraw-Hotpatch disabled, but category-stable depends on that."
 	fi
-	if test "$enable_dinput_DeviceState" -gt 1; then
-		abort "Patchset dinput-DeviceState disabled, but category-stable depends on that."
-	fi
 	if test "$enable_dinput_Events" -gt 1; then
 		abort "Patchset dinput-Events disabled, but category-stable depends on that."
 	fi
@@ -1382,9 +1367,6 @@ if test "$enable_category_stable" -eq 1; then
 	fi
 	if test "$enable_kernel32_GetDriveTypeW" -gt 1; then
 		abort "Patchset kernel32-GetDriveTypeW disabled, but category-stable depends on that."
-	fi
-	if test "$enable_kernel32_GetStringTypeW" -gt 1; then
-		abort "Patchset kernel32-GetStringTypeW disabled, but category-stable depends on that."
 	fi
 	if test "$enable_kernel32_GetSystemTimePreciseAsFileTime" -gt 1; then
 		abort "Patchset kernel32-GetSystemTimePreciseAsFileTime disabled, but category-stable depends on that."
@@ -1481,9 +1463,6 @@ if test "$enable_category_stable" -eq 1; then
 	fi
 	if test "$enable_server_Unexpected_Wakeup" -gt 1; then
 		abort "Patchset server-Unexpected_Wakeup disabled, but category-stable depends on that."
-	fi
-	if test "$enable_server_attach_thread_input" -gt 1; then
-		abort "Patchset server-attach_thread_input disabled, but category-stable depends on that."
 	fi
 	if test "$enable_setupapi_SetupDiSetDeviceInstallParamsW" -gt 1; then
 		abort "Patchset setupapi-SetupDiSetDeviceInstallParamsW disabled, but category-stable depends on that."
@@ -1607,7 +1586,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_dbghelp_Debug_Symbols=1
 	enable_ddraw_EnumSurfaces=1
 	enable_ddraw_Hotpatch=1
-	enable_dinput_DeviceState=1
 	enable_dinput_Events=1
 	enable_dxgi_GetDesc=1
 	enable_fltlib_FilterLoad=1
@@ -1616,7 +1594,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_gdiplus_GdipCreateEffect=1
 	enable_kernel32_CompareStringEx=1
 	enable_kernel32_GetDriveTypeW=1
-	enable_kernel32_GetStringTypeW=1
 	enable_kernel32_GetSystemTimePreciseAsFileTime=1
 	enable_kernel32_Named_Pipe=1
 	enable_libs_Debug_Channel=1
@@ -1649,7 +1626,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_server_CreateProcess_ACLs=1
 	enable_server_Delete_On_Close=1
 	enable_server_Unexpected_Wakeup=1
-	enable_server_attach_thread_input=1
 	enable_setupapi_SetupDiSetDeviceInstallParamsW=1
 	enable_shell32_RunDLL_CallEntry16=1
 	enable_shell32_SHFileOperation=1
@@ -2089,23 +2065,6 @@ if test "$enable_advapi32_ImpersonateAnonymousToken" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2122,6 +2081,23 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2644,21 +2620,6 @@ if test "$enable_ddraw_d3d_execute_buffer" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dinput-DeviceState
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#11607] Reset device state in SysKeyboard*Impl_Acquire
-# |
-# | Modified files:
-# |   *	dlls/dinput/keyboard.c, dlls/dinput/tests/keyboard.c
-# |
-if test "$enable_dinput_DeviceState" -eq 1; then
-	patch_apply dinput-DeviceState/0001-dinput-Reset-device-state-in-SysKeyboard-Impl_Acquir.patch
-	(
-		echo '+    { "Sebastian Lackner", "dinput: Reset device state in SysKeyboard*Impl_Acquire.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dinput-Events
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2805,6 +2766,48 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-wined3d_swapchain_present
+# |
+# | Modified files:
+# |   *	dlls/wined3d/swapchain.c
+# |
+if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
+	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Dirtify_Vertex_Shader
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38539] Dirtify vertex shader on transformed update to fix graphical corruption
+# |
+# | Modified files:
+# |   *	dlls/wined3d/glsl_shader.c
+# |
+if test "$enable_wined3d_Dirtify_Vertex_Shader" -eq 1; then
+	patch_apply wined3d-Dirtify_Vertex_Shader/0001-wined3d-Dirtify-vertex-shader-on-transformed-untrans.patch
+	(
+		echo '+    { "Matteo Bruni", "wined3d: Dirtify vertex shader on transformed <-> untransformed transition.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Multisampling
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Multisampling" -eq 1; then
+	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+	(
+		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-Revert_PixelFormat
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2839,18 +2842,6 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-wined3d_swapchain_present
-# |
-# | Modified files:
-# |   *	dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
-	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-UnhandledBlendFactor
 # |
 # | Modified files:
@@ -2872,36 +2863,6 @@ if test "$enable_wined3d_resource_check_usage" -eq 1; then
 	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
 	(
 		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Dirtify_Vertex_Shader
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38539] Dirtify vertex shader on transformed update to fix graphical corruption
-# |
-# | Modified files:
-# |   *	dlls/wined3d/glsl_shader.c
-# |
-if test "$enable_wined3d_Dirtify_Vertex_Shader" -eq 1; then
-	patch_apply wined3d-Dirtify_Vertex_Shader/0001-wined3d-Dirtify-vertex-shader-on-transformed-untrans.patch
-	(
-		echo '+    { "Matteo Bruni", "wined3d: Dirtify vertex shader on transformed <-> untransformed transition.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Multisampling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
-	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3652,21 +3613,6 @@ if test "$enable_kernel32_GetNumaProcessorNode" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "kernel32: Implement GetNumaProcessorNode.", 1 },';
 		echo '+    { "Michael Müller", "kernel32/tests: Add tests for GetNumaProcessorNode.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-GetStringTypeW
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37759] Fix access violation when calling GetStringTypeW with NULL src.
-# |
-# | Modified files:
-# |   *	dlls/kernel32/locale.c, dlls/kernel32/tests/locale.c
-# |
-if test "$enable_kernel32_GetStringTypeW" -eq 1; then
-	patch_apply kernel32-GetStringTypeW/0001-kernel32-Allow-empty-source-in-GetStringTypeW.patch
-	(
-		echo '+    { "Christian Faure", "kernel32: Allow empty source in GetStringTypeW.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4492,11 +4438,9 @@ fi
 # | 	loader/wine.inf.in
 # |
 if test "$enable_null_Null_Device" -eq 1; then
-	patch_apply null-Null_Device/0001-ntdll-tests-Add-tests-for-accessing-Device-Null.patch
-	patch_apply null-Null_Device/0002-null.sys-Added-stub-dll.patch
-	patch_apply null-Null_Device/0003-null.sys-Implement-device-ioctl-read-write-functions.patch
+	patch_apply null-Null_Device/0001-null.sys-Added-stub-dll.patch
+	patch_apply null-Null_Device/0002-null.sys-Implement-device-ioctl-read-write-functions.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for accessing \\\\\\\\Device\\\\\\\\Null.", 1 },';
 		echo '+    { "Qian Hong", "null.sys: Added stub dll.", 1 },';
 		echo '+    { "Sebastian Lackner", "null.sys: Implement device ioctl/read/write functions.", 1 },';
 	) >> "$patchlist"
@@ -4675,7 +4619,6 @@ fi
 # Patchset riched20-IText_Interface
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#12458] Support for ITextDocument_fnRange function
 # |   *	[#18303] Support for ITextRange, ITextFont and ITextPara
 # |
 # | Modified files:
@@ -4987,21 +4930,6 @@ if test "$enable_server_Unexpected_Wakeup" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "server: Avoid sending unexpected wakeup with uninitialized cookie value.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Repeat test for SignalObjectAndWait multiple times to test wineserver wakeup cookie management.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-attach_thread_input
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38562] Do not create foreign thread queues for attach_thread_input requests
-# |
-# | Modified files:
-# |   *	dlls/user32/tests/input.c, server/queue.c
-# |
-if test "$enable_server_attach_thread_input" -eq 1; then
-	patch_apply server-attach_thread_input/0001-server-Do-not-create-foreign-thread-queues-for-attac.patch
-	(
-		echo '+    { "Sebastian Lackner", "server: Do not create foreign thread queues for attach_thread_input requests.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5813,21 +5741,19 @@ fi
 # |   *	dlls/rpcrt4/rpc_transport.c, dlls/wininet/http.c, dlls/wininet/tests/http.c
 # |
 if test "$enable_wininet_Cleanup" -eq 1; then
-	patch_apply wininet-Cleanup/0001-wininet-Fix-memory-leak-by-not-calling-get_cookie_he.patch
-	patch_apply wininet-Cleanup/0002-wininet-tests-Add-more-tests-for-cookies.patch
-	patch_apply wininet-Cleanup/0003-wininet-tests-Add-tests-for-overriding-host-header.patch
-	patch_apply wininet-Cleanup/0004-wininet-tests-Test-auth-credential-reusage-with-host.patch
-	patch_apply wininet-Cleanup/0005-wininet-tests-Check-cookie-behaviour-when-overriding.patch
-	patch_apply wininet-Cleanup/0006-wininet-Use-request-server-name-when-processing-cook.patch
-	patch_apply wininet-Cleanup/0007-wininet-Delay-setting-the-http-host-header.patch
-	patch_apply wininet-Cleanup/0008-wininet-Use-request-server-canon_host_port-in-authen.patch
-	patch_apply wininet-Cleanup/0009-wininet-Use-request-server-canon_host_port-when-quer.patch
-	patch_apply wininet-Cleanup/0010-rpcrt4-Fix-arguments-of-HttpAddRequestHeaders.patch
-	patch_apply wininet-Cleanup/0011-wininet-Fix-arguments-of-HttpAddRequestHeaders.patch
-	patch_apply wininet-Cleanup/0012-wininet-Strip-filename-if-no-path-is-set-in-cookie.patch
-	patch_apply wininet-Cleanup/0013-wininet-Replacing-header-fields-should-fail-if-they-.patch
+	patch_apply wininet-Cleanup/0001-wininet-tests-Add-more-tests-for-cookies.patch
+	patch_apply wininet-Cleanup/0002-wininet-tests-Add-tests-for-overriding-host-header.patch
+	patch_apply wininet-Cleanup/0003-wininet-tests-Test-auth-credential-reusage-with-host.patch
+	patch_apply wininet-Cleanup/0004-wininet-tests-Check-cookie-behaviour-when-overriding.patch
+	patch_apply wininet-Cleanup/0005-wininet-Use-request-server-name-when-processing-cook.patch
+	patch_apply wininet-Cleanup/0006-wininet-Delay-setting-the-http-host-header.patch
+	patch_apply wininet-Cleanup/0007-wininet-Use-request-server-canon_host_port-in-authen.patch
+	patch_apply wininet-Cleanup/0008-wininet-Use-request-server-canon_host_port-when-quer.patch
+	patch_apply wininet-Cleanup/0009-rpcrt4-Fix-arguments-of-HttpAddRequestHeaders.patch
+	patch_apply wininet-Cleanup/0010-wininet-Fix-arguments-of-HttpAddRequestHeaders.patch
+	patch_apply wininet-Cleanup/0011-wininet-Strip-filename-if-no-path-is-set-in-cookie.patch
+	patch_apply wininet-Cleanup/0012-wininet-Replacing-header-fields-should-fail-if-they-.patch
 	(
-		echo '+    { "Michael Müller", "wininet: Fix memory leak by not calling get_cookie_header twice.", 1 },';
 		echo '+    { "Michael Müller", "wininet/tests: Add more tests for cookies.", 1 },';
 		echo '+    { "Michael Müller", "wininet/tests: Add tests for overriding host header.", 1 },';
 		echo '+    { "Michael Müller", "wininet/tests: Test auth credential reusage with host override.", 1 },';

@@ -51,11 +51,11 @@ usage()
 # Show version information
 version()
 {
-	echo "Wine Staging 1.7.43"
+	echo "Wine Staging 1.7.44 (unreleased)"
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 0d91274defcf65093957cf8e43985b9be55642d5"
+	echo "  commit f4790714fe69df7701cff666d6b5ab4be049cbf6"
 	echo ""
 }
 
@@ -132,7 +132,6 @@ patch_enable_all ()
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_CompareStringEx="$1"
 	enable_kernel32_CopyFileEx="$1"
-	enable_kernel32_GetDriveTypeW="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_GetLogicalProcessorInformationEx="$1"
 	enable_kernel32_GetNumaProcessorNode="$1"
@@ -462,9 +461,6 @@ patch_enable ()
 			;;
 		kernel32-CopyFileEx)
 			enable_kernel32_CopyFileEx="$2"
-			;;
-		kernel32-GetDriveTypeW)
-			enable_kernel32_GetDriveTypeW="$2"
 			;;
 		kernel32-GetFinalPathNameByHandle)
 			enable_kernel32_GetFinalPathNameByHandle="$2"
@@ -1365,9 +1361,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_kernel32_CompareStringEx" -gt 1; then
 		abort "Patchset kernel32-CompareStringEx disabled, but category-stable depends on that."
 	fi
-	if test "$enable_kernel32_GetDriveTypeW" -gt 1; then
-		abort "Patchset kernel32-GetDriveTypeW disabled, but category-stable depends on that."
-	fi
 	if test "$enable_kernel32_GetSystemTimePreciseAsFileTime" -gt 1; then
 		abort "Patchset kernel32-GetSystemTimePreciseAsFileTime disabled, but category-stable depends on that."
 	fi
@@ -1593,7 +1586,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_gdi32_MaxPixelFormats=1
 	enable_gdiplus_GdipCreateEffect=1
 	enable_kernel32_CompareStringEx=1
-	enable_kernel32_GetDriveTypeW=1
 	enable_kernel32_GetSystemTimePreciseAsFileTime=1
 	enable_kernel32_Named_Pipe=1
 	enable_libs_Debug_Channel=1
@@ -2766,18 +2758,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-wined3d_swapchain_present
-# |
-# | Modified files:
-# |   *	dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
-	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-Dirtify_Vertex_Shader
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2863,6 +2843,18 @@ if test "$enable_wined3d_resource_check_usage" -eq 1; then
 	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
 	(
 		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-wined3d_swapchain_present
+# |
+# | Modified files:
+# |   *	dlls/wined3d/swapchain.c
+# |
+if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
+	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3553,23 +3545,9 @@ fi
 # |   *	dlls/kernel32/path.c, dlls/kernel32/tests/file.c
 # |
 if test "$enable_kernel32_CopyFileEx" -eq 1; then
-	patch_apply kernel32-CopyFileEx/0001-kernel32-tests-Add-tests-for-delete-behaviour-of-Cop.patch
-	patch_apply kernel32-CopyFileEx/0002-kernel32-Add-support-for-progress-callback-in-CopyFi.patch
+	patch_apply kernel32-CopyFileEx/0001-kernel32-Add-support-for-progress-callback-in-CopyFi.patch
 	(
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for delete behaviour of CopyFileEx.", 1 },';
 		echo '+    { "Michael Müller", "kernel32: Add support for progress callback in CopyFileEx.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-GetDriveTypeW
-# |
-# | Modified files:
-# |   *	dlls/kernel32/volume.c
-# |
-if test "$enable_kernel32_GetDriveTypeW" -eq 1; then
-	patch_apply kernel32-GetDriveTypeW/0001-kernel32-Return-correct-device-type-for-cd-devices-w.patch
-	(
-		echo '+    { "Michael Müller", "kernel32: Return correct device type for cd devices without medium.", 1 },';
 	) >> "$patchlist"
 fi
 

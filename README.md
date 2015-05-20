@@ -216,7 +216,7 @@ for more details.*
 * ~~Reset device state in SysKeyboard*Impl_Acquire~~ ([Wine Bug #11607](https://bugs.winehq.org/show_bug.cgi?id=11607))
 * Return an error when trying to open a terminated process ([Wine Bug #37087](https://bugs.winehq.org/show_bug.cgi?id=37087))
 * Return correct IMediaSeeking stream positions in quartz ([Wine Bug #23174](https://bugs.winehq.org/show_bug.cgi?id=23174))
-* Return correct device type for cd devices without medium
+* ~~Return correct device type for cd devices without medium~~
 * Return correct values for GetThreadTimes function ([Wine Bug #20230](https://bugs.winehq.org/show_bug.cgi?id=20230))
 * Return default palette entries from GetSystemPaletteEntries for non-palette-based devices
 * SO_CONNECT_TIME returns the appropriate time

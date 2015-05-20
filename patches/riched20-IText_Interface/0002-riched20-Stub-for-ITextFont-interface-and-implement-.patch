@@ -1,16 +1,16 @@
-From db292bf18161a88ac2760aa6dcfb82a14906da67 Mon Sep 17 00:00:00 2001
+From 3dbb76ac15c52c9d190f7dc9c0ebf1aa9849d033 Mon Sep 17 00:00:00 2001
 From: Jactry Zeng <wine@jactry.com>
 Date: Mon, 11 Aug 2014 13:51:55 +0800
 Subject: riched20: Stub for ITextFont interface and implement
  ITextRange::GetFont and ITextSelection::GetFont.
 
 ---
- dlls/riched20/richole.c       | 362 +++++++++++++++++++++++++++++++++++++++---
+ dlls/riched20/richole.c       | 361 ++++++++++++++++++++++++++++++++++++++++--
  dlls/riched20/tests/richole.c |  93 +++++++++++
- 2 files changed, 433 insertions(+), 22 deletions(-)
+ 2 files changed, 438 insertions(+), 16 deletions(-)
 
 diff --git a/dlls/riched20/richole.c b/dlls/riched20/richole.c
-index b3566e5..3623ec7 100644
+index b3566e5..54448f5 100644
 --- a/dlls/riched20/richole.c
 +++ b/dlls/riched20/richole.c
 @@ -52,6 +52,7 @@ DEFINE_GUID(IID_ITextPara, 0x8cc497c4, 0xa1df, 0x11ce, 0x80, 0x98, 0x00, 0xaa, 0
@@ -21,128 +21,81 @@ index b3566e5..3623ec7 100644
  
  typedef struct IRichEditOleImpl {
      IUnknown IUnknown_inner;
-@@ -64,6 +65,7 @@ typedef struct IRichEditOleImpl {
-     ITextSelectionImpl *txtSel;
-     IOleClientSiteImpl *clientSite;
-     struct list rangelist;
-+    struct list fontlist;
- } IRichEditOleImpl;
- 
- struct ITextRangeImpl {
-@@ -85,8 +87,11 @@ struct ITextSelectionImpl {
- typedef struct ITextFontImpl {
-     ITextFont ITextFont_iface;
+@@ -87,6 +88,7 @@ typedef struct ITextFontImpl {
      LONG ref;
-+    struct list entry;
  
--    ITextRange *range;
-+    IRichEditOleImpl *reOle;
-+    ITextRangeImpl *txtRge;
-+    ITextSelectionImpl *txtSel;
+     ITextRange *range;
++    ITextSelection *selection;
  } ITextFontImpl;
  
  typedef struct ITextParaImpl {
-@@ -150,7 +155,7 @@ static inline ITextParaImpl *impl_from_ITextPara(ITextPara *iface)
+@@ -150,7 +152,7 @@ static inline ITextParaImpl *impl_from_ITextPara(ITextPara *iface)
      return CONTAINING_RECORD(iface, ITextParaImpl, ITextPara_iface);
  }
  
 -static HRESULT create_textfont(ITextRange*, ITextFont**);
-+static HRESULT create_textfont(IRichEditOleImpl *, ITextFontImpl **);
++static HRESULT create_textfont(ITextRange*, ITextSelection*, ITextFont**);
  static HRESULT create_textpara(ITextRange*, ITextPara**);
  
  enum textfont_prop_id {
-@@ -238,9 +243,8 @@ static HRESULT get_textfont_prop_for_pos(const IRichEditOleImpl *reole, int pos,
-     return S_OK;
- }
- 
--static HRESULT get_textfont_prop(ITextRange *range, enum textfont_prop_id propid, LONG *value)
-+static HRESULT get_textfont_prop(ITextRangeImpl *rng, enum textfont_prop_id propid, LONG *value)
- {
--    ITextRangeImpl *rng = impl_from_ITextRange(range);
-     HRESULT hr;
-     LONG v;
-     int i;
-@@ -316,6 +320,7 @@ static ULONG WINAPI IRichEditOleImpl_inner_fnRelease(IUnknown *iface)
-     if (!ref)
-     {
-         ITextRangeImpl *txtRge;
-+        ITextFontImpl *txtFont;
- 
-         TRACE("Destroying %p\n", This);
-         This->txtSel->reOle = NULL;
-@@ -324,6 +329,8 @@ static ULONG WINAPI IRichEditOleImpl_inner_fnRelease(IUnknown *iface)
-         IOleClientSite_Release(&This->clientSite->IOleClientSite_iface);
-         LIST_FOR_EACH_ENTRY(txtRge, &This->rangelist, ITextRangeImpl, entry)
-             txtRge->reOle = NULL;
-+        LIST_FOR_EACH_ENTRY(txtFont, &This->fontlist, ITextFontImpl, entry)
-+            txtFont->reOle = NULL;
-         heap_free(This);
-     }
-     return ref;
-@@ -1099,6 +1106,8 @@ static HRESULT WINAPI ITextRange_fnSetEnd(ITextRange *me, LONG end)
- static HRESULT WINAPI ITextRange_fnGetFont(ITextRange *me, ITextFont **font)
- {
-     ITextRangeImpl *This = impl_from_ITextRange(me);
-+    ITextFontImpl *txtFont = NULL;
-+    HRESULT hres;
- 
-     TRACE("(%p)->(%p)\n", This, font);
- 
-@@ -1108,7 +1117,16 @@ static HRESULT WINAPI ITextRange_fnGetFont(ITextRange *me, ITextFont **font)
+@@ -1108,7 +1110,7 @@ static HRESULT WINAPI ITextRange_fnGetFont(ITextRange *me, ITextFont **font)
      if (!font)
          return E_INVALIDARG;
  
 -    return create_textfont(me, font);
-+    *font = NULL;
-+    hres = create_textfont(This->reOle, &txtFont);
-+    if (!hres)
-+    {
-+        txtFont->txtSel = NULL;
-+        txtFont->txtRge = This;
-+        ITextRange_AddRef(me);
-+        *font = &txtFont->ITextFont_iface;
-+    }
-+    return hres;
++    return create_textfont(me, NULL, font);
  }
  
  static HRESULT WINAPI ITextRange_fnSetFont(ITextRange *me, ITextFont *pFont)
-@@ -1632,7 +1650,14 @@ static ULONG WINAPI TextFont_Release(ITextFont *iface)
+@@ -1632,16 +1634,39 @@ static ULONG WINAPI TextFont_Release(ITextFont *iface)
  
      if (!ref)
      {
 -        ITextRange_Release(This->range);
-+        if (This->txtRge)
-+            ITextRange_Release(&This->txtRge->ITextRange_iface);
-+        else
-+            ITextSelection_Release(&This->txtSel->ITextSelection_iface);
-+        This->reOle = NULL;
-+        This->txtRge = NULL;
-+        This->txtSel = NULL;
-+        list_remove(&This->entry);
++        if (This->range)
++            ITextRange_Release(This->range);
++        if (This->selection)
++            ITextSelection_Release(This->selection);
          heap_free(This);
      }
  
-@@ -1641,7 +1666,12 @@ static ULONG WINAPI TextFont_Release(ITextFont *iface)
+     return ref;
+ }
  
++static IRichEditOleImpl *font_get_reole(ITextFontImpl *This)
++{
++    if (This->range)
++    {
++        ITextRangeImpl *rng = impl_from_ITextRange(This->range);
++        return rng->reOle;
++    }
++    if (This->selection)
++    {
++        ITextSelectionImpl *sel = impl_from_ITextSelection(This->selection);
++        return sel->reOle;
++    }
++    return NULL;
++}
++
  static HRESULT WINAPI TextFont_GetTypeInfoCount(ITextFont *iface, UINT *pctinfo)
  {
 +    ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("stub\n");
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      *pctinfo = 0;
      return E_NOTIMPL;
  }
-@@ -1649,14 +1679,24 @@ static HRESULT WINAPI TextFont_GetTypeInfoCount(ITextFont *iface, UINT *pctinfo)
+@@ -1649,14 +1674,24 @@ static HRESULT WINAPI TextFont_GetTypeInfoCount(ITextFont *iface, UINT *pctinfo)
  static HRESULT WINAPI TextFont_GetTypeInfo(ITextFont *iface, UINT iTInfo, LCID lcid,
      ITypeInfo **ppTInfo)
  {
 +    ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("stub\n");
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
@@ -154,185 +107,187 @@ index b3566e5..3623ec7 100644
 +    ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("stub\n");
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1671,7 +1711,12 @@ static HRESULT WINAPI TextFont_Invoke(
+@@ -1671,7 +1706,12 @@ static HRESULT WINAPI TextFont_Invoke(
      EXCEPINFO *pExcepInfo,
      UINT *puArgErr)
  {
 +    ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("stub\n");
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1679,6 +1724,10 @@ static HRESULT WINAPI TextFont_GetDuplicate(ITextFont *iface, ITextFont **ret)
+@@ -1679,6 +1719,10 @@ static HRESULT WINAPI TextFont_GetDuplicate(ITextFont *iface, ITextFont **ret)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, ret);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1686,6 +1735,10 @@ static HRESULT WINAPI TextFont_SetDuplicate(ITextFont *iface, ITextFont *pFont)
+@@ -1686,6 +1730,10 @@ static HRESULT WINAPI TextFont_SetDuplicate(ITextFont *iface, ITextFont *pFont)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, pFont);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1693,6 +1746,10 @@ static HRESULT WINAPI TextFont_CanChange(ITextFont *iface, LONG *ret)
+@@ -1693,6 +1741,10 @@ static HRESULT WINAPI TextFont_CanChange(ITextFont *iface, LONG *ret)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, ret);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1700,6 +1757,10 @@ static HRESULT WINAPI TextFont_IsEqual(ITextFont *iface, ITextFont *font, LONG *
+@@ -1700,6 +1752,10 @@ static HRESULT WINAPI TextFont_IsEqual(ITextFont *iface, ITextFont *font, LONG *
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, ret);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1707,6 +1768,10 @@ static HRESULT WINAPI TextFont_Reset(ITextFont *iface, LONG value)
+@@ -1707,6 +1763,10 @@ static HRESULT WINAPI TextFont_Reset(ITextFont *iface, LONG value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p): stub\n", This);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1714,6 +1779,10 @@ static HRESULT WINAPI TextFont_GetStyle(ITextFont *iface, LONG *value)
+@@ -1714,6 +1774,10 @@ static HRESULT WINAPI TextFont_GetStyle(ITextFont *iface, LONG *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1721,6 +1790,10 @@ static HRESULT WINAPI TextFont_SetStyle(ITextFont *iface, LONG value)
+@@ -1721,6 +1785,10 @@ static HRESULT WINAPI TextFont_SetStyle(ITextFont *iface, LONG value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%d): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1728,6 +1801,10 @@ static HRESULT WINAPI TextFont_GetAllCaps(ITextFont *iface, LONG *value)
+@@ -1728,6 +1796,10 @@ static HRESULT WINAPI TextFont_GetAllCaps(ITextFont *iface, LONG *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1735,6 +1812,10 @@ static HRESULT WINAPI TextFont_SetAllCaps(ITextFont *iface, LONG value)
+@@ -1735,6 +1807,10 @@ static HRESULT WINAPI TextFont_SetAllCaps(ITextFont *iface, LONG value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%d): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1742,6 +1823,10 @@ static HRESULT WINAPI TextFont_GetAnimation(ITextFont *iface, LONG *value)
+@@ -1742,6 +1818,10 @@ static HRESULT WINAPI TextFont_GetAnimation(ITextFont *iface, LONG *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1749,6 +1834,10 @@ static HRESULT WINAPI TextFont_SetAnimation(ITextFont *iface, LONG value)
+@@ -1749,6 +1829,10 @@ static HRESULT WINAPI TextFont_SetAnimation(ITextFont *iface, LONG value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%d): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1756,6 +1845,10 @@ static HRESULT WINAPI TextFont_GetBackColor(ITextFont *iface, LONG *value)
+@@ -1756,6 +1840,10 @@ static HRESULT WINAPI TextFont_GetBackColor(ITextFont *iface, LONG *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1763,6 +1856,10 @@ static HRESULT WINAPI TextFont_SetBackColor(ITextFont *iface, LONG value)
+@@ -1763,6 +1851,10 @@ static HRESULT WINAPI TextFont_SetBackColor(ITextFont *iface, LONG value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%d): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1770,13 +1867,28 @@ static HRESULT WINAPI TextFont_GetBold(ITextFont *iface, LONG *value)
+@@ -1770,13 +1862,30 @@ static HRESULT WINAPI TextFont_GetBold(ITextFont *iface, LONG *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      TRACE("(%p)->(%p)\n", This, value);
 -    return get_textfont_prop(This->range, FONT_BOLD, value);
 +
++    if (This->range)
++        return get_textfont_prop(This->range, FONT_BOLD, value);
++
 +    if (!value)
 +        return E_INVALIDARG;
-+    if (!This->reOle)
-+        return CO_E_RELEASED;
-+    if (!This->txtRge)
-+    {
-+        FIXME("not implemented\n");
-+        return E_NOTIMPL;
-+    }
 +
-+    return get_textfont_prop(This->txtRge, FONT_BOLD, value);
++    *value = tomUndefined;
++
++    if (!font_get_reole(This))
++        return CO_E_RELEASED;
++
++    FIXME("not implemented\n");
++    return E_NOTIMPL;
  }
  
  static HRESULT WINAPI TextFont_SetBold(ITextFont *iface, LONG value)
@@ -340,35 +295,35 @@ index b3566e5..3623ec7 100644
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%d): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1784,6 +1896,10 @@ static HRESULT WINAPI TextFont_GetEmboss(ITextFont *iface, LONG *value)
+@@ -1784,6 +1893,10 @@ static HRESULT WINAPI TextFont_GetEmboss(ITextFont *iface, LONG *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1791,6 +1907,10 @@ static HRESULT WINAPI TextFont_SetEmboss(ITextFont *iface, LONG value)
+@@ -1791,6 +1904,10 @@ static HRESULT WINAPI TextFont_SetEmboss(ITextFont *iface, LONG value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%d): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1798,13 +1918,24 @@ static HRESULT WINAPI TextFont_GetForeColor(ITextFont *iface, LONG *value)
+@@ -1798,13 +1915,27 @@ static HRESULT WINAPI TextFont_GetForeColor(ITextFont *iface, LONG *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
@@ -376,7 +331,10 @@ index b3566e5..3623ec7 100644
 +
 +    if (!value)
 +        return E_INVALIDARG;
-+    if (!This->reOle)
++
++    *value = tomUndefined;
++
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
 +    *value = tomAutoColor;
@@ -388,7 +346,7 @@ index b3566e5..3623ec7 100644
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%d): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
@@ -399,7 +357,7 @@ index b3566e5..3623ec7 100644
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
@@ -410,7 +368,7 @@ index b3566e5..3623ec7 100644
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%d): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
@@ -421,7 +379,7 @@ index b3566e5..3623ec7 100644
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
@@ -432,29 +390,31 @@ index b3566e5..3623ec7 100644
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%d): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1840,13 +1987,28 @@ static HRESULT WINAPI TextFont_GetItalic(ITextFont *iface, LONG *value)
+@@ -1840,13 +1987,30 @@ static HRESULT WINAPI TextFont_GetItalic(ITextFont *iface, LONG *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      TRACE("(%p)->(%p)\n", This, value);
 -    return get_textfont_prop(This->range, FONT_ITALIC, value);
 +
++    if (This->range)
++        return get_textfont_prop(This->range, FONT_ITALIC, value);
++
 +    if (!value)
 +        return E_INVALIDARG;
-+    if (!This->reOle)
-+        return CO_E_RELEASED;
-+    if (!This->txtRge)
-+    {
-+        FIXME("not implemented\n");
-+        return E_NOTIMPL;
-+    }
 +
-+    return get_textfont_prop(This->txtRge, FONT_ITALIC, value);
++    *value = tomUndefined;
++
++    if (!font_get_reole(This))
++        return CO_E_RELEASED;
++
++    FIXME("not implemented\n");
++    return E_NOTIMPL;
  }
  
  static HRESULT WINAPI TextFont_SetItalic(ITextFont *iface, LONG value)
@@ -462,51 +422,51 @@ index b3566e5..3623ec7 100644
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%d): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1854,6 +2016,10 @@ static HRESULT WINAPI TextFont_GetKerning(ITextFont *iface, FLOAT *value)
+@@ -1854,6 +2018,10 @@ static HRESULT WINAPI TextFont_GetKerning(ITextFont *iface, FLOAT *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1861,6 +2027,10 @@ static HRESULT WINAPI TextFont_SetKerning(ITextFont *iface, FLOAT value)
+@@ -1861,6 +2029,10 @@ static HRESULT WINAPI TextFont_SetKerning(ITextFont *iface, FLOAT value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%.2f): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1868,6 +2038,10 @@ static HRESULT WINAPI TextFont_GetLanguageID(ITextFont *iface, LONG *value)
+@@ -1868,6 +2040,10 @@ static HRESULT WINAPI TextFont_GetLanguageID(ITextFont *iface, LONG *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1875,20 +2049,37 @@ static HRESULT WINAPI TextFont_SetLanguageID(ITextFont *iface, LONG value)
+@@ -1875,20 +2051,40 @@ static HRESULT WINAPI TextFont_SetLanguageID(ITextFont *iface, LONG value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%d): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
@@ -522,7 +482,10 @@ index b3566e5..3623ec7 100644
 +
 +    if (!value)
 +        return E_INVALIDARG;
-+    if (!This->reOle)
++
++    *value = NULL;
++
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
 +    *value = SysAllocString(font);
@@ -534,101 +497,101 @@ index b3566e5..3623ec7 100644
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%s): stub\n", This, debugstr_w(value));
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1896,6 +2087,10 @@ static HRESULT WINAPI TextFont_GetOutline(ITextFont *iface, LONG *value)
+@@ -1896,6 +2092,10 @@ static HRESULT WINAPI TextFont_GetOutline(ITextFont *iface, LONG *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1903,6 +2098,10 @@ static HRESULT WINAPI TextFont_SetOutline(ITextFont *iface, LONG value)
+@@ -1903,6 +2103,10 @@ static HRESULT WINAPI TextFont_SetOutline(ITextFont *iface, LONG value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%d): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1910,6 +2109,10 @@ static HRESULT WINAPI TextFont_GetPosition(ITextFont *iface, FLOAT *value)
+@@ -1910,6 +2114,10 @@ static HRESULT WINAPI TextFont_GetPosition(ITextFont *iface, FLOAT *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1917,6 +2120,10 @@ static HRESULT WINAPI TextFont_SetPosition(ITextFont *iface, FLOAT value)
+@@ -1917,6 +2125,10 @@ static HRESULT WINAPI TextFont_SetPosition(ITextFont *iface, FLOAT value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%.2f): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1924,6 +2131,10 @@ static HRESULT WINAPI TextFont_GetProtected(ITextFont *iface, LONG *value)
+@@ -1924,6 +2136,10 @@ static HRESULT WINAPI TextFont_GetProtected(ITextFont *iface, LONG *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1931,6 +2142,10 @@ static HRESULT WINAPI TextFont_SetProtected(ITextFont *iface, LONG value)
+@@ -1931,6 +2147,10 @@ static HRESULT WINAPI TextFont_SetProtected(ITextFont *iface, LONG value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%d): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1938,6 +2153,10 @@ static HRESULT WINAPI TextFont_GetShadow(ITextFont *iface, LONG *value)
+@@ -1938,6 +2158,10 @@ static HRESULT WINAPI TextFont_GetShadow(ITextFont *iface, LONG *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1945,6 +2164,10 @@ static HRESULT WINAPI TextFont_SetShadow(ITextFont *iface, LONG value)
+@@ -1945,6 +2169,10 @@ static HRESULT WINAPI TextFont_SetShadow(ITextFont *iface, LONG value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%d): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1952,13 +2175,24 @@ static HRESULT WINAPI TextFont_GetSize(ITextFont *iface, FLOAT *value)
+@@ -1952,13 +2180,27 @@ static HRESULT WINAPI TextFont_GetSize(ITextFont *iface, FLOAT *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
@@ -636,7 +599,10 @@ index b3566e5..3623ec7 100644
 +
 +    if (!value)
 +        return E_INVALIDARG;
-+    if (!This->reOle)
++
++    *value = 0.0;
++
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
 +    *value = 12.0;
@@ -648,57 +614,57 @@ index b3566e5..3623ec7 100644
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%.2f): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1966,6 +2200,10 @@ static HRESULT WINAPI TextFont_GetSmallCaps(ITextFont *iface, LONG *value)
+@@ -1966,6 +2208,10 @@ static HRESULT WINAPI TextFont_GetSmallCaps(ITextFont *iface, LONG *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1973,6 +2211,10 @@ static HRESULT WINAPI TextFont_SetSmallCaps(ITextFont *iface, LONG value)
+@@ -1973,6 +2219,10 @@ static HRESULT WINAPI TextFont_SetSmallCaps(ITextFont *iface, LONG value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%d): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1980,6 +2222,10 @@ static HRESULT WINAPI TextFont_GetSpacing(ITextFont *iface, FLOAT *value)
+@@ -1980,6 +2230,10 @@ static HRESULT WINAPI TextFont_GetSpacing(ITextFont *iface, FLOAT *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1987,6 +2233,10 @@ static HRESULT WINAPI TextFont_SetSpacing(ITextFont *iface, FLOAT value)
+@@ -1987,6 +2241,10 @@ static HRESULT WINAPI TextFont_SetSpacing(ITextFont *iface, FLOAT value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%.2f): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -1994,13 +2244,24 @@ static HRESULT WINAPI TextFont_GetStrikeThrough(ITextFont *iface, LONG *value)
+@@ -1994,13 +2252,27 @@ static HRESULT WINAPI TextFont_GetStrikeThrough(ITextFont *iface, LONG *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
@@ -706,7 +672,10 @@ index b3566e5..3623ec7 100644
 +
 +    if (!value)
 +        return E_INVALIDARG;
-+    if (!This->reOle)
++
++    *value = tomUndefined;
++
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
 +    *value = tomFalse;
@@ -718,21 +687,24 @@ index b3566e5..3623ec7 100644
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%d): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2008,13 +2269,24 @@ static HRESULT WINAPI TextFont_GetSubscript(ITextFont *iface, LONG *value)
+@@ -2008,13 +2280,27 @@ static HRESULT WINAPI TextFont_GetSubscript(ITextFont *iface, LONG *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
 -    return E_NOTIMPL;
 +
 +    if (!value)
-+      return E_INVALIDARG;
-+    if (!This->reOle)
++        return E_INVALIDARG;
++
++    *value = tomUndefined;
++
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
 +    *value = tomFalse;
@@ -744,13 +716,13 @@ index b3566e5..3623ec7 100644
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%d): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2022,13 +2294,24 @@ static HRESULT WINAPI TextFont_GetSuperscript(ITextFont *iface, LONG *value)
+@@ -2022,13 +2308,27 @@ static HRESULT WINAPI TextFont_GetSuperscript(ITextFont *iface, LONG *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
@@ -758,7 +730,10 @@ index b3566e5..3623ec7 100644
 +
 +    if (value)
 +        return E_INVALIDARG;
-+    if (!This->reOle)
++
++    *value = tomUndefined;
++
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
 +    *value = tomFalse;
@@ -770,13 +745,13 @@ index b3566e5..3623ec7 100644
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%d): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2036,13 +2319,24 @@ static HRESULT WINAPI TextFont_GetUnderline(ITextFont *iface, LONG *value)
+@@ -2036,13 +2336,27 @@ static HRESULT WINAPI TextFont_GetUnderline(ITextFont *iface, LONG *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
@@ -784,7 +759,10 @@ index b3566e5..3623ec7 100644
 +
 +    if (!value)
 +        return E_INVALIDARG;
-+    if (!This->reOle)
++
++    *value = tomUndefined;
++
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
 +    *value = tomNone;
@@ -796,66 +774,58 @@ index b3566e5..3623ec7 100644
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%d): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2050,6 +2344,10 @@ static HRESULT WINAPI TextFont_GetWeight(ITextFont *iface, LONG *value)
+@@ -2050,6 +2364,10 @@ static HRESULT WINAPI TextFont_GetWeight(ITextFont *iface, LONG *value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%p): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2057,6 +2355,10 @@ static HRESULT WINAPI TextFont_SetWeight(ITextFont *iface, LONG value)
+@@ -2057,6 +2375,10 @@ static HRESULT WINAPI TextFont_SetWeight(ITextFont *iface, LONG value)
  {
      ITextFontImpl *This = impl_from_ITextFont(iface);
      FIXME("(%p)->(%d): stub\n", This, value);
 +
-+    if (!This->reOle)
++    if (!font_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2125,21 +2427,20 @@ static ITextFontVtbl textfontvtbl = {
+@@ -2125,7 +2447,7 @@ static ITextFontVtbl textfontvtbl = {
      TextFont_SetWeight
  };
  
 -static HRESULT create_textfont(ITextRange *range, ITextFont **ret)
-+static HRESULT create_textfont(IRichEditOleImpl *reOle, ITextFontImpl **ret)
++static HRESULT create_textfont(ITextRange *range, ITextSelection *selection, ITextFont **ret)
  {
      ITextFontImpl *font;
  
--    *ret = NULL;
-     font = heap_alloc(sizeof(*font));
-     if (!font)
-         return E_OUTOFMEMORY;
- 
+@@ -2137,7 +2459,9 @@ static HRESULT create_textfont(ITextRange *range, ITextFont **ret)
      font->ITextFont_iface.lpVtbl = &textfontvtbl;
      font->ref = 1;
--    font->range = range;
+     font->range = range;
 -    ITextRange_AddRef(range);
-+    font->reOle = reOle;
-+    list_add_head(&reOle->fontlist, &font->entry);
++    font->selection = selection;
++    if (range) ITextRange_AddRef(range);
++    if (selection) ITextSelection_AddRef(selection);
  
--    *ret = &font->ITextFont_iface;
-+    *ret = font;
+     *ret = &font->ITextFont_iface;
      return S_OK;
- }
- 
-@@ -3191,11 +3492,27 @@ static HRESULT WINAPI ITextSelection_fnSetEnd(ITextSelection *me, LONG cpLim)
+@@ -3191,11 +3515,16 @@ static HRESULT WINAPI ITextSelection_fnSetEnd(ITextSelection *me, LONG cpLim)
  static HRESULT WINAPI ITextSelection_fnGetFont(ITextSelection *me, ITextFont **pFont)
  {
      ITextSelectionImpl *This = impl_from_ITextSelection(me);
-+    ITextFontImpl *txtFont = NULL;
-+    HRESULT hres;
 +
 +    TRACE("(%p)->(%p)\n", This, pFont);
 +
@@ -867,27 +837,10 @@ index b3566e5..3623ec7 100644
 +    if (!pFont)
 +        return E_INVALIDARG;
 +
-+    *pFont = NULL;
-+    hres = create_textfont(This->reOle, &txtFont);
-+    if (!hres)
-+    {
-+        txtFont->txtSel = This;
-+        txtFont->txtRge = NULL;
-+        ITextSelection_AddRef(me);
-+        *pFont = &txtFont->ITextFont_iface;
-+    }
-+    return hres;
++    return create_textfont(NULL, me, pFont);
  }
  
  static HRESULT WINAPI ITextSelection_fnSetFont(ITextSelection *me, ITextFont *pFont)
-@@ -3829,6 +4146,7 @@ LRESULT CreateIRichEditOle(IUnknown *outer_unk, ME_TextEditor *editor, LPVOID *p
-     }
-     TRACE("Created %p\n",reo);
-     list_init(&reo->rangelist);
-+    list_init(&reo->fontlist);
-     if (outer_unk)
-         reo->outer_unk = outer_unk;
-     else
 diff --git a/dlls/riched20/tests/richole.c b/dlls/riched20/tests/richole.c
 index e9ae68b..070b05a 100644
 --- a/dlls/riched20/tests/richole.c

@@ -4612,9 +4612,8 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 	patch_apply riched20-IText_Interface/0007-riched20-Implement-ITextRange-IsEqual.patch
 	patch_apply riched20-IText_Interface/0008-riched20-Implement-ITextRange-GetStoryLength.patch
 	patch_apply riched20-IText_Interface/0009-riched20-Implement-ITextSelection-GetStoryLength.patch
-	patch_apply riched20-IText_Interface/0010-riched20-Fix-invalid-memory-access-when-parent-objec.patch
-	patch_apply riched20-IText_Interface/0011-riched20-Silence-repeated-FIXMEs-triggered-by-Adobe-.patch
-	patch_apply riched20-IText_Interface/0012-riched20-Implement-ITextSelection_fnGetDuplicate.patch
+	patch_apply riched20-IText_Interface/0010-riched20-Silence-repeated-FIXMEs-triggered-by-Adobe-.patch
+	patch_apply riched20-IText_Interface/0011-riched20-Implement-ITextSelection_fnGetDuplicate.patch
 	(
 		echo '+    { "Jactry Zeng", "riched20: Implement IText{Selection, Range}::Set{Start, End}.", 1 },';
 		echo '+    { "Jactry Zeng", "riched20: Stub for ITextFont interface and implement ITextRange::GetFont and ITextSelection::GetFont.", 1 },';
@@ -4625,7 +4624,6 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 		echo '+    { "Jactry Zeng", "riched20: Implement ITextRange::IsEqual.", 1 },';
 		echo '+    { "Jactry Zeng", "riched20: Implement ITextRange::GetStoryLength.", 1 },';
 		echo '+    { "Jactry Zeng", "riched20: Implement ITextSelection::GetStoryLength.", 1 },';
-		echo '+    { "Sebastian Lackner", "riched20: Fix invalid memory access when parent object was destroyed earlier than child object.", 1 },';
 		echo '+    { "Sebastian Lackner", "riched20: Silence repeated FIXMEs triggered by Adobe Reader.", 1 },';
 		echo '+    { "Sebastian Lackner", "riched20: Implement ITextSelection_fnGetDuplicate.", 1 },';
 	) >> "$patchlist"

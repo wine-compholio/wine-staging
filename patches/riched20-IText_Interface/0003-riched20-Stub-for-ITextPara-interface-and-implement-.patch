@@ -1,16 +1,16 @@
-From bc105d05c98bd8d4524ad67d9e95ab88bca4135b Mon Sep 17 00:00:00 2001
+From 41df8655376ce017e80ba6970a9400ff875f0ec5 Mon Sep 17 00:00:00 2001
 From: Jactry Zeng <wine@jactry.com>
 Date: Sun, 10 Aug 2014 22:17:57 +0800
 Subject: riched20: Stub for ITextPara interface and implement
  ITextRange::GetPara.
 
 ---
- dlls/riched20/richole.c       | 256 ++++++++++++++++++++++++++++++++++++++++--
- dlls/riched20/tests/richole.c |  47 ++++++++
- 2 files changed, 294 insertions(+), 9 deletions(-)
+ dlls/riched20/richole.c       | 223 ++++++++++++++++++++++++++++++++++++++++++
+ dlls/riched20/tests/richole.c |  47 +++++++++
+ 2 files changed, 270 insertions(+)
 
 diff --git a/dlls/riched20/richole.c b/dlls/riched20/richole.c
-index 3623ec7..0e51c50 100644
+index 54448f5..6db9775 100644
 --- a/dlls/riched20/richole.c
 +++ b/dlls/riched20/richole.c
 @@ -53,6 +53,7 @@ typedef struct ITextSelectionImpl ITextSelectionImpl;
@@ -21,117 +21,39 @@ index 3623ec7..0e51c50 100644
  
  typedef struct IRichEditOleImpl {
      IUnknown IUnknown_inner;
-@@ -66,6 +67,7 @@ typedef struct IRichEditOleImpl {
-     IOleClientSiteImpl *clientSite;
-     struct list rangelist;
-     struct list fontlist;
-+    struct list paralist;
- } IRichEditOleImpl;
- 
- struct ITextRangeImpl {
-@@ -97,8 +99,11 @@ typedef struct ITextFontImpl {
- typedef struct ITextParaImpl {
-     ITextPara ITextPara_iface;
-     LONG ref;
-+    struct list entry;
- 
--    ITextRange *range;
-+    IRichEditOleImpl *reOle;
-+    ITextRangeImpl *txtRge;
-+    ITextSelectionImpl *txtSel;
- } ITextParaImpl;
- 
- struct IOleClientSiteImpl {
-@@ -156,7 +161,7 @@ static inline ITextParaImpl *impl_from_ITextPara(ITextPara *iface)
- }
- 
- static HRESULT create_textfont(IRichEditOleImpl *, ITextFontImpl **);
--static HRESULT create_textpara(ITextRange*, ITextPara**);
-+static HRESULT create_textpara(IRichEditOleImpl *, ITextParaImpl **);
- 
- enum textfont_prop_id {
-     FONT_ALLCAPS = 0,
-@@ -321,6 +326,7 @@ static ULONG WINAPI IRichEditOleImpl_inner_fnRelease(IUnknown *iface)
-     {
-         ITextRangeImpl *txtRge;
-         ITextFontImpl *txtFont;
-+        ITextParaImpl *txtPara;
- 
-         TRACE("Destroying %p\n", This);
-         This->txtSel->reOle = NULL;
-@@ -331,6 +337,8 @@ static ULONG WINAPI IRichEditOleImpl_inner_fnRelease(IUnknown *iface)
-             txtRge->reOle = NULL;
-         LIST_FOR_EACH_ENTRY(txtFont, &This->fontlist, ITextFontImpl, entry)
-             txtFont->reOle = NULL;
-+        LIST_FOR_EACH_ENTRY(txtPara, &This->paralist, ITextParaImpl, entry)
-+            txtPara->reOle = NULL;
-         heap_free(This);
-     }
+@@ -2511,9 +2512,24 @@ static ULONG WINAPI TextPara_Release(ITextPara *iface)
      return ref;
-@@ -1142,6 +1150,8 @@ static HRESULT WINAPI ITextRange_fnSetFont(ITextRange *me, ITextFont *pFont)
- static HRESULT WINAPI ITextRange_fnGetPara(ITextRange *me, ITextPara **para)
- {
-     ITextRangeImpl *This = impl_from_ITextRange(me);
-+    ITextParaImpl *txtPara = NULL;
-+    HRESULT hres;
- 
-     TRACE("(%p)->(%p)\n", This, para);
- 
-@@ -1151,7 +1161,16 @@ static HRESULT WINAPI ITextRange_fnGetPara(ITextRange *me, ITextPara **para)
-     if (!para)
-         return E_INVALIDARG;
- 
--    return create_textpara(me, para);
-+    *para = NULL;
-+    hres = create_textpara(This->reOle, &txtPara);
-+    if (!hres)
-+    {
-+        txtPara->txtSel = NULL;
-+        txtPara->txtRge = This;
-+        ITextRange_AddRef(me);
-+        *para = &txtPara->ITextPara_iface;
-+    }
-+    return hres;
  }
  
- static HRESULT WINAPI ITextRange_fnSetPara(ITextRange *me, ITextPara *pPara)
-@@ -2481,7 +2500,14 @@ static ULONG WINAPI TextPara_Release(ITextPara *iface)
- 
-     if (!ref)
-     {
--        ITextRange_Release(This->range);
-+        if (This->txtRge)
-+            ITextRange_Release(&This->txtRge->ITextRange_iface);
-+        else
-+            ITextSelection_Release(&This->txtSel->ITextSelection_iface);
-+        This->reOle = NULL;
-+        This->txtRge = NULL;
-+        This->txtSel = NULL;
-+        list_remove(&This->entry);
-         heap_free(This);
-     }
- 
-@@ -2490,7 +2516,12 @@ static ULONG WINAPI TextPara_Release(ITextPara *iface)
- 
++static IRichEditOleImpl *para_get_reole(ITextParaImpl *This)
++{
++    if (This->range)
++    {
++        ITextRangeImpl *rng = impl_from_ITextRange(This->range);
++        return rng->reOle;
++    }
++    return NULL;
++}
++
  static HRESULT WINAPI TextPara_GetTypeInfoCount(ITextPara *iface, UINT *pctinfo)
  {
 +    ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("stub\n");
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      *pctinfo = 0;
      return E_NOTIMPL;
  }
-@@ -2498,14 +2529,24 @@ static HRESULT WINAPI TextPara_GetTypeInfoCount(ITextPara *iface, UINT *pctinfo)
+@@ -2521,14 +2537,24 @@ static HRESULT WINAPI TextPara_GetTypeInfoCount(ITextPara *iface, UINT *pctinfo)
  static HRESULT WINAPI TextPara_GetTypeInfo(ITextPara *iface, UINT iTInfo, LCID lcid,
      ITypeInfo **ppTInfo)
  {
 +    ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("stub\n");
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
@@ -143,587 +65,553 @@ index 3623ec7..0e51c50 100644
 +    ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("stub\n");
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2520,7 +2561,12 @@ static HRESULT WINAPI TextPara_Invoke(
+@@ -2543,7 +2569,12 @@ static HRESULT WINAPI TextPara_Invoke(
      EXCEPINFO *pExcepInfo,
      UINT *puArgErr)
  {
 +    ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("stub\n");
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2528,6 +2574,10 @@ static HRESULT WINAPI TextPara_GetDuplicate(ITextPara *iface, ITextPara **ret)
+@@ -2551,6 +2582,10 @@ static HRESULT WINAPI TextPara_GetDuplicate(ITextPara *iface, ITextPara **ret)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, ret);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2535,6 +2585,10 @@ static HRESULT WINAPI TextPara_SetDuplicate(ITextPara *iface, ITextPara *para)
+@@ -2558,6 +2593,10 @@ static HRESULT WINAPI TextPara_SetDuplicate(ITextPara *iface, ITextPara *para)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, para);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2542,6 +2596,10 @@ static HRESULT WINAPI TextPara_CanChange(ITextPara *iface, LONG *ret)
+@@ -2565,6 +2604,10 @@ static HRESULT WINAPI TextPara_CanChange(ITextPara *iface, LONG *ret)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, ret);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2549,6 +2607,10 @@ static HRESULT WINAPI TextPara_IsEqual(ITextPara *iface, ITextPara *para, LONG *
+@@ -2572,6 +2615,10 @@ static HRESULT WINAPI TextPara_IsEqual(ITextPara *iface, ITextPara *para, LONG *
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p %p)\n", This, para, ret);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2556,6 +2618,10 @@ static HRESULT WINAPI TextPara_Reset(ITextPara *iface, LONG value)
+@@ -2579,6 +2626,10 @@ static HRESULT WINAPI TextPara_Reset(ITextPara *iface, LONG value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%d)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2563,6 +2629,10 @@ static HRESULT WINAPI TextPara_GetStyle(ITextPara *iface, LONG *value)
+@@ -2586,6 +2637,10 @@ static HRESULT WINAPI TextPara_GetStyle(ITextPara *iface, LONG *value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2570,6 +2640,10 @@ static HRESULT WINAPI TextPara_SetStyle(ITextPara *iface, LONG value)
+@@ -2593,6 +2648,10 @@ static HRESULT WINAPI TextPara_SetStyle(ITextPara *iface, LONG value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%d)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2577,6 +2651,10 @@ static HRESULT WINAPI TextPara_GetAlignment(ITextPara *iface, LONG *value)
+@@ -2600,6 +2659,10 @@ static HRESULT WINAPI TextPara_GetAlignment(ITextPara *iface, LONG *value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2584,6 +2662,10 @@ static HRESULT WINAPI TextPara_SetAlignment(ITextPara *iface, LONG value)
+@@ -2607,6 +2670,10 @@ static HRESULT WINAPI TextPara_SetAlignment(ITextPara *iface, LONG value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%d)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2591,6 +2673,10 @@ static HRESULT WINAPI TextPara_GetHyphenation(ITextPara *iface, LONG *value)
+@@ -2614,6 +2681,10 @@ static HRESULT WINAPI TextPara_GetHyphenation(ITextPara *iface, LONG *value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2598,6 +2684,10 @@ static HRESULT WINAPI TextPara_SetHyphenation(ITextPara *iface, LONG value)
+@@ -2621,6 +2692,10 @@ static HRESULT WINAPI TextPara_SetHyphenation(ITextPara *iface, LONG value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%d)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2605,6 +2695,10 @@ static HRESULT WINAPI TextPara_GetFirstLineIndent(ITextPara *iface, FLOAT *value
+@@ -2628,6 +2703,10 @@ static HRESULT WINAPI TextPara_GetFirstLineIndent(ITextPara *iface, FLOAT *value
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2612,6 +2706,10 @@ static HRESULT WINAPI TextPara_GetKeepTogether(ITextPara *iface, LONG *value)
+@@ -2635,6 +2714,10 @@ static HRESULT WINAPI TextPara_GetKeepTogether(ITextPara *iface, LONG *value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2619,6 +2717,10 @@ static HRESULT WINAPI TextPara_SetKeepTogether(ITextPara *iface, LONG value)
+@@ -2642,6 +2725,10 @@ static HRESULT WINAPI TextPara_SetKeepTogether(ITextPara *iface, LONG value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%d)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2626,6 +2728,10 @@ static HRESULT WINAPI TextPara_GetKeepWithNext(ITextPara *iface, LONG *value)
+@@ -2649,6 +2736,10 @@ static HRESULT WINAPI TextPara_GetKeepWithNext(ITextPara *iface, LONG *value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2633,6 +2739,10 @@ static HRESULT WINAPI TextPara_SetKeepWithNext(ITextPara *iface, LONG value)
+@@ -2656,6 +2747,10 @@ static HRESULT WINAPI TextPara_SetKeepWithNext(ITextPara *iface, LONG value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%d)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2640,6 +2750,10 @@ static HRESULT WINAPI TextPara_GetLeftIndent(ITextPara *iface, FLOAT *value)
+@@ -2663,6 +2758,10 @@ static HRESULT WINAPI TextPara_GetLeftIndent(ITextPara *iface, FLOAT *value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2647,6 +2761,10 @@ static HRESULT WINAPI TextPara_GetLineSpacing(ITextPara *iface, FLOAT *value)
+@@ -2670,6 +2769,10 @@ static HRESULT WINAPI TextPara_GetLineSpacing(ITextPara *iface, FLOAT *value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2654,6 +2772,10 @@ static HRESULT WINAPI TextPara_GetLineSpacingRule(ITextPara *iface, LONG *value)
+@@ -2677,6 +2780,10 @@ static HRESULT WINAPI TextPara_GetLineSpacingRule(ITextPara *iface, LONG *value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2661,6 +2783,10 @@ static HRESULT WINAPI TextPara_GetListAlignment(ITextPara *iface, LONG *value)
+@@ -2684,6 +2791,10 @@ static HRESULT WINAPI TextPara_GetListAlignment(ITextPara *iface, LONG *value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2668,6 +2794,10 @@ static HRESULT WINAPI TextPara_SetListAlignment(ITextPara *iface, LONG value)
+@@ -2691,6 +2802,10 @@ static HRESULT WINAPI TextPara_SetListAlignment(ITextPara *iface, LONG value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%d)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2675,6 +2805,10 @@ static HRESULT WINAPI TextPara_GetListLevelIndex(ITextPara *iface, LONG *value)
+@@ -2698,6 +2813,10 @@ static HRESULT WINAPI TextPara_GetListLevelIndex(ITextPara *iface, LONG *value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2682,6 +2816,10 @@ static HRESULT WINAPI TextPara_SetListLevelIndex(ITextPara *iface, LONG value)
+@@ -2705,6 +2824,10 @@ static HRESULT WINAPI TextPara_SetListLevelIndex(ITextPara *iface, LONG value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%d)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2689,6 +2827,10 @@ static HRESULT WINAPI TextPara_GetListStart(ITextPara *iface, LONG *value)
+@@ -2712,6 +2835,10 @@ static HRESULT WINAPI TextPara_GetListStart(ITextPara *iface, LONG *value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2696,6 +2838,10 @@ static HRESULT WINAPI TextPara_SetListStart(ITextPara *iface, LONG value)
+@@ -2719,6 +2846,10 @@ static HRESULT WINAPI TextPara_SetListStart(ITextPara *iface, LONG value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%d)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2703,6 +2849,10 @@ static HRESULT WINAPI TextPara_GetListTab(ITextPara *iface, FLOAT *value)
+@@ -2726,6 +2857,10 @@ static HRESULT WINAPI TextPara_GetListTab(ITextPara *iface, FLOAT *value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2710,6 +2860,10 @@ static HRESULT WINAPI TextPara_SetListTab(ITextPara *iface, FLOAT value)
+@@ -2733,6 +2868,10 @@ static HRESULT WINAPI TextPara_SetListTab(ITextPara *iface, FLOAT value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%.2f)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2717,6 +2871,10 @@ static HRESULT WINAPI TextPara_GetListType(ITextPara *iface, LONG *value)
+@@ -2740,6 +2879,10 @@ static HRESULT WINAPI TextPara_GetListType(ITextPara *iface, LONG *value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2724,6 +2882,10 @@ static HRESULT WINAPI TextPara_SetListType(ITextPara *iface, LONG value)
+@@ -2747,6 +2890,10 @@ static HRESULT WINAPI TextPara_SetListType(ITextPara *iface, LONG value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%d)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2731,6 +2893,10 @@ static HRESULT WINAPI TextPara_GetNoLineNumber(ITextPara *iface, LONG *value)
+@@ -2754,6 +2901,10 @@ static HRESULT WINAPI TextPara_GetNoLineNumber(ITextPara *iface, LONG *value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2738,6 +2904,10 @@ static HRESULT WINAPI TextPara_SetNoLineNumber(ITextPara *iface, LONG value)
+@@ -2761,6 +2912,10 @@ static HRESULT WINAPI TextPara_SetNoLineNumber(ITextPara *iface, LONG value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%d)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2745,6 +2915,10 @@ static HRESULT WINAPI TextPara_GetPageBreakBefore(ITextPara *iface, LONG *value)
+@@ -2768,6 +2923,10 @@ static HRESULT WINAPI TextPara_GetPageBreakBefore(ITextPara *iface, LONG *value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2752,6 +2926,10 @@ static HRESULT WINAPI TextPara_SetPageBreakBefore(ITextPara *iface, LONG value)
+@@ -2775,6 +2934,10 @@ static HRESULT WINAPI TextPara_SetPageBreakBefore(ITextPara *iface, LONG value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%d)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2759,6 +2937,10 @@ static HRESULT WINAPI TextPara_GetRightIndent(ITextPara *iface, FLOAT *value)
+@@ -2782,6 +2945,10 @@ static HRESULT WINAPI TextPara_GetRightIndent(ITextPara *iface, FLOAT *value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2766,6 +2948,10 @@ static HRESULT WINAPI TextPara_SetRightIndent(ITextPara *iface, FLOAT value)
+@@ -2789,6 +2956,10 @@ static HRESULT WINAPI TextPara_SetRightIndent(ITextPara *iface, FLOAT value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%.2f)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2773,6 +2959,10 @@ static HRESULT WINAPI TextPara_SetIndents(ITextPara *iface, FLOAT StartIndent, F
+@@ -2796,6 +2967,10 @@ static HRESULT WINAPI TextPara_SetIndents(ITextPara *iface, FLOAT StartIndent, F
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%.2f %.2f %.2f)\n", This, StartIndent, LeftIndent, RightIndent);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2780,6 +2970,10 @@ static HRESULT WINAPI TextPara_SetLineSpacing(ITextPara *iface, LONG LineSpacing
+@@ -2803,6 +2978,10 @@ static HRESULT WINAPI TextPara_SetLineSpacing(ITextPara *iface, LONG LineSpacing
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%d %.2f)\n", This, LineSpacingRule, LineSpacing);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2787,6 +2981,10 @@ static HRESULT WINAPI TextPara_GetSpaceAfter(ITextPara *iface, FLOAT *value)
+@@ -2810,6 +2989,10 @@ static HRESULT WINAPI TextPara_GetSpaceAfter(ITextPara *iface, FLOAT *value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2794,6 +2992,10 @@ static HRESULT WINAPI TextPara_SetSpaceAfter(ITextPara *iface, FLOAT value)
+@@ -2817,6 +3000,10 @@ static HRESULT WINAPI TextPara_SetSpaceAfter(ITextPara *iface, FLOAT value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%.2f)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2801,6 +3003,10 @@ static HRESULT WINAPI TextPara_GetSpaceBefore(ITextPara *iface, FLOAT *value)
+@@ -2824,6 +3011,10 @@ static HRESULT WINAPI TextPara_GetSpaceBefore(ITextPara *iface, FLOAT *value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2808,6 +3014,10 @@ static HRESULT WINAPI TextPara_SetSpaceBefore(ITextPara *iface, FLOAT value)
+@@ -2831,6 +3022,10 @@ static HRESULT WINAPI TextPara_SetSpaceBefore(ITextPara *iface, FLOAT value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%.2f)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2815,6 +3025,10 @@ static HRESULT WINAPI TextPara_GetWidowControl(ITextPara *iface, LONG *value)
+@@ -2838,6 +3033,10 @@ static HRESULT WINAPI TextPara_GetWidowControl(ITextPara *iface, LONG *value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2822,6 +3036,10 @@ static HRESULT WINAPI TextPara_SetWidowControl(ITextPara *iface, LONG value)
+@@ -2845,6 +3044,10 @@ static HRESULT WINAPI TextPara_SetWidowControl(ITextPara *iface, LONG value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%d)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2829,6 +3047,10 @@ static HRESULT WINAPI TextPara_GetTabCount(ITextPara *iface, LONG *value)
+@@ -2852,6 +3055,10 @@ static HRESULT WINAPI TextPara_GetTabCount(ITextPara *iface, LONG *value)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%p)\n", This, value);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2836,6 +3058,10 @@ static HRESULT WINAPI TextPara_AddTab(ITextPara *iface, FLOAT tbPos, LONG tbAlig
+@@ -2859,6 +3066,10 @@ static HRESULT WINAPI TextPara_AddTab(ITextPara *iface, FLOAT tbPos, LONG tbAlig
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%.2f %d %d)\n", This, tbPos, tbAlign, tbLeader);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2843,6 +3069,10 @@ static HRESULT WINAPI TextPara_ClearAllTabs(ITextPara *iface)
+@@ -2866,6 +3077,10 @@ static HRESULT WINAPI TextPara_ClearAllTabs(ITextPara *iface)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)\n", This);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2850,6 +3080,10 @@ static HRESULT WINAPI TextPara_DeleteTab(ITextPara *iface, FLOAT pos)
+@@ -2873,6 +3088,10 @@ static HRESULT WINAPI TextPara_DeleteTab(ITextPara *iface, FLOAT pos)
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%.2f)\n", This, pos);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2857,6 +3091,10 @@ static HRESULT WINAPI TextPara_GetTab(ITextPara *iface, LONG iTab, FLOAT *ptbPos
+@@ -2880,6 +3099,10 @@ static HRESULT WINAPI TextPara_GetTab(ITextPara *iface, LONG iTab, FLOAT *ptbPos
  {
      ITextParaImpl *This = impl_from_ITextPara(iface);
      FIXME("(%p)->(%d %p %p %p)\n", This, iTab, ptbPos, ptbAlign, ptbLeader);
 +
-+    if (!This->reOle)
++    if (!para_get_reole(This))
 +        return CO_E_RELEASED;
 +
      return E_NOTIMPL;
  }
  
-@@ -2918,21 +3156,20 @@ static ITextParaVtbl textparavtbl = {
-     TextPara_GetTab
- };
- 
--static HRESULT create_textpara(ITextRange *range, ITextPara **ret)
-+static HRESULT create_textpara(IRichEditOleImpl *reOle, ITextParaImpl **ret)
- {
-     ITextParaImpl *para;
- 
--    *ret = NULL;
-     para = heap_alloc(sizeof(*para));
-     if (!para)
-         return E_OUTOFMEMORY;
- 
-     para->ITextPara_iface.lpVtbl = &textparavtbl;
-     para->ref = 1;
--    para->range = range;
--    ITextRange_AddRef(range);
-+    para->reOle = reOle;
-+    list_add_head(&reOle->paralist, &para->entry);
- 
--    *ret = &para->ITextPara_iface;
-+    *ret = para;
-     return S_OK;
- }
- 
-@@ -4147,6 +4384,7 @@ LRESULT CreateIRichEditOle(IUnknown *outer_unk, ME_TextEditor *editor, LPVOID *p
-     TRACE("Created %p\n",reo);
-     list_init(&reo->rangelist);
-     list_init(&reo->fontlist);
-+    list_init(&reo->paralist);
-     if (outer_unk)
-         reo->outer_unk = outer_unk;
-     else
 diff --git a/dlls/riched20/tests/richole.c b/dlls/riched20/tests/richole.c
 index 070b05a..0fb5c98 100644
 --- a/dlls/riched20/tests/richole.c

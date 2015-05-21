@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 1e8759805e3c5dfe00a31bb5f13f1c1da28d2826"
+	echo "  commit 9586d3b2567e6b4a2270caeacf39796c168351c0"
 	echo ""
 }
 
@@ -79,7 +79,6 @@ patch_enable_all ()
 	enable_Exagear="$1"
 	enable_Pipelight="$1"
 	enable_Staging="$1"
-	enable_advapi32_ImpersonateAnonymousToken="$1"
 	enable_advapi32_LsaLookupSids="$1"
 	enable_advapi32_OpenSCManagerW="$1"
 	enable_atl_AtlIPersistPropertyBag_Save="$1"
@@ -185,7 +184,6 @@ patch_enable_all ()
 	enable_ntoskrnl_DriverTest="$1"
 	enable_ntoskrnl_Emulator="$1"
 	enable_ntoskrnl_Stubs="$1"
-	enable_null_Null_Device="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
@@ -298,9 +296,6 @@ patch_enable ()
 			;;
 		Staging)
 			enable_Staging="$2"
-			;;
-		advapi32-ImpersonateAnonymousToken)
-			enable_advapi32_ImpersonateAnonymousToken="$2"
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
@@ -616,9 +611,6 @@ patch_enable ()
 			;;
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
-			;;
-		null-Null_Device)
-			enable_null_Null_Device="$2"
 			;;
 		nvapi-Stub_DLL)
 			enable_nvapi_Stub_DLL="$2"
@@ -1719,13 +1711,6 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 	enable_nvcuda_CUDA_Support=1
 fi
 
-if test "$enable_nvcuda_CUDA_Support" -eq 1; then
-	if test "$enable_null_Null_Device" -gt 1; then
-		abort "Patchset null-Null_Device disabled, but nvcuda-CUDA_Support depends on that."
-	fi
-	enable_null_Null_Device=1
-fi
-
 if test "$enable_ntoskrnl_Emulator" -eq 1; then
 	if test "$enable_ntdll_User_Shared_Data" -gt 1; then
 		abort "Patchset ntdll-User_Shared_Data disabled, but ntoskrnl-Emulator depends on that."
@@ -2013,19 +1998,6 @@ if test "$enable_Staging" -eq 1; then
 		echo '+    { "Sebastian Lackner", "winelib: Append '\''(Staging)'\'' at the end of the version string.", 1 },';
 		echo '+    { "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list.", 1 },';
 		echo '+    { "Michael Müller", "loader: Add commandline option --check-libs.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset advapi32-ImpersonateAnonymousToken
-# |
-# | Modified files:
-# |   *	dlls/advapi32/advapi32.spec, dlls/advapi32/security.c, dlls/api-ms-win-security-base-l1-1-0/api-ms-win-security-
-# | 	base-l1-1-0.spec, dlls/api-ms-win-security-base-l1-2-0/api-ms-win-security-base-l1-2-0.spec
-# |
-if test "$enable_advapi32_ImpersonateAnonymousToken" -eq 1; then
-	patch_apply advapi32-ImpersonateAnonymousToken/0001-advapi32-Add-stub-for-ImpersonateAnonymousToken.patch
-	(
-		echo '+    { "Sebastian Lackner", "advapi32: Add stub for ImpersonateAnonymousToken.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2682,6 +2654,18 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -2699,18 +2683,6 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4347,24 +4319,6 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset null-Null_Device
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38107] Implement null.sys to provide \Device\Null
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/ntdll/tests/om.c, dlls/null.sys/Makefile.in, dlls/null.sys/main.c, dlls/null.sys/null.sys.spec,
-# | 	loader/wine.inf.in
-# |
-if test "$enable_null_Null_Device" -eq 1; then
-	patch_apply null-Null_Device/0001-null.sys-Added-stub-dll.patch
-	patch_apply null-Null_Device/0002-null.sys-Implement-device-ioctl-read-write-functions.patch
-	(
-		echo '+    { "Qian Hong", "null.sys: Added stub dll.", 1 },';
-		echo '+    { "Sebastian Lackner", "null.sys: Implement device ioctl/read/write functions.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset nvcuda-CUDA_Support
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4521,9 +4475,6 @@ if test "$enable_quartz_MediaSeeking_Positions" -eq 1; then
 fi
 
 # Patchset riched20-IText_Interface
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#18303] Support for ITextRange, ITextFont and ITextPara
 # |
 # | Modified files:
 # |   *	dlls/riched20/richole.c, dlls/riched20/run.c, dlls/riched20/tests/richole.c

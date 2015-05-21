@@ -64,7 +64,7 @@ for more details.*
 * Add stub for D3DXFrameFind ([Wine Bug #38334](https://bugs.winehq.org/show_bug.cgi?id=38334))
 * Add stub for D3DXIntersect
 * Add stub for NtSetLdtEntries/ZwSetLdtEntries ([Wine Bug #26268](https://bugs.winehq.org/show_bug.cgi?id=26268))
-* Add stub for advapi32.ImpersonateAnonymousToken
+* ~~Add stub for advapi32.ImpersonateAnonymousToken~~
 * Add stub for atl80.AtlIPersistPropertyBag_Save ([Wine Bug #33888](https://bugs.winehq.org/show_bug.cgi?id=33888))
 * Add stub for d3d11.D3D11CreateDeviceAndSwapChain ([Wine Bug #33153](https://bugs.winehq.org/show_bug.cgi?id=33153))
 * Add stub for fltlib.FilterLoad ([Wine Bug #38435](https://bugs.winehq.org/show_bug.cgi?id=38435))
@@ -181,7 +181,7 @@ for more details.*
 * Implement mscoree._CorValidateImage for mono runtime
 * Implement ntoskrnl driver testing framework.
 * Implement ntoskrnl.KeInitializeMutex
-* Implement null.sys to provide \Device\Null ([Wine Bug #38107](https://bugs.winehq.org/show_bug.cgi?id=38107))
+* ~~Implement null.sys to provide \Device\Null~~ ([Wine Bug #38107](https://bugs.winehq.org/show_bug.cgi?id=38107))
 * Implement proper handling of CLI .NET images in Wine library loader
 * Implement stub for ntoskrnl.IoGetAttachedDeviceReference
 * Implement stub for ntoskrnl.KeDelayExecutionThread.
@@ -245,7 +245,7 @@ for more details.*
 * Support for ID3DXFont::DrawTextA/W ([Wine Bug #24754](https://bugs.winehq.org/show_bug.cgi?id=24754))
 * Support for ID3DXSkinInfoImpl_UpdateSkinnedMesh ([Wine Bug #32572](https://bugs.winehq.org/show_bug.cgi?id=32572))
 * ~~Support for ITextDocument_fnRange function~~ ([Wine Bug #12458](https://bugs.winehq.org/show_bug.cgi?id=12458))
-* Support for ITextRange, ITextFont and ITextPara ([Wine Bug #18303](https://bugs.winehq.org/show_bug.cgi?id=18303))
+* ~~Support for ITextRange, ITextFont and ITextPara~~ ([Wine Bug #18303](https://bugs.winehq.org/show_bug.cgi?id=18303))
 * Support for Junction Points ([Wine Bug #12401](https://bugs.winehq.org/show_bug.cgi?id=12401))
 * Support for KF_FLAG_DEFAULT_PATH in SHGetKnownFolderPath ([Wine Bug #30385](https://bugs.winehq.org/show_bug.cgi?id=30385))
 * Support for LoadIconMetric ([Wine Bug #35375](https://bugs.winehq.org/show_bug.cgi?id=35375))

@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit f4790714fe69df7701cff666d6b5ab4be049cbf6"
+	echo "  commit 1e8759805e3c5dfe00a31bb5f13f1c1da28d2826"
 	echo ""
 }
 
@@ -135,7 +135,6 @@ patch_enable_all ()
 	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_GetLogicalProcessorInformationEx="$1"
 	enable_kernel32_GetNumaProcessorNode="$1"
-	enable_kernel32_GetSystemTimePreciseAsFileTime="$1"
 	enable_kernel32_GetSystemTimes="$1"
 	enable_kernel32_GetVolumePathName="$1"
 	enable_kernel32_Named_Pipe="$1"
@@ -194,7 +193,6 @@ patch_enable_all ()
 	enable_ole32_CoWaitForMultipleHandles="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
-	enable_regedit_String_Termination="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_rpcrt4_Use_After_Free="$1"
 	enable_secur32_ANSI_NTLM_Credentials="$1"
@@ -254,11 +252,9 @@ patch_enable_all ()
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
 	enable_winecfg_Unmounted_Devices="$1"
-	enable_wineconsole_Curses_Fake_Wnd="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
-	enable_wined3d_Dirtify_Vertex_Shader="$1"
 	enable_wined3d_Multisampling="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_UnhandledBlendFactor="$1"
@@ -471,9 +467,6 @@ patch_enable ()
 		kernel32-GetNumaProcessorNode)
 			enable_kernel32_GetNumaProcessorNode="$2"
 			;;
-		kernel32-GetSystemTimePreciseAsFileTime)
-			enable_kernel32_GetSystemTimePreciseAsFileTime="$2"
-			;;
 		kernel32-GetSystemTimes)
 			enable_kernel32_GetSystemTimes="$2"
 			;;
@@ -647,9 +640,6 @@ patch_enable ()
 			;;
 		quartz-MediaSeeking_Positions)
 			enable_quartz_MediaSeeking_Positions="$2"
-			;;
-		regedit-String_Termination)
-			enable_regedit_String_Termination="$2"
 			;;
 		riched20-IText_Interface)
 			enable_riched20_IText_Interface="$2"
@@ -828,9 +818,6 @@ patch_enable ()
 		winecfg-Unmounted_Devices)
 			enable_winecfg_Unmounted_Devices="$2"
 			;;
-		wineconsole-Curses_Fake_Wnd)
-			enable_wineconsole_Curses_Fake_Wnd="$2"
-			;;
 		wined3d-CSMT_Helper)
 			enable_wined3d_CSMT_Helper="$2"
 			;;
@@ -839,9 +826,6 @@ patch_enable ()
 			;;
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
-			;;
-		wined3d-Dirtify_Vertex_Shader)
-			enable_wined3d_Dirtify_Vertex_Shader="$2"
 			;;
 		wined3d-Multisampling)
 			enable_wined3d_Multisampling="$2"
@@ -1361,9 +1345,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_kernel32_CompareStringEx" -gt 1; then
 		abort "Patchset kernel32-CompareStringEx disabled, but category-stable depends on that."
 	fi
-	if test "$enable_kernel32_GetSystemTimePreciseAsFileTime" -gt 1; then
-		abort "Patchset kernel32-GetSystemTimePreciseAsFileTime disabled, but category-stable depends on that."
-	fi
 	if test "$enable_kernel32_Named_Pipe" -gt 1; then
 		abort "Patchset kernel32-Named_Pipe disabled, but category-stable depends on that."
 	fi
@@ -1439,9 +1420,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_opengl32_Revert_Disable_Ext" -gt 1; then
 		abort "Patchset opengl32-Revert_Disable_Ext disabled, but category-stable depends on that."
 	fi
-	if test "$enable_regedit_String_Termination" -gt 1; then
-		abort "Patchset regedit-String_Termination disabled, but category-stable depends on that."
-	fi
 	if test "$enable_server_Address_List_Change" -gt 1; then
 		abort "Patchset server-Address_List_Change disabled, but category-stable depends on that."
 	fi
@@ -1504,9 +1482,6 @@ if test "$enable_category_stable" -eq 1; then
 	fi
 	if test "$enable_winecfg_Libraries" -gt 1; then
 		abort "Patchset winecfg-Libraries disabled, but category-stable depends on that."
-	fi
-	if test "$enable_wined3d_Dirtify_Vertex_Shader" -gt 1; then
-		abort "Patchset wined3d-Dirtify_Vertex_Shader disabled, but category-stable depends on that."
 	fi
 	if test "$enable_wined3d_Multisampling" -gt 1; then
 		abort "Patchset wined3d-Multisampling disabled, but category-stable depends on that."
@@ -1586,7 +1561,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_gdi32_MaxPixelFormats=1
 	enable_gdiplus_GdipCreateEffect=1
 	enable_kernel32_CompareStringEx=1
-	enable_kernel32_GetSystemTimePreciseAsFileTime=1
 	enable_kernel32_Named_Pipe=1
 	enable_libs_Debug_Channel=1
 	enable_libs_Unicode_Collation=1
@@ -1612,7 +1586,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_ntdll_WriteWatches=1
 	enable_ntoskrnl_Emulator=1
 	enable_opengl32_Revert_Disable_Ext=1
-	enable_regedit_String_Termination=1
 	enable_server_Address_List_Change=1
 	enable_server_ClipCursor=1
 	enable_server_CreateProcess_ACLs=1
@@ -1634,7 +1607,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_wineboot_MachineGuid=1
 	enable_winebuild_LinkerVersion=1
 	enable_winecfg_Libraries=1
-	enable_wined3d_Dirtify_Vertex_Shader=1
 	enable_wined3d_Multisampling=1
 	enable_wined3d_Revert_PixelFormat=1
 	enable_wined3d_UnhandledBlendFactor=1
@@ -1811,18 +1783,18 @@ if test "$enable_kernel32_CopyFileEx" -eq 1; then
 	enable_ntdll_FileDispositionInformation=1
 fi
 
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	if test "$enable_kernel32_SetFileCompletionNotificationMode" -gt 1; then
-		abort "Patchset kernel32-SetFileCompletionNotificationMode disabled, but kernel32-SetFileInformationByHandle depends on that."
-	fi
-	enable_kernel32_SetFileCompletionNotificationMode=1
-fi
-
 if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 	if test "$enable_server_File_Permissions" -gt 1; then
 		abort "Patchset server-File_Permissions disabled, but ntdll-FileDispositionInformation depends on that."
 	fi
 	enable_server_File_Permissions=1
+fi
+
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	if test "$enable_kernel32_SetFileCompletionNotificationMode" -gt 1; then
+		abort "Patchset kernel32-SetFileCompletionNotificationMode disabled, but kernel32-SetFileInformationByHandle depends on that."
+	fi
+	enable_kernel32_SetFileCompletionNotificationMode=1
 fi
 
 if test "$enable_dxva2_Video_Decoder" -eq 1; then
@@ -2057,6 +2029,23 @@ if test "$enable_advapi32_ImpersonateAnonymousToken" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2073,23 +2062,6 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2755,21 +2727,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	(
 		echo '+    { "Stefan Dösinger", "wined3d: Merge get_pitch functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Dirtify_Vertex_Shader
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38539] Dirtify vertex shader on transformed update to fix graphical corruption
-# |
-# | Modified files:
-# |   *	dlls/wined3d/glsl_shader.c
-# |
-if test "$enable_wined3d_Dirtify_Vertex_Shader" -eq 1; then
-	patch_apply wined3d-Dirtify_Vertex_Shader/0001-wined3d-Dirtify-vertex-shader-on-transformed-untrans.patch
-	(
-		echo '+    { "Matteo Bruni", "wined3d: Dirtify vertex shader on transformed <-> untransformed transition.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3464,6 +3421,36 @@ if test "$enable_kernel32_CompareStringEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-SetFileCompletionNotificationMode
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38493] Add stub for kernel32.SetFileCompletionNotificationModes (for Steam in Win7 mode)
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/kernel32/file.c,
+# | 	dlls/kernel32/kernel32.spec, include/winbase.h
+# |
+if test "$enable_kernel32_SetFileCompletionNotificationMode" -eq 1; then
+	patch_apply kernel32-SetFileCompletionNotificationMode/0001-kernel32-Implement-SetFileCompletionNotificationMode.patch
+	(
+		echo '+    { "Olivier F. R. Dierick", "kernel32: Implement SetFileCompletionNotificationModes as a stub.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-File_Permissions
 # |
 # | Modified files:
@@ -3502,36 +3489,6 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Added tests to set disposition on file which is mapped to memory.", 1 },';
 		echo '+    { "Qian Hong", "server: Do not allow to set disposition on file which has a file mapping.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-SetFileCompletionNotificationMode
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38493] Add stub for kernel32.SetFileCompletionNotificationModes (for Steam in Win7 mode)
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/kernel32/file.c,
-# | 	dlls/kernel32/kernel32.spec, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileCompletionNotificationMode" -eq 1; then
-	patch_apply kernel32-SetFileCompletionNotificationMode/0001-kernel32-Implement-SetFileCompletionNotificationMode.patch
-	(
-		echo '+    { "Olivier F. R. Dierick", "kernel32: Implement SetFileCompletionNotificationModes as a stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3591,22 +3548,6 @@ if test "$enable_kernel32_GetNumaProcessorNode" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "kernel32: Implement GetNumaProcessorNode.", 1 },';
 		echo '+    { "Michael Müller", "kernel32/tests: Add tests for GetNumaProcessorNode.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-GetSystemTimePreciseAsFileTime
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38513] Implement kernel32.GetSystemTimePreciseAsFileTime
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-sysinfo-l1-2-0/api-ms-win-core-sysinfo-l1-2-0.spec, dlls/api-ms-win-core-sysinfo-l1-2-1/api-ms-win-
-# | 	core-sysinfo-l1-2-1.spec, dlls/kernel32/kernel32.spec, dlls/kernel32/time.c, include/winbase.h
-# |
-if test "$enable_kernel32_GetSystemTimePreciseAsFileTime" -eq 1; then
-	patch_apply kernel32-GetSystemTimePreciseAsFileTime/0001-kernel32-Implement-GetSystemTimePreciseAsFileTime.patch
-	(
-		echo '+    { "Martin Storsjo", "kernel32: Implement GetSystemTimePreciseAsFileTime.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4579,21 +4520,6 @@ if test "$enable_quartz_MediaSeeking_Positions" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset regedit-String_Termination
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37575] Do not append duplicate NULL characters when importing keys with regedit
-# |
-# | Modified files:
-# |   *	programs/regedit/regproc.c
-# |
-if test "$enable_regedit_String_Termination" -eq 1; then
-	patch_apply regedit-String_Termination/0001-regedit-Avoid-appending-and-0-to-string-value-of-imp.patch
-	(
-		echo '+    { "Jiaxing Wang", "regedit: Avoid appending '\''\\\\0'\'' to string value of imported key.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset riched20-IText_Interface
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5469,21 +5395,6 @@ if test "$enable_winecfg_Unmounted_Devices" -eq 1; then
 	patch_apply winecfg-Unmounted_Devices/0001-winecfg-Show-unmounted-devices-and-allow-changing-th.patch
 	(
 		echo '+    { "Michael Müller", "winecfg: Show unmounted devices and allow changing the device value.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wineconsole-Curses_Fake_Wnd
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34930] Allocate fake hWnd for wineconsole curses backend
-# |
-# | Modified files:
-# |   *	programs/wineconsole/curses.c
-# |
-if test "$enable_wineconsole_Curses_Fake_Wnd" -eq 1; then
-	patch_apply wineconsole-Curses_Fake_Wnd/0001-wineconsole-Allocate-fake-hwnds-for-curses-backend.patch
-	(
-		echo '+    { "Sebastian Lackner", "wineconsole: Allocate fake hwnds for curses backend.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -85,7 +85,7 @@ for more details.*
 * Add support for process specific debug channels
 * Add support for wbemprox Win32_SystemEnclosure table ([Wine Bug #34517](https://bugs.winehq.org/show_bug.cgi?id=34517))
 * Adobe Reader needs ITextSelection_fnGetDuplicate implementation
-* Allocate fake hWnd for wineconsole curses backend ([Wine Bug #34930](https://bugs.winehq.org/show_bug.cgi?id=34930))
+* ~~Allocate fake hWnd for wineconsole curses backend~~ ([Wine Bug #34930](https://bugs.winehq.org/show_bug.cgi?id=34930))
 * Allow selection of audio device for PulseAudio backend
 * Allow special characters in pipe names ([Wine Bug #28995](https://bugs.winehq.org/show_bug.cgi?id=28995))
 * Allow to cancel a file operation via progress callback ([Wine Bug #22690](https://bugs.winehq.org/show_bug.cgi?id=22690))
@@ -108,8 +108,8 @@ for more details.*
 * Create stub files for system32/drivers/etc/{services,hosts,networks,protocol} ([Wine Bug #12076](https://bugs.winehq.org/show_bug.cgi?id=12076))
 * CreateProcess does not prioritize the working directory over the system search path ([Wine Bug #23934](https://bugs.winehq.org/show_bug.cgi?id=23934))
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](https://bugs.winehq.org/show_bug.cgi?id=33770))
-* Dirtify vertex shader on transformed update to fix graphical corruption ([Wine Bug #38539](https://bugs.winehq.org/show_bug.cgi?id=38539))
-* Do not append duplicate NULL characters when importing keys with regedit ([Wine Bug #37575](https://bugs.winehq.org/show_bug.cgi?id=37575))
+* ~~Dirtify vertex shader on transformed update to fix graphical corruption~~ ([Wine Bug #38539](https://bugs.winehq.org/show_bug.cgi?id=38539))
+* ~~Do not append duplicate NULL characters when importing keys with regedit~~ ([Wine Bug #37575](https://bugs.winehq.org/show_bug.cgi?id=37575))
 * ~~Do not create foreign thread queues for attach_thread_input requests~~ ([Wine Bug #38562](https://bugs.winehq.org/show_bug.cgi?id=38562))
 * Do not fail when a used context is passed to wglShareLists ([Wine Bug #11436](https://bugs.winehq.org/show_bug.cgi?id=11436))
 * Emulate access to KI_USER_SHARED_DATA kernel page on x86_64 ([Wine Bug #33849](https://bugs.winehq.org/show_bug.cgi?id=33849))
@@ -176,7 +176,7 @@ for more details.*
 * Implement combase.WindowsSubstring function
 * Implement empty enumerator for IWiaDevMgr::EnumDeviceInfo ([Wine Bug #27775](https://bugs.winehq.org/show_bug.cgi?id=27775))
 * Implement exclusive mode in PulseAudio backend ([Wine Bug #37042](https://bugs.winehq.org/show_bug.cgi?id=37042))
-* Implement kernel32.GetSystemTimePreciseAsFileTime ([Wine Bug #38513](https://bugs.winehq.org/show_bug.cgi?id=38513))
+* ~~Implement kernel32.GetSystemTimePreciseAsFileTime~~ ([Wine Bug #38513](https://bugs.winehq.org/show_bug.cgi?id=38513))
 * Implement locking and synchronization of key states ([Wine Bug #31899](https://bugs.winehq.org/show_bug.cgi?id=31899))
 * Implement mscoree._CorValidateImage for mono runtime
 * Implement ntoskrnl driver testing framework.

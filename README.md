@@ -83,7 +83,7 @@ for more details.*
 * Add support for CopyFileEx progress callback ([Wine Bug #22692](https://bugs.winehq.org/show_bug.cgi?id=22692))
 * Add support for GetPropValue to PulseAudio backend
 * Add support for process specific debug channels
-* Add support for wbemprox Win32_SystemEnclosure table ([Wine Bug #34517](https://bugs.winehq.org/show_bug.cgi?id=34517))
+* ~~Add support for wbemprox Win32_SystemEnclosure table~~ ([Wine Bug #34517](https://bugs.winehq.org/show_bug.cgi?id=34517))
 * Adobe Reader needs ITextSelection_fnGetDuplicate implementation
 * ~~Allocate fake hWnd for wineconsole curses backend~~ ([Wine Bug #34930](https://bugs.winehq.org/show_bug.cgi?id=34930))
 * Allow selection of audio device for PulseAudio backend

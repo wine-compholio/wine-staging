@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 9586d3b2567e6b4a2270caeacf39796c168351c0"
+	echo "  commit 90ed96a766b4b627a5dd18d601b41257c4f8e390"
 	echo ""
 }
 
@@ -188,7 +188,6 @@ patch_enable_all ()
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
-	enable_ole32_CoWaitForMultipleHandles="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_riched20_IText_Interface="$1"
@@ -237,7 +236,6 @@ patch_enable_all ()
 	enable_vcomp_Stub_Functions="$1"
 	enable_version_VerQueryValue="$1"
 	enable_version_VersionInfoEx="$1"
-	enable_wbemprox_Win32_SystemEnclosure="$1"
 	enable_wiaservc_IEnumWIA_DEV_INFO="$1"
 	enable_windowscodecs_GIF_Decoder="$1"
 	enable_windowscodecs_TIFF_Decoder="$1"
@@ -624,9 +622,6 @@ patch_enable ()
 		nvencodeapi-Video_Encoder)
 			enable_nvencodeapi_Video_Encoder="$2"
 			;;
-		ole32-CoWaitForMultipleHandles)
-			enable_ole32_CoWaitForMultipleHandles="$2"
-			;;
 		opengl32-Revert_Disable_Ext)
 			enable_opengl32_Revert_Disable_Ext="$2"
 			;;
@@ -770,9 +765,6 @@ patch_enable ()
 			;;
 		version-VersionInfoEx)
 			enable_version_VersionInfoEx="$2"
-			;;
-		wbemprox-Win32_SystemEnclosure)
-			enable_wbemprox_Win32_SystemEnclosure="$2"
 			;;
 		wiaservc-IEnumWIA_DEV_INFO)
 			enable_wiaservc_IEnumWIA_DEV_INFO="$2"
@@ -1451,9 +1443,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_version_VersionInfoEx" -gt 1; then
 		abort "Patchset version-VersionInfoEx disabled, but category-stable depends on that."
 	fi
-	if test "$enable_wbemprox_Win32_SystemEnclosure" -gt 1; then
-		abort "Patchset wbemprox-Win32_SystemEnclosure disabled, but category-stable depends on that."
-	fi
 	if test "$enable_windowscodecs_GIF_Decoder" -gt 1; then
 		abort "Patchset windowscodecs-GIF_Decoder disabled, but category-stable depends on that."
 	fi
@@ -1591,7 +1580,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_user32_GetRawInputDeviceList=1
 	enable_user32_WndProc=1
 	enable_version_VersionInfoEx=1
-	enable_wbemprox_Win32_SystemEnclosure=1
 	enable_windowscodecs_GIF_Decoder=1
 	enable_wine_inf_Performance=1
 	enable_wine_inf_ProfileList_UserSID=1
@@ -2654,18 +2642,6 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -2683,6 +2659,18 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4424,18 +4412,6 @@ if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ole32-CoWaitForMultipleHandles
-# |
-# | Modified files:
-# |   *	dlls/ole32/tests/compobj.c
-# |
-if test "$enable_ole32_CoWaitForMultipleHandles" -eq 1; then
-	patch_apply ole32-CoWaitForMultipleHandles/0001-ole32-tests-Add-additional-tests-for-CoWaitForMultip.patch
-	(
-		echo '+    { "Sebastian Lackner", "ole32/tests: Add additional tests for CoWaitForMultipleHandles and WM_QUIT.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset opengl32-Revert_Disable_Ext
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5170,23 +5146,6 @@ if test "$enable_version_VersionInfoEx" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "version: Partially implement GetFileVersionInfoSizeExA/W.", 1 },';
 		echo '+    { "Sebastian Lackner", "version: Partially implement GetFileVersionInfoExA/W.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wbemprox-Win32_SystemEnclosure
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34517] Add support for wbemprox Win32_SystemEnclosure table
-# |
-# | Modified files:
-# |   *	dlls/wbemprox/builtin.c, dlls/wbemprox/table.c
-# |
-if test "$enable_wbemprox_Win32_SystemEnclosure" -eq 1; then
-	patch_apply wbemprox-Win32_SystemEnclosure/0001-wbemprox-Fix-handling-of-arrays-as-query-results.patch
-	patch_apply wbemprox-Win32_SystemEnclosure/0002-wbemprox-Add-support-for-Win32_SystemEnclosure.patch
-	(
-		echo '+    { "Sebastian Lackner", "wbemprox: Fix handling of arrays as query results.", 1 },';
-		echo '+    { "Michael Müller", "wbemprox: Add support for Win32_SystemEnclosure.", 1 },';
 	) >> "$patchlist"
 fi
 

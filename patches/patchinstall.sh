@@ -217,6 +217,7 @@ patch_enable_all ()
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
 	enable_shell32_Default_Path="$1"
 	enable_shell32_Icons="$1"
+	enable_shell32_Placeholder_Icons="$1"
 	enable_shell32_Progress_Dialog="$1"
 	enable_shell32_Quoted_ShellExecute="$1"
 	enable_shell32_RunDLL_CallEntry16="$1"
@@ -710,6 +711,9 @@ patch_enable ()
 			;;
 		shell32-Icons)
 			enable_shell32_Icons="$2"
+			;;
+		shell32-Placeholder_Icons)
+			enable_shell32_Placeholder_Icons="$2"
 			;;
 		shell32-Progress_Dialog)
 			enable_shell32_Progress_Dialog="$2"
@@ -2650,18 +2654,6 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -2679,6 +2671,18 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4856,6 +4860,21 @@ if test "$enable_shell32_Icons" -eq 1; then
 	patch_apply shell32-Icons/0001-shell32-Add-support-for-extra-large-and-jumbo-icon-l.patch
 	(
 		echo '+    { "Michael Müller", "shell32: Add support for extra large and jumbo icon lists.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shell32-Placeholder_Icons
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#30185] Add shell32 placeholder icons to match offsets with Windows
+# |
+# | Modified files:
+# |   *	dlls/shell32/placeholder.ico, dlls/shell32/shell32.rc, dlls/shell32/shresdef.h
+# |
+if test "$enable_shell32_Placeholder_Icons" -eq 1; then
+	patch_apply shell32-Placeholder_Icons/0001-shell32-Add-placeholder-icons-to-match-icon-offset-w.patch
+	(
+		echo '+    { "Michael Müller", "shell32: Add placeholder icons to match icon offset with XP.", 1 },';
 	) >> "$patchlist"
 fi
 

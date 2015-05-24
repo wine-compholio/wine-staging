@@ -236,6 +236,7 @@ patch_enable_all ()
 	enable_vcomp_Stub_Functions="$1"
 	enable_version_VerQueryValue="$1"
 	enable_version_VersionInfoEx="$1"
+	enable_wbemprox_Whitespace="$1"
 	enable_wiaservc_IEnumWIA_DEV_INFO="$1"
 	enable_windowscodecs_GIF_Decoder="$1"
 	enable_windowscodecs_TIFF_Decoder="$1"
@@ -765,6 +766,9 @@ patch_enable ()
 			;;
 		version-VersionInfoEx)
 			enable_version_VersionInfoEx="$2"
+			;;
+		wbemprox-Whitespace)
+			enable_wbemprox_Whitespace="$2"
 			;;
 		wiaservc-IEnumWIA_DEV_INFO)
 			enable_wiaservc_IEnumWIA_DEV_INFO="$2"
@@ -5146,6 +5150,18 @@ if test "$enable_version_VersionInfoEx" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "version: Partially implement GetFileVersionInfoSizeExA/W.", 1 },';
 		echo '+    { "Sebastian Lackner", "version: Partially implement GetFileVersionInfoExA/W.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wbemprox-Whitespace
+# |
+# | Modified files:
+# |   *	dlls/wbemprox/tests/query.c, dlls/wbemprox/wql.y
+# |
+if test "$enable_wbemprox_Whitespace" -eq 1; then
+	patch_apply wbemprox-Whitespace/0001-wbemprox-Treat-r-as-whitespace.patch
+	(
+		echo '+    { "Michael Müller", "wbemprox: Treat \\\\r as whitespace.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1467,9 +1467,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_wineboot_HKEY_DYN_DATA" -gt 1; then
 		abort "Patchset wineboot-HKEY_DYN_DATA disabled, but category-stable depends on that."
 	fi
-	if test "$enable_wineboot_MachineGuid" -gt 1; then
-		abort "Patchset wineboot-MachineGuid disabled, but category-stable depends on that."
-	fi
 	if test "$enable_winebuild_LinkerVersion" -gt 1; then
 		abort "Patchset winebuild-LinkerVersion disabled, but category-stable depends on that."
 	fi
@@ -1596,7 +1593,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_wine_inf_Performance=1
 	enable_wine_inf_ProfileList_UserSID=1
 	enable_wineboot_HKEY_DYN_DATA=1
-	enable_wineboot_MachineGuid=1
 	enable_winebuild_LinkerVersion=1
 	enable_winecfg_Libraries=1
 	enable_wined3d_Multisampling=1
@@ -5294,14 +5290,17 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#38508] Create HKLM\Software\Microsoft\Cryptography\MachineGuid registry key
+# |   *	[#17823] Assign a drive serial number during prefix creation/update
 # |
 # | Modified files:
 # |   *	programs/wineboot/Makefile.in, programs/wineboot/wineboot.c
 # |
 if test "$enable_wineboot_MachineGuid" -eq 1; then
 	patch_apply wineboot-MachineGuid/0001-wineboot-Create-MachineGuid-registry-value.patch
+	patch_apply wineboot-MachineGuid/0002-wineboot-Assign-a-drive-serial-number-during-prefix-.patch
 	(
 		echo '+    { "Michael Müller", "wineboot: Create MachineGuid registry value.", 1 },';
+		echo '+    { "Sebastian Lackner", "wineboot: Assign a drive serial number during prefix creation/update.", 1 },';
 	) >> "$patchlist"
 fi
 

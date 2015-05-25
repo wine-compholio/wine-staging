@@ -1,95 +1,18 @@
-From 366724a8595982b9d1159509188899afb227ecf5 Mon Sep 17 00:00:00 2001
+From cb74e4d8de36f0dfe8ab47f9a2a5394127142104 Mon Sep 17 00:00:00 2001
 From: Jactry Zeng <wine@jactry.com>
 Date: Fri, 8 Aug 2014 21:32:57 +0800
 Subject: riched20: Implement IText{Selection, Range}::Set{Start, End}.
 
 ---
- dlls/riched20/richole.c       |  46 ++++++++++++--
  dlls/riched20/tests/richole.c | 135 ++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 177 insertions(+), 4 deletions(-)
+ 1 file changed, 135 insertions(+)
 
-diff --git a/dlls/riched20/richole.c b/dlls/riched20/richole.c
-index 3a4eb3b..f93f086 100644
---- a/dlls/riched20/richole.c
-+++ b/dlls/riched20/richole.c
-@@ -3270,14 +3270,33 @@ static HRESULT WINAPI ITextSelection_fnGetStart(ITextSelection *me, LONG *pcpFir
-     return S_OK;
- }
- 
-+static HRESULT range_SetStart(ME_TextEditor *editor, LONG cpFirst, LONG *start, LONG *end)
-+{
-+    int len = ME_GetTextLength(editor);
-+
-+    TRACE("%d\n", cpFirst);
-+    if (cpFirst == *start)
-+        return S_FALSE;
-+    cpFirst = min(cpFirst, len);
-+    cpFirst = max(cpFirst, 0);
-+    *end = max(*end, cpFirst);
-+    *start = cpFirst;
-+    return S_OK;
-+}
-+
- static HRESULT WINAPI ITextSelection_fnSetStart(ITextSelection *me, LONG cpFirst)
- {
-     ITextSelectionImpl *This = impl_from_ITextSelection(me);
-+    int start, end;
-+    HRESULT hres;
-     if (!This->reOle)
-         return CO_E_RELEASED;
- 
--    FIXME("not implemented\n");
--    return E_NOTIMPL;
-+    ME_GetSelectionOfs(This->reOle->editor, &start, &end);
-+    hres = range_SetStart(This->reOle->editor, cpFirst, &start, &end);
-+    if (!hres)
-+        ME_SetSelection(This->reOle->editor, start, end);
-+    return hres;
- }
- 
- static HRESULT WINAPI ITextSelection_fnGetEnd(ITextSelection *me, LONG *pcpLim)
-@@ -3294,14 +3313,33 @@ static HRESULT WINAPI ITextSelection_fnGetEnd(ITextSelection *me, LONG *pcpLim)
-     return S_OK;
- }
- 
-+static HRESULT range_SetEnd(ME_TextEditor *editor, LONG cpLim, LONG *start, LONG *end)
-+{
-+    int len = ME_GetTextLength(editor) + 1;
-+
-+    TRACE("%d\n", cpLim);
-+    if (cpLim == *end)
-+        return S_FALSE;
-+    cpLim = min(cpLim, len);
-+    cpLim = max(cpLim, 0);
-+    *start = min(*start, cpLim);
-+    *end = cpLim;
-+    return S_OK;
-+}
-+
- static HRESULT WINAPI ITextSelection_fnSetEnd(ITextSelection *me, LONG cpLim)
- {
-     ITextSelectionImpl *This = impl_from_ITextSelection(me);
-+    int start, end;
-+    HRESULT hres;
-     if (!This->reOle)
-         return CO_E_RELEASED;
- 
--    FIXME("not implemented\n");
--    return E_NOTIMPL;
-+    ME_GetSelectionOfs(This->reOle->editor, &start, &end);
-+    hres = range_SetEnd(This->reOle->editor, cpLim, &start, &end);
-+    if (!hres)
-+        ME_SetSelection(This->reOle->editor, start, end);
-+    return hres;
- }
- 
- static HRESULT WINAPI ITextSelection_fnGetFont(ITextSelection *me, ITextFont **font)
 diff --git a/dlls/riched20/tests/richole.c b/dlls/riched20/tests/richole.c
-index 5472ce1..e654653 100644
+index 18ee8e0..dbd8dd2 100644
 --- a/dlls/riched20/tests/richole.c
 +++ b/dlls/riched20/tests/richole.c
-@@ -1570,6 +1570,137 @@ static void test_ITextFont(void)
-   ITextFont_Release(font);
+@@ -2034,6 +2034,137 @@ todo_wine
+   release_interfaces(&hwnd, &reOle, &doc, NULL);
  }
  
 +static void test_ITextRange_SetStart(void)
@@ -226,8 +149,8 @@ index 5472ce1..e654653 100644
  START_TEST(richole)
  {
    /* Must explicitly LoadLibrary(). The test has no references to functions in
-@@ -1582,12 +1713,16 @@ START_TEST(richole)
-   test_ITextSelection_GetText();
+@@ -2046,12 +2177,16 @@ START_TEST(richole)
+   test_GetText();
    test_ITextSelection_GetChar();
    test_ITextSelection_GetStart_GetEnd();
 +  test_ITextSelection_SetStart();

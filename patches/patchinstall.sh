@@ -275,6 +275,7 @@ patch_enable_all ()
 	enable_ws2_32_APC_Performance="$1"
 	enable_ws2_32_Connect_Time="$1"
 	enable_ws2_32_TransmitFile="$1"
+	enable_ws2_32_WSAPoll="$1"
 	enable_ws2_32_WriteWatches="$1"
 	enable_ws2_32_getaddrinfo="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
@@ -883,6 +884,9 @@ patch_enable ()
 			;;
 		ws2_32-TransmitFile)
 			enable_ws2_32_TransmitFile="$2"
+			;;
+		ws2_32-WSAPoll)
+			enable_ws2_32_WSAPoll="$2"
 			;;
 		ws2_32-WriteWatches)
 			enable_ws2_32_WriteWatches="$2"
@@ -5671,6 +5675,25 @@ if test "$enable_ws2_32_TransmitFile" -eq 1; then
 		echo '+    { "Erich E. Hoover", "ws2_32: Add asynchronous support for TransmitFile.", 2 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_DISCONNECT to TransmitFile.", 1 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_REUSE_SOCKET to TransmitFile.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ws2_32-WSAPoll
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38601] Support for ws2_32.dll.WSAPoll
+# |
+# | Modified files:
+# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, dlls/ws2_32/ws2_32.spec, include/winsock2.h
+# |
+if test "$enable_ws2_32_WSAPoll" -eq 1; then
+	patch_apply ws2_32-WSAPoll/0001-include-Add-stuff-related-to-WSAPoll-try-2.patch
+	patch_apply ws2_32-WSAPoll/0002-ws2_32-tests-Add-WSAPoll-tests.patch
+	patch_apply ws2_32-WSAPoll/0003-ws2_32-Add-WSAPoll-implementation.patch
+	(
+		echo '+    { "Bruno Jesus", "include: Add stuff related to WSAPoll().", 2 },';
+		echo '+    { "Bruno Jesus", "ws2_32/tests: Add WSAPoll() tests.", 1 },';
+		echo '+    { "Bruno Jesus", "ws2_32: Add WSAPoll() implementation.", 1 },';
 	) >> "$patchlist"
 fi
 

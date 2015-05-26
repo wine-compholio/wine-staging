@@ -39,12 +39,13 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [4]:**
+**Bug fixes and features included in the next upcoming release [5]:**
 
 * Add shell32 placeholder icons to match offsets with Windows ([Wine Bug #30185](https://bugs.winehq.org/show_bug.cgi?id=30185))
 * Add stubbed ISWbemSecurity interfaces in wbemdisp
 * Also handle '\r' as whitespace in wbemprox queries
 * Assign a drive serial number during prefix creation/update ([Wine Bug #17823](https://bugs.winehq.org/show_bug.cgi?id=17823))
+* Support for ws2_32.dll.WSAPoll ([Wine Bug #38601](https://bugs.winehq.org/show_bug.cgi?id=38601))
 
 
 **Bug fixes and features in Wine Staging 1.7.43 [235]:**

@@ -64,8 +64,8 @@ for more details.*
 * Add implementation for shlwapi.AssocGetPerceivedType
 * Add nvapi stubs required for GPU PhysX support
 * Add performance library registry keys needed by MS SQL Server Management Studio Express 2008 R2 ([Wine Bug #33661](https://bugs.winehq.org/show_bug.cgi?id=33661))
-* Add semi-stub for GetFileVersionInfoExA/W ([Wine Bug #38098](https://bugs.winehq.org/show_bug.cgi?id=38098))
-* Add semi-stub for GetFileVersionInfoSizeExA/W ([Wine Bug #38090](https://bugs.winehq.org/show_bug.cgi?id=38090))
+* ~~Add semi-stub for GetFileVersionInfoExA/W~~ ([Wine Bug #38098](https://bugs.winehq.org/show_bug.cgi?id=38098))
+* ~~Add semi-stub for GetFileVersionInfoSizeExA/W~~ ([Wine Bug #38090](https://bugs.winehq.org/show_bug.cgi?id=38090))
 * Add stub fltmgr.sys (filter manager driver) ([Wine Bug #23583](https://bugs.winehq.org/show_bug.cgi?id=23583))
 * Add stub for D3DXComputeNormalMap
 * Add stub for D3DXComputeTangentFrameEx ([Wine Bug #31984](https://bugs.winehq.org/show_bug.cgi?id=31984))
@@ -73,7 +73,7 @@ for more details.*
 * Add stub for D3DXIntersect
 * Add stub for NtSetLdtEntries/ZwSetLdtEntries ([Wine Bug #26268](https://bugs.winehq.org/show_bug.cgi?id=26268))
 * ~~Add stub for advapi32.ImpersonateAnonymousToken~~
-* Add stub for atl80.AtlIPersistPropertyBag_Save ([Wine Bug #33888](https://bugs.winehq.org/show_bug.cgi?id=33888))
+* ~~Add stub for atl80.AtlIPersistPropertyBag_Save~~ ([Wine Bug #33888](https://bugs.winehq.org/show_bug.cgi?id=33888))
 * Add stub for d3d11.D3D11CreateDeviceAndSwapChain ([Wine Bug #33153](https://bugs.winehq.org/show_bug.cgi?id=33153))
 * Add stub for fltlib.FilterLoad ([Wine Bug #38435](https://bugs.winehq.org/show_bug.cgi?id=38435))
 * Add stub for gdiplus.GdipCreateEffect ([Wine Bug #32163](https://bugs.winehq.org/show_bug.cgi?id=32163))

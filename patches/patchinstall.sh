@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 98b991fdcf3f2cdbdae7d61203367ce9728a5e6d"
+	echo "  commit 530d269e0187f2d0b406f8d5e3c4de974bf553ae"
 	echo ""
 }
 
@@ -81,7 +81,6 @@ patch_enable_all ()
 	enable_Staging="$1"
 	enable_advapi32_LsaLookupSids="$1"
 	enable_advapi32_OpenSCManagerW="$1"
-	enable_atl_AtlIPersistPropertyBag_Save="$1"
 	enable_browseui_ACLShell_IEnumString="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_category_stable="$1"
@@ -236,7 +235,6 @@ patch_enable_all ()
 	enable_user32_WndProc="$1"
 	enable_vcomp_Stub_Functions="$1"
 	enable_version_VerQueryValue="$1"
-	enable_version_VersionInfoEx="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_wbemprox_Whitespace="$1"
 	enable_wiaservc_IEnumWIA_DEV_INFO="$1"
@@ -303,9 +301,6 @@ patch_enable ()
 			;;
 		advapi32-OpenSCManagerW)
 			enable_advapi32_OpenSCManagerW="$2"
-			;;
-		atl-AtlIPersistPropertyBag_Save)
-			enable_atl_AtlIPersistPropertyBag_Save="$2"
 			;;
 		browseui-ACLShell_IEnumString)
 			enable_browseui_ACLShell_IEnumString="$2"
@@ -768,9 +763,6 @@ patch_enable ()
 			;;
 		version-VerQueryValue)
 			enable_version_VerQueryValue="$2"
-			;;
-		version-VersionInfoEx)
-			enable_version_VersionInfoEx="$2"
 			;;
 		wbemdisp-ISWbemSecurity)
 			enable_wbemdisp_ISWbemSecurity="$2"
@@ -1260,9 +1252,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_advapi32_OpenSCManagerW" -gt 1; then
 		abort "Patchset advapi32-OpenSCManagerW disabled, but category-stable depends on that."
 	fi
-	if test "$enable_atl_AtlIPersistPropertyBag_Save" -gt 1; then
-		abort "Patchset atl-AtlIPersistPropertyBag_Save disabled, but category-stable depends on that."
-	fi
 	if test "$enable_combase_String" -gt 1; then
 		abort "Patchset combase-String disabled, but category-stable depends on that."
 	fi
@@ -1452,9 +1441,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_user32_WndProc" -gt 1; then
 		abort "Patchset user32-WndProc disabled, but category-stable depends on that."
 	fi
-	if test "$enable_version_VersionInfoEx" -gt 1; then
-		abort "Patchset version-VersionInfoEx disabled, but category-stable depends on that."
-	fi
 	if test "$enable_windowscodecs_GIF_Decoder" -gt 1; then
 		abort "Patchset windowscodecs-GIF_Decoder disabled, but category-stable depends on that."
 	fi
@@ -1524,7 +1510,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_Compiler_Warnings=1
 	enable_Staging=1
 	enable_advapi32_OpenSCManagerW=1
-	enable_atl_AtlIPersistPropertyBag_Save=1
 	enable_combase_String=1
 	enable_configure_Absolute_RPATH=1
 	enable_d3d11_D3D11CreateDeviceAndSwapChain=1
@@ -1588,7 +1573,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_user32_DrawTextExW=1
 	enable_user32_GetRawInputDeviceList=1
 	enable_user32_WndProc=1
-	enable_version_VersionInfoEx=1
 	enable_windowscodecs_GIF_Decoder=1
 	enable_wine_inf_Performance=1
 	enable_wine_inf_ProfileList_UserSID=1
@@ -1764,18 +1748,18 @@ if test "$enable_kernel32_CopyFileEx" -eq 1; then
 	enable_ntdll_FileDispositionInformation=1
 fi
 
-if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
-	if test "$enable_server_File_Permissions" -gt 1; then
-		abort "Patchset server-File_Permissions disabled, but ntdll-FileDispositionInformation depends on that."
-	fi
-	enable_server_File_Permissions=1
-fi
-
 if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
 	if test "$enable_kernel32_SetFileCompletionNotificationMode" -gt 1; then
 		abort "Patchset kernel32-SetFileCompletionNotificationMode disabled, but kernel32-SetFileInformationByHandle depends on that."
 	fi
 	enable_kernel32_SetFileCompletionNotificationMode=1
+fi
+
+if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
+	if test "$enable_server_File_Permissions" -gt 1; then
+		abort "Patchset server-File_Permissions disabled, but ntdll-FileDispositionInformation depends on that."
+	fi
+	enable_server_File_Permissions=1
 fi
 
 if test "$enable_dxva2_Video_Decoder" -eq 1; then
@@ -2066,22 +2050,6 @@ if test "$enable_advapi32_OpenSCManagerW" -eq 1; then
 	patch_apply advapi32-OpenSCManagerW/0001-advapi32-Fix-error-handling-in-OpenSCManagerW.patch
 	(
 		echo '+    { "Sebastian Lackner", "advapi32: Fix error handling in OpenSCManagerW.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset atl-AtlIPersistPropertyBag_Save
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#33888] Add stub for atl80.AtlIPersistPropertyBag_Save
-# |
-# | Modified files:
-# |   *	dlls/atl/atl.c, dlls/atl/atl.spec, dlls/atl100/atl100.spec, dlls/atl110/atl110.spec, dlls/atl80/atl80.spec,
-# | 	dlls/atl90/atl90.spec
-# |
-if test "$enable_atl_AtlIPersistPropertyBag_Save" -eq 1; then
-	patch_apply atl-AtlIPersistPropertyBag_Save/0001-atl-Added-stub-AtlIPersistPropertyBag_Save.patch
-	(
-		echo '+    { "Qian Hong", "atl: Added stub AtlIPersistPropertyBag_Save.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2650,6 +2618,18 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -2667,18 +2647,6 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3389,36 +3357,6 @@ if test "$enable_kernel32_CompareStringEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-SetFileCompletionNotificationMode
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38493] Add stub for kernel32.SetFileCompletionNotificationModes (for Steam in Win7 mode)
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/kernel32/file.c,
-# | 	dlls/kernel32/kernel32.spec, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileCompletionNotificationMode" -eq 1; then
-	patch_apply kernel32-SetFileCompletionNotificationMode/0001-kernel32-Implement-SetFileCompletionNotificationMode.patch
-	(
-		echo '+    { "Olivier F. R. Dierick", "kernel32: Implement SetFileCompletionNotificationModes as a stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-File_Permissions
 # |
 # | Modified files:
@@ -3457,6 +3395,36 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Added tests to set disposition on file which is mapped to memory.", 1 },';
 		echo '+    { "Qian Hong", "server: Do not allow to set disposition on file which has a file mapping.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetFileCompletionNotificationMode
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38493] Add stub for kernel32.SetFileCompletionNotificationModes (for Steam in Win7 mode)
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/kernel32/file.c,
+# | 	dlls/kernel32/kernel32.spec, include/winbase.h
+# |
+if test "$enable_kernel32_SetFileCompletionNotificationMode" -eq 1; then
+	patch_apply kernel32-SetFileCompletionNotificationMode/0001-kernel32-Implement-SetFileCompletionNotificationMode.patch
+	(
+		echo '+    { "Olivier F. R. Dierick", "kernel32: Implement SetFileCompletionNotificationModes as a stub.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5151,24 +5119,6 @@ if test "$enable_version_VerQueryValue" -eq 1; then
 	patch_apply version-VerQueryValue/0001-version-Test-for-VerQueryValueA-try-2.patch
 	(
 		echo '+    { "Mark Jansen", "version: Test for VerQueryValueA.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset version-VersionInfoEx
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38098] Add semi-stub for GetFileVersionInfoExA/W
-# |   *	[#38090] Add semi-stub for GetFileVersionInfoSizeExA/W
-# |
-# | Modified files:
-# |   *	dlls/version/version.c
-# |
-if test "$enable_version_VersionInfoEx" -eq 1; then
-	patch_apply version-VersionInfoEx/0001-version-Partially-implement-GetFileVersionInfoSizeEx.patch
-	patch_apply version-VersionInfoEx/0002-version-Partially-implement-GetFileVersionInfoExA-W.patch
-	(
-		echo '+    { "Sebastian Lackner", "version: Partially implement GetFileVersionInfoSizeExA/W.", 1 },';
-		echo '+    { "Sebastian Lackner", "version: Partially implement GetFileVersionInfoExA/W.", 1 },';
 	) >> "$patchlist"
 fi
 

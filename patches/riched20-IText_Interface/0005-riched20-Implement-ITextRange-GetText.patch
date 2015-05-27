@@ -1,4 +1,4 @@
-From 842d74c575aa057b5c093bc8570568bb88e6216b Mon Sep 17 00:00:00 2001
+From 74ef4d73346d9607112923c1e9598b3c4db19433 Mon Sep 17 00:00:00 2001
 From: Jactry Zeng <wine@jactry.com>
 Date: Wed, 13 Aug 2014 15:40:11 +0800
 Subject: riched20: Implement ITextRange::GetText.
@@ -9,10 +9,10 @@ Subject: riched20: Implement ITextRange::GetText.
  2 files changed, 68 insertions(+), 36 deletions(-)
 
 diff --git a/dlls/riched20/richole.c b/dlls/riched20/richole.c
-index 9605404..da375e0 100644
+index 155ebca..d0834da 100644
 --- a/dlls/riched20/richole.c
 +++ b/dlls/riched20/richole.c
-@@ -1145,11 +1145,36 @@ static HRESULT WINAPI ITextRange_fnInvoke(ITextRange *me, DISPID dispIdMember, R
+@@ -1393,11 +1393,36 @@ static HRESULT WINAPI ITextRange_fnInvoke(ITextRange *me, DISPID dispIdMember, R
      return hr;
  }
  
@@ -50,7 +50,7 @@ index 9605404..da375e0 100644
  
      if (!This->reOle)
          return CO_E_RELEASED;
-@@ -1157,8 +1182,9 @@ static HRESULT WINAPI ITextRange_fnGetText(ITextRange *me, BSTR *pbstr)
+@@ -1405,8 +1430,9 @@ static HRESULT WINAPI ITextRange_fnGetText(ITextRange *me, BSTR *pbstr)
      if (!pbstr)
          return E_INVALIDARG;
  
@@ -61,8 +61,8 @@ index 9605404..da375e0 100644
 +    return range_GetText(This->reOle->editor, &start, &end, pbstr);
  }
  
- static HRESULT WINAPI ITextRange_fnSetText(ITextRange *me, BSTR bstr)
-@@ -3762,8 +3788,6 @@ static HRESULT WINAPI ITextSelection_fnGetText(ITextSelection *me, BSTR *pbstr)
+ static HRESULT WINAPI ITextRange_fnSetText(ITextRange *me, BSTR str)
+@@ -4051,8 +4077,6 @@ static HRESULT WINAPI ITextSelection_fnGetText(ITextSelection *me, BSTR *pbstr)
  {
      ITextSelectionImpl *This = impl_from_ITextSelection(me);
      ME_Cursor *start = NULL, *end = NULL;
@@ -71,7 +71,7 @@ index 9605404..da375e0 100644
  
      TRACE("(%p)->(%p)\n", This, pbstr);
  
-@@ -3774,23 +3798,7 @@ static HRESULT WINAPI ITextSelection_fnGetText(ITextSelection *me, BSTR *pbstr)
+@@ -4063,23 +4087,7 @@ static HRESULT WINAPI ITextSelection_fnGetText(ITextSelection *me, BSTR *pbstr)
          return E_INVALIDARG;
  
      ME_GetSelection(This->reOle->editor, &start, &end);
@@ -95,12 +95,12 @@ index 9605404..da375e0 100644
 +    return range_GetText(This->reOle->editor, start, end, pbstr);
  }
  
- static HRESULT WINAPI ITextSelection_fnSetText(ITextSelection *me, BSTR bstr)
+ static HRESULT WINAPI ITextSelection_fnSetText(ITextSelection *me, BSTR str)
 diff --git a/dlls/riched20/tests/richole.c b/dlls/riched20/tests/richole.c
-index ab94b58..aaeb0c9 100644
+index 0065196..d7642d4 100644
 --- a/dlls/riched20/tests/richole.c
 +++ b/dlls/riched20/tests/richole.c
-@@ -527,27 +527,22 @@ static void test_GetText(void)
+@@ -529,27 +529,22 @@ static void test_GetText(void)
    hres = ITextDocument_Range(txtDoc, 0, 4, &range);
    ok(hres == S_OK, "got 0x%08x\n", hres);
    hres = ITextRange_GetText(range, &bstr);
@@ -128,7 +128,7 @@ index ab94b58..aaeb0c9 100644
    ok(hres == S_OK, "got 0x%08x\n", hres);
    ok(!bstr, "got wrong text: %s\n", wine_dbgstr_w(bstr));
    if (!is64bit)
-@@ -560,37 +555,30 @@ todo_wine
+@@ -562,37 +557,30 @@ todo_wine
    hres = ITextDocument_Range(txtDoc, 8, 12, &range);
    ok(hres == S_OK, "got 0x%08x\n", hres);
    hres = ITextRange_GetText(range, &bstr);
@@ -166,7 +166,7 @@ index ab94b58..aaeb0c9 100644
    ok(hres == S_OK, "got 0x%08x\n", hres);
    ok(!bstr, "got wrong text: %s\n", wine_dbgstr_w(bstr));
    ITextRange_Release(range);
-@@ -598,10 +586,8 @@ todo_wine
+@@ -600,10 +588,8 @@ todo_wine
    hres = ITextDocument_Range(txtDoc, -1, 9, &range);
    ok(hres == S_OK, "got 0x%08x\n", hres);
    hres = ITextRange_GetText(range, &bstr);
@@ -177,7 +177,7 @@ index ab94b58..aaeb0c9 100644
    SysFreeString(bstr);
  
    release_interfaces(&w, &reOle, &txtDoc, NULL);
-@@ -2302,6 +2288,43 @@ static void test_ITextRange_GetPara(void)
+@@ -2755,6 +2741,43 @@ static void test_ITextRange_GetPara(void)
    ITextPara_Release(txtPara);
  }
  
@@ -221,7 +221,7 @@ index ab94b58..aaeb0c9 100644
  START_TEST(richole)
  {
    /* Must explicitly LoadLibrary(). The test has no references to functions in
-@@ -2327,6 +2350,7 @@ START_TEST(richole)
+@@ -2780,6 +2803,7 @@ START_TEST(richole)
    test_ITextRange_SetEnd();
    test_ITextRange_GetFont();
    test_ITextRange_GetPara();
@@ -230,5 +230,5 @@ index ab94b58..aaeb0c9 100644
    test_IOleWindow_GetWindow();
    test_IOleInPlaceSite_GetWindow();
 -- 
-2.4.0
+2.4.1
 

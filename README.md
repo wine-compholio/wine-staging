@@ -231,7 +231,7 @@ for more details.*
 * SO_CONNECT_TIME returns the appropriate time
 * Scrolling causes mouse and screen to lock in Call to Power II ([Wine Bug #34559](https://bugs.winehq.org/show_bug.cgi?id=34559))
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](https://bugs.winehq.org/show_bug.cgi?id=35652))
-* Set last error when GetRawInputDeviceList fails ([Wine Bug #37667](https://bugs.winehq.org/show_bug.cgi?id=37667))
+* ~~Set last error when GetRawInputDeviceList fails~~ ([Wine Bug #37667](https://bugs.winehq.org/show_bug.cgi?id=37667))
 * Show unmounted devices in winecfg and allow changing the unix path
 * Skip unknown item when decoding a CMS certificate ([Wine Bug #34388](https://bugs.winehq.org/show_bug.cgi?id=34388))
 * Software support for Environmental Audio Extensions (EAX)

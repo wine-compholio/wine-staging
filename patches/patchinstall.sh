@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 530d269e0187f2d0b406f8d5e3c4de974bf553ae"
+	echo "  commit 39d71c52ef7839fe7daad97b009d029b71f691ba"
 	echo ""
 }
 
@@ -160,7 +160,6 @@ patch_enable_all ()
 	enable_ntdll_DVD_Read_Size="$1"
 	enable_ntdll_DllRedirects="$1"
 	enable_ntdll_Exception="$1"
-	enable_ntdll_FD_Cache="$1"
 	enable_ntdll_FileDispositionInformation="$1"
 	enable_ntdll_FileFsFullSizeInformation="$1"
 	enable_ntdll_Fix_Alignment="$1"
@@ -227,7 +226,6 @@ patch_enable_all ()
 	enable_urlmon_CoInternetSetFeatureEnabled="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawTextExW="$1"
-	enable_user32_GetRawInputDeviceList="$1"
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_Mouse_Message_Hwnd="$1"
 	enable_user32_Painting="$1"
@@ -540,9 +538,6 @@ patch_enable ()
 		ntdll-Exception)
 			enable_ntdll_Exception="$2"
 			;;
-		ntdll-FD_Cache)
-			enable_ntdll_FD_Cache="$2"
-			;;
 		ntdll-FileDispositionInformation)
 			enable_ntdll_FileDispositionInformation="$2"
 			;;
@@ -740,9 +735,6 @@ patch_enable ()
 			;;
 		user32-DrawTextExW)
 			enable_user32_DrawTextExW="$2"
-			;;
-		user32-GetRawInputDeviceList)
-			enable_user32_GetRawInputDeviceList="$2"
 			;;
 		user32-GetSystemMetrics)
 			enable_user32_GetSystemMetrics="$2"
@@ -1439,9 +1431,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_user32_DrawTextExW" -gt 1; then
 		abort "Patchset user32-DrawTextExW disabled, but category-stable depends on that."
 	fi
-	if test "$enable_user32_GetRawInputDeviceList" -gt 1; then
-		abort "Patchset user32-GetRawInputDeviceList disabled, but category-stable depends on that."
-	fi
 	if test "$enable_user32_WndProc" -gt 1; then
 		abort "Patchset user32-WndProc disabled, but category-stable depends on that."
 	fi
@@ -1575,7 +1564,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_shell32_SHFileOperation=1
 	enable_urlmon_CoInternetSetFeatureEnabled=1
 	enable_user32_DrawTextExW=1
-	enable_user32_GetRawInputDeviceList=1
 	enable_user32_WndProc=1
 	enable_windowscodecs_GIF_Decoder=1
 	enable_wine_inf_Performance=1
@@ -3885,18 +3873,6 @@ if test "$enable_ntdll_Exception" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-FD_Cache
-# |
-# | Modified files:
-# |   *	libs/port/interlocked.c
-# |
-if test "$enable_ntdll_FD_Cache" -eq 1; then
-	patch_apply ntdll-FD_Cache/0001-libs-Implement-interlocked_cmpxchg64-on-PowerPC-usin.patch
-	(
-		echo '+    { "Sebastian Lackner", "libs: Implement interlocked_cmpxchg64 on PowerPC using pthread mutex.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-FileFsFullSizeInformation
 # |
 # | Modified files:
@@ -4994,21 +4970,6 @@ if test "$enable_user32_DrawTextExW" -eq 1; then
 	patch_apply user32-DrawTextExW/0001-user32-Fix-handling-of-invert_y-in-DrawTextExW.patch
 	(
 		echo '+    { "Sebastian Lackner", "user32: Fix handling of invert_y in DrawTextExW.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-GetRawInputDeviceList
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37667] Set last error when GetRawInputDeviceList fails
-# |
-# | Modified files:
-# |   *	dlls/user32/input.c
-# |
-if test "$enable_user32_GetRawInputDeviceList" -eq 1; then
-	patch_apply user32-GetRawInputDeviceList/0001-user32-Set-last-error-when-GetRawInputDeviceList-fai.patch
-	(
-		echo '+    { "Andrew Church", "user32: Set last error when GetRawInputDeviceList fails.", 1 },';
 	) >> "$patchlist"
 fi
 

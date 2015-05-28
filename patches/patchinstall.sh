@@ -247,6 +247,7 @@ patch_enable_all ()
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
 	enable_winecfg_Unmounted_Devices="$1"
+	enable_wineconsole_Insert_Mode="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
@@ -798,6 +799,9 @@ patch_enable ()
 			;;
 		winecfg-Unmounted_Devices)
 			enable_winecfg_Unmounted_Devices="$2"
+			;;
+		wineconsole-Insert_Mode)
+			enable_wineconsole_Insert_Mode="$2"
 			;;
 		wined3d-CSMT_Helper)
 			enable_wined3d_CSMT_Helper="$2"
@@ -5270,6 +5274,28 @@ if test "$enable_winecfg_Unmounted_Devices" -eq 1; then
 	patch_apply winecfg-Unmounted_Devices/0001-winecfg-Show-unmounted-devices-and-allow-changing-th.patch
 	(
 		echo '+    { "Michael Müller", "winecfg: Show unmounted devices and allow changing the device value.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wineconsole-Insert_Mode
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36704] Allow to enable/disable InsertMode in wineconsole settings
+# |
+# | Modified files:
+# |   *	programs/wineconsole/dialog.c, programs/wineconsole/registry.c, programs/wineconsole/winecon_private.h,
+# | 	programs/wineconsole/wineconsole.c, programs/wineconsole/wineconsole.rc, programs/wineconsole/wineconsole_res.h
+# |
+if test "$enable_wineconsole_Insert_Mode" -eq 1; then
+	patch_apply wineconsole-Insert_Mode/0001-wineconsole-Rearrange-user-dialog-to-make-space-for-.patch
+	patch_apply wineconsole-Insert_Mode/0002-wineconsole-Improve-semantics-of-some-poorly-worded-.patch
+	patch_apply wineconsole-Insert_Mode/0003-wineconsole-Add-InsertMode-to-HKCU.patch
+	patch_apply wineconsole-Insert_Mode/0004-wineconsole-Add-InsertMode-to-the-user-dialog.patch
+	(
+		echo '+    { "Hugh McMaster", "wineconsole: Rearrange user dialog to make space for InsertMode checkbox.", 1 },';
+		echo '+    { "Hugh McMaster", "wineconsole: Improve semantics of some poorly-worded resource strings.", 1 },';
+		echo '+    { "Hugh McMaster", "wineconsole: Add InsertMode to HKCU.", 1 },';
+		echo '+    { "Hugh McMaster", "wineconsole: Add InsertMode to the user dialog.", 1 },';
 	) >> "$patchlist"
 fi
 

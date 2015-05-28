@@ -1,0 +1,126 @@
+From 51f0cd8d176e8889b969ba9f02de67041c30b313 Mon Sep 17 00:00:00 2001
+From: Hugh McMaster <hugh.mcmaster@outlook.com>
+Date: Thu, 28 May 2015 21:53:55 +1000
+Subject: wineconsole: Add InsertMode to the user dialog
+
+---
+ programs/wineconsole/dialog.c          |  5 +++++
+ programs/wineconsole/wineconsole.c     | 32 +++++++++++++++++++++++++++++++-
+ programs/wineconsole/wineconsole.rc    |  1 +
+ programs/wineconsole/wineconsole_res.h |  1 +
+ 4 files changed, 38 insertions(+), 1 deletion(-)
+
+diff --git a/programs/wineconsole/dialog.c b/programs/wineconsole/dialog.c
+index 8573d07..493990d 100644
+--- a/programs/wineconsole/dialog.c
++++ b/programs/wineconsole/dialog.c
+@@ -76,6 +76,8 @@ static INT_PTR WINAPI WCUSER_OptionDlgProc(HWND hDlg, UINT msg, WPARAM wParam, L
+ 	SetDlgItemInt(hDlg, IDC_OPT_HIST_SIZE, di->config.history_size,  FALSE);
+         SendDlgItemMessageW(hDlg, IDC_OPT_HIST_NODOUBLE, BM_SETCHECK,
+                             (di->config.history_nodup) ? BST_CHECKED : BST_UNCHECKED, 0);
++        SendDlgItemMessageW(hDlg, IDC_OPT_INSERT_MODE, BM_SETCHECK,
++                            (di->config.insert_mode) ? BST_CHECKED : BST_UNCHECKED, 0);
+         SendDlgItemMessageW(hDlg, IDC_OPT_CONF_CTRL, BM_SETCHECK,
+                             (di->config.menu_mask & MK_CONTROL) ? BST_CHECKED : BST_UNCHECKED, 0);
+         SendDlgItemMessageW(hDlg, IDC_OPT_CONF_SHIFT, BM_SETCHECK,
+@@ -121,6 +123,9 @@ static INT_PTR WINAPI WCUSER_OptionDlgProc(HWND hDlg, UINT msg, WPARAM wParam, L
+             val = (IsDlgButtonChecked(hDlg, IDC_OPT_HIST_NODOUBLE) & BST_CHECKED) != 0;
+             di->config.history_nodup = val;
+ 
++            val = (IsDlgButtonChecked(hDlg, IDC_OPT_INSERT_MODE) & BST_CHECKED) != 0;
++            di->config.insert_mode = val;
++
+             val = 0;
+             if (IsDlgButtonChecked(hDlg, IDC_OPT_CONF_CTRL) & BST_CHECKED)  val |= MK_CONTROL;
+             if (IsDlgButtonChecked(hDlg, IDC_OPT_CONF_SHIFT) & BST_CHECKED) val |= MK_SHIFT;
+diff --git a/programs/wineconsole/wineconsole.c b/programs/wineconsole/wineconsole.c
+index ed5f816..b7a968c 100644
+--- a/programs/wineconsole/wineconsole.c
++++ b/programs/wineconsole/wineconsole.c
+@@ -150,6 +150,25 @@ static BOOL WINECON_SetHistoryMode(HANDLE hConIn, int mode)
+ }
+ 
+ /******************************************************************
++ *		WINECON_SetInsertMode
++ *
++ *
++ */
++static void WINECON_SetInsertMode(HANDLE hConIn, int enable)
++{
++    DWORD mode;
++
++    if (GetConsoleMode( hConIn, &mode ))
++    {
++        if (enable)
++            mode |= ENABLE_INSERT_MODE|ENABLE_EXTENDED_FLAGS;
++        else
++            mode &= ~ENABLE_INSERT_MODE;
++        SetConsoleMode( hConIn, mode );
++    }
++}
++
++/******************************************************************
+  *		WINECON_GetConsoleTitle
+  *
+  *
+@@ -397,6 +416,11 @@ void     WINECON_SetConfig(struct inner_data* data, const struct config_data* cf
+         data->curcfg.history_nodup = cfg->history_nodup;
+         WINECON_SetHistoryMode(data->hConIn, cfg->history_nodup);
+     }
++    if (data->curcfg.insert_mode != cfg->insert_mode)
++    {
++        data->curcfg.insert_mode = cfg->insert_mode;
++        WINECON_SetInsertMode(data->hConIn, cfg->insert_mode);
++    }
+     data->curcfg.menu_mask = cfg->menu_mask;
+     data->curcfg.quick_edit = cfg->quick_edit;
+     if (1 /* FIXME: font info has changed */)
+@@ -533,7 +557,12 @@ static void WINECON_Delete(struct inner_data* data)
+  */
+ static BOOL WINECON_GetServerConfig(struct inner_data* data)
+ {
+-    BOOL        ret;
++    BOOL  ret;
++    DWORD mode;
++
++    if (!GetConsoleMode( data->hConIn, &mode )) mode = 0;
++    data->curcfg.insert_mode = (mode & (ENABLE_INSERT_MODE|ENABLE_EXTENDED_FLAGS)) ==
++                                       (ENABLE_INSERT_MODE|ENABLE_EXTENDED_FLAGS);
+ 
+     SERVER_START_REQ(get_console_input_info)
+     {
+@@ -545,6 +574,7 @@ static BOOL WINECON_GetServerConfig(struct inner_data* data)
+     }
+     SERVER_END_REQ;
+     if (!ret) return FALSE;
++
+     SERVER_START_REQ(get_console_output_info)
+     {
+         req->handle = wine_server_obj_handle( data->hConOut );
+diff --git a/programs/wineconsole/wineconsole.rc b/programs/wineconsole/wineconsole.rc
+index 4226ba3..a3afa1b 100644
+--- a/programs/wineconsole/wineconsole.rc
++++ b/programs/wineconsole/wineconsole.rc
+@@ -66,6 +66,7 @@ FONT 8, "MS Shell Dlg"
+ 
+     GROUPBOX "Console", -1, 80, 5, 120, 54, BS_GROUPBOX
+     AUTOCHECKBOX "&QuickEdit mode", IDC_OPT_QUICK_EDIT, 84, 18, 70, 10, WS_TABSTOP
++    AUTOCHECKBOX "&Insert mode", IDC_OPT_INSERT_MODE, 84, 30, 70, 10, WS_TABSTOP
+ 
+     GROUPBOX "Popup menu", -1, 5, 61, 70, 42, BS_GROUPBOX
+     AUTOCHECKBOX "&Control", IDC_OPT_CONF_CTRL, 9, 74, 60, 10, WS_TABSTOP
+diff --git a/programs/wineconsole/wineconsole_res.h b/programs/wineconsole/wineconsole_res.h
+index ac62b58..8261fd5 100644
+--- a/programs/wineconsole/wineconsole_res.h
++++ b/programs/wineconsole/wineconsole_res.h
+@@ -70,6 +70,7 @@
+ #define IDC_OPT_CONF_CTRL       0x0107
+ #define IDC_OPT_CONF_SHIFT      0x0108
+ #define IDC_OPT_QUICK_EDIT      0x0109
++#define IDC_OPT_INSERT_MODE     0x0110
+ 
+ #define IDC_FNT_LIST_FONT	0x0201
+ #define IDC_FNT_LIST_SIZE	0x0202
+-- 
+2.4.1
+

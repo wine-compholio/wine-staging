@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 39d71c52ef7839fe7daad97b009d029b71f691ba"
+	echo "  commit 22983f2b65dc40bfa90a73e3e3bd2e13cc90e22f"
 	echo ""
 }
 

@@ -267,6 +267,7 @@ patch_enable_all ()
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
 	enable_winex11_wglShareLists="$1"
+	enable_wininet_Cache_Long_URLs="$1"
 	enable_wininet_Cleanup="$1"
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
 	enable_winmm_Delay_Import_Depends="$1"
@@ -860,6 +861,9 @@ patch_enable ()
 			;;
 		winex11-wglShareLists)
 			enable_winex11_wglShareLists="$2"
+			;;
+		wininet-Cache_Long_URLs)
+			enable_wininet_Cache_Long_URLs="$2"
 			;;
 		wininet-Cleanup)
 			enable_wininet_Cleanup="$2"
@@ -5536,6 +5540,18 @@ if test "$enable_winex11_wglShareLists" -eq 1; then
 	patch_apply winex11-wglShareLists/0001-winex11.drv-Only-warn-about-used-contexts-in-wglShar.patch
 	(
 		echo '+    { "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wininet-Cache_Long_URLs
+# |
+# | Modified files:
+# |   *	dlls/wininet/urlcache.c
+# |
+if test "$enable_wininet_Cache_Long_URLs" -eq 1; then
+	patch_apply wininet-Cache_Long_URLs/0001-wininet-Use-random-names-when-caching-very-long-urls.patch
+	(
+		echo '+    { "Michael Müller", "wininet: Use random names when caching very long urls.", 1 },';
 	) >> "$patchlist"
 fi
 

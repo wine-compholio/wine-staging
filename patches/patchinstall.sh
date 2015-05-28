@@ -127,6 +127,7 @@ patch_enable_all ()
 	enable_gdiplus_GdipCreateRegionRgnData="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imagehlp_ImageLoad="$1"
+	enable_iphlpapi_ConvertInterfaceLuidToGuid="$1"
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_CompareStringEx="$1"
 	enable_kernel32_CopyFileEx="$1"
@@ -439,6 +440,9 @@ patch_enable ()
 			;;
 		imagehlp-ImageLoad)
 			enable_imagehlp_ImageLoad="$2"
+			;;
+		iphlpapi-ConvertInterfaceLuidToGuid)
+			enable_iphlpapi_ConvertInterfaceLuidToGuid="$2"
 			;;
 		iphlpapi-TCP_Table)
 			enable_iphlpapi_TCP_Table="$2"
@@ -1744,18 +1748,18 @@ if test "$enable_kernel32_CopyFileEx" -eq 1; then
 	enable_ntdll_FileDispositionInformation=1
 fi
 
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	if test "$enable_kernel32_SetFileCompletionNotificationMode" -gt 1; then
-		abort "Patchset kernel32-SetFileCompletionNotificationMode disabled, but kernel32-SetFileInformationByHandle depends on that."
-	fi
-	enable_kernel32_SetFileCompletionNotificationMode=1
-fi
-
 if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 	if test "$enable_server_File_Permissions" -gt 1; then
 		abort "Patchset server-File_Permissions disabled, but ntdll-FileDispositionInformation depends on that."
 	fi
 	enable_server_File_Permissions=1
+fi
+
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	if test "$enable_kernel32_SetFileCompletionNotificationMode" -gt 1; then
+		abort "Patchset kernel32-SetFileCompletionNotificationMode disabled, but kernel32-SetFileInformationByHandle depends on that."
+	fi
+	enable_kernel32_SetFileCompletionNotificationMode=1
 fi
 
 if test "$enable_dxva2_Video_Decoder" -eq 1; then
@@ -3326,6 +3330,21 @@ if test "$enable_imagehlp_ImageLoad" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset iphlpapi-ConvertInterfaceLuidToGuid
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38576] Add stub for iphlpapi.ConvertInterfaceLuidToGuid
+# |
+# | Modified files:
+# |   *	dlls/iphlpapi/iphlpapi.spec, dlls/iphlpapi/iphlpapi_main.c
+# |
+if test "$enable_iphlpapi_ConvertInterfaceLuidToGuid" -eq 1; then
+	patch_apply iphlpapi-ConvertInterfaceLuidToGuid/0001-iphlpapi-Add-stub-for-ConvertInterfaceLuidToGuid.patch
+	(
+		echo '+    { "Sebastian Lackner", "iphlpapi: Add stub for ConvertInterfaceLuidToGuid.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset iphlpapi-TCP_Table
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3350,6 +3369,36 @@ if test "$enable_kernel32_CompareStringEx" -eq 1; then
 	patch_apply kernel32-CompareStringEx/0001-kernel32-Silence-repeated-CompareStringEx-FIXME.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32: Silence repeated CompareStringEx FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetFileCompletionNotificationMode
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38493] Add stub for kernel32.SetFileCompletionNotificationModes (for Steam in Win7 mode)
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/kernel32/file.c,
+# | 	dlls/kernel32/kernel32.spec, include/winbase.h
+# |
+if test "$enable_kernel32_SetFileCompletionNotificationMode" -eq 1; then
+	patch_apply kernel32-SetFileCompletionNotificationMode/0001-kernel32-Implement-SetFileCompletionNotificationMode.patch
+	(
+		echo '+    { "Olivier F. R. Dierick", "kernel32: Implement SetFileCompletionNotificationModes as a stub.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3391,36 +3440,6 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Added tests to set disposition on file which is mapped to memory.", 1 },';
 		echo '+    { "Qian Hong", "server: Do not allow to set disposition on file which has a file mapping.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-SetFileCompletionNotificationMode
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38493] Add stub for kernel32.SetFileCompletionNotificationModes (for Steam in Win7 mode)
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/kernel32/file.c,
-# | 	dlls/kernel32/kernel32.spec, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileCompletionNotificationMode" -eq 1; then
-	patch_apply kernel32-SetFileCompletionNotificationMode/0001-kernel32-Implement-SetFileCompletionNotificationMode.patch
-	(
-		echo '+    { "Olivier F. R. Dierick", "kernel32: Implement SetFileCompletionNotificationModes as a stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,153 @@
+From 5eb09620a17c714c4a2162dd69d4f748f5634859 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 29 May 2015 22:49:24 +0200
+Subject: server: Fix handling of opening a file with RootDirectory pointing to
+ a file handle.
+
+---
+ dlls/ntdll/tests/file.c | 13 +++++++++++--
+ server/fd.c             | 32 ++++++++++++++++++++++++++------
+ server/file.c           | 22 +++++++++++++++++++++-
+ 3 files changed, 58 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index 2df0edc..1e5b340 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -297,7 +297,7 @@ static void create_file_test(void)
+ 
+ static void open_file_test(void)
+ {
+-    static const WCHAR fooW[] = {'f','o','o',0};
++    static WCHAR fooW[] = {'f','o','o',0};
+     NTSTATUS status;
+     HANDLE dir, root, handle, file;
+     WCHAR path[MAX_PATH], tmpfile[MAX_PATH];
+@@ -443,13 +443,22 @@ static void open_file_test(void)
+     ok( !status, "open %s failed %x\n", wine_dbgstr_w(nameW.Buffer), status );
+     pRtlFreeUnicodeString( &nameW );
+ 
++    nameW.Length = sizeof(fooW) - sizeof(WCHAR);
++    nameW.Buffer = fooW;
++    attr.RootDirectory = file;
++    attr.ObjectName = &nameW;
++    status = pNtOpenFile( &root, SYNCHRONIZE|FILE_LIST_DIRECTORY, &attr, &io,
++                         FILE_SHARE_READ, FILE_SYNCHRONOUS_IO_NONALERT );
++    ok( status == STATUS_OBJECT_PATH_NOT_FOUND,
++        "expected STATUS_OBJECT_PATH_NOT_FOUND, got %08x\n", status );
++
+     nameW.Length = 0;
+     nameW.Buffer = NULL;
+     attr.RootDirectory = file;
+     attr.ObjectName = &nameW;
+     status = pNtOpenFile( &root, SYNCHRONIZE|FILE_LIST_DIRECTORY, &attr, &io,
+                           FILE_SHARE_READ, FILE_SYNCHRONOUS_IO_NONALERT );
+-    todo_wine ok( !status, "open %s failed %x\n", wine_dbgstr_w(tmpfile), status );
++    ok( !status, "open %s failed %x\n", wine_dbgstr_w(tmpfile), status );
+ 
+     CloseHandle( file );
+     CloseHandle( root );
+diff --git a/server/fd.c b/server/fd.c
+index f0a52ad..2fee65d 100644
+--- a/server/fd.c
++++ b/server/fd.c
+@@ -2238,14 +2238,36 @@ DECL_HANDLER(flush)
+ DECL_HANDLER(open_file_object)
+ {
+     struct unicode_str name;
+-    struct directory *root = NULL;
++    struct directory *root;
+     struct object *obj, *result;
+ 
+     get_req_unicode_str( &name );
+-    if (req->rootdir && !(root = get_directory_obj( current->process, req->rootdir, 0 )))
+-        return;
++    if (req->rootdir)
++    {
++        if ((root = get_directory_obj( current->process, req->rootdir, 0 )))
++        {
++            obj = open_object_dir( root, &name, req->attributes, NULL );
++            release_object( root );
++        }
++        else if (get_error() == STATUS_OBJECT_TYPE_MISMATCH &&
++                 (obj = (struct object *)get_file_obj( current->process, req->rootdir, 0 )))
++        {
++            if (name.len)
++            {
++                release_object( obj );
++                set_error( STATUS_OBJECT_PATH_NOT_FOUND );
++                return;
++            }
++            clear_error();
++        }
++        else return;
++    }
++    else
++    {
++        obj = open_object_dir( NULL, &name, req->attributes, NULL );
++    }
+ 
+-    if ((obj = open_object_dir( root, &name, req->attributes, NULL )))
++    if (obj)
+     {
+         if ((result = obj->ops->open_file( obj, req->access, req->sharing, req->options )))
+         {
+@@ -2254,8 +2276,6 @@ DECL_HANDLER(open_file_object)
+         }
+         release_object( obj );
+     }
+-
+-    if (root) release_object( root );
+ }
+ 
+ /* get the Unix name from a file handle */
+diff --git a/server/file.c b/server/file.c
+index 792bbe0..900a17b 100644
+--- a/server/file.c
++++ b/server/file.c
+@@ -67,6 +67,8 @@ static void file_dump( struct object *obj, int verbose );
+ static struct fd *file_get_fd( struct object *obj );
+ static struct security_descriptor *file_get_sd( struct object *obj );
+ static int file_set_sd( struct object *obj, const struct security_descriptor *sd, unsigned int set_info );
++static struct object *file_open_file( struct object *obj, unsigned int access,
++                                      unsigned int sharing, unsigned int options );
+ static void file_destroy( struct object *obj );
+ 
+ static int file_get_poll_events( struct fd *fd );
+@@ -88,7 +90,7 @@ static const struct object_ops file_ops =
+     file_get_sd,                  /* get_sd */
+     file_set_sd,                  /* set_sd */
+     no_lookup_name,               /* lookup_name */
+-    no_open_file,                 /* open_file */
++    file_open_file,               /* open_file */
+     fd_close_handle,              /* close_handle */
+     file_destroy                  /* destroy */
+ };
+@@ -597,6 +599,24 @@ static int file_set_sd( struct object *obj, const struct security_descriptor *sd
+     return 1;
+ }
+ 
++static struct object *file_open_file( struct object *obj, unsigned int access,
++                                      unsigned int sharing, unsigned int options )
++{
++    struct file *file = (struct file *)obj;
++    struct object *new_file = NULL;
++    struct fd *new_fd;
++
++    assert( obj->ops == &file_ops );
++
++    if ((new_fd = dup_fd_object( file->fd, access, sharing, options )))
++    {
++        new_file = create_file_obj( new_fd, access, file->mode );
++        release_object( new_fd );
++    }
++
++    return new_file;
++}
++
+ static void file_destroy( struct object *obj )
+ {
+     struct file *file = (struct file *)obj;
+-- 
+2.4.2
+

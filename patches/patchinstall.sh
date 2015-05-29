@@ -210,6 +210,7 @@ patch_enable_all ()
 	enable_server_OpenProcess="$1"
 	enable_server_PeekMessage="$1"
 	enable_server_Realtime_Priority="$1"
+	enable_server_RootDirectory_File="$1"
 	enable_server_Shared_Memory="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Unexpected_Wakeup="$1"
@@ -693,6 +694,9 @@ patch_enable ()
 			;;
 		server-Realtime_Priority)
 			enable_server_Realtime_Priority="$2"
+			;;
+		server-RootDirectory_File)
+			enable_server_RootDirectory_File="$2"
 			;;
 		server-Shared_Memory)
 			enable_server_Shared_Memory="$2"
@@ -1682,8 +1686,12 @@ if test "$enable_server_Stored_ACLs" -eq 1; then
 	if test "$enable_server_File_Permissions" -gt 1; then
 		abort "Patchset server-File_Permissions disabled, but server-Stored_ACLs depends on that."
 	fi
+	if test "$enable_server_RootDirectory_File" -gt 1; then
+		abort "Patchset server-RootDirectory_File disabled, but server-Stored_ACLs depends on that."
+	fi
 	enable_ntdll_DOS_Attributes=1
 	enable_server_File_Permissions=1
+	enable_server_RootDirectory_File=1
 fi
 
 if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
@@ -4549,6 +4557,18 @@ if test "$enable_secur32_ANSI_NTLM_Credentials" -eq 1; then
 	patch_apply secur32-ANSI_NTLM_Credentials/0001-secur32-Fix-handling-of-ANSI-NTLM-credentials.patch
 	(
 		echo '+    { "David Woodhouse", "secur32: Fix handling of ANSI NTLM credentials.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-RootDirectory_File
+# |
+# | Modified files:
+# |   *	dlls/ntdll/tests/file.c, server/fd.c, server/file.c
+# |
+if test "$enable_server_RootDirectory_File" -eq 1; then
+	patch_apply server-RootDirectory_File/0001-server-Fix-handling-of-opening-a-file-with-RootDirec.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Fix handling of opening a file with RootDirectory pointing to a file handle.", 1 },';
 	) >> "$patchlist"
 fi
 

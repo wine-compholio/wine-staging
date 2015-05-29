@@ -160,6 +160,7 @@ patch_enable_all ()
 	enable_ntdll_CLI_Images="$1"
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_DVD_Read_Size="$1"
+	enable_ntdll_DeviceType_Systemroot="$1"
 	enable_ntdll_DllRedirects="$1"
 	enable_ntdll_Exception="$1"
 	enable_ntdll_FileDispositionInformation="$1"
@@ -541,6 +542,9 @@ patch_enable ()
 			;;
 		ntdll-DVD_Read_Size)
 			enable_ntdll_DVD_Read_Size="$2"
+			;;
+		ntdll-DeviceType_Systemroot)
+			enable_ntdll_DeviceType_Systemroot="$2"
 			;;
 		ntdll-DllRedirects)
 			enable_ntdll_DllRedirects="$2"
@@ -1756,18 +1760,18 @@ if test "$enable_kernel32_CopyFileEx" -eq 1; then
 	enable_ntdll_FileDispositionInformation=1
 fi
 
-if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
-	if test "$enable_server_File_Permissions" -gt 1; then
-		abort "Patchset server-File_Permissions disabled, but ntdll-FileDispositionInformation depends on that."
-	fi
-	enable_server_File_Permissions=1
-fi
-
 if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
 	if test "$enable_kernel32_SetFileCompletionNotificationMode" -gt 1; then
 		abort "Patchset kernel32-SetFileCompletionNotificationMode disabled, but kernel32-SetFileInformationByHandle depends on that."
 	fi
 	enable_kernel32_SetFileCompletionNotificationMode=1
+fi
+
+if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
+	if test "$enable_server_File_Permissions" -gt 1; then
+		abort "Patchset server-File_Permissions disabled, but ntdll-FileDispositionInformation depends on that."
+	fi
+	enable_server_File_Permissions=1
 fi
 
 if test "$enable_dxva2_Video_Decoder" -eq 1; then
@@ -2641,6 +2645,18 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -2658,18 +2674,6 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3395,36 +3399,6 @@ if test "$enable_kernel32_CompareStringEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-SetFileCompletionNotificationMode
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38493] Add stub for kernel32.SetFileCompletionNotificationModes (for Steam in Win7 mode)
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/kernel32/file.c,
-# | 	dlls/kernel32/kernel32.spec, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileCompletionNotificationMode" -eq 1; then
-	patch_apply kernel32-SetFileCompletionNotificationMode/0001-kernel32-Implement-SetFileCompletionNotificationMode.patch
-	(
-		echo '+    { "Olivier F. R. Dierick", "kernel32: Implement SetFileCompletionNotificationModes as a stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-File_Permissions
 # |
 # | Modified files:
@@ -3463,6 +3437,36 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Added tests to set disposition on file which is mapped to memory.", 1 },';
 		echo '+    { "Qian Hong", "server: Do not allow to set disposition on file which has a file mapping.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetFileCompletionNotificationMode
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38493] Add stub for kernel32.SetFileCompletionNotificationModes (for Steam in Win7 mode)
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/kernel32/file.c,
+# | 	dlls/kernel32/kernel32.spec, include/winbase.h
+# |
+if test "$enable_kernel32_SetFileCompletionNotificationMode" -eq 1; then
+	patch_apply kernel32-SetFileCompletionNotificationMode/0001-kernel32-Implement-SetFileCompletionNotificationMode.patch
+	(
+		echo '+    { "Olivier F. R. Dierick", "kernel32: Implement SetFileCompletionNotificationModes as a stub.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3902,6 +3906,21 @@ if test "$enable_ntdll_DVD_Read_Size" -eq 1; then
 	patch_apply ntdll-DVD_Read_Size/0001-ntdll-Fix-expected-IOCTL_DVD_READ_STRUCTURE-expected.patch
 	(
 		echo '+    { "Erich E. Hoover", "ntdll: Fix expected IOCTL_DVD_READ_STRUCTURE expected output size.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-DeviceType_Systemroot
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36546] Return fake device type when systemroot is located on virtual disk
+# |
+# | Modified files:
+# |   *	dlls/ntdll/file.c
+# |
+if test "$enable_ntdll_DeviceType_Systemroot" -eq 1; then
+	patch_apply ntdll-DeviceType_Systemroot/0001-ntdll-Return-fake-device-type-when-systemroot-is-loc.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Return fake device type when systemroot is located on virtual disk.", 1 },';
 	) >> "$patchlist"
 fi
 

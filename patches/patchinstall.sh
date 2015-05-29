@@ -150,6 +150,7 @@ patch_enable_all ()
 	enable_mmdevapi_AEV_Stubs="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
+	enable_mshtml_get_frame_by_name="$1"
 	enable_msvcp90_basic_string_dtor="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvcrt_atof_strtod="$1"
@@ -512,6 +513,9 @@ patch_enable ()
 			;;
 		mscoree-CorValidateImage)
 			enable_mscoree_CorValidateImage="$2"
+			;;
+		mshtml-get_frame_by_name)
+			enable_mshtml_get_frame_by_name="$2"
 			;;
 		msvcp90-basic_string_dtor)
 			enable_msvcp90_basic_string_dtor="$2"
@@ -3753,6 +3757,21 @@ if test "$enable_mscoree_CorValidateImage" -eq 1; then
 	patch_apply mscoree-CorValidateImage/0001-mscoree-Implement-_CorValidateImage.patch
 	(
 		echo '+    { "Michael Müller", "mscoree: Implement _CorValidateImage.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset mshtml-get_frame_by_name
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34982] Fix NULL pointer dereference in get_frame_by_name
+# |
+# | Modified files:
+# |   *	dlls/mshtml/htmlwindow.c
+# |
+if test "$enable_mshtml_get_frame_by_name" -eq 1; then
+	patch_apply mshtml-get_frame_by_name/0001-mshtml-Do-not-crash-on-null-window-in-get_frame_by_n.patch
+	(
+		echo '+    { "Michael Müller", "mshtml: Do not crash on null window in get_frame_by_name.", 1 },';
 	) >> "$patchlist"
 fi
 

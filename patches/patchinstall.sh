@@ -113,6 +113,7 @@ patch_enable_all ()
 	enable_ddraw_Hotpatch="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
 	enable_dinput_Events="$1"
+	enable_dmstyle_IPersistStream_ParseReference="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dxgi_GetDesc="$1"
@@ -399,6 +400,9 @@ patch_enable ()
 			;;
 		dinput-Events)
 			enable_dinput_Events="$2"
+			;;
+		dmstyle-IPersistStream_ParseReference)
+			enable_dmstyle_IPersistStream_ParseReference="$2"
 			;;
 		dsound-EAX)
 			enable_dsound_EAX="$2"
@@ -2543,6 +2547,21 @@ if test "$enable_dinput_Events" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset dmstyle-IPersistStream_ParseReference
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#7425] Fix crash in Gothic 1/2 with builtin directmusic caused by wrong return value
+# |
+# | Modified files:
+# |   *	dlls/dmstyle/dmutils.c
+# |
+if test "$enable_dmstyle_IPersistStream_ParseReference" -eq 1; then
+	patch_apply dmstyle-IPersistStream_ParseReference/0001-dmstyle-Return-the-correct-variable.patch
+	(
+		echo '+    { "Bruno Jesus", "dmstyle: Return the correct variable.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset dsound-Fast_Mixer
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2622,18 +2641,6 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-DllRedirects
 # |
 # | Modified files:
@@ -2651,6 +2658,18 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 

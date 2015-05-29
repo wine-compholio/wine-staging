@@ -39,13 +39,14 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [12]:**
+**Bug fixes and features included in the next upcoming release [13]:**
 
 * Add shell32 placeholder icons to match offsets with Windows ([Wine Bug #30185](https://bugs.winehq.org/show_bug.cgi?id=30185))
 * Add stub for iphlpapi.ConvertInterfaceLuidToGuid ([Wine Bug #38576](https://bugs.winehq.org/show_bug.cgi?id=38576))
 * Add stubbed ISWbemSecurity interfaces in wbemdisp
 * Allow to enable/disable InsertMode in wineconsole settings ([Wine Bug #36704](https://bugs.winehq.org/show_bug.cgi?id=36704))
 * Also handle '\r' as whitespace in wbemprox queries
+* Also output winedbg system information to the terminal, not only to dialog
 * Assign a drive serial number during prefix creation/update ([Wine Bug #17823](https://bugs.winehq.org/show_bug.cgi?id=17823))
 * Fix NULL pointer dereference in get_frame_by_name ([Wine Bug #34982](https://bugs.winehq.org/show_bug.cgi?id=34982))
 * Fix crash in Gothic 1/2 with builtin directmusic caused by wrong return value ([Wine Bug #7425](https://bugs.winehq.org/show_bug.cgi?id=7425))

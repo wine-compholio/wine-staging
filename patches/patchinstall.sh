@@ -261,6 +261,7 @@ patch_enable_all ()
 	enable_wined3d_UnhandledBlendFactor="$1"
 	enable_wined3d_resource_check_usage="$1"
 	enable_wined3d_wined3d_swapchain_present="$1"
+	enable_winedbg_SystemInfo="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
 	enable_winepulse_PulseAudio_Support="$1"
@@ -847,6 +848,9 @@ patch_enable ()
 			;;
 		wined3d-wined3d_swapchain_present)
 			enable_wined3d_wined3d_swapchain_present="$2"
+			;;
+		winedbg-SystemInfo)
+			enable_winedbg_SystemInfo="$2"
 			;;
 		winedevice-Fix_Relocation)
 			enable_winedevice_Fix_Relocation="$2"
@@ -5396,6 +5400,18 @@ if test "$enable_wineconsole_Insert_Mode" -eq 1; then
 		echo '+    { "Hugh McMaster", "wineconsole: Improve semantics of some poorly-worded resource strings.", 1 },';
 		echo '+    { "Hugh McMaster", "wineconsole: Add InsertMode to HKCU.", 1 },';
 		echo '+    { "Hugh McMaster", "wineconsole: Add InsertMode to the user dialog.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winedbg-SystemInfo
+# |
+# | Modified files:
+# |   *	programs/winedbg/tgt_active.c
+# |
+if test "$enable_winedbg_SystemInfo" -eq 1; then
+	patch_apply winedbg-SystemInfo/0001-winedbg-Also-output-system-information-to-the-termin.patch
+	(
+		echo '+    { "Sebastian Lackner", "winedbg: Also output system information to the terminal, not only to dialog.", 1 },';
 	) >> "$patchlist"
 fi
 

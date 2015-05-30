@@ -4158,12 +4158,12 @@ fi
 # Patchset server-RootDirectory_File
 # |
 # | Modified files:
-# |   *	dlls/ntdll/tests/file.c, server/fd.c, server/file.c
+# |   *	dlls/ntdll/tests/file.c, server/fd.c, server/file.c, server/file.h
 # |
 if test "$enable_server_RootDirectory_File" -eq 1; then
 	patch_apply server-RootDirectory_File/0001-server-Fix-handling-of-opening-a-file-with-RootDirec.patch
 	(
-		echo '+    { "Sebastian Lackner", "server: Fix handling of opening a file with RootDirectory pointing to a file handle.", 2 },';
+		echo '+    { "Sebastian Lackner", "server: Fix handling of opening a file with RootDirectory pointing to a file handle.", 3 },';
 	) >> "$patchlist"
 fi
 

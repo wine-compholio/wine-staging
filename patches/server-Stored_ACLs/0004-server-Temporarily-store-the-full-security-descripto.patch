@@ -1,4 +1,4 @@
-From de99b35d5f2a612504f45324b17aa7a3c992f2ce Mon Sep 17 00:00:00 2001
+From 2884ad4a99443701819564254dc21289d6f13aec Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 30 Mar 2015 12:50:21 +0200
 Subject: server: Temporarily store the full security descriptor for file
@@ -7,9 +7,9 @@ Subject: server: Temporarily store the full security descriptor for file
 ---
  dlls/advapi32/tests/security.c | 15 +++----
  server/change.c                |  8 +++-
- server/file.c                  | 90 ++++++++++++++++++++++++++++--------------
+ server/file.c                  | 88 ++++++++++++++++++++++++++++--------------
  server/file.h                  |  3 +-
- 4 files changed, 75 insertions(+), 41 deletions(-)
+ 4 files changed, 74 insertions(+), 40 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
 index 40cf23c..57adc4e 100644
@@ -95,7 +95,7 @@ index b334fd1..2e98f5c 100644
  
      return &dir->obj;
 diff --git a/server/file.c b/server/file.c
-index 9ce3a6e..9497b45 100644
+index 011c29f..175fbce 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -172,7 +172,8 @@ struct file *create_file_for_fd_obj( struct fd *fd, unsigned int access, unsigne
@@ -227,16 +227,7 @@ index 9ce3a6e..9497b45 100644
  }
  
  static struct object *file_open_file( struct object *obj, unsigned int access,
-@@ -617,7 +644,7 @@ static struct object *file_open_file( struct object *obj, unsigned int access,
-     if ((new_fd = dup_fd_object( file->fd, access, sharing, options )))
-     {
-         lseek( get_unix_fd(new_fd), SEEK_SET, 0 );
--        new_file = create_file_obj( new_fd, access, file->mode );
-+        new_file = create_file_obj( new_fd, access, file->mode, NULL );
-         release_object( new_fd );
-     }
- 
-@@ -734,7 +761,10 @@ DECL_HANDLER(create_file)
+@@ -733,7 +760,10 @@ DECL_HANDLER(create_file)
      if ((file = create_file( root_fd, name, name_len, req->access, req->sharing,
                               req->create, req->options, req->attrs, sd )))
      {
@@ -249,10 +240,10 @@ index 9ce3a6e..9497b45 100644
      }
      if (root_fd) release_object( root_fd );
 diff --git a/server/file.h b/server/file.h
-index e26be80..d002b0d 100644
+index b9e27e2..3274c5c 100644
 --- a/server/file.h
 +++ b/server/file.h
-@@ -153,7 +153,8 @@ extern struct device *create_unix_device( struct directory *root, const struct u
+@@ -154,7 +154,8 @@ extern struct device *create_unix_device( struct directory *root, const struct u
  
  extern void do_change_notify( int unix_fd );
  extern void sigio_callback(void);

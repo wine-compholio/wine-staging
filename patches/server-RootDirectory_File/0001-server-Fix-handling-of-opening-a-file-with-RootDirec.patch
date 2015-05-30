@@ -1,19 +1,20 @@
-From af265638496273ffd4369c8d6c3a2a7b2c1daa48 Mon Sep 17 00:00:00 2001
+From 00cbc5646ce0153babf9f3cebf07461ffaaabaee Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 29 May 2015 22:49:24 +0200
 Subject: server: Fix handling of opening a file with RootDirectory pointing to
- a file handle. (v2)
+ a file handle. (v3)
 
 Changes in v2:
   * Seek back to the beginning of file in duplicated file descriptor.
 ---
- dlls/ntdll/tests/file.c | 39 ++++++++++++++++++++++++++++++++++++---
- server/fd.c             | 32 ++++++++++++++++++++++++++------
- server/file.c           | 24 +++++++++++++++++++++++-
- 3 files changed, 85 insertions(+), 10 deletions(-)
+ dlls/ntdll/tests/file.c | 49 ++++++++++++++++++++++++++++++++++++++++++++++---
+ server/fd.c             | 34 +++++++++++++++++++++++++++-------
+ server/file.c           | 23 ++++++++++++++++++++++-
+ server/file.h           |  1 +
+ 4 files changed, 96 insertions(+), 11 deletions(-)
 
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 2df0edc..7999e3a 100644
+index 2df0edc..f6a6154 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
 @@ -297,7 +297,8 @@ static void create_file_test(void)
@@ -51,7 +52,7 @@ index 2df0edc..7999e3a 100644
      attr.Length = sizeof(attr);
      attr.RootDirectory = 0;
      attr.ObjectName = &nameW;
-@@ -443,13 +453,36 @@ static void open_file_test(void)
+@@ -443,13 +453,46 @@ static void open_file_test(void)
      ok( !status, "open %s failed %x\n", wine_dbgstr_w(nameW.Buffer), status );
      pRtlFreeUnicodeString( &nameW );
  
@@ -80,19 +81,38 @@ index 2df0edc..7999e3a 100644
 -    todo_wine ok( !status, "open %s failed %x\n", wine_dbgstr_w(tmpfile), status );
 +    ok( !status, "open %s failed %x\n", wine_dbgstr_w(tmpfile), status );
 +
++    numbytes = SetFilePointer( file, 0, 0, FILE_CURRENT );
++    ok( numbytes == sizeof(testdata) - 1, "SetFilePointer returned %u\n", numbytes );
++    numbytes = SetFilePointer( root, 0, 0, FILE_CURRENT );
++    ok( numbytes == 0, "SetFilePointer returned %u\n", numbytes );
++
 +    numbytes = 0xdeadbeef;
 +    memset( data, 0, sizeof(data) );
 +    ret = ReadFile( root, data, sizeof(data), &numbytes, NULL );
 +    ok( ret, "ReadFile failed with error %u\n", GetLastError() );
 +    ok( numbytes == sizeof(testdata) - 1, "failed to read all data\n" );
 +    ok( !memcmp( data, testdata, sizeof(testdata) - 1 ), "testdata doesn't match\n" );
++
++    numbytes = SetFilePointer( file, 0, 0, FILE_CURRENT );
++    ok( numbytes == sizeof(testdata) - 1, "SetFilePointer returned %u\n", numbytes );
++    numbytes = SetFilePointer( root, 0, 0, FILE_CURRENT );
++    ok( numbytes == sizeof(testdata) - 1, "SetFilePointer returned %u\n", numbytes );
  
      CloseHandle( file );
      CloseHandle( root );
 diff --git a/server/fd.c b/server/fd.c
-index f0a52ad..2fee65d 100644
+index f0a52ad..2354b40 100644
 --- a/server/fd.c
 +++ b/server/fd.c
+@@ -1712,7 +1712,7 @@ void set_fd_user( struct fd *fd, const struct fd_ops *user_ops, struct object *u
+     fd->user   = user;
+ }
+ 
+-static char *dup_fd_name( struct fd *root, const char *name )
++char *dup_fd_name( struct fd *root, const char *name )
+ {
+     char *ret;
+ 
 @@ -2238,14 +2238,36 @@ DECL_HANDLER(flush)
  DECL_HANDLER(open_file_object)
  {
@@ -144,7 +164,7 @@ index f0a52ad..2fee65d 100644
  
  /* get the Unix name from a file handle */
 diff --git a/server/file.c b/server/file.c
-index 792bbe0..1765d1b 100644
+index 792bbe0..a189465 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -67,6 +67,8 @@ static void file_dump( struct object *obj, int verbose );
@@ -165,7 +185,7 @@ index 792bbe0..1765d1b 100644
      fd_close_handle,              /* close_handle */
      file_destroy                  /* destroy */
  };
-@@ -597,6 +599,26 @@ static int file_set_sd( struct object *obj, const struct security_descriptor *sd
+@@ -597,6 +599,25 @@ static int file_set_sd( struct object *obj, const struct security_descriptor *sd
      return 1;
  }
  
@@ -174,24 +194,35 @@ index 792bbe0..1765d1b 100644
 +{
 +    struct file *file = (struct file *)obj;
 +    struct object *new_file = NULL;
-+    struct fd *new_fd;
++    char *unix_name;
 +
 +    assert( obj->ops == &file_ops );
 +
-+    access = generic_file_map_access( access );
-+    if ((new_fd = dup_fd_object( file->fd, access, sharing, options )))
++    if ((unix_name = dup_fd_name( file->fd, "" )))
 +    {
-+        lseek( get_unix_fd(new_fd), SEEK_SET, 0 );
-+        new_file = create_file_obj( new_fd, access, file->mode );
-+        release_object( new_fd );
++        new_file = create_file( NULL, unix_name, strlen(unix_name), access,
++                                sharing, FILE_OPEN, options, 0, NULL );
++        free( unix_name );
 +    }
-+
++    else set_error( STATUS_OBJECT_TYPE_MISMATCH );
 +    return new_file;
 +}
 +
  static void file_destroy( struct object *obj )
  {
      struct file *file = (struct file *)obj;
+diff --git a/server/file.h b/server/file.h
+index b5e0ca7..b59de1c 100644
+--- a/server/file.h
++++ b/server/file.h
+@@ -81,6 +81,7 @@ extern void unlock_fd( struct fd *fd, file_pos_t offset, file_pos_t count );
+ extern void allow_fd_caching( struct fd *fd );
+ extern void set_fd_signaled( struct fd *fd, int signaled );
+ extern int is_fd_signaled( struct fd *fd );
++extern char *dup_fd_name( struct fd *root, const char *name );
+ 
+ extern int default_fd_signaled( struct object *obj, struct wait_queue_entry *entry );
+ extern unsigned int default_fd_map_access( struct object *obj, unsigned int access );
 -- 
 2.4.2
 

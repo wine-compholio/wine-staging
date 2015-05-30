@@ -1,32 +1,67 @@
-From 5eb09620a17c714c4a2162dd69d4f748f5634859 Mon Sep 17 00:00:00 2001
+From af265638496273ffd4369c8d6c3a2a7b2c1daa48 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 29 May 2015 22:49:24 +0200
 Subject: server: Fix handling of opening a file with RootDirectory pointing to
- a file handle.
+ a file handle. (v2)
 
+Changes in v2:
+  * Seek back to the beginning of file in duplicated file descriptor.
 ---
- dlls/ntdll/tests/file.c | 13 +++++++++++--
+ dlls/ntdll/tests/file.c | 39 ++++++++++++++++++++++++++++++++++++---
  server/fd.c             | 32 ++++++++++++++++++++++++++------
- server/file.c           | 22 +++++++++++++++++++++-
- 3 files changed, 58 insertions(+), 9 deletions(-)
+ server/file.c           | 24 +++++++++++++++++++++++-
+ 3 files changed, 85 insertions(+), 10 deletions(-)
 
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 2df0edc..1e5b340 100644
+index 2df0edc..7999e3a 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -297,7 +297,7 @@ static void create_file_test(void)
+@@ -297,7 +297,8 @@ static void create_file_test(void)
  
  static void open_file_test(void)
  {
 -    static const WCHAR fooW[] = {'f','o','o',0};
++    static const char testdata[] = "Hello World";
 +    static WCHAR fooW[] = {'f','o','o',0};
      NTSTATUS status;
      HANDLE dir, root, handle, file;
      WCHAR path[MAX_PATH], tmpfile[MAX_PATH];
-@@ -443,13 +443,22 @@ static void open_file_test(void)
+@@ -306,7 +307,8 @@ static void open_file_test(void)
+     IO_STATUS_BLOCK io;
+     UNICODE_STRING nameW;
+     UINT i, len;
+-    BOOL restart = TRUE;
++    BOOL ret, restart = TRUE;
++    DWORD numbytes;
+ 
+     len = GetWindowsDirectoryW( path, MAX_PATH );
+     pRtlDosPathNameToNtPathName_U( path, &nameW, NULL, NULL );
+@@ -432,6 +434,14 @@ static void open_file_test(void)
+     GetTempFileNameW( path, fooW, 0, tmpfile );
+     pRtlDosPathNameToNtPathName_U( tmpfile, &nameW, NULL, NULL );
+ 
++    file = CreateFileW( tmpfile, FILE_WRITE_DATA, 0, NULL, CREATE_ALWAYS, 0, 0 );
++    ok( file != INVALID_HANDLE_VALUE, "CreateFile error %d\n", GetLastError() );
++    numbytes = 0xdeadbeef;
++    ret = WriteFile( file, testdata, sizeof(testdata) - 1, &numbytes, NULL );
++    ok( ret, "WriteFile failed with error %u\n", GetLastError() );
++    ok( numbytes == sizeof(testdata) - 1, "failed to write all data\n" );
++    CloseHandle( file );
++
+     attr.Length = sizeof(attr);
+     attr.RootDirectory = 0;
+     attr.ObjectName = &nameW;
+@@ -443,13 +453,36 @@ static void open_file_test(void)
      ok( !status, "open %s failed %x\n", wine_dbgstr_w(nameW.Buffer), status );
      pRtlFreeUnicodeString( &nameW );
  
++    numbytes = 0xdeadbeef;
++    memset( data, 0, sizeof(data) );
++    ret = ReadFile( file, data, sizeof(data), &numbytes, NULL );
++    ok( ret, "ReadFile failed with error %u\n", GetLastError() );
++    ok( numbytes == sizeof(testdata) - 1, "failed to read all data\n" );
++    ok( !memcmp( data, testdata, sizeof(testdata) - 1 ), "testdata doesn't match\n" );
++
 +    nameW.Length = sizeof(fooW) - sizeof(WCHAR);
 +    nameW.Buffer = fooW;
 +    attr.RootDirectory = file;
@@ -44,6 +79,13 @@ index 2df0edc..1e5b340 100644
                            FILE_SHARE_READ, FILE_SYNCHRONOUS_IO_NONALERT );
 -    todo_wine ok( !status, "open %s failed %x\n", wine_dbgstr_w(tmpfile), status );
 +    ok( !status, "open %s failed %x\n", wine_dbgstr_w(tmpfile), status );
++
++    numbytes = 0xdeadbeef;
++    memset( data, 0, sizeof(data) );
++    ret = ReadFile( root, data, sizeof(data), &numbytes, NULL );
++    ok( ret, "ReadFile failed with error %u\n", GetLastError() );
++    ok( numbytes == sizeof(testdata) - 1, "failed to read all data\n" );
++    ok( !memcmp( data, testdata, sizeof(testdata) - 1 ), "testdata doesn't match\n" );
  
      CloseHandle( file );
      CloseHandle( root );
@@ -102,7 +144,7 @@ index f0a52ad..2fee65d 100644
  
  /* get the Unix name from a file handle */
 diff --git a/server/file.c b/server/file.c
-index 792bbe0..900a17b 100644
+index 792bbe0..1765d1b 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -67,6 +67,8 @@ static void file_dump( struct object *obj, int verbose );
@@ -123,7 +165,7 @@ index 792bbe0..900a17b 100644
      fd_close_handle,              /* close_handle */
      file_destroy                  /* destroy */
  };
-@@ -597,6 +599,24 @@ static int file_set_sd( struct object *obj, const struct security_descriptor *sd
+@@ -597,6 +599,26 @@ static int file_set_sd( struct object *obj, const struct security_descriptor *sd
      return 1;
  }
  
@@ -136,8 +178,10 @@ index 792bbe0..900a17b 100644
 +
 +    assert( obj->ops == &file_ops );
 +
++    access = generic_file_map_access( access );
 +    if ((new_fd = dup_fd_object( file->fd, access, sharing, options )))
 +    {
++        lseek( get_unix_fd(new_fd), SEEK_SET, 0 );
 +        new_file = create_file_obj( new_fd, access, file->mode );
 +        release_object( new_fd );
 +    }

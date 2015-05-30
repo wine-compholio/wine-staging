@@ -4155,7 +4155,7 @@ fi
 if test "$enable_server_RootDirectory_File" -eq 1; then
 	patch_apply server-RootDirectory_File/0001-server-Fix-handling-of-opening-a-file-with-RootDirec.patch
 	(
-		echo '+    { "Sebastian Lackner", "server: Fix handling of opening a file with RootDirectory pointing to a file handle.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Fix handling of opening a file with RootDirectory pointing to a file handle.", 2 },';
 	) >> "$patchlist"
 fi
 

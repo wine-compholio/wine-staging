@@ -39,11 +39,12 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [13]:**
+**Bug fixes and features included in the next upcoming release [14]:**
 
 * Add shell32 placeholder icons to match offsets with Windows ([Wine Bug #30185](https://bugs.winehq.org/show_bug.cgi?id=30185))
 * Add stub for iphlpapi.ConvertInterfaceLuidToGuid ([Wine Bug #38576](https://bugs.winehq.org/show_bug.cgi?id=38576))
 * Add stubbed ISWbemSecurity interfaces in wbemdisp
+* Add support for hiding wine version information from applications (needed for example by Warspear Online)
 * Allow to enable/disable InsertMode in wineconsole settings ([Wine Bug #36704](https://bugs.winehq.org/show_bug.cgi?id=36704))
 * Also handle '\r' as whitespace in wbemprox queries
 * Also output winedbg system information to the terminal, not only to dialog

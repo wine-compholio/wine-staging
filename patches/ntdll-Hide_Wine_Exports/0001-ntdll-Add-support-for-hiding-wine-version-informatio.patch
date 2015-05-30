@@ -1,0 +1,158 @@
+From cbdf0dd0760cda9667c1b7a3ae458a7a6724dc58 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 30 May 2015 02:23:15 +0200
+Subject: ntdll: Add support for hiding wine version information from
+ applications.
+
+---
+ dlls/ntdll/loader.c     | 96 ++++++++++++++++++++++++++++++++++++++++++++++++-
+ dlls/ntdll/ntdll_misc.h |  5 +++
+ 2 files changed, 100 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index 921bf57..6390df0 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -56,8 +56,11 @@ WINE_DECLARE_DEBUG_CHANNEL(imports);
+ 
+ typedef DWORD (CALLBACK *DLLENTRYPROC)(HMODULE,DWORD,LPVOID);
+ 
++#define IS_OPTION_TRUE(ch) ((ch) == 'y' || (ch) == 'Y' || (ch) == 't' || (ch) == 'T' || (ch) == '1')
++
+ static BOOL process_detaching = FALSE;  /* set on process detach to avoid deadlocks with thread detach */
+ static int free_lib_count;   /* recursion depth of LdrUnloadDll calls */
++static BOOL hide_wine_exports = FALSE;  /* try to hide ntdll wine exports from applications */
+ 
+ static const char * const reason_names[] =
+ {
+@@ -1395,6 +1398,96 @@ NTSTATUS WINAPI LdrUnlockLoaderLock( ULONG flags, ULONG_PTR magic )
+ }
+ 
+ 
++/***********************************************************************
++ *           hidden_exports_init
++ *
++ * Initializes the hide_wine_exports options.
++ */
++static void hidden_exports_init( const WCHAR *appname )
++{
++    static const WCHAR configW[] = {'S','o','f','t','w','a','r','e','\\','W','i','n','e',0};
++    static const WCHAR appdefaultsW[] = {'A','p','p','D','e','f','a','u','l','t','s','\\',0};
++    static const WCHAR hideWineExports[] = {'H','i','d','e','W','i','n','e','E','x','p','o','r','t','s',0};
++    OBJECT_ATTRIBUTES attr;
++    UNICODE_STRING nameW;
++    HANDLE root, config_key, hkey;
++    BOOL got_hide_wine_exports = FALSE;
++    char tmp[80];
++    DWORD dummy;
++
++    RtlOpenCurrentUser( KEY_ALL_ACCESS, &root );
++    attr.Length = sizeof(attr);
++    attr.RootDirectory = root;
++    attr.ObjectName = &nameW;
++    attr.Attributes = OBJ_CASE_INSENSITIVE;
++    attr.SecurityDescriptor = NULL;
++    attr.SecurityQualityOfService = NULL;
++    RtlInitUnicodeString( &nameW, configW );
++
++    /* @@ Wine registry key: HKCU\Software\Wine */
++    if (NtOpenKey( &config_key, KEY_QUERY_VALUE, &attr )) config_key = 0;
++    NtClose( root );
++    if (!config_key) return;
++
++    if (appname && *appname)
++    {
++        const WCHAR *p;
++        WCHAR appversion[MAX_PATH+20];
++
++        if ((p = strrchrW( appname, '/' ))) appname = p + 1;
++        if ((p = strrchrW( appname, '\\' ))) appname = p + 1;
++
++        strcpyW( appversion, appdefaultsW );
++        strcatW( appversion, appname );
++        RtlInitUnicodeString( &nameW, appversion );
++        attr.RootDirectory = config_key;
++
++        /* @@ Wine registry key: HKCU\Software\Wine\AppDefaults\app.exe */
++        if (!NtOpenKey( &hkey, KEY_QUERY_VALUE, &attr ))
++        {
++            TRACE( "getting HideWineExports from %s\n", debugstr_w(appversion) );
++
++            RtlInitUnicodeString( &nameW, hideWineExports );
++            if (!NtQueryValueKey( hkey, &nameW, KeyValuePartialInformation, tmp, sizeof(tmp), &dummy ))
++            {
++                WCHAR *str = (WCHAR *)((KEY_VALUE_PARTIAL_INFORMATION *)tmp)->Data;
++                hide_wine_exports = IS_OPTION_TRUE( str[0] );
++                got_hide_wine_exports = TRUE;
++            }
++
++            NtClose( hkey );
++        }
++    }
++
++    if (!got_hide_wine_exports)
++    {
++        TRACE( "getting default HideWineExports\n" );
++
++        RtlInitUnicodeString( &nameW, hideWineExports );
++        if (!NtQueryValueKey( config_key, &nameW, KeyValuePartialInformation, tmp, sizeof(tmp), &dummy ))
++        {
++            WCHAR *str = (WCHAR *)((KEY_VALUE_PARTIAL_INFORMATION *)tmp)->Data;
++            hide_wine_exports = IS_OPTION_TRUE( str[0] );
++        }
++    }
++
++    NtClose( config_key );
++}
++
++
++/***********************************************************************
++ *           is_hidden_export
++ *
++ * Checks if a specific export should be hidden.
++ */
++static BOOL is_hidden_export( void *proc )
++{
++    return hide_wine_exports && (proc == &NTDLL_wine_get_version ||
++                                 proc == &NTDLL_wine_get_build_id ||
++                                 proc == &NTDLL_wine_get_host_version);
++}
++
++
+ /******************************************************************
+  *		LdrGetProcedureAddress  (NTDLL.@)
+  */
+@@ -1415,7 +1508,7 @@ NTSTATUS WINAPI LdrGetProcedureAddress(HMODULE module, const ANSI_STRING *name,
+         LPCWSTR load_path = NtCurrentTeb()->Peb->ProcessParameters->DllPath.Buffer;
+         void *proc = name ? find_named_export( module, exports, exp_size, name->Buffer, -1, load_path )
+                           : find_ordinal_export( module, exports, exp_size, ord - exports->Base, load_path );
+-        if (proc)
++        if (proc && !is_hidden_export( proc ))
+         {
+             *address = proc;
+             ret = STATUS_SUCCESS;
+@@ -2897,6 +2990,7 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
+     if (!peb->ProcessParameters->WindowTitle.Buffer)
+         peb->ProcessParameters->WindowTitle = wm->ldr.FullDllName;
+     version_init( wm->ldr.FullDllName.Buffer );
++    hidden_exports_init( wm->ldr.FullDllName.Buffer );
+     virtual_set_large_address_space();
+ 
+     LdrQueryImageFileExecutionOptions( &peb->ProcessParameters->ImagePathName, globalflagW,
+diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
+index cbd19db..3a55926 100644
+--- a/dlls/ntdll/ntdll_misc.h
++++ b/dlls/ntdll/ntdll_misc.h
+@@ -268,4 +268,9 @@ extern HANDLE keyed_event DECLSPEC_HIDDEN;
+ 
+ NTSTATUS WINAPI RtlHashUnicodeString(PCUNICODE_STRING,BOOLEAN,ULONG,ULONG*);
+ 
++/* version */
++extern const char * CDECL NTDLL_wine_get_version(void);
++extern const char * CDECL NTDLL_wine_get_build_id(void);
++extern void CDECL NTDLL_wine_get_host_version( const char **sysname, const char **release );
++
+ #endif
+-- 
+2.4.2
+

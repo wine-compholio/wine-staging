@@ -170,6 +170,7 @@ patch_enable_all ()
 	enable_ntdll_Fix_Free="$1"
 	enable_ntdll_FreeBSD_Directory="$1"
 	enable_ntdll_Heap_FreeLists="$1"
+	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_LZNT1_Compression="$1"
 	enable_ntdll_NtQuerySection="$1"
@@ -575,6 +576,9 @@ patch_enable ()
 			;;
 		ntdll-Heap_FreeLists)
 			enable_ntdll_Heap_FreeLists="$2"
+			;;
+		ntdll-Hide_Wine_Exports)
+			enable_ntdll_Hide_Wine_Exports="$2"
 			;;
 		ntdll-Junction_Points)
 			enable_ntdll_Junction_Points="$2"
@@ -1621,6 +1625,28 @@ if test "$enable_category_stable" -eq 1; then
 	enable_ws2_32_WriteWatches=1
 fi
 
+if test "$enable_wined3d_CSMT_Main" -eq 1; then
+	if test "$enable_wined3d_CSMT_Helper" -gt 1; then
+		abort "Patchset wined3d-CSMT_Helper disabled, but wined3d-CSMT_Main depends on that."
+	fi
+	enable_wined3d_CSMT_Helper=1
+fi
+
+if test "$enable_wined3d_CSMT_Helper" -eq 1; then
+	if test "$enable_makedep_PARENTSPEC" -gt 1; then
+		abort "Patchset makedep-PARENTSPEC disabled, but wined3d-CSMT_Helper depends on that."
+	fi
+	if test "$enable_ntdll_DllRedirects" -gt 1; then
+		abort "Patchset ntdll-DllRedirects disabled, but wined3d-CSMT_Helper depends on that."
+	fi
+	if test "$enable_wined3d_DXTn" -gt 1; then
+		abort "Patchset wined3d-DXTn disabled, but wined3d-CSMT_Helper depends on that."
+	fi
+	enable_makedep_PARENTSPEC=1
+	enable_ntdll_DllRedirects=1
+	enable_wined3d_DXTn=1
+fi
+
 if test "$enable_shell32_SHFileOperation" -eq 1; then
 	if test "$enable_shell32_Progress_Dialog" -gt 1; then
 		abort "Patchset shell32-Progress_Dialog disabled, but shell32-SHFileOperation depends on that."
@@ -1795,35 +1821,6 @@ if test "$enable_dxva2_Video_Decoder" -eq 1; then
 		abort "Patchset winecfg-Staging disabled, but dxva2-Video_Decoder depends on that."
 	fi
 	enable_winecfg_Staging=1
-fi
-
-if test "$enable_winecfg_Staging" -eq 1; then
-	if test "$enable_wined3d_CSMT_Main" -gt 1; then
-		abort "Patchset wined3d-CSMT_Main disabled, but winecfg-Staging depends on that."
-	fi
-	enable_wined3d_CSMT_Main=1
-fi
-
-if test "$enable_wined3d_CSMT_Main" -eq 1; then
-	if test "$enable_wined3d_CSMT_Helper" -gt 1; then
-		abort "Patchset wined3d-CSMT_Helper disabled, but wined3d-CSMT_Main depends on that."
-	fi
-	enable_wined3d_CSMT_Helper=1
-fi
-
-if test "$enable_wined3d_CSMT_Helper" -eq 1; then
-	if test "$enable_makedep_PARENTSPEC" -gt 1; then
-		abort "Patchset makedep-PARENTSPEC disabled, but wined3d-CSMT_Helper depends on that."
-	fi
-	if test "$enable_ntdll_DllRedirects" -gt 1; then
-		abort "Patchset ntdll-DllRedirects disabled, but wined3d-CSMT_Helper depends on that."
-	fi
-	if test "$enable_wined3d_DXTn" -gt 1; then
-		abort "Patchset wined3d-DXTn disabled, but wined3d-CSMT_Helper depends on that."
-	fi
-	enable_makedep_PARENTSPEC=1
-	enable_ntdll_DllRedirects=1
-	enable_wined3d_DXTn=1
 fi
 
 if test "$enable_dsound_EAX" -eq 1; then
@@ -2661,507 +2658,6 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-DllRedirects
-# |
-# | Modified files:
-# |   *	dlls/ntdll/loader.c, dlls/ntdll/loadorder.c, dlls/ntdll/ntdll_misc.h
-# |
-if test "$enable_ntdll_DllRedirects" -eq 1; then
-	patch_apply ntdll-DllRedirects/0001-ntdll-Move-logic-to-determine-loadorder-HKCU-app-key.patch
-	patch_apply ntdll-DllRedirects/0002-ntdll-Move-logic-to-read-loadorder-registry-values-i.patch
-	patch_apply ntdll-DllRedirects/0003-ntdll-Move-code-to-determine-module-basename-into-se.patch
-	patch_apply ntdll-DllRedirects/0004-ntdll-Implement-get_redirect-function.patch
-	patch_apply ntdll-DllRedirects/0005-ntdll-Implement-loader-redirection-scheme.patch
-	(
-		echo '+    { "Michael Müller", "ntdll: Move logic to determine loadorder HKCU/app key into separate functions.", 1 },';
-		echo '+    { "Michael Müller", "ntdll: Move logic to read loadorder registry values into separate function.", 1 },';
-		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
-		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
-		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-CSMT_Helper
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/ddraw/surface.c, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc,
-# | 	dlls/wined3d/resource.c, dlls/wined3d/surface.c, dlls/wined3d/texture.c, dlls/wined3d/volume.c,
-# | 	dlls/wined3d/wined3d.spec, dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
-# |
-if test "$enable_wined3d_CSMT_Helper" -eq 1; then
-	patch_apply wined3d-CSMT_Helper/0001-wined3d-Merge-get_pitch-functions.patch
-	patch_apply wined3d-CSMT_Helper/0002-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch
-	(
-		echo '+    { "Stefan Dösinger", "wined3d: Merge get_pitch functions.", 1 },';
-		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Multisampling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
-	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Revert_PixelFormat
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35655] Fix wined3d performance drop introduced by pixelformat changes.
-# |   *	[#35718] Fix flickering introduced by pixelformat changes.
-# |   *	[#35950] Fix black screen on startup introduced by pixelformat changes.
-# |   *	[#35975] Fix gray screen on startup introduced by pixelformat changes.
-# |   *	[#36900] Fix missing video introduced by pixelformat changes.
-# |
-# | Modified files:
-# |   *	dlls/d3d8/tests/device.c, dlls/d3d9/tests/device.c, dlls/ddraw/tests/ddraw1.c, dlls/ddraw/tests/ddraw2.c,
-# | 	dlls/ddraw/tests/ddraw4.c, dlls/ddraw/tests/ddraw7.c, dlls/wined3d/context.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
-	patch_apply wined3d-Revert_PixelFormat/0001-Revert-wined3d-Track-if-a-context-s-private-hdc-has-.patch
-	patch_apply wined3d-Revert_PixelFormat/0002-Revert-wined3d-Track-if-a-context-s-hdc-is-private-s.patch
-	patch_apply wined3d-Revert_PixelFormat/0003-Revert-wined3d-When-restoring-pixel-format-in-contex.patch
-	patch_apply wined3d-Revert_PixelFormat/0004-Revert-wined3d-Don-t-call-GetPixelFormat-to-set-a-fl.patch
-	patch_apply wined3d-Revert_PixelFormat/0005-Revert-wined3d-Restore-the-pixel-format-of-the-windo.patch
-	patch_apply wined3d-Revert_PixelFormat/0006-d3d8-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
-	patch_apply wined3d-Revert_PixelFormat/0007-d3d9-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
-	patch_apply wined3d-Revert_PixelFormat/0008-ddraw-Mark-tests-which-no-longer-pass-due-to-reverts.patch
-	(
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s private hdc has had its pixel format set, so we don'\''t need to check it.\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s hdc is private so we never need to restore its pixel format.\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: When restoring pixel format in context_release(), mark the context as needing to be set on the next context_acquire().\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Don'\''t call GetPixelFormat() to set a flag that'\''s already set.\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Restore the pixel format of the window whose pixel format was actually changed.\".", 1 },';
-		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-resource_check_usage
-# |
-# | Modified files:
-# |   *	dlls/wined3d/resource.c
-# |
-if test "$enable_wined3d_resource_check_usage" -eq 1; then
-	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	(
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-wined3d_swapchain_present
-# |
-# | Modified files:
-# |   *	dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
-	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-CSMT_Main
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#11674] Support for CSMT (command stream) to increase graphic performance
-# |
-# | Modified files:
-# |   *	dlls/d3d8/tests/visual.c, dlls/d3d9/tests/visual.c, dlls/wined3d/arb_program_shader.c, dlls/wined3d/buffer.c,
-# | 	dlls/wined3d/context.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/directx.c, dlls/wined3d/drawprim.c,
-# | 	dlls/wined3d/glsl_shader.c, dlls/wined3d/query.c, dlls/wined3d/resource.c, dlls/wined3d/shader.c, dlls/wined3d/state.c,
-# | 	dlls/wined3d/stateblock.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c,
-# | 	dlls/wined3d/utils.c, dlls/wined3d/vertexdeclaration.c, dlls/wined3d/view.c, dlls/wined3d/volume.c,
-# | 	dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h, dlls/winex11.drv/opengl.c
-# |
-if test "$enable_wined3d_CSMT_Main" -eq 1; then
-	patch_apply wined3d-CSMT_Main/0001-wined3d-Pass-a-context-to-surface_load_sysmem.patch
-	patch_apply wined3d-CSMT_Main/0002-wined3d-Pass-a-context-to-read_from_framebuffer.patch
-	patch_apply wined3d-CSMT_Main/0003-wined3d-Pass-a-context-to-surface_load_drawable-and-.patch
-	patch_apply wined3d-CSMT_Main/0004-wined3d-Pass-a-context-to-surface_blt_fbo.patch
-	patch_apply wined3d-CSMT_Main/0005-wined3d-Pass-a-context-to-surface_multisample_resolv.patch
-	patch_apply wined3d-CSMT_Main/0006-wined3d-Pass-a-context-to-surface_load_texture.patch
-	patch_apply wined3d-CSMT_Main/0007-wined3d-Pass-a-context-to-surface_load_location.patch
-	patch_apply wined3d-CSMT_Main/0008-wined3d-Make-surface_load_location-return-nothing.patch
-	patch_apply wined3d-CSMT_Main/0009-wined3d-Store-volume-locations-in-the-resource.patch
-	patch_apply wined3d-CSMT_Main/0010-wined3d-Move-validate_location-to-resource.c.patch
-	patch_apply wined3d-CSMT_Main/0011-wined3d-Move-surface-locations-into-the-resource.patch
-	patch_apply wined3d-CSMT_Main/0012-wined3d-Remove-surface_validate_location.patch
-	patch_apply wined3d-CSMT_Main/0013-wined3d-Move-invalidate_location-to-resource.c.patch
-	patch_apply wined3d-CSMT_Main/0014-wined3d-Invalidate-containers-via-callback.patch
-	patch_apply wined3d-CSMT_Main/0015-wined3d-Remove-surface_invalidate_location.patch
-	patch_apply wined3d-CSMT_Main/0016-wined3d-Move-bitmap_data-and-user_memory-into-the-re.patch
-	patch_apply wined3d-CSMT_Main/0017-wined3d-Move-load_location-into-the-resource.patch
-	patch_apply wined3d-CSMT_Main/0018-wined3d-Replace-surface_load_location-with-resource_.patch
-	patch_apply wined3d-CSMT_Main/0019-wined3d-Introduce-helper-functions-for-mapping-volum.patch
-	patch_apply wined3d-CSMT_Main/0020-wined3d-Move-volume-PBO-infrastructure-into-the-reso.patch
-	patch_apply wined3d-CSMT_Main/0021-wined3d-Remove-surface-pbo.patch
-	patch_apply wined3d-CSMT_Main/0022-wined3d-Use-resource-buffer-mapping-facilities-in-su.patch
-	patch_apply wined3d-CSMT_Main/0023-wined3d-Move-buffer-creation-into-the-resource.patch
-	patch_apply wined3d-CSMT_Main/0024-wined3d-Handle-WINED3D_LOCATION_DISCARDED-in-surface.patch
-	patch_apply wined3d-CSMT_Main/0025-wined3d-Handle-LOCATION_DISCARDED-in-surface_load_dr.patch
-	patch_apply wined3d-CSMT_Main/0026-wined3d-Handle-WINED3D_LOCATION_DISCARDED-for-sysmem.patch
-	patch_apply wined3d-CSMT_Main/0027-wined3d-Discard-implicit-surfaces-on-unload.patch
-	patch_apply wined3d-CSMT_Main/0028-wined3d-Don-t-try-to-flip-sysmem-copies-in-swapchain.patch
-	patch_apply wined3d-CSMT_Main/0029-wined3d-Discard-the-backbuffer-in-discard-presents.patch
-	patch_apply wined3d-CSMT_Main/0030-wined3d-Allocate-sysmem-for-client-storage-if-it-doe.patch
-	patch_apply wined3d-CSMT_Main/0031-wined3d-Introduce-a-function-to-retrieve-resource-me.patch
-	patch_apply wined3d-CSMT_Main/0032-wined3d-Make-surface_ops-unmap-specific-for-front-bu.patch
-	patch_apply wined3d-CSMT_Main/0033-wined3d-Move-check_block_align-to-resource.c.patch
-	patch_apply wined3d-CSMT_Main/0034-wined3d-Replace-surface-alloc-functions-with-resourc.patch
-	patch_apply wined3d-CSMT_Main/0035-wined3d-Don-t-delete-the-buffer-in-surface_cleanup.patch
-	patch_apply wined3d-CSMT_Main/0036-wined3d-Use-resource-facilities-to-destroy-PBOs.patch
-	patch_apply wined3d-CSMT_Main/0037-wined3d-Move-simple-location-copying-to-the-resource.patch
-	patch_apply wined3d-CSMT_Main/0038-wined3d-Move-most-of-volume_map-to-resource.c.patch
-	patch_apply wined3d-CSMT_Main/0039-wined3d-Use-resource_map-for-surface_map.patch
-	patch_apply wined3d-CSMT_Main/0040-wined3d-Use-client-storage-with-DIB-sections.patch
-	patch_apply wined3d-CSMT_Main/0041-wined3d-Don-t-call-the-public-map-function-in-surfac.patch
-	patch_apply wined3d-CSMT_Main/0042-wined3d-Don-t-call-the-public-map-function-in-surfac.patch
-	patch_apply wined3d-CSMT_Main/0043-wined3d-Move-the-framebuffer-into-wined3d_state.patch
-	patch_apply wined3d-CSMT_Main/0044-wined3d-Get-rid-of-state-access-in-shader_generate_g.patch
-	patch_apply wined3d-CSMT_Main/0045-wined3d-Preload-buffers-if-streamsrc-is-not-dirty.patch
-	patch_apply wined3d-CSMT_Main/0046-wined3d-Hackily-introduce-a-multithreaded-command-st.patch
-	patch_apply wined3d-CSMT_Main/0047-wined3d-Wait-for-resource-updates-to-finish-when-usi.patch
-	patch_apply wined3d-CSMT_Main/0048-wined3d-Don-t-store-pointers-in-struct-wined3d_cs_pr.patch
-	patch_apply wined3d-CSMT_Main/0049-wined3d-Don-t-put-rectangle-pointers-into-wined3d_cs.patch
-	patch_apply wined3d-CSMT_Main/0050-wined3d-Store-the-color-in-clear-ops-instead-of-a-po.patch
-	patch_apply wined3d-CSMT_Main/0051-wined3d-Pass-the-state-to-draw_primitive.patch
-	patch_apply wined3d-CSMT_Main/0052-wined3d-Wait-for-the-cs-before-destroying-objects.patch
-	patch_apply wined3d-CSMT_Main/0053-wined3d-Give-the-cs-its-own-state.patch
-	patch_apply wined3d-CSMT_Main/0054-wined3d-Send-float-constant-updates-through-the-comm.patch
-	patch_apply wined3d-CSMT_Main/0055-wined3d-Request-a-glFinish-before-modifying-resource.patch
-	patch_apply wined3d-CSMT_Main/0056-wined3d-Finish-the-cs-before-changing-the-texture-lo.patch
-	patch_apply wined3d-CSMT_Main/0057-wined3d-Don-t-call-glFinish-after-clears.patch
-	patch_apply wined3d-CSMT_Main/0058-wined3d-Don-t-call-glFinish-after-draws.patch
-	patch_apply wined3d-CSMT_Main/0059-wined3d-Shadow-device-offscreenBuffer-in-the-context.patch
-	patch_apply wined3d-CSMT_Main/0060-wined3d-Don-t-access-the-stateblock-in-find_draw_buf.patch
-	patch_apply wined3d-CSMT_Main/0061-wined3d-Pass-the-depth-stencil-to-swapchain-present.patch
-	patch_apply wined3d-CSMT_Main/0062-wined3d-Don-t-store-viewport-pointers-in-the-command.patch
-	patch_apply wined3d-CSMT_Main/0063-wined3d-Keep-track-of-the-onscreen-depth-stencil-in-.patch
-	patch_apply wined3d-CSMT_Main/0064-wined3d-Send-base-vertex-index-updates-through-the-c.patch
-	patch_apply wined3d-CSMT_Main/0065-wined3d-Send-primitive-type-updates-through-the-comm.patch
-	patch_apply wined3d-CSMT_Main/0066-wined3d-Send-bool-constant-updates-through-the-comma.patch
-	patch_apply wined3d-CSMT_Main/0067-wined3d-Send-int-constant-updates-through-the-comman.patch
-	patch_apply wined3d-CSMT_Main/0068-wined3d-Send-light-updates-through-the-command-strea.patch
-	patch_apply wined3d-CSMT_Main/0069-wined3d-Prevent-the-command-stream-from-running-ahea.patch
-	patch_apply wined3d-CSMT_Main/0070-wined3d-Wait-for-the-cs-to-finish-before-destroying-.patch
-	patch_apply wined3d-CSMT_Main/0071-wined3d-Run-the-cs-asynchronously.patch
-	patch_apply wined3d-CSMT_Main/0072-wined3d-Send-blits-through-the-command-stream.patch
-	patch_apply wined3d-CSMT_Main/0073-wined3d-Put-update_surface-checks-back-in-place.patch
-	patch_apply wined3d-CSMT_Main/0074-wined3d-Get-rid-of-WINED3D_BUFFER_FLUSH.patch
-	patch_apply wined3d-CSMT_Main/0075-wined3d-Add-cs-waiting-debug-code.patch
-	patch_apply wined3d-CSMT_Main/0076-wined3d-Don-t-force-strict-draw-ordering-for-multith.patch
-	patch_apply wined3d-CSMT_Main/0077-wined3d-Send-render-target-view-clears-through-the-c.patch
-	patch_apply wined3d-CSMT_Main/0078-wined3d-Wait-for-the-CS-in-GetDC.patch
-	patch_apply wined3d-CSMT_Main/0079-wined3d-send-resource-maps-through-the-command-strea.patch
-	patch_apply wined3d-CSMT_Main/0080-wined3d-Get-rid-of-the-end_scene-flush-and-finish.patch
-	patch_apply wined3d-CSMT_Main/0081-wined3d-Replace-the-linked-lists-with-a-ringbuffer.patch
-	patch_apply wined3d-CSMT_Main/0082-wined3d-Don-t-preload-buffers-on-unmap.patch
-	patch_apply wined3d-CSMT_Main/0083-wined3d-Don-t-call-glFinish-before-swapping.patch
-	patch_apply wined3d-CSMT_Main/0084-wined3d-wined3d_-_query_issue-never-fails.patch
-	patch_apply wined3d-CSMT_Main/0085-wined3d-Add-query-support-to-the-command-stream.patch
-	patch_apply wined3d-CSMT_Main/0086-wined3d-Check-our-CS-state-to-find-out-if-a-query-is.patch
-	patch_apply wined3d-CSMT_Main/0087-wined3d-Poll-queries-automatically-in-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0088-wined3d-Introduce-a-separate-queue-for-priority-comm.patch
-	patch_apply wined3d-CSMT_Main/0089-wined3d-Destroy-queries-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0090-wined3d-Separate-main-and-worker-thread-query-state.patch
-	patch_apply wined3d-CSMT_Main/0091-wined3d-Don-t-poll-queries-that-failed-to-start.patch
-	patch_apply wined3d-CSMT_Main/0092-wined3d-Remove-restated-queries-from-the-poll-list.patch
-	patch_apply wined3d-CSMT_Main/0093-wined3d-Don-t-reset-the-query-state-if-it-doesn-t-ha.patch
-	patch_apply wined3d-CSMT_Main/0094-wined3d-Put-this-into-the-query-poll-patch.patch
-	patch_apply wined3d-CSMT_Main/0095-wined3d-Send-update_surface-commands-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0096-wined3d-Send-texture-preloads-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0097-wined3d-Send-surface-preloads-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0098-wined3d-Send-update_texture-calls-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0099-wined3d-Get-rid-of-the-surface_upload_data-glFinish.patch
-	patch_apply wined3d-CSMT_Main/0100-wined3d-Don-t-lock-the-src-volume-in-device_update_v.patch
-	patch_apply wined3d-CSMT_Main/0101-wined3d-Handle-evit_managed_resources-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0102-wined3d-Send-flips-through-the-command-stream.patch
-	patch_apply wined3d-CSMT_Main/0103-wined3d-Introduce-resource-fencing.patch
-	patch_apply wined3d-CSMT_Main/0104-wined3d-Fence-update_texture-and-update_surface-call.patch
-	patch_apply wined3d-CSMT_Main/0105-wined3d-Dirtify-resources-on-unmap.patch
-	patch_apply wined3d-CSMT_Main/0106-wined3d-Fence-texture-reads-in-draws.patch
-	patch_apply wined3d-CSMT_Main/0107-wined3d-Fence-render-targets-and-depth-stencils.patch
-	patch_apply wined3d-CSMT_Main/0108-wined3d-Fence-blit-operations.patch
-	patch_apply wined3d-CSMT_Main/0109-wined3d-Fence-color_fill-operations.patch
-	patch_apply wined3d-CSMT_Main/0110-wined3d-Fence-clear-calls.patch
-	patch_apply wined3d-CSMT_Main/0111-wined3d-Fence-present-calls.patch
-	patch_apply wined3d-CSMT_Main/0112-wined3d-Make-resource-maps-and-unmaps-a-priority-com.patch
-	patch_apply wined3d-CSMT_Main/0113-wined3d-Dirtify-changed-textures-through-the-command.patch
-	patch_apply wined3d-CSMT_Main/0114-wined3d-Wrap-GL-BOs-in-a-structure.patch
-	patch_apply wined3d-CSMT_Main/0115-wined3d-Separate-resource-map-and-draw-buffers.patch
-	patch_apply wined3d-CSMT_Main/0116-wined3d-Implement-DISCARD-resource-maps-with-buffers.patch
-	patch_apply wined3d-CSMT_Main/0117-wined3d-Implement-DISCARD-resource-maps-with-heap-me.patch
-	patch_apply wined3d-CSMT_Main/0118-wined3d-Unset-some-objects-in-state_init_default.patch
-	patch_apply wined3d-CSMT_Main/0119-wined3d-Don-t-request-the-frontbuffer-to-create-dumm.patch
-	patch_apply wined3d-CSMT_Main/0120-wined3d-Use-double-buffered-buffers-for-multithreade.patch
-	patch_apply wined3d-CSMT_Main/0121-wined3d-Don-t-synchronize-NOOVERWRITE-buffer-maps.patch
-	patch_apply wined3d-CSMT_Main/0122-wined3d-Separate-buffer-map-write-and-draw-read-memo.patch
-	patch_apply wined3d-CSMT_Main/0123-wined3d-Accelerate-DISCARD-buffer-maps.patch
-	patch_apply wined3d-CSMT_Main/0124-wined3d-Accelerate-READONLY-buffer-maps.patch
-	patch_apply wined3d-CSMT_Main/0125-wined3d-Access-the-buffer-dirty-areas-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0126-wined3d-Ignore-buffer-resource.map_count-in-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0127-wined3d-Send-buffer-preloads-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0128-wined3d-Use-glBufferSubData-instead-of-glMapBufferRa.patch
-	patch_apply wined3d-CSMT_Main/0129-wined3d-Separate-GL-buffer-discard-control-from-igno.patch
-	patch_apply wined3d-CSMT_Main/0130-wined3d-Create-buffers-before-mapping-them.patch
-	patch_apply wined3d-CSMT_Main/0131-wined3d-Destroy-views-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0132-wined3d-Remove-another-glFinish.patch
-	patch_apply wined3d-CSMT_Main/0133-wined3d-Destroy-vertex-declarations-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0134-wined3d-Destroy-shaders-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0135-wined3d-Create-VBOs-through-the-command-stream.patch
-	patch_apply wined3d-CSMT_Main/0136-wined3d-Clean-up-resource-data-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0137-wined3d-Clean-up-buffer-resource-data-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0138-wined3d-Clean-up-volume-resource-data-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0139-wined3d-Clean-up-surfaces-through-the-cs.patch
-	patch_apply wined3d-CSMT_Main/0140-wined3d-Clean-up-texture-resources-through-the-cs.patch
-	patch_apply wined3d-CSMT_Main/0141-wined3d-Unload-resources-through-the-CS-in-uninit_3d.patch
-	patch_apply wined3d-CSMT_Main/0142-wined3d-Unload-resources-through-the-CS-in-device_re.patch
-	patch_apply wined3d-CSMT_Main/0143-wined3d-Don-t-glFinish-after-a-depth-buffer-blit.patch
-	patch_apply wined3d-CSMT_Main/0144-wined3d-Remove-software-cursor-support.patch
-	patch_apply wined3d-CSMT_Main/0145-wined3d-Create-dummy-textures-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0146-wined3d-Create-the-initial-context-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0147-wined3d-Recreate-ctx-and-dummy-textures-through-the-.patch
-	patch_apply wined3d-CSMT_Main/0148-wined3d-Ignore-WINED3D_MAP_NO_DIRTY_UPDATE-in-resour.patch
-	patch_apply wined3d-CSMT_Main/0149-wined3d-Delete-GL-contexts-through-the-CS-in-reset.patch
-	patch_apply wined3d-CSMT_Main/0150-wined3d-Delete-GL-contexts-through-the-CS-in-uninit_.patch
-	patch_apply wined3d-CSMT_Main/0151-wined3d-Invoke-surface_unload-through-the-CS-in-wine.patch
-	patch_apply wined3d-CSMT_Main/0152-wined3d-Use-an-event-to-block-the-worker-thread-when.patch
-	patch_apply wined3d-CSMT_Main/0153-wined3d-Fence-preload-operations.patch
-	patch_apply wined3d-CSMT_Main/0154-d3d8-tests-D3DLOCK_NO_DIRTY_UPDATE-on-managed-textur.patch
-	patch_apply wined3d-CSMT_Main/0155-d3d9-tests-D3DLOCK_NO_DIRTY_UPDATE-on-managed-textur.patch
-	patch_apply wined3d-CSMT_Main/0156-wined3d-Completely-reset-the-state-on-reset.patch
-	patch_apply wined3d-CSMT_Main/0157-wined3d-Send-getdc-and-releasedc-through-the-command.patch
-	patch_apply wined3d-CSMT_Main/0158-wined3d-Set-map_heap_memory-NULL-when-allocating-a-P.patch
-	patch_apply wined3d-CSMT_Main/0159-wined3d-Wait-only-for-the-buffer-to-be-idle.patch
-	patch_apply wined3d-CSMT_Main/0160-wined3d-Add-a-comment-about-worker-thread-lag.patch
-	patch_apply wined3d-CSMT_Main/0161-wined3d-Remove-the-texture-destroy-glFinish.patch
-	patch_apply wined3d-CSMT_Main/0162-wined3d-Move-FBO-destruction-into-the-worker-thread.patch
-	patch_apply wined3d-CSMT_Main/0163-wined3d-Don-t-incref-decref-textures-in-color-depth-.patch
-	patch_apply wined3d-CSMT_Main/0164-Winex11-complain-about-glfinish.patch
-	patch_apply wined3d-CSMT_Main/0165-wined3d-Make-sure-the-new-window-is-set-up-before-se.patch
-	patch_apply wined3d-CSMT_Main/0166-wined3d-Remove-the-device_reset-CS-sync-fixme.patch
-	patch_apply wined3d-CSMT_Main/0167-wined3d-Put-GL_APPLE_flush_buffer_range-syncing-back.patch
-	patch_apply wined3d-CSMT_Main/0168-wined3d-Wait-for-the-resource-to-be-idle-when-destro.patch
-	patch_apply wined3d-CSMT_Main/0169-wined3d-Don-t-sync-on-redundant-discard-calls.patch
-	patch_apply wined3d-CSMT_Main/0170-wined3d-Don-t-discard-new-buffers.patch
-	patch_apply wined3d-CSMT_Main/0171-wined3d-Don-t-try-to-sync-VBOs-manually-on-OSX-with-.patch
-	patch_apply wined3d-CSMT_Main/0172-wined3d-Render-target-lock-hack.patch
-	patch_apply wined3d-CSMT_Main/0173-wined3d-Avoid-calling-wined3d_surface_blt-from-surfa.patch
-	patch_apply wined3d-CSMT_Main/0174-wined3d-Enable-CSMT-by-default-print-a-winediag-mess.patch
-	patch_apply wined3d-CSMT_Main/9999-IfDefined.patch
-	(
-		echo '+    { "Stefan Dösinger", "wined3d: Pass a context to surface_load_sysmem.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Pass a context to read_from_framebuffer.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Pass a context to surface_load_drawable and surface_blt_to_drawable.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Pass a context to surface_blt_fbo.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Pass a context to surface_multisample_resolve.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Pass a context to surface_load_texture.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Pass a context to surface_load_location.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Make surface_load_location return nothing.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Store volume locations in the resource.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Move validate_location to resource.c.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Move surface locations into the resource.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Remove surface_validate_location.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Move invalidate_location to resource.c.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Invalidate containers via callback.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Remove surface_invalidate_location.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Move bitmap_data and user_memory into the resource.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Move load_location into the resource.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Replace surface_load_location with resource_load_location.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Introduce helper functions for mapping volumes.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Move volume PBO infrastructure into the resource.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Remove surface->pbo.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Use resource buffer mapping facilities in surfaces.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Move buffer creation into the resource.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Handle WINED3D_LOCATION_DISCARDED in surface_load_texture.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Handle LOCATION_DISCARDED in surface_load_drawable.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Handle WINED3D_LOCATION_DISCARDED for sysmem loads.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Discard implicit surfaces on unload.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t try to flip sysmem copies in swapchain_present.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Discard the backbuffer in discard presents.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Allocate sysmem for client storage if it doesn'\''t exist already.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Introduce a function to retrieve resource memory.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Make surface_ops->unmap specific for front buffers.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Move check_block_align to resource.c.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Replace surface alloc functions with resource ones.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t delete the buffer in surface_cleanup.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Use resource facilities to destroy PBOs.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Move simple location copying to the resource.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Move most of volume_map to resource.c.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Use resource_map for surface_map.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Use client storage with DIB sections.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call the public map function in surface_convert_format.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call the public map function in surface_cpu_blt.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Move the framebuffer into wined3d_state.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Get rid of state access in shader_generate_glsl_declarations.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Preload buffers if streamsrc is not dirty.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Hackily introduce a multithreaded command stream.", 1 },';
-		echo '+    { "Henri Verbeet", "wined3d: Wait for resource updates to finish when using the multithreaded command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t store pointers in struct wined3d_cs_present.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t put rectangle pointers into wined3d_cs_clear.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Store the color in clear ops instead of a pointer.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Pass the state to draw_primitive.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Wait for the cs before destroying objects.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Give the cs its own state.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send float constant updates through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Request a glFinish before modifying resources outside the cs.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Finish the cs before changing the texture lod.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish after clears.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish after draws.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Shadow device->offscreenBuffer in the context.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t access the stateblock in find_draw_buffers_mask.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Pass the depth stencil to swapchain->present.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t store viewport pointers in the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Keep track of the onscreen depth stencil in the command stream instead of the device.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send base vertex index updates through the cs.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send primitive type updates through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send bool constant updates through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send int constant updates through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send light updates through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Prevent the command stream from running ahead too far.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Wait for the cs to finish before destroying the device.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Run the cs asynchronously.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send blits through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Put update_surface checks back in place.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Get rid of WINED3D_BUFFER_FLUSH.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Add cs waiting debug code.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t force strict draw ordering for multithreaded CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send render target view clears through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Wait for the CS in GetDC.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: send resource maps through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Get rid of the end_scene flush and finish.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Replace the linked lists with a ringbuffer.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t preload buffers on unmap.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish before swapping.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: wined3d_*_query_issue never fails.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Add query support to the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Check our CS state to find out if a query is done.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Poll queries automatically in the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Introduce a separate queue for priority commands.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Destroy queries through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Separate main and worker thread query state.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t poll queries that failed to start.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Remove restated queries from the poll list.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t reset the query state if it doesn'\''t have a ctx.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Put this into the query poll patch.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send update_surface commands through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send texture preloads through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send surface preloads through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send update_texture calls through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Get rid of the surface_upload_data glFinish.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t lock the src volume in device_update_volume.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Handle evit_managed_resources through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send flips through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Introduce resource fencing.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Fence update_texture and update_surface calls.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Dirtify resources on unmap.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Fence texture reads in draws.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Fence render targets and depth stencils.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Fence blit operations.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Fence color_fill operations.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Fence clear calls.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Fence present calls.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Make resource maps and unmaps a priority command.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Dirtify changed textures through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Wrap GL BOs in a structure.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Separate resource map and draw buffers.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Implement DISCARD resource maps with buffers.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Implement DISCARD resource maps with heap memory.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Unset some objects in state_init_default.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t request the frontbuffer to create dummy textures.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Use double-buffered buffers for multithreaded CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t synchronize NOOVERWRITE buffer maps.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Separate buffer map write and draw read memory pointers.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Accelerate DISCARD buffer maps.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Accelerate READONLY buffer maps.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Access the buffer dirty areas through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Ignore buffer->resource.map_count in the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send buffer preloads through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Use glBufferSubData instead of glMapBufferRange.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Separate GL buffer discard control from ignoring MAP_DISCARD.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Create buffers before mapping them.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Destroy views through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Remove another glFinish.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Destroy vertex declarations through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Destroy shaders through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Create VBOs through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Clean up resource data through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Clean up buffer resource data through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Clean up volume resource data through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Clean up surfaces through the cs.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Clean up texture resources through the cs.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Unload resources through the CS in uninit_3d.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Unload resources through the CS in device_reset.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t glFinish after a depth buffer blit.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Remove software cursor support.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Create dummy textures through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Create the initial context through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Recreate ctx and dummy textures through the CS after resets.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Ignore WINED3D_MAP_NO_DIRTY_UPDATE in resource_map.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Delete GL contexts through the CS in reset.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Delete GL contexts through the CS in uninit_3d.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Invoke surface_unload through the CS in wined3d_surface_update_desc.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Use an event to block the worker thread when it is idle.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Fence preload operations.", 1 },';
-		echo '+    { "Stefan Dösinger", "d3d8/tests: D3DLOCK_NO_DIRTY_UPDATE on managed textures is temporarily broken.", 1 },';
-		echo '+    { "Stefan Dösinger", "d3d9/tests: D3DLOCK_NO_DIRTY_UPDATE on managed textures is temporarily broken.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Completely reset the state on reset.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send getdc and releasedc through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Set map_heap_memory = NULL when allocating a PBO.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Wait only for the buffer to be idle.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Add a comment about worker thread lag.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Remove the texture destroy glFinish.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Move FBO destruction into the worker thread.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t incref / decref textures in color / depth fill blits.", 1 },';
-		echo '+    { "Stefan Dösinger", "Winex11: complain about glfinish.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Make sure the new window is set up before setting up a context.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Remove the device_reset CS sync fixme.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Put GL_APPLE_flush_buffer_range syncing back in place.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Wait for the resource to be idle when destroying user memory surfaces.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t sync on redundant discard calls.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t discard new buffers.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t try to sync VBOs manually on OSX with CSMT.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Render target lock hack.", 1 },';
-		echo '+    { "Matteo Bruni", "wined3d: Avoid calling wined3d_surface_blt() from surface_upload_from_surface().", 1 },';
-		echo '+    { "Sebastian Lackner", "wined3d: Enable CSMT by default, print a winediag message informing about this patchset.", 1 },';
-		echo '+    { "Wine Staging Team", "Autogenerated #ifdef patch for wined3d-CSMT_Main.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset winecfg-Staging
 # |
 # | Modified files:
@@ -3172,10 +2668,12 @@ if test "$enable_winecfg_Staging" -eq 1; then
 	patch_apply winecfg-Staging/0001-winecfg-Add-staging-tab-for-CSMT.patch
 	patch_apply winecfg-Staging/0002-winecfg-Add-checkbox-to-enable-disable-vaapi-GPU-dec.patch
 	patch_apply winecfg-Staging/0003-winecfg-Add-checkbox-to-enable-disable-EAX-support.patch
+	patch_apply winecfg-Staging/0004-winecfg-Add-checkbox-to-enable-disable-HideWineExpor.patch
 	(
 		echo '+    { "Michael Müller", "winecfg: Add staging tab for CSMT.", 1 },';
 		echo '+    { "Sebastian Lackner", "winecfg: Add checkbox to enable/disable vaapi GPU decoder.", 1 },';
 		echo '+    { "Mark Harmstone", "winecfg: Add checkbox to enable/disable EAX support.", 1 },';
+		echo '+    { "Sebastian Lackner", "winecfg: Add checkbox to enable/disable HideWineExports registry key.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3711,6 +3209,18 @@ if test "$enable_libs_Unicode_Collation" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset makedep-PARENTSPEC
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makedep_PARENTSPEC" -eq 1; then
+	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
+	(
+		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset mfplat-MFTRegister
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3955,6 +3465,26 @@ if test "$enable_ntdll_DeviceType_Systemroot" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-DllRedirects
+# |
+# | Modified files:
+# |   *	dlls/ntdll/loader.c, dlls/ntdll/loadorder.c, dlls/ntdll/ntdll_misc.h
+# |
+if test "$enable_ntdll_DllRedirects" -eq 1; then
+	patch_apply ntdll-DllRedirects/0001-ntdll-Move-logic-to-determine-loadorder-HKCU-app-key.patch
+	patch_apply ntdll-DllRedirects/0002-ntdll-Move-logic-to-read-loadorder-registry-values-i.patch
+	patch_apply ntdll-DllRedirects/0003-ntdll-Move-code-to-determine-module-basename-into-se.patch
+	patch_apply ntdll-DllRedirects/0004-ntdll-Implement-get_redirect-function.patch
+	patch_apply ntdll-DllRedirects/0005-ntdll-Implement-loader-redirection-scheme.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Move logic to determine loadorder HKCU/app key into separate functions.", 1 },';
+		echo '+    { "Michael Müller", "ntdll: Move logic to read loadorder registry values into separate function.", 1 },';
+		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
+		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
+		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-Exception
 # |
 # | Modified files:
@@ -4032,6 +3562,18 @@ if test "$enable_ntdll_Heap_FreeLists" -eq 1; then
 	patch_apply ntdll-Heap_FreeLists/0001-ntdll-Improve-heap-allocation-performance-by-using-m.patch
 	(
 		echo '+    { "Steaphan Greene", "ntdll: Improve heap allocation performance by using more fine-grained free lists.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Hide_Wine_Exports
+# |
+# | Modified files:
+# |   *	dlls/ntdll/loader.c, dlls/ntdll/ntdll_misc.h
+# |
+if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
+	patch_apply ntdll-Hide_Wine_Exports/0001-ntdll-Add-support-for-hiding-wine-version-informatio.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Add support for hiding wine version information from applications.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5400,6 +4942,475 @@ if test "$enable_wineconsole_Insert_Mode" -eq 1; then
 		echo '+    { "Hugh McMaster", "wineconsole: Improve semantics of some poorly-worded resource strings.", 1 },';
 		echo '+    { "Hugh McMaster", "wineconsole: Add InsertMode to HKCU.", 1 },';
 		echo '+    { "Hugh McMaster", "wineconsole: Add InsertMode to the user dialog.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-CSMT_Helper
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/ddraw/surface.c, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc,
+# | 	dlls/wined3d/resource.c, dlls/wined3d/surface.c, dlls/wined3d/texture.c, dlls/wined3d/volume.c,
+# | 	dlls/wined3d/wined3d.spec, dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
+# |
+if test "$enable_wined3d_CSMT_Helper" -eq 1; then
+	patch_apply wined3d-CSMT_Helper/0001-wined3d-Merge-get_pitch-functions.patch
+	patch_apply wined3d-CSMT_Helper/0002-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch
+	(
+		echo '+    { "Stefan Dösinger", "wined3d: Merge get_pitch functions.", 1 },';
+		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Multisampling
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Multisampling" -eq 1; then
+	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+	(
+		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Revert_PixelFormat
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35655] Fix wined3d performance drop introduced by pixelformat changes.
+# |   *	[#35718] Fix flickering introduced by pixelformat changes.
+# |   *	[#35950] Fix black screen on startup introduced by pixelformat changes.
+# |   *	[#35975] Fix gray screen on startup introduced by pixelformat changes.
+# |   *	[#36900] Fix missing video introduced by pixelformat changes.
+# |
+# | Modified files:
+# |   *	dlls/d3d8/tests/device.c, dlls/d3d9/tests/device.c, dlls/ddraw/tests/ddraw1.c, dlls/ddraw/tests/ddraw2.c,
+# | 	dlls/ddraw/tests/ddraw4.c, dlls/ddraw/tests/ddraw7.c, dlls/wined3d/context.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
+	patch_apply wined3d-Revert_PixelFormat/0001-Revert-wined3d-Track-if-a-context-s-private-hdc-has-.patch
+	patch_apply wined3d-Revert_PixelFormat/0002-Revert-wined3d-Track-if-a-context-s-hdc-is-private-s.patch
+	patch_apply wined3d-Revert_PixelFormat/0003-Revert-wined3d-When-restoring-pixel-format-in-contex.patch
+	patch_apply wined3d-Revert_PixelFormat/0004-Revert-wined3d-Don-t-call-GetPixelFormat-to-set-a-fl.patch
+	patch_apply wined3d-Revert_PixelFormat/0005-Revert-wined3d-Restore-the-pixel-format-of-the-windo.patch
+	patch_apply wined3d-Revert_PixelFormat/0006-d3d8-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
+	patch_apply wined3d-Revert_PixelFormat/0007-d3d9-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
+	patch_apply wined3d-Revert_PixelFormat/0008-ddraw-Mark-tests-which-no-longer-pass-due-to-reverts.patch
+	(
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s private hdc has had its pixel format set, so we don'\''t need to check it.\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s hdc is private so we never need to restore its pixel format.\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: When restoring pixel format in context_release(), mark the context as needing to be set on the next context_acquire().\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Don'\''t call GetPixelFormat() to set a flag that'\''s already set.\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Restore the pixel format of the window whose pixel format was actually changed.\".", 1 },';
+		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-resource_check_usage
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c
+# |
+if test "$enable_wined3d_resource_check_usage" -eq 1; then
+	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	(
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-wined3d_swapchain_present
+# |
+# | Modified files:
+# |   *	dlls/wined3d/swapchain.c
+# |
+if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
+	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-CSMT_Main
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#11674] Support for CSMT (command stream) to increase graphic performance
+# |
+# | Modified files:
+# |   *	dlls/d3d8/tests/visual.c, dlls/d3d9/tests/visual.c, dlls/wined3d/arb_program_shader.c, dlls/wined3d/buffer.c,
+# | 	dlls/wined3d/context.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/directx.c, dlls/wined3d/drawprim.c,
+# | 	dlls/wined3d/glsl_shader.c, dlls/wined3d/query.c, dlls/wined3d/resource.c, dlls/wined3d/shader.c, dlls/wined3d/state.c,
+# | 	dlls/wined3d/stateblock.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c,
+# | 	dlls/wined3d/utils.c, dlls/wined3d/vertexdeclaration.c, dlls/wined3d/view.c, dlls/wined3d/volume.c,
+# | 	dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h, dlls/winex11.drv/opengl.c
+# |
+if test "$enable_wined3d_CSMT_Main" -eq 1; then
+	patch_apply wined3d-CSMT_Main/0001-wined3d-Pass-a-context-to-surface_load_sysmem.patch
+	patch_apply wined3d-CSMT_Main/0002-wined3d-Pass-a-context-to-read_from_framebuffer.patch
+	patch_apply wined3d-CSMT_Main/0003-wined3d-Pass-a-context-to-surface_load_drawable-and-.patch
+	patch_apply wined3d-CSMT_Main/0004-wined3d-Pass-a-context-to-surface_blt_fbo.patch
+	patch_apply wined3d-CSMT_Main/0005-wined3d-Pass-a-context-to-surface_multisample_resolv.patch
+	patch_apply wined3d-CSMT_Main/0006-wined3d-Pass-a-context-to-surface_load_texture.patch
+	patch_apply wined3d-CSMT_Main/0007-wined3d-Pass-a-context-to-surface_load_location.patch
+	patch_apply wined3d-CSMT_Main/0008-wined3d-Make-surface_load_location-return-nothing.patch
+	patch_apply wined3d-CSMT_Main/0009-wined3d-Store-volume-locations-in-the-resource.patch
+	patch_apply wined3d-CSMT_Main/0010-wined3d-Move-validate_location-to-resource.c.patch
+	patch_apply wined3d-CSMT_Main/0011-wined3d-Move-surface-locations-into-the-resource.patch
+	patch_apply wined3d-CSMT_Main/0012-wined3d-Remove-surface_validate_location.patch
+	patch_apply wined3d-CSMT_Main/0013-wined3d-Move-invalidate_location-to-resource.c.patch
+	patch_apply wined3d-CSMT_Main/0014-wined3d-Invalidate-containers-via-callback.patch
+	patch_apply wined3d-CSMT_Main/0015-wined3d-Remove-surface_invalidate_location.patch
+	patch_apply wined3d-CSMT_Main/0016-wined3d-Move-bitmap_data-and-user_memory-into-the-re.patch
+	patch_apply wined3d-CSMT_Main/0017-wined3d-Move-load_location-into-the-resource.patch
+	patch_apply wined3d-CSMT_Main/0018-wined3d-Replace-surface_load_location-with-resource_.patch
+	patch_apply wined3d-CSMT_Main/0019-wined3d-Introduce-helper-functions-for-mapping-volum.patch
+	patch_apply wined3d-CSMT_Main/0020-wined3d-Move-volume-PBO-infrastructure-into-the-reso.patch
+	patch_apply wined3d-CSMT_Main/0021-wined3d-Remove-surface-pbo.patch
+	patch_apply wined3d-CSMT_Main/0022-wined3d-Use-resource-buffer-mapping-facilities-in-su.patch
+	patch_apply wined3d-CSMT_Main/0023-wined3d-Move-buffer-creation-into-the-resource.patch
+	patch_apply wined3d-CSMT_Main/0024-wined3d-Handle-WINED3D_LOCATION_DISCARDED-in-surface.patch
+	patch_apply wined3d-CSMT_Main/0025-wined3d-Handle-LOCATION_DISCARDED-in-surface_load_dr.patch
+	patch_apply wined3d-CSMT_Main/0026-wined3d-Handle-WINED3D_LOCATION_DISCARDED-for-sysmem.patch
+	patch_apply wined3d-CSMT_Main/0027-wined3d-Discard-implicit-surfaces-on-unload.patch
+	patch_apply wined3d-CSMT_Main/0028-wined3d-Don-t-try-to-flip-sysmem-copies-in-swapchain.patch
+	patch_apply wined3d-CSMT_Main/0029-wined3d-Discard-the-backbuffer-in-discard-presents.patch
+	patch_apply wined3d-CSMT_Main/0030-wined3d-Allocate-sysmem-for-client-storage-if-it-doe.patch
+	patch_apply wined3d-CSMT_Main/0031-wined3d-Introduce-a-function-to-retrieve-resource-me.patch
+	patch_apply wined3d-CSMT_Main/0032-wined3d-Make-surface_ops-unmap-specific-for-front-bu.patch
+	patch_apply wined3d-CSMT_Main/0033-wined3d-Move-check_block_align-to-resource.c.patch
+	patch_apply wined3d-CSMT_Main/0034-wined3d-Replace-surface-alloc-functions-with-resourc.patch
+	patch_apply wined3d-CSMT_Main/0035-wined3d-Don-t-delete-the-buffer-in-surface_cleanup.patch
+	patch_apply wined3d-CSMT_Main/0036-wined3d-Use-resource-facilities-to-destroy-PBOs.patch
+	patch_apply wined3d-CSMT_Main/0037-wined3d-Move-simple-location-copying-to-the-resource.patch
+	patch_apply wined3d-CSMT_Main/0038-wined3d-Move-most-of-volume_map-to-resource.c.patch
+	patch_apply wined3d-CSMT_Main/0039-wined3d-Use-resource_map-for-surface_map.patch
+	patch_apply wined3d-CSMT_Main/0040-wined3d-Use-client-storage-with-DIB-sections.patch
+	patch_apply wined3d-CSMT_Main/0041-wined3d-Don-t-call-the-public-map-function-in-surfac.patch
+	patch_apply wined3d-CSMT_Main/0042-wined3d-Don-t-call-the-public-map-function-in-surfac.patch
+	patch_apply wined3d-CSMT_Main/0043-wined3d-Move-the-framebuffer-into-wined3d_state.patch
+	patch_apply wined3d-CSMT_Main/0044-wined3d-Get-rid-of-state-access-in-shader_generate_g.patch
+	patch_apply wined3d-CSMT_Main/0045-wined3d-Preload-buffers-if-streamsrc-is-not-dirty.patch
+	patch_apply wined3d-CSMT_Main/0046-wined3d-Hackily-introduce-a-multithreaded-command-st.patch
+	patch_apply wined3d-CSMT_Main/0047-wined3d-Wait-for-resource-updates-to-finish-when-usi.patch
+	patch_apply wined3d-CSMT_Main/0048-wined3d-Don-t-store-pointers-in-struct-wined3d_cs_pr.patch
+	patch_apply wined3d-CSMT_Main/0049-wined3d-Don-t-put-rectangle-pointers-into-wined3d_cs.patch
+	patch_apply wined3d-CSMT_Main/0050-wined3d-Store-the-color-in-clear-ops-instead-of-a-po.patch
+	patch_apply wined3d-CSMT_Main/0051-wined3d-Pass-the-state-to-draw_primitive.patch
+	patch_apply wined3d-CSMT_Main/0052-wined3d-Wait-for-the-cs-before-destroying-objects.patch
+	patch_apply wined3d-CSMT_Main/0053-wined3d-Give-the-cs-its-own-state.patch
+	patch_apply wined3d-CSMT_Main/0054-wined3d-Send-float-constant-updates-through-the-comm.patch
+	patch_apply wined3d-CSMT_Main/0055-wined3d-Request-a-glFinish-before-modifying-resource.patch
+	patch_apply wined3d-CSMT_Main/0056-wined3d-Finish-the-cs-before-changing-the-texture-lo.patch
+	patch_apply wined3d-CSMT_Main/0057-wined3d-Don-t-call-glFinish-after-clears.patch
+	patch_apply wined3d-CSMT_Main/0058-wined3d-Don-t-call-glFinish-after-draws.patch
+	patch_apply wined3d-CSMT_Main/0059-wined3d-Shadow-device-offscreenBuffer-in-the-context.patch
+	patch_apply wined3d-CSMT_Main/0060-wined3d-Don-t-access-the-stateblock-in-find_draw_buf.patch
+	patch_apply wined3d-CSMT_Main/0061-wined3d-Pass-the-depth-stencil-to-swapchain-present.patch
+	patch_apply wined3d-CSMT_Main/0062-wined3d-Don-t-store-viewport-pointers-in-the-command.patch
+	patch_apply wined3d-CSMT_Main/0063-wined3d-Keep-track-of-the-onscreen-depth-stencil-in-.patch
+	patch_apply wined3d-CSMT_Main/0064-wined3d-Send-base-vertex-index-updates-through-the-c.patch
+	patch_apply wined3d-CSMT_Main/0065-wined3d-Send-primitive-type-updates-through-the-comm.patch
+	patch_apply wined3d-CSMT_Main/0066-wined3d-Send-bool-constant-updates-through-the-comma.patch
+	patch_apply wined3d-CSMT_Main/0067-wined3d-Send-int-constant-updates-through-the-comman.patch
+	patch_apply wined3d-CSMT_Main/0068-wined3d-Send-light-updates-through-the-command-strea.patch
+	patch_apply wined3d-CSMT_Main/0069-wined3d-Prevent-the-command-stream-from-running-ahea.patch
+	patch_apply wined3d-CSMT_Main/0070-wined3d-Wait-for-the-cs-to-finish-before-destroying-.patch
+	patch_apply wined3d-CSMT_Main/0071-wined3d-Run-the-cs-asynchronously.patch
+	patch_apply wined3d-CSMT_Main/0072-wined3d-Send-blits-through-the-command-stream.patch
+	patch_apply wined3d-CSMT_Main/0073-wined3d-Put-update_surface-checks-back-in-place.patch
+	patch_apply wined3d-CSMT_Main/0074-wined3d-Get-rid-of-WINED3D_BUFFER_FLUSH.patch
+	patch_apply wined3d-CSMT_Main/0075-wined3d-Add-cs-waiting-debug-code.patch
+	patch_apply wined3d-CSMT_Main/0076-wined3d-Don-t-force-strict-draw-ordering-for-multith.patch
+	patch_apply wined3d-CSMT_Main/0077-wined3d-Send-render-target-view-clears-through-the-c.patch
+	patch_apply wined3d-CSMT_Main/0078-wined3d-Wait-for-the-CS-in-GetDC.patch
+	patch_apply wined3d-CSMT_Main/0079-wined3d-send-resource-maps-through-the-command-strea.patch
+	patch_apply wined3d-CSMT_Main/0080-wined3d-Get-rid-of-the-end_scene-flush-and-finish.patch
+	patch_apply wined3d-CSMT_Main/0081-wined3d-Replace-the-linked-lists-with-a-ringbuffer.patch
+	patch_apply wined3d-CSMT_Main/0082-wined3d-Don-t-preload-buffers-on-unmap.patch
+	patch_apply wined3d-CSMT_Main/0083-wined3d-Don-t-call-glFinish-before-swapping.patch
+	patch_apply wined3d-CSMT_Main/0084-wined3d-wined3d_-_query_issue-never-fails.patch
+	patch_apply wined3d-CSMT_Main/0085-wined3d-Add-query-support-to-the-command-stream.patch
+	patch_apply wined3d-CSMT_Main/0086-wined3d-Check-our-CS-state-to-find-out-if-a-query-is.patch
+	patch_apply wined3d-CSMT_Main/0087-wined3d-Poll-queries-automatically-in-the-CS.patch
+	patch_apply wined3d-CSMT_Main/0088-wined3d-Introduce-a-separate-queue-for-priority-comm.patch
+	patch_apply wined3d-CSMT_Main/0089-wined3d-Destroy-queries-through-the-CS.patch
+	patch_apply wined3d-CSMT_Main/0090-wined3d-Separate-main-and-worker-thread-query-state.patch
+	patch_apply wined3d-CSMT_Main/0091-wined3d-Don-t-poll-queries-that-failed-to-start.patch
+	patch_apply wined3d-CSMT_Main/0092-wined3d-Remove-restated-queries-from-the-poll-list.patch
+	patch_apply wined3d-CSMT_Main/0093-wined3d-Don-t-reset-the-query-state-if-it-doesn-t-ha.patch
+	patch_apply wined3d-CSMT_Main/0094-wined3d-Put-this-into-the-query-poll-patch.patch
+	patch_apply wined3d-CSMT_Main/0095-wined3d-Send-update_surface-commands-through-the-CS.patch
+	patch_apply wined3d-CSMT_Main/0096-wined3d-Send-texture-preloads-through-the-CS.patch
+	patch_apply wined3d-CSMT_Main/0097-wined3d-Send-surface-preloads-through-the-CS.patch
+	patch_apply wined3d-CSMT_Main/0098-wined3d-Send-update_texture-calls-through-the-CS.patch
+	patch_apply wined3d-CSMT_Main/0099-wined3d-Get-rid-of-the-surface_upload_data-glFinish.patch
+	patch_apply wined3d-CSMT_Main/0100-wined3d-Don-t-lock-the-src-volume-in-device_update_v.patch
+	patch_apply wined3d-CSMT_Main/0101-wined3d-Handle-evit_managed_resources-through-the-CS.patch
+	patch_apply wined3d-CSMT_Main/0102-wined3d-Send-flips-through-the-command-stream.patch
+	patch_apply wined3d-CSMT_Main/0103-wined3d-Introduce-resource-fencing.patch
+	patch_apply wined3d-CSMT_Main/0104-wined3d-Fence-update_texture-and-update_surface-call.patch
+	patch_apply wined3d-CSMT_Main/0105-wined3d-Dirtify-resources-on-unmap.patch
+	patch_apply wined3d-CSMT_Main/0106-wined3d-Fence-texture-reads-in-draws.patch
+	patch_apply wined3d-CSMT_Main/0107-wined3d-Fence-render-targets-and-depth-stencils.patch
+	patch_apply wined3d-CSMT_Main/0108-wined3d-Fence-blit-operations.patch
+	patch_apply wined3d-CSMT_Main/0109-wined3d-Fence-color_fill-operations.patch
+	patch_apply wined3d-CSMT_Main/0110-wined3d-Fence-clear-calls.patch
+	patch_apply wined3d-CSMT_Main/0111-wined3d-Fence-present-calls.patch
+	patch_apply wined3d-CSMT_Main/0112-wined3d-Make-resource-maps-and-unmaps-a-priority-com.patch
+	patch_apply wined3d-CSMT_Main/0113-wined3d-Dirtify-changed-textures-through-the-command.patch
+	patch_apply wined3d-CSMT_Main/0114-wined3d-Wrap-GL-BOs-in-a-structure.patch
+	patch_apply wined3d-CSMT_Main/0115-wined3d-Separate-resource-map-and-draw-buffers.patch
+	patch_apply wined3d-CSMT_Main/0116-wined3d-Implement-DISCARD-resource-maps-with-buffers.patch
+	patch_apply wined3d-CSMT_Main/0117-wined3d-Implement-DISCARD-resource-maps-with-heap-me.patch
+	patch_apply wined3d-CSMT_Main/0118-wined3d-Unset-some-objects-in-state_init_default.patch
+	patch_apply wined3d-CSMT_Main/0119-wined3d-Don-t-request-the-frontbuffer-to-create-dumm.patch
+	patch_apply wined3d-CSMT_Main/0120-wined3d-Use-double-buffered-buffers-for-multithreade.patch
+	patch_apply wined3d-CSMT_Main/0121-wined3d-Don-t-synchronize-NOOVERWRITE-buffer-maps.patch
+	patch_apply wined3d-CSMT_Main/0122-wined3d-Separate-buffer-map-write-and-draw-read-memo.patch
+	patch_apply wined3d-CSMT_Main/0123-wined3d-Accelerate-DISCARD-buffer-maps.patch
+	patch_apply wined3d-CSMT_Main/0124-wined3d-Accelerate-READONLY-buffer-maps.patch
+	patch_apply wined3d-CSMT_Main/0125-wined3d-Access-the-buffer-dirty-areas-through-the-CS.patch
+	patch_apply wined3d-CSMT_Main/0126-wined3d-Ignore-buffer-resource.map_count-in-the-CS.patch
+	patch_apply wined3d-CSMT_Main/0127-wined3d-Send-buffer-preloads-through-the-CS.patch
+	patch_apply wined3d-CSMT_Main/0128-wined3d-Use-glBufferSubData-instead-of-glMapBufferRa.patch
+	patch_apply wined3d-CSMT_Main/0129-wined3d-Separate-GL-buffer-discard-control-from-igno.patch
+	patch_apply wined3d-CSMT_Main/0130-wined3d-Create-buffers-before-mapping-them.patch
+	patch_apply wined3d-CSMT_Main/0131-wined3d-Destroy-views-through-the-CS.patch
+	patch_apply wined3d-CSMT_Main/0132-wined3d-Remove-another-glFinish.patch
+	patch_apply wined3d-CSMT_Main/0133-wined3d-Destroy-vertex-declarations-through-the-CS.patch
+	patch_apply wined3d-CSMT_Main/0134-wined3d-Destroy-shaders-through-the-CS.patch
+	patch_apply wined3d-CSMT_Main/0135-wined3d-Create-VBOs-through-the-command-stream.patch
+	patch_apply wined3d-CSMT_Main/0136-wined3d-Clean-up-resource-data-through-the-CS.patch
+	patch_apply wined3d-CSMT_Main/0137-wined3d-Clean-up-buffer-resource-data-through-the-CS.patch
+	patch_apply wined3d-CSMT_Main/0138-wined3d-Clean-up-volume-resource-data-through-the-CS.patch
+	patch_apply wined3d-CSMT_Main/0139-wined3d-Clean-up-surfaces-through-the-cs.patch
+	patch_apply wined3d-CSMT_Main/0140-wined3d-Clean-up-texture-resources-through-the-cs.patch
+	patch_apply wined3d-CSMT_Main/0141-wined3d-Unload-resources-through-the-CS-in-uninit_3d.patch
+	patch_apply wined3d-CSMT_Main/0142-wined3d-Unload-resources-through-the-CS-in-device_re.patch
+	patch_apply wined3d-CSMT_Main/0143-wined3d-Don-t-glFinish-after-a-depth-buffer-blit.patch
+	patch_apply wined3d-CSMT_Main/0144-wined3d-Remove-software-cursor-support.patch
+	patch_apply wined3d-CSMT_Main/0145-wined3d-Create-dummy-textures-through-the-CS.patch
+	patch_apply wined3d-CSMT_Main/0146-wined3d-Create-the-initial-context-through-the-CS.patch
+	patch_apply wined3d-CSMT_Main/0147-wined3d-Recreate-ctx-and-dummy-textures-through-the-.patch
+	patch_apply wined3d-CSMT_Main/0148-wined3d-Ignore-WINED3D_MAP_NO_DIRTY_UPDATE-in-resour.patch
+	patch_apply wined3d-CSMT_Main/0149-wined3d-Delete-GL-contexts-through-the-CS-in-reset.patch
+	patch_apply wined3d-CSMT_Main/0150-wined3d-Delete-GL-contexts-through-the-CS-in-uninit_.patch
+	patch_apply wined3d-CSMT_Main/0151-wined3d-Invoke-surface_unload-through-the-CS-in-wine.patch
+	patch_apply wined3d-CSMT_Main/0152-wined3d-Use-an-event-to-block-the-worker-thread-when.patch
+	patch_apply wined3d-CSMT_Main/0153-wined3d-Fence-preload-operations.patch
+	patch_apply wined3d-CSMT_Main/0154-d3d8-tests-D3DLOCK_NO_DIRTY_UPDATE-on-managed-textur.patch
+	patch_apply wined3d-CSMT_Main/0155-d3d9-tests-D3DLOCK_NO_DIRTY_UPDATE-on-managed-textur.patch
+	patch_apply wined3d-CSMT_Main/0156-wined3d-Completely-reset-the-state-on-reset.patch
+	patch_apply wined3d-CSMT_Main/0157-wined3d-Send-getdc-and-releasedc-through-the-command.patch
+	patch_apply wined3d-CSMT_Main/0158-wined3d-Set-map_heap_memory-NULL-when-allocating-a-P.patch
+	patch_apply wined3d-CSMT_Main/0159-wined3d-Wait-only-for-the-buffer-to-be-idle.patch
+	patch_apply wined3d-CSMT_Main/0160-wined3d-Add-a-comment-about-worker-thread-lag.patch
+	patch_apply wined3d-CSMT_Main/0161-wined3d-Remove-the-texture-destroy-glFinish.patch
+	patch_apply wined3d-CSMT_Main/0162-wined3d-Move-FBO-destruction-into-the-worker-thread.patch
+	patch_apply wined3d-CSMT_Main/0163-wined3d-Don-t-incref-decref-textures-in-color-depth-.patch
+	patch_apply wined3d-CSMT_Main/0164-Winex11-complain-about-glfinish.patch
+	patch_apply wined3d-CSMT_Main/0165-wined3d-Make-sure-the-new-window-is-set-up-before-se.patch
+	patch_apply wined3d-CSMT_Main/0166-wined3d-Remove-the-device_reset-CS-sync-fixme.patch
+	patch_apply wined3d-CSMT_Main/0167-wined3d-Put-GL_APPLE_flush_buffer_range-syncing-back.patch
+	patch_apply wined3d-CSMT_Main/0168-wined3d-Wait-for-the-resource-to-be-idle-when-destro.patch
+	patch_apply wined3d-CSMT_Main/0169-wined3d-Don-t-sync-on-redundant-discard-calls.patch
+	patch_apply wined3d-CSMT_Main/0170-wined3d-Don-t-discard-new-buffers.patch
+	patch_apply wined3d-CSMT_Main/0171-wined3d-Don-t-try-to-sync-VBOs-manually-on-OSX-with-.patch
+	patch_apply wined3d-CSMT_Main/0172-wined3d-Render-target-lock-hack.patch
+	patch_apply wined3d-CSMT_Main/0173-wined3d-Avoid-calling-wined3d_surface_blt-from-surfa.patch
+	patch_apply wined3d-CSMT_Main/0174-wined3d-Enable-CSMT-by-default-print-a-winediag-mess.patch
+	patch_apply wined3d-CSMT_Main/9999-IfDefined.patch
+	(
+		echo '+    { "Stefan Dösinger", "wined3d: Pass a context to surface_load_sysmem.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Pass a context to read_from_framebuffer.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Pass a context to surface_load_drawable and surface_blt_to_drawable.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Pass a context to surface_blt_fbo.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Pass a context to surface_multisample_resolve.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Pass a context to surface_load_texture.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Pass a context to surface_load_location.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Make surface_load_location return nothing.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Store volume locations in the resource.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Move validate_location to resource.c.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Move surface locations into the resource.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Remove surface_validate_location.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Move invalidate_location to resource.c.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Invalidate containers via callback.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Remove surface_invalidate_location.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Move bitmap_data and user_memory into the resource.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Move load_location into the resource.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Replace surface_load_location with resource_load_location.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Introduce helper functions for mapping volumes.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Move volume PBO infrastructure into the resource.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Remove surface->pbo.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Use resource buffer mapping facilities in surfaces.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Move buffer creation into the resource.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Handle WINED3D_LOCATION_DISCARDED in surface_load_texture.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Handle LOCATION_DISCARDED in surface_load_drawable.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Handle WINED3D_LOCATION_DISCARDED for sysmem loads.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Discard implicit surfaces on unload.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t try to flip sysmem copies in swapchain_present.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Discard the backbuffer in discard presents.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Allocate sysmem for client storage if it doesn'\''t exist already.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Introduce a function to retrieve resource memory.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Make surface_ops->unmap specific for front buffers.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Move check_block_align to resource.c.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Replace surface alloc functions with resource ones.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t delete the buffer in surface_cleanup.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Use resource facilities to destroy PBOs.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Move simple location copying to the resource.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Move most of volume_map to resource.c.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Use resource_map for surface_map.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Use client storage with DIB sections.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call the public map function in surface_convert_format.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call the public map function in surface_cpu_blt.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Move the framebuffer into wined3d_state.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Get rid of state access in shader_generate_glsl_declarations.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Preload buffers if streamsrc is not dirty.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Hackily introduce a multithreaded command stream.", 1 },';
+		echo '+    { "Henri Verbeet", "wined3d: Wait for resource updates to finish when using the multithreaded command stream.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t store pointers in struct wined3d_cs_present.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t put rectangle pointers into wined3d_cs_clear.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Store the color in clear ops instead of a pointer.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Pass the state to draw_primitive.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Wait for the cs before destroying objects.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Give the cs its own state.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Send float constant updates through the command stream.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Request a glFinish before modifying resources outside the cs.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Finish the cs before changing the texture lod.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish after clears.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish after draws.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Shadow device->offscreenBuffer in the context.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t access the stateblock in find_draw_buffers_mask.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Pass the depth stencil to swapchain->present.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t store viewport pointers in the command stream.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Keep track of the onscreen depth stencil in the command stream instead of the device.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Send base vertex index updates through the cs.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Send primitive type updates through the command stream.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Send bool constant updates through the command stream.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Send int constant updates through the command stream.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Send light updates through the command stream.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Prevent the command stream from running ahead too far.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Wait for the cs to finish before destroying the device.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Run the cs asynchronously.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Send blits through the command stream.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Put update_surface checks back in place.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Get rid of WINED3D_BUFFER_FLUSH.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Add cs waiting debug code.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t force strict draw ordering for multithreaded CS.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Send render target view clears through the command stream.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Wait for the CS in GetDC.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: send resource maps through the command stream.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Get rid of the end_scene flush and finish.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Replace the linked lists with a ringbuffer.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t preload buffers on unmap.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish before swapping.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: wined3d_*_query_issue never fails.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Add query support to the command stream.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Check our CS state to find out if a query is done.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Poll queries automatically in the CS.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Introduce a separate queue for priority commands.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Destroy queries through the CS.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Separate main and worker thread query state.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t poll queries that failed to start.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Remove restated queries from the poll list.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t reset the query state if it doesn'\''t have a ctx.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Put this into the query poll patch.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Send update_surface commands through the CS.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Send texture preloads through the CS.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Send surface preloads through the CS.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Send update_texture calls through the CS.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Get rid of the surface_upload_data glFinish.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t lock the src volume in device_update_volume.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Handle evit_managed_resources through the CS.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Send flips through the command stream.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Introduce resource fencing.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Fence update_texture and update_surface calls.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Dirtify resources on unmap.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Fence texture reads in draws.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Fence render targets and depth stencils.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Fence blit operations.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Fence color_fill operations.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Fence clear calls.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Fence present calls.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Make resource maps and unmaps a priority command.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Dirtify changed textures through the command stream.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Wrap GL BOs in a structure.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Separate resource map and draw buffers.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Implement DISCARD resource maps with buffers.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Implement DISCARD resource maps with heap memory.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Unset some objects in state_init_default.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t request the frontbuffer to create dummy textures.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Use double-buffered buffers for multithreaded CS.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t synchronize NOOVERWRITE buffer maps.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Separate buffer map write and draw read memory pointers.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Accelerate DISCARD buffer maps.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Accelerate READONLY buffer maps.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Access the buffer dirty areas through the CS.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Ignore buffer->resource.map_count in the CS.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Send buffer preloads through the CS.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Use glBufferSubData instead of glMapBufferRange.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Separate GL buffer discard control from ignoring MAP_DISCARD.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Create buffers before mapping them.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Destroy views through the CS.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Remove another glFinish.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Destroy vertex declarations through the CS.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Destroy shaders through the CS.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Create VBOs through the command stream.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Clean up resource data through the CS.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Clean up buffer resource data through the CS.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Clean up volume resource data through the CS.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Clean up surfaces through the cs.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Clean up texture resources through the cs.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Unload resources through the CS in uninit_3d.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Unload resources through the CS in device_reset.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t glFinish after a depth buffer blit.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Remove software cursor support.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Create dummy textures through the CS.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Create the initial context through the CS.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Recreate ctx and dummy textures through the CS after resets.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Ignore WINED3D_MAP_NO_DIRTY_UPDATE in resource_map.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Delete GL contexts through the CS in reset.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Delete GL contexts through the CS in uninit_3d.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Invoke surface_unload through the CS in wined3d_surface_update_desc.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Use an event to block the worker thread when it is idle.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Fence preload operations.", 1 },';
+		echo '+    { "Stefan Dösinger", "d3d8/tests: D3DLOCK_NO_DIRTY_UPDATE on managed textures is temporarily broken.", 1 },';
+		echo '+    { "Stefan Dösinger", "d3d9/tests: D3DLOCK_NO_DIRTY_UPDATE on managed textures is temporarily broken.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Completely reset the state on reset.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Send getdc and releasedc through the command stream.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Set map_heap_memory = NULL when allocating a PBO.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Wait only for the buffer to be idle.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Add a comment about worker thread lag.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Remove the texture destroy glFinish.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Move FBO destruction into the worker thread.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t incref / decref textures in color / depth fill blits.", 1 },';
+		echo '+    { "Stefan Dösinger", "Winex11: complain about glfinish.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Make sure the new window is set up before setting up a context.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Remove the device_reset CS sync fixme.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Put GL_APPLE_flush_buffer_range syncing back in place.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Wait for the resource to be idle when destroying user memory surfaces.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t sync on redundant discard calls.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t discard new buffers.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t try to sync VBOs manually on OSX with CSMT.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Render target lock hack.", 1 },';
+		echo '+    { "Matteo Bruni", "wined3d: Avoid calling wined3d_surface_blt() from surface_upload_from_surface().", 1 },';
+		echo '+    { "Sebastian Lackner", "wined3d: Enable CSMT by default, print a winediag message informing about this patchset.", 1 },';
+		echo '+    { "Wine Staging Team", "Autogenerated #ifdef patch for wined3d-CSMT_Main.", 1 },';
 	) >> "$patchlist"
 fi
 

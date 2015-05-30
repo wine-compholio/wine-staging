@@ -1,0 +1,204 @@
+From 3e9c3ba84739fdd41205e1dd4ea8ad686871defb Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 30 May 2015 02:55:03 +0200
+Subject: ddraw: Allow size and format conversions in IDirect3DTexture2::Load.
+
+---
+ dlls/ddraw/surface.c | 147 ++++++++++++++++++++++++++-------------------------
+ 1 file changed, 76 insertions(+), 71 deletions(-)
+
+diff --git a/dlls/ddraw/surface.c b/dlls/ddraw/surface.c
+index f716cfc..f3bea20 100644
+--- a/dlls/ddraw/surface.c
++++ b/dlls/ddraw/surface.c
+@@ -5048,6 +5048,46 @@ static struct ddraw_surface *get_sub_mimaplevel(struct ddraw_surface *surface)
+     return impl_from_IDirectDrawSurface7(next_level);
+ }
+ 
++static BOOL compare_format(DDPIXELFORMAT *format1, DDPIXELFORMAT *format2)
++{
++    if ((format1->dwFlags & (DDPF_RGB|DDPF_YUV|DDPF_FOURCC)) !=
++        (format2->dwFlags & (DDPF_RGB|DDPF_YUV|DDPF_FOURCC)))
++        return FALSE;
++
++    if (format1->dwFlags & (DDPF_RGB|DDPF_YUV))
++    {
++        if (!(format1->dwFlags & DDPF_ALPHA))
++        {
++            /* The RGB and YUV bits are stored in the same fields */
++            if (format1->u1.dwRGBBitCount != format2->u1.dwRGBBitCount)
++                return FALSE;
++
++            if (format1->u2.dwRBitMask != format2->u2.dwRBitMask)
++                return FALSE;
++
++            if (format1->u3.dwGBitMask != format2->u3.dwGBitMask)
++                return FALSE;
++
++            if (format1->u4.dwBBitMask != format2->u4.dwBBitMask)
++                return FALSE;
++        }
++
++        if (format1->dwFlags & (DDPF_ALPHAPIXELS | DDPF_ALPHA))
++        {
++            if (format1->u5.dwRGBAlphaBitMask != format2->u5.dwRGBAlphaBitMask)
++                return FALSE;
++        }
++    }
++
++    if (format1->dwFlags & DDPF_FOURCC)
++    {
++        if (format1->dwFourCC != format2->dwFourCC)
++            return FALSE;
++    }
++
++    return TRUE;
++}
++
+ /*****************************************************************************
+  * IDirect3DTexture2::Load
+  *
+@@ -5081,91 +5121,57 @@ static HRESULT WINAPI d3d_texture2_Load(IDirect3DTexture2 *iface, IDirect3DTextu
+ 
+     wined3d_mutex_lock();
+ 
+-    if (((src_surface->surface_desc.ddsCaps.dwCaps & DDSCAPS_MIPMAP)
+-            != (dst_surface->surface_desc.ddsCaps.dwCaps & DDSCAPS_MIPMAP))
+-            || (src_surface->surface_desc.u2.dwMipMapCount != dst_surface->surface_desc.u2.dwMipMapCount))
+-    {
+-        ERR("Trying to load surfaces with different mip-map counts.\n");
+-    }
+-
+     for (;;)
+     {
+-        struct ddraw_palette *dst_pal, *src_pal;
+-        DDSURFACEDESC *src_desc, *dst_desc;
++        DDSURFACEDESC *src_desc = (DDSURFACEDESC *)&src_surface->surface_desc;
+ 
+         TRACE("Copying surface %p to surface %p (mipmap level %d).\n",
+                 src_surface, dst_surface, src_surface->mipmap_level);
+ 
+-        /* Suppress the ALLOCONLOAD flag */
+-        dst_surface->surface_desc.ddsCaps.dwCaps &= ~DDSCAPS_ALLOCONLOAD;
+-
+-        /* Get the palettes */
+-        dst_pal = dst_surface->palette;
+-        src_pal = src_surface->palette;
+-
+-        if (src_pal)
++        if (compare_format(&src_surface->surface_desc.u4.ddpfPixelFormat,
++                           &dst_surface->surface_desc.u4.ddpfPixelFormat))
+         {
+-            PALETTEENTRY palent[256];
++            struct ddraw_palette *dst_pal, *src_pal;
+ 
+-            if (!dst_pal)
+-            {
+-                wined3d_mutex_unlock();
+-                return DDERR_NOPALETTEATTACHED;
+-            }
+-            IDirectDrawPalette_GetEntries(&src_pal->IDirectDrawPalette_iface, 0, 0, 256, palent);
+-            IDirectDrawPalette_SetEntries(&dst_pal->IDirectDrawPalette_iface, 0, 0, 256, palent);
+-        }
++            /* Get the palettes */
++            dst_pal = dst_surface->palette;
++            src_pal = src_surface->palette;
+ 
+-        /* Copy one surface on the other */
+-        dst_desc = (DDSURFACEDESC *)&(dst_surface->surface_desc);
+-        src_desc = (DDSURFACEDESC *)&(src_surface->surface_desc);
++            if (src_pal)
++            {
++                PALETTEENTRY palent[256];
+ 
+-        if ((src_desc->dwWidth != dst_desc->dwWidth) || (src_desc->dwHeight != dst_desc->dwHeight))
+-        {
+-            /* Should also check for same pixel format, u1.lPitch, ... */
+-            ERR("Error in surface sizes.\n");
+-            wined3d_mutex_unlock();
+-            return D3DERR_TEXTURE_LOAD_FAILED;
+-        }
+-        else
+-        {
+-            struct wined3d_map_desc src_map_desc, dst_map_desc;
++                if (!dst_pal)
++                {
++                    wined3d_mutex_unlock();
++                    return DDERR_NOPALETTEATTACHED;
++                }
++                IDirectDrawPalette_GetEntries(&src_pal->IDirectDrawPalette_iface, 0, 0, 256, palent);
++                IDirectDrawPalette_SetEntries(&dst_pal->IDirectDrawPalette_iface, 0, 0, 256, palent);
++            }
+ 
+-            /* Copy the src blit color key if the source has one, don't erase
+-             * the destination's ckey if the source has none */
+             if (src_desc->dwFlags & DDSD_CKSRCBLT)
+             {
+                 IDirectDrawSurface7_SetColorKey(&dst_surface->IDirectDrawSurface7_iface,
+                         DDCKEY_SRCBLT, &src_desc->ddckCKSrcBlt);
+             }
++        }
++        else
++        {
++            if (src_desc->dwFlags & DDSD_CKSRCBLT)
++                return E_FAIL;
++        }
+ 
+-            /* Copy the main memory texture into the surface that corresponds
+-             * to the OpenGL texture object. */
+-
+-            hr = wined3d_surface_map(src_surface->wined3d_surface, &src_map_desc, NULL, 0);
+-            if (FAILED(hr))
+-            {
+-                ERR("Failed to lock source surface, hr %#x.\n", hr);
+-                wined3d_mutex_unlock();
+-                return D3DERR_TEXTURE_LOAD_FAILED;
+-            }
+-
+-            hr = wined3d_surface_map(dst_surface->wined3d_surface, &dst_map_desc, NULL, 0);
+-            if (FAILED(hr))
+-            {
+-                ERR("Failed to lock destination surface, hr %#x.\n", hr);
+-                wined3d_surface_unmap(src_surface->wined3d_surface);
+-                wined3d_mutex_unlock();
+-                return D3DERR_TEXTURE_LOAD_FAILED;
+-            }
+-
+-            if (dst_surface->surface_desc.u4.ddpfPixelFormat.dwFlags & DDPF_FOURCC)
+-                memcpy(dst_map_desc.data, src_map_desc.data, src_surface->surface_desc.u1.dwLinearSize);
+-            else
+-                memcpy(dst_map_desc.data, src_map_desc.data, src_map_desc.row_pitch * src_desc->dwHeight);
++        /* Suppress the ALLOCONLOAD flag */
++        dst_surface->surface_desc.ddsCaps.dwCaps &= ~DDSCAPS_ALLOCONLOAD;
+ 
+-            wined3d_surface_unmap(src_surface->wined3d_surface);
+-            wined3d_surface_unmap(dst_surface->wined3d_surface);
++        hr = wined3d_surface_blt(dst_surface->wined3d_surface, NULL, src_surface->wined3d_surface,
++                                 NULL, 0, NULL, WINED3D_TEXF_LINEAR);
++        if (FAILED(hr))
++        {
++            ERR("Failed to blit surface, hr %#x.\n", hr);
++            wined3d_mutex_unlock();
++            return hr;
+         }
+ 
+         if (src_surface->surface_desc.ddsCaps.dwCaps & DDSCAPS_MIPMAP)
+@@ -5178,12 +5184,11 @@ static HRESULT WINAPI d3d_texture2_Load(IDirect3DTexture2 *iface, IDirect3DTextu
+         else
+             dst_surface = NULL;
+ 
++        if (src_surface && !dst_surface)
++            return DDERR_NOTFOUND;
++
+         if (!src_surface || !dst_surface)
+-        {
+-            if (src_surface != dst_surface)
+-                ERR("Loading surface with different mipmap structure.\n");
+             break;
+-        }
+     }
+ 
+     wined3d_mutex_unlock();
+-- 
+2.4.2
+

@@ -3605,6 +3605,9 @@ fi
 
 # Patchset ntdll-Hide_Wine_Exports
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38656] Add support for hiding wine version information from applications
+# |
 # | Modified files:
 # |   *	dlls/ntdll/loader.c, dlls/ntdll/ntdll_misc.h
 # |

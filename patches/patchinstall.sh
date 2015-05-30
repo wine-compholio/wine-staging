@@ -260,6 +260,7 @@ patch_enable_all ()
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Multisampling="$1"
+	enable_wined3d_Revert_DepthStencil_Location="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_UnhandledBlendFactor="$1"
 	enable_wined3d_resource_check_usage="$1"
@@ -848,6 +849,9 @@ patch_enable ()
 			;;
 		wined3d-Multisampling)
 			enable_wined3d_Multisampling="$2"
+			;;
+		wined3d-Revert_DepthStencil_Location)
+			enable_wined3d_Revert_DepthStencil_Location="$2"
 			;;
 		wined3d-Revert_PixelFormat)
 			enable_wined3d_Revert_PixelFormat="$2"
@@ -1650,9 +1654,13 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_wined3d_DXTn" -gt 1; then
 		abort "Patchset wined3d-DXTn disabled, but wined3d-CSMT_Helper depends on that."
 	fi
+	if test "$enable_wined3d_Revert_DepthStencil_Location" -gt 1; then
+		abort "Patchset wined3d-Revert_DepthStencil_Location disabled, but wined3d-CSMT_Helper depends on that."
+	fi
 	enable_makedep_PARENTSPEC=1
 	enable_ntdll_DllRedirects=1
 	enable_wined3d_DXTn=1
+	enable_wined3d_Revert_DepthStencil_Location=1
 fi
 
 if test "$enable_shell32_SHFileOperation" -eq 1; then
@@ -4986,6 +4994,21 @@ if test "$enable_wineconsole_Insert_Mode" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-Revert_DepthStencil_Location
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38654] Revert patch which causes broken rendering in various games
+# |
+# | Modified files:
+# |   *	dlls/wined3d/context.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Revert_DepthStencil_Location" -eq 1; then
+	patch_apply wined3d-Revert_DepthStencil_Location/0001-Revert-wined3d-Allow-specifying-a-different-depth-st.patch
+	(
+		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Allow specifying a different depth stencil location.\".", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-CSMT_Helper
 # |
 # | Modified files:
@@ -4999,6 +5022,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	(
 		echo '+    { "Stefan Dösinger", "wined3d: Merge get_pitch functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-resource_check_usage
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c
+# |
+if test "$enable_wined3d_resource_check_usage" -eq 1; then
+	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	(
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -5072,18 +5107,6 @@ if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
 	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-resource_check_usage
-# |
-# | Modified files:
-# |   *	dlls/wined3d/resource.c
-# |
-if test "$enable_wined3d_resource_check_usage" -eq 1; then
-	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	(
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
 	) >> "$patchlist"
 fi
 

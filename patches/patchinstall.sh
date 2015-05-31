@@ -4631,7 +4631,7 @@ if test "$enable_shlwapi_AssocGetPerceivedType" -eq 1; then
 	patch_apply shlwapi-AssocGetPerceivedType/0002-shlwapi-Implement-AssocGetPerceivedType.patch
 	(
 		echo '+    { "Mark Jansen", "shlwapi/tests: Add tests for AssocGetPerceivedType.", 1 },';
-		echo '+    { "Mark Jansen", "shlwapi: Implement AssocGetPerceivedType.", 1 },';
+		echo '+    { "Mark Jansen", "shlwapi: Implement AssocGetPerceivedType.", 2 },';
 	) >> "$patchlist"
 fi
 

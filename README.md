@@ -39,9 +39,10 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [2]:**
+**Bug fixes and features included in the next upcoming release [3]:**
 
 * Add implementation for kernel32.GetNumaProcessorNode ([Wine Bug #38660](https://bugs.winehq.org/show_bug.cgi?id=38660))
+* Implement proper handling of CLI .NET images in Wine library loader ([Wine Bug #38661](https://bugs.winehq.org/show_bug.cgi?id=38661))
 * Multiple applications needs better NtQueryInformationJobObject stub ([Wine Bug #38658](https://bugs.winehq.org/show_bug.cgi?id=38658))
 
 
@@ -189,7 +190,7 @@ for more details.*
 * Implement mscoree._CorValidateImage for mono runtime
 * Implement ntoskrnl driver testing framework.
 * Implement ntoskrnl.KeInitializeMutex
-* Implement proper handling of CLI .NET images in Wine library loader
+* ~~Implement proper handling of CLI .NET images in Wine library loader~~
 * Implement stub for ntoskrnl.IoGetAttachedDeviceReference
 * Implement stub for ntoskrnl.KeDelayExecutionThread.
 * Implement stubs for ntoskrnl.Ex{Acquire,Release}FastMutexUnsafe

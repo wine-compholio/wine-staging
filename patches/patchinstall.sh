@@ -3450,6 +3450,9 @@ fi
 
 # Patchset ntdll-CLI_Images
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38661] Implement proper handling of CLI .NET images in Wine library loader
+# |
 # | Modified files:
 # |   *	dlls/kernel32/process.c, dlls/ntdll/loader.c
 # |

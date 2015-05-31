@@ -3325,6 +3325,9 @@ fi
 
 # Patchset mscoree-CorValidateImage
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38662] Implement mscoree._CorValidateImage for mono runtime
+# |
 # | Modified files:
 # |   *	dlls/mscoree/mscoree_main.c
 # |

@@ -3080,6 +3080,9 @@ fi
 
 # Patchset kernel32-GetNumaProcessorNode
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38660] Add implementation for kernel32.GetNumaProcessorNode
+# |
 # | Modified files:
 # |   *	dlls/kernel32/cpu.c, dlls/kernel32/kernel32.spec, dlls/kernel32/tests/Makefile.in, dlls/kernel32/tests/cpu.c,
 # | 	include/winbase.h

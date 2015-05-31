@@ -39,8 +39,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [1]:**
+**Bug fixes and features included in the next upcoming release [2]:**
 
+* Add implementation for kernel32.GetNumaProcessorNode ([Wine Bug #38660](https://bugs.winehq.org/show_bug.cgi?id=38660))
 * Multiple applications needs better NtQueryInformationJobObject stub ([Wine Bug #38658](https://bugs.winehq.org/show_bug.cgi?id=38658))
 
 

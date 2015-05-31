@@ -51,7 +51,7 @@ usage()
 # Show version information
 version()
 {
-	echo "Wine Staging 1.7.44"
+	echo "Wine Staging 1.7.45 (unreleased)"
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -4290,6 +4290,9 @@ if test "$enable_server_OpenProcess" -eq 1; then
 fi
 
 # Patchset server-JobObjects
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38658] Multiple applications needs better NtQueryInformationJobObject stub
 # |
 # | Modified files:
 # |   *	dlls/kernel32/tests/process.c, dlls/ntdll/sync.c, server/process.c

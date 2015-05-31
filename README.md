@@ -39,7 +39,12 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features in Wine Staging 1.7.44 [235]:**
+**Bug fixes and features included in the next upcoming release [1]:**
+
+* Multiple applications needs better NtQueryInformationJobObject stub ([Wine Bug #38658](https://bugs.winehq.org/show_bug.cgi?id=38658))
+
+
+**Bug fixes and features in Wine Staging 1.7.44 [236]:**
 
 *Note: The following list only contains features and bug fixes which are not
 yet available in vanilla Wine. They are removed from the list as soon as they
@@ -212,7 +217,7 @@ for more details.*
 * Prevent window managers from grouping all wine programs together ([Wine Bug #32699](https://bugs.winehq.org/show_bug.cgi?id=32699))
 * Process APC calls before starting process
 * Process Hacker 2.x needs ntoskrnl.ProbeForRead ([Wine Bug #38103](https://bugs.winehq.org/show_bug.cgi?id=38103))
-* Python PIP needs better NtQueryInformationJobObject stub
+* ~~Python PIP needs better NtQueryInformationJobObject stub~~
 * Reduced SetTimer minimum value from 10 ms to 5 ms (improves Silverlight framerates)
 * Return an error when trying to open a terminated process ([Wine Bug #37087](https://bugs.winehq.org/show_bug.cgi?id=37087))
 * Return correct IMediaSeeking stream positions in quartz ([Wine Bug #23174](https://bugs.winehq.org/show_bug.cgi?id=23174))
@@ -223,6 +228,7 @@ for more details.*
 * SO_CONNECT_TIME returns the appropriate time
 * Scrolling causes mouse and screen to lock in Call to Power II ([Wine Bug #34559](https://bugs.winehq.org/show_bug.cgi?id=34559))
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](https://bugs.winehq.org/show_bug.cgi?id=35652))
+* ~~Set last error when GetRawInputDeviceList fails~~ ([Wine Bug #37667](https://bugs.winehq.org/show_bug.cgi?id=37667))
 * Show unmounted devices in winecfg and allow changing the unix path
 * Skip unknown item when decoding a CMS certificate ([Wine Bug #34388](https://bugs.winehq.org/show_bug.cgi?id=34388))
 * Software support for Environmental Audio Extensions (EAX)

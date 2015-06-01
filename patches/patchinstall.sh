@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 7efe31d9294275f2505361c19afa4e8e50be2c8d"
+	echo "  commit 7c5f639cb86fba26a3b96d9dd0798fd3da2150a0"
 	echo ""
 }
 
@@ -1927,16 +1927,12 @@ fi
 # Patchset Coverity
 # |
 # | Modified files:
-# |   *	dlls/amstream/amstream.c, dlls/kernel32/path.c, dlls/ws2_32/socket.c
+# |   *	dlls/ws2_32/socket.c
 # |
 if test "$enable_Coverity" -eq 1; then
 	patch_apply Coverity/0001-ws2_32-Fix-uninitialized-memory-access-in-do_poll-Co.patch
-	patch_apply Coverity/0002-amstream-Correctly-check-return-values-in-IAMMultiMe.patch
-	patch_apply Coverity/0003-kernel32-Correctly-check-for-an-empty-short-filename.patch
 	(
 		echo '+    { "Sebastian Lackner", "ws2_32: Fix uninitialized memory access in do_poll (Coverity).", 1 },';
-		echo '+    { "Michael Müller", "amstream: Correctly check return values in IAMMultiMediaStreamImpl_Initialize (Coverity).", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Correctly check for an empty short filename in GetShortPathNameW (Coverity).", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,183 +1,17 @@
-From 74ef4d73346d9607112923c1e9598b3c4db19433 Mon Sep 17 00:00:00 2001
+From 65420d15d3691b910578f3e2dab6d6c2fc25bbfe Mon Sep 17 00:00:00 2001
 From: Jactry Zeng <wine@jactry.com>
 Date: Wed, 13 Aug 2014 15:40:11 +0800
 Subject: riched20: Implement ITextRange::GetText.
 
 ---
- dlls/riched20/richole.c       | 52 +++++++++++++++++++++++++------------------
- dlls/riched20/tests/richole.c | 52 +++++++++++++++++++++++++++++++------------
- 2 files changed, 68 insertions(+), 36 deletions(-)
+ dlls/riched20/tests/richole.c | 38 ++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 38 insertions(+)
 
-diff --git a/dlls/riched20/richole.c b/dlls/riched20/richole.c
-index 155ebca..d0834da 100644
---- a/dlls/riched20/richole.c
-+++ b/dlls/riched20/richole.c
-@@ -1393,11 +1393,36 @@ static HRESULT WINAPI ITextRange_fnInvoke(ITextRange *me, DISPID dispIdMember, R
-     return hr;
- }
- 
-+static HRESULT range_GetText(ME_TextEditor *editor, ME_Cursor *start, ME_Cursor *end, BSTR *pbstr)
-+{
-+    int nChars, endOfs;
-+    BOOL bEOP;
-+
-+    endOfs = ME_GetCursorOfs(end);
-+    nChars = endOfs - ME_GetCursorOfs(start);
-+    if (!nChars)
-+    {
-+        *pbstr = NULL;
-+        return S_OK;
-+    }
-+
-+    *pbstr = SysAllocStringLen(NULL, nChars);
-+    if (!*pbstr)
-+        return E_OUTOFMEMORY;
-+
-+    bEOP = (end->pRun->next->type == diTextEnd && endOfs > ME_GetTextLength(editor));
-+    ME_GetTextW(editor, *pbstr, nChars, start, nChars, FALSE, bEOP);
-+    TRACE("%s\n", wine_dbgstr_w(*pbstr));
-+
-+    return S_OK;
-+}
-+
- static HRESULT WINAPI ITextRange_fnGetText(ITextRange *me, BSTR *pbstr)
- {
-     ITextRangeImpl *This = impl_from_ITextRange(me);
-+    ME_Cursor start, end;
- 
--    FIXME("(%p)->(%p): stub\n", This, pbstr);
-+    TRACE("(%p)->(%p)\n", This, pbstr);
- 
-     if (!This->reOle)
-         return CO_E_RELEASED;
-@@ -1405,8 +1430,9 @@ static HRESULT WINAPI ITextRange_fnGetText(ITextRange *me, BSTR *pbstr)
-     if (!pbstr)
-         return E_INVALIDARG;
- 
--    *pbstr = NULL;
--    return E_NOTIMPL;
-+    ME_CursorFromCharOfs(This->reOle->editor, This->start, &start);
-+    ME_CursorFromCharOfs(This->reOle->editor, This->end, &end);
-+    return range_GetText(This->reOle->editor, &start, &end, pbstr);
- }
- 
- static HRESULT WINAPI ITextRange_fnSetText(ITextRange *me, BSTR str)
-@@ -4051,8 +4077,6 @@ static HRESULT WINAPI ITextSelection_fnGetText(ITextSelection *me, BSTR *pbstr)
- {
-     ITextSelectionImpl *This = impl_from_ITextSelection(me);
-     ME_Cursor *start = NULL, *end = NULL;
--    int nChars, endOfs;
--    BOOL bEOP;
- 
-     TRACE("(%p)->(%p)\n", This, pbstr);
- 
-@@ -4063,23 +4087,7 @@ static HRESULT WINAPI ITextSelection_fnGetText(ITextSelection *me, BSTR *pbstr)
-         return E_INVALIDARG;
- 
-     ME_GetSelection(This->reOle->editor, &start, &end);
--    endOfs = ME_GetCursorOfs(end);
--    nChars = endOfs - ME_GetCursorOfs(start);
--    if (!nChars)
--    {
--        *pbstr = NULL;
--        return S_OK;
--    }
--
--    *pbstr = SysAllocStringLen(NULL, nChars);
--    if (!*pbstr)
--        return E_OUTOFMEMORY;
--
--    bEOP = (end->pRun->next->type == diTextEnd && endOfs > ME_GetTextLength(This->reOle->editor));
--    ME_GetTextW(This->reOle->editor, *pbstr, nChars, start, nChars, FALSE, bEOP);
--    TRACE("%s\n", wine_dbgstr_w(*pbstr));
--
--    return S_OK;
-+    return range_GetText(This->reOle->editor, start, end, pbstr);
- }
- 
- static HRESULT WINAPI ITextSelection_fnSetText(ITextSelection *me, BSTR str)
 diff --git a/dlls/riched20/tests/richole.c b/dlls/riched20/tests/richole.c
-index 0065196..d7642d4 100644
+index 06410e7..05c1f34 100644
 --- a/dlls/riched20/tests/richole.c
 +++ b/dlls/riched20/tests/richole.c
-@@ -529,27 +529,22 @@ static void test_GetText(void)
-   hres = ITextDocument_Range(txtDoc, 0, 4, &range);
-   ok(hres == S_OK, "got 0x%08x\n", hres);
-   hres = ITextRange_GetText(range, &bstr);
--todo_wine {
-   ok(hres == S_OK, "got 0x%08x\n", hres);
-   ok(!lstrcmpW(bstr, bufW1), "got wrong text: %s\n", wine_dbgstr_w(bstr));
--}
-   SysFreeString(bstr);
-   ITextRange_Release(range);
- 
-   hres = ITextDocument_Range(txtDoc, 4, 0, &range);
-   ok(hres == S_OK, "got 0x%08x\n", hres);
-   hres = ITextRange_GetText(range, &bstr);
--todo_wine {
-   ok(hres == S_OK, "got 0x%08x\n", hres);
-   ok(!lstrcmpW(bstr, bufW1), "got wrong text: %s\n", wine_dbgstr_w(bstr));
--}
-   SysFreeString(bstr);
-   ITextRange_Release(range);
- 
-   hres = ITextDocument_Range(txtDoc, 1, 1, &range);
-   ok(hres == S_OK, "got 0x%08x\n", hres);
-   hres = ITextRange_GetText(range, &bstr);
--todo_wine
-   ok(hres == S_OK, "got 0x%08x\n", hres);
-   ok(!bstr, "got wrong text: %s\n", wine_dbgstr_w(bstr));
-   if (!is64bit)
-@@ -562,37 +557,30 @@ todo_wine
-   hres = ITextDocument_Range(txtDoc, 8, 12, &range);
-   ok(hres == S_OK, "got 0x%08x\n", hres);
-   hres = ITextRange_GetText(range, &bstr);
--todo_wine {
-   ok(hres == S_OK, "got 0x%08x\n", hres);
-   ok(!lstrcmpW(bstr, bufW3), "got wrong text: %s\n", wine_dbgstr_w(bstr));
--}
-   SysFreeString(bstr);
-   ITextRange_Release(range);
- 
-   hres = ITextDocument_Range(txtDoc, 8, 13, &range);
-   ok(hres == S_OK, "got 0x%08x\n", hres);
-   hres = ITextRange_GetText(range, &bstr);
--todo_wine {
-   ok(hres == S_OK, "got 0x%08x\n", hres);
-   ok(!lstrcmpW(bstr, bufW2), "got wrong text: %s\n", wine_dbgstr_w(bstr));
--}
-   SysFreeString(bstr);
-   ITextRange_Release(range);
- 
-   hres = ITextDocument_Range(txtDoc, 12, 13, &range);
-   ok(hres == S_OK, "got 0x%08x\n", hres);
-   hres = ITextRange_GetText(range, &bstr);
--todo_wine {
-   ok(hres == S_OK, "got 0x%08x\n", hres);
-   ok(!lstrcmpW(bstr, bufW5), "got wrong text: %s\n", wine_dbgstr_w(bstr));
--}
-   SysFreeString(bstr);
-   ITextRange_Release(range);
- 
-   hres = ITextDocument_Range(txtDoc, 0, -1, &range);
-   ok(hres == S_OK, "got 0x%08x\n", hres);
-   hres = ITextRange_GetText(range, &bstr);
--todo_wine
-   ok(hres == S_OK, "got 0x%08x\n", hres);
-   ok(!bstr, "got wrong text: %s\n", wine_dbgstr_w(bstr));
-   ITextRange_Release(range);
-@@ -600,10 +588,8 @@ todo_wine
-   hres = ITextDocument_Range(txtDoc, -1, 9, &range);
-   ok(hres == S_OK, "got 0x%08x\n", hres);
-   hres = ITextRange_GetText(range, &bstr);
--todo_wine {
-   ok(hres == S_OK, "got 0x%08x\n", hres);
-   ok(!lstrcmpW(bstr, bufW6), "got wrong text: %s\n", wine_dbgstr_w(bstr));
--}
-   SysFreeString(bstr);
- 
-   release_interfaces(&w, &reOle, &txtDoc, NULL);
-@@ -2755,6 +2741,43 @@ static void test_ITextRange_GetPara(void)
+@@ -3340,6 +3340,43 @@ static void test_ITextRange_GetPara(void)
    ITextPara_Release(txtPara);
  }
  
@@ -221,14 +55,14 @@ index 0065196..d7642d4 100644
  START_TEST(richole)
  {
    /* Must explicitly LoadLibrary(). The test has no references to functions in
-@@ -2780,6 +2803,7 @@ START_TEST(richole)
-   test_ITextRange_SetEnd();
+@@ -3365,6 +3402,7 @@ START_TEST(richole)
+   test_ITextRange_Collapse();
    test_ITextRange_GetFont();
    test_ITextRange_GetPara();
 +  test_ITextRange_GetText();
-   test_IOleClientSite_QueryInterface();
+   test_GetClientSite();
    test_IOleWindow_GetWindow();
    test_IOleInPlaceSite_GetWindow();
 -- 
-2.4.1
+2.4.2
 

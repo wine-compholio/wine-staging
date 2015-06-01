@@ -4324,9 +4324,11 @@ fi
 if test "$enable_server_Key_State" -eq 1; then
 	patch_apply server-Key_State/0001-server-Introduce-a-helper-function-to-update-the-thr.patch
 	patch_apply server-Key_State/0002-server-Implement-locking-and-synchronization-of-keys.patch
+	patch_apply server-Key_State/0003-server-Lock-thread-specific-keystate-in-set_key_stat.patch
 	(
 		echo '+    { "Sebastian Lackner", "server: Introduce a helper function to update the thread_input key state.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement locking and synchronization of keystate buffer.", 2 },';
+		echo '+    { "Sebastian Lackner", "server: Lock thread specific keystate in set_key_state wineserver call.", 1 },';
 	) >> "$patchlist"
 fi
 

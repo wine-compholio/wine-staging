@@ -1,16 +1,16 @@
-From 3db9d42a6ca9547e18ccbcb3b323379e85b206bc Mon Sep 17 00:00:00 2001
+From f60b05d5489027b3b98f9b05e9cf9ad598ec7fdf Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 3 Aug 2014 02:23:44 +0200
-Subject: shell32: Add support for extra large and jumbo icon lists.
+Subject: shell32: Add support for extra large and jumbo icon lists. (v2)
 
 ---
- dlls/shell32/iconcache.c    | 198 +++++++++++++++++++++++++++++---------------
+ dlls/shell32/iconcache.c    | 199 +++++++++++++++++++++++++++++---------------
  dlls/shell32/shell32_main.h |   3 +
  dlls/shell32/shellord.c     |  28 +++++--
- 3 files changed, 153 insertions(+), 76 deletions(-)
+ 3 files changed, 154 insertions(+), 76 deletions(-)
 
 diff --git a/dlls/shell32/iconcache.c b/dlls/shell32/iconcache.c
-index b294908..b9fef10 100644
+index b294908..fea5a9a 100644
 --- a/dlls/shell32/iconcache.c
 +++ b/dlls/shell32/iconcache.c
 @@ -62,7 +62,9 @@ typedef struct
@@ -210,6 +210,9 @@ index b294908..b9fef10 100644
  
 -        ShellSmallIconList = ImageList_Create(cx_small,cy_small,ILC_COLOR32|ILC_MASK,0,0x20);
 -        ShellBigIconList = ImageList_Create(cx_large,cy_large,ILC_COLOR32|ILC_MASK,0,0x20);
+-
+-        ImageList_SetBkColor(ShellSmallIconList, CLR_NONE);
+-        ImageList_SetBkColor(ShellBigIconList, CLR_NONE);
 +    ShellSmallIconList = ImageList_Create( cx_small,cy_small,ILC_COLOR32|ILC_MASK,0,0x20 );
 +    ShellLargeIconList = ImageList_Create( cx_large,cy_large,ILC_COLOR32|ILC_MASK,0,0x20 );
 +    ShellExtraLargeIconList = ImageList_Create( cx_extralarge,cy_extralarge,ILC_COLOR32|ILC_MASK,0,0x20 );
@@ -235,17 +238,14 @@ index b294908..b9fef10 100644
 +      return FALSE;
 +    }
  
--        ImageList_SetBkColor(ShellSmallIconList, CLR_NONE);
--        ImageList_SetBkColor(ShellBigIconList, CLR_NONE);
-+    SIC_IconAppend( swShell32Name, IDI_SHELL_DOCUMENT-1, hSm, hLg, hELg, hJb, 0 );
-+    SIC_IconAppend( swShell32Name, -IDI_SHELL_DOCUMENT, hSm, hLg, hELg, hJb, 0 );
- 
 -        /* Load the document icon, which is used as the default if an icon isn't found. */
 -        hSm = LoadImageA(shell32_hInstance, MAKEINTRESOURCEA(IDI_SHELL_DOCUMENT),
 -                                IMAGE_ICON, cx_small, cy_small, LR_SHARED);
 -        hLg = LoadImageA(shell32_hInstance, MAKEINTRESOURCEA(IDI_SHELL_DOCUMENT),
 -                                IMAGE_ICON, cx_large, cy_large, LR_SHARED);
--
++    SIC_IconAppend( swShell32Name, IDI_SHELL_DOCUMENT-1, hSm, hLg, hELg, hJb, 0 );
++    SIC_IconAppend( swShell32Name, -IDI_SHELL_DOCUMENT, hSm, hLg, hELg, hJb, 0 );
+ 
 -        if (!hSm || !hLg) 
 -        {
 -          FIXME("Failed to load IDI_SHELL_DOCUMENT icon!\n");
@@ -280,7 +280,7 @@ index b294908..b9fef10 100644
  
  	LeaveCriticalSection(&SHELL32_SicCS);
  	DeleteCriticalSection(&SHELL32_SicCS);
-@@ -527,10 +579,20 @@ BOOL WINAPI Shell_GetImageLists(HIMAGELIST * lpBigList, HIMAGELIST * lpSmallList
+@@ -527,10 +579,21 @@ BOOL WINAPI Shell_GetImageLists(HIMAGELIST * lpBigList, HIMAGELIST * lpSmallList
  {
      TRACE("(%p,%p)\n",lpBigList,lpSmallList);
      InitOnceExecuteOnce( &sic_init_once, SIC_Initialize, NULL, NULL );
@@ -293,6 +293,7 @@ index b294908..b9fef10 100644
 +void SHELL_GetInternalImageLists(HIMAGELIST *lpSmallList, HIMAGELIST *lpLargeList,
 +    HIMAGELIST *lpExtraLargeList, HIMAGELIST *lpJumboList)
 +{
++    InitOnceExecuteOnce( &sic_init_once, SIC_Initialize, NULL, NULL );
 +    if (lpSmallList) *lpSmallList = ShellSmallIconList;
 +    if (lpLargeList) *lpLargeList = ShellLargeIconList;
 +    if (lpExtraLargeList) *lpExtraLargeList = ShellExtraLargeIconList;
@@ -303,10 +304,10 @@ index b294908..b9fef10 100644
   * PidlToSicIndex			[INTERNAL]
   *
 diff --git a/dlls/shell32/shell32_main.h b/dlls/shell32/shell32_main.h
-index 954f1e4..e1e77f1 100644
+index 492f79f..69d2c86 100644
 --- a/dlls/shell32/shell32_main.h
 +++ b/dlls/shell32/shell32_main.h
-@@ -232,4 +232,7 @@ BOOL CreateFolderEnumList(IEnumIDListImpl *list, LPCWSTR lpszPath, DWORD dwFlags
+@@ -244,4 +244,7 @@ HRESULT get_typeinfo(enum tid_t, ITypeInfo**) DECLSPEC_HIDDEN;
  void release_typelib(void) DECLSPEC_HIDDEN;
  void release_desktop_folder(void) DECLSPEC_HIDDEN;
  
@@ -315,7 +316,7 @@ index 954f1e4..e1e77f1 100644
 +
  #endif
 diff --git a/dlls/shell32/shellord.c b/dlls/shell32/shellord.c
-index 56c9fe9..e4d4f48 100644
+index 914dc5a..75e5d645a 100644
 --- a/dlls/shell32/shellord.c
 +++ b/dlls/shell32/shellord.c
 @@ -2182,20 +2182,32 @@ void WINAPI SHFlushSFCache(void)
@@ -360,5 +361,5 @@ index 56c9fe9..e4d4f48 100644
      if (hNew)
      {
 -- 
-1.8.3.2
+2.4.2
 

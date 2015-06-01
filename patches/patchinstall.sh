@@ -4518,7 +4518,7 @@ fi
 if test "$enable_shell32_Icons" -eq 1; then
 	patch_apply shell32-Icons/0001-shell32-Add-support-for-extra-large-and-jumbo-icon-l.patch
 	(
-		echo '+    { "Michael Müller", "shell32: Add support for extra large and jumbo icon lists.", 1 },';
+		echo '+    { "Michael Müller", "shell32: Add support for extra large and jumbo icon lists.", 2 },';
 	) >> "$patchlist"
 fi
 

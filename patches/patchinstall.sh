@@ -3016,7 +3016,7 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for FileRenameInformation with nonzero RootDir.", 1 },';
 		echo '+    { "Qian Hong", "ntdll: Implement a hacky version of FileRenameInformation support.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: FileRenameInformation target cannot be an existing directory.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: When combining root and name, make sure there is only one slash.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: When combining root and name, make sure there is only one slash.", 2 },';
 		echo '+    { "Sebastian Lackner", "server: Reject rename when target has opened file handles.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Manually unlink dest when trying to replace a file with directory.", 1 },';
 	) >> "$patchlist"

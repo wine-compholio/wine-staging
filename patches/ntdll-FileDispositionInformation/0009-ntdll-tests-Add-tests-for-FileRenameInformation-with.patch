@@ -1,0 +1,76 @@
+From 4ea4a5d47019daecf77bf03f477b4b23ede6f561 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 3 Jun 2015 00:50:18 +0200
+Subject: ntdll/tests: Add tests for FileRenameInformation with nonzero
+ RootDir.
+
+---
+ dlls/ntdll/tests/file.c | 45 ++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 44 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index 70ee60a..5fdf4bf 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -1453,7 +1453,7 @@ static void test_file_rename_information(void)
+ {
+     static const WCHAR foo_txt[] = {'\\','f','o','o','.','t','x','t',0};
+     static const WCHAR foo[] = {'f','o','o',0};
+-    WCHAR tmp_path[MAX_PATH], oldpath[MAX_PATH + 16], newpath[MAX_PATH + 16];
++    WCHAR tmp_path[MAX_PATH], oldpath[MAX_PATH + 16], newpath[MAX_PATH + 16], *filename, *p;
+     UNICODE_STRING name_str;
+     HANDLE handle, handle2;
+     NTSTATUS res;
+@@ -2098,6 +2098,49 @@ static void test_file_rename_information(void)
+     HeapFree( GetProcessHeap(), 0, pfri );
+     delete_object( oldpath );
+     delete_object( newpath );
++
++    /* oldpath is a file, newpath doesn't exist, test with RootDir != NULL */
++    res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
++    ok( res != 0, "fail to create temp file\n" );
++    handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, 0, 0 );
++    ok( handle != INVALID_HANDLE_VALUE, "CreateFileW failed\n" );
++
++    res = GetTempFileNameW( tmp_path, foo, 0, newpath );
++    ok( res != 0, "fail to create temp file\n" );
++    DeleteFileW( newpath );
++    for (filename = newpath, p = newpath; *p; p++)
++        if (*p == '\\') filename = p + 1;
++    handle2 = CreateFileW( tmp_path, 0, 0, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0 );
++    ok( handle2 != INVALID_HANDLE_VALUE, "CreateFileW failed\n" );
++
++    pfri = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_RENAME_INFORMATION) + lstrlenW(filename) * sizeof(WCHAR) );
++    pfri->Replace = FALSE;
++    pfri->RootDir = handle2;
++    pfri->FileNameLength = lstrlenW(filename) * sizeof(WCHAR);
++    memcpy( pfri->FileName, filename, pfri->FileNameLength );
++
++    U(io).Status = 0xdeadbeef;
++    res = pNtSetInformationFile( handle, &io, pfri, sizeof(FILE_RENAME_INFORMATION) + pfri->FileNameLength, FileRenameInformation );
++    todo_wine ok( U(io).Status == STATUS_SUCCESS, "io.Status expected STATUS_SUCCESS, got %x\n", U(io).Status );
++    todo_wine ok( res == STATUS_SUCCESS, "res expected STATUS_SUCCESS, got %x\n", res );
++    fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
++    todo_wine ok( fileDeleted, "File should not exist\n" );
++    fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
++    todo_wine ok( !fileDeleted, "File should exist\n" );
++
++    pfni = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_NAME_INFORMATION) + MAX_PATH * sizeof(WCHAR) );
++    res = pNtQueryInformationFile( handle, &io, pfni, sizeof(FILE_NAME_INFORMATION) + MAX_PATH * sizeof(WCHAR), FileNameInformation );
++    ok( res == STATUS_SUCCESS, "res expected STATUS_SUCCESS, got %x\n", res );
++    pfni->FileName[ pfni->FileNameLength / sizeof(WCHAR) ] = 0;
++    todo_wine ok( !lstrcmpW(pfni->FileName, newpath + 2), "FileName expected %s, got %s\n",
++                  wine_dbgstr_w(newpath + 2), wine_dbgstr_w(pfni->FileName) );
++    HeapFree( GetProcessHeap(), 0, pfni );
++
++    CloseHandle( handle );
++    CloseHandle( handle2 );
++    HeapFree( GetProcessHeap(), 0, pfri );
++    delete_object( oldpath );
++    delete_object( newpath );
+ }
+ 
+ static void test_file_both_information(void)
+-- 
+2.4.2
+

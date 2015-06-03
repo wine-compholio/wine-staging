@@ -1,0 +1,50 @@
+From 0df467329be9b32d8dadc93230e89629d465511f Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 3 Jun 2015 02:57:21 +0200
+Subject: server: Manually unlink dest when trying to replace a file with
+ directory.
+
+---
+ dlls/ntdll/tests/file.c | 6 +++---
+ server/fd.c             | 7 +++++++
+ 2 files changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index f60b287..1f009f6 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -1878,10 +1878,10 @@ static void test_file_rename_information(void)
+ 
+     U(io).Status = 0xdeadbeef;
+     res = pNtSetInformationFile( handle, &io, pfri, sizeof(FILE_RENAME_INFORMATION) + pfri->FileNameLength, FileRenameInformation );
+-    todo_wine ok( U(io).Status == STATUS_SUCCESS, "io.Status expect STATUS_SUCCESS, io.Status is %x\n", U(io).Status );
+-    todo_wine ok( res == STATUS_SUCCESS, "res expect STATUS_SUCCESS, res is %x\n", res );
++    ok( U(io).Status == STATUS_SUCCESS, "io.Status expect STATUS_SUCCESS, io.Status is %x\n", U(io).Status );
++    ok( res == STATUS_SUCCESS, "res expect STATUS_SUCCESS, res is %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+-    todo_wine ok( fileDeleted, "File should have been deleted\n" );
++    ok( fileDeleted, "File should have been deleted\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+     ok( !fileDeleted, "File should exist\n" );
+ 
+diff --git a/server/fd.c b/server/fd.c
+index 719b95f..ae97a94 100644
+--- a/server/fd.c
++++ b/server/fd.c
+@@ -2549,6 +2549,13 @@ DECL_HANDLER(rename_file)
+                         goto out;
+                     }
+                 }
++
++                if (fd->unix_fd != -1 && !fstat( fd->unix_fd, &st ) &&
++                    S_ISDIR( st.st_mode ) && unlink( path ))
++                {
++                    file_set_error();
++                    goto out;
++                }
+             }
+ 
+             if (rename( fd->unix_name, path ))
+-- 
+2.4.2
+

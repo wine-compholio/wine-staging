@@ -1,0 +1,48 @@
+From 2c7eba8922e51d745c46b19971e0e8764a4052b5 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Thu, 4 Jun 2015 00:02:13 +0200
+Subject: ntdll: Set NamedPipeState to FILE_PIPE_CLOSING_STATE on broken pipe
+ in NtQueryInformationFile.
+
+---
+ dlls/ntdll/file.c  | 6 +++++-
+ include/winternl.h | 5 +++++
+ 2 files changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index 3b0a06c..62033e1 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -2893,8 +2893,12 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
+ 
+                     if (!server_get_unix_fd( hFile, FILE_READ_DATA, &fd, &needs_close, NULL, NULL ))
+                     {
+-                        if (!unix_fd_avail( fd, &avail ))
++                        NTSTATUS status = unix_fd_avail( fd, &avail );
++                        if (!status)
+                             pli->ReadDataAvailable = min(avail, reply->outsize); /* FIXME */
++                        else if (status == STATUS_PIPE_BROKEN)
++                            pli->NamedPipeState = FILE_PIPE_CLOSING_STATE;
++
+                         if (needs_close) close( fd );
+                     }
+                 }
+diff --git a/include/winternl.h b/include/winternl.h
+index 28b9e29..88bcdab 100644
+--- a/include/winternl.h
++++ b/include/winternl.h
+@@ -668,6 +668,11 @@ typedef struct _FILE_PIPE_LOCAL_INFORMATION {
+     ULONG NamedPipeEnd;
+ } FILE_PIPE_LOCAL_INFORMATION, *PFILE_PIPE_LOCAL_INFORMATION;
+ 
++#define FILE_PIPE_DISCONNECTED_STATE    0x01
++#define FILE_PIPE_LISTENING_STATE       0x02
++#define FILE_PIPE_CONNECTED_STATE       0x03
++#define FILE_PIPE_CLOSING_STATE         0x04
++
+ typedef struct _FILE_ALL_INFORMATION {
+     FILE_BASIC_INFORMATION     BasicInformation;
+     FILE_STANDARD_INFORMATION  StandardInformation;
+-- 
+2.4.2
+

@@ -580,32 +580,33 @@ def generate_script(all_patches):
                     for i, patch1 in set_apply:
                         for j, patch2 in set_skip:
                             if causal_time_smaller(patch2.verify_time, patch1.verify_time):
-                                return True # we can skip this test
+                                return None # we can skip this test
 
                     try:
                         original = original_content
                         for i, _ in set_apply:
                             original = patchutils.apply_patch(original, selected_patches[i][1], fuzz=0)
                     except patchutils.PatchApplyError:
-                        return False
+                        return current
 
-                    return True # everything is fine
+                    return None # everything is fine
 
                 def test_apply_seq(current_list):
                     for current in current_list:
-                        if not test_apply(current):
-                            return False
-                    return True
+                        failed = test_apply(current)
+                        if failed is not None:
+                            return failed
+                    return None
 
                 iterables = []
                 for i in xrange(0, len(indices) + 1):
                     iterables.append(itertools.combinations(indices, i))
                 it = _split_seq(itertools.chain(*iterables), chunk_size)
-                for k, res in enumerate(pool.imap_unordered(test_apply_seq, it)):
-                    if not res:
+                for k, failed in enumerate(pool.imap_unordered(test_apply_seq, it)):
+                    if failed is not None:
                         progress.finish("<failed to apply>")
                         raise PatchUpdaterError("Changes to file %s don't apply: %s" %
-                                                (filename, ", ".join([all_patches[i].name for i in indices])))
+                                                (filename, ", ".join([all_patches[i].name for i in failed])))
                     progress.update(k)
 
             # Update the dependency cache

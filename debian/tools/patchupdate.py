@@ -794,6 +794,9 @@ if __name__ == "__main__":
         raise RuntimeError("CTRL+C pressed")
     signal.signal(signal.SIGINT, _sig_int)
 
+    tools_directory = os.path.dirname(os.path.realpath(__file__))
+    os.chdir(os.path.join(tools_directory, "./../.."))
+
     try:
 
         # Get information about Wine and Staging version

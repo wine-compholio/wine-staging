@@ -81,7 +81,6 @@ patch_enable_all ()
 	enable_Pipelight="$1"
 	enable_Staging="$1"
 	enable_advapi32_LsaLookupSids="$1"
-	enable_advapi32_OpenSCManagerW="$1"
 	enable_browseui_ACLShell_IEnumString="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_category_stable="$1"
@@ -196,6 +195,7 @@ patch_enable_all ()
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_riched20_IText_Interface="$1"
+	enable_rpcrt4_Pipe_Transport="$1"
 	enable_rpcrt4_Use_After_Free="$1"
 	enable_secur32_ANSI_NTLM_Credentials="$1"
 	enable_server_ACL_Compat="$1"
@@ -313,9 +313,6 @@ patch_enable ()
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
-			;;
-		advapi32-OpenSCManagerW)
-			enable_advapi32_OpenSCManagerW="$2"
 			;;
 		browseui-ACLShell_IEnumString)
 			enable_browseui_ACLShell_IEnumString="$2"
@@ -658,6 +655,9 @@ patch_enable ()
 			;;
 		riched20-IText_Interface)
 			enable_riched20_IText_Interface="$2"
+			;;
+		rpcrt4-Pipe_Transport)
+			enable_rpcrt4_Pipe_Transport="$2"
 			;;
 		rpcrt4-Use_After_Free)
 			enable_rpcrt4_Use_After_Free="$2"
@@ -1297,9 +1297,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_Staging" -gt 1; then
 		abort "Patchset Staging disabled, but category-stable depends on that."
 	fi
-	if test "$enable_advapi32_OpenSCManagerW" -gt 1; then
-		abort "Patchset advapi32-OpenSCManagerW disabled, but category-stable depends on that."
-	fi
 	if test "$enable_combase_String" -gt 1; then
 		abort "Patchset combase-String disabled, but category-stable depends on that."
 	fi
@@ -1554,7 +1551,6 @@ if test "$enable_category_stable" -eq 1; then
 	fi
 	enable_Compiler_Warnings=1
 	enable_Staging=1
-	enable_advapi32_OpenSCManagerW=1
 	enable_combase_String=1
 	enable_configure_Absolute_RPATH=1
 	enable_d3d11_D3D11CreateDeviceAndSwapChain=1
@@ -1816,10 +1812,10 @@ if test "$enable_ntdll_CLI_Images" -eq 1; then
 fi
 
 if test "$enable_kernel32_Named_Pipe" -eq 1; then
-	if test "$enable_advapi32_OpenSCManagerW" -gt 1; then
-		abort "Patchset advapi32-OpenSCManagerW disabled, but kernel32-Named_Pipe depends on that."
+	if test "$enable_rpcrt4_Pipe_Transport" -gt 1; then
+		abort "Patchset rpcrt4-Pipe_Transport disabled, but kernel32-Named_Pipe depends on that."
 	fi
-	enable_advapi32_OpenSCManagerW=1
+	enable_rpcrt4_Pipe_Transport=1
 fi
 
 if test "$enable_kernel32_CopyFileEx" -eq 1; then
@@ -1833,18 +1829,18 @@ if test "$enable_kernel32_CopyFileEx" -eq 1; then
 	enable_ntdll_FileDispositionInformation=1
 fi
 
-if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
-	if test "$enable_server_File_Permissions" -gt 1; then
-		abort "Patchset server-File_Permissions disabled, but ntdll-FileDispositionInformation depends on that."
-	fi
-	enable_server_File_Permissions=1
-fi
-
 if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
 	if test "$enable_kernel32_SetFileCompletionNotificationMode" -gt 1; then
 		abort "Patchset kernel32-SetFileCompletionNotificationMode disabled, but kernel32-SetFileInformationByHandle depends on that."
 	fi
 	enable_kernel32_SetFileCompletionNotificationMode=1
+fi
+
+if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
+	if test "$enable_server_File_Permissions" -gt 1; then
+		abort "Patchset server-File_Permissions disabled, but ntdll-FileDispositionInformation depends on that."
+	fi
+	enable_server_File_Permissions=1
 fi
 
 if test "$enable_dxva2_Video_Decoder" -eq 1; then
@@ -2106,18 +2102,6 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 		echo '+    { "Qian Hong", "advapi32/tests: Test prefix and use of TokenPrimaryGroup Sid.", 1 },';
 		echo '+    { "Qian Hong", "server: Create primary group using DOMAIN_GROUP_RID_USERS.", 1 },';
 		echo '+    { "Qian Hong", "advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset advapi32-OpenSCManagerW
-# |
-# | Modified files:
-# |   *	dlls/advapi32/service.c
-# |
-if test "$enable_advapi32_OpenSCManagerW" -eq 1; then
-	patch_apply advapi32-OpenSCManagerW/0001-advapi32-Fix-error-handling-in-OpenSCManagerW.patch
-	(
-		echo '+    { "Sebastian Lackner", "advapi32: Fix error handling in OpenSCManagerW.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2970,36 +2954,6 @@ if test "$enable_kernel32_CompareStringEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-SetFileCompletionNotificationMode
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38493] Add stub for kernel32.SetFileCompletionNotificationModes (for Steam in Win7 mode)
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/kernel32/file.c,
-# | 	dlls/kernel32/kernel32.spec, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileCompletionNotificationMode" -eq 1; then
-	patch_apply kernel32-SetFileCompletionNotificationMode/0001-kernel32-Implement-SetFileCompletionNotificationMode.patch
-	(
-		echo '+    { "Olivier F. R. Dierick", "kernel32: Implement SetFileCompletionNotificationModes as a stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-File_Permissions
 # |
 # | Modified files:
@@ -3068,6 +3022,36 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Zhaonan Liang", "include: Add declaration for FILE_LINK_INFORMATION.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Add tests for FileLinkInformation class.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement support for FileLinkInformation class in NtSetInformationFile.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetFileCompletionNotificationMode
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38493] Add stub for kernel32.SetFileCompletionNotificationModes (for Steam in Win7 mode)
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/kernel32/file.c,
+# | 	dlls/kernel32/kernel32.spec, include/winbase.h
+# |
+if test "$enable_kernel32_SetFileCompletionNotificationMode" -eq 1; then
+	patch_apply kernel32-SetFileCompletionNotificationMode/0001-kernel32-Implement-SetFileCompletionNotificationMode.patch
+	(
+		echo '+    { "Olivier F. R. Dierick", "kernel32: Implement SetFileCompletionNotificationModes as a stub.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3165,6 +3149,18 @@ if test "$enable_kernel32_GetVolumePathName" -eq 1; then
 		echo '+    { "Erich E. Hoover", "kernel32: Convert GetVolumePathName tests into a list.", 1 },';
 		echo '+    { "Erich E. Hoover", "kernel32: Add a bunch more GetVolumePathName tests.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add a lot of picky GetVolumePathName tests.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset rpcrt4-Pipe_Transport
+# |
+# | Modified files:
+# |   *	dlls/rpcrt4/rpc_transport.c
+# |
+if test "$enable_rpcrt4_Pipe_Transport" -eq 1; then
+	patch_apply rpcrt4-Pipe_Transport/0001-rpcrt4-Restore-original-error-code-when-ReadFile-fai.patch
+	(
+		echo '+    { "Sebastian Lackner", "rpcrt4: Restore original error code when ReadFile fails with ERROR_MORE_DATA.", 1 },';
 	) >> "$patchlist"
 fi
 

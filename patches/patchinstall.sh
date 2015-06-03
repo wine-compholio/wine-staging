@@ -2973,12 +2973,14 @@ if test "$enable_server_File_Permissions" -eq 1; then
 	patch_apply server-File_Permissions/0003-advapi32-tests-Add-tests-for-ACL-inheritance-in-Crea.patch
 	patch_apply server-File_Permissions/0004-advapi32-tests-Add-ACL-inheritance-tests-for-creatin.patch
 	patch_apply server-File_Permissions/0005-ntdll-tests-Added-tests-for-open-behaviour-on-readon.patch
+	patch_apply server-File_Permissions/0006-server-FILE_WRITE_ATTRIBUTES-should-succeed-for-read.patch
 	(
 		echo '+    { "Sebastian Lackner", "server: Allow to open files without any permission bits.", 2 },';
 		echo '+    { "Sebastian Lackner", "server: When creating new directories temporarily give read-permissions until they are opened.", 1 },';
 		echo '+    { "Sebastian Lackner", "advapi32/tests: Add tests for ACL inheritance in CreateDirectoryA.", 1 },';
 		echo '+    { "Sebastian Lackner", "advapi32/tests: Add ACL inheritance tests for creating subdirectories with NtCreateFile.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Added tests for open behaviour on readonly files.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: FILE_WRITE_ATTRIBUTES should succeed for readonly files.", 1 },';
 	) >> "$patchlist"
 fi
 

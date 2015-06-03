@@ -571,9 +571,9 @@ def generate_script(all_patches):
             chunk_size = 20
             with progressbar.ProgressBar(desc=filename, total=2 ** len(indices) / chunk_size) as progress:
 
-                def test_apply(bitstring):
-                    set_apply = [(i, all_patches[i]) for u, i in zip(bitstring, indices) if u]
-                    set_skip  = [(i, all_patches[i]) for u, i in zip(bitstring, indices) if not u]
+                def test_apply(current):
+                    set_apply = [(i, all_patches[i]) for i in current]
+                    set_skip  = [(i, all_patches[i]) for i in indices if i not in current]
 
                     # Check if there is any patch2 which depends directly or indirectly on patch1.
                     # If this is the case we found an impossible situation, we can be skipped in this test.
@@ -591,13 +591,16 @@ def generate_script(all_patches):
 
                     return True # everything is fine
 
-                def test_apply_seq(bitstrings):
-                    for bitstring in bitstrings:
-                        if not test_apply(bitstring):
+                def test_apply_seq(current_list):
+                    for current in current_list:
+                        if not test_apply(current):
                             return False
                     return True
 
-                it = _split_seq(itertools.product([0,1], repeat=len(indices)), chunk_size)
+                iterables = []
+                for i in xrange(0, len(indices) + 1):
+                    iterables.append(itertools.combinations(indices, i))
+                it = _split_seq(itertools.chain(*iterables), chunk_size)
                 for k, res in enumerate(pool.imap_unordered(test_apply_seq, it)):
                     if not res:
                         progress.finish("<failed to apply>")

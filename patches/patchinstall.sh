@@ -90,6 +90,7 @@ patch_enable_all ()
 	enable_crypt32_CMS_Certificates="$1"
 	enable_d3d11_D3D11CreateDeviceAndSwapChain="$1"
 	enable_d3d8_Hotpatch="$1"
+	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Skip_Tests="$1"
 	enable_d3d9_Surface_Refcount="$1"
 	enable_d3drm_Specfile="$1"
@@ -340,6 +341,9 @@ patch_enable ()
 			;;
 		d3d8-Hotpatch)
 			enable_d3d8_Hotpatch="$2"
+			;;
+		d3d9-DesktopWindow)
+			enable_d3d9_DesktopWindow="$2"
 			;;
 		d3d9-Skip_Tests)
 			enable_d3d9_Skip_Tests="$2"
@@ -1829,18 +1833,18 @@ if test "$enable_kernel32_CopyFileEx" -eq 1; then
 	enable_ntdll_FileDispositionInformation=1
 fi
 
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	if test "$enable_kernel32_SetFileCompletionNotificationMode" -gt 1; then
-		abort "Patchset kernel32-SetFileCompletionNotificationMode disabled, but kernel32-SetFileInformationByHandle depends on that."
-	fi
-	enable_kernel32_SetFileCompletionNotificationMode=1
-fi
-
 if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 	if test "$enable_server_File_Permissions" -gt 1; then
 		abort "Patchset server-File_Permissions disabled, but ntdll-FileDispositionInformation depends on that."
 	fi
 	enable_server_File_Permissions=1
+fi
+
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	if test "$enable_kernel32_SetFileCompletionNotificationMode" -gt 1; then
+		abort "Patchset kernel32-SetFileCompletionNotificationMode disabled, but kernel32-SetFileInformationByHandle depends on that."
+	fi
+	enable_kernel32_SetFileCompletionNotificationMode=1
 fi
 
 if test "$enable_dxva2_Video_Decoder" -eq 1; then
@@ -2045,6 +2049,23 @@ if test "$enable_Staging" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2061,23 +2082,6 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2219,6 +2223,18 @@ if test "$enable_d3d8_Hotpatch" -eq 1; then
 	patch_apply d3d8-Hotpatch/0001-d3d8-Make-IDirect3DSwapChain8-Present-hotpachable.patch
 	(
 		echo '+    { "Michael Müller", "d3d8: Make IDirect3DSwapChain8::Present hotpachable.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3d9-DesktopWindow
+# |
+# | Modified files:
+# |   *	dlls/d3d9/tests/device.c, dlls/winex11.drv/opengl.c
+# |
+if test "$enable_d3d9_DesktopWindow" -eq 1; then
+	patch_apply d3d9-DesktopWindow/0001-winex11.drv-Allow-changing-the-opengl-pixel-format-o.patch
+	(
+		echo '+    { "Michael Müller", "winex11.drv: Allow changing the opengl pixel format on the desktop window.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2954,6 +2970,36 @@ if test "$enable_kernel32_CompareStringEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-SetFileCompletionNotificationMode
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38493] Add stub for kernel32.SetFileCompletionNotificationModes (for Steam in Win7 mode)
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/kernel32/file.c,
+# | 	dlls/kernel32/kernel32.spec, include/winbase.h
+# |
+if test "$enable_kernel32_SetFileCompletionNotificationMode" -eq 1; then
+	patch_apply kernel32-SetFileCompletionNotificationMode/0001-kernel32-Implement-SetFileCompletionNotificationMode.patch
+	(
+		echo '+    { "Olivier F. R. Dierick", "kernel32: Implement SetFileCompletionNotificationModes as a stub.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-File_Permissions
 # |
 # | Modified files:
@@ -3022,36 +3068,6 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Zhaonan Liang", "include: Add declaration for FILE_LINK_INFORMATION.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Add tests for FileLinkInformation class.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement support for FileLinkInformation class in NtSetInformationFile.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-SetFileCompletionNotificationMode
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38493] Add stub for kernel32.SetFileCompletionNotificationModes (for Steam in Win7 mode)
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/kernel32/file.c,
-# | 	dlls/kernel32/kernel32.spec, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileCompletionNotificationMode" -eq 1; then
-	patch_apply kernel32-SetFileCompletionNotificationMode/0001-kernel32-Implement-SetFileCompletionNotificationMode.patch
-	(
-		echo '+    { "Olivier F. R. Dierick", "kernel32: Implement SetFileCompletionNotificationModes as a stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4200,27 +4216,6 @@ if test "$enable_secur32_ANSI_NTLM_Credentials" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-ObjectTypeInformation
-# |
-# | Modified files:
-# |   *	dlls/ntdll/om.c, dlls/ntdll/tests/om.c, server/change.c, server/completion.c, server/directory.c, server/file.c,
-# | 	server/handle.c, server/object.h, server/protocol.def
-# |
-if test "$enable_server_ObjectTypeInformation" -eq 1; then
-	patch_apply server-ObjectTypeInformation/0001-ntdll-Implemenent-ObjectTypeInformation-class-suppor.patch
-	patch_apply server-ObjectTypeInformation/0002-ntdll-tests-Add-a-few-more-ObjectTypeInformation-tes.patch
-	patch_apply server-ObjectTypeInformation/0003-server-Fix-type-name-of-IoCompletion.patch
-	patch_apply server-ObjectTypeInformation/0004-server-Fix-type-name-of-File.patch
-	patch_apply server-ObjectTypeInformation/0005-server-Fix-type-name-of-directory-file.patch
-	(
-		echo '+    { "Qian Hong", "ntdll: Implemenent ObjectTypeInformation class support in NtQueryObject.", 2 },';
-		echo '+    { "Qian Hong", "ntdll/tests: Add a few more ObjectTypeInformation tests.", 1 },';
-		echo '+    { "Qian Hong", "server: Fix type name of IoCompletion.", 1 },';
-		echo '+    { "Qian Hong", "server: Fix type name of File.", 1 },';
-		echo '+    { "Qian Hong", "server: Fix type name of directory file.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-RootDirectory_File
 # |
 # | Modified files:
@@ -4258,6 +4253,27 @@ if test "$enable_server_Stored_ACLs" -eq 1; then
 		echo '+    { "Erich E. Hoover", "server: Store file security attributes with extended file attributes.", 8 },';
 		echo '+    { "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings.", 7 },';
 		echo '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes.", 7 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-ObjectTypeInformation
+# |
+# | Modified files:
+# |   *	dlls/ntdll/om.c, dlls/ntdll/tests/om.c, server/change.c, server/completion.c, server/directory.c, server/file.c,
+# | 	server/handle.c, server/object.h, server/protocol.def
+# |
+if test "$enable_server_ObjectTypeInformation" -eq 1; then
+	patch_apply server-ObjectTypeInformation/0001-ntdll-Implemenent-ObjectTypeInformation-class-suppor.patch
+	patch_apply server-ObjectTypeInformation/0002-ntdll-tests-Add-a-few-more-ObjectTypeInformation-tes.patch
+	patch_apply server-ObjectTypeInformation/0003-server-Fix-type-name-of-IoCompletion.patch
+	patch_apply server-ObjectTypeInformation/0004-server-Fix-type-name-of-File.patch
+	patch_apply server-ObjectTypeInformation/0005-server-Fix-type-name-of-directory-file.patch
+	(
+		echo '+    { "Qian Hong", "ntdll: Implemenent ObjectTypeInformation class support in NtQueryObject.", 2 },';
+		echo '+    { "Qian Hong", "ntdll/tests: Add a few more ObjectTypeInformation tests.", 1 },';
+		echo '+    { "Qian Hong", "server: Fix type name of IoCompletion.", 1 },';
+		echo '+    { "Qian Hong", "server: Fix type name of File.", 1 },';
+		echo '+    { "Qian Hong", "server: Fix type name of directory file.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5096,57 +5112,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-wined3d_swapchain_present
-# |
-# | Modified files:
-# |   *	dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
-	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-resource_check_usage
-# |
-# | Modified files:
-# |   *	dlls/wined3d/resource.c
-# |
-if test "$enable_wined3d_resource_check_usage" -eq 1; then
-	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	(
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Multisampling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
-	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-Revert_PixelFormat
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5178,6 +5143,57 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-resource_check_usage
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c
+# |
+if test "$enable_wined3d_resource_check_usage" -eq 1; then
+	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	(
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-wined3d_swapchain_present
+# |
+# | Modified files:
+# |   *	dlls/wined3d/swapchain.c
+# |
+if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
+	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Multisampling
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Multisampling" -eq 1; then
+	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+	(
+		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
 	) >> "$patchlist"
 fi
 

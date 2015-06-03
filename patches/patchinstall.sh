@@ -2787,7 +2787,7 @@ fi
 if test "$enable_fltmgr_Stub_SYS" -eq 1; then
 	patch_apply fltmgr-Stub_SYS/0001-fltmgr.sys-add-stub-dll-try-3.patch
 	(
-		echo '+    { "Austin English", "fltmgr.sys: add stub dll.", 3 },';
+		echo '+    { "Austin English", "fltmgr.sys: add stub dll.", 4 },';
 	) >> "$patchlist"
 fi
 

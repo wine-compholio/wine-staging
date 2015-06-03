@@ -1723,9 +1723,13 @@ if test "$enable_server_ACL_Compat" -eq 1; then
 fi
 
 if test "$enable_server_Inherited_ACLs" -eq 1; then
+	if test "$enable_server_ObjectTypeInformation" -gt 1; then
+		abort "Patchset server-ObjectTypeInformation disabled, but server-Inherited_ACLs depends on that."
+	fi
 	if test "$enable_server_Stored_ACLs" -gt 1; then
 		abort "Patchset server-Stored_ACLs disabled, but server-Inherited_ACLs depends on that."
 	fi
+	enable_server_ObjectTypeInformation=1
 	enable_server_Stored_ACLs=1
 fi
 
@@ -4198,6 +4202,27 @@ if test "$enable_secur32_ANSI_NTLM_Credentials" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-ObjectTypeInformation
+# |
+# | Modified files:
+# |   *	dlls/ntdll/om.c, dlls/ntdll/tests/om.c, server/change.c, server/completion.c, server/directory.c, server/file.c,
+# | 	server/handle.c, server/object.h, server/protocol.def
+# |
+if test "$enable_server_ObjectTypeInformation" -eq 1; then
+	patch_apply server-ObjectTypeInformation/0001-ntdll-Implemenent-ObjectTypeInformation-class-suppor.patch
+	patch_apply server-ObjectTypeInformation/0002-ntdll-tests-Add-a-few-more-ObjectTypeInformation-tes.patch
+	patch_apply server-ObjectTypeInformation/0003-server-Fix-type-name-of-IoCompletion.patch
+	patch_apply server-ObjectTypeInformation/0004-server-Fix-type-name-of-File.patch
+	patch_apply server-ObjectTypeInformation/0005-server-Fix-type-name-of-directory-file.patch
+	(
+		echo '+    { "Qian Hong", "ntdll: Implemenent ObjectTypeInformation class support in NtQueryObject.", 2 },';
+		echo '+    { "Qian Hong", "ntdll/tests: Add a few more ObjectTypeInformation tests.", 1 },';
+		echo '+    { "Qian Hong", "server: Fix type name of IoCompletion.", 1 },';
+		echo '+    { "Qian Hong", "server: Fix type name of File.", 1 },';
+		echo '+    { "Qian Hong", "server: Fix type name of directory file.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-RootDirectory_File
 # |
 # | Modified files:
@@ -4363,18 +4388,6 @@ if test "$enable_server_Key_State" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Introduce a helper function to update the thread_input key state.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement locking and synchronization of keystate buffer.", 2 },';
 		echo '+    { "Sebastian Lackner", "server: Introduce a shadow keystate array to sync keystates only on changes.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-ObjectTypeInformation
-# |
-# | Modified files:
-# |   *	dlls/ntdll/om.c, dlls/ntdll/tests/om.c, server/directory.c, server/handle.c, server/object.h, server/protocol.def
-# |
-if test "$enable_server_ObjectTypeInformation" -eq 1; then
-	patch_apply server-ObjectTypeInformation/0001-ntdll-Implemenent-ObjectTypeInformation-class-suppor.patch
-	(
-		echo '+    { "Qian Hong", "ntdll: Implemenent ObjectTypeInformation class support in NtQueryObject.", 1 },';
 	) >> "$patchlist"
 fi
 

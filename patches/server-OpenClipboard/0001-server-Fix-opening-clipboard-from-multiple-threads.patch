@@ -1,21 +1,20 @@
-From 224f0263e0d56336f6baaafd09baddff64679a9b Mon Sep 17 00:00:00 2001
+From 2683d3a1e5f86624b1227933ad620dde8aefa171 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
-Date: Sun, 3 May 2015 07:34:10 +0200
-Subject: server: OpenClipboard() with current owner shouldn't fail.
+Date: Wed, 3 Jun 2015 18:12:07 +0200
+Subject: server: Fix opening clipboard from multiple threads.
 
-Based on a patch by Nikolay Sivov.
 ---
- dlls/user32/tests/clipboard.c | 16 +++++++++++++++-
+ dlls/user32/tests/clipboard.c | 14 ++++++++++++++
  server/clipboard.c            |  3 ++-
- 2 files changed, 17 insertions(+), 2 deletions(-)
+ 2 files changed, 16 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/user32/tests/clipboard.c b/dlls/user32/tests/clipboard.c
-index 40218be..8fd4963 100644
+index a9aef84..6f6cb39 100644
 --- a/dlls/user32/tests/clipboard.c
 +++ b/dlls/user32/tests/clipboard.c
-@@ -35,9 +35,18 @@ static BOOL is_win9x = FALSE;
-                 expected_error, GetLastError()); \
-     } while (0)
+@@ -24,9 +24,18 @@
+ #include "wingdi.h"
+ #include "winuser.h"
  
 +static DWORD WINAPI open_clipboard_thread(LPVOID arg)
 +{
@@ -32,34 +31,33 @@ index 40218be..8fd4963 100644
      BOOL ret;
  
      SetLastError(0xdeadbeef);
-@@ -66,7 +75,12 @@ static void test_ClipboardOwner(void)
+@@ -56,6 +65,11 @@ static void test_ClipboardOwner(void)
      ok( ret, "CloseClipboard error %d\n", GetLastError());
  
      ok(OpenClipboard(hWnd1), "OpenClipboard failed\n");
--    todo_wine ok(OpenClipboard(hWnd1), "OpenClipboard second time in the same hwnd failed\n");
 +    thread = CreateThread(NULL, 0, open_clipboard_thread, hWnd1, 0, NULL);
 +    ok(thread != NULL, "CreateThread failed with error %d\n", GetLastError());
 +    dwret = WaitForSingleObject(thread, 1000);
 +    ok(dwret == WAIT_OBJECT_0, "expected WAIT_OBJECT_0, got %u\n", dwret);
 +    CloseHandle(thread);
-+    ok(OpenClipboard(hWnd1), "OpenClipboard second time in the same hwnd failed\n");
+     ok(OpenClipboard(hWnd1), "OpenClipboard second time in the same hwnd failed\n");
  
      SetLastError(0xdeadbeef);
-     ret = OpenClipboard(hWnd2);
 diff --git a/server/clipboard.c b/server/clipboard.c
-index 0c39319..7f94103 100644
+index 9acee98..ad7ae6f 100644
 --- a/server/clipboard.c
 +++ b/server/clipboard.c
-@@ -204,7 +204,8 @@ DECL_HANDLER(set_clipboard_info)
-         if (clipboard->open_thread)
-         {
-             /* clipboard already opened */
--            set_error(STATUS_WAS_LOCKED);
-+            if (clipboard->open_win != req->clipboard)
-+                set_error(STATUS_WAS_LOCKED);
-             return;
-         }
- 
+@@ -138,8 +138,9 @@ void cleanup_clipboard_thread(struct thread *thread)
+ static int open_clipboard( struct clipboard *clipboard, user_handle_t win )
+ {
+     win = get_user_full_handle( win );
+-    if (clipboard->open_thread && (clipboard->open_thread != current || clipboard->open_win != win))
++    if (clipboard->open_thread)
+     {
++        if (clipboard->open_win == win) return 1;
+         set_error(STATUS_WAS_LOCKED);
+         return 0;
+     }
 -- 
-2.3.5
+2.4.2
 

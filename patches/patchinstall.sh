@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit b75cd7e2f0f6f40655f690695ab0843fce472e88"
+	echo "  commit 8d4f56810775757edc87f6f01754df7f9e98d7e3"
 	echo ""
 }
 
@@ -4387,9 +4387,9 @@ fi
 # |   *	dlls/user32/tests/clipboard.c, server/clipboard.c
 # |
 if test "$enable_server_OpenClipboard" -eq 1; then
-	patch_apply server-OpenClipboard/0001-server-OpenClipboard-with-current-owner-shouldn-t-fa.patch
+	patch_apply server-OpenClipboard/0001-server-Fix-opening-clipboard-from-multiple-threads.patch
 	(
-		echo '+    { "Sebastian Lackner", "server: OpenClipboard() with current owner shouldn'\''t fail.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Fix opening clipboard from multiple threads.", 1 },';
 	) >> "$patchlist"
 fi
 

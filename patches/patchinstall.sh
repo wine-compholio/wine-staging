@@ -3025,7 +3025,8 @@ fi
 # |   *	[#30399] Support for NtSetInformationFile class FileRenameInformation
 # |
 # | Modified files:
-# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c, server/fd.c, server/file.c, server/file.h, server/protocol.def
+# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/winternl.h, server/fd.c, server/file.c, server/file.h,
+# | 	server/protocol.def
 # |
 if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 	patch_apply ntdll-FileDispositionInformation/0001-server-Keep-a-pointer-to-parent-s-fd-unix_name-in-th.patch
@@ -3042,6 +3043,9 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 	patch_apply ntdll-FileDispositionInformation/0012-server-When-combining-root-and-name-make-sure-there-.patch
 	patch_apply ntdll-FileDispositionInformation/0013-server-Reject-rename-when-target-has-opened-file-han.patch
 	patch_apply ntdll-FileDispositionInformation/0014-server-Manually-unlink-dest-when-trying-to-replace-a.patch
+	patch_apply ntdll-FileDispositionInformation/0015-include-Add-declaration-for-FILE_LINK_INFORMATION.patch
+	patch_apply ntdll-FileDispositionInformation/0016-ntdll-tests-Add-tests-for-FileLinkInformation-class.patch
+	patch_apply ntdll-FileDispositionInformation/0017-server-Implement-support-for-FileLinkInformation-cla.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "server: Keep a pointer to parent'\''s fd unix_name in the closed_fd structure.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "server: Add support for setting file disposition information.", 1 },';
@@ -3057,6 +3061,9 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: When combining root and name, make sure there is only one slash.", 2 },';
 		echo '+    { "Sebastian Lackner", "server: Reject rename when target has opened file handles.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Manually unlink dest when trying to replace a file with directory.", 1 },';
+		echo '+    { "Zhaonan Liang", "include: Add declaration for FILE_LINK_INFORMATION.", 1 },';
+		echo '+    { "Qian Hong", "ntdll/tests: Add tests for FileLinkInformation class.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Implement support for FileLinkInformation class in NtSetInformationFile.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,379 @@
+From eb0a9708ab107897cb41a20299f530a8d7bddb4c Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 3 Jun 2015 17:04:23 +0200
+Subject: server: Implement support for FileLinkInformation class in
+ NtSetInformationFile.
+
+---
+ dlls/ntdll/file.c       | 42 ++++++++++++++++++++++++++
+ dlls/ntdll/tests/file.c | 54 ++++++++++++++++-----------------
+ server/fd.c             | 79 ++++++++++++++++++++++++++++++++++++++++++++++++-
+ server/protocol.def     |  8 +++++
+ 4 files changed, 155 insertions(+), 28 deletions(-)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index 6aa46f4..1e27afb 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -2823,6 +2823,48 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
+         else io->u.Status = STATUS_INVALID_PARAMETER_3;
+         break;
+ 
++    case FileLinkInformation:
++        if (len >= sizeof(FILE_LINK_INFORMATION))
++        {
++            FILE_LINK_INFORMATION *info = ptr;
++            UNICODE_STRING name_str;
++            OBJECT_ATTRIBUTES attr;
++            ANSI_STRING unix_name;
++
++            name_str.Buffer = info->FileName;
++            name_str.Length = info->FileNameLength;
++            name_str.MaximumLength = info->FileNameLength + sizeof(WCHAR);
++
++            attr.Length = sizeof(attr);
++            attr.ObjectName = &name_str;
++            attr.RootDirectory = info->RootDirectory;
++            attr.Attributes = OBJ_CASE_INSENSITIVE;
++
++            io->u.Status = nt_to_unix_file_name_attr( &attr, &unix_name, FILE_OPEN_IF );
++            if (io->u.Status != STATUS_SUCCESS && io->u.Status != STATUS_NO_SUCH_FILE)
++                break;
++
++            if (!info->ReplaceIfExists && io->u.Status == STATUS_SUCCESS)
++            {
++                RtlFreeAnsiString( &unix_name );
++                io->u.Status = STATUS_OBJECT_NAME_COLLISION;
++                break;
++            }
++
++            SERVER_START_REQ( link_file )
++            {
++                req->handle   = wine_server_obj_handle( handle );
++                req->rootdir  = wine_server_obj_handle( attr.RootDirectory );
++                wine_server_add_data( req, unix_name.Buffer, unix_name.Length );
++                io->u.Status = wine_server_call( req );
++            }
++            SERVER_END_REQ;
++
++            RtlFreeAnsiString( &unix_name );
++        }
++        else io->u.Status = STATUS_INVALID_PARAMETER_3;
++        break;
++
+     default:
+         FIXME("Unsupported class (%d)\n", class);
+         io->u.Status = STATUS_NOT_IMPLEMENTED;
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index c985a03..92613d5 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -2183,12 +2183,12 @@ static void test_file_link_information(void)
+ 
+     U(io).Status = 0xdeadbeef;
+     res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
+-    todo_wine ok( U(io).Status == STATUS_SUCCESS, "io.Status expected STATUS_SUCCESS, got %x\n", U(io).Status );
+-    todo_wine ok( res == STATUS_SUCCESS, "res expected STATUS_SUCCESS, got %x\n", res );
++    ok( U(io).Status == STATUS_SUCCESS, "io.Status expected STATUS_SUCCESS, got %x\n", U(io).Status );
++    ok( res == STATUS_SUCCESS, "res expected STATUS_SUCCESS, got %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+     ok( !fileDeleted, "File should exist\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+-    todo_wine ok( !fileDeleted, "File should exist\n" );
++    ok( !fileDeleted, "File should exist\n" );
+ 
+     pfni = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_NAME_INFORMATION) + MAX_PATH * sizeof(WCHAR) );
+     res = pNtQueryInformationFile( handle, &io, pfni, sizeof(FILE_NAME_INFORMATION) + MAX_PATH * sizeof(WCHAR), FileNameInformation );
+@@ -2222,7 +2222,7 @@ static void test_file_link_information(void)
+     U(io).Status = 0xdeadbeef;
+     res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
+     todo_wine ok( U(io).Status == 0xdeadbeef, "shouldn't be able to set FileLinkInformation, io.Status is %x\n", U(io).Status );
+-    todo_wine ok( res == STATUS_OBJECT_NAME_COLLISION, "expect STATUS_OBJECT_NAME_COLLISION, res is %x\n", res );
++    ok( res == STATUS_OBJECT_NAME_COLLISION, "expect STATUS_OBJECT_NAME_COLLISION, res is %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+     ok( !fileDeleted, "File should exist\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -2255,7 +2255,7 @@ static void test_file_link_information(void)
+     U(io).Status = 0xdeadbeef;
+     res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
+     todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expect 0xdeadbeef, io.Status is %x\n", U(io).Status );
+-    todo_wine ok( res == STATUS_OBJECT_NAME_COLLISION, "res expect STATUS_OBJECT_NAME_COLLISION, res is %x\n", res );
++    ok( res == STATUS_OBJECT_NAME_COLLISION, "res expect STATUS_OBJECT_NAME_COLLISION, res is %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+     ok( !fileDeleted, "File should exist\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -2285,8 +2285,8 @@ static void test_file_link_information(void)
+ 
+     U(io).Status = 0xdeadbeef;
+     res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
+-    todo_wine ok( U(io).Status == STATUS_SUCCESS, "io.Status expect STATUS_SUCCESS, io.Status is %x\n", U(io).Status );
+-    todo_wine ok( res == STATUS_SUCCESS, "res expect STATUS_SUCCESS, res is %x\n", res );
++    ok( U(io).Status == STATUS_SUCCESS, "io.Status expect STATUS_SUCCESS, io.Status is %x\n", U(io).Status );
++    ok( res == STATUS_SUCCESS, "res expect STATUS_SUCCESS, res is %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+     ok( !fileDeleted, "File should exist\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -2319,7 +2319,7 @@ static void test_file_link_information(void)
+     U(io).Status = 0xdeadbeef;
+     res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
+     todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expect 0xdeadbeef, io.Status is %x\n", U(io).Status );
+-    todo_wine ok( res == STATUS_ACCESS_DENIED, "res expect STATUS_ACCESS_DENIED, res is %x\n", res );
++    ok( res == STATUS_ACCESS_DENIED, "res expect STATUS_ACCESS_DENIED, res is %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+     ok( !fileDeleted, "File should exist\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -2353,7 +2353,7 @@ static void test_file_link_information(void)
+     U(io).Status = 0xdeadbeef;
+     res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
+     todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expect 0xdeadbeef, io.Status is %x\n", U(io).Status );
+-    todo_wine ok( res == STATUS_ACCESS_DENIED, "res expect STATUS_ACCESS_DENIED, res is %x\n", res );
++    ok( res == STATUS_ACCESS_DENIED, "res expect STATUS_ACCESS_DENIED, res is %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+     ok( !fileDeleted, "File should exist\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -2387,7 +2387,7 @@ static void test_file_link_information(void)
+     U(io).Status = 0xdeadbeef;
+     res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
+     todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expect 0xdeadbeef, io.Status is %x\n", U(io).Status );
+-    todo_wine ok( res == STATUS_ACCESS_DENIED, "res expect STATUS_ACCESS_DENIED, res is %x\n", res );
++    ok( res == STATUS_ACCESS_DENIED, "res expect STATUS_ACCESS_DENIED, res is %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+     ok( !fileDeleted, "File should exist\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -2422,7 +2422,7 @@ static void test_file_link_information(void)
+     U(io).Status = 0xdeadbeef;
+     res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
+     todo_wine ok( U(io).Status == 0xdeadbeef , "io.Status expected 0xdeadbeef, got %x\n", U(io).Status );
+-    todo_wine ok( res == STATUS_FILE_IS_A_DIRECTORY, "res expected STATUS_FILE_IS_A_DIRECTORY, got %x\n", res );
++    ok( res == STATUS_FILE_IS_A_DIRECTORY, "res expected STATUS_FILE_IS_A_DIRECTORY, got %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+     ok( !fileDeleted, "File should exist\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -2469,7 +2469,7 @@ static void test_file_link_information(void)
+     U(io).Status = 0xdeadbeef;
+     res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
+     todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expected 0xdeadbeef, got %x\n", U(io).Status );
+-    todo_wine ok( res == STATUS_FILE_IS_A_DIRECTORY, "res expected STATUS_FILE_IS_A_DIRECTORY, got %x\n", res );
++    ok( res == STATUS_FILE_IS_A_DIRECTORY, "res expected STATUS_FILE_IS_A_DIRECTORY, got %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+     ok( !fileDeleted, "File should exist\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -2503,8 +2503,8 @@ static void test_file_link_information(void)
+     U(io).Status = 0xdeadbeef;
+     res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
+     todo_wine ok( U(io).Status == 0xdeadbeef, "shouldn't be able to set FileLinkInformation, io.Status is %x\n", U(io).Status );
+-    todo_wine ok( res == STATUS_OBJECT_NAME_COLLISION || broken(res == STATUS_FILE_IS_A_DIRECTORY) /* > Win XP */,
+-                  "expect STATUS_OBJECT_NAME_COLLISION or STATUS_FILE_IS_A_DIRECTORY, res is %x\n", res );
++    ok( res == STATUS_OBJECT_NAME_COLLISION || broken(res == STATUS_FILE_IS_A_DIRECTORY) /* > Win XP */,
++        "expect STATUS_OBJECT_NAME_COLLISION or STATUS_FILE_IS_A_DIRECTORY, res is %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+     ok( !fileDeleted, "File should exist\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -2540,8 +2540,8 @@ static void test_file_link_information(void)
+     U(io).Status = 0xdeadbeef;
+     res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
+     todo_wine ok( U(io).Status == 0xdeadbeef, "shouldn't be able to set FileLinkInformation, io.Status is %x\n", U(io).Status );
+-    todo_wine ok( res == STATUS_OBJECT_NAME_COLLISION || broken(res == STATUS_FILE_IS_A_DIRECTORY) /* > Win XP */,
+-                  "expect STATUS_OBJECT_NAME_COLLISION or STATUS_FILE_IS_A_DIRECTORY, res is %x\n", res );
++    ok( res == STATUS_OBJECT_NAME_COLLISION || broken(res == STATUS_FILE_IS_A_DIRECTORY) /* > Win XP */,
++        "expect STATUS_OBJECT_NAME_COLLISION or STATUS_FILE_IS_A_DIRECTORY, res is %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+     ok( !fileDeleted, "File should exist\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -2575,7 +2575,7 @@ static void test_file_link_information(void)
+     U(io).Status = 0xdeadbeef;
+     res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
+     todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expect 0xdeadbeef, io.Status is %x\n", U(io).Status );
+-    todo_wine ok( res == STATUS_FILE_IS_A_DIRECTORY, "res expect STATUS_FILE_IS_A_DIRECTORY, res is %x\n", res );
++    ok( res == STATUS_FILE_IS_A_DIRECTORY, "res expect STATUS_FILE_IS_A_DIRECTORY, res is %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+     ok( !fileDeleted, "File should exist\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -2611,7 +2611,7 @@ static void test_file_link_information(void)
+     U(io).Status = 0xdeadbeef;
+     res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
+     todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expect 0xdeadbeef, io.Status is %x\n", U(io).Status );
+-    todo_wine ok( res == STATUS_FILE_IS_A_DIRECTORY, "res expect STATUS_FILE_IS_A_DIRECTORY, res is %x\n", res );
++    ok( res == STATUS_FILE_IS_A_DIRECTORY, "res expect STATUS_FILE_IS_A_DIRECTORY, res is %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+     ok( !fileDeleted, "File should exist\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -2648,8 +2648,8 @@ static void test_file_link_information(void)
+     U(io).Status = 0xdeadbeef;
+     res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
+     todo_wine ok( U(io).Status == 0xdeadbeef, "shouldn't be able to set FileLinkInformation, io.Status is %x\n", U(io).Status );
+-    todo_wine ok( res == STATUS_OBJECT_NAME_COLLISION || broken(res == STATUS_FILE_IS_A_DIRECTORY) /* > Win XP */,
+-                  "expect STATUS_OBJECT_NAME_COLLISION or STATUS_FILE_IS_A_DIRECTORY, res is %x\n", res );
++    ok( res == STATUS_OBJECT_NAME_COLLISION || broken(res == STATUS_FILE_IS_A_DIRECTORY) /* > Win XP */,
++        "expect STATUS_OBJECT_NAME_COLLISION or STATUS_FILE_IS_A_DIRECTORY, res is %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+     ok( !fileDeleted, "File should exist\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -2685,7 +2685,7 @@ static void test_file_link_information(void)
+     U(io).Status = 0xdeadbeef;
+     res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
+     todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expect 0xdeadbeef, io.Status is %x\n", U(io).Status );
+-    todo_wine ok( res == STATUS_FILE_IS_A_DIRECTORY, "res expect STATUS_FILE_IS_A_DIRECTORY, res is %x\n", res );
++    ok( res == STATUS_FILE_IS_A_DIRECTORY, "res expect STATUS_FILE_IS_A_DIRECTORY, res is %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+     ok( !fileDeleted, "File should exist\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -2724,7 +2724,7 @@ static void test_file_link_information(void)
+     U(io).Status = 0xdeadbeef;
+     res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
+     todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expect 0xdeadbeef, io.Status is %x\n", U(io).Status );
+-    todo_wine ok( res == STATUS_FILE_IS_A_DIRECTORY, "res expect STATUS_FILE_IS_A_DIRECTORY, res is %x\n", res );
++    ok( res == STATUS_FILE_IS_A_DIRECTORY, "res expect STATUS_FILE_IS_A_DIRECTORY, res is %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+     ok( !fileDeleted, "File should exist\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -2758,7 +2758,7 @@ static void test_file_link_information(void)
+     U(io).Status = 0xdeadbeef;
+     res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
+     todo_wine ok( U(io).Status == 0xdeadbeef, "shouldn't be able to set FileLinkInformation, io.Status is %x\n", U(io).Status );
+-    todo_wine ok( res == STATUS_OBJECT_NAME_COLLISION, "expect STATUS_OBJECT_NAME_COLLISION, res is %x\n", res );
++    ok( res == STATUS_OBJECT_NAME_COLLISION, "expect STATUS_OBJECT_NAME_COLLISION, res is %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+     ok( !fileDeleted, "File should exist\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -2791,7 +2791,7 @@ static void test_file_link_information(void)
+     U(io).Status = 0xdeadbeef;
+     res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
+     todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expect 0xdeadbeef, io.Status is %x\n", U(io).Status );
+-    todo_wine ok( res == STATUS_ACCESS_DENIED, "res expect STATUS_ACCESS_DENIED, res is %x\n", res );
++    ok( res == STATUS_ACCESS_DENIED, "res expect STATUS_ACCESS_DENIED, res is %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+     ok( !fileDeleted, "File should exist\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+@@ -2824,12 +2824,12 @@ static void test_file_link_information(void)
+ 
+     U(io).Status = 0xdeadbeef;
+     res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
+-    todo_wine ok( U(io).Status == STATUS_SUCCESS, "io.Status expected STATUS_SUCCESS, got %x\n", U(io).Status );
+-    todo_wine ok( res == STATUS_SUCCESS, "res expected STATUS_SUCCESS, got %x\n", res );
++    ok( U(io).Status == STATUS_SUCCESS, "io.Status expected STATUS_SUCCESS, got %x\n", U(io).Status );
++    ok( res == STATUS_SUCCESS, "res expected STATUS_SUCCESS, got %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+     ok( !fileDeleted, "File should exist\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+-    todo_wine ok( !fileDeleted, "File should exist\n" );
++    ok( !fileDeleted, "File should exist\n" );
+ 
+     pfni = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_NAME_INFORMATION) + MAX_PATH * sizeof(WCHAR) );
+     res = pNtQueryInformationFile( handle, &io, pfni, sizeof(FILE_NAME_INFORMATION) + MAX_PATH * sizeof(WCHAR), FileNameInformation );
+diff --git a/server/fd.c b/server/fd.c
+index 0234fc0..4729170 100644
+--- a/server/fd.c
++++ b/server/fd.c
+@@ -2561,7 +2561,6 @@ DECL_HANDLER(rename_file)
+                     goto out;
+                 }
+             }
+-
+             if (rename( fd->unix_name, path ))
+                 file_set_error();
+             else
+@@ -2578,3 +2577,81 @@ out:
+ 
+     free( path );
+ }
++
++/* create hardlink - FIXME: merge with rename_file */
++DECL_HANDLER(link_file)
++{
++    struct fd *fd;
++    char *path;
++
++    if (!(path = mem_alloc( get_req_data_size() + 1 )))
++        return;
++    memcpy( path, get_req_data(), get_req_data_size() );
++    path[ get_req_data_size() ] = 0;
++
++    /* handle rootdir */
++    if (req->rootdir)
++    {
++        char *combined_path = NULL;
++        struct dir *root;
++        if ((root = get_dir_obj( current->process, req->rootdir, 0 )))
++        {
++            struct fd *root_fd;
++            if ((root_fd = get_obj_fd( (struct object *)root )))
++            {
++                combined_path = dup_fd_name( root_fd, path );
++                release_object( root_fd );
++            }
++            release_object( root );
++        }
++
++        if (!combined_path) return;
++        free( path );
++        path = combined_path;
++    }
++
++    /* create a hardlink */
++    if ((fd = get_handle_fd_obj( current->process, req->handle, 0 )))
++    {
++        if (fd->unix_name)
++        {
++            struct stat st;
++            if (fd->unix_fd != -1 && !fstat( fd->unix_fd, &st ) && S_ISDIR( st.st_mode ))
++            {
++                set_error( STATUS_FILE_IS_A_DIRECTORY );
++                goto out;
++            }
++            if (!stat( path, &st ))
++            {
++                struct inode *inode;
++                if (!S_ISREG( st.st_mode ))
++                {
++                    set_error( STATUS_ACCESS_DENIED );
++                    goto out;
++                }
++                if ((inode = get_inode( st.st_dev, st.st_ino, -1 )))
++                {
++                    int is_empty = list_empty( &inode->open );
++                    release_object( inode );
++                    if (!is_empty)
++                    {
++                        set_error( STATUS_ACCESS_DENIED );
++                        goto out;
++                    }
++                }
++                if (unlink( path ))
++                {
++                    file_set_error();
++                    goto out;
++                }
++            }
++            if (link( fd->unix_name, path ))
++                file_set_error();
++        }
++        else set_error( STATUS_OBJECT_TYPE_MISMATCH );
++out:
++        release_object( fd );
++    }
++
++    free( path );
++}
+diff --git a/server/protocol.def b/server/protocol.def
+index 431d2b9..1b7814b 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -1215,6 +1215,14 @@ enum server_fd_type
+ @END
+ 
+ 
++/* Create a hardlink */
++@REQ(link_file)
++    obj_handle_t handle;        /* handle to the file */
++    obj_handle_t rootdir;       /* root directory */
++    VARARG(unix_name,string);   /* file name */
++@END
++
++
+ /* Create a socket */
+ @REQ(create_socket)
+     unsigned int access;        /* wanted access rights */
+-- 
+2.4.2
+

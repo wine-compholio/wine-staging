@@ -1,4 +1,4 @@
-From f32616e681bebc98e6969e142edabbd4b5cf86dd Mon Sep 17 00:00:00 2001
+From a9ec2efaf7e9e8eb0440052176e79f71b615bcc8 Mon Sep 17 00:00:00 2001
 From: Qian Hong <qhong@codeweavers.com>
 Date: Fri, 17 Apr 2015 18:39:59 +0800
 Subject: server: Do not allow to set disposition on file which has a file
@@ -6,14 +6,14 @@ Subject: server: Do not allow to set disposition on file which has a file
 
 ---
  dlls/ntdll/tests/file.c |  2 --
- server/fd.c             | 15 +++++++++++++++
- 2 files changed, 15 insertions(+), 2 deletions(-)
+ server/fd.c             | 12 ++++++++++++
+ 2 files changed, 12 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 1726546..2784e9b 100644
+index 89f70de..b285157 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -1533,7 +1533,6 @@ static void test_file_disposition_information(void)
+@@ -1633,7 +1633,6 @@ static void test_file_disposition_information(void)
      ok( mapping != NULL, "failed to create file mapping\n");
      fdi.DoDeleteFile = TRUE;
      res = pNtSetInformationFile( handle, &io, &fdi, sizeof fdi, FileDispositionInformation );
@@ -21,7 +21,7 @@ index 1726546..2784e9b 100644
      ok( res == STATUS_CANNOT_DELETE, "unexpected FileDispositionInformation result (expected STATUS_CANNOT_DELETE, got %x)\n", res );
      CloseHandle( handle );
      fileDeleted = GetFileAttributesA( buffer ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
-@@ -1567,7 +1566,6 @@ static void test_file_disposition_information(void)
+@@ -1667,7 +1666,6 @@ static void test_file_disposition_information(void)
      CloseHandle( mapping );
      fdi.DoDeleteFile = TRUE;
      res = pNtSetInformationFile( handle, &io, &fdi, sizeof fdi, FileDispositionInformation );
@@ -30,10 +30,10 @@ index 1726546..2784e9b 100644
      CloseHandle( handle );
      fileDeleted = GetFileAttributesA( buffer ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
 diff --git a/server/fd.c b/server/fd.c
-index 036478a..90487cc 100644
+index d11d98c..553d840 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -1951,6 +1951,7 @@ unsigned int get_fd_options( struct fd *fd )
+@@ -1946,6 +1946,7 @@ unsigned int get_fd_options( struct fd *fd )
  void set_fd_disposition( struct fd *fd, int unlink )
  {
      struct stat st;
@@ -41,21 +41,18 @@ index 036478a..90487cc 100644
  
      if (fd->unix_fd == -1)
      {
-@@ -1978,6 +1979,20 @@ void set_fd_disposition( struct fd *fd, int unlink )
+@@ -1973,6 +1974,17 @@ void set_fd_disposition( struct fd *fd, int unlink )
          return;
      }
  
 +    LIST_FOR_EACH( ptr, &fd->inode->open )
 +    {
 +        struct fd *fd_ptr = LIST_ENTRY( ptr, struct fd, inode_entry );
-+        if (fd_ptr != fd)
++        if (fd_ptr != fd && fd_ptr->access & FILE_MAPPING_ACCESS)
 +        {
-+            if (fd_ptr->access & FILE_MAPPING_ACCESS)
-+            {
-+                /* can't unlink files which are mapped to memory */
-+                set_error( STATUS_CANNOT_DELETE );
-+                return;
-+            }
++            /* can't unlink files which are mapped to memory */
++            set_error( STATUS_CANNOT_DELETE );
++            return;
 +        }
 +    }
 +
@@ -63,5 +60,5 @@ index 036478a..90487cc 100644
          fd->closed->unlink = 1;
      else if (!(fd->options & FILE_DELETE_ON_CLOSE))
 -- 
-2.3.5
+2.4.2
 

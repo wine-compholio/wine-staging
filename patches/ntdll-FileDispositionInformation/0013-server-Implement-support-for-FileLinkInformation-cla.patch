@@ -1,24 +1,35 @@
-From eb0a9708ab107897cb41a20299f530a8d7bddb4c Mon Sep 17 00:00:00 2001
+From 0777c89085c995e4160750c12bdd0afd68eecafb Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 3 Jun 2015 17:04:23 +0200
 Subject: server: Implement support for FileLinkInformation class in
  NtSetInformationFile.
 
 ---
- dlls/ntdll/file.c       | 42 ++++++++++++++++++++++++++
- dlls/ntdll/tests/file.c | 54 ++++++++++++++++-----------------
- server/fd.c             | 79 ++++++++++++++++++++++++++++++++++++++++++++++++-
- server/protocol.def     |  8 +++++
- 4 files changed, 155 insertions(+), 28 deletions(-)
+ dlls/ntdll/file.c       | 44 ++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/tests/file.c | 54 ++++++++++++++++++++++++-------------------------
+ server/fd.c             | 47 ++++++++++++++++++++++++++++--------------
+ server/protocol.def     |  3 ++-
+ 4 files changed, 105 insertions(+), 43 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 6aa46f4..1e27afb 100644
+index 6aa46f4..f5f2458 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -2823,6 +2823,48 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
-         else io->u.Status = STATUS_INVALID_PARAMETER_3;
-         break;
- 
+@@ -2813,6 +2813,50 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
+             {
+                 req->handle   = wine_server_obj_handle( handle );
+                 req->rootdir  = wine_server_obj_handle( attr.RootDirectory );
++                req->link     = FALSE;
++                wine_server_add_data( req, unix_name.Buffer, unix_name.Length );
++                io->u.Status = wine_server_call( req );
++            }
++            SERVER_END_REQ;
++
++            RtlFreeAnsiString( &unix_name );
++        }
++        else io->u.Status = STATUS_INVALID_PARAMETER_3;
++        break;
++
 +    case FileLinkInformation:
 +        if (len >= sizeof(FILE_LINK_INFORMATION))
 +        {
@@ -47,23 +58,14 @@ index 6aa46f4..1e27afb 100644
 +                break;
 +            }
 +
-+            SERVER_START_REQ( link_file )
++            SERVER_START_REQ( rename_file )
 +            {
 +                req->handle   = wine_server_obj_handle( handle );
 +                req->rootdir  = wine_server_obj_handle( attr.RootDirectory );
-+                wine_server_add_data( req, unix_name.Buffer, unix_name.Length );
-+                io->u.Status = wine_server_call( req );
-+            }
-+            SERVER_END_REQ;
-+
-+            RtlFreeAnsiString( &unix_name );
-+        }
-+        else io->u.Status = STATUS_INVALID_PARAMETER_3;
-+        break;
-+
-     default:
-         FIXME("Unsupported class (%d)\n", class);
-         io->u.Status = STATUS_NOT_IMPLEMENTED;
++                req->link     = TRUE;
+                 wine_server_add_data( req, unix_name.Buffer, unix_name.Length );
+                 io->u.Status = wine_server_call( req );
+             }
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
 index c985a03..92613d5 100644
 --- a/dlls/ntdll/tests/file.c
@@ -262,118 +264,118 @@ index c985a03..92613d5 100644
      pfni = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_NAME_INFORMATION) + MAX_PATH * sizeof(WCHAR) );
      res = pNtQueryInformationFile( handle, &io, pfni, sizeof(FILE_NAME_INFORMATION) + MAX_PATH * sizeof(WCHAR), FileNameInformation );
 diff --git a/server/fd.c b/server/fd.c
-index 0234fc0..4729170 100644
+index 4b0bf47..db299dd 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -2561,7 +2561,6 @@ DECL_HANDLER(rename_file)
-                     goto out;
-                 }
-             }
--
-             if (rename( fd->unix_name, path ))
-                 file_set_error();
-             else
-@@ -2578,3 +2577,81 @@ out:
- 
-     free( path );
+@@ -1999,8 +1999,8 @@ void set_fd_disposition( struct fd *fd, int unlink )
+         fd->closed->unlink = 0;
  }
+ 
+-/* rename a file */
+-static void rename_fd( struct fd *fd, struct fd *root, const char *nameptr, data_size_t len )
++/* rename or link a file */
++static void rename_fd( struct fd *fd, struct fd *root, const char *nameptr, data_size_t len, int do_link )
+ {
+     struct inode *inode;
+     struct stat st;
+@@ -2027,8 +2027,16 @@ static void rename_fd( struct fd *fd, struct fd *root, const char *nameptr, data
+         name = combined_name;
+     }
+ 
++    if (do_link && fd->unix_fd != -1 &&
++        !fstat( fd->unix_fd, &st ) && S_ISDIR( st.st_mode ))
++    {
++        /* when creating a hard link, source must be a file */
++        set_error( STATUS_FILE_IS_A_DIRECTORY );
++        goto failed;
++    }
 +
-+/* create hardlink - FIXME: merge with rename_file */
-+DECL_HANDLER(link_file)
-+{
-+    struct fd *fd;
-+    char *path;
-+
-+    if (!(path = mem_alloc( get_req_data_size() + 1 )))
+     if (stat( name, &st ))
+-        goto do_rename;
++        goto skip_checks;
+ 
+     if (!S_ISREG( st.st_mode ))
+     {
+@@ -2049,25 +2057,34 @@ static void rename_fd( struct fd *fd, struct fd *root, const char *nameptr, data
+         }
+     }
+ 
++    /* unix link() doesn't succeed when the target already exists */
+     /* unix rename() doesn't automatically replace files with directories */
+-    if (fd->unix_fd != -1 && !fstat( fd->unix_fd, &st ) &&
+-        S_ISDIR( st.st_mode ) && unlink( name ))
++    if ((do_link || (fd->unix_fd != -1 && !fstat( fd->unix_fd, &st ) &&
++        S_ISDIR( st.st_mode ))) && unlink( name ))
+     {
+         file_set_error();
+         goto failed;
+     }
+ 
+-do_rename:
+-    if (rename( fd->unix_name, name ))
++skip_checks:
++    if (do_link)
+     {
+-        file_set_error();
+-        goto failed;
++        if (link( fd->unix_name, name ))
++            file_set_error();
+     }
++    else
++    {
++        if (rename( fd->unix_name, name ))
++        {
++            file_set_error();
++            goto failed;
++        }
+ 
+-    free( fd->unix_name );
+-    fd->unix_name = name;
+-    fd->closed->unix_name = name;
+-    return;
++        free( fd->unix_name );
++        fd->unix_name = name;
++        fd->closed->unix_name = name;
 +        return;
-+    memcpy( path, get_req_data(), get_req_data_size() );
-+    path[ get_req_data_size() ] = 0;
-+
-+    /* handle rootdir */
-+    if (req->rootdir)
-+    {
-+        char *combined_path = NULL;
-+        struct dir *root;
-+        if ((root = get_dir_obj( current->process, req->rootdir, 0 )))
-+        {
-+            struct fd *root_fd;
-+            if ((root_fd = get_obj_fd( (struct object *)root )))
-+            {
-+                combined_path = dup_fd_name( root_fd, path );
-+                release_object( root_fd );
-+            }
-+            release_object( root );
-+        }
-+
-+        if (!combined_path) return;
-+        free( path );
-+        path = combined_path;
 +    }
-+
-+    /* create a hardlink */
-+    if ((fd = get_handle_fd_obj( current->process, req->handle, 0 )))
-+    {
-+        if (fd->unix_name)
-+        {
-+            struct stat st;
-+            if (fd->unix_fd != -1 && !fstat( fd->unix_fd, &st ) && S_ISDIR( st.st_mode ))
-+            {
-+                set_error( STATUS_FILE_IS_A_DIRECTORY );
-+                goto out;
-+            }
-+            if (!stat( path, &st ))
-+            {
-+                struct inode *inode;
-+                if (!S_ISREG( st.st_mode ))
-+                {
-+                    set_error( STATUS_ACCESS_DENIED );
-+                    goto out;
-+                }
-+                if ((inode = get_inode( st.st_dev, st.st_ino, -1 )))
-+                {
-+                    int is_empty = list_empty( &inode->open );
-+                    release_object( inode );
-+                    if (!is_empty)
-+                    {
-+                        set_error( STATUS_ACCESS_DENIED );
-+                        goto out;
-+                    }
-+                }
-+                if (unlink( path ))
-+                {
-+                    file_set_error();
-+                    goto out;
-+                }
-+            }
-+            if (link( fd->unix_name, path ))
-+                file_set_error();
-+        }
-+        else set_error( STATUS_OBJECT_TYPE_MISMATCH );
-+out:
-+        release_object( fd );
-+    }
-+
-+    free( path );
-+}
+ 
+ failed:
+     free( name );
+@@ -2567,7 +2584,7 @@ DECL_HANDLER(add_fd_completion)
+     }
+ }
+ 
+-/* rename file */
++/* rename or link a file */
+ DECL_HANDLER(rename_file)
+ {
+     struct fd *root_fd = NULL;
+@@ -2584,7 +2601,7 @@ DECL_HANDLER(rename_file)
+ 
+     if ((fd = get_handle_fd_obj( current->process, req->handle, 0 )))
+     {
+-        rename_fd( fd, root_fd, get_req_data(), get_req_data_size() );
++        rename_fd( fd, root_fd, get_req_data(), get_req_data_size(), req->link );
+         release_object( fd );
+     }
+ 
 diff --git a/server/protocol.def b/server/protocol.def
-index 431d2b9..1b7814b 100644
+index 431d2b9..c2c4221 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -1215,6 +1215,14 @@ enum server_fd_type
+@@ -1207,10 +1207,11 @@ enum server_fd_type
  @END
  
  
-+/* Create a hardlink */
-+@REQ(link_file)
-+    obj_handle_t handle;        /* handle to the file */
-+    obj_handle_t rootdir;       /* root directory */
-+    VARARG(unix_name,string);   /* file name */
-+@END
-+
-+
- /* Create a socket */
- @REQ(create_socket)
-     unsigned int access;        /* wanted access rights */
+-/* Rename a file */
++/* Rename or link a file */
+ @REQ(rename_file)
+     obj_handle_t handle;        /* handle to the file */
+     obj_handle_t rootdir;       /* root directory */
++    int          link;          /* link instead of renaming */
+     VARARG(unix_name,string);   /* file name */
+ @END
+ 
 -- 
 2.4.2
 

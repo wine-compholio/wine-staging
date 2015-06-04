@@ -3030,33 +3030,25 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 	patch_apply ntdll-FileDispositionInformation/0003-server-Do-not-permit-FileDispositionInformation-to-d.patch
 	patch_apply ntdll-FileDispositionInformation/0004-ntdll-tests-Added-tests-to-set-disposition-on-file-w.patch
 	patch_apply ntdll-FileDispositionInformation/0005-server-Do-not-allow-to-set-disposition-on-file-which.patch
-	patch_apply ntdll-FileDispositionInformation/0006-server-Set-the-closed_fd-unix_name-shortly-before-ad.patch
-	patch_apply ntdll-FileDispositionInformation/0007-ntdll-tests-Add-tests-for-FileRenameInformation.patch
-	patch_apply ntdll-FileDispositionInformation/0008-ntdll-tests-Add-additional-tests-for-FileRenameInfor.patch
-	patch_apply ntdll-FileDispositionInformation/0009-ntdll-tests-Add-tests-for-FileRenameInformation-with.patch
-	patch_apply ntdll-FileDispositionInformation/0010-ntdll-Implement-a-hacky-version-of-FileRenameInforma.patch
-	patch_apply ntdll-FileDispositionInformation/0011-server-FileRenameInformation-target-cannot-be-an-exi.patch
-	patch_apply ntdll-FileDispositionInformation/0012-server-When-combining-root-and-name-make-sure-there-.patch
-	patch_apply ntdll-FileDispositionInformation/0013-server-Reject-rename-when-target-has-opened-file-han.patch
-	patch_apply ntdll-FileDispositionInformation/0014-server-Manually-unlink-dest-when-trying-to-replace-a.patch
-	patch_apply ntdll-FileDispositionInformation/0015-include-Add-declaration-for-FILE_LINK_INFORMATION.patch
-	patch_apply ntdll-FileDispositionInformation/0016-ntdll-tests-Add-tests-for-FileLinkInformation-class.patch
-	patch_apply ntdll-FileDispositionInformation/0017-server-Implement-support-for-FileLinkInformation-cla.patch
+	patch_apply ntdll-FileDispositionInformation/0006-ntdll-tests-Add-tests-for-FileRenameInformation.patch
+	patch_apply ntdll-FileDispositionInformation/0007-ntdll-tests-Add-additional-tests-for-FileRenameInfor.patch
+	patch_apply ntdll-FileDispositionInformation/0008-ntdll-tests-Add-tests-for-FileRenameInformation-with.patch
+	patch_apply ntdll-FileDispositionInformation/0009-ntdll-Implement-FileRenameInformation-support.patch
+	patch_apply ntdll-FileDispositionInformation/0010-server-When-combining-root-and-name-make-sure-there-.patch
+	patch_apply ntdll-FileDispositionInformation/0011-include-Add-declaration-for-FILE_LINK_INFORMATION.patch
+	patch_apply ntdll-FileDispositionInformation/0012-ntdll-tests-Add-tests-for-FileLinkInformation-class.patch
+	patch_apply ntdll-FileDispositionInformation/0013-server-Implement-support-for-FileLinkInformation-cla.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "server: Keep a pointer to parent'\''s fd unix_name in the closed_fd structure.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "server: Add support for setting file disposition information.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Added tests to set disposition on file which is mapped to memory.", 1 },';
 		echo '+    { "Qian Hong", "server: Do not allow to set disposition on file which has a file mapping.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Set the closed_fd->unix_name shortly before adding to the closed fd list.", 1 },';
 		echo '+    { "Jianqiu Zhang", "ntdll/tests: Add tests for FileRenameInformation.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll/tests: Add additional tests for FileRenameInformation.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for FileRenameInformation with nonzero RootDir.", 1 },';
-		echo '+    { "Qian Hong", "ntdll: Implement a hacky version of FileRenameInformation support.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: FileRenameInformation target cannot be an existing directory.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement FileRenameInformation support.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: When combining root and name, make sure there is only one slash.", 2 },';
-		echo '+    { "Sebastian Lackner", "server: Reject rename when target has opened file handles.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Manually unlink dest when trying to replace a file with directory.", 1 },';
 		echo '+    { "Zhaonan Liang", "include: Add declaration for FILE_LINK_INFORMATION.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Add tests for FileLinkInformation class.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement support for FileLinkInformation class in NtSetInformationFile.", 1 },';

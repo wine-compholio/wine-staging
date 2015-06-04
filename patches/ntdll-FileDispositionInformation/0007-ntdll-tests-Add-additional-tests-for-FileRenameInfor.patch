@@ -1,60 +1,62 @@
-From 3049a4cb5eaa0e35e2ce1621a4c090c1fdc13a57 Mon Sep 17 00:00:00 2001
-From: Qian Hong <qhong@codeweavers.com>
-Date: Wed, 3 Jun 2015 17:41:59 +0800
-Subject: ntdll/tests: Add tests for FileLinkInformation class.
+From 1de9ca4809416c9b3264bdc784cd66b3546d056c Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Tue, 2 Jun 2015 21:56:35 +0200
+Subject: ntdll/tests: Add additional tests for FileRenameInformation.
 
-Mostly copy and paste from Sebastian Lackner's FileNameInformation class
-tests, credit to Sebastian.
 ---
- dlls/ntdll/tests/file.c | 698 ++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 698 insertions(+)
+ dlls/ntdll/tests/file.c | 586 ++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 573 insertions(+), 13 deletions(-)
 
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 8072a15..c985a03 100644
+index aced150..f20319d 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -2149,6 +2149,703 @@ static void test_file_rename_information(void)
-     delete_object( newpath );
+@@ -1435,20 +1435,36 @@ static void test_file_all_information(void)
+     CloseHandle( h );
  }
  
-+static void test_file_link_information(void)
++static void delete_object( WCHAR *path )
 +{
++    BOOL ret;
++
++    ret = DeleteFileW( path );
++    ok( ret || GetLastError() == ERROR_FILE_NOT_FOUND || GetLastError() == ERROR_ACCESS_DENIED,
++        "DeleteFileW failed with %u\n", GetLastError() );
++    if (!ret && GetLastError() == ERROR_ACCESS_DENIED)
++    {
++        ret = RemoveDirectoryW( path );
++        ok( ret, "RemoveDirectoryW failed with %u\n", GetLastError() );
++    }
++}
++
+ static void test_file_rename_information(void)
+ {
 +    static const WCHAR foo_txt[] = {'\\','f','o','o','.','t','x','t',0};
-+    static const WCHAR foo[] = {'f','o','o',0};
-+    WCHAR tmp_path[MAX_PATH], oldpath[MAX_PATH + 16], newpath[MAX_PATH + 16], *filename, *p;
-+    UNICODE_STRING name_str;
+     static const WCHAR foo[] = {'f','o','o',0};
+     WCHAR tmp_path[MAX_PATH], oldpath[MAX_PATH + 16], newpath[MAX_PATH + 16];
+     UNICODE_STRING name_str;
+-    HANDLE handle;
 +    HANDLE handle, handle2;
-+    NTSTATUS res;
-+    IO_STATUS_BLOCK io;
-+    FILE_LINK_INFORMATION *pfli;
+     NTSTATUS res;
+     IO_STATUS_BLOCK io;
+-    PFILE_RENAME_INFORMATION pfri;
+-    BOOL fileDeleted;
++    FILE_RENAME_INFORMATION *pfri;
 +    FILE_NAME_INFORMATION *pfni;
 +    BOOL success, fileDeleted;
-+
-+    GetTempPathW( MAX_PATH, tmp_path );
-+
+ 
+     GetTempPathW( MAX_PATH, tmp_path );
+ 
+-    /* newpath doesn't exist at first */
 +    /* oldpath is a file, newpath doesn't exist */
-+    res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
-+    ok( res != 0, "fail to create temp file\n" );
-+    handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, 0, 0 );
-+    ok( handle != INVALID_HANDLE_VALUE, "CreateFileW failed\n" );
-+
-+    res = GetTempFileNameW( tmp_path, foo, 0, newpath );
-+    ok( res != 0, "fail to create temp file\n" );
-+    pRtlDosPathNameToNtPathName_U( newpath, &name_str, NULL, NULL );
-+    DeleteFileW( newpath );
-+    pfli = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_LINK_INFORMATION) + name_str.Length );
-+    pfli->ReplaceIfExists = FALSE;
-+    pfli->RootDirectory = NULL;
-+    pfli->FileNameLength = name_str.Length;
-+    memcpy( pfli->FileName, name_str.Buffer, name_str.Length );
-+    pRtlFreeUnicodeString( &name_str );
-+
-+    U(io).Status = 0xdeadbeef;
-+    res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
-+    todo_wine ok( U(io).Status == STATUS_SUCCESS, "io.Status expected STATUS_SUCCESS, got %x\n", U(io).Status );
-+    todo_wine ok( res == STATUS_SUCCESS, "res expected STATUS_SUCCESS, got %x\n", res );
-+    fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
-+    ok( !fileDeleted, "File should exist\n" );
+     res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
+     ok( res != 0, "fail to create temp file\n" );
+     handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, 0, 0 );
+@@ -1470,19 +1486,308 @@ static void test_file_rename_information(void)
+     todo_wine ok( U(io).Status == STATUS_SUCCESS, "io.Status expected STATUS_SUCCESS, got %x\n", U(io).Status );
+     todo_wine ok( res == STATUS_SUCCESS, "res expected STATUS_SUCCESS, got %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
++    todo_wine ok( fileDeleted, "File should not exist\n" );
 +    fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
 +    todo_wine ok( !fileDeleted, "File should exist\n" );
 +
@@ -62,16 +64,16 @@ index 8072a15..c985a03 100644
 +    res = pNtQueryInformationFile( handle, &io, pfni, sizeof(FILE_NAME_INFORMATION) + MAX_PATH * sizeof(WCHAR), FileNameInformation );
 +    ok( res == STATUS_SUCCESS, "res expected STATUS_SUCCESS, got %x\n", res );
 +    pfni->FileName[ pfni->FileNameLength / sizeof(WCHAR) ] = 0;
-+    ok( !lstrcmpW(pfni->FileName, oldpath + 2), "FileName expected %s, got %s\n",
-+        wine_dbgstr_w(oldpath + 2), wine_dbgstr_w(pfni->FileName) );
++    todo_wine ok( !lstrcmpW(pfni->FileName, newpath + 2), "FileName expected %s, got %s\n",
++                  wine_dbgstr_w(newpath + 2), wine_dbgstr_w(pfni->FileName) );
 +    HeapFree( GetProcessHeap(), 0, pfni );
 +
 +    CloseHandle( handle );
-+    HeapFree( GetProcessHeap(), 0, pfli );
++    HeapFree( GetProcessHeap(), 0, pfri );
 +    delete_object( oldpath );
 +    delete_object( newpath );
 +
-+    /* oldpath is a file, newpath is a file, ReplaceIfExists = FALSE */
++    /* oldpath is a file, newpath is a file, Replace = FALSE */
 +    res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
 +    ok( res != 0, "fail to create temp file\n" );
 +    handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, 0, 0 );
@@ -80,16 +82,16 @@ index 8072a15..c985a03 100644
 +    res = GetTempFileNameW( tmp_path, foo, 0, newpath );
 +    ok( res != 0, "fail to create temp file\n" );
 +    pRtlDosPathNameToNtPathName_U( newpath, &name_str, NULL, NULL );
-+    pfli = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_LINK_INFORMATION) + name_str.Length );
-+    pfli->ReplaceIfExists = FALSE;
-+    pfli->RootDirectory = NULL;
-+    pfli->FileNameLength = name_str.Length;
-+    memcpy( pfli->FileName, name_str.Buffer, name_str.Length );
++    pfri = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_RENAME_INFORMATION) + name_str.Length );
++    pfri->Replace = FALSE;
++    pfri->RootDir = NULL;
++    pfri->FileNameLength = name_str.Length;
++    memcpy( pfri->FileName, name_str.Buffer, name_str.Length );
 +    pRtlFreeUnicodeString( &name_str );
 +
 +    U(io).Status = 0xdeadbeef;
-+    res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
-+    todo_wine ok( U(io).Status == 0xdeadbeef, "shouldn't be able to set FileLinkInformation, io.Status is %x\n", U(io).Status );
++    res = pNtSetInformationFile( handle, &io, pfri, sizeof(FILE_RENAME_INFORMATION) + pfri->FileNameLength, FileRenameInformation );
++    todo_wine ok( U(io).Status == 0xdeadbeef, "shouldn't be able to set FileRenameInformation, io.Status is %x\n", U(io).Status );
 +    todo_wine ok( res == STATUS_OBJECT_NAME_COLLISION, "expect STATUS_OBJECT_NAME_COLLISION, res is %x\n", res );
 +    fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
 +    ok( !fileDeleted, "File should exist\n" );
@@ -97,11 +99,11 @@ index 8072a15..c985a03 100644
 +    ok( !fileDeleted, "File should exist\n" );
 +
 +    CloseHandle( handle );
-+    HeapFree( GetProcessHeap(), 0, pfli );
++    HeapFree( GetProcessHeap(), 0, pfri );
 +    delete_object( oldpath );
 +    delete_object( newpath );
 +
-+    /* oldpath is a file, newpath is a file, ReplaceIfExists = FALSE, target file opened */
++    /* oldpath is a file, newpath is a file, Replace = FALSE, target file opened */
 +    res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
 +    ok( res != 0, "fail to create temp file\n" );
 +    handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, 0, 0 );
@@ -113,15 +115,15 @@ index 8072a15..c985a03 100644
 +    ok( handle2 != INVALID_HANDLE_VALUE, "CreateFileW failed\n" );
 +
 +    pRtlDosPathNameToNtPathName_U( newpath, &name_str, NULL, NULL );
-+    pfli = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_LINK_INFORMATION) + name_str.Length );
-+    pfli->ReplaceIfExists = FALSE;
-+    pfli->RootDirectory = NULL;
-+    pfli->FileNameLength = name_str.Length;
-+    memcpy( pfli->FileName, name_str.Buffer, name_str.Length );
++    pfri = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_RENAME_INFORMATION) + name_str.Length );
++    pfri->Replace = FALSE;
++    pfri->RootDir = NULL;
++    pfri->FileNameLength = name_str.Length;
++    memcpy( pfri->FileName, name_str.Buffer, name_str.Length );
 +    pRtlFreeUnicodeString( &name_str );
 +
 +    U(io).Status = 0xdeadbeef;
-+    res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
++    res = pNtSetInformationFile( handle, &io, pfri, sizeof(FILE_RENAME_INFORMATION) + pfri->FileNameLength, FileRenameInformation );
 +    todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expect 0xdeadbeef, io.Status is %x\n", U(io).Status );
 +    todo_wine ok( res == STATUS_OBJECT_NAME_COLLISION, "res expect STATUS_OBJECT_NAME_COLLISION, res is %x\n", res );
 +    fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
@@ -131,11 +133,11 @@ index 8072a15..c985a03 100644
 +
 +    CloseHandle( handle );
 +    CloseHandle( handle2 );
-+    HeapFree( GetProcessHeap(), 0, pfli );
++    HeapFree( GetProcessHeap(), 0, pfri );
 +    delete_object( oldpath );
 +    delete_object( newpath );
 +
-+    /* oldpath is a file, newpath is a file, ReplaceIfExists = TRUE */
++    /* oldpath is a file, newpath is a file, Replace = TRUE */
 +    res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
 +    ok( res != 0, "fail to create temp file\n" );
 +    handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, 0, 0 );
@@ -144,28 +146,28 @@ index 8072a15..c985a03 100644
 +    res = GetTempFileNameW( tmp_path, foo, 0, newpath );
 +    ok( res != 0, "fail to create temp file\n" );
 +    pRtlDosPathNameToNtPathName_U( newpath, &name_str, NULL, NULL );
-+    pfli = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_LINK_INFORMATION) + name_str.Length );
-+    pfli->ReplaceIfExists = TRUE;
-+    pfli->RootDirectory = NULL;
-+    pfli->FileNameLength = name_str.Length;
-+    memcpy( pfli->FileName, name_str.Buffer, name_str.Length );
++    pfri = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_RENAME_INFORMATION) + name_str.Length );
++    pfri->Replace = TRUE;
++    pfri->RootDir = NULL;
++    pfri->FileNameLength = name_str.Length;
++    memcpy( pfri->FileName, name_str.Buffer, name_str.Length );
 +    pRtlFreeUnicodeString( &name_str );
 +
 +    U(io).Status = 0xdeadbeef;
-+    res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
++    res = pNtSetInformationFile( handle, &io, pfri, sizeof(FILE_RENAME_INFORMATION) + pfri->FileNameLength, FileRenameInformation );
 +    todo_wine ok( U(io).Status == STATUS_SUCCESS, "io.Status expect STATUS_SUCCESS, io.Status is %x\n", U(io).Status );
 +    todo_wine ok( res == STATUS_SUCCESS, "res expect STATUS_SUCCESS, res is %x\n", res );
 +    fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
-+    ok( !fileDeleted, "File should exist\n" );
++    todo_wine ok( fileDeleted, "File should have been deleted\n" );
 +    fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
 +    ok( !fileDeleted, "File should exist\n" );
 +
 +    CloseHandle( handle );
-+    HeapFree( GetProcessHeap(), 0, pfli );
++    HeapFree( GetProcessHeap(), 0, pfri );
 +    delete_object( oldpath );
 +    delete_object( newpath );
 +
-+    /* oldpath is a file, newpath is a file, ReplaceIfExists = TRUE, target file opened */
++    /* oldpath is a file, newpath is a file, Replace = TRUE, target file opened */
 +    res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
 +    ok( res != 0, "fail to create temp file\n" );
 +    handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, 0, 0 );
@@ -177,15 +179,15 @@ index 8072a15..c985a03 100644
 +    ok( handle2 != INVALID_HANDLE_VALUE, "CreateFileW failed\n" );
 +
 +    pRtlDosPathNameToNtPathName_U( newpath, &name_str, NULL, NULL );
-+    pfli = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_LINK_INFORMATION) + name_str.Length );
-+    pfli->ReplaceIfExists = TRUE;
-+    pfli->RootDirectory = NULL;
-+    pfli->FileNameLength = name_str.Length;
-+    memcpy( pfli->FileName, name_str.Buffer, name_str.Length );
++    pfri = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_RENAME_INFORMATION) + name_str.Length );
++    pfri->Replace = TRUE;
++    pfri->RootDir = NULL;
++    pfri->FileNameLength = name_str.Length;
++    memcpy( pfri->FileName, name_str.Buffer, name_str.Length );
 +    pRtlFreeUnicodeString( &name_str );
 +
 +    U(io).Status = 0xdeadbeef;
-+    res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
++    res = pNtSetInformationFile( handle, &io, pfri, sizeof(FILE_RENAME_INFORMATION) + pfri->FileNameLength, FileRenameInformation );
 +    todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expect 0xdeadbeef, io.Status is %x\n", U(io).Status );
 +    todo_wine ok( res == STATUS_ACCESS_DENIED, "res expect STATUS_ACCESS_DENIED, res is %x\n", res );
 +    fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
@@ -195,11 +197,11 @@ index 8072a15..c985a03 100644
 +
 +    CloseHandle( handle );
 +    CloseHandle( handle2 );
-+    HeapFree( GetProcessHeap(), 0, pfli );
++    HeapFree( GetProcessHeap(), 0, pfri );
 +    delete_object( oldpath );
 +    delete_object( newpath );
 +
-+    /* oldpath is a file, newpath is a file, ReplaceIfExists = TRUE, target file opened with FILE_SHARE_DELETE */
++    /* oldpath is a file, newpath is a file, Replace = TRUE, target file opened with FILE_SHARE_DELETE */
 +    res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
 +    ok( res != 0, "fail to create temp file\n" );
 +    handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, 0, 0 );
@@ -211,15 +213,15 @@ index 8072a15..c985a03 100644
 +    ok( handle2 != INVALID_HANDLE_VALUE, "CreateFileW failed\n" );
 +
 +    pRtlDosPathNameToNtPathName_U( newpath, &name_str, NULL, NULL );
-+    pfli = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_LINK_INFORMATION) + name_str.Length );
-+    pfli->ReplaceIfExists = TRUE;
-+    pfli->RootDirectory = NULL;
-+    pfli->FileNameLength = name_str.Length;
-+    memcpy( pfli->FileName, name_str.Buffer, name_str.Length );
++    pfri = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_RENAME_INFORMATION) + name_str.Length );
++    pfri->Replace = TRUE;
++    pfri->RootDir = NULL;
++    pfri->FileNameLength = name_str.Length;
++    memcpy( pfri->FileName, name_str.Buffer, name_str.Length );
 +    pRtlFreeUnicodeString( &name_str );
 +
 +    U(io).Status = 0xdeadbeef;
-+    res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
++    res = pNtSetInformationFile( handle, &io, pfri, sizeof(FILE_RENAME_INFORMATION) + pfri->FileNameLength, FileRenameInformation );
 +    todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expect 0xdeadbeef, io.Status is %x\n", U(io).Status );
 +    todo_wine ok( res == STATUS_ACCESS_DENIED, "res expect STATUS_ACCESS_DENIED, res is %x\n", res );
 +    fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
@@ -229,11 +231,11 @@ index 8072a15..c985a03 100644
 +
 +    CloseHandle( handle );
 +    CloseHandle( handle2 );
-+    HeapFree( GetProcessHeap(), 0, pfli );
++    HeapFree( GetProcessHeap(), 0, pfri );
 +    delete_object( oldpath );
 +    delete_object( newpath );
 +
-+    /* oldpath is a file, newpath is a file, ReplaceIfExists = TRUE, target file opened with FILE_SHARE_DELETE | FILE_SHARE_WRITE */
++    /* oldpath is a file, newpath is a file, Replace = TRUE, target file opened with FILE_SHARE_DELETE | FILE_SHARE_WRITE */
 +    res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
 +    ok( res != 0, "fail to create temp file\n" );
 +    handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, 0, 0 );
@@ -245,15 +247,15 @@ index 8072a15..c985a03 100644
 +    ok( handle2 != INVALID_HANDLE_VALUE, "CreateFileW failed\n" );
 +
 +    pRtlDosPathNameToNtPathName_U( newpath, &name_str, NULL, NULL );
-+    pfli = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_LINK_INFORMATION) + name_str.Length );
-+    pfli->ReplaceIfExists = TRUE;
-+    pfli->RootDirectory = NULL;
-+    pfli->FileNameLength = name_str.Length;
-+    memcpy( pfli->FileName, name_str.Buffer, name_str.Length );
++    pfri = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_RENAME_INFORMATION) + name_str.Length );
++    pfri->Replace = TRUE;
++    pfri->RootDir = NULL;
++    pfri->FileNameLength = name_str.Length;
++    memcpy( pfri->FileName, name_str.Buffer, name_str.Length );
 +    pRtlFreeUnicodeString( &name_str );
 +
 +    U(io).Status = 0xdeadbeef;
-+    res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
++    res = pNtSetInformationFile( handle, &io, pfri, sizeof(FILE_RENAME_INFORMATION) + pfri->FileNameLength, FileRenameInformation );
 +    todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expect 0xdeadbeef, io.Status is %x\n", U(io).Status );
 +    todo_wine ok( res == STATUS_ACCESS_DENIED, "res expect STATUS_ACCESS_DENIED, res is %x\n", res );
 +    fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
@@ -263,11 +265,11 @@ index 8072a15..c985a03 100644
 +
 +    CloseHandle( handle );
 +    CloseHandle( handle2 );
-+    HeapFree( GetProcessHeap(), 0, pfli );
++    HeapFree( GetProcessHeap(), 0, pfri );
 +    delete_object( oldpath );
 +    delete_object( newpath );
 +
-+    /* oldpath is a directory, newpath doesn't exist, ReplaceIfExists = FALSE */
++    /* oldpath is a directory, newpath doesn't exist, Replace = FALSE */
 +    res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
 +    ok( res != 0, "fail to create temp file\n" );
 +    DeleteFileW( oldpath );
@@ -280,39 +282,39 @@ index 8072a15..c985a03 100644
 +    ok( res != 0, "fail to create temp file\n" );
 +    pRtlDosPathNameToNtPathName_U( newpath, &name_str, NULL, NULL );
 +    DeleteFileW( newpath );
-+    pfli = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_LINK_INFORMATION) + name_str.Length );
-+    pfli->ReplaceIfExists = FALSE;
-+    pfli->RootDirectory = NULL;
-+    pfli->FileNameLength = name_str.Length;
-+    memcpy( pfli->FileName, name_str.Buffer, name_str.Length );
++    pfri = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_RENAME_INFORMATION) + name_str.Length );
++    pfri->Replace = FALSE;
++    pfri->RootDir = NULL;
++    pfri->FileNameLength = name_str.Length;
++    memcpy( pfri->FileName, name_str.Buffer, name_str.Length );
 +    pRtlFreeUnicodeString( &name_str );
 +
 +    U(io).Status = 0xdeadbeef;
-+    res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
-+    todo_wine ok( U(io).Status == 0xdeadbeef , "io.Status expected 0xdeadbeef, got %x\n", U(io).Status );
-+    todo_wine ok( res == STATUS_FILE_IS_A_DIRECTORY, "res expected STATUS_FILE_IS_A_DIRECTORY, got %x\n", res );
++    res = pNtSetInformationFile( handle, &io, pfri, sizeof(FILE_RENAME_INFORMATION) + pfri->FileNameLength, FileRenameInformation );
++    todo_wine ok( U(io).Status == STATUS_SUCCESS, "io.Status expected STATUS_SUCCESS, got %x\n", U(io).Status );
++    todo_wine ok( res == STATUS_SUCCESS, "res expected STATUS_SUCCESS, got %x\n", res );
 +    fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
-+    ok( !fileDeleted, "File should exist\n" );
-+    fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
-+    ok( fileDeleted, "File should have been deleted\n" );
-+
+     todo_wine ok( fileDeleted, "File should have been deleted\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+     todo_wine ok( !fileDeleted, "File should exist\n" );
+ 
 +    pfni = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_NAME_INFORMATION) + MAX_PATH * sizeof(WCHAR) );
 +    res = pNtQueryInformationFile( handle, &io, pfni, sizeof(FILE_NAME_INFORMATION) + MAX_PATH * sizeof(WCHAR), FileNameInformation );
 +    ok( res == STATUS_SUCCESS, "res expected STATUS_SUCCESS, got %x\n", res );
 +    pfni->FileName[ pfni->FileNameLength / sizeof(WCHAR) ] = 0;
-+    ok( !lstrcmpW(pfni->FileName, oldpath + 2), "FileName expected %s, got %s\n",
-+        wine_dbgstr_w(oldpath + 2), wine_dbgstr_w(pfni->FileName) );
++    todo_wine ok( !lstrcmpW(pfni->FileName, newpath + 2), "FileName expected %s, got %s\n",
++                  wine_dbgstr_w(newpath + 2), wine_dbgstr_w(pfni->FileName) );
 +    HeapFree( GetProcessHeap(), 0, pfni );
 +
-+    CloseHandle( handle );
-+    HeapFree( GetProcessHeap(), 0, pfli );
+     CloseHandle( handle );
+     HeapFree( GetProcessHeap(), 0, pfri );
 +    delete_object( oldpath );
 +    delete_object( newpath );
 +
-+    /* oldpath is a directory (but child object opened), newpath doesn't exist, ReplaceIfExists = FALSE */
++    /* oldpath is a directory (but child object opened), newpath doesn't exist, Replace = FALSE */
 +    res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
 +    ok( res != 0, "fail to create temp file\n" );
-+    DeleteFileW( oldpath );
+     DeleteFileW( oldpath );
 +    success = CreateDirectoryW( oldpath, NULL );
 +    ok( success != 0, "failed to create temp directory\n" );
 +    handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0 );
@@ -326,18 +328,19 @@ index 8072a15..c985a03 100644
 +    res = GetTempFileNameW( tmp_path, foo, 0, newpath );
 +    ok( res != 0, "fail to create temp file\n" );
 +    pRtlDosPathNameToNtPathName_U( newpath, &name_str, NULL, NULL );
-+    DeleteFileW( newpath );
-+    pfli = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_LINK_INFORMATION) + name_str.Length );
-+    pfli->ReplaceIfExists = FALSE;
-+    pfli->RootDirectory = NULL;
-+    pfli->FileNameLength = name_str.Length;
-+    memcpy( pfli->FileName, name_str.Buffer, name_str.Length );
+     DeleteFileW( newpath );
++    pfri = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_RENAME_INFORMATION) + name_str.Length );
++    pfri->Replace = FALSE;
++    pfri->RootDir = NULL;
++    pfri->FileNameLength = name_str.Length;
++    memcpy( pfri->FileName, name_str.Buffer, name_str.Length );
 +    pRtlFreeUnicodeString( &name_str );
-+
+ 
+-    /* newpath exists in temp directory, Replace = false */
 +    U(io).Status = 0xdeadbeef;
-+    res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
++    res = pNtSetInformationFile( handle, &io, pfri, sizeof(FILE_RENAME_INFORMATION) + pfri->FileNameLength, FileRenameInformation );
 +    todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expected 0xdeadbeef, got %x\n", U(io).Status );
-+    todo_wine ok( res == STATUS_FILE_IS_A_DIRECTORY, "res expected STATUS_FILE_IS_A_DIRECTORY, got %x\n", res );
++    todo_wine ok( res == STATUS_ACCESS_DENIED, "res expected STATUS_ACCESS_DENIED, got %x\n", res );
 +    fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
 +    ok( !fileDeleted, "File should exist\n" );
 +    fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
@@ -345,14 +348,41 @@ index 8072a15..c985a03 100644
 +
 +    CloseHandle( handle );
 +    CloseHandle( handle2 );
-+    HeapFree( GetProcessHeap(), 0, pfli );
++    HeapFree( GetProcessHeap(), 0, pfri );
 +    delete_object( oldpath );
 +    delete_object( newpath );
 +
-+    /* oldpath is a directory, newpath is a file, ReplaceIfExists = FALSE */
++    /* oldpath is a directory, newpath is a file, Replace = FALSE */
+     res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
+     ok( res != 0, "fail to create temp file\n" );
+-    handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, 0, 0 );
++    DeleteFileW( oldpath );
++    success = CreateDirectoryW( oldpath, NULL );
++    ok( success != 0, "failed to create temp directory\n" );
++    handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0 );
+     ok( handle != INVALID_HANDLE_VALUE, "CreateFileW failed\n" );
+ 
+     res = GetTempFileNameW( tmp_path, foo, 0, newpath );
+@@ -1500,19 +1805,59 @@ static void test_file_rename_information(void)
+     todo_wine ok( U(io).Status == 0xdeadbeef, "shouldn't be able to set FileRenameInformation, io.Status is %x\n", U(io).Status );
+     todo_wine ok( res == STATUS_OBJECT_NAME_COLLISION, "expect STATUS_OBJECT_NAME_COLLISION, res is %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+-    ok( !fileDeleted, "File shouldn't have been deleted!\n" );
++    ok( !fileDeleted, "File should exist\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+-    ok( !fileDeleted, "File shouldn't have been deleted!\n" );
++    ok( !fileDeleted, "File should exist\n" );
+ 
+     CloseHandle( handle );
+     HeapFree( GetProcessHeap(), 0, pfri );
++    delete_object( oldpath );
++    delete_object( newpath );
++
++    /* oldpath is a directory, newpath is a file, Replace = FALSE, target file opened */
 +    res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
 +    ok( res != 0, "fail to create temp file\n" );
-+    DeleteFileW( oldpath );
+     DeleteFileW( oldpath );
+-    DeleteFileW( newpath );
 +    success = CreateDirectoryW( oldpath, NULL );
 +    ok( success != 0, "failed to create temp directory\n" );
 +    handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0 );
@@ -360,33 +390,63 @@ index 8072a15..c985a03 100644
 +
 +    res = GetTempFileNameW( tmp_path, foo, 0, newpath );
 +    ok( res != 0, "fail to create temp file\n" );
++    handle2 = CreateFileW( newpath, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, 0, 0 );
++    ok( handle2 != INVALID_HANDLE_VALUE, "CreateFileW failed\n" );
+ 
+-    /* newpath exists in temp directory, Replace = true */
 +    pRtlDosPathNameToNtPathName_U( newpath, &name_str, NULL, NULL );
-+    pfli = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_LINK_INFORMATION) + name_str.Length );
-+    pfli->ReplaceIfExists = FALSE;
-+    pfli->RootDirectory = NULL;
-+    pfli->FileNameLength = name_str.Length;
-+    memcpy( pfli->FileName, name_str.Buffer, name_str.Length );
++    pfri = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_RENAME_INFORMATION) + name_str.Length );
++    pfri->Replace = FALSE;
++    pfri->RootDir = NULL;
++    pfri->FileNameLength = name_str.Length;
++    memcpy( pfri->FileName, name_str.Buffer, name_str.Length );
 +    pRtlFreeUnicodeString( &name_str );
 +
 +    U(io).Status = 0xdeadbeef;
-+    res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
-+    todo_wine ok( U(io).Status == 0xdeadbeef, "shouldn't be able to set FileLinkInformation, io.Status is %x\n", U(io).Status );
-+    todo_wine ok( res == STATUS_OBJECT_NAME_COLLISION || broken(res == STATUS_FILE_IS_A_DIRECTORY) /* > Win XP */,
-+                  "expect STATUS_OBJECT_NAME_COLLISION or STATUS_FILE_IS_A_DIRECTORY, res is %x\n", res );
++    res = pNtSetInformationFile( handle, &io, pfri, sizeof(FILE_RENAME_INFORMATION) + pfri->FileNameLength, FileRenameInformation );
++    todo_wine ok( U(io).Status == 0xdeadbeef, "shouldn't be able to set FileRenameInformation, io.Status is %x\n", U(io).Status );
++    todo_wine ok( res == STATUS_OBJECT_NAME_COLLISION, "expect STATUS_OBJECT_NAME_COLLISION, res is %x\n", res );
 +    fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
 +    ok( !fileDeleted, "File should exist\n" );
 +    fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
 +    ok( !fileDeleted, "File should exist\n" );
 +
 +    CloseHandle( handle );
-+    HeapFree( GetProcessHeap(), 0, pfli );
++    CloseHandle( handle2 );
++    HeapFree( GetProcessHeap(), 0, pfri );
 +    delete_object( oldpath );
 +    delete_object( newpath );
 +
-+    /* oldpath is a directory, newpath is a file, ReplaceIfExists = FALSE, target file opened */
++    /* oldpath is a directory, newpath is a file, Replace = TRUE */
+     res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
+     ok( res != 0, "fail to create temp file\n" );
+-    handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, 0, 0 );
++    DeleteFileW( oldpath );
++    success = CreateDirectoryW( oldpath, NULL );
++    ok( success != 0, "failed to create temp directory\n" );
++    handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0 );
+     ok( handle != INVALID_HANDLE_VALUE, "CreateFileW failed\n" );
+ 
+     res = GetTempFileNameW( tmp_path, foo, 0, newpath );
+@@ -1530,14 +1875,229 @@ static void test_file_rename_information(void)
+     todo_wine ok( U(io).Status == STATUS_SUCCESS, "io.Status expect STATUS_SUCCESS, io.Status is %x\n", U(io).Status );
+     todo_wine ok( res == STATUS_SUCCESS, "res expect STATUS_SUCCESS, res is %x\n", res );
+     fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+-    todo_wine ok( fileDeleted, "File should have been deleted!\n" );
++    todo_wine ok( fileDeleted, "File should have been deleted\n" );
+     fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
+-    ok( !fileDeleted, "File shouldn't have been deleted!\n" );
++    ok( !fileDeleted, "File should exist\n" );
+ 
+     CloseHandle( handle );
+     HeapFree( GetProcessHeap(), 0, pfri );
++    delete_object( oldpath );
++    delete_object( newpath );
++
++    /* oldpath is a directory, newpath is a file, Replace = TRUE, target file opened */
 +    res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
 +    ok( res != 0, "fail to create temp file\n" );
-+    DeleteFileW( oldpath );
+     DeleteFileW( oldpath );
 +    success = CreateDirectoryW( oldpath, NULL );
 +    ok( success != 0, "failed to create temp directory\n" );
 +    handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0 );
@@ -398,18 +458,17 @@ index 8072a15..c985a03 100644
 +    ok( handle2 != INVALID_HANDLE_VALUE, "CreateFileW failed\n" );
 +
 +    pRtlDosPathNameToNtPathName_U( newpath, &name_str, NULL, NULL );
-+    pfli = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_LINK_INFORMATION) + name_str.Length );
-+    pfli->ReplaceIfExists = FALSE;
-+    pfli->RootDirectory = NULL;
-+    pfli->FileNameLength = name_str.Length;
-+    memcpy( pfli->FileName, name_str.Buffer, name_str.Length );
++    pfri = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_RENAME_INFORMATION) + name_str.Length );
++    pfri->Replace = TRUE;
++    pfri->RootDir = NULL;
++    pfri->FileNameLength = name_str.Length;
++    memcpy( pfri->FileName, name_str.Buffer, name_str.Length );
 +    pRtlFreeUnicodeString( &name_str );
 +
 +    U(io).Status = 0xdeadbeef;
-+    res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
-+    todo_wine ok( U(io).Status == 0xdeadbeef, "shouldn't be able to set FileLinkInformation, io.Status is %x\n", U(io).Status );
-+    todo_wine ok( res == STATUS_OBJECT_NAME_COLLISION || broken(res == STATUS_FILE_IS_A_DIRECTORY) /* > Win XP */,
-+                  "expect STATUS_OBJECT_NAME_COLLISION or STATUS_FILE_IS_A_DIRECTORY, res is %x\n", res );
++    res = pNtSetInformationFile( handle, &io, pfri, sizeof(FILE_RENAME_INFORMATION) + pfri->FileNameLength, FileRenameInformation );
++    todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expect 0xdeadbeef, io.Status is %x\n", U(io).Status );
++    todo_wine ok( res == STATUS_ACCESS_DENIED, "res expect STATUS_ACCESS_DENIED, res is %x\n", res );
 +    fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
 +    ok( !fileDeleted, "File should exist\n" );
 +    fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
@@ -417,11 +476,11 @@ index 8072a15..c985a03 100644
 +
 +    CloseHandle( handle );
 +    CloseHandle( handle2 );
-+    HeapFree( GetProcessHeap(), 0, pfli );
++    HeapFree( GetProcessHeap(), 0, pfri );
 +    delete_object( oldpath );
 +    delete_object( newpath );
 +
-+    /* oldpath is a directory, newpath is a file, ReplaceIfExists = TRUE */
++    /* oldpath is a directory, newpath is a directory, Replace = FALSE */
 +    res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
 +    ok( res != 0, "fail to create temp file\n" );
 +    DeleteFileW( oldpath );
@@ -432,66 +491,32 @@ index 8072a15..c985a03 100644
 +
 +    res = GetTempFileNameW( tmp_path, foo, 0, newpath );
 +    ok( res != 0, "fail to create temp file\n" );
-+    pRtlDosPathNameToNtPathName_U( newpath, &name_str, NULL, NULL );
-+    pfli = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_LINK_INFORMATION) + name_str.Length );
-+    pfli->ReplaceIfExists = TRUE;
-+    pfli->RootDirectory = NULL;
-+    pfli->FileNameLength = name_str.Length;
-+    memcpy( pfli->FileName, name_str.Buffer, name_str.Length );
-+    pRtlFreeUnicodeString( &name_str );
-+
-+    U(io).Status = 0xdeadbeef;
-+    res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
-+    todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expect 0xdeadbeef, io.Status is %x\n", U(io).Status );
-+    todo_wine ok( res == STATUS_FILE_IS_A_DIRECTORY, "res expect STATUS_FILE_IS_A_DIRECTORY, res is %x\n", res );
-+    fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
-+    ok( !fileDeleted, "File should exist\n" );
-+    fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
-+    ok( !fileDeleted, "File should exist\n" );
-+
-+    CloseHandle( handle );
-+    HeapFree( GetProcessHeap(), 0, pfli );
-+    delete_object( oldpath );
-+    delete_object( newpath );
-+
-+    /* oldpath is a directory, newpath is a file, ReplaceIfExists = TRUE, target file opened */
-+    res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
-+    ok( res != 0, "fail to create temp file\n" );
-+    DeleteFileW( oldpath );
-+    success = CreateDirectoryW( oldpath, NULL );
+     DeleteFileW( newpath );
++    success = CreateDirectoryW( newpath, NULL );
 +    ok( success != 0, "failed to create temp directory\n" );
-+    handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0 );
-+    ok( handle != INVALID_HANDLE_VALUE, "CreateFileW failed\n" );
-+
-+    res = GetTempFileNameW( tmp_path, foo, 0, newpath );
-+    ok( res != 0, "fail to create temp file\n" );
-+    handle2 = CreateFileW( newpath, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, 0, 0 );
-+    ok( handle2 != INVALID_HANDLE_VALUE, "CreateFileW failed\n" );
-+
 +    pRtlDosPathNameToNtPathName_U( newpath, &name_str, NULL, NULL );
-+    pfli = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_LINK_INFORMATION) + name_str.Length );
-+    pfli->ReplaceIfExists = TRUE;
-+    pfli->RootDirectory = NULL;
-+    pfli->FileNameLength = name_str.Length;
-+    memcpy( pfli->FileName, name_str.Buffer, name_str.Length );
++    pfri = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_RENAME_INFORMATION) + name_str.Length );
++    pfri->Replace = FALSE;
++    pfri->RootDir = NULL;
++    pfri->FileNameLength = name_str.Length;
++    memcpy( pfri->FileName, name_str.Buffer, name_str.Length );
 +    pRtlFreeUnicodeString( &name_str );
 +
 +    U(io).Status = 0xdeadbeef;
-+    res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
-+    todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expect 0xdeadbeef, io.Status is %x\n", U(io).Status );
-+    todo_wine ok( res == STATUS_FILE_IS_A_DIRECTORY, "res expect STATUS_FILE_IS_A_DIRECTORY, res is %x\n", res );
++    res = pNtSetInformationFile( handle, &io, pfri, sizeof(FILE_RENAME_INFORMATION) + pfri->FileNameLength, FileRenameInformation );
++    todo_wine ok( U(io).Status == 0xdeadbeef, "shouldn't be able to set FileRenameInformation, io.Status is %x\n", U(io).Status );
++    todo_wine ok( res == STATUS_OBJECT_NAME_COLLISION, "expect STATUS_OBJECT_NAME_COLLISION, res is %x\n", res );
 +    fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
 +    ok( !fileDeleted, "File should exist\n" );
 +    fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
 +    ok( !fileDeleted, "File should exist\n" );
 +
 +    CloseHandle( handle );
-+    CloseHandle( handle2 );
-+    HeapFree( GetProcessHeap(), 0, pfli );
++    HeapFree( GetProcessHeap(), 0, pfri );
 +    delete_object( oldpath );
 +    delete_object( newpath );
 +
-+    /* oldpath is a directory, newpath is a directory, ReplaceIfExists = FALSE */
++    /* oldpath is a directory, newpath is a directory, Replace = TRUE */
 +    res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
 +    ok( res != 0, "fail to create temp file\n" );
 +    DeleteFileW( oldpath );
@@ -506,65 +531,28 @@ index 8072a15..c985a03 100644
 +    success = CreateDirectoryW( newpath, NULL );
 +    ok( success != 0, "failed to create temp directory\n" );
 +    pRtlDosPathNameToNtPathName_U( newpath, &name_str, NULL, NULL );
-+    pfli = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_LINK_INFORMATION) + name_str.Length );
-+    pfli->ReplaceIfExists = FALSE;
-+    pfli->RootDirectory = NULL;
-+    pfli->FileNameLength = name_str.Length;
-+    memcpy( pfli->FileName, name_str.Buffer, name_str.Length );
++    pfri = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_RENAME_INFORMATION) + name_str.Length );
++    pfri->Replace = TRUE;
++    pfri->RootDir = NULL;
++    pfri->FileNameLength = name_str.Length;
++    memcpy( pfri->FileName, name_str.Buffer, name_str.Length );
 +    pRtlFreeUnicodeString( &name_str );
 +
 +    U(io).Status = 0xdeadbeef;
-+    res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
-+    todo_wine ok( U(io).Status == 0xdeadbeef, "shouldn't be able to set FileLinkInformation, io.Status is %x\n", U(io).Status );
-+    todo_wine ok( res == STATUS_OBJECT_NAME_COLLISION || broken(res == STATUS_FILE_IS_A_DIRECTORY) /* > Win XP */,
-+                  "expect STATUS_OBJECT_NAME_COLLISION or STATUS_FILE_IS_A_DIRECTORY, res is %x\n", res );
-+    fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
-+    ok( !fileDeleted, "File should exist\n" );
-+    fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
-+    ok( !fileDeleted, "File should exist\n" );
-+
-+    CloseHandle( handle );
-+    HeapFree( GetProcessHeap(), 0, pfli );
-+    delete_object( oldpath );
-+    delete_object( newpath );
-+
-+    /* oldpath is a directory, newpath is a directory, ReplaceIfExists = TRUE */
-+    res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
-+    ok( res != 0, "fail to create temp file\n" );
-+    DeleteFileW( oldpath );
-+    success = CreateDirectoryW( oldpath, NULL );
-+    ok( success != 0, "failed to create temp directory\n" );
-+    handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0 );
-+    ok( handle != INVALID_HANDLE_VALUE, "CreateFileW failed\n" );
-+
-+    res = GetTempFileNameW( tmp_path, foo, 0, newpath );
-+    ok( res != 0, "fail to create temp file\n" );
-+    DeleteFileW( newpath );
-+    success = CreateDirectoryW( newpath, NULL );
-+    ok( success != 0, "failed to create temp directory\n" );
-+    pRtlDosPathNameToNtPathName_U( newpath, &name_str, NULL, NULL );
-+    pfli = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_LINK_INFORMATION) + name_str.Length );
-+    pfli->ReplaceIfExists = TRUE;
-+    pfli->RootDirectory = NULL;
-+    pfli->FileNameLength = name_str.Length;
-+    memcpy( pfli->FileName, name_str.Buffer, name_str.Length );
-+    pRtlFreeUnicodeString( &name_str );
-+
-+    U(io).Status = 0xdeadbeef;
-+    res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
++    res = pNtSetInformationFile( handle, &io, pfri, sizeof(FILE_RENAME_INFORMATION) + pfri->FileNameLength, FileRenameInformation );
 +    todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expect 0xdeadbeef, io.Status is %x\n", U(io).Status );
-+    todo_wine ok( res == STATUS_FILE_IS_A_DIRECTORY, "res expect STATUS_FILE_IS_A_DIRECTORY, res is %x\n", res );
++    todo_wine ok( res == STATUS_ACCESS_DENIED, "res expect STATUS_ACCESS_DENIED, res is %x\n", res );
 +    fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
 +    ok( !fileDeleted, "File should exist\n" );
 +    fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
 +    ok( !fileDeleted, "File should exist\n" );
 +
 +    CloseHandle( handle );
-+    HeapFree( GetProcessHeap(), 0, pfli );
++    HeapFree( GetProcessHeap(), 0, pfri );
 +    delete_object( oldpath );
 +    delete_object( newpath );
 +
-+    /* oldpath is a directory, newpath is a directory, ReplaceIfExists = TRUE, target file opened */
++    /* oldpath is a directory, newpath is a directory, Replace = TRUE, target file opened */
 +    res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
 +    ok( res != 0, "fail to create temp file\n" );
 +    DeleteFileW( oldpath );
@@ -582,82 +570,15 @@ index 8072a15..c985a03 100644
 +    ok( handle2 != INVALID_HANDLE_VALUE, "CreateFileW failed\n" );
 +
 +    pRtlDosPathNameToNtPathName_U( newpath, &name_str, NULL, NULL );
-+    pfli = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_LINK_INFORMATION) + name_str.Length );
-+    pfli->ReplaceIfExists = TRUE;
-+    pfli->RootDirectory = NULL;
-+    pfli->FileNameLength = name_str.Length;
-+    memcpy( pfli->FileName, name_str.Buffer, name_str.Length );
++    pfri = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_RENAME_INFORMATION) + name_str.Length );
++    pfri->Replace = TRUE;
++    pfri->RootDir = NULL;
++    pfri->FileNameLength = name_str.Length;
++    memcpy( pfri->FileName, name_str.Buffer, name_str.Length );
 +    pRtlFreeUnicodeString( &name_str );
 +
 +    U(io).Status = 0xdeadbeef;
-+    res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
-+    todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expect 0xdeadbeef, io.Status is %x\n", U(io).Status );
-+    todo_wine ok( res == STATUS_FILE_IS_A_DIRECTORY, "res expect STATUS_FILE_IS_A_DIRECTORY, res is %x\n", res );
-+    fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
-+    ok( !fileDeleted, "File should exist\n" );
-+    fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
-+    ok( !fileDeleted, "File should exist\n" );
-+
-+    CloseHandle( handle );
-+    CloseHandle( handle2 );
-+    HeapFree( GetProcessHeap(), 0, pfli );
-+    delete_object( oldpath );
-+    delete_object( newpath );
-+
-+    /* oldpath is a file, newpath is a directory, ReplaceIfExists = FALSE */
-+    res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
-+    ok( res != 0, "fail to create temp file\n" );
-+    handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, 0, 0 );
-+    ok( handle != INVALID_HANDLE_VALUE, "CreateFileW failed\n" );
-+
-+    res = GetTempFileNameW( tmp_path, foo, 0, newpath );
-+    ok( res != 0, "fail to create temp file\n" );
-+    DeleteFileW( newpath );
-+    success = CreateDirectoryW( newpath, NULL );
-+    ok( success != 0, "failed to create temp directory\n" );
-+    pRtlDosPathNameToNtPathName_U( newpath, &name_str, NULL, NULL );
-+    pfli = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_LINK_INFORMATION) + name_str.Length );
-+    pfli->ReplaceIfExists = FALSE;
-+    pfli->RootDirectory = NULL;
-+    pfli->FileNameLength = name_str.Length;
-+    memcpy( pfli->FileName, name_str.Buffer, name_str.Length );
-+    pRtlFreeUnicodeString( &name_str );
-+
-+    U(io).Status = 0xdeadbeef;
-+    res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
-+    todo_wine ok( U(io).Status == 0xdeadbeef, "shouldn't be able to set FileLinkInformation, io.Status is %x\n", U(io).Status );
-+    todo_wine ok( res == STATUS_OBJECT_NAME_COLLISION, "expect STATUS_OBJECT_NAME_COLLISION, res is %x\n", res );
-+    fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
-+    ok( !fileDeleted, "File should exist\n" );
-+    fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
-+    ok( !fileDeleted, "File should exist\n" );
-+
-+    CloseHandle( handle );
-+    HeapFree( GetProcessHeap(), 0, pfli );
-+    delete_object( oldpath );
-+    delete_object( newpath );
-+
-+    /* oldpath is a file, newpath is a directory, ReplaceIfExists = TRUE */
-+    res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
-+    ok( res != 0, "fail to create temp file\n" );
-+    handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, 0, 0 );
-+    ok( handle != INVALID_HANDLE_VALUE, "CreateFileW failed\n" );
-+
-+    res = GetTempFileNameW( tmp_path, foo, 0, newpath );
-+    ok( res != 0, "fail to create temp file\n" );
-+    DeleteFileW( newpath );
-+    success = CreateDirectoryW( newpath, NULL );
-+    ok( success != 0, "failed to create temp directory\n" );
-+    pRtlDosPathNameToNtPathName_U( newpath, &name_str, NULL, NULL );
-+    pfli = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_LINK_INFORMATION) + name_str.Length );
-+    pfli->ReplaceIfExists = TRUE;
-+    pfli->RootDirectory = NULL;
-+    pfli->FileNameLength = name_str.Length;
-+    memcpy( pfli->FileName, name_str.Buffer, name_str.Length );
-+    pRtlFreeUnicodeString( &name_str );
-+
-+    U(io).Status = 0xdeadbeef;
-+    res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
++    res = pNtSetInformationFile( handle, &io, pfri, sizeof(FILE_RENAME_INFORMATION) + pfri->FileNameLength, FileRenameInformation );
 +    todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expect 0xdeadbeef, io.Status is %x\n", U(io).Status );
 +    todo_wine ok( res == STATUS_ACCESS_DENIED, "res expect STATUS_ACCESS_DENIED, res is %x\n", res );
 +    fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
@@ -666,11 +587,12 @@ index 8072a15..c985a03 100644
 +    ok( !fileDeleted, "File should exist\n" );
 +
 +    CloseHandle( handle );
-+    HeapFree( GetProcessHeap(), 0, pfli );
++    CloseHandle( handle2 );
++    HeapFree( GetProcessHeap(), 0, pfri );
 +    delete_object( oldpath );
 +    delete_object( newpath );
 +
-+    /* oldpath is a file, newpath doesn't exist, test with RootDirectory != NULL */
++    /* oldpath is a file, newpath is a directory, Replace = FALSE */
 +    res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
 +    ok( res != 0, "fail to create temp file\n" );
 +    handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, 0, 0 );
@@ -679,52 +601,65 @@ index 8072a15..c985a03 100644
 +    res = GetTempFileNameW( tmp_path, foo, 0, newpath );
 +    ok( res != 0, "fail to create temp file\n" );
 +    DeleteFileW( newpath );
-+    for (filename = newpath, p = newpath; *p; p++)
-+        if (*p == '\\') filename = p + 1;
-+    handle2 = CreateFileW( tmp_path, 0, 0, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0 );
-+    ok( handle2 != INVALID_HANDLE_VALUE, "CreateFileW failed\n" );
-+
-+    pfli = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_LINK_INFORMATION) + lstrlenW(filename) * sizeof(WCHAR) );
-+    pfli->ReplaceIfExists = FALSE;
-+    pfli->RootDirectory = handle2;
-+    pfli->FileNameLength = lstrlenW(filename) * sizeof(WCHAR);
-+    memcpy( pfli->FileName, filename, pfli->FileNameLength );
++    success = CreateDirectoryW( newpath, NULL );
++    ok( success != 0, "failed to create temp directory\n" );
++    pRtlDosPathNameToNtPathName_U( newpath, &name_str, NULL, NULL );
++    pfri = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_RENAME_INFORMATION) + name_str.Length );
++    pfri->Replace = FALSE;
++    pfri->RootDir = NULL;
++    pfri->FileNameLength = name_str.Length;
++    memcpy( pfri->FileName, name_str.Buffer, name_str.Length );
++    pRtlFreeUnicodeString( &name_str );
 +
 +    U(io).Status = 0xdeadbeef;
-+    res = pNtSetInformationFile( handle, &io, pfli, sizeof(FILE_LINK_INFORMATION) + pfli->FileNameLength, FileLinkInformation );
-+    todo_wine ok( U(io).Status == STATUS_SUCCESS, "io.Status expected STATUS_SUCCESS, got %x\n", U(io).Status );
-+    todo_wine ok( res == STATUS_SUCCESS, "res expected STATUS_SUCCESS, got %x\n", res );
++    res = pNtSetInformationFile( handle, &io, pfri, sizeof(FILE_RENAME_INFORMATION) + pfri->FileNameLength, FileRenameInformation );
++    todo_wine ok( U(io).Status == 0xdeadbeef, "shouldn't be able to set FileRenameInformation, io.Status is %x\n", U(io).Status );
++    todo_wine ok( res == STATUS_OBJECT_NAME_COLLISION, "expect STATUS_OBJECT_NAME_COLLISION, res is %x\n", res );
 +    fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
 +    ok( !fileDeleted, "File should exist\n" );
 +    fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
-+    todo_wine ok( !fileDeleted, "File should exist\n" );
-+
-+    pfni = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_NAME_INFORMATION) + MAX_PATH * sizeof(WCHAR) );
-+    res = pNtQueryInformationFile( handle, &io, pfni, sizeof(FILE_NAME_INFORMATION) + MAX_PATH * sizeof(WCHAR), FileNameInformation );
-+    ok( res == STATUS_SUCCESS, "res expected STATUS_SUCCESS, got %x\n", res );
-+    pfni->FileName[ pfni->FileNameLength / sizeof(WCHAR) ] = 0;
-+    ok( !lstrcmpW(pfni->FileName, oldpath + 2), "FileName expected %s, got %s\n",
-+        wine_dbgstr_w(oldpath + 2), wine_dbgstr_w(pfni->FileName) );
-+    HeapFree( GetProcessHeap(), 0, pfni );
++    ok( !fileDeleted, "File should exist\n" );
 +
 +    CloseHandle( handle );
-+    CloseHandle( handle2 );
-+    HeapFree( GetProcessHeap(), 0, pfli );
++    HeapFree( GetProcessHeap(), 0, pfri );
 +    delete_object( oldpath );
 +    delete_object( newpath );
-+}
 +
++    /* oldpath is a file, newpath is a directory, Replace = TRUE */
++    res = GetTempFileNameW( tmp_path, foo, 0, oldpath );
++    ok( res != 0, "fail to create temp file\n" );
++    handle = CreateFileW( oldpath, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, 0, 0 );
++    ok( handle != INVALID_HANDLE_VALUE, "CreateFileW failed\n" );
++
++    res = GetTempFileNameW( tmp_path, foo, 0, newpath );
++    ok( res != 0, "fail to create temp file\n" );
++    DeleteFileW( newpath );
++    success = CreateDirectoryW( newpath, NULL );
++    ok( success != 0, "failed to create temp directory\n" );
++    pRtlDosPathNameToNtPathName_U( newpath, &name_str, NULL, NULL );
++    pfri = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_RENAME_INFORMATION) + name_str.Length );
++    pfri->Replace = TRUE;
++    pfri->RootDir = NULL;
++    pfri->FileNameLength = name_str.Length;
++    memcpy( pfri->FileName, name_str.Buffer, name_str.Length );
++    pRtlFreeUnicodeString( &name_str );
++
++    U(io).Status = 0xdeadbeef;
++    res = pNtSetInformationFile( handle, &io, pfri, sizeof(FILE_RENAME_INFORMATION) + pfri->FileNameLength, FileRenameInformation );
++    todo_wine ok( U(io).Status == 0xdeadbeef, "io.Status expect 0xdeadbeef, io.Status is %x\n", U(io).Status );
++    todo_wine ok( res == STATUS_ACCESS_DENIED, "res expect STATUS_ACCESS_DENIED, res is %x\n", res );
++    fileDeleted = GetFileAttributesW( oldpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
++    ok( !fileDeleted, "File should exist\n" );
++    fileDeleted = GetFileAttributesW( newpath ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
++    ok( !fileDeleted, "File should exist\n" );
++
++    CloseHandle( handle );
++    HeapFree( GetProcessHeap(), 0, pfri );
++    delete_object( oldpath );
++    delete_object( newpath );
+ }
+ 
  static void test_file_both_information(void)
- {
-     IO_STATUS_BLOCK io;
-@@ -3716,6 +4413,7 @@ START_TEST(file)
-     test_file_full_size_information();
-     test_file_all_name_information();
-     test_file_rename_information();
-+    test_file_link_information();
-     test_file_disposition_information();
-     test_query_volume_information_file();
-     test_query_attribute_information_file();
 -- 
 2.4.2
 

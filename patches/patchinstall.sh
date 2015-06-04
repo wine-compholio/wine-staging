@@ -3558,9 +3558,9 @@ fi
 # |   *	dlls/ntdll/tests/directory.c
 # |
 if test "$enable_ntdll_Directory_Test" -eq 1; then
-	patch_apply ntdll-Directory_Test/0001-ntdll-tests-Properly-mark-test-failures-with-todo_wi.patch
+	patch_apply ntdll-Directory_Test/0001-ntdll-tests-Don-t-call-lstrlenW-on-non-null-terminat.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Properly mark test failures with todo_wine.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Don'\''t call lstrlenW on non-null-terminated buffer.", 1 },';
 	) >> "$patchlist"
 fi
 

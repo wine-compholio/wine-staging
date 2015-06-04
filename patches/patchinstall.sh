@@ -227,6 +227,7 @@ patch_enable_all ()
 	enable_shell32_Progress_Dialog="$1"
 	enable_shell32_Quoted_ShellExecute="$1"
 	enable_shell32_RunDLL_CallEntry16="$1"
+	enable_shell32_Run_Dialog="$1"
 	enable_shell32_SHCreateSessionKey="$1"
 	enable_shell32_SHFileOperation="$1"
 	enable_shell32_UnixFS="$1"
@@ -750,6 +751,9 @@ patch_enable ()
 			;;
 		shell32-RunDLL_CallEntry16)
 			enable_shell32_RunDLL_CallEntry16="$2"
+			;;
+		shell32-Run_Dialog)
+			enable_shell32_Run_Dialog="$2"
 			;;
 		shell32-SHCreateSessionKey)
 			enable_shell32_SHCreateSessionKey="$2"
@@ -4613,6 +4617,18 @@ if test "$enable_shell32_RunDLL_CallEntry16" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset shell32-Run_Dialog
+# |
+# | Modified files:
+# |   *	dlls/shell32/shell32.rc
+# |
+if test "$enable_shell32_Run_Dialog" -eq 1; then
+	patch_apply shell32-Run_Dialog/0001-shell32-Add-caption-to-Run-dialog.patch
+	(
+		echo '+    { "Jared Smudde", "shell32: Add caption to Run dialog.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset shell32-SHCreateSessionKey
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5069,15 +5085,15 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-resource_check_usage
+# Patchset wined3d-UnhandledBlendFactor
 # |
 # | Modified files:
-# |   *	dlls/wined3d/resource.c
+# |   *	dlls/wined3d/state.c
 # |
-if test "$enable_wined3d_resource_check_usage" -eq 1; then
-	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
 	(
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5090,6 +5106,18 @@ if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
 	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-resource_check_usage
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c
+# |
+if test "$enable_wined3d_resource_check_usage" -eq 1; then
+	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	(
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -5139,18 +5167,6 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 

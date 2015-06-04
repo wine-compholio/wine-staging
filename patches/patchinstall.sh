@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 8d4f56810775757edc87f6f01754df7f9e98d7e3"
+	echo "  commit 9ce9ba30ead7560065c3179796eea81066b3b346"
 	echo ""
 }
 
@@ -210,7 +210,6 @@ patch_enable_all ()
 	enable_server_Key_State="$1"
 	enable_server_Misc_ACL="$1"
 	enable_server_ObjectTypeInformation="$1"
-	enable_server_OpenClipboard="$1"
 	enable_server_OpenProcess="$1"
 	enable_server_PeekMessage="$1"
 	enable_server_Realtime_Priority="$1"
@@ -244,7 +243,6 @@ patch_enable_all ()
 	enable_vcomp_Stub_Functions="$1"
 	enable_version_VerQueryValue="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
-	enable_wbemprox_Whitespace="$1"
 	enable_wiaservc_IEnumWIA_DEV_INFO="$1"
 	enable_windowscodecs_GIF_Decoder="$1"
 	enable_windowscodecs_TIFF_Decoder="$1"
@@ -702,9 +700,6 @@ patch_enable ()
 		server-ObjectTypeInformation)
 			enable_server_ObjectTypeInformation="$2"
 			;;
-		server-OpenClipboard)
-			enable_server_OpenClipboard="$2"
-			;;
 		server-OpenProcess)
 			enable_server_OpenProcess="$2"
 			;;
@@ -803,9 +798,6 @@ patch_enable ()
 			;;
 		wbemdisp-ISWbemSecurity)
 			enable_wbemdisp_ISWbemSecurity="$2"
-			;;
-		wbemprox-Whitespace)
-			enable_wbemprox_Whitespace="$2"
 			;;
 		wiaservc-IEnumWIA_DEV_INFO)
 			enable_wiaservc_IEnumWIA_DEV_INFO="$2"
@@ -4216,6 +4208,27 @@ if test "$enable_secur32_ANSI_NTLM_Credentials" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-ObjectTypeInformation
+# |
+# | Modified files:
+# |   *	dlls/ntdll/om.c, dlls/ntdll/tests/om.c, server/change.c, server/completion.c, server/directory.c, server/file.c,
+# | 	server/handle.c, server/object.h, server/protocol.def
+# |
+if test "$enable_server_ObjectTypeInformation" -eq 1; then
+	patch_apply server-ObjectTypeInformation/0001-ntdll-Implemenent-ObjectTypeInformation-class-suppor.patch
+	patch_apply server-ObjectTypeInformation/0002-ntdll-tests-Add-a-few-more-ObjectTypeInformation-tes.patch
+	patch_apply server-ObjectTypeInformation/0003-server-Fix-type-name-of-IoCompletion.patch
+	patch_apply server-ObjectTypeInformation/0004-server-Fix-type-name-of-File.patch
+	patch_apply server-ObjectTypeInformation/0005-server-Fix-type-name-of-directory-file.patch
+	(
+		echo '+    { "Qian Hong", "ntdll: Implemenent ObjectTypeInformation class support in NtQueryObject.", 2 },';
+		echo '+    { "Qian Hong", "ntdll/tests: Add a few more ObjectTypeInformation tests.", 1 },';
+		echo '+    { "Qian Hong", "server: Fix type name of IoCompletion.", 1 },';
+		echo '+    { "Qian Hong", "server: Fix type name of File.", 1 },';
+		echo '+    { "Qian Hong", "server: Fix type name of directory file.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-RootDirectory_File
 # |
 # | Modified files:
@@ -4253,27 +4266,6 @@ if test "$enable_server_Stored_ACLs" -eq 1; then
 		echo '+    { "Erich E. Hoover", "server: Store file security attributes with extended file attributes.", 8 },';
 		echo '+    { "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings.", 7 },';
 		echo '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes.", 7 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-ObjectTypeInformation
-# |
-# | Modified files:
-# |   *	dlls/ntdll/om.c, dlls/ntdll/tests/om.c, server/change.c, server/completion.c, server/directory.c, server/file.c,
-# | 	server/handle.c, server/object.h, server/protocol.def
-# |
-if test "$enable_server_ObjectTypeInformation" -eq 1; then
-	patch_apply server-ObjectTypeInformation/0001-ntdll-Implemenent-ObjectTypeInformation-class-suppor.patch
-	patch_apply server-ObjectTypeInformation/0002-ntdll-tests-Add-a-few-more-ObjectTypeInformation-tes.patch
-	patch_apply server-ObjectTypeInformation/0003-server-Fix-type-name-of-IoCompletion.patch
-	patch_apply server-ObjectTypeInformation/0004-server-Fix-type-name-of-File.patch
-	patch_apply server-ObjectTypeInformation/0005-server-Fix-type-name-of-directory-file.patch
-	(
-		echo '+    { "Qian Hong", "ntdll: Implemenent ObjectTypeInformation class support in NtQueryObject.", 2 },';
-		echo '+    { "Qian Hong", "ntdll/tests: Add a few more ObjectTypeInformation tests.", 1 },';
-		echo '+    { "Qian Hong", "server: Fix type name of IoCompletion.", 1 },';
-		echo '+    { "Qian Hong", "server: Fix type name of File.", 1 },';
-		echo '+    { "Qian Hong", "server: Fix type name of directory file.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4402,21 +4394,6 @@ if test "$enable_server_Key_State" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Introduce a helper function to update the thread_input key state.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement locking and synchronization of keystate buffer.", 2 },';
 		echo '+    { "Sebastian Lackner", "server: Introduce a shadow keystate array to sync keystates only on changes.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-OpenClipboard
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#2805] OpenClipboard with current owner shouldn't fail
-# |
-# | Modified files:
-# |   *	dlls/user32/tests/clipboard.c, server/clipboard.c
-# |
-if test "$enable_server_OpenClipboard" -eq 1; then
-	patch_apply server-OpenClipboard/0001-server-Fix-opening-clipboard-from-multiple-threads.patch
-	(
-		echo '+    { "Sebastian Lackner", "server: Fix opening clipboard from multiple threads.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4885,18 +4862,6 @@ if test "$enable_wbemdisp_ISWbemSecurity" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wbemprox-Whitespace
-# |
-# | Modified files:
-# |   *	dlls/wbemprox/tests/query.c, dlls/wbemprox/wql.y
-# |
-if test "$enable_wbemprox_Whitespace" -eq 1; then
-	patch_apply wbemprox-Whitespace/0001-wbemprox-Treat-r-as-whitespace.patch
-	(
-		echo '+    { "Michael Müller", "wbemprox: Treat \\\\r as whitespace.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wiaservc-IEnumWIA_DEV_INFO
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5112,6 +5077,45 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-resource_check_usage
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c
+# |
+if test "$enable_wined3d_resource_check_usage" -eq 1; then
+	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	(
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-wined3d_swapchain_present
+# |
+# | Modified files:
+# |   *	dlls/wined3d/swapchain.c
+# |
+if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
+	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Multisampling
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Multisampling" -eq 1; then
+	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+	(
+		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-Revert_PixelFormat
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5146,18 +5150,6 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-resource_check_usage
-# |
-# | Modified files:
-# |   *	dlls/wined3d/resource.c
-# |
-if test "$enable_wined3d_resource_check_usage" -eq 1; then
-	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	(
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-UnhandledBlendFactor
 # |
 # | Modified files:
@@ -5167,33 +5159,6 @@ if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
 	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-wined3d_swapchain_present
-# |
-# | Modified files:
-# |   *	dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
-	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Multisampling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
-	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
 	) >> "$patchlist"
 fi
 

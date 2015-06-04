@@ -103,7 +103,7 @@ for more details.*
 * Allow to enable/disable InsertMode in wineconsole settings ([Wine Bug #36704](https://bugs.winehq.org/show_bug.cgi?id=36704))
 * Allow to open files/directories without any access rights in order to query attributes
 * Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE. ([Wine Bug #12652](https://bugs.winehq.org/show_bug.cgi?id=12652))
-* Also handle '\r' as whitespace in wbemprox queries
+* ~~Also handle '\r' as whitespace in wbemprox queries~~
 * Also output winedbg system information to the terminal, not only to dialog
 * Anno 1602 installer depends on Windows 98 behavior of SHFileOperationW ([Wine Bug #37916](https://bugs.winehq.org/show_bug.cgi?id=37916))
 * Assign a drive serial number during prefix creation/update ([Wine Bug #17823](https://bugs.winehq.org/show_bug.cgi?id=17823))
@@ -218,7 +218,7 @@ for more details.*
 * Multiple applications need EnumDisplayDevicesW implementation ([Wine Bug #34978](https://bugs.winehq.org/show_bug.cgi?id=34978))
 * Multiple applications start wrong executable if whitespace present in name ([Wine Bug #19666](https://bugs.winehq.org/show_bug.cgi?id=19666))
 * Need for Speed 3 installer requires devices in HKEY_DYN_DATA ([Wine Bug #7115](https://bugs.winehq.org/show_bug.cgi?id=7115))
-* OpenClipboard with current owner shouldn't fail ([Wine Bug #2805](https://bugs.winehq.org/show_bug.cgi?id=2805))
+* ~~OpenClipboard with current owner shouldn't fail~~ ([Wine Bug #2805](https://bugs.winehq.org/show_bug.cgi?id=2805))
 * Other Pipelight-specific enhancements
 * Port Royale doesn't display ocean correctly ([Wine Bug #17913](https://bugs.winehq.org/show_bug.cgi?id=17913))
 * Prevent window managers from grouping all wine programs together ([Wine Bug #32699](https://bugs.winehq.org/show_bug.cgi?id=32699))

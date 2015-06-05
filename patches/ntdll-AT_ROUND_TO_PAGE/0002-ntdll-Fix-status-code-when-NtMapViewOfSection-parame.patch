@@ -1,0 +1,54 @@
+From 4ebf978e075ba7ff2977144606b4da6580145a1b Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 5 Jun 2015 07:35:11 +0200
+Subject: ntdll: Fix status code when NtMapViewOfSection parameter check fails.
+
+---
+ dlls/kernel32/tests/virtual.c | 3 ---
+ dlls/ntdll/virtual.c          | 2 +-
+ 2 files changed, 1 insertion(+), 4 deletions(-)
+
+diff --git a/dlls/kernel32/tests/virtual.c b/dlls/kernel32/tests/virtual.c
+index 15fa903..08a34bf 100644
+--- a/dlls/kernel32/tests/virtual.c
++++ b/dlls/kernel32/tests/virtual.c
+@@ -1075,7 +1075,6 @@ static void test_NtMapViewOfSection(void)
+     size = 0;
+     offset.QuadPart = 1;
+     status = pNtMapViewOfSection( mapping, hProcess, &ptr2, 0, 0, &offset, &size, 1, 0, PAGE_READWRITE );
+-    todo_wine
+     ok( status == STATUS_MAPPED_ALIGNMENT, "NtMapViewOfSection returned %x\n", status );
+ 
+     /* ptr has to be aligned */
+@@ -1083,7 +1082,6 @@ static void test_NtMapViewOfSection(void)
+     size = 0;
+     offset.QuadPart = 0;
+     status = pNtMapViewOfSection( mapping, hProcess, &ptr2, 0, 0, &offset, &size, 1, 0, PAGE_READWRITE );
+-    todo_wine
+     ok( status == STATUS_MAPPED_ALIGNMENT, "NtMapViewOfSection returned %x\n", status );
+ 
+     /* still not 64k aligned */
+@@ -1091,7 +1089,6 @@ static void test_NtMapViewOfSection(void)
+     size = 0;
+     offset.QuadPart = 0;
+     status = pNtMapViewOfSection( mapping, hProcess, &ptr2, 0, 0, &offset, &size, 1, 0, PAGE_READWRITE );
+-    todo_wine
+     ok( status == STATUS_MAPPED_ALIGNMENT, "NtMapViewOfSection returned %x\n", status );
+ 
+     /* zero_bits != 0 is not allowed when an address is set */
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index 0629816..72309f6 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -2602,7 +2602,7 @@ NTSTATUS WINAPI NtMapViewOfSection( HANDLE handle, HANDLE process, PVOID *addr_p
+     /* Check parameters */
+ 
+     if ((offset.u.LowPart & mask) || (*addr_ptr && ((UINT_PTR)*addr_ptr & mask)))
+-        return STATUS_INVALID_PARAMETER;
++        return STATUS_MAPPED_ALIGNMENT;
+ 
+     switch(protect)
+     {
+-- 
+2.4.2
+

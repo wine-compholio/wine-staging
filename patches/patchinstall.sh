@@ -158,6 +158,7 @@ patch_enable_all ()
 	enable_msvfw32_Image_Size="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_APC_Start_Process="$1"
+	enable_ntdll_AT_ROUND_TO_PAGE="$1"
 	enable_ntdll_Activation_Context="$1"
 	enable_ntdll_CLI_Images="$1"
 	enable_ntdll_DOS_Attributes="$1"
@@ -544,6 +545,9 @@ patch_enable ()
 			;;
 		ntdll-APC_Start_Process)
 			enable_ntdll_APC_Start_Process="$2"
+			;;
+		ntdll-AT_ROUND_TO_PAGE)
+			enable_ntdll_AT_ROUND_TO_PAGE="$2"
 			;;
 		ntdll-Activation_Context)
 			enable_ntdll_Activation_Context="$2"
@@ -1795,6 +1799,13 @@ if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
 		abort "Patchset ntdll-LZNT1_Compression disabled, but ntdll-RtlIpStringToAddress depends on that."
 	fi
 	enable_ntdll_LZNT1_Compression=1
+fi
+
+if test "$enable_ntdll_NtQuerySection" -eq 1; then
+	if test "$enable_ntdll_AT_ROUND_TO_PAGE" -gt 1; then
+		abort "Patchset ntdll-AT_ROUND_TO_PAGE disabled, but ntdll-NtQuerySection depends on that."
+	fi
+	enable_ntdll_AT_ROUND_TO_PAGE=1
 fi
 
 if test "$enable_ntdll_Junction_Points" -eq 1; then
@@ -3463,6 +3474,22 @@ if test "$enable_ntdll_APC_Start_Process" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-AT_ROUND_TO_PAGE
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/virtual.c, include/winnt.h
+# |
+if test "$enable_ntdll_AT_ROUND_TO_PAGE" -eq 1; then
+	patch_apply ntdll-AT_ROUND_TO_PAGE/0001-kernel32-tests-Add-tests-for-virtual-memory-align-be.patch
+	patch_apply ntdll-AT_ROUND_TO_PAGE/0002-ntdll-Fix-status-code-when-NtMapViewOfSection-parame.patch
+	patch_apply ntdll-AT_ROUND_TO_PAGE/0003-ntdll-Add-support-for-AT_ROUND_TO_PAGE-flag-in-NtMap.patch
+	(
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for virtual memory align behaviour.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Fix status code when NtMapViewOfSection parameter check fails.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Add support for AT_ROUND_TO_PAGE flag in NtMapViewOfSection.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-Activation_Context
 # |
 # | Modified files:
@@ -4204,27 +4231,6 @@ if test "$enable_secur32_ANSI_NTLM_Credentials" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-ObjectTypeInformation
-# |
-# | Modified files:
-# |   *	dlls/ntdll/om.c, dlls/ntdll/tests/om.c, server/change.c, server/completion.c, server/directory.c, server/file.c,
-# | 	server/handle.c, server/object.h, server/protocol.def
-# |
-if test "$enable_server_ObjectTypeInformation" -eq 1; then
-	patch_apply server-ObjectTypeInformation/0001-ntdll-Implemenent-ObjectTypeInformation-class-suppor.patch
-	patch_apply server-ObjectTypeInformation/0002-ntdll-tests-Add-a-few-more-ObjectTypeInformation-tes.patch
-	patch_apply server-ObjectTypeInformation/0003-server-Fix-type-name-of-IoCompletion.patch
-	patch_apply server-ObjectTypeInformation/0004-server-Fix-type-name-of-File.patch
-	patch_apply server-ObjectTypeInformation/0005-server-Fix-type-name-of-directory-file.patch
-	(
-		echo '+    { "Qian Hong", "ntdll: Implemenent ObjectTypeInformation class support in NtQueryObject.", 2 },';
-		echo '+    { "Qian Hong", "ntdll/tests: Add a few more ObjectTypeInformation tests.", 1 },';
-		echo '+    { "Qian Hong", "server: Fix type name of IoCompletion.", 1 },';
-		echo '+    { "Qian Hong", "server: Fix type name of File.", 1 },';
-		echo '+    { "Qian Hong", "server: Fix type name of directory file.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-RootDirectory_File
 # |
 # | Modified files:
@@ -4262,6 +4268,27 @@ if test "$enable_server_Stored_ACLs" -eq 1; then
 		echo '+    { "Erich E. Hoover", "server: Store file security attributes with extended file attributes.", 8 },';
 		echo '+    { "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings.", 7 },';
 		echo '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes.", 7 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-ObjectTypeInformation
+# |
+# | Modified files:
+# |   *	dlls/ntdll/om.c, dlls/ntdll/tests/om.c, server/change.c, server/completion.c, server/directory.c, server/file.c,
+# | 	server/handle.c, server/object.h, server/protocol.def
+# |
+if test "$enable_server_ObjectTypeInformation" -eq 1; then
+	patch_apply server-ObjectTypeInformation/0001-ntdll-Implemenent-ObjectTypeInformation-class-suppor.patch
+	patch_apply server-ObjectTypeInformation/0002-ntdll-tests-Add-a-few-more-ObjectTypeInformation-tes.patch
+	patch_apply server-ObjectTypeInformation/0003-server-Fix-type-name-of-IoCompletion.patch
+	patch_apply server-ObjectTypeInformation/0004-server-Fix-type-name-of-File.patch
+	patch_apply server-ObjectTypeInformation/0005-server-Fix-type-name-of-directory-file.patch
+	(
+		echo '+    { "Qian Hong", "ntdll: Implemenent ObjectTypeInformation class support in NtQueryObject.", 2 },';
+		echo '+    { "Qian Hong", "ntdll/tests: Add a few more ObjectTypeInformation tests.", 1 },';
+		echo '+    { "Qian Hong", "server: Fix type name of IoCompletion.", 1 },';
+		echo '+    { "Qian Hong", "server: Fix type name of File.", 1 },';
+		echo '+    { "Qian Hong", "server: Fix type name of directory file.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5085,57 +5112,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-wined3d_swapchain_present
-# |
-# | Modified files:
-# |   *	dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
-	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-resource_check_usage
-# |
-# | Modified files:
-# |   *	dlls/wined3d/resource.c
-# |
-if test "$enable_wined3d_resource_check_usage" -eq 1; then
-	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	(
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Multisampling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
-	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-Revert_PixelFormat
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5167,6 +5143,57 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-resource_check_usage
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c
+# |
+if test "$enable_wined3d_resource_check_usage" -eq 1; then
+	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	(
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-wined3d_swapchain_present
+# |
+# | Modified files:
+# |   *	dlls/wined3d/swapchain.c
+# |
+if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
+	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Multisampling
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Multisampling" -eq 1; then
+	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+	(
+		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
 	) >> "$patchlist"
 fi
 

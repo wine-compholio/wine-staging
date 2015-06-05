@@ -1,0 +1,57 @@
+From 2301c43dfcc22112849acf75a90a89cda3137952 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 5 Jun 2015 07:40:44 +0200
+Subject: ntdll: Add support for AT_ROUND_TO_PAGE flag in NtMapViewOfSection.
+
+---
+ dlls/kernel32/tests/virtual.c | 4 ----
+ dlls/ntdll/virtual.c          | 5 +++++
+ 2 files changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/kernel32/tests/virtual.c b/dlls/kernel32/tests/virtual.c
+index 08a34bf..d10d85d 100644
+--- a/dlls/kernel32/tests/virtual.c
++++ b/dlls/kernel32/tests/virtual.c
+@@ -1141,11 +1141,9 @@ static void test_NtMapViewOfSection(void)
+         offset.QuadPart = 0;
+         status = pNtMapViewOfSection( mapping, hProcess, &ptr2, 0, 0, &offset,
+                                       &size, 1, AT_ROUND_TO_PAGE, PAGE_READWRITE );
+-        todo_wine
+         ok( status == STATUS_SUCCESS, "NtMapViewOfSection returned %x\n", status );
+         ok( (char *)ptr2 == (char *)ptr + 0x1000, "expected address %p, got %p\n", (char *)ptr + 0x1000, ptr2 );
+         status = pNtUnmapViewOfSection( hProcess, ptr2 );
+-        todo_wine
+         ok( !status, "NtUnmapViewOfSection failed status %x\n", status );
+ 
+         /* the address is rounded down if not on a page boundary */
+@@ -1167,11 +1165,9 @@ static void test_NtMapViewOfSection(void)
+         offset.QuadPart = 0;
+         status = pNtMapViewOfSection( mapping, hProcess, &ptr2, 0, 0, &offset,
+                                       &size, 1, AT_ROUND_TO_PAGE, PAGE_READWRITE );
+-        todo_wine
+         ok( status == STATUS_SUCCESS, "NtMapViewOfSection returned %x\n", status );
+         ok( (char *)ptr2 == (char *)ptr + 0x2000, "expected address %p, got %p\n", (char *)ptr + 0x2000, ptr2 );
+         status = pNtUnmapViewOfSection( hProcess, ptr2 );
+-        todo_wine
+         ok( !status, "NtUnmapViewOfSection failed status %x\n", status );
+     }
+     else
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index 72309f6..91c420e 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -2601,6 +2601,11 @@ NTSTATUS WINAPI NtMapViewOfSection( HANDLE handle, HANDLE process, PVOID *addr_p
+ 
+     /* Check parameters */
+ 
++#ifndef _WIN64
++    if (!is_wow64 && (alloc_type & AT_ROUND_TO_PAGE) && !zero_bits)
++        mask = page_mask;
++#endif
++
+     if ((offset.u.LowPart & mask) || (*addr_ptr && ((UINT_PTR)*addr_ptr & mask)))
+         return STATUS_MAPPED_ALIGNMENT;
+ 
+-- 
+2.4.2
+

@@ -1,4 +1,4 @@
-From a322b70c446dcd49facd2c6987a70b289c4678d1 Mon Sep 17 00:00:00 2001
+From 3f7a369ba516a2ebe970a5160293d190f806f65e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Sun, 7 Apr 2013 17:53:43 +0200
 Subject: wined3d: Send primitive type updates through the command stream
@@ -11,10 +11,10 @@ Subject: wined3d: Send primitive type updates through the command stream
  4 files changed, 40 insertions(+), 10 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 0525a59..a7ba2b4 100644
+index f385449..8a28c40 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -67,6 +67,7 @@ enum wined3d_cs_op
+@@ -68,6 +68,7 @@ enum wined3d_cs_op
      WINED3D_CS_OP_SET_PS_CONSTS_F,
      WINED3D_CS_OP_GLFINISH,
      WINED3D_CS_OP_SET_BASE_VERTEX_INDEX,
@@ -22,7 +22,7 @@ index 0525a59..a7ba2b4 100644
      WINED3D_CS_OP_STOP,
  };
  
-@@ -297,6 +298,12 @@ struct wined3d_cs_set_base_vertex_index
+@@ -307,6 +308,12 @@ struct wined3d_cs_set_base_vertex_index
      UINT base_vertex_index;
  };
  
@@ -35,7 +35,7 @@ index 0525a59..a7ba2b4 100644
  /* FIXME: The list synchronization probably isn't particularly fast. */
  static void wined3d_cs_list_enqueue(struct wined3d_cs_list *list, struct wined3d_cs_block *block)
  {
-@@ -952,9 +959,6 @@ static UINT wined3d_cs_exec_transfer_stateblock(struct wined3d_cs *cs, const voi
+@@ -977,9 +984,6 @@ static UINT wined3d_cs_exec_transfer_stateblock(struct wined3d_cs *cs, const voi
  
      /* Don't memcpy the entire struct, we'll remove single items as we add dedicated
       * ops for setting states */
@@ -45,7 +45,7 @@ index 0525a59..a7ba2b4 100644
      memcpy(cs->state.vs_consts_b, op->state.vs_consts_b, sizeof(cs->state.vs_consts_b));
      memcpy(cs->state.vs_consts_i, op->state.vs_consts_i, sizeof(cs->state.vs_consts_i));
  
-@@ -975,8 +979,6 @@ void wined3d_cs_emit_transfer_stateblock(struct wined3d_cs *cs, const struct win
+@@ -1000,8 +1004,6 @@ void wined3d_cs_emit_transfer_stateblock(struct wined3d_cs *cs, const struct win
  
      /* Don't memcpy the entire struct, we'll remove single items as we add dedicated
       * ops for setting states */
@@ -54,7 +54,7 @@ index 0525a59..a7ba2b4 100644
      memcpy(op->state.vs_consts_b, state->vs_consts_b, sizeof(op->state.vs_consts_b));
      memcpy(op->state.vs_consts_i, state->vs_consts_i, sizeof(op->state.vs_consts_i));
  
-@@ -1321,6 +1323,32 @@ void wined3d_cs_emit_set_base_vertex_index(struct wined3d_cs *cs,
+@@ -1434,6 +1436,32 @@ void wined3d_cs_emit_set_base_vertex_index(struct wined3d_cs *cs,
      cs->ops->submit(cs);
  }
  
@@ -66,7 +66,7 @@ index 0525a59..a7ba2b4 100644
 +    prev = cs->state.gl_primitive_type;
 +
 +    if (op->gl_primitive_type == GL_POINTS || prev == GL_POINTS)
-+        device_invalidate_state(cs->device, STATE_POINT_SIZE_ENABLE);
++        device_invalidate_state(cs->device, STATE_POINT_ENABLE);
 +
 +    cs->state.gl_primitive_type = op->gl_primitive_type;
 +
@@ -87,7 +87,7 @@ index 0525a59..a7ba2b4 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_FENCE                      */ wined3d_cs_exec_fence,
-@@ -1354,6 +1382,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -1468,6 +1496,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_SET_PS_CONSTS_F            */ wined3d_cs_exec_set_ps_consts_f,
      /* WINED3D_CS_OP_GLFINISH                   */ wined3d_cs_exec_glfinish,
      /* WINED3D_CS_OP_SET_BASE_VERTEX_INDEX      */ wined3d_cs_exec_set_base_vertex_index,
@@ -96,10 +96,10 @@ index 0525a59..a7ba2b4 100644
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index a80784b..e87a52c 100644
+index 939d525..49ec1dc 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -3348,7 +3348,6 @@ void CDECL wined3d_device_set_primitive_type(struct wined3d_device *device,
+@@ -3377,7 +3377,6 @@ void CDECL wined3d_device_set_primitive_type(struct wined3d_device *device,
          enum wined3d_primitive_type primitive_type)
  {
      GLenum gl_primitive_type, prev;
@@ -107,19 +107,19 @@ index a80784b..e87a52c 100644
      TRACE("device %p, primitive_type %s\n", device, debug_d3dprimitivetype(primitive_type));
  
      gl_primitive_type = gl_primitive_type_from_d3d(primitive_type);
-@@ -3356,8 +3355,8 @@ void CDECL wined3d_device_set_primitive_type(struct wined3d_device *device,
+@@ -3385,8 +3384,8 @@ void CDECL wined3d_device_set_primitive_type(struct wined3d_device *device,
      device->update_state->gl_primitive_type = gl_primitive_type;
      if (device->recording)
          device->recording->changed.primitive_type = TRUE;
 -    else if (gl_primitive_type != prev && (gl_primitive_type == GL_POINTS || prev == GL_POINTS))
--        device_invalidate_state(device, STATE_POINT_SIZE_ENABLE);
+-        device_invalidate_state(device, STATE_POINT_ENABLE);
 +    else if (gl_primitive_type != prev)
 +        wined3d_cs_emit_set_primitive_type(device->cs, gl_primitive_type);
  }
  
  void CDECL wined3d_device_get_primitive_type(const struct wined3d_device *device,
 diff --git a/dlls/wined3d/stateblock.c b/dlls/wined3d/stateblock.c
-index 141e539..606134c 100644
+index 790d769..cd07055 100644
 --- a/dlls/wined3d/stateblock.c
 +++ b/dlls/wined3d/stateblock.c
 @@ -1075,8 +1075,8 @@ void CDECL wined3d_stateblock_apply(const struct wined3d_stateblock *stateblock)
@@ -127,17 +127,17 @@ index 141e539..606134c 100644
          prev = device->update_state->gl_primitive_type;
          device->update_state->gl_primitive_type = gl_primitive_type;
 -        if (gl_primitive_type != prev && (gl_primitive_type == GL_POINTS || prev == GL_POINTS))
--            device_invalidate_state(device, STATE_POINT_SIZE_ENABLE);
+-            device_invalidate_state(device, STATE_POINT_ENABLE);
 +        if (gl_primitive_type != prev)
 +            wined3d_cs_emit_set_primitive_type(device->cs, gl_primitive_type);
      }
  
      if (stateblock->changed.indices)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 382c120..a647ca9 100644
+index 3d65d93..bae0336 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2618,6 +2618,8 @@ void wined3d_cs_emit_set_consts_f(struct wined3d_cs *cs, UINT start_register, co
+@@ -2675,6 +2675,8 @@ void wined3d_cs_emit_set_consts_f(struct wined3d_cs *cs, UINT start_register, co
  void wined3d_cs_emit_glfinish(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_base_vertex_index(struct wined3d_cs *cs,
          UINT base_vertex_index) DECLSPEC_HIDDEN;
@@ -147,5 +147,5 @@ index 382c120..a647ca9 100644
  /* Direct3D terminology with little modifications. We do not have an issued state
   * because only the driver knows about it, but we have a created state because d3d
 -- 
-2.1.3
+2.4.2
 

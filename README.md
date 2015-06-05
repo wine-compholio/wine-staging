@@ -39,13 +39,14 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [9]:**
+**Bug fixes and features included in the next upcoming release [10]:**
 
 * Add implementation for kernel32.GetNumaProcessorNode ([Wine Bug #38660](https://bugs.winehq.org/show_bug.cgi?id=38660))
+* Allow to enable/disable InsertMode in wineconsole settings ([Wine Bug #38697](https://bugs.winehq.org/show_bug.cgi?id=38697))
 * Allow to set pixel format for desktop window
 * Implement mscoree._CorValidateImage for mono runtime ([Wine Bug #38662](https://bugs.winehq.org/show_bug.cgi?id=38662))
 * Implement proper handling of CLI .NET images in Wine library loader ([Wine Bug #38661](https://bugs.winehq.org/show_bug.cgi?id=38661))
-* Multiple applications needs better NtQueryInformationJobObject stub ([Wine Bug #38658](https://bugs.winehq.org/show_bug.cgi?id=38658))
+* Multiple applications needs better NtQueryInformationJobObject stub
 * Set NamedPipeState to FILE_PIPE_CLOSING_STATE on broken pipe in NtQueryInformationFile
 * Support for AT_ROUND_TO_PAGE flag in NtMapViewOfSection
 * Support for NtSetInformationFile class FileLinkInformation
@@ -79,7 +80,7 @@ for more details.*
 * Add stub for d3d11.D3D11CreateDeviceAndSwapChain ([Wine Bug #33153](https://bugs.winehq.org/show_bug.cgi?id=33153))
 * Add stub for fltlib.FilterLoad ([Wine Bug #38435](https://bugs.winehq.org/show_bug.cgi?id=38435))
 * Add stub for gdiplus.GdipCreateEffect ([Wine Bug #32163](https://bugs.winehq.org/show_bug.cgi?id=32163))
-* Add stub for iphlpapi.ConvertInterfaceLuidToGuid ([Wine Bug #38576](https://bugs.winehq.org/show_bug.cgi?id=38576))
+* ~~Add stub for iphlpapi.ConvertInterfaceLuidToGuid~~ ([Wine Bug #38576](https://bugs.winehq.org/show_bug.cgi?id=38576))
 * Add stub for kernel32.SetFileCompletionNotificationModes (for Steam in Win7 mode) ([Wine Bug #38493](https://bugs.winehq.org/show_bug.cgi?id=38493))
 * Add stub for ntoskrnl.ExAcquireResourceExclusiveLite
 * Add stub for ntoskrnl.ExDeleteResourceLite
@@ -101,7 +102,7 @@ for more details.*
 * Allow special characters in pipe names ([Wine Bug #28995](https://bugs.winehq.org/show_bug.cgi?id=28995))
 * Allow to cancel a file operation via progress callback ([Wine Bug #22690](https://bugs.winehq.org/show_bug.cgi?id=22690))
 * Allow to edit winecfg library override by double clicking
-* Allow to enable/disable InsertMode in wineconsole settings ([Wine Bug #36704](https://bugs.winehq.org/show_bug.cgi?id=36704))
+* ~~Allow to enable/disable InsertMode in wineconsole settings~~ ([Wine Bug #36704](https://bugs.winehq.org/show_bug.cgi?id=36704))
 * Allow to open files/directories without any access rights in order to query attributes
 * Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE. ([Wine Bug #12652](https://bugs.winehq.org/show_bug.cgi?id=12652))
 * ~~Also handle '\r' as whitespace in wbemprox queries~~
@@ -265,7 +266,7 @@ for more details.*
 * Support for NVIDIA video encoder library (nvencodeapi)
 * Support for NtQuerySection ([Wine Bug #37338](https://bugs.winehq.org/show_bug.cgi?id=37338))
 * Support for NtSetInformationFile class FileDispositionInformation ([Wine Bug #30397](https://bugs.winehq.org/show_bug.cgi?id=30397))
-* Support for ObjectTypeInformation class support in NtQueryObject
+* ~~Support for ObjectTypeInformation class support in NtQueryObject~~
 * Support for PulseAudio backend for audio ([Wine Bug #10495](https://bugs.winehq.org/show_bug.cgi?id=10495))
 * Support for RtlDecompressBuffer ([Wine Bug #37449](https://bugs.winehq.org/show_bug.cgi?id=37449))
 * Support for SHCreateSessionKey ([Wine Bug #35630](https://bugs.winehq.org/show_bug.cgi?id=35630))

@@ -3178,6 +3178,9 @@ if test "$enable_kernel32_Named_Pipe" -eq 1; then
 	patch_apply kernel32-Named_Pipe/0017-kernel32-tests-Add-additional-tests-for-PIPE_NOWAIT-.patch
 	patch_apply kernel32-Named_Pipe/0018-ntdll-Improve-ReadDataAvailable-handling-in-FilePipe.patch
 	patch_apply kernel32-Named_Pipe/0019-ntdll-Set-NamedPipeState-to-FILE_PIPE_CLOSING_STATE-.patch
+	patch_apply kernel32-Named_Pipe/0020-kernel32-tests-Add-tests-for-behaviour-of-WriteFile-.patch
+	patch_apply kernel32-Named_Pipe/0021-server-Return-correct-error-codes-for-NtWriteFile-wh.patch
+	patch_apply kernel32-Named_Pipe/0022-ntdll-Pre-cache-file-descriptors-after-opening-a-fil.patch
 	(
 		echo '+    { "Dan Kegel", "kernel32: ConnectNamedPort should return FALSE and set ERROR_PIPE_CONNECTED on success in overlapped mode.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for PeekNamedPipe with partial received messages.", 1 },';
@@ -3198,6 +3201,9 @@ if test "$enable_kernel32_Named_Pipe" -eq 1; then
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for PIPE_NOWAIT in overlapped mode.", 1 },';
 		echo '+    { "Qian Hong", "ntdll: Improve ReadDataAvailable handling in FilePipeLocalInformation class support.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Set NamedPipeState to FILE_PIPE_CLOSING_STATE on broken pipe in NtQueryInformationFile.", 1 },';
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for behaviour of WriteFile on closed pipe.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Return correct error codes for NtWriteFile when pipes are closed without disconnecting.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Pre-cache file descriptors after opening a file.", 1 },';
 	) >> "$patchlist"
 fi
 

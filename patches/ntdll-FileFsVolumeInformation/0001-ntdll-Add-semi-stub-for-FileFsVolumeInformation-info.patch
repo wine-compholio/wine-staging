@@ -1,0 +1,55 @@
+From 8d067985073de790af3a9471998cea38b7a5d373 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 6 Jun 2015 19:04:57 +0200
+Subject: ntdll: Add semi-stub for FileFsVolumeInformation information class.
+
+---
+ dlls/ntdll/file.c       | 13 ++++++++++++-
+ dlls/ntdll/tests/file.c |  4 ++--
+ 2 files changed, 14 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index d081750..afd22ac 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -3060,7 +3060,18 @@ NTSTATUS WINAPI NtQueryVolumeInformationFile( HANDLE handle, PIO_STATUS_BLOCK io
+     switch( info_class )
+     {
+     case FileFsVolumeInformation:
+-        if (!once++) FIXME( "%p: volume info not supported\n", handle );
++        if (length < sizeof(FILE_FS_VOLUME_INFORMATION))
++            io->u.Status = STATUS_BUFFER_TOO_SMALL;
++        else
++        {
++            FILE_FS_VOLUME_INFORMATION *info = buffer;
++
++            if (!once++) FIXME( "%p: faking volume info\n", handle );
++            memset( info, 0, sizeof(*info) );
++
++            io->Information = sizeof(*info);
++            io->u.Status = STATUS_SUCCESS;
++        }
+         break;
+     case FileFsLabelInformation:
+         FIXME( "%p: label info not supported\n", handle );
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index 2df0edc..3b9f097 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -1920,11 +1920,11 @@ static void test_query_volume_information_file(void)
+ 
+     ffvi = (FILE_FS_VOLUME_INFORMATION *)buf;
+ 
+-todo_wine
+-{
+     ok(status == STATUS_SUCCESS, "expected STATUS_SUCCESS, got %d\n", status);
+     ok(U(io).Status == STATUS_SUCCESS, "expected STATUS_SUCCESS, got %d\n", U(io).Status);
+ 
++todo_wine
++{
+     ok(io.Information == (FIELD_OFFSET(FILE_FS_VOLUME_INFORMATION, VolumeLabel) + ffvi->VolumeLabelLength),
+     "expected %d, got %lu\n", (FIELD_OFFSET(FILE_FS_VOLUME_INFORMATION, VolumeLabel) + ffvi->VolumeLabelLength),
+      io.Information);
+-- 
+2.4.2
+

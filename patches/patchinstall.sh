@@ -169,6 +169,7 @@ patch_enable_all ()
 	enable_ntdll_Exception="$1"
 	enable_ntdll_FileDispositionInformation="$1"
 	enable_ntdll_FileFsFullSizeInformation="$1"
+	enable_ntdll_FileFsVolumeInformation="$1"
 	enable_ntdll_Fix_Alignment="$1"
 	enable_ntdll_Fix_Free="$1"
 	enable_ntdll_FreeBSD_Directory="$1"
@@ -580,6 +581,9 @@ patch_enable ()
 			;;
 		ntdll-FileFsFullSizeInformation)
 			enable_ntdll_FileFsFullSizeInformation="$2"
+			;;
+		ntdll-FileFsVolumeInformation)
+			enable_ntdll_FileFsVolumeInformation="$2"
 			;;
 		ntdll-Fix_Alignment)
 			enable_ntdll_Fix_Alignment="$2"
@@ -3644,6 +3648,21 @@ if test "$enable_ntdll_FileFsFullSizeInformation" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-FileFsVolumeInformation
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#21466] Add semi-stub for FileFsVolumeInformation information class
+# |
+# | Modified files:
+# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
+# |
+if test "$enable_ntdll_FileFsVolumeInformation" -eq 1; then
+	patch_apply ntdll-FileFsVolumeInformation/0001-ntdll-Add-semi-stub-for-FileFsVolumeInformation-info.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Add semi-stub for FileFsVolumeInformation information class.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-Fix_Alignment
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5138,6 +5157,42 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-resource_check_usage
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c
+# |
+if test "$enable_wined3d_resource_check_usage" -eq 1; then
+	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	(
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-wined3d_swapchain_present
+# |
+# | Modified files:
+# |   *	dlls/wined3d/swapchain.c
+# |
+if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
+	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-Multisampling
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5184,42 +5239,6 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-resource_check_usage
-# |
-# | Modified files:
-# |   *	dlls/wined3d/resource.c
-# |
-if test "$enable_wined3d_resource_check_usage" -eq 1; then
-	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	(
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-wined3d_swapchain_present
-# |
-# | Modified files:
-# |   *	dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
-	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -176,6 +176,7 @@ patch_enable_all ()
 	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_LZNT1_Compression="$1"
+	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
@@ -600,6 +601,9 @@ patch_enable ()
 			;;
 		ntdll-LZNT1_Compression)
 			enable_ntdll_LZNT1_Compression="$2"
+			;;
+		ntdll-NtQueryEaFile)
+			enable_ntdll_NtQueryEaFile="$2"
 			;;
 		ntdll-NtQuerySection)
 			enable_ntdll_NtQuerySection="$2"
@@ -1812,7 +1816,11 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	if test "$enable_ntdll_Fix_Free" -gt 1; then
 		abort "Patchset ntdll-Fix_Free disabled, but ntdll-Junction_Points depends on that."
 	fi
+	if test "$enable_ntdll_NtQueryEaFile" -gt 1; then
+		abort "Patchset ntdll-NtQueryEaFile disabled, but ntdll-Junction_Points depends on that."
+	fi
 	enable_ntdll_Fix_Free=1
+	enable_ntdll_NtQueryEaFile=1
 fi
 
 if test "$enable_ntdll_CLI_Images" -eq 1; then
@@ -3705,6 +3713,18 @@ if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-NtQueryEaFile
+# |
+# | Modified files:
+# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
+# |
+if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
+	patch_apply ntdll-NtQueryEaFile/0001-ntdll-Improve-stub-of-NtQueryEaFile.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Improve stub of NtQueryEaFile.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-Junction_Points
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5118,27 +5138,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-UnhandledBlendFactor
+# Patchset wined3d-Multisampling
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
 # |
 # | Modified files:
-# |   *	dlls/wined3d/state.c
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
 # |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+if test "$enable_wined3d_Multisampling" -eq 1; then
+	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
 	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-wined3d_swapchain_present
-# |
-# | Modified files:
-# |   *	dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
-	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5188,18 +5199,27 @@ if test "$enable_wined3d_resource_check_usage" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Multisampling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# Patchset wined3d-wined3d_swapchain_present
 # |
 # | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |   *	dlls/wined3d/swapchain.c
 # |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
+	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
 	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 

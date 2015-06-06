@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [17]:**
+**Bug fixes and features included in the next upcoming release [18]:**
 
 * Add implementation for kernel32.GetNumaProcessorNode ([Wine Bug #38660](https://bugs.winehq.org/show_bug.cgi?id=38660))
 * Add semi-stub for FileFsVolumeInformation information class ([Wine Bug #21466](https://bugs.winehq.org/show_bug.cgi?id=21466))
@@ -58,6 +58,7 @@ Included bug fixes and improvements
 * Support for AT_ROUND_TO_PAGE flag in NtMapViewOfSection
 * Support for NtSetInformationFile class FileLinkInformation
 * Support for NtSetInformationFile class FileRenameInformation ([Wine Bug #30399](https://bugs.winehq.org/show_bug.cgi?id=30399))
+* Use NVX_GPU_MEMORY_INFO extension for more exact video memory accounting on NVIDIA graphic cards
 
 
 **Bug fixes and features in Wine Staging 1.7.44 [236]:**

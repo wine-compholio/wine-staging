@@ -39,14 +39,16 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [10]:**
+**Bug fixes and features included in the next upcoming release [12]:**
 
 * Add implementation for kernel32.GetNumaProcessorNode ([Wine Bug #38660](https://bugs.winehq.org/show_bug.cgi?id=38660))
 * Allow to enable/disable InsertMode in wineconsole settings ([Wine Bug #38697](https://bugs.winehq.org/show_bug.cgi?id=38697))
 * Allow to set pixel format for desktop window
 * Implement mscoree._CorValidateImage for mono runtime ([Wine Bug #38662](https://bugs.winehq.org/show_bug.cgi?id=38662))
 * Implement proper handling of CLI .NET images in Wine library loader ([Wine Bug #38661](https://bugs.winehq.org/show_bug.cgi?id=38661))
+* Initialize System\CurrentControlSet\Control\TimeZoneInformation registry keys
 * Multiple applications needs better NtQueryInformationJobObject stub
+* Return proper status codes when NtReadFile/NtWriteFile is called on closed (but not disconnected) pipe
 * Set NamedPipeState to FILE_PIPE_CLOSING_STATE on broken pipe in NtQueryInformationFile
 * Support for AT_ROUND_TO_PAGE flag in NtMapViewOfSection
 * Support for NtSetInformationFile class FileLinkInformation

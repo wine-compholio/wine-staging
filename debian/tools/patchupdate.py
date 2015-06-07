@@ -69,6 +69,7 @@ class PatchUpdaterError(RuntimeError):
 class PatchSet(object):
     def __init__(self, name, directory):
         self.name           = name
+        self.is_category    = False
         self.variable       = None
         self.directory      = directory
         self.fixes          = []
@@ -340,6 +341,7 @@ def read_patchset(revision = None):
     # Add virtual targets for all the categories
     for category, indices in categories.iteritems():
         patch = PatchSet(category, directory)
+        patch.is_category = True
         patch.depends = indices
 
         i = next(unique_id)
@@ -622,11 +624,23 @@ def generate_script(all_patches):
     lines.append("patch_enable_all ()\n")
     lines.append("{\n")
     for i, patch in sorted([(i, all_patches[i]) for i in resolved], key=lambda x:x[1].name):
+        if patch.is_category: continue
         patch.variable = "enable_%s" % patch.name.replace("-","_").replace(".","_")
         lines.append("\t%s=\"$1\"\n" % patch.variable)
     lines.append("}\n")
     lines.append("\n")
-    lines.append("# Enable or disable a specific patchset\n")
+
+    lines.append("# Enable or disable all categories\n")
+    lines.append("category_enable_all ()\n")
+    lines.append("{\n")
+    for i, patch in sorted([(i, all_patches[i]) for i in resolved], key=lambda x:x[1].name):
+        if not patch.is_category: continue
+        patch.variable = "enable_%s" % patch.name.replace("-","_").replace(".","_")
+        lines.append("\t%s=\"$1\"\n" % patch.variable)
+    lines.append("}\n")
+    lines.append("\n")
+
+    lines.append("# Enable or disable a specific patchset/category\n")
     lines.append("patch_enable ()\n")
     lines.append("{\n")
     lines.append("\tcase \"$1\" in\n")

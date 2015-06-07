@@ -83,7 +83,6 @@ patch_enable_all ()
 	enable_advapi32_LsaLookupSids="$1"
 	enable_browseui_ACLShell_IEnumString="$1"
 	enable_browseui_Progress_Dialog="$1"
-	enable_category_stable="$1"
 	enable_combase_String="$1"
 	enable_comctl32_LoadIconMetric="$1"
 	enable_configure_Absolute_RPATH="$1"
@@ -297,7 +296,13 @@ patch_enable_all ()
 	enable_wtsapi32_EnumerateProcesses="$1"
 }
 
-# Enable or disable a specific patchset
+# Enable or disable all categories
+category_enable_all ()
+{
+	enable_category_stable="$1"
+}
+
+# Enable or disable a specific patchset/category
 patch_enable ()
 {
 	case "$1" in
@@ -970,6 +975,7 @@ patch_enable ()
 
 # Default settings
 patch_enable_all 0
+category_enable_all 0
 enable_patchlist=1
 enable_autoconf=1
 patchlist="/dev/null"

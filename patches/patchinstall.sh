@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit b2aa984743cb568f8e6a634a1536bf65950167db"
+	echo "  commit 0922865b377913a27cea568ac688787a8117d8a7"
 	echo ""
 }
 
@@ -81,7 +81,6 @@ patch_enable_all ()
 	enable_Pipelight="$1"
 	enable_Staging="$1"
 	enable_advapi32_LsaLookupSids="$1"
-	enable_browseui_ACLShell_IEnumString="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_combase_String="$1"
 	enable_comctl32_LoadIconMetric="$1"
@@ -196,7 +195,6 @@ patch_enable_all ()
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
-	enable_quartz_Advice_Timers="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_regedit_Reg_Parser="$1"
 	enable_riched20_IText_Interface="$1"
@@ -271,7 +269,6 @@ patch_enable_all ()
 	enable_wined3d_UnhandledBlendFactor="$1"
 	enable_wined3d_resource_check_usage="$1"
 	enable_wined3d_wined3d_swapchain_present="$1"
-	enable_winedbg_SystemInfo="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
 	enable_winepulse_PulseAudio_Support="$1"
@@ -324,9 +321,6 @@ patch_enable ()
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
-			;;
-		browseui-ACLShell_IEnumString)
-			enable_browseui_ACLShell_IEnumString="$2"
 			;;
 		browseui-Progress_Dialog)
 			enable_browseui_Progress_Dialog="$2"
@@ -673,9 +667,6 @@ patch_enable ()
 		opengl32-Revert_Disable_Ext)
 			enable_opengl32_Revert_Disable_Ext="$2"
 			;;
-		quartz-Advice_Timers)
-			enable_quartz_Advice_Timers="$2"
-			;;
 		quartz-MediaSeeking_Positions)
 			enable_quartz_MediaSeeking_Positions="$2"
 			;;
@@ -897,9 +888,6 @@ patch_enable ()
 			;;
 		wined3d-wined3d_swapchain_present)
 			enable_wined3d_wined3d_swapchain_present="$2"
-			;;
-		winedbg-SystemInfo)
-			enable_winedbg_SystemInfo="$2"
 			;;
 		winedevice-Fix_Relocation)
 			enable_winedevice_Fix_Relocation="$2"
@@ -2082,6 +2070,23 @@ if test "$enable_Staging" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2098,23 +2103,6 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2139,21 +2127,6 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 		echo '+    { "Qian Hong", "advapi32/tests: Test prefix and use of TokenPrimaryGroup Sid.", 1 },';
 		echo '+    { "Qian Hong", "server: Create primary group using DOMAIN_GROUP_RID_USERS.", 1 },';
 		echo '+    { "Qian Hong", "advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset browseui-ACLShell_IEnumString
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#18019] Add IEnumString stub interface for ACLShellSource
-# |
-# | Modified files:
-# |   *	dlls/browseui/aclsource.c
-# |
-if test "$enable_browseui_ACLShell_IEnumString" -eq 1; then
-	patch_apply browseui-ACLShell_IEnumString/0001-browseui-Add-IEnumString-stub-interface-for-ACLShell.patch
-	(
-		echo '+    { "Michael Müller", "browseui: Add IEnumString stub interface for ACLShellSource.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3518,15 +3491,11 @@ fi
 # Patchset ntdll-AT_ROUND_TO_PAGE
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/virtual.c, include/winnt.h
+# |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/virtual.c
 # |
 if test "$enable_ntdll_AT_ROUND_TO_PAGE" -eq 1; then
-	patch_apply ntdll-AT_ROUND_TO_PAGE/0001-kernel32-tests-Add-tests-for-virtual-memory-align-be.patch
-	patch_apply ntdll-AT_ROUND_TO_PAGE/0002-ntdll-Fix-status-code-when-NtMapViewOfSection-parame.patch
-	patch_apply ntdll-AT_ROUND_TO_PAGE/0003-ntdll-Add-support-for-AT_ROUND_TO_PAGE-flag-in-NtMap.patch
+	patch_apply ntdll-AT_ROUND_TO_PAGE/0001-ntdll-Add-support-for-AT_ROUND_TO_PAGE-flag-in-NtMap.patch
 	(
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for virtual memory align behaviour.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Fix status code when NtMapViewOfSection parameter check fails.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Add support for AT_ROUND_TO_PAGE flag in NtMapViewOfSection.", 1 },';
 	) >> "$patchlist"
 fi
@@ -4202,18 +4171,6 @@ if test "$enable_opengl32_Revert_Disable_Ext" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset quartz-Advice_Timers
-# |
-# | Modified files:
-# |   *	dlls/quartz/systemclock.c
-# |
-if test "$enable_quartz_Advice_Timers" -eq 1; then
-	patch_apply quartz-Advice_Timers/0001-quartz-Fix-handling-of-periodic-advice-timers.patch
-	(
-		echo '+    { "Sebastian Lackner", "quartz: Fix handling of periodic advice timers.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset quartz-MediaSeeking_Positions
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4265,7 +4222,6 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 	patch_apply riched20-IText_Interface/0008-riched20-Implement-ITextRange-GetStoryLength.patch
 	patch_apply riched20-IText_Interface/0009-riched20-Implement-ITextSelection-GetStoryLength.patch
 	patch_apply riched20-IText_Interface/0010-riched20-Silence-repeated-FIXMEs-triggered-by-Adobe-.patch
-	patch_apply riched20-IText_Interface/0011-riched20-Implement-ITextSelection_fnGetDuplicate.patch
 	(
 		echo '+    { "Jactry Zeng", "riched20: Implement IText{Selection, Range}::Set{Start, End}.", 1 },';
 		echo '+    { "Jactry Zeng", "riched20: Stub for ITextFont interface and implement ITextRange::GetFont and ITextSelection::GetFont.", 1 },';
@@ -4277,7 +4233,6 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 		echo '+    { "Jactry Zeng", "riched20: Implement ITextRange::GetStoryLength.", 1 },';
 		echo '+    { "Jactry Zeng", "riched20: Implement ITextSelection::GetStoryLength.", 1 },';
 		echo '+    { "Sebastian Lackner", "riched20: Silence repeated FIXMEs triggered by Adobe Reader.", 1 },';
-		echo '+    { "Sebastian Lackner", "riched20: Implement ITextSelection_fnGetDuplicate.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5195,40 +5150,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Revert_PixelFormat
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35655] Fix wined3d performance drop introduced by pixelformat changes.
-# |   *	[#35718] Fix flickering introduced by pixelformat changes.
-# |   *	[#35950] Fix black screen on startup introduced by pixelformat changes.
-# |   *	[#35975] Fix gray screen on startup introduced by pixelformat changes.
-# |   *	[#36900] Fix missing video introduced by pixelformat changes.
-# |
-# | Modified files:
-# |   *	dlls/d3d8/tests/device.c, dlls/d3d9/tests/device.c, dlls/ddraw/tests/ddraw1.c, dlls/ddraw/tests/ddraw2.c,
-# | 	dlls/ddraw/tests/ddraw4.c, dlls/ddraw/tests/ddraw7.c, dlls/wined3d/context.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
-	patch_apply wined3d-Revert_PixelFormat/0001-Revert-wined3d-Track-if-a-context-s-private-hdc-has-.patch
-	patch_apply wined3d-Revert_PixelFormat/0002-Revert-wined3d-Track-if-a-context-s-hdc-is-private-s.patch
-	patch_apply wined3d-Revert_PixelFormat/0003-Revert-wined3d-When-restoring-pixel-format-in-contex.patch
-	patch_apply wined3d-Revert_PixelFormat/0004-Revert-wined3d-Don-t-call-GetPixelFormat-to-set-a-fl.patch
-	patch_apply wined3d-Revert_PixelFormat/0005-Revert-wined3d-Restore-the-pixel-format-of-the-windo.patch
-	patch_apply wined3d-Revert_PixelFormat/0006-d3d8-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
-	patch_apply wined3d-Revert_PixelFormat/0007-d3d9-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
-	patch_apply wined3d-Revert_PixelFormat/0008-ddraw-Mark-tests-which-no-longer-pass-due-to-reverts.patch
-	(
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s private hdc has had its pixel format set, so we don'\''t need to check it.\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s hdc is private so we never need to restore its pixel format.\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: When restoring pixel format in context_release(), mark the context as needing to be set on the next context_acquire().\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Don'\''t call GetPixelFormat() to set a flag that'\''s already set.\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Restore the pixel format of the window whose pixel format was actually changed.\".", 1 },';
-		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-UnhandledBlendFactor
 # |
 # | Modified files:
@@ -5277,6 +5198,40 @@ if test "$enable_wined3d_Multisampling" -eq 1; then
 	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
 	(
 		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Revert_PixelFormat
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35655] Fix wined3d performance drop introduced by pixelformat changes.
+# |   *	[#35718] Fix flickering introduced by pixelformat changes.
+# |   *	[#35950] Fix black screen on startup introduced by pixelformat changes.
+# |   *	[#35975] Fix gray screen on startup introduced by pixelformat changes.
+# |   *	[#36900] Fix missing video introduced by pixelformat changes.
+# |
+# | Modified files:
+# |   *	dlls/d3d8/tests/device.c, dlls/d3d9/tests/device.c, dlls/ddraw/tests/ddraw1.c, dlls/ddraw/tests/ddraw2.c,
+# | 	dlls/ddraw/tests/ddraw4.c, dlls/ddraw/tests/ddraw7.c, dlls/wined3d/context.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
+	patch_apply wined3d-Revert_PixelFormat/0001-Revert-wined3d-Track-if-a-context-s-private-hdc-has-.patch
+	patch_apply wined3d-Revert_PixelFormat/0002-Revert-wined3d-Track-if-a-context-s-hdc-is-private-s.patch
+	patch_apply wined3d-Revert_PixelFormat/0003-Revert-wined3d-When-restoring-pixel-format-in-contex.patch
+	patch_apply wined3d-Revert_PixelFormat/0004-Revert-wined3d-Don-t-call-GetPixelFormat-to-set-a-fl.patch
+	patch_apply wined3d-Revert_PixelFormat/0005-Revert-wined3d-Restore-the-pixel-format-of-the-windo.patch
+	patch_apply wined3d-Revert_PixelFormat/0006-d3d8-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
+	patch_apply wined3d-Revert_PixelFormat/0007-d3d9-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
+	patch_apply wined3d-Revert_PixelFormat/0008-ddraw-Mark-tests-which-no-longer-pass-due-to-reverts.patch
+	(
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s private hdc has had its pixel format set, so we don'\''t need to check it.\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s hdc is private so we never need to restore its pixel format.\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: When restoring pixel format in context_release(), mark the context as needing to be set on the next context_acquire().\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Don'\''t call GetPixelFormat() to set a flag that'\''s already set.\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Restore the pixel format of the window whose pixel format was actually changed.\".", 1 },';
+		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5645,18 +5600,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Matteo Bruni", "wined3d: Avoid calling wined3d_surface_blt() from surface_upload_from_surface().", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Enable CSMT by default, print a winediag message informing about this patchset.", 1 },';
 		echo '+    { "Wine Staging Team", "Autogenerated #ifdef patch for wined3d-CSMT_Main.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winedbg-SystemInfo
-# |
-# | Modified files:
-# |   *	programs/winedbg/tgt_active.c
-# |
-if test "$enable_winedbg_SystemInfo" -eq 1; then
-	patch_apply winedbg-SystemInfo/0001-winedbg-Also-output-system-information-to-the-termin.patch
-	(
-		echo '+    { "Sebastian Lackner", "winedbg: Also output system information to the terminal, not only to dialog.", 1 },';
 	) >> "$patchlist"
 fi
 

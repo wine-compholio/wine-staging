@@ -3018,9 +3018,11 @@ fi
 # |   *	dlls/kernel32/file.c, include/winbase.h
 # |
 if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-kernel32-Implement-SetFileInformationByHandle.patch
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Fix-definition-of-FILE_DISPOSITION_INFO.patch
+	patch_apply kernel32-SetFileInformationByHandle/0002-include-Declare-a-couple-more-file-information-class.patch
+	patch_apply kernel32-SetFileInformationByHandle/0003-kernel32-Implement-SetFileInformationByHandle.patch
 	(
+		echo '+    { "Sebastian Lackner", "include: Fix definition of FILE_DISPOSITION_INFO.", 1 },';
 		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
 		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"

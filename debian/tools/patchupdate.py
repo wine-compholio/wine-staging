@@ -738,11 +738,20 @@ def generate_markdown(all_patches, stable_patches):
     # Compare with fixes for latest stable version
     for _, patch in stable_patches.iteritems():
         for bugid, bugname in patch.fixes:
-            key = bugid if bugid is not None else bugname
-            if all_fixes.has_key(key):
-                all_fixes[key][0] = 0
+            if bugid is not None and all_fixes.has_key(bugid):
+                all_fixes[bugid][0] = 0
+            elif all_fixes.has_key(bugname):
+                all_fixes[bugname][0] = 0
+            elif bugid is None:
+                for k, v in all_fixes.iteritems():
+                    if v[2] != bugname: continue
+                    if v[1] is None: continue
+                    all_fixes[v[1]][0] = 0
+                    break
+                else:
+                    all_fixes[bugname] = [-1, None, bugname]
             else:
-                all_fixes[key] = [-1, bugid, bugname]
+                all_fixes[bugid] = [-1, bugid, bugname]
 
     # Generate lists for all new and old fixes
     new_fixes = [(mode, bugid, bugname) for dummy, (mode, bugid, bugname) in

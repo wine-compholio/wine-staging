@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [18]:**
+**Bug fixes and features included in the next upcoming release [16]:**
 
 * Add implementation for kernel32.GetNumaProcessorNode ([Wine Bug #38660](https://bugs.winehq.org/show_bug.cgi?id=38660))
 * Add semi-stub for FileFsVolumeInformation information class ([Wine Bug #21466](https://bugs.winehq.org/show_bug.cgi?id=21466))
@@ -48,8 +48,6 @@ Included bug fixes and improvements
 * Fix endless loop in regedit when importing files with very long lines
 * Fix link notification conditions for riched20 ([Wine Bug #35949](https://bugs.winehq.org/show_bug.cgi?id=35949))
 * Implement default homepage button in inetcpl.cpl
-* Implement mscoree._CorValidateImage for mono runtime ([Wine Bug #38662](https://bugs.winehq.org/show_bug.cgi?id=38662))
-* Implement proper handling of CLI .NET images in Wine library loader ([Wine Bug #38661](https://bugs.winehq.org/show_bug.cgi?id=38661))
 * Improve stub for NtQueryEaFile
 * Initialize System\CurrentControlSet\Control\TimeZoneInformation registry keys
 * Multiple applications needs better NtQueryInformationJobObject stub
@@ -202,10 +200,10 @@ for more details.*
 * Implement empty enumerator for IWiaDevMgr::EnumDeviceInfo ([Wine Bug #27775](https://bugs.winehq.org/show_bug.cgi?id=27775))
 * Implement exclusive mode in PulseAudio backend ([Wine Bug #37042](https://bugs.winehq.org/show_bug.cgi?id=37042))
 * Implement locking and synchronization of key states ([Wine Bug #31899](https://bugs.winehq.org/show_bug.cgi?id=31899))
-* ~~Implement mscoree._CorValidateImage for mono runtime~~
+* Implement mscoree._CorValidateImage for mono runtime ([Wine Bug #38662](https://bugs.winehq.org/show_bug.cgi?id=38662))
 * Implement ntoskrnl driver testing framework.
 * Implement ntoskrnl.KeInitializeMutex
-* ~~Implement proper handling of CLI .NET images in Wine library loader~~
+* Implement proper handling of CLI .NET images in Wine library loader ([Wine Bug #38661](https://bugs.winehq.org/show_bug.cgi?id=38661))
 * Implement stub for ntoskrnl.IoGetAttachedDeviceReference
 * Implement stub for ntoskrnl.KeDelayExecutionThread.
 * Implement stubs for ntoskrnl.Ex{Acquire,Release}FastMutexUnsafe

@@ -1,15 +1,15 @@
-From 431cbd6d947169761c8768b23f0c804be67229f3 Mon Sep 17 00:00:00 2001
+From 662f5dfa5e3f4de2106b5abbe47b069fa580b94a Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
-Date: Mon, 2 Dec 2013 12:18:58 +0900
+Date: Thu, 11 Jun 2015 15:32:36 +0200
 Subject: gdiplus: Implement GdipCreateRegionRgnData. Take 3.
 
 ---
- dlls/gdiplus/region.c       | 258 ++++++++++++++++++++++++++++++++++++++++----
- dlls/gdiplus/tests/region.c |  65 +++++++++++
- 2 files changed, 304 insertions(+), 19 deletions(-)
+ dlls/gdiplus/region.c       | 249 ++++++++++++++++++++++++++++++++++++--------
+ dlls/gdiplus/tests/region.c |  65 ++++++++++++
+ 2 files changed, 273 insertions(+), 41 deletions(-)
 
 diff --git a/dlls/gdiplus/region.c b/dlls/gdiplus/region.c
-index 4ba86eb..450105f 100644
+index 572df62..a3b526e 100644
 --- a/dlls/gdiplus/region.c
 +++ b/dlls/gdiplus/region.c
 @@ -1,5 +1,6 @@
@@ -48,17 +48,57 @@ index 4ba86eb..450105f 100644
  /* Header size as far as header->size is concerned. This doesn't include
   * header->size or header->checksum
   */
-@@ -522,12 +545,221 @@ GpStatus WINGDIPAPI GdipCreateRegionRectI(GDIPCONST GpRect *rect,
-     return GdipCreateRegionRect(&rectf, region);
+@@ -729,15 +752,9 @@ static void write_element(const region_element* element, DWORD *buffer,
+         {
+             INT i;
+             const GpPath* path = element->elementdata.path;
+-            struct _pathheader
+-            {
+-                DWORD size;
+-                DWORD magic;
+-                DWORD count;
+-                DWORD flags;
+-            } *pathheader;
++            struct path_header *pathheader;
+ 
+-            pathheader = (struct _pathheader *)(buffer + *filled);
++            pathheader = (struct path_header *)(buffer + *filled);
+ 
+             pathheader->flags = is_integer_path(path) ? FLAGS_INTPATH : FLAGS_NOFLAGS;
+             /* 3 for headers, once again size doesn't count itself */
+@@ -778,14 +795,6 @@ static void write_element(const region_element* element, DWORD *buffer,
+     }
  }
  
+-struct region_header
+-{
+-    DWORD size;
+-    DWORD checksum;
+-    DWORD magic;
+-    DWORD num_children;
+-};
+-
+ /*****************************************************************************
+  * GdipGetRegionData [GDIPLUS.@]
+  *
+@@ -856,36 +865,190 @@ GpStatus WINGDIPAPI GdipGetRegionData(GpRegion *region, BYTE *buffer, UINT size,
+     return Ok;
+ }
+ 
+-static inline GpStatus read_dword(DWORD **buffer, INT *size, DWORD *ret)
 +static inline void init_memory_buffer(struct memory_buffer *mbuf, const BYTE *buffer, INT size)
-+{
+ {
+-    if (*size < sizeof(DWORD))
+-        return GenericError;
 +    mbuf->buffer = buffer;
 +    mbuf->size = size;
 +    mbuf->pos = 0;
 +}
-+
+ 
+-    *ret = **buffer;
+-    (*buffer)++;
+-    (*size) -= sizeof(DWORD);
+-    return Ok;
 +static inline const void *buffer_read(struct memory_buffer *mbuf, INT size)
 +{
 +    if (mbuf->size - mbuf->pos >= size)
@@ -68,13 +108,16 @@ index 4ba86eb..450105f 100644
 +        return data;
 +    }
 +    return NULL;
-+}
-+
+ }
+ 
+-static GpStatus read_element(GpRegion *region, region_element *element, DWORD **buffer, INT *size)
 +static GpStatus read_element(struct memory_buffer *mbuf, GpRegion *region, region_element *node, INT *count)
-+{
-+    GpStatus status;
+ {
+     GpStatus status;
 +    const DWORD *type;
-+
+ 
+-    status = read_dword(buffer, size, &element->type);
+-    if (status != Ok)
 +    type = buffer_read(mbuf, sizeof(DWORD));
 +    if (!type) return Ok;
 +
@@ -117,11 +160,13 @@ index 4ba86eb..450105f 100644
 +
 +        GdipFree(left);
 +        GdipFree(right);
-+        return status;
+         return status;
 +    }
-+
+ 
+-    switch (element->type)
 +    case RegionDataRect:
-+    {
+     {
+-    case RegionDataInfiniteRect:
 +        const GpRectF *rc;
 +
 +        rc = buffer_read(mbuf, sizeof(GpRectF));
@@ -225,98 +270,68 @@ index 4ba86eb..450105f 100644
 +        return Ok;
 +    }
 +
-+    case RegionDataEmptyRect:
+     case RegionDataEmptyRect:
+-        break;
 +    case RegionDataInfiniteRect:
 +        *count += 1;
 +        return Ok;
 +
-+    default:
+     default:
+-        FIXME("region element type 0x%08x not supported\n", element->type);
+-        return NotImplemented;
 +        FIXME("element type %#x is not supported\n", *type);
 +        break;
-+    }
-+
+     }
+ 
+-    return Ok;
 +    return InvalidParameter;
-+}
-+
+ }
+ 
+ /*****************************************************************************
+@@ -893,28 +1056,32 @@ static GpStatus read_element(GpRegion *region, region_element *element, DWORD **
+  */
  GpStatus WINGDIPAPI GdipCreateRegionRgnData(GDIPCONST BYTE *data, INT size, GpRegion **region)
  {
--    FIXME("(%p, %d, %p): stub\n", data, size, region);
-+    GpStatus status;
-+    struct memory_buffer mbuf;
+-    struct region_header *region_header;
+-    DWORD *buffer = (DWORD*)data;
 +    const struct region_header *region_header;
++    struct memory_buffer mbuf;
+     GpStatus status;
 +    INT count;
  
--    *region = NULL;
--    return NotImplemented;
-+    if (!data || !size) return InvalidParameter;
-+
-+    TRACE("%p, %d, %p\n", data, size, region);
-+
+     TRACE("(%p, %d, %p)\n", data, size, region);
+ 
+-    if (!data || size < sizeof(*region_header) || !region)
++    if (!data || !size)
+         return InvalidParameter;
+ 
+-    region_header = (struct region_header *)buffer;
+-    if (region_header->magic != VERSION_MAGIC && region_header->magic != VERSION_MAGIC2)
 +    init_memory_buffer(&mbuf, data, size);
 +
 +    region_header = buffer_read(&mbuf, sizeof(struct region_header));
-+    if (!region_header || region_header->magic != VERSION_MAGIC)
-+        return InvalidParameter;
-+
-+    status = GdipCreateRegion(region);
-+    if (status != Ok) return status;
-+
++    if (!region_header || (region_header->magic != VERSION_MAGIC &&
++                           region_header->magic != VERSION_MAGIC2))
+         return InvalidParameter;
+ 
+     status = GdipCreateRegion(region);
+     if (status != Ok)
+         return status;
+ 
+-    /* skip header */
+-    buffer += 4;
+-    size -= sizeof(*region_header);
 +    count = 0;
 +    status = read_element(&mbuf, *region, &(*region)->node, &count);
 +    if (status == Ok && !count)
 +        status = InvalidParameter;
-+
-+    if (status != Ok)
-+        GdipDeleteRegion(*region);
-+
-+    return status;
- }
  
- 
-@@ -738,15 +970,9 @@ static void write_element(const region_element* element, DWORD *buffer,
-         {
-             INT i;
-             const GpPath* path = element->elementdata.path;
--            struct _pathheader
--            {
--                DWORD size;
--                DWORD magic;
--                DWORD count;
--                DWORD flags;
--            } *pathheader;
-+            struct path_header *pathheader;
- 
--            pathheader = (struct _pathheader *)(buffer + *filled);
-+            pathheader = (struct path_header *)(buffer + *filled);
- 
-             pathheader->flags = is_integer_path(path) ? FLAGS_INTPATH : FLAGS_NOFLAGS;
-             /* 3 for headers, once again size doesn't count itself */
-@@ -823,13 +1049,7 @@ static void write_element(const region_element* element, DWORD *buffer,
- GpStatus WINGDIPAPI GdipGetRegionData(GpRegion *region, BYTE *buffer, UINT size,
-         UINT *needed)
- {
--    struct _region_header
--    {
--        DWORD size;
--        DWORD checksum;
--        DWORD magic;
--        DWORD num_children;
--    } *region_header;
-+    struct region_header *region_header;
-     INT filled = 0;
-     UINT required;
-     GpStatus status;
-@@ -847,7 +1067,7 @@ GpStatus WINGDIPAPI GdipGetRegionData(GpRegion *region, BYTE *buffer, UINT size,
-         return InsufficientBuffer;
-     }
- 
--    region_header = (struct _region_header *)buffer;
-+    region_header = (struct region_header *)buffer;
-     region_header->size = sizeheader_size + get_element_size(&region->node);
-     region_header->checksum = 0;
-     region_header->magic = VERSION_MAGIC;
+-    status = read_element(*region, &(*region)->node, &buffer, &size);
+     if (status != Ok)
+     {
+         GdipDeleteRegion(*region);
 diff --git a/dlls/gdiplus/tests/region.c b/dlls/gdiplus/tests/region.c
-index 5632e4d..a718a5c 100644
+index 92569c7..0c70ccd 100644
 --- a/dlls/gdiplus/tests/region.c
 +++ b/dlls/gdiplus/tests/region.c
 @@ -102,6 +102,56 @@ static void verify_region(HRGN hrgn, const RECT *rc)
@@ -497,5 +512,5 @@ index 5632e4d..a718a5c 100644
      status = GdipDeletePath(path);
      expect(Ok, status);
 -- 
-2.1.2
+2.4.2
 

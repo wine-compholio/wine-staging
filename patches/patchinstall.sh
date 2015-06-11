@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 42cbc05e59d32228f4edd171ca66e4cbe5645d1d"
+	echo "  commit 714abcb7cdd8cab7d9383bded5b5426e55d98791"
 	echo ""
 }
 
@@ -256,7 +256,6 @@ patch_enable_all ()
 	enable_wineboot_HKEY_DYN_DATA="$1"
 	enable_wineboot_MachineGuid="$1"
 	enable_wineboot_drivers_etc_Stubs="$1"
-	enable_winebuild_LinkerVersion="$1"
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
 	enable_winecfg_Unmounted_Devices="$1"
@@ -266,7 +265,6 @@ patch_enable_all ()
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Multisampling="$1"
-	enable_wined3d_Revert_DepthStencil_Location="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_UnhandledBlendFactor="$1"
 	enable_wined3d_resource_check_usage="$1"
@@ -852,9 +850,6 @@ patch_enable ()
 		wineboot-drivers_etc_Stubs)
 			enable_wineboot_drivers_etc_Stubs="$2"
 			;;
-		winebuild-LinkerVersion)
-			enable_winebuild_LinkerVersion="$2"
-			;;
 		winecfg-Libraries)
 			enable_winecfg_Libraries="$2"
 			;;
@@ -881,9 +876,6 @@ patch_enable ()
 			;;
 		wined3d-Multisampling)
 			enable_wined3d_Multisampling="$2"
-			;;
-		wined3d-Revert_DepthStencil_Location)
-			enable_wined3d_Revert_DepthStencil_Location="$2"
 			;;
 		wined3d-Revert_PixelFormat)
 			enable_wined3d_Revert_PixelFormat="$2"
@@ -1521,9 +1513,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_wineboot_HKEY_DYN_DATA" -gt 1; then
 		abort "Patchset wineboot-HKEY_DYN_DATA disabled, but category-stable depends on that."
 	fi
-	if test "$enable_winebuild_LinkerVersion" -gt 1; then
-		abort "Patchset winebuild-LinkerVersion disabled, but category-stable depends on that."
-	fi
 	if test "$enable_winecfg_Libraries" -gt 1; then
 		abort "Patchset winecfg-Libraries disabled, but category-stable depends on that."
 	fi
@@ -1643,7 +1632,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_wine_inf_Performance=1
 	enable_wine_inf_ProfileList_UserSID=1
 	enable_wineboot_HKEY_DYN_DATA=1
-	enable_winebuild_LinkerVersion=1
 	enable_winecfg_Libraries=1
 	enable_wined3d_Multisampling=1
 	enable_wined3d_Revert_PixelFormat=1
@@ -1680,13 +1668,9 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_wined3d_DXTn" -gt 1; then
 		abort "Patchset wined3d-DXTn disabled, but wined3d-CSMT_Helper depends on that."
 	fi
-	if test "$enable_wined3d_Revert_DepthStencil_Location" -gt 1; then
-		abort "Patchset wined3d-Revert_DepthStencil_Location disabled, but wined3d-CSMT_Helper depends on that."
-	fi
 	enable_makedep_PARENTSPEC=1
 	enable_ntdll_DllRedirects=1
 	enable_wined3d_DXTn=1
-	enable_wined3d_Revert_DepthStencil_Location=1
 fi
 
 if test "$enable_shell32_SHFileOperation" -eq 1; then
@@ -5083,21 +5067,6 @@ if test "$enable_wineboot_drivers_etc_Stubs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset winebuild-LinkerVersion
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#28768] Games For Windows Live 1.x expects a valid linker version in the PE header
-# |
-# | Modified files:
-# |   *	tools/winebuild/spec32.c
-# |
-if test "$enable_winebuild_LinkerVersion" -eq 1; then
-	patch_apply winebuild-LinkerVersion/0001-winebuild-Set-a-valid-major-and-minor-linker-version.patch
-	(
-		echo '+    { "Michael Müller", "winebuild: Set a valid major and minor linker version.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset winecfg-Libraries
 # |
 # | Modified files:
@@ -5156,21 +5125,6 @@ if test "$enable_wined3d_Accounting" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Revert_DepthStencil_Location
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38654] Revert patch which causes broken rendering in various games
-# |
-# | Modified files:
-# |   *	dlls/wined3d/context.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Revert_DepthStencil_Location" -eq 1; then
-	patch_apply wined3d-Revert_DepthStencil_Location/0001-Revert-wined3d-Allow-specifying-a-different-depth-st.patch
-	(
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Allow specifying a different depth stencil location.\".", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-CSMT_Helper
 # |
 # | Modified files:
@@ -5187,37 +5141,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Revert_PixelFormat
+# Patchset wined3d-Multisampling
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#35655] Fix wined3d performance drop introduced by pixelformat changes.
-# |   *	[#35718] Fix flickering introduced by pixelformat changes.
-# |   *	[#35950] Fix black screen on startup introduced by pixelformat changes.
-# |   *	[#35975] Fix gray screen on startup introduced by pixelformat changes.
-# |   *	[#36900] Fix missing video introduced by pixelformat changes.
+# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
 # |
 # | Modified files:
-# |   *	dlls/d3d8/tests/device.c, dlls/d3d9/tests/device.c, dlls/ddraw/tests/ddraw1.c, dlls/ddraw/tests/ddraw2.c,
-# | 	dlls/ddraw/tests/ddraw4.c, dlls/ddraw/tests/ddraw7.c, dlls/wined3d/context.c, dlls/wined3d/wined3d_private.h
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
 # |
-if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
-	patch_apply wined3d-Revert_PixelFormat/0001-Revert-wined3d-Track-if-a-context-s-private-hdc-has-.patch
-	patch_apply wined3d-Revert_PixelFormat/0002-Revert-wined3d-Track-if-a-context-s-hdc-is-private-s.patch
-	patch_apply wined3d-Revert_PixelFormat/0003-Revert-wined3d-When-restoring-pixel-format-in-contex.patch
-	patch_apply wined3d-Revert_PixelFormat/0004-Revert-wined3d-Don-t-call-GetPixelFormat-to-set-a-fl.patch
-	patch_apply wined3d-Revert_PixelFormat/0005-Revert-wined3d-Restore-the-pixel-format-of-the-windo.patch
-	patch_apply wined3d-Revert_PixelFormat/0006-d3d8-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
-	patch_apply wined3d-Revert_PixelFormat/0007-d3d9-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
-	patch_apply wined3d-Revert_PixelFormat/0008-ddraw-Mark-tests-which-no-longer-pass-due-to-reverts.patch
+if test "$enable_wined3d_Multisampling" -eq 1; then
+	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
 	(
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s private hdc has had its pixel format set, so we don'\''t need to check it.\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s hdc is private so we never need to restore its pixel format.\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: When restoring pixel format in context_release(), mark the context as needing to be set on the next context_acquire().\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Don'\''t call GetPixelFormat() to set a flag that'\''s already set.\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Restore the pixel format of the window whose pixel format was actually changed.\".", 1 },';
-		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5257,18 +5192,37 @@ if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Multisampling
+# Patchset wined3d-Revert_PixelFormat
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# |   *	[#35655] Fix wined3d performance drop introduced by pixelformat changes.
+# |   *	[#35718] Fix flickering introduced by pixelformat changes.
+# |   *	[#35950] Fix black screen on startup introduced by pixelformat changes.
+# |   *	[#35975] Fix gray screen on startup introduced by pixelformat changes.
+# |   *	[#36900] Fix missing video introduced by pixelformat changes.
 # |
 # | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |   *	dlls/d3d8/tests/device.c, dlls/d3d9/tests/device.c, dlls/ddraw/tests/ddraw1.c, dlls/ddraw/tests/ddraw2.c,
+# | 	dlls/ddraw/tests/ddraw4.c, dlls/ddraw/tests/ddraw7.c, dlls/wined3d/context.c, dlls/wined3d/wined3d_private.h
 # |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
+	patch_apply wined3d-Revert_PixelFormat/0001-Revert-wined3d-Track-if-a-context-s-private-hdc-has-.patch
+	patch_apply wined3d-Revert_PixelFormat/0002-Revert-wined3d-Track-if-a-context-s-hdc-is-private-s.patch
+	patch_apply wined3d-Revert_PixelFormat/0003-Revert-wined3d-When-restoring-pixel-format-in-contex.patch
+	patch_apply wined3d-Revert_PixelFormat/0004-Revert-wined3d-Don-t-call-GetPixelFormat-to-set-a-fl.patch
+	patch_apply wined3d-Revert_PixelFormat/0005-Revert-wined3d-Restore-the-pixel-format-of-the-windo.patch
+	patch_apply wined3d-Revert_PixelFormat/0006-d3d8-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
+	patch_apply wined3d-Revert_PixelFormat/0007-d3d9-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
+	patch_apply wined3d-Revert_PixelFormat/0008-ddraw-Mark-tests-which-no-longer-pass-due-to-reverts.patch
 	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s private hdc has had its pixel format set, so we don'\''t need to check it.\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s hdc is private so we never need to restore its pixel format.\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: When restoring pixel format in context_release(), mark the context as needing to be set on the next context_acquire().\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Don'\''t call GetPixelFormat() to set a flag that'\''s already set.\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Restore the pixel format of the window whose pixel format was actually changed.\".", 1 },';
+		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 	) >> "$patchlist"
 fi
 

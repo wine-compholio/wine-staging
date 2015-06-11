@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 714abcb7cdd8cab7d9383bded5b5426e55d98791"
+	echo "  commit 39797dcfb250c4b4497fa003ae67b873427daa37"
 	echo ""
 }
 
@@ -87,7 +87,6 @@ patch_enable_all ()
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
 	enable_d3d11_D3D11CreateDeviceAndSwapChain="$1"
-	enable_d3d8_Hotpatch="$1"
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Skip_Tests="$1"
 	enable_d3d9_Surface_Refcount="$1"
@@ -113,7 +112,6 @@ patch_enable_all ()
 	enable_ddraw_IDirect3DTexture2_Load="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
 	enable_dinput_Events="$1"
-	enable_dmstyle_IPersistStream_ParseReference="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dxgi_GetDesc="$1"
@@ -136,7 +134,6 @@ patch_enable_all ()
 	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_GetLogicalProcessorInformationEx="$1"
 	enable_kernel32_GetNumaProcessorNode="$1"
-	enable_kernel32_GetSystemTimes="$1"
 	enable_kernel32_GetVolumePathName="$1"
 	enable_kernel32_InsertMode="$1"
 	enable_kernel32_Named_Pipe="$1"
@@ -343,9 +340,6 @@ patch_enable ()
 		d3d11-D3D11CreateDeviceAndSwapChain)
 			enable_d3d11_D3D11CreateDeviceAndSwapChain="$2"
 			;;
-		d3d8-Hotpatch)
-			enable_d3d8_Hotpatch="$2"
-			;;
 		d3d9-DesktopWindow)
 			enable_d3d9_DesktopWindow="$2"
 			;;
@@ -421,9 +415,6 @@ patch_enable ()
 		dinput-Events)
 			enable_dinput_Events="$2"
 			;;
-		dmstyle-IPersistStream_ParseReference)
-			enable_dmstyle_IPersistStream_ParseReference="$2"
-			;;
 		dsound-EAX)
 			enable_dsound_EAX="$2"
 			;;
@@ -489,9 +480,6 @@ patch_enable ()
 			;;
 		kernel32-GetNumaProcessorNode)
 			enable_kernel32_GetNumaProcessorNode="$2"
-			;;
-		kernel32-GetSystemTimes)
-			enable_kernel32_GetSystemTimes="$2"
 			;;
 		kernel32-GetVolumePathName)
 			enable_kernel32_GetVolumePathName="$2"
@@ -1324,9 +1312,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_d3d11_D3D11CreateDeviceAndSwapChain" -gt 1; then
 		abort "Patchset d3d11-D3D11CreateDeviceAndSwapChain disabled, but category-stable depends on that."
 	fi
-	if test "$enable_d3d8_Hotpatch" -gt 1; then
-		abort "Patchset d3d8-Hotpatch disabled, but category-stable depends on that."
-	fi
 	if test "$enable_d3d9_Skip_Tests" -gt 1; then
 		abort "Patchset d3d9-Skip_Tests disabled, but category-stable depends on that."
 	fi
@@ -1569,7 +1554,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_combase_String=1
 	enable_configure_Absolute_RPATH=1
 	enable_d3d11_D3D11CreateDeviceAndSwapChain=1
-	enable_d3d8_Hotpatch=1
 	enable_d3d9_Skip_Tests=1
 	enable_d3d9_Surface_Refcount=1
 	enable_d3drm_Specfile=1
@@ -1853,13 +1837,6 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 	enable_server_File_Permissions=1
 fi
 
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	if test "$enable_kernel32_SetFileCompletionNotificationMode" -gt 1; then
-		abort "Patchset kernel32-SetFileCompletionNotificationMode disabled, but kernel32-SetFileInformationByHandle depends on that."
-	fi
-	enable_kernel32_SetFileCompletionNotificationMode=1
-fi
-
 if test "$enable_dxva2_Video_Decoder" -eq 1; then
 	if test "$enable_winecfg_Staging" -gt 1; then
 		abort "Patchset winecfg-Staging disabled, but dxva2-Video_Decoder depends on that."
@@ -2062,6 +2039,23 @@ if test "$enable_Staging" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2078,23 +2072,6 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2209,18 +2186,6 @@ if test "$enable_d3d11_D3D11CreateDeviceAndSwapChain" -eq 1; then
 	patch_apply d3d11-D3D11CreateDeviceAndSwapChain/0001-d3d11-add-a-stub-for-D3D11CreateDeviceAndSwapChain.patch
 	(
 		echo '+    { "Austin English", "d3d11: add a stub for D3D11CreateDeviceAndSwapChain.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3d8-Hotpatch
-# |
-# | Modified files:
-# |   *	dlls/d3d8/swapchain.c
-# |
-if test "$enable_d3d8_Hotpatch" -eq 1; then
-	patch_apply d3d8-Hotpatch/0001-d3d8-Make-IDirect3DSwapChain8-Present-hotpachable.patch
-	(
-		echo '+    { "Michael Müller", "d3d8: Make IDirect3DSwapChain8::Present hotpachable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2619,21 +2584,6 @@ if test "$enable_dinput_Events" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dmstyle-IPersistStream_ParseReference
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#7425] Fix crash in Gothic 1/2 with builtin directmusic caused by wrong return value
-# |
-# | Modified files:
-# |   *	dlls/dmstyle/dmutils.c
-# |
-if test "$enable_dmstyle_IPersistStream_ParseReference" -eq 1; then
-	patch_apply dmstyle-IPersistStream_ParseReference/0001-dmstyle-Return-the-correct-variable.patch
-	(
-		echo '+    { "Bruno Jesus", "dmstyle: Return the correct variable.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dsound-Fast_Mixer
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2980,35 +2930,15 @@ if test "$enable_kernel32_CompareStringEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-SetFileCompletionNotificationMode
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38493] Add stub for kernel32.SetFileCompletionNotificationModes (for Steam in Win7 mode)
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/kernel32/file.c,
-# | 	dlls/kernel32/kernel32.spec, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileCompletionNotificationMode" -eq 1; then
-	patch_apply kernel32-SetFileCompletionNotificationMode/0001-kernel32-Implement-SetFileCompletionNotificationMode.patch
-	(
-		echo '+    { "Olivier F. R. Dierick", "kernel32: Implement SetFileCompletionNotificationModes as a stub.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-SetFileInformationByHandle
 # |
 # | Modified files:
-# |   *	dlls/kernel32/file.c, include/winbase.h
+# |   *	include/winbase.h
 # |
 if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Fix-definition-of-FILE_DISPOSITION_INFO.patch
-	patch_apply kernel32-SetFileInformationByHandle/0002-include-Declare-a-couple-more-file-information-class.patch
-	patch_apply kernel32-SetFileInformationByHandle/0003-kernel32-Implement-SetFileInformationByHandle.patch
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
 	(
-		echo '+    { "Sebastian Lackner", "include: Fix definition of FILE_DISPOSITION_INFO.", 1 },';
 		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Implement SetFileInformationByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3041,8 +2971,8 @@ fi
 # |   *	[#30399] Support for NtSetInformationFile class FileRenameInformation
 # |
 # | Modified files:
-# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/winternl.h, server/fd.c, server/file.c, server/file.h,
-# | 	server/protocol.def
+# |   *	dlls/kernel32/tests/file.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/winternl.h, server/fd.c, server/file.c,
+# | 	server/file.h, server/protocol.def
 # |
 if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 	patch_apply ntdll-FileDispositionInformation/0001-server-Keep-a-pointer-to-parent-s-fd-unix_name-in-th.patch
@@ -3134,23 +3064,6 @@ if test "$enable_kernel32_GetNumaProcessorNode" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "kernel32: Implement GetNumaProcessorNode.", 1 },';
 		echo '+    { "Michael Müller", "kernel32/tests: Add tests for GetNumaProcessorNode.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-GetSystemTimes
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#19813] Support for GetSystemTimes
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/time.c, dlls/kernel32/time.c
-# |
-if test "$enable_kernel32_GetSystemTimes" -eq 1; then
-	patch_apply kernel32-GetSystemTimes/0001-kernel32-Add-tests-for-GetSystemTimes.patch
-	patch_apply kernel32-GetSystemTimes/0002-kernel32-Implement-GetSystemTimes.patch
-	(
-		echo '+    { "Louis Lenders", "kernel32: Add tests for GetSystemTimes.", 1 },';
-		echo '+    { "Erich E. Hoover", "kernel32: Implement GetSystemTimes.", 3 },';
 	) >> "$patchlist"
 fi
 
@@ -3287,6 +3200,22 @@ if test "$enable_kernel32_Profile" -eq 1; then
 	patch_apply kernel32-Profile/0001-kernel32-Allow-empty-profile-section-and-key-name-st.patch
 	(
 		echo '+    { "Claudio Fontana", "kernel32: Allow empty profile section and key name strings.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetFileCompletionNotificationMode
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38493] Add stub for kernel32.SetFileCompletionNotificationModes (for Steam in Win7 mode)
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/kernel32/file.c,
+# | 	dlls/kernel32/kernel32.spec, include/winbase.h
+# |
+if test "$enable_kernel32_SetFileCompletionNotificationMode" -eq 1; then
+	patch_apply kernel32-SetFileCompletionNotificationMode/0001-kernel32-Implement-SetFileCompletionNotificationMode.patch
+	(
+		echo '+    { "Olivier F. R. Dierick", "kernel32: Implement SetFileCompletionNotificationModes as a stub.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5141,57 +5070,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Multisampling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
-	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-resource_check_usage
-# |
-# | Modified files:
-# |   *	dlls/wined3d/resource.c
-# |
-if test "$enable_wined3d_resource_check_usage" -eq 1; then
-	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	(
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-wined3d_swapchain_present
-# |
-# | Modified files:
-# |   *	dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
-	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-Revert_PixelFormat
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5223,6 +5101,57 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-resource_check_usage
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c
+# |
+if test "$enable_wined3d_resource_check_usage" -eq 1; then
+	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	(
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-wined3d_swapchain_present
+# |
+# | Modified files:
+# |   *	dlls/wined3d/swapchain.c
+# |
+if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
+	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Multisampling
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Multisampling" -eq 1; then
+	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+	(
+		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
 	) >> "$patchlist"
 fi
 

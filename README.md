@@ -39,10 +39,11 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [19]:**
+**Bug fixes and features included in the next upcoming release [20]:**
 
 * Add implementation for kernel32.GetNumaProcessorNode ([Wine Bug #38660](https://bugs.winehq.org/show_bug.cgi?id=38660))
 * Add semi-stub for FileFsVolumeInformation information class ([Wine Bug #21466](https://bugs.winehq.org/show_bug.cgi?id=21466))
+* Add stub for winscard.SCardListReadersA/W ([Wine Bug #26978](https://bugs.winehq.org/show_bug.cgi?id=26978))
 * Allow to enable/disable InsertMode in wineconsole settings ([Wine Bug #38697](https://bugs.winehq.org/show_bug.cgi?id=38697))
 * Allow to set pixel format for desktop window
 * Ensure console InsertMode changes take effect immediately

@@ -280,6 +280,7 @@ patch_enable_all ()
 	enable_wininet_Cleanup="$1"
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
 	enable_winmm_Delay_Import_Depends="$1"
+	enable_winscard_SCardListReaders="$1"
 	enable_winsta_WinStationEnumerateW="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_APC_Performance="$1"
@@ -918,6 +919,9 @@ patch_enable ()
 			;;
 		winmm-Delay_Import_Depends)
 			enable_winmm_Delay_Import_Depends="$2"
+			;;
+		winscard-SCardListReaders)
+			enable_winscard_SCardListReaders="$2"
 			;;
 		winsta-WinStationEnumerateW)
 			enable_winsta_WinStationEnumerateW="$2"
@@ -5819,6 +5823,21 @@ if test "$enable_winmm_Delay_Import_Depends" -eq 1; then
 	patch_apply winmm-Delay_Import_Depends/0001-winmm-Delay-import-ole32-msacm32-to-workaround-bug-w.patch
 	(
 		echo '+    { "Michael Müller", "winmm: Delay import ole32 msacm32 to workaround bug when loading multiple winmm versions.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winscard-SCardListReaders
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#26978] Add stub for winscard.SCardListReadersA/W
+# |
+# | Modified files:
+# |   *	dlls/winscard/winscard.c, dlls/winscard/winscard.spec
+# |
+if test "$enable_winscard_SCardListReaders" -eq 1; then
+	patch_apply winscard-SCardListReaders/0001-winscard-add-stubs-for-SCardListReadersA-W.patch
+	(
+		echo '+    { "Austin English", "winscard: add stubs for SCardListReadersA/W.", 1 },';
 	) >> "$patchlist"
 fi
 

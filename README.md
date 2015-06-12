@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [18]:**
+**Bug fixes and features included in the next upcoming release [19]:**
 
 * Add implementation for kernel32.GetNumaProcessorNode ([Wine Bug #38660](https://bugs.winehq.org/show_bug.cgi?id=38660))
 * Add semi-stub for FileFsVolumeInformation information class ([Wine Bug #21466](https://bugs.winehq.org/show_bug.cgi?id=21466))
@@ -53,6 +53,7 @@ Included bug fixes and improvements
 * Improve stub for NtQueryEaFile
 * Initialize System\CurrentControlSet\Control\TimeZoneInformation registry keys
 * Multiple applications needs better NtQueryInformationJobObject stub
+* Only send WM_DROPFILES when OLE dnd fails ([Wine Bug #29081](https://bugs.winehq.org/show_bug.cgi?id=29081))
 * Return proper status codes when NtReadFile/NtWriteFile is called on closed (but not disconnected) pipe
 * Set NamedPipeState to FILE_PIPE_CLOSING_STATE on broken pipe in NtQueryInformationFile
 * Support for AT_ROUND_TO_PAGE flag in NtMapViewOfSection

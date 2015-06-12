@@ -270,6 +270,7 @@ patch_enable_all ()
 	enable_winepulse_PulseAudio_Support="$1"
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_Clipboard_HTML="$1"
+	enable_winex11_DragAndDrop="$1"
 	enable_winex11_Thread_Data="$1"
 	enable_winex11_Window_Groups="$1"
 	enable_winex11_Window_Style="$1"
@@ -887,6 +888,9 @@ patch_enable ()
 			;;
 		winex11-Clipboard_HTML)
 			enable_winex11_Clipboard_HTML="$2"
+			;;
+		winex11-DragAndDrop)
+			enable_winex11_DragAndDrop="$2"
 			;;
 		winex11-Thread_Data)
 			enable_winex11_Thread_Data="$2"
@@ -5649,6 +5653,21 @@ if test "$enable_winex11_Clipboard_HTML" -eq 1; then
 	patch_apply winex11-Clipboard_HTML/0001-winex11.drv-Import-X11-s-text-html-as-HTML-Format.patch
 	(
 		echo '+    { "Damjan Jovanovic", "winex11.drv: Import X11'\''s \"text/html\" as \"HTML Format\".", 3 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11-DragAndDrop
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#29081] Only send WM_DROPFILES when OLE dnd fails
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/xdnd.c
+# |
+if test "$enable_winex11_DragAndDrop" -eq 1; then
+	patch_apply winex11-DragAndDrop/0001-winex11.drv-Only-send-WM_DROPFILES-when-OLE-dnd-fail.patch
+	(
+		echo '+    { "Damjan Jovanovic", "winex11.drv: Only send WM_DROPFILES when OLE dnd fails.", 1 },';
 	) >> "$patchlist"
 fi
 

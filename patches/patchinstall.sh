@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 39797dcfb250c4b4497fa003ae67b873427daa37"
+	echo "  commit cde46665fa8503e90c9a2fab1898cdb4d22f667b"
 	echo ""
 }
 
@@ -108,7 +108,6 @@ patch_enable_all ()
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
 	enable_dbghelp_Debug_Symbols="$1"
 	enable_ddraw_EnumSurfaces="$1"
-	enable_ddraw_Hotpatch="$1"
 	enable_ddraw_IDirect3DTexture2_Load="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
 	enable_dinput_Events="$1"
@@ -402,9 +401,6 @@ patch_enable ()
 			;;
 		ddraw-EnumSurfaces)
 			enable_ddraw_EnumSurfaces="$2"
-			;;
-		ddraw-Hotpatch)
-			enable_ddraw_Hotpatch="$2"
 			;;
 		ddraw-IDirect3DTexture2_Load)
 			enable_ddraw_IDirect3DTexture2_Load="$2"
@@ -1354,9 +1350,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_ddraw_EnumSurfaces" -gt 1; then
 		abort "Patchset ddraw-EnumSurfaces disabled, but category-stable depends on that."
 	fi
-	if test "$enable_ddraw_Hotpatch" -gt 1; then
-		abort "Patchset ddraw-Hotpatch disabled, but category-stable depends on that."
-	fi
 	if test "$enable_dinput_Events" -gt 1; then
 		abort "Patchset dinput-Events disabled, but category-stable depends on that."
 	fi
@@ -1568,7 +1561,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_d3dx9_36_UpdateSkinnedMesh=1
 	enable_dbghelp_Debug_Symbols=1
 	enable_ddraw_EnumSurfaces=1
-	enable_ddraw_Hotpatch=1
 	enable_dinput_Events=1
 	enable_dxgi_GetDesc=1
 	enable_fltlib_FilterLoad=1
@@ -2524,18 +2516,6 @@ if test "$enable_ddraw_EnumSurfaces" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "ddraw: Fix arguments to IDirectDraw7::EnumSurfaces in DllMain.", 1 },';
 		echo '+    { "Michael Müller", "ddraw: Implement DDENUMSURFACES_CANBECREATED in IDirectDraw7::EnumSurfaces and fix some bugs.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ddraw-Hotpatch
-# |
-# | Modified files:
-# |   *	dlls/ddraw/surface.c
-# |
-if test "$enable_ddraw_Hotpatch" -eq 1; then
-	patch_apply ddraw-Hotpatch/0001-ddraw-Make-some-functions-hotpachable.patch
-	(
-		echo '+    { "Michael Müller", "ddraw: Make some functions hotpachable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5070,6 +5050,57 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-wined3d_swapchain_present
+# |
+# | Modified files:
+# |   *	dlls/wined3d/swapchain.c
+# |
+if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
+	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-resource_check_usage
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c
+# |
+if test "$enable_wined3d_resource_check_usage" -eq 1; then
+	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	(
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Multisampling
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Multisampling" -eq 1; then
+	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+	(
+		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-Revert_PixelFormat
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5101,57 +5132,6 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-resource_check_usage
-# |
-# | Modified files:
-# |   *	dlls/wined3d/resource.c
-# |
-if test "$enable_wined3d_resource_check_usage" -eq 1; then
-	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	(
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-wined3d_swapchain_present
-# |
-# | Modified files:
-# |   *	dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
-	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Multisampling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
-	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
 	) >> "$patchlist"
 fi
 

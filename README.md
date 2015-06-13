@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [22]:**
+**Bug fixes and features included in the next upcoming release [23]:**
 
 * Add implementation for kernel32.GetNumaProcessorNode ([Wine Bug #38660](https://bugs.winehq.org/show_bug.cgi?id=38660))
 * Add semi-stub for FileFsVolumeInformation information class ([Wine Bug #21466](https://bugs.winehq.org/show_bug.cgi?id=21466))
@@ -51,6 +51,7 @@ Included bug fixes and improvements
 * Fix endless loop in regedit when importing files with very long lines
 * Fix link notification conditions for riched20 ([Wine Bug #35949](https://bugs.winehq.org/show_bug.cgi?id=35949))
 * Forward GIF encoder requests to windowscodecs ([Wine Bug #34356](https://bugs.winehq.org/show_bug.cgi?id=34356))
+* Implement advapi32.GetWindowsAccountDomainSid ([Wine Bug #38624](https://bugs.winehq.org/show_bug.cgi?id=38624))
 * Implement default homepage button in inetcpl.cpl
 * Improve stub for NtQueryEaFile
 * Initialize System\CurrentControlSet\Control\TimeZoneInformation registry keys

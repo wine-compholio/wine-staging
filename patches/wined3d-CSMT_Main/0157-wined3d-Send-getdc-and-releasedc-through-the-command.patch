@@ -1,4 +1,4 @@
-From 40629f10af9cb4501c9f0e73c1028b9ab9613cac Mon Sep 17 00:00:00 2001
+From a46bfa2015c98651461fb18e2e37d21046d89e2b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Sun, 16 Mar 2014 14:13:42 +0100
 Subject: wined3d: Send getdc and releasedc through the command stream.
@@ -14,7 +14,7 @@ investigate atm.
  3 files changed, 110 insertions(+), 48 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 943805f..5c43122 100644
+index 90a8efb..8bd3cd9 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -91,6 +91,8 @@ enum wined3d_cs_op
@@ -104,10 +104,10 @@ index 943805f..5c43122 100644
  
  static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index 21dfd8e..02f7c66 100644
+index 9a4edd5..e1ceeb3 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
-@@ -2549,48 +2549,23 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
+@@ -2551,48 +2551,23 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
      return wined3d_resource_map(&surface->resource, map_desc, rect ? &box : NULL, flags);
  }
  
@@ -120,9 +120,9 @@ index 21dfd8e..02f7c66 100644
  
 -    TRACE("surface %p, dc %p.\n", surface, dc);
 -
--    if (!(surface->resource.format_flags & WINED3DFMT_FLAG_GETDC))
+-    if (!(surface->container->resource.format_flags & WINED3DFMT_FLAG_GETDC))
 -    {
--        WARN("Cannot use GetDC on a %s surface.\n", debug_d3dformat(surface->resource.format->id));
+-        WARN("Cannot use GetDC on a %s surface.\n", debug_d3dformat(surface->container->resource.format->id));
 -        return WINED3DERR_INVALIDCALL;
 -    }
 -
@@ -159,7 +159,7 @@ index 21dfd8e..02f7c66 100644
          }
          if (!(surface->resource.map_binding == WINED3D_LOCATION_USER_MEMORY
                  || surface->container->flags & WINED3D_TEXTURE_PIN_SYSMEM
-@@ -2603,35 +2578,40 @@ HRESULT CDECL wined3d_surface_getdc(struct wined3d_surface *surface, HDC *dc)
+@@ -2605,35 +2580,40 @@ HRESULT CDECL wined3d_surface_getdc(struct wined3d_surface *surface, HDC *dc)
  
      if (context)
          context_release(context);
@@ -184,12 +184,12 @@ index 21dfd8e..02f7c66 100644
 +    TRACE("surface %p, dc %p.\n", surface, dc);
  
 -    if (surface->hDC != dc)
-+    if (!(surface->resource.format_flags & WINED3DFMT_FLAG_GETDC))
++    if (!(surface->container->resource.format_flags & WINED3DFMT_FLAG_GETDC))
      {
 -        WARN("Application tries to release invalid DC %p, surface DC is %p.\n",
 -                dc, surface->hDC);
 -        return WINEDDERR_NODC;
-+        WARN("Cannot use GetDC on a %s surface.\n", debug_d3dformat(surface->resource.format->id));
++        WARN("Cannot use GetDC on a %s surface.\n", debug_d3dformat(surface->container->resource.format->id));
 +        return WINED3DERR_INVALIDCALL;
      }
  
@@ -220,7 +220,7 @@ index 21dfd8e..02f7c66 100644
              && surface->resource.map_binding != WINED3D_LOCATION_DIB))
      {
          /* The game Salammbo modifies the surface contents without mapping the surface between
-@@ -2652,6 +2632,26 @@ HRESULT CDECL wined3d_surface_releasedc(struct wined3d_surface *surface, HDC dc)
+@@ -2654,6 +2634,26 @@ HRESULT CDECL wined3d_surface_releasedc(struct wined3d_surface *surface, HDC dc)
          if (context)
              context_release(context);
      }
@@ -248,10 +248,10 @@ index 21dfd8e..02f7c66 100644
      return WINED3D_OK;
  }
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 9711c2d..5ccff16 100644
+index 5865cad..b5a3611 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2493,6 +2493,8 @@ void surface_blt_ugly(struct wined3d_surface *dst_surface, const RECT *dst_rect_
+@@ -2512,6 +2512,8 @@ void surface_blt_ugly(struct wined3d_surface *dst_surface, const RECT *dst_rect_
          const WINEDDBLTFX *fx, enum wined3d_texture_filter_type filter) DECLSPEC_HIDDEN;
  BOOL surface_check_block_align(struct wined3d_surface *surface, const RECT *rect) DECLSPEC_HIDDEN;
  void wined3d_surface_cleanup_cs(struct wined3d_surface *surface) DECLSPEC_HIDDEN;
@@ -260,7 +260,7 @@ index 9711c2d..5ccff16 100644
  
  void draw_textured_quad(const struct wined3d_surface *src_surface, struct wined3d_context *context,
          const RECT *src_rect, const RECT *dst_rect, enum wined3d_texture_filter_type filter) DECLSPEC_HIDDEN;
-@@ -2769,6 +2771,8 @@ HRESULT wined3d_cs_emit_create_swapchain_context(struct wined3d_cs *cs,
+@@ -2788,6 +2790,8 @@ HRESULT wined3d_cs_emit_create_swapchain_context(struct wined3d_cs *cs,
          struct wined3d_swapchain *swapchain) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_delete_opengl_contexts(struct wined3d_cs *cs,
          struct wined3d_swapchain *swapchain) DECLSPEC_HIDDEN;
@@ -270,5 +270,5 @@ index 9711c2d..5ccff16 100644
  /* Direct3D terminology with little modifications. We do not have an issued state
   * because only the driver knows about it, but we have a created state because d3d
 -- 
-2.3.5
+2.4.2
 

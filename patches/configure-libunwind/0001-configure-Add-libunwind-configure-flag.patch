@@ -1,0 +1,112 @@
+From b016d38d184be47fd5ba396925f3f1f1c4514bd2 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 12 Jun 2015 15:52:40 -0600
+Subject: configure: Add libunwind configure flag.
+
+Based on a patch by Erich E. Hoover and Ken Thomases.
+---
+ configure.ac               | 28 ++++++++++++++++++++++++++++
+ dlls/ntdll/Makefile.in     |  2 +-
+ dlls/ntdll/signal_x86_64.c |  8 ++++----
+ 3 files changed, 33 insertions(+), 5 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index df28b27..78e5558 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -75,4 +75,6 @@ AC_ARG_WITH(pthread,   AS_HELP_STRING([--without-pthread],[do not use the pthrea
+ AC_ARG_WITH(sane,      AS_HELP_STRING([--without-sane],[do not use SANE (scanner support)]))
+ AC_ARG_WITH(tiff,      AS_HELP_STRING([--without-tiff],[do not use TIFF]))
++AC_ARG_WITH(unwind,    AS_HELP_STRING([--without-unwind],[do not use libunwind]),
++            [if test "x$withval" = "xno"; then ac_cv_header_libunwind_h=no; fi])
+ AC_ARG_WITH(v4l,       AS_HELP_STRING([--without-v4l],[do not use v4l1 (v4l support)]))
+ AC_ARG_WITH(xcomposite,AS_HELP_STRING([--without-xcomposite],[do not use the Xcomposite extension]),
+@@ -1084,6 +1086,32 @@ WINE_ERROR_WITH(pthread,[test "x$ac_cv_func_pthread_create" != xyes -a "x$PTHREA
+ [pthread ${notice_platform}development files not found.
+ Wine cannot support threads without libpthread.])
+ 
++dnl **** Check for libunwind ****
++
++if test "x$enable_win64" = "xyes"
++then
++    if test "$ac_cv_header_libunwind_h" = "yes"
++    then
++        ac_save_LIBS="$LIBS"
++        AC_MSG_CHECKING([for libunwind])
++        AC_LINK_IFELSE([AC_LANG_PROGRAM([[#define UNW_LOCAL_ONLY
++            #include <libunwind.h>]], [[unw_context_t u; unw_cursor_t c; unw_getcontext(&u); unw_init_local(&c, &u);]])],
++            [AC_MSG_RESULT([yes, without linking])
++             AC_DEFINE(HAVE_LIBUNWIND, 1, [Define to 1 if you have libunwind])],
++            [LIBS="$LIBS -lunwind"
++             AC_LINK_IFELSE([AC_LANG_PROGRAM([[#define UNW_LOCAL_ONLY
++                 #include <libunwind.h>]], [[unw_context_t u; unw_cursor_t c; unw_getcontext(&u); unw_init_local(&c, &u);]])],
++                 [AC_MSG_RESULT([yes, with linking])
++                  AC_SUBST(UNWIND_LIBS,"-lunwind")
++                  AC_DEFINE(HAVE_LIBUNWIND, 1, [Define to 1 if you have libunwind])],
++                 [AC_MSG_RESULT([no])
++                  ac_cv_header_libunwind_h=no])])
++        LIBS="$ac_save_LIBS"
++    fi
++    WINE_NOTICE_WITH(unwind,[test "x$ac_cv_header_libunwind_h" != xyes],
++                     [libunwind ${notice_platform}development files not found.])
++fi
++
+ dnl **** Check for X11 ****
+ 
+ AC_PATH_XTRA
+diff --git a/dlls/ntdll/Makefile.in b/dlls/ntdll/Makefile.in
+index ed4bb94..08f094a 100644
+--- a/dlls/ntdll/Makefile.in
++++ b/dlls/ntdll/Makefile.in
+@@ -2,7 +2,7 @@ EXTRADEFS = -D_NTSYSTEM_
+ MODULE    = ntdll.dll
+ IMPORTLIB = ntdll
+ IMPORTS   = winecrt0
+-EXTRALIBS = $(IOKIT_LIBS) $(RT_LIBS) $(PTHREAD_LIBS)
++EXTRALIBS = $(IOKIT_LIBS) $(RT_LIBS) $(PTHREAD_LIBS) $(UNWIND_LIBS)
+ EXTRADLLFLAGS = -nodefaultlibs -Wl,--image-base,0x7bc00000
+ 
+ C_SRCS = \
+diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
+index 9b98894..a4aa269 100644
+--- a/dlls/ntdll/signal_x86_64.c
++++ b/dlls/ntdll/signal_x86_64.c
+@@ -51,7 +51,7 @@
+ #ifdef HAVE_SYS_UCONTEXT_H
+ # include <sys/ucontext.h>
+ #endif
+-#ifdef HAVE_LIBUNWIND_H
++#ifdef HAVE_LIBUNWIND
+ # define UNW_LOCAL_ONLY
+ # include <libunwind.h>
+ #endif
+@@ -1431,7 +1431,7 @@ static NTSTATUS dwarf_virtual_unwind( ULONG64 ip, ULONG64 *frame,CONTEXT *contex
+ }
+ 
+ 
+-#if HAVE_LIBUNWIND_H
++#if HAVE_LIBUNWIND
+ /***********************************************************************
+  *           libunwind_set_cursor_from_context
+  */
+@@ -2341,7 +2341,7 @@ static NTSTATUS call_stack_handlers( EXCEPTION_RECORD *rec, CONTEXT *orig_contex
+                 if (status != STATUS_SUCCESS) return status;
+                 got_info = TRUE;
+             }
+-#if HAVE_LIBUNWIND_H
++#if HAVE_LIBUNWIND
+             else
+             {
+                 status = libunwind_virtual_unwind( context.Rip, &got_info, &dispatch.EstablisherFrame, &new_context,
+@@ -3369,7 +3369,7 @@ void WINAPI RtlUnwindEx( PVOID end_frame, PVOID target_ip, EXCEPTION_RECORD *rec
+                 if (status != STATUS_SUCCESS) raise_status( status, rec );
+                 got_info = TRUE;
+             }
+-#if HAVE_LIBUNWIND_H
++#if HAVE_LIBUNWIND
+             else
+             {
+                 status = libunwind_virtual_unwind( context->Rip, &got_info, &dispatch.EstablisherFrame, &new_context,
+-- 
+2.4.2
+

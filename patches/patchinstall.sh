@@ -51,7 +51,7 @@ usage()
 # Show version information
 version()
 {
-	echo "Wine Staging 1.7.45"
+	echo "Wine Staging 1.7.46 (unreleased)"
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -5807,6 +5807,9 @@ if test "$enable_winex11_wglShareLists" -eq 1; then
 fi
 
 # Patchset wininet-Cache_Long_URLs
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34021] Use random names when caching very long urls in wininet
 # |
 # | Modified files:
 # |   *	dlls/wininet/urlcache.c

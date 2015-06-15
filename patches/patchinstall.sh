@@ -4005,6 +4005,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#38103] Process Hacker 2.x needs ntoskrnl.ProbeForRead
+# |   *	[#21448] SecuROM 5.x media validation fails
 # |
 # | Modified files:
 # |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h
@@ -4027,6 +4028,7 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0015-ntoskrnl.exe-Add-stub-for-ProbeForRead.patch
 	patch_apply ntoskrnl-Stubs/0016-ntoskrnl.exe-Add-stub-for-ProbeForWrite.patch
 	patch_apply ntoskrnl-Stubs/0017-ntoskrnl.exe-Add-stub-for-PsRemoveLoadImageNotifyRou.patch
+	patch_apply ntoskrnl-Stubs/0018-ntoskrnl.exe-Improve-IoGetDeviceObjectPointer-stub-t.patch
 	(
 		echo '+    { "Austin English", "ntoskrnl.exe: add KeWaitForMultipleObjects stub.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for IoGetAttachedDeviceReference.", 1 },';
@@ -4045,6 +4047,7 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 		echo '+    { "Austin English", "ntoskrnl.exe: Add stub for ProbeForRead.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntoskrnl.exe: Add stub for ProbeForWrite.", 1 },';
 		echo '+    { "Michael Müller", "ntoskrnl.exe: Add stub for PsRemoveLoadImageNotifyRoutine.", 1 },';
+		echo '+    { "Erich E. Hoover", "ntoskrnl.exe: Improve IoGetDeviceObjectPointer stub to appease SecuROM 5.x.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -72,7 +72,7 @@ for more details.*
 * Add stub for d3d11.D3D11CreateDeviceAndSwapChain ([Wine Bug #33153](https://bugs.winehq.org/show_bug.cgi?id=33153))
 * Add stub for fltlib.FilterLoad ([Wine Bug #38435](https://bugs.winehq.org/show_bug.cgi?id=38435))
 * Add stub for gdiplus.GdipCreateEffect ([Wine Bug #32163](https://bugs.winehq.org/show_bug.cgi?id=32163))
-* Add stub for kernel32.SetFileCompletionNotificationModes (for Steam in Win7 mode) ([Wine Bug #38493](https://bugs.winehq.org/show_bug.cgi?id=38493))
+* ~~Add stub for kernel32.SetFileCompletionNotificationModes (for Steam in Win7 mode)~~ ([Wine Bug #38493](https://bugs.winehq.org/show_bug.cgi?id=38493))
 * Add stub for ntoskrnl.ExAcquireResourceExclusiveLite
 * Add stub for ntoskrnl.ExDeleteResourceLite
 * Add stub for ntoskrnl.ExReleaseResourceForThread
@@ -172,7 +172,7 @@ for more details.*
 * GetMonitorInfo returns the same name for all monitors ([Wine Bug #37709](https://bugs.winehq.org/show_bug.cgi?id=37709))
 * GetSecurityInfo returns NULL DACL for process object ([Wine Bug #15980](https://bugs.winehq.org/show_bug.cgi?id=15980))
 * Graphical issues in Inquisitor ([Wine Bug #32490](https://bugs.winehq.org/show_bug.cgi?id=32490))
-* IOCTL_DVD_READ_STRUCTURE expects the wrong size of output buffer for some requests ([Wine Bug #37767](https://bugs.winehq.org/show_bug.cgi?id=37767))
+* ~~IOCTL_DVD_READ_STRUCTURE expects the wrong size of output buffer for some requests~~ ([Wine Bug #37767](https://bugs.winehq.org/show_bug.cgi?id=37767))
 * Ignore garbage after decoding gif lines ([Wine Bug #32227](https://bugs.winehq.org/show_bug.cgi?id=32227))
 * Ignore unsupported flags for CoInternetSetFeatureEnabled ([Wine Bug #35197](https://bugs.winehq.org/show_bug.cgi?id=35197))
 * Implement D3DXGetShaderOutputSemantics
@@ -250,7 +250,7 @@ for more details.*
 * Support for DDS file format in D3DXSaveTextureToFileInMemory ([Wine Bug #26898](https://bugs.winehq.org/show_bug.cgi?id=26898))
 * Support for DOS hidden/system file attributes ([Wine Bug #9158](https://bugs.winehq.org/show_bug.cgi?id=9158))
 * Support for FileFsFullSizeInformation information class
-* Support for GdipCreateRegionRgnData ([Wine Bug #34843](https://bugs.winehq.org/show_bug.cgi?id=34843))
+* ~~Support for GdipCreateRegionRgnData~~ ([Wine Bug #34843](https://bugs.winehq.org/show_bug.cgi?id=34843))
 * Support for GetFinalPathNameByHandle ([Wine Bug #34851](https://bugs.winehq.org/show_bug.cgi?id=34851))
 * Support for GetVolumePathName
 * Support for H264 DXVA2 GPU video decoding through vaapi
@@ -289,7 +289,7 @@ for more details.*
 * Use POSIX implementation to enumerate directory content on FreeBSD ([Wine Bug #35397](https://bugs.winehq.org/show_bug.cgi?id=35397))
 * Use actual program name if available to describe PulseAudio streams
 * Use manual relay for RunDLL_CallEntry16 in shell32 ([Wine Bug #23033](https://bugs.winehq.org/show_bug.cgi?id=23033))
-* Use random names when caching very long urls in wininet ([Wine Bug #34021](https://bugs.winehq.org/show_bug.cgi?id=34021))
+* ~~Use random names when caching very long urls in wininet~~
 * Voobly expects correct handling of WRITECOPY memory protection ([Wine Bug #29384](https://bugs.winehq.org/show_bug.cgi?id=29384))
 * Wine ignores IDF_CHECKFIRST flag in SetupPromptForDisk ([Wine Bug #20465](https://bugs.winehq.org/show_bug.cgi?id=20465))
 * Workaround for shlwapi URLs with relative paths

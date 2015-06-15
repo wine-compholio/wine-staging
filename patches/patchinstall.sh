@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit cde46665fa8503e90c9a2fab1898cdb4d22f667b"
+	echo "  commit 46bdb6e59a007b71aa6a0932228e30bf3ad8bc2b"
 	echo ""
 }
 
@@ -125,7 +125,6 @@ patch_enable_all ()
 	enable_gdi32_MultiMonitor="$1"
 	enable_gdiplus_GIF_Encoder="$1"
 	enable_gdiplus_GdipCreateEffect="$1"
-	enable_gdiplus_GdipCreateRegionRgnData="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imagehlp_ImageLoad="$1"
 	enable_inetcpl_Default_Home="$1"
@@ -141,7 +140,6 @@ patch_enable_all ()
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_Profile="$1"
-	enable_kernel32_SetFileCompletionNotificationMode="$1"
 	enable_kernel32_SetFileInformationByHandle="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
 	enable_kernel32_VerifyVersionInfo="$1"
@@ -162,7 +160,6 @@ patch_enable_all ()
 	enable_ntdll_Activation_Context="$1"
 	enable_ntdll_CLI_Images="$1"
 	enable_ntdll_DOS_Attributes="$1"
-	enable_ntdll_DVD_Read_Size="$1"
 	enable_ntdll_DeviceType_Systemroot="$1"
 	enable_ntdll_DllRedirects="$1"
 	enable_ntdll_Exception="$1"
@@ -279,7 +276,6 @@ patch_enable_all ()
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
 	enable_winex11_wglShareLists="$1"
-	enable_wininet_Cache_Long_URLs="$1"
 	enable_wininet_Cleanup="$1"
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
 	enable_winmm_Delay_Import_Depends="$1"
@@ -458,9 +454,6 @@ patch_enable ()
 		gdiplus-GdipCreateEffect)
 			enable_gdiplus_GdipCreateEffect="$2"
 			;;
-		gdiplus-GdipCreateRegionRgnData)
-			enable_gdiplus_GdipCreateRegionRgnData="$2"
-			;;
 		imagehlp-BindImageEx)
 			enable_imagehlp_BindImageEx="$2"
 			;;
@@ -505,9 +498,6 @@ patch_enable ()
 			;;
 		kernel32-Profile)
 			enable_kernel32_Profile="$2"
-			;;
-		kernel32-SetFileCompletionNotificationMode)
-			enable_kernel32_SetFileCompletionNotificationMode="$2"
 			;;
 		kernel32-SetFileInformationByHandle)
 			enable_kernel32_SetFileInformationByHandle="$2"
@@ -568,9 +558,6 @@ patch_enable ()
 			;;
 		ntdll-DOS_Attributes)
 			enable_ntdll_DOS_Attributes="$2"
-			;;
-		ntdll-DVD_Read_Size)
-			enable_ntdll_DVD_Read_Size="$2"
 			;;
 		ntdll-DeviceType_Systemroot)
 			enable_ntdll_DeviceType_Systemroot="$2"
@@ -919,9 +906,6 @@ patch_enable ()
 			;;
 		winex11-wglShareLists)
 			enable_winex11_wglShareLists="$2"
-			;;
-		wininet-Cache_Long_URLs)
-			enable_wininet_Cache_Long_URLs="$2"
 			;;
 		wininet-Cleanup)
 			enable_wininet_Cleanup="$2"
@@ -2879,21 +2863,6 @@ if test "$enable_gdiplus_GdipCreateEffect" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset gdiplus-GdipCreateRegionRgnData
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34843] Support for GdipCreateRegionRgnData
-# |
-# | Modified files:
-# |   *	dlls/gdiplus/region.c, dlls/gdiplus/tests/region.c
-# |
-if test "$enable_gdiplus_GdipCreateRegionRgnData" -eq 1; then
-	patch_apply gdiplus-GdipCreateRegionRgnData/0001-gdiplus-Implement-GdipCreateRegionRgnData.-Take-3.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipCreateRegionRgnData.", 3 },';
-	) >> "$patchlist"
-fi
-
 # Patchset imagehlp-BindImageEx
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2977,18 +2946,6 @@ if test "$enable_kernel32_CompareStringEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-File_Permissions
 # |
 # | Modified files:
@@ -3049,6 +3006,18 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Zhaonan Liang", "include: Add declaration for FILE_LINK_INFORMATION.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Add tests for FileLinkInformation class.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement support for FileLinkInformation class in NtSetInformationFile.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3247,22 +3216,6 @@ if test "$enable_kernel32_Profile" -eq 1; then
 	patch_apply kernel32-Profile/0001-kernel32-Allow-empty-profile-section-and-key-name-st.patch
 	(
 		echo '+    { "Claudio Fontana", "kernel32: Allow empty profile section and key name strings.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-SetFileCompletionNotificationMode
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38493] Add stub for kernel32.SetFileCompletionNotificationModes (for Steam in Win7 mode)
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/kernel32/file.c,
-# | 	dlls/kernel32/kernel32.spec, include/winbase.h
-# |
-if test "$enable_kernel32_SetFileCompletionNotificationMode" -eq 1; then
-	patch_apply kernel32-SetFileCompletionNotificationMode/0001-kernel32-Implement-SetFileCompletionNotificationMode.patch
-	(
-		echo '+    { "Olivier F. R. Dierick", "kernel32: Implement SetFileCompletionNotificationModes as a stub.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3549,21 +3502,6 @@ if test "$enable_ntdll_DOS_Attributes" -eq 1; then
 		echo '+    { "Erich E. Hoover", "libport: Add support for Mac OS X style extended attributes.", 1 },';
 		echo '+    { "Erich E. Hoover", "libport: Add support for FreeBSD style extended attributes.", 1 },';
 		echo '+    { "Erich E. Hoover", "ntdll: Perform the Unix-style hidden file check within the unified file info grabbing routine.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-DVD_Read_Size
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37767] IOCTL_DVD_READ_STRUCTURE expects the wrong size of output buffer for some requests
-# |
-# | Modified files:
-# |   *	dlls/ntdll/cdrom.c
-# |
-if test "$enable_ntdll_DVD_Read_Size" -eq 1; then
-	patch_apply ntdll-DVD_Read_Size/0001-ntdll-Fix-expected-IOCTL_DVD_READ_STRUCTURE-expected.patch
-	(
-		echo '+    { "Erich E. Hoover", "ntdll: Fix expected IOCTL_DVD_READ_STRUCTURE expected output size.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -5120,6 +5058,57 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-wined3d_swapchain_present
+# |
+# | Modified files:
+# |   *	dlls/wined3d/swapchain.c
+# |
+if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
+	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-resource_check_usage
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c
+# |
+if test "$enable_wined3d_resource_check_usage" -eq 1; then
+	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	(
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Multisampling
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Multisampling" -eq 1; then
+	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+	(
+		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-Revert_PixelFormat
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5151,57 +5140,6 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-resource_check_usage
-# |
-# | Modified files:
-# |   *	dlls/wined3d/resource.c
-# |
-if test "$enable_wined3d_resource_check_usage" -eq 1; then
-	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	(
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-wined3d_swapchain_present
-# |
-# | Modified files:
-# |   *	dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
-	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Multisampling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
-	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5806,21 +5744,6 @@ if test "$enable_winex11_wglShareLists" -eq 1; then
 	patch_apply winex11-wglShareLists/0001-winex11.drv-Only-warn-about-used-contexts-in-wglShar.patch
 	(
 		echo '+    { "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wininet-Cache_Long_URLs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34021] Use random names when caching very long urls in wininet
-# |
-# | Modified files:
-# |   *	dlls/wininet/urlcache.c
-# |
-if test "$enable_wininet_Cache_Long_URLs" -eq 1; then
-	patch_apply wininet-Cache_Long_URLs/0001-wininet-Use-random-names-when-caching-very-long-urls.patch
-	(
-		echo '+    { "Michael Müller", "wininet: Use random names when caching very long urls.", 1 },';
 	) >> "$patchlist"
 fi
 

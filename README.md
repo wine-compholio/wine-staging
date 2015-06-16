@@ -39,8 +39,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [1]:**
+**Bug fixes and features included in the next upcoming release [2]:**
 
+* Globally invalidate key state on changes in other threads ([Wine Bug #29871](https://bugs.winehq.org/show_bug.cgi?id=29871))
 * SecuROM 5.x media validation fails ([Wine Bug #21448](https://bugs.winehq.org/show_bug.cgi?id=21448))
 
 

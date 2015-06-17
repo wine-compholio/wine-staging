@@ -3147,6 +3147,7 @@ if test "$enable_kernel32_Named_Pipe" -eq 1; then
 	patch_apply kernel32-Named_Pipe/0020-kernel32-tests-Add-tests-for-behaviour-of-WriteFile-.patch
 	patch_apply kernel32-Named_Pipe/0021-server-Return-correct-error-codes-for-NtWriteFile-wh.patch
 	patch_apply kernel32-Named_Pipe/0022-ntdll-Pre-cache-file-descriptors-after-opening-a-fil.patch
+	patch_apply kernel32-Named_Pipe/0023-server-Fix-wineserver-crash-when-pipe-server-object-.patch
 	(
 		echo '+    { "Dan Kegel", "kernel32: ConnectNamedPort should return FALSE and set ERROR_PIPE_CONNECTED on success in overlapped mode.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for PeekNamedPipe with partial received messages.", 1 },';
@@ -3170,6 +3171,7 @@ if test "$enable_kernel32_Named_Pipe" -eq 1; then
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for behaviour of WriteFile on closed pipe.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Return correct error codes for NtWriteFile when pipes are closed without disconnecting.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Pre-cache file descriptors after opening a file.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Fix wineserver crash when pipe server object is destroyed before client.", 1 },';
 	) >> "$patchlist"
 fi
 

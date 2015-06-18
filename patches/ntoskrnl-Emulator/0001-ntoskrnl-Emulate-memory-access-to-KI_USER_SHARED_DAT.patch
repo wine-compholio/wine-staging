@@ -1,16 +1,18 @@
-From 0f2b6adbefd88a3600e223774cb4aa4765815e78 Mon Sep 17 00:00:00 2001
+From 8c0608f6993ddffaff2c0a5aad9e6702ec631479 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 10 Nov 2014 21:27:39 +0100
 Subject: ntoskrnl: Emulate memory access to KI_USER_SHARED_DATA on x86_64.
- (try 2)
+ (v3)
 
+Changes in v3:
+* Add instruction emulation for MOVZX
 ---
- dlls/ntoskrnl.exe/instr.c    | 273 ++++++++++++++++++++++++++++++++++++++++++-
+ dlls/ntoskrnl.exe/instr.c    | 298 ++++++++++++++++++++++++++++++++++++++++++-
  dlls/ntoskrnl.exe/ntoskrnl.c |   2 +-
- 2 files changed, 273 insertions(+), 2 deletions(-)
+ 2 files changed, 298 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/ntoskrnl.exe/instr.c b/dlls/ntoskrnl.exe/instr.c
-index 05cd238..b6da767 100644
+index 45021c6..9e5f109 100644
 --- a/dlls/ntoskrnl.exe/instr.c
 +++ b/dlls/ntoskrnl.exe/instr.c
 @@ -4,6 +4,7 @@
@@ -21,7 +23,7 @@ index 05cd238..b6da767 100644
   *
   * This library is free software; you can redistribute it and/or
   * modify it under the terms of the GNU Lesser General Public
-@@ -470,4 +471,274 @@ LONG CALLBACK vectored_handler( EXCEPTION_POINTERS *ptrs )
+@@ -475,4 +476,299 @@ LONG CALLBACK vectored_handler( EXCEPTION_POINTERS *ptrs )
      return EXCEPTION_CONTINUE_SEARCH;
  }
  
@@ -175,8 +177,8 @@ index 05cd238..b6da767 100644
 +
 +    /* First handle any possible prefix */
 +
-+    segprefix = -1; /* no seg prefix */
-+    rex = 0; /* no rex prefix */
++    segprefix = -1;  /* no seg prefix */
++    rex = 0;  /* no rex prefix */
 +    prefix = 1;
 +    prefixlen = 0;
 +    while(prefix)
@@ -233,6 +235,31 @@ index 05cd238..b6da767 100644
 +
 +    switch(*instr)
 +    {
++    case 0x0f: /* extended instruction */
++        switch(instr[1])
++        {
++        case 0xb6: /* movzx Eb, Gv */
++        case 0xb7: /* movzx Ew, Gv */
++        {
++            BYTE *data = INSTR_GetOperandAddr( context, instr + 2, long_addr,
++                                               rex, segprefix, &len );
++            unsigned int data_size = (instr[1] == 0xb7) ? 2 : 1;
++            unsigned int offset = data - (BYTE *)KI_USER_SHARED_DATA;
++
++            if (offset <= sizeof(struct _KUSER_SHARED_DATA) - data_size)
++            {
++                BYTE *user_shared_data = __wine_user_shared_data();
++                ULONGLONG temp = 0;
++                memcpy( &temp, user_shared_data + offset, data_size );
++                store_reg_word( context, instr[2], (BYTE *)&temp, long_op, rex );
++                context->Rip += prefixlen + len + 2;
++                return ExceptionContinueExecution;
++            }
++            break;  /* Unable to emulate it */
++        }
++        }
++        break;  /* Unable to emulate it */
++
 +    case 0x8a: /* mov Eb, Gb */
 +    case 0x8b: /* mov Ev, Gv */
 +    {
@@ -299,10 +326,10 @@ index 05cd238..b6da767 100644
 +#endif  /* __x86_64__ */
 \ No newline at end of file
 diff --git a/dlls/ntoskrnl.exe/ntoskrnl.c b/dlls/ntoskrnl.exe/ntoskrnl.c
-index a31b186..1d87110 100644
+index 2051939..35454a5 100644
 --- a/dlls/ntoskrnl.exe/ntoskrnl.c
 +++ b/dlls/ntoskrnl.exe/ntoskrnl.c
-@@ -1880,7 +1880,7 @@ BOOL WINAPI DllMain( HINSTANCE inst, DWORD reason, LPVOID reserved )
+@@ -2069,7 +2069,7 @@ BOOL WINAPI DllMain( HINSTANCE inst, DWORD reason, LPVOID reserved )
      {
      case DLL_PROCESS_ATTACH:
          DisableThreadLibraryCalls( inst );
@@ -312,5 +339,5 @@ index a31b186..1d87110 100644
  #endif
          KeQueryTickCount( &count );  /* initialize the global KeTickCount */
 -- 
-2.1.3
+2.4.3
 

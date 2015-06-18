@@ -3931,7 +3931,7 @@ if test "$enable_ntoskrnl_Emulator" -eq 1; then
 	patch_apply ntoskrnl-Emulator/0001-ntoskrnl-Emulate-memory-access-to-KI_USER_SHARED_DAT.patch
 	patch_apply ntoskrnl-Emulator/0002-ntoskrnl-Add-TRACEs-for-instruction-emulator-on-x86_.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntoskrnl: Emulate memory access to KI_USER_SHARED_DATA on x86_64.", 2 },';
+		echo '+    { "Sebastian Lackner", "ntoskrnl: Emulate memory access to KI_USER_SHARED_DATA on x86_64.", 3 },';
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Add TRACEs for instruction emulator on x86_64 to simplify debugging.", 1 },';
 	) >> "$patchlist"
 fi

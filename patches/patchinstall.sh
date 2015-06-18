@@ -1972,7 +1972,7 @@ if test "$enable_ntdll_WRITECOPY" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Trigger write watches before passing userdata pointer to wait_reply.", 1 },';
 		echo '+    { "Sebastian Lackner", "advapi: Trigger write watches before passing userdata pointer to read syscall.", 1 },';
-		echo '+    { "Michael Müller", "ntdll: Setup a temporary signal handler during process startup to handle page faults.", 1 },';
+		echo '+    { "Michael Müller", "ntdll: Setup a temporary signal handler during process startup to handle page faults.", 2 },';
 		echo '+    { "Michael Müller", "ntdll: Properly handle PAGE_WRITECOPY protection.", 5 },';
 		echo '+    { "Michael Müller", "ntdll: Only enable true WRITECOPY protection when a special environment variable is set.", 1 },';
 	) >> "$patchlist"

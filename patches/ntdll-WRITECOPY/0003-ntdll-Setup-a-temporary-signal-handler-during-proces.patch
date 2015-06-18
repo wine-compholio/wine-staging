@@ -1,21 +1,21 @@
-From 987e4f22d9f0647bf6d68b9be95e79ee578094dd Mon Sep 17 00:00:00 2001
+From 1cb822449427e537c098bb6b738bb983a0cf8ec1 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 4 Oct 2014 02:53:22 +0200
 Subject: ntdll: Setup a temporary signal handler during process startup to
- handle page faults.
+ handle page faults. (v2)
 
 ---
  dlls/ntdll/ntdll_misc.h     |  1 +
- dlls/ntdll/signal_arm.c     |  6 ++++++
- dlls/ntdll/signal_arm64.c   |  6 ++++++
- dlls/ntdll/signal_i386.c    | 47 +++++++++++++++++++++++++++++++++++++++++++++
- dlls/ntdll/signal_powerpc.c |  6 ++++++
- dlls/ntdll/signal_x86_64.c  |  6 ++++++
+ dlls/ntdll/signal_arm.c     |  6 +++++
+ dlls/ntdll/signal_arm64.c   |  6 +++++
+ dlls/ntdll/signal_i386.c    | 53 +++++++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/signal_powerpc.c |  6 +++++
+ dlls/ntdll/signal_x86_64.c  |  6 +++++
  dlls/ntdll/thread.c         |  1 +
- 7 files changed, 73 insertions(+)
+ 7 files changed, 79 insertions(+)
 
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index afd1980..e344c31 100644
+index f5b5339..8d985d9 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
 @@ -68,6 +68,7 @@ extern NTSTATUS signal_alloc_thread( TEB **teb ) DECLSPEC_HIDDEN;
@@ -27,10 +27,10 @@ index afd1980..e344c31 100644
  extern void debug_init(void) DECLSPEC_HIDDEN;
  extern HANDLE thread_init(void) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/signal_arm.c b/dlls/ntdll/signal_arm.c
-index e3ae7bd..1d79b3d 100644
+index 1f6da96..cfb9df1 100644
 --- a/dlls/ntdll/signal_arm.c
 +++ b/dlls/ntdll/signal_arm.c
-@@ -930,6 +930,12 @@ void signal_init_process(void)
+@@ -974,6 +974,12 @@ void signal_init_process(void)
      exit(1);
  }
  
@@ -44,10 +44,10 @@ index e3ae7bd..1d79b3d 100644
  /**********************************************************************
   *              __wine_enter_vm86   (NTDLL.@)
 diff --git a/dlls/ntdll/signal_arm64.c b/dlls/ntdll/signal_arm64.c
-index 8c8f7af..483bc85 100644
+index bd91d81..3bd705f 100644
 --- a/dlls/ntdll/signal_arm64.c
 +++ b/dlls/ntdll/signal_arm64.c
-@@ -791,6 +791,12 @@ void signal_init_process(void)
+@@ -846,6 +846,12 @@ void signal_init_process(void)
      exit(1);
  }
  
@@ -61,10 +61,10 @@ index 8c8f7af..483bc85 100644
  /**********************************************************************
   *              __wine_enter_vm86   (NTDLL.@)
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index de55c31..49222f4 100644
+index cf20483..7275233 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
-@@ -2035,6 +2035,30 @@ static void usr2_handler( int signal, siginfo_t *siginfo, void *sigcontext )
+@@ -2035,6 +2035,31 @@ static void usr2_handler( int signal, siginfo_t *siginfo, void *sigcontext )
  
  
  /**********************************************************************
@@ -87,6 +87,7 @@ index de55c31..49222f4 100644
 +        /* fall-through */
 +    default:
 +        WINE_ERR( "Got unexpected trap %d during process initialization\n", get_trap_code(context) );
++        abort_thread(1);
 +        break;
 +    }
 +}
@@ -95,7 +96,7 @@ index de55c31..49222f4 100644
   *		segv_handler
   *
   * Handler for SIGSEGV and related errors.
-@@ -2457,6 +2481,29 @@ void signal_init_process(void)
+@@ -2466,6 +2491,34 @@ void signal_init_process(void)
      exit(1);
  }
  
@@ -116,17 +117,22 @@ index de55c31..49222f4 100644
 +    sig_act.sa_restorer = rt_sigreturn;
 +#endif
 +    sig_act.sa_sigaction = segv_handler_early;
-+    if (sigaction( SIGSEGV, &sig_act, NULL ) == -1)
-+    {
-+        perror("sigaction");
-+        exit(1);
-+    }
++    if (sigaction( SIGSEGV, &sig_act, NULL ) == -1) goto error;
++    if (sigaction( SIGILL, &sig_act, NULL ) == -1) goto error;
++#ifdef SIGBUS
++    if (sigaction( SIGBUS, &sig_act, NULL ) == -1) goto error;
++#endif
++    return;
++
++error:
++    perror("sigaction");
++    exit(1);
 +}
  
  #ifdef __HAVE_VM86
  /**********************************************************************
 diff --git a/dlls/ntdll/signal_powerpc.c b/dlls/ntdll/signal_powerpc.c
-index 0fca342..5d1d756 100644
+index 886da86..d2e7819 100644
 --- a/dlls/ntdll/signal_powerpc.c
 +++ b/dlls/ntdll/signal_powerpc.c
 @@ -1048,6 +1048,12 @@ void signal_init_process(void)
@@ -143,10 +149,10 @@ index 0fca342..5d1d756 100644
  /**********************************************************************
   *              __wine_enter_vm86   (NTDLL.@)
 diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
-index c71069d..07a0f6e 100644
+index 9b98894..60170cc 100644
 --- a/dlls/ntdll/signal_x86_64.c
 +++ b/dlls/ntdll/signal_x86_64.c
-@@ -2623,6 +2623,12 @@ void signal_init_process(void)
+@@ -2826,6 +2826,12 @@ void signal_init_process(void)
      exit(1);
  }
  
@@ -172,5 +178,5 @@ index 3696c8e..a5d10e5 100644
      /* reserve space for shared user data */
  
 -- 
-2.2.2
+2.4.3
 

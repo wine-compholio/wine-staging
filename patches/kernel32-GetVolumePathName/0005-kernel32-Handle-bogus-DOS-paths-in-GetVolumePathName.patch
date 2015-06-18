@@ -1,0 +1,99 @@
+From f58ffbfac9dd899e4a546759ede241dfd7163eae Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@wine-staging.com>
+Date: Mon, 15 Jun 2015 22:20:03 -0600
+Subject: kernel32: Handle bogus DOS paths in GetVolumePathName.
+
+---
+ dlls/kernel32/tests/volume.c | 22 ++++++++++++++++++----
+ dlls/kernel32/volume.c       | 12 ++++++++++++
+ 2 files changed, 30 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/kernel32/tests/volume.c b/dlls/kernel32/tests/volume.c
+index 5b117b8..7ed55d7 100644
+--- a/dlls/kernel32/tests/volume.c
++++ b/dlls/kernel32/tests/volume.c
+@@ -591,7 +591,7 @@ static void test_disk_extents(void)
+ 
+ static void test_GetVolumePathNameA(void)
+ {
+-    char volume_path[MAX_PATH];
++    char volume_path[MAX_PATH], cwd[MAX_PATH];
+     struct {
+         const char *file_name;
+         const char *path_name;
+@@ -671,6 +671,10 @@ static void test_GetVolumePathNameA(void)
+             "M::", "C:\\", 4,
+             ERROR_FILE_NOT_FOUND, ERROR_MORE_DATA
+         },
++        { /* test 17: an unreasonable DOS path */
++            "InvalidDrive:\\AnInvalidFolder", "%CurrentDrive%\\", sizeof(volume_path),
++            NO_ERROR, NO_ERROR
++        },
+     };
+     BOOL ret, success;
+     DWORD error;
+@@ -683,6 +687,13 @@ static void test_GetVolumePathNameA(void)
+         return;
+     }
+ 
++    /* Obtain the drive of the working directory */
++    ret = GetCurrentDirectoryA( sizeof(cwd), cwd );
++    ok( ret, "Failed to obtain the current working directory.\n" );
++    cwd[2] = 0;
++    ret = SetEnvironmentVariableA( "CurrentDrive", cwd );
++    ok( ret, "Failed to set an environment variable for the current working drive.\n" );
++
+     for (i=0; i<sizeof(test_paths)/sizeof(test_paths[0]); i++)
+     {
+         BOOL broken_ret = test_paths[i].broken_error == NO_ERROR ? TRUE : FALSE;
+@@ -699,11 +710,14 @@ static void test_GetVolumePathNameA(void)
+ 
+         if (ret)
+         {
++            char path_name[MAX_PATH];
++
++            ExpandEnvironmentStringsA( test_paths[i].path_name, path_name, MAX_PATH);
+             /* If we succeeded then make sure the path is correct */
+-            success = (strcmp( volume_path, test_paths[i].path_name ) == 0)
+-                      || broken(strcasecmp( volume_path, test_paths[i].path_name ) == 0) /* XP */;
++            success = (strcmp( volume_path, path_name ) == 0)
++                      || broken(strcasecmp( volume_path, path_name ) == 0) /* XP */;
+             ok(success, "GetVolumePathName test %d unexpectedly returned path %s (expected %s).\n",
+-                        i, volume_path, test_paths[i].path_name);
++                        i, volume_path, path_name);
+         }
+         else
+         {
+diff --git a/dlls/kernel32/volume.c b/dlls/kernel32/volume.c
+index 3eef540..e135967 100644
+--- a/dlls/kernel32/volume.c
++++ b/dlls/kernel32/volume.c
+@@ -1889,6 +1889,8 @@ BOOL WINAPI GetVolumePathNameW(LPCWSTR filename, LPWSTR volumepathname, DWORD bu
+ 
+     if (status != STATUS_SUCCESS)
+     {
++        WCHAR cwdW[MAX_PATH];
++
+         /* the path was completely invalid */
+         if (filename[0] == '\\')
+         {
+@@ -1908,6 +1910,16 @@ BOOL WINAPI GetVolumePathNameW(LPCWSTR filename, LPWSTR volumepathname, DWORD bu
+                 goto cleanup;
+             }
+         }
++        else if (GetCurrentDirectoryW( sizeof(cwdW), cwdW ))
++        {
++            /* if the path is completely bogus then revert to the drive of the working directory */
++            fallbackpathW[0] = cwdW[0];
++        }
++        else
++        {
++            status = STATUS_OBJECT_NAME_INVALID;
++            goto cleanup;
++        }
+         last_pos = strlenW(fallbackpathW) - 1; /* points to \\ */
+         filename = fallbackpathW;
+         status = STATUS_SUCCESS;
+-- 
+1.9.1
+

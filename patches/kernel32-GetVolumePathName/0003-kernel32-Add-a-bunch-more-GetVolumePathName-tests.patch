@@ -1,14 +1,14 @@
-From 93f0d790f4b5f7945847c8b5190c9da11d6160fa Mon Sep 17 00:00:00 2001
-From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
-Date: Sat, 25 Jan 2014 09:54:39 -0700
+From 4e662a9f24b82213cd5744e7281c3a5056050e80 Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@wine-staging.com>
+Date: Wed, 17 Jun 2015 19:29:16 -0600
 Subject: kernel32: Add a bunch more GetVolumePathName tests.
 
 ---
- dlls/kernel32/tests/volume.c | 28 ++++++++++++++++++++++++++++
- 1 file changed, 28 insertions(+)
+ dlls/kernel32/tests/volume.c | 32 +++++++++++++++++++++++++++++++-
+ 1 file changed, 31 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/kernel32/tests/volume.c b/dlls/kernel32/tests/volume.c
-index f15269c..e17cc16 100644
+index 2bb2603..3eb7fed 100644
 --- a/dlls/kernel32/tests/volume.c
 +++ b/dlls/kernel32/tests/volume.c
 @@ -635,6 +635,34 @@ static void test_GetVolumePathNameA(void)
@@ -23,29 +23,47 @@ index f15269c..e17cc16 100644
 +            "C:\\windows\\system32\\AnInvalidFolder", "C:\\", sizeof(volume_path),
 +            NO_ERROR, NO_ERROR
 +        },
-+        { /* test 11: an unreasonable DOS path */
-+            "InvalidDrive:\\AnInvalidFolder", "C:\\", sizeof(volume_path),
-+            NO_ERROR, NO_ERROR
-+        },
-+        { /* test 12: a reasonable NT-converted DOS path that shouldn't exist */
++        { /* test 11: a reasonable NT-converted DOS path that shouldn't exist */
 +            "\\\\?\\C:\\AnInvalidFolder", "\\\\?\\C:\\", sizeof(volume_path),
 +            NO_ERROR, NO_ERROR
 +        },
-+        { /* test 13: an unreasonable NT-converted DOS path */
-+            "\\\\?\\InvalidDrive:\\AnInvalidFolder", "", sizeof(volume_path),
++        { /* test 12: an unreasonable NT-converted DOS path */
++            "\\\\?\\InvalidDrive:\\AnInvalidFolder", "\\\\?\\InvalidDrive:\\" /* win2k, winxp */,
++            sizeof(volume_path),
 +            ERROR_INVALID_NAME, NO_ERROR
 +        },
-+        { /* test 14: an unreasonable NT volume path */
-+            "\\\\?\\Volume{00000000-00-0000-0000-000000000000}\\AnInvalidFolder", "", sizeof(volume_path),
++        { /* test 13: an unreasonable NT volume path */
++            "\\\\?\\Volume{00000000-00-0000-0000-000000000000}\\AnInvalidFolder",
++            "\\\\?\\Volume{00000000-00-0000-0000-000000000000}\\" /* win2k, winxp */,
++            sizeof(volume_path),
 +            ERROR_INVALID_NAME, NO_ERROR
 +        },
-+        { /* test 15: an unreasonable NT-ish path */
-+            "\\\\ReallyBogus\\InvalidDrive:\\AnInvalidFolder", "", sizeof(volume_path),
++        { /* test 14: an unreasonable NT-ish path */
++            "\\\\ReallyBogus\\InvalidDrive:\\AnInvalidFolder",
++            "\\\\ReallyBogus\\InvalidDrive:\\" /* win2k, winxp */, sizeof(volume_path),
 +            ERROR_INVALID_NAME, NO_ERROR
 +        },
      };
      BOOL ret, success;
      DWORD error;
+@@ -649,6 +677,7 @@ static void test_GetVolumePathNameA(void)
+ 
+     for (i=0; i<sizeof(test_paths)/sizeof(test_paths[0]); i++)
+     {
++        BOOL broken_ret = test_paths[i].broken_error == NO_ERROR ? TRUE : FALSE;
+         char *output = (test_paths[i].path_name != NULL ? volume_path : NULL);
+         BOOL expected_ret = test_paths[i].error == NO_ERROR ? TRUE : FALSE;
+ 
+@@ -656,7 +685,8 @@ static void test_GetVolumePathNameA(void)
+         SetLastError( 0xdeadbeef );
+         ret = pGetVolumePathNameA( test_paths[i].file_name, output, test_paths[i].path_len );
+         error = GetLastError();
+-        ok(ret == expected_ret, "GetVolumePathName test %d %s unexpectedly.\n",
++        ok(ret == expected_ret || broken(ret == broken_ret),
++                                "GetVolumePathName test %d %s unexpectedly.\n",
+                                 i, test_paths[i].error == NO_ERROR ? "failed" : "succeeded");
+ 
+         if (ret)
 -- 
-2.1.0
+1.9.1
 

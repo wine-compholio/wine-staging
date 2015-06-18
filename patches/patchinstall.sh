@@ -3081,11 +3081,17 @@ if test "$enable_kernel32_GetVolumePathName" -eq 1; then
 	patch_apply kernel32-GetVolumePathName/0001-kernel32-Implement-GetVolumePathName.patch
 	patch_apply kernel32-GetVolumePathName/0002-kernel32-Convert-GetVolumePathName-tests-into-a-list.patch
 	patch_apply kernel32-GetVolumePathName/0003-kernel32-Add-a-bunch-more-GetVolumePathName-tests.patch
-	patch_apply kernel32-GetVolumePathName/0004-kernel32-tests-Add-a-lot-of-picky-GetVolumePathName-.patch
+	patch_apply kernel32-GetVolumePathName/0004-kernel32-Handle-semi-DOS-paths-in-GetVolumePathName.patch
+	patch_apply kernel32-GetVolumePathName/0005-kernel32-Handle-bogus-DOS-paths-in-GetVolumePathName.patch
+	patch_apply kernel32-GetVolumePathName/0006-kernel32-Handle-device-paths-in-GetVolumePathName.patch
+	patch_apply kernel32-GetVolumePathName/0007-kernel32-tests-Add-a-lot-of-picky-GetVolumePathName-.patch
 	(
 		echo '+    { "Erich E. Hoover", "kernel32: Implement GetVolumePathName.", 1 },';
 		echo '+    { "Erich E. Hoover", "kernel32: Convert GetVolumePathName tests into a list.", 1 },';
 		echo '+    { "Erich E. Hoover", "kernel32: Add a bunch more GetVolumePathName tests.", 1 },';
+		echo '+    { "Erich E. Hoover", "kernel32: Handle semi-DOS paths in GetVolumePathName.", 1 },';
+		echo '+    { "Erich E. Hoover", "kernel32: Handle bogus DOS paths in GetVolumePathName.", 1 },';
+		echo '+    { "Erich E. Hoover", "kernel32: Handle device paths in GetVolumePathName.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add a lot of picky GetVolumePathName tests.", 1 },';
 	) >> "$patchlist"
 fi

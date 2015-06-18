@@ -1,14 +1,14 @@
-From 58660ba82873512fe46e897274f569865f8af80f Mon Sep 17 00:00:00 2001
+From ba80811571531adf3c09736b42dd400e0269abea Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Tue, 2 Sep 2014 05:23:37 +0200
 Subject: kernel32/tests: Add a lot of picky GetVolumePathName tests.
 
 ---
- dlls/kernel32/tests/volume.c | 153 ++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 152 insertions(+), 1 deletion(-)
+ dlls/kernel32/tests/volume.c | 142 +++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 142 insertions(+)
 
 diff --git a/dlls/kernel32/tests/volume.c b/dlls/kernel32/tests/volume.c
-index e17cc16..e4026ed 100644
+index 4349ec4..67aa852 100644
 --- a/dlls/kernel32/tests/volume.c
 +++ b/dlls/kernel32/tests/volume.c
 @@ -54,6 +54,7 @@ static UINT (WINAPI *pGetLogicalDriveStringsA)(UINT,LPSTR);
@@ -19,120 +19,102 @@ index e17cc16..e4026ed 100644
  static BOOL (WINAPI *pGetVolumePathNamesForVolumeNameA)(LPCSTR, LPSTR, DWORD, LPDWORD);
  static BOOL (WINAPI *pGetVolumePathNamesForVolumeNameW)(LPCWSTR, LPWSTR, DWORD, LPDWORD);
  
-@@ -645,7 +646,7 @@ static void test_GetVolumePathNameA(void)
+@@ -683,6 +684,94 @@ static void test_GetVolumePathNameA(void)
+             "\\??\\ReallyBogus", "%CurrentDrive%\\", sizeof(volume_path),
+             NO_ERROR, NO_ERROR
          },
-         { /* test 11: an unreasonable DOS path */
-             "InvalidDrive:\\AnInvalidFolder", "C:\\", sizeof(volume_path),
--            NO_ERROR, NO_ERROR
-+            NO_ERROR, NO_ERROR /* FIXME: depends on system dir */
-         },
-         { /* test 12: a reasonable NT-converted DOS path that shouldn't exist */
-             "\\\\?\\C:\\AnInvalidFolder", "\\\\?\\C:\\", sizeof(volume_path),
-@@ -663,6 +664,103 @@ static void test_GetVolumePathNameA(void)
-             "\\\\ReallyBogus\\InvalidDrive:\\AnInvalidFolder", "", sizeof(volume_path),
-             ERROR_INVALID_NAME, NO_ERROR
-         },
-+        { /* test 16 */
++        { /* test 20 */
 +            "C:", "C:", 2,
 +            ERROR_FILENAME_EXCED_RANGE, NO_ERROR
 +        },
-+        { /* test 17 */
++        { /* test 21 */
 +            "C:", "C:", 3,
-+            NO_ERROR, NO_ERROR
++            NO_ERROR, ERROR_FILENAME_EXCED_RANGE
 +        },
-+        { /* test 18 */
++        { /* test 22 */
 +            "C:\\", "C:", 2,
 +            ERROR_FILENAME_EXCED_RANGE, NO_ERROR
 +        },
-+        { /* test 19 */
++        { /* test 23 */
 +            "C:\\", "C:", 3,
-+            NO_ERROR, NO_ERROR
++            NO_ERROR, ERROR_FILENAME_EXCED_RANGE
 +        },
-+        { /* test 20 */
++        { /* test 24 */
 +            "C::", "C:", 2,
 +            ERROR_FILENAME_EXCED_RANGE, NO_ERROR
 +        },
-+        { /* test 21 */
++        { /* test 25 */
 +            "C::", "C:", 3,
-+            NO_ERROR, NO_ERROR
++            NO_ERROR, ERROR_FILENAME_EXCED_RANGE
 +        },
-+        { /* test 22 */
++        { /* test 26 */
 +            "C::", "C:\\", 4,
-+            NO_ERROR, NO_ERROR
++            NO_ERROR, ERROR_MORE_DATA
 +        },
-+        { /* test 23 */
++        { /* test 27 */
 +            "C:\\windows\\system32\\AnInvalidFolder", "C:", 3,
-+            NO_ERROR, NO_ERROR
++            NO_ERROR, ERROR_FILENAME_EXCED_RANGE
 +        },
-+        { /* test 24 */
++        { /* test 28 */
 +            "\\\\?\\C:\\AnInvalidFolder", "\\\\?\\C:", 3,
 +            ERROR_FILENAME_EXCED_RANGE, NO_ERROR
 +        },
-+        { /* test 25 */
++        { /* test 29 */
 +            "\\\\?\\C:\\AnInvalidFolder", "\\\\?\\C:", 6,
 +            ERROR_FILENAME_EXCED_RANGE, NO_ERROR
 +        },
-+        { /* test 26 */
-+            "\\\\?\\C:\\AnInvalidFolder", "\\\\?\\C:", 7,
-+            NO_ERROR, NO_ERROR
-+        },
-+        { /* test 27 */
-+            "\\\\?\\c:\\AnInvalidFolder", "\\\\?\\c:", 7,
-+            NO_ERROR, NO_ERROR
-+        },
-+        { /* test 28 */
-+            "C:/", "C:\\", 4,
-+            NO_ERROR, NO_ERROR
-+        },
-+        { /* test 29 */
-+            "E:/", "", 4,
-+            ERROR_FILE_NOT_FOUND, NO_ERROR
-+        },
 +        { /* test 30 */
-+            "M::", "C:\\", 4,
-+            ERROR_FILE_NOT_FOUND, NO_ERROR
++            "\\\\?\\C:\\AnInvalidFolder", "\\\\?\\C:", 7,
++            NO_ERROR, ERROR_FILENAME_EXCED_RANGE
 +        },
 +        { /* test 31 */
-+            "C:ABC:DEF:\\AnInvalidFolder", "C:\\", 4,
-+            NO_ERROR, NO_ERROR
++            "\\\\?\\c:\\AnInvalidFolder", "\\\\?\\c:", 7,
++            NO_ERROR, ERROR_FILENAME_EXCED_RANGE
 +        },
 +        { /* test 32 */
-+            "?:ABC:DEF:\\AnInvalidFolder", "", sizeof(volume_path),
-+            ERROR_FILE_NOT_FOUND, NO_ERROR
++            "C:/", "C:\\", 4,
++            NO_ERROR, ERROR_MORE_DATA
 +        },
 +        { /* test 33 */
-+            "relative/path", "C:\\", sizeof(volume_path),
-+            NO_ERROR, NO_ERROR /* FIXME: depends on system dir */
++            "M:/", "", 4,
++            ERROR_FILE_NOT_FOUND, ERROR_MORE_DATA
 +        },
 +        { /* test 34 */
-+            "/unix-style/absolute/path", "C:\\", sizeof(volume_path),
-+            NO_ERROR, NO_ERROR /* FIXME: depends on system dir */
++            "C:ABC:DEF:\\AnInvalidFolder", "C:\\", 4,
++            NO_ERROR, ERROR_MORE_DATA
 +        },
 +        { /* test 35 */
-+            "\\??\\ReallyBogus", "C:\\", sizeof(volume_path),
-+            NO_ERROR, NO_ERROR /* FIXME: depends on system dir */
++            "?:ABC:DEF:\\AnInvalidFolder", "?:\\" /* win2k, winxp */, sizeof(volume_path),
++            ERROR_FILE_NOT_FOUND, NO_ERROR
 +        },
 +        { /* test 36 */
-+            "\\??\\C:\\NonExistent", "C:\\", sizeof(volume_path),
-+            NO_ERROR, NO_ERROR /* FIXME: depends on system dir */
++            "relative/path", "%CurrentDrive%\\", sizeof(volume_path),
++            NO_ERROR, NO_ERROR
 +        },
 +        { /* test 37 */
-+            "\\??\\M:\\NonExistent", "C:\\", sizeof(volume_path),
-+            NO_ERROR, NO_ERROR /* FIXME: depends on system dir */
++            "/unix-style/absolute/path", "%CurrentDrive%\\", sizeof(volume_path),
++            NO_ERROR, NO_ERROR
 +        },
 +        { /* test 38 */
-+            "somefile:def", "C:\\", sizeof(volume_path),
++            "\\??\\C:\\NonExistent", "%CurrentDrive%\\", sizeof(volume_path),
 +            NO_ERROR, NO_ERROR
 +        },
 +        { /* test 39 */
-+            "s:omefile", "", sizeof(volume_path),
++            "\\??\\M:\\NonExistent", "%CurrentDrive%\\", sizeof(volume_path),
++            NO_ERROR, NO_ERROR
++        },
++        { /* test 40 */
++            "somefile:def", "%CurrentDrive%\\", sizeof(volume_path),
++            NO_ERROR, NO_ERROR
++        },
++        { /* test 41 */
++            "s:omefile", "S:\\" /* win2k, winxp */, sizeof(volume_path),
 +            ERROR_FILE_NOT_FOUND, NO_ERROR
 +        },
-+
      };
      BOOL ret, success;
      DWORD error;
-@@ -681,6 +779,9 @@ static void test_GetVolumePathNameA(void)
+@@ -709,6 +798,9 @@ static void test_GetVolumePathNameA(void)
          BOOL expected_ret = test_paths[i].error == NO_ERROR ? TRUE : FALSE;
  
          volume_path[0] = 0;
@@ -142,7 +124,7 @@ index e17cc16..e4026ed 100644
          SetLastError( 0xdeadbeef );
          ret = pGetVolumePathNameA( test_paths[i].file_name, output, test_paths[i].path_len );
          error = GetLastError();
-@@ -702,9 +803,57 @@ static void test_GetVolumePathNameA(void)
+@@ -734,9 +826,57 @@ static void test_GetVolumePathNameA(void)
              ok(success, "GetVolumePathName test %d unexpectedly returned error 0x%x (expected 0x%x).\n",
                          i, error, test_paths[i].error);
          }
@@ -200,7 +182,7 @@ index e17cc16..e4026ed 100644
  static void test_GetVolumePathNamesForVolumeNameA(void)
  {
      BOOL ret;
-@@ -1044,6 +1193,7 @@ START_TEST(volume)
+@@ -1076,6 +1216,7 @@ START_TEST(volume)
      pGetLogicalDriveStringsW = (void *) GetProcAddress(hdll, "GetLogicalDriveStringsW");
      pGetVolumeInformationA = (void *) GetProcAddress(hdll, "GetVolumeInformationA");
      pGetVolumePathNameA = (void *) GetProcAddress(hdll, "GetVolumePathNameA");
@@ -208,7 +190,7 @@ index e17cc16..e4026ed 100644
      pGetVolumePathNamesForVolumeNameA = (void *) GetProcAddress(hdll, "GetVolumePathNamesForVolumeNameA");
      pGetVolumePathNamesForVolumeNameW = (void *) GetProcAddress(hdll, "GetVolumePathNamesForVolumeNameW");
  
-@@ -1051,6 +1201,7 @@ START_TEST(volume)
+@@ -1083,6 +1224,7 @@ START_TEST(volume)
      test_define_dos_deviceA();
      test_FindFirstVolume();
      test_GetVolumePathNameA();
@@ -217,5 +199,5 @@ index e17cc16..e4026ed 100644
      test_GetVolumeNameForVolumeMountPointW();
      test_GetLogicalDriveStringsA();
 -- 
-2.1.0
+1.9.1
 

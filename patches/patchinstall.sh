@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 6fe55462107b4dcc31f919296a6e5870dcc881a3"
+	echo "  commit af55ae137965512a1635e69b8f41849114f60012"
 	echo ""
 }
 
@@ -185,7 +185,6 @@ patch_enable_all ()
 	enable_ntdll_WinSqm="$1"
 	enable_ntdll_WriteWatches="$1"
 	enable_ntoskrnl_DriverTest="$1"
-	enable_ntoskrnl_Emulator="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
@@ -211,7 +210,6 @@ patch_enable_all ()
 	enable_server_OpenProcess="$1"
 	enable_server_PeekMessage="$1"
 	enable_server_Realtime_Priority="$1"
-	enable_server_Release_File="$1"
 	enable_server_RootDirectory_File="$1"
 	enable_server_Shared_Memory="$1"
 	enable_server_Stored_ACLs="$1"
@@ -634,9 +632,6 @@ patch_enable ()
 		ntoskrnl-DriverTest)
 			enable_ntoskrnl_DriverTest="$2"
 			;;
-		ntoskrnl-Emulator)
-			enable_ntoskrnl_Emulator="$2"
-			;;
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
 			;;
@@ -711,9 +706,6 @@ patch_enable ()
 			;;
 		server-Realtime_Priority)
 			enable_server_Realtime_Priority="$2"
-			;;
-		server-Release_File)
-			enable_server_Release_File="$2"
 			;;
 		server-RootDirectory_File)
 			enable_server_RootDirectory_File="$2"
@@ -1444,9 +1436,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_ntdll_WriteWatches" -gt 1; then
 		abort "Patchset ntdll-WriteWatches disabled, but category-stable depends on that."
 	fi
-	if test "$enable_ntoskrnl_Emulator" -gt 1; then
-		abort "Patchset ntoskrnl-Emulator disabled, but category-stable depends on that."
-	fi
 	if test "$enable_opengl32_Revert_Disable_Ext" -gt 1; then
 		abort "Patchset opengl32-Revert_Disable_Ext disabled, but category-stable depends on that."
 	fi
@@ -1595,7 +1584,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_ntdll_Threading=1
 	enable_ntdll_User_Shared_Data=1
 	enable_ntdll_WriteWatches=1
-	enable_ntoskrnl_Emulator=1
 	enable_opengl32_Revert_Disable_Ext=1
 	enable_server_Address_List_Change=1
 	enable_server_ClipCursor=1
@@ -1756,13 +1744,6 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 		abort "Patchset nvcuda-CUDA_Support disabled, but nvapi-Stub_DLL depends on that."
 	fi
 	enable_nvcuda_CUDA_Support=1
-fi
-
-if test "$enable_ntoskrnl_Emulator" -eq 1; then
-	if test "$enable_ntdll_User_Shared_Data" -gt 1; then
-		abort "Patchset ntdll-User_Shared_Data disabled, but ntoskrnl-Emulator depends on that."
-	fi
-	enable_ntdll_User_Shared_Data=1
 fi
 
 if test "$enable_ntdll_WriteWatches" -eq 1; then
@@ -2052,23 +2033,6 @@ if test "$enable_advapi32_GetWindowsAccountDomainSid" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2085,6 +2049,23 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3804,12 +3785,14 @@ fi
 # Patchset ntdll-User_Shared_Data
 # |
 # | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/thread.c
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/thread.c, dlls/ntoskrnl.exe/instr.c
 # |
 if test "$enable_ntdll_User_Shared_Data" -eq 1; then
 	patch_apply ntdll-User_Shared_Data/0001-ntdll-Move-code-to-update-user-shared-data-into-a-se.patch
+	patch_apply ntdll-User_Shared_Data/0002-ntoskrnl-Update-USER_SHARED_DATA-before-accessing-me.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Move code to update user shared data into a separate function.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntoskrnl: Update USER_SHARED_DATA before accessing memory.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3912,23 +3895,6 @@ if test "$enable_ntoskrnl_DriverTest" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "ntoskrnl.exe/tests: Add initial driver testing framework and corresponding changes to Makefile system.", 2 },';
 		echo '+    { "Michael Müller", "ntoskrnl.exe/tests: Add kernel compliant test functions.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntoskrnl-Emulator
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#33849] Emulate access to KI_USER_SHARED_DATA kernel page on x86_64
-# |
-# | Modified files:
-# |   *	dlls/ntoskrnl.exe/instr.c, dlls/ntoskrnl.exe/ntoskrnl.c
-# |
-if test "$enable_ntoskrnl_Emulator" -eq 1; then
-	patch_apply ntoskrnl-Emulator/0001-ntoskrnl-Emulate-memory-access-to-KI_USER_SHARED_DAT.patch
-	patch_apply ntoskrnl-Emulator/0002-ntoskrnl-Add-TRACEs-for-instruction-emulator-on-x86_.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntoskrnl: Emulate memory access to KI_USER_SHARED_DATA on x86_64.", 3 },';
-		echo '+    { "Sebastian Lackner", "ntoskrnl: Add TRACEs for instruction emulator on x86_64 to simplify debugging.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4386,21 +4352,6 @@ if test "$enable_server_Realtime_Priority" -eq 1; then
 	patch_apply server-Realtime_Priority/0001-wineserver-Draft-to-implement-priority-levels-throug.patch
 	(
 		echo '+    { "Joakim Hernberg", "wineserver: Draft to implement priority levels through POSIX scheduling policies on linux.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Release_File
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38764] Fix possible use-after-free in wineserver device IPR code
-# |
-# | Modified files:
-# |   *	server/device.c
-# |
-if test "$enable_server_Release_File" -eq 1; then
-	patch_apply server-Release_File/0001-server-Delay-destruction-of-file-object-in-set_irp_r.patch
-	(
-		echo '+    { "Sebastian Lackner", "server: Delay destruction of file object in set_irp_result.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5066,18 +5017,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-wined3d_swapchain_present
 # |
 # | Modified files:
@@ -5087,18 +5026,6 @@ if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
 	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-resource_check_usage
-# |
-# | Modified files:
-# |   *	dlls/wined3d/resource.c
-# |
-if test "$enable_wined3d_resource_check_usage" -eq 1; then
-	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	(
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -5148,6 +5075,30 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-resource_check_usage
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c
+# |
+if test "$enable_wined3d_resource_check_usage" -eq 1; then
+	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	(
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
 	) >> "$patchlist"
 fi
 

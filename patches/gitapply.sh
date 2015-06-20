@@ -115,14 +115,27 @@ if [ "$nogit" -eq 0 ] && command -v git >/dev/null 2>&1; then
 fi
 
 # Detect BSD - we check this first to error out as early as possible
-if gzip -V 2>&1 | grep "BSD" &> /dev/null; then
+if gzip -V 2>&1 | grep -q "BSD"; then
 	echo "This script is not compatible with *BSD utilities. Please install git," >&2
 	echo "which provides the same functionality and will be used instead." >&2
 	exit 1
 fi
 
+# Check if GNU Awk is available
+if ! command -v gawk >/dev/null 2>&1; then
+	if ! awk -V 2>/dev/null | grep -q "GNU Awk"; then
+		echo "This script requires GNU Awk (or alternatively git) to work properly." >&2
+		exit 1
+	fi
+
+	gawk()
+	{
+		awk "$@"
+	}
+fi
+
 # Check for missing depdencies
-for dependency in awk cut dd du grep gzip hexdump patch sha1sum; do
+for dependency in gawk cut dd du grep gzip hexdump patch sha1sum; do
 	if ! command -v "$dependency" >/dev/null 2>&1; then
 		echo "Missing dependency: $dependency - please install this program and try again." >&2
 		exit 1
@@ -269,7 +282,7 @@ fi
 
 # Go through the different patch sections
 lastoffset=1
-for offset in $(awk '/^diff --git /{ print FNR; }' "$tmpfile"); do
+for offset in $(gawk '/^diff --git /{ print FNR; }' "$tmpfile"); do
 
 	# Check part between end of last patch and start of current patch
 	if [ "$lastoffset" -gt "$offset" ]; then
@@ -283,7 +296,7 @@ for offset in $(awk '/^diff --git /{ print FNR; }' "$tmpfile"); do
 
 	# Find out the size of the patch header
 	tmpoffset=$((offset + 1))
-	tmpoffset=$(sed -n "$tmpoffset,\$ p" "$tmpfile" | awk "$awk_eof_header")
+	tmpoffset=$(sed -n "$tmpoffset,\$ p" "$tmpfile" | gawk "$awk_eof_header")
 	hdroffset=$((offset + tmpoffset))
 
 	# Parse all important fields of the header
@@ -340,7 +353,7 @@ for offset in $(awk '/^diff --git /{ print FNR; }' "$tmpfile"); do
 	if [ "$patch_is_binary" -eq 0 ]; then
 
 		# Find end of textual patch
-		tmpoffset=$(sed -n "$hdroffset,\$ p" "$tmpfile" | awk "$awk_eof_textpatch")
+		tmpoffset=$(sed -n "$hdroffset,\$ p" "$tmpfile" | gawk "$awk_eof_textpatch")
 		lastoffset=$((hdroffset + tmpoffset - 1))
 
 		# Apply textual patch
@@ -370,7 +383,7 @@ for offset in $(awk '/^diff --git /{ print FNR; }' "$tmpfile"); do
 	fi
 
 	# Find end of binary patch
-	tmpoffset=$(sed -n "$hdroffset,\$ p" "$tmpfile" | awk "$awk_eof_binarypatch")
+	tmpoffset=$(sed -n "$hdroffset,\$ p" "$tmpfile" | gawk "$awk_eof_binarypatch")
 	lastoffset=$((hdroffset + tmpoffset - 1))
 
 	# Special case - deleting the whole file
@@ -393,7 +406,7 @@ for offset in $(awk '/^diff --git /{ print FNR; }' "$tmpfile"); do
 
 	# Decode base85 and gzip compression
 	tmpoffset=$((lastoffset - 1))
-	sed -n "$hdroffset,$tmpoffset p" "$tmpfile" | awk "$awk_decode_b85" | gzip -dc > "$literal_tmpfile" 2>/dev/null
+	sed -n "$hdroffset,$tmpoffset p" "$tmpfile" | gawk "$awk_decode_b85" | gzip -dc > "$literal_tmpfile" 2>/dev/null
 	if [ "$patch_binary_size" -ne "$(filesize "$literal_tmpfile")" ]; then
 		rm "$literal_tmpfile"
 		abort "Uncompressed binary patch has wrong size."
@@ -428,7 +441,7 @@ for offset in $(awk '/^diff --git /{ print FNR; }' "$tmpfile"); do
 				patch_binary_complete=1
 
 			else break; fi
-		done < <(hexdump -v -e '32/1 "%02X" "\n"' "$delta_tmpfile" | awk "$awk_decode_binarypatch")
+		done < <(hexdump -v -e '32/1 "%02X" "\n"' "$delta_tmpfile" | gawk "$awk_decode_binarypatch")
 
 		rm "$delta_tmpfile"
 

@@ -86,6 +86,7 @@ patch_enable_all ()
 	enable_combase_String="$1"
 	enable_comctl32_LoadIconMetric="$1"
 	enable_configure_Absolute_RPATH="$1"
+	enable_configure_Crosscompiling="$1"
 	enable_crypt32_CMS_Certificates="$1"
 	enable_d3d11_D3D11CreateDeviceAndSwapChain="$1"
 	enable_d3d9_DesktopWindow="$1"
@@ -335,6 +336,9 @@ patch_enable ()
 			;;
 		configure-Absolute_RPATH)
 			enable_configure_Absolute_RPATH="$2"
+			;;
+		configure-Crosscompiling)
+			enable_configure_Crosscompiling="$2"
 			;;
 		crypt32-CMS_Certificates)
 			enable_crypt32_CMS_Certificates="$2"
@@ -2154,6 +2158,20 @@ if test "$enable_configure_Absolute_RPATH" -eq 1; then
 	patch_apply configure-Absolute_RPATH/0001-configure-Also-add-the-absolute-RPATH-when-linking-a.patch
 	(
 		echo '+    { "Sebastian Lackner", "configure: Also add the absolute RPATH when linking against libwine.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset configure-Crosscompiling
+# |
+# | Modified files:
+# |   *	aclocal.m4, configure.ac
+# |
+if test "$enable_configure_Crosscompiling" -eq 1; then
+	patch_apply configure-Crosscompiling/0001-configure.ac-Search-for-otool-using-AC_CHECK_TOOL.patch
+	patch_apply configure-Crosscompiling/0002-configure.ac-Remove-check-for-strength-reduce-bug.patch
+	(
+		echo '+    { "Michael Müller", "configure.ac: Search for otool using AC_CHECK_TOOL.", 1 },';
+		echo '+    { "Michael Müller", "configure.ac: Remove check for strength-reduce bug.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5033,15 +5051,15 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-resource_check_usage
+# Patchset wined3d-UnhandledBlendFactor
 # |
 # | Modified files:
-# |   *	dlls/wined3d/resource.c
+# |   *	dlls/wined3d/state.c
 # |
-if test "$enable_wined3d_resource_check_usage" -eq 1; then
-	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
 	(
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5054,6 +5072,18 @@ if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
 	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-resource_check_usage
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c
+# |
+if test "$enable_wined3d_resource_check_usage" -eq 1; then
+	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	(
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -5103,18 +5133,6 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 

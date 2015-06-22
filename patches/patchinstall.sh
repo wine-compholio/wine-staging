@@ -2035,9 +2035,13 @@ fi
 # | 	base-l1-2-0.spec
 # |
 if test "$enable_advapi32_GetWindowsAccountDomainSid" -eq 1; then
-	patch_apply advapi32-GetWindowsAccountDomainSid/0001-advapi32-Implement-GetWindowsAccountDomainSid.patch
+	patch_apply advapi32-GetWindowsAccountDomainSid/0001-advapi32-tests-Explicitly-check-return-value-of-GetT.patch
+	patch_apply advapi32-GetWindowsAccountDomainSid/0002-advapi32-tests-Add-tests-for-GetWindowsAccountDomain.patch
+	patch_apply advapi32-GetWindowsAccountDomainSid/0003-advapi32-Add-initial-implementation-for-GetWindowsAc.patch
 	(
-		echo '+    { "Michael Müller", "advapi32: Implement GetWindowsAccountDomainSid.", 1 },';
+		echo '+    { "Sebastian Lackner", "advapi32/tests: Explicitly check return value of GetTokenInformation.", 1 },';
+		echo '+    { "Michael Müller", "advapi32/tests: Add tests for GetWindowsAccountDomainSid.", 1 },';
+		echo '+    { "Michael Müller", "advapi32: Add initial implementation for GetWindowsAccountDomainSid.", 1 },';
 	) >> "$patchlist"
 fi
 

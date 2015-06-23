@@ -2323,7 +2323,6 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#33768] Fix texture corruption in CSI: Fatal Conspiracy
-# |   *	[#19231] Fix crash of Trine Demo on start
 # |   *	[#37391] Exception during start of fr-043 caused by missing DXTn support
 # |   *	[#34692] Fix wrong colors in Wolfenstein (2009)
 # |   *	[#24983] Fix crash in Space Rangers2 caused by missing DXTn support
@@ -4080,9 +4079,6 @@ fi
 
 # Patchset quartz-MediaSeeking_Positions
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#23174] Return correct IMediaSeeking stream positions in quartz
-# |
 # | Modified files:
 # |   *	dlls/quartz/filtergraph.c, dlls/strmbase/pospass.c
 # |
@@ -4214,9 +4210,6 @@ if test "$enable_server_Stored_ACLs" -eq 1; then
 fi
 
 # Patchset server-Inherited_ACLs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34406] Support for inherited file ACLs
 # |
 # | Modified files:
 # |   *	dlls/advapi32/tests/security.c, server/file.c

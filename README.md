@@ -253,7 +253,7 @@ for more details.*
 * Support for FileFsFullSizeInformation information class
 * ~~Support for GdipCreateRegionRgnData~~ ([Wine Bug #34843](https://bugs.winehq.org/show_bug.cgi?id=34843))
 * Support for GetFinalPathNameByHandle ([Wine Bug #34851](https://bugs.winehq.org/show_bug.cgi?id=34851))
-* Support for GetVolumePathName
+* ~~Support for GetVolumePathName~~
 * Support for H264 DXVA2 GPU video decoding through vaapi
 * Support for ID3DXFont::DrawTextA/W ([Wine Bug #24754](https://bugs.winehq.org/show_bug.cgi?id=24754))
 * Support for ID3DXSkinInfoImpl_UpdateSkinnedMesh ([Wine Bug #32572](https://bugs.winehq.org/show_bug.cgi?id=32572))

@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit af55ae137965512a1635e69b8f41849114f60012"
+	echo "  commit da5151fd54c2679b9cd10a7a4d2933f727266bf5"
 	echo ""
 }
 
@@ -135,7 +135,6 @@ patch_enable_all ()
 	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_GetLogicalProcessorInformationEx="$1"
 	enable_kernel32_GetNumaProcessorNode="$1"
-	enable_kernel32_GetVolumePathName="$1"
 	enable_kernel32_InsertMode="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
@@ -483,9 +482,6 @@ patch_enable ()
 			;;
 		kernel32-GetNumaProcessorNode)
 			enable_kernel32_GetNumaProcessorNode="$2"
-			;;
-		kernel32-GetVolumePathName)
-			enable_kernel32_GetVolumePathName="$2"
 			;;
 		kernel32-InsertMode)
 			enable_kernel32_InsertMode="$2"
@@ -3075,30 +3071,6 @@ if test "$enable_kernel32_GetNumaProcessorNode" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-GetVolumePathName
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/volume.c, dlls/kernel32/volume.c
-# |
-if test "$enable_kernel32_GetVolumePathName" -eq 1; then
-	patch_apply kernel32-GetVolumePathName/0001-kernel32-Implement-GetVolumePathName.patch
-	patch_apply kernel32-GetVolumePathName/0002-kernel32-Convert-GetVolumePathName-tests-into-a-list.patch
-	patch_apply kernel32-GetVolumePathName/0003-kernel32-Add-a-bunch-more-GetVolumePathName-tests.patch
-	patch_apply kernel32-GetVolumePathName/0004-kernel32-Handle-semi-DOS-paths-in-GetVolumePathName.patch
-	patch_apply kernel32-GetVolumePathName/0005-kernel32-Handle-bogus-DOS-paths-in-GetVolumePathName.patch
-	patch_apply kernel32-GetVolumePathName/0006-kernel32-Handle-device-paths-in-GetVolumePathName.patch
-	patch_apply kernel32-GetVolumePathName/0007-kernel32-tests-Add-a-lot-of-picky-GetVolumePathName-.patch
-	(
-		echo '+    { "Erich E. Hoover", "kernel32: Implement GetVolumePathName.", 1 },';
-		echo '+    { "Erich E. Hoover", "kernel32: Convert GetVolumePathName tests into a list.", 1 },';
-		echo '+    { "Erich E. Hoover", "kernel32: Add a bunch more GetVolumePathName tests.", 1 },';
-		echo '+    { "Erich E. Hoover", "kernel32: Handle semi-DOS paths in GetVolumePathName.", 1 },';
-		echo '+    { "Erich E. Hoover", "kernel32: Handle bogus DOS paths in GetVolumePathName.", 1 },';
-		echo '+    { "Erich E. Hoover", "kernel32: Handle device paths in GetVolumePathName.", 1 },';
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Add a lot of picky GetVolumePathName tests.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-InsertMode
 # |
 # | Modified files:
@@ -5055,15 +5027,15 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-UnhandledBlendFactor
+# Patchset wined3d-resource_check_usage
 # |
 # | Modified files:
-# |   *	dlls/wined3d/state.c
+# |   *	dlls/wined3d/resource.c
 # |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+if test "$enable_wined3d_resource_check_usage" -eq 1; then
+	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
 	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -5076,18 +5048,6 @@ if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
 	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-resource_check_usage
-# |
-# | Modified files:
-# |   *	dlls/wined3d/resource.c
-# |
-if test "$enable_wined3d_resource_check_usage" -eq 1; then
-	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	(
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -5137,6 +5097,18 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 

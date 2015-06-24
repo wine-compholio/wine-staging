@@ -182,7 +182,7 @@ for more details.*
 * Implement IDXGIOutput::GetDesc
 * Implement a Microsoft Yahei replacement font ([Wine Bug #13829](https://bugs.winehq.org/show_bug.cgi?id=13829))
 * Implement additional stubs for vcomp dlls ([Wine Bug #31640](https://bugs.winehq.org/show_bug.cgi?id=31640))
-* Implement advapi32.GetWindowsAccountDomainSid ([Wine Bug #38624](https://bugs.winehq.org/show_bug.cgi?id=38624))
+* ~~Implement advapi32.GetWindowsAccountDomainSid~~ ([Wine Bug #38624](https://bugs.winehq.org/show_bug.cgi?id=38624))
 * Implement an Arial replacement font ([Wine Bug #32323](https://bugs.winehq.org/show_bug.cgi?id=32323))
 * Implement combase.WindowsSubstring function
 * Implement default homepage button in inetcpl.cpl

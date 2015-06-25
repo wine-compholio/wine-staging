@@ -71,7 +71,7 @@ for more details.*
 * Add stub for D3DXIntersect
 * Add stub for NtSetLdtEntries/ZwSetLdtEntries ([Wine Bug #26268](https://bugs.winehq.org/show_bug.cgi?id=26268))
 * Add stub for d3d11.D3D11CreateDeviceAndSwapChain ([Wine Bug #33153](https://bugs.winehq.org/show_bug.cgi?id=33153))
-* Add stub for fltlib.FilterLoad ([Wine Bug #38435](https://bugs.winehq.org/show_bug.cgi?id=38435))
+* ~~Add stub for fltlib.FilterLoad~~ ([Wine Bug #38435](https://bugs.winehq.org/show_bug.cgi?id=38435))
 * Add stub for gdiplus.GdipCreateEffect ([Wine Bug #32163](https://bugs.winehq.org/show_bug.cgi?id=32163))
 * ~~Add stub for kernel32.SetFileCompletionNotificationModes (for Steam in Win7 mode)~~ ([Wine Bug #38493](https://bugs.winehq.org/show_bug.cgi?id=38493))
 * Add stub for ntoskrnl.ExAcquireResourceExclusiveLite

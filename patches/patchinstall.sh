@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 4f3acf31deef5893b057778695fa5691ccac32df"
+	echo "  commit efd41e4f2b1c784d4939aa10d869f87f2384f10c"
 	echo ""
 }
 
@@ -116,7 +116,6 @@ patch_enable_all ()
 	enable_dsound_Fast_Mixer="$1"
 	enable_dxgi_GetDesc="$1"
 	enable_dxva2_Video_Decoder="$1"
-	enable_fltlib_FilterLoad="$1"
 	enable_fltmgr_Stub_SYS="$1"
 	enable_fonts_Missing_Fonts="$1"
 	enable_gdi32_Default_Palette="$1"
@@ -422,9 +421,6 @@ patch_enable ()
 			;;
 		dxva2-Video_Decoder)
 			enable_dxva2_Video_Decoder="$2"
-			;;
-		fltlib-FilterLoad)
-			enable_fltlib_FilterLoad="$2"
 			;;
 		fltmgr-Stub_SYS)
 			enable_fltmgr_Stub_SYS="$2"
@@ -1344,9 +1340,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_dxgi_GetDesc" -gt 1; then
 		abort "Patchset dxgi-GetDesc disabled, but category-stable depends on that."
 	fi
-	if test "$enable_fltlib_FilterLoad" -gt 1; then
-		abort "Patchset fltlib-FilterLoad disabled, but category-stable depends on that."
-	fi
 	if test "$enable_fonts_Missing_Fonts" -gt 1; then
 		abort "Patchset fonts-Missing_Fonts disabled, but category-stable depends on that."
 	fi
@@ -1548,7 +1541,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_ddraw_EnumSurfaces=1
 	enable_dinput_Events=1
 	enable_dxgi_GetDesc=1
-	enable_fltlib_FilterLoad=1
 	enable_fonts_Missing_Fonts=1
 	enable_gdi32_MaxPixelFormats=1
 	enable_gdiplus_GdipCreateEffect=1
@@ -2008,6 +2000,23 @@ if test "$enable_Staging" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2024,23 +2033,6 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2684,21 +2676,6 @@ if test "$enable_dxva2_Video_Decoder" -eq 1; then
 		echo '+    { "Michael Müller", "dxva2: Add DRM mode for vaapi.", 1 },';
 		echo '+    { "Michael Müller", "dxva2: Fill h264 luma and chroma weights / offsets with default values in case they are not specified.", 1 },';
 		echo '+    { "Michael Müller", "dxva2: Always destroy buffers when calling vaRenderPicture.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset fltlib-FilterLoad
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38435] Add stub for fltlib.FilterLoad
-# |
-# | Modified files:
-# |   *	dlls/fltlib/fltlib.c, dlls/fltlib/fltlib.spec
-# |
-if test "$enable_fltlib_FilterLoad" -eq 1; then
-	patch_apply fltlib-FilterLoad/0001-fltlib-Add-stub-for-FilterLoad.patch
-	(
-		echo '+    { "Michael Müller", "fltlib: Add stub for FilterLoad.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5655,32 +5632,26 @@ fi
 # |   *	[#28911] Add HTTP Host header in HttpSendRequest instead of HttpOpenRequest
 # |
 # | Modified files:
-# |   *	dlls/rpcrt4/rpc_transport.c, dlls/wininet/http.c, dlls/wininet/tests/http.c
+# |   *	dlls/wininet/http.c, dlls/wininet/tests/http.c
 # |
 if test "$enable_wininet_Cleanup" -eq 1; then
 	patch_apply wininet-Cleanup/0001-wininet-tests-Add-more-tests-for-cookies.patch
-	patch_apply wininet-Cleanup/0002-wininet-tests-Add-tests-for-overriding-host-header.patch
-	patch_apply wininet-Cleanup/0003-wininet-tests-Test-auth-credential-reusage-with-host.patch
-	patch_apply wininet-Cleanup/0004-wininet-tests-Check-cookie-behaviour-when-overriding.patch
-	patch_apply wininet-Cleanup/0005-wininet-Use-request-server-name-when-processing-cook.patch
-	patch_apply wininet-Cleanup/0006-wininet-Delay-setting-the-http-host-header.patch
-	patch_apply wininet-Cleanup/0007-wininet-Use-request-server-canon_host_port-in-authen.patch
-	patch_apply wininet-Cleanup/0008-wininet-Use-request-server-canon_host_port-when-quer.patch
-	patch_apply wininet-Cleanup/0009-rpcrt4-Fix-arguments-of-HttpAddRequestHeaders.patch
-	patch_apply wininet-Cleanup/0010-wininet-Fix-arguments-of-HttpAddRequestHeaders.patch
-	patch_apply wininet-Cleanup/0011-wininet-Strip-filename-if-no-path-is-set-in-cookie.patch
-	patch_apply wininet-Cleanup/0012-wininet-Replacing-header-fields-should-fail-if-they-.patch
+	patch_apply wininet-Cleanup/0002-wininet-tests-Test-auth-credential-reusage-with-host.patch
+	patch_apply wininet-Cleanup/0003-wininet-tests-Check-cookie-behaviour-when-overriding.patch
+	patch_apply wininet-Cleanup/0004-wininet-Use-request-server-name-when-processing-cook.patch
+	patch_apply wininet-Cleanup/0005-wininet-Delay-setting-the-http-host-header.patch
+	patch_apply wininet-Cleanup/0006-wininet-Use-request-server-canon_host_port-in-authen.patch
+	patch_apply wininet-Cleanup/0007-wininet-Use-request-server-canon_host_port-when-quer.patch
+	patch_apply wininet-Cleanup/0008-wininet-Strip-filename-if-no-path-is-set-in-cookie.patch
+	patch_apply wininet-Cleanup/0009-wininet-Replacing-header-fields-should-fail-if-they-.patch
 	(
 		echo '+    { "Michael Müller", "wininet/tests: Add more tests for cookies.", 1 },';
-		echo '+    { "Michael Müller", "wininet/tests: Add tests for overriding host header.", 1 },';
 		echo '+    { "Michael Müller", "wininet/tests: Test auth credential reusage with host override.", 1 },';
 		echo '+    { "Michael Müller", "wininet/tests: Check cookie behaviour when overriding host.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Use request->server->name when processing cookies instead of Host header field.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Delay setting the http host header.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Use request->server->canon_host_port in authentication process.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Use request->server->canon_host_port when querying for INTERNET_OPTION_URL.", 1 },';
-		echo '+    { "Michael Müller", "rpcrt4: Fix arguments of HttpAddRequestHeaders.", 1 },';
-		echo '+    { "Michael Müller", "wininet: Fix arguments of HttpAddRequestHeaders.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Strip filename if no path is set in cookie.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Replacing header fields should fail if they do not exist yet.", 1 },';
 	) >> "$patchlist"

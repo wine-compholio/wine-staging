@@ -3002,15 +3002,14 @@ fi
 # |   *	[#38660] Add implementation for kernel32.GetNumaProcessorNode
 # |
 # | Modified files:
-# |   *	dlls/kernel32/cpu.c, dlls/kernel32/kernel32.spec, dlls/kernel32/tests/Makefile.in, dlls/kernel32/tests/cpu.c,
-# | 	include/winbase.h
+# |   *	dlls/kernel32/cpu.c, dlls/kernel32/kernel32.spec, dlls/kernel32/tests/process.c, include/winbase.h
 # |
 if test "$enable_kernel32_GetNumaProcessorNode" -eq 1; then
-	patch_apply kernel32-GetNumaProcessorNode/0001-kernel32-Implement-GetNumaProcessorNode.patch
-	patch_apply kernel32-GetNumaProcessorNode/0002-kernel32-tests-Add-tests-for-GetNumaProcessorNode.patch
+	patch_apply kernel32-GetNumaProcessorNode/0001-kernel32-tests-Add-tests-for-GetNumaProcessorNode.-v.patch
+	patch_apply kernel32-GetNumaProcessorNode/0002-kernel32-Implement-GetNumaProcessorNode.-v2.patch
 	(
-		echo '+    { "Michael Müller", "kernel32: Implement GetNumaProcessorNode.", 1 },';
-		echo '+    { "Michael Müller", "kernel32/tests: Add tests for GetNumaProcessorNode.", 1 },';
+		echo '+    { "Michael Müller", "kernel32/tests: Add tests for GetNumaProcessorNode.", 2 },';
+		echo '+    { "Michael Müller", "kernel32: Implement GetNumaProcessorNode.", 2 },';
 	) >> "$patchlist"
 fi
 

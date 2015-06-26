@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit efd41e4f2b1c784d4939aa10d869f87f2384f10c"
+	echo "  commit ae6efa469bfaecade30e160d195d607bdcdcc6ae"
 	echo ""
 }
 
@@ -153,7 +153,6 @@ patch_enable_all ()
 	enable_msvfw32_Image_Size="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_APC_Start_Process="$1"
-	enable_ntdll_AT_ROUND_TO_PAGE="$1"
 	enable_ntdll_Activation_Context="$1"
 	enable_ntdll_CLI_Images="$1"
 	enable_ntdll_DOS_Attributes="$1"
@@ -533,9 +532,6 @@ patch_enable ()
 			;;
 		ntdll-APC_Start_Process)
 			enable_ntdll_APC_Start_Process="$2"
-			;;
-		ntdll-AT_ROUND_TO_PAGE)
-			enable_ntdll_AT_ROUND_TO_PAGE="$2"
 			;;
 		ntdll-Activation_Context)
 			enable_ntdll_Activation_Context="$2"
@@ -1752,13 +1748,6 @@ if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
 	enable_ntdll_LZNT1_Compression=1
 fi
 
-if test "$enable_ntdll_NtQuerySection" -eq 1; then
-	if test "$enable_ntdll_AT_ROUND_TO_PAGE" -gt 1; then
-		abort "Patchset ntdll-AT_ROUND_TO_PAGE disabled, but ntdll-NtQuerySection depends on that."
-	fi
-	enable_ntdll_AT_ROUND_TO_PAGE=1
-fi
-
 if test "$enable_ntdll_Junction_Points" -eq 1; then
 	if test "$enable_ntdll_Fix_Free" -gt 1; then
 		abort "Patchset ntdll-Fix_Free disabled, but ntdll-Junction_Points depends on that."
@@ -2881,18 +2870,6 @@ if test "$enable_kernel32_CompareStringEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-File_Permissions
 # |
 # | Modified files:
@@ -2953,6 +2930,18 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Zhaonan Liang", "include: Add declaration for FILE_LINK_INFORMATION.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Add tests for FileLinkInformation class.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement support for FileLinkInformation class in NtSetInformationFile.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3352,18 +3341,6 @@ if test "$enable_ntdll_APC_Start_Process" -eq 1; then
 	patch_apply ntdll-APC_Start_Process/0001-ntdll-Process-APC-calls-before-starting-process.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Process APC calls before starting process.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-AT_ROUND_TO_PAGE
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/virtual.c
-# |
-if test "$enable_ntdll_AT_ROUND_TO_PAGE" -eq 1; then
-	patch_apply ntdll-AT_ROUND_TO_PAGE/0001-ntdll-Add-support-for-AT_ROUND_TO_PAGE-flag-in-NtMap.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Add support for AT_ROUND_TO_PAGE flag in NtMapViewOfSection.", 1 },';
 	) >> "$patchlist"
 fi
 

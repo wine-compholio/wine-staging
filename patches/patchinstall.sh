@@ -216,6 +216,7 @@ patch_enable_all ()
 	enable_setupapi_SetupPromptForDisk="$1"
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
 	enable_shell32_Default_Path="$1"
+	enable_shell32_File_Property_Dialog="$1"
 	enable_shell32_Icons="$1"
 	enable_shell32_Placeholder_Icons="$1"
 	enable_shell32_Progress_Dialog="$1"
@@ -721,6 +722,9 @@ patch_enable ()
 			;;
 		shell32-Default_Path)
 			enable_shell32_Default_Path="$2"
+			;;
+		shell32-File_Property_Dialog)
+			enable_shell32_File_Property_Dialog="$2"
 			;;
 		shell32-Icons)
 			enable_shell32_Icons="$2"
@@ -4389,6 +4393,18 @@ if test "$enable_shell32_Default_Path" -eq 1; then
 	patch_apply shell32-Default_Path/0001-shell32-Implement-KF_FLAG_DEFAULT_PATH-flag-for-SHGe.patch
 	(
 		echo '+    { "Sebastian Lackner", "shell32: Implement KF_FLAG_DEFAULT_PATH flag for SHGetKnownFolderPath.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shell32-File_Property_Dialog
+# |
+# | Modified files:
+# |   *	dlls/shell32/shell32.rc, dlls/shell32/shlview_cmenu.c, dlls/shell32/shresdef.h
+# |
+if test "$enable_shell32_File_Property_Dialog" -eq 1; then
+	patch_apply shell32-File_Property_Dialog/0001-shell32-Add-general-tab-in-file-property-dialog.patch
+	(
+		echo '+    { "Michael Müller", "shell32: Add general tab in file property dialog.", 1 },';
 	) >> "$patchlist"
 fi
 

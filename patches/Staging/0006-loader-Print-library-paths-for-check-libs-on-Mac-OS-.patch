@@ -1,0 +1,64 @@
+From b4a2543264f9eb91fc259a81dea872eee3c14aba Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 27 Jun 2015 19:28:51 +0200
+Subject: loader: Print library paths for --check-libs on Mac OS X.
+
+---
+ loader/main.c | 27 ++++++++++++++++++++++++++-
+ 1 file changed, 26 insertions(+), 1 deletion(-)
+
+diff --git a/loader/main.c b/loader/main.c
+index 44804e1..4d9126e 100644
+--- a/loader/main.c
++++ b/loader/main.c
+@@ -48,6 +48,7 @@
+ #include "main.h"
+ 
+ #ifdef __APPLE__
++#include <mach-o/dyld.h>
+ 
+ #ifndef __clang__
+ __asm__(".zerofill WINE_DOS, WINE_DOS, ___wine_dos, 0x40000000");
+@@ -73,6 +74,26 @@ static inline void reserve_area( void *addr, size_t size )
+     wine_mmap_add_reserved_area( addr, size );
+ }
+ 
++const char *get_macho_library_path( const char *libname )
++{
++    unsigned int path_len, libname_len = strlen( libname );
++    uint32_t i, count = _dyld_image_count();
++
++    for (i = 0; i < count; i++)
++    {
++        const char *path = _dyld_get_image_name( i );
++        if (!path) continue;
++
++        path_len = strlen( path );
++        if (path_len < libname_len + 1) continue;
++        if (path[path_len - libname_len - 1] != '/') continue;
++        if (strcmp( path + path_len - libname_len, libname )) continue;
++
++        return path;
++    }
++    return NULL;
++}
++
+ #else  /* __APPLE__ */
+ 
+ /* the preloader will set this variable */
+@@ -181,7 +202,11 @@ static void check_command_line( int argc, char *argv[] )
+                 else
+             #endif
+                 {
+-                    printf( "%s: found\n", *wine_libs );
++                    const char *path = NULL;
++                #ifdef __APPLE__
++                    path = get_macho_library_path( *wine_libs );
++                #endif
++                    printf( "%s: %s\n", *wine_libs, path ? path : "found");
+                 }
+                 wine_dlclose( lib_handle, NULL, 0 );
+             }
+-- 
+2.4.3
+

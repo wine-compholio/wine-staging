@@ -1984,12 +1984,14 @@ if test "$enable_Staging" -eq 1; then
 	patch_apply Staging/0003-winelib-Append-Staging-at-the-end-of-the-version-s.patch
 	patch_apply Staging/0004-loader-Add-commandline-option-patches-to-show-the-pa.patch
 	patch_apply Staging/0005-loader-Add-commandline-option-check-libs.patch
+	patch_apply Staging/0006-loader-Print-library-paths-for-check-libs-on-Mac-OS-.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32: Add winediag message to show warning, that this isn'\''t vanilla wine.", 1 },';
 		echo '+    { "Sebastian Lackner", "winedbg: Change bug reporting URL to Wine Staging.", 1 },';
 		echo '+    { "Sebastian Lackner", "winelib: Append '\''(Staging)'\'' at the end of the version string.", 1 },';
 		echo '+    { "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list.", 1 },';
 		echo '+    { "Michael Müller", "loader: Add commandline option --check-libs.", 1 },';
+		echo '+    { "Michael Müller", "loader: Print library paths for --check-libs on Mac OS X.", 1 },';
 	) >> "$patchlist"
 fi
 

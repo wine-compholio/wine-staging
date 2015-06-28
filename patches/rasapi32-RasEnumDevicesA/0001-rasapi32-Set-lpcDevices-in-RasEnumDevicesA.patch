@@ -1,0 +1,123 @@
+From 8377389407d8ab624c79cbb072e7c6e5c1b4a8d5 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 28 Jun 2015 03:58:23 +0200
+Subject: rasapi32: Set *lpcDevices in RasEnumDevicesA.
+
+Based on a patch by Qian Hong.
+---
+ dlls/rasapi32/rasapi.c       |  2 ++
+ dlls/rasapi32/tests/rasapi.c | 21 +++++++++++++++++++++
+ 2 files changed, 23 insertions(+)
+
+diff --git a/dlls/rasapi32/rasapi.c b/dlls/rasapi32/rasapi.c
+index 235ab65..c2a4b55 100644
+--- a/dlls/rasapi32/rasapi.c
++++ b/dlls/rasapi32/rasapi.c
+@@ -254,6 +254,8 @@ DWORD WINAPI RasEnumDevicesA(LPRASDEVINFOA lpRasDevinfo, LPDWORD lpcb, LPDWORD l
+ 	if(lpRasDevinfo && lpRasDevinfo->dwSize != sizeof(RASDEVINFOA))
+ 		return ERROR_INVALID_SIZE;
+ 
++	*lpcDevices = 1;
++
+ 	if (!lpRasDevinfo || (*lpcb < sizeof(RASDEVINFOA))) {
+ 		*lpcb = sizeof(RASDEVINFOA);
+ 		return ERROR_BUFFER_TOO_SMALL;
+diff --git a/dlls/rasapi32/tests/rasapi.c b/dlls/rasapi32/tests/rasapi.c
+index e0ff25f..5171bb2 100644
+--- a/dlls/rasapi32/tests/rasapi.c
++++ b/dlls/rasapi32/tests/rasapi.c
+@@ -77,54 +77,71 @@ static void test_rasenum(void)
+ 
+     /* test first parameter */
+     cb = bufsize;
++    cDevices = 0xdeadbeef;
+     result = pRasEnumDevicesA(NULL, &cb, &cDevices);
++    ok(0 < cDevices && cDevices < 32, "expected 0 < cDevices < 32, got %u\n", cDevices);
+     ok(result == ERROR_BUFFER_TOO_SMALL ||
+     result == ERROR_INVALID_USER_BUFFER, /* win98 */
+     "Expected ERROR_BUFFER_TOO_SMALL, got %08d\n", result);
+ 
+     rasDevInfo[0].dwSize = 0;
+     cb = bufsize;
++    cDevices = 0xdeadbeef;
+     result = pRasEnumDevicesA(rasDevInfo, &cb, &cDevices);
++    ok(cDevices == 0xdeadbeef, "expected cDevices = 0xdeadbeef, got %u\n", cDevices);
+     ok(result == ERROR_INVALID_SIZE ||
+     result == ERROR_INVALID_USER_BUFFER, /* win98 */
+     "Expected ERROR_INVALID_SIZE, got %08d\n", result);
+ 
+     rasDevInfo[0].dwSize = sizeof(RASDEVINFOA) -1;
+     cb = bufsize;
++    cDevices = 0xdeadbeef;
+     result = pRasEnumDevicesA(rasDevInfo, &cb, &cDevices);
++    ok(cDevices == 0xdeadbeef, "expected cDevices = 0xdeadbeef, got %u\n", cDevices);
+     ok(result == ERROR_INVALID_SIZE ||
+     result == ERROR_INVALID_USER_BUFFER, /* win98 */
+     "Expected ERROR_INVALID_SIZE, got %08d\n", result);
+ 
+     rasDevInfo[0].dwSize = sizeof(RASDEVINFOA) +1;
+     cb = bufsize;
++    cDevices = 0xdeadbeef;
+     result = pRasEnumDevicesA(rasDevInfo, &cb, &cDevices);
++    ok(cDevices == 0xdeadbeef, "expected cDevices = 0xdeadbeef, got %u\n", cDevices);
+     ok(result == ERROR_INVALID_SIZE ||
+     result == ERROR_INVALID_USER_BUFFER, /* win98 */
+     "Expected ERROR_INVALID_SIZE, got %08d\n", result);
+ 
+     /* test second parameter */
+     rasDevInfo[0].dwSize = sizeof(RASDEVINFOA);
++    cDevices = 0xdeadbeef;
+     result = pRasEnumDevicesA(rasDevInfo, NULL, &cDevices);
++    ok(cDevices == 0xdeadbeef, "expected cDevices = 0xdeadbeef, got %u\n", cDevices);
+     ok(result == ERROR_INVALID_PARAMETER,
+     "Expected ERROR_INVALID_PARAMETER, got %08d\n", result);
+ 
+     rasDevInfo[0].dwSize = sizeof(RASDEVINFOA);
+     cb = 0;
++    cDevices = 0xdeadbeef;
+     result = pRasEnumDevicesA(rasDevInfo, &cb, &cDevices);
++    todo_wine
++    ok(cDevices == 0xdeadbeef, "expected cDevices = 0xdeadbeef, got %u\n", cDevices);
+     ok(result == ERROR_BUFFER_TOO_SMALL ||
+     result == ERROR_INVALID_SIZE, /* vista, 2k8 */
+     "Expected ERROR_BUFFER_TOO_SMALL/ERROR_INVALID_SIZE, got %08d\n", result);
+ 
+     rasDevInfo[0].dwSize = sizeof(RASDEVINFOA);
+     cb = bufsize -1;
++    cDevices = 0xdeadbeef;
+     result = pRasEnumDevicesA(rasDevInfo, &cb, &cDevices);
++    ok(0 < cDevices && cDevices < 32, "expected 0 < cDevices < 32, got %u\n", cDevices);
+     ok(result == ERROR_BUFFER_TOO_SMALL,
+     "Expected ERROR_BUFFER_TOO_SMALL, got %08d\n", result);
+ 
+     rasDevInfo[0].dwSize = sizeof(RASDEVINFOA);
+     cb = bufsize +1;
++    cDevices = 0xdeadbeef;
+     result = pRasEnumDevicesA(rasDevInfo, &cb, &cDevices);
++    ok(0 < cDevices && cDevices < 32, "expected 0 < cDevices < 32, got %u\n", cDevices);
+     ok(result == ERROR_SUCCESS,
+     "Expected ERROR_SUCCESS, got %08d\n", result);
+ 
+@@ -136,7 +153,9 @@ static void test_rasenum(void)
+     "Expected ERROR_INVALID_PARAMETER, got %08d\n", result);
+ 
+     /* test combinations of invalid parameters */
++    cDevices = 0xdeadbeef;
+     result = pRasEnumDevicesA(NULL, NULL, &cDevices);
++    ok(cDevices == 0xdeadbeef, "expected cDevices = 0xdeadbeef, got %u\n", cDevices);
+     ok(result == ERROR_INVALID_PARAMETER,
+     "Expected ERROR_INVALID_PARAMETER, got %08d\n", result);
+ 
+@@ -147,7 +166,9 @@ static void test_rasenum(void)
+ 
+     cb = 0;
+     rasDevInfo[0].dwSize = 0;
++    cDevices = 0xdeadbeef;
+     result = pRasEnumDevicesA(rasDevInfo, &cb, &cDevices);
++    ok(cDevices == 0xdeadbeef, "expected cDevices = 0xdeadbeef, got %u\n", cDevices);
+     ok(result == ERROR_INVALID_SIZE ||
+     broken(result == ERROR_BUFFER_TOO_SMALL), /* win98 */
+     "Expected ERROR_INVALID_SIZE, got %08d\n", result);
+-- 
+2.4.3
+

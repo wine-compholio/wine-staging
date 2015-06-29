@@ -51,11 +51,11 @@ usage()
 # Show version information
 version()
 {
-	echo "Wine Staging 1.7.46"
+	echo "Wine Staging 1.7.47 (unreleased)"
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit ae6efa469bfaecade30e160d195d607bdcdcc6ae"
+	echo "  commit 9353a36d8fc8bb400bc2227914db0f2e60a19c24"
 	echo ""
 }
 
@@ -132,7 +132,6 @@ patch_enable_all ()
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_GetLogicalProcessorInformationEx="$1"
-	enable_kernel32_GetNumaProcessorNode="$1"
 	enable_kernel32_InsertMode="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
@@ -149,7 +148,6 @@ patch_enable_all ()
 	enable_mscoree_CorValidateImage="$1"
 	enable_msvcp90_basic_string_dtor="$1"
 	enable_msvcrt_Math_Precision="$1"
-	enable_msvcrt_atof_strtod="$1"
 	enable_msvfw32_Image_Size="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_APC_Start_Process="$1"
@@ -472,9 +470,6 @@ patch_enable ()
 		kernel32-GetLogicalProcessorInformationEx)
 			enable_kernel32_GetLogicalProcessorInformationEx="$2"
 			;;
-		kernel32-GetNumaProcessorNode)
-			enable_kernel32_GetNumaProcessorNode="$2"
-			;;
 		kernel32-InsertMode)
 			enable_kernel32_InsertMode="$2"
 			;;
@@ -522,9 +517,6 @@ patch_enable ()
 			;;
 		msvcrt-Math_Precision)
 			enable_msvcrt_Math_Precision="$2"
-			;;
-		msvcrt-atof_strtod)
-			enable_msvcrt_atof_strtod="$2"
 			;;
 		msvfw32-Image_Size)
 			enable_msvfw32_Image_Size="$2"
@@ -3001,23 +2993,6 @@ if test "$enable_kernel32_GetLogicalProcessorInformationEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-GetNumaProcessorNode
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38660] Add implementation for kernel32.GetNumaProcessorNode
-# |
-# | Modified files:
-# |   *	dlls/kernel32/cpu.c, dlls/kernel32/kernel32.spec, dlls/kernel32/tests/process.c, include/winbase.h
-# |
-if test "$enable_kernel32_GetNumaProcessorNode" -eq 1; then
-	patch_apply kernel32-GetNumaProcessorNode/0001-kernel32-tests-Add-tests-for-GetNumaProcessorNode.-v.patch
-	patch_apply kernel32-GetNumaProcessorNode/0002-kernel32-Implement-GetNumaProcessorNode.-v2.patch
-	(
-		echo '+    { "Michael Müller", "kernel32/tests: Add tests for GetNumaProcessorNode.", 2 },';
-		echo '+    { "Michael Müller", "kernel32: Implement GetNumaProcessorNode.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-InsertMode
 # |
 # | Modified files:
@@ -3300,20 +3275,6 @@ if test "$enable_msvcrt_Math_Precision" -eq 1; then
 	patch_apply msvcrt-Math_Precision/0001-msvcrt-Calculate-sinh-cosh-exp-pow-with-higher-preci.patch
 	(
 		echo '+    { "Sebastian Lackner", "msvcrt: Calculate sinh/cosh/exp/pow with higher precision.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset msvcrt-atof_strtod
-# |
-# | Modified files:
-# |   *	dlls/msvcrt/string.c, dlls/msvcrt/tests/string.c
-# |
-if test "$enable_msvcrt_atof_strtod" -eq 1; then
-	patch_apply msvcrt-atof_strtod/0001-msvcrt-Avoid-crash-when-NULL-pointer-is-passed-to-at.patch
-	patch_apply msvcrt-atof_strtod/0002-msvcrt-Set-end-to-NULL-when-strtod-is-called-with-NU.patch
-	(
-		echo '+    { "Michael Müller", "msvcrt: Avoid crash when NULL pointer is passed to atof / strtod functions.", 1 },';
-		echo '+    { "Sebastian Lackner", "msvcrt: Set *end to NULL when strtod is called with NULL pointer string.", 1 },';
 	) >> "$patchlist"
 fi
 

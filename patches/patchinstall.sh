@@ -2124,7 +2124,7 @@ if test "$enable_configure_Crosscompiling" -eq 1; then
 	patch_apply configure-Crosscompiling/0001-configure.ac-Search-for-otool-using-AC_CHECK_TOOL.patch
 	patch_apply configure-Crosscompiling/0002-configure.ac-Remove-check-for-strength-reduce-bug.patch
 	(
-		echo '+    { "Michael Müller", "configure.ac: Search for otool using AC_CHECK_TOOL.", 1 },';
+		echo '+    { "Michael Müller", "configure.ac: Search for otool using AC_CHECK_TOOL.", 2 },';
 		echo '+    { "Michael Müller", "configure.ac: Remove check for strength-reduce bug.", 1 },';
 	) >> "$patchlist"
 fi

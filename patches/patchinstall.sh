@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 9353a36d8fc8bb400bc2227914db0f2e60a19c24"
+	echo "  commit 6b205e41cf0798fd6dff7c37e9b250fc885cf792"
 	echo ""
 }
 
@@ -4889,18 +4889,16 @@ fi
 # |   *	[#38697] Allow to enable/disable InsertMode in wineconsole settings
 # |
 # | Modified files:
-# |   *	programs/wineconsole/dialog.c, programs/wineconsole/registry.c, programs/wineconsole/winecon_private.h,
-# | 	programs/wineconsole/wineconsole.c, programs/wineconsole/wineconsole.rc, programs/wineconsole/wineconsole_res.h
+# |   *	programs/wineconsole/dialog.c, programs/wineconsole/wineconsole.c, programs/wineconsole/wineconsole.rc,
+# | 	programs/wineconsole/wineconsole_res.h
 # |
 if test "$enable_wineconsole_Insert_Mode" -eq 1; then
 	patch_apply wineconsole-Insert_Mode/0001-wineconsole-Rearrange-user-dialog-to-make-space-for-.patch
 	patch_apply wineconsole-Insert_Mode/0002-wineconsole-Improve-semantics-of-some-poorly-worded-.patch
-	patch_apply wineconsole-Insert_Mode/0003-wineconsole-Add-InsertMode-to-HKCU.patch
-	patch_apply wineconsole-Insert_Mode/0004-wineconsole-Add-InsertMode-to-the-user-dialog.patch
+	patch_apply wineconsole-Insert_Mode/0003-wineconsole-Add-InsertMode-to-the-user-dialog.patch
 	(
 		echo '+    { "Hugh McMaster", "wineconsole: Rearrange user dialog to make space for InsertMode checkbox.", 1 },';
 		echo '+    { "Hugh McMaster", "wineconsole: Improve semantics of some poorly-worded resource strings.", 1 },';
-		echo '+    { "Hugh McMaster", "wineconsole: Add InsertMode to HKCU.", 1 },';
 		echo '+    { "Hugh McMaster", "wineconsole: Add InsertMode to the user dialog.", 1 },';
 	) >> "$patchlist"
 fi

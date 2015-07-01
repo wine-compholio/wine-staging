@@ -1,4 +1,4 @@
-From d92b2f79160613f6d2f258cbf98624fee30844a8 Mon Sep 17 00:00:00 2001
+From 9a973853b87ff70fac8fbc42308300a861dc39de Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 4 Mar 2015 07:03:15 +0100
 Subject: ntdll: Add support for threadpool finalization callback.
@@ -8,10 +8,10 @@ Subject: ntdll: Add support for threadpool finalization callback.
  1 file changed, 12 insertions(+)
 
 diff --git a/dlls/ntdll/threadpool.c b/dlls/ntdll/threadpool.c
-index e30d45c..927d31c 100644
+index 93d9b28..0133e66 100644
 --- a/dlls/ntdll/threadpool.c
 +++ b/dlls/ntdll/threadpool.c
-@@ -171,6 +171,7 @@ struct threadpool_object
+@@ -172,6 +172,7 @@ struct threadpool_object
      struct threadpool_group *group;
      PVOID                   userdata;
      PTP_CLEANUP_GROUP_CANCEL_CALLBACK group_cancel_callback;
@@ -19,7 +19,7 @@ index e30d45c..927d31c 100644
      /* information about the group, locked via .group->cs */
      struct list             group_entry;
      BOOL                    is_group_member;
-@@ -1292,6 +1293,7 @@ static void tp_object_initialize( struct threadpool_object *object, struct threa
+@@ -1372,6 +1373,7 @@ static void tp_object_initialize( struct threadpool_object *object, struct threa
      object->group                   = NULL;
      object->userdata                = userdata;
      object->group_cancel_callback   = NULL;
@@ -27,19 +27,19 @@ index e30d45c..927d31c 100644
  
      memset( &object->group_entry, 0, sizeof(object->group_entry) );
      object->is_group_member         = FALSE;
-@@ -1308,6 +1310,7 @@ static void tp_object_initialize( struct threadpool_object *object, struct threa
+@@ -1388,6 +1390,7 @@ static void tp_object_initialize( struct threadpool_object *object, struct threa
  
          object->group = impl_from_TP_CLEANUP_GROUP( environment->CleanupGroup );
          object->group_cancel_callback   = environment->CleanupGroupCancelCallback;
 +        object->finalization_callback   = environment->FinalizationCallback;
  
-         WARN("environment not fully implemented yet\n");
+         WARN( "environment not fully implemented yet\n" );
      }
-@@ -1515,6 +1518,15 @@ static void CALLBACK threadpool_worker_proc( void *param )
+@@ -1616,6 +1619,15 @@ static void CALLBACK threadpool_worker_proc( void *param )
                      break;
              }
  
-+            /* Execute finalization callback */
++            /* Execute finalization callback. */
 +            if (object->finalization_callback)
 +            {
 +                TRACE( "executing finalization callback %p(NULL, %p)\n",
@@ -52,5 +52,5 @@ index e30d45c..927d31c 100644
              pool->num_busy_workers--;
              object->num_running_callbacks--;
 -- 
-2.3.3
+2.4.4
 

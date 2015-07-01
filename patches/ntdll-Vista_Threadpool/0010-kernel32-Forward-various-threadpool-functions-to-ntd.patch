@@ -1,4 +1,4 @@
-From 6a7aaa0145d32fde06229bae7f8cb879ea2ac182 Mon Sep 17 00:00:00 2001
+From e6dda25c2975565acf141011fba0694b27c8c8a0 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 1 Feb 2015 19:41:13 +0100
 Subject: kernel32: Forward various threadpool functions to ntdll.
@@ -11,7 +11,7 @@ Subject: kernel32: Forward various threadpool functions to ntdll.
  4 files changed, 155 insertions(+), 27 deletions(-)
 
 diff --git a/dlls/kernel32/kernel32.spec b/dlls/kernel32/kernel32.spec
-index 1179af2..f65f894 100644
+index 3c40975..337b339 100644
 --- a/dlls/kernel32/kernel32.spec
 +++ b/dlls/kernel32/kernel32.spec
 @@ -204,7 +204,7 @@
@@ -84,7 +84,7 @@ index 1179af2..f65f894 100644
  @ stdcall FreeResource(long)
  @ stdcall -i386 -private FreeSLCallback(long) krnl386.exe16.FreeSLCallback
  @ stub FreeUserPhysicalPages
-@@ -980,7 +980,7 @@
+@@ -981,7 +981,7 @@
  @ stub -i386 IsSLCallback
  @ stdcall IsSystemResumeAutomatic()
  @ stdcall IsThreadAFiber()
@@ -93,7 +93,7 @@ index 1179af2..f65f894 100644
  # @ stub IsTimeZoneRedirectionEnabled
  # @ stub IsValidCalDateTime
  @ stdcall IsValidCodePage(long)
-@@ -1034,7 +1034,7 @@
+@@ -1035,7 +1035,7 @@
  @ stdcall LZSeek(long long long)
  @ stdcall LZStart()
  @ stdcall LeaveCriticalSection(ptr) ntdll.RtlLeaveCriticalSection
@@ -102,7 +102,7 @@ index 1179af2..f65f894 100644
  # @ stub LoadAppInitDlls
  @ stdcall LoadLibraryA(str)
  @ stdcall LoadLibraryExA( str long long)
-@@ -1251,9 +1251,9 @@
+@@ -1252,9 +1252,9 @@
  @ stdcall ReinitializeCriticalSection(ptr)
  @ stdcall ReleaseActCtx(ptr)
  @ stdcall ReleaseMutex(long)
@@ -114,7 +114,7 @@ index 1179af2..f65f894 100644
  @ stdcall ReleaseSRWLockExclusive(ptr) ntdll.RtlReleaseSRWLockExclusive
  @ stdcall ReleaseSRWLockShared(ptr) ntdll.RtlReleaseSRWLockShared
  @ stdcall RemoveDirectoryA(str)
-@@ -1384,7 +1384,7 @@
+@@ -1385,7 +1385,7 @@
  @ stdcall SetEnvironmentVariableW(wstr wstr)
  @ stdcall SetErrorMode(long)
  @ stdcall SetEvent(long)
@@ -123,7 +123,7 @@ index 1179af2..f65f894 100644
  @ stdcall SetFileApisToANSI()
  @ stdcall SetFileApisToOEM()
  @ stdcall SetFileAttributesA(str long)
-@@ -1453,9 +1453,9 @@
+@@ -1454,9 +1454,9 @@
  # @ stub SetThreadToken
  @ stdcall SetThreadUILanguage(long)
  # @ stub SetThreadpoolStackInformation
@@ -136,7 +136,7 @@ index 1179af2..f65f894 100644
  # @ stub SetThreadpoolWait
  @ stdcall SetTimeZoneInformation(ptr)
  @ stub SetTimerQueueTimer
-@@ -1481,7 +1481,7 @@
+@@ -1482,7 +1482,7 @@
  # @ stub SortCloseHandle
  # @ stub SortGetHandle
  # @ stub StartThreadpoolIo
@@ -145,7 +145,7 @@ index 1179af2..f65f894 100644
  @ stdcall SuspendThread(long)
  @ stdcall SwitchToFiber(ptr)
  @ stdcall SwitchToThread()
-@@ -1508,7 +1508,7 @@
+@@ -1509,7 +1509,7 @@
  @ stdcall TryAcquireSRWLockExclusive(ptr) ntdll.RtlTryAcquireSRWLockExclusive
  @ stdcall TryAcquireSRWLockShared(ptr) ntdll.RtlTryAcquireSRWLockShared
  @ stdcall TryEnterCriticalSection(ptr) ntdll.RtlTryEnterCriticalSection
@@ -154,7 +154,7 @@ index 1179af2..f65f894 100644
  @ stdcall TzSpecificLocalTimeToSystemTime(ptr ptr ptr)
  # @ stub TzSpecificLocalTimeToSystemTimeEx
  # @ stub -arch=x86_64 uaw_lstrcmpW
-@@ -1570,9 +1570,9 @@
+@@ -1571,9 +1571,9 @@
  @ stdcall WaitForSingleObject(long long)
  @ stdcall WaitForSingleObjectEx(long long long)
  # @ stub WaitForThreadpoolIoCallbacks
@@ -300,10 +300,10 @@ index 3dabf94..945fe0b 100644
 +    TpSetTimer( timer, due_time ? &timeout : NULL, period, window_length );
 +}
 diff --git a/include/winternl.h b/include/winternl.h
-index f88001f..4f16d24 100644
+index a84c6d4..e1707fd 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -2596,6 +2596,33 @@ NTSYSAPI LONGLONG  WINAPI RtlLargeIntegerSubtract(LONGLONG,LONGLONG);
+@@ -2616,6 +2616,33 @@ NTSYSAPI LONGLONG  WINAPI RtlLargeIntegerSubtract(LONGLONG,LONGLONG);
  NTSYSAPI NTSTATUS  WINAPI RtlLargeIntegerToChar(const ULONGLONG *,ULONG,ULONG,PCHAR);
  #endif
  
@@ -338,5 +338,5 @@ index f88001f..4f16d24 100644
  
  NTSYSAPI NTSTATUS CDECL wine_nt_to_unix_file_name( const UNICODE_STRING *nameW, ANSI_STRING *unix_name_ret,
 -- 
-2.3.3
+2.4.4
 

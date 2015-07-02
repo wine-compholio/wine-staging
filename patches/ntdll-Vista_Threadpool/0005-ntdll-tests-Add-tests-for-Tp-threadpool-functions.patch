@@ -1,17 +1,17 @@
-From 8d1fba2b1f7b014130cfb64447cba2c2d257864a Mon Sep 17 00:00:00 2001
+From 8e03c37240d2a0fafbe6347bc8d509ce5555757a Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 4 Mar 2015 13:17:04 +0100
 Subject: ntdll/tests: Add tests for Tp* threadpool functions.
 
 ---
- dlls/ntdll/tests/threadpool.c | 470 ++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 470 insertions(+)
+ dlls/ntdll/tests/threadpool.c | 228 ++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 228 insertions(+)
 
 diff --git a/dlls/ntdll/tests/threadpool.c b/dlls/ntdll/tests/threadpool.c
-index b261cd1..76db2d0 100644
+index a75b622..4be3a8b 100644
 --- a/dlls/ntdll/tests/threadpool.c
 +++ b/dlls/ntdll/tests/threadpool.c
-@@ -22,15 +22,37 @@
+@@ -22,18 +22,37 @@
  
  static HMODULE hntdll = 0;
  static NTSTATUS (WINAPI *pTpAllocCleanupGroup)(TP_CLEANUP_GROUP **);
@@ -21,13 +21,13 @@ index b261cd1..76db2d0 100644
 +static NTSTATUS (WINAPI *pTpAllocWait)(TP_WAIT **,PTP_WAIT_CALLBACK,PVOID,TP_CALLBACK_ENVIRON *);
  static NTSTATUS (WINAPI *pTpAllocWork)(TP_WORK **,PTP_WORK_CALLBACK,PVOID,TP_CALLBACK_ENVIRON *);
 +static VOID     (WINAPI *pTpCallbackLeaveCriticalSectionOnCompletion)(TP_CALLBACK_INSTANCE *,CRITICAL_SECTION *);
-+static NTSTATUS (WINAPI *pTpCallbackMayRunLong)(TP_CALLBACK_INSTANCE *);
+ static NTSTATUS (WINAPI *pTpCallbackMayRunLong)(TP_CALLBACK_INSTANCE *);
 +static VOID     (WINAPI *pTpCallbackReleaseMutexOnCompletion)(TP_CALLBACK_INSTANCE *,HANDLE);
-+static VOID     (WINAPI *pTpCallbackReleaseSemaphoreOnCompletion)(TP_CALLBACK_INSTANCE *,HANDLE,DWORD);
+ static VOID     (WINAPI *pTpCallbackReleaseSemaphoreOnCompletion)(TP_CALLBACK_INSTANCE *,HANDLE,DWORD);
 +static VOID     (WINAPI *pTpCallbackSetEventOnCompletion)(TP_CALLBACK_INSTANCE *,HANDLE);
 +static VOID     (WINAPI *pTpCallbackUnloadDllOnCompletion)(TP_CALLBACK_INSTANCE *,HMODULE);
 +static VOID     (WINAPI *pTpCancelAsyncIoOperation)(TP_IO *);
-+static VOID     (WINAPI *pTpDisassociateCallback)(TP_CALLBACK_INSTANCE *);
+ static VOID     (WINAPI *pTpDisassociateCallback)(TP_CALLBACK_INSTANCE *);
 +static BOOL     (WINAPI *pTpIsTimerSet)(TP_TIMER *);
  static VOID     (WINAPI *pTpPostWork)(TP_WORK *);
  static VOID     (WINAPI *pTpReleaseCleanupGroup)(TP_CLEANUP_GROUP *);
@@ -49,7 +49,7 @@ index b261cd1..76db2d0 100644
  static VOID     (WINAPI *pTpWaitForWork)(TP_WORK *,BOOL);
  
  #define NTDLL_GET_PROC(func) \
-@@ -51,15 +73,37 @@ static BOOL init_threadpool(void)
+@@ -54,18 +73,37 @@ static BOOL init_threadpool(void)
      }
  
      NTDLL_GET_PROC(TpAllocCleanupGroup);
@@ -59,13 +59,13 @@ index b261cd1..76db2d0 100644
 +    NTDLL_GET_PROC(TpAllocWait);
      NTDLL_GET_PROC(TpAllocWork);
 +    NTDLL_GET_PROC(TpCallbackLeaveCriticalSectionOnCompletion);
-+    NTDLL_GET_PROC(TpCallbackMayRunLong);
+     NTDLL_GET_PROC(TpCallbackMayRunLong);
 +    NTDLL_GET_PROC(TpCallbackReleaseMutexOnCompletion);
-+    NTDLL_GET_PROC(TpCallbackReleaseSemaphoreOnCompletion);
+     NTDLL_GET_PROC(TpCallbackReleaseSemaphoreOnCompletion);
 +    NTDLL_GET_PROC(TpCallbackSetEventOnCompletion);
 +    NTDLL_GET_PROC(TpCallbackUnloadDllOnCompletion);
 +    NTDLL_GET_PROC(TpCancelAsyncIoOperation);
-+    NTDLL_GET_PROC(TpDisassociateCallback);
+     NTDLL_GET_PROC(TpDisassociateCallback);
 +    NTDLL_GET_PROC(TpIsTimerSet);
      NTDLL_GET_PROC(TpPostWork);
      NTDLL_GET_PROC(TpReleaseCleanupGroup);
@@ -87,244 +87,10 @@ index b261cd1..76db2d0 100644
      NTDLL_GET_PROC(TpWaitForWork);
  
      if (!pTpAllocPool)
-@@ -307,6 +351,425 @@ static void test_tp_work_scheduler(void)
-     pTpReleasePool(pool);
+@@ -646,6 +684,191 @@ static void test_tp_disassociate(void)
+     CloseHandle(semaphores[1]);
  }
  
-+static void CALLBACK instance_cb(TP_CALLBACK_INSTANCE *instance, void *userdata)
-+{
-+    trace("Running instance callback\n");
-+    pTpCallbackMayRunLong(instance);
-+    Sleep(100);
-+    InterlockedIncrement( (LONG *)userdata );
-+}
-+
-+static void CALLBACK instance2_cb(TP_CALLBACK_INSTANCE *instance, void *userdata)
-+{
-+    trace("Running instance2 callback\n");
-+    ok(*(LONG *)userdata == 1, "expected *userdata = 1, got %u\n", *(LONG *)userdata);
-+    InterlockedIncrement( (LONG *)userdata );
-+}
-+
-+static void CALLBACK instance3_cb(TP_CALLBACK_INSTANCE *instance, void *userdata)
-+{
-+    trace("Running instance3 callback\n");
-+    pTpDisassociateCallback(instance);
-+    Sleep(100);
-+    InterlockedIncrement( (LONG *)userdata );
-+}
-+
-+static void CALLBACK instance4_cb(TP_CALLBACK_INSTANCE *instance, void *userdata)
-+{
-+    trace("Running instance4 callback\n");
-+    pTpCallbackReleaseSemaphoreOnCompletion(instance, userdata, 1);
-+}
-+
-+static HANDLE instance_finalization_semaphore;
-+
-+static void CALLBACK instance_finalization_cb(TP_CALLBACK_INSTANCE *instance, void *userdata)
-+{
-+    DWORD ret;
-+    trace("Running instance finalization callback\n");
-+    ok(*(LONG *)userdata == 1, "expected *userdata = 1, got %u\n", *(LONG *)userdata);
-+
-+    /* Make sure that this callback is called before the regular instance cleanup tasks */
-+    ret = WaitForSingleObject(instance_finalization_semaphore, 100);
-+    ok(ret == WAIT_TIMEOUT, "expected ret = WAIT_TIMEOUT, got %u\n", ret);
-+
-+    InterlockedIncrement( (LONG *)userdata );
-+}
-+
-+static void CALLBACK instance5_cb(TP_CALLBACK_INSTANCE *instance, void *userdata)
-+{
-+    trace("Running instance5 callback\n");
-+    pTpCallbackReleaseSemaphoreOnCompletion(instance, instance_finalization_semaphore, 1);
-+    InterlockedIncrement( (LONG *)userdata );
-+}
-+
-+
-+static void test_tp_instance(void)
-+{
-+    TP_CALLBACK_ENVIRON environment;
-+    TP_CLEANUP_GROUP *group;
-+    TP_POOL *pool;
-+    NTSTATUS status;
-+    LONG userdata;
-+    HANDLE semaphore;
-+    DWORD ret;
-+
-+    /* Allocate new threadpool */
-+    pool = NULL;
-+    status = pTpAllocPool(&pool, NULL);
-+    ok(!status, "TpAllocPool failed with status %x\n", status);
-+    ok(pool != NULL, "expected pool != NULL\n");
-+
-+    /* We limit the pool to a single thread */
-+    pTpSetPoolMaxThreads(pool, 1);
-+
-+    /* Test behaviour of TpCallbackMayRunLong when the max number of threads is reached */
-+    userdata = 0;
-+    memset(&environment, 0, sizeof(environment));
-+    environment.Version = 1;
-+    environment.Pool = pool;
-+    status = pTpSimpleTryPost(instance_cb, &userdata, &environment);
-+    ok(!status, "TpSimpleTryPost failed with status %x\n", status);
-+    status = pTpSimpleTryPost(instance2_cb, &userdata, &environment);
-+    ok(!status, "TpSimpleTryPost failed with status %x\n", status);
-+    while (userdata != 2) Sleep(10);
-+
-+    /* Test behaviour of TpDisassociateCallback on wait functions */
-+    group = NULL;
-+    status = pTpAllocCleanupGroup(&group);
-+    ok(!status, "TpAllocCleanupGroup failed with status %x\n", status);
-+    ok(group != NULL, "expected pool != NULL\n");
-+
-+    userdata = 0;
-+    memset(&environment, 0, sizeof(environment));
-+    environment.Version = 1;
-+    environment.Pool = pool;
-+    environment.CleanupGroup = group;
-+    status = pTpSimpleTryPost(instance3_cb, &userdata, &environment);
-+    ok(!status, "TpSimpleTryPost failed with status %x\n", status);
-+
-+    pTpReleaseCleanupGroupMembers(group, FALSE, NULL);
-+    todo_wine /* behaviour contradicts the MSDN description? */
-+    ok(userdata == 1, "expected userdata = 1, got %u\n", userdata);
-+    while (userdata == 0) Sleep(10);
-+
-+    pTpReleaseCleanupGroup(group);
-+
-+    /* Test for TpCallbackReleaseSemaphoreOnCompletion */
-+    semaphore = CreateSemaphoreW(NULL, 0, 1, NULL);
-+    ok(semaphore != NULL, "failed to create semaphore\n");
-+    memset(&environment, 0, sizeof(environment));
-+    environment.Version = 1;
-+    environment.Pool = pool;
-+    status = pTpSimpleTryPost(instance4_cb, semaphore, &environment);
-+    ok(!status, "TpSimpleTryPost failed with status %x\n", status);
-+    ret = WaitForSingleObject(semaphore, 1000);
-+    ok(ret == WAIT_OBJECT_0, "expected ret = WAIT_OBJECT_0, got %u\n", ret);
-+
-+    /* Test for finalization callback */
-+    userdata = 0;
-+    instance_finalization_semaphore = semaphore;
-+    memset(&environment, 0, sizeof(environment));
-+    environment.Version = 1;
-+    environment.Pool = pool;
-+    environment.FinalizationCallback = instance_finalization_cb;
-+    status = pTpSimpleTryPost(instance5_cb, &userdata, &environment);
-+    ok(!status, "TpSimpleTryPost failed with status %x\n", status);
-+    ret = WaitForSingleObject(semaphore, 1000);
-+    ok(ret == WAIT_OBJECT_0, "expected ret = WAIT_OBJECT_0, got %u\n", ret);
-+    while (userdata != 2) Sleep(10);
-+
-+    CloseHandle(semaphore);
-+
-+    /* Cleanup */
-+    pTpReleasePool(pool);
-+}
-+
-+static DWORD group_cancel_tid;
-+
-+static void CALLBACK group_cancel_cleanup_cb(void *object, void *userdata)
-+{
-+    trace("Running group cancel cleanup callback\n");
-+    InterlockedIncrement( (LONG *)userdata );
-+    group_cancel_tid = GetCurrentThreadId();
-+}
-+
-+static void CALLBACK group_cancel_cb(TP_CALLBACK_INSTANCE *instance, void *userdata)
-+{
-+    trace("Running group cancel callback\n");
-+    pTpCallbackMayRunLong(instance);
-+    Sleep(100);
-+    ok(*(LONG *)userdata == 1, "expected *userdata = 1, got %u\n", *(LONG *)userdata);
-+    InterlockedIncrement( (LONG *)userdata );
-+}
-+
-+static void CALLBACK dummy_cb(TP_CALLBACK_INSTANCE *instance, void *userdata)
-+{
-+    ok(0, "Unexpected call to dummy_cb function\n");
-+}
-+
-+static void test_tp_group_cancel(void)
-+{
-+    TP_CALLBACK_ENVIRON environment;
-+    TP_CLEANUP_GROUP *group;
-+    TP_WORK *work;
-+    TP_POOL *pool;
-+    NTSTATUS status;
-+    LONG userdata, userdata2;
-+    int i;
-+
-+    /* Allocate new threadpool */
-+    pool = NULL;
-+    status = pTpAllocPool(&pool, NULL);
-+    ok(!status, "TpAllocPool failed with status %x\n", status);
-+    ok(pool != NULL, "expected pool != NULL\n");
-+
-+    /* We limit the pool to a single thread */
-+    pTpSetPoolMaxThreads(pool, 1);
-+
-+    /* Allocate a cleanup group */
-+    group = NULL;
-+    status = pTpAllocCleanupGroup(&group);
-+    ok(!status, "TpAllocCleanupGroup failed with status %x\n", status);
-+    ok(group != NULL, "expected pool != NULL\n");
-+
-+    /* Test execution of cancellation callback */
-+    userdata = 0;
-+    memset(&environment, 0, sizeof(environment));
-+    environment.Version = 1;
-+    environment.Pool = pool;
-+    status = pTpSimpleTryPost(group_cancel_cb, &userdata, &environment);
-+    ok(!status, "TpSimpleTryPost failed with status %x\n", status);
-+
-+    memset(&environment, 0, sizeof(environment));
-+    environment.Version = 1;
-+    environment.Pool = pool;
-+    environment.CleanupGroup = group;
-+    environment.CleanupGroupCancelCallback = group_cancel_cleanup_cb;
-+    status = pTpSimpleTryPost(dummy_cb, NULL, &environment);
-+    ok(!status, "TpSimpleTryPost failed with status %x\n", status);
-+
-+    group_cancel_tid = 0;
-+    pTpReleaseCleanupGroupMembers(group, TRUE, &userdata);
-+    ok(userdata == 1, "expected userdata = 1, got %u\n", userdata);
-+    ok(group_cancel_tid == GetCurrentThreadId(), "expected tid %x, got %x\n",
-+       GetCurrentThreadId(), group_cancel_tid);
-+    while (userdata != 2) Sleep(10);
-+
-+    /* Test cancellation callback for elements with multiple instances */
-+    /* Allocate new work item */
-+    work = NULL;
-+    memset(&environment, 0, sizeof(environment));
-+    environment.Version = 1;
-+    environment.Pool = pool;
-+    environment.CleanupGroup = group;
-+    environment.CleanupGroupCancelCallback = group_cancel_cleanup_cb;
-+    status = pTpAllocWork(&work, work_cb, &userdata, &environment);
-+    ok(!status, "TpAllocWork failed with status %x\n", status);
-+    ok(work != NULL, "expected work != NULL\n");
-+
-+    /* Post 10 identical work items at once */
-+    userdata = userdata2 = 0;
-+    for (i = 0; i < 10; i++)
-+        pTpPostWork(work);
-+
-+    /* Check if we get multiple cancellation callbacks */
-+    group_cancel_tid = 0;
-+    pTpReleaseCleanupGroupMembers(group, TRUE, &userdata2);
-+    ok(userdata < 10, "expected userdata < 10, got %u\n", userdata);
-+    ok(userdata2 == 1, "expected only one cancellation callback, got %u\n", userdata2);
-+    ok(group_cancel_tid == GetCurrentThreadId(), "expected tid %x, got %x\n",
-+       GetCurrentThreadId(), group_cancel_tid);
-+
-+    /* Cleanup */
-+    pTpReleaseCleanupGroup(group);
-+    pTpReleasePool(pool);
-+}
-+
 +static void CALLBACK timer_cb(TP_CALLBACK_INSTANCE *instance, void *userdata, TP_TIMER *timer)
 +{
 +    trace("Running timer callback\n");
@@ -513,12 +279,10 @@ index b261cd1..76db2d0 100644
  START_TEST(threadpool)
  {
      if (!init_threadpool())
-@@ -315,4 +778,11 @@ START_TEST(threadpool)
-     test_tp_simple();
-     test_tp_work();
-     test_tp_work_scheduler();
-+    test_tp_instance();
-+    test_tp_group_cancel();
+@@ -657,4 +880,9 @@ START_TEST(threadpool)
+     test_tp_group_cancel();
+     test_tp_instance();
+     test_tp_disassociate();
 +    test_tp_timer();
 +    test_tp_window_length();
 +

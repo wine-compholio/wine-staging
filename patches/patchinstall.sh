@@ -3696,12 +3696,18 @@ fi
 # | 	dlls/ntdll/threadpool.c, include/winternl.h
 # |
 if test "$enable_ntdll_Vista_Threadpool" -eq 1; then
-	patch_apply ntdll-Vista_Threadpool/0001-ntdll-Implement-threadpool-wait-objects.patch
-	patch_apply ntdll-Vista_Threadpool/0002-ntdll-tests-Add-tests-for-threadpool-wait-objects.patch
-	patch_apply ntdll-Vista_Threadpool/0003-kernel32-Forward-threadpool-wait-functions-to-ntdll.patch
+	patch_apply ntdll-Vista_Threadpool/0001-ntdll-Implement-TpAllocWait-and-TpReleaseWait.patch
+	patch_apply ntdll-Vista_Threadpool/0002-ntdll-Implement-threadpool-wait-queues.patch
+	patch_apply ntdll-Vista_Threadpool/0003-ntdll-tests-Add-basic-tests-for-threadpool-wait-obje.patch
+	patch_apply ntdll-Vista_Threadpool/0004-ntdll-tests-Add-highly-multithreaded-wait-tests.patch
+	patch_apply ntdll-Vista_Threadpool/0005-ntdll-Try-to-merge-threadpool-wait-queue-buckets-if-.patch
+	patch_apply ntdll-Vista_Threadpool/0006-kernel32-Forward-threadpool-wait-functions-to-ntdll.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Implement threadpool wait objects.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for threadpool wait objects.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement TpAllocWait and TpReleaseWait.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement threadpool wait queues.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Add basic tests for threadpool wait objects.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Add highly multithreaded wait tests.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Try to merge threadpool wait queue buckets if possible.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Forward threadpool wait functions to ntdll.", 1 },';
 	) >> "$patchlist"
 fi

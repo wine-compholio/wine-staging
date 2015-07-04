@@ -50,7 +50,7 @@ for more details.*
 
 * Add HTTP Host header in HttpSendRequest instead of HttpOpenRequest ([Wine Bug #28911](https://bugs.winehq.org/show_bug.cgi?id=28911))
 * Add a ProfileList\<UserSID> registry subkey ([Wine Bug #15670](https://bugs.winehq.org/show_bug.cgi?id=15670))
-* Add implementation for CreateThreadpool ([Wine Bug #35192](https://bugs.winehq.org/show_bug.cgi?id=35192))
+* ~~Add implementation for CreateThreadpool~~ ([Wine Bug #35192](https://bugs.winehq.org/show_bug.cgi?id=35192))
 * ~~Add implementation for kernel32.GetNumaProcessorNode~~ ([Wine Bug #38660](https://bugs.winehq.org/show_bug.cgi?id=38660))
 * Add implementation for mfplat.MFTRegister ([Wine Bug #37811](https://bugs.winehq.org/show_bug.cgi?id=37811))
 * Add implementation for shlwapi.AssocGetPerceivedType
@@ -186,9 +186,9 @@ for more details.*
 * Implement stub for ntoskrnl.KeDelayExecutionThread.
 * Implement stubs for ntoskrnl.Ex{Acquire,Release}FastMutexUnsafe
 * Implement stubs for ntoskrnl.ObReferenceObjectByPointer and ntoskrnl.ObDereferenceObject
-* Implement threadpool timers ([Wine Bug #37306](https://bugs.winehq.org/show_bug.cgi?id=37306))
+* ~~Implement threadpool timers~~ ([Wine Bug #37306](https://bugs.winehq.org/show_bug.cgi?id=37306))
 * Implement threadpool wait objects
-* Implement threadpool work items ([Wine Bug #32531](https://bugs.winehq.org/show_bug.cgi?id=32531))
+* ~~Implement threadpool work items~~ ([Wine Bug #32531](https://bugs.winehq.org/show_bug.cgi?id=32531))
 * Improve ReadDataAvailable handling in FilePipeLocalInformation class
 * Improve stub for AEV_GetVolumeRange ([Wine Bug #35658](https://bugs.winehq.org/show_bug.cgi?id=35658))
 * Improve stub for ID3DXEffectImpl_CloneEffect

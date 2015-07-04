@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 3d8353fe182f3e7742cd7dab3420635e45ace129"
+	echo "  commit 8b566b1da71a412fe58c3cc1988d610c2aba5f2d"
 	echo ""
 }
 
@@ -3691,32 +3691,15 @@ fi
 
 # Patchset ntdll-Vista_Threadpool
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35192] Add implementation for CreateThreadpool
-# |   *	[#32531] Implement threadpool work items
-# |   *	[#37306] Implement threadpool timers
-# |
 # | Modified files:
-# |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/tests/thread.c, dlls/kernel32/thread.c, dlls/ntdll/ntdll.spec,
-# | 	dlls/ntdll/tests/threadpool.c, dlls/ntdll/threadpool.c, include/winternl.h
+# |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/thread.c, dlls/ntdll/ntdll.spec, dlls/ntdll/tests/threadpool.c,
+# | 	dlls/ntdll/threadpool.c, include/winternl.h
 # |
 if test "$enable_ntdll_Vista_Threadpool" -eq 1; then
-	patch_apply ntdll-Vista_Threadpool/0001-ntdll-Implement-TpDisassociateCallback-and-add-separ.patch
-	patch_apply ntdll-Vista_Threadpool/0002-ntdll-tests-Add-tests-for-TpDisassociateCallback.patch
-	patch_apply ntdll-Vista_Threadpool/0003-ntdll-Add-remaining-threadpool-functions-to-specfile.patch
-	patch_apply ntdll-Vista_Threadpool/0004-ntdll-Implement-threadpool-timer-functions.-rev-2.patch
-	patch_apply ntdll-Vista_Threadpool/0005-ntdll-tests-Add-tests-for-Tp-threadpool-functions.patch
-	patch_apply ntdll-Vista_Threadpool/0006-kernel32-Forward-various-threadpool-functions-to-ntd.patch
-	patch_apply ntdll-Vista_Threadpool/0007-ntdll-Implement-threadpool-wait-objects.patch
-	patch_apply ntdll-Vista_Threadpool/0008-ntdll-tests-Add-tests-for-threadpool-wait-objects.patch
-	patch_apply ntdll-Vista_Threadpool/0009-kernel32-Forward-threadpool-wait-functions-to-ntdll.patch
+	patch_apply ntdll-Vista_Threadpool/0001-ntdll-Implement-threadpool-wait-objects.patch
+	patch_apply ntdll-Vista_Threadpool/0002-ntdll-tests-Add-tests-for-threadpool-wait-objects.patch
+	patch_apply ntdll-Vista_Threadpool/0003-kernel32-Forward-threadpool-wait-functions-to-ntdll.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Implement TpDisassociateCallback and add separate group finished event.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for TpDisassociateCallback.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Add remaining threadpool functions to specfile.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Implement threadpool timer functions.", 2 },';
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for Tp* threadpool functions.", 1 },';
-		echo '+    { "Sebastian Lackner", "kernel32: Forward various threadpool functions to ntdll.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Implement threadpool wait objects.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for threadpool wait objects.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Forward threadpool wait functions to ntdll.", 1 },';

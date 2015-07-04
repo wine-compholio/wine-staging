@@ -1,55 +1,43 @@
-From 5dd5ac0fa0ef0845cc8611ce664e48e8b25f290b Mon Sep 17 00:00:00 2001
+From 102fb5ddc55779ac9c95937faef0cc063774612f Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 4 Mar 2015 13:33:25 +0100
 Subject: ntdll: Implement threadpool wait objects.
 
 ---
- dlls/ntdll/ntdll.spec   |   8 +-
- dlls/ntdll/threadpool.c | 472 +++++++++++++++++++++++++++++++++++++++++++++++-
- 2 files changed, 469 insertions(+), 11 deletions(-)
+ dlls/ntdll/ntdll.spec   |   4 +
+ dlls/ntdll/threadpool.c | 474 +++++++++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 471 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 0f4374e..ffcf58d 100644
+index ce9d1bb..75dc647 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -977,7 +977,7 @@
- # @ stub TpAllocJobNotification
+@@ -973,6 +973,7 @@
+ @ stdcall TpAllocCleanupGroup(ptr)
  @ stdcall TpAllocPool(ptr ptr)
- @ stdcall TpAllocTimer(ptr ptr ptr)
--# @ stub TpAllocWait
+ @ stdcall TpAllocTimer(ptr ptr ptr ptr)
 +@ stdcall TpAllocWait(ptr ptr ptr ptr)
  @ stdcall TpAllocWork(ptr ptr ptr ptr)
- # @ stub TpAlpcRegisterCompletionList
- # @ stub TpAlpcUnregisterCompletionList
-@@ -1008,7 +1008,7 @@
- # @ stub TpReleaseJobNotification
+ @ stdcall TpCallbackLeaveCriticalSectionOnCompletion(ptr ptr)
+ @ stdcall TpCallbackMayRunLong(ptr)
+@@ -987,12 +988,15 @@
+ @ stdcall TpReleaseCleanupGroupMembers(ptr long ptr)
  @ stdcall TpReleasePool(ptr)
  @ stdcall TpReleaseTimer(ptr)
--# @ stub TpReleaseWait
 +@ stdcall TpReleaseWait(ptr)
  @ stdcall TpReleaseWork(ptr)
- # @ stub TpSetDefaultPoolMaxThreads
- # @ stub TpSetDefaultPoolStackInformation
-@@ -1020,7 +1020,7 @@
- # @ stub TpSetPoolWorkerThreadIdleTimeout
+ @ stdcall TpSetPoolMaxThreads(ptr long)
+ @ stdcall TpSetPoolMinThreads(ptr long)
  @ stdcall TpSetTimer(ptr ptr long long)
- # @ stub TpSetTimerEx
--# @ stub TpSetWait
 +@ stdcall TpSetWait(ptr long ptr)
- # @ stub TpSetWaitEx
  @ stdcall TpSimpleTryPost(ptr ptr ptr)
- # @ stub TpStartAsyncIoOperation
-@@ -1030,7 +1030,7 @@
- # @ stub TpWaitForIoCompletion
- # @ stub TpWaitForJobNotification
  @ stdcall TpWaitForTimer(ptr long)
--# @ stub TpWaitForWait
 +@ stdcall TpWaitForWait(ptr long)
  @ stdcall TpWaitForWork(ptr long)
  @ stdcall -ret64 VerSetConditionMask(int64 long long)
  @ stdcall WinSqmIsOptedIn()
 diff --git a/dlls/ntdll/threadpool.c b/dlls/ntdll/threadpool.c
-index c44988c..b8d761b 100644
+index ef502ba..773c3d6 100644
 --- a/dlls/ntdll/threadpool.c
 +++ b/dlls/ntdll/threadpool.c
 @@ -137,6 +137,7 @@ struct timer_queue
@@ -89,18 +77,9 @@ index c44988c..b8d761b 100644
  };
  
 @@ -267,6 +280,38 @@ static RTL_CRITICAL_SECTION_DEBUG timerqueue_debug =
-     0, 0, { (DWORD_PTR)(__FILE__ ": timerqueue.cs") }
+       0, 0, { (DWORD_PTR)(__FILE__ ": timerqueue.cs") }
  };
  
-+struct waitqueue_bucket
-+{
-+    struct list             bucket_entry;
-+    LONG                    num_waits;
-+    struct list             reserved;
-+    struct list             waits;
-+    HANDLE                  update_event;
-+};
-+
 +/* global waitqueue object */
 +static RTL_CRITICAL_SECTION_DEBUG waitqueue_debug;
 +
@@ -112,16 +91,25 @@ index c44988c..b8d761b 100644
 +}
 +waitqueue =
 +{
-+    { &waitqueue_debug, -1, 0, 0, 0, 0 },
-+    0,
-+    LIST_INIT( waitqueue.buckets )
++    { &waitqueue_debug, -1, 0, 0, 0, 0 },       /* cs */
++    0,                                          /* num_buckets */
++    LIST_INIT( waitqueue.buckets )              /* buckets */
 +};
 +
 +static RTL_CRITICAL_SECTION_DEBUG waitqueue_debug =
 +{
 +    0, 0, &waitqueue.cs,
 +    { &waitqueue_debug.ProcessLocksList, &waitqueue_debug.ProcessLocksList },
-+    0, 0, { (DWORD_PTR)(__FILE__ ": waitqueue.cs") }
++      0, 0, { (DWORD_PTR)(__FILE__ ": waitqueue.cs") }
++};
++
++struct waitqueue_bucket
++{
++    struct list             bucket_entry;
++    LONG                    objcount;
++    struct list             reserved;
++    struct list             waits;
++    HANDLE                  update_event;
 +};
 +
  static inline struct threadpool *impl_from_TP_POOL( TP_POOL *pool )
@@ -141,39 +129,182 @@ index c44988c..b8d761b 100644
  static inline struct threadpool_group *impl_from_TP_CLEANUP_GROUP( TP_CLEANUP_GROUP *group )
  {
      return (struct threadpool_group *)group;
-@@ -298,7 +350,8 @@ static inline struct threadpool_instance *impl_from_TP_CALLBACK_INSTANCE( TP_CAL
+@@ -297,7 +349,7 @@ static inline struct threadpool_instance *impl_from_TP_CALLBACK_INSTANCE( TP_CAL
+ }
  
  static void CALLBACK threadpool_worker_proc( void *param );
- static void CALLBACK timerqueue_thread_proc( void *param );
 -static void tp_object_submit( struct threadpool_object *object );
-+static void CALLBACK waitqueue_thread_proc( void *param );
 +static void tp_object_submit( struct threadpool_object *object, BOOL success );
  static void tp_object_shutdown( struct threadpool_object *object );
  static BOOL tp_object_release( struct threadpool_object *object );
  static struct threadpool *default_threadpool = NULL;
-@@ -1352,7 +1405,7 @@ update_timer:
-     RtlLeaveCriticalSection( &timerqueue.cs );
- 
-     if (submit_timer)
--       tp_object_submit( new_timer );
-+       tp_object_submit( new_timer, FALSE );
- }
- 
- static void CALLBACK timerqueue_thread_proc( void *param )
-@@ -1379,7 +1432,7 @@ static void CALLBACK timerqueue_thread_proc( void *param )
- 
-             /* Queue a new callback in one of the worker threads */
+@@ -1249,7 +1301,7 @@ static void CALLBACK timerqueue_thread_proc( void *param )
+             /* Queue a new callback in one of the worker threads. */
              list_remove( &timer->u.timer.timer_entry );
+             timer->u.timer.timer_pending = FALSE;
 -            tp_object_submit( timer );
 +            tp_object_submit( timer, FALSE );
  
-             /* Requeue the timer, except its marked for shutdown */
-             if (!timer->shutdown && timer->u.timer.period)
-@@ -1445,6 +1498,301 @@ static void CALLBACK timerqueue_thread_proc( void *param )
-     RtlLeaveCriticalSection( &timerqueue.cs );
+             /* Insert the timer back into the queue, except its marked for shutdown. */
+             if (timer->u.timer.period && !timer->shutdown)
+@@ -1386,6 +1438,255 @@ static void tp_timerqueue_unlock( struct threadpool_object *timer )
  }
  
-+static NTSTATUS tp_waitqueue_acquire( struct threadpool_object *wait )
+ /***********************************************************************
++ *           waitqueue_thread_proc    (internal)
++ */
++static void CALLBACK waitqueue_thread_proc( void *param )
++{
++    struct threadpool_object *objects[MAXIMUM_WAITQUEUE_OBJECTS];
++    HANDLE handles[MAXIMUM_WAITQUEUE_OBJECTS + 1];
++    struct waitqueue_bucket *bucket = param;
++    struct threadpool_object *wait, *next;
++    LARGE_INTEGER now, timeout;
++    DWORD num_handles;
++    NTSTATUS status;
++
++    TRACE( "starting wait queue thread\n" );
++
++    RtlEnterCriticalSection( &waitqueue.cs );
++
++    for (;;)
++    {
++        NtQuerySystemTime( &now );
++        timeout.QuadPart = TIMEOUT_INFINITE;
++        num_handles = 0;
++
++        /* Check for expired waits. */
++        LIST_FOR_EACH_ENTRY_SAFE( wait, next, &bucket->waits, struct threadpool_object, u.wait.wait_entry )
++        {
++            assert( wait->type == TP_OBJECT_TYPE_WAIT );
++            if (wait->u.wait.timeout <= now.QuadPart)
++            {
++                /* Wait expired. */
++                list_remove( &wait->u.wait.wait_entry );
++                list_add_tail( &bucket->reserved, &wait->u.wait.wait_entry );
++                tp_object_submit( wait, FALSE );
++            }
++            else
++            {
++                if (wait->u.wait.timeout < timeout.QuadPart)
++                    timeout.QuadPart = wait->u.wait.timeout;
++
++                /* Prepare wait, keep a reference to make sure the object doesn't get destroyed. */
++                assert( num_handles < MAXIMUM_WAITQUEUE_OBJECTS );
++                interlocked_inc( &wait->refcount );
++                objects[num_handles] = wait;
++                handles[num_handles] = wait->u.wait.handle;
++                num_handles++;
++            }
++        }
++
++        if (!bucket->objcount)
++        {
++            /* All wait objects have been destroyed, if no new wait objects are created
++             * within some amount of time, then we can shutdown this thread. */
++            assert( num_handles == 0 );
++            RtlLeaveCriticalSection( &waitqueue.cs );
++            timeout.QuadPart = (ULONGLONG)THREADPOOL_WORKER_TIMEOUT * -10000;
++            status = NtWaitForMultipleObjects( 1, &bucket->update_event, TRUE, FALSE, &timeout );
++            RtlEnterCriticalSection( &waitqueue.cs );
++            if (status == STATUS_TIMEOUT && !bucket->objcount)
++                break;
++        }
++        else
++        {
++            /* Wait for a wait queue update event or until an event is triggered */
++            handles[num_handles] = bucket->update_event;
++            RtlLeaveCriticalSection( &waitqueue.cs );
++            status = NtWaitForMultipleObjects( num_handles + 1, handles, TRUE, FALSE, &timeout );
++            RtlEnterCriticalSection( &waitqueue.cs );
++
++            if (status >= STATUS_WAIT_0 && status < STATUS_WAIT_0 + num_handles)
++            {
++                wait = objects[status - STATUS_WAIT_0];
++                assert( wait->type == TP_OBJECT_TYPE_WAIT );
++                if (wait->u.wait.bucket)
++                {
++                    /* Wait fulfilled. */
++                    assert( wait->u.wait.bucket == bucket );
++                    list_remove( &wait->u.wait.wait_entry );
++                    list_add_tail( &bucket->reserved, &wait->u.wait.wait_entry );
++                    tp_object_submit( wait, TRUE );
++                }
++                else
++                    ERR("wait object %p triggered while object was destroyed\n", wait);
++            }
++        }
++
++        /* Release locked wait objects (if any). */
++        while (num_handles)
++        {
++            wait = objects[--num_handles];
++            assert( wait->type == TP_OBJECT_TYPE_WAIT );
++            tp_object_release( wait );
++        }
++
++        /* Try to merge with other threads. */
++        if (waitqueue.num_buckets > 1 && bucket->objcount &&
++            bucket->objcount < MAXIMUM_WAITQUEUE_OBJECTS / 2)
++        {
++            struct waitqueue_bucket *other_bucket;
++            LIST_FOR_EACH_ENTRY( other_bucket, &waitqueue.buckets, struct waitqueue_bucket, bucket_entry )
++            {
++                if (other_bucket != bucket && other_bucket->objcount &&
++                    other_bucket->objcount + bucket->objcount <= MAXIMUM_WAITQUEUE_OBJECTS)
++                {
++                    other_bucket->objcount += bucket->objcount;
++                    bucket->objcount = 0;
++
++                    /* Update reserved list. */
++                    LIST_FOR_EACH_ENTRY( wait, &bucket->reserved, struct threadpool_object, u.wait.wait_entry )
++                    {
++                        assert( wait->type == TP_OBJECT_TYPE_WAIT );
++                        wait->u.wait.bucket = other_bucket;
++                    }
++                    list_move_tail( &other_bucket->reserved, &bucket->reserved );
++
++                    /* Update wait list. */
++                    LIST_FOR_EACH_ENTRY( wait, &bucket->waits, struct threadpool_object, u.wait.wait_entry )
++                    {
++                        assert( wait->type == TP_OBJECT_TYPE_WAIT );
++                        wait->u.wait.bucket = other_bucket;
++                    }
++                    list_move_tail( &other_bucket->waits, &bucket->waits );
++
++                    /* Move bucket to the end to keep probability of
++                     * newly added wait objects as small as possible. */
++                    list_remove( &bucket->bucket_entry );
++                    list_add_tail( &waitqueue.buckets, &bucket->bucket_entry );
++
++                    NtSetEvent( other_bucket->update_event, NULL );
++                    break;
++                }
++            }
++        }
++    }
++
++    /* Remove this bucket from the list. */
++    list_remove( &bucket->bucket_entry );
++    if (!--waitqueue.num_buckets)
++        assert( list_empty( &waitqueue.buckets ) );
++
++    RtlLeaveCriticalSection( &waitqueue.cs );
++
++    TRACE( "terminating wait queue thread\n" );
++
++    assert( bucket->objcount == 0 );
++    assert( list_empty( &bucket->reserved ) );
++    assert( list_empty( &bucket->waits ) );
++
++    NtClose( bucket->update_event );
++    RtlFreeHeap( GetProcessHeap(), 0, bucket );
++}
++
++/***********************************************************************
++ *           tp_waitqueue_lock    (internal)
++ */
++static NTSTATUS tp_waitqueue_lock( struct threadpool_object *wait )
 +{
 +    struct waitqueue_bucket *bucket;
 +    NTSTATUS status;
@@ -183,25 +314,26 @@ index c44988c..b8d761b 100644
 +    wait->u.wait.signaled       = 0;
 +    wait->u.wait.bucket         = NULL;
 +    wait->u.wait.wait_pending   = FALSE;
-+    memset( &wait->u.wait.wait_entry, 0, sizeof(wait->u.wait.wait_entry) );
 +    wait->u.wait.timeout        = 0;
 +    wait->u.wait.handle         = INVALID_HANDLE_VALUE;
 +
 +    RtlEnterCriticalSection( &waitqueue.cs );
 +
++    /* Try to assign to existing bucket if possible. */
 +    LIST_FOR_EACH_ENTRY( bucket, &waitqueue.buckets, struct waitqueue_bucket, bucket_entry )
 +    {
-+        if (bucket->num_waits < MAXIMUM_WAITQUEUE_OBJECTS)
++        if (bucket->objcount < MAXIMUM_WAITQUEUE_OBJECTS)
 +        {
-+            bucket->num_waits++;
-+            wait->u.wait.bucket = bucket;
 +            list_add_tail( &bucket->reserved, &wait->u.wait.wait_entry );
++            wait->u.wait.bucket = bucket;
++            bucket->objcount++;
 +
 +            status = STATUS_SUCCESS;
 +            goto out;
 +        }
 +    }
 +
++    /* Create a new bucket and corresponding worker thread. */
 +    bucket = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*bucket) );
 +    if (!bucket)
 +    {
@@ -209,11 +341,12 @@ index c44988c..b8d761b 100644
 +        goto out;
 +    }
 +
-+    bucket->num_waits = 1;
++    bucket->objcount = 0;
 +    list_init( &bucket->reserved );
 +    list_init( &bucket->waits );
 +
-+    status = NtCreateEvent( &bucket->update_event, EVENT_ALL_ACCESS, NULL, SynchronizationEvent, FALSE );
++    status = NtCreateEvent( &bucket->update_event, EVENT_ALL_ACCESS,
++                            NULL, SynchronizationEvent, FALSE );
 +    if (status)
 +    {
 +        RtlFreeHeap( GetProcessHeap(), 0, bucket );
@@ -224,11 +357,12 @@ index c44988c..b8d761b 100644
 +                                  waitqueue_thread_proc, bucket, &thread, NULL );
 +    if (status == STATUS_SUCCESS)
 +    {
-+        waitqueue.num_buckets++;
 +        list_add_tail( &waitqueue.buckets, &bucket->bucket_entry );
++        waitqueue.num_buckets++;
 +
-+        wait->u.wait.bucket = bucket;
 +        list_add_tail( &bucket->reserved, &wait->u.wait.wait_entry );
++        wait->u.wait.bucket = bucket;
++        bucket->objcount++;
 +
 +        NtClose( thread );
 +    }
@@ -243,235 +377,33 @@ index c44988c..b8d761b 100644
 +    return status;
 +}
 +
-+/* Decrement the refcount of a timer queue. */
-+static void tp_waitqueue_release( struct threadpool_object *wait )
++/***********************************************************************
++ *           tp_waitqueue_unlock    (internal)
++ */
++static void tp_waitqueue_unlock( struct threadpool_object *wait )
 +{
 +    assert( wait->type == TP_OBJECT_TYPE_WAIT );
-+    RtlEnterCriticalSection( &waitqueue.cs );
 +
++    RtlEnterCriticalSection( &waitqueue.cs );
 +    if (wait->u.wait.bucket)
 +    {
 +        struct waitqueue_bucket *bucket = wait->u.wait.bucket;
-+        assert( bucket->num_waits > 0 );
++        assert( bucket->objcount > 0 );
 +
-+        bucket->num_waits--;
 +        list_remove( &wait->u.wait.wait_entry );
-+        NtSetEvent( bucket->update_event, NULL );
-+
 +        wait->u.wait.bucket = NULL;
-+    }
-+
-+    RtlLeaveCriticalSection( &waitqueue.cs );
-+}
-+
-+static void tp_waitqueue_update_wait( struct threadpool_object *new_wait, HANDLE handle, LARGE_INTEGER *timeout )
-+{
-+    BOOL submit_wait = FALSE;
-+
-+    assert( new_wait->type == TP_OBJECT_TYPE_WAIT );
-+    RtlEnterCriticalSection( &waitqueue.cs );
-+    assert( new_wait->u.wait.bucket );
-+
-+    /* update wait handle */
-+    new_wait->u.wait.handle = handle;
-+
-+    /* for performance reasons we only wake up when something has changed */
-+    if (handle || new_wait->u.wait.wait_pending)
-+    {
-+        struct waitqueue_bucket *bucket = new_wait->u.wait.bucket;
-+        list_remove( &new_wait->u.wait.wait_entry );
-+
-+        if (handle)
-+        {
-+            ULONGLONG when = TIMEOUT_INFINITE;
-+
-+            if (timeout)
-+            {
-+                when = timeout->QuadPart;
-+
-+                /* A timeout of zero means that the wait should be submitted immediately */
-+                if (when == 0)
-+                {
-+                    submit_wait = TRUE;
-+                    goto remove_wait;
-+                }
-+
-+                /* Convert relative timeout to absolute */
-+                if ((LONGLONG)when < 0)
-+                {
-+                    LARGE_INTEGER now;
-+                    NtQuerySystemTime( &now );
-+                    when = now.QuadPart - when;
-+                }
-+            }
-+
-+            list_add_tail( &bucket->waits, &new_wait->u.wait.wait_entry );
-+            new_wait->u.wait.wait_pending = TRUE;
-+            new_wait->u.wait.timeout = when;
-+        }
-+        else
-+        {
-+remove_wait:
-+            list_add_tail( &bucket->reserved, &new_wait->u.wait.wait_entry );
-+            new_wait->u.wait.wait_pending = FALSE;
-+        }
++        bucket->objcount--;
 +
 +        NtSetEvent( bucket->update_event, NULL );
 +    }
-+
 +    RtlLeaveCriticalSection( &waitqueue.cs );
-+
-+    if (submit_wait)
-+        tp_object_submit( new_wait, FALSE );
 +}
 +
-+static void CALLBACK waitqueue_thread_proc( void *param )
-+{
-+    HANDLE handles[MAXIMUM_WAITQUEUE_OBJECTS + 1];
-+    struct threadpool_object *objects[MAXIMUM_WAITQUEUE_OBJECTS];
-+    struct waitqueue_bucket *bucket = param;
-+    LARGE_INTEGER now, timeout;
-+    struct threadpool_object *wait, *next;
-+    DWORD num_handles;
-+    NTSTATUS status;
-+
-+    RtlEnterCriticalSection( &waitqueue.cs );
-+
-+    for (;;)
-+    {
-+        NtQuerySystemTime( &now );
-+        timeout.QuadPart = TIMEOUT_INFINITE;
-+        num_handles = 0;
-+
-+        LIST_FOR_EACH_ENTRY_SAFE( wait, next, &bucket->waits, struct threadpool_object, u.wait.wait_entry )
-+        {
-+            assert( wait->type == TP_OBJECT_TYPE_WAIT );
-+
-+            /* Timeout expired or object was signaled */
-+            if (wait->u.wait.timeout <= now.QuadPart)
-+            {
-+                list_remove( &wait->u.wait.wait_entry );
-+                list_add_tail( &bucket->reserved, &wait->u.wait.wait_entry );
-+                tp_object_submit( wait, FALSE );
-+            }
-+            else
-+            {
-+                if (wait->u.wait.timeout < timeout.QuadPart)
-+                    timeout.QuadPart = wait->u.wait.timeout;
-+
-+                /* We will have to wait for this object - keep a reference to make sure it doesn't get destroyed */
-+                assert( num_handles < MAXIMUM_WAITQUEUE_OBJECTS );
-+                interlocked_inc( &wait->refcount );
-+                objects[num_handles] = wait;
-+                handles[num_handles] = wait->u.wait.handle;
-+                num_handles++;
-+            }
-+        }
-+
-+        if (!bucket->num_waits)
-+        {
-+            assert( num_handles == 0 );
-+
-+            /* All wait objects have been destroyed, if there are no new wait objects within some
-+             * amount of time, then we can shutdown this thread. */
-+            RtlLeaveCriticalSection( &waitqueue.cs );
-+            timeout.QuadPart = (ULONGLONG)THREADPOOL_WORKER_TIMEOUT * -10000;
-+            status = NtWaitForMultipleObjects( 1, &bucket->update_event, TRUE, FALSE, &timeout );
-+            RtlEnterCriticalSection( &waitqueue.cs );
-+
-+            if (status == STATUS_TIMEOUT && !bucket->num_waits)
-+                break;
-+        }
-+        else
-+        {
-+            handles[num_handles] = bucket->update_event;
-+
-+            /* Wait for a wait queue update event or until an event is triggered */
-+            RtlLeaveCriticalSection( &waitqueue.cs );
-+            status = NtWaitForMultipleObjects( num_handles + 1, handles, TRUE, FALSE, &timeout );
-+            RtlEnterCriticalSection( &waitqueue.cs );
-+
-+            if (status >= STATUS_WAIT_0 && status < STATUS_WAIT_0 + num_handles)
-+            {
-+                wait = objects[status - STATUS_WAIT_0];
-+                assert( wait->type == TP_OBJECT_TYPE_WAIT );
-+
-+                if (wait->u.wait.bucket)
-+                {
-+                    assert( wait->u.wait.bucket == bucket );
-+                    list_remove( &wait->u.wait.wait_entry );
-+                    list_add_tail( &bucket->reserved, &wait->u.wait.wait_entry );
-+                    tp_object_submit( wait, TRUE );
-+                }
-+                else
-+                    FIXME("Wait object triggered while object was destroyed, race-condition.\n");
-+            }
-+
-+            while (num_handles)
-+            {
-+                wait = objects[--num_handles];
-+                assert( wait->type == TP_OBJECT_TYPE_WAIT );
-+                tp_object_release( wait );
-+            }
-+        }
-+
-+        /* Try to merge with other buckets */
-+        if (waitqueue.num_buckets > 1 && bucket->num_waits && bucket->num_waits < MAXIMUM_WAITQUEUE_OBJECTS / 2)
-+        {
-+            struct waitqueue_bucket *other_bucket;
-+            LIST_FOR_EACH_ENTRY( other_bucket, &waitqueue.buckets, struct waitqueue_bucket, bucket_entry )
-+            {
-+                if (other_bucket != bucket && other_bucket->num_waits &&
-+                    other_bucket->num_waits + bucket->num_waits <= MAXIMUM_WAITQUEUE_OBJECTS)
-+                {
-+                    other_bucket->num_waits += bucket->num_waits;
-+                    bucket->num_waits = 0;
-+
-+                    LIST_FOR_EACH_ENTRY( wait, &bucket->reserved, struct threadpool_object, u.wait.wait_entry )
-+                    {
-+                        assert( wait->type == TP_OBJECT_TYPE_WAIT );
-+                        wait->u.wait.bucket = other_bucket;
-+                    }
-+                    list_move_tail( &other_bucket->reserved, &bucket->reserved );
-+
-+                    LIST_FOR_EACH_ENTRY( wait, &bucket->waits, struct threadpool_object, u.wait.wait_entry )
-+                    {
-+                        assert( wait->type == TP_OBJECT_TYPE_WAIT );
-+                        wait->u.wait.bucket = other_bucket;
-+                    }
-+                    list_move_tail( &other_bucket->waits, &bucket->waits );
-+
-+                    /* we will not terminate immediately, but instead after a timeout. Make sure that this
-+                     * bucket appears as the last one in the list, otherwise there is a high risk that
-+                     * elements will be added again. */
-+                    list_remove( &bucket->bucket_entry );
-+                    list_add_tail( &waitqueue.buckets, &bucket->bucket_entry );
-+
-+                    NtSetEvent( other_bucket->update_event, NULL );
-+                    break;
-+                }
-+            }
-+        }
-+    }
-+
-+    waitqueue.num_buckets--;
-+    list_remove( &bucket->bucket_entry );
-+    if (!waitqueue.num_buckets)
-+        assert( list_empty( &waitqueue.buckets ) );
-+    RtlLeaveCriticalSection( &waitqueue.cs );
-+
-+    assert( bucket->num_waits == 0 );
-+    assert( list_empty( &bucket->reserved ) );
-+    assert( list_empty( &bucket->waits ) );
-+
-+    NtClose( bucket->update_event );
-+    RtlFreeHeap( GetProcessHeap(), 0, bucket );
-+}
-+
- /***********************************************************************
++/***********************************************************************
   *           tp_threadpool_alloc    (internal)
   *
-@@ -1714,7 +2062,7 @@ static void tp_object_initialize( struct threadpool_object *object, struct threa
+  * Allocates a new threadpool object.
+@@ -1654,7 +1955,7 @@ static void tp_object_initialize( struct threadpool_object *object, struct threa
       * will be set, and tp_object_submit would fail with an assertion. */
  
      if (is_simple_callback)
@@ -480,7 +412,7 @@ index c44988c..b8d761b 100644
  
      if (object->group)
      {
-@@ -1740,7 +2088,7 @@ static void tp_object_initialize( struct threadpool_object *object, struct threa
+@@ -1680,7 +1981,7 @@ static void tp_object_initialize( struct threadpool_object *object, struct threa
   * Submits a threadpool object to the associcated threadpool. This
   * function has to be VOID because TpPostWork can never fail on Windows.
   */
@@ -489,37 +421,37 @@ index c44988c..b8d761b 100644
  {
      struct threadpool *pool = object->pool;
      NTSTATUS status = STATUS_UNSUCCESSFUL;
-@@ -1770,6 +2118,10 @@ static void tp_object_submit( struct threadpool_object *object )
+@@ -1710,6 +2011,10 @@ static void tp_object_submit( struct threadpool_object *object )
      if (!object->num_pending_callbacks++)
          list_add_tail( &pool->pool, &object->pool_entry );
  
-+    /* increment success counter by one */
++    /* Remember how often the wait was fulfilled. */
 +    if (object->type == TP_OBJECT_TYPE_WAIT && success)
 +        object->u.wait.signaled++;
 +
      /* No new thread started - wake up one existing thread. */
      if (status != STATUS_SUCCESS)
      {
-@@ -1797,6 +2149,9 @@ static void tp_object_cancel( struct threadpool_object *object, BOOL group_cance
+@@ -1736,6 +2041,9 @@ static void tp_object_cancel( struct threadpool_object *object, BOOL group_cance
+         pending_callbacks = object->num_pending_callbacks;
          object->num_pending_callbacks = 0;
          list_remove( &object->pool_entry );
-     }
 +
-+    if (object->type == TP_OBJECT_TYPE_WAIT)
-+        object->u.wait.signaled = 0;
++        if (object->type == TP_OBJECT_TYPE_WAIT)
++            object->u.wait.signaled = 0;
+     }
      RtlLeaveCriticalSection( &pool->cs );
  
-     /* Execute group cancellation callback if defined, and if this was actually a group cancel. */
-@@ -1845,6 +2200,8 @@ static void tp_object_shutdown( struct threadpool_object *object )
+@@ -1785,6 +2093,8 @@ static void tp_object_shutdown( struct threadpool_object *object )
  {
      if (object->type == TP_OBJECT_TYPE_TIMER)
-         tp_timerqueue_release( object );
+         tp_timerqueue_unlock( object );
 +    else if (object->type == TP_OBJECT_TYPE_WAIT)
-+        tp_waitqueue_release( object );
++        tp_waitqueue_unlock( object );
  
      object->shutdown = TRUE;
  }
-@@ -1898,6 +2255,7 @@ static void CALLBACK threadpool_worker_proc( void *param )
+@@ -1839,6 +2149,7 @@ static void CALLBACK threadpool_worker_proc( void *param )
      TP_CALLBACK_INSTANCE *callback_instance;
      struct threadpool_instance instance;
      struct threadpool *pool = param;
@@ -527,26 +459,21 @@ index c44988c..b8d761b 100644
      LARGE_INTEGER timeout;
      struct list *ptr;
      NTSTATUS status;
-@@ -1918,6 +2276,18 @@ static void CALLBACK threadpool_worker_proc( void *param )
+@@ -1859,6 +2170,13 @@ static void CALLBACK threadpool_worker_proc( void *param )
              if (--object->num_pending_callbacks)
                  list_add_tail( &pool->pool, &object->pool_entry );
  
-+            /* for wait objects, determine if the object was signaled or if this
-+             * is a timeout. */
++            /* For wait objects determine if the operation was successful. */
 +            if (object->type == TP_OBJECT_TYPE_WAIT)
 +            {
-+                if (object->u.wait.signaled > 0)
-+                {
-+                    wait_result = WAIT_OBJECT_0;
-+                    object->u.wait.signaled--;
-+                }
-+                else wait_result = WAIT_TIMEOUT;
++                wait_result = object->u.wait.signaled ? WAIT_OBJECT_0 : WAIT_TIMEOUT;
++                if (wait_result == WAIT_OBJECT_0) object->u.wait.signaled--;
 +            }
 +
              /* Leave critical section and do the actual callback. */
              object->num_associated_callbacks++;
              object->num_running_callbacks++;
-@@ -1966,6 +2336,15 @@ static void CALLBACK threadpool_worker_proc( void *param )
+@@ -1907,6 +2225,15 @@ static void CALLBACK threadpool_worker_proc( void *param )
                      break;
                  }
  
@@ -562,7 +489,7 @@ index c44988c..b8d761b 100644
                  default:
                      assert(0);
                      break;
-@@ -2112,6 +2491,46 @@ NTSTATUS WINAPI TpAllocTimer( TP_TIMER **out, PTP_TIMER_CALLBACK callback, PVOID
+@@ -2052,6 +2379,46 @@ NTSTATUS WINAPI TpAllocTimer( TP_TIMER **out, PTP_TIMER_CALLBACK callback, PVOID
  }
  
  /***********************************************************************
@@ -591,7 +518,7 @@ index c44988c..b8d761b 100644
 +    object->type = TP_OBJECT_TYPE_WAIT;
 +    object->u.wait.callback = callback;
 +
-+    status = tp_waitqueue_acquire( object );
++    status = tp_waitqueue_lock( object );
 +    if (status)
 +    {
 +        tp_threadpool_unlock( pool );
@@ -609,7 +536,7 @@ index c44988c..b8d761b 100644
   *           TpAllocWork    (NTDLL.@)
   */
  NTSTATUS WINAPI TpAllocWork( TP_WORK **out, PTP_WORK_CALLBACK callback, PVOID userdata,
-@@ -2311,7 +2730,7 @@ VOID WINAPI TpPostWork( TP_WORK *work )
+@@ -2252,7 +2619,7 @@ VOID WINAPI TpPostWork( TP_WORK *work )
  
      TRACE( "%p\n", work );
  
@@ -618,7 +545,7 @@ index c44988c..b8d761b 100644
  }
  
  /***********************************************************************
-@@ -2415,6 +2834,19 @@ VOID WINAPI TpReleaseTimer( TP_TIMER *timer )
+@@ -2356,6 +2723,19 @@ VOID WINAPI TpReleaseTimer( TP_TIMER *timer )
  }
  
  /***********************************************************************
@@ -638,26 +565,82 @@ index c44988c..b8d761b 100644
   *           TpReleaseWork    (NTDLL.@)
   */
  VOID WINAPI TpReleaseWork( TP_WORK *work )
-@@ -2490,6 +2922,18 @@ VOID WINAPI TpSetTimer( TP_TIMER *timer, LARGE_INTEGER *timeout, LONG period, LO
- }
+@@ -2493,7 +2873,73 @@ VOID WINAPI TpSetTimer( TP_TIMER *timer, LARGE_INTEGER *timeout, LONG period, LO
+     RtlLeaveCriticalSection( &timerqueue.cs );
  
- /***********************************************************************
+     if (submit_timer)
+-       tp_object_submit( this );
++       tp_object_submit( this, FALSE );
++}
++
++/***********************************************************************
 + *           TpSetWait    (KERNEL32.@)
 + */
 +VOID WINAPI TpSetWait( TP_WAIT *wait, HANDLE handle, LARGE_INTEGER *timeout )
 +{
 +    struct threadpool_object *this = impl_from_TP_WAIT( wait );
++    BOOL submit_wait = FALSE;
 +
 +    TRACE( "%p %p %p\n", wait, handle, timeout );
 +
-+    tp_waitqueue_update_wait( this, handle, timeout );
-+}
++    RtlEnterCriticalSection( &waitqueue.cs );
++    assert( this->u.wait.bucket );
 +
-+/***********************************************************************
-  *           TpSimpleTryPost    (NTDLL.@)
-  */
- NTSTATUS WINAPI TpSimpleTryPost( PTP_SIMPLE_CALLBACK callback, PVOID userdata,
-@@ -2534,6 +2978,20 @@ VOID WINAPI TpWaitForTimer( TP_TIMER *timer, BOOL cancel_pending )
++    /* update wait handle */
++    this->u.wait.handle = handle;
++
++    /* for performance reasons we only wake up when something has changed */
++    if (handle || this->u.wait.wait_pending)
++    {
++        struct waitqueue_bucket *bucket = this->u.wait.bucket;
++        list_remove( &this->u.wait.wait_entry );
++
++        if (handle)
++        {
++            ULONGLONG when = TIMEOUT_INFINITE;
++
++            if (timeout)
++            {
++                when = timeout->QuadPart;
++
++                /* A timeout of zero means that the wait should be submitted immediately */
++                if (when == 0)
++                {
++                    submit_wait = TRUE;
++                    goto remove_wait;
++                }
++
++                /* Convert relative timeout to absolute */
++                if ((LONGLONG)when < 0)
++                {
++                    LARGE_INTEGER now;
++                    NtQuerySystemTime( &now );
++                    when = now.QuadPart - when;
++                }
++            }
++
++            list_add_tail( &bucket->waits, &this->u.wait.wait_entry );
++            this->u.wait.wait_pending = TRUE;
++            this->u.wait.timeout = when;
++        }
++        else
++        {
++remove_wait:
++            list_add_tail( &bucket->reserved, &this->u.wait.wait_entry );
++            this->u.wait.wait_pending = FALSE;
++        }
++
++        NtSetEvent( bucket->update_event, NULL );
++    }
++
++    RtlLeaveCriticalSection( &waitqueue.cs );
++
++    if (submit_wait)
++        tp_object_submit( this, FALSE );
+ }
+ 
+ /***********************************************************************
+@@ -2541,6 +2987,20 @@ VOID WINAPI TpWaitForTimer( TP_TIMER *timer, BOOL cancel_pending )
  }
  
  /***********************************************************************

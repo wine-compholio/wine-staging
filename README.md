@@ -120,7 +120,7 @@ for more details.*
 * Fallback to global key state for threads without a queue ([Wine Bug #27238](https://bugs.winehq.org/show_bug.cgi?id=27238))
 * Fallback to system ping command when CAP_NET_RAW is not available ([Wine Bug #8332](https://bugs.winehq.org/show_bug.cgi?id=8332))
 * Fix NULL dereference in ICSeqCompressFrameStart ([Wine Bug #27595](https://bugs.winehq.org/show_bug.cgi?id=27595))
-* Fix black screen on startup introduced by pixelformat changes. ([Wine Bug #35950](https://bugs.winehq.org/show_bug.cgi?id=35950))
+* ~~Fix black screen on startup introduced by pixelformat changes.~~ ([Wine Bug #35950](https://bugs.winehq.org/show_bug.cgi?id=35950))
 * Fix caps lock state issues with multiple processes ([Wine Bug #35907](https://bugs.winehq.org/show_bug.cgi?id=35907))
 * Fix comparison of punctuation characters in lstrcmp ([Wine Bug #10767](https://bugs.winehq.org/show_bug.cgi?id=10767))
 * Fix condition mask handling in RtlVerifyVersionInfo ([Wine Bug #36143](https://bugs.winehq.org/show_bug.cgi?id=36143))

@@ -4891,7 +4891,6 @@ fi
 # | This patchset fixes the following Wine bugs:
 # |   *	[#35655] Fix wined3d performance drop introduced by pixelformat changes.
 # |   *	[#35718] Fix flickering introduced by pixelformat changes.
-# |   *	[#35950] Fix black screen on startup introduced by pixelformat changes.
 # |   *	[#35975] Fix gray screen on startup introduced by pixelformat changes.
 # |   *	[#36900] Fix missing video introduced by pixelformat changes.
 # |

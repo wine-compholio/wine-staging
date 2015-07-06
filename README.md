@@ -187,7 +187,7 @@ for more details.*
 * Implement stubs for ntoskrnl.Ex{Acquire,Release}FastMutexUnsafe
 * Implement stubs for ntoskrnl.ObReferenceObjectByPointer and ntoskrnl.ObDereferenceObject
 * ~~Implement threadpool timers~~ ([Wine Bug #37306](https://bugs.winehq.org/show_bug.cgi?id=37306))
-* Implement threadpool wait objects
+* ~~Implement threadpool wait objects~~
 * ~~Implement threadpool work items~~ ([Wine Bug #32531](https://bugs.winehq.org/show_bug.cgi?id=32531))
 * Improve ReadDataAvailable handling in FilePipeLocalInformation class
 * Improve stub for AEV_GetVolumeRange ([Wine Bug #35658](https://bugs.winehq.org/show_bug.cgi?id=35658))

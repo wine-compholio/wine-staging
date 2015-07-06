@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 8b566b1da71a412fe58c3cc1988d610c2aba5f2d"
+	echo "  commit f6653a93eb6796b733c6b0e9e289746692ab0a69"
 	echo ""
 }
 
@@ -175,7 +175,6 @@ patch_enable_all ()
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
 	enable_ntdll_User_Shared_Data="$1"
-	enable_ntdll_Vista_Threadpool="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_WinSqm="$1"
 	enable_ntdll_WriteWatches="$1"
@@ -598,9 +597,6 @@ patch_enable ()
 			;;
 		ntdll-User_Shared_Data)
 			enable_ntdll_User_Shared_Data="$2"
-			;;
-		ntdll-Vista_Threadpool)
-			enable_ntdll_Vista_Threadpool="$2"
 			;;
 		ntdll-WRITECOPY)
 			enable_ntdll_WRITECOPY="$2"
@@ -3686,29 +3682,6 @@ if test "$enable_ntdll_User_Shared_Data" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Move code to update user shared data into a separate function.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Update USER_SHARED_DATA before accessing memory.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Vista_Threadpool
-# |
-# | Modified files:
-# |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/thread.c, dlls/ntdll/ntdll.spec, dlls/ntdll/tests/threadpool.c,
-# | 	dlls/ntdll/threadpool.c, include/winternl.h
-# |
-if test "$enable_ntdll_Vista_Threadpool" -eq 1; then
-	patch_apply ntdll-Vista_Threadpool/0001-ntdll-Implement-TpAllocWait-and-TpReleaseWait.patch
-	patch_apply ntdll-Vista_Threadpool/0002-ntdll-Implement-threadpool-wait-queues.patch
-	patch_apply ntdll-Vista_Threadpool/0003-ntdll-tests-Add-basic-tests-for-threadpool-wait-obje.patch
-	patch_apply ntdll-Vista_Threadpool/0004-ntdll-tests-Add-highly-multithreaded-wait-tests.patch
-	patch_apply ntdll-Vista_Threadpool/0005-ntdll-Try-to-merge-threadpool-wait-queue-buckets-if-.patch
-	patch_apply ntdll-Vista_Threadpool/0006-kernel32-Forward-threadpool-wait-functions-to-ntdll.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Implement TpAllocWait and TpReleaseWait.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Implement threadpool wait queues.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Add basic tests for threadpool wait objects.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Add highly multithreaded wait tests.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Try to merge threadpool wait queue buckets if possible.", 1 },';
-		echo '+    { "Sebastian Lackner", "kernel32: Forward threadpool wait functions to ntdll.", 1 },';
 	) >> "$patchlist"
 fi
 

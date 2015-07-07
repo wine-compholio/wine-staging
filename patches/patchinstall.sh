@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit f6653a93eb6796b733c6b0e9e289746692ab0a69"
+	echo "  commit 71e5fdf478dbfb1821d4c39a55c3555cc8188741"
 	echo ""
 }
 
@@ -91,7 +91,6 @@ patch_enable_all ()
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Skip_Tests="$1"
 	enable_d3d9_Surface_Refcount="$1"
-	enable_d3drm_Specfile="$1"
 	enable_d3dx9_24_ID3DXEffect="$1"
 	enable_d3dx9_25_ID3DXEffect="$1"
 	enable_d3dx9_26_ID3DXEffect="$1"
@@ -345,9 +344,6 @@ patch_enable ()
 			;;
 		d3d9-Surface_Refcount)
 			enable_d3d9_Surface_Refcount="$2"
-			;;
-		d3drm-Specfile)
-			enable_d3drm_Specfile="$2"
 			;;
 		d3dx9_24-ID3DXEffect)
 			enable_d3dx9_24_ID3DXEffect="$2"
@@ -1294,9 +1290,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_d3d9_Surface_Refcount" -gt 1; then
 		abort "Patchset d3d9-Surface_Refcount disabled, but category-stable depends on that."
 	fi
-	if test "$enable_d3drm_Specfile" -gt 1; then
-		abort "Patchset d3drm-Specfile disabled, but category-stable depends on that."
-	fi
 	if test "$enable_d3dx9_24_ID3DXEffect" -gt 1; then
 		abort "Patchset d3dx9_24-ID3DXEffect disabled, but category-stable depends on that."
 	fi
@@ -1523,7 +1516,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_d3d11_D3D11CreateDeviceAndSwapChain=1
 	enable_d3d9_Skip_Tests=1
 	enable_d3d9_Surface_Refcount=1
-	enable_d3drm_Specfile=1
 	enable_d3dx9_24_ID3DXEffect=1
 	enable_d3dx9_25_ID3DXEffect=1
 	enable_d3dx9_26_ID3DXEffect=1
@@ -2191,18 +2183,6 @@ if test "$enable_d3d9_Surface_Refcount" -eq 1; then
 	patch_apply d3d9-Surface_Refcount/0001-d3d9-Don-t-decrease-surface-refcount-when-its-alread.patch
 	(
 		echo '+    { "Henri Verbeet", "d3d9: Don'\''t decrease surface refcount when its already zero.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3drm-Specfile
-# |
-# | Modified files:
-# |   *	dlls/d3drm/d3drm.spec
-# |
-if test "$enable_d3drm_Specfile" -eq 1; then
-	patch_apply d3drm-Specfile/0001-d3drm-Mark-DllCanUnloadNow-and-DllGetClassObject-as-.patch
-	(
-		echo '+    { "Amine Khaldi", "d3drm: Mark DllCanUnloadNow and DllGetClassObject as private.", 1 },';
 	) >> "$patchlist"
 fi
 

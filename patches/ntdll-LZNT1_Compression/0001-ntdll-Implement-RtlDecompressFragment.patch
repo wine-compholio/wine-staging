@@ -1,23 +1,26 @@
-From ac70c24f5e811828739b6e8c51d1b3e26c6a5d04 Mon Sep 17 00:00:00 2001
+From 0955227f8eddd188b2c953d82224fc7c9de34ecd Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
-Date: Thu, 30 Oct 2014 17:26:42 +0100
-Subject: ntdll: Implement LZNT1 algorithm for RtlDecompressBuffer.
+Date: Thu, 9 Jul 2015 03:07:03 +0200
+Subject: ntdll: Implement RtlDecompressFragment.
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 
 Based on a patch by Michael Müller.
+
+For https://bugs.winehq.org/show_bug.cgi?id=37449
 ---
  dlls/ntdll/ntdll.spec               |   2 +-
- dlls/ntdll/rtl.c                    | 229 ++++++++++++++++++++++++++++++++++--
+ dlls/ntdll/rtl.c                    | 214 +++++++++++++++++++++++++++++++++++-
+ dlls/ntdll/tests/rtl.c              |   3 -
  dlls/ntoskrnl.exe/ntoskrnl.exe.spec |   2 +-
- 3 files changed, 224 insertions(+), 9 deletions(-)
+ 4 files changed, 210 insertions(+), 11 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 7e95969..c79e942 100644
+index 75dc647..ca3561d 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -511,7 +511,7 @@
+@@ -513,7 +513,7 @@
  @ stdcall RtlDecodePointer(ptr)
  # @ stub RtlDecodeSystemPointer
  @ stdcall RtlDecompressBuffer(long ptr long ptr long ptr)
@@ -27,33 +30,25 @@ index 7e95969..c79e942 100644
  @ stub RtlDelete
  @ stdcall RtlDeleteAce(ptr long)
 diff --git a/dlls/ntdll/rtl.c b/dlls/ntdll/rtl.c
-index b790910..c9715df 100644
+index d9e448a..9a196d2 100644
 --- a/dlls/ntdll/rtl.c
 +++ b/dlls/ntdll/rtl.c
-@@ -1300,17 +1300,232 @@ NTSTATUS WINAPI RtlCompressBuffer(USHORT format, PUCHAR uncompressed, ULONG unco
+@@ -1309,17 +1309,219 @@ NTSTATUS WINAPI RtlCompressBuffer(USHORT format, PUCHAR uncompressed, ULONG unco
      }
  }
  
 +/* decompress a single LZNT1 chunk */
 +static PUCHAR lznt1_decompress_chunk(UCHAR *dst, ULONG dst_size, UCHAR *src, ULONG src_size)
 +{
-+    UCHAR *src_cur, *src_end, *dst_cur, *dst_end;
++    UCHAR *src_cur = src, *src_end = src + src_size;
++    UCHAR *dst_cur = dst, *dst_end = dst + dst_size;
 +    ULONG displacement_bits, length_bits;
 +    ULONG code_displacement, code_length;
 +    WORD flags, code;
 +
-+    src_cur = src;
-+    src_end = src + src_size;
-+    dst_cur = dst;
-+    dst_end = dst + dst_size;
-+
-+    /* Partial decompression is no error on Windows. */
 +    while (src_cur < src_end && dst_cur < dst_end)
 +    {
-+        /* read flags header */
 +        flags = 0x8000 | *src_cur++;
-+
-+        /* parse following 8 entities, either uncompressed data or backwards reference */
 +        while ((flags & 0xFF00) && src_cur < src_end)
 +        {
 +            if (flags & 1)
@@ -61,17 +56,18 @@ index b790910..c9715df 100644
 +                /* backwards reference */
 +                if (src_cur + sizeof(WORD) > src_end)
 +                    return NULL;
++
 +                code = *(WORD *)src_cur;
 +                src_cur += sizeof(WORD);
 +
 +                /* find length / displacement bits */
 +                for (displacement_bits = 12; displacement_bits > 4; displacement_bits--)
 +                    if ((1 << (displacement_bits - 1)) < dst_cur - dst) break;
++
 +                length_bits       = 16 - displacement_bits;
 +                code_length       = (code & ((1 << length_bits) - 1)) + 3;
 +                code_displacement = (code >> length_bits) + 1;
 +
-+                /* ensure reference is valid */
 +                if (dst_cur < dst + code_displacement)
 +                    return NULL;
 +
@@ -92,7 +88,6 @@ index b790910..c9715df 100644
 +            }
 +            flags >>= 1;
 +        }
-+
 +    }
 +
 +    return dst_cur;
@@ -102,28 +97,23 @@ index b790910..c9715df 100644
 +static NTSTATUS lznt1_decompress(UCHAR *dst, ULONG dst_size, UCHAR *src, ULONG src_size,
 +                                 ULONG offset, ULONG *final_size, UCHAR *workspace)
 +{
-+    UCHAR *src_cur, *src_end, *dst_cur, *dst_end, *ptr;
++    UCHAR *src_cur = src, *src_end = src + src_size;
++    UCHAR *dst_cur = dst, *dst_end = dst + dst_size;
 +    ULONG chunk_size, block_size;
 +    WORD chunk_header;
-+
-+    src_cur = src;
-+    src_end = src + src_size;
-+    dst_cur = dst;
-+    dst_end = dst + dst_size;
++    UCHAR *ptr;
 +
 +    if (src_cur + sizeof(WCHAR) > src_end)
 +        return STATUS_BAD_COMPRESSION_BUFFER;
 +
-+    /* skip over chunks which have a big distance (>= 0x1000) to the destination offset */
++    /* skip over chunks which have a distance >= 0x1000 to the destination offset */
 +    while (offset >= 0x1000 && src_cur + sizeof(WCHAR) <= src_end)
 +    {
-+        /* read chunk header and extract size */
 +        chunk_header = *(WORD *)src_cur;
 +        src_cur += sizeof(WCHAR);
 +        if (!chunk_header) goto out;
 +        chunk_size = (chunk_header & 0xFFF) + 1;
 +
-+        /* ensure we have enough buffer to process chunk */
 +        if (src_cur + chunk_size > src_end)
 +            return STATUS_BAD_COMPRESSION_BUFFER;
 +
@@ -131,16 +121,14 @@ index b790910..c9715df 100644
 +        offset  -= 0x1000;
 +    }
 +
-+    /* this chunk is can be included partially */
++    /* check if a chunk is included partially */
 +    if (offset && src_cur + sizeof(WCHAR) <= src_end)
 +    {
-+        /* read chunk header and extract size */
 +        chunk_header = *(WORD *)src_cur;
 +        src_cur += sizeof(WCHAR);
 +        if (!chunk_header) goto out;
 +        chunk_size = (chunk_header & 0xFFF) + 1;
 +
-+        /* ensure we have enough buffer to process chunk */
 +        if (src_cur + chunk_size > src_end)
 +            return STATUS_BAD_COMPRESSION_BUFFER;
 +
@@ -174,19 +162,18 @@ index b790910..c9715df 100644
 +        src_cur += chunk_size;
 +    }
 +
++    /* remaining blocks */
 +    while (src_cur + sizeof(WCHAR) <= src_end)
 +    {
-+        /* read chunk header and extract size */
 +        chunk_header = *(WORD *)src_cur;
 +        src_cur += sizeof(WCHAR);
 +        if (!chunk_header) goto out;
 +        chunk_size = (chunk_header & 0xFFF) + 1;
 +
-+        /* ensure we have enough buffer to process chunk */
 +        if (src_cur + chunk_size > src_end)
 +            return STATUS_BAD_COMPRESSION_BUFFER;
 +
-+        /* add padding if required */
++        /* fill space with padding */
 +        block_size = ((dst_cur - dst) + offset) & 0xFFF;
 +        if (block_size)
 +        {
@@ -196,7 +183,8 @@ index b790910..c9715df 100644
 +            memset(dst_cur, 0, block_size);
 +            dst_cur += block_size;
 +        }
-+        else if (dst_cur >= dst_end)
++
++        if (dst_cur >= dst_end)
 +            goto out;
 +
 +        if (chunk_header & 0x8000)
@@ -224,22 +212,14 @@ index b790910..c9715df 100644
 +
 +}
 +
- /******************************************************************************
-- *  RtlDecompressBuffer		[NTDLL.@]
-+ *  RtlDecompressFragment      [NTDLL.@]
-  */
--NTSTATUS WINAPI RtlDecompressBuffer(USHORT CompressionFormat, PUCHAR UncompressedBuffer,
--                                    ULONG UncompressedBufferSize, PUCHAR CompressedBuffer,
--                                    ULONG CompressedBufferSize, PULONG FinalUncompressedSize)
++/******************************************************************************
++ *  RtlDecompressFragment	[NTDLL.@]
++ */
 +NTSTATUS RtlDecompressFragment(USHORT format, PUCHAR uncompressed, ULONG uncompressed_size,
 +                               PUCHAR compressed, ULONG compressed_size, ULONG offset,
 +                               PULONG final_size, PVOID workspace)
- {
--    FIXME("0x%04x, %p, %u, %p, %u, %p :stub\n", CompressionFormat, UncompressedBuffer, UncompressedBufferSize,
--         CompressedBuffer, CompressedBufferSize, FinalUncompressedSize);
- 
--    return STATUS_NOT_IMPLEMENTED;
-+    TRACE("0x%04x, %p, %u, %p, %u, %u, %p, %p :stub\n", format, uncompressed,
++{
++    TRACE("0x%04x, %p, %u, %p, %u, %u, %p, %p\n", format, uncompressed,
 +          uncompressed_size, compressed, compressed_size, offset, final_size, workspace);
 +
 +    switch (format & ~COMPRESSION_ENGINE_MAXIMUM)
@@ -253,25 +233,50 @@ index b790910..c9715df 100644
 +            return STATUS_INVALID_PARAMETER;
 +
 +        default:
-+            FIXME("format %d not implemented\n", format);
++            FIXME("format %u not implemented\n", format);
 +            return STATUS_UNSUPPORTED_COMPRESSION;
 +    }
 +}
 +
 +
-+/******************************************************************************
-+ *  RtlDecompressBuffer		[NTDLL.@]
-+ */
+ /******************************************************************************
+  *  RtlDecompressBuffer		[NTDLL.@]
+  */
+-NTSTATUS WINAPI RtlDecompressBuffer(USHORT CompressionFormat, PUCHAR UncompressedBuffer,
+-                                    ULONG UncompressedBufferSize, PUCHAR CompressedBuffer,
+-                                    ULONG CompressedBufferSize, PULONG FinalUncompressedSize)
 +NTSTATUS WINAPI RtlDecompressBuffer(USHORT format, PUCHAR uncompressed, ULONG uncompressed_size,
 +                                    PUCHAR compressed, ULONG compressed_size, PULONG final_size)
-+{
+ {
+-    FIXME("0x%04x, %p, %u, %p, %u, %p :stub\n", CompressionFormat, UncompressedBuffer, UncompressedBufferSize,
+-         CompressedBuffer, CompressedBufferSize, FinalUncompressedSize);
++    TRACE("0x%04x, %p, %u, %p, %u, %p\n", format, uncompressed,
++        uncompressed_size, compressed, compressed_size, final_size);
+ 
+-    return STATUS_NOT_IMPLEMENTED;
 +    return RtlDecompressFragment(format, uncompressed, uncompressed_size,
 +                                 compressed, compressed_size, 0, final_size, NULL);
  }
  
  /***********************************************************************
+diff --git a/dlls/ntdll/tests/rtl.c b/dlls/ntdll/tests/rtl.c
+index c6a7023..99fd413 100644
+--- a/dlls/ntdll/tests/rtl.c
++++ b/dlls/ntdll/tests/rtl.c
+@@ -1663,11 +1663,8 @@ static void test_RtlCompressBuffer(void)
+     memset(buf2, 0x11, sizeof(buf2));
+     status = pRtlDecompressBuffer(COMPRESSION_FORMAT_LZNT1, buf2, sizeof(buf2),
+                                   buf1, buf_size, &final_size);
+-    todo_wine
+     ok(status == STATUS_SUCCESS, "got wrong status 0x%08x\n", status);
+-    todo_wine
+     ok(final_size == sizeof(test_buffer), "got wrong final_size %u\n", final_size);
+-    todo_wine
+     ok(!memcmp(buf2, test_buffer, sizeof(test_buffer)), "got wrong decoded data\n");
+     ok(buf2[sizeof(test_buffer)] == 0x11, "too many bytes written\n");
+ 
 diff --git a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
-index 4ead907..bfc3c59 100644
+index 11d1c62..0bb7d04 100644
 --- a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
 +++ b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
 @@ -977,7 +977,7 @@
@@ -284,5 +289,5 @@ index 4ead907..bfc3c59 100644
  @ stdcall RtlDeleteAce(ptr long) ntdll.RtlDeleteAce
  @ stdcall RtlDeleteAtomFromAtomTable(ptr long) ntdll.RtlDeleteAtomFromAtomTable
 -- 
-2.1.3
+2.4.5
 

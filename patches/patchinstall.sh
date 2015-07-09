@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 47a11ec626dc8888442ab0f5eb943e1d33048114"
+	echo "  commit cf7a118a9e5922d819f216c21c3a0984c7bde5dd"
 	echo ""
 }
 
@@ -3547,20 +3547,16 @@ fi
 # |   *	[#37449] Support for RtlDecompressBuffer
 # |
 # | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntdll/tests/rtl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/winnt.h
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntdll/tests/rtl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec
 # |
 if test "$enable_ntdll_LZNT1_Compression" -eq 1; then
-	patch_apply ntdll-LZNT1_Compression/0001-ntdll-Implement-semi-stub-for-RtlGetCompressionWorkS.patch
-	patch_apply ntdll-LZNT1_Compression/0002-ntdll-Implement-semi-stub-for-RtlCompressBuffer.patch
-	patch_apply ntdll-LZNT1_Compression/0003-ntdll-Implement-LZNT1-algorithm-for-RtlDecompressBuf.patch
-	patch_apply ntdll-LZNT1_Compression/0004-ntdll-tests-Add-tests-for-Rtl-Decompress-Compress-Bu.patch
-	patch_apply ntdll-LZNT1_Compression/0005-ntdll-tests-Fix-various-test-failures-caused-by-brok.patch
+	patch_apply ntdll-LZNT1_Compression/0001-ntdll-Implement-RtlDecompressFragment.patch
+	patch_apply ntdll-LZNT1_Compression/0002-ntdll-tests-Add-tests-for-RtlDecompressBuffer.patch
+	patch_apply ntdll-LZNT1_Compression/0003-ntdll-tests-Add-tests-for-RtlDecompressFragment.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Implement semi-stub for RtlGetCompressionWorkSpaceSize.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Implement semi-stub for RtlCompressBuffer.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Implement LZNT1 algorithm for RtlDecompressBuffer.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for Rtl[Decompress|Compress]Buffer and RtlGetCompressionWorkSpaceSize.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Fix various test failures caused by broken RtlDecompressBuffer results.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement RtlDecompressFragment.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for RtlDecompressBuffer.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for RtlDecompressFragment.", 1 },';
 	) >> "$patchlist"
 fi
 

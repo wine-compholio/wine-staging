@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 71e5fdf478dbfb1821d4c39a55c3555cc8188741"
+	echo "  commit 47a11ec626dc8888442ab0f5eb943e1d33048114"
 	echo ""
 }
 
@@ -269,6 +269,7 @@ patch_enable_all ()
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
 	enable_winex11_wglShareLists="$1"
+	enable_winhttp_System_Proxy_Autoconfig="$1"
 	enable_wininet_Cleanup="$1"
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
 	enable_winmm_Delay_Import_Depends="$1"
@@ -878,6 +879,9 @@ patch_enable ()
 			;;
 		winex11-wglShareLists)
 			enable_winex11_wglShareLists="$2"
+			;;
+		winhttp-System_Proxy_Autoconfig)
+			enable_winhttp_System_Proxy_Autoconfig="$2"
 			;;
 		wininet-Cleanup)
 			enable_wininet_Cleanup="$2"
@@ -5536,6 +5540,18 @@ if test "$enable_winex11_wglShareLists" -eq 1; then
 	patch_apply winex11-wglShareLists/0001-winex11.drv-Only-warn-about-used-contexts-in-wglShar.patch
 	(
 		echo '+    { "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winhttp-System_Proxy_Autoconfig
+# |
+# | Modified files:
+# |   *	dlls/winhttp/session.c
+# |
+if test "$enable_winhttp_System_Proxy_Autoconfig" -eq 1; then
+	patch_apply winhttp-System_Proxy_Autoconfig/0001-winhttp-Silence-repeated-no-support-on-this-platform.patch
+	(
+		echo '+    { "Jarkko Korpi", "winhttp: Silence repeated \"no support on this platform\" message.", 1 },';
 	) >> "$patchlist"
 fi
 

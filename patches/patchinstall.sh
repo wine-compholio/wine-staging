@@ -237,6 +237,7 @@ patch_enable_all ()
 	enable_vcomp_Stub_Functions="$1"
 	enable_version_VerQueryValue="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
+	enable_wbemdisp_Timeout="$1"
 	enable_wiaservc_IEnumWIA_DEV_INFO="$1"
 	enable_windowscodecs_GIF_Decoder="$1"
 	enable_windowscodecs_TIFF_Decoder="$1"
@@ -783,6 +784,9 @@ patch_enable ()
 			;;
 		wbemdisp-ISWbemSecurity)
 			enable_wbemdisp_ISWbemSecurity="$2"
+			;;
+		wbemdisp-Timeout)
+			enable_wbemdisp_Timeout="$2"
 			;;
 		wiaservc-IEnumWIA_DEV_INFO)
 			enable_wiaservc_IEnumWIA_DEV_INFO="$2"
@@ -4657,6 +4661,21 @@ if test "$enable_wbemdisp_ISWbemSecurity" -eq 1; then
 	patch_apply wbemdisp-ISWbemSecurity/0001-wbemdisp-Add-ISWbemSecurity-stub-interface.patch
 	(
 		echo '+    { "Michael Müller", "wbemdisp: Add ISWbemSecurity stub interface.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wbemdisp-Timeout
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37618] Silence repeated wbemprox "timeout not supported" fixme
+# |
+# | Modified files:
+# |   *	dlls/wbemprox/class.c
+# |
+if test "$enable_wbemdisp_Timeout" -eq 1; then
+	patch_apply wbemdisp-Timeout/0001-wbemprox-Silence-repeated-timeout-not-supported-fixm.patch
+	(
+		echo '+    { "Jarkko Korpi", "wbemprox: Silence repeated \"timeout not supported\" fixme.", 1 },';
 	) >> "$patchlist"
 fi
 

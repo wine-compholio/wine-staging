@@ -237,6 +237,7 @@ patch_enable_all ()
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_wbemdisp_Timeout="$1"
 	enable_wiaservc_IEnumWIA_DEV_INFO="$1"
+	enable_widl_Buffer_Overflow="$1"
 	enable_windowscodecs_GIF_Decoder="$1"
 	enable_windowscodecs_TIFF_Decoder="$1"
 	enable_wine_inf_Performance="$1"
@@ -782,6 +783,9 @@ patch_enable ()
 			;;
 		wiaservc-IEnumWIA_DEV_INFO)
 			enable_wiaservc_IEnumWIA_DEV_INFO="$2"
+			;;
+		widl-Buffer_Overflow)
+			enable_widl_Buffer_Overflow="$2"
 			;;
 		windowscodecs-GIF_Decoder)
 			enable_windowscodecs_GIF_Decoder="$2"
@@ -4629,6 +4633,21 @@ if test "$enable_wiaservc_IEnumWIA_DEV_INFO" -eq 1; then
 	patch_apply wiaservc-IEnumWIA_DEV_INFO/0001-wiaservc-Implement-IWiaDevMgr-EnumDeviceInfo-by-retu.patch
 	(
 		echo '+    { "Mikael Ståldal", "wiaservc: Implement IWiaDevMgr::EnumDeviceInfo by returning an empty enumeration of devices.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset widl-Buffer_Overflow
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37129] Increase buffer size in widl/typegen.c to avoid buffer overflow
+# |
+# | Modified files:
+# |   *	tools/widl/typegen.c
+# |
+if test "$enable_widl_Buffer_Overflow" -eq 1; then
+	patch_apply widl-Buffer_Overflow/0001-widl-Increase-buffer-size-in-typegen.c.patch
+	(
+		echo '+    { "Jarkko Korpi", "widl: Increase buffer size in typegen.c.", 1 },';
 	) >> "$patchlist"
 fi
 

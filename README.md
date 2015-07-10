@@ -39,8 +39,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [1]:**
+**Bug fixes and features included in the next upcoming release [2]:**
 
+* Increase buffer size in widl/typegen.c to avoid buffer overflow ([Wine Bug #37129](https://bugs.winehq.org/show_bug.cgi?id=37129))
 * Silence repeated wbemprox "timeout not supported" fixme ([Wine Bug #37618](https://bugs.winehq.org/show_bug.cgi?id=37618))
 
 

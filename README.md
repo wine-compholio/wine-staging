@@ -39,9 +39,11 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [2]:**
+**Bug fixes and features included in the next upcoming release [4]:**
 
 * Increase buffer size in widl/typegen.c to avoid buffer overflow ([Wine Bug #37129](https://bugs.winehq.org/show_bug.cgi?id=37129))
+* Revert patch causing crash in IrfanView when using the WebP plugin ([Wine Bug #38895](https://bugs.winehq.org/show_bug.cgi?id=38895))
+* Revert patch causing crash in Word Viewer when opening docx files ([Wine Bug #38897](https://bugs.winehq.org/show_bug.cgi?id=38897))
 * Silence repeated wbemprox "timeout not supported" fixme ([Wine Bug #37618](https://bugs.winehq.org/show_bug.cgi?id=37618))
 
 

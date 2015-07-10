@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit cf7a118a9e5922d819f216c21c3a0984c7bde5dd"
+	echo "  commit 744f7b69bf4692265588e10650090ca2f5129ccd"
 	echo ""
 }
 
@@ -87,7 +87,6 @@ patch_enable_all ()
 	enable_configure_Absolute_RPATH="$1"
 	enable_configure_Crosscompiling="$1"
 	enable_crypt32_CMS_Certificates="$1"
-	enable_d3d11_D3D11CreateDeviceAndSwapChain="$1"
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Skip_Tests="$1"
 	enable_d3d9_Surface_Refcount="$1"
@@ -165,7 +164,6 @@ patch_enable_all ()
 	enable_ntdll_Heap_FreeLists="$1"
 	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Junction_Points="$1"
-	enable_ntdll_LZNT1_Compression="$1"
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
@@ -334,9 +332,6 @@ patch_enable ()
 			;;
 		crypt32-CMS_Certificates)
 			enable_crypt32_CMS_Certificates="$2"
-			;;
-		d3d11-D3D11CreateDeviceAndSwapChain)
-			enable_d3d11_D3D11CreateDeviceAndSwapChain="$2"
 			;;
 		d3d9-DesktopWindow)
 			enable_d3d9_DesktopWindow="$2"
@@ -568,9 +563,6 @@ patch_enable ()
 			;;
 		ntdll-Junction_Points)
 			enable_ntdll_Junction_Points="$2"
-			;;
-		ntdll-LZNT1_Compression)
-			enable_ntdll_LZNT1_Compression="$2"
 			;;
 		ntdll-NtQueryEaFile)
 			enable_ntdll_NtQueryEaFile="$2"
@@ -1289,9 +1281,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_configure_Absolute_RPATH" -gt 1; then
 		abort "Patchset configure-Absolute_RPATH disabled, but category-stable depends on that."
 	fi
-	if test "$enable_d3d11_D3D11CreateDeviceAndSwapChain" -gt 1; then
-		abort "Patchset d3d11-D3D11CreateDeviceAndSwapChain disabled, but category-stable depends on that."
-	fi
 	if test "$enable_d3d9_Skip_Tests" -gt 1; then
 		abort "Patchset d3d9-Skip_Tests disabled, but category-stable depends on that."
 	fi
@@ -1396,9 +1385,6 @@ if test "$enable_category_stable" -eq 1; then
 	fi
 	if test "$enable_ntdll_Heap_FreeLists" -gt 1; then
 		abort "Patchset ntdll-Heap_FreeLists disabled, but category-stable depends on that."
-	fi
-	if test "$enable_ntdll_LZNT1_Compression" -gt 1; then
-		abort "Patchset ntdll-LZNT1_Compression disabled, but category-stable depends on that."
 	fi
 	if test "$enable_ntdll_NtSetLdtEntries" -gt 1; then
 		abort "Patchset ntdll-NtSetLdtEntries disabled, but category-stable depends on that."
@@ -1521,7 +1507,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_Staging=1
 	enable_combase_String=1
 	enable_configure_Absolute_RPATH=1
-	enable_d3d11_D3D11CreateDeviceAndSwapChain=1
 	enable_d3d9_Skip_Tests=1
 	enable_d3d9_Surface_Refcount=1
 	enable_d3dx9_24_ID3DXEffect=1
@@ -1557,7 +1542,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_ntdll_Fix_Alignment=1
 	enable_ntdll_FreeBSD_Directory=1
 	enable_ntdll_Heap_FreeLists=1
-	enable_ntdll_LZNT1_Compression=1
 	enable_ntdll_NtSetLdtEntries=1
 	enable_ntdll_Pipe_SpecialCharacters=1
 	enable_ntdll_RtlIpStringToAddress=1
@@ -1735,13 +1719,6 @@ if test "$enable_ntdll_WriteWatches" -eq 1; then
 	fi
 	enable_kernel32_Named_Pipe=1
 	enable_ws2_32_WriteWatches=1
-fi
-
-if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
-	if test "$enable_ntdll_LZNT1_Compression" -gt 1; then
-		abort "Patchset ntdll-LZNT1_Compression disabled, but ntdll-RtlIpStringToAddress depends on that."
-	fi
-	enable_ntdll_LZNT1_Compression=1
 fi
 
 if test "$enable_ntdll_Junction_Points" -eq 1; then
@@ -1991,23 +1968,6 @@ if test "$enable_Staging" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2024,6 +1984,23 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2137,21 +2114,6 @@ if test "$enable_crypt32_CMS_Certificates" -eq 1; then
 	patch_apply crypt32-CMS_Certificates/0001-crypt32-Skip-unknown-item-when-decoding-a-CMS-certif.patch
 	(
 		echo '+    { "Charles Davis", "crypt32: Skip unknown item when decoding a CMS certificate.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3d11-D3D11CreateDeviceAndSwapChain
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#33153] Add stub for d3d11.D3D11CreateDeviceAndSwapChain
-# |
-# | Modified files:
-# |   *	dlls/d3d11/d3d11.spec, dlls/d3d11/d3d11_main.c
-# |
-if test "$enable_d3d11_D3D11CreateDeviceAndSwapChain" -eq 1; then
-	patch_apply d3d11-D3D11CreateDeviceAndSwapChain/0001-d3d11-add-a-stub-for-D3D11CreateDeviceAndSwapChain.patch
-	(
-		echo '+    { "Austin English", "d3d11: add a stub for D3D11CreateDeviceAndSwapChain.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3541,25 +3503,6 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-LZNT1_Compression
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37449] Support for RtlDecompressBuffer
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntdll/tests/rtl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec
-# |
-if test "$enable_ntdll_LZNT1_Compression" -eq 1; then
-	patch_apply ntdll-LZNT1_Compression/0001-ntdll-Implement-RtlDecompressFragment.patch
-	patch_apply ntdll-LZNT1_Compression/0002-ntdll-tests-Add-tests-for-RtlDecompressBuffer.patch
-	patch_apply ntdll-LZNT1_Compression/0003-ntdll-tests-Add-tests-for-RtlDecompressFragment.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Implement RtlDecompressFragment.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for RtlDecompressBuffer.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for RtlDecompressFragment.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-NtQuerySection
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4138,7 +4081,6 @@ fi
 # Patchset server-Key_State
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#27238] Fallback to global key state for threads without a queue
 # |   *	[#31899] Implement locking and synchronization of key states
 # |   *	[#35907] Fix caps lock state issues with multiple processes
 # |

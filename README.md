@@ -178,7 +178,6 @@ for more details.*
 * Implement ID3DXEffect::FindNextValidTechnique ([Wine Bug #34101](https://bugs.winehq.org/show_bug.cgi?id=34101))
 * Implement IDXGIOutput::GetDesc
 * Implement a Microsoft Yahei replacement font ([Wine Bug #13829](https://bugs.winehq.org/show_bug.cgi?id=13829))
-* Implement additional stubs for vcomp dlls ([Wine Bug #31640](https://bugs.winehq.org/show_bug.cgi?id=31640))
 * Implement an Arial replacement font ([Wine Bug #32323](https://bugs.winehq.org/show_bug.cgi?id=32323))
 * Implement combase.WindowsSubstring function
 * Implement default homepage button in inetcpl.cpl
@@ -197,6 +196,7 @@ for more details.*
 * ~~Implement threadpool timers~~ ([Wine Bug #37306](https://bugs.winehq.org/show_bug.cgi?id=37306))
 * ~~Implement threadpool wait objects~~
 * ~~Implement threadpool work items~~ ([Wine Bug #32531](https://bugs.winehq.org/show_bug.cgi?id=32531))
+* Implement various vcomp functions ([Wine Bug #31640](https://bugs.winehq.org/show_bug.cgi?id=31640))
 * Improve ReadDataAvailable handling in FilePipeLocalInformation class
 * Improve stub for AEV_GetVolumeRange ([Wine Bug #35658](https://bugs.winehq.org/show_bug.cgi?id=35658))
 * Improve stub for ID3DXEffectImpl_CloneEffect

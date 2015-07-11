@@ -1,0 +1,244 @@
+From 77d6daebca21cfb4209a8281abac2b9db0d7a1b4 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 11 Jul 2015 21:29:41 +0200
+Subject: vcomp: Implement _vcomp_sections_init and _vcomp_sections_next and
+ add tests.
+
+---
+ dlls/vcomp/main.c           | 49 +++++++++++++++++++++++++++++++++++++++++++++
+ dlls/vcomp/tests/vcomp.c    | 49 +++++++++++++++++++++++++++++++++++++++++++++
+ dlls/vcomp/vcomp.spec       |  4 ++--
+ dlls/vcomp100/vcomp100.spec |  4 ++--
+ dlls/vcomp90/vcomp90.spec   |  4 ++--
+ 5 files changed, 104 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/vcomp/main.c b/dlls/vcomp/main.c
+index fccad93..db47ff6 100644
+--- a/dlls/vcomp/main.c
++++ b/dlls/vcomp/main.c
+@@ -56,6 +56,9 @@ struct vcomp_thread_info
+     /* current task */
+     struct vcomp_team_info  *team;
+     DWORD                   thread_num;
++
++    /* section */
++    DWORD                   section;
+ };
+ 
+ struct vcomp_team_info
+@@ -72,6 +75,11 @@ struct vcomp_team_info
+     /* barrier */
+     DWORD               barrier;
+     DWORD               barrier_count;
++
++    /* section */
++    DWORD               section;
++    DWORD               num_sections;
++    DWORD               section_index;
+ };
+ 
+ static inline struct vcomp_thread_info *vcomp_get_thread_info(void)
+@@ -357,6 +365,43 @@ int CDECL omp_in_parallel(void)
+     return vcomp_get_team_info() != NULL;
+ }
+ 
++void CDECL _vcomp_sections_init(int n)
++{
++    struct vcomp_thread_info *thread_info = vcomp_get_thread_info();
++    struct vcomp_team_info *team_info = thread_info->team;
++
++    TRACE("(%d)\n", n);
++
++    EnterCriticalSection(&vcomp_section);
++    thread_info->section++;
++    if ((int)(thread_info->section - team_info->section) > 0)
++    {
++        /* first thread in a new section */
++        team_info->section = thread_info->section;
++        team_info->num_sections  = n;
++        team_info->section_index = 0;
++    }
++    LeaveCriticalSection(&vcomp_section);
++}
++
++int CDECL _vcomp_sections_next(void)
++{
++    struct vcomp_thread_info *thread_info = vcomp_get_thread_info();
++    struct vcomp_team_info *team_info = thread_info->team;
++    int i = -1;
++
++    TRACE("()\n");
++
++    EnterCriticalSection(&vcomp_section);
++    if (thread_info->section == team_info->section &&
++        team_info->section_index < team_info->num_sections)
++    {
++        i = team_info->section_index++;
++    }
++    LeaveCriticalSection(&vcomp_section);
++    return i;
++}
++
+ void CDECL _vcomp_fork_call_wrapper(void *wrapper, int nargs, __ms_va_list args);
+ 
+ static DWORD WINAPI _vcomp_fork_worker(void *param)
+@@ -418,12 +463,14 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
+     __ms_va_start(team_info.valist, wrapper);
+     team_info.barrier           = 0;
+     team_info.barrier_count     = 0;
++    team_info.section           = -1;
+ 
+     /* Initialize members of thread_info. */
+     list_init(&thread_info.entry);
+     InitializeConditionVariable(&thread_info.cond);
+     thread_info.team        = &team_info;
+     thread_info.thread_num  = 0;
++    thread_info.section     = 0;
+ 
+     if (parallel)
+     {
+@@ -439,6 +486,7 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
+             list_add_tail(&thread_info.entry, &info->entry);
+             info->team          = &team_info;
+             info->thread_num    = team_info.num_threads++;
++            info->section       = 0;
+             WakeAllConditionVariable(&info->cond);
+         }
+ 
+@@ -455,6 +503,7 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
+             InitializeConditionVariable(&info->cond);
+             info->team       = &team_info;
+             info->thread_num = team_info.num_threads;
++            info->section    = 0;
+ 
+             thread = CreateThread(NULL, 0, _vcomp_fork_worker, info, 0, NULL);
+             if (!thread)
+diff --git a/dlls/vcomp/tests/vcomp.c b/dlls/vcomp/tests/vcomp.c
+index 96806fd..902a836 100644
+--- a/dlls/vcomp/tests/vcomp.c
++++ b/dlls/vcomp/tests/vcomp.c
+@@ -30,6 +30,8 @@ static void  (CDECL   *p_vcomp_for_static_init)(int first, int last, int step, i
+ static void  (CDECL   *p_vcomp_for_static_simple_init)(unsigned int first, unsigned int last, int step,
+                                                        BOOL forward, unsigned int *begin, unsigned int *end);
+ static void  (WINAPIV *p_vcomp_fork)(BOOL ifval, int nargs, void *wrapper, ...);
++static void  (CDECL   *p_vcomp_sections_init)(int n);
++static int   (CDECL   *p_vcomp_sections_next)(void);
+ static int   (CDECL   *pomp_get_max_threads)(void);
+ static int   (CDECL   *pomp_get_num_threads)(void);
+ static int   (CDECL   *pomp_get_thread_num)(void);
+@@ -57,6 +59,8 @@ static BOOL init_vcomp(void)
+     VCOMP_GET_PROC(_vcomp_for_static_init);
+     VCOMP_GET_PROC(_vcomp_for_static_simple_init);
+     VCOMP_GET_PROC(_vcomp_fork);
++    VCOMP_GET_PROC(_vcomp_sections_init);
++    VCOMP_GET_PROC(_vcomp_sections_next);
+     VCOMP_GET_PROC(omp_get_max_threads);
+     VCOMP_GET_PROC(omp_get_num_threads);
+     VCOMP_GET_PROC(omp_get_thread_num);
+@@ -536,6 +540,50 @@ static void test_vcomp_for_static_init(void)
+     }
+ }
+ 
++static void CDECL _test_vcomp_sections_init(LONG *a, LONG *b, LONG *c)
++{
++    int i;
++
++    p_vcomp_sections_init(20);
++    while ((i = p_vcomp_sections_next()) != -1)
++    {
++        InterlockedIncrement(a);
++        Sleep(50);
++    }
++
++    p_vcomp_sections_init(30);
++    while ((i = p_vcomp_sections_next()) != -1)
++    {
++        InterlockedIncrement(b);
++        Sleep(50);
++    }
++
++    p_vcomp_sections_init(40);
++    while ((i = p_vcomp_sections_next()) != -1)
++    {
++        InterlockedIncrement(c);
++        Sleep(50);
++    }
++}
++
++static void test_vcomp_sections_init(void)
++{
++    LONG a, b, c;
++    int i;
++
++    for (i = 1; i <= 4; i++)
++    {
++        trace("Running tests with %d threads\n", i);
++        pomp_set_num_threads(i);
++
++        a = b = c = 0;
++        p_vcomp_fork(TRUE, 3, _test_vcomp_sections_init, &a, &b, &c);
++        ok(a == 20, "expected a = 20, got %d\n", a);
++        ok(b == 30, "expected b = 30, got %d\n", b);
++        ok(c == 40, "expected c = 40, got %d\n", c);
++    }
++}
++
+ START_TEST(vcomp)
+ {
+     if (!init_vcomp())
+@@ -544,6 +592,7 @@ START_TEST(vcomp)
+     test_vcomp_fork();
+     test_vcomp_for_static_simple_init();
+     test_vcomp_for_static_init();
++    test_vcomp_sections_init();
+ 
+     FreeLibrary(hvcomp);
+ }
+diff --git a/dlls/vcomp/vcomp.spec b/dlls/vcomp/vcomp.spec
+index 156233f..7083ce4 100644
+--- a/dlls/vcomp/vcomp.spec
++++ b/dlls/vcomp/vcomp.spec
+@@ -83,8 +83,8 @@
+ @ stub _vcomp_reduction_u2
+ @ stub _vcomp_reduction_u4
+ @ stub _vcomp_reduction_u8
+-@ stub _vcomp_sections_init
+-@ stub _vcomp_sections_next
++@ cdecl _vcomp_sections_init(long)
++@ cdecl _vcomp_sections_next()
+ @ cdecl _vcomp_set_num_threads(long)
+ @ cdecl _vcomp_single_begin(long)
+ @ cdecl _vcomp_single_end()
+diff --git a/dlls/vcomp100/vcomp100.spec b/dlls/vcomp100/vcomp100.spec
+index dd276d0..56c7ae3 100644
+--- a/dlls/vcomp100/vcomp100.spec
++++ b/dlls/vcomp100/vcomp100.spec
+@@ -83,8 +83,8 @@
+ @ stub _vcomp_reduction_u2
+ @ stub _vcomp_reduction_u4
+ @ stub _vcomp_reduction_u8
+-@ stub _vcomp_sections_init
+-@ stub _vcomp_sections_next
++@ cdecl _vcomp_sections_init(long) vcomp._vcomp_sections_init
++@ cdecl _vcomp_sections_next() vcomp._vcomp_sections_next
+ @ cdecl _vcomp_set_num_threads(long) vcomp._vcomp_set_num_threads
+ @ cdecl _vcomp_single_begin(long) vcomp._vcomp_single_begin
+ @ cdecl _vcomp_single_end() vcomp._vcomp_single_end
+diff --git a/dlls/vcomp90/vcomp90.spec b/dlls/vcomp90/vcomp90.spec
+index dd276d0..56c7ae3 100644
+--- a/dlls/vcomp90/vcomp90.spec
++++ b/dlls/vcomp90/vcomp90.spec
+@@ -83,8 +83,8 @@
+ @ stub _vcomp_reduction_u2
+ @ stub _vcomp_reduction_u4
+ @ stub _vcomp_reduction_u8
+-@ stub _vcomp_sections_init
+-@ stub _vcomp_sections_next
++@ cdecl _vcomp_sections_init(long) vcomp._vcomp_sections_init
++@ cdecl _vcomp_sections_next() vcomp._vcomp_sections_next
+ @ cdecl _vcomp_set_num_threads(long) vcomp._vcomp_set_num_threads
+ @ cdecl _vcomp_single_begin(long) vcomp._vcomp_single_begin
+ @ cdecl _vcomp_single_end() vcomp._vcomp_single_end
+-- 
+2.4.5
+

@@ -1,0 +1,296 @@
+From f29610acbf9ce393b772520f6041acce9d1aefd8 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 11 Jul 2015 23:28:31 +0200
+Subject: vcomp: Implement _vcomp_for_dynamic_init and _vcomp_for_dynamic_next
+ and add tests.
+
+---
+ dlls/vcomp/main.c           | 93 +++++++++++++++++++++++++++++++++++++++++++++
+ dlls/vcomp/tests/vcomp.c    | 53 ++++++++++++++++++++++++++
+ dlls/vcomp/vcomp.spec       |  4 +-
+ dlls/vcomp100/vcomp100.spec |  4 +-
+ dlls/vcomp90/vcomp90.spec   |  4 +-
+ 5 files changed, 152 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/vcomp/main.c b/dlls/vcomp/main.c
+index db47ff6..3a1e9ee 100644
+--- a/dlls/vcomp/main.c
++++ b/dlls/vcomp/main.c
+@@ -59,6 +59,9 @@ struct vcomp_thread_info
+ 
+     /* section */
+     DWORD                   section;
++
++    /* dynamic */
++    DWORD                   dynamic;
+ };
+ 
+ struct vcomp_team_info
+@@ -80,6 +83,15 @@ struct vcomp_team_info
+     DWORD               section;
+     DWORD               num_sections;
+     DWORD               section_index;
++
++    /* dynamic */
++    DWORD               dynamic;
++    DWORD               dynamic_forward;
++    DWORD               dynamic_first;
++    DWORD               dynamic_iterations;
++    int                 dynamic_step;
++    DWORD               dynamic_chunksize;
++    DWORD               dynamic_min_chunksize;
+ };
+ 
+ static inline struct vcomp_thread_info *vcomp_get_thread_info(void)
+@@ -402,6 +414,83 @@ int CDECL _vcomp_sections_next(void)
+     return i;
+ }
+ 
++void CDECL _vcomp_for_dynamic_init(int flags, int first, int last, int step, int chunksize)
++{
++    struct vcomp_thread_info *thread_info = vcomp_get_thread_info();
++    struct vcomp_team_info *team_info = thread_info->team;
++    unsigned int iterations;
++    BOOL forward = (flags & 0x40) != 0;
++
++    TRACE("(%d, %d, %d, %d, %d)\n", flags, first, last, step, chunksize);
++
++    EnterCriticalSection(&vcomp_section);
++    thread_info->dynamic++;
++    if ((int)(thread_info->dynamic - team_info->dynamic) > 0)
++    {
++        /* first thread in a new for_dynamic */
++
++        if (forward)
++        {
++            DWORD64 last64 = last;
++            if (last64 < first)
++                last64 += 0x100000000;
++            iterations = 1 + (last64 - first) / step;
++        }
++        else
++        {
++            DWORD first64 = first;
++            if (first64 < last)
++                first64 += 0x100000000;
++            iterations = 1 + (first64 - last) / step;
++        }
++
++        team_info->dynamic = thread_info->dynamic;
++        team_info->dynamic_forward    = forward;
++        team_info->dynamic_first      = first;
++        team_info->dynamic_iterations = iterations;
++        team_info->dynamic_step       = step;
++        team_info->dynamic_chunksize  = max(1, iterations / team_info->num_threads);
++        team_info->dynamic_min_chunksize = max(1, chunksize);
++    }
++    LeaveCriticalSection(&vcomp_section);
++}
++
++int CDECL _vcomp_for_dynamic_next(int *begin, int *end)
++{
++    struct vcomp_thread_info *thread_info = vcomp_get_thread_info();
++    struct vcomp_team_info *team_info = thread_info->team;
++    unsigned int iterations = 0;
++
++    TRACE("(%p, %p)\n", begin, end);
++
++    EnterCriticalSection(&vcomp_section);
++    if (thread_info->dynamic == team_info->dynamic &&
++        team_info->dynamic_iterations != 0)
++    {
++        iterations = min(team_info->dynamic_iterations, team_info->dynamic_chunksize);
++        team_info->dynamic_iterations -= iterations;
++
++        if (team_info->dynamic_forward)
++        {
++            *begin = team_info->dynamic_first;
++            *end   = team_info->dynamic_first + (iterations - 1) * team_info->dynamic_step;
++            team_info->dynamic_first += iterations * team_info->dynamic_step;
++        }
++        else
++        {
++            *begin = team_info->dynamic_first;
++            *end   = team_info->dynamic_first - (iterations - 1) * team_info->dynamic_step;
++            team_info->dynamic_first -= iterations * team_info->dynamic_step;
++        }
++
++        team_info->dynamic_chunksize =
++            max((team_info->dynamic_chunksize * 3 + 2)/4, team_info->dynamic_min_chunksize);
++    }
++    LeaveCriticalSection(&vcomp_section);
++
++    return (iterations != 0);
++}
++
+ void CDECL _vcomp_fork_call_wrapper(void *wrapper, int nargs, __ms_va_list args);
+ 
+ static DWORD WINAPI _vcomp_fork_worker(void *param)
+@@ -464,6 +553,7 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
+     team_info.barrier           = 0;
+     team_info.barrier_count     = 0;
+     team_info.section           = -1;
++    team_info.dynamic           = -1;
+ 
+     /* Initialize members of thread_info. */
+     list_init(&thread_info.entry);
+@@ -471,6 +561,7 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
+     thread_info.team        = &team_info;
+     thread_info.thread_num  = 0;
+     thread_info.section     = 0;
++    thread_info.dynamic     = 0;
+ 
+     if (parallel)
+     {
+@@ -487,6 +578,7 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
+             info->team          = &team_info;
+             info->thread_num    = team_info.num_threads++;
+             info->section       = 0;
++            info->dynamic       = 0;
+             WakeAllConditionVariable(&info->cond);
+         }
+ 
+@@ -504,6 +596,7 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
+             info->team       = &team_info;
+             info->thread_num = team_info.num_threads;
+             info->section    = 0;
++            info->dynamic    = 0;
+ 
+             thread = CreateThread(NULL, 0, _vcomp_fork_worker, info, 0, NULL);
+             if (!thread)
+diff --git a/dlls/vcomp/tests/vcomp.c b/dlls/vcomp/tests/vcomp.c
+index 902a836..4273680 100644
+--- a/dlls/vcomp/tests/vcomp.c
++++ b/dlls/vcomp/tests/vcomp.c
+@@ -24,6 +24,8 @@ static const int is_win64 = (sizeof(void *) > sizeof(int));
+ 
+ static HMODULE hvcomp = 0;
+ static void  (CDECL   *p_vcomp_barrier)(void);
++static void  (CDECL   *p_vcomp_for_dynamic_init)(int flags, int first, int last, int step, int chunksize);
++static int   (CDECL   *p_vcomp_for_dynamic_next)(int *begin, int *end);
+ static void  (CDECL   *p_vcomp_for_static_end)(void);
+ static void  (CDECL   *p_vcomp_for_static_init)(int first, int last, int step, int chunksize, unsigned int *loops,
+                                                 int *begin, int *end, int *next, int *lastchunk);
+@@ -55,6 +57,8 @@ static BOOL init_vcomp(void)
+     }
+ 
+     VCOMP_GET_PROC(_vcomp_barrier);
++    VCOMP_GET_PROC(_vcomp_for_dynamic_init);
++    VCOMP_GET_PROC(_vcomp_for_dynamic_next);
+     VCOMP_GET_PROC(_vcomp_for_static_end);
+     VCOMP_GET_PROC(_vcomp_for_static_init);
+     VCOMP_GET_PROC(_vcomp_for_static_simple_init);
+@@ -584,6 +588,54 @@ static void test_vcomp_sections_init(void)
+     }
+ }
+ 
++static void CDECL _test_vcomp_for_dynamic_init(LONG *a, LONG *b, LONG *c)
++{
++    int begin, end;
++
++    p_vcomp_for_dynamic_init(0x40, 1, 100000, 1, 30);
++    while (p_vcomp_for_dynamic_next(&begin, &end))
++    {
++        InterlockedExchangeAdd(a, end - begin + 1);
++        Sleep(50);
++    }
++
++    p_vcomp_for_dynamic_init(0, 1337, 1, 1, 50);
++    while (p_vcomp_for_dynamic_next(&begin, &end))
++    {
++        InterlockedExchangeAdd(b, begin - end + 1);
++        Sleep(50);
++    }
++
++    p_vcomp_for_dynamic_init(0x40, 1, 100000, 7, 30);
++    while (p_vcomp_for_dynamic_next(&begin, &end))
++    {
++        while (begin <= end)
++        {
++            InterlockedIncrement(c);
++            begin += 7;
++        }
++        Sleep(50);
++    }
++}
++
++static void test_vcomp_for_dynamic_init(void)
++{
++    LONG a, b, c;
++    int i;
++
++    for (i = 1; i <= 4; i++)
++    {
++        trace("Running tests with %d threads\n", i);
++        pomp_set_num_threads(i);
++
++        a = b = c = 0;
++        p_vcomp_fork(TRUE, 3, _test_vcomp_for_dynamic_init, &a, &b, &c);
++        ok(a == 100000, "expected a = 100000, got %d\n", a);
++        ok(b == 1337, "expected b = 1337, got %d\n", b);
++        ok(c == 14286, "expected c = 14286, got %d\n", c);
++    }
++}
++
+ START_TEST(vcomp)
+ {
+     if (!init_vcomp())
+@@ -593,6 +645,7 @@ START_TEST(vcomp)
+     test_vcomp_for_static_simple_init();
+     test_vcomp_for_static_init();
+     test_vcomp_sections_init();
++    test_vcomp_for_dynamic_init();
+ 
+     FreeLibrary(hvcomp);
+ }
+diff --git a/dlls/vcomp/vcomp.spec b/dlls/vcomp/vcomp.spec
+index 7083ce4..1b02a65 100644
+--- a/dlls/vcomp/vcomp.spec
++++ b/dlls/vcomp/vcomp.spec
+@@ -55,9 +55,9 @@
+ @ stub _vcomp_copyprivate_receive
+ @ stub _vcomp_enter_critsect
+ @ stub _vcomp_flush
+-@ stub _vcomp_for_dynamic_init
++@ cdecl _vcomp_for_dynamic_init(long long long long long)
+ @ stub _vcomp_for_dynamic_init_i8
+-@ stub _vcomp_for_dynamic_next
++@ cdecl _vcomp_for_dynamic_next(ptr ptr)
+ @ stub _vcomp_for_dynamic_next_i8
+ @ cdecl _vcomp_for_static_end()
+ @ cdecl _vcomp_for_static_init(long long long long ptr ptr ptr ptr ptr)
+diff --git a/dlls/vcomp100/vcomp100.spec b/dlls/vcomp100/vcomp100.spec
+index 56c7ae3..ab93ec2 100644
+--- a/dlls/vcomp100/vcomp100.spec
++++ b/dlls/vcomp100/vcomp100.spec
+@@ -55,9 +55,9 @@
+ @ stub _vcomp_copyprivate_receive
+ @ stub _vcomp_enter_critsect
+ @ stub _vcomp_flush
+-@ stub _vcomp_for_dynamic_init
++@ cdecl _vcomp_for_dynamic_init(long long long long long) vcomp._vcomp_for_dynamic_init
+ @ stub _vcomp_for_dynamic_init_i8
+-@ stub _vcomp_for_dynamic_next
++@ cdecl _vcomp_for_dynamic_next(ptr ptr) vcomp._vcomp_for_dynamic_next
+ @ stub _vcomp_for_dynamic_next_i8
+ @ cdecl _vcomp_for_static_end() vcomp._vcomp_for_static_end
+ @ cdecl _vcomp_for_static_init(long long long long ptr ptr ptr ptr ptr) vcomp._vcomp_for_static_init
+diff --git a/dlls/vcomp90/vcomp90.spec b/dlls/vcomp90/vcomp90.spec
+index 56c7ae3..ab93ec2 100644
+--- a/dlls/vcomp90/vcomp90.spec
++++ b/dlls/vcomp90/vcomp90.spec
+@@ -55,9 +55,9 @@
+ @ stub _vcomp_copyprivate_receive
+ @ stub _vcomp_enter_critsect
+ @ stub _vcomp_flush
+-@ stub _vcomp_for_dynamic_init
++@ cdecl _vcomp_for_dynamic_init(long long long long long) vcomp._vcomp_for_dynamic_init
+ @ stub _vcomp_for_dynamic_init_i8
+-@ stub _vcomp_for_dynamic_next
++@ cdecl _vcomp_for_dynamic_next(ptr ptr) vcomp._vcomp_for_dynamic_next
+ @ stub _vcomp_for_dynamic_next_i8
+ @ cdecl _vcomp_for_static_end() vcomp._vcomp_for_static_end
+ @ cdecl _vcomp_for_static_init(long long long long ptr ptr ptr ptr ptr) vcomp._vcomp_for_static_init
+-- 
+2.4.5
+

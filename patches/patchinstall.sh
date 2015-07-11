@@ -234,7 +234,7 @@ patch_enable_all ()
 	enable_user32_Painting="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_WndProc="$1"
-	enable_vcomp_Stub_Functions="$1"
+	enable_vcomp_Functions="$1"
 	enable_version_VerQueryValue="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_wbemdisp_Timeout="$1"
@@ -778,8 +778,8 @@ patch_enable ()
 		user32-WndProc)
 			enable_user32_WndProc="$2"
 			;;
-		vcomp-Stub_Functions)
-			enable_vcomp_Stub_Functions="$2"
+		vcomp-Functions)
+			enable_vcomp_Functions="$2"
 			;;
 		version-VerQueryValue)
 			enable_version_VerQueryValue="$2"
@@ -4598,33 +4598,40 @@ if test "$enable_user32_WndProc" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset vcomp-Stub_Functions
+# Patchset vcomp-Functions
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#31640] Implement additional stubs for vcomp dlls
+# |   *	[#31640] Implement various vcomp functions
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/vcomp/Makefile.in, dlls/vcomp/fork.c, dlls/vcomp/main.c, dlls/vcomp/tests/Makefile.in,
-# | 	dlls/vcomp/tests/fork.c, dlls/vcomp/tests/vcomp.manifest, dlls/vcomp/tests/vcomp.rc, dlls/vcomp/tests/work.c,
-# | 	dlls/vcomp/vcomp.spec, dlls/vcomp/vcomp_private.h, dlls/vcomp/work.c, dlls/vcomp100/vcomp100.spec,
+# |   *	configure.ac, dlls/vcomp/main.c, dlls/vcomp/tests/Makefile.in, dlls/vcomp/tests/vcomp.c,
+# | 	dlls/vcomp/tests/vcomp.manifest, dlls/vcomp/tests/vcomp.rc, dlls/vcomp/vcomp.spec, dlls/vcomp100/vcomp100.spec,
 # | 	dlls/vcomp90/vcomp90.spec
 # |
-if test "$enable_vcomp_Stub_Functions" -eq 1; then
-	patch_apply vcomp-Stub_Functions/0001-vcomp-single-threaded-implementation-of-_vcomp_fork.patch
-	patch_apply vcomp-Stub_Functions/0002-vcomp-better-stubs-for-_vcomp_for_static_simple_init.patch
-	patch_apply vcomp-Stub_Functions/0003-vcomp-better-stub-for-_vcomp_for_static_init.patch
-	patch_apply vcomp-Stub_Functions/0004-vcomp-implement-omp_in_parallel.patch
-	patch_apply vcomp-Stub_Functions/0005-vcomp-better-stubs-for-_vcomp_for_dynamic_init-_vcom.patch
-	patch_apply vcomp-Stub_Functions/0006-vcomp-better-stubs-for-_vcomp_sections_init-_vcomp_s.patch
-	patch_apply vcomp-Stub_Functions/0007-vcomp-Add-a-warning-that-multithreading-is-not-yet-s.patch
+if test "$enable_vcomp_Functions" -eq 1; then
+	patch_apply vcomp-Functions/0001-vcomp-Implement-stub-for-_vcomp_fork.patch
+	patch_apply vcomp-Functions/0002-vcomp-Add-basic-worker-thread-infrastructure.patch
+	patch_apply vcomp-Functions/0003-vcomp-tests-Add-initial-tests-for-_vcomp_fork.patch
+	patch_apply vcomp-Functions/0004-vcomp-Implement-_vcomp_for_static_simple_init-and-_v.patch
+	patch_apply vcomp-Functions/0005-vcomp-tests-Add-tests-for-_vcomp_for_static_simple_i.patch
+	patch_apply vcomp-Functions/0006-vcomp-Implement-_vcomp_for_static_init.patch
+	patch_apply vcomp-Functions/0007-vcomp-tests-Add-tests-for-_vcomp_for_static_init.patch
+	patch_apply vcomp-Functions/0008-vcomp-Implement-_vcomp_barrier.patch
+	patch_apply vcomp-Functions/0009-vcomp-Implement-omp_in_parallel.patch
+	patch_apply vcomp-Functions/0010-vcomp-Implement-_vcomp_sections_init-and-_vcomp_sect.patch
+	patch_apply vcomp-Functions/0011-vcomp-Implement-_vcomp_for_dynamic_init-and-_vcomp_f.patch
 	(
-		echo '+    { "Dan Kegel", "vcomp: single-threaded implementation of _vcomp_fork.", 1 },';
-		echo '+    { "Dan Kegel", "vcomp: better stubs for _vcomp_for_static_simple_init, _vcomp_for_static_end.", 1 },';
-		echo '+    { "Dan Kegel", "vcomp: better stub for _vcomp_for_static_init.", 1 },';
-		echo '+    { "Dan Kegel", "vcomp: implement omp_in_parallel.", 1 },';
-		echo '+    { "Dan Kegel", "vcomp: better stubs for _vcomp_for_dynamic_init, _vcomp_for_dynamic_next.", 1 },';
-		echo '+    { "Dan Kegel", "vcomp: better stubs for _vcomp_sections_init, _vcomp_sections_next.", 1 },';
-		echo '+    { "Sebastian Lackner", "vcomp: Add a warning that multithreading is not yet supported.", 1 },';
+		echo '+    { "Dan Kegel", "vcomp: Implement stub for _vcomp_fork.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp: Add basic worker thread infrastructure.", 1 },';
+		echo '+    { "Dan Kegel", "vcomp/tests: Add initial tests for _vcomp_fork.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_for_static_simple_init and _vcomp_for_static_end.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp/tests: Add tests for _vcomp_for_static_simple_init.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_for_static_init.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp/tests: Add tests for _vcomp_for_static_init.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_barrier.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp: Implement omp_in_parallel.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_sections_init and _vcomp_sections_next and add tests.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_for_dynamic_init and _vcomp_for_dynamic_next and add tests.", 1 },';
 	) >> "$patchlist"
 fi
 

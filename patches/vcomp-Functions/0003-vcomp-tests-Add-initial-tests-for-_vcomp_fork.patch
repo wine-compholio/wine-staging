@@ -1,0 +1,230 @@
+From 92cd559115925b61b980a784efacb0ccdd7029d0 Mon Sep 17 00:00:00 2001
+From: Dan Kegel <dank@kegel.com>
+Date: Sat, 11 Jul 2015 03:56:04 +0200
+Subject: vcomp/tests: Add initial tests for _vcomp_fork.
+
+---
+ configure.ac                    |   3 +-
+ dlls/vcomp/tests/Makefile.in    |   7 +++
+ dlls/vcomp/tests/vcomp.c        | 122 ++++++++++++++++++++++++++++++++++++++++
+ dlls/vcomp/tests/vcomp.manifest |  21 +++++++
+ dlls/vcomp/tests/vcomp.rc       |  22 ++++++++
+ 5 files changed, 174 insertions(+), 1 deletion(-)
+ create mode 100644 dlls/vcomp/tests/Makefile.in
+ create mode 100644 dlls/vcomp/tests/vcomp.c
+ create mode 100644 dlls/vcomp/tests/vcomp.manifest
+ create mode 100644 dlls/vcomp/tests/vcomp.rc
+
+diff --git a/configure.ac b/configure.ac
+index 3eaec29..a36fc4b 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -3321,7 +3321,8 @@ WINE_CONFIG_DLL(uxtheme,,[implib])
+ WINE_CONFIG_TEST(dlls/uxtheme/tests)
+ WINE_CONFIG_DLL(vbscript,,[clean])
+ WINE_CONFIG_TEST(dlls/vbscript/tests,[clean])
+-WINE_CONFIG_DLL(vcomp)
++WINE_CONFIG_DLL(vcomp,,[implib])
++WINE_CONFIG_TEST(dlls/vcomp/tests)
+ WINE_CONFIG_DLL(vcomp100)
+ WINE_CONFIG_DLL(vcomp90)
+ WINE_CONFIG_DLL(vdhcp.vxd,enable_win16)
+diff --git a/dlls/vcomp/tests/Makefile.in b/dlls/vcomp/tests/Makefile.in
+new file mode 100644
+index 0000000..08a5b7f
+--- /dev/null
++++ b/dlls/vcomp/tests/Makefile.in
+@@ -0,0 +1,7 @@
++TESTDLL = vcomp.dll
++
++C_SRCS = \
++	vcomp.c
++
++RC_SRCS = \
++	vcomp.rc
+diff --git a/dlls/vcomp/tests/vcomp.c b/dlls/vcomp/tests/vcomp.c
+new file mode 100644
+index 0000000..5c6a861
+--- /dev/null
++++ b/dlls/vcomp/tests/vcomp.c
+@@ -0,0 +1,122 @@
++/*
++ * Unit test suite for vcomp fork/join implementation
++ *
++ * Copyright 2012 Dan Kegel
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "wine/test.h"
++
++static const int is_win64 = (sizeof(void *) > sizeof(int));
++
++static HMODULE hvcomp = 0;
++static void  (WINAPIV *p_vcomp_fork)(BOOL ifval, int nargs, void *wrapper, ...);
++static int   (CDECL   *pomp_get_max_threads)(void);
++
++#define VCOMP_GET_PROC(func) \
++    do \
++    { \
++        p ## func = (void *)GetProcAddress(hvcomp, #func); \
++        if (!p ## func) trace("Failed to get address for %s\n", #func); \
++    } \
++    while (0)
++
++static BOOL init_vcomp(void)
++{
++    hvcomp = LoadLibraryA("vcomp.dll");
++    if (!hvcomp)
++    {
++        win_skip("vcomp.dll not installed\n");
++        return FALSE;
++    }
++
++    VCOMP_GET_PROC(_vcomp_fork);
++    VCOMP_GET_PROC(omp_get_max_threads);
++
++    return TRUE;
++}
++
++#undef VCOMP_GET_PROC
++
++static void CDECL _test_vcomp_fork_ptr(LONG *a, LONG *b, LONG *c, LONG *d, LONG *e)
++{
++    InterlockedIncrement(a);
++    InterlockedIncrement(b);
++    InterlockedIncrement(c);
++    InterlockedIncrement(d);
++    InterlockedIncrement(e);
++}
++
++static void CDECL _test_vcomp_fork_uintptr(UINT_PTR a, UINT_PTR b, UINT_PTR c, UINT_PTR d, UINT_PTR e)
++{
++    ok(a == 1, "expected a = 1, got %p\n", (void *)a);
++    ok(b == MAXUINT_PTR - 2, "expected b = MAXUINT_PTR - 2, got %p\n", (void *)b);
++    ok(c == 3, "expected c = 3, got %p\n", (void *)c);
++    ok(d == MAXUINT_PTR - 4, "expected d = MAXUINT_PTR - 4, got %p\n", (void *)d);
++    ok(e == 5, "expected e = 5, got %p\n", (void *)e);
++}
++
++static void CDECL _test_vcomp_fork_float(float a, float b, float c, float d, float e)
++{
++    ok(1.4999 < a && a < 1.5001, "expected a = 1.5, got %f\n", a);
++    ok(2.4999 < b && b < 2.5001, "expected b = 2.5, got %f\n", b);
++    ok(3.4999 < c && c < 3.5001, "expected c = 3.5, got %f\n", c);
++    ok(4.4999 < d && d < 4.5001, "expected d = 4.5, got %f\n", d);
++    ok(5.4999 < e && e < 5.5001, "expected e = 5.5, got %f\n", e);
++}
++
++static void test_vcomp_fork(void)
++{
++    LONG a, b, c, d, e;
++    int n = pomp_get_max_threads();
++
++    a = 0; b = 1; c = 2; d = 3; e = 4;
++    p_vcomp_fork(FALSE, 5, _test_vcomp_fork_ptr, &a, &b, &c, &d, &e);
++    ok(a == 1, "expected a = 1, got %u\n", a);
++    ok(b == 2, "expected b = 2, got %u\n", b);
++    ok(c == 3, "expected c = 3, got %u\n", c);
++    ok(d == 4, "expected d = 4, got %u\n", d);
++    ok(e == 5, "expected e = 5, got %u\n", e);
++
++    a = 0; b = 1; c = 2; d = 3; e = 4;
++    p_vcomp_fork(TRUE, 5, _test_vcomp_fork_ptr, &a, &b, &c, &d, &e);
++    ok(a > 0 && a <= (n + 0), "expected a > 0 && a <= (n + 0), got %u\n", a);
++    ok(b > 1 && b <= (n + 1), "expected b > 1 && b <= (n + 1), got %u\n", b);
++    ok(c > 2 && c <= (n + 2), "expected c > 2 && c <= (n + 2), got %u\n", c);
++    ok(d > 3 && d <= (n + 3), "expected d > 3 && d <= (n + 3), got %u\n", d);
++    ok(e > 4 && e <= (n + 4), "expected e > 4 && e <= (n + 4), got %u\n", e);
++
++    p_vcomp_fork(TRUE, 5, _test_vcomp_fork_uintptr, (UINT_PTR)1, (UINT_PTR)(MAXUINT_PTR - 2),
++        (UINT_PTR)3, (UINT_PTR)(MAXUINT_PTR - 4), (UINT_PTR)5);
++
++    if (is_win64)
++        skip("skipping float test on x86_64\n");
++    else
++    {
++        void (CDECL *func)(BOOL, int, void *, float, float, float, float, float) = (void *)p_vcomp_fork;
++        func(TRUE, 5, _test_vcomp_fork_float, 1.5f, 2.5f, 3.5f, 4.5f, 5.5f);
++    }
++}
++
++START_TEST(vcomp)
++{
++    if (!init_vcomp())
++        return;
++
++    test_vcomp_fork();
++
++    FreeLibrary(hvcomp);
++}
+diff --git a/dlls/vcomp/tests/vcomp.manifest b/dlls/vcomp/tests/vcomp.manifest
+new file mode 100644
+index 0000000..6c8bd91
+--- /dev/null
++++ b/dlls/vcomp/tests/vcomp.manifest
+@@ -0,0 +1,21 @@
++<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
++<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
++  <assemblyIdentity
++      type="win32"
++      name="Wine.vcomp.Test"
++      version="1.0.0.0"
++      processorArchitecture="*"
++  />
++<description>Wine vcomp test suite</description>
++<dependency>
++  <dependentAssembly>
++    <assemblyIdentity
++        type="win32"
++        name="Microsoft.VC80.OpenMP"
++        version="8.0.50608.0"
++        processorArchitecture="*"
++        publicKeyToken="1fc8b3b9a1e18e3b"
++    />
++  </dependentAssembly>
++</dependency>
++</assembly>
+diff --git a/dlls/vcomp/tests/vcomp.rc b/dlls/vcomp/tests/vcomp.rc
+new file mode 100644
+index 0000000..c5f1d25
+--- /dev/null
++++ b/dlls/vcomp/tests/vcomp.rc
+@@ -0,0 +1,22 @@
++/*
++ * Copyright (c) 2012 Dan Kegel
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "winuser.h"
++
++/* @makedep: vcomp.manifest */
++1 RT_MANIFEST vcomp.manifest
+-- 
+2.4.5
+

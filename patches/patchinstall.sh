@@ -255,6 +255,7 @@ patch_enable_all ()
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
+	enable_wined3d_MESA_GPU_Info="$1"
 	enable_wined3d_Multisampling="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_UnhandledBlendFactor="$1"
@@ -839,6 +840,9 @@ patch_enable ()
 			;;
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
+			;;
+		wined3d-MESA_GPU_Info)
+			enable_wined3d_MESA_GPU_Info="$2"
 			;;
 		wined3d-Multisampling)
 			enable_wined3d_Multisampling="$2"
@@ -1600,6 +1604,13 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		abort "Patchset wined3d-CSMT_Helper disabled, but wined3d-CSMT_Main depends on that."
 	fi
 	enable_wined3d_CSMT_Helper=1
+fi
+
+if test "$enable_wined3d_MESA_GPU_Info" -eq 1; then
+	if test "$enable_wined3d_Accounting" -gt 1; then
+		abort "Patchset wined3d-Accounting disabled, but wined3d-MESA_GPU_Info depends on that."
+	fi
+	enable_wined3d_Accounting=1
 fi
 
 if test "$enable_wined3d_CSMT_Helper" -eq 1; then
@@ -3578,7 +3589,6 @@ fi
 # Patchset ntdll-Revert_Security_Cookie
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#38897] Revert patch causing crash in Word Viewer when opening docx files
 # |   *	[#38895] Revert patch causing crash in IrfanView when using the WebP plugin
 # |
 # | Modified files:
@@ -4864,6 +4874,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	(
 		echo '+    { "Stefan Dösinger", "wined3d: Merge get_pitch functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-MESA_GPU_Info
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_gl.h, dlls/winex11.drv/opengl.c, include/wine/wgl_driver.h
+# |
+if test "$enable_wined3d_MESA_GPU_Info" -eq 1; then
+	patch_apply wined3d-MESA_GPU_Info/0001-wined3d-Use-pci-and-memory-information-from-MESA-if-.patch
+	(
+		echo '+    { "Michael Müller", "wined3d: Use pci and memory information from MESA if possible.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -43,8 +43,8 @@ Included bug fixes and improvements
 
 * Increase buffer size in widl/typegen.c to avoid buffer overflow ([Wine Bug #37129](https://bugs.winehq.org/show_bug.cgi?id=37129))
 * Revert patch causing crash in IrfanView when using the WebP plugin ([Wine Bug #38895](https://bugs.winehq.org/show_bug.cgi?id=38895))
-* Revert patch causing crash in Word Viewer when opening docx files ([Wine Bug #38897](https://bugs.winehq.org/show_bug.cgi?id=38897))
 * Silence repeated wbemprox "timeout not supported" fixme ([Wine Bug #37618](https://bugs.winehq.org/show_bug.cgi?id=37618))
+* Use GLX_MESA_query_renderer extension to get more exact GPU infos
 
 
 **Bug fixes and features in Wine Staging 1.7.46 [236]:**

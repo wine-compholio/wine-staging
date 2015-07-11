@@ -1,0 +1,189 @@
+From 32306d330e7da6eb0bf3d20d5f755bfffa8d4109 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 11 Jul 2015 04:06:27 +0200
+Subject: wined3d: Use pci and memory information from MESA if possible.
+
+---
+ dlls/wined3d/directx.c    | 25 +++++++++++++++++++++
+ dlls/wined3d/wined3d_gl.h |  1 +
+ dlls/winex11.drv/opengl.c | 57 +++++++++++++++++++++++++++++++++++++++++++++++
+ include/wine/wgl_driver.h |  2 ++
+ 4 files changed, 85 insertions(+)
+
+diff --git a/dlls/wined3d/directx.c b/dlls/wined3d/directx.c
+index 9ee4a0e..48cc92b 100644
+--- a/dlls/wined3d/directx.c
++++ b/dlls/wined3d/directx.c
+@@ -231,6 +231,7 @@ static const struct wined3d_extension_map wgl_extension_map[] =
+     {"WGL_ARB_pixel_format",                WGL_ARB_PIXEL_FORMAT             },
+     {"WGL_EXT_swap_control",                WGL_EXT_SWAP_CONTROL             },
+     {"WGL_WINE_pixel_format_passthrough",   WGL_WINE_PIXEL_FORMAT_PASSTHROUGH},
++    {"WGL_WINE_gpu_info",                   WGL_WINE_GPU_INFO                },
+ };
+ 
+ /**********************************************************
+@@ -1407,9 +1408,22 @@ static void init_driver_info(struct wined3d_gl_info *gl_info, struct wined3d_dri
+     if (driver_info->vendor != PCI_VENDOR_NONE || driver_info->device != PCI_DEVICE_NONE)
+     {
+         static unsigned int once;
++        unsigned int real_vendor, real_device;
+ 
+         TRACE("GPU override %04x:%04x.\n", wined3d_settings.pci_vendor_id, wined3d_settings.pci_device_id);
+ 
++        if (gl_info->supported[WGL_WINE_GPU_INFO] &&
++            gl_info->gl_ops.ext.p_wglGetPCIInfoWINE(&real_vendor, &real_device))
++        {
++            if (get_gpu_description(real_vendor, real_device))
++            {
++                vendor = real_vendor;
++                device = real_device;
++            }
++            else if (!once++)
++                ERR_(winediag)("Could not find GPU info for %04x:%04x.\n", real_vendor, real_device);
++        }
++
+         driver_info->vendor = wined3d_settings.pci_vendor_id;
+         if (driver_info->vendor == PCI_VENDOR_NONE)
+             driver_info->vendor = vendor;
+@@ -1513,6 +1527,17 @@ static void init_driver_info(struct wined3d_gl_info *gl_info, struct wined3d_dri
+                 wine_dbgstr_longlong(driver_info->vram_bytes));
+     }
+ 
++    if (gl_info->supported[WGL_WINE_GPU_INFO])
++    {
++        unsigned int vram_mb;
++        if (gl_info->gl_ops.ext.p_wglGetMemoryInfoWINE(&vram_mb))
++        {
++            driver_info->vram_bytes = (UINT64)vram_mb * 1024 * 1024;
++            TRACE("Got 0x%s as video memory from wglGetGPUInfoWINE.\n",
++                    wine_dbgstr_longlong(driver_info->vram_bytes));
++        }
++    }
++
+     if (wined3d_settings.emulated_textureram)
+     {
+         TRACE("Overriding amount of video memory with 0x%s bytes.\n",
+diff --git a/dlls/wined3d/wined3d_gl.h b/dlls/wined3d/wined3d_gl.h
+index 3007516..38c1661 100644
+--- a/dlls/wined3d/wined3d_gl.h
++++ b/dlls/wined3d/wined3d_gl.h
+@@ -160,6 +160,7 @@ enum wined3d_gl_extension
+     WGL_ARB_PIXEL_FORMAT,
+     WGL_EXT_SWAP_CONTROL,
+     WGL_WINE_PIXEL_FORMAT_PASSTHROUGH,
++    WGL_WINE_GPU_INFO,
+     /* Internally used */
+     WINED3D_GL_BLEND_EQUATION,
+     WINED3D_GL_NORMALIZED_TEXRECT,
+diff --git a/dlls/winex11.drv/opengl.c b/dlls/winex11.drv/opengl.c
+index 7b8ba82..42816a2 100644
+--- a/dlls/winex11.drv/opengl.c
++++ b/dlls/winex11.drv/opengl.c
+@@ -175,6 +175,18 @@ typedef XID GLXPbuffer;
+ /** GLX_NV_float_buffer */
+ #define GLX_FLOAT_COMPONENTS_NV           0x20B0
+ 
++/** GLX_MESA_query_renderer */
++#define GLX_RENDERER_VENDOR_ID_MESA                               0x8183
++#define GLX_RENDERER_DEVICE_ID_MESA                               0x8184
++#define GLX_RENDERER_VERSION_MESA                                 0x8185
++#define GLX_RENDERER_ACCELERATED_MESA                             0x8186
++#define GLX_RENDERER_VIDEO_MEMORY_MESA                            0x8187
++#define GLX_RENDERER_UNIFIED_MEMORY_ARCHITECTURE_MESA             0x8188
++#define GLX_RENDERER_PREFERRED_PROFILE_MESA                       0x8189
++#define GLX_RENDERER_OPENGL_CORE_PROFILE_VERSION_MESA             0x818A
++#define GLX_RENDERER_OPENGL_COMPATIBILITY_PROFILE_VERSION_MESA    0x818B
++#define GLX_RENDERER_OPENGL_ES_PROFILE_VERSION_MESA               0x818C
++#define GLX_RENDERER_OPENGL_ES2_PROFILE_VERSION_MESA              0x818D
+ 
+ struct WineGLInfo {
+     const char *glVersion;
+@@ -405,6 +417,7 @@ static void  (*pglXFreeMemoryNV)(GLvoid *pointer);
+ /* MESA GLX Extensions */
+ static void (*pglXCopySubBufferMESA)(Display *dpy, GLXDrawable drawable, int x, int y, int width, int height);
+ static int (*pglXSwapIntervalMESA)(unsigned int interval);
++static Bool (*pglXQueryCurrentRendererIntegerMESA)(int attribute, unsigned int *value);
+ 
+ /* Standard OpenGL */
+ static void (*pglFinish)(void);
+@@ -658,6 +671,7 @@ static BOOL has_opengl(void)
+     /* NV GLX Extension */
+     LOAD_FUNCPTR(glXAllocateMemoryNV);
+     LOAD_FUNCPTR(glXFreeMemoryNV);
++    LOAD_FUNCPTR(glXQueryCurrentRendererIntegerMESA);
+ #undef LOAD_FUNCPTR
+ 
+     if(!X11DRV_WineGL_InitOpenglInfo()) goto failed;
+@@ -3061,6 +3075,42 @@ static BOOL X11DRV_wglSwapIntervalEXT(int interval)
+ }
+ 
+ /**
++ * X11DRV_wglGetPCIInfoWINE
++ *
++ * WINE-specific function to get the PCI vendor / device id.
++ */
++static BOOL X11DRV_wglGetPCIInfoWINE(unsigned int *vendor, unsigned int *device)
++{
++    TRACE("(%p, %p)\n", vendor, device);
++
++    if (!pglXQueryCurrentRendererIntegerMESA || !vendor || !device)
++        return FALSE;
++
++    if (!pglXQueryCurrentRendererIntegerMESA(GLX_RENDERER_VENDOR_ID_MESA, vendor))
++        return FALSE;
++
++    if (!pglXQueryCurrentRendererIntegerMESA(GLX_RENDERER_DEVICE_ID_MESA, device))
++        return FALSE;
++
++    return TRUE;
++}
++
++/**
++ * X11DRV_wglGetMemoryInfoWINE
++ *
++ * WINE-specific function to get the available video memory (in MB).
++ */
++static BOOL X11DRV_wglGetMemoryInfoWINE(unsigned int *memory)
++{
++    TRACE("(%p)\n", memory);
++
++    if (!pglXQueryCurrentRendererIntegerMESA || !memory)
++        return FALSE;
++
++    return pglXQueryCurrentRendererIntegerMESA(GLX_RENDERER_VIDEO_MEMORY_MESA, memory);
++}
++
++/**
+  * X11DRV_wglSetPixelFormatWINE
+  *
+  * WGL_WINE_pixel_format_passthrough: wglSetPixelFormatWINE
+@@ -3211,6 +3261,13 @@ static void X11DRV_WineGL_LoadExtensions(void)
+ 
+     /* WINE-specific WGL Extensions */
+ 
++    if (has_extension(WineGLInfo.glxExtensions, "GLX_MESA_query_renderer"))
++    {
++        register_extension( "WGL_WINE_gpu_info" );
++        opengl_funcs.ext.p_wglGetPCIInfoWINE = X11DRV_wglGetPCIInfoWINE;
++        opengl_funcs.ext.p_wglGetMemoryInfoWINE = X11DRV_wglGetMemoryInfoWINE;
++    }
++
+     /* In WineD3D we need the ability to set the pixel format more than once (e.g. after a device reset).
+      * The default wglSetPixelFormat doesn't allow this, so add our own which allows it.
+      */
+diff --git a/include/wine/wgl_driver.h b/include/wine/wgl_driver.h
+index c52185d..046b604 100644
+--- a/include/wine/wgl_driver.h
++++ b/include/wine/wgl_driver.h
+@@ -2903,6 +2903,8 @@ struct opengl_funcs
+         BOOL       (WINE_GLAPI *p_wglSetPbufferAttribARB)(struct wgl_pbuffer *,const int*);
+         BOOL       (WINE_GLAPI *p_wglSetPixelFormatWINE)(HDC,int);
+         BOOL       (WINE_GLAPI *p_wglSwapIntervalEXT)(int);
++        BOOL       (WINE_GLAPI *p_wglGetPCIInfoWINE)(unsigned int *, unsigned int *);
++        BOOL       (WINE_GLAPI *p_wglGetMemoryInfoWINE)(unsigned int *);
+     } ext;
+ };
+ 
+-- 
+2.4.5
+

@@ -151,6 +151,7 @@ patch_enable_all ()
 	enable_ntdll_APC_Start_Process="$1"
 	enable_ntdll_Activation_Context="$1"
 	enable_ntdll_CLI_Images="$1"
+	enable_ntdll_Coverity="$1"
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_DeviceType_Systemroot="$1"
 	enable_ntdll_DllRedirects="$1"
@@ -526,6 +527,9 @@ patch_enable ()
 			;;
 		ntdll-CLI_Images)
 			enable_ntdll_CLI_Images="$2"
+			;;
+		ntdll-Coverity)
+			enable_ntdll_Coverity="$2"
 			;;
 		ntdll-DOS_Attributes)
 			enable_ntdll_DOS_Attributes="$2"
@@ -3295,6 +3299,18 @@ if test "$enable_ntdll_CLI_Images" -eq 1; then
 	patch_apply ntdll-CLI_Images/0001-ntdll-Load-CLI-.NET-images-in-the-same-way-as-Window.patch
 	(
 		echo '+    { "Michael Müller", "ntdll: Load CLI/.NET images in the same way as Windows XP and above.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Coverity
+# |
+# | Modified files:
+# |   *	dlls/ntdll/threadpool.c
+# |
+if test "$enable_ntdll_Coverity" -eq 1; then
+	patch_apply ntdll-Coverity/0001-ntdll-Fix-incorrect-assignment-in-assert-statement-C.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Fix incorrect assignment in assert statement (Coverity).", 1 },';
 	) >> "$patchlist"
 fi
 

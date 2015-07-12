@@ -112,6 +112,7 @@ patch_enable_all ()
 	enable_dinput_Events="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
+	enable_dwrite_VDMX="$1"
 	enable_dxgi_GetDesc="$1"
 	enable_dxva2_Video_Decoder="$1"
 	enable_fltmgr_Stub_SYS="$1"
@@ -411,6 +412,9 @@ patch_enable ()
 			;;
 		dsound-Fast_Mixer)
 			enable_dsound_Fast_Mixer="$2"
+			;;
+		dwrite-VDMX)
+			enable_dwrite_VDMX="$2"
 			;;
 		dxgi-GetDesc)
 			enable_dxgi_GetDesc="$2"
@@ -2573,6 +2577,18 @@ if test "$enable_dsound_EAX" -eq 1; then
 		echo '+    { "Mark Harmstone", "dsound: Implement EAX late all-pass filter.", 1 },';
 		echo '+    { "Sebastian Lackner", "dsound: Various improvements to EAX support.", 1 },';
 		echo '+    { "Sebastian Lackner", "dsound: Allow disabling of EAX support in the registry.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dwrite-VDMX
+# |
+# | Modified files:
+# |   *	dlls/dwrite/opentype.c
+# |
+if test "$enable_dwrite_VDMX" -eq 1; then
+	patch_apply dwrite-VDMX/0001-dwrite-Avoid-dereferencing-NULL-pointer-for-fonts-wi.patch
+	(
+		echo '+    { "Sebastian Lackner", "dwrite: Avoid dereferencing NULL pointer for fonts without VDMX.", 1 },';
 	) >> "$patchlist"
 fi
 

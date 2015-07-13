@@ -89,7 +89,7 @@ for more details.*
 * Allow special characters in pipe names ([Wine Bug #28995](https://bugs.winehq.org/show_bug.cgi?id=28995))
 * Allow to cancel a file operation via progress callback ([Wine Bug #22690](https://bugs.winehq.org/show_bug.cgi?id=22690))
 * Allow to edit winecfg library override by double clicking
-* Allow to enable/disable InsertMode in wineconsole settings ([Wine Bug #38697](https://bugs.winehq.org/show_bug.cgi?id=38697))
+* ~~Allow to enable/disable InsertMode in wineconsole settings~~ ([Wine Bug #38697](https://bugs.winehq.org/show_bug.cgi?id=38697))
 * Allow to open files/directories without any access rights in order to query attributes
 * Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE. ([Wine Bug #12652](https://bugs.winehq.org/show_bug.cgi?id=12652))
 * Allow to set pixel format for desktop window
@@ -221,7 +221,7 @@ for more details.*
 * Revert patch causing crash in IrfanView when using the WebP plugin ([Wine Bug #38895](https://bugs.winehq.org/show_bug.cgi?id=38895))
 * SO_CONNECT_TIME returns the appropriate time
 * Scrolling causes mouse and screen to lock in Call to Power II ([Wine Bug #34559](https://bugs.winehq.org/show_bug.cgi?id=34559))
-* SecuROM 5.x media validation fails ([Wine Bug #21448](https://bugs.winehq.org/show_bug.cgi?id=21448))
+* ~~SecuROM 5.x media validation fails~~ ([Wine Bug #21448](https://bugs.winehq.org/show_bug.cgi?id=21448))
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](https://bugs.winehq.org/show_bug.cgi?id=35652))
 * Set NamedPipeState to FILE_PIPE_CLOSING_STATE on broken pipe in NtQueryInformationFile
 * Show unmounted devices in winecfg and allow changing the unix path

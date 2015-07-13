@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 744f7b69bf4692265588e10650090ca2f5129ccd"
+	echo "  commit c3dd56c99332c4ad9dbd095935d2c17c53463154"
 	echo ""
 }
 
@@ -112,7 +112,6 @@ patch_enable_all ()
 	enable_dinput_Events="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
-	enable_dwrite_VDMX="$1"
 	enable_dxgi_GetDesc="$1"
 	enable_dxva2_Video_Decoder="$1"
 	enable_fltmgr_Stub_SYS="$1"
@@ -152,7 +151,6 @@ patch_enable_all ()
 	enable_ntdll_APC_Start_Process="$1"
 	enable_ntdll_Activation_Context="$1"
 	enable_ntdll_CLI_Images="$1"
-	enable_ntdll_Coverity="$1"
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_DeviceType_Systemroot="$1"
 	enable_ntdll_DllRedirects="$1"
@@ -252,7 +250,6 @@ patch_enable_all ()
 	enable_winecfg_Staging="$1"
 	enable_winecfg_Unmounted_Devices="$1"
 	enable_wineconsole_Forward_Exitcode="$1"
-	enable_wineconsole_Insert_Mode="$1"
 	enable_wined3d_Accounting="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
@@ -414,9 +411,6 @@ patch_enable ()
 		dsound-Fast_Mixer)
 			enable_dsound_Fast_Mixer="$2"
 			;;
-		dwrite-VDMX)
-			enable_dwrite_VDMX="$2"
-			;;
 		dxgi-GetDesc)
 			enable_dxgi_GetDesc="$2"
 			;;
@@ -533,9 +527,6 @@ patch_enable ()
 			;;
 		ntdll-CLI_Images)
 			enable_ntdll_CLI_Images="$2"
-			;;
-		ntdll-Coverity)
-			enable_ntdll_Coverity="$2"
 			;;
 		ntdll-DOS_Attributes)
 			enable_ntdll_DOS_Attributes="$2"
@@ -833,9 +824,6 @@ patch_enable ()
 			;;
 		wineconsole-Forward_Exitcode)
 			enable_wineconsole_Forward_Exitcode="$2"
-			;;
-		wineconsole-Insert_Mode)
-			enable_wineconsole_Insert_Mode="$2"
 			;;
 		wined3d-Accounting)
 			enable_wined3d_Accounting="$2"
@@ -2584,18 +2572,6 @@ if test "$enable_dsound_EAX" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dwrite-VDMX
-# |
-# | Modified files:
-# |   *	dlls/dwrite/opentype.c
-# |
-if test "$enable_dwrite_VDMX" -eq 1; then
-	patch_apply dwrite-VDMX/0001-dwrite-Avoid-dereferencing-NULL-pointer-for-fonts-wi.patch
-	(
-		echo '+    { "Sebastian Lackner", "dwrite: Avoid dereferencing NULL pointer for fonts without VDMX.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dxgi-GetDesc
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3333,18 +3309,6 @@ if test "$enable_ntdll_CLI_Images" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-Coverity
-# |
-# | Modified files:
-# |   *	dlls/ntdll/threadpool.c
-# |
-if test "$enable_ntdll_Coverity" -eq 1; then
-	patch_apply ntdll-Coverity/0001-ntdll-Fix-incorrect-assignment-in-assert-statement-C.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Fix incorrect assignment in assert statement (Coverity).", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-DOS_Attributes
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3732,7 +3696,6 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#38103] Process Hacker 2.x needs ntoskrnl.ProbeForRead
-# |   *	[#21448] SecuROM 5.x media validation fails
 # |
 # | Modified files:
 # |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h
@@ -3755,7 +3718,6 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0015-ntoskrnl.exe-Add-stub-for-ProbeForRead.patch
 	patch_apply ntoskrnl-Stubs/0016-ntoskrnl.exe-Add-stub-for-ProbeForWrite.patch
 	patch_apply ntoskrnl-Stubs/0017-ntoskrnl.exe-Add-stub-for-PsRemoveLoadImageNotifyRou.patch
-	patch_apply ntoskrnl-Stubs/0018-ntoskrnl.exe-Improve-IoGetDeviceObjectPointer-stub-t.patch
 	(
 		echo '+    { "Austin English", "ntoskrnl.exe: add KeWaitForMultipleObjects stub.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for IoGetAttachedDeviceReference.", 1 },';
@@ -3774,7 +3736,6 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 		echo '+    { "Austin English", "ntoskrnl.exe: Add stub for ProbeForRead.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntoskrnl.exe: Add stub for ProbeForWrite.", 1 },';
 		echo '+    { "Michael Müller", "ntoskrnl.exe: Add stub for PsRemoveLoadImageNotifyRoutine.", 1 },';
-		echo '+    { "Erich E. Hoover", "ntoskrnl.exe: Improve IoGetDeviceObjectPointer stub to appease SecuROM 5.x.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4868,26 +4829,6 @@ if test "$enable_wineconsole_Forward_Exitcode" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wineconsole-Insert_Mode
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38697] Allow to enable/disable InsertMode in wineconsole settings
-# |
-# | Modified files:
-# |   *	programs/wineconsole/dialog.c, programs/wineconsole/wineconsole.c, programs/wineconsole/wineconsole.rc,
-# | 	programs/wineconsole/wineconsole_res.h
-# |
-if test "$enable_wineconsole_Insert_Mode" -eq 1; then
-	patch_apply wineconsole-Insert_Mode/0001-wineconsole-Rearrange-user-dialog-to-make-space-for-.patch
-	patch_apply wineconsole-Insert_Mode/0002-wineconsole-Improve-semantics-of-some-poorly-worded-.patch
-	patch_apply wineconsole-Insert_Mode/0003-wineconsole-Add-InsertMode-to-the-user-dialog.patch
-	(
-		echo '+    { "Hugh McMaster", "wineconsole: Rearrange user dialog to make space for InsertMode checkbox.", 1 },';
-		echo '+    { "Hugh McMaster", "wineconsole: Improve semantics of some poorly-worded resource strings.", 1 },';
-		echo '+    { "Hugh McMaster", "wineconsole: Add InsertMode to the user dialog.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-Accounting
 # |
 # | Modified files:
@@ -4913,18 +4854,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	(
 		echo '+    { "Stefan Dösinger", "wined3d: Merge get_pitch functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-wined3d_swapchain_present
-# |
-# | Modified files:
-# |   *	dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
-	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5009,6 +4938,18 @@ if test "$enable_wined3d_resource_check_usage" -eq 1; then
 	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
 	(
 		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-wined3d_swapchain_present
+# |
+# | Modified files:
+# |   *	dlls/wined3d/swapchain.c
+# |
+if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
+	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
 	) >> "$patchlist"
 fi
 

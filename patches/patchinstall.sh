@@ -51,7 +51,7 @@ usage()
 # Show version information
 version()
 {
-	echo "Wine Staging 1.7.47"
+	echo "Wine Staging 1.7.48 (unreleased)"
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -251,6 +251,7 @@ patch_enable_all ()
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
 	enable_winecfg_Unmounted_Devices="$1"
+	enable_wineconsole_Forward_Exitcode="$1"
 	enable_wineconsole_Insert_Mode="$1"
 	enable_wined3d_Accounting="$1"
 	enable_wined3d_CSMT_Helper="$1"
@@ -829,6 +830,9 @@ patch_enable ()
 			;;
 		winecfg-Unmounted_Devices)
 			enable_winecfg_Unmounted_Devices="$2"
+			;;
+		wineconsole-Forward_Exitcode)
+			enable_wineconsole_Forward_Exitcode="$2"
 			;;
 		wineconsole-Insert_Mode)
 			enable_wineconsole_Insert_Mode="$2"
@@ -4852,6 +4856,18 @@ if test "$enable_winecfg_Unmounted_Devices" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wineconsole-Forward_Exitcode
+# |
+# | Modified files:
+# |   *	programs/wineconsole/winecon_private.h, programs/wineconsole/wineconsole.c
+# |
+if test "$enable_wineconsole_Forward_Exitcode" -eq 1; then
+	patch_apply wineconsole-Forward_Exitcode/0001-wineconsole-Forward-child-process-exitcode.patch
+	(
+		echo '+    { "Michael Müller", "wineconsole: Forward child process exitcode.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wineconsole-Insert_Mode
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4897,6 +4913,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	(
 		echo '+    { "Stefan Dösinger", "wined3d: Merge get_pitch functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-wined3d_swapchain_present
+# |
+# | Modified files:
+# |   *	dlls/wined3d/swapchain.c
+# |
+if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
+	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4981,18 +5009,6 @@ if test "$enable_wined3d_resource_check_usage" -eq 1; then
 	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
 	(
 		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-wined3d_swapchain_present
-# |
-# | Modified files:
-# |   *	dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
-	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
 	) >> "$patchlist"
 fi
 

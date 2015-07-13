@@ -4820,11 +4820,14 @@ fi
 # Patchset wineconsole-Forward_Exitcode
 # |
 # | Modified files:
-# |   *	programs/wineconsole/winecon_private.h, programs/wineconsole/wineconsole.c
+# |   *	programs/wineconsole/curses.c, programs/wineconsole/user.c, programs/wineconsole/winecon_private.h,
+# | 	programs/wineconsole/wineconsole.c
 # |
 if test "$enable_wineconsole_Forward_Exitcode" -eq 1; then
-	patch_apply wineconsole-Forward_Exitcode/0001-wineconsole-Forward-child-process-exitcode.patch
+	patch_apply wineconsole-Forward_Exitcode/0001-wineconsole-Consistently-return-nonzero-exitcode-on-.patch
+	patch_apply wineconsole-Forward_Exitcode/0002-wineconsole-Forward-child-process-exitcode.patch
 	(
+		echo '+    { "Sebastian Lackner", "wineconsole: Consistently return nonzero exitcode on error.", 1 },';
 		echo '+    { "Michael Müller", "wineconsole: Forward child process exitcode.", 1 },';
 	) >> "$patchlist"
 fi

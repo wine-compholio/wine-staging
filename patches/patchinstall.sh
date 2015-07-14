@@ -2073,9 +2073,9 @@ fi
 # |   *	configure.ac
 # |
 if test "$enable_configure_Crosscompiling" -eq 1; then
-	patch_apply configure-Crosscompiling/0001-configure.ac-Remove-check-for-strength-reduce-bug.patch
+	patch_apply configure-Crosscompiling/0001-configure.ac-Do-not-assume-gcc-strength-bug-when-cro.patch
 	(
-		echo '+    { "Michael Müller", "configure.ac: Remove check for strength-reduce bug.", 1 },';
+		echo '+    { "Sebastian Lackner", "configure.ac: Do not assume gcc strength bug when crosscompiling.", 1 },';
 	) >> "$patchlist"
 fi
 

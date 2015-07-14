@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit c3dd56c99332c4ad9dbd095935d2c17c53463154"
+	echo "  commit a8f45dff604058d419bd6c2e070f65a13a6ddfdb"
 	echo ""
 }
 
@@ -118,7 +118,6 @@ patch_enable_all ()
 	enable_gdi32_Default_Palette="$1"
 	enable_gdi32_MaxPixelFormats="$1"
 	enable_gdi32_MultiMonitor="$1"
-	enable_gdiplus_GIF_Encoder="$1"
 	enable_gdiplus_GdipCreateEffect="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imagehlp_ImageLoad="$1"
@@ -167,7 +166,6 @@ patch_enable_all ()
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
-	enable_ntdll_Revert_Security_Cookie="$1"
 	enable_ntdll_RtlIpStringToAddress="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
@@ -237,9 +235,6 @@ patch_enable_all ()
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_wbemdisp_Timeout="$1"
 	enable_wiaservc_IEnumWIA_DEV_INFO="$1"
-	enable_widl_Buffer_Overflow="$1"
-	enable_windowscodecs_GIF_Decoder="$1"
-	enable_windowscodecs_TIFF_Decoder="$1"
 	enable_wine_inf_Performance="$1"
 	enable_wine_inf_ProfileList_UserSID="$1"
 	enable_wineboot_HKEY_DYN_DATA="$1"
@@ -428,9 +423,6 @@ patch_enable ()
 		gdi32-MultiMonitor)
 			enable_gdi32_MultiMonitor="$2"
 			;;
-		gdiplus-GIF_Encoder)
-			enable_gdiplus_GIF_Encoder="$2"
-			;;
 		gdiplus-GdipCreateEffect)
 			enable_gdiplus_GdipCreateEffect="$2"
 			;;
@@ -574,9 +566,6 @@ patch_enable ()
 			;;
 		ntdll-Pipe_SpecialCharacters)
 			enable_ntdll_Pipe_SpecialCharacters="$2"
-			;;
-		ntdll-Revert_Security_Cookie)
-			enable_ntdll_Revert_Security_Cookie="$2"
 			;;
 		ntdll-RtlIpStringToAddress)
 			enable_ntdll_RtlIpStringToAddress="$2"
@@ -784,15 +773,6 @@ patch_enable ()
 			;;
 		wiaservc-IEnumWIA_DEV_INFO)
 			enable_wiaservc_IEnumWIA_DEV_INFO="$2"
-			;;
-		widl-Buffer_Overflow)
-			enable_widl_Buffer_Overflow="$2"
-			;;
-		windowscodecs-GIF_Decoder)
-			enable_windowscodecs_GIF_Decoder="$2"
-			;;
-		windowscodecs-TIFF_Decoder)
-			enable_windowscodecs_TIFF_Decoder="$2"
 			;;
 		wine.inf-Performance)
 			enable_wine_inf_Performance="$2"
@@ -1448,9 +1428,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_user32_WndProc" -gt 1; then
 		abort "Patchset user32-WndProc disabled, but category-stable depends on that."
 	fi
-	if test "$enable_windowscodecs_GIF_Decoder" -gt 1; then
-		abort "Patchset windowscodecs-GIF_Decoder disabled, but category-stable depends on that."
-	fi
 	if test "$enable_wine_inf_Performance" -gt 1; then
 		abort "Patchset wine.inf-Performance disabled, but category-stable depends on that."
 	fi
@@ -1568,7 +1545,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_urlmon_CoInternetSetFeatureEnabled=1
 	enable_user32_DrawTextExW=1
 	enable_user32_WndProc=1
-	enable_windowscodecs_GIF_Decoder=1
 	enable_wine_inf_Performance=1
 	enable_wine_inf_ProfileList_UserSID=1
 	enable_wineboot_HKEY_DYN_DATA=1
@@ -1971,6 +1947,23 @@ if test "$enable_Staging" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1987,23 +1980,6 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2094,13 +2070,11 @@ fi
 # Patchset configure-Crosscompiling
 # |
 # | Modified files:
-# |   *	aclocal.m4, configure.ac
+# |   *	configure.ac
 # |
 if test "$enable_configure_Crosscompiling" -eq 1; then
-	patch_apply configure-Crosscompiling/0001-configure.ac-Search-for-otool-using-AC_CHECK_TOOL.patch
-	patch_apply configure-Crosscompiling/0002-configure.ac-Remove-check-for-strength-reduce-bug.patch
+	patch_apply configure-Crosscompiling/0001-configure.ac-Remove-check-for-strength-reduce-bug.patch
 	(
-		echo '+    { "Michael Müller", "configure.ac: Search for otool using AC_CHECK_TOOL.", 2 },';
 		echo '+    { "Michael Müller", "configure.ac: Remove check for strength-reduce bug.", 1 },';
 	) >> "$patchlist"
 fi
@@ -2710,21 +2684,6 @@ if test "$enable_gdi32_MultiMonitor" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset gdiplus-GIF_Encoder
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34356] Forward GIF encoder requests to windowscodecs
-# |
-# | Modified files:
-# |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c
-# |
-if test "$enable_gdiplus_GIF_Encoder" -eq 1; then
-	patch_apply gdiplus-GIF_Encoder/0001-gdiplus-Forward-GIF-encoder-requests-to-windowscodec.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "gdiplus: Forward GIF encoder requests to windowscodecs.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset gdiplus-GdipCreateEffect
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2823,6 +2782,18 @@ if test "$enable_kernel32_CompareStringEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-File_Permissions
 # |
 # | Modified files:
@@ -2883,18 +2854,6 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Zhaonan Liang", "include: Add declaration for FILE_LINK_INFORMATION.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Add tests for FileLinkInformation class.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement support for FileLinkInformation class in NtSetInformationFile.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3551,21 +3510,6 @@ if test "$enable_ntdll_Pipe_SpecialCharacters" -eq 1; then
 	patch_apply ntdll-Pipe_SpecialCharacters/0001-ntdll-Allow-special-characters-in-pipe-names.patch
 	(
 		echo '+    { "Michael Müller", "ntdll: Allow special characters in pipe names.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Revert_Security_Cookie
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38895] Revert patch causing crash in IrfanView when using the WebP plugin
-# |
-# | Modified files:
-# |   *	dlls/ntdll/virtual.c
-# |
-if test "$enable_ntdll_Revert_Security_Cookie" -eq 1; then
-	patch_apply ntdll-Revert_Security_Cookie/0001-Revert-ntdll-Randomize-security-cookie-when-availabl.patch
-	(
-		echo '+    { "Sebastian Lackner", "Revert \"ntdll: Randomize security cookie when available.\".", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4651,51 +4595,6 @@ if test "$enable_wiaservc_IEnumWIA_DEV_INFO" -eq 1; then
 	patch_apply wiaservc-IEnumWIA_DEV_INFO/0001-wiaservc-Implement-IWiaDevMgr-EnumDeviceInfo-by-retu.patch
 	(
 		echo '+    { "Mikael Ståldal", "wiaservc: Implement IWiaDevMgr::EnumDeviceInfo by returning an empty enumeration of devices.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset widl-Buffer_Overflow
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37129] Increase buffer size in widl/typegen.c to avoid buffer overflow
-# |
-# | Modified files:
-# |   *	tools/widl/typegen.c
-# |
-if test "$enable_widl_Buffer_Overflow" -eq 1; then
-	patch_apply widl-Buffer_Overflow/0001-widl-Increase-buffer-size-in-typegen.c.patch
-	(
-		echo '+    { "Jarkko Korpi", "widl: Increase buffer size in typegen.c.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset windowscodecs-GIF_Decoder
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#32227] Ignore garbage after decoding gif lines
-# |
-# | Modified files:
-# |   *	dlls/windowscodecs/ungif.c
-# |
-if test "$enable_windowscodecs_GIF_Decoder" -eq 1; then
-	patch_apply windowscodecs-GIF_Decoder/0001-windowscodecs-Don-t-fail-to-decode-GIF-if-an-image-h.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Don'\''t fail to decode GIF if an image has been already loaded.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset windowscodecs-TIFF_Decoder
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38027] Support for 8bpp grayscale TIFF images with 8bpp alpha channel
-# |
-# | Modified files:
-# |   *	dlls/windowscodecs/tests/tiffformat.c, dlls/windowscodecs/tiffformat.c
-# |
-if test "$enable_windowscodecs_TIFF_Decoder" -eq 1; then
-	patch_apply windowscodecs-TIFF_Decoder/0001-windowscodecs-Add-support-for-8bpp-grayscale-TIFF-im.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 8bpp grayscale TIFF images with 8bpp alpha channel.", 1 },';
 	) >> "$patchlist"
 fi
 

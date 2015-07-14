@@ -156,14 +156,14 @@ for more details.*
 * Fix wrong defition of ntoskrnl.IoReleaseCancelSpinLock function.
 * Fix wrong version of ID3DXEffect interface for d3dx9_24
 * Fix wrong version of ID3DXEffect interface for d3dx9_25 ([Wine Bug #25138](https://bugs.winehq.org/show_bug.cgi?id=25138))
-* Forward GIF encoder requests to windowscodecs ([Wine Bug #34356](https://bugs.winehq.org/show_bug.cgi?id=34356))
+* ~~Forward GIF encoder requests to windowscodecs~~ ([Wine Bug #34356](https://bugs.winehq.org/show_bug.cgi?id=34356))
 * Free RPC parameters allocated by application before anything else ([Wine Bug #36743](https://bugs.winehq.org/show_bug.cgi?id=36743))
 * GetMessage should remove already seen messages with higher priority ([Wine Bug #28884](https://bugs.winehq.org/show_bug.cgi?id=28884))
 * GetMonitorInfo returns the same name for all monitors ([Wine Bug #37709](https://bugs.winehq.org/show_bug.cgi?id=37709))
 * GetSecurityInfo returns NULL DACL for process object ([Wine Bug #15980](https://bugs.winehq.org/show_bug.cgi?id=15980))
 * Globally invalidate key state on changes in other threads ([Wine Bug #29871](https://bugs.winehq.org/show_bug.cgi?id=29871))
 * Graphical issues in Inquisitor ([Wine Bug #32490](https://bugs.winehq.org/show_bug.cgi?id=32490))
-* Ignore garbage after decoding gif lines ([Wine Bug #32227](https://bugs.winehq.org/show_bug.cgi?id=32227))
+* ~~Ignore garbage after decoding gif lines~~ ([Wine Bug #32227](https://bugs.winehq.org/show_bug.cgi?id=32227))
 * Ignore unsupported flags for CoInternetSetFeatureEnabled ([Wine Bug #35197](https://bugs.winehq.org/show_bug.cgi?id=35197))
 * Implement D3DXGetShaderOutputSemantics
 * Implement DDENUMSURFACES_CANBECREATED in IDirectDraw7::EnumSurfaces ([Wine Bug #17233](https://bugs.winehq.org/show_bug.cgi?id=17233))
@@ -193,7 +193,7 @@ for more details.*
 * Improve stubs for AEV_{Get,Set}MasterVolumeLevel
 * Improve stubs for AEV_{Get,Set}Mute
 * Improvement for heap allocation performance
-* Increase buffer size in widl/typegen.c to avoid buffer overflow ([Wine Bug #37129](https://bugs.winehq.org/show_bug.cgi?id=37129))
+* ~~Increase buffer size in widl/typegen.c to avoid buffer overflow~~ ([Wine Bug #37129](https://bugs.winehq.org/show_bug.cgi?id=37129))
 * Initialize *lpcDevices in RasEnumDevicesA ([Wine Bug #30378](https://bugs.winehq.org/show_bug.cgi?id=30378))
 * Initialize System\CurrentControlSet\Control\TimeZoneInformation registry keys
 * Jedi Knight: Dark Forces II crashes with winmm set to native ([Wine Bug #37983](https://bugs.winehq.org/show_bug.cgi?id=37983))
@@ -218,7 +218,7 @@ for more details.*
 * Return default palette entries from GetSystemPaletteEntries for non-palette-based devices
 * Return fake device type when systemroot is located on virtual disk ([Wine Bug #36546](https://bugs.winehq.org/show_bug.cgi?id=36546))
 * Return proper status codes when NtReadFile/NtWriteFile is called on closed (but not disconnected) pipe
-* Revert patch causing crash in IrfanView when using the WebP plugin ([Wine Bug #38895](https://bugs.winehq.org/show_bug.cgi?id=38895))
+* ~~Revert patch causing crash in IrfanView when using the WebP plugin~~ ([Wine Bug #38895](https://bugs.winehq.org/show_bug.cgi?id=38895))
 * SO_CONNECT_TIME returns the appropriate time
 * Scrolling causes mouse and screen to lock in Call to Power II ([Wine Bug #34559](https://bugs.winehq.org/show_bug.cgi?id=34559))
 * ~~SecuROM 5.x media validation fails~~ ([Wine Bug #21448](https://bugs.winehq.org/show_bug.cgi?id=21448))
@@ -229,7 +229,7 @@ for more details.*
 * Skip unknown item when decoding a CMS certificate ([Wine Bug #34388](https://bugs.winehq.org/show_bug.cgi?id=34388))
 * Software support for Environmental Audio Extensions (EAX)
 * Super Mario 3: Mario Forever fails to load keyboard mapping from profile files. ([Wine Bug #18099](https://bugs.winehq.org/show_bug.cgi?id=18099))
-* Support for 8bpp grayscale TIFF images with 8bpp alpha channel ([Wine Bug #38027](https://bugs.winehq.org/show_bug.cgi?id=38027))
+* ~~Support for 8bpp grayscale TIFF images with 8bpp alpha channel~~ ([Wine Bug #38027](https://bugs.winehq.org/show_bug.cgi?id=38027))
 * Support for AllocateAndGetTcpExTableFromStack ([Wine Bug #34372](https://bugs.winehq.org/show_bug.cgi?id=34372))
 * Support for BindImageEx ([Wine Bug #3591](https://bugs.winehq.org/show_bug.cgi?id=3591))
 * Support for CSMT (command stream) to increase graphic performance ([Wine Bug #11674](https://bugs.winehq.org/show_bug.cgi?id=11674))

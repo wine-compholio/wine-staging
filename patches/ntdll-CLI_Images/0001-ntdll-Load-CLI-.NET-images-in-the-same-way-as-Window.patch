@@ -1,4 +1,4 @@
-From 16bb8ba07739f3c189920cdbf56f87aa520456c0 Mon Sep 17 00:00:00 2001
+From f4024fac3fba56c007fa873a66271eef4f6c31ff Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Wed, 1 Apr 2015 04:34:20 +0200
 Subject: ntdll: Load CLI/.NET images in the same way as Windows XP and above.
@@ -9,7 +9,7 @@ Subject: ntdll: Load CLI/.NET images in the same way as Windows XP and above.
  2 files changed, 133 insertions(+), 10 deletions(-)
 
 diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
-index 2c8074b..5810080 100644
+index 1cd6e47..4d985d4 100644
 --- a/dlls/kernel32/process.c
 +++ b/dlls/kernel32/process.c
 @@ -1079,16 +1079,11 @@ static inline DWORD call_process_entry( PEB *peb, LPTHREAD_START_ROUTINE entry )
@@ -33,11 +33,11 @@ index 2c8074b..5810080 100644
          ERR( "%s doesn't have an entry point, it cannot be executed\n",
               debugstr_w(peb->ProcessParameters->ImagePathName.Buffer) );
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 9810f07..18f20fe 100644
+index bef0ab1..2dd8ad0 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -97,6 +97,10 @@ static UINT tls_module_count;      /* number of modules with TLS directory */
- static const IMAGE_TLS_DIRECTORY **tls_dirs;  /* array of TLS directories */
+ static IMAGE_TLS_DIRECTORY *tls_dirs;  /* array of TLS directories */
  LIST_ENTRY tls_links = { &tls_links, &tls_links };
  
 +static HRESULT (WINAPI *p_CorValidateImage)(PVOID* ImageBase, LPCWSTR FileName);
@@ -126,7 +126,7 @@ index 9810f07..18f20fe 100644
   *		get_modref
   *
   * Looks for the referenced HMODULE in the current process
-@@ -863,6 +939,10 @@ static NTSTATUS fixup_imports( WINE_MODREF *wm, LPCWSTR load_path )
+@@ -868,6 +944,10 @@ static NTSTATUS fixup_imports( WINE_MODREF *wm, LPCWSTR load_path )
      if (!(wm->ldr.Flags & LDR_DONT_RESOLVE_REFS)) return STATUS_SUCCESS;  /* already done */
      wm->ldr.Flags &= ~LDR_DONT_RESOLVE_REFS;
  
@@ -137,7 +137,7 @@ index 9810f07..18f20fe 100644
      wm->ldr.TlsIndex = alloc_tls_slot( &wm->ldr );
  
      if (!(imports = RtlImageDirectoryEntryToData( wm->ldr.BaseAddress, TRUE,
-@@ -1058,8 +1138,43 @@ static NTSTATUS MODULE_InitDLL( WINE_MODREF *wm, UINT reason, LPVOID lpReserved
+@@ -1063,8 +1143,43 @@ static NTSTATUS MODULE_InitDLL( WINE_MODREF *wm, UINT reason, LPVOID lpReserved
      BOOL retv = FALSE;
  
      /* Skip calls for modules loaded with special load flags */
@@ -182,7 +182,7 @@ index 9810f07..18f20fe 100644
      if (wm->ldr.TlsIndex != -1) call_tls_callbacks( wm->ldr.BaseAddress, reason );
      if (!entry || !(wm->ldr.Flags & LDR_IMAGE_IS_DLL)) return STATUS_SUCCESS;
  
-@@ -2865,7 +2980,20 @@ static void load_global_options(void)
+@@ -2870,7 +2985,20 @@ static void load_global_options(void)
   */
  static void start_process( void *kernel_start )
  {
@@ -205,5 +205,5 @@ index 9810f07..18f20fe 100644
  
  /******************************************************************
 -- 
-2.3.3
+2.4.5
 

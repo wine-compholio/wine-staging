@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit a8f45dff604058d419bd6c2e070f65a13a6ddfdb"
+	echo "  commit 22f28d2923811b85024f63ce43e41966a864ecd0"
 	echo ""
 }
 
@@ -203,7 +203,6 @@ patch_enable_all ()
 	enable_server_RootDirectory_File="$1"
 	enable_server_Shared_Memory="$1"
 	enable_server_Stored_ACLs="$1"
-	enable_server_Unexpected_Wakeup="$1"
 	enable_setupapi_SetupDiSelectBestCompatDrv="$1"
 	enable_setupapi_SetupDiSetDeviceInstallParamsW="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
@@ -677,9 +676,6 @@ patch_enable ()
 			;;
 		server-Stored_ACLs)
 			enable_server_Stored_ACLs="$2"
-			;;
-		server-Unexpected_Wakeup)
-			enable_server_Unexpected_Wakeup="$2"
 			;;
 		setupapi-SetupDiSelectBestCompatDrv)
 			enable_setupapi_SetupDiSelectBestCompatDrv="$2"
@@ -1407,9 +1403,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_server_Delete_On_Close" -gt 1; then
 		abort "Patchset server-Delete_On_Close disabled, but category-stable depends on that."
 	fi
-	if test "$enable_server_Unexpected_Wakeup" -gt 1; then
-		abort "Patchset server-Unexpected_Wakeup disabled, but category-stable depends on that."
-	fi
 	if test "$enable_setupapi_SetupDiSetDeviceInstallParamsW" -gt 1; then
 		abort "Patchset setupapi-SetupDiSetDeviceInstallParamsW disabled, but category-stable depends on that."
 	fi
@@ -1538,7 +1531,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_server_ClipCursor=1
 	enable_server_CreateProcess_ACLs=1
 	enable_server_Delete_On_Close=1
-	enable_server_Unexpected_Wakeup=1
 	enable_setupapi_SetupDiSetDeviceInstallParamsW=1
 	enable_shell32_RunDLL_CallEntry16=1
 	enable_shell32_SHFileOperation=1
@@ -4115,20 +4107,6 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Unexpected_Wakeup
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/sync.c, server/thread.c
-# |
-if test "$enable_server_Unexpected_Wakeup" -eq 1; then
-	patch_apply server-Unexpected_Wakeup/0001-server-Avoid-sending-unexpected-wakeup-with-uninitia.patch
-	patch_apply server-Unexpected_Wakeup/0002-kernel32-tests-Repeat-test-for-SignalObjectAndWait-m.patch
-	(
-		echo '+    { "Sebastian Lackner", "server: Avoid sending unexpected wakeup with uninitialized cookie value.", 1 },';
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Repeat test for SignalObjectAndWait multiple times to test wineserver wakeup cookie management.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset setupapi-SetupDiSelectBestCompatDrv
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4513,31 +4491,32 @@ fi
 # |   *	[#31640] Implement various vcomp functions
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/vcomp/main.c, dlls/vcomp/tests/Makefile.in, dlls/vcomp/tests/vcomp.c,
-# | 	dlls/vcomp/tests/vcomp.manifest, dlls/vcomp/tests/vcomp.rc, dlls/vcomp/vcomp.spec, dlls/vcomp100/vcomp100.spec,
-# | 	dlls/vcomp90/vcomp90.spec
+# |   *	configure.ac, dlls/vcomp/main.c, dlls/vcomp/tests/Makefile.in, dlls/vcomp/tests/vcomp.c, dlls/vcomp/vcomp.spec,
+# | 	dlls/vcomp100/vcomp100.spec, dlls/vcomp90/vcomp90.spec
 # |
 if test "$enable_vcomp_Functions" -eq 1; then
 	patch_apply vcomp-Functions/0001-vcomp-Implement-stub-for-_vcomp_fork.patch
-	patch_apply vcomp-Functions/0002-vcomp-Add-basic-worker-thread-infrastructure.patch
-	patch_apply vcomp-Functions/0003-vcomp-tests-Add-initial-tests-for-_vcomp_fork.patch
-	patch_apply vcomp-Functions/0004-vcomp-Implement-_vcomp_for_static_simple_init-and-_v.patch
-	patch_apply vcomp-Functions/0005-vcomp-tests-Add-tests-for-_vcomp_for_static_simple_i.patch
-	patch_apply vcomp-Functions/0006-vcomp-Implement-_vcomp_for_static_init.patch
-	patch_apply vcomp-Functions/0007-vcomp-tests-Add-tests-for-_vcomp_for_static_init.patch
-	patch_apply vcomp-Functions/0008-vcomp-Implement-_vcomp_barrier.patch
-	patch_apply vcomp-Functions/0009-vcomp-Implement-omp_in_parallel.patch
-	patch_apply vcomp-Functions/0010-vcomp-Implement-_vcomp_sections_init-and-_vcomp_sect.patch
-	patch_apply vcomp-Functions/0011-vcomp-Implement-_vcomp_for_dynamic_init-and-_vcomp_f.patch
+	patch_apply vcomp-Functions/0002-vcomp-Add-multithreaded-implementation-for-_vcomp_fo.patch
+	patch_apply vcomp-Functions/0003-vcomp-Implement-_vcomp_barrier.patch
+	patch_apply vcomp-Functions/0004-vcomp-tests-Add-initial-tests.patch
+	patch_apply vcomp-Functions/0005-vcomp-tests-Add-additional-tests-for-_vcomp_fork.patch
+	patch_apply vcomp-Functions/0006-vcomp-Implement-_vcomp_for_static_simple_init-and-_v.patch
+	patch_apply vcomp-Functions/0007-vcomp-tests-Add-tests-for-_vcomp_for_static_simple_i.patch
+	patch_apply vcomp-Functions/0008-vcomp-Implement-_vcomp_for_static_init.patch
+	patch_apply vcomp-Functions/0009-vcomp-tests-Add-tests-for-_vcomp_for_static_init.patch
+	patch_apply vcomp-Functions/0010-vcomp-Implement-omp_in_parallel.patch
+	patch_apply vcomp-Functions/0011-vcomp-Implement-_vcomp_sections_init-and-_vcomp_sect.patch
+	patch_apply vcomp-Functions/0012-vcomp-Implement-_vcomp_for_dynamic_init-and-_vcomp_f.patch
 	(
 		echo '+    { "Dan Kegel", "vcomp: Implement stub for _vcomp_fork.", 1 },';
-		echo '+    { "Sebastian Lackner", "vcomp: Add basic worker thread infrastructure.", 1 },';
-		echo '+    { "Dan Kegel", "vcomp/tests: Add initial tests for _vcomp_fork.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp: Add multithreaded implementation for _vcomp_fork.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_barrier.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp/tests: Add initial tests.", 1 },';
+		echo '+    { "Dan Kegel", "vcomp/tests: Add additional tests for _vcomp_fork.", 1 },';
 		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_for_static_simple_init and _vcomp_for_static_end.", 1 },';
 		echo '+    { "Sebastian Lackner", "vcomp/tests: Add tests for _vcomp_for_static_simple_init.", 1 },';
 		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_for_static_init.", 1 },';
 		echo '+    { "Sebastian Lackner", "vcomp/tests: Add tests for _vcomp_for_static_init.", 1 },';
-		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_barrier.", 1 },';
 		echo '+    { "Sebastian Lackner", "vcomp: Implement omp_in_parallel.", 1 },';
 		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_sections_init and _vcomp_sections_next and add tests.", 1 },';
 		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_for_dynamic_init and _vcomp_for_dynamic_next and add tests.", 1 },';

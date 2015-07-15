@@ -1,17 +1,20 @@
-From 6404654fd885acbf0e563d9b5070d321986b5b8d Mon Sep 17 00:00:00 2001
+From d0d4b3991b691ee74e999f82dbf57a5a400fe7db Mon Sep 17 00:00:00 2001
 From: Dan Kegel <dank@kegel.com>
-Date: Sat, 11 Jul 2015 06:50:26 +0200
+Date: Tue, 14 Jul 2015 21:40:36 +0200
 Subject: vcomp: Implement stub for _vcomp_fork.
 
+Changes:
+* The original patch added a new file, I moved the implementation to main.c.
+* A huge comment block was removed, tests are more reliable than comments anyway. ;)
 ---
- dlls/vcomp/main.c           | 93 +++++++++++++++++++++++++++++++++++++++++++++
+ dlls/vcomp/main.c           | 95 +++++++++++++++++++++++++++++++++++++++++++++
  dlls/vcomp/vcomp.spec       |  2 +-
  dlls/vcomp100/vcomp100.spec |  2 +-
  dlls/vcomp90/vcomp90.spec   |  2 +-
- 4 files changed, 96 insertions(+), 3 deletions(-)
+ 4 files changed, 98 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/vcomp/main.c b/dlls/vcomp/main.c
-index ab2a372..26f6c67 100644
+index 8ec3616..03c085b 100644
 --- a/dlls/vcomp/main.c
 +++ b/dlls/vcomp/main.c
 @@ -3,6 +3,7 @@
@@ -22,24 +25,14 @@ index ab2a372..26f6c67 100644
   *
   * This library is free software; you can redistribute it and/or
   * modify it under the terms of the GNU Lesser General Public
-@@ -107,6 +108,98 @@ void CDECL _vcomp_single_end(void)
-     TRACE("stub\n");
- }
+@@ -40,6 +41,89 @@ struct vcomp_thread_data
+     int                     fork_threads;
+ };
  
 +void CDECL _vcomp_fork_call_wrapper(void *wrapper, int nargs, __ms_va_list args);
 +
-+void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
-+{
-+    __ms_va_list valist;
-+
-+    TRACE("(%d, %d, %p, ...)\n", ifval, nargs, wrapper);
-+
-+    __ms_va_start(valist, wrapper);
-+    _vcomp_fork_call_wrapper(wrapper, nargs, valist);
-+    __ms_va_end(valist);
-+}
-+
 +#if defined(__i386__)
++
 +__ASM_GLOBAL_FUNC( _vcomp_fork_call_wrapper,
 +                   "pushl %ebp\n\t"
 +                   __ASM_CFI(".cfi_adjust_cfa_offset 4\n\t")
@@ -109,6 +102,7 @@ index ab2a372..26f6c67 100644
 +                   __ASM_CFI(".cfi_adjust_cfa_offset -8\n\t")
 +                   __ASM_CFI(".cfi_same_value %rbp\n\t")
 +                   "ret")
++
 +#else
 +
 +void CDECL _vcomp_fork_call_wrapper(void *wrapper, int nargs, __ms_va_list args)
@@ -118,9 +112,27 @@ index ab2a372..26f6c67 100644
 +
 +#endif
 +
- BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
+ static inline struct vcomp_thread_data *vcomp_get_thread_data(void)
  {
-     TRACE("(0x%p, %d, %p)\n", hinstDLL, fdwReason, lpvReserved);
+     return (struct vcomp_thread_data *)TlsGetValue(vcomp_context_tls);
+@@ -160,6 +244,17 @@ void CDECL _vcomp_single_end(void)
+     TRACE("stub\n");
+ }
+ 
++void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
++{
++    __ms_va_list valist;
++
++    TRACE("(%d, %d, %p, ...)\n", ifval, nargs, wrapper);
++
++    __ms_va_start(valist, wrapper);
++    _vcomp_fork_call_wrapper(wrapper, nargs, valist);
++    __ms_va_end(valist);
++}
++
+ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
+ {
+     TRACE("(%p, %d, %p)\n", instance, reason, reserved);
 diff --git a/dlls/vcomp/vcomp.spec b/dlls/vcomp/vcomp.spec
 index 306dd15..d446574 100644
 --- a/dlls/vcomp/vcomp.spec

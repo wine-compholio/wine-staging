@@ -1,0 +1,65 @@
+From 5990968a0ae43fd6f4a4001107ef5d4fcc273458 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Tue, 14 Jul 2015 21:41:27 +0200
+Subject: vcomp: Implement _vcomp_barrier.
+
+---
+ dlls/vcomp/main.c | 28 +++++++++++++++++++++++++++-
+ 1 file changed, 27 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/vcomp/main.c b/dlls/vcomp/main.c
+index 20aeb4f..bcaa4ea 100644
+--- a/dlls/vcomp/main.c
++++ b/dlls/vcomp/main.c
+@@ -70,6 +70,10 @@ struct vcomp_team_data
+     int                     nargs;
+     void                    *wrapper;
+     __ms_va_list            valist;
++
++    /* barrier */
++    unsigned int            barrier;
++    int                     barrier_count;
+ };
+ 
+ void CDECL _vcomp_fork_call_wrapper(void *wrapper, int nargs, __ms_va_list args);
+@@ -256,7 +260,27 @@ void CDECL omp_set_num_threads(int num_threads)
+ 
+ void CDECL _vcomp_barrier(void)
+ {
+-    TRACE("stub\n");
++    struct vcomp_team_data *team_data = vcomp_init_thread_data()->team;
++
++    TRACE("()\n");
++
++    if (!team_data)
++        return;
++
++    EnterCriticalSection(&vcomp_section);
++    if (++team_data->barrier_count >= team_data->num_threads)
++    {
++        team_data->barrier++;
++        team_data->barrier_count = 0;
++        WakeAllConditionVariable(&team_data->cond);
++    }
++    else
++    {
++        unsigned int barrier = team_data->barrier;
++        while (team_data->barrier == barrier)
++            SleepConditionVariableCS(&team_data->cond, &vcomp_section, INFINITE);
++    }
++    LeaveCriticalSection(&vcomp_section);
+ }
+ 
+ void CDECL _vcomp_set_num_threads(int num_threads)
+@@ -342,6 +366,8 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
+     team_data.nargs             = nargs;
+     team_data.wrapper           = wrapper;
+     __ms_va_start(team_data.valist, wrapper);
++    team_data.barrier           = 0;
++    team_data.barrier_count     = 0;
+ 
+     thread_data.team            = &team_data;
+     thread_data.thread_num      = 0;
+-- 
+2.4.5
+

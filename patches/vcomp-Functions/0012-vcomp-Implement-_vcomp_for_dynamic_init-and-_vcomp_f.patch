@@ -1,4 +1,4 @@
-From f29610acbf9ce393b772520f6041acce9d1aefd8 Mon Sep 17 00:00:00 2001
+From 145ddf41060e93e9f320d5d2e4347dd2c7b8a83f Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 11 Jul 2015 23:28:31 +0200
 Subject: vcomp: Implement _vcomp_for_dynamic_init and _vcomp_for_dynamic_next
@@ -13,23 +13,23 @@ Subject: vcomp: Implement _vcomp_for_dynamic_init and _vcomp_for_dynamic_next
  5 files changed, 152 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/vcomp/main.c b/dlls/vcomp/main.c
-index db47ff6..3a1e9ee 100644
+index 31814d6..174ce06 100644
 --- a/dlls/vcomp/main.c
 +++ b/dlls/vcomp/main.c
-@@ -59,6 +59,9 @@ struct vcomp_thread_info
+@@ -61,6 +61,9 @@ struct vcomp_thread_data
  
      /* section */
-     DWORD                   section;
+     unsigned int            section;
 +
 +    /* dynamic */
-+    DWORD                   dynamic;
++    unsigned int            dynamic;
  };
  
- struct vcomp_team_info
-@@ -80,6 +83,15 @@ struct vcomp_team_info
-     DWORD               section;
-     DWORD               num_sections;
-     DWORD               section_index;
+ struct vcomp_team_data
+@@ -82,6 +85,15 @@ struct vcomp_team_data
+     unsigned int            section;
+     unsigned int            num_sections;
+     unsigned int            section_index;
 +
 +    /* dynamic */
 +    DWORD               dynamic;
@@ -41,23 +41,23 @@ index db47ff6..3a1e9ee 100644
 +    DWORD               dynamic_min_chunksize;
  };
  
- static inline struct vcomp_thread_info *vcomp_get_thread_info(void)
-@@ -402,6 +414,83 @@ int CDECL _vcomp_sections_next(void)
+ void CDECL _vcomp_fork_call_wrapper(void *wrapper, int nargs, __ms_va_list args);
+@@ -498,6 +510,83 @@ int CDECL _vcomp_sections_next(void)
      return i;
  }
  
 +void CDECL _vcomp_for_dynamic_init(int flags, int first, int last, int step, int chunksize)
 +{
-+    struct vcomp_thread_info *thread_info = vcomp_get_thread_info();
-+    struct vcomp_team_info *team_info = thread_info->team;
++    struct vcomp_thread_data *thread_data = vcomp_get_thread_data();
++    struct vcomp_team_data *team_data = thread_data->team;
 +    unsigned int iterations;
 +    BOOL forward = (flags & 0x40) != 0;
 +
 +    TRACE("(%d, %d, %d, %d, %d)\n", flags, first, last, step, chunksize);
 +
 +    EnterCriticalSection(&vcomp_section);
-+    thread_info->dynamic++;
-+    if ((int)(thread_info->dynamic - team_info->dynamic) > 0)
++    thread_data->dynamic++;
++    if ((int)(thread_data->dynamic - team_data->dynamic) > 0)
 +    {
 +        /* first thread in a new for_dynamic */
 +
@@ -76,102 +76,100 @@ index db47ff6..3a1e9ee 100644
 +            iterations = 1 + (first64 - last) / step;
 +        }
 +
-+        team_info->dynamic = thread_info->dynamic;
-+        team_info->dynamic_forward    = forward;
-+        team_info->dynamic_first      = first;
-+        team_info->dynamic_iterations = iterations;
-+        team_info->dynamic_step       = step;
-+        team_info->dynamic_chunksize  = max(1, iterations / team_info->num_threads);
-+        team_info->dynamic_min_chunksize = max(1, chunksize);
++        team_data->dynamic = thread_data->dynamic;
++        team_data->dynamic_forward    = forward;
++        team_data->dynamic_first      = first;
++        team_data->dynamic_iterations = iterations;
++        team_data->dynamic_step       = step;
++        team_data->dynamic_chunksize  = max(1, iterations / team_data->num_threads);
++        team_data->dynamic_min_chunksize = max(1, chunksize);
 +    }
 +    LeaveCriticalSection(&vcomp_section);
 +}
 +
 +int CDECL _vcomp_for_dynamic_next(int *begin, int *end)
 +{
-+    struct vcomp_thread_info *thread_info = vcomp_get_thread_info();
-+    struct vcomp_team_info *team_info = thread_info->team;
++    struct vcomp_thread_data *thread_data = vcomp_get_thread_data();
++    struct vcomp_team_data *team_data = thread_data->team;
 +    unsigned int iterations = 0;
 +
 +    TRACE("(%p, %p)\n", begin, end);
 +
 +    EnterCriticalSection(&vcomp_section);
-+    if (thread_info->dynamic == team_info->dynamic &&
-+        team_info->dynamic_iterations != 0)
++    if (thread_data->dynamic == team_data->dynamic &&
++        team_data->dynamic_iterations != 0)
 +    {
-+        iterations = min(team_info->dynamic_iterations, team_info->dynamic_chunksize);
-+        team_info->dynamic_iterations -= iterations;
++        iterations = min(team_data->dynamic_iterations, team_data->dynamic_chunksize);
++        team_data->dynamic_iterations -= iterations;
 +
-+        if (team_info->dynamic_forward)
++        if (team_data->dynamic_forward)
 +        {
-+            *begin = team_info->dynamic_first;
-+            *end   = team_info->dynamic_first + (iterations - 1) * team_info->dynamic_step;
-+            team_info->dynamic_first += iterations * team_info->dynamic_step;
++            *begin = team_data->dynamic_first;
++            *end   = team_data->dynamic_first + (iterations - 1) * team_data->dynamic_step;
++            team_data->dynamic_first += iterations * team_data->dynamic_step;
 +        }
 +        else
 +        {
-+            *begin = team_info->dynamic_first;
-+            *end   = team_info->dynamic_first - (iterations - 1) * team_info->dynamic_step;
-+            team_info->dynamic_first -= iterations * team_info->dynamic_step;
++            *begin = team_data->dynamic_first;
++            *end   = team_data->dynamic_first - (iterations - 1) * team_data->dynamic_step;
++            team_data->dynamic_first -= iterations * team_data->dynamic_step;
 +        }
 +
-+        team_info->dynamic_chunksize =
-+            max((team_info->dynamic_chunksize * 3 + 2)/4, team_info->dynamic_min_chunksize);
++        team_data->dynamic_chunksize =
++            max((team_data->dynamic_chunksize * 3 + 2)/4, team_data->dynamic_min_chunksize);
 +    }
 +    LeaveCriticalSection(&vcomp_section);
 +
 +    return (iterations != 0);
 +}
 +
- void CDECL _vcomp_fork_call_wrapper(void *wrapper, int nargs, __ms_va_list args);
+ int CDECL omp_in_parallel(void)
+ {
+     TRACE("()\n");
+@@ -572,11 +661,13 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
+     team_data.barrier           = 0;
+     team_data.barrier_count     = 0;
+     team_data.section           = 0;
++    team_data.dynamic           = 0;
  
- static DWORD WINAPI _vcomp_fork_worker(void *param)
-@@ -464,6 +553,7 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
-     team_info.barrier           = 0;
-     team_info.barrier_count     = 0;
-     team_info.section           = -1;
-+    team_info.dynamic           = -1;
+     thread_data.team            = &team_data;
+     thread_data.thread_num      = 0;
+     thread_data.fork_threads    = 0;
+     thread_data.section         = 1;
++    thread_data.dynamic         = 1;
+     list_init(&thread_data.entry);
+     InitializeConditionVariable(&thread_data.cond);
  
-     /* Initialize members of thread_info. */
-     list_init(&thread_info.entry);
-@@ -471,6 +561,7 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
-     thread_info.team        = &team_info;
-     thread_info.thread_num  = 0;
-     thread_info.section     = 0;
-+    thread_info.dynamic     = 0;
+@@ -593,6 +684,7 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
+             data->thread_num    = team_data.num_threads++;
+             data->fork_threads  = 0;
+             data->section       = 1;
++            data->dynamic       = 1;
+             list_remove(&data->entry);
+             list_add_tail(&thread_data.entry, &data->entry);
+             WakeAllConditionVariable(&data->cond);
+@@ -612,6 +704,7 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
+             data->thread_num    = team_data.num_threads;
+             data->fork_threads  = 0;
+             data->section       = 1;
++            data->dynamic       = 1;
+             InitializeConditionVariable(&data->cond);
  
-     if (parallel)
-     {
-@@ -487,6 +578,7 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
-             info->team          = &team_info;
-             info->thread_num    = team_info.num_threads++;
-             info->section       = 0;
-+            info->dynamic       = 0;
-             WakeAllConditionVariable(&info->cond);
-         }
- 
-@@ -504,6 +596,7 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
-             info->team       = &team_info;
-             info->thread_num = team_info.num_threads;
-             info->section    = 0;
-+            info->dynamic    = 0;
- 
-             thread = CreateThread(NULL, 0, _vcomp_fork_worker, info, 0, NULL);
-             if (!thread)
+             thread = CreateThread(NULL, 0, _vcomp_fork_worker, data, 0, NULL);
 diff --git a/dlls/vcomp/tests/vcomp.c b/dlls/vcomp/tests/vcomp.c
-index 902a836..4273680 100644
+index c962fe8..af04cc9 100644
 --- a/dlls/vcomp/tests/vcomp.c
 +++ b/dlls/vcomp/tests/vcomp.c
-@@ -24,6 +24,8 @@ static const int is_win64 = (sizeof(void *) > sizeof(int));
+@@ -32,6 +32,8 @@ static BOOL   (WINAPI *pDeactivateActCtx)(DWORD, ULONG_PTR);
+ static VOID   (WINAPI *pReleaseActCtx)(HANDLE);
  
- static HMODULE hvcomp = 0;
  static void  (CDECL   *p_vcomp_barrier)(void);
 +static void  (CDECL   *p_vcomp_for_dynamic_init)(int flags, int first, int last, int step, int chunksize);
 +static int   (CDECL   *p_vcomp_for_dynamic_next)(int *begin, int *end);
  static void  (CDECL   *p_vcomp_for_static_end)(void);
  static void  (CDECL   *p_vcomp_for_static_init)(int first, int last, int step, int chunksize, unsigned int *loops,
                                                  int *begin, int *end, int *next, int *lastchunk);
-@@ -55,6 +57,8 @@ static BOOL init_vcomp(void)
+@@ -175,6 +177,8 @@ static BOOL init_vcomp(void)
      }
  
      VCOMP_GET_PROC(_vcomp_barrier);
@@ -180,7 +178,7 @@ index 902a836..4273680 100644
      VCOMP_GET_PROC(_vcomp_for_static_end);
      VCOMP_GET_PROC(_vcomp_for_static_init);
      VCOMP_GET_PROC(_vcomp_for_static_simple_init);
-@@ -584,6 +588,54 @@ static void test_vcomp_sections_init(void)
+@@ -807,6 +811,54 @@ static void test_vcomp_sections_init(void)
      }
  }
  
@@ -235,13 +233,13 @@ index 902a836..4273680 100644
  START_TEST(vcomp)
  {
      if (!init_vcomp())
-@@ -593,6 +645,7 @@ START_TEST(vcomp)
+@@ -818,6 +870,7 @@ START_TEST(vcomp)
      test_vcomp_for_static_simple_init();
      test_vcomp_for_static_init();
      test_vcomp_sections_init();
 +    test_vcomp_for_dynamic_init();
  
-     FreeLibrary(hvcomp);
+     release_vcomp();
  }
 diff --git a/dlls/vcomp/vcomp.spec b/dlls/vcomp/vcomp.spec
 index 7083ce4..1b02a65 100644

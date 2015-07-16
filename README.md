@@ -215,7 +215,7 @@ for more details.*
 * Return an error when trying to open a terminated process ([Wine Bug #37087](https://bugs.winehq.org/show_bug.cgi?id=37087))
 * Return correct IMediaSeeking stream positions in quartz
 * Return correct values for GetThreadTimes function ([Wine Bug #20230](https://bugs.winehq.org/show_bug.cgi?id=20230))
-* Return default palette entries from GetSystemPaletteEntries for non-palette-based devices
+* Return default palette entries from GetSystemPaletteEntries for non-palette-based devices ([Wine Bug #36895](https://bugs.winehq.org/show_bug.cgi?id=36895))
 * Return fake device type when systemroot is located on virtual disk ([Wine Bug #36546](https://bugs.winehq.org/show_bug.cgi?id=36546))
 * Return proper status codes when NtReadFile/NtWriteFile is called on closed (but not disconnected) pipe
 * ~~Revert patch causing crash in IrfanView when using the WebP plugin~~ ([Wine Bug #38895](https://bugs.winehq.org/show_bug.cgi?id=38895))

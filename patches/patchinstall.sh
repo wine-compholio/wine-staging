@@ -2611,6 +2611,9 @@ fi
 
 # Patchset gdi32-Default_Palette
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36895] Return default palette entries from GetSystemPaletteEntries for non-palette-based devices
+# |
 # | Modified files:
 # |   *	dlls/gdi32/palette.c, dlls/gdi32/tests/palette.c
 # |

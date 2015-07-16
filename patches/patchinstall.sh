@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 22f28d2923811b85024f63ce43e41966a864ecd0"
+	echo "  commit 2294d3ba456921e83fa5970e0e62855614c9c30c"
 	echo ""
 }
 
@@ -84,7 +84,6 @@ patch_enable_all ()
 	enable_combase_String="$1"
 	enable_comctl32_LoadIconMetric="$1"
 	enable_configure_Absolute_RPATH="$1"
-	enable_configure_Crosscompiling="$1"
 	enable_crypt32_CMS_Certificates="$1"
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Skip_Tests="$1"
@@ -212,7 +211,6 @@ patch_enable_all ()
 	enable_shell32_Icons="$1"
 	enable_shell32_Placeholder_Icons="$1"
 	enable_shell32_Progress_Dialog="$1"
-	enable_shell32_Quoted_ShellExecute="$1"
 	enable_shell32_RunDLL_CallEntry16="$1"
 	enable_shell32_Run_Dialog="$1"
 	enable_shell32_SHCreateSessionKey="$1"
@@ -319,9 +317,6 @@ patch_enable ()
 			;;
 		configure-Absolute_RPATH)
 			enable_configure_Absolute_RPATH="$2"
-			;;
-		configure-Crosscompiling)
-			enable_configure_Crosscompiling="$2"
 			;;
 		crypt32-CMS_Certificates)
 			enable_crypt32_CMS_Certificates="$2"
@@ -703,9 +698,6 @@ patch_enable ()
 			;;
 		shell32-Progress_Dialog)
 			enable_shell32_Progress_Dialog="$2"
-			;;
-		shell32-Quoted_ShellExecute)
-			enable_shell32_Quoted_ShellExecute="$2"
 			;;
 		shell32-RunDLL_CallEntry16)
 			enable_shell32_RunDLL_CallEntry16="$2"
@@ -2056,18 +2048,6 @@ if test "$enable_configure_Absolute_RPATH" -eq 1; then
 	patch_apply configure-Absolute_RPATH/0001-configure-Also-add-the-absolute-RPATH-when-linking-a.patch
 	(
 		echo '+    { "Sebastian Lackner", "configure: Also add the absolute RPATH when linking against libwine.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset configure-Crosscompiling
-# |
-# | Modified files:
-# |   *	configure.ac
-# |
-if test "$enable_configure_Crosscompiling" -eq 1; then
-	patch_apply configure-Crosscompiling/0001-configure.ac-Do-not-assume-gcc-strength-bug-when-cro.patch
-	(
-		echo '+    { "Sebastian Lackner", "configure.ac: Do not assume gcc strength bug when crosscompiling.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4238,21 +4218,6 @@ if test "$enable_shell32_Progress_Dialog" -eq 1; then
 		echo '+    { "Michael Müller", "shell32: Pass FILE_INFORMATION into SHNotify* functions.", 1 },';
 		echo '+    { "Michael Müller", "shell32: Implement file operation progress dialog.", 1 },';
 		echo '+    { "Michael Müller", "shell32: Show animation during SHFileOperation.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset shell32-Quoted_ShellExecute
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#19666] Multiple applications start wrong executable if whitespace present in name
-# |
-# | Modified files:
-# |   *	dlls/shell32/shlexec.c, dlls/shell32/tests/shlexec.c
-# |
-if test "$enable_shell32_Quoted_ShellExecute" -eq 1; then
-	patch_apply shell32-Quoted_ShellExecute/0001-shell32-Quote-program-name-in-ShellExecuteEx-if-it-c.patch
-	(
-		echo '+    { "Stefan Leichter", "shell32: Quote program name in ShellExecuteEx if it contains spaces.", 1 },';
 	) >> "$patchlist"
 fi
 

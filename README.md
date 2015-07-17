@@ -203,7 +203,7 @@ for more details.*
 * MediaCoder needs CUDA for video encoding ([Wine Bug #37664](https://bugs.winehq.org/show_bug.cgi?id=37664))
 * Multiple applications need EnumDisplayDevicesW implementation ([Wine Bug #34978](https://bugs.winehq.org/show_bug.cgi?id=34978))
 * Multiple applications needs better NtQueryInformationJobObject stub
-* Multiple applications start wrong executable if whitespace present in name ([Wine Bug #19666](https://bugs.winehq.org/show_bug.cgi?id=19666))
+* ~~Multiple applications start wrong executable if whitespace present in name~~ ([Wine Bug #19666](https://bugs.winehq.org/show_bug.cgi?id=19666))
 * Need for Speed 3 installer requires devices in HKEY_DYN_DATA ([Wine Bug #7115](https://bugs.winehq.org/show_bug.cgi?id=7115))
 * Only send WM_DROPFILES when OLE dnd fails ([Wine Bug #29081](https://bugs.winehq.org/show_bug.cgi?id=29081))
 * Other Pipelight-specific enhancements

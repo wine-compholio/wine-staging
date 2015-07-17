@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 2294d3ba456921e83fa5970e0e62855614c9c30c"
+	echo "  commit a90592c8d29d3b145eada90c297405cbd8a9277f"
 	echo ""
 }
 
@@ -3524,14 +3524,12 @@ fi
 # Patchset ntdll-Threading
 # |
 # | Modified files:
-# |   *	dlls/ntdll/process.c, dlls/ntdll/thread.c
+# |   *	dlls/ntdll/thread.c
 # |
 if test "$enable_ntdll_Threading" -eq 1; then
 	patch_apply ntdll-Threading/0001-ntdll-Fix-race-condition-when-threads-are-killed-dur.patch
-	patch_apply ntdll-Threading/0002-ntdll-Avoid-deadlock-by-using-_exit-in-NtTerminatePr.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Fix race-condition when threads are killed during shutdown.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Avoid deadlock by using _exit() in NtTerminateProcess.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4001,13 +3999,11 @@ fi
 # Patchset server-JobObjects
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/process.c, dlls/ntdll/sync.c, server/process.c
+# |   *	dlls/ntdll/sync.c
 # |
 if test "$enable_server_JobObjects" -eq 1; then
-	patch_apply server-JobObjects/0001-server-Implement-JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.patch
-	patch_apply server-JobObjects/0002-ntdll-Implement-NtQueryInformationJobObject-stub-fun.patch
+	patch_apply server-JobObjects/0001-ntdll-Implement-NtQueryInformationJobObject-stub-fun.patch
 	(
-		echo '+    { "Andrew Cook", "server: Implement JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Implement NtQueryInformationJobObject stub function.", 1 },';
 	) >> "$patchlist"
 fi
@@ -4459,34 +4455,22 @@ fi
 # |   *	[#31640] Implement various vcomp functions
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/vcomp/main.c, dlls/vcomp/tests/Makefile.in, dlls/vcomp/tests/vcomp.c, dlls/vcomp/vcomp.spec,
-# | 	dlls/vcomp100/vcomp100.spec, dlls/vcomp90/vcomp90.spec
+# |   *	dlls/vcomp/main.c, dlls/vcomp/tests/vcomp.c, dlls/vcomp/vcomp.spec, dlls/vcomp100/vcomp100.spec,
+# | 	dlls/vcomp90/vcomp90.spec
 # |
 if test "$enable_vcomp_Functions" -eq 1; then
-	patch_apply vcomp-Functions/0001-vcomp-Implement-stub-for-_vcomp_fork.patch
-	patch_apply vcomp-Functions/0002-vcomp-Add-multithreaded-implementation-for-_vcomp_fo.patch
-	patch_apply vcomp-Functions/0003-vcomp-Implement-_vcomp_barrier.patch
-	patch_apply vcomp-Functions/0004-vcomp-tests-Add-initial-tests.patch
-	patch_apply vcomp-Functions/0005-vcomp-tests-Add-additional-tests-for-_vcomp_fork.patch
-	patch_apply vcomp-Functions/0006-vcomp-Implement-_vcomp_for_static_simple_init-and-_v.patch
-	patch_apply vcomp-Functions/0007-vcomp-tests-Add-tests-for-_vcomp_for_static_simple_i.patch
-	patch_apply vcomp-Functions/0008-vcomp-Implement-_vcomp_for_static_init.patch
-	patch_apply vcomp-Functions/0009-vcomp-tests-Add-tests-for-_vcomp_for_static_init.patch
-	patch_apply vcomp-Functions/0010-vcomp-Implement-omp_in_parallel.patch
-	patch_apply vcomp-Functions/0011-vcomp-Implement-_vcomp_sections_init-and-_vcomp_sect.patch
-	patch_apply vcomp-Functions/0012-vcomp-Implement-_vcomp_for_dynamic_init-and-_vcomp_f.patch
+	patch_apply vcomp-Functions/0001-vcomp-Implement-_vcomp_for_static_simple_init-and-_v.patch
+	patch_apply vcomp-Functions/0002-vcomp-tests-Add-tests-for-_vcomp_for_static_simple_i.patch
+	patch_apply vcomp-Functions/0003-vcomp-Implement-_vcomp_for_static_init.patch
+	patch_apply vcomp-Functions/0004-vcomp-tests-Add-tests-for-_vcomp_for_static_init.patch
+	patch_apply vcomp-Functions/0005-vcomp-Implement-omp_in_parallel.patch
+	patch_apply vcomp-Functions/0006-vcomp-Implement-_vcomp_for_dynamic_init-and-_vcomp_f.patch
 	(
-		echo '+    { "Dan Kegel", "vcomp: Implement stub for _vcomp_fork.", 1 },';
-		echo '+    { "Sebastian Lackner", "vcomp: Add multithreaded implementation for _vcomp_fork.", 1 },';
-		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_barrier.", 1 },';
-		echo '+    { "Sebastian Lackner", "vcomp/tests: Add initial tests.", 1 },';
-		echo '+    { "Dan Kegel", "vcomp/tests: Add additional tests for _vcomp_fork.", 1 },';
 		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_for_static_simple_init and _vcomp_for_static_end.", 1 },';
 		echo '+    { "Sebastian Lackner", "vcomp/tests: Add tests for _vcomp_for_static_simple_init.", 1 },';
 		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_for_static_init.", 1 },';
 		echo '+    { "Sebastian Lackner", "vcomp/tests: Add tests for _vcomp_for_static_init.", 1 },';
 		echo '+    { "Sebastian Lackner", "vcomp: Implement omp_in_parallel.", 1 },';
-		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_sections_init and _vcomp_sections_next and add tests.", 1 },';
 		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_for_dynamic_init and _vcomp_for_dynamic_next and add tests.", 1 },';
 	) >> "$patchlist"
 fi
@@ -5489,7 +5473,7 @@ fi
 if test "$enable_winsta_WinStationEnumerateW" -eq 1; then
 	patch_apply winsta-WinStationEnumerateW/0001-winsta-Add-stub-for-WinStationEnumerateW.patch
 	(
-		echo '+    { "Austin English", "winsta: Add stub for WinStationEnumerateW.", 1 },';
+		echo '+    { "Austin English", "winsta: Add stub for WinStationEnumerateW.", 2 },';
 	) >> "$patchlist"
 fi
 

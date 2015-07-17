@@ -1,4 +1,4 @@
-From 145ddf41060e93e9f320d5d2e4347dd2c7b8a83f Mon Sep 17 00:00:00 2001
+From 2884d2c0e05a7bf26fe340774fd3d6a29a1de416 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 11 Jul 2015 23:28:31 +0200
 Subject: vcomp: Implement _vcomp_for_dynamic_init and _vcomp_for_dynamic_next
@@ -13,7 +13,7 @@ Subject: vcomp: Implement _vcomp_for_dynamic_init and _vcomp_for_dynamic_next
  5 files changed, 152 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/vcomp/main.c b/dlls/vcomp/main.c
-index 31814d6..174ce06 100644
+index af6fe61..9771841 100644
 --- a/dlls/vcomp/main.c
 +++ b/dlls/vcomp/main.c
 @@ -61,6 +61,9 @@ struct vcomp_thread_data
@@ -28,8 +28,8 @@ index 31814d6..174ce06 100644
  struct vcomp_team_data
 @@ -82,6 +85,15 @@ struct vcomp_team_data
      unsigned int            section;
-     unsigned int            num_sections;
-     unsigned int            section_index;
+     int                     num_sections;
+     int                     section_index;
 +
 +    /* dynamic */
 +    DWORD               dynamic;
@@ -41,9 +41,9 @@ index 31814d6..174ce06 100644
 +    DWORD               dynamic_min_chunksize;
  };
  
- void CDECL _vcomp_fork_call_wrapper(void *wrapper, int nargs, __ms_va_list args);
-@@ -498,6 +510,83 @@ int CDECL _vcomp_sections_next(void)
-     return i;
+ #if defined(__i386__)
+@@ -497,6 +509,83 @@ void CDECL _vcomp_for_static_end(void)
+     TRACE("()\n");
  }
  
 +void CDECL _vcomp_for_dynamic_init(int flags, int first, int last, int step, int chunksize)
@@ -126,7 +126,7 @@ index 31814d6..174ce06 100644
  int CDECL omp_in_parallel(void)
  {
      TRACE("()\n");
-@@ -572,11 +661,13 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
+@@ -571,11 +660,13 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
      team_data.barrier           = 0;
      team_data.barrier_count     = 0;
      team_data.section           = 0;
@@ -140,7 +140,7 @@ index 31814d6..174ce06 100644
      list_init(&thread_data.entry);
      InitializeConditionVariable(&thread_data.cond);
  
-@@ -593,6 +684,7 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
+@@ -592,6 +683,7 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
              data->thread_num    = team_data.num_threads++;
              data->fork_threads  = 0;
              data->section       = 1;
@@ -148,7 +148,7 @@ index 31814d6..174ce06 100644
              list_remove(&data->entry);
              list_add_tail(&thread_data.entry, &data->entry);
              WakeAllConditionVariable(&data->cond);
-@@ -612,6 +704,7 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
+@@ -611,6 +703,7 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
              data->thread_num    = team_data.num_threads;
              data->fork_threads  = 0;
              data->section       = 1;
@@ -157,7 +157,7 @@ index 31814d6..174ce06 100644
  
              thread = CreateThread(NULL, 0, _vcomp_fork_worker, data, 0, NULL);
 diff --git a/dlls/vcomp/tests/vcomp.c b/dlls/vcomp/tests/vcomp.c
-index c962fe8..af04cc9 100644
+index 8de4510b..3992bda 100644
 --- a/dlls/vcomp/tests/vcomp.c
 +++ b/dlls/vcomp/tests/vcomp.c
 @@ -32,6 +32,8 @@ static BOOL   (WINAPI *pDeactivateActCtx)(DWORD, ULONG_PTR);
@@ -178,7 +178,7 @@ index c962fe8..af04cc9 100644
      VCOMP_GET_PROC(_vcomp_for_static_end);
      VCOMP_GET_PROC(_vcomp_for_static_init);
      VCOMP_GET_PROC(_vcomp_for_static_simple_init);
-@@ -807,6 +811,54 @@ static void test_vcomp_sections_init(void)
+@@ -809,6 +813,54 @@ static void test_vcomp_for_static_init(void)
      }
  }
  
@@ -233,10 +233,10 @@ index c962fe8..af04cc9 100644
  START_TEST(vcomp)
  {
      if (!init_vcomp())
-@@ -818,6 +870,7 @@ START_TEST(vcomp)
+@@ -820,6 +872,7 @@ START_TEST(vcomp)
+     test_vcomp_sections_init();
      test_vcomp_for_static_simple_init();
      test_vcomp_for_static_init();
-     test_vcomp_sections_init();
 +    test_vcomp_for_dynamic_init();
  
      release_vcomp();

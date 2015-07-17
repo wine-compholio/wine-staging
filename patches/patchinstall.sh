@@ -3125,7 +3125,7 @@ fi
 if test "$enable_mscoree_CorValidateImage" -eq 1; then
 	patch_apply mscoree-CorValidateImage/0001-mscoree-Implement-_CorValidateImage.patch
 	(
-		echo '+    { "Michael Müller", "mscoree: Implement _CorValidateImage.", 1 },';
+		echo '+    { "Michael Müller", "mscoree: Implement _CorValidateImage.", 2 },';
 	) >> "$patchlist"
 fi
 

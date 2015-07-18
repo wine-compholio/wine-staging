@@ -161,6 +161,7 @@ patch_enable_all ()
 	enable_ntdll_Heap_FreeLists="$1"
 	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Junction_Points="$1"
+	enable_ntdll_Loader_Machine_Type="$1"
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
@@ -548,6 +549,9 @@ patch_enable ()
 			;;
 		ntdll-Junction_Points)
 			enable_ntdll_Junction_Points="$2"
+			;;
+		ntdll-Loader_Machine_Type)
+			enable_ntdll_Loader_Machine_Type="$2"
 			;;
 		ntdll-NtQueryEaFile)
 			enable_ntdll_NtQueryEaFile="$2"
@@ -1705,6 +1709,13 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	fi
 	enable_ntdll_Fix_Free=1
 	enable_ntdll_NtQueryEaFile=1
+fi
+
+if test "$enable_ntdll_DllRedirects" -eq 1; then
+	if test "$enable_ntdll_Loader_Machine_Type" -gt 1; then
+		abort "Patchset ntdll-Loader_Machine_Type disabled, but ntdll-DllRedirects depends on that."
+	fi
+	enable_ntdll_Loader_Machine_Type=1
 fi
 
 if test "$enable_ntdll_CLI_Images" -eq 1; then
@@ -3267,6 +3278,21 @@ if test "$enable_ntdll_DeviceType_Systemroot" -eq 1; then
 	patch_apply ntdll-DeviceType_Systemroot/0001-ntdll-Return-fake-device-type-when-systemroot-is-loc.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Return fake device type when systemroot is located on virtual disk.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Loader_Machine_Type
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38021] Check architecture before trying to load libraries
+# |
+# | Modified files:
+# |   *	dlls/ntdll/loader.c
+# |
+if test "$enable_ntdll_Loader_Machine_Type" -eq 1; then
+	patch_apply ntdll-Loader_Machine_Type/0001-ntdll-Check-architecture-before-loading-module.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Check architecture before loading module.", 1 },';
 	) >> "$patchlist"
 fi
 

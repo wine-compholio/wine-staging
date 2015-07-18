@@ -1,0 +1,206 @@
+From a9e0627c59b5ddf2f91d5ceea61a0401afc27ce4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 18 Jul 2015 04:52:55 +0200
+Subject: ntdll: Check architecture before loading module.
+
+---
+ dlls/ntdll/loader.c | 139 +++++++++++++++++++++++++++++++++++++++++++++++++---
+ 1 file changed, 131 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index bef0ab1..0486517 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -1911,6 +1911,108 @@ done:
+     return status;
+ }
+ 
++#if defined(__i386__)
++#define CURRENT_ARCH IMAGE_FILE_MACHINE_I386
++#elif defined(__x86_64__)
++#define CURRENT_ARCH IMAGE_FILE_MACHINE_AMD64
++#elif defined(__arm__)
++#define CURRENT_ARCH IMAGE_FILE_MACHINE_ARM
++#elif defined(__aarch64__)
++#define CURRENT_ARCH IMAGE_FILE_MACHINE_ARM64
++#endif
++
++/***********************************************************************
++ *  get_machine_type  (internal)
++ *
++ * Determines the machine type of a module. Based on the code in
++ * dlls/kernel32/module.c.
++ */
++static WORD get_machine_type( HANDLE hfile )
++{
++    union
++    {
++        struct
++        {
++            unsigned char magic[4];
++            unsigned char class;
++            unsigned char data;
++            unsigned char version;
++            unsigned char ignored[9];
++            unsigned short type;
++            unsigned short machine;
++        } elf;
++        struct
++        {
++            unsigned int magic;
++            unsigned int cputype;
++            unsigned int cpusubtype;
++            unsigned int filetype;
++        } macho;
++        IMAGE_DOS_HEADER mz;
++    } header;
++
++    IO_STATUS_BLOCK io;
++    LARGE_INTEGER offset;
++
++    /* Seek to the start of the file and read the header information. */
++    offset.QuadPart = 0;
++    if (NtReadFile( hfile, 0, NULL, 0, &io, &header, sizeof(header), &offset, NULL )) return 0;
++    if (io.Information < sizeof(header)) return 0;
++
++    if (!memcmp( header.elf.magic, "\177ELF", 4 ))
++    {
++#ifdef WORDS_BIGENDIAN
++        if (header.elf.data == 1)
++#else
++        if (header.elf.data == 2)
++#endif
++        {
++            header.elf.machine = RtlUshortByteSwap( header.elf.machine );
++        }
++
++        switch(header.elf.machine)
++        {
++            case 3:   return IMAGE_FILE_MACHINE_I386;
++            case 20:  return IMAGE_FILE_MACHINE_POWERPC;
++            case 40:  return IMAGE_FILE_MACHINE_ARMNT;
++            case 50:  return IMAGE_FILE_MACHINE_IA64;
++            case 62:  return IMAGE_FILE_MACHINE_AMD64;
++            case 183: return IMAGE_FILE_MACHINE_ARM64;
++            default:  return 0;
++        }
++    }
++    /* Mach-o File with Endian set to Big Endian or Little Endian */
++    else if (header.macho.magic == 0xfeedface || header.macho.magic == 0xcefaedfe ||
++             header.macho.magic == 0xfeedfacf || header.macho.magic == 0xcffaedfe)
++    {
++        if (header.macho.magic == 0xcefaedfe || header.macho.magic == 0xcffaedfe)
++            header.macho.cputype = RtlUlongByteSwap( header.macho.cputype );
++
++        switch(header.macho.cputype)
++        {
++            case 0x00000007: return IMAGE_FILE_MACHINE_I386;
++            case 0x01000007: return IMAGE_FILE_MACHINE_AMD64;
++            case 0x0000000c: return IMAGE_FILE_MACHINE_ARMNT;
++            case 0x0100000c: return IMAGE_FILE_MACHINE_ARM64;
++            case 0x00000012: return IMAGE_FILE_MACHINE_POWERPC;
++            default:         return 0;
++        }
++    }
++    /* Not ELF, try DOS */
++    else if (header.mz.e_magic == IMAGE_DOS_SIGNATURE)
++    {
++        IMAGE_NT_HEADERS32 ext_header;
++
++        offset.QuadPart = header.mz.e_lfanew;
++        if (NtReadFile( hfile, 0, NULL, 0, &io, &ext_header, sizeof(ext_header), &offset, NULL )) return 0;
++        if (io.Information < sizeof(ext_header)) return 0;
++
++        if (!memcmp( &ext_header.Signature, "PE\0\0", 4 ))
++            return ext_header.FileHeader.Machine;
++    }
++
++    return 0;
++}
+ 
+ /***********************************************************************
+  *	find_dll_file
+@@ -1918,7 +2020,8 @@ done:
+  * Find the file (or already loaded module) for a given dll name.
+  */
+ static NTSTATUS find_dll_file( const WCHAR *load_path, const WCHAR *libname,
+-                               WCHAR *filename, ULONG *size, WINE_MODREF **pwm, HANDLE *handle )
++                               WCHAR *filename, ULONG *size, WINE_MODREF **pwm, HANDLE *handle,
++                               BOOL check_arch)
+ {
+     OBJECT_ATTRIBUTES attr;
+     IO_STATUS_BLOCK io;
+@@ -1964,12 +2067,15 @@ static NTSTATUS find_dll_file( const WCHAR *load_path, const WCHAR *libname,
+ 
+     if (RtlDetermineDosPathNameType_U( libname ) == RELATIVE_PATH)
+     {
+-        /* we need to search for it */
+-        len = RtlDosSearchPath_U( load_path, libname, NULL, *size, filename, &file_part );
+-        if (len)
++        while (load_path)
+         {
++            /* we need to search for it */
++            len = RtlDosSearchPath_U( load_path, libname, NULL, *size, filename, &file_part );
++            if (!len) break;
++
+             if (len >= *size) goto overflow;
+-            if ((*pwm = find_fullname_module( filename )) || !handle) goto found;
++            if ((*pwm = find_fullname_module( filename ))) goto found;
++            if (!handle) goto next;
+ 
+             if (!RtlDosPathNameToNtPathName_U( filename, &nt_name, NULL, NULL ))
+             {
+@@ -1983,7 +2089,23 @@ static NTSTATUS find_dll_file( const WCHAR *load_path, const WCHAR *libname,
+             attr.SecurityDescriptor = NULL;
+             attr.SecurityQualityOfService = NULL;
+             if (NtOpenFile( handle, GENERIC_READ, &attr, &io, FILE_SHARE_READ|FILE_SHARE_DELETE, FILE_SYNCHRONOUS_IO_NONALERT|FILE_NON_DIRECTORY_FILE )) *handle = 0;
+-            goto found;
++        #ifdef CURRENT_ARCH
++            if (*handle && check_arch)
++            {
++                WORD machine_type = get_machine_type( *handle );
++                if (machine_type && machine_type != CURRENT_ARCH)
++                {
++                    FIXME( "skipping %s because of wrong architecture\n", debugstr_w(filename) );
++                    NtClose( *handle );
++                    *handle = 0;
++                }
++            }
++        #endif
++            if (*handle) goto found;
++
++        next:
++            load_path = strchrW(load_path, ';');
++            if (load_path) load_path++;
+         }
+ 
+         /* not found */
+@@ -2040,6 +2162,7 @@ overflow:
+  */
+ static NTSTATUS load_dll( LPCWSTR load_path, LPCWSTR libname, DWORD flags, WINE_MODREF** pwm )
+ {
++    BOOL data = flags & (LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_DATAFILE_EXCLUSIVE);
+     enum loadorder loadorder;
+     WCHAR buffer[32];
+     WCHAR *filename;
+@@ -2055,7 +2178,7 @@ static NTSTATUS load_dll( LPCWSTR load_path, LPCWSTR libname, DWORD flags, WINE_
+     size = sizeof(buffer);
+     for (;;)
+     {
+-        nts = find_dll_file( load_path, libname, filename, &size, pwm, &handle );
++        nts = find_dll_file( load_path, libname, filename, &size, pwm, &handle, !data );
+         if (nts == STATUS_SUCCESS) break;
+         if (filename != buffer) RtlFreeHeap( GetProcessHeap(), 0, filename );
+         if (nts != STATUS_BUFFER_TOO_SMALL) return nts;
+@@ -2192,7 +2315,7 @@ NTSTATUS WINAPI LdrGetDllHandle( LPCWSTR load_path, ULONG flags, const UNICODE_S
+     size = sizeof(buffer);
+     for (;;)
+     {
+-        status = find_dll_file( load_path, name->Buffer, filename, &size, &wm, NULL );
++        status = find_dll_file( load_path, name->Buffer, filename, &size, &wm, NULL, TRUE );
+         if (filename != buffer) RtlFreeHeap( GetProcessHeap(), 0, filename );
+         if (status != STATUS_BUFFER_TOO_SMALL) break;
+         /* grow the buffer and retry */
+-- 
+2.4.5
+

@@ -4485,19 +4485,25 @@ fi
 # | 	dlls/vcomp90/vcomp90.spec
 # |
 if test "$enable_vcomp_Functions" -eq 1; then
-	patch_apply vcomp-Functions/0001-vcomp-Implement-_vcomp_for_static_simple_init-and-_v.patch
-	patch_apply vcomp-Functions/0002-vcomp-tests-Add-tests-for-_vcomp_for_static_simple_i.patch
-	patch_apply vcomp-Functions/0003-vcomp-Implement-_vcomp_for_static_init.patch
-	patch_apply vcomp-Functions/0004-vcomp-tests-Add-tests-for-_vcomp_for_static_init.patch
-	patch_apply vcomp-Functions/0005-vcomp-Implement-omp_in_parallel.patch
-	patch_apply vcomp-Functions/0006-vcomp-Implement-_vcomp_for_dynamic_init-and-_vcomp_f.patch
+	patch_apply vcomp-Functions/0001-vcomp-Split-team-data-and-task-data.patch
+	patch_apply vcomp-Functions/0002-vcomp-Fix-handling-of-_vcomp_fork-with-ifval-FALSE.patch
+	patch_apply vcomp-Functions/0003-vcomp-Implement-omp_in_parallel-and-add-tests.patch
+	patch_apply vcomp-Functions/0004-vcomp-Implement-_vcomp_for_static_simple_init-and-_v.patch
+	patch_apply vcomp-Functions/0005-vcomp-tests-Add-tests-for-_vcomp_for_static_simple_i.patch
+	patch_apply vcomp-Functions/0006-vcomp-Implement-_vcomp_for_static_init.patch
+	patch_apply vcomp-Functions/0007-vcomp-tests-Add-tests-for-_vcomp_for_static_init.patch
+	patch_apply vcomp-Functions/0008-vcomp-Implement-_vcomp_for_dynamic_init-and-_vcomp_f.patch
+	patch_apply vcomp-Functions/0009-vcomp-tests-Add-tests-for-_vcomp_for_dynamic_init.patch
 	(
+		echo '+    { "Sebastian Lackner", "vcomp: Split team data and task data.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp: Fix handling of _vcomp_fork with ifval == FALSE.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp: Implement omp_in_parallel and add tests.", 1 },';
 		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_for_static_simple_init and _vcomp_for_static_end.", 1 },';
 		echo '+    { "Sebastian Lackner", "vcomp/tests: Add tests for _vcomp_for_static_simple_init.", 1 },';
 		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_for_static_init.", 1 },';
 		echo '+    { "Sebastian Lackner", "vcomp/tests: Add tests for _vcomp_for_static_init.", 1 },';
-		echo '+    { "Sebastian Lackner", "vcomp: Implement omp_in_parallel.", 1 },';
-		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_for_dynamic_init and _vcomp_for_dynamic_next and add tests.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_for_dynamic_init and _vcomp_for_dynamic_next.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp/tests: Add tests for _vcomp_for_dynamic_init.", 1 },';
 	) >> "$patchlist"
 fi
 

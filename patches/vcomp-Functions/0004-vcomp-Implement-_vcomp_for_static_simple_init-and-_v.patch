@@ -1,36 +1,34 @@
-From 3ebb9a8afbb3592c6988eb4b6cc2f0872fef45fb Mon Sep 17 00:00:00 2001
+From a2e77ca2e3e956aaabaa5190a0e8cc822349f1a8 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 11 Jul 2015 18:59:41 +0200
 Subject: vcomp: Implement _vcomp_for_static_simple_init and
  _vcomp_for_static_end.
 
 ---
- dlls/vcomp/main.c           | 90 +++++++++++++++++++++++++++++++++++++++++++++
- dlls/vcomp/vcomp.spec       |  4 +-
- dlls/vcomp100/vcomp100.spec |  4 +-
- dlls/vcomp90/vcomp90.spec   |  4 +-
- 4 files changed, 96 insertions(+), 6 deletions(-)
+ dlls/vcomp/main.c           | 57 +++++++++++++++++++++++++++++++++++++++++++++
+ dlls/vcomp/vcomp.spec       |  4 ++--
+ dlls/vcomp100/vcomp100.spec |  4 ++--
+ dlls/vcomp90/vcomp90.spec   |  4 ++--
+ 4 files changed, 63 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/vcomp/main.c b/dlls/vcomp/main.c
-index 0f8a272..7000e1b 100644
+index a17407c..b647bb1 100644
 --- a/dlls/vcomp/main.c
 +++ b/dlls/vcomp/main.c
-@@ -345,6 +345,96 @@ int CDECL _vcomp_sections_next(void)
+@@ -363,6 +363,63 @@ int CDECL _vcomp_sections_next(void)
      return i;
  }
  
-+void CDECL _vcomp_for_static_simple_init(unsigned int first, unsigned int last, int step, BOOL forward,
-+                                         unsigned int *begin, unsigned int *end)
++void CDECL _vcomp_for_static_simple_init(unsigned int first, unsigned int last, int step,
++                                         BOOL increment, unsigned int *begin, unsigned int *end)
 +{
++    unsigned int iterations, per_thread, remaining;
 +    struct vcomp_thread_data *thread_data = vcomp_init_thread_data();
 +    struct vcomp_team_data *team_data = thread_data->team;
-+    unsigned int iterations, per_thread, remaining;
-+    DWORD num_threads, thread_num;
++    int num_threads = team_data ? team_data->num_threads : 1;
++    int thread_num = thread_data->thread_num;
 +
-+    TRACE("(%d, %d, %d, %d, %p, %p)\n", first, last, step, forward, begin, end);
-+
-+    num_threads = team_data->num_threads;
-+    thread_num  = thread_data->thread_num;
++    TRACE("(%u, %u, %d, %u, %p, %p)\n", first, last, step, increment, begin, end);
 +
 +    if (num_threads == 1)
 +    {
@@ -42,78 +40,47 @@ index 0f8a272..7000e1b 100644
 +    if (step <= 0)
 +    {
 +        *begin = 0;
-+        *end   = forward ? -1 : 1;
++        *end   = increment ? -1 : 1;
 +        return;
 +    }
 +
-+    if (forward)
-+    {
-+        DWORD64 last64 = last;
-+        if (last64 < first)
-+            last64 += 0x100000000;
-+
-+        iterations = 1 + (last64 - first) / step;
-+        per_thread = iterations / num_threads;
-+        remaining  = iterations - per_thread * num_threads;
-+
-+        if (thread_num < remaining)
-+        {
-+            per_thread++;
-+        }
-+        else if (per_thread)
-+        {
-+            first += remaining * step;
-+        }
-+        else
-+        {
-+            *begin = first;
-+            *end   = first - step;
-+            return;
-+        }
-+
-+        *begin = first + per_thread * thread_num * step;
-+        *end   = *begin + (per_thread - 1) * step;
-+    }
++    if (increment)
++        iterations = 1 + (last - first) / step;
 +    else
 +    {
-+        DWORD first64 = first;
-+        if (first64 < last)
-+            first64 += 0x100000000;
-+
-+        iterations = 1 + (first64 - last) / step;
-+        per_thread = iterations / num_threads;
-+        remaining  = iterations - per_thread * num_threads;
-+
-+        if (thread_num < remaining)
-+        {
-+            per_thread++;
-+        }
-+        else if (per_thread)
-+        {
-+            first64 -= remaining * step;
-+        }
-+        else
-+        {
-+            *begin = first64;
-+            *end   = first64 + step;
-+            return;
-+        }
-+
-+        *begin = first64 - per_thread * thread_num * step;
-+        *end   = *begin - (per_thread - 1) * step;
++        iterations = 1 + (first - last) / step;
++        step *= -1;
 +    }
++
++    per_thread = iterations / num_threads;
++    remaining  = iterations - per_thread * num_threads;
++
++    if (thread_num < remaining)
++        per_thread++;
++    else if (per_thread)
++        first += remaining * step;
++    else
++    {
++        *begin = first;
++        *end   = first - step;
++        return;
++    }
++
++    *begin = first + per_thread * thread_num * step;
++    *end   = *begin + (per_thread - 1) * step;
 +}
 +
 +void CDECL _vcomp_for_static_end(void)
 +{
 +    TRACE("()\n");
++    /* nothing to do here */
 +}
 +
- static DWORD WINAPI _vcomp_fork_worker(void *param)
+ BOOL CDECL omp_in_parallel(void)
  {
-     struct vcomp_thread_data *thread_data = param;
+     TRACE("()\n");
 diff --git a/dlls/vcomp/vcomp.spec b/dlls/vcomp/vcomp.spec
-index dfbd184..51dc13c 100644
+index 5a5b114..d6b8bf5 100644
 --- a/dlls/vcomp/vcomp.spec
 +++ b/dlls/vcomp/vcomp.spec
 @@ -59,10 +59,10 @@
@@ -130,7 +97,7 @@ index dfbd184..51dc13c 100644
  @ varargs _vcomp_fork(long long ptr)
  @ stub _vcomp_get_thread_num
 diff --git a/dlls/vcomp100/vcomp100.spec b/dlls/vcomp100/vcomp100.spec
-index 6eb6ae5..c2c644a 100644
+index debc5ff..a6933c8 100644
 --- a/dlls/vcomp100/vcomp100.spec
 +++ b/dlls/vcomp100/vcomp100.spec
 @@ -59,10 +59,10 @@
@@ -147,7 +114,7 @@ index 6eb6ae5..c2c644a 100644
  @ varargs _vcomp_fork(long long ptr) vcomp._vcomp_fork
  @ stub _vcomp_get_thread_num
 diff --git a/dlls/vcomp90/vcomp90.spec b/dlls/vcomp90/vcomp90.spec
-index 6eb6ae5..c2c644a 100644
+index debc5ff..a6933c8 100644
 --- a/dlls/vcomp90/vcomp90.spec
 +++ b/dlls/vcomp90/vcomp90.spec
 @@ -59,10 +59,10 @@

@@ -1,0 +1,140 @@
+From f16ccf29286616feb69533c178cfccf2709184d6 Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Wed, 8 Jul 2015 10:55:03 +1000
+Subject: d3dx9_36: Implement D3DXGetShaderOutputSemantics. (rev 2)
+
+---
+ dlls/d3dx9_36/d3dx9_36.spec  |  2 +-
+ dlls/d3dx9_36/shader.c       | 20 +++++++++++++++-
+ dlls/d3dx9_36/tests/shader.c | 54 ++++++++++++++++++++++++++++++++++++++++++++
+ include/d3dx9shader.h        |  1 +
+ 4 files changed, 75 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/d3dx9_36/d3dx9_36.spec b/dlls/d3dx9_36/d3dx9_36.spec
+index 9b55d21..4ae1384 100644
+--- a/dlls/d3dx9_36/d3dx9_36.spec
++++ b/dlls/d3dx9_36/d3dx9_36.spec
+@@ -160,7 +160,7 @@
+ @ stdcall D3DXGetShaderConstantTable(ptr ptr)
+ @ stdcall D3DXGetShaderConstantTableEx(ptr long ptr)
+ @ stdcall D3DXGetShaderInputSemantics(ptr ptr ptr)
+-@ stub D3DXGetShaderOutputSemantics(ptr ptr ptr)
++@ stdcall D3DXGetShaderOutputSemantics(ptr ptr ptr)
+ @ stdcall D3DXGetShaderSamplers(ptr ptr ptr)
+ @ stdcall D3DXGetShaderSize(ptr)
+ @ stdcall D3DXGetShaderVersion(ptr)
+diff --git a/dlls/d3dx9_36/shader.c b/dlls/d3dx9_36/shader.c
+index fecc3ee..07e3ff1 100644
+--- a/dlls/d3dx9_36/shader.c
++++ b/dlls/d3dx9_36/shader.c
+@@ -2171,7 +2171,7 @@ static UINT get_shader_semantics(const DWORD *byte_code, D3DXSEMANTIC *semantics
+     {
+         if (*ptr & (1 << 31))
+         {
+-            FIXME("Opcode expected\n");
++            FIXME("Opcode expected but got %#x\n", *ptr);
+             return 0;
+         }
+         else if ((*ptr & D3DSI_OPCODE_MASK) == D3DSIO_DCL)
+@@ -2222,3 +2222,21 @@ HRESULT WINAPI D3DXGetShaderInputSemantics(const DWORD *byte_code, D3DXSEMANTIC
+ 
+     return D3D_OK;
+ }
++
++
++HRESULT WINAPI D3DXGetShaderOutputSemantics(const DWORD *byte_code, D3DXSEMANTIC *semantics, UINT *count)
++{
++    UINT nb_semantics;
++
++    TRACE("byte_code %p, semantics %p, count %p\n", byte_code, semantics, count);
++
++    if (!byte_code)
++        return D3DERR_INVALIDCALL;
++
++    nb_semantics = get_shader_semantics(byte_code, semantics, D3DSPR_OUTPUT);
++
++    if (count)
++        *count = nb_semantics;
++
++    return D3D_OK;
++}
+diff --git a/dlls/d3dx9_36/tests/shader.c b/dlls/d3dx9_36/tests/shader.c
+index 728cd86..62de9fb 100644
+--- a/dlls/d3dx9_36/tests/shader.c
++++ b/dlls/d3dx9_36/tests/shader.c
+@@ -6572,6 +6572,60 @@ static void test_get_shader_semantics(void)
+     ok(semantics[1].UsageIndex == 0, "Got %u, expected 0\n", semantics[0].UsageIndex);
+     ok(semantics[2].Usage == D3DDECLUSAGE_TEXCOORD, "Got %u, expected %u\n", semantics[2].Usage, D3DDECLUSAGE_TEXCOORD);
+     ok(semantics[2].UsageIndex == 1, "Got %u, expected 1\n", semantics[0].UsageIndex);
++
++    /* Test D3DXGetShaderOutputSemantics */
++
++    /* Check wrong parameters */
++    ret = D3DXGetShaderOutputSemantics(NULL, NULL, NULL);
++    ok(ret == D3DERR_INVALIDCALL, "Returned %#x, expected %#x\n", ret, D3DERR_INVALIDCALL);
++    ret = D3DXGetShaderOutputSemantics(NULL, NULL, &count);
++    ok(ret == D3DERR_INVALIDCALL, "Returned %#x, expected %#x\n", ret, D3DERR_INVALIDCALL);
++    ret = D3DXGetShaderOutputSemantics(NULL, semantics, NULL);
++    ok(ret == D3DERR_INVALIDCALL, "Returned %#x, expected %#x\n", ret, D3DERR_INVALIDCALL);
++    ret = D3DXGetShaderOutputSemantics(NULL, semantics, &count);
++    ok(ret == D3DERR_INVALIDCALL, "Returned %#x, expected %#x\n", ret, D3DERR_INVALIDCALL);
++if (0)
++{
++    /* Crashes on wvistau64 */
++    ret = D3DXGetShaderOutputSemantics(semantics_vs11, NULL, NULL);
++    ok(ret == D3D_OK, "Failed with %#x\n", ret);
++}
++
++    /* Check null semantics pointer */
++    count = 0xdeadbeef;
++    ret = D3DXGetShaderOutputSemantics(semantics_vs11, NULL, &count);
++    ok(ret == D3D_OK, "Failed with %#x\n", ret);
++    ok(count == 1, "Got %u, expected 1\n", count);
++
++    /* Check null count pointer */
++if (0)
++{
++    /* Crashes on wvistau64 */
++    memset(semantics, 0xcc, sizeof(semantics));
++    ret = D3DXGetShaderOutputSemantics(semantics_vs11, semantics, NULL);
++    ok(ret == D3D_OK, "Failed with %#x\n", ret);
++    ok(semantics[0].Usage == D3DDECLUSAGE_COLOR, "Got %u, expected %u\n", semantics[0].Usage, D3DDECLUSAGE_COLOR);
++    ok(semantics[0].UsageIndex == 0, "Got %u, expected 0\n", semantics[0].UsageIndex);
++}
++
++    /* Check with vs11 shader */
++    count = 0xdeadbeef;
++    memset(semantics, 0xcc, sizeof(semantics));
++    ret = D3DXGetShaderOutputSemantics(semantics_vs11, semantics, &count);
++    ok(ret == D3D_OK, "Failed with %#x\n", ret);
++    ok(count == 1, "Got %u, expected 1\n", count);
++    todo_wine
++    ok(semantics[0].Usage == D3DDECLUSAGE_TEXCOORD, "Got %u, expected %u\n", semantics[0].Usage, D3DDECLUSAGE_TEXCOORD);
++    ok(semantics[0].UsageIndex == 0, "Got %u, expected 0\n", semantics[0].UsageIndex);
++
++    /* Check with vs30 shader */
++    count = 0xdeadbeef;
++    memset(semantics, 0xcc, sizeof(semantics));
++    ret = D3DXGetShaderOutputSemantics(semantics_vs30, semantics, &count);
++    ok(ret == D3D_OK, "Failed with %#x\n", ret);
++    ok(count == 1, "Got %u, expected 1\n", count);
++    ok(semantics[0].Usage == D3DDECLUSAGE_COLOR, "Got %u, expected %u\n", semantics[0].Usage, D3DDECLUSAGE_COLOR);
++    ok(semantics[0].UsageIndex == 0, "Got %u, expected 0\n", semantics[0].UsageIndex);
+ }
+ 
+ START_TEST(shader)
+diff --git a/include/d3dx9shader.h b/include/d3dx9shader.h
+index f565432..056033b 100644
+--- a/include/d3dx9shader.h
++++ b/include/d3dx9shader.h
+@@ -316,6 +316,7 @@ const char * WINAPI D3DXGetVertexShaderProfile(struct IDirect3DDevice9 *device);
+ HRESULT WINAPI D3DXFindShaderComment(const DWORD *byte_code, DWORD fourcc, const void **data, UINT *size);
+ HRESULT WINAPI D3DXGetShaderSamplers(const DWORD *byte_code, const char **samplers, UINT *count);
+ HRESULT WINAPI D3DXGetShaderInputSemantics(const DWORD *byte_code, D3DXSEMANTIC *semantics, UINT *count);
++HRESULT WINAPI D3DXGetShaderOuputSemantics(const DWORD *byte_code, D3DXSEMANTIC *semantics, UINT *count);
+ 
+ HRESULT WINAPI D3DXAssembleShaderFromFileA(const char *filename, const D3DXMACRO *defines,
+         ID3DXInclude *include, DWORD flags, ID3DXBuffer **shader, ID3DXBuffer **error_messages);
+-- 
+2.4.5
+

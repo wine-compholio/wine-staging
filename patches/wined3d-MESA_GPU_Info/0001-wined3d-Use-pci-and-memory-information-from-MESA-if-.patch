@@ -1,17 +1,17 @@
-From 32306d330e7da6eb0bf3d20d5f755bfffa8d4109 Mon Sep 17 00:00:00 2001
+From 8ab65c299cd2bed6e81c6fafaf90c10f5c091643 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 11 Jul 2015 04:06:27 +0200
-Subject: wined3d: Use pci and memory information from MESA if possible.
+Subject: wined3d: Use pci and memory information from MESA if possible. (v2)
 
 ---
- dlls/wined3d/directx.c    | 25 +++++++++++++++++++++
+ dlls/wined3d/directx.c    | 25 ++++++++++++++++++
  dlls/wined3d/wined3d_gl.h |  1 +
- dlls/winex11.drv/opengl.c | 57 +++++++++++++++++++++++++++++++++++++++++++++++
+ dlls/winex11.drv/opengl.c | 65 +++++++++++++++++++++++++++++++++++++++++++++++
  include/wine/wgl_driver.h |  2 ++
- 4 files changed, 85 insertions(+)
+ 4 files changed, 93 insertions(+)
 
 diff --git a/dlls/wined3d/directx.c b/dlls/wined3d/directx.c
-index 9ee4a0e..48cc92b 100644
+index 97c7f36..33ad78e 100644
 --- a/dlls/wined3d/directx.c
 +++ b/dlls/wined3d/directx.c
 @@ -231,6 +231,7 @@ static const struct wined3d_extension_map wgl_extension_map[] =
@@ -76,7 +76,7 @@ index 3007516..38c1661 100644
      WINED3D_GL_BLEND_EQUATION,
      WINED3D_GL_NORMALIZED_TEXRECT,
 diff --git a/dlls/winex11.drv/opengl.c b/dlls/winex11.drv/opengl.c
-index 7b8ba82..42816a2 100644
+index 7b8ba82..e9009d4 100644
 --- a/dlls/winex11.drv/opengl.c
 +++ b/dlls/winex11.drv/opengl.c
 @@ -175,6 +175,18 @@ typedef XID GLXPbuffer;
@@ -114,7 +114,7 @@ index 7b8ba82..42816a2 100644
  #undef LOAD_FUNCPTR
  
      if(!X11DRV_WineGL_InitOpenglInfo()) goto failed;
-@@ -3061,6 +3075,42 @@ static BOOL X11DRV_wglSwapIntervalEXT(int interval)
+@@ -3061,6 +3075,50 @@ static BOOL X11DRV_wglSwapIntervalEXT(int interval)
  }
  
  /**
@@ -150,14 +150,22 @@ index 7b8ba82..42816a2 100644
 +    if (!pglXQueryCurrentRendererIntegerMESA || !memory)
 +        return FALSE;
 +
-+    return pglXQueryCurrentRendererIntegerMESA(GLX_RENDERER_VIDEO_MEMORY_MESA, memory);
++    if (!pglXQueryCurrentRendererIntegerMESA(GLX_RENDERER_VIDEO_MEMORY_MESA, memory))
++        return FALSE;
++
++    /* Some MESA drivers return a video memory of 0 MB. This doesn't make any sense,
++     * so fall back to other methods. */
++    if (!*memory)
++        return FALSE;
++
++    return TRUE;
 +}
 +
 +/**
   * X11DRV_wglSetPixelFormatWINE
   *
   * WGL_WINE_pixel_format_passthrough: wglSetPixelFormatWINE
-@@ -3211,6 +3261,13 @@ static void X11DRV_WineGL_LoadExtensions(void)
+@@ -3211,6 +3269,13 @@ static void X11DRV_WineGL_LoadExtensions(void)
  
      /* WINE-specific WGL Extensions */
  

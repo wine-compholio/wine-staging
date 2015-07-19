@@ -4714,7 +4714,7 @@ fi
 if test "$enable_wined3d_MESA_GPU_Info" -eq 1; then
 	patch_apply wined3d-MESA_GPU_Info/0001-wined3d-Use-pci-and-memory-information-from-MESA-if-.patch
 	(
-		echo '+    { "Michael Müller", "wined3d: Use pci and memory information from MESA if possible.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Use pci and memory information from MESA if possible.", 2 },';
 	) >> "$patchlist"
 fi
 

@@ -91,6 +91,7 @@ patch_enable_all ()
 	enable_d3dx9_24_ID3DXEffect="$1"
 	enable_d3dx9_25_ID3DXEffect="$1"
 	enable_d3dx9_26_ID3DXEffect="$1"
+	enable_d3dx9_33_Share_Source="$1"
 	enable_d3dx9_36_AnimationController="$1"
 	enable_d3dx9_36_CloneEffect="$1"
 	enable_d3dx9_36_D3DXStubs="$1"
@@ -339,6 +340,9 @@ patch_enable ()
 			;;
 		d3dx9_26-ID3DXEffect)
 			enable_d3dx9_26_ID3DXEffect="$2"
+			;;
+		d3dx9_33-Share_Source)
+			enable_d3dx9_33_Share_Source="$2"
 			;;
 		d3dx9_36-AnimationController)
 			enable_d3dx9_36_AnimationController="$2"
@@ -1778,6 +1782,13 @@ if test "$enable_d3dx9_36_DXTn" -eq 1; then
 	enable_wined3d_DXTn=1
 fi
 
+if test "$enable_d3dx9_33_Share_Source" -eq 1; then
+	if test "$enable_d3dx9_36_D3DXStubs" -gt 1; then
+		abort "Patchset d3dx9_36-D3DXStubs disabled, but d3dx9_33-Share_Source depends on that."
+	fi
+	enable_d3dx9_36_D3DXStubs=1
+fi
+
 if test "$enable_d3dx9_24_ID3DXEffect" -eq 1; then
 	if test "$enable_d3dx9_25_ID3DXEffect" -gt 1; then
 		abort "Patchset d3dx9_25-ID3DXEffect disabled, but d3dx9_24-ID3DXEffect depends on that."
@@ -1942,23 +1953,6 @@ if test "$enable_Staging" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1975,6 +1969,23 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2155,6 +2166,51 @@ if test "$enable_d3dx9_26_ID3DXEffect" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset d3dx9_36-D3DXStubs
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#31984] Add stub for D3DXComputeTangentFrameEx
+# |   *	[#26379] Support for D3DXComputeNormals
+# |   *	[#38334] Add stub for D3DXFrameFind
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_24/d3dx9_24.spec, dlls/d3dx9_25/d3dx9_25.spec, dlls/d3dx9_26/d3dx9_26.spec, dlls/d3dx9_27/d3dx9_27.spec,
+# | 	dlls/d3dx9_28/d3dx9_28.spec, dlls/d3dx9_29/d3dx9_29.spec, dlls/d3dx9_30/d3dx9_30.spec, dlls/d3dx9_31/d3dx9_31.spec,
+# | 	dlls/d3dx9_32/d3dx9_32.spec, dlls/d3dx9_33/d3dx9_33.spec, dlls/d3dx9_34/d3dx9_34.spec, dlls/d3dx9_35/d3dx9_35.spec,
+# | 	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/mesh.c, dlls/d3dx9_37/d3dx9_37.spec, dlls/d3dx9_38/d3dx9_38.spec,
+# | 	dlls/d3dx9_39/d3dx9_39.spec, dlls/d3dx9_40/d3dx9_40.spec, dlls/d3dx9_41/d3dx9_41.spec, dlls/d3dx9_42/d3dx9_42.spec,
+# | 	dlls/d3dx9_43/d3dx9_43.spec
+# |
+if test "$enable_d3dx9_36_D3DXStubs" -eq 1; then
+	patch_apply d3dx9_36-D3DXStubs/0001-d3dx9_36-Add-stub-for-D3DXComputeTangentFrameEx.patch
+	patch_apply d3dx9_36-D3DXStubs/0002-d3dx9_36-Add-stub-for-D3DXIntersect.patch
+	patch_apply d3dx9_36-D3DXStubs/0003-d3dx9_36-Implement-D3DXComputeNormals.patch
+	patch_apply d3dx9_36-D3DXStubs/0004-d3dx9_36-Add-stub-for-D3DXComputeNormalMap.patch
+	patch_apply d3dx9_36-D3DXStubs/0005-d3dx9_36-Add-D3DXFrameFind-stub.patch
+	(
+		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeTangentFrameEx.", 1 },';
+		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXIntersect.", 1 },';
+		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXComputeNormals.", 1 },';
+		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeNormalMap.", 1 },';
+		echo '+    { "Andrey Gusev", "d3dx9_36: Add D3DXFrameFind stub.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3dx9_33-Share_Source
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#21817] Share source of d3dx9_36 with d3dx9_33 to avoid Wine DLL forwards
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_33/Makefile.in, dlls/d3dx9_33/d3dx9_33.spec, dlls/d3dx9_33/d3dx9_33_main.c
+# |
+if test "$enable_d3dx9_33_Share_Source" -eq 1; then
+	patch_apply d3dx9_33-Share_Source/0001-d3dx9_33-Share-the-source-with-d3dx9_36.patch
+	(
+		echo '+    { "Alistair Leslie-Hughes", "d3dx9_33: Share the source with d3dx9_36.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-DXTn
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2220,36 +2276,6 @@ if test "$enable_d3dx9_36_CloneEffect" -eq 1; then
 	patch_apply d3dx9_36-CloneEffect/0001-d3dx9_36-Improve-stub-for-ID3DXEffectImpl_CloneEffec.patch
 	(
 		echo '+    { "Sebastian Lackner", "d3dx9_36: Improve stub for ID3DXEffectImpl_CloneEffect.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3dx9_36-D3DXStubs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#31984] Add stub for D3DXComputeTangentFrameEx
-# |   *	[#26379] Support for D3DXComputeNormals
-# |   *	[#38334] Add stub for D3DXFrameFind
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_24/d3dx9_24.spec, dlls/d3dx9_25/d3dx9_25.spec, dlls/d3dx9_26/d3dx9_26.spec, dlls/d3dx9_27/d3dx9_27.spec,
-# | 	dlls/d3dx9_28/d3dx9_28.spec, dlls/d3dx9_29/d3dx9_29.spec, dlls/d3dx9_30/d3dx9_30.spec, dlls/d3dx9_31/d3dx9_31.spec,
-# | 	dlls/d3dx9_32/d3dx9_32.spec, dlls/d3dx9_33/d3dx9_33.spec, dlls/d3dx9_34/d3dx9_34.spec, dlls/d3dx9_35/d3dx9_35.spec,
-# | 	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/mesh.c, dlls/d3dx9_37/d3dx9_37.spec, dlls/d3dx9_38/d3dx9_38.spec,
-# | 	dlls/d3dx9_39/d3dx9_39.spec, dlls/d3dx9_40/d3dx9_40.spec, dlls/d3dx9_41/d3dx9_41.spec, dlls/d3dx9_42/d3dx9_42.spec,
-# | 	dlls/d3dx9_43/d3dx9_43.spec
-# |
-if test "$enable_d3dx9_36_D3DXStubs" -eq 1; then
-	patch_apply d3dx9_36-D3DXStubs/0001-d3dx9_36-Add-stub-for-D3DXComputeTangentFrameEx.patch
-	patch_apply d3dx9_36-D3DXStubs/0002-d3dx9_36-Add-stub-for-D3DXIntersect.patch
-	patch_apply d3dx9_36-D3DXStubs/0003-d3dx9_36-Implement-D3DXComputeNormals.patch
-	patch_apply d3dx9_36-D3DXStubs/0004-d3dx9_36-Add-stub-for-D3DXComputeNormalMap.patch
-	patch_apply d3dx9_36-D3DXStubs/0005-d3dx9_36-Add-D3DXFrameFind-stub.patch
-	(
-		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeTangentFrameEx.", 1 },';
-		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXIntersect.", 1 },';
-		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXComputeNormals.", 1 },';
-		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeNormalMap.", 1 },';
-		echo '+    { "Andrey Gusev", "d3dx9_36: Add D3DXFrameFind stub.", 1 },';
 	) >> "$patchlist"
 fi
 

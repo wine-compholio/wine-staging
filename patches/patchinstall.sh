@@ -88,6 +88,7 @@ patch_enable_all ()
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Skip_Tests="$1"
 	enable_d3d9_Surface_Refcount="$1"
+	enable_d3dx10_43_D3DX10CreateEffectFromFile="$1"
 	enable_d3dx9_24_ID3DXEffect="$1"
 	enable_d3dx9_25_ID3DXEffect="$1"
 	enable_d3dx9_26_ID3DXEffect="$1"
@@ -331,6 +332,9 @@ patch_enable ()
 			;;
 		d3d9-Surface_Refcount)
 			enable_d3d9_Surface_Refcount="$2"
+			;;
+		d3dx10_43-D3DX10CreateEffectFromFile)
+			enable_d3dx10_43_D3DX10CreateEffectFromFile="$2"
 			;;
 		d3dx9_24-ID3DXEffect)
 			enable_d3dx9_24_ID3DXEffect="$2"
@@ -2127,6 +2131,23 @@ if test "$enable_d3d9_Surface_Refcount" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset d3dx10_43-D3DX10CreateEffectFromFile
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#27739] Add stubs for d3dx10_43.D3DX10CreateEffectFromFileA/W
+# |
+# | Modified files:
+# |   *	dlls/d3dx10_43/d3dx10_43.spec, dlls/d3dx10_43/d3dx10_43_main.c, include/Makefile.in, include/d3dx10core.idl
+# |
+if test "$enable_d3dx10_43_D3DX10CreateEffectFromFile" -eq 1; then
+	patch_apply d3dx10_43-D3DX10CreateEffectFromFile/0001-d3dx10_43-Add-ID3DX10ThreadPump-interface.patch
+	patch_apply d3dx10_43-D3DX10CreateEffectFromFile/0002-d3dx10_43-Add-D3DX10CreateEffectFromFileA-W-stubs.patch
+	(
+		echo '+    { "Alistair Leslie-Hughes", "d3dx10_43: Add ID3DX10ThreadPump interface.", 1 },';
+		echo '+    { "Alistair Leslie-Hughes", "d3dx10_43: Add D3DX10CreateEffectFromFileA/W stubs.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset d3dx9_25-ID3DXEffect
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2794,18 +2815,6 @@ if test "$enable_kernel32_CompareStringEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-File_Permissions
 # |
 # | Modified files:
@@ -2866,6 +2875,18 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Zhaonan Liang", "include: Add declaration for FILE_LINK_INFORMATION.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Add tests for FileLinkInformation class.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement support for FileLinkInformation class in NtSetInformationFile.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
 	) >> "$patchlist"
 fi
 

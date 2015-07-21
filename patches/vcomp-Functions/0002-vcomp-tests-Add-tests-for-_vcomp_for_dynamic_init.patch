@@ -1,4 +1,4 @@
-From 23a2077048d54113d81a05a475d63c2df37c2d63 Mon Sep 17 00:00:00 2001
+From a175543f726f1205054a69bef12d901453326016 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 19 Jul 2015 01:05:02 +0200
 Subject: vcomp/tests: Add tests for _vcomp_for_dynamic_init.
@@ -8,7 +8,7 @@ Subject: vcomp/tests: Add tests for _vcomp_for_dynamic_init.
  1 file changed, 68 insertions(+)
 
 diff --git a/dlls/vcomp/tests/vcomp.c b/dlls/vcomp/tests/vcomp.c
-index 205899d..c7a0e60 100644
+index bb1026b..769edf9 100644
 --- a/dlls/vcomp/tests/vcomp.c
 +++ b/dlls/vcomp/tests/vcomp.c
 @@ -32,6 +32,9 @@ static BOOL   (WINAPI *pDeactivateActCtx)(DWORD, ULONG_PTR);
@@ -17,7 +17,7 @@ index 205899d..c7a0e60 100644
  static void  (CDECL   *p_vcomp_barrier)(void);
 +static void  (CDECL   *p_vcomp_for_dynamic_init)(unsigned int flags, unsigned int first, unsigned int last,
 +                                                 int step, unsigned int chunksize);
-+static BOOL  (CDECL   *p_vcomp_for_dynamic_next)(unsigned int *begin, unsigned int *end);
++static int   (CDECL   *p_vcomp_for_dynamic_next)(unsigned int *begin, unsigned int *end);
  static void  (CDECL   *p_vcomp_for_static_end)(void);
  static void  (CDECL   *p_vcomp_for_static_init)(int first, int last, int step, int chunksize, unsigned int *loops,
                                                  int *begin, int *end, int *next, int *lastchunk);
@@ -30,7 +30,7 @@ index 205899d..c7a0e60 100644
      VCOMP_GET_PROC(_vcomp_for_static_end);
      VCOMP_GET_PROC(_vcomp_for_static_init);
      VCOMP_GET_PROC(_vcomp_for_static_simple_init);
-@@ -874,6 +879,68 @@ static void test_vcomp_for_static_init(void)
+@@ -849,6 +854,68 @@ static void test_vcomp_for_static_init(void)
      pomp_set_num_threads(max_threads);
  }
  
@@ -38,21 +38,21 @@ index 205899d..c7a0e60 100644
 +{
 +    unsigned int begin, end;
 +
-+    p_vcomp_for_dynamic_init(0x40, 1, 100000, 1, 30);
++    p_vcomp_for_dynamic_init(0x40, 1, 999983, 1, 30);
 +    while (p_vcomp_for_dynamic_next(&begin, &end))
 +    {
 +        InterlockedExchangeAdd(a, end - begin + 1);
 +        Sleep(1);
 +    }
 +
-+    p_vcomp_for_dynamic_init(0, 1337, 1, 1, 50);
++    p_vcomp_for_dynamic_init(0, 99991, 1, 1, 50);
 +    while (p_vcomp_for_dynamic_next(&begin, &end))
 +    {
 +        InterlockedExchangeAdd(b, begin - end + 1);
 +        Sleep(1);
 +    }
 +
-+    p_vcomp_for_dynamic_init(0x40, 1, 100000, 7, 30);
++    p_vcomp_for_dynamic_init(0x40, 1, 9973, 7, 30);
 +    while (p_vcomp_for_dynamic_next(&begin, &end))
 +    {
 +        while (begin <= end)
@@ -72,9 +72,9 @@ index 205899d..c7a0e60 100644
 +
 +    a = b = c = 0;
 +    for_dynamic_cb(&a, &b, &c);
-+    ok(a == 100000, "expected a = 100000, got %d\n", a);
-+    ok(b == 1337, "expected b = 1337, got %d\n", b);
-+    ok(c == 14286, "expected c = 14286, got %d\n", c);
++    ok(a == 999983, "expected a == 999983, got %d\n", a);
++    ok(b == 99991, "expected b == 99991, got %d\n", b);
++    ok(c == 1425, "expected c == 1425, got %d\n", c);
 +
 +    for (i = 1; i <= 4; i++)
 +    {
@@ -82,15 +82,15 @@ index 205899d..c7a0e60 100644
 +
 +        a = b = c = 0;
 +        p_vcomp_fork(TRUE, 3, for_dynamic_cb, &a, &b, &c);
-+        ok(a == 100000, "expected a = 100000, got %d\n", a);
-+        ok(b == 1337, "expected b = 1337, got %d\n", b);
-+        ok(c == 14286, "expected c = 14286, got %d\n", c);
++        ok(a == 999983, "expected a == 999983, got %d\n", a);
++        ok(b == 99991, "expected b == 99991, got %d\n", b);
++        ok(c == 1425, "expected c == 1425, got %d\n", c);
 +
 +        a = b = c = 0;
 +        p_vcomp_fork(FALSE, 3, for_dynamic_cb, &a, &b, &c);
-+        ok(a == 100000, "expected a = 100000, got %d\n", a);
-+        ok(b == 1337, "expected b = 1337, got %d\n", b);
-+        ok(c == 14286, "expected c = 14286, got %d\n", c);
++        ok(a == 999983, "expected a == 999983, got %d\n", a);
++        ok(b == 99991, "expected b == 99991, got %d\n", b);
++        ok(c == 1425, "expected c == 1425, got %d\n", c);
 +    }
 +
 +    pomp_set_num_threads(max_threads);
@@ -99,7 +99,7 @@ index 205899d..c7a0e60 100644
  START_TEST(vcomp)
  {
      if (!init_vcomp())
-@@ -885,6 +952,7 @@ START_TEST(vcomp)
+@@ -860,6 +927,7 @@ START_TEST(vcomp)
      test_vcomp_sections_init();
      test_vcomp_for_static_simple_init();
      test_vcomp_for_static_init();

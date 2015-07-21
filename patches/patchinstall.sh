@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 1a0c4efba9430382e3427cb3f355906bc2a66861"
+	echo "  commit 50d9d187c57448ca3f14de6a8eeb2520179db5b8"
 	echo ""
 }
 
@@ -129,7 +129,6 @@ patch_enable_all ()
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_GetLogicalProcessorInformationEx="$1"
-	enable_kernel32_InsertMode="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_Profile="$1"
@@ -455,9 +454,6 @@ patch_enable ()
 			;;
 		kernel32-GetLogicalProcessorInformationEx)
 			enable_kernel32_GetLogicalProcessorInformationEx="$2"
-			;;
-		kernel32-InsertMode)
-			enable_kernel32_InsertMode="$2"
 			;;
 		kernel32-Named_Pipe)
 			enable_kernel32_Named_Pipe="$2"
@@ -1779,18 +1775,22 @@ if test "$enable_d3dx9_36_AnimationController" -eq 1; then
 	enable_d3dx9_36_DXTn=1
 fi
 
+if test "$enable_d3dx9_33_Share_Source" -eq 1; then
+	if test "$enable_d3dx9_36_D3DXStubs" -gt 1; then
+		abort "Patchset d3dx9_36-D3DXStubs disabled, but d3dx9_33-Share_Source depends on that."
+	fi
+	if test "$enable_d3dx9_36_DXTn" -gt 1; then
+		abort "Patchset d3dx9_36-DXTn disabled, but d3dx9_33-Share_Source depends on that."
+	fi
+	enable_d3dx9_36_D3DXStubs=1
+	enable_d3dx9_36_DXTn=1
+fi
+
 if test "$enable_d3dx9_36_DXTn" -eq 1; then
 	if test "$enable_wined3d_DXTn" -gt 1; then
 		abort "Patchset wined3d-DXTn disabled, but d3dx9_36-DXTn depends on that."
 	fi
 	enable_wined3d_DXTn=1
-fi
-
-if test "$enable_d3dx9_33_Share_Source" -eq 1; then
-	if test "$enable_d3dx9_36_D3DXStubs" -gt 1; then
-		abort "Patchset d3dx9_36-D3DXStubs disabled, but d3dx9_33-Share_Source depends on that."
-	fi
-	enable_d3dx9_36_D3DXStubs=1
 fi
 
 if test "$enable_d3dx9_24_ID3DXEffect" -eq 1; then
@@ -2190,7 +2190,6 @@ fi
 # Patchset d3dx9_36-D3DXStubs
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#31984] Add stub for D3DXComputeTangentFrameEx
 # |   *	[#26379] Support for D3DXComputeNormals
 # |   *	[#38334] Add stub for D3DXFrameFind
 # |
@@ -2203,32 +2202,13 @@ fi
 # | 	dlls/d3dx9_43/d3dx9_43.spec
 # |
 if test "$enable_d3dx9_36_D3DXStubs" -eq 1; then
-	patch_apply d3dx9_36-D3DXStubs/0001-d3dx9_36-Add-stub-for-D3DXComputeTangentFrameEx.patch
-	patch_apply d3dx9_36-D3DXStubs/0002-d3dx9_36-Add-stub-for-D3DXIntersect.patch
-	patch_apply d3dx9_36-D3DXStubs/0003-d3dx9_36-Implement-D3DXComputeNormals.patch
-	patch_apply d3dx9_36-D3DXStubs/0004-d3dx9_36-Add-stub-for-D3DXComputeNormalMap.patch
-	patch_apply d3dx9_36-D3DXStubs/0005-d3dx9_36-Add-D3DXFrameFind-stub.patch
+	patch_apply d3dx9_36-D3DXStubs/0001-d3dx9_36-Implement-D3DXComputeNormals.patch
+	patch_apply d3dx9_36-D3DXStubs/0002-d3dx9_36-Add-stub-for-D3DXComputeNormalMap.patch
+	patch_apply d3dx9_36-D3DXStubs/0003-d3dx9_36-Add-D3DXFrameFind-stub.patch
 	(
-		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeTangentFrameEx.", 1 },';
-		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXIntersect.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXComputeNormals.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeNormalMap.", 1 },';
 		echo '+    { "Andrey Gusev", "d3dx9_36: Add D3DXFrameFind stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3dx9_33-Share_Source
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#21817] Share source of d3dx9_36 with d3dx9_33 to avoid Wine DLL forwards
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_33/Makefile.in, dlls/d3dx9_33/d3dx9_33.spec, dlls/d3dx9_33/d3dx9_33_main.c
-# |
-if test "$enable_d3dx9_33_Share_Source" -eq 1; then
-	patch_apply d3dx9_33-Share_Source/0001-d3dx9_33-Share-the-source-with-d3dx9_36.patch
-	(
-		echo '+    { "Alistair Leslie-Hughes", "d3dx9_33: Share the source with d3dx9_36.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2273,6 +2253,21 @@ if test "$enable_d3dx9_36_DXTn" -eq 1; then
 	patch_apply d3dx9_36-DXTn/0001-d3dx9_36-Add-dxtn-support.patch
 	(
 		echo '+    { "Christian Costa", "d3dx9_36: Add dxtn support.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3dx9_33-Share_Source
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#21817] Share source of d3dx9_36 with d3dx9_33 to avoid Wine DLL forwards
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_33/Makefile.in, dlls/d3dx9_33/d3dx9_33.spec, dlls/d3dx9_33/d3dx9_33_main.c
+# |
+if test "$enable_d3dx9_33_Share_Source" -eq 1; then
+	patch_apply d3dx9_33-Share_Source/0001-d3dx9_33-Share-the-source-with-d3dx9_36.patch
+	(
+		echo '+    { "Alistair Leslie-Hughes", "d3dx9_33: Share the source with d3dx9_36.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2815,6 +2810,18 @@ if test "$enable_kernel32_CompareStringEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-File_Permissions
 # |
 # | Modified files:
@@ -2878,18 +2885,6 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-CopyFileEx
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2931,18 +2926,6 @@ if test "$enable_kernel32_GetLogicalProcessorInformationEx" -eq 1; then
 	patch_apply kernel32-GetLogicalProcessorInformationEx/0001-kernel32-Make-GetLogicalProcessorInformationEx-a-stu.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32: Make GetLogicalProcessorInformationEx a stub which returns TRUE.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-InsertMode
-# |
-# | Modified files:
-# |   *	dlls/kernel32/editline.c
-# |
-if test "$enable_kernel32_InsertMode" -eq 1; then
-	patch_apply kernel32-InsertMode/0001-kernel32-Set-console-InsertMode-immediately.patch
-	(
-		echo '+    { "Hugh McMaster", "kernel32: Set console InsertMode immediately.", 1 },';
 	) >> "$patchlist"
 fi
 

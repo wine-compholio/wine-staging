@@ -66,9 +66,9 @@ for more details.*
 * Add shell32 placeholder icons to match offsets with Windows ([Wine Bug #30185](https://bugs.winehq.org/show_bug.cgi?id=30185))
 * Add stub fltmgr.sys (filter manager driver) ([Wine Bug #23583](https://bugs.winehq.org/show_bug.cgi?id=23583))
 * Add stub for D3DXComputeNormalMap
-* Add stub for D3DXComputeTangentFrameEx ([Wine Bug #31984](https://bugs.winehq.org/show_bug.cgi?id=31984))
+* ~~Add stub for D3DXComputeTangentFrameEx~~ ([Wine Bug #31984](https://bugs.winehq.org/show_bug.cgi?id=31984))
 * Add stub for D3DXFrameFind ([Wine Bug #38334](https://bugs.winehq.org/show_bug.cgi?id=38334))
-* Add stub for D3DXIntersect
+* ~~Add stub for D3DXIntersect~~
 * Add stub for NtSetLdtEntries/ZwSetLdtEntries ([Wine Bug #26268](https://bugs.winehq.org/show_bug.cgi?id=26268))
 * Add stub for gdiplus.GdipCreateEffect ([Wine Bug #32163](https://bugs.winehq.org/show_bug.cgi?id=32163))
 * Add stub for ntoskrnl.ExAcquireResourceExclusiveLite
@@ -118,7 +118,7 @@ for more details.*
 * Enforce that surfaces are flushed after ReleaseDC
 * Ensure NtProtectVirtualMemory and NtCreateSection are on separate pages ([Wine Bug #33162](https://bugs.winehq.org/show_bug.cgi?id=33162))
 * Ensure X11 input events are handled even without explicit message loop ([Wine Bug #8854](https://bugs.winehq.org/show_bug.cgi?id=8854))
-* Ensure console InsertMode changes take effect immediately
+* ~~Ensure console InsertMode changes take effect immediately~~
 * Exception during start of fr-043 caused by missing DXTn support ([Wine Bug #37391](https://bugs.winehq.org/show_bug.cgi?id=37391))
 * Expose PKEY_AudioEndpoint_PhysicalSpeakers device property in PulseAudio driver
 * FEAR 1 installer expects basic_string_wchar_dtor to return NULL ([Wine Bug #37358](https://bugs.winehq.org/show_bug.cgi?id=37358))

@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 50d9d187c57448ca3f14de6a8eeb2520179db5b8"
+	echo "  commit 4e6e9a14852298fe8c17f2666a16d5484cbe50b3"
 	echo ""
 }
 
@@ -129,6 +129,7 @@ patch_enable_all ()
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_GetLogicalProcessorInformationEx="$1"
+	enable_kernel32_LocaleNameToLCID="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_Profile="$1"
@@ -454,6 +455,9 @@ patch_enable ()
 			;;
 		kernel32-GetLogicalProcessorInformationEx)
 			enable_kernel32_GetLogicalProcessorInformationEx="$2"
+			;;
+		kernel32-LocaleNameToLCID)
+			enable_kernel32_LocaleNameToLCID="$2"
 			;;
 		kernel32-Named_Pipe)
 			enable_kernel32_Named_Pipe="$2"
@@ -2810,18 +2814,6 @@ if test "$enable_kernel32_CompareStringEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-File_Permissions
 # |
 # | Modified files:
@@ -2885,6 +2877,18 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset kernel32-CopyFileEx
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2926,6 +2930,21 @@ if test "$enable_kernel32_GetLogicalProcessorInformationEx" -eq 1; then
 	patch_apply kernel32-GetLogicalProcessorInformationEx/0001-kernel32-Make-GetLogicalProcessorInformationEx-a-stu.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32: Make GetLogicalProcessorInformationEx a stub which returns TRUE.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-LocaleNameToLCID
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#30076] Silence repeated LocaleNameToLCID/LCIDToLocaleName unsupported flags FIXMEs
+# |
+# | Modified files:
+# |   *	dlls/kernel32/locale.c
+# |
+if test "$enable_kernel32_LocaleNameToLCID" -eq 1; then
+	patch_apply kernel32-LocaleNameToLCID/0001-kernel32-Silence-repeated-LocaleNameToLCID-unsupport.patch
+	(
+		echo '+    { "Jarkko Korpi", "kernel32: Silence repeated LocaleNameToLCID unsupported flags message.", 1 },';
 	) >> "$patchlist"
 fi
 

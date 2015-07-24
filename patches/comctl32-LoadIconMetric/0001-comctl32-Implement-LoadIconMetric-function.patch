@@ -1,30 +1,21 @@
-From 3e8d16b07793f5794702e31dc08a55a71f46fa1f Mon Sep 17 00:00:00 2001
+From f746bb419f12a1a65e52e3814617afed5fdce7a1 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 7 Aug 2014 01:41:25 +0200
 Subject: comctl32: Implement LoadIconMetric function.
 
----
- dlls/comctl32/Makefile.in   |  1 +
- dlls/comctl32/comctl32.spec |  1 +
- dlls/comctl32/icon.c        | 68 +++++++++++++++++++++++++++++++++++++++++++++
- include/commctrl.h          |  6 ++++
- 4 files changed, 76 insertions(+)
- create mode 100644 dlls/comctl32/icon.c
+Changes by Alistair Leslie-Hughes:
+* Moved LoadIconMetric to commctrl.c
+* Changed INT, PCWSTR type
+* Added function to include/commctrl.h
 
-diff --git a/dlls/comctl32/Makefile.in b/dlls/comctl32/Makefile.in
-index e63f0ac..af49017 100644
---- a/dlls/comctl32/Makefile.in
-+++ b/dlls/comctl32/Makefile.in
-@@ -16,6 +16,7 @@ C_SRCS = \
- 	flatsb.c \
- 	header.c \
- 	hotkey.c \
-+	icon.c \
- 	imagelist.c \
- 	ipaddress.c \
- 	listview.c \
+---
+ dlls/comctl32/comctl32.spec |  1 +
+ dlls/comctl32/commctrl.c    | 39 +++++++++++++++++++++++++++++++++++++++
+ include/commctrl.h          |  7 +++++++
+ 3 files changed, 47 insertions(+)
+
 diff --git a/dlls/comctl32/comctl32.spec b/dlls/comctl32/comctl32.spec
-index 0bd8b13..2b96891 100644
+index 1e92e5f..e61dfbf 100644
 --- a/dlls/comctl32/comctl32.spec
 +++ b/dlls/comctl32/comctl32.spec
 @@ -88,6 +88,7 @@
@@ -35,49 +26,29 @@ index 0bd8b13..2b96891 100644
  381 stdcall -ordinal LoadIconWithScaleDown(ptr wstr long long ptr)
  382 stdcall -noname SmoothScrollWindow(ptr)
  383 stub -noname DoReaderMode
-diff --git a/dlls/comctl32/icon.c b/dlls/comctl32/icon.c
-new file mode 100644
-index 0000000..a664e2c
---- /dev/null
-+++ b/dlls/comctl32/icon.c
-@@ -0,0 +1,68 @@
-+/*
-+ * Comctl32 Icon functions
-+ *
+diff --git a/dlls/comctl32/commctrl.c b/dlls/comctl32/commctrl.c
+index e18c27d..5fbd5f5 100644
+--- a/dlls/comctl32/commctrl.c
++++ b/dlls/comctl32/commctrl.c
+@@ -3,6 +3,7 @@
+  *
+  * Copyright 1997 Dimitrie O. Paun
+  * Copyright 1998,2000 Eric Kohl
 + * Copyright 2014 Michael Müller
-+ *
-+ * This library is free software; you can redistribute it and/or
-+ * modify it under the terms of the GNU Lesser General Public
-+ * License as published by the Free Software Foundation; either
-+ * version 2.1 of the License, or (at your option) any later version.
-+ *
-+ * This library is distributed in the hope that it will be useful,
-+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
-+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-+ * Lesser General Public License for more details.
-+ *
-+ * You should have received a copy of the GNU Lesser General Public
-+ * License along with this library; if not, write to the Free Software
-+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+  *
+  * This library is free software; you can redistribute it and/or
+  * modify it under the terms of the GNU Lesser General Public
+@@ -1646,3 +1647,41 @@ HRESULT WINAPI LoadIconWithScaleDown(HINSTANCE hinst, PCWSTR name, int cx, int c
+     FIXME("stub: %p %s %d %d %p\n", hinst, wine_dbgstr_w(name), cx, cy, icon);
+     return E_NOTIMPL;
+ }
++
++/***********************************************************************
++ * LoadIconMetric [COMCTL32.@]
 + */
-+
-+#include <stdarg.h>
-+#include <string.h>
-+#include "windef.h"
-+#include "winbase.h"
-+#include "wingdi.h"
-+#include "winuser.h"
-+#include "winnls.h"
-+#include "commctrl.h"
-+#include "comctl32.h"
-+#include "wine/debug.h"
-+
-+WINE_DEFAULT_DEBUG_CHANNEL(commctrl);
-+
-+HRESULT WINAPI
-+LoadIconMetric (HINSTANCE hinst, PCWSTR name, INT size, HICON *icon)
++HRESULT WINAPI LoadIconMetric(HINSTANCE hinst, const WCHAR *name, int size, HICON *icon)
 +{
-+    INT width, height;
++    int width, height;
 +
 +    TRACE("(%p %s %d %p)\n", hinst, debugstr_w(name), size, icon);
 +
@@ -92,28 +63,36 @@ index 0000000..a664e2c
 +
 +    if (size == LIM_SMALL)
 +    {
-+        width  = GetSystemMetrics( SM_CXSMICON );
-+        height = GetSystemMetrics( SM_CYSMICON );
++        width  = GetSystemMetrics(SM_CXSMICON);
++        height = GetSystemMetrics(SM_CYSMICON);
 +    }
 +    else if (size == LIM_LARGE)
 +    {
-+        width  = GetSystemMetrics( SM_CXICON );
-+        height = GetSystemMetrics( SM_CYICON );
++        width  = GetSystemMetrics(SM_CXICON);
++        height = GetSystemMetrics(SM_CYICON);
 +    }
 +    else
 +        return E_INVALIDARG;
 +
-+    *icon = LoadImageW( hinst, name, IMAGE_ICON, width, height, LR_SHARED );
++    *icon = LoadImageW(hinst, name, IMAGE_ICON, width, height, LR_SHARED);
 +    if (*icon)
 +        return S_OK;
 +
 +    return HRESULT_FROM_WIN32(GetLastError());
 +}
 diff --git a/include/commctrl.h b/include/commctrl.h
-index 0bcaeb6..525f356 100644
+index 0bcaeb6..0ff1fea 100644
 --- a/include/commctrl.h
 +++ b/include/commctrl.h
-@@ -1374,6 +1374,12 @@ typedef struct tagTBADDBITMAP {
+@@ -43,6 +43,7 @@ LANGID WINAPI GetMUILanguage (VOID);
+ VOID WINAPI InitMUILanguage (LANGID uiLang);
+ 
+ HRESULT WINAPI LoadIconWithScaleDown(HINSTANCE, PCWSTR, int, int, HICON *);
++HRESULT WINAPI LoadIconMetric(HINSTANCE, const WCHAR *, int, HICON *);
+ 
+ #define COMCTL32_VERSION                5  /* dll version */
+ 
+@@ -1374,6 +1375,12 @@ typedef struct tagTBADDBITMAP {
  #define HIST_ADDTOFAVORITES     3
  #define HIST_VIEWTREE           4
  
@@ -127,5 +106,5 @@ index 0bcaeb6..525f356 100644
      HKEY   hkr;
      LPCSTR pszSubKey;
 -- 
-2.1.3
+2.4.5
 

@@ -2054,8 +2054,7 @@ fi
 # |   *	[#35375] Support for LoadIconMetric
 # |
 # | Modified files:
-# |   *	dlls/comctl32/Makefile.in, dlls/comctl32/comctl32.spec, dlls/comctl32/icon.c, dlls/comctl32/tests/misc.c,
-# | 	include/commctrl.h
+# |   *	dlls/comctl32/comctl32.spec, dlls/comctl32/commctrl.c, dlls/comctl32/tests/misc.c, include/commctrl.h
 # |
 if test "$enable_comctl32_LoadIconMetric" -eq 1; then
 	patch_apply comctl32-LoadIconMetric/0001-comctl32-Implement-LoadIconMetric-function.patch

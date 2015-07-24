@@ -2145,9 +2145,11 @@ fi
 if test "$enable_d3dx10_43_D3DX10CreateEffectFromFile" -eq 1; then
 	patch_apply d3dx10_43-D3DX10CreateEffectFromFile/0001-d3dx10_43-Add-ID3DX10ThreadPump-interface.patch
 	patch_apply d3dx10_43-D3DX10CreateEffectFromFile/0002-d3dx10_43-Add-D3DX10CreateEffectFromFileA-W-stubs.patch
+	patch_apply d3dx10_43-D3DX10CreateEffectFromFile/0003-d3dx10_43-Added-D3DX10CreateEffectFromMemory-stub.patch
 	(
 		echo '+    { "Alistair Leslie-Hughes", "d3dx10_43: Add ID3DX10ThreadPump interface.", 1 },';
 		echo '+    { "Alistair Leslie-Hughes", "d3dx10_43: Add D3DX10CreateEffectFromFileA/W stubs.", 1 },';
+		echo '+    { "Alistair Leslie-Hughes", "d3dx10_43: Added D3DX10CreateEffectFromMemory stub.", 1 },';
 	) >> "$patchlist"
 fi
 

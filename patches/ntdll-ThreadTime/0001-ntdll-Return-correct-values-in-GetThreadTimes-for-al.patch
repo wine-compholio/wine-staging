@@ -1,17 +1,17 @@
-From c23803e1776618f98732081302d225f0e5b54cb3 Mon Sep 17 00:00:00 2001
+From 13b20600cb2924b63ecf7c0b37db45fd7c26a8ce Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 7 Nov 2014 03:26:18 +0100
 Subject: ntdll: Return correct values in GetThreadTimes() for all threads.
 
 Based on a patch by Ray Hinchliffe <ray@pobox.co.uk>.
 ---
- dlls/ntdll/thread.c | 86 ++++++++++++++++++++++++++++++++++++++++-------------
- server/protocol.def | 11 +++++++
- server/thread.c     | 16 ++++++++++
- 3 files changed, 93 insertions(+), 20 deletions(-)
+ dlls/ntdll/thread.c | 82 ++++++++++++++++++++++++++++++++++++++++++-----------
+ server/protocol.def |  2 ++
+ server/thread.c     |  2 ++
+ 3 files changed, 69 insertions(+), 17 deletions(-)
 
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 3696c8e..eab1a53 100644
+index 95b7add..a3b1cb0 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -23,6 +23,8 @@
@@ -23,22 +23,18 @@ index 3696c8e..eab1a53 100644
  #include <sys/types.h>
  #ifdef HAVE_SYS_MMAN_H
  #include <sys/mman.h>
-@@ -962,47 +964,91 @@ NTSTATUS WINAPI NtQueryInformationThread( HANDLE handle, THREADINFOCLASS class,
+@@ -963,7 +965,10 @@ NTSTATUS WINAPI NtQueryInformationThread( HANDLE handle, THREADINFOCLASS class,
      case ThreadTimes:
          {
              KERNEL_USER_TIMES   kusrt;
--            /* We need to do a server call to get the creation time or exit time */
 +            int unix_pid, unix_tid;
-+
+ 
 +            /* We need to do a server call to get the creation time, exit time, PID and TID */
-             /* This works on any thread */
--            SERVER_START_REQ( get_thread_info )
-+            SERVER_START_REQ( get_thread_times )
++            /* This works on any thread */
+             SERVER_START_REQ( get_thread_times )
              {
                  req->handle = wine_server_obj_handle( handle );
--                req->tid_in = 0;
-                 status = wine_server_call( req );
-                 if (status == STATUS_SUCCESS)
+@@ -972,36 +977,79 @@ NTSTATUS WINAPI NtQueryInformationThread( HANDLE handle, THREADINFOCLASS class,
                  {
                      kusrt.CreateTime.QuadPart = reply->creation_time;
                      kusrt.ExitTime.QuadPart = reply->exit_time;
@@ -136,54 +132,31 @@ index 3696c8e..eab1a53 100644
                  if (ret_len) *ret_len = min( length, sizeof(kusrt) );
              }
 diff --git a/server/protocol.def b/server/protocol.def
-index 2cd8272..6fd0e45 100644
+index 15735e0..967bc81 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -790,6 +790,17 @@ struct rawinput_device
- #define SET_PROCESS_INFO_AFFINITY 0x02
- 
- 
-+/* Retrieve information about thread times */
-+@REQ(get_thread_times)
-+    obj_handle_t handle;        /* thread handle */
-+@REPLY
-+    timeout_t    creation_time; /* thread creation time */
-+    timeout_t    exit_time;     /* thread exit time */
+@@ -856,6 +856,8 @@ struct rawinput_device
+ @REPLY
+     timeout_t    creation_time; /* thread creation time */
+     timeout_t    exit_time;     /* thread exit time */
 +    int          unix_pid;      /* thread native pid */
 +    int          unix_tid;      /* thread native pid */
-+@END
-+
-+
- /* Retrieve information about a thread */
- @REQ(get_thread_info)
-     obj_handle_t handle;        /* thread handle */
+ @END
+ 
+ 
 diff --git a/server/thread.c b/server/thread.c
-index 906b79d..8877e40 100644
+index 902848e..f2b0853 100644
 --- a/server/thread.c
 +++ b/server/thread.c
-@@ -1354,6 +1354,22 @@ DECL_HANDLER(open_thread)
-     }
- }
- 
-+/* fetch information about thread times */
-+DECL_HANDLER(get_thread_times)
-+{
-+    struct thread *thread;
-+
-+    if ((thread = get_thread_from_handle( req->handle, THREAD_QUERY_INFORMATION )))
-+    {
-+        reply->creation_time  = thread->creation_time;
-+        reply->exit_time      = thread->exit_time;
+@@ -1394,6 +1394,8 @@ DECL_HANDLER(get_thread_times)
+     {
+         reply->creation_time  = thread->creation_time;
+         reply->exit_time      = thread->exit_time;
 +        reply->unix_pid       = thread->unix_pid;
 +        reply->unix_tid       = thread->unix_tid;
-+
-+        release_object( thread );
-+    }
-+}
-+
- /* fetch information about a thread */
- DECL_HANDLER(get_thread_info)
- {
+ 
+         release_object( thread );
+     }
 -- 
-2.3.2
+2.4.5
 

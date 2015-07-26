@@ -1,0 +1,96 @@
+From 1896eceb640a7488c09c3cd6dadd63ecca8f510d Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 27 Jul 2015 06:12:30 +0200
+Subject: server: Use a separate wineserver call to fetch thread times.
+
+By moving the creation_time / exit_time to a separate wineserver call, we can
+safe a couple of bytes required for the following patches. Thats not the only
+purpose, this patch is also in preparation for a proper implementation of
+NtQueryInformationThread(..., ThreadTimes, ...). The wineserver can use
+/proc/<pid>/task/<tid>/stat to obtain precise thread time information, which
+means we'll need space for two additional timeout_t values. Since accessing
+/proc might have some overhead, its better to do it only when really required.
+The values can afterwards be cached for some short amount of time.
+---
+ dlls/ntdll/thread.c |  6 ++----
+ server/protocol.def | 11 +++++++++--
+ server/thread.c     | 14 +++++++++++++-
+ 3 files changed, 24 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
+index 3696c8e..2781827 100644
+--- a/dlls/ntdll/thread.c
++++ b/dlls/ntdll/thread.c
+@@ -962,12 +962,10 @@ NTSTATUS WINAPI NtQueryInformationThread( HANDLE handle, THREADINFOCLASS class,
+     case ThreadTimes:
+         {
+             KERNEL_USER_TIMES   kusrt;
+-            /* We need to do a server call to get the creation time or exit time */
+-            /* This works on any thread */
+-            SERVER_START_REQ( get_thread_info )
++
++            SERVER_START_REQ( get_thread_times )
+             {
+                 req->handle = wine_server_obj_handle( handle );
+-                req->tid_in = 0;
+                 status = wine_server_call( req );
+                 if (status == STATUS_SUCCESS)
+                 {
+diff --git a/server/protocol.def b/server/protocol.def
+index 0ff1a6b..3d7f7be 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -842,14 +842,21 @@ struct rawinput_device
+     thread_id_t  tid;           /* server thread id */
+     client_ptr_t teb;           /* thread teb pointer */
+     affinity_t   affinity;      /* thread affinity mask */
+-    timeout_t    creation_time; /* thread creation time */
+-    timeout_t    exit_time;     /* thread exit time */
+     int          exit_code;     /* thread exit code */
+     int          priority;      /* thread priority level */
+     int          last;          /* last thread in process */
+ @END
+ 
+ 
++/* Retrieve information about thread times */
++@REQ(get_thread_times)
++    obj_handle_t handle;        /* thread handle */
++@REPLY
++    timeout_t    creation_time; /* thread creation time */
++    timeout_t    exit_time;     /* thread exit time */
++@END
++
++
+ /* Set a thread information */
+ @REQ(set_thread_info)
+     obj_handle_t handle;       /* thread handle */
+diff --git a/server/thread.c b/server/thread.c
+index 8471651..b8c73c6 100644
+--- a/server/thread.c
++++ b/server/thread.c
+@@ -1374,9 +1374,21 @@ DECL_HANDLER(get_thread_info)
+         reply->exit_code      = (thread->state == TERMINATED) ? thread->exit_code : STATUS_PENDING;
+         reply->priority       = thread->priority;
+         reply->affinity       = thread->affinity;
++        reply->last           = thread->process->running_threads == 1;
++
++        release_object( thread );
++    }
++}
++
++/* fetch information about thread times */
++DECL_HANDLER(get_thread_times)
++{
++    struct thread *thread;
++
++    if ((thread = get_thread_from_handle( req->handle, THREAD_QUERY_INFORMATION )))
++    {
+         reply->creation_time  = thread->creation_time;
+         reply->exit_time      = thread->exit_time;
+-        reply->last           = thread->process->running_threads == 1;
+ 
+         release_object( thread );
+     }
+-- 
+2.4.5
+

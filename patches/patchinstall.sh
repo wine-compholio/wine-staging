@@ -170,6 +170,7 @@ patch_enable_all ()
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_RtlIpStringToAddress="$1"
 	enable_ntdll_Security_Cookie="$1"
+	enable_ntdll_ThreadQuerySetWin32StartAddress="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
 	enable_ntdll_User_Shared_Data="$1"
@@ -579,6 +580,9 @@ patch_enable ()
 			;;
 		ntdll-Security_Cookie)
 			enable_ntdll_Security_Cookie="$2"
+			;;
+		ntdll-ThreadQuerySetWin32StartAddress)
+			enable_ntdll_ThreadQuerySetWin32StartAddress="$2"
 			;;
 		ntdll-ThreadTime)
 			enable_ntdll_ThreadTime="$2"
@@ -1710,6 +1714,13 @@ if test "$enable_ntdll_WriteWatches" -eq 1; then
 	fi
 	enable_kernel32_Named_Pipe=1
 	enable_ws2_32_WriteWatches=1
+fi
+
+if test "$enable_ntdll_ThreadTime" -eq 1; then
+	if test "$enable_ntdll_ThreadQuerySetWin32StartAddress" -gt 1; then
+		abort "Patchset ntdll-ThreadQuerySetWin32StartAddress disabled, but ntdll-ThreadTime depends on that."
+	fi
+	enable_ntdll_ThreadQuerySetWin32StartAddress=1
 fi
 
 if test "$enable_ntdll_Junction_Points" -eq 1; then
@@ -3600,6 +3611,29 @@ if test "$enable_ntdll_Security_Cookie" -eq 1; then
 	(
 		echo '+    { "Martin Storsjo", "ntdll: Handle partial image load config structs.", 3 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Validate SecurityCookie pointer before dereferencing.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-ThreadQuerySetWin32StartAddress
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#8277] Add support for ThreadQuerySetWin32StartAddress info class
+# |
+# | Modified files:
+# |   *	dlls/ntdll/tests/info.c, dlls/ntdll/thread.c, server/process.c, server/protocol.def, server/thread.c, server/thread.h
+# |
+if test "$enable_ntdll_ThreadQuerySetWin32StartAddress" -eq 1; then
+	patch_apply ntdll-ThreadQuerySetWin32StartAddress/0001-server-Use-a-separate-wineserver-call-to-fetch-threa.patch
+	patch_apply ntdll-ThreadQuerySetWin32StartAddress/0002-server-Store-thread-entry-points-in-server.patch
+	patch_apply ntdll-ThreadQuerySetWin32StartAddress/0003-ntdll-Implement-ThreadQuerySetWin32StartAddress-info.patch
+	patch_apply ntdll-ThreadQuerySetWin32StartAddress/0004-ntdll-Implement-ThreadQuerySetWin32StartAddress-info.patch
+	patch_apply ntdll-ThreadQuerySetWin32StartAddress/0005-ntdll-tests-Add-tests-for-ThreadQuerySetWin32StartAd.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Use a separate wineserver call to fetch thread times.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Store thread entry points in server.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement ThreadQuerySetWin32StartAddress info class in NtSetInformationThread.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement ThreadQuerySetWin32StartAddress info class in NtQueryInformationThread.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for ThreadQuerySetWin32StartAddress info class.", 1 },';
 	) >> "$patchlist"
 fi
 

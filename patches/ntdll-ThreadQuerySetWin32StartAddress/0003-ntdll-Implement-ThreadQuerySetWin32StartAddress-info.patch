@@ -1,0 +1,82 @@
+From 96ae4f590b53e5c418adc1b6b503aa85e7399f8d Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 27 Jul 2015 06:12:48 +0200
+Subject: ntdll: Implement ThreadQuerySetWin32StartAddress info class in
+ NtSetInformationThread.
+
+This implements the pre-Vista version, where the entry point can be changed.
+---
+ dlls/ntdll/thread.c | 16 ++++++++++++++--
+ server/protocol.def |  8 +++++---
+ server/thread.c     |  2 ++
+ 3 files changed, 21 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
+index ef4029a..74d512a 100644
+--- a/dlls/ntdll/thread.c
++++ b/dlls/ntdll/thread.c
+@@ -1204,14 +1204,26 @@ NTSTATUS WINAPI NtSetInformationThread( HANDLE handle, THREADINFOCLASS class,
+     case ThreadHideFromDebugger:
+         /* pretend the call succeeded to satisfy some code protectors */
+         return STATUS_SUCCESS;
+-
++    case ThreadQuerySetWin32StartAddress:
++        {
++            const PRTL_THREAD_START_ROUTINE *entry = data;
++            if (length != sizeof(PRTL_THREAD_START_ROUTINE)) return STATUS_INVALID_PARAMETER;
++            SERVER_START_REQ( set_thread_info )
++            {
++                req->handle   = wine_server_obj_handle( handle );
++                req->mask     = SET_THREAD_INFO_ENTRYPOINT;
++                req->entry_point = wine_server_client_ptr( *entry );
++                status = wine_server_call( req );
++            }
++            SERVER_END_REQ;
++        }
++        return status;
+     case ThreadBasicInformation:
+     case ThreadTimes:
+     case ThreadPriority:
+     case ThreadDescriptorTableEntry:
+     case ThreadEnableAlignmentFaultFixup:
+     case ThreadEventPair_Reusable:
+-    case ThreadQuerySetWin32StartAddress:
+     case ThreadPerformanceCount:
+     case ThreadAmILastThread:
+     case ThreadIdealProcessor:
+diff --git a/server/protocol.def b/server/protocol.def
+index 0e1756c..a1ab2613 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -865,10 +865,12 @@ struct rawinput_device
+     int          priority;     /* priority class */
+     affinity_t   affinity;     /* affinity mask */
+     obj_handle_t token;        /* impersonation token */
++    client_ptr_t entry_point;  /* thread entry point */
+ @END
+-#define SET_THREAD_INFO_PRIORITY 0x01
+-#define SET_THREAD_INFO_AFFINITY 0x02
+-#define SET_THREAD_INFO_TOKEN    0x04
++#define SET_THREAD_INFO_PRIORITY   0x01
++#define SET_THREAD_INFO_AFFINITY   0x02
++#define SET_THREAD_INFO_TOKEN      0x04
++#define SET_THREAD_INFO_ENTRYPOINT 0x08
+ 
+ 
+ /* Retrieve information about a module */
+diff --git a/server/thread.c b/server/thread.c
+index afcb2dc..0311966 100644
+--- a/server/thread.c
++++ b/server/thread.c
+@@ -498,6 +498,8 @@ static void set_thread_info( struct thread *thread,
+     }
+     if (req->mask & SET_THREAD_INFO_TOKEN)
+         security_set_thread_token( thread, req->token );
++    if (req->mask & SET_THREAD_INFO_ENTRYPOINT)
++        thread->entry_point = req->entry_point;
+ }
+ 
+ /* stop a thread (at the Unix level) */
+-- 
+2.4.5
+

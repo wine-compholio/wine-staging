@@ -1,0 +1,86 @@
+From 41252878d2e43bb874bcf32a81216f61f25bfca6 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 27 Jul 2015 06:12:39 +0200
+Subject: server: Store thread entry points in server.
+
+For the main thread we store it in the init_process_done handler, for
+all other threads in the new_thread handler.
+---
+ dlls/ntdll/thread.c | 1 +
+ server/process.c    | 1 +
+ server/protocol.def | 1 +
+ server/thread.c     | 2 ++
+ server/thread.h     | 1 +
+ 5 files changed, 6 insertions(+)
+
+diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
+index 2781827..ef4029a 100644
+--- a/dlls/ntdll/thread.c
++++ b/dlls/ntdll/thread.c
+@@ -494,6 +494,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, const SECURITY_DESCRIPTOR *
+ 
+     SERVER_START_REQ( new_thread )
+     {
++        req->entry      = wine_server_client_ptr( start );
+         req->access     = THREAD_ALL_ACCESS;
+         req->attributes = 0;  /* FIXME */
+         req->suspend    = suspended;
+diff --git a/server/process.c b/server/process.c
+index 0bf7194..7252497 100644
+--- a/server/process.c
++++ b/server/process.c
+@@ -1295,6 +1295,7 @@ DECL_HANDLER(init_process_done)
+ 
+     process->ldt_copy = req->ldt_copy;
+     process->start_time = current_time;
++    current->entry_point = req->entry;
+ 
+     generate_startup_debug_events( process, req->entry );
+     set_process_startup_state( process, STARTUP_DONE );
+diff --git a/server/protocol.def b/server/protocol.def
+index 3d7f7be..0e1756c 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -737,6 +737,7 @@ struct rawinput_device
+ 
+ /* Create a new thread from the context of the parent */
+ @REQ(new_thread)
++    client_ptr_t entry;        /* entry point (in client address space) */
+     unsigned int access;       /* wanted access rights */
+     unsigned int attributes;   /* object attributes */
+     int          suspend;      /* new thread should be suspended on creation */
+diff --git a/server/thread.c b/server/thread.c
+index b8c73c6..afcb2dc 100644
+--- a/server/thread.c
++++ b/server/thread.c
+@@ -175,6 +175,7 @@ static inline void init_thread_structure( struct thread *thread )
+     thread->context         = NULL;
+     thread->suspend_context = NULL;
+     thread->teb             = 0;
++    thread->entry_point     = 0;
+     thread->debug_ctx       = NULL;
+     thread->debug_event     = NULL;
+     thread->debug_break     = 0;
+@@ -1235,6 +1236,7 @@ DECL_HANDLER(new_thread)
+ 
+     if ((thread = create_thread( request_fd, current->process )))
+     {
++        thread->entry_point = req->entry;
+         if (req->suspend) thread->suspend++;
+         reply->tid = get_thread_id( thread );
+         if ((reply->handle = alloc_handle( current->process, thread, req->access, req->attributes )))
+diff --git a/server/thread.h b/server/thread.h
+index 996d95b..2821991 100644
+--- a/server/thread.h
++++ b/server/thread.h
+@@ -79,6 +79,7 @@ struct thread
+     context_t             *context;       /* current context if in an exception handler */
+     context_t             *suspend_context; /* current context if suspended */
+     client_ptr_t           teb;           /* TEB address (in client address space) */
++    client_ptr_t           entry_point;   /* entry point (in client address space) */
+     affinity_t             affinity;      /* affinity mask */
+     int                    priority;      /* priority level */
+     int                    suspend;       /* suspend count */
+-- 
+2.4.5
+

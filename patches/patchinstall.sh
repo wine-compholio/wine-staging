@@ -173,6 +173,7 @@ patch_enable_all ()
 	enable_ntdll_ThreadQuerySetWin32StartAddress="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
+	enable_ntdll_Threadpool_Cleanup="$1"
 	enable_ntdll_User_Shared_Data="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_WinSqm="$1"
@@ -589,6 +590,9 @@ patch_enable ()
 			;;
 		ntdll-Threading)
 			enable_ntdll_Threading="$2"
+			;;
+		ntdll-Threadpool_Cleanup)
+			enable_ntdll_Threadpool_Cleanup="$2"
 			;;
 		ntdll-User_Shared_Data)
 			enable_ntdll_User_Shared_Data="$2"
@@ -3661,6 +3665,20 @@ if test "$enable_ntdll_Threading" -eq 1; then
 	patch_apply ntdll-Threading/0001-ntdll-Fix-race-condition-when-threads-are-killed-dur.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Fix race-condition when threads are killed during shutdown.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Threadpool_Cleanup
+# |
+# | Modified files:
+# |   *	dlls/ntdll/tests/threadpool.c, dlls/ntdll/threadpool.c
+# |
+if test "$enable_ntdll_Threadpool_Cleanup" -eq 1; then
+	patch_apply ntdll-Threadpool_Cleanup/0001-ntdll-tests-Add-basic-tests-for-RtlQueueWorkItem.patch
+	patch_apply ntdll-Threadpool_Cleanup/0002-ntdll-Reimplement-RtlQueueWorkItem-on-top-of-new-thr.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Add basic tests for RtlQueueWorkItem.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Reimplement RtlQueueWorkItem on top of new threadpool API.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -4535,9 +4535,21 @@ fi
 # | 	dlls/vcomp90/vcomp90.spec
 # |
 if test "$enable_vcomp_Functions" -eq 1; then
-	patch_apply vcomp-Functions/0001-vcomp-Implement-_vcomp_for_dynamic_init-and-_vcomp_f.patch
-	patch_apply vcomp-Functions/0002-vcomp-tests-Add-tests-for-_vcomp_for_dynamic_init.patch
+	patch_apply vcomp-Functions/0001-vcomp-Implement-32-bit-atomic-integer-functions.patch
+	patch_apply vcomp-Functions/0002-vcomp-tests-Add-tests-for-32-bit-atomic-integer-func.patch
+	patch_apply vcomp-Functions/0003-vcomp-Implement-atomic-float-functions.patch
+	patch_apply vcomp-Functions/0004-vcomp-tests-Add-tests-for-atomic-float-functions.patch
+	patch_apply vcomp-Functions/0005-vcomp-Implement-atomic-double-functions.patch
+	patch_apply vcomp-Functions/0006-vcomp-tests-Add-tests-for-atomic-double-functions.patch
+	patch_apply vcomp-Functions/0007-vcomp-Implement-_vcomp_for_dynamic_init-and-_vcomp_f.patch
+	patch_apply vcomp-Functions/0008-vcomp-tests-Add-tests-for-_vcomp_for_dynamic_init.patch
 	(
+		echo '+    { "Sebastian Lackner", "vcomp: Implement 32-bit atomic integer functions.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp/tests: Add tests for 32-bit atomic integer functions.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp: Implement atomic float functions.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp/tests: Add tests for atomic float functions.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp: Implement atomic double functions.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp/tests: Add tests for atomic double functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_for_dynamic_init and _vcomp_for_dynamic_next.", 1 },';
 		echo '+    { "Sebastian Lackner", "vcomp/tests: Add tests for _vcomp_for_dynamic_init.", 1 },';
 	) >> "$patchlist"

@@ -133,6 +133,7 @@ patch_enable_all ()
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_Profile="$1"
+	enable_kernel32_SetFileCompletionNotificationModes="$1"
 	enable_kernel32_SetFileInformationByHandle="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
 	enable_kernel32_VerifyVersionInfo="$1"
@@ -470,6 +471,9 @@ patch_enable ()
 			;;
 		kernel32-Profile)
 			enable_kernel32_Profile="$2"
+			;;
+		kernel32-SetFileCompletionNotificationModes)
+			enable_kernel32_SetFileCompletionNotificationModes="$2"
 			;;
 		kernel32-SetFileInformationByHandle)
 			enable_kernel32_SetFileInformationByHandle="$2"
@@ -3073,6 +3077,21 @@ if test "$enable_kernel32_Profile" -eq 1; then
 	patch_apply kernel32-Profile/0001-kernel32-Allow-empty-profile-section-and-key-name-st.patch
 	(
 		echo '+    { "Claudio Fontana", "kernel32: Allow empty profile section and key name strings.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetFileCompletionNotificationModes
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38960] Fake success in kernel32.SetFileCompletionNotificationModes
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c
+# |
+if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
+	patch_apply kernel32-SetFileCompletionNotificationModes/0001-kernel32-Fake-success-in-SetFileCompletionNotificati.patch
+	(
+		echo '+    { "Sebastian Lackner", "kernel32: Fake success in SetFileCompletionNotificationModes.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -39,11 +39,12 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [8]:**
+**Bug fixes and features included in the next upcoming release [9]:**
 
 * Add stubs for d3dx10_43.D3DX10CreateEffectFromFileA/W ([Wine Bug #27739](https://bugs.winehq.org/show_bug.cgi?id=27739))
 * Add support for ThreadQuerySetWin32StartAddress info class ([Wine Bug #8277](https://bugs.winehq.org/show_bug.cgi?id=8277))
 * Check architecture before trying to load libraries ([Wine Bug #38021](https://bugs.winehq.org/show_bug.cgi?id=38021))
+* Fake success in kernel32.SetFileCompletionNotificationModes ([Wine Bug #38960](https://bugs.winehq.org/show_bug.cgi?id=38960))
 * Fix loading of libraries with incomplete IMAGE_LOAD_CONFIG_DIRECTORY struct
 * Fix security cookie handling for UPX compressed executables ([Wine Bug #38949](https://bugs.winehq.org/show_bug.cgi?id=38949))
 * Forward exitcode from child process when in wineconsole

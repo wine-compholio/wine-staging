@@ -1,0 +1,30 @@
+From e365fdbc966b3aab4dbfced4c651965cc8cd9c23 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Tue, 21 Jul 2015 20:33:47 +0200
+Subject: ntdll: Validate SecurityCookie pointer before dereferencing.
+
+---
+ dlls/ntdll/virtual.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index 479ca79..2fd8198 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -1320,9 +1320,11 @@ static NTSTATUS map_image( HANDLE hmapping, int fd, char *base, SIZE_T total_siz
+ 
+     loadcfg = RtlImageDirectoryEntryToData( (HMODULE)ptr, TRUE,
+                                             IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG, &loadcfg_size );
+-    if (loadcfg &&
+-        loadcfg_size >= offsetof(IMAGE_LOAD_CONFIG_DIRECTORY, SecurityCookie) + sizeof(loadcfg->SecurityCookie))
++    if (loadcfg && loadcfg_size >= offsetof(IMAGE_LOAD_CONFIG_DIRECTORY, SecurityCookie) + sizeof(loadcfg->SecurityCookie) &&
++        (ULONG_PTR)ptr <= loadcfg->SecurityCookie && loadcfg->SecurityCookie <= (ULONG_PTR)ptr + total_size - sizeof(ULONG_PTR))
++    {
+         set_security_cookie((ULONG_PTR *)loadcfg->SecurityCookie);
++    }
+ 
+     /* set the image protections */
+ 
+-- 
+2.4.5
+

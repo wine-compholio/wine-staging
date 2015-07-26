@@ -169,6 +169,7 @@ patch_enable_all ()
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_RtlIpStringToAddress="$1"
+	enable_ntdll_Security_Cookie="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
 	enable_ntdll_User_Shared_Data="$1"
@@ -575,6 +576,9 @@ patch_enable ()
 			;;
 		ntdll-RtlIpStringToAddress)
 			enable_ntdll_RtlIpStringToAddress="$2"
+			;;
+		ntdll-Security_Cookie)
+			enable_ntdll_Security_Cookie="$2"
 			;;
 		ntdll-ThreadTime)
 			enable_ntdll_ThreadTime="$2"
@@ -1961,6 +1965,23 @@ if test "$enable_Staging" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1977,23 +1998,6 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3579,6 +3583,23 @@ if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
 		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddressEx.", 6 },';
 		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv4StringToAddressEx (try 5, resend).", 1 },';
 		echo '+    { "Mark Jansen", "ntdll/tests: Add tests for RtlIpv6AddressToString and RtlIpv6AddressToStringEx.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Security_Cookie
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38949] Fix security cookie handling for UPX compressed executables
+# |
+# | Modified files:
+# |   *	dlls/ntdll/virtual.c
+# |
+if test "$enable_ntdll_Security_Cookie" -eq 1; then
+	patch_apply ntdll-Security_Cookie/0001-ntdll-Handle-partial-image-load-config-structs.-try-.patch
+	patch_apply ntdll-Security_Cookie/0002-ntdll-Validate-SecurityCookie-pointer-before-derefer.patch
+	(
+		echo '+    { "Martin Storsjo", "ntdll: Handle partial image load config structs.", 3 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Validate SecurityCookie pointer before dereferencing.", 1 },';
 	) >> "$patchlist"
 fi
 

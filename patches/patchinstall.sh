@@ -3643,20 +3643,18 @@ fi
 # |   *	[#8277] Add support for ThreadQuerySetWin32StartAddress info class
 # |
 # | Modified files:
-# |   *	dlls/ntdll/tests/info.c, dlls/ntdll/thread.c, server/process.c, server/protocol.def, server/thread.c, server/thread.h
+# |   *	dlls/ntdll/tests/info.c, dlls/ntdll/thread.c, server/protocol.def, server/thread.c, server/thread.h
 # |
 if test "$enable_ntdll_ThreadQuerySetWin32StartAddress" -eq 1; then
 	patch_apply ntdll-ThreadQuerySetWin32StartAddress/0001-server-Use-a-separate-wineserver-call-to-fetch-threa.patch
-	patch_apply ntdll-ThreadQuerySetWin32StartAddress/0002-server-Store-thread-entry-points-in-server.patch
+	patch_apply ntdll-ThreadQuerySetWin32StartAddress/0002-ntdll-Implement-ThreadQuerySetWin32StartAddress-info.patch
 	patch_apply ntdll-ThreadQuerySetWin32StartAddress/0003-ntdll-Implement-ThreadQuerySetWin32StartAddress-info.patch
-	patch_apply ntdll-ThreadQuerySetWin32StartAddress/0004-ntdll-Implement-ThreadQuerySetWin32StartAddress-info.patch
-	patch_apply ntdll-ThreadQuerySetWin32StartAddress/0005-ntdll-tests-Add-tests-for-ThreadQuerySetWin32StartAd.patch
+	patch_apply ntdll-ThreadQuerySetWin32StartAddress/0004-ntdll-tests-Add-tests-for-ThreadQuerySetWin32StartAd.patch
 	(
-		echo '+    { "Sebastian Lackner", "server: Use a separate wineserver call to fetch thread times.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Store thread entry points in server.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Implement ThreadQuerySetWin32StartAddress info class in NtSetInformationThread.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Implement ThreadQuerySetWin32StartAddress info class in NtQueryInformationThread.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for ThreadQuerySetWin32StartAddress info class.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Use a separate wineserver call to fetch thread times. (resend).", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement ThreadQuerySetWin32StartAddress info class in NtSetInformationThread.", 2 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement ThreadQuerySetWin32StartAddress info class in NtQueryInformationThread. (resend).", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for ThreadQuerySetWin32StartAddress info class. (resend).", 1 },';
 	) >> "$patchlist"
 fi
 

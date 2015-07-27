@@ -1,0 +1,111 @@
+From 11c840163c21b92b8e67844f18ade51f0f6905e0 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 27 Jul 2015 18:31:11 +0200
+Subject: ntdll: Implement ThreadQuerySetWin32StartAddress info class in
+ NtSetInformationThread. (v2)
+
+This implements the pre-Vista version, where the entry point can be changed.
+---
+ dlls/ntdll/thread.c | 16 ++++++++++++++--
+ server/protocol.def |  8 +++++---
+ server/thread.c     |  4 ++++
+ server/thread.h     |  1 +
+ 4 files changed, 24 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
+index 2781827..3e95fd4 100644
+--- a/dlls/ntdll/thread.c
++++ b/dlls/ntdll/thread.c
+@@ -1203,14 +1203,26 @@ NTSTATUS WINAPI NtSetInformationThread( HANDLE handle, THREADINFOCLASS class,
+     case ThreadHideFromDebugger:
+         /* pretend the call succeeded to satisfy some code protectors */
+         return STATUS_SUCCESS;
+-
++    case ThreadQuerySetWin32StartAddress:
++        {
++            const PRTL_THREAD_START_ROUTINE *entry = data;
++            if (length != sizeof(PRTL_THREAD_START_ROUTINE)) return STATUS_INVALID_PARAMETER;
++            SERVER_START_REQ( set_thread_info )
++            {
++                req->handle   = wine_server_obj_handle( handle );
++                req->mask     = SET_THREAD_INFO_ENTRYPOINT;
++                req->entry_point = wine_server_client_ptr( *entry );
++                status = wine_server_call( req );
++            }
++            SERVER_END_REQ;
++        }
++        return status;
+     case ThreadBasicInformation:
+     case ThreadTimes:
+     case ThreadPriority:
+     case ThreadDescriptorTableEntry:
+     case ThreadEnableAlignmentFaultFixup:
+     case ThreadEventPair_Reusable:
+-    case ThreadQuerySetWin32StartAddress:
+     case ThreadPerformanceCount:
+     case ThreadAmILastThread:
+     case ThreadIdealProcessor:
+diff --git a/server/protocol.def b/server/protocol.def
+index 3d7f7be..47cedff 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -864,10 +864,12 @@ struct rawinput_device
+     int          priority;     /* priority class */
+     affinity_t   affinity;     /* affinity mask */
+     obj_handle_t token;        /* impersonation token */
++    client_ptr_t entry_point;  /* thread entry point */
+ @END
+-#define SET_THREAD_INFO_PRIORITY 0x01
+-#define SET_THREAD_INFO_AFFINITY 0x02
+-#define SET_THREAD_INFO_TOKEN    0x04
++#define SET_THREAD_INFO_PRIORITY   0x01
++#define SET_THREAD_INFO_AFFINITY   0x02
++#define SET_THREAD_INFO_TOKEN      0x04
++#define SET_THREAD_INFO_ENTRYPOINT 0x08
+ 
+ 
+ /* Retrieve information about a module */
+diff --git a/server/thread.c b/server/thread.c
+index b8c73c6..f020908 100644
+--- a/server/thread.c
++++ b/server/thread.c
+@@ -175,6 +175,7 @@ static inline void init_thread_structure( struct thread *thread )
+     thread->context         = NULL;
+     thread->suspend_context = NULL;
+     thread->teb             = 0;
++    thread->entry_point     = 0;
+     thread->debug_ctx       = NULL;
+     thread->debug_event     = NULL;
+     thread->debug_break     = 0;
+@@ -497,6 +498,8 @@ static void set_thread_info( struct thread *thread,
+     }
+     if (req->mask & SET_THREAD_INFO_TOKEN)
+         security_set_thread_token( thread, req->token );
++    if (req->mask & SET_THREAD_INFO_ENTRYPOINT)
++        thread->entry_point = req->entry_point;
+ }
+ 
+ /* stop a thread (at the Unix level) */
+@@ -1284,6 +1287,7 @@ DECL_HANDLER(init_thread)
+     current->unix_pid = req->unix_pid;
+     current->unix_tid = req->unix_tid;
+     current->teb      = req->teb;
++    current->entry_point = req->entry;
+ 
+     if (!process->peb)  /* first thread, initialize the process too */
+     {
+diff --git a/server/thread.h b/server/thread.h
+index 996d95b..2821991 100644
+--- a/server/thread.h
++++ b/server/thread.h
+@@ -79,6 +79,7 @@ struct thread
+     context_t             *context;       /* current context if in an exception handler */
+     context_t             *suspend_context; /* current context if suspended */
+     client_ptr_t           teb;           /* TEB address (in client address space) */
++    client_ptr_t           entry_point;   /* entry point (in client address space) */
+     affinity_t             affinity;      /* affinity mask */
+     int                    priority;      /* priority level */
+     int                    suspend;       /* suspend count */
+-- 
+2.4.5
+

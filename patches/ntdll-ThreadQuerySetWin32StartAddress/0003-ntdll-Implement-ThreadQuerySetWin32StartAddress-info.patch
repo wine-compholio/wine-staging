@@ -1,82 +1,74 @@
-From 96ae4f590b53e5c418adc1b6b503aa85e7399f8d Mon Sep 17 00:00:00 2001
+From f9566dfc2af3bcef3d3164daaea612ad141b5c33 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
-Date: Mon, 27 Jul 2015 06:12:48 +0200
+Date: Mon, 27 Jul 2015 18:31:33 +0200
 Subject: ntdll: Implement ThreadQuerySetWin32StartAddress info class in
- NtSetInformationThread.
+ NtQueryInformationThread. (resend)
 
-This implements the pre-Vista version, where the entry point can be changed.
+No changes in this patch.
 ---
- dlls/ntdll/thread.c | 16 ++++++++++++++--
- server/protocol.def |  8 +++++---
- server/thread.c     |  2 ++
- 3 files changed, 21 insertions(+), 5 deletions(-)
+ dlls/ntdll/thread.c | 18 +++++++++++++++++-
+ server/protocol.def |  1 +
+ server/thread.c     |  1 +
+ 3 files changed, 19 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index ef4029a..74d512a 100644
+index 3e95fd4..0a8a7b9 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -1204,14 +1204,26 @@ NTSTATUS WINAPI NtSetInformationThread( HANDLE handle, THREADINFOCLASS class,
-     case ThreadHideFromDebugger:
-         /* pretend the call succeeded to satisfy some code protectors */
-         return STATUS_SUCCESS;
--
+@@ -1086,12 +1086,28 @@ NTSTATUS WINAPI NtQueryInformationThread( HANDLE handle, THREADINFOCLASS class,
+             SERVER_END_REQ;
+             return status;
+         }
 +    case ThreadQuerySetWin32StartAddress:
 +        {
-+            const PRTL_THREAD_START_ROUTINE *entry = data;
-+            if (length != sizeof(PRTL_THREAD_START_ROUTINE)) return STATUS_INVALID_PARAMETER;
-+            SERVER_START_REQ( set_thread_info )
++            SERVER_START_REQ( get_thread_info )
 +            {
-+                req->handle   = wine_server_obj_handle( handle );
-+                req->mask     = SET_THREAD_INFO_ENTRYPOINT;
-+                req->entry_point = wine_server_client_ptr( *entry );
++                req->handle = wine_server_obj_handle( handle );
++                req->tid_in = 0;
 +                status = wine_server_call( req );
++                if (status == STATUS_SUCCESS)
++                {
++                    PRTL_THREAD_START_ROUTINE entry = wine_server_get_ptr( reply->entry_point );
++                    if (data) memcpy( data, &entry, min( length, sizeof(entry) ) );
++                    if (ret_len) *ret_len = min( length, sizeof(entry) );
++                }
 +            }
 +            SERVER_END_REQ;
++            return status;
 +        }
-+        return status;
-     case ThreadBasicInformation:
-     case ThreadTimes:
      case ThreadPriority:
-     case ThreadDescriptorTableEntry:
+     case ThreadBasePriority:
+     case ThreadImpersonationToken:
      case ThreadEnableAlignmentFaultFixup:
      case ThreadEventPair_Reusable:
 -    case ThreadQuerySetWin32StartAddress:
+     case ThreadZeroTlsCell:
      case ThreadPerformanceCount:
-     case ThreadAmILastThread:
      case ThreadIdealProcessor:
 diff --git a/server/protocol.def b/server/protocol.def
-index 0e1756c..a1ab2613 100644
+index 47cedff..3e25e40 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -865,10 +865,12 @@ struct rawinput_device
-     int          priority;     /* priority class */
-     affinity_t   affinity;     /* affinity mask */
-     obj_handle_t token;        /* impersonation token */
-+    client_ptr_t entry_point;  /* thread entry point */
- @END
--#define SET_THREAD_INFO_PRIORITY 0x01
--#define SET_THREAD_INFO_AFFINITY 0x02
--#define SET_THREAD_INFO_TOKEN    0x04
-+#define SET_THREAD_INFO_PRIORITY   0x01
-+#define SET_THREAD_INFO_AFFINITY   0x02
-+#define SET_THREAD_INFO_TOKEN      0x04
-+#define SET_THREAD_INFO_ENTRYPOINT 0x08
- 
- 
- /* Retrieve information about a module */
+@@ -841,6 +841,7 @@ struct rawinput_device
+     process_id_t pid;           /* server process id */
+     thread_id_t  tid;           /* server thread id */
+     client_ptr_t teb;           /* thread teb pointer */
++    client_ptr_t entry_point;   /* thread entry point */
+     affinity_t   affinity;      /* thread affinity mask */
+     int          exit_code;     /* thread exit code */
+     int          priority;      /* thread priority level */
 diff --git a/server/thread.c b/server/thread.c
-index afcb2dc..0311966 100644
+index f020908..981bcc1 100644
 --- a/server/thread.c
 +++ b/server/thread.c
-@@ -498,6 +498,8 @@ static void set_thread_info( struct thread *thread,
-     }
-     if (req->mask & SET_THREAD_INFO_TOKEN)
-         security_set_thread_token( thread, req->token );
-+    if (req->mask & SET_THREAD_INFO_ENTRYPOINT)
-+        thread->entry_point = req->entry_point;
- }
- 
- /* stop a thread (at the Unix level) */
+@@ -1375,6 +1375,7 @@ DECL_HANDLER(get_thread_info)
+         reply->pid            = get_process_id( thread->process );
+         reply->tid            = get_thread_id( thread );
+         reply->teb            = thread->teb;
++        reply->entry_point    = thread->entry_point;
+         reply->exit_code      = (thread->state == TERMINATED) ? thread->exit_code : STATUS_PENDING;
+         reply->priority       = thread->priority;
+         reply->affinity       = thread->affinity;
 -- 
 2.4.5
 

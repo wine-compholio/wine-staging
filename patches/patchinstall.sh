@@ -3651,10 +3651,10 @@ if test "$enable_ntdll_ThreadQuerySetWin32StartAddress" -eq 1; then
 	patch_apply ntdll-ThreadQuerySetWin32StartAddress/0003-ntdll-Implement-ThreadQuerySetWin32StartAddress-info.patch
 	patch_apply ntdll-ThreadQuerySetWin32StartAddress/0004-ntdll-tests-Add-tests-for-ThreadQuerySetWin32StartAd.patch
 	(
-		echo '+    { "Sebastian Lackner", "server: Use a separate wineserver call to fetch thread times. (resend).", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Use a separate wineserver call to fetch thread times.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Implement ThreadQuerySetWin32StartAddress info class in NtSetInformationThread.", 2 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Implement ThreadQuerySetWin32StartAddress info class in NtQueryInformationThread. (resend).", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for ThreadQuerySetWin32StartAddress info class. (resend).", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement ThreadQuerySetWin32StartAddress info class in NtQueryInformationThread.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for ThreadQuerySetWin32StartAddress info class.", 1 },';
 	) >> "$patchlist"
 fi
 

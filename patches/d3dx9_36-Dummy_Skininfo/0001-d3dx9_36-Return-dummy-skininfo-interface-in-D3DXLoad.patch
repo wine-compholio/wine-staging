@@ -1,0 +1,81 @@
+From 95b6016b7cfb62a70ec9bbcc39117f68259aa93b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Tue, 28 Jul 2015 17:26:09 +0200
+Subject: d3dx9_36: Return dummy skininfo interface in D3DXLoadSkinMeshFromXof
+ when skin information is unavailable.
+
+---
+ dlls/d3dx9_36/d3dx9_36_private.h |  2 ++
+ dlls/d3dx9_36/mesh.c             |  7 +++++++
+ dlls/d3dx9_36/skin.c             | 22 +++++++++++++++++++++-
+ 3 files changed, 30 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/d3dx9_36/d3dx9_36_private.h b/dlls/d3dx9_36/d3dx9_36_private.h
+index 79f3b76..b6707f6 100644
+--- a/dlls/d3dx9_36/d3dx9_36_private.h
++++ b/dlls/d3dx9_36/d3dx9_36_private.h
+@@ -110,4 +110,6 @@ const char *debug_d3dxparameter_registerset(D3DXREGISTER_SET r) DECLSPEC_HIDDEN;
+ void set_number(void *outdata, D3DXPARAMETER_TYPE outtype,
+         const void *indata, D3DXPARAMETER_TYPE intype) DECLSPEC_HIDDEN;
+ 
++HRESULT create_dummy_skin(ID3DXSkinInfo **iface) DECLSPEC_HIDDEN;
++
+ #endif /* __WINE_D3DX9_36_PRIVATE_H */
+diff --git a/dlls/d3dx9_36/mesh.c b/dlls/d3dx9_36/mesh.c
+index 4aeac26..3cd85a3 100644
+--- a/dlls/d3dx9_36/mesh.c
++++ b/dlls/d3dx9_36/mesh.c
+@@ -3334,6 +3334,13 @@ static HRESULT parse_mesh(ID3DXFileData *filedata, struct mesh_data *mesh_data,
+         goto end;
+     }
+ 
++    if ((provide_flags & PROVIDE_SKININFO) && !mesh_data->skin_info)
++    {
++        hr = create_dummy_skin(&mesh_data->skin_info);
++        if (FAILED(hr))
++            goto end;
++    }
++
+     hr = D3D_OK;
+ 
+ end:
+diff --git a/dlls/d3dx9_36/skin.c b/dlls/d3dx9_36/skin.c
+index 9b93af6..3d68829 100644
+--- a/dlls/d3dx9_36/skin.c
++++ b/dlls/d3dx9_36/skin.c
+@@ -92,7 +92,7 @@ static ULONG WINAPI d3dx9_skin_info_Release(ID3DXSkinInfo *iface)
+             HeapFree(GetProcessHeap(), 0, skin->bones[i].vertices);
+             HeapFree(GetProcessHeap(), 0, skin->bones[i].weights);
+         }
+-        HeapFree(GetProcessHeap(), 0, skin->bones);
++        if (skin->bones) HeapFree(GetProcessHeap(), 0, skin->bones);
+         HeapFree(GetProcessHeap(), 0, skin);
+     }
+ 
+@@ -493,3 +493,23 @@ HRESULT WINAPI D3DXCreateSkinInfoFVF(DWORD num_vertices, DWORD fvf, DWORD num_bo
+ 
+     return D3DXCreateSkinInfo(num_vertices, declaration, num_bones, skin_info);
+ }
++
++HRESULT create_dummy_skin(ID3DXSkinInfo **iface)
++{
++    static const D3DVERTEXELEMENT9 empty_declaration = D3DDECL_END();
++    struct d3dx9_skin_info *object = NULL;
++
++    object = HeapAlloc(GetProcessHeap(), 0, sizeof(*object));
++    if (!object) return E_OUTOFMEMORY;
++
++    object->ID3DXSkinInfo_iface.lpVtbl = &d3dx9_skin_info_vtbl;
++    object->ref = 1;
++    object->num_vertices = 0;
++    object->num_bones = 0;
++    object->vertex_declaration[0] = empty_declaration;
++    object->fvf = 0;
++    object->bones = NULL;
++
++    *iface = &object->ID3DXSkinInfo_iface;
++    return D3D_OK;
++}
+-- 
+2.4.5
+

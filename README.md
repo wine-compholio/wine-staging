@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [10]:**
+**Bug fixes and features included in the next upcoming release [11]:**
 
 * Add stubs for d3dx10_43.D3DX10CreateEffectFromFileA/W ([Wine Bug #27739](https://bugs.winehq.org/show_bug.cgi?id=27739))
 * Add support for ThreadQuerySetWin32StartAddress info class ([Wine Bug #8277](https://bugs.winehq.org/show_bug.cgi?id=8277))
@@ -49,6 +49,7 @@ Included bug fixes and improvements
 * Fix loading of libraries with incomplete IMAGE_LOAD_CONFIG_DIRECTORY struct
 * Fix security cookie handling for UPX compressed executables ([Wine Bug #38949](https://bugs.winehq.org/show_bug.cgi?id=38949))
 * Forward exitcode from child process when in wineconsole
+* Return dummy ID3DXSkinInfo interface when skinning info not present ([Wine Bug #33904](https://bugs.winehq.org/show_bug.cgi?id=33904))
 * Share source of d3dx9_36 with d3dx9_33 to avoid Wine DLL forwards ([Wine Bug #21817](https://bugs.winehq.org/show_bug.cgi?id=21817))
 * Silence repeated LocaleNameToLCID/LCIDToLocaleName unsupported flags FIXMEs ([Wine Bug #30076](https://bugs.winehq.org/show_bug.cgi?id=30076))
 

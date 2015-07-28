@@ -99,6 +99,7 @@ patch_enable_all ()
 	enable_d3dx9_36_DDS="$1"
 	enable_d3dx9_36_DXTn="$1"
 	enable_d3dx9_36_DrawText="$1"
+	enable_d3dx9_36_Dummy_Skininfo="$1"
 	enable_d3dx9_36_Filter_Warnings="$1"
 	enable_d3dx9_36_FindNextValidTechnique="$1"
 	enable_d3dx9_36_GetShaderSemantics="$1"
@@ -370,6 +371,9 @@ patch_enable ()
 			;;
 		d3dx9_36-DrawText)
 			enable_d3dx9_36_DrawText="$2"
+			;;
+		d3dx9_36-Dummy_Skininfo)
+			enable_d3dx9_36_Dummy_Skininfo="$2"
 			;;
 		d3dx9_36-Filter_Warnings)
 			enable_d3dx9_36_Filter_Warnings="$2"
@@ -2360,6 +2364,23 @@ if test "$enable_d3dx9_36_DrawText" -eq 1; then
 	(
 		echo '+    { "Christian Costa", "d3dx9_36: Implement ID3DXFontImpl_DrawText.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Fix horizontal centering in ID3DXFont_DrawText.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3dx9_36-Dummy_Skininfo
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33904] Return dummy ID3DXSkinInfo interface when skinning info not present
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/d3dx9_36_private.h, dlls/d3dx9_36/mesh.c, dlls/d3dx9_36/skin.c, dlls/d3dx9_36/tests/mesh.c
+# |
+if test "$enable_d3dx9_36_Dummy_Skininfo" -eq 1; then
+	patch_apply d3dx9_36-Dummy_Skininfo/0001-d3dx9_36-Return-dummy-skininfo-interface-in-D3DXLoad.patch
+	patch_apply d3dx9_36-Dummy_Skininfo/0002-d3dx9_36-tests-Add-initial-tests-for-dummy-skininfo-.patch
+	(
+		echo '+    { "Michael Müller", "d3dx9_36: Return dummy skininfo interface in D3DXLoadSkinMeshFromXof when skin information is unavailable.", 1 },';
+		echo '+    { "Michael Müller", "d3dx9_36/tests: Add initial tests for dummy skininfo interface.", 1 },';
 	) >> "$patchlist"
 fi
 

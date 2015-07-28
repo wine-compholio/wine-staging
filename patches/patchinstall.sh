@@ -80,6 +80,7 @@ patch_enable_all ()
 	enable_Pipelight="$1"
 	enable_Staging="$1"
 	enable_advapi32_LsaLookupSids="$1"
+	enable_amstream_GetMultiMediaStream="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_combase_String="$1"
 	enable_comctl32_LoadIconMetric="$1"
@@ -312,6 +313,9 @@ patch_enable ()
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
+			;;
+		amstream-GetMultiMediaStream)
+			enable_amstream_GetMultiMediaStream="$2"
 			;;
 		browseui-Progress_Dialog)
 			enable_browseui_Progress_Dialog="$2"
@@ -1996,23 +2000,6 @@ if test "$enable_Staging" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2029,6 +2016,23 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2053,6 +2057,21 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 		echo '+    { "Qian Hong", "advapi32/tests: Test prefix and use of TokenPrimaryGroup Sid.", 1 },';
 		echo '+    { "Qian Hong", "server: Create primary group using DOMAIN_GROUP_RID_USERS.", 1 },';
 		echo '+    { "Qian Hong", "advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset amstream-GetMultiMediaStream
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37090] Implement AMStream GetMultiMediaStream functions
+# |
+# | Modified files:
+# |   *	dlls/amstream/mediastream.c
+# |
+if test "$enable_amstream_GetMultiMediaStream" -eq 1; then
+	patch_apply amstream-GetMultiMediaStream/0001-amstream-Implement-IAMMediaStream-GetMultiMediaStrea.patch
+	(
+		echo '+    { "Michael Müller", "amstream: Implement IAMMediaStream::GetMultiMediaStream.", 1 },';
 	) >> "$patchlist"
 fi
 

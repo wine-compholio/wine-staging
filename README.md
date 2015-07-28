@@ -39,8 +39,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [13]:**
+**Bug fixes and features included in the next upcoming release [14]:**
 
+* Add stub for D3DXTessellateNPatches
 * Add stubs for d3dx10_43.D3DX10CreateEffectFromFileA/W ([Wine Bug #27739](https://bugs.winehq.org/show_bug.cgi?id=27739))
 * Add support for ThreadQuerySetWin32StartAddress info class ([Wine Bug #8277](https://bugs.winehq.org/show_bug.cgi?id=8277))
 * Check architecture before trying to load libraries ([Wine Bug #38021](https://bugs.winehq.org/show_bug.cgi?id=38021))

@@ -2260,10 +2260,12 @@ if test "$enable_d3dx9_36_D3DXStubs" -eq 1; then
 	patch_apply d3dx9_36-D3DXStubs/0001-d3dx9_36-Implement-D3DXComputeNormals.patch
 	patch_apply d3dx9_36-D3DXStubs/0002-d3dx9_36-Add-stub-for-D3DXComputeNormalMap.patch
 	patch_apply d3dx9_36-D3DXStubs/0003-d3dx9_36-Add-D3DXFrameFind-stub.patch
+	patch_apply d3dx9_36-D3DXStubs/0004-d3dx9_36-Add-D3DXTessellateNPatches-stub.-try-2.patch
 	(
 		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXComputeNormals.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeNormalMap.", 1 },';
 		echo '+    { "Andrey Gusev", "d3dx9_36: Add D3DXFrameFind stub.", 1 },';
+		echo '+    { "Alistair Leslie-Hughes", "d3dx9_36: Add D3DXTessellateNPatches stub.", 2 },';
 	) >> "$patchlist"
 fi
 

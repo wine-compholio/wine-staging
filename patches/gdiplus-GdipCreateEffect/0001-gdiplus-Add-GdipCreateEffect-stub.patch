@@ -1,0 +1,198 @@
+From 87d78ae794d77d40f2e08b037d9985e332bb5d68 Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Thu, 23 Jul 2015 19:08:33 +1000
+Subject: gdiplus: Add GdipCreateEffect stub
+
+Based on patch by David Hedberg
+
+Fixes https://bugs.winehq.org/show_bug.cgi?id=32163
+---
+ dlls/gdiplus/gdiplus.spec  |  2 +-
+ dlls/gdiplus/image.c       | 18 ++++++++++++++++++
+ dlls/gdiplus/tests/image.c | 42 ++++++++++++++++++++++++++++++++++++++++++
+ include/Makefile.in        |  1 +
+ include/gdiplus.h          |  2 ++
+ include/gdipluseffects.h   | 37 +++++++++++++++++++++++++++++++++++++
+ 6 files changed, 101 insertions(+), 1 deletion(-)
+ create mode 100644 include/gdipluseffects.h
+
+diff --git a/dlls/gdiplus/gdiplus.spec b/dlls/gdiplus/gdiplus.spec
+index 9701ee0..3937443 100644
+--- a/dlls/gdiplus/gdiplus.spec
++++ b/dlls/gdiplus/gdiplus.spec
+@@ -610,7 +610,7 @@
+ 610 stdcall GdipFindFirstImageItem(ptr ptr)
+ 611 stub GdipFindNextImageItem
+ 612 stdcall GdipGetImageItemData(ptr ptr)
+-613 stub GdipCreateEffect
++613 stdcall GdipCreateEffect(ptr ptr)
+ 614 stdcall GdipDeleteEffect(ptr)
+ 615 stub GdipGetEffectParameterSize
+ 616 stub GdipGetEffectParameters
+diff --git a/dlls/gdiplus/image.c b/dlls/gdiplus/image.c
+index 23c465e..042835a 100644
+--- a/dlls/gdiplus/image.c
++++ b/dlls/gdiplus/image.c
+@@ -5008,6 +5008,24 @@ GpStatus WINGDIPAPI GdipCreateBitmapFromHBITMAP(HBITMAP hbm, HPALETTE hpal, GpBi
+     return retval;
+ }
+ 
++/*****************************************************************************
++ * GdipCreateEffect [GDIPLUS.@]
++ */
++GpStatus WINGDIPAPI GdipCreateEffect(const GUID guid, CGpEffect **effect)
++{
++    FIXME("(%s, %p): stub\n", debugstr_guid(&guid), effect);
++
++    if(!effect)
++        return InvalidParameter;
++
++    *effect = NULL;
++
++    return NotImplemented;
++}
++
++/*****************************************************************************
++ * GdipDeleteEffect [GDIPLUS.@]
++ */
+ GpStatus WINGDIPAPI GdipDeleteEffect(CGpEffect *effect)
+ {
+     FIXME("(%p): stub\n", effect);
+diff --git a/dlls/gdiplus/tests/image.c b/dlls/gdiplus/tests/image.c
+index 1335d97..51b99a3 100644
+--- a/dlls/gdiplus/tests/image.c
++++ b/dlls/gdiplus/tests/image.c
+@@ -4629,6 +4629,47 @@ static void test_supported_encoders(void)
+     GdipDisposeImage((GpImage *)bm);
+ }
+ 
++static void test_createeffect(void)
++{
++    static const GUID noneffect = { 0xcd0c3d4b, 0xe15e, 0x4cf2, { 0x9e, 0xa8, 0x6e, 0x1d, 0x65, 0x48, 0xc5, 0xa5 } };
++    GpStatus (WINAPI *pGdipCreateEffect)( const GUID guid, CGpEffect **effect);
++    GpStatus (WINAPI *pGdipDeleteEffect)( CGpEffect *effect);
++    GpStatus stat;
++    CGpEffect *effect;
++    HMODULE mod = GetModuleHandleA("gdiplus.dll");
++    int i;
++    const GUID effectlist[] =
++               {BlurEffectGuid, SharpenEffectGuid, ColorMatrixEffectGuid, ColorLUTEffectGuid,
++                BrightnessContrastEffectGuid, HueSaturationLightnessEffectGuid, LevelsEffectGuid,
++                TintEffectGuid, ColorBalanceEffectGuid, RedEyeCorrectionEffectGuid, ColorCurveEffectGuid};
++
++    pGdipCreateEffect = (void*)GetProcAddress( mod, "GdipCreateEffect");
++    pGdipDeleteEffect = (void*)GetProcAddress( mod, "GdipDeleteEffect");
++    if(!pGdipCreateEffect || !pGdipDeleteEffect)
++    {
++        /* GdipCreateEffect/GdipDeleteEffect was introduced in Windows Vista. */
++        win_skip("GDIPlus version 1.1 not available\n");
++        return;
++    }
++
++    stat = pGdipCreateEffect(BlurEffectGuid, NULL);
++    expect(InvalidParameter, stat);
++
++    stat = pGdipCreateEffect(noneffect, &effect);
++    todo_wine expect(Win32Error, stat);
++
++    for(i=0; i < sizeof(effectlist) / sizeof(GUID); i++)
++    {
++        stat = pGdipCreateEffect(effectlist[i], &effect);
++        todo_wine expect(Ok, stat);
++        if(stat == Ok)
++        {
++            stat = pGdipDeleteEffect(effect);
++            expect(Ok, stat);
++        }
++    }
++}
++
+ START_TEST(image)
+ {
+     struct GdiplusStartupInput gdiplusStartupInput;
+@@ -4683,6 +4724,7 @@ START_TEST(image)
+     test_remaptable();
+     test_colorkey();
+     test_dispose();
++    test_createeffect();
+ 
+     GdiplusShutdown(gdiplusToken);
+ }
+diff --git a/include/Makefile.in b/include/Makefile.in
+index f829712..6d986c1 100644
+--- a/include/Makefile.in
++++ b/include/Makefile.in
+@@ -339,6 +339,7 @@ SRCDIR_INCLUDES = \
+ 	gdiplus.h \
+ 	gdipluscolor.h \
+ 	gdipluscolormatrix.h \
++	gdipluseffects.h \
+ 	gdiplusenums.h \
+ 	gdiplusflat.h \
+ 	gdiplusgpstubs.h \
+diff --git a/include/gdiplus.h b/include/gdiplus.h
+index f063b3e..e85343b 100644
+--- a/include/gdiplus.h
++++ b/include/gdiplus.h
+@@ -37,6 +37,7 @@ namespace Gdiplus
+ #include "gdipluscolor.h"
+ #include "gdipluscolormatrix.h"
+ #include "gdiplusgpstubs.h"
++#include "gdipluseffects.h"
+ 
+     namespace DllExports
+     {
+@@ -57,6 +58,7 @@ namespace Gdiplus
+ #include "gdipluscolor.h"
+ #include "gdipluscolormatrix.h"
+ #include "gdiplusgpstubs.h"
++#include "gdipluseffects.h"
+ 
+ #include "gdiplusflat.h"
+ 
+diff --git a/include/gdipluseffects.h b/include/gdipluseffects.h
+new file mode 100644
+index 0000000..6e2c983
+--- /dev/null
++++ b/include/gdipluseffects.h
+@@ -0,0 +1,37 @@
++/*
++ * Copyright (C) 2015 Alistair Leslie-Hughes
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#ifndef _GDIPLUSEFFECTS_H
++#define _GDIPLUSEFFECTS_H
++
++DEFINE_GUID(BlurEffectGuid,                   0x633c80a4, 0x1843, 0x482b, 0x9e, 0xf2, 0xbe, 0x28, 0x34, 0xc5, 0xfd, 0xd4);
++DEFINE_GUID(SharpenEffectGuid,                0x63cbf3ee, 0xc526, 0x402c, 0x8f, 0x71, 0x62, 0xc5, 0x40, 0xbf, 0x51, 0x42);
++DEFINE_GUID(ColorMatrixEffectGuid,            0x718f2615, 0x7933, 0x40e3, 0xa5, 0x11, 0x5f, 0x68, 0xfe, 0x14, 0xdd, 0x74);
++DEFINE_GUID(ColorLUTEffectGuid,               0xa7ce72a9, 0x0f7f, 0x40d7, 0xb3, 0xcc, 0xd0, 0xc0, 0x2d, 0x5c, 0x32, 0x12);
++DEFINE_GUID(BrightnessContrastEffectGuid,     0xd3a1dbe1, 0x8ec4, 0x4c17, 0x9f, 0x4c, 0xea, 0x97, 0xad, 0x1c, 0x34, 0x3d);
++DEFINE_GUID(HueSaturationLightnessEffectGuid, 0x8b2dd6c3, 0xeb07, 0x4d87, 0xa5, 0xf0, 0x71, 0x08, 0xe2, 0x6a, 0x9c, 0x5f);
++DEFINE_GUID(LevelsEffectGuid,                 0x99c354ec, 0x2a31, 0x4f3a, 0x8c, 0x34, 0x17, 0xa8, 0x03, 0xb3, 0x3a, 0x25);
++DEFINE_GUID(TintEffectGuid,                   0x1077af00, 0x2848, 0x4441, 0x94, 0x89, 0x44, 0xad, 0x4c, 0x2d, 0x7a, 0x2c);
++DEFINE_GUID(ColorBalanceEffectGuid,           0x537e597d, 0x251e, 0x48da, 0x96, 0x64, 0x29, 0xca, 0x49, 0x6b, 0x70, 0xf8);
++DEFINE_GUID(RedEyeCorrectionEffectGuid,       0x74d29d05, 0x69a4, 0x4266, 0x95, 0x49, 0x3c, 0xc5, 0x28, 0x36, 0xb6, 0x32);
++DEFINE_GUID(ColorCurveEffectGuid,             0xdd6a0022, 0x58e4, 0x4a67, 0x9d, 0x9b, 0xd4, 0x8e, 0xb8, 0x81, 0xa5, 0x3d);
++
++GpStatus WINGDIPAPI GdipCreateEffect(const GUID guid, CGpEffect **effect);
++GpStatus WINGDIPAPI GdipDeleteEffect(CGpEffect *effect);
++
++#endif
+-- 
+2.4.5
+

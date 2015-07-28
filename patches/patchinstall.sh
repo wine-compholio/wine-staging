@@ -2792,12 +2792,13 @@ fi
 # |   *	[#32163] Add stub for gdiplus.GdipCreateEffect
 # |
 # | Modified files:
-# |   *	dlls/gdiplus/gdiplus.spec, dlls/gdiplus/image.c
+# |   *	dlls/gdiplus/gdiplus.spec, dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, include/Makefile.in, include/gdiplus.h,
+# | 	include/gdipluseffects.h
 # |
 if test "$enable_gdiplus_GdipCreateEffect" -eq 1; then
-	patch_apply gdiplus-GdipCreateEffect/0001-gdiplus-Add-stub-for-GdipCreateEffect.patch
+	patch_apply gdiplus-GdipCreateEffect/0001-gdiplus-Add-GdipCreateEffect-stub.patch
 	(
-		echo '+    { "David Hedberg", "gdiplus: Add stub for GdipCreateEffect.", 1 },';
+		echo '+    { "Alistair Leslie-Hughes", "gdiplus: Add GdipCreateEffect stub.", 1 },';
 	) >> "$patchlist"
 fi
 

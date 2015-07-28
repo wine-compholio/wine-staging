@@ -89,6 +89,7 @@ patch_enable_all ()
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Skip_Tests="$1"
 	enable_d3d9_Surface_Refcount="$1"
+	enable_d3dcompiler_43_D3DCompile="$1"
 	enable_d3dx10_43_D3DX10CreateEffectFromFile="$1"
 	enable_d3dx9_24_ID3DXEffect="$1"
 	enable_d3dx9_25_ID3DXEffect="$1"
@@ -342,6 +343,9 @@ patch_enable ()
 			;;
 		d3d9-Surface_Refcount)
 			enable_d3d9_Surface_Refcount="$2"
+			;;
+		d3dcompiler_43-D3DCompile)
+			enable_d3dcompiler_43_D3DCompile="$2"
 			;;
 		d3dx10_43-D3DX10CreateEffectFromFile)
 			enable_d3dx10_43_D3DX10CreateEffectFromFile="$2"
@@ -1996,23 +2000,6 @@ if test "$enable_Staging" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2029,6 +2016,23 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2184,6 +2188,18 @@ if test "$enable_d3d9_Surface_Refcount" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset d3dcompiler_43-D3DCompile
+# |
+# | Modified files:
+# |   *	dlls/d3dcompiler_43/compiler.c, dlls/d3dcompiler_46/d3dcompiler_46.spec, dlls/d3dcompiler_47/d3dcompiler_47.spec
+# |
+if test "$enable_d3dcompiler_43_D3DCompile" -eq 1; then
+	patch_apply d3dcompiler_43-D3DCompile/0001-d3dcompiler-Add-D3DCompileFromFile-D3DCompile2-stubs.patch
+	(
+		echo '+    { "Alistair Leslie-Hughes", "d3dcompiler: Add D3DCompileFromFile, D3DCompile2 stubs.", 3 },';
+	) >> "$patchlist"
+fi
+
 # Patchset d3dx10_43-D3DX10CreateEffectFromFile
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2242,33 +2258,6 @@ if test "$enable_d3dx9_26_ID3DXEffect" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset d3dx9_36-D3DXStubs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#26379] Support for D3DXComputeNormals
-# |   *	[#38334] Add stub for D3DXFrameFind
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_24/d3dx9_24.spec, dlls/d3dx9_25/d3dx9_25.spec, dlls/d3dx9_26/d3dx9_26.spec, dlls/d3dx9_27/d3dx9_27.spec,
-# | 	dlls/d3dx9_28/d3dx9_28.spec, dlls/d3dx9_29/d3dx9_29.spec, dlls/d3dx9_30/d3dx9_30.spec, dlls/d3dx9_31/d3dx9_31.spec,
-# | 	dlls/d3dx9_32/d3dx9_32.spec, dlls/d3dx9_33/d3dx9_33.spec, dlls/d3dx9_34/d3dx9_34.spec, dlls/d3dx9_35/d3dx9_35.spec,
-# | 	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/mesh.c, dlls/d3dx9_37/d3dx9_37.spec, dlls/d3dx9_38/d3dx9_38.spec,
-# | 	dlls/d3dx9_39/d3dx9_39.spec, dlls/d3dx9_40/d3dx9_40.spec, dlls/d3dx9_41/d3dx9_41.spec, dlls/d3dx9_42/d3dx9_42.spec,
-# | 	dlls/d3dx9_43/d3dx9_43.spec
-# |
-if test "$enable_d3dx9_36_D3DXStubs" -eq 1; then
-	patch_apply d3dx9_36-D3DXStubs/0001-d3dx9_36-Implement-D3DXComputeNormals.patch
-	patch_apply d3dx9_36-D3DXStubs/0002-d3dx9_36-Add-stub-for-D3DXComputeNormalMap.patch
-	patch_apply d3dx9_36-D3DXStubs/0003-d3dx9_36-Add-D3DXFrameFind-stub.patch
-	patch_apply d3dx9_36-D3DXStubs/0004-d3dx9_36-Add-D3DXTessellateNPatches-stub.-try-2.patch
-	(
-		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXComputeNormals.", 1 },';
-		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeNormalMap.", 1 },';
-		echo '+    { "Andrey Gusev", "d3dx9_36: Add D3DXFrameFind stub.", 1 },';
-		echo '+    { "Alistair Leslie-Hughes", "d3dx9_36: Add D3DXTessellateNPatches stub.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-DXTn
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2310,6 +2299,33 @@ if test "$enable_d3dx9_36_DXTn" -eq 1; then
 	patch_apply d3dx9_36-DXTn/0001-d3dx9_36-Add-dxtn-support.patch
 	(
 		echo '+    { "Christian Costa", "d3dx9_36: Add dxtn support.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3dx9_36-D3DXStubs
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#26379] Support for D3DXComputeNormals
+# |   *	[#38334] Add stub for D3DXFrameFind
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_24/d3dx9_24.spec, dlls/d3dx9_25/d3dx9_25.spec, dlls/d3dx9_26/d3dx9_26.spec, dlls/d3dx9_27/d3dx9_27.spec,
+# | 	dlls/d3dx9_28/d3dx9_28.spec, dlls/d3dx9_29/d3dx9_29.spec, dlls/d3dx9_30/d3dx9_30.spec, dlls/d3dx9_31/d3dx9_31.spec,
+# | 	dlls/d3dx9_32/d3dx9_32.spec, dlls/d3dx9_33/d3dx9_33.spec, dlls/d3dx9_34/d3dx9_34.spec, dlls/d3dx9_35/d3dx9_35.spec,
+# | 	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/mesh.c, dlls/d3dx9_37/d3dx9_37.spec, dlls/d3dx9_38/d3dx9_38.spec,
+# | 	dlls/d3dx9_39/d3dx9_39.spec, dlls/d3dx9_40/d3dx9_40.spec, dlls/d3dx9_41/d3dx9_41.spec, dlls/d3dx9_42/d3dx9_42.spec,
+# | 	dlls/d3dx9_43/d3dx9_43.spec
+# |
+if test "$enable_d3dx9_36_D3DXStubs" -eq 1; then
+	patch_apply d3dx9_36-D3DXStubs/0001-d3dx9_36-Implement-D3DXComputeNormals.patch
+	patch_apply d3dx9_36-D3DXStubs/0002-d3dx9_36-Add-stub-for-D3DXComputeNormalMap.patch
+	patch_apply d3dx9_36-D3DXStubs/0003-d3dx9_36-Add-D3DXFrameFind-stub.patch
+	patch_apply d3dx9_36-D3DXStubs/0004-d3dx9_36-Add-D3DXTessellateNPatches-stub.-try-2.patch
+	(
+		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXComputeNormals.", 1 },';
+		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeNormalMap.", 1 },';
+		echo '+    { "Andrey Gusev", "d3dx9_36: Add D3DXFrameFind stub.", 1 },';
+		echo '+    { "Alistair Leslie-Hughes", "d3dx9_36: Add D3DXTessellateNPatches stub.", 2 },';
 	) >> "$patchlist"
 fi
 

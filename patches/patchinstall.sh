@@ -263,6 +263,7 @@ patch_enable_all ()
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
 	enable_winepulse_PulseAudio_Support="$1"
+	enable_wineserver_Registry_Timestamp="$1"
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_Clipboard_HTML="$1"
 	enable_winex11_DragAndDrop="$1"
@@ -863,6 +864,9 @@ patch_enable ()
 			;;
 		winepulse-PulseAudio_Support)
 			enable_winepulse_PulseAudio_Support="$2"
+			;;
+		wineserver-Registry_Timestamp)
+			enable_wineserver_Registry_Timestamp="$2"
 			;;
 		winex11-CandidateWindowPos)
 			enable_winex11_CandidateWindowPos="$2"
@@ -5463,6 +5467,21 @@ if test "$enable_winepulse_PulseAudio_Support" -eq 1; then
 		echo '+    { "Mark Harmstone", "winepulse: implement GetPropValue.", 1 },';
 		echo '+    { "Mark Harmstone", "winepulse: fetch actual program name if possible.", 1 },';
 		echo '+    { "Mark Harmstone", "winepulse: return PKEY_AudioEndpoint_PhysicalSpeakers device prop.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wineserver-Registry_Timestamp
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38927] Store registry timestamps with nanoseconds precision
+# |
+# | Modified files:
+# |   *	server/registry.c
+# |
+if test "$enable_wineserver_Registry_Timestamp" -eq 1; then
+	patch_apply wineserver-Registry_Timestamp/0001-wineserver-Increase-precision-when-saving-loading-re.patch
+	(
+		echo '+    { "Michael Müller", "wineserver: Increase precision when saving / loading registry modification date.", 1 },';
 	) >> "$patchlist"
 fi
 

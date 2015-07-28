@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [11]:**
+**Bug fixes and features included in the next upcoming release [12]:**
 
 * Add stubs for d3dx10_43.D3DX10CreateEffectFromFileA/W ([Wine Bug #27739](https://bugs.winehq.org/show_bug.cgi?id=27739))
 * Add support for ThreadQuerySetWin32StartAddress info class ([Wine Bug #8277](https://bugs.winehq.org/show_bug.cgi?id=8277))
@@ -52,6 +52,7 @@ Included bug fixes and improvements
 * Return dummy ID3DXSkinInfo interface when skinning info not present ([Wine Bug #33904](https://bugs.winehq.org/show_bug.cgi?id=33904))
 * Share source of d3dx9_36 with d3dx9_33 to avoid Wine DLL forwards ([Wine Bug #21817](https://bugs.winehq.org/show_bug.cgi?id=21817))
 * Silence repeated LocaleNameToLCID/LCIDToLocaleName unsupported flags FIXMEs ([Wine Bug #30076](https://bugs.winehq.org/show_bug.cgi?id=30076))
+* Store registry timestamps with nanoseconds precision ([Wine Bug #38927](https://bugs.winehq.org/show_bug.cgi?id=38927))
 
 
 **Bug fixes and features in Wine Staging 1.7.47 [230]:**

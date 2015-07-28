@@ -185,6 +185,7 @@ patch_enable_all ()
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
+	enable_openal32_EFX_Extension="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_rasapi32_RasEnumDevicesA="$1"
@@ -627,6 +628,9 @@ patch_enable ()
 			;;
 		nvencodeapi-Video_Encoder)
 			enable_nvencodeapi_Video_Encoder="$2"
+			;;
+		openal32-EFX_Extension)
+			enable_openal32_EFX_Extension="$2"
 			;;
 		opengl32-Revert_Disable_Ext)
 			enable_opengl32_Revert_Disable_Ext="$2"
@@ -3910,6 +3914,21 @@ if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
 	patch_apply nvencodeapi-Video_Encoder/0001-nvencodeapi-First-implementation.patch
 	(
 		echo '+    { "Michael Müller", "nvencodeapi: First implementation.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset openal32-EFX_Extension
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38972] Export additional OpenAL32 functions
+# |
+# | Modified files:
+# |   *	dlls/openal32/openal.c, dlls/openal32/openal32.spec
+# |
+if test "$enable_openal32_EFX_Extension" -eq 1; then
+	patch_apply openal32-EFX_Extension/0001-openal32-Export-EFX-extension-functions.patch
+	(
+		echo '+    { "Michael Müller", "openal32: Export EFX extension functions.", 1 },';
 	) >> "$patchlist"
 fi
 

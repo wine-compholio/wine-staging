@@ -109,6 +109,7 @@ patch_enable_all ()
 	enable_d3dx9_36_Texture_Align="$1"
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
 	enable_dbghelp_Debug_Symbols="$1"
+	enable_dbghelp_UnDecorateSymbolNameW="$1"
 	enable_ddraw_EnumSurfaces="$1"
 	enable_ddraw_IDirect3DTexture2_Load="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
@@ -403,6 +404,9 @@ patch_enable ()
 			;;
 		dbghelp-Debug_Symbols)
 			enable_dbghelp_Debug_Symbols="$2"
+			;;
+		dbghelp-UnDecorateSymbolNameW)
+			enable_dbghelp_UnDecorateSymbolNameW="$2"
 			;;
 		ddraw-EnumSurfaces)
 			enable_ddraw_EnumSurfaces="$2"
@@ -2516,6 +2520,21 @@ if test "$enable_dbghelp_Debug_Symbols" -eq 1; then
 	patch_apply dbghelp-Debug_Symbols/0001-dbghelp-Always-check-for-debug-symbols-in-BINDIR.patch
 	(
 		echo '+    { "Sebastian Lackner", "dbghelp: Always check for debug symbols in BINDIR.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dbghelp-UnDecorateSymbolNameW
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38828] Implement dbghelp.UnDecorateSymbolNameW
+# |
+# | Modified files:
+# |   *	dlls/dbghelp/dbghelp.spec, dlls/dbghelp/symbol.c
+# |
+if test "$enable_dbghelp_UnDecorateSymbolNameW" -eq 1; then
+	patch_apply dbghelp-UnDecorateSymbolNameW/0001-dbghelp-Implement-UnDecorateSymbolNameW.patch
+	(
+		echo '+    { "Sebastian Lackner", "dbghelp: Implement UnDecorateSymbolNameW.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4896,6 +4915,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-wined3d_swapchain_present
+# |
+# | Modified files:
+# |   *	dlls/wined3d/swapchain.c
+# |
+if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
+	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-MESA_GPU_Info
 # |
 # | Modified files:
@@ -4977,18 +5008,6 @@ if test "$enable_wined3d_resource_check_usage" -eq 1; then
 	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
 	(
 		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-wined3d_swapchain_present
-# |
-# | Modified files:
-# |   *	dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
-	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
 	) >> "$patchlist"
 fi
 

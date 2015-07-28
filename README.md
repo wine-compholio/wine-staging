@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [15]:**
+**Bug fixes and features included in the next upcoming release [16]:**
 
 * Add stub for D3DXTessellateNPatches
 * Add stubs for D3DCompile2 and D3DCompileFromFile
@@ -52,6 +52,7 @@ Included bug fixes and improvements
 * Fix security cookie handling for UPX compressed executables ([Wine Bug #38949](https://bugs.winehq.org/show_bug.cgi?id=38949))
 * Forward exitcode from child process when in wineconsole
 * Implement AMStream GetMultiMediaStream functions ([Wine Bug #37090](https://bugs.winehq.org/show_bug.cgi?id=37090))
+* Implement dbghelp.UnDecorateSymbolNameW ([Wine Bug #38828](https://bugs.winehq.org/show_bug.cgi?id=38828))
 * Return dummy ID3DXSkinInfo interface when skinning info not present ([Wine Bug #33904](https://bugs.winehq.org/show_bug.cgi?id=33904))
 * Share source of d3dx9_36 with d3dx9_33 to avoid Wine DLL forwards ([Wine Bug #21817](https://bugs.winehq.org/show_bug.cgi?id=21817))
 * Silence repeated LocaleNameToLCID/LCIDToLocaleName unsupported flags FIXMEs ([Wine Bug #30076](https://bugs.winehq.org/show_bug.cgi?id=30076))

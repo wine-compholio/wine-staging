@@ -2206,9 +2206,11 @@ fi
 # |   *	dlls/d3dcompiler_43/compiler.c, dlls/d3dcompiler_46/d3dcompiler_46.spec, dlls/d3dcompiler_47/d3dcompiler_47.spec
 # |
 if test "$enable_d3dcompiler_43_D3DCompile" -eq 1; then
-	patch_apply d3dcompiler_43-D3DCompile/0001-d3dcompiler-Add-D3DCompileFromFile-D3DCompile2-stubs.patch
+	patch_apply d3dcompiler_43-D3DCompile/0001-d3dcompiler_43-Add-D3DCompileFromFile-stub.-try-3.patch
+	patch_apply d3dcompiler_43-D3DCompile/0002-d3dcompiler_43-Implement-semi-stub-for-D3DCompile2.patch
 	(
-		echo '+    { "Alistair Leslie-Hughes", "d3dcompiler: Add D3DCompileFromFile, D3DCompile2 stubs.", 3 },';
+		echo '+    { "Alistair Leslie-Hughes", "d3dcompiler_43: Add D3DCompileFromFile stub.", 3 },';
+		echo '+    { "Sebastian Lackner", "d3dcompiler_43: Implement semi-stub for D3DCompile2.", 1 },';
 	) >> "$patchlist"
 fi
 

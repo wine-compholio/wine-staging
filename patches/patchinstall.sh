@@ -112,6 +112,7 @@ patch_enable_all ()
 	enable_dbghelp_UnDecorateSymbolNameW="$1"
 	enable_ddraw_EnumSurfaces="$1"
 	enable_ddraw_IDirect3DTexture2_Load="$1"
+	enable_ddraw_Rendering_Targets="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
 	enable_dinput_Events="$1"
 	enable_dsound_EAX="$1"
@@ -414,6 +415,9 @@ patch_enable ()
 			;;
 		ddraw-IDirect3DTexture2_Load)
 			enable_ddraw_IDirect3DTexture2_Load="$2"
+			;;
+		ddraw-Rendering_Targets)
+			enable_ddraw_Rendering_Targets="$2"
 			;;
 		ddraw-d3d_execute_buffer)
 			enable_ddraw_d3d_execute_buffer="$2"
@@ -2008,6 +2012,23 @@ if test "$enable_Staging" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2024,23 +2045,6 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2573,6 +2577,21 @@ if test "$enable_ddraw_IDirect3DTexture2_Load" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ddraw-Rendering_Targets
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34906] Use video memory for rendering targets if possible
+# |
+# | Modified files:
+# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/ddraw_private.h, dlls/ddraw/device.c, dlls/ddraw/surface.c
+# |
+if test "$enable_ddraw_Rendering_Targets" -eq 1; then
+	patch_apply ddraw-Rendering_Targets/0001-ddraw-Create-rendering-targets-in-video-memory-if-po.patch
+	(
+		echo '+    { "Michael Müller", "ddraw: Create rendering targets in video memory if possible.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ddraw-d3d_execute_buffer
 # |
 # | Modified files:
@@ -2924,6 +2943,18 @@ if test "$enable_kernel32_CompareStringEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-File_Permissions
 # |
 # | Modified files:
@@ -2984,18 +3015,6 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Zhaonan Liang", "include: Add declaration for FILE_LINK_INFORMATION.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Add tests for FileLinkInformation class.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement support for FileLinkInformation class in NtSetInformationFile.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4930,6 +4949,51 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-Revert_PixelFormat
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35655] Fix wined3d performance drop introduced by pixelformat changes.
+# |   *	[#35718] Fix flickering introduced by pixelformat changes.
+# |   *	[#35975] Fix gray screen on startup introduced by pixelformat changes.
+# |   *	[#36900] Fix missing video introduced by pixelformat changes.
+# |
+# | Modified files:
+# |   *	dlls/d3d8/tests/device.c, dlls/d3d9/tests/device.c, dlls/ddraw/tests/ddraw1.c, dlls/ddraw/tests/ddraw2.c,
+# | 	dlls/ddraw/tests/ddraw4.c, dlls/ddraw/tests/ddraw7.c, dlls/wined3d/context.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
+	patch_apply wined3d-Revert_PixelFormat/0001-Revert-wined3d-Track-if-a-context-s-private-hdc-has-.patch
+	patch_apply wined3d-Revert_PixelFormat/0002-Revert-wined3d-Track-if-a-context-s-hdc-is-private-s.patch
+	patch_apply wined3d-Revert_PixelFormat/0003-Revert-wined3d-When-restoring-pixel-format-in-contex.patch
+	patch_apply wined3d-Revert_PixelFormat/0004-Revert-wined3d-Don-t-call-GetPixelFormat-to-set-a-fl.patch
+	patch_apply wined3d-Revert_PixelFormat/0005-Revert-wined3d-Restore-the-pixel-format-of-the-windo.patch
+	patch_apply wined3d-Revert_PixelFormat/0006-d3d8-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
+	patch_apply wined3d-Revert_PixelFormat/0007-d3d9-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
+	patch_apply wined3d-Revert_PixelFormat/0008-ddraw-Mark-tests-which-no-longer-pass-due-to-reverts.patch
+	(
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s private hdc has had its pixel format set, so we don'\''t need to check it.\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s hdc is private so we never need to restore its pixel format.\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: When restoring pixel format in context_release(), mark the context as needing to be set on the next context_acquire().\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Don'\''t call GetPixelFormat() to set a flag that'\''s already set.\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Restore the pixel format of the window whose pixel format was actually changed.\".", 1 },';
+		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-wined3d_swapchain_present
+# |
+# | Modified files:
+# |   *	dlls/wined3d/swapchain.c
+# |
+if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
+	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-UnhandledBlendFactor
 # |
 # | Modified files:
@@ -4951,18 +5015,6 @@ if test "$enable_wined3d_resource_check_usage" -eq 1; then
 	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
 	(
 		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-wined3d_swapchain_present
-# |
-# | Modified files:
-# |   *	dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
-	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5005,39 +5057,6 @@ if test "$enable_wined3d_Multisampling" -eq 1; then
 	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
 	(
 		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Revert_PixelFormat
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35655] Fix wined3d performance drop introduced by pixelformat changes.
-# |   *	[#35718] Fix flickering introduced by pixelformat changes.
-# |   *	[#35975] Fix gray screen on startup introduced by pixelformat changes.
-# |   *	[#36900] Fix missing video introduced by pixelformat changes.
-# |
-# | Modified files:
-# |   *	dlls/d3d8/tests/device.c, dlls/d3d9/tests/device.c, dlls/ddraw/tests/ddraw1.c, dlls/ddraw/tests/ddraw2.c,
-# | 	dlls/ddraw/tests/ddraw4.c, dlls/ddraw/tests/ddraw7.c, dlls/wined3d/context.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
-	patch_apply wined3d-Revert_PixelFormat/0001-Revert-wined3d-Track-if-a-context-s-private-hdc-has-.patch
-	patch_apply wined3d-Revert_PixelFormat/0002-Revert-wined3d-Track-if-a-context-s-hdc-is-private-s.patch
-	patch_apply wined3d-Revert_PixelFormat/0003-Revert-wined3d-When-restoring-pixel-format-in-contex.patch
-	patch_apply wined3d-Revert_PixelFormat/0004-Revert-wined3d-Don-t-call-GetPixelFormat-to-set-a-fl.patch
-	patch_apply wined3d-Revert_PixelFormat/0005-Revert-wined3d-Restore-the-pixel-format-of-the-windo.patch
-	patch_apply wined3d-Revert_PixelFormat/0006-d3d8-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
-	patch_apply wined3d-Revert_PixelFormat/0007-d3d9-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
-	patch_apply wined3d-Revert_PixelFormat/0008-ddraw-Mark-tests-which-no-longer-pass-due-to-reverts.patch
-	(
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s private hdc has had its pixel format set, so we don'\''t need to check it.\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s hdc is private so we never need to restore its pixel format.\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: When restoring pixel format in context_release(), mark the context as needing to be set on the next context_acquire().\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Don'\''t call GetPixelFormat() to set a flag that'\''s already set.\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Restore the pixel format of the window whose pixel format was actually changed.\".", 1 },';
-		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 	) >> "$patchlist"
 fi
 

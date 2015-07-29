@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [17]:**
+**Bug fixes and features included in the next upcoming release [18]:**
 
 * Add stub for D3DXTessellateNPatches
 * Add stubs for D3DCompile2 and D3DCompileFromFile
@@ -58,6 +58,7 @@ Included bug fixes and improvements
 * Share source of d3dx9_36 with d3dx9_33 to avoid Wine DLL forwards ([Wine Bug #21817](https://bugs.winehq.org/show_bug.cgi?id=21817))
 * Silence repeated LocaleNameToLCID/LCIDToLocaleName unsupported flags FIXMEs ([Wine Bug #30076](https://bugs.winehq.org/show_bug.cgi?id=30076))
 * Store registry timestamps with nanoseconds precision ([Wine Bug #38927](https://bugs.winehq.org/show_bug.cgi?id=38927))
+* Use video memory for rendering targets if possible ([Wine Bug #34906](https://bugs.winehq.org/show_bug.cgi?id=34906))
 
 
 **Bug fixes and features in Wine Staging 1.7.47 [230]:**

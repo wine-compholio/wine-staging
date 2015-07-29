@@ -210,6 +210,7 @@ patch_enable_all ()
 	enable_server_OpenProcess="$1"
 	enable_server_PeekMessage="$1"
 	enable_server_Realtime_Priority="$1"
+	enable_server_Registry_Timestamp="$1"
 	enable_server_RootDirectory_File="$1"
 	enable_server_Shared_Memory="$1"
 	enable_server_Stored_ACLs="$1"
@@ -266,7 +267,6 @@ patch_enable_all ()
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
 	enable_winepulse_PulseAudio_Support="$1"
-	enable_wineserver_Registry_Timestamp="$1"
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_Clipboard_HTML="$1"
 	enable_winex11_DragAndDrop="$1"
@@ -709,6 +709,9 @@ patch_enable ()
 		server-Realtime_Priority)
 			enable_server_Realtime_Priority="$2"
 			;;
+		server-Registry_Timestamp)
+			enable_server_Registry_Timestamp="$2"
+			;;
 		server-RootDirectory_File)
 			enable_server_RootDirectory_File="$2"
 			;;
@@ -876,9 +879,6 @@ patch_enable ()
 			;;
 		winepulse-PulseAudio_Support)
 			enable_winepulse_PulseAudio_Support="$2"
-			;;
-		wineserver-Registry_Timestamp)
-			enable_wineserver_Registry_Timestamp="$2"
 			;;
 		winex11-CandidateWindowPos)
 			enable_winex11_CandidateWindowPos="$2"
@@ -4308,6 +4308,21 @@ if test "$enable_server_Realtime_Priority" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-Registry_Timestamp
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38927] Store registry timestamps with nanoseconds precision
+# |
+# | Modified files:
+# |   *	server/registry.c
+# |
+if test "$enable_server_Registry_Timestamp" -eq 1; then
+	patch_apply server-Registry_Timestamp/0001-server-Increase-precision-when-saving-loading-regist.patch
+	(
+		echo '+    { "Michael Müller", "server: Increase precision when saving / loading registry modification date.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-Shared_Memory
 # |
 # | Modified files:
@@ -4915,6 +4930,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-resource_check_usage
 # |
 # | Modified files:
@@ -5011,18 +5038,6 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5513,21 +5528,6 @@ if test "$enable_winepulse_PulseAudio_Support" -eq 1; then
 		echo '+    { "Mark Harmstone", "winepulse: implement GetPropValue.", 1 },';
 		echo '+    { "Mark Harmstone", "winepulse: fetch actual program name if possible.", 1 },';
 		echo '+    { "Mark Harmstone", "winepulse: return PKEY_AudioEndpoint_PhysicalSpeakers device prop.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wineserver-Registry_Timestamp
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38927] Store registry timestamps with nanoseconds precision
-# |
-# | Modified files:
-# |   *	server/registry.c
-# |
-if test "$enable_wineserver_Registry_Timestamp" -eq 1; then
-	patch_apply wineserver-Registry_Timestamp/0001-wineserver-Increase-precision-when-saving-loading-re.patch
-	(
-		echo '+    { "Michael Müller", "wineserver: Increase precision when saving / loading registry modification date.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1131,16 +1131,24 @@ diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
  
      if (desc->pool == WINED3D_POOL_DEFAULT && desc->usage & WINED3DUSAGE_DYNAMIC
              && gl_info->supported[ARB_PIXEL_BUFFER_OBJECT]
-@@ -523,7 +980,9 @@
+@@ -523,11 +980,17 @@
      {
          wined3d_resource_free_sysmem(&volume->resource);
          volume->resource.map_binding = WINED3D_LOCATION_BUFFER;
 +#if defined(STAGING_CSMT)
          volume->resource.map_heap_memory = NULL;
-+#endif /* STAGING_CSMT */
      }
  
      volume->container = container;
+     volume->resource.format_flags = container->resource.format_flags;
++#else  /* STAGING_CSMT */
++    }
++
++    volume->container = container;
++#endif /* STAGING_CSMT */
+ 
+     return WINED3D_OK;
+ }
 diff --git a/dlls/wined3d/utils.c b/dlls/wined3d/utils.c
 --- a/dlls/wined3d/utils.c
 +++ b/dlls/wined3d/utils.c
@@ -9267,11 +9275,13 @@ diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
  
  static HRESULT surface_init(struct wined3d_surface *surface, struct wined3d_texture *container,
          const struct wined3d_resource_desc *desc, GLenum target, unsigned int level, unsigned int layer, DWORD flags)
-@@ -5395,7 +7087,11 @@
+@@ -5395,9 +7087,13 @@
      }
  
      surface->container = container;
 +#if defined(STAGING_CSMT)
+     surface->resource.format_flags = container->resource.format_flags;
+ 
      wined3d_resource_validate_location(&surface->resource, WINED3D_LOCATION_SYSMEM);
 +#else  /* STAGING_CSMT */
 +    surface_validate_location(surface, WINED3D_LOCATION_SYSMEM);
@@ -9279,7 +9289,7 @@ diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
      list_init(&surface->renderbuffers);
      list_init(&surface->overlays);
  
-@@ -5427,9 +7123,14 @@
+@@ -5429,9 +7125,14 @@
      if (surface->resource.map_binding == WINED3D_LOCATION_DIB)
      {
          wined3d_resource_free_sysmem(&surface->resource);
@@ -9294,7 +9304,7 @@ diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
      }
  
      return hr;
-@@ -5456,7 +7157,11 @@
+@@ -5458,7 +7159,11 @@
      if (FAILED(hr = surface_init(object, container, desc, target, level, layer, flags)))
      {
          WARN("Failed to initialize surface, returning %#x.\n", hr);

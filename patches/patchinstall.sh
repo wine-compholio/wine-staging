@@ -179,6 +179,7 @@ patch_enable_all ()
 	enable_ntdll_ThreadQuerySetWin32StartAddress="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
+	enable_ntdll_Threadpool="$1"
 	enable_ntdll_User_Shared_Data="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_WinSqm="$1"
@@ -616,6 +617,9 @@ patch_enable ()
 			;;
 		ntdll-Threading)
 			enable_ntdll_Threading="$2"
+			;;
+		ntdll-Threadpool)
+			enable_ntdll_Threadpool="$2"
 			;;
 		ntdll-User_Shared_Data)
 			enable_ntdll_User_Shared_Data="$2"
@@ -3792,6 +3796,18 @@ if test "$enable_ntdll_Threading" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-Threadpool
+# |
+# | Modified files:
+# |   *	dlls/ntdll/threadpool.c
+# |
+if test "$enable_ntdll_Threadpool" -eq 1; then
+	patch_apply ntdll-Threadpool/0001-ntdll-Mark-newly-spawned-worker-threads-as-busy-to-a.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Mark newly spawned worker threads as busy to avoid problems with long-running tasks.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-User_Shared_Data
 # |
 # | Modified files:
@@ -4951,6 +4967,45 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-Multisampling
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Multisampling" -eq 1; then
+	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+	(
+		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-resource_check_usage
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c
+# |
+if test "$enable_wined3d_resource_check_usage" -eq 1; then
+	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	(
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-wined3d_swapchain_present
+# |
+# | Modified files:
+# |   *	dlls/wined3d/swapchain.c
+# |
+if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
+	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-Revert_PixelFormat
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4984,18 +5039,6 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-wined3d_swapchain_present
-# |
-# | Modified files:
-# |   *	dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
-	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-UnhandledBlendFactor
 # |
 # | Modified files:
@@ -5005,18 +5048,6 @@ if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
 	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-resource_check_usage
-# |
-# | Modified files:
-# |   *	dlls/wined3d/resource.c
-# |
-if test "$enable_wined3d_resource_check_usage" -eq 1; then
-	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	(
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -5044,21 +5075,6 @@ if test "$enable_wined3d_MESA_GPU_Info" -eq 1; then
 	patch_apply wined3d-MESA_GPU_Info/0001-wined3d-Use-pci-and-memory-information-from-MESA-if-.patch
 	(
 		echo '+    { "Michael Müller", "wined3d: Use pci and memory information from MESA if possible.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Multisampling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
-	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
 	) >> "$patchlist"
 fi
 

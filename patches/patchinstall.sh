@@ -51,11 +51,11 @@ usage()
 # Show version information
 version()
 {
-	echo "Wine Staging 1.7.48"
+	echo "Wine Staging 1.7.49 (unreleased)"
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 797c037bff2f7621f5b3d632bd899349529d6b2b"
+	echo "  commit 5bd9d58016236da3142e030add2efbb2789fa2e4"
 	echo ""
 }
 
@@ -176,10 +176,8 @@ patch_enable_all ()
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_RtlIpStringToAddress="$1"
 	enable_ntdll_Security_Cookie="$1"
-	enable_ntdll_ThreadQuerySetWin32StartAddress="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
-	enable_ntdll_Threadpool="$1"
 	enable_ntdll_User_Shared_Data="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_WinSqm="$1"
@@ -609,17 +607,11 @@ patch_enable ()
 		ntdll-Security_Cookie)
 			enable_ntdll_Security_Cookie="$2"
 			;;
-		ntdll-ThreadQuerySetWin32StartAddress)
-			enable_ntdll_ThreadQuerySetWin32StartAddress="$2"
-			;;
 		ntdll-ThreadTime)
 			enable_ntdll_ThreadTime="$2"
 			;;
 		ntdll-Threading)
 			enable_ntdll_Threading="$2"
-			;;
-		ntdll-Threadpool)
-			enable_ntdll_Threadpool="$2"
 			;;
 		ntdll-User_Shared_Data)
 			enable_ntdll_User_Shared_Data="$2"
@@ -1756,13 +1748,6 @@ if test "$enable_ntdll_WriteWatches" -eq 1; then
 	enable_ws2_32_WriteWatches=1
 fi
 
-if test "$enable_ntdll_ThreadTime" -eq 1; then
-	if test "$enable_ntdll_ThreadQuerySetWin32StartAddress" -gt 1; then
-		abort "Patchset ntdll-ThreadQuerySetWin32StartAddress disabled, but ntdll-ThreadTime depends on that."
-	fi
-	enable_ntdll_ThreadQuerySetWin32StartAddress=1
-fi
-
 if test "$enable_ntdll_Junction_Points" -eq 1; then
 	if test "$enable_ntdll_Fix_Free" -gt 1; then
 		abort "Patchset ntdll-Fix_Free disabled, but ntdll-Junction_Points depends on that."
@@ -2016,23 +2001,6 @@ if test "$enable_Staging" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2049,6 +2017,23 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3740,32 +3725,9 @@ fi
 # |   *	dlls/ntdll/virtual.c
 # |
 if test "$enable_ntdll_Security_Cookie" -eq 1; then
-	patch_apply ntdll-Security_Cookie/0001-ntdll-Handle-partial-image-load-config-structs.-try-.patch
-	patch_apply ntdll-Security_Cookie/0002-ntdll-Validate-SecurityCookie-pointer-before-derefer.patch
+	patch_apply ntdll-Security_Cookie/0001-ntdll-Validate-SecurityCookie-pointer-before-derefer.patch
 	(
-		echo '+    { "Martin Storsjo", "ntdll: Handle partial image load config structs.", 3 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Validate SecurityCookie pointer before dereferencing.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-ThreadQuerySetWin32StartAddress
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#8277] Add support for ThreadQuerySetWin32StartAddress info class
-# |
-# | Modified files:
-# |   *	dlls/ntdll/tests/info.c, dlls/ntdll/thread.c, server/protocol.def, server/thread.c, server/thread.h
-# |
-if test "$enable_ntdll_ThreadQuerySetWin32StartAddress" -eq 1; then
-	patch_apply ntdll-ThreadQuerySetWin32StartAddress/0001-server-Use-a-separate-wineserver-call-to-fetch-threa.patch
-	patch_apply ntdll-ThreadQuerySetWin32StartAddress/0002-ntdll-Implement-ThreadQuerySetWin32StartAddress-info.patch
-	patch_apply ntdll-ThreadQuerySetWin32StartAddress/0003-ntdll-Implement-ThreadQuerySetWin32StartAddress-info.patch
-	patch_apply ntdll-ThreadQuerySetWin32StartAddress/0004-ntdll-tests-Add-tests-for-ThreadQuerySetWin32StartAd.patch
-	(
-		echo '+    { "Sebastian Lackner", "server: Use a separate wineserver call to fetch thread times.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Implement ThreadQuerySetWin32StartAddress info class in NtSetInformationThread.", 2 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Implement ThreadQuerySetWin32StartAddress info class in NtQueryInformationThread.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for ThreadQuerySetWin32StartAddress info class.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3793,18 +3755,6 @@ if test "$enable_ntdll_Threading" -eq 1; then
 	patch_apply ntdll-Threading/0001-ntdll-Fix-race-condition-when-threads-are-killed-dur.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Fix race-condition when threads are killed during shutdown.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Threadpool
-# |
-# | Modified files:
-# |   *	dlls/ntdll/threadpool.c
-# |
-if test "$enable_ntdll_Threadpool" -eq 1; then
-	patch_apply ntdll-Threadpool/0001-ntdll-Mark-newly-spawned-worker-threads-as-busy-to-a.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Mark newly spawned worker threads as busy to avoid problems with long-running tasks.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4967,18 +4917,15 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Multisampling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# Patchset wined3d-UnhandledBlendFactor
 # |
 # | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |   *	dlls/wined3d/state.c
 # |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
 	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5003,6 +4950,48 @@ if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
 	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Geforce_425M
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35054] Add wined3d detection for GeForce GT 425M
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Geforce_425M" -eq 1; then
+	patch_apply wined3d-Geforce_425M/0001-wined3d-Add-detection-for-NVIDIA-GeForce-425M.patch
+	(
+		echo '+    { "Jarkko Korpi", "wined3d: Add detection for NVIDIA GeForce 425M.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-MESA_GPU_Info
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_gl.h, dlls/winex11.drv/opengl.c, include/wine/wgl_driver.h
+# |
+if test "$enable_wined3d_MESA_GPU_Info" -eq 1; then
+	patch_apply wined3d-MESA_GPU_Info/0001-wined3d-Use-pci-and-memory-information-from-MESA-if-.patch
+	(
+		echo '+    { "Michael Müller", "wined3d: Use pci and memory information from MESA if possible.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Multisampling
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Multisampling" -eq 1; then
+	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+	(
+		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5036,45 +5025,6 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Geforce_425M
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35054] Add wined3d detection for GeForce GT 425M
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Geforce_425M" -eq 1; then
-	patch_apply wined3d-Geforce_425M/0001-wined3d-Add-detection-for-NVIDIA-GeForce-425M.patch
-	(
-		echo '+    { "Jarkko Korpi", "wined3d: Add detection for NVIDIA GeForce 425M.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-MESA_GPU_Info
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_gl.h, dlls/winex11.drv/opengl.c, include/wine/wgl_driver.h
-# |
-if test "$enable_wined3d_MESA_GPU_Info" -eq 1; then
-	patch_apply wined3d-MESA_GPU_Info/0001-wined3d-Use-pci-and-memory-information-from-MESA-if-.patch
-	(
-		echo '+    { "Michael Müller", "wined3d: Use pci and memory information from MESA if possible.", 2 },';
 	) >> "$patchlist"
 fi
 

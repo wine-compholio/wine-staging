@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 5bd9d58016236da3142e030add2efbb2789fa2e4"
+	echo "  commit 571462c633edbcc5dd6f2f8e56470470f27b0b07"
 	echo ""
 }
 
@@ -175,7 +175,6 @@ patch_enable_all ()
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_RtlIpStringToAddress="$1"
-	enable_ntdll_Security_Cookie="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
 	enable_ntdll_User_Shared_Data="$1"
@@ -603,9 +602,6 @@ patch_enable ()
 			;;
 		ntdll-RtlIpStringToAddress)
 			enable_ntdll_RtlIpStringToAddress="$2"
-			;;
-		ntdll-Security_Cookie)
-			enable_ntdll_Security_Cookie="$2"
 			;;
 		ntdll-ThreadTime)
 			enable_ntdll_ThreadTime="$2"
@@ -3716,21 +3712,6 @@ if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-Security_Cookie
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38949] Fix security cookie handling for UPX compressed executables
-# |
-# | Modified files:
-# |   *	dlls/ntdll/virtual.c
-# |
-if test "$enable_ntdll_Security_Cookie" -eq 1; then
-	patch_apply ntdll-Security_Cookie/0001-ntdll-Validate-SecurityCookie-pointer-before-derefer.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Validate SecurityCookie pointer before dereferencing.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-ThreadTime
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4881,14 +4862,11 @@ fi
 # Patchset wineconsole-Forward_Exitcode
 # |
 # | Modified files:
-# |   *	programs/wineconsole/curses.c, programs/wineconsole/user.c, programs/wineconsole/winecon_private.h,
-# | 	programs/wineconsole/wineconsole.c
+# |   *	programs/wineconsole/winecon_private.h, programs/wineconsole/wineconsole.c
 # |
 if test "$enable_wineconsole_Forward_Exitcode" -eq 1; then
-	patch_apply wineconsole-Forward_Exitcode/0001-wineconsole-Consistently-return-nonzero-exitcode-on-.patch
-	patch_apply wineconsole-Forward_Exitcode/0002-wineconsole-Forward-child-process-exitcode.patch
+	patch_apply wineconsole-Forward_Exitcode/0001-wineconsole-Forward-child-process-exitcode.patch
 	(
-		echo '+    { "Sebastian Lackner", "wineconsole: Consistently return nonzero exitcode on error.", 1 },';
 		echo '+    { "Michael Müller", "wineconsole: Forward child process exitcode.", 1 },';
 	) >> "$patchlist"
 fi
@@ -4914,18 +4892,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	patch_apply wined3d-CSMT_Helper/0001-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5025,6 +4991,18 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 

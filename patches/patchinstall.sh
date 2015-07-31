@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 571462c633edbcc5dd6f2f8e56470470f27b0b07"
+	echo "  commit b3fe96a0a9748c71a24fe0393fd964f0fb2f4ff4"
 	echo ""
 }
 
@@ -168,7 +168,6 @@ patch_enable_all ()
 	enable_ntdll_FreeBSD_Directory="$1"
 	enable_ntdll_Heap_FreeLists="$1"
 	enable_ntdll_Hide_Wine_Exports="$1"
-	enable_ntdll_JobObjects="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_Loader_Machine_Type="$1"
 	enable_ntdll_NtQueryEaFile="$1"
@@ -189,7 +188,6 @@ patch_enable_all ()
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
 	enable_openal32_EFX_Extension="$1"
-	enable_opencl_Silence_Deprecation_Warning="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_rasapi32_RasEnumDevicesA="$1"
@@ -281,7 +279,6 @@ patch_enable_all ()
 	enable_winmm_Delay_Import_Depends="$1"
 	enable_winscard_SCardListReaders="$1"
 	enable_winsta_WinStationEnumerateW="$1"
-	enable_wintrust_MachineGuid="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_APC_Performance="$1"
 	enable_ws2_32_Connect_Time="$1"
@@ -584,9 +581,6 @@ patch_enable ()
 		ntdll-Hide_Wine_Exports)
 			enable_ntdll_Hide_Wine_Exports="$2"
 			;;
-		ntdll-JobObjects)
-			enable_ntdll_JobObjects="$2"
-			;;
 		ntdll-Junction_Points)
 			enable_ntdll_Junction_Points="$2"
 			;;
@@ -646,9 +640,6 @@ patch_enable ()
 			;;
 		openal32-EFX_Extension)
 			enable_openal32_EFX_Extension="$2"
-			;;
-		opencl-Silence_Deprecation_Warning)
-			enable_opencl_Silence_Deprecation_Warning="$2"
 			;;
 		opengl32-Revert_Disable_Ext)
 			enable_opengl32_Revert_Disable_Ext="$2"
@@ -922,9 +913,6 @@ patch_enable ()
 			;;
 		winsta-WinStationEnumerateW)
 			enable_winsta_WinStationEnumerateW="$2"
-			;;
-		wintrust-MachineGuid)
-			enable_wintrust_MachineGuid="$2"
 			;;
 		wpcap-Dynamic_Linking)
 			enable_wpcap_Dynamic_Linking="$2"
@@ -2301,7 +2289,6 @@ fi
 # Patchset d3dx9_36-D3DXStubs
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#26379] Support for D3DXComputeNormals
 # |   *	[#38334] Add stub for D3DXFrameFind
 # |
 # | Modified files:
@@ -2313,15 +2300,11 @@ fi
 # | 	dlls/d3dx9_43/d3dx9_43.spec
 # |
 if test "$enable_d3dx9_36_D3DXStubs" -eq 1; then
-	patch_apply d3dx9_36-D3DXStubs/0001-d3dx9_36-Implement-D3DXComputeNormals.patch
-	patch_apply d3dx9_36-D3DXStubs/0002-d3dx9_36-Add-stub-for-D3DXComputeNormalMap.patch
-	patch_apply d3dx9_36-D3DXStubs/0003-d3dx9_36-Add-D3DXFrameFind-stub.patch
-	patch_apply d3dx9_36-D3DXStubs/0004-d3dx9_36-Add-D3DXTessellateNPatches-stub.-try-2.patch
+	patch_apply d3dx9_36-D3DXStubs/0001-d3dx9_36-Add-stub-for-D3DXComputeNormalMap.patch
+	patch_apply d3dx9_36-D3DXStubs/0002-d3dx9_36-Add-D3DXFrameFind-stub.patch
 	(
-		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXComputeNormals.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeNormalMap.", 1 },';
 		echo '+    { "Andrey Gusev", "d3dx9_36: Add D3DXFrameFind stub.", 1 },';
-		echo '+    { "Alistair Leslie-Hughes", "d3dx9_36: Add D3DXTessellateNPatches stub.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -3603,20 +3586,6 @@ if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-JobObjects
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/process.c, dlls/ntdll/sync.c
-# |
-if test "$enable_ntdll_JobObjects" -eq 1; then
-	patch_apply ntdll-JobObjects/0001-ntdll-Improve-stub-for-NtQueryInformationJobObject.patch
-	patch_apply ntdll-JobObjects/0002-kernel32-tests-Add-basic-tests-for-QueryInformationJ.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Improve stub for NtQueryInformationJobObject.", 1 },';
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Add basic tests for QueryInformationJobObject with JobObject*LimitInformation info class.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-NtQueryEaFile
 # |
 # | Modified files:
@@ -3976,18 +3945,6 @@ if test "$enable_openal32_EFX_Extension" -eq 1; then
 	patch_apply openal32-EFX_Extension/0001-openal32-Export-EFX-extension-functions.patch
 	(
 		echo '+    { "Michael Müller", "openal32: Export EFX extension functions.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset opencl-Silence_Deprecation_Warning
-# |
-# | Modified files:
-# |   *	dlls/opencl/Makefile.in
-# |
-if test "$enable_opencl_Silence_Deprecation_Warning" -eq 1; then
-	patch_apply opencl-Silence_Deprecation_Warning/0001-opencl-Silence-deprecation-warning-for-various-OpenC.patch
-	(
-		echo '+    { "Sebastian Lackner", "opencl: Silence deprecation warning for various OpenCL functions.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4903,30 +4860,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-resource_check_usage
-# |
-# | Modified files:
-# |   *	dlls/wined3d/resource.c
-# |
-if test "$enable_wined3d_resource_check_usage" -eq 1; then
-	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	(
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-wined3d_swapchain_present
 # |
 # | Modified files:
@@ -5011,6 +4944,30 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-resource_check_usage
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c
+# |
+if test "$enable_wined3d_resource_check_usage" -eq 1; then
+	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	(
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -5722,21 +5679,6 @@ if test "$enable_winsta_WinStationEnumerateW" -eq 1; then
 	patch_apply winsta-WinStationEnumerateW/0001-winsta-Add-stub-for-WinStationEnumerateW.patch
 	(
 		echo '+    { "Austin English", "winsta: Add stub for WinStationEnumerateW.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wintrust-MachineGuid
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38508] Create HKLM\Software\Microsoft\Cryptography\MachineGuid registry key
-# |
-# | Modified files:
-# |   *	dlls/wintrust/register.c
-# |
-if test "$enable_wintrust_MachineGuid" -eq 1; then
-	patch_apply wintrust-MachineGuid/0001-wintrust-Create-a-dummy-context-to-force-creation-of.patch
-	(
-		echo '+    { "Sebastian Lackner", "wintrust: Create a dummy context to force creation of MachineGuid registry key.", 1 },';
 	) >> "$patchlist"
 fi
 

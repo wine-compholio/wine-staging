@@ -59,7 +59,7 @@ for more details.*
 * Add stub fltmgr.sys (filter manager driver) ([Wine Bug #23583](https://bugs.winehq.org/show_bug.cgi?id=23583))
 * Add stub for D3DXComputeNormalMap
 * Add stub for D3DXFrameFind ([Wine Bug #38334](https://bugs.winehq.org/show_bug.cgi?id=38334))
-* Add stub for D3DXTessellateNPatches
+* ~~Add stub for D3DXTessellateNPatches~~
 * Add stub for NtSetLdtEntries/ZwSetLdtEntries ([Wine Bug #26268](https://bugs.winehq.org/show_bug.cgi?id=26268))
 * Add stub for gdiplus.GdipCreateEffect ([Wine Bug #32163](https://bugs.winehq.org/show_bug.cgi?id=32163))
 * Add stub for ntoskrnl.ExAcquireResourceExclusiveLite
@@ -105,7 +105,7 @@ for more details.*
 * CPU-Z fails to start because GetLogicalProcessorInformationEx returns FALSE
 * Calculate msvcrt exponential math operations with higher precision ([Wine Bug #37149](https://bugs.winehq.org/show_bug.cgi?id=37149))
 * Check architecture before trying to load libraries ([Wine Bug #38021](https://bugs.winehq.org/show_bug.cgi?id=38021))
-* Create HKLM\Software\Microsoft\Cryptography\MachineGuid registry key ([Wine Bug #38508](https://bugs.winehq.org/show_bug.cgi?id=38508))
+* ~~Create HKLM\Software\Microsoft\Cryptography\MachineGuid registry key~~ ([Wine Bug #38508](https://bugs.winehq.org/show_bug.cgi?id=38508))
 * Create stub files for system32/drivers/etc/{services,hosts,networks,protocol} ([Wine Bug #12076](https://bugs.winehq.org/show_bug.cgi?id=12076))
 * CreateProcess does not prioritize the working directory over the system search path ([Wine Bug #23934](https://bugs.winehq.org/show_bug.cgi?id=23934))
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](https://bugs.winehq.org/show_bug.cgi?id=33770))
@@ -204,7 +204,7 @@ for more details.*
 * Make it possible to change media center / tablet pc status ([Wine Bug #18732](https://bugs.winehq.org/show_bug.cgi?id=18732))
 * MediaCoder needs CUDA for video encoding ([Wine Bug #37664](https://bugs.winehq.org/show_bug.cgi?id=37664))
 * Multiple applications need EnumDisplayDevicesW implementation ([Wine Bug #34978](https://bugs.winehq.org/show_bug.cgi?id=34978))
-* Multiple applications needs better NtQueryInformationJobObject stub
+* ~~Multiple applications needs better NtQueryInformationJobObject stub~~
 * Need for Speed 3 installer requires devices in HKEY_DYN_DATA ([Wine Bug #7115](https://bugs.winehq.org/show_bug.cgi?id=7115))
 * Only send WM_DROPFILES when OLE dnd fails ([Wine Bug #29081](https://bugs.winehq.org/show_bug.cgi?id=29081))
 * Other Pipelight-specific enhancements
@@ -236,7 +236,7 @@ for more details.*
 * Support for BindImageEx ([Wine Bug #3591](https://bugs.winehq.org/show_bug.cgi?id=3591))
 * Support for CSMT (command stream) to increase graphic performance ([Wine Bug #11674](https://bugs.winehq.org/show_bug.cgi?id=11674))
 * Support for CUDA GPU video decoding
-* Support for D3DXComputeNormals ([Wine Bug #26379](https://bugs.winehq.org/show_bug.cgi?id=26379))
+* ~~Support for D3DXComputeNormals~~ ([Wine Bug #26379](https://bugs.winehq.org/show_bug.cgi?id=26379))
 * Support for D3DXGetShaderInputSemantics ([Wine Bug #22682](https://bugs.winehq.org/show_bug.cgi?id=22682))
 * Support for DDS file format in D3DXSaveTextureToFileInMemory ([Wine Bug #26898](https://bugs.winehq.org/show_bug.cgi?id=26898))
 * Support for DOS hidden/system file attributes ([Wine Bug #9158](https://bugs.winehq.org/show_bug.cgi?id=9158))

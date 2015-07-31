@@ -246,8 +246,8 @@ patch_enable_all ()
 	enable_wiaservc_IEnumWIA_DEV_INFO="$1"
 	enable_wine_inf_Performance="$1"
 	enable_wine_inf_ProfileList_UserSID="$1"
+	enable_wineboot_DriveSerial="$1"
 	enable_wineboot_HKEY_DYN_DATA="$1"
-	enable_wineboot_MachineGuid="$1"
 	enable_wineboot_drivers_etc_Stubs="$1"
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
@@ -281,6 +281,7 @@ patch_enable_all ()
 	enable_winmm_Delay_Import_Depends="$1"
 	enable_winscard_SCardListReaders="$1"
 	enable_winsta_WinStationEnumerateW="$1"
+	enable_wintrust_MachineGuid="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_APC_Performance="$1"
 	enable_ws2_32_Connect_Time="$1"
@@ -817,11 +818,11 @@ patch_enable ()
 		wine.inf-ProfileList_UserSID)
 			enable_wine_inf_ProfileList_UserSID="$2"
 			;;
+		wineboot-DriveSerial)
+			enable_wineboot_DriveSerial="$2"
+			;;
 		wineboot-HKEY_DYN_DATA)
 			enable_wineboot_HKEY_DYN_DATA="$2"
-			;;
-		wineboot-MachineGuid)
-			enable_wineboot_MachineGuid="$2"
 			;;
 		wineboot-drivers_etc_Stubs)
 			enable_wineboot_drivers_etc_Stubs="$2"
@@ -921,6 +922,9 @@ patch_enable ()
 			;;
 		winsta-WinStationEnumerateW)
 			enable_winsta_WinStationEnumerateW="$2"
+			;;
+		wintrust-MachineGuid)
+			enable_wintrust_MachineGuid="$2"
 			;;
 		wpcap-Dynamic_Linking)
 			enable_wpcap_Dynamic_Linking="$2"
@@ -4803,6 +4807,21 @@ if test "$enable_wine_inf_ProfileList_UserSID" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wineboot-DriveSerial
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#17823] Assign a drive serial number during prefix creation/update
+# |
+# | Modified files:
+# |   *	programs/wineboot/wineboot.c
+# |
+if test "$enable_wineboot_DriveSerial" -eq 1; then
+	patch_apply wineboot-DriveSerial/0001-wineboot-Assign-a-drive-serial-number-during-prefix-.patch
+	(
+		echo '+    { "Sebastian Lackner", "wineboot: Assign a drive serial number during prefix creation/update.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wineboot-HKEY_DYN_DATA
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4815,24 +4834,6 @@ if test "$enable_wineboot_HKEY_DYN_DATA" -eq 1; then
 	patch_apply wineboot-HKEY_DYN_DATA/0001-wineboot-Add-some-generic-hardware-in-HKEY_DYN_DATA-.patch
 	(
 		echo '+    { "Michael Müller", "wineboot: Add some generic hardware in HKEY_DYN_DATA\\\\Config Manager\\\\Enum.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wineboot-MachineGuid
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38508] Create HKLM\Software\Microsoft\Cryptography\MachineGuid registry key
-# |   *	[#17823] Assign a drive serial number during prefix creation/update
-# |
-# | Modified files:
-# |   *	programs/wineboot/Makefile.in, programs/wineboot/wineboot.c
-# |
-if test "$enable_wineboot_MachineGuid" -eq 1; then
-	patch_apply wineboot-MachineGuid/0001-wineboot-Create-MachineGuid-registry-value.patch
-	patch_apply wineboot-MachineGuid/0002-wineboot-Assign-a-drive-serial-number-during-prefix-.patch
-	(
-		echo '+    { "Michael Müller", "wineboot: Create MachineGuid registry value.", 1 },';
-		echo '+    { "Sebastian Lackner", "wineboot: Assign a drive serial number during prefix creation/update.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5730,6 +5731,21 @@ if test "$enable_winsta_WinStationEnumerateW" -eq 1; then
 	patch_apply winsta-WinStationEnumerateW/0001-winsta-Add-stub-for-WinStationEnumerateW.patch
 	(
 		echo '+    { "Austin English", "winsta: Add stub for WinStationEnumerateW.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wintrust-MachineGuid
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38508] Create HKLM\Software\Microsoft\Cryptography\MachineGuid registry key
+# |
+# | Modified files:
+# |   *	dlls/wintrust/register.c
+# |
+if test "$enable_wintrust_MachineGuid" -eq 1; then
+	patch_apply wintrust-MachineGuid/0001-wintrust-Create-a-dummy-context-to-force-creation-of.patch
+	(
+		echo '+    { "Sebastian Lackner", "wintrust: Create a dummy context to force creation of MachineGuid registry key.", 1 },';
 	) >> "$patchlist"
 fi
 

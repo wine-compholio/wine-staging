@@ -168,6 +168,7 @@ patch_enable_all ()
 	enable_ntdll_FreeBSD_Directory="$1"
 	enable_ntdll_Heap_FreeLists="$1"
 	enable_ntdll_Hide_Wine_Exports="$1"
+	enable_ntdll_JobObjects="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_Loader_Machine_Type="$1"
 	enable_ntdll_NtQueryEaFile="$1"
@@ -204,7 +205,6 @@ patch_enable_all ()
 	enable_server_Delete_On_Close="$1"
 	enable_server_File_Permissions="$1"
 	enable_server_Inherited_ACLs="$1"
-	enable_server_JobObjects="$1"
 	enable_server_Key_State="$1"
 	enable_server_Misc_ACL="$1"
 	enable_server_OpenProcess="$1"
@@ -584,6 +584,9 @@ patch_enable ()
 		ntdll-Hide_Wine_Exports)
 			enable_ntdll_Hide_Wine_Exports="$2"
 			;;
+		ntdll-JobObjects)
+			enable_ntdll_JobObjects="$2"
+			;;
 		ntdll-Junction_Points)
 			enable_ntdll_Junction_Points="$2"
 			;;
@@ -691,9 +694,6 @@ patch_enable ()
 			;;
 		server-Inherited_ACLs)
 			enable_server_Inherited_ACLs="$2"
-			;;
-		server-JobObjects)
-			enable_server_JobObjects="$2"
 			;;
 		server-Key_State)
 			enable_server_Key_State="$2"
@@ -1671,17 +1671,6 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 	enable_server_ClipCursor=1
 	enable_server_Key_State=1
 	enable_server_PeekMessage=1
-fi
-
-if test "$enable_server_JobObjects" -eq 1; then
-	if test "$enable_server_Misc_ACL" -gt 1; then
-		abort "Patchset server-Misc_ACL disabled, but server-JobObjects depends on that."
-	fi
-	if test "$enable_server_OpenProcess" -gt 1; then
-		abort "Patchset server-OpenProcess disabled, but server-JobObjects depends on that."
-	fi
-	enable_server_Misc_ACL=1
-	enable_server_OpenProcess=1
 fi
 
 if test "$enable_server_ACL_Compat" -eq 1; then
@@ -3614,6 +3603,20 @@ if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-JobObjects
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/process.c, dlls/ntdll/sync.c
+# |
+if test "$enable_ntdll_JobObjects" -eq 1; then
+	patch_apply ntdll-JobObjects/0001-ntdll-Improve-stub-for-NtQueryInformationJobObject.patch
+	patch_apply ntdll-JobObjects/0002-kernel32-tests-Add-basic-tests-for-QueryInformationJ.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Improve stub for NtQueryInformationJobObject.", 1 },';
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Add basic tests for QueryInformationJobObject with JobObject*LimitInformation info class.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-NtQueryEaFile
 # |
 # | Modified files:
@@ -4222,33 +4225,6 @@ if test "$enable_server_Delete_On_Close" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-OpenProcess
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37087] Return an error when trying to open a terminated process
-# |
-# | Modified files:
-# |   *	server/process.c, server/process.h
-# |
-if test "$enable_server_OpenProcess" -eq 1; then
-	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
-	(
-		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-JobObjects
-# |
-# | Modified files:
-# |   *	dlls/ntdll/sync.c
-# |
-if test "$enable_server_JobObjects" -eq 1; then
-	patch_apply server-JobObjects/0001-ntdll-Implement-NtQueryInformationJobObject-stub-fun.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Implement NtQueryInformationJobObject stub function.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-Key_State
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4266,6 +4242,21 @@ if test "$enable_server_Key_State" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Introduce a helper function to update the thread_input key state.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement locking and synchronization of keystate buffer.", 2 },';
 		echo '+    { "Sebastian Lackner", "server: Introduce a shadow keystate array to sync keystates only on changes.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-OpenProcess
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37087] Return an error when trying to open a terminated process
+# |
+# | Modified files:
+# |   *	server/process.c, server/process.h
+# |
+if test "$enable_server_OpenProcess" -eq 1; then
+	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
+	(
+		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
 	) >> "$patchlist"
 fi
 

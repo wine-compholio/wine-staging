@@ -188,6 +188,7 @@ patch_enable_all ()
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
 	enable_openal32_EFX_Extension="$1"
+	enable_opencl_Silence_Deprecation_Warning="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_rasapi32_RasEnumDevicesA="$1"
@@ -641,6 +642,9 @@ patch_enable ()
 			;;
 		openal32-EFX_Extension)
 			enable_openal32_EFX_Extension="$2"
+			;;
+		opencl-Silence_Deprecation_Warning)
+			enable_opencl_Silence_Deprecation_Warning="$2"
 			;;
 		opengl32-Revert_Disable_Ext)
 			enable_opengl32_Revert_Disable_Ext="$2"
@@ -3968,6 +3972,18 @@ if test "$enable_openal32_EFX_Extension" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset opencl-Silence_Deprecation_Warning
+# |
+# | Modified files:
+# |   *	dlls/opencl/Makefile.in
+# |
+if test "$enable_opencl_Silence_Deprecation_Warning" -eq 1; then
+	patch_apply opencl-Silence_Deprecation_Warning/0001-opencl-Silence-deprecation-warning-for-various-OpenC.patch
+	(
+		echo '+    { "Sebastian Lackner", "opencl: Silence deprecation warning for various OpenCL functions.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset opengl32-Revert_Disable_Ext
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4895,6 +4911,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-resource_check_usage
 # |
 # | Modified files:
@@ -4991,18 +5019,6 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 

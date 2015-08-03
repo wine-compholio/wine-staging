@@ -2951,8 +2951,8 @@ fi
 # |   *	[#30399] Support for NtSetInformationFile class FileRenameInformation
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/file.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/winternl.h, server/fd.c, server/file.c,
-# | 	server/file.h, server/protocol.def
+# |   *	dlls/kernel32/tests/file.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/winternl.h, server/fd.c,
+# | 	server/protocol.def
 # |
 if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 	patch_apply ntdll-FileDispositionInformation/0001-server-Keep-a-pointer-to-parent-s-fd-unix_name-in-th.patch
@@ -2970,7 +2970,7 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 	patch_apply ntdll-FileDispositionInformation/0013-server-Implement-support-for-FileLinkInformation-cla.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "server: Keep a pointer to parent'\''s fd unix_name in the closed_fd structure.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "server: Add support for setting file disposition information.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Add support for setting file disposition information.", 1 },';
 		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Added tests to set disposition on file which is mapped to memory.", 1 },';
 		echo '+    { "Qian Hong", "server: Do not allow to set disposition on file which has a file mapping.", 1 },';

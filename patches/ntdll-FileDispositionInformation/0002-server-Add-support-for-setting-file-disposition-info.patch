@@ -1,17 +1,16 @@
-From 65b27926c9e006f41496c42886d55956047d4b69 Mon Sep 17 00:00:00 2001
-From: Dmitry Timoshkov <dmitry@baikal.ru>
+From 2009dee9faca0fb2ac2b1422a62445a523c4fe56 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Thu, 7 Aug 2014 20:32:19 -0600
 Subject: server: Add support for setting file disposition information.
 
+Based on a patch by Dmitry Timoshkov.
 ---
  dlls/kernel32/tests/file.c |  1 -
  dlls/ntdll/file.c          | 16 ++++++++++++++++
  dlls/ntdll/tests/file.c    | 13 ++-----------
- server/fd.c                | 30 ++++++++++++++++++++++++++++++
- server/file.c              | 23 +++++++++++++++++++++++
- server/file.h              |  1 +
- server/protocol.def        |  6 ++++++
- 7 files changed, 78 insertions(+), 12 deletions(-)
+ server/fd.c                | 44 ++++++++++++++++++++++++++++++++++++++++++++
+ server/protocol.def        |  7 +++++++
+ 5 files changed, 69 insertions(+), 12 deletions(-)
 
 diff --git a/dlls/kernel32/tests/file.c b/dlls/kernel32/tests/file.c
 index 53d225c..dd64c91 100644
@@ -26,7 +25,7 @@ index 53d225c..dd64c91 100644
  
      CloseHandle(file);
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index d081750..86063b6 100644
+index d081750..314c233 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
 @@ -2765,6 +2765,22 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
@@ -38,11 +37,11 @@ index d081750..86063b6 100644
 +        {
 +            FILE_DISPOSITION_INFORMATION *info = ptr;
 +
-+            SERVER_START_REQ( set_file_info )
++            SERVER_START_REQ( set_fd_info )
 +            {
 +                req->handle   = wine_server_obj_handle( handle );
 +                req->unlink   = info->DoDeleteFile;
-+                io->u.Status = wine_server_call( req );
++                io->u.Status  = wine_server_call( req );
 +            }
 +            SERVER_END_REQ;
 +        } else
@@ -53,7 +52,7 @@ index d081750..86063b6 100644
          FIXME("Unsupported class (%d)\n", class);
          io->u.Status = STATUS_NOT_IMPLEMENTED;
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index fed1207..9cb3bd2 100644
+index 86a4516..57ae15c 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
 @@ -1473,7 +1473,6 @@ static void test_file_disposition_information(void)
@@ -149,21 +148,27 @@ index fed1207..9cb3bd2 100644
      RemoveDirectoryA( buffer );
  }
 diff --git a/server/fd.c b/server/fd.c
-index 7c2d717..442e639 100644
+index 6b95d6c..f607261 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -1942,6 +1942,36 @@ unsigned int get_fd_options( struct fd *fd )
-     return fd->options;
+@@ -2214,6 +2214,39 @@ static struct fd *get_handle_fd_obj( struct process *process, obj_handle_t handl
+     return fd;
  }
  
 +/* set disposition for the fd */
-+void set_fd_disposition( struct fd *fd, int unlink )
++static void set_fd_disposition( struct fd *fd, int unlink )
 +{
 +    struct stat st;
 +
++    if (!fd->inode)
++    {
++        set_error( STATUS_OBJECT_TYPE_MISMATCH );
++        return;
++    }
++
 +    if (fd->unix_fd == -1)
 +    {
-+        set_error( STATUS_INVALID_HANDLE );
++        set_error( fd->no_fd_status );
 +        return;
 +    }
 +
@@ -173,82 +178,52 @@ index 7c2d717..442e639 100644
 +        return;
 +    }
 +
++    /* can't unlink special files */
 +    if (unlink && !S_ISDIR(st.st_mode) && !S_ISREG(st.st_mode))
 +    {
-+        /* can't unlink special files */
 +        set_error( STATUS_INVALID_PARAMETER );
 +        return;
 +    }
 +
-+    if (unlink)
-+        fd->closed->unlink = 1;
-+    else if (!(fd->options & FILE_DELETE_ON_CLOSE))
-+        fd->closed->unlink = 0;
++    fd->closed->unlink = unlink || (fd->options & FILE_DELETE_ON_CLOSE);
 +}
 +
- /* retrieve the unix fd for an object */
- int get_unix_fd( struct fd *fd )
+ struct completion *fd_get_completion( struct fd *fd, apc_param_t *p_key )
  {
-diff --git a/server/file.c b/server/file.c
-index e70304f..098c705 100644
---- a/server/file.c
-+++ b/server/file.c
-@@ -749,3 +749,26 @@ DECL_HANDLER(unlock_file)
-         release_object( file );
+     *p_key = fd->comp_key;
+@@ -2409,3 +2442,14 @@ DECL_HANDLER(add_fd_completion)
+         release_object( fd );
      }
  }
 +
-+/* set file information */
-+DECL_HANDLER(set_file_info)
++/* set fd information */
++DECL_HANDLER(set_fd_info)
 +{
-+    struct file *file;
-+
-+    if ((file = get_file_obj( current->process, req->handle, DELETE )))
++    struct fd *fd = get_handle_fd_obj( current->process, req->handle, DELETE );
++    if (fd)
 +    {
-+        set_fd_disposition( file->fd, req->unlink );
-+        release_object( file );
-+        return;
-+    }
-+
-+    if (get_error() == STATUS_OBJECT_TYPE_MISMATCH)
-+    {
-+        clear_error();
-+        if ((file = (struct file *)get_dir_obj( current->process, req->handle, DELETE )))
-+        {
-+            set_fd_disposition( file->fd, req->unlink );
-+            release_object( file );
-+        }
++        set_fd_disposition( fd, req->unlink );
++        release_object( fd );
 +    }
 +}
-diff --git a/server/file.h b/server/file.h
-index b5e0ca7..460656f 100644
---- a/server/file.h
-+++ b/server/file.h
-@@ -70,6 +70,7 @@ extern struct fd *get_fd_object_for_mapping( struct fd *fd, unsigned int access,
- extern void *get_fd_user( struct fd *fd );
- extern void set_fd_user( struct fd *fd, const struct fd_ops *ops, struct object *user );
- extern unsigned int get_fd_options( struct fd *fd );
-+extern void set_fd_disposition( struct fd *fd, int unlink );
- extern int get_unix_fd( struct fd *fd );
- extern int is_same_file_fd( struct fd *fd1, struct fd *fd2 );
- extern int is_fd_removable( struct fd *fd );
 diff --git a/server/protocol.def b/server/protocol.def
-index 9e5e416..d71f5ef 100644
+index ffee0c0..ea9eb12 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -1200,6 +1200,12 @@ enum server_fd_type
+@@ -3525,6 +3525,13 @@ enum coords_relative
  @END
  
  
-+/* Set file information */
-+@REQ(set_file_info)
-+    obj_handle_t handle;        /* handle to the file */
++/* set fd information */
++@REQ(set_fd_info)
++    obj_handle_t handle;        /* handle to a file or directory */
 +    int          unlink;        /* whether to unlink file on close */
 +@END
 +
- /* Create a socket */
- @REQ(create_socket)
-     unsigned int access;        /* wanted access rights */
++
+ /* Retrieve layered info for a window */
+ @REQ(get_window_layered_info)
+     user_handle_t  handle;        /* handle to the window */
 -- 
-2.4.2
+2.5.0
 

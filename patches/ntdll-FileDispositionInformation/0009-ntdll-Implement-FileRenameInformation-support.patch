@@ -1,4 +1,4 @@
-From 526d905701f6d27f38cce701f36f6280f7c2c6cf Mon Sep 17 00:00:00 2001
+From 80f50af6703521e5a8ff7a3fa9bbb67abe52a210 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Tue, 2 Jun 2015 01:56:24 +0800
 Subject: ntdll: Implement FileRenameInformation support.
@@ -12,7 +12,7 @@ Based on a patch by Qian Hong.
  4 files changed, 192 insertions(+), 37 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 86063b6..6aa46f4 100644
+index 314c233..b865345 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
 @@ -2781,6 +2781,48 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
@@ -65,7 +65,7 @@ index 86063b6..6aa46f4 100644
          FIXME("Unsupported class (%d)\n", class);
          io->u.Status = STATUS_NOT_IMPLEMENTED;
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index a0aae0a..941cc0c 100644
+index d7be561..31a672d 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
 @@ -1483,19 +1483,19 @@ static void test_file_rename_information(void)
@@ -306,11 +306,11 @@ index a0aae0a..941cc0c 100644
      pfni = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_NAME_INFORMATION) + MAX_PATH * sizeof(WCHAR) );
      res = pNtQueryInformationFile( handle, &io, pfni, sizeof(FILE_NAME_INFORMATION) + MAX_PATH * sizeof(WCHAR), FileNameInformation );
 diff --git a/server/fd.c b/server/fd.c
-index 553d840..d4e5321 100644
+index f93093d..24e845c 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -1991,6 +1991,80 @@ void set_fd_disposition( struct fd *fd, int unlink )
-         fd->closed->unlink = 0;
+@@ -2266,6 +2266,80 @@ static void set_fd_disposition( struct fd *fd, int unlink )
+     fd->closed->unlink = unlink || (fd->options & FILE_DELETE_ON_CLOSE);
  }
  
 +/* rename a file */
@@ -320,7 +320,7 @@ index 553d840..d4e5321 100644
 +    struct stat st;
 +    char *name;
 +
-+    if (!fd->unix_name)
++    if (!fd->inode || !fd->unix_name)
 +    {
 +        set_error( STATUS_OBJECT_TYPE_MISMATCH );
 +        return;
@@ -387,10 +387,10 @@ index 553d840..d4e5321 100644
 +    free( name );
 +}
 +
- /* retrieve the unix fd for an object */
- int get_unix_fd( struct fd *fd )
+ struct completion *fd_get_completion( struct fd *fd, apc_param_t *p_key )
  {
-@@ -2484,3 +2558,27 @@ DECL_HANDLER(add_fd_completion)
+     *p_key = fd->comp_key;
+@@ -2472,3 +2546,27 @@ DECL_HANDLER(set_fd_info)
          release_object( fd );
      }
  }
@@ -419,12 +419,12 @@ index 553d840..d4e5321 100644
 +    if (root_fd) release_object( root_fd );
 +}
 diff --git a/server/protocol.def b/server/protocol.def
-index 800f73c..431d2b9 100644
+index ea9eb12..3f1cef5 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -1206,6 +1206,15 @@ enum server_fd_type
-     int          unlink;        /* whether to unlink file on close */
+@@ -1233,6 +1233,15 @@ enum server_fd_type
  @END
+ 
  
 +
 +/* Rename a file */
@@ -439,5 +439,5 @@ index 800f73c..431d2b9 100644
  @REQ(create_socket)
      unsigned int access;        /* wanted access rights */
 -- 
-2.4.2
+2.5.0
 

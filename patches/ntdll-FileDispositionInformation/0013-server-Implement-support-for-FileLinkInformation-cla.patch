@@ -1,4 +1,4 @@
-From 0777c89085c995e4160750c12bdd0afd68eecafb Mon Sep 17 00:00:00 2001
+From 5555934a5d007286895f7ad2c7523899be9e3c9b Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 3 Jun 2015 17:04:23 +0200
 Subject: server: Implement support for FileLinkInformation class in
@@ -12,7 +12,7 @@ Subject: server: Implement support for FileLinkInformation class in
  4 files changed, 105 insertions(+), 43 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 6aa46f4..f5f2458 100644
+index b865345..049b323 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
 @@ -2813,6 +2813,50 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
@@ -67,7 +67,7 @@ index 6aa46f4..f5f2458 100644
                  io->u.Status = wine_server_call( req );
              }
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index c985a03..92613d5 100644
+index 5da5d0d..27ea58c 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
 @@ -2183,12 +2183,12 @@ static void test_file_link_information(void)
@@ -264,11 +264,11 @@ index c985a03..92613d5 100644
      pfni = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_NAME_INFORMATION) + MAX_PATH * sizeof(WCHAR) );
      res = pNtQueryInformationFile( handle, &io, pfni, sizeof(FILE_NAME_INFORMATION) + MAX_PATH * sizeof(WCHAR), FileNameInformation );
 diff --git a/server/fd.c b/server/fd.c
-index 4b0bf47..db299dd 100644
+index 757a06c..8c3c97e 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -1999,8 +1999,8 @@ void set_fd_disposition( struct fd *fd, int unlink )
-         fd->closed->unlink = 0;
+@@ -2274,8 +2274,8 @@ static void set_fd_disposition( struct fd *fd, int unlink )
+     fd->closed->unlink = unlink || (fd->options & FILE_DELETE_ON_CLOSE);
  }
  
 -/* rename a file */
@@ -278,7 +278,7 @@ index 4b0bf47..db299dd 100644
  {
      struct inode *inode;
      struct stat st;
-@@ -2027,8 +2027,16 @@ static void rename_fd( struct fd *fd, struct fd *root, const char *nameptr, data
+@@ -2302,8 +2302,16 @@ static void rename_fd( struct fd *fd, struct fd *root, const char *nameptr, data
          name = combined_name;
      }
  
@@ -296,7 +296,7 @@ index 4b0bf47..db299dd 100644
  
      if (!S_ISREG( st.st_mode ))
      {
-@@ -2049,25 +2057,34 @@ static void rename_fd( struct fd *fd, struct fd *root, const char *nameptr, data
+@@ -2324,25 +2332,34 @@ static void rename_fd( struct fd *fd, struct fd *root, const char *nameptr, data
          }
      }
  
@@ -341,7 +341,7 @@ index 4b0bf47..db299dd 100644
  
  failed:
      free( name );
-@@ -2567,7 +2584,7 @@ DECL_HANDLER(add_fd_completion)
+@@ -2555,7 +2572,7 @@ DECL_HANDLER(set_fd_info)
      }
  }
  
@@ -350,7 +350,7 @@ index 4b0bf47..db299dd 100644
  DECL_HANDLER(rename_file)
  {
      struct fd *root_fd = NULL;
-@@ -2584,7 +2601,7 @@ DECL_HANDLER(rename_file)
+@@ -2572,7 +2589,7 @@ DECL_HANDLER(rename_file)
  
      if ((fd = get_handle_fd_obj( current->process, req->handle, 0 )))
      {
@@ -360,11 +360,11 @@ index 4b0bf47..db299dd 100644
      }
  
 diff --git a/server/protocol.def b/server/protocol.def
-index 431d2b9..c2c4221 100644
+index 3f1cef5..1c868c3 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -1207,10 +1207,11 @@ enum server_fd_type
- @END
+@@ -1234,10 +1234,11 @@ enum server_fd_type
+ 
  
  
 -/* Rename a file */
@@ -377,5 +377,5 @@ index 431d2b9..c2c4221 100644
  @END
  
 -- 
-2.4.2
+2.5.0
 

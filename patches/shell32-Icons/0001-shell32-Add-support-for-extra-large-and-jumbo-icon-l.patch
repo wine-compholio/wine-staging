@@ -1,16 +1,16 @@
-From f60b05d5489027b3b98f9b05e9cf9ad598ec7fdf Mon Sep 17 00:00:00 2001
+From 8fd25fe53f564ebbe2dd2a2de6ed1126c4b4ee1a Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 3 Aug 2014 02:23:44 +0200
 Subject: shell32: Add support for extra large and jumbo icon lists. (v2)
 
 ---
- dlls/shell32/iconcache.c    | 199 +++++++++++++++++++++++++++++---------------
+ dlls/shell32/iconcache.c    | 203 +++++++++++++++++++++++++++++---------------
  dlls/shell32/shell32_main.h |   3 +
- dlls/shell32/shellord.c     |  28 +++++--
- 3 files changed, 154 insertions(+), 76 deletions(-)
+ dlls/shell32/shellord.c     |  28 ++++--
+ 3 files changed, 156 insertions(+), 78 deletions(-)
 
 diff --git a/dlls/shell32/iconcache.c b/dlls/shell32/iconcache.c
-index b294908..fea5a9a 100644
+index 4549d5b..2aff054 100644
 --- a/dlls/shell32/iconcache.c
 +++ b/dlls/shell32/iconcache.c
 @@ -62,7 +62,9 @@ typedef struct
@@ -94,7 +94,7 @@ index b294908..fea5a9a 100644
  	  lpsice->dwListIndex = index;
  	  ret = lpsice->dwListIndex;
  	}
-@@ -305,15 +317,22 @@ static INT SIC_IconAppend (LPCWSTR sSourceFile, INT dwSourceIndex, HICON hSmallI
+@@ -305,17 +317,24 @@ static INT SIC_IconAppend (LPCWSTR sSourceFile, INT dwSourceIndex, HICON hSmallI
   *  gets small/big icon by number from a file
   */
  static INT SIC_LoadIcon (LPCWSTR sSourceFile, INT dwSourceIndex, DWORD dwFlags)
@@ -103,8 +103,10 @@ index b294908..fea5a9a 100644
 -	HICON 	hiconLargeShortcut;
 -	HICON	hiconSmallShortcut;
 -
--        PrivateExtractIconsW( sSourceFile, dwSourceIndex, 32, 32, &hiconLarge, 0, 1, 0 );
--        PrivateExtractIconsW( sSourceFile, dwSourceIndex, 16, 16, &hiconSmall, 0, 1, 0 );
+-        PrivateExtractIconsW( sSourceFile, dwSourceIndex, GetSystemMetrics(SM_CXICON),
+-                              GetSystemMetrics(SM_CYICON), &hiconLarge, 0, 1, 0 );
+-        PrivateExtractIconsW( sSourceFile, dwSourceIndex, GetSystemMetrics(SM_CXSMICON),
+-                              GetSystemMetrics(SM_CYSMICON), &hiconSmall, 0, 1, 0 );
 -
 -	if ( !hiconLarge ||  !hiconSmall)
 +{
@@ -117,16 +119,18 @@ index b294908..fea5a9a 100644
 +    HICON   hiconExtraLargeShortcut;
 +    HICON   hiconJumboShortcut;
 +
-+    PrivateExtractIconsW( sSourceFile, dwSourceIndex, 16, 16, &hiconSmall, 0, 1, 0 );
-+    PrivateExtractIconsW( sSourceFile, dwSourceIndex, 32, 32, &hiconLarge, 0, 1, 0 );
++    PrivateExtractIconsW( sSourceFile, dwSourceIndex, GetSystemMetrics(SM_CXSMICON),
++                          GetSystemMetrics(SM_CYSMICON), &hiconSmall, 0, 1, 0 );
++    PrivateExtractIconsW( sSourceFile, dwSourceIndex, GetSystemMetrics(SM_CXICON),
++                          GetSystemMetrics(SM_CYICON), &hiconLarge, 0, 1, 0 );
 +    PrivateExtractIconsW( sSourceFile, dwSourceIndex, 48, 48, &hiconExtraLarge, 0, 1, 0 );
 +    PrivateExtractIconsW( sSourceFile, dwSourceIndex, 256, 256, &hiconJumbo, 0, 1, 0 );
 +
-+    if ( !hiconSmall || !hiconLarge || !hiconExtraLarge || !hiconJumbo )
++	if (!hiconSmall || !hiconLarge || !hiconExtraLarge || !hiconJumbo)
  	{
  	  WARN("failure loading icon %i from %s (%p %p)\n", dwSourceIndex, debugstr_w(sSourceFile), hiconLarge, hiconSmall);
  	  return -1;
-@@ -321,38 +340,59 @@ static INT SIC_LoadIcon (LPCWSTR sSourceFile, INT dwSourceIndex, DWORD dwFlags)
+@@ -323,38 +342,59 @@ static INT SIC_LoadIcon (LPCWSTR sSourceFile, INT dwSourceIndex, DWORD dwFlags)
  
  	if (0 != (dwFlags & GIL_FORSHORTCUT))
  	{
@@ -204,7 +208,7 @@ index b294908..fea5a9a 100644
  	TRACE("\n");
  
  	sic_hdpa = DPA_Create(16);
-@@ -362,28 +402,36 @@ static BOOL WINAPI SIC_Initialize( INIT_ONCE *once, void *param, void **context
+@@ -364,28 +404,36 @@ static BOOL WINAPI SIC_Initialize( INIT_ONCE *once, void *param, void **context
  	  return(FALSE);
  	}
  
@@ -261,7 +265,7 @@ index b294908..fea5a9a 100644
  
  	return TRUE;
  }
-@@ -407,10 +455,14 @@ void SIC_Destroy(void)
+@@ -409,10 +457,14 @@ void SIC_Destroy(void)
  
  	if (sic_hdpa) DPA_DestroyCallback(sic_hdpa, sic_free, NULL );
  
@@ -280,7 +284,7 @@ index b294908..fea5a9a 100644
  
  	LeaveCriticalSection(&SHELL32_SicCS);
  	DeleteCriticalSection(&SHELL32_SicCS);
-@@ -527,10 +579,21 @@ BOOL WINAPI Shell_GetImageLists(HIMAGELIST * lpBigList, HIMAGELIST * lpSmallList
+@@ -529,10 +581,21 @@ BOOL WINAPI Shell_GetImageLists(HIMAGELIST * lpBigList, HIMAGELIST * lpSmallList
  {
      TRACE("(%p,%p)\n",lpBigList,lpSmallList);
      InitOnceExecuteOnce( &sic_init_once, SIC_Initialize, NULL, NULL );
@@ -361,5 +365,5 @@ index 914dc5a..75e5d645a 100644
      if (hNew)
      {
 -- 
-2.4.2
+2.5.0
 

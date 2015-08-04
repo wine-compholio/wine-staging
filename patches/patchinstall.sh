@@ -2509,7 +2509,7 @@ fi
 if test "$enable_dbghelp_UnDecorateSymbolNameW" -eq 1; then
 	patch_apply dbghelp-UnDecorateSymbolNameW/0001-dbghelp-Implement-UnDecorateSymbolNameW.patch
 	(
-		echo '+    { "Sebastian Lackner", "dbghelp: Implement UnDecorateSymbolNameW.", 1 },';
+		echo '+    { "Sebastian Lackner", "dbghelp: Implement UnDecorateSymbolNameW.", 2 },';
 	) >> "$patchlist"
 fi
 

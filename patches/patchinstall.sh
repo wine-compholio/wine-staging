@@ -118,6 +118,7 @@ patch_enable_all ()
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dxgi_GetDesc="$1"
+	enable_dxgi_MakeWindowAssociation="$1"
 	enable_dxva2_Video_Decoder="$1"
 	enable_fltmgr_Stub_SYS="$1"
 	enable_fonts_Missing_Fonts="$1"
@@ -430,6 +431,9 @@ patch_enable ()
 			;;
 		dxgi-GetDesc)
 			enable_dxgi_GetDesc="$2"
+			;;
+		dxgi-MakeWindowAssociation)
+			enable_dxgi_MakeWindowAssociation="$2"
 			;;
 		dxva2-Video_Decoder)
 			enable_dxva2_Video_Decoder="$2"
@@ -2669,6 +2673,18 @@ if test "$enable_dxgi_GetDesc" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset dxgi-MakeWindowAssociation
+# |
+# | Modified files:
+# |   *	dlls/dxgi/dxgi_private.h, dlls/dxgi/factory.c
+# |
+if test "$enable_dxgi_MakeWindowAssociation" -eq 1; then
+	patch_apply dxgi-MakeWindowAssociation/0001-dxgi-Improve-stubs-for-MakeWindowAssociation-and-Get.patch
+	(
+		echo '+    { "Michael Müller", "dxgi: Improve stubs for MakeWindowAssociation and GetWindowAssociation.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset winecfg-Staging
 # |
 # | Modified files:
@@ -4860,6 +4876,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-resource_check_usage
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c
+# |
+if test "$enable_wined3d_resource_check_usage" -eq 1; then
+	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	(
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-wined3d_swapchain_present
 # |
 # | Modified files:
@@ -4956,18 +4984,6 @@ if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
 	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-resource_check_usage
-# |
-# | Modified files:
-# |   *	dlls/wined3d/resource.c
-# |
-if test "$enable_wined3d_resource_check_usage" -eq 1; then
-	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	(
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
 	) >> "$patchlist"
 fi
 

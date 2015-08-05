@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit e3c6777edda76f319e5c465faf6c20bb91ed9f17"
+	echo "  commit 07e4d4bd044ac3c9f46526b210205216d8bfeb45"
 	echo ""
 }
 
@@ -269,7 +269,6 @@ patch_enable_all ()
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_Clipboard_HTML="$1"
 	enable_winex11_DragAndDrop="$1"
-	enable_winex11_Thread_Data="$1"
 	enable_winex11_Window_Groups="$1"
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
@@ -885,9 +884,6 @@ patch_enable ()
 		winex11-DragAndDrop)
 			enable_winex11_DragAndDrop="$2"
 			;;
-		winex11-Thread_Data)
-			enable_winex11_Thread_Data="$2"
-			;;
 		winex11-Window_Groups)
 			enable_winex11_Window_Groups="$2"
 			;;
@@ -1494,9 +1490,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_winepulse_PulseAudio_Support" -gt 1; then
 		abort "Patchset winepulse-PulseAudio_Support disabled, but category-stable depends on that."
 	fi
-	if test "$enable_winex11_Thread_Data" -gt 1; then
-		abort "Patchset winex11-Thread_Data disabled, but category-stable depends on that."
-	fi
 	if test "$enable_winex11_Window_Style" -gt 1; then
 		abort "Patchset winex11-Window_Style disabled, but category-stable depends on that."
 	fi
@@ -1588,7 +1581,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_wined3d_wined3d_swapchain_present=1
 	enable_winemenubuilder_Desktop_Icon_Path=1
 	enable_winepulse_PulseAudio_Support=1
-	enable_winex11_Thread_Data=1
 	enable_winex11_Window_Style=1
 	enable_winex11_XEMBED=1
 	enable_winex11_wglShareLists=1
@@ -3258,7 +3250,7 @@ fi
 # |   *	[#37811] Add implementation for mfplat.MFTRegister
 # |
 # | Modified files:
-# |   *	dlls/mfplat/Makefile.in, dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, include/mfapi.h, loader/wine.inf.in
+# |   *	dlls/mfplat/Makefile.in, dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, loader/wine.inf.in
 # |
 if test "$enable_mfplat_MFTRegister" -eq 1; then
 	patch_apply mfplat-MFTRegister/0001-mfplat-Implement-MFTRegister.patch
@@ -5520,21 +5512,6 @@ if test "$enable_winex11_DragAndDrop" -eq 1; then
 	patch_apply winex11-DragAndDrop/0001-winex11.drv-Only-send-WM_DROPFILES-when-OLE-dnd-fail.patch
 	(
 		echo '+    { "Damjan Jovanovic", "winex11.drv: Only send WM_DROPFILES when OLE dnd fails.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winex11-Thread_Data
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36915] Fix crash in clip_cursor_notify caused by uninitialized TLS
-# |
-# | Modified files:
-# |   *	dlls/winex11.drv/mouse.c
-# |
-if test "$enable_winex11_Thread_Data" -eq 1; then
-	patch_apply winex11-Thread_Data/0001-winex11-Initialize-thread-data-in-clip_cursor_notify.patch
-	(
-		echo '+    { "Sebastian Lackner", "winex11: Initialize thread data in clip_cursor_notify.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -179,7 +179,7 @@ for more details.*
 * Implement a Microsoft Yahei replacement font ([Wine Bug #13829](https://bugs.winehq.org/show_bug.cgi?id=13829))
 * Implement an Arial replacement font ([Wine Bug #32323](https://bugs.winehq.org/show_bug.cgi?id=32323))
 * Implement combase.WindowsSubstring function
-* Implement dbghelp.UnDecorateSymbolNameW ([Wine Bug #38828](https://bugs.winehq.org/show_bug.cgi?id=38828))
+* ~~Implement dbghelp.UnDecorateSymbolNameW~~ ([Wine Bug #38828](https://bugs.winehq.org/show_bug.cgi?id=38828))
 * Implement default homepage button in inetcpl.cpl
 * Implement empty enumerator for IWiaDevMgr::EnumDeviceInfo ([Wine Bug #27775](https://bugs.winehq.org/show_bug.cgi?id=27775))
 * Implement exclusive mode in PulseAudio backend ([Wine Bug #37042](https://bugs.winehq.org/show_bug.cgi?id=37042))
@@ -193,7 +193,7 @@ for more details.*
 * Implement stub for ntoskrnl.KeDelayExecutionThread.
 * Implement stubs for ntoskrnl.Ex{Acquire,Release}FastMutexUnsafe
 * Implement stubs for ntoskrnl.ObReferenceObjectByPointer and ntoskrnl.ObDereferenceObject
-* Implement various vcomp functions ([Wine Bug #31640](https://bugs.winehq.org/show_bug.cgi?id=31640))
+* ~~Implement various vcomp functions~~ ([Wine Bug #31640](https://bugs.winehq.org/show_bug.cgi?id=31640))
 * Improve ReadDataAvailable handling in FilePipeLocalInformation class
 * Improve stub for AEV_GetVolumeRange ([Wine Bug #35658](https://bugs.winehq.org/show_bug.cgi?id=35658))
 * Improve stub for ID3DXEffectImpl_CloneEffect

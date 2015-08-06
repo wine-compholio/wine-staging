@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 07e4d4bd044ac3c9f46526b210205216d8bfeb45"
+	echo "  commit 813368481679a5848bc715d1e181782de157485f"
 	echo ""
 }
 
@@ -109,7 +109,6 @@ patch_enable_all ()
 	enable_d3dx9_36_Texture_Align="$1"
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
 	enable_dbghelp_Debug_Symbols="$1"
-	enable_dbghelp_UnDecorateSymbolNameW="$1"
 	enable_ddraw_EnumSurfaces="$1"
 	enable_ddraw_IDirect3DTexture2_Load="$1"
 	enable_ddraw_Rendering_Targets="$1"
@@ -238,7 +237,6 @@ patch_enable_all ()
 	enable_user32_Painting="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_WndProc="$1"
-	enable_vcomp_Functions="$1"
 	enable_version_VerQueryValue="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_wbemdisp_Timeout="$1"
@@ -403,9 +401,6 @@ patch_enable ()
 			;;
 		dbghelp-Debug_Symbols)
 			enable_dbghelp_Debug_Symbols="$2"
-			;;
-		dbghelp-UnDecorateSymbolNameW)
-			enable_dbghelp_UnDecorateSymbolNameW="$2"
 			;;
 		ddraw-EnumSurfaces)
 			enable_ddraw_EnumSurfaces="$2"
@@ -790,9 +785,6 @@ patch_enable ()
 			;;
 		user32-WndProc)
 			enable_user32_WndProc="$2"
-			;;
-		vcomp-Functions)
-			enable_vcomp_Functions="$2"
 			;;
 		version-VerQueryValue)
 			enable_version_VerQueryValue="$2"
@@ -2491,21 +2483,6 @@ if test "$enable_dbghelp_Debug_Symbols" -eq 1; then
 	patch_apply dbghelp-Debug_Symbols/0001-dbghelp-Always-check-for-debug-symbols-in-BINDIR.patch
 	(
 		echo '+    { "Sebastian Lackner", "dbghelp: Always check for debug symbols in BINDIR.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset dbghelp-UnDecorateSymbolNameW
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38828] Implement dbghelp.UnDecorateSymbolNameW
-# |
-# | Modified files:
-# |   *	dlls/dbghelp/dbghelp.spec, dlls/dbghelp/symbol.c
-# |
-if test "$enable_dbghelp_UnDecorateSymbolNameW" -eq 1; then
-	patch_apply dbghelp-UnDecorateSymbolNameW/0001-dbghelp-Implement-UnDecorateSymbolNameW.patch
-	(
-		echo '+    { "Sebastian Lackner", "dbghelp: Implement UnDecorateSymbolNameW.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -4661,24 +4638,6 @@ if test "$enable_user32_WndProc" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset vcomp-Functions
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#31640] Implement various vcomp functions
-# |
-# | Modified files:
-# |   *	dlls/vcomp/main.c, dlls/vcomp/tests/vcomp.c, dlls/vcomp/vcomp.spec, dlls/vcomp100/vcomp100.spec,
-# | 	dlls/vcomp90/vcomp90.spec
-# |
-if test "$enable_vcomp_Functions" -eq 1; then
-	patch_apply vcomp-Functions/0001-vcomp-Implement-_vcomp_for_dynamic_init-and-_vcomp_f.patch
-	patch_apply vcomp-Functions/0002-vcomp-tests-Add-tests-for-_vcomp_for_dynamic_init.patch
-	(
-		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_for_dynamic_init and _vcomp_for_dynamic_next.", 1 },';
-		echo '+    { "Sebastian Lackner", "vcomp/tests: Add tests for _vcomp_for_dynamic_init.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset version-VerQueryValue
 # |
 # | Modified files:
@@ -4868,30 +4827,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-resource_check_usage
-# |
-# | Modified files:
-# |   *	dlls/wined3d/resource.c
-# |
-if test "$enable_wined3d_resource_check_usage" -eq 1; then
-	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	(
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-wined3d_swapchain_present
-# |
-# | Modified files:
-# |   *	dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
-	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-Geforce_425M
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4976,6 +4911,30 @@ if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
 	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-resource_check_usage
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c
+# |
+if test "$enable_wined3d_resource_check_usage" -eq 1; then
+	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	(
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-wined3d_swapchain_present
+# |
+# | Modified files:
+# |   *	dlls/wined3d/swapchain.c
+# |
+if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
+	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
 	) >> "$patchlist"
 fi
 

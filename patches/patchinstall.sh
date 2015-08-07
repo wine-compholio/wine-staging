@@ -273,6 +273,7 @@ patch_enable_all ()
 	enable_winex11_wglShareLists="$1"
 	enable_winhttp_System_Proxy_Autoconfig="$1"
 	enable_wininet_Cleanup="$1"
+	enable_wininet_Internet_Settings="$1"
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
 	enable_winmm_Delay_Import_Depends="$1"
 	enable_winscard_SCardListReaders="$1"
@@ -893,6 +894,9 @@ patch_enable ()
 			;;
 		wininet-Cleanup)
 			enable_wininet_Cleanup="$2"
+			;;
+		wininet-Internet_Settings)
+			enable_wininet_Internet_Settings="$2"
 			;;
 		wininet-ParseX509EncodedCertificateForListBoxEntry)
 			enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$2"
@@ -5628,6 +5632,24 @@ if test "$enable_wininet_Cleanup" -eq 1; then
 		echo '+    { "Michael Müller", "wininet: Use request->server->canon_host_port when querying for INTERNET_OPTION_URL.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Strip filename if no path is set in cookie.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Replacing header fields should fail if they do not exist yet.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wininet-Internet_Settings
+# |
+# | Modified files:
+# |   *	dlls/wininet/internet.c, dlls/wininet/tests/internet.c
+# |
+if test "$enable_wininet_Internet_Settings" -eq 1; then
+	patch_apply wininet-Internet_Settings/0001-wininet-Print-the-correct-function-name-in-ok-messag.patch
+	patch_apply wininet-Internet_Settings/0002-wininet-Disabling-proxy-should-return-success-when-n.patch
+	patch_apply wininet-Internet_Settings/0003-wininet-Allow-INTERNET_OPTION_SETTINGS_CHANGED-on-co.patch
+	patch_apply wininet-Internet_Settings/0004-wininet-Add-support-for-INTERNET_OPTION_SETTINGS_CHA.patch
+	(
+		echo '+    { "Sebastian Lackner", "wininet: Print the correct function name in ok() messages.", 1 },';
+		echo '+    { "Michael Müller", "wininet: Disabling proxy should return success when no proxy was enabled.", 1 },';
+		echo '+    { "Michael Müller", "wininet: Allow INTERNET_OPTION_SETTINGS_CHANGED on connections.", 1 },';
+		echo '+    { "Michael Müller", "wininet: Add support for INTERNET_OPTION_SETTINGS_CHANGED in InternetSetOption.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -39,9 +39,10 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [2]:**
+**Bug fixes and features included in the next upcoming release [3]:**
 
 * Add stub dlls required for MSVC 2015 runtime library (Windows 10)
+* Add stubs for additional wininet options in InternetSetOption
 * Improve stubs for dxgi MakeWindowAssociation and GetWindowAssociation
 
 

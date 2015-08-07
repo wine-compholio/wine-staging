@@ -250,6 +250,7 @@ patch_enable_all ()
 	enable_wineboot_drivers_etc_Stubs="$1"
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
+	enable_winecfg_Theme_Leak="$1"
 	enable_winecfg_Unmounted_Devices="$1"
 	enable_wineconsole_Forward_Exitcode="$1"
 	enable_wined3d_Accounting="$1"
@@ -826,6 +827,9 @@ patch_enable ()
 			;;
 		winecfg-Staging)
 			enable_winecfg_Staging="$2"
+			;;
+		winecfg-Theme_Leak)
+			enable_winecfg_Theme_Leak="$2"
 			;;
 		winecfg-Unmounted_Devices)
 			enable_winecfg_Unmounted_Devices="$2"
@@ -4873,6 +4877,18 @@ if test "$enable_winecfg_Libraries" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset winecfg-Theme_Leak
+# |
+# | Modified files:
+# |   *	programs/winecfg/theme.c
+# |
+if test "$enable_winecfg_Theme_Leak" -eq 1; then
+	patch_apply winecfg-Theme_Leak/0001-winecfg-Do-not-overwrite-theme-each-time-an-item-is-.patch
+	(
+		echo '+    { "Michael Müller", "winecfg: Do not overwrite theme each time an item is drawn.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset winecfg-Unmounted_Devices
 # |
 # | Modified files:
@@ -4918,6 +4934,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	patch_apply wined3d-CSMT_Helper/0001-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5017,18 +5045,6 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -81,6 +81,7 @@ patch_enable_all ()
 	enable_Staging="$1"
 	enable_advapi32_LsaLookupSids="$1"
 	enable_amstream_GetMultiMediaStream="$1"
+	enable_api_ms_win_crt_Stub_DLLs="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_combase_String="$1"
 	enable_comctl32_LoadIconMetric="$1"
@@ -313,6 +314,9 @@ patch_enable ()
 			;;
 		amstream-GetMultiMediaStream)
 			enable_amstream_GetMultiMediaStream="$2"
+			;;
+		api-ms-win-crt-Stub_DLLs)
+			enable_api_ms_win_crt_Stub_DLLs="$2"
 			;;
 		browseui-Progress_Dialog)
 			enable_browseui_Progress_Dialog="$2"
@@ -2038,6 +2042,76 @@ if test "$enable_amstream_GetMultiMediaStream" -eq 1; then
 	patch_apply amstream-GetMultiMediaStream/0001-amstream-Implement-IAMMediaStream-GetMultiMediaStrea.patch
 	(
 		echo '+    { "Michael Müller", "amstream: Implement IAMMediaStream::GetMultiMediaStream.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset api-ms-win-crt-Stub_DLLs
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/api-ms-win-crt-conio-l1-1-0/Makefile.in, dlls/api-ms-win-crt-conio-l1-1-0/api-ms-win-crt-
+# | 	conio-l1-1-0.spec, dlls/api-ms-win-crt-convert-l1-1-0/Makefile.in, dlls/api-ms-win-crt-convert-l1-1-0/api-ms-win-crt-
+# | 	convert-l1-1-0.spec, dlls/api-ms-win-crt-environment-l1-1-0/Makefile.in, dlls/api-ms-win-crt-environment-l1-1-0/api-ms-
+# | 	win-crt-environment-l1-1-0.spec, dlls/api-ms-win-crt-filesystem-l1-1-0/Makefile.in, dlls/api-ms-win-crt-
+# | 	filesystem-l1-1-0/api-ms-win-crt-filesystem-l1-1-0.spec, dlls/api-ms-win-crt-heap-l1-1-0/Makefile.in, dlls/api-ms-win-
+# | 	crt-heap-l1-1-0/api-ms-win-crt-heap-l1-1-0.spec, dlls/api-ms-win-crt-locale-l1-1-0/Makefile.in, dlls/api-ms-win-crt-
+# | 	locale-l1-1-0/api-ms-win-crt-locale-l1-1-0.spec, dlls/api-ms-win-crt-math-l1-1-0/Makefile.in, dlls/api-ms-win-crt-
+# | 	math-l1-1-0/api-ms-win-crt-math-l1-1-0.spec, dlls/api-ms-win-crt-multibyte-l1-1-0/Makefile.in, dlls/api-ms-win-crt-
+# | 	multibyte-l1-1-0/api-ms-win-crt-multibyte-l1-1-0.spec, dlls/api-ms-win-crt-private-l1-1-0/Makefile.in, dlls/api-ms-win-
+# | 	crt-private-l1-1-0/api-ms-win-crt-private-l1-1-0.spec, dlls/api-ms-win-crt-process-l1-1-0/Makefile.in, dlls/api-ms-win-
+# | 	crt-process-l1-1-0/api-ms-win-crt-process-l1-1-0.spec, dlls/api-ms-win-crt-runtime-l1-1-0/Makefile.in, dlls/api-ms-win-
+# | 	crt-runtime-l1-1-0/api-ms-win-crt-runtime-l1-1-0.spec, dlls/api-ms-win-crt-stdio-l1-1-0/Makefile.in, dlls/api-ms-win-
+# | 	crt-stdio-l1-1-0/api-ms-win-crt-stdio-l1-1-0.spec, dlls/api-ms-win-crt-string-l1-1-0/Makefile.in, dlls/api-ms-win-crt-
+# | 	string-l1-1-0/api-ms-win-crt-string-l1-1-0.spec, dlls/api-ms-win-crt-time-l1-1-0/Makefile.in, dlls/api-ms-win-crt-
+# | 	time-l1-1-0/api-ms-win-crt-time-l1-1-0.spec, dlls/api-ms-win-crt-utility-l1-1-0/Makefile.in, dlls/api-ms-win-crt-
+# | 	utility-l1-1-0/api-ms-win-crt-utility-l1-1-0.spec, dlls/msvcrt/data.c, dlls/msvcrt/misc.c, dlls/ucrtbase/Makefile.in,
+# | 	dlls/ucrtbase/ucrtbase.spec, dlls/vcruntime140/Makefile.in, dlls/vcruntime140/vcruntime140.spec, tools/make_specfiles
+# |
+if test "$enable_api_ms_win_crt_Stub_DLLs" -eq 1; then
+	patch_apply api-ms-win-crt-Stub_DLLs/0001-ucrtbase-Add-the-new-universal-CRT-DLL.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0002-ucrtbase-Hook-up-some-functions-with-new-names-to-ex.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0003-vcruntime140-Add-the-new-MSVC-2015-compiler-specific.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0004-vcruntime140-Hook-up-a-function-with-a-new-name-to-t.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0005-ucrtbase-Add-stub-functions-for-narrow-environment.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0006-vcruntime140-Add-stubs-for-telemetry-functions.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0007-make_specfiles-Use-cdecl-for-stub-redirects-to-ucrtb.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0008-api-ms-win-crt-conio-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0009-api-ms-win-crt-convert-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0010-api-ms-win-crt-environment-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0011-api-ms-win-crt-filesystem-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0012-api-ms-win-crt-heap-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0013-api-ms-win-crt-locale-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0014-api-ms-win-crt-math-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0015-api-ms-win-crt-multibyte-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0016-api-ms-win-crt-private-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0017-api-ms-win-crt-process-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0018-api-ms-win-crt-runtime-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0019-api-ms-win-crt-stdio-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0020-api-ms-win-crt-string-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0021-api-ms-win-crt-time-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0022-api-ms-win-crt-utility-l1-1-0-Add-stub-dll.patch
+	(
+		echo '+    { "Martin Storsjo", "ucrtbase: Add the new universal CRT DLL.", 1 },';
+		echo '+    { "Martin Storsjo", "ucrtbase: Hook up some functions with new names to existing implementations.", 1 },';
+		echo '+    { "Martin Storsjo", "vcruntime140: Add the new MSVC 2015 compiler specific DLL.", 1 },';
+		echo '+    { "Martin Storsjo", "vcruntime140: Hook up a function with a new name to the existing implementation.", 1 },';
+		echo '+    { "Martin Storsjo", "ucrtbase: Add stub functions for narrow environment.", 1 },';
+		echo '+    { "Martin Storsjo", "vcruntime140: Add stubs for telemetry functions.", 1 },';
+		echo '+    { "Martin Storsjo", "make_specfiles: Use cdecl for stub redirects to ucrtbase, just like to msvcr*.", 1 },';
+		echo '+    { "Martin Storsjo", "api-ms-win-crt-conio-l1-1-0: Add stub dll.", 1 },';
+		echo '+    { "Martin Storsjo", "api-ms-win-crt-convert-l1-1-0: Add stub dll.", 1 },';
+		echo '+    { "Martin Storsjo", "api-ms-win-crt-environment-l1-1-0: Add stub dll.", 1 },';
+		echo '+    { "Martin Storsjo", "api-ms-win-crt-filesystem-l1-1-0: Add stub dll.", 1 },';
+		echo '+    { "Martin Storsjo", "api-ms-win-crt-heap-l1-1-0: Add stub dll.", 1 },';
+		echo '+    { "Martin Storsjo", "api-ms-win-crt-locale-l1-1-0: Add stub dll.", 1 },';
+		echo '+    { "Martin Storsjo", "api-ms-win-crt-math-l1-1-0: Add stub dll.", 1 },';
+		echo '+    { "Martin Storsjo", "api-ms-win-crt-multibyte-l1-1-0: Add stub dll.", 1 },';
+		echo '+    { "Martin Storsjo", "api-ms-win-crt-private-l1-1-0: Add stub dll.", 1 },';
+		echo '+    { "Martin Storsjo", "api-ms-win-crt-process-l1-1-0: Add stub dll.", 1 },';
+		echo '+    { "Martin Storsjo", "api-ms-win-crt-runtime-l1-1-0: Add stub dll.", 1 },';
+		echo '+    { "Martin Storsjo", "api-ms-win-crt-stdio-l1-1-0: Add stub dll.", 1 },';
+		echo '+    { "Martin Storsjo", "api-ms-win-crt-string-l1-1-0: Add stub dll.", 1 },';
+		echo '+    { "Martin Storsjo", "api-ms-win-crt-time-l1-1-0: Add stub dll.", 1 },';
+		echo '+    { "Martin Storsjo", "api-ms-win-crt-utility-l1-1-0: Add stub dll.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4823,6 +4897,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-wined3d_swapchain_present
+# |
+# | Modified files:
+# |   *	dlls/wined3d/swapchain.c
+# |
+if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
+	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-Geforce_425M
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4919,18 +5005,6 @@ if test "$enable_wined3d_resource_check_usage" -eq 1; then
 	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
 	(
 		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-wined3d_swapchain_present
-# |
-# | Modified files:
-# |   *	dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
-	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -211,7 +211,7 @@ for more details.*
 * Multiple applications need EnumDisplayDevicesW implementation ([Wine Bug #34978](https://bugs.winehq.org/show_bug.cgi?id=34978))
 * ~~Multiple applications needs better NtQueryInformationJobObject stub~~
 * Need for Speed 3 installer requires devices in HKEY_DYN_DATA ([Wine Bug #7115](https://bugs.winehq.org/show_bug.cgi?id=7115))
-* Only send WM_DROPFILES when OLE dnd fails ([Wine Bug #29081](https://bugs.winehq.org/show_bug.cgi?id=29081))
+* ~~Only send WM_DROPFILES when OLE dnd fails~~ ([Wine Bug #29081](https://bugs.winehq.org/show_bug.cgi?id=29081))
 * Other Pipelight-specific enhancements
 * Port Royale doesn't display ocean correctly ([Wine Bug #17913](https://bugs.winehq.org/show_bug.cgi?id=17913))
 * Prevent window managers from grouping all wine programs together ([Wine Bug #32699](https://bugs.winehq.org/show_bug.cgi?id=32699))

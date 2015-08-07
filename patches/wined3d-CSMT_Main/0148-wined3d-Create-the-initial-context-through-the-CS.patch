@@ -1,4 +1,4 @@
-From f53a2f40f946d8e6c9d36de24010dc9d2f324de1 Mon Sep 17 00:00:00 2001
+From 994d4c154e7017344ddf8ba6403a9c02ca177b4f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 10 Oct 2013 16:43:19 +0200
 Subject: wined3d: Create the initial context through the CS.
@@ -11,10 +11,10 @@ Very hacky.
  3 files changed, 103 insertions(+), 53 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index fb1d1aa..3662432 100644
+index 97281c8..a643b84 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -88,6 +88,7 @@ enum wined3d_cs_op
+@@ -89,6 +89,7 @@ enum wined3d_cs_op
      WINED3D_CS_OP_SURFACE_CLEANUP,
      WINED3D_CS_OP_TEXTURE_CLEANUP,
      WINED3D_CS_OP_CREATE_DUMMY_TEXTURES,
@@ -22,7 +22,7 @@ index fb1d1aa..3662432 100644
      WINED3D_CS_OP_STOP,
  };
  
-@@ -518,6 +519,13 @@ struct wined3d_cs_create_dummy_textures
+@@ -528,6 +529,13 @@ struct wined3d_cs_create_dummy_textures
      enum wined3d_cs_op opcode;
  };
  
@@ -36,7 +36,7 @@ index fb1d1aa..3662432 100644
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
  {
      LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
-@@ -2501,6 +2509,31 @@ void wined3d_cs_emit_create_dummy_textures(struct wined3d_cs *cs)
+@@ -2615,6 +2623,31 @@ void wined3d_cs_emit_create_dummy_textures(struct wined3d_cs *cs)
      cs->ops->finish(cs);
  }
  
@@ -68,7 +68,7 @@ index fb1d1aa..3662432 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2567,6 +2600,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2682,6 +2715,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_SURFACE_CLEANUP            */ wined3d_cs_exec_surface_cleanup,
      /* WINED3D_CS_OP_TEXTURE_CLEANUP            */ wined3d_cs_exec_texture_cleanup,
      /* WINED3D_CS_OP_CREATE_DUMMY_TEXTURES      */ wined3d_cs_exec_create_dummy_textures,
@@ -77,10 +77,10 @@ index fb1d1aa..3662432 100644
  
  static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
 diff --git a/dlls/wined3d/swapchain.c b/dlls/wined3d/swapchain.c
-index 0a7b68d..8b9b13c 100644
+index d2e2c05..d72eb8a 100644
 --- a/dlls/wined3d/swapchain.c
 +++ b/dlls/wined3d/swapchain.c
-@@ -723,6 +723,69 @@ void swapchain_update_render_to_fbo(struct wined3d_swapchain *swapchain)
+@@ -723,6 +723,69 @@ static void swapchain_update_render_to_fbo(struct wined3d_swapchain *swapchain)
      swapchain->render_to_fbo = TRUE;
  }
  
@@ -214,10 +214,10 @@ index 0a7b68d..8b9b13c 100644
  
      if (swapchain->desc.backbuffer_count > 0)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index a4e1886..ab38f0e 100644
+index fa5f6d8..b16dae9 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2716,6 +2716,8 @@ void wined3d_cs_emit_volume_cleanup(struct wined3d_cs *cs, struct wined3d_volume
+@@ -2804,6 +2804,8 @@ void wined3d_cs_emit_volume_cleanup(struct wined3d_cs *cs, struct wined3d_volume
  void wined3d_cs_emit_surface_cleanup(struct wined3d_cs *cs, struct wined3d_surface *surface) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_texture_cleanup(struct wined3d_cs *cs, struct wined3d_texture *texture) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_create_dummy_textures(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
@@ -226,15 +226,15 @@ index a4e1886..ab38f0e 100644
  
  /* Direct3D terminology with little modifications. We do not have an issued state
   * because only the driver knows about it, but we have a created state because d3d
-@@ -2900,6 +2902,8 @@ void swapchain_destroy_contexts(struct wined3d_swapchain *swapchain) DECLSPEC_HI
+@@ -2988,6 +2990,8 @@ struct wined3d_context *swapchain_get_context(struct wined3d_swapchain *swapchai
+ void swapchain_destroy_contexts(struct wined3d_swapchain *swapchain) DECLSPEC_HIDDEN;
  HDC swapchain_get_backup_dc(struct wined3d_swapchain *swapchain) DECLSPEC_HIDDEN;
  void swapchain_update_draw_bindings(struct wined3d_swapchain *swapchain) DECLSPEC_HIDDEN;
- void swapchain_update_render_to_fbo(struct wined3d_swapchain *swapchain) DECLSPEC_HIDDEN;
 +HRESULT swapchain_create_context_cs(struct wined3d_device *device,
 +        struct wined3d_swapchain *swapchain) DECLSPEC_HIDDEN;
  
  /*****************************************************************************
   * Utility function prototypes
 -- 
-2.1.3
+2.5.0
 

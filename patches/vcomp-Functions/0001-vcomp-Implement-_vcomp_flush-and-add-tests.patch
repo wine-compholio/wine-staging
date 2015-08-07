@@ -1,0 +1,128 @@
+From 7f7a6eb2828e1400e298e7a2a315c81b04cfb2b1 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 7 Aug 2015 23:22:28 +0200
+Subject: vcomp: Implement _vcomp_flush and add tests.
+
+---
+ dlls/vcomp/main.c           |  6 ++++++
+ dlls/vcomp/tests/vcomp.c    | 10 ++++++++++
+ dlls/vcomp/vcomp.spec       |  2 +-
+ dlls/vcomp100/vcomp100.spec |  2 +-
+ dlls/vcomp110/vcomp110.spec |  2 +-
+ dlls/vcomp90/vcomp90.spec   |  2 +-
+ 6 files changed, 20 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/vcomp/main.c b/dlls/vcomp/main.c
+index 10ac465..0f733a9 100644
+--- a/dlls/vcomp/main.c
++++ b/dlls/vcomp/main.c
+@@ -465,6 +465,12 @@ void CDECL omp_set_num_threads(int num_threads)
+         vcomp_num_threads = num_threads;
+ }
+ 
++void CDECL _vcomp_flush(void)
++{
++    TRACE("(): stub\n");
++    /* FIXME: What kind of memory barrier is this? */
++}
++
+ void CDECL _vcomp_barrier(void)
+ {
+     struct vcomp_team_data *team_data = vcomp_init_thread_data()->team;
+diff --git a/dlls/vcomp/tests/vcomp.c b/dlls/vcomp/tests/vcomp.c
+index f24c654..3df547a 100644
+--- a/dlls/vcomp/tests/vcomp.c
++++ b/dlls/vcomp/tests/vcomp.c
+@@ -52,6 +52,7 @@ static void  (CDECL   *p_vcomp_atomic_sub_r8)(double *dest, double val);
+ static void  (CDECL   *p_vcomp_atomic_xor_i4)(int *dest, int val);
+ static void  (CDECL   *p_vcomp_barrier)(void);
+ static void  (CDECL   *p_vcomp_enter_critsect)(CRITICAL_SECTION **critsect);
++static void  (CDECL   *p_vcomp_flush)(void);
+ static void  (CDECL   *p_vcomp_for_dynamic_init)(unsigned int flags, unsigned int first, unsigned int last,
+                                                  int step, unsigned int chunksize);
+ static int   (CDECL   *p_vcomp_for_dynamic_next)(unsigned int *begin, unsigned int *end);
+@@ -229,6 +230,7 @@ static BOOL init_vcomp(void)
+     VCOMP_GET_PROC(_vcomp_atomic_xor_i4);
+     VCOMP_GET_PROC(_vcomp_barrier);
+     VCOMP_GET_PROC(_vcomp_enter_critsect);
++    VCOMP_GET_PROC(_vcomp_flush);
+     VCOMP_GET_PROC(_vcomp_for_dynamic_init);
+     VCOMP_GET_PROC(_vcomp_for_dynamic_next);
+     VCOMP_GET_PROC(_vcomp_for_static_end);
+@@ -1269,6 +1271,13 @@ static void test_vcomp_enter_critsect(void)
+     pomp_set_num_threads(max_threads);
+ }
+ 
++static void test_vcomp_flush(void)
++{
++    p_vcomp_flush();
++    p_vcomp_flush();
++    p_vcomp_flush();
++}
++
+ static void test_atomic_integer32(void)
+ {
+     struct
+@@ -1388,6 +1397,7 @@ START_TEST(vcomp)
+     test_vcomp_master_begin();
+     test_vcomp_single_begin();
+     test_vcomp_enter_critsect();
++    test_vcomp_flush();
+     test_atomic_integer32();
+     test_atomic_float();
+     test_atomic_double();
+diff --git a/dlls/vcomp/vcomp.spec b/dlls/vcomp/vcomp.spec
+index 55b699f..40110d2 100644
+--- a/dlls/vcomp/vcomp.spec
++++ b/dlls/vcomp/vcomp.spec
+@@ -54,7 +54,7 @@
+ @ stub _vcomp_copyprivate_broadcast
+ @ stub _vcomp_copyprivate_receive
+ @ cdecl _vcomp_enter_critsect(ptr)
+-@ stub _vcomp_flush
++@ cdecl _vcomp_flush()
+ @ cdecl _vcomp_for_dynamic_init(long long long long long)
+ @ stub _vcomp_for_dynamic_init_i8
+ @ cdecl _vcomp_for_dynamic_next(ptr ptr)
+diff --git a/dlls/vcomp100/vcomp100.spec b/dlls/vcomp100/vcomp100.spec
+index 7bf6238..1974f7e 100644
+--- a/dlls/vcomp100/vcomp100.spec
++++ b/dlls/vcomp100/vcomp100.spec
+@@ -54,7 +54,7 @@
+ @ stub _vcomp_copyprivate_broadcast
+ @ stub _vcomp_copyprivate_receive
+ @ cdecl _vcomp_enter_critsect(ptr) vcomp._vcomp_enter_critsect
+-@ stub _vcomp_flush
++@ cdecl _vcomp_flush() vcomp._vcomp_flush
+ @ cdecl _vcomp_for_dynamic_init(long long long long long) vcomp._vcomp_for_dynamic_init
+ @ stub _vcomp_for_dynamic_init_i8
+ @ cdecl _vcomp_for_dynamic_next(ptr ptr) vcomp._vcomp_for_dynamic_next
+diff --git a/dlls/vcomp110/vcomp110.spec b/dlls/vcomp110/vcomp110.spec
+index c84e44c..d1b27ed 100644
+--- a/dlls/vcomp110/vcomp110.spec
++++ b/dlls/vcomp110/vcomp110.spec
+@@ -55,7 +55,7 @@
+ @ stub _vcomp_copyprivate_broadcast
+ @ stub _vcomp_copyprivate_receive
+ @ cdecl _vcomp_enter_critsect(ptr) vcomp._vcomp_enter_critsect
+-@ stub _vcomp_flush
++@ cdecl _vcomp_flush() vcomp._vcomp_flush
+ @ cdecl _vcomp_for_dynamic_init(long long long long long) vcomp._vcomp_for_dynamic_init
+ @ stub _vcomp_for_dynamic_init_i8
+ @ cdecl _vcomp_for_dynamic_next(ptr ptr) vcomp._vcomp_for_dynamic_next
+diff --git a/dlls/vcomp90/vcomp90.spec b/dlls/vcomp90/vcomp90.spec
+index 7bf6238..1974f7e 100644
+--- a/dlls/vcomp90/vcomp90.spec
++++ b/dlls/vcomp90/vcomp90.spec
+@@ -54,7 +54,7 @@
+ @ stub _vcomp_copyprivate_broadcast
+ @ stub _vcomp_copyprivate_receive
+ @ cdecl _vcomp_enter_critsect(ptr) vcomp._vcomp_enter_critsect
+-@ stub _vcomp_flush
++@ cdecl _vcomp_flush() vcomp._vcomp_flush
+ @ cdecl _vcomp_for_dynamic_init(long long long long long) vcomp._vcomp_for_dynamic_init
+ @ stub _vcomp_for_dynamic_init_i8
+ @ cdecl _vcomp_for_dynamic_next(ptr ptr) vcomp._vcomp_for_dynamic_next
+-- 
+2.5.0
+

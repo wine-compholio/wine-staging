@@ -39,10 +39,11 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [3]:**
+**Bug fixes and features included in the next upcoming release [4]:**
 
 * Add stub dlls required for MSVC 2015 runtime library (Windows 10)
 * Add stubs for additional wininet options in InternetSetOption
+* Implement stub for vcomp._vcomp_flush ([Wine Bug #39058](https://bugs.winehq.org/show_bug.cgi?id=39058))
 * Improve stubs for dxgi MakeWindowAssociation and GetWindowAssociation
 
 

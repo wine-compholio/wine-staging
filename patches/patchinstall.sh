@@ -238,6 +238,7 @@ patch_enable_all ()
 	enable_user32_Painting="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_WndProc="$1"
+	enable_vcomp_Functions="$1"
 	enable_version_VerQueryValue="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_wbemdisp_Timeout="$1"
@@ -789,6 +790,9 @@ patch_enable ()
 			;;
 		user32-WndProc)
 			enable_user32_WndProc="$2"
+			;;
+		vcomp-Functions)
+			enable_vcomp_Functions="$2"
 			;;
 		version-VerQueryValue)
 			enable_version_VerQueryValue="$2"
@@ -4712,6 +4716,22 @@ if test "$enable_user32_WndProc" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset vcomp-Functions
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39058] Implement stub for vcomp._vcomp_flush
+# |
+# | Modified files:
+# |   *	dlls/vcomp/main.c, dlls/vcomp/tests/vcomp.c, dlls/vcomp/vcomp.spec, dlls/vcomp100/vcomp100.spec,
+# | 	dlls/vcomp110/vcomp110.spec, dlls/vcomp90/vcomp90.spec
+# |
+if test "$enable_vcomp_Functions" -eq 1; then
+	patch_apply vcomp-Functions/0001-vcomp-Implement-_vcomp_flush-and-add-tests.patch
+	(
+		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_flush and add tests.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset version-VerQueryValue
 # |
 # | Modified files:
@@ -4901,6 +4921,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-resource_check_usage
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c
+# |
+if test "$enable_wined3d_resource_check_usage" -eq 1; then
+	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	(
+		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-wined3d_swapchain_present
 # |
 # | Modified files:
@@ -4997,18 +5029,6 @@ if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
 	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-resource_check_usage
-# |
-# | Modified files:
-# |   *	dlls/wined3d/resource.c
-# |
-if test "$enable_wined3d_resource_check_usage" -eq 1; then
-	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	(
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
 	) >> "$patchlist"
 fi
 

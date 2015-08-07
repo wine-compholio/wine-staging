@@ -5589,12 +5589,14 @@ fi
 # Patchset winhttp-System_Proxy_Autoconfig
 # |
 # | Modified files:
-# |   *	dlls/winhttp/session.c
+# |   *	dlls/winhttp/session.c, dlls/wininet/internet.c
 # |
 if test "$enable_winhttp_System_Proxy_Autoconfig" -eq 1; then
 	patch_apply winhttp-System_Proxy_Autoconfig/0001-winhttp-Silence-repeated-no-support-on-this-platform.patch
+	patch_apply winhttp-System_Proxy_Autoconfig/0002-wininet-Silence-wininet-no-support-on-this-platform-.patch
 	(
 		echo '+    { "Jarkko Korpi", "winhttp: Silence repeated \"no support on this platform\" message.", 1 },';
+		echo '+    { "Jarkko Korpi", "wininet: Silence wininet no support on this platform message.", 1 },';
 	) >> "$patchlist"
 fi
 

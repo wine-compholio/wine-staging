@@ -1,26 +1,20 @@
-From ac0eef4019baefc758a06d21ccaa5aaa7dadf1c2 Mon Sep 17 00:00:00 2001
+From ea0e2fc70db6ce4904655ea4a27ee34531d96712 Mon Sep 17 00:00:00 2001
 From: Jonathan Vollebregt <jnvsor@gmail.com>
-Date: Wed, 14 Jan 2015 18:12:24 +0100
-Subject: reg: Add path/key conversion functions
+Date: Sun, 31 Aug 2014 13:22:13 +0200
+Subject: [PATCH 1/4] reg: Add path/key conversion functions
 
 ---
- programs/reg/reg.c | 150 ++++++++++++++++++++++++++---------------------------
- 1 file changed, 75 insertions(+), 75 deletions(-)
+ programs/reg/reg.c | 166 +++++++++++++++++++++++++++--------------------------
+ 1 file changed, 86 insertions(+), 80 deletions(-)
 
 diff --git a/programs/reg/reg.c b/programs/reg/reg.c
-index f0c0b2e..e9b5b68 100755
+index 4ec25bc..cf6425e 100644
 --- a/programs/reg/reg.c
 +++ b/programs/reg/reg.c
-@@ -20,8 +20,38 @@
- #include <wine/unicode.h>
- #include "reg.h"
+@@ -22,6 +22,32 @@
  
-+#define ARRAY_SIZE(A) (sizeof(A)/sizeof(*A))
-+
- #define ERROR_NO_REMOTE         20000
+ #define ARRAY_SIZE(A) (sizeof(A)/sizeof(*A))
  
-+static const WCHAR empty_wstr[] = {0};
-+
 +static const WCHAR short_hklm[] = {'H','K','L','M',0};
 +static const WCHAR short_hkcu[] = {'H','K','C','U',0};
 +static const WCHAR short_hkcr[] = {'H','K','C','R',0};
@@ -47,21 +41,11 @@ index f0c0b2e..e9b5b68 100755
 +    {HKEY_CURRENT_CONFIG, short_hkcc, long_hkcc},
 +};
 +
- static int reg_printfW(const WCHAR *msg, ...)
- {
-     va_list va_args;
-@@ -84,6 +114,9 @@ static void reg_print_error(LSTATUS error_code)
-         case ERROR_NO_REMOTE:
-             reg_message(STRING_NO_REMOTE);
-             return;
-+        case ERROR_FILE_NOT_FOUND:
-+            reg_message(STRING_CANNOT_FIND);
-+            return;
-         default:
-         {
-             static const WCHAR error_string[] = {'%','0','5','d',':',' ','%','s',0};
-@@ -99,51 +132,40 @@ static void reg_print_error(LSTATUS error_code)
-     }
+ static const WCHAR type_none[] = {'R','E','G','_','N','O','N','E',0};
+ static const WCHAR type_sz[] = {'R','E','G','_','S','Z',0};
+ static const WCHAR type_expand_sz[] = {'R','E','G','_','E','X','P','A','N','D','_','S','Z',0};
+@@ -95,51 +121,56 @@ static int reg_message(int msg)
+     return reg_printfW(formatW, msg_buffer);
  }
  
 -static int reg_StrCmpNIW(LPCWSTR str, LPCWSTR comp, int len)
@@ -69,12 +53,12 @@ index f0c0b2e..e9b5b68 100755
  {
 -    int i;
 +    DWORD length = strlenW(rootkey_name);
-+
+ 
+-    for (i = 0; i < len; i++)
 +    return (!strncmpiW(input_path, rootkey_name, length) &&
 +            (input_path[length] == 0 || input_path[length] == '\\'));
 +}
- 
--    for (i = 0; i < len; i++)
++
 +static HKEY path_get_rootkey(const WCHAR *path)
 +{
 +    DWORD i;
@@ -96,7 +80,7 @@ index f0c0b2e..e9b5b68 100755
  }
  
 -static HKEY get_rootkey(LPWSTR key)
-+static LSTATUS path_open(const WCHAR *path, HKEY *out, BOOL create)
++static HKEY path_open(const WCHAR *path, BOOL create)
  {
 -    static const WCHAR szHKLM[] = {'H','K','L','M',0};
 -    static const WCHAR szHKEY_LOCAL_MACHINE[] = {'H','K','E','Y','_','L','O','C','A','L','_','M','A','C','H','I','N','E',0};
@@ -125,32 +109,47 @@ index f0c0b2e..e9b5b68 100755
 -             !reg_StrCmpNIW(key, szHKEY_CURRENT_CONFIG, 19))
 -        return HKEY_CURRENT_CONFIG;
 -    else return NULL;
-+    *out = path_get_rootkey(path);
++    LONG err;
++    HKEY k;
++
++    k = path_get_rootkey(path);
++    if (!k)
++    {
++        reg_message(STRING_INVALID_KEY);
++        return NULL;
++    }
 +
 +    path = strchrW(path, '\\');
 +    if (path)
 +        path++;
 +
 +    if (create)
-+        return RegCreateKeyW(*out, path, out);
++        err = RegCreateKeyW(k, path, &k);
 +    else
-+        return RegOpenKeyW(*out, path, out);
++        err = RegOpenKeyW(k, path, &k);
++
++    if (err != ERROR_SUCCESS)
++    {
++        reg_message(STRING_CANNOT_FIND);
++        return NULL;
++    }
++
++    return k;
  }
  
- static DWORD get_regtype(LPWSTR type)
-@@ -229,8 +251,7 @@ static int reg_add(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
+ static DWORD wchar_get_type(const WCHAR *type_name)
+@@ -221,34 +252,16 @@ static int reg_add(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
  {
      static const WCHAR stubW[] = {'A','D','D',' ','-',' ','%','s',
          ' ','%','s',' ','%','d',' ','%','s',' ','%','s',' ','%','d','\n',0};
 -    LPWSTR p;
 -    HKEY root,subkey;
 +    HKEY subkey;
-     LONG err;
  
      reg_printfW(stubW, key_name, value_name, value_empty, type, data, force);
-@@ -242,22 +263,8 @@ static int reg_add(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
+ 
+     if (!sane_path(key_name))
          return 1;
-     }
  
 -    p = strchrW(key_name,'\\');
 -    if (!p)
@@ -164,28 +163,33 @@ index f0c0b2e..e9b5b68 100755
 -    if (!root)
 -    {
 -        reg_message(STRING_INVALID_KEY);
--        return 1;
++    subkey = path_open(key_name, TRUE);
++    if (!subkey)
+         return 1;
 -    }
 -
 -    if(RegCreateKeyW(root,p,&subkey)!=ERROR_SUCCESS)
-+    err = path_open(key_name, &subkey, TRUE);
-+    if (err != ERROR_SUCCESS)
+-    {
+-        reg_message(STRING_INVALID_KEY);
+-        return 1;
+-    }
+ 
+     if (value_name || data)
      {
-         reg_message(STRING_INVALID_KEY);
-         return 1;
-@@ -301,8 +308,7 @@ static int reg_add(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
+@@ -288,8 +301,8 @@ static int reg_add(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
  static int reg_delete(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
      BOOL value_all, BOOL force)
  {
 -    LPWSTR p;
 -    HKEY root,subkey;
 +    HKEY subkey;
-     LONG err;
++    LONG err;
  
      static const WCHAR stubW[] = {'D','E','L','E','T','E',
-@@ -317,16 +323,8 @@ static int reg_delete(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
+         ' ','-',' ','%','s',' ','%','s',' ','%','d',' ','%','d',' ','%','d','\n'
+@@ -299,20 +312,9 @@ static int reg_delete(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
+     if (!sane_path(key_name))
          return 1;
-     }
  
 -    p = strchrW(key_name,'\\');
 -    if (!p)
@@ -197,31 +201,35 @@ index f0c0b2e..e9b5b68 100755
 -
 -    root = get_rootkey(key_name);
 -    if (!root)
-+    err = path_open(key_name, &subkey, FALSE);
-+    if (err != ERROR_SUCCESS)
-     {
-         reg_message(STRING_INVALID_KEY);
+-    {
+-        reg_message(STRING_INVALID_KEY);
++    subkey = path_open(key_name, FALSE);
++    if (!subkey)
          return 1;
-@@ -352,21 +350,23 @@ static int reg_delete(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
+-    }
+ 
+     if (value_name && value_empty)
+     {
+@@ -334,7 +336,17 @@ static int reg_delete(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
      /* Delete subtree only if no /v* option is given */
      if (!value_name && !value_empty && !value_all)
      {
 -        if (RegDeleteTreeW(root,p)!=ERROR_SUCCESS)
++        static const WCHAR empty_wstr[] = {0};
++
 +        err = RegDeleteTreeW(subkey, NULL);
 +        if (err != ERROR_SUCCESS)
-         {
--            reg_message(STRING_CANNOT_FIND);
-+            reg_print_error(err);
++        {
++            reg_message(STRING_CANNOT_FIND);
 +            return 1;
 +        }
 +
 +        err = RegDeleteKeyW(subkey, empty_wstr);
 +        if (err != ERROR_SUCCESS)
-+        {
-+            reg_print_error(err);
+         {
+             reg_message(STRING_CANNOT_FIND);
              return 1;
-         }
-         reg_message(STRING_SUCCESS);
+@@ -343,12 +355,6 @@ static int reg_delete(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
          return 0;
      }
  
@@ -235,5 +243,5 @@ index f0c0b2e..e9b5b68 100755
      {
          LPWSTR szValue;
 -- 
-2.2.2
+2.5.0
 

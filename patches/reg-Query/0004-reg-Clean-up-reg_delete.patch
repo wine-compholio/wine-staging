@@ -1,67 +1,57 @@
-From c1794766d8e9d1a1ddf46f4b81236e71a12fcbc4 Mon Sep 17 00:00:00 2001
+From a1047d392615e5f0c9ab308b3a8decd0c2e192a6 Mon Sep 17 00:00:00 2001
 From: Jonathan Vollebregt <jnvsor@gmail.com>
-Date: Wed, 14 Jan 2015 18:12:28 +0100
-Subject: reg: Clean up reg_delete
+Date: Fri, 5 Sep 2014 20:40:38 +0200
+Subject: [PATCH 4/4] reg: Clean up reg_delete
 
 ---
- programs/reg/reg.c       | 152 ++++++++++++++++++++++++-----------------------
+ programs/reg/reg.c       | 128 ++++++++++++++++++++++++-----------------------
  programs/reg/tests/reg.c |   2 +-
- 2 files changed, 78 insertions(+), 76 deletions(-)
+ 2 files changed, 66 insertions(+), 64 deletions(-)
 
 diff --git a/programs/reg/reg.c b/programs/reg/reg.c
-index 084a8d5..5d7db3b 100755
+index 86c2e20..6b32aa6 100644
 --- a/programs/reg/reg.c
 +++ b/programs/reg/reg.c
-@@ -414,120 +414,122 @@ error:
-     return 1;
+@@ -403,111 +403,113 @@ static int reg_add(const WCHAR *key_name, const WCHAR *value_name, const BOOL va
+     return 0;
  }
  
 -static int reg_delete(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
 -    BOOL value_all, BOOL force)
-+static int reg_delete(const WCHAR *key_name,    const WCHAR *value_name,  const BOOL value_empty,
-+                      const BOOL value_all,     const BOOL force)
++static int reg_delete(const WCHAR *key_name, const WCHAR *value_name, const BOOL value_empty,
++    const BOOL value_all, const BOOL force)
  {
 -    HKEY subkey;
--    LONG err;
--
++    HKEY key = NULL;
+     LONG err;
+ 
 -    static const WCHAR stubW[] = {'D','E','L','E','T','E',
 -        ' ','-',' ','%','s',' ','%','s',' ','%','d',' ','%','d',' ','%','d','\n'
 -        ,0};
 -    reg_printfW(stubW, key_name, value_name, value_empty, value_all, force);
 -
--    err = sane_path(key_name);
-+    HKEY key = NULL;
-+    LONG err = sane_path(key_name);
-     if (err != ERROR_SUCCESS)
-     {
-         reg_print_error(err);
+     if (!sane_path(key_name))
          return 1;
-     }
  
--    err = path_open(key_name, &subkey, FALSE);
-+    err = path_open(key_name, &key, FALSE);
-     if (err != ERROR_SUCCESS)
--    {
--        reg_message(STRING_INVALID_KEY);
+-    subkey = path_open(key_name, FALSE);
+-    if (!subkey)
 -        return 1;
--    }
 -
 -    if (value_name && value_empty)
--    {
--        reg_message(STRING_INVALID_CMDLINE);
--        return 1;
--    }
-+        goto error;
- 
--    if (value_empty && value_all)
 +    /* Mutually exclusive options */
 +    if ((!!value_name + !!value_empty + !!value_all) > 1)
      {
--        reg_message(STRING_INVALID_CMDLINE);
--        return 1;
-+        err = ERROR_BAD_COMMAND;
-+        goto error;
+         reg_message(STRING_INVALID_CMDLINE);
+         return 1;
      }
+ 
+-    if (value_empty && value_all)
+-    {
+-        reg_message(STRING_INVALID_CMDLINE);
++    key = path_open(key_name, FALSE);
++    if (!key)
+         return 1;
+-    }
  
      if (!force)
      {
@@ -76,7 +66,7 @@ index 084a8d5..5d7db3b 100755
 -        err = RegDeleteTreeW(subkey, NULL);
 -        if (err != ERROR_SUCCESS)
 -        {
--            reg_print_error(err);
+-            reg_message(STRING_CANNOT_FIND);
 -            return 1;
 -        }
 +        if (value_name && value_name[0])
@@ -86,13 +76,14 @@ index 084a8d5..5d7db3b 100755
  
 -        err = RegDeleteKeyW(subkey, empty_wstr);
          if (err != ERROR_SUCCESS)
--        {
--            reg_print_error(err);
--            return 1;
--        }
+         {
+-            reg_message(STRING_CANNOT_FIND);
++            RegCloseKey(key);
++            reg_message(STRING_ERROR);
+             return 1;
+         }
 -        reg_message(STRING_SUCCESS);
 -        return 0;
-+            goto error;
      }
 -
 -    if (value_all)
@@ -107,28 +98,24 @@ index 084a8d5..5d7db3b 100755
 -            &maxValue, NULL, NULL, NULL);
 -        if (rc != ERROR_SUCCESS)
 +        WCHAR *enum_v_name;
-+        DWORD count, max_size, this_size, i = 0;
-+        BOOL incomplete = FALSE;
++        DWORD count, max_size, this_size, i = 0, errors = 0;
 +
 +        err = RegQueryInfoKeyW(key, NULL, NULL, NULL, NULL, NULL, NULL,
-+                &count, &max_size, NULL, NULL, NULL);
++            &count, &max_size, NULL, NULL, NULL);
 +        if (err != ERROR_SUCCESS)
-+            goto error;
-+
-+        max_size++;
-+        enum_v_name = HeapAlloc(GetProcessHeap(), 0, max_size * sizeof(WCHAR));
-+        if (!enum_v_name)
          {
 -            /* FIXME: failure */
 -            RegCloseKey(subkey);
--            return 1;
-+            err = ERROR_NOT_ENOUGH_MEMORY;
-+            goto error;
++            RegCloseKey(key);
++            reg_message(STRING_ERROR);
+             return 1;
          }
 -        maxValue++;
 -        szValue = HeapAlloc(GetProcessHeap(),0,maxValue*sizeof(WCHAR));
  
 -        while (1)
++        enum_v_name = HeapAlloc(GetProcessHeap(), 0, ++max_size * sizeof(WCHAR));
++
 +        while (i < count)
          {
 -            count = maxValue;
@@ -139,9 +126,8 @@ index 084a8d5..5d7db3b 100755
 +            err = RegEnumValueW(key, i, enum_v_name, &this_size, NULL, NULL, NULL, NULL);
 +            if (err != ERROR_SUCCESS)
 +            {
-+                reg_print_error(err);
-+                incomplete = TRUE;
 +                i++;
++                errors++;
 +                continue;
 +            }
 +
@@ -151,9 +137,8 @@ index 084a8d5..5d7db3b 100755
 -                rc = RegDeleteValueW(subkey, szValue);
 -                if (rc != ERROR_SUCCESS)
 -                    break;
-+                reg_print_error(err);
-+                incomplete = TRUE;
 +                i++;
++                errors++;
 +                continue;
              }
 -            else break;
@@ -164,10 +149,11 @@ index 084a8d5..5d7db3b 100755
 +
 +        HeapFree(GetProcessHeap(), 0, enum_v_name);
 +
-+        if (incomplete)
++        if (errors)
          {
 -            /* FIXME  delete failed */
 +            RegCloseKey(key);
++            reg_message(STRING_ERROR);
 +            return 1;
          }
      }
@@ -183,33 +169,26 @@ index 084a8d5..5d7db3b 100755
 +            /* "This works well enough on native to make you regret you pressed enter" - stefand */
 +            WINE_FIXME("Deleting a root key is not implemented.\n");
 +            RegCloseKey(key);
++            return 1;
++        }
++
++        if (RegDeleteTreeW(key, NULL) != ERROR_SUCCESS || RegDeleteKeyW(key, empty_wstr))
++        {
++            RegCloseKey(key);
++            reg_message(STRING_ERROR);
              return 1;
          }
 -    }
 -    else if (value_empty)
 -    {
 -        RegSetValueExW(subkey,NULL,0,REG_SZ,NULL,0);
-+
-+        err = RegDeleteTreeW(key, NULL);
-+        if (err != ERROR_SUCCESS)
-+            goto error;
-+        err = RegDeleteKeyW(key, empty_wstr);
-+        if (err != ERROR_SUCCESS)
-+            goto error;
      }
  
 -    RegCloseKey(subkey);
 +    RegCloseKey(key);
      reg_message(STRING_SUCCESS);
      return 0;
-+
-+error:
-+    RegCloseKey(key);
-+    reg_print_error(err);
-+    return 1;
  }
- 
- static int reg_query(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
 diff --git a/programs/reg/tests/reg.c b/programs/reg/tests/reg.c
 index a3ecdfb..20ef7af 100644
 --- a/programs/reg/tests/reg.c
@@ -224,5 +203,5 @@ index a3ecdfb..20ef7af 100644
      run_reg_exe("reg delete HKCU\\" KEY_BASE " /va /f", &r);
      ok(r == REG_EXIT_SUCCESS, "got exit code %d, expected 0\n", r);
 -- 
-2.2.2
+2.5.0
 

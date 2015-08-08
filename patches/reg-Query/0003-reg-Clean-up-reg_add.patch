@@ -1,58 +1,52 @@
-From 41951b170a3de9adade891c290c161793582f32e Mon Sep 17 00:00:00 2001
+From 460e4697d19528384e8844491cd4283a3a5d585e Mon Sep 17 00:00:00 2001
 From: Jonathan Vollebregt <jnvsor@gmail.com>
-Date: Wed, 14 Jan 2015 18:12:27 +0100
-Subject: reg: Clean up reg_add
+Date: Fri, 17 Oct 2014 16:18:52 +0200
+Subject: [PATCH 3/4] reg: Clean up reg_add
 
 You'll notice that bad value input leaves a zombie key after this
 call, but this is consistant with native.
 ---
- programs/reg/reg.c       | 91 +++++++++++++++++++++++++-----------------------
- programs/reg/tests/reg.c | 22 ++++++------
- 2 files changed, 59 insertions(+), 54 deletions(-)
+ programs/reg/reg.c       | 77 +++++++++++++++++++++++++++++-------------------
+ programs/reg/reg.h       |  1 +
+ programs/reg/reg.rc      |  1 +
+ programs/reg/tests/reg.c | 22 +++++++-------
+ 4 files changed, 60 insertions(+), 41 deletions(-)
 
 diff --git a/programs/reg/reg.c b/programs/reg/reg.c
-index 0d892fd..084a8d5 100755
+index b2447fc..86c2e20 100644
 --- a/programs/reg/reg.c
 +++ b/programs/reg/reg.c
-@@ -349,71 +349,69 @@ static LSTATUS sane_path(const WCHAR *key)
-     return ERROR_SUCCESS;
+@@ -335,61 +335,71 @@ static BOOL sane_path(const WCHAR *key)
+     return TRUE;
  }
  
 -static int reg_add(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
 -    WCHAR *type, WCHAR separator, WCHAR *data, BOOL force)
-+static int reg_add( const WCHAR *key_name,  const WCHAR *value_name,    const BOOL value_empty,
-+                    const WCHAR *type,      const WCHAR separator,      const WCHAR *data,
-+                    const BOOL force)
++static int reg_add(const WCHAR *key_name, const WCHAR *value_name, const BOOL value_empty,
++    const WCHAR *type, const WCHAR separator, const WCHAR *data, const BOOL force)
  {
 -    static const WCHAR stubW[] = {'A','D','D',' ','-',' ','%','s',
 -        ' ','%','s',' ','%','d',' ','%','s',' ','%','s',' ','%','d','\n',0};
 -    HKEY subkey;
--    LONG err;
 -
 -    reg_printfW(stubW, key_name, value_name, value_empty, type, data, force);
--
--    err = sane_path(key_name);
 +    HKEY key = NULL;
-+    LONG err = sane_path(key_name);
-     if (err != ERROR_SUCCESS)
-+        goto error;
-+
-+    if (value_name && value_empty)
-     {
--        reg_print_error(err);
--        return 1;
-+        err = ERROR_BAD_COMMAND;
-+        goto error;
-     }
++    LONG err;
  
--    err = path_open(key_name, &subkey, TRUE);
-+    err = path_open(key_name, &key, TRUE);
-     if (err != ERROR_SUCCESS)
--    {
--        reg_message(STRING_INVALID_KEY);
--        return 1;
--    }
-+        goto error;
+     if (!sane_path(key_name))
+         return 1;
+ 
+-    subkey = path_open(key_name, TRUE);
+-    if (!subkey)
++    if (value_name && value_empty)
++    {
++        reg_message(STRING_INVALID_CMDLINE);
++        return 1;
++    }
++
++    key = path_open(key_name, TRUE);
++    if (!key)
+         return 1;
  
      if (value_name || data)
      {
@@ -61,11 +55,11 @@ index 0d892fd..084a8d5 100755
 -        BYTE* reg_data = NULL;
 +        DWORD size, reg_type;
 +        BYTE *data_out;
-+
-+        if (value_name && !value_name[0])
-+            value_name = NULL;
  
 -        if (!force)
++        if (value_name && !value_name[0])
++            value_name = NULL;
++
 +        if (type && !type[0])
          {
 -            if (RegQueryValueW(subkey,value_name,NULL,NULL)==ERROR_SUCCESS)
@@ -74,43 +68,46 @@ index 0d892fd..084a8d5 100755
 -            }
 +            data = NULL;
 +            type = NULL;
-         }
- 
--        reg_type = wchar_get_type(type);
--        if (reg_type == ~0u)
++        }
++
 +        if (!force && RegQueryValueExW(key, value_name, NULL, NULL, NULL, NULL) == ERROR_SUCCESS)
-         {
--            RegCloseKey(subkey);
--            reg_print_error(ERROR_UNSUPPORTED_TYPE);
--            return 1;
++        {
 +            WINE_FIXME("Prompt for overwrite\n");
          }
  
--        if (data)
-+        reg_type = wchar_get_type(type);
-+        if (reg_type == ~0u)
+         reg_type = wchar_get_type(type);
+         if (reg_type == ~0u)
          {
--            err = wchar_get_data(data, reg_type, separator, &reg_count, &reg_data);
--            if (err != ERROR_SUCCESS)
+-            RegCloseKey(subkey);
+             reg_message(STRING_UNSUPPORTED_TYPE);
++            RegCloseKey(key);
+             return 1;
+         }
+ 
+-        if (data)
++        data_out = wchar_get_data(data, reg_type, separator, &size);
++        if (!data_out)
+         {
+-            reg_data = wchar_get_data(data, reg_type, separator, &reg_count);
+-            if (!reg_data)
 -            {
 -                RegCloseKey(subkey);
--                reg_print_error(err);
 -                return 1;
 -            }
-+            err = ERROR_INVALID_DATATYPE;
-+            goto error;
++            RegCloseKey(key);
++            return 1;
          }
  
 -        RegSetValueExW(subkey,value_name,0,reg_type,reg_data,reg_count);
 -        HeapFree(GetProcessHeap(),0,reg_data);
-+        err = wchar_get_data(data, reg_type, separator, &size, &data_out);
-+        if (err != ERROR_SUCCESS)
-+            goto error;
-+
 +        err = RegSetValueExW(key, value_name, 0, reg_type, data_out, size);
 +        HeapFree(GetProcessHeap(), 0, data_out);
-+        if (err != ERROR_SUCCESS)
-+            goto error;
++
++        if (err != ERROR_SUCCESS){
++            RegCloseKey(key);
++            reg_message(STRING_ERROR);
++            return 1;
++        }
      }
  
 -    RegCloseKey(subkey);
@@ -118,15 +115,9 @@ index 0d892fd..084a8d5 100755
      reg_message(STRING_SUCCESS);
 -
      return 0;
-+
-+error:
-+    RegCloseKey(key);
-+    reg_print_error(err);
-+    return 1;
  }
  
- static int reg_delete(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
-@@ -593,7 +591,14 @@ int wmain(int argc, WCHAR *argvW[])
+@@ -563,7 +573,14 @@ int wmain(int argc, WCHAR *argvW[])
              else if (!lstrcmpiW(argvW[i], slashTW))
                  type = argvW[++i];
              else if (!lstrcmpiW(argvW[i], slashSW))
@@ -134,7 +125,7 @@ index 0d892fd..084a8d5 100755
 +            {
 +                if (!argvW[++i][0] || argvW[i][1])
 +                {
-+                    reg_print_error(ERROR_BAD_COMMAND);
++                    reg_message(STRING_INVALID_CMDLINE);
 +                    return 1;
 +                }
 +                separator = argvW[i][0];
@@ -142,6 +133,25 @@ index 0d892fd..084a8d5 100755
              else if (!lstrcmpiW(argvW[i], slashDW))
                  data = argvW[++i];
              else if (!lstrcmpiW(argvW[i], slashFW))
+diff --git a/programs/reg/reg.h b/programs/reg/reg.h
+index c6fb151..c5d82a3 100644
+--- a/programs/reg/reg.h
++++ b/programs/reg/reg.h
+@@ -32,3 +32,4 @@
+ #define STRING_CANNOT_FIND      109
+ #define STRING_UNSUPPORTED_TYPE 110
+ #define STRING_INVALID_DWORD    111
++#define STRING_ERROR            112
+diff --git a/programs/reg/reg.rc b/programs/reg/reg.rc
+index dbd92ea..228dec6 100644
+--- a/programs/reg/reg.rc
++++ b/programs/reg/reg.rc
+@@ -37,4 +37,5 @@ STRINGTABLE
+     STRING_CANNOT_FIND, "Error: The system was unable to find the specified registry key or value\n"
+     STRING_UNSUPPORTED_TYPE, "Error: Unsupported type\n"
+     STRING_INVALID_DWORD, "Error: /d must be positive number\n"
++    STRING_ERROR, "An unexpected error occurred\n"
+ }
 diff --git a/programs/reg/tests/reg.c b/programs/reg/tests/reg.c
 index 99b4813..a3ecdfb 100644
 --- a/programs/reg/tests/reg.c
@@ -222,5 +232,5 @@ index 99b4813..a3ecdfb 100644
      ok(r == REG_EXIT_FAILURE, "got exit code %u\n", r);
      run_reg_exe("reg add HKCU\\" KEY_BASE " /t REG_MULTI_SZ /v multi9 /s \"#\" /d \"two##strings\" /f", &r);
 -- 
-2.2.2
+2.5.0
 

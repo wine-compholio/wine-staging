@@ -176,6 +176,7 @@ patch_enable_all ()
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_RtlIpStringToAddress="$1"
+	enable_ntdll_Security_Cookie="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
 	enable_ntdll_User_Shared_Data="$1"
@@ -605,6 +606,9 @@ patch_enable ()
 			;;
 		ntdll-RtlIpStringToAddress)
 			enable_ntdll_RtlIpStringToAddress="$2"
+			;;
+		ntdll-Security_Cookie)
+			enable_ntdll_Security_Cookie="$2"
 			;;
 		ntdll-ThreadTime)
 			enable_ntdll_ThreadTime="$2"
@@ -3759,6 +3763,21 @@ if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-Security_Cookie
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39040] Move cookie initialization code from memory management to loader
+# |
+# | Modified files:
+# |   *	dlls/ntdll/loader.c, dlls/ntdll/virtual.c
+# |
+if test "$enable_ntdll_Security_Cookie" -eq 1; then
+	patch_apply ntdll-Security_Cookie/0001-ntdll-Move-cookie-initialization-code-from-memory-ma.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Move cookie initialization code from memory management to loader.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-ThreadTime
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4937,6 +4956,51 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-Revert_PixelFormat
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35655] Fix wined3d performance drop introduced by pixelformat changes.
+# |   *	[#35718] Fix flickering introduced by pixelformat changes.
+# |   *	[#35975] Fix gray screen on startup introduced by pixelformat changes.
+# |   *	[#36900] Fix missing video introduced by pixelformat changes.
+# |
+# | Modified files:
+# |   *	dlls/d3d8/tests/device.c, dlls/d3d9/tests/device.c, dlls/ddraw/tests/ddraw1.c, dlls/ddraw/tests/ddraw2.c,
+# | 	dlls/ddraw/tests/ddraw4.c, dlls/ddraw/tests/ddraw7.c, dlls/wined3d/context.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
+	patch_apply wined3d-Revert_PixelFormat/0001-Revert-wined3d-Track-if-a-context-s-private-hdc-has-.patch
+	patch_apply wined3d-Revert_PixelFormat/0002-Revert-wined3d-Track-if-a-context-s-hdc-is-private-s.patch
+	patch_apply wined3d-Revert_PixelFormat/0003-Revert-wined3d-When-restoring-pixel-format-in-contex.patch
+	patch_apply wined3d-Revert_PixelFormat/0004-Revert-wined3d-Don-t-call-GetPixelFormat-to-set-a-fl.patch
+	patch_apply wined3d-Revert_PixelFormat/0005-Revert-wined3d-Restore-the-pixel-format-of-the-windo.patch
+	patch_apply wined3d-Revert_PixelFormat/0006-d3d8-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
+	patch_apply wined3d-Revert_PixelFormat/0007-d3d9-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
+	patch_apply wined3d-Revert_PixelFormat/0008-ddraw-Mark-tests-which-no-longer-pass-due-to-reverts.patch
+	(
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s private hdc has had its pixel format set, so we don'\''t need to check it.\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s hdc is private so we never need to restore its pixel format.\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: When restoring pixel format in context_release(), mark the context as needing to be set on the next context_acquire().\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Don'\''t call GetPixelFormat() to set a flag that'\''s already set.\".", 1 },';
+		echo '+    { "Ken Thomases", "Revert \"wined3d: Restore the pixel format of the window whose pixel format was actually changed.\".", 1 },';
+		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-wined3d_swapchain_present
+# |
+# | Modified files:
+# |   *	dlls/wined3d/swapchain.c
+# |
+if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
+	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-UnhandledBlendFactor
 # |
 # | Modified files:
@@ -4958,18 +5022,6 @@ if test "$enable_wined3d_resource_check_usage" -eq 1; then
 	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
 	(
 		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-wined3d_swapchain_present
-# |
-# | Modified files:
-# |   *	dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
-	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5012,39 +5064,6 @@ if test "$enable_wined3d_Multisampling" -eq 1; then
 	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
 	(
 		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Revert_PixelFormat
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35655] Fix wined3d performance drop introduced by pixelformat changes.
-# |   *	[#35718] Fix flickering introduced by pixelformat changes.
-# |   *	[#35975] Fix gray screen on startup introduced by pixelformat changes.
-# |   *	[#36900] Fix missing video introduced by pixelformat changes.
-# |
-# | Modified files:
-# |   *	dlls/d3d8/tests/device.c, dlls/d3d9/tests/device.c, dlls/ddraw/tests/ddraw1.c, dlls/ddraw/tests/ddraw2.c,
-# | 	dlls/ddraw/tests/ddraw4.c, dlls/ddraw/tests/ddraw7.c, dlls/wined3d/context.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
-	patch_apply wined3d-Revert_PixelFormat/0001-Revert-wined3d-Track-if-a-context-s-private-hdc-has-.patch
-	patch_apply wined3d-Revert_PixelFormat/0002-Revert-wined3d-Track-if-a-context-s-hdc-is-private-s.patch
-	patch_apply wined3d-Revert_PixelFormat/0003-Revert-wined3d-When-restoring-pixel-format-in-contex.patch
-	patch_apply wined3d-Revert_PixelFormat/0004-Revert-wined3d-Don-t-call-GetPixelFormat-to-set-a-fl.patch
-	patch_apply wined3d-Revert_PixelFormat/0005-Revert-wined3d-Restore-the-pixel-format-of-the-windo.patch
-	patch_apply wined3d-Revert_PixelFormat/0006-d3d8-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
-	patch_apply wined3d-Revert_PixelFormat/0007-d3d9-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
-	patch_apply wined3d-Revert_PixelFormat/0008-ddraw-Mark-tests-which-no-longer-pass-due-to-reverts.patch
-	(
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s private hdc has had its pixel format set, so we don'\''t need to check it.\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s hdc is private so we never need to restore its pixel format.\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: When restoring pixel format in context_release(), mark the context as needing to be set on the next context_acquire().\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Don'\''t call GetPixelFormat() to set a flag that'\''s already set.\".", 1 },';
-		echo '+    { "Ken Thomases", "Revert \"wined3d: Restore the pixel format of the window whose pixel format was actually changed.\".", 1 },';
-		echo '+    { "Ken Thomases", "d3d8: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-		echo '+    { "Ken Thomases", "d3d9: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
-		echo '+    { "Ken Thomases", "ddraw: Mark tests which no longer pass due to reverts as todo_wine.", 1 },';
 	) >> "$patchlist"
 fi
 

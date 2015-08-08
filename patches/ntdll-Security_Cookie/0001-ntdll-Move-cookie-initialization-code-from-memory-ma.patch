@@ -1,0 +1,179 @@
+From bf3a7b253745c148a65efc9678e7dbb9356c3cf0 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 8 Aug 2015 20:51:43 +0200
+Subject: ntdll: Move cookie initialization code from memory management to
+ loader.
+
+---
+ dlls/ntdll/loader.c  | 59 ++++++++++++++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/virtual.c | 49 -------------------------------------------
+ 2 files changed, 59 insertions(+), 49 deletions(-)
+
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index bef0ab1..fb7b171 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -50,6 +50,12 @@ WINE_DECLARE_DEBUG_CHANNEL(snoop);
+ WINE_DECLARE_DEBUG_CHANNEL(loaddll);
+ WINE_DECLARE_DEBUG_CHANNEL(imports);
+ 
++#ifdef _WIN64
++#define DEFAULT_SECURITY_COOKIE_64  (((ULONGLONG)0x00002b99 << 32) | 0x2ddfa232)
++#endif
++#define DEFAULT_SECURITY_COOKIE_32  0xbb40e64e
++#define DEFAULT_SECURITY_COOKIE_16  (DEFAULT_SECURITY_COOKIE_32 >> 16)
++
+ /* we don't want to include winuser.h */
+ #define RT_MANIFEST                         ((ULONG_PTR)24)
+ #define ISOLATIONAWARE_MANIFEST_RESOURCE_ID ((ULONG_PTR)2)
+@@ -1602,6 +1608,55 @@ static void load_builtin_callback( void *module, const char *filename )
+ }
+ 
+ 
++/***********************************************************************
++ *           set_security_cookie
++ *
++ * Create a random security cookie for buffer overflow protection. Make
++ * sure it does not accidentally match the default cookie value.
++ */
++static void set_security_cookie( void *module, SIZE_T len )
++{
++    static ULONG seed;
++    IMAGE_LOAD_CONFIG_DIRECTORY *loadcfg;
++    ULONG loadcfg_size;
++    ULONG_PTR *cookie;
++
++    loadcfg = RtlImageDirectoryEntryToData( module, TRUE, IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG, &loadcfg_size );
++    if (!loadcfg) return;
++    if (loadcfg_size < offsetof(IMAGE_LOAD_CONFIG_DIRECTORY, SecurityCookie) + sizeof(loadcfg->SecurityCookie)) return;
++    if (!loadcfg->SecurityCookie) return;
++    if (loadcfg->SecurityCookie < (ULONG_PTR)module ||
++        loadcfg->SecurityCookie > (ULONG_PTR)module + len - sizeof(ULONG_PTR))
++    {
++        WARN( "security cookie %p outside of image %p-%p\n",
++              (void *)loadcfg->SecurityCookie, module, (char *)module + len );
++        return;
++    }
++
++    cookie = (ULONG_PTR *)loadcfg->SecurityCookie;
++    TRACE( "initializing security cookie %p\n", cookie );
++
++    if (!seed) seed = NtGetTickCount() ^ GetCurrentProcessId();
++    for (;;)
++    {
++        if (*cookie == DEFAULT_SECURITY_COOKIE_16)
++            *cookie = RtlRandom( &seed ) >> 16; /* leave the high word clear */
++        else if (*cookie == DEFAULT_SECURITY_COOKIE_32)
++            *cookie = RtlRandom( &seed );
++#ifdef DEFAULT_SECURITY_COOKIE_64
++        else if (*cookie == DEFAULT_SECURITY_COOKIE_64)
++        {
++            *cookie = RtlRandom( &seed );
++            /* fill up, but keep the highest word clear */
++            *cookie ^= (ULONG_PTR)RtlRandom( &seed ) << 16;
++        }
++#endif
++        else
++            break;
++    }
++}
++
++
+ /******************************************************************************
+  *	load_native_dll  (internal)
+  */
+@@ -1636,6 +1691,10 @@ static NTSTATUS load_native_dll( LPCWSTR load_path, LPCWSTR name, HANDLE file,
+         goto done;
+     }
+ 
++    /* randomize security cookie */
++
++    set_security_cookie( module, len );
++
+     /* fixup imports */
+ 
+     nt = RtlImageNtHeader( module );
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index 676675f..fe17518 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -61,12 +61,6 @@ WINE_DECLARE_DEBUG_CHANNEL(module);
+ #define MAP_NORESERVE 0
+ #endif
+ 
+-#ifdef _WIN64
+-#define DEFAULT_SECURITY_COOKIE_64  (((ULONGLONG)0x00002b99 << 32) | 0x2ddfa232)
+-#endif
+-#define DEFAULT_SECURITY_COOKIE_32  0xbb40e64e
+-#define DEFAULT_SECURITY_COOKIE_16  (DEFAULT_SECURITY_COOKIE_32 >> 16)
+-
+ /* File view */
+ struct file_view
+ {
+@@ -1060,37 +1054,6 @@ static NTSTATUS stat_mapping_file( struct file_view *view, struct stat *st )
+ }
+ 
+ /***********************************************************************
+- *           set_security_cookie
+- *
+- * Create a random security cookie for buffer overflow protection. Make
+- * sure it does not accidentally match the default cookie value.
+- */
+-static void set_security_cookie(ULONG_PTR *cookie)
+-{
+-    static ULONG seed;
+-
+-    if (!cookie) return;
+-    if (!seed) seed = NtGetTickCount() ^ GetCurrentProcessId();
+-    while (1)
+-    {
+-        if (*cookie == DEFAULT_SECURITY_COOKIE_16)
+-            *cookie = RtlRandom( &seed ) >> 16; /* leave the high word clear */
+-        else if (*cookie == DEFAULT_SECURITY_COOKIE_32)
+-            *cookie = RtlRandom( &seed );
+-#ifdef DEFAULT_SECURITY_COOKIE_64
+-        else if (*cookie == DEFAULT_SECURITY_COOKIE_64)
+-        {
+-            *cookie = RtlRandom( &seed );
+-            /* fill up, but keep the highest word clear */
+-            *cookie ^= (ULONG_PTR)RtlRandom( &seed ) << 16;
+-        }
+-#endif
+-        else
+-            break;
+-    }
+-}
+-
+-/***********************************************************************
+  *           map_image
+  *
+  * Map an executable (PE format) image into memory.
+@@ -1103,8 +1066,6 @@ static NTSTATUS map_image( HANDLE hmapping, int fd, char *base, SIZE_T total_siz
+     IMAGE_SECTION_HEADER sections[96];
+     IMAGE_SECTION_HEADER *sec;
+     IMAGE_DATA_DIRECTORY *imports;
+-    IMAGE_LOAD_CONFIG_DIRECTORY *loadcfg;
+-    ULONG loadcfg_size;
+     NTSTATUS status = STATUS_CONFLICTING_ADDRESSES;
+     int i;
+     off_t pos;
+@@ -1316,16 +1277,6 @@ static NTSTATUS map_image( HANDLE hmapping, int fd, char *base, SIZE_T total_siz
+         }
+     }
+ 
+-    /* randomize security cookie */
+-
+-    loadcfg = RtlImageDirectoryEntryToData( (HMODULE)ptr, TRUE,
+-                                            IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG, &loadcfg_size );
+-    if (loadcfg && loadcfg_size >= offsetof(IMAGE_LOAD_CONFIG_DIRECTORY, SecurityCookie) + sizeof(loadcfg->SecurityCookie) &&
+-        (ULONG_PTR)ptr <= loadcfg->SecurityCookie && loadcfg->SecurityCookie <= (ULONG_PTR)ptr + total_size - sizeof(ULONG_PTR))
+-    {
+-        set_security_cookie((ULONG_PTR *)loadcfg->SecurityCookie);
+-    }
+-
+     /* set the image protections */
+ 
+     VIRTUAL_SetProt( view, ptr, ROUND_SIZE( 0, header_size ), VPROT_COMMITTED | VPROT_READ );
+-- 
+2.5.0
+

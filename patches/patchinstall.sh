@@ -3997,13 +3997,13 @@ if test "$enable_reg_Query" -eq 1; then
        patch_apply reg-Query/0002-reg-Add-wchar-raw-data-conversion-functions.patch
        patch_apply reg-Query/0003-reg-Clean-up-reg_add.patch
        patch_apply reg-Query/0004-reg-Clean-up-reg_delete.patch
-       patch_apply reg-Query/0005-reg-Add-reg-query.patch
+       patch_apply reg-Query/0005-reg-Implement-query-functionality.patch
        (
                echo '+    { "Jonathan Vollebregt", "reg: Add path/key conversion functions", 1 },';
                echo '+    { "Jonathan Vollebregt", "reg: Add wchar/raw data conversion functions", 1 },';
                echo '+    { "Jonathan Vollebregt", "reg: Clean up reg_add", 1 },';
                echo '+    { "Jonathan Vollebregt", "reg: Clean up reg_delete", 1 },';
-               echo '+    { "Jonathan Vollebregt", "reg: Add reg query", 1 },';
+               echo '+    { "Jonathan Vollebregt", "reg: Implement query functionality", 1 },';
        ) >> "$patchlist"
 fi
 

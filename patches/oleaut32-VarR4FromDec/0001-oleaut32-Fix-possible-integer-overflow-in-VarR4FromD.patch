@@ -1,0 +1,64 @@
+From eb9b31d9ea9b15d16e3e8bafa33592ae79789672 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 8 Aug 2015 21:42:25 +0200
+Subject: oleaut32: Fix possible integer overflow in VarR4FromDec.
+
+---
+ dlls/oleaut32/tests/vartype.c | 3 ++-
+ dlls/oleaut32/vartype.c       | 8 ++++----
+ 2 files changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/oleaut32/tests/vartype.c b/dlls/oleaut32/tests/vartype.c
+index 4dd77a0..7cbb059 100644
+--- a/dlls/oleaut32/tests/vartype.c
++++ b/dlls/oleaut32/tests/vartype.c
+@@ -2890,7 +2890,8 @@ static void test_VarR4FromDec(void)
+ 
+   CONVERT_DEC(VarR4FromDec,2,0x80,0,3276800); EXPECT(-32768.0f);
+   CONVERT_DEC(VarR4FromDec,2,0,0,3276700);    EXPECT(32767.0f);
+-  
++  CONVERT_DEC(VarR4FromDec,10,0,0,3276700);   EXPECT(0.00032767f);
++
+   CONVERT_DEC(VarR4FromDec,0,0,1,0);        EXPECT(18446744073709551616.0f);
+ }
+ 
+diff --git a/dlls/oleaut32/vartype.c b/dlls/oleaut32/vartype.c
+index 607d1a2..bf7ebc6 100644
+--- a/dlls/oleaut32/vartype.c
++++ b/dlls/oleaut32/vartype.c
+@@ -2948,28 +2948,28 @@ HRESULT WINAPI VarR4FromUI4(ULONG ulIn, float *pFltOut)
+ HRESULT WINAPI VarR4FromDec(DECIMAL* pDecIn, float *pFltOut)
+ {
+   BYTE scale = DEC_SCALE(pDecIn);
+-  int divisor = 1;
++  double divisor = 1.0;
+   double highPart;
+ 
+   if (scale > DEC_MAX_SCALE || DEC_SIGN(pDecIn) & ~DECIMAL_NEG)
+     return E_INVALIDARG;
+ 
+   while (scale--)
+-    divisor *= 10;
++    divisor *= 10.0;
+ 
+   if (DEC_SIGN(pDecIn))
+     divisor = -divisor;
+ 
+   if (DEC_HI32(pDecIn))
+   {
+-    highPart = (double)DEC_HI32(pDecIn) / (double)divisor;
++    highPart = (double)DEC_HI32(pDecIn) / divisor;
+     highPart *= 4294967296.0F;
+     highPart *= 4294967296.0F;
+   }
+   else
+     highPart = 0.0;
+ 
+-  *pFltOut = (double)DEC_LO64(pDecIn) / (double)divisor + highPart;
++  *pFltOut = (double)DEC_LO64(pDecIn) / divisor + highPart;
+   return S_OK;
+ }
+ 
+-- 
+2.5.0
+

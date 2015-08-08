@@ -190,6 +190,7 @@ patch_enable_all ()
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
+	enable_oleaut32_VarR4FromDec="$1"
 	enable_openal32_EFX_Extension="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
@@ -649,6 +650,9 @@ patch_enable ()
 			;;
 		nvencodeapi-Video_Encoder)
 			enable_nvencodeapi_Video_Encoder="$2"
+			;;
+		oleaut32-VarR4FromDec)
+			enable_oleaut32_VarR4FromDec="$2"
 			;;
 		openal32-EFX_Extension)
 			enable_openal32_EFX_Extension="$2"
@@ -4038,6 +4042,21 @@ if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset oleaut32-VarR4FromDec
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38988] Fix possible integer overflow in VarR4FromDec
+# |
+# | Modified files:
+# |   *	dlls/oleaut32/tests/vartype.c, dlls/oleaut32/vartype.c
+# |
+if test "$enable_oleaut32_VarR4FromDec" -eq 1; then
+	patch_apply oleaut32-VarR4FromDec/0001-oleaut32-Fix-possible-integer-overflow-in-VarR4FromD.patch
+	(
+		echo '+    { "Sebastian Lackner", "oleaut32: Fix possible integer overflow in VarR4FromDec.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset openal32-EFX_Extension
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4975,18 +4994,27 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Multisampling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# Patchset wined3d-MESA_GPU_Info
 # |
 # | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_gl.h, dlls/winex11.drv/opengl.c, include/wine/wgl_driver.h
 # |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+if test "$enable_wined3d_MESA_GPU_Info" -eq 1; then
+	patch_apply wined3d-MESA_GPU_Info/0001-wined3d-Use-pci-and-memory-information-from-MESA-if-.patch
 	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Use pci and memory information from MESA if possible.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-UnhandledBlendFactor
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
+	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5011,6 +5039,21 @@ if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
 	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Multisampling
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Multisampling" -eq 1; then
+	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
+	(
+		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5047,18 +5090,6 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-UnhandledBlendFactor
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-Geforce_425M
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5071,18 +5102,6 @@ if test "$enable_wined3d_Geforce_425M" -eq 1; then
 	patch_apply wined3d-Geforce_425M/0001-wined3d-Add-detection-for-NVIDIA-GeForce-425M.patch
 	(
 		echo '+    { "Jarkko Korpi", "wined3d: Add detection for NVIDIA GeForce 425M.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-MESA_GPU_Info
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_gl.h, dlls/winex11.drv/opengl.c, include/wine/wgl_driver.h
-# |
-if test "$enable_wined3d_MESA_GPU_Info" -eq 1; then
-	patch_apply wined3d-MESA_GPU_Info/0001-wined3d-Use-pci-and-memory-information-from-MESA-if-.patch
-	(
-		echo '+    { "Michael Müller", "wined3d: Use pci and memory information from MESA if possible.", 2 },';
 	) >> "$patchlist"
 fi
 

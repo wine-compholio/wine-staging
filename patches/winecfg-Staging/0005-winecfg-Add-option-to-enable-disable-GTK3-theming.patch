@@ -1,0 +1,96 @@
+From 34a7ed1ea779a9f8c1f6fe61b26ba985c495737b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 9 Aug 2015 18:01:11 +0200
+Subject: winecfg: Add option to enable/disable GTK3 theming.
+
+---
+ programs/winecfg/resource.h |  1 +
+ programs/winecfg/staging.c  | 29 +++++++++++++++++++++++++++++
+ programs/winecfg/winecfg.rc |  1 +
+ 3 files changed, 31 insertions(+)
+
+diff --git a/programs/winecfg/resource.h b/programs/winecfg/resource.h
+index 57ebe9d..bf3b884 100644
+--- a/programs/winecfg/resource.h
++++ b/programs/winecfg/resource.h
+@@ -217,6 +217,7 @@
+ #define IDC_ENABLE_VAAPI                9002
+ #define IDC_ENABLE_EAX                  9003
+ #define IDC_ENABLE_HIDEWINE             9004
++#define IDC_ENABLE_GTK3                 9005
+ 
+ /* About tab */
+ #define IDC_ABT_OWNER                8432
+diff --git a/programs/winecfg/staging.c b/programs/winecfg/staging.c
+index 903ce7e..81a4e24 100644
+--- a/programs/winecfg/staging.c
++++ b/programs/winecfg/staging.c
+@@ -103,6 +103,27 @@ static void hidewine_set(BOOL status)
+     set_reg_key(config_key, keypath(""), "HideWineExports", status ? "Y" : "N");
+ }
+ 
++/*
++ * GTK3
++ */
++static BOOL gtk3_get(void)
++{
++#ifdef HAVE_GTK3
++    BOOL ret;
++    char *value = get_reg_key(config_key, keypath("DllRedirects"), "uxtheme", NULL);
++    ret = (value && !strcmp(value, "uxtheme-gtk.dll"));
++    HeapFree(GetProcessHeap(), 0, value);
++    return ret;
++#else
++    return FALSE;
++#endif
++}
++static void gtk3_set(BOOL status)
++{
++#ifdef HAVE_GTK3
++    set_reg_key(config_key, keypath("DllRedirects"), "uxtheme", status ? "uxtheme-gtk.dll" : NULL);
++#endif
++}
+ 
+ static void load_staging_settings(HWND dialog)
+ {
+@@ -110,10 +131,14 @@ static void load_staging_settings(HWND dialog)
+     CheckDlgButton(dialog, IDC_ENABLE_VAAPI, vaapi_get() ? BST_CHECKED : BST_UNCHECKED);
+     CheckDlgButton(dialog, IDC_ENABLE_EAX, eax_get() ? BST_CHECKED : BST_UNCHECKED);
+     CheckDlgButton(dialog, IDC_ENABLE_HIDEWINE, hidewine_get() ? BST_CHECKED : BST_UNCHECKED);
++    CheckDlgButton(dialog, IDC_ENABLE_GTK3, gtk3_get() ? BST_CHECKED : BST_UNCHECKED);
+ 
+ #ifndef HAVE_VAAPI
+     disable(IDC_ENABLE_VAAPI);
+ #endif
++#ifndef HAVE_GTK3
++    disable(IDC_ENABLE_GTK3);
++#endif
+ }
+ 
+ INT_PTR CALLBACK StagingDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
+@@ -155,6 +180,10 @@ INT_PTR CALLBACK StagingDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPar
+             hidewine_set(IsDlgButtonChecked(hDlg, IDC_ENABLE_HIDEWINE) == BST_CHECKED);
+             SendMessageW(GetParent(hDlg), PSM_CHANGED, 0, 0);
+             return TRUE;
++        case IDC_ENABLE_GTK3:
++            gtk3_set(IsDlgButtonChecked(hDlg, IDC_ENABLE_GTK3) == BST_CHECKED);
++            SendMessageW(GetParent(hDlg), PSM_CHANGED, 0, 0);
++            return TRUE;
+         }
+         break;
+     }
+diff --git a/programs/winecfg/winecfg.rc b/programs/winecfg/winecfg.rc
+index c2d106c..a9c62ae 100644
+--- a/programs/winecfg/winecfg.rc
++++ b/programs/winecfg/winecfg.rc
+@@ -319,6 +319,7 @@ BEGIN
+     CONTROL     "Enable &VAAPI as backend for DXVA2 GPU decoding",IDC_ENABLE_VAAPI,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,16,55,230,8
+     CONTROL     "Enable Environmental Audio E&xtensions (EAX)",IDC_ENABLE_EAX,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,16,70,230,8
+     CONTROL     "&Hide Wine version from applications",IDC_ENABLE_HIDEWINE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,16,85,230,8
++    CONTROL     "Enable &GTK3 Theming",IDC_ENABLE_GTK3,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,16,100,230,8
+ END
+ 
+ LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+-- 
+2.5.0
+

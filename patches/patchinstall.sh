@@ -2767,11 +2767,13 @@ if test "$enable_winecfg_Staging" -eq 1; then
 	patch_apply winecfg-Staging/0002-winecfg-Add-checkbox-to-enable-disable-vaapi-GPU-dec.patch
 	patch_apply winecfg-Staging/0003-winecfg-Add-checkbox-to-enable-disable-EAX-support.patch
 	patch_apply winecfg-Staging/0004-winecfg-Add-checkbox-to-enable-disable-HideWineExpor.patch
+	patch_apply winecfg-Staging/0005-winecfg-Add-option-to-enable-disable-GTK3-theming.patch
 	(
 		echo '+    { "Michael Müller", "winecfg: Add staging tab for CSMT.", 1 },';
 		echo '+    { "Sebastian Lackner", "winecfg: Add checkbox to enable/disable vaapi GPU decoder.", 1 },';
 		echo '+    { "Mark Harmstone", "winecfg: Add checkbox to enable/disable EAX support.", 1 },';
 		echo '+    { "Sebastian Lackner", "winecfg: Add checkbox to enable/disable HideWineExports registry key.", 1 },';
+		echo '+    { "Michael Müller", "winecfg: Add option to enable/disable GTK3 theming.", 1 },';
 	) >> "$patchlist"
 fi
 

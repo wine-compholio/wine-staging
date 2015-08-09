@@ -1,0 +1,3568 @@
+From 33b66bb01ef63fe6a2c140d19961f1e213ac2af1 Mon Sep 17 00:00:00 2001
+From: Ivan Akulinchev <ivan.akulinchev@gmail.com>
+Date: Sun, 9 Aug 2015 03:15:30 +0200
+Subject: uxthemegtk: Initial implementation.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Additional changes by Michael Müller <michael@fds-team.de>:
+ * Various style cleanup.
+ * Replace malloc/free with HeapAlloc/HeapFree.
+
+Additional changes by Sebastian Lackner <sebastian@fds-team.de>:
+ * Various style cleanup.
+ * Avoid casts, use impl_from_uxgtk_theme wrappers.
+ * Avoid declarations by moving vtables to the end of the file.
+ * Avoid unnecessary uninit() function.
+ * Merge init(), apply_style() and fix_sys_params() into a single function.
+ * Fix incorrect class enumaration in OpenThemeData().
+ * Avoid unnecessary goto in DrawThemeBackgroundEx().
+---
+ dlls/uxtheme-gtk/Makefile.in      |  17 +-
+ dlls/uxtheme-gtk/button.c         | 510 +++++++++++++++++++++++
+ dlls/uxtheme-gtk/combobox.c       | 236 +++++++++++
+ dlls/uxtheme-gtk/edit.c           | 205 +++++++++
+ dlls/uxtheme-gtk/header.c         | 122 ++++++
+ dlls/uxtheme-gtk/listbox.c        | 113 +++++
+ dlls/uxtheme-gtk/listview.c       |  32 ++
+ dlls/uxtheme-gtk/menu.c           | 183 ++++++++
+ dlls/uxtheme-gtk/rebar.c          |  96 +++++
+ dlls/uxtheme-gtk/status.c         | 151 +++++++
+ dlls/uxtheme-gtk/tab.c            | 201 +++++++++
+ dlls/uxtheme-gtk/toolbar.c        | 165 ++++++++
+ dlls/uxtheme-gtk/trackbar.c       | 182 ++++++++
+ dlls/uxtheme-gtk/uxtheme-gtk.spec |  56 ++-
+ dlls/uxtheme-gtk/uxtheme.c        | 853 +++++++++++++++++++++++++++++++++++++-
+ dlls/uxtheme-gtk/uxthemegtk.h     |  53 +++
+ dlls/uxtheme-gtk/window.c         | 166 ++++++++
+ 17 files changed, 3336 insertions(+), 5 deletions(-)
+ create mode 100644 dlls/uxtheme-gtk/button.c
+ create mode 100644 dlls/uxtheme-gtk/combobox.c
+ create mode 100644 dlls/uxtheme-gtk/edit.c
+ create mode 100644 dlls/uxtheme-gtk/header.c
+ create mode 100644 dlls/uxtheme-gtk/listbox.c
+ create mode 100644 dlls/uxtheme-gtk/listview.c
+ create mode 100644 dlls/uxtheme-gtk/menu.c
+ create mode 100644 dlls/uxtheme-gtk/rebar.c
+ create mode 100644 dlls/uxtheme-gtk/status.c
+ create mode 100644 dlls/uxtheme-gtk/tab.c
+ create mode 100644 dlls/uxtheme-gtk/toolbar.c
+ create mode 100644 dlls/uxtheme-gtk/trackbar.c
+ create mode 100644 dlls/uxtheme-gtk/window.c
+
+diff --git a/dlls/uxtheme-gtk/Makefile.in b/dlls/uxtheme-gtk/Makefile.in
+index 07cf3a0f..8cefd51 100644
+--- a/dlls/uxtheme-gtk/Makefile.in
++++ b/dlls/uxtheme-gtk/Makefile.in
+@@ -1,7 +1,22 @@
+ MODULE    = uxtheme-gtk.dll
++IMPORTS   = user32 gdi32 advapi32
++DELAYIMPORTS = msimg32
+ EXTRAINCL = $(GTK3_CFLAGS)
+ 
+ C_SRCS = \
+-	uxtheme.c
++	button.c \
++	combobox.c \
++	edit.c \
++	header.c \
++	listbox.c \
++	listview.c \
++	menu.c \
++	rebar.c \
++	status.c \
++	tab.c \
++	toolbar.c \
++	trackbar.c \
++	uxtheme.c \
++	window.c
+ 
+ RC_SRCS = version.rc
+diff --git a/dlls/uxtheme-gtk/button.c b/dlls/uxtheme-gtk/button.c
+new file mode 100644
+index 0000000..b4b2d02
+--- /dev/null
++++ b/dlls/uxtheme-gtk/button.c
+@@ -0,0 +1,510 @@
++/*
++ * GTK uxtheme implementation
++ *
++ * Copyright (C) 2015 Ivan Akulinchev
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "uxthemegtk.h"
++
++#include <assert.h>
++
++#include "winbase.h"
++#include "vsstyle.h"
++#include "vssym32.h"
++#include "winerror.h"
++
++#include "wine/debug.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(uxthemegtk);
++
++typedef struct _button_theme
++{
++    uxgtk_theme_t base;
++
++    int indicator_size;
++
++    GtkWidget *button;
++    GtkWidget *check;
++    GtkWidget *radio;
++    GtkWidget *frame;
++    GtkWidget *label;
++    GtkWidget *button_label;
++    GtkWidget *check_label;
++    GtkWidget *radio_label;
++} button_theme_t;
++
++static inline button_theme_t *impl_from_uxgtk_theme_t(uxgtk_theme_t *theme)
++{
++    return CONTAINING_RECORD(theme, button_theme_t, base);
++}
++
++static GtkWidget *get_button(button_theme_t *theme)
++{
++    assert(theme != NULL);
++
++    if (theme->button == NULL)
++    {
++        theme->button = pgtk_button_new();
++        pgtk_container_add((GtkContainer *)theme->base.layout, theme->button);
++    }
++
++    return theme->button;
++}
++
++static GtkWidget *get_radio(button_theme_t *theme)
++{
++    assert(theme != NULL);
++
++    if (theme->radio == NULL)
++    {
++        theme->radio = pgtk_radio_button_new(NULL);
++        pgtk_container_add((GtkContainer *)theme->base.layout, theme->radio);
++    }
++
++    return theme->radio;
++}
++
++static GtkWidget *get_frame(button_theme_t *theme)
++{
++    assert(theme != NULL);
++
++    if (theme->frame == NULL)
++    {
++        theme->frame = pgtk_frame_new(NULL);
++        pgtk_container_add((GtkContainer *)theme->base.layout, theme->frame);
++    }
++
++    return theme->frame;
++}
++
++static GtkWidget *get_label(button_theme_t *theme)
++{
++    assert(theme != NULL);
++
++    if (theme->label == NULL)
++    {
++        theme->label = pgtk_label_new(NULL);
++        pgtk_container_add((GtkContainer *)theme->base.layout, theme->label);
++    }
++
++    return theme->label;
++}
++
++static GtkWidget *get_button_label(button_theme_t *theme)
++{
++    assert(theme != NULL);
++
++    if (theme->button_label == NULL)
++    {
++        GtkWidget *button = get_button(theme);
++        theme->button_label = pgtk_label_new(NULL);
++        pgtk_container_add((GtkContainer *)button, theme->button_label);
++    }
++
++    return theme->button_label;
++}
++
++static GtkWidget *get_check_label(button_theme_t *theme)
++{
++    assert(theme != NULL);
++
++    if (theme->check_label == NULL)
++    {
++        theme->check_label = pgtk_label_new(NULL);
++        pgtk_container_add((GtkContainer *)theme->check, theme->check_label);
++    }
++
++    return theme->check_label;
++}
++
++static GtkWidget *get_radio_label(button_theme_t *theme)
++{
++    assert(theme != NULL);
++
++    if (theme->radio_label == NULL)
++    {
++        GtkWidget *radio = get_radio(theme);
++        theme->radio_label = pgtk_label_new(NULL);
++        pgtk_container_add((GtkContainer *)radio, theme->radio_label);
++    }
++
++    return theme->radio_label;
++}
++
++static GtkStateFlags get_push_button_state_flags(int state_id)
++{
++    switch (state_id)
++    {
++        case PBS_NORMAL:
++            return GTK_STATE_FLAG_NORMAL;
++
++        case PBS_HOT:
++            return GTK_STATE_FLAG_PRELIGHT;
++
++        case PBS_PRESSED:
++            return GTK_STATE_FLAG_ACTIVE;
++
++        case PBS_DISABLED:
++            return GTK_STATE_FLAG_INSENSITIVE;
++
++        case PBS_DEFAULTED:
++            return GTK_STATE_FLAG_FOCUSED;
++    }
++
++    FIXME("Unsupported push button state %d.\n", state_id);
++    return GTK_STATE_FLAG_NORMAL;
++}
++
++static GtkStateFlags get_radio_button_state_flags(int state_id)
++{
++    switch (state_id)
++    {
++        case RBS_UNCHECKEDNORMAL:
++            return GTK_STATE_FLAG_NORMAL;
++
++        case RBS_UNCHECKEDHOT:
++            return GTK_STATE_FLAG_PRELIGHT;
++
++        case RBS_UNCHECKEDPRESSED:
++            return GTK_STATE_FLAG_ACTIVE;
++
++        case RBS_UNCHECKEDDISABLED:
++            return GTK_STATE_FLAG_INSENSITIVE;
++
++        case RBS_CHECKEDNORMAL:
++            return GTK_STATE_FLAG_NORMAL | GTK_STATE_FLAG_ACTIVE;
++
++        case RBS_CHECKEDHOT:
++            return GTK_STATE_FLAG_PRELIGHT | GTK_STATE_FLAG_ACTIVE;
++
++        case RBS_CHECKEDPRESSED:
++            return GTK_STATE_FLAG_ACTIVE;
++
++        case RBS_CHECKEDDISABLED:
++            return GTK_STATE_FLAG_INSENSITIVE | GTK_STATE_FLAG_ACTIVE;
++    }
++
++    ERR("Unknown radio button state %d.\n", state_id);
++    return GTK_STATE_FLAG_NORMAL;
++}
++
++static GtkStateFlags get_checkbox_state_flags(int state_id)
++{
++    switch (state_id)
++    {
++        case CBS_UNCHECKEDNORMAL:
++            return GTK_STATE_FLAG_NORMAL;
++
++        case CBS_UNCHECKEDHOT:
++            return GTK_STATE_FLAG_PRELIGHT;
++
++        case CBS_UNCHECKEDPRESSED:
++            return GTK_STATE_FLAG_SELECTED;
++
++        case CBS_UNCHECKEDDISABLED:
++            return GTK_STATE_FLAG_INSENSITIVE;
++
++        case CBS_CHECKEDNORMAL:
++            return GTK_STATE_FLAG_NORMAL | GTK_STATE_FLAG_ACTIVE;
++
++        case CBS_CHECKEDHOT:
++            return GTK_STATE_FLAG_PRELIGHT | GTK_STATE_FLAG_ACTIVE;
++
++        case CBS_CHECKEDPRESSED:
++            return GTK_STATE_FLAG_SELECTED | GTK_STATE_FLAG_ACTIVE;
++
++        case CBS_CHECKEDDISABLED:
++            return GTK_STATE_FLAG_INSENSITIVE | GTK_STATE_FLAG_ACTIVE;
++
++        case CBS_MIXEDNORMAL:
++            return GTK_STATE_FLAG_NORMAL | GTK_STATE_FLAG_INCONSISTENT;
++
++        case CBS_MIXEDHOT:
++            return GTK_STATE_FLAG_PRELIGHT | GTK_STATE_FLAG_INCONSISTENT;
++
++        case CBS_MIXEDPRESSED:
++            return GTK_STATE_FLAG_ACTIVE | GTK_STATE_FLAG_INCONSISTENT;
++
++        case CBS_MIXEDDISABLED:
++            return GTK_STATE_FLAG_INSENSITIVE | GTK_STATE_FLAG_INCONSISTENT;
++    }
++
++    FIXME("Unsupported checkbox state %d.\n", state_id);
++    return GTK_STATE_FLAG_NORMAL;
++}
++
++static GtkStateFlags get_groupbox_state_flags(int state_id)
++{
++    switch (state_id)
++    {
++        case GBS_NORMAL:
++            return GTK_STATE_FLAG_NORMAL;
++
++        case GBS_DISABLED:
++            return GTK_STATE_FLAG_INSENSITIVE;
++    }
++
++    ERR("Unknown groupbox state %d.\n", state_id);
++    return GTK_STATE_FLAG_NORMAL;
++}
++
++static HRESULT get_border_color(button_theme_t *theme, int part_id, int state_id, GdkRGBA *rgba)
++{
++    GtkStateFlags state;
++    GtkStyleContext *context;
++
++    switch (part_id)
++    {
++        case BP_PUSHBUTTON:
++            state = get_push_button_state_flags(state_id);
++            break;
++
++        case BP_RADIOBUTTON:
++            state = get_radio_button_state_flags(state_id);
++            break;
++
++        case BP_CHECKBOX:
++            state = get_checkbox_state_flags(state_id);
++            break;
++
++        case BP_GROUPBOX:
++            state = get_groupbox_state_flags(state_id);
++            break;
++
++        default:
++            FIXME("Unsupported button part %d.\n", part_id);
++            return E_NOTIMPL;
++    }
++
++    context = pgtk_widget_get_style_context(get_frame(theme));
++
++    pgtk_style_context_save(context);
++
++    pgtk_style_context_add_class(context, GTK_STYLE_CLASS_FRAME);
++    pgtk_style_context_get_border_color(context, state, rgba);
++
++    pgtk_style_context_restore(context);
++
++    return S_OK;
++}
++
++static HRESULT get_text_color(button_theme_t *theme, int part_id, int state_id, GdkRGBA *rgba)
++{
++    GtkWidget *widget;
++    GtkStateFlags state;
++    GtkStyleContext *context;
++
++    switch (part_id)
++    {
++        case BP_PUSHBUTTON:
++            widget = get_button_label(theme);
++            state = get_push_button_state_flags(state_id);
++            break;
++
++        case BP_RADIOBUTTON:
++            widget = get_radio_label(theme);
++            state = get_radio_button_state_flags(state_id);
++            break;
++
++        case BP_CHECKBOX:
++            widget = get_check_label(theme);
++            state = get_checkbox_state_flags(state_id);
++            break;
++
++        case BP_GROUPBOX:
++            widget = get_label(theme);
++            state = get_groupbox_state_flags(state_id);
++            break;
++
++        default:
++            FIXME("Unsupported button part %d.\n", part_id);
++            return E_NOTIMPL;
++    }
++
++    context = pgtk_widget_get_style_context(widget);
++    pgtk_style_context_get_color(context, state, rgba);
++
++    return S_OK;
++}
++
++static HRESULT get_color(uxgtk_theme_t *theme, int part_id, int state_id,
++                         int prop_id, GdkRGBA *rgba)
++{
++    button_theme_t *button_theme = impl_from_uxgtk_theme_t(theme);
++
++    switch (prop_id)
++    {
++        case TMT_BORDERCOLOR:
++            return get_border_color(button_theme, part_id, state_id, rgba);
++
++        case TMT_TEXTCOLOR:
++            return get_text_color(button_theme, part_id, state_id, rgba);
++    }
++
++    FIXME("Unsupported button color %d.\n", prop_id);
++    return E_NOTIMPL;
++}
++
++static HRESULT draw_button(button_theme_t *theme, cairo_t *cr, int state_id, int width, int height)
++{
++    GtkStateFlags state = get_push_button_state_flags(state_id);
++    GtkStyleContext *context;
++
++    assert(theme != NULL);
++
++    context = pgtk_widget_get_style_context(get_button(theme));
++    pgtk_style_context_save(context);
++
++    pgtk_style_context_set_state(context, state);
++
++    if (state_id == PBS_DEFAULTED)
++        pgtk_style_context_add_class(context, GTK_STYLE_CLASS_DEFAULT);
++
++    pgtk_render_background(context, cr, 0, 0, width, height);
++    pgtk_render_frame(context, cr, 0, 0, width, height);
++
++    pgtk_style_context_restore(context);
++
++    return S_OK;
++}
++
++static HRESULT draw_radio(button_theme_t *theme, cairo_t *cr, int state_id)
++{
++    GtkStateFlags state = get_radio_button_state_flags(state_id);
++    GtkStyleContext *context;
++
++    assert(theme != NULL);
++
++    context = pgtk_widget_get_style_context(get_radio(theme));
++    pgtk_style_context_save(context);
++
++    pgtk_style_context_set_state(context, state);
++    pgtk_style_context_add_class(context, GTK_STYLE_CLASS_RADIO);
++
++    pgtk_render_option(context, cr, 0, 0, theme->indicator_size, theme->indicator_size);
++
++    pgtk_style_context_restore(context);
++
++    return S_OK;
++}
++
++static HRESULT draw_checkbox(button_theme_t *theme, cairo_t *cr, int state_id)
++{
++    GtkStateFlags state = get_checkbox_state_flags(state_id);
++    GtkStyleContext *context;
++
++    assert(theme != NULL);
++
++    context = pgtk_widget_get_style_context(theme->check);
++    pgtk_style_context_save(context);
++
++    pgtk_style_context_set_state(context, state);
++    pgtk_style_context_add_class(context, GTK_STYLE_CLASS_CHECK);
++
++    pgtk_render_check(context, cr, 0, 0, theme->indicator_size, theme->indicator_size);
++
++    pgtk_style_context_restore(context);
++
++    return S_OK;
++}
++
++static HRESULT draw_background(uxgtk_theme_t *theme, cairo_t *cr, int part_id, int state_id,
++                               int width, int height)
++{
++    button_theme_t *button_theme = impl_from_uxgtk_theme_t(theme);
++
++    switch (part_id)
++    {
++        case BP_PUSHBUTTON:
++            return draw_button(button_theme, cr, state_id, width, height);
++
++        case BP_RADIOBUTTON:
++            return draw_radio(button_theme, cr, state_id);
++
++        case BP_CHECKBOX:
++            return draw_checkbox(button_theme, cr, state_id);
++
++        case BP_GROUPBOX:
++            /* GNOME applications don't draw a group box. Return some error code
++             * to avoid useless painting operations. */
++            return E_ABORT;
++    }
++
++    FIXME("Unsupported button part %d.\n", part_id);
++    return E_NOTIMPL;
++}
++
++static HRESULT get_part_size(uxgtk_theme_t *theme, int part_id, int state_id,
++                             RECT *rect, SIZE *size)
++{
++    button_theme_t *button_theme = impl_from_uxgtk_theme_t(theme);
++
++    assert(theme != NULL);
++    assert(size != NULL);
++
++    switch (part_id)
++    {
++        case BP_CHECKBOX:
++        case BP_RADIOBUTTON:
++            size->cx = button_theme->indicator_size;
++            size->cy = button_theme->indicator_size;
++            return S_OK;
++    }
++
++    FIXME("Unsupported button part %d.\n", part_id);
++    return E_NOTIMPL;
++}
++
++static BOOL is_part_defined(int part_id, int state_id)
++{
++    if (part_id == BP_CHECKBOX)
++        return (state_id < CBS_IMPLICITNORMAL);
++
++    return (part_id > 0 && part_id < BP_COMMANDLINK);
++}
++
++static const uxgtk_theme_vtable_t button_vtable =
++{
++    get_color,
++    draw_background,
++    get_part_size,
++    is_part_defined
++};
++
++uxgtk_theme_t *uxgtk_button_theme_create(void)
++{
++    button_theme_t *theme;
++
++    TRACE("()\n");
++
++    theme = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*theme));
++    if (!theme) return NULL;
++
++    uxgtk_theme_init(&theme->base, &button_vtable);
++
++    /* Other widgets will be created on demand */
++    theme->check = pgtk_check_button_new();
++
++    pgtk_container_add((GtkContainer *)theme->base.layout, theme->check);
++
++    /* Used for both check- and radiobuttons */
++    pgtk_widget_style_get(theme->check, "indicator-size", &theme->indicator_size, NULL);
++
++    TRACE("-GtkCheckButton-indicator-size: %d\n", theme->indicator_size);
++
++    return &theme->base;
++}
+diff --git a/dlls/uxtheme-gtk/combobox.c b/dlls/uxtheme-gtk/combobox.c
+new file mode 100644
+index 0000000..38abb82
+--- /dev/null
++++ b/dlls/uxtheme-gtk/combobox.c
+@@ -0,0 +1,236 @@
++/*
++ * GTK uxtheme implementation
++ *
++ * Copyright (C) 2015 Ivan Akulinchev
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "uxthemegtk.h"
++
++#include <assert.h>
++
++#include "winbase.h"
++#include "vsstyle.h"
++#include "winerror.h"
++
++#include "wine/debug.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(uxthemegtk);
++
++typedef struct _combobox_theme
++{
++    uxgtk_theme_t base;
++
++    int arrow_size;
++    float arrow_scaling;
++
++    GtkWidget *combobox;
++    GtkWidget *button;
++    GtkWidget *entry;
++    GtkWidget *arrow;
++} combobox_theme_t;
++
++static inline combobox_theme_t *impl_from_uxgtk_theme_t(uxgtk_theme_t *theme)
++{
++    return CONTAINING_RECORD(theme, combobox_theme_t, base);
++}
++
++static GtkStateFlags get_border_state_flags(int state_id)
++{
++    switch (state_id)
++    {
++        case CBB_NORMAL:
++            return GTK_STATE_FLAG_NORMAL;
++
++        case CBB_HOT:
++            return GTK_STATE_FLAG_PRELIGHT;
++
++        case CBB_FOCUSED:
++            return GTK_STATE_FLAG_FOCUSED;
++
++        case CBB_DISABLED:
++            return GTK_STATE_FLAG_INSENSITIVE;
++    }
++
++    ERR("Unknown combobox border state %d.\n", state_id);
++    return GTK_STATE_FLAG_NORMAL;
++}
++
++static GtkStateFlags get_dropdown_button_state_flags(int state_id)
++{
++    switch (state_id)
++    {
++        case CBXS_NORMAL:
++            return GTK_STATE_FLAG_NORMAL;
++
++        case CBXS_HOT:
++            return GTK_STATE_FLAG_PRELIGHT;
++
++        case CBXS_PRESSED:
++            return GTK_STATE_FLAG_ACTIVE;
++
++        case CBXS_DISABLED:
++            return GTK_STATE_FLAG_INSENSITIVE;
++    }
++
++    ERR("Unknown combobox dropdown button state %d.\n", state_id);
++    return GTK_STATE_FLAG_NORMAL;
++}
++
++static void iter_callback(GtkWidget *widget, gpointer data)
++{
++    assert(data != NULL);
++
++    if (pg_type_check_instance_is_a((GTypeInstance *)widget, pgtk_toggle_button_get_type()))
++        ((combobox_theme_t *)data)->button = widget;
++}
++
++static HRESULT draw_border(combobox_theme_t *theme, cairo_t *cr, int state_id, int width, int height)
++{
++    GtkStateFlags state = get_border_state_flags(state_id);
++    GtkStyleContext *context;
++
++    assert(theme != NULL);
++
++    context = pgtk_widget_get_style_context(theme->entry);
++    pgtk_style_context_save(context);
++
++    pgtk_style_context_set_state(context, state);
++
++    pgtk_render_background(context, cr, 0, 0, width, height);
++    pgtk_render_frame(context, cr, 0, 0, width, height);
++
++    pgtk_style_context_restore(context);
++
++    return S_OK;
++}
++
++static HRESULT draw_button(combobox_theme_t *theme, cairo_t *cr, int part_id, int state_id,
++                           int width, int height)
++{
++    GtkStateFlags state = get_dropdown_button_state_flags(state_id);
++    GtkStyleContext *context;
++    int arrow_x, arrow_y, arrow_width;
++
++    assert(theme != NULL);
++
++    context = pgtk_widget_get_style_context(theme->button);
++    pgtk_style_context_save(context);
++
++    pgtk_style_context_set_state(context, state);
++
++    /* Render with another size to remove a gap */
++    if (part_id == CP_DROPDOWNBUTTONLEFT)
++    {
++        pgtk_render_background(context, cr, -2, -2, width + 2, height + 4);
++        pgtk_render_frame(context, cr, -2, -2, width + 2, height + 4);
++    }
++    else
++    {
++        pgtk_render_background(context, cr, 0, -2, width + 2, height + 4);
++        pgtk_render_frame(context, cr, 0, -2, width + 2, height + 4);
++    }
++
++    pgtk_style_context_restore(context);
++
++    context = pgtk_widget_get_style_context(theme->arrow);
++    pgtk_style_context_save(context);
++
++    pgtk_style_context_set_state(context, state);
++
++    arrow_width = theme->arrow_size * theme->arrow_scaling;
++    arrow_x = (width - arrow_width + 3) / 2;
++    arrow_y = (height - arrow_width) / 2;
++
++    pgtk_render_arrow(context, cr, G_PI, arrow_x, arrow_y, arrow_width);
++
++    pgtk_style_context_restore(context);
++
++    return S_OK;
++}
++
++static HRESULT draw_background(uxgtk_theme_t *theme, cairo_t *cr, int part_id, int state_id,
++                               int width, int height)
++{
++    combobox_theme_t *combobox_theme = impl_from_uxgtk_theme_t(theme);
++
++    switch (part_id)
++    {
++        case 0:
++        case CP_BORDER:
++            return draw_border(combobox_theme, cr, state_id, width, height);
++
++        case CP_DROPDOWNBUTTON:
++        case CP_DROPDOWNBUTTONLEFT:
++        case CP_DROPDOWNBUTTONRIGHT:
++            return draw_button(combobox_theme, cr, part_id, state_id, width, height);
++    }
++
++    FIXME("Unsupported combobox part %d.\n", part_id);
++    return E_NOTIMPL;
++}
++
++static BOOL is_part_defined(int part_id, int state_id)
++{
++    return (part_id == 0 || part_id == CP_BORDER || part_id == CP_DROPDOWNBUTTON ||
++            part_id == CP_DROPDOWNBUTTONLEFT || part_id == CP_DROPDOWNBUTTONRIGHT);
++}
++
++static const uxgtk_theme_vtable_t combobox_vtable =
++{
++    NULL, /* get_color */
++    draw_background,
++    NULL, /* get_part_size */
++    is_part_defined
++};
++
++uxgtk_theme_t *uxgtk_combobox_theme_create(void)
++{
++    combobox_theme_t *theme;
++
++    TRACE("()\n");
++
++    theme = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*theme));
++    if (!theme) return NULL;
++
++    uxgtk_theme_init(&theme->base, &combobox_vtable);
++
++    /* I use a simple entry because .combobox-entry has no right border sometimes */
++    theme->entry = pgtk_entry_new();
++    theme->combobox = pgtk_combo_box_new_with_entry();
++
++    pgtk_container_add((GtkContainer *)theme->base.layout, theme->entry);
++    pgtk_container_add((GtkContainer *)theme->base.layout, theme->combobox);
++
++    /* Extract button */
++    pgtk_container_forall((GtkContainer *)theme->combobox, iter_callback, theme);
++
++    theme->arrow = pgtk_bin_get_child((GtkBin *)theme->button);
++
++    pgtk_widget_style_get(theme->combobox,
++                          "arrow-size", &theme->arrow_size,
++                          "arrow-scaling", &theme->arrow_scaling,
++                          NULL);
++
++    /* A workaround for old themes like Ambiance */
++    if (theme->arrow_scaling == 1)
++        theme->arrow_scaling = 0.6;
++
++    TRACE("-GtkComboBox-arrow-scaling: %f\n", theme->arrow_scaling);
++    TRACE("-GtkComboBox-arrow-size: %d\n", theme->arrow_size);
++
++    return &theme->base;
++}
+diff --git a/dlls/uxtheme-gtk/edit.c b/dlls/uxtheme-gtk/edit.c
+new file mode 100644
+index 0000000..eb5f108
+--- /dev/null
++++ b/dlls/uxtheme-gtk/edit.c
+@@ -0,0 +1,205 @@
++/*
++ * GTK uxtheme implementation
++ *
++ * Copyright (C) 2015 Ivan Akulinchev
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "uxthemegtk.h"
++
++#include <assert.h>
++
++#include "winbase.h"
++#include "vsstyle.h"
++#include "vssym32.h"
++#include "winerror.h"
++
++#include "wine/debug.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(uxthemegtk);
++
++typedef struct _edit_theme
++{
++    uxgtk_theme_t base;
++
++    GtkWidget *entry;
++} edit_theme_t;
++
++static inline edit_theme_t *impl_from_uxgtk_theme_t(uxgtk_theme_t *theme)
++{
++    return CONTAINING_RECORD(theme, edit_theme_t, base);
++}
++
++static GtkStateFlags get_text_state_flags(int state_id)
++{
++    switch (state_id)
++    {
++        case ETS_NORMAL:
++            return GTK_STATE_FLAG_NORMAL;
++
++        case ETS_HOT:
++            return GTK_STATE_FLAG_PRELIGHT;
++
++        case ETS_SELECTED:
++            return GTK_STATE_FLAG_SELECTED;
++
++        case ETS_DISABLED:
++            return GTK_STATE_FLAG_INSENSITIVE;
++
++        case ETS_FOCUSED:
++            return GTK_STATE_FLAG_FOCUSED;
++
++        case ETS_READONLY:
++            return GTK_STATE_FLAG_INSENSITIVE;
++    }
++
++    FIXME("Unknown edit text state %d.\n", state_id);
++    return GTK_STATE_FLAG_NORMAL;
++}
++
++static HRESULT get_fill_color(edit_theme_t *theme, int part_id, int state_id, GdkRGBA *rgba)
++{
++    GtkStateFlags state;
++    GtkStyleContext *context;
++
++    assert(theme != NULL);
++
++    switch (part_id)
++    {
++        case EP_EDITTEXT:
++            state = get_text_state_flags(state_id);
++            context = pgtk_widget_get_style_context(theme->entry);
++            break;
++
++        default:
++            FIXME("Unsupported button part %d.\n", part_id);
++            return E_NOTIMPL;
++    }
++
++    pgtk_style_context_add_class(context, GTK_STYLE_CLASS_VIEW);
++    pgtk_style_context_get_background_color(context, state, rgba);
++    pgtk_style_context_remove_class(context, GTK_STYLE_CLASS_VIEW);
++
++    return S_OK;
++}
++
++static HRESULT get_text_color(edit_theme_t *theme, int part_id, int state_id, GdkRGBA *rgba)
++{
++    GtkStateFlags state;
++    GtkStyleContext *context;
++
++    assert(theme != NULL);
++
++    switch (part_id)
++    {
++        case EP_EDITTEXT:
++            state = get_text_state_flags(state_id);
++            context = pgtk_widget_get_style_context(theme->entry);
++            break;
++
++        default:
++            FIXME("Unsupported button part %d.\n", part_id);
++            return E_NOTIMPL;
++    }
++
++    pgtk_style_context_get_color(context, state, rgba);
++
++    return S_OK;
++}
++
++static HRESULT get_color(uxgtk_theme_t *theme, int part_id, int state_id,
++                         int prop_id, GdkRGBA *rgba)
++{
++    edit_theme_t *edit_theme = impl_from_uxgtk_theme_t(theme);
++
++    switch (prop_id)
++    {
++        case TMT_FILLCOLOR:
++            return get_fill_color(edit_theme, part_id, state_id, rgba);
++
++        case TMT_TEXTCOLOR:
++            return get_text_color(edit_theme, part_id, state_id, rgba);
++    }
++
++    FIXME("Unsupported edit color %d.\n", prop_id);
++    return E_NOTIMPL;
++}
++
++static HRESULT draw_text(edit_theme_t *theme, cairo_t *cr, int state_id, int width, int height)
++{
++    GtkStateFlags state = get_text_state_flags(state_id);
++    GtkStyleContext *context;
++
++    assert(theme != NULL);
++
++    context = pgtk_widget_get_style_context(theme->entry);
++    pgtk_style_context_save(context);
++
++    pgtk_style_context_set_state(context, state);
++
++    pgtk_render_background(context, cr, 0, 0, width, height);
++    pgtk_render_frame(context, cr, 0, 0, width, height);
++
++    pgtk_style_context_restore(context);
++
++    return S_OK;
++}
++
++static HRESULT draw_background(uxgtk_theme_t *theme, cairo_t *cr, int part_id, int state_id,
++                               int width, int height)
++{
++    edit_theme_t *edit_theme = impl_from_uxgtk_theme_t(theme);
++
++    switch (part_id)
++    {
++        case EP_EDITTEXT:
++            return draw_text(edit_theme, cr, state_id, width, height);
++    }
++
++    FIXME("Unsupported edit part %d.\n", part_id);
++    return E_NOTIMPL;
++}
++
++static BOOL is_part_defined(int part_id, int state_id)
++{
++    return (part_id == EP_EDITTEXT && state_id < ETS_ASSIST);
++}
++
++static const uxgtk_theme_vtable_t edit_vtable =
++{
++    get_color,
++    draw_background,
++    NULL, /* get_part_size */
++    is_part_defined
++};
++
++uxgtk_theme_t *uxgtk_edit_theme_create(void)
++{
++    edit_theme_t *theme;
++
++    TRACE("()\n");
++
++    theme = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*theme));
++    if (!theme) return NULL;
++
++    uxgtk_theme_init(&theme->base, &edit_vtable);
++
++    theme->entry = pgtk_entry_new();
++
++    pgtk_container_add((GtkContainer *)theme->base.layout, theme->entry);
++
++    return &theme->base;
++}
+diff --git a/dlls/uxtheme-gtk/header.c b/dlls/uxtheme-gtk/header.c
+new file mode 100644
+index 0000000..11c0245
+--- /dev/null
++++ b/dlls/uxtheme-gtk/header.c
+@@ -0,0 +1,122 @@
++/*
++ * GTK uxtheme implementation
++ *
++ * Copyright (C) 2015 Ivan Akulinchev
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "uxthemegtk.h"
++
++#include <assert.h>
++
++#include "winbase.h"
++#include "vsstyle.h"
++#include "winerror.h"
++
++#include "wine/debug.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(uxthemegtk);
++
++typedef struct _header_theme
++{
++    uxgtk_theme_t base;
++
++    GtkWidget *treeview;
++} header_theme_t;
++
++static inline header_theme_t *impl_from_uxgtk_theme_t(uxgtk_theme_t *theme)
++{
++    return CONTAINING_RECORD(theme, header_theme_t, base);
++}
++
++static HRESULT draw_item(header_theme_t *theme, cairo_t *cr, int state_id, int width, int height)
++{
++    GtkStyleContext *context;
++    GtkStateFlags state;
++    GtkWidget *widget;
++
++    assert(theme != NULL);
++
++    widget = pgtk_tree_view_column_get_button(
++        pgtk_tree_view_get_column((GtkTreeView *)theme->treeview, 1));
++    context = pgtk_widget_get_style_context(widget);
++    pgtk_style_context_save(context);
++
++    if (state_id == HIS_HOT)
++        state = GTK_STATE_FLAG_PRELIGHT;
++    else if (state_id == HIS_PRESSED)
++        state = GTK_STATE_FLAG_ACTIVE;
++    else
++        state = GTK_STATE_FLAG_NORMAL;
++
++    pgtk_style_context_set_state(context, state);
++
++    pgtk_render_background(context, cr, 0, 0, width, height);
++    pgtk_render_frame(context, cr, 0, 0, width, height);
++
++    pgtk_style_context_restore(context);
++
++    return S_OK;
++}
++
++static HRESULT draw_background(uxgtk_theme_t *theme, cairo_t *cr, int part_id, int state_id,
++                               int width, int height)
++{
++    header_theme_t *header_theme = impl_from_uxgtk_theme_t(theme);
++
++    switch (part_id)
++    {
++        case HP_HEADERITEM:
++            return draw_item(header_theme, cr, state_id, width, height);
++    }
++
++    FIXME("Unsupported header part %d.\n", part_id);
++    return E_NOTIMPL;
++}
++
++static BOOL is_part_defined(int part_id, int state_id)
++{
++    return (part_id == HP_HEADERITEM);
++}
++
++static const uxgtk_theme_vtable_t header_vtable = {
++    NULL, /* get_color */
++    draw_background,
++    NULL, /* get_part_size */
++    is_part_defined
++};
++
++uxgtk_theme_t *uxgtk_header_theme_create(void)
++{
++    header_theme_t *theme;
++
++    TRACE("()\n");
++
++    theme = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*theme));
++    if (!theme) return NULL;
++
++    uxgtk_theme_init(&theme->base, &header_vtable);
++
++    theme->treeview = pgtk_tree_view_new();
++
++    pgtk_tree_view_append_column((GtkTreeView *)theme->treeview, pgtk_tree_view_column_new());
++    pgtk_tree_view_append_column((GtkTreeView *)theme->treeview, pgtk_tree_view_column_new());
++    pgtk_tree_view_append_column((GtkTreeView *)theme->treeview, pgtk_tree_view_column_new());
++
++    pgtk_container_add((GtkContainer *)theme->base.layout, theme->treeview);
++
++    return &theme->base;
++}
+diff --git a/dlls/uxtheme-gtk/listbox.c b/dlls/uxtheme-gtk/listbox.c
+new file mode 100644
+index 0000000..53e1391
+--- /dev/null
++++ b/dlls/uxtheme-gtk/listbox.c
+@@ -0,0 +1,113 @@
++/*
++ * GTK uxtheme implementation
++ *
++ * Copyright (C) 2015 Ivan Akulinchev
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "uxthemegtk.h"
++
++#include <assert.h>
++
++#include "winbase.h"
++#include "vsstyle.h"
++#include "winerror.h"
++
++#include "wine/debug.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(uxthemegtk);
++
++typedef struct _listbox_theme
++{
++    uxgtk_theme_t base;
++
++    GtkWidget *scrolled_window;
++} listbox_theme_t;
++
++static inline listbox_theme_t *impl_from_uxgtk_theme_t(uxgtk_theme_t *theme)
++{
++    return CONTAINING_RECORD(theme, listbox_theme_t, base);
++}
++
++static HRESULT draw_border(listbox_theme_t *theme, cairo_t *cr, int width, int height)
++{
++    GtkStyleContext *context;
++
++    assert(theme != NULL);
++
++    context = pgtk_widget_get_style_context(theme->scrolled_window);
++    pgtk_style_context_save(context);
++
++    pgtk_style_context_add_class(context, GTK_STYLE_CLASS_VIEW);
++    pgtk_style_context_add_class(context, GTK_STYLE_CLASS_FRAME);
++
++    pgtk_render_background(context, cr, 0, 0, width, height);
++    pgtk_render_frame(context, cr, 0, 0, width, height);
++
++    pgtk_style_context_restore(context);
++
++    return S_OK;
++}
++
++static HRESULT draw_background(uxgtk_theme_t *theme, cairo_t *cr, int part_id, int state_id,
++                               int width, int height)
++{
++    listbox_theme_t *listbox_theme = impl_from_uxgtk_theme_t(theme);
++
++    switch (part_id)
++    {
++        case 0:
++        case LBCP_BORDER_HSCROLL:
++        case LBCP_BORDER_HVSCROLL:
++        case LBCP_BORDER_NOSCROLL:
++        case LBCP_BORDER_VSCROLL:
++            return draw_border(listbox_theme, cr, width, height);
++    }
++
++    FIXME("Unsupported listbox part %d.\n", part_id);
++    return E_NOTIMPL;
++}
++
++static BOOL is_part_defined(int part_id, int state_id)
++{
++    return (part_id >= 0 && part_id < LBCP_ITEM);
++}
++
++static const uxgtk_theme_vtable_t listbox_vtable =
++{
++    NULL, /* get_color */
++    draw_background,
++    NULL, /* get_part_size */
++    is_part_defined
++};
++
++uxgtk_theme_t *uxgtk_listbox_theme_create(void)
++{
++    listbox_theme_t *theme;
++
++    TRACE("()\n");
++
++    theme = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*theme));
++    if (!theme) return NULL;
++
++    uxgtk_theme_init(&theme->base, &listbox_vtable);
++
++    theme->scrolled_window = pgtk_scrolled_window_new(NULL, NULL);
++
++    pgtk_container_add((GtkContainer *)theme->base.layout, theme->scrolled_window);
++
++    return &theme->base;
++}
+diff --git a/dlls/uxtheme-gtk/listview.c b/dlls/uxtheme-gtk/listview.c
+new file mode 100644
+index 0000000..673bc4b
+--- /dev/null
++++ b/dlls/uxtheme-gtk/listview.c
+@@ -0,0 +1,32 @@
++/*
++ * GTK uxtheme implementation
++ *
++ * Copyright (C) 2015 Ivan Akulinchev
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "uxthemegtk.h"
++
++#include "wine/debug.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(uxthemegtk);
++
++uxgtk_theme_t *uxgtk_listview_theme_create(void)
++{
++    TRACE("()\n");
++
++    return uxgtk_listbox_theme_create();
++}
+diff --git a/dlls/uxtheme-gtk/menu.c b/dlls/uxtheme-gtk/menu.c
+new file mode 100644
+index 0000000..b24a085
+--- /dev/null
++++ b/dlls/uxtheme-gtk/menu.c
+@@ -0,0 +1,183 @@
++/*
++ * GTK uxtheme implementation
++ *
++ * Copyright (C) 2015 Ivan Akulinchev
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "uxthemegtk.h"
++
++#include <assert.h>
++
++#include "winbase.h"
++#include "vsstyle.h"
++#include "vssym32.h"
++#include "winerror.h"
++
++#include "wine/debug.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(uxthemegtk);
++
++typedef struct _menu_theme
++{
++    uxgtk_theme_t base;
++
++    GtkWidget *menubar;
++    GtkWidget *menuitem;
++    GtkWidget *menu;
++} menu_theme_t;
++
++static inline menu_theme_t *impl_from_uxgtk_theme_t(uxgtk_theme_t *theme)
++{
++    return CONTAINING_RECORD(theme, menu_theme_t, base);
++}
++
++static GtkStateFlags get_popup_item_state_flags(int state_id)
++{
++    switch (state_id)
++    {
++        case MPI_NORMAL:
++            return GTK_STATE_FLAG_NORMAL;
++
++        case MPI_HOT:
++            return GTK_STATE_FLAG_PRELIGHT;
++
++        case MPI_DISABLED:
++            return GTK_STATE_FLAG_INSENSITIVE;
++
++        case MPI_DISABLEDHOT:
++            return GTK_STATE_FLAG_INSENSITIVE | GTK_STATE_FLAG_PRELIGHT;
++    }
++
++    ERR("Unknown menu popup item state %d.\n", state_id);
++    return GTK_STATE_FLAG_NORMAL;
++}
++
++static HRESULT get_fill_color(menu_theme_t *theme, int part_id, int state_id, GdkRGBA *rgba)
++{
++    GtkStateFlags state;
++    GtkStyleContext *context;
++
++    assert(theme != NULL);
++
++    switch (part_id)
++    {
++        case MENU_BARBACKGROUND:
++            state = GTK_STATE_FLAG_NORMAL;
++            context = pgtk_widget_get_style_context(theme->menubar);
++            break;
++
++        case MENU_POPUPBACKGROUND:
++            state = GTK_STATE_FLAG_NORMAL;
++            context = pgtk_widget_get_style_context(theme->menu);
++            break;
++
++        case MENU_POPUPITEM:
++            state = get_popup_item_state_flags(state_id);
++            context = pgtk_widget_get_style_context(theme->menuitem);
++            break;
++
++        default:
++            FIXME("Unsupported menu part %d.\n", part_id);
++            return E_NOTIMPL;
++    }
++
++    pgtk_style_context_get_background_color(context, state, rgba);
++
++    return S_OK;
++}
++
++static HRESULT get_text_color(menu_theme_t *theme, int part_id, int state_id, GdkRGBA *rgba)
++{
++    GtkStateFlags state;
++    GtkStyleContext *context;
++
++    assert(theme != NULL);
++
++    switch (part_id)
++    {
++        case MENU_BARBACKGROUND:
++            state = GTK_STATE_FLAG_NORMAL;
++            context = pgtk_widget_get_style_context(theme->menubar);
++            break;
++
++        case MENU_POPUPBACKGROUND:
++            state = GTK_STATE_FLAG_NORMAL;
++            context = pgtk_widget_get_style_context(theme->menu);
++            break;
++
++        case MENU_POPUPITEM:
++            state = get_popup_item_state_flags(state_id);
++            context = pgtk_widget_get_style_context(theme->menuitem);
++            break;
++
++        default:
++            FIXME("Unsupported menu part %d.\n", part_id);
++            return E_NOTIMPL;
++    }
++
++    pgtk_style_context_get_color(context, state, rgba);
++
++    return S_OK;
++}
++
++static HRESULT get_color(uxgtk_theme_t *theme, int part_id, int state_id,
++                         int prop_id, GdkRGBA *rgba)
++{
++    menu_theme_t *menu_theme = impl_from_uxgtk_theme_t(theme);
++
++    switch (prop_id)
++    {
++        case TMT_FILLCOLOR:
++            return get_fill_color(menu_theme, part_id, state_id, rgba);
++
++        case TMT_TEXTCOLOR:
++            return get_text_color(menu_theme, part_id, state_id, rgba);
++    }
++
++    FIXME("Unsupported menu color %d.\n", prop_id);
++    return E_NOTIMPL;
++}
++
++static const uxgtk_theme_vtable_t menu_vtable =
++{
++    get_color,
++    NULL, /* draw_background */
++    NULL, /* get_part_size */
++    NULL /* is_part_defined */
++};
++
++uxgtk_theme_t *uxgtk_menu_theme_create(void)
++{
++    menu_theme_t *theme;
++
++    TRACE("()\n");
++
++    theme = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*theme));
++    if (!theme) return NULL;
++
++    uxgtk_theme_init(&theme->base, &menu_vtable);
++
++    theme->menubar = pgtk_menu_bar_new();
++    theme->menuitem = pgtk_menu_item_new();
++    theme->menu = pgtk_menu_new();
++
++    pgtk_container_add((GtkContainer *)theme->base.layout, theme->menubar);
++    pgtk_menu_shell_append((GtkMenuShell *)theme->menubar, theme->menuitem);
++    pgtk_menu_item_set_submenu((GtkMenuItem *)theme->menuitem, theme->menu);
++
++    return &theme->base;
++}
+diff --git a/dlls/uxtheme-gtk/rebar.c b/dlls/uxtheme-gtk/rebar.c
+new file mode 100644
+index 0000000..03650ae
+--- /dev/null
++++ b/dlls/uxtheme-gtk/rebar.c
+@@ -0,0 +1,96 @@
++/*
++ * GTK uxtheme implementation
++ *
++ * Copyright (C) 2015 Ivan Akulinchev
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "uxthemegtk.h"
++
++#include <assert.h>
++
++#include "winbase.h"
++#include "vsstyle.h"
++#include "winerror.h"
++
++#include "wine/debug.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(uxthemegtk);
++
++typedef struct _rebar_theme
++{
++    uxgtk_theme_t base;
++
++    GtkWidget *toolbar;
++} rebar_theme_t;
++
++static inline rebar_theme_t *impl_from_uxgtk_theme_t(uxgtk_theme_t *theme)
++{
++    return CONTAINING_RECORD(theme, rebar_theme_t, base);
++}
++
++static HRESULT draw_background(uxgtk_theme_t *theme, cairo_t *cr, int part_id, int state_id,
++                               int width, int height)
++{
++    rebar_theme_t *rebar_theme = impl_from_uxgtk_theme_t(theme);
++
++    assert(theme != NULL);
++
++    switch (part_id)
++    {
++        case 0:
++        case RP_BACKGROUND:
++        {
++            GtkStyleContext *context = pgtk_widget_get_style_context(rebar_theme->toolbar);
++            pgtk_render_background(context, cr, 0, 0, width, height);
++            return S_OK;
++        }
++    }
++
++    FIXME("Unsupported rebar part %d.\n", part_id);
++    return E_NOTIMPL;
++}
++
++static BOOL is_part_defined(int part_id, int state_id)
++{
++    return (part_id == 0 || part_id == RP_BACKGROUND);
++}
++
++static const uxgtk_theme_vtable_t rebar_vtable =
++{
++    NULL, /* get_color */
++    draw_background,
++    NULL, /* get_part_size */
++    is_part_defined
++};
++
++uxgtk_theme_t *uxgtk_rebar_theme_create(void)
++{
++    rebar_theme_t *theme;
++
++    TRACE("()\n");
++
++    theme = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*theme));
++    if (!theme) return NULL;
++
++    uxgtk_theme_init(&theme->base, &rebar_vtable);
++
++    theme->toolbar = pgtk_toolbar_new();
++
++    pgtk_container_add((GtkContainer *)theme->base.layout, theme->toolbar);
++
++    return &theme->base;
++}
+diff --git a/dlls/uxtheme-gtk/status.c b/dlls/uxtheme-gtk/status.c
+new file mode 100644
+index 0000000..e2a937a
+--- /dev/null
++++ b/dlls/uxtheme-gtk/status.c
+@@ -0,0 +1,151 @@
++/*
++ * GTK uxtheme implementation
++ *
++ * Copyright (C) 2015 Ivan Akulinchev
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "uxthemegtk.h"
++
++#include <assert.h>
++
++#include "winbase.h"
++#include "vsstyle.h"
++#include "winerror.h"
++
++#include "wine/debug.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(uxthemegtk);
++
++typedef struct _status_theme
++{
++    uxgtk_theme_t base;
++
++    int grip_width;
++    int grip_height;
++} status_theme_t;
++
++static inline status_theme_t *impl_from_uxgtk_theme_t(uxgtk_theme_t *theme)
++{
++    return CONTAINING_RECORD(theme, status_theme_t, base);
++}
++
++static HRESULT draw_pane(uxgtk_theme_t *theme, cairo_t *cr, int width, int height)
++{
++    GtkStyleContext *context;
++
++    assert(theme != NULL);
++
++    context = pgtk_widget_get_style_context(theme->window);
++
++    pgtk_style_context_add_class(context, GTK_STYLE_CLASS_BACKGROUND);
++    pgtk_render_background(context, cr, 0, 0, width, height);
++
++    return S_OK;
++}
++
++static HRESULT draw_gripper(uxgtk_theme_t *theme, cairo_t *cr, int width, int height)
++{
++    GtkStyleContext *context;
++
++    assert(theme != NULL);
++
++    context = pgtk_widget_get_style_context(theme->window);
++    pgtk_style_context_save(context);
++
++    pgtk_style_context_add_class(context, GTK_STYLE_CLASS_GRIP);
++    pgtk_style_context_set_junction_sides(context, GTK_JUNCTION_CORNER_BOTTOMRIGHT);
++    pgtk_render_handle(context, cr, 0, 0, width, height);
++
++    pgtk_style_context_restore(context);
++
++    return S_OK;
++}
++
++static HRESULT draw_background(uxgtk_theme_t *theme, cairo_t *cr, int part_id, int state_id,
++                               int width, int height)
++{
++    TRACE("(%p, %p, %d, %d, %d, %d)\n", theme, cr, part_id, state_id, width, height);
++
++    switch (part_id)
++    {
++        case 0:
++        case SP_PANE:
++        case SP_GRIPPERPANE:
++            return draw_pane(theme, cr, width, height);
++
++        case SP_GRIPPER:
++            return draw_gripper(theme, cr, width, height);
++    }
++
++    ERR("Unknown status part %d.\n", part_id);
++    return E_FAIL;
++}
++
++static HRESULT get_part_size(uxgtk_theme_t *theme, int part_id, int state_id,
++                             RECT *rect, SIZE *size)
++{
++    status_theme_t *status_theme = impl_from_uxgtk_theme_t(theme);
++
++    assert(theme != NULL);
++    assert(size != NULL);
++
++    switch (part_id)
++    {
++        case SP_GRIPPER:
++            size->cx = status_theme->grip_width;
++            size->cy = status_theme->grip_height;
++            return S_OK;
++    }
++
++    FIXME("Unsupported status part %d.\n", part_id);
++    return E_NOTIMPL;
++}
++
++static BOOL is_part_defined(int part_id, int state_id)
++{
++    return (part_id >= 0 && part_id <= SP_GRIPPER);
++}
++
++static const uxgtk_theme_vtable_t status_vtable =
++{
++    NULL, /* get_color */
++    draw_background,
++    get_part_size,
++    is_part_defined
++};
++
++uxgtk_theme_t *uxgtk_status_theme_create(void)
++{
++    status_theme_t *theme;
++
++    TRACE("()\n");
++
++    theme = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*theme));
++    if (!theme) return NULL;
++
++    uxgtk_theme_init(&theme->base, &status_vtable);
++
++    pgtk_widget_style_get(theme->base.window,
++                          "resize-grip-width", &theme->grip_width,
++                          "resize-grip-height", &theme->grip_height,
++                          NULL);
++
++    TRACE("-GtkWindow-resize-grip-width: %d\n", theme->grip_width);
++    TRACE("-GtkWindow-resize-grip-height: %d\n", theme->grip_height);
++
++    return &theme->base;
++}
+diff --git a/dlls/uxtheme-gtk/tab.c b/dlls/uxtheme-gtk/tab.c
+new file mode 100644
+index 0000000..31bdc0e
+--- /dev/null
++++ b/dlls/uxtheme-gtk/tab.c
+@@ -0,0 +1,201 @@
++/*
++ * GTK uxtheme implementation
++ *
++ * Copyright (C) 2015 Ivan Akulinchev
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "uxthemegtk.h"
++
++#include <assert.h>
++
++#include "winbase.h"
++#include "vsstyle.h"
++#include "winerror.h"
++
++#include "wine/debug.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(uxthemegtk);
++
++typedef struct _tab_theme
++{
++    uxgtk_theme_t base;
++
++    int tab_overlap;
++
++    GtkWidget *notebook;
++} tab_theme_t;
++
++static inline tab_theme_t *impl_from_uxgtk_theme_t(uxgtk_theme_t *theme)
++{
++    return CONTAINING_RECORD(theme, tab_theme_t, base);
++}
++
++static HRESULT draw_tab_item(tab_theme_t *theme, cairo_t *cr, int part_id, int state_id,
++                             int width, int height)
++{
++    int x = 0, new_width = width, new_height = height;
++    GtkRegionFlags region = 0;
++    GtkStyleContext *context;
++
++    assert(theme != NULL);
++
++    context = pgtk_widget_get_style_context(theme->notebook);
++    pgtk_style_context_save(context);
++
++    /* Emulate the "-GtkNotebook-tab-overlap" style property */
++    if (part_id == TABP_TABITEM || part_id == TABP_TABITEMRIGHTEDGE)
++    {
++        x = -theme->tab_overlap;
++        new_width += theme->tab_overlap;
++    }
++
++    /* Provide GTK a little bit more information about the tab position */
++    if (part_id == TABP_TABITEMLEFTEDGE || part_id == TABP_TOPTABITEMLEFTEDGE)
++        region = GTK_REGION_FIRST;
++    else if (part_id == TABP_TABITEMRIGHTEDGE || part_id == TABP_TOPTABITEMRIGHTEDGE)
++        region = GTK_REGION_LAST;
++    else if (part_id == TABP_TABITEMBOTHEDGE || part_id == TABP_TOPTABITEMBOTHEDGE)
++        region = GTK_REGION_ONLY;
++    pgtk_style_context_add_region(context, GTK_STYLE_REGION_TAB, region);
++
++    /* Some themes are not friendly with the TCS_MULTILINE tabs */
++    pgtk_style_context_set_junction_sides(context, GTK_JUNCTION_BOTTOM);
++
++    /* Active tabs have their own parts */
++    if (part_id > TABP_TABITEMBOTHEDGE && part_id < TABP_PANE) {
++        new_height--; /* Fix the active tab height */
++        pgtk_style_context_set_state(context, GTK_STATE_FLAG_ACTIVE);
++    }
++
++    pgtk_render_background(context, cr, x, 0, new_width, new_height);
++    pgtk_render_frame(context, cr, x, 0, new_width, new_height);
++
++    pgtk_style_context_restore(context);
++
++    return S_OK;
++}
++
++static HRESULT draw_tab_pane(tab_theme_t *theme, cairo_t *cr, int width, int height)
++{
++    GtkStyleContext *context;
++
++    assert(theme != NULL);
++
++    context = pgtk_widget_get_style_context(theme->notebook);
++    pgtk_style_context_save(context);
++
++    pgtk_style_context_add_class(context, GTK_STYLE_CLASS_FRAME);
++    pgtk_style_context_set_junction_sides(context, GTK_JUNCTION_TOP);
++
++    pgtk_render_background(context, cr, 0, 0, width, height);
++    pgtk_render_frame(context, cr, 0, 0, width, height);
++
++    pgtk_style_context_restore(context);
++
++    return S_OK;
++}
++
++static HRESULT draw_tab_body(tab_theme_t *theme, cairo_t *cr, int width, int height)
++{
++    GtkStyleContext *context;
++
++    assert(theme != NULL);
++
++    context = pgtk_widget_get_style_context(theme->notebook);
++
++    /* Some borders are already drawned by draw_tab_pane */
++    pgtk_render_background(context, cr, -4, -4, width + 4, height + 4);
++
++    return S_OK;
++}
++
++static HRESULT draw_background(uxgtk_theme_t *theme, cairo_t *cr, int part_id, int state_id,
++                               int width, int height)
++{
++    tab_theme_t *tab_theme = impl_from_uxgtk_theme_t(theme);
++    GtkStyleContext *context;
++
++    assert(theme != NULL);
++
++    /* Draw a dialog background to fix some themes like Ambiance */
++    context = pgtk_widget_get_style_context(theme->window);
++    pgtk_render_background(context, cr, 0, 0, width, height - 1);
++
++    switch (part_id)
++    {
++        case TABP_TABITEM:
++        case TABP_TABITEMLEFTEDGE:
++        case TABP_TABITEMRIGHTEDGE:
++        case TABP_TABITEMBOTHEDGE:
++        case TABP_TOPTABITEM:
++        case TABP_TOPTABITEMLEFTEDGE:
++        case TABP_TOPTABITEMRIGHTEDGE:
++        case TABP_TOPTABITEMBOTHEDGE:
++            return draw_tab_item(tab_theme, cr, part_id, state_id, width, height);
++
++        case TABP_PANE:
++            return draw_tab_pane(tab_theme, cr, width, height);
++
++        case TABP_BODY:
++        case TABP_AEROWIZARDBODY:
++            return draw_tab_body(tab_theme, cr, width, height);
++    }
++
++    ERR("Unknown tab part %d.\n", part_id);
++    return E_FAIL;
++}
++
++static BOOL is_part_defined(int part_id, int state_id)
++{
++    return (part_id > 0 && part_id <= TABP_AEROWIZARDBODY);
++}
++
++static const uxgtk_theme_vtable_t tab_vtable =
++{
++    NULL, /* get_color */
++    draw_background,
++    NULL, /* get_part_size */
++    is_part_defined
++};
++
++uxgtk_theme_t *uxgtk_tab_theme_create(void)
++{
++    tab_theme_t *theme;
++    GtkStyleContext *context;
++
++    TRACE("()\n");
++
++    theme = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*theme));
++    if (!theme) return NULL;
++
++    uxgtk_theme_init(&theme->base, &tab_vtable);
++
++    theme->notebook = pgtk_notebook_new();
++
++    pgtk_container_add((GtkContainer *)theme->base.layout, theme->notebook);
++
++    context = pgtk_widget_get_style_context(theme->notebook);
++
++    pgtk_style_context_add_class(context, GTK_STYLE_CLASS_NOTEBOOK);
++    pgtk_style_context_add_class(context, GTK_STYLE_CLASS_TOP);
++
++    pgtk_widget_style_get(theme->notebook, "tab-overlap", &theme->tab_overlap, NULL);
++
++    TRACE("-GtkNotebook-tab-overlap: %d\n", theme->tab_overlap);
++
++    return &theme->base;
++}
+diff --git a/dlls/uxtheme-gtk/toolbar.c b/dlls/uxtheme-gtk/toolbar.c
+new file mode 100644
+index 0000000..be8fbae
+--- /dev/null
++++ b/dlls/uxtheme-gtk/toolbar.c
+@@ -0,0 +1,165 @@
++/*
++ * GTK uxtheme implementation
++ *
++ * Copyright (C) 2015 Ivan Akulinchev
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "uxthemegtk.h"
++
++#include <assert.h>
++
++#include "winbase.h"
++#include "vsstyle.h"
++#include "winerror.h"
++
++#include "wine/debug.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(uxthemegtk);
++
++typedef struct _toolbar_theme
++{
++    uxgtk_theme_t base;
++
++    GtkWidget *button;
++    GtkWidget *separator;
++} toolbar_theme_t;
++
++static inline toolbar_theme_t *impl_from_uxgtk_theme_t(uxgtk_theme_t *theme)
++{
++    return CONTAINING_RECORD(theme, toolbar_theme_t, base);
++}
++
++static GtkStateFlags get_state_flags(int state_id)
++{
++    switch (state_id)
++    {
++        case TS_NORMAL:
++            return GTK_STATE_FLAG_NORMAL;
++
++        case TS_HOT:
++            return GTK_STATE_FLAG_PRELIGHT;
++
++        case TS_PRESSED:
++            return GTK_STATE_FLAG_ACTIVE;
++
++        case TS_DISABLED:
++            return GTK_STATE_FLAG_INSENSITIVE;
++    }
++
++    FIXME("Unsupported toolbar state %d.\n", state_id);
++    return GTK_STATE_FLAG_NORMAL;
++}
++
++static HRESULT draw_button(toolbar_theme_t *theme, cairo_t *cr, int state_id, int width, int height)
++{
++    GtkStateFlags state = get_state_flags(state_id);
++    GtkStyleContext *context;
++
++    assert(theme != NULL);
++
++    context = pgtk_widget_get_style_context(theme->button);
++    pgtk_style_context_save(context);
++
++    pgtk_style_context_set_state(context, state);
++
++    pgtk_render_background(context, cr, 0, 0, width, height);
++    pgtk_render_frame(context, cr, 0, 0, width, height);
++
++    pgtk_style_context_restore(context);
++
++    return S_OK;
++}
++
++static HRESULT draw_separator(toolbar_theme_t *theme, cairo_t *cr, int part_id,
++                              int width, int height)
++{
++    int x1, x2, y1, y2;
++    GtkStyleContext *context;
++
++    assert(theme != NULL);
++
++    context = pgtk_widget_get_style_context(theme->separator);
++
++    if (part_id == TP_SEPARATOR) /* TP_SEPARATORVERT ? */
++    {
++        y1 = 0;
++        y2 = height;
++        x1 = x2 = width/2;
++    }
++    else
++    {
++        x1 = 0;
++        x2 = width;
++        y1 = y2 = height/2;
++    }
++
++    pgtk_render_line(context, cr, x1, y1, x2, y2);
++
++    return S_OK;
++}
++
++static HRESULT draw_background(uxgtk_theme_t *theme, cairo_t *cr, int part_id, int state_id,
++                               int width, int height)
++{
++    toolbar_theme_t *toolbar_theme = impl_from_uxgtk_theme_t(theme);
++
++    switch (part_id)
++    {
++        case TP_BUTTON:
++            return draw_button(toolbar_theme, cr, state_id, width, height);
++
++        case TP_SEPARATOR:
++        case TP_SEPARATORVERT:
++            return draw_separator(toolbar_theme, cr, part_id, width, height);
++    }
++
++    FIXME("Unsupported toolbar part %d.\n", part_id);
++    return E_NOTIMPL;
++}
++
++static BOOL is_part_defined(int part_id, int state_id)
++{
++    return (part_id == TP_BUTTON || part_id == TP_SEPARATOR || part_id == TP_SEPARATORVERT);
++}
++
++static const uxgtk_theme_vtable_t toolbar_vtable =
++{
++    NULL, /* get_color */
++    draw_background,
++    NULL, /* get_part_size */
++    is_part_defined
++};
++
++uxgtk_theme_t *uxgtk_toolbar_theme_create(void)
++{
++    toolbar_theme_t *theme;
++
++    TRACE("()\n");
++
++    theme = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*theme));
++    if (!theme) return NULL;
++
++    uxgtk_theme_init(&theme->base, &toolbar_vtable);
++
++    theme->button = pgtk_button_new();
++    theme->separator = (GtkWidget *)pgtk_separator_tool_item_new();
++
++    pgtk_container_add((GtkContainer *)theme->base.layout, theme->button);
++    pgtk_container_add((GtkContainer *)theme->base.layout, theme->separator);
++
++    return &theme->base;
++}
+diff --git a/dlls/uxtheme-gtk/trackbar.c b/dlls/uxtheme-gtk/trackbar.c
+new file mode 100644
+index 0000000..58df246
+--- /dev/null
++++ b/dlls/uxtheme-gtk/trackbar.c
+@@ -0,0 +1,182 @@
++/*
++ * GTK uxtheme implementation
++ *
++ * Copyright (C) 2015 Ivan Akulinchev
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "uxthemegtk.h"
++
++#include <assert.h>
++
++#include "winbase.h"
++#include "vsstyle.h"
++#include "winerror.h"
++
++#include "wine/debug.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(uxthemegtk);
++
++typedef struct _trackbar_theme
++{
++    uxgtk_theme_t base;
++
++    int slider_length;
++    int slider_width;
++
++    GtkWidget *scale;
++} trackbar_theme_t;
++
++static inline trackbar_theme_t *impl_from_uxgtk_theme_t(uxgtk_theme_t *theme)
++{
++    return CONTAINING_RECORD(theme, trackbar_theme_t, base);
++}
++
++static HRESULT draw_track(trackbar_theme_t *theme, cairo_t *cr, int part_id, int width, int height)
++{
++    int x1, x2, y1, y2;
++    GtkStyleContext *context;
++
++    assert(theme != NULL);
++
++    context = pgtk_widget_get_style_context(theme->scale);
++    pgtk_style_context_save(context);
++
++    if (part_id == TKP_TRACKVERT)
++    {
++        y1 = 0;
++        y2 = height;
++        x1 = x2 = width/2;
++    }
++    else
++    {
++        x1 = 0;
++        x2 = width;
++        y1 = y2 = height/2;
++    }
++
++    pgtk_style_context_add_class(context, GTK_STYLE_CLASS_SEPARATOR);
++
++    pgtk_render_line(context, cr, x1, y1, x2, y2);
++
++    pgtk_style_context_restore(context);
++
++    return S_OK;
++}
++
++static HRESULT draw_thumb(trackbar_theme_t *theme, cairo_t *cr, int state_id, int width, int height)
++{
++    GtkStateFlags state = GTK_STATE_FLAG_NORMAL;
++    GtkStyleContext *context;
++
++    assert(theme != NULL);
++
++    context = pgtk_widget_get_style_context(theme->scale);
++    pgtk_style_context_save(context);
++
++    if (state_id == TUS_HOT)
++        state = GTK_STATE_FLAG_PRELIGHT;
++    else if (state_id == TUBS_PRESSED)
++        state = GTK_STATE_FLAG_ACTIVE;
++
++    pgtk_style_context_set_state(context, state);
++
++    if (width > height)
++        if (theme->slider_length > theme->slider_width)
++            pgtk_style_context_add_class(context, GTK_STYLE_CLASS_HORIZONTAL);
++        else
++            pgtk_style_context_add_class(context, GTK_STYLE_CLASS_VERTICAL);
++    else
++        if (theme->slider_length > theme->slider_width)
++            pgtk_style_context_add_class(context, GTK_STYLE_CLASS_VERTICAL);
++        else
++            pgtk_style_context_add_class(context, GTK_STYLE_CLASS_HORIZONTAL);
++
++    pgtk_style_context_add_class(context, GTK_STYLE_CLASS_SCALE);
++    pgtk_style_context_add_class(context, GTK_STYLE_CLASS_SLIDER);
++
++    pgtk_render_slider(context, cr, 0, 0, theme->slider_length, theme->slider_width,
++                       GTK_ORIENTATION_HORIZONTAL);
++
++    pgtk_style_context_restore(context);
++
++    return S_OK;
++}
++
++static HRESULT draw_background(uxgtk_theme_t *theme, cairo_t *cr, int part_id, int state_id,
++                               int width, int height)
++{
++    trackbar_theme_t *trackbar_theme = impl_from_uxgtk_theme_t(theme);
++
++    TRACE("(%p, %p, %d, %d, %d, %d)\n", theme, cr, part_id, state_id, width, height);
++
++    switch (part_id)
++    {
++        case TKP_THUMB:
++        case TKP_THUMBBOTTOM:
++        case TKP_THUMBTOP:
++        case TKP_THUMBVERT:
++        case TKP_THUMBLEFT:
++        case TKP_THUMBRIGHT:
++            return draw_thumb(trackbar_theme, cr, state_id, width, height);
++
++        case TKP_TRACK:
++        case TKP_TRACKVERT:
++            return draw_track(trackbar_theme, cr, part_id, width, height);
++    }
++
++    FIXME("Unsupported trackbar part %d.\n", part_id);
++    return E_NOTIMPL;
++}
++
++static BOOL is_part_defined(int part_id, int state_id)
++{
++    return (part_id > 0 && part_id < TKP_TICS);
++}
++
++static const uxgtk_theme_vtable_t trackbar_vtable =
++{
++    NULL, /* get_color */
++    draw_background,
++    NULL, /* get_part_size */
++    is_part_defined
++};
++
++uxgtk_theme_t *uxgtk_trackbar_theme_create(void)
++{
++    trackbar_theme_t *theme;
++
++    TRACE("()\n");
++
++    theme = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*theme));
++    if (!theme) return NULL;
++
++    uxgtk_theme_init(&theme->base, &trackbar_vtable);
++
++    theme->scale = pgtk_scale_new(GTK_ORIENTATION_HORIZONTAL, NULL);
++
++    pgtk_container_add((GtkContainer *)theme->base.layout, theme->scale);
++
++    pgtk_widget_style_get(theme->scale,
++                          "slider-length", &theme->slider_length,
++                          "slider-width", &theme->slider_width,
++                          NULL);
++
++    TRACE("-GtkScale-slider-length: %d\n", theme->slider_length);
++    TRACE("-GtkScale-slider-width: %d\n", theme->slider_width);
++
++    return &theme->base;
++}
+diff --git a/dlls/uxtheme-gtk/uxtheme-gtk.spec b/dlls/uxtheme-gtk/uxtheme-gtk.spec
+index b7db254..70cd7ff 100644
+--- a/dlls/uxtheme-gtk/uxtheme-gtk.spec
++++ b/dlls/uxtheme-gtk/uxtheme-gtk.spec
+@@ -1 +1,55 @@
+-# Empty
++# System
++@ stdcall CloseThemeData(ptr)
++@ stdcall EnableThemeDialogTexture(ptr long)
++@ stdcall EnableTheming(long)
++@ stdcall GetCurrentThemeName(wstr long wstr long wstr long)
++@ stdcall GetThemeAppProperties()
++@ stdcall GetWindowTheme(ptr)
++@ stdcall IsAppThemed()
++@ stdcall IsThemeActive()
++@ stdcall IsThemeDialogTextureEnabled(ptr)
++@ stdcall OpenThemeData(ptr wstr)
++@ stdcall SetThemeAppProperties(long)
++@ stdcall SetWindowTheme(ptr wstr wstr)
++
++# Properties
++@ stdcall GetThemeBool(ptr long long long ptr)
++@ stdcall GetThemeColor(ptr long long long ptr)
++@ stdcall GetThemeEnumValue(ptr long long long ptr)
++@ stdcall GetThemeFilename(ptr long long long wstr long)
++@ stdcall GetThemeFont(ptr ptr long long long ptr)
++@ stdcall GetThemeInt(ptr long long long ptr)
++@ stdcall GetThemeIntList(ptr long long long ptr)
++@ stdcall GetThemeMargins(ptr ptr long long long ptr ptr)
++@ stdcall GetThemeMetric(ptr ptr long long long ptr)
++@ stdcall GetThemePosition(ptr long long long ptr)
++@ stdcall GetThemePropertyOrigin(ptr long long long ptr)
++@ stdcall GetThemeRect(ptr long long long ptr)
++@ stdcall GetThemeString(ptr long long long wstr long)
++@ stdcall GetThemeTransitionDuration(ptr long long long long ptr)
++
++# Metrics
++@ stdcall GetThemeSysBool(ptr long)
++@ stdcall GetThemeSysColor(ptr long)
++@ stdcall GetThemeSysColorBrush(ptr long)
++@ stdcall GetThemeSysFont(ptr long ptr)
++@ stdcall GetThemeSysInt(ptr long ptr)
++@ stdcall GetThemeSysSize(ptr long)
++@ stdcall GetThemeSysString(ptr long wstr long)
++
++# Drawing
++@ stdcall DrawThemeBackground(ptr ptr long long ptr ptr)
++@ stdcall DrawThemeBackgroundEx(ptr ptr long long ptr ptr)
++@ stdcall DrawThemeEdge(ptr ptr long long ptr long long ptr)
++@ stdcall DrawThemeIcon(ptr ptr long long ptr ptr long)
++@ stdcall DrawThemeParentBackground(ptr ptr ptr)
++@ stdcall DrawThemeText(ptr ptr long long wstr long long long ptr)
++@ stdcall GetThemeBackgroundContentRect(ptr ptr long long ptr ptr)
++@ stdcall GetThemeBackgroundExtent(ptr ptr long long ptr ptr)
++@ stdcall GetThemeBackgroundRegion(ptr ptr long long ptr ptr)
++@ stdcall GetThemePartSize(ptr ptr long long ptr long ptr)
++@ stdcall GetThemeTextExtent(ptr ptr long long wstr long long ptr ptr)
++@ stdcall GetThemeTextMetrics(ptr ptr long long ptr)
++@ stdcall HitTestThemeBackground(ptr long long long long ptr long int64 ptr)
++@ stdcall IsThemeBackgroundPartiallyTransparent(ptr long long)
++@ stdcall IsThemePartDefined(ptr long long)
+diff --git a/dlls/uxtheme-gtk/uxtheme.c b/dlls/uxtheme-gtk/uxtheme.c
+index cd5e3c0..22285df 100644
+--- a/dlls/uxtheme-gtk/uxtheme.c
++++ b/dlls/uxtheme-gtk/uxtheme.c
+@@ -1,6 +1,7 @@
+ /*
+  * GTK uxtheme implementation
+  *
++ * Copyright (C) 2015 Ivan Akulinchev
+  * Copyright (C) 2015 Michael Müller
+  *
+  * This library is free software; you can redistribute it and/or
+@@ -22,7 +23,19 @@
+ #include "wine/port.h"
+ #include "wine/library.h"
+ 
++#include <stdarg.h>
++
++#include "windef.h"
++#include "winbase.h"
++#include "wingdi.h"
++#include "winuser.h"
++#include "winerror.h"
++#include "uxtheme.h"
++#include "vsstyle.h"
++#include "vssym32.h"
++
+ #include "wine/debug.h"
++
+ #include "uxthemegtk.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(uxthemegtk);
+@@ -31,6 +44,28 @@ static void *libgtk3 = NULL;
+ static void *libcairo = NULL;
+ static void *libgobject2 = NULL;
+ 
++static const struct
++{
++    const WCHAR *classname;
++    uxgtk_theme_t *(*create)(void);
++}
++classes[] =
++{
++    { VSCLASS_BUTTON,   uxgtk_button_theme_create },
++    { VSCLASS_COMBOBOX, uxgtk_combobox_theme_create },
++    { VSCLASS_EDIT,     uxgtk_edit_theme_create },
++    { VSCLASS_HEADER,   uxgtk_header_theme_create },
++    { VSCLASS_LISTBOX,  uxgtk_listbox_theme_create },
++    { VSCLASS_LISTVIEW, uxgtk_listview_theme_create },
++    { VSCLASS_MENU,     uxgtk_menu_theme_create },
++    { VSCLASS_REBAR,    uxgtk_rebar_theme_create },
++    { VSCLASS_STATUS,   uxgtk_status_theme_create },
++    { VSCLASS_TAB,      uxgtk_tab_theme_create },
++    { VSCLASS_TOOLBAR,  uxgtk_toolbar_theme_create },
++    { VSCLASS_TRACKBAR, uxgtk_trackbar_theme_create },
++    { VSCLASS_WINDOW,   uxgtk_window_theme_create }
++};
++
+ #define MAKE_FUNCPTR(f) typeof(f) * p##f = NULL
+ MAKE_FUNCPTR(cairo_create);
+ MAKE_FUNCPTR(cairo_destroy);
+@@ -92,6 +127,12 @@ MAKE_FUNCPTR(gtk_widget_style_get);
+ MAKE_FUNCPTR(gtk_window_new);
+ #undef MAKE_FUNCPTR
+ 
++#define NUM_SYS_COLORS      (COLOR_MENUBAR + 1)
++#define MENU_HEIGHT         20
++#define CLASSLIST_MAXLEN    128
++
++static const WCHAR THEME_PROPERTY[] = {'u','x','g','t','k','_','t','h','e','m','e',0};
++
+ static void free_gtk3_libs(void)
+ {
+     if (libgtk3) wine_dlclose(libgtk3, NULL, 0);
+@@ -197,6 +238,812 @@ error:
+     return FALSE;
+ }
+ 
++static void process_attach(void)
++{
++    int i, colors[NUM_SYS_COLORS];
++    COLORREF refs[NUM_SYS_COLORS];
++    NONCLIENTMETRICSW metrics;
++
++    if (!load_gtk3_libs())
++        return;
++
++    pgtk_init(0, NULL); /* Otherwise every call to GTK will fail */
++
++    /* apply colors */
++    for (i = 0; i < NUM_SYS_COLORS; i++)
++    {
++        colors[i] = i;
++        refs[i] = GetThemeSysColor(NULL, i);
++    }
++    SetSysColors(NUM_SYS_COLORS, colors, refs);
++
++    /* fix sys params */
++    memset(&metrics, 0, sizeof(metrics));
++    metrics.cbSize = sizeof(metrics);
++    SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(metrics), &metrics, 0);
++    metrics.iMenuHeight = MENU_HEIGHT;
++    SystemParametersInfoW(SPI_SETNONCLIENTMETRICS, sizeof(metrics), &metrics, 0);
++
++    SystemParametersInfoW(SPI_SETCLEARTYPE, 0, (LPVOID)TRUE, 0);
++    SystemParametersInfoW(SPI_SETFONTSMOOTHING, 0, (LPVOID)TRUE, 0);
++    SystemParametersInfoW(SPI_SETFLATMENU, 0, (LPVOID)TRUE, 0);
++}
++
++void uxgtk_theme_init(uxgtk_theme_t *theme, const uxgtk_theme_vtable_t *vtable)
++{
++    theme->vtable = vtable;
++    theme->window = pgtk_window_new(GTK_WINDOW_TOPLEVEL);
++    theme->layout = pgtk_fixed_new();
++    pgtk_container_add((GtkContainer *)theme->window, theme->layout);
++}
++
++static void paint_cairo_surface(cairo_surface_t *surface, HDC target_hdc,
++                                int x, int y, int width, int height)
++{
++    unsigned char *bitmap_data, *surface_data;
++    int i, dib_stride, cairo_stride;
++    HDC bitmap_hdc;
++    HBITMAP bitmap;
++    BITMAPINFO info;
++    BLENDFUNCTION bf;
++
++    info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
++    info.bmiHeader.biWidth = width;
++    info.bmiHeader.biHeight = -height; /* top-down, see MSDN */
++    info.bmiHeader.biPlanes = 1;
++    info.bmiHeader.biBitCount = 32;
++    info.bmiHeader.biCompression = BI_RGB; /* no compression */
++    info.bmiHeader.biSizeImage = 0;
++    info.bmiHeader.biXPelsPerMeter = 1;
++    info.bmiHeader.biYPelsPerMeter = 1;
++    info.bmiHeader.biClrUsed = 0;
++    info.bmiHeader.biClrImportant = 0;
++
++    bf.BlendOp = AC_SRC_OVER;
++    bf.BlendFlags = 0;
++    bf.SourceConstantAlpha = 0xff;
++    bf.AlphaFormat = AC_SRC_ALPHA;
++
++    bitmap_hdc = CreateCompatibleDC(target_hdc);
++    bitmap = CreateDIBSection(bitmap_hdc, &info, DIB_RGB_COLORS,
++                              (void **)&bitmap_data, NULL, 0);
++
++    pcairo_surface_flush(surface);
++
++    surface_data = pcairo_image_surface_get_data(surface);
++    cairo_stride = pcairo_image_surface_get_stride(surface);
++    dib_stride = width * 4;
++
++    for (i = 0; i < height; i++)
++        memcpy(bitmap_data + i * dib_stride, surface_data + i * cairo_stride, width * 4);
++
++    SelectObject(bitmap_hdc, bitmap);
++
++    GdiAlphaBlend(target_hdc, x, y, width, height,
++                  bitmap_hdc, 0, 0, width, height, bf);
++
++    DeleteObject(bitmap);
++    DeleteDC(bitmap_hdc);
++}
++
++HRESULT WINAPI CloseThemeData(HTHEME htheme)
++{
++    uxgtk_theme_t *theme = (uxgtk_theme_t *)htheme;
++
++    TRACE("(%p)\n", htheme);
++
++    if (libgtk3 == NULL)
++        return E_NOTIMPL;
++
++    if (theme == NULL)
++        return E_HANDLE;
++
++    /* Destroy the toplevel widget */
++    pgtk_widget_destroy(theme->window);
++    HeapFree(GetProcessHeap(), 0, theme);
++    return S_OK;
++}
++
++HRESULT WINAPI EnableThemeDialogTexture(HWND hwnd, DWORD flags)
++{
++    HTHEME htheme;
++
++    TRACE("(%p, %u)\n", hwnd, flags);
++
++    if (libgtk3 == NULL)
++        return E_NOTIMPL;
++
++    if (flags & ETDT_USETABTEXTURE)
++    {
++        htheme = GetWindowTheme(hwnd);
++        OpenThemeData(hwnd, VSCLASS_TAB);
++        CloseThemeData(htheme);
++    }
++
++    return S_OK; /* Always enabled */
++}
++
++HRESULT WINAPI EnableTheming(BOOL enable)
++{
++    TRACE("(%u)\n", enable);
++
++    return S_OK; /* Always enabled */
++}
++
++HRESULT WINAPI GetCurrentThemeName(LPWSTR filename, int filename_maxlen,
++                                   LPWSTR color, int color_maxlen,
++                                   LPWSTR size, int size_maxlen)
++{
++    TRACE("(%p, %d, %p, %d, %p, %d)\n", filename, filename_maxlen,
++          color, color_maxlen, size, size_maxlen);
++
++    return E_FAIL; /* To prevent calling EnumThemeColors and so on */
++}
++
++DWORD WINAPI GetThemeAppProperties(void)
++{
++    TRACE("()\n");
++
++    return STAP_ALLOW_CONTROLS; /* Non-client drawing is not supported */
++}
++
++HTHEME WINAPI GetWindowTheme(HWND hwnd)
++{
++    TRACE("(%p)\n", hwnd);
++
++    return GetPropW(hwnd, THEME_PROPERTY);
++}
++
++BOOL WINAPI IsAppThemed(void)
++{
++    TRACE("()\n");
++
++    return IsThemeActive();
++}
++
++BOOL WINAPI IsThemeActive(void)
++{
++    TRACE("()\n");
++
++    if (libgtk3 == NULL)
++        return FALSE;
++
++    return TRUE;
++}
++
++BOOL WINAPI IsThemeDialogTextureEnabled(HWND hwnd)
++{
++    TRACE("(%p)\n", hwnd);
++
++    return TRUE; /* Always enabled */
++}
++
++HTHEME WINAPI OpenThemeData(HWND hwnd, LPCWSTR classlist)
++{
++    WCHAR *start, *tok, buf[CLASSLIST_MAXLEN];
++    uxgtk_theme_t *theme;
++    int i;
++
++    TRACE("(%p, %s)\n", hwnd, debugstr_w(classlist));
++
++    if (libgtk3 == NULL)
++    {
++        SetLastError(ERROR_NOT_SUPPORTED);
++        return NULL;
++    }
++
++    /* comctl32.dll likes to send NULL */
++    if (classlist == NULL)
++    {
++        SetLastError(ERROR_INVALID_PARAMETER);
++        return NULL;
++    }
++
++    lstrcpynW(buf, classlist, CLASSLIST_MAXLEN - 1);
++    buf[CLASSLIST_MAXLEN - 1] = L'\0';
++
++    /* search for the first match */
++    start = buf;
++    for (tok = buf; *tok; tok++)
++    {
++        if (*tok != ';') continue;
++        *tok = 0;
++
++        for (i = 0; i < sizeof(classes) / sizeof(classes[0]); i++)
++            if (lstrcmpiW(start, classes[i].classname) == 0) goto found;
++
++        start = tok + 1;
++    }
++    if (start != tok)
++    {
++        for (i = 0; i < sizeof(classes) / sizeof(classes[0]); i++)
++            if (lstrcmpiW(start, classes[i].classname) == 0) goto found;
++    }
++
++    FIXME("No matching theme for %s.\n", debugstr_w(classlist));
++    SetLastError(ERROR_NOT_FOUND);
++    return NULL;
++
++found:
++    TRACE("Using %s for %s.\n", debugstr_w(classes[i].classname),
++          debugstr_w(classlist));
++
++    theme = classes[i].create();
++    if (theme && IsWindow(hwnd))
++        SetPropW(hwnd, THEME_PROPERTY, theme);
++
++    return theme;
++}
++
++void WINAPI SetThemeAppProperties(DWORD flags)
++{
++    TRACE("(%u)\n", flags);
++}
++
++HRESULT WINAPI SetWindowTheme(HWND hwnd, LPCWSTR sub_app_name,
++                              LPCWSTR sub_id_list)
++{
++    FIXME("(%p, %s, %s)\n", hwnd, debugstr_w(sub_app_name),
++          debugstr_w(sub_id_list));
++
++    return E_NOTIMPL;
++}
++
++HRESULT WINAPI GetThemeBool(HTHEME htheme, int part_id, int state_id,
++                            int prop_id, BOOL *value)
++{
++    TRACE("(%p, %d, %d, %d, %p)\n", htheme, part_id, state_id, prop_id, value);
++
++    return E_NOTIMPL;
++}
++
++HRESULT WINAPI GetThemeColor(HTHEME htheme, int part_id, int state_id,
++                             int prop_id, COLORREF *color)
++{
++    HRESULT hr;
++    GdkRGBA rgba = {0, 0, 0, 0};
++    uxgtk_theme_t *theme = (uxgtk_theme_t *)htheme;
++
++    TRACE("(%p, %d, %d, %d, %p)\n", htheme, part_id, state_id, prop_id, color);
++
++    if (libgtk3 == NULL)
++        return E_NOTIMPL;
++
++    if (theme == NULL || theme->vtable == NULL)
++        return E_HANDLE;
++
++    if (theme->vtable->get_color == NULL)
++        return E_NOTIMPL;
++
++    if (color == NULL)
++        return E_INVALIDARG;
++
++    hr = theme->vtable->get_color(theme, part_id, state_id, prop_id, &rgba);
++
++    if (SUCCEEDED(hr) && rgba.alpha > 0)
++    {
++        *color = RGB((int)(0.5 + CLAMP(rgba.red, 0.0, 1.0) * 255.0),
++                     (int)(0.5 + CLAMP(rgba.green, 0.0, 1.0) * 255.0),
++                     (int)(0.5 + CLAMP(rgba.blue, 0.0, 1.0) * 255.0));
++        return S_OK;
++    }
++
++    return E_FAIL;
++}
++
++HRESULT WINAPI GetThemeEnumValue(HTHEME htheme, int part_id, int state_id,
++                                 int prop_id, int *value)
++{
++    TRACE("(%p, %d, %d, %d, %p)\n", htheme, part_id, state_id, prop_id, value);
++
++    return E_NOTIMPL;
++}
++
++HRESULT WINAPI GetThemeFilename(HTHEME htheme, int part_id, int state_id,
++                                int prop_id, LPWSTR filename, int maxlen)
++{
++    TRACE("(%p, %d, %d, %d, %p, %d)\n", htheme, part_id, state_id, prop_id,
++          filename, maxlen);
++
++    return E_NOTIMPL;
++}
++
++HRESULT WINAPI GetThemeFont(HTHEME htheme, HDC hdc, int part_id, int state_id,
++                            int prop_id, LOGFONTW *font)
++{
++    TRACE("(%p, %d, %d, %d, %p)\n", htheme, part_id, state_id, prop_id, font);
++
++    return E_NOTIMPL;
++}
++
++HRESULT WINAPI GetThemeInt(HTHEME htheme, int part_id, int state_id,
++                           int prop_id, int *value)
++{
++    TRACE("(%p, %d, %d, %d, %p)\n", htheme, part_id, state_id, prop_id, value);
++
++    return E_NOTIMPL;
++}
++
++HRESULT WINAPI GetThemeIntList(HTHEME htheme, int part_id, int state_id,
++                               int prop_id, INTLIST *intlist)
++{
++    TRACE("(%p, %d, %d, %d, %p)\n", htheme, part_id, state_id, prop_id, intlist);
++
++    return E_NOTIMPL;
++}
++
++HRESULT WINAPI GetThemeMargins(HTHEME htheme, HDC hdc, int part_id, int state_id,
++                               int prop_id, LPRECT rect, MARGINS *margins)
++{
++    TRACE("(%p, %d, %d, %d, %p, %p)\n", htheme, part_id, state_id, prop_id, rect, margins);
++
++    memset(margins, 0, sizeof(MARGINS)); /* Set all margins to 0 */
++
++    return S_OK;
++}
++
++HRESULT WINAPI GetThemeMetric(HTHEME htheme, HDC hdc, int part_id, int state_id,
++                              int prop_id, int *value)
++{
++    TRACE("(%p, %d, %d, %d, %p)\n", htheme, part_id, state_id, prop_id, value);
++
++    return E_NOTIMPL;
++}
++
++HRESULT WINAPI GetThemePosition(HTHEME htheme, int part_id, int state_id,
++                                int prop_id, POINT *point)
++{
++    TRACE("(%p, %d, %d, %d, %p)\n", htheme, part_id, state_id, prop_id, point);
++
++    return E_NOTIMPL;
++}
++
++HRESULT WINAPI GetThemePropertyOrigin(HTHEME htheme, int part_id, int state_id,
++                                      int prop_id, PROPERTYORIGIN *origin)
++{
++    TRACE("(%p, %d, %d, %d, %p)\n", htheme, part_id, state_id, prop_id, origin);
++
++    return E_NOTIMPL;
++}
++
++HRESULT WINAPI GetThemeRect(HTHEME htheme, int part_id, int state_id,
++                            int prop_id, RECT *rect)
++{
++    TRACE("(%p, %d, %d, %d, %p)\n", htheme, part_id, state_id, prop_id, rect);
++
++    return E_NOTIMPL;
++}
++
++HRESULT WINAPI GetThemeString(HTHEME htheme, int part_id, int state_id,
++                              int prop_id, LPWSTR buffer, int maxlen)
++{
++    TRACE("(%p, %d, %d, %d, %p, %d)\n", htheme, part_id, state_id, prop_id, buffer,
++          maxlen);
++
++    return E_NOTIMPL;
++}
++
++HRESULT WINAPI GetThemeTransitionDuration(HTHEME htheme, int part_id, int state_id_from,
++                                          int state_id_to, int prop_id, DWORD *duration)
++{
++    TRACE("(%p, %d, %d, %d, %d, %p)\n", htheme, part_id, state_id_from, state_id_to, prop_id,
++          duration);
++
++    return E_NOTIMPL;
++}
++
++BOOL WINAPI GetThemeSysBool(HTHEME htheme, int bool_id)
++{
++    TRACE("(%p, %d)\n", htheme, bool_id);
++
++    SetLastError(ERROR_NOT_SUPPORTED);
++
++    return FALSE;
++}
++
++COLORREF WINAPI GetThemeSysColor(HTHEME htheme, int color_id)
++{
++    HRESULT hr = S_OK;
++    COLORREF color = 0;
++
++    static HTHEME window_htheme = NULL;
++    static HTHEME button_htheme = NULL;
++    static HTHEME edit_htheme = NULL;
++    static HTHEME menu_htheme = NULL;
++
++    TRACE("(%p, %d)\n", htheme, color_id);
++
++    if (libgtk3 == NULL)
++        return GetSysColor(color_id);
++
++    if (window_htheme == NULL)
++    {
++        window_htheme = OpenThemeData(NULL, VSCLASS_WINDOW);
++        button_htheme = OpenThemeData(NULL, VSCLASS_BUTTON);
++        edit_htheme = OpenThemeData(NULL, VSCLASS_EDIT);
++        menu_htheme = OpenThemeData(NULL, VSCLASS_MENU);
++    }
++
++    switch (color_id)
++    {
++        case COLOR_BTNFACE:
++        case COLOR_SCROLLBAR:
++        case COLOR_WINDOWFRAME:
++        case COLOR_INACTIVECAPTION:
++        case COLOR_GRADIENTINACTIVECAPTION:
++        case COLOR_3DDKSHADOW:
++        case COLOR_BTNHIGHLIGHT:
++        case COLOR_ACTIVEBORDER:
++        case COLOR_INACTIVEBORDER:
++        case COLOR_APPWORKSPACE:
++        case COLOR_BACKGROUND:
++        case COLOR_ACTIVECAPTION:
++        case COLOR_GRADIENTACTIVECAPTION:
++        case COLOR_ALTERNATEBTNFACE:
++        case COLOR_INFOBK: /* FIXME */
++            hr = GetThemeColor(window_htheme, WP_DIALOG, 0, TMT_FILLCOLOR, &color);
++            break;
++
++        case COLOR_3DLIGHT:
++        case COLOR_BTNSHADOW:
++            hr = GetThemeColor(button_htheme, BP_PUSHBUTTON, PBS_NORMAL, TMT_BORDERCOLOR, &color);
++            break;
++
++        case COLOR_BTNTEXT:
++        case COLOR_INFOTEXT:
++        case COLOR_WINDOWTEXT:
++        case COLOR_CAPTIONTEXT:
++            hr = GetThemeColor(window_htheme, WP_DIALOG, 0, TMT_TEXTCOLOR, &color);
++            break;
++
++        case COLOR_HIGHLIGHTTEXT:
++            hr = GetThemeColor(edit_htheme, EP_EDITTEXT, ETS_SELECTED, TMT_TEXTCOLOR, &color);
++            break;
++
++        case COLOR_GRAYTEXT:
++        case COLOR_INACTIVECAPTIONTEXT:
++            hr = GetThemeColor(button_htheme, BP_PUSHBUTTON, PBS_DISABLED, TMT_TEXTCOLOR, &color);
++            break;
++
++        case COLOR_HIGHLIGHT:
++        case COLOR_MENUHILIGHT:
++        case COLOR_HOTLIGHT:
++            hr = GetThemeColor(edit_htheme, EP_EDITTEXT, ETS_SELECTED, TMT_FILLCOLOR, &color);
++            break;
++
++        case COLOR_MENUBAR:
++            hr = GetThemeColor(menu_htheme, MENU_BARBACKGROUND, MB_ACTIVE, TMT_FILLCOLOR, &color);
++            break;
++
++        case COLOR_MENU:
++            hr = GetThemeColor(menu_htheme, MENU_POPUPBACKGROUND, 0, TMT_FILLCOLOR, &color);
++            break;
++
++        case COLOR_MENUTEXT:
++            hr = GetThemeColor(menu_htheme, MENU_POPUPITEM, MPI_NORMAL, TMT_TEXTCOLOR, &color);
++            break;
++
++        case COLOR_WINDOW:
++            hr = GetThemeColor(edit_htheme, EP_EDITTEXT, ETS_NORMAL, TMT_FILLCOLOR, &color);
++            break;
++
++        default:
++            FIXME("Unknown color %d.\n", color_id);
++            return GetSysColor(color_id);
++    }
++
++    if (FAILED(hr))
++        return GetSysColor(color_id);
++
++    return color;
++}
++
++HBRUSH WINAPI GetThemeSysColorBrush(HTHEME htheme, int color_id)
++{
++    TRACE("(%p, %d)\n", htheme, color_id);
++
++    return CreateSolidBrush(GetThemeSysColor(htheme, color_id));
++}
++
++HRESULT WINAPI GetThemeSysFont(HTHEME htheme, int font_id, LOGFONTW *font)
++{
++    TRACE("(%p, %d, %p)\n", htheme, font_id, font);
++
++    return E_NOTIMPL;
++}
++
++HRESULT WINAPI GetThemeSysInt(HTHEME htheme, int int_id, int *value)
++{
++    TRACE("(%p, %d, %p)\n", htheme, int_id, value);
++
++    return E_NOTIMPL;
++}
++
++int WINAPI GetThemeSysSize(HTHEME htheme, int size_id)
++{
++    TRACE("(%p, %d)\n", htheme, size_id);
++
++    SetLastError(ERROR_NOT_SUPPORTED);
++
++    return -1;
++}
++
++HRESULT WINAPI GetThemeSysString(HTHEME htheme, int string_id,
++                                 LPWSTR buffer, int maxlen)
++{
++    TRACE("(%p, %d, %p, %d)\n", htheme, string_id, buffer, maxlen);
++
++    return E_NOTIMPL;
++}
++
++HRESULT WINAPI DrawThemeBackground(HTHEME htheme, HDC hdc, int part_id, int state_id,
++                                   LPCRECT rect, LPCRECT clip_rect)
++{
++    DTBGOPTS opts;
++
++    TRACE("(%p, %p, %d, %d, %p, %p)\n", htheme, hdc, part_id, state_id, rect, clip_rect);
++
++    opts.dwSize = sizeof(DTBGOPTS);
++    opts.dwFlags = 0;
++
++    if (clip_rect != NULL)
++    {
++        opts.dwFlags = DTBG_CLIPRECT;
++        CopyRect(&opts.rcClip, clip_rect);
++    }
++
++    return DrawThemeBackgroundEx(htheme, hdc, part_id, state_id, rect, &opts);
++}
++
++HRESULT WINAPI DrawThemeBackgroundEx(HTHEME htheme, HDC hdc, int part_id, int state_id,
++                                     LPCRECT rect, const DTBGOPTS *options)
++{
++    uxgtk_theme_t *theme = (uxgtk_theme_t *)htheme;
++    cairo_surface_t *surface;
++    int width, height;
++    cairo_t *cr;
++    HRESULT hr;
++
++    TRACE("(%p, %p, %d, %d, %p, %p)\n", htheme, hdc, part_id, state_id, rect, options);
++
++    if (libgtk3 == NULL)
++        return E_NOTIMPL;
++
++    if (theme == NULL || theme->vtable == NULL)
++        return E_HANDLE;
++
++    if (theme->vtable->draw_background == NULL)
++        return E_NOTIMPL;
++
++    width = rect->right - rect->left;
++    height = rect->bottom - rect->top;
++
++    surface = pcairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
++    cr = pcairo_create(surface);
++
++    hr = theme->vtable->draw_background(theme, cr, part_id, state_id, width, height);
++    if (SUCCEEDED(hr))
++        paint_cairo_surface(surface, hdc, rect->left, rect->top, width, height);
++
++    pcairo_destroy(cr);
++    pcairo_surface_destroy(surface);
++    return hr;
++}
++
++HRESULT WINAPI DrawThemeEdge(HTHEME htheme, HDC hdc, int part_id, int state_id,
++                             LPCRECT dest_rect, UINT edge, UINT flags,
++                             LPRECT content_rect)
++{
++    TRACE("(%p, %p, %d, %d, %p, %u, %u, %p)\n", htheme, hdc, part_id, state_id,
++          dest_rect, edge, flags, content_rect);
++
++    return E_NOTIMPL;
++}
++
++HRESULT WINAPI DrawThemeIcon(HTHEME htheme, HDC hdc, int part_id, int state_id,
++                             LPCRECT rect, HIMAGELIST list, int index)
++{
++    TRACE("(%p, %p, %d, %d, %p, %p, %d)\n", htheme, hdc, part_id, state_id, rect, list, index);
++
++    return E_NOTIMPL;
++}
++
++HRESULT WINAPI DrawThemeParentBackground(HWND hwnd, HDC hdc, RECT *rect)
++{
++    HWND parent;
++
++    TRACE("(%p, %p, %p)\n", hwnd, hdc, rect);
++
++    parent = GetParent(hwnd);
++    if (!parent)
++    {
++        ERR("Window has no parent.\n");
++        return E_FAIL;
++    }
++
++    SendMessageW(parent, WM_ERASEBKGND, (WPARAM)hdc, 0);
++    SendMessageW(parent, WM_PRINTCLIENT, (WPARAM)hdc, PRF_CLIENT);
++
++    return S_OK;
++}
++
++HRESULT WINAPI DrawThemeText(HTHEME htheme, HDC hdc, int part_id, int state_id,
++                             LPCWSTR text, int length, DWORD flags, DWORD flags2,
++                             LPCRECT rect)
++{
++    RECT rt;
++    HRESULT hr;
++    COLORREF color = RGB(0, 0, 0), oldcolor;
++
++    TRACE("(%p, %p, %d, %d, %s, %u, %u, %p)\n", htheme, hdc, part_id, state_id,
++          wine_dbgstr_wn(text, length), flags, flags2, rect);
++
++    hr = GetThemeColor(htheme, part_id, state_id, TMT_TEXTCOLOR, &color);
++    if (FAILED(hr))
++    {
++        FIXME("No color.\n");
++        /*return hr;*/
++    }
++
++    oldcolor = SetTextColor(hdc, color);
++
++    CopyRect(&rt, rect);
++
++    SetBkMode(hdc, TRANSPARENT);
++    DrawTextW(hdc, text, length, &rt, flags);
++
++    SetTextColor(hdc, oldcolor);
++
++    return S_OK;
++}
++
++HRESULT WINAPI GetThemeBackgroundContentRect(HTHEME htheme, HDC hdc, int part_id, int state_id,
++                                             LPCRECT bounding_rect, LPRECT content_rect)
++{
++    HRESULT hr;
++    MARGINS margins;
++
++    TRACE("(%p, %p, %d, %d, %p, %p)\n", htheme, hdc, part_id, state_id, bounding_rect,
++          content_rect);
++
++    if (bounding_rect == NULL || content_rect == NULL)
++        return E_INVALIDARG;
++
++    hr = GetThemeMargins(htheme, hdc, part_id, state_id,
++                         TMT_CONTENTMARGINS, NULL, &margins);
++
++    if (FAILED(hr))
++        return hr;
++
++    content_rect->left = bounding_rect->left + margins.cxLeftWidth;
++    content_rect->top = bounding_rect->top + margins.cyTopHeight;
++    content_rect->right = bounding_rect->right - margins.cxRightWidth;
++    content_rect->bottom = bounding_rect->bottom - margins.cyBottomHeight;
++
++    return S_OK;
++}
++
++HRESULT WINAPI GetThemeBackgroundExtent(HTHEME htheme, HDC hdc, int part_id, int state_id,
++                                        LPCRECT content_rect, RECT *extent_rect)
++{
++    HRESULT hr;
++    MARGINS margins;
++
++    TRACE("(%p, %p, %d, %d, %p, %p)\n", htheme, hdc, part_id, state_id, content_rect,
++          extent_rect);
++
++    if (content_rect == NULL || extent_rect == NULL)
++        return E_INVALIDARG;
++
++    hr = GetThemeMargins(htheme, hdc, part_id, state_id,
++                         TMT_CONTENTMARGINS, NULL, &margins);
++
++    if (FAILED(hr))
++        return hr;
++
++    extent_rect->left = content_rect->left - margins.cxLeftWidth;
++    extent_rect->top = content_rect->top - margins.cyTopHeight;
++    extent_rect->right = content_rect->right + margins.cxRightWidth;
++    extent_rect->bottom = content_rect->bottom + margins.cyBottomHeight;
++
++    return S_OK;
++}
++
++HRESULT WINAPI GetThemeBackgroundRegion(HTHEME htheme, HDC hdc, int part_id, int state_id,
++                                        LPCRECT rect, HRGN *region)
++{
++    TRACE("(%p, %p, %d, %d, %p, %p)\n", htheme, hdc, part_id, state_id, rect, region);
++
++    return E_NOTIMPL;
++}
++
++HRESULT WINAPI GetThemePartSize(HTHEME htheme, HDC hdc, int part_id, int state_id,
++                                RECT *rect, THEMESIZE type, SIZE *size)
++{
++    uxgtk_theme_t *theme = (uxgtk_theme_t *)htheme;
++
++    TRACE("(%p, %p, %d, %d, %p, %d, %p)\n", htheme, hdc, part_id, state_id, rect, type, size);
++
++    if (libgtk3 == NULL)
++        return E_NOTIMPL;
++
++    if (theme == NULL || theme->vtable == NULL)
++        return E_HANDLE;
++
++    if (theme->vtable->get_part_size == NULL)
++        return E_NOTIMPL;
++
++    if (rect == NULL || size == NULL)
++        return E_INVALIDARG;
++
++    return theme->vtable->get_part_size(theme, part_id, state_id, rect, size);
++}
++
++HRESULT WINAPI GetThemeTextExtent(HTHEME htheme, HDC hdc, int part_id, int state_id,
++                                  LPCWSTR text, int length, DWORD flags,
++                                  LPCRECT bounding_rect, LPRECT extent_rect)
++{
++    TRACE("(%p, %p, %d, %d, %s, %u, %p, %p)\n", htheme, hdc, part_id, state_id,
++          wine_dbgstr_wn(text, length), flags, bounding_rect, extent_rect);
++
++    return E_NOTIMPL;
++}
++
++HRESULT WINAPI GetThemeTextMetrics(HTHEME htheme, HDC hdc, int part_id, int state_id,
++                                   TEXTMETRICW *metric)
++{
++    TRACE("(%p, %p, %d, %d, %p)\n", htheme, hdc, part_id, state_id, metric);
++
++    if (!GetTextMetricsW(hdc, metric))
++        return HRESULT_FROM_WIN32(GetLastError());
++
++    return S_OK;
++}
++
++HRESULT WINAPI HitTestThemeBackground(HTHEME htheme, HDC hdc, int part_id, int state_id,
++                                      DWORD options, LPCRECT rect, HRGN hrgn,
++                                      POINT point, WORD *hit_test_code)
++{
++    TRACE("(%p, %p, %d, %d, %u, %p, %p, (%d, %d), %p)\n", htheme, hdc, part_id, state_id, options,
++          rect, hrgn, point.x, point.y, hit_test_code);
++
++    return E_NOTIMPL;
++}
++
++BOOL WINAPI IsThemeBackgroundPartiallyTransparent(HTHEME htheme, int part_id, int state_id)
++{
++    TRACE("(%p, %d, %d)\n", htheme, part_id, state_id);
++
++    return TRUE; /* The most widgets are partially transparent */
++}
++
++BOOL WINAPI IsThemePartDefined(HTHEME htheme, int part_id, int state_id)
++{
++    uxgtk_theme_t *theme = (uxgtk_theme_t *)htheme;
++
++    TRACE("(%p, %d, %d)\n", htheme, part_id, state_id);
++
++    if (libgtk3 == NULL)
++    {
++        SetLastError(ERROR_NOT_SUPPORTED);
++        return FALSE;
++    }
++
++    if (theme == NULL || theme->vtable == NULL)
++    {
++        SetLastError(ERROR_INVALID_HANDLE);
++        return FALSE;
++    }
++
++    if (theme->vtable->is_part_defined == NULL)
++    {
++        SetLastError(ERROR_NOT_SUPPORTED);
++        return FALSE;
++    }
++
++    return theme->vtable->is_part_defined(part_id, state_id);
++}
++
+ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
+ {
+     TRACE("(%p, %d, %p)\n", instance, reason, reserved);
+@@ -205,13 +1052,13 @@ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
+     {
+         case DLL_PROCESS_ATTACH:
+             DisableThreadLibraryCalls(instance);
+-            if (!load_gtk3_libs()) return FALSE;
+-            break;
++            process_attach();
++            return TRUE;
+ 
+         case DLL_PROCESS_DETACH:
+             if (reserved) break;
+             free_gtk3_libs();
+-            break;
++            return TRUE;
+     }
+ 
+     return TRUE;
+diff --git a/dlls/uxtheme-gtk/uxthemegtk.h b/dlls/uxtheme-gtk/uxthemegtk.h
+index 42e4784..17307f1 100644
+--- a/dlls/uxtheme-gtk/uxthemegtk.h
++++ b/dlls/uxtheme-gtk/uxthemegtk.h
+@@ -1,6 +1,7 @@
+ /*
+  * GTK uxtheme implementation
+  *
++ * Copyright (C) 2015 Ivan Akulinchev
+  * Copyright (C) 2015 Michael Müller
+  *
+  * This library is free software; you can redistribute it and/or
+@@ -21,9 +22,45 @@
+ #ifndef UXTHEMEGTK_H
+ #define UXTHEMEGTK_H
+ 
++#include "windef.h"
++
+ #define GDK_DISABLE_DEPRECATION_WARNINGS
+ #include <gtk/gtk.h>
+ 
++typedef struct _uxgtk_theme uxgtk_theme_t;
++typedef struct _uxgtk_theme_vtable uxgtk_theme_vtable_t;
++
++struct _uxgtk_theme_vtable
++{
++    HRESULT (*get_color)(uxgtk_theme_t *theme, int part_id, int state_id,
++                         int prop_id, GdkRGBA *rgba);
++    HRESULT (*draw_background)(uxgtk_theme_t *theme, cairo_t *cr, int part_id, int state_id,
++                              int width, int height);
++    HRESULT (*get_part_size)(uxgtk_theme_t *theme, int part_id, int state_id,
++                             RECT *rect, SIZE *size);
++    BOOL (*is_part_defined)(int part_id, int state_id);
++};
++
++struct _uxgtk_theme
++{
++    const uxgtk_theme_vtable_t *vtable;
++
++    GtkWidget *window;
++    GtkWidget *layout;
++};
++
++typedef HANDLE HTHEMEFILE;
++
++typedef struct tagTHEMENAMES
++{
++    WCHAR szName[MAX_PATH+1];
++    WCHAR szDisplayName[MAX_PATH+1];
++    WCHAR szTooltip[MAX_PATH+1];
++} THEMENAMES, *PTHEMENAMES;
++
++typedef BOOL (CALLBACK *EnumThemeProc)(LPVOID, LPCWSTR, LPCWSTR, LPCWSTR, LPVOID, LPVOID);
++typedef BOOL (CALLBACK *ParseThemeIniFileProc)(DWORD, LPWSTR, LPWSTR, LPWSTR, DWORD, LPVOID);
++
+ #define MAKE_FUNCPTR(f) extern typeof(f) * p##f DECLSPEC_HIDDEN
+ MAKE_FUNCPTR(cairo_create);
+ MAKE_FUNCPTR(cairo_destroy);
+@@ -85,4 +122,20 @@ MAKE_FUNCPTR(gtk_widget_style_get);
+ MAKE_FUNCPTR(gtk_window_new);
+ #undef MAKE_FUNCPTR
+ 
++uxgtk_theme_t *uxgtk_button_theme_create(void) DECLSPEC_HIDDEN;
++uxgtk_theme_t *uxgtk_combobox_theme_create(void) DECLSPEC_HIDDEN;
++uxgtk_theme_t *uxgtk_edit_theme_create(void) DECLSPEC_HIDDEN;
++uxgtk_theme_t *uxgtk_header_theme_create(void) DECLSPEC_HIDDEN;
++uxgtk_theme_t *uxgtk_listbox_theme_create(void) DECLSPEC_HIDDEN;
++uxgtk_theme_t *uxgtk_listview_theme_create(void) DECLSPEC_HIDDEN;
++uxgtk_theme_t *uxgtk_menu_theme_create(void) DECLSPEC_HIDDEN;
++uxgtk_theme_t *uxgtk_rebar_theme_create(void) DECLSPEC_HIDDEN;
++uxgtk_theme_t *uxgtk_status_theme_create(void) DECLSPEC_HIDDEN;
++uxgtk_theme_t *uxgtk_tab_theme_create(void) DECLSPEC_HIDDEN;
++uxgtk_theme_t *uxgtk_toolbar_theme_create(void) DECLSPEC_HIDDEN;
++uxgtk_theme_t *uxgtk_trackbar_theme_create(void) DECLSPEC_HIDDEN;
++uxgtk_theme_t *uxgtk_window_theme_create(void) DECLSPEC_HIDDEN;
++
++void uxgtk_theme_init(uxgtk_theme_t *theme, const uxgtk_theme_vtable_t *vtable) DECLSPEC_HIDDEN;
++
+ #endif /* UXTHEMEGTK_H */
+diff --git a/dlls/uxtheme-gtk/window.c b/dlls/uxtheme-gtk/window.c
+new file mode 100644
+index 0000000..cf617ef
+--- /dev/null
++++ b/dlls/uxtheme-gtk/window.c
+@@ -0,0 +1,166 @@
++/*
++ * GTK uxtheme implementation
++ *
++ * Copyright (C) 2015 Ivan Akulinchev
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "uxthemegtk.h"
++
++#include <assert.h>
++
++#include "winbase.h"
++#include "vsstyle.h"
++#include "vssym32.h"
++#include "winerror.h"
++
++#include "wine/debug.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(uxthemegtk);
++
++typedef struct _window_theme
++{
++    uxgtk_theme_t base;
++} window_theme_t;
++
++static inline window_theme_t *impl_from_uxgtk_theme_t(uxgtk_theme_t *theme)
++{
++    return CONTAINING_RECORD(theme, window_theme_t, base);
++}
++
++static HRESULT get_fill_color(uxgtk_theme_t *theme, int part_id, int state_id, GdkRGBA *rgba)
++{
++    GtkStyleContext *context;
++    GtkStateFlags state;
++
++    assert(theme != NULL);
++
++    switch (part_id)
++    {
++        case WP_DIALOG:
++            state = GTK_STATE_FLAG_NORMAL;
++            context = pgtk_widget_get_style_context(theme->window);
++            break;
++
++        default:
++            FIXME("Unsupported window part %d.\n", part_id);
++            return E_NOTIMPL;
++    }
++
++    pgtk_style_context_get_background_color(context, state, rgba);
++
++    return S_OK;
++}
++
++static HRESULT get_text_color(uxgtk_theme_t *theme, int part_id, int state_id, GdkRGBA *rgba)
++{
++    GtkStyleContext *context;
++    GtkStateFlags state;
++
++    assert(theme != NULL);
++
++    switch (part_id)
++    {
++        case WP_DIALOG:
++            state = GTK_STATE_FLAG_NORMAL;
++            context = pgtk_widget_get_style_context(theme->window);
++            break;
++
++        default:
++            FIXME("Unsupported window part %d.\n", part_id);
++            return E_NOTIMPL;
++    }
++
++    pgtk_style_context_get_color(context, state, rgba);
++
++    return S_OK;
++}
++
++static HRESULT get_color(uxgtk_theme_t *theme, int part_id, int state_id,
++                         int prop_id, GdkRGBA *rgba)
++{
++    switch (prop_id)
++    {
++        case TMT_FILLCOLOR:
++            return get_fill_color(theme, part_id, state_id, rgba);
++
++        case TMT_TEXTCOLOR:
++            return get_text_color(theme, part_id, state_id, rgba);
++
++        default:
++            FIXME("Unsupported property %d.\n", prop_id);
++            return E_FAIL;
++    }
++
++    return S_OK;
++}
++
++static HRESULT draw_dialog(uxgtk_theme_t *theme, cairo_t *cr, int state_id, int width, int height)
++{
++    GtkStyleContext *context;
++
++    assert(theme != NULL);
++
++    context = pgtk_widget_get_style_context(theme->window);
++
++    pgtk_render_background(context, cr, 0, 0, width, height);
++
++    return S_OK;
++}
++
++static HRESULT draw_background(uxgtk_theme_t *theme, cairo_t *cr, int part_id, int state_id,
++                               int width, int height)
++{
++    switch (part_id)
++    {
++        case WP_DIALOG:
++            return draw_dialog(theme, cr, state_id, width, height);
++    }
++
++    FIXME("Unsupported window part %d.\n", part_id);
++    return E_NOTIMPL;
++}
++
++static BOOL is_part_defined(int part_id, int state_id)
++{
++    return (part_id == WP_DIALOG);
++}
++
++static const uxgtk_theme_vtable_t window_vtable =
++{
++    get_color,
++    draw_background,
++    NULL, /* get_part_size */
++    is_part_defined
++};
++
++uxgtk_theme_t *uxgtk_window_theme_create(void)
++{
++    window_theme_t *theme;
++    GtkStyleContext *context;
++
++    TRACE("()\n");
++
++    theme = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*theme));
++    if (!theme) return NULL;
++
++    uxgtk_theme_init(&theme->base, &window_vtable);
++
++    context = pgtk_widget_get_style_context(theme->base.window);
++    pgtk_style_context_add_class(context, GTK_STYLE_CLASS_BACKGROUND);
++
++    return &theme->base;
++}
+-- 
+2.5.0
+

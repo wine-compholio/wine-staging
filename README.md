@@ -39,10 +39,11 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [8]:**
+**Bug fixes and features included in the next upcoming release [9]:**
 
 * Add stub dlls required for MSVC 2015 runtime library (Windows 10)
 * Add stubs for additional wininet options in InternetSetOption
+* Add support for GTK3 theming
 * Fake success in IViewObject::Draw stub ([Wine Bug #30611](https://bugs.winehq.org/show_bug.cgi?id=30611))
 * Fix possible integer overflow in VarR4FromDec ([Wine Bug #38988](https://bugs.winehq.org/show_bug.cgi?id=38988))
 * Implement stub for vcomp._vcomp_flush ([Wine Bug #39058](https://bugs.winehq.org/show_bug.cgi?id=39058))

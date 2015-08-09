@@ -276,6 +276,7 @@ patch_enable_all ()
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
 	enable_winex11_wglShareLists="$1"
+	enable_winhttp_Request_Headers="$1"
 	enable_winhttp_System_Proxy_Autoconfig="$1"
 	enable_wininet_Cleanup="$1"
 	enable_wininet_Internet_Settings="$1"
@@ -908,6 +909,9 @@ patch_enable ()
 			;;
 		winex11-wglShareLists)
 			enable_winex11_wglShareLists="$2"
+			;;
+		winhttp-Request_Headers)
+			enable_winhttp_Request_Headers="$2"
 			;;
 		winhttp-System_Proxy_Autoconfig)
 			enable_winhttp_System_Proxy_Autoconfig="$2"
@@ -5680,6 +5684,23 @@ if test "$enable_winex11_wglShareLists" -eq 1; then
 	patch_apply winex11-wglShareLists/0001-winex11.drv-Only-warn-about-used-contexts-in-wglShar.patch
 	(
 		echo '+    { "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winhttp-Request_Headers
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35953] Winhttp raw request headers must be terminated using double \r\n
+# |
+# | Modified files:
+# |   *	dlls/winhttp/request.c, dlls/winhttp/tests/winhttp.c
+# |
+if test "$enable_winhttp_Request_Headers" -eq 1; then
+	patch_apply winhttp-Request_Headers/0001-winhttp-Remove-unused-variable-in-read_reply.patch
+	patch_apply winhttp-Request_Headers/0002-winhttp-Raw-request-headers-needs-to-be-terminated-u.patch
+	(
+		echo '+    { "Michael Müller", "winhttp: Remove unused variable in read_reply().", 1 },';
+		echo '+    { "Michael Müller", "winhttp: Raw request headers needs to be terminated using double \\\\r\\\\n.", 1 },';
 	) >> "$patchlist"
 fi
 

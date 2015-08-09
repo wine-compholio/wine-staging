@@ -1,0 +1,100 @@
+From e6a6251091cdffd205827f5755622ad2b787aa0c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 9 Aug 2015 16:44:49 +0200
+Subject: winhttp: Raw request headers needs to be terminated using double
+ \r\n.
+
+---
+ dlls/winhttp/request.c       | 14 ++++++++------
+ dlls/winhttp/tests/winhttp.c | 18 ++++++++++++++++++
+ 2 files changed, 26 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/winhttp/request.c b/dlls/winhttp/request.c
+index 607b502..498df2b 100644
+--- a/dlls/winhttp/request.c
++++ b/dlls/winhttp/request.c
+@@ -672,11 +672,8 @@ static BOOL query_headers( request_t *request, DWORD level, LPCWSTR name, LPVOID
+         if (!(p = headers)) return FALSE;
+         for (len = 0; *p; p++) if (*p != '\r') len++;
+ 
+-        if (!buffer || (len + 1) * sizeof(WCHAR) > *buflen)
+-        {
+-            len++;
++        if (!buffer || len * sizeof(WCHAR) > *buflen)
+             set_last_error( ERROR_INSUFFICIENT_BUFFER );
+-        }
+         else
+         {
+             for (p = headers, q = buffer; *p; p++, q++)
+@@ -688,8 +685,8 @@ static BOOL query_headers( request_t *request, DWORD level, LPCWSTR name, LPVOID
+                     p++; /* skip '\n' */
+                 }
+             }
+-            *q = 0;
+             TRACE("returning data: %s\n", debugstr_wn(buffer, len));
++            if (len) len--;
+             ret = TRUE;
+         }
+         *buflen = len * sizeof(WCHAR);
+@@ -2155,7 +2152,7 @@ static BOOL read_reply( request_t *request )
+ 
+         buflen = MAX_REPLY_LEN;
+         if (!read_line( request, buffer, &buflen )) return TRUE;
+-        if (!*buffer) break;
++        if (!*buffer) buflen = 1;
+ 
+         while (len - offset < buflen + crlf_len)
+         {
+@@ -2164,6 +2161,11 @@ static BOOL read_reply( request_t *request )
+             if (!(tmp = heap_realloc( raw_headers, len * sizeof(WCHAR) ))) return FALSE;
+             request->raw_headers = raw_headers = tmp;
+         }
++        if (!*buffer)
++        {
++            memcpy( raw_headers + offset, crlf, sizeof(crlf) );
++            break;
++        }
+         MultiByteToWideChar( CP_ACP, 0, buffer, buflen, raw_headers + offset, buflen );
+ 
+         if (!(header = parse_header( raw_headers + offset ))) break;
+diff --git a/dlls/winhttp/tests/winhttp.c b/dlls/winhttp/tests/winhttp.c
+index cb462bb..3131dcf 100644
+--- a/dlls/winhttp/tests/winhttp.c
++++ b/dlls/winhttp/tests/winhttp.c
+@@ -2126,8 +2126,11 @@ static DWORD CALLBACK server_thread(LPVOID param)
+ 
+ static void test_basic_request(int port, const WCHAR *verb, const WCHAR *path)
+ {
++    static const WCHAR test_header_end_clrf[] = {'\r','\n','\r','\n',0};
++    static const WCHAR test_header_end_raw[] = {0,0};
+     HINTERNET ses, con, req;
+     char buffer[0x100];
++    WCHAR buffer2[0x100];
+     DWORD count, status, size, error, supported, first, target;
+     BOOL ret;
+ 
+@@ -2162,6 +2165,21 @@ static void test_basic_request(int port, const WCHAR *verb, const WCHAR *path)
+     ok(first == 0xdeadbeef, "got %x\n", first);
+     ok(target == 0xdeadbeef, "got %x\n", target);
+ 
++    size = sizeof(buffer2);
++    memset(buffer2, 0, sizeof(buffer2));
++    ret = WinHttpQueryHeaders(req, WINHTTP_QUERY_RAW_HEADERS_CRLF, NULL, buffer2, &size, NULL);
++    ok(ret, "failed to query for raw headers: %u\n", GetLastError());
++    ok(memcmp(buffer2 + lstrlenW(buffer2) - 4, test_header_end_clrf, sizeof(test_header_end_clrf)) == 0,
++       "WinHttpQueryHeaders returned invalid end of header string\n");
++
++    size = sizeof(buffer2);
++    memset(buffer2, 0, sizeof(buffer2));
++    ret = WinHttpQueryHeaders(req, WINHTTP_QUERY_RAW_HEADERS, NULL, buffer2, &size, NULL);
++    ok(ret, "failed to query for raw headers: %u\n", GetLastError());
++    ok(memcmp(buffer2 + (size / sizeof(WCHAR)) - 1, test_header_end_raw, sizeof(test_header_end_raw)) == 0,
++       "WinHttpQueryHeaders returned invalid end of header string\n");
++    ok(buffer2[(size / sizeof(WCHAR)) - 2] != 0, "String has too many NULL characters\n");
++
+     count = 0;
+     memset(buffer, 0, sizeof(buffer));
+     ret = WinHttpReadData(req, buffer, sizeof buffer, &count);
+-- 
+2.5.0
+

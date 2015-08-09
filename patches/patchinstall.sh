@@ -4800,10 +4800,12 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 	patch_apply uxtheme-GTK_Theming/0001-uxthemegtk-Add-configure-check-and-stub-dll.patch
 	patch_apply uxtheme-GTK_Theming/0002-uxthemegtk-Initial-implementation.patch
 	patch_apply uxtheme-GTK_Theming/0003-uxthemegtk-Implement-enumeration-of-themes-color-and.patch
+	patch_apply uxtheme-GTK_Theming/0004-uxthemegtk-Correctly-render-buttons-with-GTK-3.14.0.patch
 	(
 		echo '+    { "Michael Müller", "uxthemegtk: Add configure check and stub dll.", 1 },';
 		echo '+    { "Ivan Akulinchev", "uxthemegtk: Initial implementation.", 1 },';
 		echo '+    { "Michael Müller", "uxthemegtk: Implement enumeration of themes, color and sizes.", 1 },';
+		echo '+    { "Sebastian Lackner", "uxthemegtk: Correctly render buttons with GTK >= 3.14.0.", 1 },';
 	) >> "$patchlist"
 fi
 

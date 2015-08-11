@@ -436,7 +436,7 @@ def resolve_dependencies(all_patches, index = None, depends = None):
     """Returns a sorted list with all dependencies for a given patch."""
 
     def _resolve(depends):
-        for i in depends:
+        for i in sorted(depends):
             # Check for disabled patch
             if all_patches[i].disabled:
                 raise PatchUpdaterError("Encountered dependency on disabled patchset %s" % all_patches[i].name)

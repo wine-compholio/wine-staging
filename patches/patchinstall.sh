@@ -2017,23 +2017,6 @@ if test "$enable_Staging" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2050,6 +2033,23 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2347,6 +2347,28 @@ if test "$enable_d3dx9_26_ID3DXEffect" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset d3dx9_36-D3DXStubs
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38334] Add stub for D3DXFrameFind
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_24/d3dx9_24.spec, dlls/d3dx9_25/d3dx9_25.spec, dlls/d3dx9_26/d3dx9_26.spec, dlls/d3dx9_27/d3dx9_27.spec,
+# | 	dlls/d3dx9_28/d3dx9_28.spec, dlls/d3dx9_29/d3dx9_29.spec, dlls/d3dx9_30/d3dx9_30.spec, dlls/d3dx9_31/d3dx9_31.spec,
+# | 	dlls/d3dx9_32/d3dx9_32.spec, dlls/d3dx9_33/d3dx9_33.spec, dlls/d3dx9_34/d3dx9_34.spec, dlls/d3dx9_35/d3dx9_35.spec,
+# | 	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/mesh.c, dlls/d3dx9_37/d3dx9_37.spec, dlls/d3dx9_38/d3dx9_38.spec,
+# | 	dlls/d3dx9_39/d3dx9_39.spec, dlls/d3dx9_40/d3dx9_40.spec, dlls/d3dx9_41/d3dx9_41.spec, dlls/d3dx9_42/d3dx9_42.spec,
+# | 	dlls/d3dx9_43/d3dx9_43.spec
+# |
+if test "$enable_d3dx9_36_D3DXStubs" -eq 1; then
+	patch_apply d3dx9_36-D3DXStubs/0001-d3dx9_36-Add-stub-for-D3DXComputeNormalMap.patch
+	patch_apply d3dx9_36-D3DXStubs/0002-d3dx9_36-Add-D3DXFrameFind-stub.patch
+	(
+		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeNormalMap.", 1 },';
+		echo '+    { "Andrey Gusev", "d3dx9_36: Add D3DXFrameFind stub.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-DXTn
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2388,28 +2410,6 @@ if test "$enable_d3dx9_36_DXTn" -eq 1; then
 	patch_apply d3dx9_36-DXTn/0001-d3dx9_36-Add-dxtn-support.patch
 	(
 		echo '+    { "Christian Costa", "d3dx9_36: Add dxtn support.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3dx9_36-D3DXStubs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38334] Add stub for D3DXFrameFind
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_24/d3dx9_24.spec, dlls/d3dx9_25/d3dx9_25.spec, dlls/d3dx9_26/d3dx9_26.spec, dlls/d3dx9_27/d3dx9_27.spec,
-# | 	dlls/d3dx9_28/d3dx9_28.spec, dlls/d3dx9_29/d3dx9_29.spec, dlls/d3dx9_30/d3dx9_30.spec, dlls/d3dx9_31/d3dx9_31.spec,
-# | 	dlls/d3dx9_32/d3dx9_32.spec, dlls/d3dx9_33/d3dx9_33.spec, dlls/d3dx9_34/d3dx9_34.spec, dlls/d3dx9_35/d3dx9_35.spec,
-# | 	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/mesh.c, dlls/d3dx9_37/d3dx9_37.spec, dlls/d3dx9_38/d3dx9_38.spec,
-# | 	dlls/d3dx9_39/d3dx9_39.spec, dlls/d3dx9_40/d3dx9_40.spec, dlls/d3dx9_41/d3dx9_41.spec, dlls/d3dx9_42/d3dx9_42.spec,
-# | 	dlls/d3dx9_43/d3dx9_43.spec
-# |
-if test "$enable_d3dx9_36_D3DXStubs" -eq 1; then
-	patch_apply d3dx9_36-D3DXStubs/0001-d3dx9_36-Add-stub-for-D3DXComputeNormalMap.patch
-	patch_apply d3dx9_36-D3DXStubs/0002-d3dx9_36-Add-D3DXFrameFind-stub.patch
-	(
-		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeNormalMap.", 1 },';
-		echo '+    { "Andrey Gusev", "d3dx9_36: Add D3DXFrameFind stub.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3047,6 +3047,18 @@ if test "$enable_kernel32_CompareStringEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-SetFileInformationByHandle
+# |
+# | Modified files:
+# |   *	include/winbase.h
+# |
+if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
+	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
+	(
+		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-File_Permissions
 # |
 # | Modified files:
@@ -3107,18 +3119,6 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		echo '+    { "Zhaonan Liang", "include: Add declaration for FILE_LINK_INFORMATION.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Add tests for FileLinkInformation class.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement support for FileLinkInformation class in NtSetInformationFile.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5082,6 +5082,21 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-Geforce_425M
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35054] Add wined3d detection for GeForce GT 425M
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Geforce_425M" -eq 1; then
+	patch_apply wined3d-Geforce_425M/0001-wined3d-Add-detection-for-NVIDIA-GeForce-425M.patch
+	(
+		echo '+    { "Jarkko Korpi", "wined3d: Add detection for NVIDIA GeForce 425M.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-MESA_GPU_Info
 # |
 # | Modified files:
@@ -5175,21 +5190,6 @@ if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
 	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Geforce_425M
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35054] Add wined3d detection for GeForce GT 425M
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Geforce_425M" -eq 1; then
-	patch_apply wined3d-Geforce_425M/0001-wined3d-Add-detection-for-NVIDIA-GeForce-425M.patch
-	(
-		echo '+    { "Jarkko Korpi", "wined3d: Add detection for NVIDIA GeForce 425M.", 1 },';
 	) >> "$patchlist"
 fi
 

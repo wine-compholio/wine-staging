@@ -3834,7 +3834,7 @@ fi
 if test "$enable_ntdll_NtMapViewOfSection" -eq 1; then
 	patch_apply ntdll-NtMapViewOfSection/0001-ntdll-Separate-image-relocation-from-NtMapViewOfSect.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "ntdll: Separate image relocation from NtMapViewOfSection.", 2 },';
+		echo '+    { "Dmitry Timoshkov", "ntdll: Separate image relocation from NtMapViewOfSection.", 3 },';
 	) >> "$patchlist"
 fi
 

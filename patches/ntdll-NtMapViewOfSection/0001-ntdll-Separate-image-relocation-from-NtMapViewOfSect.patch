@@ -1,16 +1,19 @@
-From 41cd5a1cb61aed36cc57eb2602055f62911ca809 Mon Sep 17 00:00:00 2001
+From 115e90057158cd7e6a40ee174d1480901cf540f4 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Tue, 11 Aug 2015 07:03:49 +0200
-Subject: ntdll: Separate image relocation from NtMapViewOfSection. (v2)
+Subject: ntdll: Separate image relocation from NtMapViewOfSection. (v3)
 
 Changes in v2 by Sebastian Lackner <sebastian@fds-team.de>:
 * Don't pass a NULL pointer to NtProtectVirtualMemory.
 * Check against mapped size instead of header field.
+
+Changes in v3 by Sebastian Lackner <sebastian@fds-team.de>:
+* Add missing check for non-aligned PE binaries.
 ---
- dlls/kernel32/tests/loader.c | 10 ------
- dlls/ntdll/loader.c          | 83 +++++++++++++++++++++++++++++++++++++++++++-
- dlls/ntdll/virtual.c         | 44 +----------------------
- 3 files changed, 83 insertions(+), 54 deletions(-)
+ dlls/kernel32/tests/loader.c | 10 -----
+ dlls/ntdll/loader.c          | 87 +++++++++++++++++++++++++++++++++++++++++++-
+ dlls/ntdll/virtual.c         | 44 +---------------------
+ 3 files changed, 87 insertions(+), 54 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
 index 89feeb9..25b7b08 100644
@@ -41,10 +44,10 @@ index 89feeb9..25b7b08 100644
      ok(status == STATUS_SUCCESS, "NtUnmapViewOfSection error %x\n", status);
  
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index fb7b171..465456b 100644
+index fb7b171..63451a0 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -1656,6 +1656,77 @@ static void set_security_cookie( void *module, SIZE_T len )
+@@ -1656,6 +1656,81 @@ static void set_security_cookie( void *module, SIZE_T len )
      }
  }
  
@@ -62,6 +65,10 @@ index fb7b171..465456b 100644
 +    base = (char *)nt->OptionalHeader.ImageBase;
 +
 +    assert( module != base );
++
++    /* no relocations are performed on non page-aligned binaries */
++    if (nt->OptionalHeader.SectionAlignment < page_size)
++        return STATUS_SUCCESS;
 +
 +    if (!(nt->FileHeader.Characteristics & IMAGE_FILE_DLL) && NtCurrentTeb()->Peb->ImageBaseAddress)
 +        return STATUS_SUCCESS;
@@ -122,7 +129,7 @@ index fb7b171..465456b 100644
  
  /******************************************************************************
   *	load_native_dll  (internal)
-@@ -1681,7 +1752,17 @@ static NTSTATUS load_native_dll( LPCWSTR load_path, LPCWSTR name, HANDLE file,
+@@ -1681,7 +1756,17 @@ static NTSTATUS load_native_dll( LPCWSTR load_path, LPCWSTR name, HANDLE file,
      module = NULL;
      status = NtMapViewOfSection( mapping, NtCurrentProcess(),
                                   &module, 0, 0, &size, &len, ViewShare, 0, PAGE_EXECUTE_READ );

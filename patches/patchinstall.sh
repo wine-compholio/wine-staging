@@ -51,7 +51,7 @@ usage()
 # Show version information
 version()
 {
-	echo "Wine Staging 1.7.49"
+	echo "Wine Staging 1.7.50 (unreleased)"
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -4813,6 +4813,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#39058] Implement stub for vcomp._vcomp_flush
+# |   *	[#26688] Implement vcomp locking functions
 # |
 # | Modified files:
 # |   *	dlls/vcomp/main.c, dlls/vcomp/tests/vcomp.c, dlls/vcomp/vcomp.spec, dlls/vcomp100/vcomp100.spec,
@@ -4820,8 +4821,18 @@ fi
 # |
 if test "$enable_vcomp_Functions" -eq 1; then
 	patch_apply vcomp-Functions/0001-vcomp-Implement-_vcomp_flush-and-add-tests.patch
+	patch_apply vcomp-Functions/0002-vcomp-Implement-omp_init_lock-and-omp_destroy_lock.patch
+	patch_apply vcomp-Functions/0003-vcomp-Export-omp_init_nest_lock-and-omp_destroy_nest.patch
+	patch_apply vcomp-Functions/0004-vcomp-Implement-OpenMP-nested-locking-functions.patch
+	patch_apply vcomp-Functions/0005-vcomp-Implement-OpenMP-regular-locking-functions.patch
+	patch_apply vcomp-Functions/0006-vcomp-tests-Add-tests-for-function-pointers-of-remai.patch
 	(
 		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_flush and add tests.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp: Implement omp_init_lock and omp_destroy_lock.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp: Export omp_init_nest_lock and omp_destroy_nest_lock.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp: Implement OpenMP nested locking functions.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp: Implement OpenMP regular locking functions.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp/tests: Add tests for function pointers of remaining lock functions.", 1 },';
 	) >> "$patchlist"
 fi
 

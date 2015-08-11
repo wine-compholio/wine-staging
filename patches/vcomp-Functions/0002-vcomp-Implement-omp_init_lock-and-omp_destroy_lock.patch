@@ -1,0 +1,184 @@
+From 8ae03eb63457887c256bd9ddcc1cc848ab6d0f24 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Tue, 11 Aug 2015 05:45:30 +0200
+Subject: vcomp: Implement omp_init_lock and omp_destroy_lock.
+
+---
+ dlls/vcomp/main.c           | 55 ++++++++++++++++++++++++++++++++-------------
+ dlls/vcomp/vcomp.spec       |  4 ++--
+ dlls/vcomp100/vcomp100.spec |  4 ++--
+ dlls/vcomp110/vcomp110.spec |  4 ++--
+ dlls/vcomp90/vcomp90.spec   |  4 ++--
+ 5 files changed, 47 insertions(+), 24 deletions(-)
+
+diff --git a/dlls/vcomp/main.c b/dlls/vcomp/main.c
+index 0f733a9..0a5e709 100644
+--- a/dlls/vcomp/main.c
++++ b/dlls/vcomp/main.c
+@@ -34,6 +34,9 @@
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(vcomp);
+ 
++typedef CRITICAL_SECTION *omp_lock_t;
++typedef CRITICAL_SECTION *omp_nest_lock_t;
++
+ static struct list vcomp_idle_threads = LIST_INIT(vcomp_idle_threads);
+ static DWORD   vcomp_context_tls = TLS_OUT_OF_INDEXES;
+ static HMODULE vcomp_module;
+@@ -985,29 +988,49 @@ void WINAPIV _vcomp_fork(BOOL ifval, int nargs, void *wrapper, ...)
+     __ms_va_end(team_data.valist);
+ }
+ 
++static CRITICAL_SECTION *alloc_critsect(void)
++{
++    CRITICAL_SECTION *critsect;
++    if (!(critsect = HeapAlloc(GetProcessHeap(), 0, sizeof(*critsect))))
++    {
++        ERR("could not allocate critical section\n");
++        ExitProcess(1);
++    }
++
++    InitializeCriticalSection(critsect);
++    critsect->DebugInfo->Spare[0] = (DWORD_PTR)(__FILE__ ": critsect");
++    return critsect;
++}
++
++static void destroy_critsect(CRITICAL_SECTION *critsect)
++{
++    if (!critsect) return;
++    critsect->DebugInfo->Spare[0] = 0;
++    DeleteCriticalSection(critsect);
++    HeapFree(GetProcessHeap(), 0, critsect);
++}
++
++void CDECL omp_init_lock(omp_lock_t *lock)
++{
++    TRACE("(%p)\n", lock);
++    *lock = alloc_critsect();
++}
++
++void CDECL omp_destroy_lock(omp_lock_t *lock)
++{
++    TRACE("(%p)\n", lock);
++    destroy_critsect(*lock);
++}
++
+ void CDECL _vcomp_enter_critsect(CRITICAL_SECTION **critsect)
+ {
+     TRACE("(%p)\n", critsect);
+ 
+     if (!*critsect)
+     {
+-        CRITICAL_SECTION *new_critsect;
+-        if (!(new_critsect = HeapAlloc(GetProcessHeap(), 0, sizeof(*new_critsect))))
+-        {
+-            ERR("could not allocate critical section\n");
+-            ExitProcess(1);
+-        }
+-
+-        InitializeCriticalSection(new_critsect);
+-        new_critsect->DebugInfo->Spare[0] = (DWORD_PTR)(__FILE__ ": critsect");
+-
++        CRITICAL_SECTION *new_critsect = alloc_critsect();
+         if (interlocked_cmpxchg_ptr((void **)critsect, new_critsect, NULL) != NULL)
+-        {
+-            /* someone beat us to it */
+-            new_critsect->DebugInfo->Spare[0] = 0;
+-            DeleteCriticalSection(new_critsect);
+-            HeapFree(GetProcessHeap(), 0, new_critsect);
+-        }
++            destroy_critsect(new_critsect);  /* someone beat us to it */
+     }
+ 
+     EnterCriticalSection(*critsect);
+diff --git a/dlls/vcomp/vcomp.spec b/dlls/vcomp/vcomp.spec
+index 40110d2..e078af9 100644
+--- a/dlls/vcomp/vcomp.spec
++++ b/dlls/vcomp/vcomp.spec
+@@ -88,7 +88,7 @@
+ @ cdecl _vcomp_set_num_threads(long)
+ @ cdecl _vcomp_single_begin(long)
+ @ cdecl _vcomp_single_end()
+-@ stub omp_destroy_lock
++@ cdecl omp_destroy_lock(ptr)
+ @ stub omp_destroy_nest_lock
+ @ cdecl omp_get_dynamic()
+ @ cdecl omp_get_max_threads()
+@@ -99,7 +99,7 @@
+ @ stub omp_get_wtick
+ @ cdecl omp_get_wtime()
+ @ cdecl omp_in_parallel()
+-@ stub omp_init_lock
++@ cdecl omp_init_lock(ptr)
+ @ stub omp_init_nest_lock
+ @ cdecl omp_set_dynamic(long)
+ @ stub omp_set_lock
+diff --git a/dlls/vcomp100/vcomp100.spec b/dlls/vcomp100/vcomp100.spec
+index 1974f7e..017f49e 100644
+--- a/dlls/vcomp100/vcomp100.spec
++++ b/dlls/vcomp100/vcomp100.spec
+@@ -88,7 +88,7 @@
+ @ cdecl _vcomp_set_num_threads(long) vcomp._vcomp_set_num_threads
+ @ cdecl _vcomp_single_begin(long) vcomp._vcomp_single_begin
+ @ cdecl _vcomp_single_end() vcomp._vcomp_single_end
+-@ stub omp_destroy_lock
++@ cdecl omp_destroy_lock(ptr) vcomp.omp_destroy_lock
+ @ stub omp_destroy_nest_lock
+ @ cdecl omp_get_dynamic() vcomp.omp_get_dynamic
+ @ cdecl omp_get_max_threads() vcomp.omp_get_max_threads
+@@ -99,7 +99,7 @@
+ @ stub omp_get_wtick
+ @ cdecl omp_get_wtime() vcomp.omp_get_wtime
+ @ cdecl omp_in_parallel() vcomp.omp_in_parallel
+-@ stub omp_init_lock
++@ cdecl omp_init_lock(ptr) vcomp.omp_init_lock
+ @ stub omp_init_nest_lock
+ @ cdecl omp_set_dynamic(long) vcomp.omp_set_dynamic
+ @ stub omp_set_lock
+diff --git a/dlls/vcomp110/vcomp110.spec b/dlls/vcomp110/vcomp110.spec
+index d1b27ed..a7be1d9 100644
+--- a/dlls/vcomp110/vcomp110.spec
++++ b/dlls/vcomp110/vcomp110.spec
+@@ -89,7 +89,7 @@
+ @ cdecl _vcomp_set_num_threads(long) vcomp._vcomp_set_num_threads
+ @ cdecl _vcomp_single_begin(long) vcomp._vcomp_single_begin
+ @ cdecl _vcomp_single_end() vcomp._vcomp_single_end
+-@ stub omp_destroy_lock
++@ cdecl omp_destroy_lock(ptr) vcomp.omp_destroy_lock
+ @ stub omp_destroy_nest_lock
+ @ cdecl omp_get_dynamic() vcomp.omp_get_dynamic
+ @ cdecl omp_get_max_threads() vcomp.omp_get_max_threads
+@@ -100,7 +100,7 @@
+ @ stub omp_get_wtick
+ @ cdecl omp_get_wtime() vcomp.omp_get_wtime
+ @ cdecl omp_in_parallel() vcomp.omp_in_parallel
+-@ stub omp_init_lock
++@ cdecl omp_init_lock(ptr) vcomp.omp_init_lock
+ @ stub omp_init_nest_lock
+ @ cdecl omp_set_dynamic(long) vcomp.omp_set_dynamic
+ @ stub omp_set_lock
+diff --git a/dlls/vcomp90/vcomp90.spec b/dlls/vcomp90/vcomp90.spec
+index 1974f7e..017f49e 100644
+--- a/dlls/vcomp90/vcomp90.spec
++++ b/dlls/vcomp90/vcomp90.spec
+@@ -88,7 +88,7 @@
+ @ cdecl _vcomp_set_num_threads(long) vcomp._vcomp_set_num_threads
+ @ cdecl _vcomp_single_begin(long) vcomp._vcomp_single_begin
+ @ cdecl _vcomp_single_end() vcomp._vcomp_single_end
+-@ stub omp_destroy_lock
++@ cdecl omp_destroy_lock(ptr) vcomp.omp_destroy_lock
+ @ stub omp_destroy_nest_lock
+ @ cdecl omp_get_dynamic() vcomp.omp_get_dynamic
+ @ cdecl omp_get_max_threads() vcomp.omp_get_max_threads
+@@ -99,7 +99,7 @@
+ @ stub omp_get_wtick
+ @ cdecl omp_get_wtime() vcomp.omp_get_wtime
+ @ cdecl omp_in_parallel() vcomp.omp_in_parallel
+-@ stub omp_init_lock
++@ cdecl omp_init_lock(ptr) vcomp.omp_init_lock
+ @ stub omp_init_nest_lock
+ @ cdecl omp_set_dynamic(long) vcomp.omp_set_dynamic
+ @ stub omp_set_lock
+-- 
+2.5.0
+

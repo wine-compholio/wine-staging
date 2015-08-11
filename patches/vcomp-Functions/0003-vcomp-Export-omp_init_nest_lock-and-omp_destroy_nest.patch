@@ -1,0 +1,175 @@
+From f63f4cf4b09773743c44b8778687b77bea01ee35 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Tue, 11 Aug 2015 06:02:25 +0200
+Subject: vcomp: Export omp_init_nest_lock and omp_destroy_nest_lock.
+
+---
+ dlls/vcomp/tests/vcomp.c    | 22 ++++++++++++++++++++++
+ dlls/vcomp/vcomp.spec       |  4 ++--
+ dlls/vcomp100/vcomp100.spec |  4 ++--
+ dlls/vcomp110/vcomp110.spec |  4 ++--
+ dlls/vcomp90/vcomp90.spec   |  4 ++--
+ 5 files changed, 30 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/vcomp/tests/vcomp.c b/dlls/vcomp/tests/vcomp.c
+index 3df547a..ccb6792 100644
+--- a/dlls/vcomp/tests/vcomp.c
++++ b/dlls/vcomp/tests/vcomp.c
+@@ -31,6 +31,9 @@ static BOOL   (WINAPI *pActivateActCtx)(HANDLE, ULONG_PTR*);
+ static BOOL   (WINAPI *pDeactivateActCtx)(DWORD, ULONG_PTR);
+ static VOID   (WINAPI *pReleaseActCtx)(HANDLE);
+ 
++typedef CRITICAL_SECTION *omp_lock_t;
++typedef CRITICAL_SECTION *omp_nest_lock_t;
++
+ static void  (CDECL   *p_vcomp_atomic_add_i4)(int *dest, int val);
+ static void  (CDECL   *p_vcomp_atomic_add_r4)(float *dest, float val);
+ static void  (CDECL   *p_vcomp_atomic_add_r8)(double *dest, double val);
+@@ -70,11 +73,15 @@ static int   (CDECL   *p_vcomp_sections_next)(void);
+ static void  (CDECL   *p_vcomp_set_num_threads)(int num_threads);
+ static int   (CDECL   *p_vcomp_single_begin)(int flags);
+ static void  (CDECL   *p_vcomp_single_end)(void);
++static void  (CDECL   *pomp_destroy_lock)(omp_lock_t *lock);
++static void  (CDECL   *pomp_destroy_nest_lock)(omp_nest_lock_t *lock);
+ static int   (CDECL   *pomp_get_max_threads)(void);
+ static int   (CDECL   *pomp_get_nested)(void);
+ static int   (CDECL   *pomp_get_num_threads)(void);
+ static int   (CDECL   *pomp_get_thread_num)(void);
+ static int   (CDECL   *pomp_in_parallel)(void);
++static void  (CDECL   *pomp_init_lock)(omp_lock_t *lock);
++static void  (CDECL   *pomp_init_nest_lock)(omp_nest_lock_t *lock);
+ static void  (CDECL   *pomp_set_nested)(int nested);
+ static void  (CDECL   *pomp_set_num_threads)(int num_threads);
+ 
+@@ -245,11 +252,15 @@ static BOOL init_vcomp(void)
+     VCOMP_GET_PROC(_vcomp_set_num_threads);
+     VCOMP_GET_PROC(_vcomp_single_begin);
+     VCOMP_GET_PROC(_vcomp_single_end);
++    VCOMP_GET_PROC(omp_destroy_lock);
++    VCOMP_GET_PROC(omp_destroy_nest_lock);
+     VCOMP_GET_PROC(omp_get_max_threads);
+     VCOMP_GET_PROC(omp_get_nested);
+     VCOMP_GET_PROC(omp_get_num_threads);
+     VCOMP_GET_PROC(omp_get_thread_num);
+     VCOMP_GET_PROC(omp_in_parallel);
++    VCOMP_GET_PROC(omp_init_lock);
++    VCOMP_GET_PROC(omp_init_nest_lock);
+     VCOMP_GET_PROC(omp_set_nested);
+     VCOMP_GET_PROC(omp_set_num_threads);
+ 
+@@ -1278,6 +1289,16 @@ static void test_vcomp_flush(void)
+     p_vcomp_flush();
+ }
+ 
++static void test_omp_init_nest_lock(void)
++{
++    ok(pomp_init_lock == pomp_init_nest_lock,
++       "expected omp_init_lock == omp_init_nest_lock, got %p and %p\n",
++       pomp_init_lock, pomp_init_nest_lock);
++    ok(pomp_destroy_lock == pomp_destroy_nest_lock,
++       "expected omp_destroy_lock == omp_destroy_nest_lock, got %p and %p\n",
++       pomp_destroy_lock, pomp_destroy_nest_lock);
++}
++
+ static void test_atomic_integer32(void)
+ {
+     struct
+@@ -1398,6 +1419,7 @@ START_TEST(vcomp)
+     test_vcomp_single_begin();
+     test_vcomp_enter_critsect();
+     test_vcomp_flush();
++    test_omp_init_nest_lock();
+     test_atomic_integer32();
+     test_atomic_float();
+     test_atomic_double();
+diff --git a/dlls/vcomp/vcomp.spec b/dlls/vcomp/vcomp.spec
+index e078af9..418d176 100644
+--- a/dlls/vcomp/vcomp.spec
++++ b/dlls/vcomp/vcomp.spec
+@@ -89,7 +89,7 @@
+ @ cdecl _vcomp_single_begin(long)
+ @ cdecl _vcomp_single_end()
+ @ cdecl omp_destroy_lock(ptr)
+-@ stub omp_destroy_nest_lock
++@ cdecl omp_destroy_nest_lock(ptr) omp_destroy_lock
+ @ cdecl omp_get_dynamic()
+ @ cdecl omp_get_max_threads()
+ @ cdecl omp_get_nested()
+@@ -100,7 +100,7 @@
+ @ cdecl omp_get_wtime()
+ @ cdecl omp_in_parallel()
+ @ cdecl omp_init_lock(ptr)
+-@ stub omp_init_nest_lock
++@ cdecl omp_init_nest_lock(ptr) omp_init_lock
+ @ cdecl omp_set_dynamic(long)
+ @ stub omp_set_lock
+ @ stub omp_set_nest_lock
+diff --git a/dlls/vcomp100/vcomp100.spec b/dlls/vcomp100/vcomp100.spec
+index 017f49e..8a26b15 100644
+--- a/dlls/vcomp100/vcomp100.spec
++++ b/dlls/vcomp100/vcomp100.spec
+@@ -89,7 +89,7 @@
+ @ cdecl _vcomp_single_begin(long) vcomp._vcomp_single_begin
+ @ cdecl _vcomp_single_end() vcomp._vcomp_single_end
+ @ cdecl omp_destroy_lock(ptr) vcomp.omp_destroy_lock
+-@ stub omp_destroy_nest_lock
++@ cdecl omp_destroy_nest_lock(ptr) vcomp.omp_destroy_nest_lock
+ @ cdecl omp_get_dynamic() vcomp.omp_get_dynamic
+ @ cdecl omp_get_max_threads() vcomp.omp_get_max_threads
+ @ cdecl omp_get_nested() vcomp.omp_get_nested
+@@ -100,7 +100,7 @@
+ @ cdecl omp_get_wtime() vcomp.omp_get_wtime
+ @ cdecl omp_in_parallel() vcomp.omp_in_parallel
+ @ cdecl omp_init_lock(ptr) vcomp.omp_init_lock
+-@ stub omp_init_nest_lock
++@ cdecl omp_init_nest_lock(ptr) vcomp.omp_init_nest_lock
+ @ cdecl omp_set_dynamic(long) vcomp.omp_set_dynamic
+ @ stub omp_set_lock
+ @ stub omp_set_nest_lock
+diff --git a/dlls/vcomp110/vcomp110.spec b/dlls/vcomp110/vcomp110.spec
+index a7be1d9..64a4016 100644
+--- a/dlls/vcomp110/vcomp110.spec
++++ b/dlls/vcomp110/vcomp110.spec
+@@ -90,7 +90,7 @@
+ @ cdecl _vcomp_single_begin(long) vcomp._vcomp_single_begin
+ @ cdecl _vcomp_single_end() vcomp._vcomp_single_end
+ @ cdecl omp_destroy_lock(ptr) vcomp.omp_destroy_lock
+-@ stub omp_destroy_nest_lock
++@ cdecl omp_destroy_nest_lock(ptr) vcomp.omp_destroy_nest_lock
+ @ cdecl omp_get_dynamic() vcomp.omp_get_dynamic
+ @ cdecl omp_get_max_threads() vcomp.omp_get_max_threads
+ @ cdecl omp_get_nested() vcomp.omp_get_nested
+@@ -101,7 +101,7 @@
+ @ cdecl omp_get_wtime() vcomp.omp_get_wtime
+ @ cdecl omp_in_parallel() vcomp.omp_in_parallel
+ @ cdecl omp_init_lock(ptr) vcomp.omp_init_lock
+-@ stub omp_init_nest_lock
++@ cdecl omp_init_nest_lock(ptr) vcomp.omp_init_nest_lock
+ @ cdecl omp_set_dynamic(long) vcomp.omp_set_dynamic
+ @ stub omp_set_lock
+ @ stub omp_set_nest_lock
+diff --git a/dlls/vcomp90/vcomp90.spec b/dlls/vcomp90/vcomp90.spec
+index 017f49e..8a26b15 100644
+--- a/dlls/vcomp90/vcomp90.spec
++++ b/dlls/vcomp90/vcomp90.spec
+@@ -89,7 +89,7 @@
+ @ cdecl _vcomp_single_begin(long) vcomp._vcomp_single_begin
+ @ cdecl _vcomp_single_end() vcomp._vcomp_single_end
+ @ cdecl omp_destroy_lock(ptr) vcomp.omp_destroy_lock
+-@ stub omp_destroy_nest_lock
++@ cdecl omp_destroy_nest_lock(ptr) vcomp.omp_destroy_nest_lock
+ @ cdecl omp_get_dynamic() vcomp.omp_get_dynamic
+ @ cdecl omp_get_max_threads() vcomp.omp_get_max_threads
+ @ cdecl omp_get_nested() vcomp.omp_get_nested
+@@ -100,7 +100,7 @@
+ @ cdecl omp_get_wtime() vcomp.omp_get_wtime
+ @ cdecl omp_in_parallel() vcomp.omp_in_parallel
+ @ cdecl omp_init_lock(ptr) vcomp.omp_init_lock
+-@ stub omp_init_nest_lock
++@ cdecl omp_init_nest_lock(ptr) vcomp.omp_init_nest_lock
+ @ cdecl omp_set_dynamic(long) vcomp.omp_set_dynamic
+ @ stub omp_set_lock
+ @ stub omp_set_nest_lock
+-- 
+2.5.0
+

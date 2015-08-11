@@ -39,6 +39,11 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
+**Bug fixes and features included in the next upcoming release [1]:**
+
+* Implement vcomp locking functions ([Wine Bug #26688](https://bugs.winehq.org/show_bug.cgi?id=26688))
+
+
 **Bug fixes and features in Wine Staging 1.7.49 [235]:**
 
 *Note: The following list only contains features and bug fixes which are not

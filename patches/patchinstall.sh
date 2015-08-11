@@ -128,6 +128,7 @@ patch_enable_all ()
 	enable_gdiplus_GdipCreateEffect="$1"
 	enable_ieframe_IViewObject_Draw="$1"
 	enable_imagehlp_BindImageEx="$1"
+	enable_imagehlp_Cleanup="$1"
 	enable_imagehlp_ImageLoad="$1"
 	enable_inetcpl_Default_Home="$1"
 	enable_iphlpapi_System_Ping="$1"
@@ -466,6 +467,9 @@ patch_enable ()
 			;;
 		imagehlp-BindImageEx)
 			enable_imagehlp_BindImageEx="$2"
+			;;
+		imagehlp-Cleanup)
+			enable_imagehlp_Cleanup="$2"
 			;;
 		imagehlp-ImageLoad)
 			enable_imagehlp_ImageLoad="$2"
@@ -2946,6 +2950,24 @@ if test "$enable_imagehlp_BindImageEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset imagehlp-Cleanup
+# |
+# | Modified files:
+# |   *	dlls/imagehlp/access.c, dlls/imagehlp/modify.c, dlls/imagehlp/tests/integrity.c
+# |
+if test "$enable_imagehlp_Cleanup" -eq 1; then
+	patch_apply imagehlp-Cleanup/0001-imagehlp-Catch-invalid-memory-access-in-CheckSumMapp.patch
+	patch_apply imagehlp-Cleanup/0002-imagehlp-Fix-checksum-calculation-for-odd-sizes.patch
+	patch_apply imagehlp-Cleanup/0003-imagehlp-Remove-unused-structure.patch
+	patch_apply imagehlp-Cleanup/0004-imagehlp-Implement-ImageLoad-and-cleanup-ImageUnload.patch
+	(
+		echo '+    { "Michael Müller", "imagehlp: Catch invalid memory access in CheckSumMappedFile and add tests.", 1 },';
+		echo '+    { "Michael Müller", "imagehlp: Fix checksum calculation for odd sizes.", 1 },';
+		echo '+    { "Michael Müller", "imagehlp: Remove unused structure.", 1 },';
+		echo '+    { "Michael Müller", "imagehlp: Implement ImageLoad and cleanup ImageUnload.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset imagehlp-ImageLoad
 # |
 # | Modified files:
@@ -5037,18 +5059,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Geforce_425M
+# Patchset wined3d-Multisampling
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#35054] Add wined3d detection for GeForce GT 425M
+# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
 # |
 # | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_private.h
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
 # |
-if test "$enable_wined3d_Geforce_425M" -eq 1; then
-	patch_apply wined3d-Geforce_425M/0001-wined3d-Add-detection-for-NVIDIA-GeForce-425M.patch
+if test "$enable_wined3d_Multisampling" -eq 1; then
+	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
 	(
-		echo '+    { "Jarkko Korpi", "wined3d: Add detection for NVIDIA GeForce 425M.", 1 },';
+		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5109,6 +5131,21 @@ if test "$enable_wined3d_resource_check_usage" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-Geforce_425M
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35054] Add wined3d detection for GeForce GT 425M
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Geforce_425M" -eq 1; then
+	patch_apply wined3d-Geforce_425M/0001-wined3d-Add-detection-for-NVIDIA-GeForce-425M.patch
+	(
+		echo '+    { "Jarkko Korpi", "wined3d: Add detection for NVIDIA GeForce 425M.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-wined3d_swapchain_present
 # |
 # | Modified files:
@@ -5130,21 +5167,6 @@ if test "$enable_wined3d_MESA_GPU_Info" -eq 1; then
 	patch_apply wined3d-MESA_GPU_Info/0001-wined3d-Use-pci-and-memory-information-from-MESA-if-.patch
 	(
 		echo '+    { "Michael Müller", "wined3d: Use pci and memory information from MESA if possible.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Multisampling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
-	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
 	) >> "$patchlist"
 fi
 

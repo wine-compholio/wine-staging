@@ -1,0 +1,84 @@
+From 2255200233c348e56b17330c4836c34e3e6b7854 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Tue, 11 Aug 2015 02:46:06 +0200
+Subject: imagehlp: Fix checksum calculation for odd sizes.
+
+---
+ dlls/imagehlp/modify.c          | 39 +++++++++++++++++++--------------------
+ dlls/imagehlp/tests/integrity.c |  2 +-
+ 2 files changed, 20 insertions(+), 21 deletions(-)
+
+diff --git a/dlls/imagehlp/modify.c b/dlls/imagehlp/modify.c
+index aa29ca7..2a0214b 100644
+--- a/dlls/imagehlp/modify.c
++++ b/dlls/imagehlp/modify.c
+@@ -60,26 +60,25 @@ BOOL WINAPI BindImageEx(
+ /***********************************************************************
+  *		CheckSum (internal)
+  */
+-static WORD CalcCheckSum(
+-  DWORD StartValue, LPVOID BaseAddress, DWORD WordCount)
++static WORD CalcCheckSum(DWORD StartValue, LPVOID BaseAddress, DWORD ByteCount)
+ {
+-   LPWORD Ptr;
+-   DWORD Sum;
+-   DWORD i;
+-
+-   Sum = StartValue;
+-   Ptr = (LPWORD)BaseAddress;
+-   for (i = 0; i < WordCount; i++)
+-     {
+-	Sum += *Ptr;
+-	if (HIWORD(Sum) != 0)
+-	  {
+-	     Sum = LOWORD(Sum) + HIWORD(Sum);
+-	  }
+-	Ptr++;
+-     }
+-
+-   return (WORD)(LOWORD(Sum) + HIWORD(Sum));
++    LPWORD Ptr;
++    DWORD Sum, i;
++
++    Sum = StartValue;
++    Ptr = (LPWORD)BaseAddress;
++    for (i = ByteCount; i > 1; i -= 2)
++    {
++        Sum += *Ptr;
++        if (HIWORD(Sum) != 0)
++            Sum = LOWORD(Sum) + HIWORD(Sum);
++        Ptr++;
++    }
++
++    if (i == 1)
++        Sum += *(BYTE *)Ptr;
++
++    return (WORD)(LOWORD(Sum) + HIWORD(Sum));
+ }
+ 
+ 
+@@ -102,7 +101,7 @@ PIMAGE_NT_HEADERS WINAPI CheckSumMappedFile(
+     BaseAddress, FileLength, HeaderSum, CheckSum
+   );
+ 
+-  CalcSum = (DWORD)CalcCheckSum(0, BaseAddress, (FileLength + 1) / sizeof(WORD));
++  CalcSum = (DWORD)CalcCheckSum(0, BaseAddress, FileLength);
+ 
+   __TRY
+   {
+diff --git a/dlls/imagehlp/tests/integrity.c b/dlls/imagehlp/tests/integrity.c
+index 7dd8ff4..913c396 100644
+--- a/dlls/imagehlp/tests/integrity.c
++++ b/dlls/imagehlp/tests/integrity.c
+@@ -362,7 +362,7 @@ static void test_pe_checksum(void)
+     ret = pCheckSumMappedFile(buffer, 11, &checksum_orig, &checksum_new);
+     ok(ret == NULL, "Expected NULL, got %p\n", ret);
+     ok(checksum_orig == 0, "Expected 0, got %x\n", checksum_orig);
+-    todo_wine ok(checksum_new == 0xaad7, "Expected 0xaad7, got %x\n", checksum_new);
++    ok(checksum_new == 0xaad7, "Expected 0xaad7, got %x\n", checksum_new);
+ 
+     /* test checksum of PE module */
+     memset(buffer, 0x22, sizeof(buffer));
+-- 
+2.5.0
+

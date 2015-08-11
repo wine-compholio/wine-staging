@@ -1930,6 +1930,9 @@ fi
 
 # Patchset ntdll-WRITECOPY
 # |
+# | This patchset has the following dependencies:
+# |   *	ws2_32-WriteWatches
+# |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#29384] Voobly expects correct handling of WRITECOPY memory protection
 # |   *	[#35561] MSYS2 expects correct handling of WRITECOPY memory protection
@@ -1955,6 +1958,9 @@ if test "$enable_ntdll_WRITECOPY" -eq 1; then
 fi
 
 # Patchset Exagear
+# |
+# | This patchset has the following dependencies:
+# |   *	ntdll-WRITECOPY
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/ntdll/signal_i386.c, dlls/ntdll/virtual.c, server/ptrace.c
@@ -2054,6 +2060,9 @@ if test "$enable_server_Misc_ACL" -eq 1; then
 fi
 
 # Patchset advapi32-LsaLookupSids
+# |
+# | This patchset has the following dependencies:
+# |   *	server-CreateProcess_ACLs, server-Misc_ACL
 # |
 # | Modified files:
 # |   *	dlls/advapi32/lsa.c, dlls/advapi32/security.c, dlls/advapi32/tests/security.c, server/token.c
@@ -2325,6 +2334,9 @@ fi
 
 # Patchset d3dx9_24-ID3DXEffect
 # |
+# | This patchset has the following dependencies:
+# |   *	d3dx9_25-ID3DXEffect
+# |
 # | Modified files:
 # |   *	dlls/d3dx9_24/d3dx9_24.spec
 # |
@@ -2397,6 +2409,9 @@ fi
 
 # Patchset d3dx9_36-DXTn
 # |
+# | This patchset has the following dependencies:
+# |   *	wined3d-DXTn
+# |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#33768] Fix texture corruption in CSI: Fatal Conspiracy
 # |   *	[#37391] Exception during start of fr-043 caused by missing DXTn support
@@ -2415,6 +2430,9 @@ fi
 
 # Patchset d3dx9_33-Share_Source
 # |
+# | This patchset has the following dependencies:
+# |   *	d3dx9_36-D3DXStubs, d3dx9_36-DXTn
+# |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#21817] Share source of d3dx9_36 with d3dx9_33 to avoid Wine DLL forwards
 # |
@@ -2429,6 +2447,9 @@ if test "$enable_d3dx9_33_Share_Source" -eq 1; then
 fi
 
 # Patchset d3dx9_36-AnimationController
+# |
+# | This patchset has the following dependencies:
+# |   *	d3dx9_36-DXTn
 # |
 # | Modified files:
 # |   *	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/animation.c, dlls/d3dx9_36/d3dx9_36.spec, include/d3dx9anim.h
@@ -2697,6 +2718,9 @@ fi
 
 # Patchset dsound-EAX
 # |
+# | This patchset has the following dependencies:
+# |   *	dsound-Fast_Mixer
+# |
 # | Modified files:
 # |   *	dlls/dsound/Makefile.in, dlls/dsound/buffer.c, dlls/dsound/dsound.c, dlls/dsound/dsound_eax.h,
 # | 	dlls/dsound/dsound_main.c, dlls/dsound/dsound_private.h, dlls/dsound/eax.c, dlls/dsound/mixer.c
@@ -2793,6 +2817,9 @@ if test "$enable_winecfg_Staging" -eq 1; then
 fi
 
 # Patchset dxva2-Video_Decoder
+# |
+# | This patchset has the following dependencies:
+# |   *	winecfg-Staging
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/dxva2/Makefile.in, dlls/dxva2/backend.idl, dlls/dxva2/devicemanager.c, dlls/dxva2/dxva2_private.h,
@@ -3083,6 +3110,9 @@ fi
 
 # Patchset ntdll-FileDispositionInformation
 # |
+# | This patchset has the following dependencies:
+# |   *	server-File_Permissions
+# |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#30397] Support for NtSetInformationFile class FileDispositionInformation
 # |   *	[#30399] Support for NtSetInformationFile class FileRenameInformation
@@ -3123,6 +3153,9 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 fi
 
 # Patchset kernel32-CopyFileEx
+# |
+# | This patchset has the following dependencies:
+# |   *	kernel32-SetFileInformationByHandle, ntdll-FileDispositionInformation
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#22692] Add support for CopyFileEx progress callback
@@ -3194,6 +3227,9 @@ if test "$enable_rpcrt4_Pipe_Transport" -eq 1; then
 fi
 
 # Patchset kernel32-Named_Pipe
+# |
+# | This patchset has the following dependencies:
+# |   *	rpcrt4-Pipe_Transport
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#16550] Fix for ConnectNamedPort return value in overlapped mode
@@ -3522,6 +3558,9 @@ fi
 
 # Patchset ntdll-CLI_Images
 # |
+# | This patchset has the following dependencies:
+# |   *	mscoree-CorValidateImage
+# |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#38661] Implement proper handling of CLI .NET images in Wine library loader
 # |
@@ -3594,6 +3633,9 @@ if test "$enable_ntdll_Loader_Machine_Type" -eq 1; then
 fi
 
 # Patchset ntdll-DllRedirects
+# |
+# | This patchset has the following dependencies:
+# |   *	ntdll-Loader_Machine_Type
 # |
 # | Modified files:
 # |   *	dlls/ntdll/loader.c, dlls/ntdll/loadorder.c, dlls/ntdll/ntdll_misc.h
@@ -3737,6 +3779,9 @@ fi
 
 # Patchset ntdll-Junction_Points
 # |
+# | This patchset has the following dependencies:
+# |   *	ntdll-Fix_Free, ntdll-NtQueryEaFile
+# |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#12401] Support for Junction Points
 # |
@@ -3779,6 +3824,9 @@ if test "$enable_ntdll_Security_Cookie" -eq 1; then
 fi
 
 # Patchset ntdll-NtMapViewOfSection
+# |
+# | This patchset has the following dependencies:
+# |   *	ntdll-Security_Cookie
 # |
 # | Modified files:
 # |   *	dlls/kernel32/tests/loader.c, dlls/ntdll/loader.c, dlls/ntdll/virtual.c
@@ -3914,6 +3962,9 @@ fi
 
 # Patchset ntdll-WriteWatches
 # |
+# | This patchset has the following dependencies:
+# |   *	kernel32-Named_Pipe, ws2_32-WriteWatches
+# |
 # | Modified files:
 # |   *	dlls/ntdll/file.c
 # |
@@ -4027,6 +4078,9 @@ fi
 
 # Patchset nvapi-Stub_DLL
 # |
+# | This patchset has the following dependencies:
+# |   *	nvcuda-CUDA_Support
+# |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#35062] Fix graphical corruption in FarCry 3 with NVIDIA drivers
 # |
@@ -4073,6 +4127,9 @@ fi
 
 # Patchset nvcuvid-CUDA_Video_Support
 # |
+# | This patchset has the following dependencies:
+# |   *	nvapi-Stub_DLL
+# |
 # | Modified files:
 # |   *	configure.ac, dlls/nvcuvid/Makefile.in, dlls/nvcuvid/nvcuvid.c, dlls/nvcuvid/nvcuvid.spec, include/Makefile.in,
 # | 	include/cuviddec.h, include/nvcuvid.h
@@ -4085,6 +4142,9 @@ if test "$enable_nvcuvid_CUDA_Video_Support" -eq 1; then
 fi
 
 # Patchset nvencodeapi-Video_Encoder
+# |
+# | This patchset has the following dependencies:
+# |   *	nvcuvid-CUDA_Video_Support
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/nvencodeapi/Makefile.in, dlls/nvencodeapi/nvencodeapi.c, dlls/nvencodeapi/nvencodeapi.spec,
@@ -4251,6 +4311,9 @@ fi
 
 # Patchset server-RootDirectory_File
 # |
+# | This patchset has the following dependencies:
+# |   *	ntdll-FileDispositionInformation
+# |
 # | Modified files:
 # |   *	dlls/ntdll/tests/file.c, server/fd.c, server/file.c, server/file.h
 # |
@@ -4262,6 +4325,9 @@ if test "$enable_server_RootDirectory_File" -eq 1; then
 fi
 
 # Patchset server-Stored_ACLs
+# |
+# | This patchset has the following dependencies:
+# |   *	ntdll-DOS_Attributes, server-File_Permissions, server-RootDirectory_File
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#33576] Support for stored file ACLs
@@ -4291,6 +4357,9 @@ fi
 
 # Patchset server-Inherited_ACLs
 # |
+# | This patchset has the following dependencies:
+# |   *	server-Stored_ACLs
+# |
 # | Modified files:
 # |   *	dlls/advapi32/tests/security.c, server/file.c
 # |
@@ -4302,6 +4371,9 @@ if test "$enable_server_Inherited_ACLs" -eq 1; then
 fi
 
 # Patchset server-ACL_Compat
+# |
+# | This patchset has the following dependencies:
+# |   *	server-Inherited_ACLs
 # |
 # | Modified files:
 # |   *	server/file.c
@@ -4439,6 +4511,9 @@ if test "$enable_server_Registry_Timestamp" -eq 1; then
 fi
 
 # Patchset server-Shared_Memory
+# |
+# | This patchset has the following dependencies:
+# |   *	dinput-Events, ntdll-Threading, server-ClipCursor, server-Key_State, server-PeekMessage
 # |
 # | Modified files:
 # |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c, dlls/user32/focus.c,
@@ -4587,6 +4662,9 @@ fi
 
 # Patchset shell32-Progress_Dialog
 # |
+# | This patchset has the following dependencies:
+# |   *	kernel32-CopyFileEx
+# |
 # | Modified files:
 # |   *	dlls/shell32/shell32.rc, dlls/shell32/shlfileop.c, dlls/shell32/shresdef.h
 # |
@@ -4646,6 +4724,9 @@ if test "$enable_shell32_SHCreateSessionKey" -eq 1; then
 fi
 
 # Patchset shell32-SHFileOperation
+# |
+# | This patchset has the following dependencies:
+# |   *	shell32-Progress_Dialog
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#37916] Anno 1602 installer depends on Windows 98 behavior of SHFileOperationW
@@ -5072,6 +5153,9 @@ fi
 
 # Patchset wined3d-CSMT_Helper
 # |
+# | This patchset has the following dependencies:
+# |   *	makedep-PARENTSPEC, ntdll-DllRedirects, wined3d-DXTn
+# |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
 # |
@@ -5098,6 +5182,9 @@ if test "$enable_wined3d_Geforce_425M" -eq 1; then
 fi
 
 # Patchset wined3d-MESA_GPU_Info
+# |
+# | This patchset has the following dependencies:
+# |   *	wined3d-Accounting
 # |
 # | Modified files:
 # |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_gl.h, dlls/winex11.drv/opengl.c, include/wine/wgl_driver.h
@@ -5194,6 +5281,9 @@ if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
 fi
 
 # Patchset wined3d-CSMT_Main
+# |
+# | This patchset has the following dependencies:
+# |   *	wined3d-CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance

@@ -682,6 +682,13 @@ def generate_script(all_patches):
         lines.append("# Patchset %s\n" % patch.name)
         lines.append("# |\n")
 
+        # List dependencies (if any)
+        if len(patch.depends):
+            lines.append("# | This patchset has the following dependencies:\n")
+            lines.append("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap(
+                ", ".join([all_patches[j].name for j in sorted(patch.depends)]), 120)))
+            lines.append("# |\n")
+
         # List all bugs fixed by this patchset
         if any([bugid is not None for bugid, bugname in patch.fixes]):
             lines.append("# | This patchset fixes the following Wine bugs:\n")

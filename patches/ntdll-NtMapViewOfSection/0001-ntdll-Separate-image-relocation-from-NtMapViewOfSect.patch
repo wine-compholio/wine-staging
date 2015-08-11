@@ -1,13 +1,16 @@
-From 804fe2821fb2e925df294f44f00a357fcdad384c Mon Sep 17 00:00:00 2001
+From 41cd5a1cb61aed36cc57eb2602055f62911ca809 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Tue, 11 Aug 2015 07:03:49 +0200
-Subject: ntdll: Separate image relocation from NtMapViewOfSection.
+Subject: ntdll: Separate image relocation from NtMapViewOfSection. (v2)
 
+Changes in v2 by Sebastian Lackner <sebastian@fds-team.de>:
+* Don't pass a NULL pointer to NtProtectVirtualMemory.
+* Check against mapped size instead of header field.
 ---
  dlls/kernel32/tests/loader.c | 10 ------
- dlls/ntdll/loader.c          | 84 +++++++++++++++++++++++++++++++++++++++++++-
+ dlls/ntdll/loader.c          | 83 +++++++++++++++++++++++++++++++++++++++++++-
  dlls/ntdll/virtual.c         | 44 +----------------------
- 3 files changed, 84 insertions(+), 54 deletions(-)
+ 3 files changed, 83 insertions(+), 54 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
 index 89feeb9..25b7b08 100644
@@ -38,14 +41,14 @@ index 89feeb9..25b7b08 100644
      ok(status == STATUS_SUCCESS, "NtUnmapViewOfSection error %x\n", status);
  
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index fb7b171..493e444 100644
+index fb7b171..465456b 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -1656,6 +1656,79 @@ static void set_security_cookie( void *module, SIZE_T len )
+@@ -1656,6 +1656,77 @@ static void set_security_cookie( void *module, SIZE_T len )
      }
  }
  
-+static NTSTATUS perform_relocations( void *module )
++static NTSTATUS perform_relocations( void *module, SIZE_T len )
 +{
 +    IMAGE_NT_HEADERS *nt;
 +    char *base;
@@ -53,7 +56,6 @@ index fb7b171..493e444 100644
 +    const IMAGE_DATA_DIRECTORY *relocs;
 +    const IMAGE_SECTION_HEADER *sec;
 +    INT_PTR delta;
-+    SIZE_T total_size;
 +    ULONG protect_old[96], i;
 +
 +    nt = RtlImageNtHeader( module );
@@ -82,14 +84,13 @@ index fb7b171..493e444 100644
 +    for (i = 0; i < nt->FileHeader.NumberOfSections; i++)
 +    {
 +        void *addr = get_rva( module, sec[i].VirtualAddress );
-+        total_size = sec[i].SizeOfRawData;
++        SIZE_T size = sec[i].SizeOfRawData;
 +        NtProtectVirtualMemory( NtCurrentProcess(), &addr,
-+                                &total_size, PAGE_READWRITE, &protect_old[i] );
++                                &size, PAGE_READWRITE, &protect_old[i] );
 +    }
 +
-+    total_size = nt->OptionalHeader.SizeOfImage;
 +    TRACE( "relocating from %p-%p to %p-%p\n",
-+           base, base + total_size, module, (char *)module + total_size );
++           base, base + len, module, (char *)module + len );
 +
 +    rel = get_rva( module, relocs->VirtualAddress );
 +    end = get_rva( module, relocs->VirtualAddress + relocs->Size );
@@ -97,12 +98,12 @@ index fb7b171..493e444 100644
 +
 +    while (rel < end - 1 && rel->SizeOfBlock)
 +    {
-+        if (rel->VirtualAddress >= total_size)
++        if (rel->VirtualAddress >= len)
 +        {
-+            WARN( "invalid address %p in relocation %p\n", (char *)module + rel->VirtualAddress, rel );
++            WARN( "invalid address %p in relocation %p\n", get_rva( module, rel->VirtualAddress ), rel );
 +            return STATUS_ACCESS_VIOLATION;
 +        }
-+        rel = LdrProcessRelocationBlock( (char *)module + rel->VirtualAddress,
++        rel = LdrProcessRelocationBlock( get_rva( module, rel->VirtualAddress ),
 +                                         (rel->SizeOfBlock - sizeof(*rel)) / sizeof(USHORT),
 +                                         (USHORT *)(rel + 1), delta );
 +        if (!rel) return STATUS_INVALID_IMAGE_FORMAT;
@@ -111,9 +112,9 @@ index fb7b171..493e444 100644
 +    for (i = 0; i < nt->FileHeader.NumberOfSections; i++)
 +    {
 +        void *addr = get_rva( module, sec[i].VirtualAddress );
-+        total_size = sec[i].SizeOfRawData;
++        SIZE_T size = sec[i].SizeOfRawData;
 +        NtProtectVirtualMemory( NtCurrentProcess(), &addr,
-+                                &total_size, protect_old[i], NULL );
++                                &size, protect_old[i], &protect_old[i] );
 +    }
 +
 +    return STATUS_SUCCESS;
@@ -121,7 +122,7 @@ index fb7b171..493e444 100644
  
  /******************************************************************************
   *	load_native_dll  (internal)
-@@ -1681,7 +1754,16 @@ static NTSTATUS load_native_dll( LPCWSTR load_path, LPCWSTR name, HANDLE file,
+@@ -1681,7 +1752,17 @@ static NTSTATUS load_native_dll( LPCWSTR load_path, LPCWSTR name, HANDLE file,
      module = NULL;
      status = NtMapViewOfSection( mapping, NtCurrentProcess(),
                                   &module, 0, 0, &size, &len, ViewShare, 0, PAGE_EXECUTE_READ );
@@ -130,7 +131,8 @@ index fb7b171..493e444 100644
 +    /* perform base relocation, if necessary */
 +
 +    if (status == STATUS_IMAGE_NOT_AT_BASE)
-+        status = perform_relocations( module );
++        status = perform_relocations( module, len );
++
 +    if (status != STATUS_SUCCESS)
 +    {
 +        if (module) NtUnmapViewOfSection( NtCurrentProcess(), module );

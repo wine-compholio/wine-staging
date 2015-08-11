@@ -173,6 +173,7 @@ patch_enable_all ()
 	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_Loader_Machine_Type="$1"
+	enable_ntdll_NtMapViewOfSection="$1"
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
@@ -602,6 +603,9 @@ patch_enable ()
 			;;
 		ntdll-Loader_Machine_Type)
 			enable_ntdll_Loader_Machine_Type="$2"
+			;;
+		ntdll-NtMapViewOfSection)
+			enable_ntdll_NtMapViewOfSection="$2"
 			;;
 		ntdll-NtQueryEaFile)
 			enable_ntdll_NtQueryEaFile="$2"
@@ -1751,6 +1755,13 @@ if test "$enable_ntdll_WriteWatches" -eq 1; then
 	fi
 	enable_kernel32_Named_Pipe=1
 	enable_ws2_32_WriteWatches=1
+fi
+
+if test "$enable_ntdll_NtMapViewOfSection" -eq 1; then
+	if test "$enable_ntdll_Security_Cookie" -gt 1; then
+		abort "Patchset ntdll-Security_Cookie disabled, but ntdll-NtMapViewOfSection depends on that."
+	fi
+	enable_ntdll_Security_Cookie=1
 fi
 
 if test "$enable_ntdll_Junction_Points" -eq 1; then
@@ -3752,6 +3763,33 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-Security_Cookie
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39040] Move cookie initialization code from memory management to loader
+# |
+# | Modified files:
+# |   *	dlls/ntdll/loader.c, dlls/ntdll/virtual.c
+# |
+if test "$enable_ntdll_Security_Cookie" -eq 1; then
+	patch_apply ntdll-Security_Cookie/0001-ntdll-Move-cookie-initialization-code-from-memory-ma.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Move cookie initialization code from memory management to loader.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtMapViewOfSection
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/loader.c, dlls/ntdll/loader.c, dlls/ntdll/virtual.c
+# |
+if test "$enable_ntdll_NtMapViewOfSection" -eq 1; then
+	patch_apply ntdll-NtMapViewOfSection/0001-ntdll-Separate-image-relocation-from-NtMapViewOfSect.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "ntdll: Separate image relocation from NtMapViewOfSection.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-NtQuerySection
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3815,21 +3853,6 @@ if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
 		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddressEx.", 6 },';
 		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv4StringToAddressEx (try 5, resend).", 1 },';
 		echo '+    { "Mark Jansen", "ntdll/tests: Add tests for RtlIpv6AddressToString and RtlIpv6AddressToStringEx.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Security_Cookie
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39040] Move cookie initialization code from memory management to loader
-# |
-# | Modified files:
-# |   *	dlls/ntdll/loader.c, dlls/ntdll/virtual.c
-# |
-if test "$enable_ntdll_Security_Cookie" -eq 1; then
-	patch_apply ntdll-Security_Cookie/0001-ntdll-Move-cookie-initialization-code-from-memory-ma.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Move cookie initialization code from memory management to loader.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5059,6 +5082,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-MESA_GPU_Info
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_gl.h, dlls/winex11.drv/opengl.c, include/wine/wgl_driver.h
+# |
+if test "$enable_wined3d_MESA_GPU_Info" -eq 1; then
+	patch_apply wined3d-MESA_GPU_Info/0001-wined3d-Use-pci-and-memory-information-from-MESA-if-.patch
+	(
+		echo '+    { "Michael Müller", "wined3d: Use pci and memory information from MESA if possible.", 2 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-Multisampling
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5131,21 +5166,6 @@ if test "$enable_wined3d_resource_check_usage" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Geforce_425M
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35054] Add wined3d detection for GeForce GT 425M
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Geforce_425M" -eq 1; then
-	patch_apply wined3d-Geforce_425M/0001-wined3d-Add-detection-for-NVIDIA-GeForce-425M.patch
-	(
-		echo '+    { "Jarkko Korpi", "wined3d: Add detection for NVIDIA GeForce 425M.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-wined3d_swapchain_present
 # |
 # | Modified files:
@@ -5158,15 +5178,18 @@ if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-MESA_GPU_Info
+# Patchset wined3d-Geforce_425M
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35054] Add wined3d detection for GeForce GT 425M
 # |
 # | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_gl.h, dlls/winex11.drv/opengl.c, include/wine/wgl_driver.h
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_private.h
 # |
-if test "$enable_wined3d_MESA_GPU_Info" -eq 1; then
-	patch_apply wined3d-MESA_GPU_Info/0001-wined3d-Use-pci-and-memory-information-from-MESA-if-.patch
+if test "$enable_wined3d_Geforce_425M" -eq 1; then
+	patch_apply wined3d-Geforce_425M/0001-wined3d-Add-detection-for-NVIDIA-GeForce-425M.patch
 	(
-		echo '+    { "Michael Müller", "wined3d: Use pci and memory information from MESA if possible.", 2 },';
+		echo '+    { "Jarkko Korpi", "wined3d: Add detection for NVIDIA GeForce 425M.", 1 },';
 	) >> "$patchlist"
 fi
 

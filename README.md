@@ -39,9 +39,10 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [3]:**
+**Bug fixes and features included in the next upcoming release [4]:**
 
 * Catch invalid memory accesses in imagehlp.CheckSumMappedFile
+* Fix implementation of ntdll.MapViewOfSection
 * Implement vcomp locking functions ([Wine Bug #26688](https://bugs.winehq.org/show_bug.cgi?id=26688))
 * Properly implement imagehlp.ImageLoad and ImageUnload
 

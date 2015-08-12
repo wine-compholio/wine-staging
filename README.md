@@ -209,7 +209,7 @@ for more details.*
 * MSYS2 expects correct handling of WRITECOPY memory protection ([Wine Bug #35561](https://bugs.winehq.org/show_bug.cgi?id=35561))
 * Make it possible to change media center / tablet pc status ([Wine Bug #18732](https://bugs.winehq.org/show_bug.cgi?id=18732))
 * MediaCoder needs CUDA for video encoding ([Wine Bug #37664](https://bugs.winehq.org/show_bug.cgi?id=37664))
-* Move cookie initialization code from memory management to loader ([Wine Bug #39040](https://bugs.winehq.org/show_bug.cgi?id=39040))
+* ~~Move cookie initialization code from memory management to loader~~ ([Wine Bug #39040](https://bugs.winehq.org/show_bug.cgi?id=39040))
 * Multiple applications need EnumDisplayDevicesW implementation ([Wine Bug #34978](https://bugs.winehq.org/show_bug.cgi?id=34978))
 * Need for Speed 3 installer requires devices in HKEY_DYN_DATA ([Wine Bug #7115](https://bugs.winehq.org/show_bug.cgi?id=7115))
 * Other Pipelight-specific enhancements

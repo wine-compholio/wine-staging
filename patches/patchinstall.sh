@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 06e68ff6613042e78a5dd4b9066713d9beab0c6d"
+	echo "  commit e083986df52bd706d0c7e8ae8820a5d886942585"
 	echo ""
 }
 
@@ -179,7 +179,6 @@ patch_enable_all ()
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_RtlIpStringToAddress="$1"
-	enable_ntdll_Security_Cookie="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
 	enable_ntdll_User_Shared_Data="$1"
@@ -621,9 +620,6 @@ patch_enable ()
 			;;
 		ntdll-RtlIpStringToAddress)
 			enable_ntdll_RtlIpStringToAddress="$2"
-			;;
-		ntdll-Security_Cookie)
-			enable_ntdll_Security_Cookie="$2"
 			;;
 		ntdll-ThreadTime)
 			enable_ntdll_ThreadTime="$2"
@@ -1755,13 +1751,6 @@ if test "$enable_ntdll_WriteWatches" -eq 1; then
 	fi
 	enable_kernel32_Named_Pipe=1
 	enable_ws2_32_WriteWatches=1
-fi
-
-if test "$enable_ntdll_NtMapViewOfSection" -eq 1; then
-	if test "$enable_ntdll_Security_Cookie" -gt 1; then
-		abort "Patchset ntdll-Security_Cookie disabled, but ntdll-NtMapViewOfSection depends on that."
-	fi
-	enable_ntdll_Security_Cookie=1
 fi
 
 if test "$enable_ntdll_Junction_Points" -eq 1; then
@@ -2996,12 +2985,10 @@ fi
 if test "$enable_imagehlp_Cleanup" -eq 1; then
 	patch_apply imagehlp-Cleanup/0001-imagehlp-Catch-invalid-memory-access-in-CheckSumMapp.patch
 	patch_apply imagehlp-Cleanup/0002-imagehlp-Fix-checksum-calculation-for-odd-sizes.patch
-	patch_apply imagehlp-Cleanup/0003-imagehlp-Remove-unused-structure.patch
-	patch_apply imagehlp-Cleanup/0004-imagehlp-Implement-ImageLoad-and-cleanup-ImageUnload.patch
+	patch_apply imagehlp-Cleanup/0003-imagehlp-Implement-ImageLoad-and-cleanup-ImageUnload.patch
 	(
 		echo '+    { "Michael Müller", "imagehlp: Catch invalid memory access in CheckSumMappedFile and add tests.", 1 },';
 		echo '+    { "Michael Müller", "imagehlp: Fix checksum calculation for odd sizes.", 1 },';
-		echo '+    { "Michael Müller", "imagehlp: Remove unused structure.", 1 },';
 		echo '+    { "Michael Müller", "imagehlp: Implement ImageLoad and cleanup ImageUnload.", 1 },';
 	) >> "$patchlist"
 fi
@@ -3808,25 +3795,7 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-Security_Cookie
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39040] Move cookie initialization code from memory management to loader
-# |
-# | Modified files:
-# |   *	dlls/ntdll/loader.c, dlls/ntdll/virtual.c
-# |
-if test "$enable_ntdll_Security_Cookie" -eq 1; then
-	patch_apply ntdll-Security_Cookie/0001-ntdll-Move-cookie-initialization-code-from-memory-ma.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Move cookie initialization code from memory management to loader.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-NtMapViewOfSection
-# |
-# | This patchset has the following dependencies:
-# |   *	ntdll-Security_Cookie
 # |
 # | Modified files:
 # |   *	dlls/kernel32/tests/loader.c, dlls/ntdll/loader.c, dlls/ntdll/virtual.c
@@ -5870,10 +5839,8 @@ fi
 # |   *	dlls/winhttp/request.c, dlls/winhttp/tests/winhttp.c
 # |
 if test "$enable_winhttp_Request_Headers" -eq 1; then
-	patch_apply winhttp-Request_Headers/0001-winhttp-Remove-unused-variable-in-read_reply.patch
-	patch_apply winhttp-Request_Headers/0002-winhttp-Raw-request-headers-needs-to-be-terminated-u.patch
+	patch_apply winhttp-Request_Headers/0001-winhttp-Raw-request-headers-needs-to-be-terminated-u.patch
 	(
-		echo '+    { "Michael Müller", "winhttp: Remove unused variable in read_reply().", 1 },';
 		echo '+    { "Michael Müller", "winhttp: Raw request headers needs to be terminated using double \\\\r\\\\n.", 1 },';
 	) >> "$patchlist"
 fi
@@ -5929,12 +5896,10 @@ fi
 # |   *	dlls/wininet/internet.c, dlls/wininet/tests/internet.c
 # |
 if test "$enable_wininet_Internet_Settings" -eq 1; then
-	patch_apply wininet-Internet_Settings/0001-wininet-Print-the-correct-function-name-in-ok-messag.patch
-	patch_apply wininet-Internet_Settings/0002-wininet-Disabling-proxy-should-return-success-when-n.patch
-	patch_apply wininet-Internet_Settings/0003-wininet-Allow-INTERNET_OPTION_SETTINGS_CHANGED-on-co.patch
-	patch_apply wininet-Internet_Settings/0004-wininet-Add-support-for-INTERNET_OPTION_SETTINGS_CHA.patch
+	patch_apply wininet-Internet_Settings/0001-wininet-Disabling-proxy-should-return-success-when-n.patch
+	patch_apply wininet-Internet_Settings/0002-wininet-Allow-INTERNET_OPTION_SETTINGS_CHANGED-on-co.patch
+	patch_apply wininet-Internet_Settings/0003-wininet-Add-support-for-INTERNET_OPTION_SETTINGS_CHA.patch
 	(
-		echo '+    { "Sebastian Lackner", "wininet: Print the correct function name in ok() messages.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Disabling proxy should return success when no proxy was enabled.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Allow INTERNET_OPTION_SETTINGS_CHANGED on connections.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Add support for INTERNET_OPTION_SETTINGS_CHANGED in InternetSetOption.", 1 },';

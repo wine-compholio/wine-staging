@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [8]:**
+**Bug fixes and features included in the next upcoming release [9]:**
 
 * Add IDragSourceHelper stub interface ([Wine Bug #24699](https://bugs.winehq.org/show_bug.cgi?id=24699))
 * Catch invalid memory accesses in imagehlp.CheckSumMappedFile
@@ -48,6 +48,7 @@ Included bug fixes and improvements
 * Implement special handling for calling GetChildContainer with an empty string ([Wine Bug #38014](https://bugs.winehq.org/show_bug.cgi?id=38014))
 * Implement vcomp locking functions ([Wine Bug #26688](https://bugs.winehq.org/show_bug.cgi?id=26688))
 * Improve startup performance by delaying font initialization
+* Only set SFGAO_HASSUBFOLDER when there are really subfolders ([Wine Bug #24851](https://bugs.winehq.org/show_bug.cgi?id=24851))
 * Properly implement imagehlp.ImageLoad and ImageUnload
 
 

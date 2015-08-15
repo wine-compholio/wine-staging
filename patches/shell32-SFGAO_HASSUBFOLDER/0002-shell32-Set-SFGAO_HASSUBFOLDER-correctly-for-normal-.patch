@@ -1,0 +1,43 @@
+From b9fa2a0da086a8e964ef959a0f4e9a68779dd2a7 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 15 Aug 2015 21:12:00 +0200
+Subject: shell32: Set SFGAO_HASSUBFOLDER correctly for normal shellfolders.
+
+---
+ dlls/shell32/shlfolder.c | 20 ++++++++++++++++++--
+ 1 file changed, 18 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/shell32/shlfolder.c b/dlls/shell32/shlfolder.c
+index 46ccc56..0303924 100644
+--- a/dlls/shell32/shlfolder.c
++++ b/dlls/shell32/shlfolder.c
+@@ -450,8 +450,24 @@ HRESULT SHELL32_GetItemAttributes (IShellFolder * psf, LPCITEMIDLIST pidl, LPDWO
+         *pdwAttributes |= SFGAO_FILESYSTEM | SFGAO_DROPTARGET | SFGAO_HASPROPSHEET | SFGAO_CANDELETE | 
+                           SFGAO_CANRENAME | SFGAO_CANLINK | SFGAO_CANMOVE | SFGAO_CANCOPY;
+ 
+-	if (dwAttributes & FILE_ATTRIBUTE_DIRECTORY)
+-	    *pdwAttributes |=  (SFGAO_FOLDER | SFGAO_HASSUBFOLDER | SFGAO_FILESYSANCESTOR);
++        if (dwAttributes & FILE_ATTRIBUTE_DIRECTORY)
++        {
++            IEnumIDList *enum_list;
++            IShellFolder *child;
++
++            *pdwAttributes |= (SFGAO_FOLDER | SFGAO_FILESYSANCESTOR);
++
++            if (SUCCEEDED(IShellFolder_BindToObject(psf, pidl, NULL, &IID_IShellFolder, (void **)&child)))
++            {
++                if (IShellFolder_EnumObjects(child, NULL, SHCONTF_FOLDERS|SHCONTF_INCLUDEHIDDEN, &enum_list) == S_OK)
++                {
++                    if (IEnumIDList_Skip(enum_list, 1) != S_OK)
++                        *pdwAttributes &= ~SFGAO_HASSUBFOLDER;
++                    IEnumIDList_Release(enum_list);
++                }
++                IShellFolder_Release(child);
++            }
++        }
+ 	else
+ 	    *pdwAttributes &= ~(SFGAO_FOLDER | SFGAO_HASSUBFOLDER | SFGAO_FILESYSANCESTOR);
+ 
+-- 
+2.5.0
+

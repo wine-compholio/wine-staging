@@ -232,6 +232,7 @@ patch_enable_all ()
 	enable_shell32_Progress_Dialog="$1"
 	enable_shell32_RunDLL_CallEntry16="$1"
 	enable_shell32_Run_Dialog="$1"
+	enable_shell32_SFGAO_HASSUBFOLDER="$1"
 	enable_shell32_SHCreateSessionKey="$1"
 	enable_shell32_SHFileOperation="$1"
 	enable_shell32_UnixFS="$1"
@@ -783,6 +784,9 @@ patch_enable ()
 			;;
 		shell32-Run_Dialog)
 			enable_shell32_Run_Dialog="$2"
+			;;
+		shell32-SFGAO_HASSUBFOLDER)
+			enable_shell32_SFGAO_HASSUBFOLDER="$2"
 			;;
 		shell32-SHCreateSessionKey)
 			enable_shell32_SHCreateSessionKey="$2"
@@ -4759,6 +4763,23 @@ if test "$enable_shell32_Run_Dialog" -eq 1; then
 	patch_apply shell32-Run_Dialog/0001-shell32-Add-caption-to-Run-dialog.patch
 	(
 		echo '+    { "Jared Smudde", "shell32: Add caption to Run dialog.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shell32-SFGAO_HASSUBFOLDER
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#24851] Only set SFGAO_HASSUBFOLDER when there are really subfolders
+# |
+# | Modified files:
+# |   *	dlls/shell32/shfldr_unixfs.c, dlls/shell32/shlfolder.c
+# |
+if test "$enable_shell32_SFGAO_HASSUBFOLDER" -eq 1; then
+	patch_apply shell32-SFGAO_HASSUBFOLDER/0001-shell32-Set-SFGAO_HASSUBFOLDER-correctly-for-unixfs.patch
+	patch_apply shell32-SFGAO_HASSUBFOLDER/0002-shell32-Set-SFGAO_HASSUBFOLDER-correctly-for-normal-.patch
+	(
+		echo '+    { "Michael Müller", "shell32: Set SFGAO_HASSUBFOLDER correctly for unixfs.", 1 },';
+		echo '+    { "Michael Müller", "shell32: Set SFGAO_HASSUBFOLDER correctly for normal shellfolders.", 1 },';
 	) >> "$patchlist"
 fi
 

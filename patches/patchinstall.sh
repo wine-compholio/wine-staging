@@ -225,6 +225,7 @@ patch_enable_all ()
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
 	enable_shell32_Default_Path="$1"
 	enable_shell32_File_Property_Dialog="$1"
+	enable_shell32_IDragSourceHelper="$1"
 	enable_shell32_Icons="$1"
 	enable_shell32_Placeholder_Icons="$1"
 	enable_shell32_Progress_Dialog="$1"
@@ -760,6 +761,9 @@ patch_enable ()
 			;;
 		shell32-File_Property_Dialog)
 			enable_shell32_File_Property_Dialog="$2"
+			;;
+		shell32-IDragSourceHelper)
+			enable_shell32_IDragSourceHelper="$2"
 			;;
 		shell32-Icons)
 			enable_shell32_Icons="$2"
@@ -4644,6 +4648,23 @@ if test "$enable_shell32_File_Property_Dialog" -eq 1; then
 	patch_apply shell32-File_Property_Dialog/0001-shell32-Add-general-tab-in-file-property-dialog.patch
 	(
 		echo '+    { "Michael Müller", "shell32: Add general tab in file property dialog.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shell32-IDragSourceHelper
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#24699] Add IDragSourceHelper stub interface
+# |
+# | Modified files:
+# |   *	dlls/shell32/dragdrophelper.c
+# |
+if test "$enable_shell32_IDragSourceHelper" -eq 1; then
+	patch_apply shell32-IDragSourceHelper/0001-shell32-Cleanup-IDropTargetHelper-and-preparation-fo.patch
+	patch_apply shell32-IDragSourceHelper/0002-shell32-Add-IDragSourceHelper-stub-interface.patch
+	(
+		echo '+    { "Michael Müller", "shell32: Cleanup IDropTargetHelper and preparation for IDragSourceHelper.", 1 },';
+		echo '+    { "Michael Müller", "shell32: Add IDragSourceHelper stub interface.", 1 },';
 	) >> "$patchlist"
 fi
 

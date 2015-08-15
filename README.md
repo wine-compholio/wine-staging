@@ -39,8 +39,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [6]:**
+**Bug fixes and features included in the next upcoming release [7]:**
 
+* Add IDragSourceHelper stub interface ([Wine Bug #24699](https://bugs.winehq.org/show_bug.cgi?id=24699))
 * Catch invalid memory accesses in imagehlp.CheckSumMappedFile
 * Fix implementation of ntdll.MapViewOfSection
 * Implement enumeration of sound devices and basic properties to dxdiagn ([Wine Bug #32613](https://bugs.winehq.org/show_bug.cgi?id=32613))

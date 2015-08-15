@@ -118,6 +118,7 @@ patch_enable_all ()
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
+	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
 	enable_dxgi_GetDesc="$1"
 	enable_dxgi_MakeWindowAssociation="$1"
 	enable_dxva2_Video_Decoder="$1"
@@ -438,6 +439,9 @@ patch_enable ()
 			;;
 		dxdiagn-Enumerate_DirectSound)
 			enable_dxdiagn_Enumerate_DirectSound="$2"
+			;;
+		dxdiagn-GetChildContainer_Leaf_Nodes)
+			enable_dxdiagn_GetChildContainer_Leaf_Nodes="$2"
 			;;
 		dxgi-GetDesc)
 			enable_dxgi_GetDesc="$2"
@@ -1814,6 +1818,13 @@ if test "$enable_dxva2_Video_Decoder" -eq 1; then
 	enable_winecfg_Staging=1
 fi
 
+if test "$enable_dxdiagn_GetChildContainer_Leaf_Nodes" -eq 1; then
+	if test "$enable_dxdiagn_Enumerate_DirectSound" -gt 1; then
+		abort "Patchset dxdiagn-Enumerate_DirectSound disabled, but dxdiagn-GetChildContainer_Leaf_Nodes depends on that."
+	fi
+	enable_dxdiagn_Enumerate_DirectSound=1
+fi
+
 if test "$enable_dsound_EAX" -eq 1; then
 	if test "$enable_dsound_Fast_Mixer" -gt 1; then
 		abort "Patchset dsound-Fast_Mixer disabled, but dsound-EAX depends on that."
@@ -2773,6 +2784,24 @@ if test "$enable_dxdiagn_Enumerate_DirectSound" -eq 1; then
 	patch_apply dxdiagn-Enumerate_DirectSound/0001-dxdiagn-Enumerate-DirectSound-devices-and-add-some-b.patch
 	(
 		echo '+    { "Michael Müller", "dxdiagn: Enumerate DirectSound devices and add some basic properties.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dxdiagn-GetChildContainer_Leaf_Nodes
+# |
+# | This patchset has the following dependencies:
+# |   *	dxdiagn-Enumerate_DirectSound
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38014] Implement special handling for calling GetChildContainer with an empty string
+# |
+# | Modified files:
+# |   *	dlls/dxdiagn/container.c, dlls/dxdiagn/tests/container.c
+# |
+if test "$enable_dxdiagn_GetChildContainer_Leaf_Nodes" -eq 1; then
+	patch_apply dxdiagn-GetChildContainer_Leaf_Nodes/0001-dxdiagn-Calling-GetChildContainer-with-an-empty-stri.patch
+	(
+		echo '+    { "Michael Müller", "dxdiagn: Calling GetChildContainer with an empty string on a leaf container returns the object itself.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -39,11 +39,12 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [5]:**
+**Bug fixes and features included in the next upcoming release [6]:**
 
 * Catch invalid memory accesses in imagehlp.CheckSumMappedFile
 * Fix implementation of ntdll.MapViewOfSection
 * Implement enumeration of sound devices and basic properties to dxdiagn ([Wine Bug #32613](https://bugs.winehq.org/show_bug.cgi?id=32613))
+* Implement special handling for calling GetChildContainer with an empty string ([Wine Bug #38014](https://bugs.winehq.org/show_bug.cgi?id=38014))
 * Implement vcomp locking functions ([Wine Bug #26688](https://bugs.winehq.org/show_bug.cgi?id=26688))
 * Properly implement imagehlp.ImageLoad and ImageUnload
 

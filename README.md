@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [7]:**
+**Bug fixes and features included in the next upcoming release [8]:**
 
 * Add IDragSourceHelper stub interface ([Wine Bug #24699](https://bugs.winehq.org/show_bug.cgi?id=24699))
 * Catch invalid memory accesses in imagehlp.CheckSumMappedFile
@@ -47,6 +47,7 @@ Included bug fixes and improvements
 * Implement enumeration of sound devices and basic properties to dxdiagn ([Wine Bug #32613](https://bugs.winehq.org/show_bug.cgi?id=32613))
 * Implement special handling for calling GetChildContainer with an empty string ([Wine Bug #38014](https://bugs.winehq.org/show_bug.cgi?id=38014))
 * Implement vcomp locking functions ([Wine Bug #26688](https://bugs.winehq.org/show_bug.cgi?id=26688))
+* Improve startup performance by delaying font initialization
 * Properly implement imagehlp.ImageLoad and ImageUnload
 
 

@@ -125,6 +125,7 @@ patch_enable_all ()
 	enable_fltmgr_Stub_SYS="$1"
 	enable_fonts_Missing_Fonts="$1"
 	enable_gdi32_Default_Palette="$1"
+	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_MaxPixelFormats="$1"
 	enable_gdi32_MultiMonitor="$1"
 	enable_gdiplus_GdipCreateEffect="$1"
@@ -461,6 +462,9 @@ patch_enable ()
 			;;
 		gdi32-Default_Palette)
 			enable_gdi32_Default_Palette="$2"
+			;;
+		gdi32-Lazy_Font_Initialization)
+			enable_gdi32_Lazy_Font_Initialization="$2"
 			;;
 		gdi32-MaxPixelFormats)
 			enable_gdi32_MaxPixelFormats="$2"
@@ -2945,6 +2949,18 @@ if test "$enable_gdi32_Default_Palette" -eq 1; then
 	patch_apply gdi32-Default_Palette/0001-gdi32-Return-default-palette-entries-from-GetSystemP.patch
 	(
 		echo '+    { "Anton Baskanov", "gdi32: Return default palette entries from GetSystemPaletteEntries for non-palette-based devices.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset gdi32-Lazy_Font_Initialization
+# |
+# | Modified files:
+# |   *	dlls/gdi32/dc.c, dlls/gdi32/freetype.c
+# |
+if test "$enable_gdi32_Lazy_Font_Initialization" -eq 1; then
+	patch_apply gdi32-Lazy_Font_Initialization/0001-gdi32-Perform-lazy-initialization-of-fonts-to-improv.patch
+	(
+		echo '+    { "Sebastian Lackner", "gdi32: Perform lazy initialization of fonts to improve startup performance.", 1 },';
 	) >> "$patchlist"
 fi
 

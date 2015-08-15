@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit e083986df52bd706d0c7e8ae8820a5d886942585"
+	echo "  commit 36a39cea9096a1eef46c59392858c26ecae40c39"
 	echo ""
 }
 
@@ -117,6 +117,7 @@ patch_enable_all ()
 	enable_dinput_Events="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
+	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxgi_GetDesc="$1"
 	enable_dxgi_MakeWindowAssociation="$1"
 	enable_dxva2_Video_Decoder="$1"
@@ -434,6 +435,9 @@ patch_enable ()
 			;;
 		dsound-Fast_Mixer)
 			enable_dsound_Fast_Mixer="$2"
+			;;
+		dxdiagn-Enumerate_DirectSound)
+			enable_dxdiagn_Enumerate_DirectSound="$2"
 			;;
 		dxgi-GetDesc)
 			enable_dxgi_GetDesc="$2"
@@ -2754,6 +2758,21 @@ if test "$enable_dsound_EAX" -eq 1; then
 		echo '+    { "Mark Harmstone", "dsound: Implement EAX late all-pass filter.", 1 },';
 		echo '+    { "Sebastian Lackner", "dsound: Various improvements to EAX support.", 1 },';
 		echo '+    { "Sebastian Lackner", "dsound: Allow disabling of EAX support in the registry.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dxdiagn-Enumerate_DirectSound
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#32613] Implement enumeration of sound devices and basic properties to dxdiagn
+# |
+# | Modified files:
+# |   *	dlls/dxdiagn/Makefile.in, dlls/dxdiagn/provider.c, dlls/dxdiagn/tests/container.c
+# |
+if test "$enable_dxdiagn_Enumerate_DirectSound" -eq 1; then
+	patch_apply dxdiagn-Enumerate_DirectSound/0001-dxdiagn-Enumerate-DirectSound-devices-and-add-some-b.patch
+	(
+		echo '+    { "Michael Müller", "dxdiagn: Enumerate DirectSound devices and add some basic properties.", 1 },';
 	) >> "$patchlist"
 fi
 

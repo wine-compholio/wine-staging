@@ -229,6 +229,7 @@ patch_enable_all ()
 	enable_shell32_File_Property_Dialog="$1"
 	enable_shell32_IDragSourceHelper="$1"
 	enable_shell32_Icons="$1"
+	enable_shell32_NewMenu_Interface="$1"
 	enable_shell32_Placeholder_Icons="$1"
 	enable_shell32_Progress_Dialog="$1"
 	enable_shell32_RunDLL_CallEntry16="$1"
@@ -776,6 +777,9 @@ patch_enable ()
 			;;
 		shell32-Icons)
 			enable_shell32_Icons="$2"
+			;;
+		shell32-NewMenu_Interface)
+			enable_shell32_NewMenu_Interface="$2"
 			;;
 		shell32-Placeholder_Icons)
 			enable_shell32_Placeholder_Icons="$2"
@@ -4718,6 +4722,22 @@ if test "$enable_shell32_Icons" -eq 1; then
 	patch_apply shell32-Icons/0001-shell32-Add-support-for-extra-large-and-jumbo-icon-l.patch
 	(
 		echo '+    { "Michael Müller", "shell32: Add support for extra large and jumbo icon lists.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shell32-NewMenu_Interface
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#24812] Implement shell32 NewMenu class with new folder item
+# |
+# | Modified files:
+# |   *	dlls/shell32/Makefile.in, dlls/shell32/shell32_classes.idl, dlls/shell32/shell32_main.h, dlls/shell32/shellnew.c,
+# | 	dlls/shell32/shellole.c, include/shlguid.h
+# |
+if test "$enable_shell32_NewMenu_Interface" -eq 1; then
+	patch_apply shell32-NewMenu_Interface/0001-shell32-Implement-NewMenu-with-new-folder-item.patch
+	(
+		echo '+    { "Michael Müller", "shell32: Implement NewMenu with new folder item.", 1 },';
 	) >> "$patchlist"
 fi
 

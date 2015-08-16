@@ -220,6 +220,7 @@ patch_enable_all ()
 	enable_server_RootDirectory_File="$1"
 	enable_server_Shared_Memory="$1"
 	enable_server_Stored_ACLs="$1"
+	enable_server_Uninitialized_Memory="$1"
 	enable_setupapi_SetupDiSelectBestCompatDrv="$1"
 	enable_setupapi_SetupDiSetDeviceInstallParamsW="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
@@ -748,6 +749,9 @@ patch_enable ()
 			;;
 		server-Stored_ACLs)
 			enable_server_Stored_ACLs="$2"
+			;;
+		server-Uninitialized_Memory)
+			enable_server_Uninitialized_Memory="$2"
 			;;
 		setupapi-SetupDiSelectBestCompatDrv)
 			enable_setupapi_SetupDiSelectBestCompatDrv="$2"
@@ -4582,6 +4586,20 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Store a list of associated queues for each thread input.", 1 },';
 		echo '+    { "Sebastian Lackner", "user32: Get rid of wineserver call for GetActiveWindow, GetFocus, GetCapture.", 1 },';
 		echo '+    { "Sebastian Lackner", "user32: Cache the result of GetForegroundWindow.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Uninitialized_Memory
+# |
+# | Modified files:
+# |   *	server/device.c
+# |
+if test "$enable_server_Uninitialized_Memory" -eq 1; then
+	patch_apply server-Uninitialized_Memory/0001-server-Initialize-irp-thread-immediately-after-creat.patch
+	patch_apply server-Uninitialized_Memory/0002-server-Avoid-leaking-uninitialized-stack-value-to-ap.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Initialize irp->thread immediately after creation of irp_call object.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Avoid leaking uninitialized stack value to application.", 1 },';
 	) >> "$patchlist"
 fi
 

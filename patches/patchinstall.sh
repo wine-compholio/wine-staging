@@ -215,6 +215,7 @@ patch_enable_all ()
 	enable_server_Misc_ACL="$1"
 	enable_server_OpenProcess="$1"
 	enable_server_PeekMessage="$1"
+	enable_server_Pipe_ObjectName="$1"
 	enable_server_Realtime_Priority="$1"
 	enable_server_Registry_Timestamp="$1"
 	enable_server_RootDirectory_File="$1"
@@ -735,6 +736,9 @@ patch_enable ()
 			;;
 		server-PeekMessage)
 			enable_server_PeekMessage="$2"
+			;;
+		server-Pipe_ObjectName)
+			enable_server_Pipe_ObjectName="$2"
 			;;
 		server-Realtime_Priority)
 			enable_server_Realtime_Priority="$2"
@@ -1711,6 +1715,13 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 	enable_server_ClipCursor=1
 	enable_server_Key_State=1
 	enable_server_PeekMessage=1
+fi
+
+if test "$enable_server_Pipe_ObjectName" -eq 1; then
+	if test "$enable_kernel32_Named_Pipe" -gt 1; then
+		abort "Patchset kernel32-Named_Pipe disabled, but server-Pipe_ObjectName depends on that."
+	fi
+	enable_kernel32_Named_Pipe=1
 fi
 
 if test "$enable_server_ACL_Compat" -eq 1; then
@@ -4529,6 +4540,25 @@ if test "$enable_server_PeekMessage" -eq 1; then
 	patch_apply server-PeekMessage/0001-server-Fix-handling-of-GetMessage-after-previous-Pee.patch
 	(
 		echo '+    { "Sebastian Lackner", "server: Fix handling of GetMessage after previous PeekMessage call.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Pipe_ObjectName
+# |
+# | This patchset has the following dependencies:
+# |   *	kernel32-Named_Pipe
+# |
+# | Modified files:
+# |   *	server/named_pipe.c, server/object.c, server/object.h
+# |
+if test "$enable_server_Pipe_ObjectName" -eq 1; then
+	patch_apply server-Pipe_ObjectName/0001-server-Move-parent-reference-from-object_name-to-obj.patch
+	patch_apply server-Pipe_ObjectName/0002-server-Link-named-pipes-to-their-device.patch
+	patch_apply server-Pipe_ObjectName/0003-server-Store-a-reference-to-the-parent-object-for-pi.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Move parent reference from object_name to object.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Link named pipes to their device.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Store a reference to the parent object for pipe servers.", 1 },';
 	) >> "$patchlist"
 fi
 

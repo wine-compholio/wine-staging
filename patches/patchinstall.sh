@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 36a39cea9096a1eef46c59392858c26ecae40c39"
+	echo "  commit bd7f43d7e8fca5cab20120b3819bfd5491436b72"
 	echo ""
 }
 
@@ -90,7 +90,6 @@ patch_enable_all ()
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Skip_Tests="$1"
 	enable_d3d9_Surface_Refcount="$1"
-	enable_d3dcompiler_43_D3DCompile="$1"
 	enable_d3dx10_43_D3DX10CreateEffectFromFile="$1"
 	enable_d3dx9_24_ID3DXEffect="$1"
 	enable_d3dx9_25_ID3DXEffect="$1"
@@ -222,7 +221,6 @@ patch_enable_all ()
 	enable_server_RootDirectory_File="$1"
 	enable_server_Shared_Memory="$1"
 	enable_server_Stored_ACLs="$1"
-	enable_server_Uninitialized_Memory="$1"
 	enable_setupapi_SetupDiSelectBestCompatDrv="$1"
 	enable_setupapi_SetupDiSetDeviceInstallParamsW="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
@@ -362,9 +360,6 @@ patch_enable ()
 			;;
 		d3d9-Surface_Refcount)
 			enable_d3d9_Surface_Refcount="$2"
-			;;
-		d3dcompiler_43-D3DCompile)
-			enable_d3dcompiler_43_D3DCompile="$2"
 			;;
 		d3dx10_43-D3DX10CreateEffectFromFile)
 			enable_d3dx10_43_D3DX10CreateEffectFromFile="$2"
@@ -758,9 +753,6 @@ patch_enable ()
 			;;
 		server-Stored_ACLs)
 			enable_server_Stored_ACLs="$2"
-			;;
-		server-Uninitialized_Memory)
-			enable_server_Uninitialized_Memory="$2"
 			;;
 		setupapi-SetupDiSelectBestCompatDrv)
 			enable_setupapi_SetupDiSelectBestCompatDrv="$2"
@@ -2327,20 +2319,6 @@ if test "$enable_d3d9_Surface_Refcount" -eq 1; then
 	patch_apply d3d9-Surface_Refcount/0001-d3d9-Don-t-decrease-surface-refcount-when-its-alread.patch
 	(
 		echo '+    { "Henri Verbeet", "d3d9: Don'\''t decrease surface refcount when its already zero.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3dcompiler_43-D3DCompile
-# |
-# | Modified files:
-# |   *	dlls/d3dcompiler_43/compiler.c, dlls/d3dcompiler_46/d3dcompiler_46.spec, dlls/d3dcompiler_47/d3dcompiler_47.spec
-# |
-if test "$enable_d3dcompiler_43_D3DCompile" -eq 1; then
-	patch_apply d3dcompiler_43-D3DCompile/0001-d3dcompiler_43-Add-D3DCompileFromFile-stub.-try-3.patch
-	patch_apply d3dcompiler_43-D3DCompile/0002-d3dcompiler_43-Implement-semi-stub-for-D3DCompile2.patch
-	(
-		echo '+    { "Alistair Leslie-Hughes", "d3dcompiler_43: Add D3DCompileFromFile stub.", 3 },';
-		echo '+    { "Sebastian Lackner", "d3dcompiler_43: Implement semi-stub for D3DCompile2.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4646,20 +4624,6 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Store a list of associated queues for each thread input.", 1 },';
 		echo '+    { "Sebastian Lackner", "user32: Get rid of wineserver call for GetActiveWindow, GetFocus, GetCapture.", 1 },';
 		echo '+    { "Sebastian Lackner", "user32: Cache the result of GetForegroundWindow.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Uninitialized_Memory
-# |
-# | Modified files:
-# |   *	server/device.c
-# |
-if test "$enable_server_Uninitialized_Memory" -eq 1; then
-	patch_apply server-Uninitialized_Memory/0001-server-Initialize-irp-thread-immediately-after-creat.patch
-	patch_apply server-Uninitialized_Memory/0002-server-Avoid-leaking-uninitialized-stack-value-to-ap.patch
-	(
-		echo '+    { "Sebastian Lackner", "server: Initialize irp->thread immediately after creation of irp_call object.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Avoid leaking uninitialized stack value to application.", 1 },';
 	) >> "$patchlist"
 fi
 

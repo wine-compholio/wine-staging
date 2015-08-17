@@ -89,7 +89,7 @@ for more details.*
 * Add stub for winscard.SCardListReadersA/W ([Wine Bug #26978](https://bugs.winehq.org/show_bug.cgi?id=26978))
 * Add stub for winsta.WinStationEnumerateW ([Wine Bug #38102](https://bugs.winehq.org/show_bug.cgi?id=38102))
 * Add stubbed ISWbemSecurity interfaces in wbemdisp
-* Add stubs for D3DCompile2 and D3DCompileFromFile
+* ~~Add stubs for D3DCompile2 and D3DCompileFromFile~~
 * Add stubs for D3DXCreateAnimationController interface
 * Add stubs for additional wininet options in InternetSetOption
 * Add stubs for d3dx10_43.D3DX10CreateEffectFromFileA/W ([Wine Bug #27739](https://bugs.winehq.org/show_bug.cgi?id=27739))

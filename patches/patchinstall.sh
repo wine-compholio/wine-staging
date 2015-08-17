@@ -182,6 +182,7 @@ patch_enable_all ()
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_RtlIpStringToAddress="$1"
+	enable_ntdll_SystemRoot_Symlink="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
 	enable_ntdll_User_Shared_Data="$1"
@@ -637,6 +638,9 @@ patch_enable ()
 			;;
 		ntdll-RtlIpStringToAddress)
 			enable_ntdll_RtlIpStringToAddress="$2"
+			;;
+		ntdll-SystemRoot_Symlink)
+			enable_ntdll_SystemRoot_Symlink="$2"
 			;;
 		ntdll-ThreadTime)
 			enable_ntdll_ThreadTime="$2"
@@ -1790,6 +1794,13 @@ if test "$enable_ntdll_WriteWatches" -eq 1; then
 	fi
 	enable_kernel32_Named_Pipe=1
 	enable_ws2_32_WriteWatches=1
+fi
+
+if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
+	if test "$enable_ntdll_Exception" -gt 1; then
+		abort "Patchset ntdll-Exception disabled, but ntdll-SystemRoot_Symlink depends on that."
+	fi
+	enable_ntdll_Exception=1
 fi
 
 if test "$enable_ntdll_Junction_Points" -eq 1; then
@@ -3961,6 +3972,21 @@ if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
 		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddressEx.", 6 },';
 		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv4StringToAddressEx (try 5, resend).", 1 },';
 		echo '+    { "Mark Jansen", "ntdll/tests: Add tests for RtlIpv6AddressToString and RtlIpv6AddressToStringEx.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-SystemRoot_Symlink
+# |
+# | This patchset has the following dependencies:
+# |   *	ntdll-Exception
+# |
+# | Modified files:
+# |   *	dlls/ntdll/om.c
+# |
+if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
+	patch_apply ntdll-SystemRoot_Symlink/0001-ntdll-Add-special-handling-for-SystemRoot-to-satisfy.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Add special handling for \\\\SystemRoot to satisfy MSYS2 case-insensitive system check.", 1 },';
 	) >> "$patchlist"
 fi
 

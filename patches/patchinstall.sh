@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit bd7f43d7e8fca5cab20120b3819bfd5491436b72"
+	echo "  commit cfbc37c699e3b3b27df4c566014e6dde9c7194b8"
 	echo ""
 }
 
@@ -175,7 +175,6 @@ patch_enable_all ()
 	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_Loader_Machine_Type="$1"
-	enable_ntdll_NtMapViewOfSection="$1"
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
@@ -217,7 +216,6 @@ patch_enable_all ()
 	enable_server_PeekMessage="$1"
 	enable_server_Pipe_ObjectName="$1"
 	enable_server_Realtime_Priority="$1"
-	enable_server_Registry_Timestamp="$1"
 	enable_server_RootDirectory_File="$1"
 	enable_server_Shared_Memory="$1"
 	enable_server_Stored_ACLs="$1"
@@ -250,7 +248,6 @@ patch_enable_all ()
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_WndProc="$1"
 	enable_uxtheme_GTK_Theming="$1"
-	enable_vcomp_Functions="$1"
 	enable_version_VerQueryValue="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_wbemdisp_Timeout="$1"
@@ -285,7 +282,6 @@ patch_enable_all ()
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
 	enable_winex11_wglShareLists="$1"
-	enable_winhttp_Request_Headers="$1"
 	enable_winhttp_System_Proxy_Autoconfig="$1"
 	enable_wininet_Cleanup="$1"
 	enable_wininet_Internet_Settings="$1"
@@ -616,9 +612,6 @@ patch_enable ()
 		ntdll-Loader_Machine_Type)
 			enable_ntdll_Loader_Machine_Type="$2"
 			;;
-		ntdll-NtMapViewOfSection)
-			enable_ntdll_NtMapViewOfSection="$2"
-			;;
 		ntdll-NtQueryEaFile)
 			enable_ntdll_NtQueryEaFile="$2"
 			;;
@@ -742,9 +735,6 @@ patch_enable ()
 		server-Realtime_Priority)
 			enable_server_Realtime_Priority="$2"
 			;;
-		server-Registry_Timestamp)
-			enable_server_Registry_Timestamp="$2"
-			;;
 		server-RootDirectory_File)
 			enable_server_RootDirectory_File="$2"
 			;;
@@ -840,9 +830,6 @@ patch_enable ()
 			;;
 		uxtheme-GTK_Theming)
 			enable_uxtheme_GTK_Theming="$2"
-			;;
-		vcomp-Functions)
-			enable_vcomp_Functions="$2"
 			;;
 		version-VerQueryValue)
 			enable_version_VerQueryValue="$2"
@@ -945,9 +932,6 @@ patch_enable ()
 			;;
 		winex11-wglShareLists)
 			enable_winex11_wglShareLists="$2"
-			;;
-		winhttp-Request_Headers)
-			enable_winhttp_Request_Headers="$2"
 			;;
 		winhttp-System_Proxy_Autoconfig)
 			enable_winhttp_System_Proxy_Autoconfig="$2"
@@ -3875,18 +3859,6 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-NtMapViewOfSection
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/loader.c, dlls/ntdll/loader.c, dlls/ntdll/virtual.c
-# |
-if test "$enable_ntdll_NtMapViewOfSection" -eq 1; then
-	patch_apply ntdll-NtMapViewOfSection/0001-ntdll-Separate-image-relocation-from-NtMapViewOfSect.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "ntdll: Separate image relocation from NtMapViewOfSection.", 3 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-NtQuerySection
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4578,21 +4550,6 @@ if test "$enable_server_Realtime_Priority" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Registry_Timestamp
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38927] Store registry timestamps with nanoseconds precision
-# |
-# | Modified files:
-# |   *	server/registry.c
-# |
-if test "$enable_server_Registry_Timestamp" -eq 1; then
-	patch_apply server-Registry_Timestamp/0001-server-Increase-precision-when-saving-loading-regist.patch
-	(
-		echo '+    { "Michael Müller", "server: Increase precision when saving / loading registry modification date.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-Shared_Memory
 # |
 # | This patchset has the following dependencies:
@@ -5065,33 +5022,6 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 		echo '+    { "Ivan Akulinchev", "uxthemegtk: Initial implementation.", 1 },';
 		echo '+    { "Michael Müller", "uxthemegtk: Implement enumeration of themes, color and sizes.", 1 },';
 		echo '+    { "Sebastian Lackner", "uxthemegtk: Correctly render buttons with GTK >= 3.14.0.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset vcomp-Functions
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39058] Implement stub for vcomp._vcomp_flush
-# |   *	[#26688] Implement vcomp locking functions
-# |
-# | Modified files:
-# |   *	dlls/vcomp/main.c, dlls/vcomp/tests/vcomp.c, dlls/vcomp/vcomp.spec, dlls/vcomp100/vcomp100.spec,
-# | 	dlls/vcomp110/vcomp110.spec, dlls/vcomp90/vcomp90.spec
-# |
-if test "$enable_vcomp_Functions" -eq 1; then
-	patch_apply vcomp-Functions/0001-vcomp-Implement-_vcomp_flush-and-add-tests.patch
-	patch_apply vcomp-Functions/0002-vcomp-Implement-omp_init_lock-and-omp_destroy_lock.patch
-	patch_apply vcomp-Functions/0003-vcomp-Export-omp_init_nest_lock-and-omp_destroy_nest.patch
-	patch_apply vcomp-Functions/0004-vcomp-Implement-OpenMP-nested-locking-functions.patch
-	patch_apply vcomp-Functions/0005-vcomp-Implement-OpenMP-regular-locking-functions.patch
-	patch_apply vcomp-Functions/0006-vcomp-tests-Add-tests-for-function-pointers-of-remai.patch
-	(
-		echo '+    { "Sebastian Lackner", "vcomp: Implement _vcomp_flush and add tests.", 1 },';
-		echo '+    { "Sebastian Lackner", "vcomp: Implement omp_init_lock and omp_destroy_lock.", 1 },';
-		echo '+    { "Sebastian Lackner", "vcomp: Export omp_init_nest_lock and omp_destroy_nest_lock.", 1 },';
-		echo '+    { "Sebastian Lackner", "vcomp: Implement OpenMP nested locking functions.", 1 },';
-		echo '+    { "Sebastian Lackner", "vcomp: Implement OpenMP regular locking functions.", 1 },';
-		echo '+    { "Sebastian Lackner", "vcomp/tests: Add tests for function pointers of remaining lock functions.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5991,21 +5921,6 @@ if test "$enable_winex11_wglShareLists" -eq 1; then
 	patch_apply winex11-wglShareLists/0001-winex11.drv-Only-warn-about-used-contexts-in-wglShar.patch
 	(
 		echo '+    { "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winhttp-Request_Headers
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35953] Winhttp raw request headers must be terminated using double \r\n
-# |
-# | Modified files:
-# |   *	dlls/winhttp/request.c, dlls/winhttp/tests/winhttp.c
-# |
-if test "$enable_winhttp_Request_Headers" -eq 1; then
-	patch_apply winhttp-Request_Headers/0001-winhttp-Raw-request-headers-needs-to-be-terminated-u.patch
-	(
-		echo '+    { "Michael Müller", "winhttp: Raw request headers needs to be terminated using double \\\\r\\\\n.", 1 },';
 	) >> "$patchlist"
 fi
 

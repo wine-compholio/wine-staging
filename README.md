@@ -39,16 +39,14 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [12]:**
+**Bug fixes and features included in the next upcoming release [10]:**
 
 * Add IDragSourceHelper stub interface ([Wine Bug #24699](https://bugs.winehq.org/show_bug.cgi?id=24699))
 * Catch invalid memory accesses in imagehlp.CheckSumMappedFile
 * Fix detection of case-insensitive systems in MSYS2
-* Fix implementation of ntdll.MapViewOfSection
 * Implement enumeration of sound devices and basic properties to dxdiagn ([Wine Bug #32613](https://bugs.winehq.org/show_bug.cgi?id=32613))
 * Implement shell32 NewMenu class with new folder item ([Wine Bug #24812](https://bugs.winehq.org/show_bug.cgi?id=24812))
 * Implement special handling for calling GetChildContainer with an empty string ([Wine Bug #38014](https://bugs.winehq.org/show_bug.cgi?id=38014))
-* Implement vcomp locking functions ([Wine Bug #26688](https://bugs.winehq.org/show_bug.cgi?id=26688))
 * Improve startup performance by delaying font initialization
 * Only set SFGAO_HASSUBFOLDER when there are really subfolders ([Wine Bug #24851](https://bugs.winehq.org/show_bug.cgi?id=24851))
 * Properly implement imagehlp.ImageLoad and ImageUnload
@@ -199,7 +197,7 @@ for more details.*
 * Implement proper handling of CLI .NET images in Wine library loader ([Wine Bug #38661](https://bugs.winehq.org/show_bug.cgi?id=38661))
 * Implement stub for ntoskrnl.IoGetAttachedDeviceReference
 * Implement stub for ntoskrnl.KeDelayExecutionThread.
-* Implement stub for vcomp._vcomp_flush ([Wine Bug #39058](https://bugs.winehq.org/show_bug.cgi?id=39058))
+* ~~Implement stub for vcomp._vcomp_flush~~ ([Wine Bug #39058](https://bugs.winehq.org/show_bug.cgi?id=39058))
 * Implement stubs for ntoskrnl.Ex{Acquire,Release}FastMutexUnsafe
 * Implement stubs for ntoskrnl.ObReferenceObjectByPointer and ntoskrnl.ObDereferenceObject
 * Improve ReadDataAvailable handling in FilePipeLocalInformation class
@@ -243,7 +241,7 @@ for more details.*
 * Silence repeated wbemprox "timeout not supported" fixme ([Wine Bug #37618](https://bugs.winehq.org/show_bug.cgi?id=37618))
 * Skip unknown item when decoding a CMS certificate ([Wine Bug #34388](https://bugs.winehq.org/show_bug.cgi?id=34388))
 * Software support for Environmental Audio Extensions (EAX)
-* Store registry timestamps with nanoseconds precision ([Wine Bug #38927](https://bugs.winehq.org/show_bug.cgi?id=38927))
+* ~~Store registry timestamps with nanoseconds precision~~ ([Wine Bug #38927](https://bugs.winehq.org/show_bug.cgi?id=38927))
 * Super Mario 3: Mario Forever fails to load keyboard mapping from profile files. ([Wine Bug #18099](https://bugs.winehq.org/show_bug.cgi?id=18099))
 * Support for AllocateAndGetTcpExTableFromStack ([Wine Bug #34372](https://bugs.winehq.org/show_bug.cgi?id=34372))
 * Support for BindImageEx ([Wine Bug #3591](https://bugs.winehq.org/show_bug.cgi?id=3591))
@@ -293,7 +291,7 @@ for more details.*
 * Use video memory for rendering targets if possible ([Wine Bug #34906](https://bugs.winehq.org/show_bug.cgi?id=34906))
 * Voobly expects correct handling of WRITECOPY memory protection ([Wine Bug #29384](https://bugs.winehq.org/show_bug.cgi?id=29384))
 * Wine ignores IDF_CHECKFIRST flag in SetupPromptForDisk ([Wine Bug #20465](https://bugs.winehq.org/show_bug.cgi?id=20465))
-* Winhttp raw request headers must be terminated using double \r\n ([Wine Bug #35953](https://bugs.winehq.org/show_bug.cgi?id=35953))
+* ~~Winhttp raw request headers must be terminated using double \r\n~~ ([Wine Bug #35953](https://bugs.winehq.org/show_bug.cgi?id=35953))
 * Workaround for shlwapi URLs with relative paths
 * XEMBED support for embedding Wine windows inside Linux applications
 * eRacer Demo doesn't correctly display text ([Wine Bug #29598](https://bugs.winehq.org/show_bug.cgi?id=29598))

@@ -1,16 +1,16 @@
-From 3869f9533a5ee475fc7e315f1905334da13b6650 Mon Sep 17 00:00:00 2001
+From ccc579e226c2061d3138da446d30b8ba68397751 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 7 Aug 2014 21:14:25 -0600
 Subject: server: Do not permit FileDispositionInformation to delete a file
  without write access.
 
 ---
- dlls/ntdll/tests/file.c | 28 ++++++++++++++++++++++++++++
+ dlls/ntdll/tests/file.c | 14 ++++++++++++++
  server/fd.c             |  7 +++++++
- 2 files changed, 35 insertions(+)
+ 2 files changed, 21 insertions(+)
 
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 57ae15c..fe07643 100644
+index 57ae15c..d215d09 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
 @@ -1507,6 +1507,20 @@ static void test_file_disposition_information(void)
@@ -34,27 +34,6 @@ index 57ae15c..fe07643 100644
      handle = CreateFileA(buffer, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_READONLY, 0);
      ok( handle != INVALID_HANDLE_VALUE, "failed to create temp file\n" );
      fdi.DoDeleteFile = TRUE;
-@@ -1520,6 +1534,20 @@ static void test_file_disposition_information(void)
-     SetFileAttributesA( buffer, FILE_ATTRIBUTE_NORMAL );
-     DeleteFileA( buffer );
- 
-+    /* cannot set disposition on readonly file */
-+    GetTempFileNameA( tmp_path, "dis", 0, buffer );
-+    DeleteFileA( buffer );
-+    handle = CreateFileA(buffer, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_READONLY, 0);
-+    ok( handle != INVALID_HANDLE_VALUE, "failed to create temp file\n" );
-+    fdi.DoDeleteFile = TRUE;
-+    res = pNtSetInformationFile( handle, &io, &fdi, sizeof fdi, FileDispositionInformation );
-+    ok( res == STATUS_CANNOT_DELETE, "unexpected FileDispositionInformation result (expected STATUS_CANNOT_DELETE, got %x)\n", res );
-+    CloseHandle( handle );
-+    fileDeleted = GetFileAttributesA( buffer ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
-+    ok( !fileDeleted, "File shouldn't have been deleted\n" );
-+    SetFileAttributesA( buffer, FILE_ATTRIBUTE_NORMAL );
-+    DeleteFileA( buffer );
-+
-     /* can set disposition on file and then reset it */
-     GetTempFileNameA( tmp_path, "dis", 0, buffer );
-     handle = CreateFileA(buffer, GENERIC_WRITE | DELETE, 0, NULL, CREATE_ALWAYS, 0, 0);
 diff --git a/server/fd.c b/server/fd.c
 index f607261..0bac57d 100644
 --- a/server/fd.c

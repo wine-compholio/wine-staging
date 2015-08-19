@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit cfbc37c699e3b3b27df4c566014e6dde9c7194b8"
+	echo "  commit 3b5107d06305972beaa9c5ff147ecbcd99949a75"
 	echo ""
 }
 
@@ -147,7 +147,6 @@ patch_enable_all ()
 	enable_kernel32_SetFileInformationByHandle="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
 	enable_kernel32_VerifyVersionInfo="$1"
-	enable_krnl386_exe16_GetTempDrive="$1"
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_makedep_PARENTSPEC="$1"
@@ -194,7 +193,6 @@ patch_enable_all ()
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
-	enable_oleaut32_VarR4FromDec="$1"
 	enable_openal32_EFX_Extension="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
@@ -260,7 +258,6 @@ patch_enable_all ()
 	enable_wineboot_drivers_etc_Stubs="$1"
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
-	enable_winecfg_Theme_Leak="$1"
 	enable_winecfg_Unmounted_Devices="$1"
 	enable_wineconsole_Forward_Exitcode="$1"
 	enable_wined3d_Accounting="$1"
@@ -529,9 +526,6 @@ patch_enable ()
 		kernel32-VerifyVersionInfo)
 			enable_kernel32_VerifyVersionInfo="$2"
 			;;
-		krnl386.exe16-GetTempDrive)
-			enable_krnl386_exe16_GetTempDrive="$2"
-			;;
 		libs-Debug_Channel)
 			enable_libs_Debug_Channel="$2"
 			;;
@@ -669,9 +663,6 @@ patch_enable ()
 			;;
 		nvencodeapi-Video_Encoder)
 			enable_nvencodeapi_Video_Encoder="$2"
-			;;
-		oleaut32-VarR4FromDec)
-			enable_oleaut32_VarR4FromDec="$2"
 			;;
 		openal32-EFX_Extension)
 			enable_openal32_EFX_Extension="$2"
@@ -867,9 +858,6 @@ patch_enable ()
 			;;
 		winecfg-Staging)
 			enable_winecfg_Staging="$2"
-			;;
-		winecfg-Theme_Leak)
-			enable_winecfg_Theme_Leak="$2"
 			;;
 		winecfg-Unmounted_Devices)
 			enable_winecfg_Unmounted_Devices="$2"
@@ -3166,27 +3154,20 @@ fi
 # |   *	[#30399] Support for NtSetInformationFile class FileRenameInformation
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/file.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/winternl.h, server/fd.c,
-# | 	server/protocol.def
+# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/winternl.h, server/fd.c, server/protocol.def
 # |
 if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
-	patch_apply ntdll-FileDispositionInformation/0001-server-Keep-a-pointer-to-parent-s-fd-unix_name-in-th.patch
-	patch_apply ntdll-FileDispositionInformation/0002-server-Add-support-for-setting-file-disposition-info.patch
-	patch_apply ntdll-FileDispositionInformation/0003-server-Do-not-permit-FileDispositionInformation-to-d.patch
-	patch_apply ntdll-FileDispositionInformation/0004-ntdll-tests-Added-tests-to-set-disposition-on-file-w.patch
-	patch_apply ntdll-FileDispositionInformation/0005-server-Do-not-allow-to-set-disposition-on-file-which.patch
-	patch_apply ntdll-FileDispositionInformation/0006-ntdll-tests-Add-tests-for-FileRenameInformation.patch
-	patch_apply ntdll-FileDispositionInformation/0007-ntdll-tests-Add-additional-tests-for-FileRenameInfor.patch
-	patch_apply ntdll-FileDispositionInformation/0008-ntdll-tests-Add-tests-for-FileRenameInformation-with.patch
-	patch_apply ntdll-FileDispositionInformation/0009-ntdll-Implement-FileRenameInformation-support.patch
-	patch_apply ntdll-FileDispositionInformation/0010-server-When-combining-root-and-name-make-sure-there-.patch
-	patch_apply ntdll-FileDispositionInformation/0011-include-Add-declaration-for-FILE_LINK_INFORMATION.patch
-	patch_apply ntdll-FileDispositionInformation/0012-ntdll-tests-Add-tests-for-FileLinkInformation-class.patch
-	patch_apply ntdll-FileDispositionInformation/0013-server-Implement-support-for-FileLinkInformation-cla.patch
+	patch_apply ntdll-FileDispositionInformation/0001-ntdll-tests-Added-tests-to-set-disposition-on-file-w.patch
+	patch_apply ntdll-FileDispositionInformation/0002-server-Do-not-allow-to-set-disposition-on-file-which.patch
+	patch_apply ntdll-FileDispositionInformation/0003-ntdll-tests-Add-tests-for-FileRenameInformation.patch
+	patch_apply ntdll-FileDispositionInformation/0004-ntdll-tests-Add-additional-tests-for-FileRenameInfor.patch
+	patch_apply ntdll-FileDispositionInformation/0005-ntdll-tests-Add-tests-for-FileRenameInformation-with.patch
+	patch_apply ntdll-FileDispositionInformation/0006-ntdll-Implement-FileRenameInformation-support.patch
+	patch_apply ntdll-FileDispositionInformation/0007-server-When-combining-root-and-name-make-sure-there-.patch
+	patch_apply ntdll-FileDispositionInformation/0008-include-Add-declaration-for-FILE_LINK_INFORMATION.patch
+	patch_apply ntdll-FileDispositionInformation/0009-ntdll-tests-Add-tests-for-FileLinkInformation-class.patch
+	patch_apply ntdll-FileDispositionInformation/0010-server-Implement-support-for-FileLinkInformation-cla.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "server: Keep a pointer to parent'\''s fd unix_name in the closed_fd structure.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Add support for setting file disposition information.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Do not permit FileDispositionInformation to delete a file without write access.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Added tests to set disposition on file which is mapped to memory.", 1 },';
 		echo '+    { "Qian Hong", "server: Do not allow to set disposition on file which has a file mapping.", 1 },';
 		echo '+    { "Jianqiu Zhang", "ntdll/tests: Add tests for FileRenameInformation.", 1 },';
@@ -3414,21 +3395,6 @@ if test "$enable_kernel32_VerifyVersionInfo" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for condition mask of VerifyVersionInfoA.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Fix condition mask handling in RtlVerifyVersionInfo.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset krnl386.exe16-GetTempDrive
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39104] Fix implementation of krnl386.exe16.GetTempDrive
-# |
-# | Modified files:
-# |   *	dlls/krnl386.exe16/file.c
-# |
-if test "$enable_krnl386_exe16_GetTempDrive" -eq 1; then
-	patch_apply krnl386.exe16-GetTempDrive/0001-krnl386.exe16-Increase-buffer-size-in-GetTempDrive.patch
-	(
-		echo '+    { "Michael Müller", "krnl386.exe16: Increase buffer size in GetTempDrive.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4202,21 +4168,6 @@ if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
 	patch_apply nvencodeapi-Video_Encoder/0001-nvencodeapi-First-implementation.patch
 	(
 		echo '+    { "Michael Müller", "nvencodeapi: First implementation.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset oleaut32-VarR4FromDec
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38988] Fix possible integer overflow in VarR4FromDec
-# |
-# | Modified files:
-# |   *	dlls/oleaut32/tests/vartype.c, dlls/oleaut32/vartype.c
-# |
-if test "$enable_oleaut32_VarR4FromDec" -eq 1; then
-	patch_apply oleaut32-VarR4FromDec/0001-oleaut32-Fix-possible-integer-overflow-in-VarR4FromD.patch
-	(
-		echo '+    { "Sebastian Lackner", "oleaut32: Fix possible integer overflow in VarR4FromDec.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5170,18 +5121,6 @@ if test "$enable_winecfg_Libraries" -eq 1; then
 	patch_apply winecfg-Libraries/0001-winecfg-Double-click-in-dlls-list-to-edit-item-s-ove.patch
 	(
 		echo '+    { "Hao Peng", "winecfg: Double click in dlls list to edit item'\''s overides.", 3 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winecfg-Theme_Leak
-# |
-# | Modified files:
-# |   *	programs/winecfg/theme.c
-# |
-if test "$enable_winecfg_Theme_Leak" -eq 1; then
-	patch_apply winecfg-Theme_Leak/0001-winecfg-Do-not-overwrite-theme-each-time-an-item-is-.patch
-	(
-		echo '+    { "Michael Müller", "winecfg: Do not overwrite theme each time an item is drawn.", 1 },';
 	) >> "$patchlist"
 fi
 

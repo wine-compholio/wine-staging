@@ -39,12 +39,11 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [11]:**
+**Bug fixes and features included in the next upcoming release [10]:**
 
 * Add IDragSourceHelper stub interface ([Wine Bug #24699](https://bugs.winehq.org/show_bug.cgi?id=24699))
 * Catch invalid memory accesses in imagehlp.CheckSumMappedFile
 * Fix detection of case-insensitive systems in MSYS2
-* Fix implementation of krnl386.exe16.GetTempDrive ([Wine Bug #39104](https://bugs.winehq.org/show_bug.cgi?id=39104))
 * Implement enumeration of sound devices and basic properties to dxdiagn ([Wine Bug #32613](https://bugs.winehq.org/show_bug.cgi?id=32613))
 * Implement shell32 NewMenu class with new folder item ([Wine Bug #24812](https://bugs.winehq.org/show_bug.cgi?id=24812))
 * Implement special handling for calling GetChildContainer with an empty string ([Wine Bug #38014](https://bugs.winehq.org/show_bug.cgi?id=38014))
@@ -158,7 +157,7 @@ for more details.*
 * Fix issues with dragging layers between images in Adobe Photoshop 7.0 ([Wine Bug #12007](https://bugs.winehq.org/show_bug.cgi?id=12007))
 * Fix missing video introduced by pixelformat changes. ([Wine Bug #36900](https://bugs.winehq.org/show_bug.cgi?id=36900))
 * Fix multithreading issues with fullscreen clipping ([Wine Bug #38087](https://bugs.winehq.org/show_bug.cgi?id=38087))
-* Fix possible integer overflow in VarR4FromDec ([Wine Bug #38988](https://bugs.winehq.org/show_bug.cgi?id=38988))
+* ~~Fix possible integer overflow in VarR4FromDec~~ ([Wine Bug #38988](https://bugs.winehq.org/show_bug.cgi?id=38988))
 * Fix possible segfault in pulse_rd_loop of PulseAudio backend
 * Fix race-condition when threads are killed during shutdown
 * Fix regression caused by blacklisting supported OpenGL extensions ([Wine Bug #38480](https://bugs.winehq.org/show_bug.cgi?id=38480))

@@ -220,6 +220,7 @@ patch_enable_all ()
 	enable_server_RootDirectory_File="$1"
 	enable_server_Shared_Memory="$1"
 	enable_server_Stored_ACLs="$1"
+	enable_server_Timestamp_Compat="$1"
 	enable_setupapi_SetupDiSelectBestCompatDrv="$1"
 	enable_setupapi_SetupDiSetDeviceInstallParamsW="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
@@ -747,6 +748,9 @@ patch_enable ()
 			;;
 		server-Stored_ACLs)
 			enable_server_Stored_ACLs="$2"
+			;;
+		server-Timestamp_Compat)
+			enable_server_Timestamp_Compat="$2"
 			;;
 		setupapi-SetupDiSelectBestCompatDrv)
 			enable_setupapi_SetupDiSelectBestCompatDrv="$2"
@@ -4600,6 +4604,18 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 		echo '+    { "Sebastian Lackner", "server: Store a list of associated queues for each thread input.", 1 },';
 		echo '+    { "Sebastian Lackner", "user32: Get rid of wineserver call for GetActiveWindow, GetFocus, GetCapture.", 1 },';
 		echo '+    { "Sebastian Lackner", "user32: Cache the result of GetForegroundWindow.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Timestamp_Compat
+# |
+# | Modified files:
+# |   *	server/registry.c
+# |
+if test "$enable_server_Timestamp_Compat" -eq 1; then
+	patch_apply server-Timestamp_Compat/0001-server-Compatibility-with-Wine-Staging-format-for-hi.patch
+	(
+		echo '+    { "Michael Müller", "server: Compatibility with Wine Staging format for high precision registry timestamps.", 1 },';
 	) >> "$patchlist"
 fi
 

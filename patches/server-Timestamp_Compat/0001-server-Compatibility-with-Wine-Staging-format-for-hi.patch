@@ -1,0 +1,57 @@
+From 36fb61bb93cb04d4548130f49116577abb21693e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Tue, 28 Jul 2015 17:46:13 +0200
+Subject: server: Compatibility with Wine Staging format for high precision
+ registry timestamps.
+
+The corresponding bug was fixed upstream in commit
+http://source.winehq.org/git/wine.git/commit/1baf01fc2475c508b6464bc735483a7e25c915f6
+This patch should ensure forward/backward compatibility when upgrading Wine.
+---
+ server/registry.c | 16 +++++++++-------
+ 1 file changed, 9 insertions(+), 7 deletions(-)
+
+diff --git a/server/registry.c b/server/registry.c
+index 7f7a7b1..891b4e3 100644
+--- a/server/registry.c
++++ b/server/registry.c
+@@ -264,7 +264,8 @@ static void save_subkeys( const struct key *key, const struct key *base, FILE *f
+     {
+         fprintf( f, "\n[" );
+         if (key != base) dump_path( key, base, f );
+-        fprintf( f, "] %u\n", (unsigned int)((key->modif - ticks_1601_to_1970) / TICKS_PER_SEC) );
++        fprintf( f, "] %u %u\n", (unsigned int)((key->modif - ticks_1601_to_1970) / TICKS_PER_SEC),
++                                 (unsigned int)((key->modif - ticks_1601_to_1970) % TICKS_PER_SEC) );
+         fprintf( f, "#time=%x%08x\n", (unsigned int)(key->modif >> 32), (unsigned int)key->modif );
+         if (key->class)
+         {
+@@ -1347,8 +1348,8 @@ static struct key *load_key( struct key *base, const char *buffer, int prefix_le
+ {
+     WCHAR *p;
+     struct unicode_str name;
+-    int res;
+-    unsigned int mod;
++    int res, num_items;
++    unsigned int mod, mod_ticks;
+     data_size_t len;
+ 
+     if (!get_file_tmp_space( info, strlen(buffer) * sizeof(WCHAR) )) return NULL;
+@@ -1359,10 +1360,11 @@ static struct key *load_key( struct key *base, const char *buffer, int prefix_le
+         file_read_error( "Malformed key", info );
+         return NULL;
+     }
+-    if (sscanf( buffer + res, " %u", &mod ) == 1)
+-        *modif = (timeout_t)mod * TICKS_PER_SEC + ticks_1601_to_1970;
+-    else
+-        *modif = current_time;
++
++    *modif = current_time;
++    num_items = sscanf( buffer + res, " %u %u", &mod, &mod_ticks );
++    if (num_items >= 1) *modif = (timeout_t)mod * TICKS_PER_SEC + ticks_1601_to_1970;
++    if (num_items >= 2) *modif += mod_ticks;
+ 
+     p = info->tmp;
+     while (prefix_len && *p) { if (*p++ == '\\') prefix_len--; }
+-- 
+2.5.0
+

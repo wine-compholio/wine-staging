@@ -204,7 +204,6 @@ patch_enable_all ()
 	enable_rpcrt4_Pipe_Transport="$1"
 	enable_rpcrt4_Use_After_Free="$1"
 	enable_secur32_ANSI_NTLM_Credentials="$1"
-	enable_server_ACL_Compat="$1"
 	enable_server_Address_List_Change="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
@@ -700,9 +699,6 @@ patch_enable ()
 			;;
 		secur32-ANSI_NTLM_Credentials)
 			enable_secur32_ANSI_NTLM_Credentials="$2"
-			;;
-		server-ACL_Compat)
-			enable_server_ACL_Compat="$2"
 			;;
 		server-Address_List_Change)
 			enable_server_Address_List_Change="$2"
@@ -1710,13 +1706,6 @@ if test "$enable_server_Pipe_ObjectName" -eq 1; then
 		abort "Patchset kernel32-Named_Pipe disabled, but server-Pipe_ObjectName depends on that."
 	fi
 	enable_kernel32_Named_Pipe=1
-fi
-
-if test "$enable_server_ACL_Compat" -eq 1; then
-	if test "$enable_server_Inherited_ACLs" -gt 1; then
-		abort "Patchset server-Inherited_ACLs disabled, but server-ACL_Compat depends on that."
-	fi
-	enable_server_Inherited_ACLs=1
 fi
 
 if test "$enable_server_Inherited_ACLs" -eq 1; then
@@ -4368,6 +4357,54 @@ if test "$enable_secur32_ANSI_NTLM_Credentials" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-Address_List_Change
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38062] Support for non-blocking SIO_ADDRESS_LIST_CHANGE requests
+# |
+# | Modified files:
+# |   *	server/sock.c
+# |
+if test "$enable_server_Address_List_Change" -eq 1; then
+	patch_apply server-Address_List_Change/0001-server-Return-STATUS_CANT_WAIT-WSAEWOULDBLOCK-for-no.patch
+	(
+		echo '+    { "Erich E. Hoover", "server: Return STATUS_CANT_WAIT/WSAEWOULDBLOCK for non-overlapped SIO_ADDRESS_LIST_CHANGE requests on non-blocking sockets.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-ClipCursor
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33479] Fix cursor clip regression / broken raw input in multiple games
+# |   *	[#38087] Fix multithreading issues with fullscreen clipping
+# |
+# | Modified files:
+# |   *	dlls/user32/message.c, dlls/winex11.drv/mouse.c, server/queue.c
+# |
+if test "$enable_server_ClipCursor" -eq 1; then
+	patch_apply server-ClipCursor/0001-server-Only-send-WM_WINE_CLIPCURSOR-for-forced-clip-.patch
+	patch_apply server-ClipCursor/0002-winex11-Forward-all-clipping-requests-to-the-right-t.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Only send WM_WINE_CLIPCURSOR for forced clip resets.", 1 },';
+		echo '+    { "Sebastian Lackner", "winex11: Forward all clipping requests to the right thread (including fullscreen clipping).", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Delete_On_Close
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38417] Fix handling of opening read-only files for FILE_DELETE_ON_CLOSE
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, dlls/kernel32/tests/file.c, server/fd.c
+# |
+if test "$enable_server_Delete_On_Close" -eq 1; then
+	patch_apply server-Delete_On_Close/0001-server-Fix-handling-of-opening-read-only-files-with-.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Fix handling of opening read-only files with FILE_DELETE_ON_CLOSE.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-RootDirectory_File
 # |
 # | This patchset has the following dependencies:
@@ -4426,69 +4463,6 @@ if test "$enable_server_Inherited_ACLs" -eq 1; then
 	patch_apply server-Inherited_ACLs/0001-server-Inherit-security-attributes-from-parent-direc.patch
 	(
 		echo '+    { "Erich E. Hoover", "server: Inherit security attributes from parent directories on creation.", 7 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-ACL_Compat
-# |
-# | This patchset has the following dependencies:
-# |   *	server-Inherited_ACLs
-# |
-# | Modified files:
-# |   *	server/file.c
-# |
-if test "$enable_server_ACL_Compat" -eq 1; then
-	patch_apply server-ACL_Compat/0001-server-Add-compatibility-code-for-handling-the-old-m.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Add compatibility code for handling the old method of storing ACLs.", 6 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Address_List_Change
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38062] Support for non-blocking SIO_ADDRESS_LIST_CHANGE requests
-# |
-# | Modified files:
-# |   *	server/sock.c
-# |
-if test "$enable_server_Address_List_Change" -eq 1; then
-	patch_apply server-Address_List_Change/0001-server-Return-STATUS_CANT_WAIT-WSAEWOULDBLOCK-for-no.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Return STATUS_CANT_WAIT/WSAEWOULDBLOCK for non-overlapped SIO_ADDRESS_LIST_CHANGE requests on non-blocking sockets.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-ClipCursor
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#33479] Fix cursor clip regression / broken raw input in multiple games
-# |   *	[#38087] Fix multithreading issues with fullscreen clipping
-# |
-# | Modified files:
-# |   *	dlls/user32/message.c, dlls/winex11.drv/mouse.c, server/queue.c
-# |
-if test "$enable_server_ClipCursor" -eq 1; then
-	patch_apply server-ClipCursor/0001-server-Only-send-WM_WINE_CLIPCURSOR-for-forced-clip-.patch
-	patch_apply server-ClipCursor/0002-winex11-Forward-all-clipping-requests-to-the-right-t.patch
-	(
-		echo '+    { "Sebastian Lackner", "server: Only send WM_WINE_CLIPCURSOR for forced clip resets.", 1 },';
-		echo '+    { "Sebastian Lackner", "winex11: Forward all clipping requests to the right thread (including fullscreen clipping).", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Delete_On_Close
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38417] Fix handling of opening read-only files for FILE_DELETE_ON_CLOSE
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/kernel32/tests/file.c, server/fd.c
-# |
-if test "$enable_server_Delete_On_Close" -eq 1; then
-	patch_apply server-Delete_On_Close/0001-server-Fix-handling-of-opening-read-only-files-with-.patch
-	(
-		echo '+    { "Sebastian Lackner", "server: Fix handling of opening read-only files with FILE_DELETE_ON_CLOSE.", 1 },';
 	) >> "$patchlist"
 fi
 

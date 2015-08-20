@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 3b5107d06305972beaa9c5ff147ecbcd99949a75"
+	echo "  commit 5021e91940fe01a54e6ee91f9d9f246ce8f6dd84"
 	echo ""
 }
 
@@ -3149,33 +3149,19 @@ fi
 # | This patchset has the following dependencies:
 # |   *	server-File_Permissions
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#30397] Support for NtSetInformationFile class FileDispositionInformation
-# |   *	[#30399] Support for NtSetInformationFile class FileRenameInformation
-# |
 # | Modified files:
-# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/winternl.h, server/fd.c, server/protocol.def
+# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c, server/fd.c, server/protocol.def
 # |
 if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 	patch_apply ntdll-FileDispositionInformation/0001-ntdll-tests-Added-tests-to-set-disposition-on-file-w.patch
 	patch_apply ntdll-FileDispositionInformation/0002-server-Do-not-allow-to-set-disposition-on-file-which.patch
-	patch_apply ntdll-FileDispositionInformation/0003-ntdll-tests-Add-tests-for-FileRenameInformation.patch
-	patch_apply ntdll-FileDispositionInformation/0004-ntdll-tests-Add-additional-tests-for-FileRenameInfor.patch
-	patch_apply ntdll-FileDispositionInformation/0005-ntdll-tests-Add-tests-for-FileRenameInformation-with.patch
-	patch_apply ntdll-FileDispositionInformation/0006-ntdll-Implement-FileRenameInformation-support.patch
-	patch_apply ntdll-FileDispositionInformation/0007-server-When-combining-root-and-name-make-sure-there-.patch
-	patch_apply ntdll-FileDispositionInformation/0008-include-Add-declaration-for-FILE_LINK_INFORMATION.patch
-	patch_apply ntdll-FileDispositionInformation/0009-ntdll-tests-Add-tests-for-FileLinkInformation-class.patch
-	patch_apply ntdll-FileDispositionInformation/0010-server-Implement-support-for-FileLinkInformation-cla.patch
+	patch_apply ntdll-FileDispositionInformation/0003-server-When-combining-root-and-name-make-sure-there-.patch
+	patch_apply ntdll-FileDispositionInformation/0004-ntdll-tests-Add-tests-for-FileLinkInformation-class.patch
+	patch_apply ntdll-FileDispositionInformation/0005-server-Implement-support-for-FileLinkInformation-cla.patch
 	(
 		echo '+    { "Qian Hong", "ntdll/tests: Added tests to set disposition on file which is mapped to memory.", 1 },';
 		echo '+    { "Qian Hong", "server: Do not allow to set disposition on file which has a file mapping.", 1 },';
-		echo '+    { "Jianqiu Zhang", "ntdll/tests: Add tests for FileRenameInformation.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Add additional tests for FileRenameInformation.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for FileRenameInformation with nonzero RootDir.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Implement FileRenameInformation support.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: When combining root and name, make sure there is only one slash.", 2 },';
-		echo '+    { "Zhaonan Liang", "include: Add declaration for FILE_LINK_INFORMATION.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Add tests for FileLinkInformation class.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement support for FileLinkInformation class in NtSetInformationFile.", 1 },';
 	) >> "$patchlist"

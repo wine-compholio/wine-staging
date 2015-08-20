@@ -261,9 +261,9 @@ for more details.*
 * Support for MPEG2 DXVA2 GPU video decoding through vaapi
 * Support for NVIDIA video encoder library (nvencodeapi)
 * Support for NtQuerySection ([Wine Bug #37338](https://bugs.winehq.org/show_bug.cgi?id=37338))
-* Support for NtSetInformationFile class FileDispositionInformation ([Wine Bug #30397](https://bugs.winehq.org/show_bug.cgi?id=30397))
+* ~~Support for NtSetInformationFile class FileDispositionInformation~~ ([Wine Bug #30397](https://bugs.winehq.org/show_bug.cgi?id=30397))
 * Support for NtSetInformationFile class FileLinkInformation
-* Support for NtSetInformationFile class FileRenameInformation ([Wine Bug #30399](https://bugs.winehq.org/show_bug.cgi?id=30399))
+* ~~Support for NtSetInformationFile class FileRenameInformation~~ ([Wine Bug #30399](https://bugs.winehq.org/show_bug.cgi?id=30399))
 * Support for PulseAudio backend for audio ([Wine Bug #10495](https://bugs.winehq.org/show_bug.cgi?id=10495))
 * Support for SHCreateSessionKey ([Wine Bug #35630](https://bugs.winehq.org/show_bug.cgi?id=35630))
 * Support for TransmitFile ([Wine Bug #5048](https://bugs.winehq.org/show_bug.cgi?id=5048))

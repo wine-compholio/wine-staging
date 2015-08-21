@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [10]:**
+**Bug fixes and features included in the next upcoming release [11]:**
 
 * Add IDragSourceHelper stub interface ([Wine Bug #24699](https://bugs.winehq.org/show_bug.cgi?id=24699))
 * Catch invalid memory accesses in imagehlp.CheckSumMappedFile
@@ -51,6 +51,7 @@ Included bug fixes and improvements
 * Only set SFGAO_HASSUBFOLDER when there are really subfolders ([Wine Bug #24851](https://bugs.winehq.org/show_bug.cgi?id=24851))
 * Properly implement imagehlp.ImageLoad and ImageUnload
 * Report correct ObjectName for NamedPipe wineserver objects
+* Use helper function for NtWaitForMultipleObjects and NtWaitForSingleObject ([Wine Bug #39127](https://bugs.winehq.org/show_bug.cgi?id=39127))
 
 
 **Bug fixes and features in Wine Staging 1.7.49 [235]:**

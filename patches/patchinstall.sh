@@ -178,6 +178,7 @@ patch_enable_all ()
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
+	enable_ntdll_NtWaitForMultipleObjects="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_RtlIpStringToAddress="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
@@ -618,6 +619,9 @@ patch_enable ()
 			;;
 		ntdll-NtSetLdtEntries)
 			enable_ntdll_NtSetLdtEntries="$2"
+			;;
+		ntdll-NtWaitForMultipleObjects)
+			enable_ntdll_NtWaitForMultipleObjects="$2"
 			;;
 		ntdll-Pipe_SpecialCharacters)
 			enable_ntdll_Pipe_SpecialCharacters="$2"
@@ -3853,6 +3857,21 @@ if test "$enable_ntdll_NtSetLdtEntries" -eq 1; then
 	patch_apply ntdll-NtSetLdtEntries/0001-ntdll-add-NtSetLdtEntries-ZwSetLdtEntries-stub-try-2.patch
 	(
 		echo '+    { "Austin English", "ntdll: add NtSetLdtEntries/ZwSetLdtEntries stub.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtWaitForMultipleObjects
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39127] Use helper function for NtWaitForMultipleObjects and NtWaitForSingleObject
+# |
+# | Modified files:
+# |   *	dlls/ntdll/sync.c
+# |
+if test "$enable_ntdll_NtWaitForMultipleObjects" -eq 1; then
+	patch_apply ntdll-NtWaitForMultipleObjects/0001-ntdll-Use-helper-function-for-NtWaitForMultipleObjec.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Use helper function for NtWaitForMultipleObjects and NtWaitForSingleObject.", 1 },';
 	) >> "$patchlist"
 fi
 

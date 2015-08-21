@@ -1941,7 +1941,7 @@ fi
 
 # Patchset ntdll-WRITECOPY
 # |
-# | This patchset has the following dependencies:
+# | This patchset has the following (direct or indirect) dependencies:
 # |   *	ws2_32-WriteWatches
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1970,8 +1970,8 @@ fi
 
 # Patchset Exagear
 # |
-# | This patchset has the following dependencies:
-# |   *	ntdll-WRITECOPY
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ws2_32-WriteWatches, ntdll-WRITECOPY
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/ntdll/signal_i386.c, dlls/ntdll/virtual.c, server/ptrace.c
@@ -2072,7 +2072,7 @@ fi
 
 # Patchset advapi32-LsaLookupSids
 # |
-# | This patchset has the following dependencies:
+# | This patchset has the following (direct or indirect) dependencies:
 # |   *	server-CreateProcess_ACLs, server-Misc_ACL
 # |
 # | Modified files:
@@ -2331,7 +2331,7 @@ fi
 
 # Patchset d3dx9_24-ID3DXEffect
 # |
-# | This patchset has the following dependencies:
+# | This patchset has the following (direct or indirect) dependencies:
 # |   *	d3dx9_25-ID3DXEffect
 # |
 # | Modified files:
@@ -2406,7 +2406,7 @@ fi
 
 # Patchset d3dx9_36-DXTn
 # |
-# | This patchset has the following dependencies:
+# | This patchset has the following (direct or indirect) dependencies:
 # |   *	wined3d-DXTn
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2427,8 +2427,8 @@ fi
 
 # Patchset d3dx9_33-Share_Source
 # |
-# | This patchset has the following dependencies:
-# |   *	d3dx9_36-D3DXStubs, d3dx9_36-DXTn
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	d3dx9_36-D3DXStubs, wined3d-DXTn, d3dx9_36-DXTn
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#21817] Share source of d3dx9_36 with d3dx9_33 to avoid Wine DLL forwards
@@ -2445,8 +2445,8 @@ fi
 
 # Patchset d3dx9_36-AnimationController
 # |
-# | This patchset has the following dependencies:
-# |   *	d3dx9_36-DXTn
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	wined3d-DXTn, d3dx9_36-DXTn
 # |
 # | Modified files:
 # |   *	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/animation.c, dlls/d3dx9_36/d3dx9_36.spec, include/d3dx9anim.h
@@ -2715,7 +2715,7 @@ fi
 
 # Patchset dsound-EAX
 # |
-# | This patchset has the following dependencies:
+# | This patchset has the following (direct or indirect) dependencies:
 # |   *	dsound-Fast_Mixer
 # |
 # | Modified files:
@@ -2782,7 +2782,7 @@ fi
 
 # Patchset dxdiagn-GetChildContainer_Leaf_Nodes
 # |
-# | This patchset has the following dependencies:
+# | This patchset has the following (direct or indirect) dependencies:
 # |   *	dxdiagn-Enumerate_DirectSound
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2848,7 +2848,7 @@ fi
 
 # Patchset dxva2-Video_Decoder
 # |
-# | This patchset has the following dependencies:
+# | This patchset has the following (direct or indirect) dependencies:
 # |   *	winecfg-Staging
 # |
 # | Modified files:
@@ -3150,7 +3150,7 @@ fi
 
 # Patchset ntdll-FileDispositionInformation
 # |
-# | This patchset has the following dependencies:
+# | This patchset has the following (direct or indirect) dependencies:
 # |   *	server-File_Permissions
 # |
 # | Modified files:
@@ -3173,8 +3173,8 @@ fi
 
 # Patchset kernel32-CopyFileEx
 # |
-# | This patchset has the following dependencies:
-# |   *	kernel32-SetFileInformationByHandle, ntdll-FileDispositionInformation
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	kernel32-SetFileInformationByHandle, server-File_Permissions, ntdll-FileDispositionInformation
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#22692] Add support for CopyFileEx progress callback
@@ -3247,7 +3247,7 @@ fi
 
 # Patchset kernel32-Named_Pipe
 # |
-# | This patchset has the following dependencies:
+# | This patchset has the following (direct or indirect) dependencies:
 # |   *	rpcrt4-Pipe_Transport
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3577,7 +3577,7 @@ fi
 
 # Patchset ntdll-CLI_Images
 # |
-# | This patchset has the following dependencies:
+# | This patchset has the following (direct or indirect) dependencies:
 # |   *	mscoree-CorValidateImage
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3653,7 +3653,7 @@ fi
 
 # Patchset ntdll-DllRedirects
 # |
-# | This patchset has the following dependencies:
+# | This patchset has the following (direct or indirect) dependencies:
 # |   *	ntdll-Loader_Machine_Type
 # |
 # | Modified files:
@@ -3798,7 +3798,7 @@ fi
 
 # Patchset ntdll-Junction_Points
 # |
-# | This patchset has the following dependencies:
+# | This patchset has the following (direct or indirect) dependencies:
 # |   *	ntdll-Fix_Free, ntdll-NtQueryEaFile
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3910,7 +3910,7 @@ fi
 
 # Patchset ntdll-SystemRoot_Symlink
 # |
-# | This patchset has the following dependencies:
+# | This patchset has the following (direct or indirect) dependencies:
 # |   *	ntdll-Exception
 # |
 # | Modified files:
@@ -3981,8 +3981,8 @@ fi
 
 # Patchset ntdll-WriteWatches
 # |
-# | This patchset has the following dependencies:
-# |   *	kernel32-Named_Pipe, ws2_32-WriteWatches
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	rpcrt4-Pipe_Transport, kernel32-Named_Pipe, ws2_32-WriteWatches
 # |
 # | Modified files:
 # |   *	dlls/ntdll/file.c
@@ -4097,7 +4097,7 @@ fi
 
 # Patchset nvapi-Stub_DLL
 # |
-# | This patchset has the following dependencies:
+# | This patchset has the following (direct or indirect) dependencies:
 # |   *	nvcuda-CUDA_Support
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4146,8 +4146,8 @@ fi
 
 # Patchset nvcuvid-CUDA_Video_Support
 # |
-# | This patchset has the following dependencies:
-# |   *	nvapi-Stub_DLL
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	nvcuda-CUDA_Support, nvapi-Stub_DLL
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/nvcuvid/Makefile.in, dlls/nvcuvid/nvcuvid.c, dlls/nvcuvid/nvcuvid.spec, include/Makefile.in,
@@ -4162,8 +4162,8 @@ fi
 
 # Patchset nvencodeapi-Video_Encoder
 # |
-# | This patchset has the following dependencies:
-# |   *	nvcuvid-CUDA_Video_Support
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	nvcuda-CUDA_Support, nvapi-Stub_DLL, nvcuvid-CUDA_Video_Support
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/nvencodeapi/Makefile.in, dlls/nvencodeapi/nvencodeapi.c, dlls/nvencodeapi/nvencodeapi.spec,
@@ -4363,8 +4363,8 @@ fi
 
 # Patchset server-RootDirectory_File
 # |
-# | This patchset has the following dependencies:
-# |   *	ntdll-FileDispositionInformation
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	server-File_Permissions, ntdll-FileDispositionInformation
 # |
 # | Modified files:
 # |   *	dlls/ntdll/tests/file.c, server/fd.c, server/file.c, server/file.h
@@ -4378,8 +4378,8 @@ fi
 
 # Patchset server-Stored_ACLs
 # |
-# | This patchset has the following dependencies:
-# |   *	ntdll-DOS_Attributes, server-File_Permissions, server-RootDirectory_File
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-DOS_Attributes, server-File_Permissions, ntdll-FileDispositionInformation, server-RootDirectory_File
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#33576] Support for stored file ACLs
@@ -4409,8 +4409,9 @@ fi
 
 # Patchset server-Inherited_ACLs
 # |
-# | This patchset has the following dependencies:
-# |   *	server-Stored_ACLs
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-DOS_Attributes, server-File_Permissions, ntdll-FileDispositionInformation, server-RootDirectory_File, server-
+# | 	Stored_ACLs
 # |
 # | Modified files:
 # |   *	dlls/advapi32/tests/security.c, server/file.c
@@ -4472,8 +4473,8 @@ fi
 
 # Patchset server-Pipe_ObjectName
 # |
-# | This patchset has the following dependencies:
-# |   *	kernel32-Named_Pipe
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	rpcrt4-Pipe_Transport, kernel32-Named_Pipe
 # |
 # | Modified files:
 # |   *	server/named_pipe.c, server/object.c, server/object.h
@@ -4503,7 +4504,7 @@ fi
 
 # Patchset server-Shared_Memory
 # |
-# | This patchset has the following dependencies:
+# | This patchset has the following (direct or indirect) dependencies:
 # |   *	dinput-Events, ntdll-Threading, server-ClipCursor, server-Key_State, server-PeekMessage
 # |
 # | Modified files:
@@ -4698,8 +4699,8 @@ fi
 
 # Patchset shell32-Progress_Dialog
 # |
-# | This patchset has the following dependencies:
-# |   *	kernel32-CopyFileEx
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	kernel32-SetFileInformationByHandle, server-File_Permissions, ntdll-FileDispositionInformation, kernel32-CopyFileEx
 # |
 # | Modified files:
 # |   *	dlls/shell32/shell32.rc, dlls/shell32/shlfileop.c, dlls/shell32/shresdef.h
@@ -4778,8 +4779,9 @@ fi
 
 # Patchset shell32-SHFileOperation
 # |
-# | This patchset has the following dependencies:
-# |   *	shell32-Progress_Dialog
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	kernel32-SetFileInformationByHandle, server-File_Permissions, ntdll-FileDispositionInformation, kernel32-CopyFileEx,
+# | 	shell32-Progress_Dialog
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#37916] Anno 1602 installer depends on Windows 98 behavior of SHFileOperationW
@@ -5167,8 +5169,8 @@ fi
 
 # Patchset wined3d-CSMT_Helper
 # |
-# | This patchset has the following dependencies:
-# |   *	makedep-PARENTSPEC, ntdll-DllRedirects, wined3d-DXTn
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	makedep-PARENTSPEC, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-DXTn
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
@@ -5197,7 +5199,7 @@ fi
 
 # Patchset wined3d-MESA_GPU_Info
 # |
-# | This patchset has the following dependencies:
+# | This patchset has the following (direct or indirect) dependencies:
 # |   *	wined3d-Accounting
 # |
 # | Modified files:
@@ -5296,8 +5298,8 @@ fi
 
 # Patchset wined3d-CSMT_Main
 # |
-# | This patchset has the following dependencies:
-# |   *	wined3d-CSMT_Helper
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	makedep-PARENTSPEC, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-DXTn, wined3d-CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance

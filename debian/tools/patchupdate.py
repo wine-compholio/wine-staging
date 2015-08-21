@@ -684,9 +684,10 @@ def generate_script(all_patches):
 
         # List dependencies (if any)
         if len(patch.depends):
-            lines.append("# | This patchset has the following dependencies:\n")
+            depends = resolve_dependencies(all_patches, i)
+            lines.append("# | This patchset has the following (direct or indirect) dependencies:\n")
             lines.append("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap(
-                ", ".join([all_patches[j].name for j in sorted(patch.depends)]), 120)))
+                ", ".join([all_patches[j].name for j in depends]), 120)))
             lines.append("# |\n")
 
         # List all bugs fixed by this patchset

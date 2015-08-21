@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 5021e91940fe01a54e6ee91f9d9f246ce8f6dd84"
+	echo "  commit 5ccc463a4e3ba181b96a161c3c8cd4bc0cb0e607"
 	echo ""
 }
 
@@ -215,7 +215,6 @@ patch_enable_all ()
 	enable_server_PeekMessage="$1"
 	enable_server_Pipe_ObjectName="$1"
 	enable_server_Realtime_Priority="$1"
-	enable_server_RootDirectory_File="$1"
 	enable_server_Shared_Memory="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
@@ -730,9 +729,6 @@ patch_enable ()
 			;;
 		server-Realtime_Priority)
 			enable_server_Realtime_Priority="$2"
-			;;
-		server-RootDirectory_File)
-			enable_server_RootDirectory_File="$2"
 			;;
 		server-Shared_Memory)
 			enable_server_Shared_Memory="$2"
@@ -1714,19 +1710,8 @@ if test "$enable_server_Stored_ACLs" -eq 1; then
 	if test "$enable_server_File_Permissions" -gt 1; then
 		abort "Patchset server-File_Permissions disabled, but server-Stored_ACLs depends on that."
 	fi
-	if test "$enable_server_RootDirectory_File" -gt 1; then
-		abort "Patchset server-RootDirectory_File disabled, but server-Stored_ACLs depends on that."
-	fi
 	enable_ntdll_DOS_Attributes=1
 	enable_server_File_Permissions=1
-	enable_server_RootDirectory_File=1
-fi
-
-if test "$enable_server_RootDirectory_File" -eq 1; then
-	if test "$enable_ntdll_FileDispositionInformation" -gt 1; then
-		abort "Patchset ntdll-FileDispositionInformation disabled, but server-RootDirectory_File depends on that."
-	fi
-	enable_ntdll_FileDispositionInformation=1
 fi
 
 if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
@@ -3154,20 +3139,16 @@ fi
 # |   *	server-File_Permissions
 # |
 # | Modified files:
-# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c, server/fd.c, server/protocol.def
+# |   *	dlls/ntdll/tests/file.c, server/fd.c
 # |
 if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 	patch_apply ntdll-FileDispositionInformation/0001-ntdll-tests-Added-tests-to-set-disposition-on-file-w.patch
 	patch_apply ntdll-FileDispositionInformation/0002-server-Do-not-allow-to-set-disposition-on-file-which.patch
 	patch_apply ntdll-FileDispositionInformation/0003-server-When-combining-root-and-name-make-sure-there-.patch
-	patch_apply ntdll-FileDispositionInformation/0004-ntdll-tests-Add-tests-for-FileLinkInformation-class.patch
-	patch_apply ntdll-FileDispositionInformation/0005-server-Implement-support-for-FileLinkInformation-cla.patch
 	(
 		echo '+    { "Qian Hong", "ntdll/tests: Added tests to set disposition on file which is mapped to memory.", 1 },';
 		echo '+    { "Qian Hong", "server: Do not allow to set disposition on file which has a file mapping.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: When combining root and name, make sure there is only one slash.", 2 },';
-		echo '+    { "Qian Hong", "ntdll/tests: Add tests for FileLinkInformation class.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Implement support for FileLinkInformation class in NtSetInformationFile.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4361,25 +4342,10 @@ if test "$enable_server_Delete_On_Close" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-RootDirectory_File
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	server-File_Permissions, ntdll-FileDispositionInformation
-# |
-# | Modified files:
-# |   *	dlls/ntdll/tests/file.c, server/fd.c, server/file.c, server/file.h
-# |
-if test "$enable_server_RootDirectory_File" -eq 1; then
-	patch_apply server-RootDirectory_File/0001-server-Fix-handling-of-opening-a-file-with-RootDirec.patch
-	(
-		echo '+    { "Sebastian Lackner", "server: Fix handling of opening a file with RootDirectory pointing to a file handle.", 3 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-Stored_ACLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DOS_Attributes, server-File_Permissions, ntdll-FileDispositionInformation, server-RootDirectory_File
+# |   *	ntdll-DOS_Attributes, server-File_Permissions
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#33576] Support for stored file ACLs
@@ -4410,8 +4376,7 @@ fi
 # Patchset server-Inherited_ACLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DOS_Attributes, server-File_Permissions, ntdll-FileDispositionInformation, server-RootDirectory_File, server-
-# | 	Stored_ACLs
+# |   *	ntdll-DOS_Attributes, server-File_Permissions, server-Stored_ACLs
 # |
 # | Modified files:
 # |   *	dlls/advapi32/tests/security.c, server/file.c

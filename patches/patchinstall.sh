@@ -97,6 +97,7 @@ patch_enable_all ()
 	enable_d3dx9_33_Share_Source="$1"
 	enable_d3dx9_36_AnimationController="$1"
 	enable_d3dx9_36_CloneEffect="$1"
+	enable_d3dx9_36_D3DXCreateTeapot="$1"
 	enable_d3dx9_36_D3DXStubs="$1"
 	enable_d3dx9_36_DDS="$1"
 	enable_d3dx9_36_DXTn="$1"
@@ -381,6 +382,9 @@ patch_enable ()
 			;;
 		d3dx9_36-CloneEffect)
 			enable_d3dx9_36_CloneEffect="$2"
+			;;
+		d3dx9_36-D3DXCreateTeapot)
+			enable_d3dx9_36_D3DXCreateTeapot="$2"
 			;;
 		d3dx9_36-D3DXStubs)
 			enable_d3dx9_36_D3DXStubs="$2"
@@ -2490,6 +2494,21 @@ if test "$enable_d3dx9_36_CloneEffect" -eq 1; then
 	patch_apply d3dx9_36-CloneEffect/0001-d3dx9_36-Improve-stub-for-ID3DXEffectImpl_CloneEffec.patch
 	(
 		echo '+    { "Sebastian Lackner", "d3dx9_36: Improve stub for ID3DXEffectImpl_CloneEffect.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3dx9_36-D3DXCreateTeapot
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36884] Return a valid mesh in D3DXCreateTeapot
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/mesh.c
+# |
+if test "$enable_d3dx9_36_D3DXCreateTeapot" -eq 1; then
+	patch_apply d3dx9_36-D3DXCreateTeapot/0001-d3dx9_36-Return-a-mesh-in-D3DXCreateTeapot.patch
+	(
+		echo '+    { "Alistair Leslie-Hughes", "d3dx9_36: Return a mesh in D3DXCreateTeapot.", 1 },';
 	) >> "$patchlist"
 fi
 

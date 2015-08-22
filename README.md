@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [16]:**
+**Bug fixes and features included in the next upcoming release [17]:**
 
 * Add IDragSourceHelper stub interface ([Wine Bug #24699](https://bugs.winehq.org/show_bug.cgi?id=24699))
 * Catch invalid memory accesses in imagehlp.CheckSumMappedFile
@@ -55,6 +55,7 @@ Included bug fixes and improvements
 * Properly implement imagehlp.ImageLoad and ImageUnload
 * Report correct ObjectName for NamedPipe wineserver objects
 * Return STATUS_OBJECT_NAME_INVALID in wine_nt_to_unix_file_name for paths that only contain a prefix ([Wine Bug #39133](https://bugs.winehq.org/show_bug.cgi?id=39133))
+* Return a valid mesh in D3DXCreateTeapot ([Wine Bug #36884](https://bugs.winehq.org/show_bug.cgi?id=36884))
 * Set EOF on file which has a memory mapping should fail
 * Use helper function for NtWaitForMultipleObjects and NtWaitForSingleObject ([Wine Bug #39127](https://bugs.winehq.org/show_bug.cgi?id=39127))
 

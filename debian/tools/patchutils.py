@@ -55,9 +55,6 @@ class PatchObject(object):
         self.patch_subject      = header['subject']
         self.patch_revision     = header['revision'] if header.has_key('revision') else 1
 
-        # self.extracted_patch    = None
-        self.unique_hash        = None
-
         self.filename           = filename
         self.offset_begin       = None
         self.offset_end         = None

@@ -1,0 +1,174 @@
+From fa7e6a770944d1e8663e6062ee83df778d6cf7af Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 22 Aug 2015 15:41:15 +0200
+Subject: uxthemegtk: Reset FPU flags before calling GTK3 functions.
+
+---
+ dlls/uxtheme-gtk/uxtheme.c | 57 ++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 55 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/uxtheme-gtk/uxtheme.c b/dlls/uxtheme-gtk/uxtheme.c
+index 37af3bc..22d3ffb 100644
+--- a/dlls/uxtheme-gtk/uxtheme.c
++++ b/dlls/uxtheme-gtk/uxtheme.c
+@@ -139,6 +139,27 @@ static const WCHAR FAKE_THEME_COLOR[]   = {'D','e','f','a','u','l','t',' ','C','
+ static const WCHAR FAKE_THEME_SIZE[]    = {'D','e','f','a','u','l','t',' ','S','i','z','e',0};
+ static WCHAR fake_msstyles_file[MAX_PATH];
+ 
++static inline WORD reset_fpu_flags(void)
++{
++#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
++    WORD default_cw = 0x37f, pre_cw;
++    __asm__ __volatile__( "fwait" );
++    __asm__ __volatile__( "fnstcw %0" : "=m" (pre_cw) );
++    __asm__ __volatile__( "fldcw %0" : : "m" (default_cw) );
++    return pre_cw;
++#else
++    return 0;
++#endif
++}
++
++static inline void set_fpu_flags(WORD flags)
++{
++#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
++    __asm__ __volatile__( "fclex" );
++    __asm__ __volatile__( "fldcw %0" : : "m" (flags) );
++#endif
++}
++
+ static void free_gtk3_libs(void)
+ {
+     if (libgtk3) wine_dlclose(libgtk3, NULL, 0);
+@@ -384,6 +405,7 @@ static void paint_cairo_surface(cairo_surface_t *surface, HDC target_hdc,
+ HRESULT WINAPI CloseThemeData(HTHEME htheme)
+ {
+     uxgtk_theme_t *theme = (uxgtk_theme_t *)htheme;
++    WORD fpu_flags;
+ 
+     TRACE("(%p)\n", htheme);
+ 
+@@ -394,7 +416,10 @@ HRESULT WINAPI CloseThemeData(HTHEME htheme)
+         return E_HANDLE;
+ 
+     /* Destroy the toplevel widget */
++    fpu_flags = reset_fpu_flags();
+     pgtk_widget_destroy(theme->window);
++    set_fpu_flags(fpu_flags);
++
+     HeapFree(GetProcessHeap(), 0, theme);
+     return S_OK;
+ }
+@@ -480,6 +505,7 @@ HTHEME WINAPI OpenThemeData(HWND hwnd, LPCWSTR classlist)
+ {
+     WCHAR *start, *tok, buf[CLASSLIST_MAXLEN];
+     uxgtk_theme_t *theme;
++    WORD fpu_flags;
+     int i;
+ 
+     TRACE("(%p, %s)\n", hwnd, debugstr_w(classlist));
+@@ -526,7 +552,10 @@ found:
+     TRACE("Using %s for %s.\n", debugstr_w(classes[i].classname),
+           debugstr_w(classlist));
+ 
++    fpu_flags = reset_fpu_flags();
+     theme = classes[i].create();
++    set_fpu_flags(fpu_flags);
++
+     if (theme && IsWindow(hwnd))
+         SetPropW(hwnd, THEME_PROPERTY, theme);
+ 
+@@ -561,6 +590,7 @@ HRESULT WINAPI GetThemeColor(HTHEME htheme, int part_id, int state_id,
+     HRESULT hr;
+     GdkRGBA rgba = {0, 0, 0, 0};
+     uxgtk_theme_t *theme = (uxgtk_theme_t *)htheme;
++    WORD fpu_flags;
+ 
+     TRACE("(%p, %d, %d, %d, %p)\n", htheme, part_id, state_id, prop_id, color);
+ 
+@@ -577,7 +607,10 @@ HRESULT WINAPI GetThemeColor(HTHEME htheme, int part_id, int state_id,
+         return E_INVALIDARG;
+ 
+     TRACE("%s->get_color()\n", theme->vtable->classname);
++
++    fpu_flags = reset_fpu_flags();
+     hr = theme->vtable->get_color(theme, part_id, state_id, prop_id, &rgba);
++    set_fpu_flags(fpu_flags);
+ 
+     if (SUCCEEDED(hr) && rgba.alpha > 0)
+     {
+@@ -860,6 +893,7 @@ HRESULT WINAPI DrawThemeBackgroundEx(HTHEME htheme, HDC hdc, int part_id, int st
+     uxgtk_theme_t *theme = (uxgtk_theme_t *)htheme;
+     cairo_surface_t *surface;
+     int width, height;
++    WORD fpu_flags;
+     cairo_t *cr;
+     HRESULT hr;
+ 
+@@ -877,6 +911,8 @@ HRESULT WINAPI DrawThemeBackgroundEx(HTHEME htheme, HDC hdc, int part_id, int st
+     width = rect->right - rect->left;
+     height = rect->bottom - rect->top;
+ 
++    fpu_flags = reset_fpu_flags();
++
+     surface = pcairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
+     cr = pcairo_create(surface);
+ 
+@@ -887,6 +923,9 @@ HRESULT WINAPI DrawThemeBackgroundEx(HTHEME htheme, HDC hdc, int part_id, int st
+ 
+     pcairo_destroy(cr);
+     pcairo_surface_destroy(surface);
++
++    set_fpu_flags(fpu_flags);
++
+     return hr;
+ }
+ 
+@@ -1021,6 +1060,8 @@ HRESULT WINAPI GetThemePartSize(HTHEME htheme, HDC hdc, int part_id, int state_i
+                                 RECT *rect, THEMESIZE type, SIZE *size)
+ {
+     uxgtk_theme_t *theme = (uxgtk_theme_t *)htheme;
++    HRESULT result;
++    WORD fpu_flags;
+ 
+     TRACE("(%p, %p, %d, %d, %p, %d, %p)\n", htheme, hdc, part_id, state_id, rect, type, size);
+ 
+@@ -1037,7 +1078,12 @@ HRESULT WINAPI GetThemePartSize(HTHEME htheme, HDC hdc, int part_id, int state_i
+         return E_INVALIDARG;
+ 
+     TRACE("%s->get_part_size()\n", theme->vtable->classname);
+-    return theme->vtable->get_part_size(theme, part_id, state_id, rect, size);
++
++    fpu_flags = reset_fpu_flags();
++    result = theme->vtable->get_part_size(theme, part_id, state_id, rect, size);
++    set_fpu_flags(fpu_flags);
++
++    return result;
+ }
+ 
+ HRESULT WINAPI GetThemeTextExtent(HTHEME htheme, HDC hdc, int part_id, int state_id,
+@@ -1081,6 +1127,8 @@ BOOL WINAPI IsThemeBackgroundPartiallyTransparent(HTHEME htheme, int part_id, in
+ BOOL WINAPI IsThemePartDefined(HTHEME htheme, int part_id, int state_id)
+ {
+     uxgtk_theme_t *theme = (uxgtk_theme_t *)htheme;
++    WORD fpu_flags;
++    BOOL result;
+ 
+     TRACE("(%p, %d, %d)\n", htheme, part_id, state_id);
+ 
+@@ -1103,7 +1151,12 @@ BOOL WINAPI IsThemePartDefined(HTHEME htheme, int part_id, int state_id)
+     }
+ 
+     TRACE("%s->is_part_defined()\n", theme->vtable->classname);
+-    return theme->vtable->is_part_defined(part_id, state_id);
++
++    fpu_flags = reset_fpu_flags();
++    result = theme->vtable->is_part_defined(part_id, state_id);
++    set_fpu_flags(fpu_flags);
++
++    return result;
+ }
+ 
+ DWORD WINAPI QueryThemeServices(void)
+-- 
+2.5.0
+

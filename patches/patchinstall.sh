@@ -167,6 +167,7 @@ patch_enable_all ()
 	enable_ntdll_Dealloc_Thread_Stack="$1"
 	enable_ntdll_DeviceType_Systemroot="$1"
 	enable_ntdll_DllRedirects="$1"
+	enable_ntdll_Empty_Path="$1"
 	enable_ntdll_Exception="$1"
 	enable_ntdll_FileDispositionInformation="$1"
 	enable_ntdll_FileFsFullSizeInformation="$1"
@@ -589,6 +590,9 @@ patch_enable ()
 			;;
 		ntdll-DllRedirects)
 			enable_ntdll_DllRedirects="$2"
+			;;
+		ntdll-Empty_Path)
+			enable_ntdll_Empty_Path="$2"
 			;;
 		ntdll-Exception)
 			enable_ntdll_Exception="$2"
@@ -1778,6 +1782,13 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	fi
 	enable_ntdll_Fix_Free=1
 	enable_ntdll_NtQueryEaFile=1
+fi
+
+if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
+	if test "$enable_ntdll_Empty_Path" -gt 1; then
+		abort "Patchset ntdll-Empty_Path disabled, but ntdll-NtQueryEaFile depends on that."
+	fi
+	enable_ntdll_Empty_Path=1
 fi
 
 if test "$enable_ntdll_DllRedirects" -eq 1; then
@@ -3712,6 +3723,21 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-Empty_Path
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39133] Return STATUS_OBJECT_NAME_INVALID in wine_nt_to_unix_file_name for paths that only contain a prefix
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/file.c, dlls/ntdll/directory.c, dlls/ntdll/tests/file.c
+# |
+if test "$enable_ntdll_Empty_Path" -eq 1; then
+	patch_apply ntdll-Empty_Path/0001-ntdll-Return-STATUS_OBJECT_NAME_INVALID-in-wine_nt_t.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Return STATUS_OBJECT_NAME_INVALID in wine_nt_to_unix_file_name for paths that only contain a prefix.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-Exception
 # |
 # | Modified files:
@@ -3824,6 +3850,9 @@ fi
 
 # Patchset ntdll-NtQueryEaFile
 # |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Empty_Path
+# |
 # | Modified files:
 # |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
 # |
@@ -3837,7 +3866,7 @@ fi
 # Patchset ntdll-Junction_Points
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Fix_Free, ntdll-NtQueryEaFile
+# |   *	ntdll-Fix_Free, ntdll-Empty_Path, ntdll-NtQueryEaFile
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#12401] Support for Junction Points

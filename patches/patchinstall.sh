@@ -208,6 +208,7 @@ patch_enable_all ()
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
 	enable_server_Delete_On_Close="$1"
+	enable_server_FileEndOfFileInformation="$1"
 	enable_server_File_Permissions="$1"
 	enable_server_Inherited_ACLs="$1"
 	enable_server_Key_State="$1"
@@ -709,6 +710,9 @@ patch_enable ()
 			;;
 		server-Delete_On_Close)
 			enable_server_Delete_On_Close="$2"
+			;;
+		server-FileEndOfFileInformation)
+			enable_server_FileEndOfFileInformation="$2"
 			;;
 		server-File_Permissions)
 			enable_server_File_Permissions="$2"
@@ -4356,6 +4360,18 @@ if test "$enable_server_Delete_On_Close" -eq 1; then
 	patch_apply server-Delete_On_Close/0001-server-Fix-handling-of-opening-read-only-files-with-.patch
 	(
 		echo '+    { "Sebastian Lackner", "server: Fix handling of opening read-only files with FILE_DELETE_ON_CLOSE.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-FileEndOfFileInformation
+# |
+# | Modified files:
+# |   *	dlls/ntdll/file.c, server/fd.c, server/protocol.def
+# |
+if test "$enable_server_FileEndOfFileInformation" -eq 1; then
+	patch_apply server-FileEndOfFileInformation/0001-ntdll-Set-EOF-on-file-which-has-a-memory-mapping-sho.patch
+	(
+		echo '+    { "Qian Hong", "ntdll: Set EOF on file which has a memory mapping should fail.", 1 },';
 	) >> "$patchlist"
 fi
 

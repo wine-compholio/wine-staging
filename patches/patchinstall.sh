@@ -162,6 +162,7 @@ patch_enable_all ()
 	enable_ntdll_Activation_Context="$1"
 	enable_ntdll_CLI_Images="$1"
 	enable_ntdll_DOS_Attributes="$1"
+	enable_ntdll_Dealloc_Thread_Stack="$1"
 	enable_ntdll_DeviceType_Systemroot="$1"
 	enable_ntdll_DllRedirects="$1"
 	enable_ntdll_Exception="$1"
@@ -570,6 +571,9 @@ patch_enable ()
 			;;
 		ntdll-DOS_Attributes)
 			enable_ntdll_DOS_Attributes="$2"
+			;;
+		ntdll-Dealloc_Thread_Stack)
+			enable_ntdll_Dealloc_Thread_Stack="$2"
 			;;
 		ntdll-DeviceType_Systemroot)
 			enable_ntdll_DeviceType_Systemroot="$2"
@@ -3599,6 +3603,19 @@ if test "$enable_ntdll_DOS_Attributes" -eq 1; then
 		echo '+    { "Erich E. Hoover", "libport: Add support for Mac OS X style extended attributes.", 1 },';
 		echo '+    { "Erich E. Hoover", "libport: Add support for FreeBSD style extended attributes.", 1 },';
 		echo '+    { "Erich E. Hoover", "ntdll: Perform the Unix-style hidden file check within the unified file info grabbing routine.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Dealloc_Thread_Stack
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c,
+# | 	dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/virtual.c
+# |
+if test "$enable_ntdll_Dealloc_Thread_Stack" -eq 1; then
+	patch_apply ntdll-Dealloc_Thread_Stack/0001-ntdll-Do-not-allow-to-allocate-thread-stack-for-curr.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Do not allow to allocate thread stack for current thread.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,191 @@
+From dae71e69de99580ced403804e944c7a13e0519e9 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 21 Aug 2015 06:39:47 +0800
+Subject: ntdll: Do not allow to allocate thread stack for current thread.
+
+---
+ dlls/ntdll/ntdll_misc.h     | 10 ++++++++++
+ dlls/ntdll/signal_arm.c     |  7 +++++++
+ dlls/ntdll/signal_arm64.c   |  7 +++++++
+ dlls/ntdll/signal_i386.c    |  8 +++++++-
+ dlls/ntdll/signal_powerpc.c |  7 +++++++
+ dlls/ntdll/signal_x86_64.c  |  7 +++++++
+ dlls/ntdll/virtual.c        | 12 ++++++++++++
+ 7 files changed, 57 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
+index 46776a6..14b47ac 100644
+--- a/dlls/ntdll/ntdll_misc.h
++++ b/dlls/ntdll/ntdll_misc.h
+@@ -242,8 +242,18 @@ struct ntdll_thread_data
+     WINE_VM86_TEB_INFO vm86;          /* 1fc vm86 private data */
+     void              *exit_frame;    /* 204 exit frame pointer */
+ #endif
++    void              *pthread_stack; /* 208/318 pthread stack */
+ };
+ 
++C_ASSERT( FIELD_OFFSET(TEB, SpareBytes1) + sizeof(struct ntdll_thread_data) <=
++          FIELD_OFFSET(TEB, GdiTebBatch) + sizeof(((TEB *)0)->GdiTebBatch) );
++
++#ifdef __i386__
++C_ASSERT( FIELD_OFFSET(TEB, SpareBytes1) + FIELD_OFFSET(struct ntdll_thread_data, vm86) == FIELD_OFFSET(TEB, GdiTebBatch) );
++C_ASSERT( FIELD_OFFSET(TEB, SpareBytes1) + FIELD_OFFSET(struct ntdll_thread_data, vm86) == 0x1fc );
++C_ASSERT( FIELD_OFFSET(TEB, SpareBytes1) + FIELD_OFFSET(struct ntdll_thread_data, gs)   == 0x1d8 );
++#endif
++
+ static inline struct ntdll_thread_data *ntdll_get_thread_data(void)
+ {
+     return (struct ntdll_thread_data *)NtCurrentTeb()->SpareBytes1;
+diff --git a/dlls/ntdll/signal_arm.c b/dlls/ntdll/signal_arm.c
+index cfb9df1..07c8b0a 100644
+--- a/dlls/ntdll/signal_arm.c
++++ b/dlls/ntdll/signal_arm.c
+@@ -902,12 +902,19 @@ NTSTATUS signal_alloc_thread( TEB **teb )
+ void signal_free_thread( TEB *teb )
+ {
+     SIZE_T size;
++    struct ntdll_thread_data *thread_data = (struct ntdll_thread_data *)teb->SpareBytes1;
+ 
+     if (teb->DeallocationStack)
+     {
+         size = 0;
+         NtFreeVirtualMemory( GetCurrentProcess(), &teb->DeallocationStack, &size, MEM_RELEASE );
+     }
++    if ((ULONG_PTR)thread_data->pthread_stack & 1)
++    {
++        void *addr = (void *)((ULONG_PTR)thread_data->pthread_stack & ~1);
++        size = 0;
++        NtFreeVirtualMemory( GetCurrentProcess(), &addr, &size, MEM_RELEASE );
++    }
+     size = 0;
+     NtFreeVirtualMemory( NtCurrentProcess(), (void **)&teb, &size, MEM_RELEASE );
+ }
+diff --git a/dlls/ntdll/signal_arm64.c b/dlls/ntdll/signal_arm64.c
+index 7259831..09bdfe0 100644
+--- a/dlls/ntdll/signal_arm64.c
++++ b/dlls/ntdll/signal_arm64.c
+@@ -776,12 +776,19 @@ NTSTATUS signal_alloc_thread( TEB **teb )
+ void signal_free_thread( TEB *teb )
+ {
+     SIZE_T size;
++    struct ntdll_thread_data *thread_data = (struct ntdll_thread_data *)teb->SpareBytes1;
+ 
+     if (teb->DeallocationStack)
+     {
+         size = 0;
+         NtFreeVirtualMemory( GetCurrentProcess(), &teb->DeallocationStack, &size, MEM_RELEASE );
+     }
++    if ((ULONG_PTR)thread_data->pthread_stack & 1)
++    {
++        void *addr = (void *)((ULONG_PTR)thread_data->pthread_stack & ~1);
++        size = 0;
++        NtFreeVirtualMemory( GetCurrentProcess(), &addr, &size, MEM_RELEASE );
++    }
+     size = 0;
+     NtFreeVirtualMemory( NtCurrentProcess(), (void **)&teb, &size, MEM_RELEASE );
+ }
+diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
+index f550c63..1007358 100644
+--- a/dlls/ntdll/signal_i386.c
++++ b/dlls/ntdll/signal_i386.c
+@@ -2616,12 +2616,18 @@ void signal_free_thread( TEB *teb )
+     SIZE_T size;
+     struct ntdll_thread_data *thread_data = (struct ntdll_thread_data *)teb->SpareBytes1;
+ 
+-    if (thread_data) wine_ldt_free_fs( thread_data->fs );
++    wine_ldt_free_fs( thread_data->fs );
+     if (teb->DeallocationStack)
+     {
+         size = 0;
+         NtFreeVirtualMemory( GetCurrentProcess(), &teb->DeallocationStack, &size, MEM_RELEASE );
+     }
++    if ((ULONG_PTR)thread_data->pthread_stack & 1)
++    {
++        void *addr = (void *)((ULONG_PTR)thread_data->pthread_stack & ~1);
++        size = 0;
++        NtFreeVirtualMemory( GetCurrentProcess(), &addr, &size, MEM_RELEASE );
++    }
+     size = 0;
+     NtFreeVirtualMemory( NtCurrentProcess(), (void **)&teb, &size, MEM_RELEASE );
+ }
+diff --git a/dlls/ntdll/signal_powerpc.c b/dlls/ntdll/signal_powerpc.c
+index d2e7819..c673d6e 100644
+--- a/dlls/ntdll/signal_powerpc.c
++++ b/dlls/ntdll/signal_powerpc.c
+@@ -982,12 +982,19 @@ NTSTATUS signal_alloc_thread( TEB **teb )
+ void signal_free_thread( TEB *teb )
+ {
+     SIZE_T size;
++    struct ntdll_thread_data *thread_data = (struct ntdll_thread_data *)teb->SpareBytes1;
+ 
+     if (teb->DeallocationStack)
+     {
+         size = 0;
+         NtFreeVirtualMemory( GetCurrentProcess(), &teb->DeallocationStack, &size, MEM_RELEASE );
+     }
++    if ((ULONG_PTR)thread_data->pthread_stack & 1)
++    {
++        void *addr = (void *)((ULONG_PTR)thread_data->pthread_stack & ~1);
++        size = 0;
++        NtFreeVirtualMemory( GetCurrentProcess(), &addr, &size, MEM_RELEASE );
++    }
+     size = 0;
+     NtFreeVirtualMemory( NtCurrentProcess(), (void **)&teb, &size, MEM_RELEASE );
+ }
+diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
+index a1ee02d..1db9f27 100644
+--- a/dlls/ntdll/signal_x86_64.c
++++ b/dlls/ntdll/signal_x86_64.c
+@@ -2732,12 +2732,19 @@ NTSTATUS signal_alloc_thread( TEB **teb )
+ void signal_free_thread( TEB *teb )
+ {
+     SIZE_T size;
++    struct ntdll_thread_data *thread_data = (struct ntdll_thread_data *)teb->SpareBytes1;
+ 
+     if (teb->DeallocationStack)
+     {
+         size = 0;
+         NtFreeVirtualMemory( GetCurrentProcess(), &teb->DeallocationStack, &size, MEM_RELEASE );
+     }
++    if ((ULONG_PTR)thread_data->pthread_stack & 1)
++    {
++        void *addr = (void *)((ULONG_PTR)thread_data->pthread_stack & ~1);
++        size = 0;
++        NtFreeVirtualMemory( GetCurrentProcess(), &addr, &size, MEM_RELEASE );
++    }
+     size = 0;
+     NtFreeVirtualMemory( NtCurrentProcess(), (void **)&teb, &size, MEM_RELEASE );
+ }
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index 9d35693..b40674b 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -1486,6 +1486,8 @@ NTSTATUS virtual_alloc_thread_stack( TEB *teb, SIZE_T reserve_size, SIZE_T commi
+     teb->DeallocationStack = view->base;
+     teb->Tib.StackBase     = (char *)view->base + view->size;
+     teb->Tib.StackLimit    = (char *)view->base + 2 * page_size;
++    ((struct ntdll_thread_data *)teb->SpareBytes1)->pthread_stack = view->base;
++
+ done:
+     server_leave_uninterrupted_section( &csVirtual, &sigset );
+     return status;
+@@ -2119,6 +2121,16 @@ NTSTATUS WINAPI NtFreeVirtualMemory( HANDLE process, PVOID *addr_ptr, SIZE_T *si
+         /* Free the pages */
+ 
+         if (size || (base != view->base)) status = STATUS_INVALID_PARAMETER;
++        else if (view->base == (void *)((ULONG_PTR)ntdll_get_thread_data()->pthread_stack & ~1))
++        {
++            ULONG_PTR stack = (ULONG_PTR)ntdll_get_thread_data()->pthread_stack;
++            if (stack & 1) status = STATUS_INVALID_PARAMETER;
++            else
++            {
++                WARN( "Application tried to deallocate current pthread stack %p, deferring\n", view->base);
++                ntdll_get_thread_data()->pthread_stack = (void *)(stack | 1);
++            }
++        }
+         else
+         {
+             delete_view( view );
+-- 
+2.5.0
+

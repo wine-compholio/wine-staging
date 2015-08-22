@@ -3666,7 +3666,7 @@ fi
 if test "$enable_ntdll_Dealloc_Thread_Stack" -eq 1; then
 	patch_apply ntdll-Dealloc_Thread_Stack/0001-ntdll-Do-not-allow-to-allocate-thread-stack-for-curr.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Do not allow to allocate thread stack for current thread.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Do not allow to deallocate thread stack for current thread.", 1 },';
 	) >> "$patchlist"
 fi
 

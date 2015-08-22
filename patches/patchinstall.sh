@@ -137,6 +137,7 @@ patch_enable_all ()
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_CompareStringEx="$1"
 	enable_kernel32_CopyFileEx="$1"
+	enable_kernel32_Fix_Testfailure="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_GetLogicalProcessorInformationEx="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
@@ -497,6 +498,9 @@ patch_enable ()
 			;;
 		kernel32-CopyFileEx)
 			enable_kernel32_CopyFileEx="$2"
+			;;
+		kernel32-Fix_Testfailure)
+			enable_kernel32_Fix_Testfailure="$2"
 			;;
 		kernel32-GetFinalPathNameByHandle)
 			enable_kernel32_GetFinalPathNameByHandle="$2"
@@ -3176,6 +3180,18 @@ if test "$enable_kernel32_CopyFileEx" -eq 1; then
 	patch_apply kernel32-CopyFileEx/0001-kernel32-Add-support-for-progress-callback-in-CopyFi.patch
 	(
 		echo '+    { "Michael Müller", "kernel32: Add support for progress callback in CopyFileEx.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-Fix_Testfailure
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/thread.c
+# |
+if test "$enable_kernel32_Fix_Testfailure" -eq 1; then
+	patch_apply kernel32-Fix_Testfailure/0001-kernel32-tests-Properly-initialize-buf-before-callin.patch
+	(
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Properly initialize buf before calling NtQueryInformationThread.", 1 },';
 	) >> "$patchlist"
 fi
 

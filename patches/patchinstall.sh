@@ -1672,6 +1672,13 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	enable_wined3d_DXTn=1
 fi
 
+if test "$enable_uxtheme_GTK_Theming" -eq 1; then
+	if test "$enable_ntdll_DllRedirects" -gt 1; then
+		abort "Patchset ntdll-DllRedirects disabled, but uxtheme-GTK_Theming depends on that."
+	fi
+	enable_ntdll_DllRedirects=1
+fi
+
 if test "$enable_shell32_SHFileOperation" -eq 1; then
 	if test "$enable_shell32_Progress_Dialog" -gt 1; then
 		abort "Patchset shell32-Progress_Dialog disabled, but shell32-SHFileOperation depends on that."
@@ -5032,6 +5039,9 @@ if test "$enable_user32_WndProc" -eq 1; then
 fi
 
 # Patchset uxtheme-GTK_Theming
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Loader_Machine_Type, ntdll-DllRedirects
 # |
 # | Modified files:
 # |   *	aclocal.m4, configure.ac, dlls/uxtheme-gtk/Makefile.in, dlls/uxtheme-gtk/button.c, dlls/uxtheme-gtk/combobox.c, dlls

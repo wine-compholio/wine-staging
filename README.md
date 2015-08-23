@@ -39,28 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [17]:**
-
-* Add IDragSourceHelper stub interface ([Wine Bug #24699](https://bugs.winehq.org/show_bug.cgi?id=24699))
-* Catch invalid memory accesses in imagehlp.CheckSumMappedFile
-* Do not allow to deallocate thread stack for current thread
-* Fix detection of case-insensitive systems in MSYS2
-* Fix implementation of msvcrt.close when stdout == stderr
-* Implement enumeration of sound devices and basic properties to dxdiagn ([Wine Bug #32613](https://bugs.winehq.org/show_bug.cgi?id=32613))
-* Implement shell32 NewMenu class with new folder item ([Wine Bug #24812](https://bugs.winehq.org/show_bug.cgi?id=24812))
-* Implement special handling for calling GetChildContainer with an empty string ([Wine Bug #38014](https://bugs.winehq.org/show_bug.cgi?id=38014))
-* Improve startup performance by delaying font initialization
-* Notepad should create new files immediately ([Wine Bug #19425](https://bugs.winehq.org/show_bug.cgi?id=19425))
-* Only set SFGAO_HASSUBFOLDER when there are really subfolders ([Wine Bug #24851](https://bugs.winehq.org/show_bug.cgi?id=24851))
-* Properly implement imagehlp.ImageLoad and ImageUnload
-* Report correct ObjectName for NamedPipe wineserver objects
-* Return STATUS_OBJECT_NAME_INVALID in wine_nt_to_unix_file_name for paths that only contain a prefix ([Wine Bug #39133](https://bugs.winehq.org/show_bug.cgi?id=39133))
-* Return a valid mesh in D3DXCreateTeapot ([Wine Bug #36884](https://bugs.winehq.org/show_bug.cgi?id=36884))
-* Set EOF on file which has a memory mapping should fail
-* Use helper function for NtWaitForMultipleObjects and NtWaitForSingleObject ([Wine Bug #39127](https://bugs.winehq.org/show_bug.cgi?id=39127))
-
-
-**Bug fixes and features in Wine Staging 1.7.49 [235]:**
+**Bug fixes and features in Wine Staging 1.7.50 [242]:**
 
 *Note: The following list only contains features and bug fixes which are not
 yet available in vanilla Wine. They are removed from the list as soon as they
@@ -70,6 +49,7 @@ releases, take a look at the
 for more details.*
 
 * Add HTTP Host header in HttpSendRequest instead of HttpOpenRequest ([Wine Bug #28911](https://bugs.winehq.org/show_bug.cgi?id=28911))
+* Add IDragSourceHelper stub interface ([Wine Bug #24699](https://bugs.winehq.org/show_bug.cgi?id=24699))
 * Add a ProfileList\<UserSID> registry subkey ([Wine Bug #15670](https://bugs.winehq.org/show_bug.cgi?id=15670))
 * Add implementation for mfplat.MFTRegister ([Wine Bug #37811](https://bugs.winehq.org/show_bug.cgi?id=37811))
 * Add implementation for shlwapi.AssocGetPerceivedType
@@ -94,7 +74,6 @@ for more details.*
 * Add stub for winscard.SCardListReadersA/W ([Wine Bug #26978](https://bugs.winehq.org/show_bug.cgi?id=26978))
 * Add stub for winsta.WinStationEnumerateW ([Wine Bug #38102](https://bugs.winehq.org/show_bug.cgi?id=38102))
 * Add stubbed ISWbemSecurity interfaces in wbemdisp
-* ~~Add stubs for D3DCompile2 and D3DCompileFromFile~~
 * Add stubs for D3DXCreateAnimationController interface
 * Add stubs for additional wininet options in InternetSetOption
 * Add stubs for d3dx10_43.D3DX10CreateEffectFromFileA/W ([Wine Bug #27739](https://bugs.winehq.org/show_bug.cgi?id=27739))
@@ -125,10 +104,12 @@ for more details.*
 * Black & White needs DXTn software decoding support ([Wine Bug #14939](https://bugs.winehq.org/show_bug.cgi?id=14939))
 * CPU-Z fails to start because GetLogicalProcessorInformationEx returns FALSE
 * Calculate msvcrt exponential math operations with higher precision ([Wine Bug #37149](https://bugs.winehq.org/show_bug.cgi?id=37149))
+* Catch invalid memory accesses in imagehlp.CheckSumMappedFile
 * Check architecture before trying to load libraries ([Wine Bug #38021](https://bugs.winehq.org/show_bug.cgi?id=38021))
 * Create stub files for system32/drivers/etc/{services,hosts,networks,protocol} ([Wine Bug #12076](https://bugs.winehq.org/show_bug.cgi?id=12076))
 * CreateProcess does not prioritize the working directory over the system search path ([Wine Bug #23934](https://bugs.winehq.org/show_bug.cgi?id=23934))
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](https://bugs.winehq.org/show_bug.cgi?id=33770))
+* Do not allow to deallocate thread stack for current thread
 * Do not fail when a used context is passed to wglShareLists ([Wine Bug #11436](https://bugs.winehq.org/show_bug.cgi?id=11436))
 * Do not use unixfs for devices without mountpoint
 * Enforce that surfaces are flushed after ReleaseDC
@@ -148,6 +129,7 @@ for more details.*
 * Fix crash in Space Rangers2 caused by missing DXTn support ([Wine Bug #24983](https://bugs.winehq.org/show_bug.cgi?id=24983))
 * Fix crash of winedevice when relocation entry crosses page boundary ([Wine Bug #28254](https://bugs.winehq.org/show_bug.cgi?id=28254))
 * Fix cursor clip regression / broken raw input in multiple games ([Wine Bug #33479](https://bugs.winehq.org/show_bug.cgi?id=33479))
+* Fix detection of case-insensitive systems in MSYS2
 * Fix device paths in HKLM\SYSTEM\MountedDevices ([Wine Bug #38235](https://bugs.winehq.org/show_bug.cgi?id=38235))
 * Fix endless loop in regedit when importing files with very long lines
 * Fix flickering introduced by pixelformat changes. ([Wine Bug #35718](https://bugs.winehq.org/show_bug.cgi?id=35718))
@@ -158,13 +140,12 @@ for more details.*
 * Fix handling of ANSI NTLM credentials ([Wine Bug #37063](https://bugs.winehq.org/show_bug.cgi?id=37063))
 * Fix handling of empty section and key name for profile files. ([Wine Bug #8036](https://bugs.winehq.org/show_bug.cgi?id=8036))
 * Fix handling of invert_y in DrawTextExW ([Wine Bug #22109](https://bugs.winehq.org/show_bug.cgi?id=22109))
-* ~~Fix handling of opening a file with RootDirectory pointing to a file handle~~
 * Fix handling of opening read-only files for FILE_DELETE_ON_CLOSE ([Wine Bug #38417](https://bugs.winehq.org/show_bug.cgi?id=38417))
 * Fix handling of window attributes for WS_EX_LAYERED | WS_EX_COMPOSITED ([Wine Bug #37876](https://bugs.winehq.org/show_bug.cgi?id=37876))
+* Fix implementation of msvcrt.close when stdout == stderr
 * Fix issues with dragging layers between images in Adobe Photoshop 7.0 ([Wine Bug #12007](https://bugs.winehq.org/show_bug.cgi?id=12007))
 * Fix missing video introduced by pixelformat changes. ([Wine Bug #36900](https://bugs.winehq.org/show_bug.cgi?id=36900))
 * Fix multithreading issues with fullscreen clipping ([Wine Bug #38087](https://bugs.winehq.org/show_bug.cgi?id=38087))
-* ~~Fix possible integer overflow in VarR4FromDec~~ ([Wine Bug #38988](https://bugs.winehq.org/show_bug.cgi?id=38988))
 * Fix possible segfault in pulse_rd_loop of PulseAudio backend
 * Fix race-condition when threads are killed during shutdown
 * Fix regression caused by blacklisting supported OpenGL extensions ([Wine Bug #38480](https://bugs.winehq.org/show_bug.cgi?id=38480))
@@ -195,6 +176,7 @@ for more details.*
 * Implement combase.WindowsSubstring function
 * Implement default homepage button in inetcpl.cpl
 * Implement empty enumerator for IWiaDevMgr::EnumDeviceInfo ([Wine Bug #27775](https://bugs.winehq.org/show_bug.cgi?id=27775))
+* Implement enumeration of sound devices and basic properties to dxdiagn ([Wine Bug #32613](https://bugs.winehq.org/show_bug.cgi?id=32613))
 * Implement exclusive mode in PulseAudio backend ([Wine Bug #37042](https://bugs.winehq.org/show_bug.cgi?id=37042))
 * Implement general tab for file property dialog
 * Implement locking and synchronization of key states ([Wine Bug #31899](https://bugs.winehq.org/show_bug.cgi?id=31899))
@@ -202,12 +184,14 @@ for more details.*
 * Implement ntoskrnl driver testing framework.
 * Implement ntoskrnl.KeInitializeMutex
 * Implement proper handling of CLI .NET images in Wine library loader ([Wine Bug #38661](https://bugs.winehq.org/show_bug.cgi?id=38661))
+* Implement shell32 NewMenu class with new folder item ([Wine Bug #24812](https://bugs.winehq.org/show_bug.cgi?id=24812))
+* Implement special handling for calling GetChildContainer with an empty string ([Wine Bug #38014](https://bugs.winehq.org/show_bug.cgi?id=38014))
 * Implement stub for ntoskrnl.IoGetAttachedDeviceReference
 * Implement stub for ntoskrnl.KeDelayExecutionThread.
-* ~~Implement stub for vcomp._vcomp_flush~~ ([Wine Bug #39058](https://bugs.winehq.org/show_bug.cgi?id=39058))
 * Implement stubs for ntoskrnl.Ex{Acquire,Release}FastMutexUnsafe
 * Implement stubs for ntoskrnl.ObReferenceObjectByPointer and ntoskrnl.ObDereferenceObject
 * Improve ReadDataAvailable handling in FilePipeLocalInformation class
+* Improve startup performance by delaying font initialization
 * Improve stub for AEV_GetVolumeRange ([Wine Bug #35658](https://bugs.winehq.org/show_bug.cgi?id=35658))
 * Improve stub for ID3DXEffectImpl_CloneEffect
 * Improve stub for NtQueryEaFile
@@ -222,15 +206,20 @@ for more details.*
 * MSYS2 expects correct handling of WRITECOPY memory protection ([Wine Bug #35561](https://bugs.winehq.org/show_bug.cgi?id=35561))
 * Make it possible to change media center / tablet pc status ([Wine Bug #18732](https://bugs.winehq.org/show_bug.cgi?id=18732))
 * MediaCoder needs CUDA for video encoding ([Wine Bug #37664](https://bugs.winehq.org/show_bug.cgi?id=37664))
-* ~~Move cookie initialization code from memory management to loader~~ ([Wine Bug #39040](https://bugs.winehq.org/show_bug.cgi?id=39040))
 * Multiple applications need EnumDisplayDevicesW implementation ([Wine Bug #34978](https://bugs.winehq.org/show_bug.cgi?id=34978))
 * Need for Speed 3 installer requires devices in HKEY_DYN_DATA ([Wine Bug #7115](https://bugs.winehq.org/show_bug.cgi?id=7115))
+* Notepad should create new files immediately ([Wine Bug #19425](https://bugs.winehq.org/show_bug.cgi?id=19425))
+* Only set SFGAO_HASSUBFOLDER when there are really subfolders ([Wine Bug #24851](https://bugs.winehq.org/show_bug.cgi?id=24851))
 * Other Pipelight-specific enhancements
 * Port Royale doesn't display ocean correctly ([Wine Bug #17913](https://bugs.winehq.org/show_bug.cgi?id=17913))
 * Prevent window managers from grouping all wine programs together ([Wine Bug #32699](https://bugs.winehq.org/show_bug.cgi?id=32699))
 * Process APC calls before starting process
 * Process Hacker 2.x needs ntoskrnl.ProbeForRead ([Wine Bug #38103](https://bugs.winehq.org/show_bug.cgi?id=38103))
+* Properly implement imagehlp.ImageLoad and ImageUnload
 * Reduced SetTimer minimum value from 10 ms to 5 ms (improves Silverlight framerates)
+* Report correct ObjectName for NamedPipe wineserver objects
+* Return STATUS_OBJECT_NAME_INVALID in wine_nt_to_unix_file_name for paths that only contain a prefix ([Wine Bug #39133](https://bugs.winehq.org/show_bug.cgi?id=39133))
+* Return a valid mesh in D3DXCreateTeapot ([Wine Bug #36884](https://bugs.winehq.org/show_bug.cgi?id=36884))
 * Return an error when trying to open a terminated process ([Wine Bug #37087](https://bugs.winehq.org/show_bug.cgi?id=37087))
 * Return correct IMediaSeeking stream positions in quartz
 * Return correct values for GetThreadTimes function ([Wine Bug #20230](https://bugs.winehq.org/show_bug.cgi?id=20230))
@@ -241,6 +230,7 @@ for more details.*
 * SO_CONNECT_TIME returns the appropriate time
 * Scrolling causes mouse and screen to lock in Call to Power II ([Wine Bug #34559](https://bugs.winehq.org/show_bug.cgi?id=34559))
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](https://bugs.winehq.org/show_bug.cgi?id=35652))
+* Set EOF on file which has a memory mapping should fail
 * Set NamedPipeState to FILE_PIPE_CLOSING_STATE on broken pipe in NtQueryInformationFile
 * Share source of d3dx9_36 with d3dx9_33 to avoid Wine DLL forwards ([Wine Bug #21817](https://bugs.winehq.org/show_bug.cgi?id=21817))
 * Show unmounted devices in winecfg and allow changing the unix path
@@ -248,7 +238,6 @@ for more details.*
 * Silence repeated wbemprox "timeout not supported" fixme ([Wine Bug #37618](https://bugs.winehq.org/show_bug.cgi?id=37618))
 * Skip unknown item when decoding a CMS certificate ([Wine Bug #34388](https://bugs.winehq.org/show_bug.cgi?id=34388))
 * Software support for Environmental Audio Extensions (EAX)
-* ~~Store registry timestamps with nanoseconds precision~~ ([Wine Bug #38927](https://bugs.winehq.org/show_bug.cgi?id=38927))
 * Super Mario 3: Mario Forever fails to load keyboard mapping from profile files. ([Wine Bug #18099](https://bugs.winehq.org/show_bug.cgi?id=18099))
 * Support for AllocateAndGetTcpExTableFromStack ([Wine Bug #34372](https://bugs.winehq.org/show_bug.cgi?id=34372))
 * Support for BindImageEx ([Wine Bug #3591](https://bugs.winehq.org/show_bug.cgi?id=3591))
@@ -268,9 +257,6 @@ for more details.*
 * Support for MPEG2 DXVA2 GPU video decoding through vaapi
 * Support for NVIDIA video encoder library (nvencodeapi)
 * Support for NtQuerySection ([Wine Bug #37338](https://bugs.winehq.org/show_bug.cgi?id=37338))
-* ~~Support for NtSetInformationFile class FileDispositionInformation~~ ([Wine Bug #30397](https://bugs.winehq.org/show_bug.cgi?id=30397))
-* ~~Support for NtSetInformationFile class FileLinkInformation~~
-* ~~Support for NtSetInformationFile class FileRenameInformation~~ ([Wine Bug #30399](https://bugs.winehq.org/show_bug.cgi?id=30399))
 * Support for PulseAudio backend for audio ([Wine Bug #10495](https://bugs.winehq.org/show_bug.cgi?id=10495))
 * Support for SHCreateSessionKey ([Wine Bug #35630](https://bugs.winehq.org/show_bug.cgi?id=35630))
 * Support for TransmitFile ([Wine Bug #5048](https://bugs.winehq.org/show_bug.cgi?id=5048))
@@ -294,11 +280,11 @@ for more details.*
 * Use NVX_GPU_MEMORY_INFO extension for more exact video memory accounting on NVIDIA graphic cards
 * Use POSIX implementation to enumerate directory content on FreeBSD ([Wine Bug #35397](https://bugs.winehq.org/show_bug.cgi?id=35397))
 * Use actual program name if available to describe PulseAudio streams
+* Use helper function for NtWaitForMultipleObjects and NtWaitForSingleObject ([Wine Bug #39127](https://bugs.winehq.org/show_bug.cgi?id=39127))
 * Use manual relay for RunDLL_CallEntry16 in shell32 ([Wine Bug #23033](https://bugs.winehq.org/show_bug.cgi?id=23033))
 * Use video memory for rendering targets if possible ([Wine Bug #34906](https://bugs.winehq.org/show_bug.cgi?id=34906))
 * Voobly expects correct handling of WRITECOPY memory protection ([Wine Bug #29384](https://bugs.winehq.org/show_bug.cgi?id=29384))
 * Wine ignores IDF_CHECKFIRST flag in SetupPromptForDisk ([Wine Bug #20465](https://bugs.winehq.org/show_bug.cgi?id=20465))
-* ~~Winhttp raw request headers must be terminated using double \r\n~~ ([Wine Bug #35953](https://bugs.winehq.org/show_bug.cgi?id=35953))
 * Workaround for shlwapi URLs with relative paths
 * XEMBED support for embedding Wine windows inside Linux applications
 * eRacer Demo doesn't correctly display text ([Wine Bug #29598](https://bugs.winehq.org/show_bug.cgi?id=29598))

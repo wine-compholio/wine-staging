@@ -51,7 +51,7 @@ usage()
 # Show version information
 version()
 {
-	echo "Wine Staging 1.7.50"
+	echo "Wine Staging 1.7.51 (unreleased)"
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -212,6 +212,7 @@ patch_enable_all ()
 	enable_server_Address_List_Change="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
+	enable_server_Debug_Inheritance="$1"
 	enable_server_Delete_On_Close="$1"
 	enable_server_FileEndOfFileInformation="$1"
 	enable_server_File_Permissions="$1"
@@ -727,6 +728,9 @@ patch_enable ()
 			;;
 		server-CreateProcess_ACLs)
 			enable_server_CreateProcess_ACLs="$2"
+			;;
+		server-Debug_Inheritance)
+			enable_server_Debug_Inheritance="$2"
 			;;
 		server-Delete_On_Close)
 			enable_server_Delete_On_Close="$2"
@@ -4455,6 +4459,18 @@ if test "$enable_server_ClipCursor" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "server: Only send WM_WINE_CLIPCURSOR for forced clip resets.", 1 },';
 		echo '+    { "Sebastian Lackner", "winex11: Forward all clipping requests to the right thread (including fullscreen clipping).", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Debug_Inheritance
+# |
+# | Modified files:
+# |   *	server/process.c
+# |
+if test "$enable_server_Debug_Inheritance" -eq 1; then
+	patch_apply server-Debug_Inheritance/0001-server-Properly-inherit-debug_children-flag.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Properly inherit debug_children flag.", 1 },';
 	) >> "$patchlist"
 fi
 

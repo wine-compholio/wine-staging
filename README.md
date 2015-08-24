@@ -39,11 +39,6 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [1]:**
-
-* Properly inherit debug_children flag in wineserver
-
-
 **Bug fixes and features in Wine Staging 1.7.50 [242]:**
 
 *Note: The following list only contains features and bug fixes which are not
@@ -285,7 +280,7 @@ for more details.*
 * Use NVX_GPU_MEMORY_INFO extension for more exact video memory accounting on NVIDIA graphic cards
 * Use POSIX implementation to enumerate directory content on FreeBSD ([Wine Bug #35397](https://bugs.winehq.org/show_bug.cgi?id=35397))
 * Use actual program name if available to describe PulseAudio streams
-* Use helper function for NtWaitForMultipleObjects and NtWaitForSingleObject ([Wine Bug #39127](https://bugs.winehq.org/show_bug.cgi?id=39127))
+* ~~Use helper function for NtWaitForMultipleObjects and NtWaitForSingleObject~~ ([Wine Bug #39127](https://bugs.winehq.org/show_bug.cgi?id=39127))
 * Use manual relay for RunDLL_CallEntry16 in shell32 ([Wine Bug #23033](https://bugs.winehq.org/show_bug.cgi?id=23033))
 * Use video memory for rendering targets if possible ([Wine Bug #34906](https://bugs.winehq.org/show_bug.cgi?id=34906))
 * Voobly expects correct handling of WRITECOPY memory protection ([Wine Bug #29384](https://bugs.winehq.org/show_bug.cgi?id=29384))

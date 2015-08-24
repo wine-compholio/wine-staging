@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 5ccc463a4e3ba181b96a161c3c8cd4bc0cb0e607"
+	echo "  commit 6038e2ab7957b65dd2e13ddd414c206718fb14b7"
 	echo ""
 }
 
@@ -138,7 +138,6 @@ patch_enable_all ()
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_CompareStringEx="$1"
 	enable_kernel32_CopyFileEx="$1"
-	enable_kernel32_Fix_Testfailure="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_GetLogicalProcessorInformationEx="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
@@ -184,7 +183,6 @@ patch_enable_all ()
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
-	enable_ntdll_NtWaitForMultipleObjects="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_RtlIpStringToAddress="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
@@ -212,7 +210,6 @@ patch_enable_all ()
 	enable_server_Address_List_Change="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
-	enable_server_Debug_Inheritance="$1"
 	enable_server_Delete_On_Close="$1"
 	enable_server_FileEndOfFileInformation="$1"
 	enable_server_File_Permissions="$1"
@@ -507,9 +504,6 @@ patch_enable ()
 		kernel32-CopyFileEx)
 			enable_kernel32_CopyFileEx="$2"
 			;;
-		kernel32-Fix_Testfailure)
-			enable_kernel32_Fix_Testfailure="$2"
-			;;
 		kernel32-GetFinalPathNameByHandle)
 			enable_kernel32_GetFinalPathNameByHandle="$2"
 			;;
@@ -645,9 +639,6 @@ patch_enable ()
 		ntdll-NtSetLdtEntries)
 			enable_ntdll_NtSetLdtEntries="$2"
 			;;
-		ntdll-NtWaitForMultipleObjects)
-			enable_ntdll_NtWaitForMultipleObjects="$2"
-			;;
 		ntdll-Pipe_SpecialCharacters)
 			enable_ntdll_Pipe_SpecialCharacters="$2"
 			;;
@@ -728,9 +719,6 @@ patch_enable ()
 			;;
 		server-CreateProcess_ACLs)
 			enable_server_CreateProcess_ACLs="$2"
-			;;
-		server-Debug_Inheritance)
-			enable_server_Debug_Inheritance="$2"
 			;;
 		server-Delete_On_Close)
 			enable_server_Delete_On_Close="$2"
@@ -3232,18 +3220,6 @@ if test "$enable_kernel32_CopyFileEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-Fix_Testfailure
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/thread.c
-# |
-if test "$enable_kernel32_Fix_Testfailure" -eq 1; then
-	patch_apply kernel32-Fix_Testfailure/0001-kernel32-tests-Properly-initialize-buf-before-callin.patch
-	(
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Properly initialize buf before calling NtQueryInformationThread.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-GetFinalPathNameByHandle
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3976,21 +3952,6 @@ if test "$enable_ntdll_NtSetLdtEntries" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-NtWaitForMultipleObjects
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39127] Use helper function for NtWaitForMultipleObjects and NtWaitForSingleObject
-# |
-# | Modified files:
-# |   *	dlls/ntdll/sync.c
-# |
-if test "$enable_ntdll_NtWaitForMultipleObjects" -eq 1; then
-	patch_apply ntdll-NtWaitForMultipleObjects/0001-ntdll-Use-helper-function-for-NtWaitForMultipleObjec.patch
-	(
-		echo '+    { "Michael Müller", "ntdll: Use helper function for NtWaitForMultipleObjects and NtWaitForSingleObject.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Pipe_SpecialCharacters
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4459,18 +4420,6 @@ if test "$enable_server_ClipCursor" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "server: Only send WM_WINE_CLIPCURSOR for forced clip resets.", 1 },';
 		echo '+    { "Sebastian Lackner", "winex11: Forward all clipping requests to the right thread (including fullscreen clipping).", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Debug_Inheritance
-# |
-# | Modified files:
-# |   *	server/process.c
-# |
-if test "$enable_server_Debug_Inheritance" -eq 1; then
-	patch_apply server-Debug_Inheritance/0001-server-Properly-inherit-debug_children-flag.patch
-	(
-		echo '+    { "Sebastian Lackner", "server: Properly inherit debug_children flag.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6034,17 +5983,15 @@ if test "$enable_wininet_Cleanup" -eq 1; then
 	patch_apply wininet-Cleanup/0001-wininet-tests-Add-more-tests-for-cookies.patch
 	patch_apply wininet-Cleanup/0002-wininet-tests-Test-auth-credential-reusage-with-host.patch
 	patch_apply wininet-Cleanup/0003-wininet-tests-Check-cookie-behaviour-when-overriding.patch
-	patch_apply wininet-Cleanup/0004-wininet-Use-request-server-name-when-processing-cook.patch
-	patch_apply wininet-Cleanup/0005-wininet-Delay-setting-the-http-host-header.patch
-	patch_apply wininet-Cleanup/0006-wininet-Use-request-server-canon_host_port-in-authen.patch
-	patch_apply wininet-Cleanup/0007-wininet-Use-request-server-canon_host_port-when-quer.patch
-	patch_apply wininet-Cleanup/0008-wininet-Strip-filename-if-no-path-is-set-in-cookie.patch
-	patch_apply wininet-Cleanup/0009-wininet-Replacing-header-fields-should-fail-if-they-.patch
+	patch_apply wininet-Cleanup/0004-wininet-Delay-setting-the-http-host-header.patch
+	patch_apply wininet-Cleanup/0005-wininet-Use-request-server-canon_host_port-in-authen.patch
+	patch_apply wininet-Cleanup/0006-wininet-Use-request-server-canon_host_port-when-quer.patch
+	patch_apply wininet-Cleanup/0007-wininet-Strip-filename-if-no-path-is-set-in-cookie.patch
+	patch_apply wininet-Cleanup/0008-wininet-Replacing-header-fields-should-fail-if-they-.patch
 	(
 		echo '+    { "Michael Müller", "wininet/tests: Add more tests for cookies.", 1 },';
 		echo '+    { "Michael Müller", "wininet/tests: Test auth credential reusage with host override.", 1 },';
 		echo '+    { "Michael Müller", "wininet/tests: Check cookie behaviour when overriding host.", 1 },';
-		echo '+    { "Michael Müller", "wininet: Use request->server->name when processing cookies instead of Host header field.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Delay setting the http host header.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Use request->server->canon_host_port in authentication process.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Use request->server->canon_host_port when querying for INTERNET_OPTION_URL.", 1 },';

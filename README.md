@@ -53,7 +53,7 @@ releases, take a look at the
 [changelog](https://github.com/wine-compholio/wine-staging/blob/master/debian/changelog)
 for more details.*
 
-* Add HTTP Host header in HttpSendRequest instead of HttpOpenRequest ([Wine Bug #28911](https://bugs.winehq.org/show_bug.cgi?id=28911))
+* ~~Add HTTP Host header in HttpSendRequest instead of HttpOpenRequest~~ ([Wine Bug #28911](https://bugs.winehq.org/show_bug.cgi?id=28911))
 * Add IDragSourceHelper stub interface ([Wine Bug #24699](https://bugs.winehq.org/show_bug.cgi?id=24699))
 * Add a ProfileList\<UserSID> registry subkey ([Wine Bug #15670](https://bugs.winehq.org/show_bug.cgi?id=15670))
 * Add implementation for mfplat.MFTRegister ([Wine Bug #37811](https://bugs.winehq.org/show_bug.cgi?id=37811))
@@ -213,7 +213,7 @@ for more details.*
 * MediaCoder needs CUDA for video encoding ([Wine Bug #37664](https://bugs.winehq.org/show_bug.cgi?id=37664))
 * Multiple applications need EnumDisplayDevicesW implementation ([Wine Bug #34978](https://bugs.winehq.org/show_bug.cgi?id=34978))
 * Need for Speed 3 installer requires devices in HKEY_DYN_DATA ([Wine Bug #7115](https://bugs.winehq.org/show_bug.cgi?id=7115))
-* Notepad should create new files immediately ([Wine Bug #19425](https://bugs.winehq.org/show_bug.cgi?id=19425))
+* ~~Notepad should create new files immediately~~ ([Wine Bug #19425](https://bugs.winehq.org/show_bug.cgi?id=19425))
 * Only set SFGAO_HASSUBFOLDER when there are really subfolders ([Wine Bug #24851](https://bugs.winehq.org/show_bug.cgi?id=24851))
 * Other Pipelight-specific enhancements
 * Port Royale doesn't display ocean correctly ([Wine Bug #17913](https://bugs.winehq.org/show_bug.cgi?id=17913))

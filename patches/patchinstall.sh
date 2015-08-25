@@ -55,7 +55,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit 6038e2ab7957b65dd2e13ddd414c206718fb14b7"
+	echo "  commit bdaa571c5d7dd59dd28fd1f25cdad5761bfaf4dd"
 	echo ""
 }
 
@@ -159,7 +159,6 @@ patch_enable_all ()
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvcrt_StdHandle_RefCount="$1"
 	enable_msvfw32_Image_Size="$1"
-	enable_notepad_New_File="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_APC_Start_Process="$1"
 	enable_ntdll_Activation_Context="$1"
@@ -567,9 +566,6 @@ patch_enable ()
 			;;
 		msvfw32-Image_Size)
 			enable_msvfw32_Image_Size="$2"
-			;;
-		notepad-New_File)
-			enable_notepad_New_File="$2"
 			;;
 		ntdll-APC_Performance)
 			enable_ntdll_APC_Performance="$2"
@@ -2153,34 +2149,32 @@ fi
 # | 	crt-stdio-l1-1-0/api-ms-win-crt-stdio-l1-1-0.spec, dlls/api-ms-win-crt-string-l1-1-0/Makefile.in, dlls/api-ms-win-crt-
 # | 	string-l1-1-0/api-ms-win-crt-string-l1-1-0.spec, dlls/api-ms-win-crt-time-l1-1-0/Makefile.in, dlls/api-ms-win-crt-
 # | 	time-l1-1-0/api-ms-win-crt-time-l1-1-0.spec, dlls/api-ms-win-crt-utility-l1-1-0/Makefile.in, dlls/api-ms-win-crt-
-# | 	utility-l1-1-0/api-ms-win-crt-utility-l1-1-0.spec, dlls/msvcrt/data.c, dlls/msvcrt/misc.c, dlls/ucrtbase/Makefile.in,
-# | 	dlls/ucrtbase/ucrtbase.spec, dlls/vcruntime140/Makefile.in, dlls/vcruntime140/vcruntime140.spec, tools/make_specfiles
+# | 	utility-l1-1-0/api-ms-win-crt-utility-l1-1-0.spec, dlls/msvcrt/data.c, dlls/msvcrt/misc.c, dlls/ucrtbase/ucrtbase.spec,
+# | 	dlls/vcruntime140/Makefile.in, dlls/vcruntime140/vcruntime140.spec, tools/make_specfiles
 # |
 if test "$enable_api_ms_win_crt_Stub_DLLs" -eq 1; then
-	patch_apply api-ms-win-crt-Stub_DLLs/0001-ucrtbase-Add-the-new-universal-CRT-DLL.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0002-ucrtbase-Hook-up-some-functions-with-new-names-to-ex.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0003-vcruntime140-Add-the-new-MSVC-2015-compiler-specific.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0004-vcruntime140-Hook-up-a-function-with-a-new-name-to-t.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0005-ucrtbase-Add-stub-functions-for-narrow-environment.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0006-vcruntime140-Add-stubs-for-telemetry-functions.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0007-make_specfiles-Use-cdecl-for-stub-redirects-to-ucrtb.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0008-api-ms-win-crt-conio-l1-1-0-Add-stub-dll.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0009-api-ms-win-crt-convert-l1-1-0-Add-stub-dll.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0010-api-ms-win-crt-environment-l1-1-0-Add-stub-dll.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0011-api-ms-win-crt-filesystem-l1-1-0-Add-stub-dll.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0012-api-ms-win-crt-heap-l1-1-0-Add-stub-dll.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0013-api-ms-win-crt-locale-l1-1-0-Add-stub-dll.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0014-api-ms-win-crt-math-l1-1-0-Add-stub-dll.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0015-api-ms-win-crt-multibyte-l1-1-0-Add-stub-dll.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0016-api-ms-win-crt-private-l1-1-0-Add-stub-dll.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0017-api-ms-win-crt-process-l1-1-0-Add-stub-dll.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0018-api-ms-win-crt-runtime-l1-1-0-Add-stub-dll.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0019-api-ms-win-crt-stdio-l1-1-0-Add-stub-dll.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0020-api-ms-win-crt-string-l1-1-0-Add-stub-dll.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0021-api-ms-win-crt-time-l1-1-0-Add-stub-dll.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0022-api-ms-win-crt-utility-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0001-ucrtbase-Hook-up-some-functions-with-new-names-to-ex.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0002-vcruntime140-Add-the-new-MSVC-2015-compiler-specific.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0003-vcruntime140-Hook-up-a-function-with-a-new-name-to-t.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0004-ucrtbase-Add-stub-functions-for-narrow-environment.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0005-vcruntime140-Add-stubs-for-telemetry-functions.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0006-make_specfiles-Use-cdecl-for-stub-redirects-to-ucrtb.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0007-api-ms-win-crt-conio-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0008-api-ms-win-crt-convert-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0009-api-ms-win-crt-environment-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0010-api-ms-win-crt-filesystem-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0011-api-ms-win-crt-heap-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0012-api-ms-win-crt-locale-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0013-api-ms-win-crt-math-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0014-api-ms-win-crt-multibyte-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0015-api-ms-win-crt-private-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0016-api-ms-win-crt-process-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0017-api-ms-win-crt-runtime-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0018-api-ms-win-crt-stdio-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0019-api-ms-win-crt-string-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0020-api-ms-win-crt-time-l1-1-0-Add-stub-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0021-api-ms-win-crt-utility-l1-1-0-Add-stub-dll.patch
 	(
-		echo '+    { "Martin Storsjo", "ucrtbase: Add the new universal CRT DLL.", 1 },';
 		echo '+    { "Martin Storsjo", "ucrtbase: Hook up some functions with new names to existing implementations.", 1 },';
 		echo '+    { "Martin Storsjo", "vcruntime140: Add the new MSVC 2015 compiler specific DLL.", 1 },';
 		echo '+    { "Martin Storsjo", "vcruntime140: Hook up a function with a new name to the existing implementation.", 1 },';
@@ -3586,21 +3580,6 @@ if test "$enable_msvfw32_Image_Size" -eq 1; then
 	patch_apply msvfw32-Image_Size/0001-msvfw32-Derive-image-size-from-input-image-to-avoid-.patch
 	(
 		echo '+    { "Bruno Jesus", "msvfw32: Derive image size from input image to avoid NULL dereference.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset notepad-New_File
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#19425] Notepad should create new files immediately
-# |
-# | Modified files:
-# |   *	programs/notepad/main.c
-# |
-if test "$enable_notepad_New_File" -eq 1; then
-	patch_apply notepad-New_File/0001-notepad-Make-sure-new-files-are-created-immediately.patch
-	(
-		echo '+    { "Sebastian Lackner", "notepad: Make sure new files are created immediately.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5989,9 +5968,6 @@ fi
 
 # Patchset wininet-Cleanup
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#28911] Add HTTP Host header in HttpSendRequest instead of HttpOpenRequest
-# |
 # | Modified files:
 # |   *	dlls/wininet/http.c, dlls/wininet/tests/http.c
 # |
@@ -5999,18 +5975,12 @@ if test "$enable_wininet_Cleanup" -eq 1; then
 	patch_apply wininet-Cleanup/0001-wininet-tests-Add-more-tests-for-cookies.patch
 	patch_apply wininet-Cleanup/0002-wininet-tests-Test-auth-credential-reusage-with-host.patch
 	patch_apply wininet-Cleanup/0003-wininet-tests-Check-cookie-behaviour-when-overriding.patch
-	patch_apply wininet-Cleanup/0004-wininet-Delay-setting-the-http-host-header.patch
-	patch_apply wininet-Cleanup/0005-wininet-Use-request-server-canon_host_port-in-authen.patch
-	patch_apply wininet-Cleanup/0006-wininet-Use-request-server-canon_host_port-when-quer.patch
-	patch_apply wininet-Cleanup/0007-wininet-Strip-filename-if-no-path-is-set-in-cookie.patch
-	patch_apply wininet-Cleanup/0008-wininet-Replacing-header-fields-should-fail-if-they-.patch
+	patch_apply wininet-Cleanup/0004-wininet-Strip-filename-if-no-path-is-set-in-cookie.patch
+	patch_apply wininet-Cleanup/0005-wininet-Replacing-header-fields-should-fail-if-they-.patch
 	(
 		echo '+    { "Michael Müller", "wininet/tests: Add more tests for cookies.", 1 },';
 		echo '+    { "Michael Müller", "wininet/tests: Test auth credential reusage with host override.", 1 },';
 		echo '+    { "Michael Müller", "wininet/tests: Check cookie behaviour when overriding host.", 1 },';
-		echo '+    { "Michael Müller", "wininet: Delay setting the http host header.", 1 },';
-		echo '+    { "Michael Müller", "wininet: Use request->server->canon_host_port in authentication process.", 1 },';
-		echo '+    { "Michael Müller", "wininet: Use request->server->canon_host_port when querying for INTERNET_OPTION_URL.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Strip filename if no path is set in cookie.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Replacing header fields should fail if they do not exist yet.", 1 },';
 	) >> "$patchlist"

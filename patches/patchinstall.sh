@@ -36,7 +36,8 @@ usage()
 	echo "  --help               Display this help and exit"
 	echo "  --no-patchlist       Do not apply patchlist (needed for 'wine --patches')"
 	echo "  --no-autoconf        Do not run autoreconf and tools/make_requests"
-	echo "  --version            Show version information"
+	echo "  --upstream-commit    Print the upstream Wine commit SHA1 and exit"
+	echo "  --version            Show version information and exit"
 	echo "  -W patchset          Exclude a specific patchset"
 	echo ""
 	echo "Backends:"
@@ -48,6 +49,12 @@ usage()
 	echo ""
 }
 
+# Get the upstream commit sha
+upstream_commit()
+{
+	echo "bdaa571c5d7dd59dd28fd1f25cdad5761bfaf4dd"
+}
+
 # Show version information
 version()
 {
@@ -55,7 +62,7 @@ version()
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
-	echo "  commit bdaa571c5d7dd59dd28fd1f25cdad5761bfaf4dd"
+	echo "  commit $(upstream_commit)"
 	echo ""
 }
 
@@ -1055,6 +1062,11 @@ while test "$#" -gt 0; do
 		--no-autoconf)
 			enable_autoconf=0
 			shift
+			;;
+
+		--upstream-commit)
+			upstream_commit
+			exit 0
 			;;
 
 		--version)

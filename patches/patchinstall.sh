@@ -185,6 +185,7 @@ patch_enable_all ()
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_RtlIpStringToAddress="$1"
+	enable_ntdll_Stack_Fault="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
@@ -644,6 +645,9 @@ patch_enable ()
 			;;
 		ntdll-RtlIpStringToAddress)
 			enable_ntdll_RtlIpStringToAddress="$2"
+			;;
+		ntdll-Stack_Fault)
+			enable_ntdll_Stack_Fault="$2"
 			;;
 		ntdll-SystemRoot_Symlink)
 			enable_ntdll_SystemRoot_Symlink="$2"
@@ -3982,6 +3986,18 @@ if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
 		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddressEx.", 6 },';
 		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv4StringToAddressEx (try 5, resend).", 1 },';
 		echo '+    { "Mark Jansen", "ntdll/tests: Add tests for RtlIpv6AddressToString and RtlIpv6AddressToStringEx.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Stack_Fault
+# |
+# | Modified files:
+# |   *	dlls/ntdll/virtual.c
+# |
+if test "$enable_ntdll_Stack_Fault" -eq 1; then
+	patch_apply ntdll-Stack_Fault/0001-ntdll-When-handling-stack-faults-also-commit-the-pag.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: When handling stack faults also commit the page, instead of just removing the guard page flag.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,7 +1,7 @@
-From ff3494f11d42dc38e2455b21a95981b6e7d48a8d Mon Sep 17 00:00:00 2001
+From ec00e5c94d5b3ec65d7e8dbc4220aa71ff97872a Mon Sep 17 00:00:00 2001
 From: Jonathan Vollebregt <jnvsor@gmail.com>
-Date: Wed, 14 Jan 2015 18:12:26 +0100
-Subject: reg: Add wchar/raw data conversion functions
+Date: Fri, 5 Sep 2014 22:48:23 +0200
+Subject: [PATCH 2/4] reg: Add wchar/raw data conversion functions
 
 In the case of REG_SZ and the like, it may seem like the functions
 perform an unncessary copy of the strings which should already be
@@ -14,17 +14,17 @@ Simply returning the input string would result in a function
 freeing one of it's own parameters, so we make sure to return
 new memory by making a copy.
 ---
- programs/reg/reg.c       | 140 +++++++++++++++++++++++++++++++++++++++--------
+ programs/reg/reg.c       | 145 ++++++++++++++++++++++++++++++++++++++---------
  programs/reg/reg.h       |   1 +
  programs/reg/reg.rc      |   1 +
- programs/reg/tests/reg.c |  57 ++++++++++---------
- 4 files changed, 146 insertions(+), 53 deletions(-)
+ programs/reg/tests/reg.c |  57 +++++++++----------
+ 4 files changed, 149 insertions(+), 55 deletions(-)
 
 diff --git a/programs/reg/reg.c b/programs/reg/reg.c
-index 3ffcc25..0d892fd 100755
+index cf6425e..b2447fc 100644
 --- a/programs/reg/reg.c
 +++ b/programs/reg/reg.c
-@@ -18,11 +18,15 @@
+@@ -18,10 +18,15 @@
  
  #include <windows.h>
  #include <wine/unicode.h>
@@ -33,30 +33,20 @@ index 3ffcc25..0d892fd 100755
  
  #define ARRAY_SIZE(A) (sizeof(A)/sizeof(*A))
  
- #define ERROR_NO_REMOTE         20000
-+#define ERROR_INVALID_DWORD     20001
-+
 +WINE_DEFAULT_DEBUG_CHANNEL(reg);
- 
- static const WCHAR empty_wstr[] = {0};
- 
-@@ -146,6 +150,9 @@ static void reg_print_error(LSTATUS error_code)
-         case ERROR_UNSUPPORTED_TYPE:
-             reg_message(STRING_UNSUPPORTED_TYPE);
-             return;
-+        case ERROR_INVALID_DWORD:
-+            reg_message(STRING_INVALID_DWORD);
-+            return;
-         default:
-         {
-             static const WCHAR error_string[] = {'%','0','5','d',':',' ','%','s',0};
-@@ -213,43 +220,120 @@ static DWORD wchar_get_type(const WCHAR *type_name)
++
++static const WCHAR empty_wstr[] = {0};
++
+ static const WCHAR short_hklm[] = {'H','K','L','M',0};
+ static const WCHAR short_hkcu[] = {'H','K','C','U',0};
+ static const WCHAR short_hkcr[] = {'H','K','C','R',0};
+@@ -189,43 +194,126 @@ static DWORD wchar_get_type(const WCHAR *type_name)
      return ~0u;
  }
  
 -static LPBYTE get_regdata(LPWSTR data, DWORD reg_type, WCHAR separator, DWORD *reg_count)
-+static LSTATUS wchar_get_data(const WCHAR *input, const DWORD type, const WCHAR separator,
-+    DWORD *size_out, BYTE **out)
++static BYTE *wchar_get_data(const WCHAR *input, const DWORD type, const WCHAR separator,
++    DWORD *size_out)
  {
 -    LPBYTE out_data = NULL;
 -    *reg_count = 0;
@@ -76,34 +66,16 @@ index 3ffcc25..0d892fd 100755
 -            out_data = HeapAlloc(GetProcessHeap(),0,*reg_count);
 -            lstrcpyW((LPWSTR)out_data,data);
 -            break;
++            BYTE *data;
++
 +            i = (strlenW(input) + 1) * sizeof(WCHAR);
-+            *out = HeapAlloc(GetProcessHeap(), 0, i);
-+            memcpy(*out, input, i);
 +            *size_out = i;
-+            return ERROR_SUCCESS;
++            data = HeapAlloc(GetProcessHeap(), 0, i);
++            memcpy(data, input, i);
++            return data;
          }
          case REG_DWORD:
 +        case REG_DWORD_BIG_ENDIAN:
-+        {
-+            WCHAR *temp;
-+
-+            if (input[0] == '0' && (input[1] == 'x' || input[1] == 'X'))
-+                i = strtoulW(input, &temp, 16);
-+            else
-+                i = strtoulW(input, &temp, 10);
-+
-+            if (input[0] == '-' || temp[0] || temp == input)
-+                return ERROR_INVALID_DWORD;
-+
-+            if (i == 0xffffffff)
-+                WINE_FIXME("Check for integer overflow.\n");
-+
-+            *out = HeapAlloc(GetProcessHeap(), 0, sizeof(DWORD));
-+            **(DWORD **) out = i;
-+            *size_out = sizeof(DWORD);
-+            return ERROR_SUCCESS;
-+        }
-+        case REG_MULTI_SZ:
          {
 -            LPWSTR rest;
 -            DWORD val;
@@ -112,7 +84,35 @@ index 3ffcc25..0d892fd 100755
 -                static const WCHAR nonnumber[] = {'E','r','r','o','r',':',' ','/','d',' ','r','e','q','u','i','r','e','s',' ','n','u','m','b','e','r','.','\n',0};
 -                reg_printfW(nonnumber);
 -                break;
-+            WCHAR *temp = HeapAlloc(GetProcessHeap(), 0, (strlenW(input) + 1) * sizeof(WCHAR));
++            BYTE *data;
++            WCHAR *temp;
++
++            if (input[0] == '0' && (input[1] == 'x' || input[1] == 'X'))
++                i = strtoulW(input, &temp, 16);
++            else
++                i = strtoulW(input, &temp, 10);
++
++            if (input[0] == '-' || temp[0] || temp == input)
++            {
++                reg_message(STRING_INVALID_DWORD);
++                return NULL;
+             }
+-            *reg_count = sizeof(DWORD);
+-            out_data = HeapAlloc(GetProcessHeap(),0,*reg_count);
+-            ((LPDWORD)out_data)[0] = val;
+-            break;
++
++            if (i == 0xffffffff)
++                WINE_FIXME("Check for integer overflow.\n");
++
++            data = HeapAlloc(GetProcessHeap(), 0, sizeof(DWORD));
++            *(DWORD *) data = i;
++            *size_out = sizeof(DWORD);
++            return data;
++        }
++        case REG_MULTI_SZ:
++        {
++            WCHAR *data = HeapAlloc(GetProcessHeap(), 0, (strlenW(input) + 1) * sizeof(WCHAR));
 +            DWORD p;
 +
 +            for (i = 0, p = 0; i <= strlenW(input); i++, p++)
@@ -123,110 +123,114 @@ index 3ffcc25..0d892fd 100755
 +                     (!separator && input[i] == '\\' && input[i + 1] == '0') )
 +                {
 +                    /* If it's the first character or the previous one was a separator */
-+                    if (!p || temp[p - 1] == 0)
++                    if (!p || data[p - 1] == 0)
 +                    {
-+                        HeapFree(GetProcessHeap(), 0, temp);
-+                        return ERROR_INVALID_DATA;
++                        HeapFree(GetProcessHeap(), 0, data);
++                        reg_message(STRING_INVALID_CMDLINE);
++                        return NULL;
 +                    }
-+                    temp[p] = 0;
++                    data[p] = 0;
 +
 +                    if (!separator)
 +                        i++;
 +                }
 +                else
-+                    temp[p] = input[i];
-             }
--            *reg_count = sizeof(DWORD);
--            out_data = HeapAlloc(GetProcessHeap(),0,*reg_count);
--            ((LPDWORD)out_data)[0] = val;
--            break;
++                    data[p] = input[i];
++            }
 +
 +            /* Add a 0 to the end if the string wasn't "", and it wasn't
 +             * double-0-terminated already (In the case of a trailing separator) */
-+            if (p > 1 && temp[p - 2])
-+                temp[p++] = 0;
++            if (p > 1 && data[p - 2])
++                data[p++] = 0;
 +
 +            *size_out = p * sizeof(WCHAR);
-+            *out = (BYTE *) temp;
-+            return ERROR_SUCCESS;
++            return (BYTE *) data;
 +        }
 +        case REG_BINARY:
 +        {
-+            BYTE *temp = HeapAlloc(GetProcessHeap(), 0, strlenW(input));
++            BYTE *data = HeapAlloc(GetProcessHeap(), 0, strlenW(input));
 +            DWORD p, odd;
 +
-+            for (i = 0, p = 0; i < strlenW(input); i++, p++)
++            for (i = 0; i < strlenW(input); i++)
 +            {
 +                if (input[i] >= '0' && input[i] <= '9')
-+                    temp[p] = input[i] - '0';
++                    data[i] = input[i] - '0';
 +                else if (input[i] >= 'a' && input[i] <= 'f')
-+                    temp[p] = input[i] - 'a' + 10;
++                    data[i] = input[i] - 'a' + 10;
 +                else if (input[i] >= 'A' && input[i] <= 'F')
-+                    temp[p] = input[i] - 'A' + 10;
++                    data[i] = input[i] - 'A' + 10;
 +                else
 +                {
-+                    HeapFree(GetProcessHeap(), 0, temp);
-+                    return ERROR_INVALID_DATA;
++                    HeapFree(GetProcessHeap(), 0, data);
++                    reg_message(STRING_INVALID_CMDLINE);
++                    return NULL;
 +                }
 +            }
 +
-+            *out = temp;
-+            odd = p & 1;
-+            temp += odd;
-+            p >>= 1;
++            odd = i & 1;
++            p = i >> 1;
++            data += odd;
 +
 +            for (i = 0; i < p; i++)
-+                temp[i] = (temp[i * 2] << 4) | temp[i * 2 + 1];
++                data[i] = (data[i * 2] << 4) | data[i * 2 + 1];
 +
 +            *size_out = p + odd;
-+            return ERROR_SUCCESS;
++            return data - odd;
          }
          default:
          {
 -            static const WCHAR unhandled[] = {'U','n','h','a','n','d','l','e','d',' ','T','y','p','e',' ','0','x','%','x',' ',' ','d','a','t','a',' ','%','s','\n',0};
 -            reg_printfW(unhandled, reg_type,data);
 +            WINE_FIXME("Add support for registry type: %u\n", type);
-+            return ERROR_UNSUPPORTED_TYPE;
++            return NULL;
          }
      }
 -
 -    return out_data;
  }
  
- static LSTATUS sane_path(const WCHAR *key)
-@@ -312,7 +396,15 @@ static int reg_add(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
+ static BOOL sane_path(const WCHAR *key)
+@@ -286,7 +374,14 @@ static int reg_add(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
          }
  
          if (data)
 -            reg_data = get_regdata(data,reg_type,separator,&reg_count);
 +        {
-+            err = wchar_get_data(data, reg_type, separator, &reg_count, &reg_data);
-+            if (err != ERROR_SUCCESS)
++            reg_data = wchar_get_data(data, reg_type, separator, &reg_count);
++            if (!reg_data)
 +            {
 +                RegCloseKey(subkey);
-+                reg_print_error(err);
 +                return 1;
 +            }
 +        }
  
          RegSetValueExW(subkey,value_name,0,reg_type,reg_data,reg_count);
          HeapFree(GetProcessHeap(),0,reg_data);
+@@ -336,8 +431,6 @@ static int reg_delete(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
+     /* Delete subtree only if no /v* option is given */
+     if (!value_name && !value_empty && !value_all)
+     {
+-        static const WCHAR empty_wstr[] = {0};
+-
+         err = RegDeleteTreeW(subkey, NULL);
+         if (err != ERROR_SUCCESS)
+         {
 diff --git a/programs/reg/reg.h b/programs/reg/reg.h
-index 42de422..00c4d66 100644
+index 6fca7eb..c6fb151 100644
 --- a/programs/reg/reg.h
 +++ b/programs/reg/reg.h
-@@ -32,3 +32,4 @@
+@@ -31,3 +31,4 @@
+ #define STRING_NO_REMOTE        108
  #define STRING_CANNOT_FIND      109
- #define STRING_ERROR            110
- #define STRING_UNSUPPORTED_TYPE 111
-+#define STRING_INVALID_DWORD    112
+ #define STRING_UNSUPPORTED_TYPE 110
++#define STRING_INVALID_DWORD    111
 diff --git a/programs/reg/reg.rc b/programs/reg/reg.rc
-index beafd4f..730d421 100644
+index 94dddf2..dbd92ea 100644
 --- a/programs/reg/reg.rc
 +++ b/programs/reg/reg.rc
-@@ -37,4 +37,5 @@ STRINGTABLE
+@@ -36,4 +36,5 @@ STRINGTABLE
+     STRING_NO_REMOTE, "Error: Unable to access remote machine\n"
      STRING_CANNOT_FIND, "Error: The system was unable to find the specified registry key or value\n"
-     STRING_ERROR, "Unexpected error: "
      STRING_UNSUPPORTED_TYPE, "Error: Unsupported type\n"
 +    STRING_INVALID_DWORD, "Error: /d must be positive number\n"
  }
@@ -403,5 +407,5 @@ index dbfce89..99b4813 100644
      RegCloseKey(hkey);
  
 -- 
-2.2.2
+2.5.0
 

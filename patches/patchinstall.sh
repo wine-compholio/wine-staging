@@ -208,6 +208,7 @@ patch_enable_all ()
 	enable_openal32_EFX_Extension="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
+	enable_reg_Query="$1"
 	enable_rasapi32_RasEnumDevicesA="$1"
 	enable_regedit_Reg_Parser="$1"
 	enable_riched20_IText_Interface="$1"
@@ -700,6 +701,9 @@ patch_enable ()
 		quartz-MediaSeeking_Positions)
 			enable_quartz_MediaSeeking_Positions="$2"
 			;;
+		reg-Query)
+                        enable_reg_Query="$2"
+                        ;;
 		rasapi32-RasEnumDevicesA)
 			enable_rasapi32_RasEnumDevicesA="$2"
 			;;
@@ -4308,6 +4312,26 @@ if test "$enable_quartz_MediaSeeking_Positions" -eq 1; then
 		echo '+    { "Erich E. Hoover", "quartz: Implement MediaSeeking_GetStopPosition on top of MediaSeeking_GetPositions.", 1 },';
 		echo '+    { "Erich E. Hoover", "quartz: Remove unused cache of MediaSeeking stop position.", 1 },';
 	) >> "$patchlist"
+fi
+
+# Patchset reg-Query
+# |
+# | Modified files:
+# |   *        programs/reg/reg.c, programs/reg/reg.h, programs/reg/reg.rc, programs/reg/tests/reg.c
+# |
+if test "$enable_reg_Query" -eq 1; then
+       patch_apply reg-Query/0001-reg-Add-path-key-conversion-functions.patch
+       patch_apply reg-Query/0002-reg-Add-wchar-raw-data-conversion-functions.patch
+       patch_apply reg-Query/0003-reg-Clean-up-reg_add.patch
+       patch_apply reg-Query/0004-reg-Clean-up-reg_delete.patch
+       patch_apply reg-Query/0005-reg-Implement-query-functionality.patch
+       (
+               echo '+    { "Jonathan Vollebregt", "reg: Add path/key conversion functions", 1 },';
+               echo '+    { "Jonathan Vollebregt", "reg: Add wchar/raw data conversion functions", 1 },';
+               echo '+    { "Jonathan Vollebregt", "reg: Clean up reg_add", 1 },';
+               echo '+    { "Jonathan Vollebregt", "reg: Clean up reg_delete", 1 },';
+               echo '+    { "Jonathan Vollebregt", "reg: Implement query functionality", 1 },';
+       ) >> "$patchlist"
 fi
 
 # Patchset rasapi32-RasEnumDevicesA

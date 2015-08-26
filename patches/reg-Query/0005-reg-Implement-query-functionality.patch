@@ -1,0 +1,389 @@
+From 596da7a24a5f45cb3f7570fbfbd79a075f4f1171 Mon Sep 17 00:00:00 2001
+From: Jonathan Vollebregt <jnvsor@gmail.com>
+Date: Sat, 8 Aug 2015 11:05:36 +0200
+Subject: [PATCH] reg: Add reg query
+
+---
+ programs/reg/reg.c | 321 +++++++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 312 insertions(+), 9 deletions(-)
+
+diff --git a/programs/reg/reg.c b/programs/reg/reg.c
+index 6b32aa6..82c89fc 100644
+--- a/programs/reg/reg.c
++++ b/programs/reg/reg.c
+@@ -25,6 +25,10 @@
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(reg);
+ 
++#define MAX_VALUE_NAME  16384
++#define MAX_KEY_LENGTH  256
++#define ERROR_INVALID_TYPE      20001
++
+ static const WCHAR empty_wstr[] = {0};
+ 
+ static const WCHAR short_hklm[] = {'H','K','L','M',0};
+@@ -148,6 +152,23 @@ static HKEY path_get_rootkey(const WCHAR *path)
+     return NULL;
+ }
+ 
++static LSTATUS path_get_rootkey_name(const WCHAR *path, const WCHAR **out)
++{
++    DWORD i;
++
++    for (i = 0; i < ARRAY_SIZE(root_rels); i++)
++    {
++        if (path_rootname_cmp(path, root_rels[i].short_name) ||
++            path_rootname_cmp(path, root_rels[i].long_name))
++        {
++            *out = root_rels[i].long_name;
++            return ERROR_SUCCESS;
++        }
++    }
++
++    return ERROR_BADKEY;
++}
++
+ static HKEY path_open(const WCHAR *path, BOOL create)
+ {
+     LONG err;
+@@ -178,6 +199,85 @@ static HKEY path_open(const WCHAR *path, BOOL create)
+     return k;
+ }
+ 
++static LSTATUS type_get_wchar(const DWORD type, const WCHAR **out)
++{
++    static const WCHAR unknown[] = {'U','N','K','N','O','W','N','_','T','Y','P','E',0};
++    DWORD i;
++
++    for (i = 0; i < ARRAY_SIZE(type_rels); i++)
++    {
++        if (type_rels[i].type == type)
++        {
++            *out = type_rels[i].name;
++            return ERROR_SUCCESS;
++        }
++    }
++
++    *out = unknown;
++    return ERROR_INVALID_TYPE;
++}
++
++static LSTATUS data_get_wchar(const BYTE *data, const DWORD size, const DWORD type, WCHAR **out)
++{
++    static const WCHAR print_dwordW[] = {'0','x','%','0','8','x',0};
++    static const WCHAR print_byteW[] = {'%','0','2','x',0};
++    DWORD i = 0;
++    WCHAR *output = NULL;
++
++    switch(type)
++    {
++        case REG_SZ:
++        case REG_EXPAND_SZ:
++        {
++            output = HeapAlloc(GetProcessHeap(), 0, size);
++            lstrcpyW(output, (WCHAR *) data);
++            *out = output;
++            return ERROR_SUCCESS;
++        }
++        case REG_DWORD:
++        case REG_DWORD_BIG_ENDIAN:
++        {
++            output = HeapAlloc(GetProcessHeap(), 0, 11 * sizeof(WCHAR));
++            i = * (DWORD *) data;
++            sprintfW(output, print_dwordW, i);
++            *out = output;
++            return ERROR_SUCCESS;
++        }
++        case REG_MULTI_SZ:
++        {
++            WCHAR *input = (WCHAR *) data;
++
++            output = HeapAlloc(GetProcessHeap(), 0, size);
++
++            do
++            {
++                lstrcpyW(output+i, &input[i]);
++
++                i += strlenW(&input[i]) + 1;
++
++                if (input[i] != 0)
++                    output[i - 1] = ',';
++            } while (input[i]);
++
++            *out = output;
++            return ERROR_SUCCESS;
++        }
++        case REG_BINARY:
++        {
++            output = HeapAlloc(GetProcessHeap(), 0, (size * 2 + 1) * sizeof(WCHAR) );
++
++            for (i = 0; i < size; i++)
++                sprintfW(output + i * 2, print_byteW, data[i]);
++            output[size * 2] = 0;
++
++            *out = output;
++            return ERROR_SUCCESS;
++        }
++        default:
++            return ERROR_UNSUPPORTED_TYPE;
++    }
++}
++
+ static DWORD wchar_get_type(const WCHAR *type_name)
+ {
+     DWORD i;
+@@ -316,6 +416,177 @@ static BYTE *wchar_get_data(const WCHAR *input, const DWORD type, const WCHAR se
+     }
+ }
+ 
++static LSTATUS print_key(const WCHAR *path, const WCHAR *subkey)
++{
++    static const WCHAR part[] = {'\\','%','s',0};
++    static const WCHAR newline[] = {'\n',0};
++    const WCHAR *rootkey_name;
++    HKEY root = NULL, key = NULL;
++    LONG err;
++
++    err = path_get_rootkey_name(path, &rootkey_name);
++    if (err != ERROR_SUCCESS)
++        goto error;
++
++    root = path_get_rootkey(path);
++    if (!root)
++    {
++        err = ERROR_INVALID_HANDLE;
++        goto error;
++    }
++
++    key = path_open(path, FALSE);
++    if (!key)
++        goto error;
++
++    reg_printfW(&part[1], rootkey_name);
++
++    if (key != root)
++        reg_printfW(part, strchrW(path, '\\') + 1);
++    if(subkey)
++        reg_printfW(part, subkey);
++
++    reg_printfW(newline);
++
++    return ERROR_SUCCESS;
++
++error:
++    if (root)
++        RegCloseKey(root);
++    if (key)
++        RegCloseKey(key);
++
++    return err;
++}
++
++static LSTATUS print_value(const HKEY hkey, const WCHAR *value_name)
++{
++    static const WCHAR default_value_name[] = {'(','N','O',' ','N','A','M','E',')',0};
++    static const WCHAR print_value[] = {' ',' ',' ',' ','%','s',' ',' ',' ',' ','%','s',' ',' ',' ',' ','%','s','\n',0};
++    const WCHAR *out_type = NULL;
++    WCHAR *out_data = NULL;
++    BYTE* data = NULL;
++    DWORD type, data_size;
++    LONG err;
++
++    if (value_name && !value_name[0])
++        value_name = NULL;
++
++    err = RegQueryValueExW(hkey, value_name, NULL, &type, NULL, &data_size);
++    if (err != ERROR_SUCCESS)
++        goto error;
++
++    data = HeapAlloc(GetProcessHeap(), 0, data_size);
++
++    err = RegQueryValueExW(hkey, value_name, NULL, NULL, data, &data_size);
++    if (err != ERROR_SUCCESS)
++        goto error;
++
++    err = data_get_wchar(data, data_size, type, &out_data);
++    if (err != ERROR_SUCCESS)
++        goto error;
++
++    err = type_get_wchar(type, &out_type);
++    if (err != ERROR_SUCCESS)
++        goto error;
++
++    if (value_name && value_name[0])
++        reg_printfW(print_value, value_name, out_type, out_data);
++    else
++        reg_printfW(print_value, default_value_name, out_type, out_data);
++
++    return ERROR_SUCCESS;
++
++error:
++    if (data)
++        HeapFree(GetProcessHeap(), 0, data);
++    if (out_data)
++        HeapFree(GetProcessHeap(), 0, out_data);
++
++    return err;
++}
++
++static LSTATUS print_all_values(const HKEY hkey, const WCHAR *key_name, const BOOL recurse)
++{
++    static const WCHAR format_subkey_path[] = {'%','s','\\','%','s',0};
++    static const WCHAR newline[] = {'\n',0};
++    WCHAR value_name[MAX_VALUE_NAME];
++    WCHAR subkey_name[MAX_KEY_LENGTH];
++    WCHAR *subkey_path = NULL;
++    DWORD i, length, subkey_length, num_subkeys, num_values;
++    LONG err;
++    HKEY subkey;
++
++    err = RegQueryInfoKeyW(hkey, NULL, NULL, NULL, &num_subkeys, NULL, NULL,
++            &num_values, NULL, NULL, NULL, NULL);
++
++    if (err != ERROR_SUCCESS)
++        return err;
++
++    print_key(key_name, NULL);
++
++    for (i = 0; i < num_values; i++)
++    {
++        length = MAX_VALUE_NAME;
++
++        err = RegEnumValueW(hkey, i, value_name, &length, NULL, NULL, NULL, NULL);
++        if (err != ERROR_SUCCESS)
++        {
++            reg_message(err);
++            continue;
++        }
++
++        if (!value_name[0])
++            print_value(hkey, NULL);
++        else
++            print_value(hkey, value_name);
++    }
++
++    if (num_subkeys)
++        reg_printfW(newline);
++
++    for (i = 0; i < num_subkeys; i++)
++    {
++        length = MAX_KEY_LENGTH;
++        subkey = NULL;
++
++        err = RegEnumKeyExW(hkey, i, subkey_name, &length, NULL, NULL, NULL, NULL);
++
++        if (err != ERROR_SUCCESS)
++        {
++            reg_message(err);
++            continue;
++        }
++
++        if (!recurse)
++        {
++            print_key(key_name, subkey_name);
++            continue;
++        }
++
++        subkey_length = strlenW(key_name) + length + 2;
++        subkey_path = HeapAlloc(GetProcessHeap(), 0, subkey_length * sizeof(WCHAR));
++
++        err = snprintfW(subkey_path, subkey_length, format_subkey_path, key_name, subkey_name);
++        if (err < 0 || err >= subkey_length)
++            goto subkey_error;
++
++        subkey = path_open(subkey_path, FALSE);
++        if (!subkey)
++            goto subkey_error;
++
++        print_all_values(subkey, subkey_path, recurse);
++
++subkey_error:
++        if (subkey)
++            RegCloseKey(subkey);
++        if (subkey_path)
++            HeapFree(GetProcessHeap(), 0, subkey_path);
++    }
++
++    return ERROR_SUCCESS;
++}
++
+ static BOOL sane_path(const WCHAR *key)
+ {
+     unsigned int i = strlenW(key);
+@@ -514,14 +785,46 @@ static int reg_delete(const WCHAR *key_name, const WCHAR *value_name, const BOOL
+     return 0;
+ }
+ 
+-static int reg_query(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
+-    BOOL subkey)
++static int reg_query(   const WCHAR *key_name,    const WCHAR *value_name,
++                        const BOOL value_empty,   const BOOL recurse)
+ {
+-    static const WCHAR stubW[] = {'S','T','U','B',' ','Q','U','E','R','Y',' ',
+-        '-',' ','%','s',' ','%','s',' ','%','d',' ','%','d','\n',0};
+-    reg_printfW(stubW, key_name, value_name, value_empty, subkey);
++    static const WCHAR newline[] = {'\n',0};
++    HKEY key;
++    LONG err = sane_path(key_name);
++    if (err != ERROR_SUCCESS)
++    {
++        reg_message(err);
++        return 1;
++    }
++
++    reg_printfW(newline);
++
++    if (value_name && value_empty)
++    {
++        reg_message(ERROR_BAD_COMMAND);
++        return 1;
++    }
++
++    key = path_open(key_name, FALSE);
++    if (!key)
++    {
++        return 1;
++    }
+ 
+-    return 1;
++    if (value_empty || value_name)
++        err = print_value(key, value_name);
++    else
++        err = print_all_values(key, key_name, recurse);
++
++    RegCloseKey(key);
++
++    if (err != ERROR_SUCCESS)
++    {
++        reg_message(err);
++        return 1;
++    }
++
++    return 0;
+ }
+ 
+ int wmain(int argc, WCHAR *argvW[])
+@@ -625,7 +928,7 @@ int wmain(int argc, WCHAR *argvW[])
+     else if (!lstrcmpiW(argvW[1], queryW))
+     {
+         WCHAR *key_name, *value_name = NULL;
+-        BOOL value_empty = FALSE, subkey = FALSE;
++        BOOL value_empty = FALSE, recurse = FALSE;
+ 
+         if (argc < 3)
+         {
+@@ -647,9 +950,9 @@ int wmain(int argc, WCHAR *argvW[])
+             else if (!lstrcmpiW(argvW[i], slashVEW))
+                 value_empty = TRUE;
+             else if (!lstrcmpiW(argvW[i], slashSW))
+-                subkey = TRUE;
++                recurse = TRUE;
+         }
+-        return reg_query(key_name, value_name, value_empty, subkey);
++        return reg_query(key_name, value_name, value_empty, recurse);
+     }
+     else
+     {
+-- 
+2.5.0
+

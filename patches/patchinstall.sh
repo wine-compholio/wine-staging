@@ -262,6 +262,7 @@ patch_enable_all ()
 	enable_version_VerQueryValue="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_wbemdisp_Timeout="$1"
+	enable_wbemprox_Bios_Name="$1"
 	enable_wiaservc_IEnumWIA_DEV_INFO="$1"
 	enable_wine_inf_Performance="$1"
 	enable_wine_inf_ProfileList_UserSID="$1"
@@ -861,6 +862,9 @@ patch_enable ()
 			;;
 		wbemdisp-Timeout)
 			enable_wbemdisp_Timeout="$2"
+			;;
+		wbemprox-Bios_Name)
+			enable_wbemprox_Bios_Name="$2"
 			;;
 		wiaservc-IEnumWIA_DEV_INFO)
 			enable_wiaservc_IEnumWIA_DEV_INFO="$2"
@@ -5066,6 +5070,18 @@ if test "$enable_wbemdisp_Timeout" -eq 1; then
 	patch_apply wbemdisp-Timeout/0001-wbemprox-Silence-repeated-timeout-not-supported-fixm.patch
 	(
 		echo '+    { "Jarkko Korpi", "wbemprox: Silence repeated \"timeout not supported\" fixme.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wbemprox-Bios_Name
+# |
+# | Modified files:
+# |   *	dlls/wbemprox/builtin.c
+# |
+if test "$enable_wbemprox_Bios_Name" -eq 1; then
+	patch_apply wbemprox-Bios_Name/0001-wbemprox-Set-bios-name-in-Win32_BIOS.patch
+	(
+		echo '+    { "Michael Müller", "wbemprox: Set bios name in Win32_BIOS.", 1 },';
 	) >> "$patchlist"
 fi
 

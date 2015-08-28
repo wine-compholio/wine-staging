@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e5ce90ed1b88bba8389aabfcb9ad0b6f837f6a14"
+	echo "6056a3f1634a72e181fb3a03ca625aaa7720523e"
 }
 
 # Show version information
@@ -2150,20 +2150,18 @@ fi
 # Patchset api-ms-win-crt-Stub_DLLs
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/msvcrt/data.c, dlls/msvcrt/misc.c, dlls/ucrtbase/ucrtbase.spec, dlls/vcruntime140/Makefile.in,
+# |   *	configure.ac, dlls/msvcrt/misc.c, dlls/ucrtbase/ucrtbase.spec, dlls/vcruntime140/Makefile.in,
 # | 	dlls/vcruntime140/vcruntime140.spec
 # |
 if test "$enable_api_ms_win_crt_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-crt-Stub_DLLs/0001-ucrtbase-Hook-up-some-functions-with-new-names-to-ex.patch
 	patch_apply api-ms-win-crt-Stub_DLLs/0002-vcruntime140-Add-the-new-MSVC-2015-compiler-specific.patch
 	patch_apply api-ms-win-crt-Stub_DLLs/0003-vcruntime140-Hook-up-a-function-with-a-new-name-to-t.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0004-ucrtbase-Add-stub-functions-for-narrow-environment.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0005-vcruntime140-Add-stubs-for-telemetry-functions.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0004-vcruntime140-Add-stubs-for-telemetry-functions.patch
 	(
 		echo '+    { "Martin Storsjo", "ucrtbase: Hook up some functions with new names to existing implementations.", 1 },';
 		echo '+    { "Martin Storsjo", "vcruntime140: Add the new MSVC 2015 compiler specific DLL.", 1 },';
 		echo '+    { "Martin Storsjo", "vcruntime140: Hook up a function with a new name to the existing implementation.", 1 },';
-		echo '+    { "Martin Storsjo", "ucrtbase: Add stub functions for narrow environment.", 1 },';
 		echo '+    { "Martin Storsjo", "vcruntime140: Add stubs for telemetry functions.", 1 },';
 	) >> "$patchlist"
 fi

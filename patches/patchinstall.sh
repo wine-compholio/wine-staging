@@ -94,6 +94,7 @@ patch_enable_all ()
 	enable_comctl32_LoadIconMetric="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
+	enable_d3d11_Fix_Compile="$1"
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Skip_Tests="$1"
 	enable_d3d9_Surface_Refcount="$1"
@@ -358,6 +359,9 @@ patch_enable ()
 			;;
 		crypt32-CMS_Certificates)
 			enable_crypt32_CMS_Certificates="$2"
+			;;
+		d3d11-Fix_Compile)
+			enable_d3d11_Fix_Compile="$2"
 			;;
 		d3d9-DesktopWindow)
 			enable_d3d9_DesktopWindow="$2"
@@ -2237,6 +2241,18 @@ if test "$enable_crypt32_CMS_Certificates" -eq 1; then
 	patch_apply crypt32-CMS_Certificates/0001-crypt32-Skip-unknown-item-when-decoding-a-CMS-certif.patch
 	(
 		echo '+    { "Charles Davis", "crypt32: Skip unknown item when decoding a CMS certificate.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3d11-Fix_Compile
+# |
+# | Modified files:
+# |   *	dlls/d3d11/utils.c
+# |
+if test "$enable_d3d11_Fix_Compile" -eq 1; then
+	patch_apply d3d11-Fix_Compile/0001-d3d11-Fix-compile-failure-with-recent-version-of-gcc.patch
+	(
+		echo '+    { "Sebastian Lackner", "d3d11: Fix compile failure with recent version of gcc.", 1 },';
 	) >> "$patchlist"
 fi
 

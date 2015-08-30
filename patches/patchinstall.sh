@@ -232,6 +232,7 @@ patch_enable_all ()
 	enable_server_Shared_Memory="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
+	enable_server_Working_Directory="$1"
 	enable_setupapi_SetupDiSelectBestCompatDrv="$1"
 	enable_setupapi_SetupDiSetDeviceInstallParamsW="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
@@ -774,6 +775,9 @@ patch_enable ()
 			;;
 		server-Timestamp_Compat)
 			enable_server_Timestamp_Compat="$2"
+			;;
+		server-Working_Directory)
+			enable_server_Working_Directory="$2"
 			;;
 		setupapi-SetupDiSelectBestCompatDrv)
 			enable_setupapi_SetupDiSelectBestCompatDrv="$2"
@@ -1763,6 +1767,13 @@ if test "$enable_server_Stored_ACLs" -eq 1; then
 	fi
 	enable_ntdll_DOS_Attributes=1
 	enable_server_File_Permissions=1
+fi
+
+if test "$enable_server_Delete_On_Close" -eq 1; then
+	if test "$enable_server_Working_Directory" -gt 1; then
+		abort "Patchset server-Working_Directory disabled, but server-Delete_On_Close depends on that."
+	fi
+	enable_server_Working_Directory=1
 fi
 
 if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
@@ -4405,7 +4416,22 @@ if test "$enable_server_ClipCursor" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-Working_Directory
+# |
+# | Modified files:
+# |   *	server/fd.c
+# |
+if test "$enable_server_Working_Directory" -eq 1; then
+	patch_apply server-Working_Directory/0001-server-Switch-back-to-server-dir-when-open_fd-fails.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Switch back to server dir when open_fd fails.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-Delete_On_Close
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	server-Working_Directory
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#38417] Fix handling of opening read-only files for FILE_DELETE_ON_CLOSE

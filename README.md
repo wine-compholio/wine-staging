@@ -39,9 +39,10 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [2]:**
+**Bug fixes and features included in the next upcoming release [3]:**
 
 * Fix access violation in MSYS2 git when cloning repository
+* Map EXDEV error code to STATUS_NOT_SAME_DEVICE
 * Return a dummy BIOS name in Win32_BIOS record
 
 

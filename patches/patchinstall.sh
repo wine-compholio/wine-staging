@@ -223,6 +223,7 @@ patch_enable_all ()
 	enable_server_File_Permissions="$1"
 	enable_server_Inherited_ACLs="$1"
 	enable_server_Key_State="$1"
+	enable_server_Map_EXDEV_Error="$1"
 	enable_server_Misc_ACL="$1"
 	enable_server_OpenProcess="$1"
 	enable_server_PeekMessage="$1"
@@ -746,6 +747,9 @@ patch_enable ()
 			;;
 		server-Key_State)
 			enable_server_Key_State="$2"
+			;;
+		server-Map_EXDEV_Error)
+			enable_server_Map_EXDEV_Error="$2"
 			;;
 		server-Misc_ACL)
 			enable_server_Misc_ACL="$2"
@@ -4489,6 +4493,18 @@ if test "$enable_server_Key_State" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "server: Introduce a helper function to update the thread_input key state.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement locking and synchronization of keystate buffer.", 3 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Map_EXDEV_Error
+# |
+# | Modified files:
+# |   *	server/file.c
+# |
+if test "$enable_server_Map_EXDEV_Error" -eq 1; then
+	patch_apply server-Map_EXDEV_Error/0001-server-Map-EXDEV-to-STATUS_NOT_SAME_DEVICE.patch
+	(
+		echo '+    { "Qian Hong", "server: Map EXDEV to STATUS_NOT_SAME_DEVICE.", 1 },';
 	) >> "$patchlist"
 fi
 

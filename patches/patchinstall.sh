@@ -304,6 +304,7 @@ patch_enable_all ()
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
 	enable_winmm_Delay_Import_Depends="$1"
 	enable_winscard_SCardListReaders="$1"
+	enable_winspool_drv_SetPrinterW="$1"
 	enable_winsta_WinStationEnumerateW="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_APC_Performance="$1"
@@ -993,6 +994,9 @@ patch_enable ()
 			;;
 		winscard-SCardListReaders)
 			enable_winscard_SCardListReaders="$2"
+			;;
+		winspool.drv-SetPrinterW)
+			enable_winspool_drv_SetPrinterW="$2"
 			;;
 		winsta-WinStationEnumerateW)
 			enable_winsta_WinStationEnumerateW="$2"
@@ -6118,6 +6122,21 @@ if test "$enable_winscard_SCardListReaders" -eq 1; then
 	patch_apply winscard-SCardListReaders/0001-winscard-add-stubs-for-SCardListReadersA-W.patch
 	(
 		echo '+    { "Austin English", "winscard: add stubs for SCardListReadersA/W.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winspool.drv-SetPrinterW
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#24645] Add stub for winspool.SetPrinterW level 8
+# |
+# | Modified files:
+# |   *	dlls/winspool.drv/info.c
+# |
+if test "$enable_winspool_drv_SetPrinterW" -eq 1; then
+	patch_apply winspool.drv-SetPrinterW/0001-winspool.drv-Add-case-8-for-SetPrinterW.patch
+	(
+		echo '+    { "Jarkko Korpi", "winspool.drv Add case 8 for SetPrinterW.", 1 },';
 	) >> "$patchlist"
 fi
 

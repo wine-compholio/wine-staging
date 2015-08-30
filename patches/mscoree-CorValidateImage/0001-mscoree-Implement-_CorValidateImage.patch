@@ -1,14 +1,16 @@
-From 9a13889280aaedf1219b4f41000fd02f343a4a0d Mon Sep 17 00:00:00 2001
+From d7d0e1917534ef784bb37b4c5dbbca58c9d8a300 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
-Date: Thu, 2 Apr 2015 02:38:29 +0200
-Subject: mscoree: Implement _CorValidateImage. (v2)
+Date: Tue, 25 Aug 2015 11:31:34 +0200
+Subject: mscoree: Implement semi-stub for _CorValidateImage.
 
+This is required in order to implement "proper" loader support for .NET executables.
+(Yes, its intentional that both NTSTATUS and HRESULT values are returned, don't ask...)
 ---
- dlls/mscoree/mscoree_main.c | 74 +++++++++++++++++++++++++++++++++++++++++++--
- 1 file changed, 72 insertions(+), 2 deletions(-)
+ dlls/mscoree/mscoree_main.c | 75 +++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 73 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/mscoree/mscoree_main.c b/dlls/mscoree/mscoree_main.c
-index 8b46fd5..327fcb9 100644
+index 8b46fd5..8ec8ffe 100644
 --- a/dlls/mscoree/mscoree_main.c
 +++ b/dlls/mscoree/mscoree_main.c
 @@ -21,11 +21,14 @@
@@ -26,7 +28,7 @@ index 8b46fd5..327fcb9 100644
  #include "winuser.h"
  #include "winnls.h"
  #include "winreg.h"
-@@ -259,8 +262,75 @@ VOID WINAPI _CorImageUnloading(PVOID imageBase)
+@@ -259,8 +262,76 @@ VOID WINAPI _CorImageUnloading(PVOID imageBase)
  
  HRESULT WINAPI _CorValidateImage(PVOID* imageBase, LPCWSTR imageName)
  {
@@ -51,7 +53,7 @@ index 8b46fd5..327fcb9 100644
 +
 +#ifdef _WIN64
 +    if (cliheader->Flags & COMIMAGE_FLAGS_32BITREQUIRED)
-+            return STATUS_INVALID_IMAGE_FORMAT;
++        return STATUS_INVALID_IMAGE_FORMAT;
 +
 +    if (nt->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC)
 +    {
@@ -90,7 +92,8 @@ index 8b46fd5..327fcb9 100644
 +            if (!VirtualProtect(entry, sizeof(*entry), PAGE_READWRITE, &old_protect))
 +                return E_UNEXPECTED;
 +            *entry = (nt->FileHeader.Characteristics & IMAGE_FILE_DLL) ?
-+                ((DWORD)&_CorDllMain - (DWORD)*imageBase) : ((DWORD)&_CorExeMain - (DWORD)*imageBase);
++                ((DWORD_PTR)&_CorDllMain - (DWORD_PTR)*imageBase) :
++                ((DWORD_PTR)&_CorExeMain - (DWORD_PTR)*imageBase);
 +            if (!VirtualProtect(entry, sizeof(*entry), old_protect, &old_protect))
 +                return E_UNEXPECTED;
 +        }
@@ -105,5 +108,5 @@ index 8b46fd5..327fcb9 100644
  
  HRESULT WINAPI GetCORSystemDirectory(LPWSTR pbuffer, DWORD cchBuffer, DWORD *dwLength)
 -- 
-2.4.5
+2.5.0
 

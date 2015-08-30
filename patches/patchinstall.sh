@@ -253,6 +253,7 @@ patch_enable_all ()
 	enable_shlwapi_AssocGetPerceivedType="$1"
 	enable_shlwapi_UrlCombine="$1"
 	enable_urlmon_CoInternetSetFeatureEnabled="$1"
+	enable_user32_DeferWindowPos="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawTextExW="$1"
 	enable_user32_GetSystemMetrics="$1"
@@ -838,6 +839,9 @@ patch_enable ()
 			;;
 		urlmon-CoInternetSetFeatureEnabled)
 			enable_urlmon_CoInternetSetFeatureEnabled="$2"
+			;;
+		user32-DeferWindowPos)
+			enable_user32_DeferWindowPos="$2"
 			;;
 		user32-Dialog_Paint_Event)
 			enable_user32_Dialog_Paint_Event="$2"
@@ -4943,6 +4947,21 @@ if test "$enable_urlmon_CoInternetSetFeatureEnabled" -eq 1; then
 	patch_apply urlmon-CoInternetSetFeatureEnabled/0001-urlmon-Ignore-unsupported-flags-for-CoInternetSetFea.patch
 	(
 		echo '+    { "Bruno Jesus", "urlmon: Ignore unsupported flags for CoInternetSetFeatureEnabled.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-DeferWindowPos
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#23187] Fix error handling in DeferWindowPos when passing an invalid HWND
+# |
+# | Modified files:
+# |   *	dlls/user32/winpos.c
+# |
+if test "$enable_user32_DeferWindowPos" -eq 1; then
+	patch_apply user32-DeferWindowPos/0001-user32-Fix-error-handling-in-Begin-End-DeferWindowPo.patch
+	(
+		echo '+    { "Rodrigo Rivas", "user32: Fix error handling in {Begin,End,}DeferWindowPos() to match Windows behavior.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -146,6 +146,7 @@ patch_enable_all ()
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_CompareStringEx="$1"
 	enable_kernel32_CopyFileEx="$1"
+	enable_kernel32_Cwd_Startup_Info="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_GetLogicalProcessorInformationEx="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
@@ -518,6 +519,9 @@ patch_enable ()
 			;;
 		kernel32-CopyFileEx)
 			enable_kernel32_CopyFileEx="$2"
+			;;
+		kernel32-Cwd_Startup_Info)
+			enable_kernel32_Cwd_Startup_Info="$2"
 			;;
 		kernel32-GetFinalPathNameByHandle)
 			enable_kernel32_GetFinalPathNameByHandle="$2"
@@ -3219,6 +3223,18 @@ if test "$enable_kernel32_CopyFileEx" -eq 1; then
 	patch_apply kernel32-CopyFileEx/0001-kernel32-Add-support-for-progress-callback-in-CopyFi.patch
 	(
 		echo '+    { "Michael Müller", "kernel32: Add support for progress callback in CopyFileEx.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-Cwd_Startup_Info
+# |
+# | Modified files:
+# |   *	dlls/kernel32/process.c
+# |
+if test "$enable_kernel32_Cwd_Startup_Info" -eq 1; then
+	patch_apply kernel32-Cwd_Startup_Info/0001-kernel32-Allow-non-nullterminated-string-as-working-.patch
+	(
+		echo '+    { "Sebastian Lackner", "kernel32: Allow non-nullterminated string as working directory in create_startup_info.", 1 },';
 	) >> "$patchlist"
 fi
 

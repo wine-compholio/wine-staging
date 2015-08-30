@@ -39,8 +39,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [5]:**
+**Bug fixes and features included in the next upcoming release [6]:**
 
+* Allow non-nullterminated string as working directory in kernel32.create_startup_info
 * Fix access violation in MSYS2 git when cloning repository
 * Fix error handling in DeferWindowPos when passing an invalid HWND ([Wine Bug #23187](https://bugs.winehq.org/show_bug.cgi?id=23187))
 * Fix failure to create anonymous file mapping after failed open_fd server call

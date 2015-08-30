@@ -1,0 +1,235 @@
+From 4c6b3da41feef98226bbfe14c2b0e88acf39807e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Tue, 25 Aug 2015 11:15:59 +0200
+Subject: ddraw/tests: Add more tests for IDirectDraw7::EnumSurfaces.
+
+---
+ dlls/ddraw/ddraw.c     |   3 +
+ dlls/ddraw/tests/d3d.c | 177 ++++++++++++++++++++++++++++++++++++++++++++++---
+ 2 files changed, 172 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/ddraw/ddraw.c b/dlls/ddraw/ddraw.c
+index b3caba2..4b7a207 100644
+--- a/dlls/ddraw/ddraw.c
++++ b/dlls/ddraw/ddraw.c
+@@ -3135,6 +3135,9 @@ static HRESULT WINAPI ddraw7_EnumSurfaces(IDirectDraw7 *iface, DWORD Flags,
+     if (!Callback)
+         return DDERR_INVALIDPARAMS;
+ 
++    if (!all && !DDSD)
++        return DDERR_INVALIDPARAMS;
++
+     wined3d_mutex_lock();
+ 
+     /* Use the _SAFE enumeration, the app may destroy enumerated surfaces */
+diff --git a/dlls/ddraw/tests/d3d.c b/dlls/ddraw/tests/d3d.c
+index ec4197a..e9c616e 100644
+--- a/dlls/ddraw/tests/d3d.c
++++ b/dlls/ddraw/tests/d3d.c
+@@ -57,6 +57,12 @@ typedef struct {
+     int total;
+ } D3D7ECancelTest;
+ 
++typedef struct
++{
++    int found;
++    int surfaces;
++} EnumSurfaceTest;
++
+ #define MAX_ENUMERATION_COUNT 10
+ typedef struct
+ {
+@@ -85,17 +91,21 @@ static ULONG getRefcount(IUnknown *iface)
+ 
+ static HRESULT WINAPI SurfaceCounter(IDirectDrawSurface7 *surface, DDSURFACEDESC2 *desc, void *context)
+ {
+-    UINT *num = context;
+-    (*num)++;
+-    IDirectDrawSurface_Release(surface);
++    EnumSurfaceTest *count = context;
++    count->found++;
++    if (surface)
++    {
++        count->surfaces++;
++        IDirectDrawSurface_Release(surface);
++    }
+     return DDENUMRET_OK;
+ }
+ 
+ static BOOL CreateDirect3D(void)
+ {
+     HRESULT rc;
+-    DDSURFACEDESC2 ddsd;
+-    UINT num;
++    DDSURFACEDESC2 ddsd, ddsd2;
++    EnumSurfaceTest count;
+ 
+     rc = pDirectDrawCreateEx(NULL, (void**)&lpDD,
+         &IID_IDirectDraw7, NULL);
+@@ -122,9 +132,160 @@ static BOOL CreateDirect3D(void)
+     if (FAILED(rc))
+         return FALSE;
+ 
+-    num = 0;
+-    IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_ALL | DDENUMSURFACES_DOESEXIST, NULL, &num, SurfaceCounter);
+-    ok(num == 1, "Has %d surfaces, expected 1\n", num);
++    memset(&ddsd2, 0, sizeof(ddsd2));
++    ddsd2.dwSize = sizeof(ddsd2);
++    ddsd2.dwFlags = DDSD_WIDTH | DDSD_HEIGHT;
++    ddsd2.dwWidth = 256;
++    ddsd2.dwHeight = 256;
++
++    /* without search type flags */
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, 0, NULL, &count, SurfaceCounter);
++    ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
++    ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, 0, &ddsd, &count, SurfaceCounter);
++    todo_wine ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
++    ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_ALL, NULL, &count, SurfaceCounter);
++    todo_wine ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
++    todo_wine ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    todo_wine ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_MATCH, NULL, &count, SurfaceCounter);
++    ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
++    ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_NOMATCH, NULL, &count, SurfaceCounter);
++    ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
++    ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++
++    /* search type DDENUMSURFACES_DOESEXIST */
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_DOESEXIST, NULL, &count, SurfaceCounter);
++    ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
++    ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_DOESEXIST, &ddsd, &count, SurfaceCounter);
++    ok(rc == DD_OK, "Expected DD_OK, got %x\n", rc);
++    ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_DOESEXIST, &ddsd2, &count, SurfaceCounter);
++    ok(rc == DD_OK, "Expected DD_OK, got %x\n", rc);
++    ok(count.found == 1, "Has %d surface descriptions, expected 1\n", count.found);
++    ok(count.surfaces == 1, "Has %d surfaces, expected 1\n", count.surfaces);
++
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_DOESEXIST | DDENUMSURFACES_ALL,
++            NULL, &count, SurfaceCounter);
++    ok(rc == DD_OK, "Expected DD_OK, got %x\n", rc);
++    ok(count.found == 1, "Has %d surface descriptions, expected 1\n", count.found);
++    ok(count.surfaces == 1, "Has %d surfaces, expected 1\n", count.surfaces);
++
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_DOESEXIST | DDENUMSURFACES_MATCH,
++            &ddsd, &count, SurfaceCounter);
++    ok(rc == DD_OK, "Expected DD_OK, got %x\n", rc);
++    ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_DOESEXIST | DDENUMSURFACES_NOMATCH,
++            &ddsd, &count, SurfaceCounter);
++    ok(rc == DD_OK, "Expected DD_OK, got %x\n", rc);
++    ok(count.found == 1, "Has %d surface descriptions, expected 1\n", count.found);
++    ok(count.surfaces == 1, "Has %d surfaces, expected 1\n", count.surfaces);
++
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_DOESEXIST | DDENUMSURFACES_MATCH,
++            &ddsd2, &count, SurfaceCounter);
++    ok(rc == DD_OK, "Expected DD_OK, got %x\n", rc);
++    ok(count.found == 1, "Has %d surface descriptions, expected 1\n", count.found);
++    ok(count.surfaces == 1, "Has %d surfaces, expected 1\n", count.surfaces);
++
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_DOESEXIST | DDENUMSURFACES_NOMATCH,
++            &ddsd2, &count, SurfaceCounter);
++    ok(rc == DD_OK, "Expected DD_OK, got %x\n", rc);
++    todo_wine ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    todo_wine ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_DOESEXIST | DDENUMSURFACES_ALL |
++            DDENUMSURFACES_MATCH, NULL, &count, SurfaceCounter);
++    todo_wine ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
++    todo_wine ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    todo_wine ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_DOESEXIST | DDENUMSURFACES_ALL |
++            DDENUMSURFACES_NOMATCH, NULL, &count, SurfaceCounter);
++    todo_wine ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
++    todo_wine ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    todo_wine ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_DOESEXIST | DDENUMSURFACES_MATCH |
++            DDENUMSURFACES_NOMATCH, NULL, &count, SurfaceCounter);
++    ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
++    ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++
++    /* search type DDENUMSURFACES_CANBECREATED */
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_CANBECREATED, &ddsd, &count, SurfaceCounter);
++    todo_wine ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
++    ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_CANBECREATED | DDENUMSURFACES_ALL,
++            &ddsd, &count, SurfaceCounter);
++    todo_wine ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
++    todo_wine ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    todo_wine ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_CANBECREATED | DDENUMSURFACES_NOMATCH,
++            &ddsd, &count, SurfaceCounter);
++    todo_wine ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
++    todo_wine ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    todo_wine ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_CANBECREATED | DDENUMSURFACES_MATCH,
++            NULL, &count, SurfaceCounter);
++    ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
++    ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_CANBECREATED | DDENUMSURFACES_MATCH,
++            &ddsd, &count, SurfaceCounter);
++    ok(rc == DD_OK, "Expected DD_OK, got %x\n", rc);
++    todo_wine ok(count.found == 1, "Has %d surface descriptions, expected 1\n", count.found);
++    ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++
++    /* combination of DDENUMSURFACES_DOESEXIST and DDENUMSURFACES_CANBECREATED */
++    count.found = count.surfaces = 0;
++    rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_DOESEXIST | DDENUMSURFACES_CANBECREATED |
++            DDENUMSURFACES_MATCH, &ddsd, &count, SurfaceCounter);
++    ok(rc == DD_OK, "Expected DD_OK, got %x\n", rc);
++    todo_wine ok(count.found == 1, "Has %d surface descriptions, expected 1\n", count.found);
++    ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
+ 
+     memset(&ddsd, 0, sizeof(ddsd));
+     ddsd.dwSize = sizeof(ddsd);
+-- 
+2.5.0
+

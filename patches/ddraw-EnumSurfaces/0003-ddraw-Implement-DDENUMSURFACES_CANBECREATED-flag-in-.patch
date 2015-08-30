@@ -1,0 +1,248 @@
+From 5dcbd836e663da908a9a39b5791da65d64a00eb8 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Tue, 25 Aug 2015 11:17:07 +0200
+Subject: ddraw: Implement DDENUMSURFACES_CANBECREATED flag in
+ ddraw7_EnumSurfaces.
+
+Also fixes various test failures related to DDENUMSURFACES_DOESEXIST.
+
+The "Unexpected destination texture level pixels" testfailure on the w8 VM is not related to this patch.
+---
+ dlls/ddraw/ddraw.c     | 98 +++++++++++++++++++++++++++++++++++++-------------
+ dlls/ddraw/tests/d3d.c | 42 +++++++++++-----------
+ 2 files changed, 94 insertions(+), 46 deletions(-)
+
+diff --git a/dlls/ddraw/ddraw.c b/dlls/ddraw/ddraw.c
+index 4b7a207..19ed213 100644
+--- a/dlls/ddraw/ddraw.c
++++ b/dlls/ddraw/ddraw.c
+@@ -3122,49 +3122,97 @@ static HRESULT WINAPI ddraw7_EnumSurfaces(IDirectDraw7 *iface, DWORD Flags,
+ {
+     struct ddraw *ddraw = impl_from_IDirectDraw7(iface);
+     struct ddraw_surface *surf;
+-    BOOL all, nomatch;
+-    DDSURFACEDESC2 desc;
+-    struct list *entry, *entry2;
++    DWORD match_flags = Flags & (DDENUMSURFACES_ALL | DDENUMSURFACES_NOMATCH | DDENUMSURFACES_MATCH);
+ 
+     TRACE("iface %p, flags %#x, surface_desc %p, context %p, callback %p.\n",
+             iface, Flags, DDSD, Context, Callback);
+ 
+-    all = Flags & DDENUMSURFACES_ALL;
+-    nomatch = Flags & DDENUMSURFACES_NOMATCH;
+-
+     if (!Callback)
+         return DDERR_INVALIDPARAMS;
+ 
+-    if (!all && !DDSD)
+-        return DDERR_INVALIDPARAMS;
++    if (Flags & DDENUMSURFACES_CANBECREATED)
++    {
++         IDirectDrawSurface7 *surface;
++         DDSURFACEDESC2 testdesc;
++         HRESULT hr;
+ 
+-    wined3d_mutex_lock();
++        if (match_flags != DDENUMSURFACES_MATCH)
++            return DDERR_INVALIDPARAMS;
+ 
+-    /* Use the _SAFE enumeration, the app may destroy enumerated surfaces */
+-    LIST_FOR_EACH_SAFE(entry, entry2, &ddraw->surface_list)
+-    {
+-        surf = LIST_ENTRY(entry, struct ddraw_surface, surface_list_entry);
++        if (!DDSD)
++            return DDERR_INVALIDPARAMS;
++
++        memcpy(&testdesc, DDSD, sizeof(testdesc));
++        if (!(testdesc.dwFlags & DDSD_WIDTH))
++        {
++            testdesc.dwFlags |= DDSD_WIDTH;
++            testdesc.dwWidth = 512;
++        }
++        if (!(testdesc.dwFlags & DDSD_HEIGHT))
++        {
++            testdesc.dwFlags |= DDSD_HEIGHT;
++            testdesc.dwHeight = 512;
++        }
+ 
+-        if (!surf->iface_count)
++        hr = IDirectDraw7_CreateSurface(iface, &testdesc, &surface, NULL);
++        if (SUCCEEDED(hr))
+         {
+-            WARN("Not enumerating surface %p because it doesn't have any references.\n", surf);
+-            continue;
++            surf = unsafe_impl_from_IDirectDrawSurface7(surface);
++            Callback(NULL, &surf->surface_desc, Context);
++            IDirectDrawSurface7_Release(surface);
+         }
++        else
++            ERR("Failed to create surface, hr %#x.\n", hr);
++    }
++    else if (Flags & DDENUMSURFACES_DOESEXIST)
++    {
++        BOOL all, nomatch;
++        DDSURFACEDESC2 desc;
++        struct list *entry, *entry2;
++
++        /* a combination of match flags is not allowed */
++        if (match_flags != 0 &&
++                match_flags != DDENUMSURFACES_ALL &&
++                match_flags != DDENUMSURFACES_MATCH &&
++                match_flags != DDENUMSURFACES_NOMATCH)
++            return DDERR_INVALIDPARAMS;
++
++        all = (Flags & DDENUMSURFACES_ALL) != 0;
++        nomatch = (Flags & DDENUMSURFACES_NOMATCH) != 0;
++
++        if (!all && !DDSD)
++            return DDERR_INVALIDPARAMS;
+ 
+-        if (all || (nomatch != ddraw_match_surface_desc(DDSD, &surf->surface_desc)))
++        wined3d_mutex_lock();
++
++        /* Use the _SAFE enumeration, the app may destroy enumerated surfaces */
++        LIST_FOR_EACH_SAFE(entry, entry2, &ddraw->surface_list)
+         {
+-            TRACE("Enumerating surface %p.\n", surf);
+-            desc = surf->surface_desc;
+-            IDirectDrawSurface7_AddRef(&surf->IDirectDrawSurface7_iface);
+-            if (Callback(&surf->IDirectDrawSurface7_iface, &desc, Context) != DDENUMRET_OK)
++            surf = LIST_ENTRY(entry, struct ddraw_surface, surface_list_entry);
++
++            if (!surf->iface_count)
+             {
+-                wined3d_mutex_unlock();
+-                return DD_OK;
++                WARN("Not enumerating surface %p because it doesn't have any references.\n", surf);
++                continue;
++            }
++
++            if (all || (nomatch != ddraw_match_surface_desc(DDSD, &surf->surface_desc)))
++            {
++                TRACE("Enumerating surface %p.\n", surf);
++                desc = surf->surface_desc;
++                IDirectDrawSurface7_AddRef(&surf->IDirectDrawSurface7_iface);
++                if (Callback(&surf->IDirectDrawSurface7_iface, &desc, Context) != DDENUMRET_OK)
++                {
++                    wined3d_mutex_unlock();
++                    return DD_OK;
++                }
+             }
+         }
+-    }
+ 
+-    wined3d_mutex_unlock();
++        wined3d_mutex_unlock();
++    }
++    else
++        return DDERR_INVALIDPARAMS;
+ 
+     return DD_OK;
+ }
+diff --git a/dlls/ddraw/tests/d3d.c b/dlls/ddraw/tests/d3d.c
+index e9c616e..930460f 100644
+--- a/dlls/ddraw/tests/d3d.c
++++ b/dlls/ddraw/tests/d3d.c
+@@ -147,15 +147,15 @@ static BOOL CreateDirect3D(void)
+ 
+     count.found = count.surfaces = 0;
+     rc = IDirectDraw7_EnumSurfaces(lpDD, 0, &ddsd, &count, SurfaceCounter);
+-    todo_wine ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
++    ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
+     ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
+     ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
+ 
+     count.found = count.surfaces = 0;
+     rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_ALL, NULL, &count, SurfaceCounter);
+-    todo_wine ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
+-    todo_wine ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
+-    todo_wine ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++    ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
++    ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
+ 
+     count.found = count.surfaces = 0;
+     rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_MATCH, NULL, &count, SurfaceCounter);
+@@ -220,22 +220,22 @@ static BOOL CreateDirect3D(void)
+     rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_DOESEXIST | DDENUMSURFACES_NOMATCH,
+             &ddsd2, &count, SurfaceCounter);
+     ok(rc == DD_OK, "Expected DD_OK, got %x\n", rc);
+-    todo_wine ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
+-    todo_wine ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++    ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
+ 
+     count.found = count.surfaces = 0;
+     rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_DOESEXIST | DDENUMSURFACES_ALL |
+             DDENUMSURFACES_MATCH, NULL, &count, SurfaceCounter);
+-    todo_wine ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
+-    todo_wine ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
+-    todo_wine ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++    ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
++    ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
+ 
+     count.found = count.surfaces = 0;
+     rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_DOESEXIST | DDENUMSURFACES_ALL |
+             DDENUMSURFACES_NOMATCH, NULL, &count, SurfaceCounter);
+-    todo_wine ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
+-    todo_wine ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
+-    todo_wine ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++    ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
++    ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
+ 
+     count.found = count.surfaces = 0;
+     rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_DOESEXIST | DDENUMSURFACES_MATCH |
+@@ -247,23 +247,23 @@ static BOOL CreateDirect3D(void)
+     /* search type DDENUMSURFACES_CANBECREATED */
+     count.found = count.surfaces = 0;
+     rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_CANBECREATED, &ddsd, &count, SurfaceCounter);
+-    todo_wine ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
++    ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
+     ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
+     ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
+ 
+     count.found = count.surfaces = 0;
+     rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_CANBECREATED | DDENUMSURFACES_ALL,
+             &ddsd, &count, SurfaceCounter);
+-    todo_wine ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
+-    todo_wine ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
+-    todo_wine ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++    ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
++    ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
+ 
+     count.found = count.surfaces = 0;
+     rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_CANBECREATED | DDENUMSURFACES_NOMATCH,
+             &ddsd, &count, SurfaceCounter);
+-    todo_wine ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
+-    todo_wine ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
+-    todo_wine ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
++    ok(rc == DDERR_INVALIDPARAMS, "Expected DDERR_INVALIDPARAMS, got %x\n", rc);
++    ok(count.found == 0, "Has %d surface descriptions, expected 0\n", count.found);
++    ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
+ 
+     count.found = count.surfaces = 0;
+     rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_CANBECREATED | DDENUMSURFACES_MATCH,
+@@ -276,7 +276,7 @@ static BOOL CreateDirect3D(void)
+     rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_CANBECREATED | DDENUMSURFACES_MATCH,
+             &ddsd, &count, SurfaceCounter);
+     ok(rc == DD_OK, "Expected DD_OK, got %x\n", rc);
+-    todo_wine ok(count.found == 1, "Has %d surface descriptions, expected 1\n", count.found);
++    ok(count.found == 1, "Has %d surface descriptions, expected 1\n", count.found);
+     ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
+ 
+     /* combination of DDENUMSURFACES_DOESEXIST and DDENUMSURFACES_CANBECREATED */
+@@ -284,7 +284,7 @@ static BOOL CreateDirect3D(void)
+     rc = IDirectDraw7_EnumSurfaces(lpDD, DDENUMSURFACES_DOESEXIST | DDENUMSURFACES_CANBECREATED |
+             DDENUMSURFACES_MATCH, &ddsd, &count, SurfaceCounter);
+     ok(rc == DD_OK, "Expected DD_OK, got %x\n", rc);
+-    todo_wine ok(count.found == 1, "Has %d surface descriptions, expected 1\n", count.found);
++    ok(count.found == 1, "Has %d surface descriptions, expected 1\n", count.found);
+     ok(count.surfaces == 0, "Has %d surfaces, expected 0\n", count.surfaces);
+ 
+     memset(&ddsd, 0, sizeof(ddsd));
+-- 
+2.5.0
+

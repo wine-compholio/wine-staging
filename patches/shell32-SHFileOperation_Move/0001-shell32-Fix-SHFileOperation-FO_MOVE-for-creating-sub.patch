@@ -1,0 +1,60 @@
+From cfa714bac4c6610bbeeb540041ff327a78fca47f Mon Sep 17 00:00:00 2001
+From: Zhenbo Li <litimetal@gmail.com>
+Date: Fri, 14 Aug 2015 21:18:43 +0800
+Subject: shell32: Fix SHFileOperation(FO_MOVE) for creating subdirectories.
+
+This patch fixes bug 25207.
+---
+ dlls/shell32/shlfileop.c       | 8 ++++++--
+ dlls/shell32/tests/shlfileop.c | 4 ++--
+ 2 files changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/shell32/shlfileop.c b/dlls/shell32/shlfileop.c
+index 0b096b1..4d2ebb4 100644
+--- a/dlls/shell32/shlfileop.c
++++ b/dlls/shell32/shlfileop.c
+@@ -1401,7 +1401,7 @@ static void move_to_dir(LPSHFILEOPSTRUCTW lpFileOp, const FILE_ENTRY *feFrom, co
+ /* the FO_MOVE operation */
+ static DWORD move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, const FILE_LIST *flTo)
+ {
+-    DWORD i;
++    DWORD i, ret;
+     INT mismatched = 0;
+     const FILE_ENTRY *entryToMove;
+     const FILE_ENTRY *fileDest;
+@@ -1426,7 +1426,11 @@ static DWORD move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, con
+     }
+ 
+     if (!PathFileExistsW(flTo->feFiles[0].szDirectory))
+-        return ERROR_CANCELLED;
++    {
++        ret = SHCreateDirectoryExW(NULL, flTo->feFiles[0].szDirectory, NULL);
++        if (ret)
++            return ret;
++    }
+ 
+     if (lpFileOp->fFlags & FOF_MULTIDESTFILES)
+         mismatched = flFrom->dwNumFiles - flTo->dwNumFiles;
+diff --git a/dlls/shell32/tests/shlfileop.c b/dlls/shell32/tests/shlfileop.c
+index d33ad5b..108d65e 100644
+--- a/dlls/shell32/tests/shlfileop.c
++++ b/dlls/shell32/tests/shlfileop.c
+@@ -2205,13 +2205,13 @@ static void test_move(void)
+         ok(!DeleteFileA("d.txt"), "Expected d.txt to not exist\n");
+     }
+ 
+-    /* FO_MOVE does not create dest directories */
++    /* FO_MOVE should create dest directories */
+     shfo.pFrom = "test2.txt\0";
+     shfo.pTo = "dir1\\dir2\\test2.txt\0";
+     retval = SHFileOperationA(&shfo);
+     if (dir_exists("dir1"))
+     {
+-        /* Vista and W2K8 (broken or new behavior ?) */
++        /* New behavior on Vista or later */
+         ok(retval == ERROR_SUCCESS, "Expected ERROR_SUCCESS, got %d\n", retval);
+         ok(DeleteFileA("dir1\\dir2\\test2.txt"), "Expected dir1\\dir2\\test2.txt to exist\n");
+         RemoveDirectoryA("dir1\\dir2");
+-- 
+2.5.0
+

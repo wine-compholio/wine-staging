@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [8]:**
+**Bug fixes and features included in the next upcoming release [9]:**
 
 * Add stub for winspool.SetPrinterW level 8 ([Wine Bug #24645](https://bugs.winehq.org/show_bug.cgi?id=24645))
 * Allow non-nullterminated string as working directory in kernel32.create_startup_info
@@ -48,6 +48,7 @@ Included bug fixes and improvements
 * Fix failure to create anonymous file mapping after failed open_fd server call
 * Map EXDEV error code to STATUS_NOT_SAME_DEVICE
 * Return a dummy BIOS name in Win32_BIOS record
+* SHFileOperation with FO_MOVE should create new directory on Vista+ ([Wine Bug #25207](https://bugs.winehq.org/show_bug.cgi?id=25207))
 * Translate flags in LaunchINFSectionW
 
 

@@ -250,7 +250,8 @@ patch_enable_all ()
 	enable_shell32_Run_Dialog="$1"
 	enable_shell32_SFGAO_HASSUBFOLDER="$1"
 	enable_shell32_SHCreateSessionKey="$1"
-	enable_shell32_SHFileOperation="$1"
+	enable_shell32_SHFileOperation_Move="$1"
+	enable_shell32_SHFileOperation_Win9x="$1"
 	enable_shell32_UnixFS="$1"
 	enable_shlwapi_AssocGetPerceivedType="$1"
 	enable_shlwapi_UrlCombine="$1"
@@ -834,8 +835,11 @@ patch_enable ()
 		shell32-SHCreateSessionKey)
 			enable_shell32_SHCreateSessionKey="$2"
 			;;
-		shell32-SHFileOperation)
-			enable_shell32_SHFileOperation="$2"
+		shell32-SHFileOperation_Move)
+			enable_shell32_SHFileOperation_Move="$2"
+			;;
+		shell32-SHFileOperation_Win9x)
+			enable_shell32_SHFileOperation_Win9x="$2"
 			;;
 		shell32-UnixFS)
 			enable_shell32_UnixFS="$2"
@@ -1541,8 +1545,8 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_shell32_RunDLL_CallEntry16" -gt 1; then
 		abort "Patchset shell32-RunDLL_CallEntry16 disabled, but category-stable depends on that."
 	fi
-	if test "$enable_shell32_SHFileOperation" -gt 1; then
-		abort "Patchset shell32-SHFileOperation disabled, but category-stable depends on that."
+	if test "$enable_shell32_SHFileOperation_Win9x" -gt 1; then
+		abort "Patchset shell32-SHFileOperation_Win9x disabled, but category-stable depends on that."
 	fi
 	if test "$enable_urlmon_CoInternetSetFeatureEnabled" -gt 1; then
 		abort "Patchset urlmon-CoInternetSetFeatureEnabled disabled, but category-stable depends on that."
@@ -1662,7 +1666,7 @@ if test "$enable_category_stable" -eq 1; then
 	enable_server_Delete_On_Close=1
 	enable_setupapi_SetupDiSetDeviceInstallParamsW=1
 	enable_shell32_RunDLL_CallEntry16=1
-	enable_shell32_SHFileOperation=1
+	enable_shell32_SHFileOperation_Win9x=1
 	enable_urlmon_CoInternetSetFeatureEnabled=1
 	enable_user32_DrawTextExW=1
 	enable_user32_WndProc=1
@@ -1723,9 +1727,9 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 	enable_ntdll_DllRedirects=1
 fi
 
-if test "$enable_shell32_SHFileOperation" -eq 1; then
+if test "$enable_shell32_SHFileOperation_Win9x" -eq 1; then
 	if test "$enable_shell32_Progress_Dialog" -gt 1; then
-		abort "Patchset shell32-Progress_Dialog disabled, but shell32-SHFileOperation depends on that."
+		abort "Patchset shell32-Progress_Dialog disabled, but shell32-SHFileOperation_Win9x depends on that."
 	fi
 	enable_shell32_Progress_Dialog=1
 fi
@@ -1734,7 +1738,11 @@ if test "$enable_shell32_Progress_Dialog" -eq 1; then
 	if test "$enable_kernel32_CopyFileEx" -gt 1; then
 		abort "Patchset kernel32-CopyFileEx disabled, but shell32-Progress_Dialog depends on that."
 	fi
+	if test "$enable_shell32_SHFileOperation_Move" -gt 1; then
+		abort "Patchset shell32-SHFileOperation_Move disabled, but shell32-Progress_Dialog depends on that."
+	fi
 	enable_kernel32_CopyFileEx=1
+	enable_shell32_SHFileOperation_Move=1
 fi
 
 if test "$enable_server_Shared_Memory" -eq 1; then
@@ -4832,10 +4840,26 @@ if test "$enable_shell32_Placeholder_Icons" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset shell32-SHFileOperation_Move
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#25207] SHFileOperation with FO_MOVE should create new directory on Vista+
+# |
+# | Modified files:
+# |   *	dlls/shell32/shlfileop.c, dlls/shell32/tests/shlfileop.c
+# |
+if test "$enable_shell32_SHFileOperation_Move" -eq 1; then
+	patch_apply shell32-SHFileOperation_Move/0001-shell32-Fix-SHFileOperation-FO_MOVE-for-creating-sub.patch
+	(
+		echo '+    { "Zhenbo Li", "shell32: Fix SHFileOperation(FO_MOVE) for creating subdirectories.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset shell32-Progress_Dialog
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	kernel32-SetFileInformationByHandle, server-File_Permissions, ntdll-FileDispositionInformation, kernel32-CopyFileEx
+# |   *	kernel32-SetFileInformationByHandle, server-File_Permissions, ntdll-FileDispositionInformation, kernel32-CopyFileEx,
+# | 	shell32-SHFileOperation_Move
 # |
 # | Modified files:
 # |   *	dlls/shell32/shell32.rc, dlls/shell32/shlfileop.c, dlls/shell32/shresdef.h
@@ -4912,11 +4936,11 @@ if test "$enable_shell32_SHCreateSessionKey" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset shell32-SHFileOperation
+# Patchset shell32-SHFileOperation_Win9x
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	kernel32-SetFileInformationByHandle, server-File_Permissions, ntdll-FileDispositionInformation, kernel32-CopyFileEx,
-# | 	shell32-Progress_Dialog
+# | 	shell32-SHFileOperation_Move, shell32-Progress_Dialog
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#37916] Anno 1602 installer depends on Windows 98 behavior of SHFileOperationW
@@ -4924,8 +4948,8 @@ fi
 # | Modified files:
 # |   *	dlls/shell32/shlfileop.c
 # |
-if test "$enable_shell32_SHFileOperation" -eq 1; then
-	patch_apply shell32-SHFileOperation/0001-shell32-Choose-return-value-for-SHFileOperationW-dep.patch
+if test "$enable_shell32_SHFileOperation_Win9x" -eq 1; then
+	patch_apply shell32-SHFileOperation_Win9x/0001-shell32-Choose-return-value-for-SHFileOperationW-dep.patch
 	(
 		echo '+    { "Michael Müller", "shell32: Choose return value for SHFileOperationW depending on windows version.", 1 },';
 	) >> "$patchlist"

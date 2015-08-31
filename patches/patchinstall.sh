@@ -1981,6 +1981,18 @@ if test "$enable_patchlist" -eq 1; then
 fi
 
 
+# Patchset d3d11-Fix_Compile
+# |
+# | Modified files:
+# |   *	dlls/d3d11/utils.c
+# |
+if test "$enable_d3d11_Fix_Compile" -eq 1; then
+	patch_apply d3d11-Fix_Compile/0001-d3d11-Fix-compile-failure-with-recent-version-of-gcc.patch
+	(
+		echo '+    { "Sebastian Lackner", "d3d11: Fix compile failure with recent version of gcc.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset Compiler_Warnings
 # |
 # | Modified files:
@@ -2284,18 +2296,6 @@ if test "$enable_crypt32_CMS_Certificates" -eq 1; then
 	patch_apply crypt32-CMS_Certificates/0001-crypt32-Skip-unknown-item-when-decoding-a-CMS-certif.patch
 	(
 		echo '+    { "Charles Davis", "crypt32: Skip unknown item when decoding a CMS certificate.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3d11-Fix_Compile
-# |
-# | Modified files:
-# |   *	dlls/d3d11/utils.c
-# |
-if test "$enable_d3d11_Fix_Compile" -eq 1; then
-	patch_apply d3d11-Fix_Compile/0001-d3d11-Fix-compile-failure-with-recent-version-of-gcc.patch
-	(
-		echo '+    { "Sebastian Lackner", "d3d11: Fix compile failure with recent version of gcc.", 1 },';
 	) >> "$patchlist"
 fi
 

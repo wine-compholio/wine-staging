@@ -300,6 +300,11 @@ def read_patchset(revision = None):
                     if i != j and any([fnmatch.fnmatch(f, val) for f in other_patch.modified_files]):
                         patch.auto_depends.add(j)
 
+            elif key == "apply-before":
+                for j, other_patch in all_patches.iteritems():
+                    if i != j and any([fnmatch.fnmatch(f, val) for f in other_patch.modified_files]):
+                        other_patch.auto_depends.add(i)
+
             elif key == "category":
                 val = "category-%s" % val
                 if name_to_id.has_key(val):
@@ -432,7 +437,7 @@ def select_patches(all_patches, indices, filename):
         selected_patches[i] = extract_patch(all_patches[i], filename)
     return selected_patches
 
-def resolve_dependencies(all_patches, index = None, depends = None):
+def resolve_dependencies(all_patches, index = None, depends = None, auto_deps = True):
     """Returns a sorted list with all dependencies for a given patch."""
 
     def _resolve(depends):
@@ -450,7 +455,7 @@ def resolve_dependencies(all_patches, index = None, depends = None):
             # Recusively resolve dependencies
             all_patches[i].verify_resolved = -1
             _resolve(all_patches[i].depends)
-            _resolve(all_patches[i].auto_depends)
+            if auto_deps: _resolve(all_patches[i].auto_depends)
             all_patches[i].verify_resolved = 1
             resolved.append(i)
 
@@ -459,8 +464,10 @@ def resolve_dependencies(all_patches, index = None, depends = None):
 
     resolved = []
     if depends is None:
-        depends = all_patches[index].depends
-    _resolve(depends)
+        _resolve(all_patches[index].depends)
+        if auto_deps: _resolve(all_patches[index].auto_depends)
+    else:
+        _resolve(depends)
     return resolved
 
 def generate_ifdefined(all_patches):
@@ -684,7 +691,7 @@ def generate_script(all_patches):
 
         # List dependencies (if any)
         if len(patch.depends):
-            depends = resolve_dependencies(all_patches, i)
+            depends = resolve_dependencies(all_patches, i, auto_deps=False)
             lines.append("# | This patchset has the following (direct or indirect) dependencies:\n")
             lines.append("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap(
                 ", ".join([all_patches[j].name for j in depends]), 120)))

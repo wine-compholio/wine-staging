@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "6056a3f1634a72e181fb3a03ca625aaa7720523e"
+	echo "d3177504b1cbf5029b505588928911be980eebec"
 }
 
 # Show version information
@@ -95,7 +95,6 @@ patch_enable_all ()
 	enable_comctl32_LoadIconMetric="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
-	enable_d3d11_Fix_Compile="$1"
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Skip_Tests="$1"
 	enable_d3d9_Surface_Refcount="$1"
@@ -369,9 +368,6 @@ patch_enable ()
 			;;
 		crypt32-CMS_Certificates)
 			enable_crypt32_CMS_Certificates="$2"
-			;;
-		d3d11-Fix_Compile)
-			enable_d3d11_Fix_Compile="$2"
 			;;
 		d3d9-DesktopWindow)
 			enable_d3d9_DesktopWindow="$2"
@@ -1988,18 +1984,6 @@ if test "$enable_patchlist" -eq 1; then
 	fi
 fi
 
-
-# Patchset d3d11-Fix_Compile
-# |
-# | Modified files:
-# |   *	dlls/d3d11/utils.c
-# |
-if test "$enable_d3d11_Fix_Compile" -eq 1; then
-	patch_apply d3d11-Fix_Compile/0001-d3d11-Fix-compile-failure-with-recent-version-of-gcc.patch
-	(
-		echo '+    { "Sebastian Lackner", "d3d11: Fix compile failure with recent version of gcc.", 1 },';
-	) >> "$patchlist"
-fi
 
 # Patchset Compiler_Warnings
 # |

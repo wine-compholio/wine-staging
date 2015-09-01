@@ -95,6 +95,7 @@ patch_enable_all ()
 	enable_comctl32_LoadIconMetric="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
+	enable_crypt32_CryptUnprotectMemory="$1"
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Skip_Tests="$1"
 	enable_d3d9_Surface_Refcount="$1"
@@ -368,6 +369,9 @@ patch_enable ()
 			;;
 		crypt32-CMS_Certificates)
 			enable_crypt32_CMS_Certificates="$2"
+			;;
+		crypt32-CryptUnprotectMemory)
+			enable_crypt32_CryptUnprotectMemory="$2"
 			;;
 		d3d9-DesktopWindow)
 			enable_d3d9_DesktopWindow="$2"
@@ -2288,6 +2292,18 @@ if test "$enable_crypt32_CMS_Certificates" -eq 1; then
 	patch_apply crypt32-CMS_Certificates/0001-crypt32-Skip-unknown-item-when-decoding-a-CMS-certif.patch
 	(
 		echo '+    { "Charles Davis", "crypt32: Skip unknown item when decoding a CMS certificate.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset crypt32-CryptUnprotectMemory
+# |
+# | Modified files:
+# |   *	dlls/crypt32/main.c
+# |
+if test "$enable_crypt32_CryptUnprotectMemory" -eq 1; then
+	patch_apply crypt32-CryptUnprotectMemory/0001-crypt32-Print-CryptUnprotectMemory-FIXME-only-once.patch
+	(
+		echo '+    { "Christian Costa", "crypt32: Print CryptUnprotectMemory FIXME only once.", 1 },';
 	) >> "$patchlist"
 fi
 

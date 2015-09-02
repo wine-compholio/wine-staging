@@ -3104,6 +3104,9 @@ fi
 
 # Patchset imagehlp-Cleanup
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#23455] Properly implement imagehlp.ImageLoad and ImageUnload
+# |
 # | Modified files:
 # |   *	dlls/imagehlp/access.c, dlls/imagehlp/modify.c, dlls/imagehlp/tests/integrity.c
 # |

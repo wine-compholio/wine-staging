@@ -489,12 +489,26 @@ def generate_ifdefined(all_patches):
 
                 # Reconstruct the state after applying the dependencies
                 original = get_wine_file(f)
-                for _, (_, p) in select_patches(enabled_patches, depends, f).iteritems():
-                    original = patchutils.apply_patch(original, p, fuzz=0)
+                selected_patches = select_patches(enabled_patches, depends, f)
+                failed = []
+
+                try:
+                    for j in depends:
+                        failed.append(j)
+                        original = patchutils.apply_patch(original, selected_patches[j][1], fuzz=0)
+                except patchutils.PatchApplyError:
+                    raise PatchUpdaterError("Changes to file %s don't apply: %s" %
+                                            (f, ", ".join([all_patches[j].name for j in failed])))
 
                 # Now apply the main patch
                 p = extract_patch(patch, f)[1]
-                patched = patchutils.apply_patch(original, p, fuzz=0)
+
+                try:
+                    failed.append(i)
+                    patched = patchutils.apply_patch(original, p, fuzz=0)
+                except patchutils.PatchApplyError:
+                    raise PatchUpdaterError("Changes to file %s don't apply: %s" %
+                                            (f, ", ".join([all_patches[j].name for j in failed])))
 
                 # Now get the diff between both
                 diff = patchutils.generate_ifdef_patch(original, patched, ifdef=patch.ifdefined)

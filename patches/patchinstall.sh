@@ -2975,21 +2975,25 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#32323] Implement an Arial replacement font
+# |   *	[#32342] Implement a Times New Roman replacement font
+# |   *	[#20456] Implement a Courier New replacement font
 # |   *	[#13829] Implement a Microsoft Yahei replacement font
 # |
 # | Modified files:
-# |   *	COPYING.arial, COPYING.cour, COPYING.msyh, LICENSE, fonts/Makefile.in, fonts/arial.sfd, fonts/arial.ttf, fonts/cour.sfd,
-# | 	fonts/cour.ttf, fonts/msyh.sfd, fonts/msyh.ttf
+# |   *	COPYING.arial, COPYING.cour, COPYING.msyh, COPYING.times, LICENSE, fonts/Makefile.in, fonts/arial.sfd, fonts/arial.ttf,
+# | 	fonts/cour.sfd, fonts/cour.ttf, fonts/msyh.sfd, fonts/msyh.ttf, fonts/times.sfd, fonts/times.ttf
 # |
 if test "$enable_fonts_Missing_Fonts" -eq 1; then
 	patch_apply fonts-Missing_Fonts/0001-fonts-Add-Liberation-Sans-as-an-Arial-replacement.patch
-	patch_apply fonts-Missing_Fonts/0002-fonts-Add-WenQuanYi-Micro-Hei-as-a-Microsoft-Yahei-r.patch
-	patch_apply fonts-Missing_Fonts/0003-fonts-Add-Courier-Prime-as-a-Courier-New-replacement.patch
-	patch_apply fonts-Missing_Fonts/0004-Add-licenses-for-fonts-as-separate-files.patch
+	patch_apply fonts-Missing_Fonts/0002-fonts-Add-Liberation-Serif-as-an-Times-New-Roman-rep.patch
+	patch_apply fonts-Missing_Fonts/0003-fonts-Add-Liberation-Mono-as-an-Courier-New-replacem.patch
+	patch_apply fonts-Missing_Fonts/0004-fonts-Add-WenQuanYi-Micro-Hei-as-a-Microsoft-Yahei-r.patch
+	patch_apply fonts-Missing_Fonts/0005-Add-licenses-for-fonts-as-separate-files.patch
 	(
 		echo '+    { "Torsten Kurbad", "fonts: Add Liberation Sans as an Arial replacement.", 2 },';
+		echo '+    { "Sebastian Lackner", "fonts: Add Liberation Serif as an Times New Roman replacement.", 1 },';
+		echo '+    { "Sebastian Lackner", "fonts: Add Liberation Mono as an Courier New replacement.", 1 },';
 		echo '+    { "Erich E. Hoover", "fonts: Add WenQuanYi Micro Hei as a Microsoft Yahei replacement.", 1 },';
-		echo '+    { "Erich E. Hoover", "fonts: Add Courier Prime as a Courier New replacement.", 1 },';
 		echo '+    { "Michael Müller", "Add licenses for fonts as separate files.", 1 },';
 	) >> "$patchlist"
 fi

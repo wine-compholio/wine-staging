@@ -145,6 +145,7 @@ patch_enable_all ()
 	enable_inetcpl_Default_Home="$1"
 	enable_iphlpapi_System_Ping="$1"
 	enable_iphlpapi_TCP_Table="$1"
+	enable_kernel32_COMSPEC="$1"
 	enable_kernel32_CompareStringEx="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Cwd_Startup_Info="$1"
@@ -519,6 +520,9 @@ patch_enable ()
 			;;
 		iphlpapi-TCP_Table)
 			enable_iphlpapi_TCP_Table="$2"
+			;;
+		kernel32-COMSPEC)
+			enable_kernel32_COMSPEC="$2"
 			;;
 		kernel32-CompareStringEx)
 			enable_kernel32_CompareStringEx="$2"
@@ -3167,6 +3171,18 @@ if test "$enable_iphlpapi_TCP_Table" -eq 1; then
 	patch_apply iphlpapi-TCP_Table/0001-iphlpapi-Implement-AllocateAndGetTcpExTableFromStack.patch
 	(
 		echo '+    { "Erich E. Hoover", "iphlpapi: Implement AllocateAndGetTcpExTableFromStack.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-COMSPEC
+# |
+# | Modified files:
+# |   *	dlls/kernel32/process.c, programs/cmd/wcmdmain.c
+# |
+if test "$enable_kernel32_COMSPEC" -eq 1; then
+	patch_apply kernel32-COMSPEC/0001-kernel32-Fallback-to-default-comspec-when-COMSPEC-is.patch
+	(
+		echo '+    { "Qian Hong", "kernel32: Fallback to default comspec when %COMSPEC% is not set.", 1 },';
 	) >> "$patchlist"
 fi
 

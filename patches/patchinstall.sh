@@ -244,6 +244,7 @@ patch_enable_all ()
 	enable_shell32_File_Property_Dialog="$1"
 	enable_shell32_IDragSourceHelper="$1"
 	enable_shell32_Icons="$1"
+	enable_shell32_Microsoft_Windows_Themes="$1"
 	enable_shell32_NewMenu_Interface="$1"
 	enable_shell32_Placeholder_Icons="$1"
 	enable_shell32_Progress_Dialog="$1"
@@ -817,6 +818,9 @@ patch_enable ()
 			;;
 		shell32-Icons)
 			enable_shell32_Icons="$2"
+			;;
+		shell32-Microsoft_Windows_Themes)
+			enable_shell32_Microsoft_Windows_Themes="$2"
 			;;
 		shell32-NewMenu_Interface)
 			enable_shell32_NewMenu_Interface="$2"
@@ -4829,6 +4833,21 @@ if test "$enable_shell32_Icons" -eq 1; then
 	patch_apply shell32-Icons/0001-shell32-Add-support-for-extra-large-and-jumbo-icon-l.patch
 	(
 		echo '+    { "Michael Müller", "shell32: Add support for extra large and jumbo icon lists.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shell32-Microsoft_Windows_Themes
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34910] Create Microsoft\Windows\Themes directory during Wineprefix creation
+# |
+# | Modified files:
+# |   *	dlls/shell32/shellpath.c
+# |
+if test "$enable_shell32_Microsoft_Windows_Themes" -eq 1; then
+	patch_apply shell32-Microsoft_Windows_Themes/0001-shell32-Create-Microsoft-Windows-Themes-directory-du.patch
+	(
+		echo '+    { "Sebastian Lackner", "shell32: Create Microsoft\\\\Windows\\\\Themes directory during Wineprefix creation.", 1 },';
 	) >> "$patchlist"
 fi
 

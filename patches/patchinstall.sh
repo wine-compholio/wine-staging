@@ -210,6 +210,7 @@ patch_enable_all ()
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
 	enable_openal32_EFX_Extension="$1"
+	enable_opencl_Deprecation="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_rasapi32_RasEnumDevicesA="$1"
@@ -716,6 +717,9 @@ patch_enable ()
 			;;
 		openal32-EFX_Extension)
 			enable_openal32_EFX_Extension="$2"
+			;;
+		opencl-Deprecation)
+			enable_opencl_Deprecation="$2"
 			;;
 		opengl32-Revert_Disable_Ext)
 			enable_opengl32_Revert_Disable_Ext="$2"
@@ -4335,6 +4339,18 @@ if test "$enable_openal32_EFX_Extension" -eq 1; then
 	patch_apply openal32-EFX_Extension/0001-openal32-Export-EFX-extension-functions.patch
 	(
 		echo '+    { "Michael Müller", "openal32: Export EFX extension functions.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset opencl-Deprecation
+# |
+# | Modified files:
+# |   *	dlls/opencl/opencl.c
+# |
+if test "$enable_opencl_Deprecation" -eq 1; then
+	patch_apply opencl-Deprecation/0001-opencl-Avoid-deprecation-warning-for-OpenCL-1.2-APIs.patch
+	(
+		echo '+    { "Sebastian Lackner", "opencl: Avoid deprecation warning for OpenCL 1.2 APIs.", 1 },';
 	) >> "$patchlist"
 fi
 

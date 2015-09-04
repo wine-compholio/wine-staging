@@ -49,7 +49,7 @@ Included bug fixes and improvements
 * Fix access violation in MSYS2 git when cloning repository
 * Fix error handling in DeferWindowPos when passing an invalid HWND ([Wine Bug #23187](https://bugs.winehq.org/show_bug.cgi?id=23187))
 * Fix failure to create anonymous file mapping after failed open_fd server call
-* Implement FolterImpl_Items and stubbed FolderItems interface
+* Implement FolderImpl_Items and stubbed FolderItems interface
 * Implement a Courier New replacement font ([Wine Bug #20456](https://bugs.winehq.org/show_bug.cgi?id=20456))
 * Implement a Times New Roman replacement font ([Wine Bug #32342](https://bugs.winehq.org/show_bug.cgi?id=32342))
 * Map EXDEV error code to STATUS_NOT_SAME_DEVICE

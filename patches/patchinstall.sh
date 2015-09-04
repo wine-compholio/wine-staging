@@ -4848,7 +4848,7 @@ fi
 if test "$enable_shell32_FolderItems_Stub_Iface" -eq 1; then
 	patch_apply shell32-FolderItems_Stub_Iface/0001-shell32-Implement-FolterImpl_Items-and-stubbed-Folde.patch
 	(
-		echo '+    { "Christian Costa", "shell32: Implement FolterImpl_Items and stubbed FolderItems interface.", 1 },';
+		echo '+    { "Christian Costa", "shell32: Implement FolderImpl_Items and stubbed FolderItems interface.", 1 },';
 	) >> "$patchlist"
 fi
 

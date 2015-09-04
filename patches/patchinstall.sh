@@ -3546,7 +3546,7 @@ fi
 if test "$enable_mfplat_MFTRegister" -eq 1; then
 	patch_apply mfplat-MFTRegister/0001-mfplat-Implement-MFTRegister.patch
 	(
-		echo '+    { "Michael Müller", "mfplat: Implement MFTRegister.", 1 },';
+		echo '+    { "Michael Müller", "mfplat: Implement MFTRegister.", 2 },';
 	) >> "$patchlist"
 fi
 

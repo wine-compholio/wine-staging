@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [13]:**
+**Bug fixes and features included in the next upcoming release [14]:**
 
 * Add stub for winspool.SetPrinterW level 8 ([Wine Bug #24645](https://bugs.winehq.org/show_bug.cgi?id=24645))
 * Allow non-nullterminated string as working directory in kernel32.create_startup_info
@@ -48,6 +48,7 @@ Included bug fixes and improvements
 * Fix access violation in MSYS2 git when cloning repository
 * Fix error handling in DeferWindowPos when passing an invalid HWND ([Wine Bug #23187](https://bugs.winehq.org/show_bug.cgi?id=23187))
 * Fix failure to create anonymous file mapping after failed open_fd server call
+* Implement FolterImpl_Items and stubbed FolderItems interface
 * Implement a Courier New replacement font ([Wine Bug #20456](https://bugs.winehq.org/show_bug.cgi?id=20456))
 * Implement a Times New Roman replacement font ([Wine Bug #32342](https://bugs.winehq.org/show_bug.cgi?id=32342))
 * Map EXDEV error code to STATUS_NOT_SAME_DEVICE

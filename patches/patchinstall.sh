@@ -2001,6 +2001,18 @@ if test "$enable_patchlist" -eq 1; then
 fi
 
 
+# Patchset opencl-Deprecation
+# |
+# | Modified files:
+# |   *	dlls/opencl/opencl.c
+# |
+if test "$enable_opencl_Deprecation" -eq 1; then
+	patch_apply opencl-Deprecation/0001-opencl-Avoid-deprecation-warning-for-OpenCL-1.2-APIs.patch
+	(
+		echo '+    { "Sebastian Lackner", "opencl: Avoid deprecation warning for OpenCL 1.2 APIs.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset Compiler_Warnings
 # |
 # | Modified files:
@@ -4339,18 +4351,6 @@ if test "$enable_openal32_EFX_Extension" -eq 1; then
 	patch_apply openal32-EFX_Extension/0001-openal32-Export-EFX-extension-functions.patch
 	(
 		echo '+    { "Michael Müller", "openal32: Export EFX extension functions.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset opencl-Deprecation
-# |
-# | Modified files:
-# |   *	dlls/opencl/opencl.c
-# |
-if test "$enable_opencl_Deprecation" -eq 1; then
-	patch_apply opencl-Deprecation/0001-opencl-Avoid-deprecation-warning-for-OpenCL-1.2-APIs.patch
-	(
-		echo '+    { "Sebastian Lackner", "opencl: Avoid deprecation warning for OpenCL 1.2 APIs.", 1 },';
 	) >> "$patchlist"
 fi
 

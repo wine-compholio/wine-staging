@@ -1,4 +1,4 @@
-From 3783cc16737b9ebebc9b00d90e981207843bc01e Mon Sep 17 00:00:00 2001
+From ff38f01388324b055bcda33d46929169f76ce3eb Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Mon, 29 Apr 2013 18:49:53 +0200
 Subject: wined3d: Send blits through the command stream.
@@ -7,12 +7,12 @@ This needs more work. This patch breaks error handling, and the split
 between surface_blt and surface_blt_ugly isn't particularly nice.
 ---
  dlls/wined3d/cs.c              |  50 +++++++
- dlls/wined3d/surface.c         | 307 ++++++++++++++++++++++-------------------
+ dlls/wined3d/surface.c         | 309 +++++++++++++++++++++++------------------
  dlls/wined3d/wined3d_private.h |   8 ++
- 3 files changed, 226 insertions(+), 139 deletions(-)
+ 3 files changed, 228 insertions(+), 139 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 77bb485..b5b5ece 100644
+index fcc5ed7..550206f 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -74,6 +74,7 @@ enum wined3d_cs_op
@@ -42,7 +42,7 @@ index 77bb485..b5b5ece 100644
  /* FIXME: The list synchronization probably isn't particularly fast. */
  static void wined3d_cs_list_enqueue(struct wined3d_cs_list *list, struct wined3d_cs_block *block)
  {
-@@ -1506,6 +1519,9 @@ static UINT wined3d_cs_exec_glfinish(struct wined3d_cs *cs, const void *data)
+@@ -1507,6 +1520,9 @@ static UINT wined3d_cs_exec_glfinish(struct wined3d_cs *cs, const void *data)
      struct wined3d_device *device = cs->device;
      struct wined3d_context *context;
  
@@ -52,7 +52,7 @@ index 77bb485..b5b5ece 100644
      context = context_acquire(device, NULL);
      context->gl_info->gl_ops.gl.p_glFinish();
      context_release(context);
-@@ -1717,6 +1733,38 @@ void wined3d_cs_emit_set_light_enable(struct wined3d_cs *cs, UINT idx, BOOL enab
+@@ -1718,6 +1734,38 @@ void wined3d_cs_emit_set_light_enable(struct wined3d_cs *cs, UINT idx, BOOL enab
      cs->ops->submit(cs);
  }
  
@@ -91,7 +91,7 @@ index 77bb485..b5b5ece 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_FENCE                      */ wined3d_cs_exec_fence,
-@@ -1757,6 +1805,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -1758,6 +1806,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_SET_PRIMITIVE_TYPE         */ wined3d_cs_exec_set_primitive_type,
      /* WINED3D_CS_OP_SET_LIGHT                  */ wined3d_cs_exec_set_light,
      /* WINED3D_CS_OP_SET_LIGHT_ENABLE           */ wined3d_cs_exec_set_light_enable,
@@ -99,7 +99,7 @@ index 77bb485..b5b5ece 100644
  };
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
-@@ -1831,6 +1880,7 @@ static DWORD WINAPI wined3d_cs_run(void *thread_param)
+@@ -1832,6 +1881,7 @@ static DWORD WINAPI wined3d_cs_run(void *thread_param)
  
      TRACE("Started.\n");
  
@@ -108,10 +108,10 @@ index 77bb485..b5b5ece 100644
      {
          struct wined3d_cs_block *block;
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index 0c25884..8883c9c 100644
+index bd048c2..8cec730 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
-@@ -5003,14 +5003,13 @@ const struct blit_shader cpu_blit =  {
+@@ -5002,14 +5002,13 @@ const struct blit_shader cpu_blit =  {
      cpu_blit_blit_surface,
  };
  
@@ -128,7 +128,7 @@ index 0c25884..8883c9c 100644
      BOOL scale, convert;
  
      static const DWORD simple_blit = WINEDDBLT_ASYNC
-@@ -5021,111 +5020,6 @@ HRESULT CDECL wined3d_surface_blt(struct wined3d_surface *dst_surface, const REC
+@@ -5020,111 +5019,6 @@ HRESULT CDECL wined3d_surface_blt(struct wined3d_surface *dst_surface, const REC
              | WINEDDBLT_DEPTHFILL
              | WINEDDBLT_DONOTWAIT;
  
@@ -240,7 +240,7 @@ index 0c25884..8883c9c 100644
      if (!device->d3d_initialized)
      {
          WARN("D3D not initialized, using fallback.\n");
-@@ -5168,8 +5062,8 @@ HRESULT CDECL wined3d_surface_blt(struct wined3d_surface *dst_surface, const REC
+@@ -5167,8 +5061,8 @@ HRESULT CDECL wined3d_surface_blt(struct wined3d_surface *dst_surface, const REC
      }
  
      scale = src_surface
@@ -251,7 +251,7 @@ index 0c25884..8883c9c 100644
      convert = src_surface && src_surface->resource.format->id != dst_surface->resource.format->id;
  
      dst_ds_flags = dst_surface->container->resource.format_flags
-@@ -5189,22 +5083,16 @@ HRESULT CDECL wined3d_surface_blt(struct wined3d_surface *dst_surface, const REC
+@@ -5188,22 +5082,16 @@ HRESULT CDECL wined3d_surface_blt(struct wined3d_surface *dst_surface, const REC
              TRACE("Depth fill.\n");
  
              if (!surface_convert_depth_to_float(dst_surface, fx->u5.dwFillDepth, &depth))
@@ -279,7 +279,7 @@ index 0c25884..8883c9c 100644
          }
      }
      else
-@@ -5235,8 +5123,8 @@ HRESULT CDECL wined3d_surface_blt(struct wined3d_surface *dst_surface, const REC
+@@ -5234,8 +5122,8 @@ HRESULT CDECL wined3d_surface_blt(struct wined3d_surface *dst_surface, const REC
                      palette, fx->u5.dwFillColor, &color))
                  goto fallback;
  
@@ -290,7 +290,7 @@ index 0c25884..8883c9c 100644
          }
          else
          {
-@@ -5264,9 +5152,9 @@ HRESULT CDECL wined3d_surface_blt(struct wined3d_surface *dst_surface, const REC
+@@ -5263,9 +5151,9 @@ HRESULT CDECL wined3d_surface_blt(struct wined3d_surface *dst_surface, const REC
                      TRACE("Not doing upload because of format conversion.\n");
                  else
                  {
@@ -302,7 +302,7 @@ index 0c25884..8883c9c 100644
                      {
                          if (!wined3d_resource_is_offscreen(&dst_surface->container->resource))
                          {
-@@ -5275,7 +5163,7 @@ HRESULT CDECL wined3d_surface_blt(struct wined3d_surface *dst_surface, const REC
+@@ -5274,7 +5162,7 @@ HRESULT CDECL wined3d_surface_blt(struct wined3d_surface *dst_surface, const REC
                                      dst_surface->container->resource.draw_binding);
                              context_release(context);
                          }
@@ -311,7 +311,7 @@ index 0c25884..8883c9c 100644
                      }
                  }
              }
-@@ -5299,50 +5187,191 @@ HRESULT CDECL wined3d_surface_blt(struct wined3d_surface *dst_surface, const REC
+@@ -5298,50 +5186,193 @@ HRESULT CDECL wined3d_surface_blt(struct wined3d_surface *dst_surface, const REC
                  wined3d_swapchain_present(dst_swapchain, NULL, NULL, dst_swapchain->win_handle, NULL, 0);
                  dst_swapchain->desc.swap_effect = swap_effect;
  
@@ -469,8 +469,10 @@ index 0c25884..8883c9c 100644
 +            return WINEDDERR_INVALIDRECT;
 +        }
 +
-+        dst_ds_flags = dst_surface->container->resource.format_flags & (WINED3DFMT_FLAG_DEPTH | WINED3DFMT_FLAG_STENCIL);
-+        src_ds_flags = src_surface->container->resource.format_flags & (WINED3DFMT_FLAG_DEPTH | WINED3DFMT_FLAG_STENCIL);
++        dst_ds_flags = dst_surface->container->resource.format_flags
++                & (WINED3DFMT_FLAG_DEPTH | WINED3DFMT_FLAG_STENCIL);
++        src_ds_flags = src_surface->container->resource.format_flags
++                & (WINED3DFMT_FLAG_DEPTH | WINED3DFMT_FLAG_STENCIL);
 +        if (src_ds_flags != dst_ds_flags)
 +        {
 +            WARN("Rejecting depth / stencil blit between incompatible formats.\n");
@@ -517,10 +519,10 @@ index 0c25884..8883c9c 100644
  
  static const struct wined3d_resource_ops surface_resource_ops =
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index ff3d49b..9fc2181 100644
+index e153b0b..77317a5 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2463,6 +2463,9 @@ void wined3d_surface_destroy(struct wined3d_surface *surface) DECLSPEC_HIDDEN;
+@@ -2491,6 +2491,9 @@ void wined3d_surface_destroy(struct wined3d_surface *surface) DECLSPEC_HIDDEN;
  void wined3d_surface_upload_data(struct wined3d_surface *surface, const struct wined3d_gl_info *gl_info,
          const struct wined3d_format *format, const RECT *src_rect, UINT src_pitch, const POINT *dst_point,
          BOOL srgb, const struct wined3d_const_bo_address *data) DECLSPEC_HIDDEN;
@@ -530,7 +532,7 @@ index ff3d49b..9fc2181 100644
  
  void draw_textured_quad(const struct wined3d_surface *src_surface, struct wined3d_context *context,
          const RECT *src_rect, const RECT *dst_rect, enum wined3d_texture_filter_type filter) DECLSPEC_HIDDEN;
-@@ -2612,6 +2615,7 @@ struct wined3d_cs
+@@ -2640,6 +2643,7 @@ struct wined3d_cs
      struct wined3d_device *device;
      struct wined3d_state state;
      HANDLE thread;
@@ -538,7 +540,7 @@ index ff3d49b..9fc2181 100644
      DWORD tls_idx;
      struct wined3d_surface *onscreen_depth_stencil;
  
-@@ -2690,6 +2694,10 @@ void wined3d_cs_emit_set_primitive_type(struct wined3d_cs *cs,
+@@ -2718,6 +2722,10 @@ void wined3d_cs_emit_set_primitive_type(struct wined3d_cs *cs,
          GLenum primitive_type) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_light(struct wined3d_cs *cs, const struct wined3d_light_info *light) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_light_enable(struct wined3d_cs *cs, UINT idx, BOOL enable) DECLSPEC_HIDDEN;
@@ -550,5 +552,5 @@ index ff3d49b..9fc2181 100644
  /* Direct3D terminology with little modifications. We do not have an issued state
   * because only the driver knows about it, but we have a created state because d3d
 -- 
-2.4.2
+2.5.1
 

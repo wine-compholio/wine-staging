@@ -1,4 +1,4 @@
-From d95011df395938acfe6f6c7a33f7c5c094e7df83 Mon Sep 17 00:00:00 2001
+From bf044ed200f71fa0d27d5b74254afb4cef8fe7ca Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Fri, 27 Sep 2013 17:04:47 +0200
 Subject: wined3d: Fence clear calls.
@@ -8,10 +8,10 @@ Subject: wined3d: Fence clear calls.
  1 file changed, 25 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index fb92286..bdb9279 100644
+index 23683d0..78731a0 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -540,7 +540,7 @@ static UINT wined3d_cs_exec_clear(struct wined3d_cs *cs, const void *data)
+@@ -550,7 +550,7 @@ static UINT wined3d_cs_exec_clear(struct wined3d_cs *cs, const void *data)
      const struct wined3d_cs_clear *op = data;
      struct wined3d_device *device;
      RECT draw_rect;
@@ -20,13 +20,13 @@ index fb92286..bdb9279 100644
  
      device = cs->device;
      wined3d_get_draw_rect(&cs->state, &draw_rect);
-@@ -548,6 +548,17 @@ static UINT wined3d_cs_exec_clear(struct wined3d_cs *cs, const void *data)
+@@ -558,6 +558,17 @@ static UINT wined3d_cs_exec_clear(struct wined3d_cs *cs, const void *data)
              &cs->state.fb, op->rect_count, op->rect_count ? op->rects : NULL, &draw_rect, op->flags,
              &op->color, op->depth, op->stencil);
  
 +    if (op->flags & WINED3DCLEAR_TARGET)
 +    {
-+        for (i = 0; i < sizeof(cs->state.fb.render_targets) / sizeof(*cs->state.fb.render_targets); i++)
++        for (i = 0; i < device->adapter->gl_info.limits.buffers; i++)
 +        {
 +            if (cs->state.fb.render_targets[i])
 +                wined3d_resource_dec_fence(cs->state.fb.render_targets[i]->resource);
@@ -38,7 +38,7 @@ index fb92286..bdb9279 100644
      return sizeof(*op) + sizeof(*op->rects) * extra_rects;
  }
  
-@@ -555,8 +566,9 @@ void wined3d_cs_emit_clear(struct wined3d_cs *cs, DWORD rect_count, const RECT *
+@@ -565,8 +576,9 @@ void wined3d_cs_emit_clear(struct wined3d_cs *cs, DWORD rect_count, const RECT *
          DWORD flags, const struct wined3d_color *color, float depth, DWORD stencil)
  {
      struct wined3d_cs_clear *op;
@@ -49,13 +49,13 @@ index fb92286..bdb9279 100644
  
      op = cs->ops->require_space(cs, size);
      op->opcode = WINED3D_CS_OP_CLEAR;
-@@ -568,6 +580,17 @@ void wined3d_cs_emit_clear(struct wined3d_cs *cs, DWORD rect_count, const RECT *
+@@ -578,6 +590,17 @@ void wined3d_cs_emit_clear(struct wined3d_cs *cs, DWORD rect_count, const RECT *
      op->depth = depth;
      op->stencil = stencil;
  
 +    if (flags & WINED3DCLEAR_TARGET)
 +    {
-+        for (i = 0; i < sizeof(state->fb.render_targets) / sizeof(*state->fb.render_targets); i++)
++        for (i = 0; i < cs->device->adapter->gl_info.limits.buffers; i++)
 +        {
 +            if (state->fb.render_targets[i])
 +                wined3d_resource_inc_fence(state->fb.render_targets[i]->resource);
@@ -68,5 +68,5 @@ index fb92286..bdb9279 100644
  }
  
 -- 
-2.1.3
+2.5.1
 

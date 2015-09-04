@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "76c43d817746bb9c81b36e0d0bec4bb0b2ffbdbb"
+	echo "253a587e471a653e1b5ed590280452f43679aa6d"
 }
 
 # Show version information
@@ -5743,7 +5743,7 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/0176-wined3d-Destroy-samplers-through-the-command-stream.patch
 	patch_apply wined3d-CSMT_Main/0177-wined3d-Hack-to-reject-unsupported-color-fills.patch
 	patch_apply wined3d-CSMT_Main/0178-wined3d-Alloc-the-buffer-map-array-before-mapping-th.patch
-	patch_apply wined3d-CSMT_Main/0180-wined3d-Avoid-unnecessary-call-to-wined3d_resource_g.patch
+	patch_apply wined3d-CSMT_Main/0179-wined3d-Avoid-unnecessary-call-to-wined3d_resource_g.patch
 	patch_apply wined3d-CSMT_Main/9998-wined3d-Enable-CSMT-by-default-print-a-winediag-mess.patch
 	patch_apply wined3d-CSMT_Main/9999-IfDefined.patch
 	(

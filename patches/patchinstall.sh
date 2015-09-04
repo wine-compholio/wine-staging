@@ -126,6 +126,7 @@ patch_enable_all ()
 	enable_dinput_Events="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
+	enable_dwmapi_DwmUpdateThumbnailProperties="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
 	enable_dxgi_GetDesc="$1"
@@ -466,6 +467,9 @@ patch_enable ()
 			;;
 		dsound-Fast_Mixer)
 			enable_dsound_Fast_Mixer="$2"
+			;;
+		dwmapi-DwmUpdateThumbnailProperties)
+			enable_dwmapi_DwmUpdateThumbnailProperties="$2"
 			;;
 		dxdiagn-Enumerate_DirectSound)
 			enable_dxdiagn_Enumerate_DirectSound="$2"
@@ -2858,6 +2862,18 @@ if test "$enable_dsound_EAX" -eq 1; then
 		echo '+    { "Mark Harmstone", "dsound: Implement EAX late all-pass filter.", 1 },';
 		echo '+    { "Sebastian Lackner", "dsound: Various improvements to EAX support.", 1 },';
 		echo '+    { "Sebastian Lackner", "dsound: Allow disabling of EAX support in the registry.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dwmapi-DwmUpdateThumbnailProperties
+# |
+# | Modified files:
+# |   *	dlls/dwmapi/dwmapi.spec, dlls/dwmapi/dwmapi_main.c, include/dwmapi.h
+# |
+if test "$enable_dwmapi_DwmUpdateThumbnailProperties" -eq 1; then
+	patch_apply dwmapi-DwmUpdateThumbnailProperties/0001-dwmapi-Add-DwmUpdateThumbnailProperties-stub.patch
+	(
+		echo '+    { "Alistair Leslie-Hughes", "dwmapi: Add DwmUpdateThumbnailProperties stub.", 1 },';
 	) >> "$patchlist"
 fi
 

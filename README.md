@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [15]:**
+**Bug fixes and features included in the next upcoming release [16]:**
 
 * Add stub for dwmapi.DwmUpdateThumbnailProperties
 * Add stub for winspool.SetPrinterW level 8 ([Wine Bug #24645](https://bugs.winehq.org/show_bug.cgi?id=24645))
@@ -56,6 +56,7 @@ Included bug fixes and improvements
 * Return a dummy BIOS name in Win32_BIOS record
 * SHFileOperation with FO_MOVE should create new directory on Vista+ ([Wine Bug #25207](https://bugs.winehq.org/show_bug.cgi?id=25207))
 * Translate flags in LaunchINFSectionW
+* Use proper glyph names in wineps driver to allow copying text from generated PDF files ([Wine Bug #6416](https://bugs.winehq.org/show_bug.cgi?id=6416))
 
 
 **Bug fixes and features in Wine Staging 1.7.50 [242]:**

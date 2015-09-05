@@ -318,6 +318,7 @@ patch_enable_all ()
 	enable_ws2_32_APC_Performance="$1"
 	enable_ws2_32_Connect_Time="$1"
 	enable_ws2_32_TransmitFile="$1"
+	enable_ws2_32_WSACleanup="$1"
 	enable_ws2_32_WSAPoll="$1"
 	enable_ws2_32_WriteWatches="$1"
 	enable_ws2_32_getaddrinfo="$1"
@@ -1044,6 +1045,9 @@ patch_enable ()
 			;;
 		ws2_32-TransmitFile)
 			enable_ws2_32_TransmitFile="$2"
+			;;
+		ws2_32-WSACleanup)
+			enable_ws2_32_WSACleanup="$2"
 			;;
 		ws2_32-WSAPoll)
 			enable_ws2_32_WSAPoll="$2"
@@ -6375,6 +6379,21 @@ if test "$enable_ws2_32_TransmitFile" -eq 1; then
 		echo '+    { "Erich E. Hoover", "ws2_32: Add asynchronous support for TransmitFile.", 2 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_DISCONNECT to TransmitFile.", 1 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_REUSE_SOCKET to TransmitFile.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ws2_32-WSACleanup
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#18670] Properly close sockets when WSACleanup is called
+# |
+# | Modified files:
+# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, server/protocol.def, server/sock.c
+# |
+if test "$enable_ws2_32_WSACleanup" -eq 1; then
+	patch_apply ws2_32-WSACleanup/0001-ws2_32-Proper-WSACleanup-implementation-using-winese.patch
+	(
+		echo '+    { "Matt Durgavich", "ws2_32: Proper WSACleanup implementation using wineserver function.", 2 },';
 	) >> "$patchlist"
 fi
 

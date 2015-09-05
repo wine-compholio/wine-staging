@@ -1,0 +1,108 @@
+From 0002cf1a076fddb1eecef95f1177ae6562cda785 Mon Sep 17 00:00:00 2001
+From: Matt Durgavich <mattdurgavich@gmail.com>
+Date: Sun, 30 Aug 2015 11:04:08 -0400
+Subject: ws2_32: Proper WSACleanup implementation using wineserver function
+ (try 2)
+
+---
+ dlls/ws2_32/socket.c     | 22 ++++++++++++++++------
+ dlls/ws2_32/tests/sock.c |  5 ++---
+ server/protocol.def      |  3 +++
+ server/sock.c            |  9 +++++++++
+ 4 files changed, 30 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
+index ca82ec9..f153de1 100644
+--- a/dlls/ws2_32/socket.c
++++ b/dlls/ws2_32/socket.c
+@@ -1469,13 +1469,23 @@ int WINAPI WSAStartup(WORD wVersionRequested, LPWSADATA lpWSAData)
+  */
+ INT WINAPI WSACleanup(void)
+ {
+-    if (num_startup) {
+-        num_startup--;
+-        TRACE("pending cleanups: %d\n", num_startup);
+-        return 0;
++    if (!num_startup)
++    {
++        SetLastError(WSANOTINITIALISED);
++        return SOCKET_ERROR;
+     }
+-    SetLastError(WSANOTINITIALISED);
+-    return SOCKET_ERROR;
++
++    if (!--num_startup)
++    {
++        SERVER_START_REQ(socket_cleanup)
++        {
++            wine_server_call( req );
++        }
++        SERVER_END_REQ;
++    }
++
++    TRACE("pending cleanups: %d\n", num_startup);
++    return 0;
+ }
+ 
+ 
+diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
+index 2d14496..204b852 100644
+--- a/dlls/ws2_32/tests/sock.c
++++ b/dlls/ws2_32/tests/sock.c
+@@ -1119,20 +1119,19 @@ static void test_WithWSAStartup(void)
+     ok(res == 0, "WSAStartup() failed unexpectedly: %d\n", res);
+ 
+     /* show that sockets are destroyed automatically after WSACleanup */
+-    todo_wine {
+     SetLastError(0xdeadbeef);
+     res = send(src, "TEST", 4, 0);
+     error = WSAGetLastError();
+     ok(res == SOCKET_ERROR, "send should have failed\n");
++    todo_wine
+     ok(error == WSAENOTSOCK, "expected 10038, got %d\n", error);
+ 
+     SetLastError(0xdeadbeef);
+     res = closesocket(dst);
+     error = WSAGetLastError();
+     ok(res == SOCKET_ERROR, "closesocket should have failed\n");
++    todo_wine
+     ok(error == WSAENOTSOCK, "expected 10038, got %d\n", error);
+-    }
+-
+     closesocket(src);
+     closesocket(dst);
+ 
+diff --git a/server/protocol.def b/server/protocol.def
+index c313006..2dccb9a 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -942,6 +942,9 @@ struct rawinput_device
+     obj_handle_t handle;       /* handle to close */
+ @END
+ 
++/* Close all sockets for the current process */
++@REQ(socket_cleanup)
++@END
+ 
+ /* Set a handle information */
+ @REQ(set_handle_info)
+diff --git a/server/sock.c b/server/sock.c
+index 67d6416e..98f8176 100644
+--- a/server/sock.c
++++ b/server/sock.c
+@@ -1383,3 +1383,12 @@ DECL_HANDLER(get_socket_info)
+ 
+     release_object( &sock->obj );
+ }
++
++DECL_HANDLER(socket_cleanup)
++{
++    unsigned int index = 0;
++    obj_handle_t sock;
++
++    while ((sock = enumerate_handles(current->process, &sock_ops, &index)))
++        close_handle(current->process, sock);
++}
+-- 
+2.5.1
+

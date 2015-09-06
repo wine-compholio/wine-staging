@@ -92,6 +92,7 @@ patch_enable_all ()
 	enable_api_ms_win_crt_Stub_DLLs="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_combase_String="$1"
+	enable_comctl32_Button_Theming="$1"
 	enable_comctl32_LoadIconMetric="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
@@ -368,6 +369,9 @@ patch_enable ()
 			;;
 		combase-String)
 			enable_combase_String="$2"
+			;;
+		comctl32-Button_Theming)
+			enable_comctl32_Button_Theming="$2"
 			;;
 		comctl32-LoadIconMetric)
 			enable_comctl32_LoadIconMetric="$2"
@@ -2289,6 +2293,21 @@ if test "$enable_combase_String" -eq 1; then
 	patch_apply combase-String/0001-combase-implement-WindowsSubstring-try-2.patch
 	(
 		echo '+    { "Thomas Pointhuber", "combase: implement WindowsSubstring.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset comctl32-Button_Theming
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37584] Properly render themed buttons when they are pressed
+# |
+# | Modified files:
+# |   *	dlls/comctl32/theme_button.c
+# |
+if test "$enable_comctl32_Button_Theming" -eq 1; then
+	patch_apply comctl32-Button_Theming/0001-comctl32-fix-buttons-becoming-unthemed-when-pressed-.patch
+	(
+		echo '+    { "Samuel Kim", "comctl32: fix buttons becoming unthemed when pressed/released Fixes 37584.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -158,6 +158,7 @@ patch_enable_all ()
 	enable_kernel32_Profile="$1"
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
 	enable_kernel32_SetFileInformationByHandle="$1"
+	enable_kernel32_ThreadGroupAffinity="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
 	enable_kernel32_VerifyVersionInfo="$1"
 	enable_libs_Debug_Channel="$1"
@@ -565,6 +566,9 @@ patch_enable ()
 			;;
 		kernel32-SetFileInformationByHandle)
 			enable_kernel32_SetFileInformationByHandle="$2"
+			;;
+		kernel32-ThreadGroupAffinity)
+			enable_kernel32_ThreadGroupAffinity="$2"
 			;;
 		kernel32-TimezoneInformation_Registry)
 			enable_kernel32_TimezoneInformation_Registry="$2"
@@ -3503,6 +3507,24 @@ if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
 	patch_apply kernel32-SetFileCompletionNotificationModes/0001-kernel32-Fake-success-in-SetFileCompletionNotificati.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32: Fake success in SetFileCompletionNotificationModes.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-ThreadGroupAffinity
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36549] Implement {Set,Get}ThreadGroupAffinity and related ntdll functions
+# |
+# | Modified files:
+# |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/tests/thread.c, dlls/kernel32/thread.c, dlls/ntdll/thread.c,
+# | 	include/winternl.h
+# |
+if test "$enable_kernel32_ThreadGroupAffinity" -eq 1; then
+	patch_apply kernel32-ThreadGroupAffinity/0001-ntdll-Implement-ThreadGroupInformation-class.patch
+	patch_apply kernel32-ThreadGroupAffinity/0002-kernel32-Implement-Set-GetThreadGroupAffinity.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Implement ThreadGroupInformation class.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Implement Set/GetThreadGroupAffinity.", 1 },';
 	) >> "$patchlist"
 fi
 

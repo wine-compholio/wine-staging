@@ -1,0 +1,275 @@
+From 318239782eedd7da56d610d448c17b355ab0f1be Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 6 Sep 2015 06:19:40 +0200
+Subject: kernel32: Implement Set/GetThreadGroupAffinity.
+
+---
+ dlls/kernel32/kernel32.spec  |   4 +-
+ dlls/kernel32/tests/thread.c | 142 ++++++++++++++++++++++++++++++++-----------
+ dlls/kernel32/thread.c       |  46 ++++++++++++++
+ 3 files changed, 156 insertions(+), 36 deletions(-)
+
+diff --git a/dlls/kernel32/kernel32.spec b/dlls/kernel32/kernel32.spec
+index 77e55e1..bda7c9d 100644
+--- a/dlls/kernel32/kernel32.spec
++++ b/dlls/kernel32/kernel32.spec
+@@ -844,7 +844,7 @@
+ @ stdcall GetTempPathW(long ptr)
+ @ stdcall GetThreadContext(long ptr)
+ @ stdcall GetThreadErrorMode()
+-# @ stub GetThreadGroupAffinity
++@ stdcall GetThreadGroupAffinity(long ptr)
+ @ stdcall GetThreadId(ptr)
+ # @ stub GetThreadIdealProcessorEx
+ @ stdcall GetThreadIOPendingFlag(long ptr)
+@@ -1443,7 +1443,7 @@
+ @ stdcall SetThreadContext(long ptr)
+ @ stdcall SetThreadErrorMode(long ptr)
+ @ stdcall SetThreadExecutionState(long)
+-# @ stub SetThreadGroupAffinity
++@ stdcall SetThreadGroupAffinity(long ptr ptr)
+ @ stdcall SetThreadIdealProcessor(long long)
+ # @ stub SetThreadIdealProcessorEx
+ @ stdcall SetThreadLocale(long)
+diff --git a/dlls/kernel32/tests/thread.c b/dlls/kernel32/tests/thread.c
+index d0fbfa4..3b4eab8 100644
+--- a/dlls/kernel32/tests/thread.c
++++ b/dlls/kernel32/tests/thread.c
+@@ -99,6 +99,9 @@ static void (WINAPI *pSubmitThreadpoolWork)(PTP_WORK);
+ static void (WINAPI *pWaitForThreadpoolWorkCallbacks)(PTP_WORK,BOOL);
+ static void (WINAPI *pCloseThreadpoolWork)(PTP_WORK);
+ static NTSTATUS (WINAPI *pNtQueryInformationThread)(HANDLE,THREADINFOCLASS,PVOID,ULONG,PULONG);
++static BOOL (WINAPI *pGetThreadGroupAffinity)(HANDLE,GROUP_AFFINITY*);
++static BOOL (WINAPI *pSetThreadGroupAffinity)(HANDLE,const GROUP_AFFINITY*,GROUP_AFFINITY*);
++static NTSTATUS (WINAPI *pNtSetInformationThread)(HANDLE,THREADINFOCLASS,LPCVOID,ULONG);
+ 
+ static HANDLE create_target_process(const char *arg)
+ {
+@@ -877,6 +880,15 @@ static VOID test_thread_processor(void)
+    retMask = SetThreadAffinityMask(curthread,~0);
+    ok(broken(retMask==0) || retMask==processMask,
+       "SetThreadAffinityMask(thread,-1) failed to request all processors.\n");
++
++    if (retMask == processMask)
++    {
++        /* Show that the "all processors" flag is handled in ntdll/kernel */
++        DWORD_PTR mask = ~0;
++        NTSTATUS status = pNtSetInformationThread(curthread, ThreadAffinityMask, &mask, sizeof(mask));
++        ok(status == STATUS_SUCCESS, "Expected STATUS_SUCCESS in NtSetInformationThread, got %x\n", status);
++    }
++
+    if (retMask == processMask && sizeof(ULONG_PTR) > sizeof(ULONG))
+    {
+        /* only the low 32-bits matter */
+@@ -886,41 +898,99 @@ static VOID test_thread_processor(void)
+        ok(retMask == processMask, "SetThreadAffinityMask failed\n");
+    }
+ /* NOTE: This only works on WinNT/2000/XP) */
+-   if (pSetThreadIdealProcessor) {
+-     SetLastError(0xdeadbeef);
+-     error=pSetThreadIdealProcessor(curthread,0);
+-     if (GetLastError()==ERROR_CALL_NOT_IMPLEMENTED)
+-     {
+-       win_skip("SetThreadIdealProcessor is not implemented\n");
+-       return;
+-     }
+-     ok(error!=-1, "SetThreadIdealProcessor failed\n");
+-
+-     if (is_wow64)
+-     {
+-         SetLastError(0xdeadbeef);
+-         error=pSetThreadIdealProcessor(curthread,MAXIMUM_PROCESSORS+1);
+-         todo_wine
+-         ok(error!=-1, "SetThreadIdealProcessor failed for %u on Wow64\n", MAXIMUM_PROCESSORS+1);
+-
+-         SetLastError(0xdeadbeef);
+-         error=pSetThreadIdealProcessor(curthread,65);
+-         ok(error==-1, "SetThreadIdealProcessor succeeded with an illegal processor #\n");
+-         ok(GetLastError()==ERROR_INVALID_PARAMETER,
+-            "Expected ERROR_INVALID_PARAMETER, got %d\n", GetLastError());
+-     }
+-     else
+-     {
+-         SetLastError(0xdeadbeef);
+-         error=pSetThreadIdealProcessor(curthread,MAXIMUM_PROCESSORS+1);
+-         ok(error==-1, "SetThreadIdealProcessor succeeded with an illegal processor #\n");
+-         ok(GetLastError()==ERROR_INVALID_PARAMETER,
+-            "Expected ERROR_INVALID_PARAMETER, got %d\n", GetLastError());
+-     }
++    if (pSetThreadIdealProcessor)
++    {
++        SetLastError(0xdeadbeef);
++        error=pSetThreadIdealProcessor(curthread,0);
++        if (GetLastError()!=ERROR_CALL_NOT_IMPLEMENTED)
++        {
++            ok(error!=-1, "SetThreadIdealProcessor failed\n");
++
++            if (is_wow64)
++            {
++                SetLastError(0xdeadbeef);
++                error=pSetThreadIdealProcessor(curthread,MAXIMUM_PROCESSORS+1);
++                todo_wine
++                ok(error!=-1, "SetThreadIdealProcessor failed for %u on Wow64\n", MAXIMUM_PROCESSORS+1);
++
++                SetLastError(0xdeadbeef);
++                error=pSetThreadIdealProcessor(curthread,65);
++                ok(error==-1, "SetThreadIdealProcessor succeeded with an illegal processor #\n");
++                ok(GetLastError()==ERROR_INVALID_PARAMETER,
++                  "Expected ERROR_INVALID_PARAMETER, got %d\n", GetLastError());
++            }
++            else
++            {
++                SetLastError(0xdeadbeef);
++                error=pSetThreadIdealProcessor(curthread,MAXIMUM_PROCESSORS+1);
++                ok(error==-1, "SetThreadIdealProcessor succeeded with an illegal processor #\n");
++                ok(GetLastError()==ERROR_INVALID_PARAMETER,
++                  "Expected ERROR_INVALID_PARAMETER, got %d\n", GetLastError());
++            }
++
++            error=pSetThreadIdealProcessor(curthread,MAXIMUM_PROCESSORS);
++            ok(error!=-1, "SetThreadIdealProcessor failed\n");
++        }
++        else
++          win_skip("SetThreadIdealProcessor is not implemented\n");
++    }
+ 
+-     error=pSetThreadIdealProcessor(curthread,MAXIMUM_PROCESSORS);
+-     ok(error!=-1, "SetThreadIdealProcessor failed\n");
+-   }
++    if (pGetThreadGroupAffinity && pSetThreadGroupAffinity)
++    {
++        GROUP_AFFINITY affinity, affinity_new;
++        NTSTATUS status;
++
++        memset(&affinity, 0, sizeof(affinity));
++        ok(pGetThreadGroupAffinity(curthread, &affinity), "GetThreadGroupAffinity failed\n");
++
++        SetLastError(0xdeadbeef);
++        ok(!pGetThreadGroupAffinity(curthread, NULL), "GetThreadGroupAffinity succeeded\n");
++        ok(GetLastError() == ERROR_INVALID_PARAMETER,
++           "Expected ERROR_INVALID_PARAMETER, got %d\n", GetLastError());
++        ok(affinity.Group == 0, "Expected group 0 got %u\n", affinity.Group);
++
++        memset(&affinity_new, 0, sizeof(affinity_new));
++        affinity_new.Group = 0;
++        affinity_new.Mask  = affinity.Mask;
++        ok(pSetThreadGroupAffinity(curthread, &affinity_new, &affinity), "SetThreadGroupAffinity failed\n");
++        ok(affinity_new.Mask == affinity.Mask, "Expected old affinity mask %lx, got %lx\n",
++           affinity_new.Mask, affinity.Mask);
++
++        /* show that the "all processors" flag is not supported for SetThreadGroupAffinity */
++        affinity_new.Group = 0;
++        affinity_new.Mask  = ~0;
++        SetLastError(0xdeadbeef);
++        ok(!pSetThreadGroupAffinity(curthread, &affinity_new, NULL), "SetThreadGroupAffinity succeeded\n");
++        ok(GetLastError() == ERROR_INVALID_PARAMETER,
++           "Expected ERROR_INVALID_PARAMETER, got %d\n", GetLastError());
++
++        affinity_new.Group = 1; /* assumes that you have less than 64 logical processors */
++        affinity_new.Mask  = 0x1;
++        SetLastError(0xdeadbeef);
++        ok(!pSetThreadGroupAffinity(curthread, &affinity_new, NULL), "SetThreadGroupAffinity succeeded\n");
++        ok(GetLastError() == ERROR_INVALID_PARAMETER,
++           "Expected ERROR_INVALID_PARAMETER, got %d\n", GetLastError());
++
++        SetLastError(0xdeadbeef);
++        ok(!pSetThreadGroupAffinity(curthread, NULL, NULL), "SetThreadGroupAffinity succeeded\n");
++        ok(GetLastError() == ERROR_NOACCESS,
++           "Expected ERROR_NOACCESS, got %d\n", GetLastError());
++
++        /* show that the ERROR_NOACCESS was set in ntdll */
++        status = pNtSetInformationThread(curthread, ThreadGroupInformation, NULL, sizeof(affinity_new));
++        ok(status == STATUS_ACCESS_VIOLATION,
++           "Expected STATUS_ACCESS_VIOLATION, got %08x\n", status);
++
++        /* restore original mask */
++        affinity_new.Group = 0;
++        affinity_new.Mask  = affinity.Mask;
++        SetLastError(0xdeadbeef);
++        ok(pSetThreadGroupAffinity(curthread, &affinity_new, &affinity), "SetThreadGroupAffinity failed\n");
++        ok(affinity_new.Mask == affinity.Mask, "Expected old affinity mask %lx, got %lx\n",
++           affinity_new.Mask, affinity.Mask);
++    }
++    else
++      win_skip("Get/SetThreadGroupAffinity not available\n");
+ }
+ 
+ static VOID test_GetThreadExitCode(void)
+@@ -1833,6 +1903,9 @@ static void init_funcs(void)
+     X(SubmitThreadpoolWork);
+     X(WaitForThreadpoolWorkCallbacks);
+     X(CloseThreadpoolWork);
++
++    X(GetThreadGroupAffinity);
++    X(SetThreadGroupAffinity);
+ #undef X
+ 
+ #define X(f) p##f = (void*)GetProcAddress(ntdll, #f)
+@@ -1840,6 +1913,7 @@ static void init_funcs(void)
+    {
+        X(NtQueryInformationThread);
+        X(RtlGetThreadErrorMode);
++       X(NtSetInformationThread);
+    }
+ #undef X
+ }
+diff --git a/dlls/kernel32/thread.c b/dlls/kernel32/thread.c
+index c992e0d..0e9de82 100644
+--- a/dlls/kernel32/thread.c
++++ b/dlls/kernel32/thread.c
+@@ -378,6 +378,52 @@ BOOL WINAPI SetThreadStackGuarantee(PULONG stacksize)
+     return TRUE;
+ }
+ 
++/***********************************************************************
++ *              GetThreadGroupAffinity (KERNEL32.@)
++ */
++BOOL WINAPI GetThreadGroupAffinity( HANDLE thread, GROUP_AFFINITY *affinity )
++{
++    NTSTATUS status;
++
++    if (!affinity)
++    {
++        SetLastError( ERROR_INVALID_PARAMETER );
++        return FALSE;
++    }
++
++    status = NtQueryInformationThread( thread, ThreadGroupInformation,
++                                       affinity, sizeof(*affinity), NULL );
++    if (status)
++    {
++        SetLastError( RtlNtStatusToDosError(status) );
++        return FALSE;
++    }
++
++    return TRUE;
++}
++
++/***********************************************************************
++ *              SetThreadGroupAffinity (KERNEL32.@)
++ */
++BOOL WINAPI SetThreadGroupAffinity( HANDLE thread, const GROUP_AFFINITY *affinity_new,
++                                    GROUP_AFFINITY *affinity_old )
++{
++    NTSTATUS status;
++
++    if (affinity_old && !GetThreadGroupAffinity( thread, affinity_old ))
++        return FALSE;
++
++    status = NtSetInformationThread( thread, ThreadGroupInformation,
++                                     affinity_new, sizeof(*affinity_new) );
++    if (status)
++    {
++        SetLastError( RtlNtStatusToDosError(status) );
++        return FALSE;
++    }
++
++    return TRUE;
++}
++
+ /**********************************************************************
+  *           SetThreadAffinityMask   (KERNEL32.@)
+  */
+-- 
+2.5.1
+

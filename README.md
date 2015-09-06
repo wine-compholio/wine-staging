@@ -39,7 +39,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [17]:**
+**Bug fixes and features included in the next upcoming release [18]:**
 
 * Add stub for dwmapi.DwmUpdateThumbnailProperties
 * Add stub for winspool.SetPrinterW level 8 ([Wine Bug #24645](https://bugs.winehq.org/show_bug.cgi?id=24645))
@@ -52,6 +52,7 @@ Included bug fixes and improvements
 * Implement FolderImpl_Items and stubbed FolderItems interface
 * Implement a Courier New replacement font ([Wine Bug #20456](https://bugs.winehq.org/show_bug.cgi?id=20456))
 * Implement a Times New Roman replacement font ([Wine Bug #32342](https://bugs.winehq.org/show_bug.cgi?id=32342))
+* Implement {Set,Get}ThreadGroupAffinity and related ntdll functions ([Wine Bug #36549](https://bugs.winehq.org/show_bug.cgi?id=36549))
 * Map EXDEV error code to STATUS_NOT_SAME_DEVICE
 * Properly close sockets when WSACleanup is called ([Wine Bug #18670](https://bugs.winehq.org/show_bug.cgi?id=18670))
 * Return a dummy BIOS name in Win32_BIOS record

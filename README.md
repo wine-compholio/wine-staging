@@ -39,8 +39,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [20]:**
+**Bug fixes and features included in the next upcoming release [21]:**
 
+* Add IHTMLLocation::hash property's getter implementation ([Wine Bug #32967](https://bugs.winehq.org/show_bug.cgi?id=32967))
 * Add stub for dwmapi.DwmUpdateThumbnailProperties
 * Add stub for winspool.SetPrinterW level 8 ([Wine Bug #24645](https://bugs.winehq.org/show_bug.cgi?id=24645))
 * Allow non-nullterminated string as working directory in kernel32.create_startup_info

@@ -170,6 +170,7 @@ patch_enable_all ()
 	enable_mmdevapi_AEV_Stubs="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
+	enable_mshtml_HTMLLocation_put_hash="$1"
 	enable_msvcp90_basic_string_dtor="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvcrt_StdHandle_RefCount="$1"
@@ -605,6 +606,9 @@ patch_enable ()
 			;;
 		mscoree-CorValidateImage)
 			enable_mscoree_CorValidateImage="$2"
+			;;
+		mshtml-HTMLLocation_put_hash)
+			enable_mshtml_HTMLLocation_put_hash="$2"
 			;;
 		msvcp90-basic_string_dtor)
 			enable_msvcp90_basic_string_dtor="$2"
@@ -3700,6 +3704,21 @@ if test "$enable_mscoree_CorValidateImage" -eq 1; then
 	patch_apply mscoree-CorValidateImage/0001-mscoree-Implement-_CorValidateImage.patch
 	(
 		echo '+    { "Michael Müller", "mscoree: Implement semi-stub for _CorValidateImage.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset mshtml-HTMLLocation_put_hash
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#32967] Add IHTMLLocation::hash property's getter implementation
+# |
+# | Modified files:
+# |   *	dlls/mshtml/htmllocation.c, dlls/mshtml/tests/htmldoc.c
+# |
+if test "$enable_mshtml_HTMLLocation_put_hash" -eq 1; then
+	patch_apply mshtml-HTMLLocation_put_hash/0001-mshtml-Add-IHTMLLocation-hash-property-s-getter-impl.patch
+	(
+		echo '+    { "Zhenbo Li", "mshtml: Add IHTMLLocation::hash property'\''s getter implementation.", 1 },';
 	) >> "$patchlist"
 fi
 

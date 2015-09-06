@@ -1,0 +1,113 @@
+From ac412bfe66c287d88409abc153c615c014907607 Mon Sep 17 00:00:00 2001
+From: Zhenbo Li <litimetal@gmail.com>
+Date: Tue, 1 Jul 2014 19:45:43 +0800
+Subject: mshtml: Add IHTMLLocation::hash property's getter implementation.
+
+---
+ dlls/mshtml/htmllocation.c  | 11 ++++++++--
+ dlls/mshtml/tests/htmldoc.c | 53 ++++++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 61 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/mshtml/htmllocation.c b/dlls/mshtml/htmllocation.c
+index 6411eb7..176468f 100644
+--- a/dlls/mshtml/htmllocation.c
++++ b/dlls/mshtml/htmllocation.c
+@@ -516,8 +516,15 @@ static HRESULT WINAPI HTMLLocation_get_search(IHTMLLocation *iface, BSTR *p)
+ static HRESULT WINAPI HTMLLocation_put_hash(IHTMLLocation *iface, BSTR v)
+ {
+     HTMLLocation *This = impl_from_IHTMLLocation(iface);
+-    FIXME("(%p)->(%s)\n", This, debugstr_w(v));
+-    return E_NOTIMPL;
++
++    TRACE("(%p)->(%s)\n", This, debugstr_w(v));
++
++    if(!This->window || !This->window->base.outer_window) {
++        FIXME("No window available\n");
++        return E_FAIL;
++    }
++
++    return navigate_url(This->window->base.outer_window, v, This->window->base.outer_window->uri, 0);
+ }
+ 
+ static HRESULT WINAPI HTMLLocation_get_hash(IHTMLLocation *iface, BSTR *p)
+diff --git a/dlls/mshtml/tests/htmldoc.c b/dlls/mshtml/tests/htmldoc.c
+index 635302c..409a5da 100644
+--- a/dlls/mshtml/tests/htmldoc.c
++++ b/dlls/mshtml/tests/htmldoc.c
+@@ -5932,6 +5932,56 @@ static void test_Persist(IHTMLDocument2 *doc, IMoniker *mon)
+     }
+ }
+ 
++static void test_put_hash(IHTMLDocument2 *doc, const char *new_hash)
++{
++    static char nav_url_buff[256];
++    IHTMLLocation *location;
++    BSTR str;
++    char *psharp;
++    HRESULT hres;
++
++    trace("put_hash, url = %s, new hash = %s\n", nav_url, new_hash);
++
++    location = NULL;
++    hres = IHTMLDocument2_get_location(doc, &location);
++    ok(hres == S_OK, "get_location failed: %08x\n", hres);
++    ok(location != NULL, "location == NULL\n");
++
++    SET_EXPECT(TranslateUrl);
++    SET_EXPECT(Exec_ShellDocView_67);
++    SET_EXPECT(FireBeforeNavigate2);
++    SET_EXPECT(FireDocumentComplete);
++    SET_EXPECT(FireNavigateComplete2);
++
++    /* Edit nav_url */
++    strcpy(nav_url_buff, nav_url);
++    psharp = strchr(nav_url_buff, '#');
++    if (psharp)
++        *psharp = '\0';
++    strcat(nav_url_buff, new_hash);
++    nav_url = nav_url_buff;
++
++    str = a2bstr(new_hash);
++    hres = IHTMLLocation_put_hash(location, str);
++    ok (hres == S_OK, "put_hash failed: %08x\n", hres);
++    SysFreeString(str);
++
++    CHECK_CALLED(TranslateUrl);
++    CHECK_CALLED_BROKEN(Exec_ShellDocView_67); /* Broken on Win7 and 8 */
++    CHECK_CALLED(FireBeforeNavigate2);
++    CHECK_CALLED(FireDocumentComplete);
++    CHECK_CALLED(FireNavigateComplete2);
++
++
++    /* Check the result */
++    hres = IHTMLLocation_get_hash(location, &str);
++    ok(hres == S_OK, "get_hash failed: %08x\n", hres);
++    ok(!strcmp_wa(str, new_hash), "expected %s, got %s\n", new_hash, wine_dbgstr_w(str));
++    SysFreeString(str);
++
++    IHTMLLocation_Release(location);
++}
++
+ static void test_put_href(IHTMLDocument2 *doc, BOOL use_replace, const char *href, const char *new_nav_url, BOOL is_js,
+         BOOL is_hash, DWORD dwl_flags)
+ {
+@@ -6116,7 +6166,7 @@ static void test_load_history(IHTMLDocument2 *doc)
+     ok(hres == S_OK, "Could not get IPersistHistory iface: %08x\n", hres);
+ 
+     prev_url = nav_url;
+-    nav_url = "http://test.winehq.org/tests/winehq_snapshot/#test";
++    nav_url = "http://test.winehq.org/tests/winehq_snapshot/#hash_test";
+     nav_serv_url = "http://test.winehq.org/tests/winehq_snapshot/";
+ 
+     SET_EXPECT(Exec_ShellDocView_138);
+@@ -7721,6 +7771,7 @@ static void test_HTMLDocument_http(BOOL with_wbapp)
+     nav_url = nav_serv_url = "http://test.winehq.org/tests/winehq_snapshot/"; /* for valid prev nav_url */
+     if(support_wbapp) {
+         test_put_href(doc, FALSE, "#test", "http://test.winehq.org/tests/winehq_snapshot/#test", FALSE, TRUE, 0);
++        test_put_hash(doc, "#hash_test");
+         test_travellog(doc);
+         test_refresh(doc);
+     }
+-- 
+2.5.1
+

@@ -123,6 +123,7 @@ patch_enable_all ()
 	enable_ddraw_EnumSurfaces="$1"
 	enable_ddraw_IDirect3DTexture2_Load="$1"
 	enable_ddraw_Rendering_Targets="$1"
+	enable_ddraw_ZBufferBitDepths="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
 	enable_dinput_Events="$1"
 	enable_dsound_EAX="$1"
@@ -463,6 +464,9 @@ patch_enable ()
 			;;
 		ddraw-Rendering_Targets)
 			enable_ddraw_Rendering_Targets="$2"
+			;;
+		ddraw-ZBufferBitDepths)
+			enable_ddraw_ZBufferBitDepths="$2"
 			;;
 		ddraw-d3d_execute_buffer)
 			enable_ddraw_d3d_execute_buffer="$2"
@@ -2799,6 +2803,21 @@ if test "$enable_ddraw_Rendering_Targets" -eq 1; then
 	patch_apply ddraw-Rendering_Targets/0001-ddraw-Create-rendering-targets-in-video-memory-if-po.patch
 	(
 		echo '+    { "Michael Müller", "ddraw: Create rendering targets in video memory if possible.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ddraw-ZBufferBitDepths
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#27002] Properly initialize caps->dwZBufferBitDepths in ddraw7_GetCaps
+# |
+# | Modified files:
+# |   *	dlls/ddraw/ddraw.c
+# |
+if test "$enable_ddraw_ZBufferBitDepths" -eq 1; then
+	patch_apply ddraw-ZBufferBitDepths/0001-ddraw-Set-dwZBufferBitDepth-in-ddraw7_GetCaps.patch
+	(
+		echo '+    { "Michael Müller", "ddraw: Set dwZBufferBitDepth in ddraw7_GetCaps.", 1 },';
 	) >> "$patchlist"
 fi
 

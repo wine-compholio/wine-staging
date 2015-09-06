@@ -6429,12 +6429,15 @@ fi
 # |   *	[#18670] Properly close sockets when WSACleanup is called
 # |
 # | Modified files:
-# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, server/protocol.def, server/sock.c
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/server.c, dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/wine/server.h,
+# | 	server/protocol.def, server/sock.c
 # |
 if test "$enable_ws2_32_WSACleanup" -eq 1; then
 	patch_apply ws2_32-WSACleanup/0001-ws2_32-Proper-WSACleanup-implementation-using-winese.patch
+	patch_apply ws2_32-WSACleanup/0002-ws2_32-Invalidate-client-side-file-descriptor-cache-.patch
 	(
 		echo '+    { "Matt Durgavich", "ws2_32: Proper WSACleanup implementation using wineserver function.", 2 },';
+		echo '+    { "Sebastian Lackner", "ws2_32: Invalidate client-side file descriptor cache in WSACleanup.", 1 },';
 	) >> "$patchlist"
 fi
 

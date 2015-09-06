@@ -1,0 +1,99 @@
+From e2d45538487646f7d17b35a351887fd94c8381f3 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 6 Sep 2015 12:41:17 +0200
+Subject: ws2_32: Invalidate client-side file descriptor cache in WSACleanup.
+
+---
+ dlls/ntdll/ntdll.spec    |  1 +
+ dlls/ntdll/server.c      | 24 ++++++++++++++++++++++++
+ dlls/ws2_32/socket.c     |  1 +
+ dlls/ws2_32/tests/sock.c |  1 -
+ include/wine/server.h    |  1 +
+ 5 files changed, 27 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index ca3561d..d1205df 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -1446,6 +1446,7 @@
+ 
+ # Server interface
+ @ cdecl -norelay wine_server_call(ptr)
++@ cdecl wine_server_close_fds_by_type(long)
+ @ cdecl wine_server_fd_to_handle(long long long ptr)
+ @ cdecl wine_server_handle_to_fd(long long ptr ptr)
+ @ cdecl wine_server_release_fd(long long)
+diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
+index 95111ad..667c0b9 100644
+--- a/dlls/ntdll/server.c
++++ b/dlls/ntdll/server.c
+@@ -915,6 +915,30 @@ int server_remove_fd_from_cache( HANDLE handle )
+ 
+ 
+ /***********************************************************************
++ *           wine_server_close_fds_by_type
++ *
++ * Needed for a proper implementation of WSACleanup.
++ */
++void CDECL wine_server_close_fds_by_type( enum server_fd_type type )
++{
++    union fd_cache_entry cache;
++    unsigned int entry, idx;
++
++    for (entry = 0; entry < FD_CACHE_ENTRIES; entry++)
++    {
++        if (!fd_cache[entry]) continue;
++        for (idx = 0; idx < FD_CACHE_BLOCK_SIZE; idx++)
++        {
++            cache.data = interlocked_cmpxchg64( &fd_cache[entry][idx].data, 0, 0 );
++            if (cache.s.type != type || cache.s.fd == 0) continue;
++            if (interlocked_cmpxchg64( &fd_cache[entry][idx].data, 0, cache.data ) != cache.data) continue;
++            close( cache.s.fd - 1 );
++        }
++    }
++}
++
++
++/***********************************************************************
+  *           server_get_unix_fd
+  *
+  * The returned unix_fd should be closed iff needs_close is non-zero.
+diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
+index f153de1..e06c42f 100644
+--- a/dlls/ws2_32/socket.c
++++ b/dlls/ws2_32/socket.c
+@@ -1477,6 +1477,7 @@ INT WINAPI WSACleanup(void)
+ 
+     if (!--num_startup)
+     {
++        wine_server_close_fds_by_type( FD_TYPE_SOCKET );
+         SERVER_START_REQ(socket_cleanup)
+         {
+             wine_server_call( req );
+diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
+index 204b852..b6e2a32 100644
+--- a/dlls/ws2_32/tests/sock.c
++++ b/dlls/ws2_32/tests/sock.c
+@@ -1130,7 +1130,6 @@ static void test_WithWSAStartup(void)
+     res = closesocket(dst);
+     error = WSAGetLastError();
+     ok(res == SOCKET_ERROR, "closesocket should have failed\n");
+-    todo_wine
+     ok(error == WSAENOTSOCK, "expected 10038, got %d\n", error);
+     closesocket(src);
+     closesocket(dst);
+diff --git a/include/wine/server.h b/include/wine/server.h
+index d573d1f..02d9c7b 100644
+--- a/include/wine/server.h
++++ b/include/wine/server.h
+@@ -54,6 +54,7 @@ extern void CDECL wine_server_send_fd( int fd );
+ extern int CDECL wine_server_fd_to_handle( int fd, unsigned int access, unsigned int attributes, HANDLE *handle );
+ extern int CDECL wine_server_handle_to_fd( HANDLE handle, unsigned int access, int *unix_fd, unsigned int *options );
+ extern void CDECL wine_server_release_fd( HANDLE handle, int unix_fd );
++extern void CDECL wine_server_close_fds_by_type( enum server_fd_type type );
+ 
+ /* do a server call and set the last error code */
+ static inline unsigned int wine_server_call_err( void *req_ptr )
+-- 
+2.5.1
+

@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "253a587e471a653e1b5ed590280452f43679aa6d"
+	echo "07cc9a34a87cd08c87ae198e4aeb8c9bb7f55175"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 1.7.51"
+	echo "Wine Staging 1.7.52 (unreleased)"
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -175,7 +175,6 @@ patch_enable_all ()
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvcrt_StdHandle_RefCount="$1"
 	enable_msvfw32_Image_Size="$1"
-	enable_netprofm_Coverity="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_APC_Start_Process="$1"
 	enable_ntdll_Activation_Context="$1"
@@ -621,9 +620,6 @@ patch_enable ()
 			;;
 		msvfw32-Image_Size)
 			enable_msvfw32_Image_Size="$2"
-			;;
-		netprofm-Coverity)
-			enable_netprofm_Coverity="$2"
 			;;
 		ntdll-APC_Performance)
 			enable_ntdll_APC_Performance="$2"
@@ -3782,18 +3778,6 @@ if test "$enable_msvfw32_Image_Size" -eq 1; then
 	patch_apply msvfw32-Image_Size/0001-msvfw32-Derive-image-size-from-input-image-to-avoid-.patch
 	(
 		echo '+    { "Bruno Jesus", "msvfw32: Derive image size from input image to avoid NULL dereference.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset netprofm-Coverity
-# |
-# | Modified files:
-# |   *	dlls/netprofm/list.c
-# |
-if test "$enable_netprofm_Coverity" -eq 1; then
-	patch_apply netprofm-Coverity/0001-netprofm-Fix-possible-memory-leak-in-init_networks-C.patch
-	(
-		echo '+    { "Sebastian Lackner", "netprofm: Fix possible memory leak in init_networks (Coverity).", 1 },';
 	) >> "$patchlist"
 fi
 

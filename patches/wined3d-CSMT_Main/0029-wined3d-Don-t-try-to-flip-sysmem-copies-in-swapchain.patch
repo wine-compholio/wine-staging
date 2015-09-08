@@ -1,4 +1,4 @@
-From 33832b5fb0f7d3c8a0f93d4e3f3d7e1d4de0e6df Mon Sep 17 00:00:00 2001
+From de1d4bc66eb1356415957721c76db10213d2f48b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 19 Sep 2013 13:08:33 +0200
 Subject: wined3d: Don't try to flip sysmem copies in swapchain_present.
@@ -7,67 +7,32 @@ This was once an optimization for ddraw applications that mapped the
 backbuffer to render movies. It doesn't work any more in the intended
 fashion.
 ---
- dlls/wined3d/swapchain.c | 46 +++++++++-------------------------------------
- 1 file changed, 9 insertions(+), 37 deletions(-)
+ dlls/wined3d/swapchain.c | 12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/wined3d/swapchain.c b/dlls/wined3d/swapchain.c
-index e1a5b8a..05f68f7 100644
+index cf2543e..3214fe5 100644
 --- a/dlls/wined3d/swapchain.c
 +++ b/dlls/wined3d/swapchain.c
-@@ -555,44 +555,16 @@ static void swapchain_gl_present(struct wined3d_swapchain *swapchain, const RECT
-     }
- 
-     front = surface_from_resource(wined3d_texture_get_sub_resource(swapchain->front_buffer, 0));
--    if (!swapchain->render_to_fbo && ((front->resource.locations & WINED3D_LOCATION_SYSMEM)
--            || (back_buffer->resource.locations & WINED3D_LOCATION_SYSMEM)))
-+    wined3d_resource_validate_location(&front->resource, WINED3D_LOCATION_DRAWABLE);
-+    wined3d_resource_invalidate_location(&front->resource, ~WINED3D_LOCATION_DRAWABLE);
-+    /* If the swapeffect is DISCARD, the back buffer is undefined. That means the SYSMEM
-+     * and INTEXTURE copies can keep their old content if they have any defined content.
+@@ -560,11 +560,13 @@ static void swapchain_gl_present(struct wined3d_swapchain *swapchain, const RECT
+     wined3d_resource_invalidate_location(&front->resource, ~WINED3D_LOCATION_DRAWABLE);
+     /* If the swapeffect is DISCARD, the back buffer is undefined. That means the SYSMEM
+      * and INTEXTURE copies can keep their old content if they have any defined content.
+-     * If the swapeffect is COPY, the content remains the same.
+-     *
+-     * The FLIP swap effect is not implemented yet. We could mark WINED3D_LOCATION_DRAWABLE
+-     * up to date and hope WGL flipped front and back buffers and read this data into
+-     * the FBO. Don't bother about this for now. */
 +     * If the swapeffect is COPY, the content remains the same. If it is FLIP however,
 +     * the texture / sysmem copy needs to be reloaded from the drawable. */
 +    if (swapchain->desc.swap_effect == WINED3D_SWAP_EFFECT_FLIP)
-     {
--        /* Both memory copies of the surfaces are ok, flip them around too instead of dirtifying
--         * Doesn't work with render_to_fbo because we're not flipping
--         */
--
--        if (front->resource.size == back_buffer->resource.size)
--        {
--            flip_surface(front, back_buffer);
--
--            /* Tell the front buffer surface that is has been modified. However,
--             * the other locations were preserved during that, so keep the flags.
--             * This serves to update the emulated overlay, if any. */
--            wined3d_resource_validate_location(&front->resource, WINED3D_LOCATION_DRAWABLE);
--        }
--        else
--        {
--            wined3d_resource_validate_location(&front->resource, WINED3D_LOCATION_DRAWABLE);
--            wined3d_resource_invalidate_location(&front->resource, ~WINED3D_LOCATION_DRAWABLE);
--            wined3d_resource_validate_location(&back_buffer->resource, WINED3D_LOCATION_DRAWABLE);
--            wined3d_resource_invalidate_location(&back_buffer->resource, ~WINED3D_LOCATION_DRAWABLE);
--        }
--    }
--    else
--    {
--        wined3d_resource_validate_location(&front->resource, WINED3D_LOCATION_DRAWABLE);
--        wined3d_resource_invalidate_location(&front->resource, ~WINED3D_LOCATION_DRAWABLE);
--        /* If the swapeffect is DISCARD, the back buffer is undefined. That means the SYSMEM
--         * and INTEXTURE copies can keep their old content if they have any defined content.
--         * If the swapeffect is COPY, the content remains the same. If it is FLIP however,
--         * the texture / sysmem copy needs to be reloaded from the drawable
--         */
--        if (swapchain->desc.swap_effect == WINED3D_SWAP_EFFECT_FLIP)
--        {
--            wined3d_resource_validate_location(&back_buffer->resource, back_buffer->container->resource.draw_binding);
--            wined3d_resource_invalidate_location(&back_buffer->resource, ~back_buffer->container->resource.draw_binding);
--        }
++    {
 +        wined3d_resource_validate_location(&back_buffer->resource, back_buffer->container->resource.draw_binding);
 +        wined3d_resource_invalidate_location(&back_buffer->resource, ~back_buffer->container->resource.draw_binding);
-     }
++    }
  
      if (fb->depth_stencil)
+     {
 -- 
-2.1.3
+2.5.1
 

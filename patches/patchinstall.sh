@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "07cc9a34a87cd08c87ae198e4aeb8c9bb7f55175"
+	echo "e28d6b2fb099795d2472a97d7ab0bfe868e90421"
 }
 
 # Show version information
@@ -128,7 +128,6 @@ patch_enable_all ()
 	enable_dinput_Events="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
-	enable_dwmapi_DwmUpdateThumbnailProperties="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
 	enable_dxgi_GetDesc="$1"
@@ -222,7 +221,6 @@ patch_enable_all ()
 	enable_regedit_Reg_Parser="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_rpcrt4_Pipe_Transport="$1"
-	enable_rpcrt4_Use_After_Free="$1"
 	enable_secur32_ANSI_NTLM_Credentials="$1"
 	enable_server_Address_List_Change="$1"
 	enable_server_ClipCursor="$1"
@@ -325,7 +323,6 @@ patch_enable_all ()
 	enable_ws2_32_WSACleanup="$1"
 	enable_ws2_32_WSAPoll="$1"
 	enable_ws2_32_WriteWatches="$1"
-	enable_ws2_32_getaddrinfo="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
 }
 
@@ -479,9 +476,6 @@ patch_enable ()
 			;;
 		dsound-Fast_Mixer)
 			enable_dsound_Fast_Mixer="$2"
-			;;
-		dwmapi-DwmUpdateThumbnailProperties)
-			enable_dwmapi_DwmUpdateThumbnailProperties="$2"
 			;;
 		dxdiagn-Enumerate_DirectSound)
 			enable_dxdiagn_Enumerate_DirectSound="$2"
@@ -761,9 +755,6 @@ patch_enable ()
 			;;
 		rpcrt4-Pipe_Transport)
 			enable_rpcrt4_Pipe_Transport="$2"
-			;;
-		rpcrt4-Use_After_Free)
-			enable_rpcrt4_Use_After_Free="$2"
 			;;
 		secur32-ANSI_NTLM_Credentials)
 			enable_secur32_ANSI_NTLM_Credentials="$2"
@@ -1070,9 +1061,6 @@ patch_enable ()
 			;;
 		ws2_32-WriteWatches)
 			enable_ws2_32_WriteWatches="$2"
-			;;
-		ws2_32-getaddrinfo)
-			enable_ws2_32_getaddrinfo="$2"
 			;;
 		wtsapi32-EnumerateProcesses)
 			enable_wtsapi32_EnumerateProcesses="$2"
@@ -2919,18 +2907,6 @@ if test "$enable_dsound_EAX" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dwmapi-DwmUpdateThumbnailProperties
-# |
-# | Modified files:
-# |   *	dlls/dwmapi/dwmapi.spec, dlls/dwmapi/dwmapi_main.c, include/dwmapi.h
-# |
-if test "$enable_dwmapi_DwmUpdateThumbnailProperties" -eq 1; then
-	patch_apply dwmapi-DwmUpdateThumbnailProperties/0001-dwmapi-Add-DwmUpdateThumbnailProperties-stub.patch
-	(
-		echo '+    { "Alistair Leslie-Hughes", "dwmapi: Add DwmUpdateThumbnailProperties stub.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dxdiagn-Enumerate_DirectSound
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4550,21 +4526,6 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 		echo '+    { "Jactry Zeng", "riched20: Implement ITextRange::GetStoryLength.", 1 },';
 		echo '+    { "Jactry Zeng", "riched20: Implement ITextSelection::GetStoryLength.", 1 },';
 		echo '+    { "Sebastian Lackner", "riched20: Silence repeated FIXMEs triggered by Adobe Reader.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset rpcrt4-Use_After_Free
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36743] Free RPC parameters allocated by application before anything else
-# |
-# | Modified files:
-# |   *	dlls/rpcrt4/ndr_stubless.c
-# |
-if test "$enable_rpcrt4_Use_After_Free" -eq 1; then
-	patch_apply rpcrt4-Use_After_Free/0001-rpcrt4-Free-parameters-allocated-by-application-befo.patch
-	(
-		echo '+    { "Jérôme Gardou", "rpcrt4: Free parameters allocated by application before anything else.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6495,21 +6456,6 @@ if test "$enable_ws2_32_WSAPoll" -eq 1; then
 		echo '+    { "Bruno Jesus", "include: Add stuff related to WSAPoll().", 2 },';
 		echo '+    { "Bruno Jesus", "ws2_32/tests: Add WSAPoll() tests.", 1 },';
 		echo '+    { "Bruno Jesus", "ws2_32: Add WSAPoll() implementation.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ws2_32-getaddrinfo
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#29609] Try harder to get the host name address in getaddrinfo()
-# |
-# | Modified files:
-# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c
-# |
-if test "$enable_ws2_32_getaddrinfo" -eq 1; then
-	patch_apply ws2_32-getaddrinfo/0001-ws2_32-Try-harder-to-get-the-host-name-address-in-ge.patch
-	(
-		echo '+    { "Bruno Jesus", "ws2_32: Try harder to get the host name address in getaddrinfo().", 1 },';
 	) >> "$patchlist"
 fi
 

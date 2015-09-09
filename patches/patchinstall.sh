@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e28d6b2fb099795d2472a97d7ab0bfe868e90421"
+	echo "e19a8fd706768aa2bcbeeec2f22ca991c4821ad3"
 }
 
 # Show version information
@@ -2303,7 +2303,7 @@ fi
 if test "$enable_comctl32_Button_Theming" -eq 1; then
 	patch_apply comctl32-Button_Theming/0001-comctl32-fix-buttons-becoming-unthemed-when-pressed-.patch
 	(
-		echo '+    { "Samuel Kim", "comctl32: fix buttons becoming unthemed when pressed/released Fixes 37584.", 1 },';
+		echo '+    { "Samuel Kim", "comctl32: fix buttons becoming unthemed when pressed/released.", 1 },';
 	) >> "$patchlist"
 fi
 

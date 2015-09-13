@@ -202,6 +202,7 @@ patch_enable_all ()
 	enable_ntdll_Stack_Fault="$1"
 	enable_ntdll_Status_Mapping="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
+	enable_ntdll_ThreadDescriptorTableEntry="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
 	enable_ntdll_User_Shared_Data="$1"
@@ -699,6 +700,9 @@ patch_enable ()
 			;;
 		ntdll-SystemRoot_Symlink)
 			enable_ntdll_SystemRoot_Symlink="$2"
+			;;
+		ntdll-ThreadDescriptorTableEntry)
+			enable_ntdll_ThreadDescriptorTableEntry="$2"
 			;;
 		ntdll-ThreadTime)
 			enable_ntdll_ThreadTime="$2"
@@ -4182,6 +4186,18 @@ if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
 	patch_apply ntdll-SystemRoot_Symlink/0001-ntdll-Add-special-handling-for-SystemRoot-to-satisfy.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Add special handling for \\\\SystemRoot to satisfy MSYS2 case-insensitive system check.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-ThreadDescriptorTableEntry
+# |
+# | Modified files:
+# |   *	dlls/ntdll/thread.c
+# |
+if test "$enable_ntdll_ThreadDescriptorTableEntry" -eq 1; then
+	patch_apply ntdll-ThreadDescriptorTableEntry/0001-ntdll-Ignore-higher-bits-in-selector-for-ThreadDescr.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Ignore higher bits in selector for ThreadDescriptorTableEntry info query.", 1 },';
 	) >> "$patchlist"
 fi
 

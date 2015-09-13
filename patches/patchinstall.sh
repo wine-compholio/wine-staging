@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "efb1cf0299c23385f934fa9b3abc920bfca46611"
+	echo "a7e294c064ac443a4351d1cbe84e7f52e0775d6f"
 }
 
 # Show version information
@@ -200,6 +200,7 @@ patch_enable_all ()
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_RtlIpStringToAddress="$1"
 	enable_ntdll_Stack_Fault="$1"
+	enable_ntdll_Status_Mapping="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
@@ -692,6 +693,9 @@ patch_enable ()
 			;;
 		ntdll-Stack_Fault)
 			enable_ntdll_Stack_Fault="$2"
+			;;
+		ntdll-Status_Mapping)
+			enable_ntdll_Status_Mapping="$2"
 			;;
 		ntdll-SystemRoot_Symlink)
 			enable_ntdll_SystemRoot_Symlink="$2"
@@ -4151,6 +4155,18 @@ if test "$enable_ntdll_Stack_Fault" -eq 1; then
 	patch_apply ntdll-Stack_Fault/0001-ntdll-When-handling-stack-faults-also-commit-the-pag.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: When handling stack faults also commit the page, instead of just removing the guard page flag.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Status_Mapping
+# |
+# | Modified files:
+# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
+# |
+if test "$enable_ntdll_Status_Mapping" -eq 1; then
+	patch_apply ntdll-Status_Mapping/0001-ntdll-Return-STATUS_INVALID_DEVICE_REQUEST-when-tryi.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Return STATUS_INVALID_DEVICE_REQUEST when trying to call NtReadFile on directory.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a7e294c064ac443a4351d1cbe84e7f52e0775d6f"
+	echo "aacc7b394ee1eb25001ae2854fd774e1b443e50b"
 }
 
 # Show version information
@@ -302,7 +302,6 @@ patch_enable_all ()
 	enable_wined3d_wined3d_swapchain_present="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
-	enable_wineps_drv_Glyph_Names="$1"
 	enable_winepulse_PulseAudio_Support="$1"
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_Clipboard_HTML="$1"
@@ -1000,9 +999,6 @@ patch_enable ()
 			;;
 		winemenubuilder-Desktop_Icon_Path)
 			enable_winemenubuilder_Desktop_Icon_Path="$2"
-			;;
-		wineps.drv-Glyph_Names)
-			enable_wineps_drv_Glyph_Names="$2"
 			;;
 		winepulse-PulseAudio_Support)
 			enable_winepulse_PulseAudio_Support="$2"
@@ -6063,25 +6059,6 @@ if test "$enable_winemenubuilder_Desktop_Icon_Path" -eq 1; then
 	patch_apply winemenubuilder-Desktop_Icon_Path/0001-winemenubuilder-Create-desktop-shortcuts-with-absolu.patch
 	(
 		echo '+    { "Sebastian Lackner", "winemenubuilder: Create desktop shortcuts with absolute wine path.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wineps.drv-Glyph_Names
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#6416] Use proper glyph names in wineps driver to allow copying text from generated PDF files
-# |
-# | Modified files:
-# |   *	dlls/wineps.drv/download.c
-# |
-if test "$enable_wineps_drv_Glyph_Names" -eq 1; then
-	patch_apply wineps.drv-Glyph_Names/0001-wineps.drv-Add-support-for-PostScript-Format-1-glyph.patch
-	patch_apply wineps.drv-Glyph_Names/0002-wineps.drv-Add-support-for-PostScript-Format-2-stand.patch
-	patch_apply wineps.drv-Glyph_Names/0003-wineps.drv-Add-support-for-PostScript-Format-2-custo.patch
-	(
-		echo '+    { "Erich E. Hoover", "wineps.drv: Add support for PostScript Format 1 glyph names.", 1 },';
-		echo '+    { "Erich E. Hoover", "wineps.drv: Add support for PostScript Format 2 standard glyph names.", 1 },';
-		echo '+    { "Erich E. Hoover", "wineps.drv: Add support for PostScript Format 2 custom glyph names.", 1 },';
 	) >> "$patchlist"
 fi
 

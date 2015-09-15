@@ -305,7 +305,7 @@ for more details.*
 * Use POSIX implementation to enumerate directory content on FreeBSD ([Wine Bug #35397](https://bugs.winehq.org/show_bug.cgi?id=35397))
 * Use actual program name if available to describe PulseAudio streams
 * Use manual relay for RunDLL_CallEntry16 in shell32 ([Wine Bug #23033](https://bugs.winehq.org/show_bug.cgi?id=23033))
-* Use proper glyph names in wineps driver to allow copying text from generated PDF files ([Wine Bug #6416](https://bugs.winehq.org/show_bug.cgi?id=6416))
+* ~~Use proper glyph names in wineps driver to allow copying text from generated PDF files~~ ([Wine Bug #6416](https://bugs.winehq.org/show_bug.cgi?id=6416))
 * Use video memory for rendering targets if possible ([Wine Bug #34906](https://bugs.winehq.org/show_bug.cgi?id=34906))
 * Voobly expects correct handling of WRITECOPY memory protection ([Wine Bug #29384](https://bugs.winehq.org/show_bug.cgi?id=29384))
 * Wine ignores IDF_CHECKFIRST flag in SetupPromptForDisk ([Wine Bug #20465](https://bugs.winehq.org/show_bug.cgi?id=20465))

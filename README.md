@@ -84,7 +84,7 @@ for more details.*
 * Add stubbed ISWbemSecurity interfaces in wbemdisp
 * Add stubs for D3DXCreateAnimationController interface
 * Add stubs for additional wininet options in InternetSetOption
-* Add stubs for d3dx10_43.D3DX10CreateEffectFromFileA/W ([Wine Bug #27739](https://bugs.winehq.org/show_bug.cgi?id=27739))
+* ~~Add stubs for d3dx10_43.D3DX10CreateEffectFromFileA/W~~ ([Wine Bug #27739](https://bugs.winehq.org/show_bug.cgi?id=27739))
 * Add support for CopyFileEx progress callback ([Wine Bug #22692](https://bugs.winehq.org/show_bug.cgi?id=22692))
 * Add support for GTK3 theming
 * Add support for GetPropValue to PulseAudio backend

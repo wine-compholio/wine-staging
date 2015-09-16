@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "aacc7b394ee1eb25001ae2854fd774e1b443e50b"
+	echo "8fdcc239ba784894eed0f5c08ec56441db783e5e"
 }
 
 # Show version information
@@ -100,7 +100,6 @@ patch_enable_all ()
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Skip_Tests="$1"
 	enable_d3d9_Surface_Refcount="$1"
-	enable_d3dx10_43_D3DX10CreateEffectFromFile="$1"
 	enable_d3dx9_24_ID3DXEffect="$1"
 	enable_d3dx9_25_ID3DXEffect="$1"
 	enable_d3dx9_26_ID3DXEffect="$1"
@@ -393,9 +392,6 @@ patch_enable ()
 			;;
 		d3d9-Surface_Refcount)
 			enable_d3d9_Surface_Refcount="$2"
-			;;
-		d3dx10_43-D3DX10CreateEffectFromFile)
-			enable_d3dx10_43_D3DX10CreateEffectFromFile="$2"
 			;;
 		d3dx9_24-ID3DXEffect)
 			enable_d3dx9_24_ID3DXEffect="$2"
@@ -2406,25 +2402,6 @@ if test "$enable_d3d9_Surface_Refcount" -eq 1; then
 	patch_apply d3d9-Surface_Refcount/0001-d3d9-Don-t-decrease-surface-refcount-when-its-alread.patch
 	(
 		echo '+    { "Henri Verbeet", "d3d9: Don'\''t decrease surface refcount when its already zero.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3dx10_43-D3DX10CreateEffectFromFile
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#27739] Add stubs for d3dx10_43.D3DX10CreateEffectFromFileA/W
-# |
-# | Modified files:
-# |   *	dlls/d3dx10_43/d3dx10_43.spec, dlls/d3dx10_43/d3dx10_43_main.c, include/Makefile.in, include/d3dx10core.idl
-# |
-if test "$enable_d3dx10_43_D3DX10CreateEffectFromFile" -eq 1; then
-	patch_apply d3dx10_43-D3DX10CreateEffectFromFile/0001-d3dx10_43-Add-ID3DX10ThreadPump-interface.patch
-	patch_apply d3dx10_43-D3DX10CreateEffectFromFile/0002-d3dx10_43-Add-D3DX10CreateEffectFromFileA-W-stubs.patch
-	patch_apply d3dx10_43-D3DX10CreateEffectFromFile/0003-d3dx10_43-Added-D3DX10CreateEffectFromMemory-stub.patch
-	(
-		echo '+    { "Alistair Leslie-Hughes", "d3dx10_43: Add ID3DX10ThreadPump interface.", 1 },';
-		echo '+    { "Alistair Leslie-Hughes", "d3dx10_43: Add D3DX10CreateEffectFromFileA/W stubs.", 1 },';
-		echo '+    { "Alistair Leslie-Hughes", "d3dx10_43: Added D3DX10CreateEffectFromMemory stub.", 1 },';
 	) >> "$patchlist"
 fi
 

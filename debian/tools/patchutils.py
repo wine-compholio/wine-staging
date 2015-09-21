@@ -54,6 +54,7 @@ class PatchObject(object):
         self.patch_email        = header['email']
         self.patch_subject      = header['subject']
         self.patch_revision     = header['revision'] if header.has_key('revision') else 1
+        self.signed_off_by      = header['signedoffby'] if header.has_key('signedoffby') else []
 
         self.filename           = filename
         self.offset_begin       = None
@@ -328,6 +329,12 @@ def read_patch(filename):
                 subject, revision = _parse_subject(subject)
                 if not subject.endswith("."): subject += "."
                 header['subject'], header['revision'] = subject, revision
+
+            elif line.startswith("Signed-off-by: "):
+                if not header.has_key('signedoffby'):
+                    header['signedoffby'] = []
+                header['signedoffby'].append(_parse_author(line[15:]))
+                assert fp.read() == line
 
             elif line.startswith("diff --git "):
                 tmp = line.strip().split(" ")

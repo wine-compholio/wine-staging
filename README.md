@@ -39,8 +39,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [2]:**
+**Bug fixes and features included in the next upcoming release [3]:**
 
+* Codepage conversion should fail when destination length is < 0
 * Ignore higher bits in selector for ThreadDescriptorTableEntry info query
 * Return STATUS_INVALID_DEVICE_REQUEST when trying to call NtReadFile on directory
 

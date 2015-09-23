@@ -647,6 +647,10 @@ def generate_script(all_patches, skip_checks=False):
                 # Update the dependency cache
                 dependency_cache[filename] = unique_hash
 
+            # Delete outdated cache information
+            for filename in dependency_cache.keys():
+                if not modified_files.has_key(filename):
+                    del dependency_cache[filename]
         finally:
             pool.close()
             _save_dict(config.path_cache, dependency_cache)

@@ -170,6 +170,7 @@ patch_enable_all ()
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
+	enable_msidb_Implementation="$1"
 	enable_msvcp90_basic_string_dtor="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvcrt_StdHandle_RefCount="$1"
@@ -603,6 +604,9 @@ patch_enable ()
 			;;
 		mshtml-HTMLLocation_put_hash)
 			enable_mshtml_HTMLLocation_put_hash="$2"
+			;;
+		msidb-Implementation)
+			enable_msidb_Implementation="$2"
 			;;
 		msvcp90-basic_string_dtor)
 			enable_msvcp90_basic_string_dtor="$2"
@@ -3688,6 +3692,43 @@ if test "$enable_mshtml_HTMLLocation_put_hash" -eq 1; then
 	patch_apply mshtml-HTMLLocation_put_hash/0001-mshtml-Add-IHTMLLocation-hash-property-s-getter-impl.patch
 	(
 		echo '+    { "Zhenbo Li", "mshtml: Add IHTMLLocation::hash property'\''s getter implementation.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msidb-Implementation
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/msi/database.c, dlls/msi/msipriv.h, dlls/msi/streams.c, dlls/msi/suminfo.c,
+# | 	programs/msidb/Makefile.in, programs/msidb/main.c
+# |
+if test "$enable_msidb_Implementation" -eq 1; then
+	patch_apply msidb-Implementation/0001-msidb-Add-stub-tool-for-manipulating-MSI-databases.patch
+	patch_apply msidb-Implementation/0002-msi-Return-an-error-when-MsiDatabaseImport-is-passed.patch
+	patch_apply msidb-Implementation/0003-msidb-Add-support-for-importing-database-tables.patch
+	patch_apply msidb-Implementation/0004-msidb-Add-support-for-adding-stream-cabinet-files-to.patch
+	patch_apply msidb-Implementation/0005-msi-Add-support-for-deleting-streams-from-an-MSI-dat.patch
+	patch_apply msidb-Implementation/0006-msidb-Add-support-for-removing-stream-cabinet-files-.patch
+	patch_apply msidb-Implementation/0007-msidb-Add-support-for-extracting-stream-cabinet-file.patch
+	patch_apply msidb-Implementation/0008-msidb-Add-support-for-exporting-database-tables.patch
+	patch_apply msidb-Implementation/0009-msidb-Add-support-for-exporting-with-short-DOS-filen.patch
+	patch_apply msidb-Implementation/0010-msi-Add-support-for-exporting-the-_SummaryInformatio.patch
+	patch_apply msidb-Implementation/0011-msi-Break-out-field-exporting-into-a-separate-routin.patch
+	patch_apply msidb-Implementation/0012-msi-Add-support-for-exporting-binary-streams-Binary-.patch
+	patch_apply msidb-Implementation/0013-msidb-Add-support-for-wildcard-full-database-export.patch
+	(
+		echo '+    { "Erich E. Hoover", "msidb: Add stub tool for manipulating MSI databases.", 1 },';
+		echo '+    { "Erich E. Hoover", "msi: Return an error when MsiDatabaseImport is passed an invalid pathname.", 1 },';
+		echo '+    { "Erich E. Hoover", "msidb: Add support for importing database tables.", 1 },';
+		echo '+    { "Erich E. Hoover", "msidb: Add support for adding stream/cabinet files to MSI databases.", 1 },';
+		echo '+    { "Erich E. Hoover", "msi: Add support for deleting streams from an MSI database.", 1 },';
+		echo '+    { "Erich E. Hoover", "msidb: Add support for removing stream/cabinet files from MSI databases.", 1 },';
+		echo '+    { "Erich E. Hoover", "msidb: Add support for extracting stream/cabinet files from MSI databases.", 1 },';
+		echo '+    { "Erich E. Hoover", "msidb: Add support for exporting database tables.", 1 },';
+		echo '+    { "Erich E. Hoover", "msidb: Add support for exporting with short (DOS) filenames.", 1 },';
+		echo '+    { "Erich E. Hoover", "msi: Add support for exporting the _SummaryInformation table.", 1 },';
+		echo '+    { "Erich E. Hoover", "msi: Break out field exporting into a separate routine.", 1 },';
+		echo '+    { "Erich E. Hoover", "msi: Add support for exporting binary streams (Binary/Icon tables).", 1 },';
+		echo '+    { "Erich E. Hoover", "msidb: Add support for wildcard (full database) export.", 1 },';
 	) >> "$patchlist"
 fi
 

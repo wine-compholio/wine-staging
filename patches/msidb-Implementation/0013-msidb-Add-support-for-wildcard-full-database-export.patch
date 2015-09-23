@@ -1,0 +1,110 @@
+From 8c0efb4738cddee5545154a87fbdc40300bb5ddc Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@wine-staging.com>
+Date: Fri, 18 Sep 2015 12:19:19 -0600
+Subject: msidb: Add support for wildcard (full database) export.
+
+Signed-off-by: Erich E. Hoover <erich.e.hoover@wine-staging.com>
+---
+ programs/msidb/main.c | 80 +++++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 78 insertions(+), 2 deletions(-)
+
+diff --git a/programs/msidb/main.c b/programs/msidb/main.c
+index 49dd11b..8796451 100644
+--- a/programs/msidb/main.c
++++ b/programs/msidb/main.c
+@@ -473,14 +473,90 @@ static int export_table( struct msidb_state *state, const WCHAR *table_name )
+     return 1;
+ }
+ 
++static int export_all_tables( struct msidb_state *state )
++{
++    static const WCHAR summary_information[] = {
++        '_','S','u','m','m','a','r','y','I','n','f','o','r','m','a','t','i','o','n',0 };
++    static const char query_command[] = "SELECT Name FROM _Tables";
++    MSIHANDLE view = 0;
++    UINT ret;
++
++    ret = MsiDatabaseOpenViewA( state->database_handle, query_command, &view );
++    if (ret != ERROR_SUCCESS)
++    {
++        ERR( "Failed to open _Tables table.\n" );
++        goto cleanup;
++    }
++    ret = MsiViewExecute( view, 0 );
++    if (ret != ERROR_SUCCESS)
++    {
++        ERR( "Failed to query list from _Tables table.\n" );
++        goto cleanup;
++    }
++    for (;;)
++    {
++        MSIHANDLE record = 0;
++        WCHAR table[256];
++        DWORD size;
++
++        ret = MsiViewFetch( view, &record );
++        if (ret == ERROR_NO_MORE_ITEMS)
++            break;
++        if (ret != ERROR_SUCCESS)
++        {
++            ERR( "Failed to query row from _Tables table.\n" );
++            goto cleanup;
++        }
++        size = sizeof(table)/sizeof(WCHAR);
++        ret = MsiRecordGetStringW( record, 1, table, &size );
++        if (ret != ERROR_SUCCESS)
++        {
++            ERR( "Failed to retrieve name string.\n" );
++            goto cleanup;
++        }
++        ret = MsiCloseHandle( record );
++        if (ret != ERROR_SUCCESS)
++        {
++            ERR( "Failed to close record handle.\n" );
++            goto cleanup;
++        }
++        if (!export_table( state, table ))
++        {
++            ret = ERROR_FUNCTION_FAILED;
++            goto cleanup;
++        }
++    }
++    ret = ERROR_SUCCESS;
++    /* the _SummaryInformation table is not listed in _Tables */
++    if (!export_table( state, summary_information ))
++    {
++        ret = ERROR_FUNCTION_FAILED;
++        goto cleanup;
++    }
++
++cleanup:
++    if (view)
++        MsiViewClose( view );
++    return (ret == ERROR_SUCCESS);
++}
++
+ static int export_tables( struct msidb_state *state )
+ {
++    const WCHAR wildcard[] = { '*',0 };
+     struct msidb_listentry *data;
+ 
+     LIST_FOR_EACH_ENTRY( data, &state->table_list, struct msidb_listentry, entry )
+     {
+-        if (!export_table( state, data->name ))
+-            return 0; /* failed, do not commit changes */
++        if (strcmpW( data->name, wildcard ) == 0)
++        {
++            if (!export_all_tables( state ))
++                return 0; /* failed, do not commit changes */
++        }
++        else
++        {
++            if (!export_table( state, data->name ))
++                return 0; /* failed, do not commit changes */
++        }
+     }
+     return 1;
+ }
+-- 
+2.5.1
+

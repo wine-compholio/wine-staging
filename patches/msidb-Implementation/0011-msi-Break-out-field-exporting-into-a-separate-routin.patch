@@ -1,0 +1,113 @@
+From 95dff4faee45b610f212b57cf526bee256b7b4ff Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@wine-staging.com>
+Date: Fri, 18 Sep 2015 10:15:20 -0600
+Subject: msi: Break out field exporting into a separate routine.
+
+Signed-off-by: Erich E. Hoover <erich.e.hoover@wine-staging.com>
+---
+ dlls/msi/database.c | 73 +++++++++++++++++++++++++++++++++--------------------
+ 1 file changed, 45 insertions(+), 28 deletions(-)
+
+diff --git a/dlls/msi/database.c b/dlls/msi/database.c
+index 13eac2a..7c511c9 100644
+--- a/dlls/msi/database.c
++++ b/dlls/msi/database.c
+@@ -920,50 +920,67 @@ end:
+     return r;
+ }
+ 
+-static UINT msi_export_record( HANDLE handle, MSIRECORD *row, UINT start )
++static UINT msi_export_field( HANDLE handle, MSIRECORD *row, UINT field )
+ {
+-    UINT i, count, len, r = ERROR_SUCCESS;
+-    const char *sep;
+     char *buffer;
++    BOOL bret;
+     DWORD sz;
++    UINT r;
+ 
+-    len = 0x100;
+-    buffer = msi_alloc( len );
+-    if ( !buffer )
++    sz = 0x100;
++    buffer = msi_alloc( sz );
++    if (!buffer)
+         return ERROR_OUTOFMEMORY;
+ 
+-    count = MSI_RecordGetFieldCount( row );
+-    for ( i=start; i<=count; i++ )
++    r = MSI_RecordGetStringA( row, field, buffer, &sz );
++    if (r == ERROR_MORE_DATA)
+     {
+-        sz = len;
+-        r = MSI_RecordGetStringA( row, i, buffer, &sz );
+-        if (r == ERROR_MORE_DATA)
++        char *p;
++
++        sz++; /* leave room for NULL terminator */
++        p = msi_realloc( buffer, sz );
++        if (!p)
+         {
+-            char *p = msi_realloc( buffer, sz + 1 );
+-            if (!p)
+-                break;
+-            len = sz + 1;
+-            buffer = p;
++            msi_free( buffer );
++            return ERROR_OUTOFMEMORY;
+         }
+-        sz = len;
+-        r = MSI_RecordGetStringA( row, i, buffer, &sz );
+-        if (r != ERROR_SUCCESS)
+-            break;
++        buffer = p;
+ 
+-        if (!WriteFile( handle, buffer, sz, &sz, NULL ))
++        r = MSI_RecordGetStringA( row, field, buffer, &sz );
++        if (r != ERROR_SUCCESS)
+         {
+-            r = ERROR_FUNCTION_FAILED;
+-            break;
++            msi_free( buffer );
++            return r;
+         }
++    }
++    else if (r != ERROR_SUCCESS)
++        return r;
++
++    bret = WriteFile( handle, buffer, sz, &sz, NULL );
++    msi_free( buffer );
++    if (!bret)
++        return ERROR_FUNCTION_FAILED;
++
++    return r;
++}
++
++static UINT msi_export_record( HANDLE handle, MSIRECORD *row, UINT start )
++{
++    UINT i, count, r = ERROR_SUCCESS;
++    const char *sep;
++    DWORD sz;
++
++    count = MSI_RecordGetFieldCount( row );
++    for (i = start; i <= count; i++)
++    {
++        r = msi_export_field( handle, row, i );
++        if (r != ERROR_SUCCESS)
++            return r;
+ 
+         sep = (i < count) ? "\t" : "\r\n";
+         if (!WriteFile( handle, sep, strlen(sep), &sz, NULL ))
+-        {
+-            r = ERROR_FUNCTION_FAILED;
+-            break;
+-        }
++            return ERROR_FUNCTION_FAILED;
+     }
+-    msi_free( buffer );
+     return r;
+ }
+ 
+-- 
+2.5.1
+

@@ -1,0 +1,200 @@
+From 65d3fe2e1b64341598f8e427f2e331e430617aac Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@wine-staging.com>
+Date: Thu, 17 Sep 2015 17:56:15 -0600
+Subject: msi: Add support for exporting the _SummaryInformation table.
+
+Signed-off-by: Erich E. Hoover <erich.e.hoover@wine-staging.com>
+---
+ dlls/msi/database.c |  22 +++++++++++
+ dlls/msi/msipriv.h  |   1 +
+ dlls/msi/suminfo.c  | 112 ++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 135 insertions(+)
+
+diff --git a/dlls/msi/database.c b/dlls/msi/database.c
+index e28cf1c..13eac2a 100644
+--- a/dlls/msi/database.c
++++ b/dlls/msi/database.c
+@@ -987,9 +987,25 @@ static UINT msi_export_forcecodepage( HANDLE handle, UINT codepage )
+     return ERROR_SUCCESS;
+ }
+ 
++static UINT msi_export_summaryinformation( MSIDATABASE *db, HANDLE handle )
++{
++    static const char header[] = "PropertyId\tValue\r\n"
++                                 "i2\tl255\r\n"
++                                 "_SummaryInformation\tPropertyId\r\n";
++    DWORD sz;
++
++    sz = lstrlenA(header);
++    if (!WriteFile(handle, header, sz, &sz, NULL))
++        return ERROR_WRITE_FAULT;
++
++    return msi_export_suminfo( db, handle );
++}
++
+ static UINT MSI_DatabaseExport( MSIDATABASE *db, LPCWSTR table,
+                LPCWSTR folder, LPCWSTR file )
+ {
++    static const WCHAR summaryinformation[] = {
++        '_','S','u','m','m','a','r','y','I','n','f','o','r','m','a','t','i','o','n',0 };
+     static const WCHAR query[] = {
+         's','e','l','e','c','t',' ','*',' ','f','r','o','m',' ','%','s',0 };
+     static const WCHAR forcecodepage[] = {
+@@ -1028,6 +1044,12 @@ static UINT MSI_DatabaseExport( MSIDATABASE *db, LPCWSTR table,
+         goto done;
+     }
+ 
++    if (!strcmpW( table, summaryinformation ))
++    {
++        r = msi_export_summaryinformation( db, handle );
++        goto done;
++    }
++
+     r = MSI_OpenQuery( db, &view, query, table );
+     if (r == ERROR_SUCCESS)
+     {
+diff --git a/dlls/msi/msipriv.h b/dlls/msi/msipriv.h
+index d457a54..71b620c 100644
+--- a/dlls/msi/msipriv.h
++++ b/dlls/msi/msipriv.h
+@@ -954,6 +954,7 @@ extern LPWSTR msi_suminfo_dup_string( MSISUMMARYINFO *si, UINT uiProperty ) DECL
+ extern INT msi_suminfo_get_int32( MSISUMMARYINFO *si, UINT uiProperty ) DECLSPEC_HIDDEN;
+ extern LPWSTR msi_get_suminfo_product( IStorage *stg ) DECLSPEC_HIDDEN;
+ extern UINT msi_add_suminfo( MSIDATABASE *db, LPWSTR **records, int num_records, int num_columns ) DECLSPEC_HIDDEN;
++extern UINT msi_export_suminfo( MSIDATABASE *db, HANDLE handle ) DECLSPEC_HIDDEN;
+ extern enum platform parse_platform( const WCHAR *str ) DECLSPEC_HIDDEN;
+ extern UINT msi_load_suminfo_properties( MSIPACKAGE *package ) DECLSPEC_HIDDEN;
+ 
+diff --git a/dlls/msi/suminfo.c b/dlls/msi/suminfo.c
+index 451fd16..c929fa5 100644
+--- a/dlls/msi/suminfo.c
++++ b/dlls/msi/suminfo.c
+@@ -23,6 +23,7 @@
+ #define COBJMACROS
+ #define NONAMELESSUNION
+ 
++#include "stdio.h"
+ #include "windef.h"
+ #include "winbase.h"
+ #include "winreg.h"
+@@ -1015,6 +1016,117 @@ end:
+     return r;
+ }
+ 
++static UINT save_prop( MSISUMMARYINFO *si, HANDLE handle, UINT row )
++{
++    static const char fmt_systemtime[] = "%d/%02d/%02d %02d:%02d:%02d";
++    char data[20]; /* largest string: YYYY/MM/DD hh:mm:ss */
++    static const char fmt_begin[] = "%u\t";
++    static const char data_end[] = "\r\n";
++    static const char fmt_int[] = "%u";
++    UINT r, data_type, len;
++    SYSTEMTIME system_time;
++    FILETIME file_time;
++    INT int_value;
++    awstring str;
++    DWORD sz;
++
++    str.unicode = FALSE;
++    str.str.a = NULL;
++    len = 0;
++    r = get_prop( si, row, &data_type, &int_value, &file_time, &str, &len );
++    if (r != ERROR_SUCCESS && r != ERROR_MORE_DATA)
++        return r;
++    if (data_type == VT_EMPTY)
++        return ERROR_SUCCESS; /* property not set */
++    snprintf( data, sizeof(data), fmt_begin, row );
++    sz = lstrlenA( data );
++    if (!WriteFile( handle, data, sz, &sz, NULL ))
++        return ERROR_WRITE_FAULT;
++
++    switch (data_type)
++    {
++    case VT_I2:
++    case VT_I4:
++        snprintf( data, sizeof(data), fmt_int, int_value );
++        sz = lstrlenA( data );
++        if (!WriteFile( handle, data, sz, &sz, NULL ))
++            return ERROR_WRITE_FAULT;
++        break;
++    case VT_LPSTR:
++        len++;
++        if (!(str.str.a = msi_alloc( len )))
++            return ERROR_OUTOFMEMORY;
++        r = get_prop( si, row, NULL, NULL, NULL, &str, &len );
++        if (r != ERROR_SUCCESS)
++        {
++            msi_free( str.str.a );
++            return r;
++        }
++        sz = lstrlenA( str.str.a );
++        if (!WriteFile( handle, str.str.a, sz, &sz, NULL ))
++        {
++            msi_free( str.str.a );
++            return ERROR_WRITE_FAULT;
++        }
++        msi_free( str.str.a );
++        break;
++    case VT_FILETIME:
++        if (!FileTimeToSystemTime( &file_time, &system_time ))
++            return ERROR_FUNCTION_FAILED;
++        snprintf( data, sizeof(data), fmt_systemtime, system_time.wYear, system_time.wMonth,
++                  system_time.wDay, system_time.wHour, system_time.wMinute,
++                  system_time.wSecond );
++        sz = lstrlenA( data );
++        if (!WriteFile( handle, data, sz, &sz, NULL ))
++            return ERROR_WRITE_FAULT;
++        break;
++    case VT_EMPTY:
++        /* cannot reach here, property not set */
++        break;
++    default:
++        FIXME( "Unknown property variant type\n" );
++        return ERROR_FUNCTION_FAILED;
++    }
++
++    sz = lstrlenA( data_end );
++    if (!WriteFile( handle, data_end, sz, &sz, NULL ))
++        return ERROR_WRITE_FAULT;
++
++    return ERROR_SUCCESS;
++}
++
++UINT msi_export_suminfo( MSIDATABASE *db, HANDLE handle )
++{
++    UINT i, r, num_rows;
++    MSISUMMARYINFO *si;
++
++    r = msi_get_suminfo( db->storage, 0, &si );
++    if (r != ERROR_SUCCESS)
++        r = msi_get_db_suminfo( db, 0, &si );
++    if (r != ERROR_SUCCESS)
++        return r;
++
++    num_rows = get_property_count( si->property );
++    if (!num_rows)
++    {
++        msiobj_release( &si->hdr );
++        return ERROR_FUNCTION_FAILED;
++    }
++
++    for (i = 0; i < num_rows; i++)
++    {
++        r = save_prop( si, handle, i );
++        if (r != ERROR_SUCCESS)
++        {
++            msiobj_release( &si->hdr );
++            return r;
++        }
++    }
++
++    msiobj_release( &si->hdr );
++    return ERROR_SUCCESS;
++}
++
+ UINT WINAPI MsiSummaryInfoPersist( MSIHANDLE handle )
+ {
+     MSISUMMARYINFO *si;
+-- 
+2.5.1
+

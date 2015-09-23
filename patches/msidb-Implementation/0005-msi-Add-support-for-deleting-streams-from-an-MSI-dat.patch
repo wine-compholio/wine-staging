@@ -1,0 +1,64 @@
+From 06bd88e4154eb5eb41011a3f51fe7fac05447b41 Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@wine-staging.com>
+Date: Thu, 17 Sep 2015 10:21:27 -0600
+Subject: msi: Add support for deleting streams from an MSI database.
+
+Signed-off-by: Erich E. Hoover <erich.e.hoover@wine-staging.com>
+---
+ dlls/msi/streams.c | 28 ++++++++++++++++++++++++++--
+ 1 file changed, 26 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/msi/streams.c b/dlls/msi/streams.c
+index 7f9582c..e170c03 100644
+--- a/dlls/msi/streams.c
++++ b/dlls/msi/streams.c
+@@ -208,7 +208,28 @@ static UINT STREAMS_insert_row(struct tagMSIVIEW *view, MSIRECORD *rec, UINT row
+ 
+ static UINT STREAMS_delete_row(struct tagMSIVIEW *view, UINT row)
+ {
+-    FIXME("(%p %d): stub!\n", view, row);
++    MSIDATABASE *db = ((MSISTREAMSVIEW *)view)->db;
++    UINT i, num_rows = db->num_streams - 1;
++    const WCHAR *name;
++    WCHAR *encname;
++    HRESULT hr;
++
++    TRACE("(%p %d)!\n", view, row);
++
++    name = msi_string_lookup( db->strings, db->streams[row].str_index, NULL );
++    if (!(encname = encode_streamname( FALSE, name ))) return ERROR_OUTOFMEMORY;
++    hr = IStorage_DestroyElement( db->storage, encname );
++    msi_free( encname );
++    if (FAILED( hr ))
++        return ERROR_FUNCTION_FAILED;
++    hr = IStream_Release( db->streams[row].stream );
++    if (FAILED( hr ))
++        return ERROR_FUNCTION_FAILED;
++
++    for (i = row; i < num_rows; i++)
++        db->streams[i] = db->streams[i + 1];
++    db->num_streams = num_rows;
++
+     return ERROR_SUCCESS;
+ }
+ 
+@@ -307,12 +328,15 @@ static UINT STREAMS_modify(struct tagMSIVIEW *view, MSIMODIFY eModifyMode, MSIRE
+         r = streams_modify_update(view, rec);
+         break;
+ 
++    case MSIMODIFY_DELETE:
++        r = STREAMS_delete_row(view, row - 1);
++        break;
++
+     case MSIMODIFY_VALIDATE_NEW:
+     case MSIMODIFY_INSERT_TEMPORARY:
+     case MSIMODIFY_REFRESH:
+     case MSIMODIFY_REPLACE:
+     case MSIMODIFY_MERGE:
+-    case MSIMODIFY_DELETE:
+     case MSIMODIFY_VALIDATE:
+     case MSIMODIFY_VALIDATE_FIELD:
+     case MSIMODIFY_VALIDATE_DELETE:
+-- 
+2.5.1
+

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "60d1d6f5952e8b5d6fb0327a28c047058851fa70"
+	echo "3966affe064c7b98a7b4c052b6a6696fe74c8830"
 }
 
 # Show version information
@@ -203,7 +203,6 @@ patch_enable_all ()
 	enable_ntdll_Stack_Fault="$1"
 	enable_ntdll_Status_Mapping="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
-	enable_ntdll_ThreadDescriptorTableEntry="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
 	enable_ntdll_User_Shared_Data="$1"
@@ -217,7 +216,6 @@ patch_enable_all ()
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
 	enable_openal32_EFX_Extension="$1"
-	enable_opencl_Deprecation="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_rasapi32_RasEnumDevicesA="$1"
@@ -704,9 +702,6 @@ patch_enable ()
 		ntdll-SystemRoot_Symlink)
 			enable_ntdll_SystemRoot_Symlink="$2"
 			;;
-		ntdll-ThreadDescriptorTableEntry)
-			enable_ntdll_ThreadDescriptorTableEntry="$2"
-			;;
 		ntdll-ThreadTime)
 			enable_ntdll_ThreadTime="$2"
 			;;
@@ -745,9 +740,6 @@ patch_enable ()
 			;;
 		openal32-EFX_Extension)
 			enable_openal32_EFX_Extension="$2"
-			;;
-		opencl-Deprecation)
-			enable_opencl_Deprecation="$2"
 			;;
 		opengl32-Revert_Disable_Ext)
 			enable_opengl32_Revert_Disable_Ext="$2"
@@ -2028,18 +2020,6 @@ if test "$enable_patchlist" -eq 1; then
 	fi
 fi
 
-
-# Patchset opencl-Deprecation
-# |
-# | Modified files:
-# |   *	dlls/opencl/opencl.c
-# |
-if test "$enable_opencl_Deprecation" -eq 1; then
-	patch_apply opencl-Deprecation/0001-opencl-Avoid-deprecation-warning-for-OpenCL-1.2-APIs.patch
-	(
-		echo '+    { "Sebastian Lackner", "opencl: Avoid deprecation warning for OpenCL 1.2 APIs.", 1 },';
-	) >> "$patchlist"
-fi
 
 # Patchset Compiler_Warnings
 # |
@@ -4216,18 +4196,6 @@ if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
 	patch_apply ntdll-SystemRoot_Symlink/0001-ntdll-Add-special-handling-for-SystemRoot-to-satisfy.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Add special handling for \\\\SystemRoot to satisfy MSYS2 case-insensitive system check.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-ThreadDescriptorTableEntry
-# |
-# | Modified files:
-# |   *	dlls/ntdll/thread.c
-# |
-if test "$enable_ntdll_ThreadDescriptorTableEntry" -eq 1; then
-	patch_apply ntdll-ThreadDescriptorTableEntry/0001-ntdll-Ignore-higher-bits-in-selector-for-ThreadDescr.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Ignore higher bits in selector for ThreadDescriptorTableEntry info query.", 1 },';
 	) >> "$patchlist"
 fi
 

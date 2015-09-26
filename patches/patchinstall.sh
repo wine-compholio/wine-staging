@@ -207,6 +207,7 @@ patch_enable_all ()
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
 	enable_ntdll_User_Shared_Data="$1"
+	enable_ntdll_Virtual_Memory_Stack="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_WinSqm="$1"
 	enable_ntdll_WriteWatches="$1"
@@ -714,6 +715,9 @@ patch_enable ()
 			;;
 		ntdll-User_Shared_Data)
 			enable_ntdll_User_Shared_Data="$2"
+			;;
+		ntdll-Virtual_Memory_Stack)
+			enable_ntdll_Virtual_Memory_Stack="$2"
 			;;
 		ntdll-WRITECOPY)
 			enable_ntdll_WRITECOPY="$2"
@@ -1893,11 +1897,25 @@ if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
 	enable_ntdll_Empty_Path=1
 fi
 
+if test "$enable_ntdll_Fix_Alignment" -eq 1; then
+	if test "$enable_ntdll_Virtual_Memory_Stack" -gt 1; then
+		abort "Patchset ntdll-Virtual_Memory_Stack disabled, but ntdll-Fix_Alignment depends on that."
+	fi
+	enable_ntdll_Virtual_Memory_Stack=1
+fi
+
 if test "$enable_ntdll_DllRedirects" -eq 1; then
 	if test "$enable_ntdll_Loader_Machine_Type" -gt 1; then
 		abort "Patchset ntdll-Loader_Machine_Type disabled, but ntdll-DllRedirects depends on that."
 	fi
 	enable_ntdll_Loader_Machine_Type=1
+fi
+
+if test "$enable_ntdll_Dealloc_Thread_Stack" -eq 1; then
+	if test "$enable_ntdll_Virtual_Memory_Stack" -gt 1; then
+		abort "Patchset ntdll-Virtual_Memory_Stack disabled, but ntdll-Dealloc_Thread_Stack depends on that."
+	fi
+	enable_ntdll_Virtual_Memory_Stack=1
 fi
 
 if test "$enable_ntdll_CLI_Images" -eq 1; then
@@ -2010,6 +2028,13 @@ if test "$enable_ntdll_WRITECOPY" -eq 1; then
 	enable_ws2_32_WriteWatches=1
 fi
 
+if test "$enable_ws2_32_WriteWatches" -eq 1; then
+	if test "$enable_ntdll_Virtual_Memory_Stack" -gt 1; then
+		abort "Patchset ntdll-Virtual_Memory_Stack disabled, but ws2_32-WriteWatches depends on that."
+	fi
+	enable_ntdll_Virtual_Memory_Stack=1
+fi
+
 
 # If autoupdate is enabled then create a tempfile to keep track of all patches
 if test "$enable_patchlist" -eq 1; then
@@ -2038,7 +2063,27 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-Virtual_Memory_Stack
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34558] Reduce stack usage of virtual memory functions
+# |
+# | Modified files:
+# |   *	dlls/ntdll/virtual.c
+# |
+if test "$enable_ntdll_Virtual_Memory_Stack" -eq 1; then
+	patch_apply ntdll-Virtual_Memory_Stack/0001-ntdll-Reduce-stack-usage-by-storing-sigset-in-static.patch
+	patch_apply ntdll-Virtual_Memory_Stack/0002-ntdll-Save-stack-in-NtAllocateVirtualMemory-by-movin.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Reduce stack usage by storing sigset in static memory.", 1 },';
+		echo '+    { "Michael Müller", "ntdll: Save stack in NtAllocateVirtualMemory by moving remote memory allocation into separate function.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ws2_32-WriteWatches
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Virtual_Memory_Stack
 # |
 # | Modified files:
 # |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/signal_i386.c, dlls/ntdll/virtual.c, dlls/ws2_32/socket.c,
@@ -2056,7 +2101,7 @@ fi
 # Patchset ntdll-WRITECOPY
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ws2_32-WriteWatches
+# |   *	ntdll-Virtual_Memory_Stack, ws2_32-WriteWatches
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#29384] Voobly expects correct handling of WRITECOPY memory protection
@@ -2085,7 +2130,7 @@ fi
 # Patchset Exagear
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ws2_32-WriteWatches, ntdll-WRITECOPY
+# |   *	ntdll-Virtual_Memory_Stack, ws2_32-WriteWatches, ntdll-WRITECOPY
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/ntdll/signal_i386.c, dlls/ntdll/virtual.c, server/ptrace.c
@@ -3878,6 +3923,9 @@ fi
 
 # Patchset ntdll-Dealloc_Thread_Stack
 # |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Virtual_Memory_Stack
+# |
 # | Modified files:
 # |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c,
 # | 	dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/virtual.c
@@ -3999,6 +4047,9 @@ if test "$enable_ntdll_FileFsVolumeInformation" -eq 1; then
 fi
 
 # Patchset ntdll-Fix_Alignment
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Virtual_Memory_Stack
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#33162] Ensure NtProtectVirtualMemory and NtCreateSection are on separate pages
@@ -4277,7 +4328,7 @@ fi
 # Patchset ntdll-WriteWatches
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	rpcrt4-Pipe_Transport, kernel32-Named_Pipe, ws2_32-WriteWatches
+# |   *	rpcrt4-Pipe_Transport, kernel32-Named_Pipe, ntdll-Virtual_Memory_Stack, ws2_32-WriteWatches
 # |
 # | Modified files:
 # |   *	dlls/ntdll/file.c

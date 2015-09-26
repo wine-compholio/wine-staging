@@ -1,4 +1,4 @@
-From dae71e69de99580ced403804e944c7a13e0519e9 Mon Sep 17 00:00:00 2001
+From 25288a6031d1a4cf1a7e409eb06ac234d21761ac Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 21 Aug 2015 06:39:47 +0800
 Subject: ntdll: Do not allow to deallocate thread stack for current thread.
@@ -14,10 +14,10 @@ Subject: ntdll: Do not allow to deallocate thread stack for current thread.
  7 files changed, 57 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 46776a6..14b47ac 100644
+index cbd19db..6e25915 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -242,8 +242,18 @@ struct ntdll_thread_data
+@@ -240,8 +240,18 @@ struct ntdll_thread_data
      WINE_VM86_TEB_INFO vm86;          /* 1fc vm86 private data */
      void              *exit_frame;    /* 204 exit frame pointer */
  #endif
@@ -37,7 +37,7 @@ index 46776a6..14b47ac 100644
  {
      return (struct ntdll_thread_data *)NtCurrentTeb()->SpareBytes1;
 diff --git a/dlls/ntdll/signal_arm.c b/dlls/ntdll/signal_arm.c
-index cfb9df1..07c8b0a 100644
+index 1f6da96..a82eb91 100644
 --- a/dlls/ntdll/signal_arm.c
 +++ b/dlls/ntdll/signal_arm.c
 @@ -902,12 +902,19 @@ NTSTATUS signal_alloc_thread( TEB **teb )
@@ -61,7 +61,7 @@ index cfb9df1..07c8b0a 100644
      NtFreeVirtualMemory( NtCurrentProcess(), (void **)&teb, &size, MEM_RELEASE );
  }
 diff --git a/dlls/ntdll/signal_arm64.c b/dlls/ntdll/signal_arm64.c
-index 7259831..09bdfe0 100644
+index 3a41c84..3ad412a 100644
 --- a/dlls/ntdll/signal_arm64.c
 +++ b/dlls/ntdll/signal_arm64.c
 @@ -776,12 +776,19 @@ NTSTATUS signal_alloc_thread( TEB **teb )
@@ -85,10 +85,10 @@ index 7259831..09bdfe0 100644
      NtFreeVirtualMemory( NtCurrentProcess(), (void **)&teb, &size, MEM_RELEASE );
  }
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index f550c63..1007358 100644
+index 5c3aa819..28d9e29 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
-@@ -2616,12 +2616,18 @@ void signal_free_thread( TEB *teb )
+@@ -2367,12 +2367,18 @@ void signal_free_thread( TEB *teb )
      SIZE_T size;
      struct ntdll_thread_data *thread_data = (struct ntdll_thread_data *)teb->SpareBytes1;
  
@@ -109,7 +109,7 @@ index f550c63..1007358 100644
      NtFreeVirtualMemory( NtCurrentProcess(), (void **)&teb, &size, MEM_RELEASE );
  }
 diff --git a/dlls/ntdll/signal_powerpc.c b/dlls/ntdll/signal_powerpc.c
-index d2e7819..c673d6e 100644
+index 886da86..90644a4 100644
 --- a/dlls/ntdll/signal_powerpc.c
 +++ b/dlls/ntdll/signal_powerpc.c
 @@ -982,12 +982,19 @@ NTSTATUS signal_alloc_thread( TEB **teb )
@@ -133,7 +133,7 @@ index d2e7819..c673d6e 100644
      NtFreeVirtualMemory( NtCurrentProcess(), (void **)&teb, &size, MEM_RELEASE );
  }
 diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
-index a1ee02d..1db9f27 100644
+index 575a770..2ced91e 100644
 --- a/dlls/ntdll/signal_x86_64.c
 +++ b/dlls/ntdll/signal_x86_64.c
 @@ -2732,12 +2732,19 @@ NTSTATUS signal_alloc_thread( TEB **teb )
@@ -157,19 +157,19 @@ index a1ee02d..1db9f27 100644
      NtFreeVirtualMemory( NtCurrentProcess(), (void **)&teb, &size, MEM_RELEASE );
  }
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 9d35693..b40674b 100644
+index 020a6c0..98de9e6 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -1486,6 +1486,8 @@ NTSTATUS virtual_alloc_thread_stack( TEB *teb, SIZE_T reserve_size, SIZE_T commi
+@@ -1469,6 +1469,8 @@ NTSTATUS virtual_alloc_thread_stack( TEB *teb, SIZE_T reserve_size, SIZE_T commi
      teb->DeallocationStack = view->base;
      teb->Tib.StackBase     = (char *)view->base + view->size;
      teb->Tib.StackLimit    = (char *)view->base + 2 * page_size;
 +    ((struct ntdll_thread_data *)teb->SpareBytes1)->pthread_stack = view->base;
 +
  done:
-     server_leave_uninterrupted_section( &csVirtual, &sigset );
+     virtual_unlock();
      return status;
-@@ -2119,6 +2121,16 @@ NTSTATUS WINAPI NtFreeVirtualMemory( HANDLE process, PVOID *addr_ptr, SIZE_T *si
+@@ -2060,6 +2062,16 @@ NTSTATUS WINAPI NtFreeVirtualMemory( HANDLE process, PVOID *addr_ptr, SIZE_T *si
          /* Free the pages */
  
          if (size || (base != view->base)) status = STATUS_INVALID_PARAMETER;
@@ -187,5 +187,5 @@ index 9d35693..b40674b 100644
          {
              delete_view( view );
 -- 
-2.5.0
+2.5.1
 

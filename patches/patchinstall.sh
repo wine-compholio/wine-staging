@@ -97,6 +97,7 @@ patch_enable_all ()
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
 	enable_crypt32_CryptUnprotectMemory="$1"
+	enable_d3d8_D3DSWAPEFFECT_COPY_VSYNC="$1"
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Skip_Tests="$1"
 	enable_d3d9_Surface_Refcount="$1"
@@ -383,6 +384,9 @@ patch_enable ()
 			;;
 		crypt32-CryptUnprotectMemory)
 			enable_crypt32_CryptUnprotectMemory="$2"
+			;;
+		d3d8-D3DSWAPEFFECT_COPY_VSYNC)
+			enable_d3d8_D3DSWAPEFFECT_COPY_VSYNC="$2"
 			;;
 		d3d9-DesktopWindow)
 			enable_d3d9_DesktopWindow="$2"
@@ -2351,6 +2355,21 @@ if test "$enable_crypt32_CryptUnprotectMemory" -eq 1; then
 	patch_apply crypt32-CryptUnprotectMemory/0001-crypt32-Print-CryptUnprotectMemory-FIXME-only-once.patch
 	(
 		echo '+    { "Christian Costa", "crypt32: Print CryptUnprotectMemory FIXME only once.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3d8-D3DSWAPEFFECT_COPY_VSYNC
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37587] Implement semi-stub for d3d8 swapchain effect D3DSWAPEFFECT_COPY_VSYNC
+# |
+# | Modified files:
+# |   *	dlls/d3d8/device.c
+# |
+if test "$enable_d3d8_D3DSWAPEFFECT_COPY_VSYNC" -eq 1; then
+	patch_apply d3d8-D3DSWAPEFFECT_COPY_VSYNC/0001-d3d8-Handle-D3DSWAPEFFECT_COPY_VSYNC-swapchain-effec.patch
+	(
+		echo '+    { "Sebastian Lackner", "d3d8: Handle D3DSWAPEFFECT_COPY_VSYNC swapchain effect like D3DSWAPEFFECT_COPY.", 1 },';
 	) >> "$patchlist"
 fi
 

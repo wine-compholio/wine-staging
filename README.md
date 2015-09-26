@@ -39,10 +39,11 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [3]:**
+**Bug fixes and features included in the next upcoming release [4]:**
 
 * Add implementation for msidb commandline tool
 * Codepage conversion should fail when destination length is < 0
+* Implement semi-stub for d3d8 swapchain effect D3DSWAPEFFECT_COPY_VSYNC ([Wine Bug #37587](https://bugs.winehq.org/show_bug.cgi?id=37587))
 * Return STATUS_INVALID_DEVICE_REQUEST when trying to call NtReadFile on directory
 
 

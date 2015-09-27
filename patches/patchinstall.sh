@@ -2418,7 +2418,7 @@ fi
 # Patchset d3d8-D3DSWAPEFFECT_COPY_VSYNC
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#37587] Implement semi-stub for d3d8 swapchain effect D3DSWAPEFFECT_COPY_VSYNC
+# |   *	[#39281] Implement semi-stub for d3d8 swapchain effect D3DSWAPEFFECT_COPY_VSYNC
 # |
 # | Modified files:
 # |   *	dlls/d3d8/device.c

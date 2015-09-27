@@ -269,6 +269,7 @@ patch_enable_all ()
 	enable_user32_DeferWindowPos="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawTextExW="$1"
+	enable_user32_Edit_Control_Resize="$1"
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_Invalidate_Key_State="$1"
 	enable_user32_ListBox_Size="$1"
@@ -902,6 +903,9 @@ patch_enable ()
 			;;
 		user32-DrawTextExW)
 			enable_user32_DrawTextExW="$2"
+			;;
+		user32-Edit_Control_Resize)
+			enable_user32_Edit_Control_Resize="$2"
 			;;
 		user32-GetSystemMetrics)
 			enable_user32_GetSystemMetrics="$2"
@@ -5294,6 +5298,21 @@ if test "$enable_user32_DrawTextExW" -eq 1; then
 	patch_apply user32-DrawTextExW/0001-user32-Fix-handling-of-invert_y-in-DrawTextExW.patch
 	(
 		echo '+    { "Sebastian Lackner", "user32: Fix handling of invert_y in DrawTextExW.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-Edit_Control_Resize
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37542] Do not trust width/height passed to edit control in WM_SIZE message
+# |
+# | Modified files:
+# |   *	dlls/user32/edit.c
+# |
+if test "$enable_user32_Edit_Control_Resize" -eq 1; then
+	patch_apply user32-Edit_Control_Resize/0001-user32-Ignore-sizes-passed-in-WM_SIZE-for-edit-contr.patch
+	(
+		echo '+    { "Michael Müller", "user32: Ignore sizes passed in WM_SIZE for edit control.", 1 },';
 	) >> "$patchlist"
 fi
 

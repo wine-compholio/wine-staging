@@ -2,7 +2,7 @@
 # Installation: ln -s ../../precommit-hook.sh .git/hooks/pre-commit
 
 for directory in patches debian; do
-	if [ ! -z "$(git status --porcelain "$directory")" ]; then
+	if git status --porcelain "$directory" | grep "^.[^ ]" &> /dev/null; then
 		echo ""
 		echo "*** PLEASE ADD OR STASH YOUR CHANGES IN $directory ***"
 		echo ""

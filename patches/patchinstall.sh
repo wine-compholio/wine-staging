@@ -2161,8 +2161,8 @@ fi
 # Patchset Pipelight
 # |
 # | Modified files:
-# |   *	dlls/user32/message.c, dlls/wined3d/wined3d.spec, dlls/wined3d/wined3d_main.c, dlls/winex11.drv/init.c,
-# | 	dlls/winex11.drv/opengl.c, dlls/winex11.drv/x11drv.h
+# |   *	dlls/user32/message.c, dlls/user32/tests/msg.c, dlls/wined3d/wined3d.spec, dlls/wined3d/wined3d_main.c,
+# | 	dlls/winex11.drv/init.c, dlls/winex11.drv/opengl.c, dlls/winex11.drv/x11drv.h
 # |
 if test "$enable_Pipelight" -eq 1; then
 	patch_apply Pipelight/0001-winex11-Implement-X11DRV_FLUSH_GDI_DISPLAY-ExtEscape-c.patch

@@ -271,6 +271,7 @@ patch_enable_all ()
 	enable_user32_DrawTextExW="$1"
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_Invalidate_Key_State="$1"
+	enable_user32_ListBox_Size="$1"
 	enable_user32_Mouse_Message_Hwnd="$1"
 	enable_user32_Painting="$1"
 	enable_user32_ScrollWindowEx="$1"
@@ -907,6 +908,9 @@ patch_enable ()
 			;;
 		user32-Invalidate_Key_State)
 			enable_user32_Invalidate_Key_State="$2"
+			;;
+		user32-ListBox_Size)
+			enable_user32_ListBox_Size="$2"
 			;;
 		user32-Mouse_Message_Hwnd)
 			enable_user32_Mouse_Message_Hwnd="$2"
@@ -5320,6 +5324,21 @@ if test "$enable_user32_Invalidate_Key_State" -eq 1; then
 	patch_apply user32-Invalidate_Key_State/0001-user32-Globally-invalidate-key-state-on-changes-in-o.patch
 	(
 		echo '+    { "Sebastian Lackner", "user32: Globally invalidate key state on changes in other threads.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-ListBox_Size
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38142] Fix calculation of listbox size when horizontal scrollbar is present
+# |
+# | Modified files:
+# |   *	dlls/user32/listbox.c
+# |
+if test "$enable_user32_ListBox_Size" -eq 1; then
+	patch_apply user32-ListBox_Size/0001-user32-Fix-calculation-of-listbox-size-when-horizont.patch
+	(
+		echo '+    { "Michael Müller", "user32: Fix calculation of listbox size when horizontal scrollbar is present.", 1 },';
 	) >> "$patchlist"
 fi
 

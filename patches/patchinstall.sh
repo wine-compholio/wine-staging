@@ -94,6 +94,7 @@ patch_enable_all ()
 	enable_combase_String="$1"
 	enable_comctl32_Button_Theming="$1"
 	enable_comctl32_LoadIconMetric="$1"
+	enable_comctl32_TVM_GETITEM="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
 	enable_crypt32_CryptUnprotectMemory="$1"
@@ -379,6 +380,9 @@ patch_enable ()
 			;;
 		comctl32-LoadIconMetric)
 			enable_comctl32_LoadIconMetric="$2"
+			;;
+		comctl32-TVM_GETITEM)
+			enable_comctl32_TVM_GETITEM="$2"
 			;;
 		configure-Absolute_RPATH)
 			enable_configure_Absolute_RPATH="$2"
@@ -2370,6 +2374,21 @@ if test "$enable_comctl32_LoadIconMetric" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "comctl32: Implement LoadIconMetric function.", 1 },';
 		echo '+    { "Michael Müller", "comctl32/tests: Add tests for LoadIconMetric function.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset comctl32-TVM_GETITEM
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33001] Protect TVM_GETITEM from invalid item pointers
+# |
+# | Modified files:
+# |   *	dlls/comctl32/tests/treeview.c, dlls/comctl32/treeview.c
+# |
+if test "$enable_comctl32_TVM_GETITEM" -eq 1; then
+	patch_apply comctl32-TVM_GETITEM/0001-comctl32-Protect-TVM_GETITEM-from-invalid-item-point.patch
+	(
+		echo '+    { "Nikolay Sivov", "comctl32: Protect TVM_GETITEM from invalid item pointers.", 1 },';
 	) >> "$patchlist"
 fi
 

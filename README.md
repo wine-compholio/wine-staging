@@ -39,13 +39,14 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [8]:**
+**Bug fixes and features included in the next upcoming release [9]:**
 
 * Add implementation for msidb commandline tool
 * Codepage conversion should fail when destination length is < 0
 * Do not trust width/height passed to edit control in WM_SIZE message ([Wine Bug #37542](https://bugs.winehq.org/show_bug.cgi?id=37542))
 * Fix calculation of listbox size when horizontal scrollbar is present ([Wine Bug #38142](https://bugs.winehq.org/show_bug.cgi?id=38142))
 * Implement semi-stub for d3d8 swapchain effect D3DSWAPEFFECT_COPY_VSYNC ([Wine Bug #39281](https://bugs.winehq.org/show_bug.cgi?id=39281))
+* Protect TVM_GETITEM from invalid item pointers ([Wine Bug #33001](https://bugs.winehq.org/show_bug.cgi?id=33001))
 * Reduce stack usage of virtual memory functions ([Wine Bug #34558](https://bugs.winehq.org/show_bug.cgi?id=34558))
 * Refresh MDI menus when DefMDIChildProc(WM_SETTEXT) is called ([Wine Bug #21855](https://bugs.winehq.org/show_bug.cgi?id=21855))
 * Return STATUS_INVALID_DEVICE_REQUEST when trying to call NtReadFile on directory

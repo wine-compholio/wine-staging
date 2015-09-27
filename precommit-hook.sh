@@ -1,6 +1,15 @@
 #!/bin/bash
 # Installation: ln -s ../../precommit-hook.sh .git/hooks/pre-commit
 
+for directory in patches debian; do
+	if [ ! -z "$(git status --porcelain "$directory")" ]; then
+		echo ""
+		echo "*** PLEASE ADD OR STASH YOUR CHANGES IN $directory ***"
+		echo ""
+		exit 1
+	fi
+done
+
 git diff --cached --name-status | while read status file; do
 	if [[ "$file" =~ ^patches/ ]] || [[ "$file" =~ ^debian/tools/ ]] || [[ "$file" =~ ^debian/changelog ]]; then
 		echo ""

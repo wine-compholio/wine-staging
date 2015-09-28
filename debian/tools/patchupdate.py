@@ -448,6 +448,20 @@ def check_bug_status(all_patches):
                 once = False
             print " #%d - \"%s\" - %s %s" % (bug['id'], bug['summary'], bug['status'],
                                              bug['resolution'] if bug['resolution'] else "")
+
+    staged_bugs = bugtracker.Bug.search(dict(status="STAGED"))
+
+    once = True
+    for bug in staged_bugs['bugs']:
+        if bug['id'] not in all_bugids:
+            if once:
+                print ""
+                print "WARNING: The following bugs are incorrectly markes as STAGED:"
+                print ""
+                once = False
+            print " #%d - \"%s\" - %s %s" % (bug['id'], bug['summary'], bug['status'],
+                                             bug['resolution'] if bug['resolution'] else "")
+
     print ""
 
 def generate_ifdefined(all_patches, skip_checks=False):

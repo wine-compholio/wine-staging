@@ -1,8 +1,10 @@
 #!/usr/bin/python2
+# -*- coding: utf-8 -*-
 #
 # Automatic patch dependency checker and apply script/README.md generator.
 #
 # Copyright (C) 2014-2015 Sebastian Lackner
+# Copyright (C) 2015 Michael Müller
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -39,7 +41,7 @@ import sys
 import tempfile
 import textwrap
 import urllib
-import xml.dom.minidom
+import xmlrpclib
 
 _devnull = open(os.devnull, 'wb')
 
@@ -144,34 +146,6 @@ def _parse_int(val, default=0):
         return {'true': 1, 'yes': 1, 'false': 0, 'no': 0}[val.lower()]
     except AttributeError:
         return default
-
-def _winebugs_query(bugids):
-    """Query short_desc from multiple wine bugzilla bugs at the same time."""
-    bugids = list(set(bugids)) # Remove duplicates and convert to fixed order
-    if len(bugids) == 0: return {}
-
-    # Query bugzilla
-    url = "http://bugs.winehq.org/show_bug.cgi?%s&ctype=xml&field=short_desc&field=bug_status&field=resolution" % \
-          "&".join(["id=%d" % bugid for bugid in bugids])
-    with contextlib.closing(urllib.urlopen(url)) as fp:
-        data = xml.dom.minidom.parseString(fp.read())
-
-    # convert xml in a dictionary containing all bugs we found
-    result = {}
-    for element in data.getElementsByTagName('bug_id'):
-        bugids.remove(int(element.firstChild.data))
-
-    def _get_text(n):
-        return n.firstChild.data if (n and n.firstChild) else None
-
-    for bugid, element in zip(bugids, data.getElementsByTagName('bug')):
-        if element.getElementsByTagName('bug_id'): continue
-        result[bugid] = {
-            'short_desc': _get_text(element.getElementsByTagName('short_desc')[0]),
-            'bug_status': _get_text(element.getElementsByTagName('bug_status')[0]),
-            'resolution': _get_text(element.getElementsByTagName('resolution')[0]) }
-
-    return result
 
 def _read_changelog():
     """Read information from changelog."""
@@ -461,15 +435,18 @@ def check_bug_status(all_patches):
             if bugid is not None:
                 all_bugids.add(bugid)
 
+    bugtracker = xmlrpclib.ServerProxy("https://bugs.winehq.org/xmlrpc.cgi")
+    bug_list = bugtracker.Bug.get(dict(ids=list(all_bugids)))
+
     once = True
-    for bugid, bug in sorted(_winebugs_query(all_bugids).items()):
-        if bug['bug_status'] not in ["UNCONFIRMED", "NEW", "ASSIGNED", "REOPENED"]:
+    for bug in bug_list['bugs']:
+        if bug['status'] not in ["UNCONFIRMED", "NEW", "ASSIGNED", "REOPENED"]:
             if once:
                 print ""
                 print "WARNING: The following bugs might require attention:"
                 print ""
                 once = False
-            print " #%d - \"%s\" - %s %s" % (bugid, bug['short_desc'], bug['bug_status'],
+            print " #%d - \"%s\" - %s %s" % (bug['id'], bug['summary'], bug['status'],
                                              bug['resolution'] if bug['resolution'] else "")
     print ""
 

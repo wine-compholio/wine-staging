@@ -1,23 +1,18 @@
 What is Wine Staging?
 ---------------------
 
-**Warning: Do not report bugs at bugs.winehq.org when using this version!
-Please take a look [here](http://bugs.wine-staging.com) for more information
-about how to report bugs.**
+**Wine Staging** is the testing area of winehq.org. It contains bug fixes and
+features, which have not been integrated into the development branch yet. The
+idea of Wine Staging is to provide experimental features faster to end users and
+to give developers the possibility to discuss and improve their patches before
+they are integrated into the main branch. More information about Wine Staging
+can also be found on our website [wine-staging.com](http://wine-staging.com).
 
-**Wine Staging** (formerly wine-compholio) is a special wine version containing
-bug fixes and features, which are not yet available in regular wine versions.
-The idea of Wine Staging is to provide new features faster to end users and to
-give developers the possibility to discuss and improve their patches before
-they are sent upstream. We also intend to create a community of wine developers
-to share experience and to make it easier for beginners to start hacking on
-wine. More information about Wine Staging can also be found on our website
-[wine-staging.com](http://wine-staging.com).
+Although we are reviewing and testing all patches carefully before adding them,
+you may encounter additional bugs, which are not present in the development
+branch. Do not hesitate to report such issues at winehq.org, so they can be
+fixed before the feature gets integrated.
 
-Although we are reviewing and testing all patches before adding them, you may
-encounter additional bugs, which are not present in vanilla wine. Make sure to
-report such issues in our bug tracker instead of winehq.org so that we can try
-to solve them in future versions. Thanks!
 
 How to install and use Wine Staging
 -----------------------------------

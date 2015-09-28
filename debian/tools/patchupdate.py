@@ -65,6 +65,9 @@ class config(object):
 
     path_IfDefined          = "9999-IfDefined.patch"
 
+    bugtracker_url          = "https://bugs.winehq.org/xmlrpc.cgi"
+    github_url              = "https://github.com/wine-compholio/wine-staging"
+
 class PatchUpdaterError(RuntimeError):
     """Failed to update patches."""
     pass
@@ -429,27 +432,29 @@ def resolve_dependencies(all_patches, index = None, depends = None, auto_deps = 
 
 def check_bug_status(all_patches):
     all_bugids = set()
+    url_map = {}
 
     for _, patch in all_patches.iteritems():
+        url = "%s/tree/master/%s" % (config.github_url, patch.directory)
         for bugid, bugname in patch.fixes:
             if bugid is not None:
+                url_map[bugid] = url
                 all_bugids.add(bugid)
 
-    bugtracker = xmlrpclib.ServerProxy("https://bugs.winehq.org/xmlrpc.cgi")
-    bug_list = bugtracker.Bug.get(dict(ids=list(all_bugids)))
+    bugtracker  = xmlrpclib.ServerProxy(config.bugtracker_url)
+    bug_list    = bugtracker.Bug.get(dict(ids=list(all_bugids)))
+    staged_bugs = bugtracker.Bug.search(dict(status="STAGED"))
 
     once = True
     for bug in bug_list['bugs']:
-        if bug['status'] not in ["UNCONFIRMED", "NEW", "ASSIGNED", "REOPENED"]:
+        if bug['status'] != "STAGED" or bug['cf_staged_patchset'] != url_map[bug['id']]:
             if once:
                 print ""
                 print "WARNING: The following bugs might require attention:"
                 print ""
                 once = False
-            print " #%d - \"%s\" - %s %s" % (bug['id'], bug['summary'], bug['status'],
-                                             bug['resolution'] if bug['resolution'] else "")
-
-    staged_bugs = bugtracker.Bug.search(dict(status="STAGED"))
+            print " #%d - \"%s\" - %s %s - %s" % (bug['id'], bug['summary'], bug['status'],
+                                                  bug['resolution'], bug['cf_staged_patchset'])
 
     once = True
     for bug in staged_bugs['bugs']:
@@ -460,7 +465,7 @@ def check_bug_status(all_patches):
                 print ""
                 once = False
             print " #%d - \"%s\" - %s %s" % (bug['id'], bug['summary'], bug['status'],
-                                             bug['resolution'] if bug['resolution'] else "")
+                                             bug['resolution'])
 
     print ""
 

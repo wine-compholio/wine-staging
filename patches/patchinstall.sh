@@ -3174,16 +3174,18 @@ fi
 # |   *	[#37709] GetMonitorInfo returns the same name for all monitors
 # |
 # | Modified files:
-# |   *	dlls/gdi32/driver.c, dlls/user32/misc.c, dlls/winex11.drv/xinerama.c
+# |   *	dlls/gdi32/driver.c, dlls/user32/misc.c, dlls/winemac.drv/display.c, dlls/winex11.drv/xinerama.c
 # |
 if test "$enable_gdi32_MultiMonitor" -eq 1; then
 	patch_apply gdi32-MultiMonitor/0001-gdi32-Also-accept-.-DISPLAY-n-devices-names-with-n-o.patch
 	patch_apply gdi32-MultiMonitor/0002-winex11-Make-GetMonitorInfo-give-a-different-device-.patch
 	patch_apply gdi32-MultiMonitor/0003-user32-Implement-EnumDisplayDevicesW-based-on-EnumDi.patch
+	patch_apply gdi32-MultiMonitor/0004-winemac-Make-GetMonitorInfo-give-a-different-device-.patch
 	(
 		echo '+    { "Ken Thomases", "gdi32: Also accept \"\\\\\\\\.\\\\DISPLAY<n>\" devices names with <n> other than 1 as display devices.", 1 },';
 		echo '+    { "Ken Thomases", "winex11: Make GetMonitorInfo() give a different device name (\\\\.\\\\DISPLAY<n>) to each monitor.", 1 },';
 		echo '+    { "Ken Thomases", "user32: Implement EnumDisplayDevicesW() based on EnumDisplayMonitors() and GetMonitorInfoW().", 1 },';
+		echo '+    { "Ken Thomases", "winemac: Make GetMonitorInfo() give a different device name (\\\\\\\\.\\\\DISPLAY<n>) to each monitor.", 1 },';
 	) >> "$patchlist"
 fi
 

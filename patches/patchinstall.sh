@@ -175,6 +175,7 @@ patch_enable_all ()
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
+	enable_msi_msi_get_property="$1"
 	enable_msidb_Implementation="$1"
 	enable_msvcp90_basic_string_dtor="$1"
 	enable_msvcrt_Math_Precision="$1"
@@ -625,6 +626,9 @@ patch_enable ()
 			;;
 		mshtml-HTMLLocation_put_hash)
 			enable_mshtml_HTMLLocation_put_hash="$2"
+			;;
+		msi-msi_get_property)
+			enable_msi_msi_get_property="$2"
 			;;
 		msidb-Implementation)
 			enable_msidb_Implementation="$2"
@@ -3810,6 +3814,18 @@ if test "$enable_mshtml_HTMLLocation_put_hash" -eq 1; then
 	patch_apply mshtml-HTMLLocation_put_hash/0001-mshtml-Add-IHTMLLocation-hash-property-s-getter-impl.patch
 	(
 		echo '+    { "Zhenbo Li", "mshtml: Add IHTMLLocation::hash property'\''s getter implementation.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msi-msi_get_property
+# |
+# | Modified files:
+# |   *	dlls/msi/package.c
+# |
+if test "$enable_msi_msi_get_property" -eq 1; then
+	patch_apply msi-msi_get_property/0001-msi-Add-a-trace-to-msi_get_property.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "msi: Add a trace to msi_get_property.", 1 },';
 	) >> "$patchlist"
 fi
 

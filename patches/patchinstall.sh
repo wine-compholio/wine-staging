@@ -179,6 +179,7 @@ patch_enable_all ()
 	enable_msvcp90_basic_string_dtor="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvcrt_StdHandle_RefCount="$1"
+	enable_msvcrt__seh_longjmp_unwind4="$1"
 	enable_msvfw32_Image_Size="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_APC_Start_Process="$1"
@@ -636,6 +637,9 @@ patch_enable ()
 			;;
 		msvcrt-StdHandle_RefCount)
 			enable_msvcrt_StdHandle_RefCount="$2"
+			;;
+		msvcrt-_seh_longjmp_unwind4)
+			enable_msvcrt__seh_longjmp_unwind4="$2"
 			;;
 		msvfw32-Image_Size)
 			enable_msvfw32_Image_Size="$2"
@@ -3891,6 +3895,21 @@ if test "$enable_msvcrt_StdHandle_RefCount" -eq 1; then
 		echo '+    { "Qian Hong", "msvcrt/tests: Add tests for stdout and stderr refcount.", 1 },';
 		echo '+    { "Qian Hong", "msvcrt: Implemenent refcount check for stdout and stderr.", 1 },';
 		echo '+    { "Sebastian Lackner", "msvcrt: Use constants instead of hardcoded values.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msvcrt-_seh_longjmp_unwind4
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39356] Pass cookie by reference to msvcrt_local_unwind4 in _seh_longjmp_unwind4
+# |
+# | Modified files:
+# |   *	dlls/msvcrt/except_i386.c
+# |
+if test "$enable_msvcrt__seh_longjmp_unwind4" -eq 1; then
+	patch_apply msvcrt-_seh_longjmp_unwind4/0001-msvcrt-Pass-cookie-reference-to-msvcrt_local_unwind4.patch
+	(
+		echo '+    { "Sebastian Lackner", "msvcrt: Pass cookie reference to msvcrt_local_unwind4 instead of value.", 1 },';
 	) >> "$patchlist"
 fi
 

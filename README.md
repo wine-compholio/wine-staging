@@ -34,7 +34,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [12]:**
+**Bug fixes and features included in the next upcoming release [13]:**
 
 * Add implementation for msidb commandline tool
 * Codepage conversion should fail when destination length is < 0
@@ -44,6 +44,7 @@ Included bug fixes and improvements
 * Fix calculation of listbox size when horizontal scrollbar is present ([Wine Bug #38142](https://bugs.winehq.org/show_bug.cgi?id=38142))
 * Implement additional stub functions in authz.dll
 * Implement semi-stub for d3d8 swapchain effect D3DSWAPEFFECT_COPY_VSYNC ([Wine Bug #39281](https://bugs.winehq.org/show_bug.cgi?id=39281))
+* Pass cookie by reference to msvcrt_local_unwind4 in _seh_longjmp_unwind4 ([Wine Bug #39356](https://bugs.winehq.org/show_bug.cgi?id=39356))
 * Protect TVM_GETITEM from invalid item pointers ([Wine Bug #33001](https://bugs.winehq.org/show_bug.cgi?id=33001))
 * Reduce stack usage of virtual memory functions ([Wine Bug #34558](https://bugs.winehq.org/show_bug.cgi?id=34558))
 * Refresh MDI menus when DefMDIChildProc(WM_SETTEXT) is called ([Wine Bug #21855](https://bugs.winehq.org/show_bug.cgi?id=21855))

@@ -34,12 +34,13 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [11]:**
+**Bug fixes and features included in the next upcoming release [12]:**
 
 * Add implementation for msidb commandline tool
 * Codepage conversion should fail when destination length is < 0
 * Do not trust width/height passed to edit control in WM_SIZE message ([Wine Bug #37542](https://bugs.winehq.org/show_bug.cgi?id=37542))
 * Do not use GdipAlloc and GdipFree in internal functions ([Wine Bug #32786](https://bugs.winehq.org/show_bug.cgi?id=32786))
+* Do not wait for hook thread startup in IDirectInput8::Initialize ([Wine Bug #21403](https://bugs.winehq.org/show_bug.cgi?id=21403))
 * Fix calculation of listbox size when horizontal scrollbar is present ([Wine Bug #38142](https://bugs.winehq.org/show_bug.cgi?id=38142))
 * Implement additional stub functions in authz.dll
 * Implement semi-stub for d3d8 swapchain effect D3DSWAPEFFECT_COPY_VSYNC ([Wine Bug #39281](https://bugs.winehq.org/show_bug.cgi?id=39281))

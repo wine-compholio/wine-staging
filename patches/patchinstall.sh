@@ -128,6 +128,7 @@ patch_enable_all ()
 	enable_ddraw_ZBufferBitDepths="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
 	enable_dinput_Events="$1"
+	enable_dinput_Initialize="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
@@ -482,6 +483,9 @@ patch_enable ()
 			;;
 		dinput-Events)
 			enable_dinput_Events="$2"
+			;;
+		dinput-Initialize)
+			enable_dinput_Initialize="$2"
 			;;
 		dsound-EAX)
 			enable_dsound_EAX="$2"
@@ -2901,6 +2905,21 @@ if test "$enable_dinput_Events" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "dinput: Ensure X11 input events are handled even without explicit message loop.", 3 },';
 		echo '+    { "Amine Khaldi", "dinput: Skip Wine specific __wine_check_for_events calls in ReactOS.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dinput-Initialize
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#21403] Do not wait for hook thread startup in IDirectInput8::Initialize
+# |
+# | Modified files:
+# |   *	dlls/dinput/dinput_main.c
+# |
+if test "$enable_dinput_Initialize" -eq 1; then
+	patch_apply dinput-Initialize/0001-dinput-Do-not-wait-for-hook-thread-startup-in-IDirec.patch
+	(
+		echo '+    { "Sebastian Lackner", "dinput: Do not wait for hook thread startup in IDirectInput8::Initialize.", 1 },';
 	) >> "$patchlist"
 fi
 

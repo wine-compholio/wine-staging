@@ -2367,10 +2367,12 @@ fi
 # |   *	dlls/comctl32/comctl32.spec, dlls/comctl32/commctrl.c, dlls/comctl32/tests/misc.c, include/commctrl.h
 # |
 if test "$enable_comctl32_LoadIconMetric" -eq 1; then
-	patch_apply comctl32-LoadIconMetric/0001-comctl32-Implement-LoadIconMetric-function.patch
-	patch_apply comctl32-LoadIconMetric/0002-comctl32-tests-Add-tests-for-LoadIconMetric-function.patch
+	patch_apply comctl32-LoadIconMetric/0001-comctl32-Add-semi-stub-implementation-for-LoadIconWi.patch
+	patch_apply comctl32-LoadIconMetric/0002-comctl32-Add-implementation-for-LoadIconMetric.patch
+	patch_apply comctl32-LoadIconMetric/0003-comctl32-tests-Add-tests-for-LoadIconMetric-function.patch
 	(
-		echo '+    { "Michael Müller", "comctl32: Implement LoadIconMetric function.", 1 },';
+		echo '+    { "Michael Müller", "comctl32: Add semi-stub implementation for LoadIconWithScaleDown.", 1 },';
+		echo '+    { "Michael Müller", "comctl32: Add implementation for LoadIconMetric.", 1 },';
 		echo '+    { "Michael Müller", "comctl32/tests: Add tests for LoadIconMetric function.", 1 },';
 	) >> "$patchlist"
 fi

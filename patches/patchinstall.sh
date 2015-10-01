@@ -141,6 +141,7 @@ patch_enable_all ()
 	enable_gdi32_MaxPixelFormats="$1"
 	enable_gdi32_MultiMonitor="$1"
 	enable_gdiplus_GdipCreateEffect="$1"
+	enable_gdiplus_Memory_Allocation="$1"
 	enable_ieframe_IViewObject_Draw="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imagehlp_Cleanup="$1"
@@ -521,6 +522,9 @@ patch_enable ()
 			;;
 		gdiplus-GdipCreateEffect)
 			enable_gdiplus_GdipCreateEffect="$2"
+			;;
+		gdiplus-Memory_Allocation)
+			enable_gdiplus_Memory_Allocation="$2"
 			;;
 		ieframe-IViewObject-Draw)
 			enable_ieframe_IViewObject_Draw="$2"
@@ -3202,6 +3206,24 @@ if test "$enable_gdiplus_GdipCreateEffect" -eq 1; then
 	patch_apply gdiplus-GdipCreateEffect/0001-gdiplus-Add-GdipCreateEffect-stub.patch
 	(
 		echo '+    { "Alistair Leslie-Hughes", "gdiplus: Add GdipCreateEffect stub.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset gdiplus-Memory_Allocation
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#32786] Do not use GdipAlloc and GdipFree in internal functions
+# |
+# | Modified files:
+# |   *	dlls/gdiplus/brush.c, dlls/gdiplus/customlinecap.c, dlls/gdiplus/font.c, dlls/gdiplus/gdiplus.c,
+# | 	dlls/gdiplus/gdiplus_private.h, dlls/gdiplus/graphics.c, dlls/gdiplus/graphicspath.c, dlls/gdiplus/image.c,
+# | 	dlls/gdiplus/imageattributes.c, dlls/gdiplus/matrix.c, dlls/gdiplus/metafile.c, dlls/gdiplus/pathiterator.c,
+# | 	dlls/gdiplus/pen.c, dlls/gdiplus/region.c, dlls/gdiplus/stringformat.c
+# |
+if test "$enable_gdiplus_Memory_Allocation" -eq 1; then
+	patch_apply gdiplus-Memory_Allocation/0001-gdiplus-Do-not-use-GdipAlloc-and-GdipFree-in-interna.patch
+	(
+		echo '+    { "Sebastian Lackner", "gdiplus: Do not use GdipAlloc and GdipFree in internal functions.", 1 },';
 	) >> "$patchlist"
 fi
 

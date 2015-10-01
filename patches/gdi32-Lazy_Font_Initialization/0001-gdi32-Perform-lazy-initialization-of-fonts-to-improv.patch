@@ -1,4 +1,4 @@
-From 029c387205b7a5d0d62df10512ae068980313bc3 Mon Sep 17 00:00:00 2001
+From ed8b8ed961c31b68abc5fb266d872f7228e02b93 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 15 Aug 2015 07:41:17 +0200
 Subject: gdi32: Perform lazy initialization of fonts to improve startup
@@ -6,8 +6,8 @@ Subject: gdi32: Perform lazy initialization of fonts to improve startup
 
 ---
  dlls/gdi32/dc.c       |  8 +++-----
- dlls/gdi32/freetype.c | 48 +++++++++++++++++++++++++++++++++---------------
- 2 files changed, 36 insertions(+), 20 deletions(-)
+ dlls/gdi32/freetype.c | 49 ++++++++++++++++++++++++++++++++++---------------
+ 2 files changed, 37 insertions(+), 20 deletions(-)
 
 diff --git a/dlls/gdi32/dc.c b/dlls/gdi32/dc.c
 index 5146f5b..91ad953 100644
@@ -29,7 +29,7 @@ index 5146f5b..91ad953 100644
  }
  
 diff --git a/dlls/gdi32/freetype.c b/dlls/gdi32/freetype.c
-index 1187598..446212f 100644
+index de40d9f..d4eb837 100644
 --- a/dlls/gdi32/freetype.c
 +++ b/dlls/gdi32/freetype.c
 @@ -110,6 +110,9 @@
@@ -42,7 +42,7 @@ index 1187598..446212f 100644
  #ifdef HAVE_FREETYPE
  
  #ifndef HAVE_FT_TRUETYPEENGINETYPE
-@@ -3112,6 +3115,7 @@ INT WineEngAddFontResourceEx(LPCWSTR file, DWORD flags, PVOID pdv)
+@@ -3176,6 +3179,7 @@ INT WineEngAddFontResourceEx(LPCWSTR file, DWORD flags, PVOID pdv)
  {
      INT ret = 0;
  
@@ -50,7 +50,7 @@ index 1187598..446212f 100644
      GDI_CheckNotLock();
  
      if (ft_handle)  /* do it only if we have freetype up and running */
-@@ -3154,6 +3158,7 @@ INT WineEngAddFontResourceEx(LPCWSTR file, DWORD flags, PVOID pdv)
+@@ -3218,6 +3222,7 @@ INT WineEngAddFontResourceEx(LPCWSTR file, DWORD flags, PVOID pdv)
   */
  HANDLE WineEngAddFontMemResourceEx(PVOID pbFont, DWORD cbFont, PVOID pdv, DWORD *pcFonts)
  {
@@ -58,7 +58,7 @@ index 1187598..446212f 100644
      GDI_CheckNotLock();
  
      if (ft_handle)  /* do it only if we have freetype up and running */
-@@ -3192,6 +3197,7 @@ BOOL WineEngRemoveFontResourceEx(LPCWSTR file, DWORD flags, PVOID pdv)
+@@ -3256,6 +3261,7 @@ BOOL WineEngRemoveFontResourceEx(LPCWSTR file, DWORD flags, PVOID pdv)
  {
      INT ret = 0;
  
@@ -66,7 +66,7 @@ index 1187598..446212f 100644
      GDI_CheckNotLock();
  
      if (ft_handle)  /* do it only if we have freetype up and running */
-@@ -3513,10 +3519,13 @@ static BOOL create_fot( const WCHAR *resource, const WCHAR *font_file, const str
+@@ -3577,10 +3583,13 @@ static BOOL create_fot( const WCHAR *resource, const WCHAR *font_file, const str
  BOOL WineEngCreateScalableFontResource( DWORD hidden, LPCWSTR resource,
                                          LPCWSTR font_file, LPCWSTR font_path )
  {
@@ -81,7 +81,7 @@ index 1187598..446212f 100644
      if (!unix_name || !get_fontdir( unix_name, &fontdir ))
          SetLastError( ERROR_INVALID_PARAMETER );
      else
-@@ -3948,8 +3957,6 @@ static BOOL init_freetype(void)
+@@ -4012,8 +4021,6 @@ static BOOL init_freetype(void)
      FT_SimpleVersion = ((FT_Version.major << 16) & 0xff0000) |
                         ((FT_Version.minor <<  8) & 0x00ff00) |
                         ((FT_Version.patch      ) & 0x0000ff);
@@ -90,7 +90,7 @@ index 1187598..446212f 100644
      return TRUE;
  
  sym_not_found:
-@@ -4136,20 +4143,12 @@ static void reorder_font_list(void)
+@@ -4200,21 +4207,13 @@ static void reorder_font_list(void)
      set_default( default_sans_list );
  }
  
@@ -102,6 +102,7 @@ index 1187598..446212f 100644
 -BOOL WineEngInit(void)
 +static DWORD WINAPI freetype_lazy_init(RTL_RUN_ONCE *once, void *param, void **context)
  {
+     HKEY hkey;
      DWORD disposition;
      HANDLE font_mutex;
  
@@ -113,7 +114,7 @@ index 1187598..446212f 100644
  
  #ifdef SONAME_LIBFONTCONFIG
      init_fontconfig();
-@@ -4158,7 +4157,7 @@ BOOL WineEngInit(void)
+@@ -4240,7 +4239,7 @@ BOOL WineEngInit(void)
      if((font_mutex = CreateMutexW(NULL, FALSE, font_mutex_nameW)) == NULL)
      {
          ERR("Failed to create font mutex\n");
@@ -122,7 +123,7 @@ index 1187598..446212f 100644
      }
      WaitForSingleObject(font_mutex, INFINITE);
  
-@@ -4185,6 +4184,20 @@ BOOL WineEngInit(void)
+@@ -4267,6 +4266,21 @@ BOOL WineEngInit(void)
      return TRUE;
  }
  
@@ -140,10 +141,11 @@ index 1187598..446212f 100644
 +    font_driver = &freetype_funcs;
 +    return TRUE;
 +}
- 
- static LONG calc_ppem_for_height(FT_Face ft_face, LONG height)
- {
-@@ -4856,8 +4869,12 @@ static BOOL select_charmap(FT_Face ft_face, FT_Encoding encoding)
++
+ /* Some fonts have large usWinDescent values, as a result of storing signed short
+    in unsigned field. That's probably caused by sTypoDescent vs usWinDescent confusion in
+    some font generation tools. */
+@@ -4948,8 +4962,12 @@ static BOOL select_charmap(FT_Face ft_face, FT_Encoding encoding)
  static BOOL freetype_CreateDC( PHYSDEV *dev, LPCWSTR driver, LPCWSTR device,
                                 LPCWSTR output, const DEVMODEW *devmode )
  {
@@ -157,7 +159,7 @@ index 1187598..446212f 100644
      if (!physdev) return FALSE;
      push_dc_driver( dev, &physdev->dev, &freetype_funcs );
      return TRUE;
-@@ -8124,6 +8141,7 @@ static BOOL freetype_FontIsLinked( PHYSDEV dev )
+@@ -8218,6 +8236,7 @@ static BOOL freetype_FontIsLinked( PHYSDEV dev )
   */
  BOOL WINAPI GetRasterizerCaps( LPRASTERIZER_STATUS lprs, UINT cbNumBytes)
  {
@@ -166,5 +168,5 @@ index 1187598..446212f 100644
      lprs->wFlags = TT_AVAILABLE | TT_ENABLED;
      lprs->nLanguageID = 0;
 -- 
-2.5.0
+2.5.1
 

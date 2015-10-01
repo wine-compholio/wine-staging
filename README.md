@@ -148,7 +148,7 @@ for more details.*
 * Fix device paths in HKLM\SYSTEM\MountedDevices ([Wine Bug #38235](https://bugs.winehq.org/show_bug.cgi?id=38235))
 * Fix endless loop in regedit when importing files with very long lines
 * Fix error handling in DeferWindowPos when passing an invalid HWND ([Wine Bug #23187](https://bugs.winehq.org/show_bug.cgi?id=23187))
-* Fix failure to create anonymous file mapping after failed open_fd server call
+* ~~Fix failure to create anonymous file mapping after failed open_fd server call~~
 * Fix flickering introduced by pixelformat changes. ([Wine Bug #35718](https://bugs.winehq.org/show_bug.cgi?id=35718))
 * Fix for ConnectNamedPort return value in overlapped mode ([Wine Bug #16550](https://bugs.winehq.org/show_bug.cgi?id=16550))
 * Fix for programs leaking wndproc slots ([Wine Bug #32451](https://bugs.winehq.org/show_bug.cgi?id=32451))
@@ -175,7 +175,7 @@ for more details.*
 * Fix wrong defition of ntoskrnl.IoReleaseCancelSpinLock function.
 * Fix wrong version of ID3DXEffect interface for d3dx9_24
 * Fix wrong version of ID3DXEffect interface for d3dx9_25 ([Wine Bug #25138](https://bugs.winehq.org/show_bug.cgi?id=25138))
-* Forward exitcode from child process when in wineconsole
+* ~~Forward exitcode from child process when in wineconsole~~
 * ~~Free RPC parameters allocated by application before anything else~~ ([Wine Bug #36743](https://bugs.winehq.org/show_bug.cgi?id=36743))
 * GetMessage should remove already seen messages with higher priority ([Wine Bug #28884](https://bugs.winehq.org/show_bug.cgi?id=28884))
 * GetMonitorInfo returns the same name for all monitors ([Wine Bug #37709](https://bugs.winehq.org/show_bug.cgi?id=37709))

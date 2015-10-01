@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "3966affe064c7b98a7b4c052b6a6696fe74c8830"
+	echo "781b88b7c586fc295780f0c8ad76bda0ffe96cd1"
 }
 
 # Show version information
@@ -244,7 +244,6 @@ patch_enable_all ()
 	enable_server_Shared_Memory="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
-	enable_server_Working_Directory="$1"
 	enable_setupapi_SetupDiSelectBestCompatDrv="$1"
 	enable_setupapi_SetupDiSetDeviceInstallParamsW="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
@@ -294,7 +293,6 @@ patch_enable_all ()
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
 	enable_winecfg_Unmounted_Devices="$1"
-	enable_wineconsole_Forward_Exitcode="$1"
 	enable_wined3d_Accounting="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
@@ -832,9 +830,6 @@ patch_enable ()
 		server-Timestamp_Compat)
 			enable_server_Timestamp_Compat="$2"
 			;;
-		server-Working_Directory)
-			enable_server_Working_Directory="$2"
-			;;
 		setupapi-SetupDiSelectBestCompatDrv)
 			enable_setupapi_SetupDiSelectBestCompatDrv="$2"
 			;;
@@ -981,9 +976,6 @@ patch_enable ()
 			;;
 		winecfg-Unmounted_Devices)
 			enable_winecfg_Unmounted_Devices="$2"
-			;;
-		wineconsole-Forward_Exitcode)
-			enable_wineconsole_Forward_Exitcode="$2"
 			;;
 		wined3d-Accounting)
 			enable_wined3d_Accounting="$2"
@@ -1851,13 +1843,6 @@ if test "$enable_server_Stored_ACLs" -eq 1; then
 	fi
 	enable_ntdll_DOS_Attributes=1
 	enable_server_File_Permissions=1
-fi
-
-if test "$enable_server_Delete_On_Close" -eq 1; then
-	if test "$enable_server_Working_Directory" -gt 1; then
-		abort "Patchset server-Working_Directory disabled, but server-Delete_On_Close depends on that."
-	fi
-	enable_server_Working_Directory=1
 fi
 
 if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
@@ -4725,22 +4710,7 @@ if test "$enable_server_ClipCursor" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Working_Directory
-# |
-# | Modified files:
-# |   *	server/fd.c
-# |
-if test "$enable_server_Working_Directory" -eq 1; then
-	patch_apply server-Working_Directory/0001-server-Switch-back-to-server-dir-when-open_fd-fails.patch
-	(
-		echo '+    { "Sebastian Lackner", "server: Switch back to server dir when open_fd fails.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-Delete_On_Close
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	server-Working_Directory
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#38417] Fix handling of opening read-only files for FILE_DELETE_ON_CLOSE
@@ -5664,18 +5634,6 @@ if test "$enable_winecfg_Unmounted_Devices" -eq 1; then
 	patch_apply winecfg-Unmounted_Devices/0001-winecfg-Show-unmounted-devices-and-allow-changing-th.patch
 	(
 		echo '+    { "Michael Müller", "winecfg: Show unmounted devices and allow changing the device value.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wineconsole-Forward_Exitcode
-# |
-# | Modified files:
-# |   *	programs/wineconsole/winecon_private.h, programs/wineconsole/wineconsole.c
-# |
-if test "$enable_wineconsole_Forward_Exitcode" -eq 1; then
-	patch_apply wineconsole-Forward_Exitcode/0001-wineconsole-Forward-child-process-exitcode.patch
-	(
-		echo '+    { "Michael Müller", "wineconsole: Forward child process exitcode.", 1 },';
 	) >> "$patchlist"
 fi
 

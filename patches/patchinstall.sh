@@ -90,6 +90,7 @@ patch_enable_all ()
 	enable_advpack_LaunchINFSection="$1"
 	enable_amstream_GetMultiMediaStream="$1"
 	enable_api_ms_win_crt_Stub_DLLs="$1"
+	enable_authz_Stub_Functions="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_combase_String="$1"
 	enable_comctl32_Button_Theming="$1"
@@ -364,6 +365,9 @@ patch_enable ()
 			;;
 		api-ms-win-crt-Stub_DLLs)
 			enable_api_ms_win_crt_Stub_DLLs="$2"
+			;;
+		authz-Stub_Functions)
+			enable_authz_Stub_Functions="$2"
 			;;
 		browseui-Progress_Dialog)
 			enable_browseui_Progress_Dialog="$2"
@@ -2297,6 +2301,18 @@ if test "$enable_api_ms_win_crt_Stub_DLLs" -eq 1; then
 		echo '+    { "Martin Storsjo", "vcruntime140: Add the new MSVC 2015 compiler specific DLL.", 1 },';
 		echo '+    { "Martin Storsjo", "vcruntime140: Hook up a function with a new name to the existing implementation.", 1 },';
 		echo '+    { "Martin Storsjo", "vcruntime140: Add stubs for telemetry functions.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset authz-Stub_Functions
+# |
+# | Modified files:
+# |   *	dlls/authz/authz.c, dlls/authz/authz.spec
+# |
+if test "$enable_authz_Stub_Functions" -eq 1; then
+	patch_apply authz-Stub_Functions/0001-authz-Added-additional-stub-functions.patch
+	(
+		echo '+    { "Zhenbo Li", "authz: Added additional stub functions.", 1 },';
 	) >> "$patchlist"
 fi
 

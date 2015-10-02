@@ -3746,14 +3746,22 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#37811] Add implementation for mfplat.MFTRegister
+# |   *	[#39309] Add implementation for mfplat.MFTEnum
 # |
 # | Modified files:
-# |   *	dlls/mfplat/Makefile.in, dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, loader/wine.inf.in
+# |   *	configure.ac, dlls/mfplat/Makefile.in, dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, dlls/mfplat/tests/Makefile.in,
+# | 	dlls/mfplat/tests/mfplat.c, loader/wine.inf.in
 # |
 if test "$enable_mfplat_MFTRegister" -eq 1; then
 	patch_apply mfplat-MFTRegister/0001-mfplat-Implement-MFTRegister.patch
+	patch_apply mfplat-MFTRegister/0002-mfplat-Implement-MFTUnregister.patch
+	patch_apply mfplat-MFTRegister/0003-mfplat-Implement-MFTEnum.patch
+	patch_apply mfplat-MFTRegister/0004-mfplat-tests-Add-tests.patch
 	(
 		echo '+    { "Michael Müller", "mfplat: Implement MFTRegister.", 2 },';
+		echo '+    { "Michael Müller", "mfplat: Implement MFTUnregister.", 1 },';
+		echo '+    { "Michael Müller", "mfplat: Implement MFTEnum.", 1 },';
+		echo '+    { "Michael Müller", "mfplat/tests: Add tests.", 1 },';
 	) >> "$patchlist"
 fi
 

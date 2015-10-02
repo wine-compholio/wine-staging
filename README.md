@@ -34,8 +34,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [16]:**
+**Bug fixes and features included in the next upcoming release [17]:**
 
+* Add implementation for mfplat.MFTEnum ([Wine Bug #39309](https://bugs.winehq.org/show_bug.cgi?id=39309))
 * Add implementation for msidb commandline tool
 * BitBlt and StretchDIBits should be marked as hotpatchable
 * Codepage conversion should fail when destination length is < 0

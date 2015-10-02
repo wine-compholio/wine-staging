@@ -1,0 +1,196 @@
+From ad8bbfd9104e2d35aba7f37b26c555bb7cbd7e16 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Fri, 2 Oct 2015 05:09:10 +0200
+Subject: mfplat/tests: Add tests.
+
+---
+ configure.ac                  |   1 +
+ dlls/mfplat/tests/Makefile.in |   5 ++
+ dlls/mfplat/tests/mfplat.c    | 151 ++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 157 insertions(+)
+ create mode 100644 dlls/mfplat/tests/Makefile.in
+ create mode 100644 dlls/mfplat/tests/mfplat.c
+
+diff --git a/configure.ac b/configure.ac
+index c37c491..54641a6 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -3078,6 +3078,7 @@ WINE_CONFIG_DLL(mciseq)
+ WINE_CONFIG_DLL(mciwave)
+ WINE_CONFIG_DLL(mf)
+ WINE_CONFIG_DLL(mfplat)
++WINE_CONFIG_TEST(dlls/mfplat/tests)
+ WINE_CONFIG_DLL(mfreadwrite)
+ WINE_CONFIG_DLL(mgmtapi)
+ WINE_CONFIG_DLL(midimap)
+diff --git a/dlls/mfplat/tests/Makefile.in b/dlls/mfplat/tests/Makefile.in
+new file mode 100644
+index 0000000..41a098d
+--- /dev/null
++++ b/dlls/mfplat/tests/Makefile.in
+@@ -0,0 +1,5 @@
++TESTDLL   = mfplat.dll
++IMPORTS   = ole32
++
++C_SRCS = \
++	mfplat.c
+diff --git a/dlls/mfplat/tests/mfplat.c b/dlls/mfplat/tests/mfplat.c
+new file mode 100644
+index 0000000..5e3be98
+--- /dev/null
++++ b/dlls/mfplat/tests/mfplat.c
+@@ -0,0 +1,151 @@
++/*
++ * Unit test suite for mfplat.
++ *
++ * Copyright 2015 Michael Müller
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include <stdarg.h>
++#include <string.h>
++
++#define COBJMACROS
++
++#include "windef.h"
++#include "winbase.h"
++#include "winuser.h"
++#include "winreg.h"
++
++#include "initguid.h"
++#include "mfapi.h"
++#include "mferror.h"
++
++#include "wine/test.h"
++
++DEFINE_GUID(MFT_CATEGORY_OTHER, 0x90175d57,0xb7ea,0x4901,0xae,0xb3,0x93,0x3a,0x87,0x47,0x75,0x6f);
++
++DEFINE_GUID(DUMMY_CLSID, 0x12345678,0x1234,0x1234,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19);
++DEFINE_GUID(DUMMY_GUID1, 0x12345678,0x1234,0x1234,0x21,0x21,0x21,0x21,0x21,0x21,0x21,0x21);
++DEFINE_GUID(DUMMY_GUID2, 0x12345678,0x1234,0x1234,0x22,0x22,0x22,0x22,0x22,0x22,0x22,0x22);
++DEFINE_GUID(DUMMY_GUID3, 0x12345678,0x1234,0x1234,0x33,0x33,0x33,0x33,0x33,0x33,0x33,0x33);
++
++static HRESULT (WINAPI* pMFTEnum)(GUID, UINT32, MFT_REGISTER_TYPE_INFO *, MFT_REGISTER_TYPE_INFO *,
++                                  IMFAttributes *, CLSID**, UINT32*);
++static HRESULT (WINAPI* pMFTRegister)(CLSID, GUID, LPWSTR, UINT32, UINT32, MFT_REGISTER_TYPE_INFO *,
++                                      UINT32, MFT_REGISTER_TYPE_INFO *, void *);
++static HRESULT (WINAPI* pMFTUnregister)(CLSID);
++
++static BOOL check_clsid(CLSID *clsids, UINT32 count)
++{
++    int i;
++    for (i = 0; i < count; i++)
++    {
++        if (IsEqualGUID(&clsids[i], &DUMMY_CLSID))
++            return TRUE;
++    }
++    return FALSE;
++}
++
++static void test_register(void)
++{
++    static WCHAR name[] = {'W','i','n','e',' ','t','e','s','t',0};
++    MFT_REGISTER_TYPE_INFO input;
++    MFT_REGISTER_TYPE_INFO output;
++    CLSID *clsids;
++    UINT32 count;
++    HRESULT ret;
++
++    memcpy(&input.guidMajorType, &DUMMY_GUID1, sizeof(GUID));
++    memcpy(&input.guidMajorType, &DUMMY_GUID2, sizeof(GUID));
++    memcpy(&output.guidSubtype, &DUMMY_GUID1, sizeof(GUID));
++    memcpy(&output.guidSubtype, &DUMMY_GUID3, sizeof(GUID));
++
++    ret = pMFTRegister(DUMMY_CLSID, MFT_CATEGORY_OTHER, name, 0, 1, &input, 1, &output, NULL);
++    ok(!ret, "Failed to register dummy filter: %x\n", ret);
++    if (ret) return;
++
++    count = 0;
++    clsids = NULL;
++    ret = pMFTEnum(MFT_CATEGORY_OTHER, 0, NULL, NULL, NULL, &clsids, &count);
++    ok(!ret, "Failed to enumerate filters: %x\n", ret);
++    ok(count > 0, "Expected count > 0\n");
++    ok(clsids != NULL, "Expected clsids != NULL\n");
++    ok(check_clsid(clsids, count), "Filter was not part of enumeration\n");
++    CoTaskMemFree(clsids);
++
++    count = 0;
++    clsids = NULL;
++    ret = pMFTEnum(MFT_CATEGORY_OTHER, 0, &input, NULL, NULL, &clsids, &count);
++    ok(!ret, "Failed to enumerate filters: %x\n", ret);
++    ok(count > 0, "Expected count > 0\n");
++    ok(clsids != NULL, "Expected clsids != NULL\n");
++    ok(check_clsid(clsids, count), "Filter was not part of enumeration\n");
++    CoTaskMemFree(clsids);
++
++    count = 0;
++    clsids = NULL;
++    ret = pMFTEnum(MFT_CATEGORY_OTHER, 0, NULL, &output, NULL, &clsids, &count);
++    ok(!ret, "Failed to enumerate filters: %x\n", ret);
++    ok(count > 0, "Expected count > 0\n");
++    ok(clsids != NULL, "Expected clsids != NULL\n");
++    ok(check_clsid(clsids, count), "Filter was not part of enumeration\n");
++    CoTaskMemFree(clsids);
++
++    count = 0;
++    clsids = NULL;
++    ret = pMFTEnum(MFT_CATEGORY_OTHER, 0, &input, &output, NULL, &clsids, &count);
++    ok(!ret, "Failed to enumerate filters: %x\n", ret);
++    ok(count > 0, "Expected count > 0\n");
++    ok(clsids != NULL, "Expected clsids != NULL\n");
++    ok(check_clsid(clsids, count), "Filter was not part of enumeration\n");
++    CoTaskMemFree(clsids);
++
++    /* exchange input and output */
++    count = 0;
++    clsids = NULL;
++    ret = pMFTEnum(MFT_CATEGORY_OTHER, 0, &output, &input, NULL, &clsids, &count);
++    ok(!ret, "Failed to enumerate filters: %x\n", ret);
++    ok(!count, "Expected count == 0\n");
++    ok(clsids == NULL, "Expected clsids == NULL\n");
++
++    pMFTUnregister(DUMMY_CLSID);
++}
++
++BOOL init_function_ptrs(void)
++{
++    HMODULE mfplat = LoadLibraryA("mfplat.dll");
++    if (!mfplat)
++    {
++        win_skip("Could not load mfplat.dll\n");
++        return FALSE;
++    }
++
++    #define LOAD_FUNCPTR(f) p##f = (void*)GetProcAddress(mfplat, #f)
++    LOAD_FUNCPTR(MFTEnum);
++    LOAD_FUNCPTR(MFTRegister);
++    LOAD_FUNCPTR(MFTUnregister);
++    #undef LOAD_FUNCPTR
++
++    return TRUE;
++}
++
++START_TEST(mfplat)
++{
++    if (!init_function_ptrs())
++        return;
++
++    CoInitialize(NULL);
++    test_register();
++}
+-- 
+2.5.1
+

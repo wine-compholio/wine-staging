@@ -34,7 +34,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [15]:**
+**Bug fixes and features included in the next upcoming release [16]:**
 
 * Add implementation for msidb commandline tool
 * BitBlt and StretchDIBits should be marked as hotpatchable
@@ -44,6 +44,7 @@ Included bug fixes and improvements
 * Do not wait for hook thread startup in IDirectInput8::Initialize ([Wine Bug #21403](https://bugs.winehq.org/show_bug.cgi?id=21403))
 * Fix calculation of listbox size when horizontal scrollbar is present ([Wine Bug #38142](https://bugs.winehq.org/show_bug.cgi?id=38142))
 * Implement additional stub functions in authz.dll
+* Make ddraw1 and ddraw_surface1 vtable as writable
 * Pass cookie by reference to msvcrt_local_unwind4 in _seh_longjmp_unwind4 ([Wine Bug #39356](https://bugs.winehq.org/show_bug.cgi?id=39356))
 * Protect TVM_GETITEM from invalid item pointers ([Wine Bug #33001](https://bugs.winehq.org/show_bug.cgi?id=33001))
 * Reduce stack usage of virtual memory functions ([Wine Bug #34558](https://bugs.winehq.org/show_bug.cgi?id=34558))

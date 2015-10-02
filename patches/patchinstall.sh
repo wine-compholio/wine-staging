@@ -125,6 +125,7 @@ patch_enable_all ()
 	enable_ddraw_EnumSurfaces="$1"
 	enable_ddraw_IDirect3DTexture2_Load="$1"
 	enable_ddraw_Rendering_Targets="$1"
+	enable_ddraw_Write_Vtable="$1"
 	enable_ddraw_ZBufferBitDepths="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
 	enable_dinput_Events="$1"
@@ -475,6 +476,9 @@ patch_enable ()
 			;;
 		ddraw-Rendering_Targets)
 			enable_ddraw_Rendering_Targets="$2"
+			;;
+		ddraw-Write_Vtable)
+			enable_ddraw_Write_Vtable="$2"
 			;;
 		ddraw-ZBufferBitDepths)
 			enable_ddraw_ZBufferBitDepths="$2"
@@ -2849,6 +2853,18 @@ if test "$enable_ddraw_Rendering_Targets" -eq 1; then
 	patch_apply ddraw-Rendering_Targets/0001-ddraw-Create-rendering-targets-in-video-memory-if-po.patch
 	(
 		echo '+    { "Michael Müller", "ddraw: Create rendering targets in video memory if possible.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ddraw-Write_Vtable
+# |
+# | Modified files:
+# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/surface.c
+# |
+if test "$enable_ddraw_Write_Vtable" -eq 1; then
+	patch_apply ddraw-Write_Vtable/0001-ddraw-Remove-const-from-ddraw1_vtbl-and-ddraw_surfac.patch
+	(
+		echo '+    { "Michael Müller", "ddraw: Remove const from ddraw1_vtbl and ddraw_surface1_vtbl.", 1 },';
 	) >> "$patchlist"
 fi
 

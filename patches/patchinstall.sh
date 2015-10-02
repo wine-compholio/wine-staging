@@ -139,6 +139,7 @@ patch_enable_all ()
 	enable_fltmgr_Stub_SYS="$1"
 	enable_fonts_Missing_Fonts="$1"
 	enable_gdi32_Default_Palette="$1"
+	enable_gdi32_Hotpatching="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_MaxPixelFormats="$1"
 	enable_gdi32_MultiMonitor="$1"
@@ -515,6 +516,9 @@ patch_enable ()
 			;;
 		gdi32-Default_Palette)
 			enable_gdi32_Default_Palette="$2"
+			;;
+		gdi32-Hotpatching)
+			enable_gdi32_Hotpatching="$2"
 			;;
 		gdi32-Lazy_Font_Initialization)
 			enable_gdi32_Lazy_Font_Initialization="$2"
@@ -3145,6 +3149,18 @@ if test "$enable_gdi32_Default_Palette" -eq 1; then
 	patch_apply gdi32-Default_Palette/0001-gdi32-Return-default-palette-entries-from-GetSystemP.patch
 	(
 		echo '+    { "Anton Baskanov", "gdi32: Return default palette entries from GetSystemPaletteEntries for non-palette-based devices.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset gdi32-Hotpatching
+# |
+# | Modified files:
+# |   *	dlls/gdi32/bitblt.c, dlls/gdi32/dib.c
+# |
+if test "$enable_gdi32_Hotpatching" -eq 1; then
+	patch_apply gdi32-Hotpatching/0001-gdi32-Mark-some-functions-as-hotpatchable.patch
+	(
+		echo '+    { "Michael Müller", "gdi32: Mark some functions as hotpatchable.", 1 },';
 	) >> "$patchlist"
 fi
 

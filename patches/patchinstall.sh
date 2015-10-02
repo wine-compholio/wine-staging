@@ -159,6 +159,7 @@ patch_enable_all ()
 	enable_kernel32_Cwd_Startup_Info="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_GetLogicalProcessorInformationEx="$1"
+	enable_kernel32_Hotpatching="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
@@ -576,6 +577,9 @@ patch_enable ()
 			;;
 		kernel32-GetLogicalProcessorInformationEx)
 			enable_kernel32_GetLogicalProcessorInformationEx="$2"
+			;;
+		kernel32-Hotpatching)
+			enable_kernel32_Hotpatching="$2"
 			;;
 		kernel32-LocaleNameToLCID)
 			enable_kernel32_LocaleNameToLCID="$2"
@@ -3497,6 +3501,18 @@ if test "$enable_kernel32_GetLogicalProcessorInformationEx" -eq 1; then
 	patch_apply kernel32-GetLogicalProcessorInformationEx/0001-kernel32-Make-GetLogicalProcessorInformationEx-a-stu.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32: Make GetLogicalProcessorInformationEx a stub which returns TRUE.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-Hotpatching
+# |
+# | Modified files:
+# |   *	dlls/kernel32/profile.c
+# |
+if test "$enable_kernel32_Hotpatching" -eq 1; then
+	patch_apply kernel32-Hotpatching/0001-kernel32-Mark-WritePrivateProfileStringA-as-hotpatch.patch
+	(
+		echo '+    { "Michael Müller", "kernel32: Mark WritePrivateProfileStringA as hotpatchable.", 1 },';
 	) >> "$patchlist"
 fi
 

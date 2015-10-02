@@ -34,7 +34,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [14]:**
+**Bug fixes and features included in the next upcoming release [15]:**
 
 * Add implementation for msidb commandline tool
 * BitBlt and StretchDIBits should be marked as hotpatchable
@@ -50,6 +50,7 @@ Included bug fixes and improvements
 * Refresh MDI menus when DefMDIChildProc(WM_SETTEXT) is called ([Wine Bug #21855](https://bugs.winehq.org/show_bug.cgi?id=21855))
 * RegOpenKeyExA, RegCloseKey and RegQueryValueExA should be hotpatchable
 * Return STATUS_INVALID_DEVICE_REQUEST when trying to call NtReadFile on directory
+* WritePrivateProfileStringA should be hotpatchable
 
 
 **Bug fixes and features in Wine Staging 1.7.51 [260]:**

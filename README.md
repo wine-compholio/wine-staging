@@ -34,7 +34,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [12]:**
+**Bug fixes and features included in the next upcoming release [13]:**
 
 * Add implementation for msidb commandline tool
 * Codepage conversion should fail when destination length is < 0
@@ -47,6 +47,7 @@ Included bug fixes and improvements
 * Protect TVM_GETITEM from invalid item pointers ([Wine Bug #33001](https://bugs.winehq.org/show_bug.cgi?id=33001))
 * Reduce stack usage of virtual memory functions ([Wine Bug #34558](https://bugs.winehq.org/show_bug.cgi?id=34558))
 * Refresh MDI menus when DefMDIChildProc(WM_SETTEXT) is called ([Wine Bug #21855](https://bugs.winehq.org/show_bug.cgi?id=21855))
+* RegOpenKeyExA, RegCloseKey and RegQueryValueExA should be hotpatchable
 * Return STATUS_INVALID_DEVICE_REQUEST when trying to call NtReadFile on directory
 
 

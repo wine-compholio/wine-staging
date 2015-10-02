@@ -86,6 +86,7 @@ patch_enable_all ()
 	enable_Exagear="$1"
 	enable_Pipelight="$1"
 	enable_Staging="$1"
+	enable_advapi32_Hotpatching="$1"
 	enable_advapi32_LsaLookupSids="$1"
 	enable_advpack_LaunchINFSection="$1"
 	enable_amstream_GetMultiMediaStream="$1"
@@ -352,6 +353,9 @@ patch_enable ()
 			;;
 		Staging)
 			enable_Staging="$2"
+			;;
+		advapi32-Hotpatching)
+			enable_advapi32_Hotpatching="$2"
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
@@ -2177,6 +2181,18 @@ if test "$enable_Staging" -eq 1; then
 		echo '+    { "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list.", 1 },';
 		echo '+    { "Michael Müller", "loader: Add commandline option --check-libs.", 1 },';
 		echo '+    { "Michael Müller", "loader: Print library paths for --check-libs on Mac OS X.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset advapi32-Hotpatching
+# |
+# | Modified files:
+# |   *	dlls/advapi32/registry.c
+# |
+if test "$enable_advapi32_Hotpatching" -eq 1; then
+	patch_apply advapi32-Hotpatching/0001-advapi32-Mark-some-functions-as-hotpatchable.patch
+	(
+		echo '+    { "Michael Müller", "advapi32: Mark some functions as hotpatchable.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,77 @@
+From 2147c0778c3a31e9f2e16facdf49dedbf7257cf6 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 3 Oct 2015 00:38:08 +0200
+Subject: ws2_32: Implement InetPtonA/W.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Michael Müller <michael@fds-team.de>
+---
+ dlls/ws2_32/socket.c    | 30 ++++++++++++++++++++++++++++++
+ dlls/ws2_32/ws2_32.spec |  4 +++-
+ 2 files changed, 33 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
+index 5cf3e0f..4c2428d 100644
+--- a/dlls/ws2_32/socket.c
++++ b/dlls/ws2_32/socket.c
+@@ -7456,6 +7456,36 @@ INT WINAPI WS_inet_pton( INT family, PCSTR addr, PVOID buffer)
+ #endif
+ }
+ 
++/***********************************************************************
++*              InetPtonW                      (WS2_32.@)
++*/
++INT WINAPI InetPtonW(INT family, PCWSTR addr, PVOID buffer)
++{
++    char *addrA;
++    int len;
++    INT ret;
++
++    TRACE("family %d, addr '%s', buffer (%p)\n", family, addr ? debugstr_w(addr) : "(null)", buffer);
++
++    if (!addr)
++    {
++        SetLastError(WSAEFAULT);
++        return SOCKET_ERROR;
++    }
++
++    len = WideCharToMultiByte(CP_ACP, 0, addr, -1, NULL, 0, NULL, NULL);
++    if (!(addrA = HeapAlloc(GetProcessHeap(), 0, len)))
++    {
++        SetLastError(WSA_NOT_ENOUGH_MEMORY);
++        return SOCKET_ERROR;
++    }
++    WideCharToMultiByte(CP_ACP, 0, addr, -1, addrA, len, NULL, NULL);
++
++    ret = WS_inet_pton(family, addrA, buffer);
++
++    HeapFree(GetProcessHeap(), 0, addrA);
++    return ret;
++}
+ 
+ /***********************************************************************
+  *              WSAStringToAddressA                      (WS2_32.80)
+diff --git a/dlls/ws2_32/ws2_32.spec b/dlls/ws2_32/ws2_32.spec
+index f7c6c2d..95c7da1 100644
+--- a/dlls/ws2_32/ws2_32.spec
++++ b/dlls/ws2_32/ws2_32.spec
+@@ -53,6 +53,8 @@
+ @ stdcall FreeAddrInfoW(ptr)
+ @ stdcall GetAddrInfoW(wstr wstr ptr ptr)
+ @ stdcall GetNameInfoW(ptr long ptr long ptr long long)
++@ stdcall InetPtonA(long str ptr) WS_inet_pton
++@ stdcall InetPtonW(long wstr ptr)
+ @ stdcall WSApSetPostRoutine(ptr)
+ @ stdcall WPUCompleteOverlappedRequest(long ptr long long ptr)
+ @ stdcall WSAAccept(long ptr ptr ptr long)
+@@ -121,4 +123,4 @@
+ @ stdcall getaddrinfo(str str ptr ptr) WS_getaddrinfo
+ @ stdcall getnameinfo(ptr long ptr long ptr long long) WS_getnameinfo
+ @ stdcall inet_ntop(long ptr ptr long) WS_inet_ntop
+-@ stdcall inet_pton(long ptr ptr) WS_inet_pton
++@ stdcall inet_pton(long str ptr) WS_inet_pton
+-- 
+2.5.1
+

@@ -328,6 +328,7 @@ patch_enable_all ()
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_APC_Performance="$1"
 	enable_ws2_32_Connect_Time="$1"
+	enable_ws2_32_InetPtonW="$1"
 	enable_ws2_32_TransmitFile="$1"
 	enable_ws2_32_WSACleanup="$1"
 	enable_ws2_32_WSAPoll="$1"
@@ -1085,6 +1086,9 @@ patch_enable ()
 			;;
 		ws2_32-Connect_Time)
 			enable_ws2_32_Connect_Time="$2"
+			;;
+		ws2_32-InetPtonW)
+			enable_ws2_32_InetPtonW="$2"
 			;;
 		ws2_32-TransmitFile)
 			enable_ws2_32_TransmitFile="$2"
@@ -6573,6 +6577,18 @@ if test "$enable_ws2_32_Connect_Time" -eq 1; then
 	patch_apply ws2_32-Connect_Time/0001-ws2_32-Implement-returning-the-proper-time-with-SO_C.patch
 	(
 		echo '+    { "Sebastian Lackner", "ws2_32: Implement returning the proper time with SO_CONNECT_TIME.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ws2_32-InetPtonW
+# |
+# | Modified files:
+# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/ws2_32.spec
+# |
+if test "$enable_ws2_32_InetPtonW" -eq 1; then
+	patch_apply ws2_32-InetPtonW/0001-ws2_32-Implement-InetPtonA-W.patch
+	(
+		echo '+    { "Michael Müller", "ws2_32: Implement InetPtonA/W.", 1 },';
 	) >> "$patchlist"
 fi
 

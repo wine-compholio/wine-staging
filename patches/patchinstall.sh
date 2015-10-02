@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "781b88b7c586fc295780f0c8ad76bda0ffe96cd1"
+	echo "9bd963065b1fb7b445d010897d5f84967eadf75b"
 }
 
 # Show version information
@@ -99,7 +99,6 @@ patch_enable_all ()
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
 	enable_crypt32_CryptUnprotectMemory="$1"
-	enable_d3d8_D3DSWAPEFFECT_COPY_VSYNC="$1"
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Skip_Tests="$1"
 	enable_d3d9_Surface_Refcount="$1"
@@ -164,7 +163,6 @@ patch_enable_all ()
 	enable_kernel32_Profile="$1"
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
 	enable_kernel32_SetFileInformationByHandle="$1"
-	enable_kernel32_ThreadGroupAffinity="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
 	enable_kernel32_VerifyVersionInfo="$1"
 	enable_libs_Debug_Channel="$1"
@@ -190,7 +188,6 @@ patch_enable_all ()
 	enable_ntdll_Dealloc_Thread_Stack="$1"
 	enable_ntdll_DeviceType_Systemroot="$1"
 	enable_ntdll_DllRedirects="$1"
-	enable_ntdll_Empty_Path="$1"
 	enable_ntdll_Exception="$1"
 	enable_ntdll_FileDispositionInformation="$1"
 	enable_ntdll_FileFsFullSizeInformation="$1"
@@ -231,7 +228,6 @@ patch_enable_all ()
 	enable_riched20_IText_Interface="$1"
 	enable_rpcrt4_Pipe_Transport="$1"
 	enable_secur32_ANSI_NTLM_Credentials="$1"
-	enable_server_Address_List_Change="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
 	enable_server_Delete_On_Close="$1"
@@ -398,9 +394,6 @@ patch_enable ()
 			;;
 		crypt32-CryptUnprotectMemory)
 			enable_crypt32_CryptUnprotectMemory="$2"
-			;;
-		d3d8-D3DSWAPEFFECT_COPY_VSYNC)
-			enable_d3d8_D3DSWAPEFFECT_COPY_VSYNC="$2"
 			;;
 		d3d9-DesktopWindow)
 			enable_d3d9_DesktopWindow="$2"
@@ -594,9 +587,6 @@ patch_enable ()
 		kernel32-SetFileInformationByHandle)
 			enable_kernel32_SetFileInformationByHandle="$2"
 			;;
-		kernel32-ThreadGroupAffinity)
-			enable_kernel32_ThreadGroupAffinity="$2"
-			;;
 		kernel32-TimezoneInformation_Registry)
 			enable_kernel32_TimezoneInformation_Registry="$2"
 			;;
@@ -671,9 +661,6 @@ patch_enable ()
 			;;
 		ntdll-DllRedirects)
 			enable_ntdll_DllRedirects="$2"
-			;;
-		ntdll-Empty_Path)
-			enable_ntdll_Empty_Path="$2"
 			;;
 		ntdll-Exception)
 			enable_ntdll_Exception="$2"
@@ -794,9 +781,6 @@ patch_enable ()
 			;;
 		secur32-ANSI_NTLM_Credentials)
 			enable_secur32_ANSI_NTLM_Credentials="$2"
-			;;
-		server-Address_List_Change)
-			enable_server_Address_List_Change="$2"
 			;;
 		server-ClipCursor)
 			enable_server_ClipCursor="$2"
@@ -1595,9 +1579,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_opengl32_Revert_Disable_Ext" -gt 1; then
 		abort "Patchset opengl32-Revert_Disable_Ext disabled, but category-stable depends on that."
 	fi
-	if test "$enable_server_Address_List_Change" -gt 1; then
-		abort "Patchset server-Address_List_Change disabled, but category-stable depends on that."
-	fi
 	if test "$enable_server_ClipCursor" -gt 1; then
 		abort "Patchset server-ClipCursor disabled, but category-stable depends on that."
 	fi
@@ -1728,7 +1709,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_ntdll_User_Shared_Data=1
 	enable_ntdll_WriteWatches=1
 	enable_opengl32_Revert_Disable_Ext=1
-	enable_server_Address_List_Change=1
 	enable_server_ClipCursor=1
 	enable_server_CreateProcess_ACLs=1
 	enable_server_Delete_On_Close=1
@@ -1909,13 +1889,6 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	fi
 	enable_ntdll_Fix_Free=1
 	enable_ntdll_NtQueryEaFile=1
-fi
-
-if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
-	if test "$enable_ntdll_Empty_Path" -gt 1; then
-		abort "Patchset ntdll-Empty_Path disabled, but ntdll-NtQueryEaFile depends on that."
-	fi
-	enable_ntdll_Empty_Path=1
 fi
 
 if test "$enable_ntdll_Fix_Alignment" -eq 1; then
@@ -2443,21 +2416,6 @@ if test "$enable_crypt32_CryptUnprotectMemory" -eq 1; then
 	patch_apply crypt32-CryptUnprotectMemory/0001-crypt32-Print-CryptUnprotectMemory-FIXME-only-once.patch
 	(
 		echo '+    { "Christian Costa", "crypt32: Print CryptUnprotectMemory FIXME only once.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3d8-D3DSWAPEFFECT_COPY_VSYNC
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39281] Implement semi-stub for d3d8 swapchain effect D3DSWAPEFFECT_COPY_VSYNC
-# |
-# | Modified files:
-# |   *	dlls/d3d8/device.c
-# |
-if test "$enable_d3d8_D3DSWAPEFFECT_COPY_VSYNC" -eq 1; then
-	patch_apply d3d8-D3DSWAPEFFECT_COPY_VSYNC/0001-d3d8-Handle-D3DSWAPEFFECT_COPY_VSYNC-swapchain-effec.patch
-	(
-		echo '+    { "Sebastian Lackner", "d3d8: Handle D3DSWAPEFFECT_COPY_VSYNC swapchain effect like D3DSWAPEFFECT_COPY.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3651,24 +3609,6 @@ if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-ThreadGroupAffinity
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36549] Implement {Set,Get}ThreadGroupAffinity and related ntdll functions
-# |
-# | Modified files:
-# |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/tests/thread.c, dlls/kernel32/thread.c, dlls/ntdll/thread.c,
-# | 	include/winternl.h
-# |
-if test "$enable_kernel32_ThreadGroupAffinity" -eq 1; then
-	patch_apply kernel32-ThreadGroupAffinity/0001-ntdll-Implement-ThreadGroupInformation-class.patch
-	patch_apply kernel32-ThreadGroupAffinity/0002-kernel32-Implement-Set-GetThreadGroupAffinity.patch
-	(
-		echo '+    { "Michael Müller", "ntdll: Implement ThreadGroupInformation class.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Implement Set/GetThreadGroupAffinity.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-TimezoneInformation_Registry
 # |
 # | Modified files:
@@ -4095,21 +4035,6 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-Empty_Path
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39133] Return STATUS_OBJECT_NAME_INVALID in wine_nt_to_unix_file_name for paths that only contain a prefix
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/file.c, dlls/ntdll/directory.c, dlls/ntdll/tests/file.c
-# |
-if test "$enable_ntdll_Empty_Path" -eq 1; then
-	patch_apply ntdll-Empty_Path/0001-ntdll-Return-STATUS_OBJECT_NAME_INVALID-in-wine_nt_t.patch
-	(
-		echo '+    { "Michael Müller", "ntdll: Return STATUS_OBJECT_NAME_INVALID in wine_nt_to_unix_file_name for paths that only contain a prefix.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Exception
 # |
 # | Modified files:
@@ -4225,9 +4150,6 @@ fi
 
 # Patchset ntdll-NtQueryEaFile
 # |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Empty_Path
-# |
 # | Modified files:
 # |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
 # |
@@ -4241,7 +4163,7 @@ fi
 # Patchset ntdll-Junction_Points
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Fix_Free, ntdll-Empty_Path, ntdll-NtQueryEaFile
+# |   *	ntdll-Fix_Free, ntdll-NtQueryEaFile
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#12401] Support for Junction Points
@@ -4746,21 +4668,6 @@ if test "$enable_secur32_ANSI_NTLM_Credentials" -eq 1; then
 	patch_apply secur32-ANSI_NTLM_Credentials/0001-secur32-Fix-handling-of-ANSI-NTLM-credentials.patch
 	(
 		echo '+    { "David Woodhouse", "secur32: Fix handling of ANSI NTLM credentials.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Address_List_Change
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38062] Support for non-blocking SIO_ADDRESS_LIST_CHANGE requests
-# |
-# | Modified files:
-# |   *	server/sock.c
-# |
-if test "$enable_server_Address_List_Change" -eq 1; then
-	patch_apply server-Address_List_Change/0001-server-Return-STATUS_CANT_WAIT-WSAEWOULDBLOCK-for-no.patch
-	(
-		echo '+    { "Erich E. Hoover", "server: Return STATUS_CANT_WAIT/WSAEWOULDBLOCK for non-overlapped SIO_ADDRESS_LIST_CHANGE requests on non-blocking sockets.", 1 },';
 	) >> "$patchlist"
 fi
 

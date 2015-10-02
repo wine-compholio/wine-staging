@@ -34,7 +34,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [13]:**
+**Bug fixes and features included in the next upcoming release [12]:**
 
 * Add implementation for msidb commandline tool
 * Codepage conversion should fail when destination length is < 0
@@ -43,7 +43,6 @@ Included bug fixes and improvements
 * Do not wait for hook thread startup in IDirectInput8::Initialize ([Wine Bug #21403](https://bugs.winehq.org/show_bug.cgi?id=21403))
 * Fix calculation of listbox size when horizontal scrollbar is present ([Wine Bug #38142](https://bugs.winehq.org/show_bug.cgi?id=38142))
 * Implement additional stub functions in authz.dll
-* Implement semi-stub for d3d8 swapchain effect D3DSWAPEFFECT_COPY_VSYNC ([Wine Bug #39281](https://bugs.winehq.org/show_bug.cgi?id=39281))
 * Pass cookie by reference to msvcrt_local_unwind4 in _seh_longjmp_unwind4 ([Wine Bug #39356](https://bugs.winehq.org/show_bug.cgi?id=39356))
 * Protect TVM_GETITEM from invalid item pointers ([Wine Bug #33001](https://bugs.winehq.org/show_bug.cgi?id=33001))
 * Reduce stack usage of virtual memory functions ([Wine Bug #34558](https://bugs.winehq.org/show_bug.cgi?id=34558))
@@ -213,7 +212,7 @@ for more details.*
 * Implement stub for ntoskrnl.KeDelayExecutionThread.
 * Implement stubs for ntoskrnl.Ex{Acquire,Release}FastMutexUnsafe
 * Implement stubs for ntoskrnl.ObReferenceObjectByPointer and ntoskrnl.ObDereferenceObject
-* Implement {Set,Get}ThreadGroupAffinity and related ntdll functions ([Wine Bug #36549](https://bugs.winehq.org/show_bug.cgi?id=36549))
+* ~~Implement {Set,Get}ThreadGroupAffinity and related ntdll functions~~ ([Wine Bug #36549](https://bugs.winehq.org/show_bug.cgi?id=36549))
 * Improve ReadDataAvailable handling in FilePipeLocalInformation class
 * Improve startup performance by delaying font initialization
 * Improve stub for AEV_GetVolumeRange ([Wine Bug #35658](https://bugs.winehq.org/show_bug.cgi?id=35658))
@@ -245,7 +244,7 @@ for more details.*
 * Properly render themed buttons when they are pressed ([Wine Bug #37584](https://bugs.winehq.org/show_bug.cgi?id=37584))
 * Reduced SetTimer minimum value from 10 ms to 5 ms (improves Silverlight framerates)
 * Report correct ObjectName for NamedPipe wineserver objects
-* Return STATUS_OBJECT_NAME_INVALID in wine_nt_to_unix_file_name for paths that only contain a prefix ([Wine Bug #39133](https://bugs.winehq.org/show_bug.cgi?id=39133))
+* ~~Return STATUS_OBJECT_NAME_INVALID in wine_nt_to_unix_file_name for paths that only contain a prefix~~ ([Wine Bug #39133](https://bugs.winehq.org/show_bug.cgi?id=39133))
 * Return a dummy BIOS name in Win32_BIOS record
 * Return a valid mesh in D3DXCreateTeapot ([Wine Bug #36884](https://bugs.winehq.org/show_bug.cgi?id=36884))
 * Return an error when trying to open a terminated process ([Wine Bug #37087](https://bugs.winehq.org/show_bug.cgi?id=37087))
@@ -295,7 +294,7 @@ for more details.*
 * Support for linux priority levels for faster performance
 * Support for loader dll redirections
 * Support for named pipe message mode (Linux only) ([Wine Bug #17195](https://bugs.winehq.org/show_bug.cgi?id=17195))
-* Support for non-blocking SIO_ADDRESS_LIST_CHANGE requests ([Wine Bug #38062](https://bugs.winehq.org/show_bug.cgi?id=38062))
+* ~~Support for non-blocking SIO_ADDRESS_LIST_CHANGE requests~~ ([Wine Bug #38062](https://bugs.winehq.org/show_bug.cgi?id=38062))
 * Support for pasting HTML from Unix applications ([Wine Bug #7372](https://bugs.winehq.org/show_bug.cgi?id=7372))
 * Support for process ACLs ([Wine Bug #22006](https://bugs.winehq.org/show_bug.cgi?id=22006))
 * Support for setcap on wine-preloader ([Wine Bug #26256](https://bugs.winehq.org/show_bug.cgi?id=26256))

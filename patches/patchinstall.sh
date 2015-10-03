@@ -218,6 +218,7 @@ patch_enable_all ()
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_WinSqm="$1"
 	enable_ntdll_WriteWatches="$1"
+	enable_ntdll_Zero_mod_name="$1"
 	enable_ntoskrnl_DriverTest="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
@@ -756,6 +757,9 @@ patch_enable ()
 			;;
 		ntdll-WriteWatches)
 			enable_ntdll_WriteWatches="$2"
+			;;
+		ntdll-Zero_mod_name)
+			enable_ntdll_Zero_mod_name="$2"
 			;;
 		ntoskrnl-DriverTest)
 			enable_ntoskrnl_DriverTest="$2"
@@ -4440,6 +4444,18 @@ if test "$enable_ntdll_WriteWatches" -eq 1; then
 	patch_apply ntdll-WriteWatches/0001-ntdll-Avoid-race-conditions-with-write-watches-in-Nt.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "ntdll: Avoid race-conditions with write watches in NtReadFile.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Zero_mod_name
+# |
+# | Modified files:
+# |   *	dlls/ntdll/loader.c
+# |
+if test "$enable_ntdll_Zero_mod_name" -eq 1; then
+	patch_apply ntdll-Zero_mod_name/0001-ntdll-Initialize-mod_name-to-zero.patch
+	(
+		echo '+    { "Qian Hong", "ntdll: Initialize mod_name to zero.", 1 },';
 	) >> "$patchlist"
 fi
 

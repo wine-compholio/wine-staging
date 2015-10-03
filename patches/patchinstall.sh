@@ -2087,9 +2087,6 @@ fi
 
 # Patchset ntdll-Virtual_Memory_Stack
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34558] Reduce stack usage of virtual memory functions
-# |
 # | Modified files:
 # |   *	dlls/ntdll/virtual.c
 # |

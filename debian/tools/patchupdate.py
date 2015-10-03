@@ -67,7 +67,8 @@ class config(object):
     path_IfDefined          = "9999-IfDefined.patch"
 
     bugtracker_url          = "https://bugs.winehq.org/xmlrpc.cgi"
-    bugtracker_defaultcc    = ["michael@fds-team.de", "sebastian@fds-team.de"]
+    bugtracker_defaultcc    = ["michael@fds-team.de", "sebastian@fds-team.de",
+                               "erich.e.hoover@wine-staging.com"]
     bugtracker_user         = None
     bugtracker_pass         = None
 

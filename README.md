@@ -34,12 +34,13 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [18]:**
+**Bug fixes and features included in the next upcoming release [19]:**
 
 * Add implementation for mfplat.MFTEnum ([Wine Bug #39309](https://bugs.winehq.org/show_bug.cgi?id=39309))
 * Add implementation for msidb commandline tool
 * BitBlt and StretchDIBits should be marked as hotpatchable
 * Codepage conversion should fail when destination length is < 0
+* Correctly parse double quotes in the msi token values
 * Do not trust width/height passed to edit control in WM_SIZE message ([Wine Bug #37542](https://bugs.winehq.org/show_bug.cgi?id=37542))
 * Do not use GdipAlloc and GdipFree in internal functions ([Wine Bug #32786](https://bugs.winehq.org/show_bug.cgi?id=32786))
 * Do not wait for hook thread startup in IDirectInput8::Initialize ([Wine Bug #21403](https://bugs.winehq.org/show_bug.cgi?id=21403))

@@ -177,6 +177,7 @@ patch_enable_all ()
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
+	enable_msi_Parse_Double_Quotes="$1"
 	enable_msi_msi_get_property="$1"
 	enable_msidb_Implementation="$1"
 	enable_msvcp90_basic_string_dtor="$1"
@@ -634,6 +635,9 @@ patch_enable ()
 			;;
 		mshtml-HTMLLocation_put_hash)
 			enable_mshtml_HTMLLocation_put_hash="$2"
+			;;
+		msi-Parse_Double_Quotes)
+			enable_msi_Parse_Double_Quotes="$2"
 			;;
 		msi-msi_get_property)
 			enable_msi_msi_get_property="$2"
@@ -3834,6 +3838,18 @@ if test "$enable_mshtml_HTMLLocation_put_hash" -eq 1; then
 	patch_apply mshtml-HTMLLocation_put_hash/0001-mshtml-Add-IHTMLLocation-hash-property-s-getter-impl.patch
 	(
 		echo '+    { "Zhenbo Li", "mshtml: Add IHTMLLocation::hash property'\''s getter implementation.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msi-Parse_Double_Quotes
+# |
+# | Modified files:
+# |   *	dlls/msi/action.c
+# |
+if test "$enable_msi_Parse_Double_Quotes" -eq 1; then
+	patch_apply msi-Parse_Double_Quotes/0001-msi-Correctly-parse-double-quotes-in-the-token-value.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "msi: Correctly parse double quotes in the token value.", 1 },';
 	) >> "$patchlist"
 fi
 

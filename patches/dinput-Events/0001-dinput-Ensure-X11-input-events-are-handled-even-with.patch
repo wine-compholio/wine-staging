@@ -1,4 +1,4 @@
-From c9ecfe26ac53dc015f02b91948db35cdc141b5d9 Mon Sep 17 00:00:00 2001
+From 0bf1b2a338baca121228b1739a2398f34a5fbd86 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Thu, 18 Dec 2014 01:04:34 +0100
 Subject: dinput: Ensure X11 input events are handled even without explicit
@@ -30,13 +30,14 @@ call __wine_check_for_events from multiple locations in the code. See:
 * https://bugs.wine-staging.com/show_bug.cgi?id=42
 * https://bugs.wine-staging.com/show_bug.cgi?id=149
 ---
- dlls/dinput/device.c    |  5 +++--
- dlls/dinput/keyboard.c  |  2 ++
- dlls/dinput/mouse.c     |  2 ++
- dlls/user32/input.c     | 14 ++++++++++----
- dlls/user32/user32.spec |  1 +
- include/winuser.h       |  1 +
- 6 files changed, 19 insertions(+), 6 deletions(-)
+ dlls/dinput/device.c      |  5 +++--
+ dlls/dinput/keyboard.c    |  2 ++
+ dlls/dinput/mouse.c       |  2 ++
+ dlls/dinput/tests/mouse.c |  2 ++
+ dlls/user32/input.c       | 14 ++++++++++----
+ dlls/user32/user32.spec   |  1 +
+ include/winuser.h         |  1 +
+ 7 files changed, 21 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/dinput/device.c b/dlls/dinput/device.c
 index ab43029..60678be 100644
@@ -55,7 +56,7 @@ index ab43029..60678be 100644
  
  HRESULT WINAPI IDirectInputDevice2AImpl_Poll(LPDIRECTINPUTDEVICE8A iface)
 diff --git a/dlls/dinput/keyboard.c b/dlls/dinput/keyboard.c
-index a5967d7..9e78257 100644
+index f3ac30e..4b4ccf4 100644
 --- a/dlls/dinput/keyboard.c
 +++ b/dlls/dinput/keyboard.c
 @@ -335,6 +335,8 @@ static HRESULT WINAPI SysKeyboardWImpl_GetDeviceState(LPDIRECTINPUTDEVICE8W ifac
@@ -80,11 +81,31 @@ index 132efce..44e1d57 100644
      TRACE("(this=%p,0x%08x,%p):\n", This, len, ptr);
      _dump_mouse_state(&This->m_state);
  
+diff --git a/dlls/dinput/tests/mouse.c b/dlls/dinput/tests/mouse.c
+index 1a5f4bc..711abcf 100644
+--- a/dlls/dinput/tests/mouse.c
++++ b/dlls/dinput/tests/mouse.c
+@@ -160,6 +160,7 @@ static void test_acquire(IDirectInputA *pDI, HWND hwnd)
+     IDirectInputDevice_Acquire(pMouse);
+     cnt = 1;
+     hr = IDirectInputDevice_GetDeviceData(pMouse, sizeof(mouse_state), &mouse_state, &cnt, 0);
++    todo_wine
+     ok(hr == S_OK && cnt > 0, "GetDeviceData() failed: %08x cnt:%d\n", hr, cnt);
+ 
+     /* Check for buffer owerflow */
+@@ -171,6 +172,7 @@ static void test_acquire(IDirectInputA *pDI, HWND hwnd)
+     ok(hr == DI_OK, "GetDeviceData() failed: %08x cnt:%d\n", hr, cnt);
+     cnt = 1;
+     hr = IDirectInputDevice_GetDeviceData(pMouse, sizeof(mouse_state), &mouse_state, &cnt, 0);
++    todo_wine
+     ok(hr == DI_OK && cnt == 1, "GetDeviceData() failed: %08x cnt:%d\n", hr, cnt);
+ 
+     if (pMouse) IUnknown_Release(pMouse);
 diff --git a/dlls/user32/input.c b/dlls/user32/input.c
-index 1f05f34..23f5da8 100644
+index 40e35a9..0ce64fc 100644
 --- a/dlls/user32/input.c
 +++ b/dlls/user32/input.c
-@@ -353,12 +353,18 @@ HWND WINAPI GetCapture(void)
+@@ -354,12 +354,18 @@ HWND WINAPI GetCapture(void)
  }
  
  
@@ -104,7 +125,7 @@ index 1f05f34..23f5da8 100644
  /**********************************************************************
   *		GetAsyncKeyState (USER32.@)
   *
-@@ -373,7 +379,7 @@ SHORT WINAPI DECLSPEC_HOTPATCH GetAsyncKeyState( INT key )
+@@ -375,7 +381,7 @@ SHORT WINAPI DECLSPEC_HOTPATCH GetAsyncKeyState( INT key )
  
      if (key < 0 || key >= 256) return 0;
  
@@ -113,7 +134,7 @@ index 1f05f34..23f5da8 100644
  
      if ((ret = USER_Driver->pGetAsyncKeyState( key )) == -1)
      {
-@@ -416,7 +422,7 @@ DWORD WINAPI GetQueueStatus( UINT flags )
+@@ -430,7 +436,7 @@ DWORD WINAPI GetQueueStatus( UINT flags )
          return 0;
      }
  
@@ -122,7 +143,7 @@ index 1f05f34..23f5da8 100644
  
      SERVER_START_REQ( get_queue_status )
      {
-@@ -436,7 +442,7 @@ BOOL WINAPI GetInputState(void)
+@@ -450,7 +456,7 @@ BOOL WINAPI GetInputState(void)
  {
      DWORD ret;
  
@@ -132,10 +153,10 @@ index 1f05f34..23f5da8 100644
      SERVER_START_REQ( get_queue_status )
      {
 diff --git a/dlls/user32/user32.spec b/dlls/user32/user32.spec
-index a8bbe83..b314b27 100644
+index f0e541f..e1f165f 100644
 --- a/dlls/user32/user32.spec
 +++ b/dlls/user32/user32.spec
-@@ -785,5 +785,6 @@
+@@ -789,5 +789,6 @@
  # All functions must be prefixed with '__wine_' (for internal functions)
  # or 'wine_' (for user-visible functions) to avoid namespace conflicts.
  #
@@ -143,10 +164,10 @@ index a8bbe83..b314b27 100644
  @ cdecl __wine_send_input(long ptr)
  @ cdecl __wine_set_pixel_format(long long)
 diff --git a/include/winuser.h b/include/winuser.h
-index 3d9b937..7c5c01e 100644
+index 06ca054..5d32474 100644
 --- a/include/winuser.h
 +++ b/include/winuser.h
-@@ -4057,6 +4057,7 @@ WINUSERAPI INT         WINAPI wvsprintfW(LPWSTR,LPCWSTR,__ms_va_list);
+@@ -4061,6 +4061,7 @@ WINUSERAPI INT         WINAPI wvsprintfW(LPWSTR,LPCWSTR,__ms_va_list);
  WORD        WINAPI SYSTEM_KillSystemTimer( WORD );
  
  #ifdef __WINESRC__
@@ -155,5 +176,5 @@ index 3d9b937..7c5c01e 100644
  #endif
  
 -- 
-2.3.2
+2.6.0
 

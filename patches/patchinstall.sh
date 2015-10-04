@@ -58,7 +58,7 @@ upstream_commit()
 # Show version information
 version()
 {
-	echo "Wine Staging 1.7.52"
+	echo "Wine Staging 1.7.53 (unreleased)"
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -180,6 +180,7 @@ patch_enable_all ()
 	enable_msi_Parse_Double_Quotes="$1"
 	enable_msi_msi_get_property="$1"
 	enable_msidb_Implementation="$1"
+	enable_msiexec_Passive="$1"
 	enable_msvcp90_basic_string_dtor="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvcrt_StdHandle_RefCount="$1"
@@ -644,6 +645,9 @@ patch_enable ()
 			;;
 		msidb-Implementation)
 			enable_msidb_Implementation="$2"
+			;;
+		msiexec-Passive)
+			enable_msiexec_Passive="$2"
 			;;
 		msvcp90-basic_string_dtor)
 			enable_msvcp90_basic_string_dtor="$2"
@@ -3896,6 +3900,21 @@ if test "$enable_msidb_Implementation" -eq 1; then
 		echo '+    { "Erich E. Hoover", "msi: Break out field exporting into a separate routine.", 1 },';
 		echo '+    { "Erich E. Hoover", "msi: Add support for exporting binary streams (Binary/Icon tables).", 1 },';
 		echo '+    { "Erich E. Hoover", "msidb: Add support for wildcard (full database) export.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msiexec-Passive
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#21813] Add support for /passive command line option to msiexec
+# |
+# | Modified files:
+# |   *	programs/msiexec/msiexec.c
+# |
+if test "$enable_msiexec_Passive" -eq 1; then
+	patch_apply msiexec-Passive/0001-msiexec-Add-support-for-passive-command-line-option.patch
+	(
+		echo '+    { "Michael Müller", "msiexec: Add support for /passive command line option.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -104,7 +104,7 @@ for more details.*
 * Avseq crashes when multisampling is enabled ([Wine Bug #31998](https://bugs.winehq.org/show_bug.cgi?id=31998))
 * Basic handling of write watches triggered while we're on the signal stack.
 * Basic support for CUDA
-* BitBlt and StretchDIBits should be marked as hotpatchable
+* ~~BitBlt and StretchDIBits should be marked as hotpatchable~~
 * Black & White needs DXTn software decoding support ([Wine Bug #14939](https://bugs.winehq.org/show_bug.cgi?id=14939))
 * CPU-Z fails to start because GetLogicalProcessorInformationEx returns FALSE
 * Calculate msvcrt exponential math operations with higher precision ([Wine Bug #37149](https://bugs.winehq.org/show_bug.cgi?id=37149))
@@ -206,7 +206,7 @@ for more details.*
 * Implement stub for ntoskrnl.KeDelayExecutionThread.
 * Implement stubs for ntoskrnl.Ex{Acquire,Release}FastMutexUnsafe
 * Implement stubs for ntoskrnl.ObReferenceObjectByPointer and ntoskrnl.ObDereferenceObject
-* Implement ws2_32.InetPtonA/W functions
+* ~~Implement ws2_32.InetPtonA/W functions~~
 * Improve ReadDataAvailable handling in FilePipeLocalInformation class
 * Improve startup performance by delaying font initialization
 * Improve stub for AEV_GetVolumeRange ([Wine Bug #35658](https://bugs.winehq.org/show_bug.cgi?id=35658))
@@ -229,7 +229,7 @@ for more details.*
 * Need for Speed 3 installer requires devices in HKEY_DYN_DATA ([Wine Bug #7115](https://bugs.winehq.org/show_bug.cgi?id=7115))
 * Only set SFGAO_HASSUBFOLDER when there are really subfolders ([Wine Bug #24851](https://bugs.winehq.org/show_bug.cgi?id=24851))
 * Other Pipelight-specific enhancements
-* Pass cookie by reference to msvcrt_local_unwind4 in _seh_longjmp_unwind4 ([Wine Bug #39356](https://bugs.winehq.org/show_bug.cgi?id=39356))
+* ~~Pass cookie by reference to msvcrt_local_unwind4 in _seh_longjmp_unwind4~~ ([Wine Bug #39356](https://bugs.winehq.org/show_bug.cgi?id=39356))
 * Port Royale doesn't display ocean correctly ([Wine Bug #17913](https://bugs.winehq.org/show_bug.cgi?id=17913))
 * Prevent window managers from grouping all wine programs together ([Wine Bug #32699](https://bugs.winehq.org/show_bug.cgi?id=32699))
 * Process APC calls before starting process
@@ -241,7 +241,7 @@ for more details.*
 * Protect TVM_GETITEM from invalid item pointers ([Wine Bug #33001](https://bugs.winehq.org/show_bug.cgi?id=33001))
 * Reduced SetTimer minimum value from 10 ms to 5 ms (improves Silverlight framerates)
 * Refresh MDI menus when DefMDIChildProc(WM_SETTEXT) is called ([Wine Bug #21855](https://bugs.winehq.org/show_bug.cgi?id=21855))
-* RegOpenKeyExA, RegCloseKey and RegQueryValueExA should be hotpatchable
+* ~~RegOpenKeyExA, RegCloseKey and RegQueryValueExA should be hotpatchable~~
 * Report correct ObjectName for NamedPipe wineserver objects
 * Return STATUS_INVALID_DEVICE_REQUEST when trying to call NtReadFile on directory
 * Return a dummy BIOS name in Win32_BIOS record
@@ -280,7 +280,7 @@ for more details.*
 * Support for ID3DXSkinInfoImpl_UpdateSkinnedMesh ([Wine Bug #32572](https://bugs.winehq.org/show_bug.cgi?id=32572))
 * Support for Junction Points ([Wine Bug #12401](https://bugs.winehq.org/show_bug.cgi?id=12401))
 * Support for KF_FLAG_DEFAULT_PATH in SHGetKnownFolderPath ([Wine Bug #30385](https://bugs.winehq.org/show_bug.cgi?id=30385))
-* Support for LoadIconMetric ([Wine Bug #35375](https://bugs.winehq.org/show_bug.cgi?id=35375))
+* ~~Support for LoadIconMetric~~ ([Wine Bug #35375](https://bugs.winehq.org/show_bug.cgi?id=35375))
 * Support for MPEG2 DXVA2 GPU video decoding through vaapi
 * Support for NVIDIA video encoder library (nvencodeapi)
 * Support for NtQuerySection ([Wine Bug #37338](https://bugs.winehq.org/show_bug.cgi?id=37338))
@@ -311,7 +311,7 @@ for more details.*
 * Voobly expects correct handling of WRITECOPY memory protection ([Wine Bug #29384](https://bugs.winehq.org/show_bug.cgi?id=29384))
 * Wine ignores IDF_CHECKFIRST flag in SetupPromptForDisk ([Wine Bug #20465](https://bugs.winehq.org/show_bug.cgi?id=20465))
 * Workaround for shlwapi URLs with relative paths
-* WritePrivateProfileStringA should be hotpatchable
+* ~~WritePrivateProfileStringA should be hotpatchable~~
 * XEMBED support for embedding Wine windows inside Linux applications
 * eRacer Demo doesn't correctly display text ([Wine Bug #29598](https://bugs.winehq.org/show_bug.cgi?id=29598))
 * ntdll is missing WinSqm[Start|End]Session implementation ([Wine Bug #31971](https://bugs.winehq.org/show_bug.cgi?id=31971))

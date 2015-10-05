@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9bd963065b1fb7b445d010897d5f84967eadf75b"
+	echo "d050343c502202e1abdabdb37668684031d5367d"
 }
 
 # Show version information
@@ -86,7 +86,6 @@ patch_enable_all ()
 	enable_Exagear="$1"
 	enable_Pipelight="$1"
 	enable_Staging="$1"
-	enable_advapi32_Hotpatching="$1"
 	enable_advapi32_LsaLookupSids="$1"
 	enable_advpack_LaunchINFSection="$1"
 	enable_amstream_GetMultiMediaStream="$1"
@@ -95,7 +94,6 @@ patch_enable_all ()
 	enable_browseui_Progress_Dialog="$1"
 	enable_combase_String="$1"
 	enable_comctl32_Button_Theming="$1"
-	enable_comctl32_LoadIconMetric="$1"
 	enable_comctl32_TVM_GETITEM="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
@@ -140,7 +138,6 @@ patch_enable_all ()
 	enable_fltmgr_Stub_SYS="$1"
 	enable_fonts_Missing_Fonts="$1"
 	enable_gdi32_Default_Palette="$1"
-	enable_gdi32_Hotpatching="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_MaxPixelFormats="$1"
 	enable_gdi32_MultiMonitor="$1"
@@ -160,7 +157,6 @@ patch_enable_all ()
 	enable_kernel32_Cwd_Startup_Info="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_GetLogicalProcessorInformationEx="$1"
-	enable_kernel32_Hotpatching="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
@@ -184,7 +180,6 @@ patch_enable_all ()
 	enable_msvcp90_basic_string_dtor="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvcrt_StdHandle_RefCount="$1"
-	enable_msvcrt__seh_longjmp_unwind4="$1"
 	enable_msvfw32_Image_Size="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_APC_Start_Process="$1"
@@ -331,7 +326,6 @@ patch_enable_all ()
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_APC_Performance="$1"
 	enable_ws2_32_Connect_Time="$1"
-	enable_ws2_32_InetPtonW="$1"
 	enable_ws2_32_TransmitFile="$1"
 	enable_ws2_32_WSACleanup="$1"
 	enable_ws2_32_WSAPoll="$1"
@@ -361,9 +355,6 @@ patch_enable ()
 		Staging)
 			enable_Staging="$2"
 			;;
-		advapi32-Hotpatching)
-			enable_advapi32_Hotpatching="$2"
-			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
 			;;
@@ -390,9 +381,6 @@ patch_enable ()
 			;;
 		comctl32-Button_Theming)
 			enable_comctl32_Button_Theming="$2"
-			;;
-		comctl32-LoadIconMetric)
-			enable_comctl32_LoadIconMetric="$2"
 			;;
 		comctl32-TVM_GETITEM)
 			enable_comctl32_TVM_GETITEM="$2"
@@ -526,9 +514,6 @@ patch_enable ()
 		gdi32-Default_Palette)
 			enable_gdi32_Default_Palette="$2"
 			;;
-		gdi32-Hotpatching)
-			enable_gdi32_Hotpatching="$2"
-			;;
 		gdi32-Lazy_Font_Initialization)
 			enable_gdi32_Lazy_Font_Initialization="$2"
 			;;
@@ -585,9 +570,6 @@ patch_enable ()
 			;;
 		kernel32-GetLogicalProcessorInformationEx)
 			enable_kernel32_GetLogicalProcessorInformationEx="$2"
-			;;
-		kernel32-Hotpatching)
-			enable_kernel32_Hotpatching="$2"
 			;;
 		kernel32-LocaleNameToLCID)
 			enable_kernel32_LocaleNameToLCID="$2"
@@ -657,9 +639,6 @@ patch_enable ()
 			;;
 		msvcrt-StdHandle_RefCount)
 			enable_msvcrt_StdHandle_RefCount="$2"
-			;;
-		msvcrt-_seh_longjmp_unwind4)
-			enable_msvcrt__seh_longjmp_unwind4="$2"
 			;;
 		msvfw32-Image_Size)
 			enable_msvfw32_Image_Size="$2"
@@ -1098,9 +1077,6 @@ patch_enable ()
 			;;
 		ws2_32-Connect_Time)
 			enable_ws2_32_Connect_Time="$2"
-			;;
-		ws2_32-InetPtonW)
-			enable_ws2_32_InetPtonW="$2"
 			;;
 		ws2_32-TransmitFile)
 			enable_ws2_32_TransmitFile="$2"
@@ -2209,18 +2185,6 @@ if test "$enable_Staging" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset advapi32-Hotpatching
-# |
-# | Modified files:
-# |   *	dlls/advapi32/registry.c
-# |
-if test "$enable_advapi32_Hotpatching" -eq 1; then
-	patch_apply advapi32-Hotpatching/0001-advapi32-Mark-some-functions-as-hotpatchable.patch
-	(
-		echo '+    { "Michael Müller", "advapi32: Mark some functions as hotpatchable.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2381,25 +2345,6 @@ if test "$enable_comctl32_Button_Theming" -eq 1; then
 	patch_apply comctl32-Button_Theming/0001-comctl32-fix-buttons-becoming-unthemed-when-pressed-.patch
 	(
 		echo '+    { "Samuel Kim", "comctl32: fix buttons becoming unthemed when pressed/released.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset comctl32-LoadIconMetric
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35375] Support for LoadIconMetric
-# |
-# | Modified files:
-# |   *	dlls/comctl32/comctl32.spec, dlls/comctl32/commctrl.c, dlls/comctl32/tests/misc.c, include/commctrl.h
-# |
-if test "$enable_comctl32_LoadIconMetric" -eq 1; then
-	patch_apply comctl32-LoadIconMetric/0001-comctl32-Add-semi-stub-implementation-for-LoadIconWi.patch
-	patch_apply comctl32-LoadIconMetric/0002-comctl32-Add-implementation-for-LoadIconMetric.patch
-	patch_apply comctl32-LoadIconMetric/0003-comctl32-tests-Add-tests-for-LoadIconMetric-function.patch
-	(
-		echo '+    { "Michael Müller", "comctl32: Add semi-stub implementation for LoadIconWithScaleDown.", 1 },';
-		echo '+    { "Michael Müller", "comctl32: Add implementation for LoadIconMetric.", 1 },';
-		echo '+    { "Michael Müller", "comctl32/tests: Add tests for LoadIconMetric function.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3185,18 +3130,6 @@ if test "$enable_gdi32_Default_Palette" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset gdi32-Hotpatching
-# |
-# | Modified files:
-# |   *	dlls/gdi32/bitblt.c, dlls/gdi32/dib.c
-# |
-if test "$enable_gdi32_Hotpatching" -eq 1; then
-	patch_apply gdi32-Hotpatching/0001-gdi32-Mark-some-functions-as-hotpatchable.patch
-	(
-		echo '+    { "Michael Müller", "gdi32: Mark some functions as hotpatchable.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset gdi32-Lazy_Font_Initialization
 # |
 # | Modified files:
@@ -3530,18 +3463,6 @@ if test "$enable_kernel32_GetLogicalProcessorInformationEx" -eq 1; then
 	patch_apply kernel32-GetLogicalProcessorInformationEx/0001-kernel32-Make-GetLogicalProcessorInformationEx-a-stu.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32: Make GetLogicalProcessorInformationEx a stub which returns TRUE.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-Hotpatching
-# |
-# | Modified files:
-# |   *	dlls/kernel32/profile.c
-# |
-if test "$enable_kernel32_Hotpatching" -eq 1; then
-	patch_apply kernel32-Hotpatching/0001-kernel32-Mark-WritePrivateProfileStringA-as-hotpatch.patch
-	(
-		echo '+    { "Michael Müller", "kernel32: Mark WritePrivateProfileStringA as hotpatchable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3963,21 +3884,6 @@ if test "$enable_msvcrt_StdHandle_RefCount" -eq 1; then
 		echo '+    { "Qian Hong", "msvcrt/tests: Add tests for stdout and stderr refcount.", 1 },';
 		echo '+    { "Qian Hong", "msvcrt: Implemenent refcount check for stdout and stderr.", 1 },';
 		echo '+    { "Sebastian Lackner", "msvcrt: Use constants instead of hardcoded values.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset msvcrt-_seh_longjmp_unwind4
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39356] Pass cookie by reference to msvcrt_local_unwind4 in _seh_longjmp_unwind4
-# |
-# | Modified files:
-# |   *	dlls/msvcrt/except_i386.c
-# |
-if test "$enable_msvcrt__seh_longjmp_unwind4" -eq 1; then
-	patch_apply msvcrt-_seh_longjmp_unwind4/0001-msvcrt-Pass-cookie-reference-to-msvcrt_local_unwind4.patch
-	(
-		echo '+    { "Sebastian Lackner", "msvcrt: Pass cookie reference to msvcrt_local_unwind4 instead of value.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6625,18 +6531,6 @@ if test "$enable_ws2_32_Connect_Time" -eq 1; then
 	patch_apply ws2_32-Connect_Time/0001-ws2_32-Implement-returning-the-proper-time-with-SO_C.patch
 	(
 		echo '+    { "Sebastian Lackner", "ws2_32: Implement returning the proper time with SO_CONNECT_TIME.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ws2_32-InetPtonW
-# |
-# | Modified files:
-# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/ws2_32.spec
-# |
-if test "$enable_ws2_32_InetPtonW" -eq 1; then
-	patch_apply ws2_32-InetPtonW/0001-ws2_32-Implement-InetPtonA-W.patch
-	(
-		echo '+    { "Michael Müller", "ws2_32: Implement InetPtonA/W.", 1 },';
 	) >> "$patchlist"
 fi
 

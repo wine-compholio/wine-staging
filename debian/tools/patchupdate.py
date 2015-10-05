@@ -655,22 +655,21 @@ def generate_script(all_patches, skip_checks=False):
                         for i, patch1 in set_apply:
                             for j, patch2 in set_skip:
                                 if causal_time_smaller(patch2.verify_time, patch1.verify_time):
-                                    return None # we can skip this test
+                                    return True # we can skip this test
 
                         try:
                             original = original_content
                             for i, _ in set_apply:
                                 original = patchutils.apply_patch(original, selected_patches[i][1], fuzz=0)
                         except patchutils.PatchApplyError:
-                            return current
+                            return False
 
-                        return None # everything is fine
+                        return True # everything is fine
 
                     def test_apply_seq(current_list):
                         for current in current_list:
-                            failed = test_apply(current)
-                            if failed is not None:
-                                return failed
+                            if not test_apply(current):
+                                return current
                         return None
 
                     iterables = []

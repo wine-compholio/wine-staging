@@ -34,11 +34,6 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [1]:**
-
-* Add support for /passive command line option to msiexec ([Wine Bug #21813](https://bugs.winehq.org/show_bug.cgi?id=21813))
-
-
 **Bug fixes and features in Wine Staging 1.7.52 [268]:**
 
 *Note: The following list only contains features and bug fixes which are not
@@ -111,14 +106,14 @@ for more details.*
 * Catch invalid memory accesses in imagehlp.CheckSumMappedFile
 * Check architecture before trying to load libraries ([Wine Bug #38021](https://bugs.winehq.org/show_bug.cgi?id=38021))
 * Codepage conversion should fail when destination length is < 0
-* Correctly parse double quotes in the msi token values
+* ~~Correctly parse double quotes in the msi token values~~
 * Create Microsoft\Windows\Themes directory during Wineprefix creation ([Wine Bug #34910](https://bugs.winehq.org/show_bug.cgi?id=34910))
 * Create stub files for system32/drivers/etc/{services,hosts,networks,protocol} ([Wine Bug #12076](https://bugs.winehq.org/show_bug.cgi?id=12076))
 * CreateProcess does not prioritize the working directory over the system search path ([Wine Bug #23934](https://bugs.winehq.org/show_bug.cgi?id=23934))
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](https://bugs.winehq.org/show_bug.cgi?id=33770))
 * Do not allow to deallocate thread stack for current thread
 * Do not fail when a used context is passed to wglShareLists ([Wine Bug #11436](https://bugs.winehq.org/show_bug.cgi?id=11436))
-* Do not trust width/height passed to edit control in WM_SIZE message ([Wine Bug #37542](https://bugs.winehq.org/show_bug.cgi?id=37542))
+* ~~Do not trust width/height passed to edit control in WM_SIZE message~~ ([Wine Bug #37542](https://bugs.winehq.org/show_bug.cgi?id=37542))
 * Do not use GdipAlloc and GdipFree in internal functions ([Wine Bug #32786](https://bugs.winehq.org/show_bug.cgi?id=32786))
 * Do not use unixfs for devices without mountpoint
 * Do not wait for hook thread startup in IDirectInput8::Initialize ([Wine Bug #21403](https://bugs.winehq.org/show_bug.cgi?id=21403))
@@ -262,7 +257,7 @@ for more details.*
 * Share source of d3dx9_36 with d3dx9_33 to avoid Wine DLL forwards ([Wine Bug #21817](https://bugs.winehq.org/show_bug.cgi?id=21817))
 * Show unmounted devices in winecfg and allow changing the unix path
 * Silence repeated LocaleNameToLCID/LCIDToLocaleName unsupported flags FIXMEs ([Wine Bug #30076](https://bugs.winehq.org/show_bug.cgi?id=30076))
-* Silence repeated wbemprox "timeout not supported" fixme ([Wine Bug #37618](https://bugs.winehq.org/show_bug.cgi?id=37618))
+* ~~Silence repeated wbemprox "timeout not supported" fixme~~ ([Wine Bug #37618](https://bugs.winehq.org/show_bug.cgi?id=37618))
 * Skip unknown item when decoding a CMS certificate ([Wine Bug #34388](https://bugs.winehq.org/show_bug.cgi?id=34388))
 * Software support for Environmental Audio Extensions (EAX)
 * Super Mario 3: Mario Forever fails to load keyboard mapping from profile files. ([Wine Bug #18099](https://bugs.winehq.org/show_bug.cgi?id=18099))

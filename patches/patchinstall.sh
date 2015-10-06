@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d050343c502202e1abdabdb37668684031d5367d"
+	echo "6b9a87c7a801e1776444ac96c555fbad80d34115"
 }
 
 # Show version information
@@ -173,10 +173,7 @@ patch_enable_all ()
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
-	enable_msi_Parse_Double_Quotes="$1"
-	enable_msi_msi_get_property="$1"
 	enable_msidb_Implementation="$1"
-	enable_msiexec_Passive="$1"
 	enable_msvcp90_basic_string_dtor="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvcrt_StdHandle_RefCount="$1"
@@ -272,7 +269,6 @@ patch_enable_all ()
 	enable_user32_DeferWindowPos="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawTextExW="$1"
-	enable_user32_Edit_Control_Resize="$1"
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_Invalidate_Key_State="$1"
 	enable_user32_ListBox_Size="$1"
@@ -284,7 +280,6 @@ patch_enable_all ()
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_VerQueryValue="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
-	enable_wbemdisp_Timeout="$1"
 	enable_wbemprox_Bios_Name="$1"
 	enable_wiaservc_IEnumWIA_DEV_INFO="$1"
 	enable_wine_inf_Performance="$1"
@@ -619,17 +614,8 @@ patch_enable ()
 		mshtml-HTMLLocation_put_hash)
 			enable_mshtml_HTMLLocation_put_hash="$2"
 			;;
-		msi-Parse_Double_Quotes)
-			enable_msi_Parse_Double_Quotes="$2"
-			;;
-		msi-msi_get_property)
-			enable_msi_msi_get_property="$2"
-			;;
 		msidb-Implementation)
 			enable_msidb_Implementation="$2"
-			;;
-		msiexec-Passive)
-			enable_msiexec_Passive="$2"
 			;;
 		msvcp90-basic_string_dtor)
 			enable_msvcp90_basic_string_dtor="$2"
@@ -916,9 +902,6 @@ patch_enable ()
 		user32-DrawTextExW)
 			enable_user32_DrawTextExW="$2"
 			;;
-		user32-Edit_Control_Resize)
-			enable_user32_Edit_Control_Resize="$2"
-			;;
 		user32-GetSystemMetrics)
 			enable_user32_GetSystemMetrics="$2"
 			;;
@@ -951,9 +934,6 @@ patch_enable ()
 			;;
 		wbemdisp-ISWbemSecurity)
 			enable_wbemdisp_ISWbemSecurity="$2"
-			;;
-		wbemdisp-Timeout)
-			enable_wbemdisp_Timeout="$2"
 			;;
 		wbemprox-Bios_Name)
 			enable_wbemprox_Bios_Name="$2"
@@ -3763,30 +3743,6 @@ if test "$enable_mshtml_HTMLLocation_put_hash" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset msi-Parse_Double_Quotes
-# |
-# | Modified files:
-# |   *	dlls/msi/action.c
-# |
-if test "$enable_msi_Parse_Double_Quotes" -eq 1; then
-	patch_apply msi-Parse_Double_Quotes/0001-msi-Correctly-parse-double-quotes-in-the-token-value.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "msi: Correctly parse double quotes in the token value.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset msi-msi_get_property
-# |
-# | Modified files:
-# |   *	dlls/msi/package.c
-# |
-if test "$enable_msi_msi_get_property" -eq 1; then
-	patch_apply msi-msi_get_property/0001-msi-Add-a-trace-to-msi_get_property.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "msi: Add a trace to msi_get_property.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset msidb-Implementation
 # |
 # | Modified files:
@@ -3821,21 +3777,6 @@ if test "$enable_msidb_Implementation" -eq 1; then
 		echo '+    { "Erich E. Hoover", "msi: Break out field exporting into a separate routine.", 1 },';
 		echo '+    { "Erich E. Hoover", "msi: Add support for exporting binary streams (Binary/Icon tables).", 1 },';
 		echo '+    { "Erich E. Hoover", "msidb: Add support for wildcard (full database) export.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset msiexec-Passive
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#21813] Add support for /passive command line option to msiexec
-# |
-# | Modified files:
-# |   *	programs/msiexec/msiexec.c
-# |
-if test "$enable_msiexec_Passive" -eq 1; then
-	patch_apply msiexec-Passive/0001-msiexec-Add-support-for-passive-command-line-option.patch
-	(
-		echo '+    { "Michael Müller", "msiexec: Add support for /passive command line option.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5320,21 +5261,6 @@ if test "$enable_user32_DrawTextExW" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset user32-Edit_Control_Resize
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37542] Do not trust width/height passed to edit control in WM_SIZE message
-# |
-# | Modified files:
-# |   *	dlls/user32/edit.c
-# |
-if test "$enable_user32_Edit_Control_Resize" -eq 1; then
-	patch_apply user32-Edit_Control_Resize/0001-user32-Ignore-sizes-passed-in-WM_SIZE-for-edit-contr.patch
-	(
-		echo '+    { "Michael Müller", "user32: Ignore sizes passed in WM_SIZE for edit control.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset user32-GetSystemMetrics
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5502,21 +5428,6 @@ if test "$enable_wbemdisp_ISWbemSecurity" -eq 1; then
 	patch_apply wbemdisp-ISWbemSecurity/0001-wbemdisp-Add-ISWbemSecurity-stub-interface.patch
 	(
 		echo '+    { "Michael Müller", "wbemdisp: Add ISWbemSecurity stub interface.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wbemdisp-Timeout
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37618] Silence repeated wbemprox "timeout not supported" fixme
-# |
-# | Modified files:
-# |   *	dlls/wbemprox/class.c
-# |
-if test "$enable_wbemdisp_Timeout" -eq 1; then
-	patch_apply wbemdisp-Timeout/0001-wbemprox-Silence-repeated-timeout-not-supported-fixm.patch
-	(
-		echo '+    { "Jarkko Korpi", "wbemprox: Silence repeated \"timeout not supported\" fixme.", 1 },';
 	) >> "$patchlist"
 fi
 

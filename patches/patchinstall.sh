@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "1d1487105d4d3a9133f0846d32363a0432812d0c"
+	echo "20ff3352eb19292d47eaa8f3aecc61523ac1f1d9"
 }
 
 # Show version information
@@ -280,7 +280,6 @@ patch_enable_all ()
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_VerQueryValue="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
-	enable_wbemprox_Bios_Name="$1"
 	enable_wiaservc_IEnumWIA_DEV_INFO="$1"
 	enable_wine_inf_Performance="$1"
 	enable_wine_inf_ProfileList_UserSID="$1"
@@ -935,9 +934,6 @@ patch_enable ()
 			;;
 		wbemdisp-ISWbemSecurity)
 			enable_wbemdisp_ISWbemSecurity="$2"
-			;;
-		wbemprox-Bios_Name)
-			enable_wbemprox_Bios_Name="$2"
 			;;
 		wiaservc-IEnumWIA_DEV_INFO)
 			enable_wiaservc_IEnumWIA_DEV_INFO="$2"
@@ -5439,18 +5435,6 @@ if test "$enable_wbemdisp_ISWbemSecurity" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wbemprox-Bios_Name
-# |
-# | Modified files:
-# |   *	dlls/wbemprox/builtin.c
-# |
-if test "$enable_wbemprox_Bios_Name" -eq 1; then
-	patch_apply wbemprox-Bios_Name/0001-wbemprox-Set-bios-name-in-Win32_BIOS.patch
-	(
-		echo '+    { "Michael Müller", "wbemprox: Set bios name in Win32_BIOS.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wiaservc-IEnumWIA_DEV_INFO
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6474,16 +6458,12 @@ fi
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c
 # |
 if test "$enable_ws2_32_TransmitFile" -eq 1; then
-	patch_apply ws2_32-TransmitFile/0001-ws2_32-Add-stub-for-TransmitFile.patch
-	patch_apply ws2_32-TransmitFile/0002-ws2_32-Check-for-invalid-parameters-in-TransmitFile.patch
-	patch_apply ws2_32-TransmitFile/0003-ws2_32-Implement-a-basic-synchronous-TransmitFile.-r.patch
-	patch_apply ws2_32-TransmitFile/0004-ws2_32-Add-support-for-TransmitFile-headers-and-foot.patch
-	patch_apply ws2_32-TransmitFile/0005-ws2_32-Add-asynchronous-support-for-TransmitFile.-re.patch
-	patch_apply ws2_32-TransmitFile/0006-ws2_32-Add-support-for-TF_DISCONNECT-to-TransmitFile.patch
-	patch_apply ws2_32-TransmitFile/0007-ws2_32-Add-support-for-TF_REUSE_SOCKET-to-TransmitFi.patch
+	patch_apply ws2_32-TransmitFile/0001-ws2_32-Implement-a-basic-synchronous-TransmitFile.-r.patch
+	patch_apply ws2_32-TransmitFile/0002-ws2_32-Add-support-for-TransmitFile-headers-and-foot.patch
+	patch_apply ws2_32-TransmitFile/0003-ws2_32-Add-asynchronous-support-for-TransmitFile.-re.patch
+	patch_apply ws2_32-TransmitFile/0004-ws2_32-Add-support-for-TF_DISCONNECT-to-TransmitFile.patch
+	patch_apply ws2_32-TransmitFile/0005-ws2_32-Add-support-for-TF_REUSE_SOCKET-to-TransmitFi.patch
 	(
-		echo '+    { "Erich E. Hoover", "ws2_32: Add stub for TransmitFile.", 1 },';
-		echo '+    { "Erich E. Hoover", "ws2_32: Check for invalid parameters in TransmitFile.", 1 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Implement a basic synchronous TransmitFile.", 2 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TransmitFile headers and footers.", 1 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Add asynchronous support for TransmitFile.", 2 },';

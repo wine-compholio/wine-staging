@@ -244,7 +244,7 @@ for more details.*
 * ~~RegOpenKeyExA, RegCloseKey and RegQueryValueExA should be hotpatchable~~
 * Report correct ObjectName for NamedPipe wineserver objects
 * Return STATUS_INVALID_DEVICE_REQUEST when trying to call NtReadFile on directory
-* Return a dummy BIOS name in Win32_BIOS record
+* ~~Return a dummy BIOS name in Win32_BIOS record~~
 * Return a valid mesh in D3DXCreateTeapot ([Wine Bug #36884](https://bugs.winehq.org/show_bug.cgi?id=36884))
 * Return an error when trying to open a terminated process ([Wine Bug #37087](https://bugs.winehq.org/show_bug.cgi?id=37087))
 * Return correct IMediaSeeking stream positions in quartz

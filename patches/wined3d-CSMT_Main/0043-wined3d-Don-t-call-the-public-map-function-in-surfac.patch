@@ -1,17 +1,22 @@
-From 9d0010d5add477e39747ac3e458d16b5b1fa101f Mon Sep 17 00:00:00 2001
+From 74de56cff82b598bb71d556767bcd1c53dcb16e2 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Tue, 24 Sep 2013 00:31:39 +0200
 Subject: wined3d: Don't call the public map function in surface_cpu_blt.
 
 ---
- dlls/wined3d/surface.c | 107 +++++++++++++++++++++++++++++++++----------------
- 1 file changed, 72 insertions(+), 35 deletions(-)
+ dlls/wined3d/surface.c | 108 ++++++++++++++++++++++++++++++++-----------------
+ 1 file changed, 72 insertions(+), 36 deletions(-)
 
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index ff83f29..df8aea6 100644
+index 5c30f78..a32ce1d 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
-@@ -4428,21 +4428,36 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4306,26 +4306,40 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+         struct wined3d_surface *src_surface, const RECT *src_rect, DWORD flags,
+         const WINEDDBLTFX *fx, enum wined3d_texture_filter_type filter)
+ {
+-    const struct wined3d_box dst_box = {dst_rect->left, dst_rect->top, dst_rect->right, dst_rect->bottom, 0, 1};
+     int bpp, srcheight, srcwidth, dstheight, dstwidth, width;
      const struct wined3d_format *src_format, *dst_format;
      unsigned int src_fmt_flags, dst_fmt_flags;
      struct wined3d_texture *src_texture = NULL;
@@ -51,7 +56,7 @@ index ff83f29..df8aea6 100644
          src_format = dst_surface->resource.format;
          dst_format = src_format;
          dst_fmt_flags = dst_surface->container->resource.format_flags;
-@@ -4454,6 +4469,12 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4337,6 +4351,12 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
          dst_fmt_flags = dst_surface->container->resource.format_flags;
          if (src_surface)
          {
@@ -64,7 +69,7 @@ index ff83f29..df8aea6 100644
              if (dst_surface->resource.format->id != src_surface->resource.format->id)
              {
                  if (!(src_texture = surface_convert_format(src_surface, dst_format->id)))
-@@ -4464,7 +4485,9 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4347,7 +4367,9 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
                  }
                  src_surface = surface_from_resource(wined3d_texture_get_sub_resource(src_texture, 0));
              }
@@ -75,17 +80,17 @@ index ff83f29..df8aea6 100644
              src_format = src_surface->resource.format;
              src_fmt_flags = src_surface->container->resource.format_flags;
          }
-@@ -4474,7 +4497,8 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4357,7 +4379,8 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
              src_fmt_flags = dst_fmt_flags;
          }
  
--        wined3d_surface_map(dst_surface, &dst_map, dst_rect, 0);
+-        wined3d_surface_map(dst_surface, &dst_map, &dst_box, 0);
 +        wined3d_resource_get_pitch(&dst_surface->resource, &dst_row_pitch, &dst_slice_pitch);
 +        dst_data = wined3d_resource_get_map_ptr(&dst_surface->resource, context, 0);
      }
  
      bpp = dst_surface->resource.format->byte_count;
-@@ -4485,15 +4509,12 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4368,15 +4391,12 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
      width = (dst_rect->right - dst_rect->left) * bpp;
  
      if (src_surface)
@@ -106,7 +111,7 @@ index ff83f29..df8aea6 100644
  
      if (src_fmt_flags & dst_fmt_flags & WINED3DFMT_FLAG_BLOCKS)
      {
-@@ -4528,7 +4549,7 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4411,7 +4431,7 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
          }
  
          hr = surface_cpu_blt_compressed(sbase, dbuf,
@@ -115,7 +120,7 @@ index ff83f29..df8aea6 100644
                  src_format, flags, fx);
          goto release;
      }
-@@ -4536,7 +4557,7 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4419,7 +4439,7 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
      /* First, all the 'source-less' blits */
      if (flags & WINEDDBLT_COLORFILL)
      {
@@ -124,7 +129,7 @@ index ff83f29..df8aea6 100644
          flags &= ~WINEDDBLT_COLORFILL;
      }
  
-@@ -4585,19 +4606,19 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4468,19 +4488,19 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
                          for (y = 0; y < dstheight; ++y)
                          {
                              memcpy(dbuf, sbuf, width);
@@ -150,7 +155,7 @@ index ff83f29..df8aea6 100644
                              memcpy(dbuf, sbuf, width);
                          }
                      }
-@@ -4607,8 +4628,8 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4490,8 +4510,8 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
                          for (y = 0; y < dstheight; ++y)
                          {
                              memmove(dbuf, sbuf, width);
@@ -161,7 +166,7 @@ index ff83f29..df8aea6 100644
                          }
                      }
                  }
-@@ -4617,9 +4638,9 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4500,9 +4520,9 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
                      /* Stretching in y direction only. */
                      for (y = sy = 0; y < dstheight; ++y, sy += yinc)
                      {
@@ -173,7 +178,7 @@ index ff83f29..df8aea6 100644
                      }
                  }
              }
-@@ -4629,13 +4650,13 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
+@@ -4512,13 +4532,13 @@ static HRESULT surface_cpu_blt(struct wined3d_surface *dst_surface, const RECT *
                  int last_sy = -1;
                  for (y = sy = 0; y < dstheight; ++y, sy += yinc)
                  {
@@ -189,7 +194,7 @@ index ff83f29..df8aea6 100644
                      }
                      else
                      {
-@@ -4682,14 +4703,14 @@ do { \
+@@ -4565,14 +4585,14 @@ do { \
                          }
  #undef STRETCH_ROW
                      }
@@ -206,7 +211,7 @@ index ff83f29..df8aea6 100644
              DWORD keylow = 0xffffffff, keyhigh = 0, keymask = 0xffffffff;
              DWORD destkeylow = 0x0, destkeyhigh = 0xffffffff, destkeymask = 0xffffffff;
              if (flags & (WINEDDBLT_KEYSRC | WINEDDBLT_KEYDEST | WINEDDBLT_KEYSRCOVERRIDE | WINEDDBLT_KEYDESTOVERRIDE))
-@@ -4739,7 +4760,7 @@ do { \
+@@ -4622,7 +4642,7 @@ do { \
                  LONG tmpxy;
                  dTopLeft     = dbuf;
                  dTopRight    = dbuf + ((dstwidth - 1) * bpp);
@@ -215,7 +220,7 @@ index ff83f29..df8aea6 100644
                  dBottomRight = dBottomLeft + ((dstwidth - 1) * bpp);
  
                  if (fx->dwDDFX & WINEDDBLTFX_ARITHSTRETCHY)
-@@ -4822,7 +4843,7 @@ do { \
+@@ -4705,7 +4725,7 @@ do { \
      type *d = (type *)dbuf, *dx, tmp; \
      for (y = sy = 0; y < dstheight; ++y, sy += yinc) \
      { \
@@ -224,7 +229,7 @@ index ff83f29..df8aea6 100644
          dx = d; \
          for (x = sx = 0; x < dstwidth; ++x, sx += xinc) \
          { \
-@@ -4855,7 +4876,7 @@ do { \
+@@ -4738,7 +4758,7 @@ do { \
                      BYTE *d = dbuf, *dx;
                      for (y = sy = 0; y < dstheight; ++y, sy += yinc)
                      {
@@ -233,7 +238,7 @@ index ff83f29..df8aea6 100644
                          dx = d;
                          for (x = sx = 0; x < dstwidth; ++x, sx+= xinc)
                          {
-@@ -4886,6 +4907,10 @@ do { \
+@@ -4769,6 +4789,10 @@ do { \
          }
      }
  
@@ -244,7 +249,7 @@ index ff83f29..df8aea6 100644
  error:
      if (flags && FIXME_ON(d3d_surface))
      {
-@@ -4893,12 +4918,24 @@ error:
+@@ -4776,12 +4800,24 @@ error:
      }
  
  release:
@@ -273,5 +278,5 @@ index ff83f29..df8aea6 100644
      return hr;
  }
 -- 
-2.4.2
+2.6.0
 

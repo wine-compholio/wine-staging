@@ -2911,6 +2911,7 @@ if test "$enable_dsound_EAX" -eq 1; then
 	patch_apply dsound-EAX/0017-dsound-Implement-EAX-late-all-pass-filter.patch
 	patch_apply dsound-EAX/0018-dsound-Various-improvements-to-EAX-support.patch
 	patch_apply dsound-EAX/0019-dsound-Allow-disabling-of-EAX-support-in-the-registr.patch
+	patch_apply dsound-EAX/0020-dsound-Add-stub-support-for-DSPROPSETID_EAX20_Listen.patch
 	(
 		echo '+    { "Sebastian Lackner", "dsound: Apply filters before sound is multiplied to speakers.", 1 },';
 		echo '+    { "Mark Harmstone", "dsound: Add EAX v1 constants and structs.", 1 },';
@@ -2931,6 +2932,7 @@ if test "$enable_dsound_EAX" -eq 1; then
 		echo '+    { "Mark Harmstone", "dsound: Implement EAX late all-pass filter.", 1 },';
 		echo '+    { "Sebastian Lackner", "dsound: Various improvements to EAX support.", 1 },';
 		echo '+    { "Sebastian Lackner", "dsound: Allow disabling of EAX support in the registry.", 1 },';
+		echo '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_ListenerProperties.", 1 },';
 	) >> "$patchlist"
 fi
 

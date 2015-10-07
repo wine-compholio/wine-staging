@@ -4240,8 +4240,10 @@ fi
 # |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
 # |
 if test "$enable_ntdll_Status_Mapping" -eq 1; then
-	patch_apply ntdll-Status_Mapping/0001-ntdll-Return-STATUS_INVALID_DEVICE_REQUEST-when-tryi.patch
+	patch_apply ntdll-Status_Mapping/0001-ntdll-tests-Add-tests-for-calling-NtReadFile-NtWrite.patch
+	patch_apply ntdll-Status_Mapping/0002-ntdll-Return-STATUS_INVALID_DEVICE_REQUEST-when-tryi.patch
 	(
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for calling NtReadFile/NtWriteFile on directory.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Return STATUS_INVALID_DEVICE_REQUEST when trying to call NtReadFile on directory.", 1 },';
 	) >> "$patchlist"
 fi

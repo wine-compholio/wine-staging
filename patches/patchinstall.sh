@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "20ff3352eb19292d47eaa8f3aecc61523ac1f1d9"
+	echo "8dd86823fdd9a5e631cf3173727b6f667ef1b611"
 }
 
 # Show version information
@@ -4238,10 +4238,8 @@ fi
 # |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
 # |
 if test "$enable_ntdll_Status_Mapping" -eq 1; then
-	patch_apply ntdll-Status_Mapping/0001-ntdll-tests-Add-tests-for-calling-NtReadFile-NtWrite.patch
-	patch_apply ntdll-Status_Mapping/0002-ntdll-Return-STATUS_INVALID_DEVICE_REQUEST-when-tryi.patch
+	patch_apply ntdll-Status_Mapping/0001-ntdll-Return-STATUS_INVALID_DEVICE_REQUEST-when-tryi.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for calling NtReadFile/NtWriteFile on directory.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Return STATUS_INVALID_DEVICE_REQUEST when trying to call NtReadFile on directory.", 1 },';
 	) >> "$patchlist"
 fi

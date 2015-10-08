@@ -817,26 +817,11 @@ diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
      }
  
      /* The texture name is managed by the container. */
-@@ -355,6 +597,7 @@
-     return wined3d_texture_incref(volume->container);
+@@ -348,6 +590,36 @@
+     resource_unload(resource);
  }
  
-+#if defined(STAGING_CSMT)
- void wined3d_volume_cleanup_cs(struct wined3d_volume *volume)
- {
-     HeapFree(GetProcessHeap(), 0, volume);
-@@ -365,6 +608,41 @@
-     TRACE("Forwarding to container %p.\n", volume->container);
- 
-     return wined3d_texture_decref(volume->container);
-+#else  /* STAGING_CSMT */
-+static ULONG CDECL wined3d_volume_decref(struct wined3d_volume *volume)
-+{
-+    TRACE("Forwarding to container %p.\n", volume->container);
-+
-+    return wined3d_texture_decref(volume->container);
-+}
-+
++#if !defined(STAGING_CSMT)
 +static BOOL volume_check_block_align(const struct wined3d_volume *volume,
 +        const struct wined3d_box *box)
 +{
@@ -863,11 +848,13 @@ diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
 +        return FALSE;
 +
 +    return TRUE;
++}
++
 +#endif /* STAGING_CSMT */
- }
- 
  static BOOL wined3d_volume_check_box_dimensions(const struct wined3d_volume *volume,
-@@ -392,6 +670,7 @@
+         const struct wined3d_box *box)
+ {
+@@ -373,6 +645,7 @@
  HRESULT wined3d_volume_map(struct wined3d_volume *volume,
          struct wined3d_map_desc *map_desc, const struct wined3d_box *box, DWORD flags)
  {
@@ -875,7 +862,7 @@ diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
      HRESULT hr;
      const struct wined3d_format *format = volume->resource.format;
      const unsigned int fmt_flags = volume->container->resource.format_flags;
-@@ -432,6 +711,177 @@
+@@ -413,6 +686,177 @@
      if (hr == WINEDDERR_NOTLOCKED)
          return WINED3DERR_INVALIDCALL;
      return hr;
@@ -1053,15 +1040,29 @@ diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
  }
  
  static ULONG volume_resource_incref(struct wined3d_resource *resource)
-@@ -444,6 +894,7 @@
-     return wined3d_volume_decref(volume_from_resource(resource));
+@@ -423,11 +867,13 @@
+     return wined3d_texture_incref(volume->container);
+ }
+ 
++#if defined(STAGING_CSMT)
+ void wined3d_volume_cleanup_cs(struct wined3d_volume *volume)
+ {
+     HeapFree(GetProcessHeap(), 0, volume);
+ }
+ 
++#endif /* STAGING_CSMT */
+ static ULONG volume_resource_decref(struct wined3d_resource *resource)
+ {
+     struct wined3d_volume *volume = volume_from_resource(resource);
+@@ -436,6 +882,7 @@
+     return wined3d_texture_decref(volume->container);
  }
  
 +#if defined(STAGING_CSMT)
  static void wined3d_volume_location_invalidated(struct wined3d_resource *resource, DWORD location)
  {
      struct wined3d_volume *volume = volume_from_resource(resource);
-@@ -459,6 +910,13 @@
+@@ -451,6 +898,13 @@
      volume_unload,
      wined3d_volume_location_invalidated,
      wined3d_volume_load_location,
@@ -1075,7 +1076,7 @@ diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
  };
  
  static HRESULT volume_init(struct wined3d_volume *volume, struct wined3d_texture *container,
-@@ -490,7 +948,11 @@
+@@ -482,7 +936,11 @@
      }
  
      volume->texture_level = level;
@@ -1087,7 +1088,7 @@ diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
  
      if (desc->pool == WINED3D_POOL_DEFAULT && desc->usage & WINED3DUSAGE_DYNAMIC
              && gl_info->supported[ARB_PIXEL_BUFFER_OBJECT]
-@@ -498,7 +960,9 @@
+@@ -490,7 +948,9 @@
      {
          wined3d_resource_free_sysmem(&volume->resource);
          volume->resource.map_binding = WINED3D_LOCATION_BUFFER;

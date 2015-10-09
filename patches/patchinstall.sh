@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ebb320fa37f2ad27649f571946af038e9d70ced2"
+	echo "d548639d977dee847350b408aec9522d68aef813"
 }
 
 # Show version information
@@ -87,7 +87,6 @@ patch_enable_all ()
 	enable_Pipelight="$1"
 	enable_Staging="$1"
 	enable_advapi32_LsaLookupSids="$1"
-	enable_advpack_LaunchINFSection="$1"
 	enable_amstream_GetMultiMediaStream="$1"
 	enable_api_ms_win_crt_Stub_DLLs="$1"
 	enable_authz_Stub_Functions="$1"
@@ -280,7 +279,6 @@ patch_enable_all ()
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_VerQueryValue="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
-	enable_wiaservc_IEnumWIA_DEV_INFO="$1"
 	enable_wine_inf_Performance="$1"
 	enable_wine_inf_ProfileList_UserSID="$1"
 	enable_wineboot_DriveSerial="$1"
@@ -352,9 +350,6 @@ patch_enable ()
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
-			;;
-		advpack-LaunchINFSection)
-			enable_advpack_LaunchINFSection="$2"
 			;;
 		amstream-GetMultiMediaStream)
 			enable_amstream_GetMultiMediaStream="$2"
@@ -934,9 +929,6 @@ patch_enable ()
 			;;
 		wbemdisp-ISWbemSecurity)
 			enable_wbemdisp_ISWbemSecurity="$2"
-			;;
-		wiaservc-IEnumWIA_DEV_INFO)
-			enable_wiaservc_IEnumWIA_DEV_INFO="$2"
 			;;
 		wine.inf-Performance)
 			enable_wine_inf_Performance="$2"
@@ -2225,18 +2217,6 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 		echo '+    { "Qian Hong", "advapi32/tests: Test prefix and use of TokenPrimaryGroup Sid.", 1 },';
 		echo '+    { "Qian Hong", "server: Create primary group using DOMAIN_GROUP_RID_USERS.", 1 },';
 		echo '+    { "Qian Hong", "advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset advpack-LaunchINFSection
-# |
-# | Modified files:
-# |   *	dlls/advpack/install.c, dlls/advpack/tests/install.c, include/advpub.h
-# |
-if test "$enable_advpack_LaunchINFSection" -eq 1; then
-	patch_apply advpack-LaunchINFSection/0001-advpack-Translate-flags-in-LaunchINFSection.patch
-	(
-		echo '+    { "Michael Müller", "advpack: Translate flags in LaunchINFSection.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5435,21 +5415,6 @@ if test "$enable_wbemdisp_ISWbemSecurity" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wiaservc-IEnumWIA_DEV_INFO
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#27775] Implement empty enumerator for IWiaDevMgr::EnumDeviceInfo
-# |
-# | Modified files:
-# |   *	dlls/wiaservc/Makefile.in, dlls/wiaservc/enumwiadevinfo.c, dlls/wiaservc/wiadevmgr.c, dlls/wiaservc/wiaservc_private.h
-# |
-if test "$enable_wiaservc_IEnumWIA_DEV_INFO" -eq 1; then
-	patch_apply wiaservc-IEnumWIA_DEV_INFO/0001-wiaservc-Implement-IWiaDevMgr-EnumDeviceInfo-by-retu.patch
-	(
-		echo '+    { "Mikael Ståldal", "wiaservc: Implement IWiaDevMgr::EnumDeviceInfo by returning an empty enumeration of devices.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wine.inf-Performance
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6328,11 +6293,9 @@ fi
 # |   *	dlls/wininet/internet.c, dlls/wininet/tests/internet.c
 # |
 if test "$enable_wininet_Internet_Settings" -eq 1; then
-	patch_apply wininet-Internet_Settings/0001-wininet-Disabling-proxy-should-return-success-when-n.patch
-	patch_apply wininet-Internet_Settings/0002-wininet-Allow-INTERNET_OPTION_SETTINGS_CHANGED-on-co.patch
-	patch_apply wininet-Internet_Settings/0003-wininet-Add-support-for-INTERNET_OPTION_SETTINGS_CHA.patch
+	patch_apply wininet-Internet_Settings/0001-wininet-Allow-INTERNET_OPTION_SETTINGS_CHANGED-on-co.patch
+	patch_apply wininet-Internet_Settings/0002-wininet-Add-support-for-INTERNET_OPTION_SETTINGS_CHA.patch
 	(
-		echo '+    { "Michael Müller", "wininet: Disabling proxy should return success when no proxy was enabled.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Allow INTERNET_OPTION_SETTINGS_CHANGED on connections.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Add support for INTERNET_OPTION_SETTINGS_CHANGED in InternetSetOption.", 1 },';
 	) >> "$patchlist"

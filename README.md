@@ -191,7 +191,7 @@ for more details.*
 * Implement an Arial replacement font ([Wine Bug #32323](https://bugs.winehq.org/show_bug.cgi?id=32323))
 * Implement combase.WindowsSubstring function
 * Implement default homepage button in inetcpl.cpl
-* Implement empty enumerator for IWiaDevMgr::EnumDeviceInfo ([Wine Bug #27775](https://bugs.winehq.org/show_bug.cgi?id=27775))
+* ~~Implement empty enumerator for IWiaDevMgr::EnumDeviceInfo~~ ([Wine Bug #27775](https://bugs.winehq.org/show_bug.cgi?id=27775))
 * Implement enumeration of sound devices and basic properties to dxdiagn ([Wine Bug #32613](https://bugs.winehq.org/show_bug.cgi?id=32613))
 * Implement exclusive mode in PulseAudio backend ([Wine Bug #37042](https://bugs.winehq.org/show_bug.cgi?id=37042))
 * Implement general tab for file property dialog
@@ -299,7 +299,7 @@ for more details.*
 * Support for shell32 file operation progress dialog
 * Support for stored file ACLs ([Wine Bug #33576](https://bugs.winehq.org/show_bug.cgi?id=33576))
 * Support for ws2_32.dll.WSAPoll ([Wine Bug #38601](https://bugs.winehq.org/show_bug.cgi?id=38601))
-* Translate flags in LaunchINFSectionW
+* ~~Translate flags in LaunchINFSectionW~~
 * Tumblebugs 2 requires DXTn software encoding support ([Wine Bug #29586](https://bugs.winehq.org/show_bug.cgi?id=29586))
 * Update a XIM candidate position when cursor location changes ([Wine Bug #30938](https://bugs.winehq.org/show_bug.cgi?id=30938))
 * Use GLX_MESA_query_renderer extension to get more exact GPU infos

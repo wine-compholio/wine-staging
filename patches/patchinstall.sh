@@ -209,6 +209,7 @@ patch_enable_all ()
 	enable_ntdll_User_Shared_Data="$1"
 	enable_ntdll_Virtual_Memory_Stack="$1"
 	enable_ntdll_WRITECOPY="$1"
+	enable_ntdll_Wait_User_APC="$1"
 	enable_ntdll_WinSqm="$1"
 	enable_ntdll_WriteWatches="$1"
 	enable_ntdll_Zero_mod_name="$1"
@@ -719,6 +720,9 @@ patch_enable ()
 			;;
 		ntdll-WRITECOPY)
 			enable_ntdll_WRITECOPY="$2"
+			;;
+		ntdll-Wait_User_APC)
+			enable_ntdll_Wait_User_APC="$2"
 			;;
 		ntdll-WinSqm)
 			enable_ntdll_WinSqm="$2"
@@ -4277,6 +4281,20 @@ if test "$enable_ntdll_User_Shared_Data" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Move code to update user shared data into a separate function.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Update USER_SHARED_DATA before accessing memory.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Wait_User_APC
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/sync.c, dlls/ntdll/server.c
+# |
+if test "$enable_ntdll_Wait_User_APC" -eq 1; then
+	patch_apply ntdll-Wait_User_APC/0001-kernel32-tests-Add-test-to-show-that-multiple-user-A.patch
+	patch_apply ntdll-Wait_User_APC/0002-ntdll-Do-not-check-if-object-was-signaled-after-user.patch
+	(
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Add test to show that multiple user APCs are processed at once.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Do not check if object was signaled after user APC in server_select.", 1 },';
 	) >> "$patchlist"
 fi
 

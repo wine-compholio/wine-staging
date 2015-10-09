@@ -34,8 +34,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [1]:**
+**Bug fixes and features included in the next upcoming release [2]:**
 
+* Do not check if object was signaled after user APC in server_select
 * Show windows version when collecting system info in winedbg
 
 

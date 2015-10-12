@@ -61,11 +61,11 @@ for more details.*
 * Add semi-stub for FileFsVolumeInformation information class ([Wine Bug #21466](https://bugs.winehq.org/show_bug.cgi?id=21466))
 * Add shell32 placeholder icons to match offsets with Windows ([Wine Bug #30185](https://bugs.winehq.org/show_bug.cgi?id=30185))
 * Add stub dlls required for MSVC 2015 runtime library (Windows 10)
-* Add stub fltmgr.sys (filter manager driver) ([Wine Bug #23583](https://bugs.winehq.org/show_bug.cgi?id=23583))
+* ~~Add stub fltmgr.sys (filter manager driver)~~ ([Wine Bug #23583](https://bugs.winehq.org/show_bug.cgi?id=23583))
 * Add stub for D3DXComputeNormalMap
 * Add stub for D3DXFrameFind ([Wine Bug #38334](https://bugs.winehq.org/show_bug.cgi?id=38334))
 * Add stub for NtSetLdtEntries/ZwSetLdtEntries ([Wine Bug #26268](https://bugs.winehq.org/show_bug.cgi?id=26268))
-* Add stub for gdiplus.GdipCreateEffect ([Wine Bug #32163](https://bugs.winehq.org/show_bug.cgi?id=32163))
+* ~~Add stub for gdiplus.GdipCreateEffect~~ ([Wine Bug #32163](https://bugs.winehq.org/show_bug.cgi?id=32163))
 * Add stub for ntoskrnl.ExAcquireResourceExclusiveLite
 * Add stub for ntoskrnl.ExDeleteResourceLite
 * Add stub for ntoskrnl.ExReleaseResourceForThread
@@ -120,7 +120,7 @@ for more details.*
 * Do not allow to deallocate thread stack for current thread
 * Do not fail when a used context is passed to wglShareLists ([Wine Bug #11436](https://bugs.winehq.org/show_bug.cgi?id=11436))
 * ~~Do not trust width/height passed to edit control in WM_SIZE message~~ ([Wine Bug #37542](https://bugs.winehq.org/show_bug.cgi?id=37542))
-* Do not use GdipAlloc and GdipFree in internal functions ([Wine Bug #32786](https://bugs.winehq.org/show_bug.cgi?id=32786))
+* ~~Do not use GdipAlloc and GdipFree in internal functions~~ ([Wine Bug #32786](https://bugs.winehq.org/show_bug.cgi?id=32786))
 * Do not use unixfs for devices without mountpoint
 * Do not wait for hook thread startup in IDirectInput8::Initialize ([Wine Bug #21403](https://bugs.winehq.org/show_bug.cgi?id=21403))
 * Enforce that surfaces are flushed after ReleaseDC
@@ -178,7 +178,7 @@ for more details.*
 * GetSecurityInfo returns NULL DACL for process object ([Wine Bug #15980](https://bugs.winehq.org/show_bug.cgi?id=15980))
 * Globally invalidate key state on changes in other threads ([Wine Bug #29871](https://bugs.winehq.org/show_bug.cgi?id=29871))
 * Graphical issues in Inquisitor ([Wine Bug #32490](https://bugs.winehq.org/show_bug.cgi?id=32490))
-* Ignore unsupported flags for CoInternetSetFeatureEnabled ([Wine Bug #35197](https://bugs.winehq.org/show_bug.cgi?id=35197))
+* ~~Ignore unsupported flags for CoInternetSetFeatureEnabled~~ ([Wine Bug #35197](https://bugs.winehq.org/show_bug.cgi?id=35197))
 * Implement AMStream GetMultiMediaStream functions ([Wine Bug #37090](https://bugs.winehq.org/show_bug.cgi?id=37090))
 * Implement D3DXGetShaderOutputSemantics
 * Implement DDENUMSURFACES_CANBECREATED in IDirectDraw7::EnumSurfaces ([Wine Bug #17233](https://bugs.winehq.org/show_bug.cgi?id=17233))

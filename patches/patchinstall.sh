@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d548639d977dee847350b408aec9522d68aef813"
+	echo "e8b9bda53ac39c913ddc93de0308f0c8b69605fc"
 }
 
 # Show version information
@@ -134,14 +134,11 @@ patch_enable_all ()
 	enable_dxgi_GetDesc="$1"
 	enable_dxgi_MakeWindowAssociation="$1"
 	enable_dxva2_Video_Decoder="$1"
-	enable_fltmgr_Stub_SYS="$1"
 	enable_fonts_Missing_Fonts="$1"
 	enable_gdi32_Default_Palette="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_MaxPixelFormats="$1"
 	enable_gdi32_MultiMonitor="$1"
-	enable_gdiplus_GdipCreateEffect="$1"
-	enable_gdiplus_Memory_Allocation="$1"
 	enable_ieframe_IViewObject_Draw="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imagehlp_Cleanup="$1"
@@ -265,7 +262,6 @@ patch_enable_all ()
 	enable_shell32_UnixFS="$1"
 	enable_shlwapi_AssocGetPerceivedType="$1"
 	enable_shlwapi_UrlCombine="$1"
-	enable_urlmon_CoInternetSetFeatureEnabled="$1"
 	enable_user32_DeferWindowPos="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawTextExW="$1"
@@ -496,9 +492,6 @@ patch_enable ()
 		dxva2-Video_Decoder)
 			enable_dxva2_Video_Decoder="$2"
 			;;
-		fltmgr-Stub_SYS)
-			enable_fltmgr_Stub_SYS="$2"
-			;;
 		fonts-Missing_Fonts)
 			enable_fonts_Missing_Fonts="$2"
 			;;
@@ -513,12 +506,6 @@ patch_enable ()
 			;;
 		gdi32-MultiMonitor)
 			enable_gdi32_MultiMonitor="$2"
-			;;
-		gdiplus-GdipCreateEffect)
-			enable_gdiplus_GdipCreateEffect="$2"
-			;;
-		gdiplus-Memory_Allocation)
-			enable_gdiplus_Memory_Allocation="$2"
 			;;
 		ieframe-IViewObject-Draw)
 			enable_ieframe_IViewObject_Draw="$2"
@@ -888,9 +875,6 @@ patch_enable ()
 			;;
 		shlwapi-UrlCombine)
 			enable_shlwapi_UrlCombine="$2"
-			;;
-		urlmon-CoInternetSetFeatureEnabled)
-			enable_urlmon_CoInternetSetFeatureEnabled="$2"
 			;;
 		user32-DeferWindowPos)
 			enable_user32_DeferWindowPos="$2"
@@ -1488,9 +1472,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_gdi32_MaxPixelFormats" -gt 1; then
 		abort "Patchset gdi32-MaxPixelFormats disabled, but category-stable depends on that."
 	fi
-	if test "$enable_gdiplus_GdipCreateEffect" -gt 1; then
-		abort "Patchset gdiplus-GdipCreateEffect disabled, but category-stable depends on that."
-	fi
 	if test "$enable_kernel32_CompareStringEx" -gt 1; then
 		abort "Patchset kernel32-CompareStringEx disabled, but category-stable depends on that."
 	fi
@@ -1581,9 +1562,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_shell32_SHFileOperation_Win9x" -gt 1; then
 		abort "Patchset shell32-SHFileOperation_Win9x disabled, but category-stable depends on that."
 	fi
-	if test "$enable_urlmon_CoInternetSetFeatureEnabled" -gt 1; then
-		abort "Patchset urlmon-CoInternetSetFeatureEnabled disabled, but category-stable depends on that."
-	fi
 	if test "$enable_user32_DrawTextExW" -gt 1; then
 		abort "Patchset user32-DrawTextExW disabled, but category-stable depends on that."
 	fi
@@ -1668,7 +1646,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_dxgi_GetDesc=1
 	enable_fonts_Missing_Fonts=1
 	enable_gdi32_MaxPixelFormats=1
-	enable_gdiplus_GdipCreateEffect=1
 	enable_kernel32_CompareStringEx=1
 	enable_kernel32_Named_Pipe=1
 	enable_libs_Debug_Channel=1
@@ -1699,7 +1676,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_setupapi_SetupDiSetDeviceInstallParamsW=1
 	enable_shell32_RunDLL_CallEntry16=1
 	enable_shell32_SHFileOperation_Win9x=1
-	enable_urlmon_CoInternetSetFeatureEnabled=1
 	enable_user32_DrawTextExW=1
 	enable_user32_WndProc=1
 	enable_wine_inf_Performance=1
@@ -3041,21 +3017,6 @@ if test "$enable_dxva2_Video_Decoder" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset fltmgr-Stub_SYS
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#23583] Add stub fltmgr.sys (filter manager driver)
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/fltmgr.sys/Makefile.in, dlls/fltmgr.sys/fltmgr.sys.spec, dlls/fltmgr.sys/main.c, loader/wine.inf.in
-# |
-if test "$enable_fltmgr_Stub_SYS" -eq 1; then
-	patch_apply fltmgr-Stub_SYS/0001-fltmgr.sys-add-stub-dll-try-3.patch
-	(
-		echo '+    { "Austin English", "fltmgr.sys: add stub dll.", 4 },';
-	) >> "$patchlist"
-fi
-
 # Patchset fonts-Missing_Fonts
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3144,40 +3105,6 @@ if test "$enable_gdi32_MultiMonitor" -eq 1; then
 		echo '+    { "Ken Thomases", "winex11: Make GetMonitorInfo() give a different device name (\\\\.\\\\DISPLAY<n>) to each monitor.", 1 },';
 		echo '+    { "Ken Thomases", "user32: Implement EnumDisplayDevicesW() based on EnumDisplayMonitors() and GetMonitorInfoW().", 1 },';
 		echo '+    { "Ken Thomases", "winemac: Make GetMonitorInfo() give a different device name (\\\\\\\\.\\\\DISPLAY<n>) to each monitor.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset gdiplus-GdipCreateEffect
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#32163] Add stub for gdiplus.GdipCreateEffect
-# |
-# | Modified files:
-# |   *	dlls/gdiplus/gdiplus.spec, dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, include/Makefile.in, include/gdiplus.h,
-# | 	include/gdipluseffects.h
-# |
-if test "$enable_gdiplus_GdipCreateEffect" -eq 1; then
-	patch_apply gdiplus-GdipCreateEffect/0001-gdiplus-Add-GdipCreateEffect-stub.patch
-	(
-		echo '+    { "Alistair Leslie-Hughes", "gdiplus: Add GdipCreateEffect stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset gdiplus-Memory_Allocation
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#32786] Do not use GdipAlloc and GdipFree in internal functions
-# |
-# | Modified files:
-# |   *	dlls/gdiplus/brush.c, dlls/gdiplus/customlinecap.c, dlls/gdiplus/font.c, dlls/gdiplus/gdiplus.c,
-# | 	dlls/gdiplus/gdiplus_private.h, dlls/gdiplus/graphics.c, dlls/gdiplus/graphicspath.c, dlls/gdiplus/image.c,
-# | 	dlls/gdiplus/imageattributes.c, dlls/gdiplus/matrix.c, dlls/gdiplus/metafile.c, dlls/gdiplus/pathiterator.c,
-# | 	dlls/gdiplus/pen.c, dlls/gdiplus/region.c, dlls/gdiplus/stringformat.c
-# |
-if test "$enable_gdiplus_Memory_Allocation" -eq 1; then
-	patch_apply gdiplus-Memory_Allocation/0001-gdiplus-Do-not-use-GdipAlloc-and-GdipFree-in-interna.patch
-	(
-		echo '+    { "Sebastian Lackner", "gdiplus: Do not use GdipAlloc and GdipFree in internal functions.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5200,21 +5127,6 @@ if test "$enable_shlwapi_UrlCombine" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "shlwapi/tests: Add additional tests for UrlCombine and UrlCanonicalize.", 1 },';
 		echo '+    { "Sebastian Lackner", "shlwapi: UrlCombineW workaround for relative paths.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset urlmon-CoInternetSetFeatureEnabled
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35197] Ignore unsupported flags for CoInternetSetFeatureEnabled
-# |
-# | Modified files:
-# |   *	dlls/urlmon/internet.c
-# |
-if test "$enable_urlmon_CoInternetSetFeatureEnabled" -eq 1; then
-	patch_apply urlmon-CoInternetSetFeatureEnabled/0001-urlmon-Ignore-unsupported-flags-for-CoInternetSetFea.patch
-	(
-		echo '+    { "Bruno Jesus", "urlmon: Ignore unsupported flags for CoInternetSetFeatureEnabled.", 1 },';
 	) >> "$patchlist"
 fi
 

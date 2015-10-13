@@ -34,8 +34,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [2]:**
+**Bug fixes and features included in the next upcoming release [3]:**
 
+* Add implementation for IDXGIOutput::GetDesc ([Wine Bug #32006](https://bugs.winehq.org/show_bug.cgi?id=32006))
 * Do not check if object was signaled after user APC in server_select
 * Show windows version when collecting system info in winedbg
 

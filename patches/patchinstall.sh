@@ -2935,6 +2935,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#31998] Avseq crashes when multisampling is enabled
+# |   *	[#32006] Add implementation for IDXGIOutput::GetDesc
 # |
 # | Modified files:
 # |   *	dlls/dxgi/output.c

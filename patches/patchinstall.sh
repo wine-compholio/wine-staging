@@ -200,6 +200,7 @@ patch_enable_all ()
 	enable_ntdll_RtlIpStringToAddress="$1"
 	enable_ntdll_Stack_Fault="$1"
 	enable_ntdll_Status_Mapping="$1"
+	enable_ntdll_Syscall_Wrappers="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
@@ -689,6 +690,9 @@ patch_enable ()
 			;;
 		ntdll-Status_Mapping)
 			enable_ntdll_Status_Mapping="$2"
+			;;
+		ntdll-Syscall_Wrappers)
+			enable_ntdll_Syscall_Wrappers="$2"
 			;;
 		ntdll-SystemRoot_Symlink)
 			enable_ntdll_SystemRoot_Symlink="$2"
@@ -1837,7 +1841,18 @@ if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
 	if test "$enable_ntdll_Exception" -gt 1; then
 		abort "Patchset ntdll-Exception disabled, but ntdll-SystemRoot_Symlink depends on that."
 	fi
+	if test "$enable_ntdll_Syscall_Wrappers" -gt 1; then
+		abort "Patchset ntdll-Syscall_Wrappers disabled, but ntdll-SystemRoot_Symlink depends on that."
+	fi
 	enable_ntdll_Exception=1
+	enable_ntdll_Syscall_Wrappers=1
+fi
+
+if test "$enable_ntdll_NtQuerySection" -eq 1; then
+	if test "$enable_ntdll_Syscall_Wrappers" -gt 1; then
+		abort "Patchset ntdll-Syscall_Wrappers disabled, but ntdll-NtQuerySection depends on that."
+	fi
+	enable_ntdll_Syscall_Wrappers=1
 fi
 
 if test "$enable_ntdll_Junction_Points" -eq 1; then
@@ -1849,6 +1864,13 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	fi
 	enable_ntdll_Fix_Free=1
 	enable_ntdll_NtQueryEaFile=1
+fi
+
+if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
+	if test "$enable_ntdll_Syscall_Wrappers" -gt 1; then
+		abort "Patchset ntdll-Syscall_Wrappers disabled, but ntdll-NtQueryEaFile depends on that."
+	fi
+	enable_ntdll_Syscall_Wrappers=1
 fi
 
 if test "$enable_ntdll_Fix_Alignment" -eq 1; then
@@ -4023,7 +4045,29 @@ if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-Syscall_Wrappers
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39403] Use wrapper functions for syscalls to appease Chromium sandbox (32-bit)
+# |
+# | Modified files:
+# |   *	dlls/ntdll/atom.c, dlls/ntdll/directory.c, dlls/ntdll/env.c, dlls/ntdll/error.c, dlls/ntdll/file.c, dlls/ntdll/loader.c,
+# | 	dlls/ntdll/nt.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/om.c, dlls/ntdll/process.c, dlls/ntdll/reg.c,
+# | 	dlls/ntdll/resource.c, dlls/ntdll/sec.c, dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c,
+# | 	dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/sync.c, dlls/ntdll/thread.c, dlls/ntdll/time.c,
+# | 	dlls/ntdll/virtual.c
+# |
+if test "$enable_ntdll_Syscall_Wrappers" -eq 1; then
+	patch_apply ntdll-Syscall_Wrappers/0001-ntdll-Use-wrapper-functions-for-syscalls.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Use wrapper functions for syscalls.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-NtQueryEaFile
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Syscall_Wrappers
 # |
 # | Modified files:
 # |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
@@ -4038,7 +4082,7 @@ fi
 # Patchset ntdll-Junction_Points
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Fix_Free, ntdll-NtQueryEaFile
+# |   *	ntdll-Fix_Free, ntdll-Syscall_Wrappers, ntdll-NtQueryEaFile
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#12401] Support for Junction Points
@@ -4067,6 +4111,9 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 fi
 
 # Patchset ntdll-NtQuerySection
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Syscall_Wrappers
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#37338] Support for NtQuerySection
@@ -4159,7 +4206,7 @@ fi
 # Patchset ntdll-SystemRoot_Symlink
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Exception
+# |   *	ntdll-Exception, ntdll-Syscall_Wrappers
 # |
 # | Modified files:
 # |   *	dlls/ntdll/om.c

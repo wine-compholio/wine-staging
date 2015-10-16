@@ -1,0 +1,2093 @@
+From 0668a4f55e62578d3c3b9ebd84599b6c0fd0baf0 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 16 Oct 2015 02:32:58 +0200
+Subject: ntdll: Use wrapper functions for syscalls.
+
+---
+ dlls/ntdll/atom.c           |  13 +++--
+ dlls/ntdll/directory.c      |   3 +-
+ dlls/ntdll/env.c            |   6 ++-
+ dlls/ntdll/error.c          |   4 +-
+ dlls/ntdll/file.c           |  75 +++++++++++++++++---------
+ dlls/ntdll/loader.c         |   6 ++-
+ dlls/ntdll/nt.c             |  93 +++++++++++++++++++++-----------
+ dlls/ntdll/ntdll_misc.h     |  15 +++++-
+ dlls/ntdll/om.c             |  39 +++++++++-----
+ dlls/ntdll/process.c        |  15 ++++--
+ dlls/ntdll/reg.c            |  57 +++++++++++++-------
+ dlls/ntdll/resource.c       |  16 ++++--
+ dlls/ntdll/sec.c            |   9 ++--
+ dlls/ntdll/signal_arm.c     |   3 +-
+ dlls/ntdll/signal_arm64.c   |   3 +-
+ dlls/ntdll/signal_i386.c    |  11 +++-
+ dlls/ntdll/signal_powerpc.c |   3 +-
+ dlls/ntdll/signal_x86_64.c  |   3 +-
+ dlls/ntdll/sync.c           | 129 +++++++++++++++++++++++++++++---------------
+ dlls/ntdll/thread.c         |  36 ++++++++-----
+ dlls/ntdll/time.c           |  12 +++--
+ dlls/ntdll/virtual.c        |  48 +++++++++++------
+ 22 files changed, 407 insertions(+), 192 deletions(-)
+
+diff --git a/dlls/ntdll/atom.c b/dlls/ntdll/atom.c
+index 304b7f6..222fde9 100644
+--- a/dlls/ntdll/atom.c
++++ b/dlls/ntdll/atom.c
+@@ -31,6 +31,7 @@
+ #include "ntstatus.h"
+ #define WIN32_NO_STATUS
+ #include "windef.h"
++#include "ntdll_misc.h"
+ 
+ #include "wine/server.h"
+ #include "wine/unicode.h"
+@@ -311,7 +312,8 @@ NTSTATUS WINAPI RtlPinAtomInAtomTable( RTL_ATOM_TABLE table, RTL_ATOM atom )
+ /******************************************************************
+  *		NtAddAtom (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtAddAtom( const WCHAR* name, ULONG length, RTL_ATOM* atom )
++DEFINE_SYSCALL_ENTRYPOINT( NtAddAtom, 3 );
++NTSTATUS WINAPI SYSCALL(NtAddAtom)( const WCHAR* name, ULONG length, RTL_ATOM* atom )
+ {
+     NTSTATUS    status;
+ 
+@@ -335,7 +337,8 @@ NTSTATUS WINAPI NtAddAtom( const WCHAR* name, ULONG length, RTL_ATOM* atom )
+ /******************************************************************
+  *		NtDeleteAtom (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtDeleteAtom(RTL_ATOM atom)
++DEFINE_SYSCALL_ENTRYPOINT( NtDeleteAtom, 1 );
++NTSTATUS WINAPI SYSCALL(NtDeleteAtom)(RTL_ATOM atom)
+ {
+     NTSTATUS    status;
+ 
+@@ -352,7 +355,8 @@ NTSTATUS WINAPI NtDeleteAtom(RTL_ATOM atom)
+ /******************************************************************
+  *		NtFindAtom (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtFindAtom( const WCHAR* name, ULONG length, RTL_ATOM* atom )
++DEFINE_SYSCALL_ENTRYPOINT( NtFindAtom, 3 );
++NTSTATUS WINAPI SYSCALL(NtFindAtom)( const WCHAR* name, ULONG length, RTL_ATOM* atom )
+ {
+     NTSTATUS    status;
+ 
+@@ -376,7 +380,8 @@ NTSTATUS WINAPI NtFindAtom( const WCHAR* name, ULONG length, RTL_ATOM* atom )
+ /******************************************************************
+  *		NtQueryInformationAtom (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtQueryInformationAtom( RTL_ATOM atom, ATOM_INFORMATION_CLASS class,
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryInformationAtom, 5 );
++NTSTATUS WINAPI SYSCALL(NtQueryInformationAtom)( RTL_ATOM atom, ATOM_INFORMATION_CLASS class,
+                                         PVOID ptr, ULONG size, PULONG psize )
+ {
+     NTSTATUS status;
+diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
+index 4faafe9..770cd3f 100644
+--- a/dlls/ntdll/directory.c
++++ b/dlls/ntdll/directory.c
+@@ -2236,7 +2236,8 @@ done:
+  *  NtQueryDirectoryFile	[NTDLL.@]
+  *  ZwQueryDirectoryFile	[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtQueryDirectoryFile( HANDLE handle, HANDLE event,
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryDirectoryFile, 11 );
++NTSTATUS WINAPI SYSCALL(NtQueryDirectoryFile)( HANDLE handle, HANDLE event,
+                                       PIO_APC_ROUTINE apc_routine, PVOID apc_context,
+                                       PIO_STATUS_BLOCK io,
+                                       PVOID buffer, ULONG length,
+diff --git a/dlls/ntdll/env.c b/dlls/ntdll/env.c
+index a5bdf0f..3b08c54 100644
+--- a/dlls/ntdll/env.c
++++ b/dlls/ntdll/env.c
+@@ -37,7 +37,8 @@ WINE_DEFAULT_DEBUG_CHANNEL(environ);
+ /******************************************************************************
+  *  NtQuerySystemEnvironmentValue		[NTDLL.@]
+  */
+-NTSYSAPI NTSTATUS WINAPI NtQuerySystemEnvironmentValue(PUNICODE_STRING VariableName,
++DEFINE_SYSCALL_ENTRYPOINT( NtQuerySystemEnvironmentValue, 4 );
++NTSYSAPI NTSTATUS WINAPI SYSCALL(NtQuerySystemEnvironmentValue)(PUNICODE_STRING VariableName,
+                                                        PWCHAR Value,
+                                                        ULONG ValueBufferLength,
+                                                        PULONG RequiredLength)
+@@ -49,7 +50,8 @@ NTSYSAPI NTSTATUS WINAPI NtQuerySystemEnvironmentValue(PUNICODE_STRING VariableN
+ /******************************************************************************
+  *  NtQuerySystemEnvironmentValueEx		[NTDLL.@]
+  */
+-NTSYSAPI NTSTATUS WINAPI NtQuerySystemEnvironmentValueEx(PUNICODE_STRING name, LPGUID vendor,
++DEFINE_SYSCALL_ENTRYPOINT( NtQuerySystemEnvironmentValueEx, 5 );
++NTSYSAPI NTSTATUS WINAPI SYSCALL(NtQuerySystemEnvironmentValueEx)(PUNICODE_STRING name, LPGUID vendor,
+                                                          PVOID value, PULONG retlength, PULONG attrib)
+ {
+     FIXME("(%s, %s, %p, %p, %p), stub\n", debugstr_us(name), debugstr_guid(vendor), value, retlength, attrib);
+diff --git a/dlls/ntdll/error.c b/dlls/ntdll/error.c
+index 5c42010..12b2995 100644
+--- a/dlls/ntdll/error.c
++++ b/dlls/ntdll/error.c
+@@ -29,6 +29,7 @@
+ #include "windef.h"
+ #include "winternl.h"
+ #include "winerror.h"
++#include "ntdll_misc.h"
+ #include "wine/debug.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(ntdll);
+@@ -132,7 +133,8 @@ DWORD WINAPI RtlGetLastWin32Error(void)
+ /**********************************************************************
+  *      NtRaiseHardError (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtRaiseHardError( NTSTATUS ErrorStatus, ULONG NumberOfParameters,
++DEFINE_SYSCALL_ENTRYPOINT( NtRaiseHardError, 6 );
++NTSTATUS WINAPI SYSCALL(NtRaiseHardError)( NTSTATUS ErrorStatus, ULONG NumberOfParameters,
+                                   PUNICODE_STRING UnicodeStringParameterMask, PVOID *Parameters,
+                                   HARDERROR_RESPONSE_OPTION ResponseOption, PHARDERROR_RESPONSE Response )
+ {
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index 8f89ba5..f75463a 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -298,7 +298,8 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
+  *  Success: 0. FileHandle and IoStatusBlock are updated.
+  *  Failure: An NTSTATUS error code describing the error.
+  */
+-NTSTATUS WINAPI NtOpenFile( PHANDLE handle, ACCESS_MASK access,
++DEFINE_SYSCALL_ENTRYPOINT( NtOpenFile, 6 );
++NTSTATUS WINAPI SYSCALL(NtOpenFile)( PHANDLE handle, ACCESS_MASK access,
+                             POBJECT_ATTRIBUTES attr, PIO_STATUS_BLOCK io,
+                             ULONG sharing, ULONG options )
+ {
+@@ -330,7 +331,8 @@ NTSTATUS WINAPI NtOpenFile( PHANDLE handle, ACCESS_MASK access,
+  *  Success: 0. handle and io are updated.
+  *  Failure: An NTSTATUS error code describing the error.
+  */
+-NTSTATUS WINAPI NtCreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATTRIBUTES attr,
++DEFINE_SYSCALL_ENTRYPOINT( NtCreateFile, 11 );
++NTSTATUS WINAPI SYSCALL(NtCreateFile)( PHANDLE handle, ACCESS_MASK access, POBJECT_ATTRIBUTES attr,
+                               PIO_STATUS_BLOCK io, PLARGE_INTEGER alloc_size,
+                               ULONG attributes, ULONG sharing, ULONG disposition,
+                               ULONG options, PVOID ea_buffer, ULONG ea_length )
+@@ -800,7 +802,8 @@ static NTSTATUS get_io_avail_mode( HANDLE handle, enum server_fd_type type, BOOL
+  *           The number of bytes read.
+  *  Failure: An NTSTATUS error code describing the error.
+  */
+-NTSTATUS WINAPI NtReadFile(HANDLE hFile, HANDLE hEvent,
++DEFINE_SYSCALL_ENTRYPOINT( NtReadFile, 9 );
++NTSTATUS WINAPI SYSCALL(NtReadFile)(HANDLE hFile, HANDLE hEvent,
+                            PIO_APC_ROUTINE apc, void* apc_user,
+                            PIO_STATUS_BLOCK io_status, void* buffer, ULONG length,
+                            PLARGE_INTEGER offset, PULONG key)
+@@ -1011,7 +1014,8 @@ err:
+  *  NtReadFileScatter   [NTDLL.@]
+  *  ZwReadFileScatter   [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtReadFileScatter( HANDLE file, HANDLE event, PIO_APC_ROUTINE apc, void *apc_user,
++DEFINE_SYSCALL_ENTRYPOINT( NtReadFileScatter, 9 );
++NTSTATUS WINAPI SYSCALL(NtReadFileScatter)( HANDLE file, HANDLE event, PIO_APC_ROUTINE apc, void *apc_user,
+                                    PIO_STATUS_BLOCK io_status, FILE_SEGMENT_ELEMENT *segments,
+                                    ULONG length, PLARGE_INTEGER offset, PULONG key )
+ {
+@@ -1183,7 +1187,8 @@ static NTSTATUS set_pending_write( HANDLE device )
+  *           The number of bytes written.
+  *  Failure: An NTSTATUS error code describing the error.
+  */
+-NTSTATUS WINAPI NtWriteFile(HANDLE hFile, HANDLE hEvent,
++DEFINE_SYSCALL_ENTRYPOINT( NtWriteFile, 9 );
++NTSTATUS WINAPI SYSCALL(NtWriteFile)(HANDLE hFile, HANDLE hEvent,
+                             PIO_APC_ROUTINE apc, void* apc_user,
+                             PIO_STATUS_BLOCK io_status, 
+                             const void* buffer, ULONG length,
+@@ -1417,7 +1422,8 @@ err:
+  *  NtWriteFileGather   [NTDLL.@]
+  *  ZwWriteFileGather   [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtWriteFileGather( HANDLE file, HANDLE event, PIO_APC_ROUTINE apc, void *apc_user,
++DEFINE_SYSCALL_ENTRYPOINT( NtWriteFileGather, 9 );
++NTSTATUS WINAPI SYSCALL(NtWriteFileGather)( HANDLE file, HANDLE event, PIO_APC_ROUTINE apc, void *apc_user,
+                                    PIO_STATUS_BLOCK io_status, FILE_SEGMENT_ELEMENT *segments,
+                                    ULONG length, PLARGE_INTEGER offset, PULONG key )
+ {
+@@ -1606,7 +1612,8 @@ static void ignore_server_ioctl_struct_holes (ULONG code, const void *in_buffer,
+  *  Success: 0. IoStatusBlock is updated.
+  *  Failure: An NTSTATUS error code describing the error.
+  */
+-NTSTATUS WINAPI NtDeviceIoControlFile(HANDLE handle, HANDLE event,
++DEFINE_SYSCALL_ENTRYPOINT( NtDeviceIoControlFile, 10 );
++NTSTATUS WINAPI SYSCALL(NtDeviceIoControlFile)(HANDLE handle, HANDLE event,
+                                       PIO_APC_ROUTINE apc, PVOID apc_context,
+                                       PIO_STATUS_BLOCK io, ULONG code,
+                                       PVOID in_buffer, ULONG in_size,
+@@ -1670,7 +1677,8 @@ NTSTATUS WINAPI NtDeviceIoControlFile(HANDLE handle, HANDLE event,
+  *  Success: 0. IoStatusBlock is updated.
+  *  Failure: An NTSTATUS error code describing the error.
+  */
+-NTSTATUS WINAPI NtFsControlFile(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc,
++DEFINE_SYSCALL_ENTRYPOINT( NtFsControlFile, 10 );
++NTSTATUS WINAPI SYSCALL(NtFsControlFile)(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc,
+                                 PVOID apc_context, PIO_STATUS_BLOCK io, ULONG code,
+                                 PVOID in_buffer, ULONG in_size, PVOID out_buffer, ULONG out_size)
+ {
+@@ -1908,7 +1916,8 @@ static NTSTATUS read_changes_apc( void *user, IO_STATUS_BLOCK *iosb,
+ /******************************************************************************
+  *  NtNotifyChangeDirectoryFile [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtNotifyChangeDirectoryFile( HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc,
++DEFINE_SYSCALL_ENTRYPOINT( NtNotifyChangeDirectoryFile, 9 );
++NTSTATUS WINAPI SYSCALL(NtNotifyChangeDirectoryFile)( HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc,
+                                              void *apc_context, PIO_STATUS_BLOCK iosb, void *buffer,
+                                              ULONG buffer_size, ULONG filter, BOOLEAN subtree )
+ {
+@@ -1967,7 +1976,8 @@ NTSTATUS WINAPI NtNotifyChangeDirectoryFile( HANDLE handle, HANDLE event, PIO_AP
+  *  Success: 0. IoStatusBlock is updated.
+  *  Failure: An NTSTATUS error code describing the error.
+  */
+-NTSTATUS WINAPI NtSetVolumeInformationFile(
++DEFINE_SYSCALL_ENTRYPOINT( NtSetVolumeInformationFile, 5 );
++NTSTATUS WINAPI SYSCALL(NtSetVolumeInformationFile)(
+ 	IN HANDLE FileHandle,
+ 	PIO_STATUS_BLOCK IoStatusBlock,
+ 	PVOID FsInformation,
+@@ -2272,7 +2282,8 @@ static NTSTATUS fill_name_info( const ANSI_STRING *unix_name, FILE_NAME_INFORMAT
+  *  Success: 0. IoStatusBlock and FileInformation are updated.
+  *  Failure: An NTSTATUS error code describing the error.
+  */
+-NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryInformationFile, 5 );
++NTSTATUS WINAPI SYSCALL(NtQueryInformationFile)( HANDLE hFile, PIO_STATUS_BLOCK io,
+                                         PVOID ptr, LONG len, FILE_INFORMATION_CLASS class )
+ {
+     static const size_t info_sizes[] =
+@@ -2598,7 +2609,8 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
+  *  Success: 0. io is updated.
+  *  Failure: An NTSTATUS error code describing the error.
+  */
+-NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
++DEFINE_SYSCALL_ENTRYPOINT( NtSetInformationFile, 5 );
++NTSTATUS WINAPI SYSCALL(NtSetInformationFile)(HANDLE handle, PIO_STATUS_BLOCK io,
+                                      PVOID ptr, ULONG len, FILE_INFORMATION_CLASS class)
+ {
+     int fd, needs_close;
+@@ -2895,7 +2907,8 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
+ /******************************************************************************
+  *              NtQueryFullAttributesFile   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtQueryFullAttributesFile( const OBJECT_ATTRIBUTES *attr,
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryFullAttributesFile, 2 );
++NTSTATUS WINAPI SYSCALL(NtQueryFullAttributesFile)( const OBJECT_ATTRIBUTES *attr,
+                                            FILE_NETWORK_OPEN_INFORMATION *info )
+ {
+     ANSI_STRING unix_name;
+@@ -2939,7 +2952,8 @@ NTSTATUS WINAPI NtQueryFullAttributesFile( const OBJECT_ATTRIBUTES *attr,
+  *              NtQueryAttributesFile   (NTDLL.@)
+  *              ZwQueryAttributesFile   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtQueryAttributesFile( const OBJECT_ATTRIBUTES *attr, FILE_BASIC_INFORMATION *info )
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryAttributesFile, 2 );
++NTSTATUS WINAPI SYSCALL(NtQueryAttributesFile)( const OBJECT_ATTRIBUTES *attr, FILE_BASIC_INFORMATION *info )
+ {
+     ANSI_STRING unix_name;
+     NTSTATUS status;
+@@ -3160,7 +3174,8 @@ static NTSTATUS get_device_info( int fd, FILE_FS_DEVICE_INFORMATION *info )
+  *  Success: 0. io and buffer are updated.
+  *  Failure: An NTSTATUS error code describing the error.
+  */
+-NTSTATUS WINAPI NtQueryVolumeInformationFile( HANDLE handle, PIO_STATUS_BLOCK io,
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryVolumeInformationFile, 5 );
++NTSTATUS WINAPI SYSCALL(NtQueryVolumeInformationFile)( HANDLE handle, PIO_STATUS_BLOCK io,
+                                               PVOID buffer, ULONG length,
+                                               FS_INFORMATION_CLASS info_class )
+ {
+@@ -3308,7 +3323,8 @@ NTSTATUS WINAPI NtQueryVolumeInformationFile( HANDLE handle, PIO_STATUS_BLOCK io
+  *  Success: 0. Atrributes read into buffer
+  *  Failure: An NTSTATUS error code describing the error.
+  */
+-NTSTATUS WINAPI NtQueryEaFile( HANDLE hFile, PIO_STATUS_BLOCK iosb, PVOID buffer, ULONG length,
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryEaFile, 9 );
++NTSTATUS WINAPI SYSCALL(NtQueryEaFile)( HANDLE hFile, PIO_STATUS_BLOCK iosb, PVOID buffer, ULONG length,
+                                BOOLEAN single_entry, PVOID ea_list, ULONG ea_list_len,
+                                PULONG ea_index, BOOLEAN restart )
+ {
+@@ -3334,7 +3350,8 @@ NTSTATUS WINAPI NtQueryEaFile( HANDLE hFile, PIO_STATUS_BLOCK iosb, PVOID buffer
+  *  Success: 0. Attributes are updated
+  *  Failure: An NTSTATUS error code describing the error.
+  */
+-NTSTATUS WINAPI NtSetEaFile( HANDLE hFile, PIO_STATUS_BLOCK iosb, PVOID buffer, ULONG length )
++DEFINE_SYSCALL_ENTRYPOINT( NtSetEaFile, 4 );
++NTSTATUS WINAPI SYSCALL(NtSetEaFile)( HANDLE hFile, PIO_STATUS_BLOCK iosb, PVOID buffer, ULONG length )
+ {
+     FIXME("(%p,%p,%p,%d) stub\n", hFile, iosb, buffer, length);
+     return STATUS_ACCESS_DENIED;
+@@ -3354,7 +3371,8 @@ NTSTATUS WINAPI NtSetEaFile( HANDLE hFile, PIO_STATUS_BLOCK iosb, PVOID buffer,
+  *  Success: 0. IoStatusBlock is updated.
+  *  Failure: An NTSTATUS error code describing the error.
+  */
+-NTSTATUS WINAPI NtFlushBuffersFile( HANDLE hFile, IO_STATUS_BLOCK* IoStatusBlock )
++DEFINE_SYSCALL_ENTRYPOINT( NtFlushBuffersFile, 2 );
++NTSTATUS WINAPI SYSCALL(NtFlushBuffersFile)( HANDLE hFile, IO_STATUS_BLOCK* IoStatusBlock )
+ {
+     NTSTATUS ret;
+     HANDLE hEvent = NULL;
+@@ -3396,7 +3414,8 @@ NTSTATUS WINAPI NtFlushBuffersFile( HANDLE hFile, IO_STATUS_BLOCK* IoStatusBlock
+  *
+  *
+  */
+-NTSTATUS WINAPI NtLockFile( HANDLE hFile, HANDLE lock_granted_event,
++DEFINE_SYSCALL_ENTRYPOINT( NtLockFile, 10 );
++NTSTATUS WINAPI SYSCALL(NtLockFile)( HANDLE hFile, HANDLE lock_granted_event,
+                             PIO_APC_ROUTINE apc, void* apc_user,
+                             PIO_STATUS_BLOCK io_status, PLARGE_INTEGER offset,
+                             PLARGE_INTEGER count, ULONG* key, BOOLEAN dont_wait,
+@@ -3468,7 +3487,8 @@ NTSTATUS WINAPI NtLockFile( HANDLE hFile, HANDLE lock_granted_event,
+  *
+  *
+  */
+-NTSTATUS WINAPI NtUnlockFile( HANDLE hFile, PIO_STATUS_BLOCK io_status,
++DEFINE_SYSCALL_ENTRYPOINT( NtUnlockFile, 5 );
++NTSTATUS WINAPI SYSCALL(NtUnlockFile)( HANDLE hFile, PIO_STATUS_BLOCK io_status,
+                               PLARGE_INTEGER offset, PLARGE_INTEGER count,
+                               PULONG key )
+ {
+@@ -3499,7 +3519,8 @@ NTSTATUS WINAPI NtUnlockFile( HANDLE hFile, PIO_STATUS_BLOCK io_status,
+  *
+  *
+  */
+-NTSTATUS WINAPI NtCreateNamedPipeFile( PHANDLE handle, ULONG access,
++DEFINE_SYSCALL_ENTRYPOINT( NtCreateNamedPipeFile, 14 );
++NTSTATUS WINAPI SYSCALL(NtCreateNamedPipeFile)( PHANDLE handle, ULONG access,
+                                        POBJECT_ATTRIBUTES attr, PIO_STATUS_BLOCK iosb,
+                                        ULONG sharing, ULONG dispo, ULONG options,
+                                        ULONG pipe_type, ULONG read_mode, 
+@@ -3558,7 +3579,8 @@ NTSTATUS WINAPI NtCreateNamedPipeFile( PHANDLE handle, ULONG access,
+  *
+  *
+  */
+-NTSTATUS WINAPI NtDeleteFile( POBJECT_ATTRIBUTES ObjectAttributes )
++DEFINE_SYSCALL_ENTRYPOINT( NtDeleteFile, 1 );
++NTSTATUS WINAPI SYSCALL(NtDeleteFile)( POBJECT_ATTRIBUTES ObjectAttributes )
+ {
+     NTSTATUS status;
+     HANDLE hFile;
+@@ -3578,7 +3600,8 @@ NTSTATUS WINAPI NtDeleteFile( POBJECT_ATTRIBUTES ObjectAttributes )
+  *
+  *
+  */
+-NTSTATUS WINAPI NtCancelIoFileEx( HANDLE hFile, PIO_STATUS_BLOCK iosb, PIO_STATUS_BLOCK io_status )
++DEFINE_SYSCALL_ENTRYPOINT( NtCancelIoFileEx, 3 );
++NTSTATUS WINAPI SYSCALL(NtCancelIoFileEx)( HANDLE hFile, PIO_STATUS_BLOCK iosb, PIO_STATUS_BLOCK io_status )
+ {
+     TRACE("%p %p %p\n", hFile, iosb, io_status );
+ 
+@@ -3599,7 +3622,8 @@ NTSTATUS WINAPI NtCancelIoFileEx( HANDLE hFile, PIO_STATUS_BLOCK iosb, PIO_STATU
+  *
+  *
+  */
+-NTSTATUS WINAPI NtCancelIoFile( HANDLE hFile, PIO_STATUS_BLOCK io_status )
++DEFINE_SYSCALL_ENTRYPOINT( NtCancelIoFile, 2 );
++NTSTATUS WINAPI SYSCALL(NtCancelIoFile)( HANDLE hFile, PIO_STATUS_BLOCK io_status )
+ {
+     TRACE("%p %p\n", hFile, io_status );
+ 
+@@ -3632,7 +3656,8 @@ NTSTATUS WINAPI NtCancelIoFile( HANDLE hFile, PIO_STATUS_BLOCK io_status )
+  * RETURNS
+  *  An NT status code
+  */
+-NTSTATUS WINAPI NtCreateMailslotFile(PHANDLE pHandle, ULONG DesiredAccess,
++DEFINE_SYSCALL_ENTRYPOINT( NtCreateMailslotFile, 8 );
++NTSTATUS WINAPI SYSCALL(NtCreateMailslotFile)(PHANDLE pHandle, ULONG DesiredAccess,
+      POBJECT_ATTRIBUTES attr, PIO_STATUS_BLOCK IoStatusBlock,
+      ULONG CreateOptions, ULONG MailslotQuota, ULONG MaxMessageSize,
+      PLARGE_INTEGER TimeOut)
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index 831f049..ecbc885 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -3200,7 +3200,8 @@ PVOID WINAPI RtlPcToFileHeader( PVOID pc, PVOID *address )
+  *           NtLoadDriver   (NTDLL.@)
+  *           ZwLoadDriver   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtLoadDriver( const UNICODE_STRING *DriverServiceName )
++DEFINE_SYSCALL_ENTRYPOINT( NtLoadDriver, 1 );
++NTSTATUS WINAPI SYSCALL(NtLoadDriver)( const UNICODE_STRING *DriverServiceName )
+ {
+     FIXME("(%p), stub!\n",DriverServiceName);
+     return STATUS_NOT_IMPLEMENTED;
+@@ -3211,7 +3212,8 @@ NTSTATUS WINAPI NtLoadDriver( const UNICODE_STRING *DriverServiceName )
+  *           NtUnloadDriver   (NTDLL.@)
+  *           ZwUnloadDriver   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtUnloadDriver( const UNICODE_STRING *DriverServiceName )
++DEFINE_SYSCALL_ENTRYPOINT( NtUnloadDriver, 1 );
++NTSTATUS WINAPI SYSCALL(NtUnloadDriver)( const UNICODE_STRING *DriverServiceName )
+ {
+     FIXME("(%p), stub!\n",DriverServiceName);
+     return STATUS_NOT_IMPLEMENTED;
+diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
+index 2acaa83..e48e6d4 100644
+--- a/dlls/ntdll/nt.c
++++ b/dlls/ntdll/nt.c
+@@ -74,7 +74,8 @@ WINE_DEFAULT_DEBUG_CHANNEL(ntdll);
+  *  NtDuplicateToken		[NTDLL.@]
+  *  ZwDuplicateToken		[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtDuplicateToken(
++DEFINE_SYSCALL_ENTRYPOINT( NtDuplicateToken, 6 );
++NTSTATUS WINAPI SYSCALL(NtDuplicateToken)(
+         IN HANDLE ExistingToken,
+         IN ACCESS_MASK DesiredAccess,
+         IN POBJECT_ATTRIBUTES ObjectAttributes,
+@@ -117,7 +118,8 @@ NTSTATUS WINAPI NtDuplicateToken(
+  *  NtOpenProcessToken		[NTDLL.@]
+  *  ZwOpenProcessToken		[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtOpenProcessToken(
++DEFINE_SYSCALL_ENTRYPOINT( NtOpenProcessToken, 3 );
++NTSTATUS WINAPI SYSCALL(NtOpenProcessToken)(
+ 	HANDLE ProcessHandle,
+ 	DWORD DesiredAccess,
+ 	HANDLE *TokenHandle)
+@@ -129,7 +131,8 @@ NTSTATUS WINAPI NtOpenProcessToken(
+  *  NtOpenProcessTokenEx   [NTDLL.@]
+  *  ZwOpenProcessTokenEx   [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtOpenProcessTokenEx( HANDLE process, DWORD access, DWORD attributes,
++DEFINE_SYSCALL_ENTRYPOINT( NtOpenProcessTokenEx, 4 );
++NTSTATUS WINAPI SYSCALL(NtOpenProcessTokenEx)( HANDLE process, DWORD access, DWORD attributes,
+                                       HANDLE *handle )
+ {
+     NTSTATUS ret;
+@@ -153,7 +156,8 @@ NTSTATUS WINAPI NtOpenProcessTokenEx( HANDLE process, DWORD access, DWORD attrib
+  *  NtOpenThreadToken		[NTDLL.@]
+  *  ZwOpenThreadToken		[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtOpenThreadToken(
++DEFINE_SYSCALL_ENTRYPOINT( NtOpenThreadToken, 4 );
++NTSTATUS WINAPI SYSCALL(NtOpenThreadToken)(
+ 	HANDLE ThreadHandle,
+ 	DWORD DesiredAccess,
+ 	BOOLEAN OpenAsSelf,
+@@ -166,7 +170,8 @@ NTSTATUS WINAPI NtOpenThreadToken(
+  *  NtOpenThreadTokenEx   [NTDLL.@]
+  *  ZwOpenThreadTokenEx   [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtOpenThreadTokenEx( HANDLE thread, DWORD access, BOOLEAN as_self, DWORD attributes,
++DEFINE_SYSCALL_ENTRYPOINT( NtOpenThreadTokenEx, 5 );
++NTSTATUS WINAPI SYSCALL(NtOpenThreadTokenEx)( HANDLE thread, DWORD access, BOOLEAN as_self, DWORD attributes,
+                                      HANDLE *handle )
+ {
+     NTSTATUS ret;
+@@ -194,7 +199,8 @@ NTSTATUS WINAPI NtOpenThreadTokenEx( HANDLE thread, DWORD access, BOOLEAN as_sel
+  *
+  * FIXME: parameters unsafe
+  */
+-NTSTATUS WINAPI NtAdjustPrivilegesToken(
++DEFINE_SYSCALL_ENTRYPOINT( NtAdjustPrivilegesToken, 6 );
++NTSTATUS WINAPI SYSCALL(NtAdjustPrivilegesToken)(
+ 	IN HANDLE TokenHandle,
+ 	IN BOOLEAN DisableAllPrivileges,
+ 	IN PTOKEN_PRIVILEGES NewState,
+@@ -242,7 +248,8 @@ NTSTATUS WINAPI NtAdjustPrivilegesToken(
+ *   0x08 SID
+ *
+ */
+-NTSTATUS WINAPI NtQueryInformationToken(
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryInformationToken, 5 );
++NTSTATUS WINAPI SYSCALL(NtQueryInformationToken)(
+ 	HANDLE token,
+ 	TOKEN_INFORMATION_CLASS tokeninfoclass,
+ 	PVOID tokeninfo,
+@@ -554,7 +561,8 @@ NTSTATUS WINAPI NtQueryInformationToken(
+ *  NtSetInformationToken		[NTDLL.@]
+ *  ZwSetInformationToken		[NTDLL.@]
+ */
+-NTSTATUS WINAPI NtSetInformationToken(
++DEFINE_SYSCALL_ENTRYPOINT( NtSetInformationToken, 4 );
++NTSTATUS WINAPI SYSCALL(NtSetInformationToken)(
+         HANDLE TokenHandle,
+         TOKEN_INFORMATION_CLASS TokenInformationClass,
+         PVOID TokenInformation,
+@@ -604,7 +612,8 @@ NTSTATUS WINAPI NtSetInformationToken(
+ *  NtAdjustGroupsToken		[NTDLL.@]
+ *  ZwAdjustGroupsToken		[NTDLL.@]
+ */
+-NTSTATUS WINAPI NtAdjustGroupsToken(
++DEFINE_SYSCALL_ENTRYPOINT( NtAdjustGroupsToken, 6 );
++NTSTATUS WINAPI SYSCALL(NtAdjustGroupsToken)(
+         HANDLE TokenHandle,
+         BOOLEAN ResetToDefault,
+         PTOKEN_GROUPS NewState,
+@@ -621,7 +630,8 @@ NTSTATUS WINAPI NtAdjustGroupsToken(
+ *  NtPrivilegeCheck		[NTDLL.@]
+ *  ZwPrivilegeCheck		[NTDLL.@]
+ */
+-NTSTATUS WINAPI NtPrivilegeCheck(
++DEFINE_SYSCALL_ENTRYPOINT( NtPrivilegeCheck, 3 );
++NTSTATUS WINAPI SYSCALL(NtPrivilegeCheck)(
+     HANDLE ClientToken,
+     PPRIVILEGE_SET RequiredPrivileges,
+     PBOOLEAN Result)
+@@ -652,7 +662,8 @@ NTSTATUS WINAPI NtPrivilegeCheck(
+ /******************************************************************************
+  *  NtQuerySection	[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtQuerySection(
++DEFINE_SYSCALL_ENTRYPOINT( NtQuerySection, 5 );
++NTSTATUS WINAPI SYSCALL(NtQuerySection)(
+ 	IN HANDLE SectionHandle,
+ 	IN SECTION_INFORMATION_CLASS SectionInformationClass,
+ 	OUT PVOID SectionInformation,
+@@ -672,7 +683,8 @@ NTSTATUS WINAPI NtQuerySection(
+  *  NtCreatePort		[NTDLL.@]
+  *  ZwCreatePort		[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtCreatePort(PHANDLE PortHandle,POBJECT_ATTRIBUTES ObjectAttributes,
++DEFINE_SYSCALL_ENTRYPOINT( NtCreatePort, 5 );
++NTSTATUS WINAPI SYSCALL(NtCreatePort)(PHANDLE PortHandle,POBJECT_ATTRIBUTES ObjectAttributes,
+                              ULONG MaxConnectInfoLength,ULONG MaxDataLength,PULONG reserved)
+ {
+   FIXME("(%p,%p,%u,%u,%p),stub!\n",PortHandle,ObjectAttributes,
+@@ -684,7 +696,8 @@ NTSTATUS WINAPI NtCreatePort(PHANDLE PortHandle,POBJECT_ATTRIBUTES ObjectAttribu
+  *  NtConnectPort		[NTDLL.@]
+  *  ZwConnectPort		[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtConnectPort(
++DEFINE_SYSCALL_ENTRYPOINT( NtConnectPort, 8 );
++NTSTATUS WINAPI SYSCALL(NtConnectPort)(
+         PHANDLE PortHandle,
+         PUNICODE_STRING PortName,
+         PSECURITY_QUALITY_OF_SERVICE SecurityQos,
+@@ -707,7 +720,8 @@ NTSTATUS WINAPI NtConnectPort(
+  *  NtSecureConnectPort                (NTDLL.@)
+  *  ZwSecureConnectPort                (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtSecureConnectPort(
++DEFINE_SYSCALL_ENTRYPOINT( NtSecureConnectPort, 9 );
++NTSTATUS WINAPI SYSCALL(NtSecureConnectPort)(
+         PHANDLE PortHandle,
+         PUNICODE_STRING PortName,
+         PSECURITY_QUALITY_OF_SERVICE SecurityQos,
+@@ -729,7 +743,8 @@ NTSTATUS WINAPI NtSecureConnectPort(
+  *  NtListenPort		[NTDLL.@]
+  *  ZwListenPort		[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtListenPort(HANDLE PortHandle,PLPC_MESSAGE pLpcMessage)
++DEFINE_SYSCALL_ENTRYPOINT( NtListenPort, 2 );
++NTSTATUS WINAPI SYSCALL(NtListenPort)(HANDLE PortHandle,PLPC_MESSAGE pLpcMessage)
+ {
+   FIXME("(%p,%p),stub!\n",PortHandle,pLpcMessage);
+   return STATUS_NOT_IMPLEMENTED;
+@@ -739,7 +754,8 @@ NTSTATUS WINAPI NtListenPort(HANDLE PortHandle,PLPC_MESSAGE pLpcMessage)
+  *  NtAcceptConnectPort	[NTDLL.@]
+  *  ZwAcceptConnectPort	[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtAcceptConnectPort(
++DEFINE_SYSCALL_ENTRYPOINT( NtAcceptConnectPort, 6 );
++NTSTATUS WINAPI SYSCALL(NtAcceptConnectPort)(
+         PHANDLE PortHandle,
+         ULONG PortIdentifier,
+         PLPC_MESSAGE pLpcMessage,
+@@ -756,7 +772,8 @@ NTSTATUS WINAPI NtAcceptConnectPort(
+  *  NtCompleteConnectPort	[NTDLL.@]
+  *  ZwCompleteConnectPort	[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtCompleteConnectPort(HANDLE PortHandle)
++DEFINE_SYSCALL_ENTRYPOINT( NtCompleteConnectPort, 1 );
++NTSTATUS WINAPI SYSCALL(NtCompleteConnectPort)(HANDLE PortHandle)
+ {
+   FIXME("(%p),stub!\n",PortHandle);
+   return STATUS_NOT_IMPLEMENTED;
+@@ -766,7 +783,8 @@ NTSTATUS WINAPI NtCompleteConnectPort(HANDLE PortHandle)
+  *  NtRegisterThreadTerminatePort	[NTDLL.@]
+  *  ZwRegisterThreadTerminatePort	[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtRegisterThreadTerminatePort(HANDLE PortHandle)
++DEFINE_SYSCALL_ENTRYPOINT( NtRegisterThreadTerminatePort, 1 );
++NTSTATUS WINAPI SYSCALL(NtRegisterThreadTerminatePort)(HANDLE PortHandle)
+ {
+   FIXME("(%p),stub!\n",PortHandle);
+   return STATUS_NOT_IMPLEMENTED;
+@@ -776,7 +794,8 @@ NTSTATUS WINAPI NtRegisterThreadTerminatePort(HANDLE PortHandle)
+  *  NtRequestWaitReplyPort		[NTDLL.@]
+  *  ZwRequestWaitReplyPort		[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtRequestWaitReplyPort(
++DEFINE_SYSCALL_ENTRYPOINT( NtRequestWaitReplyPort, 3 );
++NTSTATUS WINAPI SYSCALL(NtRequestWaitReplyPort)(
+         HANDLE PortHandle,
+         PLPC_MESSAGE pLpcMessageIn,
+         PLPC_MESSAGE pLpcMessageOut)
+@@ -803,7 +822,8 @@ NTSTATUS WINAPI NtRequestWaitReplyPort(
+  *  NtReplyWaitReceivePort	[NTDLL.@]
+  *  ZwReplyWaitReceivePort	[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtReplyWaitReceivePort(
++DEFINE_SYSCALL_ENTRYPOINT( NtReplyWaitReceivePort, 4 );
++NTSTATUS WINAPI SYSCALL(NtReplyWaitReceivePort)(
+         HANDLE PortHandle,
+         PULONG PortIdentifier,
+         PLPC_MESSAGE ReplyMessage,
+@@ -821,7 +841,8 @@ NTSTATUS WINAPI NtReplyWaitReceivePort(
+  *  NtSetIntervalProfile	[NTDLL.@]
+  *  ZwSetIntervalProfile	[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtSetIntervalProfile(
++DEFINE_SYSCALL_ENTRYPOINT( NtSetIntervalProfile, 2 );
++NTSTATUS WINAPI SYSCALL(NtSetIntervalProfile)(
+         ULONG Interval,
+         KPROFILE_SOURCE Source)
+ {
+@@ -1676,7 +1697,8 @@ static NTSTATUS create_logical_proc_info(SYSTEM_LOGICAL_PROCESSOR_INFORMATION **
+  *  Length		size of the structure
+  *  ResultLength	Data written
+  */
+-NTSTATUS WINAPI NtQuerySystemInformation(
++DEFINE_SYSCALL_ENTRYPOINT( NtQuerySystemInformation, 4 );
++NTSTATUS WINAPI SYSCALL(NtQuerySystemInformation)(
+ 	IN SYSTEM_INFORMATION_CLASS SystemInformationClass,
+ 	OUT PVOID SystemInformation,
+ 	IN ULONG Length,
+@@ -2142,7 +2164,8 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+  * NtSetSystemInformation [NTDLL.@]
+  * ZwSetSystemInformation [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtSetSystemInformation(SYSTEM_INFORMATION_CLASS SystemInformationClass, PVOID SystemInformation, ULONG Length)
++DEFINE_SYSCALL_ENTRYPOINT( NtSetSystemInformation, 3 );
++NTSTATUS WINAPI SYSCALL(NtSetSystemInformation)(SYSTEM_INFORMATION_CLASS SystemInformationClass, PVOID SystemInformation, ULONG Length)
+ {
+     FIXME("(0x%08x,%p,0x%08x) stub\n",SystemInformationClass,SystemInformation,Length);
+     return STATUS_SUCCESS;
+@@ -2152,7 +2175,8 @@ NTSTATUS WINAPI NtSetSystemInformation(SYSTEM_INFORMATION_CLASS SystemInformatio
+  *  NtCreatePagingFile		[NTDLL.@]
+  *  ZwCreatePagingFile		[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtCreatePagingFile(
++DEFINE_SYSCALL_ENTRYPOINT( NtCreatePagingFile, 4 );
++NTSTATUS WINAPI SYSCALL(NtCreatePagingFile)(
+ 	PUNICODE_STRING PageFileName,
+ 	PLARGE_INTEGER MinimumSize,
+ 	PLARGE_INTEGER MaximumSize,
+@@ -2167,7 +2191,8 @@ NTSTATUS WINAPI NtCreatePagingFile(
+  *
+  * writes a string to the nt-textmode screen eg. during startup
+  */
+-NTSTATUS WINAPI NtDisplayString ( PUNICODE_STRING string )
++DEFINE_SYSCALL_ENTRYPOINT( NtDisplayString, 1 );
++NTSTATUS WINAPI SYSCALL(NtDisplayString) ( PUNICODE_STRING string )
+ {
+     STRING stringA;
+     NTSTATUS ret;
+@@ -2184,7 +2209,8 @@ NTSTATUS WINAPI NtDisplayString ( PUNICODE_STRING string )
+  *  NtInitiatePowerAction                       [NTDLL.@]
+  *
+  */
+-NTSTATUS WINAPI NtInitiatePowerAction(
++DEFINE_SYSCALL_ENTRYPOINT( NtInitiatePowerAction, 4 );
++NTSTATUS WINAPI SYSCALL(NtInitiatePowerAction)(
+ 	IN POWER_ACTION SystemAction,
+ 	IN SYSTEM_POWER_STATE MinSystemState,
+ 	IN ULONG Flags,
+@@ -2228,7 +2254,8 @@ static ULONG mhz_from_cpuinfo(void)
+  *  NtPowerInformation				[NTDLL.@]
+  *
+  */
+-NTSTATUS WINAPI NtPowerInformation(
++DEFINE_SYSCALL_ENTRYPOINT( NtPowerInformation, 5 );
++NTSTATUS WINAPI SYSCALL(NtPowerInformation)(
+ 	IN POWER_INFORMATION_LEVEL InformationLevel,
+ 	IN PVOID lpInputBuffer,
+ 	IN ULONG nInputBufferSize,
+@@ -2418,7 +2445,8 @@ NTSTATUS WINAPI NtPowerInformation(
+  *  NtShutdownSystem				[NTDLL.@]
+  *
+  */
+-NTSTATUS WINAPI NtShutdownSystem(SHUTDOWN_ACTION Action)
++DEFINE_SYSCALL_ENTRYPOINT( NtShutdownSystem, 1 );
++NTSTATUS WINAPI SYSCALL(NtShutdownSystem)(SHUTDOWN_ACTION Action)
+ {
+     FIXME("%d\n",Action);
+     return STATUS_SUCCESS;
+@@ -2427,7 +2455,8 @@ NTSTATUS WINAPI NtShutdownSystem(SHUTDOWN_ACTION Action)
+ /******************************************************************************
+  *  NtAllocateLocallyUniqueId (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtAllocateLocallyUniqueId(PLUID Luid)
++DEFINE_SYSCALL_ENTRYPOINT( NtAllocateLocallyUniqueId, 1 );
++NTSTATUS WINAPI SYSCALL(NtAllocateLocallyUniqueId)(PLUID Luid)
+ {
+     NTSTATUS status;
+ 
+@@ -2485,7 +2514,8 @@ ULONGLONG WINAPI VerSetConditionMask( ULONGLONG dwlConditionMask, DWORD dwTypeBi
+  *  NtAccessCheckAndAuditAlarm   (NTDLL.@)
+  *  ZwAccessCheckAndAuditAlarm   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtAccessCheckAndAuditAlarm(PUNICODE_STRING SubsystemName, HANDLE HandleId, PUNICODE_STRING ObjectTypeName,
++DEFINE_SYSCALL_ENTRYPOINT( NtAccessCheckAndAuditAlarm, 11 );
++NTSTATUS WINAPI SYSCALL(NtAccessCheckAndAuditAlarm)(PUNICODE_STRING SubsystemName, HANDLE HandleId, PUNICODE_STRING ObjectTypeName,
+                                            PUNICODE_STRING ObjectName, PSECURITY_DESCRIPTOR SecurityDescriptor,
+                                            ACCESS_MASK DesiredAccess, PGENERIC_MAPPING GenericMapping, BOOLEAN ObjectCreation,
+                                            PACCESS_MASK GrantedAccess, PBOOLEAN AccessStatus, PBOOLEAN GenerateOnClose)
+@@ -2501,7 +2531,8 @@ NTSTATUS WINAPI NtAccessCheckAndAuditAlarm(PUNICODE_STRING SubsystemName, HANDLE
+  *  NtSystemDebugControl   (NTDLL.@)
+  *  ZwSystemDebugControl   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtSystemDebugControl(SYSDBG_COMMAND command, PVOID inbuffer, ULONG inbuflength, PVOID outbuffer,
++DEFINE_SYSCALL_ENTRYPOINT( NtSystemDebugControl, 6 );
++NTSTATUS WINAPI SYSCALL(NtSystemDebugControl)(SYSDBG_COMMAND command, PVOID inbuffer, ULONG inbuflength, PVOID outbuffer,
+                                      ULONG outbuflength, PULONG retlength)
+ {
+     FIXME("(%d, %p, %d, %p, %d, %p), stub\n", command, inbuffer, inbuflength, outbuffer, outbuflength, retlength);
+diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
+index cbd19db..a33b1ea 100644
+--- a/dlls/ntdll/ntdll_misc.h
++++ b/dlls/ntdll/ntdll_misc.h
+@@ -260,7 +260,20 @@ extern HANDLE keyed_event DECLSPEC_HIDDEN;
+                        ".byte 0x6a," #args "\n\t" /* pushl $args */     \
+                        "call " __ASM_NAME("__wine_call_from_regs") "\n\t" \
+                        "ret $(4*" #args ")" ) /* fake ret to make copy protections happy */
+-#endif
++
++#define SYSCALL( name ) __syscall_ ## name
++#define DEFINE_SYSCALL_ENTRYPOINT( name, args ) \
++    __ASM_GLOBAL_FUNC( name, \
++                       "movl $" __ASM_NAME("__syscall_") #name ",%eax\n\t"  \
++                       "movl $" __ASM_NAME("call_syscall_func") ",%edx\n\t" \
++                       "call *%edx\n\t"                                     \
++                       "ret $(4*" #args ")" )
++#else /* __i386__ */
++
++#define SYSCALL( name ) name
++#define DEFINE_SYSCALL_ENTRYPOINT( name, args ) /* nothing */
++
++#endif /* __i386__ */
+ 
+ #define HASH_STRING_ALGORITHM_DEFAULT  0
+ #define HASH_STRING_ALGORITHM_X65599   1
+diff --git a/dlls/ntdll/om.c b/dlls/ntdll/om.c
+index 3fadba7..4fd0656 100644
+--- a/dlls/ntdll/om.c
++++ b/dlls/ntdll/om.c
+@@ -50,7 +50,8 @@ WINE_DEFAULT_DEBUG_CHANNEL(ntdll);
+  * NtQueryObject [NTDLL.@]
+  * ZwQueryObject [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtQueryObject(IN HANDLE handle,
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryObject, 5 );
++NTSTATUS WINAPI SYSCALL(NtQueryObject)(IN HANDLE handle,
+                               IN OBJECT_INFORMATION_CLASS info_class,
+                               OUT PVOID ptr, IN ULONG len, OUT PULONG used_len)
+ {
+@@ -221,7 +222,8 @@ NTSTATUS WINAPI NtQueryObject(IN HANDLE handle,
+  *		ZwSetInformationObject [NTDLL.@]
+  *
+  */
+-NTSTATUS WINAPI NtSetInformationObject(IN HANDLE handle,
++DEFINE_SYSCALL_ENTRYPOINT( NtSetInformationObject, 4 );
++NTSTATUS WINAPI SYSCALL(NtSetInformationObject)(IN HANDLE handle,
+                                        IN OBJECT_INFORMATION_CLASS info_class,
+                                        IN PVOID ptr, IN ULONG len)
+ {
+@@ -263,8 +265,9 @@ NTSTATUS WINAPI NtSetInformationObject(IN HANDLE handle,
+  * An ntdll analogue to GetKernelObjectSecurity().
+  *
+  */
++DEFINE_SYSCALL_ENTRYPOINT( NtQuerySecurityObject, 5 );
+ NTSTATUS WINAPI
+-NtQuerySecurityObject(
++SYSCALL(NtQuerySecurityObject)(
+ 	IN HANDLE Object,
+ 	IN SECURITY_INFORMATION RequestedInformation,
+ 	OUT PSECURITY_DESCRIPTOR pSecurityDescriptor,
+@@ -349,7 +352,8 @@ NtQuerySecurityObject(
+  *  NtDuplicateObject		[NTDLL.@]
+  *  ZwDuplicateObject		[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtDuplicateObject( HANDLE source_process, HANDLE source,
++DEFINE_SYSCALL_ENTRYPOINT( NtDuplicateObject, 7 );
++NTSTATUS WINAPI SYSCALL(NtDuplicateObject)( HANDLE source_process, HANDLE source,
+                                    HANDLE dest_process, PHANDLE dest,
+                                    ACCESS_MASK access, ULONG attributes, ULONG options )
+ {
+@@ -405,7 +409,8 @@ NTSTATUS close_handle( HANDLE handle )
+  *  Success: ERROR_SUCCESS.
+  *  Failure: An NTSTATUS error code.
+  */
+-NTSTATUS WINAPI NtClose( HANDLE Handle )
++DEFINE_SYSCALL_ENTRYPOINT( NtClose, 1 );
++NTSTATUS WINAPI SYSCALL(NtClose)( HANDLE Handle )
+ {
+     return close_handle( Handle );
+ }
+@@ -429,7 +434,8 @@ NTSTATUS WINAPI NtClose( HANDLE Handle )
+  *  Success: ERROR_SUCCESS.
+  *  Failure: An NTSTATUS error code.
+  */
+-NTSTATUS WINAPI NtOpenDirectoryObject(PHANDLE DirectoryHandle, ACCESS_MASK DesiredAccess,
++DEFINE_SYSCALL_ENTRYPOINT( NtOpenDirectoryObject, 3 );
++NTSTATUS WINAPI SYSCALL(NtOpenDirectoryObject)(PHANDLE DirectoryHandle, ACCESS_MASK DesiredAccess,
+                                       POBJECT_ATTRIBUTES ObjectAttributes)
+ {
+     NTSTATUS ret;
+@@ -477,7 +483,8 @@ NTSTATUS WINAPI NtOpenDirectoryObject(PHANDLE DirectoryHandle, ACCESS_MASK Desir
+  *  Success: ERROR_SUCCESS.
+  *  Failure: An NTSTATUS error code.
+  */
+-NTSTATUS WINAPI NtCreateDirectoryObject(PHANDLE DirectoryHandle, ACCESS_MASK DesiredAccess,
++DEFINE_SYSCALL_ENTRYPOINT( NtCreateDirectoryObject, 3 );
++NTSTATUS WINAPI SYSCALL(NtCreateDirectoryObject)(PHANDLE DirectoryHandle, ACCESS_MASK DesiredAccess,
+                                         POBJECT_ATTRIBUTES ObjectAttributes)
+ {
+     NTSTATUS ret;
+@@ -519,7 +526,8 @@ NTSTATUS WINAPI NtCreateDirectoryObject(PHANDLE DirectoryHandle, ACCESS_MASK Des
+  *  Success: ERROR_SUCCESS.
+  *  Failure: An NTSTATUS error code.
+  */
+-NTSTATUS WINAPI NtQueryDirectoryObject(HANDLE handle, PDIRECTORY_BASIC_INFORMATION buffer,
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryDirectoryObject, 7 );
++NTSTATUS WINAPI SYSCALL(NtQueryDirectoryObject)(HANDLE handle, PDIRECTORY_BASIC_INFORMATION buffer,
+                                        ULONG size, BOOLEAN single_entry, BOOLEAN restart,
+                                        PULONG context, PULONG ret_size)
+ {
+@@ -584,7 +592,8 @@ NTSTATUS WINAPI NtQueryDirectoryObject(HANDLE handle, PDIRECTORY_BASIC_INFORMATI
+  *  Success: ERROR_SUCCESS.
+  *  Failure: An NTSTATUS error code.
+  */
+-NTSTATUS WINAPI NtOpenSymbolicLinkObject(OUT PHANDLE LinkHandle, IN ACCESS_MASK DesiredAccess,
++DEFINE_SYSCALL_ENTRYPOINT( NtOpenSymbolicLinkObject, 3 );
++NTSTATUS WINAPI SYSCALL(NtOpenSymbolicLinkObject)(OUT PHANDLE LinkHandle, IN ACCESS_MASK DesiredAccess,
+                                          IN POBJECT_ATTRIBUTES ObjectAttributes)
+ {
+     NTSTATUS ret;
+@@ -633,7 +642,8 @@ NTSTATUS WINAPI NtOpenSymbolicLinkObject(OUT PHANDLE LinkHandle, IN ACCESS_MASK
+  *  Success: ERROR_SUCCESS.
+  *  Failure: An NTSTATUS error code.
+  */
+-NTSTATUS WINAPI NtCreateSymbolicLinkObject(OUT PHANDLE SymbolicLinkHandle,IN ACCESS_MASK DesiredAccess,
++DEFINE_SYSCALL_ENTRYPOINT( NtCreateSymbolicLinkObject, 4 );
++NTSTATUS WINAPI SYSCALL(NtCreateSymbolicLinkObject)(OUT PHANDLE SymbolicLinkHandle,IN ACCESS_MASK DesiredAccess,
+ 	                                   IN POBJECT_ATTRIBUTES ObjectAttributes,
+                                            IN PUNICODE_STRING TargetName)
+ {
+@@ -681,7 +691,8 @@ NTSTATUS WINAPI NtCreateSymbolicLinkObject(OUT PHANDLE SymbolicLinkHandle,IN ACC
+  *  Success: ERROR_SUCCESS.
+  *  Failure: An NTSTATUS error code.
+  */
+-NTSTATUS WINAPI NtQuerySymbolicLinkObject( HANDLE handle, PUNICODE_STRING target, PULONG length )
++DEFINE_SYSCALL_ENTRYPOINT( NtQuerySymbolicLinkObject, 3 );
++NTSTATUS WINAPI SYSCALL(NtQuerySymbolicLinkObject)( HANDLE handle, PUNICODE_STRING target, PULONG length )
+ {
+     NTSTATUS ret;
+ 
+@@ -709,7 +720,8 @@ NTSTATUS WINAPI NtQuerySymbolicLinkObject( HANDLE handle, PUNICODE_STRING target
+ /******************************************************************************
+  *  NtAllocateUuids   [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtAllocateUuids(
++DEFINE_SYSCALL_ENTRYPOINT( NtAllocateUuids, 3 );
++NTSTATUS WINAPI SYSCALL(NtAllocateUuids)(
+         PULARGE_INTEGER Time,
+         PULONG Range,
+         PULONG Sequence)
+@@ -731,7 +743,8 @@ NTSTATUS WINAPI NtAllocateUuids(
+  *  Success: STATUS_SUCCESS.
+  *  Failure: An NTSTATUS error code.
+  */
+-NTSTATUS WINAPI NtMakeTemporaryObject( HANDLE Handle )
++DEFINE_SYSCALL_ENTRYPOINT( NtMakeTemporaryObject, 1 );
++NTSTATUS WINAPI SYSCALL(NtMakeTemporaryObject)( HANDLE Handle )
+ {
+     FIXME("(%p), stub.\n", Handle);
+     return STATUS_SUCCESS;
+diff --git a/dlls/ntdll/process.c b/dlls/ntdll/process.c
+index ca9462a..37c08f1 100644
+--- a/dlls/ntdll/process.c
++++ b/dlls/ntdll/process.c
+@@ -53,7 +53,8 @@ static ULONG execute_flags = MEM_EXECUTE_OPTION_DISABLE;
+  *
+  *  Native applications must kill themselves when done
+  */
+-NTSTATUS WINAPI NtTerminateProcess( HANDLE handle, LONG exit_code )
++DEFINE_SYSCALL_ENTRYPOINT( NtTerminateProcess, 2 );
++NTSTATUS WINAPI SYSCALL(NtTerminateProcess)( HANDLE handle, LONG exit_code )
+ {
+     NTSTATUS ret;
+     BOOL self;
+@@ -115,7 +116,8 @@ ULONG_PTR get_system_affinity_mask(void)
+ *  ZwQueryInformationProcess		[NTDLL.@]
+ *
+ */
+-NTSTATUS WINAPI NtQueryInformationProcess(
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryInformationProcess, 5 );
++NTSTATUS WINAPI SYSCALL(NtQueryInformationProcess)(
+ 	IN HANDLE ProcessHandle,
+ 	IN PROCESSINFOCLASS ProcessInformationClass,
+ 	OUT PVOID ProcessInformation,
+@@ -485,7 +487,8 @@ NTSTATUS WINAPI NtQueryInformationProcess(
+  * NtSetInformationProcess [NTDLL.@]
+  * ZwSetInformationProcess [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtSetInformationProcess(
++DEFINE_SYSCALL_ENTRYPOINT( NtSetInformationProcess, 4 );
++NTSTATUS WINAPI SYSCALL(NtSetInformationProcess)(
+ 	IN HANDLE ProcessHandle,
+ 	IN PROCESSINFOCLASS ProcessInformationClass,
+ 	IN PVOID ProcessInformation,
+@@ -575,7 +578,8 @@ NTSTATUS WINAPI NtSetInformationProcess(
+  * NtFlushInstructionCache [NTDLL.@]
+  * ZwFlushInstructionCache [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtFlushInstructionCache(
++DEFINE_SYSCALL_ENTRYPOINT( NtFlushInstructionCache, 3 );
++NTSTATUS WINAPI SYSCALL(NtFlushInstructionCache)(
+         IN HANDLE ProcessHandle,
+         IN LPCVOID BaseAddress,
+         IN SIZE_T Size)
+@@ -596,7 +600,8 @@ NTSTATUS WINAPI NtFlushInstructionCache(
+  *		NtOpenProcess [NTDLL.@]
+  *		ZwOpenProcess [NTDLL.@]
+  */
+-NTSTATUS  WINAPI NtOpenProcess(PHANDLE handle, ACCESS_MASK access,
++DEFINE_SYSCALL_ENTRYPOINT( NtOpenProcess, 4 );
++NTSTATUS  WINAPI SYSCALL(NtOpenProcess)(PHANDLE handle, ACCESS_MASK access,
+                                const OBJECT_ATTRIBUTES* attr, const CLIENT_ID* cid)
+ {
+     NTSTATUS    status;
+diff --git a/dlls/ntdll/reg.c b/dlls/ntdll/reg.c
+index a104c2e..c8d8704 100644
+--- a/dlls/ntdll/reg.c
++++ b/dlls/ntdll/reg.c
+@@ -51,7 +51,8 @@ WINE_DEFAULT_DEBUG_CHANNEL(reg);
+  * NtCreateKey [NTDLL.@]
+  * ZwCreateKey [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtCreateKey( PHANDLE retkey, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr,
++DEFINE_SYSCALL_ENTRYPOINT( NtCreateKey, 7 );
++NTSTATUS WINAPI SYSCALL(NtCreateKey)( PHANDLE retkey, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr,
+                              ULONG TitleIndex, const UNICODE_STRING *class, ULONG options,
+                              PULONG dispos )
+ {
+@@ -113,7 +114,8 @@ NTSTATUS WINAPI RtlpNtCreateKey( PHANDLE retkey, ACCESS_MASK access, const OBJEC
+  *   IN		ACCESS_MASK		access
+  *   IN		POBJECT_ATTRIBUTES 	attr
+  */
+-NTSTATUS WINAPI NtOpenKey( PHANDLE retkey, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr )
++DEFINE_SYSCALL_ENTRYPOINT( NtOpenKey, 3 );
++NTSTATUS WINAPI SYSCALL(NtOpenKey)( PHANDLE retkey, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr )
+ {
+     NTSTATUS ret;
+     DWORD len;
+@@ -156,7 +158,8 @@ NTSTATUS WINAPI RtlpNtOpenKey( PHANDLE retkey, ACCESS_MASK access, OBJECT_ATTRIB
+  * NtDeleteKey [NTDLL.@]
+  * ZwDeleteKey [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtDeleteKey( HANDLE hkey )
++DEFINE_SYSCALL_ENTRYPOINT( NtDeleteKey, 1 );
++NTSTATUS WINAPI SYSCALL(NtDeleteKey)( HANDLE hkey )
+ {
+     NTSTATUS ret;
+ 
+@@ -185,7 +188,8 @@ NTSTATUS WINAPI RtlpNtMakeTemporaryKey( HANDLE hkey )
+  * NtDeleteValueKey [NTDLL.@]
+  * ZwDeleteValueKey [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtDeleteValueKey( HANDLE hkey, const UNICODE_STRING *name )
++DEFINE_SYSCALL_ENTRYPOINT( NtDeleteValueKey, 2 );
++NTSTATUS WINAPI SYSCALL(NtDeleteValueKey)( HANDLE hkey, const UNICODE_STRING *name )
+ {
+     NTSTATUS ret;
+ 
+@@ -311,7 +315,8 @@ static NTSTATUS enumerate_key( HANDLE handle, int index, KEY_INFORMATION_CLASS i
+  * NOTES
+  *  the name copied into the buffer is NOT 0-terminated
+  */
+-NTSTATUS WINAPI NtEnumerateKey( HANDLE handle, ULONG index, KEY_INFORMATION_CLASS info_class,
++DEFINE_SYSCALL_ENTRYPOINT( NtEnumerateKey, 6 );
++NTSTATUS WINAPI SYSCALL(NtEnumerateKey)( HANDLE handle, ULONG index, KEY_INFORMATION_CLASS info_class,
+                                 void *info, DWORD length, DWORD *result_len )
+ {
+     /* -1 means query key, so avoid it here */
+@@ -370,7 +375,8 @@ NTSTATUS WINAPI RtlpNtEnumerateSubKey( HANDLE handle, UNICODE_STRING *out, ULONG
+  * NtQueryKey [NTDLL.@]
+  * ZwQueryKey [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtQueryKey( HANDLE handle, KEY_INFORMATION_CLASS info_class,
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryKey, 5 );
++NTSTATUS WINAPI SYSCALL(NtQueryKey)( HANDLE handle, KEY_INFORMATION_CLASS info_class,
+                             void *info, DWORD length, DWORD *result_len )
+ {
+     return enumerate_key( handle, -1, info_class, info, length, result_len );
+@@ -425,7 +431,8 @@ static void copy_key_value_info( KEY_VALUE_INFORMATION_CLASS info_class, void *i
+  *  NtEnumerateValueKey	[NTDLL.@]
+  *  ZwEnumerateValueKey [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtEnumerateValueKey( HANDLE handle, ULONG index,
++DEFINE_SYSCALL_ENTRYPOINT( NtEnumerateValueKey, 6 );
++NTSTATUS WINAPI SYSCALL(NtEnumerateValueKey)( HANDLE handle, ULONG index,
+                                      KEY_VALUE_INFORMATION_CLASS info_class,
+                                      void *info, DWORD length, DWORD *result_len )
+ {
+@@ -473,7 +480,8 @@ NTSTATUS WINAPI NtEnumerateValueKey( HANDLE handle, ULONG index,
+  * NOTES
+  *  the name in the KeyValueInformation is never set
+  */
+-NTSTATUS WINAPI NtQueryValueKey( HANDLE handle, const UNICODE_STRING *name,
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryValueKey, 6 );
++NTSTATUS WINAPI SYSCALL(NtQueryValueKey)( HANDLE handle, const UNICODE_STRING *name,
+                                  KEY_VALUE_INFORMATION_CLASS info_class,
+                                  void *info, DWORD length, DWORD *result_len )
+ {
+@@ -575,7 +583,8 @@ NTSTATUS WINAPI RtlpNtQueryValueKey( HANDLE handle, ULONG *result_type, PBYTE de
+  *  NtFlushKey	[NTDLL.@]
+  *  ZwFlushKey  [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtFlushKey(HANDLE key)
++DEFINE_SYSCALL_ENTRYPOINT( NtFlushKey, 1 );
++NTSTATUS WINAPI SYSCALL(NtFlushKey)(HANDLE key)
+ {
+     NTSTATUS ret;
+ 
+@@ -595,7 +604,8 @@ NTSTATUS WINAPI NtFlushKey(HANDLE key)
+  *  NtLoadKey	[NTDLL.@]
+  *  ZwLoadKey   [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtLoadKey( const OBJECT_ATTRIBUTES *attr, OBJECT_ATTRIBUTES *file )
++DEFINE_SYSCALL_ENTRYPOINT( NtLoadKey, 2 );
++NTSTATUS WINAPI SYSCALL(NtLoadKey)( const OBJECT_ATTRIBUTES *attr, OBJECT_ATTRIBUTES *file )
+ {
+     NTSTATUS ret;
+     HANDLE hive;
+@@ -625,7 +635,8 @@ NTSTATUS WINAPI NtLoadKey( const OBJECT_ATTRIBUTES *attr, OBJECT_ATTRIBUTES *fil
+  *  NtNotifyChangeKey	[NTDLL.@]
+  *  ZwNotifyChangeKey   [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtNotifyChangeKey(
++DEFINE_SYSCALL_ENTRYPOINT( NtNotifyChangeKey, 10 );
++NTSTATUS WINAPI SYSCALL(NtNotifyChangeKey)(
+ 	IN HANDLE KeyHandle,
+ 	IN HANDLE Event,
+ 	IN PIO_APC_ROUTINE ApcRoutine OPTIONAL,
+@@ -680,7 +691,8 @@ NTSTATUS WINAPI NtNotifyChangeKey(
+  * ZwQueryMultipleValueKey
+  */
+ 
+-NTSTATUS WINAPI NtQueryMultipleValueKey(
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryMultipleValueKey, 6 );
++NTSTATUS WINAPI SYSCALL(NtQueryMultipleValueKey)(
+ 	HANDLE KeyHandle,
+ 	PKEY_MULTIPLE_VALUE_INFORMATION ListOfValuesToQuery,
+ 	ULONG NumberOfItems,
+@@ -698,7 +710,8 @@ NTSTATUS WINAPI NtQueryMultipleValueKey(
+  * NtReplaceKey [NTDLL.@]
+  * ZwReplaceKey [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtReplaceKey(
++DEFINE_SYSCALL_ENTRYPOINT( NtReplaceKey, 3 );
++NTSTATUS WINAPI SYSCALL(NtReplaceKey)(
+ 	IN POBJECT_ATTRIBUTES ObjectAttributes,
+ 	IN HANDLE Key,
+ 	IN POBJECT_ATTRIBUTES ReplacedObjectAttributes)
+@@ -711,7 +724,8 @@ NTSTATUS WINAPI NtReplaceKey(
+  * NtRestoreKey [NTDLL.@]
+  * ZwRestoreKey [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtRestoreKey(
++DEFINE_SYSCALL_ENTRYPOINT( NtRestoreKey, 3 );
++NTSTATUS WINAPI SYSCALL(NtRestoreKey)(
+ 	HANDLE KeyHandle,
+ 	HANDLE FileHandle,
+ 	ULONG RestoreFlags)
+@@ -724,7 +738,8 @@ NTSTATUS WINAPI NtRestoreKey(
+  * NtSaveKey [NTDLL.@]
+  * ZwSaveKey [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtSaveKey(IN HANDLE KeyHandle, IN HANDLE FileHandle)
++DEFINE_SYSCALL_ENTRYPOINT( NtSaveKey, 2 );
++NTSTATUS WINAPI SYSCALL(NtSaveKey)(IN HANDLE KeyHandle, IN HANDLE FileHandle)
+ {
+     NTSTATUS ret;
+ 
+@@ -744,7 +759,8 @@ NTSTATUS WINAPI NtSaveKey(IN HANDLE KeyHandle, IN HANDLE FileHandle)
+  * NtSetInformationKey [NTDLL.@]
+  * ZwSetInformationKey [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtSetInformationKey(
++DEFINE_SYSCALL_ENTRYPOINT( NtSetInformationKey, 4 );
++NTSTATUS WINAPI SYSCALL(NtSetInformationKey)(
+ 	IN HANDLE KeyHandle,
+ 	IN const int KeyInformationClass,
+ 	IN PVOID KeyInformation,
+@@ -764,7 +780,8 @@ NTSTATUS WINAPI NtSetInformationKey(
+  *   win95 does not care about count for REG_SZ and finds out the len by itself (js)
+  *   NT does definitely care (aj)
+  */
+-NTSTATUS WINAPI NtSetValueKey( HANDLE hkey, const UNICODE_STRING *name, ULONG TitleIndex,
++DEFINE_SYSCALL_ENTRYPOINT( NtSetValueKey, 6 );
++NTSTATUS WINAPI SYSCALL(NtSetValueKey)( HANDLE hkey, const UNICODE_STRING *name, ULONG TitleIndex,
+                                ULONG type, const void *data, ULONG count )
+ {
+     NTSTATUS ret;
+@@ -803,7 +820,8 @@ NTSTATUS WINAPI RtlpNtSetValueKey( HANDLE hkey, ULONG type, const void *data,
+  * NtUnloadKey [NTDLL.@]
+  * ZwUnloadKey [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtUnloadKey(IN POBJECT_ATTRIBUTES attr)
++DEFINE_SYSCALL_ENTRYPOINT( NtUnloadKey, 1 );
++NTSTATUS WINAPI SYSCALL(NtUnloadKey)(IN POBJECT_ATTRIBUTES attr)
+ {
+     NTSTATUS ret;
+ 
+@@ -1410,7 +1428,8 @@ NTSTATUS WINAPI RtlWriteRegistryValue( ULONG RelativeTo, PCWSTR path, PCWSTR nam
+  *  unless there is some app which explicitly depends on that, there is
+  *  no good reason to reproduce that.
+  */
+-NTSTATUS WINAPI NtQueryLicenseValue( const UNICODE_STRING *name, ULONG *result_type,
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryLicenseValue, 5 );
++NTSTATUS WINAPI SYSCALL(NtQueryLicenseValue)( const UNICODE_STRING *name, ULONG *result_type,
+                                      PVOID data, ULONG length, ULONG *result_len )
+ {
+     static const WCHAR LicenseInformationW[] = {'M','a','c','h','i','n','e','\\',
+diff --git a/dlls/ntdll/resource.c b/dlls/ntdll/resource.c
+index 9635bb0..473e965 100644
+--- a/dlls/ntdll/resource.c
++++ b/dlls/ntdll/resource.c
+@@ -40,6 +40,7 @@
+ #include "winbase.h"
+ #include "winnt.h"
+ #include "winternl.h"
++#include "ntdll_misc.h"
+ #include "wine/exception.h"
+ #include "wine/unicode.h"
+ #include "wine/debug.h"
+@@ -454,7 +455,8 @@ NTSTATUS WINAPI RtlFormatMessage( LPWSTR Message, UCHAR MaxWidth,
+ /**********************************************************************
+  *	NtQueryDefaultLocale  (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtQueryDefaultLocale( BOOLEAN user, LCID *lcid )
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryDefaultLocale, 2 );
++NTSTATUS WINAPI SYSCALL(NtQueryDefaultLocale)( BOOLEAN user, LCID *lcid )
+ {
+     *lcid = user ? user_lcid : system_lcid;
+     return STATUS_SUCCESS;
+@@ -464,7 +466,8 @@ NTSTATUS WINAPI NtQueryDefaultLocale( BOOLEAN user, LCID *lcid )
+ /**********************************************************************
+  *	NtSetDefaultLocale  (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtSetDefaultLocale( BOOLEAN user, LCID lcid )
++DEFINE_SYSCALL_ENTRYPOINT( NtSetDefaultLocale, 2 );
++NTSTATUS WINAPI SYSCALL(NtSetDefaultLocale)( BOOLEAN user, LCID lcid )
+ {
+     if (user) user_lcid = lcid;
+     else
+@@ -479,7 +482,8 @@ NTSTATUS WINAPI NtSetDefaultLocale( BOOLEAN user, LCID lcid )
+ /**********************************************************************
+  *	NtQueryDefaultUILanguage  (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtQueryDefaultUILanguage( LANGID *lang )
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryDefaultUILanguage, 1 );
++NTSTATUS WINAPI SYSCALL(NtQueryDefaultUILanguage)( LANGID *lang )
+ {
+     *lang = user_ui_language;
+     return STATUS_SUCCESS;
+@@ -489,7 +493,8 @@ NTSTATUS WINAPI NtQueryDefaultUILanguage( LANGID *lang )
+ /**********************************************************************
+  *	NtSetDefaultUILanguage  (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtSetDefaultUILanguage( LANGID lang )
++DEFINE_SYSCALL_ENTRYPOINT( NtSetDefaultUILanguage, 1 );
++NTSTATUS WINAPI SYSCALL(NtSetDefaultUILanguage)( LANGID lang )
+ {
+     user_ui_language = lang;
+     return STATUS_SUCCESS;
+@@ -499,7 +504,8 @@ NTSTATUS WINAPI NtSetDefaultUILanguage( LANGID lang )
+ /**********************************************************************
+  *	NtQueryInstallUILanguage  (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtQueryInstallUILanguage( LANGID *lang )
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryInstallUILanguage, 1 );
++NTSTATUS WINAPI SYSCALL(NtQueryInstallUILanguage)( LANGID *lang )
+ {
+     *lang = system_ui_language;
+     return STATUS_SUCCESS;
+diff --git a/dlls/ntdll/sec.c b/dlls/ntdll/sec.c
+index 125c86e..b778c9e 100644
+--- a/dlls/ntdll/sec.c
++++ b/dlls/ntdll/sec.c
+@@ -1535,8 +1535,9 @@ RtlImpersonateSelf(SECURITY_IMPERSONATION_LEVEL ImpersonationLevel)
+ /******************************************************************************
+  *  NtImpersonateAnonymousToken      [NTDLL.@]
+  */
++DEFINE_SYSCALL_ENTRYPOINT( NtImpersonateAnonymousToken, 1 );
+ NTSTATUS WINAPI
+-NtImpersonateAnonymousToken(HANDLE thread)
++SYSCALL(NtImpersonateAnonymousToken)(HANDLE thread)
+ {
+     FIXME("(%p): stub\n", thread);
+     return STATUS_NOT_IMPLEMENTED;
+@@ -1569,8 +1570,9 @@ NtImpersonateAnonymousToken(HANDLE thread)
+  *  The SecurityDescriptor must have a valid owner and groups present,
+  *  otherwise the function will fail.
+  */
++DEFINE_SYSCALL_ENTRYPOINT( NtAccessCheck, 8 );
+ NTSTATUS WINAPI
+-NtAccessCheck(
++SYSCALL(NtAccessCheck)(
+     PSECURITY_DESCRIPTOR SecurityDescriptor,
+     HANDLE ClientToken,
+     ACCESS_MASK DesiredAccess,
+@@ -1658,7 +1660,8 @@ NtAccessCheck(
+  *  NTSTATUS code.
+  *
+  */
+-NTSTATUS WINAPI NtSetSecurityObject(HANDLE Handle,
++DEFINE_SYSCALL_ENTRYPOINT( NtSetSecurityObject, 3 );
++NTSTATUS WINAPI SYSCALL(NtSetSecurityObject)(HANDLE Handle,
+         SECURITY_INFORMATION SecurityInformation,
+         PSECURITY_DESCRIPTOR SecurityDescriptor)
+ {
+diff --git a/dlls/ntdll/signal_arm.c b/dlls/ntdll/signal_arm.c
+index 1f6da96..10e06e0 100644
+--- a/dlls/ntdll/signal_arm.c
++++ b/dlls/ntdll/signal_arm.c
+@@ -1122,7 +1122,8 @@ void WINAPI RtlUnwind( void *endframe, void *target_ip, EXCEPTION_RECORD *rec, v
+ /*******************************************************************
+  *		NtRaiseException (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtRaiseException( EXCEPTION_RECORD *rec, CONTEXT *context, BOOL first_chance )
++DEFINE_SYSCALL_ENTRYPOINT( NtRaiseException, 3 );
++NTSTATUS WINAPI SYSCALL(NtRaiseException)( EXCEPTION_RECORD *rec, CONTEXT *context, BOOL first_chance )
+ {
+     NTSTATUS status = raise_exception( rec, context, first_chance );
+     if (status == STATUS_SUCCESS) NtSetContextThread( GetCurrentThread(), context );
+diff --git a/dlls/ntdll/signal_arm64.c b/dlls/ntdll/signal_arm64.c
+index 3a41c84..905e7cc 100644
+--- a/dlls/ntdll/signal_arm64.c
++++ b/dlls/ntdll/signal_arm64.c
+@@ -866,7 +866,8 @@ void WINAPI RtlUnwind( PVOID pEndFrame, PVOID targetIp, PEXCEPTION_RECORD pRecor
+ /*******************************************************************
+  *		NtRaiseException (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtRaiseException( EXCEPTION_RECORD *rec, CONTEXT *context, BOOL first_chance )
++DEFINE_SYSCALL_ENTRYPOINT( NtRaiseException, 3 );
++NTSTATUS WINAPI SYSCALL(NtRaiseException)( EXCEPTION_RECORD *rec, CONTEXT *context, BOOL first_chance )
+ {
+     NTSTATUS status = raise_exception( rec, context, first_chance );
+     if (status == STATUS_SUCCESS) NtSetContextThread( GetCurrentThread(), context );
+diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
+index 5c3aa819..fdb48371 100644
+--- a/dlls/ntdll/signal_i386.c
++++ b/dlls/ntdll/signal_i386.c
+@@ -2617,7 +2617,8 @@ DEFINE_REGS_ENTRYPOINT( RtlUnwind, 4 )
+ /*******************************************************************
+  *		NtRaiseException (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtRaiseException( EXCEPTION_RECORD *rec, CONTEXT *context, BOOL first_chance )
++DEFINE_SYSCALL_ENTRYPOINT( NtRaiseException, 3 );
++NTSTATUS WINAPI SYSCALL(NtRaiseException)( EXCEPTION_RECORD *rec, CONTEXT *context, BOOL first_chance )
+ {
+     NTSTATUS status = raise_exception( rec, context, first_chance );
+     if (status == STATUS_SUCCESS)
+@@ -2856,4 +2857,12 @@ __ASM_GLOBAL_FUNC(call_exception_handler,
+                    __ASM_CFI(".cfi_same_value %ebp\n\t")
+                   "ret $20" )            /* (*4) */
+ 
++/**********************************************************************
++ *    call_syscall_func   (internal)
++ */
++__ASM_GLOBAL_FUNC( call_syscall_func,
++                   "addl $4,%esp\n\t"
++                   "jmp *%eax\n\t"
++                   "ret" )
++
+ #endif  /* __i386__ */
+diff --git a/dlls/ntdll/signal_powerpc.c b/dlls/ntdll/signal_powerpc.c
+index 886da86..9ec38f5 100644
+--- a/dlls/ntdll/signal_powerpc.c
++++ b/dlls/ntdll/signal_powerpc.c
+@@ -1068,7 +1068,8 @@ void WINAPI RtlUnwind( PVOID pEndFrame, PVOID targetIp, PEXCEPTION_RECORD pRecor
+ /*******************************************************************
+  *		NtRaiseException (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtRaiseException( EXCEPTION_RECORD *rec, CONTEXT *context, BOOL first_chance )
++DEFINE_SYSCALL_ENTRYPOINT( NtRaiseException, 3 );
++NTSTATUS WINAPI SYSCALL(NtRaiseException)( EXCEPTION_RECORD *rec, CONTEXT *context, BOOL first_chance )
+ {
+     NTSTATUS status = raise_exception( rec, context, first_chance );
+     if (status == STATUS_SUCCESS) NtSetContextThread( GetCurrentThread(), context );
+diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
+index 575a770..b4d4122 100644
+--- a/dlls/ntdll/signal_x86_64.c
++++ b/dlls/ntdll/signal_x86_64.c
+@@ -3558,7 +3558,8 @@ EXCEPTION_DISPOSITION WINAPI __C_specific_handler( EXCEPTION_RECORD *rec,
+ /*******************************************************************
+  *		NtRaiseException (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtRaiseException( EXCEPTION_RECORD *rec, CONTEXT *context, BOOL first_chance )
++DEFINE_SYSCALL_ENTRYPOINT( NtRaiseException, 3 );
++NTSTATUS WINAPI SYSCALL(NtRaiseException)( EXCEPTION_RECORD *rec, CONTEXT *context, BOOL first_chance )
+ {
+     NTSTATUS status = raise_exception( rec, context, first_chance );
+     if (status == STATUS_SUCCESS) NtSetContextThread( GetCurrentThread(), context );
+diff --git a/dlls/ntdll/sync.c b/dlls/ntdll/sync.c
+index 6892732..341a71a 100644
+--- a/dlls/ntdll/sync.c
++++ b/dlls/ntdll/sync.c
+@@ -149,7 +149,8 @@ void NTDLL_free_struct_sd(struct security_descriptor *server_sd)
+ /******************************************************************************
+  *  NtCreateSemaphore (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtCreateSemaphore( OUT PHANDLE SemaphoreHandle,
++DEFINE_SYSCALL_ENTRYPOINT( NtCreateSemaphore, 5 );
++NTSTATUS WINAPI SYSCALL(NtCreateSemaphore)( OUT PHANDLE SemaphoreHandle,
+                                    IN ACCESS_MASK access,
+                                    IN const OBJECT_ATTRIBUTES *attr OPTIONAL,
+                                    IN LONG InitialCount,
+@@ -195,7 +196,8 @@ NTSTATUS WINAPI NtCreateSemaphore( OUT PHANDLE SemaphoreHandle,
+ /******************************************************************************
+  *  NtOpenSemaphore (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtOpenSemaphore( OUT PHANDLE SemaphoreHandle,
++DEFINE_SYSCALL_ENTRYPOINT( NtOpenSemaphore, 3 );
++NTSTATUS WINAPI SYSCALL(NtOpenSemaphore)( OUT PHANDLE SemaphoreHandle,
+                                  IN ACCESS_MASK access,
+                                  IN const OBJECT_ATTRIBUTES *attr )
+ {
+@@ -220,7 +222,8 @@ NTSTATUS WINAPI NtOpenSemaphore( OUT PHANDLE SemaphoreHandle,
+ /******************************************************************************
+  *  NtQuerySemaphore (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtQuerySemaphore( HANDLE handle, SEMAPHORE_INFORMATION_CLASS class,
++DEFINE_SYSCALL_ENTRYPOINT( NtQuerySemaphore, 5 );
++NTSTATUS WINAPI SYSCALL(NtQuerySemaphore)( HANDLE handle, SEMAPHORE_INFORMATION_CLASS class,
+                                   void *info, ULONG len, ULONG *ret_len )
+ {
+     NTSTATUS ret;
+@@ -252,7 +255,8 @@ NTSTATUS WINAPI NtQuerySemaphore( HANDLE handle, SEMAPHORE_INFORMATION_CLASS cla
+ /******************************************************************************
+  *  NtReleaseSemaphore (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtReleaseSemaphore( HANDLE handle, ULONG count, PULONG previous )
++DEFINE_SYSCALL_ENTRYPOINT( NtReleaseSemaphore, 3 );
++NTSTATUS WINAPI SYSCALL(NtReleaseSemaphore)( HANDLE handle, ULONG count, PULONG previous )
+ {
+     NTSTATUS ret;
+     SERVER_START_REQ( release_semaphore )
+@@ -276,7 +280,8 @@ NTSTATUS WINAPI NtReleaseSemaphore( HANDLE handle, ULONG count, PULONG previous
+  * NtCreateEvent (NTDLL.@)
+  * ZwCreateEvent (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtCreateEvent( PHANDLE EventHandle, ACCESS_MASK DesiredAccess,
++DEFINE_SYSCALL_ENTRYPOINT( NtCreateEvent, 5 );
++NTSTATUS WINAPI SYSCALL(NtCreateEvent)( PHANDLE EventHandle, ACCESS_MASK DesiredAccess,
+                                const OBJECT_ATTRIBUTES *attr, EVENT_TYPE type, BOOLEAN InitialState)
+ {
+     DWORD len = attr && attr->ObjectName ? attr->ObjectName->Length : 0;
+@@ -318,7 +323,8 @@ NTSTATUS WINAPI NtCreateEvent( PHANDLE EventHandle, ACCESS_MASK DesiredAccess,
+  *  NtOpenEvent (NTDLL.@)
+  *  ZwOpenEvent (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtOpenEvent(
++DEFINE_SYSCALL_ENTRYPOINT( NtOpenEvent, 3 );
++NTSTATUS WINAPI SYSCALL(NtOpenEvent)(
+ 	OUT PHANDLE EventHandle,
+ 	IN ACCESS_MASK DesiredAccess,
+ 	IN const OBJECT_ATTRIBUTES *attr )
+@@ -346,7 +352,8 @@ NTSTATUS WINAPI NtOpenEvent(
+  *  NtSetEvent (NTDLL.@)
+  *  ZwSetEvent (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtSetEvent( HANDLE handle, PULONG NumberOfThreadsReleased )
++DEFINE_SYSCALL_ENTRYPOINT( NtSetEvent, 2 );
++NTSTATUS WINAPI SYSCALL(NtSetEvent)( HANDLE handle, PULONG NumberOfThreadsReleased )
+ {
+     NTSTATUS ret;
+ 
+@@ -365,7 +372,8 @@ NTSTATUS WINAPI NtSetEvent( HANDLE handle, PULONG NumberOfThreadsReleased )
+ /******************************************************************************
+  *  NtResetEvent (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtResetEvent( HANDLE handle, PULONG NumberOfThreadsReleased )
++DEFINE_SYSCALL_ENTRYPOINT( NtResetEvent, 2 );
++NTSTATUS WINAPI SYSCALL(NtResetEvent)( HANDLE handle, PULONG NumberOfThreadsReleased )
+ {
+     NTSTATUS ret;
+ 
+@@ -388,7 +396,8 @@ NTSTATUS WINAPI NtResetEvent( HANDLE handle, PULONG NumberOfThreadsReleased )
+  * FIXME
+  *   same as NtResetEvent ???
+  */
+-NTSTATUS WINAPI NtClearEvent ( HANDLE handle )
++DEFINE_SYSCALL_ENTRYPOINT( NtClearEvent, 1 );
++NTSTATUS WINAPI SYSCALL(NtClearEvent) ( HANDLE handle )
+ {
+     return NtResetEvent( handle, NULL );
+ }
+@@ -399,7 +408,8 @@ NTSTATUS WINAPI NtClearEvent ( HANDLE handle )
+  * FIXME
+  *   PulseCount
+  */
+-NTSTATUS WINAPI NtPulseEvent( HANDLE handle, PULONG PulseCount )
++DEFINE_SYSCALL_ENTRYPOINT( NtPulseEvent, 2 );
++NTSTATUS WINAPI SYSCALL(NtPulseEvent)( HANDLE handle, PULONG PulseCount )
+ {
+     NTSTATUS ret;
+ 
+@@ -419,7 +429,8 @@ NTSTATUS WINAPI NtPulseEvent( HANDLE handle, PULONG PulseCount )
+ /******************************************************************************
+  *  NtQueryEvent (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtQueryEvent( HANDLE handle, EVENT_INFORMATION_CLASS class,
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryEvent, 5 );
++NTSTATUS WINAPI SYSCALL(NtQueryEvent)( HANDLE handle, EVENT_INFORMATION_CLASS class,
+                               void *info, ULONG len, ULONG *ret_len )
+ {
+     NTSTATUS ret;
+@@ -457,7 +468,8 @@ NTSTATUS WINAPI NtQueryEvent( HANDLE handle, EVENT_INFORMATION_CLASS class,
+  *              NtCreateMutant                          [NTDLL.@]
+  *              ZwCreateMutant                          [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtCreateMutant(OUT HANDLE* MutantHandle,
++DEFINE_SYSCALL_ENTRYPOINT( NtCreateMutant, 4 );
++NTSTATUS WINAPI SYSCALL(NtCreateMutant)(OUT HANDLE* MutantHandle,
+                                IN ACCESS_MASK access,
+                                IN const OBJECT_ATTRIBUTES* attr OPTIONAL,
+                                IN BOOLEAN InitialOwner)
+@@ -500,7 +512,8 @@ NTSTATUS WINAPI NtCreateMutant(OUT HANDLE* MutantHandle,
+  *		NtOpenMutant				[NTDLL.@]
+  *		ZwOpenMutant				[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtOpenMutant(OUT HANDLE* MutantHandle, 
++DEFINE_SYSCALL_ENTRYPOINT( NtOpenMutant, 3 );
++NTSTATUS WINAPI SYSCALL(NtOpenMutant)(OUT HANDLE* MutantHandle,
+                              IN ACCESS_MASK access, 
+                              IN const OBJECT_ATTRIBUTES* attr )
+ {
+@@ -526,7 +539,8 @@ NTSTATUS WINAPI NtOpenMutant(OUT HANDLE* MutantHandle,
+  *		NtReleaseMutant				[NTDLL.@]
+  *		ZwReleaseMutant				[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtReleaseMutant( IN HANDLE handle, OUT PLONG prev_count OPTIONAL)
++DEFINE_SYSCALL_ENTRYPOINT( NtReleaseMutant, 2 );
++NTSTATUS WINAPI SYSCALL(NtReleaseMutant)( IN HANDLE handle, OUT PLONG prev_count OPTIONAL)
+ {
+     NTSTATUS    status;
+ 
+@@ -544,7 +558,8 @@ NTSTATUS WINAPI NtReleaseMutant( IN HANDLE handle, OUT PLONG prev_count OPTIONAL
+  *		NtQueryMutant                   [NTDLL.@]
+  *		ZwQueryMutant                   [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtQueryMutant(IN HANDLE handle, 
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryMutant, 5 );
++NTSTATUS WINAPI SYSCALL(NtQueryMutant)(IN HANDLE handle,
+                               IN MUTANT_INFORMATION_CLASS MutantInformationClass, 
+                               OUT PVOID MutantInformation, 
+                               IN ULONG MutantInformationLength, 
+@@ -563,7 +578,8 @@ NTSTATUS WINAPI NtQueryMutant(IN HANDLE handle,
+  *              NtCreateJobObject   [NTDLL.@]
+  *              ZwCreateJobObject   [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtCreateJobObject( PHANDLE handle, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr )
++DEFINE_SYSCALL_ENTRYPOINT( NtCreateJobObject, 3 );
++NTSTATUS WINAPI SYSCALL(NtCreateJobObject)( PHANDLE handle, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr )
+ {
+     DWORD len = attr && attr->ObjectName ? attr->ObjectName->Length : 0;
+     NTSTATUS ret;
+@@ -601,7 +617,8 @@ NTSTATUS WINAPI NtCreateJobObject( PHANDLE handle, ACCESS_MASK access, const OBJ
+  *              NtOpenJobObject   [NTDLL.@]
+  *              ZwOpenJobObject   [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtOpenJobObject( PHANDLE handle, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr )
++DEFINE_SYSCALL_ENTRYPOINT( NtOpenJobObject, 3 );
++NTSTATUS WINAPI SYSCALL(NtOpenJobObject)( PHANDLE handle, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr )
+ {
+     FIXME( "stub: %p %x %s\n", handle, access, attr ? debugstr_us(attr->ObjectName) : "" );
+     return STATUS_NOT_IMPLEMENTED;
+@@ -611,7 +628,8 @@ NTSTATUS WINAPI NtOpenJobObject( PHANDLE handle, ACCESS_MASK access, const OBJEC
+  *              NtTerminateJobObject   [NTDLL.@]
+  *              ZwTerminateJobObject   [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtTerminateJobObject( HANDLE handle, NTSTATUS status )
++DEFINE_SYSCALL_ENTRYPOINT( NtTerminateJobObject, 2 );
++NTSTATUS WINAPI SYSCALL(NtTerminateJobObject)( HANDLE handle, NTSTATUS status )
+ {
+     NTSTATUS ret;
+ 
+@@ -632,7 +650,8 @@ NTSTATUS WINAPI NtTerminateJobObject( HANDLE handle, NTSTATUS status )
+  *              NtQueryInformationJobObject   [NTDLL.@]
+  *              ZwQueryInformationJobObject   [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtQueryInformationJobObject( HANDLE handle, JOBOBJECTINFOCLASS class, PVOID info,
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryInformationJobObject, 5 );
++NTSTATUS WINAPI SYSCALL(NtQueryInformationJobObject)( HANDLE handle, JOBOBJECTINFOCLASS class, PVOID info,
+                                              ULONG len, PULONG ret_len )
+ {
+     FIXME( "stub: %p %u %p %u %p\n", handle, class, info, len, ret_len );
+@@ -675,7 +694,8 @@ NTSTATUS WINAPI NtQueryInformationJobObject( HANDLE handle, JOBOBJECTINFOCLASS c
+  *              NtSetInformationJobObject   [NTDLL.@]
+  *              ZwSetInformationJobObject   [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtSetInformationJobObject( HANDLE handle, JOBOBJECTINFOCLASS class, PVOID info, ULONG len )
++DEFINE_SYSCALL_ENTRYPOINT( NtSetInformationJobObject, 4 );
++NTSTATUS WINAPI SYSCALL(NtSetInformationJobObject)( HANDLE handle, JOBOBJECTINFOCLASS class, PVOID info, ULONG len )
+ {
+     NTSTATUS status = STATUS_NOT_IMPLEMENTED;
+     JOBOBJECT_BASIC_LIMIT_INFORMATION *basic_limit;
+@@ -740,7 +760,8 @@ NTSTATUS WINAPI NtSetInformationJobObject( HANDLE handle, JOBOBJECTINFOCLASS cla
+  *              NtIsProcessInJob   [NTDLL.@]
+  *              ZwIsProcessInJob   [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtIsProcessInJob( HANDLE process, HANDLE job )
++DEFINE_SYSCALL_ENTRYPOINT( NtIsProcessInJob, 2 );
++NTSTATUS WINAPI SYSCALL(NtIsProcessInJob)( HANDLE process, HANDLE job )
+ {
+     NTSTATUS status;
+ 
+@@ -761,7 +782,8 @@ NTSTATUS WINAPI NtIsProcessInJob( HANDLE process, HANDLE job )
+  *              NtAssignProcessToJobObject   [NTDLL.@]
+  *              ZwAssignProcessToJobObject   [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtAssignProcessToJobObject( HANDLE job, HANDLE process )
++DEFINE_SYSCALL_ENTRYPOINT( NtAssignProcessToJobObject, 2 );
++NTSTATUS WINAPI SYSCALL(NtAssignProcessToJobObject)( HANDLE job, HANDLE process )
+ {
+     NTSTATUS status;
+ 
+@@ -786,7 +808,8 @@ NTSTATUS WINAPI NtAssignProcessToJobObject( HANDLE job, HANDLE process )
+  *		NtCreateTimer				[NTDLL.@]
+  *		ZwCreateTimer				[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtCreateTimer(OUT HANDLE *handle,
++DEFINE_SYSCALL_ENTRYPOINT( NtCreateTimer, 4 );
++NTSTATUS WINAPI SYSCALL(NtCreateTimer)(OUT HANDLE *handle,
+                               IN ACCESS_MASK access,
+                               IN const OBJECT_ATTRIBUTES *attr OPTIONAL,
+                               IN TIMER_TYPE timer_type)
+@@ -818,7 +841,8 @@ NTSTATUS WINAPI NtCreateTimer(OUT HANDLE *handle,
+  *		NtOpenTimer				[NTDLL.@]
+  *		ZwOpenTimer				[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtOpenTimer(OUT PHANDLE handle,
++DEFINE_SYSCALL_ENTRYPOINT( NtOpenTimer, 3 );
++NTSTATUS WINAPI SYSCALL(NtOpenTimer)(OUT PHANDLE handle,
+                             IN ACCESS_MASK access,
+                             IN const OBJECT_ATTRIBUTES* attr )
+ {
+@@ -844,7 +868,8 @@ NTSTATUS WINAPI NtOpenTimer(OUT PHANDLE handle,
+  *		NtSetTimer				[NTDLL.@]
+  *		ZwSetTimer				[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtSetTimer(IN HANDLE handle,
++DEFINE_SYSCALL_ENTRYPOINT( NtSetTimer, 7 );
++NTSTATUS WINAPI SYSCALL(NtSetTimer)(IN HANDLE handle,
+                            IN const LARGE_INTEGER* when,
+                            IN PTIMER_APC_ROUTINE callback,
+                            IN PVOID callback_arg,
+@@ -878,7 +903,8 @@ NTSTATUS WINAPI NtSetTimer(IN HANDLE handle,
+  *		NtCancelTimer				[NTDLL.@]
+  *		ZwCancelTimer				[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtCancelTimer(IN HANDLE handle, OUT BOOLEAN* state)
++DEFINE_SYSCALL_ENTRYPOINT( NtCancelTimer, 2 );
++NTSTATUS WINAPI SYSCALL(NtCancelTimer)(IN HANDLE handle, OUT BOOLEAN* state)
+ {
+     NTSTATUS    status;
+ 
+@@ -912,7 +938,8 @@ NTSTATUS WINAPI NtCancelTimer(IN HANDLE handle, OUT BOOLEAN* state)
+  *           STATUS_ACCESS_DENIED, if TimerHandle does not have TIMER_QUERY_STATE access
+  *           to the timer.
+  */
+-NTSTATUS WINAPI NtQueryTimer(
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryTimer, 5 );
++NTSTATUS WINAPI SYSCALL(NtQueryTimer)(
+     HANDLE TimerHandle,
+     TIMER_INFORMATION_CLASS TimerInformationClass,
+     PVOID TimerInformation,
+@@ -963,7 +990,8 @@ NTSTATUS WINAPI NtQueryTimer(
+ /******************************************************************************
+  * NtQueryTimerResolution [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtQueryTimerResolution(OUT ULONG* min_resolution,
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryTimerResolution, 3 );
++NTSTATUS WINAPI SYSCALL(NtQueryTimerResolution)(OUT ULONG* min_resolution,
+                                        OUT ULONG* max_resolution,
+                                        OUT ULONG* current_resolution)
+ {
+@@ -976,7 +1004,8 @@ NTSTATUS WINAPI NtQueryTimerResolution(OUT ULONG* min_resolution,
+ /******************************************************************************
+  * NtSetTimerResolution [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtSetTimerResolution(IN ULONG resolution,
++DEFINE_SYSCALL_ENTRYPOINT( NtSetTimerResolution, 3 );
++NTSTATUS WINAPI SYSCALL(NtSetTimerResolution)(IN ULONG resolution,
+                                      IN BOOLEAN set_resolution,
+                                      OUT ULONG* current_resolution )
+ {
+@@ -1009,7 +1038,8 @@ static NTSTATUS wait_objects( DWORD count, const HANDLE *handles,
+ /******************************************************************
+  *		NtWaitForMultipleObjects (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtWaitForMultipleObjects( DWORD count, const HANDLE *handles,
++DEFINE_SYSCALL_ENTRYPOINT( NtWaitForMultipleObjects, 5 );
++NTSTATUS WINAPI SYSCALL(NtWaitForMultipleObjects)( DWORD count, const HANDLE *handles,
+                                           BOOLEAN wait_any, BOOLEAN alertable,
+                                           const LARGE_INTEGER *timeout )
+ {
+@@ -1020,7 +1050,8 @@ NTSTATUS WINAPI NtWaitForMultipleObjects( DWORD count, const HANDLE *handles,
+ /******************************************************************
+  *		NtWaitForSingleObject (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtWaitForSingleObject(HANDLE handle, BOOLEAN alertable, const LARGE_INTEGER *timeout )
++DEFINE_SYSCALL_ENTRYPOINT( NtWaitForSingleObject, 3 );
++NTSTATUS WINAPI SYSCALL(NtWaitForSingleObject)(HANDLE handle, BOOLEAN alertable, const LARGE_INTEGER *timeout )
+ {
+     return wait_objects( 1, &handle, FALSE, alertable, timeout );
+ }
+@@ -1029,7 +1060,8 @@ NTSTATUS WINAPI NtWaitForSingleObject(HANDLE handle, BOOLEAN alertable, const LA
+ /******************************************************************
+  *		NtSignalAndWaitForSingleObject (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtSignalAndWaitForSingleObject( HANDLE hSignalObject, HANDLE hWaitObject,
++DEFINE_SYSCALL_ENTRYPOINT( NtSignalAndWaitForSingleObject, 4 );
++NTSTATUS WINAPI SYSCALL(NtSignalAndWaitForSingleObject)( HANDLE hSignalObject, HANDLE hWaitObject,
+                                                 BOOLEAN alertable, const LARGE_INTEGER *timeout )
+ {
+     select_op_t select_op;
+@@ -1048,7 +1080,8 @@ NTSTATUS WINAPI NtSignalAndWaitForSingleObject( HANDLE hSignalObject, HANDLE hWa
+ /******************************************************************
+  *		NtYieldExecution (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtYieldExecution(void)
++DEFINE_SYSCALL_ENTRYPOINT( NtYieldExecution, 0 );
++NTSTATUS WINAPI SYSCALL(NtYieldExecution)(void)
+ {
+ #ifdef HAVE_SCHED_YIELD
+     sched_yield();
+@@ -1062,7 +1095,8 @@ NTSTATUS WINAPI NtYieldExecution(void)
+ /******************************************************************
+  *		NtDelayExecution (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtDelayExecution( BOOLEAN alertable, const LARGE_INTEGER *timeout )
++DEFINE_SYSCALL_ENTRYPOINT( NtDelayExecution, 2 );
++NTSTATUS WINAPI SYSCALL(NtDelayExecution)( BOOLEAN alertable, const LARGE_INTEGER *timeout )
+ {
+     /* if alertable, we need to query the server */
+     if (alertable)
+@@ -1105,7 +1139,8 @@ NTSTATUS WINAPI NtDelayExecution( BOOLEAN alertable, const LARGE_INTEGER *timeou
+ /******************************************************************************
+  *              NtCreateKeyedEvent (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtCreateKeyedEvent( HANDLE *handle, ACCESS_MASK access,
++DEFINE_SYSCALL_ENTRYPOINT( NtCreateKeyedEvent, 4 );
++NTSTATUS WINAPI SYSCALL(NtCreateKeyedEvent)( HANDLE *handle, ACCESS_MASK access,
+                                     const OBJECT_ATTRIBUTES *attr, ULONG flags )
+ {
+     DWORD len = attr && attr->ObjectName ? attr->ObjectName->Length : 0;
+@@ -1143,7 +1178,8 @@ NTSTATUS WINAPI NtCreateKeyedEvent( HANDLE *handle, ACCESS_MASK access,
+ /******************************************************************************
+  *              NtOpenKeyedEvent (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtOpenKeyedEvent( HANDLE *handle, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr )
++DEFINE_SYSCALL_ENTRYPOINT( NtOpenKeyedEvent, 3 );
++NTSTATUS WINAPI SYSCALL(NtOpenKeyedEvent)( HANDLE *handle, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr )
+ {
+     DWORD len = attr && attr->ObjectName ? attr->ObjectName->Length : 0;
+     NTSTATUS ret;
+@@ -1166,7 +1202,8 @@ NTSTATUS WINAPI NtOpenKeyedEvent( HANDLE *handle, ACCESS_MASK access, const OBJE
+ /******************************************************************************
+  *              NtWaitForKeyedEvent (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtWaitForKeyedEvent( HANDLE handle, const void *key,
++DEFINE_SYSCALL_ENTRYPOINT( NtWaitForKeyedEvent, 4 );
++NTSTATUS WINAPI SYSCALL(NtWaitForKeyedEvent)( HANDLE handle, const void *key,
+                                      BOOLEAN alertable, const LARGE_INTEGER *timeout )
+ {
+     select_op_t select_op;
+@@ -1183,7 +1220,8 @@ NTSTATUS WINAPI NtWaitForKeyedEvent( HANDLE handle, const void *key,
+ /******************************************************************************
+  *              NtReleaseKeyedEvent (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtReleaseKeyedEvent( HANDLE handle, const void *key,
++DEFINE_SYSCALL_ENTRYPOINT( NtReleaseKeyedEvent, 4 );
++NTSTATUS WINAPI SYSCALL(NtReleaseKeyedEvent)( HANDLE handle, const void *key,
+                                      BOOLEAN alertable, const LARGE_INTEGER *timeout )
+ {
+     select_op_t select_op;
+@@ -1210,7 +1248,8 @@ NTSTATUS WINAPI NtReleaseKeyedEvent( HANDLE handle, const void *key,
+  *      NumberOfConcurrentThreads [I] desired number of concurrent active worker threads
+  *
+  */
+-NTSTATUS WINAPI NtCreateIoCompletion( PHANDLE CompletionPort, ACCESS_MASK DesiredAccess,
++DEFINE_SYSCALL_ENTRYPOINT( NtCreateIoCompletion, 4 );
++NTSTATUS WINAPI SYSCALL(NtCreateIoCompletion)( PHANDLE CompletionPort, ACCESS_MASK DesiredAccess,
+                                       POBJECT_ATTRIBUTES ObjectAttributes, ULONG NumberOfConcurrentThreads )
+ {
+     NTSTATUS status;
+@@ -1250,7 +1289,8 @@ NTSTATUS WINAPI NtCreateIoCompletion( PHANDLE CompletionPort, ACCESS_MASK Desire
+  *      Status                   [I] operation status
+  *      NumberOfBytesTransferred [I] number of bytes transferred
+  */
+-NTSTATUS WINAPI NtSetIoCompletion( HANDLE CompletionPort, ULONG_PTR CompletionKey,
++DEFINE_SYSCALL_ENTRYPOINT( NtSetIoCompletion, 5 );
++NTSTATUS WINAPI SYSCALL(NtSetIoCompletion)( HANDLE CompletionPort, ULONG_PTR CompletionKey,
+                                    ULONG_PTR CompletionValue, NTSTATUS Status,
+                                    SIZE_T NumberOfBytesTransferred )
+ {
+@@ -1286,7 +1326,8 @@ NTSTATUS WINAPI NtSetIoCompletion( HANDLE CompletionPort, ULONG_PTR CompletionKe
+  *      WaitTime        [I] optional wait time in NTDLL format
+  *
+  */
+-NTSTATUS WINAPI NtRemoveIoCompletion( HANDLE CompletionPort, PULONG_PTR CompletionKey,
++DEFINE_SYSCALL_ENTRYPOINT( NtRemoveIoCompletion, 5 );
++NTSTATUS WINAPI SYSCALL(NtRemoveIoCompletion)( HANDLE CompletionPort, PULONG_PTR CompletionKey,
+                                       PULONG_PTR CompletionValue, PIO_STATUS_BLOCK iosb,
+                                       PLARGE_INTEGER WaitTime )
+ {
+@@ -1329,7 +1370,8 @@ NTSTATUS WINAPI NtRemoveIoCompletion( HANDLE CompletionPort, PULONG_PTR Completi
+  *      ObjectAttributes   [I] completion object name
+  *
+  */
+-NTSTATUS WINAPI NtOpenIoCompletion( PHANDLE CompletionPort, ACCESS_MASK DesiredAccess,
++DEFINE_SYSCALL_ENTRYPOINT( NtOpenIoCompletion, 3 );
++NTSTATUS WINAPI SYSCALL(NtOpenIoCompletion)( PHANDLE CompletionPort, ACCESS_MASK DesiredAccess,
+                                     POBJECT_ATTRIBUTES ObjectAttributes )
+ {
+     NTSTATUS status;
+@@ -1366,7 +1408,8 @@ NTSTATUS WINAPI NtOpenIoCompletion( PHANDLE CompletionPort, ACCESS_MASK DesiredA
+  *      RequiredLength        [O] required buffer length
+  *
+  */
+-NTSTATUS WINAPI NtQueryIoCompletion( HANDLE CompletionPort, IO_COMPLETION_INFORMATION_CLASS InformationClass,
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryIoCompletion, 5 );
++NTSTATUS WINAPI SYSCALL(NtQueryIoCompletion)( HANDLE CompletionPort, IO_COMPLETION_INFORMATION_CLASS InformationClass,
+                                      PVOID CompletionInformation, ULONG BufferLength, PULONG RequiredLength )
+ {
+     NTSTATUS status;
+diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
+index aaf7a71..41f93be 100644
+--- a/dlls/ntdll/thread.c
++++ b/dlls/ntdll/thread.c
+@@ -599,7 +599,8 @@ ULONG WINAPI RtlGetNtGlobalFlags(void)
+  *              NtOpenThread   (NTDLL.@)
+  *              ZwOpenThread   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtOpenThread( HANDLE *handle, ACCESS_MASK access,
++DEFINE_SYSCALL_ENTRYPOINT( NtOpenThread, 4 );
++NTSTATUS WINAPI SYSCALL(NtOpenThread)( HANDLE *handle, ACCESS_MASK access,
+                               const OBJECT_ATTRIBUTES *attr, const CLIENT_ID *id )
+ {
+     NTSTATUS ret;
+@@ -621,7 +622,8 @@ NTSTATUS WINAPI NtOpenThread( HANDLE *handle, ACCESS_MASK access,
+  *              NtSuspendThread   (NTDLL.@)
+  *              ZwSuspendThread   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtSuspendThread( HANDLE handle, PULONG count )
++DEFINE_SYSCALL_ENTRYPOINT( NtSuspendThread, 2 );
++NTSTATUS WINAPI SYSCALL(NtSuspendThread)( HANDLE handle, PULONG count )
+ {
+     NTSTATUS ret;
+ 
+@@ -639,7 +641,8 @@ NTSTATUS WINAPI NtSuspendThread( HANDLE handle, PULONG count )
+  *              NtResumeThread   (NTDLL.@)
+  *              ZwResumeThread   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtResumeThread( HANDLE handle, PULONG count )
++DEFINE_SYSCALL_ENTRYPOINT( NtResumeThread, 2 );
++NTSTATUS WINAPI SYSCALL(NtResumeThread)( HANDLE handle, PULONG count )
+ {
+     NTSTATUS ret;
+ 
+@@ -657,7 +660,8 @@ NTSTATUS WINAPI NtResumeThread( HANDLE handle, PULONG count )
+  *              NtAlertResumeThread   (NTDLL.@)
+  *              ZwAlertResumeThread   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtAlertResumeThread( HANDLE handle, PULONG count )
++DEFINE_SYSCALL_ENTRYPOINT( NtAlertResumeThread, 2 );
++NTSTATUS WINAPI SYSCALL(NtAlertResumeThread)( HANDLE handle, PULONG count )
+ {
+     FIXME( "stub: should alert thread %p\n", handle );
+     return NtResumeThread( handle, count );
+@@ -668,7 +672,8 @@ NTSTATUS WINAPI NtAlertResumeThread( HANDLE handle, PULONG count )
+  *              NtAlertThread   (NTDLL.@)
+  *              ZwAlertThread   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtAlertThread( HANDLE handle )
++DEFINE_SYSCALL_ENTRYPOINT( NtAlertThread, 1 );
++NTSTATUS WINAPI SYSCALL(NtAlertThread)( HANDLE handle )
+ {
+     FIXME( "stub: %p\n", handle );
+     return STATUS_NOT_IMPLEMENTED;
+@@ -679,7 +684,8 @@ NTSTATUS WINAPI NtAlertThread( HANDLE handle )
+  *              NtTerminateThread  (NTDLL.@)
+  *              ZwTerminateThread  (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtTerminateThread( HANDLE handle, LONG exit_code )
++DEFINE_SYSCALL_ENTRYPOINT( NtTerminateThread, 2 );
++NTSTATUS WINAPI SYSCALL(NtTerminateThread)( HANDLE handle, LONG exit_code )
+ {
+     NTSTATUS ret;
+     BOOL self;
+@@ -701,7 +707,8 @@ NTSTATUS WINAPI NtTerminateThread( HANDLE handle, LONG exit_code )
+ /******************************************************************************
+  *              NtQueueApcThread  (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtQueueApcThread( HANDLE handle, PNTAPCFUNC func, ULONG_PTR arg1,
++DEFINE_SYSCALL_ENTRYPOINT( NtQueueApcThread, 5 );
++NTSTATUS WINAPI SYSCALL(NtQueueApcThread)( HANDLE handle, PNTAPCFUNC func, ULONG_PTR arg1,
+                                   ULONG_PTR arg2, ULONG_PTR arg3 )
+ {
+     NTSTATUS ret;
+@@ -728,7 +735,8 @@ NTSTATUS WINAPI NtQueueApcThread( HANDLE handle, PNTAPCFUNC func, ULONG_PTR arg1
+  *              NtSetContextThread  (NTDLL.@)
+  *              ZwSetContextThread  (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtSetContextThread( HANDLE handle, const CONTEXT *context )
++DEFINE_SYSCALL_ENTRYPOINT( NtSetContextThread, 2 );
++NTSTATUS WINAPI SYSCALL(NtSetContextThread)( HANDLE handle, const CONTEXT *context )
+ {
+     NTSTATUS ret;
+     DWORD dummy, i;
+@@ -823,7 +831,8 @@ static inline unsigned int get_server_context_flags( DWORD flags )
+  *              NtGetContextThread  (NTDLL.@)
+  *              ZwGetContextThread  (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtGetContextThread( HANDLE handle, CONTEXT *context )
++DEFINE_SYSCALL_ENTRYPOINT( NtGetContextThread, 2 );
++NTSTATUS WINAPI SYSCALL(NtGetContextThread)( HANDLE handle, CONTEXT *context )
+ {
+     NTSTATUS ret;
+     DWORD dummy, i;
+@@ -910,7 +919,8 @@ NTSTATUS WINAPI NtGetContextThread( HANDLE handle, CONTEXT *context )
+  *              NtQueryInformationThread  (NTDLL.@)
+  *              ZwQueryInformationThread  (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtQueryInformationThread( HANDLE handle, THREADINFOCLASS class,
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryInformationThread, 5 );
++NTSTATUS WINAPI SYSCALL(NtQueryInformationThread)( HANDLE handle, THREADINFOCLASS class,
+                                           void *data, ULONG length, ULONG *ret_len )
+ {
+     NTSTATUS status;
+@@ -1154,7 +1164,8 @@ NTSTATUS WINAPI NtQueryInformationThread( HANDLE handle, THREADINFOCLASS class,
+  *              NtSetInformationThread  (NTDLL.@)
+  *              ZwSetInformationThread  (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtSetInformationThread( HANDLE handle, THREADINFOCLASS class,
++DEFINE_SYSCALL_ENTRYPOINT( NtSetInformationThread, 4 );
++NTSTATUS WINAPI SYSCALL(NtSetInformationThread)( HANDLE handle, THREADINFOCLASS class,
+                                         LPCVOID data, ULONG length )
+ {
+     NTSTATUS status;
+@@ -1313,7 +1324,8 @@ NTSTATUS WINAPI NtSetInformationThread( HANDLE handle, THREADINFOCLASS class,
+  * Return the processor, on which the thread is running
+  *
+  */
+-ULONG WINAPI NtGetCurrentProcessorNumber(void)
++DEFINE_SYSCALL_ENTRYPOINT( NtGetCurrentProcessorNumber, 0 );
++ULONG WINAPI SYSCALL(NtGetCurrentProcessorNumber)(void)
+ {
+     ULONG processor;
+ 
+diff --git a/dlls/ntdll/time.c b/dlls/ntdll/time.c
+index 96ffcfa..e93e820 100644
+--- a/dlls/ntdll/time.c
++++ b/dlls/ntdll/time.c
+@@ -457,7 +457,8 @@ void WINAPI RtlTimeToElapsedTimeFields( const LARGE_INTEGER *Time, PTIME_FIELDS
+  *   Success: STATUS_SUCCESS.
+  *   Failure: An NTSTATUS error code indicating the problem.
+  */
+-NTSTATUS WINAPI NtQuerySystemTime( PLARGE_INTEGER Time )
++DEFINE_SYSCALL_ENTRYPOINT( NtQuerySystemTime, 1 );
++NTSTATUS WINAPI SYSCALL(NtQuerySystemTime)( PLARGE_INTEGER Time )
+ {
+     struct timeval now;
+ 
+@@ -470,7 +471,8 @@ NTSTATUS WINAPI NtQuerySystemTime( PLARGE_INTEGER Time )
+ /******************************************************************************
+  *  NtQueryPerformanceCounter	[NTDLL.@]
+  */
+-NTSTATUS WINAPI NtQueryPerformanceCounter( LARGE_INTEGER *counter, LARGE_INTEGER *frequency )
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryPerformanceCounter, 2 );
++NTSTATUS WINAPI SYSCALL(NtQueryPerformanceCounter)( LARGE_INTEGER *counter, LARGE_INTEGER *frequency )
+ {
+     if (!counter) return STATUS_ACCESS_VIOLATION;
+ 
+@@ -484,7 +486,8 @@ NTSTATUS WINAPI NtQueryPerformanceCounter( LARGE_INTEGER *counter, LARGE_INTEGER
+  * NtGetTickCount   (NTDLL.@)
+  * ZwGetTickCount   (NTDLL.@)
+  */
+-ULONG WINAPI NtGetTickCount(void)
++DEFINE_SYSCALL_ENTRYPOINT( NtGetTickCount, 0 );
++ULONG WINAPI SYSCALL(NtGetTickCount)(void)
+ {
+     return monotonic_counter() / TICKSPERMSEC;
+ }
+@@ -936,7 +939,8 @@ NTSTATUS WINAPI RtlSetTimeZoneInformation( const RTL_TIME_ZONE_INFORMATION *tzin
+  *   Success: STATUS_SUCCESS.
+  *   Failure: An NTSTATUS error code indicating the problem.
+  */
+-NTSTATUS WINAPI NtSetSystemTime(const LARGE_INTEGER *NewTime, LARGE_INTEGER *OldTime)
++DEFINE_SYSCALL_ENTRYPOINT( NtSetSystemTime, 2 );
++NTSTATUS WINAPI SYSCALL(NtSetSystemTime)(const LARGE_INTEGER *NewTime, LARGE_INTEGER *OldTime)
+ {
+     struct timeval tv;
+     time_t tm_t;
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index 4d4bc3b..f30d94a 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -1857,7 +1857,8 @@ void virtual_set_large_address_space(void)
+  *             NtAllocateVirtualMemory   (NTDLL.@)
+  *             ZwAllocateVirtualMemory   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtAllocateVirtualMemory( HANDLE process, PVOID *ret, ULONG zero_bits,
++DEFINE_SYSCALL_ENTRYPOINT( NtAllocateVirtualMemory, 6 );
++NTSTATUS WINAPI SYSCALL(NtAllocateVirtualMemory)( HANDLE process, PVOID *ret, ULONG zero_bits,
+                                          SIZE_T *size_ptr, ULONG type, ULONG protect )
+ {
+     void *base;
+@@ -1996,7 +1997,8 @@ NTSTATUS WINAPI NtAllocateVirtualMemory( HANDLE process, PVOID *ret, ULONG zero_
+  *             NtFreeVirtualMemory   (NTDLL.@)
+  *             ZwFreeVirtualMemory   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtFreeVirtualMemory( HANDLE process, PVOID *addr_ptr, SIZE_T *size_ptr, ULONG type )
++DEFINE_SYSCALL_ENTRYPOINT( NtFreeVirtualMemory, 4 );
++NTSTATUS WINAPI SYSCALL(NtFreeVirtualMemory)( HANDLE process, PVOID *addr_ptr, SIZE_T *size_ptr, ULONG type )
+ {
+     struct file_view *view;
+     char *base;
+@@ -2107,7 +2109,8 @@ static BOOL is_compatible_protection( const struct file_view *view, ULONG new_pr
+  *             NtProtectVirtualMemory   (NTDLL.@)
+  *             ZwProtectVirtualMemory   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtProtectVirtualMemory( HANDLE process, PVOID *addr_ptr, SIZE_T *size_ptr,
++DEFINE_SYSCALL_ENTRYPOINT( NtProtectVirtualMemory, 5 );
++NTSTATUS WINAPI SYSCALL(NtProtectVirtualMemory)( HANDLE process, PVOID *addr_ptr, SIZE_T *size_ptr,
+                                         ULONG new_prot, ULONG *old_prot )
+ {
+     struct file_view *view;
+@@ -2235,7 +2238,8 @@ static int get_free_mem_state_callback( void *start, size_t size, void *arg )
+  *             NtQueryVirtualMemory   (NTDLL.@)
+  *             ZwQueryVirtualMemory   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtQueryVirtualMemory( HANDLE process, LPCVOID addr,
++DEFINE_SYSCALL_ENTRYPOINT( NtQueryVirtualMemory, 6 );
++NTSTATUS WINAPI SYSCALL(NtQueryVirtualMemory)( HANDLE process, LPCVOID addr,
+                                       MEMORY_INFORMATION_CLASS info_class, PVOID buffer,
+                                       SIZE_T len, SIZE_T *res_len )
+ {
+@@ -2380,7 +2384,8 @@ NTSTATUS WINAPI NtQueryVirtualMemory( HANDLE process, LPCVOID addr,
+  *             NtLockVirtualMemory   (NTDLL.@)
+  *             ZwLockVirtualMemory   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtLockVirtualMemory( HANDLE process, PVOID *addr, SIZE_T *size, ULONG unknown )
++DEFINE_SYSCALL_ENTRYPOINT( NtLockVirtualMemory, 4 );
++NTSTATUS WINAPI SYSCALL(NtLockVirtualMemory)( HANDLE process, PVOID *addr, SIZE_T *size, ULONG unknown )
+ {
+     NTSTATUS status = STATUS_SUCCESS;
+ 
+@@ -2417,7 +2422,8 @@ NTSTATUS WINAPI NtLockVirtualMemory( HANDLE process, PVOID *addr, SIZE_T *size,
+  *             NtUnlockVirtualMemory   (NTDLL.@)
+  *             ZwUnlockVirtualMemory   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtUnlockVirtualMemory( HANDLE process, PVOID *addr, SIZE_T *size, ULONG unknown )
++DEFINE_SYSCALL_ENTRYPOINT( NtUnlockVirtualMemory, 4 );
++NTSTATUS WINAPI SYSCALL(NtUnlockVirtualMemory)( HANDLE process, PVOID *addr, SIZE_T *size, ULONG unknown )
+ {
+     NTSTATUS status = STATUS_SUCCESS;
+ 
+@@ -2454,7 +2460,8 @@ NTSTATUS WINAPI NtUnlockVirtualMemory( HANDLE process, PVOID *addr, SIZE_T *size
+  *             NtCreateSection   (NTDLL.@)
+  *             ZwCreateSection   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtCreateSection( HANDLE *handle, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr,
++DEFINE_SYSCALL_ENTRYPOINT( NtCreateSection, 7 );
++NTSTATUS WINAPI SYSCALL(NtCreateSection)( HANDLE *handle, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr,
+                                  const LARGE_INTEGER *size, ULONG protect,
+                                  ULONG sec_flags, HANDLE file )
+ {
+@@ -2510,7 +2517,8 @@ NTSTATUS WINAPI NtCreateSection( HANDLE *handle, ACCESS_MASK access, const OBJEC
+  *             NtOpenSection   (NTDLL.@)
+  *             ZwOpenSection   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtOpenSection( HANDLE *handle, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr )
++DEFINE_SYSCALL_ENTRYPOINT( NtOpenSection, 3 );
++NTSTATUS WINAPI SYSCALL(NtOpenSection)( HANDLE *handle, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr )
+ {
+     NTSTATUS ret;
+     DWORD len = attr->ObjectName->Length;
+@@ -2534,7 +2542,8 @@ NTSTATUS WINAPI NtOpenSection( HANDLE *handle, ACCESS_MASK access, const OBJECT_
+  *             NtMapViewOfSection   (NTDLL.@)
+  *             ZwMapViewOfSection   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtMapViewOfSection( HANDLE handle, HANDLE process, PVOID *addr_ptr, ULONG zero_bits,
++DEFINE_SYSCALL_ENTRYPOINT( NtMapViewOfSection, 10 );
++NTSTATUS WINAPI SYSCALL(NtMapViewOfSection)( HANDLE handle, HANDLE process, PVOID *addr_ptr, ULONG zero_bits,
+                                     SIZE_T commit_size, const LARGE_INTEGER *offset_ptr, SIZE_T *size_ptr,
+                                     SECTION_INHERIT inherit, ULONG alloc_type, ULONG protect )
+ {
+@@ -2732,7 +2741,8 @@ done:
+  *             NtUnmapViewOfSection   (NTDLL.@)
+  *             ZwUnmapViewOfSection   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtUnmapViewOfSection( HANDLE process, PVOID addr )
++DEFINE_SYSCALL_ENTRYPOINT( NtUnmapViewOfSection, 2 );
++NTSTATUS WINAPI SYSCALL(NtUnmapViewOfSection)( HANDLE process, PVOID addr )
+ {
+     struct file_view *view;
+     NTSTATUS status = STATUS_NOT_MAPPED_VIEW;
+@@ -2768,7 +2778,8 @@ NTSTATUS WINAPI NtUnmapViewOfSection( HANDLE process, PVOID addr )
+  *             NtFlushVirtualMemory   (NTDLL.@)
+  *             ZwFlushVirtualMemory   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtFlushVirtualMemory( HANDLE process, LPCVOID *addr_ptr,
++DEFINE_SYSCALL_ENTRYPOINT( NtFlushVirtualMemory, 4 );
++NTSTATUS WINAPI SYSCALL(NtFlushVirtualMemory)( HANDLE process, LPCVOID *addr_ptr,
+                                       SIZE_T *size_ptr, ULONG unknown )
+ {
+     struct file_view *view;
+@@ -2816,7 +2827,8 @@ NTSTATUS WINAPI NtFlushVirtualMemory( HANDLE process, LPCVOID *addr_ptr,
+  *             NtGetWriteWatch   (NTDLL.@)
+  *             ZwGetWriteWatch   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtGetWriteWatch( HANDLE process, ULONG flags, PVOID base, SIZE_T size, PVOID *addresses,
++DEFINE_SYSCALL_ENTRYPOINT( NtGetWriteWatch, 7 );
++NTSTATUS WINAPI SYSCALL(NtGetWriteWatch)( HANDLE process, ULONG flags, PVOID base, SIZE_T size, PVOID *addresses,
+                                  ULONG_PTR *count, ULONG *granularity )
+ {
+     struct file_view *view;
+@@ -2864,7 +2876,8 @@ NTSTATUS WINAPI NtGetWriteWatch( HANDLE process, ULONG flags, PVOID base, SIZE_T
+  *             NtResetWriteWatch   (NTDLL.@)
+  *             ZwResetWriteWatch   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtResetWriteWatch( HANDLE process, PVOID base, SIZE_T size )
++DEFINE_SYSCALL_ENTRYPOINT( NtResetWriteWatch, 3 );
++NTSTATUS WINAPI SYSCALL(NtResetWriteWatch)( HANDLE process, PVOID base, SIZE_T size )
+ {
+     struct file_view *view;
+     NTSTATUS status = STATUS_SUCCESS;
+@@ -2893,7 +2906,8 @@ NTSTATUS WINAPI NtResetWriteWatch( HANDLE process, PVOID base, SIZE_T size )
+  *             NtReadVirtualMemory   (NTDLL.@)
+  *             ZwReadVirtualMemory   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtReadVirtualMemory( HANDLE process, const void *addr, void *buffer,
++DEFINE_SYSCALL_ENTRYPOINT( NtReadVirtualMemory, 5 );
++NTSTATUS WINAPI SYSCALL(NtReadVirtualMemory)( HANDLE process, const void *addr, void *buffer,
+                                      SIZE_T size, SIZE_T *bytes_read )
+ {
+     NTSTATUS status;
+@@ -2923,7 +2937,8 @@ NTSTATUS WINAPI NtReadVirtualMemory( HANDLE process, const void *addr, void *buf
+  *             NtWriteVirtualMemory   (NTDLL.@)
+  *             ZwWriteVirtualMemory   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtWriteVirtualMemory( HANDLE process, void *addr, const void *buffer,
++DEFINE_SYSCALL_ENTRYPOINT( NtWriteVirtualMemory, 5 );
++NTSTATUS WINAPI SYSCALL(NtWriteVirtualMemory)( HANDLE process, void *addr, const void *buffer,
+                                       SIZE_T size, SIZE_T *bytes_written )
+ {
+     NTSTATUS status;
+@@ -2953,7 +2968,8 @@ NTSTATUS WINAPI NtWriteVirtualMemory( HANDLE process, void *addr, const void *bu
+  *             NtAreMappedFilesTheSame   (NTDLL.@)
+  *             ZwAreMappedFilesTheSame   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtAreMappedFilesTheSame(PVOID addr1, PVOID addr2)
++DEFINE_SYSCALL_ENTRYPOINT( NtAreMappedFilesTheSame, 2 );
++NTSTATUS WINAPI SYSCALL(NtAreMappedFilesTheSame)(PVOID addr1, PVOID addr2)
+ {
+     struct file_view *view1, *view2;
+     struct stat st1, st2;
+-- 
+2.6.1
+

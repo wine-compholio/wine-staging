@@ -1,0 +1,124 @@
+From bf52a59d8a964fd0e79c684b61513c0ec5c78ccb Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 16 Oct 2015 05:17:26 +0200
+Subject: ntdll: APCs should call the implementation instead of the syscall
+ thunk.
+
+---
+ dlls/ntdll/ntdll_misc.h | 14 ++++++++++++++
+ dlls/ntdll/server.c     | 18 +++++++++---------
+ 2 files changed, 23 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
+index a33b1ea..b63005e 100644
+--- a/dlls/ntdll/ntdll_misc.h
++++ b/dlls/ntdll/ntdll_misc.h
+@@ -268,6 +268,20 @@ extern HANDLE keyed_event DECLSPEC_HIDDEN;
+                        "movl $" __ASM_NAME("call_syscall_func") ",%edx\n\t" \
+                        "call *%edx\n\t"                                     \
+                        "ret $(4*" #args ")" )
++
++#define DECLARE_SYSCALL_ENTRYPOINT( name ) \
++    extern typeof( name ) __syscall_ ## name
++
++DECLARE_SYSCALL_ENTRYPOINT( NtAllocateVirtualMemory );
++DECLARE_SYSCALL_ENTRYPOINT( NtFlushVirtualMemory );
++DECLARE_SYSCALL_ENTRYPOINT( NtFreeVirtualMemory );
++DECLARE_SYSCALL_ENTRYPOINT( NtLockVirtualMemory );
++DECLARE_SYSCALL_ENTRYPOINT( NtMapViewOfSection );
++DECLARE_SYSCALL_ENTRYPOINT( NtProtectVirtualMemory );
++DECLARE_SYSCALL_ENTRYPOINT( NtQueryVirtualMemory );
++DECLARE_SYSCALL_ENTRYPOINT( NtUnlockVirtualMemory );
++DECLARE_SYSCALL_ENTRYPOINT( NtUnmapViewOfSection );
++
+ #else /* __i386__ */
+ 
+ #define SYSCALL( name ) name
+diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
+index 95111ad..d2b15cb 100644
+--- a/dlls/ntdll/server.c
++++ b/dlls/ntdll/server.c
+@@ -424,7 +424,7 @@ static BOOL invoke_apc( const apc_call_t *call, apc_result_t *result )
+         size = call->virtual_alloc.size;
+         if ((ULONG_PTR)addr == call->virtual_alloc.addr && size == call->virtual_alloc.size)
+         {
+-            result->virtual_alloc.status = NtAllocateVirtualMemory( NtCurrentProcess(), &addr,
++            result->virtual_alloc.status = SYSCALL(NtAllocateVirtualMemory)( NtCurrentProcess(), &addr,
+                                                                     call->virtual_alloc.zero_bits, &size,
+                                                                     call->virtual_alloc.op_type,
+                                                                     call->virtual_alloc.prot );
+@@ -439,7 +439,7 @@ static BOOL invoke_apc( const apc_call_t *call, apc_result_t *result )
+         size = call->virtual_free.size;
+         if ((ULONG_PTR)addr == call->virtual_free.addr && size == call->virtual_free.size)
+         {
+-            result->virtual_free.status = NtFreeVirtualMemory( NtCurrentProcess(), &addr, &size,
++            result->virtual_free.status = SYSCALL(NtFreeVirtualMemory)( NtCurrentProcess(), &addr, &size,
+                                                                call->virtual_free.op_type );
+             result->virtual_free.addr = wine_server_client_ptr( addr );
+             result->virtual_free.size = size;
+@@ -452,7 +452,7 @@ static BOOL invoke_apc( const apc_call_t *call, apc_result_t *result )
+         result->type = call->type;
+         addr = wine_server_get_ptr( call->virtual_query.addr );
+         if ((ULONG_PTR)addr == call->virtual_query.addr)
+-            result->virtual_query.status = NtQueryVirtualMemory( NtCurrentProcess(),
++            result->virtual_query.status = SYSCALL(NtQueryVirtualMemory)( NtCurrentProcess(),
+                                                                  addr, MemoryBasicInformation, &info,
+                                                                  sizeof(info), NULL );
+         else
+@@ -476,7 +476,7 @@ static BOOL invoke_apc( const apc_call_t *call, apc_result_t *result )
+         size = call->virtual_protect.size;
+         if ((ULONG_PTR)addr == call->virtual_protect.addr && size == call->virtual_protect.size)
+         {
+-            result->virtual_protect.status = NtProtectVirtualMemory( NtCurrentProcess(), &addr, &size,
++            result->virtual_protect.status = SYSCALL(NtProtectVirtualMemory)( NtCurrentProcess(), &addr, &size,
+                                                                      call->virtual_protect.prot,
+                                                                      &result->virtual_protect.prot );
+             result->virtual_protect.addr = wine_server_client_ptr( addr );
+@@ -490,7 +490,7 @@ static BOOL invoke_apc( const apc_call_t *call, apc_result_t *result )
+         size = call->virtual_flush.size;
+         if ((ULONG_PTR)addr == call->virtual_flush.addr && size == call->virtual_flush.size)
+         {
+-            result->virtual_flush.status = NtFlushVirtualMemory( NtCurrentProcess(),
++            result->virtual_flush.status = SYSCALL(NtFlushVirtualMemory)( NtCurrentProcess(),
+                                                                  (const void **)&addr, &size, 0 );
+             result->virtual_flush.addr = wine_server_client_ptr( addr );
+             result->virtual_flush.size = size;
+@@ -503,7 +503,7 @@ static BOOL invoke_apc( const apc_call_t *call, apc_result_t *result )
+         size = call->virtual_lock.size;
+         if ((ULONG_PTR)addr == call->virtual_lock.addr && size == call->virtual_lock.size)
+         {
+-            result->virtual_lock.status = NtLockVirtualMemory( NtCurrentProcess(), &addr, &size, 0 );
++            result->virtual_lock.status = SYSCALL(NtLockVirtualMemory)( NtCurrentProcess(), &addr, &size, 0 );
+             result->virtual_lock.addr = wine_server_client_ptr( addr );
+             result->virtual_lock.size = size;
+         }
+@@ -515,7 +515,7 @@ static BOOL invoke_apc( const apc_call_t *call, apc_result_t *result )
+         size = call->virtual_unlock.size;
+         if ((ULONG_PTR)addr == call->virtual_unlock.addr && size == call->virtual_unlock.size)
+         {
+-            result->virtual_unlock.status = NtUnlockVirtualMemory( NtCurrentProcess(), &addr, &size, 0 );
++            result->virtual_unlock.status = SYSCALL(NtUnlockVirtualMemory)( NtCurrentProcess(), &addr, &size, 0 );
+             result->virtual_unlock.addr = wine_server_client_ptr( addr );
+             result->virtual_unlock.size = size;
+         }
+@@ -529,7 +529,7 @@ static BOOL invoke_apc( const apc_call_t *call, apc_result_t *result )
+         {
+             LARGE_INTEGER offset;
+             offset.QuadPart = call->map_view.offset;
+-            result->map_view.status = NtMapViewOfSection( wine_server_ptr_handle(call->map_view.handle),
++            result->map_view.status = SYSCALL(NtMapViewOfSection)( wine_server_ptr_handle(call->map_view.handle),
+                                                           NtCurrentProcess(), &addr,
+                                                           call->map_view.zero_bits, 0,
+                                                           &offset, &size, ViewShare,
+@@ -544,7 +544,7 @@ static BOOL invoke_apc( const apc_call_t *call, apc_result_t *result )
+         result->type = call->type;
+         addr = wine_server_get_ptr( call->unmap_view.addr );
+         if ((ULONG_PTR)addr == call->unmap_view.addr)
+-            result->unmap_view.status = NtUnmapViewOfSection( NtCurrentProcess(), addr );
++            result->unmap_view.status = SYSCALL(NtUnmapViewOfSection)( NtCurrentProcess(), addr );
+         else
+             result->unmap_view.status = STATUS_INVALID_PARAMETER;
+         break;
+-- 
+2.6.1
+

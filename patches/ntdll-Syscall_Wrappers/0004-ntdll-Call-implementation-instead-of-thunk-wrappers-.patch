@@ -1,0 +1,57 @@
+From dd80beb72d31aa4cb1713e669e0030cfbc246a71 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 16 Oct 2015 05:54:08 +0200
+Subject: ntdll: Call implementation instead of thunk wrappers in init_options.
+
+---
+ dlls/ntdll/directory.c  | 6 +++---
+ dlls/ntdll/ntdll_misc.h | 3 +++
+ 2 files changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
+index 770cd3f..5c595c8 100644
+--- a/dlls/ntdll/directory.c
++++ b/dlls/ntdll/directory.c
+@@ -1188,15 +1188,15 @@ static DWORD WINAPI init_options( RTL_RUN_ONCE *once, void *param, void **contex
+     RtlInitUnicodeString( &nameW, WineW );
+ 
+     /* @@ Wine registry key: HKCU\Software\Wine */
+-    if (!NtOpenKey( &hkey, KEY_ALL_ACCESS, &attr ))
++    if (!SYSCALL(NtOpenKey)( &hkey, KEY_ALL_ACCESS, &attr ))
+     {
+         RtlInitUnicodeString( &nameW, ShowDotFilesW );
+-        if (!NtQueryValueKey( hkey, &nameW, KeyValuePartialInformation, tmp, sizeof(tmp), &dummy ))
++        if (!SYSCALL(NtQueryValueKey)( hkey, &nameW, KeyValuePartialInformation, tmp, sizeof(tmp), &dummy ))
+         {
+             WCHAR *str = (WCHAR *)((KEY_VALUE_PARTIAL_INFORMATION *)tmp)->Data;
+             show_dot_files = IS_OPTION_TRUE( str[0] );
+         }
+-        NtClose( hkey );
++        SYSCALL(NtClose)( hkey );
+     }
+     NtClose( root );
+ 
+diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
+index 11099c5..cf2b33b 100644
+--- a/dlls/ntdll/ntdll_misc.h
++++ b/dlls/ntdll/ntdll_misc.h
+@@ -273,13 +273,16 @@ extern HANDLE keyed_event DECLSPEC_HIDDEN;
+     extern typeof( name ) __syscall_ ## name
+ 
+ DECLARE_SYSCALL_ENTRYPOINT( NtAllocateVirtualMemory );
++DECLARE_SYSCALL_ENTRYPOINT( NtClose );
+ DECLARE_SYSCALL_ENTRYPOINT( NtFlushVirtualMemory );
+ DECLARE_SYSCALL_ENTRYPOINT( NtFreeVirtualMemory );
+ DECLARE_SYSCALL_ENTRYPOINT( NtLockVirtualMemory );
+ DECLARE_SYSCALL_ENTRYPOINT( NtMapViewOfSection );
++DECLARE_SYSCALL_ENTRYPOINT( NtOpenKey );
+ DECLARE_SYSCALL_ENTRYPOINT( NtOpenProcessTokenEx );
+ DECLARE_SYSCALL_ENTRYPOINT( NtOpenThreadTokenEx );
+ DECLARE_SYSCALL_ENTRYPOINT( NtProtectVirtualMemory );
++DECLARE_SYSCALL_ENTRYPOINT( NtQueryValueKey );
+ DECLARE_SYSCALL_ENTRYPOINT( NtQueryVirtualMemory );
+ DECLARE_SYSCALL_ENTRYPOINT( NtUnlockVirtualMemory );
+ DECLARE_SYSCALL_ENTRYPOINT( NtUnmapViewOfSection );
+-- 
+2.6.1
+

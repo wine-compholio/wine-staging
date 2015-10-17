@@ -1898,6 +1898,13 @@ if test "$enable_ntdll_Dealloc_Thread_Stack" -eq 1; then
 	enable_ntdll_Virtual_Memory_Stack=1
 fi
 
+if test "$enable_ntdll_DOS_Attributes" -eq 1; then
+	if test "$enable_ntdll_Syscall_Wrappers" -gt 1; then
+		abort "Patchset ntdll-Syscall_Wrappers disabled, but ntdll-DOS_Attributes depends on that."
+	fi
+	enable_ntdll_Syscall_Wrappers=1
+fi
+
 if test "$enable_ntdll_CLI_Images" -eq 1; then
 	if test "$enable_mscoree_CorValidateImage" -gt 1; then
 		abort "Patchset mscoree-CorValidateImage disabled, but ntdll-CLI_Images depends on that."
@@ -3861,7 +3868,35 @@ if test "$enable_ntdll_CLI_Images" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-Syscall_Wrappers
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39403] Use wrapper functions for syscalls to appease Chromium sandbox (32-bit)
+# |
+# | Modified files:
+# |   *	dlls/ntdll/atom.c, dlls/ntdll/directory.c, dlls/ntdll/env.c, dlls/ntdll/error.c, dlls/ntdll/file.c, dlls/ntdll/loader.c,
+# | 	dlls/ntdll/nt.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/om.c, dlls/ntdll/process.c, dlls/ntdll/reg.c,
+# | 	dlls/ntdll/resource.c, dlls/ntdll/sec.c, dlls/ntdll/server.c, dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c,
+# | 	dlls/ntdll/signal_i386.c, dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/sync.c,
+# | 	dlls/ntdll/thread.c, dlls/ntdll/time.c, dlls/ntdll/virtual.c
+# |
+if test "$enable_ntdll_Syscall_Wrappers" -eq 1; then
+	patch_apply ntdll-Syscall_Wrappers/0001-ntdll-Use-wrapper-functions-for-syscalls.patch
+	patch_apply ntdll-Syscall_Wrappers/0002-ntdll-APCs-should-call-the-implementation-instead-of.patch
+	patch_apply ntdll-Syscall_Wrappers/0003-ntdll-Syscalls-should-not-call-Nt-Ex-thunk-wrappers.patch
+	patch_apply ntdll-Syscall_Wrappers/0004-ntdll-Run-directory-initialization-function-early-du.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Use wrapper functions for syscalls.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: APCs should call the implementation instead of the syscall thunk.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Syscalls should not call Nt*Ex thunk wrappers.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Run directory initialization function early during the process startup.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-DOS_Attributes
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Syscall_Wrappers
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#9158] Support for DOS hidden/system file attributes
@@ -4068,31 +4103,6 @@ if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
 	patch_apply ntdll-Hide_Wine_Exports/0001-ntdll-Add-support-for-hiding-wine-version-informatio.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Add support for hiding wine version information from applications.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Syscall_Wrappers
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39403] Use wrapper functions for syscalls to appease Chromium sandbox (32-bit)
-# |
-# | Modified files:
-# |   *	dlls/ntdll/atom.c, dlls/ntdll/directory.c, dlls/ntdll/env.c, dlls/ntdll/error.c, dlls/ntdll/file.c, dlls/ntdll/loader.c,
-# | 	dlls/ntdll/nt.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/om.c, dlls/ntdll/process.c, dlls/ntdll/reg.c,
-# | 	dlls/ntdll/resource.c, dlls/ntdll/sec.c, dlls/ntdll/server.c, dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c,
-# | 	dlls/ntdll/signal_i386.c, dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/sync.c,
-# | 	dlls/ntdll/thread.c, dlls/ntdll/time.c, dlls/ntdll/virtual.c
-# |
-if test "$enable_ntdll_Syscall_Wrappers" -eq 1; then
-	patch_apply ntdll-Syscall_Wrappers/0001-ntdll-Use-wrapper-functions-for-syscalls.patch
-	patch_apply ntdll-Syscall_Wrappers/0002-ntdll-APCs-should-call-the-implementation-instead-of.patch
-	patch_apply ntdll-Syscall_Wrappers/0003-ntdll-Syscalls-should-not-call-Nt-Ex-thunk-wrappers.patch
-	patch_apply ntdll-Syscall_Wrappers/0004-ntdll-Call-implementation-instead-of-thunk-wrappers-.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Use wrapper functions for syscalls.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: APCs should call the implementation instead of the syscall thunk.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Syscalls should not call Nt*Ex thunk wrappers.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Call implementation instead of thunk wrappers in init_options.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4699,7 +4709,7 @@ fi
 # Patchset server-Stored_ACLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DOS_Attributes, server-File_Permissions
+# |   *	ntdll-Syscall_Wrappers, ntdll-DOS_Attributes, server-File_Permissions
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#33576] Support for stored file ACLs
@@ -4730,7 +4740,7 @@ fi
 # Patchset server-Inherited_ACLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DOS_Attributes, server-File_Permissions, server-Stored_ACLs
+# |   *	ntdll-Syscall_Wrappers, ntdll-DOS_Attributes, server-File_Permissions, server-Stored_ACLs
 # |
 # | Modified files:
 # |   *	dlls/advapi32/tests/security.c, server/file.c

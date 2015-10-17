@@ -5348,6 +5348,9 @@ fi
 
 # Patchset user32-Painting
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39465] Enforce that surfaces are flushed after ReleaseDC
+# |
 # | Modified files:
 # |   *	dlls/user32/painting.c, dlls/user32/win.c
 # |

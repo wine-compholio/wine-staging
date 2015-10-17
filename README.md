@@ -127,7 +127,7 @@ for more details.*
 * ~~Do not use GdipAlloc and GdipFree in internal functions~~ ([Wine Bug #32786](https://bugs.winehq.org/show_bug.cgi?id=32786))
 * Do not use unixfs for devices without mountpoint
 * Do not wait for hook thread startup in IDirectInput8::Initialize ([Wine Bug #21403](https://bugs.winehq.org/show_bug.cgi?id=21403))
-* Enforce that surfaces are flushed after ReleaseDC
+* Enforce that surfaces are flushed after ReleaseDC ([Wine Bug #39465](https://bugs.winehq.org/show_bug.cgi?id=39465))
 * Ensure NtProtectVirtualMemory and NtCreateSection are on separate pages ([Wine Bug #33162](https://bugs.winehq.org/show_bug.cgi?id=33162))
 * Ensure X11 input events are handled even without explicit message loop ([Wine Bug #8854](https://bugs.winehq.org/show_bug.cgi?id=8854))
 * Exception during start of fr-043 caused by missing DXTn support ([Wine Bug #37391](https://bugs.winehq.org/show_bug.cgi?id=37391))

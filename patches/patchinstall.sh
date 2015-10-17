@@ -2562,12 +2562,17 @@ fi
 # |   *	wined3d-DXTn, d3dx9_36-DXTn
 # |
 # | Modified files:
-# |   *	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/animation.c, dlls/d3dx9_36/d3dx9_36.spec, include/d3dx9anim.h
+# |   *	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/animation.c, dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/tests/mesh.c,
+# | 	include/d3dx9anim.h
 # |
 if test "$enable_d3dx9_36_AnimationController" -eq 1; then
 	patch_apply d3dx9_36-AnimationController/0001-d3dx9_36-Implement-D3DXCreateAnimationController-wit.patch
+	patch_apply d3dx9_36-AnimationController/0002-d3dx9_36-Store-all-values-passed-to-the-create-and-r.patch
+	patch_apply d3dx9_36-AnimationController/0003-d3dx9_36-Add-D3DXCreateAnimationController-tests.patch
 	(
 		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXCreateAnimationController with a stubbed ID3DXAnimationController interface.", 1 },';
+		echo '+    { "Alistair Leslie-Hughes", "d3dx9_36: Store all values passed to the create and return them in the correct functions.", 1 },';
+		echo '+    { "Alistair Leslie-Hughes", "d3dx9_36: Add D3DXCreateAnimationController tests.", 1 },';
 	) >> "$patchlist"
 fi
 

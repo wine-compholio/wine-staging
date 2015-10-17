@@ -94,6 +94,7 @@ patch_enable_all ()
 	enable_browseui_Progress_Dialog="$1"
 	enable_combase_String="$1"
 	enable_comctl32_Button_Theming="$1"
+	enable_comctl32_PROPSHEET_InsertPage="$1"
 	enable_comctl32_TVM_GETITEM="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
@@ -373,6 +374,9 @@ patch_enable ()
 			;;
 		comctl32-Button_Theming)
 			enable_comctl32_Button_Theming="$2"
+			;;
+		comctl32-PROPSHEET_InsertPage)
+			enable_comctl32_PROPSHEET_InsertPage="$2"
 			;;
 		comctl32-TVM_GETITEM)
 			enable_comctl32_TVM_GETITEM="$2"
@@ -2335,6 +2339,23 @@ if test "$enable_comctl32_Button_Theming" -eq 1; then
 	patch_apply comctl32-Button_Theming/0001-comctl32-fix-buttons-becoming-unthemed-when-pressed-.patch
 	(
 		echo '+    { "Samuel Kim", "comctl32: fix buttons becoming unthemed when pressed/released.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset comctl32-PROPSHEET_InsertPage
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#25625] Add implementation for comctl32.PROPSHEET_InsertPage.
+# |
+# | Modified files:
+# |   *	dlls/comctl32/propsheet.c, dlls/comctl32/tests/propsheet.c
+# |
+if test "$enable_comctl32_PROPSHEET_InsertPage" -eq 1; then
+	patch_apply comctl32-PROPSHEET_InsertPage/0001-comctl32-tests-Add-tests-for-PROPSHEET_InsertPage.patch
+	patch_apply comctl32-PROPSHEET_InsertPage/0002-comctl32-Implement-PROPSHEET_InsertPage-based-on-PRO.patch
+	(
+		echo '+    { "Sebastian Lackner", "comctl32/tests: Add tests for PROPSHEET_InsertPage.", 1 },';
+		echo '+    { "Peter Hater", "comctl32: Implement PROPSHEET_InsertPage based on PROPSHEET_AddPage.", 1 },';
 	) >> "$patchlist"
 fi
 

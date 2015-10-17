@@ -87,6 +87,7 @@ patch_enable_all ()
 	enable_Pipelight="$1"
 	enable_Staging="$1"
 	enable_advapi32_LsaLookupSids="$1"
+	enable_advapi32_SetSecurityInfo="$1"
 	enable_amstream_GetMultiMediaStream="$1"
 	enable_api_ms_win_crt_Stub_DLLs="$1"
 	enable_authz_Stub_Functions="$1"
@@ -348,6 +349,9 @@ patch_enable ()
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
+			;;
+		advapi32-SetSecurityInfo)
+			enable_advapi32_SetSecurityInfo="$2"
 			;;
 		amstream-GetMultiMediaStream)
 			enable_amstream_GetMultiMediaStream="$2"
@@ -2219,6 +2223,23 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 		echo '+    { "Qian Hong", "advapi32/tests: Test prefix and use of TokenPrimaryGroup Sid.", 1 },';
 		echo '+    { "Qian Hong", "server: Create primary group using DOMAIN_GROUP_RID_USERS.", 1 },';
 		echo '+    { "Qian Hong", "advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset advapi32-SetSecurityInfo
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38423] Fix the initialization of combined DACLs when the new DACL is empty
+# |
+# | Modified files:
+# |   *	dlls/advapi32/security.c
+# |
+if test "$enable_advapi32_SetSecurityInfo" -eq 1; then
+	patch_apply advapi32-SetSecurityInfo/0001-advapi32-Move-the-DACL-combining-code-into-a-separat.patch
+	patch_apply advapi32-SetSecurityInfo/0002-advapi32-Fix-the-initialization-of-combined-DACLs-wh.patch
+	(
+		echo '+    { "Erich E. Hoover", "advapi32: Move the DACL combining code into a separate routine.", 1 },';
+		echo '+    { "Erich E. Hoover", "advapi32: Fix the initialization of combined DACLs when the new DACL is empty.", 1 },';
 	) >> "$patchlist"
 fi
 

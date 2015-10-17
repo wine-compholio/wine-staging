@@ -1,0 +1,54 @@
+From d1accafbe8e52b6b2c84e9fe5d08303fc05858af Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@wine-staging.com>
+Date: Fri, 16 Oct 2015 13:58:38 -0600
+Subject: advapi32: Fix the initialization of combined DACLs when the new DACL
+ is empty.
+
+---
+ dlls/advapi32/security.c | 23 +++++++++++++++++++++--
+ 1 file changed, 21 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/advapi32/security.c b/dlls/advapi32/security.c
+index dad8b22..11ae487 100644
+--- a/dlls/advapi32/security.c
++++ b/dlls/advapi32/security.c
+@@ -5807,6 +5807,7 @@ BOOL WINAPI FileEncryptionStatusA(LPCSTR lpFileName, LPDWORD lpStatus)
+ 
+ static NTSTATUS combine_dacls(ACL *parent, ACL *child, ACL **result)
+ {
++    NTSTATUS status;
+     ACL *combined;
+     int i;
+ 
+@@ -5815,8 +5816,26 @@ static NTSTATUS combine_dacls(ACL *parent, ACL *child, ACL **result)
+     if (!combined)
+         return STATUS_NO_MEMORY;
+ 
+-    memcpy(combined, child, child->AclSize);
+-    combined->AclSize = child->AclSize+parent->AclSize;
++    status = RtlCreateAcl(combined, parent->AclSize+child->AclSize, ACL_REVISION);
++    if (status != STATUS_SUCCESS)
++    {
++        heap_free(combined);
++        return status;
++    }
++
++    /* copy the new ACEs */
++    for (i=0; i<child->AceCount; i++)
++    {
++        ACE_HEADER *ace;
++
++        if (!GetAce(child, i, (void*)&ace))
++        {
++            WARN("error obtaining new ACE\n");
++            continue;
++        }
++        if (!AddAce(combined, ACL_REVISION, MAXDWORD, ace, ace->AceSize))
++            WARN("error adding new ACE\n");
++    }
+ 
+     /* copy the inherited ACEs */
+     for (i=0; i<parent->AceCount; i++)
+-- 
+2.6.1
+

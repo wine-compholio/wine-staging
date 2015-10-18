@@ -1,4 +1,4 @@
-From e56e42a0193c98b3550855edf9f0015e1efc29ca Mon Sep 17 00:00:00 2001
+From 0514f064febfdfdd9321c03793e996b6989fb3d0 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 19 Mar 2015 01:22:34 +0100
 Subject: server: Implement support for global and local shared memory blocks
@@ -114,10 +114,10 @@ index 95111ad..955c392 100644
      ntdll_get_thread_data()->wow64_redir = is_wow64;
  
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 74e64c9..b030afd 100644
+index 7633232..c56ee1d 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -370,6 +370,7 @@ void terminate_thread( int status )
+@@ -376,6 +376,7 @@ void terminate_thread( int status )
  void exit_thread( int status )
  {
      static void *prev_teb;
@@ -125,7 +125,7 @@ index 74e64c9..b030afd 100644
      sigset_t sigset;
      TEB *teb;
  
-@@ -393,6 +394,9 @@ void exit_thread( int status )
+@@ -399,6 +400,9 @@ void exit_thread( int status )
      LdrShutdownThread();
      RtlFreeThreadActivationContextStack();
  
@@ -158,7 +158,7 @@ index d573d1f..695389a 100644
  /* macros for server requests */
  
 diff --git a/include/winternl.h b/include/winternl.h
-index a84c6d4..9128ffd 100644
+index 5420391..624da00 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
 @@ -366,7 +366,7 @@ typedef struct _TEB
@@ -171,10 +171,10 @@ index a84c6d4..9128ffd 100644
      ULONG                        ImpersonationLocale;               /* f98/1788 */
      ULONG                        IsImpersonating;                   /* f9c/178c */
 diff --git a/server/fd.c b/server/fd.c
-index f0a52ad..791a36f 100644
+index fe778f1..f6f9b42 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -2323,6 +2323,33 @@ DECL_HANDLER(write)
+@@ -2472,6 +2472,33 @@ DECL_HANDLER(write)
      }
  }
  
@@ -209,10 +209,10 @@ index f0a52ad..791a36f 100644
  DECL_HANDLER(ioctl)
  {
 diff --git a/server/file.h b/server/file.h
-index b5e0ca7..7ffef6f 100644
+index b59de1c..8a9f6b9 100644
 --- a/server/file.h
 +++ b/server/file.h
-@@ -145,6 +145,14 @@ extern void create_mailslot_device( struct directory *root, const struct unicode
+@@ -146,6 +146,14 @@ extern void create_mailslot_device( struct directory *root, const struct unicode
  extern struct device *create_unix_device( struct directory *root, const struct unicode_str *name,
                                            const char *unix_path );
  
@@ -341,7 +341,7 @@ index 16e7c1c..c180ae5 100644
  static int create_temp_file( file_pos_t size )
  {
 diff --git a/server/protocol.def b/server/protocol.def
-index 9c4dab4..495365b 100644
+index c313006..b8c5abf 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -69,6 +69,15 @@ struct request_max_size
@@ -360,7 +360,7 @@ index 9c4dab4..495365b 100644
  
  /* debug event data */
  typedef union
-@@ -1170,6 +1179,12 @@ enum server_fd_type
+@@ -1203,6 +1212,12 @@ enum server_fd_type
  };
  
  
@@ -374,19 +374,19 @@ index 9c4dab4..495365b 100644
  @REQ(flush)
      int            blocking;    /* whether it's a blocking flush */
 diff --git a/server/thread.c b/server/thread.c
-index 6c5d12d..d692a77 100644
+index ba84bee..4bb5149 100644
 --- a/server/thread.c
 +++ b/server/thread.c
-@@ -194,6 +194,8 @@ static inline void init_thread_structure( struct thread *thread )
-     thread->suspend         = 0;
+@@ -196,6 +196,8 @@ static inline void init_thread_structure( struct thread *thread )
      thread->desktop_users   = 0;
      thread->token           = NULL;
+     thread->exit_poll       = NULL;
 +    thread->shm_fd          = -1;
 +    thread->shm             = NULL;
  
      thread->creation_time = current_time;
      thread->exit_time     = 0;
-@@ -295,6 +297,8 @@ static void cleanup_thread( struct thread *thread )
+@@ -297,6 +299,8 @@ static void cleanup_thread( struct thread *thread )
              thread->inflight[i].client = thread->inflight[i].server = -1;
          }
      }
@@ -395,7 +395,7 @@ index 6c5d12d..d692a77 100644
      thread->req_data = NULL;
      thread->reply_data = NULL;
      thread->request_fd = NULL;
-@@ -303,6 +307,9 @@ static void cleanup_thread( struct thread *thread )
+@@ -305,6 +309,9 @@ static void cleanup_thread( struct thread *thread )
      thread->context = NULL;
      thread->suspend_context = NULL;
      thread->desktop = 0;
@@ -406,18 +406,18 @@ index 6c5d12d..d692a77 100644
  
  /* destroy a thread when its refcount is 0 */
 diff --git a/server/thread.h b/server/thread.h
-index 996d95b..0107a45 100644
+index ac9af24..59ef250 100644
 --- a/server/thread.h
 +++ b/server/thread.h
-@@ -87,6 +87,8 @@ struct thread
-     timeout_t              creation_time; /* Thread creation time */
+@@ -89,6 +89,8 @@ struct thread
      timeout_t              exit_time;     /* Thread exit time */
      struct token          *token;         /* security token associated with this thread */
+     struct timeout_user   *exit_poll;     /* poll if the thread/process has exited already */
 +    int                    shm_fd;        /* file descriptor for thread local shared memory */
 +    shmlocal_t            *shm;           /* thread local shared memory pointer */
  };
  
  struct thread_snapshot
 -- 
-2.4.0
+2.6.1
 

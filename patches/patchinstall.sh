@@ -244,6 +244,7 @@ patch_enable_all ()
 	enable_server_Pipe_ObjectName="$1"
 	enable_server_Realtime_Priority="$1"
 	enable_server_Shared_Memory="$1"
+	enable_server_Signal_Thread="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
 	enable_setupapi_SetupDiSelectBestCompatDrv="$1"
@@ -827,6 +828,9 @@ patch_enable ()
 			;;
 		server-Shared_Memory)
 			enable_server_Shared_Memory="$2"
+			;;
+		server-Signal_Thread)
+			enable_server_Signal_Thread="$2"
 			;;
 		server-Stored_ACLs)
 			enable_server_Stored_ACLs="$2"
@@ -1790,10 +1794,14 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 	if test "$enable_server_PeekMessage" -gt 1; then
 		abort "Patchset server-PeekMessage disabled, but server-Shared_Memory depends on that."
 	fi
+	if test "$enable_server_Signal_Thread" -gt 1; then
+		abort "Patchset server-Signal_Thread disabled, but server-Shared_Memory depends on that."
+	fi
 	enable_ntdll_Threading=1
 	enable_server_ClipCursor=1
 	enable_server_Key_State=1
 	enable_server_PeekMessage=1
+	enable_server_Signal_Thread=1
 fi
 
 if test "$enable_server_Pipe_ObjectName" -eq 1; then
@@ -4915,10 +4923,22 @@ if test "$enable_server_Realtime_Priority" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-Signal_Thread
+# |
+# | Modified files:
+# |   *	server/thread.c, server/thread.h
+# |
+if test "$enable_server_Signal_Thread" -eq 1; then
+	patch_apply server-Signal_Thread/0001-server-Do-not-signal-thread-until-it-is-really-gone.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Do not signal thread until it is really gone.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-Shared_Memory
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Threading, server-ClipCursor, server-Key_State, server-PeekMessage
+# |   *	ntdll-Threading, server-ClipCursor, server-Key_State, server-PeekMessage, server-Signal_Thread
 # |
 # | Modified files:
 # |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c, dlls/user32/focus.c,

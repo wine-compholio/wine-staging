@@ -1,8 +1,8 @@
-From 0bf1b2a338baca121228b1739a2398f34a5fbd86 Mon Sep 17 00:00:00 2001
+From 278d2cd8f466e786bed9fa4a621d627c20c83b8d Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Thu, 18 Dec 2014 01:04:34 +0100
 Subject: dinput: Ensure X11 input events are handled even without explicit
- message loop. (try 3)
+ message loop. (v4)
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -30,17 +30,14 @@ call __wine_check_for_events from multiple locations in the code. See:
 * https://bugs.wine-staging.com/show_bug.cgi?id=42
 * https://bugs.wine-staging.com/show_bug.cgi?id=149
 ---
- dlls/dinput/device.c      |  5 +++--
- dlls/dinput/keyboard.c    |  2 ++
- dlls/dinput/mouse.c       |  2 ++
- dlls/dinput/tests/mouse.c |  2 ++
- dlls/user32/input.c       | 14 ++++++++++----
- dlls/user32/user32.spec   |  1 +
- include/winuser.h         |  1 +
- 7 files changed, 21 insertions(+), 6 deletions(-)
+ dlls/dinput/device.c      | 5 +++--
+ dlls/dinput/keyboard.c    | 2 ++
+ dlls/dinput/mouse.c       | 2 ++
+ dlls/dinput/tests/mouse.c | 2 ++
+ 4 files changed, 9 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/dinput/device.c b/dlls/dinput/device.c
-index ab43029..60678be 100644
+index ab43029..501eae8 100644
 --- a/dlls/dinput/device.c
 +++ b/dlls/dinput/device.c
 @@ -1631,8 +1631,9 @@ HRESULT WINAPI IDirectInputDevice2WImpl_Poll(LPDIRECTINPUTDEVICE8W iface)
@@ -50,33 +47,33 @@ index ab43029..60678be 100644
 -    /* Because wine devices do not need to be polled, just return DI_NOEFFECT */
 -    return DI_NOEFFECT;
 +
-+    __wine_check_for_events( QS_ALLINPUT );
++    MsgWaitForMultipleObjectsEx(0, NULL, 0, QS_ALLINPUT, 0);
 +    return DI_OK;
  }
  
  HRESULT WINAPI IDirectInputDevice2AImpl_Poll(LPDIRECTINPUTDEVICE8A iface)
 diff --git a/dlls/dinput/keyboard.c b/dlls/dinput/keyboard.c
-index f3ac30e..4b4ccf4 100644
+index f3ac30e..1e273f6 100644
 --- a/dlls/dinput/keyboard.c
 +++ b/dlls/dinput/keyboard.c
 @@ -335,6 +335,8 @@ static HRESULT WINAPI SysKeyboardWImpl_GetDeviceState(LPDIRECTINPUTDEVICE8W ifac
      if (len != This->base.data_format.user_df->dwDataSize )
          return DIERR_INVALIDPARAM;
  
-+    __wine_check_for_events( QS_ALLINPUT );
++    MsgWaitForMultipleObjectsEx(0, NULL, 0, QS_ALLINPUT, 0);
 +
      EnterCriticalSection(&This->base.crit);
  
      if (TRACE_ON(dinput)) {
 diff --git a/dlls/dinput/mouse.c b/dlls/dinput/mouse.c
-index 132efce..44e1d57 100644
+index 132efce..8126c1e 100644
 --- a/dlls/dinput/mouse.c
 +++ b/dlls/dinput/mouse.c
 @@ -552,6 +552,8 @@ static HRESULT WINAPI SysMouseWImpl_GetDeviceState(LPDIRECTINPUTDEVICE8W iface,
  
      if(This->base.acquired == 0) return DIERR_NOTACQUIRED;
  
-+    __wine_check_for_events( QS_ALLINPUT );
++    MsgWaitForMultipleObjectsEx(0, NULL, 0, QS_ALLINPUT, 0);
 +
      TRACE("(this=%p,0x%08x,%p):\n", This, len, ptr);
      _dump_mouse_state(&This->m_state);
@@ -101,80 +98,6 @@ index 1a5f4bc..711abcf 100644
      ok(hr == DI_OK && cnt == 1, "GetDeviceData() failed: %08x cnt:%d\n", hr, cnt);
  
      if (pMouse) IUnknown_Release(pMouse);
-diff --git a/dlls/user32/input.c b/dlls/user32/input.c
-index 40e35a9..0ce64fc 100644
---- a/dlls/user32/input.c
-+++ b/dlls/user32/input.c
-@@ -354,12 +354,18 @@ HWND WINAPI GetCapture(void)
- }
- 
- 
--static void check_for_events( UINT flags )
-+/***********************************************************************
-+ *      __wine_check_for_events  (USER32.@)
-+ *
-+ * Internal function to check for pending X11 events.
-+ */
-+void CDECL __wine_check_for_events( UINT flags )
- {
-     if (USER_Driver->pMsgWaitForMultipleObjectsEx( 0, NULL, 0, flags, 0 ) == WAIT_TIMEOUT)
-         flush_window_surfaces( TRUE );
- }
- 
-+
- /**********************************************************************
-  *		GetAsyncKeyState (USER32.@)
-  *
-@@ -375,7 +381,7 @@ SHORT WINAPI DECLSPEC_HOTPATCH GetAsyncKeyState( INT key )
- 
-     if (key < 0 || key >= 256) return 0;
- 
--    check_for_events( QS_INPUT );
-+    __wine_check_for_events( QS_INPUT );
- 
-     if ((ret = USER_Driver->pGetAsyncKeyState( key )) == -1)
-     {
-@@ -430,7 +436,7 @@ DWORD WINAPI GetQueueStatus( UINT flags )
-         return 0;
-     }
- 
--    check_for_events( flags );
-+    __wine_check_for_events( flags );
- 
-     SERVER_START_REQ( get_queue_status )
-     {
-@@ -450,7 +456,7 @@ BOOL WINAPI GetInputState(void)
- {
-     DWORD ret;
- 
--    check_for_events( QS_INPUT );
-+    __wine_check_for_events( QS_INPUT );
- 
-     SERVER_START_REQ( get_queue_status )
-     {
-diff --git a/dlls/user32/user32.spec b/dlls/user32/user32.spec
-index f0e541f..e1f165f 100644
---- a/dlls/user32/user32.spec
-+++ b/dlls/user32/user32.spec
-@@ -789,5 +789,6 @@
- # All functions must be prefixed with '__wine_' (for internal functions)
- # or 'wine_' (for user-visible functions) to avoid namespace conflicts.
- #
-+@ cdecl __wine_check_for_events(long)
- @ cdecl __wine_send_input(long ptr)
- @ cdecl __wine_set_pixel_format(long long)
-diff --git a/include/winuser.h b/include/winuser.h
-index 06ca054..5d32474 100644
---- a/include/winuser.h
-+++ b/include/winuser.h
-@@ -4061,6 +4061,7 @@ WINUSERAPI INT         WINAPI wvsprintfW(LPWSTR,LPCWSTR,__ms_va_list);
- WORD        WINAPI SYSTEM_KillSystemTimer( WORD );
- 
- #ifdef __WINESRC__
-+WINUSERAPI VOID CDECL __wine_check_for_events( UINT flags );
- WINUSERAPI BOOL CDECL __wine_send_input( HWND hwnd, const INPUT *input );
- #endif
- 
 -- 
-2.6.0
+2.6.1
 

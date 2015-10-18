@@ -184,6 +184,7 @@ patch_enable_all ()
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_Dealloc_Thread_Stack="$1"
 	enable_ntdll_DeviceType_Systemroot="$1"
+	enable_ntdll_DllOverrides_WOW64="$1"
 	enable_ntdll_DllRedirects="$1"
 	enable_ntdll_Exception="$1"
 	enable_ntdll_FileDispositionInformation="$1"
@@ -645,6 +646,9 @@ patch_enable ()
 			;;
 		ntdll-DeviceType_Systemroot)
 			enable_ntdll_DeviceType_Systemroot="$2"
+			;;
+		ntdll-DllOverrides_WOW64)
+			enable_ntdll_DllOverrides_WOW64="$2"
 			;;
 		ntdll-DllRedirects)
 			enable_ntdll_DllRedirects="$2"
@@ -1893,9 +1897,13 @@ if test "$enable_ntdll_Fix_Alignment" -eq 1; then
 fi
 
 if test "$enable_ntdll_DllRedirects" -eq 1; then
+	if test "$enable_ntdll_DllOverrides_WOW64" -gt 1; then
+		abort "Patchset ntdll-DllOverrides_WOW64 disabled, but ntdll-DllRedirects depends on that."
+	fi
 	if test "$enable_ntdll_Loader_Machine_Type" -gt 1; then
 		abort "Patchset ntdll-Loader_Machine_Type disabled, but ntdll-DllRedirects depends on that."
 	fi
+	enable_ntdll_DllOverrides_WOW64=1
 	enable_ntdll_Loader_Machine_Type=1
 fi
 
@@ -3995,6 +4003,18 @@ if test "$enable_ntdll_DeviceType_Systemroot" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-DllOverrides_WOW64
+# |
+# | Modified files:
+# |   *	dlls/ntdll/loadorder.c
+# |
+if test "$enable_ntdll_DllOverrides_WOW64" -eq 1; then
+	patch_apply ntdll-DllOverrides_WOW64/0001-ntdll-Always-use-64-bit-registry-view-on-WOW64-setup.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Always use 64-bit registry view on WOW64 setups.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-Loader_Machine_Type
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4013,7 +4033,7 @@ fi
 # Patchset ntdll-DllRedirects
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Loader_Machine_Type
+# |   *	ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type
 # |
 # | Modified files:
 # |   *	dlls/ntdll/loader.c, dlls/ntdll/loadorder.c, dlls/ntdll/ntdll_misc.h
@@ -5428,7 +5448,7 @@ fi
 # Patchset uxtheme-GTK_Theming
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Loader_Machine_Type, ntdll-DllRedirects
+# |   *	ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects
 # |
 # | Modified files:
 # |   *	aclocal.m4, configure.ac, dlls/uxtheme-gtk/Makefile.in, dlls/uxtheme-gtk/button.c, dlls/uxtheme-gtk/combobox.c, dlls
@@ -5592,7 +5612,7 @@ fi
 # Patchset wined3d-CSMT_Helper
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	makedep-PARENTSPEC, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-DXTn
+# |   *	makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-DXTn
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
@@ -5721,7 +5741,8 @@ fi
 # Patchset wined3d-CSMT_Main
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	makedep-PARENTSPEC, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-DXTn, wined3d-CSMT_Helper
+# |   *	makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-DXTn, wined3d-
+# | 	CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance

@@ -34,12 +34,13 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [6]:**
+**Bug fixes and features included in the next upcoming release [7]:**
 
 * Add implementation for IDXGIOutput::GetDesc ([Wine Bug #32006](https://bugs.winehq.org/show_bug.cgi?id=32006))
 * Add implementation for comctl32.PROPSHEET_InsertPage. ([Wine Bug #25625](https://bugs.winehq.org/show_bug.cgi?id=25625))
 * Do not check if object was signaled after user APC in server_select
 * Fix the initialization of combined DACLs when the new DACL is empty ([Wine Bug #38423](https://bugs.winehq.org/show_bug.cgi?id=38423))
+* Return WN_NOT_CONNECTED from WNetGetUniversalName REMOTE_NAME_INFO_LEVEL stub ([Wine Bug #39452](https://bugs.winehq.org/show_bug.cgi?id=39452))
 * Show windows version when collecting system info in winedbg
 * Use wrapper functions for syscalls to appease Chromium sandbox (32-bit) ([Wine Bug #39403](https://bugs.winehq.org/show_bug.cgi?id=39403))
 

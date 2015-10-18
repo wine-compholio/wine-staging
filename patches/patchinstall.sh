@@ -169,6 +169,7 @@ patch_enable_all ()
 	enable_mfplat_MFTRegister="$1"
 	enable_mmdevapi_AEV_Stubs="$1"
 	enable_mountmgr_DosDevices="$1"
+	enable_mpr_WNetGetUniversalNameW="$1"
 	enable_mscoree_CorValidateImage="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
 	enable_msidb_Implementation="$1"
@@ -599,6 +600,9 @@ patch_enable ()
 			;;
 		mountmgr-DosDevices)
 			enable_mountmgr_DosDevices="$2"
+			;;
+		mpr-WNetGetUniversalNameW)
+			enable_mpr_WNetGetUniversalNameW="$2"
 			;;
 		mscoree-CorValidateImage)
 			enable_mscoree_CorValidateImage="$2"
@@ -3702,6 +3706,21 @@ if test "$enable_mountmgr_DosDevices" -eq 1; then
 	patch_apply mountmgr-DosDevices/0001-mountmgr.sys-Write-usable-device-paths-into-HKLM-SYS.patch
 	(
 		echo '+    { "Michael Müller", "mountmgr.sys: Write usable device paths into HKLM\\\\SYSTEM\\\\MountedDevices.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset mpr-WNetGetUniversalNameW
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39452] Return WN_NOT_CONNECTED from WNetGetUniversalName REMOTE_NAME_INFO_LEVEL stub
+# |
+# | Modified files:
+# |   *	dlls/mpr/tests/mpr.c, dlls/mpr/wnet.c
+# |
+if test "$enable_mpr_WNetGetUniversalNameW" -eq 1; then
+	patch_apply mpr-WNetGetUniversalNameW/0001-mpr-Return-correct-error-code-for-non-network-paths-.patch
+	(
+		echo '+    { "Michael Müller", "mpr: Return correct error code for non network paths and REMOTE_NAME_INFO_LEVEL in WNetGetUniversalName.", 1 },';
 	) >> "$patchlist"
 fi
 

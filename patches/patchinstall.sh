@@ -155,6 +155,7 @@ patch_enable_all ()
 	enable_kernel32_Cwd_Startup_Info="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_GetLogicalProcessorInformationEx="$1"
+	enable_kernel32_GetPhysicallyInstalledSystemMemory="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
@@ -559,6 +560,9 @@ patch_enable ()
 			;;
 		kernel32-GetLogicalProcessorInformationEx)
 			enable_kernel32_GetLogicalProcessorInformationEx="$2"
+			;;
+		kernel32-GetPhysicallyInstalledSystemMemory)
+			enable_kernel32_GetPhysicallyInstalledSystemMemory="$2"
 			;;
 		kernel32-LocaleNameToLCID)
 			enable_kernel32_LocaleNameToLCID="$2"
@@ -3440,6 +3444,21 @@ if test "$enable_kernel32_GetLogicalProcessorInformationEx" -eq 1; then
 	patch_apply kernel32-GetLogicalProcessorInformationEx/0001-kernel32-Make-GetLogicalProcessorInformationEx-a-stu.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32: Make GetLogicalProcessorInformationEx a stub which returns TRUE.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-GetPhysicallyInstalledSystemMemory
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39395] Implement kernel32.GetPhysicallyInstalledSystemMemory
+# |
+# | Modified files:
+# |   *	dlls/kernel32/heap.c, dlls/kernel32/kernel32.spec, dlls/kernel32/tests/heap.c
+# |
+if test "$enable_kernel32_GetPhysicallyInstalledSystemMemory" -eq 1; then
+	patch_apply kernel32-GetPhysicallyInstalledSystemMemory/0001-kernel32-Add-stub-implementation-for-GetPhysicallyIn.patch
+	(
+		echo '+    { "Sebastian Lackner", "kernel32: Add stub implementation for GetPhysicallyInstalledSystemMemory.", 1 },';
 	) >> "$patchlist"
 fi
 

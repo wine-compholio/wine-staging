@@ -1,18 +1,81 @@
-From 1677afa592e1bc7e81301592027dc641172a5bc4 Mon Sep 17 00:00:00 2001
+From 38e2c0d234e1d3615ac26eeb4808a0446a6c72de Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@wine-staging.com>
-Date: Tue, 3 Mar 2015 23:19:40 -0700
-Subject: ws2_32: Add asynchronous support for TransmitFile. (rev 2)
+Date: Wed, 7 Oct 2015 12:19:42 -0600
+Subject: ws2_32: Add asynchronous support for TransmitFile.
 
+Signed-off-by: Erich E. Hoover <erich.e.hoover@wine-staging.com>
 ---
- dlls/ws2_32/socket.c     | 75 +++++++++++++++++++++++++++++++++------
+ dlls/ws2_32/socket.c     | 89 ++++++++++++++++++++++++++++++++++++++--------
  dlls/ws2_32/tests/sock.c | 91 ++++++++++++++++++++++++++++++++++++++++++++----
- 2 files changed, 150 insertions(+), 16 deletions(-)
+ 2 files changed, 160 insertions(+), 20 deletions(-)
 
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index 7d4f112..ed3f806 100644
+index bc29f6d..4531b81 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
-@@ -2669,10 +2669,15 @@ static NTSTATUS WS2_transmitfile_base( int fd, struct ws2_transmitfile_async *ws
+@@ -177,6 +177,8 @@
+ #define TCP_KEEPIDLE TCP_KEEPALIVE
+ #endif
+ 
++#define FILE_USE_FILE_POINTER_POSITION ((LONGLONG)-2)
++
+ WINE_DEFAULT_DEBUG_CHANNEL(winsock);
+ WINE_DECLARE_DEBUG_CHANNEL(winediag);
+ 
+@@ -524,6 +526,7 @@ struct ws2_transmitfile_async
+     DWORD                 bytes_per_send;
+     TRANSMIT_FILE_BUFFERS buffers;
+     DWORD                 flags;
++    LARGE_INTEGER         offset;
+     struct ws2_async      write;
+ };
+ 
+@@ -2742,9 +2745,10 @@ static BOOL WINAPI WS2_AcceptEx(SOCKET listener, SOCKET acceptor, PVOID dest, DW
+  *
+  * Perform an APC-safe ReadFile operation
+  */
+-static NTSTATUS WS2_ReadFile(HANDLE hFile, PIO_STATUS_BLOCK io_status, char* buffer, ULONG length)
++static NTSTATUS WS2_ReadFile(HANDLE hFile, PIO_STATUS_BLOCK io_status, char* buffer, ULONG length,
++                             PLARGE_INTEGER offset)
+ {
+-    int result, unix_handle;
++    int result = -1, unix_handle;
+     unsigned int options;
+     NTSTATUS status;
+ 
+@@ -2753,8 +2757,12 @@ static NTSTATUS WS2_ReadFile(HANDLE hFile, PIO_STATUS_BLOCK io_status, char* buf
+     status = wine_server_handle_to_fd( hFile, FILE_READ_DATA, &unix_handle, &options );
+     if (status) return status;
+ 
+-    while ((result = read( unix_handle, buffer, length )) == -1)
++    while (result == -1)
+     {
++        if (offset && offset->QuadPart != FILE_USE_FILE_POINTER_POSITION)
++            result = pread( unix_handle, buffer, length, offset->QuadPart );
++        else
++            result = read( unix_handle, buffer, length );
+         if (errno != EINTR)
+             break;
+     }
+@@ -2772,6 +2780,8 @@ static NTSTATUS WS2_ReadFile(HANDLE hFile, PIO_STATUS_BLOCK io_status, char* buf
+     TRACE("= 0x%08x (%d)\n", status, result);
+     if (status == STATUS_SUCCESS || status == STATUS_END_OF_FILE)
+     {
++        if (offset && offset->QuadPart != FILE_USE_FILE_POINTER_POSITION)
++            offset->QuadPart += result;
+         io_status->u.Status = status;
+         io_status->Information = result;
+     }
+@@ -2811,7 +2821,7 @@ static NTSTATUS WS2_transmitfile_getbuffer( int fd, struct ws2_transmitfile_asyn
+         /* when the size of the transfer is limited ensure that we don't go past that limit */
+         if (wsa->file_bytes != 0)
+             bytes_per_send = min(bytes_per_send, wsa->file_bytes - wsa->file_read);
+-        status = WS2_ReadFile( wsa->file, &iosb, wsa->buffer, bytes_per_send );
++        status = WS2_ReadFile( wsa->file, &iosb, wsa->buffer, bytes_per_send, &wsa->offset );
+         if (status == STATUS_END_OF_FILE)
+             wsa->file = NULL; /* continue on to the footer */
+         else if (status != STATUS_SUCCESS)
+@@ -2860,10 +2870,15 @@ static NTSTATUS WS2_transmitfile_base( int fd, struct ws2_transmitfile_async *ws
      status = WS2_transmitfile_getbuffer( fd, wsa );
      if (status == STATUS_PENDING)
      {
@@ -29,7 +92,7 @@ index 7d4f112..ed3f806 100644
              return wsaErrStatus();
      }
  
-@@ -2680,26 +2685,46 @@ static NTSTATUS WS2_transmitfile_base( int fd, struct ws2_transmitfile_async *ws
+@@ -2871,26 +2886,46 @@ static NTSTATUS WS2_transmitfile_base( int fd, struct ws2_transmitfile_async *ws
  }
  
  /***********************************************************************
@@ -84,23 +147,26 @@ index 7d4f112..ed3f806 100644
      TRACE("(%lx, %p, %d, %d, %p, %p, %d)\n", s, h, file_bytes, bytes_per_send, overlapped,
              buffers, flags );
  
-@@ -2746,7 +2771,37 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
+@@ -2937,6 +2972,7 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
+     wsa->file_bytes            = file_bytes;
+     wsa->bytes_per_send        = bytes_per_send;
+     wsa->flags                 = flags;
++    wsa->offset.QuadPart       = FILE_USE_FILE_POINTER_POSITION;
+     wsa->write.hSocket         = SOCKET2HANDLE(s);
+     wsa->write.addr            = NULL;
+     wsa->write.addrlen.val     = 0;
+@@ -2945,7 +2981,32 @@ static BOOL WINAPI WS2_TransmitFile( SOCKET s, HANDLE h, DWORD file_bytes, DWORD
      wsa->write.control         = NULL;
      wsa->write.n_iovecs        = 0;
      wsa->write.first_iovec     = 0;
 -    wsa->write.user_overlapped = NULL;
 +    wsa->write.user_overlapped = overlapped;
-+
 +    if (overlapped)
 +    {
-+        LARGE_INTEGER offset;
 +        int status;
 +
-+        /* set the file offset to the desired point */
-+        offset.u.LowPart = overlapped->u.s.Offset;
-+        offset.u.HighPart = overlapped->u.s.OffsetHigh;
-+        SetFilePointerEx( wsa->file, offset, NULL, FILE_BEGIN );
-+
++        wsa->offset.u.LowPart  = overlapped->u.s.Offset;
++        wsa->offset.u.HighPart = overlapped->u.s.OffsetHigh;
 +        iosb->u.Status = STATUS_PENDING;
 +        iosb->Information = 0;
 +        SERVER_START_REQ( register_async )
@@ -124,10 +190,10 @@ index 7d4f112..ed3f806 100644
      do
      {
 diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
-index f4a0d55..a22ca94 100644
+index 3d20c89..29e20c3 100644
 --- a/dlls/ws2_32/tests/sock.c
 +++ b/dlls/ws2_32/tests/sock.c
-@@ -7115,15 +7115,15 @@ end:
+@@ -7429,15 +7429,15 @@ end:
          closesocket(connector2);
  }
  
@@ -146,7 +212,7 @@ index f4a0d55..a22ca94 100644
      while (1)
      {
          DWORD n1 = 0, n2 = 0;
-@@ -7143,6 +7143,7 @@ static void compare_file2(HANDLE handle, SOCKET sock, const char *file, int line
+@@ -7457,6 +7457,7 @@ static void compare_file2(HANDLE handle, SOCKET sock, const char *file, int line
  
  static void test_TransmitFile(void)
  {
@@ -154,7 +220,7 @@ index f4a0d55..a22ca94 100644
      GUID transmitFileGuid = WSAID_TRANSMITFILE;
      LPFN_TRANSMITFILE pTransmitFile = NULL;
      HANDLE file = INVALID_HANDLE_VALUE;
-@@ -7152,11 +7153,13 @@ static void test_TransmitFile(void)
+@@ -7466,11 +7467,13 @@ static void test_TransmitFile(void)
      struct sockaddr_in bindAddress;
      TRANSMIT_FILE_BUFFERS buffers;
      SOCKET client, server, dest;
@@ -169,7 +235,7 @@ index f4a0d55..a22ca94 100644
      /* Setup sockets for testing TransmitFile */
      client = socket(AF_INET, SOCK_STREAM, 0);
      server = socket(AF_INET, SOCK_STREAM, 0);
-@@ -7180,6 +7183,7 @@ static void test_TransmitFile(void)
+@@ -7494,6 +7497,7 @@ static void test_TransmitFile(void)
          skip("Unable to open a file to transmit.\n");
          goto cleanup;
      }
@@ -177,7 +243,7 @@ index f4a0d55..a22ca94 100644
  
      /* Test TransmitFile with an invalid socket */
      bret = pTransmitFile(INVALID_SOCKET, file, 0, 0, NULL, NULL, 0);
-@@ -7254,7 +7258,7 @@ static void test_TransmitFile(void)
+@@ -7567,7 +7571,7 @@ static void test_TransmitFile(void)
      /* Test TransmitFile with only file data */
      bret = pTransmitFile(client, file, 0, 0, NULL, NULL, 0);
      ok(bret, "TransmitFile failed unexpectedly.\n");
@@ -186,7 +252,7 @@ index f4a0d55..a22ca94 100644
  
      /* Test TransmitFile with both file and buffer data */
      buffers.Head = &header_msg[0];
-@@ -7267,7 +7271,81 @@ static void test_TransmitFile(void)
+@@ -7580,7 +7584,81 @@ static void test_TransmitFile(void)
      iret = recv(dest, buf, sizeof(header_msg)+1, 0);
      ok(memcmp(buf, &header_msg[0], sizeof(header_msg)+1) == 0,
         "TransmitFile header buffer did not match!\n");
@@ -269,7 +335,7 @@ index f4a0d55..a22ca94 100644
      iret = recv(dest, buf, sizeof(footer_msg)+1, 0);
      ok(memcmp(buf, &footer_msg[0], sizeof(footer_msg)+1) == 0,
         "TransmitFile footer buffer did not match!\n");
-@@ -7282,6 +7360,7 @@ static void test_TransmitFile(void)
+@@ -7595,6 +7673,7 @@ static void test_TransmitFile(void)
  
  cleanup:
      CloseHandle(file);
@@ -278,5 +344,5 @@ index f4a0d55..a22ca94 100644
      closesocket(server);
  }
 -- 
-2.3.3
+2.6.1
 

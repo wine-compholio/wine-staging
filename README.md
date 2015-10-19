@@ -188,7 +188,7 @@ for more details.*
 * Implement enumeration of sound devices and basic properties to dxdiagn ([Wine Bug #32613](https://bugs.winehq.org/show_bug.cgi?id=32613))
 * Implement exclusive mode in PulseAudio backend ([Wine Bug #37042](https://bugs.winehq.org/show_bug.cgi?id=37042))
 * Implement general tab for file property dialog
-* Implement kernel32.GetPhysicallyInstalledSystemMemory ([Wine Bug #39395](https://bugs.winehq.org/show_bug.cgi?id=39395))
+* ~~Implement kernel32.GetPhysicallyInstalledSystemMemory~~ ([Wine Bug #39395](https://bugs.winehq.org/show_bug.cgi?id=39395))
 * Implement locking and synchronization of key states ([Wine Bug #31899](https://bugs.winehq.org/show_bug.cgi?id=31899))
 * Implement mscoree._CorValidateImage for mono runtime ([Wine Bug #38662](https://bugs.winehq.org/show_bug.cgi?id=38662))
 * Implement ntoskrnl driver testing framework.

@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "65d699eb5f7fc151197f3dc9f36499ee3e43f8e7"
+	echo "26094c5634b1f12d3f156a90a3e228513675cd63"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 1.7.53"
+	echo "Wine Staging 1.7.54 (unreleased)"
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -155,7 +155,6 @@ patch_enable_all ()
 	enable_kernel32_Cwd_Startup_Info="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_GetLogicalProcessorInformationEx="$1"
-	enable_kernel32_GetPhysicallyInstalledSystemMemory="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
@@ -561,9 +560,6 @@ patch_enable ()
 			;;
 		kernel32-GetLogicalProcessorInformationEx)
 			enable_kernel32_GetLogicalProcessorInformationEx="$2"
-			;;
-		kernel32-GetPhysicallyInstalledSystemMemory)
-			enable_kernel32_GetPhysicallyInstalledSystemMemory="$2"
 			;;
 		kernel32-LocaleNameToLCID)
 			enable_kernel32_LocaleNameToLCID="$2"
@@ -3452,21 +3448,6 @@ if test "$enable_kernel32_GetLogicalProcessorInformationEx" -eq 1; then
 	patch_apply kernel32-GetLogicalProcessorInformationEx/0001-kernel32-Make-GetLogicalProcessorInformationEx-a-stu.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32: Make GetLogicalProcessorInformationEx a stub which returns TRUE.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-GetPhysicallyInstalledSystemMemory
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39395] Implement kernel32.GetPhysicallyInstalledSystemMemory
-# |
-# | Modified files:
-# |   *	dlls/kernel32/heap.c, dlls/kernel32/kernel32.spec, dlls/kernel32/tests/heap.c
-# |
-if test "$enable_kernel32_GetPhysicallyInstalledSystemMemory" -eq 1; then
-	patch_apply kernel32-GetPhysicallyInstalledSystemMemory/0001-kernel32-Add-stub-implementation-for-GetPhysicallyIn.patch
-	(
-		echo '+    { "Sebastian Lackner", "kernel32: Add stub implementation for GetPhysicallyInstalledSystemMemory.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6525,15 +6506,11 @@ fi
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c
 # |
 if test "$enable_ws2_32_TransmitFile" -eq 1; then
-	patch_apply ws2_32-TransmitFile/0001-ws2_32-Implement-a-basic-synchronous-TransmitFile.-r.patch
-	patch_apply ws2_32-TransmitFile/0002-ws2_32-Add-support-for-TransmitFile-headers-and-foot.patch
-	patch_apply ws2_32-TransmitFile/0003-ws2_32-Add-asynchronous-support-for-TransmitFile.-re.patch
-	patch_apply ws2_32-TransmitFile/0004-ws2_32-Add-support-for-TF_DISCONNECT-to-TransmitFile.patch
-	patch_apply ws2_32-TransmitFile/0005-ws2_32-Add-support-for-TF_REUSE_SOCKET-to-TransmitFi.patch
+	patch_apply ws2_32-TransmitFile/0001-ws2_32-Add-asynchronous-support-for-TransmitFile.-re.patch
+	patch_apply ws2_32-TransmitFile/0002-ws2_32-Add-support-for-TF_DISCONNECT-to-TransmitFile.patch
+	patch_apply ws2_32-TransmitFile/0003-ws2_32-Add-support-for-TF_REUSE_SOCKET-to-TransmitFi.patch
 	(
-		echo '+    { "Erich E. Hoover", "ws2_32: Implement a basic synchronous TransmitFile.", 2 },';
-		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TransmitFile headers and footers.", 1 },';
-		echo '+    { "Erich E. Hoover", "ws2_32: Add asynchronous support for TransmitFile.", 2 },';
+		echo '+    { "Erich E. Hoover", "ws2_32: Add asynchronous support for TransmitFile.", 1 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_DISCONNECT to TransmitFile.", 1 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_REUSE_SOCKET to TransmitFile.", 1 },';
 	) >> "$patchlist"

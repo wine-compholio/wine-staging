@@ -1,4 +1,4 @@
-From 2e5a98194b938b677a8049cfd59cee18c31417ed Mon Sep 17 00:00:00 2001
+From b306273dc9e8ef9cdc53affc64098399bad4e65c Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 3 Oct 2013 19:23:24 +0200
 Subject: wined3d: Remove software cursor support.
@@ -14,7 +14,7 @@ FIXME: Make sure wined3d_device_show_cursor returns the correct value if a softw
  3 files changed, 86 deletions(-)
 
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 3e3d4a7..6b87c20 100644
+index b44d304..e8871b2 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
 @@ -1039,8 +1039,6 @@ HRESULT CDECL wined3d_device_uninit_3d(struct wined3d_device *device)
@@ -26,7 +26,7 @@ index 3e3d4a7..6b87c20 100644
  
      /* Release the buffers (with sanity checks).
       * FIXME: Move this move into a separate patch. I think the idea
-@@ -4157,48 +4155,6 @@ void CDECL wined3d_device_set_depth_stencil_view(struct wined3d_device *device,
+@@ -4144,48 +4142,6 @@ void CDECL wined3d_device_set_depth_stencil_view(struct wined3d_device *device,
          wined3d_rendertarget_view_decref(prev);
  }
  
@@ -73,11 +73,11 @@ index 3e3d4a7..6b87c20 100644
 -}
 -
  HRESULT CDECL wined3d_device_set_cursor_properties(struct wined3d_device *device,
-         UINT x_hotspot, UINT y_hotspot, struct wined3d_surface *cursor_image)
+         UINT x_hotspot, UINT y_hotspot, struct wined3d_texture *texture, unsigned int sub_resource_idx)
  {
-@@ -4209,12 +4165,6 @@ HRESULT CDECL wined3d_device_set_cursor_properties(struct wined3d_device *device
-     TRACE("device %p, x_hotspot %u, y_hotspot %u, cursor_image %p.\n",
-             device, x_hotspot, y_hotspot, cursor_image);
+@@ -4204,12 +4160,6 @@ HRESULT CDECL wined3d_device_set_cursor_properties(struct wined3d_device *device
+ 
+     cursor_image = surface_from_resource(sub_resource);
  
 -    if (device->cursor_texture)
 -    {
@@ -88,7 +88,7 @@ index 3e3d4a7..6b87c20 100644
      if (cursor_image->resource.format->id != WINED3DFMT_B8G8R8A8_UNORM)
      {
          WARN("Surface %p has an invalid format %s.\n",
-@@ -4242,11 +4192,6 @@ HRESULT CDECL wined3d_device_set_cursor_properties(struct wined3d_device *device
+@@ -4237,11 +4187,6 @@ HRESULT CDECL wined3d_device_set_cursor_properties(struct wined3d_device *device
       * release it after setting the cursor image. Windows doesn't
       * addref the set surface, so we can't do this either without
       * creating circular refcount dependencies. */
@@ -100,7 +100,7 @@ index 3e3d4a7..6b87c20 100644
  
      if (cursor_image->resource.width == 32 && cursor_image->resource.height == 32)
      {
-@@ -4351,10 +4296,6 @@ BOOL CDECL wined3d_device_show_cursor(struct wined3d_device *device, BOOL show)
+@@ -4346,10 +4291,6 @@ BOOL CDECL wined3d_device_show_cursor(struct wined3d_device *device, BOOL show)
          else
              SetCursor(NULL);
      }
@@ -111,7 +111,7 @@ index 3e3d4a7..6b87c20 100644
  
      return oldVisible;
  }
-@@ -4509,11 +4450,6 @@ HRESULT CDECL wined3d_device_reset(struct wined3d_device *device,
+@@ -4504,11 +4445,6 @@ HRESULT CDECL wined3d_device_reset(struct wined3d_device *device,
              wined3d_texture_decref(device->logo_texture);
              device->logo_texture = NULL;
          }
@@ -124,10 +124,10 @@ index 3e3d4a7..6b87c20 100644
  
      if (device->state.fb.render_targets)
 diff --git a/dlls/wined3d/swapchain.c b/dlls/wined3d/swapchain.c
-index 560d1b9..a248292 100644
+index 5ded5d0..94ca18f 100644
 --- a/dlls/wined3d/swapchain.c
 +++ b/dlls/wined3d/swapchain.c
-@@ -449,27 +449,6 @@ static void swapchain_gl_present(struct wined3d_swapchain *swapchain, const RECT
+@@ -455,27 +455,6 @@ static void swapchain_gl_present(struct wined3d_swapchain *swapchain, const RECT
                  NULL, WINED3D_TEXF_POINT);
      }
  
@@ -156,7 +156,7 @@ index 560d1b9..a248292 100644
  
      render_to_fbo = swapchain->render_to_fbo;
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 4171809..8ea2946 100644
+index 5f29243..f51a6d4 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -2137,7 +2137,6 @@ struct wined3d_device

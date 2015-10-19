@@ -1,15 +1,15 @@
-From 67856c891a6d40c6e484f5f29db30a8899a39e04 Mon Sep 17 00:00:00 2001
+From 47b0e70a85956bc0688fb0cef2218f482d2e94fb Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 19 Oct 2015 00:34:01 +0200
 Subject: server: Do not signal thread until it is really gone.
 
 ---
- server/thread.c | 22 ++++++++++++++++++++--
+ server/thread.c | 25 +++++++++++++++++++++++--
  server/thread.h |  1 +
- 2 files changed, 21 insertions(+), 2 deletions(-)
+ 2 files changed, 24 insertions(+), 2 deletions(-)
 
 diff --git a/server/thread.c b/server/thread.c
-index 6383000..ba84bee 100644
+index 6383000..438d9d0 100644
 --- a/server/thread.c
 +++ b/server/thread.c
 @@ -195,6 +195,7 @@ static inline void init_thread_structure( struct thread *thread )
@@ -37,7 +37,7 @@ index 6383000..ba84bee 100644
  }
  
  static unsigned int thread_map_access( struct object *obj, unsigned int access )
-@@ -1091,6 +1093,22 @@ int thread_get_inflight_fd( struct thread *thread, int client )
+@@ -1091,6 +1093,25 @@ int thread_get_inflight_fd( struct thread *thread, int client )
      return -1;
  }
  
@@ -53,14 +53,17 @@ index 6383000..ba84bee 100644
 +        return;
 +    }
 +
++    /* grab reference since object can be destroyed while trying to wake up */
++    grab_object( &thread->obj );
 +    thread->exit_poll = NULL;
 +    wake_up( &thread->obj, 0 );
++    release_object( &thread->obj );
 +}
 +
  /* kill a thread on the spot */
  void kill_thread( struct thread *thread, int violent_death )
  {
-@@ -1111,8 +1129,8 @@ void kill_thread( struct thread *thread, int violent_death )
+@@ -1111,8 +1132,8 @@ void kill_thread( struct thread *thread, int violent_death )
      kill_console_processes( thread, 0 );
      debug_exit_thread( thread );
      abandon_mutexes( thread );

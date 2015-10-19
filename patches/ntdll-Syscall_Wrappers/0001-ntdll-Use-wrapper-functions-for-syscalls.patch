@@ -1,4 +1,4 @@
-From 0668a4f55e62578d3c3b9ebd84599b6c0fd0baf0 Mon Sep 17 00:00:00 2001
+From 127b83239a2d762d974fcbf6b14a6298c659b7cc Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 16 Oct 2015 02:32:58 +0200
 Subject: ntdll: Use wrapper functions for syscalls.
@@ -11,7 +11,7 @@ Subject: ntdll: Use wrapper functions for syscalls.
  dlls/ntdll/file.c           |  75 +++++++++++++++++---------
  dlls/ntdll/loader.c         |   6 ++-
  dlls/ntdll/nt.c             |  93 +++++++++++++++++++++-----------
- dlls/ntdll/ntdll_misc.h     |  15 +++++-
+ dlls/ntdll/ntdll_misc.h     |  17 ++++++
  dlls/ntdll/om.c             |  39 +++++++++-----
  dlls/ntdll/process.c        |  15 ++++--
  dlls/ntdll/reg.c            |  57 +++++++++++++-------
@@ -26,7 +26,7 @@ Subject: ntdll: Use wrapper functions for syscalls.
  dlls/ntdll/thread.c         |  36 ++++++++-----
  dlls/ntdll/time.c           |  12 +++--
  dlls/ntdll/virtual.c        |  48 +++++++++++------
- 22 files changed, 407 insertions(+), 192 deletions(-)
+ 22 files changed, 410 insertions(+), 191 deletions(-)
 
 diff --git a/dlls/ntdll/atom.c b/dlls/ntdll/atom.c
 index 304b7f6..222fde9 100644
@@ -733,14 +733,14 @@ index 2acaa83..e48e6d4 100644
  {
      FIXME("(%d, %p, %d, %p, %d, %p), stub\n", command, inbuffer, inbuflength, outbuffer, outbuflength, retlength);
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index cbd19db..a33b1ea 100644
+index cbd19db..0f9534a 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -260,7 +260,20 @@ extern HANDLE keyed_event DECLSPEC_HIDDEN;
-                        ".byte 0x6a," #args "\n\t" /* pushl $args */     \
-                        "call " __ASM_NAME("__wine_call_from_regs") "\n\t" \
+@@ -262,6 +262,23 @@ extern HANDLE keyed_event DECLSPEC_HIDDEN;
                         "ret $(4*" #args ")" ) /* fake ret to make copy protections happy */
--#endif
+ #endif
+ 
++#if defined(__i386__) && defined(__linux__)
 +
 +#define SYSCALL( name ) __syscall_ ## name
 +#define DEFINE_SYSCALL_ENTRYPOINT( name, args ) \
@@ -749,15 +749,17 @@ index cbd19db..a33b1ea 100644
 +                       "movl $" __ASM_NAME("call_syscall_func") ",%edx\n\t" \
 +                       "call *%edx\n\t"                                     \
 +                       "ret $(4*" #args ")" )
-+#else /* __i386__ */
++
++#else /* defined(__i386__) && defined(__linux__) */
 +
 +#define SYSCALL( name ) name
 +#define DEFINE_SYSCALL_ENTRYPOINT( name, args ) /* nothing */
 +
-+#endif /* __i386__ */
- 
++#endif /* defined(__i386__) && defined(__linux__) */
++
  #define HASH_STRING_ALGORITHM_DEFAULT  0
  #define HASH_STRING_ALGORITHM_X65599   1
+ #define HASH_STRING_ALGORITHM_INVALID  0xffffffff
 diff --git a/dlls/ntdll/om.c b/dlls/ntdll/om.c
 index 3fadba7..4fd0656 100644
 --- a/dlls/ntdll/om.c

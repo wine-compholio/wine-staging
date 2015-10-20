@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "26094c5634b1f12d3f156a90a3e228513675cd63"
+	echo "59cca65ce0edd88b65a55a847468761e11dfab0b"
 }
 
 # Show version information
@@ -176,7 +176,6 @@ patch_enable_all ()
 	enable_msvcp90_basic_string_dtor="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvcrt_StdHandle_RefCount="$1"
-	enable_msvfw32_Image_Size="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_APC_Start_Process="$1"
 	enable_ntdll_Activation_Context="$1"
@@ -624,9 +623,6 @@ patch_enable ()
 			;;
 		msvcrt-StdHandle_RefCount)
 			enable_msvcrt_StdHandle_RefCount="$2"
-			;;
-		msvfw32-Image_Size)
-			enable_msvfw32_Image_Size="$2"
 			;;
 		ntdll-APC_Performance)
 			enable_ntdll_APC_Performance="$2"
@@ -3849,21 +3845,6 @@ if test "$enable_msvcrt_StdHandle_RefCount" -eq 1; then
 		echo '+    { "Qian Hong", "msvcrt/tests: Add tests for stdout and stderr refcount.", 1 },';
 		echo '+    { "Qian Hong", "msvcrt: Implemenent refcount check for stdout and stderr.", 1 },';
 		echo '+    { "Sebastian Lackner", "msvcrt: Use constants instead of hardcoded values.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset msvfw32-Image_Size
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#27595] Fix NULL dereference in ICSeqCompressFrameStart
-# |
-# | Modified files:
-# |   *	dlls/msvfw32/msvideo_main.c
-# |
-if test "$enable_msvfw32_Image_Size" -eq 1; then
-	patch_apply msvfw32-Image_Size/0001-msvfw32-Derive-image-size-from-input-image-to-avoid-.patch
-	(
-		echo '+    { "Bruno Jesus", "msvfw32: Derive image size from input image to avoid NULL dereference.", 1 },';
 	) >> "$patchlist"
 fi
 

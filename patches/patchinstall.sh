@@ -3932,7 +3932,7 @@ fi
 if test "$enable_ntdll_Consolidation_Callback" -eq 1; then
 	patch_apply ntdll-Consolidation_Callback/0001-ntdll-Use-wrapper-function-for-consolidation-callbac.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Use wrapper function for consolidation callback during unwinding.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Use wrapper function for consolidate callback on x86_64.", 1 },';
 	) >> "$patchlist"
 fi
 

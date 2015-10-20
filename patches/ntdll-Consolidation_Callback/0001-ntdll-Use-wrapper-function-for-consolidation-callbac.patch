@@ -1,0 +1,112 @@
+From d17b8ff94411edbb545a321ebe40fb2a8c4e05cc Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Tue, 20 Oct 2015 02:08:12 +0200
+Subject: ntdll: Use wrapper function for consolidation callback during
+ unwinding.
+
+---
+ dlls/ntdll/signal_x86_64.c | 81 ++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 79 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
+index 575a770..f443e05 100644
+--- a/dlls/ntdll/signal_x86_64.c
++++ b/dlls/ntdll/signal_x86_64.c
+@@ -3287,6 +3287,82 @@ static void call_teb_unwind_handler( EXCEPTION_RECORD *rec, DISPATCHER_CONTEXT *
+     }
+ }
+ 
++extern void * WINAPI call_consolidate_callback( CONTEXT *context, void *(CALLBACK *consolidate)(EXCEPTION_RECORD *), EXCEPTION_RECORD *rec );
++__ASM_GLOBAL_FUNC( call_consolidate_callback,
++                   "pushq %rbp\n\t"
++                   __ASM_CFI(".cfi_adjust_cfa_offset 8\n\t")
++                   __ASM_CFI(".cfi_rel_offset %rbp,0\n\t")
++                   "movq %rsp,%rbp\n\t"
++                   __ASM_CFI(".cfi_def_cfa_register %rbp\n\t")
++                   "subq $0x20,%rsp\n\t"
++
++                   "movq %rcx,0x10(%rbp)\n\t"
++                   "movq %rdx,%rax\n\t"
++                   "movq %r8,%rcx\n\t"
++                   "movq %rcx,0x0(%rsp)\n\t"
++
++                   /* The following unwind info is intentionally "wrong". To be compatible with
++                    * nested RtlUnwindEx function calls. We have to skip all frames which have
++                    * already been unwound. All rules have the following format:
++                    *
++                    *   DW_OP_breg6
++                    *   sleb128 0x10
++                    *   DW_OP_deref
++                    *   DW_OP_plus_uconst
++                    *   uleb128 <offset in context structure>
++                    *   DW_OP_deref (only for DW_CFA_def_cfa_expression)
++                    *
++                    */
++
++                   __ASM_CFI(".cfi_escape 0x0a\n\t") /* DW_CFA_remember_state */
++                   __ASM_CFI(".cfi_escape 0x0f,0x07,0x76,0x10,0x06,0x23,0x98,0x01,0x06\n\t") /* DW_CFA_def_cfa_expression */
++                   __ASM_CFI(".cfi_escape 0x10,0x03,0x06,0x76,0x10,0x06,0x23,0x90,0x01\n\t") /* DW_CFA_expression(%rbx)   */
++                   __ASM_CFI(".cfi_escape 0x10,0x04,0x06,0x76,0x10,0x06,0x23,0xa8,0x01\n\t") /* DW_CFA_expression(%rsi)   */
++                   __ASM_CFI(".cfi_escape 0x10,0x05,0x06,0x76,0x10,0x06,0x23,0xb0,0x01\n\t") /* DW_CFA_expression(%rdi)   */
++                   __ASM_CFI(".cfi_escape 0x10,0x06,0x06,0x76,0x10,0x06,0x23,0xa0,0x01\n\t") /* DW_CFA_expression(%rbp)   */
++                   __ASM_CFI(".cfi_escape 0x10,0x08,0x06,0x76,0x10,0x06,0x23,0xb8,0x01\n\t") /* DW_CFA_expression(%r8)    */
++                   __ASM_CFI(".cfi_escape 0x10,0x09,0x06,0x76,0x10,0x06,0x23,0xc0,0x01\n\t") /* DW_CFA_expression(%r9)    */
++                   __ASM_CFI(".cfi_escape 0x10,0x0a,0x06,0x76,0x10,0x06,0x23,0xc8,0x01\n\t") /* DW_CFA_expression(%r10)   */
++                   __ASM_CFI(".cfi_escape 0x10,0x0b,0x06,0x76,0x10,0x06,0x23,0xd0,0x01\n\t") /* DW_CFA_expression(%r11)   */
++                   __ASM_CFI(".cfi_escape 0x10,0x0c,0x06,0x76,0x10,0x06,0x23,0xd8,0x01\n\t") /* DW_CFA_expression(%r12)   */
++                   __ASM_CFI(".cfi_escape 0x10,0x0d,0x06,0x76,0x10,0x06,0x23,0xe0,0x01\n\t") /* DW_CFA_expression(%r13)   */
++                   __ASM_CFI(".cfi_escape 0x10,0x0e,0x06,0x76,0x10,0x06,0x23,0xe8,0x01\n\t") /* DW_CFA_expression(%r14)   */
++                   __ASM_CFI(".cfi_escape 0x10,0x0f,0x06,0x76,0x10,0x06,0x23,0xf0,0x01\n\t") /* DW_CFA_expression(%r15)   */
++                   __ASM_CFI(".cfi_escape 0x10,0x10,0x06,0x76,0x10,0x06,0x23,0xf8,0x01\n\t") /* DW_CFA_expression(%rip)   */
++                   __ASM_CFI(".cfi_escape 0x10,0x11,0x06,0x76,0x10,0x06,0x23,0xa0,0x03\n\t") /* DW_CFA_expression(%xmm0)  */
++                   __ASM_CFI(".cfi_escape 0x10,0x12,0x06,0x76,0x10,0x06,0x23,0xb0,0x03\n\t") /* DW_CFA_expression(%xmm1)  */
++                   __ASM_CFI(".cfi_escape 0x10,0x13,0x06,0x76,0x10,0x06,0x23,0xc0,0x03\n\t") /* DW_CFA_expression(%xmm2)  */
++                   __ASM_CFI(".cfi_escape 0x10,0x14,0x06,0x76,0x10,0x06,0x23,0xd0,0x03\n\t") /* DW_CFA_expression(%xmm3)  */
++                   __ASM_CFI(".cfi_escape 0x10,0x15,0x06,0x76,0x10,0x06,0x23,0xe0,0x03\n\t") /* DW_CFA_expression(%xmm4)  */
++                   __ASM_CFI(".cfi_escape 0x10,0x16,0x06,0x76,0x10,0x06,0x23,0xf0,0x03\n\t") /* DW_CFA_expression(%xmm5)  */
++                   __ASM_CFI(".cfi_escape 0x10,0x17,0x06,0x76,0x10,0x06,0x23,0x80,0x04\n\t") /* DW_CFA_expression(%xmm6)  */
++                   __ASM_CFI(".cfi_escape 0x10,0x18,0x06,0x76,0x10,0x06,0x23,0x90,0x04\n\t") /* DW_CFA_expression(%xmm7)  */
++                   __ASM_CFI(".cfi_escape 0x10,0x19,0x06,0x76,0x10,0x06,0x23,0xa0,0x04\n\t") /* DW_CFA_expression(%xmm8)  */
++                   __ASM_CFI(".cfi_escape 0x10,0x1a,0x06,0x76,0x10,0x06,0x23,0xb0,0x04\n\t") /* DW_CFA_expression(%xmm9)  */
++                   __ASM_CFI(".cfi_escape 0x10,0x1b,0x06,0x76,0x10,0x06,0x23,0xc0,0x04\n\t") /* DW_CFA_expression(%xmm10) */
++                   __ASM_CFI(".cfi_escape 0x10,0x1c,0x06,0x76,0x10,0x06,0x23,0xd0,0x04\n\t") /* DW_CFA_expression(%xmm11) */
++                   __ASM_CFI(".cfi_escape 0x10,0x1d,0x06,0x76,0x10,0x06,0x23,0xe0,0x04\n\t") /* DW_CFA_expression(%xmm12) */
++                   __ASM_CFI(".cfi_escape 0x10,0x1e,0x06,0x76,0x10,0x06,0x23,0xf0,0x04\n\t") /* DW_CFA_expression(%xmm13) */
++                   __ASM_CFI(".cfi_escape 0x10,0x1f,0x06,0x76,0x10,0x06,0x23,0x80,0x05\n\t") /* DW_CFA_expression(%xmm14) */
++                   __ASM_CFI(".cfi_escape 0x10,0x20,0x06,0x76,0x10,0x06,0x23,0x90,0x05\n\t") /* DW_CFA_expression(%xmm15) */
++                   __ASM_CFI(".cfi_escape 0x10,0x21,0x06,0x76,0x10,0x06,0x23,0xa0,0x02\n\t") /* DW_CFA_expression(%st0)   */
++                   __ASM_CFI(".cfi_escape 0x10,0x22,0x06,0x76,0x10,0x06,0x23,0xb0,0x02\n\t") /* DW_CFA_expression(%st1)   */
++                   __ASM_CFI(".cfi_escape 0x10,0x23,0x06,0x76,0x10,0x06,0x23,0xc0,0x02\n\t") /* DW_CFA_expression(%st2)   */
++                   __ASM_CFI(".cfi_escape 0x10,0x24,0x06,0x76,0x10,0x06,0x23,0xd0,0x02\n\t") /* DW_CFA_expression(%st3)   */
++                   __ASM_CFI(".cfi_escape 0x10,0x25,0x06,0x76,0x10,0x06,0x23,0xe0,0x02\n\t") /* DW_CFA_expression(%st4)   */
++                   __ASM_CFI(".cfi_escape 0x10,0x26,0x06,0x76,0x10,0x06,0x23,0xf0,0x02\n\t") /* DW_CFA_expression(%st5)   */
++                   __ASM_CFI(".cfi_escape 0x10,0x27,0x06,0x76,0x10,0x06,0x23,0x80,0x03\n\t") /* DW_CFA_expression(%st6)   */
++                   __ASM_CFI(".cfi_escape 0x10,0x28,0x06,0x76,0x10,0x06,0x23,0x90,0x03\n\t") /* DW_CFA_expression(%st7)   */
++                   "callq *%rax\n\t"
++                   __ASM_CFI(".cfi_escape 0x0b\n\t") /* DW_CFA_restore_state */
++
++                   "movq %rbp,%rsp\n\t"
++                   __ASM_CFI(".cfi_def_cfa_register %rsp\n\t")
++                   "popq %rbp\n\t"
++                   __ASM_CFI(".cfi_adjust_cfa_offset -8\n\t")
++                   __ASM_CFI(".cfi_same_value %rbp\n\t")
++                   "ret")
++
+ 
+ /*******************************************************************
+  *		RtlUnwindEx (NTDLL.@)
+@@ -3474,8 +3550,9 @@ void WINAPI RtlUnwindEx( PVOID end_frame, PVOID target_ip, EXCEPTION_RECORD *rec
+     else if (rec->ExceptionCode == STATUS_UNWIND_CONSOLIDATE && rec->NumberParameters >= 1)
+     {
+         PVOID (CALLBACK *consolidate)(EXCEPTION_RECORD *) = (void *)rec->ExceptionInformation[0];
+-        TRACE( "calling consolidate callback %p\n", consolidate );
+-        target_ip = consolidate( rec );
++        TRACE( "calling consolidate callback %p( %p )\n", consolidate, rec );
++        target_ip = call_consolidate_callback( context, consolidate, rec );
++        TRACE( "-> target=%p\n", target_ip );
+     }
+     context->Rax = (ULONG64)retval;
+     context->Rip = (ULONG64)target_ip;
+-- 
+2.6.1
+

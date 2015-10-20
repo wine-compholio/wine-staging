@@ -181,6 +181,7 @@ patch_enable_all ()
 	enable_ntdll_APC_Start_Process="$1"
 	enable_ntdll_Activation_Context="$1"
 	enable_ntdll_CLI_Images="$1"
+	enable_ntdll_Consolidation_Callback="$1"
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_Dealloc_Thread_Stack="$1"
 	enable_ntdll_DeviceType_Systemroot="$1"
@@ -638,6 +639,9 @@ patch_enable ()
 			;;
 		ntdll-CLI_Images)
 			enable_ntdll_CLI_Images="$2"
+			;;
+		ntdll-Consolidation_Callback)
+			enable_ntdll_Consolidation_Callback="$2"
 			;;
 		ntdll-DOS_Attributes)
 			enable_ntdll_DOS_Attributes="$2"
@@ -3914,6 +3918,21 @@ if test "$enable_ntdll_CLI_Images" -eq 1; then
 	patch_apply ntdll-CLI_Images/0001-ntdll-Load-CLI-.NET-images-in-the-same-way-as-Window.patch
 	(
 		echo '+    { "Michael Müller", "ntdll: Load CLI/.NET images in the same way as Windows XP and above.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Consolidation_Callback
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39449] Use wrapper function for consolidation callback during unwinding.
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_x86_64.c
+# |
+if test "$enable_ntdll_Consolidation_Callback" -eq 1; then
+	patch_apply ntdll-Consolidation_Callback/0001-ntdll-Use-wrapper-function-for-consolidation-callbac.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Use wrapper function for consolidation callback during unwinding.", 1 },';
 	) >> "$patchlist"
 fi
 

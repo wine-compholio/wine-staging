@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "59cca65ce0edd88b65a55a847468761e11dfab0b"
+	echo "8075101480df82c5f4280d534f2d76f035653667"
 }
 
 # Show version information
@@ -137,7 +137,6 @@ patch_enable_all ()
 	enable_dxgi_MakeWindowAssociation="$1"
 	enable_dxva2_Video_Decoder="$1"
 	enable_fonts_Missing_Fonts="$1"
-	enable_gdi32_Default_Palette="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_MaxPixelFormats="$1"
 	enable_gdi32_MultiMonitor="$1"
@@ -180,7 +179,6 @@ patch_enable_all ()
 	enable_ntdll_APC_Start_Process="$1"
 	enable_ntdll_Activation_Context="$1"
 	enable_ntdll_CLI_Images="$1"
-	enable_ntdll_Consolidation_Callback="$1"
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_Dealloc_Thread_Stack="$1"
 	enable_ntdll_DeviceType_Systemroot="$1"
@@ -278,7 +276,6 @@ patch_enable_all ()
 	enable_user32_Mouse_Message_Hwnd="$1"
 	enable_user32_Painting="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
-	enable_user32_ReleaseCapture="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_WndProc="$1"
 	enable_uxtheme_GTK_Theming="$1"
@@ -509,9 +506,6 @@ patch_enable ()
 		fonts-Missing_Fonts)
 			enable_fonts_Missing_Fonts="$2"
 			;;
-		gdi32-Default_Palette)
-			enable_gdi32_Default_Palette="$2"
-			;;
 		gdi32-Lazy_Font_Initialization)
 			enable_gdi32_Lazy_Font_Initialization="$2"
 			;;
@@ -637,9 +631,6 @@ patch_enable ()
 			;;
 		ntdll-CLI_Images)
 			enable_ntdll_CLI_Images="$2"
-			;;
-		ntdll-Consolidation_Callback)
-			enable_ntdll_Consolidation_Callback="$2"
 			;;
 		ntdll-DOS_Attributes)
 			enable_ntdll_DOS_Attributes="$2"
@@ -931,9 +922,6 @@ patch_enable ()
 			;;
 		user32-Refresh_MDI_Menus)
 			enable_user32_Refresh_MDI_Menus="$2"
-			;;
-		user32-ReleaseCapture)
-			enable_user32_ReleaseCapture="$2"
 			;;
 		user32-ScrollWindowEx)
 			enable_user32_ScrollWindowEx="$2"
@@ -3142,21 +3130,6 @@ if test "$enable_fonts_Missing_Fonts" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset gdi32-Default_Palette
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36895] Return default palette entries from GetSystemPaletteEntries for non-palette-based devices
-# |
-# | Modified files:
-# |   *	dlls/gdi32/palette.c, dlls/gdi32/tests/palette.c
-# |
-if test "$enable_gdi32_Default_Palette" -eq 1; then
-	patch_apply gdi32-Default_Palette/0001-gdi32-Return-default-palette-entries-from-GetSystemP.patch
-	(
-		echo '+    { "Anton Baskanov", "gdi32: Return default palette entries from GetSystemPaletteEntries for non-palette-based devices.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset gdi32-Lazy_Font_Initialization
 # |
 # | Modified files:
@@ -3907,21 +3880,6 @@ if test "$enable_ntdll_CLI_Images" -eq 1; then
 	patch_apply ntdll-CLI_Images/0001-ntdll-Load-CLI-.NET-images-in-the-same-way-as-Window.patch
 	(
 		echo '+    { "Michael Müller", "ntdll: Load CLI/.NET images in the same way as Windows XP and above.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Consolidation_Callback
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39449] Use wrapper function for consolidation callback during unwinding.
-# |
-# | Modified files:
-# |   *	dlls/ntdll/signal_x86_64.c
-# |
-if test "$enable_ntdll_Consolidation_Callback" -eq 1; then
-	patch_apply ntdll-Consolidation_Callback/0001-ntdll-Use-wrapper-function-for-consolidation-callbac.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Use wrapper function for consolidate callback on x86_64.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5453,21 +5411,6 @@ if test "$enable_user32_Refresh_MDI_Menus" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset user32-ReleaseCapture
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39296] Release capture before sending WM_COMMAND
-# |
-# | Modified files:
-# |   *	dlls/user32/button.c
-# |
-if test "$enable_user32_ReleaseCapture" -eq 1; then
-	patch_apply user32-ReleaseCapture/0001-user32-Release-capture-before-sending-WM_COMMAND.patch
-	(
-		echo '+    { "Alex Henrie", "user32: Release capture before sending WM_COMMAND.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset user32-ScrollWindowEx
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6546,11 +6489,9 @@ fi
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c
 # |
 if test "$enable_ws2_32_TransmitFile" -eq 1; then
-	patch_apply ws2_32-TransmitFile/0001-ws2_32-Add-asynchronous-support-for-TransmitFile.-re.patch
-	patch_apply ws2_32-TransmitFile/0002-ws2_32-Add-support-for-TF_DISCONNECT-to-TransmitFile.patch
-	patch_apply ws2_32-TransmitFile/0003-ws2_32-Add-support-for-TF_REUSE_SOCKET-to-TransmitFi.patch
+	patch_apply ws2_32-TransmitFile/0001-ws2_32-Add-support-for-TF_DISCONNECT-to-TransmitFile.patch
+	patch_apply ws2_32-TransmitFile/0002-ws2_32-Add-support-for-TF_REUSE_SOCKET-to-TransmitFi.patch
 	(
-		echo '+    { "Erich E. Hoover", "ws2_32: Add asynchronous support for TransmitFile.", 1 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_DISCONNECT to TransmitFile.", 1 },';
 		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_REUSE_SOCKET to TransmitFile.", 1 },';
 	) >> "$patchlist"

@@ -34,12 +34,10 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [4]:**
+**Bug fixes and features included in the next upcoming release [2]:**
 
 * Do not allow interruption of system APC in server_select ([Wine Bug #14697](https://bugs.winehq.org/show_bug.cgi?id=14697))
 * Implement stub for ProcessQuotaLimits info class
-* Release capture before sending WM_COMMAND ([Wine Bug #39296](https://bugs.winehq.org/show_bug.cgi?id=39296))
-* Use wrapper function for consolidation callback during unwinding. ([Wine Bug #39449](https://bugs.winehq.org/show_bug.cgi?id=39449))
 
 
 **Bug fixes and features in Wine Staging 1.7.53 [262]:**
@@ -248,7 +246,7 @@ for more details.*
 * Return an error when trying to open a terminated process ([Wine Bug #37087](https://bugs.winehq.org/show_bug.cgi?id=37087))
 * Return correct IMediaSeeking stream positions in quartz
 * Return correct values for GetThreadTimes function ([Wine Bug #20230](https://bugs.winehq.org/show_bug.cgi?id=20230))
-* Return default palette entries from GetSystemPaletteEntries for non-palette-based devices ([Wine Bug #36895](https://bugs.winehq.org/show_bug.cgi?id=36895))
+* ~~Return default palette entries from GetSystemPaletteEntries for non-palette-based devices~~ ([Wine Bug #36895](https://bugs.winehq.org/show_bug.cgi?id=36895))
 * Return dummy ID3DXSkinInfo interface when skinning info not present ([Wine Bug #33904](https://bugs.winehq.org/show_bug.cgi?id=33904))
 * Return fake device type when systemroot is located on virtual disk ([Wine Bug #36546](https://bugs.winehq.org/show_bug.cgi?id=36546))
 * Return proper status codes when NtReadFile/NtWriteFile is called on closed (but not disconnected) pipe

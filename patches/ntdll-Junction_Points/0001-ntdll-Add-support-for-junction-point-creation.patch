@@ -1,21 +1,21 @@
-From eac9db85f7a5703a41bb956a9cabc2277872881d Mon Sep 17 00:00:00 2001
+From 0a7a9cfce718a28567b87a5bf6776632af629d41 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 20:56:49 -0700
 Subject: ntdll: Add support for junction point creation.
 
 ---
- dlls/ntdll/file.c       | 89 ++++++++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/file.c       | 91 +++++++++++++++++++++++++++++++++++++++++++++++
  dlls/ntdll/tests/file.c | 94 +++++++++++++++++++++++++++++++++++++++++++++++++
  include/Makefile.in     |  1 +
  include/ntifs.h         | 52 +++++++++++++++++++++++++++
- 4 files changed, 236 insertions(+)
+ 4 files changed, 238 insertions(+)
  create mode 100644 include/ntifs.h
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 8503dd8..fb171f2 100644
+index fecec13..d8bb01b 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -88,12 +88,14 @@
+@@ -103,12 +103,14 @@
  #include "winioctl.h"
  #include "ddk/ntddk.h"
  #include "ddk/ntddser.h"
@@ -30,7 +30,7 @@ index 8503dd8..fb171f2 100644
  #define SECSPERDAY         86400
  #define SECS_1601_TO_1970  ((369 * 365 + 89) * (ULONGLONG)SECSPERDAY)
  
-@@ -1633,6 +1635,76 @@ NTSTATUS WINAPI NtDeviceIoControlFile(HANDLE handle, HANDLE event,
+@@ -1655,6 +1657,76 @@ NTSTATUS WINAPI SYSCALL(NtDeviceIoControlFile)(HANDLE handle, HANDLE event,
  }
  
  
@@ -107,10 +107,16 @@ index 8503dd8..fb171f2 100644
  /**************************************************************************
   *              NtFsControlFile                 [NTDLL.@]
   *              ZwFsControlFile                 [NTDLL.@]
-@@ -1780,6 +1852,23 @@ NTSTATUS WINAPI NtFsControlFile(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc
+@@ -1803,11 +1875,30 @@ NTSTATUS WINAPI SYSCALL(NtFsControlFile)(HANDLE handle, HANDLE event, PIO_APC_RO
          }
          break;
      }
++
+     case FSCTL_SET_SPARSE:
+         TRACE("FSCTL_SET_SPARSE: Ignoring request\n");
+         io->Information = 0;
+         status = STATUS_SUCCESS;
+         break;
 +
 +    case FSCTL_SET_REPARSE_POINT:
 +    {
@@ -128,11 +134,12 @@ index 8503dd8..fb171f2 100644
 +        }
 +        break;
 +    }
++
      case FSCTL_PIPE_LISTEN:
      case FSCTL_PIPE_WAIT:
      default:
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 3696124..b7b9e00 100644
+index 55e34ad..71e10c2 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
 @@ -37,6 +37,7 @@
@@ -143,7 +150,7 @@ index 3696124..b7b9e00 100644
  
  #ifndef IO_COMPLETION_ALL_ACCESS
  #define IO_COMPLETION_ALL_ACCESS 0x001F0003
-@@ -2866,6 +2867,98 @@ static void test_query_ea(void)
+@@ -4273,6 +4274,98 @@ static void test_query_ea(void)
      #undef EA_BUFFER_SIZE
  }
  
@@ -242,17 +249,17 @@ index 3696124..b7b9e00 100644
  START_TEST(file)
  {
      HMODULE hkernel32 = GetModuleHandleA("kernel32.dll");
-@@ -2922,4 +3015,5 @@ START_TEST(file)
+@@ -4332,4 +4425,5 @@ START_TEST(file)
      test_query_volume_information_file();
      test_query_attribute_information_file();
      test_query_ea();
 +    test_junction_points();
  }
 diff --git a/include/Makefile.in b/include/Makefile.in
-index 499c5d4..e410e14 100644
+index c5563a2..1e60e08 100644
 --- a/include/Makefile.in
 +++ b/include/Makefile.in
-@@ -479,6 +479,7 @@ SRCDIR_INCLUDES = \
+@@ -493,6 +493,7 @@ SRCDIR_INCLUDES = \
  	ntddstor.h \
  	ntdef.h \
  	ntdsapi.h \
@@ -319,5 +326,5 @@ index 0000000..db07c28
 +
 +#endif /* __WINE_NTIFS_H */
 -- 
-2.4.2
+2.6.1
 

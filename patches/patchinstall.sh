@@ -201,6 +201,7 @@ patch_enable_all ()
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
+	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_RtlIpStringToAddress="$1"
 	enable_ntdll_Stack_Fault="$1"
 	enable_ntdll_Status_Mapping="$1"
@@ -698,6 +699,9 @@ patch_enable ()
 			;;
 		ntdll-Pipe_SpecialCharacters)
 			enable_ntdll_Pipe_SpecialCharacters="$2"
+			;;
+		ntdll-ProcessQuotaLimits)
+			enable_ntdll_ProcessQuotaLimits="$2"
 			;;
 		ntdll-RtlIpStringToAddress)
 			enable_ntdll_RtlIpStringToAddress="$2"
@@ -4261,6 +4265,18 @@ if test "$enable_ntdll_Pipe_SpecialCharacters" -eq 1; then
 	patch_apply ntdll-Pipe_SpecialCharacters/0001-ntdll-Allow-special-characters-in-pipe-names.patch
 	(
 		echo '+    { "Michael Müller", "ntdll: Allow special characters in pipe names.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-ProcessQuotaLimits
+# |
+# | Modified files:
+# |   *	dlls/ntdll/process.c
+# |
+if test "$enable_ntdll_ProcessQuotaLimits" -eq 1; then
+	patch_apply ntdll-ProcessQuotaLimits/0001-ntdll-Add-fake-data-implementation-for-ProcessQuotaL.patch
+	(
+		echo '+    { "Qian Hong", "ntdll: Add fake data implementation for ProcessQuotaLimits class.", 1 },';
 	) >> "$patchlist"
 fi
 

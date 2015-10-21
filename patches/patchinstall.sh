@@ -4384,15 +4384,20 @@ fi
 
 # Patchset ntdll-Wait_User_APC
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#14697] Do not allow interruption of system APC in server_select
+# |
 # | Modified files:
 # |   *	dlls/kernel32/tests/sync.c, dlls/ntdll/server.c
 # |
 if test "$enable_ntdll_Wait_User_APC" -eq 1; then
 	patch_apply ntdll-Wait_User_APC/0001-kernel32-tests-Add-test-to-show-that-multiple-user-A.patch
 	patch_apply ntdll-Wait_User_APC/0002-ntdll-Do-not-check-if-object-was-signaled-after-user.patch
+	patch_apply ntdll-Wait_User_APC/0003-ntdll-Block-signals-while-executing-system-APCs.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add test to show that multiple user APCs are processed at once.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Do not check if object was signaled after user APC in server_select.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Block signals while executing system APCs.", 1 },';
 	) >> "$patchlist"
 fi
 

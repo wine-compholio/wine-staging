@@ -278,6 +278,7 @@ patch_enable_all ()
 	enable_user32_Mouse_Message_Hwnd="$1"
 	enable_user32_Painting="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
+	enable_user32_ReleaseCapture="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_WndProc="$1"
 	enable_uxtheme_GTK_Theming="$1"
@@ -930,6 +931,9 @@ patch_enable ()
 			;;
 		user32-Refresh_MDI_Menus)
 			enable_user32_Refresh_MDI_Menus="$2"
+			;;
+		user32-ReleaseCapture)
+			enable_user32_ReleaseCapture="$2"
 			;;
 		user32-ScrollWindowEx)
 			enable_user32_ScrollWindowEx="$2"
@@ -5441,6 +5445,21 @@ if test "$enable_user32_Refresh_MDI_Menus" -eq 1; then
 	patch_apply user32-Refresh_MDI_Menus/0001-user32-Refresh-MDI-menus-when-DefMDIChildProcW-WM_SE.patch
 	(
 		echo '+    { "Sebastian Lackner", "user32: Refresh MDI menus when DefMDIChildProc(WM_SETTEXT) is called.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-ReleaseCapture
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39296] Release capture before sending WM_COMMAND
+# |
+# | Modified files:
+# |   *	dlls/user32/button.c
+# |
+if test "$enable_user32_ReleaseCapture" -eq 1; then
+	patch_apply user32-ReleaseCapture/0001-user32-Release-capture-before-sending-WM_COMMAND.patch
+	(
+		echo '+    { "Alex Henrie", "user32: Release capture before sending WM_COMMAND.", 1 },';
 	) >> "$patchlist"
 fi
 

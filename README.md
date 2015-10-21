@@ -34,9 +34,10 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [2]:**
+**Bug fixes and features included in the next upcoming release [3]:**
 
 * Implement stub for ProcessQuotaLimits info class
+* Release capture before sending WM_COMMAND ([Wine Bug #39296](https://bugs.winehq.org/show_bug.cgi?id=39296))
 * Use wrapper function for consolidation callback during unwinding. ([Wine Bug #39449](https://bugs.winehq.org/show_bug.cgi?id=39449))
 
 

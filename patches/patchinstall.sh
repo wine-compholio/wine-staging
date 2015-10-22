@@ -188,6 +188,7 @@ patch_enable_all ()
 	enable_ntdll_FileDispositionInformation="$1"
 	enable_ntdll_FileFsFullSizeInformation="$1"
 	enable_ntdll_FileFsVolumeInformation="$1"
+	enable_ntdll_FileNamesInformation="$1"
 	enable_ntdll_Fix_Alignment="$1"
 	enable_ntdll_Fix_Free="$1"
 	enable_ntdll_FreeBSD_Directory="$1"
@@ -658,6 +659,9 @@ patch_enable ()
 			;;
 		ntdll-FileFsVolumeInformation)
 			enable_ntdll_FileFsVolumeInformation="$2"
+			;;
+		ntdll-FileNamesInformation)
+			enable_ntdll_FileNamesInformation="$2"
 			;;
 		ntdll-Fix_Alignment)
 			enable_ntdll_Fix_Alignment="$2"
@@ -4058,6 +4062,18 @@ if test "$enable_ntdll_FileFsVolumeInformation" -eq 1; then
 	patch_apply ntdll-FileFsVolumeInformation/0001-ntdll-Add-semi-stub-for-FileFsVolumeInformation-info.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Add semi-stub for FileFsVolumeInformation information class.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-FileNamesInformation
+# |
+# | Modified files:
+# |   *	dlls/ntdll/directory.c
+# |
+if test "$enable_ntdll_FileNamesInformation" -eq 1; then
+	patch_apply ntdll-FileNamesInformation/0001-ntdll-Implement-FileNamesInformation-class-support.patch
+	(
+		echo '+    { "Qian Hong", "ntdll: Implement FileNamesInformation class support.", 1 },';
 	) >> "$patchlist"
 fi
 

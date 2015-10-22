@@ -1,9 +1,11 @@
-From f791fc56711cd4860b405604af4b30b0efc22f52 Mon Sep 17 00:00:00 2001
+From 93378d11e8fc9c56251847f7eebf55454fe1d585 Mon Sep 17 00:00:00 2001
 From: Christian Costa <titan.costa@gmail.com>
 Date: Sat, 5 Apr 2014 14:02:07 +0200
 Subject: d3dx9_36: Implement D3DXGetShaderInputSemantics + tests. (rev 3)
 
 Fixes bug 22682.
+
+Signed-off-by: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
 ---
  dlls/d3dx9_36/d3dx9_36.spec  |  2 +-
  dlls/d3dx9_36/shader.c       | 92 ++++++++++++++++++++++++++++++++++++++++++++
@@ -12,7 +14,7 @@ Fixes bug 22682.
  4 files changed, 180 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/d3dx9_36/d3dx9_36.spec b/dlls/d3dx9_36/d3dx9_36.spec
-index 15d693c..9b55d21 100644
+index f79b6fa..cba33b4 100644
 --- a/dlls/d3dx9_36/d3dx9_36.spec
 +++ b/dlls/d3dx9_36/d3dx9_36.spec
 @@ -159,7 +159,7 @@
@@ -25,7 +27,7 @@ index 15d693c..9b55d21 100644
  @ stdcall D3DXGetShaderSamplers(ptr ptr ptr)
  @ stdcall D3DXGetShaderSize(ptr)
 diff --git a/dlls/d3dx9_36/shader.c b/dlls/d3dx9_36/shader.c
-index cdc470b..fecc3ee 100644
+index e9d893b..39f1f31 100644
 --- a/dlls/d3dx9_36/shader.c
 +++ b/dlls/d3dx9_36/shader.c
 @@ -1,6 +1,7 @@
@@ -36,7 +38,7 @@ index cdc470b..fecc3ee 100644
   * Copyright 2011 Travis Athougies
   *
   * This library is free software; you can redistribute it and/or
-@@ -2130,3 +2131,94 @@ HRESULT WINAPI D3DXDisassembleShader(const DWORD *shader, BOOL colorcode, const
+@@ -2151,3 +2152,94 @@ HRESULT WINAPI D3DXDisassembleShader(const DWORD *shader, BOOL colorcode, const
     FIXME("%p %d %s %p: stub\n", shader, colorcode, debugstr_a(comments), disassembly);
     return E_OUTOFMEMORY;
  }
@@ -61,7 +63,7 @@ index cdc470b..fecc3ee 100644
 +    else
 +    {
 +        /* Handle remaining safe instructions */
-+        while (*++byte_code & (1 << 31));
++        while (*++byte_code & (1u << 31));
 +    }
 +
 +    return byte_code;
@@ -78,7 +80,7 @@ index cdc470b..fecc3ee 100644
 +
 +    while (*ptr != D3DSIO_END)
 +    {
-+        if (*ptr & (1 << 31))
++        if (*ptr & (1u << 31))
 +        {
 +            FIXME("Opcode expected\n");
 +            return 0;
@@ -88,8 +90,8 @@ index cdc470b..fecc3ee 100644
 +            DWORD param1 = *++ptr;
 +            DWORD param2 = *++ptr;
 +            DWORD usage = param1 & 0x1f;
-+            DWORD usage_index = (param1 >> 16) & 0xf;
-+            DWORD reg_type = (((param2 >> 11) & 0x3) << 3) | ((param2 >> 28) & 0x7);
++            DWORD usage_index = (param1 >> D3DSP_DCL_USAGEINDEX_SHIFT) & D3DSP_DCL_USAGE_MASK;
++            DWORD reg_type = (((param2 >> 11) & 0x3) << 3) | ((param2 >> D3DSP_REGTYPE_SHIFT) & 0x7);
 +
 +            TRACE("D3DSIO_DCL param1: %#x, param2: %#x, usage: %u, usage_index: %u, reg_type: %u\n",
 +                   param1, param2, usage, usage_index, reg_type);
@@ -247,10 +249,10 @@ index 694540c..728cd86 100644
 +    test_get_shader_semantics();
  }
 diff --git a/include/d3dx9shader.h b/include/d3dx9shader.h
-index d665f72..f565432 100644
+index a3f68f2..5714ddb 100644
 --- a/include/d3dx9shader.h
 +++ b/include/d3dx9shader.h
-@@ -315,6 +315,7 @@ DWORD WINAPI D3DXGetShaderVersion(const DWORD *byte_code);
+@@ -352,6 +352,7 @@ DWORD WINAPI D3DXGetShaderVersion(const DWORD *byte_code);
  const char * WINAPI D3DXGetVertexShaderProfile(struct IDirect3DDevice9 *device);
  HRESULT WINAPI D3DXFindShaderComment(const DWORD *byte_code, DWORD fourcc, const void **data, UINT *size);
  HRESULT WINAPI D3DXGetShaderSamplers(const DWORD *byte_code, const char **samplers, UINT *count);
@@ -259,5 +261,5 @@ index d665f72..f565432 100644
  HRESULT WINAPI D3DXAssembleShaderFromFileA(const char *filename, const D3DXMACRO *defines,
          ID3DXInclude *include, DWORD flags, ID3DXBuffer **shader, ID3DXBuffer **error_messages);
 -- 
-2.4.5
+2.6.1
 

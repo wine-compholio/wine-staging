@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "4fb840b614691a787c76659f02c163d922f88fba"
+	echo "f8d78b0d927c1cae4c5075c64d980c306fb3ed87"
 }
 
 # Show version information
@@ -92,7 +92,6 @@ patch_enable_all ()
 	enable_api_ms_win_crt_Stub_DLLs="$1"
 	enable_authz_Stub_Functions="$1"
 	enable_browseui_Progress_Dialog="$1"
-	enable_combase_String="$1"
 	enable_comctl32_Button_Theming="$1"
 	enable_comctl32_PROPSHEET_InsertPage="$1"
 	enable_comctl32_TVM_GETITEM="$1"
@@ -371,9 +370,6 @@ patch_enable ()
 			;;
 		category-stable)
 			enable_category_stable="$2"
-			;;
-		combase-String)
-			enable_combase_String="$2"
 			;;
 		comctl32-Button_Theming)
 			enable_comctl32_Button_Theming="$2"
@@ -1439,9 +1435,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_Staging" -gt 1; then
 		abort "Patchset Staging disabled, but category-stable depends on that."
 	fi
-	if test "$enable_combase_String" -gt 1; then
-		abort "Patchset combase-String disabled, but category-stable depends on that."
-	fi
 	if test "$enable_configure_Absolute_RPATH" -gt 1; then
 		abort "Patchset configure-Absolute_RPATH disabled, but category-stable depends on that."
 	fi
@@ -1651,7 +1644,6 @@ if test "$enable_category_stable" -eq 1; then
 	fi
 	enable_Compiler_Warnings=1
 	enable_Staging=1
-	enable_combase_String=1
 	enable_configure_Absolute_RPATH=1
 	enable_d3d9_Skip_Tests=1
 	enable_d3d9_Surface_Refcount=1
@@ -2327,19 +2319,6 @@ if test "$enable_browseui_Progress_Dialog" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "browseui: Implement IProgressDialog::SetAnimation.", 1 },';
 		echo '+    { "Michael Müller", "browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset combase-String
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-winrt-string-l1-1-0/api-ms-win-core-winrt-string-l1-1-0.spec, dlls/combase/combase.spec,
-# | 	dlls/combase/string.c, dlls/combase/tests/string.c, include/winerror.h
-# |
-if test "$enable_combase_String" -eq 1; then
-	patch_apply combase-String/0001-combase-implement-WindowsSubstring-try-2.patch
-	(
-		echo '+    { "Thomas Pointhuber", "combase: implement WindowsSubstring.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -4362,15 +4341,11 @@ fi
 # |   *	[#14697] Do not allow interruption of system APC in server_select
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/sync.c, dlls/ntdll/server.c
+# |   *	dlls/ntdll/server.c
 # |
 if test "$enable_ntdll_Wait_User_APC" -eq 1; then
-	patch_apply ntdll-Wait_User_APC/0001-kernel32-tests-Add-test-to-show-that-multiple-user-A.patch
-	patch_apply ntdll-Wait_User_APC/0002-ntdll-Do-not-check-if-object-was-signaled-after-user.patch
-	patch_apply ntdll-Wait_User_APC/0003-ntdll-Block-signals-while-executing-system-APCs.patch
+	patch_apply ntdll-Wait_User_APC/0001-ntdll-Block-signals-while-executing-system-APCs.patch
 	(
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Add test to show that multiple user APCs are processed at once.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Do not check if object was signaled after user APC in server_select.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Block signals while executing system APCs.", 1 },';
 	) >> "$patchlist"
 fi

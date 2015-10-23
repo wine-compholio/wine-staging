@@ -118,7 +118,7 @@ for more details.*
 * CreateProcess does not prioritize the working directory over the system search path ([Wine Bug #23934](https://bugs.winehq.org/show_bug.cgi?id=23934))
 * D3DCompileShader should filter specific warning messages ([Wine Bug #33770](https://bugs.winehq.org/show_bug.cgi?id=33770))
 * Do not allow to deallocate thread stack for current thread
-* Do not check if object was signaled after user APC in server_select
+* ~~Do not check if object was signaled after user APC in server_select~~
 * Do not fail when a used context is passed to wglShareLists ([Wine Bug #11436](https://bugs.winehq.org/show_bug.cgi?id=11436))
 * Do not signal threads until they are really gone
 * Do not use unixfs for devices without mountpoint
@@ -190,7 +190,7 @@ for more details.*
 * Implement a Times New Roman replacement font ([Wine Bug #32342](https://bugs.winehq.org/show_bug.cgi?id=32342))
 * Implement additional stub functions in authz.dll
 * Implement an Arial replacement font ([Wine Bug #32323](https://bugs.winehq.org/show_bug.cgi?id=32323))
-* Implement combase.WindowsSubstring function
+* ~~Implement combase.WindowsSubstring function~~
 * Implement default homepage button in inetcpl.cpl
 * Implement enumeration of sound devices and basic properties to dxdiagn ([Wine Bug #32613](https://bugs.winehq.org/show_bug.cgi?id=32613))
 * Implement exclusive mode in PulseAudio backend ([Wine Bug #37042](https://bugs.winehq.org/show_bug.cgi?id=37042))

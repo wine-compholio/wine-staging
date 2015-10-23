@@ -1,11 +1,11 @@
-From 6564e70be47d7eede39141f62290577272588655 Mon Sep 17 00:00:00 2001
+From aff30eb5ce44d1f62c9c0a1419a89ba076dd93b8 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 22 Feb 2015 01:25:20 +0100
 Subject: dxva2: Initial implementation of MPEG2 decoder using vaapi backend.
 
 ---
  configure.ac                |  16 +
- dlls/dxva2/Makefile.in      |  12 +-
+ dlls/dxva2/Makefile.in      |  14 +-
  dlls/dxva2/backend.idl      |  94 ++++++
  dlls/dxva2/dxva2_private.h  | 115 ++++++-
  dlls/dxva2/genericdecoder.c | 432 +++++++++++++++++++++++++
@@ -14,14 +14,14 @@ Subject: dxva2: Initial implementation of MPEG2 decoder using vaapi backend.
  dlls/dxva2/vaapi-mpeg2.c    | 753 +++++++++++++++++++++++++++++++++++++++++++
  dlls/dxva2/vaapi.c          | 767 ++++++++++++++++++++++++++++++++++++++++++++
  dlls/dxva2/videoservices.c  |  74 ++---
- 10 files changed, 2290 insertions(+), 66 deletions(-)
+ 10 files changed, 2291 insertions(+), 67 deletions(-)
  create mode 100644 dlls/dxva2/backend.idl
  create mode 100644 dlls/dxva2/genericdecoder.c
  create mode 100644 dlls/dxva2/vaapi-mpeg2.c
  create mode 100644 dlls/dxva2/vaapi.c
 
 diff --git a/configure.ac b/configure.ac
-index 22b46ae..db872d8 100644
+index fbcd3fb..324deba 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -99,6 +99,8 @@ AC_ARG_WITH(xxf86vm,   AS_HELP_STRING([--without-xxf86vm],[do not use XFree vide
@@ -33,7 +33,7 @@ index 22b46ae..db872d8 100644
  
  AC_ARG_WITH(wine-tools,AS_HELP_STRING([--with-wine-tools=DIR],[use Wine tools from directory DIR]))
  AC_ARG_WITH(wine64,    AS_HELP_STRING([--with-wine64=DIR],[use the 64-bit Wine in DIR for a Wow64 build]))
-@@ -1261,6 +1263,20 @@ This probably prevents linking to OpenGL. Try deleting the file and restarting c
+@@ -1265,6 +1267,20 @@ This probably prevents linking to OpenGL. Try deleting the file and restarting c
      WINE_WARNING_WITH(opengl,[test -n "$opengl_msg"],[$opengl_msg
  OpenGL and Direct3D won't be supported.])
  
@@ -55,7 +55,7 @@ index 22b46ae..db872d8 100644
  else
      X_CFLAGS=""
 diff --git a/dlls/dxva2/Makefile.in b/dlls/dxva2/Makefile.in
-index 4af9dc0..808173c 100644
+index 4af9dc0..afdefc3 100644
 --- a/dlls/dxva2/Makefile.in
 +++ b/dlls/dxva2/Makefile.in
 @@ -1,8 +1,14 @@
@@ -67,15 +67,16 @@ index 4af9dc0..808173c 100644
 +	backend.idl
  
  C_SRCS = \
-+	devicemanager.c \
+-	main.c \
+-	videoservices.c \
+ 	devicemanager.c \
+-	softwareprocessor.c
 +	genericdecoder.c \
- 	main.c \
++	main.c \
 +	softwareprocessor.c \
 +	vaapi.c \
 +	vaapi-mpeg2.c \
- 	videoservices.c \
--	devicemanager.c \
--	softwareprocessor.c
++	videoservices.c
 diff --git a/dlls/dxva2/backend.idl b/dlls/dxva2/backend.idl
 new file mode 100644
 index 0000000..dd37695
@@ -2632,5 +2633,5 @@ index 46e431a..84222dc 100644
          return E_NOINTERFACE;
      }
 -- 
-2.3.0
+2.6.1
 

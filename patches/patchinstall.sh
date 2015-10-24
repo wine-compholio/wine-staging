@@ -4480,7 +4480,7 @@ if test "$enable_nvcuda_CUDA_Support" -eq 1; then
 	patch_apply nvcuda-CUDA_Support/0009-nvcuda-Implement-cuModuleLoad-wrapper-function.patch
 	patch_apply nvcuda-CUDA_Support/0010-nvcuda-Search-for-dylib-library-on-Mac-OS-X.patch
 	(
-		echo '+    { "Sebastian Lackner", "include: Add cuda.h.h.", 1 },';
+		echo '+    { "Sebastian Lackner", "include: Add cuda.h.", 1 },';
 		echo '+    { "Sebastian Lackner", "nvcuda: Add stub dll.", 1 },';
 		echo '+    { "Michael Müller", "nvcuda: First implementation.", 2 },';
 		echo '+    { "Sebastian Lackner", "nvcuda: Implement new functions added in CUDA 6.5.", 1 },';

@@ -3731,7 +3731,7 @@ fi
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/msi/database.c, dlls/msi/msipriv.h, dlls/msi/streams.c, dlls/msi/suminfo.c,
-# | 	programs/msidb/Makefile.in, programs/msidb/main.c
+# | 	programs/msidb/Makefile.in, programs/msidb/main.c, tools/make_makefiles
 # |
 if test "$enable_msidb_Implementation" -eq 1; then
 	patch_apply msidb-Implementation/0001-msidb-Add-stub-tool-for-manipulating-MSI-databases.patch

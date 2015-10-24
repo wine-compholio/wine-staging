@@ -34,8 +34,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [3]:**
+**Bug fixes and features included in the next upcoming release [4]:**
 
+* Add implementation for additional HSTRING functions
 * Do not allow interruption of system APC in server_select ([Wine Bug #14697](https://bugs.winehq.org/show_bug.cgi?id=14697))
 * Implement FileNamesInformation class support for NtQueryDirectoryFile
 * Implement stub for ProcessQuotaLimits info class

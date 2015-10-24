@@ -92,6 +92,7 @@ patch_enable_all ()
 	enable_api_ms_win_crt_Stub_DLLs="$1"
 	enable_authz_Stub_Functions="$1"
 	enable_browseui_Progress_Dialog="$1"
+	enable_combase_Strings="$1"
 	enable_comctl32_Button_Theming="$1"
 	enable_comctl32_PROPSHEET_InsertPage="$1"
 	enable_comctl32_TVM_GETITEM="$1"
@@ -370,6 +371,9 @@ patch_enable ()
 			;;
 		category-stable)
 			enable_category_stable="$2"
+			;;
+		combase-Strings)
+			enable_combase_Strings="$2"
 			;;
 		comctl32-Button_Theming)
 			enable_comctl32_Button_Theming="$2"
@@ -2319,6 +2323,29 @@ if test "$enable_browseui_Progress_Dialog" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "browseui: Implement IProgressDialog::SetAnimation.", 1 },';
 		echo '+    { "Michael Müller", "browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset combase-Strings
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-winrt-string-l1-1-0/api-ms-win-core-winrt-string-l1-1-0.spec, dlls/combase/combase.spec,
+# | 	dlls/combase/string.c, dlls/combase/tests/string.c
+# |
+if test "$enable_combase_Strings" -eq 1; then
+	patch_apply combase-Strings/0001-combase-Add-TRACEs-to-string-functions.patch
+	patch_apply combase-Strings/0002-combase-Simplify-check-for-NULL-pointer-in-WindowsCr.patch
+	patch_apply combase-Strings/0003-combase-Implement-WindowsSubstringWithSpecifiedLengt.patch
+	patch_apply combase-Strings/0004-combase-tests-Add-tests-for-WindowsSubstringWithSpec.patch
+	patch_apply combase-Strings/0005-combase-Implement-WindowsConcatString.patch
+	patch_apply combase-Strings/0006-combase-tests-Add-tests-for-WindowsConcatString.patch
+	(
+		echo '+    { "Sebastian Lackner", "combase: Add TRACEs to string functions.", 1 },';
+		echo '+    { "Sebastian Lackner", "combase: Simplify check for NULL pointer in WindowsCreateString[Reference].", 1 },';
+		echo '+    { "Sebastian Lackner", "combase: Implement WindowsSubstringWithSpecifiedLength.", 1 },';
+		echo '+    { "Sebastian Lackner", "combase/tests: Add tests for WindowsSubstringWithSpecifiedLength.", 1 },';
+		echo '+    { "Sebastian Lackner", "combase: Implement WindowsConcatString.", 1 },';
+		echo '+    { "Sebastian Lackner", "combase/tests: Add tests for WindowsConcatString.", 1 },';
 	) >> "$patchlist"
 fi
 

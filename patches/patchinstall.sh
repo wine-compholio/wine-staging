@@ -140,6 +140,7 @@ patch_enable_all ()
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_MaxPixelFormats="$1"
 	enable_gdi32_MultiMonitor="$1"
+	enable_gdiplus_Memory_Allocation="$1"
 	enable_ieframe_IViewObject_Draw="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imagehlp_Cleanup="$1"
@@ -515,6 +516,9 @@ patch_enable ()
 			;;
 		gdi32-MultiMonitor)
 			enable_gdi32_MultiMonitor="$2"
+			;;
+		gdiplus-Memory_Allocation)
+			enable_gdiplus_Memory_Allocation="$2"
 			;;
 		ieframe-IViewObject-Draw)
 			enable_ieframe_IViewObject_Draw="$2"
@@ -3178,6 +3182,25 @@ if test "$enable_gdi32_MultiMonitor" -eq 1; then
 		echo '+    { "Ken Thomases", "winex11: Make GetMonitorInfo() give a different device name (\\\\.\\\\DISPLAY<n>) to each monitor.", 1 },';
 		echo '+    { "Ken Thomases", "user32: Implement EnumDisplayDevicesW() based on EnumDisplayMonitors() and GetMonitorInfoW().", 1 },';
 		echo '+    { "Ken Thomases", "winemac: Make GetMonitorInfo() give a different device name (\\\\\\\\.\\\\DISPLAY<n>) to each monitor.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset gdiplus-Memory_Allocation
+# |
+# | Modified files:
+# |   *	dlls/gdiplus/font.c, dlls/gdiplus/gdiplus.c, dlls/gdiplus/gdiplus_private.h, dlls/gdiplus/image.c,
+# | 	dlls/gdiplus/stringformat.c
+# |
+if test "$enable_gdiplus_Memory_Allocation" -eq 1; then
+	patch_apply gdiplus-Memory_Allocation/0001-gdiplus-Use-the-correct-memory-allocation-function-f.patch
+	patch_apply gdiplus-Memory_Allocation/0002-gdiplus-Use-helper-function-for-HeapAlloc-calls.patch
+	patch_apply gdiplus-Memory_Allocation/0003-gdiplus-Use-helper-function-for-HeapReAlloc-calls.patch
+	patch_apply gdiplus-Memory_Allocation/0004-gdiplus-Use-helper-function-for-remaining-HeapFree-c.patch
+	(
+		echo '+    { "Sebastian Lackner", "gdiplus: Use the correct memory allocation function for PropVariants.", 1 },';
+		echo '+    { "Sebastian Lackner", "gdiplus: Use helper function for HeapAlloc calls.", 1 },';
+		echo '+    { "Sebastian Lackner", "gdiplus: Use helper function for HeapReAlloc calls.", 1 },';
+		echo '+    { "Sebastian Lackner", "gdiplus: Use helper function for remaining HeapFree calls.", 1 },';
 	) >> "$patchlist"
 fi
 

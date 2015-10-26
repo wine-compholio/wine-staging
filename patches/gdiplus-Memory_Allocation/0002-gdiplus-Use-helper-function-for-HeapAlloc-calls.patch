@@ -1,0 +1,77 @@
+From a6febdb275f477877e886c8a99a0426061a22ff0 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 21 Oct 2015 00:53:12 +0200
+Subject: gdiplus: Use helper function for HeapAlloc calls.
+
+Signed-off-by: Sebastian Lackner <sebastian@fds-team.de>
+Signed-off-by: Dmitry Timoshkov <dmitry@baikal.ru>
+---
+ dlls/gdiplus/font.c            | 2 +-
+ dlls/gdiplus/gdiplus_private.h | 6 ++++++
+ dlls/gdiplus/image.c           | 6 +++---
+ 3 files changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/gdiplus/font.c b/dlls/gdiplus/font.c
+index cd9041e..dffba1e 100644
+--- a/dlls/gdiplus/font.c
++++ b/dlls/gdiplus/font.c
+@@ -1612,7 +1612,7 @@ static INT CALLBACK add_font_proc(const LOGFONTW *lfw, const TEXTMETRICW *ntm,
+     if (fonts->allocated == fonts->count)
+     {
+         INT new_alloc_count = fonts->allocated+50;
+-        GpFontFamily** new_family_list = HeapAlloc(GetProcessHeap(), 0, new_alloc_count*sizeof(void*));
++        GpFontFamily** new_family_list = heap_alloc(new_alloc_count*sizeof(void*));
+ 
+         if (!new_family_list)
+             return 0;
+diff --git a/dlls/gdiplus/gdiplus_private.h b/dlls/gdiplus/gdiplus_private.h
+index 4b7e4c8..d0faac2 100644
+--- a/dlls/gdiplus/gdiplus_private.h
++++ b/dlls/gdiplus/gdiplus_private.h
+@@ -48,6 +48,12 @@
+ #define GIF_DISPOSE_RESTORE_TO_BKGND 2
+ #define GIF_DISPOSE_RESTORE_TO_PREV 3
+ 
++static void *heap_alloc(size_t len) __WINE_ALLOC_SIZE(1);
++static inline void *heap_alloc(size_t len)
++{
++    return HeapAlloc(GetProcessHeap(), 0, len);
++}
++
+ static void *heap_alloc_zero(size_t len) __WINE_ALLOC_SIZE(1);
+ static inline void *heap_alloc_zero(size_t len)
+ {
+diff --git a/dlls/gdiplus/image.c b/dlls/gdiplus/image.c
+index 06cf633..5777cf7 100644
+--- a/dlls/gdiplus/image.c
++++ b/dlls/gdiplus/image.c
+@@ -92,7 +92,7 @@ static ColorPalette *get_palette(IWICBitmapFrameDecode *frame, WICBitmapPaletteT
+             UINT count;
+ 
+             IWICPalette_GetColorCount(wic_palette, &count);
+-            palette = HeapAlloc(GetProcessHeap(), 0, 2 * sizeof(UINT) + count * sizeof(ARGB));
++            palette = heap_alloc(2 * sizeof(UINT) + count * sizeof(ARGB));
+             IWICPalette_GetColors(wic_palette, count, palette->Entries, &palette->Count);
+ 
+             IWICPalette_GetType(wic_palette, &type);
+@@ -1692,7 +1692,7 @@ GpStatus WINGDIPAPI GdipCreateBitmapFromHICON(HICON hicon, GpBitmap** bitmap)
+     {
+         if (iinfo.hbmMask)
+         {
+-            BYTE *bits = HeapAlloc(GetProcessHeap(), 0, height * stride);
++            BYTE *bits = heap_alloc(height * stride);
+ 
+             /* read alpha data from the mask */
+             if (iinfo.hbmColor)
+@@ -2874,7 +2874,7 @@ GpStatus WINGDIPAPI GdipGetAllPropertyItems(GpImage *image, UINT size,
+         item_size = propvariant_size(&value);
+         if (item_size)
+         {
+-            item = HeapAlloc(GetProcessHeap(), 0, item_size + sizeof(*item));
++            item = heap_alloc(item_size + sizeof(*item));
+ 
+             propvariant_to_item(&value, item, item_size + sizeof(*item), id.u.uiVal);
+             buf[i].id = item->id;
+-- 
+2.6.1
+

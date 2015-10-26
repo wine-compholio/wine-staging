@@ -6515,9 +6515,6 @@ fi
 
 # Patchset ws2_32-TransmitFile
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#5048] Support for TransmitFile
-# |
 # | Modified files:
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c
 # |

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f8d78b0d927c1cae4c5075c64d980c306fb3ed87"
+	echo "12111d8c3b897df92fabc1c1a81567477952e9b1"
 }
 
 # Show version information
@@ -2333,17 +2333,9 @@ fi
 # | 	dlls/combase/string.c, dlls/combase/tests/string.c
 # |
 if test "$enable_combase_Strings" -eq 1; then
-	patch_apply combase-Strings/0001-combase-Add-TRACEs-to-string-functions.patch
-	patch_apply combase-Strings/0002-combase-Simplify-check-for-NULL-pointer-in-WindowsCr.patch
-	patch_apply combase-Strings/0003-combase-Implement-WindowsSubstringWithSpecifiedLengt.patch
-	patch_apply combase-Strings/0004-combase-tests-Add-tests-for-WindowsSubstringWithSpec.patch
-	patch_apply combase-Strings/0005-combase-Implement-WindowsConcatString.patch
-	patch_apply combase-Strings/0006-combase-tests-Add-tests-for-WindowsConcatString.patch
+	patch_apply combase-Strings/0001-combase-Implement-WindowsConcatString.patch
+	patch_apply combase-Strings/0002-combase-tests-Add-tests-for-WindowsConcatString.patch
 	(
-		echo '+    { "Sebastian Lackner", "combase: Add TRACEs to string functions.", 1 },';
-		echo '+    { "Sebastian Lackner", "combase: Simplify check for NULL pointer in WindowsCreateString[Reference].", 1 },';
-		echo '+    { "Sebastian Lackner", "combase: Implement WindowsSubstringWithSpecifiedLength.", 1 },';
-		echo '+    { "Sebastian Lackner", "combase/tests: Add tests for WindowsSubstringWithSpecifiedLength.", 1 },';
 		echo '+    { "Sebastian Lackner", "combase: Implement WindowsConcatString.", 1 },';
 		echo '+    { "Sebastian Lackner", "combase/tests: Add tests for WindowsConcatString.", 1 },';
 	) >> "$patchlist"

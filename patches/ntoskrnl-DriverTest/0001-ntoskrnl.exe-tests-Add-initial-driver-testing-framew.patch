@@ -1,4 +1,4 @@
-From daa8ccd8d94c1e8c53d26b2e985d75c7c7a47f1b Mon Sep 17 00:00:00 2001
+From e707326e017a60d1178b1f07d2c0178f64b01e30 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 18 Jan 2015 05:42:10 +0100
 Subject: ntoskrnl.exe/tests: Add initial driver testing framework and
@@ -24,10 +24,10 @@ Subject: ntoskrnl.exe/tests: Add initial driver testing framework and
  create mode 100644 dlls/ntoskrnl.exe/tests/ntoskrnl.c
 
 diff --git a/aclocal.m4 b/aclocal.m4
-index 3d43721..adc6b04 100644
+index e236c92..c19efc7 100644
 --- a/aclocal.m4
 +++ b/aclocal.m4
-@@ -617,6 +617,28 @@ $ac_dir/crosstest: $ac_dir/Makefile __builddeps__ dummy
+@@ -629,6 +629,28 @@ $ac_dir/crosstest: $ac_dir/Makefile __builddeps__ dummy
          fi
  }
  
@@ -56,7 +56,7 @@ index 3d43721..adc6b04 100644
  wine_fn_config_tool ()
  {
      ac_dir=$[1]
-@@ -722,6 +744,15 @@ wine_fn_config_test $1 ac_name[]ac_suffix [$2]dnl
+@@ -734,6 +756,15 @@ wine_fn_config_test $1 ac_name[]ac_suffix [$2]dnl
  m4_popdef([ac_suffix])dnl
  m4_popdef([ac_name])])
  
@@ -73,16 +73,18 @@ index 3d43721..adc6b04 100644
  dnl
  dnl Usage: WINE_CONFIG_LIB(name,flags)
 diff --git a/configure.ac b/configure.ac
-index ab8945a..dfc3d07 100644
+index 3180407..7862a4b 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -3126,4 +3126,6 @@ WINE_CONFIG_DLL(ntdsapi,,[implib])
+@@ -3215,6 +3215,8 @@ WINE_CONFIG_TEST(dlls/ntdll/tests)
+ WINE_CONFIG_DLL(ntdsapi,,[implib])
  WINE_CONFIG_TEST(dlls/ntdsapi/tests)
  WINE_CONFIG_DLL(ntoskrnl.exe,,[implib])
 +WINE_CONFIG_TEST(dlls/ntoskrnl.exe/tests)
 +WINE_CONFIG_RESOURCE(dlls/ntoskrnl.exe/tests/driver.sys)
  WINE_CONFIG_DLL(ntprint)
  WINE_CONFIG_TEST(dlls/ntprint/tests)
+ WINE_CONFIG_DLL(objsel,,[clean])
 diff --git a/dlls/ntoskrnl.exe/tests/Makefile.in b/dlls/ntoskrnl.exe/tests/Makefile.in
 new file mode 100644
 index 0000000..f0c2460
@@ -524,10 +526,10 @@ index 0000000..9b8a6a7
 +    unload_driver(service, filename);
 +}
 diff --git a/tools/make_makefiles b/tools/make_makefiles
-index f0b40c0..46b8389 100644
+index 069d0ae..b1d77ab 100755
 --- a/tools/make_makefiles
 +++ b/tools/make_makefiles
-@@ -257,7 +257,7 @@ sub parse_makefile($)
+@@ -258,7 +258,7 @@ sub parse_makefile($)
          while (/\\$/) { chop; $_ .= <MAKE>; chomp; }  # merge continued lines
          next if (/^\s*$/);
  
@@ -536,7 +538,7 @@ index f0b40c0..46b8389 100644
          {
              my $var = $1;
              $make{$var} = $2;
-@@ -476,6 +476,13 @@ sub update_makefiles(@)
+@@ -481,6 +481,13 @@ sub update_makefiles(@)
              (my $dir = $file) =~ s/^(.*)\/Makefile/$1/;
              push @lines, "WINE_CONFIG_TEST($dir$flag_args)\n";
          }
@@ -551,16 +553,16 @@ index f0b40c0..46b8389 100644
          {
              die "MODULE should not be defined as static lib in $file" unless $file =~ /^dlls\//;
 diff --git a/tools/makedep.c b/tools/makedep.c
-index 54aab45..c9f48fe 100644
+index 8c5abde..62bd284 100644
 --- a/tools/makedep.c
 +++ b/tools/makedep.c
-@@ -164,4 +164,5 @@ struct makefile
+@@ -165,4 +165,5 @@ struct makefile
      const char     *module;
      const char     *testdll;
 +    const char     *resource;
      const char     *staticlib;
      const char     *importlib;
-@@ -466,6 +467,30 @@ static char *get_extension( char *filename )
+@@ -467,6 +468,30 @@ static char *get_extension( char *filename )
  
  
  /*******************************************************************
@@ -591,15 +593,15 @@ index 54aab45..c9f48fe 100644
   *         replace_extension
   */
  static char *replace_extension( const char *name, const char *old_ext, const char *new_ext )
-@@ -1747,6 +1772,7 @@ static struct strarray output_sources( struct makefile *make, struct strarray *t
+@@ -1778,6 +1803,7 @@ static struct strarray output_sources( struct makefile *make, struct strarray *t
      struct strarray subdirs = empty_strarray;
      struct strarray phony_targets = empty_strarray;
-     struct strarray all_targets = get_expanded_make_var_array( make, "PROGRAMS" );
+     struct strarray all_targets = empty_strarray;
 +    struct strarray resource_dlls = get_expanded_make_var_array( make, "RC_DLLS" );
  
      for (i = 0; i < linguas.count; i++)
          strarray_add( &mo_files, strmake( "%s/%s.mo", top_obj_dir_path( make, "po" ), linguas.str[i] ));
-@@ -1980,7 +2006,7 @@ static struct strarray output_sources( struct makefile *make, struct strarray *t
+@@ -2012,7 +2038,7 @@ static struct strarray output_sources( struct makefile *make, struct strarray *t
          }
          else
          {
@@ -608,7 +610,7 @@ index 54aab45..c9f48fe 100644
                  (source->file->flags & FLAG_C_IMPLIB) ||
                  (make->module && make->staticlib);
  
-@@ -1994,7 +2020,7 @@ static struct strarray output_sources( struct makefile *make, struct strarray *t
+@@ -2026,7 +2052,7 @@ static struct strarray output_sources( struct makefile *make, struct strarray *t
              output_filenames( includes );
              output_filenames( make->define_args );
              output_filenames( extradefs );
@@ -617,7 +619,7 @@ index 54aab45..c9f48fe 100644
              {
                  output_filenames( dll_flags );
                  if (make->use_msvcrt) output_filenames( msvcrt_flags );
-@@ -2074,6 +2100,72 @@ static struct strarray output_sources( struct makefile *make, struct strarray *t
+@@ -2106,6 +2132,72 @@ static struct strarray output_sources( struct makefile *make, struct strarray *t
          output( "\n" );
      }
  
@@ -690,8 +692,8 @@ index 54aab45..c9f48fe 100644
      if (make->module && !make->staticlib)
      {
          struct strarray all_libs = empty_strarray;
-@@ -2331,6 +2423,83 @@ static struct strarray output_sources( struct makefile *make, struct strarray *t
-         *testlist_files = strarray_replace_extension( &ok_files, ".ok", "" );
+@@ -2387,6 +2479,83 @@ static struct strarray output_sources( struct makefile *make, struct strarray *t
+         strarray_add( &all_targets, program );
      }
  
 +    if (make->resource)
@@ -774,12 +776,12 @@ index 54aab45..c9f48fe 100644
      if (all_targets.count)
      {
          output( "all:" );
-@@ -2600,4 +2769,5 @@ static void update_makefile( const char *path )
+@@ -2668,4 +2837,5 @@ static void update_makefile( const char *path )
      make->module        = get_expanded_make_variable( make, "MODULE" );
      make->testdll       = get_expanded_make_variable( make, "TESTDLL" );
 +    make->resource      = get_expanded_make_variable( make, "RESOURCE" );
      make->staticlib     = get_expanded_make_variable( make, "STATICLIB" );
      make->importlib     = get_expanded_make_variable( make, "IMPORTLIB" );
 -- 
-2.2.1
+2.6.1
 

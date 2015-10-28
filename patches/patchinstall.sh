@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "28b916b26eceb35a071e9aad76da1fbbaa857ba1"
+	echo "79c59085b1b1f487e91c2695028dd3d1d257a468"
 }
 
 # Show version information
@@ -3192,12 +3192,10 @@ fi
 # | 	dlls/gdiplus/stringformat.c
 # |
 if test "$enable_gdiplus_Memory_Allocation" -eq 1; then
-	patch_apply gdiplus-Memory_Allocation/0001-gdiplus-Use-the-correct-memory-allocation-function-f.patch
-	patch_apply gdiplus-Memory_Allocation/0002-gdiplus-Use-helper-function-for-HeapAlloc-calls.patch
-	patch_apply gdiplus-Memory_Allocation/0003-gdiplus-Use-helper-function-for-HeapReAlloc-calls.patch
-	patch_apply gdiplus-Memory_Allocation/0004-gdiplus-Use-helper-function-for-remaining-HeapFree-c.patch
+	patch_apply gdiplus-Memory_Allocation/0001-gdiplus-Use-helper-function-for-HeapAlloc-calls.patch
+	patch_apply gdiplus-Memory_Allocation/0002-gdiplus-Use-helper-function-for-HeapReAlloc-calls.patch
+	patch_apply gdiplus-Memory_Allocation/0003-gdiplus-Use-helper-function-for-remaining-HeapFree-c.patch
 	(
-		echo '+    { "Sebastian Lackner", "gdiplus: Use the correct memory allocation function for PropVariants.", 1 },';
 		echo '+    { "Sebastian Lackner", "gdiplus: Use helper function for HeapAlloc calls.", 1 },';
 		echo '+    { "Sebastian Lackner", "gdiplus: Use helper function for HeapReAlloc calls.", 1 },';
 		echo '+    { "Sebastian Lackner", "gdiplus: Use helper function for remaining HeapFree calls.", 1 },';

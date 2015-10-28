@@ -141,6 +141,7 @@ patch_enable_all ()
 	enable_gdi32_MaxPixelFormats="$1"
 	enable_gdi32_MultiMonitor="$1"
 	enable_gdiplus_Memory_Allocation="$1"
+	enable_hal_KeQueryPerformanceCounter="$1"
 	enable_ieframe_IViewObject_Draw="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imagehlp_Cleanup="$1"
@@ -519,6 +520,9 @@ patch_enable ()
 			;;
 		gdiplus-Memory_Allocation)
 			enable_gdiplus_Memory_Allocation="$2"
+			;;
+		hal-KeQueryPerformanceCounter)
+			enable_hal_KeQueryPerformanceCounter="$2"
 			;;
 		ieframe-IViewObject-Draw)
 			enable_ieframe_IViewObject_Draw="$2"
@@ -3199,6 +3203,21 @@ if test "$enable_gdiplus_Memory_Allocation" -eq 1; then
 		echo '+    { "Sebastian Lackner", "gdiplus: Use helper function for HeapAlloc calls.", 1 },';
 		echo '+    { "Sebastian Lackner", "gdiplus: Use helper function for HeapReAlloc calls.", 1 },';
 		echo '+    { "Sebastian Lackner", "gdiplus: Use helper function for remaining HeapFree calls.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset hal-KeQueryPerformanceCounter
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39500] Implement hal.KeQueryPerformanceCounter
+# |
+# | Modified files:
+# |   *	dlls/hal/hal.c, dlls/hal/hal.spec
+# |
+if test "$enable_hal_KeQueryPerformanceCounter" -eq 1; then
+	patch_apply hal-KeQueryPerformanceCounter/0001-hal-Implement-KeQueryPerformanceCounter.patch
+	(
+		echo '+    { "Michael Müller", "hal: Implement KeQueryPerformanceCounter.", 1 },';
 	) >> "$patchlist"
 fi
 

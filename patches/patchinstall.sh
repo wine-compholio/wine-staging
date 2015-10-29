@@ -165,6 +165,7 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_makedep_PARENTSPEC="$1"
+	enable_makefiles_Fix_Build="$1"
 	enable_mfplat_MFTRegister="$1"
 	enable_mmdevapi_AEV_Stubs="$1"
 	enable_mountmgr_DosDevices="$1"
@@ -590,6 +591,9 @@ patch_enable ()
 			;;
 		makedep-PARENTSPEC)
 			enable_makedep_PARENTSPEC="$2"
+			;;
+		makefiles-Fix_Build)
+			enable_makefiles_Fix_Build="$2"
 			;;
 		mfplat-MFTRegister)
 			enable_mfplat_MFTRegister="$2"
@@ -2052,6 +2056,20 @@ if test "$enable_patchlist" -eq 1; then
 	fi
 fi
 
+
+# Patchset makefiles-Fix_Build
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makefiles_Fix_Build" -eq 1; then
+	patch_apply makefiles-Fix_Build/0001-makefiles-Use-correct-source-path-for-ttf-install-ru.patch
+	patch_apply makefiles-Fix_Build/0002-makefiles-Symlinks-have-no-dependencies-on-source-fi.patch
+	(
+		echo '+    { "Sebastian Lackner", "makefiles: Use correct source path for ttf install rules.", 1 },';
+		echo '+    { "Sebastian Lackner", "makefiles: Symlinks have no dependencies on source files.", 1 },';
+	) >> "$patchlist"
+fi
 
 # Patchset Compiler_Warnings
 # |

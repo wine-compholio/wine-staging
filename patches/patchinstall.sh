@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "79c59085b1b1f487e91c2695028dd3d1d257a468"
+	echo "54633e3956e6b3c4d8ebbd5d721efa294e9602fb"
 }
 
 # Show version information
@@ -92,7 +92,6 @@ patch_enable_all ()
 	enable_api_ms_win_crt_Stub_DLLs="$1"
 	enable_authz_Stub_Functions="$1"
 	enable_browseui_Progress_Dialog="$1"
-	enable_combase_Strings="$1"
 	enable_comctl32_Button_Theming="$1"
 	enable_comctl32_PROPSHEET_InsertPage="$1"
 	enable_comctl32_TVM_GETITEM="$1"
@@ -140,7 +139,6 @@ patch_enable_all ()
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_MaxPixelFormats="$1"
 	enable_gdi32_MultiMonitor="$1"
-	enable_gdiplus_Memory_Allocation="$1"
 	enable_hal_KeQueryPerformanceCounter="$1"
 	enable_ieframe_IViewObject_Draw="$1"
 	enable_imagehlp_BindImageEx="$1"
@@ -374,9 +372,6 @@ patch_enable ()
 		category-stable)
 			enable_category_stable="$2"
 			;;
-		combase-Strings)
-			enable_combase_Strings="$2"
-			;;
 		comctl32-Button_Theming)
 			enable_comctl32_Button_Theming="$2"
 			;;
@@ -517,9 +512,6 @@ patch_enable ()
 			;;
 		gdi32-MultiMonitor)
 			enable_gdi32_MultiMonitor="$2"
-			;;
-		gdiplus-Memory_Allocation)
-			enable_gdiplus_Memory_Allocation="$2"
 			;;
 		hal-KeQueryPerformanceCounter)
 			enable_hal_KeQueryPerformanceCounter="$2"
@@ -2334,21 +2326,6 @@ if test "$enable_browseui_Progress_Dialog" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset combase-Strings
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-winrt-string-l1-1-0/api-ms-win-core-winrt-string-l1-1-0.spec, dlls/combase/combase.spec,
-# | 	dlls/combase/string.c, dlls/combase/tests/string.c
-# |
-if test "$enable_combase_Strings" -eq 1; then
-	patch_apply combase-Strings/0001-combase-Implement-WindowsConcatString.patch
-	patch_apply combase-Strings/0002-combase-tests-Add-tests-for-WindowsConcatString.patch
-	(
-		echo '+    { "Sebastian Lackner", "combase: Implement WindowsConcatString.", 1 },';
-		echo '+    { "Sebastian Lackner", "combase/tests: Add tests for WindowsConcatString.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset comctl32-Button_Theming
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3186,23 +3163,6 @@ if test "$enable_gdi32_MultiMonitor" -eq 1; then
 		echo '+    { "Ken Thomases", "winex11: Make GetMonitorInfo() give a different device name (\\\\.\\\\DISPLAY<n>) to each monitor.", 1 },';
 		echo '+    { "Ken Thomases", "user32: Implement EnumDisplayDevicesW() based on EnumDisplayMonitors() and GetMonitorInfoW().", 1 },';
 		echo '+    { "Ken Thomases", "winemac: Make GetMonitorInfo() give a different device name (\\\\\\\\.\\\\DISPLAY<n>) to each monitor.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset gdiplus-Memory_Allocation
-# |
-# | Modified files:
-# |   *	dlls/gdiplus/font.c, dlls/gdiplus/gdiplus.c, dlls/gdiplus/gdiplus_private.h, dlls/gdiplus/image.c,
-# | 	dlls/gdiplus/stringformat.c
-# |
-if test "$enable_gdiplus_Memory_Allocation" -eq 1; then
-	patch_apply gdiplus-Memory_Allocation/0001-gdiplus-Use-helper-function-for-HeapAlloc-calls.patch
-	patch_apply gdiplus-Memory_Allocation/0002-gdiplus-Use-helper-function-for-HeapReAlloc-calls.patch
-	patch_apply gdiplus-Memory_Allocation/0003-gdiplus-Use-helper-function-for-remaining-HeapFree-c.patch
-	(
-		echo '+    { "Sebastian Lackner", "gdiplus: Use helper function for HeapAlloc calls.", 1 },';
-		echo '+    { "Sebastian Lackner", "gdiplus: Use helper function for HeapReAlloc calls.", 1 },';
-		echo '+    { "Sebastian Lackner", "gdiplus: Use helper function for remaining HeapFree calls.", 1 },';
 	) >> "$patchlist"
 fi
 

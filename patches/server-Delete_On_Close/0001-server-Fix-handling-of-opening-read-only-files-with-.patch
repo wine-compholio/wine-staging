@@ -1,4 +1,4 @@
-From 70bb2cad6678981c4690dcbb618d4cfaf4ec097d Mon Sep 17 00:00:00 2001
+From 4d0561f1b3bbf5d72e49ddeb14f7ed25eb9c2d01 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 17 Apr 2015 12:40:38 +0200
 Subject: server: Fix handling of opening read-only files with
@@ -11,21 +11,21 @@ Subject: server: Fix handling of opening read-only files with
  3 files changed, 10 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/kernel32/file.c b/dlls/kernel32/file.c
-index e43829e..d4111b9 100644
+index 5ea024f..f6ee97e 100644
 --- a/dlls/kernel32/file.c
 +++ b/dlls/kernel32/file.c
-@@ -1664,8 +1664,7 @@ BOOL WINAPI DeleteFileW( LPCWSTR path )
+@@ -1683,8 +1683,7 @@ BOOL WINAPI DeleteFileW( LPCWSTR path )
      attr.SecurityDescriptor = NULL;
      attr.SecurityQualityOfService = NULL;
  
--    status = NtCreateFile(&hFile, GENERIC_READ | GENERIC_WRITE | DELETE,
+-    status = NtCreateFile(&hFile, GENERIC_READ | GENERIC_WRITE | SYNCHRONIZE | DELETE,
 -			  &attr, &io, NULL, 0,
-+    status = NtCreateFile(&hFile, DELETE, &attr, &io, NULL, 0,
++    status = NtCreateFile(&hFile, SYNCHRONIZE | DELETE, &attr, &io, NULL, 0,
  			  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
  			  FILE_OPEN, FILE_DELETE_ON_CLOSE | FILE_NON_DIRECTORY_FILE, NULL, 0);
      if (status == STATUS_SUCCESS) status = NtClose(hFile);
 diff --git a/dlls/kernel32/tests/file.c b/dlls/kernel32/tests/file.c
-index dd64c91..3a950f1 100644
+index ca49863..134f877 100644
 --- a/dlls/kernel32/tests/file.c
 +++ b/dlls/kernel32/tests/file.c
 @@ -361,17 +361,13 @@ static void test__lcreat( void )
@@ -62,10 +62,10 @@ index dd64c91..3a950f1 100644
  
      SetLastError(0xdeadbeef);
 diff --git a/server/fd.c b/server/fd.c
-index 6c78a0a..8d6067e 100644
+index fe778f1..500d273 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -1837,6 +1837,15 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+@@ -1834,6 +1834,15 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
          list_add_head( &inode->open, &fd->inode_entry );
          closed_fd = NULL;
  
@@ -82,5 +82,5 @@ index 6c78a0a..8d6067e 100644
          if ((options & FILE_DIRECTORY_FILE) && !S_ISDIR(st.st_mode))
          {
 -- 
-2.5.0
+2.6.1
 

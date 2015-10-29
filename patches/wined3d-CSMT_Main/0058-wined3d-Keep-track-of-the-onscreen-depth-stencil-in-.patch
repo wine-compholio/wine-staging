@@ -1,4 +1,4 @@
-From 3d851db23b85050b91b68a9556fd5b3407166089 Mon Sep 17 00:00:00 2001
+From ea3a3342b80849797472ffbaa5d722def0b599ab Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Fri, 5 Apr 2013 14:37:44 +0200
 Subject: wined3d: Keep track of the onscreen depth stencil in the command
@@ -23,10 +23,10 @@ configurations.
  5 files changed, 38 insertions(+), 39 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 4b1ed18..236e2f2 100644
+index 948bc80..9147719 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -629,10 +629,10 @@ static UINT wined3d_cs_exec_set_depth_stencil_view(struct wined3d_cs *cs, const
+@@ -639,10 +639,10 @@ static UINT wined3d_cs_exec_set_depth_stencil_view(struct wined3d_cs *cs, const
                  || prev_surface->flags & SFLAG_DISCARD))
          {
              surface_modify_ds_location(prev_surface, WINED3D_LOCATION_DISCARDED, prev->width, prev->height);
@@ -40,7 +40,7 @@ index 4b1ed18..236e2f2 100644
              }
          }
      }
-@@ -1365,6 +1365,22 @@ static void wined3d_cs_emit_stop(struct wined3d_cs *cs)
+@@ -1480,6 +1480,22 @@ static void wined3d_cs_emit_stop(struct wined3d_cs *cs)
      wined3d_cs_flush(cs);
  }
  
@@ -64,7 +64,7 @@ index 4b1ed18..236e2f2 100644
  {
      struct wined3d_cs *cs = thread_param;
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index c3e7d33..9fe7760 100644
+index eecb8b2..b1502c1 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
 @@ -198,22 +198,6 @@ void device_context_remove(struct wined3d_device *device, struct wined3d_context
@@ -90,7 +90,7 @@ index c3e7d33..9fe7760 100644
  static BOOL is_full_clear(const struct wined3d_surface *target, const RECT *draw_rect, const RECT *clear_rect)
  {
      /* partial draw rect */
-@@ -343,8 +327,8 @@ void device_clear_render_targets(struct wined3d_device *device, UINT rt_count, c
+@@ -348,8 +332,8 @@ void device_clear_render_targets(struct wined3d_device *device, UINT rt_count, c
      {
          DWORD location = render_offscreen ? fb->depth_stencil->resource->draw_binding : WINED3D_LOCATION_DRAWABLE;
  
@@ -101,7 +101,7 @@ index c3e7d33..9fe7760 100644
          prepare_ds_clear(depth_stencil, context, location,
                  draw_rect, rect_count, clear_rect, &ds_rect);
      }
-@@ -1060,11 +1044,12 @@ HRESULT CDECL wined3d_device_uninit_3d(struct wined3d_device *device)
+@@ -1064,11 +1048,12 @@ HRESULT CDECL wined3d_device_uninit_3d(struct wined3d_device *device)
      /* Release the buffers (with sanity checks).
       * FIXME: Move this move into a separate patch. I think the idea
       * behind this is that those surfaces should be freed before unloading
@@ -118,7 +118,7 @@ index c3e7d33..9fe7760 100644
          wined3d_surface_decref(surface);
      }
  
-@@ -4402,10 +4387,10 @@ HRESULT CDECL wined3d_device_reset(struct wined3d_device *device,
+@@ -4559,10 +4544,10 @@ HRESULT CDECL wined3d_device_reset(struct wined3d_device *device,
          state_unbind_resources(&device->state);
      }
  
@@ -133,11 +133,11 @@ index c3e7d33..9fe7760 100644
  
      if (reset_state)
 diff --git a/dlls/wined3d/drawprim.c b/dlls/wined3d/drawprim.c
-index 43d867d..5eb80f0 100644
+index 21ce53a..9ec380a 100644
 --- a/dlls/wined3d/drawprim.c
 +++ b/dlls/wined3d/drawprim.c
-@@ -644,8 +644,8 @@ void draw_primitive(struct wined3d_device *device, const struct wined3d_state *s
-             struct wined3d_surface *ds = wined3d_rendertarget_view_get_surface(state->fb.depth_stencil);
+@@ -651,8 +651,8 @@ void draw_primitive(struct wined3d_device *device, const struct wined3d_state *s
+         {
              RECT current_rect, draw_rect, r;
  
 -            if (!context->render_offscreen && ds != device->onscreen_depth_stencil)
@@ -148,10 +148,10 @@ index 43d867d..5eb80f0 100644
              if (ds->resource.locations & location)
                  SetRect(&current_rect, 0, 0, ds->ds_current_size.cx, ds->ds_current_size.cy);
 diff --git a/dlls/wined3d/swapchain.c b/dlls/wined3d/swapchain.c
-index e190892..fa0c241 100644
+index 1ae7bb0..13d82e2 100644
 --- a/dlls/wined3d/swapchain.c
 +++ b/dlls/wined3d/swapchain.c
-@@ -581,10 +581,10 @@ static void swapchain_gl_present(struct wined3d_swapchain *swapchain, const RECT
+@@ -588,10 +588,10 @@ static void swapchain_gl_present(struct wined3d_swapchain *swapchain, const RECT
          {
              surface_modify_ds_location(depth_stencil, WINED3D_LOCATION_DISCARDED,
                      depth_stencil->resource.width, depth_stencil->resource.height);
@@ -166,10 +166,10 @@ index e190892..fa0c241 100644
          }
      }
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 0aed164..aadb8db 100644
+index 4e3da0c..212db68 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2021,15 +2021,12 @@ struct wined3d_device
+@@ -2116,15 +2116,12 @@ struct wined3d_device
      struct wined3d_rendertarget_view *back_buffer_view;
      struct wined3d_swapchain **swapchains;
      UINT swapchain_count;
@@ -186,7 +186,7 @@ index 0aed164..aadb8db 100644
      /* For rendering to a texture using glCopyTexImage */
      GLuint                  depth_blt_texture;
  
-@@ -2071,8 +2068,6 @@ LRESULT device_process_message(struct wined3d_device *device, HWND window, BOOL
+@@ -2166,8 +2163,6 @@ LRESULT device_process_message(struct wined3d_device *device, HWND window, BOOL
          UINT message, WPARAM wparam, LPARAM lparam, WNDPROC proc) DECLSPEC_HIDDEN;
  void device_resource_add(struct wined3d_device *device, struct wined3d_resource *resource) DECLSPEC_HIDDEN;
  void device_resource_released(struct wined3d_device *device, struct wined3d_resource *resource) DECLSPEC_HIDDEN;
@@ -195,7 +195,7 @@ index 0aed164..aadb8db 100644
  void device_invalidate_state(const struct wined3d_device *device, DWORD state) DECLSPEC_HIDDEN;
  
  static inline BOOL isStateDirty(const struct wined3d_context *context, DWORD state)
-@@ -2559,6 +2554,7 @@ struct wined3d_cs
+@@ -2667,6 +2662,7 @@ struct wined3d_cs
      struct wined3d_state state;
      HANDLE thread;
      DWORD tls_idx;
@@ -203,7 +203,7 @@ index 0aed164..aadb8db 100644
  
      size_t data_size;
      void *data;
-@@ -2569,6 +2565,8 @@ struct wined3d_cs
+@@ -2677,6 +2673,8 @@ struct wined3d_cs
  
  struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device) DECLSPEC_HIDDEN;
  void wined3d_cs_destroy(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
@@ -213,5 +213,5 @@ index 0aed164..aadb8db 100644
  void wined3d_cs_emit_clear(struct wined3d_cs *cs, DWORD rect_count, const RECT *rects,
          DWORD flags, const struct wined3d_color *color, float depth, DWORD stencil) DECLSPEC_HIDDEN;
 -- 
-2.2.1
+2.6.1
 

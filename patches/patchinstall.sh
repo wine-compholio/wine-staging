@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "54633e3956e6b3c4d8ebbd5d721efa294e9602fb"
+	echo "cbaab82d086e36dacaa22c6adf80f9114bb820fb"
 }
 
 # Show version information
@@ -165,7 +165,6 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_makedep_PARENTSPEC="$1"
-	enable_makefiles_Fix_Build="$1"
 	enable_mfplat_MFTRegister="$1"
 	enable_mmdevapi_AEV_Stubs="$1"
 	enable_mountmgr_DosDevices="$1"
@@ -591,9 +590,6 @@ patch_enable ()
 			;;
 		makedep-PARENTSPEC)
 			enable_makedep_PARENTSPEC="$2"
-			;;
-		makefiles-Fix_Build)
-			enable_makefiles_Fix_Build="$2"
 			;;
 		mfplat-MFTRegister)
 			enable_mfplat_MFTRegister="$2"
@@ -2057,20 +2053,6 @@ if test "$enable_patchlist" -eq 1; then
 fi
 
 
-# Patchset makefiles-Fix_Build
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makefiles_Fix_Build" -eq 1; then
-	patch_apply makefiles-Fix_Build/0001-makefiles-Use-correct-source-path-for-ttf-install-ru.patch
-	patch_apply makefiles-Fix_Build/0002-makefiles-Symlinks-have-no-dependencies-on-source-fi.patch
-	(
-		echo '+    { "Sebastian Lackner", "makefiles: Use correct source path for ttf install rules.", 1 },';
-		echo '+    { "Sebastian Lackner", "makefiles: Symlinks have no dependencies on source files.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset Compiler_Warnings
 # |
 # | Modified files:
@@ -2302,19 +2284,12 @@ fi
 # Patchset api-ms-win-crt-Stub_DLLs
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/msvcrt/misc.c, dlls/ucrtbase/ucrtbase.spec, dlls/vcruntime140/Makefile.in,
-# | 	dlls/vcruntime140/vcruntime140.spec
+# |   *	dlls/ucrtbase/ucrtbase.spec
 # |
 if test "$enable_api_ms_win_crt_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-crt-Stub_DLLs/0001-ucrtbase-Hook-up-some-functions-with-new-names-to-ex.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0002-vcruntime140-Add-the-new-MSVC-2015-compiler-specific.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0003-vcruntime140-Hook-up-a-function-with-a-new-name-to-t.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0004-vcruntime140-Add-stubs-for-telemetry-functions.patch
 	(
 		echo '+    { "Martin Storsjo", "ucrtbase: Hook up some functions with new names to existing implementations.", 1 },';
-		echo '+    { "Martin Storsjo", "vcruntime140: Add the new MSVC 2015 compiler specific DLL.", 1 },';
-		echo '+    { "Martin Storsjo", "vcruntime140: Hook up a function with a new name to the existing implementation.", 1 },';
-		echo '+    { "Martin Storsjo", "vcruntime140: Add stubs for telemetry functions.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3768,7 +3743,7 @@ fi
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/msi/database.c, dlls/msi/msipriv.h, dlls/msi/streams.c, dlls/msi/suminfo.c,
-# | 	programs/msidb/Makefile.in, programs/msidb/main.c, tools/make_makefiles
+# | 	programs/msidb/Makefile.in, programs/msidb/main.c
 # |
 if test "$enable_msidb_Implementation" -eq 1; then
 	patch_apply msidb-Implementation/0001-msidb-Add-stub-tool-for-manipulating-MSI-databases.patch

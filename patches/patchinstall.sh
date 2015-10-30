@@ -4408,7 +4408,7 @@ fi
 # |   *	rpcrt4-Pipe_Transport, kernel32-Named_Pipe, ntdll-Virtual_Memory_Stack, ws2_32-WriteWatches
 # |
 # | Modified files:
-# |   *	dlls/ntdll/file.c
+# |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/file.c
 # |
 if test "$enable_ntdll_WriteWatches" -eq 1; then
 	patch_apply ntdll-WriteWatches/0001-ntdll-Avoid-race-conditions-with-write-watches-in-Nt.patch

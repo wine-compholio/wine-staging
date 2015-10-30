@@ -3888,14 +3888,16 @@ fi
 # | 	dlls/ntdll/nt.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/om.c, dlls/ntdll/process.c, dlls/ntdll/reg.c,
 # | 	dlls/ntdll/resource.c, dlls/ntdll/sec.c, dlls/ntdll/server.c, dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c,
 # | 	dlls/ntdll/signal_i386.c, dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/sync.c,
-# | 	dlls/ntdll/thread.c, dlls/ntdll/time.c, dlls/ntdll/virtual.c
+# | 	dlls/ntdll/thread.c, dlls/ntdll/time.c, dlls/ntdll/virtual.c, tools/winegcc/winegcc.c
 # |
 if test "$enable_ntdll_Syscall_Wrappers" -eq 1; then
-	patch_apply ntdll-Syscall_Wrappers/0001-ntdll-Use-wrapper-functions-for-syscalls.patch
-	patch_apply ntdll-Syscall_Wrappers/0002-ntdll-APCs-should-call-the-implementation-instead-of.patch
-	patch_apply ntdll-Syscall_Wrappers/0003-ntdll-Syscalls-should-not-call-Nt-Ex-thunk-wrappers.patch
-	patch_apply ntdll-Syscall_Wrappers/0004-ntdll-Run-directory-initialization-function-early-du.patch
+	patch_apply ntdll-Syscall_Wrappers/0001-winegcc-Pass-read_only_relocs-suppress-to-the-linker.patch
+	patch_apply ntdll-Syscall_Wrappers/0002-ntdll-Use-wrapper-functions-for-syscalls.patch
+	patch_apply ntdll-Syscall_Wrappers/0003-ntdll-APCs-should-call-the-implementation-instead-of.patch
+	patch_apply ntdll-Syscall_Wrappers/0004-ntdll-Syscalls-should-not-call-Nt-Ex-thunk-wrappers.patch
+	patch_apply ntdll-Syscall_Wrappers/0005-ntdll-Run-directory-initialization-function-early-du.patch
 	(
+		echo '+    { "Sebastian Lackner", "winegcc: Pass '\''-read_only_relocs suppress'\'' to the linker on OSX.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Use wrapper functions for syscalls.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: APCs should call the implementation instead of the syscall thunk.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Syscalls should not call Nt*Ex thunk wrappers.", 1 },';

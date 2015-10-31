@@ -1,0 +1,200 @@
+From 0df43162220f42efb66def6176a29ac89a2618f4 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 31 Oct 2015 22:17:43 +0100
+Subject: server: Implement wineserver call for SystemHandleInformation.
+
+---
+ dlls/ntdll/nt.c         | 49 +++++++++++++++++++++++++++++++++++++--------
+ dlls/ntdll/tests/info.c |  8 ++++----
+ server/handle.c         | 53 +++++++++++++++++++++++++++++++++++++++++++++++++
+ server/protocol.def     | 16 +++++++++++++++
+ 4 files changed, 114 insertions(+), 12 deletions(-)
+
+diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
+index 8ea1ddd..6d360c3 100644
+--- a/dlls/ntdll/nt.c
++++ b/dlls/ntdll/nt.c
+@@ -2004,18 +2004,51 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+         break;
+     case SystemHandleInformation:
+         {
+-            SYSTEM_HANDLE_INFORMATION shi;
++            struct handle_info *info;
++            DWORD i, num_handles;
+ 
+-            memset(&shi, 0, sizeof(shi));
+-            len = sizeof(shi);
++            if (Length < sizeof(SYSTEM_HANDLE_INFORMATION))
++            {
++                ret = STATUS_INFO_LENGTH_MISMATCH;
++                break;
++            }
+ 
+-            if ( Length >= len)
++            if (!SystemInformation)
+             {
+-                if (!SystemInformation) ret = STATUS_ACCESS_VIOLATION;
+-                else memcpy( SystemInformation, &shi, len);
++                ret = STATUS_ACCESS_VIOLATION;
++                break;
+             }
+-            else ret = STATUS_INFO_LENGTH_MISMATCH;
+-            FIXME("info_class SYSTEM_HANDLE_INFORMATION\n");
++
++            num_handles = (Length - FIELD_OFFSET(SYSTEM_HANDLE_INFORMATION, Handle)) / sizeof(SYSTEM_HANDLE_ENTRY);
++            if (!(info = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*info) * num_handles )))
++                return STATUS_NO_MEMORY;
++
++            SERVER_START_REQ( get_system_handles )
++            {
++                wine_server_set_reply( req, info, sizeof(*info) * num_handles );
++                if (!(ret = wine_server_call( req )))
++                {
++                    SYSTEM_HANDLE_INFORMATION *shi = SystemInformation;
++                    shi->Count = wine_server_reply_size( req ) / sizeof(*info);
++                    len = FIELD_OFFSET(SYSTEM_HANDLE_INFORMATION, Handle[shi->Count]);
++                    for (i = 0; i < shi->Count; i++)
++                    {
++                        memset(&shi->Handle[i], 0, sizeof(shi->Handle[i]));
++                        shi->Handle[i].OwnerPid     = info[i].owner;
++                        shi->Handle[i].HandleValue  = info[i].handle;
++                        shi->Handle[i].AccessMask   = info[i].access;
++                        /* FIXME: Fill out ObjectType, HandleFlags, ObjectPointer */
++                    }
++                }
++                else if (ret == STATUS_BUFFER_TOO_SMALL)
++                {
++                    len = FIELD_OFFSET(SYSTEM_HANDLE_INFORMATION, Handle[reply->count]);
++                    ret = STATUS_INFO_LENGTH_MISMATCH;
++                }
++            }
++            SERVER_END_REQ;
++
++            RtlFreeHeap( GetProcessHeap(), 0, info );
+         }
+         break;
+     case SystemCacheInformation:
+diff --git a/dlls/ntdll/tests/info.c b/dlls/ntdll/tests/info.c
+index 8e0a806..c0e2b1a 100644
+--- a/dlls/ntdll/tests/info.c
++++ b/dlls/ntdll/tests/info.c
+@@ -485,7 +485,7 @@ static void test_query_handle(void)
+     /* Request the needed length : a SystemInformationLength greater than one struct sets ReturnLength */
+     ReturnLength = 0xdeadbeef;
+     status = pNtQuerySystemInformation(SystemHandleInformation, shi, SystemInformationLength, &ReturnLength);
+-    todo_wine ok( status == STATUS_INFO_LENGTH_MISMATCH, "Expected STATUS_INFO_LENGTH_MISMATCH, got %08x\n", status);
++    ok( status == STATUS_INFO_LENGTH_MISMATCH, "Expected STATUS_INFO_LENGTH_MISMATCH, got %08x\n", status);
+     ok( ReturnLength != 0xdeadbeef, "Expected valid ReturnLength\n" );
+ 
+     SystemInformationLength = ReturnLength;
+@@ -500,8 +500,8 @@ static void test_query_handle(void)
+         BOOL found = FALSE;
+ 
+         ok( status == STATUS_SUCCESS, "Expected STATUS_SUCCESS, got %08x\n", status );
+-        todo_wine ok( ReturnLength == ExpectedLength, "Expected length %u, got %u\n", ExpectedLength, ReturnLength );
+-        todo_wine ok( shi->Count > 1, "Expected more than 1 handles, got %u\n", shi->Count );
++        ok( ReturnLength == ExpectedLength, "Expected length %u, got %u\n", ExpectedLength, ReturnLength );
++        ok( shi->Count > 1, "Expected more than 1 handles, got %u\n", shi->Count );
+         for (i = 0; i < shi->Count; i++)
+         {
+             if (shi->Handle[i].OwnerPid == GetCurrentProcessId() &&
+@@ -511,7 +511,7 @@ static void test_query_handle(void)
+                 break;
+             }
+         }
+-        todo_wine ok( found, "Expected to find event handle in handle list\n" );
++        ok( found, "Expected to find event handle in handle list\n" );
+     }
+ 
+     status = pNtQuerySystemInformation(SystemHandleInformation, NULL, SystemInformationLength, &ReturnLength);
+diff --git a/server/handle.c b/server/handle.c
+index 5043ff7..666814c 100644
+--- a/server/handle.c
++++ b/server/handle.c
+@@ -745,3 +745,56 @@ DECL_HANDLER(get_security_object)
+ 
+     release_object( obj );
+ }
++
++struct enum_handle_info
++{
++    unsigned int count;
++    struct handle_info *handle;
++};
++
++static int enum_handles( struct process *process, void *user )
++{
++    struct enum_handle_info *info = user;
++    struct handle_table *table = process->handles;
++    struct handle_entry *entry;
++    struct handle_info *handle;
++    unsigned int i;
++
++    if (!table)
++        return 0;
++
++    if (!info->handle)
++    {
++        info->count += table->count;
++        return 0;
++    }
++
++    for (i = 0, entry = table->entries; i <= table->last; i++, entry++)
++    {
++        if (!entry->ptr) continue;
++        assert( info->count );
++        handle = info->handle++;
++        handle->owner  = process->id;
++        handle->handle = index_to_handle(i);
++        handle->access = entry->access & ~RESERVED_ALL;
++        info->count--;
++    }
++
++    return 0;
++}
++
++DECL_HANDLER(get_system_handles)
++{
++    struct enum_handle_info info;
++    data_size_t max_handles = get_reply_max_size() / sizeof(struct handle_entry);
++
++    info.handle = NULL;
++    info.count  = 0;
++    enum_processes( enum_handles, &info );
++    reply->count = info.count;
++
++    if (max_handles < info.count)
++        set_error( STATUS_BUFFER_TOO_SMALL );
++    else if ((info.handle = set_reply_data_size( info.count * sizeof(struct handle_entry) )))
++        enum_processes( enum_handles, &info );
++}
+diff --git a/server/protocol.def b/server/protocol.def
+index 5b45078..200a2e9 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -3259,6 +3259,22 @@ enum coords_relative
+     VARARG(sd,security_descriptor); /* retrieved security descriptor */
+ @END
+ 
++
++struct handle_info
++{
++    process_id_t owner;
++    obj_handle_t handle;
++    unsigned int access;
++};
++
++/* Return a list of all opened handles */
++@REQ(get_system_handles)
++@REPLY
++    unsigned int    count;        /* number of handles */
++    VARARG(data,bytes);           /* array of handle_infos */
++@END
++
++
+ /* Create a mailslot */
+ @REQ(create_mailslot)
+     unsigned int   access;        /* wanted access rights */
+-- 
+2.6.1
+

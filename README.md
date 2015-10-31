@@ -34,7 +34,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [11]:**
+**Bug fixes and features included in the next upcoming release [12]:**
 
 * Add stub for SetCoalescableTimer ([Wine Bug #39509](https://bugs.winehq.org/show_bug.cgi?id=39509))
 * Add stub for SetConsoleKeyShortcuts ([Wine Bug #35702](https://bugs.winehq.org/show_bug.cgi?id=35702))
@@ -43,6 +43,7 @@ Included bug fixes and improvements
 * Fix multiple issues in widl typelib generation
 * IEnumSTATSTG::Next should zero out returned stats when enumeration ends
 * Implement FileNamesInformation class support for NtQueryDirectoryFile
+* Implement SystemHandleInformation info class
 * Implement hal.KeQueryPerformanceCounter ([Wine Bug #39500](https://bugs.winehq.org/show_bug.cgi?id=39500))
 * Implement kernel32.GetConsoleFontSize
 * Implement stub for ProcessQuotaLimits info class

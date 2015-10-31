@@ -208,6 +208,7 @@ patch_enable_all ()
 	enable_ntdll_Stack_Fault="$1"
 	enable_ntdll_Status_Mapping="$1"
 	enable_ntdll_Syscall_Wrappers="$1"
+	enable_ntdll_SystemHandleInformation="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
@@ -725,6 +726,9 @@ patch_enable ()
 			;;
 		ntdll-Syscall_Wrappers)
 			enable_ntdll_Syscall_Wrappers="$2"
+			;;
+		ntdll-SystemHandleInformation)
+			enable_ntdll_SystemHandleInformation="$2"
 			;;
 		ntdll-SystemRoot_Symlink)
 			enable_ntdll_SystemRoot_Symlink="$2"
@@ -4333,6 +4337,20 @@ if test "$enable_ntdll_Status_Mapping" -eq 1; then
 	patch_apply ntdll-Status_Mapping/0001-ntdll-Return-STATUS_INVALID_DEVICE_REQUEST-when-tryi.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Return STATUS_INVALID_DEVICE_REQUEST when trying to call NtReadFile on directory.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-SystemHandleInformation
+# |
+# | Modified files:
+# |   *	dlls/ntdll/nt.c, dlls/ntdll/tests/info.c, server/handle.c, server/protocol.def
+# |
+if test "$enable_ntdll_SystemHandleInformation" -eq 1; then
+	patch_apply ntdll-SystemHandleInformation/0001-ntdll-tests-Add-more-tests-for-SystemHandleInformati.patch
+	patch_apply ntdll-SystemHandleInformation/0002-server-Implement-wineserver-call-for-SystemHandleInf.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Add more tests for SystemHandleInformation.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Implement wineserver call for SystemHandleInformation.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,78 @@
+From 1b1bec9415d3ed3ada5ed6fbc5e4d9a30797cbc9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 31 Oct 2015 02:27:14 +0100
+Subject: hnetcfg: Improve
+ INetFwAuthorizedApplication::get_ProcessImageFileName stub.
+
+---
+ dlls/hnetcfg/apps.c | 26 ++++++++++++++++++++++++--
+ 1 file changed, 24 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/hnetcfg/apps.c b/dlls/hnetcfg/apps.c
+index d21ed98..7a8d5e8 100644
+--- a/dlls/hnetcfg/apps.c
++++ b/dlls/hnetcfg/apps.c
+@@ -38,6 +38,7 @@ typedef struct fw_app
+ {
+     INetFwAuthorizedApplication INetFwAuthorizedApplication_iface;
+     LONG refs;
++    BSTR filename;
+ } fw_app;
+ 
+ static inline fw_app *impl_from_INetFwAuthorizedApplication( INetFwAuthorizedApplication *iface )
+@@ -60,6 +61,7 @@ static ULONG WINAPI fw_app_Release(
+     if (!refs)
+     {
+         TRACE("destroying %p\n", fw_app);
++        if (fw_app->filename) SysFreeString( fw_app->filename );
+         HeapFree( GetProcessHeap(), 0, fw_app );
+     }
+     return refs;
+@@ -250,7 +252,18 @@ static HRESULT WINAPI fw_app_get_ProcessImageFileName(
+     fw_app *This = impl_from_INetFwAuthorizedApplication( iface );
+ 
+     FIXME("%p, %p\n", This, imageFileName);
+-    return E_NOTIMPL;
++
++    if (!imageFileName)
++        return E_INVALIDARG;
++
++    if (!This->filename)
++    {
++        *imageFileName = NULL;
++        return S_OK;
++    }
++
++    *imageFileName = SysAllocString( This->filename );
++    return *imageFileName ? S_OK : E_OUTOFMEMORY;
+ }
+ 
+ static HRESULT WINAPI fw_app_put_ProcessImageFileName(
+@@ -260,7 +273,15 @@ static HRESULT WINAPI fw_app_put_ProcessImageFileName(
+     fw_app *This = impl_from_INetFwAuthorizedApplication( iface );
+ 
+     FIXME("%p, %s\n", This, debugstr_w(imageFileName));
+-    return S_OK;
++
++    if (!imageFileName)
++    {
++        This->filename = NULL;
++        return S_OK;
++    }
++
++    This->filename = SysAllocString( imageFileName );
++    return This->filename ? S_OK : E_OUTOFMEMORY;
+ }
+ 
+ static HRESULT WINAPI fw_app_get_IpVersion(
+@@ -383,6 +404,7 @@ HRESULT NetFwAuthorizedApplication_create( IUnknown *pUnkOuter, LPVOID *ppObj )
+ 
+     fa->INetFwAuthorizedApplication_iface.lpVtbl = &fw_app_vtbl;
+     fa->refs = 1;
++    fa->filename = NULL;
+ 
+     *ppObj = &fa->INetFwAuthorizedApplication_iface;
+ 
+-- 
+2.6.1
+

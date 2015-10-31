@@ -34,12 +34,13 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [4]:**
+**Bug fixes and features included in the next upcoming release [5]:**
 
 * Do not allow interruption of system APC in server_select ([Wine Bug #14697](https://bugs.winehq.org/show_bug.cgi?id=14697))
 * Implement FileNamesInformation class support for NtQueryDirectoryFile
 * Implement hal.KeQueryPerformanceCounter ([Wine Bug #39500](https://bugs.winehq.org/show_bug.cgi?id=39500))
 * Implement stub for ProcessQuotaLimits info class
+* Improve INetFwAuthorizedApplication::get_ProcessImageFileName stub
 
 
 **Bug fixes and features in Wine Staging 1.7.53 [262]:**

@@ -140,6 +140,7 @@ patch_enable_all ()
 	enable_gdi32_MaxPixelFormats="$1"
 	enable_gdi32_MultiMonitor="$1"
 	enable_hal_KeQueryPerformanceCounter="$1"
+	enable_hnetcfg_INetFwAuthorizedApplication="$1"
 	enable_ieframe_IViewObject_Draw="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imagehlp_Cleanup="$1"
@@ -514,6 +515,9 @@ patch_enable ()
 			;;
 		hal-KeQueryPerformanceCounter)
 			enable_hal_KeQueryPerformanceCounter="$2"
+			;;
+		hnetcfg-INetFwAuthorizedApplication)
+			enable_hnetcfg_INetFwAuthorizedApplication="$2"
 			;;
 		ieframe-IViewObject-Draw)
 			enable_ieframe_IViewObject_Draw="$2"
@@ -3132,6 +3136,18 @@ if test "$enable_hal_KeQueryPerformanceCounter" -eq 1; then
 	patch_apply hal-KeQueryPerformanceCounter/0001-hal-Implement-KeQueryPerformanceCounter.patch
 	(
 		echo '+    { "Michael Müller", "hal: Implement KeQueryPerformanceCounter.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset hnetcfg-INetFwAuthorizedApplication
+# |
+# | Modified files:
+# |   *	dlls/hnetcfg/apps.c
+# |
+if test "$enable_hnetcfg_INetFwAuthorizedApplication" -eq 1; then
+	patch_apply hnetcfg-INetFwAuthorizedApplication/0001-hnetcfg-Improve-INetFwAuthorizedApplication-get_Proc.patch
+	(
+		echo '+    { "Michael Müller", "hnetcfg: Improve INetFwAuthorizedApplication::get_ProcessImageFileName stub.", 1 },';
 	) >> "$patchlist"
 fi
 

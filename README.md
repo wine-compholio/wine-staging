@@ -222,7 +222,7 @@ for more details.*
 * Jedi Knight: Dark Forces II crashes with winmm set to native ([Wine Bug #37983](https://bugs.winehq.org/show_bug.cgi?id=37983))
 * Lego Stunt Rally requires DXTn software de/encoding support ([Wine Bug #25486](https://bugs.winehq.org/show_bug.cgi?id=25486))
 * MSYS2 expects correct handling of WRITECOPY memory protection ([Wine Bug #35561](https://bugs.winehq.org/show_bug.cgi?id=35561))
-* Make ddraw1 and ddraw_surface1 vtable as writable
+* Make ddraw1 and ddraw_surface1 vtable as writable ([Wine Bug #39534](https://bugs.winehq.org/show_bug.cgi?id=39534))
 * Make it possible to change media center / tablet pc status ([Wine Bug #18732](https://bugs.winehq.org/show_bug.cgi?id=18732))
 * Map EXDEV error code to STATUS_NOT_SAME_DEVICE
 * MediaCoder needs CUDA for video encoding ([Wine Bug #37664](https://bugs.winehq.org/show_bug.cgi?id=37664))

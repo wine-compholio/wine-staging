@@ -2782,6 +2782,9 @@ fi
 
 # Patchset ddraw-Write_Vtable
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39534] Make ddraw1 and ddraw_surface1 vtable as writable
+# |
 # | Modified files:
 # |   *	dlls/ddraw/ddraw.c, dlls/ddraw/surface.c
 # |

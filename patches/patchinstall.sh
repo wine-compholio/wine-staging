@@ -278,6 +278,7 @@ patch_enable_all ()
 	enable_user32_Painting="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
+	enable_user32_SetCoalescableTimer="$1"
 	enable_user32_WndProc="$1"
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_VerQueryValue="$1"
@@ -929,6 +930,9 @@ patch_enable ()
 			;;
 		user32-ScrollWindowEx)
 			enable_user32_ScrollWindowEx="$2"
+			;;
+		user32-SetCoalescableTimer)
+			enable_user32_SetCoalescableTimer="$2"
 			;;
 		user32-WndProc)
 			enable_user32_WndProc="$2"
@@ -5401,6 +5405,21 @@ if test "$enable_user32_ScrollWindowEx" -eq 1; then
 	patch_apply user32-ScrollWindowEx/0001-user32-Fix-return-value-of-ScrollWindowEx-for-invisi.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "user32: Fix return value of ScrollWindowEx for invisible windows.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-SetCoalescableTimer
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39509] Add stub for SetCoalescableTimer
+# |
+# | Modified files:
+# |   *	dlls/user32/message.c, dlls/user32/user32.spec
+# |
+if test "$enable_user32_SetCoalescableTimer" -eq 1; then
+	patch_apply user32-SetCoalescableTimer/0001-user32-add-SetCoalescableTimer-stub.patch
+	(
+		echo '+    { "Austin English", "user32: add SetCoalescableTimer stub.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -34,11 +34,12 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [8]:**
+**Bug fixes and features included in the next upcoming release [9]:**
 
 * Add stub for SetCoalescableTimer ([Wine Bug #39509](https://bugs.winehq.org/show_bug.cgi?id=39509))
 * Add stub for SfcGetNextProtectedFile ([Wine Bug #38097](https://bugs.winehq.org/show_bug.cgi?id=38097))
 * Do not allow interruption of system APC in server_select ([Wine Bug #14697](https://bugs.winehq.org/show_bug.cgi?id=14697))
+* Fix multiple issues in widl typelib generation
 * IEnumSTATSTG::Next should zero out returned stats when enumeration ends
 * Implement FileNamesInformation class support for NtQueryDirectoryFile
 * Implement hal.KeQueryPerformanceCounter ([Wine Bug #39500](https://bugs.winehq.org/show_bug.cgi?id=39500))

@@ -1,0 +1,68 @@
+From 6efefd95152a5dd8f05c95558c783e42562d4bf1 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Sat, 31 Oct 2015 14:31:47 +0800
+Subject: widl: Attributes of the alias are supposed to replace attributes of a
+ tag in the typelib. Resend.
+
+I have limited this functionality only to typedefs for structures, unions
+and enums since I have the tests only for this types.
+
+I've added the tests for version() and helpcontext() attributes suggested
+by Huw to the last patch with tests to make this change more convincing.
+
+In practice this means that the difinitions in an .idl like
+
+[uuid(016fe2ec-b2c8-45f8-b23b-39e53a753901),restricted]
+struct _n { int n1; };
+[uuid(016fe2ec-b2c8-45f8-b23b-39e53a753902),hidden]
+typedef struct _n n;
+[uuid(016fe2ec-b2c8-45f8-b23b-39e53a753903)]
+typedef struct _n nn;
+
+lead to the following typelib records:
+
+{
+  "_n",
+  "{016fe2ec-b2c8-45f8-b23b-39e53a753903}",
+  /*kind*/ TKIND_RECORD, /*flags*/ 0, /*align*/ 4, /*size*/ sizeof(struct _n),
+  /*#vtbl*/ 0, /*#func*/ 0
+},
+{
+  "n",
+  "{016fe2ec-b2c8-45f8-b23b-39e53a753902}",
+  /*kind*/ TKIND_ALIAS, /*flags*/ TYPEFLAG_FHIDDEN, /*align*/ 4, /*size*/ 4,
+  /*#vtbl*/ 0, /*#func*/ 0
+},
+{
+  "nn",
+  "{00000000-0000-0000-0000-000000000000}",
+  /*kind*/ TKIND_ALIAS, /*flags*/ 0, /*align*/ 4, /*size*/ 4,
+  /*#vtbl*/ 0, /*#func*/ 0
+}
+
+and the tests confirm that. But this change is very specific to typelibs
+and breaks header generation, thus it's limited only to the typelib mode.
+
+Signed-off-by: Dmitry Timoshkov <dmitry@baikal.ru>
+---
+ tools/widl/parser.y | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/tools/widl/parser.y b/tools/widl/parser.y
+index db5897e..4309833 100644
+--- a/tools/widl/parser.y
++++ b/tools/widl/parser.y
+@@ -1893,6 +1893,10 @@ static type_t *reg_typedefs(decl_spec_t *decl_spec, declarator_list_t *decls, at
+   {
+     if (!type->name)
+       type->name = gen_name();
++
++    /* replace existing attributes when generating a typelib */
++    if (do_typelib)
++        type->attrs = attrs;
+   }
+ 
+   LIST_FOR_EACH_ENTRY( decl, decls, const declarator_t, entry )
+-- 
+2.6.1
+

@@ -285,6 +285,7 @@ patch_enable_all ()
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_VerQueryValue="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
+	enable_widl_Typelib_Generator="$1"
 	enable_wine_inf_Performance="$1"
 	enable_wine_inf_ProfileList_UserSID="$1"
 	enable_wineboot_DriveSerial="$1"
@@ -953,6 +954,9 @@ patch_enable ()
 			;;
 		wbemdisp-ISWbemSecurity)
 			enable_wbemdisp_ISWbemSecurity="$2"
+			;;
+		widl-Typelib_Generator)
+			enable_widl_Typelib_Generator="$2"
 			;;
 		wine.inf-Performance)
 			enable_wine_inf_Performance="$2"
@@ -5527,6 +5531,29 @@ if test "$enable_wbemdisp_ISWbemSecurity" -eq 1; then
 	patch_apply wbemdisp-ISWbemSecurity/0001-wbemdisp-Add-ISWbemSecurity-stub-interface.patch
 	(
 		echo '+    { "Michael Müller", "wbemdisp: Add ISWbemSecurity stub interface.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset widl-Typelib_Generator
+# |
+# | Modified files:
+# |   *	dlls/oleaut32/tests/test_tlb.idl, dlls/oleaut32/tests/typelib.c, tools/widl/parser.y, tools/widl/typetree.c,
+# | 	tools/widl/write_msft.c
+# |
+if test "$enable_widl_Typelib_Generator" -eq 1; then
+	patch_apply widl-Typelib_Generator/0001-widl-When-adding-an-interface-typedef-do-check-wheth.patch
+	patch_apply widl-Typelib_Generator/0002-widl-Ignore-assignment-of-a-duplicate-uuid.-Resend.patch
+	patch_apply widl-Typelib_Generator/0003-widl-Attribute-uuid-takes-precedence-over-hidden-.-R.patch
+	patch_apply widl-Typelib_Generator/0004-widl-Attributes-of-the-alias-are-supposed-to-replace.patch
+	patch_apply widl-Typelib_Generator/0005-widl-Avoid-generating-duplicate-typelib-entries-for-.patch
+	patch_apply widl-Typelib_Generator/0006-oleaut32-tests-Add-a-bunch-of-new-tests-for-typelib-.patch
+	(
+		echo '+    { "Sebastian Lackner", "widl: When adding an interface typedef do check whether it has been already added while resolving the parent interface.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Ignore assignment of a duplicate uuid. Resend.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Attribute uuid() takes precedence over '\''hidden'\''. Resend.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Attributes of the alias are supposed to replace attributes of a tag in the typelib. Resend.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Avoid generating duplicate typelib entries for structure tag names. Resend.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "oleaut32/tests: Add a bunch of new tests for typelib generation.", 1 },';
 	) >> "$patchlist"
 fi
 

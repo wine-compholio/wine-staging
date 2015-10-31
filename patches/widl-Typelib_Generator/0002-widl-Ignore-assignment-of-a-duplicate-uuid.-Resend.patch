@@ -1,0 +1,58 @@
+From d2819273e30e3f5c89cd2f704ddb4593e3cbb540 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Sat, 31 Oct 2015 14:31:38 +0800
+Subject: widl: Ignore assignment of a duplicate uuid. Resend.
+
+MSDN KB285146 article describes this behaviour, and the tests in the last
+patch confirm that.
+
+Technically this means that in the construct like
+
+typedef [uuid(016fe2ec-b2c8-45f8-b23b-39e53a75396d)]
+enum _d { d1, d2 } d;
+
+only 'd' gets assigned the specified uuid, '_d' will get uuid offset set
+to -1 (undefined) which leads to '_d' having NULL_GUID. This matches widl
+behaviour, in this case widl emits a warning (mentioned in the KB article).
+
+I decided to leave emitting a warning about a duplicate uuid for enums same
+way as for structures and unions, this may help recognizing real bugs instead
+of hiding them (although apparently midl doesn't generate a warning for enums
+while still ignoring the uuid assignment).
+
+Signed-off-by: Dmitry Timoshkov <dmitry@baikal.ru>
+---
+ tools/widl/write_msft.c | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/tools/widl/write_msft.c b/tools/widl/write_msft.c
+index 98081f2..0992cf3 100644
+--- a/tools/widl/write_msft.c
++++ b/tools/widl/write_msft.c
+@@ -494,10 +494,22 @@ static int ctl2_alloc_guid(
+     MSFT_GuidEntry *guid_space;
+     int hash_key;
+ 
++    chat("adding uuid {%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x}\n",
++         guid->guid.Data1, guid->guid.Data2, guid->guid.Data3,
++         guid->guid.Data4[0], guid->guid.Data4[1], guid->guid.Data4[2], guid->guid.Data4[3],
++         guid->guid.Data4[4], guid->guid.Data4[5], guid->guid.Data4[6], guid->guid.Data4[7]);
++
+     hash_key = ctl2_hash_guid(&guid->guid);
+ 
+     offset = ctl2_find_guid(typelib, hash_key, &guid->guid);
+-    if (offset != -1) return offset;
++    if (offset != -1)
++    {
++        warning("duplicate uuid {%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x}\n",
++                guid->guid.Data1, guid->guid.Data2, guid->guid.Data3,
++                guid->guid.Data4[0], guid->guid.Data4[1], guid->guid.Data4[2], guid->guid.Data4[3],
++                guid->guid.Data4[4], guid->guid.Data4[5], guid->guid.Data4[6], guid->guid.Data4[7]);
++        return -1;
++    }
+ 
+     offset = ctl2_alloc_segment(typelib, MSFT_SEG_GUID, sizeof(MSFT_GuidEntry), 0);
+ 
+-- 
+2.6.1
+

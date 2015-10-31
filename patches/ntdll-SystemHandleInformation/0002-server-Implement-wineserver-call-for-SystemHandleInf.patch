@@ -1,14 +1,14 @@
-From 0df43162220f42efb66def6176a29ac89a2618f4 Mon Sep 17 00:00:00 2001
+From 5576d1d8409f51c9d5ed2311d3b3a7ece07f0c9b Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 31 Oct 2015 22:17:43 +0100
 Subject: server: Implement wineserver call for SystemHandleInformation.
 
 ---
- dlls/ntdll/nt.c         | 49 +++++++++++++++++++++++++++++++++++++--------
- dlls/ntdll/tests/info.c |  8 ++++----
- server/handle.c         | 53 +++++++++++++++++++++++++++++++++++++++++++++++++
- server/protocol.def     | 16 +++++++++++++++
- 4 files changed, 114 insertions(+), 12 deletions(-)
+ dlls/ntdll/nt.c         | 49 +++++++++++++++++++++++++++++++++++-------
+ dlls/ntdll/tests/info.c |  8 +++----
+ server/handle.c         | 57 +++++++++++++++++++++++++++++++++++++++++++++++++
+ server/protocol.def     | 16 ++++++++++++++
+ 4 files changed, 118 insertions(+), 12 deletions(-)
 
 diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
 index 8ea1ddd..6d360c3 100644
@@ -108,10 +108,10 @@ index 8e0a806..c0e2b1a 100644
  
      status = pNtQuerySystemInformation(SystemHandleInformation, NULL, SystemInformationLength, &ReturnLength);
 diff --git a/server/handle.c b/server/handle.c
-index 5043ff7..666814c 100644
+index 5043ff7..98e4d01 100644
 --- a/server/handle.c
 +++ b/server/handle.c
-@@ -745,3 +745,56 @@ DECL_HANDLER(get_security_object)
+@@ -745,3 +745,60 @@ DECL_HANDLER(get_security_object)
  
      release_object( obj );
  }
@@ -156,7 +156,8 @@ index 5043ff7..666814c 100644
 +DECL_HANDLER(get_system_handles)
 +{
 +    struct enum_handle_info info;
-+    data_size_t max_handles = get_reply_max_size() / sizeof(struct handle_entry);
++    struct handle_info *handle;
++    data_size_t max_handles = get_reply_max_size() / sizeof(*handle);
 +
 +    info.handle = NULL;
 +    info.count  = 0;
@@ -165,8 +166,11 @@ index 5043ff7..666814c 100644
 +
 +    if (max_handles < info.count)
 +        set_error( STATUS_BUFFER_TOO_SMALL );
-+    else if ((info.handle = set_reply_data_size( info.count * sizeof(struct handle_entry) )))
++    else if ((handle = set_reply_data_size( info.count * sizeof(*handle) )))
++    {
++        info.handle = handle;
 +        enum_processes( enum_handles, &info );
++    }
 +}
 diff --git a/server/protocol.def b/server/protocol.def
 index 5b45078..200a2e9 100644

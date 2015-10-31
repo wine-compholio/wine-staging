@@ -249,6 +249,7 @@ patch_enable_all ()
 	enable_setupapi_SetupDiSelectBestCompatDrv="$1"
 	enable_setupapi_SetupDiSetDeviceInstallParamsW="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
+	enable_sfc_SfcGetNextProtectedFile="$1"
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
 	enable_shell32_Default_Path="$1"
 	enable_shell32_File_Property_Dialog="$1"
@@ -843,6 +844,9 @@ patch_enable ()
 			;;
 		setupapi-SetupPromptForDisk)
 			enable_setupapi_SetupPromptForDisk="$2"
+			;;
+		sfc-SfcGetNextProtectedFile)
+			enable_sfc_SfcGetNextProtectedFile="$2"
 			;;
 		shdocvw-ParseURLFromOutsideSource_Tests)
 			enable_shdocvw_ParseURLFromOutsideSource_Tests="$2"
@@ -4971,6 +4975,21 @@ if test "$enable_setupapi_SetupPromptForDisk" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "setupapi: Add support for IDF_CHECKFIRST flag in SetupPromptForDiskW.", 1 },';
 		echo '+    { "Michael Müller", "setupapi/tests: Add test for IDF_CHECKFIRST and SetupPromptForDiskA/W.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset sfc-SfcGetNextProtectedFile
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38097] Add stub for SfcGetNextProtectedFile
+# |
+# | Modified files:
+# |   *	dlls/sfc/sfc.spec, dlls/sfc_os/sfc_os.c, dlls/sfc_os/sfc_os.spec
+# |
+if test "$enable_sfc_SfcGetNextProtectedFile" -eq 1; then
+	patch_apply sfc-SfcGetNextProtectedFile/0001-sfc_os-Implement-SfcGetNextProtectedFile.patch
+	(
+		echo '+    { "Michael Müller", "sfc_os: Implement SfcGetNextProtectedFile.", 1 },';
 	) >> "$patchlist"
 fi
 

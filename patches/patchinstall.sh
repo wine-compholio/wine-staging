@@ -153,6 +153,7 @@ patch_enable_all ()
 	enable_kernel32_CompareStringEx="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Cwd_Startup_Info="$1"
+	enable_kernel32_GetConsoleFontSize="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_GetLogicalProcessorInformationEx="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
@@ -559,6 +560,9 @@ patch_enable ()
 			;;
 		kernel32-Cwd_Startup_Info)
 			enable_kernel32_Cwd_Startup_Info="$2"
+			;;
+		kernel32-GetConsoleFontSize)
+			enable_kernel32_GetConsoleFontSize="$2"
 			;;
 		kernel32-GetFinalPathNameByHandle)
 			enable_kernel32_GetFinalPathNameByHandle="$2"
@@ -1932,6 +1936,13 @@ if test "$enable_ntdll_CLI_Images" -eq 1; then
 		abort "Patchset mscoree-CorValidateImage disabled, but ntdll-CLI_Images depends on that."
 	fi
 	enable_mscoree_CorValidateImage=1
+fi
+
+if test "$enable_kernel32_SetConsoleKeyShortcuts" -eq 1; then
+	if test "$enable_kernel32_GetConsoleFontSize" -gt 1; then
+		abort "Patchset kernel32-GetConsoleFontSize disabled, but kernel32-SetConsoleKeyShortcuts depends on that."
+	fi
+	enable_kernel32_GetConsoleFontSize=1
 fi
 
 if test "$enable_kernel32_Named_Pipe" -eq 1; then
@@ -3396,6 +3407,27 @@ if test "$enable_kernel32_Cwd_Startup_Info" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-GetConsoleFontSize
+# |
+# | Modified files:
+# |   *	dlls/kernel32/console.c, dlls/kernel32/kernel32.spec, dlls/kernel32/tests/console.c, programs/wineconsole/wineconsole.c,
+# | 	server/console.c, server/protocol.def
+# |
+if test "$enable_kernel32_GetConsoleFontSize" -eq 1; then
+	patch_apply kernel32-GetConsoleFontSize/0001-wineconsole-Add-if-check-to-determine-whether-a-font.patch
+	patch_apply kernel32-GetConsoleFontSize/0002-wineconsole-Pass-font-size-information-to-wineserver.patch
+	patch_apply kernel32-GetConsoleFontSize/0003-kernel32-Implement-GetNumberOfConsoleFonts-resend.patch
+	patch_apply kernel32-GetConsoleFontSize/0004-kernel32-Implement-GetConsoleFontSize-v2-resend.patch
+	patch_apply kernel32-GetConsoleFontSize/0005-kernel32-tests-Add-tests-for-GetConsoleFontSize-v2-r.patch
+	(
+		echo '+    { "Hugh McMaster", "wineconsole: Add if check to determine whether a font attribute has changed.", 3 },';
+		echo '+    { "Hugh McMaster", "wineconsole: Pass font size information to wineserver.", 1 },';
+		echo '+    { "Hugh McMaster", "kernel32: Implement GetNumberOfConsoleFonts.", 1 },';
+		echo '+    { "Hugh McMaster", "kernel32: Implement GetConsoleFontSize (v2, resend).", 1 },';
+		echo '+    { "Hugh McMaster", "kernel32/tests: Add tests for GetConsoleFontSize (v2, resend).", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset kernel32-GetFinalPathNameByHandle
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3551,6 +3583,9 @@ if test "$enable_kernel32_Profile" -eq 1; then
 fi
 
 # Patchset kernel32-SetConsoleKeyShortcuts
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	kernel32-GetConsoleFontSize
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#35702] Add stub for SetConsoleKeyShortcuts

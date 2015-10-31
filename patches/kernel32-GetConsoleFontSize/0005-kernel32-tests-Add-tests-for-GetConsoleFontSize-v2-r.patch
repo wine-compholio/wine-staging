@@ -1,0 +1,84 @@
+From a366dabe15b06c31edebf966c81d5e981b1d6e7d Mon Sep 17 00:00:00 2001
+From: Hugh McMaster <hugh.mcmaster@outlook.com>
+Date: Thu, 29 Oct 2015 23:17:22 +1100
+Subject: kernel32/tests: Add tests for GetConsoleFontSize (v2, resend)
+
+Signed-off-by: Hugh McMaster <hugh.mcmaster@outlook.com>
+---
+ dlls/kernel32/tests/console.c | 55 +++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 55 insertions(+)
+
+diff --git a/dlls/kernel32/tests/console.c b/dlls/kernel32/tests/console.c
+index 454f963..240d9d8 100644
+--- a/dlls/kernel32/tests/console.c
++++ b/dlls/kernel32/tests/console.c
+@@ -2627,6 +2627,60 @@ static void test_GetCurrentConsoleFont(HANDLE std_output)
+         "got %d, expected %d\n", cfi.dwFontSize.Y, height);
+ }
+ 
++static void test_GetConsoleFontSize(HANDLE std_output)
++{
++    COORD c;
++    DWORD index = 0;
++    CONSOLE_FONT_INFO cfi;
++    RECT r;
++    CONSOLE_SCREEN_BUFFER_INFO csbi;
++    LONG font_width, font_height;
++    HMODULE hmod;
++    DWORD (WINAPI *pGetNumberOfConsoleFonts)(void);
++
++    memset(&c, 10, sizeof(COORD));
++    SetLastError(0xdeadbeef);
++    c = GetConsoleFontSize(NULL, index);
++    ok(GetLastError() == ERROR_INVALID_HANDLE, "got %u, expected 6\n", GetLastError());
++    ok(!c.X, "got %d, expected 0\n", c.X);
++    ok(!c.Y, "got %d, expected 0\n", c.Y);
++
++    memset(&c, 10, sizeof(COORD));
++    SetLastError(0xdeadbeef);
++    c = GetConsoleFontSize(GetStdHandle(STD_INPUT_HANDLE), index);
++    ok(GetLastError() == ERROR_INVALID_HANDLE, "got %u, expected 6\n", GetLastError());
++    ok(!c.X, "got %d, expected 0\n", c.X);
++    ok(!c.Y, "got %d, expected 0\n", c.Y);
++
++    GetCurrentConsoleFont(std_output, FALSE, &cfi);
++    memset(&c, 10, sizeof(COORD));
++    SetLastError(0xdeadbeef);
++    c = GetConsoleFontSize(std_output, cfi.nFont);
++    ok(GetLastError() == 0xdeadbeef, "got %u, expected 0xdeadbeef\n", GetLastError());
++    GetClientRect(GetConsoleWindow(), &r);
++    GetConsoleScreenBufferInfo(std_output, &csbi);
++    font_width = (r.right - r.left + 1) / csbi.srWindow.Right;
++    font_height = (r.bottom - r.top + 1) / csbi.srWindow.Bottom;
++    ok(c.X == font_width, "got %d, expected %d\n", c.X, font_width);
++    ok(c.Y == font_height, "got %d, expected %d\n", c.Y, font_height);
++
++    hmod = GetModuleHandleA("kernel32.dll");
++    pGetNumberOfConsoleFonts = (void *)GetProcAddress(hmod, "GetNumberOfConsoleFonts");
++    if (!pGetNumberOfConsoleFonts)
++    {
++        win_skip("GetNumberOfConsoleFonts is not available\n");
++        return;
++    }
++    index = pGetNumberOfConsoleFonts();
++
++    memset(&c, 10, sizeof(COORD));
++    SetLastError(0xdeadbeef);
++    c = GetConsoleFontSize(std_output, index);
++    ok(GetLastError() == ERROR_INVALID_PARAMETER, "got %u, expected 87\n", GetLastError());
++    ok(!c.X, "got %d, expected 0\n", c.X);
++    ok(!c.Y, "got %d, expected 0\n", c.Y);
++}
++
+ START_TEST(console)
+ {
+     static const char font_name[] = "Lucida Console";
+@@ -2760,4 +2814,5 @@ START_TEST(console)
+     test_ReadConsoleOutputCharacterW(hConOut);
+     test_ReadConsoleOutputAttribute(hConOut);
+     test_GetCurrentConsoleFont(hConOut);
++    test_GetConsoleFontSize(hConOut);
+ }
+-- 
+2.6.1
+

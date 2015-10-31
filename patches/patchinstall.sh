@@ -4809,8 +4809,10 @@ fi
 # |
 if test "$enable_server_FileEndOfFileInformation" -eq 1; then
 	patch_apply server-FileEndOfFileInformation/0001-ntdll-Set-EOF-on-file-which-has-a-memory-mapping-sho.patch
+	patch_apply server-FileEndOfFileInformation/0002-server-Growing-files-which-are-mapped-to-memory-shou.patch
 	(
 		echo '+    { "Qian Hong", "ntdll: Set EOF on file which has a memory mapping should fail.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Growing files which are mapped to memory should still work.", 1 },';
 	) >> "$patchlist"
 fi
 

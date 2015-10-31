@@ -221,6 +221,7 @@ patch_enable_all ()
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
+	enable_ole32_IEnumSTATSTG="$1"
 	enable_openal32_EFX_Extension="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
@@ -760,6 +761,9 @@ patch_enable ()
 			;;
 		nvencodeapi-Video_Encoder)
 			enable_nvencodeapi_Video_Encoder="$2"
+			;;
+		ole32-IEnumSTATSTG)
+			enable_ole32_IEnumSTATSTG="$2"
 			;;
 		openal32-EFX_Extension)
 			enable_openal32_EFX_Extension="$2"
@@ -4566,6 +4570,22 @@ if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
 	patch_apply nvencodeapi-Video_Encoder/0001-nvencodeapi-First-implementation.patch
 	(
 		echo '+    { "Michael Müller", "nvencodeapi: First implementation.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ole32-IEnumSTATSTG
+# |
+# | Modified files:
+# |   *	dlls/ole32/storage32.c, dlls/ole32/tests/storage32.c
+# |
+if test "$enable_ole32_IEnumSTATSTG" -eq 1; then
+	patch_apply ole32-IEnumSTATSTG/0001-dlls-ole32-Handle-failure-of-reading-directory-entry.patch
+	patch_apply ole32-IEnumSTATSTG/0002-dlls-ole32-Zero-out-returned-stats-when-IEnumSTATSTG.patch
+	patch_apply ole32-IEnumSTATSTG/0003-ole32-tests-Add-the-tests-to-show-that-IEnumSTATSTG-.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "dlls/ole32: Handle failure of reading directory entry in IEnumSTATSTG::Next.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "dlls/ole32: Zero out returned stats when IEnumSTATSTG::Next reaches end of enumeration.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "ole32/tests: Add the tests to show that IEnumSTATSTG::Next should zero out returned stats when it reaches end of enumeration.", 1 },';
 	) >> "$patchlist"
 fi
 

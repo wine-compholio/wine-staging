@@ -1,4 +1,4 @@
-From b7a6d8f0acb9dca71c277ded977d6cf60240dbba Mon Sep 17 00:00:00 2001
+From 16bdcfee73240d725727f595f08e851b719e16c5 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 18 Mar 2015 23:03:01 +0100
 Subject: ntdll: Implement virtual_map_shared_memory.
@@ -6,8 +6,8 @@ Subject: ntdll: Implement virtual_map_shared_memory.
 Preparation for shared memory wineserver communication.
 ---
  dlls/ntdll/ntdll_misc.h |  1 +
- dlls/ntdll/virtual.c    | 51 +++++++++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 52 insertions(+)
+ dlls/ntdll/virtual.c    | 52 +++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 53 insertions(+)
 
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
 index cbd19db..7eded42 100644
@@ -22,10 +22,10 @@ index cbd19db..7eded42 100644
  extern BOOL virtual_handle_stack_fault( void *addr ) DECLSPEC_HIDDEN;
  extern BOOL virtual_is_valid_code_address( const void *addr, SIZE_T size ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 91db4d6..8027556 100644
+index 4d4bc3b..8b422f4 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -2734,6 +2734,57 @@ done:
+@@ -2729,6 +2729,58 @@ done:
  
  
  /***********************************************************************
@@ -37,6 +37,7 @@ index 91db4d6..8027556 100644
 +    SIZE_T size, mask = get_mask( zero_bits );
 +    struct file_view *view;
 +    unsigned int vprot;
++    sigset_t sigset;
 +    NTSTATUS res;
 +    int prot;
 +
@@ -44,7 +45,7 @@ index 91db4d6..8027556 100644
 +    if (size < *size_ptr)
 +        return STATUS_INVALID_PARAMETER;
 +
-+    virtual_lock();
++    server_enter_uninterrupted_section( &csVirtual, &sigset );
 +
 +    get_vprot_flags( protect, &vprot, FALSE );
 +    vprot |= VPROT_COMMITTED;
@@ -74,7 +75,7 @@ index 91db4d6..8027556 100644
 +        }
 +    }
 +
-+    virtual_unlock();
++    server_leave_uninterrupted_section( &csVirtual, &sigset );
 +    return res;
 +}
 +
@@ -84,5 +85,5 @@ index 91db4d6..8027556 100644
   *             ZwUnmapViewOfSection   (NTDLL.@)
   */
 -- 
-2.5.1
+2.6.1
 

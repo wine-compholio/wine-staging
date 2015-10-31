@@ -1,4 +1,4 @@
-From 7d4dbe4eccb1c132d31486780bdd3b892ccb08a6 Mon Sep 17 00:00:00 2001
+From 98455537b8e39281df59357bf1a2628350026c27 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Thu, 16 Oct 2014 23:24:37 +0200
 Subject: ntdll: Implement NtQuerySection. (try 2)
@@ -14,7 +14,7 @@ Some small modifications by Sebastian Lackner <sebastian@fds-team.de>
  6 files changed, 148 insertions(+), 23 deletions(-)
 
 diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
-index e48e6d4..36e3704 100644
+index a0d8909..a53e0bb 100644
 --- a/dlls/ntdll/nt.c
 +++ b/dlls/ntdll/nt.c
 @@ -656,26 +656,6 @@ NTSTATUS WINAPI SYSCALL(NtPrivilegeCheck)(
@@ -67,7 +67,7 @@ index 38422ae..73ae405 100644
  @ stdcall ZwQuerySemaphore(long long ptr long ptr) NtQuerySemaphore
  @ stdcall ZwQuerySymbolicLinkObject(long ptr ptr) NtQuerySymbolicLinkObject
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index f30d94a..2145b53 100644
+index 54c4cf4..f29084f 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
 @@ -2539,6 +2539,102 @@ NTSTATUS WINAPI SYSCALL(NtOpenSection)( HANDLE *handle, ACCESS_MASK access, cons
@@ -128,8 +128,8 @@ index f30d94a..2145b53 100644
 +    SERVER_END_REQ;
 +    if (res) return res;
 +
-+    if (dup_mapping) NtClose( dup_mapping );
-+    if (shared_file) NtClose( shared_file );
++    if (dup_mapping) close_handle( dup_mapping );
++    if (shared_file) close_handle( shared_file );
 +
 +    if (info_class == SectionBasicInformation)
 +    {
@@ -272,7 +272,7 @@ index 16e7c1c..ba26d1e 100644
      if ((fd = get_obj_fd( &mapping->obj )))
      {
 diff --git a/server/protocol.def b/server/protocol.def
-index c313006..4e07c10 100644
+index 5b45078..0d9b090 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -1674,6 +1674,13 @@ enum char_info_mode

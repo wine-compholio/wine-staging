@@ -3854,12 +3854,14 @@ if test "$enable_ntdll_Syscall_Wrappers" -eq 1; then
 	patch_apply ntdll-Syscall_Wrappers/0003-ntdll-APCs-should-call-the-implementation-instead-of.patch
 	patch_apply ntdll-Syscall_Wrappers/0004-ntdll-Syscalls-should-not-call-Nt-Ex-thunk-wrappers.patch
 	patch_apply ntdll-Syscall_Wrappers/0005-ntdll-Run-directory-initialization-function-early-du.patch
+	patch_apply ntdll-Syscall_Wrappers/0006-ntdll-Use-close_handle-instead-of-NtClose-for-intern.patch
 	(
 		echo '+    { "Sebastian Lackner", "winegcc: Pass '\''-read_only_relocs suppress'\'' to the linker on OSX.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Use wrapper functions for syscalls.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: APCs should call the implementation instead of the syscall thunk.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Syscalls should not call Nt*Ex thunk wrappers.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Run directory initialization function early during the process startup.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Use close_handle instead of NtClose for internal memory management functions.", 1 },';
 	) >> "$patchlist"
 fi
 

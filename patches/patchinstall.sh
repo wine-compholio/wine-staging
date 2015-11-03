@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "8f443077416fd820375b1bc0d1276286d23348fc"
+	echo "c715127536a78166e58b165c390a57b704899d29"
 }
 
 # Show version information
@@ -159,7 +159,6 @@ patch_enable_all ()
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_Profile="$1"
-	enable_kernel32_SetConsoleKeyShortcuts="$1"
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
 	enable_kernel32_SetFileInformationByHandle="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
@@ -576,9 +575,6 @@ patch_enable ()
 			;;
 		kernel32-Profile)
 			enable_kernel32_Profile="$2"
-			;;
-		kernel32-SetConsoleKeyShortcuts)
-			enable_kernel32_SetConsoleKeyShortcuts="$2"
 			;;
 		kernel32-SetFileCompletionNotificationModes)
 			enable_kernel32_SetFileCompletionNotificationModes="$2"
@@ -3542,21 +3538,6 @@ if test "$enable_kernel32_Profile" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-SetConsoleKeyShortcuts
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35702] Add stub for SetConsoleKeyShortcuts
-# |
-# | Modified files:
-# |   *	dlls/kernel32/console.c, dlls/kernel32/kernel32.spec
-# |
-if test "$enable_kernel32_SetConsoleKeyShortcuts" -eq 1; then
-	patch_apply kernel32-SetConsoleKeyShortcuts/0001-kernel32-add-SetConsoleKeyShortcuts-stub-resend.patch
-	(
-		echo '+    { "Austin English", "kernel32: add SetConsoleKeyShortcuts stub.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-SetFileCompletionNotificationModes
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5015,16 +4996,13 @@ fi
 
 # Patchset sfc-SfcGetNextProtectedFile
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38097] Add stub for SfcGetNextProtectedFile
-# |
 # | Modified files:
-# |   *	dlls/sfc/sfc.spec, dlls/sfc_os/sfc_os.c, dlls/sfc_os/sfc_os.spec
+# |   *	dlls/sfc_os/sfc_os.c
 # |
 if test "$enable_sfc_SfcGetNextProtectedFile" -eq 1; then
-	patch_apply sfc-SfcGetNextProtectedFile/0001-sfc_os-Implement-SfcGetNextProtectedFile.patch
+	patch_apply sfc-SfcGetNextProtectedFile/0001-sfc_os-Set-an-error-code-in-SfcGetNextProtectedFile-.patch
 	(
-		echo '+    { "Michael Müller", "sfc_os: Implement SfcGetNextProtectedFile.", 1 },';
+		echo '+    { "Michael Müller", "sfc_os: Set an error code in SfcGetNextProtectedFile stub.", 1 },';
 	) >> "$patchlist"
 fi
 

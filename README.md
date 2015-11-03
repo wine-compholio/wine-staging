@@ -61,8 +61,8 @@ for more details.*
 * Add stub for D3DXFrameFind ([Wine Bug #38334](https://bugs.winehq.org/show_bug.cgi?id=38334))
 * Add stub for NtSetLdtEntries/ZwSetLdtEntries ([Wine Bug #26268](https://bugs.winehq.org/show_bug.cgi?id=26268))
 * Add stub for SetCoalescableTimer ([Wine Bug #39509](https://bugs.winehq.org/show_bug.cgi?id=39509))
-* Add stub for SetConsoleKeyShortcuts ([Wine Bug #35702](https://bugs.winehq.org/show_bug.cgi?id=35702))
-* Add stub for SfcGetNextProtectedFile ([Wine Bug #38097](https://bugs.winehq.org/show_bug.cgi?id=38097))
+* ~~Add stub for SetConsoleKeyShortcuts~~ ([Wine Bug #35702](https://bugs.winehq.org/show_bug.cgi?id=35702))
+* ~~Add stub for SfcGetNextProtectedFile~~ ([Wine Bug #38097](https://bugs.winehq.org/show_bug.cgi?id=38097))
 * Add stub for ntoskrnl.ExAcquireResourceExclusiveLite
 * Add stub for ntoskrnl.ExDeleteResourceLite
 * Add stub for ntoskrnl.ExReleaseResourceForThread

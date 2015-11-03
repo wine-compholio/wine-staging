@@ -175,7 +175,7 @@ for more details.*
 * GetSecurityInfo returns NULL DACL for process object ([Wine Bug #15980](https://bugs.winehq.org/show_bug.cgi?id=15980))
 * Globally invalidate key state on changes in other threads ([Wine Bug #29871](https://bugs.winehq.org/show_bug.cgi?id=29871))
 * Graphical issues in Inquisitor ([Wine Bug #32490](https://bugs.winehq.org/show_bug.cgi?id=32490))
-* IEnumSTATSTG::Next should zero out returned stats when enumeration ends
+* ~~IEnumSTATSTG::Next should zero out returned stats when enumeration ends~~
 * Implement AMStream GetMultiMediaStream functions ([Wine Bug #37090](https://bugs.winehq.org/show_bug.cgi?id=37090))
 * Implement D3DXGetShaderOutputSemantics
 * Implement DDENUMSURFACES_CANBECREATED in IDirectDraw7::EnumSurfaces ([Wine Bug #17233](https://bugs.winehq.org/show_bug.cgi?id=17233))
@@ -194,7 +194,7 @@ for more details.*
 * Implement exclusive mode in PulseAudio backend ([Wine Bug #37042](https://bugs.winehq.org/show_bug.cgi?id=37042))
 * Implement general tab for file property dialog
 * Implement hal.KeQueryPerformanceCounter ([Wine Bug #39500](https://bugs.winehq.org/show_bug.cgi?id=39500))
-* Implement kernel32.GetConsoleFontSize
+* ~~Implement kernel32.GetConsoleFontSize~~
 * Implement locking and synchronization of key states ([Wine Bug #31899](https://bugs.winehq.org/show_bug.cgi?id=31899))
 * Implement mscoree._CorValidateImage for mono runtime ([Wine Bug #38662](https://bugs.winehq.org/show_bug.cgi?id=38662))
 * Implement ntoskrnl driver testing framework.

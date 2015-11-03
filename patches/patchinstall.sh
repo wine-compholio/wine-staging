@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "cbaab82d086e36dacaa22c6adf80f9114bb820fb"
+	echo "8f443077416fd820375b1bc0d1276286d23348fc"
 }
 
 # Show version information
@@ -153,7 +153,6 @@ patch_enable_all ()
 	enable_kernel32_CompareStringEx="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Cwd_Startup_Info="$1"
-	enable_kernel32_GetConsoleFontSize="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_GetLogicalProcessorInformationEx="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
@@ -224,7 +223,6 @@ patch_enable_all ()
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
-	enable_ole32_IEnumSTATSTG="$1"
 	enable_openal32_EFX_Extension="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
@@ -311,7 +309,6 @@ patch_enable_all ()
 	enable_winedbg_Windows_Version="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
-	enable_winepulse_PulseAudio_Support="$1"
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_Clipboard_HTML="$1"
 	enable_winex11_Window_Groups="$1"
@@ -562,9 +559,6 @@ patch_enable ()
 		kernel32-Cwd_Startup_Info)
 			enable_kernel32_Cwd_Startup_Info="$2"
 			;;
-		kernel32-GetConsoleFontSize)
-			enable_kernel32_GetConsoleFontSize="$2"
-			;;
 		kernel32-GetFinalPathNameByHandle)
 			enable_kernel32_GetFinalPathNameByHandle="$2"
 			;;
@@ -774,9 +768,6 @@ patch_enable ()
 			;;
 		nvencodeapi-Video_Encoder)
 			enable_nvencodeapi_Video_Encoder="$2"
-			;;
-		ole32-IEnumSTATSTG)
-			enable_ole32_IEnumSTATSTG="$2"
 			;;
 		openal32-EFX_Extension)
 			enable_openal32_EFX_Extension="$2"
@@ -1035,9 +1026,6 @@ patch_enable ()
 			;;
 		winemenubuilder-Desktop_Icon_Path)
 			enable_winemenubuilder_Desktop_Icon_Path="$2"
-			;;
-		winepulse-PulseAudio_Support)
-			enable_winepulse_PulseAudio_Support="$2"
 			;;
 		winex11-CandidateWindowPos)
 			enable_winex11_CandidateWindowPos="$2"
@@ -1647,9 +1635,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_winemenubuilder_Desktop_Icon_Path" -gt 1; then
 		abort "Patchset winemenubuilder-Desktop_Icon_Path disabled, but category-stable depends on that."
 	fi
-	if test "$enable_winepulse_PulseAudio_Support" -gt 1; then
-		abort "Patchset winepulse-PulseAudio_Support disabled, but category-stable depends on that."
-	fi
 	if test "$enable_winex11_Window_Style" -gt 1; then
 		abort "Patchset winex11-Window_Style disabled, but category-stable depends on that."
 	fi
@@ -1736,7 +1721,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_wined3d_resource_check_usage=1
 	enable_wined3d_wined3d_swapchain_present=1
 	enable_winemenubuilder_Desktop_Icon_Path=1
-	enable_winepulse_PulseAudio_Support=1
 	enable_winex11_Window_Style=1
 	enable_winex11_XEMBED=1
 	enable_winex11_wglShareLists=1
@@ -1940,13 +1924,6 @@ if test "$enable_ntdll_CLI_Images" -eq 1; then
 		abort "Patchset mscoree-CorValidateImage disabled, but ntdll-CLI_Images depends on that."
 	fi
 	enable_mscoree_CorValidateImage=1
-fi
-
-if test "$enable_kernel32_SetConsoleKeyShortcuts" -eq 1; then
-	if test "$enable_kernel32_GetConsoleFontSize" -gt 1; then
-		abort "Patchset kernel32-GetConsoleFontSize disabled, but kernel32-SetConsoleKeyShortcuts depends on that."
-	fi
-	enable_kernel32_GetConsoleFontSize=1
 fi
 
 if test "$enable_kernel32_Named_Pipe" -eq 1; then
@@ -3411,27 +3388,6 @@ if test "$enable_kernel32_Cwd_Startup_Info" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-GetConsoleFontSize
-# |
-# | Modified files:
-# |   *	dlls/kernel32/console.c, dlls/kernel32/kernel32.spec, dlls/kernel32/tests/console.c, programs/wineconsole/wineconsole.c,
-# | 	server/console.c, server/protocol.def
-# |
-if test "$enable_kernel32_GetConsoleFontSize" -eq 1; then
-	patch_apply kernel32-GetConsoleFontSize/0001-wineconsole-Add-if-check-to-determine-whether-a-font.patch
-	patch_apply kernel32-GetConsoleFontSize/0002-wineconsole-Pass-font-size-information-to-wineserver.patch
-	patch_apply kernel32-GetConsoleFontSize/0003-kernel32-Implement-GetNumberOfConsoleFonts-resend.patch
-	patch_apply kernel32-GetConsoleFontSize/0004-kernel32-Implement-GetConsoleFontSize-v2-resend.patch
-	patch_apply kernel32-GetConsoleFontSize/0005-kernel32-tests-Add-tests-for-GetConsoleFontSize-v2-r.patch
-	(
-		echo '+    { "Hugh McMaster", "wineconsole: Add if check to determine whether a font attribute has changed.", 3 },';
-		echo '+    { "Hugh McMaster", "wineconsole: Pass font size information to wineserver.", 1 },';
-		echo '+    { "Hugh McMaster", "kernel32: Implement GetNumberOfConsoleFonts.", 1 },';
-		echo '+    { "Hugh McMaster", "kernel32: Implement GetConsoleFontSize (v2, resend).", 1 },';
-		echo '+    { "Hugh McMaster", "kernel32/tests: Add tests for GetConsoleFontSize (v2, resend).", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-GetFinalPathNameByHandle
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3587,9 +3543,6 @@ if test "$enable_kernel32_Profile" -eq 1; then
 fi
 
 # Patchset kernel32-SetConsoleKeyShortcuts
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	kernel32-GetConsoleFontSize
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#35702] Add stub for SetConsoleKeyShortcuts
@@ -4649,22 +4602,6 @@ if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ole32-IEnumSTATSTG
-# |
-# | Modified files:
-# |   *	dlls/ole32/storage32.c, dlls/ole32/tests/storage32.c
-# |
-if test "$enable_ole32_IEnumSTATSTG" -eq 1; then
-	patch_apply ole32-IEnumSTATSTG/0001-dlls-ole32-Handle-failure-of-reading-directory-entry.patch
-	patch_apply ole32-IEnumSTATSTG/0002-dlls-ole32-Zero-out-returned-stats-when-IEnumSTATSTG.patch
-	patch_apply ole32-IEnumSTATSTG/0003-ole32-tests-Add-the-tests-to-show-that-IEnumSTATSTG-.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "dlls/ole32: Handle failure of reading directory entry in IEnumSTATSTG::Next.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "dlls/ole32: Zero out returned stats when IEnumSTATSTG::Next reaches end of enumeration.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "ole32/tests: Add the tests to show that IEnumSTATSTG::Next should zero out returned stats when it reaches end of enumeration.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset openal32-EFX_Extension
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5615,14 +5552,12 @@ fi
 # | 	tools/widl/write_msft.c
 # |
 if test "$enable_widl_Typelib_Generator" -eq 1; then
-	patch_apply widl-Typelib_Generator/0001-widl-When-adding-an-interface-typedef-do-check-wheth.patch
-	patch_apply widl-Typelib_Generator/0002-widl-Ignore-assignment-of-a-duplicate-uuid.-Resend.patch
-	patch_apply widl-Typelib_Generator/0003-widl-Attribute-uuid-takes-precedence-over-hidden-.-R.patch
-	patch_apply widl-Typelib_Generator/0004-widl-Attributes-of-the-alias-are-supposed-to-replace.patch
-	patch_apply widl-Typelib_Generator/0005-widl-Avoid-generating-duplicate-typelib-entries-for-.patch
-	patch_apply widl-Typelib_Generator/0006-oleaut32-tests-Add-a-bunch-of-new-tests-for-typelib-.patch
+	patch_apply widl-Typelib_Generator/0001-widl-Ignore-assignment-of-a-duplicate-uuid.-Resend.patch
+	patch_apply widl-Typelib_Generator/0002-widl-Attribute-uuid-takes-precedence-over-hidden-.-R.patch
+	patch_apply widl-Typelib_Generator/0003-widl-Attributes-of-the-alias-are-supposed-to-replace.patch
+	patch_apply widl-Typelib_Generator/0004-widl-Avoid-generating-duplicate-typelib-entries-for-.patch
+	patch_apply widl-Typelib_Generator/0005-oleaut32-tests-Add-a-bunch-of-new-tests-for-typelib-.patch
 	(
-		echo '+    { "Sebastian Lackner", "widl: When adding an interface typedef do check whether it has been already added while resolving the parent interface.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "widl: Ignore assignment of a duplicate uuid. Resend.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "widl: Attribute uuid() takes precedence over '\''hidden'\''. Resend.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "widl: Attributes of the alias are supposed to replace attributes of a tag in the typelib. Resend.", 1 },';
@@ -6276,97 +6211,6 @@ if test "$enable_winemenubuilder_Desktop_Icon_Path" -eq 1; then
 	patch_apply winemenubuilder-Desktop_Icon_Path/0001-winemenubuilder-Create-desktop-shortcuts-with-absolu.patch
 	(
 		echo '+    { "Sebastian Lackner", "winemenubuilder: Create desktop shortcuts with absolute wine path.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winepulse-PulseAudio_Support
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#10495] Support for PulseAudio backend for audio
-# |   *	[#37042] Implement exclusive mode in PulseAudio backend
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/mmdevapi/main.c, dlls/mmdevapi/tests/render.c, dlls/winepulse.drv/Makefile.in,
-# | 	dlls/winepulse.drv/mmdevdrv.c, dlls/winepulse.drv/winepulse.drv.spec
-# |
-if test "$enable_winepulse_PulseAudio_Support" -eq 1; then
-	patch_apply winepulse-PulseAudio_Support/0001-winepulse-Add-initial-stub-for-pulseaudio-support.patch
-	patch_apply winepulse-PulseAudio_Support/0002-winepulse-Add-format-and-period-probing.patch
-	patch_apply winepulse-PulseAudio_Support/0003-winepulse-Add-audioclient.patch
-	patch_apply winepulse-PulseAudio_Support/0004-winepulse-Add-IAudioRenderClient-and-IAudioCaptureCl.patch
-	patch_apply winepulse-PulseAudio_Support/0005-winepulse-Add-IAudioClock-and-IAudioClock2.patch
-	patch_apply winepulse-PulseAudio_Support/0006-winepulse-Add-audiostreamvolume.patch
-	patch_apply winepulse-PulseAudio_Support/0007-winepulse-Add-session-support.patch
-	patch_apply winepulse-PulseAudio_Support/0008-fix-fdels-trailing-whitespaces.patch
-	patch_apply winepulse-PulseAudio_Support/0009-winepulse-v12.patch
-	patch_apply winepulse-PulseAudio_Support/0010-winepulse-v15-Add-support-for-missing-formats-and-si.patch
-	patch_apply winepulse-PulseAudio_Support/0011-winepulse-v16-Add-official-warning-wine-doesn-t-want.patch
-	patch_apply winepulse-PulseAudio_Support/0012-winepulse-v17-Fix-winmm-tests.patch
-	patch_apply winepulse-PulseAudio_Support/0013-winepulse-v18-Latency-and-compilation-improvements.patch
-	patch_apply winepulse-PulseAudio_Support/0014-winepulse-API-Compatibility-with-1.5.2-onward-v2.patch
-	patch_apply winepulse-PulseAudio_Support/0015-winepulse-Fix-low-latency-support.patch
-	patch_apply winepulse-PulseAudio_Support/0016-winepulse-drop-realtime-priority-before-thread-destr.patch
-	patch_apply winepulse-PulseAudio_Support/0017-winepulse-remove-bogus-SetEvent-from-pulse_started_c.patch
-	patch_apply winepulse-PulseAudio_Support/0018-winepulse-disable-the-setevent-part-of-the-latency-h.patch
-	patch_apply winepulse-PulseAudio_Support/0019-winepulse-v20-fix-the-checks-in-IsFormatSupported.patch
-	patch_apply winepulse-PulseAudio_Support/0020-winepulse-fixup-IsFormatSupported-calls.patch
-	patch_apply winepulse-PulseAudio_Support/0021-winepulse-v21-return-early-if-padding-didn-t-update.patch
-	patch_apply winepulse-PulseAudio_Support/0022-winepulse-fix-unneeded-free-in-write.patch
-	patch_apply winepulse-PulseAudio_Support/0023-winepulse-v23-fixup-a-invalid-free-in-mmdevapi.patch
-	patch_apply winepulse-PulseAudio_Support/0024-winepulse-use-a-pi-mutex-for-serialization.patch
-	patch_apply winepulse-PulseAudio_Support/0025-winepulse-add-support-for-IMarshal.patch
-	patch_apply winepulse-PulseAudio_Support/0026-winepulse-handle-stream-create-failing-correctly.patch
-	patch_apply winepulse-PulseAudio_Support/0027-winepulse-Trivial-cleanups-and-changes-for-consisten.patch
-	patch_apply winepulse-PulseAudio_Support/0028-winepulse-Sync-default-channel-masks-with-other-driv.patch
-	patch_apply winepulse-PulseAudio_Support/0029-winepulse-In-Shared-mode-track-device-position-in-by.patch
-	patch_apply winepulse-PulseAudio_Support/0030-winepulse-Always-mute-buffer.patch
-	patch_apply winepulse-PulseAudio_Support/0031-winepulse-Remove-volume-support.patch
-	patch_apply winepulse-PulseAudio_Support/0032-winepulse-Forward-winmm-functions-to-winealsa.patch
-	patch_apply winepulse-PulseAudio_Support/0033-winepulse-expose-audio-devices-directly-to-programs.patch
-	patch_apply winepulse-PulseAudio_Support/0034-winepulse-implement-exclusive-mode.patch
-	patch_apply winepulse-PulseAudio_Support/0035-winepulse-fix-segfault-in-pulse_rd_loop.patch
-	patch_apply winepulse-PulseAudio_Support/0036-winepulse-implement-GetPropValue.patch
-	patch_apply winepulse-PulseAudio_Support/0037-winepulse-fetch-actual-program-name-if-possible.patch
-	patch_apply winepulse-PulseAudio_Support/0038-winepulse-return-PKEY_AudioEndpoint_PhysicalSpeakers.patch
-	(
-		echo '+    { "Maarten Lankhorst", "winepulse: Add initial stub for pulseaudio support.", 1 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: Add format and period probing.", 1 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: Add audioclient.", 1 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: Add IAudioRenderClient and IAudioCaptureClient.", 1 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: Add IAudioClock and IAudioClock2.", 1 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: Add audiostreamvolume.", 1 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: Add session support.", 1 },';
-		echo '+    { "Maarten Lankhorst", "fix fdels trailing whitespaces.", 1 },';
-		echo '+    { "Maarten Lankhorst", "winepulse.", 12 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: Add support for missing formats, and silence an error for missing format tags.", 15 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: Add official warning wine doesn'\''t want to support winepulse.", 16 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: Fix winmm tests.", 17 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: Latency and compilation improvements.", 18 },';
-		echo '+    { "Juergen Tretthahn", "winepulse: API Compatibility with 1.5.2 onward.", 2 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: Fix low latency support.", 1 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: drop realtime priority before thread destruction.", 1 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: remove bogus SetEvent from pulse_started_callback.", 1 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: disable the setevent part of the latency hack.", 1 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: fix the checks in IsFormatSupported.", 20 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: fixup IsFormatSupported calls.", 1 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: return early if padding didn'\''t update.", 21 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: fix unneeded free in write.", 1 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: fixup a invalid free in mmdevapi.", 23 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: use a pi-mutex for serialization.", 1 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: add support for IMarshal.", 1 },';
-		echo '+    { "Mark Harmstone", "winepulse: handle stream create failing correctly.", 1 },';
-		echo '+    { "Andrew Eikum", "winepulse: Trivial cleanups and changes for consistency with other drivers.", 1 },';
-		echo '+    { "Andrew Eikum", "winepulse: Sync default channel masks with other drivers.", 1 },';
-		echo '+    { "Andrew Eikum", "winepulse: In Shared mode, track device position in bytes.", 1 },';
-		echo '+    { "Andrew Eikum", "winepulse: Always mute buffer.", 1 },';
-		echo '+    { "Andrew Eikum", "winepulse: Remove volume support.", 1 },';
-		echo '+    { "Maarten Lankhorst", "winepulse: Forward winmm functions to winealsa.", 1 },';
-		echo '+    { "Mark Harmstone", "winepulse: expose audio devices directly to programs.", 1 },';
-		echo '+    { "Mark Harmstone", "winepulse: implement exclusive mode.", 1 },';
-		echo '+    { "Mark Harmstone", "winepulse: fix segfault in pulse_rd_loop.", 1 },';
-		echo '+    { "Mark Harmstone", "winepulse: implement GetPropValue.", 1 },';
-		echo '+    { "Mark Harmstone", "winepulse: fetch actual program name if possible.", 1 },';
-		echo '+    { "Mark Harmstone", "winepulse: return PKEY_AudioEndpoint_PhysicalSpeakers device prop.", 1 },';
 	) >> "$patchlist"
 fi
 

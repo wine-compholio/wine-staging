@@ -1,4 +1,4 @@
-From aff30eb5ce44d1f62c9c0a1419a89ba076dd93b8 Mon Sep 17 00:00:00 2001
+From e6ddf6fa378fc8e41535fb3d06daab9587fded2a Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 22 Feb 2015 01:25:20 +0100
 Subject: dxva2: Initial implementation of MPEG2 decoder using vaapi backend.
@@ -6,7 +6,7 @@ Subject: dxva2: Initial implementation of MPEG2 decoder using vaapi backend.
 ---
  configure.ac                |  16 +
  dlls/dxva2/Makefile.in      |  14 +-
- dlls/dxva2/backend.idl      |  94 ++++++
+ dlls/dxva2/backend.idl      |  96 ++++++
  dlls/dxva2/dxva2_private.h  | 115 ++++++-
  dlls/dxva2/genericdecoder.c | 432 +++++++++++++++++++++++++
  dlls/dxva2/main.c           |  70 +++-
@@ -14,17 +14,17 @@ Subject: dxva2: Initial implementation of MPEG2 decoder using vaapi backend.
  dlls/dxva2/vaapi-mpeg2.c    | 753 +++++++++++++++++++++++++++++++++++++++++++
  dlls/dxva2/vaapi.c          | 767 ++++++++++++++++++++++++++++++++++++++++++++
  dlls/dxva2/videoservices.c  |  74 ++---
- 10 files changed, 2291 insertions(+), 67 deletions(-)
+ 10 files changed, 2293 insertions(+), 67 deletions(-)
  create mode 100644 dlls/dxva2/backend.idl
  create mode 100644 dlls/dxva2/genericdecoder.c
  create mode 100644 dlls/dxva2/vaapi-mpeg2.c
  create mode 100644 dlls/dxva2/vaapi.c
 
 diff --git a/configure.ac b/configure.ac
-index fbcd3fb..324deba 100644
+index 3473566..ff3b189 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -99,6 +99,8 @@ AC_ARG_WITH(xxf86vm,   AS_HELP_STRING([--without-xxf86vm],[do not use XFree vide
+@@ -100,6 +100,8 @@ AC_ARG_WITH(xxf86vm,   AS_HELP_STRING([--without-xxf86vm],[do not use XFree vide
              [if test "x$withval" = "xno"; then ac_cv_header_X11_extensions_xf86vmode_h=no; ac_cv_header_X11_extensions_xf86vmproto_h=no; fi])
  AC_ARG_WITH(zlib,      AS_HELP_STRING([--without-zlib],[do not use Zlib (data compression)]),
              [if test "x$withval" = "xno"; then ac_cv_header_zlib_h=no; fi])
@@ -33,7 +33,7 @@ index fbcd3fb..324deba 100644
  
  AC_ARG_WITH(wine-tools,AS_HELP_STRING([--with-wine-tools=DIR],[use Wine tools from directory DIR]))
  AC_ARG_WITH(wine64,    AS_HELP_STRING([--with-wine64=DIR],[use the 64-bit Wine in DIR for a Wow64 build]))
-@@ -1265,6 +1267,20 @@ This probably prevents linking to OpenGL. Try deleting the file and restarting c
+@@ -1261,6 +1263,20 @@ This probably prevents linking to OpenGL. Try deleting the file and restarting c
      WINE_WARNING_WITH(opengl,[test -n "$opengl_msg"],[$opengl_msg
  OpenGL and Direct3D won't be supported.])
  
@@ -79,10 +79,10 @@ index 4af9dc0..afdefc3 100644
 +	videoservices.c
 diff --git a/dlls/dxva2/backend.idl b/dlls/dxva2/backend.idl
 new file mode 100644
-index 0000000..dd37695
+index 0000000..8d48835
 --- /dev/null
 +++ b/dlls/dxva2/backend.idl
-@@ -0,0 +1,94 @@
+@@ -0,0 +1,96 @@
 +/*
 + * Copyright (C) 2015 Michael Müller for Pipelight
 + *
@@ -100,6 +100,8 @@ index 0000000..dd37695
 + * License along with this library; if not, write to the Free Software
 + * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 + */
++
++#pragma makedep header
 +
 +import "unknwn.idl";
 +import "dxva2api.idl";
@@ -2633,5 +2635,5 @@ index 46e431a..84222dc 100644
          return E_NOINTERFACE;
      }
 -- 
-2.6.1
+2.6.2
 

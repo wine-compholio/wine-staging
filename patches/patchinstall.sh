@@ -4363,7 +4363,7 @@ fi
 if test "$enable_ntdll_Wait_User_APC" -eq 1; then
 	patch_apply ntdll-Wait_User_APC/0001-ntdll-Block-signals-while-executing-system-APCs.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Block signals while executing system APCs.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Block signals while executing system APCs.", 2 },';
 	) >> "$patchlist"
 fi
 

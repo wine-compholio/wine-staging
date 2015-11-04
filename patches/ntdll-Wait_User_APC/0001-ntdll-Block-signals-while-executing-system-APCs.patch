@@ -1,75 +1,62 @@
-From 67ccfc9b0fe9549fb20f2b752d98dd51baa08b8e Mon Sep 17 00:00:00 2001
+From 6c65f88462818ea7438abc6567c089424eed0368 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
-Date: Wed, 21 Oct 2015 18:53:58 +0200
-Subject: ntdll: Block signals while executing system APCs.
+Date: Wed, 4 Nov 2015 07:30:36 +0100
+Subject: ntdll: Block signals while executing system APCs. (v2)
 
+Changes in v2:
+  * Do not delete the still valid comment "Return TRUE if a user APC has been run.".
+    I still had this deleted from an earlier version of the patchset, where the
+    return type was changed.
+
+If a USR1 suspend signal arrives between dequeing a system APC and sending
+back the result to the wineserver, a deadlock occurs. To avoid this issue
+this patch blocks all signals in server_select(), except while waiting or
+processing user APCs.
+
+In server_queue_process_apc() we do not need to block signals because no
+other process will wait on the result.
+
+Signed-off-by: Sebastian Lackner <sebastian@fds-team.de>
 ---
- dlls/ntdll/server.c | 48 ++++++++++++++++++++++++++++++++++++++++--------
- 1 file changed, 40 insertions(+), 8 deletions(-)
+ dlls/ntdll/server.c | 21 +++++++++++++++++----
+ 1 file changed, 17 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
-index f6457db..0e97290 100644
+index 356d631..0450d85 100644
 --- a/dlls/ntdll/server.c
 +++ b/dlls/ntdll/server.c
-@@ -371,13 +371,30 @@ static int wait_select_reply( void *cookie )
- 
- 
- /***********************************************************************
-+ *              is_system_apc
-+ *
-+ * Checks if an APC call is a system APC.
-+ */
-+static BOOL is_system_apc( const apc_call_t *call )
-+{
-+    switch (call->type)
-+    {
-+        case APC_USER:
-+        case APC_TIMER:
-+            return FALSE;
-+        default:
-+            return TRUE;
-+    }
-+}
-+
-+
-+/***********************************************************************
+@@ -374,8 +374,9 @@ static int wait_select_reply( void *cookie )
   *              invoke_apc
   *
-- * Invoke a single APC. Return TRUE if a user APC has been run.
-+ * Invoke a single APC.
+  * Invoke a single APC. Return TRUE if a user APC has been run.
++ * Optionally unblock signals while executing user APCs.
   */
 -static BOOL invoke_apc( const apc_call_t *call, apc_result_t *result )
-+static void invoke_apc( const apc_call_t *call, apc_result_t *result )
++static BOOL invoke_apc( const apc_call_t *call, apc_result_t *result, sigset_t *user_sigset )
  {
--    BOOL user_apc = FALSE;
+     BOOL user_apc = FALSE;
      SIZE_T size;
-     void *addr;
- 
-@@ -391,7 +408,6 @@ static BOOL invoke_apc( const apc_call_t *call, apc_result_t *result )
+@@ -390,15 +391,19 @@ static BOOL invoke_apc( const apc_call_t *call, apc_result_t *result )
+     case APC_USER:
      {
          void (WINAPI *func)(ULONG_PTR,ULONG_PTR,ULONG_PTR) = wine_server_get_ptr( call->user.func );
++        if (user_sigset) pthread_sigmask( SIG_SETMASK, user_sigset, NULL );
          func( call->user.args[0], call->user.args[1], call->user.args[2] );
--        user_apc = TRUE;
++        if (user_sigset) pthread_sigmask( SIG_BLOCK, &server_block_set, user_sigset );
+         user_apc = TRUE;
          break;
      }
      case APC_TIMER:
-@@ -399,7 +415,6 @@ static BOOL invoke_apc( const apc_call_t *call, apc_result_t *result )
+     {
          void (WINAPI *func)(void*, unsigned int, unsigned int) = wine_server_get_ptr( call->timer.func );
++        if (user_sigset) pthread_sigmask( SIG_SETMASK, user_sigset, NULL );
          func( wine_server_get_ptr( call->timer.arg ),
                (DWORD)call->timer.time, (DWORD)(call->timer.time >> 32) );
--        user_apc = TRUE;
++        if (user_sigset) pthread_sigmask( SIG_BLOCK, &server_block_set, user_sigset );
+         user_apc = TRUE;
          break;
      }
-     case APC_ASYNC_IO:
-@@ -574,7 +589,6 @@ static BOOL invoke_apc( const apc_call_t *call, apc_result_t *result )
-         server_protocol_error( "get_apc_request: bad type %d\n", call->type );
-         break;
-     }
--    return user_apc;
- }
- 
- 
-@@ -590,10 +604,12 @@ unsigned int server_select( const select_op_t *select_op, data_size_t size, UINT
+@@ -590,10 +595,12 @@ unsigned int server_select( const select_op_t *select_op, data_size_t size, UINT
      obj_handle_t apc_handle = 0;
      apc_call_t call;
      apc_result_t result;
@@ -82,7 +69,7 @@ index f6457db..0e97290 100644
      for (;;)
      {
          SERVER_START_REQ( select )
-@@ -610,10 +626,25 @@ unsigned int server_select( const select_op_t *select_op, data_size_t size, UINT
+@@ -610,9 +617,14 @@ unsigned int server_select( const select_op_t *select_op, data_size_t size, UINT
              call        = reply->call;
          }
          SERVER_END_REQ;
@@ -95,22 +82,11 @@ index f6457db..0e97290 100644
 +        }
          if (ret != STATUS_USER_APC) break;
 -        if (invoke_apc( &call, &result ))
-+
-+        if (is_system_apc( &call ))
++        if (invoke_apc( &call, &result, &old_set ))
          {
-+            /* execute system APC without releasing the lock */
-+            invoke_apc( &call, &result );
-+        }
-+        else
-+        {
-+            pthread_sigmask( SIG_SETMASK, &old_set, NULL );
-+            invoke_apc( &call, &result );
-+            pthread_sigmask( SIG_BLOCK, &server_block_set, &old_set );
-+
              /* if we ran a user apc we have to check once more if additional apcs are queued,
               * but we don't want to wait */
-             abs_timeout = 0;
-@@ -625,6 +656,7 @@ unsigned int server_select( const select_op_t *select_op, data_size_t size, UINT
+@@ -625,6 +637,7 @@ unsigned int server_select( const select_op_t *select_op, data_size_t size, UINT
          if (size >= sizeof(select_op->signal_and_wait) && select_op->op == SELECT_SIGNAL_AND_WAIT)
              size = offsetof( select_op_t, signal_and_wait.signal );
      }
@@ -118,6 +94,15 @@ index f6457db..0e97290 100644
  
      if (ret == STATUS_TIMEOUT && user_apc) ret = STATUS_USER_APC;
  
+@@ -663,7 +676,7 @@ unsigned int server_queue_process_apc( HANDLE process, const apc_call_t *call, a
+ 
+         if (self)
+         {
+-            invoke_apc( call, result );
++            invoke_apc( call, result, NULL );
+         }
+         else
+         {
 -- 
-2.6.1
+2.6.2
 

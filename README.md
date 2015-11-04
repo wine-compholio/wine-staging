@@ -281,7 +281,7 @@ for more details.*
 * Support for MPEG2 DXVA2 GPU video decoding through vaapi
 * Support for NVIDIA video encoder library (nvencodeapi)
 * Support for NtQuerySection ([Wine Bug #37338](https://bugs.winehq.org/show_bug.cgi?id=37338))
-* Support for PulseAudio backend for audio ([Wine Bug #10495](https://bugs.winehq.org/show_bug.cgi?id=10495))
+* ~~Support for PulseAudio backend for audio~~ ([Wine Bug #10495](https://bugs.winehq.org/show_bug.cgi?id=10495))
 * Support for SHCreateSessionKey ([Wine Bug #35630](https://bugs.winehq.org/show_bug.cgi?id=35630))
 * Support for WTSEnumerateProcessesW ([Wine Bug #29903](https://bugs.winehq.org/show_bug.cgi?id=29903))
 * Support for extra large and jumbo icon lists in shell32 ([Wine Bug #24721](https://bugs.winehq.org/show_bug.cgi?id=24721))

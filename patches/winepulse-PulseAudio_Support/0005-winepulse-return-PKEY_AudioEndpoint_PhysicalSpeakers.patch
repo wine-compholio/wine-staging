@@ -1,17 +1,31 @@
-From 044624c3318488cb5c540797bd03994e18a221fd Mon Sep 17 00:00:00 2001
+From 690e73e4d7201a602f06b6d7d6896ed766f1c9f2 Mon Sep 17 00:00:00 2001
 From: Mark Harmstone <mark@harmstone.com>
-Date: Wed, 10 Dec 2014 18:08:41 +0000
+Date: Tue, 3 Nov 2015 16:22:28 -0600
 Subject: winepulse: return PKEY_AudioEndpoint_PhysicalSpeakers device prop
 
+Edited by Maarten Lankhorst: No support for multiple devices in winepulse yet.
+
+Synchronous static data initialization by Andrew Eikum <aeikum@codeweavers.com>
+
+Signed-off-by: Andrew Eikum <aeikum@codeweavers.com>
 ---
- dlls/winepulse.drv/mmdevdrv.c | 91 +++++++++++++++++++++++++++++++------------
- 1 file changed, 67 insertions(+), 24 deletions(-)
+ dlls/winepulse.drv/mmdevdrv.c | 84 +++++++++++++++++++++++++++++++------------
+ 1 file changed, 61 insertions(+), 23 deletions(-)
 
 diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
-index 445c242..c66ba54 100644
+index 64e6c2a..9aa1537 100644
 --- a/dlls/winepulse.drv/mmdevdrv.c
 +++ b/dlls/winepulse.drv/mmdevdrv.c
-@@ -322,13 +322,44 @@ static const enum pa_channel_position pulse_pos_from_wfx[] = {
+@@ -79,6 +79,8 @@ static pthread_mutex_t pulse_lock;
+ static pthread_cond_t pulse_cond = PTHREAD_COND_INITIALIZER;
+ static struct list g_sessions = LIST_INIT(g_sessions);
+ 
++static UINT g_phys_speakers_mask = 0;
++
+ /* Mixer format + period times */
+ static WAVEFORMATEXTENSIBLE pulse_fmt[2];
+ static REFERENCE_TIME pulse_min_period[2], pulse_def_period[2];
+@@ -330,13 +332,44 @@ static const enum pa_channel_position pulse_pos_from_wfx[] = {
      PA_CHANNEL_POSITION_TOP_REAR_RIGHT
  };
  
@@ -57,7 +71,7 @@ index 445c242..c66ba54 100644
      unsigned int length = 0;
  
      pa_channel_map_init_auto(&map, 2, PA_CHANNEL_MAP_ALSA);
-@@ -391,28 +422,7 @@ static void pulse_probe_settings(int render, WAVEFORMATEXTENSIBLE *fmt) {
+@@ -401,28 +434,7 @@ static void pulse_probe_settings(int render, WAVEFORMATEXTENSIBLE *fmt) {
      else
          fmt->SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
  
@@ -86,70 +100,60 @@ index 445c242..c66ba54 100644
 +    fmt->dwChannelMask = pulse_channel_map_to_channel_mask(&map);
  }
  
- typedef struct tagLANGANDCODEPAGE
-@@ -3632,6 +3642,10 @@ static void pulse_prop_values_sink_info_cb(pa_context *c, const pa_sink_info *i,
-             st->pv->vt = VT_UI4;
-             st->pv->u.ulVal = Speakers;
-             st->hr = S_OK;
-+        } else if (IsEqualPropertyKey(*st->prop, PKEY_AudioEndpoint_PhysicalSpeakers)) {
-+            st->pv->vt = VT_UI4;
-+            st->pv->u.ulVal = pulse_channel_map_to_channel_mask(&i->channel_map);
-+            st->hr = S_OK;
-         } else
-             st->hr = E_NOTIMPL;
-     }
-@@ -3658,6 +3672,16 @@ static void pulse_prop_values_source_info_cb(pa_context *c, const pa_source_info
-     pthread_cond_signal(&pulse_cond);
+ static HRESULT pulse_connect(void)
+@@ -492,6 +504,14 @@ fail:
+     return E_FAIL;
  }
  
++/* For default Pulseaudio render device, OR together all of the
++ * PKEY_AudioEndpoint_PhysicalSpeakers values of the sinks. */
 +static void pulse_phys_speakers_cb(pa_context *c, const pa_sink_info *i, int eol, void *userdata)
 +{
-+    PROPVARIANT *pv = userdata;
-+
 +    if (i)
-+        pv->u.ulVal |= pulse_channel_map_to_channel_mask(&i->channel_map);
-+
-+    pthread_cond_signal(&pulse_cond);
++        g_phys_speakers_mask |= pulse_channel_map_to_channel_mask(&i->channel_map);
 +}
 +
- HRESULT WINAPI AUDDRV_GetPropValue(GUID *guid, const PROPERTYKEY *prop, PROPVARIANT *out)
- {
-     struct pulse_prop_values_info_cb_data userdata;
-@@ -3667,6 +3691,24 @@ HRESULT WINAPI AUDDRV_GetPropValue(GUID *guid, const PROPERTYKEY *prop, PROPVARI
+ /* some poorly-behaved applications call audio functions during DllMain, so we
+  * have to do as much as possible without creating a new thread. this function
+  * sets up a synchronous connection to verify the server is running and query
+@@ -501,6 +521,7 @@ static HRESULT pulse_test_connect(void)
+     int len, ret;
+     WCHAR path[PATH_MAX], *name;
+     char *str;
++    pa_operation *o;
  
-     TRACE("%s, (%s,%u), %p\n", wine_dbgstr_guid(guid), wine_dbgstr_guid(&prop->fmtid), prop->pid, out);
+     pulse_ml = pa_mainloop_new();
  
-+    if (IsEqualGUID(guid, &pulse_render_guid) && IsEqualPropertyKey(*prop, PKEY_AudioEndpoint_PhysicalSpeakers)) {
-+        /* For default Pulseaudio render device, OR together all of the
-+         * PKEY_AudioEndpoint_PhysicalSpeakers values of the sinks. */
-+
-+        out->vt = VT_UI4;
-+        out->u.ulVal = 0;
-+
-+        pthread_mutex_lock(&pulse_lock);
-+        o = pa_context_get_sink_info_list(pulse_ctx, &pulse_phys_speakers_cb, out);
-+        if (o) {
-+            while (pa_operation_get_state(o) == PA_OPERATION_RUNNING)
-+                pthread_cond_wait(&pulse_cond, &pulse_lock);
-+            pa_operation_unref(o);
-+        }
-+        pthread_mutex_unlock(&pulse_lock);
-+        return o ? S_OK : E_FAIL;
+@@ -549,6 +570,15 @@ static HRESULT pulse_test_connect(void)
+     pulse_probe_settings(1, &pulse_fmt[0]);
+     pulse_probe_settings(0, &pulse_fmt[1]);
+ 
++    g_phys_speakers_mask = 0;
++    o = pa_context_get_sink_info_list(pulse_ctx, &pulse_phys_speakers_cb, NULL);
++    if (o) {
++        while (pa_mainloop_iterate(pulse_ml, 1, &ret) >= 0 &&
++                pa_operation_get_state(o) == PA_OPERATION_RUNNING)
++        {}
++        pa_operation_unref(o);
 +    }
 +
-     if (IsEqualGUID(guid, &pulse_render_guid) || IsEqualGUID(guid, &pulse_capture_guid))
-         return E_NOTIMPL;
- 
-@@ -3676,7 +3718,8 @@ HRESULT WINAPI AUDDRV_GetPropValue(GUID *guid, const PROPERTYKEY *prop, PROPVARI
-     }
- 
-     if (!IsEqualPropertyKey(*prop, PKEY_AudioEndpoint_FormFactor) &&
--        !IsEqualPropertyKey(*prop, devicepath_key)) {
-+        !IsEqualPropertyKey(*prop, devicepath_key) &&
-+        (flow == eCapture || !IsEqualPropertyKey(*prop, PKEY_AudioEndpoint_PhysicalSpeakers))) {
-         return E_NOTIMPL;
-     }
- 
+     pa_context_unref(pulse_ctx);
+     pulse_ctx = NULL;
+     pa_mainloop_free(pulse_ml);
+@@ -3203,5 +3233,13 @@ HRESULT WINAPI AUDDRV_GetAudioSessionManager(IMMDevice *device,
+ HRESULT WINAPI AUDDRV_GetPropValue(GUID *guid, const PROPERTYKEY *prop, PROPVARIANT *out)
+ {
+     TRACE("%s, (%s,%u), %p\n", wine_dbgstr_guid(guid), wine_dbgstr_guid(&prop->fmtid), prop->pid, out);
++
++    if (IsEqualGUID(guid, &pulse_render_guid) && IsEqualPropertyKey(*prop, PKEY_AudioEndpoint_PhysicalSpeakers)) {
++        out->vt = VT_UI4;
++        out->u.ulVal = g_phys_speakers_mask;
++
++        return out->u.ulVal ? S_OK : E_FAIL;
++    }
++
+     return E_NOTIMPL;
+ }
 -- 
-2.2.1
+2.6.2
 

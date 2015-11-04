@@ -308,6 +308,7 @@ patch_enable_all ()
 	enable_winedbg_Windows_Version="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
+	enable_winepulse_PulseAudio_Support="$1"
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_Clipboard_HTML="$1"
 	enable_winex11_Window_Groups="$1"
@@ -1023,6 +1024,9 @@ patch_enable ()
 		winemenubuilder-Desktop_Icon_Path)
 			enable_winemenubuilder_Desktop_Icon_Path="$2"
 			;;
+		winepulse-PulseAudio_Support)
+			enable_winepulse_PulseAudio_Support="$2"
+			;;
 		winex11-CandidateWindowPos)
 			enable_winex11_CandidateWindowPos="$2"
 			;;
@@ -1631,6 +1635,9 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_winemenubuilder_Desktop_Icon_Path" -gt 1; then
 		abort "Patchset winemenubuilder-Desktop_Icon_Path disabled, but category-stable depends on that."
 	fi
+	if test "$enable_winepulse_PulseAudio_Support" -gt 1; then
+		abort "Patchset winepulse-PulseAudio_Support disabled, but category-stable depends on that."
+	fi
 	if test "$enable_winex11_Window_Style" -gt 1; then
 		abort "Patchset winex11-Window_Style disabled, but category-stable depends on that."
 	fi
@@ -1717,6 +1724,7 @@ if test "$enable_category_stable" -eq 1; then
 	enable_wined3d_resource_check_usage=1
 	enable_wined3d_wined3d_swapchain_present=1
 	enable_winemenubuilder_Desktop_Icon_Path=1
+	enable_winepulse_PulseAudio_Support=1
 	enable_winex11_Window_Style=1
 	enable_winex11_XEMBED=1
 	enable_winex11_wglShareLists=1
@@ -6189,6 +6197,47 @@ if test "$enable_winemenubuilder_Desktop_Icon_Path" -eq 1; then
 	patch_apply winemenubuilder-Desktop_Icon_Path/0001-winemenubuilder-Create-desktop-shortcuts-with-absolu.patch
 	(
 		echo '+    { "Sebastian Lackner", "winemenubuilder: Create desktop shortcuts with absolute wine path.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winepulse-PulseAudio_Support
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37042] Implement exclusive mode in PulseAudio backend
+# |
+# | Modified files:
+# |   *	dlls/winepulse.drv/Makefile.in, dlls/winepulse.drv/mmdevdrv.c, dlls/winepulse.drv/winepulse.drv.spec
+# |
+if test "$enable_winepulse_PulseAudio_Support" -eq 1; then
+	patch_apply winepulse-PulseAudio_Support/0001-winepulse-handle-stream-create-failing-correctly.patch
+	patch_apply winepulse-PulseAudio_Support/0002-winepulse-Always-mute-buffer.patch
+	patch_apply winepulse-PulseAudio_Support/0003-winepulse-In-Shared-mode-track-device-position-in-by.patch
+	patch_apply winepulse-PulseAudio_Support/0004-winepulse-add-stub-for-GetPropValue.patch
+	patch_apply winepulse-PulseAudio_Support/0005-winepulse-return-PKEY_AudioEndpoint_PhysicalSpeakers.patch
+	patch_apply winepulse-PulseAudio_Support/0006-winepulse-Prefer-PulseAudio-driver.patch
+	patch_apply winepulse-PulseAudio_Support/0007-winepulse.drv-Use-delay-import-for-winealsa.drv.patch
+	patch_apply winepulse-PulseAudio_Support/0008-winepulse.drv-Use-a-separate-mainloop-and-ctx-for-pu.patch
+	patch_apply winepulse-PulseAudio_Support/0009-winepulse-expose-audio-devices-directly-to-programs.patch
+	patch_apply winepulse-PulseAudio_Support/0010-winepulse-implement-exclusive-mode.patch
+	patch_apply winepulse-PulseAudio_Support/0011-winepulse-fix-segfault-in-pulse_rd_loop.patch
+	patch_apply winepulse-PulseAudio_Support/0012-winepulse-implement-GetPropValue.patch
+	patch_apply winepulse-PulseAudio_Support/0013-winepulse-fetch-actual-program-name-if-possible.patch
+	patch_apply winepulse-PulseAudio_Support/0014-winepulse-return-PKEY_AudioEndpoint_PhysicalSpeakers.patch
+	(
+		echo '+    { "Mark Harmstone", "winepulse: handle stream create failing correctly.", 1 },';
+		echo '+    { "Andrew Eikum", "winepulse: Always mute buffer.", 1 },';
+		echo '+    { "Andrew Eikum", "winepulse: In Shared mode, track device position in bytes.", 1 },';
+		echo '+    { "Mark Harmstone", "winepulse: add stub for GetPropValue.", 1 },';
+		echo '+    { "Mark Harmstone", "winepulse: return PKEY_AudioEndpoint_PhysicalSpeakers device prop.", 1 },';
+		echo '+    { "Andrew Eikum", "winepulse: Prefer PulseAudio driver.", 1 },';
+		echo '+    { "Sebastian Lackner", "winepulse.drv: Use delay import for winealsa.drv.", 1 },';
+		echo '+    { "Sebastian Lackner", "winepulse.drv: Use a separate mainloop and ctx for pulse_test_connect.", 1 },';
+		echo '+    { "Mark Harmstone", "winepulse: expose audio devices directly to programs.", 1 },';
+		echo '+    { "Mark Harmstone", "winepulse: implement exclusive mode.", 1 },';
+		echo '+    { "Mark Harmstone", "winepulse: fix segfault in pulse_rd_loop.", 1 },';
+		echo '+    { "Mark Harmstone", "winepulse: implement GetPropValue.", 1 },';
+		echo '+    { "Mark Harmstone", "winepulse: fetch actual program name if possible.", 1 },';
+		echo '+    { "Mark Harmstone", "winepulse: return PKEY_AudioEndpoint_PhysicalSpeakers device prop.", 1 },';
 	) >> "$patchlist"
 fi
 

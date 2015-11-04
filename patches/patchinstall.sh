@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "c715127536a78166e58b165c390a57b704899d29"
+	echo "99033b14534ffe8ff6c88c8d38a70d398c933b4d"
 }
 
 # Show version information
@@ -5669,11 +5669,14 @@ fi
 # |   *	makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-DXTn
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
+# |   *	configure.ac, dlls/d3d11/device.c, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc, dlls/wined3d/resource.c,
+# | 	dlls/wined3d/wined3d.spec, include/wine/wined3d.h
 # |
 if test "$enable_wined3d_CSMT_Helper" -eq 1; then
-	patch_apply wined3d-CSMT_Helper/0001-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch
+	patch_apply wined3d-CSMT_Helper/0001-wined3d-Rename-wined3d_resource_-un-map-to-wined3d_r.patch
+	patch_apply wined3d-CSMT_Helper/0002-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch
 	(
+		echo '+    { "Sebastian Lackner", "wined3d: Rename wined3d_resource_(un)map to wined3d_resource_sub_resource_(un)map.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
 	) >> "$patchlist"
 fi

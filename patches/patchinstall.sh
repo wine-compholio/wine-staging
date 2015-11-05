@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "99033b14534ffe8ff6c88c8d38a70d398c933b4d"
+	echo "b53256b8b752855576252cc2290dfbc9cb0f1280"
 }
 
 # Show version information
@@ -5739,15 +5739,17 @@ fi
 # | 	dlls/ddraw/tests/ddraw4.c, dlls/ddraw/tests/ddraw7.c, dlls/wined3d/context.c, dlls/wined3d/wined3d_private.h
 # |
 if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
-	patch_apply wined3d-Revert_PixelFormat/0001-Revert-wined3d-Track-if-a-context-s-private-hdc-has-.patch
-	patch_apply wined3d-Revert_PixelFormat/0002-Revert-wined3d-Track-if-a-context-s-hdc-is-private-s.patch
-	patch_apply wined3d-Revert_PixelFormat/0003-Revert-wined3d-When-restoring-pixel-format-in-contex.patch
-	patch_apply wined3d-Revert_PixelFormat/0004-Revert-wined3d-Don-t-call-GetPixelFormat-to-set-a-fl.patch
-	patch_apply wined3d-Revert_PixelFormat/0005-Revert-wined3d-Restore-the-pixel-format-of-the-windo.patch
-	patch_apply wined3d-Revert_PixelFormat/0006-d3d8-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
-	patch_apply wined3d-Revert_PixelFormat/0007-d3d9-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
-	patch_apply wined3d-Revert_PixelFormat/0008-ddraw-Mark-tests-which-no-longer-pass-due-to-reverts.patch
+	patch_apply wined3d-Revert_PixelFormat/0001-Revert-wined3d-Call-wglGetPixelFormat-through-the-gl.patch
+	patch_apply wined3d-Revert_PixelFormat/0002-Revert-wined3d-Track-if-a-context-s-private-hdc-has-.patch
+	patch_apply wined3d-Revert_PixelFormat/0003-Revert-wined3d-Track-if-a-context-s-hdc-is-private-s.patch
+	patch_apply wined3d-Revert_PixelFormat/0004-Revert-wined3d-When-restoring-pixel-format-in-contex.patch
+	patch_apply wined3d-Revert_PixelFormat/0005-Revert-wined3d-Don-t-call-GetPixelFormat-to-set-a-fl.patch
+	patch_apply wined3d-Revert_PixelFormat/0006-Revert-wined3d-Restore-the-pixel-format-of-the-windo.patch
+	patch_apply wined3d-Revert_PixelFormat/0007-d3d8-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
+	patch_apply wined3d-Revert_PixelFormat/0008-d3d9-Mark-tests-which-no-longer-pass-due-to-reverts-.patch
+	patch_apply wined3d-Revert_PixelFormat/0009-ddraw-Mark-tests-which-no-longer-pass-due-to-reverts.patch
 	(
+		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Call wglGetPixelFormat() through the gl_ops table.\".", 1 },';
 		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s private hdc has had its pixel format set, so we don'\''t need to check it.\".", 1 },';
 		echo '+    { "Ken Thomases", "Revert \"wined3d: Track if a context'\''s hdc is private so we never need to restore its pixel format.\".", 1 },';
 		echo '+    { "Ken Thomases", "Revert \"wined3d: When restoring pixel format in context_release(), mark the context as needing to be set on the next context_acquire().\".", 1 },';

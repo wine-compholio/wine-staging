@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "b53256b8b752855576252cc2290dfbc9cb0f1280"
+	echo "a410990f7cb0fd7477d4594f8644428ca8873f0e"
 }
 
 # Show version information
@@ -6211,30 +6211,18 @@ fi
 # |   *	[#37042] Implement exclusive mode in PulseAudio backend
 # |
 # | Modified files:
-# |   *	dlls/winepulse.drv/Makefile.in, dlls/winepulse.drv/mmdevdrv.c, dlls/winepulse.drv/winepulse.drv.spec
+# |   *	dlls/winepulse.drv/Makefile.in, dlls/winepulse.drv/mmdevdrv.c
 # |
 if test "$enable_winepulse_PulseAudio_Support" -eq 1; then
-	patch_apply winepulse-PulseAudio_Support/0001-winepulse-handle-stream-create-failing-correctly.patch
-	patch_apply winepulse-PulseAudio_Support/0002-winepulse-Always-mute-buffer.patch
-	patch_apply winepulse-PulseAudio_Support/0003-winepulse-In-Shared-mode-track-device-position-in-by.patch
-	patch_apply winepulse-PulseAudio_Support/0004-winepulse-add-stub-for-GetPropValue.patch
-	patch_apply winepulse-PulseAudio_Support/0005-winepulse-return-PKEY_AudioEndpoint_PhysicalSpeakers.patch
-	patch_apply winepulse-PulseAudio_Support/0006-winepulse-Prefer-PulseAudio-driver.patch
-	patch_apply winepulse-PulseAudio_Support/0007-winepulse.drv-Use-delay-import-for-winealsa.drv.patch
-	patch_apply winepulse-PulseAudio_Support/0008-winepulse.drv-Use-a-separate-mainloop-and-ctx-for-pu.patch
-	patch_apply winepulse-PulseAudio_Support/0009-winepulse-expose-audio-devices-directly-to-programs.patch
-	patch_apply winepulse-PulseAudio_Support/0010-winepulse-implement-exclusive-mode.patch
-	patch_apply winepulse-PulseAudio_Support/0011-winepulse-fix-segfault-in-pulse_rd_loop.patch
-	patch_apply winepulse-PulseAudio_Support/0012-winepulse-implement-GetPropValue.patch
-	patch_apply winepulse-PulseAudio_Support/0013-winepulse-fetch-actual-program-name-if-possible.patch
-	patch_apply winepulse-PulseAudio_Support/0014-winepulse-return-PKEY_AudioEndpoint_PhysicalSpeakers.patch
+	patch_apply winepulse-PulseAudio_Support/0001-winepulse.drv-Use-delay-import-for-winealsa.drv.patch
+	patch_apply winepulse-PulseAudio_Support/0002-winepulse.drv-Use-a-separate-mainloop-and-ctx-for-pu.patch
+	patch_apply winepulse-PulseAudio_Support/0003-winepulse-expose-audio-devices-directly-to-programs.patch
+	patch_apply winepulse-PulseAudio_Support/0004-winepulse-implement-exclusive-mode.patch
+	patch_apply winepulse-PulseAudio_Support/0005-winepulse-fix-segfault-in-pulse_rd_loop.patch
+	patch_apply winepulse-PulseAudio_Support/0006-winepulse-implement-GetPropValue.patch
+	patch_apply winepulse-PulseAudio_Support/0007-winepulse-fetch-actual-program-name-if-possible.patch
+	patch_apply winepulse-PulseAudio_Support/0008-winepulse-return-PKEY_AudioEndpoint_PhysicalSpeakers.patch
 	(
-		echo '+    { "Mark Harmstone", "winepulse: handle stream create failing correctly.", 1 },';
-		echo '+    { "Andrew Eikum", "winepulse: Always mute buffer.", 1 },';
-		echo '+    { "Andrew Eikum", "winepulse: In Shared mode, track device position in bytes.", 1 },';
-		echo '+    { "Mark Harmstone", "winepulse: add stub for GetPropValue.", 1 },';
-		echo '+    { "Mark Harmstone", "winepulse: return PKEY_AudioEndpoint_PhysicalSpeakers device prop.", 1 },';
-		echo '+    { "Andrew Eikum", "winepulse: Prefer PulseAudio driver.", 1 },';
 		echo '+    { "Sebastian Lackner", "winepulse.drv: Use delay import for winealsa.drv.", 1 },';
 		echo '+    { "Sebastian Lackner", "winepulse.drv: Use a separate mainloop and ctx for pulse_test_connect.", 1 },';
 		echo '+    { "Mark Harmstone", "winepulse: expose audio devices directly to programs.", 1 },';

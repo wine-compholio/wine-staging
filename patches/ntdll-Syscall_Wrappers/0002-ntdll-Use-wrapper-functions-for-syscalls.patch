@@ -1,4 +1,4 @@
-From 446c222f1cda30dd0cc4c36a2feb4256537dec7d Mon Sep 17 00:00:00 2001
+From 1b7d74bd0325ceb988838324875369cdea6b26d9 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 16 Oct 2015 02:32:58 +0200
 Subject: ntdll: Use wrapper functions for syscalls.
@@ -14,7 +14,7 @@ Subject: ntdll: Use wrapper functions for syscalls.
  dlls/ntdll/ntdll_misc.h     |  17 ++++++
  dlls/ntdll/om.c             |  39 +++++++++-----
  dlls/ntdll/process.c        |  15 ++++--
- dlls/ntdll/reg.c            |  57 +++++++++++++-------
+ dlls/ntdll/reg.c            |  60 ++++++++++++++-------
  dlls/ntdll/resource.c       |  16 ++++--
  dlls/ntdll/sec.c            |   9 ++--
  dlls/ntdll/signal_arm.c     |   3 +-
@@ -26,7 +26,7 @@ Subject: ntdll: Use wrapper functions for syscalls.
  dlls/ntdll/thread.c         |  36 ++++++++-----
  dlls/ntdll/time.c           |  12 +++--
  dlls/ntdll/virtual.c        |  48 +++++++++++------
- 22 files changed, 410 insertions(+), 191 deletions(-)
+ 22 files changed, 412 insertions(+), 192 deletions(-)
 
 diff --git a/dlls/ntdll/atom.c b/dlls/ntdll/atom.c
 index 304b7f6..222fde9 100644
@@ -950,7 +950,7 @@ index ca9462a..37c08f1 100644
  {
      NTSTATUS    status;
 diff --git a/dlls/ntdll/reg.c b/dlls/ntdll/reg.c
-index a104c2e..c8d8704 100644
+index c0fc641..6df88c3 100644
 --- a/dlls/ntdll/reg.c
 +++ b/dlls/ntdll/reg.c
 @@ -51,7 +51,8 @@ WINE_DEFAULT_DEBUG_CHANNEL(reg);
@@ -963,7 +963,17 @@ index a104c2e..c8d8704 100644
                               ULONG TitleIndex, const UNICODE_STRING *class, ULONG options,
                               PULONG dispos )
  {
-@@ -113,7 +114,8 @@ NTSTATUS WINAPI RtlpNtCreateKey( PHANDLE retkey, ACCESS_MASK access, const OBJEC
+@@ -109,7 +110,8 @@ NTSTATUS WINAPI RtlpNtCreateKey( PHANDLE retkey, ACCESS_MASK access, const OBJEC
+  * NtOpenKeyEx [NTDLL.@]
+  * ZwOpenKeyEx [NTDLL.@]
+  */
+-NTSTATUS WINAPI NtOpenKeyEx( PHANDLE retkey, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr, ULONG options )
++DEFINE_SYSCALL_ENTRYPOINT( NtOpenKeyEx, 4 );
++NTSTATUS WINAPI SYSCALL(NtOpenKeyEx)( PHANDLE retkey, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr, ULONG options )
+ {
+     NTSTATUS ret;
+     DWORD len;
+@@ -146,7 +148,8 @@ NTSTATUS WINAPI NtOpenKeyEx( PHANDLE retkey, ACCESS_MASK access, const OBJECT_AT
   *   IN		ACCESS_MASK		access
   *   IN		POBJECT_ATTRIBUTES 	attr
   */
@@ -971,9 +981,9 @@ index a104c2e..c8d8704 100644
 +DEFINE_SYSCALL_ENTRYPOINT( NtOpenKey, 3 );
 +NTSTATUS WINAPI SYSCALL(NtOpenKey)( PHANDLE retkey, ACCESS_MASK access, const OBJECT_ATTRIBUTES *attr )
  {
-     NTSTATUS ret;
-     DWORD len;
-@@ -156,7 +158,8 @@ NTSTATUS WINAPI RtlpNtOpenKey( PHANDLE retkey, ACCESS_MASK access, OBJECT_ATTRIB
+     return NtOpenKeyEx( retkey, access, attr, 0 );
+ }
+@@ -167,7 +170,8 @@ NTSTATUS WINAPI RtlpNtOpenKey( PHANDLE retkey, ACCESS_MASK access, OBJECT_ATTRIB
   * NtDeleteKey [NTDLL.@]
   * ZwDeleteKey [NTDLL.@]
   */
@@ -983,7 +993,7 @@ index a104c2e..c8d8704 100644
  {
      NTSTATUS ret;
  
-@@ -185,7 +188,8 @@ NTSTATUS WINAPI RtlpNtMakeTemporaryKey( HANDLE hkey )
+@@ -196,7 +200,8 @@ NTSTATUS WINAPI RtlpNtMakeTemporaryKey( HANDLE hkey )
   * NtDeleteValueKey [NTDLL.@]
   * ZwDeleteValueKey [NTDLL.@]
   */
@@ -993,7 +1003,7 @@ index a104c2e..c8d8704 100644
  {
      NTSTATUS ret;
  
-@@ -311,7 +315,8 @@ static NTSTATUS enumerate_key( HANDLE handle, int index, KEY_INFORMATION_CLASS i
+@@ -322,7 +327,8 @@ static NTSTATUS enumerate_key( HANDLE handle, int index, KEY_INFORMATION_CLASS i
   * NOTES
   *  the name copied into the buffer is NOT 0-terminated
   */
@@ -1003,7 +1013,7 @@ index a104c2e..c8d8704 100644
                                  void *info, DWORD length, DWORD *result_len )
  {
      /* -1 means query key, so avoid it here */
-@@ -370,7 +375,8 @@ NTSTATUS WINAPI RtlpNtEnumerateSubKey( HANDLE handle, UNICODE_STRING *out, ULONG
+@@ -381,7 +387,8 @@ NTSTATUS WINAPI RtlpNtEnumerateSubKey( HANDLE handle, UNICODE_STRING *out, ULONG
   * NtQueryKey [NTDLL.@]
   * ZwQueryKey [NTDLL.@]
   */
@@ -1013,7 +1023,7 @@ index a104c2e..c8d8704 100644
                              void *info, DWORD length, DWORD *result_len )
  {
      return enumerate_key( handle, -1, info_class, info, length, result_len );
-@@ -425,7 +431,8 @@ static void copy_key_value_info( KEY_VALUE_INFORMATION_CLASS info_class, void *i
+@@ -436,7 +443,8 @@ static void copy_key_value_info( KEY_VALUE_INFORMATION_CLASS info_class, void *i
   *  NtEnumerateValueKey	[NTDLL.@]
   *  ZwEnumerateValueKey [NTDLL.@]
   */
@@ -1023,7 +1033,7 @@ index a104c2e..c8d8704 100644
                                       KEY_VALUE_INFORMATION_CLASS info_class,
                                       void *info, DWORD length, DWORD *result_len )
  {
-@@ -473,7 +480,8 @@ NTSTATUS WINAPI NtEnumerateValueKey( HANDLE handle, ULONG index,
+@@ -484,7 +492,8 @@ NTSTATUS WINAPI NtEnumerateValueKey( HANDLE handle, ULONG index,
   * NOTES
   *  the name in the KeyValueInformation is never set
   */
@@ -1033,7 +1043,7 @@ index a104c2e..c8d8704 100644
                                   KEY_VALUE_INFORMATION_CLASS info_class,
                                   void *info, DWORD length, DWORD *result_len )
  {
-@@ -575,7 +583,8 @@ NTSTATUS WINAPI RtlpNtQueryValueKey( HANDLE handle, ULONG *result_type, PBYTE de
+@@ -586,7 +595,8 @@ NTSTATUS WINAPI RtlpNtQueryValueKey( HANDLE handle, ULONG *result_type, PBYTE de
   *  NtFlushKey	[NTDLL.@]
   *  ZwFlushKey  [NTDLL.@]
   */
@@ -1043,7 +1053,7 @@ index a104c2e..c8d8704 100644
  {
      NTSTATUS ret;
  
-@@ -595,7 +604,8 @@ NTSTATUS WINAPI NtFlushKey(HANDLE key)
+@@ -606,7 +616,8 @@ NTSTATUS WINAPI NtFlushKey(HANDLE key)
   *  NtLoadKey	[NTDLL.@]
   *  ZwLoadKey   [NTDLL.@]
   */
@@ -1053,7 +1063,7 @@ index a104c2e..c8d8704 100644
  {
      NTSTATUS ret;
      HANDLE hive;
-@@ -625,7 +635,8 @@ NTSTATUS WINAPI NtLoadKey( const OBJECT_ATTRIBUTES *attr, OBJECT_ATTRIBUTES *fil
+@@ -636,7 +647,8 @@ NTSTATUS WINAPI NtLoadKey( const OBJECT_ATTRIBUTES *attr, OBJECT_ATTRIBUTES *fil
   *  NtNotifyChangeKey	[NTDLL.@]
   *  ZwNotifyChangeKey   [NTDLL.@]
   */
@@ -1063,7 +1073,7 @@ index a104c2e..c8d8704 100644
  	IN HANDLE KeyHandle,
  	IN HANDLE Event,
  	IN PIO_APC_ROUTINE ApcRoutine OPTIONAL,
-@@ -680,7 +691,8 @@ NTSTATUS WINAPI NtNotifyChangeKey(
+@@ -691,7 +703,8 @@ NTSTATUS WINAPI NtNotifyChangeKey(
   * ZwQueryMultipleValueKey
   */
  
@@ -1073,7 +1083,7 @@ index a104c2e..c8d8704 100644
  	HANDLE KeyHandle,
  	PKEY_MULTIPLE_VALUE_INFORMATION ListOfValuesToQuery,
  	ULONG NumberOfItems,
-@@ -698,7 +710,8 @@ NTSTATUS WINAPI NtQueryMultipleValueKey(
+@@ -709,7 +722,8 @@ NTSTATUS WINAPI NtQueryMultipleValueKey(
   * NtReplaceKey [NTDLL.@]
   * ZwReplaceKey [NTDLL.@]
   */
@@ -1083,7 +1093,7 @@ index a104c2e..c8d8704 100644
  	IN POBJECT_ATTRIBUTES ObjectAttributes,
  	IN HANDLE Key,
  	IN POBJECT_ATTRIBUTES ReplacedObjectAttributes)
-@@ -711,7 +724,8 @@ NTSTATUS WINAPI NtReplaceKey(
+@@ -722,7 +736,8 @@ NTSTATUS WINAPI NtReplaceKey(
   * NtRestoreKey [NTDLL.@]
   * ZwRestoreKey [NTDLL.@]
   */
@@ -1093,7 +1103,7 @@ index a104c2e..c8d8704 100644
  	HANDLE KeyHandle,
  	HANDLE FileHandle,
  	ULONG RestoreFlags)
-@@ -724,7 +738,8 @@ NTSTATUS WINAPI NtRestoreKey(
+@@ -735,7 +750,8 @@ NTSTATUS WINAPI NtRestoreKey(
   * NtSaveKey [NTDLL.@]
   * ZwSaveKey [NTDLL.@]
   */
@@ -1103,7 +1113,7 @@ index a104c2e..c8d8704 100644
  {
      NTSTATUS ret;
  
-@@ -744,7 +759,8 @@ NTSTATUS WINAPI NtSaveKey(IN HANDLE KeyHandle, IN HANDLE FileHandle)
+@@ -755,7 +771,8 @@ NTSTATUS WINAPI NtSaveKey(IN HANDLE KeyHandle, IN HANDLE FileHandle)
   * NtSetInformationKey [NTDLL.@]
   * ZwSetInformationKey [NTDLL.@]
   */
@@ -1113,7 +1123,7 @@ index a104c2e..c8d8704 100644
  	IN HANDLE KeyHandle,
  	IN const int KeyInformationClass,
  	IN PVOID KeyInformation,
-@@ -764,7 +780,8 @@ NTSTATUS WINAPI NtSetInformationKey(
+@@ -775,7 +792,8 @@ NTSTATUS WINAPI NtSetInformationKey(
   *   win95 does not care about count for REG_SZ and finds out the len by itself (js)
   *   NT does definitely care (aj)
   */
@@ -1123,7 +1133,7 @@ index a104c2e..c8d8704 100644
                                 ULONG type, const void *data, ULONG count )
  {
      NTSTATUS ret;
-@@ -803,7 +820,8 @@ NTSTATUS WINAPI RtlpNtSetValueKey( HANDLE hkey, ULONG type, const void *data,
+@@ -814,7 +832,8 @@ NTSTATUS WINAPI RtlpNtSetValueKey( HANDLE hkey, ULONG type, const void *data,
   * NtUnloadKey [NTDLL.@]
   * ZwUnloadKey [NTDLL.@]
   */
@@ -1133,7 +1143,7 @@ index a104c2e..c8d8704 100644
  {
      NTSTATUS ret;
  
-@@ -1410,7 +1428,8 @@ NTSTATUS WINAPI RtlWriteRegistryValue( ULONG RelativeTo, PCWSTR path, PCWSTR nam
+@@ -1421,7 +1440,8 @@ NTSTATUS WINAPI RtlWriteRegistryValue( ULONG RelativeTo, PCWSTR path, PCWSTR nam
   *  unless there is some app which explicitly depends on that, there is
   *  no good reason to reproduce that.
   */
@@ -2091,5 +2101,5 @@ index 4d4bc3b..f30d94a 100644
      struct file_view *view1, *view2;
      struct stat st1, st2;
 -- 
-2.6.1
+2.6.2
 

@@ -121,7 +121,7 @@ for more details.*
 * Do not wait for hook thread startup in IDirectInput8::Initialize ([Wine Bug #21403](https://bugs.winehq.org/show_bug.cgi?id=21403))
 * Enforce that surfaces are flushed after ReleaseDC ([Wine Bug #39465](https://bugs.winehq.org/show_bug.cgi?id=39465))
 * Ensure NtProtectVirtualMemory and NtCreateSection are on separate pages ([Wine Bug #33162](https://bugs.winehq.org/show_bug.cgi?id=33162))
-* Ensure X11 input events are handled even without explicit message loop ([Wine Bug #8854](https://bugs.winehq.org/show_bug.cgi?id=8854))
+* ~~Ensure X11 input events are handled even without explicit message loop~~ ([Wine Bug #8854](https://bugs.winehq.org/show_bug.cgi?id=8854))
 * Exception during start of fr-043 caused by missing DXTn support ([Wine Bug #37391](https://bugs.winehq.org/show_bug.cgi?id=37391))
 * Export additional OpenAL32 functions ([Wine Bug #38972](https://bugs.winehq.org/show_bug.cgi?id=38972))
 * Expose PKEY_AudioEndpoint_PhysicalSpeakers device property in PulseAudio driver
@@ -155,7 +155,7 @@ for more details.*
 * Fix implementation of msvcrt.close when stdout == stderr
 * Fix issues with dragging layers between images in Adobe Photoshop 7.0 ([Wine Bug #12007](https://bugs.winehq.org/show_bug.cgi?id=12007))
 * Fix missing video introduced by pixelformat changes. ([Wine Bug #36900](https://bugs.winehq.org/show_bug.cgi?id=36900))
-* Fix multiple issues in widl typelib generation
+* ~~Fix multiple issues in widl typelib generation~~
 * Fix multithreading issues with fullscreen clipping ([Wine Bug #38087](https://bugs.winehq.org/show_bug.cgi?id=38087))
 * Fix possible segfault in pulse_rd_loop of PulseAudio backend
 * Fix race-condition when threads are killed during shutdown
@@ -253,7 +253,7 @@ for more details.*
 * Return proper status codes when NtReadFile/NtWriteFile is called on closed (but not disconnected) pipe
 * SHFileOperation with FO_MOVE should create new directory on Vista+ ([Wine Bug #25207](https://bugs.winehq.org/show_bug.cgi?id=25207))
 * SO_CONNECT_TIME returns the appropriate time
-* Scrolling causes mouse and screen to lock in Call to Power II ([Wine Bug #34559](https://bugs.winehq.org/show_bug.cgi?id=34559))
+* ~~Scrolling causes mouse and screen to lock in Call to Power II~~ ([Wine Bug #34559](https://bugs.winehq.org/show_bug.cgi?id=34559))
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](https://bugs.winehq.org/show_bug.cgi?id=35652))
 * Set EOF on file which has a memory mapping should fail
 * Set NamedPipeState to FILE_PIPE_CLOSING_STATE on broken pipe in NtQueryInformationFile

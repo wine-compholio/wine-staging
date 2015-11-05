@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "60fedd23f95c66f4dce06c5c447de9ec99ebefa5"
+	echo "bfb845f9fccb2ff5bff0b0ba3238fec7f9f7b710"
 }
 
 # Show version information
@@ -125,7 +125,6 @@ patch_enable_all ()
 	enable_ddraw_Write_Vtable="$1"
 	enable_ddraw_ZBufferBitDepths="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
-	enable_dinput_Events="$1"
 	enable_dinput_Initialize="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
@@ -284,7 +283,6 @@ patch_enable_all ()
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_VerQueryValue="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
-	enable_widl_Typelib_Generator="$1"
 	enable_wine_inf_Performance="$1"
 	enable_wine_inf_ProfileList_UserSID="$1"
 	enable_wineboot_DriveSerial="$1"
@@ -473,9 +471,6 @@ patch_enable ()
 			;;
 		ddraw-d3d_execute_buffer)
 			enable_ddraw_d3d_execute_buffer="$2"
-			;;
-		dinput-Events)
-			enable_dinput_Events="$2"
 			;;
 		dinput-Initialize)
 			enable_dinput_Initialize="$2"
@@ -950,9 +945,6 @@ patch_enable ()
 			;;
 		wbemdisp-ISWbemSecurity)
 			enable_wbemdisp_ISWbemSecurity="$2"
-			;;
-		widl-Typelib_Generator)
-			enable_widl_Typelib_Generator="$2"
 			;;
 		wine.inf-Performance)
 			enable_wine_inf_Performance="$2"
@@ -1493,9 +1485,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_ddraw_EnumSurfaces" -gt 1; then
 		abort "Patchset ddraw-EnumSurfaces disabled, but category-stable depends on that."
 	fi
-	if test "$enable_dinput_Events" -gt 1; then
-		abort "Patchset dinput-Events disabled, but category-stable depends on that."
-	fi
 	if test "$enable_dxgi_GetDesc" -gt 1; then
 		abort "Patchset dxgi-GetDesc disabled, but category-stable depends on that."
 	fi
@@ -1674,7 +1663,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_d3dx9_36_UpdateSkinnedMesh=1
 	enable_dbghelp_Debug_Symbols=1
 	enable_ddraw_EnumSurfaces=1
-	enable_dinput_Events=1
 	enable_dxgi_GetDesc=1
 	enable_fonts_Missing_Fonts=1
 	enable_gdi32_MaxPixelFormats=1
@@ -2820,22 +2808,6 @@ if test "$enable_ddraw_d3d_execute_buffer" -eq 1; then
 	patch_apply ddraw-d3d_execute_buffer/0001-ddraw-Don-t-call-IDirect3DDevice7_DrawIndexedPrimiti.patch
 	(
 		echo '+    { "Christian Costa", "ddraw: Don'\''t call IDirect3DDevice7_DrawIndexedPrimitive if there is no primitive.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset dinput-Events
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#8854] Ensure X11 input events are handled even without explicit message loop
-# |   *	[#34559] Scrolling causes mouse and screen to lock in Call to Power II
-# |
-# | Modified files:
-# |   *	dlls/dinput/device.c, dlls/dinput/keyboard.c, dlls/dinput/mouse.c, dlls/dinput/tests/mouse.c
-# |
-if test "$enable_dinput_Events" -eq 1; then
-	patch_apply dinput-Events/0001-dinput-Ensure-X11-input-events-are-handled-even-with.patch
-	(
-		echo '+    { "Sebastian Lackner", "dinput: Ensure X11 input events are handled even without explicit message loop.", 4 },';
 	) >> "$patchlist"
 fi
 
@@ -5512,27 +5484,6 @@ if test "$enable_wbemdisp_ISWbemSecurity" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset widl-Typelib_Generator
-# |
-# | Modified files:
-# |   *	dlls/oleaut32/tests/test_tlb.idl, dlls/oleaut32/tests/typelib.c, tools/widl/parser.y, tools/widl/typetree.c,
-# | 	tools/widl/write_msft.c
-# |
-if test "$enable_widl_Typelib_Generator" -eq 1; then
-	patch_apply widl-Typelib_Generator/0001-widl-Ignore-assignment-of-a-duplicate-uuid.-Resend.patch
-	patch_apply widl-Typelib_Generator/0002-widl-Attribute-uuid-takes-precedence-over-hidden-.-R.patch
-	patch_apply widl-Typelib_Generator/0003-widl-Attributes-of-the-alias-are-supposed-to-replace.patch
-	patch_apply widl-Typelib_Generator/0004-widl-Avoid-generating-duplicate-typelib-entries-for-.patch
-	patch_apply widl-Typelib_Generator/0005-oleaut32-tests-Add-a-bunch-of-new-tests-for-typelib-.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "widl: Ignore assignment of a duplicate uuid. Resend.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Attribute uuid() takes precedence over '\''hidden'\''. Resend.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Attributes of the alias are supposed to replace attributes of a tag in the typelib. Resend.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Avoid generating duplicate typelib entries for structure tag names. Resend.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "oleaut32/tests: Add a bunch of new tests for typelib generation.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wine.inf-Performance
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5650,7 +5601,8 @@ fi
 # |   *	makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-DXTn
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/d3d11/device.c, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc, dlls/wined3d/resource.c,
+# |   *	configure.ac, dlls/d3d11/device.c, dlls/d3d11/texture.c, dlls/d3d8/surface.c, dlls/d3d8/volume.c, dlls/d3d9/surface.c,
+# | 	dlls/d3d9/volume.c, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc, dlls/wined3d/resource.c,
 # | 	dlls/wined3d/wined3d.spec, include/wine/wined3d.h
 # |
 if test "$enable_wined3d_CSMT_Helper" -eq 1; then
@@ -6503,11 +6455,11 @@ fi
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, dlls/ws2_32/ws2_32.spec, include/winsock2.h
 # |
 if test "$enable_ws2_32_WSAPoll" -eq 1; then
-	patch_apply ws2_32-WSAPoll/0001-include-Add-stuff-related-to-WSAPoll-try-2.patch
+	patch_apply ws2_32-WSAPoll/0001-include-Remove-check-for-__WINE_WNE_PORT_H-in-winsoc.patch
 	patch_apply ws2_32-WSAPoll/0002-ws2_32-tests-Add-WSAPoll-tests.patch
 	patch_apply ws2_32-WSAPoll/0003-ws2_32-Add-WSAPoll-implementation.patch
 	(
-		echo '+    { "Bruno Jesus", "include: Add stuff related to WSAPoll().", 2 },';
+		echo '+    { "Sebastian Lackner", "include: Remove check for __WINE_WNE_PORT_H in winsock2.h.", 1 },';
 		echo '+    { "Bruno Jesus", "ws2_32/tests: Add WSAPoll() tests.", 1 },';
 		echo '+    { "Bruno Jesus", "ws2_32: Add WSAPoll() implementation.", 1 },';
 	) >> "$patchlist"

@@ -238,7 +238,7 @@ for more details.*
 * Properly implement imagehlp.ImageLoad and ImageUnload ([Wine Bug #23455](https://bugs.winehq.org/show_bug.cgi?id=23455))
 * Properly initialize caps->dwZBufferBitDepths in ddraw7_GetCaps ([Wine Bug #27002](https://bugs.winehq.org/show_bug.cgi?id=27002))
 * Properly render themed buttons when they are pressed ([Wine Bug #37584](https://bugs.winehq.org/show_bug.cgi?id=37584))
-* Protect TVM_GETITEM from invalid item pointers ([Wine Bug #33001](https://bugs.winehq.org/show_bug.cgi?id=33001))
+* ~~Protect TVM_GETITEM from invalid item pointers~~ ([Wine Bug #33001](https://bugs.winehq.org/show_bug.cgi?id=33001))
 * Reduced SetTimer minimum value from 10 ms to 5 ms (improves Silverlight framerates)
 * Refresh MDI menus when DefMDIChildProc(WM_SETTEXT) is called ([Wine Bug #21855](https://bugs.winehq.org/show_bug.cgi?id=21855))
 * Report correct ObjectName for NamedPipe wineserver objects

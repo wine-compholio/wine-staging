@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a410990f7cb0fd7477d4594f8644428ca8873f0e"
+	echo "60fedd23f95c66f4dce06c5c447de9ec99ebefa5"
 }
 
 # Show version information
@@ -94,7 +94,6 @@ patch_enable_all ()
 	enable_browseui_Progress_Dialog="$1"
 	enable_comctl32_Button_Theming="$1"
 	enable_comctl32_PROPSHEET_InsertPage="$1"
-	enable_comctl32_TVM_GETITEM="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
 	enable_crypt32_CryptUnprotectMemory="$1"
@@ -381,9 +380,6 @@ patch_enable ()
 			;;
 		comctl32-PROPSHEET_InsertPage)
 			enable_comctl32_PROPSHEET_InsertPage="$2"
-			;;
-		comctl32-TVM_GETITEM)
-			enable_comctl32_TVM_GETITEM="$2"
 			;;
 		configure-Absolute_RPATH)
 			enable_configure_Absolute_RPATH="$2"
@@ -2326,21 +2322,6 @@ if test "$enable_comctl32_PROPSHEET_InsertPage" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "comctl32/tests: Add tests for PROPSHEET_InsertPage.", 1 },';
 		echo '+    { "Peter Hater", "comctl32: Implement PROPSHEET_InsertPage based on PROPSHEET_AddPage.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset comctl32-TVM_GETITEM
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#33001] Protect TVM_GETITEM from invalid item pointers
-# |
-# | Modified files:
-# |   *	dlls/comctl32/tests/treeview.c, dlls/comctl32/treeview.c
-# |
-if test "$enable_comctl32_TVM_GETITEM" -eq 1; then
-	patch_apply comctl32-TVM_GETITEM/0001-comctl32-Protect-TVM_GETITEM-from-invalid-item-point.patch
-	(
-		echo '+    { "Nikolay Sivov", "comctl32: Protect TVM_GETITEM from invalid item pointers.", 1 },';
 	) >> "$patchlist"
 fi
 

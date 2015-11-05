@@ -1,4 +1,4 @@
-From 6c65f88462818ea7438abc6567c089424eed0368 Mon Sep 17 00:00:00 2001
+From e923a9b76bc2b65422bff7953be5628b6a2a93d5 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 4 Nov 2015 07:30:36 +0100
 Subject: ntdll: Block signals while executing system APCs. (v2)
@@ -18,9 +18,38 @@ other process will wait on the result.
 
 Signed-off-by: Sebastian Lackner <sebastian@fds-team.de>
 ---
- dlls/ntdll/server.c | 21 +++++++++++++++++----
- 1 file changed, 17 insertions(+), 4 deletions(-)
+ dlls/kernel32/tests/sync.c | 11 ++---------
+ dlls/ntdll/server.c        | 21 +++++++++++++++++----
+ 2 files changed, 19 insertions(+), 13 deletions(-)
 
+diff --git a/dlls/kernel32/tests/sync.c b/dlls/kernel32/tests/sync.c
+index 4ac6a99..53e4f81 100644
+--- a/dlls/kernel32/tests/sync.c
++++ b/dlls/kernel32/tests/sync.c
+@@ -2460,21 +2460,14 @@ static void test_apc_deadlock(void)
+     result = WaitForSingleObject(event, 1000);
+     ok(result == WAIT_OBJECT_0, "expected WAIT_OBJECT_0, got %u\n", result);
+ 
+-    for (i = 0; i < 1000 && info.running; i++)
++    for (i = 0; i < 1000; i++)
+     {
+         result = SuspendThread(pi.hThread);
+         ok(result == 0, "expected 0, got %u\n", result);
+ 
+         WaitForSingleObject(event, 0); /* reset event */
+         result = WaitForSingleObject(event, 1000);
+-        if (result == WAIT_TIMEOUT)
+-        {
+-            todo_wine
+-            ok(result == WAIT_OBJECT_0, "expected WAIT_OBJECT_0, got %u\n", result);
+-            info.running = FALSE;
+-        }
+-        else
+-            ok(result == WAIT_OBJECT_0, "expected WAIT_OBJECT_0, got %u\n", result);
++        ok(result == WAIT_OBJECT_0, "expected WAIT_OBJECT_0, got %u\n", result);
+ 
+         result = ResumeThread(pi.hThread);
+         ok(result == 1, "expected 1, got %u\n", result);
 diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
 index 356d631..0450d85 100644
 --- a/dlls/ntdll/server.c

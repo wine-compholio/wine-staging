@@ -6144,7 +6144,7 @@ fi
 # |   *	[#37042] Implement exclusive mode in PulseAudio backend
 # |
 # | Modified files:
-# |   *	dlls/winepulse.drv/Makefile.in, dlls/winepulse.drv/mmdevdrv.c
+# |   *	configure.ac, dlls/winealsa.drv/Makefile.in, dlls/winepulse.drv/Makefile.in, dlls/winepulse.drv/mmdevdrv.c
 # |
 if test "$enable_winepulse_PulseAudio_Support" -eq 1; then
 	patch_apply winepulse-PulseAudio_Support/0001-winepulse.drv-Use-delay-import-for-winealsa.drv.patch

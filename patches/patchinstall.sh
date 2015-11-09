@@ -3414,30 +3414,32 @@ fi
 # | 	server/named_pipe.c, server/protocol.def, server/sock.c, server/sock.h
 # |
 if test "$enable_kernel32_Named_Pipe" -eq 1; then
-	patch_apply kernel32-Named_Pipe/0001-kernel32-ConnectNamedPort-should-return-FALSE-and-se.patch
-	patch_apply kernel32-Named_Pipe/0002-kernel32-tests-Add-tests-for-PeekNamedPipe-with-part.patch
-	patch_apply kernel32-Named_Pipe/0003-kernel32-tests-Add-tests-for-sending-and-receiving-l.patch
-	patch_apply kernel32-Named_Pipe/0004-kernel32-tests-Add-tests-for-closing-named-pipes.patch
-	patch_apply kernel32-Named_Pipe/0005-server-Show-warning-if-message-mode-is-not-supported.patch
-	patch_apply kernel32-Named_Pipe/0006-ntdll-Unify-similar-code-in-NtReadFile-and-FILE_Asyn.patch
-	patch_apply kernel32-Named_Pipe/0007-ntdll-Move-logic-to-check-for-broken-pipe-into-a-sep.patch
-	patch_apply kernel32-Named_Pipe/0008-ntdll-Unify-similar-code-in-NtWriteFile-and-FILE_Asy.patch
-	patch_apply kernel32-Named_Pipe/0009-server-Use-SOCK_SEQPACKET-socket-in-combination-with.patch
-	patch_apply kernel32-Named_Pipe/0010-ntdll-Add-handling-for-partially-received-messages-i.patch
-	patch_apply kernel32-Named_Pipe/0011-kernel32-tests-Add-more-tests-with-overlapped-IO-and.patch
-	patch_apply kernel32-Named_Pipe/0012-ntdll-Fix-some-tests-for-overlapped-partial-reads.patch
-	patch_apply kernel32-Named_Pipe/0013-kernel32-tests-Test-sending-peeking-and-receiving-an.patch
-	patch_apply kernel32-Named_Pipe/0014-ntdll-Add-support-for-nonblocking-pipes.patch
-	patch_apply kernel32-Named_Pipe/0015-kernel32-tests-Add-tests-for-PIPE_NOWAIT-in-message-.patch
-	patch_apply kernel32-Named_Pipe/0016-ntdll-Allow-to-set-PIPE_NOWAIT-on-byte-mode-pipes.patch
-	patch_apply kernel32-Named_Pipe/0017-kernel32-tests-Add-additional-tests-for-PIPE_NOWAIT-.patch
-	patch_apply kernel32-Named_Pipe/0018-ntdll-Improve-ReadDataAvailable-handling-in-FilePipe.patch
-	patch_apply kernel32-Named_Pipe/0019-ntdll-Set-NamedPipeState-to-FILE_PIPE_CLOSING_STATE-.patch
-	patch_apply kernel32-Named_Pipe/0020-kernel32-tests-Add-tests-for-behaviour-of-WriteFile-.patch
-	patch_apply kernel32-Named_Pipe/0021-server-Return-correct-error-codes-for-NtWriteFile-wh.patch
-	patch_apply kernel32-Named_Pipe/0022-ntdll-Pre-cache-file-descriptors-after-opening-a-fil.patch
-	patch_apply kernel32-Named_Pipe/0023-server-Fix-wineserver-crash-when-pipe-server-object-.patch
+	patch_apply kernel32-Named_Pipe/0001-kernel32-tests-Only-allow-one-test-result.patch
+	patch_apply kernel32-Named_Pipe/0002-kernel32-ConnectNamedPort-should-return-FALSE-and-se.patch
+	patch_apply kernel32-Named_Pipe/0003-kernel32-tests-Add-tests-for-PeekNamedPipe-with-part.patch
+	patch_apply kernel32-Named_Pipe/0004-kernel32-tests-Add-tests-for-sending-and-receiving-l.patch
+	patch_apply kernel32-Named_Pipe/0005-kernel32-tests-Add-tests-for-closing-named-pipes.patch
+	patch_apply kernel32-Named_Pipe/0006-server-Show-warning-if-message-mode-is-not-supported.patch
+	patch_apply kernel32-Named_Pipe/0007-ntdll-Unify-similar-code-in-NtReadFile-and-FILE_Asyn.patch
+	patch_apply kernel32-Named_Pipe/0008-ntdll-Move-logic-to-check-for-broken-pipe-into-a-sep.patch
+	patch_apply kernel32-Named_Pipe/0009-ntdll-Unify-similar-code-in-NtWriteFile-and-FILE_Asy.patch
+	patch_apply kernel32-Named_Pipe/0010-server-Use-SOCK_SEQPACKET-socket-in-combination-with.patch
+	patch_apply kernel32-Named_Pipe/0011-ntdll-Add-handling-for-partially-received-messages-i.patch
+	patch_apply kernel32-Named_Pipe/0012-kernel32-tests-Add-more-tests-with-overlapped-IO-and.patch
+	patch_apply kernel32-Named_Pipe/0013-ntdll-Fix-some-tests-for-overlapped-partial-reads.patch
+	patch_apply kernel32-Named_Pipe/0014-kernel32-tests-Test-sending-peeking-and-receiving-an.patch
+	patch_apply kernel32-Named_Pipe/0015-ntdll-Add-support-for-nonblocking-pipes.patch
+	patch_apply kernel32-Named_Pipe/0016-kernel32-tests-Add-tests-for-PIPE_NOWAIT-in-message-.patch
+	patch_apply kernel32-Named_Pipe/0017-ntdll-Allow-to-set-PIPE_NOWAIT-on-byte-mode-pipes.patch
+	patch_apply kernel32-Named_Pipe/0018-kernel32-tests-Add-additional-tests-for-PIPE_NOWAIT-.patch
+	patch_apply kernel32-Named_Pipe/0019-ntdll-Improve-ReadDataAvailable-handling-in-FilePipe.patch
+	patch_apply kernel32-Named_Pipe/0020-ntdll-Set-NamedPipeState-to-FILE_PIPE_CLOSING_STATE-.patch
+	patch_apply kernel32-Named_Pipe/0021-kernel32-tests-Add-tests-for-behaviour-of-WriteFile-.patch
+	patch_apply kernel32-Named_Pipe/0022-server-Return-correct-error-codes-for-NtWriteFile-wh.patch
+	patch_apply kernel32-Named_Pipe/0023-ntdll-Pre-cache-file-descriptors-after-opening-a-fil.patch
+	patch_apply kernel32-Named_Pipe/0024-server-Fix-wineserver-crash-when-pipe-server-object-.patch
 	(
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Only allow one test result.", 1 },';
 		echo '+    { "Dan Kegel", "kernel32: ConnectNamedPort should return FALSE and set ERROR_PIPE_CONNECTED on success in overlapped mode.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for PeekNamedPipe with partial received messages.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for sending and receiving large messages.", 1 },';

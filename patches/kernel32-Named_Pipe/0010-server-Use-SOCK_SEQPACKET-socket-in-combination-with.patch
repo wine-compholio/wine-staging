@@ -1,4 +1,4 @@
-From 7ae0152904f19f7f8e6e6fd761563b837b08cc69 Mon Sep 17 00:00:00 2001
+From c36c3e7049560da14340b1e5ce390cd91ef90c08 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 4 Aug 2014 05:01:11 +0200
 Subject: server: Use SOCK_SEQPACKET socket in combination with SO_PEEK_OFF to
@@ -27,16 +27,16 @@ Changes in v6:
   * When running on an older kernel make sure that ntdll doesn't try to use message mode features.
 ---
  dlls/kernel32/sync.c       |   2 +-
- dlls/kernel32/tests/pipe.c |   9 ----
+ dlls/kernel32/tests/pipe.c |  17 ++-----
  dlls/ntdll/file.c          | 106 ++++++++++++++++++++++++++++++++++------
  server/named_pipe.c        | 117 ++++++++++++++++++++++++++++++++++++---------
  server/sock.c              |   4 +-
  server/sock.h              |  26 ++++++++++
- 6 files changed, 215 insertions(+), 49 deletions(-)
+ 6 files changed, 219 insertions(+), 53 deletions(-)
  create mode 100644 server/sock.h
 
 diff --git a/dlls/kernel32/sync.c b/dlls/kernel32/sync.c
-index ef100bc..8157140 100644
+index 11626a2..0a3f2d7 100644
 --- a/dlls/kernel32/sync.c
 +++ b/dlls/kernel32/sync.c
 @@ -1470,7 +1470,7 @@ BOOL WINAPI PeekNamedPipe( HANDLE hPipe, LPVOID lpvBuffer, DWORD cbBuffer,
@@ -49,7 +49,7 @@ index ef100bc..8157140 100644
      }
      else SetLastError( RtlNtStatusToDosError(status) );
 diff --git a/dlls/kernel32/tests/pipe.c b/dlls/kernel32/tests/pipe.c
-index 1b30ffb..dff00c9 100644
+index 1ac4ed1..fded318 100644
 --- a/dlls/kernel32/tests/pipe.c
 +++ b/dlls/kernel32/tests/pipe.c
 @@ -286,7 +286,6 @@ static void test_CreateNamedPipe(int pipemode)
@@ -60,6 +60,42 @@ index 1b30ffb..dff00c9 100644
              ok(leftmsg == sizeof(obuf2) - 4, "peek got %d bytes left in message\n", leftmsg);
          ok(ReadFile(hFile, ibuf + 4, sizeof(ibuf) - 4, &readden, NULL), "ReadFile\n");
          ok(readden == sizeof(obuf2) - 4, "read got %d bytes\n", readden);
+@@ -357,7 +356,7 @@ static void test_CreateNamedPipe(int pipemode)
+         }
+         else
+         {
+-            todo_wine ok(readden == sizeof(obuf), "peek3 got %d bytes\n", readden);
++            ok(readden == sizeof(obuf), "peek3 got %d bytes\n", readden);
+         }
+         ok(avail == sizeof(obuf) + sizeof(obuf2), "peek3 got %d bytes available\n", avail);
+         pbuf = ibuf;
+@@ -385,7 +384,7 @@ static void test_CreateNamedPipe(int pipemode)
+         }
+         else
+         {
+-            todo_wine ok(readden == sizeof(obuf), "peek4 got %d bytes\n", readden);
++            ok(readden == sizeof(obuf), "peek4 got %d bytes\n", readden);
+         }
+         ok(avail == sizeof(obuf) + sizeof(obuf2), "peek4 got %d bytes available\n", avail);
+         pbuf = ibuf;
+@@ -426,7 +425,7 @@ static void test_CreateNamedPipe(int pipemode)
+             ok(WriteFile(hnp, obuf2, sizeof(obuf2), &written, NULL), " WriteFile5b\n");
+             ok(written == sizeof(obuf2), "write file len 3b\n");
+             ok(PeekNamedPipe(hFile, ibuf, sizeof(ibuf), &readden, &avail, NULL), "Peek5\n");
+-            todo_wine ok(readden == sizeof(obuf), "peek5 got %d bytes\n", readden);
++            ok(readden == sizeof(obuf), "peek5 got %d bytes\n", readden);
+             ok(avail == sizeof(obuf) + sizeof(obuf2), "peek5 got %d bytes available\n", avail);
+             pbuf = ibuf;
+             ok(memcmp(obuf, pbuf, sizeof(obuf)) == 0, "content 5a check\n");
+@@ -458,7 +457,7 @@ static void test_CreateNamedPipe(int pipemode)
+             ok(WriteFile(hFile, obuf2, sizeof(obuf2), &written, NULL), " WriteFile6b\n");
+             ok(written == sizeof(obuf2), "write file len 6b\n");
+             ok(PeekNamedPipe(hnp, ibuf, sizeof(ibuf), &readden, &avail, NULL), "Peek6\n");
+-            todo_wine ok(readden == sizeof(obuf), "peek6 got %d bytes\n", readden);
++            ok(readden == sizeof(obuf), "peek6 got %d bytes\n", readden);
+             ok(avail == sizeof(obuf) + sizeof(obuf2), "peek6b got %d bytes available\n", avail);
+             pbuf = ibuf;
+             ok(memcmp(obuf, pbuf, sizeof(obuf)) == 0, "content 6a check\n");
 @@ -510,12 +509,10 @@ static void test_CreateNamedPipe(int pipemode)
              readden = leftmsg = -1;
              ok(PeekNamedPipe(hFile, NULL, 0, NULL, &readden, &leftmsg), "PeekNamedPipe 9\n");
@@ -113,10 +149,10 @@ index 1b30ffb..dff00c9 100644
              ret = RpcReadFile(hnp, ibuf + 8, sizeof(ibuf), &readden, NULL);
              ok(ret, "RpcReadFile 10\n");
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 2f00767..1a4211e 100644
+index c0ca068..fd6c605 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -76,6 +76,10 @@
+@@ -91,6 +91,10 @@
  # include <valgrind/memcheck.h>
  #endif
  
@@ -127,7 +163,7 @@ index 2f00767..1a4211e 100644
  #include "ntstatus.h"
  #define WIN32_NO_STATUS
  #define NONAMELESSUNION
-@@ -461,18 +465,57 @@ static NTSTATUS unix_fd_avail(int fd, int *avail)
+@@ -511,18 +515,57 @@ static NTSTATUS unix_fd_avail(int fd, int *avail)
             STATUS_PIPE_BROKEN : STATUS_SUCCESS;
  }
  
@@ -188,7 +224,7 @@ index 2f00767..1a4211e 100644
              {
                  if (*total)
                      return STATUS_SUCCESS;
-@@ -487,16 +530,17 @@ static NTSTATUS read_unix_fd(int fd, char *buf, ULONG *total, ULONG length,
+@@ -538,16 +581,17 @@ static NTSTATUS read_unix_fd(int fd, char *buf, ULONG *total, ULONG length,
                      return STATUS_PIPE_BROKEN;
                  }
              }
@@ -210,7 +246,7 @@ index 2f00767..1a4211e 100644
  }
  
  /***********************************************************************
-@@ -955,13 +999,14 @@ NTSTATUS WINAPI NtReadFileScatter( HANDLE file, HANDLE event, PIO_APC_ROUTINE ap
+@@ -1105,13 +1149,14 @@ NTSTATUS WINAPI NtReadFileScatter( HANDLE file, HANDLE event, PIO_APC_ROUTINE ap
  /* helper function for NtWriteFile and FILE_AsyncWriteService */
  static NTSTATUS write_unix_fd(int fd, const char *buf, ULONG *total, ULONG length, enum server_fd_type type)
  {
@@ -226,7 +262,7 @@ index 2f00767..1a4211e 100644
          if (result >= 0)
          {
              *total += result;
-@@ -970,6 +1015,17 @@ static NTSTATUS write_unix_fd(int fd, const char *buf, ULONG *total, ULONG lengt
+@@ -1120,6 +1165,17 @@ static NTSTATUS write_unix_fd(int fd, const char *buf, ULONG *total, ULONG lengt
              else if (type != FD_TYPE_FILE) /* no async I/O on regular files */
                  return STATUS_PENDING;
          }
@@ -244,7 +280,7 @@ index 2f00767..1a4211e 100644
          else if (errno != EINTR)
          {
              if (errno == EAGAIN)
-@@ -1593,20 +1649,40 @@ NTSTATUS WINAPI NtFsControlFile(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc
+@@ -1710,20 +1766,40 @@ NTSTATUS WINAPI NtFsControlFile(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc
              status = unix_fd_avail( fd, &avail );
              if (!status)
              {
@@ -293,7 +329,7 @@ index 2f00767..1a4211e 100644
              if (needs_close) close( fd );
          }
 diff --git a/server/named_pipe.c b/server/named_pipe.c
-index 7c6bcf8..fe4a33a 100644
+index 494a3d8..9df5915 100644
 --- a/server/named_pipe.c
 +++ b/server/named_pipe.c
 @@ -42,6 +42,10 @@
@@ -315,7 +351,7 @@ index 7c6bcf8..fe4a33a 100644
  #include "handle.h"
  #include "thread.h"
  #include "request.h"
-@@ -791,14 +796,43 @@ static struct pipe_server *find_available_server( struct named_pipe *pipe )
+@@ -783,14 +788,43 @@ static struct pipe_server *find_available_server( struct named_pipe *pipe )
      return NULL;
  }
  
@@ -360,7 +396,7 @@ index 7c6bcf8..fe4a33a 100644
  
      if (!(server = find_available_server( pipe )))
      {
-@@ -817,7 +851,10 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
+@@ -809,7 +843,10 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
  
      if ((client = create_pipe_client( options, pipe->flags )))
      {
@@ -372,7 +408,7 @@ index 7c6bcf8..fe4a33a 100644
          {
              assert( !server->fd );
  
-@@ -827,32 +864,55 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
+@@ -819,32 +856,55 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
              if (is_overlapped( options )) fcntl( fds[1], F_SETFL, O_NONBLOCK );
              if (is_overlapped( server->options )) fcntl( fds[0], F_SETFL, O_NONBLOCK );
  
@@ -447,7 +483,7 @@ index 7c6bcf8..fe4a33a 100644
                  release_object( client );
                  client = NULL;
              }
-@@ -952,7 +1012,7 @@ DECL_HANDLER(create_named_pipe)
+@@ -933,7 +993,7 @@ DECL_HANDLER(create_named_pipe)
          return;
      }
  
@@ -456,7 +492,7 @@ index 7c6bcf8..fe4a33a 100644
      reply->handle = 0;
  
      if (!objattr_is_valid( objattr, get_req_data_size() ))
-@@ -1052,6 +1112,9 @@ DECL_HANDLER(set_named_pipe_info)
+@@ -1033,6 +1093,9 @@ DECL_HANDLER(set_named_pipe_info)
  {
      struct pipe_server *server;
      struct pipe_client *client = NULL;
@@ -466,7 +502,7 @@ index 7c6bcf8..fe4a33a 100644
  
      server = get_pipe_server_obj( current->process, req->handle, FILE_WRITE_ATTRIBUTES );
      if (!server)
-@@ -1074,10 +1137,20 @@ DECL_HANDLER(set_named_pipe_info)
+@@ -1055,10 +1118,20 @@ DECL_HANDLER(set_named_pipe_info)
      else if (client)
      {
          client->pipe_flags = server->pipe->flags | req->flags;
@@ -488,7 +524,7 @@ index 7c6bcf8..fe4a33a 100644
  
      if (client)
 diff --git a/server/sock.c b/server/sock.c
-index 823c846..d3c26d6 100644
+index 1767dea..095c569 100644
 --- a/server/sock.c
 +++ b/server/sock.c
 @@ -61,6 +61,7 @@
@@ -499,7 +535,7 @@ index 823c846..d3c26d6 100644
  #include "handle.h"
  #include "thread.h"
  #include "request.h"
-@@ -138,7 +139,6 @@ static void sock_cancel_async( struct fd *fd, struct process *process, struct th
+@@ -136,7 +137,6 @@ static int sock_cancel_async( struct fd *fd, struct process *process, struct thr
  
  static int sock_get_ntstatus( int err );
  static int sock_get_error( int err );
@@ -507,7 +543,7 @@ index 823c846..d3c26d6 100644
  
  static const struct object_ops sock_ops =
  {
-@@ -956,7 +956,7 @@ static int sock_get_ntstatus( int err )
+@@ -955,7 +955,7 @@ static int sock_get_ntstatus( int err )
  }
  
  /* set the last error depending on errno */
@@ -549,5 +585,5 @@ index 0000000..21551b4
 +
 +#endif  /* __WINE_SERVER_SOCK_H */
 -- 
-2.3.2
+2.6.2
 

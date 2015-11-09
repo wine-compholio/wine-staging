@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a0d0d0dd0a5b4a500ab8d37cc6e687a202997d56"
+	echo "7bd852c6ce0299f14fa585c124bae029f0d6d214"
 }
 
 # Show version information
@@ -6456,11 +6456,9 @@ fi
 # |
 if test "$enable_ws2_32_WSAPoll" -eq 1; then
 	patch_apply ws2_32-WSAPoll/0001-include-Remove-check-for-__WINE_WNE_PORT_H-in-winsoc.patch
-	patch_apply ws2_32-WSAPoll/0002-ws2_32-tests-Add-WSAPoll-tests.patch
-	patch_apply ws2_32-WSAPoll/0003-ws2_32-Add-WSAPoll-implementation.patch
+	patch_apply ws2_32-WSAPoll/0002-ws2_32-Add-WSAPoll-implementation.patch
 	(
 		echo '+    { "Sebastian Lackner", "include: Remove check for __WINE_WNE_PORT_H in winsock2.h.", 1 },';
-		echo '+    { "Bruno Jesus", "ws2_32/tests: Add WSAPoll() tests.", 1 },';
 		echo '+    { "Bruno Jesus", "ws2_32: Add WSAPoll() implementation.", 1 },';
 	) >> "$patchlist"
 fi

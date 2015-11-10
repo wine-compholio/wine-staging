@@ -299,6 +299,7 @@ patch_enable_all ()
 	enable_wined3d_MESA_GPU_Info="$1"
 	enable_wined3d_Multisampling="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
+	enable_wined3d_Revert_Prepare_GL_Resources="$1"
 	enable_wined3d_UnhandledBlendFactor="$1"
 	enable_wined3d_resource_check_usage="$1"
 	enable_wined3d_wined3d_swapchain_present="$1"
@@ -993,6 +994,9 @@ patch_enable ()
 			;;
 		wined3d-Revert_PixelFormat)
 			enable_wined3d_Revert_PixelFormat="$2"
+			;;
+		wined3d-Revert_Prepare_GL_Resources)
+			enable_wined3d_Revert_Prepare_GL_Resources="$2"
 			;;
 		wined3d-UnhandledBlendFactor)
 			enable_wined3d_UnhandledBlendFactor="$2"
@@ -1743,9 +1747,13 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_wined3d_DXTn" -gt 1; then
 		abort "Patchset wined3d-DXTn disabled, but wined3d-CSMT_Helper depends on that."
 	fi
+	if test "$enable_wined3d_Revert_Prepare_GL_Resources" -gt 1; then
+		abort "Patchset wined3d-Revert_Prepare_GL_Resources disabled, but wined3d-CSMT_Helper depends on that."
+	fi
 	enable_makedep_PARENTSPEC=1
 	enable_ntdll_DllRedirects=1
 	enable_wined3d_DXTn=1
+	enable_wined3d_Revert_Prepare_GL_Resources=1
 fi
 
 if test "$enable_uxtheme_GTK_Theming" -eq 1; then
@@ -5597,10 +5605,27 @@ if test "$enable_wined3d_Accounting" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-Revert_Prepare_GL_Resources
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39536] Revert patch to prepare GL resources before calling context_apply_fbo_state
+# |
+# | Modified files:
+# |   *	dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/drawprim.c, dlls/wined3d/surface.c,
+# | 	dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Revert_Prepare_GL_Resources" -eq 1; then
+	patch_apply wined3d-Revert_Prepare_GL_Resources/0001-Revert-wined3d-Prepare-GL-resources-before-calling-c.patch
+	(
+		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Prepare GL resources before calling context_apply_fbo_state.\".", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-CSMT_Helper
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-DXTn
+# |   *	makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-DXTn, wined3d-
+# | 	Revert_Prepare_GL_Resources
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/d3d11/device.c, dlls/d3d11/texture.c, dlls/d3d8/surface.c, dlls/d3d8/volume.c, dlls/d3d9/surface.c,
@@ -5736,7 +5761,7 @@ fi
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-DXTn, wined3d-
-# | 	CSMT_Helper
+# | 	Revert_Prepare_GL_Resources, wined3d-CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance

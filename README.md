@@ -34,6 +34,11 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
+**Bug fixes and features included in the next upcoming release [1]:**
+
+* Revert patch to prepare GL resources before calling context_apply_fbo_state ([Wine Bug #39536](https://bugs.winehq.org/show_bug.cgi?id=39536))
+
+
 **Bug fixes and features in Wine Staging 1.7.54 [268]:**
 
 *Note: The following list only contains features and bug fixes which are not

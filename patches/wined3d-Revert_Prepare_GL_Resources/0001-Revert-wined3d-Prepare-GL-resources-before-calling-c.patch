@@ -1,0 +1,244 @@
+From b0e2839c98b1b0f2a16b3382b1bd32fe60130700 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Tue, 10 Nov 2015 00:36:45 +0100
+Subject: Revert "wined3d: Prepare GL resources before calling
+ context_apply_fbo_state."
+
+This reverts commit 1ca9dfc8ee25f4ae188fdacd4d3d56046cef8003.
+---
+ dlls/wined3d/context.c         |  7 +++++++
+ dlls/wined3d/device.c          | 13 ++++--------
+ dlls/wined3d/drawprim.c        | 20 ++++++------------
+ dlls/wined3d/surface.c         | 46 ++++++++++++++++--------------------------
+ dlls/wined3d/wined3d_private.h |  2 --
+ 5 files changed, 34 insertions(+), 54 deletions(-)
+
+diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
+index 1692d0d..97f3c04 100644
+--- a/dlls/wined3d/context.c
++++ b/dlls/wined3d/context.c
+@@ -141,6 +141,8 @@ static void context_attach_depth_stencil_fbo(struct wined3d_context *context,
+             {
+                 case WINED3D_LOCATION_TEXTURE_RGB:
+                 case WINED3D_LOCATION_TEXTURE_SRGB:
++                    wined3d_texture_prepare_texture(depth_stencil->container, context, FALSE);
++
+                     if (format_flags & WINED3DFMT_FLAG_DEPTH)
+                     {
+                         gl_info->fbo_ops.glFramebufferTexture2D(fbo_target, GL_DEPTH_ATTACHMENT,
+@@ -159,11 +161,13 @@ static void context_attach_depth_stencil_fbo(struct wined3d_context *context,
+                     break;
+ 
+                 case WINED3D_LOCATION_RB_MULTISAMPLE:
++                    surface_prepare_rb(depth_stencil, gl_info, TRUE);
+                     context_attach_depth_stencil_rb(gl_info, fbo_target,
+                             format_flags, depth_stencil->rb_multisample);
+                     break;
+ 
+                 case WINED3D_LOCATION_RB_RESOLVED:
++                    surface_prepare_rb(depth_stencil, gl_info, FALSE);
+                     context_attach_depth_stencil_rb(gl_info, fbo_target,
+                             format_flags, depth_stencil->rb_resolved);
+                     break;
+@@ -213,6 +217,7 @@ static void context_attach_surface_fbo(struct wined3d_context *context,
+             case WINED3D_LOCATION_TEXTURE_RGB:
+             case WINED3D_LOCATION_TEXTURE_SRGB:
+                 srgb = location == WINED3D_LOCATION_TEXTURE_SRGB;
++                wined3d_texture_prepare_texture(surface->container, context, srgb);
+                 gl_info->fbo_ops.glFramebufferTexture2D(fbo_target, GL_COLOR_ATTACHMENT0 + idx,
+                         surface->texture_target, surface_get_texture_name(surface, gl_info, srgb),
+                         surface->texture_level);
+@@ -220,12 +225,14 @@ static void context_attach_surface_fbo(struct wined3d_context *context,
+                 break;
+ 
+             case WINED3D_LOCATION_RB_MULTISAMPLE:
++                surface_prepare_rb(surface, gl_info, TRUE);
+                 gl_info->fbo_ops.glFramebufferRenderbuffer(fbo_target, GL_COLOR_ATTACHMENT0 + idx,
+                         GL_RENDERBUFFER, surface->rb_multisample);
+                 checkGLcall("glFramebufferRenderbuffer()");
+                 break;
+ 
+             case WINED3D_LOCATION_RB_RESOLVED:
++                surface_prepare_rb(surface, gl_info, FALSE);
+                 gl_info->fbo_ops.glFramebufferRenderbuffer(fbo_target, GL_COLOR_ATTACHMENT0 + idx,
+                         GL_RENDERBUFFER, surface->rb_resolved);
+                 checkGLcall("glFramebufferRenderbuffer()");
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index 2960e08..0da8607 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -317,15 +317,13 @@ void device_clear_render_targets(struct wined3d_device *device, UINT rt_count, c
+      * anyway. If we're not clearing the color buffer we don't have to copy either since we're not going to set
+      * the drawable up to date. We have to check all settings that limit the clear area though. Do not bother
+      * checking all this if the dest surface is in the drawable anyway. */
+-    for (i = 0; i < rt_count; ++i)
++    if (flags & WINED3DCLEAR_TARGET && !is_full_clear(target, draw_rect, clear_rect))
+     {
+-        struct wined3d_surface *rt = wined3d_rendertarget_view_get_surface(fb->render_targets[i]);
+-        if (rt && rt->resource.format->id != WINED3DFMT_NULL)
++        for (i = 0; i < rt_count; ++i)
+         {
+-            if (flags & WINED3DCLEAR_TARGET && !is_full_clear(target, draw_rect, clear_rect))
++            struct wined3d_surface *rt = wined3d_rendertarget_view_get_surface(fb->render_targets[i]);
++            if (rt)
+                 surface_load_location(rt, context, rt->container->resource.draw_binding);
+-            else
+-                wined3d_surface_prepare(rt, context, rt->container->resource.draw_binding);
+         }
+     }
+ 
+@@ -341,9 +339,6 @@ void device_clear_render_targets(struct wined3d_device *device, UINT rt_count, c
+         drawable_height = depth_stencil->pow2Height;
+     }
+ 
+-    if (depth_stencil && render_offscreen)
+-        wined3d_surface_prepare(depth_stencil, context, depth_stencil->container->resource.draw_binding);
+-
+     if (flags & WINED3DCLEAR_ZBUFFER)
+     {
+         DWORD location = render_offscreen ? fb->depth_stencil->resource->draw_binding : WINED3D_LOCATION_DRAWABLE;
+diff --git a/dlls/wined3d/drawprim.c b/dlls/wined3d/drawprim.c
+index 3761830..d2d3bce 100644
+--- a/dlls/wined3d/drawprim.c
++++ b/dlls/wined3d/drawprim.c
+@@ -620,20 +620,17 @@ void draw_primitive(struct wined3d_device *device, UINT start_idx, UINT index_co
+     }
+     gl_info = context->gl_info;
+ 
+-    for (i = 0; i < device->adapter->gl_info.limits.buffers; ++i)
++    if (state->render_states[WINED3D_RS_COLORWRITEENABLE])
+     {
+-        struct wined3d_surface *target = wined3d_rendertarget_view_get_surface(device->fb.render_targets[i]);
+-        if (target && target->resource.format->id != WINED3DFMT_NULL)
++        /* Invalidate the back buffer memory so LockRect will read it the next time */
++        for (i = 0; i < device->adapter->gl_info.limits.buffers; ++i)
+         {
+-            if (state->render_states[WINED3D_RS_COLORWRITEENABLE])
++            struct wined3d_surface *target = wined3d_rendertarget_view_get_surface(device->fb.render_targets[i]);
++            if (target)
+             {
+                 surface_load_location(target, context, target->container->resource.draw_binding);
+                 surface_invalidate_location(target, ~target->container->resource.draw_binding);
+             }
+-            else
+-            {
+-                wined3d_surface_prepare(target, context, target->container->resource.draw_binding);
+-            }
+         }
+     }
+ 
+@@ -646,10 +643,9 @@ void draw_primitive(struct wined3d_device *device, UINT start_idx, UINT index_co
+          * that we never copy the stencil data.*/
+         DWORD location = context->render_offscreen ? device->fb.depth_stencil->resource->draw_binding
+                 : WINED3D_LOCATION_DRAWABLE;
+-        struct wined3d_surface *ds = wined3d_rendertarget_view_get_surface(device->fb.depth_stencil);
+-
+         if (state->render_states[WINED3D_RS_ZWRITEENABLE] || state->render_states[WINED3D_RS_ZENABLE])
+         {
++            struct wined3d_surface *ds = wined3d_rendertarget_view_get_surface(device->fb.depth_stencil);
+             RECT current_rect, draw_rect, r;
+ 
+             if (!context->render_offscreen && ds != device->onscreen_depth_stencil)
+@@ -665,11 +661,7 @@ void draw_primitive(struct wined3d_device *device, UINT start_idx, UINT index_co
+             IntersectRect(&r, &draw_rect, &current_rect);
+             if (!EqualRect(&r, &draw_rect))
+                 surface_load_ds_location(ds, context, location);
+-            else
+-                wined3d_surface_prepare(ds, context, location);
+         }
+-        else
+-            wined3d_surface_prepare(ds, context, location);
+     }
+ 
+     if (!context_apply_draw_state(context, device))
+diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
+index c3ddc84..179ce02 100644
+--- a/dlls/wined3d/surface.c
++++ b/dlls/wined3d/surface.c
+@@ -821,8 +821,6 @@ static void surface_depth_blt_fbo(const struct wined3d_device *device,
+     surface_load_location(src_surface, context, src_location);
+     if (!surface_is_full_rect(dst_surface, dst_rect))
+         surface_load_location(dst_surface, context, dst_location);
+-    else
+-        wined3d_surface_prepare(dst_surface, context, dst_location);
+ 
+     gl_info = context->gl_info;
+ 
+@@ -914,9 +912,6 @@ static void surface_blt_fbo(const struct wined3d_device *device,
+     surface_load_location(src_surface, old_ctx, src_location);
+     if (!surface_is_full_rect(dst_surface, &dst_rect))
+         surface_load_location(dst_surface, old_ctx, dst_location);
+-    else
+-        wined3d_surface_prepare(dst_surface, old_ctx, dst_location);
+-
+ 
+     if (src_location == WINED3D_LOCATION_DRAWABLE) required_rt = src_surface;
+     else if (dst_location == WINED3D_LOCATION_DRAWABLE) required_rt = dst_surface;
+@@ -3678,7 +3673,23 @@ void surface_load_ds_location(struct wined3d_surface *surface, struct wined3d_co
+     if (surface->locations & WINED3D_LOCATION_DISCARDED)
+     {
+         TRACE("Surface was discarded, no need copy data.\n");
+-        wined3d_surface_prepare(surface, context, location);
++        switch (location)
++        {
++            case WINED3D_LOCATION_TEXTURE_RGB:
++                wined3d_texture_prepare_texture(surface->container, context, FALSE);
++                break;
++            case WINED3D_LOCATION_RB_MULTISAMPLE:
++                surface_prepare_rb(surface, gl_info, TRUE);
++                break;
++            case WINED3D_LOCATION_RB_RESOLVED:
++                surface_prepare_rb(surface, gl_info, FALSE);
++                break;
++            case WINED3D_LOCATION_DRAWABLE:
++                /* Nothing to do */
++                break;
++            default:
++                FIXME("Unhandled location %#x\n", location);
++        }
+         surface->locations &= ~WINED3D_LOCATION_DISCARDED;
+         surface->locations |= location;
+         surface->ds_current_size.cx = surface->resource.width;
+@@ -5501,26 +5512,3 @@ HRESULT wined3d_surface_create(struct wined3d_texture *container, const struct w
+ 
+     return hr;
+ }
+-
+-/* Context activation is done by the caller. */
+-void wined3d_surface_prepare(struct wined3d_surface *surface, struct wined3d_context *context, DWORD location)
+-{
+-    switch (location)
+-    {
+-        case WINED3D_LOCATION_TEXTURE_RGB:
+-            wined3d_texture_prepare_texture(surface->container, context, FALSE);
+-            break;
+-
+-        case WINED3D_LOCATION_TEXTURE_SRGB:
+-            wined3d_texture_prepare_texture(surface->container, context, TRUE);
+-            break;
+-
+-        case WINED3D_LOCATION_RB_MULTISAMPLE:
+-            surface_prepare_rb(surface, context->gl_info, TRUE);
+-            break;
+-
+-        case WINED3D_LOCATION_RB_RESOLVED:
+-            surface_prepare_rb(surface, context->gl_info, FALSE);
+-            break;
+-    }
+-}
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index ac0b09a..49cc29f 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2459,8 +2459,6 @@ void surface_load_fb_texture(struct wined3d_surface *surface, BOOL srgb,
+ HRESULT surface_load_location(struct wined3d_surface *surface,
+         struct wined3d_context *context, DWORD location) DECLSPEC_HIDDEN;
+ void surface_modify_ds_location(struct wined3d_surface *surface, DWORD location, UINT w, UINT h) DECLSPEC_HIDDEN;
+-void wined3d_surface_prepare(struct wined3d_surface *surface, struct wined3d_context *context,
+-        DWORD location) DECLSPEC_HIDDEN;
+ void surface_prepare_rb(struct wined3d_surface *surface,
+         const struct wined3d_gl_info *gl_info, BOOL multisample) DECLSPEC_HIDDEN;
+ void surface_set_compatible_renderbuffer(struct wined3d_surface *surface,
+-- 
+2.6.2
+

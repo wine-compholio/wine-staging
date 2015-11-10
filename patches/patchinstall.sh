@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "7bd852c6ce0299f14fa585c124bae029f0d6d214"
+	echo "61c49bd78e5c96f14870e5c21a2ff75da7ac17b2"
 }
 
 # Show version information
@@ -3852,19 +3852,22 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/ntdll/atom.c, dlls/ntdll/directory.c, dlls/ntdll/env.c, dlls/ntdll/error.c, dlls/ntdll/file.c, dlls/ntdll/loader.c,
-# | 	dlls/ntdll/nt.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/om.c, dlls/ntdll/process.c, dlls/ntdll/reg.c,
-# | 	dlls/ntdll/resource.c, dlls/ntdll/sec.c, dlls/ntdll/server.c, dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c,
-# | 	dlls/ntdll/signal_i386.c, dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/sync.c,
-# | 	dlls/ntdll/thread.c, dlls/ntdll/time.c, dlls/ntdll/virtual.c, tools/winegcc/winegcc.c
+# | 	dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/om.c, dlls/ntdll/process.c,
+# | 	dlls/ntdll/reg.c, dlls/ntdll/resource.c, dlls/ntdll/sec.c, dlls/ntdll/server.c, dlls/ntdll/signal_arm.c,
+# | 	dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c, dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c,
+# | 	dlls/ntdll/sync.c, dlls/ntdll/thread.c, dlls/ntdll/time.c, dlls/ntdll/virtual.c, include/winternl.h,
+# | 	tools/winegcc/winegcc.c
 # |
 if test "$enable_ntdll_Syscall_Wrappers" -eq 1; then
-	patch_apply ntdll-Syscall_Wrappers/0001-winegcc-Pass-read_only_relocs-suppress-to-the-linker.patch
-	patch_apply ntdll-Syscall_Wrappers/0002-ntdll-Use-wrapper-functions-for-syscalls.patch
-	patch_apply ntdll-Syscall_Wrappers/0003-ntdll-APCs-should-call-the-implementation-instead-of.patch
-	patch_apply ntdll-Syscall_Wrappers/0004-ntdll-Syscalls-should-not-call-Nt-Ex-thunk-wrappers.patch
-	patch_apply ntdll-Syscall_Wrappers/0005-ntdll-Run-directory-initialization-function-early-du.patch
-	patch_apply ntdll-Syscall_Wrappers/0006-ntdll-Use-close_handle-instead-of-NtClose-for-intern.patch
+	patch_apply ntdll-Syscall_Wrappers/0001-include-Add-missing-definitions-for-Nt-functions.patch
+	patch_apply ntdll-Syscall_Wrappers/0002-winegcc-Pass-read_only_relocs-suppress-to-the-linker.patch
+	patch_apply ntdll-Syscall_Wrappers/0003-ntdll-Use-wrapper-functions-for-syscalls.patch
+	patch_apply ntdll-Syscall_Wrappers/0004-ntdll-APCs-should-call-the-implementation-instead-of.patch
+	patch_apply ntdll-Syscall_Wrappers/0005-ntdll-Syscalls-should-not-call-Nt-Ex-thunk-wrappers.patch
+	patch_apply ntdll-Syscall_Wrappers/0006-ntdll-Run-directory-initialization-function-early-du.patch
+	patch_apply ntdll-Syscall_Wrappers/0007-ntdll-Use-close_handle-instead-of-NtClose-for-intern.patch
 	(
+		echo '+    { "Sebastian Lackner", "include: Add missing definitions for Nt* functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "winegcc: Pass '\''-read_only_relocs suppress'\'' to the linker on OSX.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Use wrapper functions for syscalls.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: APCs should call the implementation instead of the syscall thunk.", 1 },';

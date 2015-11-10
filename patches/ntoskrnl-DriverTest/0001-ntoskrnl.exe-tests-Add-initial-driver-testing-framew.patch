@@ -1,4 +1,4 @@
-From 0a6a4d1aa5009c1e29508c34a32155cc5174984c Mon Sep 17 00:00:00 2001
+From ff63d064b47c582a0b31a0120d9555af5f041b7d Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 18 Jan 2015 05:42:10 +0100
 Subject: ntoskrnl.exe/tests: Add initial driver testing framework and
@@ -24,7 +24,7 @@ Subject: ntoskrnl.exe/tests: Add initial driver testing framework and
  create mode 100644 dlls/ntoskrnl.exe/tests/ntoskrnl.c
 
 diff --git a/aclocal.m4 b/aclocal.m4
-index e236c92..c19efc7 100644
+index 774377d..bf91b70 100644
 --- a/aclocal.m4
 +++ b/aclocal.m4
 @@ -629,6 +629,28 @@ $ac_dir/crosstest: $ac_dir/Makefile __builddeps__ dummy
@@ -73,10 +73,10 @@ index e236c92..c19efc7 100644
  dnl
  dnl Usage: WINE_CONFIG_LIB(name,flags)
 diff --git a/configure.ac b/configure.ac
-index 3180407..7862a4b 100644
+index 84420a9..fe4b94e 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -3215,6 +3215,8 @@ WINE_CONFIG_TEST(dlls/ntdll/tests)
+@@ -3203,6 +3203,8 @@ WINE_CONFIG_TEST(dlls/ntdll/tests)
  WINE_CONFIG_DLL(ntdsapi,,[implib])
  WINE_CONFIG_TEST(dlls/ntdsapi/tests)
  WINE_CONFIG_DLL(ntoskrnl.exe,,[implib])
@@ -530,10 +530,10 @@ index 0000000..9b8a6a7
 +    unload_driver(service, filename);
 +}
 diff --git a/tools/make_makefiles b/tools/make_makefiles
-index 4b539cd..2bea0a4 100755
+index b7f8b63..8143c4f 100755
 --- a/tools/make_makefiles
 +++ b/tools/make_makefiles
-@@ -258,7 +258,7 @@ sub parse_makefile($)
+@@ -200,7 +200,7 @@ sub parse_makefile($)
          while (/\\$/) { chop; $_ .= <MAKE>; chomp; }  # merge continued lines
          next if (/^\s*$/);
  
@@ -542,7 +542,7 @@ index 4b539cd..2bea0a4 100755
          {
              my $var = $1;
              $make{$var} = $2;
-@@ -486,6 +486,13 @@ sub update_makefiles(@)
+@@ -440,6 +440,13 @@ sub update_makefiles(@)
              (my $dir = $file) =~ s/^(.*)\/Makefile/$1/;
              push @lines, "WINE_CONFIG_TEST($dir$flag_args)\n";
          }
@@ -557,7 +557,7 @@ index 4b539cd..2bea0a4 100755
          {
              die "MODULE should not be defined as static lib in $file" unless $file =~ /^dlls\//;
 diff --git a/tools/makedep.c b/tools/makedep.c
-index 30bbc3e..de5ca59 100644
+index d8cf2f5..6094148 100644
 --- a/tools/makedep.c
 +++ b/tools/makedep.c
 @@ -170,4 +170,5 @@ struct makefile
@@ -597,15 +597,15 @@ index 30bbc3e..de5ca59 100644
   *         replace_extension
   */
  static char *replace_extension( const char *name, const char *old_ext, const char *new_ext )
-@@ -1872,6 +1897,7 @@ static struct strarray output_sources( struct makefile *make, struct strarray *t
+@@ -1958,6 +1983,7 @@ static struct strarray output_sources( const struct makefile *make, struct strar
      struct strarray subdirs = empty_strarray;
      struct strarray phony_targets = empty_strarray;
      struct strarray all_targets = empty_strarray;
 +    struct strarray resource_dlls = get_expanded_make_var_array( make, "RC_DLLS" );
+     struct strarray install_rules[NB_INSTALL_RULES];
      char *ldrpath_local   = get_expanded_make_variable( make, "LDRPATH_LOCAL" );
      char *ldrpath_install = get_expanded_make_variable( make, "LDRPATH_INSTALL" );
- 
-@@ -2097,7 +2123,7 @@ static struct strarray output_sources( struct makefile *make, struct strarray *t
+@@ -2229,7 +2255,7 @@ static struct strarray output_sources( const struct makefile *make, struct strar
          }
          else
          {
@@ -614,7 +614,7 @@ index 30bbc3e..de5ca59 100644
                  (source->file->flags & FLAG_C_IMPLIB) ||
                  (make->module && make->staticlib);
  
-@@ -2111,7 +2137,7 @@ static struct strarray output_sources( struct makefile *make, struct strarray *t
+@@ -2243,7 +2269,7 @@ static struct strarray output_sources( const struct makefile *make, struct strar
              output_filenames( includes );
              output_filenames( make->define_args );
              output_filenames( extradefs );
@@ -623,7 +623,7 @@ index 30bbc3e..de5ca59 100644
              {
                  output_filenames( dll_flags );
                  if (make->use_msvcrt) output_filenames( msvcrt_flags );
-@@ -2191,6 +2217,72 @@ static struct strarray output_sources( struct makefile *make, struct strarray *t
+@@ -2322,6 +2348,72 @@ static struct strarray output_sources( const struct makefile *make, struct strar
          output( "\n" );
      }
  
@@ -696,8 +696,8 @@ index 30bbc3e..de5ca59 100644
      if (make->module && !make->staticlib)
      {
          struct strarray all_libs = empty_strarray;
-@@ -2514,6 +2606,83 @@ static struct strarray output_sources( struct makefile *make, struct strarray *t
-         add_install_rule( make, make->scripts.str[i], make->scripts.str[i],
+@@ -2666,6 +2758,83 @@ static struct strarray output_sources( const struct makefile *make, struct strar
+         add_install_rule( make, install_rules, make->scripts.str[i], make->scripts.str[i],
                            strmake( "S$(bindir)/%s", make->scripts.str[i] ));
  
 +    if (make->resource)
@@ -780,12 +780,12 @@ index 30bbc3e..de5ca59 100644
      if (all_targets.count)
      {
          output( "all:" );
-@@ -2798,4 +2967,5 @@ static void update_makefile( const char *path )
+@@ -2951,4 +3120,5 @@ static void update_makefile( const char *path )
      make->module        = get_expanded_make_variable( make, "MODULE" );
      make->testdll       = get_expanded_make_variable( make, "TESTDLL" );
 +    make->resource      = get_expanded_make_variable( make, "RESOURCE" );
      make->staticlib     = get_expanded_make_variable( make, "STATICLIB" );
      make->importlib     = get_expanded_make_variable( make, "IMPORTLIB" );
 -- 
-2.6.1
+2.6.2
 

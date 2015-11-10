@@ -34,8 +34,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [1]:**
+**Bug fixes and features included in the next upcoming release [2]:**
 
+* Implement support for "Purist Mode" (override for all dlls)
 * Revert patch to prepare GL resources before calling context_apply_fbo_state ([Wine Bug #39536](https://bugs.winehq.org/show_bug.cgi?id=39536))
 
 

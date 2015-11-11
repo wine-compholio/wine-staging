@@ -156,7 +156,7 @@ for more details.*
 * Fix handling of ANSI NTLM credentials ([Wine Bug #37063](https://bugs.winehq.org/show_bug.cgi?id=37063))
 * Fix handling of empty section and key name for profile files. ([Wine Bug #8036](https://bugs.winehq.org/show_bug.cgi?id=8036))
 * Fix handling of invert_y in DrawTextExW ([Wine Bug #22109](https://bugs.winehq.org/show_bug.cgi?id=22109))
-* Fix handling of opening read-only files for FILE_DELETE_ON_CLOSE ([Wine Bug #38417](https://bugs.winehq.org/show_bug.cgi?id=38417))
+* ~~Fix handling of opening read-only files for FILE_DELETE_ON_CLOSE~~ ([Wine Bug #38417](https://bugs.winehq.org/show_bug.cgi?id=38417))
 * Fix handling of window attributes for WS_EX_LAYERED | WS_EX_COMPOSITED ([Wine Bug #37876](https://bugs.winehq.org/show_bug.cgi?id=37876))
 * Fix implementation of msvcrt.close when stdout == stderr
 * Fix issues with dragging layers between images in Adobe Photoshop 7.0 ([Wine Bug #12007](https://bugs.winehq.org/show_bug.cgi?id=12007))

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "61c49bd78e5c96f14870e5c21a2ff75da7ac17b2"
+	echo "5cf95396503d49f0249c473c1ed51e51213124c0"
 }
 
 # Show version information
@@ -231,7 +231,6 @@ patch_enable_all ()
 	enable_secur32_ANSI_NTLM_Credentials="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
-	enable_server_Delete_On_Close="$1"
 	enable_server_FileEndOfFileInformation="$1"
 	enable_server_File_Permissions="$1"
 	enable_server_Inherited_ACLs="$1"
@@ -791,9 +790,6 @@ patch_enable ()
 			;;
 		server-CreateProcess_ACLs)
 			enable_server_CreateProcess_ACLs="$2"
-			;;
-		server-Delete_On_Close)
-			enable_server_Delete_On_Close="$2"
 			;;
 		server-FileEndOfFileInformation)
 			enable_server_FileEndOfFileInformation="$2"
@@ -1580,9 +1576,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_server_CreateProcess_ACLs" -gt 1; then
 		abort "Patchset server-CreateProcess_ACLs disabled, but category-stable depends on that."
 	fi
-	if test "$enable_server_Delete_On_Close" -gt 1; then
-		abort "Patchset server-Delete_On_Close disabled, but category-stable depends on that."
-	fi
 	if test "$enable_setupapi_SetupDiSetDeviceInstallParamsW" -gt 1; then
 		abort "Patchset setupapi-SetupDiSetDeviceInstallParamsW disabled, but category-stable depends on that."
 	fi
@@ -1700,7 +1693,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_opengl32_Revert_Disable_Ext=1
 	enable_server_ClipCursor=1
 	enable_server_CreateProcess_ACLs=1
-	enable_server_Delete_On_Close=1
 	enable_setupapi_SetupDiSetDeviceInstallParamsW=1
 	enable_shell32_RunDLL_CallEntry16=1
 	enable_shell32_SHFileOperation_Win9x=1
@@ -3852,22 +3844,19 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/ntdll/atom.c, dlls/ntdll/directory.c, dlls/ntdll/env.c, dlls/ntdll/error.c, dlls/ntdll/file.c, dlls/ntdll/loader.c,
-# | 	dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/om.c, dlls/ntdll/process.c,
-# | 	dlls/ntdll/reg.c, dlls/ntdll/resource.c, dlls/ntdll/sec.c, dlls/ntdll/server.c, dlls/ntdll/signal_arm.c,
-# | 	dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c, dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c,
-# | 	dlls/ntdll/sync.c, dlls/ntdll/thread.c, dlls/ntdll/time.c, dlls/ntdll/virtual.c, include/winternl.h,
-# | 	tools/winegcc/winegcc.c
+# | 	dlls/ntdll/nt.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/om.c, dlls/ntdll/process.c, dlls/ntdll/reg.c,
+# | 	dlls/ntdll/resource.c, dlls/ntdll/sec.c, dlls/ntdll/server.c, dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c,
+# | 	dlls/ntdll/signal_i386.c, dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/sync.c,
+# | 	dlls/ntdll/thread.c, dlls/ntdll/time.c, dlls/ntdll/virtual.c, tools/winegcc/winegcc.c
 # |
 if test "$enable_ntdll_Syscall_Wrappers" -eq 1; then
-	patch_apply ntdll-Syscall_Wrappers/0001-include-Add-missing-definitions-for-Nt-functions.patch
-	patch_apply ntdll-Syscall_Wrappers/0002-winegcc-Pass-read_only_relocs-suppress-to-the-linker.patch
-	patch_apply ntdll-Syscall_Wrappers/0003-ntdll-Use-wrapper-functions-for-syscalls.patch
-	patch_apply ntdll-Syscall_Wrappers/0004-ntdll-APCs-should-call-the-implementation-instead-of.patch
-	patch_apply ntdll-Syscall_Wrappers/0005-ntdll-Syscalls-should-not-call-Nt-Ex-thunk-wrappers.patch
-	patch_apply ntdll-Syscall_Wrappers/0006-ntdll-Run-directory-initialization-function-early-du.patch
-	patch_apply ntdll-Syscall_Wrappers/0007-ntdll-Use-close_handle-instead-of-NtClose-for-intern.patch
+	patch_apply ntdll-Syscall_Wrappers/0001-winegcc-Pass-read_only_relocs-suppress-to-the-linker.patch
+	patch_apply ntdll-Syscall_Wrappers/0002-ntdll-Use-wrapper-functions-for-syscalls.patch
+	patch_apply ntdll-Syscall_Wrappers/0003-ntdll-APCs-should-call-the-implementation-instead-of.patch
+	patch_apply ntdll-Syscall_Wrappers/0004-ntdll-Syscalls-should-not-call-Nt-Ex-thunk-wrappers.patch
+	patch_apply ntdll-Syscall_Wrappers/0005-ntdll-Run-directory-initialization-function-early-du.patch
+	patch_apply ntdll-Syscall_Wrappers/0006-ntdll-Use-close_handle-instead-of-NtClose-for-intern.patch
 	(
-		echo '+    { "Sebastian Lackner", "include: Add missing definitions for Nt* functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "winegcc: Pass '\''-read_only_relocs suppress'\'' to the linker on OSX.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Use wrapper functions for syscalls.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: APCs should call the implementation instead of the syscall thunk.", 1 },';
@@ -4438,14 +4427,11 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0007-ntoskrnl.exe-Improve-KeInitializeSemaphore-stub.patch
 	patch_apply ntoskrnl-Stubs/0008-ntoskrnl.exe-Improve-KeInitializeTimerEx-stub.patch
 	patch_apply ntoskrnl-Stubs/0009-ntoskrnl.exe-Fix-IoReleaseCancelSpinLock-argument.patch
-	patch_apply ntoskrnl-Stubs/0010-ntoskrnl.exe-Add-stub-for-ExAcquireResourceExclusive.patch
-	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Add-stub-for-ExReleaseResourceForThread.patch
-	patch_apply ntoskrnl-Stubs/0012-ntoskrnl.exe-Add-stub-for-ExDeleteResourceLite.patch
-	patch_apply ntoskrnl-Stubs/0013-ntoskrnl.exe-Implement-MmMapLockedPages-and-MmUnmapL.patch
-	patch_apply ntoskrnl-Stubs/0014-ntoskrnl.exe-Implement-KeInitializeMutex.patch
-	patch_apply ntoskrnl-Stubs/0015-ntoskrnl.exe-Add-stub-for-ProbeForRead.patch
-	patch_apply ntoskrnl-Stubs/0016-ntoskrnl.exe-Add-stub-for-ProbeForWrite.patch
-	patch_apply ntoskrnl-Stubs/0017-ntoskrnl.exe-Add-stub-for-PsRemoveLoadImageNotifyRou.patch
+	patch_apply ntoskrnl-Stubs/0010-ntoskrnl.exe-Implement-MmMapLockedPages-and-MmUnmapL.patch
+	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Implement-KeInitializeMutex.patch
+	patch_apply ntoskrnl-Stubs/0012-ntoskrnl.exe-Add-stub-for-ProbeForRead.patch
+	patch_apply ntoskrnl-Stubs/0013-ntoskrnl.exe-Add-stub-for-ProbeForWrite.patch
+	patch_apply ntoskrnl-Stubs/0014-ntoskrnl.exe-Add-stub-for-PsRemoveLoadImageNotifyRou.patch
 	(
 		echo '+    { "Austin English", "ntoskrnl.exe: add KeWaitForMultipleObjects stub.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for IoGetAttachedDeviceReference.", 1 },';
@@ -4456,9 +4442,6 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeSemaphore stub.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeTimerEx stub.", 1 },';
 		echo '+    { "Christian Costa", "ntoskrnl.exe: Fix IoReleaseCancelSpinLock argument.", 1 },';
-		echo '+    { "Christian Costa", "ntoskrnl.exe: Add stub for ExAcquireResourceExclusiveLite.", 1 },';
-		echo '+    { "Christian Costa", "ntoskrnl.exe: Add stub for ExReleaseResourceForThreadLite.", 1 },';
-		echo '+    { "Christian Costa", "ntoskrnl.exe: Add stub for ExDeleteResourceLite.", 1 },';
 		echo '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Implement KeInitializeMutex.", 1 },';
 		echo '+    { "Austin English", "ntoskrnl.exe: Add stub for ProbeForRead.", 1 },';
@@ -4720,21 +4703,6 @@ if test "$enable_server_ClipCursor" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "server: Only send WM_WINE_CLIPCURSOR for forced clip resets.", 1 },';
 		echo '+    { "Sebastian Lackner", "winex11: Forward all clipping requests to the right thread (including fullscreen clipping).", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Delete_On_Close
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38417] Fix handling of opening read-only files for FILE_DELETE_ON_CLOSE
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/kernel32/tests/file.c, server/fd.c
-# |
-if test "$enable_server_Delete_On_Close" -eq 1; then
-	patch_apply server-Delete_On_Close/0001-server-Fix-handling-of-opening-read-only-files-with-.patch
-	(
-		echo '+    { "Sebastian Lackner", "server: Fix handling of opening read-only files with FILE_DELETE_ON_CLOSE.", 1 },';
 	) >> "$patchlist"
 fi
 

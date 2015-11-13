@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "370254cbe93beae6a9ff693d98c638db5bfb1134"
+	echo "a786dca935c3e9b3d85853db4b61700e590a1c8b"
 }
 
 # Show version information
@@ -4411,9 +4411,6 @@ fi
 
 # Patchset ntoskrnl-Stubs
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38103] Process Hacker 2.x needs ntoskrnl.ProbeForRead
-# |
 # | Modified files:
 # |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h
 # |
@@ -4429,9 +4426,7 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0009-ntoskrnl.exe-Fix-IoReleaseCancelSpinLock-argument.patch
 	patch_apply ntoskrnl-Stubs/0010-ntoskrnl.exe-Implement-MmMapLockedPages-and-MmUnmapL.patch
 	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Implement-KeInitializeMutex.patch
-	patch_apply ntoskrnl-Stubs/0012-ntoskrnl.exe-Add-stub-for-ProbeForRead.patch
-	patch_apply ntoskrnl-Stubs/0013-ntoskrnl.exe-Add-stub-for-ProbeForWrite.patch
-	patch_apply ntoskrnl-Stubs/0014-ntoskrnl.exe-Add-stub-for-PsRemoveLoadImageNotifyRou.patch
+	patch_apply ntoskrnl-Stubs/0012-ntoskrnl.exe-Add-stub-for-PsRemoveLoadImageNotifyRou.patch
 	(
 		echo '+    { "Austin English", "ntoskrnl.exe: add KeWaitForMultipleObjects stub.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for IoGetAttachedDeviceReference.", 1 },';
@@ -4444,8 +4439,6 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 		echo '+    { "Christian Costa", "ntoskrnl.exe: Fix IoReleaseCancelSpinLock argument.", 1 },';
 		echo '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Implement KeInitializeMutex.", 1 },';
-		echo '+    { "Austin English", "ntoskrnl.exe: Add stub for ProbeForRead.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntoskrnl.exe: Add stub for ProbeForWrite.", 1 },';
 		echo '+    { "Michael Müller", "ntoskrnl.exe: Add stub for PsRemoveLoadImageNotifyRoutine.", 1 },';
 	) >> "$patchlist"
 fi

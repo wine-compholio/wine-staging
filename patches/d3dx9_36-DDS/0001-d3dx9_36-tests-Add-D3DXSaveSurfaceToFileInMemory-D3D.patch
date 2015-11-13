@@ -1,0 +1,74 @@
+From 68efe5449591b9b1366d66d87fff1a8c9f8002e5 Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Fri, 16 Oct 2015 14:06:30 +1100
+Subject: d3dx9_36/tests: Add D3DXSaveSurfaceToFileInMemory D3DXIFF_DDS tests
+
+Also updates the structure dds_header to be the same as d3dx9_36/surface.c.
+
+Signed-off-by: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+---
+ dlls/d3dx9_36/tests/surface.c | 34 +++++++++++++++++++++++++++++++++-
+ 1 file changed, 33 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/d3dx9_36/tests/surface.c b/dlls/d3dx9_36/tests/surface.c
+index 1697a03..77bd142 100644
+--- a/dlls/d3dx9_36/tests/surface.c
++++ b/dlls/d3dx9_36/tests/surface.c
+@@ -211,7 +211,9 @@ struct dds_header
+     struct dds_pixel_format pixel_format;
+     DWORD caps;
+     DWORD caps2;
+-    DWORD reserved2[3];
++    DWORD caps3;
++    DWORD caps4;
++    DWORD reserved2;
+ };
+ 
+ /* fills dds_header with reasonable default values */
+@@ -1231,6 +1233,7 @@ static void test_D3DXSaveSurfaceToFileInMemory(IDirect3DDevice9 *device)
+     RECT rect;
+     ID3DXBuffer *buffer;
+     IDirect3DSurface9 *surface;
++    struct dds_header *header;
+ 
+     hr = IDirect3DDevice9_CreateOffscreenPlainSurface(device, 4, 4, D3DFMT_A8R8G8B8, D3DPOOL_SCRATCH, &surface, NULL);
+     if (FAILED(hr)) {
+@@ -1248,6 +1251,35 @@ static void test_D3DXSaveSurfaceToFileInMemory(IDirect3DDevice9 *device)
+         ID3DXBuffer_Release(buffer);
+     }
+ 
++    SetRect(&rect, 0, 0, 0, 0);
++    hr = D3DXSaveSurfaceToFileInMemory(&buffer, D3DXIFF_DDS, surface, NULL, &rect);
++    todo_wine ok(hr == D3D_OK || broken(hr == D3DERR_INVALIDCALL), "D3DXSaveSurfaceToFileInMemory returned %#x, expected %#x\n", hr, D3D_OK);
++    if (SUCCEEDED(hr)) {
++        header = ID3DXBuffer_GetBufferPointer(buffer);
++
++        ok(header->magic == MAKEFOURCC('D','D','S',' '), "Invalid DDS signature\n");
++        todo_wine ok(header->size == 124, "Invalid DDS size %d\n", header->size);
++        ok(header->height == 0, "Wrong height %d\n", header->height);
++        ok(header->width == 0, "Wrong width %d\n", header->width);
++        ok(header->flags == (DDS_CAPS | DDS_HEIGHT | DDS_WIDTH | DDS_PIXELFORMAT),
++           "Wrong flags %x\n", header->flags);
++        ID3DXBuffer_Release(buffer);
++    }
++
++    hr = D3DXSaveSurfaceToFileInMemory(&buffer, D3DXIFF_DDS, surface, NULL, NULL);
++    ok(hr == D3D_OK || broken(hr == D3DERR_INVALIDCALL), "D3DXSaveSurfaceToFileInMemory returned %#x, expected %#x\n", hr, D3D_OK);
++    if (SUCCEEDED(hr)) {
++        header = ID3DXBuffer_GetBufferPointer(buffer);
++
++        ok(header->magic == MAKEFOURCC('D','D','S',' '), "Invalid DDS signature\n");
++        todo_wine ok(header->size == 124, "Invalid DDS size %d\n", header->size);
++        ok(header->height == 4, "Wrong height %d\n", header->height);
++        ok(header->width == 4, "Wrong width %d\n", header->width);
++        todo_wine ok(header->flags == (DDS_CAPS | DDS_HEIGHT | DDS_WIDTH | DDS_PIXELFORMAT),
++                     "Wrong flags %x\n", header->flags);
++        ID3DXBuffer_Release(buffer);
++    }
++
+     IDirect3DSurface9_Release(surface);
+ }
+ 
+-- 
+2.6.2
+

@@ -2587,13 +2587,15 @@ fi
 # |   *	[#26898] Support for DDS file format in D3DXSaveTextureToFileInMemory
 # |
 # | Modified files:
-# |   *	dlls/d3dx9_36/d3dx9_36_private.h, dlls/d3dx9_36/surface.c, dlls/d3dx9_36/texture.c
+# |   *	dlls/d3dx9_36/d3dx9_36_private.h, dlls/d3dx9_36/surface.c, dlls/d3dx9_36/tests/surface.c, dlls/d3dx9_36/texture.c
 # |
 if test "$enable_d3dx9_36_DDS" -eq 1; then
-	patch_apply d3dx9_36-DDS/0001-d3dx9_36-Fix-several-issues-in-save_dds_surface_to_m.patch
-	patch_apply d3dx9_36-DDS/0002-d3dx9_36-Add-support-for-FOURCC-surface-to-save_dds_.patch
-	patch_apply d3dx9_36-DDS/0003-d3dx9_36-Improve-D3DXSaveTextureToFile-to-save-simpl.patch
+	patch_apply d3dx9_36-DDS/0001-d3dx9_36-tests-Add-D3DXSaveSurfaceToFileInMemory-D3D.patch
+	patch_apply d3dx9_36-DDS/0002-d3dx9_36-Fix-several-issues-in-save_dds_surface_to_m.patch
+	patch_apply d3dx9_36-DDS/0003-d3dx9_36-Add-support-for-FOURCC-surface-to-save_dds_.patch
+	patch_apply d3dx9_36-DDS/0004-d3dx9_36-Improve-D3DXSaveTextureToFile-to-save-simpl.patch
 	(
+		echo '+    { "Alistair Leslie-Hughes", "d3dx9_36/tests: Add D3DXSaveSurfaceToFileInMemory D3DXIFF_DDS tests.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Fix several issues in save_dds_surface_to_memory.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Add support for FOURCC surface to save_dds_surface_to_memory.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Improve D3DXSaveTextureToFile to save simple texture to dds file.", 1 },';

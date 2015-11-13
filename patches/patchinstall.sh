@@ -169,6 +169,7 @@ patch_enable_all ()
 	enable_mountmgr_DosDevices="$1"
 	enable_mpr_WNetGetUniversalNameW="$1"
 	enable_mscoree_CorValidateImage="$1"
+	enable_msctf_ITfThreadMgrEx_ActivateEx="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
 	enable_msidb_Implementation="$1"
 	enable_msvcp90_basic_string_dtor="$1"
@@ -604,6 +605,9 @@ patch_enable ()
 			;;
 		mscoree-CorValidateImage)
 			enable_mscoree_CorValidateImage="$2"
+			;;
+		msctf-ITfThreadMgrEx_ActivateEx)
+			enable_msctf_ITfThreadMgrEx_ActivateEx="$2"
 			;;
 		mshtml-HTMLLocation_put_hash)
 			enable_mshtml_HTMLLocation_put_hash="$2"
@@ -3682,6 +3686,21 @@ if test "$enable_mscoree_CorValidateImage" -eq 1; then
 	patch_apply mscoree-CorValidateImage/0001-mscoree-Implement-_CorValidateImage.patch
 	(
 		echo '+    { "Michael Müller", "mscoree: Implement semi-stub for _CorValidateImage.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msctf-ITfThreadMgrEx_ActivateEx
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39564] Add partial implementation of ITfThreadMgrEx_ActivateEx
+# |
+# | Modified files:
+# |   *	dlls/msctf/tests/inputprocessor.c, dlls/msctf/threadmgr.c
+# |
+if test "$enable_msctf_ITfThreadMgrEx_ActivateEx" -eq 1; then
+	patch_apply msctf-ITfThreadMgrEx_ActivateEx/0001-msctf-Add-a-partial-implementation-of-ITfThreadMgrEx.patch
+	(
+		echo '+    { "Matteo Bruni", "msctf: Add a partial implementation of ITfThreadMgrEx_ActivateEx().", 1 },';
 	) >> "$patchlist"
 fi
 

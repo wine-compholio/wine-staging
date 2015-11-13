@@ -1,0 +1,126 @@
+From c215f96c76ba4352e79bde6b4422d46ead6b5a85 Mon Sep 17 00:00:00 2001
+From: Matteo Bruni <mbruni@codeweavers.com>
+Date: Fri, 13 Nov 2015 00:33:37 +0100
+Subject: msctf: Add a partial implementation of ITfThreadMgrEx_ActivateEx().
+
+---
+ dlls/msctf/tests/inputprocessor.c | 16 +++++++++++--
+ dlls/msctf/threadmgr.c            | 47 +++++++++++++++++++++------------------
+ 2 files changed, 39 insertions(+), 24 deletions(-)
+
+diff --git a/dlls/msctf/tests/inputprocessor.c b/dlls/msctf/tests/inputprocessor.c
+index c01d5bc..58d4d26 100644
+--- a/dlls/msctf/tests/inputprocessor.c
++++ b/dlls/msctf/tests/inputprocessor.c
+@@ -1409,6 +1409,7 @@ static void test_startSession(void)
+     ITfContext *cxt,*cxt2,*cxt3,*cxtTest;
+     ITextStoreACP *ts;
+     TfClientId cid2 = 0;
++    ITfThreadMgrEx *tmex;
+ 
+     hr = ITfThreadMgr_Deactivate(g_tm);
+     ok(hr == E_UNEXPECTED,"Deactivate should have failed with E_UNEXPECTED\n");
+@@ -1421,10 +1422,21 @@ static void test_startSession(void)
+     test_ShouldActivate = FALSE;
+     hr = ITfThreadMgr_Activate(g_tm,&cid2);
+     ok(SUCCEEDED(hr),"Failed to Activate\n");
+-    ok (cid == cid2, "Second activate client ID does not match\n");
++    ok(cid == cid2, "Second activate client ID does not match\n");
++
++    hr = ITfThreadMgr_QueryInterface(g_tm, &IID_ITfThreadMgrEx, (void **)&tmex);
++    ok(SUCCEEDED(hr), "Unable to acquire ITfThreadMgrEx interface\n");
++
++    hr = ITfThreadMgrEx_ActivateEx(tmex, &cid2, 0);
++    ok(SUCCEEDED(hr), "Failed to Activate\n");
++    ok(cid == cid2, "ActivateEx client ID does not match\n");
++
++    ITfThreadMgrEx_Release(tmex);
+ 
+     hr = ITfThreadMgr_Deactivate(g_tm);
+-    ok(SUCCEEDED(hr),"Failed to Deactivate\n");
++    ok(SUCCEEDED(hr), "Failed to Deactivate\n");
++    hr = ITfThreadMgr_Deactivate(g_tm);
++    ok(SUCCEEDED(hr), "Failed to Deactivate\n");
+ 
+     test_EnumDocumentMgr(g_tm,NULL,NULL);
+ 
+diff --git a/dlls/msctf/threadmgr.c b/dlls/msctf/threadmgr.c
+index d997cda..91deb8d 100644
+--- a/dlls/msctf/threadmgr.c
++++ b/dlls/msctf/threadmgr.c
+@@ -327,29 +327,15 @@ static ULONG WINAPI ThreadMgr_Release(ITfThreadMgrEx *iface)
+  * ITfThreadMgr functions
+  *****************************************************/
+ 
+-static HRESULT WINAPI ThreadMgr_fnActivate(ITfThreadMgrEx *iface, TfClientId *ptid)
++static HRESULT WINAPI ThreadMgr_Activate(ITfThreadMgrEx *iface, TfClientId *id)
+ {
+     ThreadMgr *This = impl_from_ITfThreadMgrEx(iface);
+ 
+-    TRACE("(%p) %p\n",This, ptid);
+-
+-    if (!ptid)
+-        return E_INVALIDARG;
+-
+-    if (!processId)
+-    {
+-        GUID guid;
+-        CoCreateGuid(&guid);
+-        ITfClientId_GetClientId(&This->ITfClientId_iface, &guid, &processId);
+-    }
+-
+-    activate_textservices((ITfThreadMgr *)iface);
+-    This->activationCount++;
+-    *ptid = processId;
+-    return S_OK;
++    TRACE("(%p) %p\n", This, id);
++    return ITfThreadMgrEx_ActivateEx(iface, id, 0);
+ }
+ 
+-static HRESULT WINAPI ThreadMgr_fnDeactivate(ITfThreadMgrEx *iface)
++static HRESULT WINAPI ThreadMgr_Deactivate(ITfThreadMgrEx *iface)
+ {
+     ThreadMgr *This = impl_from_ITfThreadMgrEx(iface);
+     TRACE("(%p)\n",This);
+@@ -597,8 +583,25 @@ static HRESULT WINAPI ThreadMgr_ActivateEx(ITfThreadMgrEx *iface, TfClientId *id
+ {
+     ThreadMgr *This = impl_from_ITfThreadMgrEx(iface);
+ 
+-    FIXME("STUB:(%p)\n", This);
+-    return E_NOTIMPL;
++    TRACE("(%p) %p, %#x\n", This, id, flags);
++
++    if (!id)
++        return E_INVALIDARG;
++
++    if (flags)
++        FIXME("Unimplemented flags %#x\n", flags);
++
++    if (!processId)
++    {
++        GUID guid;
++        CoCreateGuid(&guid);
++        ITfClientId_GetClientId(&This->ITfClientId_iface, &guid, &processId);
++    }
++
++    activate_textservices((ITfThreadMgr *)iface);
++    This->activationCount++;
++    *id = processId;
++    return S_OK;
+ }
+ 
+ static HRESULT WINAPI ThreadMgr_GetActiveFlags(ITfThreadMgrEx *iface, DWORD *flags)
+@@ -614,8 +617,8 @@ static const ITfThreadMgrExVtbl ThreadMgrExVtbl =
+     ThreadMgr_QueryInterface,
+     ThreadMgr_AddRef,
+     ThreadMgr_Release,
+-    ThreadMgr_fnActivate,
+-    ThreadMgr_fnDeactivate,
++    ThreadMgr_Activate,
++    ThreadMgr_Deactivate,
+     ThreadMgr_CreateDocumentMgr,
+     ThreadMgr_EnumDocumentMgrs,
+     ThreadMgr_GetFocus,
+-- 
+2.6.2
+

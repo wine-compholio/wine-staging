@@ -34,9 +34,10 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [3]:**
+**Bug fixes and features included in the next upcoming release [4]:**
 
 * Add partial implementation of ITfThreadMgrEx_ActivateEx ([Wine Bug #39564](https://bugs.winehq.org/show_bug.cgi?id=39564))
+* Implement stub for hid.HidP_TranslateUsagesToI8042ScanCodes ([Wine Bug #39447](https://bugs.winehq.org/show_bug.cgi?id=39447))
 * Implement support for "Purist Mode" (override for all dlls)
 * Revert patch to prepare GL resources before calling context_apply_fbo_state ([Wine Bug #39536](https://bugs.winehq.org/show_bug.cgi?id=39536))
 

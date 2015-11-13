@@ -138,6 +138,7 @@ patch_enable_all ()
 	enable_gdi32_MaxPixelFormats="$1"
 	enable_gdi32_MultiMonitor="$1"
 	enable_hal_KeQueryPerformanceCounter="$1"
+	enable_hid_HidP_TranslateUsagesToI8042ScanCodes="$1"
 	enable_hnetcfg_INetFwAuthorizedApplication="$1"
 	enable_ieframe_IViewObject_Draw="$1"
 	enable_imagehlp_BindImageEx="$1"
@@ -512,6 +513,9 @@ patch_enable ()
 			;;
 		hal-KeQueryPerformanceCounter)
 			enable_hal_KeQueryPerformanceCounter="$2"
+			;;
+		hid-HidP_TranslateUsagesToI8042ScanCodes)
+			enable_hid_HidP_TranslateUsagesToI8042ScanCodes="$2"
 			;;
 		hnetcfg-INetFwAuthorizedApplication)
 			enable_hnetcfg_INetFwAuthorizedApplication="$2"
@@ -3122,6 +3126,21 @@ if test "$enable_hal_KeQueryPerformanceCounter" -eq 1; then
 	patch_apply hal-KeQueryPerformanceCounter/0001-hal-Implement-KeQueryPerformanceCounter.patch
 	(
 		echo '+    { "Michael Müller", "hal: Implement KeQueryPerformanceCounter.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset hid-HidP_TranslateUsagesToI8042ScanCodes
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39447] Implement stub for hid.HidP_TranslateUsagesToI8042ScanCodes
+# |
+# | Modified files:
+# |   *	dlls/hid/hid.spec, dlls/hid/hidp.c, include/ddk/hidpi.h
+# |
+if test "$enable_hid_HidP_TranslateUsagesToI8042ScanCodes" -eq 1; then
+	patch_apply hid-HidP_TranslateUsagesToI8042ScanCodes/0001-hid-Stub-HidP_TranslateUsagesToI8042ScanCodes.patch
+	(
+		echo '+    { "Aric Stewart", "hid: Stub HidP_TranslateUsagesToI8042ScanCodes.", 1 },';
 	) >> "$patchlist"
 fi
 

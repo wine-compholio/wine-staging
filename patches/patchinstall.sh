@@ -243,6 +243,7 @@ patch_enable_all ()
 	enable_server_PeekMessage="$1"
 	enable_server_Pipe_ObjectName="$1"
 	enable_server_Realtime_Priority="$1"
+	enable_server_Registry_Notifications="$1"
 	enable_server_Shared_Memory="$1"
 	enable_server_Signal_Thread="$1"
 	enable_server_Stored_ACLs="$1"
@@ -828,6 +829,9 @@ patch_enable ()
 			;;
 		server-Realtime_Priority)
 			enable_server_Realtime_Priority="$2"
+			;;
+		server-Registry_Notifications)
+			enable_server_Registry_Notifications="$2"
 			;;
 		server-Shared_Memory)
 			enable_server_Shared_Memory="$2"
@@ -4884,6 +4888,20 @@ if test "$enable_server_Realtime_Priority" -eq 1; then
 	patch_apply server-Realtime_Priority/0001-wineserver-Draft-to-implement-priority-levels-throug.patch
 	(
 		echo '+    { "Joakim Hernberg", "wineserver: Draft to implement priority levels through POSIX scheduling policies on linux.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Registry_Notifications
+# |
+# | Modified files:
+# |   *	dlls/ntdll/tests/reg.c, server/registry.c
+# |
+if test "$enable_server_Registry_Notifications" -eq 1; then
+	patch_apply server-Registry_Notifications/0001-server-Allow-multiple-registry-notifications-for-the.patch
+	patch_apply server-Registry_Notifications/0002-server-Introduce-refcounting-for-registry-notificati.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Allow multiple registry notifications for the same key.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Introduce refcounting for registry notifications.", 1 },';
 	) >> "$patchlist"
 fi
 

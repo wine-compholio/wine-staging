@@ -151,6 +151,7 @@ patch_enable_all ()
 	enable_kernel32_COMSPEC="$1"
 	enable_kernel32_Codepage_Conversion="$1"
 	enable_kernel32_CompareStringEx="$1"
+	enable_kernel32_CompareString_Length="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Cwd_Startup_Info="$1"
 	enable_kernel32_FreeUserPhysicalPages="$1"
@@ -556,6 +557,9 @@ patch_enable ()
 			;;
 		kernel32-CompareStringEx)
 			enable_kernel32_CompareStringEx="$2"
+			;;
+		kernel32-CompareString_Length)
+			enable_kernel32_CompareString_Length="$2"
 			;;
 		kernel32-CopyFileEx)
 			enable_kernel32_CopyFileEx="$2"
@@ -3322,6 +3326,23 @@ if test "$enable_kernel32_CompareStringEx" -eq 1; then
 	patch_apply kernel32-CompareStringEx/0001-kernel32-Silence-repeated-CompareStringEx-FIXME.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32: Silence repeated CompareStringEx FIXME.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-CompareString_Length
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37556] CompareString should abort on first non-matching character
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/locale.c, libs/wine/sortkey.c
+# |
+if test "$enable_kernel32_CompareString_Length" -eq 1; then
+	patch_apply kernel32-CompareString_Length/0001-kernel32-CompareStringW-should-abort-on-the-first-no.patch
+	patch_apply kernel32-CompareString_Length/0002-kernel32-tests-Add-some-more-tests-for-NORM_IGNORESY.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "kernel32: CompareStringW should abort on the first nonmatching character to avoid invalid memory access.", 1 },';
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Add some more tests for NORM_IGNORESYMBOLS.", 1 },';
 	) >> "$patchlist"
 fi
 

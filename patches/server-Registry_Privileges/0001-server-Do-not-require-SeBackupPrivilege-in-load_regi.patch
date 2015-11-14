@@ -1,0 +1,187 @@
+From 71dfe4d8c48b19acb04773f769862b5a541cb4c9 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 14 Nov 2015 18:22:52 +0100
+Subject: server: Do not require SeBackupPrivilege in load_registry and
+ unload_registry.
+
+---
+ dlls/advapi32/tests/registry.c | 107 ++++++++++++++++++++++++-----------------
+ server/registry.c              |  20 +-------
+ 2 files changed, 65 insertions(+), 62 deletions(-)
+
+diff --git a/dlls/advapi32/tests/registry.c b/dlls/advapi32/tests/registry.c
+index 8808822..de32bd9 100644
+--- a/dlls/advapi32/tests/registry.c
++++ b/dlls/advapi32/tests/registry.c
+@@ -1513,39 +1513,6 @@ static void test_reg_delete_key(void)
+     RegCloseKey(key);
+ }
+ 
+-static void test_reg_save_key(void)
+-{
+-    DWORD ret;
+-
+-    ret = RegSaveKeyA(hkey_main, "saved_key", NULL);
+-    ok(ret == ERROR_SUCCESS, "expected ERROR_SUCCESS, got %d\n", ret);
+-}
+-
+-static void test_reg_load_key(void)
+-{
+-    DWORD ret;
+-    HKEY hkHandle;
+-
+-    ret = RegLoadKeyA(HKEY_LOCAL_MACHINE, "Test", "saved_key");
+-    ok(ret == ERROR_SUCCESS, "expected ERROR_SUCCESS, got %d\n", ret);
+-
+-    ret = RegOpenKeyA(HKEY_LOCAL_MACHINE, "Test", &hkHandle);
+-    ok(ret == ERROR_SUCCESS, "expected ERROR_SUCCESS, got %d\n", ret);
+-
+-    RegCloseKey(hkHandle);
+-}
+-
+-static void test_reg_unload_key(void)
+-{
+-    DWORD ret;
+-
+-    ret = RegUnLoadKeyA(HKEY_LOCAL_MACHINE, "Test");
+-    ok(ret == ERROR_SUCCESS, "expected ERROR_SUCCESS, got %d\n", ret);
+-
+-    DeleteFileA("saved_key");
+-    DeleteFileA("saved_key.LOG");
+-}
+-
+ static BOOL set_privileges(LPCSTR privilege, BOOL set)
+ {
+     TOKEN_PRIVILEGES tp;
+@@ -1580,6 +1547,66 @@ static BOOL set_privileges(LPCSTR privilege, BOOL set)
+     return TRUE;
+ }
+ 
++static void test_reg_save_key(void)
++{
++    DWORD ret;
++
++    if (!set_privileges(SE_BACKUP_NAME, TRUE) ||
++        !set_privileges(SE_RESTORE_NAME, FALSE))
++    {
++        win_skip("Failed to set SE_BACKUP_NAME privileges, skipping tests\n");
++        return;
++    }
++
++    ret = RegSaveKeyA(hkey_main, "saved_key", NULL);
++    ok(ret == ERROR_SUCCESS, "expected ERROR_SUCCESS, got %d\n", ret);
++
++    set_privileges(SE_BACKUP_NAME, FALSE);
++}
++
++static void test_reg_load_key(void)
++{
++    DWORD ret;
++    HKEY hkHandle;
++
++    if (!set_privileges(SE_RESTORE_NAME, TRUE) ||
++        !set_privileges(SE_BACKUP_NAME, FALSE))
++    {
++        win_skip("Failed to set SE_RESTORE_NAME privileges, skipping tests\n");
++        return;
++    }
++
++    ret = RegLoadKeyA(HKEY_LOCAL_MACHINE, "Test", "saved_key");
++    ok(ret == ERROR_SUCCESS, "expected ERROR_SUCCESS, got %d\n", ret);
++
++    set_privileges(SE_RESTORE_NAME, FALSE);
++
++    ret = RegOpenKeyA(HKEY_LOCAL_MACHINE, "Test", &hkHandle);
++    ok(ret == ERROR_SUCCESS, "expected ERROR_SUCCESS, got %d\n", ret);
++
++    RegCloseKey(hkHandle);
++}
++
++static void test_reg_unload_key(void)
++{
++    DWORD ret;
++
++    if (!set_privileges(SE_RESTORE_NAME, TRUE) ||
++        !set_privileges(SE_BACKUP_NAME, FALSE))
++    {
++        win_skip("Failed to set SE_RESTORE_NAME privileges, skipping tests\n");
++        return;
++    }
++
++    ret = RegUnLoadKeyA(HKEY_LOCAL_MACHINE, "Test");
++    ok(ret == ERROR_SUCCESS, "expected ERROR_SUCCESS, got %d\n", ret);
++
++    set_privileges(SE_RESTORE_NAME, FALSE);
++
++    DeleteFileA("saved_key");
++    DeleteFileA("saved_key.LOG");
++}
++
+ /* tests that show that RegConnectRegistry and 
+    OpenSCManager accept computer names without the
+    \\ prefix (what MSDN says).   */
+@@ -3276,17 +3303,9 @@ START_TEST(registry)
+     test_classesroot_enum();
+     test_classesroot_mask();
+ 
+-    /* SaveKey/LoadKey require the SE_BACKUP_NAME privilege to be set */
+-    if (set_privileges(SE_BACKUP_NAME, TRUE) &&
+-        set_privileges(SE_RESTORE_NAME, TRUE))
+-    {
+-        test_reg_save_key();
+-        test_reg_load_key();
+-        test_reg_unload_key();
+-
+-        set_privileges(SE_BACKUP_NAME, FALSE);
+-        set_privileges(SE_RESTORE_NAME, FALSE);
+-    }
++    test_reg_save_key();
++    test_reg_load_key();
++    test_reg_unload_key();
+ 
+     test_reg_delete_tree();
+     test_rw_order();
+diff --git a/server/registry.c b/server/registry.c
+index c95e103..a3c1390 100644
+--- a/server/registry.c
++++ b/server/registry.c
+@@ -2182,17 +2182,9 @@ DECL_HANDLER(delete_key_value)
+ DECL_HANDLER(load_registry)
+ {
+     struct key *key, *parent;
+-    struct token *token = thread_get_impersonation_token( current );
+     struct unicode_str name;
+ 
+-    const LUID_AND_ATTRIBUTES privs[] =
+-    {
+-        { SeBackupPrivilege,  0 },
+-        { SeRestorePrivilege, 0 },
+-    };
+-
+-    if (!token || !token_check_privileges( token, TRUE, privs,
+-                                           sizeof(privs)/sizeof(privs[0]), NULL ))
++    if (!thread_single_check_privilege( current, &SeRestorePrivilege ))
+     {
+         set_error( STATUS_PRIVILEGE_NOT_HELD );
+         return;
+@@ -2214,16 +2206,8 @@ DECL_HANDLER(load_registry)
+ DECL_HANDLER(unload_registry)
+ {
+     struct key *key;
+-    struct token *token = thread_get_impersonation_token( current );
+-
+-    const LUID_AND_ATTRIBUTES privs[] =
+-    {
+-        { SeBackupPrivilege,  0 },
+-        { SeRestorePrivilege, 0 },
+-    };
+ 
+-    if (!token || !token_check_privileges( token, TRUE, privs,
+-                                           sizeof(privs)/sizeof(privs[0]), NULL ))
++    if (!thread_single_check_privilege( current, &SeRestorePrivilege ))
+     {
+         set_error( STATUS_PRIVILEGE_NOT_HELD );
+         return;
+-- 
+2.6.2
+

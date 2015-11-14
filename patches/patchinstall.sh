@@ -246,6 +246,7 @@ patch_enable_all ()
 	enable_server_Pipe_ObjectName="$1"
 	enable_server_Realtime_Priority="$1"
 	enable_server_Registry_Notifications="$1"
+	enable_server_Registry_Privileges="$1"
 	enable_server_Shared_Memory="$1"
 	enable_server_Signal_Thread="$1"
 	enable_server_Stored_ACLs="$1"
@@ -840,6 +841,9 @@ patch_enable ()
 			;;
 		server-Registry_Notifications)
 			enable_server_Registry_Notifications="$2"
+			;;
+		server-Registry_Privileges)
+			enable_server_Registry_Privileges="$2"
 			;;
 		server-Shared_Memory)
 			enable_server_Shared_Memory="$2"
@@ -4937,6 +4941,21 @@ if test "$enable_server_Registry_Notifications" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "server: Allow multiple registry notifications for the same key.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Introduce refcounting for registry notifications.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Registry_Privileges
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#28729] Do not require SeBackupPrivilege in load_registry and unload_registry
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/registry.c, server/registry.c
+# |
+if test "$enable_server_Registry_Privileges" -eq 1; then
+	patch_apply server-Registry_Privileges/0001-server-Do-not-require-SeBackupPrivilege-in-load_regi.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Do not require SeBackupPrivilege in load_registry and unload_registry.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -87,6 +87,7 @@ patch_enable_all ()
 	enable_Pipelight="$1"
 	enable_Staging="$1"
 	enable_advapi32_LsaLookupSids="$1"
+	enable_advapi32_RegCreateKeyTransacted="$1"
 	enable_advapi32_SetSecurityInfo="$1"
 	enable_amstream_GetMultiMediaStream="$1"
 	enable_api_ms_win_crt_Stub_DLLs="$1"
@@ -359,6 +360,9 @@ patch_enable ()
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
+			;;
+		advapi32-RegCreateKeyTransacted)
+			enable_advapi32_RegCreateKeyTransacted="$2"
 			;;
 		advapi32-SetSecurityInfo)
 			enable_advapi32_SetSecurityInfo="$2"
@@ -2235,6 +2239,18 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 		echo '+    { "Qian Hong", "advapi32/tests: Test prefix and use of TokenPrimaryGroup Sid.", 1 },';
 		echo '+    { "Qian Hong", "server: Create primary group using DOMAIN_GROUP_RID_USERS.", 1 },';
 		echo '+    { "Qian Hong", "advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset advapi32-RegCreateKeyTransacted
+# |
+# | Modified files:
+# |   *	dlls/advapi32/advapi32.spec, dlls/advapi32/registry.c
+# |
+if test "$enable_advapi32_RegCreateKeyTransacted" -eq 1; then
+	patch_apply advapi32-RegCreateKeyTransacted/0001-advapi32-Add-stubs-for-RegCreateKeyTransacted-A-W-fu.patch
+	(
+		echo '+    { "Sebastian Lackner", "advapi32: Add stubs for RegCreateKeyTransacted[A/W] functions.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -226,6 +226,7 @@ patch_enable_all ()
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
+	enable_oleaut32_TKIND_COCLASS="$1"
 	enable_openal32_EFX_Extension="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
@@ -782,6 +783,9 @@ patch_enable ()
 			;;
 		nvencodeapi-Video_Encoder)
 			enable_nvencodeapi_Video_Encoder="$2"
+			;;
+		oleaut32-TKIND_COCLASS)
+			enable_oleaut32_TKIND_COCLASS="$2"
 			;;
 		openal32-EFX_Extension)
 			enable_openal32_EFX_Extension="$2"
@@ -4660,6 +4664,30 @@ if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
 	patch_apply nvencodeapi-Video_Encoder/0001-nvencodeapi-First-implementation.patch
 	(
 		echo '+    { "Michael Müller", "nvencodeapi: First implementation.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset oleaut32-TKIND_COCLASS
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#19016] Implement marshalling for TKIND_COCLASS
+# |
+# | Modified files:
+# |   *	dlls/oleaut32/tests/tmarshal.c, dlls/oleaut32/tests/tmarshal.idl, dlls/oleaut32/tests/tmarshal_dispids.h,
+# | 	dlls/oleaut32/tmarshal.c, dlls/oleaut32/typelib.c
+# |
+if test "$enable_oleaut32_TKIND_COCLASS" -eq 1; then
+	patch_apply oleaut32-TKIND_COCLASS/0001-oleaut32-tests-Add-test-for-calling-method-with-cocl.patch
+	patch_apply oleaut32-TKIND_COCLASS/0002-oleaut32-Pass-a-HREFTYPE-to-get_iface_guid.patch
+	patch_apply oleaut32-TKIND_COCLASS/0003-oleaut32-Implement-ITypeInfo_fnInvoke-for-TKIND_COCL.patch
+	patch_apply oleaut32-TKIND_COCLASS/0004-oleaut32-Handle-TKIND_COCLASS-in-proxy-stub-marshall.patch
+	patch_apply oleaut32-TKIND_COCLASS/0005-oleaut32-tests-Add-a-test-for-TKIND_COCLASS-in-proxy.patch
+	(
+		echo '+    { "Sebastian Lackner", "oleaut32/tests: Add test for calling method with coclass argument.", 1 },';
+		echo '+    { "Sebastian Lackner", "oleaut32: Pass a HREFTYPE to get_iface_guid.", 1 },';
+		echo '+    { "Sebastian Lackner", "oleaut32: Implement ITypeInfo_fnInvoke for TKIND_COCLASS in arguments.", 1 },';
+		echo '+    { "Sebastian Lackner", "oleaut32: Handle TKIND_COCLASS in proxy/stub marshalling.", 1 },';
+		echo '+    { "Sebastian Lackner", "oleaut32/tests: Add a test for TKIND_COCLASS in proxy/stub marshalling.", 1 },';
 	) >> "$patchlist"
 fi
 

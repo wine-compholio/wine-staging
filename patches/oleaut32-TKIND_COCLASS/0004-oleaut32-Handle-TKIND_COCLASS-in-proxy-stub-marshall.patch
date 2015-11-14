@@ -1,0 +1,127 @@
+From 3c6e50c54130738fadbb4b7e1a05a5a0c9c9b538 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 15 Nov 2015 00:39:08 +0100
+Subject: oleaut32: Handle TKIND_COCLASS in proxy/stub marshalling.
+
+Based on a patch by Jan T. Ohlsen.
+---
+ dlls/oleaut32/tmarshal.c | 68 ++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 66 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/oleaut32/tmarshal.c b/dlls/oleaut32/tmarshal.c
+index f4ce311..0211387 100644
+--- a/dlls/oleaut32/tmarshal.c
++++ b/dlls/oleaut32/tmarshal.c
+@@ -851,7 +851,9 @@ serialize_param(
+                         return hres;
+                     }
+                     ITypeInfo_GetTypeAttr(tinfo2,&tattr);
+-                    derefhere = (tattr->typekind != TKIND_DISPATCH && tattr->typekind != TKIND_INTERFACE);
++                    derefhere = (tattr->typekind != TKIND_DISPATCH &&
++                                 tattr->typekind != TKIND_INTERFACE &&
++                                 tattr->typekind != TKIND_COCLASS);
+                 }
+                 break;
+ 	    case TKIND_ENUM:	/* confirmed */
+@@ -859,6 +861,7 @@ serialize_param(
+ 		break;
+ 	    case TKIND_DISPATCH:	/* will be done in VT_USERDEFINED case */
+ 	    case TKIND_INTERFACE:	/* will be done in VT_USERDEFINED case */
++            case TKIND_COCLASS:         /* will be done in VT_USERDEFINED case */
+ 		derefhere=FALSE;
+ 		break;
+ 	    default:
+@@ -920,6 +923,36 @@ serialize_param(
+ 	    if (dealloc)
+ 	        IUnknown_Release((LPUNKNOWN)arg);
+ 	    break;
++        case TKIND_COCLASS: {
++            GUID iid = tattr->guid;
++            unsigned int i;
++            int type_flags;
++
++            for(i = 0; i < tattr->cImplTypes; i++) {
++                if(SUCCEEDED(ITypeInfo_GetImplTypeFlags(tinfo2, i, &type_flags)) &&
++                   type_flags == (IMPLTYPEFLAG_FSOURCE|IMPLTYPEFLAG_FDEFAULT)) {
++                    ITypeInfo *tinfo3;
++                    TYPEATTR *tattr2;
++                    HREFTYPE href;
++                    if(FAILED(ITypeInfo_GetRefTypeOfImplType(tinfo2, i, &href)))
++                        break;
++                    if(FAILED(ITypeInfo_GetRefTypeInfo(tinfo2, href, &tinfo3)))
++                        break;
++                    if(SUCCEEDED(ITypeInfo_GetTypeAttr(tinfo3, &tattr2))) {
++                        iid = tattr2->guid;
++                        ITypeInfo_ReleaseTypeAttr(tinfo3, tattr2);
++                    }
++                    ITypeInfo_Release(tinfo3);
++                    break;
++                }
++            }
++
++            if(writeit)
++                hres=_marshal_interface(buf, &iid, (LPUNKNOWN)arg);
++            if(dealloc)
++                IUnknown_Release((LPUNKNOWN)arg);
++            break;
++        }
+ 	case TKIND_RECORD: {
+ 	    int i;
+ 	    if (debugout) TRACE_(olerelay)("{");
+@@ -1129,7 +1162,9 @@ deserialize_param(
+                             return hres;
+                         }
+                         ITypeInfo_GetTypeAttr(tinfo2,&tattr);
+-                        derefhere = (tattr->typekind != TKIND_DISPATCH && tattr->typekind != TKIND_INTERFACE);
++                        derefhere = (tattr->typekind != TKIND_DISPATCH &&
++                                     tattr->typekind != TKIND_INTERFACE &&
++                                     tattr->typekind != TKIND_COCLASS);
+                     }
+                     break;
+ 		case TKIND_ENUM:	/* confirmed */
+@@ -1137,6 +1172,7 @@ deserialize_param(
+ 		    break;
+ 		case TKIND_DISPATCH:	/* will be done in VT_USERDEFINED case */
+ 		case TKIND_INTERFACE:	/* will be done in VT_USERDEFINED case */
++                case TKIND_COCLASS:     /* will be done in VT_USERDEFINED case */
+ 		    derefhere=FALSE;
+ 		    break;
+ 		default:
+@@ -1211,6 +1247,34 @@ deserialize_param(
+ 		    if (readit)
+ 			hres = _unmarshal_interface(buf,&(tattr->guid),(LPUNKNOWN*)arg);
+ 		    break;
++                case TKIND_COCLASS: {
++                    GUID iid = tattr->guid;
++                    unsigned int i;
++                    int type_flags;
++
++                    for(i = 0; i < tattr->cImplTypes; i++) {
++                        if(SUCCEEDED(ITypeInfo_GetImplTypeFlags(tinfo2, i, &type_flags)) &&
++                           type_flags == (IMPLTYPEFLAG_FSOURCE|IMPLTYPEFLAG_FDEFAULT)) {
++                            ITypeInfo *tinfo3;
++                            TYPEATTR *tattr2;
++                            HREFTYPE href;
++                            if(FAILED(ITypeInfo_GetRefTypeOfImplType(tinfo2, i, &href)))
++                                break;
++                            if(FAILED(ITypeInfo_GetRefTypeInfo(tinfo2, href, &tinfo3)))
++                                break;
++                            if(SUCCEEDED(ITypeInfo_GetTypeAttr(tinfo3, &tattr2))) {
++                                iid = tattr2->guid;
++                                ITypeInfo_ReleaseTypeAttr(tinfo3, tattr2);
++                            }
++                            ITypeInfo_Release(tinfo3);
++                            break;
++                        }
++                    }
++
++                    if(readit)
++                        hres = _unmarshal_interface(buf, &iid, (LPUNKNOWN*)arg);
++                    break;
++                }
+ 		case TKIND_RECORD: {
+ 		    int i;
+ 
+-- 
+2.6.2
+

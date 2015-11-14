@@ -1,0 +1,53 @@
+From 1bb32d84f5ac99211790aa596c995cb0b1a6c88f Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 14 Nov 2015 23:45:18 +0100
+Subject: oleaut32: Implement ITypeInfo_fnInvoke for TKIND_COCLASS in
+ arguments.
+
+---
+ dlls/oleaut32/tests/tmarshal.c |  2 +-
+ dlls/oleaut32/typelib.c        | 15 +++++++++++++++
+ 2 files changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/oleaut32/tests/tmarshal.c b/dlls/oleaut32/tests/tmarshal.c
+index 96399cc..758b85f 100644
+--- a/dlls/oleaut32/tests/tmarshal.c
++++ b/dlls/oleaut32/tests/tmarshal.c
+@@ -1514,7 +1514,7 @@ static void test_typelibmarshal(void)
+     dispparams.rgvarg = vararg;
+     VariantInit(&varresult);
+     hr = IDispatch_Invoke(pDispatch, DISPID_TM_COCLASS, &IID_NULL, LOCALE_NEUTRAL, DISPATCH_METHOD, &dispparams, &varresult, &excepinfo, NULL);
+-    todo_wine ok_ole_success(hr, IDispatch_Invoke);
++    ok_ole_success(hr, IDispatch_Invoke);
+     ok(excepinfo.wCode == 0x0 && excepinfo.scode == S_OK,
+         "EXCEPINFO differs from expected: wCode = 0x%x, scode = 0x%08x\n",
+         excepinfo.wCode, excepinfo.scode);
+diff --git a/dlls/oleaut32/typelib.c b/dlls/oleaut32/typelib.c
+index deb898a..1cfdd7b 100644
+--- a/dlls/oleaut32/typelib.c
++++ b/dlls/oleaut32/typelib.c
+@@ -6638,6 +6638,21 @@ static HRESULT get_iface_guid(ITypeInfo *tinfo, HREFTYPE href, GUID *guid)
+         *guid = tattr->guid;
+         break;
+ 
++    case TKIND_COCLASS: {
++        unsigned int i;
++        int type_flags;
++
++        for(i = 0; i < tattr->cImplTypes; i++)
++            if(SUCCEEDED(ITypeInfo_GetImplTypeFlags(tinfo2, i, &type_flags)) &&
++               type_flags == (IMPLTYPEFLAG_FSOURCE|IMPLTYPEFLAG_FDEFAULT)) break;
++
++        if(i < tattr->cImplTypes) {
++            hres = ITypeInfo_GetRefTypeOfImplType(tinfo2, i, &href);
++            if(SUCCEEDED(hres)) hres = get_iface_guid(tinfo2, href, guid);
++        } else hres = E_UNEXPECTED;
++        break;
++    }
++
+     default:
+         ERR("Unexpected typekind %d\n", tattr->typekind);
+         hres = E_UNEXPECTED;
+-- 
+2.6.2
+

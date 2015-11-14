@@ -1,0 +1,103 @@
+From 9b845e845d3f3b9895571a9865747bf28501d47c Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 14 Nov 2015 23:14:18 +0100
+Subject: oleaut32/tests: Add test for calling method with coclass argument.
+
+---
+ dlls/oleaut32/tests/tmarshal.c         | 30 +++++++++++++++++++++++++++---
+ dlls/oleaut32/tests/tmarshal.idl       |  3 +++
+ dlls/oleaut32/tests/tmarshal_dispids.h |  1 +
+ 3 files changed, 31 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/oleaut32/tests/tmarshal.c b/dlls/oleaut32/tests/tmarshal.c
+index 4a990af..96399cc 100644
+--- a/dlls/oleaut32/tests/tmarshal.c
++++ b/dlls/oleaut32/tests/tmarshal.c
+@@ -598,7 +598,7 @@ static HRESULT WINAPI Widget_CloneCoclass(
+     ApplicationObject2 **ppVal)
+ {
+     trace("CloneCoclass()\n");
+-    return S_OK;
++    return Widget_QueryInterface(iface, &IID_IWidget, (void **)ppVal);
+ }
+ 
+ static HRESULT WINAPI Widget_Value(
+@@ -909,6 +909,15 @@ static HRESULT WINAPI Widget_VarArg_Ref_Run(
+     return S_OK;
+ }
+ 
++static HRESULT WINAPI Widget_Coclass(
++    IWidget *iface,
++    ApplicationObject2 *p)
++{
++    trace("Coclass(%p)\n", p);
++    ok(p == (ApplicationObject2 *)iface, "expected p == %p, got %p\n", iface, p);
++    return S_OK;
++}
++
+ static const struct IWidgetVtbl Widget_VTable =
+ {
+     Widget_QueryInterface,
+@@ -948,7 +957,8 @@ static const struct IWidgetVtbl Widget_VTable =
+     Widget_pos_restrict,
+     Widget_neg_restrict,
+     Widget_VarArg_Run,
+-    Widget_VarArg_Ref_Run
++    Widget_VarArg_Ref_Run,
++    Widget_Coclass,
+ };
+ 
+ static HRESULT WINAPI StaticWidget_QueryInterface(IStaticWidget *iface, REFIID riid, void **ppvObject)
+@@ -1494,8 +1504,22 @@ static void test_typelibmarshal(void)
+        excepinfo.wCode, excepinfo.scode);
+ 
+     ok(V_VT(&varresult) == VT_DISPATCH, "V_VT(&varresult) was %d instead of VT_DISPATCH\n", V_VT(&varresult));
+-    ok(!V_DISPATCH(&varresult), "V_DISPATCH(&varresult) should be NULL instead of %p\n", V_DISPATCH(&varresult));
++    ok(V_DISPATCH(&varresult) != NULL, "expected V_DISPATCH(&varresult) != NULL\n");
++
++    /* call CoClass with VT_DISPATCH type */
++    vararg[0] = varresult;
++    dispparams.cNamedArgs = 0;
++    dispparams.rgdispidNamedArgs = NULL;
++    dispparams.cArgs = 1;
++    dispparams.rgvarg = vararg;
++    VariantInit(&varresult);
++    hr = IDispatch_Invoke(pDispatch, DISPID_TM_COCLASS, &IID_NULL, LOCALE_NEUTRAL, DISPATCH_METHOD, &dispparams, &varresult, &excepinfo, NULL);
++    todo_wine ok_ole_success(hr, IDispatch_Invoke);
++    ok(excepinfo.wCode == 0x0 && excepinfo.scode == S_OK,
++        "EXCEPINFO differs from expected: wCode = 0x%x, scode = 0x%08x\n",
++        excepinfo.wCode, excepinfo.scode);
+     VariantClear(&varresult);
++    VariantClear(&vararg[0]);
+ 
+     /* call Value with a VT_VARIANT|VT_BYREF type */
+     V_VT(&vararg[0]) = VT_VARIANT|VT_BYREF;
+diff --git a/dlls/oleaut32/tests/tmarshal.idl b/dlls/oleaut32/tests/tmarshal.idl
+index 680f4b4..afc578f 100644
+--- a/dlls/oleaut32/tests/tmarshal.idl
++++ b/dlls/oleaut32/tests/tmarshal.idl
+@@ -185,6 +185,9 @@ library TestTypelib
+ 
+         [id(DISPID_TM_VARARG_REF_RUN), vararg]
+         HRESULT VarArg_Ref_Run([in] BSTR name, [in] SAFEARRAY(VARIANT) *params, [out, retval] VARIANT *result);
++
++        [id(DISPID_TM_COCLASS)]
++        HRESULT Coclass([in] ApplicationObject2 *p);
+     }
+ 
+     [
+diff --git a/dlls/oleaut32/tests/tmarshal_dispids.h b/dlls/oleaut32/tests/tmarshal_dispids.h
+index dfca216..26f4027 100644
+--- a/dlls/oleaut32/tests/tmarshal_dispids.h
++++ b/dlls/oleaut32/tests/tmarshal_dispids.h
+@@ -46,6 +46,7 @@
+ #define DISPID_TM_TESTSECONDIFACE 27
+ #define DISPID_TM_VARARG_RUN 28
+ #define DISPID_TM_VARARG_REF_RUN 29
++#define DISPID_TM_COCLASS 30
+ 
+ #define DISPID_NOA_BSTRRET 1
+ #define DISPID_NOA_ERROR 2
+-- 
+2.6.2
+

@@ -1,0 +1,62 @@
+From 0904e4dd80d07f725dc31c78ffbfaa32b351ad94 Mon Sep 17 00:00:00 2001
+From: Andrew Nguyen <arethusa26@gmail.com>
+Date: Sun, 15 Nov 2015 07:18:13 +0100
+Subject: dinput: Allow EnumDevices callback functions with broken calling
+ conventions.
+
+---
+ dlls/dinput/dinput_main.c | 24 ++++++++++++++++++++++--
+ 1 file changed, 22 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/dinput/dinput_main.c b/dlls/dinput/dinput_main.c
+index aef9d10..1ed1034 100644
+--- a/dlls/dinput/dinput_main.c
++++ b/dlls/dinput/dinput_main.c
+@@ -339,6 +339,26 @@ static DWORD diactionformat_priorityW(LPDIACTIONFORMATW lpdiaf, DWORD genre)
+     return priorityFlags;
+ }
+ 
++#ifdef __i386__
++extern BOOL CDECL enum_callback_wrapper(void *callback, const void *instance, void *ref);
++__ASM_GLOBAL_FUNC( enum_callback_wrapper,
++    "pushl %ebp\n\t"
++    __ASM_CFI(".cfi_adjust_cfa_offset 4\n\t")
++    __ASM_CFI(".cfi_rel_offset %ebp,0\n\t")
++    "movl %esp,%ebp\n\t"
++    __ASM_CFI(".cfi_def_cfa_register %ebp\n\t")
++    "pushl 16(%ebp)\n\t"
++    "pushl 12(%ebp)\n\t"
++    "movl 8(%ebp),%eax\n\t"
++    "call *%eax\n\t"
++    "leave\n\t"
++    __ASM_CFI(".cfi_def_cfa %esp,4\n\t")
++    __ASM_CFI(".cfi_same_value %ebp\n\t")
++    "ret" )
++#else
++#define enum_callback_wrapper(callback, instance, ref) (callback)((instance), (ref))
++#endif
++
+ /******************************************************************************
+  *	IDirectInputA_EnumDevices
+  */
+@@ -371,7 +391,7 @@ static HRESULT WINAPI IDirectInputAImpl_EnumDevices(
+             TRACE("  - checking device %u ('%s')\n", i, dinput_devices[i]->name);
+             r = dinput_devices[i]->enum_deviceA(dwDevType, dwFlags, &devInstance, This->dwVersion, j);
+             if (r == S_OK)
+-                if (lpCallback(&devInstance,pvRef) == DIENUM_STOP)
++                if (enum_callback_wrapper(lpCallback, &devInstance, pvRef) == DIENUM_STOP)
+                     return S_OK;
+         }
+     }
+@@ -411,7 +431,7 @@ static HRESULT WINAPI IDirectInputWImpl_EnumDevices(
+             TRACE("  - checking device %u ('%s')\n", i, dinput_devices[i]->name);
+             r = dinput_devices[i]->enum_deviceW(dwDevType, dwFlags, &devInstance, This->dwVersion, j);
+             if (r == S_OK)
+-                if (lpCallback(&devInstance,pvRef) == DIENUM_STOP)
++                if (enum_callback_wrapper(lpCallback, &devInstance, pvRef) == DIENUM_STOP)
+                     return S_OK;
+         }
+     }
+-- 
+2.6.2
+

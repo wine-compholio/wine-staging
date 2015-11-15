@@ -126,6 +126,7 @@ patch_enable_all ()
 	enable_ddraw_Write_Vtable="$1"
 	enable_ddraw_ZBufferBitDepths="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
+	enable_dinput_EnumDevice_Callback="$1"
 	enable_dinput_Initialize="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
@@ -484,6 +485,9 @@ patch_enable ()
 			;;
 		ddraw-d3d_execute_buffer)
 			enable_ddraw_d3d_execute_buffer="$2"
+			;;
+		dinput-EnumDevice_Callback)
+			enable_dinput_EnumDevice_Callback="$2"
 			;;
 		dinput-Initialize)
 			enable_dinput_Initialize="$2"
@@ -2869,6 +2873,21 @@ if test "$enable_ddraw_d3d_execute_buffer" -eq 1; then
 	patch_apply ddraw-d3d_execute_buffer/0001-ddraw-Don-t-call-IDirect3DDevice7_DrawIndexedPrimiti.patch
 	(
 		echo '+    { "Christian Costa", "ddraw: Don'\''t call IDirect3DDevice7_DrawIndexedPrimitive if there is no primitive.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dinput-EnumDevice_Callback
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#27664] Allow dinput EnumDevices callback with broken calling convention
+# |
+# | Modified files:
+# |   *	dlls/dinput/dinput_main.c
+# |
+if test "$enable_dinput_EnumDevice_Callback" -eq 1; then
+	patch_apply dinput-EnumDevice_Callback/0001-dinput-Allow-EnumDevices-callback-functions-with-bro.patch
+	(
+		echo '+    { "Andrew Nguyen", "dinput: Allow EnumDevices callback functions with broken calling conventions.", 1 },';
 	) >> "$patchlist"
 fi
 

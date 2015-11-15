@@ -1,0 +1,137 @@
+From 564a5198eae9dc64f53c1507aa823cd4f73266da Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 5 Nov 2015 14:33:48 +0100
+Subject: winex11.drv: Allow to select default display frequency in registry
+ key.
+
+When an application doesn't request a specific display frequency, Wine
+currently just picks the first one. Most of the time this is fine, but
+there is no way to switch to a different frequency. This patch adds a
+registry key (of type STRING) to select the default display frequency:
+
+HKCU\Software\Wine\X11 Driver\DefaultDisplayFrequency
+---
+ dlls/winex11.drv/settings.c    | 51 +++++++++++++++++++++++++++++-------------
+ dlls/winex11.drv/x11drv.h      |  1 +
+ dlls/winex11.drv/x11drv_main.c |  4 ++++
+ 3 files changed, 40 insertions(+), 16 deletions(-)
+
+diff --git a/dlls/winex11.drv/settings.c b/dlls/winex11.drv/settings.c
+index afa26cf..33bcddc 100644
+--- a/dlls/winex11.drv/settings.c
++++ b/dlls/winex11.drv/settings.c
+@@ -342,7 +342,7 @@ static const char * _DM_fields(DWORD fields)
+ LONG CDECL X11DRV_ChangeDisplaySettingsEx( LPCWSTR devname, LPDEVMODEW devmode,
+                                            HWND hwnd, DWORD flags, LPVOID lpvoid )
+ {
+-    DWORD i, dwBpp = 0;
++    DWORD i, mode, dwBpp = 0;
+     DEVMODEW dm;
+     BOOL def_mode = TRUE;
+ 
+@@ -387,6 +387,7 @@ LONG CDECL X11DRV_ChangeDisplaySettingsEx( LPCWSTR devname, LPDEVMODEW devmode,
+         return DISP_CHANGE_BADMODE;
+     }
+ 
++    mode = ENUM_CURRENT_SETTINGS;
+     for (i = 0; i < dd_mode_count; i++)
+     {
+         if (devmode->dmFields & DM_BITSPERPEL)
+@@ -404,27 +405,45 @@ LONG CDECL X11DRV_ChangeDisplaySettingsEx( LPCWSTR devname, LPDEVMODEW devmode,
+             if (devmode->dmPelsHeight != dd_modes[i].height)
+                 continue;
+         }
+-        if ((devmode->dmFields & DM_DISPLAYFREQUENCY) && (dd_modes[i].refresh_rate != 0) &&
++        if ((devmode->dmFields & DM_DISPLAYFREQUENCY) &&
+             devmode->dmDisplayFrequency != 0)
+         {
+-            if (devmode->dmDisplayFrequency != dd_modes[i].refresh_rate)
++            if (dd_modes[i].refresh_rate != 0 &&
++                devmode->dmDisplayFrequency != dd_modes[i].refresh_rate)
+                 continue;
+         }
+-        /* we have a valid mode */
+-        TRACE("Requested display settings match mode %d (%s)\n", i, handler_name);
+-
+-        if (flags & CDS_UPDATEREGISTRY)
+-            write_registry_settings(devmode);
++        else if (default_display_frequency != 0)
++        {
++            if (dd_modes[i].refresh_rate != 0 &&
++                default_display_frequency == dd_modes[i].refresh_rate)
++            {
++                TRACE("Found display mode %d with default frequency (%s)\n", i, handler_name);
++                mode = i;
++                break;
++            }
++        }
+ 
+-        if (!(flags & (CDS_TEST | CDS_NORESET)))
+-            return pSetCurrentMode(i);
++        if (mode == ENUM_CURRENT_SETTINGS)
++            mode = i;
++    }
+ 
+-        return DISP_CHANGE_SUCCESSFUL;
++    if (mode == ENUM_CURRENT_SETTINGS)
++    {
++        /* no valid modes found */
++        ERR("No matching mode found %ux%ux%u @%u! (%s)\n",
++            devmode->dmPelsWidth, devmode->dmPelsHeight,
++            devmode->dmBitsPerPel, devmode->dmDisplayFrequency, handler_name);
++        return DISP_CHANGE_BADMODE;
+     }
+ 
+-    /* no valid modes found */
+-    ERR("No matching mode found %ux%ux%u @%u! (%s)\n",
+-        devmode->dmPelsWidth, devmode->dmPelsHeight,
+-        devmode->dmBitsPerPel, devmode->dmDisplayFrequency, handler_name);
+-    return DISP_CHANGE_BADMODE;
++    /* we have a valid mode */
++    TRACE("Requested display settings match mode %d (%s)\n", mode, handler_name);
++
++    if (flags & CDS_UPDATEREGISTRY)
++        write_registry_settings(devmode);
++
++    if (!(flags & (CDS_TEST | CDS_NORESET)))
++        return pSetCurrentMode(mode);
++
++    return DISP_CHANGE_SUCCESSFUL;
+ }
+diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
+index 2694d23..e3176f3 100644
+--- a/dlls/winex11.drv/x11drv.h
++++ b/dlls/winex11.drv/x11drv.h
+@@ -378,6 +378,7 @@ extern BOOL private_color_map DECLSPEC_HIDDEN;
+ extern int primary_monitor DECLSPEC_HIDDEN;
+ extern int copy_default_colors DECLSPEC_HIDDEN;
+ extern int alloc_system_colors DECLSPEC_HIDDEN;
++extern int default_display_frequency DECLSPEC_HIDDEN;
+ extern int xrender_error_base DECLSPEC_HIDDEN;
+ extern HMODULE x11drv_module DECLSPEC_HIDDEN;
+ 
+diff --git a/dlls/winex11.drv/x11drv_main.c b/dlls/winex11.drv/x11drv_main.c
+index d4f5c84..a8f4b4e 100644
+--- a/dlls/winex11.drv/x11drv_main.c
++++ b/dlls/winex11.drv/x11drv_main.c
+@@ -81,6 +81,7 @@ BOOL client_side_with_render = TRUE;
+ BOOL shape_layered_windows = TRUE;
+ int copy_default_colors = 128;
+ int alloc_system_colors = 256;
++int default_display_frequency = 0;
+ DWORD thread_data_tls_index = TLS_OUT_OF_INDEXES;
+ int xrender_error_base = 0;
+ HMODULE x11drv_module = 0;
+@@ -411,6 +412,9 @@ static void setup_options(void)
+     if (!get_config_key( hkey, appkey, "AllocSystemColors", buffer, sizeof(buffer) ))
+         alloc_system_colors = atoi(buffer);
+ 
++    if (!get_config_key( hkey, appkey, "DefaultDisplayFrequency", buffer, sizeof(buffer) ))
++        default_display_frequency = atoi(buffer);
++
+     get_config_key( hkey, appkey, "InputStyle", input_style, sizeof(input_style) );
+ 
+     if (appkey) RegCloseKey( appkey );
+-- 
+2.6.2
+

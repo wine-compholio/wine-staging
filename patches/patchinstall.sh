@@ -319,6 +319,7 @@ patch_enable_all ()
 	enable_winepulse_PulseAudio_Support="$1"
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_Clipboard_HTML="$1"
+	enable_winex11_DefaultDisplayFrequency="$1"
 	enable_winex11_Window_Groups="$1"
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
@@ -1064,6 +1065,9 @@ patch_enable ()
 			;;
 		winex11-Clipboard_HTML)
 			enable_winex11_Clipboard_HTML="$2"
+			;;
+		winex11-DefaultDisplayFrequency)
+			enable_winex11_DefaultDisplayFrequency="$2"
 			;;
 		winex11-Window_Groups)
 			enable_winex11_Window_Groups="$2"
@@ -6412,6 +6416,18 @@ if test "$enable_winex11_Clipboard_HTML" -eq 1; then
 	patch_apply winex11-Clipboard_HTML/0001-winex11.drv-Import-X11-s-text-html-as-HTML-Format.patch
 	(
 		echo '+    { "Damjan Jovanovic", "winex11.drv: Import X11'\''s \"text/html\" as \"HTML Format\".", 3 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11-DefaultDisplayFrequency
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/settings.c, dlls/winex11.drv/x11drv.h, dlls/winex11.drv/x11drv_main.c
+# |
+if test "$enable_winex11_DefaultDisplayFrequency" -eq 1; then
+	patch_apply winex11-DefaultDisplayFrequency/0001-winex11.drv-Allow-to-select-default-display-frequenc.patch
+	(
+		echo '+    { "Michael Müller", "winex11.drv: Allow to select default display frequency in registry key.", 1 },';
 	) >> "$patchlist"
 fi
 

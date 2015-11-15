@@ -34,12 +34,13 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [12]:**
+**Bug fixes and features included in the next upcoming release [13]:**
 
 * Add partial implementation of ITfThreadMgrEx_ActivateEx ([Wine Bug #39564](https://bugs.winehq.org/show_bug.cgi?id=39564))
 * Add stub kernel32.FreeUserPhysicalPages ([Wine Bug #39543](https://bugs.winehq.org/show_bug.cgi?id=39543))
 * Add stubs for advapi32.RegCreateKeyTransacted[A/W]
 * Allow dinput EnumDevices callback with broken calling convention ([Wine Bug #27664](https://bugs.winehq.org/show_bug.cgi?id=27664))
+* Allow to specify default display frequency in registry
 * CompareString should abort on first non-matching character ([Wine Bug #37556](https://bugs.winehq.org/show_bug.cgi?id=37556))
 * Do not require SeBackupPrivilege in load_registry and unload_registry ([Wine Bug #28729](https://bugs.winehq.org/show_bug.cgi?id=28729))
 * Implement marshalling for TKIND_COCLASS ([Wine Bug #19016](https://bugs.winehq.org/show_bug.cgi?id=19016))

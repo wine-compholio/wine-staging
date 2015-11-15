@@ -328,6 +328,8 @@ def read_patch(filename):
                     assert fp.read() == line
                 subject, revision = _parse_subject(subject)
                 if not subject.endswith("."): subject += "."
+                subject = re.sub('^([^:]*: *)([a-z])', lambda x: "%s%s" %
+                                 (x.group(1), x.group(2).upper()), subject, 1)
                 header['subject'], header['revision'] = subject, revision
 
             elif line.startswith("Signed-off-by: "):

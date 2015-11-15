@@ -2165,7 +2165,7 @@ if test "$enable_Pipelight" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "winex11: Implement X11DRV_FLUSH_GDI_DISPLAY ExtEscape command.", 1 },';
 		echo '+    { "Michael Müller", "user32: Decrease minimum SetTimer interval to 5 ms.", 2 },';
-		echo '+    { "Michael Müller", "wined3d: allow changing strict drawing through an exported function.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Allow changing strict drawing through an exported function.", 1 },';
 		echo '+    { "Michael Müller", "winex11.drv: Indicate direct rendering through OpenGL extension.", 1 },';
 	) >> "$patchlist"
 fi
@@ -2347,7 +2347,7 @@ fi
 if test "$enable_comctl32_Button_Theming" -eq 1; then
 	patch_apply comctl32-Button_Theming/0001-comctl32-fix-buttons-becoming-unthemed-when-pressed-.patch
 	(
-		echo '+    { "Samuel Kim", "comctl32: fix buttons becoming unthemed when pressed/released.", 1 },';
+		echo '+    { "Samuel Kim", "comctl32: Fix buttons becoming unthemed when pressed/released.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2534,7 +2534,7 @@ if test "$enable_wined3d_DXTn" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "wined3d: Add support for DXTn software decoding through libtxc_dxtn.", 3 },';
 		echo '+    { "Christian Costa", "wined3d: Improve DXTn support and export conversion functions for d3dx9_36.", 1 },';
-		echo '+    { "Michael Müller", "wined3d: add DXT1 to B4G4R4A4, DXT1 to B5G5R5A1 and DXT3 to B4G4R4A4 conversion.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Add DXT1 to B4G4R4A4, DXT1 to B5G5R5A1 and DXT3 to B4G4R4A4 conversion.", 1 },';
 		echo '+    { "Michael Müller", "wined3d: Load dxtn dylib library on Mac OS X.", 1 },';
 	) >> "$patchlist"
 fi
@@ -3251,7 +3251,7 @@ if test "$enable_imagehlp_ImageLoad" -eq 1; then
 	patch_apply imagehlp-ImageLoad/0002-imagehlp-tests-msvc-compatibility-fixes.patch
 	(
 		echo '+    { "Mark Jansen", "imagehlp/tests: Add tests for ImageLoad, ImageUnload, GetImageUnusedHeaderBytes.", 1 },';
-		echo '+    { "Mark Jansen", "imagehlp/tests: msvc compatibility fixes.", 1 },';
+		echo '+    { "Mark Jansen", "imagehlp/tests: Msvc compatibility fixes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3445,7 +3445,7 @@ fi
 if test "$enable_kernel32_FreeUserPhysicalPages" -eq 1; then
 	patch_apply kernel32-FreeUserPhysicalPages/0001-kernel32-add-FreeUserPhysicalPages-stub-try-2.patch
 	(
-		echo '+    { "Austin English", "kernel32: add FreeUserPhysicalPages stub.", 2 },';
+		echo '+    { "Austin English", "kernel32: Add FreeUserPhysicalPages stub.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -3855,7 +3855,7 @@ if test "$enable_msvcp90_basic_string_dtor" -eq 1; then
 	patch_apply msvcp90-basic_string_dtor/0001-msvcp90-basic_string_wchar_dtor-needs-to-return-NULL.patch
 	patch_apply msvcp90-basic_string_dtor/0002-msvcp90-tests-Add-tests-to-check-that-basic_string_w.patch
 	(
-		echo '+    { "Michael Müller", "msvcp90: basic_string_wchar_dtor needs to return NULL.", 1 },';
+		echo '+    { "Michael Müller", "msvcp90: Basic_string_wchar_dtor needs to return NULL.", 1 },';
 		echo '+    { "Michael Müller", "msvcp90/tests: Add tests to check that basic_string_wchar_dtor returns NULL.", 1 },';
 	) >> "$patchlist"
 fi
@@ -4283,7 +4283,7 @@ fi
 if test "$enable_ntdll_NtSetLdtEntries" -eq 1; then
 	patch_apply ntdll-NtSetLdtEntries/0001-ntdll-add-NtSetLdtEntries-ZwSetLdtEntries-stub-try-2.patch
 	(
-		echo '+    { "Austin English", "ntdll: add NtSetLdtEntries/ZwSetLdtEntries stub.", 2 },';
+		echo '+    { "Austin English", "ntdll: Add NtSetLdtEntries/ZwSetLdtEntries stub.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -4536,7 +4536,7 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Implement-KeInitializeMutex.patch
 	patch_apply ntoskrnl-Stubs/0012-ntoskrnl.exe-Add-stub-for-PsRemoveLoadImageNotifyRou.patch
 	(
-		echo '+    { "Austin English", "ntoskrnl.exe: add KeWaitForMultipleObjects stub.", 1 },';
+		echo '+    { "Austin English", "ntoskrnl.exe: Add KeWaitForMultipleObjects stub.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for IoGetAttachedDeviceReference.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ExAcquireFastMutexUnsafe and ExReleaseFastMutexUnsafe.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ObReferenceObjectByPointer and ObDereferenceObject.", 1 },';
@@ -5092,7 +5092,7 @@ fi
 if test "$enable_setupapi_SetupDiSetDeviceInstallParamsW" -eq 1; then
 	patch_apply setupapi-SetupDiSetDeviceInstallParamsW/0001-setupapi-add-SetupDiSetDeviceInstallParamsW-stub.patch
 	(
-		echo '+    { "Austin English", "setupapi: add SetupDiSetDeviceInstallParamsW stub.", 1 },';
+		echo '+    { "Austin English", "setupapi: Add SetupDiSetDeviceInstallParamsW stub.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5570,7 +5570,7 @@ fi
 if test "$enable_user32_SetCoalescableTimer" -eq 1; then
 	patch_apply user32-SetCoalescableTimer/0001-user32-add-SetCoalescableTimer-stub.patch
 	(
-		echo '+    { "Austin English", "user32: add SetCoalescableTimer stub.", 1 },';
+		echo '+    { "Austin English", "user32: Add SetCoalescableTimer stub.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6170,12 +6170,12 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t force strict draw ordering for multithreaded CS.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Send render target view clears through the command stream.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Wait for the CS in GetDC.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: send resource maps through the command stream.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Send resource maps through the command stream.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Get rid of the end_scene flush and finish.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Replace the linked lists with a ringbuffer.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t preload buffers on unmap.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish before swapping.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: wined3d_*_query_issue never fails.", 1 },';
+		echo '+    { "Stefan Dösinger", "wined3d: Wined3d_*_query_issue never fails.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Add query support to the command stream.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Check our CS state to find out if a query is done.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Poll queries automatically in the CS.", 1 },';
@@ -6254,7 +6254,7 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Remove the texture destroy glFinish.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Move FBO destruction into the worker thread.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t incref / decref textures in color / depth fill blits.", 1 },';
-		echo '+    { "Stefan Dösinger", "Winex11: complain about glfinish.", 1 },';
+		echo '+    { "Stefan Dösinger", "Winex11: Complain about glfinish.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Make sure the new window is set up before setting up a context.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Remove the device_reset CS sync fixme.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Put GL_APPLE_flush_buffer_range syncing back in place.", 1 },';
@@ -6333,12 +6333,12 @@ if test "$enable_winepulse_PulseAudio_Support" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "winepulse.drv: Use delay import for winealsa.drv.", 1 },';
 		echo '+    { "Sebastian Lackner", "winepulse.drv: Use a separate mainloop and ctx for pulse_test_connect.", 1 },';
-		echo '+    { "Mark Harmstone", "winepulse: expose audio devices directly to programs.", 1 },';
-		echo '+    { "Mark Harmstone", "winepulse: implement exclusive mode.", 1 },';
-		echo '+    { "Mark Harmstone", "winepulse: fix segfault in pulse_rd_loop.", 1 },';
-		echo '+    { "Mark Harmstone", "winepulse: implement GetPropValue.", 1 },';
-		echo '+    { "Mark Harmstone", "winepulse: fetch actual program name if possible.", 1 },';
-		echo '+    { "Mark Harmstone", "winepulse: return PKEY_AudioEndpoint_PhysicalSpeakers device prop.", 1 },';
+		echo '+    { "Mark Harmstone", "winepulse: Expose audio devices directly to programs.", 1 },';
+		echo '+    { "Mark Harmstone", "winepulse: Implement exclusive mode.", 1 },';
+		echo '+    { "Mark Harmstone", "winepulse: Fix segfault in pulse_rd_loop.", 1 },';
+		echo '+    { "Mark Harmstone", "winepulse: Implement GetPropValue.", 1 },';
+		echo '+    { "Mark Harmstone", "winepulse: Fetch actual program name if possible.", 1 },';
+		echo '+    { "Mark Harmstone", "winepulse: Return PKEY_AudioEndpoint_PhysicalSpeakers device prop.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6489,7 +6489,7 @@ fi
 if test "$enable_wininet_ParseX509EncodedCertificateForListBoxEntry" -eq 1; then
 	patch_apply wininet-ParseX509EncodedCertificateForListBoxEntry/0001-wininet-add-ParseX509EncodedCertificateForListBoxEnt.patch
 	(
-		echo '+    { "Austin English", "wininet: add ParseX509EncodedCertificateForListBoxEntry stub.", 2 },';
+		echo '+    { "Austin English", "wininet: Add ParseX509EncodedCertificateForListBoxEntry stub.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -6519,7 +6519,7 @@ fi
 if test "$enable_winscard_SCardListReaders" -eq 1; then
 	patch_apply winscard-SCardListReaders/0001-winscard-add-stubs-for-SCardListReadersA-W.patch
 	(
-		echo '+    { "Austin English", "winscard: add stubs for SCardListReadersA/W.", 1 },';
+		echo '+    { "Austin English", "winscard: Add stubs for SCardListReadersA/W.", 1 },';
 	) >> "$patchlist"
 fi
 

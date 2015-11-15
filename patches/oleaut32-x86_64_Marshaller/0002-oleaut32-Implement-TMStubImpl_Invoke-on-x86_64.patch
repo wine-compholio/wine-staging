@@ -1,0 +1,65 @@
+From 371486a6f5257c287886543b1d0c76ad60993998 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 15 Nov 2015 05:06:30 +0100
+Subject: oleaut32: Implement TMStubImpl_Invoke on x86_64.
+
+---
+ dlls/oleaut32/tmarshal.c |  2 +-
+ dlls/oleaut32/typelib.c  | 28 ++++++++++++++++++++++++++++
+ 2 files changed, 29 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/oleaut32/tmarshal.c b/dlls/oleaut32/tmarshal.c
+index c5aa374..bcea046 100644
+--- a/dlls/oleaut32/tmarshal.c
++++ b/dlls/oleaut32/tmarshal.c
+@@ -2071,7 +2071,7 @@ static HRESULT WINAPI
+ TMStubImpl_Invoke(
+     LPRPCSTUBBUFFER iface, RPCOLEMESSAGE* xmsg,IRpcChannelBuffer*rpcchanbuf)
+ {
+-#ifdef __i386__
++#if defined(__i386__) || defined(__x86_64__)
+     int		i;
+     const FUNCDESC *fdesc;
+     TMStubImpl *This = impl_from_IRpcStubBuffer(iface);
+diff --git a/dlls/oleaut32/typelib.c b/dlls/oleaut32/typelib.c
+index 97f40bc..2d0768b 100644
+--- a/dlls/oleaut32/typelib.c
++++ b/dlls/oleaut32/typelib.c
+@@ -6475,6 +6475,34 @@ __ASM_GLOBAL_FUNC( call_method,
+ /* same function but returning floating point */
+ static double (CDECL * const call_double_method)(void*,int,const DWORD_PTR*) = (void *)call_method;
+ 
++DWORD _invoke(FARPROC func, CALLCONV callconv, int nrargs, DWORD_PTR *args)
++{
++    DWORD res;
++
++    if (TRACE_ON(ole))
++    {
++        int i;
++        TRACE("Calling %p(", func);
++        for (i=0; i<min(nrargs, 30); i++) TRACE("%016lx,", args[i]);
++        if (nrargs > 30) TRACE("...");
++        TRACE(")\n");
++    }
++
++    switch (callconv) {
++    case CC_STDCALL:
++    case CC_CDECL:
++        res = call_method(func, nrargs, args);
++        break;
++    default:
++        FIXME("unsupported calling convention %d\n", callconv);
++        res = -1;
++        break;
++    }
++
++    TRACE("returns %08x\n", res);
++    return res;
++}
++
+ #endif  /* __x86_64__ */
+ 
+ static HRESULT userdefined_to_variantvt(ITypeInfo *tinfo, const TYPEDESC *tdesc, VARTYPE *vt)
+-- 
+2.6.2
+

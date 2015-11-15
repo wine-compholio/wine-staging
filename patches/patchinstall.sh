@@ -227,6 +227,7 @@ patch_enable_all ()
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
 	enable_oleaut32_TKIND_COCLASS="$1"
+	enable_oleaut32_x86_64_Marshaller="$1"
 	enable_openal32_EFX_Extension="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
@@ -786,6 +787,9 @@ patch_enable ()
 			;;
 		oleaut32-TKIND_COCLASS)
 			enable_oleaut32_TKIND_COCLASS="$2"
+			;;
+		oleaut32-x86_64_Marshaller)
+			enable_oleaut32_x86_64_Marshaller="$2"
 			;;
 		openal32-EFX_Extension)
 			enable_openal32_EFX_Extension="$2"
@@ -4688,6 +4692,25 @@ if test "$enable_oleaut32_TKIND_COCLASS" -eq 1; then
 		echo '+    { "Sebastian Lackner", "oleaut32: Implement ITypeInfo_fnInvoke for TKIND_COCLASS in arguments.", 1 },';
 		echo '+    { "Sebastian Lackner", "oleaut32: Handle TKIND_COCLASS in proxy/stub marshalling.", 1 },';
 		echo '+    { "Sebastian Lackner", "oleaut32/tests: Add a test for TKIND_COCLASS in proxy/stub marshalling.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset oleaut32-x86_64_Marshaller
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#26768] Implement stubless proxies on x86_64
+# |
+# | Modified files:
+# |   *	dlls/oleaut32/tmarshal.c, dlls/oleaut32/typelib.c, dlls/oleaut32/typelib.h
+# |
+if test "$enable_oleaut32_x86_64_Marshaller" -eq 1; then
+	patch_apply oleaut32-x86_64_Marshaller/0001-oleaut32-Initial-preparation-to-make-marshalling-com.patch
+	patch_apply oleaut32-x86_64_Marshaller/0002-oleaut32-Implement-TMStubImpl_Invoke-on-x86_64.patch
+	patch_apply oleaut32-x86_64_Marshaller/0003-oleaut32-Implement-asm-proxys-for-x86_64.patch
+	(
+		echo '+    { "Sebastian Lackner", "oleaut32: Initial preparation to make marshalling compatible with x86_64.", 1 },';
+		echo '+    { "Sebastian Lackner", "oleaut32: Implement TMStubImpl_Invoke on x86_64.", 1 },';
+		echo '+    { "Sebastian Lackner", "oleaut32: Implement asm proxys for x86_64.", 1 },';
 	) >> "$patchlist"
 fi
 

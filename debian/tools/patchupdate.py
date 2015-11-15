@@ -295,11 +295,6 @@ def read_patchset(revision = None):
                 patch.categories.append(val)
 
             elif key == "fixes":
-                r = re.match("^[0-9]+$", val)
-                if r:
-                    bugid = int(val)
-                    patch.fixes.append((bugid, None))
-                    continue
                 r = re.match("^\\[ *([0-9]+) *\\](.*)$", val)
                 if r:
                     bugid = int(r.group(1))

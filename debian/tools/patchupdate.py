@@ -295,12 +295,13 @@ def read_patchset(revision = None):
                 patch.categories.append(val)
 
             elif key == "fixes":
-                r = re.match("^\\[ *([0-9]+) *\\](.*)$", val)
+                r = re.match("^\\[ *(!)? *([0-9]+) *\\](.*)$", val)
                 if r:
-                    bugid = int(r.group(1))
-                    patch.fixes.append((bugid, r.group(2).strip()))
+                    sync  = (r.group(1) != "!")
+                    bugid = int(r.group(2))
+                    patch.fixes.append((sync, bugid, r.group(3).strip()))
                     continue
-                patch.fixes.append((None, val))
+                patch.fixes.append((False, None, val))
 
             elif key == "disabled":
                 patch.disabled = _parse_int(val)
@@ -471,8 +472,8 @@ def check_bug_status(all_patches, sync_bugs=False):
 
     for _, patch in all_patches.iteritems():
         url = "%s/tree/master/%s" % (config.github_url, patch.directory)
-        for bugid, bugname in patch.fixes:
-            if bugid is not None:
+        for sync, bugid, bugname in patch.fixes:
+            if sync and bugid is not None:
                 url_map[bugid] = url
                 all_bugids.add(bugid)
 
@@ -762,9 +763,9 @@ def generate_script(all_patches, skip_checks=False):
             lines.append("# |\n")
 
         # List all bugs fixed by this patchset
-        if any([bugid is not None for bugid, bugname in patch.fixes]):
+        if any([bugid is not None for sync, bugid, bugname in patch.fixes]):
             lines.append("# | This patchset fixes the following Wine bugs:\n")
-            for bugid, bugname in patch.fixes:
+            for sync, bugid, bugname in patch.fixes:
                 if bugid is not None:
                     lines.append("# |   *\t%s\n" % "\n# | \t".join(textwrap.wrap("[#%d] %s" % (bugid, bugname), 120)))
             lines.append("# |\n")
@@ -810,13 +811,13 @@ def generate_markdown(all_patches, release_patches):
 
     # Get fixes for current version
     for _, patch in all_patches.iteritems():
-        for bugid, bugname in patch.fixes:
+        for sync, bugid, bugname in patch.fixes:
             key = bugid if bugid is not None else bugname
             all_fixes[key] = [1, bugid, bugname]
 
     # Compare with fixes for last release
     for _, patch in release_patches.iteritems():
-        for bugid, bugname in patch.fixes:
+        for sync, bugid, bugname in patch.fixes:
             if bugid is not None and all_fixes.has_key(bugid):
                 all_fixes[bugid][0] = 0
             elif all_fixes.has_key(bugname):

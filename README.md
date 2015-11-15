@@ -83,7 +83,7 @@ for more details.*
 * Add stub for ntoskrnl.ExAcquireResourceExclusiveLite
 * Add stub for ntoskrnl.ExDeleteResourceLite
 * Add stub for ntoskrnl.ExReleaseResourceForThread
-* Add stub for ntoskrnl.KeWaitForMultipleObjects
+* Add stub for ntoskrnl.KeWaitForMultipleObjects ([Wine Bug #32186](https://bugs.winehq.org/show_bug.cgi?id=32186))
 * Add stub for ntoskrnl.Mm{Map,Unmap}LockedPages
 * Add stub for ntoskrnl.PsRemoveLoadImageNotifyRoutine
 * Add stub for setupapi.SetupDiSelectBestCompatDrv ([Wine Bug #32088](https://bugs.winehq.org/show_bug.cgi?id=32088))

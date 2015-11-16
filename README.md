@@ -85,7 +85,7 @@ for more details.*
 * Add support for process specific debug channels
 * Add wined3d detection for GeForce GT 425M ([Wine Bug #35054](https://bugs.winehq.org/show_bug.cgi?id=35054))
 * Adobe Reader needs ITextSelection_fnGetDuplicate implementation
-* Allow dinput EnumDevices callback with broken calling convention ([Wine Bug #27664](https://bugs.winehq.org/show_bug.cgi?id=27664))
+* ~~Allow dinput EnumDevices callback with broken calling convention~~ ([Wine Bug #27664](https://bugs.winehq.org/show_bug.cgi?id=27664))
 * Allow non-nullterminated string as working directory in kernel32.create_startup_info
 * Allow selection of audio device for PulseAudio backend
 * Allow special characters in pipe names ([Wine Bug #28995](https://bugs.winehq.org/show_bug.cgi?id=28995))
@@ -120,7 +120,7 @@ for more details.*
 * Do not allow interruption of system APC in server_select ([Wine Bug #14697](https://bugs.winehq.org/show_bug.cgi?id=14697))
 * Do not allow to deallocate thread stack for current thread
 * Do not fail when a used context is passed to wglShareLists ([Wine Bug #11436](https://bugs.winehq.org/show_bug.cgi?id=11436))
-* Do not require SeBackupPrivilege in load_registry and unload_registry ([Wine Bug #28729](https://bugs.winehq.org/show_bug.cgi?id=28729))
+* ~~Do not require SeBackupPrivilege in load_registry and unload_registry~~ ([Wine Bug #28729](https://bugs.winehq.org/show_bug.cgi?id=28729))
 * Do not signal threads until they are really gone
 * Do not use unixfs for devices without mountpoint
 * Do not wait for hook thread startup in IDirectInput8::Initialize ([Wine Bug #21403](https://bugs.winehq.org/show_bug.cgi?id=21403))

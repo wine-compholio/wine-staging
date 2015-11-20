@@ -55,13 +55,13 @@ class config(object):
     path_config             = os.path.expanduser("~/.config/patchupdate.conf")
 
     path_patches            = "patches"
-    path_changelog          = "debian/changelog"
-    path_wine               = "debian/tools/wine"
+    path_changelog          = "patch-tools/changelog"
+    path_wine               = "patch-tools/wine"
 
-    path_template_script    = "debian/tools/patchinstall.sh.in"
+    path_template_script    = "patch-tools/patchinstall.sh.in"
     path_script             = "patches/patchinstall.sh"
 
-    path_template_README_md = "debian/tools/README.md.in"
+    path_template_README_md = "patch-tools/README.md.in"
     path_README_md          = "README.md"
 
     path_IfDefined          = "9999-IfDefined.patch"
@@ -859,7 +859,7 @@ def generate_markdown(all_patches, release_patches):
     lines.append("yet available in vanilla Wine. They are removed from the list as soon as they")
     lines.append("are included upstream. The list also includes features and fixes from previous")
     lines.append("releases, take a look at the")
-    lines.append("[changelog](https://github.com/wine-compholio/wine-staging/blob/master/debian/changelog)")
+    lines.append("[changelog](https://github.com/wine-compholio/wine-staging/blob/master/patch-tools/changelog)")
     lines.append("for more details.*")
     lines.append("")
     for mode, bugid, bugname in sorted(old_fixes, key=lambda x: x[2]):
@@ -913,7 +913,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     tools_directory = os.path.dirname(os.path.realpath(__file__))
-    os.chdir(os.path.join(tools_directory, "./../.."))
+    os.chdir(os.path.join(tools_directory, "./.."))
 
     config_parser = ConfigParser.ConfigParser()
     config_parser.read(config.path_config)

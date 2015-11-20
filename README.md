@@ -40,7 +40,7 @@ Included bug fixes and improvements
 yet available in vanilla Wine. They are removed from the list as soon as they
 are included upstream. The list also includes features and fixes from previous
 releases, take a look at the
-[changelog](https://github.com/wine-compholio/wine-staging/blob/master/debian/changelog)
+[changelog](https://github.com/wine-compholio/wine-staging/blob/master/patch-tools/changelog)
 for more details.*
 
 * Add IDragSourceHelper stub interface ([Wine Bug #24699](https://bugs.winehq.org/show_bug.cgi?id=24699))

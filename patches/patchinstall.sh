@@ -83,6 +83,7 @@ warning()
 patch_enable_all ()
 {
 	enable_Compiler_Warnings="$1"
+	enable_Coverity="$1"
 	enable_Exagear="$1"
 	enable_Pipelight="$1"
 	enable_Staging="$1"
@@ -354,6 +355,9 @@ patch_enable ()
 	case "$1" in
 		Compiler_Warnings)
 			enable_Compiler_Warnings="$2"
+			;;
+		Coverity)
+			enable_Coverity="$2"
 			;;
 		Exagear)
 			enable_Exagear="$2"
@@ -2097,6 +2101,18 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0001-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch
 	(
 		echo '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset Coverity
+# |
+# | Modified files:
+# |   *	tools/sfnt2fon/sfnt2fon.c
+# |
+if test "$enable_Coverity" -eq 1; then
+	patch_apply Coverity/0001-sfnt2fon-Don-t-leak-output-name-if-specified-multipl.patch
+	(
+		echo '+    { "André Hentschel", "sfnt2fon: Don'\''t leak output name if specified multiple times (Coverity).", 1 },';
 	) >> "$patchlist"
 fi
 

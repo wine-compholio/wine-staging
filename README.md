@@ -34,8 +34,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [2]:**
+**Bug fixes and features included in the next upcoming release [3]:**
 
+* Add a stub driver for tdi.sys ([Wine Bug #35693](https://bugs.winehq.org/show_bug.cgi?id=35693))
 * Fix broken textures in XIII Century: Death or Glory ([Wine Bug #25419](https://bugs.winehq.org/show_bug.cgi?id=25419))
 * Improve detection of symbol charset for old truetype fonts ([Wine Bug #33117](https://bugs.winehq.org/show_bug.cgi?id=33117))
 

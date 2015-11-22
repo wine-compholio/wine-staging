@@ -278,6 +278,7 @@ patch_enable_all ()
 	enable_shell32_UnixFS="$1"
 	enable_shlwapi_AssocGetPerceivedType="$1"
 	enable_shlwapi_UrlCombine="$1"
+	enable_tdi_sys_Stub_Driver="$1"
 	enable_user32_DeferWindowPos="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawTextExW="$1"
@@ -943,6 +944,9 @@ patch_enable ()
 			;;
 		shlwapi-UrlCombine)
 			enable_shlwapi_UrlCombine="$2"
+			;;
+		tdi.sys-Stub_Driver)
+			enable_tdi_sys_Stub_Driver="$2"
 			;;
 		user32-DeferWindowPos)
 			enable_user32_DeferWindowPos="$2"
@@ -5458,6 +5462,21 @@ if test "$enable_shlwapi_UrlCombine" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "shlwapi/tests: Add additional tests for UrlCombine and UrlCanonicalize.", 1 },';
 		echo '+    { "Sebastian Lackner", "shlwapi: UrlCombineW workaround for relative paths.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset tdi.sys-Stub_Driver
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35693] Add a stub driver for tdi.sys
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/tdi.sys/Makefile.in, dlls/tdi.sys/main.c, dlls/tdi.sys/tdi.sys.spec, loader/wine.inf.in
+# |
+if test "$enable_tdi_sys_Stub_Driver" -eq 1; then
+	patch_apply tdi.sys-Stub_Driver/0001-tdi.sys-add-a-stub-dll-try-3.patch
+	(
+		echo '+    { "Austin English", "tdi.sys: Add a stub dll.", 3 },';
 	) >> "$patchlist"
 fi
 

@@ -34,6 +34,11 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
+**Bug fixes and features included in the next upcoming release [1]:**
+
+* Fix broken textures in XIII Century: Death or Glory ([Wine Bug #25419](https://bugs.winehq.org/show_bug.cgi?id=25419))
+
+
 **Bug fixes and features in Wine Staging 1.7.55 [269]:**
 
 *Note: The following list only contains features and bug fixes which are not
@@ -145,7 +150,7 @@ for more details.*
 * Fix device paths in HKLM\SYSTEM\MountedDevices ([Wine Bug #38235](https://bugs.winehq.org/show_bug.cgi?id=38235))
 * Fix endless loop in regedit when importing files with very long lines
 * Fix error handling in DeferWindowPos when passing an invalid HWND ([Wine Bug #23187](https://bugs.winehq.org/show_bug.cgi?id=23187))
-* Fix flickering introduced by pixelformat changes. ([Wine Bug #35718](https://bugs.winehq.org/show_bug.cgi?id=35718))
+* ~~Fix flickering introduced by pixelformat changes.~~ ([Wine Bug #35718](https://bugs.winehq.org/show_bug.cgi?id=35718))
 * Fix for ConnectNamedPort return value in overlapped mode ([Wine Bug #16550](https://bugs.winehq.org/show_bug.cgi?id=16550))
 * Fix for programs leaking wndproc slots ([Wine Bug #32451](https://bugs.winehq.org/show_bug.cgi?id=32451))
 * Fix graphical corruption in FarCry 3 with NVIDIA drivers ([Wine Bug #35062](https://bugs.winehq.org/show_bug.cgi?id=35062))
@@ -166,7 +171,7 @@ for more details.*
 * Fix texture corruption in CSI: Fatal Conspiracy ([Wine Bug #33768](https://bugs.winehq.org/show_bug.cgi?id=33768))
 * Fix the initialization of combined DACLs when the new DACL is empty ([Wine Bug #38423](https://bugs.winehq.org/show_bug.cgi?id=38423))
 * Fix unintentional leaks with ntdll internals
-* Fix wined3d performance drop introduced by pixelformat changes. ([Wine Bug #35655](https://bugs.winehq.org/show_bug.cgi?id=35655))
+* ~~Fix wined3d performance drop introduced by pixelformat changes.~~ ([Wine Bug #35655](https://bugs.winehq.org/show_bug.cgi?id=35655))
 * Fix wrong colors in Wolfenstein (2009) ([Wine Bug #34692](https://bugs.winehq.org/show_bug.cgi?id=34692))
 * Fix wrong defition of ntoskrnl.IoReleaseCancelSpinLock function.
 * Fix wrong version of ID3DXEffect interface for d3dx9_24

@@ -5848,8 +5848,6 @@ fi
 # Patchset wined3d-Revert_PixelFormat
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#35655] Fix wined3d performance drop introduced by pixelformat changes.
-# |   *	[#35718] Fix flickering introduced by pixelformat changes.
 # |   *	[#35975] Fix gray screen on startup introduced by pixelformat changes.
 # |   *	[#36900] Fix missing video introduced by pixelformat changes.
 # |
@@ -6442,6 +6440,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11436] Do not fail when a used context is passed to wglShareLists
+# |   *	[#25419] Fix broken textures in XIII Century: Death or Glory
 # |
 # | Modified files:
 # |   *	dlls/winex11.drv/opengl.c

@@ -34,9 +34,10 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [1]:**
+**Bug fixes and features included in the next upcoming release [2]:**
 
 * Fix broken textures in XIII Century: Death or Glory ([Wine Bug #25419](https://bugs.winehq.org/show_bug.cgi?id=25419))
+* Improve detection of symbol charset for old truetype fonts ([Wine Bug #33117](https://bugs.winehq.org/show_bug.cgi?id=33117))
 
 
 **Bug fixes and features in Wine Staging 1.7.55 [269]:**

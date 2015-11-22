@@ -58,7 +58,7 @@ upstream_commit()
 # Show version information
 version()
 {
-	echo "Wine Staging 1.7.56 (unreleased)"
+	echo "Wine Staging 1.8~rc1 (unreleased)"
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -138,6 +138,7 @@ patch_enable_all ()
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_MaxPixelFormats="$1"
 	enable_gdi32_MultiMonitor="$1"
+	enable_gdi32_Symbol_Truetype_Font="$1"
 	enable_hal_KeQueryPerformanceCounter="$1"
 	enable_hid_HidP_TranslateUsagesToI8042ScanCodes="$1"
 	enable_hnetcfg_INetFwAuthorizedApplication="$1"
@@ -520,6 +521,9 @@ patch_enable ()
 			;;
 		gdi32-MultiMonitor)
 			enable_gdi32_MultiMonitor="$2"
+			;;
+		gdi32-Symbol_Truetype_Font)
+			enable_gdi32_Symbol_Truetype_Font="$2"
 			;;
 		hal-KeQueryPerformanceCounter)
 			enable_hal_KeQueryPerformanceCounter="$2"
@@ -3151,6 +3155,21 @@ if test "$enable_gdi32_MultiMonitor" -eq 1; then
 		echo '+    { "Ken Thomases", "winex11: Make GetMonitorInfo() give a different device name (\\\\.\\\\DISPLAY<n>) to each monitor.", 1 },';
 		echo '+    { "Ken Thomases", "user32: Implement EnumDisplayDevicesW() based on EnumDisplayMonitors() and GetMonitorInfoW().", 1 },';
 		echo '+    { "Ken Thomases", "winemac: Make GetMonitorInfo() give a different device name (\\\\\\\\.\\\\DISPLAY<n>) to each monitor.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset gdi32-Symbol_Truetype_Font
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33117] Improve detection of symbol charset for old truetype fonts
+# |
+# | Modified files:
+# |   *	dlls/gdi32/freetype.c
+# |
+if test "$enable_gdi32_Symbol_Truetype_Font" -eq 1; then
+	patch_apply gdi32-Symbol_Truetype_Font/0001-gdi32-Improve-detection-of-symbol-charset-for-old-tr.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "gdi32: Improve detection of symbol charset for old truetype fonts.", 1 },';
 	) >> "$patchlist"
 fi
 

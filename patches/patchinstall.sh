@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "39f2ed321d87d888ac3f81e764d0e5c661db74ea"
+	echo "b5c0c46cfc0c8590d797d8cbe08b3f0a8cfe751e"
 }
 
 # Show version information
@@ -288,6 +288,7 @@ patch_enable_all ()
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_SetCoalescableTimer="$1"
+	enable_user32_WM_MDICALCCHILDSCROLL="$1"
 	enable_user32_WndProc="$1"
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_VerQueryValue="$1"
@@ -971,6 +972,9 @@ patch_enable ()
 			;;
 		user32-SetCoalescableTimer)
 			enable_user32_SetCoalescableTimer="$2"
+			;;
+		user32-WM_MDICALCCHILDSCROLL)
+			enable_user32_WM_MDICALCCHILDSCROLL="$2"
 			;;
 		user32-WndProc)
 			enable_user32_WndProc="$2"
@@ -5601,6 +5605,18 @@ if test "$enable_user32_SetCoalescableTimer" -eq 1; then
 	patch_apply user32-SetCoalescableTimer/0001-user32-add-SetCoalescableTimer-stub.patch
 	(
 		echo '+    { "Austin English", "user32: Add SetCoalescableTimer stub.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-WM_MDICALCCHILDSCROLL
+# |
+# | Modified files:
+# |   *	dlls/user32/mdi.c, dlls/user32/tests/win.c
+# |
+if test "$enable_user32_WM_MDICALCCHILDSCROLL" -eq 1; then
+	patch_apply user32-WM_MDICALCCHILDSCROLL/0001-user32-Change-value-for-WM_MDICALCCHILDSCROLL-to-0x0.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "user32: Change value for WM_MDICALCCHILDSCROLL to 0x003f.", 1 },';
 	) >> "$patchlist"
 fi
 

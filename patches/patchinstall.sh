@@ -2107,12 +2107,14 @@ fi
 # Patchset Coverity
 # |
 # | Modified files:
-# |   *	tools/sfnt2fon/sfnt2fon.c
+# |   *	tools/sfnt2fon/sfnt2fon.c, tools/winedump/msc.c
 # |
 if test "$enable_Coverity" -eq 1; then
 	patch_apply Coverity/0001-sfnt2fon-Don-t-leak-output-name-if-specified-multipl.patch
+	patch_apply Coverity/0002-winedump-Free-debug-string-in-case-it-was-not-freed-.patch
 	(
 		echo '+    { "André Hentschel", "sfnt2fon: Don'\''t leak output name if specified multiple times (Coverity).", 1 },';
+		echo '+    { "André Hentschel", "winedump: Free debug string in case it was not freed in for-loop (Coverity).", 1 },';
 	) >> "$patchlist"
 fi
 

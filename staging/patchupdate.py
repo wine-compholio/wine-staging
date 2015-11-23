@@ -166,6 +166,7 @@ def _read_changelog():
 def _latest_staging_version(only_released=False):
     """Get version number of the latest release / unreleased version."""
     for package, version, distro in _read_changelog():
+        version = version.replace("~rc", "-rc")
         if distro.lower() != "unreleased":
             return version
         elif not only_released:

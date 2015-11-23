@@ -34,14 +34,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [3]:**
-
-* Add a stub driver for tdi.sys ([Wine Bug #35693](https://bugs.winehq.org/show_bug.cgi?id=35693))
-* Fix broken textures in XIII Century: Death or Glory ([Wine Bug #25419](https://bugs.winehq.org/show_bug.cgi?id=25419))
-* Improve detection of symbol charset for old truetype fonts ([Wine Bug #33117](https://bugs.winehq.org/show_bug.cgi?id=33117))
-
-
-**Bug fixes and features in Wine Staging 1.7.55 [269]:**
+**Bug fixes and features in Wine Staging 1.8-rc1 [268]:**
 
 *Note: The following list only contains features and bug fixes which are not
 yet available in vanilla Wine. They are removed from the list as soon as they
@@ -53,6 +46,7 @@ for more details.*
 * Add IDragSourceHelper stub interface ([Wine Bug #24699](https://bugs.winehq.org/show_bug.cgi?id=24699))
 * Add IHTMLLocation::hash property's getter implementation ([Wine Bug #32967](https://bugs.winehq.org/show_bug.cgi?id=32967))
 * Add a ProfileList\<UserSID> registry subkey ([Wine Bug #15670](https://bugs.winehq.org/show_bug.cgi?id=15670))
+* Add a stub driver for tdi.sys ([Wine Bug #35693](https://bugs.winehq.org/show_bug.cgi?id=35693))
 * Add implementation for IDXGIOutput::GetDesc ([Wine Bug #32006](https://bugs.winehq.org/show_bug.cgi?id=32006))
 * Add implementation for comctl32.PROPSHEET_InsertPage. ([Wine Bug #25625](https://bugs.winehq.org/show_bug.cgi?id=25625))
 * Add implementation for mfplat.MFTEnum ([Wine Bug #39309](https://bugs.winehq.org/show_bug.cgi?id=39309))
@@ -92,7 +86,6 @@ for more details.*
 * Add support for process specific debug channels
 * Add wined3d detection for GeForce GT 425M ([Wine Bug #35054](https://bugs.winehq.org/show_bug.cgi?id=35054))
 * Adobe Reader needs ITextSelection_fnGetDuplicate implementation
-* ~~Allow dinput EnumDevices callback with broken calling convention~~ ([Wine Bug #27664](https://bugs.winehq.org/show_bug.cgi?id=27664))
 * Allow non-nullterminated string as working directory in kernel32.create_startup_info
 * Allow selection of audio device for PulseAudio backend
 * Allow special characters in pipe names ([Wine Bug #28995](https://bugs.winehq.org/show_bug.cgi?id=28995))
@@ -127,7 +120,6 @@ for more details.*
 * Do not allow interruption of system APC in server_select ([Wine Bug #14697](https://bugs.winehq.org/show_bug.cgi?id=14697))
 * Do not allow to deallocate thread stack for current thread
 * Do not fail when a used context is passed to wglShareLists ([Wine Bug #11436](https://bugs.winehq.org/show_bug.cgi?id=11436))
-* ~~Do not require SeBackupPrivilege in load_registry and unload_registry~~ ([Wine Bug #28729](https://bugs.winehq.org/show_bug.cgi?id=28729))
 * Do not signal threads until they are really gone
 * Do not use unixfs for devices without mountpoint
 * Do not wait for hook thread startup in IDirectInput8::Initialize ([Wine Bug #21403](https://bugs.winehq.org/show_bug.cgi?id=21403))
@@ -142,6 +134,7 @@ for more details.*
 * Fallback to default comspec when %COMSPEC% is not set
 * Fallback to system ping command when CAP_NET_RAW is not available ([Wine Bug #8332](https://bugs.winehq.org/show_bug.cgi?id=8332))
 * Fix access violation in MSYS2 git when cloning repository
+* Fix broken textures in XIII Century: Death or Glory ([Wine Bug #25419](https://bugs.winehq.org/show_bug.cgi?id=25419))
 * Fix calculation of listbox size when horizontal scrollbar is present ([Wine Bug #38142](https://bugs.winehq.org/show_bug.cgi?id=38142))
 * Fix caps lock state issues with multiple processes ([Wine Bug #35907](https://bugs.winehq.org/show_bug.cgi?id=35907))
 * Fix comparison of punctuation characters in lstrcmp ([Wine Bug #10767](https://bugs.winehq.org/show_bug.cgi?id=10767))
@@ -152,7 +145,6 @@ for more details.*
 * Fix device paths in HKLM\SYSTEM\MountedDevices ([Wine Bug #38235](https://bugs.winehq.org/show_bug.cgi?id=38235))
 * Fix endless loop in regedit when importing files with very long lines
 * Fix error handling in DeferWindowPos when passing an invalid HWND ([Wine Bug #23187](https://bugs.winehq.org/show_bug.cgi?id=23187))
-* ~~Fix flickering introduced by pixelformat changes.~~ ([Wine Bug #35718](https://bugs.winehq.org/show_bug.cgi?id=35718))
 * Fix for ConnectNamedPort return value in overlapped mode ([Wine Bug #16550](https://bugs.winehq.org/show_bug.cgi?id=16550))
 * Fix for programs leaking wndproc slots ([Wine Bug #32451](https://bugs.winehq.org/show_bug.cgi?id=32451))
 * Fix graphical corruption in FarCry 3 with NVIDIA drivers ([Wine Bug #35062](https://bugs.winehq.org/show_bug.cgi?id=35062))
@@ -173,7 +165,6 @@ for more details.*
 * Fix texture corruption in CSI: Fatal Conspiracy ([Wine Bug #33768](https://bugs.winehq.org/show_bug.cgi?id=33768))
 * Fix the initialization of combined DACLs when the new DACL is empty ([Wine Bug #38423](https://bugs.winehq.org/show_bug.cgi?id=38423))
 * Fix unintentional leaks with ntdll internals
-* ~~Fix wined3d performance drop introduced by pixelformat changes.~~ ([Wine Bug #35655](https://bugs.winehq.org/show_bug.cgi?id=35655))
 * Fix wrong colors in Wolfenstein (2009) ([Wine Bug #34692](https://bugs.winehq.org/show_bug.cgi?id=34692))
 * Fix wrong defition of ntoskrnl.IoReleaseCancelSpinLock function.
 * Fix wrong version of ID3DXEffect interface for d3dx9_24
@@ -219,6 +210,7 @@ for more details.*
 * Implement support for "Purist Mode" (override for all dlls)
 * Improve INetFwAuthorizedApplication::get_ProcessImageFileName stub
 * Improve ReadDataAvailable handling in FilePipeLocalInformation class
+* Improve detection of symbol charset for old truetype fonts ([Wine Bug #33117](https://bugs.winehq.org/show_bug.cgi?id=33117))
 * Improve startup performance by delaying font initialization
 * Improve stub for AEV_GetVolumeRange ([Wine Bug #35658](https://bugs.winehq.org/show_bug.cgi?id=35658))
 * Improve stub for ID3DXEffectImpl_CloneEffect

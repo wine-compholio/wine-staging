@@ -55,13 +55,13 @@ class config(object):
     path_config             = os.path.expanduser("~/.config/patchupdate.conf")
 
     path_patches            = "patches"
-    path_changelog          = "patch-tools/changelog"
-    path_wine               = "patch-tools/wine"
+    path_changelog          = "staging/changelog"
+    path_wine               = "staging/wine"
 
-    path_template_script    = "patch-tools/patchinstall.sh.in"
+    path_template_script    = "staging/patchinstall.sh.in"
     path_script             = "patches/patchinstall.sh"
 
-    path_template_README_md = "patch-tools/README.md.in"
+    path_template_README_md = "staging/README.md.in"
     path_README_md          = "README.md"
 
     path_IfDefined          = "9999-IfDefined.patch"
@@ -859,7 +859,7 @@ def generate_markdown(all_patches, release_patches):
     lines.append("yet available in vanilla Wine. They are removed from the list as soon as they")
     lines.append("are included upstream. The list also includes features and fixes from previous")
     lines.append("releases, take a look at the")
-    lines.append("[changelog](https://github.com/wine-compholio/wine-staging/blob/master/patch-tools/changelog)")
+    lines.append("[changelog](https://github.com/wine-compholio/wine-staging/blob/master/staging/changelog)")
     lines.append("for more details.*")
     lines.append("")
     for mode, bugid, bugname in sorted(old_fixes, key=lambda x: x[2]):

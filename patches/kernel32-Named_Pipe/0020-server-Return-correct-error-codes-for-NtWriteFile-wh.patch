@@ -1,49 +1,34 @@
-From 4b593f0dd46be8b51cb4e1d31efc5e16bc61cdc9 Mon Sep 17 00:00:00 2001
+From 686c258580f515c706074970599fb5a081bdf06a Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 6 Jun 2015 01:21:05 +0200
 Subject: server: Return correct error codes for NtWriteFile when pipes are
  closed without disconnecting.
 
 ---
- dlls/kernel32/tests/pipe.c |  3 ---
+ dlls/kernel32/tests/pipe.c |  2 +-
  dlls/ntdll/file.c          |  3 +++
  server/named_pipe.c        | 43 +++++++++++++++++++++++++++++++++++++++++--
  server/protocol.def        |  1 +
- 4 files changed, 45 insertions(+), 5 deletions(-)
+ 4 files changed, 46 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/kernel32/tests/pipe.c b/dlls/kernel32/tests/pipe.c
-index 0fca432..4590d3c 100644
+index 3035dd4..9986337 100644
 --- a/dlls/kernel32/tests/pipe.c
 +++ b/dlls/kernel32/tests/pipe.c
-@@ -1192,7 +1192,6 @@ static void test_CloseNamedPipe(void)
+@@ -1909,7 +1909,7 @@ static void test_CloseHandle(void)
+     SetLastError(0xdeadbeef);
+     ret = WriteFile(hfile, testdata, sizeof(testdata), &numbytes, NULL);
+     ok(!ret, "WriteFile unexpectedly succeeded\n");
+-    todo_wine ok(GetLastError() == ERROR_NO_DATA, "expected ERROR_NO_DATA, got %u\n", GetLastError());
++    ok(GetLastError() == ERROR_NO_DATA, "expected ERROR_NO_DATA, got %u\n", GetLastError());
  
-         SetLastError(0xdeadbeef);
-         ok(!WriteFile(hFile, obuf, sizeof(obuf), &written, NULL), "WriteFile() succeeded\n");
--        todo_wine
-         ok(GetLastError() == ERROR_NO_DATA, "GetLastError() returned %08x, expected ERROR_NO_DATA\n", GetLastError());
+     CloseHandle(hfile);
  
-         CloseHandle(hFile);
-@@ -1276,7 +1275,6 @@ static void test_CloseNamedPipe(void)
- 
-         SetLastError(0xdeadbeef);
-         ok(!WriteFile(hnp, obuf, sizeof(obuf), &written, NULL), "WriteFile() succeeded\n");
--        todo_wine
-         ok(GetLastError() == ERROR_NO_DATA, "GetLastError() returned %08x, expected ERROR_NO_DATA\n", GetLastError());
- 
-         CloseHandle(hnp);
-@@ -1314,7 +1312,6 @@ static void test_CloseNamedPipe(void)
- 
-         SetLastError(0xdeadbeef);
-         ok(!WriteFile(hnp, obuf, sizeof(obuf), &written, NULL), "WriteFile() succeeded\n");
--        todo_wine
-         ok(GetLastError() == ERROR_NO_DATA, "GetLastError() returned %08x, expected ERROR_NO_DATA\n", GetLastError());
- 
-         CloseHandle(hnp);
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index f0d816f..26707e2 100644
+index 42d1fae..3bb2905 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -1198,6 +1198,9 @@ static NTSTATUS write_unix_fd(int fd, const char *buf, ULONG *total, ULONG lengt
+@@ -1213,6 +1213,9 @@ static NTSTATUS write_unix_fd(int fd, const char *buf, ULONG *total, ULONG lengt
                  return STATUS_SUCCESS;
              else if (errno == EFAULT)
                  return STATUS_INVALID_USER_BUFFER;
@@ -54,7 +39,7 @@ index f0d816f..26707e2 100644
          }
      }
 diff --git a/server/named_pipe.c b/server/named_pipe.c
-index cd647c4..4718d1b 100644
+index 4bdb4d7..c9c08e5 100644
 --- a/server/named_pipe.c
 +++ b/server/named_pipe.c
 @@ -144,6 +144,7 @@ static const struct object_ops named_pipe_ops =
@@ -150,10 +135,10 @@ index cd647c4..4718d1b 100644
  {
      struct pipe_client *client = (struct pipe_client *)obj;
 diff --git a/server/protocol.def b/server/protocol.def
-index 428f2e0..4efda91 100644
+index d0a949f..91ab8cc 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -2351,6 +2351,7 @@ enum message_type
+@@ -2389,6 +2389,7 @@ enum message_type
  #define NAMED_PIPE_MESSAGE_STREAM_WRITE 0x0001
  #define NAMED_PIPE_MESSAGE_STREAM_READ  0x0002
  #define NAMED_PIPE_NONBLOCKING_MODE     0x0004
@@ -162,5 +147,5 @@ index 428f2e0..4efda91 100644
  
  /* Get named pipe information by handle */
 -- 
-2.4.2
+2.6.2
 

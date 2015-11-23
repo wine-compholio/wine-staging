@@ -1,6 +1,6 @@
-From 24ad6b8855d6739be102ed3d1cd3d18b39e3fceb Mon Sep 17 00:00:00 2001
+From cdb1ae761d777e7a1cf4c73edd946c94d1e73700 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
-Date: Mon, 11 Aug 2014 18:20:52 +0200
+Date: Mon, 11 Aug 2014 05:01:11 +0200
 Subject: ntdll: Add handling for partially received messages in NtReadFile.
 
 Changes in v2:
@@ -13,12 +13,12 @@ Changes in v3:
 Changes in v4:
   * Include changes from later patch.
 ---
- dlls/kernel32/tests/pipe.c | 53 +++++-----------------------------------------
- dlls/ntdll/file.c          | 28 ++++++++++++++++++------
- 2 files changed, 27 insertions(+), 54 deletions(-)
+ dlls/kernel32/tests/pipe.c | 57 +++++++---------------------------------------
+ dlls/ntdll/file.c          | 28 ++++++++++++++++++-----
+ 2 files changed, 30 insertions(+), 55 deletions(-)
 
 diff --git a/dlls/kernel32/tests/pipe.c b/dlls/kernel32/tests/pipe.c
-index dff00c9..81b4581 100644
+index 5f5553b..3811ccd 100644
 --- a/dlls/kernel32/tests/pipe.c
 +++ b/dlls/kernel32/tests/pipe.c
 @@ -305,9 +305,7 @@ static void test_CreateNamedPipe(int pipemode)
@@ -207,23 +207,27 @@ index dff00c9..81b4581 100644
                  ok(GetLastError() == ERROR_MORE_DATA, "wrong error\n");
              }
              ok(readden == 32, "read got %d bytes\n", readden);
-@@ -949,7 +911,6 @@ static void test_CloseNamedPipe(void)
-         /* close server end without disconnecting */
-         ok(CloseHandle(hnp), "CloseHandle() failed: %08x\n", GetLastError());
+@@ -1657,7 +1619,7 @@ static void test_CloseHandle(void)
+     numbytes = 0xdeadbeef;
+     memset(buffer, 0, sizeof(buffer));
+     ret = ReadFile(hfile, buffer, 0, &numbytes, NULL);
+-    todo_wine ok(ret, "ReadFile failed with %u\n", GetLastError());
++    ok(ret, "ReadFile failed with %u\n", GetLastError());
+     ok(numbytes == 0, "expected 0, got %u\n", numbytes);
  
--        todo_wine
-         ok(ReadFile(hFile, ibuf, 0, &readden, NULL), "ReadFile() failed: %08x\n", GetLastError());
-         ok(readden == 0, "got %d bytes\n", readden);
+     numbytes = 0xdeadbeef;
+@@ -1750,8 +1712,8 @@ static void test_CloseHandle(void)
+     numbytes = 0xdeadbeef;
+     memset(buffer, 0, sizeof(buffer));
+     ret = ReadFile(hpipe, buffer, 0, &numbytes, NULL);
+-    todo_wine ok(ret || broken(GetLastError() == ERROR_MORE_DATA) /* >= Win 8 */,
+-                 "ReadFile failed with %u\n", GetLastError());
++    ok(ret || broken(GetLastError() == ERROR_MORE_DATA) /* >= Win 8 */,
++       "ReadFile failed with %u\n", GetLastError());
+     ok(numbytes == 0, "expected 0, got %u\n", numbytes);
  
-@@ -991,7 +952,6 @@ static void test_CloseNamedPipe(void)
-         ok(CloseHandle(hFile), "CloseHandle() failed: %08x\n", GetLastError());
- 
-         /* you'd think ERROR_MORE_DATA, but no */
--        todo_wine
-         ok(ReadFile(hnp, ibuf, 0, &readden, NULL), "ReadFile() failed: %08x\n", GetLastError());
-         ok(readden == 0, "got %d bytes\n", readden);
- 
-@@ -2459,7 +2419,6 @@ static void test_readfileex_pending(void)
+     numbytes = 0xdeadbeef;
+@@ -2559,7 +2521,6 @@ static void test_readfileex_pending(void)
      SetLastError(0xdeadbeef);
      ret = ReadFile(server, read_buf, 0, &num_bytes, &overlapped);
      ok(!ret, "ReadFile should fail\n");
@@ -231,7 +235,7 @@ index dff00c9..81b4581 100644
      ok(GetLastError() == ERROR_IO_PENDING, "expected ERROR_IO_PENDING, got %d\n", GetLastError());
      ok(num_bytes == 0, "bytes %u\n", num_bytes);
      ok((NTSTATUS)overlapped.Internal == STATUS_PENDING, "expected STATUS_PENDING, got %#lx\n", overlapped.Internal);
-@@ -2475,11 +2434,9 @@ todo_wine
+@@ -2575,11 +2536,9 @@ todo_wine
      ok(num_bytes == 1, "bytes %u\n", num_bytes);
  
      wait = WaitForSingleObject(event, 100);
@@ -244,10 +248,10 @@ index dff00c9..81b4581 100644
      ok(overlapped.InternalHigh == 0, "expected 0, got %lu\n", overlapped.InternalHigh);
  
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index d8579a9..2c8855c 100644
+index fd6c605..18ee740 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -441,7 +441,7 @@ NTSTATUS FILE_GetNtStatus(void)
+@@ -490,7 +490,7 @@ NTSTATUS FILE_GetNtStatus(void)
      }
  }
  
@@ -256,7 +260,7 @@ index d8579a9..2c8855c 100644
  static NTSTATUS unix_fd_avail(int fd, int *avail)
  {
      struct pollfd pollfd;
-@@ -470,7 +470,14 @@ static NTSTATUS unix_fd_avail(int fd, int *avail)
+@@ -519,7 +519,14 @@ static NTSTATUS unix_fd_avail(int fd, int *avail)
  static inline int get_pipe_flags(int fd)
  {
  #ifdef __linux__
@@ -272,7 +276,7 @@ index d8579a9..2c8855c 100644
  #else
      return 0;
  #endif
-@@ -516,10 +523,12 @@ static NTSTATUS read_unix_fd(int fd, char *buf, ULONG *total, ULONG length,
+@@ -565,10 +572,12 @@ static NTSTATUS read_unix_fd(int fd, char *buf, ULONG *total, ULONG length,
          if (result >= 0)
          {
              *total += result;
@@ -287,7 +291,7 @@ index d8579a9..2c8855c 100644
                  switch (type)
                  {
                  case FD_TYPE_FILE:
-@@ -527,11 +536,18 @@ static NTSTATUS read_unix_fd(int fd, char *buf, ULONG *total, ULONG length,
+@@ -577,11 +586,18 @@ static NTSTATUS read_unix_fd(int fd, char *buf, ULONG *total, ULONG length,
                      return length ? STATUS_END_OF_FILE : STATUS_SUCCESS;
                  case FD_TYPE_SERIAL:
                      return STATUS_PENDING;
@@ -307,7 +311,7 @@ index d8579a9..2c8855c 100644
                  continue;
              else if (type != FD_TYPE_FILE) /* no async I/O on regular files */
                  return STATUS_PENDING;
-@@ -890,7 +906,7 @@ done:
+@@ -1039,7 +1055,7 @@ done:
  
  err:
      if (needs_close) close( unix_handle );
@@ -317,5 +321,5 @@ index d8579a9..2c8855c 100644
          io_status->u.Status = status;
          io_status->Information = total;
 -- 
-2.3.0
+2.6.2
 

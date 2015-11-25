@@ -1,4 +1,4 @@
-From 0002cf1a076fddb1eecef95f1177ae6562cda785 Mon Sep 17 00:00:00 2001
+From 9b2d1b5533f52cee4a9445ed83a17e16b6da8b85 Mon Sep 17 00:00:00 2001
 From: Matt Durgavich <mattdurgavich@gmail.com>
 Date: Sun, 30 Aug 2015 11:04:08 -0400
 Subject: ws2_32: Proper WSACleanup implementation using wineserver function
@@ -6,16 +6,16 @@ Subject: ws2_32: Proper WSACleanup implementation using wineserver function
 
 ---
  dlls/ws2_32/socket.c     | 22 ++++++++++++++++------
- dlls/ws2_32/tests/sock.c |  5 ++---
+ dlls/ws2_32/tests/sock.c | 14 +++++++-------
  server/protocol.def      |  3 +++
  server/sock.c            |  9 +++++++++
- 4 files changed, 30 insertions(+), 9 deletions(-)
+ 4 files changed, 35 insertions(+), 13 deletions(-)
 
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index ca82ec9..f153de1 100644
+index d31f0b4..ea45397 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
-@@ -1469,13 +1469,23 @@ int WINAPI WSAStartup(WORD wVersionRequested, LPWSADATA lpWSAData)
+@@ -1487,13 +1487,23 @@ int WINAPI WSAStartup(WORD wVersionRequested, LPWSADATA lpWSAData)
   */
  INT WINAPI WSACleanup(void)
  {
@@ -46,34 +46,51 @@ index ca82ec9..f153de1 100644
  
  
 diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
-index 2d14496..204b852 100644
+index 3c66f7d..e3732a3 100644
 --- a/dlls/ws2_32/tests/sock.c
 +++ b/dlls/ws2_32/tests/sock.c
-@@ -1119,20 +1119,19 @@ static void test_WithWSAStartup(void)
+@@ -1149,18 +1149,17 @@ static void test_WithWSAStartup(void)
      ok(res == 0, "WSAStartup() failed unexpectedly: %d\n", res);
  
      /* show that sockets are destroyed automatically after WSACleanup */
 -    todo_wine {
      SetLastError(0xdeadbeef);
-     res = send(src, "TEST", 4, 0);
+     res = send(pairs[0].src, "TEST", 4, 0);
      error = WSAGetLastError();
      ok(res == SOCKET_ERROR, "send should have failed\n");
-+    todo_wine
-     ok(error == WSAENOTSOCK, "expected 10038, got %d\n", error);
+-    ok(error == WSAENOTSOCK, "expected 10038, got %d\n", error);
++    todo_wine ok(error == WSAENOTSOCK, "expected 10038, got %d\n", error);
  
      SetLastError(0xdeadbeef);
-     res = closesocket(dst);
+     res = send(pairs[0].dst, "TEST", 4, 0);
      error = WSAGetLastError();
-     ok(res == SOCKET_ERROR, "closesocket should have failed\n");
-+    todo_wine
-     ok(error == WSAENOTSOCK, "expected 10038, got %d\n", error);
+     ok(res == SOCKET_ERROR, "send should have failed\n");
+-    ok(error == WSAENOTSOCK, "expected 10038, got %d\n", error);
++    todo_wine ok(error == WSAENOTSOCK, "expected 10038, got %d\n", error);
+ 
+     /* Check that all sockets were destroyed */
+     for (i = 0; i < socks; i++)
+@@ -1180,13 +1179,14 @@ static void test_WithWSAStartup(void)
+             SetLastError(0xdeadbeef);
+             res = getsockname(sock, (struct sockaddr *)&saddr, &size);
+             error = WSAGetLastError();
+-            ok(res == SOCKET_ERROR, "Test[%d]: getsockname should have failed\n", i);
+-            ok(error == WSAENOTSOCK, "Test[%d]: expected 10038, got %d\n", i, error);
++            if (j == 2 || (j == 0 && i == 0))
++                todo_wine ok(res == SOCKET_ERROR, "Test[%d]: getsockname should have failed\n", i);
++            else
++                ok(res == SOCKET_ERROR, "Test[%d]: getsockname should have failed\n", i);
++            todo_wine ok(error == WSAENOTSOCK, "Test[%d]: expected 10038, got %d\n", i, error);
+         }
+     }
+ 
 -    }
 -
-     closesocket(src);
-     closesocket(dst);
- 
+     /* While wine is not fixed, close all sockets manually */
+     for (i = 0; i < socks; i++)
+     {
 diff --git a/server/protocol.def b/server/protocol.def
-index c313006..2dccb9a 100644
+index aa37c66..058111a 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -942,6 +942,9 @@ struct rawinput_device
@@ -87,10 +104,10 @@ index c313006..2dccb9a 100644
  /* Set a handle information */
  @REQ(set_handle_info)
 diff --git a/server/sock.c b/server/sock.c
-index 67d6416e..98f8176 100644
+index 1767dea..090c753 100644
 --- a/server/sock.c
 +++ b/server/sock.c
-@@ -1383,3 +1383,12 @@ DECL_HANDLER(get_socket_info)
+@@ -1388,3 +1388,12 @@ DECL_HANDLER(get_socket_info)
  
      release_object( &sock->obj );
  }
@@ -104,5 +121,5 @@ index 67d6416e..98f8176 100644
 +        close_handle(current->process, sock);
 +}
 -- 
-2.5.1
+2.6.2
 

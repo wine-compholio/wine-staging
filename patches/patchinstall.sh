@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "3a6ac6055511b14a7e26ba0200f36da418f80723"
+	echo "6790d825d1b2c41de73ffe5cb5df28c1d1cc8878"
 }
 
 # Show version information
@@ -132,7 +132,6 @@ patch_enable_all ()
 	enable_dsound_Fast_Mixer="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
-	enable_dxgi_GetDesc="$1"
 	enable_dxgi_MakeWindowAssociation="$1"
 	enable_dxva2_Video_Decoder="$1"
 	enable_fonts_Missing_Fonts="$1"
@@ -504,9 +503,6 @@ patch_enable ()
 			;;
 		dxdiagn-GetChildContainer_Leaf_Nodes)
 			enable_dxdiagn_GetChildContainer_Leaf_Nodes="$2"
-			;;
-		dxgi-GetDesc)
-			enable_dxgi_GetDesc="$2"
 			;;
 		dxgi-MakeWindowAssociation)
 			enable_dxgi_MakeWindowAssociation="$2"
@@ -1533,9 +1529,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_ddraw_EnumSurfaces" -gt 1; then
 		abort "Patchset ddraw-EnumSurfaces disabled, but category-stable depends on that."
 	fi
-	if test "$enable_dxgi_GetDesc" -gt 1; then
-		abort "Patchset dxgi-GetDesc disabled, but category-stable depends on that."
-	fi
 	if test "$enable_fonts_Missing_Fonts" -gt 1; then
 		abort "Patchset fonts-Missing_Fonts disabled, but category-stable depends on that."
 	fi
@@ -1705,7 +1698,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_d3dx9_36_UpdateSkinnedMesh=1
 	enable_dbghelp_Debug_Symbols=1
 	enable_ddraw_EnumSurfaces=1
-	enable_dxgi_GetDesc=1
 	enable_fonts_Missing_Fonts=1
 	enable_gdi32_MaxPixelFormats=1
 	enable_kernel32_CompareStringEx=1
@@ -3002,22 +2994,6 @@ if test "$enable_dxdiagn_GetChildContainer_Leaf_Nodes" -eq 1; then
 	patch_apply dxdiagn-GetChildContainer_Leaf_Nodes/0001-dxdiagn-Calling-GetChildContainer-with-an-empty-stri.patch
 	(
 		echo '+    { "Michael Müller", "dxdiagn: Calling GetChildContainer with an empty string on a leaf container returns the object itself.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset dxgi-GetDesc
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#31998] Avseq crashes when multisampling is enabled
-# |   *	[#32006] Add implementation for IDXGIOutput::GetDesc
-# |
-# | Modified files:
-# |   *	dlls/dxgi/output.c
-# |
-if test "$enable_dxgi_GetDesc" -eq 1; then
-	patch_apply dxgi-GetDesc/0001-dxgi-Implement-IDXGIOutput-GetDesc.patch
-	(
-		echo '+    { "Michael Müller", "dxgi: Implement IDXGIOutput::GetDesc.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5552,7 +5528,7 @@ fi
 # |   *	[#39465] Enforce that surfaces are flushed after ReleaseDC
 # |
 # | Modified files:
-# |   *	dlls/user32/painting.c, dlls/user32/win.c
+# |   *	dlls/user32/painting.c
 # |
 if test "$enable_user32_Painting" -eq 1; then
 	patch_apply user32-Painting/0001-user32-Enforce-that-surfaces-are-flushed-after-Relea.patch

@@ -34,7 +34,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features in Wine Staging 1.8-rc2 [266]:**
+**Bug fixes and features in Wine Staging 1.8-rc2 [263]:**
 
 *Note: The following list only contains features and bug fixes which are not
 yet available in vanilla Wine. They are removed from the list as soon as they
@@ -47,7 +47,6 @@ for more details.*
 * Add IHTMLLocation::hash property's getter implementation ([Wine Bug #32967](https://bugs.winehq.org/show_bug.cgi?id=32967))
 * Add a ProfileList\<UserSID> registry subkey ([Wine Bug #15670](https://bugs.winehq.org/show_bug.cgi?id=15670))
 * Add a stub driver for tdi.sys ([Wine Bug #35693](https://bugs.winehq.org/show_bug.cgi?id=35693))
-* Add implementation for IDXGIOutput::GetDesc ([Wine Bug #32006](https://bugs.winehq.org/show_bug.cgi?id=32006))
 * Add implementation for comctl32.PROPSHEET_InsertPage. ([Wine Bug #25625](https://bugs.winehq.org/show_bug.cgi?id=25625))
 * Add implementation for mfplat.MFTEnum ([Wine Bug #39309](https://bugs.winehq.org/show_bug.cgi?id=39309))
 * Add implementation for mfplat.MFTRegister ([Wine Bug #37811](https://bugs.winehq.org/show_bug.cgi?id=37811))
@@ -103,7 +102,6 @@ for more details.*
 * Avoid race-conditions in NtReadFile() operations with write watches.
 * Avoid race-conditions of async WSARecv() operations with write watches.
 * Avoid race-conditions with write watches in WS2_async_accept.
-* Avseq crashes when multisampling is enabled ([Wine Bug #31998](https://bugs.winehq.org/show_bug.cgi?id=31998))
 * Basic handling of write watches triggered while we're on the signal stack.
 * Basic support for CUDA
 * Black & White needs DXTn software decoding support ([Wine Bug #14939](https://bugs.winehq.org/show_bug.cgi?id=14939))
@@ -179,7 +177,6 @@ for more details.*
 * Implement FileNamesInformation class support for NtQueryDirectoryFile
 * Implement FolderImpl_Items and stubbed FolderItems interface
 * Implement ID3DXEffect::FindNextValidTechnique ([Wine Bug #34101](https://bugs.winehq.org/show_bug.cgi?id=34101))
-* Implement IDXGIOutput::GetDesc
 * Implement SystemHandleInformation info class
 * Implement a Courier New replacement font ([Wine Bug #20456](https://bugs.winehq.org/show_bug.cgi?id=20456))
 * Implement a Microsoft Yahei replacement font ([Wine Bug #13829](https://bugs.winehq.org/show_bug.cgi?id=13829))

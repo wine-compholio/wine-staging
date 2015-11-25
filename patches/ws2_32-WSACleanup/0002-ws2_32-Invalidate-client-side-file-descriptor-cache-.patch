@@ -1,4 +1,4 @@
-From e2d45538487646f7d17b35a351887fd94c8381f3 Mon Sep 17 00:00:00 2001
+From 380a706bf10f26de9a1cd1a440b427f01f012285 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 6 Sep 2015 12:41:17 +0200
 Subject: ws2_32: Invalidate client-side file descriptor cache in WSACleanup.
@@ -7,15 +7,15 @@ Subject: ws2_32: Invalidate client-side file descriptor cache in WSACleanup.
  dlls/ntdll/ntdll.spec    |  1 +
  dlls/ntdll/server.c      | 24 ++++++++++++++++++++++++
  dlls/ws2_32/socket.c     |  1 +
- dlls/ws2_32/tests/sock.c |  1 -
+ dlls/ws2_32/tests/sock.c |  5 +----
  include/wine/server.h    |  1 +
- 5 files changed, 27 insertions(+), 1 deletion(-)
+ 5 files changed, 28 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index ca3561d..d1205df 100644
+index c3b6bf0..2b52562 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -1446,6 +1446,7 @@
+@@ -1458,6 +1458,7 @@
  
  # Server interface
  @ cdecl -norelay wine_server_call(ptr)
@@ -24,7 +24,7 @@ index ca3561d..d1205df 100644
  @ cdecl wine_server_handle_to_fd(long long ptr ptr)
  @ cdecl wine_server_release_fd(long long)
 diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
-index 95111ad..667c0b9 100644
+index 356d631..381d5aa 100644
 --- a/dlls/ntdll/server.c
 +++ b/dlls/ntdll/server.c
 @@ -915,6 +915,30 @@ int server_remove_fd_from_cache( HANDLE handle )
@@ -59,10 +59,10 @@ index 95111ad..667c0b9 100644
   *
   * The returned unix_fd should be closed iff needs_close is non-zero.
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index f153de1..e06c42f 100644
+index ea45397..c50d2b6 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
-@@ -1477,6 +1477,7 @@ INT WINAPI WSACleanup(void)
+@@ -1495,6 +1495,7 @@ INT WINAPI WSACleanup(void)
  
      if (!--num_startup)
      {
@@ -71,17 +71,21 @@ index f153de1..e06c42f 100644
          {
              wine_server_call( req );
 diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
-index 204b852..b6e2a32 100644
+index e3732a3..9ed71aa 100644
 --- a/dlls/ws2_32/tests/sock.c
 +++ b/dlls/ws2_32/tests/sock.c
-@@ -1130,7 +1130,6 @@ static void test_WithWSAStartup(void)
-     res = closesocket(dst);
-     error = WSAGetLastError();
-     ok(res == SOCKET_ERROR, "closesocket should have failed\n");
--    todo_wine
-     ok(error == WSAENOTSOCK, "expected 10038, got %d\n", error);
-     closesocket(src);
-     closesocket(dst);
+@@ -1179,10 +1179,7 @@ static void test_WithWSAStartup(void)
+             SetLastError(0xdeadbeef);
+             res = getsockname(sock, (struct sockaddr *)&saddr, &size);
+             error = WSAGetLastError();
+-            if (j == 2 || (j == 0 && i == 0))
+-                todo_wine ok(res == SOCKET_ERROR, "Test[%d]: getsockname should have failed\n", i);
+-            else
+-                ok(res == SOCKET_ERROR, "Test[%d]: getsockname should have failed\n", i);
++            ok(res == SOCKET_ERROR, "Test[%d]: getsockname should have failed\n", i);
+             todo_wine ok(error == WSAENOTSOCK, "Test[%d]: expected 10038, got %d\n", i, error);
+         }
+     }
 diff --git a/include/wine/server.h b/include/wine/server.h
 index d573d1f..02d9c7b 100644
 --- a/include/wine/server.h
@@ -95,5 +99,5 @@ index d573d1f..02d9c7b 100644
  /* do a server call and set the last error code */
  static inline unsigned int wine_server_call_err( void *req_ptr )
 -- 
-2.5.1
+2.6.2
 

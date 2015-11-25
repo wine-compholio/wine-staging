@@ -34,7 +34,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features in Wine Staging 1.8-rc2 [267]:**
+**Bug fixes and features in Wine Staging 1.8-rc2 [266]:**
 
 *Note: The following list only contains features and bug fixes which are not
 yet available in vanilla Wine. They are removed from the list as soon as they
@@ -128,7 +128,6 @@ for more details.*
 * Exception during start of fr-043 caused by missing DXTn support ([Wine Bug #37391](https://bugs.winehq.org/show_bug.cgi?id=37391))
 * Export additional OpenAL32 functions ([Wine Bug #38972](https://bugs.winehq.org/show_bug.cgi?id=38972))
 * Expose PKEY_AudioEndpoint_PhysicalSpeakers device property in PulseAudio driver
-* FEAR 1 installer expects basic_string_wchar_dtor to return NULL ([Wine Bug #37358](https://bugs.winehq.org/show_bug.cgi?id=37358))
 * Fake success in IViewObject::Draw stub ([Wine Bug #30611](https://bugs.winehq.org/show_bug.cgi?id=30611))
 * Fake success in kernel32.SetFileCompletionNotificationModes ([Wine Bug #38960](https://bugs.winehq.org/show_bug.cgi?id=38960))
 * Fallback to default comspec when %COMSPEC% is not set

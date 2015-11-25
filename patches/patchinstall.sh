@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "1d19eb15d4abfdd14dccc5ac05b83c0ee1a1ace1"
+	echo "3a6ac6055511b14a7e26ba0200f36da418f80723"
 }
 
 # Show version information
@@ -178,7 +178,6 @@ patch_enable_all ()
 	enable_msctf_ITfThreadMgrEx_ActivateEx="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
 	enable_msidb_Implementation="$1"
-	enable_msvcp90_basic_string_dtor="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvcrt_StdHandle_RefCount="$1"
 	enable_ntdll_APC_Performance="$1"
@@ -643,9 +642,6 @@ patch_enable ()
 			;;
 		msidb-Implementation)
 			enable_msidb_Implementation="$2"
-			;;
-		msvcp90-basic_string_dtor)
-			enable_msvcp90_basic_string_dtor="$2"
 			;;
 		msvcrt-Math_Precision)
 			enable_msvcrt_Math_Precision="$2"
@@ -1570,9 +1566,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_mscoree_CorValidateImage" -gt 1; then
 		abort "Patchset mscoree-CorValidateImage disabled, but category-stable depends on that."
 	fi
-	if test "$enable_msvcp90_basic_string_dtor" -gt 1; then
-		abort "Patchset msvcp90-basic_string_dtor disabled, but category-stable depends on that."
-	fi
 	if test "$enable_ntdll_APC_Start_Process" -gt 1; then
 		abort "Patchset ntdll-APC_Start_Process disabled, but category-stable depends on that."
 	fi
@@ -1723,7 +1716,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_mfplat_MFTRegister=1
 	enable_mountmgr_DosDevices=1
 	enable_mscoree_CorValidateImage=1
-	enable_msvcp90_basic_string_dtor=1
 	enable_ntdll_APC_Start_Process=1
 	enable_ntdll_CLI_Images=1
 	enable_ntdll_DOS_Attributes=1
@@ -3875,23 +3867,6 @@ if test "$enable_msidb_Implementation" -eq 1; then
 		echo '+    { "Erich E. Hoover", "msi: Break out field exporting into a separate routine.", 1 },';
 		echo '+    { "Erich E. Hoover", "msi: Add support for exporting binary streams (Binary/Icon tables).", 1 },';
 		echo '+    { "Erich E. Hoover", "msidb: Add support for wildcard (full database) export.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset msvcp90-basic_string_dtor
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37358] FEAR 1 installer expects basic_string_wchar_dtor to return NULL
-# |
-# | Modified files:
-# |   *	dlls/msvcp90/msvcp90.h, dlls/msvcp90/string.c, dlls/msvcp90/tests/string.c
-# |
-if test "$enable_msvcp90_basic_string_dtor" -eq 1; then
-	patch_apply msvcp90-basic_string_dtor/0001-msvcp90-basic_string_wchar_dtor-needs-to-return-NULL.patch
-	patch_apply msvcp90-basic_string_dtor/0002-msvcp90-tests-Add-tests-to-check-that-basic_string_w.patch
-	(
-		echo '+    { "Michael Müller", "msvcp90: Basic_string_wchar_dtor needs to return NULL.", 1 },';
-		echo '+    { "Michael Müller", "msvcp90/tests: Add tests to check that basic_string_wchar_dtor returns NULL.", 1 },';
 	) >> "$patchlist"
 fi
 

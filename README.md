@@ -34,7 +34,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features in Wine Staging 1.8-rc1 [268]:**
+**Bug fixes and features in Wine Staging 1.8-rc2 [267]:**
 
 *Note: The following list only contains features and bug fixes which are not
 yet available in vanilla Wine. They are removed from the list as soon as they
@@ -252,7 +252,6 @@ for more details.*
 * Return dummy ID3DXSkinInfo interface when skinning info not present ([Wine Bug #33904](https://bugs.winehq.org/show_bug.cgi?id=33904))
 * Return fake device type when systemroot is located on virtual disk ([Wine Bug #36546](https://bugs.winehq.org/show_bug.cgi?id=36546))
 * Return proper status codes when NtReadFile/NtWriteFile is called on closed (but not disconnected) pipe
-* Revert patch to prepare GL resources before calling context_apply_fbo_state ([Wine Bug #39536](https://bugs.winehq.org/show_bug.cgi?id=39536))
 * SHFileOperation with FO_MOVE should create new directory on Vista+ ([Wine Bug #25207](https://bugs.winehq.org/show_bug.cgi?id=25207))
 * SO_CONNECT_TIME returns the appropriate time
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](https://bugs.winehq.org/show_bug.cgi?id=35652))

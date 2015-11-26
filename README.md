@@ -34,7 +34,12 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features in Wine Staging 1.8-rc2 [262]:**
+**Bug fixes and features included in the next upcoming release [1]:**
+
+* Fix font loading in Capella ([Wine Bug #12377](https://bugs.winehq.org/show_bug.cgi?id=12377))
+
+
+**Bug fixes and features in Wine Staging 1.8-rc1 [268]:**
 
 *Note: The following list only contains features and bug fixes which are not
 yet available in vanilla Wine. They are removed from the list as soon as they
@@ -47,6 +52,7 @@ for more details.*
 * Add IHTMLLocation::hash property's getter implementation ([Wine Bug #32967](https://bugs.winehq.org/show_bug.cgi?id=32967))
 * Add a ProfileList\<UserSID> registry subkey ([Wine Bug #15670](https://bugs.winehq.org/show_bug.cgi?id=15670))
 * Add a stub driver for tdi.sys ([Wine Bug #35693](https://bugs.winehq.org/show_bug.cgi?id=35693))
+* ~~Add implementation for IDXGIOutput::GetDesc~~ ([Wine Bug #32006](https://bugs.winehq.org/show_bug.cgi?id=32006))
 * Add implementation for comctl32.PROPSHEET_InsertPage. ([Wine Bug #25625](https://bugs.winehq.org/show_bug.cgi?id=25625))
 * Add implementation for mfplat.MFTEnum ([Wine Bug #39309](https://bugs.winehq.org/show_bug.cgi?id=39309))
 * Add implementation for mfplat.MFTRegister ([Wine Bug #37811](https://bugs.winehq.org/show_bug.cgi?id=37811))
@@ -102,6 +108,7 @@ for more details.*
 * Avoid race-conditions in NtReadFile() operations with write watches.
 * Avoid race-conditions of async WSARecv() operations with write watches.
 * Avoid race-conditions with write watches in WS2_async_accept.
+* ~~Avseq crashes when multisampling is enabled~~ ([Wine Bug #31998](https://bugs.winehq.org/show_bug.cgi?id=31998))
 * Basic handling of write watches triggered while we're on the signal stack.
 * Basic support for CUDA
 * Black & White needs DXTn software decoding support ([Wine Bug #14939](https://bugs.winehq.org/show_bug.cgi?id=14939))
@@ -126,6 +133,7 @@ for more details.*
 * Exception during start of fr-043 caused by missing DXTn support ([Wine Bug #37391](https://bugs.winehq.org/show_bug.cgi?id=37391))
 * Export additional OpenAL32 functions ([Wine Bug #38972](https://bugs.winehq.org/show_bug.cgi?id=38972))
 * Expose PKEY_AudioEndpoint_PhysicalSpeakers device property in PulseAudio driver
+* ~~FEAR 1 installer expects basic_string_wchar_dtor to return NULL~~ ([Wine Bug #37358](https://bugs.winehq.org/show_bug.cgi?id=37358))
 * Fake success in IViewObject::Draw stub ([Wine Bug #30611](https://bugs.winehq.org/show_bug.cgi?id=30611))
 * Fake success in kernel32.SetFileCompletionNotificationModes ([Wine Bug #38960](https://bugs.winehq.org/show_bug.cgi?id=38960))
 * Fallback to default comspec when %COMSPEC% is not set
@@ -140,18 +148,19 @@ for more details.*
 * Fix crash of winedevice when relocation entry crosses page boundary ([Wine Bug #28254](https://bugs.winehq.org/show_bug.cgi?id=28254))
 * Fix detection of case-insensitive systems in MSYS2
 * Fix device paths in HKLM\SYSTEM\MountedDevices ([Wine Bug #38235](https://bugs.winehq.org/show_bug.cgi?id=38235))
-* Fix endless loop in regedit when importing files with very long lines
+* ~~Fix endless loop in regedit when importing files with very long lines~~
 * Fix error handling in DeferWindowPos when passing an invalid HWND ([Wine Bug #23187](https://bugs.winehq.org/show_bug.cgi?id=23187))
-* Fix font loading in Capella ([Wine Bug #12377](https://bugs.winehq.org/show_bug.cgi?id=12377))
 * Fix for ConnectNamedPort return value in overlapped mode ([Wine Bug #16550](https://bugs.winehq.org/show_bug.cgi?id=16550))
 * Fix for programs leaking wndproc slots ([Wine Bug #32451](https://bugs.winehq.org/show_bug.cgi?id=32451))
 * Fix graphical corruption in FarCry 3 with NVIDIA drivers ([Wine Bug #35062](https://bugs.winehq.org/show_bug.cgi?id=35062))
+* ~~Fix gray screen on startup introduced by pixelformat changes.~~ ([Wine Bug #35975](https://bugs.winehq.org/show_bug.cgi?id=35975))
 * Fix handling of ANSI NTLM credentials ([Wine Bug #37063](https://bugs.winehq.org/show_bug.cgi?id=37063))
 * Fix handling of empty section and key name for profile files. ([Wine Bug #8036](https://bugs.winehq.org/show_bug.cgi?id=8036))
 * Fix handling of invert_y in DrawTextExW ([Wine Bug #22109](https://bugs.winehq.org/show_bug.cgi?id=22109))
 * Fix handling of window attributes for WS_EX_LAYERED | WS_EX_COMPOSITED ([Wine Bug #37876](https://bugs.winehq.org/show_bug.cgi?id=37876))
 * Fix implementation of msvcrt.close when stdout == stderr
 * Fix issues with dragging layers between images in Adobe Photoshop 7.0 ([Wine Bug #12007](https://bugs.winehq.org/show_bug.cgi?id=12007))
+* ~~Fix missing video introduced by pixelformat changes.~~ ([Wine Bug #36900](https://bugs.winehq.org/show_bug.cgi?id=36900))
 * Fix multithreading issues with fullscreen clipping ([Wine Bug #38087](https://bugs.winehq.org/show_bug.cgi?id=38087))
 * Fix possible segfault in pulse_rd_loop of PulseAudio backend
 * Fix race-condition when threads are killed during shutdown
@@ -176,6 +185,7 @@ for more details.*
 * Implement FileNamesInformation class support for NtQueryDirectoryFile
 * Implement FolderImpl_Items and stubbed FolderItems interface
 * Implement ID3DXEffect::FindNextValidTechnique ([Wine Bug #34101](https://bugs.winehq.org/show_bug.cgi?id=34101))
+* ~~Implement IDXGIOutput::GetDesc~~
 * Implement SystemHandleInformation info class
 * Implement a Courier New replacement font ([Wine Bug #20456](https://bugs.winehq.org/show_bug.cgi?id=20456))
 * Implement a Microsoft Yahei replacement font ([Wine Bug #13829](https://bugs.winehq.org/show_bug.cgi?id=13829))
@@ -247,6 +257,7 @@ for more details.*
 * Return dummy ID3DXSkinInfo interface when skinning info not present ([Wine Bug #33904](https://bugs.winehq.org/show_bug.cgi?id=33904))
 * Return fake device type when systemroot is located on virtual disk ([Wine Bug #36546](https://bugs.winehq.org/show_bug.cgi?id=36546))
 * Return proper status codes when NtReadFile/NtWriteFile is called on closed (but not disconnected) pipe
+* ~~Revert patch to prepare GL resources before calling context_apply_fbo_state~~ ([Wine Bug #39536](https://bugs.winehq.org/show_bug.cgi?id=39536))
 * SHFileOperation with FO_MOVE should create new directory on Vista+ ([Wine Bug #25207](https://bugs.winehq.org/show_bug.cgi?id=25207))
 * SO_CONNECT_TIME returns the appropriate time
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](https://bugs.winehq.org/show_bug.cgi?id=35652))
@@ -304,5 +315,5 @@ for more details.*
 * XEMBED support for embedding Wine windows inside Linux applications
 * eRacer Demo doesn't correctly display text ([Wine Bug #29598](https://bugs.winehq.org/show_bug.cgi?id=29598))
 * ntdll is missing WinSqm[Start|End]Session implementation ([Wine Bug #31971](https://bugs.winehq.org/show_bug.cgi?id=31971))
-* wglDescribePixelFormat should return max index for NULL descriptor ([Wine Bug #6176](https://bugs.winehq.org/show_bug.cgi?id=6176))
+* ~~wglDescribePixelFormat should return max index for NULL descriptor~~ ([Wine Bug #6176](https://bugs.winehq.org/show_bug.cgi?id=6176))
 

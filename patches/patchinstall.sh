@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "6790d825d1b2c41de73ffe5cb5df28c1d1cc8878"
+	echo "4a315cd78a3c97d76ae06e3185ab01a70eb9a1a2"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 1.8-rc2"
+	echo "Wine Staging 1.8-rc2 (unreleased)"
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -136,7 +136,6 @@ patch_enable_all ()
 	enable_dxva2_Video_Decoder="$1"
 	enable_fonts_Missing_Fonts="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
-	enable_gdi32_MaxPixelFormats="$1"
 	enable_gdi32_MultiMonitor="$1"
 	enable_gdi32_Symbol_Truetype_Font="$1"
 	enable_hal_KeQueryPerformanceCounter="$1"
@@ -232,7 +231,6 @@ patch_enable_all ()
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_rasapi32_RasEnumDevicesA="$1"
-	enable_regedit_Reg_Parser="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_rpcrt4_Pipe_Transport="$1"
 	enable_secur32_ANSI_NTLM_Credentials="$1"
@@ -515,9 +513,6 @@ patch_enable ()
 			;;
 		gdi32-Lazy_Font_Initialization)
 			enable_gdi32_Lazy_Font_Initialization="$2"
-			;;
-		gdi32-MaxPixelFormats)
-			enable_gdi32_MaxPixelFormats="$2"
 			;;
 		gdi32-MultiMonitor)
 			enable_gdi32_MultiMonitor="$2"
@@ -803,9 +798,6 @@ patch_enable ()
 			;;
 		rasapi32-RasEnumDevicesA)
 			enable_rasapi32_RasEnumDevicesA="$2"
-			;;
-		regedit-Reg_Parser)
-			enable_regedit_Reg_Parser="$2"
 			;;
 		riched20-IText_Interface)
 			enable_riched20_IText_Interface="$2"
@@ -1532,9 +1524,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_fonts_Missing_Fonts" -gt 1; then
 		abort "Patchset fonts-Missing_Fonts disabled, but category-stable depends on that."
 	fi
-	if test "$enable_gdi32_MaxPixelFormats" -gt 1; then
-		abort "Patchset gdi32-MaxPixelFormats disabled, but category-stable depends on that."
-	fi
 	if test "$enable_kernel32_CompareStringEx" -gt 1; then
 		abort "Patchset kernel32-CompareStringEx disabled, but category-stable depends on that."
 	fi
@@ -1699,7 +1688,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_dbghelp_Debug_Symbols=1
 	enable_ddraw_EnumSurfaces=1
 	enable_fonts_Missing_Fonts=1
-	enable_gdi32_MaxPixelFormats=1
 	enable_kernel32_CompareStringEx=1
 	enable_kernel32_Named_Pipe=1
 	enable_libs_Debug_Channel=1
@@ -3104,21 +3092,6 @@ if test "$enable_gdi32_Lazy_Font_Initialization" -eq 1; then
 	patch_apply gdi32-Lazy_Font_Initialization/0001-gdi32-Perform-lazy-initialization-of-fonts-to-improv.patch
 	(
 		echo '+    { "Sebastian Lackner", "gdi32: Perform lazy initialization of fonts to improve startup performance.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset gdi32-MaxPixelFormats
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#6176] wglDescribePixelFormat should return max index for NULL descriptor
-# |
-# | Modified files:
-# |   *	dlls/gdi32/dibdrv/opengl.c
-# |
-if test "$enable_gdi32_MaxPixelFormats" -eq 1; then
-	patch_apply gdi32-MaxPixelFormats/0001-gdi32-Return-maximum-number-of-pixel-formats-when-NU.patch
-	(
-		echo '+    { "Sebastian Lackner", "gdi32: Return maximum number of pixel formats when NULL pointer is passed to wglDescribePixelFormat.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4762,18 +4735,6 @@ if test "$enable_rasapi32_RasEnumDevicesA" -eq 1; then
 	patch_apply rasapi32-RasEnumDevicesA/0001-rasapi32-Set-lpcDevices-in-RasEnumDevicesA.patch
 	(
 		echo '+    { "Sebastian Lackner", "rasapi32: Set *lpcDevices in RasEnumDevicesA.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset regedit-Reg_Parser
-# |
-# | Modified files:
-# |   *	programs/regedit/regproc.c
-# |
-if test "$enable_regedit_Reg_Parser" -eq 1; then
-	patch_apply regedit-Reg_Parser/0001-regedit-Need-3-bytes-of-room-at-end-of-buffer-for-r-.patch
-	(
-		echo '+    { "Jiaxing Wang", "regedit: Need 3 bytes of room at end of buffer for \\\\r\\\\n\\\\0 to avoid endless loop.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -128,7 +128,7 @@ for more details.*
 * Do not signal threads until they are really gone
 * Do not use unixfs for devices without mountpoint
 * Do not wait for hook thread startup in IDirectInput8::Initialize ([Wine Bug #21403](https://bugs.winehq.org/show_bug.cgi?id=21403))
-* Enforce that surfaces are flushed after ReleaseDC ([Wine Bug #39465](https://bugs.winehq.org/show_bug.cgi?id=39465))
+* ~~Enforce that surfaces are flushed after ReleaseDC~~ ([Wine Bug #39465](https://bugs.winehq.org/show_bug.cgi?id=39465))
 * Ensure NtProtectVirtualMemory and NtCreateSection are on separate pages ([Wine Bug #33162](https://bugs.winehq.org/show_bug.cgi?id=33162))
 * Exception during start of fr-043 caused by missing DXTn support ([Wine Bug #37391](https://bugs.winehq.org/show_bug.cgi?id=37391))
 * Export additional OpenAL32 functions ([Wine Bug #38972](https://bugs.winehq.org/show_bug.cgi?id=38972))

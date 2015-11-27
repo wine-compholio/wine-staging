@@ -1,0 +1,223 @@
+From 8b63a6aa028969d43834a2a4ddd1ff1746af0d03 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Fri, 27 Nov 2015 21:28:50 +0100
+Subject: setupapi: Check handle type for HSPFILEQ handles.
+
+---
+ dlls/setupapi/queue.c | 93 +++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 93 insertions(+)
+
+diff --git a/dlls/setupapi/queue.c b/dlls/setupapi/queue.c
+index d57f8e1..1b27800 100644
+--- a/dlls/setupapi/queue.c
++++ b/dlls/setupapi/queue.c
+@@ -68,8 +68,11 @@ struct file_op_queue
+     unsigned int count;
+ };
+ 
++#define SETUP_FILE_QUEUE_MAGIC 0x51465053 /* "SPFQ" */
++
+ struct file_queue
+ {
++    DWORD magic;
+     struct file_op_queue copy_queue;
+     struct file_op_queue delete_queue;
+     struct file_op_queue rename_queue;
+@@ -415,6 +418,7 @@ HSPFILEQ WINAPI SetupOpenFileQueue(void)
+ 
+     if (!(queue = HeapAlloc( GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*queue))))
+         return INVALID_HANDLE_VALUE;
++    queue->magic = SETUP_FILE_QUEUE_MAGIC;
+     return queue;
+ }
+ 
+@@ -426,6 +430,13 @@ BOOL WINAPI SetupCloseFileQueue( HSPFILEQ handle )
+ {
+     struct file_queue *queue = handle;
+ 
++    if (!queue || queue->magic != SETUP_FILE_QUEUE_MAGIC)
++    {
++        SetLastError(ERROR_INVALID_HANDLE);
++        return FALSE;
++    }
++
++    queue->magic = 0;
+     free_file_op_queue( &queue->copy_queue );
+     free_file_op_queue( &queue->rename_queue );
+     free_file_op_queue( &queue->delete_queue );
+@@ -442,6 +453,12 @@ BOOL WINAPI SetupQueueCopyIndirectA( PSP_FILE_COPY_PARAMS_A params )
+     struct file_queue *queue = params->QueueHandle;
+     struct file_op *op;
+ 
++    if (!queue || queue->magic != SETUP_FILE_QUEUE_MAGIC)
++    {
++        SetLastError(ERROR_INVALID_HANDLE);
++        return FALSE;
++    }
++
+     if (!(op = HeapAlloc( GetProcessHeap(), 0, sizeof(*op) ))) return FALSE;
+     op->style      = params->CopyStyle;
+     op->src_root   = strdupAtoW( params->SourceRootPath );
+@@ -478,6 +495,12 @@ BOOL WINAPI SetupQueueCopyIndirectW( PSP_FILE_COPY_PARAMS_W params )
+     struct file_queue *queue = params->QueueHandle;
+     struct file_op *op;
+ 
++    if (!queue || queue->magic != SETUP_FILE_QUEUE_MAGIC)
++    {
++        SetLastError(ERROR_INVALID_HANDLE);
++        return FALSE;
++    }
++
+     if (!(op = HeapAlloc( GetProcessHeap(), 0, sizeof(*op) ))) return FALSE;
+     op->style      = params->CopyStyle;
+     op->src_root   = strdupW( params->SourceRootPath );
+@@ -612,6 +635,12 @@ BOOL WINAPI SetupQueueDeleteA( HSPFILEQ handle, PCSTR part1, PCSTR part2 )
+     struct file_queue *queue = handle;
+     struct file_op *op;
+ 
++    if (!queue || queue->magic != SETUP_FILE_QUEUE_MAGIC)
++    {
++        SetLastError(ERROR_INVALID_HANDLE);
++        return FALSE;
++    }
++
+     if (!(op = HeapAlloc( GetProcessHeap(), 0, sizeof(*op) ))) return FALSE;
+     op->style      = 0;
+     op->src_root   = NULL;
+@@ -634,6 +663,12 @@ BOOL WINAPI SetupQueueDeleteW( HSPFILEQ handle, PCWSTR part1, PCWSTR part2 )
+     struct file_queue *queue = handle;
+     struct file_op *op;
+ 
++    if (!queue || queue->magic != SETUP_FILE_QUEUE_MAGIC)
++    {
++        SetLastError(ERROR_INVALID_HANDLE);
++        return FALSE;
++    }
++
+     if (!(op = HeapAlloc( GetProcessHeap(), 0, sizeof(*op) ))) return FALSE;
+     op->style      = 0;
+     op->src_root   = NULL;
+@@ -657,6 +692,12 @@ BOOL WINAPI SetupQueueRenameA( HSPFILEQ handle, PCSTR SourcePath, PCSTR SourceFi
+     struct file_queue *queue = handle;
+     struct file_op *op;
+ 
++    if (!queue || queue->magic != SETUP_FILE_QUEUE_MAGIC)
++    {
++        SetLastError(ERROR_INVALID_HANDLE);
++        return FALSE;
++    }
++
+     if (!(op = HeapAlloc( GetProcessHeap(), 0, sizeof(*op) ))) return FALSE;
+     op->style      = 0;
+     op->src_root   = NULL;
+@@ -680,6 +721,12 @@ BOOL WINAPI SetupQueueRenameW( HSPFILEQ handle, PCWSTR SourcePath, PCWSTR Source
+     struct file_queue *queue = handle;
+     struct file_op *op;
+ 
++    if (!queue || queue->magic != SETUP_FILE_QUEUE_MAGIC)
++    {
++        SetLastError(ERROR_INVALID_HANDLE);
++        return FALSE;
++    }
++
+     if (!(op = HeapAlloc( GetProcessHeap(), 0, sizeof(*op) ))) return FALSE;
+     op->style      = 0;
+     op->src_root   = NULL;
+@@ -1222,6 +1269,12 @@ BOOL WINAPI SetupCommitFileQueueW( HWND owner, HSPFILEQ handle, PSP_FILE_CALLBAC
+ 
+     paths.Source = paths.Target = NULL;
+ 
++    if (!queue || queue->magic != SETUP_FILE_QUEUE_MAGIC)
++    {
++        SetLastError(ERROR_INVALID_HANDLE);
++        return FALSE;
++    }
++
+     if (!queue->copy_queue.count && !queue->delete_queue.count && !queue->rename_queue.count)
+         return TRUE;  /* nothing to do */
+ 
+@@ -1365,6 +1418,12 @@ BOOL WINAPI SetupScanFileQueueW( HSPFILEQ handle, DWORD flags, HWND window,
+ 
+     TRACE("%p %x %p %p %p %p\n", handle, flags, window, handler, context, result);
+ 
++    if (!queue || queue->magic != SETUP_FILE_QUEUE_MAGIC)
++    {
++        SetLastError(ERROR_INVALID_HANDLE);
++        return FALSE;
++    }
++
+     if (!queue->copy_queue.count) return TRUE;
+ 
+     if (flags & SPQ_SCAN_USE_CALLBACK)        notification = SPFILENOTIFY_QUEUESCAN;
+@@ -1411,6 +1470,12 @@ BOOL WINAPI SetupGetFileQueueCount( HSPFILEQ handle, UINT op, PUINT result )
+ {
+     struct file_queue *queue = handle;
+ 
++    if (!queue || queue->magic != SETUP_FILE_QUEUE_MAGIC)
++    {
++        SetLastError(ERROR_INVALID_HANDLE);
++        return FALSE;
++    }
++
+     switch(op)
+     {
+     case FILEOP_COPY:
+@@ -1433,6 +1498,13 @@ BOOL WINAPI SetupGetFileQueueCount( HSPFILEQ handle, UINT op, PUINT result )
+ BOOL WINAPI SetupGetFileQueueFlags( HSPFILEQ handle, PDWORD flags )
+ {
+     struct file_queue *queue = handle;
++
++    if (!queue || queue->magic != SETUP_FILE_QUEUE_MAGIC)
++    {
++        SetLastError(ERROR_INVALID_HANDLE);
++        return FALSE;
++    }
++
+     *flags = queue->flags;
+     return TRUE;
+ }
+@@ -1444,6 +1516,13 @@ BOOL WINAPI SetupGetFileQueueFlags( HSPFILEQ handle, PDWORD flags )
+ BOOL WINAPI SetupSetFileQueueFlags( HSPFILEQ handle, DWORD mask, DWORD flags )
+ {
+     struct file_queue *queue = handle;
++
++    if (!queue || queue->magic != SETUP_FILE_QUEUE_MAGIC)
++    {
++        SetLastError(ERROR_INVALID_HANDLE);
++        return FALSE;
++    }
++
+     queue->flags = (queue->flags & ~mask) | flags;
+     return TRUE;
+ }
+@@ -1717,6 +1796,13 @@ UINT WINAPI SetupCopyErrorW( HWND parent, PCWSTR dialogTitle, PCWSTR diskname,
+ DWORD WINAPI pSetupGetQueueFlags( HSPFILEQ handle )
+ {
+     struct file_queue *queue = handle;
++
++    if (!queue || queue->magic != SETUP_FILE_QUEUE_MAGIC)
++    {
++        SetLastError(ERROR_INVALID_HANDLE);
++        return FALSE;
++    }
++
+     return queue->flags;
+ }
+ 
+@@ -1726,6 +1812,13 @@ DWORD WINAPI pSetupGetQueueFlags( HSPFILEQ handle )
+ BOOL WINAPI pSetupSetQueueFlags( HSPFILEQ handle, DWORD flags )
+ {
+     struct file_queue *queue = handle;
++
++    if (!queue || queue->magic != SETUP_FILE_QUEUE_MAGIC)
++    {
++        SetLastError(ERROR_INVALID_HANDLE);
++        return FALSE;
++    }
++
+     queue->flags = flags;
+     return TRUE;
+ }
+-- 
+2.6.2
+

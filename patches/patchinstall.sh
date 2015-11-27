@@ -251,6 +251,7 @@ patch_enable_all ()
 	enable_server_Signal_Thread="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
+	enable_setupapi_HSPFILEQ_Check_Type="$1"
 	enable_setupapi_SetupDiSelectBestCompatDrv="$1"
 	enable_setupapi_SetupDiSetDeviceInstallParamsW="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
@@ -857,6 +858,9 @@ patch_enable ()
 			;;
 		server-Timestamp_Compat)
 			enable_server_Timestamp_Compat="$2"
+			;;
+		setupapi-HSPFILEQ_Check_Type)
+			enable_setupapi_HSPFILEQ_Check_Type="$2"
 			;;
 		setupapi-SetupDiSelectBestCompatDrv)
 			enable_setupapi_SetupDiSelectBestCompatDrv="$2"
@@ -5014,6 +5018,21 @@ if test "$enable_server_Timestamp_Compat" -eq 1; then
 	patch_apply server-Timestamp_Compat/0001-server-Compatibility-with-Wine-Staging-format-for-hi.patch
 	(
 		echo '+    { "Michael Müller", "server: Compatibility with Wine Staging format for high precision registry timestamps.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset setupapi-HSPFILEQ_Check_Type
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12332] Check handle type for HSPFILEQ handles
+# |
+# | Modified files:
+# |   *	dlls/setupapi/queue.c
+# |
+if test "$enable_setupapi_HSPFILEQ_Check_Type" -eq 1; then
+	patch_apply setupapi-HSPFILEQ_Check_Type/0001-setupapi-Check-handle-type-for-HSPFILEQ-handles.patch
+	(
+		echo '+    { "Michael Müller", "setupapi: Check handle type for HSPFILEQ handles.", 1 },';
 	) >> "$patchlist"
 fi
 

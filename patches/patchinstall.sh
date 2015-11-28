@@ -291,6 +291,7 @@ patch_enable_all ()
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_VerQueryValue="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
+	enable_wine_inf_Dynamic_DST="$1"
 	enable_wine_inf_Performance="$1"
 	enable_wine_inf_ProfileList_UserSID="$1"
 	enable_wineboot_DriveSerial="$1"
@@ -978,6 +979,9 @@ patch_enable ()
 			;;
 		wbemdisp-ISWbemSecurity)
 			enable_wbemdisp_ISWbemSecurity="$2"
+			;;
+		wine.inf-Dynamic_DST)
+			enable_wine_inf_Dynamic_DST="$2"
 			;;
 		wine.inf-Performance)
 			enable_wine_inf_Performance="$2"
@@ -5623,6 +5627,18 @@ if test "$enable_wbemdisp_ISWbemSecurity" -eq 1; then
 	patch_apply wbemdisp-ISWbemSecurity/0001-wbemdisp-Add-ISWbemSecurity-stub-interface.patch
 	(
 		echo '+    { "Michael Müller", "wbemdisp: Add ISWbemSecurity stub interface.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wine.inf-Dynamic_DST
+# |
+# | Modified files:
+# |   *	loader/wine.inf.in
+# |
+if test "$enable_wine_inf_Dynamic_DST" -eq 1; then
+	patch_apply wine.inf-Dynamic_DST/0001-wine.inf-Add-information-for-delayed-end-of-DST-in-E.patch
+	(
+		echo '+    { "Sebastian Lackner", "wine.inf: Add information for delayed end of DST in Europe/Istanbul.", 1 },';
 	) >> "$patchlist"
 fi
 

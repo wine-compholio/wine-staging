@@ -312,6 +312,7 @@ patch_enable_all ()
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_UnhandledBlendFactor="$1"
 	enable_wined3d_resource_check_usage="$1"
+	enable_wined3d_surface_cpu_blt="$1"
 	enable_wined3d_wined3d_swapchain_present="$1"
 	enable_winedbg_Windows_Version="$1"
 	enable_winedevice_Fix_Relocation="$1"
@@ -1044,6 +1045,9 @@ patch_enable ()
 			;;
 		wined3d-resource_check_usage)
 			enable_wined3d_resource_check_usage="$2"
+			;;
+		wined3d-surface_cpu_blt)
+			enable_wined3d_surface_cpu_blt="$2"
 			;;
 		wined3d-wined3d_swapchain_present)
 			enable_wined3d_wined3d_swapchain_present="$2"
@@ -5905,6 +5909,18 @@ if test "$enable_wined3d_resource_check_usage" -eq 1; then
 	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
 	(
 		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-surface_cpu_blt
+# |
+# | Modified files:
+# |   *	dlls/wined3d/surface.c
+# |
+if test "$enable_wined3d_surface_cpu_blt" -eq 1; then
+	patch_apply wined3d-surface_cpu_blt/0001-wined3d-Print-FIXME-only-once-in-surface_cpu_blt.patch
+	(
+		echo '+    { "Christian Costa", "wined3d: Print FIXME only once in surface_cpu_blt.", 1 },';
 	) >> "$patchlist"
 fi
 

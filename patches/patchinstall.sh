@@ -220,6 +220,7 @@ patch_enable_all ()
 	enable_ntdll_WinSqm="$1"
 	enable_ntdll_WriteWatches="$1"
 	enable_ntdll_Zero_mod_name="$1"
+	enable_ntdll_x86_64_set_cpu_context="$1"
 	enable_ntoskrnl_DriverTest="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
@@ -770,6 +771,9 @@ patch_enable ()
 			;;
 		ntdll-Zero_mod_name)
 			enable_ntdll_Zero_mod_name="$2"
+			;;
+		ntdll-x86_64_set_cpu_context)
+			enable_ntdll_x86_64_set_cpu_context="$2"
 			;;
 		ntoskrnl-DriverTest)
 			enable_ntoskrnl_DriverTest="$2"
@@ -4492,6 +4496,21 @@ if test "$enable_ntdll_Zero_mod_name" -eq 1; then
 	patch_apply ntdll-Zero_mod_name/0001-ntdll-Initialize-mod_name-to-zero.patch
 	(
 		echo '+    { "Qian Hong", "ntdll: Initialize mod_name to zero.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-x86_64_set_cpu_context
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39454] Allow to set debug registers separately in NtSetContextThread
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_x86_64.c
+# |
+if test "$enable_ntdll_x86_64_set_cpu_context" -eq 1; then
+	patch_apply ntdll-x86_64_set_cpu_context/0001-ntdll-Allow-to-set-debug-registers-separately-in-NtS.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Allow to set debug registers separately in NtSetContextThread.", 1 },';
 	) >> "$patchlist"
 fi
 

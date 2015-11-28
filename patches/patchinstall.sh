@@ -287,6 +287,7 @@ patch_enable_all ()
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_SetCoalescableTimer="$1"
+	enable_user32_WM_CAPTURECHANGE="$1"
 	enable_user32_WM_MDICALCCHILDSCROLL="$1"
 	enable_user32_WndProc="$1"
 	enable_uxtheme_GTK_Theming="$1"
@@ -968,6 +969,9 @@ patch_enable ()
 			;;
 		user32-SetCoalescableTimer)
 			enable_user32_SetCoalescableTimer="$2"
+			;;
+		user32-WM_CAPTURECHANGE)
+			enable_user32_WM_CAPTURECHANGE="$2"
 			;;
 		user32-WM_MDICALCCHILDSCROLL)
 			enable_user32_WM_MDICALCCHILDSCROLL="$2"
@@ -5566,6 +5570,21 @@ if test "$enable_user32_SetCoalescableTimer" -eq 1; then
 	patch_apply user32-SetCoalescableTimer/0001-user32-add-SetCoalescableTimer-stub.patch
 	(
 		echo '+    { "Austin English", "user32: Add SetCoalescableTimer stub.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-WM_CAPTURECHANGE
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#13683] Also send WM_CAPTURECHANGE when capture has not changed
+# |
+# | Modified files:
+# |   *	dlls/comctl32/toolbar.c, dlls/comctl32/trackbar.c, dlls/user32/button.c, dlls/user32/input.c, dlls/user32/tests/msg.c
+# |
+if test "$enable_user32_WM_CAPTURECHANGE" -eq 1; then
+	patch_apply user32-WM_CAPTURECHANGE/0001-user32-Also-send-WM_CAPTURECHANGE-when-capture-has-n.patch
+	(
+		echo '+    { "Christopher Thielen", "user32: Also send WM_CAPTURECHANGE when capture has not changed.", 1 },';
 	) >> "$patchlist"
 fi
 

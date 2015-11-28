@@ -4310,12 +4310,14 @@ fi
 # Patchset ntdll-Stack_Fault
 # |
 # | Modified files:
-# |   *	dlls/ntdll/virtual.c
+# |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/virtual.c
 # |
 if test "$enable_ntdll_Stack_Fault" -eq 1; then
-	patch_apply ntdll-Stack_Fault/0001-ntdll-When-handling-stack-faults-also-commit-the-pag.patch
+	patch_apply ntdll-Stack_Fault/0001-ntdll-Commit-new-guard-pages-in-virtual_handle_stack.patch
+	patch_apply ntdll-Stack_Fault/0002-kernel32-tests-Add-tests-for-committing-stack-guard-.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: When handling stack faults also commit the page, instead of just removing the guard page flag.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Commit new guard pages in virtual_handle_stack_fault.", 1 },';
+		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for committing stack guard pages.", 2 },';
 	) >> "$patchlist"
 fi
 

@@ -342,6 +342,7 @@ patch_enable_all ()
 	enable_ws2_32_WSACleanup="$1"
 	enable_ws2_32_WSAPoll="$1"
 	enable_ws2_32_WriteWatches="$1"
+	enable_ws2_32_getaddrinfo="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
 }
 
@@ -1137,6 +1138,9 @@ patch_enable ()
 			;;
 		ws2_32-WriteWatches)
 			enable_ws2_32_WriteWatches="$2"
+			;;
+		ws2_32-getaddrinfo)
+			enable_ws2_32_getaddrinfo="$2"
 			;;
 		wtsapi32-EnumerateProcesses)
 			enable_wtsapi32_EnumerateProcesses="$2"
@@ -6717,6 +6721,18 @@ if test "$enable_ws2_32_WSAPoll" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "include: Remove check for __WINE_WNE_PORT_H in winsock2.h.", 1 },';
 		echo '+    { "Bruno Jesus", "ws2_32: Add WSAPoll() implementation.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ws2_32-getaddrinfo
+# |
+# | Modified files:
+# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c
+# |
+if test "$enable_ws2_32_getaddrinfo" -eq 1; then
+	patch_apply ws2_32-getaddrinfo/0001-ws2_32-Ignore-socket-type-for-protocol-IPPROTO_IPV6-.patch
+	(
+		echo '+    { "Michael Müller", "ws2_32: Ignore socket type for protocol IPPROTO_IPV6 in getaddrinfo.", 1 },';
 	) >> "$patchlist"
 fi
 

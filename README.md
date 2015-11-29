@@ -34,13 +34,14 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [8]:**
+**Bug fixes and features included in the next upcoming release [9]:**
 
 * Add information for delayed end of DST in Europe/Istanbul
 * Allow to set debug registers separately in NtSetContextThread ([Wine Bug #39454](https://bugs.winehq.org/show_bug.cgi?id=39454))
 * Also send WM_CAPTURECHANGE when capture has not changed ([Wine Bug #13683](https://bugs.winehq.org/show_bug.cgi?id=13683))
 * Check handle type for HSPFILEQ handles ([Wine Bug #12332](https://bugs.winehq.org/show_bug.cgi?id=12332))
 * Fix font loading in Capella ([Wine Bug #12377](https://bugs.winehq.org/show_bug.cgi?id=12377))
+* Ignore socket type for protocol IPPROTO_IPV6 in getaddrinfo
 * Silence repeated FIXME message in surface_cpu_blt
 * Skip invalid entries in GetPrivateProfileString16 ([Wine Bug #9919](https://bugs.winehq.org/show_bug.cgi?id=9919))
 * Start SERVICE_FILE_SYSTEM_DRIVER services with winedevice ([Wine Bug #35824](https://bugs.winehq.org/show_bug.cgi?id=35824))

@@ -127,6 +127,7 @@ patch_enable_all ()
 	enable_ddraw_Write_Vtable="$1"
 	enable_ddraw_ZBufferBitDepths="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
+	enable_dinput_DIPROP_USERNAME="$1"
 	enable_dinput_Initialize="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
@@ -493,6 +494,9 @@ patch_enable ()
 			;;
 		ddraw-d3d_execute_buffer)
 			enable_ddraw_d3d_execute_buffer="$2"
+			;;
+		dinput-DIPROP_USERNAME)
+			enable_dinput_DIPROP_USERNAME="$2"
 			;;
 		dinput-Initialize)
 			enable_dinput_Initialize="$2"
@@ -2891,6 +2895,21 @@ if test "$enable_ddraw_d3d_execute_buffer" -eq 1; then
 	patch_apply ddraw-d3d_execute_buffer/0001-ddraw-Don-t-call-IDirect3DDevice7_DrawIndexedPrimiti.patch
 	(
 		echo '+    { "Christian Costa", "ddraw: Don'\''t call IDirect3DDevice7_DrawIndexedPrimitive if there is no primitive.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dinput-DIPROP_USERNAME
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39667] Implement dinput device property DIPROP_USERNAME
+# |
+# | Modified files:
+# |   *	dlls/dinput/device.c, dlls/dinput/device_private.h, dlls/dinput8/tests/device.c
+# |
+if test "$enable_dinput_DIPROP_USERNAME" -eq 1; then
+	patch_apply dinput-DIPROP_USERNAME/0001-dinput-Implement-device-property-DIPROP_USERNAME.patch
+	(
+		echo '+    { "Bernhard Übelacker", "dinput: Implement device property DIPROP_USERNAME.", 1 },';
 	) >> "$patchlist"
 fi
 

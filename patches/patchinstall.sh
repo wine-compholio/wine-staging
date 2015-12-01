@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e6c67c52757508ce92c3819bb14e87c2ab21fa20"
+	echo "66d8e38ba4c5d67ae6e287cac557acfeae8b5bcd"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 1.8-rc2"
+	echo "Wine Staging 1.8-rc3 (unreleased)"
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -175,7 +175,6 @@ patch_enable_all ()
 	enable_mountmgr_DosDevices="$1"
 	enable_mpr_WNetGetUniversalNameW="$1"
 	enable_mscoree_CorValidateImage="$1"
-	enable_msctf_ITfThreadMgrEx_ActivateEx="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
 	enable_msidb_Implementation="$1"
 	enable_msvcrt_Math_Precision="$1"
@@ -208,7 +207,6 @@ patch_enable_all ()
 	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_Purist_Mode="$1"
 	enable_ntdll_RtlIpStringToAddress="$1"
-	enable_ntdll_Stack_Fault="$1"
 	enable_ntdll_Status_Mapping="$1"
 	enable_ntdll_Syscall_Wrappers="$1"
 	enable_ntdll_SystemHandleInformation="$1"
@@ -296,7 +294,6 @@ patch_enable_all ()
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_VerQueryValue="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
-	enable_wine_inf_Dynamic_DST="$1"
 	enable_wine_inf_Performance="$1"
 	enable_wine_inf_ProfileList_UserSID="$1"
 	enable_wineboot_DriveSerial="$1"
@@ -640,9 +637,6 @@ patch_enable ()
 		mscoree-CorValidateImage)
 			enable_mscoree_CorValidateImage="$2"
 			;;
-		msctf-ITfThreadMgrEx_ActivateEx)
-			enable_msctf_ITfThreadMgrEx_ActivateEx="$2"
-			;;
 		mshtml-HTMLLocation_put_hash)
 			enable_mshtml_HTMLLocation_put_hash="$2"
 			;;
@@ -738,9 +732,6 @@ patch_enable ()
 			;;
 		ntdll-RtlIpStringToAddress)
 			enable_ntdll_RtlIpStringToAddress="$2"
-			;;
-		ntdll-Stack_Fault)
-			enable_ntdll_Stack_Fault="$2"
 			;;
 		ntdll-Status_Mapping)
 			enable_ntdll_Status_Mapping="$2"
@@ -1002,9 +993,6 @@ patch_enable ()
 			;;
 		wbemdisp-ISWbemSecurity)
 			enable_wbemdisp_ISWbemSecurity="$2"
-			;;
-		wine.inf-Dynamic_DST)
-			enable_wine_inf_Dynamic_DST="$2"
 			;;
 		wine.inf-Performance)
 			enable_wine_inf_Performance="$2"
@@ -3819,21 +3807,6 @@ if test "$enable_mscoree_CorValidateImage" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset msctf-ITfThreadMgrEx_ActivateEx
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39564] Add partial implementation of ITfThreadMgrEx_ActivateEx
-# |
-# | Modified files:
-# |   *	dlls/msctf/tests/inputprocessor.c, dlls/msctf/threadmgr.c
-# |
-if test "$enable_msctf_ITfThreadMgrEx_ActivateEx" -eq 1; then
-	patch_apply msctf-ITfThreadMgrEx_ActivateEx/0001-msctf-Add-a-partial-implementation-of-ITfThreadMgrEx.patch
-	(
-		echo '+    { "Matteo Bruni", "msctf: Add a partial implementation of ITfThreadMgrEx_ActivateEx().", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset mshtml-HTMLLocation_put_hash
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4370,20 +4343,6 @@ if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
 		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddressEx.", 6 },';
 		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv4StringToAddressEx (try 5, resend).", 1 },';
 		echo '+    { "Mark Jansen", "ntdll/tests: Add tests for RtlIpv6AddressToString and RtlIpv6AddressToStringEx.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Stack_Fault
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/virtual.c
-# |
-if test "$enable_ntdll_Stack_Fault" -eq 1; then
-	patch_apply ntdll-Stack_Fault/0001-ntdll-Commit-new-guard-pages-in-virtual_handle_stack.patch
-	patch_apply ntdll-Stack_Fault/0002-kernel32-tests-Add-tests-for-committing-stack-guard-.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Commit new guard pages in virtual_handle_stack_fault.", 1 },';
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for committing stack guard pages.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -5734,18 +5693,6 @@ if test "$enable_wbemdisp_ISWbemSecurity" -eq 1; then
 	patch_apply wbemdisp-ISWbemSecurity/0001-wbemdisp-Add-ISWbemSecurity-stub-interface.patch
 	(
 		echo '+    { "Michael Müller", "wbemdisp: Add ISWbemSecurity stub interface.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wine.inf-Dynamic_DST
-# |
-# | Modified files:
-# |   *	loader/wine.inf.in
-# |
-if test "$enable_wine_inf_Dynamic_DST" -eq 1; then
-	patch_apply wine.inf-Dynamic_DST/0001-wine.inf-Add-information-for-delayed-end-of-DST-in-E.patch
-	(
-		echo '+    { "Sebastian Lackner", "wine.inf: Add information for delayed end of DST in Europe/Istanbul.", 1 },';
 	) >> "$patchlist"
 fi
 

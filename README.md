@@ -52,9 +52,9 @@ for more details.*
 * Add implementation for mfplat.MFTRegister ([Wine Bug #37811](https://bugs.winehq.org/show_bug.cgi?id=37811))
 * Add implementation for msidb commandline tool
 * Add implementation for shlwapi.AssocGetPerceivedType
-* Add information for delayed end of DST in Europe/Istanbul
+* ~~Add information for delayed end of DST in Europe/Istanbul~~
 * Add nvapi stubs required for GPU PhysX support
-* Add partial implementation of ITfThreadMgrEx_ActivateEx ([Wine Bug #39564](https://bugs.winehq.org/show_bug.cgi?id=39564))
+* ~~Add partial implementation of ITfThreadMgrEx_ActivateEx~~ ([Wine Bug #39564](https://bugs.winehq.org/show_bug.cgi?id=39564))
 * Add performance library registry keys needed by MS SQL Server Management Studio Express 2008 R2 ([Wine Bug #33661](https://bugs.winehq.org/show_bug.cgi?id=33661))
 * Add semi-stub for FileFsVolumeInformation information class ([Wine Bug #21466](https://bugs.winehq.org/show_bug.cgi?id=21466))
 * Add shell32 placeholder icons to match offsets with Windows ([Wine Bug #30185](https://bugs.winehq.org/show_bug.cgi?id=30185))
@@ -134,7 +134,7 @@ for more details.*
 * Fake success in kernel32.SetFileCompletionNotificationModes ([Wine Bug #38960](https://bugs.winehq.org/show_bug.cgi?id=38960))
 * Fallback to default comspec when %COMSPEC% is not set
 * Fallback to system ping command when CAP_NET_RAW is not available ([Wine Bug #8332](https://bugs.winehq.org/show_bug.cgi?id=8332))
-* Fix access violation in MSYS2 git when cloning repository
+* ~~Fix access violation in MSYS2 git when cloning repository~~
 * Fix broken textures in XIII Century: Death or Glory ([Wine Bug #25419](https://bugs.winehq.org/show_bug.cgi?id=25419))
 * Fix calculation of listbox size when horizontal scrollbar is present ([Wine Bug #38142](https://bugs.winehq.org/show_bug.cgi?id=38142))
 * Fix caps lock state issues with multiple processes ([Wine Bug #35907](https://bugs.winehq.org/show_bug.cgi?id=35907))

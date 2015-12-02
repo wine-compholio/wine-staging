@@ -263,7 +263,7 @@ for more details.*
 * Show windows version when collecting system info in winedbg
 * Silence repeated FIXME message in surface_cpu_blt
 * Silence repeated LocaleNameToLCID/LCIDToLocaleName unsupported flags FIXMEs ([Wine Bug #30076](https://bugs.winehq.org/show_bug.cgi?id=30076))
-* Skip invalid entries in GetPrivateProfileString16 ([Wine Bug #9919](https://bugs.winehq.org/show_bug.cgi?id=9919))
+* ~~Skip invalid entries in GetPrivateProfileString16~~ ([Wine Bug #9919](https://bugs.winehq.org/show_bug.cgi?id=9919))
 * Skip unknown item when decoding a CMS certificate ([Wine Bug #34388](https://bugs.winehq.org/show_bug.cgi?id=34388))
 * Software support for Environmental Audio Extensions (EAX)
 * Start SERVICE_FILE_SYSTEM_DRIVER services with winedevice ([Wine Bug #35824](https://bugs.winehq.org/show_bug.cgi?id=35824))

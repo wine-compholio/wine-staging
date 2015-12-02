@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "66d8e38ba4c5d67ae6e287cac557acfeae8b5bcd"
+	echo "e69d9ec3c4e8829c5c18cea7d8348171d51dcd76"
 }
 
 # Show version information
@@ -166,7 +166,6 @@ patch_enable_all ()
 	enable_kernel32_SetFileInformationByHandle="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
 	enable_kernel32_VerifyVersionInfo="$1"
-	enable_krnl386_exe_GetPrivateProfileString="$1"
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_makedep_PARENTSPEC="$1"
@@ -609,9 +608,6 @@ patch_enable ()
 			;;
 		kernel32-VerifyVersionInfo)
 			enable_kernel32_VerifyVersionInfo="$2"
-			;;
-		krnl386.exe-GetPrivateProfileString)
-			enable_krnl386_exe_GetPrivateProfileString="$2"
 			;;
 		libs-Debug_Channel)
 			enable_libs_Debug_Channel="$2"
@@ -3662,21 +3658,6 @@ if test "$enable_kernel32_VerifyVersionInfo" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for condition mask of VerifyVersionInfoA.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Fix condition mask handling in RtlVerifyVersionInfo.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset krnl386.exe-GetPrivateProfileString
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#9919] Skip invalid entries in GetPrivateProfileString16
-# |
-# | Modified files:
-# |   *	dlls/krnl386.exe16/file.c
-# |
-if test "$enable_krnl386_exe_GetPrivateProfileString" -eq 1; then
-	patch_apply krnl386.exe-GetPrivateProfileString/0001-krnl386.exe16-Skip-invalid-entries-in-GetPrivateProf.patch
-	(
-		echo '+    { "Bruno Jesus", "krnl386.exe16: Skip invalid entries in GetPrivateProfileString16.", 1 },';
 	) >> "$patchlist"
 fi
 

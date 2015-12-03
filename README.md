@@ -260,7 +260,7 @@ for more details.*
 * Set NamedPipeState to FILE_PIPE_CLOSING_STATE on broken pipe in NtQueryInformationFile
 * Share source of d3dx9_36 with d3dx9_33 to avoid Wine DLL forwards ([Wine Bug #21817](https://bugs.winehq.org/show_bug.cgi?id=21817))
 * Show unmounted devices in winecfg and allow changing the unix path
-* Show windows version when collecting system info in winedbg
+* ~~Show windows version when collecting system info in winedbg~~
 * Silence repeated FIXME message in surface_cpu_blt
 * Silence repeated LocaleNameToLCID/LCIDToLocaleName unsupported flags FIXMEs ([Wine Bug #30076](https://bugs.winehq.org/show_bug.cgi?id=30076))
 * ~~Skip invalid entries in GetPrivateProfileString16~~ ([Wine Bug #9919](https://bugs.winehq.org/show_bug.cgi?id=9919))

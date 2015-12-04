@@ -236,6 +236,7 @@ patch_enable_all ()
 	enable_secur32_ANSI_NTLM_Credentials="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
+	enable_server_Desktop_Refcount="$1"
 	enable_server_FileEndOfFileInformation="$1"
 	enable_server_File_Permissions="$1"
 	enable_server_Inherited_ACLs="$1"
@@ -817,6 +818,9 @@ patch_enable ()
 			;;
 		server-CreateProcess_ACLs)
 			enable_server_CreateProcess_ACLs="$2"
+			;;
+		server-Desktop_Refcount)
+			enable_server_Desktop_Refcount="$2"
 			;;
 		server-FileEndOfFileInformation)
 			enable_server_FileEndOfFileInformation="$2"
@@ -1755,6 +1759,13 @@ if test "$enable_category_stable" -eq 1; then
 	enable_ws2_32_WriteWatches=1
 fi
 
+if test "$enable_ws2_32_TransmitFile" -eq 1; then
+	if test "$enable_server_Desktop_Refcount" -gt 1; then
+		abort "Patchset server-Desktop_Refcount disabled, but ws2_32-TransmitFile depends on that."
+	fi
+	enable_server_Desktop_Refcount=1
+fi
+
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	if test "$enable_wined3d_CSMT_Helper" -gt 1; then
 		abort "Patchset wined3d-CSMT_Helper disabled, but wined3d-CSMT_Main depends on that."
@@ -1961,7 +1972,11 @@ if test "$enable_kernel32_Named_Pipe" -eq 1; then
 	if test "$enable_rpcrt4_Pipe_Transport" -gt 1; then
 		abort "Patchset rpcrt4-Pipe_Transport disabled, but kernel32-Named_Pipe depends on that."
 	fi
+	if test "$enable_server_Desktop_Refcount" -gt 1; then
+		abort "Patchset server-Desktop_Refcount disabled, but kernel32-Named_Pipe depends on that."
+	fi
 	enable_rpcrt4_Pipe_Transport=1
+	enable_server_Desktop_Refcount=1
 fi
 
 if test "$enable_kernel32_CopyFileEx" -eq 1; then
@@ -3518,10 +3533,29 @@ if test "$enable_rpcrt4_Pipe_Transport" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-Desktop_Refcount
+# |
+# | Modified files:
+# |   *	programs/explorer/desktop.c, server/async.c, server/atom.c, server/change.c, server/clipboard.c, server/completion.c,
+# | 	server/console.c, server/debugger.c, server/device.c, server/directory.c, server/event.c, server/fd.c, server/file.c,
+# | 	server/handle.c, server/handle.h, server/hook.c, server/mailslot.c, server/mapping.c, server/mutex.c,
+# | 	server/named_pipe.c, server/object.c, server/object.h, server/process.c, server/queue.c, server/registry.c,
+# | 	server/request.c, server/semaphore.c, server/serial.c, server/signal.c, server/snapshot.c, server/sock.c,
+# | 	server/symlink.c, server/thread.c, server/timer.c, server/token.c, server/winstation.c
+# |
+if test "$enable_server_Desktop_Refcount" -eq 1; then
+	patch_apply server-Desktop_Refcount/0001-server-Introduce-a-new-alloc_handle-object-callback..patch
+	patch_apply server-Desktop_Refcount/0002-server-Track-desktop-handle-count-more-correctly.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Introduce a new alloc_handle object callback.", 2 },';
+		echo '+    { "Sebastian Lackner", "server: Track desktop handle count more correctly.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset kernel32-Named_Pipe
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	rpcrt4-Pipe_Transport
+# |   *	rpcrt4-Pipe_Transport, server-Desktop_Refcount
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#16550] Fix for ConnectNamedPort return value in overlapped mode
@@ -4438,7 +4472,7 @@ fi
 # Patchset ntdll-WriteWatches
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	rpcrt4-Pipe_Transport, kernel32-Named_Pipe, ws2_32-WriteWatches
+# |   *	rpcrt4-Pipe_Transport, server-Desktop_Refcount, kernel32-Named_Pipe, ws2_32-WriteWatches
 # |
 # | Modified files:
 # |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/file.c
@@ -4937,7 +4971,7 @@ fi
 # Patchset server-Pipe_ObjectName
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	rpcrt4-Pipe_Transport, kernel32-Named_Pipe
+# |   *	rpcrt4-Pipe_Transport, server-Desktop_Refcount, kernel32-Named_Pipe
 # |
 # | Modified files:
 # |   *	server/named_pipe.c, server/object.c, server/object.h
@@ -6624,6 +6658,9 @@ if test "$enable_ws2_32_Sort_default_route" -eq 1; then
 fi
 
 # Patchset ws2_32-TransmitFile
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	server-Desktop_Refcount
 # |
 # | Modified files:
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c

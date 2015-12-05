@@ -1771,6 +1771,13 @@ if test "$enable_category_stable" -eq 1; then
 	enable_ws2_32_WriteWatches=1
 fi
 
+if test "$enable_ws2_32_WSACleanup" -eq 1; then
+	if test "$enable_server_Desktop_Refcount" -gt 1; then
+		abort "Patchset server-Desktop_Refcount disabled, but ws2_32-WSACleanup depends on that."
+	fi
+	enable_server_Desktop_Refcount=1
+fi
+
 if test "$enable_ws2_32_TransmitFile" -eq 1; then
 	if test "$enable_server_Desktop_Refcount" -gt 1; then
 		abort "Patchset server-Desktop_Refcount disabled, but ws2_32-TransmitFile depends on that."
@@ -6741,6 +6748,9 @@ if test "$enable_ws2_32_TransmitFile" -eq 1; then
 fi
 
 # Patchset ws2_32-WSACleanup
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	server-Desktop_Refcount
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#18670] Properly close sockets when WSACleanup is called

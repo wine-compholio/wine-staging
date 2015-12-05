@@ -205,6 +205,7 @@ patch_enable_all ()
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
+	enable_ntdll_ProcessDebugFlags="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_Purist_Mode="$1"
 	enable_ntdll_RtlIpStringToAddress="$1"
@@ -727,6 +728,9 @@ patch_enable ()
 			;;
 		ntdll-Pipe_SpecialCharacters)
 			enable_ntdll_Pipe_SpecialCharacters="$2"
+			;;
+		ntdll-ProcessDebugFlags)
+			enable_ntdll_ProcessDebugFlags="$2"
 			;;
 		ntdll-ProcessQuotaLimits)
 			enable_ntdll_ProcessQuotaLimits="$2"
@@ -4359,6 +4363,18 @@ if test "$enable_ntdll_Pipe_SpecialCharacters" -eq 1; then
 	patch_apply ntdll-Pipe_SpecialCharacters/0001-ntdll-Allow-special-characters-in-pipe-names.patch
 	(
 		echo '+    { "Michael Müller", "ntdll: Allow special characters in pipe names.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-ProcessDebugFlags
+# |
+# | Modified files:
+# |   *	dlls/ntdll/process.c, dlls/ntdll/tests/info.c, server/process.c, server/protocol.def
+# |
+if test "$enable_ntdll_ProcessDebugFlags" -eq 1; then
+	patch_apply ntdll-ProcessDebugFlags/0001-ntdll-Fix-implementation-of-NtQueryInformationProces.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Fix implementation of NtQueryInformationProcess for ProcessDebugFlags.", 1 },';
 	) >> "$patchlist"
 fi
 

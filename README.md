@@ -34,8 +34,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [3]:**
+**Bug fixes and features included in the next upcoming release [4]:**
 
+* Fix implementation of NtQueryInformationProcess for ProcessDebugFlags
 * Fix possible leak of explorer.exe processes and implement proper desktop refcounting
 * Properly implement GetLargestConsoleWindowSize ([Wine Bug #10919](https://bugs.winehq.org/show_bug.cgi?id=10919))
 * Set LastError to 0 in GetSidIdentifierAuthority

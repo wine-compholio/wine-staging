@@ -2701,14 +2701,18 @@ fi
 # |   *	[#24754] Support for ID3DXFont::DrawTextA/W
 # |
 # | Modified files:
-# |   *	dlls/d3dx9_36/font.c
+# |   *	dlls/d3dx9_36/font.c, dlls/d3dx9_36/tests/core.c
 # |
 if test "$enable_d3dx9_36_DrawText" -eq 1; then
 	patch_apply d3dx9_36-DrawText/0001-d3dx9_36-Implement-ID3DXFontImpl_DrawText.patch
 	patch_apply d3dx9_36-DrawText/0002-d3dx9_36-Fix-horizontal-centering-in-ID3DXFont_DrawT.patch
+	patch_apply d3dx9_36-DrawText/0003-d3dx9_36-Support-NULL-terminated-strings-in-ID3DXFon.patch
+	patch_apply d3dx9_36-DrawText/0004-d3dx9_36-ID3DXFont_DrawText-calc_rect-can-be-null.patch
 	(
 		echo '+    { "Christian Costa", "d3dx9_36: Implement ID3DXFontImpl_DrawText.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Fix horizontal centering in ID3DXFont_DrawText.", 1 },';
+		echo '+    { "Alistair Leslie-Hughes", "d3dx9_36: Support NULL terminated strings in ID3DXFont_DrawText.", 1 },';
+		echo '+    { "Alistair Leslie-Hughes", "d3dx9_36: ID3DXFont_DrawText calc_rect can be null.", 1 },';
 	) >> "$patchlist"
 fi
 

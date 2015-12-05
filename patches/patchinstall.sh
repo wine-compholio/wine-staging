@@ -158,6 +158,7 @@ patch_enable_all ()
 	enable_kernel32_Cwd_Startup_Info="$1"
 	enable_kernel32_FreeUserPhysicalPages="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
+	enable_kernel32_GetLargestConsoleWindowSize="$1"
 	enable_kernel32_GetLogicalProcessorInformationEx="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
 	enable_kernel32_Named_Pipe="$1"
@@ -585,6 +586,9 @@ patch_enable ()
 			;;
 		kernel32-GetFinalPathNameByHandle)
 			enable_kernel32_GetFinalPathNameByHandle="$2"
+			;;
+		kernel32-GetLargestConsoleWindowSize)
+			enable_kernel32_GetLargestConsoleWindowSize="$2"
 			;;
 		kernel32-GetLogicalProcessorInformationEx)
 			enable_kernel32_GetLogicalProcessorInformationEx="$2"
@@ -3507,6 +3511,32 @@ if test "$enable_kernel32_GetFinalPathNameByHandle" -eq 1; then
 	patch_apply kernel32-GetFinalPathNameByHandle/0001-kernel32-Implement-GetFinalPathNameByHandle.patch
 	(
 		echo '+    { "Michael Müller", "kernel32: Implement GetFinalPathNameByHandle.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-GetLargestConsoleWindowSize
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#10919] Properly implement GetLargestConsoleWindowSize
+# |
+# | Modified files:
+# |   *	dlls/kernel32/console.c, dlls/kernel32/kernel32.spec, dlls/kernel32/tests/console.c, programs/wineconsole/wineconsole.c,
+# | 	server/console.c
+# |
+if test "$enable_kernel32_GetLargestConsoleWindowSize" -eq 1; then
+	patch_apply kernel32-GetLargestConsoleWindowSize/0001-wineconsole-Send-the-largest-console-window-size-inf.patch
+	patch_apply kernel32-GetLargestConsoleWindowSize/0002-kernel32-Implement-GetLargestConsoleWindowSize.patch
+	patch_apply kernel32-GetLargestConsoleWindowSize/0003-kernel32-Add-a-stub-for-SetConsoleFont.patch
+	patch_apply kernel32-GetLargestConsoleWindowSize/0004-kernel32-tests-Refresh-the-console-to-clear-the-cons.patch
+	patch_apply kernel32-GetLargestConsoleWindowSize/0005-kernel32-tests-Add-tests-for-GetLargestConsoleWindow.patch
+	patch_apply kernel32-GetLargestConsoleWindowSize/0006-kernel32-Clamp-maximum-window-size-to-screen-buffer-.patch
+	(
+		echo '+    { "Hugh McMaster", "wineconsole: Send the largest console window size information to the server.", 1 },';
+		echo '+    { "Hugh McMaster", "kernel32: Implement GetLargestConsoleWindowSize.", 1 },';
+		echo '+    { "Hugh McMaster", "kernel32: Add a stub for SetConsoleFont.", 1 },';
+		echo '+    { "Hugh McMaster", "kernel32/tests: Refresh the console to clear the console font table.", 1 },';
+		echo '+    { "Hugh McMaster", "kernel32/tests: Add tests for GetLargestConsoleWindowSize.", 1 },';
+		echo '+    { "Sebastian Lackner", "kernel32: Clamp maximum window size to screen buffer size.", 1 },';
 	) >> "$patchlist"
 fi
 

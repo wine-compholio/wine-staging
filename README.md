@@ -34,9 +34,10 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [1]:**
+**Bug fixes and features included in the next upcoming release [2]:**
 
 * Fix possible leak of explorer.exe processes and implement proper desktop refcounting
+* Set LastError to 0 in GetSidIdentifierAuthority
 
 
 **Bug fixes and features in Wine Staging 1.8-rc2 [270]:**

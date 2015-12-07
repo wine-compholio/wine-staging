@@ -34,15 +34,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [4]:**
-
-* Fix implementation of NtQueryInformationProcess for ProcessDebugFlags
-* Fix possible leak of explorer.exe processes and implement proper desktop refcounting
-* Properly implement GetLargestConsoleWindowSize ([Wine Bug #10919](https://bugs.winehq.org/show_bug.cgi?id=10919))
-* Set LastError to 0 in GetSidIdentifierAuthority
-
-
-**Bug fixes and features in Wine Staging 1.8-rc2 [270]:**
+**Bug fixes and features in Wine Staging 1.8-rc3 [269]:**
 
 *Note: The following list only contains features and bug fixes which are not
 yet available in vanilla Wine. They are removed from the list as soon as they
@@ -60,9 +52,7 @@ for more details.*
 * Add implementation for mfplat.MFTRegister ([Wine Bug #37811](https://bugs.winehq.org/show_bug.cgi?id=37811))
 * Add implementation for msidb commandline tool
 * Add implementation for shlwapi.AssocGetPerceivedType
-* ~~Add information for delayed end of DST in Europe/Istanbul~~
 * Add nvapi stubs required for GPU PhysX support
-* ~~Add partial implementation of ITfThreadMgrEx_ActivateEx~~ ([Wine Bug #39564](https://bugs.winehq.org/show_bug.cgi?id=39564))
 * Add performance library registry keys needed by MS SQL Server Management Studio Express 2008 R2 ([Wine Bug #33661](https://bugs.winehq.org/show_bug.cgi?id=33661))
 * Add semi-stub for FileFsVolumeInformation information class ([Wine Bug #21466](https://bugs.winehq.org/show_bug.cgi?id=21466))
 * Add shell32 placeholder icons to match offsets with Windows ([Wine Bug #30185](https://bugs.winehq.org/show_bug.cgi?id=30185))
@@ -142,7 +132,6 @@ for more details.*
 * Fake success in kernel32.SetFileCompletionNotificationModes ([Wine Bug #38960](https://bugs.winehq.org/show_bug.cgi?id=38960))
 * Fallback to default comspec when %COMSPEC% is not set
 * Fallback to system ping command when CAP_NET_RAW is not available ([Wine Bug #8332](https://bugs.winehq.org/show_bug.cgi?id=8332))
-* ~~Fix access violation in MSYS2 git when cloning repository~~
 * Fix broken textures in XIII Century: Death or Glory ([Wine Bug #25419](https://bugs.winehq.org/show_bug.cgi?id=25419))
 * Fix calculation of listbox size when horizontal scrollbar is present ([Wine Bug #38142](https://bugs.winehq.org/show_bug.cgi?id=38142))
 * Fix caps lock state issues with multiple processes ([Wine Bug #35907](https://bugs.winehq.org/show_bug.cgi?id=35907))
@@ -161,10 +150,12 @@ for more details.*
 * Fix handling of empty section and key name for profile files. ([Wine Bug #8036](https://bugs.winehq.org/show_bug.cgi?id=8036))
 * Fix handling of invert_y in DrawTextExW ([Wine Bug #22109](https://bugs.winehq.org/show_bug.cgi?id=22109))
 * Fix handling of window attributes for WS_EX_LAYERED | WS_EX_COMPOSITED ([Wine Bug #37876](https://bugs.winehq.org/show_bug.cgi?id=37876))
+* Fix implementation of NtQueryInformationProcess for ProcessDebugFlags
 * Fix implementation of msvcrt.close when stdout == stderr
 * Fix issue causing applications to report magic loopback address instead of real IP ([Wine Bug #37271](https://bugs.winehq.org/show_bug.cgi?id=37271))
 * Fix issues with dragging layers between images in Adobe Photoshop 7.0 ([Wine Bug #12007](https://bugs.winehq.org/show_bug.cgi?id=12007))
 * Fix multithreading issues with fullscreen clipping ([Wine Bug #38087](https://bugs.winehq.org/show_bug.cgi?id=38087))
+* Fix possible leak of explorer.exe processes and implement proper desktop refcounting
 * Fix possible segfault in pulse_rd_loop of PulseAudio backend
 * Fix race-condition when threads are killed during shutdown
 * Fix regression caused by blacklisting supported OpenGL extensions ([Wine Bug #38480](https://bugs.winehq.org/show_bug.cgi?id=38480))
@@ -246,6 +237,7 @@ for more details.*
 * Process APC calls before starting process
 * Properly close sockets when WSACleanup is called ([Wine Bug #18670](https://bugs.winehq.org/show_bug.cgi?id=18670))
 * Properly handle multiple registry notifications per key
+* Properly implement GetLargestConsoleWindowSize ([Wine Bug #10919](https://bugs.winehq.org/show_bug.cgi?id=10919))
 * Properly implement imagehlp.ImageLoad and ImageUnload ([Wine Bug #23455](https://bugs.winehq.org/show_bug.cgi?id=23455))
 * Properly initialize caps->dwZBufferBitDepths in ddraw7_GetCaps ([Wine Bug #27002](https://bugs.winehq.org/show_bug.cgi?id=27002))
 * Properly render themed buttons when they are pressed ([Wine Bug #37584](https://bugs.winehq.org/show_bug.cgi?id=37584))
@@ -265,13 +257,12 @@ for more details.*
 * SO_CONNECT_TIME returns the appropriate time
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](https://bugs.winehq.org/show_bug.cgi?id=35652))
 * Set EOF on file which has a memory mapping should fail
+* Set LastError to 0 in GetSidIdentifierAuthority
 * Set NamedPipeState to FILE_PIPE_CLOSING_STATE on broken pipe in NtQueryInformationFile
 * Share source of d3dx9_36 with d3dx9_33 to avoid Wine DLL forwards ([Wine Bug #21817](https://bugs.winehq.org/show_bug.cgi?id=21817))
 * Show unmounted devices in winecfg and allow changing the unix path
-* ~~Show windows version when collecting system info in winedbg~~
 * Silence repeated FIXME message in surface_cpu_blt
 * Silence repeated LocaleNameToLCID/LCIDToLocaleName unsupported flags FIXMEs ([Wine Bug #30076](https://bugs.winehq.org/show_bug.cgi?id=30076))
-* ~~Skip invalid entries in GetPrivateProfileString16~~ ([Wine Bug #9919](https://bugs.winehq.org/show_bug.cgi?id=9919))
 * Skip unknown item when decoding a CMS certificate ([Wine Bug #34388](https://bugs.winehq.org/show_bug.cgi?id=34388))
 * Software support for Environmental Audio Extensions (EAX)
 * Start SERVICE_FILE_SYSTEM_DRIVER services with winedevice ([Wine Bug #35824](https://bugs.winehq.org/show_bug.cgi?id=35824))

@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ffee96a80c0585fb5fcb041382540e2014d2f77b"
+	echo "571dc0faa502b63880e905c35d3e3da6d87c5599"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 1.8-rc3"
+	echo "Wine Staging 1.8-rc4 (unreleased)"
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -87,7 +87,6 @@ patch_enable_all ()
 	enable_Exagear="$1"
 	enable_Pipelight="$1"
 	enable_Staging="$1"
-	enable_advapi32_GetSidIdentifierAuthority="$1"
 	enable_advapi32_LsaLookupSids="$1"
 	enable_advapi32_RegCreateKeyTransacted="$1"
 	enable_advapi32_SetSecurityInfo="$1"
@@ -371,9 +370,6 @@ patch_enable ()
 			;;
 		Staging)
 			enable_Staging="$2"
-			;;
-		advapi32-GetSidIdentifierAuthority)
-			enable_advapi32_GetSidIdentifierAuthority="$2"
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
@@ -2236,18 +2232,6 @@ if test "$enable_Staging" -eq 1; then
 		echo '+    { "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list.", 1 },';
 		echo '+    { "Michael Müller", "loader: Add commandline option --check-libs.", 1 },';
 		echo '+    { "Michael Müller", "loader: Print library paths for --check-libs on Mac OS X.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset advapi32-GetSidIdentifierAuthority
-# |
-# | Modified files:
-# |   *	dlls/advapi32/security.c, dlls/advapi32/tests/security.c
-# |
-if test "$enable_advapi32_GetSidIdentifierAuthority" -eq 1; then
-	patch_apply advapi32-GetSidIdentifierAuthority/0001-advapi32-Set-LastError-to-0-in-GetSidIdentifierAutho.patch
-	(
-		echo '+    { "Michael Müller", "advapi32: Set LastError to 0 in GetSidIdentifierAuthority.", 1 },';
 	) >> "$patchlist"
 fi
 

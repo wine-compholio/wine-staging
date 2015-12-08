@@ -257,7 +257,7 @@ for more details.*
 * SO_CONNECT_TIME returns the appropriate time
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](https://bugs.winehq.org/show_bug.cgi?id=35652))
 * Set EOF on file which has a memory mapping should fail
-* Set LastError to 0 in GetSidIdentifierAuthority
+* ~~Set LastError to 0 in GetSidIdentifierAuthority~~
 * Set NamedPipeState to FILE_PIPE_CLOSING_STATE on broken pipe in NtQueryInformationFile
 * Share source of d3dx9_36 with d3dx9_33 to avoid Wine DLL forwards ([Wine Bug #21817](https://bugs.winehq.org/show_bug.cgi?id=21817))
 * Show unmounted devices in winecfg and allow changing the unix path

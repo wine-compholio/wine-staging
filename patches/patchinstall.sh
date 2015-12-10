@@ -5001,14 +5001,16 @@ fi
 # |   *	[#37087] Do not hold reference on parent process in wineserver
 # |
 # | Modified files:
-# |   *	server/console.c, server/process.c, server/process.h, server/snapshot.c, server/thread.c
+# |   *	server/console.c, server/process.c, server/process.h, server/snapshot.c, server/thread.c, server/token.c
 # |
 if test "$enable_server_Parent_Process" -eq 1; then
-	patch_apply server-Parent_Process/0001-server-Do-not-hold-reference-on-parent-process.patch
+	patch_apply server-Parent_Process/0001-server-token_duplicate-should-not-reference-the-orig.patch
 	patch_apply server-Parent_Process/0002-server-Increase-size-of-PID-table-to-512-to-reduce-r.patch
+	patch_apply server-Parent_Process/0003-server-Do-not-hold-reference-on-parent-process.patch
 	(
-		echo '+    { "Sebastian Lackner", "server: Do not hold reference on parent process.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Token_duplicate should not reference the original token, which will get destroyed on process exit.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Increase size of PID table to 512 to reduce risk of collisions.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Do not hold reference on parent process.", 1 },';
 	) >> "$patchlist"
 fi
 

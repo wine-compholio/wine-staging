@@ -1,0 +1,125 @@
+From 682c8d52bbec194245ce03428ab1678a28d6acf5 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Thu, 10 Dec 2015 03:11:25 +0100
+Subject: ntdll: ProcessDebugFlags should return debug_children flag instead of
+ !debugger_present.
+
+Signed-off-by: Sebastian Lackner <sebastian@fds-team.de>
+---
+ dlls/ntdll/process.c    |  2 +-
+ dlls/ntdll/tests/info.c | 12 ++----------
+ server/debugger.c       |  2 +-
+ server/process.c        |  5 +++--
+ server/protocol.def     |  3 ++-
+ 5 files changed, 9 insertions(+), 15 deletions(-)
+
+diff --git a/dlls/ntdll/process.c b/dlls/ntdll/process.c
+index ca9462a..5a5c3ef 100644
+--- a/dlls/ntdll/process.c
++++ b/dlls/ntdll/process.c
+@@ -339,7 +339,7 @@ NTSTATUS WINAPI NtQueryInformationProcess(
+                     req->handle = wine_server_obj_handle( ProcessHandle );
+                     if ((ret = wine_server_call( req )) == STATUS_SUCCESS)
+                     {
+-                        *(DWORD *)ProcessInformation = !reply->debugger_present;
++                        *(DWORD *)ProcessInformation = reply->debug_children;
+                     }
+                 }
+                 SERVER_END_REQ;
+diff --git a/dlls/ntdll/tests/info.c b/dlls/ntdll/tests/info.c
+index 88d0417..a521447 100644
+--- a/dlls/ntdll/tests/info.c
++++ b/dlls/ntdll/tests/info.c
+@@ -1345,11 +1345,7 @@ static void test_query_process_debug_flags(int argc, char **argv)
+         status = pNtQueryInformationProcess(pi.hProcess, ProcessDebugFlags,
+                 &debug_flags, sizeof(debug_flags), NULL);
+         ok(!status, "NtQueryInformationProcess failed, status %#x.\n", status);
+-        if (!expected_flags)
+-            ok(debug_flags == expected_flags, "Expected flag %x, got %x.\n", expected_flags, debug_flags);
+-        else
+-            todo_wine
+-            ok(debug_flags == expected_flags, "Expected flag %x, got %x.\n", expected_flags, debug_flags);
++        ok(debug_flags == expected_flags, "Expected flag %x, got %x.\n", expected_flags, debug_flags);
+ 
+         if (!(test_flags[i] & CREATE_SUSPENDED))
+         {
+@@ -1379,11 +1375,7 @@ static void test_query_process_debug_flags(int argc, char **argv)
+         status = pNtQueryInformationProcess(pi.hProcess, ProcessDebugFlags,
+                 &debug_flags, sizeof(debug_flags), NULL);
+         ok(!status, "NtQueryInformationProcess failed, status %#x.\n", status);
+-        if (expected_flags)
+-            ok(debug_flags == expected_flags, "Expected flag %x, got %x.\n", expected_flags, debug_flags);
+-        else
+-            todo_wine
+-            ok(debug_flags == expected_flags, "Expected flag %x, got %x.\n", expected_flags, debug_flags);
++        ok(debug_flags == expected_flags, "Expected flag %x, got %x.\n", expected_flags, debug_flags);
+ 
+         ret = DebugActiveProcess(pi.dwProcessId);
+         ok(ret, "DebugActiveProcess failed, last error %#x.\n", GetLastError());
+diff --git a/server/debugger.c b/server/debugger.c
+index 374f2ad..810e8d3 100644
+--- a/server/debugger.c
++++ b/server/debugger.c
+@@ -443,6 +443,7 @@ static int debugger_attach( struct process *process, struct thread *debugger )
+         resume_process( process );
+         return 0;
+     }
++    process->debug_children = 0;
+     return 1;
+ 
+  error:
+@@ -483,7 +484,6 @@ int debugger_detach( struct process *process, struct thread *debugger )
+ 
+     /* remove relationships between process and its debugger */
+     process->debugger = NULL;
+-    process->debug_children = 0;
+     if (!set_process_debug_flag( process, 0 )) clear_error();  /* ignore error */
+ 
+     /* from this function */
+diff --git a/server/process.c b/server/process.c
+index e00b429..8433002 100644
+--- a/server/process.c
++++ b/server/process.c
+@@ -513,7 +513,7 @@ struct thread *create_process( int fd, struct thread *parent_thread, int inherit
+     process->priority        = PROCESS_PRIOCLASS_NORMAL;
+     process->suspend         = 0;
+     process->is_system       = 0;
+-    process->debug_children  = 0;
++    process->debug_children  = 1;
+     process->is_terminating  = 0;
+     process->job             = NULL;
+     process->console         = NULL;
+@@ -1228,7 +1228,7 @@ DECL_HANDLER(new_process)
+     else if (parent->debugger && parent->debug_children)
+     {
+         set_process_debugger( process, parent->debugger );
+-        process->debug_children = 1;
++        /* debug_children is set to 1 by default */
+     }
+ 
+     if (!(req->create_flags & CREATE_NEW_PROCESS_GROUP))
+@@ -1359,6 +1359,7 @@ DECL_HANDLER(get_process_info)
+         reply->end_time         = process->end_time;
+         reply->cpu              = process->cpu;
+         reply->debugger_present = !!process->debugger;
++        reply->debug_children   = process->debug_children;
+         release_object( process );
+     }
+ }
+diff --git a/server/protocol.def b/server/protocol.def
+index 04814c9..bfb9089 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -818,7 +818,8 @@ struct rawinput_device
+     int          exit_code;        /* process exit code */
+     int          priority;         /* priority class */
+     cpu_type_t   cpu;              /* CPU that this process is running on */
+-    int          debugger_present; /* process is being debugged */
++    short int    debugger_present; /* process is being debugged */
++    short int    debug_children;   /* inherit debugger to child processes */
+ @END
+ 
+ 
+-- 
+2.6.2
+

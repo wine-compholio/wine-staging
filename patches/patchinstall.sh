@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d29dcec6efa935abc2db2cbb726c48086a8e1a71"
+	echo "97ac9d410fdd612db863fdccc538d8dd8d94d91a"
 }
 
 # Show version information
@@ -4360,12 +4360,12 @@ fi
 # Patchset ntdll-ProcessDebugFlags
 # |
 # | Modified files:
-# |   *	dlls/ntdll/process.c, dlls/ntdll/tests/info.c, server/process.c, server/protocol.def
+# |   *	dlls/ntdll/process.c, dlls/ntdll/tests/info.c, server/debugger.c, server/process.c, server/protocol.def
 # |
 if test "$enable_ntdll_ProcessDebugFlags" -eq 1; then
-	patch_apply ntdll-ProcessDebugFlags/0001-ntdll-Fix-implementation-of-NtQueryInformationProces.patch
+	patch_apply ntdll-ProcessDebugFlags/0001-ntdll-ProcessDebugFlags-should-return-debug_children.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Fix implementation of NtQueryInformationProcess for ProcessDebugFlags.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: ProcessDebugFlags should return debug_children flag instead of !debugger_present.", 1 },';
 	) >> "$patchlist"
 fi
 

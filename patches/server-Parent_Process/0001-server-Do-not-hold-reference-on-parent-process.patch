@@ -1,0 +1,113 @@
+From b71aa6b6bdf71f3a5d006a5d2b1c109a29af75af Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Thu, 10 Dec 2015 05:55:41 +0100
+Subject: server: Do not hold reference on parent process.
+
+---
+ server/console.c  | 3 +--
+ server/process.c  | 7 +++----
+ server/process.h  | 2 +-
+ server/snapshot.c | 2 +-
+ server/thread.c   | 2 +-
+ 5 files changed, 7 insertions(+), 9 deletions(-)
+
+diff --git a/server/console.c b/server/console.c
+index a57b2fe..3d0e0e0 100644
+--- a/server/console.c
++++ b/server/console.c
+@@ -1425,13 +1425,12 @@ DECL_HANDLER(alloc_console)
+     case 0:
+         /* renderer is current, console to be attached to parent process */
+         renderer = current;
+-        if (!(process = current->process->parent))
++        if (!(process = get_process_from_id( current->process->parent_id )))
+         {
+             if (fd != -1) close( fd );
+             set_error( STATUS_ACCESS_DENIED );
+             return;
+         }
+-        grab_object( process );
+         attach = 1;
+         break;
+     case 0xffffffff:
+diff --git a/server/process.c b/server/process.c
+index e00b429..1fdaaca 100644
+--- a/server/process.c
++++ b/server/process.c
+@@ -502,7 +502,7 @@ struct thread *create_process( int fd, struct thread *parent_thread, int inherit
+         close( fd );
+         goto error;
+     }
+-    process->parent          = NULL;
++    process->parent_id       = 0;
+     process->debugger        = NULL;
+     process->handles         = NULL;
+     process->msg_fd          = NULL;
+@@ -554,7 +554,7 @@ struct thread *create_process( int fd, struct thread *parent_thread, int inherit
+     else
+     {
+         struct process *parent = parent_thread->process;
+-        process->parent = (struct process *)grab_object( parent );
++        process->parent_id = parent->id;
+         process->handles = inherit_all ? copy_handle_table( process, parent )
+                                        : alloc_handle_table( process, 0 );
+         /* Note: for security reasons, starting a new process does not attempt
+@@ -621,7 +621,6 @@ static void process_destroy( struct object *obj )
+         release_object( process->job );
+     }
+     if (process->console) release_object( process->console );
+-    if (process->parent) release_object( process->parent );
+     if (process->msg_fd) release_object( process->msg_fd );
+     list_remove( &process->entry );
+     if (process->idle_event) release_object( process->idle_event );
+@@ -1350,7 +1349,7 @@ DECL_HANDLER(get_process_info)
+     if ((process = get_process_from_handle( req->handle, PROCESS_QUERY_LIMITED_INFORMATION )))
+     {
+         reply->pid              = get_process_id( process );
+-        reply->ppid             = process->parent ? get_process_id( process->parent ) : 0;
++        reply->ppid             = process->parent_id;
+         reply->exit_code        = process->exit_code;
+         reply->priority         = process->priority;
+         reply->affinity         = process->affinity;
+diff --git a/server/process.h b/server/process.h
+index fa7f60d..34b6ea6 100644
+--- a/server/process.h
++++ b/server/process.h
+@@ -56,7 +56,7 @@ struct process
+ {
+     struct object        obj;             /* object header */
+     struct list          entry;           /* entry in system-wide process list */
+-    struct process      *parent;          /* parent process */
++    process_id_t         parent_id;       /* parent process id (at the time of creation) */
+     struct list          thread_list;     /* thread list */
+     struct thread       *debugger;        /* thread debugging this process */
+     struct handle_table *handles;         /* handle entries */
+diff --git a/server/snapshot.c b/server/snapshot.c
+index dd00bd1..bec281d 100644
+--- a/server/snapshot.c
++++ b/server/snapshot.c
+@@ -113,7 +113,7 @@ static int snapshot_next_process( struct snapshot *snapshot, struct next_process
+     ptr = &snapshot->processes[snapshot->process_pos++];
+     reply->count    = ptr->count;
+     reply->pid      = get_process_id( ptr->process );
+-    reply->ppid     = ptr->process->parent ? get_process_id( ptr->process->parent ) : 0;
++    reply->ppid     = ptr->process->parent_id;
+     reply->threads  = ptr->threads;
+     reply->priority = ptr->priority;
+     reply->handles  = ptr->handles;
+diff --git a/server/thread.c b/server/thread.c
+index bad2231..176cf44 100644
+--- a/server/thread.c
++++ b/server/thread.c
+@@ -1300,7 +1300,7 @@ DECL_HANDLER(init_thread)
+         process->peb      = req->entry;
+         process->cpu      = req->cpu;
+         reply->info_size  = init_process( current );
+-        if (!process->parent)
++        if (!process->parent_id)
+             process->affinity = current->affinity = get_thread_affinity( current );
+         else
+             set_thread_affinity( current, current->affinity );
+-- 
+2.6.2
+

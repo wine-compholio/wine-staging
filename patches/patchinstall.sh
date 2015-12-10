@@ -245,7 +245,7 @@ patch_enable_all ()
 	enable_server_Key_State="$1"
 	enable_server_Map_EXDEV_Error="$1"
 	enable_server_Misc_ACL="$1"
-	enable_server_OpenProcess="$1"
+	enable_server_Parent_Process="$1"
 	enable_server_PeekMessage="$1"
 	enable_server_Pipe_ObjectName="$1"
 	enable_server_Realtime_Priority="$1"
@@ -848,8 +848,8 @@ patch_enable ()
 		server-Misc_ACL)
 			enable_server_Misc_ACL="$2"
 			;;
-		server-OpenProcess)
-			enable_server_OpenProcess="$2"
+		server-Parent_Process)
+			enable_server_Parent_Process="$2"
 			;;
 		server-PeekMessage)
 			enable_server_PeekMessage="$2"
@@ -4995,18 +4995,20 @@ if test "$enable_server_Map_EXDEV_Error" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-OpenProcess
+# Patchset server-Parent_Process
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#37087] Return an error when trying to open a terminated process
+# |   *	[#37087] Do not hold reference on parent process in wineserver
 # |
 # | Modified files:
-# |   *	server/process.c, server/process.h
+# |   *	server/console.c, server/process.c, server/process.h, server/snapshot.c, server/thread.c
 # |
-if test "$enable_server_OpenProcess" -eq 1; then
-	patch_apply server-OpenProcess/0001-server-Return-error-when-opening-a-terminating-proce.patch
+if test "$enable_server_Parent_Process" -eq 1; then
+	patch_apply server-Parent_Process/0001-server-Do-not-hold-reference-on-parent-process.patch
+	patch_apply server-Parent_Process/0002-server-Increase-size-of-PID-table-to-512-to-reduce-r.patch
 	(
-		echo '+    { "Michael Müller", "server: Return error when opening a terminating process.", 3 },';
+		echo '+    { "Sebastian Lackner", "server: Do not hold reference on parent process.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Increase size of PID table to 512 to reduce risk of collisions.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "571dc0faa502b63880e905c35d3e3da6d87c5599"
+	echo "d29dcec6efa935abc2db2cbb726c48086a8e1a71"
 }
 
 # Show version information
@@ -4798,7 +4798,7 @@ fi
 # Patchset opengl32-Revert_Disable_Ext
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#38480] Fix regression caused by blacklisting supported OpenGL extensions
+# |   *	[#39769] Fix regression caused by blacklisting supported OpenGL extensions
 # |
 # | Modified files:
 # |   *	dlls/opengl32/wgl.c

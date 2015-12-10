@@ -34,6 +34,11 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
+**Bug fixes and features included in the next upcoming release [1]:**
+
+* Fix regression caused by blacklisting supported OpenGL extensions ([Wine Bug #39769](https://bugs.winehq.org/show_bug.cgi?id=39769))
+
+
 **Bug fixes and features in Wine Staging 1.8-rc3 [269]:**
 
 *Note: The following list only contains features and bug fixes which are not
@@ -159,7 +164,7 @@ for more details.*
 * Fix possible leak of explorer.exe processes and implement proper desktop refcounting
 * Fix possible segfault in pulse_rd_loop of PulseAudio backend
 * Fix race-condition when threads are killed during shutdown
-* Fix regression caused by blacklisting supported OpenGL extensions ([Wine Bug #38480](https://bugs.winehq.org/show_bug.cgi?id=38480))
+* ~~Fix regression caused by blacklisting supported OpenGL extensions~~ ([Wine Bug #38480](https://bugs.winehq.org/show_bug.cgi?id=38480))
 * Fix return value of ScrollWindowEx for invisible windows ([Wine Bug #37706](https://bugs.winehq.org/show_bug.cgi?id=37706))
 * Fix scaling behaviour of images and mipmap levels in IDirect3DTexture2_Load (needed for example by Prezzie Hunt)
 * Fix texture corruption in CSI: Fatal Conspiracy ([Wine Bug #33768](https://bugs.winehq.org/show_bug.cgi?id=33768))

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "97ac9d410fdd612db863fdccc538d8dd8d94d91a"
+	echo "ca9001d6bda3084ab9bc80baa7d6e5533252c797"
 }
 
 # Show version information
@@ -4796,9 +4796,6 @@ if test "$enable_openal32_EFX_Extension" -eq 1; then
 fi
 
 # Patchset opengl32-Revert_Disable_Ext
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39769] Fix regression caused by blacklisting supported OpenGL extensions
 # |
 # | Modified files:
 # |   *	dlls/opengl32/wgl.c

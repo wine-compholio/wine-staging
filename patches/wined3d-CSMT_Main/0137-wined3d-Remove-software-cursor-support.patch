@@ -1,4 +1,4 @@
-From b306273dc9e8ef9cdc53affc64098399bad4e65c Mon Sep 17 00:00:00 2001
+From 649e5b815399a26eb4f3ace31d604310771a9eac Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 3 Oct 2013 19:23:24 +0200
 Subject: wined3d: Remove software cursor support.
@@ -9,15 +9,15 @@ in the main thread.
 FIXME: Make sure wined3d_device_show_cursor returns the correct value if a software cursor is set.
 ---
  dlls/wined3d/device.c          | 64 ------------------------------------------
- dlls/wined3d/swapchain.c       | 21 --------------
+ dlls/wined3d/swapchain.c       | 29 -------------------
  dlls/wined3d/wined3d_private.h |  1 -
- 3 files changed, 86 deletions(-)
+ 3 files changed, 94 deletions(-)
 
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index b44d304..e8871b2 100644
+index 70fb2cb..e9ef79f 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -1039,8 +1039,6 @@ HRESULT CDECL wined3d_device_uninit_3d(struct wined3d_device *device)
+@@ -1073,8 +1073,6 @@ HRESULT CDECL wined3d_device_uninit_3d(struct wined3d_device *device)
  
      if (device->logo_texture)
          wined3d_texture_decref(device->logo_texture);
@@ -26,7 +26,7 @@ index b44d304..e8871b2 100644
  
      /* Release the buffers (with sanity checks).
       * FIXME: Move this move into a separate patch. I think the idea
-@@ -4144,48 +4142,6 @@ void CDECL wined3d_device_set_depth_stencil_view(struct wined3d_device *device,
+@@ -4181,48 +4179,6 @@ void CDECL wined3d_device_set_depth_stencil_view(struct wined3d_device *device,
          wined3d_rendertarget_view_decref(prev);
  }
  
@@ -75,7 +75,7 @@ index b44d304..e8871b2 100644
  HRESULT CDECL wined3d_device_set_cursor_properties(struct wined3d_device *device,
          UINT x_hotspot, UINT y_hotspot, struct wined3d_texture *texture, unsigned int sub_resource_idx)
  {
-@@ -4204,12 +4160,6 @@ HRESULT CDECL wined3d_device_set_cursor_properties(struct wined3d_device *device
+@@ -4241,12 +4197,6 @@ HRESULT CDECL wined3d_device_set_cursor_properties(struct wined3d_device *device
  
      cursor_image = surface_from_resource(sub_resource);
  
@@ -88,7 +88,7 @@ index b44d304..e8871b2 100644
      if (cursor_image->resource.format->id != WINED3DFMT_B8G8R8A8_UNORM)
      {
          WARN("Surface %p has an invalid format %s.\n",
-@@ -4237,11 +4187,6 @@ HRESULT CDECL wined3d_device_set_cursor_properties(struct wined3d_device *device
+@@ -4274,11 +4224,6 @@ HRESULT CDECL wined3d_device_set_cursor_properties(struct wined3d_device *device
       * release it after setting the cursor image. Windows doesn't
       * addref the set surface, so we can't do this either without
       * creating circular refcount dependencies. */
@@ -100,7 +100,7 @@ index b44d304..e8871b2 100644
  
      if (cursor_image->resource.width == 32 && cursor_image->resource.height == 32)
      {
-@@ -4346,10 +4291,6 @@ BOOL CDECL wined3d_device_show_cursor(struct wined3d_device *device, BOOL show)
+@@ -4383,10 +4328,6 @@ BOOL CDECL wined3d_device_show_cursor(struct wined3d_device *device, BOOL show)
          else
              SetCursor(NULL);
      }
@@ -111,7 +111,7 @@ index b44d304..e8871b2 100644
  
      return oldVisible;
  }
-@@ -4504,11 +4445,6 @@ HRESULT CDECL wined3d_device_reset(struct wined3d_device *device,
+@@ -4541,11 +4482,6 @@ HRESULT CDECL wined3d_device_reset(struct wined3d_device *device,
              wined3d_texture_decref(device->logo_texture);
              device->logo_texture = NULL;
          }
@@ -124,10 +124,10 @@ index b44d304..e8871b2 100644
  
      if (device->state.fb.render_targets)
 diff --git a/dlls/wined3d/swapchain.c b/dlls/wined3d/swapchain.c
-index 5ded5d0..94ca18f 100644
+index 77eb532..d0c7c54 100644
 --- a/dlls/wined3d/swapchain.c
 +++ b/dlls/wined3d/swapchain.c
-@@ -455,27 +455,6 @@ static void swapchain_gl_present(struct wined3d_swapchain *swapchain, const RECT
+@@ -455,35 +455,6 @@ static void swapchain_gl_present(struct wined3d_swapchain *swapchain, const RECT
                  NULL, WINED3D_TEXF_POINT);
      }
  
@@ -143,23 +143,31 @@ index 5ded5d0..94ca18f 100644
 -            swapchain->device->xScreenSpace + swapchain->device->cursorWidth - swapchain->device->xHotSpot,
 -            swapchain->device->yScreenSpace + swapchain->device->cursorHeight - swapchain->device->yHotSpot,
 -        };
+-        RECT src_rect =
+-        {
+-            0, 0,
+-            swapchain->device->cursor_texture->resource.width,
+-            swapchain->device->cursor_texture->resource.height
+-        };
+-        const RECT clip_rect = {0, 0, back_buffer->resource.width, back_buffer->resource.height};
 -
 -        TRACE("Rendering the software cursor.\n");
 -
 -        if (swapchain->desc.windowed)
 -            MapWindowPoints(NULL, swapchain->win_handle, (POINT *)&destRect, 2);
--        wined3d_surface_blt(back_buffer, &destRect, cursor, NULL, WINEDDBLT_ALPHATEST,
--                NULL, WINED3D_TEXF_POINT);
+-        if (wined3d_clip_blit(&clip_rect, &destRect, &src_rect))
+-            wined3d_surface_blt(back_buffer, &destRect, cursor, &src_rect, WINEDDBLT_ALPHATEST,
+-                    NULL, WINED3D_TEXF_POINT);
 -    }
 -
      TRACE("Presenting HDC %p.\n", context->hdc);
  
      render_to_fbo = swapchain->render_to_fbo;
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 5f29243..f51a6d4 100644
+index 9450bdc..27a4a87 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2137,7 +2137,6 @@ struct wined3d_device
+@@ -2151,7 +2151,6 @@ struct wined3d_device
      UINT                    xScreenSpace;
      UINT                    yScreenSpace;
      UINT                    cursorWidth, cursorHeight;
@@ -168,5 +176,5 @@ index 5f29243..f51a6d4 100644
  
      /* The Wine logo texture */
 -- 
-2.6.1
+2.6.2
 

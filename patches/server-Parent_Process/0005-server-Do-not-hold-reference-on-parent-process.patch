@@ -1,16 +1,30 @@
-From b71aa6b6bdf71f3a5d006a5d2b1c109a29af75af Mon Sep 17 00:00:00 2001
+From 8d0b9020200ee933ed02fae3235fee2ade651394 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Thu, 10 Dec 2015 05:55:41 +0100
 Subject: server: Do not hold reference on parent process.
 
 ---
- server/console.c  | 3 +--
- server/process.c  | 7 +++----
- server/process.h  | 2 +-
- server/snapshot.c | 2 +-
- server/thread.c   | 2 +-
- 5 files changed, 7 insertions(+), 9 deletions(-)
+ dlls/kernel32/tests/process.c | 2 +-
+ server/console.c              | 3 +--
+ server/process.c              | 7 +++----
+ server/process.h              | 2 +-
+ server/snapshot.c             | 2 +-
+ server/thread.c               | 2 +-
+ 6 files changed, 8 insertions(+), 10 deletions(-)
 
+diff --git a/dlls/kernel32/tests/process.c b/dlls/kernel32/tests/process.c
+index 8e0f0c2..9c07d09 100644
+--- a/dlls/kernel32/tests/process.c
++++ b/dlls/kernel32/tests/process.c
+@@ -1158,7 +1158,7 @@ static void test_Toolhelp(void)
+         Sleep(100);
+     }
+     /* The following test fails randomly on some Windows versions */
+-    todo_wine ok(i < 20 || broken(i == 20), "process object not released\n");
++    ok(i < 20 || broken(i == 20), "process object not released\n");
+ 
+     snapshot = pCreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+     ok(snapshot != INVALID_HANDLE_VALUE, "CreateToolhelp32Snapshot failed %u\n", GetLastError());
 diff --git a/server/console.c b/server/console.c
 index a57b2fe..3d0e0e0 100644
 --- a/server/console.c
@@ -31,10 +45,10 @@ index a57b2fe..3d0e0e0 100644
          break;
      case 0xffffffff:
 diff --git a/server/process.c b/server/process.c
-index e00b429..1fdaaca 100644
+index 1b41037..8ecc32e 100644
 --- a/server/process.c
 +++ b/server/process.c
-@@ -502,7 +502,7 @@ struct thread *create_process( int fd, struct thread *parent_thread, int inherit
+@@ -504,7 +504,7 @@ struct thread *create_process( int fd, struct thread *parent_thread, int inherit
          close( fd );
          goto error;
      }
@@ -43,7 +57,7 @@ index e00b429..1fdaaca 100644
      process->debugger        = NULL;
      process->handles         = NULL;
      process->msg_fd          = NULL;
-@@ -554,7 +554,7 @@ struct thread *create_process( int fd, struct thread *parent_thread, int inherit
+@@ -556,7 +556,7 @@ struct thread *create_process( int fd, struct thread *parent_thread, int inherit
      else
      {
          struct process *parent = parent_thread->process;
@@ -52,7 +66,7 @@ index e00b429..1fdaaca 100644
          process->handles = inherit_all ? copy_handle_table( process, parent )
                                         : alloc_handle_table( process, 0 );
          /* Note: for security reasons, starting a new process does not attempt
-@@ -621,7 +621,6 @@ static void process_destroy( struct object *obj )
+@@ -623,7 +623,6 @@ static void process_destroy( struct object *obj )
          release_object( process->job );
      }
      if (process->console) release_object( process->console );
@@ -60,7 +74,7 @@ index e00b429..1fdaaca 100644
      if (process->msg_fd) release_object( process->msg_fd );
      list_remove( &process->entry );
      if (process->idle_event) release_object( process->idle_event );
-@@ -1350,7 +1349,7 @@ DECL_HANDLER(get_process_info)
+@@ -1352,7 +1351,7 @@ DECL_HANDLER(get_process_info)
      if ((process = get_process_from_handle( req->handle, PROCESS_QUERY_LIMITED_INFORMATION )))
      {
          reply->pid              = get_process_id( process );

@@ -34,7 +34,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features in Wine Staging 1.8-rc3 [269]:**
+**Bug fixes and features in Wine Staging 1.8-rc4 [267]:**
 
 *Note: The following list only contains features and bug fixes which are not
 yet available in vanilla Wine. They are removed from the list as soon as they
@@ -159,7 +159,6 @@ for more details.*
 * Fix possible leak of explorer.exe processes and implement proper desktop refcounting
 * Fix possible segfault in pulse_rd_loop of PulseAudio backend
 * Fix race-condition when threads are killed during shutdown
-* ~~Fix regression caused by blacklisting supported OpenGL extensions~~ ([Wine Bug #38480](https://bugs.winehq.org/show_bug.cgi?id=38480))
 * Fix return value of ScrollWindowEx for invisible windows ([Wine Bug #37706](https://bugs.winehq.org/show_bug.cgi?id=37706))
 * Fix scaling behaviour of images and mipmap levels in IDirect3DTexture2_Load (needed for example by Prezzie Hunt)
 * Fix texture corruption in CSI: Fatal Conspiracy ([Wine Bug #33768](https://bugs.winehq.org/show_bug.cgi?id=33768))
@@ -257,7 +256,6 @@ for more details.*
 * SO_CONNECT_TIME returns the appropriate time
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](https://bugs.winehq.org/show_bug.cgi?id=35652))
 * Set EOF on file which has a memory mapping should fail
-* ~~Set LastError to 0 in GetSidIdentifierAuthority~~
 * Set NamedPipeState to FILE_PIPE_CLOSING_STATE on broken pipe in NtQueryInformationFile
 * Share source of d3dx9_36 with d3dx9_33 to avoid Wine DLL forwards ([Wine Bug #21817](https://bugs.winehq.org/show_bug.cgi?id=21817))
 * Show unmounted devices in winecfg and allow changing the unix path

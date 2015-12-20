@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ca9001d6bda3084ab9bc80baa7d6e5533252c797"
+	echo "c465401984ec732f8e76bb1b71cd65427ae088f1"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 1.8-rc4"
+	echo "Wine Staging 1.8 (unreleased)"
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -4735,8 +4735,12 @@ fi
 # |
 if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
 	patch_apply nvencodeapi-Video_Encoder/0001-nvencodeapi-First-implementation.patch
+	patch_apply nvencodeapi-Video_Encoder/0002-nvencodeapi-Add-debian-specific-paths-to-native-libr.patch
+	patch_apply nvencodeapi-Video_Encoder/0003-nvencodeapi-Add-support-for-version-6.0.patch
 	(
 		echo '+    { "Michael Müller", "nvencodeapi: First implementation.", 1 },';
+		echo '+    { "Michael Müller", "nvencodeapi: Add debian specific paths to native library.", 1 },';
+		echo '+    { "Michael Müller", "nvencodeapi: Add support for version 6.0.", 1 },';
 	) >> "$patchlist"
 fi
 

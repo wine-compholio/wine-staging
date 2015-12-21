@@ -6824,12 +6824,16 @@ if test "$enable_wusa_MSU_Package_Installer" -eq 1; then
 	patch_apply wusa-MSU_Package_Installer/0003-wusa-Treat-empty-update-list-as-error.patch
 	patch_apply wusa-MSU_Package_Installer/0004-wusa-Implement-WOW64-support.patch
 	patch_apply wusa-MSU_Package_Installer/0005-wusa-Add-workaround-to-be-compatible-with-Vista-pack.patch
+	patch_apply wusa-MSU_Package_Installer/0006-wusa-Improve-tracing-of-installation-process.patch
+	patch_apply wusa-MSU_Package_Installer/0007-wusa-Print-warning-when-encountering-msdelta-compres.patch
 	(
 		echo '+    { "Michael Müller", "wusa: Implement basic installation logic.", 1 },';
 		echo '+    { "Michael Müller", "wusa: Ignore systemProtection subkey of registry key.", 1 },';
 		echo '+    { "Michael Müller", "wusa: Treat empty update list as error.", 1 },';
 		echo '+    { "Michael Müller", "wusa: Implement WOW64 support.", 1 },';
 		echo '+    { "Sebastian Lackner", "wusa: Add workaround to be compatible with Vista packages.", 1 },';
+		echo '+    { "Sebastian Lackner", "wusa: Improve tracing of installation process.", 1 },';
+		echo '+    { "Michael Müller", "wusa: Print warning when encountering msdelta compressed files.", 1 },';
 	) >> "$patchlist"
 fi
 

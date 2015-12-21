@@ -34,12 +34,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [1]:**
-
-* Initial implementation of wusa.exe (MSU package installer) ([Wine Bug #26757](https://bugs.winehq.org/show_bug.cgi?id=26757))
-
-
-**Bug fixes and features in Wine Staging 1.8-rc4 [267]:**
+**Bug fixes and features in Wine Staging 1.8 [268]:**
 
 *Note: The following list only contains features and bug fixes which are not
 yet available in vanilla Wine. They are removed from the list as soon as they
@@ -224,6 +219,7 @@ for more details.*
 * Improve stubs for AEV_{Get,Set}Mute
 * Improve stubs for dxgi MakeWindowAssociation and GetWindowAssociation
 * Improvement for heap allocation performance
+* Initial implementation of wusa.exe (MSU package installer) ([Wine Bug #26757](https://bugs.winehq.org/show_bug.cgi?id=26757))
 * Initialize *lpcDevices in RasEnumDevicesA ([Wine Bug #30378](https://bugs.winehq.org/show_bug.cgi?id=30378))
 * Initialize System\CurrentControlSet\Control\TimeZoneInformation registry keys
 * Jedi Knight: Dark Forces II crashes with winmm set to native ([Wine Bug #37983](https://bugs.winehq.org/show_bug.cgi?id=37983))

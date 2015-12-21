@@ -1,0 +1,95 @@
+From c848126e160493a7baa717c96e663ef5ebddb542 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 21 Dec 2015 03:01:05 +0100
+Subject: wusa: Add workaround to be compatible with Vista packages.
+
+---
+ programs/wusa/main.c     | 21 +++++++++++++++++++++
+ programs/wusa/manifest.c | 22 ++++++++++++++++++++++
+ programs/wusa/wusa.h     |  1 +
+ 3 files changed, 44 insertions(+)
+
+diff --git a/programs/wusa/main.c b/programs/wusa/main.c
+index 5dae802..834da33 100644
+--- a/programs/wusa/main.c
++++ b/programs/wusa/main.c
+@@ -111,6 +111,13 @@ static BOOL strbuf_append(struct strbuf *buf, const WCHAR *str, DWORD len)
+     return TRUE;
+ }
+ 
++static BOOL str_starts_with(const WCHAR *str, const WCHAR *prefix)
++{
++    DWORD str_len = strlenW(str), prefix_len = strlenW(prefix);
++    if (prefix_len > str_len) return FALSE;
++    return !strncmpiW(str, prefix, prefix_len);
++}
++
+ static BOOL str_ends_with(const WCHAR *str, const WCHAR *suffix)
+ {
+     DWORD str_len = strlenW(str), suffix_len = strlenW(suffix);
+@@ -1003,6 +1010,20 @@ static BOOL install_msu(WCHAR *filename, struct installer_state *state)
+         FindClose(search);
+     }
+ 
++    /* Windows Vista MSU files do not contain an xml file - what is the correct way to get
++     * the update list? For now just install all assemblies starting with "Package_for_KB". */
++    if (list_empty(&state->updates))
++    {
++        static const WCHAR package_for_kbW[] = {'P','a','c','k','a','g','e','_','f','o','r','_','K','B',0};
++        struct assembly_entry *assembly;
++        LIST_FOR_EACH_ENTRY(assembly, &state->assemblies, struct assembly_entry, entry)
++        {
++            if (!assembly->identity.name) continue;
++            if (str_starts_with(assembly->identity.name, package_for_kbW))
++                queue_update(assembly, &state->updates);
++        }
++    }
++
+     /* dump package information (for debugging) */
+     if (WINE_TRACE_ON(wusa))
+     {
+diff --git a/programs/wusa/manifest.c b/programs/wusa/manifest.c
+index 63e56e0..0d6fae6 100644
+--- a/programs/wusa/manifest.c
++++ b/programs/wusa/manifest.c
+@@ -704,3 +704,25 @@ done:
+     IXMLDOMElement_Release(root);
+     return ret;
+ }
++
++BOOL queue_update(struct assembly_entry *assembly, struct list *update_list)
++{
++    struct dependency_entry *entry;
++
++    if (!(entry = alloc_dependency()))
++        return FALSE;
++
++    if (!(entry->identity.name          = strdupW(assembly->identity.name))) goto error;
++    if (!(entry->identity.version       = strdupW(assembly->identity.version))) goto error;
++    if (!(entry->identity.architecture  = strdupW(assembly->identity.architecture))) goto error;
++    if (!(entry->identity.language      = strdupW(assembly->identity.language))) goto error;
++    if (!(entry->identity.pubkey_token  = strdupW(assembly->identity.pubkey_token))) goto error;
++
++    WINE_TRACE("Queued update %s\n", debugstr_w(entry->identity.name));
++    list_add_tail(update_list, &entry->entry);
++    return TRUE;
++
++error:
++    free_dependency(entry);
++    return FALSE;
++}
+diff --git a/programs/wusa/wusa.h b/programs/wusa/wusa.h
+index eada6d9..ef5793b 100644
+--- a/programs/wusa/wusa.h
++++ b/programs/wusa/wusa.h
+@@ -82,6 +82,7 @@ void free_assembly(struct assembly_entry *entry) DECLSPEC_HIDDEN;
+ void free_dependency(struct dependency_entry *entry) DECLSPEC_HIDDEN;
+ struct assembly_entry *load_manifest(const WCHAR *filename) DECLSPEC_HIDDEN;
+ BOOL load_update(const WCHAR *filename, struct list *update_list) DECLSPEC_HIDDEN;
++BOOL queue_update(struct assembly_entry *assembly, struct list *update_list) DECLSPEC_HIDDEN;
+ 
+ static void *heap_alloc(size_t len) __WINE_ALLOC_SIZE(1);
+ static inline void *heap_alloc(size_t len)
+-- 
+2.6.4
+

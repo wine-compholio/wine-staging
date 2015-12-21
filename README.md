@@ -34,6 +34,11 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
+**Bug fixes and features included in the next upcoming release [1]:**
+
+* Initial implementation of wusa.exe (MSU package installer) ([Wine Bug #26757](https://bugs.winehq.org/show_bug.cgi?id=26757))
+
+
 **Bug fixes and features in Wine Staging 1.8-rc4 [267]:**
 
 *Note: The following list only contains features and bug fixes which are not

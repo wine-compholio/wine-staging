@@ -1,0 +1,126 @@
+From 3bd8282421aad38c45c38d2f3510c46560a4902d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Mon, 21 Dec 2015 01:47:59 +0100
+Subject: wusa: Implement WOW64 support.
+
+---
+ programs/wusa/main.c | 59 +++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 58 insertions(+), 1 deletion(-)
+
+diff --git a/programs/wusa/main.c b/programs/wusa/main.c
+index 9cd8a2d..5dae802 100644
+--- a/programs/wusa/main.c
++++ b/programs/wusa/main.c
+@@ -66,6 +66,9 @@ struct installer_state
+     struct list updates;
+ };
+ 
++static const WCHAR x86W[] = {'x','8','6',0};
++static const WCHAR amd64W[] = {'a','m','d','6','4',0};
++
+ static BOOL strbuf_init(struct strbuf *buf)
+ {
+     buf->pos = 0;
+@@ -375,6 +378,14 @@ static WCHAR *lookup_expression(struct assembly_entry *assembly, const WCHAR *ke
+ 
+     if (!strcmpW(key, runtime_system32))
+     {
++    #if defined(__x86_64__)
++        if (!strcmpW(assembly->identity.architecture, x86W))
++        {
++            GetSystemWow64DirectoryW(path, sizeof(path)/sizeof(path[0]));
++            return strdupW(path);
++        }
++    #endif
++
+         GetSystemDirectoryW(path, sizeof(path)/sizeof(path[0]));
+         return strdupW(path);
+     }
+@@ -691,8 +702,13 @@ static BOOL install_registry(struct assembly_entry *assembly, BOOL dryrun)
+     struct registrykv_entry *registrykv;
+     HKEY root, subkey;
+     WCHAR *path;
++    REGSAM sam = KEY_ALL_ACCESS;
+     BOOL ret = TRUE;
+ 
++#if defined(__x86_64__)
++    if (!strcmpW(assembly->identity.architecture, x86W)) sam |= KEY_WOW64_32KEY;
++#endif
++
+     LIST_FOR_EACH_ENTRY(registryop, &assembly->registryops, struct registryop_entry, entry)
+     {
+         if (!(path = split_registry_key(registryop->key, &root)))
+@@ -701,7 +717,7 @@ static BOOL install_registry(struct assembly_entry *assembly, BOOL dryrun)
+             break;
+         }
+ 
+-        if (!dryrun && RegCreateKeyExW(root, path, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &subkey, NULL))
++        if (!dryrun && RegCreateKeyExW(root, path, 0, NULL, REG_OPTION_NON_VOLATILE, sam, NULL, &subkey, NULL))
+         {
+             WINE_ERR("Failed to open registry key %s\n", debugstr_w(registryop->key));
+             ret = FALSE;
+@@ -772,6 +788,14 @@ static BOOL install_assembly(struct list *manifest_list, struct assembly_identit
+         return FALSE;
+     }
+ 
++#if defined(__i386__)
++    if (!strcmpW(assembly->identity.architecture, amd64W))
++    {
++        WINE_ERR("Can not install amd64 assembly in 32 bit prefix\n");
++        return FALSE;
++    }
++#endif
++
+     assembly->status = ASSEMBLY_STATUS_IN_PROGRESS;
+ 
+     LIST_FOR_EACH_ENTRY(dependency, &assembly->dependencies, struct dependency_entry, entry)
+@@ -1027,6 +1051,37 @@ done:
+     return ret;
+ }
+ 
++static void restart_as_x86_64(void)
++{
++    WCHAR filename[MAX_PATH];
++    PROCESS_INFORMATION pi;
++    STARTUPINFOW si;
++    DWORD exit_code = 1;
++    BOOL is_wow64;
++    void *redir;
++
++    if (!IsWow64Process(GetCurrentProcess(), &is_wow64) || !is_wow64)
++        return;
++
++    memset(&si, 0, sizeof(si));
++    si.cb = sizeof(si);
++    GetModuleFileNameW(0, filename, MAX_PATH);
++
++    Wow64DisableWow64FsRedirection(&redir);
++    if (CreateProcessW(filename, GetCommandLineW(), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
++    {
++        WINE_TRACE("Restarting %s\n", wine_dbgstr_w(filename));
++        WaitForSingleObject(pi.hProcess, INFINITE);
++        GetExitCodeProcess(pi.hProcess, &exit_code);
++        CloseHandle(pi.hProcess);
++        CloseHandle(pi.hThread);
++    }
++    else WINE_ERR("Failed to restart 64-bit %s, err %d\n", wine_dbgstr_w(filename), GetLastError());
++    Wow64RevertWow64FsRedirection(redir);
++
++    ExitProcess(exit_code);
++}
++
+ int wmain(int argc, WCHAR *argv[])
+ {
+     static const WCHAR norestartW[] = {'/','n','o','r','e','s','t','a','r','t',0};
+@@ -1035,6 +1090,8 @@ int wmain(int argc, WCHAR *argv[])
+     WCHAR *filename = NULL;
+     int i;
+ 
++    restart_as_x86_64();
++
+     state.norestart = FALSE;
+     state.quiet = FALSE;
+ 
+-- 
+2.6.4
+

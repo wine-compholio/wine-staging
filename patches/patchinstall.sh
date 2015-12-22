@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a981d3738014339cd0fae1e7f5aa9429222ee03d"
+	echo "a0b8f178df8ed704fc732f5aef3b2e1f623512fc"
 }
 
 # Show version information
@@ -204,7 +204,6 @@ patch_enable_all ()
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
-	enable_ntdll_ProcessDebugFlags="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_Purist_Mode="$1"
 	enable_ntdll_RtlIpStringToAddress="$1"
@@ -725,9 +724,6 @@ patch_enable ()
 			;;
 		ntdll-Pipe_SpecialCharacters)
 			enable_ntdll_Pipe_SpecialCharacters="$2"
-			;;
-		ntdll-ProcessDebugFlags)
-			enable_ntdll_ProcessDebugFlags="$2"
 			;;
 		ntdll-ProcessQuotaLimits)
 			enable_ntdll_ProcessQuotaLimits="$2"
@@ -4361,18 +4357,6 @@ if test "$enable_ntdll_Pipe_SpecialCharacters" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-ProcessDebugFlags
-# |
-# | Modified files:
-# |   *	dlls/ntdll/process.c, dlls/ntdll/tests/info.c, server/debugger.c, server/process.c, server/protocol.def
-# |
-if test "$enable_ntdll_ProcessDebugFlags" -eq 1; then
-	patch_apply ntdll-ProcessDebugFlags/0001-ntdll-ProcessDebugFlags-should-return-debug_children.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: ProcessDebugFlags should return debug_children flag instead of !debugger_present.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-ProcessQuotaLimits
 # |
 # | Modified files:
@@ -5006,19 +4990,14 @@ fi
 # |   *	[#37087] Do not hold reference on parent process in wineserver
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/process.c, server/console.c, server/process.c, server/process.h, server/snapshot.c, server/thread.c,
-# | 	server/token.c
+# |   *	dlls/kernel32/tests/process.c, server/console.c, server/process.c, server/process.h, server/snapshot.c, server/thread.c
 # |
 if test "$enable_server_Parent_Process" -eq 1; then
-	patch_apply server-Parent_Process/0001-kernel32-tests-Remove-unnecessary-call-to-GetExitCod.patch
-	patch_apply server-Parent_Process/0002-kernel32-tests-Add-test-for-process-object-destructi.patch
-	patch_apply server-Parent_Process/0003-server-token_duplicate-should-not-reference-the-orig.patch
-	patch_apply server-Parent_Process/0004-server-Increase-size-of-PID-table-to-512-to-reduce-r.patch
-	patch_apply server-Parent_Process/0005-server-Do-not-hold-reference-on-parent-process.patch
+	patch_apply server-Parent_Process/0001-kernel32-tests-Add-test-for-process-object-destructi.patch
+	patch_apply server-Parent_Process/0002-server-Increase-size-of-PID-table-to-512-to-reduce-r.patch
+	patch_apply server-Parent_Process/0003-server-Do-not-hold-reference-on-parent-process.patch
 	(
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Remove unnecessary call to GetExitCodeProcess in process tests.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add test for process object destruction.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Token_duplicate should not reference the original token, which will get destroyed on process exit.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Increase size of PID table to 512 to reduce risk of collisions.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Do not hold reference on parent process.", 1 },';
 	) >> "$patchlist"

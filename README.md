@@ -151,7 +151,7 @@ for more details.*
 * Fix handling of empty section and key name for profile files. ([Wine Bug #8036](https://bugs.winehq.org/show_bug.cgi?id=8036))
 * Fix handling of invert_y in DrawTextExW ([Wine Bug #22109](https://bugs.winehq.org/show_bug.cgi?id=22109))
 * Fix handling of window attributes for WS_EX_LAYERED | WS_EX_COMPOSITED ([Wine Bug #37876](https://bugs.winehq.org/show_bug.cgi?id=37876))
-* Fix implementation of NtQueryInformationProcess for ProcessDebugFlags
+* ~~Fix implementation of NtQueryInformationProcess for ProcessDebugFlags~~
 * Fix implementation of msvcrt.close when stdout == stderr
 * Fix issue causing applications to report magic loopback address instead of real IP ([Wine Bug #37271](https://bugs.winehq.org/show_bug.cgi?id=37271))
 * Fix issues with dragging layers between images in Adobe Photoshop 7.0 ([Wine Bug #12007](https://bugs.winehq.org/show_bug.cgi?id=12007))

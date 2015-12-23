@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a0b8f178df8ed704fc732f5aef3b2e1f623512fc"
+	echo "35eebeef0fe0b3f03f44731f805c447b2342acfd"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 1.8"
+	echo "Wine Staging 1.9.0 (unreleased)"
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -131,6 +131,7 @@ patch_enable_all ()
 	enable_dinput_Initialize="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
+	enable_dsound_Revert_Cleanup="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
 	enable_dxgi_MakeWindowAssociation="$1"
@@ -278,7 +279,6 @@ patch_enable_all ()
 	enable_shell32_UnixFS="$1"
 	enable_shlwapi_AssocGetPerceivedType="$1"
 	enable_shlwapi_UrlCombine="$1"
-	enable_tdi_sys_Stub_Driver="$1"
 	enable_user32_DeferWindowPos="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawTextExW="$1"
@@ -339,7 +339,6 @@ patch_enable_all ()
 	enable_ws2_32_Sort_default_route="$1"
 	enable_ws2_32_TransmitFile="$1"
 	enable_ws2_32_WSACleanup="$1"
-	enable_ws2_32_WSAPoll="$1"
 	enable_ws2_32_WriteWatches="$1"
 	enable_ws2_32_getaddrinfo="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
@@ -505,6 +504,9 @@ patch_enable ()
 			;;
 		dsound-Fast_Mixer)
 			enable_dsound_Fast_Mixer="$2"
+			;;
+		dsound-Revert_Cleanup)
+			enable_dsound_Revert_Cleanup="$2"
 			;;
 		dxdiagn-Enumerate_DirectSound)
 			enable_dxdiagn_Enumerate_DirectSound="$2"
@@ -947,9 +949,6 @@ patch_enable ()
 		shlwapi-UrlCombine)
 			enable_shlwapi_UrlCombine="$2"
 			;;
-		tdi.sys-Stub_Driver)
-			enable_tdi_sys_Stub_Driver="$2"
-			;;
 		user32-DeferWindowPos)
 			enable_user32_DeferWindowPos="$2"
 			;;
@@ -1129,9 +1128,6 @@ patch_enable ()
 			;;
 		ws2_32-WSACleanup)
 			enable_ws2_32_WSACleanup="$2"
-			;;
-		ws2_32-WSAPoll)
-			enable_ws2_32_WSAPoll="$2"
 			;;
 		ws2_32-WriteWatches)
 			enable_ws2_32_WriteWatches="$2"
@@ -2030,7 +2026,11 @@ if test "$enable_dsound_EAX" -eq 1; then
 	if test "$enable_dsound_Fast_Mixer" -gt 1; then
 		abort "Patchset dsound-Fast_Mixer disabled, but dsound-EAX depends on that."
 	fi
+	if test "$enable_dsound_Revert_Cleanup" -gt 1; then
+		abort "Patchset dsound-Revert_Cleanup disabled, but dsound-EAX depends on that."
+	fi
 	enable_dsound_Fast_Mixer=1
+	enable_dsound_Revert_Cleanup=1
 fi
 
 if test "$enable_d3dx9_36_AnimationController" -eq 1; then
@@ -2961,10 +2961,24 @@ if test "$enable_dsound_Fast_Mixer" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset dsound-Revert_Cleanup
+# |
+# | Modified files:
+# |   *	dlls/dsound/buffer.c, dlls/dsound/dsound.c, dlls/dsound/dsound_private.h
+# |
+if test "$enable_dsound_Revert_Cleanup" -eq 1; then
+	patch_apply dsound-Revert_Cleanup/0001-Revert-dsound-Use-a-better-name-for-IDirectSoundBuff.patch
+	patch_apply dsound-Revert_Cleanup/0002-Revert-dsound-Simplify-error-handling-when-creating-.patch
+	(
+		echo '+    { "Sebastian Lackner", "Revert \"dsound: Use a better name for IDirectSoundBufferImpl_Create().\".", 1 },';
+		echo '+    { "Sebastian Lackner", "Revert \"dsound: Simplify error handling when creating a sound buffer.\".", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset dsound-EAX
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	dsound-Fast_Mixer
+# |   *	dsound-Fast_Mixer, dsound-Revert_Cleanup
 # |
 # | Modified files:
 # |   *	dlls/dsound/Makefile.in, dlls/dsound/buffer.c, dlls/dsound/dsound.c, dlls/dsound/dsound_eax.h,
@@ -5494,21 +5508,6 @@ if test "$enable_shlwapi_UrlCombine" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset tdi.sys-Stub_Driver
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35693] Add a stub driver for tdi.sys
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/tdi.sys/Makefile.in, dlls/tdi.sys/main.c, dlls/tdi.sys/tdi.sys.spec, loader/wine.inf.in
-# |
-if test "$enable_tdi_sys_Stub_Driver" -eq 1; then
-	patch_apply tdi.sys-Stub_Driver/0001-tdi.sys-add-a-stub-dll-try-3.patch
-	(
-		echo '+    { "Austin English", "tdi.sys: Add a stub dll.", 3 },';
-	) >> "$patchlist"
-fi
-
 # Patchset user32-DeferWindowPos
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6742,23 +6741,6 @@ if test "$enable_ws2_32_WSACleanup" -eq 1; then
 	(
 		echo '+    { "Matt Durgavich", "ws2_32: Proper WSACleanup implementation using wineserver function.", 2 },';
 		echo '+    { "Sebastian Lackner", "ws2_32: Invalidate client-side file descriptor cache in WSACleanup.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ws2_32-WSAPoll
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38601] Support for ws2_32.dll.WSAPoll
-# |
-# | Modified files:
-# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, dlls/ws2_32/ws2_32.spec, include/winsock2.h
-# |
-if test "$enable_ws2_32_WSAPoll" -eq 1; then
-	patch_apply ws2_32-WSAPoll/0001-include-Remove-check-for-__WINE_WNE_PORT_H-in-winsoc.patch
-	patch_apply ws2_32-WSAPoll/0002-ws2_32-Add-WSAPoll-implementation.patch
-	(
-		echo '+    { "Sebastian Lackner", "include: Remove check for __WINE_WNE_PORT_H in winsock2.h.", 1 },';
-		echo '+    { "Bruno Jesus", "ws2_32: Add WSAPoll() implementation.", 1 },';
 	) >> "$patchlist"
 fi
 

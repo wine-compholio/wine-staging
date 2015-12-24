@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "35eebeef0fe0b3f03f44731f805c447b2342acfd"
+	echo "6767ac4bb79ad774f0c850a8c4753a2e6fdea75f"
 }
 
 # Show version information
@@ -88,7 +88,6 @@ patch_enable_all ()
 	enable_Pipelight="$1"
 	enable_Staging="$1"
 	enable_advapi32_LsaLookupSids="$1"
-	enable_advapi32_RegCreateKeyTransacted="$1"
 	enable_advapi32_SetSecurityInfo="$1"
 	enable_amstream_GetMultiMediaStream="$1"
 	enable_api_ms_win_crt_Stub_DLLs="$1"
@@ -152,7 +151,6 @@ patch_enable_all ()
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_COMSPEC="$1"
 	enable_kernel32_Codepage_Conversion="$1"
-	enable_kernel32_CompareStringEx="$1"
 	enable_kernel32_CompareString_Length="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Cwd_Startup_Info="$1"
@@ -256,7 +254,6 @@ patch_enable_all ()
 	enable_server_Timestamp_Compat="$1"
 	enable_services_SERVICE_FILE_SYSTEM_DRIVER="$1"
 	enable_setupapi_HSPFILEQ_Check_Type="$1"
-	enable_setupapi_SetupDiSelectBestCompatDrv="$1"
 	enable_setupapi_SetupDiSetDeviceInstallParamsW="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
 	enable_sfc_SfcGetNextProtectedFile="$1"
@@ -372,9 +369,6 @@ patch_enable ()
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
-			;;
-		advapi32-RegCreateKeyTransacted)
-			enable_advapi32_RegCreateKeyTransacted="$2"
 			;;
 		advapi32-SetSecurityInfo)
 			enable_advapi32_SetSecurityInfo="$2"
@@ -567,9 +561,6 @@ patch_enable ()
 			;;
 		kernel32-Codepage_Conversion)
 			enable_kernel32_Codepage_Conversion="$2"
-			;;
-		kernel32-CompareStringEx)
-			enable_kernel32_CompareStringEx="$2"
 			;;
 		kernel32-CompareString_Length)
 			enable_kernel32_CompareString_Length="$2"
@@ -879,9 +870,6 @@ patch_enable ()
 			;;
 		setupapi-HSPFILEQ_Check_Type)
 			enable_setupapi_HSPFILEQ_Check_Type="$2"
-			;;
-		setupapi-SetupDiSelectBestCompatDrv)
-			enable_setupapi_SetupDiSelectBestCompatDrv="$2"
 			;;
 		setupapi-SetupDiSetDeviceInstallParamsW)
 			enable_setupapi_SetupDiSetDeviceInstallParamsW="$2"
@@ -1548,9 +1536,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_fonts_Missing_Fonts" -gt 1; then
 		abort "Patchset fonts-Missing_Fonts disabled, but category-stable depends on that."
 	fi
-	if test "$enable_kernel32_CompareStringEx" -gt 1; then
-		abort "Patchset kernel32-CompareStringEx disabled, but category-stable depends on that."
-	fi
 	if test "$enable_kernel32_Named_Pipe" -gt 1; then
 		abort "Patchset kernel32-Named_Pipe disabled, but category-stable depends on that."
 	fi
@@ -1712,7 +1697,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_dbghelp_Debug_Symbols=1
 	enable_ddraw_EnumSurfaces=1
 	enable_fonts_Missing_Fonts=1
-	enable_kernel32_CompareStringEx=1
 	enable_kernel32_Named_Pipe=1
 	enable_libs_Debug_Channel=1
 	enable_libs_Unicode_Collation=1
@@ -2295,18 +2279,6 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 		echo '+    { "Qian Hong", "advapi32/tests: Test prefix and use of TokenPrimaryGroup Sid.", 1 },';
 		echo '+    { "Qian Hong", "server: Create primary group using DOMAIN_GROUP_RID_USERS.", 1 },';
 		echo '+    { "Qian Hong", "advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset advapi32-RegCreateKeyTransacted
-# |
-# | Modified files:
-# |   *	dlls/advapi32/advapi32.spec, dlls/advapi32/registry.c
-# |
-if test "$enable_advapi32_RegCreateKeyTransacted" -eq 1; then
-	patch_apply advapi32-RegCreateKeyTransacted/0001-advapi32-Add-stubs-for-RegCreateKeyTransacted-A-W-fu.patch
-	(
-		echo '+    { "Sebastian Lackner", "advapi32: Add stubs for RegCreateKeyTransacted[A/W] functions.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3383,18 +3355,6 @@ if test "$enable_kernel32_Codepage_Conversion" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-CompareStringEx
-# |
-# | Modified files:
-# |   *	dlls/kernel32/locale.c
-# |
-if test "$enable_kernel32_CompareStringEx" -eq 1; then
-	patch_apply kernel32-CompareStringEx/0001-kernel32-Silence-repeated-CompareStringEx-FIXME.patch
-	(
-		echo '+    { "Sebastian Lackner", "kernel32: Silence repeated CompareStringEx FIXME.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-CompareString_Length
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4431,14 +4391,12 @@ fi
 # Patchset ntdll-SystemHandleInformation
 # |
 # | Modified files:
-# |   *	dlls/ntdll/nt.c, dlls/ntdll/tests/info.c, server/handle.c, server/protocol.def
+# |   *	dlls/ntdll/nt.c, dlls/ntdll/tests/info.c, server/handle.c, server/protocol.def, server/trace.c
 # |
 if test "$enable_ntdll_SystemHandleInformation" -eq 1; then
-	patch_apply ntdll-SystemHandleInformation/0001-ntdll-tests-Add-more-tests-for-SystemHandleInformati.patch
-	patch_apply ntdll-SystemHandleInformation/0002-server-Implement-wineserver-call-for-SystemHandleInf.patch
+	patch_apply ntdll-SystemHandleInformation/0001-server-Implement-wineserver-call-for-SystemHandleInf.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Add more tests for SystemHandleInformation.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Implement wineserver call for SystemHandleInformation.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Implement wineserver call for SystemHandleInformation.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -5007,11 +4965,9 @@ fi
 # |   *	dlls/kernel32/tests/process.c, server/console.c, server/process.c, server/process.h, server/snapshot.c, server/thread.c
 # |
 if test "$enable_server_Parent_Process" -eq 1; then
-	patch_apply server-Parent_Process/0001-kernel32-tests-Add-test-for-process-object-destructi.patch
-	patch_apply server-Parent_Process/0002-server-Increase-size-of-PID-table-to-512-to-reduce-r.patch
-	patch_apply server-Parent_Process/0003-server-Do-not-hold-reference-on-parent-process.patch
+	patch_apply server-Parent_Process/0001-server-Increase-size-of-PID-table-to-512-to-reduce-r.patch
+	patch_apply server-Parent_Process/0002-server-Do-not-hold-reference-on-parent-process.patch
 	(
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Add test for process object destruction.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Increase size of PID table to 512 to reduce risk of collisions.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Do not hold reference on parent process.", 1 },';
 	) >> "$patchlist"
@@ -5162,21 +5118,6 @@ if test "$enable_setupapi_HSPFILEQ_Check_Type" -eq 1; then
 	patch_apply setupapi-HSPFILEQ_Check_Type/0001-setupapi-Check-handle-type-for-HSPFILEQ-handles.patch
 	(
 		echo '+    { "Michael Müller", "setupapi: Check handle type for HSPFILEQ handles.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset setupapi-SetupDiSelectBestCompatDrv
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#32088] Add stub for setupapi.SetupDiSelectBestCompatDrv
-# |
-# | Modified files:
-# |   *	dlls/setupapi/setupapi.spec, dlls/setupapi/stubs.c
-# |
-if test "$enable_setupapi_SetupDiSelectBestCompatDrv" -eq 1; then
-	patch_apply setupapi-SetupDiSelectBestCompatDrv/0001-setupapi-Add-stub-for-SetupDiSelectBestCompatDrv.patch
-	(
-		echo '+    { "Austin English", "setupapi: Add stub for SetupDiSelectBestCompatDrv.", 1 },';
 	) >> "$patchlist"
 fi
 

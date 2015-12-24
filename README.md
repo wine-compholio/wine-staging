@@ -67,7 +67,7 @@ for more details.*
 * Add stub for ntoskrnl.KeWaitForMultipleObjects ([Wine Bug #32186](https://bugs.winehq.org/show_bug.cgi?id=32186))
 * Add stub for ntoskrnl.Mm{Map,Unmap}LockedPages
 * Add stub for ntoskrnl.PsRemoveLoadImageNotifyRoutine
-* Add stub for setupapi.SetupDiSelectBestCompatDrv ([Wine Bug #32088](https://bugs.winehq.org/show_bug.cgi?id=32088))
+* ~~Add stub for setupapi.SetupDiSelectBestCompatDrv~~ ([Wine Bug #32088](https://bugs.winehq.org/show_bug.cgi?id=32088))
 * Add stub for wininet.ParseX509EncodedCertificateForListBoxEntry ([Wine Bug #29842](https://bugs.winehq.org/show_bug.cgi?id=29842))
 * Add stub for winscard.SCardListReadersA/W ([Wine Bug #26978](https://bugs.winehq.org/show_bug.cgi?id=26978))
 * Add stub for winspool.SetPrinterW level 8 ([Wine Bug #24645](https://bugs.winehq.org/show_bug.cgi?id=24645))
@@ -76,7 +76,7 @@ for more details.*
 * Add stubbed ISWbemSecurity interfaces in wbemdisp
 * Add stubs for D3DXCreateAnimationController interface
 * Add stubs for additional wininet options in InternetSetOption
-* Add stubs for advapi32.RegCreateKeyTransacted[A/W]
+* ~~Add stubs for advapi32.RegCreateKeyTransacted[A/W]~~
 * Add support for CopyFileEx progress callback ([Wine Bug #22692](https://bugs.winehq.org/show_bug.cgi?id=22692))
 * Add support for GTK3 theming
 * Add support for GetPropValue to PulseAudio backend

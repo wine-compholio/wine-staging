@@ -1,17 +1,19 @@
-From 5576d1d8409f51c9d5ed2311d3b3a7ece07f0c9b Mon Sep 17 00:00:00 2001
+From 1703d568d9756fbf3d6a11889386ff9355f33755 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
-Date: Sat, 31 Oct 2015 22:17:43 +0100
-Subject: server: Implement wineserver call for SystemHandleInformation.
+Date: Thu, 24 Dec 2015 13:08:50 +0100
+Subject: server: Implement wineserver call for SystemHandleInformation. (v2)
 
+Signed-off-by: Sebastian Lackner <sebastian@fds-team.de>
 ---
- dlls/ntdll/nt.c         | 49 +++++++++++++++++++++++++++++++++++-------
- dlls/ntdll/tests/info.c |  8 +++----
- server/handle.c         | 57 +++++++++++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/nt.c         | 49 ++++++++++++++++++++++++++++++++++++-------
+ dlls/ntdll/tests/info.c | 10 ++++-----
+ server/handle.c         | 56 +++++++++++++++++++++++++++++++++++++++++++++++++
  server/protocol.def     | 16 ++++++++++++++
- 4 files changed, 118 insertions(+), 12 deletions(-)
+ server/trace.c          | 17 +++++++++++++++
+ 5 files changed, 135 insertions(+), 13 deletions(-)
 
 diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
-index 8ea1ddd..6d360c3 100644
+index 8ea1ddd..55255a8 100644
 --- a/dlls/ntdll/nt.c
 +++ b/dlls/ntdll/nt.c
 @@ -2004,18 +2004,51 @@ NTSTATUS WINAPI NtQuerySystemInformation(
@@ -41,7 +43,7 @@ index 8ea1ddd..6d360c3 100644
 -            else ret = STATUS_INFO_LENGTH_MISMATCH;
 -            FIXME("info_class SYSTEM_HANDLE_INFORMATION\n");
 +
-+            num_handles = (Length - FIELD_OFFSET(SYSTEM_HANDLE_INFORMATION, Handle)) / sizeof(SYSTEM_HANDLE_ENTRY);
++            num_handles = (Length - FIELD_OFFSET( SYSTEM_HANDLE_INFORMATION, Handle )) / sizeof(SYSTEM_HANDLE_ENTRY);
 +            if (!(info = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*info) * num_handles )))
 +                return STATUS_NO_MEMORY;
 +
@@ -52,10 +54,10 @@ index 8ea1ddd..6d360c3 100644
 +                {
 +                    SYSTEM_HANDLE_INFORMATION *shi = SystemInformation;
 +                    shi->Count = wine_server_reply_size( req ) / sizeof(*info);
-+                    len = FIELD_OFFSET(SYSTEM_HANDLE_INFORMATION, Handle[shi->Count]);
++                    len = FIELD_OFFSET( SYSTEM_HANDLE_INFORMATION, Handle[shi->Count] );
 +                    for (i = 0; i < shi->Count; i++)
 +                    {
-+                        memset(&shi->Handle[i], 0, sizeof(shi->Handle[i]));
++                        memset( &shi->Handle[i], 0, sizeof(shi->Handle[i]) );
 +                        shi->Handle[i].OwnerPid     = info[i].owner;
 +                        shi->Handle[i].HandleValue  = info[i].handle;
 +                        shi->Handle[i].AccessMask   = info[i].access;
@@ -64,7 +66,7 @@ index 8ea1ddd..6d360c3 100644
 +                }
 +                else if (ret == STATUS_BUFFER_TOO_SMALL)
 +                {
-+                    len = FIELD_OFFSET(SYSTEM_HANDLE_INFORMATION, Handle[reply->count]);
++                    len = FIELD_OFFSET( SYSTEM_HANDLE_INFORMATION, Handle[reply->count] );
 +                    ret = STATUS_INFO_LENGTH_MISMATCH;
 +                }
 +            }
@@ -75,10 +77,10 @@ index 8ea1ddd..6d360c3 100644
          break;
      case SystemCacheInformation:
 diff --git a/dlls/ntdll/tests/info.c b/dlls/ntdll/tests/info.c
-index 8e0a806..c0e2b1a 100644
+index 3219dbb..da509aa 100644
 --- a/dlls/ntdll/tests/info.c
 +++ b/dlls/ntdll/tests/info.c
-@@ -485,7 +485,7 @@ static void test_query_handle(void)
+@@ -487,7 +487,7 @@ static void test_query_handle(void)
      /* Request the needed length : a SystemInformationLength greater than one struct sets ReturnLength */
      ReturnLength = 0xdeadbeef;
      status = pNtQuerySystemInformation(SystemHandleInformation, shi, SystemInformationLength, &ReturnLength);
@@ -87,31 +89,29 @@ index 8e0a806..c0e2b1a 100644
      ok( ReturnLength != 0xdeadbeef, "Expected valid ReturnLength\n" );
  
      SystemInformationLength = ReturnLength;
-@@ -500,8 +500,8 @@ static void test_query_handle(void)
-         BOOL found = FALSE;
- 
-         ok( status == STATUS_SUCCESS, "Expected STATUS_SUCCESS, got %08x\n", status );
--        todo_wine ok( ReturnLength == ExpectedLength, "Expected length %u, got %u\n", ExpectedLength, ReturnLength );
--        todo_wine ok( shi->Count > 1, "Expected more than 1 handles, got %u\n", shi->Count );
-+        ok( ReturnLength == ExpectedLength, "Expected length %u, got %u\n", ExpectedLength, ReturnLength );
-+        ok( shi->Count > 1, "Expected more than 1 handles, got %u\n", shi->Count );
-         for (i = 0; i < shi->Count; i++)
-         {
-             if (shi->Handle[i].OwnerPid == GetCurrentProcessId() &&
-@@ -511,7 +511,7 @@ static void test_query_handle(void)
-                 break;
-             }
-         }
--        todo_wine ok( found, "Expected to find event handle in handle list\n" );
-+        ok( found, "Expected to find event handle in handle list\n" );
+@@ -503,13 +503,13 @@ static void test_query_handle(void)
      }
+     ok( status == STATUS_SUCCESS, "Expected STATUS_SUCCESS, got %08x\n", status );
+     ExpectedLength = FIELD_OFFSET(SYSTEM_HANDLE_INFORMATION, Handle[shi->Count]);
+-    todo_wine ok( ReturnLength == ExpectedLength || broken(ReturnLength == ExpectedLength - sizeof(DWORD)), /* Vista / 2008 */
+-                  "Expected length %u, got %u\n", ExpectedLength, ReturnLength );
+-    todo_wine ok( shi->Count > 1, "Expected more than 1 handle, got %u\n", shi->Count );
++    ok( ReturnLength == ExpectedLength || broken(ReturnLength == ExpectedLength - sizeof(DWORD)), /* Vista / 2008 */
++        "Expected length %u, got %u\n", ExpectedLength, ReturnLength );
++    ok( shi->Count > 1, "Expected more than 1 handle, got %u\n", shi->Count );
+     for (i = 0, found = FALSE; i < shi->Count && !found; i++)
+         found = (shi->Handle[i].OwnerPid == GetCurrentProcessId()) &&
+                 ((HANDLE)(ULONG_PTR)shi->Handle[i].HandleValue == EventHandle);
+-    todo_wine ok( found, "Expected to find event handle in handle list\n" );
++    ok( found, "Expected to find event handle in handle list\n" );
  
-     status = pNtQuerySystemInformation(SystemHandleInformation, NULL, SystemInformationLength, &ReturnLength);
+     CloseHandle(EventHandle);
+ 
 diff --git a/server/handle.c b/server/handle.c
-index 5043ff7..98e4d01 100644
+index 5043ff7..05d71ba 100644
 --- a/server/handle.c
 +++ b/server/handle.c
-@@ -745,3 +745,60 @@ DECL_HANDLER(get_security_object)
+@@ -745,3 +745,59 @@ DECL_HANDLER(get_security_object)
  
      release_object( obj );
  }
@@ -133,15 +133,14 @@ index 5043ff7..98e4d01 100644
 +    if (!table)
 +        return 0;
 +
-+    if (!info->handle)
-+    {
-+        info->count += table->count;
-+        return 0;
-+    }
-+
 +    for (i = 0, entry = table->entries; i <= table->last; i++, entry++)
 +    {
 +        if (!entry->ptr) continue;
++        if (!info->handle)
++        {
++            info->count++;
++            continue;
++        }
 +        assert( info->count );
 +        handle = info->handle++;
 +        handle->owner  = process->id;
@@ -173,10 +172,10 @@ index 5043ff7..98e4d01 100644
 +    }
 +}
 diff --git a/server/protocol.def b/server/protocol.def
-index 5b45078..200a2e9 100644
+index bfb9089..ea5bd61 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -3259,6 +3259,22 @@ enum coords_relative
+@@ -3266,6 +3266,22 @@ enum coords_relative
      VARARG(sd,security_descriptor); /* retrieved security descriptor */
  @END
  
@@ -192,13 +191,41 @@ index 5b45078..200a2e9 100644
 +@REQ(get_system_handles)
 +@REPLY
 +    unsigned int    count;        /* number of handles */
-+    VARARG(data,bytes);           /* array of handle_infos */
++    VARARG(data,handle_infos);    /* array of handle_infos */
 +@END
 +
 +
  /* Create a mailslot */
  @REQ(create_mailslot)
      unsigned int   access;        /* wanted access rights */
+diff --git a/server/trace.c b/server/trace.c
+index 405a1c9..8a26fdb 100644
+--- a/server/trace.c
++++ b/server/trace.c
+@@ -1142,6 +1142,23 @@ static void dump_varargs_rawinput_devices(const char *prefix, data_size_t size )
+     fputc( '}', stderr );
+ }
+ 
++static void dump_varargs_handle_infos( const char *prefix, data_size_t size )
++{
++    const struct handle_info *handle;
++
++    fprintf( stderr, "%s{", prefix );
++    while (size >= sizeof(*handle))
++    {
++        handle = cur_data;
++        fprintf( stderr, "{owner=%04x,handle=%04x,access=%08x}",
++                 handle->owner, handle->handle, handle->access );
++        size -= sizeof(*handle);
++        remove_data( sizeof(*handle) );
++        if (size) fputc( ',', stderr );
++    }
++    fputc( '}', stderr );
++}
++
+ typedef void (*dump_func)( const void *req );
+ 
+ /* Everything below this line is generated automatically by tools/make_requests */
 -- 
-2.6.1
+2.6.4
 

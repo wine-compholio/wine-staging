@@ -34,9 +34,10 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [2]:**
+**Bug fixes and features included in the next upcoming release [3]:**
 
 * Avoid corruption of caret when SetCaretPos() is called
+* SHMapHandle should not set error when NULL is passed as hShared
 * SysAllocStringByteLen should align terminating null WCHAR
 
 

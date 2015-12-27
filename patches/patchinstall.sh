@@ -276,6 +276,7 @@ patch_enable_all ()
 	enable_shell32_SHFileOperation_Win9x="$1"
 	enable_shell32_UnixFS="$1"
 	enable_shlwapi_AssocGetPerceivedType="$1"
+	enable_shlwapi_SHMapHandle="$1"
 	enable_shlwapi_UrlCombine="$1"
 	enable_user32_DeferWindowPos="$1"
 	enable_user32_Dialog_Paint_Event="$1"
@@ -938,6 +939,9 @@ patch_enable ()
 			;;
 		shlwapi-AssocGetPerceivedType)
 			enable_shlwapi_AssocGetPerceivedType="$2"
+			;;
+		shlwapi-SHMapHandle)
+			enable_shlwapi_SHMapHandle="$2"
 			;;
 		shlwapi-UrlCombine)
 			enable_shlwapi_UrlCombine="$2"
@@ -5456,6 +5460,20 @@ if test "$enable_shlwapi_AssocGetPerceivedType" -eq 1; then
 	(
 		echo '+    { "Mark Jansen", "shlwapi/tests: Add tests for AssocGetPerceivedType.", 1 },';
 		echo '+    { "Mark Jansen", "shlwapi: Implement AssocGetPerceivedType.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shlwapi-SHMapHandle
+# |
+# | Modified files:
+# |   *	dlls/shlwapi/ordinal.c, dlls/shlwapi/tests/ordinal.c
+# |
+if test "$enable_shlwapi_SHMapHandle" -eq 1; then
+	patch_apply shlwapi-SHMapHandle/0001-shlwapi-tests-Test-NULL-handle-duplication-in-SHMapH.patch
+	patch_apply shlwapi-SHMapHandle/0002-shlwapi-SHMapHandle-should-not-set-error-when-NULL-i.patch
+	(
+		echo '+    { "Bruno Jesus", "shlwapi/tests: Test NULL handle duplication in SHMapHandle().", 1 },';
+		echo '+    { "Sebastian Lackner", "shlwapi: SHMapHandle should not set error when NULL is passed as hShared.", 1 },';
 	) >> "$patchlist"
 fi
 

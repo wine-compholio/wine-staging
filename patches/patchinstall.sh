@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "6767ac4bb79ad774f0c850a8c4753a2e6fdea75f"
+	echo "93d7356290bfe5bfd2104f98592790841e33420e"
 }
 
 # Show version information
@@ -225,6 +225,7 @@ patch_enable_all ()
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
+	enable_oleaut32_SysAllocStringByteLen="$1"
 	enable_oleaut32_TKIND_COCLASS="$1"
 	enable_oleaut32_x86_64_Marshaller="$1"
 	enable_openal32_EFX_Extension="$1"
@@ -783,6 +784,9 @@ patch_enable ()
 			;;
 		nvencodeapi-Video_Encoder)
 			enable_nvencodeapi_Video_Encoder="$2"
+			;;
+		oleaut32-SysAllocStringByteLen)
+			enable_oleaut32_SysAllocStringByteLen="$2"
 			;;
 		oleaut32-TKIND_COCLASS)
 			enable_oleaut32_TKIND_COCLASS="$2"
@@ -4701,6 +4705,22 @@ if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
 		echo '+    { "Michael Müller", "nvencodeapi: First implementation.", 1 },';
 		echo '+    { "Michael Müller", "nvencodeapi: Add debian specific paths to native library.", 1 },';
 		echo '+    { "Michael Müller", "nvencodeapi: Add support for version 6.0.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset oleaut32-SysAllocStringByteLen
+# |
+# | Modified files:
+# |   *	dlls/oleaut32/oleaut.c, dlls/oleaut32/tests/vartype.c
+# |
+if test "$enable_oleaut32_SysAllocStringByteLen" -eq 1; then
+	patch_apply oleaut32-SysAllocStringByteLen/0001-oleaut32-Pass-size-without-terminating-null-to-get_c.patch
+	patch_apply oleaut32-SysAllocStringByteLen/0002-oleaut32-Align-terminating-null-character-in-SysAllo.patch
+	patch_apply oleaut32-SysAllocStringByteLen/0003-oleaut32-tests-Test-SysStringLen-on-string-allocated.patch
+	(
+		echo '+    { "Sebastian Lackner", "oleaut32: Pass size without terminating null to get_cache_entry.", 1 },';
+		echo '+    { "Sebastian Lackner", "oleaut32: Align terminating null character in SysAllocStringByteLen.", 1 },';
+		echo '+    { "Sebastian Lackner", "oleaut32/tests: Test SysStringLen() on string allocated with SysAllocStringByteLen.", 1 },';
 	) >> "$patchlist"
 fi
 

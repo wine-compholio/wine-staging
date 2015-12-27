@@ -1,0 +1,103 @@
+From cd1a0baf46ef8d3394fbd7ba220d850a372c172a Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 25 Dec 2015 06:38:10 +0100
+Subject: oleaut32: Align terminating null character in SysAllocStringByteLen.
+
+Signed-off-by: Sebastian Lackner <sebastian@fds-team.de>
+---
+ dlls/oleaut32/oleaut.c        | 14 ++++++--------
+ dlls/oleaut32/tests/vartype.c | 29 +++++++++++++++++++++++++++++
+ 2 files changed, 35 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/oleaut32/oleaut.c b/dlls/oleaut32/oleaut.c
+index 75f9cb4..78cb083 100644
+--- a/dlls/oleaut32/oleaut.c
++++ b/dlls/oleaut32/oleaut.c
+@@ -149,12 +149,9 @@ static bstr_t *alloc_bstr(size_t size)
+ 
+         if(cache_entry) {
+             if(WARN_ON(heap)) {
+-                size_t tail;
+-
+-                memset(ret, ARENA_INUSE_FILLER, FIELD_OFFSET(bstr_t, u.ptr[size+sizeof(WCHAR)]));
+-                tail = bstr_alloc_size(size) - FIELD_OFFSET(bstr_t, u.ptr[size+sizeof(WCHAR)]);
+-                if(tail)
+-                    memset(ret->u.ptr+size+sizeof(WCHAR), ARENA_TAIL_FILLER, tail);
++                size_t fill_size = (FIELD_OFFSET(bstr_t, u.ptr[size])+2*sizeof(WCHAR)-1) & ~(sizeof(WCHAR)-1);
++                memset(ret, ARENA_INUSE_FILLER, fill_size);
++                memset((char *)ret+fill_size, ARENA_TAIL_FILLER, bstr_alloc_size(size)-fill_size);
+             }
+             ret->size = size;
+             return ret;
+@@ -418,10 +415,11 @@ BSTR WINAPI SysAllocStringByteLen(LPCSTR str, UINT len)
+ 
+     if(str) {
+         memcpy(bstr->u.ptr, str, len);
+-        bstr->u.ptr[len] = bstr->u.ptr[len+1] = 0;
++        bstr->u.ptr[len] = 0;
+     }else {
+-        memset(bstr->u.ptr, 0, len+sizeof(WCHAR));
++        memset(bstr->u.ptr, 0, len+1);
+     }
++    bstr->u.str[(len+sizeof(WCHAR)-1)/sizeof(WCHAR)] = 0;
+ 
+     return bstr->u.str;
+ }
+diff --git a/dlls/oleaut32/tests/vartype.c b/dlls/oleaut32/tests/vartype.c
+index 7cbb059..d905d37 100644
+--- a/dlls/oleaut32/tests/vartype.c
++++ b/dlls/oleaut32/tests/vartype.c
+@@ -5444,7 +5444,9 @@ static void test_SysAllocStringByteLen(void)
+ {
+   const OLECHAR szTest[10] = { 'T','e','s','t','\0' };
+   const CHAR szTestA[6] = { 'T','e','s','t','\0','?' };
++  char *buf;
+   BSTR str;
++  int i;
+ 
+   if (sizeof(void *) == 4)  /* not limited to 0x80000000 on Win64 */
+   {
+@@ -5487,6 +5489,7 @@ static void test_SysAllocStringByteLen(void)
+ 
+     ok (bstr->dwLen == 3, "Expected 3, got %d\n", bstr->dwLen);
+     ok (!lstrcmpA((LPCSTR)bstr->szString, szTestTruncA), "String different\n");
++    ok (!bstr->szString[2], "String not terminated\n");
+     SysFreeString(str);
+   }
+ 
+@@ -5500,6 +5503,32 @@ static void test_SysAllocStringByteLen(void)
+     ok (!lstrcmpW(bstr->szString, szTest), "String different\n");
+     SysFreeString(str);
+   }
++
++  /* Make sure terminating null is aligned properly */
++  buf = HeapAlloc(GetProcessHeap(), 0, 1025);
++  ok (buf != NULL, "Expected non-NULL\n");
++  for (i = 0; i < 1024; i++)
++  {
++    LPINTERNAL_BSTR bstr;
++
++    str = SysAllocStringByteLen(NULL, i);
++    ok (str != NULL, "Expected non-NULL\n");
++    bstr = Get(str);
++    ok (bstr->dwLen == i, "Expected %d, got %d\n", i, bstr->dwLen);
++    ok (!bstr->szString[(i+sizeof(WCHAR)-1)/sizeof(WCHAR)], "String not terminated\n");
++    SysFreeString(str);
++
++    memset(buf, 0xaa, 1025);
++    str = SysAllocStringByteLen(buf, i);
++    ok (str != NULL, "Expected non-NULL\n");
++    bstr = Get(str);
++    ok (bstr->dwLen == i, "Expected %d, got %d\n", i, bstr->dwLen);
++    buf[i] = 0;
++    ok (!lstrcmpA((LPCSTR)bstr->szString, buf), "String different\n");
++    ok (!bstr->szString[(i+sizeof(WCHAR)-1)/sizeof(WCHAR)], "String not terminated\n");
++    SysFreeString(str);
++  }
++  HeapFree(GetProcessHeap(), 0, buf);
+ }
+ 
+ static void test_SysReAllocString(void)
+-- 
+2.6.4
+

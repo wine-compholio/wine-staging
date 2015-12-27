@@ -34,6 +34,11 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
+**Bug fixes and features included in the next upcoming release [1]:**
+
+* SysAllocStringByteLen should align terminating null WCHAR
+
+
 **Bug fixes and features in Wine Staging 1.8 [268]:**
 
 *Note: The following list only contains features and bug fixes which are not

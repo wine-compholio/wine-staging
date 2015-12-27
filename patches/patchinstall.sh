@@ -286,6 +286,7 @@ patch_enable_all ()
 	enable_user32_Mouse_Message_Hwnd="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
+	enable_user32_SetCaretPos="$1"
 	enable_user32_SetCoalescableTimer="$1"
 	enable_user32_WM_CAPTURECHANGE="$1"
 	enable_user32_WM_MDICALCCHILDSCROLL="$1"
@@ -967,6 +968,9 @@ patch_enable ()
 			;;
 		user32-ScrollWindowEx)
 			enable_user32_ScrollWindowEx="$2"
+			;;
+		user32-SetCaretPos)
+			enable_user32_SetCaretPos="$2"
 			;;
 		user32-SetCoalescableTimer)
 			enable_user32_SetCoalescableTimer="$2"
@@ -5601,6 +5605,18 @@ if test "$enable_user32_ScrollWindowEx" -eq 1; then
 	patch_apply user32-ScrollWindowEx/0001-user32-Fix-return-value-of-ScrollWindowEx-for-invisi.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "user32: Fix return value of ScrollWindowEx for invisible windows.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-SetCaretPos
+# |
+# | Modified files:
+# |   *	dlls/user32/caret.c, server/protocol.def, server/queue.c
+# |
+if test "$enable_user32_SetCaretPos" -eq 1; then
+	patch_apply user32-SetCaretPos/0001-user32-Set-correct-caret-state-in-the-server-in-SetC.patch
+	(
+		echo '+    { "Anton Baskanov", "user32: Set correct caret state in the server in SetCaretPos.", 4 },';
 	) >> "$patchlist"
 fi
 

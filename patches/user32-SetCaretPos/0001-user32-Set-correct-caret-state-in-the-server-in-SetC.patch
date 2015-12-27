@@ -1,0 +1,109 @@
+From 00f9c189e83c7e470ab03e779b6829467fe6e39b Mon Sep 17 00:00:00 2001
+From: Anton Baskanov <baskanov@gmail.com>
+Date: Fri, 25 Dec 2015 21:06:07 +0600
+Subject: user32: Set correct caret state in the server in SetCaretPos (try 4)
+
+Signed-off-by: Anton Baskanov <baskanov@gmail.com>
+
+The code in SetCaretPos doesn't change the caret state if it's position is unchanged.
+Reflect this at the server side to avoid caret corruption.
+
+try2:
+ - fixed incorrect if statement in the server
+try3:
+ - fixed multiline comment
+try4:
+ - replaced magic numbers with named constants
+---
+ dlls/user32/caret.c | 8 ++++----
+ server/protocol.def | 6 +++++-
+ server/queue.c      | 9 +++++++--
+ 3 files changed, 16 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/user32/caret.c b/dlls/user32/caret.c
+index 53bb5b4..734377a 100644
+--- a/dlls/user32/caret.c
++++ b/dlls/user32/caret.c
+@@ -86,7 +86,7 @@ static void CALLBACK CARET_Callback( HWND hwnd, UINT msg, UINT_PTR id, DWORD cti
+         req->x      = 0;
+         req->y      = 0;
+         req->hide   = 0;
+-        req->state  = -1;  /* toggle current state */
++        req->state  = CARET_STATE_TOGGLE;
+         if ((ret = !wine_server_call( req )))
+         {
+             hwnd      = wine_server_ptr_handle( reply->full_handle );
+@@ -256,7 +256,7 @@ BOOL WINAPI SetCaretPos( INT x, INT y )
+         req->x      = x;
+         req->y      = y;
+         req->hide   = 0;
+-        req->state  = 1;
++        req->state  = CARET_STATE_ON_IF_POS_CHANGED;
+         if ((ret = !wine_server_call_err( req )))
+         {
+             hwnd      = wine_server_ptr_handle( reply->full_handle );
+@@ -300,7 +300,7 @@ BOOL WINAPI HideCaret( HWND hwnd )
+         req->x      = 0;
+         req->y      = 0;
+         req->hide   = 1;
+-        req->state  = 0;
++        req->state  = CARET_STATE_OFF;
+         if ((ret = !wine_server_call_err( req )))
+         {
+             hwnd      = wine_server_ptr_handle( reply->full_handle );
+@@ -339,7 +339,7 @@ BOOL WINAPI ShowCaret( HWND hwnd )
+         req->x      = 0;
+         req->y      = 0;
+         req->hide   = -1;
+-        req->state  = 1;
++        req->state  = CARET_STATE_ON;
+         if ((ret = !wine_server_call_err( req )))
+         {
+             hwnd      = wine_server_ptr_handle( reply->full_handle );
+diff --git a/server/protocol.def b/server/protocol.def
+index bfb9089..7a7c7e1 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -2978,7 +2978,7 @@ enum coords_relative
+     int            x;             /* caret x position */
+     int            y;             /* caret y position */
+     int            hide;          /* increment for hide count (can be negative to show it) */
+-    int            state;         /* caret state (1=on, 0=off, -1=toggle current state) */
++    int            state;         /* caret state (see below) */
+ @REPLY
+     user_handle_t  full_handle;   /* handle to the current caret window */
+     rectangle_t    old_rect;      /* previous caret rectangle */
+@@ -2988,6 +2988,10 @@ enum coords_relative
+ #define SET_CARET_POS        0x01  /* set the caret position from x,y */
+ #define SET_CARET_HIDE       0x02  /* increment the caret hide count */
+ #define SET_CARET_STATE      0x04  /* set the caret on/off state */
++#define CARET_STATE_OFF                0 /* off */
++#define CARET_STATE_ON                 1 /* on */
++#define CARET_STATE_TOGGLE            -1 /* toggle current state */
++#define CARET_STATE_ON_IF_POS_CHANGED -2 /* on if the position differs, unchanged otherwise */
+ 
+ 
+ /* Set a window hook */
+diff --git a/server/queue.c b/server/queue.c
+index 3099e12..c04d73a 100644
+--- a/server/queue.c
++++ b/server/queue.c
+@@ -3039,8 +3039,13 @@ DECL_HANDLER(set_caret_info)
+     }
+     if (req->flags & SET_CARET_STATE)
+     {
+-        if (req->state == -1) input->caret_state = !input->caret_state;
+-        else input->caret_state = !!req->state;
++        if (req->state == CARET_STATE_TOGGLE) input->caret_state = !input->caret_state;
++        else if (req->state == CARET_STATE_ON_IF_POS_CHANGED)
++        {
++            if (req->x != reply->old_rect.left || req->y != reply->old_rect.top)
++                input->caret_state = 1;
++        }
++        else input->caret_state = (req->state == CARET_STATE_ON);
+     }
+ }
+ 
+-- 
+2.6.4
+

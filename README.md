@@ -34,9 +34,10 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [3]:**
+**Bug fixes and features included in the next upcoming release [4]:**
 
 * Avoid corruption of caret when SetCaretPos() is called
+* Check IsWoW64Process before calling Wow64 functions in UNIXFS_get_unix_path
 * SHMapHandle should not set error when NULL is passed as hShared
 * SysAllocStringByteLen should align terminating null WCHAR
 

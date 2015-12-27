@@ -274,6 +274,7 @@ patch_enable_all ()
 	enable_shell32_SHCreateSessionKey="$1"
 	enable_shell32_SHFileOperation_Move="$1"
 	enable_shell32_SHFileOperation_Win9x="$1"
+	enable_shell32_UNIXFS_get_unix_path="$1"
 	enable_shell32_UnixFS="$1"
 	enable_shlwapi_AssocGetPerceivedType="$1"
 	enable_shlwapi_SHMapHandle="$1"
@@ -933,6 +934,9 @@ patch_enable ()
 			;;
 		shell32-SHFileOperation_Win9x)
 			enable_shell32_SHFileOperation_Win9x="$2"
+			;;
+		shell32-UNIXFS_get_unix_path)
+			enable_shell32_UNIXFS_get_unix_path="$2"
 			;;
 		shell32-UnixFS)
 			enable_shell32_UnixFS="$2"
@@ -5434,6 +5438,18 @@ if test "$enable_shell32_SHFileOperation_Win9x" -eq 1; then
 	patch_apply shell32-SHFileOperation_Win9x/0001-shell32-Choose-return-value-for-SHFileOperationW-dep.patch
 	(
 		echo '+    { "Michael Müller", "shell32: Choose return value for SHFileOperationW depending on windows version.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shell32-UNIXFS_get_unix_path
+# |
+# | Modified files:
+# |   *	dlls/shell32/shfldr_unixfs.c
+# |
+if test "$enable_shell32_UNIXFS_get_unix_path" -eq 1; then
+	patch_apply shell32-UNIXFS_get_unix_path/0001-shell32-Check-IsWoW64Process-before-calling-Wow64-fu.patch
+	(
+		echo '+    { "Olivier F. R. Dierick", "shell32: Check IsWoW64Process before calling Wow64 functions.", 2 },';
 	) >> "$patchlist"
 fi
 

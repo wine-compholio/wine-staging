@@ -34,17 +34,7 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [6]:**
-
-* Avoid corruption of caret when SetCaretPos() is called
-* Check IsWoW64Process before calling Wow64 functions in UNIXFS_get_unix_path
-* Pass MOUSEHOOKSTRUCTEX struct to mouse hook callback ([Wine Bug #38314](https://bugs.winehq.org/show_bug.cgi?id=38314))
-* SHMapHandle should not set error when NULL is passed as hShared
-* SysAllocStringByteLen should align terminating null WCHAR
-* Workaround installation bug of IE7 caused by version bump
-
-
-**Bug fixes and features in Wine Staging 1.8 [268]:**
+**Bug fixes and features in Wine Staging 1.9.0 [269]:**
 
 *Note: The following list only contains features and bug fixes which are not
 yet available in vanilla Wine. They are removed from the list as soon as they
@@ -56,7 +46,6 @@ for more details.*
 * Add IDragSourceHelper stub interface ([Wine Bug #24699](https://bugs.winehq.org/show_bug.cgi?id=24699))
 * Add IHTMLLocation::hash property's getter implementation ([Wine Bug #32967](https://bugs.winehq.org/show_bug.cgi?id=32967))
 * Add a ProfileList\<UserSID> registry subkey ([Wine Bug #15670](https://bugs.winehq.org/show_bug.cgi?id=15670))
-* ~~Add a stub driver for tdi.sys~~ ([Wine Bug #35693](https://bugs.winehq.org/show_bug.cgi?id=35693))
 * Add implementation for comctl32.PROPSHEET_InsertPage. ([Wine Bug #25625](https://bugs.winehq.org/show_bug.cgi?id=25625))
 * Add implementation for mfplat.MFTEnum ([Wine Bug #39309](https://bugs.winehq.org/show_bug.cgi?id=39309))
 * Add implementation for mfplat.MFTRegister ([Wine Bug #37811](https://bugs.winehq.org/show_bug.cgi?id=37811))
@@ -77,7 +66,6 @@ for more details.*
 * Add stub for ntoskrnl.KeWaitForMultipleObjects ([Wine Bug #32186](https://bugs.winehq.org/show_bug.cgi?id=32186))
 * Add stub for ntoskrnl.Mm{Map,Unmap}LockedPages
 * Add stub for ntoskrnl.PsRemoveLoadImageNotifyRoutine
-* ~~Add stub for setupapi.SetupDiSelectBestCompatDrv~~ ([Wine Bug #32088](https://bugs.winehq.org/show_bug.cgi?id=32088))
 * Add stub for wininet.ParseX509EncodedCertificateForListBoxEntry ([Wine Bug #29842](https://bugs.winehq.org/show_bug.cgi?id=29842))
 * Add stub for winscard.SCardListReadersA/W ([Wine Bug #26978](https://bugs.winehq.org/show_bug.cgi?id=26978))
 * Add stub for winspool.SetPrinterW level 8 ([Wine Bug #24645](https://bugs.winehq.org/show_bug.cgi?id=24645))
@@ -86,7 +74,6 @@ for more details.*
 * Add stubbed ISWbemSecurity interfaces in wbemdisp
 * Add stubs for D3DXCreateAnimationController interface
 * Add stubs for additional wininet options in InternetSetOption
-* ~~Add stubs for advapi32.RegCreateKeyTransacted[A/W]~~
 * Add support for CopyFileEx progress callback ([Wine Bug #22692](https://bugs.winehq.org/show_bug.cgi?id=22692))
 * Add support for GTK3 theming
 * Add support for GetPropValue to PulseAudio backend
@@ -109,6 +96,7 @@ for more details.*
 * Anno 1602 installer depends on Windows 98 behavior of SHFileOperationW ([Wine Bug #37916](https://bugs.winehq.org/show_bug.cgi?id=37916))
 * Assign a drive serial number during prefix creation/update ([Wine Bug #17823](https://bugs.winehq.org/show_bug.cgi?id=17823))
 * Audio stuttering and performance drops in multiple applications ([Wine Bug #30639](https://bugs.winehq.org/show_bug.cgi?id=30639))
+* Avoid corruption of caret when SetCaretPos() is called
 * Avoid crashing when broken app tries to release surface although refcount is zero ([Wine Bug #18477](https://bugs.winehq.org/show_bug.cgi?id=18477))
 * Avoid race-conditions in NtReadFile() operations with write watches.
 * Avoid race-conditions of async WSARecv() operations with write watches.
@@ -119,6 +107,7 @@ for more details.*
 * CPU-Z fails to start because GetLogicalProcessorInformationEx returns FALSE
 * Calculate msvcrt exponential math operations with higher precision ([Wine Bug #37149](https://bugs.winehq.org/show_bug.cgi?id=37149))
 * Catch invalid memory accesses in imagehlp.CheckSumMappedFile
+* Check IsWoW64Process before calling Wow64 functions in UNIXFS_get_unix_path
 * Check architecture before trying to load libraries ([Wine Bug #38021](https://bugs.winehq.org/show_bug.cgi?id=38021))
 * Check handle type for HSPFILEQ handles ([Wine Bug #12332](https://bugs.winehq.org/show_bug.cgi?id=12332))
 * Codepage conversion should fail when destination length is < 0
@@ -161,7 +150,6 @@ for more details.*
 * Fix handling of empty section and key name for profile files. ([Wine Bug #8036](https://bugs.winehq.org/show_bug.cgi?id=8036))
 * Fix handling of invert_y in DrawTextExW ([Wine Bug #22109](https://bugs.winehq.org/show_bug.cgi?id=22109))
 * Fix handling of window attributes for WS_EX_LAYERED | WS_EX_COMPOSITED ([Wine Bug #37876](https://bugs.winehq.org/show_bug.cgi?id=37876))
-* ~~Fix implementation of NtQueryInformationProcess for ProcessDebugFlags~~
 * Fix implementation of msvcrt.close when stdout == stderr
 * Fix issue causing applications to report magic loopback address instead of real IP ([Wine Bug #37271](https://bugs.winehq.org/show_bug.cgi?id=37271))
 * Fix issues with dragging layers between images in Adobe Photoshop 7.0 ([Wine Bug #12007](https://bugs.winehq.org/show_bug.cgi?id=12007))
@@ -243,6 +231,7 @@ for more details.*
 * Need for Speed 3 installer requires devices in HKEY_DYN_DATA ([Wine Bug #7115](https://bugs.winehq.org/show_bug.cgi?id=7115))
 * Only set SFGAO_HASSUBFOLDER when there are really subfolders ([Wine Bug #24851](https://bugs.winehq.org/show_bug.cgi?id=24851))
 * Other Pipelight-specific enhancements
+* Pass MOUSEHOOKSTRUCTEX struct to mouse hook callback ([Wine Bug #38314](https://bugs.winehq.org/show_bug.cgi?id=38314))
 * Port Royale doesn't display ocean correctly ([Wine Bug #17913](https://bugs.winehq.org/show_bug.cgi?id=17913))
 * Prevent window managers from grouping all wine programs together ([Wine Bug #32699](https://bugs.winehq.org/show_bug.cgi?id=32699))
 * Process APC calls before starting process
@@ -264,6 +253,7 @@ for more details.*
 * Return fake device type when systemroot is located on virtual disk ([Wine Bug #36546](https://bugs.winehq.org/show_bug.cgi?id=36546))
 * Return proper status codes when NtReadFile/NtWriteFile is called on closed (but not disconnected) pipe
 * SHFileOperation with FO_MOVE should create new directory on Vista+ ([Wine Bug #25207](https://bugs.winehq.org/show_bug.cgi?id=25207))
+* SHMapHandle should not set error when NULL is passed as hShared
 * SO_CONNECT_TIME returns the appropriate time
 * Send WM_PAINT event during dialog creation ([Wine Bug #35652](https://bugs.winehq.org/show_bug.cgi?id=35652))
 * Set EOF on file which has a memory mapping should fail
@@ -305,7 +295,7 @@ for more details.*
 * Support for setcap on wine-preloader ([Wine Bug #26256](https://bugs.winehq.org/show_bug.cgi?id=26256))
 * Support for shell32 file operation progress dialog
 * Support for stored file ACLs ([Wine Bug #33576](https://bugs.winehq.org/show_bug.cgi?id=33576))
-* ~~Support for ws2_32.dll.WSAPoll~~ ([Wine Bug #38601](https://bugs.winehq.org/show_bug.cgi?id=38601))
+* SysAllocStringByteLen should align terminating null WCHAR
 * Tumblebugs 2 requires DXTn software encoding support ([Wine Bug #29586](https://bugs.winehq.org/show_bug.cgi?id=29586))
 * Update a XIM candidate position when cursor location changes ([Wine Bug #30938](https://bugs.winehq.org/show_bug.cgi?id=30938))
 * Use GLX_MESA_query_renderer extension to get more exact GPU infos
@@ -318,6 +308,7 @@ for more details.*
 * Voobly expects correct handling of WRITECOPY memory protection ([Wine Bug #29384](https://bugs.winehq.org/show_bug.cgi?id=29384))
 * Wine ignores IDF_CHECKFIRST flag in SetupPromptForDisk ([Wine Bug #20465](https://bugs.winehq.org/show_bug.cgi?id=20465))
 * Workaround for shlwapi URLs with relative paths
+* Workaround installation bug of IE7 caused by version bump
 * XEMBED support for embedding Wine windows inside Linux applications
 * eRacer Demo doesn't correctly display text ([Wine Bug #29598](https://bugs.winehq.org/show_bug.cgi?id=29598))
 * ntdll is missing WinSqm[Start|End]Session implementation ([Wine Bug #31971](https://bugs.winehq.org/show_bug.cgi?id=31971))

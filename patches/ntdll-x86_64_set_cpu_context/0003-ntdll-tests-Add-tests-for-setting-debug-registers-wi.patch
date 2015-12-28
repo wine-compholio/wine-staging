@@ -1,0 +1,117 @@
+From 2db0a83315fbe9f84369f0123ad1b5f27a4b202e Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 28 Dec 2015 03:00:56 +0100
+Subject: ntdll/tests: Add tests for setting debug registers with
+ NtSetContextThread.
+
+---
+ dlls/ntdll/tests/exception.c | 79 ++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 79 insertions(+)
+
+diff --git a/dlls/ntdll/tests/exception.c b/dlls/ntdll/tests/exception.c
+index a368997..f355513 100644
+--- a/dlls/ntdll/tests/exception.c
++++ b/dlls/ntdll/tests/exception.c
+@@ -1723,6 +1723,83 @@ static void test_dynamic_unwind(void)
+ #endif  /* __x86_64__ */
+ 
+ #if defined(__i386__) || defined(__x86_64__)
++
++static void test_debug_registers(void)
++{
++    NTSTATUS status;
++    CONTEXT ctx, ctx2;
++
++    memset(&ctx, 0, sizeof(ctx));
++    ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS;
++    ctx2.ContextFlags = CONTEXT_DEBUG_REGISTERS;
++
++    ctx.Dr0 = 0x42424240;
++    ctx.Dr2 = 0x126bb070;
++    ctx.Dr3 = 0x0badbad0;
++    ctx.Dr7 = 0xffff0115;
++    status = pNtSetContextThread(GetCurrentThread(), &ctx);
++    ok(status == STATUS_SUCCESS, "NtGetContextThread failed with %08x\n", status);
++    status = pNtGetContextThread(GetCurrentThread(), &ctx2);
++    ok(status == STATUS_SUCCESS, "NtGetContextThread failed with %x\n", status);
++    ctx2.Dr6 &= 0xf00f; ctx2.Dr7 &= ~0xdc00;
++    ok(ctx2.Dr0 == ctx.Dr0, "expected %lx, got %lx\n", (DWORD_PTR)ctx.Dr0, (DWORD_PTR)ctx2.Dr0);
++    ok(ctx2.Dr1 == ctx.Dr1, "expected %lx, got %lx\n", (DWORD_PTR)ctx.Dr1, (DWORD_PTR)ctx2.Dr1);
++    ok(ctx2.Dr2 == ctx.Dr2, "expected %lx, got %lx\n", (DWORD_PTR)ctx.Dr2, (DWORD_PTR)ctx2.Dr2);
++    ok(ctx2.Dr3 == ctx.Dr3, "expected %lx, got %lx\n", (DWORD_PTR)ctx.Dr3, (DWORD_PTR)ctx2.Dr3);
++    ok(ctx2.Dr6 == ctx.Dr6, "expected %lx, got %lx\n", (DWORD_PTR)ctx.Dr6, (DWORD_PTR)ctx2.Dr6);
++    ok(ctx2.Dr7 == ctx.Dr7, "expected %lx, got %lx\n", (DWORD_PTR)ctx.Dr7, (DWORD_PTR)ctx2.Dr7);
++
++    ctx.Dr0 = 0x42424242;
++    ctx.Dr2 = 0x100f0fe7;
++    ctx.Dr3 = 0x0abebabe;
++    ctx.Dr7 = 0x115;
++    status = pNtSetContextThread(GetCurrentThread(), &ctx);
++    ok(status == STATUS_SUCCESS, "NtGetContextThread failed with %08x\n", status);
++    status = pNtGetContextThread(GetCurrentThread(), &ctx2);
++    ok(status == STATUS_SUCCESS, "NtGetContextThread failed with %x\n", status);
++    ctx2.Dr6 &= 0xf00f; ctx2.Dr7 &= ~0xdc00;
++    ok(ctx2.Dr0 == ctx.Dr0, "expected %lx, got %lx\n", (DWORD_PTR)ctx.Dr0, (DWORD_PTR)ctx2.Dr0);
++    ok(ctx2.Dr1 == ctx.Dr1, "expected %lx, got %lx\n", (DWORD_PTR)ctx.Dr1, (DWORD_PTR)ctx2.Dr1);
++    ok(ctx2.Dr2 == ctx.Dr2, "expected %lx, got %lx\n", (DWORD_PTR)ctx.Dr2, (DWORD_PTR)ctx2.Dr2);
++    ok(ctx2.Dr3 == ctx.Dr3, "expected %lx, got %lx\n", (DWORD_PTR)ctx.Dr3, (DWORD_PTR)ctx2.Dr3);
++    ok(ctx2.Dr6 == ctx.Dr6, "expected %lx, got %lx\n", (DWORD_PTR)ctx.Dr6, (DWORD_PTR)ctx2.Dr6);
++    ok(ctx2.Dr7 == ctx.Dr7, "expected %lx, got %lx\n", (DWORD_PTR)ctx.Dr7, (DWORD_PTR)ctx2.Dr7);
++
++    /* setting Gx flags is not allowed */
++    ctx.Dr7 |= 0xaa;
++    status = pNtSetContextThread(GetCurrentThread(), &ctx);
++    ok(status == STATUS_SUCCESS, "NtGetContextThread failed with %08x\n", status);
++    status = pNtGetContextThread(GetCurrentThread(), &ctx2);
++    ok(status == STATUS_SUCCESS, "NtGetContextThread failed with %x\n", status);
++    ctx.Dr7 &= ~0xaa; ctx2.Dr7 &= ~0xdc00;
++todo_wine
++    ok(ctx2.Dr7 == ctx.Dr7, "expected %lx, got %lx\n", (DWORD_PTR)ctx.Dr7, (DWORD_PTR)ctx2.Dr7);
++
++    /* setting GE flag is not allowed on 32-bit, but on 64-bit */
++    ctx.Dr7 |= 0x200;
++    status = pNtSetContextThread(GetCurrentThread(), &ctx);
++    ok(status == STATUS_SUCCESS, "NtGetContextThread failed with %08x\n", status);
++    status = pNtGetContextThread(GetCurrentThread(), &ctx2);
++    ok(status == STATUS_SUCCESS, "NtGetContextThread failed with %x\n", status);
++#ifdef __i386__
++    ctx.Dr7 &= ~0x200; ctx2.Dr7 &= ~0xdc00;
++todo_wine
++    ok(ctx2.Dr7 == ctx.Dr7, "expected %lx, got %lx\n", (DWORD_PTR)ctx.Dr7, (DWORD_PTR)ctx2.Dr7);
++#else
++    ctx2.Dr7 &= ~0xdc00;
++    ok(ctx2.Dr7 == ctx.Dr7, "expected %lx, got %lx\n", (DWORD_PTR)ctx.Dr7, (DWORD_PTR)ctx2.Dr7);
++#endif
++
++    /* clearing LE flag is allowed */
++    ctx.Dr7 &= ~0x100;
++    status = pNtSetContextThread(GetCurrentThread(), &ctx);
++    ok(status == STATUS_SUCCESS, "NtGetContextThread failed with %08x\n", status);
++    status = pNtGetContextThread(GetCurrentThread(), &ctx2);
++    ok(status == STATUS_SUCCESS, "NtGetContextThread failed with %x\n", status);
++    ctx2.Dr7 &= ~0xdc00;
++    ok(ctx2.Dr7 == ctx.Dr7, "expected %lx, got %lx\n", (DWORD_PTR)ctx.Dr7, (DWORD_PTR)ctx2.Dr7);
++}
++
+ static DWORD outputdebugstring_exceptions;
+ 
+ static LONG CALLBACK outputdebugstring_vectored_handler(EXCEPTION_POINTERS *ExceptionInfo)
+@@ -1946,6 +2023,7 @@ START_TEST(exception)
+     test_unwind();
+     test_exceptions();
+     test_rtlraiseexception();
++    test_debug_registers();
+     test_outputdebugstring(1, FALSE);
+     test_ripevent(1);
+     test_vectored_continue_handler();
+@@ -1965,6 +2043,7 @@ START_TEST(exception)
+     pRtlLookupFunctionEntry            = (void *)GetProcAddress( hntdll,
+                                                                  "RtlLookupFunctionEntry" );
+ 
++    test_debug_registers();
+     test_outputdebugstring(1, FALSE);
+     test_ripevent(1);
+     test_vectored_continue_handler();
+-- 
+2.6.4
+

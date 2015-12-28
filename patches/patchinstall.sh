@@ -1962,6 +1962,13 @@ if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
 	enable_ntdll_Syscall_Wrappers=1
 fi
 
+if test "$enable_ntdll_Exception" -eq 1; then
+	if test "$enable_ntdll_x86_64_set_cpu_context" -gt 1; then
+		abort "Patchset ntdll-x86_64_set_cpu_context disabled, but ntdll-Exception depends on that."
+	fi
+	enable_ntdll_x86_64_set_cpu_context=1
+fi
+
 if test "$enable_ntdll_DllRedirects" -eq 1; then
 	if test "$enable_ntdll_DllOverrides_WOW64" -gt 1; then
 		abort "Patchset ntdll-DllOverrides_WOW64 disabled, but ntdll-DllRedirects depends on that."
@@ -4148,7 +4155,29 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-x86_64_set_cpu_context
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39454] Allow to set debug registers separately in NtSetContextThread
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_x86_64.c, dlls/ntdll/tests/exception.c, dlls/ntdll/thread.c
+# |
+if test "$enable_ntdll_x86_64_set_cpu_context" -eq 1; then
+	patch_apply ntdll-x86_64_set_cpu_context/0001-ntdll-Allow-to-set-debug-registers-separately-in-NtS.patch
+	patch_apply ntdll-x86_64_set_cpu_context/0002-ntdll-Receive-debug-registers-from-server-on-x86_64.patch
+	patch_apply ntdll-x86_64_set_cpu_context/0003-ntdll-tests-Add-tests-for-setting-debug-registers-wi.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Allow to set debug registers separately in NtSetContextThread.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Receive debug registers from server on x86_64.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for setting debug registers with NtSetContextThread.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-Exception
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-x86_64_set_cpu_context
 # |
 # | Modified files:
 # |   *	dlls/kernel32/debugger.c, dlls/ntdll/om.c, dlls/ntdll/tests/exception.c
@@ -4439,7 +4468,7 @@ fi
 # Patchset ntdll-SystemRoot_Symlink
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Exception, ntdll-Syscall_Wrappers
+# |   *	ntdll-x86_64_set_cpu_context, ntdll-Exception, ntdll-Syscall_Wrappers
 # |
 # | Modified files:
 # |   *	dlls/ntdll/om.c
@@ -4546,21 +4575,6 @@ if test "$enable_ntdll_Zero_mod_name" -eq 1; then
 	patch_apply ntdll-Zero_mod_name/0001-ntdll-Initialize-mod_name-to-zero.patch
 	(
 		echo '+    { "Qian Hong", "ntdll: Initialize mod_name to zero.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-x86_64_set_cpu_context
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39454] Allow to set debug registers separately in NtSetContextThread
-# |
-# | Modified files:
-# |   *	dlls/ntdll/signal_x86_64.c
-# |
-if test "$enable_ntdll_x86_64_set_cpu_context" -eq 1; then
-	patch_apply ntdll-x86_64_set_cpu_context/0001-ntdll-Allow-to-set-debug-registers-separately-in-NtS.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Allow to set debug registers separately in NtSetContextThread.", 1 },';
 	) >> "$patchlist"
 fi
 

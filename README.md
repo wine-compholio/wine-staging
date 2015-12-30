@@ -178,7 +178,7 @@ for more details.*
 * Implement FileNamesInformation class support for NtQueryDirectoryFile
 * Implement FolderImpl_Items and stubbed FolderItems interface
 * Implement ID3DXEffect::FindNextValidTechnique ([Wine Bug #34101](https://bugs.winehq.org/show_bug.cgi?id=34101))
-* Implement SystemHandleInformation info class
+* ~~Implement SystemHandleInformation info class~~
 * Implement a Courier New replacement font ([Wine Bug #20456](https://bugs.winehq.org/show_bug.cgi?id=20456))
 * Implement a Microsoft Yahei replacement font ([Wine Bug #13829](https://bugs.winehq.org/show_bug.cgi?id=13829))
 * Implement a Times New Roman replacement font ([Wine Bug #32342](https://bugs.winehq.org/show_bug.cgi?id=32342))
@@ -295,7 +295,7 @@ for more details.*
 * Support for setcap on wine-preloader ([Wine Bug #26256](https://bugs.winehq.org/show_bug.cgi?id=26256))
 * Support for shell32 file operation progress dialog
 * Support for stored file ACLs ([Wine Bug #33576](https://bugs.winehq.org/show_bug.cgi?id=33576))
-* SysAllocStringByteLen should align terminating null WCHAR
+* ~~SysAllocStringByteLen should align terminating null WCHAR~~
 * Tumblebugs 2 requires DXTn software encoding support ([Wine Bug #29586](https://bugs.winehq.org/show_bug.cgi?id=29586))
 * Update a XIM candidate position when cursor location changes ([Wine Bug #30938](https://bugs.winehq.org/show_bug.cgi?id=30938))
 * Use GLX_MESA_query_renderer extension to get more exact GPU infos

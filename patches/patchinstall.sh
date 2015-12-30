@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "93d7356290bfe5bfd2104f98592790841e33420e"
+	echo "d07a7bbba51d6c40a5ed089ab9069451805928c2"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 1.9.0"
+	echo "Wine Staging 1.9.1 (unreleased)"
 	echo "Copyright (C) 2014-2015 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -209,7 +209,6 @@ patch_enable_all ()
 	enable_ntdll_RtlIpStringToAddress="$1"
 	enable_ntdll_Status_Mapping="$1"
 	enable_ntdll_Syscall_Wrappers="$1"
-	enable_ntdll_SystemHandleInformation="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
@@ -226,7 +225,6 @@ patch_enable_all ()
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
-	enable_oleaut32_SysAllocStringByteLen="$1"
 	enable_oleaut32_TKIND_COCLASS="$1"
 	enable_oleaut32_x86_64_Marshaller="$1"
 	enable_openal32_EFX_Extension="$1"
@@ -742,9 +740,6 @@ patch_enable ()
 		ntdll-Syscall_Wrappers)
 			enable_ntdll_Syscall_Wrappers="$2"
 			;;
-		ntdll-SystemHandleInformation)
-			enable_ntdll_SystemHandleInformation="$2"
-			;;
 		ntdll-SystemRoot_Symlink)
 			enable_ntdll_SystemRoot_Symlink="$2"
 			;;
@@ -792,9 +787,6 @@ patch_enable ()
 			;;
 		nvencodeapi-Video_Encoder)
 			enable_nvencodeapi_Video_Encoder="$2"
-			;;
-		oleaut32-SysAllocStringByteLen)
-			enable_oleaut32_SysAllocStringByteLen="$2"
 			;;
 		oleaut32-TKIND_COCLASS)
 			enable_oleaut32_TKIND_COCLASS="$2"
@@ -4453,18 +4445,6 @@ if test "$enable_ntdll_Status_Mapping" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-SystemHandleInformation
-# |
-# | Modified files:
-# |   *	dlls/ntdll/nt.c, dlls/ntdll/tests/info.c, server/handle.c, server/protocol.def, server/trace.c
-# |
-if test "$enable_ntdll_SystemHandleInformation" -eq 1; then
-	patch_apply ntdll-SystemHandleInformation/0001-server-Implement-wineserver-call-for-SystemHandleInf.patch
-	(
-		echo '+    { "Sebastian Lackner", "server: Implement wineserver call for SystemHandleInformation.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-SystemRoot_Symlink
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -4751,22 +4731,6 @@ if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
 		echo '+    { "Michael Müller", "nvencodeapi: First implementation.", 1 },';
 		echo '+    { "Michael Müller", "nvencodeapi: Add debian specific paths to native library.", 1 },';
 		echo '+    { "Michael Müller", "nvencodeapi: Add support for version 6.0.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset oleaut32-SysAllocStringByteLen
-# |
-# | Modified files:
-# |   *	dlls/oleaut32/oleaut.c, dlls/oleaut32/tests/vartype.c
-# |
-if test "$enable_oleaut32_SysAllocStringByteLen" -eq 1; then
-	patch_apply oleaut32-SysAllocStringByteLen/0001-oleaut32-Pass-size-without-terminating-null-to-get_c.patch
-	patch_apply oleaut32-SysAllocStringByteLen/0002-oleaut32-Align-terminating-null-character-in-SysAllo.patch
-	patch_apply oleaut32-SysAllocStringByteLen/0003-oleaut32-tests-Test-SysStringLen-on-string-allocated.patch
-	(
-		echo '+    { "Sebastian Lackner", "oleaut32: Pass size without terminating null to get_cache_entry.", 1 },';
-		echo '+    { "Sebastian Lackner", "oleaut32: Align terminating null character in SysAllocStringByteLen.", 1 },';
-		echo '+    { "Sebastian Lackner", "oleaut32/tests: Test SysStringLen() on string allocated with SysAllocStringByteLen.", 1 },';
 	) >> "$patchlist"
 fi
 

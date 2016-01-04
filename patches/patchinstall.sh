@@ -278,6 +278,7 @@ patch_enable_all ()
 	enable_shlwapi_AssocGetPerceivedType="$1"
 	enable_shlwapi_SHMapHandle="$1"
 	enable_shlwapi_UrlCombine="$1"
+	enable_user32_Dead_Code="$1"
 	enable_user32_DeferWindowPos="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawTextExW="$1"
@@ -946,6 +947,9 @@ patch_enable ()
 			;;
 		shlwapi-UrlCombine)
 			enable_shlwapi_UrlCombine="$2"
+			;;
+		user32-Dead_Code)
+			enable_user32_Dead_Code="$2"
 			;;
 		user32-DeferWindowPos)
 			enable_user32_DeferWindowPos="$2"
@@ -5502,6 +5506,21 @@ if test "$enable_shlwapi_UrlCombine" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "shlwapi/tests: Add additional tests for UrlCombine and UrlCanonicalize.", 1 },';
 		echo '+    { "Sebastian Lackner", "shlwapi: UrlCombineW workaround for relative paths.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-Dead_Code
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39558] Remove dead code from SCROLL_TrackScrollBar
+# |
+# | Modified files:
+# |   *	dlls/user32/scroll.c
+# |
+if test "$enable_user32_Dead_Code" -eq 1; then
+	patch_apply user32-Dead_Code/0001-user32-Remove-dead-code-from-SCROLL_TrackScrollBar.patch
+	(
+		echo '+    { "Jarkko Korpi", "user32: Remove dead code from SCROLL_TrackScrollBar.", 1 },';
 	) >> "$patchlist"
 fi
 

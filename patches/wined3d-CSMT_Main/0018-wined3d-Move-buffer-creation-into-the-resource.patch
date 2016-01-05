@@ -1,4 +1,4 @@
-From e6f030ca36c31b52f7dce040eb03552a2a73b2e7 Mon Sep 17 00:00:00 2001
+From bd7832b10a3c2c43e33abff97a9447d52166da3e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 18 Sep 2013 22:49:34 +0200
 Subject: wined3d: Move buffer creation into the resource.
@@ -9,13 +9,12 @@ location scheme. Otherwise the unimplemented buffer_load_location and
 surface_load_location will write a lot of ERRs.
 ---
  dlls/wined3d/resource.c        | 66 ++++++++++++++++++++++++++++++++++++++++++
- dlls/wined3d/texture.c         |  2 +-
  dlls/wined3d/volume.c          | 63 ++--------------------------------------
  dlls/wined3d/wined3d_private.h |  4 ++-
- 4 files changed, 72 insertions(+), 63 deletions(-)
+ 3 files changed, 71 insertions(+), 62 deletions(-)
 
 diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
-index dda77f0..e20f353 100644
+index 5204fee..0d2145f 100644
 --- a/dlls/wined3d/resource.c
 +++ b/dlls/wined3d/resource.c
 @@ -223,6 +223,18 @@ HRESULT resource_init(struct wined3d_resource *resource, struct wined3d_device *
@@ -57,7 +56,7 @@ index dda77f0..e20f353 100644
      context_resource_unloaded(resource->device,
              resource, resource->type);
  }
-@@ -581,3 +599,51 @@ void wined3d_resource_release_map_ptr(const struct wined3d_resource *resource,
+@@ -597,3 +615,51 @@ void wined3d_resource_release_map_ptr(const struct wined3d_resource *resource,
              return;
      }
  }
@@ -109,24 +108,11 @@ index dda77f0..e20f353 100644
 +            return FALSE;
 +    }
 +}
-diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index 0241309..abd2d8a 100644
---- a/dlls/wined3d/texture.c
-+++ b/dlls/wined3d/texture.c
-@@ -1289,7 +1289,7 @@ static void texture3d_prepare_texture(struct wined3d_texture *texture, struct wi
-         void *mem = NULL;
- 
-         if (gl_info->supported[APPLE_CLIENT_STORAGE] && !format->convert
--                && volume_prepare_system_memory(volume))
-+                && wined3d_resource_prepare_system_memory(&volume->resource))
-         {
-             TRACE("Enabling GL_UNPACK_CLIENT_STORAGE_APPLE for volume %p\n", volume);
-             gl_info->gl_ops.gl.p_glPixelStorei(GL_UNPACK_CLIENT_STORAGE_APPLE, GL_TRUE);
 diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
-index 084e0e6..d823ebd 100644
+index 78b153d..c95af94 100644
 --- a/dlls/wined3d/volume.c
 +++ b/dlls/wined3d/volume.c
-@@ -316,42 +316,10 @@ void wined3d_volume_load(struct wined3d_volume *volume, struct wined3d_context *
+@@ -314,42 +314,10 @@ void wined3d_volume_load(struct wined3d_volume *volume, struct wined3d_context *
              srgb_mode ? WINED3D_LOCATION_TEXTURE_SRGB : WINED3D_LOCATION_TEXTURE_RGB);
  }
  
@@ -169,7 +155,7 @@ index 084e0e6..d823ebd 100644
      resource_cleanup(&volume->resource);
      volume->resource.parent_ops->wined3d_object_destroyed(volume->resource.parent);
      HeapFree(GetProcessHeap(), 0, volume);
-@@ -368,7 +336,7 @@ static void volume_unload(struct wined3d_resource *resource)
+@@ -366,7 +334,7 @@ static void volume_unload(struct wined3d_resource *resource)
  
      TRACE("texture %p.\n", resource);
  
@@ -178,7 +164,7 @@ index 084e0e6..d823ebd 100644
      {
          context = context_acquire(device, NULL);
          wined3d_resource_load_location(&volume->resource, context, WINED3D_LOCATION_SYSMEM);
-@@ -382,15 +350,6 @@ static void volume_unload(struct wined3d_resource *resource)
+@@ -380,15 +348,6 @@ static void volume_unload(struct wined3d_resource *resource)
          wined3d_resource_invalidate_location(&volume->resource, ~WINED3D_LOCATION_DISCARDED);
      }
  
@@ -192,9 +178,9 @@ index 084e0e6..d823ebd 100644
 -    }
 -
      /* The texture name is managed by the container. */
-     volume->flags &= ~WINED3D_VFLAG_CLIENT_STORAGE;
  
-@@ -468,24 +427,6 @@ static BOOL wined3d_volume_check_box_dimensions(const struct wined3d_volume *vol
+     resource_unload(resource);
+@@ -444,24 +403,6 @@ static BOOL wined3d_volume_check_box_dimensions(const struct wined3d_volume *vol
      return TRUE;
  }
  
@@ -219,7 +205,7 @@ index 084e0e6..d823ebd 100644
  HRESULT wined3d_volume_map(struct wined3d_volume *volume,
          struct wined3d_map_desc *map_desc, const struct wined3d_box *box, DWORD flags)
  {
-@@ -524,7 +465,7 @@ HRESULT wined3d_volume_map(struct wined3d_volume *volume,
+@@ -500,7 +441,7 @@ HRESULT wined3d_volume_map(struct wined3d_volume *volume,
      flags = wined3d_resource_sanitize_map_flags(&volume->resource, flags);
  
      context = context_acquire(device, NULL);
@@ -229,10 +215,10 @@ index 084e0e6..d823ebd 100644
          WARN("Out of memory.\n");
          map_desc->data = NULL;
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 828f9a7..67c1de2 100644
+index 6dc1b04..0049165 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2213,6 +2213,9 @@ void wined3d_resource_invalidate_location(struct wined3d_resource *resource, DWO
+@@ -2238,6 +2238,9 @@ void wined3d_resource_invalidate_location(struct wined3d_resource *resource, DWO
  BOOL wined3d_resource_is_offscreen(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
  void wined3d_resource_load_location(struct wined3d_resource *resource,
          struct wined3d_context *context, DWORD location) DECLSPEC_HIDDEN;
@@ -242,7 +228,7 @@ index 828f9a7..67c1de2 100644
  void wined3d_resource_release_map_ptr(const struct wined3d_resource *resource,
          const struct wined3d_context *context) DECLSPEC_HIDDEN;
  DWORD wined3d_resource_sanitize_map_flags(const struct wined3d_resource *resource, DWORD flags) DECLSPEC_HIDDEN;
-@@ -2348,7 +2351,6 @@ static inline struct wined3d_volume *volume_from_resource(struct wined3d_resourc
+@@ -2367,7 +2370,6 @@ static inline struct wined3d_volume *volume_from_resource(struct wined3d_resourc
      return CONTAINING_RECORD(resource, struct wined3d_volume, resource);
  }
  
@@ -251,5 +237,5 @@ index 828f9a7..67c1de2 100644
          unsigned int level, struct wined3d_volume **volume) DECLSPEC_HIDDEN;
  void wined3d_volume_destroy(struct wined3d_volume *volume) DECLSPEC_HIDDEN;
 -- 
-2.6.0
+2.6.4
 

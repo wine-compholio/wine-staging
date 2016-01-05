@@ -1,4 +1,4 @@
-From fd33771329457adaba5a2fb8006991e7ad756ec7 Mon Sep 17 00:00:00 2001
+From cb3001744c90910e2a44caa6bb05eb0c5a685efd Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Tue, 30 Jul 2013 22:17:10 +0200
 Subject: wined3d: Separate GL buffer discard control from ignoring
@@ -18,7 +18,7 @@ There are some problems left:
  3 files changed, 28 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
-index 675dbec..8b09aee 100644
+index 3945549..2421eb3 100644
 --- a/dlls/wined3d/buffer.c
 +++ b/dlls/wined3d/buffer.c
 @@ -32,7 +32,7 @@ WINE_DEFAULT_DEBUG_CHANNEL(d3d);
@@ -67,7 +67,7 @@ index 675dbec..8b09aee 100644
              wined3d_resource_allocate_sysmem(&buffer->resource);
              wined3d_cs_emit_buffer_swap_mem(device->cs, buffer, buffer->resource.map_heap_memory);
          }
-@@ -1332,3 +1338,10 @@ HRESULT CDECL wined3d_buffer_create_ib(struct wined3d_device *device, UINT size,
+@@ -1399,3 +1405,10 @@ HRESULT CDECL wined3d_buffer_create_ib(struct wined3d_device *device, UINT size,
  
      return WINED3D_OK;
  }
@@ -79,10 +79,10 @@ index 675dbec..8b09aee 100644
 +    buffer->flags |= WINED3D_BUFFER_DISCARD;
 +}
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 6b16d51..4b9af57 100644
+index ee76ef0..5eb8803 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -722,11 +722,17 @@ void wined3d_cs_emit_draw(struct wined3d_cs *cs, UINT start_idx, UINT index_coun
+@@ -732,11 +732,17 @@ void wined3d_cs_emit_draw(struct wined3d_cs *cs, UINT start_idx, UINT index_coun
      op->indexed = indexed;
  
      if (indexed)
@@ -100,7 +100,7 @@ index 6b16d51..4b9af57 100644
      }
      for (i = 0; i < sizeof(state->textures) / sizeof(*state->textures); i++)
      {
-@@ -2151,8 +2157,7 @@ static UINT wined3d_cs_exec_buffer_swap_mem(struct wined3d_cs *cs, const void *d
+@@ -2265,8 +2271,7 @@ static UINT wined3d_cs_exec_buffer_swap_mem(struct wined3d_cs *cs, const void *d
      const struct wined3d_cs_buffer_swap_mem *op = data;
      struct wined3d_buffer *buffer = op->buffer;
  
@@ -111,10 +111,10 @@ index 6b16d51..4b9af57 100644
      if (!buffer->buffer_object && buffer->resource.bind_count)
      {
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 4070e1d..0f88961 100644
+index 27a534a..c79b6a9 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2760,6 +2760,7 @@ struct wined3d_buffer
+@@ -2877,6 +2877,7 @@ struct wined3d_buffer
      GLenum buffer_object_usage;
      GLenum buffer_type_hint;
      DWORD flags;
@@ -122,14 +122,14 @@ index 4070e1d..0f88961 100644
      void *map_ptr;
  
      struct wined3d_map_range *maps;
-@@ -2785,6 +2786,7 @@ BYTE *buffer_get_sysmem(struct wined3d_buffer *This, struct wined3d_context *con
+@@ -2902,6 +2903,7 @@ BYTE *buffer_get_sysmem(struct wined3d_buffer *This, struct wined3d_context *con
  void buffer_internal_preload(struct wined3d_buffer *buffer, struct wined3d_context *context,
          const struct wined3d_state *state) DECLSPEC_HIDDEN;
  void buffer_invalidate_bo_range(struct wined3d_buffer *This, UINT offset, UINT size) DECLSPEC_HIDDEN;
 +void buffer_swap_mem(struct wined3d_buffer *buffer, BYTE *mem) DECLSPEC_HIDDEN;
+ HRESULT wined3d_buffer_upload_data(struct wined3d_buffer *buffer,
+         const struct wined3d_box *box, const void *data) DECLSPEC_HIDDEN;
  
- struct wined3d_rendertarget_view
- {
 -- 
-2.1.3
+2.6.4
 

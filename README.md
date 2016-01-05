@@ -110,7 +110,7 @@ for more details.*
 * Basic handling of write watches triggered while we're on the signal stack.
 * Basic support for CUDA
 * Black & White needs DXTn software decoding support ([Wine Bug #14939](https://bugs.winehq.org/show_bug.cgi?id=14939))
-* CPU-Z fails to start because GetLogicalProcessorInformationEx returns FALSE
+* ~~CPU-Z fails to start because GetLogicalProcessorInformationEx returns FALSE~~
 * Calculate msvcrt exponential math operations with higher precision ([Wine Bug #37149](https://bugs.winehq.org/show_bug.cgi?id=37149))
 * Catch invalid memory accesses in imagehlp.CheckSumMappedFile
 * Check IsWoW64Process before calling Wow64 functions in UNIXFS_get_unix_path
@@ -243,7 +243,7 @@ for more details.*
 * Process APC calls before starting process
 * Properly close sockets when WSACleanup is called ([Wine Bug #18670](https://bugs.winehq.org/show_bug.cgi?id=18670))
 * Properly handle multiple registry notifications per key
-* Properly implement GetLargestConsoleWindowSize ([Wine Bug #10919](https://bugs.winehq.org/show_bug.cgi?id=10919))
+* ~~Properly implement GetLargestConsoleWindowSize~~ ([Wine Bug #10919](https://bugs.winehq.org/show_bug.cgi?id=10919))
 * Properly implement imagehlp.ImageLoad and ImageUnload ([Wine Bug #23455](https://bugs.winehq.org/show_bug.cgi?id=23455))
 * Properly initialize caps->dwZBufferBitDepths in ddraw7_GetCaps ([Wine Bug #27002](https://bugs.winehq.org/show_bug.cgi?id=27002))
 * Properly render themed buttons when they are pressed ([Wine Bug #37584](https://bugs.winehq.org/show_bug.cgi?id=37584))

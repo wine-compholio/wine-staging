@@ -207,6 +207,7 @@ patch_enable_all ()
 	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_Purist_Mode="$1"
 	enable_ntdll_RtlIpStringToAddress="$1"
+	enable_ntdll_Serial_Port_Detection="$1"
 	enable_ntdll_Status_Mapping="$1"
 	enable_ntdll_Syscall_Wrappers="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
@@ -734,6 +735,9 @@ patch_enable ()
 			;;
 		ntdll-RtlIpStringToAddress)
 			enable_ntdll_RtlIpStringToAddress="$2"
+			;;
+		ntdll-Serial_Port_Detection)
+			enable_ntdll_Serial_Port_Detection="$2"
 			;;
 		ntdll-Status_Mapping)
 			enable_ntdll_Status_Mapping="$2"
@@ -4434,6 +4438,21 @@ if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
 		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddressEx.", 6 },';
 		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv4StringToAddressEx (try 5, resend).", 1 },';
 		echo '+    { "Mark Jansen", "ntdll/tests: Add tests for RtlIpv6AddressToString and RtlIpv6AddressToStringEx.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Serial_Port_Detection
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39793] Do a device check before returning a default serial port name
+# |
+# | Modified files:
+# |   *	dlls/ntdll/directory.c
+# |
+if test "$enable_ntdll_Serial_Port_Detection" -eq 1; then
+	patch_apply ntdll-Serial_Port_Detection/0001-ntdll-Do-a-device-check-before-returning-a-default-s.patch
+	(
+		echo '+    { "Alex Henrie", "ntdll: Do a device check before returning a default serial port name.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -34,8 +34,9 @@ Wine. All those differences are also documented on the
 Included bug fixes and improvements
 -----------------------------------
 
-**Bug fixes and features included in the next upcoming release [1]:**
+**Bug fixes and features included in the next upcoming release [2]:**
 
+* Do a device check before returning a default serial port name ([Wine Bug #39793](https://bugs.winehq.org/show_bug.cgi?id=39793))
 * Remove dead code from SCROLL_TrackScrollBar ([Wine Bug #39558](https://bugs.winehq.org/show_bug.cgi?id=39558))
 
 

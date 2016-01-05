@@ -2,7 +2,7 @@
 #
 # Python functions to read, split and apply patches.
 #
-# Copyright (C) 2014 Sebastian Lackner
+# Copyright (C) 2014-2016 Sebastian Lackner
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -565,8 +565,10 @@ def generate_ifdef_patch(original, patched, ifdef):
 
             # If this is the first hunk, then check if we have to extend it at the beginning
             if len(hunks) == 0:
+                assert srcpos == dstpos
                 while srcpos > 0 and srcpos not in split:
                     srcpos -= 1
+                    dstpos -= 1
                     srcdata.insert(0, lines[srcpos])
                     dstdata.insert(0, lines[srcpos])
                 hunks.append((srcpos, dstpos, srcdata, dstdata))
@@ -601,8 +603,8 @@ def generate_ifdef_patch(original, patched, ifdef):
                         prev_dstdata.append(lines[prev_endpos])
                         prev_endpos += 1
                     assert prev_dstpos + len(prev_dstdata) == dstpos
-                    hunks[-1][2] += srcdata
-                    hunks[-1][3] += dstdata
+                    prev_srcdata.extend(srcdata)
+                    prev_dstdata.extend(dstdata)
 
             # Ready with this hunk
             pass

@@ -165,8 +165,8 @@ def _latest_wine_commit(commit=None):
     assert len(commit) == 40 and commit == commit.lower()
     return commit
 
-def enum_directories(revision, path):
-    """Enumerate all subdirectories of 'path' at a specific revision."""
+def enum_directories(path):
+    """Enumerate all subdirectories of 'path'."""
     dirs = []
 
     if path[0:2] == "./":
@@ -174,64 +174,42 @@ def enum_directories(revision, path):
     elif path[0] == "/":
         raise RuntimeError("Expected relative path, not an absolute path")
 
-    if revision is None:
-        for name in os.listdir(path):
-            if name in [".", ".."]: continue
-            directory = os.path.join(path, name)
-            if not os.path.isdir(directory):
-                continue
-            dirs.append((name, directory))
-    else:
-        filename = "%s:%s" % (revision, path)
-        try:
-            content = subprocess.check_output(["git", "show", filename], stderr=_devnull)
-        except subprocess.CalledProcessError as e:
-            if e.returncode != 128: raise
-            return [] # ignore error
-        lines = content.split("\n")
-        if not lines[0].startswith("tree ") or lines[1] != "":
-            raise RuntimeError("Unexpected output from 'git show %s'" % filename)
-        for name in lines[2:]:
-            if name == "" or name[-1] != "/": continue
-            name = name[:-1]
-            dirs.append((name, os.path.join(path, name)))
+    for name in os.listdir(path):
+        directory = os.path.join(path, name)
+        if not os.path.isdir(directory):
+            continue
+        dirs.append((name, directory))
 
     return dirs
 
-def read_patchset(revision = None):
-    """Read information about all patchsets for a specific revision."""
+def read_patchset():
+    """Read information about all patchsets."""
     unique_id   = itertools.count()
     all_patches = {}
     name_to_id  = {}
     categories  = {}
 
     # Read in sorted order (to ensure created Makefile doesn't change too much)
-    for name, directory in sorted(enum_directories(revision, config.path_patches)):
+    for name, directory in sorted(enum_directories(config.path_patches)):
         patch = PatchSet(name, directory)
 
-        if revision is None:
-
-            # If its the latest revision, then request additional information
-            if not os.path.isdir(directory):
-                raise RuntimeError("Unable to open directory %s" % directory)
-
-            # Enumerate .patch files in the given directory, enumerate individual patches and affected files
-            for f in sorted(os.listdir(directory)):
-                if not re.match("^[0-9]{4}-.*\\.patch$", f):
-                    continue
-                if f.startswith(config.path_IfDefined):
-                    continue
-                if not os.path.isfile(os.path.join(directory, f)):
-                    continue
-                patch.files.append(f)
-                for p in patchutils.read_patch(os.path.join(directory, f)):
-                    patch.modified_files.add(p.modified_file)
-                    patch.patches.append(p)
-
-            # No single patch within this directory, ignore it
-            if len(patch.patches) == 0:
-                del patch
+        # Enumerate .patch files in the given directory, enumerate individual patches and affected files
+        for f in sorted(os.listdir(directory)):
+            if not re.match("^[0-9]{4}-.*\\.patch$", f):
                 continue
+            if f.startswith(config.path_IfDefined):
+                continue
+            if not os.path.isfile(os.path.join(directory, f)):
+                continue
+            patch.files.append(f)
+            for p in patchutils.read_patch(os.path.join(directory, f)):
+                patch.modified_files.add(p.modified_file)
+                patch.patches.append(p)
+
+        # No single patch within this directory, ignore it
+        if len(patch.patches) == 0:
+            del patch
+            continue
 
         i = next(unique_id)
         all_patches[i]   = patch
@@ -239,15 +217,11 @@ def read_patchset(revision = None):
 
     # Now read the definition files in a second step
     for i, patch in all_patches.iteritems():
+        filename = os.path.join(os.path.join(config.path_patches, patch.name), "definition")
         try:
-            filename = os.path.join(os.path.join(config.path_patches, patch.name), "definition")
-            if revision is None:
-                with open(filename) as fp:
-                    content = fp.read()
-            else:
-                filename = "%s:%s" % (revision, filename)
-                content = subprocess.check_output(["git", "show", filename], stderr=_devnull)
-        except (IOError, subprocess.CalledProcessError):
+            with open(filename) as fp:
+                content = fp.read()
+        except IOError:
             continue # Skip this definition file
 
         for line in content.split("\n"):
@@ -294,7 +268,7 @@ def read_patchset(revision = None):
             elif key == "ifdefined":
                 patch.ifdefined = val
 
-            elif revision is None:
+            else:
                 print "WARNING: Ignoring unknown command in definition file %s: %s" % (filename, line)
 
         # If patch is not disabled then finally add it to the category

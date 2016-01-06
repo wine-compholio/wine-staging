@@ -1,9 +1,9 @@
 #!/usr/bin/python2
 # -*- coding: utf-8 -*-
 #
-# Automatic patch dependency checker and apply script/README.md generator.
+# Automatic patch dependency checker and apply script generator.
 #
-# Copyright (C) 2014-2015 Sebastian Lackner
+# Copyright (C) 2014-2016 Sebastian Lackner
 # Copyright (C) 2015 Michael Müller
 #
 # This library is free software; you can redistribute it and/or
@@ -47,8 +47,6 @@ _devnull = open(os.devnull, 'wb')
 
 # Cached information to speed up patch dependency checks
 latest_wine_commit     = None
-latest_staging_version = None
-cached_patch_result    = {}
 
 class config(object):
     path_cache              = ".patchupdate.cache"
@@ -60,9 +58,6 @@ class config(object):
 
     path_template_script    = "staging/patchinstall.sh.in"
     path_script             = "patches/patchinstall.sh"
-
-    path_template_README_md = "staging/README.md.in"
-    path_README_md          = "README.md"
 
     path_IfDefined          = "9999-IfDefined.patch"
 
@@ -799,82 +794,6 @@ def generate_script(all_patches, skip_checks=False):
     # Add changes to git
     subprocess.call(["git", "add", config.path_script])
 
-def generate_markdown(all_patches, release_patches):
-    """Generate README.md including information about specific patches and bugfixes."""
-
-    def _format_bug(mode, bugid, bugname):
-        if mode < 0: bugname = "~~%s~~" % bugname
-        if bugid is None: return "* %s" % bugname
-        return "* %s ([Wine Bug #%d](https://bugs.winehq.org/show_bug.cgi?id=%d))" % \
-               (bugname, bugid, bugid) #, short_desc.replace("\\", "\\\\").replace("\"", "\\\""))
-
-    all_fixes = {}
-
-    # Get fixes for current version
-    for _, patch in all_patches.iteritems():
-        for sync, bugid, bugname in patch.fixes:
-            key = bugid if bugid is not None else bugname
-            all_fixes[key] = [1, bugid, bugname]
-
-    # Compare with fixes for last release
-    for _, patch in release_patches.iteritems():
-        for sync, bugid, bugname in patch.fixes:
-            if bugid is not None and all_fixes.has_key(bugid):
-                all_fixes[bugid][0] = 0
-            elif all_fixes.has_key(bugname):
-                all_fixes[bugname][0] = 0
-            elif bugid is None:
-                for k, v in all_fixes.iteritems():
-                    if v[2] != bugname: continue
-                    if v[1] is None: continue
-                    all_fixes[v[1]][0] = 0
-                    break
-                else:
-                    all_fixes[bugname] = [-1, None, bugname]
-            else:
-                all_fixes[bugid] = [-1, bugid, bugname]
-
-    # Generate lists for all new and old fixes
-    new_fixes = [(mode, bugid, bugname) for dummy, (mode, bugid, bugname) in
-                                            all_fixes.iteritems() if mode > 0]
-    old_fixes = [(mode, bugid, bugname) for dummy, (mode, bugid, bugname) in
-                                            all_fixes.iteritems() if mode <= 0]
-
-    # List of old fixes is not available when releasing a new version
-    if len(old_fixes) == 0:
-        old_fixes = new_fixes
-        new_fixes = []
-
-    # Generate information for current version
-    lines = []
-    if len(new_fixes):
-        lines.append("**Bug fixes and features included in the next upcoming release [%d]:**" % len(new_fixes))
-        lines.append("")
-        for mode, bugid, bugname in sorted(new_fixes, key=lambda x: x[2]):
-            lines.append(_format_bug(mode, bugid, bugname))
-        lines.append("")
-        lines.append("")
-    lines.append("**Bug fixes and features in Wine Staging %s [%d]:**" % (latest_staging_version, len(old_fixes)))
-    lines.append("")
-    lines.append("*Note: The following list only contains features and bug fixes which are not")
-    lines.append("yet available in vanilla Wine. They are removed from the list as soon as they")
-    lines.append("are included upstream. The list also includes features and fixes from previous")
-    lines.append("releases, take a look at the")
-    lines.append("[changelog](https://github.com/wine-compholio/wine-staging/blob/master/staging/changelog)")
-    lines.append("for more details.*")
-    lines.append("")
-    for mode, bugid, bugname in sorted(old_fixes, key=lambda x: x[2]):
-        lines.append(_format_bug(mode, bugid, bugname))
-
-    # Update README.md
-    with open(config.path_template_README_md) as template_fp:
-        template = template_fp.read()
-    with open(config.path_README_md, "w") as fp:
-        fp.write(template.format(fixes="\n".join(lines)))
-
-    # Add changes to git
-    subprocess.call(["git", "add", config.path_README_md])
-
 def wrap_changelog():
 
     lines = []
@@ -907,7 +826,7 @@ if __name__ == "__main__":
             raise argparse.ArgumentTypeError("not a valid commit hash")
         return commit
 
-    parser = argparse.ArgumentParser(description="Automatic patch dependency checker and apply script/README.md generator.")
+    parser = argparse.ArgumentParser(description="Automatic patch dependency checker and apply script generator.")
     parser.add_argument('--skip-checks', action='store_true', help="Skip dependency checks")
     parser.add_argument('--commit', type=_check_commit_hash, help="Use given commit hash instead of HEAD")
     parser.add_argument('--sync-bugs', action='store_true', help="Update bugs in bugtracker (requires admin rights)")
@@ -928,13 +847,11 @@ if __name__ == "__main__":
 
     try:
 
-        # Get information about Wine and Staging version
-        latest_wine_commit       = _latest_wine_commit(args.commit)
-        latest_staging_version   = _latest_staging_version(only_released=True)
+        # Get information about Wine version
+        latest_wine_commit = _latest_wine_commit(args.commit)
 
         # Read current and release patches
         all_patches     = read_patchset()
-        release_patches = read_patchset(revision="v%s" % latest_staging_version)
 
         # Check bugzilla
         check_bug_status(all_patches, sync_bugs=args.sync_bugs)
@@ -942,7 +859,6 @@ if __name__ == "__main__":
         # Update autogenerated files
         generate_ifdefined(all_patches, skip_checks=args.skip_checks)
         generate_script(all_patches, skip_checks=args.skip_checks)
-        generate_markdown(all_patches, release_patches)
         wrap_changelog()
 
     except PatchUpdaterError as e:

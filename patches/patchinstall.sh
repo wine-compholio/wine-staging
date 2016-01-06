@@ -201,6 +201,7 @@ patch_enable_all ()
 	enable_ntdll_Loader_Machine_Type="$1"
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
+	enable_ntdll_NtQuerySystemInformationEx="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
@@ -716,6 +717,9 @@ patch_enable ()
 			;;
 		ntdll-NtQuerySection)
 			enable_ntdll_NtQuerySection="$2"
+			;;
+		ntdll-NtQuerySystemInformationEx)
+			enable_ntdll_NtQuerySystemInformationEx="$2"
 			;;
 		ntdll-NtSetLdtEntries)
 			enable_ntdll_NtSetLdtEntries="$2"
@@ -4333,6 +4337,18 @@ if test "$enable_ntdll_NtQuerySection" -eq 1; then
 	(
 		echo '+    { "Dmitry Timoshkov", "ntdll: Implement NtQuerySection.", 2 },';
 		echo '+    { "Dmitry Timoshkov", "kernel32/tests: Add tests for NtQuerySection.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtQuerySystemInformationEx
+# |
+# | Modified files:
+# |   *	dlls/ntdll/nt.c
+# |
+if test "$enable_ntdll_NtQuerySystemInformationEx" -eq 1; then
+	patch_apply ntdll-NtQuerySystemInformationEx/0001-ntdll-Return-STATUS_SUCCESS-from-NtQuerySystemInform.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Return STATUS_SUCCESS from NtQuerySystemInformationEx.", 1 },';
 	) >> "$patchlist"
 fi
 

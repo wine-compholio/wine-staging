@@ -110,7 +110,7 @@ for more details.*
 * Basic handling of write watches triggered while we're on the signal stack.
 * Basic support for CUDA
 * Black & White needs DXTn software decoding support ([Wine Bug #14939](https://bugs.winehq.org/show_bug.cgi?id=14939))
-* ~~CPU-Z fails to start because GetLogicalProcessorInformationEx returns FALSE~~
+* CPU-Z fails to start because GetLogicalProcessorInformationEx returns FALSE
 * Calculate msvcrt exponential math operations with higher precision ([Wine Bug #37149](https://bugs.winehq.org/show_bug.cgi?id=37149))
 * Catch invalid memory accesses in imagehlp.CheckSumMappedFile
 * Check IsWoW64Process before calling Wow64 functions in UNIXFS_get_unix_path

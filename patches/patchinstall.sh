@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "367b30d8278684aaff373f5666b78264137d7a8f"
+	echo "d7e4193df2f22a87031e44ce358a626a5f92b295"
 }
 
 # Show version information
@@ -157,7 +157,6 @@ patch_enable_all ()
 	enable_kernel32_Cwd_Startup_Info="$1"
 	enable_kernel32_FreeUserPhysicalPages="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
-	enable_kernel32_GetLargestConsoleWindowSize="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
@@ -220,7 +219,6 @@ patch_enable_all ()
 	enable_ntdll_WinSqm="$1"
 	enable_ntdll_WriteWatches="$1"
 	enable_ntdll_Zero_mod_name="$1"
-	enable_ntdll_x86_64_set_cpu_context="$1"
 	enable_ntoskrnl_DriverTest="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
@@ -587,9 +585,6 @@ patch_enable ()
 		kernel32-GetFinalPathNameByHandle)
 			enable_kernel32_GetFinalPathNameByHandle="$2"
 			;;
-		kernel32-GetLargestConsoleWindowSize)
-			enable_kernel32_GetLargestConsoleWindowSize="$2"
-			;;
 		kernel32-LocaleNameToLCID)
 			enable_kernel32_LocaleNameToLCID="$2"
 			;;
@@ -775,9 +770,6 @@ patch_enable ()
 			;;
 		ntdll-Zero_mod_name)
 			enable_ntdll_Zero_mod_name="$2"
-			;;
-		ntdll-x86_64_set_cpu_context)
-			enable_ntdll_x86_64_set_cpu_context="$2"
 			;;
 		ntoskrnl-DriverTest)
 			enable_ntoskrnl_DriverTest="$2"
@@ -1964,13 +1956,6 @@ if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
 		abort "Patchset ntdll-Syscall_Wrappers disabled, but ntdll-NtQueryEaFile depends on that."
 	fi
 	enable_ntdll_Syscall_Wrappers=1
-fi
-
-if test "$enable_ntdll_Exception" -eq 1; then
-	if test "$enable_ntdll_x86_64_set_cpu_context" -gt 1; then
-		abort "Patchset ntdll-x86_64_set_cpu_context disabled, but ntdll-Exception depends on that."
-	fi
-	enable_ntdll_x86_64_set_cpu_context=1
 fi
 
 if test "$enable_ntdll_DllRedirects" -eq 1; then
@@ -3534,18 +3519,6 @@ if test "$enable_kernel32_GetFinalPathNameByHandle" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-GetLargestConsoleWindowSize
-# |
-# | Modified files:
-# |   *	dlls/kernel32/console.c, dlls/kernel32/tests/console.c
-# |
-if test "$enable_kernel32_GetLargestConsoleWindowSize" -eq 1; then
-	patch_apply kernel32-GetLargestConsoleWindowSize/0001-kernel32-Clamp-maximum-window-size-to-screen-buffer-.patch
-	(
-		echo '+    { "Sebastian Lackner", "kernel32: Clamp maximum window size to screen buffer size.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-LocaleNameToLCID
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4148,29 +4121,7 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-x86_64_set_cpu_context
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39454] Allow to set debug registers separately in NtSetContextThread
-# |
-# | Modified files:
-# |   *	dlls/ntdll/signal_x86_64.c, dlls/ntdll/tests/exception.c, dlls/ntdll/thread.c
-# |
-if test "$enable_ntdll_x86_64_set_cpu_context" -eq 1; then
-	patch_apply ntdll-x86_64_set_cpu_context/0001-ntdll-Allow-to-set-debug-registers-separately-in-NtS.patch
-	patch_apply ntdll-x86_64_set_cpu_context/0002-ntdll-Receive-debug-registers-from-server-on-x86_64.patch
-	patch_apply ntdll-x86_64_set_cpu_context/0003-ntdll-tests-Add-tests-for-setting-debug-registers-wi.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Allow to set debug registers separately in NtSetContextThread.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Receive debug registers from server on x86_64.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for setting debug registers with NtSetContextThread.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Exception
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-x86_64_set_cpu_context
 # |
 # | Modified files:
 # |   *	dlls/kernel32/debugger.c, dlls/ntdll/om.c, dlls/ntdll/tests/exception.c
@@ -4476,7 +4427,7 @@ fi
 # Patchset ntdll-SystemRoot_Symlink
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-x86_64_set_cpu_context, ntdll-Exception, ntdll-Syscall_Wrappers
+# |   *	ntdll-Exception, ntdll-Syscall_Wrappers
 # |
 # | Modified files:
 # |   *	dlls/ntdll/om.c

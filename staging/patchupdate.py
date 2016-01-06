@@ -479,7 +479,7 @@ def generate_ifdefined(all_patches, skip_checks=False):
             fp.write("\n")
 
             depends = resolve_dependencies(enabled_patches, i)
-            for f in patch.modified_files:
+            for f in sorted(patch.modified_files):
 
                 # Reconstruct the state after applying the dependencies
                 original = get_wine_file(f)

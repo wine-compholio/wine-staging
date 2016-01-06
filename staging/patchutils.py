@@ -379,90 +379,89 @@ def apply_patch(original, patchfile, reverse=False, fuzz=2):
         os.unlink(result.name)
         raise
 
+def _preprocess_source(fp):
+    """Simple C preprocessor to determine where we can safely add #ifdef instructions."""
+
+    _re_state0 = re.compile("(\"|/[/*])")
+    _re_state1 = re.compile("(\\\\\"|\\\\\\\\|\")")
+    _re_state2 = re.compile("\\*/")
+
+    # We need to read the original file, and figure out where lines can be splitted
+    lines = []
+    for line in fp:
+        lines.append(line.rstrip("\n"))
+
+    split = set([0])
+    state = 0
+
+    i = 0
+    while i < len(lines):
+
+        # Read a full line (and handle line continuation)
+        line = lines[i]
+        i += 1
+        while line.endswith("\\"):
+            if i >= len(lines):
+                raise CParserError("Unexpected end of file.")
+            line = line[:-1] + lines[i]
+            i += 1
+
+        # To find out where we can add our #ifdef tags we use a simple
+        # statemachine. This allows finding the beginning of a multiline
+        # instruction or comment.
+        j = 0
+        while True:
+
+            # State 0: No context
+            if state == 0:
+                match = _re_state0.search(line, j)
+                if match is None: break
+
+                if match.group(0) == "\"":
+                    state = 1 # Begin of string
+                elif match.group(0) == "/*":
+                    state = 2 # Begin of comment
+                elif match.group(0) == "//":
+                    break # Rest of the line is a comment, which can be safely ignored
+                else:
+                    assert 0
+
+            # State 1: Inside of string
+            elif state == 1:
+                match = _re_state1.search(line, j)
+                if match is None:
+                    raise CParserError("Line ended in the middle of a string.")
+
+                if match.group(0) == "\"":
+                    state = 0 # End of string
+                elif match.group(0) != "\\\"" and match.group(0) != "\\\\":
+                    assert 0
+
+            # State 2: Multiline comment
+            elif state == 2:
+                match = _re_state2.search(line, j)
+                if match is None: break
+
+                if match.group(0) == "*/":
+                    state = 0 # End of comment
+                else:
+                    assert 0
+
+            else:
+                raise CParserError("Internal state error.")
+            j = match.end()
+
+        # Only in state 0 (no context) we can split here
+        if state == 0:
+            split.add(i)
+
+    # Ensure that the last comment is properly terminated
+    if state != 0:
+        raise CParserError("Unexpected end of file.")
+    return lines, split
+
 def generate_ifdef_patch(original, patched, ifdef):
     """Generate a patch which adds #ifdef where necessary to keep both the original and patched version."""
-
-    def _preprocess_source(fp):
-        """Simple C preprocessor to determine where we can safely add #ifdef instructions."""
-
-        _re_state0 = re.compile("(\"|/[/*])")
-        _re_state1 = re.compile("(\\\"|\")")
-        _re_state2 = re.compile("\\*/")
-
-        # We need to read the original file, and figure out where lines can be splitted
-        lines = []
-        original.seek(0)
-        for line in original:
-            lines.append(line.rstrip("\n"))
-
-        split = set([0])
-        state = 0
-
-        i = 0
-        while i < len(lines):
-
-            # Read a full line (and handle line continuation)
-            line = lines[i]
-            i += 1
-            while line.endswith("\\"):
-                if i >= len(lines):
-                    raise CParserError("Unexpected end of file.")
-                line = line[:-1] + lines[i]
-                i += 1
-
-            # To find out where we can add our #ifdef tags we use a simple
-            # statemachine. This allows finding the beginning of a multiline
-            # instruction or comment.
-            j = 0
-            while True:
-
-                # State 0: No context
-                if state == 0:
-                    match = _re_state0.search(line, j)
-                    if match is None: break
-
-                    if match.group(0) == "\"":
-                        state = 1 # Begin of string
-                    elif match.group(0) == "/*":
-                        state = 2 # Begin of comment
-                    elif match.group(0) == "//":
-                        break # Rest of the line is a comment, which can be safely ignored
-                    else:
-                        assert 0
-
-                # State 1: Inside of string
-                elif state == 1:
-                    match = _re_state1.search(line, j)
-                    if match is None:
-                        raise CParserError("Line ended in the middle of a string.")
-
-                    if match.group(0) == "\"":
-                        state = 0 # End of string
-                    elif match.group(0) != "\\\"":
-                        assert 0
-
-                # State 2: Multiline comment
-                elif state == 2:
-                    match = _re_state2.search(line, j)
-                    if match is None: break
-
-                    if match.group(0) == "*/":
-                        state = 0 # End of comment
-                    else:
-                        assert 0
-
-                else:
-                    raise CParserError("Internal state error.")
-                j = match.end()
-
-            # Only in state 0 (no context) we can split here
-            if state == 0:
-                split.add(i)
-
-        # Ensure that the last comment is properly terminated
-        if state != 0:
-            raise CParserError("Unexpected end of file.")
-        return lines, split
 
     #
     # The basic of idea of this algorithm is as following:
@@ -482,6 +481,7 @@ def generate_ifdef_patch(original, patched, ifdef):
             raise PatchDiffError("Failed to compute diff (exitcode %d)." % exitcode)
 
         # Preprocess the original C source
+        original.seek(0)
         lines, split = _preprocess_source(original)
 
         # Parse the created diff file

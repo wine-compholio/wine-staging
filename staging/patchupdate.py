@@ -46,7 +46,7 @@ import ConfigParser
 _devnull = open(os.devnull, 'wb')
 
 # Cached information to speed up patch dependency checks
-latest_wine_commit     = None
+upstream_commit = None
 
 class config(object):
     path_cache              = ".patchupdate.cache"
@@ -143,12 +143,11 @@ def _sha256(fp):
 
 def _parse_int(val, default=0):
     """Parse an integer or boolean value."""
-    r = re.match("^[0-9]+$", val)
-    if r:
+    if re.match("^[0-9]+$", val):
         return int(val)
     try:
         return {'true': 1, 'yes': 1, 'false': 0, 'no': 0}[val.lower()]
-    except AttributeError:
+    except KeyError:
         return default
 
 def _staging_version():
@@ -156,7 +155,7 @@ def _staging_version():
     with open(config.path_version) as fp:
         return fp.read().strip()
 
-def _latest_wine_commit(commit=None):
+def _upstream_commit(commit=None):
     """Get latest wine commit."""
     if not os.path.isdir(config.path_wine):
         raise PatchUpdaterError("Please create a symlink to the wine repository in %s" % config.path_wine)
@@ -165,32 +164,24 @@ def _latest_wine_commit(commit=None):
     assert len(commit) == 40 and commit == commit.lower()
     return commit
 
-def enum_directories(path):
-    """Enumerate all subdirectories of 'path'."""
+def enum_patchsets(path):
+    """Return a sorted list of all subdirectories of path."""
     dirs = []
-
-    if path[0:2] == "./":
-        path = path[2:]
-    elif path[0] == "/":
-        raise RuntimeError("Expected relative path, not an absolute path")
-
     for name in os.listdir(path):
         directory = os.path.join(path, name)
         if not os.path.isdir(directory):
             continue
         dirs.append((name, directory))
+    return sorted(dirs)
 
-    return dirs
-
-def read_patchset():
+def load_patchsets():
     """Read information about all patchsets."""
     unique_id   = itertools.count()
     all_patches = {}
     name_to_id  = {}
     categories  = {}
 
-    # Read in sorted order (to ensure created Makefile doesn't change too much)
-    for name, directory in sorted(enum_directories(config.path_patches)):
+    for name, directory in enum_patchsets(config.path_patches):
         patch = PatchSet(name, directory)
 
         # Enumerate .patch files in the given directory, enumerate individual patches and affected files
@@ -272,12 +263,13 @@ def read_patchset():
                 print "WARNING: Ignoring unknown command in definition file %s: %s" % (filename, line)
 
         # If patch is not disabled then finally add it to the category
-        if not patch.disabled:
-            for category in patch.categories:
-                if not categories.has_key(category):
-                    categories[category] = set()
-                categories[category].add(i)
+        if patch.disabled:
+            continue
 
+        for category in patch.categories:
+            if not categories.has_key(category):
+                categories[category] = set()
+            categories[category].add(i)
 
     # Add virtual targets for all the categories
     for category, indices in categories.iteritems():
@@ -324,7 +316,7 @@ def contains_binary_patch(all_patches, indices, filename):
 
 def get_wine_file(filename):
     """Return the content of a file."""
-    entry  = "%s:%s" % (latest_wine_commit, filename)
+    entry  = "%s:%s" % (upstream_commit, filename)
     result = tempfile.NamedTemporaryFile()
     try:
         content = subprocess.check_call(["git", "show", entry], cwd=config.path_wine, \
@@ -363,14 +355,11 @@ def resolve_dependencies(all_patches, index = None, depends = None, auto_deps = 
 
     def _resolve(depends):
         for i in sorted(depends):
-            # Check for disabled patch
-            if all_patches[i].disabled:
+            if all_patches[i].disabled: # Check for disabled patch
                 raise PatchUpdaterError("Encountered dependency on disabled patchset %s" % all_patches[i].name)
-            # Dependencies already resolved
-            if all_patches[i].verify_resolved > 0:
+            if all_patches[i].verify_resolved > 0: # Dependencies already resolved
                 continue
-            # Detect circular dependency
-            if all_patches[i].verify_resolved < 0:
+            if all_patches[i].verify_resolved < 0: # Detect circular dependency
                 raise PatchUpdaterError("Circular dependency while trying to resolve %s" % all_patches[i].name)
 
             # Recusively resolve dependencies
@@ -749,7 +738,7 @@ def generate_script(all_patches, skip_checks=False):
         template = template_fp.read()
     with open(config.path_script, "w") as fp:
         fp.write(template.format(staging_version=_staging_version(),
-                                 latest_wine_commit=latest_wine_commit,
+                                 upstream_commit=upstream_commit,
                                  patch_helpers="".join(lines_helpers).rstrip("\n"),
                                  patch_resolver="".join(lines_resolver).rstrip("\n"),
                                  patch_apply="".join(lines_apply).rstrip("\n")))
@@ -791,12 +780,8 @@ if __name__ == "__main__":
         config.bugtracker_pass = None
 
     try:
-
-        # Get information about Wine version
-        latest_wine_commit = _latest_wine_commit(args.commit)
-
-        # Read current and release patches
-        all_patches     = read_patchset()
+        upstream_commit = _upstream_commit(args.commit)
+        all_patches = load_patchsets()
 
         # Check bugzilla
         check_bug_status(all_patches, sync_bugs=args.sync_bugs)

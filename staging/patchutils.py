@@ -19,6 +19,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 #
 
+import cStringIO as StringIO
 import collections
 import difflib
 import email.header
@@ -85,10 +86,14 @@ class PatchObject(object):
                 i -= len(buf)
 
 class _FileReader(object):
-    def __init__(self, filename):
+    def __init__(self, filename, content=None):
         self.filename = filename
-        self.fp       = open(self.filename)
         self.peeked   = None
+
+        if content is not None:
+            self.fp = StringIO.StringIO(content)
+        else:
+            self.fp = open(filename)
 
     def close(self):
         self.fp.close()
@@ -128,7 +133,7 @@ class _FileReader(object):
         tmp, self.peeked = self.peeked, None
         return tmp[1]
 
-def read_patch(filename):
+def read_patch(filename, content=None):
     """Iterates over all patches contained in a file, and returns PatchObject objects."""
 
     def _read_single_patch(fp, header, oldname=None, newname=None):
@@ -308,7 +313,7 @@ def read_patch(filename):
         return subject, 1
 
     header = {}
-    with _FileReader(filename) as fp:
+    with _FileReader(filename, content) as fp:
         while True:
             line = fp.peek()
             if line is None:

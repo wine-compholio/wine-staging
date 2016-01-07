@@ -211,6 +211,7 @@ patch_enable_all ()
 	enable_ntdll_Serial_Port_Detection="$1"
 	enable_ntdll_Status_Mapping="$1"
 	enable_ntdll_Syscall_Wrappers="$1"
+	enable_ntdll_SystemInterruptInformation="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
@@ -748,6 +749,9 @@ patch_enable ()
 			;;
 		ntdll-Syscall_Wrappers)
 			enable_ntdll_Syscall_Wrappers="$2"
+			;;
+		ntdll-SystemInterruptInformation)
+			enable_ntdll_SystemInterruptInformation="$2"
 			;;
 		ntdll-SystemRoot_Symlink)
 			enable_ntdll_SystemRoot_Symlink="$2"
@@ -4444,6 +4448,21 @@ if test "$enable_ntdll_Status_Mapping" -eq 1; then
 	patch_apply ntdll-Status_Mapping/0001-ntdll-Return-STATUS_INVALID_DEVICE_REQUEST-when-tryi.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Return STATUS_INVALID_DEVICE_REQUEST when trying to call NtReadFile on directory.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-SystemInterruptInformation
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39123] Return buffer filled with random values from SystemInterruptInformation
+# |
+# | Modified files:
+# |   *	dlls/ntdll/nt.c
+# |
+if test "$enable_ntdll_SystemInterruptInformation" -eq 1; then
+	patch_apply ntdll-SystemInterruptInformation/0001-ntdll-Return-buffer-filled-with-random-values-from-S.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Return buffer filled with random values from SystemInterruptInformation.", 1 },';
 	) >> "$patchlist"
 fi
 

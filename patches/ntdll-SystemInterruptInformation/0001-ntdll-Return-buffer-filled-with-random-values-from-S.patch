@@ -1,0 +1,39 @@
+From e42cdb8305dcebca77afba4a56e59391f2cb4a38 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Thu, 7 Jan 2016 06:01:01 +0100
+Subject: ntdll: Return buffer filled with random values from
+ SystemInterruptInformation.
+
+---
+ dlls/ntdll/nt.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
+index 9ee1923..fe3e8e8 100644
+--- a/dlls/ntdll/nt.c
++++ b/dlls/ntdll/nt.c
+@@ -2070,10 +2070,21 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+     case SystemInterruptInformation:
+         {
+             SYSTEM_INTERRUPT_INFORMATION sii;
++            int dev_random;
+ 
+             memset(&sii, 0, sizeof(sii));
+             len = sizeof(sii);
+ 
++            /* Some applications use the returned buffer for random number
++             * generation. Its unlikely that an app depends on the exact
++             * layout, so just fill with values from /dev/urandom. */
++            dev_random = open( "/dev/urandom", O_RDONLY );
++            if (dev_random != -1)
++            {
++                read( dev_random, &sii, sizeof(sii) );
++                close( dev_random );
++            }
++
+             if ( Length >= len)
+             {
+                 if (!SystemInformation) ret = STATUS_ACCESS_VIOLATION;
+-- 
+2.6.4
+

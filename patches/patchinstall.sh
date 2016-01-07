@@ -93,6 +93,7 @@ patch_enable_all ()
 	enable_api_ms_win_crt_Stub_DLLs="$1"
 	enable_authz_Stub_Functions="$1"
 	enable_browseui_Progress_Dialog="$1"
+	enable_cmd_Fix_Sharing="$1"
 	enable_comctl32_Button_Theming="$1"
 	enable_comctl32_PROPSHEET_InsertPage="$1"
 	enable_configure_Absolute_RPATH="$1"
@@ -393,6 +394,9 @@ patch_enable ()
 			;;
 		category-stable)
 			enable_category_stable="$2"
+			;;
+		cmd-Fix_Sharing)
+			enable_cmd_Fix_Sharing="$2"
 			;;
 		comctl32-Button_Theming)
 			enable_comctl32_Button_Theming="$2"
@@ -2373,6 +2377,21 @@ if test "$enable_browseui_Progress_Dialog" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "browseui: Implement IProgressDialog::SetAnimation.", 1 },';
 		echo '+    { "Michael Müller", "browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset cmd-Fix_Sharing
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34174] Fix sharing violation on temp file for piped output
+# |
+# | Modified files:
+# |   *	programs/cmd/tests/test_builtins.cmd.exp, programs/cmd/wcmdmain.c
+# |
+if test "$enable_cmd_Fix_Sharing" -eq 1; then
+	patch_apply cmd-Fix_Sharing/0001-cmd-Fix-sharing-permissions-for-pipe-file.patch
+	(
+		echo '+    { "Sebastian Lackner", "cmd: Fix sharing permissions for pipe file.", 1 },';
 	) >> "$patchlist"
 fi
 

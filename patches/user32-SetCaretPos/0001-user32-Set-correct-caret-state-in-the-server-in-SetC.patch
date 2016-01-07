@@ -1,24 +1,15 @@
-From 00f9c189e83c7e470ab03e779b6829467fe6e39b Mon Sep 17 00:00:00 2001
+From 64b178a05599e08ff0ceb28e6455bedd58487ff1 Mon Sep 17 00:00:00 2001
 From: Anton Baskanov <baskanov@gmail.com>
-Date: Fri, 25 Dec 2015 21:06:07 +0600
-Subject: user32: Set correct caret state in the server in SetCaretPos (try 4)
+Date: Thu, 31 Dec 2015 17:39:02 +0100
+Subject: user32: Set correct caret state in the server in SetCaretPos. (try 5)
 
 Signed-off-by: Anton Baskanov <baskanov@gmail.com>
-
-The code in SetCaretPos doesn't change the caret state if it's position is unchanged.
-Reflect this at the server side to avoid caret corruption.
-
-try2:
- - fixed incorrect if statement in the server
-try3:
- - fixed multiline comment
-try4:
- - replaced magic numbers with named constants
+Signed-off-by: Sebastian Lackner <sebastian@fds-team.de>
 ---
  dlls/user32/caret.c | 8 ++++----
  server/protocol.def | 6 +++++-
- server/queue.c      | 9 +++++++--
- 3 files changed, 16 insertions(+), 7 deletions(-)
+ server/queue.c      | 8 ++++++--
+ 3 files changed, 15 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/user32/caret.c b/dlls/user32/caret.c
 index 53bb5b4..734377a 100644
@@ -61,7 +52,7 @@ index 53bb5b4..734377a 100644
          {
              hwnd      = wine_server_ptr_handle( reply->full_handle );
 diff --git a/server/protocol.def b/server/protocol.def
-index bfb9089..7a7c7e1 100644
+index ea5bd61..ad702fe 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -2978,7 +2978,7 @@ enum coords_relative
@@ -85,22 +76,21 @@ index bfb9089..7a7c7e1 100644
  
  /* Set a window hook */
 diff --git a/server/queue.c b/server/queue.c
-index 3099e12..c04d73a 100644
+index 3099e12..25260e4 100644
 --- a/server/queue.c
 +++ b/server/queue.c
-@@ -3039,8 +3039,13 @@ DECL_HANDLER(set_caret_info)
+@@ -3039,8 +3039,12 @@ DECL_HANDLER(set_caret_info)
      }
      if (req->flags & SET_CARET_STATE)
      {
 -        if (req->state == -1) input->caret_state = !input->caret_state;
 -        else input->caret_state = !!req->state;
-+        if (req->state == CARET_STATE_TOGGLE) input->caret_state = !input->caret_state;
-+        else if (req->state == CARET_STATE_ON_IF_POS_CHANGED)
-+        {
-+            if (req->x != reply->old_rect.left || req->y != reply->old_rect.top)
-+                input->caret_state = 1;
-+        }
-+        else input->caret_state = (req->state == CARET_STATE_ON);
++        if (req->state == CARET_STATE_TOGGLE)
++            input->caret_state = !input->caret_state;
++        else if (req->state != CARET_STATE_ON_IF_POS_CHANGED)
++            input->caret_state = (req->state != CARET_STATE_OFF);
++        else if (req->x != reply->old_rect.left || req->y != reply->old_rect.top)
++            input->caret_state = 1;
      }
  }
  

@@ -5676,7 +5676,7 @@ fi
 if test "$enable_user32_SetCaretPos" -eq 1; then
 	patch_apply user32-SetCaretPos/0001-user32-Set-correct-caret-state-in-the-server-in-SetC.patch
 	(
-		echo '+    { "Anton Baskanov", "user32: Set correct caret state in the server in SetCaretPos.", 4 },';
+		echo '+    { "Anton Baskanov", "user32: Set correct caret state in the server in SetCaretPos.", 5 },';
 	) >> "$patchlist"
 fi
 

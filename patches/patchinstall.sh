@@ -213,6 +213,7 @@ patch_enable_all ()
 	enable_ntdll_SystemRoot_Symlink="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
+	enable_ntdll_Unused_Import_Descr="$1"
 	enable_ntdll_User_Shared_Data="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_Wait_User_APC="$1"
@@ -752,6 +753,9 @@ patch_enable ()
 			;;
 		ntdll-Threading)
 			enable_ntdll_Threading="$2"
+			;;
+		ntdll-Unused_Import_Descr)
+			enable_ntdll_Unused_Import_Descr="$2"
 			;;
 		ntdll-User_Shared_Data)
 			enable_ntdll_User_Shared_Data="$2"
@@ -4463,6 +4467,21 @@ if test "$enable_ntdll_Threading" -eq 1; then
 	patch_apply ntdll-Threading/0001-ntdll-Fix-race-condition-when-threads-are-killed-dur.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Fix race-condition when threads are killed during shutdown.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Unused_Import_Descr
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39792] Ignore import descriptors with empty thunk list
+# |
+# | Modified files:
+# |   *	dlls/ntdll/loader.c
+# |
+if test "$enable_ntdll_Unused_Import_Descr" -eq 1; then
+	patch_apply ntdll-Unused_Import_Descr/0001-ntdll-Skip-unused-import-descriptors-when-loading-li.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Skip unused import descriptors when loading libraries.", 1 },';
 	) >> "$patchlist"
 fi
 

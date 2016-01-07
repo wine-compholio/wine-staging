@@ -1,0 +1,36 @@
+From 62e17ad9aac4093654a2347aca9fd62f9e0499a8 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Thu, 7 Jan 2016 04:07:25 +0100
+Subject: ntdll: Skip unused import descriptors when loading libraries.
+
+---
+ dlls/ntdll/loader.c | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index 74feb97..d552a32 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -901,7 +901,18 @@ static NTSTATUS fixup_imports( WINE_MODREF *wm, LPCWSTR load_path )
+     status = STATUS_SUCCESS;
+     for (i = 0; i < nb_imports; i++)
+     {
+-        if (!(wm->deps[i] = import_dll( wm->ldr.BaseAddress, &imports[i], load_path )))
++        const IMAGE_IMPORT_DESCRIPTOR *descr = &imports[i];
++        const IMAGE_THUNK_DATA *import_list = get_rva( wm->ldr.BaseAddress, descr->u.OriginalFirstThunk ?
++                                                       (DWORD)descr->u.OriginalFirstThunk : (DWORD)descr->FirstThunk );
++        if (!import_list->u1.Ordinal)
++        {
++            const char *name = get_rva( wm->ldr.BaseAddress, descr->Name );
++            WARN( "Skipping unused import %s\n", debugstr_a(name) );
++            wm->deps[i] = NULL;
++            continue;
++        }
++
++        if (!(wm->deps[i] = import_dll( wm->ldr.BaseAddress, descr, load_path )))
+             status = STATUS_DLL_NOT_FOUND;
+     }
+     current_modref = prev;
+-- 
+2.6.4
+

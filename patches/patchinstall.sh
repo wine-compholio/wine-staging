@@ -238,6 +238,7 @@ patch_enable_all ()
 	enable_rasapi32_RasEnumDevicesA="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_rpcrt4_Pipe_Transport="$1"
+	enable_rpcrt4_RpcBindingServerFromClient="$1"
 	enable_secur32_ANSI_NTLM_Credentials="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
@@ -833,6 +834,9 @@ patch_enable ()
 			;;
 		rpcrt4-Pipe_Transport)
 			enable_rpcrt4_Pipe_Transport="$2"
+			;;
+		rpcrt4-RpcBindingServerFromClient)
+			enable_rpcrt4_RpcBindingServerFromClient="$2"
 			;;
 		secur32-ANSI_NTLM_Credentials)
 			enable_secur32_ANSI_NTLM_Credentials="$2"
@@ -4931,6 +4935,21 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 		echo '+    { "Jactry Zeng", "riched20: Implement ITextRange::GetStoryLength.", 1 },';
 		echo '+    { "Jactry Zeng", "riched20: Implement ITextSelection::GetStoryLength.", 1 },';
 		echo '+    { "Sebastian Lackner", "riched20: Silence repeated FIXMEs triggered by Adobe Reader.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset rpcrt4-RpcBindingServerFromClient
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38766] Implement stub for RpcBindingServerFromClient
+# |
+# | Modified files:
+# |   *	dlls/rpcrt4/rpc_binding.c, dlls/rpcrt4/rpcrt4.spec
+# |
+if test "$enable_rpcrt4_RpcBindingServerFromClient" -eq 1; then
+	patch_apply rpcrt4-RpcBindingServerFromClient/0001-rpcrt4-add-a-stub-for-RpcBindingServerFromClient.patch
+	(
+		echo '+    { "Austin English", "rpcrt4: Add a stub for RpcBindingServerFromClient.", 1 },';
 	) >> "$patchlist"
 fi
 

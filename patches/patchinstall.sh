@@ -128,6 +128,7 @@ patch_enable_all ()
 	enable_ddraw_d3d_execute_buffer="$1"
 	enable_dinput_DIPROP_USERNAME="$1"
 	enable_dinput_Initialize="$1"
+	enable_dmime_Dsound_Flags="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
@@ -501,6 +502,9 @@ patch_enable ()
 			;;
 		dinput-Initialize)
 			enable_dinput_Initialize="$2"
+			;;
+		dmime-Dsound_Flags)
+			enable_dmime_Dsound_Flags="$2"
 			;;
 		dsound-EAX)
 			enable_dsound_EAX="$2"
@@ -2947,6 +2951,21 @@ if test "$enable_dinput_Initialize" -eq 1; then
 	patch_apply dinput-Initialize/0001-dinput-Do-not-wait-for-hook-thread-startup-in-IDirec.patch
 	(
 		echo '+    { "Sebastian Lackner", "dinput: Do not wait for hook thread startup in IDirectInput8::Initialize.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dmime-Dsound_Flags
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39958] Fix regression caused by passing invalid flag combination to dsound8
+# |
+# | Modified files:
+# |   *	dlls/dmime/performance.c
+# |
+if test "$enable_dmime_Dsound_Flags" -eq 1; then
+	patch_apply dmime-Dsound_Flags/0001-dmime-Do-not-pass-both-DSBCAPS_CTRLPAN-and-DSBCAPS_C.patch
+	(
+		echo '+    { "Michael Stefaniuc", "dmime: Do not pass both DSBCAPS_CTRLPAN and DSBCAPS_CTRL3D to dsound.", 1 },';
 	) >> "$patchlist"
 fi
 

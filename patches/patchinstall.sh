@@ -299,6 +299,7 @@ patch_enable_all ()
 	enable_user32_WndProc="$1"
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_VerQueryValue="$1"
+	enable_vmm_vxd_PageReserve="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_wine_inf_Performance="$1"
 	enable_wine_inf_ProfileList_UserSID="$1"
@@ -1013,6 +1014,9 @@ patch_enable ()
 			;;
 		version-VerQueryValue)
 			enable_version_VerQueryValue="$2"
+			;;
+		vmm.vxd-PageReserve)
+			enable_vmm_vxd_PageReserve="$2"
 			;;
 		wbemdisp-ISWbemSecurity)
 			enable_wbemdisp_ISWbemSecurity="$2"
@@ -5806,6 +5810,21 @@ if test "$enable_version_VerQueryValue" -eq 1; then
 	patch_apply version-VerQueryValue/0001-version-Test-for-VerQueryValueA-try-2.patch
 	(
 		echo '+    { "Mark Jansen", "version: Test for VerQueryValueA.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset vmm.vxd-PageReserve
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36013] Fix protection flags passed to VirtualAlloc call in PageReserve VxDCall
+# |
+# | Modified files:
+# |   *	dlls/vmm.vxd/vmm.c
+# |
+if test "$enable_vmm_vxd_PageReserve" -eq 1; then
+	patch_apply vmm.vxd-PageReserve/0001-vmm.vxd-Fix-protection-flags-passed-to-VirtualAlloc.patch
+	(
+		echo '+    { "Sebastian Lackner", "vmm.vxd: Fix protection flags passed to VirtualAlloc.", 1 },';
 	) >> "$patchlist"
 fi
 

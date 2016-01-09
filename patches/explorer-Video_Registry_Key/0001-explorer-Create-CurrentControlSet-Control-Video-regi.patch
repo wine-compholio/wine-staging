@@ -1,0 +1,63 @@
+From cccf1b75e810985c817d34329878f497d853d3ac Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 9 Jan 2016 16:57:49 +0100
+Subject: explorer: Create CurrentControlSet\Control\Video registry key as
+ non-volatile.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Michael Müller <michael@fds-team.de>
+---
+ dlls/advapi32/tests/registry.c | 7 +++++++
+ programs/explorer/desktop.c    | 9 +++++++++
+ 2 files changed, 16 insertions(+)
+
+diff --git a/dlls/advapi32/tests/registry.c b/dlls/advapi32/tests/registry.c
+index ef5d989..6387697 100644
+--- a/dlls/advapi32/tests/registry.c
++++ b/dlls/advapi32/tests/registry.c
+@@ -1340,6 +1340,13 @@ static void test_reg_create_key(void)
+     RegDeleteKeyA(hkey1, "");
+     RegCloseKey(hkey1);
+ 
++    /* System\CurrentControlSet\Control\Video should be non-volatile */
++    ret = RegCreateKeyExA(HKEY_LOCAL_MACHINE, "System\\CurrentControlSet\\Control\\Video\\Wine",
++                          0, NULL, 0, KEY_NOTIFY, NULL, &hkey1, NULL);
++    ok(ret == ERROR_SUCCESS, "RegCreateKeyExA failed with error %d\n", ret);
++    RegDeleteKeyA(hkey1, "");
++    RegCloseKey(hkey1);
++
+     /* WOW64 flags - open an existing key */
+     hkey1 = NULL;
+     ret = RegCreateKeyExA(HKEY_LOCAL_MACHINE, "Software", 0, NULL, 0, KEY_READ|KEY_WOW64_32KEY, NULL, &hkey1, NULL);
+diff --git a/programs/explorer/desktop.c b/programs/explorer/desktop.c
+index 2b8502b..85cb4bc 100644
+--- a/programs/explorer/desktop.c
++++ b/programs/explorer/desktop.c
+@@ -775,6 +775,11 @@ static BOOL get_default_enable_shell( const WCHAR *name )
+ 
+ static HMODULE load_graphics_driver( const WCHAR *driver, const GUID *guid )
+ {
++    static const WCHAR video_keyW[] = {
++        'S','y','s','t','e','m','\\',
++        'C','u','r','r','e','n','t','C','o','n','t','r','o','l','S','e','t','\\',
++        'C','o','n','t','r','o','l','\\',
++        'V','i','d','e','o',0};
+     static const WCHAR device_keyW[] = {
+         'S','y','s','t','e','m','\\',
+         'C','u','r','r','e','n','t','C','o','n','t','r','o','l','S','e','t','\\',
+@@ -838,6 +843,10 @@ static HMODULE load_graphics_driver( const WCHAR *driver, const GUID *guid )
+         TRACE( "display %s driver %s\n", debugstr_guid(guid), debugstr_w(buffer) );
+     }
+ 
++    /* create video key first without REG_OPTION_VOLATILE attribute */
++    if (!RegCreateKeyExW( HKEY_LOCAL_MACHINE, video_keyW, 0, NULL, 0, KEY_SET_VALUE, NULL, &hkey, NULL ))
++        RegCloseKey( hkey );
++
+     sprintfW( key, device_keyW, guid->Data1, guid->Data2, guid->Data3,
+               guid->Data4[0], guid->Data4[1], guid->Data4[2], guid->Data4[3],
+               guid->Data4[4], guid->Data4[5], guid->Data4[6], guid->Data4[7] );
+-- 
+2.6.4
+

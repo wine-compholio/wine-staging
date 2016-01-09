@@ -135,6 +135,7 @@ patch_enable_all ()
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
 	enable_dxgi_MakeWindowAssociation="$1"
 	enable_dxva2_Video_Decoder="$1"
+	enable_explorer_Video_Registry_Key="$1"
 	enable_fonts_Missing_Fonts="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_MultiMonitor="$1"
@@ -520,6 +521,9 @@ patch_enable ()
 			;;
 		dxva2-Video_Decoder)
 			enable_dxva2_Video_Decoder="$2"
+			;;
+		explorer-Video_Registry_Key)
+			enable_explorer_Video_Registry_Key="$2"
 			;;
 		fonts-Missing_Fonts)
 			enable_fonts_Missing_Fonts="$2"
@@ -3128,6 +3132,18 @@ if test "$enable_dxva2_Video_Decoder" -eq 1; then
 		echo '+    { "Michael Müller", "dxva2: Add DRM mode for vaapi.", 1 },';
 		echo '+    { "Michael Müller", "dxva2: Fill h264 luma and chroma weights / offsets with default values in case they are not specified.", 1 },';
 		echo '+    { "Michael Müller", "dxva2: Always destroy buffers when calling vaRenderPicture.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset explorer-Video_Registry_Key
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/registry.c, programs/explorer/desktop.c
+# |
+if test "$enable_explorer_Video_Registry_Key" -eq 1; then
+	patch_apply explorer-Video_Registry_Key/0001-explorer-Create-CurrentControlSet-Control-Video-regi.patch
+	(
+		echo '+    { "Michael Müller", "explorer: Create CurrentControlSet\\\\Control\\\\Video registry key as non-volatile.", 1 },';
 	) >> "$patchlist"
 fi
 

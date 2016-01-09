@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d7e4193df2f22a87031e44ce358a626a5f92b295"
+	echo "91dd155e9bc13c1bc1be860cd67fe3e48c20feae"
 }
 
 # Show version information
@@ -93,7 +93,6 @@ patch_enable_all ()
 	enable_api_ms_win_crt_Stub_DLLs="$1"
 	enable_authz_Stub_Functions="$1"
 	enable_browseui_Progress_Dialog="$1"
-	enable_cmd_Fix_Sharing="$1"
 	enable_comctl32_Button_Theming="$1"
 	enable_comctl32_PROPSHEET_InsertPage="$1"
 	enable_configure_Absolute_RPATH="$1"
@@ -395,9 +394,6 @@ patch_enable ()
 			;;
 		category-stable)
 			enable_category_stable="$2"
-			;;
-		cmd-Fix_Sharing)
-			enable_cmd_Fix_Sharing="$2"
 			;;
 		comctl32-Button_Theming)
 			enable_comctl32_Button_Theming="$2"
@@ -2384,21 +2380,6 @@ if test "$enable_browseui_Progress_Dialog" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset cmd-Fix_Sharing
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34174] Fix sharing violation on temp file for piped output
-# |
-# | Modified files:
-# |   *	programs/cmd/tests/test_builtins.cmd.exp, programs/cmd/wcmdmain.c
-# |
-if test "$enable_cmd_Fix_Sharing" -eq 1; then
-	patch_apply cmd-Fix_Sharing/0001-cmd-Fix-sharing-permissions-for-pipe-file.patch
-	(
-		echo '+    { "Sebastian Lackner", "cmd: Fix sharing permissions for pipe file.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset comctl32-Button_Theming
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2694,16 +2675,12 @@ fi
 # |   *	[#26898] Support for DDS file format in D3DXSaveTextureToFileInMemory
 # |
 # | Modified files:
-# |   *	dlls/d3dx9_36/d3dx9_36_private.h, dlls/d3dx9_36/surface.c, dlls/d3dx9_36/tests/surface.c, dlls/d3dx9_36/texture.c
+# |   *	dlls/d3dx9_36/d3dx9_36_private.h, dlls/d3dx9_36/surface.c, dlls/d3dx9_36/texture.c
 # |
 if test "$enable_d3dx9_36_DDS" -eq 1; then
-	patch_apply d3dx9_36-DDS/0001-d3dx9_36-tests-Add-D3DXSaveSurfaceToFileInMemory-D3D.patch
-	patch_apply d3dx9_36-DDS/0002-d3dx9_36-Fix-several-issues-in-save_dds_surface_to_m.patch
-	patch_apply d3dx9_36-DDS/0003-d3dx9_36-Add-support-for-FOURCC-surface-to-save_dds_.patch
-	patch_apply d3dx9_36-DDS/0004-d3dx9_36-Improve-D3DXSaveTextureToFile-to-save-simpl.patch
+	patch_apply d3dx9_36-DDS/0001-d3dx9_36-Add-support-for-FOURCC-surface-to-save_dds_.patch
+	patch_apply d3dx9_36-DDS/0002-d3dx9_36-Improve-D3DXSaveTextureToFile-to-save-simpl.patch
 	(
-		echo '+    { "Alistair Leslie-Hughes", "d3dx9_36/tests: Add D3DXSaveSurfaceToFileInMemory D3DXIFF_DDS tests.", 1 },';
-		echo '+    { "Christian Costa", "d3dx9_36: Fix several issues in save_dds_surface_to_memory.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Add support for FOURCC surface to save_dds_surface_to_memory.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Improve D3DXSaveTextureToFile to save simple texture to dds file.", 1 },';
 	) >> "$patchlist"

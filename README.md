@@ -58,8 +58,8 @@ Configuration:
   --all                Select all patches
   --force-autoconf     Run autoreconf and tools/make_requests after each patch
   --help               Display this help and exit
-  --no-patchlist       Do not apply patchlist (needed for 'wine --patches')
   --no-autoconf        Do not run autoreconf and tools/make_requests
+  --no-patchlist       Do not apply patchlist (needed for 'wine --patches')
   --upstream-commit    Print the upstream Wine commit SHA1 and exit
   --version            Show version information and exit
   -W patchset          Exclude a specific patchset

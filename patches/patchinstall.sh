@@ -316,6 +316,7 @@ patch_enable_all ()
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Geforce_425M="$1"
+	enable_wined3d_Invalid_Render_States="$1"
 	enable_wined3d_MESA_GPU_Info="$1"
 	enable_wined3d_Multisampling="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
@@ -1070,6 +1071,9 @@ patch_enable ()
 			;;
 		wined3d-Geforce_425M)
 			enable_wined3d_Geforce_425M="$2"
+			;;
+		wined3d-Invalid_Render_States)
+			enable_wined3d_Invalid_Render_States="$2"
 			;;
 		wined3d-MESA_GPU_Info)
 			enable_wined3d_MESA_GPU_Info="$2"
@@ -6035,6 +6039,21 @@ if test "$enable_wined3d_Geforce_425M" -eq 1; then
 	patch_apply wined3d-Geforce_425M/0001-wined3d-Add-detection-for-NVIDIA-GeForce-425M.patch
 	(
 		echo '+    { "Jarkko Korpi", "wined3d: Add detection for NVIDIA GeForce 425M.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Invalid_Render_States
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33988] Ignore invalid render states in wined3d_device_set_render_state
+# |
+# | Modified files:
+# |   *	dlls/wined3d/device.c
+# |
+if test "$enable_wined3d_Invalid_Render_States" -eq 1; then
+	patch_apply wined3d-Invalid_Render_States/0001-wined3d-Ignore-invalid-render-states.patch
+	(
+		echo '+    { "Józef Kucia", "wined3d: Ignore invalid render states.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -157,6 +157,7 @@ patch_enable_all ()
 	enable_kernel32_Cwd_Startup_Info="$1"
 	enable_kernel32_FreeUserPhysicalPages="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
+	enable_kernel32_InterlockedPushListSList="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
@@ -593,6 +594,9 @@ patch_enable ()
 			;;
 		kernel32-GetFinalPathNameByHandle)
 			enable_kernel32_GetFinalPathNameByHandle="$2"
+			;;
+		kernel32-InterlockedPushListSList)
+			enable_kernel32_InterlockedPushListSList="$2"
 			;;
 		kernel32-LocaleNameToLCID)
 			enable_kernel32_LocaleNameToLCID="$2"
@@ -3551,6 +3555,18 @@ if test "$enable_kernel32_GetFinalPathNameByHandle" -eq 1; then
 	patch_apply kernel32-GetFinalPathNameByHandle/0001-kernel32-Implement-GetFinalPathNameByHandle.patch
 	(
 		echo '+    { "Michael Müller", "kernel32: Implement GetFinalPathNameByHandle.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-InterlockedPushListSList
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-interlocked-l1-1-0/api-ms-win-core-interlocked-l1-1-0.spec, dlls/kernel32/kernel32.spec
+# |
+if test "$enable_kernel32_InterlockedPushListSList" -eq 1; then
+	patch_apply kernel32-InterlockedPushListSList/0001-kernel32-Forward-InterlockedPushListSList-to-ntdll.patch
+	(
+		echo '+    { "Sebastian Lackner", "kernel32: Forward InterlockedPushListSList to ntdll.", 1 },';
 	) >> "$patchlist"
 fi
 

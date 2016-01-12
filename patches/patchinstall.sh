@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0f67df657db77ea8aef9c2b9498fb5fa1f514a55"
+	echo "f2ceadc6e6e6b7906400b6df84ac385d263cf394"
 }
 
 # Show version information
@@ -233,7 +233,6 @@ patch_enable_all ()
 	enable_openal32_EFX_Extension="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
-	enable_quartz_NULL_TargetFormat="$1"
 	enable_rasapi32_RasEnumDevicesA="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_rpcrt4_Pipe_Transport="$1"
@@ -822,9 +821,6 @@ patch_enable ()
 			;;
 		quartz-MediaSeeking_Positions)
 			enable_quartz_MediaSeeking_Positions="$2"
-			;;
-		quartz-NULL_TargetFormat)
-			enable_quartz_NULL_TargetFormat="$2"
 			;;
 		rasapi32-RasEnumDevicesA)
 			enable_rasapi32_RasEnumDevicesA="$2"
@@ -4878,18 +4874,6 @@ if test "$enable_quartz_MediaSeeking_Positions" -eq 1; then
 		echo '+    { "Erich E. Hoover", "quartz: Implement MediaSeeking_GetCurrentPosition on top of MediaSeeking_GetPositions.", 1 },';
 		echo '+    { "Erich E. Hoover", "quartz: Implement MediaSeeking_GetStopPosition on top of MediaSeeking_GetPositions.", 1 },';
 		echo '+    { "Erich E. Hoover", "quartz: Remove unused cache of MediaSeeking stop position.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset quartz-NULL_TargetFormat
-# |
-# | Modified files:
-# |   *	dlls/quartz/filtergraph.c, dlls/quartz/tests/filtergraph.c
-# |
-if test "$enable_quartz_NULL_TargetFormat" -eq 1; then
-	patch_apply quartz-NULL_TargetFormat/0001-quartz-Handle-NULL-target-format-in-FilterGraph-Conv.patch
-	(
-		echo '+    { "Anton Baskanov", "quartz: Handle NULL target format in FilterGraph::ConvertTimeFormat.", 2 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,458 @@
+From bf16d653d692fdb4b3f5f595f1fa9cf58d9b2947 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Thu, 14 Jan 2016 07:20:03 +0100
+Subject: vcomp: Implement 64-bit atomic instructions.
+
+---
+ dlls/vcomp/main.c           | 68 ++++++++++++++++++++++++++++++++++++++++++++-
+ dlls/vcomp/vcomp.spec       | 22 +++++++--------
+ dlls/vcomp100/vcomp100.spec | 22 +++++++--------
+ dlls/vcomp110/vcomp110.spec | 22 +++++++--------
+ dlls/vcomp120/vcomp120.spec | 22 +++++++--------
+ dlls/vcomp90/vcomp90.spec   | 22 +++++++--------
+ 6 files changed, 122 insertions(+), 56 deletions(-)
+
+diff --git a/dlls/vcomp/main.c b/dlls/vcomp/main.c
+index 12fd2a5..446b83d 100644
+--- a/dlls/vcomp/main.c
++++ b/dlls/vcomp/main.c
+@@ -4,7 +4,7 @@
+  *
+  * Copyright 2011 Austin English
+  * Copyright 2012 Dan Kegel
+- * Copyright 2015 Sebastian Lackner
++ * Copyright 2015-2016 Sebastian Lackner
+  *
+  * This library is free software; you can redistribute it and/or
+  * modify it under the terms of the GNU Lesser General Public
+@@ -356,6 +356,72 @@ void CDECL _vcomp_atomic_xor_i4(int *dest, int val)
+     do old = *dest; while (interlocked_cmpxchg(dest, old ^ val, old) != old);
+ }
+ 
++void CDECL _vcomp_atomic_add_i8(LONG64 *dest, LONG64 val)
++{
++    LONG64 old;
++    do old = *dest; while (interlocked_cmpxchg64(dest, old + val, old) != old);
++}
++
++void CDECL _vcomp_atomic_and_i8(LONG64 *dest, LONG64 val)
++{
++    LONG64 old;
++    do old = *dest; while (interlocked_cmpxchg64(dest, old & val, old) != old);
++}
++
++void CDECL _vcomp_atomic_div_i8(LONG64 *dest, LONG64 val)
++{
++    LONG64 old;
++    do old = *dest; while (interlocked_cmpxchg64(dest, old / val, old) != old);
++}
++
++void CDECL _vcomp_atomic_div_ui8(ULONG64 *dest, ULONG64 val)
++{
++    ULONG64 old;
++    do old = *dest; while (interlocked_cmpxchg64((LONG64 *)dest, old / val, old) != old);
++}
++
++void CDECL _vcomp_atomic_mul_i8(LONG64 *dest, LONG64 val)
++{
++    LONG64 old;
++    do old = *dest; while (interlocked_cmpxchg64(dest, old * val, old) != old);
++}
++
++void CDECL _vcomp_atomic_or_i8(LONG64 *dest, LONG64 val)
++{
++    LONG64 old;
++    do old = *dest; while (interlocked_cmpxchg64(dest, old | val, old) != old);
++}
++
++void CDECL _vcomp_atomic_shl_i8(LONG64 *dest, unsigned int val)
++{
++    LONG64 old;
++    do old = *dest; while (interlocked_cmpxchg64(dest, old << val, old) != old);
++}
++
++void CDECL _vcomp_atomic_shr_i8(LONG64 *dest, unsigned int val)
++{
++    LONG64 old;
++    do old = *dest; while (interlocked_cmpxchg64(dest, old >> val, old) != old);
++}
++
++void CDECL _vcomp_atomic_shr_ui8(ULONG64 *dest, unsigned int val)
++{
++    ULONG64 old;
++    do old = *dest; while (interlocked_cmpxchg64((LONG64 *)dest, old >> val, old) != old);
++}
++
++void CDECL _vcomp_atomic_sub_i8(LONG64 *dest, LONG64 val)
++{
++    LONG64 old;
++    do old = *dest; while (interlocked_cmpxchg64(dest, old - val, old) != old);
++}
++
++void CDECL _vcomp_atomic_xor_i8(LONG64 *dest, LONG64 val)
++{
++    LONG64 old;
++    do old = *dest; while (interlocked_cmpxchg64(dest, old ^ val, old) != old);
++}
++
+ void CDECL _vcomp_atomic_add_r4(float *dest, float val)
+ {
+     int old, new;
+diff --git a/dlls/vcomp/vcomp.spec b/dlls/vcomp/vcomp.spec
+index 7703e2e..eff411e 100644
+--- a/dlls/vcomp/vcomp.spec
++++ b/dlls/vcomp/vcomp.spec
+@@ -1,55 +1,55 @@
+ @ stub _vcomp_atomic_add_i1
+ @ stub _vcomp_atomic_add_i2
+ @ cdecl _vcomp_atomic_add_i4(ptr long)
+-@ stub _vcomp_atomic_add_i8
++@ cdecl _vcomp_atomic_add_i8(ptr int64)
+ @ cdecl _vcomp_atomic_add_r4(ptr float)
+ @ cdecl _vcomp_atomic_add_r8(ptr double)
+ @ stub _vcomp_atomic_and_i1
+ @ stub _vcomp_atomic_and_i2
+ @ cdecl _vcomp_atomic_and_i4(ptr long)
+-@ stub _vcomp_atomic_and_i8
++@ cdecl _vcomp_atomic_and_i8(ptr int64)
+ @ stub _vcomp_atomic_div_i1
+ @ stub _vcomp_atomic_div_i2
+ @ cdecl _vcomp_atomic_div_i4(ptr long)
+-@ stub _vcomp_atomic_div_i8
++@ cdecl _vcomp_atomic_div_i8(ptr int64)
+ @ cdecl _vcomp_atomic_div_r4(ptr float)
+ @ cdecl _vcomp_atomic_div_r8(ptr double)
+ @ stub _vcomp_atomic_div_ui1
+ @ stub _vcomp_atomic_div_ui2
+ @ cdecl _vcomp_atomic_div_ui4(ptr long)
+-@ stub _vcomp_atomic_div_ui8
++@ cdecl _vcomp_atomic_div_ui8(ptr int64)
+ @ stub _vcomp_atomic_mul_i1
+ @ stub _vcomp_atomic_mul_i2
+ @ cdecl _vcomp_atomic_mul_i4(ptr long)
+-@ stub _vcomp_atomic_mul_i8
++@ cdecl _vcomp_atomic_mul_i8(ptr int64)
+ @ cdecl _vcomp_atomic_mul_r4(ptr float)
+ @ cdecl _vcomp_atomic_mul_r8(ptr double)
+ @ stub _vcomp_atomic_or_i1
+ @ stub _vcomp_atomic_or_i2
+ @ cdecl _vcomp_atomic_or_i4(ptr long)
+-@ stub _vcomp_atomic_or_i8
++@ cdecl _vcomp_atomic_or_i8(ptr int64)
+ @ stub _vcomp_atomic_shl_i1
+ @ stub _vcomp_atomic_shl_i2
+ @ cdecl _vcomp_atomic_shl_i4(ptr long)
+-@ stub _vcomp_atomic_shl_i8
++@ cdecl _vcomp_atomic_shl_i8(ptr long)
+ @ stub _vcomp_atomic_shr_i1
+ @ stub _vcomp_atomic_shr_i2
+ @ cdecl _vcomp_atomic_shr_i4(ptr long)
+-@ stub _vcomp_atomic_shr_i8
++@ cdecl _vcomp_atomic_shr_i8(ptr long)
+ @ stub _vcomp_atomic_shr_ui1
+ @ stub _vcomp_atomic_shr_ui2
+ @ cdecl _vcomp_atomic_shr_ui4(ptr long)
+-@ stub _vcomp_atomic_shr_ui8
++@ cdecl _vcomp_atomic_shr_ui8(ptr long)
+ @ stub _vcomp_atomic_sub_i1
+ @ stub _vcomp_atomic_sub_i2
+ @ cdecl _vcomp_atomic_sub_i4(ptr long)
+-@ stub _vcomp_atomic_sub_i8
++@ cdecl _vcomp_atomic_sub_i8(ptr int64)
+ @ cdecl _vcomp_atomic_sub_r4(ptr float)
+ @ cdecl _vcomp_atomic_sub_r8(ptr double)
+ @ stub _vcomp_atomic_xor_i1
+ @ stub _vcomp_atomic_xor_i2
+ @ cdecl _vcomp_atomic_xor_i4(ptr long)
+-@ stub _vcomp_atomic_xor_i8
++@ cdecl _vcomp_atomic_xor_i8(ptr int64)
+ @ cdecl _vcomp_barrier()
+ @ stub _vcomp_copyprivate_broadcast
+ @ stub _vcomp_copyprivate_receive
+diff --git a/dlls/vcomp100/vcomp100.spec b/dlls/vcomp100/vcomp100.spec
+index 849125f..ba1f414 100644
+--- a/dlls/vcomp100/vcomp100.spec
++++ b/dlls/vcomp100/vcomp100.spec
+@@ -1,55 +1,55 @@
+ @ stub _vcomp_atomic_add_i1
+ @ stub _vcomp_atomic_add_i2
+ @ cdecl _vcomp_atomic_add_i4(ptr long) vcomp._vcomp_atomic_add_i4
+-@ stub _vcomp_atomic_add_i8
++@ cdecl _vcomp_atomic_add_i8(ptr int64) vcomp._vcomp_atomic_add_i8
+ @ cdecl _vcomp_atomic_add_r4(ptr float) vcomp._vcomp_atomic_add_r4
+ @ cdecl _vcomp_atomic_add_r8(ptr double) vcomp._vcomp_atomic_add_r8
+ @ stub _vcomp_atomic_and_i1
+ @ stub _vcomp_atomic_and_i2
+ @ cdecl _vcomp_atomic_and_i4(ptr long) vcomp._vcomp_atomic_and_i4
+-@ stub _vcomp_atomic_and_i8
++@ cdecl _vcomp_atomic_and_i8(ptr int64) vcomp._vcomp_atomic_and_i8
+ @ stub _vcomp_atomic_div_i1
+ @ stub _vcomp_atomic_div_i2
+ @ cdecl _vcomp_atomic_div_i4(ptr long) vcomp._vcomp_atomic_div_i4
+-@ stub _vcomp_atomic_div_i8
++@ cdecl _vcomp_atomic_div_i8(ptr int64) vcomp._vcomp_atomic_div_i8
+ @ cdecl _vcomp_atomic_div_r4(ptr float) vcomp._vcomp_atomic_div_r4
+ @ cdecl _vcomp_atomic_div_r8(ptr double) vcomp._vcomp_atomic_div_r8
+ @ stub _vcomp_atomic_div_ui1
+ @ stub _vcomp_atomic_div_ui2
+ @ cdecl _vcomp_atomic_div_ui4(ptr long) vcomp._vcomp_atomic_div_ui4
+-@ stub _vcomp_atomic_div_ui8
++@ cdecl _vcomp_atomic_div_ui8(ptr int64) vcomp._vcomp_atomic_div_ui8
+ @ stub _vcomp_atomic_mul_i1
+ @ stub _vcomp_atomic_mul_i2
+ @ cdecl _vcomp_atomic_mul_i4(ptr long) vcomp._vcomp_atomic_mul_i4
+-@ stub _vcomp_atomic_mul_i8
++@ cdecl _vcomp_atomic_mul_i8(ptr int64) vcomp._vcomp_atomic_mul_i8
+ @ cdecl _vcomp_atomic_mul_r4(ptr float) vcomp._vcomp_atomic_mul_r4
+ @ cdecl _vcomp_atomic_mul_r8(ptr double) vcomp._vcomp_atomic_mul_r8
+ @ stub _vcomp_atomic_or_i1
+ @ stub _vcomp_atomic_or_i2
+ @ cdecl _vcomp_atomic_or_i4(ptr long) vcomp._vcomp_atomic_or_i4
+-@ stub _vcomp_atomic_or_i8
++@ cdecl _vcomp_atomic_or_i8(ptr int64) vcomp._vcomp_atomic_or_i8
+ @ stub _vcomp_atomic_shl_i1
+ @ stub _vcomp_atomic_shl_i2
+ @ cdecl _vcomp_atomic_shl_i4(ptr long) vcomp._vcomp_atomic_shl_i4
+-@ stub _vcomp_atomic_shl_i8
++@ cdecl _vcomp_atomic_shl_i8(ptr long) vcomp._vcomp_atomic_shl_i8
+ @ stub _vcomp_atomic_shr_i1
+ @ stub _vcomp_atomic_shr_i2
+ @ cdecl _vcomp_atomic_shr_i4(ptr long) vcomp._vcomp_atomic_shr_i4
+-@ stub _vcomp_atomic_shr_i8
++@ cdecl _vcomp_atomic_shr_i8(ptr long) vcomp._vcomp_atomic_shr_i8
+ @ stub _vcomp_atomic_shr_ui1
+ @ stub _vcomp_atomic_shr_ui2
+ @ cdecl _vcomp_atomic_shr_ui4(ptr long) vcomp._vcomp_atomic_shr_ui4
+-@ stub _vcomp_atomic_shr_ui8
++@ cdecl _vcomp_atomic_shr_ui8(ptr long) vcomp._vcomp_atomic_shr_ui8
+ @ stub _vcomp_atomic_sub_i1
+ @ stub _vcomp_atomic_sub_i2
+ @ cdecl _vcomp_atomic_sub_i4(ptr long) vcomp._vcomp_atomic_sub_i4
+-@ stub _vcomp_atomic_sub_i8
++@ cdecl _vcomp_atomic_sub_i8(ptr int64) vcomp._vcomp_atomic_sub_i8
+ @ cdecl _vcomp_atomic_sub_r4(ptr float) vcomp._vcomp_atomic_sub_r4
+ @ cdecl _vcomp_atomic_sub_r8(ptr double) vcomp._vcomp_atomic_sub_r8
+ @ stub _vcomp_atomic_xor_i1
+ @ stub _vcomp_atomic_xor_i2
+ @ cdecl _vcomp_atomic_xor_i4(ptr long) vcomp._vcomp_atomic_xor_i4
+-@ stub _vcomp_atomic_xor_i8
++@ cdecl _vcomp_atomic_xor_i8(ptr int64) vcomp._vcomp_atomic_xor_i8
+ @ cdecl _vcomp_barrier() vcomp._vcomp_barrier
+ @ stub _vcomp_copyprivate_broadcast
+ @ stub _vcomp_copyprivate_receive
+diff --git a/dlls/vcomp110/vcomp110.spec b/dlls/vcomp110/vcomp110.spec
+index 87a7205..8389d27 100644
+--- a/dlls/vcomp110/vcomp110.spec
++++ b/dlls/vcomp110/vcomp110.spec
+@@ -2,55 +2,55 @@
+ @ stub _vcomp_atomic_add_i1
+ @ stub _vcomp_atomic_add_i2
+ @ cdecl _vcomp_atomic_add_i4(ptr long) vcomp._vcomp_atomic_add_i4
+-@ stub _vcomp_atomic_add_i8
++@ cdecl _vcomp_atomic_add_i8(ptr int64) vcomp._vcomp_atomic_add_i8
+ @ cdecl _vcomp_atomic_add_r4(ptr float) vcomp._vcomp_atomic_add_r4
+ @ cdecl _vcomp_atomic_add_r8(ptr double) vcomp._vcomp_atomic_add_r8
+ @ stub _vcomp_atomic_and_i1
+ @ stub _vcomp_atomic_and_i2
+ @ cdecl _vcomp_atomic_and_i4(ptr long) vcomp._vcomp_atomic_and_i4
+-@ stub _vcomp_atomic_and_i8
++@ cdecl _vcomp_atomic_and_i8(ptr int64) vcomp._vcomp_atomic_and_i8
+ @ stub _vcomp_atomic_div_i1
+ @ stub _vcomp_atomic_div_i2
+ @ cdecl _vcomp_atomic_div_i4(ptr long) vcomp._vcomp_atomic_div_i4
+-@ stub _vcomp_atomic_div_i8
++@ cdecl _vcomp_atomic_div_i8(ptr int64) vcomp._vcomp_atomic_div_i8
+ @ cdecl _vcomp_atomic_div_r4(ptr float) vcomp._vcomp_atomic_div_r4
+ @ cdecl _vcomp_atomic_div_r8(ptr double) vcomp._vcomp_atomic_div_r8
+ @ stub _vcomp_atomic_div_ui1
+ @ stub _vcomp_atomic_div_ui2
+ @ cdecl _vcomp_atomic_div_ui4(ptr long) vcomp._vcomp_atomic_div_ui4
+-@ stub _vcomp_atomic_div_ui8
++@ cdecl _vcomp_atomic_div_ui8(ptr int64) vcomp._vcomp_atomic_div_ui8
+ @ stub _vcomp_atomic_mul_i1
+ @ stub _vcomp_atomic_mul_i2
+ @ cdecl _vcomp_atomic_mul_i4(ptr long) vcomp._vcomp_atomic_mul_i4
+-@ stub _vcomp_atomic_mul_i8
++@ cdecl _vcomp_atomic_mul_i8(ptr int64) vcomp._vcomp_atomic_mul_i8
+ @ cdecl _vcomp_atomic_mul_r4(ptr float) vcomp._vcomp_atomic_mul_r4
+ @ cdecl _vcomp_atomic_mul_r8(ptr double) vcomp._vcomp_atomic_mul_r8
+ @ stub _vcomp_atomic_or_i1
+ @ stub _vcomp_atomic_or_i2
+ @ cdecl _vcomp_atomic_or_i4(ptr long) vcomp._vcomp_atomic_or_i4
+-@ stub _vcomp_atomic_or_i8
++@ cdecl _vcomp_atomic_or_i8(ptr int64) vcomp._vcomp_atomic_or_i8
+ @ stub _vcomp_atomic_shl_i1
+ @ stub _vcomp_atomic_shl_i2
+ @ cdecl _vcomp_atomic_shl_i4(ptr long) vcomp._vcomp_atomic_shl_i4
+-@ stub _vcomp_atomic_shl_i8
++@ cdecl _vcomp_atomic_shl_i8(ptr long) vcomp._vcomp_atomic_shl_i8
+ @ stub _vcomp_atomic_shr_i1
+ @ stub _vcomp_atomic_shr_i2
+ @ cdecl _vcomp_atomic_shr_i4(ptr long) vcomp._vcomp_atomic_shr_i4
+-@ stub _vcomp_atomic_shr_i8
++@ cdecl _vcomp_atomic_shr_i8(ptr long) vcomp._vcomp_atomic_shr_i8
+ @ stub _vcomp_atomic_shr_ui1
+ @ stub _vcomp_atomic_shr_ui2
+ @ cdecl _vcomp_atomic_shr_ui4(ptr long) vcomp._vcomp_atomic_shr_ui4
+-@ stub _vcomp_atomic_shr_ui8
++@ cdecl _vcomp_atomic_shr_ui8(ptr long) vcomp._vcomp_atomic_shr_ui8
+ @ stub _vcomp_atomic_sub_i1
+ @ stub _vcomp_atomic_sub_i2
+ @ cdecl _vcomp_atomic_sub_i4(ptr long) vcomp._vcomp_atomic_sub_i4
+-@ stub _vcomp_atomic_sub_i8
++@ cdecl _vcomp_atomic_sub_i8(ptr int64) vcomp._vcomp_atomic_sub_i8
+ @ cdecl _vcomp_atomic_sub_r4(ptr float) vcomp._vcomp_atomic_sub_r4
+ @ cdecl _vcomp_atomic_sub_r8(ptr double) vcomp._vcomp_atomic_sub_r8
+ @ stub _vcomp_atomic_xor_i1
+ @ stub _vcomp_atomic_xor_i2
+ @ cdecl _vcomp_atomic_xor_i4(ptr long) vcomp._vcomp_atomic_xor_i4
+-@ stub _vcomp_atomic_xor_i8
++@ cdecl _vcomp_atomic_xor_i8(ptr int64) vcomp._vcomp_atomic_xor_i8
+ @ cdecl _vcomp_barrier() vcomp._vcomp_barrier
+ @ stub _vcomp_copyprivate_broadcast
+ @ stub _vcomp_copyprivate_receive
+diff --git a/dlls/vcomp120/vcomp120.spec b/dlls/vcomp120/vcomp120.spec
+index 87a7205..8389d27 100644
+--- a/dlls/vcomp120/vcomp120.spec
++++ b/dlls/vcomp120/vcomp120.spec
+@@ -2,55 +2,55 @@
+ @ stub _vcomp_atomic_add_i1
+ @ stub _vcomp_atomic_add_i2
+ @ cdecl _vcomp_atomic_add_i4(ptr long) vcomp._vcomp_atomic_add_i4
+-@ stub _vcomp_atomic_add_i8
++@ cdecl _vcomp_atomic_add_i8(ptr int64) vcomp._vcomp_atomic_add_i8
+ @ cdecl _vcomp_atomic_add_r4(ptr float) vcomp._vcomp_atomic_add_r4
+ @ cdecl _vcomp_atomic_add_r8(ptr double) vcomp._vcomp_atomic_add_r8
+ @ stub _vcomp_atomic_and_i1
+ @ stub _vcomp_atomic_and_i2
+ @ cdecl _vcomp_atomic_and_i4(ptr long) vcomp._vcomp_atomic_and_i4
+-@ stub _vcomp_atomic_and_i8
++@ cdecl _vcomp_atomic_and_i8(ptr int64) vcomp._vcomp_atomic_and_i8
+ @ stub _vcomp_atomic_div_i1
+ @ stub _vcomp_atomic_div_i2
+ @ cdecl _vcomp_atomic_div_i4(ptr long) vcomp._vcomp_atomic_div_i4
+-@ stub _vcomp_atomic_div_i8
++@ cdecl _vcomp_atomic_div_i8(ptr int64) vcomp._vcomp_atomic_div_i8
+ @ cdecl _vcomp_atomic_div_r4(ptr float) vcomp._vcomp_atomic_div_r4
+ @ cdecl _vcomp_atomic_div_r8(ptr double) vcomp._vcomp_atomic_div_r8
+ @ stub _vcomp_atomic_div_ui1
+ @ stub _vcomp_atomic_div_ui2
+ @ cdecl _vcomp_atomic_div_ui4(ptr long) vcomp._vcomp_atomic_div_ui4
+-@ stub _vcomp_atomic_div_ui8
++@ cdecl _vcomp_atomic_div_ui8(ptr int64) vcomp._vcomp_atomic_div_ui8
+ @ stub _vcomp_atomic_mul_i1
+ @ stub _vcomp_atomic_mul_i2
+ @ cdecl _vcomp_atomic_mul_i4(ptr long) vcomp._vcomp_atomic_mul_i4
+-@ stub _vcomp_atomic_mul_i8
++@ cdecl _vcomp_atomic_mul_i8(ptr int64) vcomp._vcomp_atomic_mul_i8
+ @ cdecl _vcomp_atomic_mul_r4(ptr float) vcomp._vcomp_atomic_mul_r4
+ @ cdecl _vcomp_atomic_mul_r8(ptr double) vcomp._vcomp_atomic_mul_r8
+ @ stub _vcomp_atomic_or_i1
+ @ stub _vcomp_atomic_or_i2
+ @ cdecl _vcomp_atomic_or_i4(ptr long) vcomp._vcomp_atomic_or_i4
+-@ stub _vcomp_atomic_or_i8
++@ cdecl _vcomp_atomic_or_i8(ptr int64) vcomp._vcomp_atomic_or_i8
+ @ stub _vcomp_atomic_shl_i1
+ @ stub _vcomp_atomic_shl_i2
+ @ cdecl _vcomp_atomic_shl_i4(ptr long) vcomp._vcomp_atomic_shl_i4
+-@ stub _vcomp_atomic_shl_i8
++@ cdecl _vcomp_atomic_shl_i8(ptr long) vcomp._vcomp_atomic_shl_i8
+ @ stub _vcomp_atomic_shr_i1
+ @ stub _vcomp_atomic_shr_i2
+ @ cdecl _vcomp_atomic_shr_i4(ptr long) vcomp._vcomp_atomic_shr_i4
+-@ stub _vcomp_atomic_shr_i8
++@ cdecl _vcomp_atomic_shr_i8(ptr long) vcomp._vcomp_atomic_shr_i8
+ @ stub _vcomp_atomic_shr_ui1
+ @ stub _vcomp_atomic_shr_ui2
+ @ cdecl _vcomp_atomic_shr_ui4(ptr long) vcomp._vcomp_atomic_shr_ui4
+-@ stub _vcomp_atomic_shr_ui8
++@ cdecl _vcomp_atomic_shr_ui8(ptr long) vcomp._vcomp_atomic_shr_ui8
+ @ stub _vcomp_atomic_sub_i1
+ @ stub _vcomp_atomic_sub_i2
+ @ cdecl _vcomp_atomic_sub_i4(ptr long) vcomp._vcomp_atomic_sub_i4
+-@ stub _vcomp_atomic_sub_i8
++@ cdecl _vcomp_atomic_sub_i8(ptr int64) vcomp._vcomp_atomic_sub_i8
+ @ cdecl _vcomp_atomic_sub_r4(ptr float) vcomp._vcomp_atomic_sub_r4
+ @ cdecl _vcomp_atomic_sub_r8(ptr double) vcomp._vcomp_atomic_sub_r8
+ @ stub _vcomp_atomic_xor_i1
+ @ stub _vcomp_atomic_xor_i2
+ @ cdecl _vcomp_atomic_xor_i4(ptr long) vcomp._vcomp_atomic_xor_i4
+-@ stub _vcomp_atomic_xor_i8
++@ cdecl _vcomp_atomic_xor_i8(ptr int64) vcomp._vcomp_atomic_xor_i8
+ @ cdecl _vcomp_barrier() vcomp._vcomp_barrier
+ @ stub _vcomp_copyprivate_broadcast
+ @ stub _vcomp_copyprivate_receive
+diff --git a/dlls/vcomp90/vcomp90.spec b/dlls/vcomp90/vcomp90.spec
+index 849125f..ba1f414 100644
+--- a/dlls/vcomp90/vcomp90.spec
++++ b/dlls/vcomp90/vcomp90.spec
+@@ -1,55 +1,55 @@
+ @ stub _vcomp_atomic_add_i1
+ @ stub _vcomp_atomic_add_i2
+ @ cdecl _vcomp_atomic_add_i4(ptr long) vcomp._vcomp_atomic_add_i4
+-@ stub _vcomp_atomic_add_i8
++@ cdecl _vcomp_atomic_add_i8(ptr int64) vcomp._vcomp_atomic_add_i8
+ @ cdecl _vcomp_atomic_add_r4(ptr float) vcomp._vcomp_atomic_add_r4
+ @ cdecl _vcomp_atomic_add_r8(ptr double) vcomp._vcomp_atomic_add_r8
+ @ stub _vcomp_atomic_and_i1
+ @ stub _vcomp_atomic_and_i2
+ @ cdecl _vcomp_atomic_and_i4(ptr long) vcomp._vcomp_atomic_and_i4
+-@ stub _vcomp_atomic_and_i8
++@ cdecl _vcomp_atomic_and_i8(ptr int64) vcomp._vcomp_atomic_and_i8
+ @ stub _vcomp_atomic_div_i1
+ @ stub _vcomp_atomic_div_i2
+ @ cdecl _vcomp_atomic_div_i4(ptr long) vcomp._vcomp_atomic_div_i4
+-@ stub _vcomp_atomic_div_i8
++@ cdecl _vcomp_atomic_div_i8(ptr int64) vcomp._vcomp_atomic_div_i8
+ @ cdecl _vcomp_atomic_div_r4(ptr float) vcomp._vcomp_atomic_div_r4
+ @ cdecl _vcomp_atomic_div_r8(ptr double) vcomp._vcomp_atomic_div_r8
+ @ stub _vcomp_atomic_div_ui1
+ @ stub _vcomp_atomic_div_ui2
+ @ cdecl _vcomp_atomic_div_ui4(ptr long) vcomp._vcomp_atomic_div_ui4
+-@ stub _vcomp_atomic_div_ui8
++@ cdecl _vcomp_atomic_div_ui8(ptr int64) vcomp._vcomp_atomic_div_ui8
+ @ stub _vcomp_atomic_mul_i1
+ @ stub _vcomp_atomic_mul_i2
+ @ cdecl _vcomp_atomic_mul_i4(ptr long) vcomp._vcomp_atomic_mul_i4
+-@ stub _vcomp_atomic_mul_i8
++@ cdecl _vcomp_atomic_mul_i8(ptr int64) vcomp._vcomp_atomic_mul_i8
+ @ cdecl _vcomp_atomic_mul_r4(ptr float) vcomp._vcomp_atomic_mul_r4
+ @ cdecl _vcomp_atomic_mul_r8(ptr double) vcomp._vcomp_atomic_mul_r8
+ @ stub _vcomp_atomic_or_i1
+ @ stub _vcomp_atomic_or_i2
+ @ cdecl _vcomp_atomic_or_i4(ptr long) vcomp._vcomp_atomic_or_i4
+-@ stub _vcomp_atomic_or_i8
++@ cdecl _vcomp_atomic_or_i8(ptr int64) vcomp._vcomp_atomic_or_i8
+ @ stub _vcomp_atomic_shl_i1
+ @ stub _vcomp_atomic_shl_i2
+ @ cdecl _vcomp_atomic_shl_i4(ptr long) vcomp._vcomp_atomic_shl_i4
+-@ stub _vcomp_atomic_shl_i8
++@ cdecl _vcomp_atomic_shl_i8(ptr long) vcomp._vcomp_atomic_shl_i8
+ @ stub _vcomp_atomic_shr_i1
+ @ stub _vcomp_atomic_shr_i2
+ @ cdecl _vcomp_atomic_shr_i4(ptr long) vcomp._vcomp_atomic_shr_i4
+-@ stub _vcomp_atomic_shr_i8
++@ cdecl _vcomp_atomic_shr_i8(ptr long) vcomp._vcomp_atomic_shr_i8
+ @ stub _vcomp_atomic_shr_ui1
+ @ stub _vcomp_atomic_shr_ui2
+ @ cdecl _vcomp_atomic_shr_ui4(ptr long) vcomp._vcomp_atomic_shr_ui4
+-@ stub _vcomp_atomic_shr_ui8
++@ cdecl _vcomp_atomic_shr_ui8(ptr long) vcomp._vcomp_atomic_shr_ui8
+ @ stub _vcomp_atomic_sub_i1
+ @ stub _vcomp_atomic_sub_i2
+ @ cdecl _vcomp_atomic_sub_i4(ptr long) vcomp._vcomp_atomic_sub_i4
+-@ stub _vcomp_atomic_sub_i8
++@ cdecl _vcomp_atomic_sub_i8(ptr int64) vcomp._vcomp_atomic_sub_i8
+ @ cdecl _vcomp_atomic_sub_r4(ptr float) vcomp._vcomp_atomic_sub_r4
+ @ cdecl _vcomp_atomic_sub_r8(ptr double) vcomp._vcomp_atomic_sub_r8
+ @ stub _vcomp_atomic_xor_i1
+ @ stub _vcomp_atomic_xor_i2
+ @ cdecl _vcomp_atomic_xor_i4(ptr long) vcomp._vcomp_atomic_xor_i4
+-@ stub _vcomp_atomic_xor_i8
++@ cdecl _vcomp_atomic_xor_i8(ptr int64) vcomp._vcomp_atomic_xor_i8
+ @ cdecl _vcomp_barrier() vcomp._vcomp_barrier
+ @ stub _vcomp_copyprivate_broadcast
+ @ stub _vcomp_copyprivate_receive
+-- 
+2.6.4
+

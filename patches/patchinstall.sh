@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f2ceadc6e6e6b7906400b6df84ac385d263cf394"
+	echo "26c9bd9f15c364215be9731bb050454c14d90767"
 }
 
 # Show version information
@@ -299,6 +299,7 @@ patch_enable_all ()
 	enable_user32_WM_MDICALCCHILDSCROLL="$1"
 	enable_user32_WndProc="$1"
 	enable_uxtheme_GTK_Theming="$1"
+	enable_vcomp_Atomic_I8="$1"
 	enable_version_VerQueryValue="$1"
 	enable_vmm_vxd_PageReserve="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
@@ -1019,6 +1020,9 @@ patch_enable ()
 			;;
 		uxtheme-GTK_Theming)
 			enable_uxtheme_GTK_Theming="$2"
+			;;
+		vcomp-Atomic_I8)
+			enable_vcomp_Atomic_I8="$2"
 			;;
 		version-VerQueryValue)
 			enable_version_VerQueryValue="$2"
@@ -5836,6 +5840,23 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 		echo '+    { "Sebastian Lackner", "uxthemegtk: Correctly render buttons with GTK >= 3.14.0.", 1 },';
 		echo '+    { "Michael Müller", "uxthemegtk: Print class name before calling vtable functions.", 1 },';
 		echo '+    { "Michael Müller", "uxthemegtk: Reset FPU flags before calling GTK3 functions.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset vcomp-Atomic_I8
+# |
+# | Modified files:
+# |   *	dlls/vcomp/main.c, dlls/vcomp/tests/vcomp.c, dlls/vcomp/vcomp.spec, dlls/vcomp100/vcomp100.spec,
+# | 	dlls/vcomp110/vcomp110.spec, dlls/vcomp120/vcomp120.spec, dlls/vcomp90/vcomp90.spec
+# |
+if test "$enable_vcomp_Atomic_I8" -eq 1; then
+	patch_apply vcomp-Atomic_I8/0001-vcomp-tests-Reenable-architecture-dependent-tests.patch
+	patch_apply vcomp-Atomic_I8/0002-vcomp-Implement-64-bit-atomic-instructions.patch
+	patch_apply vcomp-Atomic_I8/0003-vcomp-tests-Add-tests-for-64-bit-atomic-instructions.patch
+	(
+		echo '+    { "Sebastian Lackner", "vcomp/tests: Reenable architecture dependent tests.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp: Implement 64-bit atomic instructions.", 1 },';
+		echo '+    { "Sebastian Lackner", "vcomp/tests: Add tests for 64-bit atomic instructions.", 1 },';
 	) >> "$patchlist"
 fi
 

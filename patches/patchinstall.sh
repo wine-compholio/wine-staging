@@ -5495,7 +5495,7 @@ fi
 # |   *	[#35630] Support for SHCreateSessionKey
 # |
 # | Modified files:
-# |   *	dlls/shell32/shell32.spec, dlls/shell32/shellreg.c
+# |   *	dlls/shell32/shell32.spec, dlls/shell32/shellreg.c, dlls/shell32/tests/shellole.c
 # |
 if test "$enable_shell32_SHCreateSessionKey" -eq 1; then
 	patch_apply shell32-SHCreateSessionKey/0001-shell32-Implement-SHCreateSessionKey.patch

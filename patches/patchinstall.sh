@@ -343,6 +343,7 @@ patch_enable_all ()
 	enable_winspool_drv_SetPrinterW="$1"
 	enable_winsta_WinStationEnumerateW="$1"
 	enable_wpcap_Dynamic_Linking="$1"
+	enable_wpcap_Several_Fixes="$1"
 	enable_ws2_32_APC_Performance="$1"
 	enable_ws2_32_Connect_Time="$1"
 	enable_ws2_32_Sort_default_route="$1"
@@ -1153,6 +1154,9 @@ patch_enable ()
 		wpcap-Dynamic_Linking)
 			enable_wpcap_Dynamic_Linking="$2"
 			;;
+		wpcap-Several_Fixes)
+			enable_wpcap_Several_Fixes="$2"
+			;;
 		ws2_32-APC_Performance)
 			enable_ws2_32_APC_Performance="$2"
 			;;
@@ -1722,9 +1726,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_winmm_Delay_Import_Depends" -gt 1; then
 		abort "Patchset winmm-Delay_Import_Depends disabled, but category-stable depends on that."
 	fi
-	if test "$enable_wpcap_Dynamic_Linking" -gt 1; then
-		abort "Patchset wpcap-Dynamic_Linking disabled, but category-stable depends on that."
-	fi
 	if test "$enable_ws2_32_Connect_Time" -gt 1; then
 		abort "Patchset ws2_32-Connect_Time disabled, but category-stable depends on that."
 	fi
@@ -1793,7 +1794,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_winex11_wglShareLists=1
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry=1
 	enable_winmm_Delay_Import_Depends=1
-	enable_wpcap_Dynamic_Linking=1
 	enable_ws2_32_Connect_Time=1
 	enable_ws2_32_WriteWatches=1
 fi
@@ -1810,6 +1810,13 @@ if test "$enable_ws2_32_TransmitFile" -eq 1; then
 		abort "Patchset server-Desktop_Refcount disabled, but ws2_32-TransmitFile depends on that."
 	fi
 	enable_server_Desktop_Refcount=1
+fi
+
+if test "$enable_wpcap_Dynamic_Linking" -eq 1; then
+	if test "$enable_wpcap_Several_Fixes" -gt 1; then
+		abort "Patchset wpcap-Several_Fixes disabled, but wpcap-Dynamic_Linking depends on that."
+	fi
+	enable_wpcap_Several_Fixes=1
 fi
 
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
@@ -6811,7 +6818,24 @@ if test "$enable_winsta_WinStationEnumerateW" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wpcap-Several_Fixes
+# |
+# | Modified files:
+# |   *	dlls/wpcap/wpcap.c, dlls/wpcap/wpcap.spec
+# |
+if test "$enable_wpcap_Several_Fixes" -eq 1; then
+	patch_apply wpcap-Several_Fixes/0001-wpcap-Implement-pcap_dump_open-and-pcap_dump.patch
+	patch_apply wpcap-Several_Fixes/0002-wpcap-Fix-crash-on-pcap_loop.patch
+	(
+		echo '+    { "Jianqiu Zhang", "wpcap: Implement pcap_dump_open and pcap_dump.", 1 },';
+		echo '+    { "Jianqiu Zhang", "wpcap: Fix crash on pcap_loop.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wpcap-Dynamic_Linking
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	wpcap-Several_Fixes
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wpcap/Makefile.in, dlls/wpcap/wpcap.c

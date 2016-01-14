@@ -1,4 +1,4 @@
-From 811b0381cc2979ba6dee508e0f497e50d2ed499d Mon Sep 17 00:00:00 2001
+From 09e0c732f3c13f7ac1ba8c40e918092c642051a4 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Andr=C3=A9=20Hentschel?= <nerv@dawncrow.de>
 Date: Tue, 26 Aug 2014 00:59:37 +0200
 Subject: wpcap: Load libpcap dynamically.
@@ -8,14 +8,14 @@ Something we don't want i guess.
 ---
  configure.ac           |   6 +-
  dlls/wpcap/Makefile.in |   1 -
- dlls/wpcap/wpcap.c     | 163 +++++++++++++++++++++++++++++++++++++++----------
- 3 files changed, 134 insertions(+), 36 deletions(-)
+ dlls/wpcap/wpcap.c     | 171 +++++++++++++++++++++++++++++++++++++++----------
+ 3 files changed, 140 insertions(+), 38 deletions(-)
 
 diff --git a/configure.ac b/configure.ac
-index aec53f6..58112de 100644
+index 811e2aa..30b500a 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -1288,11 +1288,11 @@ test "x$ac_cv_lib_OpenCL_clGetPlatformInfo" != xyes && enable_opencl=${enable_op
+@@ -1182,11 +1182,11 @@ test "x$ac_cv_lib_OpenCL_clGetPlatformInfo" != xyes && enable_opencl=${enable_op
  dnl **** Check for libpcap ****
  if test "$ac_cv_header_pcap_pcap_h" = "yes"
  then
@@ -31,7 +31,7 @@ index aec53f6..58112de 100644
  dnl **** Check for libxml2 ****
  
 diff --git a/dlls/wpcap/Makefile.in b/dlls/wpcap/Makefile.in
-index e44613f..aeef71a 100644
+index 91b4a95..aeef71a 100644
 --- a/dlls/wpcap/Makefile.in
 +++ b/dlls/wpcap/Makefile.in
 @@ -1,6 +1,5 @@
@@ -42,7 +42,7 @@ index e44613f..aeef71a 100644
  C_SRCS = \
  	wpcap.c
 diff --git a/dlls/wpcap/wpcap.c b/dlls/wpcap/wpcap.c
-index ae9e482..3e5c82b 100644
+index 44e8c2a..f9029c8 100644
 --- a/dlls/wpcap/wpcap.c
 +++ b/dlls/wpcap/wpcap.c
 @@ -18,6 +18,9 @@
@@ -55,7 +55,7 @@ index ae9e482..3e5c82b 100644
  #include <pcap/pcap.h>
  #include "winsock2.h"
  #include "windef.h"
-@@ -40,47 +43,124 @@ WINE_DECLARE_DEBUG_CHANNEL(winediag);
+@@ -40,47 +43,128 @@ WINE_DECLARE_DEBUG_CHANNEL(winediag);
  #define PCAP_SRC_IFLOCAL        3
  #endif
  
@@ -67,6 +67,8 @@ index ae9e482..3e5c82b 100644
 +static const char*   (*ppcap_datalink_val_to_description)(int);
 +static const char*   (*ppcap_datalink_val_to_name)(int);
 +static int           (*ppcap_dispatch)(pcap_t *, int, pcap_handler, u_char *);
++static void          (*ppcap_dump)(u_char *, const struct pcap_pkthdr *, const u_char *);
++static pcap_dumper_t* (*ppcap_dump_open)(pcap_t *, const char *);
 +static int           (*ppcap_findalldevs)(pcap_if_t **, char *);
 +static void          (*ppcap_freealldevs)(pcap_if_t *);
 +static void          (*ppcap_freecode)(struct bpf_program *);
@@ -110,6 +112,8 @@ index ae9e482..3e5c82b 100644
 +    LOAD_FUNCPTR(pcap_datalink_val_to_description);
 +    LOAD_FUNCPTR(pcap_datalink_val_to_name);
 +    LOAD_FUNCPTR(pcap_dispatch);
++    LOAD_FUNCPTR(pcap_dump);
++    LOAD_FUNCPTR(pcap_dump_open);
 +    LOAD_FUNCPTR(pcap_findalldevs);
 +    LOAD_FUNCPTR(pcap_freealldevs);
 +    LOAD_FUNCPTR(pcap_freecode);
@@ -187,12 +191,14 @@ index ae9e482..3e5c82b 100644
  }
  
  typedef struct
-@@ -111,10 +191,10 @@ int CDECL wine_pcap_dispatch(pcap_t *p, int cnt,
+@@ -112,12 +196,12 @@ int CDECL wine_pcap_dispatch(pcap_t *p, int cnt,
          pcb = HeapAlloc(GetProcessHeap(), 0, sizeof(PCAP_HANDLER_CALLBACK));
          pcb->pfn_cb = callback;
          pcb->user_data = user;
--        return pcap_dispatch(p, cnt, pcap_handler_callback, (unsigned char*)pcb);
-+        return ppcap_dispatch(p, cnt, pcap_handler_callback, (unsigned char*)pcb);
+-        res = pcap_dispatch(p, cnt, pcap_handler_callback, (unsigned char *)pcb);
++        res = ppcap_dispatch(p, cnt, pcap_handler_callback, (unsigned char *)pcb);
+         HeapFree(GetProcessHeap(), 0, pcb);
+         return res;
      }
  
 -    return pcap_dispatch(p, cnt, NULL, user);
@@ -200,7 +206,7 @@ index ae9e482..3e5c82b 100644
  }
  
  int CDECL wine_pcap_findalldevs(pcap_if_t **alldevsp, char *errbuf)
-@@ -122,7 +202,7 @@ int CDECL wine_pcap_findalldevs(pcap_if_t **alldevsp, char *errbuf)
+@@ -125,7 +209,7 @@ int CDECL wine_pcap_findalldevs(pcap_if_t **alldevsp, char *errbuf)
      int ret;
  
      TRACE("(%p %p)\n", alldevsp, errbuf);
@@ -209,7 +215,7 @@ index ae9e482..3e5c82b 100644
      if(alldevsp && !*alldevsp)
          ERR_(winediag)("Failed to access raw network (pcap), this requires special permissions.\n");
  
-@@ -138,13 +218,13 @@ int CDECL wine_pcap_findalldevs_ex(char *source, void *auth, pcap_if_t **alldevs
+@@ -141,13 +225,13 @@ int CDECL wine_pcap_findalldevs_ex(char *source, void *auth, pcap_if_t **alldevs
  void CDECL wine_pcap_freealldevs(pcap_if_t *alldevs)
  {
      TRACE("(%p)\n", alldevs);
@@ -225,7 +231,7 @@ index ae9e482..3e5c82b 100644
  }
  
  typedef struct _AirpcapHandle *PAirpcapHandle;
-@@ -157,18 +237,18 @@ PAirpcapHandle CDECL wine_pcap_get_airpcap_handle(pcap_t *p)
+@@ -160,18 +244,18 @@ PAirpcapHandle CDECL wine_pcap_get_airpcap_handle(pcap_t *p)
  char* CDECL wine_pcap_geterr(pcap_t *p)
  {
      TRACE("(%p)\n", p);
@@ -247,7 +253,7 @@ index ae9e482..3e5c82b 100644
      TRACE("%s\n", debugstr_a(ret));
      return ret;
  }
-@@ -176,20 +256,20 @@ const char* CDECL wine_pcap_lib_version(void)
+@@ -179,20 +263,20 @@ const char* CDECL wine_pcap_lib_version(void)
  int CDECL wine_pcap_list_datalinks(pcap_t *p, int **dlt_buffer)
  {
      TRACE("(%p %p)\n", p, dlt_buffer);
@@ -271,12 +277,14 @@ index ae9e482..3e5c82b 100644
  }
  
  int CDECL wine_pcap_loop(pcap_t *p, int cnt,
-@@ -204,34 +284,34 @@ int CDECL wine_pcap_loop(pcap_t *p, int cnt,
+@@ -209,36 +293,36 @@ int CDECL wine_pcap_loop(pcap_t *p, int cnt,
          pcb = HeapAlloc(GetProcessHeap(), 0, sizeof(PCAP_HANDLER_CALLBACK));
          pcb->pfn_cb = callback;
          pcb->user_data = user;
--        return pcap_loop(p, cnt, pcap_handler_callback, (unsigned char*)pcb);
-+        return ppcap_loop(p, cnt, pcap_handler_callback, (unsigned char*)pcb);
+-        res =  pcap_loop(p, cnt, pcap_handler_callback, (unsigned char *)pcb);
++        res =  ppcap_loop(p, cnt, pcap_handler_callback, (unsigned char *)pcb);
+         HeapFree(GetProcessHeap(), 0, pcb);
+         return res;
      }
  
 -    return pcap_loop(p, cnt, NULL, user);
@@ -312,7 +320,7 @@ index ae9e482..3e5c82b 100644
  }
  
  #define PCAP_OPENFLAG_PROMISCUOUS 1
-@@ -242,14 +322,14 @@ pcap_t* CDECL wine_pcap_open(const char *source, int snaplen, int flags, int rea
+@@ -249,14 +333,14 @@ pcap_t* CDECL wine_pcap_open(const char *source, int snaplen, int flags, int rea
      int promisc = flags & PCAP_OPENFLAG_PROMISCUOUS;
      FIXME("(%s %i %i %i %p %p): partial stub\n", debugstr_a(source), snaplen, flags, read_timeout,
                                                   auth, errbuf);
@@ -329,7 +337,7 @@ index ae9e482..3e5c82b 100644
  }
  
  int CDECL wine_pcap_parsesrcstr(const char *source, int *type, char *host, char *port, char *name, char *errbuf)
-@@ -293,13 +373,13 @@ int CDECL wine_pcap_parsesrcstr(const char *source, int *type, char *host, char
+@@ -300,13 +384,13 @@ int CDECL wine_pcap_parsesrcstr(const char *source, int *type, char *host, char
  int CDECL wine_pcap_sendpacket(pcap_t *p, const unsigned char *buf, int size)
  {
      TRACE("(%p %p %i)\n", p, buf, size);
@@ -345,7 +353,7 @@ index ae9e482..3e5c82b 100644
  }
  
  int CDECL wine_pcap_setbuff(pcap_t * p, int dim)
-@@ -311,25 +391,25 @@ int CDECL wine_pcap_setbuff(pcap_t * p, int dim)
+@@ -318,25 +402,25 @@ int CDECL wine_pcap_setbuff(pcap_t * p, int dim)
  int CDECL wine_pcap_setfilter(pcap_t *p, struct bpf_program *fp)
  {
      TRACE("(%p %p)\n", p, fp);
@@ -375,10 +383,19 @@ index ae9e482..3e5c82b 100644
  }
  
  int CDECL wine_wsockinit(void)
-@@ -339,3 +419,22 @@ int CDECL wine_wsockinit(void)
-     if (WSAStartup(MAKEWORD(1,1), &wsadata)) return -1;
-     return 0;
+@@ -349,10 +433,29 @@ int CDECL wine_wsockinit(void)
+ 
+ pcap_dumper_t* CDECL wine_pcap_dump_open(pcap_t *p, const char *fname)
+ {
+-    return pcap_dump_open(p, fname);
++    return ppcap_dump_open(p, fname);
  }
+ 
+ void CDECL wine_pcap_dump(u_char *user, const struct pcap_pkthdr *h, const u_char *sp)
+ {
+-    return pcap_dump(user, h, sp);
++    return ppcap_dump(user, h, sp);
++}
 +
 +BOOL WINAPI DllMain (HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 +{
@@ -397,7 +414,7 @@ index ae9e482..3e5c82b 100644
 +    }
 +
 +    return TRUE;
-+}
+ }
 -- 
-2.5.0
+2.6.4
 

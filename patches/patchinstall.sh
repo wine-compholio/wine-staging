@@ -4090,6 +4090,7 @@ if test "$enable_ntdll_DOS_Attributes" -eq 1; then
 	patch_apply ntdll-DOS_Attributes/0005-libport-Add-support-for-Mac-OS-X-style-extended-attr.patch
 	patch_apply ntdll-DOS_Attributes/0006-libport-Add-support-for-FreeBSD-style-extended-attri.patch
 	patch_apply ntdll-DOS_Attributes/0007-ntdll-Perform-the-Unix-style-hidden-file-check-withi.patch
+	patch_apply ntdll-DOS_Attributes/0008-ntdll-Always-store-SAMBA_XATTR_DOS_ATTRIB-when-path-.patch
 	(
 		echo '+    { "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQueryInformationFile.", 1 },';
 		echo '+    { "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQuery[Full]AttributesFile and NtQueryDirectoryFile.", 1 },';
@@ -4098,6 +4099,7 @@ if test "$enable_ntdll_DOS_Attributes" -eq 1; then
 		echo '+    { "Erich E. Hoover", "libport: Add support for Mac OS X style extended attributes.", 1 },';
 		echo '+    { "Erich E. Hoover", "libport: Add support for FreeBSD style extended attributes.", 1 },';
 		echo '+    { "Erich E. Hoover", "ntdll: Perform the Unix-style hidden file check within the unified file info grabbing routine.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Always store SAMBA_XATTR_DOS_ATTRIB when path could be interpreted as hidden.", 1 },';
 	) >> "$patchlist"
 fi
 

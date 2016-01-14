@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "26c9bd9f15c364215be9731bb050454c14d90767"
+	echo "14529012da91580119c1712cd24fcf67c780789b"
 }
 
 # Show version information
@@ -4939,12 +4939,12 @@ fi
 # |   *	[#38766] Implement stub for RpcBindingServerFromClient
 # |
 # | Modified files:
-# |   *	dlls/rpcrt4/rpc_binding.c, dlls/rpcrt4/rpcrt4.spec
+# |   *	dlls/rpcrt4/rpc_binding.c
 # |
 if test "$enable_rpcrt4_RpcBindingServerFromClient" -eq 1; then
-	patch_apply rpcrt4-RpcBindingServerFromClient/0001-rpcrt4-add-a-stub-for-RpcBindingServerFromClient.patch
+	patch_apply rpcrt4-RpcBindingServerFromClient/0001-rpcrt4-Fix-prototype-of-RpcBindingServerFromClient.patch
 	(
-		echo '+    { "Austin English", "rpcrt4: Add a stub for RpcBindingServerFromClient.", 1 },';
+		echo '+    { "Sebastian Lackner", "rpcrt4: Fix prototype of RpcBindingServerFromClient.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,46 @@
+From 5a419298c1871c0d71a2892d6ac4b517288b3563 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Thu, 14 Jan 2016 23:09:19 +0100
+Subject: ntdll: Always store SAMBA_XATTR_DOS_ATTRIB when path could be
+ interpreted as hidden.
+
+---
+ dlls/ntdll/file.c | 13 ++++++++-----
+ 1 file changed, 8 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index 50b0042..b38698f 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -213,12 +213,15 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
+         if (S_ISDIR( st->st_mode )) *attr |= FILE_ATTRIBUTE_REPARSE_POINT;
+     }
+     *attr |= get_file_attributes( st );
+-    /* convert Unix-style hidden files to a DOS hidden file attribute */
+-    if (DIR_is_hidden_file( path ))
+-        *attr |= FILE_ATTRIBUTE_HIDDEN;
+     /* retrieve any stored DOS attributes */
+     len = xattr_get( path, SAMBA_XATTR_DOS_ATTRIB, hexattr, sizeof(hexattr)-1 );
+-    if (len == -1) return ret;
++    if (len == -1)
++    {
++        /* convert Unix-style hidden files to a DOS hidden file attribute */
++        if (DIR_is_hidden_file( path ))
++            *attr |= FILE_ATTRIBUTE_HIDDEN;
++        return ret;
++    }
+     *attr |= get_file_xattr( hexattr, len );
+     return ret;
+ }
+@@ -231,7 +234,7 @@ NTSTATUS set_file_info( const char *path, ULONG attr )
+     /* Note: unix mode already set when called this way */
+     attr &= ~FILE_ATTRIBUTE_NORMAL; /* do not store everything, but keep everything Samba can use */
+     len = sprintf( hexattr, "0x%x", attr );
+-    if (attr != 0)
++    if (attr != 0 || DIR_is_hidden_file( path ))
+         xattr_set( path, SAMBA_XATTR_DOS_ATTRIB, hexattr, len );
+     else
+         xattr_remove( path, SAMBA_XATTR_DOS_ATTRIB );
+-- 
+2.6.4
+

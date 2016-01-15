@@ -4985,9 +4985,6 @@ fi
 
 # Patchset rpcrt4-RpcBindingServerFromClient
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38766] Implement stub for RpcBindingServerFromClient
-# |
 # | Modified files:
 # |   *	dlls/rpcrt4/rpc_binding.c
 # |

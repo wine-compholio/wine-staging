@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "14529012da91580119c1712cd24fcf67c780789b"
+	echo "8d0d1e563ca7697902df9c285ff13ce648697537"
 }
 
 # Show version information
@@ -285,7 +285,6 @@ patch_enable_all ()
 	enable_shlwapi_AssocGetPerceivedType="$1"
 	enable_shlwapi_SHMapHandle="$1"
 	enable_shlwapi_UrlCombine="$1"
-	enable_user32_Dead_Code="$1"
 	enable_user32_DeferWindowPos="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawTextExW="$1"
@@ -982,9 +981,6 @@ patch_enable ()
 			;;
 		shlwapi-UrlCombine)
 			enable_shlwapi_UrlCombine="$2"
-			;;
-		user32-Dead_Code)
-			enable_user32_Dead_Code="$2"
 			;;
 		user32-DeferWindowPos)
 			enable_user32_DeferWindowPos="$2"
@@ -2637,7 +2633,7 @@ fi
 # |   *	[#25138] Fix wrong version of ID3DXEffect interface for d3dx9_25
 # |
 # | Modified files:
-# |   *	dlls/d3dx9_25/Makefile.in, dlls/d3dx9_25/d3dx9_25.spec, dlls/d3dx9_25/effect.c, include/d3dx9effect.h
+# |   *	dlls/d3dx9_25/Makefile.in, dlls/d3dx9_25/d3dx9_25.spec, dlls/d3dx9_25/effect.c
 # |
 if test "$enable_d3dx9_25_ID3DXEffect" -eq 1; then
 	patch_apply d3dx9_25-ID3DXEffect/0001-d3dx9_25-Add-an-interface-wrapper-for-different-vers.patch
@@ -5675,21 +5671,6 @@ if test "$enable_shlwapi_UrlCombine" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "shlwapi/tests: Add additional tests for UrlCombine and UrlCanonicalize.", 1 },';
 		echo '+    { "Sebastian Lackner", "shlwapi: UrlCombineW workaround for relative paths.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-Dead_Code
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39558] Remove dead code from SCROLL_TrackScrollBar
-# |
-# | Modified files:
-# |   *	dlls/user32/scroll.c
-# |
-if test "$enable_user32_Dead_Code" -eq 1; then
-	patch_apply user32-Dead_Code/0001-user32-Remove-dead-code-from-SCROLL_TrackScrollBar.patch
-	(
-		echo '+    { "Jarkko Korpi", "user32: Remove dead code from SCROLL_TrackScrollBar.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -2111,6 +2111,13 @@ if test "$enable_d3dx9_24_ID3DXEffect" -eq 1; then
 	enable_d3dx9_25_ID3DXEffect=1
 fi
 
+if test "$enable_api_ms_win_crt_Stub_DLLs" -eq 1; then
+	if test "$enable_ole32_CoGetApartmentType" -gt 1; then
+		abort "Patchset ole32-CoGetApartmentType disabled, but api-ms-win-crt-Stub_DLLs depends on that."
+	fi
+	enable_ole32_CoGetApartmentType=1
+fi
+
 if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 	if test "$enable_server_CreateProcess_ACLs" -gt 1; then
 		abort "Patchset server-CreateProcess_ACLs disabled, but advapi32-LsaLookupSids depends on that."
@@ -2376,15 +2383,35 @@ if test "$enable_amstream_GetMultiMediaStream" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset api-ms-win-crt-Stub_DLLs
+# Patchset ole32-CoGetApartmentType
 # |
 # | Modified files:
-# |   *	dlls/ucrtbase/ucrtbase.spec
+# |   *	dlls/api-ms-win-core-com-l1-1-0/api-ms-win-core-com-l1-1-0.spec, dlls/api-ms-win-downlevel-ole32-l1-1-0/api-ms-win-
+# | 	downlevel-ole32-l1-1-0.spec, dlls/combase/combase.spec, dlls/ole32/compobj.c, dlls/ole32/ole32.spec,
+# | 	dlls/ole32/tests/compobj.c, include/objidl.idl
+# |
+if test "$enable_ole32_CoGetApartmentType" -eq 1; then
+	patch_apply ole32-CoGetApartmentType/0001-ole32-Implement-CoGetApartmentType.patch
+	(
+		echo '+    { "Michael Müller", "ole32: Implement CoGetApartmentType.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset api-ms-win-crt-Stub_DLLs
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ole32-CoGetApartmentType
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/api-ms-win-core-com-l1-1-1/Makefile.in, dlls/api-ms-win-core-com-l1-1-1/api-ms-win-core-
+# | 	com-l1-1-1.spec, dlls/ucrtbase/ucrtbase.spec, tools/make_specfiles
 # |
 if test "$enable_api_ms_win_crt_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-crt-Stub_DLLs/0001-ucrtbase-Hook-up-some-functions-with-new-names-to-ex.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0002-api-ms-win-core-com-l1-1-1-Add-dll.patch
 	(
 		echo '+    { "Martin Storsjo", "ucrtbase: Hook up some functions with new names to existing implementations.", 1 },';
+		echo '+    { "Michael Müller", "api-ms-win-core-com-l1-1-1: Add dll.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4804,20 +4831,6 @@ if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
 		echo '+    { "Michael Müller", "nvencodeapi: First implementation.", 1 },';
 		echo '+    { "Michael Müller", "nvencodeapi: Add debian specific paths to native library.", 1 },';
 		echo '+    { "Michael Müller", "nvencodeapi: Add support for version 6.0.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ole32-CoGetApartmentType
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-com-l1-1-0/api-ms-win-core-com-l1-1-0.spec, dlls/api-ms-win-downlevel-ole32-l1-1-0/api-ms-win-
-# | 	downlevel-ole32-l1-1-0.spec, dlls/combase/combase.spec, dlls/ole32/compobj.c, dlls/ole32/ole32.spec,
-# | 	dlls/ole32/tests/compobj.c, include/objidl.idl
-# |
-if test "$enable_ole32_CoGetApartmentType" -eq 1; then
-	patch_apply ole32-CoGetApartmentType/0001-ole32-Implement-CoGetApartmentType.patch
-	(
-		echo '+    { "Michael Müller", "ole32: Implement CoGetApartmentType.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -177,6 +177,7 @@ patch_enable_all ()
 	enable_mshtml_HTMLLocation_put_hash="$1"
 	enable_mshtml_Wine_Gecko_2_44="$1"
 	enable_msidb_Implementation="$1"
+	enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvcrt_StdHandle_RefCount="$1"
 	enable_ntdll_APC_Performance="$1"
@@ -656,6 +657,9 @@ patch_enable ()
 			;;
 		msidb-Implementation)
 			enable_msidb_Implementation="$2"
+			;;
+		msvcr120-_SetWinRTOutOfMemoryExceptionCallback)
+			enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback="$2"
 			;;
 		msvcrt-Math_Precision)
 			enable_msvcrt_Math_Precision="$2"
@@ -3984,6 +3988,18 @@ if test "$enable_msidb_Implementation" -eq 1; then
 		echo '+    { "Erich E. Hoover", "msi: Break out field exporting into a separate routine.", 1 },';
 		echo '+    { "Erich E. Hoover", "msi: Add support for exporting binary streams (Binary/Icon tables).", 1 },';
 		echo '+    { "Erich E. Hoover", "msidb: Add support for wildcard (full database) export.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msvcr120-_SetWinRTOutOfMemoryExceptionCallback
+# |
+# | Modified files:
+# |   *	dlls/msvcr120/msvcr120.spec, dlls/msvcr120_app/msvcr120_app.spec, dlls/msvcrt/misc.c
+# |
+if test "$enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback" -eq 1; then
+	patch_apply msvcr120-_SetWinRTOutOfMemoryExceptionCallback/0001-msvcr120-Add-stub-for-_SetWinRTOutOfMemoryExceptionC.patch
+	(
+		echo '+    { "Michael Müller", "msvcr120: Add stub for _SetWinRTOutOfMemoryExceptionCallback.", 1 },';
 	) >> "$patchlist"
 fi
 

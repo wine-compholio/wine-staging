@@ -228,6 +228,7 @@ patch_enable_all ()
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
+	enable_ole32_CoGetApartmentType="$1"
 	enable_oleaut32_TKIND_COCLASS="$1"
 	enable_oleaut32_x86_64_Marshaller="$1"
 	enable_openal32_EFX_Extension="$1"
@@ -808,6 +809,9 @@ patch_enable ()
 			;;
 		nvencodeapi-Video_Encoder)
 			enable_nvencodeapi_Video_Encoder="$2"
+			;;
+		ole32-CoGetApartmentType)
+			enable_ole32_CoGetApartmentType="$2"
 			;;
 		oleaut32-TKIND_COCLASS)
 			enable_oleaut32_TKIND_COCLASS="$2"
@@ -4800,6 +4804,20 @@ if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
 		echo '+    { "Michael Müller", "nvencodeapi: First implementation.", 1 },';
 		echo '+    { "Michael Müller", "nvencodeapi: Add debian specific paths to native library.", 1 },';
 		echo '+    { "Michael Müller", "nvencodeapi: Add support for version 6.0.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ole32-CoGetApartmentType
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-com-l1-1-0/api-ms-win-core-com-l1-1-0.spec, dlls/api-ms-win-downlevel-ole32-l1-1-0/api-ms-win-
+# | 	downlevel-ole32-l1-1-0.spec, dlls/combase/combase.spec, dlls/ole32/compobj.c, dlls/ole32/ole32.spec,
+# | 	dlls/ole32/tests/compobj.c, include/objidl.idl
+# |
+if test "$enable_ole32_CoGetApartmentType" -eq 1; then
+	patch_apply ole32-CoGetApartmentType/0001-ole32-Implement-CoGetApartmentType.patch
+	(
+		echo '+    { "Michael Müller", "ole32: Implement CoGetApartmentType.", 1 },';
 	) >> "$patchlist"
 fi
 

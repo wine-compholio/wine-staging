@@ -2116,9 +2116,21 @@ if test "$enable_d3dx9_24_ID3DXEffect" -eq 1; then
 fi
 
 if test "$enable_api_ms_win_crt_Stub_DLLs" -eq 1; then
+	if test "$enable_kernel32_FreeUserPhysicalPages" -gt 1; then
+		abort "Patchset kernel32-FreeUserPhysicalPages disabled, but api-ms-win-crt-Stub_DLLs depends on that."
+	fi
+	if test "$enable_kernel32_GetFinalPathNameByHandle" -gt 1; then
+		abort "Patchset kernel32-GetFinalPathNameByHandle disabled, but api-ms-win-crt-Stub_DLLs depends on that."
+	fi
+	if test "$enable_kernel32_InterlockedPushListSList" -gt 1; then
+		abort "Patchset kernel32-InterlockedPushListSList disabled, but api-ms-win-crt-Stub_DLLs depends on that."
+	fi
 	if test "$enable_ole32_CoGetApartmentType" -gt 1; then
 		abort "Patchset ole32-CoGetApartmentType disabled, but api-ms-win-crt-Stub_DLLs depends on that."
 	fi
+	enable_kernel32_FreeUserPhysicalPages=1
+	enable_kernel32_GetFinalPathNameByHandle=1
+	enable_kernel32_InterlockedPushListSList=1
 	enable_ole32_CoGetApartmentType=1
 fi
 
@@ -2387,6 +2399,49 @@ if test "$enable_amstream_GetMultiMediaStream" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-FreeUserPhysicalPages
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39543] Add stub kernel32.FreeUserPhysicalPages
+# |
+# | Modified files:
+# |   *	dlls/kernel32/heap.c, dlls/kernel32/kernel32.spec
+# |
+if test "$enable_kernel32_FreeUserPhysicalPages" -eq 1; then
+	patch_apply kernel32-FreeUserPhysicalPages/0001-kernel32-add-FreeUserPhysicalPages-stub-try-2.patch
+	(
+		echo '+    { "Austin English", "kernel32: Add FreeUserPhysicalPages stub.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-GetFinalPathNameByHandle
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34851] Support for GetFinalPathNameByHandle
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-file-l1-1-0/api-ms-win-core-file-l1-1-0.spec, dlls/api-ms-win-core-file-l1-2-0/api-ms-win-core-
+# | 	file-l1-2-0.spec, dlls/kernel32/file.c, dlls/kernel32/kernel32.spec
+# |
+if test "$enable_kernel32_GetFinalPathNameByHandle" -eq 1; then
+	patch_apply kernel32-GetFinalPathNameByHandle/0001-kernel32-Implement-GetFinalPathNameByHandle.patch
+	(
+		echo '+    { "Michael Müller", "kernel32: Implement GetFinalPathNameByHandle.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-InterlockedPushListSList
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-interlocked-l1-1-0/api-ms-win-core-interlocked-l1-1-0.spec, dlls/kernel32/kernel32.spec
+# |
+if test "$enable_kernel32_InterlockedPushListSList" -eq 1; then
+	patch_apply kernel32-InterlockedPushListSList/0001-kernel32-Forward-InterlockedPushListSList-to-ntdll.patch
+	(
+		echo '+    { "Sebastian Lackner", "kernel32: Forward InterlockedPushListSList to ntdll.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ole32-CoGetApartmentType
 # |
 # | Modified files:
@@ -2404,19 +2459,22 @@ fi
 # Patchset api-ms-win-crt-Stub_DLLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ole32-CoGetApartmentType
+# |   *	kernel32-FreeUserPhysicalPages, kernel32-GetFinalPathNameByHandle, kernel32-InterlockedPushListSList,
+# | 	ole32-CoGetApartmentType
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/api-ms-win-core-com-l1-1-1/Makefile.in, dlls/api-ms-win-core-com-l1-1-1/api-ms-win-core-
-# | 	com-l1-1-1.spec, dlls/api-ms-win-crt-heap-l1-1-0/api-ms-win-crt-heap-l1-1-0.spec, dlls/ucrtbase/ucrtbase.spec,
-# | 	tools/make_specfiles
+# | 	com-l1-1-1.spec, dlls/api-ms-win-crt-heap-l1-1-0/api-ms-win-crt-heap-l1-1-0.spec, dlls/kernelbase/Makefile.in,
+# | 	dlls/kernelbase/kernelbase.spec, dlls/kernelbase/misc.c, dlls/ucrtbase/ucrtbase.spec, tools/make_specfiles
 # |
 if test "$enable_api_ms_win_crt_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-crt-Stub_DLLs/0001-ucrtbase-Hook-up-some-functions-with-new-names-to-ex.patch
 	patch_apply api-ms-win-crt-Stub_DLLs/0002-api-ms-win-core-com-l1-1-1-Add-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0003-kernelbase-Add-dll-and-add-stub-for-QuirkIsEnabled.patch
 	(
 		echo '+    { "Martin Storsjo", "ucrtbase: Hook up some functions with new names to existing implementations.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-com-l1-1-1: Add dll.", 1 },';
+		echo '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3567,49 +3625,6 @@ if test "$enable_kernel32_Cwd_Startup_Info" -eq 1; then
 	patch_apply kernel32-Cwd_Startup_Info/0001-kernel32-Allow-non-nullterminated-string-as-working-.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32: Allow non-nullterminated string as working directory in create_startup_info.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-FreeUserPhysicalPages
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39543] Add stub kernel32.FreeUserPhysicalPages
-# |
-# | Modified files:
-# |   *	dlls/kernel32/heap.c, dlls/kernel32/kernel32.spec
-# |
-if test "$enable_kernel32_FreeUserPhysicalPages" -eq 1; then
-	patch_apply kernel32-FreeUserPhysicalPages/0001-kernel32-add-FreeUserPhysicalPages-stub-try-2.patch
-	(
-		echo '+    { "Austin English", "kernel32: Add FreeUserPhysicalPages stub.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-GetFinalPathNameByHandle
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34851] Support for GetFinalPathNameByHandle
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-file-l1-1-0/api-ms-win-core-file-l1-1-0.spec, dlls/api-ms-win-core-file-l1-2-0/api-ms-win-core-
-# | 	file-l1-2-0.spec, dlls/kernel32/file.c, dlls/kernel32/kernel32.spec
-# |
-if test "$enable_kernel32_GetFinalPathNameByHandle" -eq 1; then
-	patch_apply kernel32-GetFinalPathNameByHandle/0001-kernel32-Implement-GetFinalPathNameByHandle.patch
-	(
-		echo '+    { "Michael Müller", "kernel32: Implement GetFinalPathNameByHandle.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-InterlockedPushListSList
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-interlocked-l1-1-0/api-ms-win-core-interlocked-l1-1-0.spec, dlls/kernel32/kernel32.spec
-# |
-if test "$enable_kernel32_InterlockedPushListSList" -eq 1; then
-	patch_apply kernel32-InterlockedPushListSList/0001-kernel32-Forward-InterlockedPushListSList-to-ntdll.patch
-	(
-		echo '+    { "Sebastian Lackner", "kernel32: Forward InterlockedPushListSList to ntdll.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -183,6 +183,7 @@ patch_enable_all ()
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_APC_Start_Process="$1"
 	enable_ntdll_Activation_Context="$1"
+	enable_ntdll_ApiSetQueryApiSetPresence="$1"
 	enable_ntdll_CLI_Images="$1"
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_Dealloc_Thread_Stack="$1"
@@ -675,6 +676,9 @@ patch_enable ()
 			;;
 		ntdll-Activation_Context)
 			enable_ntdll_Activation_Context="$2"
+			;;
+		ntdll-ApiSetQueryApiSetPresence)
+			enable_ntdll_ApiSetQueryApiSetPresence="$2"
 			;;
 		ntdll-CLI_Images)
 			enable_ntdll_CLI_Images="$2"
@@ -2027,6 +2031,13 @@ if test "$enable_ntdll_CLI_Images" -eq 1; then
 		abort "Patchset mscoree-CorValidateImage disabled, but ntdll-CLI_Images depends on that."
 	fi
 	enable_mscoree_CorValidateImage=1
+fi
+
+if test "$enable_ntdll_ApiSetQueryApiSetPresence" -eq 1; then
+	if test "$enable_ntdll_WinSqm" -gt 1; then
+		abort "Patchset ntdll-WinSqm disabled, but ntdll-ApiSetQueryApiSetPresence depends on that."
+	fi
+	enable_ntdll_WinSqm=1
 fi
 
 if test "$enable_kernel32_Named_Pipe" -eq 1; then
@@ -4089,6 +4100,36 @@ if test "$enable_ntdll_Activation_Context" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-WinSqm
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#31971] ntdll is missing WinSqm[Start|End]Session implementation
+# |
+# | Modified files:
+# |   *	dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec, dlls/ntdll/tests/rtl.c
+# |
+if test "$enable_ntdll_WinSqm" -eq 1; then
+	patch_apply ntdll-WinSqm/0001-ntdll-Add-stubs-for-WinSqmStartSession-WinSqmEndSess.patch
+	(
+		echo '+    { "Erich E. Hoover", "ntdll: Add stubs for WinSqmStartSession / WinSqmEndSession.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-ApiSetQueryApiSetPresence
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-WinSqm
+# |
+# | Modified files:
+# |   *	dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec
+# |
+if test "$enable_ntdll_ApiSetQueryApiSetPresence" -eq 1; then
+	patch_apply ntdll-ApiSetQueryApiSetPresence/0001-ntdll-Add-stub-for-ApiSetQueryApiSetPresence.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Add stub for ApiSetQueryApiSetPresence.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-CLI_Images
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -4648,21 +4689,6 @@ if test "$enable_ntdll_Wait_User_APC" -eq 1; then
 	patch_apply ntdll-Wait_User_APC/0001-ntdll-Block-signals-while-executing-system-APCs.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Block signals while executing system APCs.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-WinSqm
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#31971] ntdll is missing WinSqm[Start|End]Session implementation
-# |
-# | Modified files:
-# |   *	dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec, dlls/ntdll/tests/rtl.c
-# |
-if test "$enable_ntdll_WinSqm" -eq 1; then
-	patch_apply ntdll-WinSqm/0001-ntdll-Add-stubs-for-WinSqmStartSession-WinSqmEndSess.patch
-	(
-		echo '+    { "Erich E. Hoover", "ntdll: Add stubs for WinSqmStartSession / WinSqmEndSession.", 1 },';
 	) >> "$patchlist"
 fi
 

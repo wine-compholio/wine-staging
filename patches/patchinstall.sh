@@ -2408,7 +2408,8 @@ fi
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/api-ms-win-core-com-l1-1-1/Makefile.in, dlls/api-ms-win-core-com-l1-1-1/api-ms-win-core-
-# | 	com-l1-1-1.spec, dlls/ucrtbase/ucrtbase.spec, tools/make_specfiles
+# | 	com-l1-1-1.spec, dlls/api-ms-win-crt-heap-l1-1-0/api-ms-win-crt-heap-l1-1-0.spec, dlls/ucrtbase/ucrtbase.spec,
+# | 	tools/make_specfiles
 # |
 if test "$enable_api_ms_win_crt_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-crt-Stub_DLLs/0001-ucrtbase-Hook-up-some-functions-with-new-names-to-ex.patch

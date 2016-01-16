@@ -92,6 +92,7 @@ patch_enable_all ()
 	enable_api_ms_win_crt_Stub_DLLs="$1"
 	enable_authz_Stub_Functions="$1"
 	enable_browseui_Progress_Dialog="$1"
+	enable_combase_WindowsCompareStringOrdinal="$1"
 	enable_comctl32_Button_Theming="$1"
 	enable_comctl32_PROPSHEET_InsertPage="$1"
 	enable_configure_Absolute_RPATH="$1"
@@ -403,6 +404,9 @@ patch_enable ()
 			;;
 		category-stable)
 			enable_category_stable="$2"
+			;;
+		combase-WindowsCompareStringOrdinal)
+			enable_combase_WindowsCompareStringOrdinal="$2"
 			;;
 		comctl32-Button_Theming)
 			enable_comctl32_Button_Theming="$2"
@@ -2544,6 +2548,21 @@ if test "$enable_browseui_Progress_Dialog" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "browseui: Implement IProgressDialog::SetAnimation.", 1 },';
 		echo '+    { "Michael Müller", "browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset combase-WindowsCompareStringOrdinal
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-winrt-string-l1-1-0/api-ms-win-core-winrt-string-l1-1-0.spec, dlls/combase/combase.spec,
+# | 	dlls/combase/string.c, dlls/combase/tests/string.c
+# |
+if test "$enable_combase_WindowsCompareStringOrdinal" -eq 1; then
+	patch_apply combase-WindowsCompareStringOrdinal/0001-combase-Implement-WindowsCompareStringOrdinal.patch
+	patch_apply combase-WindowsCompareStringOrdinal/0002-combase-tests-Add-tests-for-WindowsCompareStringOrdi.patch
+	(
+		echo '+    { "Sebastian Lackner", "combase: Implement WindowsCompareStringOrdinal.", 1 },';
+		echo '+    { "Sebastian Lackner", "combase/tests: Add tests for WindowsCompareStringOrdinal.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,4 +1,4 @@
-From c36c3e7049560da14340b1e5ce390cd91ef90c08 Mon Sep 17 00:00:00 2001
+From 504a202bba0312a71c4e5ea662e4a498c46be82a Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 4 Aug 2014 05:01:11 +0200
 Subject: server: Use SOCK_SEQPACKET socket in combination with SO_PEEK_OFF to
@@ -49,7 +49,7 @@ index 11626a2..0a3f2d7 100644
      }
      else SetLastError( RtlNtStatusToDosError(status) );
 diff --git a/dlls/kernel32/tests/pipe.c b/dlls/kernel32/tests/pipe.c
-index 1ac4ed1..fded318 100644
+index 544b7fa..5f5553b 100644
 --- a/dlls/kernel32/tests/pipe.c
 +++ b/dlls/kernel32/tests/pipe.c
 @@ -286,7 +286,6 @@ static void test_CreateNamedPipe(int pipemode)
@@ -149,7 +149,7 @@ index 1ac4ed1..fded318 100644
              ret = RpcReadFile(hnp, ibuf + 8, sizeof(ibuf), &readden, NULL);
              ok(ret, "RpcReadFile 10\n");
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index c0ca068..fd6c605 100644
+index 5e3a9e1..dfb7812 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
 @@ -91,6 +91,10 @@
@@ -163,7 +163,7 @@ index c0ca068..fd6c605 100644
  #include "ntstatus.h"
  #define WIN32_NO_STATUS
  #define NONAMELESSUNION
-@@ -511,18 +515,57 @@ static NTSTATUS unix_fd_avail(int fd, int *avail)
+@@ -508,18 +512,57 @@ static NTSTATUS unix_fd_avail(int fd, int *avail)
             STATUS_PIPE_BROKEN : STATUS_SUCCESS;
  }
  
@@ -224,7 +224,7 @@ index c0ca068..fd6c605 100644
              {
                  if (*total)
                      return STATUS_SUCCESS;
-@@ -538,16 +581,17 @@ static NTSTATUS read_unix_fd(int fd, char *buf, ULONG *total, ULONG length,
+@@ -535,16 +578,17 @@ static NTSTATUS read_unix_fd(int fd, char *buf, ULONG *total, ULONG length,
                      return STATUS_PIPE_BROKEN;
                  }
              }
@@ -246,7 +246,7 @@ index c0ca068..fd6c605 100644
  }
  
  /***********************************************************************
-@@ -1105,13 +1149,14 @@ NTSTATUS WINAPI NtReadFileScatter( HANDLE file, HANDLE event, PIO_APC_ROUTINE ap
+@@ -1102,13 +1146,14 @@ NTSTATUS WINAPI NtReadFileScatter( HANDLE file, HANDLE event, PIO_APC_ROUTINE ap
  /* helper function for NtWriteFile and FILE_AsyncWriteService */
  static NTSTATUS write_unix_fd(int fd, const char *buf, ULONG *total, ULONG length, enum server_fd_type type)
  {
@@ -262,7 +262,7 @@ index c0ca068..fd6c605 100644
          if (result >= 0)
          {
              *total += result;
-@@ -1120,6 +1165,17 @@ static NTSTATUS write_unix_fd(int fd, const char *buf, ULONG *total, ULONG lengt
+@@ -1117,6 +1162,17 @@ static NTSTATUS write_unix_fd(int fd, const char *buf, ULONG *total, ULONG lengt
              else if (type != FD_TYPE_FILE) /* no async I/O on regular files */
                  return STATUS_PENDING;
          }
@@ -280,7 +280,7 @@ index c0ca068..fd6c605 100644
          else if (errno != EINTR)
          {
              if (errno == EAGAIN)
-@@ -1710,20 +1766,40 @@ NTSTATUS WINAPI NtFsControlFile(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc
+@@ -1707,20 +1763,40 @@ NTSTATUS WINAPI NtFsControlFile(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc
              status = unix_fd_avail( fd, &avail );
              if (!status)
              {
@@ -329,7 +329,7 @@ index c0ca068..fd6c605 100644
              if (needs_close) close( fd );
          }
 diff --git a/server/named_pipe.c b/server/named_pipe.c
-index 494a3d8..9df5915 100644
+index 51650cd..670eafe 100644
 --- a/server/named_pipe.c
 +++ b/server/named_pipe.c
 @@ -42,6 +42,10 @@
@@ -351,7 +351,7 @@ index 494a3d8..9df5915 100644
  #include "handle.h"
  #include "thread.h"
  #include "request.h"
-@@ -783,14 +788,43 @@ static struct pipe_server *find_available_server( struct named_pipe *pipe )
+@@ -787,14 +792,43 @@ static struct pipe_server *find_available_server( struct named_pipe *pipe )
      return NULL;
  }
  
@@ -396,7 +396,7 @@ index 494a3d8..9df5915 100644
  
      if (!(server = find_available_server( pipe )))
      {
-@@ -809,7 +843,10 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
+@@ -813,7 +847,10 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
  
      if ((client = create_pipe_client( options, pipe->flags )))
      {
@@ -408,7 +408,7 @@ index 494a3d8..9df5915 100644
          {
              assert( !server->fd );
  
-@@ -819,32 +856,55 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
+@@ -823,32 +860,55 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
              if (is_overlapped( options )) fcntl( fds[1], F_SETFL, O_NONBLOCK );
              if (is_overlapped( server->options )) fcntl( fds[0], F_SETFL, O_NONBLOCK );
  
@@ -483,16 +483,16 @@ index 494a3d8..9df5915 100644
                  release_object( client );
                  client = NULL;
              }
-@@ -933,7 +993,7 @@ DECL_HANDLER(create_named_pipe)
+@@ -939,7 +999,7 @@ DECL_HANDLER(create_named_pipe)
          return;
      }
  
 -    reply->flags = req->flags & ~(NAMED_PIPE_MESSAGE_STREAM_WRITE | NAMED_PIPE_MESSAGE_STREAM_READ);
 +    reply->flags = messagemode_flags(req->flags);
-     reply->handle = 0;
  
-     if (!objattr_is_valid( objattr, get_req_data_size() ))
-@@ -1033,6 +1093,9 @@ DECL_HANDLER(set_named_pipe_info)
+     if (objattr->rootdir && !(root = get_directory_obj( current->process, objattr->rootdir, 0 )))
+         return;
+@@ -1035,6 +1095,9 @@ DECL_HANDLER(set_named_pipe_info)
  {
      struct pipe_server *server;
      struct pipe_client *client = NULL;
@@ -502,7 +502,7 @@ index 494a3d8..9df5915 100644
  
      server = get_pipe_server_obj( current->process, req->handle, FILE_WRITE_ATTRIBUTES );
      if (!server)
-@@ -1055,10 +1118,20 @@ DECL_HANDLER(set_named_pipe_info)
+@@ -1061,10 +1124,20 @@ DECL_HANDLER(set_named_pipe_info)
      else if (client)
      {
          client->pipe_flags = server->pipe->flags | req->flags;
@@ -524,7 +524,7 @@ index 494a3d8..9df5915 100644
  
      if (client)
 diff --git a/server/sock.c b/server/sock.c
-index 1767dea..095c569 100644
+index 57d3d93..ede97d9 100644
 --- a/server/sock.c
 +++ b/server/sock.c
 @@ -61,6 +61,7 @@
@@ -543,7 +543,7 @@ index 1767dea..095c569 100644
  
  static const struct object_ops sock_ops =
  {
-@@ -955,7 +955,7 @@ static int sock_get_ntstatus( int err )
+@@ -956,7 +956,7 @@ static int sock_get_ntstatus( int err )
  }
  
  /* set the last error depending on errno */
@@ -585,5 +585,5 @@ index 0000000..21551b4
 +
 +#endif  /* __WINE_SERVER_SOCK_H */
 -- 
-2.6.2
+2.6.4
 

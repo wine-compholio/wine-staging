@@ -1,17 +1,17 @@
-From ab880fafaf84e637a978a39488413b25e32f5217 Mon Sep 17 00:00:00 2001
+From 12b1d27763ce61ee38b3694e68c44a96d9b17102 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 20 Aug 2014 15:28:00 -0600
 Subject: ntdll: Implement storing DOS attributes in NtCreateFile.
 
 ---
- dlls/ntdll/file.c            | 76 ++++++++++++++++++++++++++++----------------
+ dlls/ntdll/file.c            | 74 ++++++++++++++++++++++++++++----------------
  dlls/ntdll/tests/directory.c | 24 ++++++--------
  include/wine/port.h          |  2 ++
  libs/port/xattr.c            | 20 ++++++++++++
- 4 files changed, 80 insertions(+), 42 deletions(-)
+ 4 files changed, 79 insertions(+), 41 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index a5fbda7..a22ca20 100644
+index 3dfcbf8..13787ba 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
 @@ -219,6 +219,21 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
@@ -46,7 +46,7 @@ index a5fbda7..a22ca20 100644
      ANSI_STRING unix_name;
      BOOL created = FALSE;
  
-@@ -273,37 +291,35 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
+@@ -273,36 +291,34 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
          io->u.Status = STATUS_SUCCESS;
      }
  
@@ -70,7 +70,6 @@ index a5fbda7..a22ca20 100644
 -        SERVER_START_REQ( create_file )
 -        {
 -            req->access     = access;
--            req->attributes = attr->Attributes;
 -            req->sharing    = sharing;
 -            req->create     = disposition;
 -            req->options    = options;
@@ -94,7 +93,6 @@ index a5fbda7..a22ca20 100644
 +    SERVER_START_REQ( create_file )
 +    {
 +        req->access     = access;
-+        req->attributes = attr->Attributes;
 +        req->sharing    = sharing;
 +        req->create     = disposition;
 +        req->options    = options;
@@ -109,7 +107,7 @@ index a5fbda7..a22ca20 100644
  
      if (io->u.Status == STATUS_SUCCESS)
      {
-@@ -325,6 +341,11 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
+@@ -324,6 +340,11 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
              io->Information = FILE_OVERWRITTEN;
              break;
          }
@@ -121,7 +119,7 @@ index a5fbda7..a22ca20 100644
      }
      else if (io->u.Status == STATUS_TOO_MANY_OPENED_FILES)
      {
-@@ -332,6 +353,7 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
+@@ -331,6 +352,7 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
          if (!once++) ERR_(winediag)( "Too many open files, ulimit -n probably needs to be increased\n" );
      }
  

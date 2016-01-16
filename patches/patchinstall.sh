@@ -2130,6 +2130,9 @@ if test "$enable_api_ms_win_crt_Stub_DLLs" -eq 1; then
 	if test "$enable_kernel32_FreeUserPhysicalPages" -gt 1; then
 		abort "Patchset kernel32-FreeUserPhysicalPages disabled, but api-ms-win-crt-Stub_DLLs depends on that."
 	fi
+	if test "$enable_kernel32_GetCurrentPackageFamilyName" -gt 1; then
+		abort "Patchset kernel32-GetCurrentPackageFamilyName disabled, but api-ms-win-crt-Stub_DLLs depends on that."
+	fi
 	if test "$enable_kernel32_GetFinalPathNameByHandle" -gt 1; then
 		abort "Patchset kernel32-GetFinalPathNameByHandle disabled, but api-ms-win-crt-Stub_DLLs depends on that."
 	fi
@@ -2140,6 +2143,7 @@ if test "$enable_api_ms_win_crt_Stub_DLLs" -eq 1; then
 		abort "Patchset ole32-CoGetApartmentType disabled, but api-ms-win-crt-Stub_DLLs depends on that."
 	fi
 	enable_kernel32_FreeUserPhysicalPages=1
+	enable_kernel32_GetCurrentPackageFamilyName=1
 	enable_kernel32_GetFinalPathNameByHandle=1
 	enable_kernel32_InterlockedPushListSList=1
 	enable_ole32_CoGetApartmentType=1
@@ -2425,6 +2429,18 @@ if test "$enable_kernel32_FreeUserPhysicalPages" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-GetCurrentPackageFamilyName
+# |
+# | Modified files:
+# |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/version.c
+# |
+if test "$enable_kernel32_GetCurrentPackageFamilyName" -eq 1; then
+	patch_apply kernel32-GetCurrentPackageFamilyName/0001-kernel32-Add-stub-for-GetCurrentPackageFamilyName-an.patch
+	(
+		echo '+    { "Michael Müller", "kernel32: Add stub for GetCurrentPackageFamilyName and add related functions to spec file.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset kernel32-GetFinalPathNameByHandle
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2470,8 +2486,8 @@ fi
 # Patchset api-ms-win-crt-Stub_DLLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	kernel32-FreeUserPhysicalPages, kernel32-GetFinalPathNameByHandle, kernel32-InterlockedPushListSList,
-# | 	ole32-CoGetApartmentType
+# |   *	kernel32-FreeUserPhysicalPages, kernel32-GetCurrentPackageFamilyName, kernel32-GetFinalPathNameByHandle,
+# | 	kernel32-InterlockedPushListSList, ole32-CoGetApartmentType
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/api-ms-win-core-com-l1-1-1/Makefile.in, dlls/api-ms-win-core-com-l1-1-1/api-ms-win-core-
@@ -3643,18 +3659,6 @@ if test "$enable_kernel32_Cwd_Startup_Info" -eq 1; then
 	patch_apply kernel32-Cwd_Startup_Info/0001-kernel32-Allow-non-nullterminated-string-as-working-.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32: Allow non-nullterminated string as working directory in create_startup_info.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-GetCurrentPackageFamilyName
-# |
-# | Modified files:
-# |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/version.c
-# |
-if test "$enable_kernel32_GetCurrentPackageFamilyName" -eq 1; then
-	patch_apply kernel32-GetCurrentPackageFamilyName/0001-kernel32-Add-stub-for-GetCurrentPackageFamilyName-an.patch
-	(
-		echo '+    { "Michael Müller", "kernel32: Add stub for GetCurrentPackageFamilyName and add related functions to spec file.", 1 },';
 	) >> "$patchlist"
 fi
 

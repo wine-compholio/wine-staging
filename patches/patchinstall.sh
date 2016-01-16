@@ -89,7 +89,7 @@ patch_enable_all ()
 	enable_advapi32_LsaLookupSids="$1"
 	enable_advapi32_SetSecurityInfo="$1"
 	enable_amstream_GetMultiMediaStream="$1"
-	enable_api_ms_win_crt_Stub_DLLs="$1"
+	enable_api_ms_win_Stub_DLLs="$1"
 	enable_authz_Stub_Functions="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_combase_WindowsCompareStringOrdinal="$1"
@@ -393,8 +393,8 @@ patch_enable ()
 		amstream-GetMultiMediaStream)
 			enable_amstream_GetMultiMediaStream="$2"
 			;;
-		api-ms-win-crt-Stub_DLLs)
-			enable_api_ms_win_crt_Stub_DLLs="$2"
+		api-ms-win-Stub_DLLs)
+			enable_api_ms_win_Stub_DLLs="$2"
 			;;
 		authz-Stub_Functions)
 			enable_authz_Stub_Functions="$2"
@@ -2130,21 +2130,21 @@ if test "$enable_d3dx9_24_ID3DXEffect" -eq 1; then
 	enable_d3dx9_25_ID3DXEffect=1
 fi
 
-if test "$enable_api_ms_win_crt_Stub_DLLs" -eq 1; then
+if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	if test "$enable_kernel32_FreeUserPhysicalPages" -gt 1; then
-		abort "Patchset kernel32-FreeUserPhysicalPages disabled, but api-ms-win-crt-Stub_DLLs depends on that."
+		abort "Patchset kernel32-FreeUserPhysicalPages disabled, but api-ms-win-Stub_DLLs depends on that."
 	fi
 	if test "$enable_kernel32_GetCurrentPackageFamilyName" -gt 1; then
-		abort "Patchset kernel32-GetCurrentPackageFamilyName disabled, but api-ms-win-crt-Stub_DLLs depends on that."
+		abort "Patchset kernel32-GetCurrentPackageFamilyName disabled, but api-ms-win-Stub_DLLs depends on that."
 	fi
 	if test "$enable_kernel32_GetFinalPathNameByHandle" -gt 1; then
-		abort "Patchset kernel32-GetFinalPathNameByHandle disabled, but api-ms-win-crt-Stub_DLLs depends on that."
+		abort "Patchset kernel32-GetFinalPathNameByHandle disabled, but api-ms-win-Stub_DLLs depends on that."
 	fi
 	if test "$enable_kernel32_InterlockedPushListSList" -gt 1; then
-		abort "Patchset kernel32-InterlockedPushListSList disabled, but api-ms-win-crt-Stub_DLLs depends on that."
+		abort "Patchset kernel32-InterlockedPushListSList disabled, but api-ms-win-Stub_DLLs depends on that."
 	fi
 	if test "$enable_ole32_CoGetApartmentType" -gt 1; then
-		abort "Patchset ole32-CoGetApartmentType disabled, but api-ms-win-crt-Stub_DLLs depends on that."
+		abort "Patchset ole32-CoGetApartmentType disabled, but api-ms-win-Stub_DLLs depends on that."
 	fi
 	enable_kernel32_FreeUserPhysicalPages=1
 	enable_kernel32_GetCurrentPackageFamilyName=1
@@ -2487,7 +2487,7 @@ if test "$enable_ole32_CoGetApartmentType" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset api-ms-win-crt-Stub_DLLs
+# Patchset api-ms-win-Stub_DLLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	kernel32-FreeUserPhysicalPages, kernel32-GetCurrentPackageFamilyName, kernel32-GetFinalPathNameByHandle,
@@ -2504,15 +2504,15 @@ fi
 # | 	heap-l1-1-0.spec, dlls/kernelbase/Makefile.in, dlls/kernelbase/kernelbase.spec, dlls/kernelbase/misc.c,
 # | 	dlls/ucrtbase/ucrtbase.spec, tools/make_specfiles
 # |
-if test "$enable_api_ms_win_crt_Stub_DLLs" -eq 1; then
-	patch_apply api-ms-win-crt-Stub_DLLs/0001-ucrtbase-Hook-up-some-functions-with-new-names-to-ex.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0002-api-ms-win-core-com-l1-1-1-Add-dll.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0003-kernelbase-Add-dll-and-add-stub-for-QuirkIsEnabled.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0004-api-ms-win-core-quirks-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0005-api-ms-win-core-delayload-l1-1-1-Add-dll.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0006-api-ms-win-appmodel-runtime-l1-1-1-Add-new-dll.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0007-api-ms-win-core-apiquery-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-crt-Stub_DLLs/0008-api-ms-win-core-libraryloader-l1-2-0-Add-dll.patch
+if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
+	patch_apply api-ms-win-Stub_DLLs/0001-ucrtbase-Hook-up-some-functions-with-new-names-to-ex.patch
+	patch_apply api-ms-win-Stub_DLLs/0002-api-ms-win-core-com-l1-1-1-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0003-kernelbase-Add-dll-and-add-stub-for-QuirkIsEnabled.patch
+	patch_apply api-ms-win-Stub_DLLs/0004-api-ms-win-core-quirks-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0005-api-ms-win-core-delayload-l1-1-1-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0006-api-ms-win-appmodel-runtime-l1-1-1-Add-new-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0007-api-ms-win-core-apiquery-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0008-api-ms-win-core-libraryloader-l1-2-0-Add-dll.patch
 	(
 		echo '+    { "Martin Storsjo", "ucrtbase: Hook up some functions with new names to existing implementations.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-com-l1-1-1: Add dll.", 1 },';

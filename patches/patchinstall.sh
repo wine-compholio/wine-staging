@@ -2490,10 +2490,11 @@ fi
 # | 	kernel32-InterlockedPushListSList, ole32-CoGetApartmentType
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/api-ms-win-core-com-l1-1-1/Makefile.in, dlls/api-ms-win-core-com-l1-1-1/api-ms-win-core-
-# | 	com-l1-1-1.spec, dlls/api-ms-win-core-delayload-l1-1-1/Makefile.in, dlls/api-ms-win-core-delayload-l1-1-1/api-ms-win-
-# | 	core-delayload-l1-1-1.spec, dlls/api-ms-win-core-quirks-l1-1-0/Makefile.in, dlls/api-ms-win-core-quirks-l1-1-0/api-ms-
-# | 	win-core-quirks-l1-1-0.spec, dlls/api-ms-win-crt-heap-l1-1-0/api-ms-win-crt-heap-l1-1-0.spec,
+# |   *	configure.ac, dlls/api-ms-win-appmodel-runtime-l1-1-1/Makefile.in, dlls/api-ms-win-appmodel-runtime-l1-1-1/api-ms-win-
+# | 	appmodel-runtime-l1-1-1.spec, dlls/api-ms-win-core-com-l1-1-1/Makefile.in, dlls/api-ms-win-core-com-l1-1-1/api-ms-win-
+# | 	core-com-l1-1-1.spec, dlls/api-ms-win-core-delayload-l1-1-1/Makefile.in, dlls/api-ms-win-core-delayload-l1-1-1/api-ms-
+# | 	win-core-delayload-l1-1-1.spec, dlls/api-ms-win-core-quirks-l1-1-0/Makefile.in, dlls/api-ms-win-core-quirks-l1-1-0/api-
+# | 	ms-win-core-quirks-l1-1-0.spec, dlls/api-ms-win-crt-heap-l1-1-0/api-ms-win-crt-heap-l1-1-0.spec,
 # | 	dlls/kernelbase/Makefile.in, dlls/kernelbase/kernelbase.spec, dlls/kernelbase/misc.c, dlls/ucrtbase/ucrtbase.spec,
 # | 	tools/make_specfiles
 # |
@@ -2503,12 +2504,14 @@ if test "$enable_api_ms_win_crt_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-crt-Stub_DLLs/0003-kernelbase-Add-dll-and-add-stub-for-QuirkIsEnabled.patch
 	patch_apply api-ms-win-crt-Stub_DLLs/0004-api-ms-win-core-quirks-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-crt-Stub_DLLs/0005-api-ms-win-core-delayload-l1-1-1-Add-dll.patch
+	patch_apply api-ms-win-crt-Stub_DLLs/0006-api-ms-win-appmodel-runtime-l1-1-1-Add-new-dll.patch
 	(
 		echo '+    { "Martin Storsjo", "ucrtbase: Hook up some functions with new names to existing implementations.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-com-l1-1-1: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-quirks-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-delayload-l1-1-1: Add dll.", 1 },';
+		echo '+    { "Michael Müller", "api-ms-win-appmodel-runtime-l1-1-1: Add new dll.", 1 },';
 	) >> "$patchlist"
 fi
 

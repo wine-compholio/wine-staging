@@ -2565,13 +2565,13 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/api-ms-win-core-winrt-string-l1-1-0/api-ms-win-core-winrt-string-l1-1-0.spec, dlls/combase/combase.spec,
-# | 	dlls/combase/string.c, dlls/combase/tests/string.c
+# | 	dlls/combase/string.c, dlls/combase/tests/string.c, include/winnls.h
 # |
 if test "$enable_combase_WindowsCompareStringOrdinal" -eq 1; then
 	patch_apply combase-WindowsCompareStringOrdinal/0001-combase-Implement-WindowsCompareStringOrdinal.patch
 	patch_apply combase-WindowsCompareStringOrdinal/0002-combase-tests-Add-tests-for-WindowsCompareStringOrdi.patch
 	(
-		echo '+    { "Sebastian Lackner", "combase: Implement WindowsCompareStringOrdinal.", 1 },';
+		echo '+    { "Sebastian Lackner", "combase: Implement WindowsCompareStringOrdinal.", 2 },';
 		echo '+    { "Sebastian Lackner", "combase/tests: Add tests for WindowsCompareStringOrdinal.", 1 },';
 	) >> "$patchlist"
 fi

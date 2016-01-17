@@ -2529,8 +2529,9 @@ fi
 # | 	kernel32-legacy-l1-1-1/api-ms-win-core-kernel32-legacy-l1-1-1.spec, dlls/api-ms-win-core-
 # | 	libraryloader-l1-2-0/Makefile.in, dlls/api-ms-win-core-libraryloader-l1-2-0/api-ms-win-core-libraryloader-l1-2-0.spec,
 # | 	dlls/api-ms-win-core-quirks-l1-1-0/Makefile.in, dlls/api-ms-win-core-quirks-l1-1-0/api-ms-win-core-quirks-l1-1-0.spec,
-# | 	dlls/api-ms-win-crt-heap-l1-1-0/api-ms-win-crt-heap-l1-1-0.spec, dlls/api-ms-win-eventing-
-# | 	classicprovider-l1-1-0/Makefile.in, dlls/api-ms-win-eventing-classicprovider-l1-1-0/api-ms-win-eventing-
+# | 	dlls/api-ms-win-core-winrt-registration-l1-1-0/Makefile.in, dlls/api-ms-win-core-winrt-registration-l1-1-0/api-ms-win-
+# | 	core-winrt-registration-l1-1-0.spec, dlls/api-ms-win-crt-heap-l1-1-0/api-ms-win-crt-heap-l1-1-0.spec, dlls/api-ms-win-
+# | 	eventing-classicprovider-l1-1-0/Makefile.in, dlls/api-ms-win-eventing-classicprovider-l1-1-0/api-ms-win-eventing-
 # | 	classicprovider-l1-1-0.spec, dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec, dlls/iertutil/main.c,
 # | 	dlls/kernelbase/Makefile.in, dlls/kernelbase/kernelbase.spec, dlls/kernelbase/misc.c, dlls/ucrtbase/ucrtbase.spec,
 # | 	tools/make_specfiles
@@ -2548,6 +2549,7 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0010-api-ms-win-core-heap-l2-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0011-api-ms-win-eventing-classicprovider-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0012-iertutil-Add-dll-and-add-stub-for-ordinal-811.patch
+	patch_apply api-ms-win-Stub_DLLs/0013-api-ms-win-core-winrt-registration-l1-1-0-Add-dll.patch
 	(
 		echo '+    { "Martin Storsjo", "ucrtbase: Hook up some functions with new names to existing implementations.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-com-l1-1-1: Add dll.", 1 },';
@@ -2561,6 +2563,7 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		echo '+    { "Michael Müller", "api-ms-win-core-heap-l2-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-eventing-classicprovider-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "iertutil: Add dll and add stub for ordinal 811.", 1 },';
+		echo '+    { "Michael Müller", "api-ms-win-core-winrt-registration-l1-1-0: Add dll.", 1 },';
 	) >> "$patchlist"
 fi
 

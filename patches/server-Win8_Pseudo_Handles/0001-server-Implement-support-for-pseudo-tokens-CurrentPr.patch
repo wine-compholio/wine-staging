@@ -1,0 +1,126 @@
+From e68fdb7c4406d7b01a653480e28153c0e2c87bbf Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 17 Jan 2016 20:32:28 +0100
+Subject: server: Implement support for pseudo tokens CurrentProcessToken,
+ CurrentThreadToken, CurrentThreadEffectiveToken.
+
+---
+ dlls/advapi32/tests/security.c | 52 ++++++++++++++++++++++++++++++++++++++++++
+ include/winbase.h              | 15 ++++++++++++
+ server/handle.c                |  6 +++++
+ 3 files changed, 73 insertions(+)
+
+diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
+index c71e6fe..a3d194c 100644
+--- a/dlls/advapi32/tests/security.c
++++ b/dlls/advapi32/tests/security.c
+@@ -6070,6 +6070,57 @@ static void test_GetSidIdentifierAuthority(void)
+     ok(GetLastError() == ERROR_SUCCESS, "expected ERROR_SUCCESS, got %u\n", GetLastError());
+ }
+ 
++static void test_pseudo_tokens(void)
++{
++    TOKEN_STATISTICS statistics1, statistics2;
++    HANDLE token;
++    DWORD retlen;
++    BOOL ret;
++
++    ret = OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token);
++    ok(ret, "OpenProcessToken failed with error %u\n", GetLastError());
++    memset(&statistics1, 0x11, sizeof(statistics1));
++    ret = GetTokenInformation(token, TokenStatistics, &statistics1, sizeof(statistics1), &retlen);
++    ok(ret, "GetTokenInformation failed with %u\n", GetLastError());
++    CloseHandle(token);
++
++    /* test GetCurrentProcessToken() */
++    SetLastError(0xdeadbeef);
++    memset(&statistics2, 0x22, sizeof(statistics2));
++    ret = GetTokenInformation(GetCurrentProcessToken(), TokenStatistics,
++                              &statistics2, sizeof(statistics2), &retlen);
++    ok(ret || broken(GetLastError() == ERROR_INVALID_HANDLE),
++       "GetTokenInformation failed with %u\n", GetLastError());
++    if (ret)
++        ok(!memcmp(&statistics1, &statistics2, sizeof(statistics1)), "Token statistics are not equal\n");
++    else
++        win_skip("Failed to get information about pseudo process token, skipping comparison\n");
++
++    /* test GetCurrentThreadEffectiveToken() */
++    SetLastError(0xdeadbeef);
++    memset(&statistics2, 0x22, sizeof(statistics2));
++    ret = GetTokenInformation(GetCurrentThreadEffectiveToken(), TokenStatistics,
++                              &statistics2, sizeof(statistics2), &retlen);
++    ok(ret || broken(GetLastError() == ERROR_INVALID_HANDLE),
++       "GetTokenInformation failed with %u\n", GetLastError());
++    if (ret)
++        ok(!memcmp(&statistics1, &statistics2, sizeof(statistics1)), "Token statistics are not equal\n");
++    else
++        win_skip("Failed to get information about pseudo effective thread token, skipping comparison\n");
++
++    SetLastError(0xdeadbeef);
++    ret = OpenThreadToken(GetCurrentThread(), TOKEN_QUERY, TRUE, &token);
++    ok(!ret, "OpenThreadToken should have failed\n");
++    ok(GetLastError() == ERROR_NO_TOKEN, "Expected ERROR_NO_TOKEN, got %u\n", GetLastError());
++
++    /* test GetCurrentThreadToken() */
++    SetLastError(0xdeadbeef);
++    ret = GetTokenInformation(GetCurrentThreadToken(), TokenStatistics,
++                              &statistics2, sizeof(statistics2), &retlen);
++    todo_wine ok(GetLastError() == ERROR_NO_TOKEN || broken(GetLastError() == ERROR_INVALID_HANDLE),
++                 "Expected ERROR_NO_TOKEN, got %u\n", GetLastError());
++}
++
+ START_TEST(security)
+ {
+     init();
+@@ -6115,4 +6166,5 @@ START_TEST(security)
+     test_AddAce();
+     test_system_security_access();
+     test_GetSidIdentifierAuthority();
++    test_pseudo_tokens();
+ }
+diff --git a/include/winbase.h b/include/winbase.h
+index f35391d..f5c2557 100644
+--- a/include/winbase.h
++++ b/include/winbase.h
+@@ -2973,6 +2973,21 @@ WINBASEAPI VOID        WINAPI SetLastError(DWORD);
+ #define GetCurrentThread()  ((HANDLE)~(ULONG_PTR)1)
+ #endif
+ 
++static FORCEINLINE HANDLE GetCurrentProcessToken(void)
++{
++    return (HANDLE)~(LONG_PTR)3;
++}
++
++static FORCEINLINE HANDLE GetCurrentThreadToken(void)
++{
++    return (HANDLE)~(LONG_PTR)4;
++}
++
++static FORCEINLINE HANDLE GetCurrentThreadEffectiveToken(void)
++{
++    return (HANDLE)~(LONG_PTR)5;
++}
++
+ /* WinMain(entry point) must be declared in winbase.h. */
+ /* If this is not declared, we cannot compile many sources written with C++. */
+ int WINAPI WinMain(HINSTANCE,HINSTANCE,LPSTR,int);
+diff --git a/server/handle.c b/server/handle.c
+index 05d71ba..76e1cca 100644
+--- a/server/handle.c
++++ b/server/handle.c
+@@ -402,6 +402,12 @@ static inline struct object *get_magic_handle( obj_handle_t handle )
+ {
+     switch(handle)
+     {
++        case 0xfffffffa:  /* current thread impersonation token pseudo-handle */
++            return (struct object *)thread_get_impersonation_token( current );
++        case 0xfffffffb:  /* current thread token pseudo-handle */
++            return (struct object *)current->token;
++        case 0xfffffffc:  /* current process token pseudo-handle */
++            return (struct object *)current->process->token;
+         case 0xfffffffe:  /* current thread pseudo-handle */
+             return &current->obj;
+         case 0x7fffffff:  /* current process pseudo-handle */
+-- 
+2.6.4
+

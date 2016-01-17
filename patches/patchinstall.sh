@@ -264,6 +264,7 @@ patch_enable_all ()
 	enable_server_Signal_Thread="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
+	enable_server_Win8_Pseudo_Handles="$1"
 	enable_services_SERVICE_FILE_SYSTEM_DRIVER="$1"
 	enable_setupapi_HSPFILEQ_Check_Type="$1"
 	enable_setupapi_SetupDiSetDeviceInstallParamsW="$1"
@@ -923,6 +924,9 @@ patch_enable ()
 			;;
 		server-Timestamp_Compat)
 			enable_server_Timestamp_Compat="$2"
+			;;
+		server-Win8_Pseudo_Handles)
+			enable_server_Win8_Pseudo_Handles="$2"
 			;;
 		services-SERVICE_FILE_SYSTEM_DRIVER)
 			enable_services_SERVICE_FILE_SYSTEM_DRIVER="$2"
@@ -5445,6 +5449,18 @@ if test "$enable_server_Timestamp_Compat" -eq 1; then
 	patch_apply server-Timestamp_Compat/0001-server-Compatibility-with-Wine-Staging-format-for-hi.patch
 	(
 		echo '+    { "Michael Müller", "server: Compatibility with Wine Staging format for high precision registry timestamps.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Win8_Pseudo_Handles
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, include/winbase.h, server/handle.c
+# |
+if test "$enable_server_Win8_Pseudo_Handles" -eq 1; then
+	patch_apply server-Win8_Pseudo_Handles/0001-server-Implement-support-for-pseudo-tokens-CurrentPr.patch
+	(
+		echo '+    { "Michael Müller", "server: Implement support for pseudo tokens CurrentProcessToken, CurrentThreadToken, CurrentThreadEffectiveToken.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -214,6 +214,7 @@ patch_enable_all ()
 	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_Purist_Mode="$1"
 	enable_ntdll_RtlIpStringToAddress="$1"
+	enable_ntdll_RtlQueryPackageIdentity="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
 	enable_ntdll_Status_Mapping="$1"
 	enable_ntdll_Syscall_Wrappers="$1"
@@ -772,6 +773,9 @@ patch_enable ()
 			;;
 		ntdll-RtlIpStringToAddress)
 			enable_ntdll_RtlIpStringToAddress="$2"
+			;;
+		ntdll-RtlQueryPackageIdentity)
+			enable_ntdll_RtlQueryPackageIdentity="$2"
 			;;
 		ntdll-Serial_Port_Detection)
 			enable_ntdll_Serial_Port_Detection="$2"
@@ -1993,6 +1997,13 @@ if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
 	fi
 	enable_ntdll_Exception=1
 	enable_ntdll_Syscall_Wrappers=1
+fi
+
+if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
+	if test "$enable_ntdll_RtlQueryPackageIdentity" -gt 1; then
+		abort "Patchset ntdll-RtlQueryPackageIdentity disabled, but ntdll-RtlIpStringToAddress depends on that."
+	fi
+	enable_ntdll_RtlQueryPackageIdentity=1
 fi
 
 if test "$enable_ntdll_Purist_Mode" -eq 1; then
@@ -4644,7 +4655,26 @@ if test "$enable_ntdll_Purist_Mode" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-RtlQueryPackageIdentity
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntdll/tests/Makefile.in, dlls/ntdll/tests/rtl.c, include/shobjidl.idl
+# |
+if test "$enable_ntdll_RtlQueryPackageIdentity" -eq 1; then
+	patch_apply ntdll-RtlQueryPackageIdentity/0001-ntdll-Add-stub-for-RtlQueryPackageIdentity.patch
+	patch_apply ntdll-RtlQueryPackageIdentity/0002-include-Add-IApplicationActivationManager-interface-.patch
+	patch_apply ntdll-RtlQueryPackageIdentity/0003-ntdll-tests-Add-basic-tests-for-RtlQueryPackageIdent.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Add stub for RtlQueryPackageIdentity.", 1 },';
+		echo '+    { "Michael Müller", "include: Add IApplicationActivationManager interface declaration.", 1 },';
+		echo '+    { "Michael Müller", "ntdll/tests: Add basic tests for RtlQueryPackageIdentity.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-RtlIpStringToAddress
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-RtlQueryPackageIdentity
 # |
 # | Modified files:
 # |   *	dlls/ntdll/tests/rtl.c

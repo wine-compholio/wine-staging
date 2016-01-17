@@ -192,6 +192,7 @@ patch_enable_all ()
 	enable_ntdll_DeviceType_Systemroot="$1"
 	enable_ntdll_DllOverrides_WOW64="$1"
 	enable_ntdll_DllRedirects="$1"
+	enable_ntdll_EtwRegisterTraceGuids="$1"
 	enable_ntdll_Exception="$1"
 	enable_ntdll_FileDispositionInformation="$1"
 	enable_ntdll_FileFsFullSizeInformation="$1"
@@ -704,6 +705,9 @@ patch_enable ()
 			;;
 		ntdll-DllRedirects)
 			enable_ntdll_DllRedirects="$2"
+			;;
+		ntdll-EtwRegisterTraceGuids)
+			enable_ntdll_EtwRegisterTraceGuids="$2"
 			;;
 		ntdll-Exception)
 			enable_ntdll_Exception="$2"
@@ -1969,6 +1973,13 @@ if test "$enable_ntdll_WriteWatches" -eq 1; then
 	enable_ws2_32_WriteWatches=1
 fi
 
+if test "$enable_ntdll_WinSqm" -eq 1; then
+	if test "$enable_ntdll_EtwRegisterTraceGuids" -gt 1; then
+		abort "Patchset ntdll-EtwRegisterTraceGuids disabled, but ntdll-WinSqm depends on that."
+	fi
+	enable_ntdll_EtwRegisterTraceGuids=1
+fi
+
 if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
 	if test "$enable_ntdll_Exception" -gt 1; then
 		abort "Patchset ntdll-Exception disabled, but ntdll-SystemRoot_Symlink depends on that."
@@ -2038,10 +2049,10 @@ if test "$enable_ntdll_CLI_Images" -eq 1; then
 fi
 
 if test "$enable_ntdll_ApiSetQueryApiSetPresence" -eq 1; then
-	if test "$enable_ntdll_WinSqm" -gt 1; then
-		abort "Patchset ntdll-WinSqm disabled, but ntdll-ApiSetQueryApiSetPresence depends on that."
+	if test "$enable_ntdll_EtwRegisterTraceGuids" -gt 1; then
+		abort "Patchset ntdll-EtwRegisterTraceGuids disabled, but ntdll-ApiSetQueryApiSetPresence depends on that."
 	fi
-	enable_ntdll_WinSqm=1
+	enable_ntdll_EtwRegisterTraceGuids=1
 fi
 
 if test "$enable_kernel32_Named_Pipe" -eq 1; then
@@ -4158,25 +4169,29 @@ if test "$enable_ntdll_Activation_Context" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-WinSqm
+# Patchset ntdll-EtwRegisterTraceGuids
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#31971] ntdll is missing WinSqm[Start|End]Session implementation
+# |   *	[#34318] Move implementation of EtwRegisterTraceGuidsW to ntdll
 # |
 # | Modified files:
-# |   *	dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec, dlls/ntdll/tests/rtl.c
+# |   *	dlls/advapi32/advapi32.spec, dlls/advapi32/eventlog.c, dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec
 # |
-if test "$enable_ntdll_WinSqm" -eq 1; then
-	patch_apply ntdll-WinSqm/0001-ntdll-Add-stubs-for-WinSqmStartSession-WinSqmEndSess.patch
+if test "$enable_ntdll_EtwRegisterTraceGuids" -eq 1; then
+	patch_apply ntdll-EtwRegisterTraceGuids/0001-ntdll-Move-RegisterTraceGuids-from-advapi32-to-ntdll.patch
+	patch_apply ntdll-EtwRegisterTraceGuids/0002-ntdll-Move-EventRegister-from-advapi32-to-ntdll.patch
+	patch_apply ntdll-EtwRegisterTraceGuids/0003-ntdll-Move-EventSetInformation-from-advapi32-to-ntdl.patch
 	(
-		echo '+    { "Erich E. Hoover", "ntdll: Add stubs for WinSqmStartSession / WinSqmEndSession.", 1 },';
+		echo '+    { "Michael Müller", "ntdll: Move RegisterTraceGuids from advapi32 to ntdll.", 1 },';
+		echo '+    { "Michael Müller", "ntdll: Move EventRegister from advapi32 to ntdll.", 1 },';
+		echo '+    { "Michael Müller", "ntdll: Move EventSetInformation from advapi32 to ntdll.", 1 },';
 	) >> "$patchlist"
 fi
 
 # Patchset ntdll-ApiSetQueryApiSetPresence
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-WinSqm
+# |   *	ntdll-EtwRegisterTraceGuids
 # |
 # | Modified files:
 # |   *	dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec
@@ -4747,6 +4762,24 @@ if test "$enable_ntdll_Wait_User_APC" -eq 1; then
 	patch_apply ntdll-Wait_User_APC/0001-ntdll-Block-signals-while-executing-system-APCs.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Block signals while executing system APCs.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-WinSqm
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-EtwRegisterTraceGuids
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#31971] ntdll is missing WinSqm[Start|End]Session implementation
+# |
+# | Modified files:
+# |   *	dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec, dlls/ntdll/tests/rtl.c
+# |
+if test "$enable_ntdll_WinSqm" -eq 1; then
+	patch_apply ntdll-WinSqm/0001-ntdll-Add-stubs-for-WinSqmStartSession-WinSqmEndSess.patch
+	(
+		echo '+    { "Erich E. Hoover", "ntdll: Add stubs for WinSqmStartSession / WinSqmEndSession.", 1 },';
 	) >> "$patchlist"
 fi
 

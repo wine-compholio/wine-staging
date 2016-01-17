@@ -92,6 +92,7 @@ patch_enable_all ()
 	enable_api_ms_win_Stub_DLLs="$1"
 	enable_authz_Stub_Functions="$1"
 	enable_browseui_Progress_Dialog="$1"
+	enable_combase_RoApi="$1"
 	enable_combase_WindowsString="$1"
 	enable_comctl32_Button_Theming="$1"
 	enable_comctl32_PROPSHEET_InsertPage="$1"
@@ -405,6 +406,9 @@ patch_enable ()
 			;;
 		category-stable)
 			enable_category_stable="$2"
+			;;
+		combase-RoApi)
+			enable_combase_RoApi="$2"
 			;;
 		combase-WindowsString)
 			enable_combase_WindowsString="$2"
@@ -2572,6 +2576,18 @@ if test "$enable_browseui_Progress_Dialog" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "browseui: Implement IProgressDialog::SetAnimation.", 1 },';
 		echo '+    { "Michael Müller", "browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset combase-RoApi
+# |
+# | Modified files:
+# |   *	include/Makefile.in, include/activation.idl
+# |
+if test "$enable_combase_RoApi" -eq 1; then
+	patch_apply combase-RoApi/0001-include-Add-activation.idl-with-IActivationFactory-i.patch
+	(
+		echo '+    { "Michael Müller", "include: Add activation.idl with IActivationFactory interface.", 1 },';
 	) >> "$patchlist"
 fi
 

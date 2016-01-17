@@ -92,7 +92,7 @@ patch_enable_all ()
 	enable_api_ms_win_Stub_DLLs="$1"
 	enable_authz_Stub_Functions="$1"
 	enable_browseui_Progress_Dialog="$1"
-	enable_combase_WindowsCompareStringOrdinal="$1"
+	enable_combase_WindowsString="$1"
 	enable_comctl32_Button_Theming="$1"
 	enable_comctl32_PROPSHEET_InsertPage="$1"
 	enable_configure_Absolute_RPATH="$1"
@@ -406,8 +406,8 @@ patch_enable ()
 		category-stable)
 			enable_category_stable="$2"
 			;;
-		combase-WindowsCompareStringOrdinal)
-			enable_combase_WindowsCompareStringOrdinal="$2"
+		combase-WindowsString)
+			enable_combase_WindowsString="$2"
 			;;
 		comctl32-Button_Theming)
 			enable_comctl32_Button_Theming="$2"
@@ -2575,18 +2575,24 @@ if test "$enable_browseui_Progress_Dialog" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset combase-WindowsCompareStringOrdinal
+# Patchset combase-WindowsString
 # |
 # | Modified files:
 # |   *	dlls/api-ms-win-core-winrt-string-l1-1-0/api-ms-win-core-winrt-string-l1-1-0.spec, dlls/combase/combase.spec,
 # | 	dlls/combase/string.c, dlls/combase/tests/string.c, include/winnls.h
 # |
-if test "$enable_combase_WindowsCompareStringOrdinal" -eq 1; then
-	patch_apply combase-WindowsCompareStringOrdinal/0001-combase-Implement-WindowsCompareStringOrdinal.patch
-	patch_apply combase-WindowsCompareStringOrdinal/0002-combase-tests-Add-tests-for-WindowsCompareStringOrdi.patch
+if test "$enable_combase_WindowsString" -eq 1; then
+	patch_apply combase-WindowsString/0001-combase-Implement-WindowsCompareStringOrdinal.patch
+	patch_apply combase-WindowsString/0002-combase-tests-Add-tests-for-WindowsCompareStringOrdi.patch
+	patch_apply combase-WindowsString/0003-combase-Implement-WindowsTrimStringStart.patch
+	patch_apply combase-WindowsString/0004-combase-Implement-WindowsTrimStringEnd.patch
+	patch_apply combase-WindowsString/0005-combase-tests-Add-tests-for-WindowsTrimString-Start-.patch
 	(
 		echo '+    { "Sebastian Lackner", "combase: Implement WindowsCompareStringOrdinal.", 2 },';
 		echo '+    { "Sebastian Lackner", "combase/tests: Add tests for WindowsCompareStringOrdinal.", 1 },';
+		echo '+    { "Sebastian Lackner", "combase: Implement WindowsTrimStringStart.", 1 },';
+		echo '+    { "Sebastian Lackner", "combase: Implement WindowsTrimStringEnd.", 1 },';
+		echo '+    { "Sebastian Lackner", "combase/tests: Add tests for WindowsTrimString{Start,End}.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,59 @@
+From 356dff154c4885bfba910b0ea8febd978e2bf824 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 17 Jan 2016 05:56:50 +0100
+Subject: combase: Implement WindowsTrimStringEnd.
+
+---
+ dlls/combase/combase.spec |  2 +-
+ dlls/combase/string.c     | 27 +++++++++++++++++++++++++++
+ 2 files changed, 28 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/combase/combase.spec b/dlls/combase/combase.spec
+index 69f47d0..4bda470 100644
+--- a/dlls/combase/combase.spec
++++ b/dlls/combase/combase.spec
+@@ -304,5 +304,5 @@
+ @ stdcall WindowsStringHasEmbeddedNull(ptr ptr)
+ @ stdcall WindowsSubstring(ptr long ptr)
+ @ stdcall WindowsSubstringWithSpecifiedLength(ptr long long ptr)
+-@ stub WindowsTrimStringEnd
++@ stdcall WindowsTrimStringEnd(ptr ptr ptr)
+ @ stdcall WindowsTrimStringStart(ptr ptr ptr)
+diff --git a/dlls/combase/string.c b/dlls/combase/string.c
+index 868411c..56d84ad 100644
+--- a/dlls/combase/string.c
++++ b/dlls/combase/string.c
+@@ -433,3 +433,30 @@ HRESULT WINAPI WindowsTrimStringStart(HSTRING str1, HSTRING str2, HSTRING *out)
+     return start ? WindowsCreateString(&priv1->buffer[start], priv1->length - start, out) :
+                    WindowsDuplicateString(str1, out);
+ }
++
++/***********************************************************************
++ *      WindowsTrimStringEnd (combase.@)
++ */
++HRESULT WINAPI WindowsTrimStringEnd(HSTRING str1, HSTRING str2, HSTRING *out)
++{
++    struct hstring_private *priv1 = impl_from_HSTRING(str1);
++    struct hstring_private *priv2 = impl_from_HSTRING(str2);
++    UINT32 len;
++
++    TRACE("(%p, %p, %p)\n", str1, str2, out);
++
++    if (!out || !str2 || !priv2->length)
++        return E_INVALIDARG;
++    if (!str1)
++    {
++        *out = NULL;
++        return S_OK;
++    }
++    for (len = priv1->length; len > 0; len--)
++    {
++        if (!memchrW(priv2->buffer, priv1->buffer[len - 1], priv2->length))
++            break;
++    }
++    return (len < priv1->length) ? WindowsCreateString(priv1->buffer, len, out) :
++                                   WindowsDuplicateString(str1, out);
++}
+-- 
+2.6.4
+

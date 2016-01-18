@@ -2605,12 +2605,14 @@ fi
 # Patchset combase-RoApi
 # |
 # | Modified files:
-# |   *	include/Makefile.in, include/activation.idl
+# |   *	include/Makefile.in, include/activation.idl, include/roapi.h
 # |
 if test "$enable_combase_RoApi" -eq 1; then
 	patch_apply combase-RoApi/0001-include-Add-activation.idl-with-IActivationFactory-i.patch
+	patch_apply combase-RoApi/0002-include-roapi.h-Add-further-typedefs.patch
 	(
 		echo '+    { "Michael Müller", "include: Add activation.idl with IActivationFactory interface.", 1 },';
+		echo '+    { "Michael Müller", "include/roapi.h: Add further typedefs.", 1 },';
 	) >> "$patchlist"
 fi
 

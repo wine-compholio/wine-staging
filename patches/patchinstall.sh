@@ -2612,8 +2612,9 @@ fi
 # Patchset combase-RoApi
 # |
 # | Modified files:
-# |   *	dlls/combase/Makefile.in, dlls/combase/combase.spec, dlls/combase/roapi.c, include/Makefile.in, include/activation.idl,
-# | 	include/objidl.idl, include/roapi.h
+# |   *	dlls/api-ms-win-core-winrt-l1-1-0/api-ms-win-core-winrt-l1-1-0.spec, dlls/combase/Makefile.in,
+# | 	dlls/combase/combase.spec, dlls/combase/roapi.c, include/Makefile.in, include/activation.idl, include/objidl.idl,
+# | 	include/roapi.h
 # |
 if test "$enable_combase_RoApi" -eq 1; then
 	patch_apply combase-RoApi/0001-include-Add-activation.idl-with-IActivationFactory-i.patch

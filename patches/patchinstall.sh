@@ -2537,9 +2537,12 @@ fi
 # | 	core-winrt-registration-l1-1-0.spec, dlls/api-ms-win-crt-heap-l1-1-0/api-ms-win-crt-heap-l1-1-0.spec, dlls/api-ms-win-
 # | 	eventing-classicprovider-l1-1-0/Makefile.in, dlls/api-ms-win-eventing-classicprovider-l1-1-0/api-ms-win-eventing-
 # | 	classicprovider-l1-1-0.spec, dlls/api-ms-win-shcore-obsolete-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-obsolete-l1-1-0
-# | 	/api-ms-win-shcore-obsolete-l1-1-0.spec, dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec, dlls/iertutil/main.c,
-# | 	dlls/kernelbase/Makefile.in, dlls/kernelbase/kernelbase.spec, dlls/kernelbase/misc.c, dlls/shcore/Makefile.in,
-# | 	dlls/shcore/shcore.spec, dlls/ucrtbase/ucrtbase.spec, tools/make_specfiles
+# | 	/api-ms-win-shcore-obsolete-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/Makefile.in, dlls/ext-ms-win-
+# | 	appmodel-usercontext-l1-1-0/ext-ms-win-appmodel-usercontext-l1-1-0.spec, dlls/ext-ms-win-appmodel-
+# | 	usercontext-l1-1-0/main.c, dlls/ext-ms-win-xaml-pal-l1-1-0/Makefile.in, dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-xaml-
+# | 	pal-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/main.c, dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec,
+# | 	dlls/iertutil/main.c, dlls/kernelbase/Makefile.in, dlls/kernelbase/kernelbase.spec, dlls/kernelbase/misc.c,
+# | 	dlls/shcore/Makefile.in, dlls/shcore/shcore.spec, dlls/ucrtbase/ucrtbase.spec, tools/make_specfiles
 # |
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0001-ucrtbase-Hook-up-some-functions-with-new-names-to-ex.patch
@@ -2557,6 +2560,8 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0013-api-ms-win-core-winrt-registration-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0014-shcore-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0015-api-ms-win-shcore-obsolete-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0016-ext-ms-win-xaml-pal-l1-1-0-Add-dll-and-add-stub-for-.patch
+	patch_apply api-ms-win-Stub_DLLs/0017-ext-ms-win-appmodel-usercontext-l1-1-0-Add-dll-and-a.patch
 	(
 		echo '+    { "Martin Storsjo", "ucrtbase: Hook up some functions with new names to existing implementations.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-com-l1-1-1: Add dll.", 1 },';
@@ -2573,6 +2578,8 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		echo '+    { "Michael Müller", "api-ms-win-core-winrt-registration-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Sebastian Lackner", "shcore: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-shcore-obsolete-l1-1-0: Add dll.", 1 },';
+		echo '+    { "Michael Müller", "ext-ms-win-xaml-pal-l1-1-0: Add dll and add stub for XamlBehaviorEnabled.", 1 },';
+		echo '+    { "Michael Müller", "ext-ms-win-appmodel-usercontext-l1-1-0: Add dll and add stub for UserContextExtInitialize.", 1 },';
 	) >> "$patchlist"
 fi
 

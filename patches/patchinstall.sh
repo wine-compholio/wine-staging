@@ -2161,6 +2161,9 @@ if test "$enable_d3dx9_24_ID3DXEffect" -eq 1; then
 fi
 
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
+	if test "$enable_combase_RoApi" -gt 1; then
+		abort "Patchset combase-RoApi disabled, but api-ms-win-Stub_DLLs depends on that."
+	fi
 	if test "$enable_kernel32_FreeUserPhysicalPages" -gt 1; then
 		abort "Patchset kernel32-FreeUserPhysicalPages disabled, but api-ms-win-Stub_DLLs depends on that."
 	fi
@@ -2176,6 +2179,7 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	if test "$enable_ole32_CoGetApartmentType" -gt 1; then
 		abort "Patchset ole32-CoGetApartmentType disabled, but api-ms-win-Stub_DLLs depends on that."
 	fi
+	enable_combase_RoApi=1
 	enable_kernel32_FreeUserPhysicalPages=1
 	enable_kernel32_GetCurrentPackageFamilyName=1
 	enable_kernel32_GetFinalPathNameByHandle=1
@@ -2448,6 +2452,38 @@ if test "$enable_amstream_GetMultiMediaStream" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset combase-RoApi
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-winrt-l1-1-0/api-ms-win-core-winrt-l1-1-0.spec, dlls/combase/Makefile.in,
+# | 	dlls/combase/combase.spec, dlls/combase/roapi.c, include/Makefile.in, include/activation.idl, include/objidl.idl,
+# | 	include/roapi.h
+# |
+if test "$enable_combase_RoApi" -eq 1; then
+	patch_apply combase-RoApi/0001-include-Add-activation.idl-with-IActivationFactory-i.patch
+	patch_apply combase-RoApi/0002-include-roapi.h-Add-further-typedefs.patch
+	patch_apply combase-RoApi/0003-combase-Implement-RoGetActivationFactory.patch
+	patch_apply combase-RoApi/0004-combase-Implement-RoActivateInstance.patch
+	patch_apply combase-RoApi/0005-combase-Add-stub-for-RoGetApartmentIdentifier.patch
+	patch_apply combase-RoApi/0006-include-objidl.idl-Add-IApartmentShutdown-interface.patch
+	patch_apply combase-RoApi/0007-combase-Add-stub-for-RoRegisterForApartmentShutdown.patch
+	patch_apply combase-RoApi/0008-combase-Add-stub-for-RoGetServerActivatableClasses.patch
+	patch_apply combase-RoApi/0009-combase-Add-stub-for-RoRegisterActivationFactories.patch
+	patch_apply combase-RoApi/0010-combase-Add-stub-for-CleanupTlsOleState.patch
+	(
+		echo '+    { "Michael Müller", "include: Add activation.idl with IActivationFactory interface.", 1 },';
+		echo '+    { "Michael Müller", "include/roapi.h: Add further typedefs.", 1 },';
+		echo '+    { "Michael Müller", "combase: Implement RoGetActivationFactory.", 1 },';
+		echo '+    { "Michael Müller", "combase: Implement RoActivateInstance.", 1 },';
+		echo '+    { "Michael Müller", "combase: Add stub for RoGetApartmentIdentifier.", 1 },';
+		echo '+    { "Michael Müller", "include/objidl.idl: Add IApartmentShutdown interface.", 1 },';
+		echo '+    { "Michael Müller", "combase: Add stub for RoRegisterForApartmentShutdown.", 1 },';
+		echo '+    { "Michael Müller", "combase: Add stub for RoGetServerActivatableClasses.", 1 },';
+		echo '+    { "Michael Müller", "combase: Add stub for RoRegisterActivationFactories.", 1 },';
+		echo '+    { "Michael Müller", "combase: Add stub for CleanupTlsOleState.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset kernel32-FreeUserPhysicalPages
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2520,7 +2556,7 @@ fi
 # Patchset api-ms-win-Stub_DLLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	kernel32-FreeUserPhysicalPages, kernel32-GetCurrentPackageFamilyName, kernel32-GetFinalPathNameByHandle,
+# |   *	combase-RoApi, kernel32-FreeUserPhysicalPages, kernel32-GetCurrentPackageFamilyName, kernel32-GetFinalPathNameByHandle,
 # | 	kernel32-InterlockedPushListSList, ole32-CoGetApartmentType
 # |
 # | Modified files:
@@ -2606,38 +2642,6 @@ if test "$enable_browseui_Progress_Dialog" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "browseui: Implement IProgressDialog::SetAnimation.", 1 },';
 		echo '+    { "Michael Müller", "browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset combase-RoApi
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-winrt-l1-1-0/api-ms-win-core-winrt-l1-1-0.spec, dlls/combase/Makefile.in,
-# | 	dlls/combase/combase.spec, dlls/combase/roapi.c, include/Makefile.in, include/activation.idl, include/objidl.idl,
-# | 	include/roapi.h
-# |
-if test "$enable_combase_RoApi" -eq 1; then
-	patch_apply combase-RoApi/0001-include-Add-activation.idl-with-IActivationFactory-i.patch
-	patch_apply combase-RoApi/0002-include-roapi.h-Add-further-typedefs.patch
-	patch_apply combase-RoApi/0003-combase-Implement-RoGetActivationFactory.patch
-	patch_apply combase-RoApi/0004-combase-Implement-RoActivateInstance.patch
-	patch_apply combase-RoApi/0005-combase-Add-stub-for-RoGetApartmentIdentifier.patch
-	patch_apply combase-RoApi/0006-include-objidl.idl-Add-IApartmentShutdown-interface.patch
-	patch_apply combase-RoApi/0007-combase-Add-stub-for-RoRegisterForApartmentShutdown.patch
-	patch_apply combase-RoApi/0008-combase-Add-stub-for-RoGetServerActivatableClasses.patch
-	patch_apply combase-RoApi/0009-combase-Add-stub-for-RoRegisterActivationFactories.patch
-	patch_apply combase-RoApi/0010-combase-Add-stub-for-CleanupTlsOleState.patch
-	(
-		echo '+    { "Michael Müller", "include: Add activation.idl with IActivationFactory interface.", 1 },';
-		echo '+    { "Michael Müller", "include/roapi.h: Add further typedefs.", 1 },';
-		echo '+    { "Michael Müller", "combase: Implement RoGetActivationFactory.", 1 },';
-		echo '+    { "Michael Müller", "combase: Implement RoActivateInstance.", 1 },';
-		echo '+    { "Michael Müller", "combase: Add stub for RoGetApartmentIdentifier.", 1 },';
-		echo '+    { "Michael Müller", "include/objidl.idl: Add IApartmentShutdown interface.", 1 },';
-		echo '+    { "Michael Müller", "combase: Add stub for RoRegisterForApartmentShutdown.", 1 },';
-		echo '+    { "Michael Müller", "combase: Add stub for RoGetServerActivatableClasses.", 1 },';
-		echo '+    { "Michael Müller", "combase: Add stub for RoRegisterActivationFactories.", 1 },';
-		echo '+    { "Michael Müller", "combase: Add stub for CleanupTlsOleState.", 1 },';
 	) >> "$patchlist"
 fi
 

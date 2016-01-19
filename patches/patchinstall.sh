@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "1eb69be36f176f499b67a16c93a470475bb1b330"
+	echo "4083af404b2ef9e0b0928a6f685f2efa8567c80b"
 }
 
 # Show version information
@@ -106,7 +106,6 @@ patch_enable_all ()
 	enable_d3dx9_25_ID3DXEffect="$1"
 	enable_d3dx9_26_ID3DXEffect="$1"
 	enable_d3dx9_33_Share_Source="$1"
-	enable_d3dx9_36_AnimationController="$1"
 	enable_d3dx9_36_CloneEffect="$1"
 	enable_d3dx9_36_D3DXCreateTeapot="$1"
 	enable_d3dx9_36_D3DXStubs="$1"
@@ -450,9 +449,6 @@ patch_enable ()
 			;;
 		d3dx9_33-Share_Source)
 			enable_d3dx9_33_Share_Source="$2"
-			;;
-		d3dx9_36-AnimationController)
-			enable_d3dx9_36_AnimationController="$2"
 			;;
 		d3dx9_36-CloneEffect)
 			enable_d3dx9_36_CloneEffect="$2"
@@ -1596,9 +1592,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_d3dx9_26_ID3DXEffect" -gt 1; then
 		abort "Patchset d3dx9_26-ID3DXEffect disabled, but category-stable depends on that."
 	fi
-	if test "$enable_d3dx9_36_AnimationController" -gt 1; then
-		abort "Patchset d3dx9_36-AnimationController disabled, but category-stable depends on that."
-	fi
 	if test "$enable_d3dx9_36_D3DXStubs" -gt 1; then
 		abort "Patchset d3dx9_36-D3DXStubs disabled, but category-stable depends on that."
 	fi
@@ -1772,7 +1765,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_d3dx9_24_ID3DXEffect=1
 	enable_d3dx9_25_ID3DXEffect=1
 	enable_d3dx9_26_ID3DXEffect=1
-	enable_d3dx9_36_AnimationController=1
 	enable_d3dx9_36_D3DXStubs=1
 	enable_d3dx9_36_FindNextValidTechnique=1
 	enable_d3dx9_36_Optimize_Inplace=1
@@ -2126,13 +2118,6 @@ if test "$enable_dsound_EAX" -eq 1; then
 	fi
 	enable_dsound_Fast_Mixer=1
 	enable_dsound_Revert_Cleanup=1
-fi
-
-if test "$enable_d3dx9_36_AnimationController" -eq 1; then
-	if test "$enable_d3dx9_36_DXTn" -gt 1; then
-		abort "Patchset d3dx9_36-DXTn disabled, but d3dx9_36-AnimationController depends on that."
-	fi
-	enable_d3dx9_36_DXTn=1
 fi
 
 if test "$enable_d3dx9_33_Share_Source" -eq 1; then
@@ -2905,26 +2890,6 @@ if test "$enable_d3dx9_33_Share_Source" -eq 1; then
 	patch_apply d3dx9_33-Share_Source/0001-d3dx9_33-Share-the-source-with-d3dx9_36.patch
 	(
 		echo '+    { "Alistair Leslie-Hughes", "d3dx9_33: Share the source with d3dx9_36.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3dx9_36-AnimationController
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-DXTn, d3dx9_36-DXTn
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/animation.c, dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/tests/mesh.c,
-# | 	include/d3dx9anim.h
-# |
-if test "$enable_d3dx9_36_AnimationController" -eq 1; then
-	patch_apply d3dx9_36-AnimationController/0001-d3dx9_36-Implement-D3DXCreateAnimationController-wit.patch
-	patch_apply d3dx9_36-AnimationController/0002-d3dx9_36-Store-all-values-passed-to-the-create-and-r.patch
-	patch_apply d3dx9_36-AnimationController/0003-d3dx9_36-Add-D3DXCreateAnimationController-tests.patch
-	(
-		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXCreateAnimationController with a stubbed ID3DXAnimationController interface.", 1 },';
-		echo '+    { "Alistair Leslie-Hughes", "d3dx9_36: Store all values passed to the create and return them in the correct functions.", 1 },';
-		echo '+    { "Alistair Leslie-Hughes", "d3dx9_36: Add D3DXCreateAnimationController tests.", 1 },';
 	) >> "$patchlist"
 fi
 

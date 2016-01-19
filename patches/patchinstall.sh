@@ -291,6 +291,7 @@ patch_enable_all ()
 	enable_shlwapi_AssocGetPerceivedType="$1"
 	enable_shlwapi_SHMapHandle="$1"
 	enable_shlwapi_UrlCombine="$1"
+	enable_ucrtbase_Functions="$1"
 	enable_user32_DeferWindowPos="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawTextExW="$1"
@@ -1005,6 +1006,9 @@ patch_enable ()
 			;;
 		shlwapi-UrlCombine)
 			enable_shlwapi_UrlCombine="$2"
+			;;
+		ucrtbase-Functions)
+			enable_ucrtbase_Functions="$2"
 			;;
 		user32-DeferWindowPos)
 			enable_user32_DeferWindowPos="$2"
@@ -2559,36 +2563,34 @@ fi
 # | 	libraryloader-l1-2-0/Makefile.in, dlls/api-ms-win-core-libraryloader-l1-2-0/api-ms-win-core-libraryloader-l1-2-0.spec,
 # | 	dlls/api-ms-win-core-quirks-l1-1-0/Makefile.in, dlls/api-ms-win-core-quirks-l1-1-0/api-ms-win-core-quirks-l1-1-0.spec,
 # | 	dlls/api-ms-win-core-winrt-registration-l1-1-0/Makefile.in, dlls/api-ms-win-core-winrt-registration-l1-1-0/api-ms-win-
-# | 	core-winrt-registration-l1-1-0.spec, dlls/api-ms-win-crt-heap-l1-1-0/api-ms-win-crt-heap-l1-1-0.spec, dlls/api-ms-win-
-# | 	eventing-classicprovider-l1-1-0/Makefile.in, dlls/api-ms-win-eventing-classicprovider-l1-1-0/api-ms-win-eventing-
-# | 	classicprovider-l1-1-0.spec, dlls/api-ms-win-shcore-obsolete-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-obsolete-l1-1-0
-# | 	/api-ms-win-shcore-obsolete-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/Makefile.in, dlls/ext-ms-win-
-# | 	appmodel-usercontext-l1-1-0/ext-ms-win-appmodel-usercontext-l1-1-0.spec, dlls/ext-ms-win-appmodel-
-# | 	usercontext-l1-1-0/main.c, dlls/ext-ms-win-xaml-pal-l1-1-0/Makefile.in, dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-xaml-
-# | 	pal-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/main.c, dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec,
-# | 	dlls/iertutil/main.c, dlls/kernelbase/Makefile.in, dlls/kernelbase/kernelbase.spec, dlls/kernelbase/misc.c,
-# | 	dlls/shcore/Makefile.in, dlls/shcore/shcore.spec, dlls/ucrtbase/ucrtbase.spec, tools/make_specfiles
+# | 	core-winrt-registration-l1-1-0.spec, dlls/api-ms-win-eventing-classicprovider-l1-1-0/Makefile.in, dlls/api-ms-win-
+# | 	eventing-classicprovider-l1-1-0/api-ms-win-eventing-classicprovider-l1-1-0.spec, dlls/api-ms-win-shcore-
+# | 	obsolete-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-obsolete-l1-1-0/api-ms-win-shcore-obsolete-l1-1-0.spec, dlls/ext-ms-
+# | 	win-appmodel-usercontext-l1-1-0/Makefile.in, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/ext-ms-win-appmodel-
+# | 	usercontext-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/main.c, dlls/ext-ms-win-xaml-
+# | 	pal-l1-1-0/Makefile.in, dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-
+# | 	pal-l1-1-0/main.c, dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec, dlls/iertutil/main.c,
+# | 	dlls/kernelbase/Makefile.in, dlls/kernelbase/kernelbase.spec, dlls/kernelbase/misc.c, dlls/shcore/Makefile.in,
+# | 	dlls/shcore/shcore.spec, tools/make_specfiles
 # |
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
-	patch_apply api-ms-win-Stub_DLLs/0001-ucrtbase-Hook-up-some-functions-with-new-names-to-ex.patch
-	patch_apply api-ms-win-Stub_DLLs/0002-api-ms-win-core-com-l1-1-1-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0003-kernelbase-Add-dll-and-add-stub-for-QuirkIsEnabled.patch
-	patch_apply api-ms-win-Stub_DLLs/0004-api-ms-win-core-quirks-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0005-api-ms-win-core-delayload-l1-1-1-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0006-api-ms-win-appmodel-runtime-l1-1-1-Add-new-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0007-api-ms-win-core-apiquery-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0008-api-ms-win-core-libraryloader-l1-2-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0009-api-ms-win-core-kernel32-legacy-l1-1-1-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0010-api-ms-win-core-heap-l2-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0011-api-ms-win-eventing-classicprovider-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0012-iertutil-Add-dll-and-add-stub-for-ordinal-811.patch
-	patch_apply api-ms-win-Stub_DLLs/0013-api-ms-win-core-winrt-registration-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0014-shcore-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0015-api-ms-win-shcore-obsolete-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0016-ext-ms-win-xaml-pal-l1-1-0-Add-dll-and-add-stub-for-.patch
-	patch_apply api-ms-win-Stub_DLLs/0017-ext-ms-win-appmodel-usercontext-l1-1-0-Add-dll-and-a.patch
+	patch_apply api-ms-win-Stub_DLLs/0001-api-ms-win-core-com-l1-1-1-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0002-kernelbase-Add-dll-and-add-stub-for-QuirkIsEnabled.patch
+	patch_apply api-ms-win-Stub_DLLs/0003-api-ms-win-core-quirks-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0004-api-ms-win-core-delayload-l1-1-1-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0005-api-ms-win-appmodel-runtime-l1-1-1-Add-new-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0006-api-ms-win-core-apiquery-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0007-api-ms-win-core-libraryloader-l1-2-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0008-api-ms-win-core-kernel32-legacy-l1-1-1-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0009-api-ms-win-core-heap-l2-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0010-api-ms-win-eventing-classicprovider-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0011-iertutil-Add-dll-and-add-stub-for-ordinal-811.patch
+	patch_apply api-ms-win-Stub_DLLs/0012-api-ms-win-core-winrt-registration-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0013-shcore-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0014-api-ms-win-shcore-obsolete-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0015-ext-ms-win-xaml-pal-l1-1-0-Add-dll-and-add-stub-for-.patch
+	patch_apply api-ms-win-Stub_DLLs/0016-ext-ms-win-appmodel-usercontext-l1-1-0-Add-dll-and-a.patch
 	(
-		echo '+    { "Martin Storsjo", "ucrtbase: Hook up some functions with new names to existing implementations.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-com-l1-1-1: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-quirks-l1-1-0: Add dll.", 1 },';
@@ -5857,6 +5859,18 @@ if test "$enable_shlwapi_UrlCombine" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "shlwapi/tests: Add additional tests for UrlCombine and UrlCanonicalize.", 1 },';
 		echo '+    { "Sebastian Lackner", "shlwapi: UrlCombineW workaround for relative paths.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ucrtbase-Functions
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-crt-heap-l1-1-0/api-ms-win-crt-heap-l1-1-0.spec, dlls/ucrtbase/ucrtbase.spec
+# |
+if test "$enable_ucrtbase_Functions" -eq 1; then
+	patch_apply ucrtbase-Functions/0001-ucrtbase-Hook-up-some-functions-with-new-names-to-ex.patch
+	(
+		echo '+    { "Martin Storsjo", "ucrtbase: Hook up some functions with new names to existing implementations.", 1 },';
 	) >> "$patchlist"
 fi
 

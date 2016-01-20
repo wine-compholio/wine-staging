@@ -2893,7 +2893,7 @@ fi
 # |   *	[#21817] Share source of d3dx9_36 with d3dx9_33 to avoid Wine DLL forwards
 # |
 # | Modified files:
-# |   *	dlls/d3dx9_33/Makefile.in, dlls/d3dx9_33/d3dx9_33.spec, dlls/d3dx9_33/d3dx9_33_main.c
+# |   *	dlls/d3dx9_33/Makefile.in, dlls/d3dx9_33/d3dx9_33.spec, dlls/d3dx9_33/d3dx9_33_main.c, tools/make_specfiles
 # |
 if test "$enable_d3dx9_33_Share_Source" -eq 1; then
 	patch_apply d3dx9_33-Share_Source/0001-d3dx9_33-Share-the-source-with-d3dx9_36.patch

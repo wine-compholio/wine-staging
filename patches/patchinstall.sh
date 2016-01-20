@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d1841f496b423afa0e29cd7da87cfd297e5e8054"
+	echo "af4a757ad2cacbd238486632d0f7bd6f0a94483f"
 }
 
 # Show version information
@@ -118,7 +118,6 @@ patch_enable_all ()
 	enable_d3dx9_36_GetShaderSemantics="$1"
 	enable_d3dx9_36_Optimize_Inplace="$1"
 	enable_d3dx9_36_Texture_Align="$1"
-	enable_d3dx9_36_Uninitialized_Memory="$1"
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
 	enable_dbghelp_Debug_Symbols="$1"
 	enable_ddraw_EnumSurfaces="$1"
@@ -487,9 +486,6 @@ patch_enable ()
 			;;
 		d3dx9_36-Texture_Align)
 			enable_d3dx9_36_Texture_Align="$2"
-			;;
-		d3dx9_36-Uninitialized_Memory)
-			enable_d3dx9_36_Uninitialized_Memory="$2"
 			;;
 		d3dx9_36-UpdateSkinnedMesh)
 			enable_d3dx9_36_UpdateSkinnedMesh="$2"
@@ -3052,18 +3048,6 @@ if test "$enable_d3dx9_36_Texture_Align" -eq 1; then
 	patch_apply d3dx9_36-Texture_Align/0001-d3dx9_36-Align-texture-dimensions-to-block-size-for-.patch
 	(
 		echo '+    { "Christian Costa", "d3dx9_36: Align texture dimensions to block size for compressed textures in D3DXCheckTextureRequirements.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3dx9_36-Uninitialized_Memory
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_36/tests/mesh.c
-# |
-if test "$enable_d3dx9_36_Uninitialized_Memory" -eq 1; then
-	patch_apply d3dx9_36-Uninitialized_Memory/0001-d3dx9_36-tests-Initialize-animation-variable-before-.patch
-	(
-		echo '+    { "Sebastian Lackner", "d3dx9_36/tests: Initialize animation variable before D3DXCreateAnimationController test.", 1 },';
 	) >> "$patchlist"
 fi
 

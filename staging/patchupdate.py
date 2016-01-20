@@ -580,11 +580,14 @@ def generate_script(all_patches, skip_checks=False):
                 unique_hash = m.digest()
 
                 # Skip checks if it matches the information from the cache
-                try:
-                    if dependency_cache[filename] == unique_hash:
+                # For backwards compatibility, convert string entries to list
+                if dependency_cache.has_key(filename):
+                    if not isinstance(dependency_cache[filename], list):
+                        dependency_cache[filename] = [dependency_cache[filename]]
+                    if unique_hash in dependency_cache[filename]:
+                        dependency_cache[filename].append(unique_hash)
+                        dependency_cache[filename].remove(unique_hash)
                         continue
-                except KeyError:
-                    pass
 
                 # Show a progress bar while applying the patches - this task might take some time
                 chunk_size = 20
@@ -627,8 +630,11 @@ def generate_script(all_patches, skip_checks=False):
                                                     (filename, ", ".join([all_patches[i].name for i in failed])))
                         progress.update(k)
 
-                # Update the dependency cache
-                dependency_cache[filename] = unique_hash
+                # Update the dependency cache, store max 10 entries per file
+                if not dependency_cache.has_key(filename):
+                    dependency_cache[filename] = []
+                dependency_cache[filename].append(unique_hash)
+                dependency_cache[filename] = dependency_cache[filename][-10:]
 
             # Delete outdated cache information
             for filename in dependency_cache.keys():

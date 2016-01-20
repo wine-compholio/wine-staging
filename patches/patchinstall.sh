@@ -2571,7 +2571,7 @@ fi
 # | 	pal-l1-1-0/Makefile.in, dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-
 # | 	pal-l1-1-0/main.c, dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec, dlls/iertutil/main.c,
 # | 	dlls/kernelbase/Makefile.in, dlls/kernelbase/kernelbase.spec, dlls/kernelbase/misc.c, dlls/shcore/Makefile.in,
-# | 	dlls/shcore/shcore.spec, tools/make_specfiles
+# | 	dlls/shcore/shcore.spec, dlls/shlwapi/shlwapi.spec, tools/make_specfiles
 # |
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0001-api-ms-win-core-com-l1-1-1-Add-dll.patch

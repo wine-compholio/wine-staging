@@ -250,6 +250,7 @@ patch_enable_all ()
 	enable_server_Desktop_Refcount="$1"
 	enable_server_FileEndOfFileInformation="$1"
 	enable_server_File_Permissions="$1"
+	enable_server_Fix_Invalid_Memory_Access="$1"
 	enable_server_Inherited_ACLs="$1"
 	enable_server_Key_State="$1"
 	enable_server_Map_EXDEV_Error="$1"
@@ -882,6 +883,9 @@ patch_enable ()
 			;;
 		server-File_Permissions)
 			enable_server_File_Permissions="$2"
+			;;
+		server-Fix_Invalid_Memory_Access)
+			enable_server_Fix_Invalid_Memory_Access="$2"
 			;;
 		server-Inherited_ACLs)
 			enable_server_Inherited_ACLs="$2"
@@ -5239,6 +5243,18 @@ if test "$enable_server_FileEndOfFileInformation" -eq 1; then
 	(
 		echo '+    { "Qian Hong", "ntdll: Set EOF on file which has a memory mapping should fail.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Growing files which are mapped to memory should still work.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Fix_Invalid_Memory_Access
+# |
+# | Modified files:
+# |   *	server/winstation.c
+# |
+if test "$enable_server_Fix_Invalid_Memory_Access" -eq 1; then
+	patch_apply server-Fix_Invalid_Memory_Access/0001-server-Fix-invalid-memory-accesss-caused-by-destroyi.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Fix invalid memory accesss caused by destroying winstation before desktop.", 1 },';
 	) >> "$patchlist"
 fi
 

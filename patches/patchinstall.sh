@@ -2600,6 +2600,7 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0015-ext-ms-win-xaml-pal-l1-1-0-Add-dll-and-add-stub-for-.patch
 	patch_apply api-ms-win-Stub_DLLs/0016-ext-ms-win-appmodel-usercontext-l1-1-0-Add-dll-and-a.patch
 	patch_apply api-ms-win-Stub_DLLs/0017-api-ms-win-shcore-thread-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0018-ext-ms-win-xaml-pal-l1-1-0-Add-stub-for-GetThemeServ.patch
 	(
 		echo '+    { "Michael Müller", "api-ms-win-core-com-l1-1-1: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
@@ -2618,6 +2619,7 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		echo '+    { "Michael Müller", "ext-ms-win-xaml-pal-l1-1-0: Add dll and add stub for XamlBehaviorEnabled.", 1 },';
 		echo '+    { "Michael Müller", "ext-ms-win-appmodel-usercontext-l1-1-0: Add dll and add stub for UserContextExtInitialize.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-shcore-thread-l1-1-0: Add dll.", 1 },';
+		echo '+    { "Michael Müller", "ext-ms-win-xaml-pal-l1-1-0: Add stub for GetThemeServices.", 1 },';
 	) >> "$patchlist"
 fi
 

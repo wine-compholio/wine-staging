@@ -213,7 +213,8 @@ patch_enable_all ()
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_Purist_Mode="$1"
-	enable_ntdll_RtlIpStringToAddress="$1"
+	enable_ntdll_RtlIpStringToAddress_Stubs="$1"
+	enable_ntdll_RtlIpStringToAddress_Tests="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
 	enable_ntdll_Status_Mapping="$1"
@@ -774,8 +775,11 @@ patch_enable ()
 		ntdll-Purist_Mode)
 			enable_ntdll_Purist_Mode="$2"
 			;;
-		ntdll-RtlIpStringToAddress)
-			enable_ntdll_RtlIpStringToAddress="$2"
+		ntdll-RtlIpStringToAddress_Stubs)
+			enable_ntdll_RtlIpStringToAddress_Stubs="$2"
+			;;
+		ntdll-RtlIpStringToAddress_Tests)
+			enable_ntdll_RtlIpStringToAddress_Tests="$2"
 			;;
 		ntdll-RtlQueryPackageIdentity)
 			enable_ntdll_RtlQueryPackageIdentity="$2"
@@ -1679,8 +1683,8 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_ntdll_Pipe_SpecialCharacters" -gt 1; then
 		abort "Patchset ntdll-Pipe_SpecialCharacters disabled, but category-stable depends on that."
 	fi
-	if test "$enable_ntdll_RtlIpStringToAddress" -gt 1; then
-		abort "Patchset ntdll-RtlIpStringToAddress disabled, but category-stable depends on that."
+	if test "$enable_ntdll_RtlIpStringToAddress_Tests" -gt 1; then
+		abort "Patchset ntdll-RtlIpStringToAddress_Tests disabled, but category-stable depends on that."
 	fi
 	if test "$enable_ntdll_Threading" -gt 1; then
 		abort "Patchset ntdll-Threading disabled, but category-stable depends on that."
@@ -1802,7 +1806,7 @@ if test "$enable_category_stable" -eq 1; then
 	enable_ntdll_Heap_FreeLists=1
 	enable_ntdll_NtSetLdtEntries=1
 	enable_ntdll_Pipe_SpecialCharacters=1
-	enable_ntdll_RtlIpStringToAddress=1
+	enable_ntdll_RtlIpStringToAddress_Tests=1
 	enable_ntdll_Threading=1
 	enable_ntdll_User_Shared_Data=1
 	enable_ntdll_WriteWatches=1
@@ -2007,9 +2011,9 @@ if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
 	enable_ntdll_Syscall_Wrappers=1
 fi
 
-if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
+if test "$enable_ntdll_RtlIpStringToAddress_Tests" -eq 1; then
 	if test "$enable_ntdll_RtlQueryPackageIdentity" -gt 1; then
-		abort "Patchset ntdll-RtlQueryPackageIdentity disabled, but ntdll-RtlIpStringToAddress depends on that."
+		abort "Patchset ntdll-RtlQueryPackageIdentity disabled, but ntdll-RtlIpStringToAddress_Tests depends on that."
 	fi
 	enable_ntdll_RtlQueryPackageIdentity=1
 fi
@@ -4688,6 +4692,20 @@ if test "$enable_ntdll_Purist_Mode" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-RtlIpStringToAddress_Stubs
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec
+# |
+if test "$enable_ntdll_RtlIpStringToAddress_Stubs" -eq 1; then
+	patch_apply ntdll-RtlIpStringToAddress_Stubs/0001-ntdll-Fix-parameters-for-RtlIpv4StringToAddressExW-s.patch
+	patch_apply ntdll-RtlIpStringToAddress_Stubs/0002-ntdll-Add-stub-for-RtlIpv6StringToAddressExW.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Fix parameters for RtlIpv4StringToAddressExW stub.", 1 },';
+		echo '+    { "Michael Müller", "ntdll: Add stub for RtlIpv6StringToAddressExW.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-RtlQueryPackageIdentity
 # |
 # | Modified files:
@@ -4704,7 +4722,7 @@ if test "$enable_ntdll_RtlQueryPackageIdentity" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-RtlIpStringToAddress
+# Patchset ntdll-RtlIpStringToAddress_Tests
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	ntdll-RtlQueryPackageIdentity
@@ -4712,11 +4730,11 @@ fi
 # | Modified files:
 # |   *	dlls/ntdll/tests/rtl.c
 # |
-if test "$enable_ntdll_RtlIpStringToAddress" -eq 1; then
-	patch_apply ntdll-RtlIpStringToAddress/0001-ntdll-tests-Tests-for-RtlIpv6StringToAddress-try-6.patch
-	patch_apply ntdll-RtlIpStringToAddress/0002-ntdll-tests-Tests-for-RtlIpv6StringToAddressEx-try-6.patch
-	patch_apply ntdll-RtlIpStringToAddress/0003-ntdll-tests-Tests-for-RtlIpv4StringToAddressEx-try-5.patch
-	patch_apply ntdll-RtlIpStringToAddress/0004-ntdll-tests-Add-tests-for-RtlIpv6AddressToString-and.patch
+if test "$enable_ntdll_RtlIpStringToAddress_Tests" -eq 1; then
+	patch_apply ntdll-RtlIpStringToAddress_Tests/0001-ntdll-tests-Tests-for-RtlIpv6StringToAddress-try-6.patch
+	patch_apply ntdll-RtlIpStringToAddress_Tests/0002-ntdll-tests-Tests-for-RtlIpv6StringToAddressEx-try-6.patch
+	patch_apply ntdll-RtlIpStringToAddress_Tests/0003-ntdll-tests-Tests-for-RtlIpv4StringToAddressEx-try-5.patch
+	patch_apply ntdll-RtlIpStringToAddress_Tests/0004-ntdll-tests-Add-tests-for-RtlIpv6AddressToString-and.patch
 	(
 		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddress.", 6 },';
 		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddressEx.", 6 },';

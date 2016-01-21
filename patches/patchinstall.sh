@@ -6057,6 +6057,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#12007] Fix issues with dragging layers between images in Adobe Photoshop 7.0
+# |   *	[#9512] Make sure popups don't block access to objects underneath in DVDPro
 # |
 # | Modified files:
 # |   *	dlls/user32/message.c, dlls/user32/tests/input.c

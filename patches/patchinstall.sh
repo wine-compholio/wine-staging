@@ -2572,9 +2572,10 @@ fi
 # | 	dlls/api-ms-win-core-memory-l1-1-2/Makefile.in, dlls/api-ms-win-core-memory-l1-1-2/api-ms-win-core-memory-l1-1-2.spec,
 # | 	dlls/api-ms-win-core-quirks-l1-1-0/Makefile.in, dlls/api-ms-win-core-quirks-l1-1-0/api-ms-win-core-quirks-l1-1-0.spec,
 # | 	dlls/api-ms-win-core-shlwapi-obsolete-l1-2-0/Makefile.in, dlls/api-ms-win-core-shlwapi-obsolete-l1-2-0/api-ms-win-core-
-# | 	shlwapi-obsolete-l1-2-0.spec, dlls/api-ms-win-core-winrt-registration-l1-1-0/Makefile.in, dlls/api-ms-win-core-winrt-
-# | 	registration-l1-1-0/api-ms-win-core-winrt-registration-l1-1-0.spec, dlls/api-ms-win-core-wow64-l1-1-0/Makefile.in, dlls
-# | 	/api-ms-win-core-wow64-l1-1-0/api-ms-win-core-wow64-l1-1-0.spec, dlls/api-ms-win-eventing-
+# | 	shlwapi-obsolete-l1-2-0.spec, dlls/api-ms-win-core-threadpool-l1-2-0/Makefile.in, dlls/api-ms-win-core-threadpool-l1-2-0
+# | 	/api-ms-win-core-threadpool-l1-2-0.spec, dlls/api-ms-win-core-winrt-registration-l1-1-0/Makefile.in, dlls/api-ms-win-
+# | 	core-winrt-registration-l1-1-0/api-ms-win-core-winrt-registration-l1-1-0.spec, dlls/api-ms-win-core-
+# | 	wow64-l1-1-0/Makefile.in, dlls/api-ms-win-core-wow64-l1-1-0/api-ms-win-core-wow64-l1-1-0.spec, dlls/api-ms-win-eventing-
 # | 	classicprovider-l1-1-0/Makefile.in, dlls/api-ms-win-eventing-classicprovider-l1-1-0/api-ms-win-eventing-
 # | 	classicprovider-l1-1-0.spec, dlls/api-ms-win-shcore-obsolete-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-obsolete-l1-1-0
 # | 	/api-ms-win-shcore-obsolete-l1-1-0.spec, dlls/api-ms-win-shcore-thread-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-
@@ -2607,6 +2608,7 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0019-api-ms-win-core-memory-l1-1-2-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0020-api-ms-win-core-wow64-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0021-api-ms-win-core-shlwapi-obsolete-l1-2-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0022-api-ms-win-core-threadpool-l1-2-0-Add-dll.patch
 	(
 		echo '+    { "Michael Müller", "api-ms-win-core-com-l1-1-1: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
@@ -2629,6 +2631,7 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		echo '+    { "Michael Müller", "api-ms-win-core-memory-l1-1-2: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-wow64-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-shlwapi-obsolete-l1-2-0: Add dll.", 1 },';
+		echo '+    { "Michael Müller", "api-ms-win-core-threadpool-l1-2-0: Add dll.", 1 },';
 	) >> "$patchlist"
 fi
 

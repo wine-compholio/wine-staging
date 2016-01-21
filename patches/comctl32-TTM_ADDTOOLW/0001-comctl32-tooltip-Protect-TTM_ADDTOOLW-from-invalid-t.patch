@@ -1,0 +1,90 @@
+From 6a2ce8e894076cbc50ec1cda81fd00ad6d7ea68c Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Thu, 14 Jan 2016 17:56:00 +1100
+Subject: comctl32/tooltip: Protect TTM_ADDTOOLW from invalid text pointers
+
+Fixes https://bugs.winehq.org/show_bug.cgi?id=10347
+
+Signed-off-by: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+---
+ dlls/comctl32/tests/tooltips.c | 27 +++++++++++++++++++++++++++
+ dlls/comctl32/tooltips.c       | 18 ++++++++++++++----
+ 2 files changed, 41 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/comctl32/tests/tooltips.c b/dlls/comctl32/tests/tooltips.c
+index 3382fce..2a0f855 100644
+--- a/dlls/comctl32/tests/tooltips.c
++++ b/dlls/comctl32/tests/tooltips.c
+@@ -446,6 +446,33 @@ static void test_gettext(void)
+     r = SendMessageW(hwnd, TTM_ADDTOOLW, 0, (LPARAM)&toolinfoW);
+     ok(!r, "Adding the tool to the tooltip succeeded!\n");
+ 
++    /* lpszText with an invalid address */
++    toolinfoW.cbSize = sizeof(TTTOOLINFOW);
++    toolinfoW.hwnd = notify;
++    toolinfoW.hinst = GetModuleHandleA(NULL);
++    toolinfoW.uFlags = 0;
++    toolinfoW.uId = 0;
++    toolinfoW.lpszText = (LPWSTR)0xdeadbeef;
++    toolinfoW.lParam = 0;
++    GetClientRect(hwnd, &toolinfoW.rect);
++    r = SendMessageA(hwnd, TTM_ADDTOOLW, 0, (LPARAM)&toolinfoW);
++    ok(!r, "Adding the tool to the tooltip succeeded!\n");
++
++    /* lpszText with an invalid address. Crashes using TTTOOLINFOA message */
++    if(0)
++    {
++        toolinfoA.cbSize = sizeof(TTTOOLINFOA);
++        toolinfoA.hwnd = notify;
++        toolinfoA.hinst = GetModuleHandleA(NULL);
++        toolinfoA.uFlags = 0;
++        toolinfoA.uId = 0;
++        toolinfoA.lpszText = (LPSTR)0xdeadbeef;
++        toolinfoA.lParam = 0;
++        GetClientRect(hwnd, &toolinfoA.rect);
++        r = SendMessageA(hwnd, TTM_ADDTOOLA, 0, (LPARAM)&toolinfoA);
++        ok(!r, "Adding the tool to the tooltip succeeded!\n");
++    }
++
+     if (0)  /* crashes on NT4 */
+     {
+         toolinfoW.hwnd = NULL;
+diff --git a/dlls/comctl32/tooltips.c b/dlls/comctl32/tooltips.c
+index 8bf6919..eea1d2e 100644
+--- a/dlls/comctl32/tooltips.c
++++ b/dlls/comctl32/tooltips.c
+@@ -103,6 +103,7 @@
+ #include "commctrl.h"
+ #include "comctl32.h"
+ #include "wine/debug.h"
++#include "wine/exception.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(tooltips);
+ 
+@@ -1076,10 +1077,19 @@ TOOLTIPS_AddToolT (TOOLTIPS_INFO *infoPtr, const TTTOOLINFOW *ti, BOOL isW)
+                 toolPtr->lpszText = LPSTR_TEXTCALLBACKW;
+             }
+             else if (isW) {
+-                INT len = lstrlenW (ti->lpszText);
+-                TRACE("add text %s!\n", debugstr_w(ti->lpszText));
+-                toolPtr->lpszText =	Alloc ((len + 1)*sizeof(WCHAR));
+-                strcpyW (toolPtr->lpszText, ti->lpszText);
++                __TRY
++                {
++                    INT len = lstrlenW (ti->lpszText);
++                    TRACE("add text %s!\n", debugstr_w(ti->lpszText));
++                    toolPtr->lpszText =	Alloc ((len + 1)*sizeof(WCHAR));
++                    strcpyW (toolPtr->lpszText, ti->lpszText);
++                }
++                __EXCEPT_PAGE_FAULT
++                {
++                    WARN("Invalid lpszText.\n");
++                    return FALSE;
++                }
++                __ENDTRY
+             }
+             else {
+                 INT len = MultiByteToWideChar(CP_ACP, 0, (LPSTR)ti->lpszText, -1, NULL, 0);
+-- 
+2.6.4
+

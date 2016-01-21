@@ -96,6 +96,7 @@ patch_enable_all ()
 	enable_combase_WindowsString="$1"
 	enable_comctl32_Button_Theming="$1"
 	enable_comctl32_PROPSHEET_InsertPage="$1"
+	enable_comctl32_TTM_ADDTOOLW="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
 	enable_crypt32_CryptUnprotectMemory="$1"
@@ -424,6 +425,9 @@ patch_enable ()
 			;;
 		comctl32-PROPSHEET_InsertPage)
 			enable_comctl32_PROPSHEET_InsertPage="$2"
+			;;
+		comctl32-TTM_ADDTOOLW)
+			enable_comctl32_TTM_ADDTOOLW="$2"
 			;;
 		configure-Absolute_RPATH)
 			enable_configure_Absolute_RPATH="$2"
@@ -2715,6 +2719,21 @@ if test "$enable_comctl32_PROPSHEET_InsertPage" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "comctl32/tests: Add tests for PROPSHEET_InsertPage.", 1 },';
 		echo '+    { "Peter Hater", "comctl32: Implement PROPSHEET_InsertPage based on PROPSHEET_AddPage.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset comctl32-TTM_ADDTOOLW
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#10347] Protect TTM_ADDTOOLW from invalid text pointers
+# |
+# | Modified files:
+# |   *	dlls/comctl32/tests/tooltips.c, dlls/comctl32/tooltips.c
+# |
+if test "$enable_comctl32_TTM_ADDTOOLW" -eq 1; then
+	patch_apply comctl32-TTM_ADDTOOLW/0001-comctl32-tooltip-Protect-TTM_ADDTOOLW-from-invalid-t.patch
+	(
+		echo '+    { "Alistair Leslie-Hughes", "comctl32/tooltip: Protect TTM_ADDTOOLW from invalid text pointers.", 1 },';
 	) >> "$patchlist"
 fi
 

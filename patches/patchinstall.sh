@@ -148,6 +148,7 @@ patch_enable_all ()
 	enable_imagehlp_BindImageEx="$1"
 	enable_imagehlp_Cleanup="$1"
 	enable_imagehlp_ImageLoad="$1"
+	enable_imm32_IMMDisableLegacyIME="$1"
 	enable_inetcpl_Default_Home="$1"
 	enable_iphlpapi_System_Ping="$1"
 	enable_iphlpapi_TCP_Table="$1"
@@ -577,6 +578,9 @@ patch_enable ()
 			;;
 		imagehlp-ImageLoad)
 			enable_imagehlp_ImageLoad="$2"
+			;;
+		imm32-IMMDisableLegacyIME)
+			enable_imm32_IMMDisableLegacyIME="$2"
 			;;
 		inetcpl-Default_Home)
 			enable_inetcpl_Default_Home="$2"
@@ -3594,6 +3598,18 @@ if test "$enable_imagehlp_ImageLoad" -eq 1; then
 	(
 		echo '+    { "Mark Jansen", "imagehlp/tests: Add tests for ImageLoad, ImageUnload, GetImageUnusedHeaderBytes.", 1 },';
 		echo '+    { "Mark Jansen", "imagehlp/tests: Msvc compatibility fixes.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset imm32-IMMDisableLegacyIME
+# |
+# | Modified files:
+# |   *	dlls/imm32/imm.c, dlls/imm32/imm32.spec
+# |
+if test "$enable_imm32_IMMDisableLegacyIME" -eq 1; then
+	patch_apply imm32-IMMDisableLegacyIME/0001-imm32-Add-stub-for-ImmDisableLegacyIME.patch
+	(
+		echo '+    { "Michael Müller", "imm32: Add stub for ImmDisableLegacyIME.", 1 },';
 	) >> "$patchlist"
 fi
 

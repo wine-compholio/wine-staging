@@ -238,6 +238,7 @@ patch_enable_all ()
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
 	enable_ole32_CoGetApartmentType="$1"
+	enable_oleaut32_Fix_Invalid_Memory_Access="$1"
 	enable_oleaut32_TKIND_COCLASS="$1"
 	enable_oleaut32_x86_64_Marshaller="$1"
 	enable_openal32_EFX_Extension="$1"
@@ -851,6 +852,9 @@ patch_enable ()
 			;;
 		ole32-CoGetApartmentType)
 			enable_ole32_CoGetApartmentType="$2"
+			;;
+		oleaut32-Fix_Invalid_Memory_Access)
+			enable_oleaut32_Fix_Invalid_Memory_Access="$2"
 			;;
 		oleaut32-TKIND_COCLASS)
 			enable_oleaut32_TKIND_COCLASS="$2"
@@ -5126,6 +5130,18 @@ if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
 		echo '+    { "Michael Müller", "nvencodeapi: First implementation.", 1 },';
 		echo '+    { "Michael Müller", "nvencodeapi: Add debian specific paths to native library.", 1 },';
 		echo '+    { "Michael Müller", "nvencodeapi: Add support for version 6.0.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset oleaut32-Fix_Invalid_Memory_Access
+# |
+# | Modified files:
+# |   *	dlls/oleaut32/oleaut.c
+# |
+if test "$enable_oleaut32_Fix_Invalid_Memory_Access" -eq 1; then
+	patch_apply oleaut32-Fix_Invalid_Memory_Access/0001-oleaut32-Fix-clearing-of-heap-buffer-when-warn-heap-.patch
+	(
+		echo '+    { "Sebastian Lackner", "oleaut32: Fix clearing of heap buffer when warn+heap is used.", 1 },';
 	) >> "$patchlist"
 fi
 

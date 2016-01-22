@@ -5443,16 +5443,14 @@ fi
 # |   *	rpcrt4-Pipe_Transport, server-Desktop_Refcount, kernel32-Named_Pipe
 # |
 # | Modified files:
-# |   *	server/named_pipe.c, server/object.c, server/object.h
+# |   *	server/named_pipe.c, server/object.c
 # |
 if test "$enable_server_Pipe_ObjectName" -eq 1; then
-	patch_apply server-Pipe_ObjectName/0001-server-Move-parent-reference-from-object_name-to-obj.patch
-	patch_apply server-Pipe_ObjectName/0002-server-Link-named-pipes-to-their-device.patch
-	patch_apply server-Pipe_ObjectName/0003-server-Store-a-reference-to-the-parent-object-for-pi.patch
+	patch_apply server-Pipe_ObjectName/0001-server-Link-named-pipes-to-their-device.patch
+	patch_apply server-Pipe_ObjectName/0002-server-Store-a-reference-to-the-parent-object-for-pi.patch
 	(
-		echo '+    { "Sebastian Lackner", "server: Move parent reference from object_name to object.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Link named pipes to their device.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Store a reference to the parent object for pipe servers.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Store a reference to the parent object for pipe servers.", 2 },';
 	) >> "$patchlist"
 fi
 

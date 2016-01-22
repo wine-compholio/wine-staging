@@ -3395,9 +3395,11 @@ fi
 if test "$enable_kernel32_CompareString_Length" -eq 1; then
 	patch_apply kernel32-CompareString_Length/0001-kernel32-CompareStringW-should-abort-on-the-first-no.patch
 	patch_apply kernel32-CompareString_Length/0002-kernel32-tests-Add-some-more-tests-for-NORM_IGNORESY.patch
+	patch_apply kernel32-CompareString_Length/0003-kenrel32-tests-Add-further-tests-for-comparing-strin.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "kernel32: CompareStringW should abort on the first nonmatching character to avoid invalid memory access.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "kernel32: CompareStringW should abort on the first nonmatching character to avoid invalid memory access.", 2 },';
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add some more tests for NORM_IGNORESYMBOLS.", 1 },';
+		echo '+    { "Sebastian Lackner", "kenrel32/tests: Add further tests for comparing strings ending with multiple \\\\0 characters.", 1 },';
 	) >> "$patchlist"
 fi
 

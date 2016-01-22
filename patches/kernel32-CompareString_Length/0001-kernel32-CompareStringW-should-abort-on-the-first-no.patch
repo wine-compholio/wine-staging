@@ -1,44 +1,72 @@
-From 8e2f184541d44755fa67a43e4d8cf8debeeafc82 Mon Sep 17 00:00:00 2001
+From f8acf44d20407c213dd1f48691b432c2e9f555df Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Fri, 13 Nov 2015 20:36:54 +0800
 Subject: kernel32: CompareStringW should abort on the first nonmatching
- character to avoid invalid memory access.
+ character to avoid invalid memory access. (v2)
 
 For bug 37556.
 
+Changes in v2 (by Sebastian Lackner):
+* Use loop to handle strings ending with multiple \0 characters correctly.
+
 Signed-off-by: Dmitry Timoshkov <dmitry@baikal.ru>
+Signed-off-by: Sebastian Lackner <sebastian@fds-team.de>
 ---
- libs/wine/sortkey.c | 15 ++++++---------
- 1 file changed, 6 insertions(+), 9 deletions(-)
+ libs/wine/sortkey.c | 39 ++++++++++++++++++++++++++++++---------
+ 1 file changed, 30 insertions(+), 9 deletions(-)
 
 diff --git a/libs/wine/sortkey.c b/libs/wine/sortkey.c
-index 17b5537..c459cea 100644
+index 17b5537..7280501 100644
 --- a/libs/wine/sortkey.c
 +++ b/libs/wine/sortkey.c
-@@ -223,6 +223,8 @@ static inline int compare_unicode_weights(int flags, const WCHAR *str1, int len1
+@@ -223,6 +223,16 @@ static inline int compare_unicode_weights(int flags, const WCHAR *str1, int len1
          len1--;
          len2--;
      }
-+    if (len1 && !*str1) len1--;
-+    if (len2 && !*str2) len2--;
++    while (len1 && !*str1)
++    {
++        str1++;
++        len1--;
++    }
++    while (len2 && !*str2)
++    {
++        str2++;
++        len2--;
++    }
      return len1 - len2;
  }
  
-@@ -272,6 +274,8 @@ static inline int compare_diacritic_weights(int flags, const WCHAR *str1, int le
+@@ -272,6 +282,16 @@ static inline int compare_diacritic_weights(int flags, const WCHAR *str1, int le
          len1--;
          len2--;
      }
-+    if (len1 && !*str1) len1--;
-+    if (len2 && !*str2) len2--;
++    while (len1 && !*str1)
++    {
++        str1++;
++        len1--;
++    }
++    while (len2 && !*str2)
++    {
++        str2++;
++        len2--;
++    }
      return len1 - len2;
  }
  
-@@ -321,23 +325,16 @@ static inline int compare_case_weights(int flags, const WCHAR *str1, int len1,
+@@ -321,23 +341,24 @@ static inline int compare_case_weights(int flags, const WCHAR *str1, int len1,
          len1--;
          len2--;
      }
-+    if (len1 && !*str1) len1--;
-+    if (len2 && !*str2) len2--;
++    while (len1 && !*str1)
++    {
++        str1++;
++        len1--;
++    }
++    while (len2 && !*str2)
++    {
++        str2++;
++        len2--;
++    }
      return len1 - len2;
  }
  
@@ -60,5 +88,5 @@ index 17b5537..c459cea 100644
      if (!ret)
      {
 -- 
-2.6.2
+2.6.4
 

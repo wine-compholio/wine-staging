@@ -240,6 +240,7 @@ patch_enable_all ()
 	enable_ole32_CoGetApartmentType="$1"
 	enable_oleaut32_TKIND_COCLASS="$1"
 	enable_oleaut32_x86_64_Marshaller="$1"
+	enable_olepro32_Typelib="$1"
 	enable_openal32_EFX_Extension="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
@@ -856,6 +857,9 @@ patch_enable ()
 			;;
 		oleaut32-x86_64_Marshaller)
 			enable_oleaut32_x86_64_Marshaller="$2"
+			;;
+		olepro32-Typelib)
+			enable_olepro32_Typelib="$2"
 			;;
 		openal32-EFX_Extension)
 			enable_openal32_EFX_Extension="$2"
@@ -5164,6 +5168,24 @@ if test "$enable_oleaut32_x86_64_Marshaller" -eq 1; then
 		echo '+    { "Sebastian Lackner", "oleaut32: Initial preparation to make marshalling compatible with x86_64.", 1 },';
 		echo '+    { "Sebastian Lackner", "oleaut32: Implement TMStubImpl_Invoke on x86_64.", 1 },';
 		echo '+    { "Sebastian Lackner", "oleaut32: Implement asm proxys for x86_64.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset olepro32-Typelib
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#14617] Add Standard OLE Types typelib to olepro32.dll
+# |
+# | Modified files:
+# |   *	dlls/olepro32/Makefile.in, dlls/olepro32/olepro.idl, dlls/stdole32.tlb/std_ole_v1.idl, include/Makefile.in,
+# | 	include/stdole32.idl
+# |
+if test "$enable_olepro32_Typelib" -eq 1; then
+	patch_apply olepro32-Typelib/0001-include-Make-stdole32.idl-a-public-component.patch
+	patch_apply olepro32-Typelib/0002-olepro32-Add-typelib-resource.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "include: Make stdole32.idl a public component.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "olepro32: Add typelib resource.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -221,6 +221,7 @@ patch_enable_all ()
 	enable_ntdll_Status_Mapping="$1"
 	enable_ntdll_Syscall_Wrappers="$1"
 	enable_ntdll_SystemInterruptInformation="$1"
+	enable_ntdll_SystemRecommendedSharedDataAlignment="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
@@ -800,6 +801,9 @@ patch_enable ()
 			;;
 		ntdll-SystemInterruptInformation)
 			enable_ntdll_SystemInterruptInformation="$2"
+			;;
+		ntdll-SystemRecommendedSharedDataAlignment)
+			enable_ntdll_SystemRecommendedSharedDataAlignment="$2"
 			;;
 		ntdll-SystemRoot_Symlink)
 			enable_ntdll_SystemRoot_Symlink="$2"
@@ -4821,6 +4825,20 @@ if test "$enable_ntdll_SystemInterruptInformation" -eq 1; then
 	patch_apply ntdll-SystemInterruptInformation/0001-ntdll-Return-buffer-filled-with-random-values-from-S.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Return buffer filled with random values from SystemInterruptInformation.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-SystemRecommendedSharedDataAlignment
+# |
+# | Modified files:
+# |   *	dlls/ntdll/nt.c, dlls/ntdll/tests/info.c, include/winternl.h
+# |
+if test "$enable_ntdll_SystemRecommendedSharedDataAlignment" -eq 1; then
+	patch_apply ntdll-SystemRecommendedSharedDataAlignment/0001-include-Add-more-constants-to-SYSTEM_INFORMATION_CLA.patch
+	patch_apply ntdll-SystemRecommendedSharedDataAlignment/0002-ntdll-Implement-SystemRecommendedSharedDataAlignment.patch
+	(
+		echo '+    { "Michael Müller", "include: Add more constants to SYSTEM_INFORMATION_CLASS.", 1 },';
+		echo '+    { "Michael Müller", "ntdll: Implement SystemRecommendedSharedDataAlignment class in NtQuerySystemInformation.", 1 },';
 	) >> "$patchlist"
 fi
 

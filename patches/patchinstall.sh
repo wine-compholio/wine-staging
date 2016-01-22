@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "8676f7bae099f0ca20c26a29dfa4bebd828b39b9"
+	echo "e5132e5a91208253e67c0eff709ab5c96d79b790"
 }
 
 # Show version information
@@ -238,7 +238,6 @@ patch_enable_all ()
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
 	enable_ole32_CoGetApartmentType="$1"
-	enable_oleaut32_Fix_Invalid_Memory_Access="$1"
 	enable_oleaut32_TKIND_COCLASS="$1"
 	enable_oleaut32_x86_64_Marshaller="$1"
 	enable_openal32_EFX_Extension="$1"
@@ -254,7 +253,6 @@ patch_enable_all ()
 	enable_server_Desktop_Refcount="$1"
 	enable_server_FileEndOfFileInformation="$1"
 	enable_server_File_Permissions="$1"
-	enable_server_Fix_Invalid_Memory_Access="$1"
 	enable_server_Inherited_ACLs="$1"
 	enable_server_Key_State="$1"
 	enable_server_Map_EXDEV_Error="$1"
@@ -853,9 +851,6 @@ patch_enable ()
 		ole32-CoGetApartmentType)
 			enable_ole32_CoGetApartmentType="$2"
 			;;
-		oleaut32-Fix_Invalid_Memory_Access)
-			enable_oleaut32_Fix_Invalid_Memory_Access="$2"
-			;;
 		oleaut32-TKIND_COCLASS)
 			enable_oleaut32_TKIND_COCLASS="$2"
 			;;
@@ -900,9 +895,6 @@ patch_enable ()
 			;;
 		server-File_Permissions)
 			enable_server_File_Permissions="$2"
-			;;
-		server-Fix_Invalid_Memory_Access)
-			enable_server_Fix_Invalid_Memory_Access="$2"
 			;;
 		server-Inherited_ACLs)
 			enable_server_Inherited_ACLs="$2"
@@ -5135,18 +5127,6 @@ if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset oleaut32-Fix_Invalid_Memory_Access
-# |
-# | Modified files:
-# |   *	dlls/oleaut32/oleaut.c
-# |
-if test "$enable_oleaut32_Fix_Invalid_Memory_Access" -eq 1; then
-	patch_apply oleaut32-Fix_Invalid_Memory_Access/0001-oleaut32-Fix-clearing-of-heap-buffer-when-warn-heap-.patch
-	(
-		echo '+    { "Sebastian Lackner", "oleaut32: Fix clearing of heap buffer when warn+heap is used.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset oleaut32-TKIND_COCLASS
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5332,18 +5312,6 @@ if test "$enable_server_FileEndOfFileInformation" -eq 1; then
 	(
 		echo '+    { "Qian Hong", "ntdll: Set EOF on file which has a memory mapping should fail.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Growing files which are mapped to memory should still work.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Fix_Invalid_Memory_Access
-# |
-# | Modified files:
-# |   *	server/winstation.c
-# |
-if test "$enable_server_Fix_Invalid_Memory_Access" -eq 1; then
-	patch_apply server-Fix_Invalid_Memory_Access/0001-server-Fix-invalid-memory-accesss-caused-by-destroyi.patch
-	(
-		echo '+    { "Sebastian Lackner", "server: Fix invalid memory accesss caused by destroying winstation before desktop.", 1 },';
 	) >> "$patchlist"
 fi
 

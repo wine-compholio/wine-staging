@@ -251,6 +251,7 @@ patch_enable_all ()
 	enable_rpcrt4_RpcBindingServerFromClient="$1"
 	enable_secur32_ANSI_NTLM_Credentials="$1"
 	enable_server_ClipCursor="$1"
+	enable_server_Coverity="$1"
 	enable_server_CreateProcess_ACLs="$1"
 	enable_server_Desktop_Refcount="$1"
 	enable_server_FileEndOfFileInformation="$1"
@@ -891,6 +892,9 @@ patch_enable ()
 			;;
 		server-ClipCursor)
 			enable_server_ClipCursor="$2"
+			;;
+		server-Coverity)
+			enable_server_Coverity="$2"
 			;;
 		server-CreateProcess_ACLs)
 			enable_server_CreateProcess_ACLs="$2"
@@ -5338,6 +5342,20 @@ if test "$enable_server_ClipCursor" -eq 1; then
 	patch_apply server-ClipCursor/0001-winex11-Forward-all-clipping-requests-to-the-right-t.patch
 	(
 		echo '+    { "Sebastian Lackner", "winex11: Forward all clipping requests to the right thread (including fullscreen clipping).", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Coverity
+# |
+# | Modified files:
+# |   *	server/directory.c, server/registry.c
+# |
+if test "$enable_server_Coverity" -eq 1; then
+	patch_apply server-Coverity/0001-server-Add-missing-check-for-objattr-variable-in-loa.patch
+	patch_apply server-Coverity/0002-server-Avoid-invalid-memory-access-if-creation-of-na.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Add missing check for objattr variable in load_registry wineserver call (Coverity).", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Avoid invalid memory access if creation of namespace fails in create_directory (Coverity).", 1 },';
 	) >> "$patchlist"
 fi
 

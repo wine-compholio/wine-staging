@@ -57,7 +57,7 @@ upstream_commit()
 # Show version information
 version()
 {
-	echo "Wine Staging 1.9.2"
+	echo "Wine Staging 1.9.3 (unreleased)"
 	echo "Copyright (C) 2014-2016 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -2614,7 +2614,8 @@ fi
 # | 	win-uxtheme-themes-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/Makefile.in, dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-
 # | 	xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/main.c, dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec,
 # | 	dlls/iertutil/main.c, dlls/kernelbase/Makefile.in, dlls/kernelbase/kernelbase.spec, dlls/kernelbase/misc.c,
-# | 	dlls/shcore/Makefile.in, dlls/shcore/shcore.spec, dlls/shlwapi/shlwapi.spec, tools/make_specfiles
+# | 	dlls/shcore/Makefile.in, dlls/shcore/main.c, dlls/shcore/shcore.spec, dlls/shlwapi/shlwapi.spec, include/Makefile.in,
+# | 	include/shellscalingapi.h, tools/make_specfiles
 # |
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0001-api-ms-win-core-com-l1-1-1-Add-dll.patch
@@ -2647,6 +2648,7 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0028-api-ms-win-rtcore-ntuser-draw-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0029-ext-ms-win-rtcore-ntuser-sysparams-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0030-ext-ms-win-kernel32-package-current-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0031-shcore-Add-SetProcessDpiAwareness-stub.patch
 	(
 		echo '+    { "Michael Müller", "api-ms-win-core-com-l1-1-1: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
@@ -2678,6 +2680,7 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		echo '+    { "Michael Müller", "api-ms-win-rtcore-ntuser-draw-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "ext-ms-win-rtcore-ntuser-sysparams-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "ext-ms-win-kernel32-package-current-l1-1-0: Add dll.", 1 },';
+		echo '+    { "Sebastian Lackner", "shcore: Add SetProcessDpiAwareness stub.", 1 },';
 	) >> "$patchlist"
 fi
 

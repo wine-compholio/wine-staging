@@ -2593,13 +2593,14 @@ fi
 # | 	core-winrt-registration-l1-1-0/api-ms-win-core-winrt-registration-l1-1-0.spec, dlls/api-ms-win-core-
 # | 	wow64-l1-1-0/Makefile.in, dlls/api-ms-win-core-wow64-l1-1-0/api-ms-win-core-wow64-l1-1-0.spec, dlls/api-ms-win-eventing-
 # | 	classicprovider-l1-1-0/Makefile.in, dlls/api-ms-win-eventing-classicprovider-l1-1-0/api-ms-win-eventing-
-# | 	classicprovider-l1-1-0.spec, dlls/api-ms-win-rtcore-ntuser-window-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-
-# | 	window-l1-1-0/api-ms-win-rtcore-ntuser-window-l1-1-0.spec, dlls/api-ms-win-shcore-obsolete-l1-1-0/Makefile.in, dlls/api-
-# | 	ms-win-shcore-obsolete-l1-1-0/api-ms-win-shcore-obsolete-l1-1-0.spec, dlls/api-ms-win-shcore-stream-l1-1-0/Makefile.in,
-# | 	dlls/api-ms-win-shcore-stream-l1-1-0/api-ms-win-shcore-stream-l1-1-0.spec, dlls/api-ms-win-shcore-
-# | 	thread-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-thread-l1-1-0/api-ms-win-shcore-thread-l1-1-0.spec, dlls/ext-ms-win-
-# | 	appmodel-usercontext-l1-1-0/Makefile.in, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/ext-ms-win-appmodel-
-# | 	usercontext-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/main.c, dlls/ext-ms-win-ntuser-
+# | 	classicprovider-l1-1-0.spec, dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-
+# | 	draw-l1-1-0/api-ms-win-rtcore-ntuser-draw-l1-1-0.spec, dlls/api-ms-win-rtcore-ntuser-window-l1-1-0/Makefile.in, dlls
+# | 	/api-ms-win-rtcore-ntuser-window-l1-1-0/api-ms-win-rtcore-ntuser-window-l1-1-0.spec, dlls/api-ms-win-shcore-
+# | 	obsolete-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-obsolete-l1-1-0/api-ms-win-shcore-obsolete-l1-1-0.spec, dlls/api-ms-
+# | 	win-shcore-stream-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-stream-l1-1-0/api-ms-win-shcore-stream-l1-1-0.spec, dlls
+# | 	/api-ms-win-shcore-thread-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-thread-l1-1-0/api-ms-win-shcore-thread-l1-1-0.spec,
+# | 	dlls/ext-ms-win-appmodel-usercontext-l1-1-0/Makefile.in, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/ext-ms-win-
+# | 	appmodel-usercontext-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/main.c, dlls/ext-ms-win-ntuser-
 # | 	mouse-l1-1-0/Makefile.in, dlls/ext-ms-win-ntuser-mouse-l1-1-0/ext-ms-win-ntuser-mouse-l1-1-0.spec, dlls/ext-ms-win-
 # | 	rtcore-ntuser-syscolors-l1-1-0/Makefile.in, dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/ext-ms-win-rtcore-ntuser-
 # | 	syscolors-l1-1-0.spec, dlls/ext-ms-win-uxtheme-themes-l1-1-0/Makefile.in, dlls/ext-ms-win-uxtheme-themes-l1-1-0/ext-ms-
@@ -2636,6 +2637,7 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0025-ext-ms-win-uxtheme-themes-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0026-api-ms-win-rtcore-ntuser-window-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0027-ext-ms-win-rtcore-ntuser-syscolors-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0028-api-ms-win-rtcore-ntuser-draw-l1-1-0-Add-dll.patch
 	(
 		echo '+    { "Michael Müller", "api-ms-win-core-com-l1-1-1: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
@@ -2664,6 +2666,7 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		echo '+    { "Michael Müller", "ext-ms-win-uxtheme-themes-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-rtcore-ntuser-window-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "ext-ms-win-rtcore-ntuser-syscolors-l1-1-0: Add dll.", 1 },';
+		echo '+    { "Michael Müller", "api-ms-win-rtcore-ntuser-draw-l1-1-0: Add dll.", 1 },';
 	) >> "$patchlist"
 fi
 

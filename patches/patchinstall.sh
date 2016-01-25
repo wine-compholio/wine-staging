@@ -295,6 +295,7 @@ patch_enable_all ()
 	enable_shlwapi_AssocGetPerceivedType="$1"
 	enable_shlwapi_SHMapHandle="$1"
 	enable_shlwapi_UrlCombine="$1"
+	enable_stdole32_tlb_SLTG_Typelib="$1"
 	enable_ucrtbase_Functions="$1"
 	enable_user32_DeferWindowPos="$1"
 	enable_user32_Dialog_Paint_Event="$1"
@@ -1022,6 +1023,9 @@ patch_enable ()
 			;;
 		shlwapi-UrlCombine)
 			enable_shlwapi_UrlCombine="$2"
+			;;
+		stdole32.tlb-SLTG_Typelib)
+			enable_stdole32_tlb_SLTG_Typelib="$2"
 			;;
 		ucrtbase-Functions)
 			enable_ucrtbase_Functions="$2"
@@ -1901,6 +1905,13 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 		abort "Patchset ntdll-DllRedirects disabled, but uxtheme-GTK_Theming depends on that."
 	fi
 	enable_ntdll_DllRedirects=1
+fi
+
+if test "$enable_stdole32_tlb_SLTG_Typelib" -eq 1; then
+	if test "$enable_widl_SLTG_Typelib_Support" -gt 1; then
+		abort "Patchset widl-SLTG_Typelib_Support disabled, but stdole32.tlb-SLTG_Typelib depends on that."
+	fi
+	enable_widl_SLTG_Typelib_Support=1
 fi
 
 if test "$enable_shell32_SHFileOperation_Win9x" -eq 1; then
@@ -5988,6 +5999,75 @@ if test "$enable_shlwapi_UrlCombine" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset widl-SLTG_Typelib_Support
+# |
+# | Modified files:
+# |   *	dlls/oleaut32/typelib.c, tools/widl/Makefile.in, tools/widl/typelib.c, tools/widl/typelib.h, tools/widl/widl.c,
+# | 	tools/widl/widl.h, tools/widl/write_sltg.c
+# |
+if test "$enable_widl_SLTG_Typelib_Support" -eq 1; then
+	patch_apply widl-SLTG_Typelib_Support/0001-widl-Add-initial-implementation-of-SLTG-typelib-gene.patch
+	patch_apply widl-SLTG_Typelib_Support/0002-widl-Add-support-for-structures.patch
+	patch_apply widl-SLTG_Typelib_Support/0003-widl-Properly-align-name-table-entries.patch
+	patch_apply widl-SLTG_Typelib_Support/0004-widl-More-accurately-report-variable-descriptions-da.patch
+	patch_apply widl-SLTG_Typelib_Support/0005-widl-Calculate-size-of-instance-for-structures.patch
+	patch_apply widl-SLTG_Typelib_Support/0006-widl-Write-correct-typekind-to-the-SLTG-typeinfo-blo.patch
+	patch_apply widl-SLTG_Typelib_Support/0007-widl-Write-SLTG-blocks-according-to-the-index-order.patch
+	patch_apply widl-SLTG_Typelib_Support/0008-widl-Write-correct-syskind-by-SLTG-typelib-generator.patch
+	patch_apply widl-SLTG_Typelib_Support/0009-widl-Add-support-for-VT_VOID-and-VT_VARIANT-to-SLTG-.patch
+	patch_apply widl-SLTG_Typelib_Support/0010-widl-Add-support-for-VT_USERDEFINED-to-SLTG-typelib-.patch
+	patch_apply widl-SLTG_Typelib_Support/0011-widl-Factor-out-SLTG-tail-initialization.patch
+	patch_apply widl-SLTG_Typelib_Support/0012-widl-Add-support-for-recursive-type-references-to-SL.patch
+	patch_apply widl-SLTG_Typelib_Support/0013-widl-Add-support-for-interfaces-to-SLTG-typelib-gene.patch
+	patch_apply widl-SLTG_Typelib_Support/0014-widl-Add-support-for-inherited-interfaces-to-SLTG-ty.patch
+	patch_apply widl-SLTG_Typelib_Support/0015-widl-Make-automatic-dispid-generation-scheme-better-.patch
+	patch_apply widl-SLTG_Typelib_Support/0016-widl-Create-library-block-index-right-after-the-Comp.patch
+	patch_apply widl-SLTG_Typelib_Support/0017-widl-Fix-generation-of-resources-containing-an-old-t.patch
+	patch_apply widl-SLTG_Typelib_Support/0018-widl-Add-oldtlb-switch-in-usage-message.patch
+	patch_apply widl-SLTG_Typelib_Support/0019-widl-Avoid-relying-on-side-effects-when-marking-func.patch
+	patch_apply widl-SLTG_Typelib_Support/0020-oleaut32-Fix-logic-for-deciding-whether-type-descrip.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "widl: Add initial implementation of SLTG typelib generator.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Add support for structures.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Properly align name table entries.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: More accurately report variable descriptions data size.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Calculate size of instance for structures.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Write correct typekind to the SLTG typeinfo block.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Write SLTG blocks according to the index order.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Write correct syskind by SLTG typelib generator.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Add support for VT_VOID and VT_VARIANT to SLTG typelib generator.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Add support for VT_USERDEFINED to SLTG typelib generator.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Factor out SLTG tail initialization.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Add support for recursive type references to SLTG typelib generator.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Add support for interfaces to SLTG typelib generator.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Add support for inherited interfaces to SLTG typelib generator.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Make automatic dispid generation scheme better match what midl does.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Create library block index right after the CompObj one.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Fix generation of resources containing an old typelib.", 1 },';
+		echo '+    { "Sebastian Lackner", "widl: Add --oldtlb switch in usage message.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Avoid relying on side effects when marking function index as the last one.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "oleaut32: Fix logic for deciding whether type description follows the name.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset stdole32.tlb-SLTG_Typelib
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	widl-SLTG_Typelib_Support
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#3689] Compile stdole32.tlb in SLTG typelib format
+# |
+# | Modified files:
+# |   *	dlls/stdole32.tlb/Makefile.in
+# |
+if test "$enable_stdole32_tlb_SLTG_Typelib" -eq 1; then
+	patch_apply stdole32.tlb-SLTG_Typelib/0020-stdole32.tlb-Compile-typelib-with-oldtlb.patch
+	(
+		echo '+    { "Sebastian Lackner", "stdole32.tlb: Compile typelib with --oldtlb.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ucrtbase-Functions
 # |
 # | Modified files:
@@ -6290,62 +6370,6 @@ if test "$enable_wbemdisp_ISWbemSecurity" -eq 1; then
 	patch_apply wbemdisp-ISWbemSecurity/0001-wbemdisp-Add-ISWbemSecurity-stub-interface.patch
 	(
 		echo '+    { "Michael Müller", "wbemdisp: Add ISWbemSecurity stub interface.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset widl-SLTG_Typelib_Support
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#3689] Compile stdole32.tlb in SLTG typelib format
-# |
-# | Modified files:
-# |   *	dlls/oleaut32/typelib.c, dlls/stdole32.tlb/Makefile.in, tools/widl/Makefile.in, tools/widl/typelib.c,
-# | 	tools/widl/typelib.h, tools/widl/widl.c, tools/widl/widl.h, tools/widl/write_sltg.c
-# |
-if test "$enable_widl_SLTG_Typelib_Support" -eq 1; then
-	patch_apply widl-SLTG_Typelib_Support/0001-widl-Add-initial-implementation-of-SLTG-typelib-gene.patch
-	patch_apply widl-SLTG_Typelib_Support/0002-widl-Add-support-for-structures.patch
-	patch_apply widl-SLTG_Typelib_Support/0003-widl-Properly-align-name-table-entries.patch
-	patch_apply widl-SLTG_Typelib_Support/0004-widl-More-accurately-report-variable-descriptions-da.patch
-	patch_apply widl-SLTG_Typelib_Support/0005-widl-Calculate-size-of-instance-for-structures.patch
-	patch_apply widl-SLTG_Typelib_Support/0006-widl-Write-correct-typekind-to-the-SLTG-typeinfo-blo.patch
-	patch_apply widl-SLTG_Typelib_Support/0007-widl-Write-SLTG-blocks-according-to-the-index-order.patch
-	patch_apply widl-SLTG_Typelib_Support/0008-widl-Write-correct-syskind-by-SLTG-typelib-generator.patch
-	patch_apply widl-SLTG_Typelib_Support/0009-widl-Add-support-for-VT_VOID-and-VT_VARIANT-to-SLTG-.patch
-	patch_apply widl-SLTG_Typelib_Support/0010-widl-Add-support-for-VT_USERDEFINED-to-SLTG-typelib-.patch
-	patch_apply widl-SLTG_Typelib_Support/0011-widl-Factor-out-SLTG-tail-initialization.patch
-	patch_apply widl-SLTG_Typelib_Support/0012-widl-Add-support-for-recursive-type-references-to-SL.patch
-	patch_apply widl-SLTG_Typelib_Support/0013-widl-Add-support-for-interfaces-to-SLTG-typelib-gene.patch
-	patch_apply widl-SLTG_Typelib_Support/0014-widl-Add-support-for-inherited-interfaces-to-SLTG-ty.patch
-	patch_apply widl-SLTG_Typelib_Support/0015-widl-Make-automatic-dispid-generation-scheme-better-.patch
-	patch_apply widl-SLTG_Typelib_Support/0016-widl-Create-library-block-index-right-after-the-Comp.patch
-	patch_apply widl-SLTG_Typelib_Support/0017-oleaut32-Fix-logic-for-deciding-whether-type-descrip.patch
-	patch_apply widl-SLTG_Typelib_Support/0018-widl-Fix-generation-of-resources-containing-an-old-t.patch
-	patch_apply widl-SLTG_Typelib_Support/0019-widl-Add-oldtlb-switch-in-usage-message.patch
-	patch_apply widl-SLTG_Typelib_Support/0020-stdole32.tlb-Compile-typelib-with-oldtlb.patch
-	patch_apply widl-SLTG_Typelib_Support/0021-widl-Avoid-relying-on-side-effects-when-marking-func.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "widl: Add initial implementation of SLTG typelib generator.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Add support for structures.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Properly align name table entries.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: More accurately report variable descriptions data size.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Calculate size of instance for structures.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Write correct typekind to the SLTG typeinfo block.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Write SLTG blocks according to the index order.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Write correct syskind by SLTG typelib generator.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Add support for VT_VOID and VT_VARIANT to SLTG typelib generator.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Add support for VT_USERDEFINED to SLTG typelib generator.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Factor out SLTG tail initialization.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Add support for recursive type references to SLTG typelib generator.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Add support for interfaces to SLTG typelib generator.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Add support for inherited interfaces to SLTG typelib generator.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Make automatic dispid generation scheme better match what midl does.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Create library block index right after the CompObj one.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "oleaut32: Fix logic for deciding whether type description follows the name.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Fix generation of resources containing an old typelib.", 1 },';
-		echo '+    { "Sebastian Lackner", "widl: Add --oldtlb switch in usage message.", 1 },';
-		echo '+    { "Sebastian Lackner", "stdole32.tlb: Compile typelib with --oldtlb.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Avoid relying on side effects when marking function index as the last one.", 1 },';
 	) >> "$patchlist"
 fi
 

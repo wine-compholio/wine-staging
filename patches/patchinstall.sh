@@ -6027,6 +6027,7 @@ if test "$enable_widl_SLTG_Typelib_Support" -eq 1; then
 	patch_apply widl-SLTG_Typelib_Support/0019-widl-Avoid-relying-on-side-effects-when-marking-func.patch
 	patch_apply widl-SLTG_Typelib_Support/0020-widl-Set-the-lowest-bit-in-the-param-name-to-indicat.patch
 	patch_apply widl-SLTG_Typelib_Support/0021-oleaut32-Fix-logic-for-deciding-whether-type-descrip.patch
+	patch_apply widl-SLTG_Typelib_Support/0022-widl-Add-support-for-function-parameter-flags-to-SLT.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "widl: Add initial implementation of SLTG typelib generator.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "widl: Add support for structures.", 1 },';
@@ -6049,6 +6050,7 @@ if test "$enable_widl_SLTG_Typelib_Support" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "widl: Avoid relying on side effects when marking function index as the last one.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "widl: Set the lowest bit in the param name to indicate whether type description follows the name.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "oleaut32: Fix logic for deciding whether type description follows the name.", 2 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Add support for function parameter flags to SLTG typelib generator.", 1 },';
 	) >> "$patchlist"
 fi
 

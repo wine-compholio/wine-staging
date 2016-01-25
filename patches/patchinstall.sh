@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e5132e5a91208253e67c0eff709ab5c96d79b790"
+	echo "d575e0afe304d0096f8014f7f411bf28c126cc0b"
 }
 
 # Show version information
@@ -154,7 +154,6 @@ patch_enable_all ()
 	enable_iphlpapi_System_Ping="$1"
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_COMSPEC="$1"
-	enable_kernel32_Codepage_Conversion="$1"
 	enable_kernel32_CompareString_Length="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Cwd_Startup_Info="$1"
@@ -252,7 +251,6 @@ patch_enable_all ()
 	enable_rpcrt4_RpcBindingServerFromClient="$1"
 	enable_secur32_ANSI_NTLM_Credentials="$1"
 	enable_server_ClipCursor="$1"
-	enable_server_Coverity="$1"
 	enable_server_CreateProcess_ACLs="$1"
 	enable_server_Desktop_Refcount="$1"
 	enable_server_FileEndOfFileInformation="$1"
@@ -308,7 +306,6 @@ patch_enable_all ()
 	enable_user32_Mouse_Message_Hwnd="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
-	enable_user32_SetCaretPos="$1"
 	enable_user32_SetCoalescableTimer="$1"
 	enable_user32_WM_CAPTURECHANGE="$1"
 	enable_user32_WM_MDICALCCHILDSCROLL="$1"
@@ -603,9 +600,6 @@ patch_enable ()
 		kernel32-COMSPEC)
 			enable_kernel32_COMSPEC="$2"
 			;;
-		kernel32-Codepage_Conversion)
-			enable_kernel32_Codepage_Conversion="$2"
-			;;
 		kernel32-CompareString_Length)
 			enable_kernel32_CompareString_Length="$2"
 			;;
@@ -897,9 +891,6 @@ patch_enable ()
 		server-ClipCursor)
 			enable_server_ClipCursor="$2"
 			;;
-		server-Coverity)
-			enable_server_Coverity="$2"
-			;;
 		server-CreateProcess_ACLs)
 			enable_server_CreateProcess_ACLs="$2"
 			;;
@@ -1064,9 +1055,6 @@ patch_enable ()
 			;;
 		user32-ScrollWindowEx)
 			enable_user32_ScrollWindowEx="$2"
-			;;
-		user32-SetCaretPos)
-			enable_user32_SetCaretPos="$2"
 			;;
 		user32-SetCoalescableTimer)
 			enable_user32_SetCoalescableTimer="$2"
@@ -3749,18 +3737,6 @@ if test "$enable_kernel32_COMSPEC" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-Codepage_Conversion
-# |
-# | Modified files:
-# |   *	dlls/kernel32/locale.c, dlls/kernel32/tests/codepage.c
-# |
-if test "$enable_kernel32_Codepage_Conversion" -eq 1; then
-	patch_apply kernel32-Codepage_Conversion/0001-kernel32-Set-error-if-dstlen-0-in-codepage-conversio.patch
-	(
-		echo '+    { "Alex Henrie", "kernel32: Set error if dstlen < 0 in codepage conversion functions.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-CompareString_Length
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5393,20 +5369,6 @@ if test "$enable_server_ClipCursor" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Coverity
-# |
-# | Modified files:
-# |   *	server/directory.c, server/registry.c
-# |
-if test "$enable_server_Coverity" -eq 1; then
-	patch_apply server-Coverity/0001-server-Add-missing-check-for-objattr-variable-in-loa.patch
-	patch_apply server-Coverity/0002-server-Avoid-invalid-memory-access-if-creation-of-na.patch
-	(
-		echo '+    { "Sebastian Lackner", "server: Add missing check for objattr variable in load_registry wineserver call (Coverity).", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Avoid invalid memory access if creation of namespace fails in create_directory (Coverity).", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-FileEndOfFileInformation
 # |
 # | Modified files:
@@ -6186,18 +6148,6 @@ if test "$enable_user32_ScrollWindowEx" -eq 1; then
 	patch_apply user32-ScrollWindowEx/0001-user32-Fix-return-value-of-ScrollWindowEx-for-invisi.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "user32: Fix return value of ScrollWindowEx for invisible windows.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-SetCaretPos
-# |
-# | Modified files:
-# |   *	dlls/user32/caret.c, server/protocol.def, server/queue.c
-# |
-if test "$enable_user32_SetCaretPos" -eq 1; then
-	patch_apply user32-SetCaretPos/0001-user32-Set-correct-caret-state-in-the-server-in-SetC.patch
-	(
-		echo '+    { "Anton Baskanov", "user32: Set correct caret state in the server in SetCaretPos.", 5 },';
 	) >> "$patchlist"
 fi
 

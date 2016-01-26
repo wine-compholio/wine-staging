@@ -1,0 +1,95 @@
+From 1d25ef1b6e9ef476686a3103604850ec5005b658 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Tue, 26 Jan 2016 16:17:21 +0800
+Subject: oleaut32: Add support for decoding SLTG variable help strings.
+
+---
+ dlls/oleaut32/typelib.c | 24 +++++++++++++++---------
+ 1 file changed, 15 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/oleaut32/typelib.c b/dlls/oleaut32/typelib.c
+index b9d8cbb..6699e0b 100644
+--- a/dlls/oleaut32/typelib.c
++++ b/dlls/oleaut32/typelib.c
+@@ -4129,7 +4129,7 @@ static char *SLTG_DoImpls(char *pBlk, ITypeInfoImpl *pTI,
+ }
+ 
+ static void SLTG_DoVars(char *pBlk, char *pFirstItem, ITypeInfoImpl *pTI, unsigned short cVars,
+-			const char *pNameTable, const sltg_ref_lookup_t *ref_lookup)
++			const char *pNameTable, const sltg_ref_lookup_t *ref_lookup, const BYTE *hlp_strings)
+ {
+   TLBVarDesc *pVarDesc;
+   const TLBString *prevName = NULL;
+@@ -4159,6 +4159,12 @@ static void SLTG_DoVars(char *pBlk, char *pFirstItem, ITypeInfoImpl *pTI, unsign
+       TRACE_(typelib)("byte_offs = 0x%x\n", pItem->byte_offs);
+       TRACE_(typelib)("memid = 0x%x\n", pItem->memid);
+ 
++      if (pItem->helpstring != 0xffff)
++      {
++          pVarDesc->HelpString = decode_string(hlp_strings, pBlk + pItem->helpstring, pNameTable - pBlk, pTI->pTypeLib);
++          TRACE_(typelib)("helpstring = %s\n", debugstr_w(pVarDesc->HelpString->str));
++      }
++
+       if(pItem->flags & 0x02)
+ 	  pType = &pItem->type;
+       else
+@@ -4394,9 +4400,9 @@ static void SLTG_ProcessInterface(char *pBlk, ITypeInfoImpl *pTI,
+ 
+ static void SLTG_ProcessRecord(char *pBlk, ITypeInfoImpl *pTI,
+ 			       const char *pNameTable, SLTG_TypeInfoHeader *pTIHeader,
+-			       const SLTG_TypeInfoTail *pTITail)
++			       const SLTG_TypeInfoTail *pTITail, const BYTE *hlp_strings)
+ {
+-  SLTG_DoVars(pBlk, pBlk + pTITail->vars_off, pTI, pTITail->cVars, pNameTable, NULL);
++  SLTG_DoVars(pBlk, pBlk + pTITail->vars_off, pTI, pTITail->cVars, pNameTable, NULL, hlp_strings);
+ }
+ 
+ static void SLTG_ProcessAlias(char *pBlk, ITypeInfoImpl *pTI,
+@@ -4437,7 +4443,7 @@ static void SLTG_ProcessDispatch(char *pBlk, ITypeInfoImpl *pTI,
+                                   pNameTable);
+ 
+   if (pTITail->vars_off != 0xffff)
+-    SLTG_DoVars(pBlk, pBlk + pTITail->vars_off, pTI, pTITail->cVars, pNameTable, ref_lookup);
++    SLTG_DoVars(pBlk, pBlk + pTITail->vars_off, pTI, pTITail->cVars, pNameTable, ref_lookup, hlp_strings);
+ 
+   if (pTITail->funcs_off != 0xffff)
+     SLTG_DoFuncs(pBlk, pBlk + pTITail->funcs_off, pTI, pTITail->cFuncs, pNameTable, ref_lookup, hlp_strings);
+@@ -4457,9 +4463,9 @@ static void SLTG_ProcessDispatch(char *pBlk, ITypeInfoImpl *pTI,
+ 
+ static void SLTG_ProcessEnum(char *pBlk, ITypeInfoImpl *pTI,
+ 			     const char *pNameTable, SLTG_TypeInfoHeader *pTIHeader,
+-			     const SLTG_TypeInfoTail *pTITail)
++			     const SLTG_TypeInfoTail *pTITail, const BYTE *hlp_strings)
+ {
+-  SLTG_DoVars(pBlk, pBlk + pTITail->vars_off, pTI, pTITail->cVars, pNameTable, NULL);
++  SLTG_DoVars(pBlk, pBlk + pTITail->vars_off, pTI, pTITail->cVars, pNameTable, NULL, hlp_strings);
+ }
+ 
+ static void SLTG_ProcessModule(char *pBlk, ITypeInfoImpl *pTI,
+@@ -4472,7 +4478,7 @@ static void SLTG_ProcessModule(char *pBlk, ITypeInfoImpl *pTI,
+                                   pNameTable);
+ 
+   if (pTITail->vars_off != 0xffff)
+-    SLTG_DoVars(pBlk, pBlk + pTITail->vars_off, pTI, pTITail->cVars, pNameTable, ref_lookup);
++    SLTG_DoVars(pBlk, pBlk + pTITail->vars_off, pTI, pTITail->cVars, pNameTable, ref_lookup, hlp_strings);
+ 
+   if (pTITail->funcs_off != 0xffff)
+     SLTG_DoFuncs(pBlk, pBlk + pTITail->funcs_off, pTI, pTITail->cFuncs, pNameTable, ref_lookup, hlp_strings);
+@@ -4727,12 +4733,12 @@ static ITypeLib2* ITypeLib2_Constructor_SLTG(LPVOID pLib, DWORD dwTLBLength)
+       switch(pTIHeader->typekind) {
+       case TKIND_ENUM:
+ 	SLTG_ProcessEnum((char *)(pMemHeader + 1), *ppTypeInfoImpl, pNameTable,
+-                         pTIHeader, pTITail);
++                         pTIHeader, pTITail, hlp_strings);
+ 	break;
+ 
+       case TKIND_RECORD:
+ 	SLTG_ProcessRecord((char *)(pMemHeader + 1), *ppTypeInfoImpl, pNameTable,
+-                           pTIHeader, pTITail);
++                           pTIHeader, pTITail, hlp_strings);
+ 	break;
+ 
+       case TKIND_INTERFACE:
+-- 
+2.6.4
+

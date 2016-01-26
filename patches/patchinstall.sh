@@ -6002,8 +6002,8 @@ fi
 # Patchset widl-SLTG_Typelib_Support
 # |
 # | Modified files:
-# |   *	dlls/oleaut32/typelib.c, tools/widl/Makefile.in, tools/widl/typelib.c, tools/widl/typelib.h, tools/widl/widl.c,
-# | 	tools/widl/widl.h, tools/widl/write_sltg.c
+# |   *	dlls/oleaut32/typelib.c, dlls/oleaut32/typelib.h, tools/widl/Makefile.in, tools/widl/typelib.c, tools/widl/typelib.h,
+# | 	tools/widl/widl.c, tools/widl/widl.h, tools/widl/write_sltg.c
 # |
 if test "$enable_widl_SLTG_Typelib_Support" -eq 1; then
 	patch_apply widl-SLTG_Typelib_Support/0001-widl-Add-initial-implementation-of-SLTG-typelib-gene.patch
@@ -6028,6 +6028,9 @@ if test "$enable_widl_SLTG_Typelib_Support" -eq 1; then
 	patch_apply widl-SLTG_Typelib_Support/0020-widl-Set-the-lowest-bit-in-the-param-name-to-indicat.patch
 	patch_apply widl-SLTG_Typelib_Support/0021-oleaut32-Fix-logic-for-deciding-whether-type-descrip.patch
 	patch_apply widl-SLTG_Typelib_Support/0022-widl-Add-support-for-function-parameter-flags-to-SLT.patch
+	patch_apply widl-SLTG_Typelib_Support/0023-oleaut32-Implement-decoding-of-SLTG-help-strings.patch
+	patch_apply widl-SLTG_Typelib_Support/0024-oleaut32-Add-support-for-decoding-SLTG-function-help.patch
+	patch_apply widl-SLTG_Typelib_Support/0025-oleaut32-Add-support-for-decoding-SLTG-variable-help.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "widl: Add initial implementation of SLTG typelib generator.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "widl: Add support for structures.", 1 },';
@@ -6051,6 +6054,9 @@ if test "$enable_widl_SLTG_Typelib_Support" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "widl: Set the lowest bit in the param name to indicate whether type description follows the name.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "oleaut32: Fix logic for deciding whether type description follows the name.", 2 },';
 		echo '+    { "Dmitry Timoshkov", "widl: Add support for function parameter flags to SLTG typelib generator.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "oleaut32: Implement decoding of SLTG help strings.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "oleaut32: Add support for decoding SLTG function help strings.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "oleaut32: Add support for decoding SLTG variable help strings.", 1 },';
 	) >> "$patchlist"
 fi
 

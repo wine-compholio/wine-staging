@@ -2648,6 +2648,7 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0029-ext-ms-win-rtcore-ntuser-sysparams-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0030-ext-ms-win-kernel32-package-current-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0031-shcore-Add-SetProcessDpiAwareness-stub.patch
+	patch_apply api-ms-win-Stub_DLLs/0032-shcore-Implement-stub-for-GetDpiForMonitor.patch
 	(
 		echo '+    { "Michael Müller", "api-ms-win-core-com-l1-1-1: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
@@ -2680,6 +2681,7 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		echo '+    { "Michael Müller", "ext-ms-win-rtcore-ntuser-sysparams-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "ext-ms-win-kernel32-package-current-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Sebastian Lackner", "shcore: Add SetProcessDpiAwareness stub.", 1 },';
+		echo '+    { "Sebastian Lackner", "shcore: Implement stub for GetDpiForMonitor.", 1 },';
 	) >> "$patchlist"
 fi
 

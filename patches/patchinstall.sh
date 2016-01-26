@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d575e0afe304d0096f8014f7f411bf28c126cc0b"
+	echo "b0140f8ee22ad0f4a627f396b760e4a7833e474a"
 }
 
 # Show version information
@@ -5510,7 +5510,7 @@ fi
 # |   *	rpcrt4-Pipe_Transport, server-Desktop_Refcount, kernel32-Named_Pipe
 # |
 # | Modified files:
-# |   *	server/named_pipe.c, server/object.c
+# |   *	dlls/ntdll/tests/om.c, server/named_pipe.c, server/object.c
 # |
 if test "$enable_server_Pipe_ObjectName" -eq 1; then
 	patch_apply server-Pipe_ObjectName/0001-server-Link-named-pipes-to-their-device.patch

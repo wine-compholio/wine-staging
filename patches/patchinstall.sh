@@ -162,6 +162,7 @@ patch_enable_all ()
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_Profile="$1"
+	enable_kernel32_QT_Environment_Variables="$1"
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
 	enable_kernel32_SetFileInformationByHandle="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
@@ -600,6 +601,9 @@ patch_enable ()
 			;;
 		kernel32-Profile)
 			enable_kernel32_Profile="$2"
+			;;
+		kernel32-QT_Environment_Variables)
+			enable_kernel32_QT_Environment_Variables="$2"
 			;;
 		kernel32-SetFileCompletionNotificationModes)
 			enable_kernel32_SetFileCompletionNotificationModes="$2"
@@ -3688,6 +3692,18 @@ if test "$enable_kernel32_Profile" -eq 1; then
 	patch_apply kernel32-Profile/0001-kernel32-Allow-empty-profile-section-and-key-name-st.patch
 	(
 		echo '+    { "Claudio Fontana", "kernel32: Allow empty profile section and key name strings.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-QT_Environment_Variables
+# |
+# | Modified files:
+# |   *	dlls/kernel32/process.c
+# |
+if test "$enable_kernel32_QT_Environment_Variables" -eq 1; then
+	patch_apply kernel32-QT_Environment_Variables/0001-kernel32-Do-not-inherit-QT_-environment-variables-to.patch
+	(
+		echo '+    { "Sebastian Lackner", "kernel32: Do not inherit QT_* environment variables to Windows environment.", 1 },';
 	) >> "$patchlist"
 fi
 

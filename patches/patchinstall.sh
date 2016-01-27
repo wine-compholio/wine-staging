@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d178301b723b0a05d8dc0c04b185e39f3ac8ba14"
+	echo "bb29a9bf5b42a9848faae749b6d0bd79576f665a"
 }
 
 # Show version information
@@ -242,7 +242,6 @@ patch_enable_all ()
 	enable_ole32_CoGetApartmentType="$1"
 	enable_oleaut32_TKIND_COCLASS="$1"
 	enable_oleaut32_x86_64_Marshaller="$1"
-	enable_olepro32_Typelib="$1"
 	enable_openal32_EFX_Extension="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
@@ -296,6 +295,7 @@ patch_enable_all ()
 	enable_shlwapi_AssocGetPerceivedType="$1"
 	enable_shlwapi_SHMapHandle="$1"
 	enable_shlwapi_UrlCombine="$1"
+	enable_stdole32_idl_Typelib="$1"
 	enable_stdole32_tlb_SLTG_Typelib="$1"
 	enable_ucrtbase_Functions="$1"
 	enable_user32_DeferWindowPos="$1"
@@ -866,9 +866,6 @@ patch_enable ()
 		oleaut32-x86_64_Marshaller)
 			enable_oleaut32_x86_64_Marshaller="$2"
 			;;
-		olepro32-Typelib)
-			enable_olepro32_Typelib="$2"
-			;;
 		openal32-EFX_Extension)
 			enable_openal32_EFX_Extension="$2"
 			;;
@@ -1027,6 +1024,9 @@ patch_enable ()
 			;;
 		shlwapi-UrlCombine)
 			enable_shlwapi_UrlCombine="$2"
+			;;
+		stdole32.idl-Typelib)
+			enable_stdole32_idl_Typelib="$2"
 			;;
 		stdole32.tlb-SLTG_Typelib)
 			enable_stdole32_tlb_SLTG_Typelib="$2"
@@ -5242,24 +5242,6 @@ if test "$enable_oleaut32_x86_64_Marshaller" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset olepro32-Typelib
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#14617] Add Standard OLE Types typelib to olepro32.dll
-# |
-# | Modified files:
-# |   *	dlls/olepro32/Makefile.in, dlls/olepro32/olepro.idl, dlls/stdole32.tlb/std_ole_v1.idl, include/Makefile.in,
-# | 	include/stdole32.idl
-# |
-if test "$enable_olepro32_Typelib" -eq 1; then
-	patch_apply olepro32-Typelib/0001-include-Make-stdole32.idl-a-public-component.patch
-	patch_apply olepro32-Typelib/0002-olepro32-Add-typelib-resource.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "include: Make stdole32.idl a public component.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "olepro32: Add typelib resource.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset openal32-EFX_Extension
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6010,6 +5992,18 @@ if test "$enable_shlwapi_UrlCombine" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "shlwapi/tests: Add additional tests for UrlCombine and UrlCanonicalize.", 1 },';
 		echo '+    { "Sebastian Lackner", "shlwapi: UrlCombineW workaround for relative paths.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset stdole32.idl-Typelib
+# |
+# | Modified files:
+# |   *	dlls/stdole32.tlb/std_ole_v1.idl, include/Makefile.in, include/stdole32.idl
+# |
+if test "$enable_stdole32_idl_Typelib" -eq 1; then
+	patch_apply stdole32.idl-Typelib/0001-include-Make-stdole32.idl-a-public-component.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "include: Make stdole32.idl a public component.", 1 },';
 	) >> "$patchlist"
 fi
 

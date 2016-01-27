@@ -1,0 +1,192 @@
+From f5278dc9cd67771aace50ba14bce51626719ac7c Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 27 Jan 2016 08:53:14 +0100
+Subject: uxthemegtk: Validate theme handles before accessing private data.
+
+---
+ dlls/uxtheme-gtk/uxtheme.c    | 47 +++++++++++++++++++++++++++++++++----------
+ dlls/uxtheme-gtk/uxthemegtk.h |  2 +-
+ 2 files changed, 37 insertions(+), 12 deletions(-)
+
+diff --git a/dlls/uxtheme-gtk/uxtheme.c b/dlls/uxtheme-gtk/uxtheme.c
+index 631c4da..aeaeb06 100644
+--- a/dlls/uxtheme-gtk/uxtheme.c
++++ b/dlls/uxtheme-gtk/uxtheme.c
+@@ -3,6 +3,7 @@
+  *
+  * Copyright (C) 2015 Ivan Akulinchev
+  * Copyright (C) 2015 Michael Müller
++ * Copyright (C) 2016 Sebastian Lackner
+  *
+  * This library is free software; you can redistribute it and/or
+  * modify it under the terms of the GNU Lesser General Public
+@@ -36,6 +37,7 @@
+ #include "vfwmsgs.h"
+ #include "shlobj.h"
+ 
++#include "wine/exception.h"
+ #include "wine/debug.h"
+ 
+ #include "uxthemegtk.h"
+@@ -129,6 +131,7 @@ MAKE_FUNCPTR(gtk_widget_style_get);
+ MAKE_FUNCPTR(gtk_window_new);
+ #undef MAKE_FUNCPTR
+ 
++#define HTHEME_MAGIC        0x4b544758
+ #define NUM_SYS_COLORS      (COLOR_MENUBAR + 1)
+ #define MENU_HEIGHT         20
+ #define CLASSLIST_MAXLEN    128
+@@ -265,6 +268,26 @@ error:
+     return FALSE;
+ }
+ 
++static uxgtk_theme_t *impl_from_HTHEME(HTHEME htheme)
++{
++    uxgtk_theme_t *theme = (uxgtk_theme_t *)htheme;
++    if (!htheme || htheme == INVALID_HANDLE_VALUE) return NULL;
++    __TRY
++    {
++        if (theme->magic != HTHEME_MAGIC) theme = NULL;
++    }
++    __EXCEPT_PAGE_FAULT
++    {
++        theme = NULL;
++    }
++    __ENDTRY
++
++    if (!theme)
++        FIXME("Theme handle %p is invalid\n", htheme);
++
++    return theme;
++}
++
+ static void process_attach(void)
+ {
+     static const WCHAR themes_subdir[] = {'\\','T','h','e','m','e','s','\\', 'g','t','k','3',0};
+@@ -347,6 +370,7 @@ static BOOL is_fake_theme(const WCHAR *path)
+ 
+ void uxgtk_theme_init(uxgtk_theme_t *theme, const uxgtk_theme_vtable_t *vtable)
+ {
++    theme->magic  = HTHEME_MAGIC;
+     theme->vtable = vtable;
+     theme->window = pgtk_window_new(GTK_WINDOW_TOPLEVEL);
+     theme->layout = pgtk_fixed_new();
+@@ -404,7 +428,7 @@ static void paint_cairo_surface(cairo_surface_t *surface, HDC target_hdc,
+ 
+ HRESULT WINAPI CloseThemeData(HTHEME htheme)
+ {
+-    uxgtk_theme_t *theme = (uxgtk_theme_t *)htheme;
++    uxgtk_theme_t *theme;
+     WORD fpu_flags;
+ 
+     TRACE("(%p)\n", htheme);
+@@ -412,7 +436,7 @@ HRESULT WINAPI CloseThemeData(HTHEME htheme)
+     if (libgtk3 == NULL)
+         return E_NOTIMPL;
+ 
+-    if (theme == NULL)
++    if (!(theme = impl_from_HTHEME(htheme)))
+         return E_HANDLE;
+ 
+     /* Destroy the toplevel widget */
+@@ -420,6 +444,7 @@ HRESULT WINAPI CloseThemeData(HTHEME htheme)
+     pgtk_widget_destroy(theme->window);
+     set_fpu_flags(fpu_flags);
+ 
++    theme->magic = 0;
+     HeapFree(GetProcessHeap(), 0, theme);
+     return S_OK;
+ }
+@@ -592,17 +617,17 @@ HRESULT WINAPI GetThemeBool(HTHEME htheme, int part_id, int state_id,
+ HRESULT WINAPI GetThemeColor(HTHEME htheme, int part_id, int state_id,
+                              int prop_id, COLORREF *color)
+ {
+-    HRESULT hr;
+     GdkRGBA rgba = {0, 0, 0, 0};
+-    uxgtk_theme_t *theme = (uxgtk_theme_t *)htheme;
++    uxgtk_theme_t *theme;
+     WORD fpu_flags;
++    HRESULT hr;
+ 
+     TRACE("(%p, %d, %d, %d, %p)\n", htheme, part_id, state_id, prop_id, color);
+ 
+     if (libgtk3 == NULL)
+         return E_NOTIMPL;
+ 
+-    if (theme == NULL || theme->vtable == NULL)
++    if (!(theme = impl_from_HTHEME(htheme)))
+         return E_HANDLE;
+ 
+     if (theme->vtable->get_color == NULL)
+@@ -895,8 +920,8 @@ HRESULT WINAPI DrawThemeBackground(HTHEME htheme, HDC hdc, int part_id, int stat
+ HRESULT WINAPI DrawThemeBackgroundEx(HTHEME htheme, HDC hdc, int part_id, int state_id,
+                                      LPCRECT rect, const DTBGOPTS *options)
+ {
+-    uxgtk_theme_t *theme = (uxgtk_theme_t *)htheme;
+     cairo_surface_t *surface;
++    uxgtk_theme_t *theme;
+     int width, height;
+     WORD fpu_flags;
+     cairo_t *cr;
+@@ -907,7 +932,7 @@ HRESULT WINAPI DrawThemeBackgroundEx(HTHEME htheme, HDC hdc, int part_id, int st
+     if (libgtk3 == NULL)
+         return E_NOTIMPL;
+ 
+-    if (theme == NULL || theme->vtable == NULL)
++    if (!(theme = impl_from_HTHEME(htheme)))
+         return E_HANDLE;
+ 
+     if (theme->vtable->draw_background == NULL)
+@@ -1064,7 +1089,7 @@ HRESULT WINAPI GetThemeBackgroundRegion(HTHEME htheme, HDC hdc, int part_id, int
+ HRESULT WINAPI GetThemePartSize(HTHEME htheme, HDC hdc, int part_id, int state_id,
+                                 RECT *rect, THEMESIZE type, SIZE *size)
+ {
+-    uxgtk_theme_t *theme = (uxgtk_theme_t *)htheme;
++    uxgtk_theme_t *theme;
+     HRESULT result;
+     WORD fpu_flags;
+ 
+@@ -1073,7 +1098,7 @@ HRESULT WINAPI GetThemePartSize(HTHEME htheme, HDC hdc, int part_id, int state_i
+     if (libgtk3 == NULL)
+         return E_NOTIMPL;
+ 
+-    if (theme == NULL || theme->vtable == NULL)
++    if (!(theme = impl_from_HTHEME(htheme)))
+         return E_HANDLE;
+ 
+     if (theme->vtable->get_part_size == NULL)
+@@ -1131,7 +1156,7 @@ BOOL WINAPI IsThemeBackgroundPartiallyTransparent(HTHEME htheme, int part_id, in
+ 
+ BOOL WINAPI IsThemePartDefined(HTHEME htheme, int part_id, int state_id)
+ {
+-    uxgtk_theme_t *theme = (uxgtk_theme_t *)htheme;
++    uxgtk_theme_t *theme;
+     WORD fpu_flags;
+     BOOL result;
+ 
+@@ -1143,7 +1168,7 @@ BOOL WINAPI IsThemePartDefined(HTHEME htheme, int part_id, int state_id)
+         return FALSE;
+     }
+ 
+-    if (theme == NULL || theme->vtable == NULL)
++    if (!(theme = impl_from_HTHEME(htheme)))
+     {
+         SetLastError(E_HANDLE);
+         return FALSE;
+diff --git a/dlls/uxtheme-gtk/uxthemegtk.h b/dlls/uxtheme-gtk/uxthemegtk.h
+index 79037fb..185366b 100644
+--- a/dlls/uxtheme-gtk/uxthemegtk.h
++++ b/dlls/uxtheme-gtk/uxthemegtk.h
+@@ -44,8 +44,8 @@ struct _uxgtk_theme_vtable
+ 
+ struct _uxgtk_theme
+ {
++    DWORD magic;
+     const uxgtk_theme_vtable_t *vtable;
+-
+     GtkWidget *window;
+     GtkWidget *layout;
+ };
+-- 
+2.6.4
+

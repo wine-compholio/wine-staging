@@ -6356,6 +6356,7 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 	patch_apply uxtheme-GTK_Theming/0006-uxthemegtk-Reset-FPU-flags-before-calling-GTK3-funct.patch
 	patch_apply uxtheme-GTK_Theming/0007-uxthemegtk-Add-export-for-OpenThemeDataEx.patch
 	patch_apply uxtheme-GTK_Theming/0008-uxthemegtk-Fix-some-incorrect-error-codes.patch
+	patch_apply uxtheme-GTK_Theming/0009-uxthemegtk-Validate-theme-handles-before-accessing-p.patch
 	(
 		echo '+    { "Michael Müller", "uxthemegtk: Add configure check and stub dll.", 1 },';
 		echo '+    { "Ivan Akulinchev", "uxthemegtk: Initial implementation.", 1 },';
@@ -6365,6 +6366,7 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 		echo '+    { "Michael Müller", "uxthemegtk: Reset FPU flags before calling GTK3 functions.", 1 },';
 		echo '+    { "Sebastian Lackner", "uxthemegtk: Add export for OpenThemeDataEx.", 1 },';
 		echo '+    { "Sebastian Lackner", "uxthemegtk: Fix some incorrect error codes.", 1 },';
+		echo '+    { "Sebastian Lackner", "uxthemegtk: Validate theme handles before accessing private data.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,16 +1,16 @@
-From a67a9a39ffcf23526dbabc064d02520c41a5ecdb Mon Sep 17 00:00:00 2001
+From c26e82ad29fda0dc41ecec558d18392044606bd5 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 1 Aug 2013 00:33:48 +0200
 Subject: wined3d: Send update_texture calls through the CS
 
 ---
- dlls/wined3d/cs.c              |  33 ++++++++++++
- dlls/wined3d/device.c          | 119 +++++++++++++++++++----------------------
+ dlls/wined3d/cs.c              |  33 +++++++++++
+ dlls/wined3d/device.c          | 125 ++++++++++++++++++++---------------------
  dlls/wined3d/wined3d_private.h |   4 ++
- 3 files changed, 91 insertions(+), 65 deletions(-)
+ 3 files changed, 98 insertions(+), 64 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index f17a222..31f7087 100644
+index 20340da..fa25731 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -73,6 +73,7 @@ enum wined3d_cs_op
@@ -75,10 +75,10 @@ index f17a222..31f7087 100644
  
  static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index d302b17..e7c5bcc 100644
+index 05bfa46..8103f75 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -3420,16 +3420,15 @@ void CDECL wined3d_device_draw_indexed_primitive_instanced(struct wined3d_device
+@@ -3484,16 +3484,15 @@ void CDECL wined3d_device_draw_indexed_primitive_instanced(struct wined3d_device
  }
  
  /* This is a helper function for UpdateTexture, there is no UpdateVolume method in D3D. */
@@ -98,7 +98,7 @@ index d302b17..e7c5bcc 100644
  
      if (src_volume->resource.format != dst_volume->resource.format)
      {
-@@ -3447,8 +3446,6 @@ static HRESULT device_update_volume(struct wined3d_device *device,
+@@ -3511,8 +3510,6 @@ static HRESULT device_update_volume(struct wined3d_device *device,
      if (FAILED(hr = wined3d_volume_map(src_volume, &src, NULL, WINED3D_MAP_READONLY)))
          return hr;
  
@@ -107,7 +107,7 @@ index d302b17..e7c5bcc 100644
      /* Only a prepare, since we're uploading the entire volume. */
      wined3d_texture_prepare_texture(dst_volume->container, context, FALSE);
      wined3d_texture_bind_and_dirtify(dst_volume->container, context, FALSE);
-@@ -3458,48 +3455,17 @@ static HRESULT device_update_volume(struct wined3d_device *device,
+@@ -3522,57 +3519,20 @@ static HRESULT device_update_volume(struct wined3d_device *device,
      wined3d_volume_upload_data(dst_volume, context, &data);
      wined3d_resource_invalidate_location(&dst_volume->resource, ~WINED3D_LOCATION_TEXTURE_RGB);
  
@@ -124,9 +124,9 @@ index d302b17..e7c5bcc 100644
 +void device_exec_update_texture(struct wined3d_context *context, struct wined3d_texture *src_texture,
 +        struct wined3d_texture *dst_texture)
  {
+     unsigned int src_size, dst_size, src_skip_levels = 0;
+     unsigned int layer_count, level_count, i, j;
 -    enum wined3d_resource_type type;
-+    enum wined3d_resource_type type = src_texture->resource.type;
-     unsigned int level_count, i, j, src_size, dst_size, src_skip_levels = 0;
 -    HRESULT hr;
 -    struct wined3d_context *context;
 -
@@ -157,10 +157,19 @@ index d302b17..e7c5bcc 100644
 -        WARN("Source and destination have different types, returning WINED3DERR_INVALIDCALL.\n");
 -        return WINED3DERR_INVALIDCALL;
 -    }
++    enum wined3d_resource_type type = src_texture->resource.type;
  
+     layer_count = src_texture->layer_count;
+-    if (layer_count != dst_texture->layer_count)
+-    {
+-        WARN("Source and destination have different layer counts.\n");
+-        return WINED3DERR_INVALIDCALL;
+-    }
+-
      level_count = min(wined3d_texture_get_level_count(src_texture),
              wined3d_texture_get_level_count(dst_texture));
-@@ -3517,17 +3483,8 @@ HRESULT CDECL wined3d_device_update_texture(struct wined3d_device *device,
+ 
+@@ -3589,17 +3549,8 @@ HRESULT CDECL wined3d_device_update_texture(struct wined3d_device *device,
          ++src_skip_levels;
      }
  
@@ -178,26 +187,11 @@ index d302b17..e7c5bcc 100644
  
      /* Update every surface level of the texture. */
      switch (type)
-@@ -3542,12 +3499,7 @@ HRESULT CDECL wined3d_device_update_texture(struct wined3d_device *device,
-                 src_surface = surface_from_resource(wined3d_texture_get_sub_resource(src_texture,
-                         i + src_skip_levels));
-                 dst_surface = surface_from_resource(wined3d_texture_get_sub_resource(dst_texture, i));
--                hr = wined3d_device_update_surface(device, src_surface, NULL, dst_surface, NULL);
--                if (FAILED(hr))
--                {
--                    WARN("Failed to update surface, hr %#x.\n", hr);
--                    return hr;
--                }
-+                surface_upload_from_surface(dst_surface, NULL, src_surface, NULL);
-             }
-             break;
-         }
-@@ -3567,12 +3519,7 @@ HRESULT CDECL wined3d_device_update_texture(struct wined3d_device *device,
+@@ -3619,11 +3570,7 @@ HRESULT CDECL wined3d_device_update_texture(struct wined3d_device *device,
                              i * src_levels + j + src_skip_levels));
                      dst_surface = surface_from_resource(wined3d_texture_get_sub_resource(dst_texture,
                              i * dst_levels + j));
--                    hr = wined3d_device_update_surface(device, src_surface, NULL, dst_surface, NULL);
--                    if (FAILED(hr))
+-                    if (FAILED(hr = wined3d_device_update_surface(device, src_surface, NULL, dst_surface, NULL)))
 -                    {
 -                        WARN("Failed to update surface, hr %#x.\n", hr);
 -                        return hr;
@@ -206,7 +200,7 @@ index d302b17..e7c5bcc 100644
                  }
              }
              break;
-@@ -3582,14 +3529,15 @@ HRESULT CDECL wined3d_device_update_texture(struct wined3d_device *device,
+@@ -3633,14 +3580,15 @@ HRESULT CDECL wined3d_device_update_texture(struct wined3d_device *device,
          {
              for (i = 0; i < level_count; ++i)
              {
@@ -224,7 +218,7 @@ index d302b17..e7c5bcc 100644
                  }
              }
              break;
-@@ -3597,9 +3545,50 @@ HRESULT CDECL wined3d_device_update_texture(struct wined3d_device *device,
+@@ -3648,9 +3596,58 @@ HRESULT CDECL wined3d_device_update_texture(struct wined3d_device *device,
  
          default:
              FIXME("Unsupported texture type %#x.\n", type);
@@ -237,6 +231,7 @@ index d302b17..e7c5bcc 100644
 +        struct wined3d_texture *src_texture, struct wined3d_texture *dst_texture)
 +{
 +    enum wined3d_resource_type type;
++    unsigned int layer_count;
 +
 +    TRACE("device %p, src_texture %p, dst_texture %p.\n", device, src_texture, dst_texture);
 +
@@ -271,16 +266,23 @@ index d302b17..e7c5bcc 100644
 +        return WINED3DERR_INVALIDCALL;
 +    }
 +
++    layer_count = src_texture->layer_count;
++    if (layer_count != dst_texture->layer_count)
++    {
++        WARN("Source and destination have different layer counts.\n");
++        return WINED3DERR_INVALIDCALL;
++    }
++
 +    wined3d_cs_emit_update_texture(device->cs, src_texture, dst_texture);
 +
      return WINED3D_OK;
  }
  
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 3081be5..3297c5e 100644
+index ee80c52..5a0dbc4 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2152,6 +2152,8 @@ void device_resource_add(struct wined3d_device *device, struct wined3d_resource
+@@ -2194,6 +2194,8 @@ void device_resource_add(struct wined3d_device *device, struct wined3d_resource
  void device_resource_released(struct wined3d_device *device, struct wined3d_resource *resource) DECLSPEC_HIDDEN;
  void device_invalidate_state(const struct wined3d_device *device, DWORD state) DECLSPEC_HIDDEN;
  void device_invalidate_shader_constants(const struct wined3d_device *device, DWORD mask) DECLSPEC_HIDDEN;
@@ -289,7 +291,7 @@ index 3081be5..3297c5e 100644
  
  static inline BOOL isStateDirty(const struct wined3d_context *context, DWORD state)
  {
-@@ -2744,6 +2746,8 @@ void wined3d_cs_emit_update_surface(struct wined3d_cs *cs, struct wined3d_surfac
+@@ -2786,6 +2788,8 @@ void wined3d_cs_emit_update_surface(struct wined3d_cs *cs, struct wined3d_surfac
          const RECT *src_rect, struct wined3d_surface *dst, const POINT *dst_point) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_texture_preload(struct wined3d_cs *cs, struct wined3d_texture *texture) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_surface_preload(struct wined3d_cs *cs, struct wined3d_surface *surface) DECLSPEC_HIDDEN;
@@ -299,5 +301,5 @@ index 3081be5..3297c5e 100644
  /* Direct3D terminology with little modifications. We do not have an issued state
   * because only the driver knows about it, but we have a created state because d3d
 -- 
-2.5.1
+2.6.4
 

@@ -334,7 +334,6 @@ patch_enable_all ()
 	enable_wined3d_Geforce_425M="$1"
 	enable_wined3d_Invalid_Render_States="$1"
 	enable_wined3d_MESA_GPU_Info="$1"
-	enable_wined3d_Multisampling="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_UnhandledBlendFactor="$1"
 	enable_wined3d_resource_check_usage="$1"
@@ -1143,9 +1142,6 @@ patch_enable ()
 		wined3d-MESA_GPU_Info)
 			enable_wined3d_MESA_GPU_Info="$2"
 			;;
-		wined3d-Multisampling)
-			enable_wined3d_Multisampling="$2"
-			;;
 		wined3d-Revert_PixelFormat)
 			enable_wined3d_Revert_PixelFormat="$2"
 			;;
@@ -1751,9 +1747,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_winecfg_Libraries" -gt 1; then
 		abort "Patchset winecfg-Libraries disabled, but category-stable depends on that."
 	fi
-	if test "$enable_wined3d_Multisampling" -gt 1; then
-		abort "Patchset wined3d-Multisampling disabled, but category-stable depends on that."
-	fi
 	if test "$enable_wined3d_Revert_PixelFormat" -gt 1; then
 		abort "Patchset wined3d-Revert_PixelFormat disabled, but category-stable depends on that."
 	fi
@@ -1842,7 +1835,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_wine_inf_ProfileList_UserSID=1
 	enable_wineboot_HKEY_DYN_DATA=1
 	enable_winecfg_Libraries=1
-	enable_wined3d_Multisampling=1
 	enable_wined3d_Revert_PixelFormat=1
 	enable_wined3d_UnhandledBlendFactor=1
 	enable_wined3d_resource_check_usage=1
@@ -6598,21 +6590,6 @@ if test "$enable_wined3d_MESA_GPU_Info" -eq 1; then
 	patch_apply wined3d-MESA_GPU_Info/0001-wined3d-Use-pci-and-memory-information-from-MESA-if-.patch
 	(
 		echo '+    { "Michael Müller", "wined3d: Use pci and memory information from MESA if possible.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Multisampling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
-	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
 	) >> "$patchlist"
 fi
 

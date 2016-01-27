@@ -312,6 +312,7 @@ patch_enable_all ()
 	enable_user32_WM_CAPTURECHANGE="$1"
 	enable_user32_WM_MDICALCCHILDSCROLL="$1"
 	enable_user32_WndProc="$1"
+	enable_uxtheme_CloseThemeData="$1"
 	enable_uxtheme_GTK_Theming="$1"
 	enable_vcomp_Atomic_I8="$1"
 	enable_version_VerQueryValue="$1"
@@ -1075,6 +1076,9 @@ patch_enable ()
 			;;
 		user32-WndProc)
 			enable_user32_WndProc="$2"
+			;;
+		uxtheme-CloseThemeData)
+			enable_uxtheme_CloseThemeData="$2"
 			;;
 		uxtheme-GTK_Theming)
 			enable_uxtheme_GTK_Theming="$2"
@@ -6313,6 +6317,21 @@ if test "$enable_user32_WndProc" -eq 1; then
 	patch_apply user32-WndProc/0001-user32-Increase-MAX_WINPROCS-to-16384.patch
 	(
 		echo '+    { "Sebastian Lackner", "user32: Increase MAX_WINPROCS to 16384.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset uxtheme-CloseThemeData
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#29862] Do not crash when INVALID_HANDLE_VALUE is passed to CloseThemeData
+# |
+# | Modified files:
+# |   *	dlls/uxtheme/system.c, dlls/uxtheme/tests/system.c
+# |
+if test "$enable_uxtheme_CloseThemeData" -eq 1; then
+	patch_apply uxtheme-CloseThemeData/0001-uxtheme-Do-not-crash-when-INVALID_HANDLE_VALUE-is-pa.patch
+	(
+		echo '+    { "Louis Lenders", "uxtheme: Do not crash when INVALID_HANDLE_VALUE is passed to CloseThemeData.", 1 },';
 	) >> "$patchlist"
 fi
 

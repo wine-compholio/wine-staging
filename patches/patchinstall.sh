@@ -6043,6 +6043,7 @@ if test "$enable_widl_SLTG_Typelib_Support" -eq 1; then
 	patch_apply widl-SLTG_Typelib_Support/0023-oleaut32-Implement-decoding-of-SLTG-help-strings.patch
 	patch_apply widl-SLTG_Typelib_Support/0024-oleaut32-Add-support-for-decoding-SLTG-function-help.patch
 	patch_apply widl-SLTG_Typelib_Support/0025-oleaut32-Add-support-for-decoding-SLTG-variable-help.patch
+	patch_apply widl-SLTG_Typelib_Support/0026-widl-Minor-cosmetic-clean-up.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "widl: Add initial implementation of SLTG typelib generator.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "widl: Add support for structures.", 1 },';
@@ -6069,6 +6070,7 @@ if test "$enable_widl_SLTG_Typelib_Support" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "oleaut32: Implement decoding of SLTG help strings.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "oleaut32: Add support for decoding SLTG function help strings.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "oleaut32: Add support for decoding SLTG variable help strings.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "widl: Minor/cosmetic clean up.", 1 },';
 	) >> "$patchlist"
 fi
 

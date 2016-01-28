@@ -240,6 +240,7 @@ patch_enable_all ()
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
 	enable_ole32_CoGetApartmentType="$1"
+	enable_oleaut32_CreateTypeLib="$1"
 	enable_oleaut32_TKIND_COCLASS="$1"
 	enable_oleaut32_x86_64_Marshaller="$1"
 	enable_openal32_EFX_Extension="$1"
@@ -860,6 +861,9 @@ patch_enable ()
 			;;
 		ole32-CoGetApartmentType)
 			enable_ole32_CoGetApartmentType="$2"
+			;;
+		oleaut32-CreateTypeLib)
+			enable_oleaut32_CreateTypeLib="$2"
 			;;
 		oleaut32-TKIND_COCLASS)
 			enable_oleaut32_TKIND_COCLASS="$2"
@@ -5203,6 +5207,21 @@ if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
 		echo '+    { "Michael Müller", "nvencodeapi: First implementation.", 1 },';
 		echo '+    { "Michael Müller", "nvencodeapi: Add debian specific paths to native library.", 1 },';
 		echo '+    { "Michael Müller", "nvencodeapi: Add support for version 6.0.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset oleaut32-CreateTypeLib
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#8780] Forward CreateTypeLib to CreateTypeLib2
+# |
+# | Modified files:
+# |   *	dlls/oleaut32/typelib.c
+# |
+if test "$enable_oleaut32_CreateTypeLib" -eq 1; then
+	patch_apply oleaut32-CreateTypeLib/0001-oleaut32-Implement-semi-stub-for-CreateTypeLib.patch
+	(
+		echo '+    { "Alistair Leslie-Hughes", "oleaut32: Implement semi-stub for CreateTypeLib.", 1 },';
 	) >> "$patchlist"
 fi
 

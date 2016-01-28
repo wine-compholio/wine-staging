@@ -1,0 +1,62 @@
+From cfc7a0a240df174882997f8b69d37848543e12dd Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Wed, 27 Jan 2016 04:54:15 +0100
+Subject: ntdll: Use sysinfo to report correct number of physical pages.
+
+---
+ configure.ac         |  1 +
+ dlls/ntdll/virtual.c | 14 ++++++++++++++
+ 2 files changed, 15 insertions(+)
+
+diff --git a/configure.ac b/configure.ac
+index 59fc4fa..3909cd5 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -502,6 +502,7 @@ AC_CHECK_HEADERS(\
+ 	sys/statvfs.h \
+ 	sys/strtio.h \
+ 	sys/syscall.h \
++	sys/sysinfo.h \
+ 	sys/tihdr.h \
+ 	sys/time.h \
+ 	sys/timeout.h \
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index f4ca487..b9a59fc 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -38,6 +38,9 @@
+ #ifdef HAVE_SYS_MMAN_H
+ # include <sys/mman.h>
+ #endif
++#ifdef HAVE_SYS_SYSINFO_H
++# include <sys/sysinfo.h>
++#endif
+ #ifdef HAVE_VALGRIND_VALGRIND_H
+ # include <valgrind/valgrind.h>
+ #endif
+@@ -1356,11 +1359,22 @@ void virtual_init_threading(void)
+  */
+ void virtual_get_system_info( SYSTEM_BASIC_INFORMATION *info )
+ {
++#ifdef HAVE_SYS_SYSINFO_H
++    struct sysinfo sinfo;
++#endif
++
+     info->unknown                 = 0;
+     info->KeMaximumIncrement      = 0;  /* FIXME */
+     info->PageSize                = page_size;
+     info->MmLowestPhysicalPage    = 1;
+     info->MmHighestPhysicalPage   = 0x7fffffff / page_size;
++#ifdef HAVE_SYS_SYSINFO_H
++    if (!sysinfo(&sinfo))
++    {
++        ULONG64 total = (ULONG64)sinfo.totalram * sinfo.mem_unit;
++        info->MmHighestPhysicalPage = max(1, total / page_size);
++    }
++#endif
+     info->MmNumberOfPhysicalPages = info->MmHighestPhysicalPage - info->MmLowestPhysicalPage;
+     info->AllocationGranularity   = get_mask(0) + 1;
+     info->LowestUserAddress       = (void *)0x10000;
+-- 
+2.6.4
+

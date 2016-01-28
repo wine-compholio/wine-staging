@@ -1,0 +1,58 @@
+From 67f11502fdf5bdabbc786efe99ce4e681683ba31 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 28 Jan 2016 06:43:00 +0100
+Subject: ntdll: Report system information SystemPerformanceInformation info
+ class.
+
+---
+ dlls/ntdll/nt.c | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
+index 9ee1923..947b410 100644
+--- a/dlls/ntdll/nt.c
++++ b/dlls/ntdll/nt.c
+@@ -30,6 +30,9 @@
+ #ifdef HAVE_SYS_SYSCTL_H
+ # include <sys/sysctl.h>
+ #endif
++#ifdef HAVE_SYS_SYSINFO_H
++# include <sys/sysinfo.h>
++#endif
+ #ifdef HAVE_MACHINE_CPU_H
+ # include <machine/cpu.h>
+ #endif
+@@ -1718,6 +1721,9 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+             SYSTEM_PERFORMANCE_INFORMATION spi;
+             static BOOL fixme_written = FALSE;
+             FILE *fp;
++        #ifdef HAVE_SYS_SYSINFO_H
++            struct sysinfo sinfo;
++        #endif
+ 
+             memset(&spi, 0 , sizeof(spi));
+             len = sizeof(spi);
+@@ -1739,6 +1745,20 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+                 spi.IdleTime.QuadPart = ++idle;
+             }
+ 
++        #ifdef HAVE_SYS_SYSINFO_H
++            if (!sysinfo(&sinfo))
++            {
++                ULONG64 freemem   = (ULONG64)sinfo.freeram * sinfo.mem_unit;
++                ULONG64 totalram  = (ULONG64)sinfo.totalram * sinfo.mem_unit;
++                ULONG64 totalswap = (ULONG64)sinfo.totalswap * sinfo.mem_unit;
++                ULONG64 freeswap  = (ULONG64)sinfo.freeswap * sinfo.mem_unit;
++
++                spi.AvailablePages      = freemem / page_size;
++                spi.TotalCommittedPages = (totalram + totalswap - freemem - freeswap) / page_size;
++                spi.TotalCommitLimit    = (totalram + totalswap) / page_size;
++            }
++        #endif
++
+             if (Length >= len)
+             {
+                 if (!SystemInformation) ret = STATUS_ACCESS_VIOLATION;
+-- 
+2.6.4
+

@@ -297,6 +297,7 @@ patch_enable_all ()
 	enable_shlwapi_UrlCombine="$1"
 	enable_stdole32_idl_Typelib="$1"
 	enable_stdole32_tlb_SLTG_Typelib="$1"
+	enable_taskmgr_Memory_Usage="$1"
 	enable_ucrtbase_Functions="$1"
 	enable_user32_DeferWindowPos="$1"
 	enable_user32_Dialog_Paint_Event="$1"
@@ -1030,6 +1031,9 @@ patch_enable ()
 			;;
 		stdole32.tlb-SLTG_Typelib)
 			enable_stdole32_tlb_SLTG_Typelib="$2"
+			;;
+		taskmgr-Memory_Usage)
+			enable_taskmgr_Memory_Usage="$2"
 			;;
 		ucrtbase-Functions)
 			enable_ucrtbase_Functions="$2"
@@ -6083,6 +6087,25 @@ if test "$enable_stdole32_tlb_SLTG_Typelib" -eq 1; then
 	patch_apply stdole32.tlb-SLTG_Typelib/0020-stdole32.tlb-Compile-typelib-with-oldtlb.patch
 	(
 		echo '+    { "Sebastian Lackner", "stdole32.tlb: Compile typelib with --oldtlb.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset taskmgr-Memory_Usage
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/ntdll/nt.c, dlls/ntdll/virtual.c, programs/taskmgr/font.bmp, programs/taskmgr/graph.c,
+# | 	programs/taskmgr/resource.h, programs/taskmgr/taskmgr.c, programs/taskmgr/taskmgr.rc
+# |
+if test "$enable_taskmgr_Memory_Usage" -eq 1; then
+	patch_apply taskmgr-Memory_Usage/0001-ntdll-Use-sysinfo-to-report-correct-number-of-physic.patch
+	patch_apply taskmgr-Memory_Usage/0002-ntdll-Report-system-information-SystemPerformanceInf.patch
+	patch_apply taskmgr-Memory_Usage/0003-taskmgr-Use-system-font-instead-of-special-bitmap-fo.patch
+	patch_apply taskmgr-Memory_Usage/0004-taskmgr-Use-different-units-depending-on-memory-usag.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Use sysinfo to report correct number of physical pages.", 1 },';
+		echo '+    { "Michael Müller", "ntdll: Report system information SystemPerformanceInformation info class.", 1 },';
+		echo '+    { "Michael Müller", "taskmgr: Use system font instead of special bitmap font.", 1 },';
+		echo '+    { "Michael Müller", "taskmgr: Use different units depending on memory usage.", 1 },';
 	) >> "$patchlist"
 fi
 

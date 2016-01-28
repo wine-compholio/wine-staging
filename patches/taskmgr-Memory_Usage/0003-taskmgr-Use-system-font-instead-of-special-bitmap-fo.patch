@@ -1,0 +1,139 @@
+From 54f6838211778a8f2527640d3c5a411f56d5cd98 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Wed, 27 Jan 2016 04:55:09 +0100
+Subject: taskmgr: Use system font instead of special bitmap font.
+
+---
+ programs/taskmgr/font.bmp   | Bin 646 -> 0 bytes
+ programs/taskmgr/graph.c    |  14 ++++++++++++--
+ programs/taskmgr/resource.h |   1 -
+ programs/taskmgr/taskmgr.c  |  29 -----------------------------
+ programs/taskmgr/taskmgr.rc |   3 ---
+ 5 files changed, 12 insertions(+), 35 deletions(-)
+ delete mode 100644 programs/taskmgr/font.bmp
+
+diff --git a/programs/taskmgr/font.bmp b/programs/taskmgr/font.bmp
+deleted file mode 100644
+index c1f8410c93273f4bc7013014561c35ef84faa182..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 646
+zcma)(!4U#62u0EH6fcfdSci9eun5QVo~(m&sz_(+`>@G4J060-haZBlxj#Nf3wh&j
+z*b_Tr2Rq@-E}XxvX+aFPn4z{T33x(lt${jNLv39ZVf;klYOQWo0y8!j?qiD3aA3(K
+zIq{C$VS%n9(V2QTr);{O_DntBpT=8p%%lCvw&%ZnE9Lyb=%2T9J{pLZxOXEEt2{0S
+rj&qR`_imbB3(wY5`TKp;OQ!n~kRUw=3;lV4-TOj~_w9QN#T)VkBip4W
+
+diff --git a/programs/taskmgr/graph.c b/programs/taskmgr/graph.c
+index 4098675..df4f922 100644
+--- a/programs/taskmgr/graph.c
++++ b/programs/taskmgr/graph.c
+@@ -44,6 +44,7 @@ static void Graph_DrawCpuUsageGraph(HDC hDC, HWND hWnd)
+     RECT            rcClient;
+     RECT            rcBarLeft;
+     RECT            rcBarRight;
++    RECT            rcText;
+     WCHAR            Text[256];
+     ULONG            CpuUsage;
+     ULONG            CpuKernelUsage;
+@@ -97,7 +98,11 @@ static void Graph_DrawCpuUsageGraph(HDC hDC, HWND hWnd)
+      * Draw the font text onto the graph
+      * The bottom 20 pixels are reserved for the text
+      */
+-    Font_DrawText(hDC, Text, ((rcClient.right - rcClient.left) - 32) / 2, rcClient.bottom - 11 - 5);
++    CopyRect(&rcText, &rcClient);
++    rcText.top = rcText.bottom - 19;
++
++    SetTextColor(hDC, BRIGHT_GREEN);
++    DrawTextW(hDC, Text, -1, &rcText, DT_CENTER);
+ 
+     /*
+      * Now we have to draw the graph
+@@ -224,6 +229,7 @@ static void Graph_DrawMemUsageGraph(HDC hDC, HWND hWnd)
+     RECT            rcClient;
+     RECT            rcBarLeft;
+     RECT            rcBarRight;
++    RECT            rcText;
+     WCHAR            Text[256];
+     ULONGLONG        CommitChargeTotal;
+     ULONGLONG        CommitChargeLimit;
+@@ -258,7 +264,11 @@ static void Graph_DrawMemUsageGraph(HDC hDC, HWND hWnd)
+      * Draw the font text onto the graph
+      * The bottom 20 pixels are reserved for the text
+      */
+-    Font_DrawText(hDC, Text, ((rcClient.right - rcClient.left) - (strlenW(Text) * 8)) / 2, rcClient.bottom - 11 - 5);
++    CopyRect(&rcText, &rcClient);
++    rcText.top = rcText.bottom - 19;
++
++    SetTextColor(hDC, BRIGHT_GREEN);
++    DrawTextW(hDC, Text, -1, &rcText, DT_CENTER);
+ 
+     /*
+      * Now we have to draw the graph
+diff --git a/programs/taskmgr/resource.h b/programs/taskmgr/resource.h
+index add873d..cbd2448 100644
+--- a/programs/taskmgr/resource.h
++++ b/programs/taskmgr/resource.h
+@@ -35,7 +35,6 @@
+ #define IDR_PROCESS_PAGE_CONTEXT        144
+ #define IDB_TRAYMASK                    150
+ #define IDB_TRAYICON                    153
+-#define IDB_FONT                        154
+ #define IDD_DEBUG_CHANNELS_DIALOG       155
+ #define IDC_DEBUG_CHANNELS_LIST         156
+ 
+diff --git a/programs/taskmgr/taskmgr.c b/programs/taskmgr/taskmgr.c
+index 80dc81c..b0f2e78 100644
+--- a/programs/taskmgr/taskmgr.c
++++ b/programs/taskmgr/taskmgr.c
+@@ -80,35 +80,6 @@ static void Draw3dRect(HDC hDC, int x, int y, int cx, int cy, COLORREF clrTopLef
+     FillSolidRect2(hDC, x, y + cy, cx, -1, clrBottomRight);
+ }
+ 
+-void Font_DrawText(HDC hDC, LPWSTR lpwszText, int x, int y)
+-{
+-    HDC        hFontDC;
+-    HBITMAP    hFontBitmap;
+-    HBITMAP    hOldBitmap;
+-    int        i;
+-
+-    hFontDC = CreateCompatibleDC(hDC);
+-    hFontBitmap = LoadBitmapW(hInst, MAKEINTRESOURCEW(IDB_FONT));
+-    hOldBitmap = SelectObject(hFontDC, hFontBitmap);
+-
+-    for (i = 0; lpwszText[i]; i++) {
+-        if ((lpwszText[i] >= '0') && (lpwszText[i] <= '9')) {
+-            BitBlt(hDC, x + (i * 8), y, 8, 11, hFontDC, (lpwszText[i] - '0') * 8, 0, SRCCOPY);
+-        }
+-        else if (lpwszText[i] == 'K')
+-        {
+-            BitBlt(hDC, x + (i * 8), y, 8, 11, hFontDC, 80, 0, SRCCOPY);
+-        }
+-        else if (lpwszText[i] == '%')
+-        {
+-            BitBlt(hDC, x + (i * 8), y, 8, 11, hFontDC, 88, 0, SRCCOPY);
+-        }
+-    }
+-    SelectObject(hFontDC, hOldBitmap);
+-    DeleteObject(hFontBitmap);
+-    DeleteDC(hFontDC);
+-}
+-
+ static BOOL OnCreate(HWND hWnd)
+ {
+     HMENU   hMenu;
+diff --git a/programs/taskmgr/taskmgr.rc b/programs/taskmgr/taskmgr.rc
+index e6742a7..ffd0699 100644
+--- a/programs/taskmgr/taskmgr.rc
++++ b/programs/taskmgr/taskmgr.rc
+@@ -609,6 +609,3 @@ IDB_TRAYMASK            BITMAP traymask.bmp
+ 
+ /* @makedep: trayicon.bmp */
+ IDB_TRAYICON            BITMAP trayicon.bmp
+-
+-/* @makedep: font.bmp */
+-IDB_FONT                BITMAP font.bmp
+-- 
+2.6.4
+

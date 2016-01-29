@@ -1,17 +1,17 @@
-From f1ad7b7975ed611a4989986f35ea3695eca0f26c Mon Sep 17 00:00:00 2001
+From 5b0590e3b6935cd82f7b88a69c92f7530edff337 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 30 May 2015 02:55:03 +0200
 Subject: ddraw: Allow size and format conversions in IDirect3DTexture2::Load.
 
 ---
- dlls/ddraw/surface.c | 147 ++++++++++++++++++++++++++-------------------------
- 1 file changed, 76 insertions(+), 71 deletions(-)
+ dlls/ddraw/surface.c | 149 +++++++++++++++++++++++++++------------------------
+ 1 file changed, 79 insertions(+), 70 deletions(-)
 
 diff --git a/dlls/ddraw/surface.c b/dlls/ddraw/surface.c
-index 8a10eff..cb71a65 100644
+index baf6201..7d91d47 100644
 --- a/dlls/ddraw/surface.c
 +++ b/dlls/ddraw/surface.c
-@@ -5062,6 +5062,46 @@ static struct ddraw_surface *get_sub_mimaplevel(struct ddraw_surface *surface)
+@@ -5042,6 +5042,46 @@ static struct ddraw_surface *get_sub_mimaplevel(struct ddraw_surface *surface)
      return impl_from_IDirectDrawSurface7(next_level);
  }
  
@@ -58,7 +58,15 @@ index 8a10eff..cb71a65 100644
  /*****************************************************************************
   * IDirect3DTexture2::Load
   *
-@@ -5095,90 +5135,56 @@ static HRESULT WINAPI d3d_texture2_Load(IDirect3DTexture2 *iface, IDirect3DTextu
+@@ -5063,6 +5103,7 @@ static HRESULT WINAPI d3d_texture2_Load(IDirect3DTexture2 *iface, IDirect3DTextu
+ {
+     struct ddraw_surface *dst_surface = impl_from_IDirect3DTexture2(iface);
+     struct ddraw_surface *src_surface = unsafe_impl_from_IDirect3DTexture2(src_texture);
++    RECT src_rect, dst_rect;
+     HRESULT hr;
+ 
+     TRACE("iface %p, src_texture %p.\n", iface, src_texture);
+@@ -5075,90 +5116,59 @@ static HRESULT WINAPI d3d_texture2_Load(IDirect3DTexture2 *iface, IDirect3DTextu
  
      wined3d_mutex_lock();
  
@@ -162,18 +170,20 @@ index 8a10eff..cb71a65 100644
 -                wined3d_mutex_unlock();
 -                return D3DERR_TEXTURE_LOAD_FAILED;
 -            }
--
++        /* Suppress the ALLOCONLOAD flag */
++        dst_surface->surface_desc.ddsCaps.dwCaps &= ~DDSCAPS_ALLOCONLOAD;
+ 
 -            if (dst_surface->surface_desc.u4.ddpfPixelFormat.dwFlags & DDPF_FOURCC)
 -                memcpy(dst_map_desc.data, src_map_desc.data, src_surface->surface_desc.u1.dwLinearSize);
 -            else
 -                memcpy(dst_map_desc.data, src_map_desc.data, src_map_desc.row_pitch * src_desc->dwHeight);
-+        /* Suppress the ALLOCONLOAD flag */
-+        dst_surface->surface_desc.ddsCaps.dwCaps &= ~DDSCAPS_ALLOCONLOAD;
++        SetRect(&src_rect, 0, 0, src_surface->surface_desc.dwWidth, src_surface->surface_desc.dwHeight);
++        SetRect(&dst_rect, 0, 0, dst_surface->surface_desc.dwWidth, dst_surface->surface_desc.dwHeight);
  
 -            wined3d_surface_unmap(src_surface->wined3d_surface);
 -            wined3d_surface_unmap(dst_surface->wined3d_surface);
-+        hr = wined3d_surface_blt(dst_surface->wined3d_surface, NULL, src_surface->wined3d_surface,
-+                                 NULL, 0, NULL, WINED3D_TEXF_LINEAR);
++        hr = wined3d_surface_blt(dst_surface->wined3d_surface, &dst_rect, src_surface->wined3d_surface,
++                                 &src_rect, 0, NULL, WINED3D_TEXF_LINEAR);
 +        if (FAILED(hr))
 +        {
 +            ERR("Failed to blit surface, hr %#x.\n", hr);
@@ -182,7 +192,7 @@ index 8a10eff..cb71a65 100644
          }
  
          if (src_surface->surface_desc.ddsCaps.dwCaps & DDSCAPS_MIPMAP)
-@@ -5191,12 +5197,11 @@ static HRESULT WINAPI d3d_texture2_Load(IDirect3DTexture2 *iface, IDirect3DTextu
+@@ -5171,12 +5181,11 @@ static HRESULT WINAPI d3d_texture2_Load(IDirect3DTexture2 *iface, IDirect3DTextu
          else
              dst_surface = NULL;
  
@@ -199,5 +209,5 @@ index 8a10eff..cb71a65 100644
  
      wined3d_mutex_unlock();
 -- 
-2.6.2
+2.7.0
 

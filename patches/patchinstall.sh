@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "b3064d748b1cab6464e8b92a558b2d4ba4fe3909"
+	echo "fe0924625fc138d84dccb056f86f46ce23c346d9"
 }
 
 # Show version information
@@ -208,7 +208,6 @@ patch_enable_all ()
 	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_Loader_Machine_Type="$1"
-	enable_ntdll_NtOpenSection="$1"
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
@@ -764,9 +763,6 @@ patch_enable ()
 			;;
 		ntdll-Loader_Machine_Type)
 			enable_ntdll_Loader_Machine_Type="$2"
-			;;
-		ntdll-NtOpenSection)
-			enable_ntdll_NtOpenSection="$2"
 			;;
 		ntdll-NtQueryEaFile)
 			enable_ntdll_NtQueryEaFile="$2"
@@ -4699,18 +4695,6 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 		echo '+    { "Erich E. Hoover", "kernel32,ntdll: Add support for deleting junction points with RemoveDirectory.", 1 },';
 		echo '+    { "Erich E. Hoover", "kernel32: Advertise junction point support.", 1 },';
 		echo '+    { "Erich E. Hoover", "ntdll/tests: Add test for deleting junction point target.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-NtOpenSection
-# |
-# | Modified files:
-# |   *	dlls/ntdll/virtual.c
-# |
-if test "$enable_ntdll_NtOpenSection" -eq 1; then
-	patch_apply ntdll-NtOpenSection/0001-ntdll-Avoid-crash-in-om-tests-when-NULL-attr-is-pass.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Avoid crash in om tests when NULL attr is passed to NtOpenSection.", 1 },';
 	) >> "$patchlist"
 fi
 

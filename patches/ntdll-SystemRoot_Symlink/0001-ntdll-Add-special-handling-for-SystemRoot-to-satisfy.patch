@@ -1,15 +1,15 @@
-From fc9e2809d5ace76166250a4af312f167c7d40af7 Mon Sep 17 00:00:00 2001
+From c3a457db84cd6c95bbce802329840befdbe9057f Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 17 Aug 2015 06:17:33 +0200
 Subject: ntdll: Add special handling for \SystemRoot to satisfy MSYS2
  case-insensitive system check.
 
 ---
- dlls/ntdll/om.c | 13 +++++++++++++
- 1 file changed, 13 insertions(+)
+ dlls/ntdll/om.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
 
 diff --git a/dlls/ntdll/om.c b/dlls/ntdll/om.c
-index c28a82a..ef17b1d 100644
+index a45de9c..0c3f69e 100644
 --- a/dlls/ntdll/om.c
 +++ b/dlls/ntdll/om.c
 @@ -39,6 +39,7 @@
@@ -20,24 +20,22 @@ index c28a82a..ef17b1d 100644
  
  WINE_DEFAULT_DEBUG_CHANNEL(ntdll);
  
-@@ -623,7 +624,9 @@ DEFINE_SYSCALL_ENTRYPOINT( NtOpenSymbolicLinkObject, 3 );
- NTSTATUS WINAPI SYSCALL(NtOpenSymbolicLinkObject)(OUT PHANDLE LinkHandle, IN ACCESS_MASK DesiredAccess,
-                                          IN POBJECT_ATTRIBUTES ObjectAttributes)
+@@ -615,6 +616,7 @@ DEFINE_SYSCALL_ENTRYPOINT( NtOpenSymbolicLinkObject, 3 );
+ NTSTATUS WINAPI SYSCALL(NtOpenSymbolicLinkObject)( HANDLE *handle, ACCESS_MASK access,
+                                           const OBJECT_ATTRIBUTES *attr)
  {
 +    static const WCHAR SystemRootW[] = {'\\','S','y','s','t','e','m','R','o','o','t'};
      NTSTATUS ret;
-+
-     TRACE("(%p,0x%08x,%s)\n",LinkHandle, DesiredAccess, debugstr_ObjectAttributes(ObjectAttributes));
  
-     if (!LinkHandle) return STATUS_ACCESS_VIOLATION;
-@@ -638,6 +641,16 @@ NTSTATUS WINAPI SYSCALL(NtOpenSymbolicLinkObject)(OUT PHANDLE LinkHandle, IN ACC
-             return STATUS_OBJECT_PATH_SYNTAX_BAD;
-     }
+     TRACE("(%p,0x%08x,%s)\n", handle, access, debugstr_ObjectAttributes(attr));
+@@ -622,6 +624,16 @@ NTSTATUS WINAPI SYSCALL(NtOpenSymbolicLinkObject)( HANDLE *handle, ACCESS_MASK a
+     if (!handle) return STATUS_ACCESS_VIOLATION;
+     if ((ret = validate_open_object_attributes( attr ))) return ret;
  
 +    /* MSYS2 tries to open \\SYSTEMROOT to check for case-insensitive systems */
-+    if (!DesiredAccess && !ObjectAttributes->RootDirectory &&
-+        ObjectAttributes->ObjectName->Length == sizeof(SystemRootW) &&
-+        !memicmpW( ObjectAttributes->ObjectName->Buffer, SystemRootW,
++    if (!access && !attr->RootDirectory &&
++        attr->ObjectName->Length == sizeof(SystemRootW) &&
++        !memicmpW( attr->ObjectName->Buffer, SystemRootW,
 +                   sizeof(SystemRootW)/sizeof(WCHAR) ))
 +    {
 +        TRACE( "returning STATUS_ACCESS_DENIED\n" );
@@ -46,7 +44,7 @@ index c28a82a..ef17b1d 100644
 +
      SERVER_START_REQ(open_symlink)
      {
-         req->access = DesiredAccess;
+         req->access     = access;
 -- 
-2.6.1
+2.7.0
 

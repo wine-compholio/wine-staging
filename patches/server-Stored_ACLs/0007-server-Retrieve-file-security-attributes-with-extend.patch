@@ -1,19 +1,19 @@
-From ea6969acf3f5e79a39bb461f78b4f0785a2b8843 Mon Sep 17 00:00:00 2001
+From 212dc266153f4c782ad4855720cc5b377f35c0ad Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 14:01:35 -0600
 Subject: server: Retrieve file security attributes with extended file
  attributes. (try 7)
 
 ---
- dlls/advapi32/tests/security.c | 15 +++++++--------
+ dlls/advapi32/tests/security.c | 19 +++++++++----------
  server/file.c                  | 30 +++++++++++++++++++++++++++---
- 2 files changed, 34 insertions(+), 11 deletions(-)
+ 2 files changed, 36 insertions(+), 13 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index 0013c3c..945542e 100644
+index f4238c7..79a9df4 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -3264,7 +3264,7 @@ static void test_CreateDirectoryA(void)
+@@ -3303,7 +3303,7 @@ static void test_CreateDirectoryA(void)
      }
      ok(!error, "GetNamedSecurityInfo failed with error %d\n", error);
      test_inherited_dacl(pDacl, admin_sid, user_sid, OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE,
@@ -22,12 +22,14 @@ index 0013c3c..945542e 100644
      LocalFree(pSD);
  
      /* Test inheritance of ACLs in CreateFile without security descriptor */
-@@ -3719,19 +3719,18 @@ static void test_GetNamedSecurityInfoA(void)
+@@ -3758,21 +3758,20 @@ static void test_GetNamedSecurityInfoA(void)
          bret = pGetAce(pDacl, 0, (VOID **)&ace);
          ok(bret, "Failed to get Current User ACE.\n");
          bret = EqualSid(&ace->SidStart, user_sid);
--        todo_wine ok(bret, "Current User ACE != Current User SID.\n");
-+        ok(bret, "Current User ACE != Current User SID.\n");
+-        todo_wine ok(bret, "Current User ACE (%s) != Current User SID (%s).\n",
+-                     debugstr_sid(&ace->SidStart), debugstr_sid(user_sid));
++        ok(bret, "Current User ACE (%s) != Current User SID (%s).\n",
++           debugstr_sid(&ace->SidStart), debugstr_sid(user_sid));
          ok(((ACE_HEADER *)ace)->AceFlags == 0,
             "Current User ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
 -        ok(ace->Mask == 0x1f01ff, "Current User ACE has unexpected mask (0x%x != 0x1f01ff)\n",
@@ -41,12 +43,14 @@ index 0013c3c..945542e 100644
          ok(bret, "Failed to get Administators Group ACE.\n");
          bret = EqualSid(&ace->SidStart, admin_sid);
 -        todo_wine ok(bret || broken(!bret) /* win2k */,
--                     "Administators Group ACE != Administators Group SID.\n");
-+        ok(bret || broken(!bret) /* win2k */, "Administators Group ACE != Administators Group SID.\n");
+-                     "Administators Group ACE (%s) != Administators Group SID (%s).\n",
+-                     debugstr_sid(&ace->SidStart), debugstr_sid(admin_sid));
++        ok(bret || broken(!bret) /* win2k */, "Administators Group ACE (%s) != Administators Group SID (%s).\n",
++           debugstr_sid(&ace->SidStart), debugstr_sid(admin_sid));
          ok(((ACE_HEADER *)ace)->AceFlags == 0,
             "Administators Group ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
          ok(ace->Mask == 0x1f01ff || broken(ace->Mask == GENERIC_ALL) /* win2k */,
-@@ -3758,8 +3757,8 @@ static void test_GetNamedSecurityInfoA(void)
+@@ -3799,8 +3798,8 @@ static void test_GetNamedSecurityInfoA(void)
      {
          bret = pGetAce(pDacl, 0, (VOID **)&ace);
          ok(bret, "Failed to get ACE.\n");
@@ -58,10 +62,10 @@ index 0013c3c..945542e 100644
      LocalFree(pSD);
  
 diff --git a/server/file.c b/server/file.c
-index 6663927..8bcf6ee 100644
+index 703479f..78eef58 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -486,6 +486,29 @@ static void convert_generic_sd( struct security_descriptor *sd )
+@@ -499,6 +499,29 @@ static void convert_generic_sd( struct security_descriptor *sd )
      }
  }
  
@@ -91,7 +95,7 @@ index 6663927..8bcf6ee 100644
  struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode_t *mode,
                                           uid_t *uid )
  {
-@@ -501,9 +524,10 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
+@@ -514,9 +537,10 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
          (st.st_uid == *uid))
          return obj->sd;
  
@@ -106,5 +110,5 @@ index 6663927..8bcf6ee 100644
  
      *mode = st.st_mode;
 -- 
-2.3.5
+2.7.0
 

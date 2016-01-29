@@ -1,17 +1,17 @@
-From 12b1d27763ce61ee38b3694e68c44a96d9b17102 Mon Sep 17 00:00:00 2001
+From 536b80a9145b26aa771b390ec29978dfa6f45344 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 20 Aug 2014 15:28:00 -0600
 Subject: ntdll: Implement storing DOS attributes in NtCreateFile.
 
 ---
- dlls/ntdll/file.c            | 74 ++++++++++++++++++++++++++++----------------
+ dlls/ntdll/file.c            | 76 ++++++++++++++++++++++++++++----------------
  dlls/ntdll/tests/directory.c | 24 ++++++--------
  include/wine/port.h          |  2 ++
  libs/port/xattr.c            | 20 ++++++++++++
- 4 files changed, 79 insertions(+), 41 deletions(-)
+ 4 files changed, 80 insertions(+), 42 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 3dfcbf8..13787ba 100644
+index 3146926..2a71613 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
 @@ -219,6 +219,21 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
@@ -36,28 +36,30 @@ index 3dfcbf8..13787ba 100644
  /**************************************************************************
   *                 FILE_CreateFile                    (internal)
   * Open a file.
-@@ -230,6 +245,9 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
+@@ -230,6 +245,10 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
                                   ULONG attributes, ULONG sharing, ULONG disposition,
                                   ULONG options, PVOID ea_buffer, ULONG ea_length )
  {
++    static UNICODE_STRING empty_string;
 +    OBJECT_ATTRIBUTES unix_attr;
 +    data_size_t len;
 +    struct object_attributes *objattr;
      ANSI_STRING unix_name;
      BOOL created = FALSE;
  
-@@ -273,36 +291,34 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
+@@ -273,37 +292,34 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
          io->u.Status = STATUS_SUCCESS;
      }
  
 -    if (io->u.Status == STATUS_SUCCESS)
 +    if (io->u.Status != STATUS_SUCCESS)
      {
+-        static UNICODE_STRING empty_string;
 -        OBJECT_ATTRIBUTES unix_attr = *attr;
 -        data_size_t len;
 -        struct object_attributes *objattr;
 -
--        unix_attr.ObjectName = NULL;  /* we send the unix name instead */
+-        unix_attr.ObjectName = &empty_string;  /* we send the unix name instead */
 -        if ((io->u.Status = alloc_object_attributes( &unix_attr, &objattr, &len )))
 -        {
 -            RtlFreeAnsiString( &unix_name );
@@ -82,7 +84,7 @@ index 3dfcbf8..13787ba 100644
 -        SERVER_END_REQ;
 -        RtlFreeHeap( GetProcessHeap(), 0, objattr );
 +    unix_attr = *attr;
-+    unix_attr.ObjectName = NULL;  /* we send the unix name instead */
++    unix_attr.ObjectName = &empty_string;  /* we send the unix name instead */
 +    if ((io->u.Status = alloc_object_attributes( &unix_attr, &objattr, &len )))
 +    {
          RtlFreeAnsiString( &unix_name );
@@ -107,7 +109,7 @@ index 3dfcbf8..13787ba 100644
  
      if (io->u.Status == STATUS_SUCCESS)
      {
-@@ -324,6 +340,11 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
+@@ -325,6 +341,11 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
              io->Information = FILE_OVERWRITTEN;
              break;
          }
@@ -119,7 +121,7 @@ index 3dfcbf8..13787ba 100644
      }
      else if (io->u.Status == STATUS_TOO_MANY_OPENED_FILES)
      {
-@@ -331,6 +352,7 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
+@@ -332,6 +353,7 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
          if (!once++) ERR_(winediag)( "Too many open files, ulimit -n probably needs to be increased\n" );
      }
  
@@ -218,5 +220,5 @@ index 6918c99..683e7a6 100644
 +#endif
 +}
 -- 
-2.6.4
+2.7.0
 

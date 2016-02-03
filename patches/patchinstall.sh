@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "59116f833ea29839b186617b625bb3aa01927944"
+	echo "7561f343815a34c3445238047e1742baec05fdb7"
 }
 
 # Show version information
@@ -179,7 +179,6 @@ patch_enable_all ()
 	enable_mpr_WNetGetUniversalNameW="$1"
 	enable_mscoree_CorValidateImage="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
-	enable_mshtml_Wine_Gecko_2_44="$1"
 	enable_msidb_Implementation="$1"
 	enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback="$1"
 	enable_msvcr120_strof="$1"
@@ -676,9 +675,6 @@ patch_enable ()
 			;;
 		mshtml-HTMLLocation_put_hash)
 			enable_mshtml_HTMLLocation_put_hash="$2"
-			;;
-		mshtml-Wine_Gecko_2.44)
-			enable_mshtml_Wine_Gecko_2_44="$2"
 			;;
 		msidb-Implementation)
 			enable_msidb_Implementation="$2"
@@ -4189,21 +4185,6 @@ if test "$enable_mshtml_HTMLLocation_put_hash" -eq 1; then
 	patch_apply mshtml-HTMLLocation_put_hash/0001-mshtml-Add-IHTMLLocation-hash-property-s-getter-impl.patch
 	(
 		echo '+    { "Zhenbo Li", "mshtml: Add IHTMLLocation::hash property'\''s getter implementation.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset mshtml-Wine_Gecko_2.44
-# |
-# | Modified files:
-# |   *	dlls/appwiz.cpl/addons.c, dlls/mshtml/mshtml_private.h, dlls/mshtml/mutation.c, dlls/mshtml/nsembed.c,
-# | 	dlls/mshtml/nsiface.idl, dlls/mshtml/nsio.c
-# |
-if test "$enable_mshtml_Wine_Gecko_2_44" -eq 1; then
-	patch_apply mshtml-Wine_Gecko_2.44/0001-mshtml-Wine-Gecko-2.44-release.patch
-	patch_apply mshtml-Wine_Gecko_2.44/0002-mshtml-Fix-some-prototypes.patch
-	(
-		echo '+    { "Jacek Caban", "mshtml: Wine Gecko 2.44 release.", 1 },';
-		echo '+    { "Sebastian Lackner", "mshtml: Fix some prototypes.", 1 },';
 	) >> "$patchlist"
 fi
 

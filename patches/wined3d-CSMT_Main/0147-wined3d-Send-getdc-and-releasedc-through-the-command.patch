@@ -1,4 +1,4 @@
-From d16e01527b157dc80e7d6417b6f209d09450aecd Mon Sep 17 00:00:00 2001
+From 5408b26baa4ac643bab0a522a6b0dd42df5a0e43 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Sun, 16 Mar 2014 14:13:42 +0100
 Subject: wined3d: Send getdc and releasedc through the command stream.
@@ -14,10 +14,10 @@ investigate atm.
  3 files changed, 109 insertions(+), 46 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index afc17a4..4830eb5 100644
+index 0aab83b..c135ece 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -91,6 +91,8 @@ enum wined3d_cs_op
+@@ -90,6 +90,8 @@ enum wined3d_cs_op
      WINED3D_CS_OP_CREATE_DUMMY_TEXTURES,
      WINED3D_CS_OP_CREATE_SWAPCHAIN_CONTEXT,
      WINED3D_CS_OP_DELETE_GL_CONTEXTS,
@@ -26,7 +26,7 @@ index afc17a4..4830eb5 100644
      WINED3D_CS_OP_STOP,
  };
  
-@@ -543,6 +545,18 @@ struct wined3d_cs_delete_gl_contexts
+@@ -536,6 +538,18 @@ struct wined3d_cs_delete_gl_contexts
      struct wined3d_swapchain *swapchain;
  };
  
@@ -45,7 +45,7 @@ index afc17a4..4830eb5 100644
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
  {
      LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
-@@ -2694,6 +2708,48 @@ void wined3d_cs_emit_delete_opengl_contexts(struct wined3d_cs *cs, struct wined3
+@@ -2661,6 +2675,48 @@ void wined3d_cs_emit_delete_opengl_contexts(struct wined3d_cs *cs, struct wined3
      cs->ops->finish(cs);
  }
  
@@ -94,7 +94,7 @@ index afc17a4..4830eb5 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2763,6 +2819,8 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2729,6 +2785,8 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_CREATE_DUMMY_TEXTURES      */ wined3d_cs_exec_create_dummy_textures,
      /* WINED3D_CS_OP_CREATE_SWAPCHAIN_CONTEXT   */ wined3d_cs_exec_create_swapchain_context,
      /* WINED3D_CS_OP_DELETE_GL_CONTEXTS         */ wined3d_cs_exec_delete_gl_contexts,
@@ -104,14 +104,14 @@ index afc17a4..4830eb5 100644
  
  static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index c63bb66..18a2f91 100644
+index fd1510e..e03143a 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
-@@ -2474,36 +2474,12 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
+@@ -2456,36 +2456,12 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
      return wined3d_resource_map(&surface->resource, map_desc, box, flags);
  }
  
--HRESULT CDECL wined3d_surface_getdc(struct wined3d_surface *surface, HDC *dc)
+-HRESULT wined3d_surface_getdc(struct wined3d_surface *surface, HDC *dc)
 +void wined3d_surface_getdc_cs(struct wined3d_surface *surface)
  {
      HRESULT hr;
@@ -145,7 +145,7 @@ index c63bb66..18a2f91 100644
      if (device->d3d_initialized)
          context = context_acquire(surface->resource.device, NULL);
  
-@@ -2514,7 +2490,7 @@ HRESULT CDECL wined3d_surface_getdc(struct wined3d_surface *surface, HDC *dc)
+@@ -2496,7 +2472,7 @@ HRESULT wined3d_surface_getdc(struct wined3d_surface *surface, HDC *dc)
          {
              if (context)
                  context_release(context);
@@ -154,7 +154,7 @@ index c63bb66..18a2f91 100644
          }
          if (!(surface->resource.map_binding == WINED3D_LOCATION_USER_MEMORY
                  || surface->container->flags & WINED3D_TEXTURE_PIN_SYSMEM
-@@ -2527,35 +2503,40 @@ HRESULT CDECL wined3d_surface_getdc(struct wined3d_surface *surface, HDC *dc)
+@@ -2509,35 +2485,40 @@ HRESULT wined3d_surface_getdc(struct wined3d_surface *surface, HDC *dc)
  
      if (context)
          context_release(context);
@@ -169,7 +169,7 @@ index c63bb66..18a2f91 100644
  }
  
 -HRESULT CDECL wined3d_surface_releasedc(struct wined3d_surface *surface, HDC dc)
-+HRESULT CDECL wined3d_surface_getdc(struct wined3d_surface *surface, HDC *dc)
++HRESULT wined3d_surface_getdc(struct wined3d_surface *surface, HDC *dc)
  {
 -    TRACE("surface %p, dc %p.\n", surface, dc);
 +    struct wined3d_device *device = surface->resource.device;
@@ -215,7 +215,7 @@ index c63bb66..18a2f91 100644
              && surface->resource.map_binding != WINED3D_LOCATION_DIB))
      {
          /* The game Salammbo modifies the surface contents without mapping the surface between
-@@ -2576,6 +2557,26 @@ HRESULT CDECL wined3d_surface_releasedc(struct wined3d_surface *surface, HDC dc)
+@@ -2558,6 +2539,26 @@ HRESULT CDECL wined3d_surface_releasedc(struct wined3d_surface *surface, HDC dc)
          if (context)
              context_release(context);
      }
@@ -243,10 +243,10 @@ index c63bb66..18a2f91 100644
      return WINED3D_OK;
  }
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index ec7bda3..670c14c 100644
+index 9ee860c..d19fae8 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2571,6 +2571,8 @@ void surface_blt_ugly(struct wined3d_surface *dst_surface, const RECT *dst_rect_
+@@ -2623,6 +2623,8 @@ void surface_blt_ugly(struct wined3d_surface *dst_surface, const RECT *dst_rect_
          const WINEDDBLTFX *fx, enum wined3d_texture_filter_type filter) DECLSPEC_HIDDEN;
  BOOL surface_check_block_align_rect(struct wined3d_surface *surface, const RECT *rect) DECLSPEC_HIDDEN;
  void wined3d_surface_cleanup_cs(struct wined3d_surface *surface) DECLSPEC_HIDDEN;
@@ -255,7 +255,7 @@ index ec7bda3..670c14c 100644
  
  void draw_textured_quad(const struct wined3d_surface *src_surface, struct wined3d_context *context,
          const RECT *src_rect, const RECT *dst_rect, enum wined3d_texture_filter_type filter) DECLSPEC_HIDDEN;
-@@ -2844,6 +2846,8 @@ HRESULT wined3d_cs_emit_create_swapchain_context(struct wined3d_cs *cs,
+@@ -2895,6 +2897,8 @@ HRESULT wined3d_cs_emit_create_swapchain_context(struct wined3d_cs *cs,
          struct wined3d_swapchain *swapchain) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_delete_opengl_contexts(struct wined3d_cs *cs,
          struct wined3d_swapchain *swapchain) DECLSPEC_HIDDEN;
@@ -265,5 +265,5 @@ index ec7bda3..670c14c 100644
  /* Direct3D terminology with little modifications. We do not have an issued state
   * because only the driver knows about it, but we have a created state because d3d
 -- 
-2.6.4
+2.7.0
 

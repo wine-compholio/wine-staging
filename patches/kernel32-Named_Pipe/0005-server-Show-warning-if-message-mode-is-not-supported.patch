@@ -1,4 +1,4 @@
-From 47754a35cfc710d9900a1f25cde3c6d0a62f1a38 Mon Sep 17 00:00:00 2001
+From 630edc66479db789c7541e2c356a41090524d838 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 4 Aug 2014 00:29:26 +0200
 Subject: server: Show warning if message mode is not supported.
@@ -13,10 +13,10 @@ missing message mode support.
  3 files changed, 13 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 4cac2ca..d585d6c 100644
+index 3883e5a..9e98f36 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -3506,6 +3506,7 @@ NTSTATUS WINAPI NtCreateNamedPipeFile( PHANDLE handle, ULONG access,
+@@ -3507,6 +3507,7 @@ NTSTATUS WINAPI NtCreateNamedPipeFile( PHANDLE handle, ULONG access,
      NTSTATUS status;
      data_size_t len;
      struct object_attributes *objattr;
@@ -24,7 +24,7 @@ index 4cac2ca..d585d6c 100644
  
      TRACE("(%p %x %s %p %x %d %x %d %d %d %d %d %d %p)\n",
            handle, access, debugstr_w(attr->ObjectName->Buffer), iosb, sharing, dispo,
-@@ -3518,15 +3519,16 @@ NTSTATUS WINAPI NtCreateNamedPipeFile( PHANDLE handle, ULONG access,
+@@ -3521,15 +3522,16 @@ NTSTATUS WINAPI NtCreateNamedPipeFile( PHANDLE handle, ULONG access,
  
      if ((status = alloc_object_attributes( attr, &objattr, &len ))) return status;
  
@@ -45,7 +45,7 @@ index 4cac2ca..d585d6c 100644
          req->maxinstances = max_inst;
          req->outsize = outbound_quota;
          req->insize  = inbound_quota;
-@@ -3534,9 +3536,13 @@ NTSTATUS WINAPI NtCreateNamedPipeFile( PHANDLE handle, ULONG access,
+@@ -3537,9 +3539,13 @@ NTSTATUS WINAPI NtCreateNamedPipeFile( PHANDLE handle, ULONG access,
          wine_server_add_data( req, objattr, len );
          status = wine_server_call( req );
          if (!status) *handle = wine_server_ptr_handle( reply->handle );
@@ -60,23 +60,23 @@ index 4cac2ca..d585d6c 100644
      return status;
  }
 diff --git a/server/named_pipe.c b/server/named_pipe.c
-index 2621642..51650cd 100644
+index 7a97e35..ee6008c 100644
 --- a/server/named_pipe.c
 +++ b/server/named_pipe.c
-@@ -939,6 +939,8 @@ DECL_HANDLER(create_named_pipe)
+@@ -934,6 +934,8 @@ DECL_HANDLER(create_named_pipe)
          return;
      }
  
 +    reply->flags = req->flags & ~(NAMED_PIPE_MESSAGE_STREAM_WRITE | NAMED_PIPE_MESSAGE_STREAM_READ);
 +
-     if (objattr->rootdir && !(root = get_directory_obj( current->process, objattr->rootdir, 0 )))
-         return;
- 
+     if (!name.len)  /* pipes need a root directory even without a name */
+     {
+         if (!objattr->rootdir)
 diff --git a/server/protocol.def b/server/protocol.def
-index 4becb8f..9facc59 100644
+index a5a45eb..2d87f03 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -2376,6 +2376,7 @@ enum message_type
+@@ -2370,6 +2370,7 @@ enum message_type
      unsigned int   flags;
      VARARG(objattr,object_attributes); /* object attributes */
  @REPLY
@@ -85,5 +85,5 @@ index 4becb8f..9facc59 100644
  @END
  
 -- 
-2.6.4
+2.7.0
 

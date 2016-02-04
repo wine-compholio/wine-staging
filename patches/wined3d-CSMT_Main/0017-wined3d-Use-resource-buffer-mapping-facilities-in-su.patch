@@ -1,4 +1,4 @@
-From 0c74d61fdaa16fbb70f443f6863d864024b8e615 Mon Sep 17 00:00:00 2001
+From 15d68401bf24f7ba0face4f18b90a708fd33545a Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Tue, 21 Jan 2014 13:30:59 +0100
 Subject: wined3d: Use resource buffer mapping facilities in surfaces.
@@ -9,10 +9,10 @@ Subject: wined3d: Use resource buffer mapping facilities in surfaces.
  2 files changed, 23 insertions(+), 63 deletions(-)
 
 diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
-index 5f0a98e..dda77f0 100644
+index 869c42f..642e907 100644
 --- a/dlls/wined3d/resource.c
 +++ b/dlls/wined3d/resource.c
-@@ -544,6 +544,12 @@ BYTE *wined3d_resource_get_map_ptr(const struct wined3d_resource *resource,
+@@ -570,6 +570,12 @@ BYTE *wined3d_resource_get_map_ptr(const struct wined3d_resource *resource,
          case WINED3D_LOCATION_SYSMEM:
              return resource->heap_memory;
  
@@ -25,7 +25,7 @@ index 5f0a98e..dda77f0 100644
          default:
              ERR("Unexpected map binding %s.\n", wined3d_debug_location(resource->map_binding));
              return NULL;
-@@ -566,6 +572,8 @@ void wined3d_resource_release_map_ptr(const struct wined3d_resource *resource,
+@@ -592,6 +598,8 @@ void wined3d_resource_release_map_ptr(const struct wined3d_resource *resource,
              return;
  
          case WINED3D_LOCATION_SYSMEM:
@@ -35,10 +35,10 @@ index 5f0a98e..dda77f0 100644
  
          default:
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index 62f74bd..583fa59 100644
+index b94d7a2..3e27544 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
-@@ -716,36 +716,10 @@ static HRESULT surface_private_setup(struct wined3d_surface *surface)
+@@ -692,36 +692,10 @@ static HRESULT surface_private_setup(struct wined3d_surface *surface)
  
  static void surface_unmap(struct wined3d_surface *surface)
  {
@@ -75,16 +75,16 @@ index 62f74bd..583fa59 100644
      if (surface->resource.locations & (WINED3D_LOCATION_DRAWABLE | WINED3D_LOCATION_TEXTURE_RGB))
      {
          TRACE("Not dirtified, nothing to do.\n");
-@@ -2623,6 +2597,8 @@ struct wined3d_surface * CDECL wined3d_surface_from_resource(struct wined3d_reso
+@@ -2569,6 +2543,8 @@ do { \
  
- HRESULT CDECL wined3d_surface_unmap(struct wined3d_surface *surface)
+ HRESULT wined3d_surface_unmap(struct wined3d_surface *surface)
  {
 +    struct wined3d_device *device = surface->resource.device;
 +    struct wined3d_context *context = NULL;
      TRACE("surface %p.\n", surface);
  
      if (!surface->resource.map_count)
-@@ -2632,6 +2608,12 @@ HRESULT CDECL wined3d_surface_unmap(struct wined3d_surface *surface)
+@@ -2578,6 +2554,12 @@ HRESULT wined3d_surface_unmap(struct wined3d_surface *surface)
      }
      --surface->resource.map_count;
  
@@ -97,7 +97,7 @@ index 62f74bd..583fa59 100644
      surface->surface_ops->surface_unmap(surface);
  
      return WINED3D_OK;
-@@ -2643,8 +2625,7 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
+@@ -2589,8 +2571,7 @@ HRESULT wined3d_surface_map(struct wined3d_surface *surface, struct wined3d_map_
      const struct wined3d_format *format = surface->resource.format;
      unsigned int fmt_flags = surface->container->resource.format_flags;
      struct wined3d_device *device = surface->resource.device;
@@ -107,7 +107,7 @@ index 62f74bd..583fa59 100644
      BYTE *base_memory;
  
      TRACE("surface %p, map_desc %p, box %p, flags %#x.\n",
-@@ -2686,6 +2667,9 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
+@@ -2632,6 +2613,9 @@ HRESULT wined3d_surface_map(struct wined3d_surface *surface, struct wined3d_map_
          }
      }
  
@@ -117,7 +117,7 @@ index 62f74bd..583fa59 100644
      surface_prepare_map_memory(surface);
      if (flags & WINED3D_MAP_DISCARD)
      {
-@@ -2695,51 +2679,19 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
+@@ -2641,51 +2625,19 @@ HRESULT wined3d_surface_map(struct wined3d_surface *surface, struct wined3d_map_
      }
      else
      {
@@ -149,12 +149,12 @@ index 62f74bd..583fa59 100644
 -        case WINED3D_LOCATION_DIB:
 -            base_memory = surface->resource.bitmap_data;
 -            break;
--
++    base_memory = wined3d_resource_get_map_ptr(&surface->resource, context, flags);
+ 
 -        case WINED3D_LOCATION_BUFFER:
 -            context = context_acquire(device, NULL);
 -            gl_info = context->gl_info;
-+    base_memory = wined3d_resource_get_map_ptr(&surface->resource, context, flags);
- 
+-
 -            GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, surface->resource.buffer_object));
 -            base_memory = GL_EXTCALL(glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_READ_WRITE));
 -            GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
@@ -173,5 +173,5 @@ index 62f74bd..583fa59 100644
      if (fmt_flags & WINED3DFMT_FLAG_BROKEN_PITCH)
          map_desc->row_pitch = surface->resource.width * format->byte_count;
 -- 
-2.6.0
+2.7.0
 

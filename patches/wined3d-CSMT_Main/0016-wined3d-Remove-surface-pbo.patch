@@ -1,15 +1,16 @@
-From 2e105cc77b4f86b1dc044e3dc174a61df5d30a43 Mon Sep 17 00:00:00 2001
+From 1c6393b228a4764d3b7383fea540948ba147e009 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Tue, 21 Jan 2014 13:25:48 +0100
 Subject: wined3d: Remove surface->pbo.
 
 ---
- dlls/wined3d/surface.c         | 36 ++++++++++++++++++------------------
+ dlls/wined3d/surface.c         | 34 +++++++++++++++++-----------------
+ dlls/wined3d/texture.c         |  2 +-
  dlls/wined3d/wined3d_private.h |  2 --
- 2 files changed, 18 insertions(+), 20 deletions(-)
+ 3 files changed, 18 insertions(+), 20 deletions(-)
 
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index 58d825c..4cdd104 100644
+index 604a79c..75abc0a 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
 @@ -46,7 +46,7 @@ static void surface_cleanup(struct wined3d_surface *surface)
@@ -70,7 +71,7 @@ index 58d825c..4cdd104 100644
      checkGLcall("glBindBuffer");
  
      GL_EXTCALL(glBufferData(GL_PIXEL_UNPACK_BUFFER, surface->resource.size + 4,
-@@ -735,7 +735,7 @@ static void surface_unmap(struct wined3d_surface *surface)
+@@ -711,7 +711,7 @@ static void surface_unmap(struct wined3d_surface *surface)
              context = context_acquire(device, NULL);
              gl_info = context->gl_info;
  
@@ -79,7 +80,7 @@ index 58d825c..4cdd104 100644
              GL_EXTCALL(glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER));
              GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
              checkGLcall("glUnmapBuffer");
-@@ -1127,10 +1127,10 @@ HRESULT CDECL wined3d_surface_get_render_target_data(struct wined3d_surface *sur
+@@ -1091,10 +1091,10 @@ static HRESULT wined3d_surface_depth_blt(struct wined3d_surface *src_surface, DW
  /* Context activation is done by the caller. */
  static void surface_remove_pbo(struct wined3d_surface *surface, const struct wined3d_gl_info *gl_info)
  {
@@ -93,7 +94,7 @@ index 58d825c..4cdd104 100644
      wined3d_resource_invalidate_location(&surface->resource, WINED3D_LOCATION_BUFFER);
  }
  
-@@ -1187,7 +1187,7 @@ static void surface_unload(struct wined3d_resource *resource)
+@@ -1161,7 +1161,7 @@ static void surface_unload(struct wined3d_resource *resource)
      }
  
      /* Destroy PBOs, but load them into real sysmem before */
@@ -102,7 +103,7 @@ index 58d825c..4cdd104 100644
          surface_remove_pbo(surface, gl_info);
  
      /* Destroy fbo render buffers. This is needed for implicit render targets, for
-@@ -2753,7 +2753,7 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
+@@ -2674,7 +2674,7 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
              context = context_acquire(device, NULL);
              gl_info = context->gl_info;
  
@@ -111,16 +112,7 @@ index 58d825c..4cdd104 100644
              base_memory = GL_EXTCALL(glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_READ_WRITE));
              GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
              checkGLcall("map PBO");
-@@ -2844,7 +2844,7 @@ HRESULT CDECL wined3d_surface_getdc(struct wined3d_surface *surface, HDC *dc)
-         }
-         if (!(surface->resource.map_binding == WINED3D_LOCATION_USER_MEMORY
-                 || surface->container->flags & WINED3D_TEXTURE_PIN_SYSMEM
--                || surface->pbo))
-+                || surface->resource.buffer_object))
-             surface->resource.map_binding = WINED3D_LOCATION_DIB;
-     }
- 
-@@ -4180,7 +4180,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
+@@ -3990,7 +3990,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
      /* Don't use PBOs for converted surfaces. During PBO conversion we look at
       * WINED3D_TEXTURE_CONVERTED but it isn't set (yet) in all cases it is
       * getting called. */
@@ -129,11 +121,24 @@ index 58d825c..4cdd104 100644
      {
          TRACE("Removing the pbo attached to surface %p.\n", surface);
  
+diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
+index dd3a600..d41b79e 100644
+--- a/dlls/wined3d/texture.c
++++ b/dlls/wined3d/texture.c
+@@ -1561,7 +1561,7 @@ HRESULT CDECL wined3d_texture_get_dc(struct wined3d_texture *texture, unsigned i
+         }
+         if (!(surface->resource.map_binding == WINED3D_LOCATION_USER_MEMORY
+                 || surface->container->flags & WINED3D_TEXTURE_PIN_SYSMEM
+-                || surface->pbo))
++                || surface->resource.buffer_object))
+             surface->resource.map_binding = WINED3D_LOCATION_DIB;
+     }
+ 
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index f948f73..839dc7f 100644
+index 3bbe506..7aba4a7 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2390,8 +2390,6 @@ struct wined3d_surface
+@@ -2468,8 +2468,6 @@ struct wined3d_surface
      UINT pow2Width;
      UINT pow2Height;
  
@@ -143,5 +148,5 @@ index f948f73..839dc7f 100644
      GLuint rb_resolved;
      GLenum texture_target;
 -- 
-2.5.1
+2.7.0
 

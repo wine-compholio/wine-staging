@@ -1,17 +1,17 @@
-From 43c2d8643d8d7ece5f9e232c068a2b78a982ab8e Mon Sep 17 00:00:00 2001
+From aee6d79ac93aecb6eb7927e42736609d0d473c31 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 30 May 2015 02:55:03 +0200
 Subject: ddraw: Allow size and format conversions in IDirect3DTexture2::Load.
 
 ---
- dlls/ddraw/surface.c | 150 +++++++++++++++++++++++++++------------------------
- 1 file changed, 80 insertions(+), 70 deletions(-)
+ dlls/ddraw/surface.c | 151 +++++++++++++++++++++++++++------------------------
+ 1 file changed, 80 insertions(+), 71 deletions(-)
 
 diff --git a/dlls/ddraw/surface.c b/dlls/ddraw/surface.c
-index 3e57ad6..c6bde0f 100644
+index 6a07cd7..cacf14c 100644
 --- a/dlls/ddraw/surface.c
 +++ b/dlls/ddraw/surface.c
-@@ -5035,6 +5035,46 @@ static struct ddraw_surface *get_sub_mimaplevel(struct ddraw_surface *surface)
+@@ -5041,6 +5041,46 @@ static struct ddraw_surface *get_sub_mimaplevel(struct ddraw_surface *surface)
      return impl_from_IDirectDrawSurface7(next_level);
  }
  
@@ -58,18 +58,22 @@ index 3e57ad6..c6bde0f 100644
  /*****************************************************************************
   * IDirect3DTexture2::Load
   *
-@@ -5056,6 +5096,7 @@ static HRESULT WINAPI d3d_texture2_Load(IDirect3DTexture2 *iface, IDirect3DTextu
+@@ -5062,7 +5102,7 @@ static HRESULT WINAPI d3d_texture2_Load(IDirect3DTexture2 *iface, IDirect3DTextu
  {
      struct ddraw_surface *dst_surface = impl_from_IDirect3DTexture2(iface);
      struct ddraw_surface *src_surface = unsafe_impl_from_IDirect3DTexture2(src_texture);
+-    struct wined3d_resource *dst_resource, *src_resource;
 +    RECT src_rect, dst_rect;
      HRESULT hr;
  
      TRACE("iface %p, src_texture %p.\n", iface, src_texture);
-@@ -5068,90 +5109,60 @@ static HRESULT WINAPI d3d_texture2_Load(IDirect3DTexture2 *iface, IDirect3DTextu
+@@ -5075,90 +5115,60 @@ static HRESULT WINAPI d3d_texture2_Load(IDirect3DTexture2 *iface, IDirect3DTextu
  
      wined3d_mutex_lock();
  
+-    dst_resource = wined3d_texture_get_resource(dst_surface->wined3d_texture);
+-    src_resource = wined3d_texture_get_resource(src_surface->wined3d_texture);
+-
 -    if (((src_surface->surface_desc.ddsCaps.dwCaps & DDSCAPS_MIPMAP)
 -            != (dst_surface->surface_desc.ddsCaps.dwCaps & DDSCAPS_MIPMAP))
 -            || (src_surface->surface_desc.u2.dwMipMapCount != dst_surface->surface_desc.u2.dwMipMapCount))
@@ -151,22 +155,19 @@ index 3e57ad6..c6bde0f 100644
 +                return E_FAIL;
 +        }
  
--            /* Copy the main memory texture into the surface that corresponds
--             * to the OpenGL texture object. */
--
--            hr = wined3d_surface_map(src_surface->wined3d_surface, &src_map_desc, NULL, 0);
--            if (FAILED(hr))
+-            if (FAILED(hr = wined3d_resource_sub_resource_map(src_resource,
+-                    src_surface->sub_resource_idx, &src_map_desc, NULL, 0)))
 -            {
 -                ERR("Failed to lock source surface, hr %#x.\n", hr);
 -                wined3d_mutex_unlock();
 -                return D3DERR_TEXTURE_LOAD_FAILED;
 -            }
 -
--            hr = wined3d_surface_map(dst_surface->wined3d_surface, &dst_map_desc, NULL, 0);
--            if (FAILED(hr))
+-            if (FAILED(hr = wined3d_resource_sub_resource_map(dst_resource,
+-                    dst_surface->sub_resource_idx, &dst_map_desc, NULL, 0)))
 -            {
 -                ERR("Failed to lock destination surface, hr %#x.\n", hr);
--                wined3d_surface_unmap(src_surface->wined3d_surface);
+-                wined3d_resource_sub_resource_unmap(src_resource, src_surface->sub_resource_idx);
 -                wined3d_mutex_unlock();
 -                return D3DERR_TEXTURE_LOAD_FAILED;
 -            }
@@ -180,8 +181,8 @@ index 3e57ad6..c6bde0f 100644
 +        SetRect(&src_rect, 0, 0, src_surface->surface_desc.dwWidth, src_surface->surface_desc.dwHeight);
 +        SetRect(&dst_rect, 0, 0, dst_surface->surface_desc.dwWidth, dst_surface->surface_desc.dwHeight);
  
--            wined3d_surface_unmap(src_surface->wined3d_surface);
--            wined3d_surface_unmap(dst_surface->wined3d_surface);
+-            wined3d_resource_sub_resource_unmap(dst_resource, dst_surface->sub_resource_idx);
+-            wined3d_resource_sub_resource_unmap(src_resource, src_surface->sub_resource_idx);
 +        hr = wined3d_texture_blt(dst_surface->wined3d_texture, dst_surface->sub_resource_idx, &dst_rect,
 +                                 src_surface->wined3d_texture, src_surface->sub_resource_idx, &src_rect,
 +                                 0, NULL, WINED3D_TEXF_LINEAR);
@@ -193,7 +194,7 @@ index 3e57ad6..c6bde0f 100644
          }
  
          if (src_surface->surface_desc.ddsCaps.dwCaps & DDSCAPS_MIPMAP)
-@@ -5164,12 +5175,11 @@ static HRESULT WINAPI d3d_texture2_Load(IDirect3DTexture2 *iface, IDirect3DTextu
+@@ -5171,12 +5181,11 @@ static HRESULT WINAPI d3d_texture2_Load(IDirect3DTexture2 *iface, IDirect3DTextu
          else
              dst_surface = NULL;
  

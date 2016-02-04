@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9bdab23bf7a57e92656782907ae2ac67ed292f0b"
+	echo "6b2a080372ae49cdde6b7752de5de20142ce2a70"
 }
 
 # Show version information
@@ -336,6 +336,7 @@ patch_enable_all ()
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_UnhandledBlendFactor="$1"
 	enable_wined3d_resource_check_usage="$1"
+	enable_wined3d_resource_map="$1"
 	enable_wined3d_surface_cpu_blt="$1"
 	enable_wined3d_wined3d_swapchain_present="$1"
 	enable_winedevice_Fix_Relocation="$1"
@@ -1147,6 +1148,9 @@ patch_enable ()
 		wined3d-resource_check_usage)
 			enable_wined3d_resource_check_usage="$2"
 			;;
+		wined3d-resource_map)
+			enable_wined3d_resource_map="$2"
+			;;
 		wined3d-surface_cpu_blt)
 			enable_wined3d_surface_cpu_blt="$2"
 			;;
@@ -1891,9 +1895,13 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_wined3d_DXTn" -gt 1; then
 		abort "Patchset wined3d-DXTn disabled, but wined3d-CSMT_Helper depends on that."
 	fi
+	if test "$enable_wined3d_resource_map" -gt 1; then
+		abort "Patchset wined3d-resource_map disabled, but wined3d-CSMT_Helper depends on that."
+	fi
 	enable_makedep_PARENTSPEC=1
 	enable_ntdll_DllRedirects=1
 	enable_wined3d_DXTn=1
+	enable_wined3d_resource_map=1
 fi
 
 if test "$enable_uxtheme_GTK_Theming" -eq 1; then
@@ -2149,6 +2157,13 @@ if test "$enable_dsound_EAX" -eq 1; then
 	fi
 	enable_dsound_Fast_Mixer=1
 	enable_dsound_Revert_Cleanup=1
+fi
+
+if test "$enable_ddraw_IDirect3DTexture2_Load" -eq 1; then
+	if test "$enable_wined3d_resource_map" -gt 1; then
+		abort "Patchset wined3d-resource_map disabled, but ddraw-IDirect3DTexture2_Load depends on that."
+	fi
+	enable_wined3d_resource_map=1
 fi
 
 if test "$enable_d3dx9_33_Share_Source" -eq 1; then
@@ -3184,7 +3199,23 @@ if test "$enable_ddraw_EnumSurfaces" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-resource_map
+# |
+# | Modified files:
+# |   *	dlls/d3d11/device.c, dlls/d3d11/texture.c, dlls/d3d8/surface.c, dlls/d3d8/volume.c, dlls/d3d9/surface.c,
+# | 	dlls/d3d9/volume.c, dlls/ddraw/surface.c, dlls/wined3d/resource.c, dlls/wined3d/wined3d.spec, include/wine/wined3d.h
+# |
+if test "$enable_wined3d_resource_map" -eq 1; then
+	patch_apply wined3d-resource_map/0001-wined3d-Rename-wined3d_resource_-un-map-to-wined3d_r.patch
+	(
+		echo '+    { "Sebastian Lackner", "wined3d: Rename wined3d_resource_(un)map to wined3d_resource_sub_resource_(un)map.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ddraw-IDirect3DTexture2_Load
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	wined3d-resource_map
 # |
 # | Modified files:
 # |   *	dlls/ddraw/surface.c, dlls/ddraw/tests/d3d.c, dlls/ddraw/tests/ddraw2.c
@@ -6531,18 +6562,15 @@ fi
 # Patchset wined3d-CSMT_Helper
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-DXTn
+# |   *	makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-DXTn, wined3d-
+# | 	resource_map
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/d3d11/device.c, dlls/d3d11/texture.c, dlls/d3d8/surface.c, dlls/d3d8/volume.c, dlls/d3d9/surface.c,
-# | 	dlls/d3d9/volume.c, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc, dlls/wined3d/resource.c,
-# | 	dlls/wined3d/wined3d.spec, include/wine/wined3d.h
+# |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
 # |
 if test "$enable_wined3d_CSMT_Helper" -eq 1; then
-	patch_apply wined3d-CSMT_Helper/0001-wined3d-Rename-wined3d_resource_-un-map-to-wined3d_r.patch
 	patch_apply wined3d-CSMT_Helper/0002-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch
 	(
-		echo '+    { "Sebastian Lackner", "wined3d: Rename wined3d_resource_(un)map to wined3d_resource_sub_resource_(un)map.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
 	) >> "$patchlist"
 fi
@@ -6658,7 +6686,7 @@ fi
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-DXTn, wined3d-
-# | 	CSMT_Helper
+# | 	resource_map, wined3d-CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance

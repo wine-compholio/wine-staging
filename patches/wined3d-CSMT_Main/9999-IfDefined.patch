@@ -7968,8 +7968,8 @@ diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
 +#endif /* STAGING_CSMT */
  };
  
- static HRESULT cubetexture_init(struct wined3d_texture *texture, const struct wined3d_resource_desc *desc,
-@@ -991,7 +1050,9 @@
+ static HRESULT texture_init(struct wined3d_texture *texture, const struct wined3d_resource_desc *desc,
+@@ -993,7 +1052,9 @@
      if (WINED3DFMT_UNKNOWN >= desc->format)
      {
          WARN("(%p) : Texture cannot be created with a format of WINED3DFMT_UNKNOWN.\n", texture);
@@ -7979,70 +7979,17 @@ diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
          return WINED3DERR_INVALIDCALL;
      }
  
-@@ -1001,6 +1062,7 @@
-         if (!gl_info->supported[SGIS_GENERATE_MIPMAP])
-         {
-             WARN("No mipmap generation support, returning D3DERR_INVALIDCALL.\n");
-+#if defined(STAGING_CSMT)
-             HeapFree(GetProcessHeap(), 0, texture);
-             return WINED3DERR_INVALIDCALL;
-         }
-@@ -1009,6 +1071,14 @@
-         {
-             WARN("WINED3DUSAGE_AUTOGENMIPMAP is set, and level count != 1, returning D3DERR_INVALIDCALL.\n");
-             HeapFree(GetProcessHeap(), 0, texture);
-+#else  /* STAGING_CSMT */
-+            return WINED3DERR_INVALIDCALL;
-+        }
-+
-+        if (levels != 1)
-+        {
-+            WARN("WINED3DUSAGE_AUTOGENMIPMAP is set, and level count != 1, returning D3DERR_INVALIDCALL.\n");
-+#endif /* STAGING_CSMT */
-             return WINED3DERR_INVALIDCALL;
-         }
-     }
-@@ -1029,7 +1099,9 @@
-             else
-             {
-                 WARN("Attempted to create a NPOT cube texture (edge length %u) without GL support.\n", desc->width);
-+#if defined(STAGING_CSMT)
-                 HeapFree(GetProcessHeap(), 0, texture);
-+#endif /* STAGING_CSMT */
-                 return WINED3DERR_INVALIDCALL;
-             }
-         }
-@@ -1039,7 +1111,9 @@
-             surface_flags, device, parent, parent_ops, &texture2d_resource_ops)))
-     {
-         WARN("Failed to initialize texture, returning %#x\n", hr);
-+#if defined(STAGING_CSMT)
-         HeapFree(GetProcessHeap(), 0, texture);
-+#endif /* STAGING_CSMT */
-         return hr;
-     }
- 
-@@ -1102,7 +1176,9 @@
-     if (WINED3DFMT_UNKNOWN >= desc->format)
-     {
-         WARN("(%p) : Texture cannot be created with a format of WINED3DFMT_UNKNOWN.\n", texture);
-+#if defined(STAGING_CSMT)
-         HeapFree(GetProcessHeap(), 0, texture);
-+#endif /* STAGING_CSMT */
-         return WINED3DERR_INVALIDCALL;
-     }
- 
-@@ -1133,7 +1209,9 @@
+@@ -1024,7 +1085,9 @@
                  else
                  {
-                     WARN("Attempted to create a mipmapped NPOT texture without unconditional NPOT support.\n");
+                     WARN("Attempted to create a mipmapped/cube NPOT texture without unconditional NPOT support.\n");
 +#if defined(STAGING_CSMT)
                      HeapFree(GetProcessHeap(), 0, texture);
 +#endif /* STAGING_CSMT */
                      return WINED3DERR_INVALIDCALL;
                  }
              }
-@@ -1146,6 +1224,7 @@
+@@ -1037,6 +1100,7 @@
          if (!gl_info->supported[SGIS_GENERATE_MIPMAP])
          {
              WARN("No mipmap generation support, returning WINED3DERR_INVALIDCALL.\n");
@@ -8050,7 +7997,7 @@ diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
              HeapFree(GetProcessHeap(), 0, texture);
              return WINED3DERR_INVALIDCALL;
          }
-@@ -1154,6 +1233,14 @@
+@@ -1045,6 +1109,14 @@
          {
              WARN("WINED3DUSAGE_AUTOGENMIPMAP is set, and level count != 1, returning WINED3DERR_INVALIDCALL.\n");
              HeapFree(GetProcessHeap(), 0, texture);
@@ -8058,15 +8005,15 @@ diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
 +            return WINED3DERR_INVALIDCALL;
 +        }
 +
-+        if (levels != 1)
++        if (level_count != 1)
 +        {
 +            WARN("WINED3DUSAGE_AUTOGENMIPMAP is set, and level count != 1, returning WINED3DERR_INVALIDCALL.\n");
 +#endif /* STAGING_CSMT */
              return WINED3DERR_INVALIDCALL;
          }
      }
-@@ -1162,7 +1249,9 @@
-             surface_flags, device, parent, parent_ops, &texture2d_resource_ops)))
+@@ -1053,7 +1125,9 @@
+             flags, device, parent, parent_ops, &texture2d_resource_ops)))
      {
          WARN("Failed to initialize texture, returning %#x.\n", hr);
 +#if defined(STAGING_CSMT)
@@ -8075,7 +8022,7 @@ diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
          return hr;
      }
  
-@@ -1248,12 +1337,25 @@
+@@ -1156,12 +1230,25 @@
  
  static void texture3d_sub_resource_invalidate_location(struct wined3d_resource *sub_resource, DWORD location)
  {
@@ -8101,7 +8048,7 @@ diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
  }
  
  static void texture3d_sub_resource_upload_data(struct wined3d_resource *sub_resource,
-@@ -1263,7 +1365,11 @@
+@@ -1171,7 +1258,11 @@
      struct wined3d_const_bo_address addr;
      unsigned int row_pitch, slice_pitch;
  
@@ -8113,7 +8060,7 @@ diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
      if (row_pitch != data->row_pitch || slice_pitch != data->slice_pitch)
          FIXME("Ignoring row/slice pitch (%u/%u).\n", data->row_pitch, data->slice_pitch);
  
-@@ -1348,6 +1454,7 @@
+@@ -1256,6 +1347,7 @@
      if (WINED3DFMT_UNKNOWN >= desc->format)
      {
          WARN("(%p) : Texture cannot be created with a format of WINED3DFMT_UNKNOWN.\n", texture);
@@ -8121,7 +8068,7 @@ diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
          HeapFree(GetProcessHeap(), 0, texture);
          return WINED3DERR_INVALIDCALL;
      }
-@@ -1356,6 +1463,14 @@
+@@ -1264,6 +1356,14 @@
      {
          WARN("(%p) : Texture cannot be created - no volume texture support.\n", texture);
          HeapFree(GetProcessHeap(), 0, texture);
@@ -8136,7 +8083,7 @@ diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
          return WINED3DERR_INVALIDCALL;
      }
  
-@@ -1365,6 +1480,7 @@
+@@ -1273,6 +1373,7 @@
          if (!gl_info->supported[SGIS_GENERATE_MIPMAP])
          {
              WARN("No mipmap generation support, returning D3DERR_INVALIDCALL.\n");
@@ -8144,7 +8091,7 @@ diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
              HeapFree(GetProcessHeap(), 0, texture);
              return WINED3DERR_INVALIDCALL;
          }
-@@ -1373,6 +1489,14 @@
+@@ -1281,6 +1382,14 @@
          {
              WARN("WINED3DUSAGE_AUTOGENMIPMAP is set, and level count != 1, returning D3DERR_INVALIDCALL.\n");
              HeapFree(GetProcessHeap(), 0, texture);
@@ -8159,7 +8106,7 @@ diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
              return WINED3DERR_INVALIDCALL;
          }
      }
-@@ -1400,7 +1524,9 @@
+@@ -1308,7 +1417,9 @@
              {
                  WARN("Attempted to create a NPOT volume texture (%u, %u, %u) without GL support.\n",
                          desc->width, desc->height, desc->depth);
@@ -8169,7 +8116,7 @@ diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
                  return WINED3DERR_INVALIDCALL;
              }
          }
-@@ -1410,7 +1536,9 @@
+@@ -1318,7 +1429,9 @@
              0, device, parent, parent_ops, &texture3d_resource_ops)))
      {
          WARN("Failed to initialize texture, returning %#x.\n", hr);
@@ -8179,7 +8126,7 @@ diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
          return hr;
      }
  
-@@ -1533,6 +1661,9 @@
+@@ -1438,6 +1551,9 @@
      if (FAILED(hr))
      {
          WARN("Failed to initialize texture, returning %#x.\n", hr);
@@ -8189,23 +8136,23 @@ diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
          return hr;
      }
  
-@@ -1554,8 +1685,15 @@
+@@ -1459,8 +1575,15 @@
  HRESULT CDECL wined3d_texture_get_dc(struct wined3d_texture *texture, unsigned int sub_resource_idx, HDC *dc)
  {
      struct wined3d_device *device = texture->resource.device;
 +#if defined(STAGING_CSMT)
-+    struct wined3d_resource *sub_resource;
-+    struct wined3d_surface *surface;
-+#else  /* STAGING_CSMT */
-+    struct wined3d_context *context = NULL;
      struct wined3d_resource *sub_resource;
      struct wined3d_surface *surface;
++#else  /* STAGING_CSMT */
++    struct wined3d_context *context = NULL;
++    struct wined3d_resource *sub_resource;
++    struct wined3d_surface *surface;
 +    HRESULT hr;
 +#endif /* STAGING_CSMT */
  
      TRACE("texture %p, sub_resource_idx %u, dc %p.\n", texture, sub_resource_idx, dc);
  
-@@ -1570,12 +1708,14 @@
+@@ -1475,12 +1598,14 @@
  
      surface = surface_from_resource(sub_resource);
  
@@ -8220,7 +8167,7 @@ diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
      /* Give more detailed info for ddraw. */
      if (surface->flags & SFLAG_DCINUSE)
          return WINEDDERR_DCALREADYCREATED;
-@@ -1584,6 +1724,7 @@
+@@ -1489,6 +1614,7 @@
      if (surface->resource.map_count)
          return WINED3DERR_INVALIDCALL;
  
@@ -8228,7 +8175,7 @@ diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
      surface->flags |= SFLAG_DCINUSE;
      surface->resource.map_count++;
      wined3d_cs_emit_getdc(device->cs, surface);
-@@ -1596,6 +1737,45 @@
+@@ -1501,6 +1627,45 @@
  HRESULT CDECL wined3d_texture_release_dc(struct wined3d_texture *texture, unsigned int sub_resource_idx, HDC dc)
  {
      struct wined3d_device *device = texture->resource.device;
@@ -8274,7 +8221,7 @@ diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
      struct wined3d_resource *sub_resource;
      struct wined3d_surface *surface;
  
-@@ -1625,7 +1805,30 @@
+@@ -1530,7 +1695,30 @@
      surface->resource.map_count--;
      surface->flags &= ~SFLAG_DCINUSE;
  

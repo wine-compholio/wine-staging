@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "b21a3240705fdaf9f70a0eb1d2ff4736efcd35c9"
+	echo "c266d373deb417abef4883f59daa5d517b77e76c"
 }
 
 # Show version information
@@ -305,7 +305,6 @@ patch_enable_all ()
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_Invalidate_Key_State="$1"
 	enable_user32_ListBox_Size="$1"
-	enable_user32_MOUSEHOOKSTRUCTEX="$1"
 	enable_user32_Mouse_Message_Hwnd="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
@@ -1054,9 +1053,6 @@ patch_enable ()
 			;;
 		user32-ListBox_Size)
 			enable_user32_ListBox_Size="$2"
-			;;
-		user32-MOUSEHOOKSTRUCTEX)
-			enable_user32_MOUSEHOOKSTRUCTEX="$2"
 			;;
 		user32-Mouse_Message_Hwnd)
 			enable_user32_Mouse_Message_Hwnd="$2"
@@ -6231,21 +6227,6 @@ if test "$enable_user32_ListBox_Size" -eq 1; then
 	patch_apply user32-ListBox_Size/0001-user32-Fix-calculation-of-listbox-size-when-horizont.patch
 	(
 		echo '+    { "Michael Müller", "user32: Fix calculation of listbox size when horizontal scrollbar is present.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-MOUSEHOOKSTRUCTEX
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38314] Pass MOUSEHOOKSTRUCTEX struct to mouse hook callback
-# |
-# | Modified files:
-# |   *	dlls/user32/message.c
-# |
-if test "$enable_user32_MOUSEHOOKSTRUCTEX" -eq 1; then
-	patch_apply user32-MOUSEHOOKSTRUCTEX/0001-user32-Add-MOUSEHOOKSTRUCTEX-to-fix-mouse-wheel-supp.patch
-	(
-		echo '+    { "Kira Backes", "user32: Add MOUSEHOOKSTRUCTEX to fix mouse wheel support for JA2 1.13 and other apps which use it.", 1 },';
 	) >> "$patchlist"
 fi
 

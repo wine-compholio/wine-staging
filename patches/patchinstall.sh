@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f55db7882db25019e1af1a497bd7723d10541989"
+	echo "b21a3240705fdaf9f70a0eb1d2ff4736efcd35c9"
 }
 
 # Show version information
@@ -254,6 +254,7 @@ patch_enable_all ()
 	enable_server_Desktop_Refcount="$1"
 	enable_server_FileEndOfFileInformation="$1"
 	enable_server_File_Permissions="$1"
+	enable_server_Fix_Leak="$1"
 	enable_server_Inherited_ACLs="$1"
 	enable_server_Key_State="$1"
 	enable_server_Map_EXDEV_Error="$1"
@@ -900,6 +901,9 @@ patch_enable ()
 			;;
 		server-File_Permissions)
 			enable_server_File_Permissions="$2"
+			;;
+		server-Fix_Leak)
+			enable_server_Fix_Leak="$2"
 			;;
 		server-Inherited_ACLs)
 			enable_server_Inherited_ACLs="$2"
@@ -5401,6 +5405,18 @@ if test "$enable_server_FileEndOfFileInformation" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-Fix_Leak
+# |
+# | Modified files:
+# |   *	server/object.c
+# |
+if test "$enable_server_Fix_Leak" -eq 1; then
+	patch_apply server-Fix_Leak/0001-server-Fix-newly-introduced-memory-leak-of-object-na.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Fix newly introduced memory leak of object name structure.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-Stored_ACLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -5518,10 +5534,8 @@ fi
 # |   *	dlls/ntdll/tests/om.c, server/named_pipe.c, server/object.c
 # |
 if test "$enable_server_Pipe_ObjectName" -eq 1; then
-	patch_apply server-Pipe_ObjectName/0001-server-Link-named-pipes-to-their-device.patch
-	patch_apply server-Pipe_ObjectName/0002-server-Store-a-reference-to-the-parent-object-for-pi.patch
+	patch_apply server-Pipe_ObjectName/0001-server-Store-a-reference-to-the-parent-object-for-pi.patch
 	(
-		echo '+    { "Sebastian Lackner", "server: Link named pipes to their device.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Store a reference to the parent object for pipe servers.", 2 },';
 	) >> "$patchlist"
 fi

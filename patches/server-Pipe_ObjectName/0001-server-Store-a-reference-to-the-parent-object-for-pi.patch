@@ -1,0 +1,193 @@
+From dea19bf17349a7c1c2398a44e15587dae8fbce44 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 17 Aug 2015 01:11:47 +0200
+Subject: server: Store a reference to the parent object for pipe servers. (v2)
+
+---
+ dlls/ntdll/tests/om.c |  3 ---
+ server/named_pipe.c   | 45 +++++++++++++++++++++++++++++++++++++--------
+ server/object.c       | 18 ++++++++++++------
+ 3 files changed, 49 insertions(+), 17 deletions(-)
+
+diff --git a/dlls/ntdll/tests/om.c b/dlls/ntdll/tests/om.c
+index 3d0487c..84507de 100644
+--- a/dlls/ntdll/tests/om.c
++++ b/dlls/ntdll/tests/om.c
+@@ -1401,14 +1401,11 @@ static void test_query_object(void)
+     status = pNtQueryObject( handle, ObjectNameInformation, buffer, sizeof(buffer), &len );
+     ok( status == STATUS_SUCCESS , "NtQueryObject returned %x\n", status );
+     str = (UNICODE_STRING *)buffer;
+-    todo_wine
+     ok( len > sizeof(UNICODE_STRING), "unexpected len %u\n", len );
+     str = (UNICODE_STRING *)buffer;
+     expected_len = sizeof(UNICODE_STRING) + str->Length + sizeof(WCHAR);
+-    todo_wine
+     ok( len == expected_len || broken(len == expected_len - sizeof(WCHAR)), /* NT4 */
+         "unexpected len %u\n", len );
+-    todo_wine
+     ok( len > sizeof(UNICODE_STRING) + sizeof("\\test_pipe") * sizeof(WCHAR),
+         "name too short %s\n", wine_dbgstr_w(str->Buffer) );
+     trace( "got %s len %u\n", wine_dbgstr_w(str->Buffer), len );
+diff --git a/server/named_pipe.c b/server/named_pipe.c
+index ffa9e32..c92a117 100644
+--- a/server/named_pipe.c
++++ b/server/named_pipe.c
+@@ -148,6 +148,8 @@ static const struct object_ops named_pipe_ops =
+ /* server end functions */
+ static void pipe_server_dump( struct object *obj, int verbose );
+ static struct fd *pipe_server_get_fd( struct object *obj );
++static int pipe_server_link_name( struct object *obj, struct object_name *name, struct object *parent );
++static void pipe_server_unlink_name( struct object *obj, struct object_name *name );
+ static int pipe_server_close_handle( struct object *obj, struct process *process, obj_handle_t handle );
+ static void pipe_server_destroy( struct object *obj);
+ static obj_handle_t pipe_server_flush( struct fd *fd, const async_data_t *async, int blocking );
+@@ -170,8 +172,8 @@ static const struct object_ops pipe_server_ops =
+     default_get_sd,               /* get_sd */
+     default_set_sd,               /* set_sd */
+     no_lookup_name,               /* lookup_name */
+-    no_link_name,                 /* link_name */
+-    NULL,                         /* unlink_name */
++    pipe_server_link_name,        /* link_name */
++    pipe_server_unlink_name,      /* unlink_name */
+     no_open_file,                 /* open_file */
+     no_alloc_handle,              /* alloc_handle */
+     pipe_server_close_handle,     /* close_handle */
+@@ -196,6 +198,8 @@ static const struct fd_ops pipe_server_fd_ops =
+ static void pipe_client_dump( struct object *obj, int verbose );
+ static int pipe_client_signaled( struct object *obj, struct wait_queue_entry *entry );
+ static struct fd *pipe_client_get_fd( struct object *obj );
++static int pipe_client_link_name( struct object *obj, struct object_name *name, struct object *parent );
++static void pipe_client_unlink_name( struct object *obj, struct object_name *name );
+ static int pipe_client_close_handle( struct object *obj, struct process *process, obj_handle_t handle );
+ static void pipe_client_destroy( struct object *obj );
+ static obj_handle_t pipe_client_flush( struct fd *fd, const async_data_t *async, int blocking );
+@@ -216,8 +220,8 @@ static const struct object_ops pipe_client_ops =
+     default_get_sd,               /* get_sd */
+     default_set_sd,               /* set_sd */
+     no_lookup_name,               /* lookup_name */
+-    no_link_name,                 /* link_name */
+-    NULL,                         /* unlink_name */
++    pipe_client_link_name,        /* link_name */
++    pipe_client_unlink_name,      /* unlink_name */
+     no_open_file,                 /* open_file */
+     no_alloc_handle,              /* alloc_handle */
+     pipe_client_close_handle,     /* close_handle */
+@@ -399,6 +403,17 @@ static void do_disconnect( struct pipe_server *server )
+     server->fd = NULL;
+ }
+ 
++static int pipe_server_link_name( struct object *obj, struct object_name *name, struct object *parent )
++{
++    assert( parent->ops == &named_pipe_ops );
++    name->parent = grab_object( parent );
++    return 1;
++}
++
++static void pipe_server_unlink_name( struct object *obj, struct object_name *name )
++{
++}
++
+ static int pipe_server_close_handle( struct object *obj, struct process *process, obj_handle_t handle )
+ {
+ #ifdef __linux__
+@@ -442,6 +457,17 @@ static void pipe_server_destroy( struct object *obj)
+     release_object( server->pipe );
+ }
+ 
++static int pipe_client_link_name( struct object *obj, struct object_name *name, struct object *parent )
++{
++    assert( parent->ops == &named_pipe_ops );
++    name->parent = grab_object( parent );
++    return 1;
++}
++
++static void pipe_client_unlink_name( struct object *obj, struct object_name *name )
++{
++}
++
+ static int pipe_client_close_handle( struct object *obj, struct process *process, obj_handle_t handle )
+ {
+ #ifdef __linux__
+@@ -768,9 +794,10 @@ static struct pipe_server *get_pipe_server_obj( struct process *process,
+ static struct pipe_server *create_pipe_server( struct named_pipe *pipe, unsigned int options,
+                                                unsigned int pipe_flags )
+ {
++    static const struct unicode_str str = { NULL, 0 };
+     struct pipe_server *server;
+ 
+-    server = alloc_object( &pipe_server_ops );
++    server = create_object( &pipe->obj, &pipe_server_ops, &str );
+     if (!server)
+         return NULL;
+ 
+@@ -792,11 +819,13 @@ static struct pipe_server *create_pipe_server( struct named_pipe *pipe, unsigned
+     return server;
+ }
+ 
+-static struct pipe_client *create_pipe_client( unsigned int flags, unsigned int pipe_flags )
++static struct pipe_client *create_pipe_client( struct named_pipe *pipe, unsigned int flags,
++                                               unsigned int pipe_flags )
+ {
++    static const struct unicode_str str = { NULL, 0 };
+     struct pipe_client *client;
+ 
+-    client = alloc_object( &pipe_client_ops );
++    client = create_object( &pipe->obj, &pipe_client_ops, &str );
+     if (!client)
+         return NULL;
+ 
+@@ -896,7 +925,7 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
+         return NULL;
+     }
+ 
+-    if ((client = create_pipe_client( options, pipe->flags )))
++    if ((client = create_pipe_client( pipe, options, pipe->flags )))
+     {
+         type = ((pipe->flags & NAMED_PIPE_MESSAGE_STREAM_WRITE) && is_messagemode_supported()) ?
+                SOCK_SEQPACKET : SOCK_STREAM;
+diff --git a/server/object.c b/server/object.c
+index d4217c0..ef99334 100644
+--- a/server/object.c
++++ b/server/object.c
+@@ -162,7 +162,7 @@ WCHAR *get_object_full_name( struct object *obj, data_size_t *ret_len )
+     while (ptr && ptr->name)
+     {
+         struct object_name *name = ptr->name;
+-        len += name->len + sizeof(WCHAR);
++        if (name->len) len += name->len + sizeof(WCHAR);
+         ptr = name->parent;
+     }
+     if (!len) return NULL;
+@@ -172,9 +172,12 @@ WCHAR *get_object_full_name( struct object *obj, data_size_t *ret_len )
+     while (obj && obj->name)
+     {
+         struct object_name *name = obj->name;
+-        memcpy( ret + len - name->len, name->name, name->len );
+-        len -= name->len + sizeof(WCHAR);
+-        memcpy( ret + len, &backslash, sizeof(WCHAR) );
++        if (name->len)
++        {
++            memcpy( ret + len - name->len, name->name, name->len );
++            len -= name->len + sizeof(WCHAR);
++            memcpy( ret + len, &backslash, sizeof(WCHAR) );
++        }
+         obj = name->parent;
+     }
+     return (WCHAR *)ret;
+@@ -269,8 +272,11 @@ static void dump_name( struct object *obj )
+ 
+     if (!name) return;
+     if (name->parent) dump_name( name->parent );
+-    fputs( "\\\\", stderr );
+-    dump_strW( name->name, name->len / sizeof(WCHAR), stderr, "[]" );
++    if (name->len)
++    {
++        fputs( "\\\\", stderr );
++        dump_strW( name->name, name->len / sizeof(WCHAR), stderr, "[]" );
++    }
+ }
+ 
+ /* dump the name of an object to stderr */
+-- 
+2.7.0
+

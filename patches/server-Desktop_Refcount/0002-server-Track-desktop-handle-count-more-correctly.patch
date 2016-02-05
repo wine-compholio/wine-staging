@@ -1,4 +1,4 @@
-From b66d03524b625b22f92f60b1856c7ac89197e809 Mon Sep 17 00:00:00 2001
+From 02981c79c3ad972000fd3f397371f284ce9fade6 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 4 Dec 2015 01:22:29 +0100
 Subject: server: Track desktop handle count more correctly.
@@ -88,7 +88,7 @@ index f1deb79..1347836 100644
  extern struct handle_table *alloc_handle_table( struct process *process, int count );
  extern struct handle_table *copy_handle_table( struct process *process, struct process *parent );
 diff --git a/server/process.c b/server/process.c
-index 0f37a3b..0bc1edd 100644
+index cc9c01c..b43e1f8 100644
 --- a/server/process.c
 +++ b/server/process.c
 @@ -838,7 +838,6 @@ static void process_killed( struct process *process )
@@ -100,28 +100,28 @@ index 0f37a3b..0bc1edd 100644
      process->desktop = 0;
      close_process_handles( process );
 diff --git a/server/winstation.c b/server/winstation.c
-index ab3dd05..9924cbe 100644
+index 17c312a..46ade3b 100644
 --- a/server/winstation.c
 +++ b/server/winstation.c
-@@ -50,6 +50,7 @@ static void winstation_destroy( struct object *obj );
- static unsigned int winstation_map_access( struct object *obj, unsigned int access );
+@@ -51,6 +51,7 @@ static unsigned int winstation_map_access( struct object *obj, unsigned int acce
  static void desktop_dump( struct object *obj, int verbose );
  static struct object_type *desktop_get_type( struct object *obj );
+ static int desktop_link_name( struct object *obj, struct object_name *name, struct object *parent );
 +static void desktop_alloc_handle( struct object *obj, struct process *process, obj_handle_t handle );
  static int desktop_close_handle( struct object *obj, struct process *process, obj_handle_t handle );
  static void desktop_destroy( struct object *obj );
  static unsigned int desktop_map_access( struct object *obj, unsigned int access );
-@@ -96,7 +97,7 @@ static const struct object_ops desktop_ops =
-     no_link_name,                 /* link_name */
-     NULL,                         /* unlink_name */
+@@ -97,7 +98,7 @@ static const struct object_ops desktop_ops =
+     desktop_link_name,            /* link_name */
+     default_unlink_name,          /* unlink_name */
      no_open_file,                 /* open_file */
 -    no_alloc_handle,              /* alloc_handle */
 +    desktop_alloc_handle,         /* alloc_handle */
      desktop_close_handle,         /* close_handle */
      desktop_destroy               /* destroy */
  };
-@@ -240,14 +241,54 @@ static struct object_type *desktop_get_type( struct object *obj )
-     return get_object_type( &str );
+@@ -253,14 +254,54 @@ static int desktop_link_name( struct object *obj, struct object_name *name, stru
+     return 1;
  }
  
 +static void close_desktop_timeout( void *private )
@@ -175,7 +175,7 @@ index ab3dd05..9924cbe 100644
      return 1;
  }
  
-@@ -255,6 +296,7 @@ static void desktop_destroy( struct object *obj )
+@@ -268,6 +309,7 @@ static void desktop_destroy( struct object *obj )
  {
      struct desktop *desktop = (struct desktop *)obj;
  
@@ -183,7 +183,7 @@ index ab3dd05..9924cbe 100644
      free_hotkeys( desktop, 0 );
      if (desktop->top_window) destroy_window( desktop->top_window );
      if (desktop->msg_window) destroy_window( desktop->msg_window );
-@@ -282,40 +324,6 @@ struct desktop *get_thread_desktop( struct thread *thread, unsigned int access )
+@@ -294,40 +336,6 @@ struct desktop *get_thread_desktop( struct thread *thread, unsigned int access )
      return get_desktop_obj( thread->process, thread->desktop, access );
  }
  
@@ -224,7 +224,7 @@ index ab3dd05..9924cbe 100644
  /* set the process default desktop handle */
  void set_process_default_desktop( struct process *process, struct desktop *desktop,
                                    obj_handle_t handle )
-@@ -332,12 +340,6 @@ void set_process_default_desktop( struct process *process, struct desktop *deskt
+@@ -344,12 +352,6 @@ void set_process_default_desktop( struct process *process, struct desktop *deskt
      LIST_FOR_EACH_ENTRY( thread, &process->thread_list, struct thread, proc_entry )
          if (!thread->desktop) thread->desktop = handle;
  
@@ -237,7 +237,7 @@ index ab3dd05..9924cbe 100644
      if (old_desktop) release_object( old_desktop );
  }
  
-@@ -387,8 +389,8 @@ done:
+@@ -399,8 +401,8 @@ done:
  void close_process_desktop( struct process *process )
  {
      struct desktop *desktop;

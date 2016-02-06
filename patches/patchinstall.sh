@@ -133,6 +133,7 @@ patch_enable_all ()
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
+	enable_dxdiagn_Display_Information="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
 	enable_dxgi_MakeWindowAssociation="$1"
@@ -541,6 +542,9 @@ patch_enable ()
 			;;
 		dsound-Revert_Cleanup)
 			enable_dsound_Revert_Cleanup="$2"
+			;;
+		dxdiagn-Display_Information)
+			enable_dxdiagn_Display_Information="$2"
 			;;
 		dxdiagn-Enumerate_DirectSound)
 			enable_dxdiagn_Enumerate_DirectSound="$2"
@@ -3426,6 +3430,21 @@ if test "$enable_dsound_EAX" -eq 1; then
 		echo '+    { "Sebastian Lackner", "dsound: Allow disabling of EAX support in the registry.", 1 },';
 		echo '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_ListenerProperties.", 1 },';
 		echo '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_BufferProperties.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dxdiagn-Display_Information
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34686] Return additional properties for display devices in dxdiagn
+# |
+# | Modified files:
+# |   *	dlls/dxdiagn/provider.c, dlls/dxdiagn/tests/container.c
+# |
+if test "$enable_dxdiagn_Display_Information" -eq 1; then
+	patch_apply dxdiagn-Display_Information/0001-dxdiagn-Add-several-more-fields-for-DisplayDevices.patch
+	(
+		echo '+    { "Michael Müller", "dxdiagn: Add several more fields for DisplayDevices.", 1 },';
 	) >> "$patchlist"
 fi
 

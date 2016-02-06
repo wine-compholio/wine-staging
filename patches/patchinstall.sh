@@ -158,6 +158,7 @@ patch_enable_all ()
 	enable_kernel32_CompareString_Length="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Cwd_Startup_Info="$1"
+	enable_kernel32_FindFirstFile="$1"
 	enable_kernel32_FreeUserPhysicalPages="$1"
 	enable_kernel32_GetCurrentPackageFamilyName="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
@@ -615,6 +616,9 @@ patch_enable ()
 			;;
 		kernel32-Cwd_Startup_Info)
 			enable_kernel32_Cwd_Startup_Info="$2"
+			;;
+		kernel32-FindFirstFile)
+			enable_kernel32_FindFirstFile="$2"
 			;;
 		kernel32-FreeUserPhysicalPages)
 			enable_kernel32_FreeUserPhysicalPages="$2"
@@ -3901,6 +3905,23 @@ if test "$enable_kernel32_Cwd_Startup_Info" -eq 1; then
 	patch_apply kernel32-Cwd_Startup_Info/0001-kernel32-Allow-non-nullterminated-string-as-working-.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32: Allow non-nullterminated string as working directory in create_startup_info.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-FindFirstFile
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#22635] Strip invalid characters from mask in FindFirstFileExW
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, dlls/kernel32/tests/file.c
+# |
+if test "$enable_kernel32_FindFirstFile" -eq 1; then
+	patch_apply kernel32-FindFirstFile/0001-kernel32-Strip-invalid-characters-from-mask-in-FindF.patch
+	patch_apply kernel32-FindFirstFile/0002-kernel32-tests-Add-tests-for-FindFirstFileA-with-inv.patch
+	(
+		echo '+    { "Michael Müller", "kernel32: Strip invalid characters from mask in FindFirstFileExW.", 1 },';
+		echo '+    { "Michael Müller", "kernel32/tests: Add tests for FindFirstFileA with invalid characters.", 1 },';
 	) >> "$patchlist"
 fi
 

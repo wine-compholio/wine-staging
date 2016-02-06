@@ -121,6 +121,7 @@ patch_enable_all ()
 	enable_d3dx9_36_Texture_Align="$1"
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
 	enable_dbghelp_Debug_Symbols="$1"
+	enable_ddraw_Device_Caps="$1"
 	enable_ddraw_EnumSurfaces="$1"
 	enable_ddraw_IDirect3DTexture2_Load="$1"
 	enable_ddraw_Rendering_Targets="$1"
@@ -502,6 +503,9 @@ patch_enable ()
 			;;
 		dbghelp-Debug_Symbols)
 			enable_dbghelp_Debug_Symbols="$2"
+			;;
+		ddraw-Device_Caps)
+			enable_ddraw_Device_Caps="$2"
 			;;
 		ddraw-EnumSurfaces)
 			enable_ddraw_EnumSurfaces="$2"
@@ -3181,6 +3185,18 @@ if test "$enable_dbghelp_Debug_Symbols" -eq 1; then
 	patch_apply dbghelp-Debug_Symbols/0001-dbghelp-Always-check-for-debug-symbols-in-BINDIR.patch
 	(
 		echo '+    { "Sebastian Lackner", "dbghelp: Always check for debug symbols in BINDIR.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ddraw-Device_Caps
+# |
+# | Modified files:
+# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/tests/ddraw7.c
+# |
+if test "$enable_ddraw_Device_Caps" -eq 1; then
+	patch_apply ddraw-Device_Caps/0001-ddraw-Don-t-set-HWTRANSFORMANDLIGHT-flag-on-d3d7-RGB.patch
+	(
+		echo '+    { "Michael Müller", "ddraw: Don'\''t set HWTRANSFORMANDLIGHT flag on d3d7 RGB device.", 1 },';
 	) >> "$patchlist"
 fi
 

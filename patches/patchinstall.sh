@@ -173,6 +173,7 @@ patch_enable_all ()
 	enable_kernel32_SetFileInformationByHandle="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
 	enable_kernel32_VerifyVersionInfo="$1"
+	enable_kernel32_VirtualProtect="$1"
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_makedep_PARENTSPEC="$1"
@@ -662,6 +663,9 @@ patch_enable ()
 			;;
 		kernel32-VerifyVersionInfo)
 			enable_kernel32_VerifyVersionInfo="$2"
+			;;
+		kernel32-VirtualProtect)
+			enable_kernel32_VirtualProtect="$2"
 			;;
 		libs-Debug_Channel)
 			enable_libs_Debug_Channel="$2"
@@ -4138,6 +4142,18 @@ if test "$enable_kernel32_VerifyVersionInfo" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for condition mask of VerifyVersionInfoA.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Fix condition mask handling in RtlVerifyVersionInfo.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-VirtualProtect
+# |
+# | Modified files:
+# |   *	dlls/kernel32/virtual.c
+# |
+if test "$enable_kernel32_VirtualProtect" -eq 1; then
+	patch_apply kernel32-VirtualProtect/0001-kernel32-Allow-to-pass-NULL-as-old-protection-in-Vir.patch
+	(
+		echo '+    { "Michael Müller", "kernel32: Allow to pass NULL as old protection in VirtualProtect for Win9X.", 1 },';
 	) >> "$patchlist"
 fi
 

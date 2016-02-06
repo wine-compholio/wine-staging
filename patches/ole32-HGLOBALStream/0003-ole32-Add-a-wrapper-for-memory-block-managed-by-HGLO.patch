@@ -1,0 +1,422 @@
+From 3c9954c3838d7504fad0213ade7363747e7a6805 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Tue, 2 Feb 2016 13:03:58 +0800
+Subject: ole32: Add a wrapper for memory block managed by HGLOBAL based
+ IStream.
+
+Based on a suggestion of Sebastian Lackner <sebastian@fds-team.de>.
+---
+ dlls/ole32/hglobalstream.c       | 202 +++++++++++++++++++++++++++------------
+ dlls/ole32/tests/hglobalstream.c |  12 ---
+ 2 files changed, 140 insertions(+), 74 deletions(-)
+
+diff --git a/dlls/ole32/hglobalstream.c b/dlls/ole32/hglobalstream.c
+index b86de56..5eb6320 100644
+--- a/dlls/ole32/hglobalstream.c
++++ b/dlls/ole32/hglobalstream.c
+@@ -5,6 +5,7 @@
+  * for streams contained supported by an HGLOBAL pointer.
+  *
+  * Copyright 1999 Francis Beaudet
++ * Copyright 2016 Dmitry Timoshkov
+  *
+  * This library is free software; you can redistribute it and/or
+  * modify it under the terms of the GNU Lesser General Public
+@@ -42,7 +43,96 @@
+ 
+ #include "wine/debug.h"
+ 
+-WINE_DEFAULT_DEBUG_CHANNEL(storage);
++WINE_DEFAULT_DEBUG_CHANNEL(hglobalstream);
++
++struct handle_wrapper
++{
++    LONG ref;
++    HGLOBAL hglobal;
++    ULONG size;
++    BOOL delete_on_release;
++    CRITICAL_SECTION lock;
++};
++
++static void handle_addref(struct handle_wrapper *handle)
++{
++    InterlockedIncrement(&handle->ref);
++}
++
++static void handle_release(struct handle_wrapper *handle)
++{
++    ULONG ref = InterlockedDecrement(&handle->ref);
++
++    if (!ref)
++    {
++        if (handle->delete_on_release)
++        {
++            GlobalFree(handle->hglobal);
++            handle->hglobal = NULL;
++        }
++
++        DeleteCriticalSection(&handle->lock);
++        HeapFree(GetProcessHeap(), 0, handle);
++    }
++}
++
++static void *handle_lock(struct handle_wrapper *handle)
++{
++    return GlobalLock(handle->hglobal);
++}
++
++static void handle_unlock(struct handle_wrapper *handle)
++{
++    GlobalUnlock(handle->hglobal);
++}
++
++static HGLOBAL handle_gethglobal(struct handle_wrapper *handle)
++{
++    return handle->hglobal;
++}
++
++static HRESULT handle_setsize(struct handle_wrapper *handle, ULONG size)
++{
++    HRESULT hr = S_OK;
++
++    EnterCriticalSection(&handle->lock);
++
++    if (handle->size != size)
++    {
++        HGLOBAL hglobal = GlobalReAlloc(handle->hglobal, size, 0);
++        if (hglobal)
++        {
++            handle->hglobal = hglobal;
++            handle->size = size;
++        }
++        else
++            hr = E_OUTOFMEMORY;
++    }
++
++    LeaveCriticalSection(&handle->lock);
++    return hr;
++}
++
++static ULONG handle_getsize(struct handle_wrapper *handle)
++{
++    return handle->size;
++}
++
++static struct handle_wrapper *handle_create(HGLOBAL hglobal, BOOL delete_on_release)
++{
++    struct handle_wrapper *handle;
++
++    handle = HeapAlloc(GetProcessHeap(), 0, sizeof(*handle));
++    if (handle)
++    {
++        handle->ref = 1;
++        handle->hglobal = hglobal;
++        handle->size = GlobalSize(hglobal);
++        handle->delete_on_release = delete_on_release;
++        InitializeCriticalSection(&handle->lock);
++    }
++    return handle;
++}
+ 
+ /****************************************************************************
+  * HGLOBALStreamImpl definition.
+@@ -55,14 +145,7 @@ typedef struct
+   IStream IStream_iface;
+   LONG ref;
+ 
+-  /* support for the stream */
+-  HGLOBAL supportHandle;
+-
+-  /* if TRUE the HGLOBAL is destroyed when the stream is finally released */
+-  BOOL deleteOnRelease;
+-
+-  /* size of the stream */
+-  ULARGE_INTEGER streamSize;
++  struct handle_wrapper *handle;
+ 
+   /* current position of the cursor */
+   ULARGE_INTEGER currentPosition;
+@@ -114,12 +197,7 @@ static ULONG WINAPI HGLOBALStreamImpl_Release(
+ 
+   if (!ref)
+   {
+-    if (This->deleteOnRelease)
+-    {
+-      GlobalFree(This->supportHandle);
+-      This->supportHandle = NULL;
+-    }
+-
++    handle_release(This->handle);
+     HeapFree(GetProcessHeap(), 0, This);
+   }
+ 
+@@ -161,15 +239,15 @@ static HRESULT WINAPI HGLOBALStreamImpl_Read(
+    * Using the known size of the stream, calculate the number of bytes
+    * to read from the block chain
+    */
+-  bytesToReadFromBuffer = min( This->streamSize.u.LowPart - This->currentPosition.u.LowPart, cb);
++  bytesToReadFromBuffer = min( handle_getsize(This->handle) - This->currentPosition.u.LowPart, cb);
+ 
+   /*
+    * Lock the buffer in position and copy the data.
+    */
+-  supportBuffer = GlobalLock(This->supportHandle);
++  supportBuffer = handle_lock(This->handle);
+   if (!supportBuffer)
+   {
+-      WARN("read from invalid hglobal %p\n", This->supportHandle);
++      WARN("read from invalid hglobal %p\n", handle_gethglobal(This->handle));
+       *pcbRead = 0;
+       return S_OK;
+   }
+@@ -189,7 +267,7 @@ static HRESULT WINAPI HGLOBALStreamImpl_Read(
+   /*
+    * Cleanup
+    */
+-  GlobalUnlock(This->supportHandle);
++  handle_unlock(This->handle);
+ 
+   /*
+    * Always returns S_OK even if the end of the stream is reached before the
+@@ -241,7 +319,7 @@ static HRESULT WINAPI HGLOBALStreamImpl_Write(
+   /*
+    * Verify if we need to grow the stream
+    */
+-  if (newSize.u.LowPart > This->streamSize.u.LowPart)
++  if (newSize.u.LowPart > handle_getsize(This->handle))
+   {
+     /* grow stream */
+     HRESULT hr = IStream_SetSize(iface, newSize);
+@@ -255,10 +333,10 @@ static HRESULT WINAPI HGLOBALStreamImpl_Write(
+   /*
+    * Lock the buffer in position and copy the data.
+    */
+-  supportBuffer = GlobalLock(This->supportHandle);
++  supportBuffer = handle_lock(This->handle);
+   if (!supportBuffer)
+   {
+-      WARN("write to invalid hglobal %p\n", This->supportHandle);
++      WARN("write to invalid hglobal %p\n", handle_gethglobal(This->handle));
+       return S_OK;
+   }
+ 
+@@ -272,7 +350,7 @@ static HRESULT WINAPI HGLOBALStreamImpl_Write(
+   /*
+    * Cleanup
+    */
+-  GlobalUnlock(This->supportHandle);
++  handle_unlock(This->handle);
+ 
+ out:
+   /*
+@@ -318,7 +396,7 @@ static HRESULT WINAPI HGLOBALStreamImpl_Seek(
+     case STREAM_SEEK_CUR:
+       break;
+     case STREAM_SEEK_END:
+-      newPosition = This->streamSize;
++      newPosition.QuadPart = handle_getsize(This->handle);
+       break;
+     default:
+       hr = STG_E_SEEKERROR;
+@@ -363,29 +441,13 @@ static HRESULT WINAPI HGLOBALStreamImpl_SetSize(
+ 				     ULARGE_INTEGER  libNewSize)   /* [in] */
+ {
+   HGLOBALStreamImpl* This = impl_from_IStream(iface);
+-  HGLOBAL supportHandle;
+ 
+   TRACE("(%p, %d)\n", iface, libNewSize.u.LowPart);
+ 
+   /*
+    * HighPart is ignored as shown in tests
+    */
+-
+-  if (This->streamSize.u.LowPart == libNewSize.u.LowPart)
+-    return S_OK;
+-
+-  /*
+-   * Re allocate the HGlobal to fit the new size of the stream.
+-   */
+-  supportHandle = GlobalReAlloc(This->supportHandle, libNewSize.u.LowPart, 0);
+-
+-  if (supportHandle == 0)
+-    return E_OUTOFMEMORY;
+-
+-  This->supportHandle = supportHandle;
+-  This->streamSize.u.LowPart = libNewSize.u.LowPart;
+-
+-  return S_OK;
++  return handle_setsize(This->handle, libNewSize.u.LowPart);
+ }
+ 
+ /***
+@@ -533,24 +595,49 @@ static HRESULT WINAPI HGLOBALStreamImpl_Stat(
+ 
+   pstatstg->pwcsName = NULL;
+   pstatstg->type     = STGTY_STREAM;
+-  pstatstg->cbSize   = This->streamSize;
++  pstatstg->cbSize.QuadPart = handle_getsize(This->handle);
+ 
+   return S_OK;
+ }
+ 
++static const IStreamVtbl HGLOBALStreamImplVtbl;
++
++static HGLOBALStreamImpl *HGLOBALStreamImpl_Create(void)
++{
++    HGLOBALStreamImpl *This;
++
++    This = HeapAlloc(GetProcessHeap(), 0, sizeof(*This));
++    if (This)
++    {
++        This->IStream_iface.lpVtbl = &HGLOBALStreamImplVtbl;
++        This->ref = 1;
++    }
++    return This;
++}
++
+ static HRESULT WINAPI HGLOBALStreamImpl_Clone(
+ 		  IStream*     iface,
+ 		  IStream**    ppstm) /* [out] */
+ {
+   HGLOBALStreamImpl* This = impl_from_IStream(iface);
++  HGLOBALStreamImpl* clone;
+   ULARGE_INTEGER dummy;
+   LARGE_INTEGER offset;
+-  HRESULT hr;
+ 
+-  TRACE(" Cloning %p (deleteOnRelease=%d seek position=%ld)\n",iface,This->deleteOnRelease,(long)This->currentPosition.QuadPart);
+-  hr = CreateStreamOnHGlobal(This->supportHandle, FALSE, ppstm);
+-  if(FAILED(hr))
+-    return hr;
++  if (!ppstm) return E_INVALIDARG;
++
++  *ppstm = NULL;
++
++  TRACE(" Cloning %p (seek position=%d)\n", iface, This->currentPosition.u.LowPart);
++
++  clone = HGLOBALStreamImpl_Create();
++  if (!clone) return E_OUTOFMEMORY;
++
++  *ppstm = &clone->IStream_iface;
++
++  handle_addref(This->handle);
++  clone->handle = This->handle;
++
+   offset.QuadPart = (LONGLONG)This->currentPosition.QuadPart;
+   IStream_Seek(*ppstm, offset, STREAM_SEEK_SET, &dummy);
+   return S_OK;
+@@ -587,28 +674,19 @@ HRESULT WINAPI CreateStreamOnHGlobal(
+   if (!ppstm)
+     return E_INVALIDARG;
+ 
+-  This = HeapAlloc(GetProcessHeap(), 0, sizeof(HGLOBALStreamImpl));
++  This = HGLOBALStreamImpl_Create();
+   if (!This) return E_OUTOFMEMORY;
+ 
+-  This->IStream_iface.lpVtbl = &HGLOBALStreamImplVtbl;
+-  This->ref = 1;
+-
+-  /* initialize the support */
+-  This->supportHandle = hGlobal;
+-  This->deleteOnRelease = fDeleteOnRelease;
+-
+   /* allocate a handle if one is not supplied */
+-  if (!This->supportHandle)
+-    This->supportHandle = GlobalAlloc(GMEM_MOVEABLE|GMEM_NODISCARD|GMEM_SHARE, 0);
++  if (!hGlobal)
++    hGlobal = GlobalAlloc(GMEM_MOVEABLE|GMEM_NODISCARD|GMEM_SHARE, 0);
++
++  This->handle = handle_create(hGlobal, fDeleteOnRelease);
+ 
+   /* start at the beginning */
+   This->currentPosition.u.HighPart = 0;
+   This->currentPosition.u.LowPart = 0;
+ 
+-  /* initialize the size of the stream to the size of the handle */
+-  This->streamSize.u.HighPart = 0;
+-  This->streamSize.u.LowPart = GlobalSize(This->supportHandle);
+-
+   *ppstm = &This->IStream_iface;
+ 
+   return S_OK;
+@@ -630,7 +708,7 @@ HRESULT WINAPI GetHGlobalFromStream(IStream* pstm, HGLOBAL* phglobal)
+    * Verify that the stream object was created with CreateStreamOnHGlobal.
+    */
+   if (pStream->IStream_iface.lpVtbl == &HGLOBALStreamImplVtbl)
+-    *phglobal = pStream->supportHandle;
++    *phglobal = handle_gethglobal(pStream->handle);
+   else
+   {
+     *phglobal = 0;
+diff --git a/dlls/ole32/tests/hglobalstream.c b/dlls/ole32/tests/hglobalstream.c
+index 0453e54..afda4e6 100644
+--- a/dlls/ole32/tests/hglobalstream.c
++++ b/dlls/ole32/tests/hglobalstream.c
+@@ -579,14 +579,12 @@ static void test_IStream_Clone(void)
+ 
+     stream_info(clone, &hmem_clone, &size, &pos);
+     ok(hmem_clone == hmem, "handles should match\n");
+-todo_wine
+     ok(size == 13,  "unexpected %d\n", size);
+     ok(pos == 0,  "unexpected %d\n", pos);
+ 
+     buf[0] = 0;
+     hr = IStream_Read(clone, buf, sizeof(buf), NULL);
+     ok(hr == S_OK, "unexpected %#x\n", hr);
+-todo_wine
+     ok(!strcmp(buf, hello), "wrong stream contents\n");
+ 
+     newsize.QuadPart = 0x8000;
+@@ -601,9 +599,7 @@ todo_wine
+ 
+     stream_info(clone, &hmem_clone, &size, &pos);
+     ok(hmem_clone == hmem, "handles should match\n");
+-todo_wine
+     ok(size == 0x8000,  "unexpected %#x\n", size);
+-todo_wine
+     ok(pos == 13,  "unexpected %d\n", pos);
+ 
+     IStream_Release(clone);
+@@ -715,24 +711,19 @@ todo_wine
+ 
+     newsize.QuadPart = 0x8000;
+     hr = IStream_SetSize(clone, newsize);
+-todo_wine
+     ok(hr == S_OK, "unexpected %#x\n", hr);
+ 
+     stream_info(clone, &hmem_clone, &size, &pos);
+     ok(hmem_clone == hmem, "handles should match\n");
+-todo_wine
+     ok(size == 0x8000,  "unexpected %#x\n", size);
+     ok(pos == 0,  "unexpected %d\n", pos);
+ 
+     hr = IStream_Write(clone, hello, sizeof(hello), NULL);
+-todo_wine
+     ok(hr == S_OK, "unexpected %#x\n", hr);
+ 
+     stream_info(clone, &hmem_clone, &size, &pos);
+     ok(hmem_clone == hmem, "handles should match\n");
+-todo_wine
+     ok(size == 0x8000,  "unexpected %#x\n", size);
+-todo_wine
+     ok(pos == 13,  "unexpected %d\n", pos);
+ 
+     offset.QuadPart = 0;
+@@ -742,14 +733,11 @@ todo_wine
+     buf[0] = 0;
+     hr = IStream_Read(clone, buf, sizeof(buf), NULL);
+     ok(hr == S_OK, "unexpected %#x\n", hr);
+-todo_wine
+     ok(!strcmp(buf, hello), "wrong stream contents\n");
+ 
+     stream_info(clone, &hmem_clone, &size, &pos);
+     ok(hmem_clone == hmem, "handles should match\n");
+-todo_wine
+     ok(size == 0x8000,  "unexpected %#x\n", size);
+-todo_wine
+     ok(pos == 32,  "unexpected %d\n", pos);
+ 
+     ret = IStream_Release(clone);
+-- 
+2.7.0
+

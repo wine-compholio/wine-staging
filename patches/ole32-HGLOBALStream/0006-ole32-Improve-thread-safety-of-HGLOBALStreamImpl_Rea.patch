@@ -1,0 +1,115 @@
+From f5c31437019892510e36f603cbde72d9204a4155 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 6 Feb 2016 03:50:55 +0100
+Subject: ole32: Improve thread-safety of HGLOBALStreamImpl_Read.
+
+---
+ dlls/ole32/hglobalstream.c | 83 ++++++++++++++++++----------------------------
+ 1 file changed, 32 insertions(+), 51 deletions(-)
+
+diff --git a/dlls/ole32/hglobalstream.c b/dlls/ole32/hglobalstream.c
+index 3e7f67b..27ac706 100644
+--- a/dlls/ole32/hglobalstream.c
++++ b/dlls/ole32/hglobalstream.c
+@@ -87,6 +87,34 @@ static void handle_unlock(struct handle_wrapper *handle)
+     GlobalUnlock(handle->hglobal);
+ }
+ 
++static ULONG handle_read(struct handle_wrapper *handle, ULONG *pos, void *dest, ULONG len)
++{
++    void *source;
++
++    EnterCriticalSection(&handle->lock);
++
++    if (*pos < handle->size)
++        len = min(handle->size - *pos, len);
++    else
++        len = 0;
++
++    source = GlobalLock(handle->hglobal);
++    if (source)
++    {
++        memcpy(dest, (char *)source + *pos, len);
++        *pos += len;
++        GlobalUnlock(handle->hglobal);
++    }
++    else
++    {
++        WARN("read from invalid hglobal %p\n", handle->hglobal);
++        len = 0;
++    }
++
++    LeaveCriticalSection(&handle->lock);
++    return len;
++}
++
+ static HGLOBAL handle_gethglobal(struct handle_wrapper *handle)
+ {
+     return handle->hglobal;
+@@ -222,59 +250,12 @@ static HRESULT WINAPI HGLOBALStreamImpl_Read(
+ 		  ULONG*         pcbRead)   /* [out] */
+ {
+   HGLOBALStreamImpl* This = impl_from_IStream(iface);
++  ULONG num_bytes;
+ 
+-  void* supportBuffer;
+-  ULONG bytesReadBuffer;
+-  ULONG bytesToReadFromBuffer;
+-
+-  TRACE("(%p, %p, %d, %p)\n", iface,
+-	pv, cb, pcbRead);
+-
+-  /*
+-   * If the caller is not interested in the number of bytes read,
+-   * we use another buffer to avoid "if" statements in the code.
+-   */
+-  if (pcbRead==0)
+-    pcbRead = &bytesReadBuffer;
+-
+-  /*
+-   * Using the known size of the stream, calculate the number of bytes
+-   * to read from the block chain
+-   */
+-  bytesToReadFromBuffer = min( handle_getsize(This->handle) - This->currentPosition.u.LowPart, cb);
+-
+-  /*
+-   * Lock the buffer in position and copy the data.
+-   */
+-  supportBuffer = handle_lock(This->handle);
+-  if (!supportBuffer)
+-  {
+-      WARN("read from invalid hglobal %p\n", handle_gethglobal(This->handle));
+-      *pcbRead = 0;
+-      return S_OK;
+-  }
+-
+-  memcpy(pv, (char *) supportBuffer+This->currentPosition.u.LowPart, bytesToReadFromBuffer);
+-
+-  /*
+-   * Move the current position to the new position
+-   */
+-  This->currentPosition.u.LowPart+=bytesToReadFromBuffer;
+-
+-  /*
+-   * Return the number of bytes read.
+-   */
+-  *pcbRead = bytesToReadFromBuffer;
+-
+-  /*
+-   * Cleanup
+-   */
+-  handle_unlock(This->handle);
++  TRACE("(%p, %p, %d, %p)\n", iface, pv, cb, pcbRead);
+ 
+-  /*
+-   * Always returns S_OK even if the end of the stream is reached before the
+-   * buffer is filled
+-   */
++  num_bytes = handle_read(This->handle, &This->currentPosition.u.LowPart, pv, cb);
++  if (pcbRead) *pcbRead = num_bytes;
+ 
+   return S_OK;
+ }
+-- 
+2.7.0
+

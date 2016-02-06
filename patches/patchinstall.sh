@@ -238,6 +238,7 @@ patch_enable_all ()
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
 	enable_ole32_CoGetApartmentType="$1"
+	enable_ole32_HGLOBALStream="$1"
 	enable_oleaut32_CreateTypeLib="$1"
 	enable_oleaut32_TKIND_COCLASS="$1"
 	enable_oleaut32_x86_64_Marshaller="$1"
@@ -852,6 +853,9 @@ patch_enable ()
 			;;
 		ole32-CoGetApartmentType)
 			enable_ole32_CoGetApartmentType="$2"
+			;;
+		ole32-HGLOBALStream)
+			enable_ole32_HGLOBALStream="$2"
 			;;
 		oleaut32-CreateTypeLib)
 			enable_oleaut32_CreateTypeLib="$2"
@@ -5199,6 +5203,30 @@ if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
 		echo '+    { "Michael Müller", "nvencodeapi: First implementation.", 1 },';
 		echo '+    { "Michael Müller", "nvencodeapi: Add debian specific paths to native library.", 1 },';
 		echo '+    { "Michael Müller", "nvencodeapi: Add support for version 6.0.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ole32-HGLOBALStream
+# |
+# | Modified files:
+# |   *	dlls/ole32/hglobalstream.c, dlls/ole32/tests/hglobalstream.c
+# |
+if test "$enable_ole32_HGLOBALStream" -eq 1; then
+	patch_apply ole32-HGLOBALStream/0001-ole32-tests-Add-a-bunch-of-tests-for-HGLOBAL-based-I.patch
+	patch_apply ole32-HGLOBALStream/0002-ole32-Add-a-check-for-hglobal-pointer-to-GetHGlobalF.patch
+	patch_apply ole32-HGLOBALStream/0003-ole32-Add-a-wrapper-for-memory-block-managed-by-HGLO.patch
+	patch_apply ole32-HGLOBALStream/0004-ole32-Set-DebugInfo-Spare-0-for-handle_wrapper-lock.patch
+	patch_apply ole32-HGLOBALStream/0005-ole32-Allow-moving-a-being-reallocated-block-of-memo.patch
+	patch_apply ole32-HGLOBALStream/0006-ole32-Improve-thread-safety-of-HGLOBALStreamImpl_Rea.patch
+	patch_apply ole32-HGLOBALStream/0007-ole32-Improve-thread-safety-of-HGLOBALStreamImpl_Wri.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "ole32/tests: Add a bunch of tests for HGLOBAL based IStream::Clone.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "ole32: Add a check for hglobal pointer to GetHGlobalFromStream.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "ole32: Add a wrapper for memory block managed by HGLOBAL based IStream.", 1 },';
+		echo '+    { "Sebastian Lackner", "ole32: Set DebugInfo->Spare[0] for handle_wrapper lock.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "ole32: Allow moving a being reallocated block of memory managed by HGLOBAL based IStream.", 1 },';
+		echo '+    { "Sebastian Lackner", "ole32: Improve thread-safety of HGLOBALStreamImpl_Read.", 1 },';
+		echo '+    { "Sebastian Lackner", "ole32: Improve thread-safety of HGLOBALStreamImpl_Write.", 1 },';
 	) >> "$patchlist"
 fi
 

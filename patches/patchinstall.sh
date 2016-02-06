@@ -2657,6 +2657,7 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0031-shcore-Add-SetProcessDpiAwareness-stub.patch
 	patch_apply api-ms-win-Stub_DLLs/0032-shcore-Implement-stub-for-GetDpiForMonitor.patch
 	patch_apply api-ms-win-Stub_DLLs/0033-kernelbase-Add-stub-for-QuirkIsEnabled3.patch
+	patch_apply api-ms-win-Stub_DLLs/0034-shcore-Add-stub-for-GetProcessDpiAwareness.patch
 	(
 		echo '+    { "Michael Müller", "api-ms-win-core-com-l1-1-1: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
@@ -2691,6 +2692,7 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "shcore: Add SetProcessDpiAwareness stub.", 1 },';
 		echo '+    { "Sebastian Lackner", "shcore: Implement stub for GetDpiForMonitor.", 1 },';
 		echo '+    { "Michael Müller", "kernelbase: Add stub for QuirkIsEnabled3.", 1 },';
+		echo '+    { "Sebastian Lackner", "shcore: Add stub for GetProcessDpiAwareness.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -185,6 +185,7 @@ patch_enable_all ()
 	enable_msvcr120_strof="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvcrt_StdHandle_RefCount="$1"
+	enable_msvideo_MCIWNDM_SETTIMEFORMATA="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_APC_Start_Process="$1"
 	enable_ntdll_Activation_Context="$1"
@@ -695,6 +696,9 @@ patch_enable ()
 			;;
 		msvcrt-StdHandle_RefCount)
 			enable_msvcrt_StdHandle_RefCount="$2"
+			;;
+		msvideo-MCIWNDM_SETTIMEFORMATA)
+			enable_msvideo_MCIWNDM_SETTIMEFORMATA="$2"
 			;;
 		ntdll-APC_Performance)
 			enable_ntdll_APC_Performance="$2"
@@ -4331,6 +4335,18 @@ if test "$enable_msvcrt_StdHandle_RefCount" -eq 1; then
 		echo '+    { "Qian Hong", "msvcrt/tests: Add tests for stdout and stderr refcount.", 1 },';
 		echo '+    { "Qian Hong", "msvcrt: Implemenent refcount check for stdout and stderr.", 1 },';
 		echo '+    { "Sebastian Lackner", "msvcrt: Use constants instead of hardcoded values.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msvideo-MCIWNDM_SETTIMEFORMATA
+# |
+# | Modified files:
+# |   *	dlls/msvideo.dll16/msvideo16.c
+# |
+if test "$enable_msvideo_MCIWNDM_SETTIMEFORMATA" -eq 1; then
+	patch_apply msvideo-MCIWNDM_SETTIMEFORMATA/0001-msvideo.dll-Translate-16-bit-address-in-MCIWNDM_SETT.patch
+	(
+		echo '+    { "Michael Müller", "msvideo.dll16: Translate 16 bit address in MCIWNDM_SETTIMEFORMATA command.", 1 },';
 	) >> "$patchlist"
 fi
 

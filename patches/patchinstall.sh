@@ -249,6 +249,7 @@ patch_enable_all ()
 	enable_oleaut32_x86_64_Marshaller="$1"
 	enable_openal32_EFX_Extension="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
+	enable_quartz_AsyncReader="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_rasapi32_RasEnumDevicesA="$1"
 	enable_riched20_IText_Interface="$1"
@@ -891,6 +892,9 @@ patch_enable ()
 			;;
 		opengl32-Revert_Disable_Ext)
 			enable_opengl32_Revert_Disable_Ext="$2"
+			;;
+		quartz-AsyncReader)
+			enable_quartz_AsyncReader="$2"
 			;;
 		quartz-MediaSeeking_Positions)
 			enable_quartz_MediaSeeking_Positions="$2"
@@ -5397,6 +5401,20 @@ if test "$enable_opengl32_Revert_Disable_Ext" -eq 1; then
 	patch_apply opengl32-Revert_Disable_Ext/0001-Revert-opengl32-Return-a-NULL-pointer-for-functions-.patch
 	(
 		echo '+    { "Sebastian Lackner", "Revert \"opengl32: Return a NULL pointer for functions requiring unsupported or disabled extensions.\".", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset quartz-AsyncReader
+# |
+# | Modified files:
+# |   *	dlls/quartz/filesource.c, dlls/quartz/regsvr.c
+# |
+if test "$enable_quartz_AsyncReader" -eq 1; then
+	patch_apply quartz-AsyncReader/0001-quartz-AsyncReader-should-return-NULL-as-media-subty.patch
+	patch_apply quartz-AsyncReader/0002-quartz-Recognize-mpeg2-program-streams.patch
+	(
+		echo '+    { "Michael Müller", "quartz: AsyncReader should return NULL as media subtype for unknown formats instead of failing.", 1 },';
+		echo '+    { "Michael Müller", "quartz: Recognize mpeg2 program streams.", 1 },';
 	) >> "$patchlist"
 fi
 

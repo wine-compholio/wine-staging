@@ -91,6 +91,7 @@ patch_enable_all ()
 	enable_amstream_GetMultiMediaStream="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
 	enable_authz_Stub_Functions="$1"
+	enable_avifil32_AVIFile_Proxies="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_combase_RoApi="$1"
 	enable_combase_WindowsString="$1"
@@ -415,6 +416,9 @@ patch_enable ()
 			;;
 		authz-Stub_Functions)
 			enable_authz_Stub_Functions="$2"
+			;;
+		avifil32-AVIFile_Proxies)
+			enable_avifil32_AVIFile_Proxies="$2"
 			;;
 		browseui-Progress_Dialog)
 			enable_browseui_Progress_Dialog="$2"
@@ -2733,6 +2737,22 @@ if test "$enable_authz_Stub_Functions" -eq 1; then
 	patch_apply authz-Stub_Functions/0001-authz-Added-additional-stub-functions.patch
 	(
 		echo '+    { "Zhenbo Li", "authz: Added additional stub functions.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset avifil32-AVIFile_Proxies
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38564] Add support for AVIFile interface proxies
+# |
+# | Modified files:
+# |   *	dlls/avifil32/Makefile.in, dlls/avifil32/avifil32.idl, dlls/avifil32/avifile_ifaces.idl,
+# | 	dlls/avifil32/avifile_private.h, dlls/avifil32/factory.c
+# |
+if test "$enable_avifil32_AVIFile_Proxies" -eq 1; then
+	patch_apply avifil32-AVIFile_Proxies/0001-avifil32-Add-support-for-AVIFile-interface-proxies.-.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "avifil32: Add support for AVIFile interface proxies.", 2 },';
 	) >> "$patchlist"
 fi
 

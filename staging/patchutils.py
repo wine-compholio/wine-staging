@@ -302,6 +302,8 @@ def read_patch(filename, content=None):
             if r is not None: return subject, int(r.group(2))
         r = re.match("^(.*)\\(%s\\)$" % version, subject, re.IGNORECASE)
         if r is not None: return r.group(1).strip(), int(r.group(3))
+        r = re.match("^(.*)\\[%s\\]$" % version, subject, re.IGNORECASE)
+        if r is not None: return r.group(1).strip(), int(r.group(3))
         r = re.match("^(.*)[.,] +%s$" % version, subject, re.IGNORECASE)
         if r is not None: return r.group(1).strip(), int(r.group(3))
         r = re.match("^([^:]+) %s: (.*)$" % version, subject, re.IGNORECASE)

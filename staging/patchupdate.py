@@ -63,7 +63,7 @@ class config(object):
 
     bugtracker_url          = "https://bugs.winehq.org/xmlrpc.cgi"
     bugtracker_defaultcc    = ["michael@fds-team.de", "sebastian@fds-team.de",
-                               "erich.e.hoover@wine-staging.com"]
+                               "erich.e.hoover@wine-staging.com", "dmitry@baikal.ru"]
     bugtracker_user         = None
     bugtracker_pass         = None
 

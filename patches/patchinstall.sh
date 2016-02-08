@@ -374,6 +374,7 @@ patch_enable_all ()
 	enable_ws2_32_WSACleanup="$1"
 	enable_ws2_32_WriteWatches="$1"
 	enable_ws2_32_getaddrinfo="$1"
+	enable_ws2_32_getsockopt="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
 	enable_wusa_MSU_Package_Installer="$1"
 }
@@ -1269,6 +1270,9 @@ patch_enable ()
 			;;
 		ws2_32-getaddrinfo)
 			enable_ws2_32_getaddrinfo="$2"
+			;;
+		ws2_32-getsockopt)
+			enable_ws2_32_getsockopt="$2"
 			;;
 		wtsapi32-EnumerateProcesses)
 			enable_wtsapi32_EnumerateProcesses="$2"
@@ -7596,6 +7600,21 @@ if test "$enable_ws2_32_getaddrinfo" -eq 1; then
 	patch_apply ws2_32-getaddrinfo/0001-ws2_32-Ignore-socket-type-for-protocol-IPPROTO_IPV6-.patch
 	(
 		echo '+    { "Michael Müller", "ws2_32: Ignore socket type for protocol IPPROTO_IPV6 in getaddrinfo.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ws2_32-getsockopt
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#8606] Divide values returned by SO_RCVBUF and SO_SNDBUF getsockopt options by two
+# |
+# | Modified files:
+# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c
+# |
+if test "$enable_ws2_32_getsockopt" -eq 1; then
+	patch_apply ws2_32-getsockopt/0001-ws2_32-Divide-values-returned-by-SO_RCVBUF-and-SO_SN.patch
+	(
+		echo '+    { "Sebastian Lackner", "ws2_32: Divide values returned by SO_RCVBUF and SO_SNDBUF getsockopt options by two.", 1 },';
 	) >> "$patchlist"
 fi
 

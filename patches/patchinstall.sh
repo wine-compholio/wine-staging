@@ -92,6 +92,7 @@ patch_enable_all ()
 	enable_api_ms_win_Stub_DLLs="$1"
 	enable_authz_Stub_Functions="$1"
 	enable_avifil32_AVIFile_Proxies="$1"
+	enable_avifil32_IGetFrame_fnSetFormat="$1"
 	enable_avifile_dll16_AVIStreamGetFrame="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_combase_RoApi="$1"
@@ -423,6 +424,9 @@ patch_enable ()
 			;;
 		avifil32-AVIFile_Proxies)
 			enable_avifil32_AVIFile_Proxies="$2"
+			;;
+		avifil32-IGetFrame_fnSetFormat)
+			enable_avifil32_IGetFrame_fnSetFormat="$2"
 			;;
 		avifile.dll16-AVIStreamGetFrame)
 			enable_avifile_dll16_AVIStreamGetFrame="$2"
@@ -2769,6 +2773,18 @@ if test "$enable_avifil32_AVIFile_Proxies" -eq 1; then
 	patch_apply avifil32-AVIFile_Proxies/0001-avifil32-Add-support-for-AVIFile-interface-proxies.-.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "avifil32: Add support for AVIFile interface proxies.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset avifil32-IGetFrame_fnSetFormat
+# |
+# | Modified files:
+# |   *	dlls/avifil32/getframe.c
+# |
+if test "$enable_avifil32_IGetFrame_fnSetFormat" -eq 1; then
+	patch_apply avifil32-IGetFrame_fnSetFormat/0001-avifil32-Correctly-handle-compressed-frames-when-des.patch
+	(
+		echo '+    { "Michael Müller", "avifil32: Correctly handle compressed frames when desired format is specified.", 1 },';
 	) >> "$patchlist"
 fi
 

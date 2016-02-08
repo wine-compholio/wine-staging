@@ -2,7 +2,7 @@
 #
 # Wrapper to apply binary patches without git.
 #
-# Copyright (C) 2014-2015 Sebastian Lackner
+# Copyright (C) 2014-2016 Sebastian Lackner
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -237,7 +237,7 @@ awk_eof_header='
 BEGIN{
   ofs=1;
 }
-!/^(--- |\+\+\+ |old |new |copy |rename |similarity |index |GIT |literal |delta )/{
+!/^(--- |\+\+\+ |old |deleted |new |copy |rename |similarity |index |GIT |literal |delta )/{
   ofs=0; exit 0;
 }
 END{

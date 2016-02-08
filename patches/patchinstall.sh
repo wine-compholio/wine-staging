@@ -92,6 +92,7 @@ patch_enable_all ()
 	enable_api_ms_win_Stub_DLLs="$1"
 	enable_authz_Stub_Functions="$1"
 	enable_avifil32_AVIFile_Proxies="$1"
+	enable_avifile_dll16_AVIStreamGetFrame="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_combase_RoApi="$1"
 	enable_combase_WindowsString="$1"
@@ -422,6 +423,9 @@ patch_enable ()
 			;;
 		avifil32-AVIFile_Proxies)
 			enable_avifil32_AVIFile_Proxies="$2"
+			;;
+		avifile.dll16-AVIStreamGetFrame)
+			enable_avifile_dll16_AVIStreamGetFrame="$2"
 			;;
 		browseui-Progress_Dialog)
 			enable_browseui_Progress_Dialog="$2"
@@ -2765,6 +2769,18 @@ if test "$enable_avifil32_AVIFile_Proxies" -eq 1; then
 	patch_apply avifil32-AVIFile_Proxies/0001-avifil32-Add-support-for-AVIFile-interface-proxies.-.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "avifil32: Add support for AVIFile interface proxies.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset avifile.dll16-AVIStreamGetFrame
+# |
+# | Modified files:
+# |   *	dlls/avifile.dll16/Makefile.in, dlls/avifile.dll16/avifile.dll16.spec, dlls/avifile.dll16/main.c
+# |
+if test "$enable_avifile_dll16_AVIStreamGetFrame" -eq 1; then
+	patch_apply avifile.dll16-AVIStreamGetFrame/0001-avifile-Correctly-convert-result-of-AVIStreamGetFram.patch
+	(
+		echo '+    { "Michael Müller", "avifile.dll16: Correctly convert result of AVIStreamGetFrame to a segptr.", 1 },';
 	) >> "$patchlist"
 fi
 

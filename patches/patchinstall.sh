@@ -2779,8 +2779,10 @@ fi
 # |
 if test "$enable_avifile_dll16_AVIStreamGetFrame" -eq 1; then
 	patch_apply avifile.dll16-AVIStreamGetFrame/0001-avifile-Correctly-convert-result-of-AVIStreamGetFram.patch
+	patch_apply avifile.dll16-AVIStreamGetFrame/0002-avifile-Convert-between-AVISTREAMINFO-16-bit-and-AVI.patch
 	(
 		echo '+    { "Michael Müller", "avifile.dll16: Correctly convert result of AVIStreamGetFrame to a segptr.", 1 },';
+		echo '+    { "Michael Müller", "avifile.dll16: Convert between AVISTREAMINFO (16 bit) and AVISTREAMINFOA.", 1 },';
 	) >> "$patchlist"
 fi
 

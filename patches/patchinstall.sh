@@ -181,6 +181,7 @@ patch_enable_all ()
 	enable_makedep_PARENTSPEC="$1"
 	enable_mfplat_MFTRegister="$1"
 	enable_mmdevapi_AEV_Stubs="$1"
+	enable_mmsystem_dll16_Fix_Argument_Order="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mpr_WNetGetUniversalNameW="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -691,6 +692,9 @@ patch_enable ()
 			;;
 		mmdevapi-AEV_Stubs)
 			enable_mmdevapi_AEV_Stubs="$2"
+			;;
+		mmsystem.dll16-Fix_Argument_Order)
+			enable_mmsystem_dll16_Fix_Argument_Order="$2"
 			;;
 		mountmgr-DosDevices)
 			enable_mountmgr_DosDevices="$2"
@@ -4285,6 +4289,18 @@ if test "$enable_mmdevapi_AEV_Stubs" -eq 1; then
 		echo '+    { "Christian Costa", "mmdevapi: Improve AEV_GetVolumeRange stub.", 1 },';
 		echo '+    { "Christian Costa", "mmdevapi: Improve AEV_SetMasterVolumeLevel and AEV_GetMasterVolumeLevel stubs.", 1 },';
 		echo '+    { "Christian Costa", "mmdevapi: Improve AEV_SetMute and AEV_GetMute stubs.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset mmsystem.dll16-Fix_Argument_Order
+# |
+# | Modified files:
+# |   *	dlls/mmsystem.dll16/mmsystem.c
+# |
+if test "$enable_mmsystem_dll16_Fix_Argument_Order" -eq 1; then
+	patch_apply mmsystem.dll16-Fix_Argument_Order/0001-mmsystem.dll16-Fix-argument-order-in-GlobalAlloc16-c.patch
+	(
+		echo '+    { "Sebastian Lackner", "mmsystem.dll16: Fix argument order in GlobalAlloc16 call.", 1 },';
 	) >> "$patchlist"
 fi
 

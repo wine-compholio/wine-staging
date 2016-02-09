@@ -271,6 +271,10 @@ def load_patchsets():
                 categories[category] = set()
             categories[category].add(i)
 
+    # Filter autodepends on disabled patchsets
+    for i, patch in all_patches.iteritems():
+        patch.auto_depends = set([j for j in patch.auto_depends if not all_patches[j].disabled])
+
     # Add virtual targets for all the categories
     for category, indices in categories.iteritems():
         patch = PatchSet(category, directory)

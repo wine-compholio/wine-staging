@@ -1,4 +1,4 @@
-From f51b464c3100bfdea3de7e6dde646f97e09fccb6 Mon Sep 17 00:00:00 2001
+From c58d7ad7ff9aa243f52380343bce58a0ed069bfa Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Sun, 16 Mar 2014 14:13:42 +0100
 Subject: wined3d: Send getdc and releasedc through the command stream.
@@ -15,10 +15,10 @@ investigate atm.
  4 files changed, 121 insertions(+), 57 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 0aab83b..c135ece 100644
+index 1be16ad..8bf006d 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -90,6 +90,8 @@ enum wined3d_cs_op
+@@ -89,6 +89,8 @@ enum wined3d_cs_op
      WINED3D_CS_OP_CREATE_DUMMY_TEXTURES,
      WINED3D_CS_OP_CREATE_SWAPCHAIN_CONTEXT,
      WINED3D_CS_OP_DELETE_GL_CONTEXTS,
@@ -27,7 +27,7 @@ index 0aab83b..c135ece 100644
      WINED3D_CS_OP_STOP,
  };
  
-@@ -536,6 +538,18 @@ struct wined3d_cs_delete_gl_contexts
+@@ -526,6 +528,18 @@ struct wined3d_cs_delete_gl_contexts
      struct wined3d_swapchain *swapchain;
  };
  
@@ -46,7 +46,7 @@ index 0aab83b..c135ece 100644
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
  {
      LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
-@@ -2661,6 +2675,48 @@ void wined3d_cs_emit_delete_opengl_contexts(struct wined3d_cs *cs, struct wined3
+@@ -2594,6 +2608,48 @@ void wined3d_cs_emit_delete_opengl_contexts(struct wined3d_cs *cs, struct wined3
      cs->ops->finish(cs);
  }
  
@@ -95,7 +95,7 @@ index 0aab83b..c135ece 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2729,6 +2785,8 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2661,6 +2717,8 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_CREATE_DUMMY_TEXTURES      */ wined3d_cs_exec_create_dummy_textures,
      /* WINED3D_CS_OP_CREATE_SWAPCHAIN_CONTEXT   */ wined3d_cs_exec_create_swapchain_context,
      /* WINED3D_CS_OP_DELETE_GL_CONTEXTS         */ wined3d_cs_exec_delete_gl_contexts,
@@ -105,10 +105,10 @@ index 0aab83b..c135ece 100644
  
  static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index 822f36f..d70e310 100644
+index ef85801..6b0014c 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
-@@ -2456,6 +2456,62 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
+@@ -2356,6 +2356,62 @@ HRESULT wined3d_surface_map(struct wined3d_surface *surface, struct wined3d_map_
      return wined3d_resource_map(&surface->resource, map_desc, box, flags);
  }
  
@@ -172,10 +172,10 @@ index 822f36f..d70e310 100644
          struct wined3d_context *old_ctx, DWORD dst_location)
  {
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index d17a6e1..a9dbf42 100644
+index ba58453..4cf1c5d 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -1561,10 +1561,8 @@ HRESULT CDECL wined3d_texture_create(struct wined3d_device *device, const struct
+@@ -1589,10 +1589,8 @@ HRESULT CDECL wined3d_texture_create(struct wined3d_device *device, const struct
  HRESULT CDECL wined3d_texture_get_dc(struct wined3d_texture *texture, unsigned int sub_resource_idx, HDC *dc)
  {
      struct wined3d_device *device = texture->resource.device;
@@ -186,7 +186,7 @@ index d17a6e1..a9dbf42 100644
  
      TRACE("texture %p, sub_resource_idx %u, dc %p.\n", texture, sub_resource_idx, dc);
  
-@@ -1585,14 +1583,6 @@ HRESULT CDECL wined3d_texture_get_dc(struct wined3d_texture *texture, unsigned i
+@@ -1613,14 +1611,6 @@ HRESULT CDECL wined3d_texture_get_dc(struct wined3d_texture *texture, unsigned i
          return WINED3DERR_INVALIDCALL;
      }
  
@@ -201,7 +201,7 @@ index d17a6e1..a9dbf42 100644
      /* Give more detailed info for ddraw. */
      if (surface->flags & SFLAG_DCINUSE)
          return WINEDDERR_DCALREADYCREATED;
-@@ -1601,43 +1591,18 @@ HRESULT CDECL wined3d_texture_get_dc(struct wined3d_texture *texture, unsigned i
+@@ -1629,43 +1619,18 @@ HRESULT CDECL wined3d_texture_get_dc(struct wined3d_texture *texture, unsigned i
      if (surface->resource.map_count)
          return WINED3DERR_INVALIDCALL;
  
@@ -247,7 +247,7 @@ index d17a6e1..a9dbf42 100644
      struct wined3d_resource *sub_resource;
      struct wined3d_surface *surface;
  
-@@ -1667,26 +1632,7 @@ HRESULT CDECL wined3d_texture_release_dc(struct wined3d_texture *texture, unsign
+@@ -1695,26 +1660,7 @@ HRESULT CDECL wined3d_texture_release_dc(struct wined3d_texture *texture, unsign
      surface->resource.map_count--;
      surface->flags &= ~SFLAG_DCINUSE;
  
@@ -276,19 +276,19 @@ index d17a6e1..a9dbf42 100644
      return WINED3D_OK;
  }
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 5bb6a21..0e0e3fe 100644
+index 2481ad6..fa72a01 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2623,6 +2623,8 @@ void surface_blt_ugly(struct wined3d_surface *dst_surface, const RECT *dst_rect_
+@@ -2665,6 +2665,8 @@ void surface_blt_ugly(struct wined3d_surface *dst_surface, const RECT *dst_rect_
+         struct wined3d_surface *src_surface, const RECT *src_rect_in, DWORD flags,
          const WINEDDBLTFX *fx, enum wined3d_texture_filter_type filter) DECLSPEC_HIDDEN;
- BOOL surface_check_block_align_rect(struct wined3d_surface *surface, const RECT *rect) DECLSPEC_HIDDEN;
  void wined3d_surface_cleanup_cs(struct wined3d_surface *surface) DECLSPEC_HIDDEN;
 +void wined3d_surface_getdc_cs(struct wined3d_surface *surface) DECLSPEC_HIDDEN;
 +void wined3d_surface_releasedc_cs(struct wined3d_surface *surface) DECLSPEC_HIDDEN;
  
  void draw_textured_quad(const struct wined3d_surface *src_surface, struct wined3d_context *context,
          const RECT *src_rect, const RECT *dst_rect, enum wined3d_texture_filter_type filter) DECLSPEC_HIDDEN;
-@@ -2895,6 +2897,8 @@ HRESULT wined3d_cs_emit_create_swapchain_context(struct wined3d_cs *cs,
+@@ -2935,6 +2937,8 @@ HRESULT wined3d_cs_emit_create_swapchain_context(struct wined3d_cs *cs,
          struct wined3d_swapchain *swapchain) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_delete_opengl_contexts(struct wined3d_cs *cs,
          struct wined3d_swapchain *swapchain) DECLSPEC_HIDDEN;

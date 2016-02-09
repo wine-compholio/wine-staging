@@ -1,4 +1,4 @@
-From 0fd12af6067cbe8aa8800098a602d808978d14ac Mon Sep 17 00:00:00 2001
+From a03c917180369e66fc6dc41948d3786753d7c33f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Sun, 6 Oct 2013 16:12:24 +0200
 Subject: wined3d: Clean up surfaces through the cs.
@@ -10,10 +10,10 @@ Subject: wined3d: Clean up surfaces through the cs.
  3 files changed, 46 insertions(+), 21 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 18b556d..91b76f5 100644
+index 18ff64a..c723b54 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -86,6 +86,7 @@ enum wined3d_cs_op
+@@ -84,6 +84,7 @@ enum wined3d_cs_op
      WINED3D_CS_OP_RESOURCE_CLEANUP,
      WINED3D_CS_OP_BUFFER_CLEANUP,
      WINED3D_CS_OP_VOLUME_CLEANUP,
@@ -21,7 +21,7 @@ index 18b556d..91b76f5 100644
      WINED3D_CS_OP_STOP,
  };
  
-@@ -508,6 +509,12 @@ struct wined3d_cs_volume_cleanup
+@@ -491,6 +492,12 @@ struct wined3d_cs_volume_cleanup
      struct wined3d_volume *volume;
  };
  
@@ -34,7 +34,7 @@ index 18b556d..91b76f5 100644
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
  {
      LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
-@@ -2533,6 +2540,26 @@ void wined3d_cs_emit_volume_cleanup(struct wined3d_cs *cs, struct wined3d_volume
+@@ -2436,6 +2443,26 @@ void wined3d_cs_emit_volume_cleanup(struct wined3d_cs *cs, struct wined3d_volume
      cs->ops->submit(cs, sizeof(*op));
  }
  
@@ -61,7 +61,7 @@ index 18b556d..91b76f5 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2597,6 +2624,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2498,6 +2525,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_RESOURCE_CLEANUP           */ wined3d_cs_exec_resource_cleanup,
      /* WINED3D_CS_OP_BUFFER_CLEANUP             */ wined3d_cs_exec_buffer_cleanup,
      /* WINED3D_CS_OP_VOLUME_CLEANUP             */ wined3d_cs_exec_volume_cleanup,
@@ -70,7 +70,7 @@ index 18b556d..91b76f5 100644
  
  static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index c607072..e0164f1 100644
+index ddbaef8..24a39bb 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
 @@ -36,20 +36,10 @@ WINE_DECLARE_DEBUG_CHANNEL(d3d);
@@ -80,7 +80,7 @@ index c607072..e0164f1 100644
 -static void surface_cleanup(struct wined3d_surface *surface)
 -{
 -    struct wined3d_surface *overlay, *cur;
--
+ 
 -    TRACE("surface %p.\n", surface);
 -
 -    if (wined3d_settings.cs_multithreaded)
@@ -88,7 +88,7 @@ index c607072..e0164f1 100644
 -        FIXME("Waiting for cs.\n");
 -        surface->resource.device->cs->ops->finish(surface->resource.device->cs);
 -    }
- 
+-
 -    if (surface->resource.buffer || surface->rb_multisample
 -            || surface->rb_resolved || !list_empty(&surface->renderbuffers))
 +void wined3d_surface_cleanup_cs(struct wined3d_surface *surface)
@@ -135,7 +135,7 @@ index c607072..e0164f1 100644
  }
  
  void surface_get_drawable_size(const struct wined3d_surface *surface, const struct wined3d_context *context,
-@@ -5360,8 +5357,6 @@ static HRESULT surface_init(struct wined3d_surface *surface, struct wined3d_text
+@@ -5108,8 +5105,6 @@ static HRESULT surface_init(struct wined3d_surface *surface, struct wined3d_text
      {
          ERR("Private setup failed, hr %#x.\n", hr);
          surface_cleanup(surface);
@@ -144,7 +144,7 @@ index c607072..e0164f1 100644
          return hr;
      }
  
-@@ -5404,7 +5399,7 @@ HRESULT wined3d_surface_create(struct wined3d_texture *container, const struct w
+@@ -5152,7 +5147,7 @@ HRESULT wined3d_surface_create(struct wined3d_texture *container, const struct w
      if (FAILED(hr = surface_init(object, container, desc, target, level, layer, flags)))
      {
          WARN("Failed to initialize surface, returning %#x.\n", hr);
@@ -154,18 +154,18 @@ index c607072..e0164f1 100644
      }
  
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 96102af..cbc3fa9 100644
+index 0203bfe..522d393 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2537,6 +2537,7 @@ void surface_blt_ugly(struct wined3d_surface *dst_surface, const RECT *dst_rect_
+@@ -2661,6 +2661,7 @@ void wined3d_surface_upload_data(struct wined3d_surface *surface, const struct w
+ void surface_blt_ugly(struct wined3d_surface *dst_surface, const RECT *dst_rect_in,
          struct wined3d_surface *src_surface, const RECT *src_rect_in, DWORD flags,
          const WINEDDBLTFX *fx, enum wined3d_texture_filter_type filter) DECLSPEC_HIDDEN;
- BOOL surface_check_block_align_rect(struct wined3d_surface *surface, const RECT *rect) DECLSPEC_HIDDEN;
 +void wined3d_surface_cleanup_cs(struct wined3d_surface *surface) DECLSPEC_HIDDEN;
  
  void draw_textured_quad(const struct wined3d_surface *src_surface, struct wined3d_context *context,
          const RECT *src_rect, const RECT *dst_rect, enum wined3d_texture_filter_type filter) DECLSPEC_HIDDEN;
-@@ -2800,6 +2801,7 @@ void wined3d_cs_emit_resource_cleanup(struct wined3d_cs *cs,
+@@ -2919,6 +2920,7 @@ void wined3d_cs_emit_resource_cleanup(struct wined3d_cs *cs,
          struct wined3d_resource *resource) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_buffer_cleanup(struct wined3d_cs *cs, struct wined3d_buffer *buffer) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_volume_cleanup(struct wined3d_cs *cs, struct wined3d_volume *volume) DECLSPEC_HIDDEN;
@@ -174,5 +174,5 @@ index 96102af..cbc3fa9 100644
  /* Direct3D terminology with little modifications. We do not have an issued state
   * because only the driver knows about it, but we have a created state because d3d
 -- 
-2.6.0
+2.7.0
 

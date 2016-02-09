@@ -128,7 +128,6 @@ patch_enable_all ()
 	enable_ddraw_EnumSurfaces="$1"
 	enable_ddraw_IDirect3DTexture2_Load="$1"
 	enable_ddraw_Rendering_Targets="$1"
-	enable_ddraw_Revert_Surface_Init="$1"
 	enable_ddraw_Write_Vtable="$1"
 	enable_ddraw_ZBufferBitDepths="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
@@ -534,9 +533,6 @@ patch_enable ()
 			;;
 		ddraw-Rendering_Targets)
 			enable_ddraw_Rendering_Targets="$2"
-			;;
-		ddraw-Revert_Surface_Init)
-			enable_ddraw_Revert_Surface_Init="$2"
 			;;
 		ddraw-Write_Vtable)
 			enable_ddraw_Write_Vtable="$2"
@@ -3343,23 +3339,6 @@ if test "$enable_ddraw_Rendering_Targets" -eq 1; then
 	patch_apply ddraw-Rendering_Targets/0001-ddraw-Create-rendering-targets-in-video-memory-if-po.patch
 	(
 		echo '+    { "Michael Müller", "ddraw: Create rendering targets in video memory if possible.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ddraw-Revert_Surface_Init
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40094] Revert patches to move mip-level dimensions fixup (causes regressions in multiple games)
-# |
-# | Modified files:
-# |   *	dlls/ddraw/surface.c, dlls/wined3d/surface.c, dlls/wined3d/wined3d.spec, include/wine/wined3d.h
-# |
-if test "$enable_ddraw_Revert_Surface_Init" -eq 1; then
-	patch_apply ddraw-Revert_Surface_Init/0001-Revert-ddraw-Use-wined3d_texture_get_sub_resource-in.patch
-	patch_apply ddraw-Revert_Surface_Init/0002-Revert-ddraw-Move-the-mip-level-dimensions-fix-up-fr.patch
-	(
-		echo '+    { "Sebastian Lackner", "Revert \"ddraw: Use wined3d_texture_get_sub_resource() in ddraw_surface7_Flip().\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"ddraw: Move the mip-level dimensions fix-up from ddraw_surface_init() to ddraw_surface_create().\".", 1 },';
 	) >> "$patchlist"
 fi
 

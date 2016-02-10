@@ -532,121 +532,127 @@ def generate_ifdefined(all_patches, skip_checks=False):
             assert p.modified_file in patch.modified_files
             patch.patches.append(p)
 
-def generate_script(all_patches, skip_checks=False):
+def generate_apply_order(all_patches, skip_checks=False):
     """Resolve dependencies, and afterwards check if everything applies properly."""
     depends     = sorted([i for i, patch in all_patches.iteritems() if not patch.disabled])
     resolved    = resolve_dependencies(all_patches, depends=depends)
     max_patches = max(resolved) + 1
 
-    if not skip_checks:
+    if skip_checks:
+        return resolved
 
-        # Generate timestamps based on dependencies, still required for binary patches
-        # Find out which files are modified by multiple patches
-        modified_files = {}
-        for i, patch in [(i, all_patches[i]) for i in resolved]:
-            patch.verify_time = [0]*max_patches
-            patch.verify_time[i] += 1
-            for j in patch.depends:
-                patch.verify_time = causal_time_combine(patch.verify_time, all_patches[j].verify_time)
+    # Generate timestamps based on dependencies, still required for binary patches
+    # Find out which files are modified by multiple patches
+    modified_files = {}
+    for i, patch in [(i, all_patches[i]) for i in resolved]:
+        patch.verify_time = [0]*max_patches
+        patch.verify_time[i] += 1
+        for j in patch.depends:
+            patch.verify_time = causal_time_combine(patch.verify_time, all_patches[j].verify_time)
 
-            for f in patch.modified_files:
-                if f not in modified_files:
-                    modified_files[f] = []
-                modified_files[f].append(i)
+        for f in patch.modified_files:
+            if f not in modified_files:
+                modified_files[f] = []
+            modified_files[f].append(i)
 
-        # Check dependencies
-        dependency_cache = _load_dict(config.path_cache)
-        pool = multiprocessing.pool.ThreadPool(processes=4)
-        try:
-            for filename, indices in modified_files.iteritems():
+    # Check dependencies
+    dependency_cache = _load_dict(config.path_cache)
+    pool = multiprocessing.pool.ThreadPool(processes=4)
+    try:
+        for filename, indices in modified_files.iteritems():
 
-                # If one of patches is a binary patch, then we cannot / won't verify it - require dependencies in this case
-                if contains_binary_patch(all_patches, indices, filename):
-                    if not causal_time_relation_any(all_patches, indices):
-                        raise PatchUpdaterError("Because of binary patch modifying file %s the following patches need explicit dependencies: %s" %
-                                                (filename, ", ".join([all_patches[i].name for i in indices])))
+            # If one of patches is a binary patch, then we cannot / won't verify it - require dependencies in this case
+            if contains_binary_patch(all_patches, indices, filename):
+                if not causal_time_relation_any(all_patches, indices):
+                    raise PatchUpdaterError("Because of binary patch modifying file %s the following patches need explicit dependencies: %s" %
+                                            (filename, ", ".join([all_patches[i].name for i in indices])))
+                continue
+
+            original_content = get_wine_file(filename)
+            original_hash    = _sha256(original_content)
+            selected_patches = select_patches(all_patches, indices, filename)
+
+            # Generate a unique id based on the original content, the selected patches
+            # and the dependency information. Since this information only has to be compared
+            # we can throw it into a single hash.
+            m = hashlib.sha256()
+            m.update(original_hash)
+            for i in indices:
+                m.update("P%s" % selected_patches[i][0])
+                for j in indices:
+                    if causal_time_smaller(all_patches[j].verify_time, all_patches[i].verify_time):
+                        m.update("D%s" % selected_patches[j][0])
+            unique_hash = m.digest()
+
+            # Skip checks if it matches the information from the cache
+            # For backwards compatibility, convert string entries to list
+            if dependency_cache.has_key(filename):
+                if not isinstance(dependency_cache[filename], list):
+                    dependency_cache[filename] = [dependency_cache[filename]]
+                if unique_hash in dependency_cache[filename]:
+                    dependency_cache[filename].append(unique_hash)
+                    dependency_cache[filename].remove(unique_hash)
                     continue
 
-                original_content = get_wine_file(filename)
-                original_hash    = _sha256(original_content)
-                selected_patches = select_patches(all_patches, indices, filename)
+            # Show a progress bar while applying the patches - this task might take some time
+            chunk_size = 20
+            with progressbar.ProgressBar(desc=filename, total=2 ** len(indices) / chunk_size) as progress:
 
-                # Generate a unique id based on the original content, the selected patches
-                # and the dependency information. Since this information only has to be compared
-                # we can throw it into a single hash.
-                m = hashlib.sha256()
-                m.update(original_hash)
-                for i in indices:
-                    m.update("P%s" % selected_patches[i][0])
-                    for j in indices:
-                        if causal_time_smaller(all_patches[j].verify_time, all_patches[i].verify_time):
-                            m.update("D%s" % selected_patches[j][0])
-                unique_hash = m.digest()
+                def test_apply(current):
+                    set_apply = [(i, all_patches[i]) for i in current]
+                    set_skip  = [(i, all_patches[i]) for i in indices if i not in current]
 
-                # Skip checks if it matches the information from the cache
-                # For backwards compatibility, convert string entries to list
-                if dependency_cache.has_key(filename):
-                    if not isinstance(dependency_cache[filename], list):
-                        dependency_cache[filename] = [dependency_cache[filename]]
-                    if unique_hash in dependency_cache[filename]:
-                        dependency_cache[filename].append(unique_hash)
-                        dependency_cache[filename].remove(unique_hash)
-                        continue
+                    # Check if there is any patch2 which depends directly or indirectly on patch1.
+                    # If this is the case we found an impossible situation, we can be skipped in this test.
+                    for i, patch1 in set_apply:
+                        for j, patch2 in set_skip:
+                            if causal_time_smaller(patch2.verify_time, patch1.verify_time):
+                                return True # we can skip this test
 
-                # Show a progress bar while applying the patches - this task might take some time
-                chunk_size = 20
-                with progressbar.ProgressBar(desc=filename, total=2 ** len(indices) / chunk_size) as progress:
+                    try:
+                        original = original_content
+                        for i, _ in set_apply:
+                            original = patchutils.apply_patch(original, selected_patches[i][1], fuzz=0)
+                    except patchutils.PatchApplyError:
+                        return False
 
-                    def test_apply(current):
-                        set_apply = [(i, all_patches[i]) for i in current]
-                        set_skip  = [(i, all_patches[i]) for i in indices if i not in current]
+                    return True # everything is fine
 
-                        # Check if there is any patch2 which depends directly or indirectly on patch1.
-                        # If this is the case we found an impossible situation, we can be skipped in this test.
-                        for i, patch1 in set_apply:
-                            for j, patch2 in set_skip:
-                                if causal_time_smaller(patch2.verify_time, patch1.verify_time):
-                                    return True # we can skip this test
+                def test_apply_seq(current_list):
+                    for current in current_list:
+                        if not test_apply(current):
+                            return current
+                    return None
 
-                        try:
-                            original = original_content
-                            for i, _ in set_apply:
-                                original = patchutils.apply_patch(original, selected_patches[i][1], fuzz=0)
-                        except patchutils.PatchApplyError:
-                            return False
+                iterables = []
+                for i in xrange(0, len(indices) + 1):
+                    iterables.append(itertools.combinations(indices, i))
+                it = _split_seq(itertools.chain(*iterables), chunk_size)
+                for k, failed in enumerate(pool.imap_unordered(test_apply_seq, it)):
+                    if failed is not None:
+                        progress.finish("<failed to apply>")
+                        raise PatchUpdaterError("Changes to file %s don't apply: %s" %
+                                                (filename, ", ".join([all_patches[i].name for i in failed])))
+                    progress.update(k)
 
-                        return True # everything is fine
+            # Update the dependency cache, store max 10 entries per file
+            if not dependency_cache.has_key(filename):
+                dependency_cache[filename] = []
+            dependency_cache[filename].append(unique_hash)
+            dependency_cache[filename] = dependency_cache[filename][-10:]
 
-                    def test_apply_seq(current_list):
-                        for current in current_list:
-                            if not test_apply(current):
-                                return current
-                        return None
+        # Delete outdated cache information
+        for filename in dependency_cache.keys():
+            if not modified_files.has_key(filename):
+                del dependency_cache[filename]
+    finally:
+        pool.close()
+        _save_dict(config.path_cache, dependency_cache)
 
-                    iterables = []
-                    for i in xrange(0, len(indices) + 1):
-                        iterables.append(itertools.combinations(indices, i))
-                    it = _split_seq(itertools.chain(*iterables), chunk_size)
-                    for k, failed in enumerate(pool.imap_unordered(test_apply_seq, it)):
-                        if failed is not None:
-                            progress.finish("<failed to apply>")
-                            raise PatchUpdaterError("Changes to file %s don't apply: %s" %
-                                                    (filename, ", ".join([all_patches[i].name for i in failed])))
-                        progress.update(k)
+    return resolved
 
-                # Update the dependency cache, store max 10 entries per file
-                if not dependency_cache.has_key(filename):
-                    dependency_cache[filename] = []
-                dependency_cache[filename].append(unique_hash)
-                dependency_cache[filename] = dependency_cache[filename][-10:]
-
-            # Delete outdated cache information
-            for filename in dependency_cache.keys():
-                if not modified_files.has_key(filename):
-                    del dependency_cache[filename]
-        finally:
-            pool.close()
-            _save_dict(config.path_cache, dependency_cache)
+def generate_script(all_patches, resolved):
+    """Generate script to apply patches."""
 
     # Generate code for helper functions
     lines = []
@@ -798,7 +804,8 @@ if __name__ == "__main__":
 
         # Update autogenerated files
         generate_ifdefined(all_patches, skip_checks=args.skip_checks)
-        generate_script(all_patches, skip_checks=args.skip_checks)
+        resolved = generate_apply_order(all_patches, skip_checks=args.skip_checks)
+        generate_script(all_patches, resolved)
 
     except PatchUpdaterError as e:
         print ""

@@ -1,0 +1,109 @@
+From c40334a562447ca292f9699a1d3b2b725a78c844 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 10 Feb 2016 02:05:11 +0100
+Subject: Revert "wined3d: Store custom pitches in the texture instead of the
+ surface."
+
+This reverts commit 195d16c8267fcd5085048b3513571e2fee0eb548.
+---
+ dlls/wined3d/surface.c         | 14 ++++++++------
+ dlls/wined3d/texture.c         |  3 +--
+ dlls/wined3d/wined3d_private.h |  4 ++--
+ 3 files changed, 11 insertions(+), 10 deletions(-)
+
+diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
+index 665af4a..65e07c5 100644
+--- a/dlls/wined3d/surface.c
++++ b/dlls/wined3d/surface.c
+@@ -1897,8 +1897,8 @@ DWORD CDECL wined3d_surface_get_pitch(const struct wined3d_surface *surface)
+ 
+     TRACE("surface %p.\n", surface);
+ 
+-    if (surface->container->row_pitch)
+-        return surface->container->row_pitch;
++    if (surface->pitch)
++        return surface->pitch;
+ 
+     alignment = surface->resource.device->surface_alignment;
+     pitch = wined3d_format_calculate_pitch(surface->resource.format, surface->resource.width);
+@@ -1909,7 +1909,8 @@ DWORD CDECL wined3d_surface_get_pitch(const struct wined3d_surface *surface)
+     return pitch;
+ }
+ 
+-HRESULT wined3d_surface_update_desc(struct wined3d_surface *surface, const struct wined3d_gl_info *gl_info)
++HRESULT wined3d_surface_update_desc(struct wined3d_surface *surface,
++        const struct wined3d_gl_info *gl_info, unsigned int pitch)
+ {
+     struct wined3d_resource *texture_resource = &surface->container->resource;
+     unsigned int width, height;
+@@ -1958,19 +1959,20 @@ HRESULT wined3d_surface_update_desc(struct wined3d_surface *surface, const struc
+         surface->resource.map_binding = WINED3D_LOCATION_USER_MEMORY;
+         valid_location = WINED3D_LOCATION_USER_MEMORY;
+     }
++    surface->pitch = pitch;
+     surface->resource.format = texture_resource->format;
+     surface->resource.multisample_type = texture_resource->multisample_type;
+     surface->resource.multisample_quality = texture_resource->multisample_quality;
+-    if (surface->container->row_pitch)
++    if (surface->pitch)
+     {
+-        surface->resource.size = height * surface->container->row_pitch;
++        surface->resource.size = height * surface->pitch;
+     }
+     else
+     {
+         /* User memory surfaces don't have the regular surface alignment. */
+         surface->resource.size = wined3d_format_calculate_size(texture_resource->format,
+                 1, width, height, 1);
+-        surface->container->row_pitch = wined3d_format_calculate_pitch(texture_resource->format, width);
++        surface->pitch = wined3d_format_calculate_pitch(texture_resource->format, width);
+     }
+ 
+     /* The format might be changed to a format that needs conversion.
+diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
+index 0a084de..4ded4ca 100644
+--- a/dlls/wined3d/texture.c
++++ b/dlls/wined3d/texture.c
+@@ -645,9 +645,8 @@ HRESULT CDECL wined3d_texture_update_desc(struct wined3d_texture *texture, UINT
+     texture->resource.height = height;
+ 
+     texture->user_memory = mem;
+-    texture->row_pitch = pitch;
+ 
+-    return wined3d_surface_update_desc(surface, gl_info);
++    return wined3d_surface_update_desc(surface, gl_info, pitch);
+ }
+ 
+ void wined3d_texture_prepare_texture(struct wined3d_texture *texture, struct wined3d_context *context, BOOL srgb)
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 3fadff6..2ff3b99 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2365,7 +2365,6 @@ struct wined3d_texture
+     GLenum target;
+ 
+     void *user_memory;
+-    unsigned int row_pitch;
+ 
+     /* May only be accessed from the command stream worker thread. */
+     struct wined3d_texture_async
+@@ -2493,6 +2492,7 @@ struct wined3d_surface
+ 
+     DWORD flags;
+ 
++    UINT pitch;
+     UINT pow2Width;
+     UINT pow2Height;
+ 
+@@ -2570,7 +2570,7 @@ void surface_set_texture_target(struct wined3d_surface *surface, GLenum target,
+ void surface_translate_drawable_coords(const struct wined3d_surface *surface, HWND window, RECT *rect) DECLSPEC_HIDDEN;
+ HRESULT wined3d_surface_unmap(struct wined3d_surface *surface) DECLSPEC_HIDDEN;
+ HRESULT wined3d_surface_update_desc(struct wined3d_surface *surface,
+-        const struct wined3d_gl_info *gl_info) DECLSPEC_HIDDEN;
++        const struct wined3d_gl_info *gl_info, unsigned int pitch) DECLSPEC_HIDDEN;
+ HRESULT surface_upload_from_surface(struct wined3d_surface *dst_surface, const POINT *dst_point,
+         struct wined3d_surface *src_surface, const RECT *src_rect) DECLSPEC_HIDDEN;
+ void surface_validate_location(struct wined3d_surface *surface, DWORD location) DECLSPEC_HIDDEN;
+-- 
+2.7.0
+

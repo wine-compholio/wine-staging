@@ -278,6 +278,7 @@ patch_enable_all ()
 	enable_server_Timestamp_Compat="$1"
 	enable_server_Win8_Pseudo_Handles="$1"
 	enable_services_SERVICE_FILE_SYSTEM_DRIVER="$1"
+	enable_setupapi_Display_Device="$1"
 	enable_setupapi_HSPFILEQ_Check_Type="$1"
 	enable_setupapi_SetupDiSetDeviceInstallParamsW="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
@@ -979,6 +980,9 @@ patch_enable ()
 			;;
 		services-SERVICE_FILE_SYSTEM_DRIVER)
 			enable_services_SERVICE_FILE_SYSTEM_DRIVER="$2"
+			;;
+		setupapi-Display_Device)
+			enable_setupapi_Display_Device="$2"
 			;;
 		setupapi-HSPFILEQ_Check_Type)
 			enable_setupapi_HSPFILEQ_Check_Type="$2"
@@ -5793,6 +5797,23 @@ if test "$enable_services_SERVICE_FILE_SYSTEM_DRIVER" -eq 1; then
 	patch_apply services-SERVICE_FILE_SYSTEM_DRIVER/0001-services-Start-SERVICE_FILE_SYSTEM_DRIVER-services-w.patch
 	(
 		echo '+    { "Sebastian Lackner", "services: Start SERVICE_FILE_SYSTEM_DRIVER services with winedevice.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset setupapi-Display_Device
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35345] Fix enumeration of display driver properties using setupapi
+# |
+# | Modified files:
+# |   *	dlls/setupapi/devinst.c, dlls/setupapi/tests/devinst.c, loader/wine.inf.in
+# |
+if test "$enable_setupapi_Display_Device" -eq 1; then
+	patch_apply setupapi-Display_Device/0001-setupapi-Create-registry-keys-for-display-devices-an.patch
+	patch_apply setupapi-Display_Device/0002-setupapi-Handle-the-case-that-a-full-driver-path-is-.patch
+	(
+		echo '+    { "Michael Müller", "setupapi: Create registry keys for display devices and display drivers.", 1 },';
+		echo '+    { "Michael Müller", "setupapi: Handle the case that a full driver path is passed to SetupDiGetClassDevs.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,90 @@
+From cb319b87c1753f771771ced81be00fa0c5de06bd Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 11 Feb 2016 03:20:33 +0100
+Subject: setupapi: Handle the case that a full driver path is passed to
+ SetupDiGetClassDevs.
+
+---
+ dlls/setupapi/devinst.c       | 26 ++++++++++++++++++++++++--
+ dlls/setupapi/tests/devinst.c | 23 +++++++++++++++++++++++
+ 2 files changed, 47 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/setupapi/devinst.c b/dlls/setupapi/devinst.c
+index 744bcd6..3708de7 100644
+--- a/dlls/setupapi/devinst.c
++++ b/dlls/setupapi/devinst.c
+@@ -2366,8 +2366,30 @@ static void SETUPDI_EnumerateDevices(HDEVINFO DeviceInfoSet, const GUID *class,
+                     &enumStrKey);
+             if (!l)
+             {
+-                SETUPDI_EnumerateMatchingDevices(DeviceInfoSet, enumstr,
+-                        enumStrKey, class, flags);
++                WCHAR *bus, *device;
++                HKEY devKey;
++
++                if (!strchrW(enumstr, '\\'))
++                {
++                    SETUPDI_EnumerateMatchingDevices(DeviceInfoSet, enumstr,
++                                                     enumStrKey, class, flags);
++                }
++                else if ((bus = strdupW(enumstr)))
++                {
++                    device = strchrW(bus, '\\');
++                    *device++ = 0;
++
++                    l = RegOpenKeyExW(enumKey, enumstr, 0, KEY_READ, &devKey);
++                    if (!l)
++                    {
++                        SETUPDI_EnumerateMatchingDeviceInstances(DeviceInfoSet, bus, device,
++                                                                 devKey, class, flags);
++                        RegCloseKey(devKey);
++                    }
++
++                    HeapFree(GetProcessHeap(), 0, bus);
++                }
++
+                 RegCloseKey(enumStrKey);
+             }
+         }
+diff --git a/dlls/setupapi/tests/devinst.c b/dlls/setupapi/tests/devinst.c
+index 319bb31..a0aa531 100644
+--- a/dlls/setupapi/tests/devinst.c
++++ b/dlls/setupapi/tests/devinst.c
+@@ -1542,6 +1542,28 @@ static void testSetupDiGetINFClassA(void)
+     }
+ }
+ 
++static void testSetupDiGetClassDevsA(void)
++{
++    static GUID displayguid = {0x4d36e968, 0xe325, 0x11ce, {0xbf,0xc1,0x08,0x00,0x2b,0xe1,0x03,0x18}};
++    SP_DEVINFO_DATA devinfo;
++    DISPLAY_DEVICEA disp;
++    HDEVINFO set;
++    BOOL ret;
++
++    disp.cb = sizeof(disp);
++    ok(EnumDisplayDevicesA(NULL, 0, &disp, 0), "EnumDisplayDevices failed: %08x\n", GetLastError());
++
++    SetLastError(0xdeadbeef);
++    set = pSetupDiGetClassDevsA(&displayguid, disp.DeviceID, 0, 0);
++    ok(set != INVALID_HANDLE_VALUE, "SetupDiGetClassDevsA failed: %08x\n", GetLastError());
++
++    devinfo.cbSize = sizeof(devinfo);
++    ret = SetupDiEnumDeviceInfo(set, 0, &devinfo);
++    ok(ret, "SetupDiEnumDeviceInfo failed: %08x\n", GetLastError());
++
++    pSetupDiDestroyDeviceInfoList(set);
++}
++
+ START_TEST(devinst)
+ {
+     init_function_pointers();
+@@ -1570,4 +1592,5 @@ START_TEST(devinst)
+     testDeviceRegistryPropertyA();
+     testDeviceRegistryPropertyW();
+     testSetupDiGetINFClassA();
++    testSetupDiGetClassDevsA();
+ }
+-- 
+2.7.1
+

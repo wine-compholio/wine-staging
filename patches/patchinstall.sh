@@ -371,6 +371,7 @@ patch_enable_all ()
 	enable_ws2_32_getaddrinfo="$1"
 	enable_ws2_32_getsockopt="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
+	enable_wtsapi32_WTSQueryUserToken="$1"
 	enable_wusa_MSU_Package_Installer="$1"
 }
 
@@ -1256,6 +1257,9 @@ patch_enable ()
 			;;
 		wtsapi32-EnumerateProcesses)
 			enable_wtsapi32_EnumerateProcesses="$2"
+			;;
+		wtsapi32-WTSQueryUserToken)
+			enable_wtsapi32_WTSQueryUserToken="$2"
 			;;
 		wusa-MSU_Package_Installer)
 			enable_wusa_MSU_Package_Installer="$2"
@@ -7177,6 +7181,21 @@ if test "$enable_wtsapi32_EnumerateProcesses" -eq 1; then
 	patch_apply wtsapi32-EnumerateProcesses/0001-wtsapi32-Partial-implementation-of-WTSEnumerateProce.patch
 	(
 		echo '+    { "Sebastian Lackner", "wtsapi32: Partial implementation of WTSEnumerateProcessesW.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wtsapi32-WTSQueryUserToken
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39663] Improve WTSQueryUserToken stub to make GOG Galaxy happy
+# |
+# | Modified files:
+# |   *	dlls/wtsapi32/wtsapi32.c
+# |
+if test "$enable_wtsapi32_WTSQueryUserToken" -eq 1; then
+	patch_apply wtsapi32-WTSQueryUserToken/0001-wtsapi32-Improve-WTSQueryUserToken-stub.patch
+	(
+		echo '+    { "Sebastian Lackner", "wtsapi32: Improve WTSQueryUserToken stub.", 1 },';
 	) >> "$patchlist"
 fi
 

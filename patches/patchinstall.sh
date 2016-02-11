@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9c98d632779862aae15e9e3a25f59065fae03386"
+	echo "1098a673e61908bacf9459ea6a1ef062f9332d6b"
 }
 
 # Show version information
@@ -96,7 +96,6 @@ patch_enable_all ()
 	enable_avifile_dll16_AVIStreamGetFrame="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_combase_RoApi="$1"
-	enable_combase_WindowsString="$1"
 	enable_comctl32_Button_Theming="$1"
 	enable_comctl32_PROPSHEET_InsertPage="$1"
 	enable_comctl32_TTM_ADDTOOLW="$1"
@@ -166,7 +165,6 @@ patch_enable_all ()
 	enable_kernel32_FreeUserPhysicalPages="$1"
 	enable_kernel32_GetCurrentPackageFamilyName="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
-	enable_kernel32_InterlockedPushListSList="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
@@ -231,7 +229,6 @@ patch_enable_all ()
 	enable_ntdll_SystemRoot_Symlink="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
-	enable_ntdll_Unused_Import_Descr="$1"
 	enable_ntdll_User_Shared_Data="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_Wait_User_APC="$1"
@@ -276,7 +273,6 @@ patch_enable_all ()
 	enable_server_Signal_Thread="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
-	enable_server_Win8_Pseudo_Handles="$1"
 	enable_services_SERVICE_FILE_SYSTEM_DRIVER="$1"
 	enable_setupapi_Display_Device="$1"
 	enable_setupapi_HSPFILEQ_Check_Type="$1"
@@ -435,9 +431,6 @@ patch_enable ()
 			;;
 		combase-RoApi)
 			enable_combase_RoApi="$2"
-			;;
-		combase-WindowsString)
-			enable_combase_WindowsString="$2"
 			;;
 		comctl32-Button_Theming)
 			enable_comctl32_Button_Theming="$2"
@@ -646,9 +639,6 @@ patch_enable ()
 		kernel32-GetFinalPathNameByHandle)
 			enable_kernel32_GetFinalPathNameByHandle="$2"
 			;;
-		kernel32-InterlockedPushListSList)
-			enable_kernel32_InterlockedPushListSList="$2"
-			;;
 		kernel32-LocaleNameToLCID)
 			enable_kernel32_LocaleNameToLCID="$2"
 			;;
@@ -841,9 +831,6 @@ patch_enable ()
 		ntdll-Threading)
 			enable_ntdll_Threading="$2"
 			;;
-		ntdll-Unused_Import_Descr)
-			enable_ntdll_Unused_Import_Descr="$2"
-			;;
 		ntdll-User_Shared_Data)
 			enable_ntdll_User_Shared_Data="$2"
 			;;
@@ -975,9 +962,6 @@ patch_enable ()
 			;;
 		server-Timestamp_Compat)
 			enable_server_Timestamp_Compat="$2"
-			;;
-		server-Win8_Pseudo_Handles)
-			enable_server_Win8_Pseudo_Handles="$2"
 			;;
 		services-SERVICE_FILE_SYSTEM_DRIVER)
 			enable_services_SERVICE_FILE_SYSTEM_DRIVER="$2"
@@ -2229,9 +2213,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	if test "$enable_kernel32_GetFinalPathNameByHandle" -gt 1; then
 		abort "Patchset kernel32-GetFinalPathNameByHandle disabled, but api-ms-win-Stub_DLLs depends on that."
 	fi
-	if test "$enable_kernel32_InterlockedPushListSList" -gt 1; then
-		abort "Patchset kernel32-InterlockedPushListSList disabled, but api-ms-win-Stub_DLLs depends on that."
-	fi
 	if test "$enable_ole32_CoGetApartmentType" -gt 1; then
 		abort "Patchset ole32-CoGetApartmentType disabled, but api-ms-win-Stub_DLLs depends on that."
 	fi
@@ -2239,7 +2220,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	enable_kernel32_FreeUserPhysicalPages=1
 	enable_kernel32_GetCurrentPackageFamilyName=1
 	enable_kernel32_GetFinalPathNameByHandle=1
-	enable_kernel32_InterlockedPushListSList=1
 	enable_ole32_CoGetApartmentType=1
 fi
 
@@ -2583,18 +2563,6 @@ if test "$enable_kernel32_GetFinalPathNameByHandle" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-InterlockedPushListSList
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-interlocked-l1-1-0/api-ms-win-core-interlocked-l1-1-0.spec, dlls/kernel32/kernel32.spec
-# |
-if test "$enable_kernel32_InterlockedPushListSList" -eq 1; then
-	patch_apply kernel32-InterlockedPushListSList/0001-kernel32-Forward-InterlockedPushListSList-to-ntdll.patch
-	(
-		echo '+    { "Sebastian Lackner", "kernel32: Forward InterlockedPushListSList to ntdll.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ole32-CoGetApartmentType
 # |
 # | Modified files:
@@ -2613,7 +2581,7 @@ fi
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	combase-RoApi, kernel32-FreeUserPhysicalPages, kernel32-GetCurrentPackageFamilyName, kernel32-GetFinalPathNameByHandle,
-# | 	kernel32-InterlockedPushListSList, ole32-CoGetApartmentType
+# | 	ole32-CoGetApartmentType
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/api-ms-win-appmodel-runtime-l1-1-1/Makefile.in, dlls/api-ms-win-appmodel-runtime-l1-1-1/api-ms-win-
@@ -2790,27 +2758,6 @@ if test "$enable_browseui_Progress_Dialog" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "browseui: Implement IProgressDialog::SetAnimation.", 1 },';
 		echo '+    { "Michael Müller", "browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset combase-WindowsString
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-winrt-string-l1-1-0/api-ms-win-core-winrt-string-l1-1-0.spec, dlls/combase/combase.spec,
-# | 	dlls/combase/string.c, dlls/combase/tests/string.c, include/winnls.h
-# |
-if test "$enable_combase_WindowsString" -eq 1; then
-	patch_apply combase-WindowsString/0001-combase-Implement-WindowsCompareStringOrdinal.patch
-	patch_apply combase-WindowsString/0002-combase-tests-Add-tests-for-WindowsCompareStringOrdi.patch
-	patch_apply combase-WindowsString/0003-combase-Implement-WindowsTrimStringStart.patch
-	patch_apply combase-WindowsString/0004-combase-Implement-WindowsTrimStringEnd.patch
-	patch_apply combase-WindowsString/0005-combase-tests-Add-tests-for-WindowsTrimString-Start-.patch
-	(
-		echo '+    { "Sebastian Lackner", "combase: Implement WindowsCompareStringOrdinal.", 2 },';
-		echo '+    { "Sebastian Lackner", "combase/tests: Add tests for WindowsCompareStringOrdinal.", 1 },';
-		echo '+    { "Sebastian Lackner", "combase: Implement WindowsTrimStringStart.", 1 },';
-		echo '+    { "Sebastian Lackner", "combase: Implement WindowsTrimStringEnd.", 1 },';
-		echo '+    { "Sebastian Lackner", "combase/tests: Add tests for WindowsTrimString{Start,End}.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5064,21 +5011,6 @@ if test "$enable_ntdll_Threading" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-Unused_Import_Descr
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39792] Ignore import descriptors with empty thunk list
-# |
-# | Modified files:
-# |   *	dlls/ntdll/loader.c
-# |
-if test "$enable_ntdll_Unused_Import_Descr" -eq 1; then
-	patch_apply ntdll-Unused_Import_Descr/0001-ntdll-Skip-unused-import-descriptors-when-loading-li.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Skip unused import descriptors when loading libraries.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-User_Shared_Data
 # |
 # | Modified files:
@@ -5774,18 +5706,6 @@ if test "$enable_server_Timestamp_Compat" -eq 1; then
 	patch_apply server-Timestamp_Compat/0001-server-Compatibility-with-Wine-Staging-format-for-hi.patch
 	(
 		echo '+    { "Michael Müller", "server: Compatibility with Wine Staging format for high precision registry timestamps.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Win8_Pseudo_Handles
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, include/winbase.h, server/handle.c
-# |
-if test "$enable_server_Win8_Pseudo_Handles" -eq 1; then
-	patch_apply server-Win8_Pseudo_Handles/0001-server-Implement-support-for-pseudo-tokens-CurrentPr.patch
-	(
-		echo '+    { "Michael Müller", "server: Implement support for pseudo tokens CurrentProcessToken, CurrentThreadToken, CurrentThreadEffectiveToken.", 1 },';
 	) >> "$patchlist"
 fi
 

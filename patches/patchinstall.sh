@@ -300,6 +300,7 @@ patch_enable_all ()
 	enable_shlwapi_AssocGetPerceivedType="$1"
 	enable_shlwapi_SHMapHandle="$1"
 	enable_shlwapi_UrlCombine="$1"
+	enable_shutdown_Stub_DLL="$1"
 	enable_stdole32_idl_Typelib="$1"
 	enable_stdole32_tlb_SLTG_Typelib="$1"
 	enable_taskmgr_Memory_Usage="$1"
@@ -1044,6 +1045,9 @@ patch_enable ()
 			;;
 		shlwapi-UrlCombine)
 			enable_shlwapi_UrlCombine="$2"
+			;;
+		shutdown-Stub_DLL)
+			enable_shutdown_Stub_DLL="$2"
 			;;
 		stdole32.idl-Typelib)
 			enable_stdole32_idl_Typelib="$2"
@@ -6111,6 +6115,18 @@ if test "$enable_shlwapi_UrlCombine" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "shlwapi/tests: Add additional tests for UrlCombine and UrlCanonicalize.", 1 },';
 		echo '+    { "Sebastian Lackner", "shlwapi: UrlCombineW workaround for relative paths.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shutdown-Stub_DLL
+# |
+# | Modified files:
+# |   *	configure.ac, programs/shutdown/Makefile.in, programs/shutdown/main.c
+# |
+if test "$enable_shutdown_Stub_DLL" -eq 1; then
+	patch_apply shutdown-Stub_DLL/0001-programs-shutdown-Add-stub-implementation.patch
+	(
+		echo '+    { "Michael Müller", "programs/shutdown: Add stub implementation.", 1 },';
 	) >> "$patchlist"
 fi
 

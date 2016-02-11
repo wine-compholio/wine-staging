@@ -354,6 +354,7 @@ patch_enable_all ()
 	enable_winex11_Window_Groups="$1"
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
+	enable_winex11__NET_ACTIVE_WINDOW="$1"
 	enable_winex11_wglShareLists="$1"
 	enable_winhttp_System_Proxy_Autoconfig="$1"
 	enable_wininet_Cleanup="$1"
@@ -1208,6 +1209,9 @@ patch_enable ()
 			;;
 		winex11-XEMBED)
 			enable_winex11_XEMBED="$2"
+			;;
+		winex11-_NET_ACTIVE_WINDOW)
+			enable_winex11__NET_ACTIVE_WINDOW="$2"
 			;;
 		winex11-wglShareLists)
 			enable_winex11_wglShareLists="$2"
@@ -6949,6 +6953,22 @@ if test "$enable_winex11_XEMBED" -eq 1; then
 	patch_apply winex11-XEMBED/0001-winex11-Enable-disable-windows-when-they-are-un-mapped.patch
 	(
 		echo '+    { "Sebastian Lackner", "winex11: Enable/disable windows when they are (un)mapped by foreign applications.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11-_NET_ACTIVE_WINDOW
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#2155] Forward activate window requests to WM using _NET_ACTIVE_WINDOW
+# |
+# | Modified files:
+# |   *	dlls/user32/driver.c, dlls/user32/focus.c, dlls/user32/user_private.h, dlls/winex11.drv/event.c,
+# | 	dlls/winex11.drv/window.c, dlls/winex11.drv/winex11.drv.spec, dlls/winex11.drv/x11drv.h, dlls/winex11.drv/x11drv_main.c
+# |
+if test "$enable_winex11__NET_ACTIVE_WINDOW" -eq 1; then
+	patch_apply winex11-_NET_ACTIVE_WINDOW/0001-winex11.drv-Add-support-for-_NET_ACTIVE_WINDOW.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "winex11.drv: Add support for _NET_ACTIVE_WINDOW.", 1 },';
 	) >> "$patchlist"
 fi
 

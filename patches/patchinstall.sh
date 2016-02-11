@@ -4440,6 +4440,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#34318] Move implementation of EtwRegisterTraceGuidsW to ntdll
+# |   *	[#33021] Move implementation of EtwEventRegister to ntdll
 # |
 # | Modified files:
 # |   *	dlls/advapi32/advapi32.spec, dlls/advapi32/eventlog.c, dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec

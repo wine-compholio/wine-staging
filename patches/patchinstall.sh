@@ -248,6 +248,7 @@ patch_enable_all ()
 	enable_oleaut32_x86_64_Marshaller="$1"
 	enable_openal32_EFX_Extension="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
+	enable_opengl32_glDebugMessageCallback="$1"
 	enable_quartz_AsyncReader="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_rasapi32_RasEnumDevicesA="$1"
@@ -890,6 +891,9 @@ patch_enable ()
 			;;
 		opengl32-Revert_Disable_Ext)
 			enable_opengl32_Revert_Disable_Ext="$2"
+			;;
+		opengl32-glDebugMessageCallback)
+			enable_opengl32_glDebugMessageCallback="$2"
 			;;
 		quartz-AsyncReader)
 			enable_quartz_AsyncReader="$2"
@@ -5377,6 +5381,24 @@ if test "$enable_opengl32_Revert_Disable_Ext" -eq 1; then
 	patch_apply opengl32-Revert_Disable_Ext/0001-Revert-opengl32-Return-a-NULL-pointer-for-functions-.patch
 	(
 		echo '+    { "Sebastian Lackner", "Revert \"opengl32: Return a NULL pointer for functions requiring unsupported or disabled extensions.\".", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset opengl32-glDebugMessageCallback
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38402] Fix calling convention of glDebugMessageCallback callback function
+# |
+# | Modified files:
+# |   *	dlls/opengl32/make_opengl, dlls/opengl32/opengl_ext.c, dlls/opengl32/opengl_ext.h, dlls/opengl32/tests/opengl.c,
+# | 	dlls/opengl32/wgl.c
+# |
+if test "$enable_opengl32_glDebugMessageCallback" -eq 1; then
+	patch_apply opengl32-glDebugMessageCallback/0001-opengl32-tests-Include-wgl.h-and-remove-duplicate-de.patch
+	patch_apply opengl32-glDebugMessageCallback/0002-opengl32-Add-wrappers-for-glDebugMessageCallback-to-.patch
+	(
+		echo '+    { "Sebastian Lackner", "opengl32/tests: Include wgl.h and remove duplicate declarations.", 1 },';
+		echo '+    { "Sebastian Lackner", "opengl32: Add wrappers for glDebugMessageCallback to handle calling convention differences.", 1 },';
 	) >> "$patchlist"
 fi
 

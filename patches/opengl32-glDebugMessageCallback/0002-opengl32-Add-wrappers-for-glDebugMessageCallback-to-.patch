@@ -1,0 +1,226 @@
+From 8e64df5a5161db39c7e1828b138e72f4bbcc7693 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 12 Feb 2016 02:39:07 +0100
+Subject: opengl32: Add wrappers for glDebugMessageCallback to handle calling
+ convention differences.
+
+---
+ dlls/opengl32/make_opengl    |  5 ++++
+ dlls/opengl32/opengl_ext.c   | 18 --------------
+ dlls/opengl32/opengl_ext.h   |  4 ++++
+ dlls/opengl32/tests/opengl.c | 44 ++++++++++++++++++++++++++++++++++
+ dlls/opengl32/wgl.c          | 57 ++++++++++++++++++++++++++++++++++++++++++++
+ 5 files changed, 110 insertions(+), 18 deletions(-)
+
+diff --git a/dlls/opengl32/make_opengl b/dlls/opengl32/make_opengl
+index 2b15f58..9a95fa77 100755
+--- a/dlls/opengl32/make_opengl
++++ b/dlls/opengl32/make_opengl
+@@ -238,6 +238,11 @@ sub GenerateThunk($$$$)
+     return "" if $name eq "glDebugEntry";
+     return "" if $name eq "glGetIntegerv";
+     return "" if $name eq "glGetString";
++
++    return "" if $name eq "glDebugMessageCallback";
++    return "" if $name eq "glDebugMessageCallbackAMD";
++    return "" if $name eq "glDebugMessageCallbackARB";
++
+     return "" if $func_ref->[2] && $func_ref->[2]->[0] =~ /WGL_/;
+ 
+     # If for opengl_norm.c, generate a nice heading otherwise Patrik won't be happy :-)
+diff --git a/dlls/opengl32/opengl_ext.c b/dlls/opengl32/opengl_ext.c
+index e1aeec5..d707f9a 100644
+--- a/dlls/opengl32/opengl_ext.c
++++ b/dlls/opengl32/opengl_ext.c
+@@ -1942,24 +1942,6 @@ static void WINAPI glCurrentPaletteMatrixARB( GLint index ) {
+   funcs->ext.p_glCurrentPaletteMatrixARB( index );
+ }
+ 
+-static void WINAPI glDebugMessageCallback( void * callback, const void* userParam ) {
+-  const struct opengl_funcs *funcs = NtCurrentTeb()->glTable;
+-  TRACE("(%p, %p)\n", callback, userParam );
+-  funcs->ext.p_glDebugMessageCallback( callback, userParam );
+-}
+-
+-static void WINAPI glDebugMessageCallbackAMD( void * callback, void* userParam ) {
+-  const struct opengl_funcs *funcs = NtCurrentTeb()->glTable;
+-  TRACE("(%p, %p)\n", callback, userParam );
+-  funcs->ext.p_glDebugMessageCallbackAMD( callback, userParam );
+-}
+-
+-static void WINAPI glDebugMessageCallbackARB( void * callback, const void* userParam ) {
+-  const struct opengl_funcs *funcs = NtCurrentTeb()->glTable;
+-  TRACE("(%p, %p)\n", callback, userParam );
+-  funcs->ext.p_glDebugMessageCallbackARB( callback, userParam );
+-}
+-
+ static void WINAPI glDebugMessageControl( GLenum source, GLenum type, GLenum severity, GLsizei count, const GLuint* ids, GLboolean enabled ) {
+   const struct opengl_funcs *funcs = NtCurrentTeb()->glTable;
+   TRACE("(%d, %d, %d, %d, %p, %d)\n", source, type, severity, count, ids, enabled );
+diff --git a/dlls/opengl32/opengl_ext.h b/dlls/opengl32/opengl_ext.h
+index 2e49d4a..a538434 100644
+--- a/dlls/opengl32/opengl_ext.h
++++ b/dlls/opengl32/opengl_ext.h
+@@ -33,4 +33,8 @@ extern const int extension_registry_size DECLSPEC_HIDDEN;
+ 
+ extern BOOL WINAPI wglSetPixelFormatWINE( HDC hdc, int format ) DECLSPEC_HIDDEN;
+ 
++extern void WINAPI glDebugMessageCallback( void *callback, const void *userParam ) DECLSPEC_HIDDEN;
++extern void WINAPI glDebugMessageCallbackAMD( void *callback, void *userParam ) DECLSPEC_HIDDEN;
++extern void WINAPI glDebugMessageCallbackARB( void *callback, const void *userParam ) DECLSPEC_HIDDEN;
++
+ #endif /* __DLLS_OPENGL32_OPENGL_EXT_H */
+diff --git a/dlls/opengl32/tests/opengl.c b/dlls/opengl32/tests/opengl.c
+index 3f203ab..59b92ea 100644
+--- a/dlls/opengl32/tests/opengl.c
++++ b/dlls/opengl32/tests/opengl.c
+@@ -71,6 +71,11 @@ static HDC (WINAPI *pwglGetPbufferDCARB)(HPBUFFERARB);
+ static BOOL (WINAPI *pwglSwapIntervalEXT)(int interval);
+ static int (WINAPI *pwglGetSwapIntervalEXT)(void);
+ 
++/* GL_ARB_debug_output */
++static void (WINAPI *pglDebugMessageCallbackARB)(void *, void *);
++static void (WINAPI *pglDebugMessageControlARB)(GLenum, GLenum, GLenum, GLsizei, const GLuint *, GLboolean);
++static void (WINAPI *pglDebugMessageInsertARB)(GLenum, GLenum, GLuint, GLenum, GLsizei, const char *);
++
+ static const char* wgl_extensions = NULL;
+ 
+ static void init_functions(void)
+@@ -103,6 +108,11 @@ static void init_functions(void)
+     GET_PROC(wglSwapIntervalEXT)
+     GET_PROC(wglGetSwapIntervalEXT)
+ 
++    /* GL_ARB_debug_output */
++    GET_PROC(glDebugMessageCallbackARB)
++    GET_PROC(glDebugMessageControlARB)
++    GET_PROC(glDebugMessageInsertARB)
++
+ #undef GET_PROC
+ }
+ 
+@@ -232,6 +242,39 @@ static void test_pbuffers(HDC hdc)
+     else skip("Pbuffer test for offscreen pixelformat skipped as no offscreen-only format with pbuffer capabilities has been found\n");
+ }
+ 
++static void WINAPI gl_debug_message_callback(GLenum source, GLenum type, GLuint id, GLenum severity,
++                                             GLsizei length, const GLchar *message, const void *userParam)
++{
++    DWORD *count = (DWORD *)userParam;
++    (*count)++;
++}
++
++static void test_debug_message_callback(void)
++{
++    static const char testmsg[] = "Hello World";
++    DWORD count;
++
++    if (!pglDebugMessageCallbackARB)
++    {
++        skip("glDebugMessageCallbackARB not supported\n");
++        return;
++    }
++
++    glEnable(GL_DEBUG_OUTPUT);
++    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
++
++    pglDebugMessageCallbackARB(gl_debug_message_callback, &count);
++    pglDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, NULL, GL_TRUE);
++
++    count = 0;
++    pglDebugMessageInsertARB(GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_OTHER, 0x42424242,
++                             GL_DEBUG_SEVERITY_LOW, sizeof(testmsg), testmsg);
++    ok(count == 1, "expected count == 1, got %u\n", count);
++
++    glDisable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
++    glDisable(GL_DEBUG_OUTPUT);
++}
++
+ static void test_setpixelformat(HDC winhdc)
+ {
+     int res = 0;
+@@ -1684,6 +1727,7 @@ START_TEST(opengl)
+             return;
+         }
+ 
++        test_debug_message_callback();
+         test_setpixelformat(hdc);
+         test_destroy(hdc);
+         test_sharelists(hdc);
+diff --git a/dlls/opengl32/wgl.c b/dlls/opengl32/wgl.c
+index f3f78ef..e5f9a6f 100644
+--- a/dlls/opengl32/wgl.c
++++ b/dlls/opengl32/wgl.c
+@@ -62,6 +62,9 @@ struct opengl_context
+     DWORD               tid;           /* thread that the context is current in */
+     HDC                 draw_dc;       /* current drawing DC */
+     HDC                 read_dc;       /* current reading DC */
++    void     (CALLBACK *debug_callback)(GLenum, GLenum, GLuint, GLenum,
++                                        GLsizei, const GLchar *, const void *); /* debug callback */
++    const void         *debug_user;    /* debug user parameter */
+     GLubyte            *extensions;    /* extension string */
+     GLuint             *disabled_exts; /* indices of disabled extensions */
+     struct wgl_context *drv_ctx;       /* driver context */
+@@ -1919,6 +1922,60 @@ const GLubyte * WINAPI glGetString( GLenum name )
+     return ret;
+ }
+ 
++/* wrapper for glDebugMessageCallback* functions */
++static void gl_debug_message_callback( GLenum source, GLenum type, GLuint id, GLenum severity,
++                                       GLsizei length, const GLchar *message,const void *userParam )
++{
++    struct wgl_handle *ptr = (struct wgl_handle *)userParam;
++    if (!ptr->u.context->debug_callback) return;
++    ptr->u.context->debug_callback( source, type, id, severity, length, message, ptr->u.context->debug_user );
++}
++
++/***********************************************************************
++ *      glDebugMessageCallback
++ */
++void WINAPI glDebugMessageCallback( void *callback, const void *userParam )
++{
++    struct wgl_handle *ptr = get_current_context_ptr();
++    const struct opengl_funcs *funcs = NtCurrentTeb()->glTable;
++
++    TRACE("(%p, %p)\n", callback, userParam );
++
++    ptr->u.context->debug_callback = callback;
++    ptr->u.context->debug_user     = userParam;
++    funcs->ext.p_glDebugMessageCallback( gl_debug_message_callback, ptr );
++}
++
++/***********************************************************************
++ *      glDebugMessageCallbackAMD
++ */
++void WINAPI glDebugMessageCallbackAMD( void *callback, void *userParam )
++{
++    struct wgl_handle *ptr = get_current_context_ptr();
++    const struct opengl_funcs *funcs = NtCurrentTeb()->glTable;
++
++    TRACE("(%p, %p)\n", callback, userParam );
++
++    ptr->u.context->debug_callback = callback;
++    ptr->u.context->debug_user     = userParam;
++    funcs->ext.p_glDebugMessageCallbackAMD( gl_debug_message_callback, ptr );
++}
++
++/***********************************************************************
++ *      glDebugMessageCallbackARB
++ */
++void WINAPI glDebugMessageCallbackARB( void *callback, const void *userParam )
++{
++    struct wgl_handle *ptr = get_current_context_ptr();
++    const struct opengl_funcs *funcs = NtCurrentTeb()->glTable;
++
++    TRACE("(%p, %p)\n", callback, userParam );
++
++    ptr->u.context->debug_callback = callback;
++    ptr->u.context->debug_user     = userParam;
++    funcs->ext.p_glDebugMessageCallbackARB( gl_debug_message_callback, ptr );
++}
++
+ /***********************************************************************
+  *           OpenGL initialisation routine
+  */
+-- 
+2.7.1
+

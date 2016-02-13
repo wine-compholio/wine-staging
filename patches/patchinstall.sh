@@ -7189,7 +7189,7 @@ fi
 if test "$enable_wtsapi32_WTSQueryUserToken" -eq 1; then
 	patch_apply wtsapi32-WTSQueryUserToken/0001-wtsapi32-Improve-WTSQueryUserToken-stub.patch
 	(
-		echo '+    { "Sebastian Lackner", "wtsapi32: Improve WTSQueryUserToken stub.", 1 },';
+		echo '+    { "Sebastian Lackner", "wtsapi32: Improve WTSQueryUserToken stub.", 2 },';
 	) >> "$patchlist"
 fi
 

@@ -1,4 +1,4 @@
-From 98455537b8e39281df59357bf1a2628350026c27 Mon Sep 17 00:00:00 2001
+From d27ca5000c0fc51c6df0ec6751372f98704508dd Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Thu, 16 Oct 2014 23:24:37 +0200
 Subject: ntdll: Implement NtQuerySection. (try 2)
@@ -14,7 +14,7 @@ Some small modifications by Sebastian Lackner <sebastian@fds-team.de>
  6 files changed, 148 insertions(+), 23 deletions(-)
 
 diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
-index a0d8909..a53e0bb 100644
+index 02166e8..3ee5a52 100644
 --- a/dlls/ntdll/nt.c
 +++ b/dlls/ntdll/nt.c
 @@ -656,26 +656,6 @@ NTSTATUS WINAPI SYSCALL(NtPrivilegeCheck)(
@@ -45,10 +45,10 @@ index a0d8909..a53e0bb 100644
   */
  
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 38422ae..73ae405 100644
+index d3cd489..44bffc5 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -263,7 +263,7 @@
+@@ -267,7 +267,7 @@
  @ stdcall NtQueryPerformanceCounter(ptr ptr)
  # @ stub NtQueryPortInformationProcess
  # @ stub NtQueryQuotaInformationFile
@@ -57,7 +57,7 @@ index 38422ae..73ae405 100644
  @ stdcall NtQuerySecurityObject (long long long long long)
  @ stdcall NtQuerySemaphore (long long ptr long ptr)
  @ stdcall NtQuerySymbolicLinkObject(long ptr ptr)
-@@ -1178,7 +1178,7 @@
+@@ -1188,7 +1188,7 @@
  @ stdcall ZwQueryPerformanceCounter(ptr ptr) NtQueryPerformanceCounter
  # @ stub ZwQueryPortInformationProcess
  # @ stub ZwQueryQuotaInformationFile
@@ -67,10 +67,10 @@ index 38422ae..73ae405 100644
  @ stdcall ZwQuerySemaphore(long long ptr long ptr) NtQuerySemaphore
  @ stdcall ZwQuerySymbolicLinkObject(long ptr ptr) NtQuerySymbolicLinkObject
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 54c4cf4..f29084f 100644
+index 16a5a1b..5a8d85c 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -2539,6 +2539,102 @@ NTSTATUS WINAPI SYSCALL(NtOpenSection)( HANDLE *handle, ACCESS_MASK access, cons
+@@ -2525,6 +2525,102 @@ NTSTATUS WINAPI SYSCALL(NtOpenSection)( HANDLE *handle, ACCESS_MASK access, cons
  
  
  /***********************************************************************
@@ -174,7 +174,7 @@ index 54c4cf4..f29084f 100644
   *             ZwMapViewOfSection   (NTDLL.@)
   */
 diff --git a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
-index 1957a9a..276cdbf5 100644
+index 1319ada..eb4aad2 100644
 --- a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
 +++ b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
 @@ -1351,7 +1351,7 @@
@@ -187,7 +187,7 @@ index 1957a9a..276cdbf5 100644
  @ stdcall ZwQuerySymbolicLinkObject(long ptr ptr) ntdll.ZwQuerySymbolicLinkObject
  @ stdcall ZwQuerySystemInformation(long long long long) ntdll.ZwQuerySystemInformation
 diff --git a/server/mapping.c b/server/mapping.c
-index 16e7c1c..ba26d1e 100644
+index fe30450..ec0ef98 100644
 --- a/server/mapping.c
 +++ b/server/mapping.c
 @@ -64,6 +64,15 @@ struct mapping
@@ -206,7 +206,7 @@ index 16e7c1c..ba26d1e 100644
      struct ranges  *committed;       /* list of committed ranges in this mapping */
      struct file    *shared_file;     /* temp file for shared PE mapping */
      struct list     shared_entry;    /* entry in global shared PE mappings list */
-@@ -432,17 +441,34 @@ static unsigned int get_image_params( struct mapping *mapping, int unix_fd, int
+@@ -434,17 +443,34 @@ static unsigned int get_image_params( struct mapping *mapping, int unix_fd, int
          return STATUS_INVALID_IMAGE_FORMAT;
      }
  
@@ -241,8 +241,8 @@ index 16e7c1c..ba26d1e 100644
          break;
      }
  
-@@ -492,6 +518,15 @@ static struct object *create_mapping( struct directory *root, const struct unico
-                                                SACL_SECURITY_INFORMATION );
+@@ -490,6 +516,15 @@ static struct object *create_mapping( struct object *root, const struct unicode_
+ 
      mapping->header_size = 0;
      mapping->base        = 0;
 +    mapping->entry               = 0;
@@ -257,7 +257,7 @@ index 16e7c1c..ba26d1e 100644
      mapping->fd          = NULL;
      mapping->shared_file = NULL;
      mapping->committed   = NULL;
-@@ -729,6 +764,13 @@ DECL_HANDLER(get_mapping_info)
+@@ -706,6 +741,13 @@ DECL_HANDLER(get_mapping_info)
      reply->protect     = mapping->protect;
      reply->header_size = mapping->header_size;
      reply->base        = mapping->base;
@@ -272,10 +272,10 @@ index 16e7c1c..ba26d1e 100644
      if ((fd = get_obj_fd( &mapping->obj )))
      {
 diff --git a/server/protocol.def b/server/protocol.def
-index 5b45078..0d9b090 100644
+index a5a45eb..fdc07a3 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -1674,6 +1674,13 @@ enum char_info_mode
+@@ -1675,6 +1675,13 @@ enum char_info_mode
      int          protect;       /* protection flags */
      int          header_size;   /* header size (for VPROT_IMAGE mapping) */
      client_ptr_t base;          /* default base addr (for VPROT_IMAGE mapping) */
@@ -290,5 +290,5 @@ index 5b45078..0d9b090 100644
      obj_handle_t shared_file;   /* shared mapping file handle */
  @END
 -- 
-2.6.1
+2.7.1
 

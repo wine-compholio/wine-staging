@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "1098a673e61908bacf9459ea6a1ef062f9332d6b"
+	echo "0f8a0fd4002f9d5d1cb6dadcb81ef430d8be21b7"
 }
 
 # Show version information
@@ -158,7 +158,6 @@ patch_enable_all ()
 	enable_iphlpapi_System_Ping="$1"
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_COMSPEC="$1"
-	enable_kernel32_CompareString_Length="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Cwd_Startup_Info="$1"
 	enable_kernel32_FindFirstFile="$1"
@@ -321,7 +320,6 @@ patch_enable_all ()
 	enable_uxtheme_CloseThemeData="$1"
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_VerQueryValue="$1"
-	enable_vmm_vxd_PageReserve="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_wine_inf_Performance="$1"
@@ -621,9 +619,6 @@ patch_enable ()
 			;;
 		kernel32-COMSPEC)
 			enable_kernel32_COMSPEC="$2"
-			;;
-		kernel32-CompareString_Length)
-			enable_kernel32_CompareString_Length="$2"
 			;;
 		kernel32-CopyFileEx)
 			enable_kernel32_CopyFileEx="$2"
@@ -1110,9 +1105,6 @@ patch_enable ()
 			;;
 		version-VerQueryValue)
 			enable_version_VerQueryValue="$2"
-			;;
-		vmm.vxd-PageReserve)
-			enable_vmm_vxd_PageReserve="$2"
 			;;
 		wbemdisp-ISWbemSecurity)
 			enable_wbemdisp_ISWbemSecurity="$2"
@@ -2602,88 +2594,68 @@ fi
 # | Modified files:
 # |   *	configure.ac, dlls/api-ms-win-appmodel-runtime-l1-1-1/Makefile.in, dlls/api-ms-win-appmodel-runtime-l1-1-1/api-ms-win-
 # | 	appmodel-runtime-l1-1-1.spec, dlls/api-ms-win-core-apiquery-l1-1-0/Makefile.in, dlls/api-ms-win-core-apiquery-l1-1-0
-# | 	/api-ms-win-core-apiquery-l1-1-0.spec, dlls/api-ms-win-core-com-l1-1-1/Makefile.in, dlls/api-ms-win-core-com-l1-1-1/api-
-# | 	ms-win-core-com-l1-1-1.spec, dlls/api-ms-win-core-delayload-l1-1-1/Makefile.in, dlls/api-ms-win-core-delayload-l1-1-1
-# | 	/api-ms-win-core-delayload-l1-1-1.spec, dlls/api-ms-win-core-heap-l2-1-0/Makefile.in, dlls/api-ms-win-core-heap-l2-1-0
-# | 	/api-ms-win-core-heap-l2-1-0.spec, dlls/api-ms-win-core-kernel32-legacy-l1-1-1/Makefile.in, dlls/api-ms-win-core-
-# | 	kernel32-legacy-l1-1-1/api-ms-win-core-kernel32-legacy-l1-1-1.spec, dlls/api-ms-win-core-
-# | 	libraryloader-l1-2-0/Makefile.in, dlls/api-ms-win-core-libraryloader-l1-2-0/api-ms-win-core-libraryloader-l1-2-0.spec,
-# | 	dlls/api-ms-win-core-memory-l1-1-2/Makefile.in, dlls/api-ms-win-core-memory-l1-1-2/api-ms-win-core-memory-l1-1-2.spec,
-# | 	dlls/api-ms-win-core-quirks-l1-1-0/Makefile.in, dlls/api-ms-win-core-quirks-l1-1-0/api-ms-win-core-quirks-l1-1-0.spec,
-# | 	dlls/api-ms-win-core-shlwapi-obsolete-l1-2-0/Makefile.in, dlls/api-ms-win-core-shlwapi-obsolete-l1-2-0/api-ms-win-core-
-# | 	shlwapi-obsolete-l1-2-0.spec, dlls/api-ms-win-core-threadpool-l1-2-0/Makefile.in, dlls/api-ms-win-core-threadpool-l1-2-0
-# | 	/api-ms-win-core-threadpool-l1-2-0.spec, dlls/api-ms-win-core-winrt-registration-l1-1-0/Makefile.in, dlls/api-ms-win-
-# | 	core-winrt-registration-l1-1-0/api-ms-win-core-winrt-registration-l1-1-0.spec, dlls/api-ms-win-core-
-# | 	wow64-l1-1-0/Makefile.in, dlls/api-ms-win-core-wow64-l1-1-0/api-ms-win-core-wow64-l1-1-0.spec, dlls/api-ms-win-eventing-
-# | 	classicprovider-l1-1-0/Makefile.in, dlls/api-ms-win-eventing-classicprovider-l1-1-0/api-ms-win-eventing-
-# | 	classicprovider-l1-1-0.spec, dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-
-# | 	draw-l1-1-0/api-ms-win-rtcore-ntuser-draw-l1-1-0.spec, dlls/api-ms-win-rtcore-ntuser-window-l1-1-0/Makefile.in, dlls
-# | 	/api-ms-win-rtcore-ntuser-window-l1-1-0/api-ms-win-rtcore-ntuser-window-l1-1-0.spec, dlls/api-ms-win-shcore-
-# | 	obsolete-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-obsolete-l1-1-0/api-ms-win-shcore-obsolete-l1-1-0.spec, dlls/api-ms-
-# | 	win-shcore-stream-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-stream-l1-1-0/api-ms-win-shcore-stream-l1-1-0.spec, dlls
-# | 	/api-ms-win-shcore-thread-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-thread-l1-1-0/api-ms-win-shcore-thread-l1-1-0.spec,
-# | 	dlls/ext-ms-win-appmodel-usercontext-l1-1-0/Makefile.in, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/ext-ms-win-
-# | 	appmodel-usercontext-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/main.c, dlls/ext-ms-win-kernel32-package-
-# | 	current-l1-1-0/Makefile.in, dlls/ext-ms-win-kernel32-package-current-l1-1-0/ext-ms-win-kernel32-package-
-# | 	current-l1-1-0.spec, dlls/ext-ms-win-ntuser-mouse-l1-1-0/Makefile.in, dlls/ext-ms-win-ntuser-mouse-l1-1-0/ext-ms-win-
-# | 	ntuser-mouse-l1-1-0.spec, dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/Makefile.in, dlls/ext-ms-win-rtcore-ntuser-
-# | 	syscolors-l1-1-0/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0.spec, dlls/ext-ms-win-rtcore-ntuser-
-# | 	sysparams-l1-1-0/Makefile.in, dlls/ext-ms-win-rtcore-ntuser-sysparams-l1-1-0/ext-ms-win-rtcore-ntuser-
-# | 	sysparams-l1-1-0.spec, dlls/ext-ms-win-uxtheme-themes-l1-1-0/Makefile.in, dlls/ext-ms-win-uxtheme-themes-l1-1-0/ext-ms-
-# | 	win-uxtheme-themes-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/Makefile.in, dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-
-# | 	xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/main.c, dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec,
-# | 	dlls/iertutil/main.c, dlls/kernelbase/Makefile.in, dlls/kernelbase/kernelbase.spec, dlls/kernelbase/misc.c,
-# | 	dlls/shcore/Makefile.in, dlls/shcore/main.c, dlls/shcore/shcore.spec, dlls/shlwapi/shlwapi.spec, include/Makefile.in,
-# | 	include/shellscalingapi.h, tools/make_specfiles
+# | 	/api-ms-win-core-apiquery-l1-1-0.spec, dlls/api-ms-win-core-heap-l2-1-0/Makefile.in, dlls/api-ms-win-core-heap-l2-1-0
+# | 	/api-ms-win-core-heap-l2-1-0.spec, dlls/api-ms-win-core-memory-l1-1-2/Makefile.in, dlls/api-ms-win-core-memory-l1-1-2
+# | 	/api-ms-win-core-memory-l1-1-2.spec, dlls/api-ms-win-core-quirks-l1-1-0/Makefile.in, dlls/api-ms-win-core-quirks-l1-1-0
+# | 	/api-ms-win-core-quirks-l1-1-0.spec, dlls/api-ms-win-core-shlwapi-obsolete-l1-2-0/Makefile.in, dlls/api-ms-win-core-
+# | 	shlwapi-obsolete-l1-2-0/api-ms-win-core-shlwapi-obsolete-l1-2-0.spec, dlls/api-ms-win-core-
+# | 	threadpool-l1-2-0/Makefile.in, dlls/api-ms-win-core-threadpool-l1-2-0/api-ms-win-core-threadpool-l1-2-0.spec, dlls/api-
+# | 	ms-win-core-wow64-l1-1-0/Makefile.in, dlls/api-ms-win-core-wow64-l1-1-0/api-ms-win-core-wow64-l1-1-0.spec, dlls/api-ms-
+# | 	win-rtcore-ntuser-draw-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/api-ms-win-rtcore-ntuser-
+# | 	draw-l1-1-0.spec, dlls/api-ms-win-rtcore-ntuser-window-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-window-l1-1-0
+# | 	/api-ms-win-rtcore-ntuser-window-l1-1-0.spec, dlls/api-ms-win-shcore-obsolete-l1-1-0/Makefile.in, dlls/api-ms-win-
+# | 	shcore-obsolete-l1-1-0/api-ms-win-shcore-obsolete-l1-1-0.spec, dlls/api-ms-win-shcore-stream-l1-1-0/Makefile.in, dlls
+# | 	/api-ms-win-shcore-stream-l1-1-0/api-ms-win-shcore-stream-l1-1-0.spec, dlls/api-ms-win-shcore-thread-l1-1-0/Makefile.in,
+# | 	dlls/api-ms-win-shcore-thread-l1-1-0/api-ms-win-shcore-thread-l1-1-0.spec, dlls/ext-ms-win-appmodel-
+# | 	usercontext-l1-1-0/Makefile.in, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/ext-ms-win-appmodel-usercontext-l1-1-0.spec,
+# | 	dlls/ext-ms-win-appmodel-usercontext-l1-1-0/main.c, dlls/ext-ms-win-kernel32-package-current-l1-1-0/Makefile.in, dlls
+# | 	/ext-ms-win-kernel32-package-current-l1-1-0/ext-ms-win-kernel32-package-current-l1-1-0.spec, dlls/ext-ms-win-ntuser-
+# | 	mouse-l1-1-0/Makefile.in, dlls/ext-ms-win-ntuser-mouse-l1-1-0/ext-ms-win-ntuser-mouse-l1-1-0.spec, dlls/ext-ms-win-
+# | 	rtcore-ntuser-syscolors-l1-1-0/Makefile.in, dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/ext-ms-win-rtcore-ntuser-
+# | 	syscolors-l1-1-0.spec, dlls/ext-ms-win-rtcore-ntuser-sysparams-l1-1-0/Makefile.in, dlls/ext-ms-win-rtcore-ntuser-
+# | 	sysparams-l1-1-0/ext-ms-win-rtcore-ntuser-sysparams-l1-1-0.spec, dlls/ext-ms-win-uxtheme-themes-l1-1-0/Makefile.in, dlls
+# | 	/ext-ms-win-uxtheme-themes-l1-1-0/ext-ms-win-uxtheme-themes-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/Makefile.in,
+# | 	dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/main.c,
+# | 	dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec, dlls/iertutil/main.c, dlls/kernelbase/Makefile.in,
+# | 	dlls/kernelbase/kernelbase.spec, dlls/kernelbase/misc.c, dlls/shcore/Makefile.in, dlls/shcore/main.c,
+# | 	dlls/shcore/shcore.spec, dlls/shlwapi/shlwapi.spec, include/Makefile.in, include/shellscalingapi.h, tools/make_specfiles
 # |
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
-	patch_apply api-ms-win-Stub_DLLs/0001-api-ms-win-core-com-l1-1-1-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0002-kernelbase-Add-dll-and-add-stub-for-QuirkIsEnabled.patch
-	patch_apply api-ms-win-Stub_DLLs/0003-api-ms-win-core-quirks-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0004-api-ms-win-core-delayload-l1-1-1-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0005-api-ms-win-appmodel-runtime-l1-1-1-Add-new-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0006-api-ms-win-core-apiquery-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0007-api-ms-win-core-libraryloader-l1-2-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0008-api-ms-win-core-kernel32-legacy-l1-1-1-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0009-api-ms-win-core-heap-l2-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0010-api-ms-win-eventing-classicprovider-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0011-iertutil-Add-dll-and-add-stub-for-ordinal-811.patch
-	patch_apply api-ms-win-Stub_DLLs/0012-api-ms-win-core-winrt-registration-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0013-shcore-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0014-api-ms-win-shcore-obsolete-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0015-ext-ms-win-xaml-pal-l1-1-0-Add-dll-and-add-stub-for-.patch
-	patch_apply api-ms-win-Stub_DLLs/0016-ext-ms-win-appmodel-usercontext-l1-1-0-Add-dll-and-a.patch
-	patch_apply api-ms-win-Stub_DLLs/0017-api-ms-win-shcore-thread-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0018-ext-ms-win-xaml-pal-l1-1-0-Add-stub-for-GetThemeServ.patch
-	patch_apply api-ms-win-Stub_DLLs/0019-api-ms-win-core-memory-l1-1-2-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0020-api-ms-win-core-wow64-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0021-api-ms-win-core-shlwapi-obsolete-l1-2-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0022-api-ms-win-core-threadpool-l1-2-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0023-api-ms-win-shcore-stream-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0024-ext-ms-win-ntuser-mouse-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0025-ext-ms-win-uxtheme-themes-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0026-api-ms-win-rtcore-ntuser-window-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0027-ext-ms-win-rtcore-ntuser-syscolors-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0028-api-ms-win-rtcore-ntuser-draw-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0029-ext-ms-win-rtcore-ntuser-sysparams-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0030-ext-ms-win-kernel32-package-current-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0031-shcore-Add-SetProcessDpiAwareness-stub.patch
-	patch_apply api-ms-win-Stub_DLLs/0032-shcore-Implement-stub-for-GetDpiForMonitor.patch
-	patch_apply api-ms-win-Stub_DLLs/0033-kernelbase-Add-stub-for-QuirkIsEnabled3.patch
-	patch_apply api-ms-win-Stub_DLLs/0034-shcore-Add-stub-for-GetProcessDpiAwareness.patch
+	patch_apply api-ms-win-Stub_DLLs/0001-kernelbase-Add-dll-and-add-stub-for-QuirkIsEnabled.patch
+	patch_apply api-ms-win-Stub_DLLs/0002-api-ms-win-core-quirks-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0003-api-ms-win-appmodel-runtime-l1-1-1-Add-new-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0004-api-ms-win-core-apiquery-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0005-api-ms-win-core-heap-l2-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0006-iertutil-Add-dll-and-add-stub-for-ordinal-811.patch
+	patch_apply api-ms-win-Stub_DLLs/0007-shcore-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0008-api-ms-win-shcore-obsolete-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0009-ext-ms-win-xaml-pal-l1-1-0-Add-dll-and-add-stub-for-.patch
+	patch_apply api-ms-win-Stub_DLLs/0010-ext-ms-win-appmodel-usercontext-l1-1-0-Add-dll-and-a.patch
+	patch_apply api-ms-win-Stub_DLLs/0011-api-ms-win-shcore-thread-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0012-ext-ms-win-xaml-pal-l1-1-0-Add-stub-for-GetThemeServ.patch
+	patch_apply api-ms-win-Stub_DLLs/0013-api-ms-win-core-memory-l1-1-2-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0014-api-ms-win-core-wow64-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0015-api-ms-win-core-shlwapi-obsolete-l1-2-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0016-api-ms-win-core-threadpool-l1-2-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0017-api-ms-win-shcore-stream-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0018-ext-ms-win-ntuser-mouse-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0019-ext-ms-win-uxtheme-themes-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0020-api-ms-win-rtcore-ntuser-window-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0021-ext-ms-win-rtcore-ntuser-syscolors-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0022-api-ms-win-rtcore-ntuser-draw-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0023-ext-ms-win-rtcore-ntuser-sysparams-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0024-ext-ms-win-kernel32-package-current-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0025-shcore-Add-SetProcessDpiAwareness-stub.patch
+	patch_apply api-ms-win-Stub_DLLs/0026-shcore-Implement-stub-for-GetDpiForMonitor.patch
+	patch_apply api-ms-win-Stub_DLLs/0027-kernelbase-Add-stub-for-QuirkIsEnabled3.patch
+	patch_apply api-ms-win-Stub_DLLs/0028-shcore-Add-stub-for-GetProcessDpiAwareness.patch
 	(
-		echo '+    { "Michael Müller", "api-ms-win-core-com-l1-1-1: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-quirks-l1-1-0: Add dll.", 1 },';
-		echo '+    { "Michael Müller", "api-ms-win-core-delayload-l1-1-1: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-appmodel-runtime-l1-1-1: Add new dll.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-apiquery-l1-1-0: Add dll.", 1 },';
-		echo '+    { "Michael Müller", "api-ms-win-core-libraryloader-l1-2-0: Add dll.", 1 },';
-		echo '+    { "Michael Müller", "api-ms-win-core-kernel32-legacy-l1-1-1: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-heap-l2-1-0: Add dll.", 1 },';
-		echo '+    { "Michael Müller", "api-ms-win-eventing-classicprovider-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "iertutil: Add dll and add stub for ordinal 811.", 1 },';
-		echo '+    { "Michael Müller", "api-ms-win-core-winrt-registration-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Sebastian Lackner", "shcore: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-shcore-obsolete-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "ext-ms-win-xaml-pal-l1-1-0: Add dll and add stub for XamlBehaviorEnabled.", 1 },';
@@ -3838,25 +3810,6 @@ if test "$enable_kernel32_COMSPEC" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-CompareString_Length
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37556] CompareString should abort on first non-matching character
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/locale.c, libs/wine/sortkey.c
-# |
-if test "$enable_kernel32_CompareString_Length" -eq 1; then
-	patch_apply kernel32-CompareString_Length/0001-kernel32-CompareStringW-should-abort-on-the-first-no.patch
-	patch_apply kernel32-CompareString_Length/0002-kernel32-tests-Add-some-more-tests-for-NORM_IGNORESY.patch
-	patch_apply kernel32-CompareString_Length/0003-kenrel32-tests-Add-further-tests-for-comparing-strin.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "kernel32: CompareStringW should abort on the first nonmatching character to avoid invalid memory access.", 2 },';
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Add some more tests for NORM_IGNORESYMBOLS.", 1 },';
-		echo '+    { "Sebastian Lackner", "kenrel32/tests: Add further tests for comparing strings ending with multiple \\\\0 characters.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-SetFileInformationByHandle
 # |
 # | Modified files:
@@ -4975,14 +4928,12 @@ fi
 # Patchset ntdll-SystemRecommendedSharedDataAlignment
 # |
 # | Modified files:
-# |   *	dlls/ntdll/nt.c, dlls/ntdll/tests/info.c, include/winternl.h
+# |   *	include/winternl.h
 # |
 if test "$enable_ntdll_SystemRecommendedSharedDataAlignment" -eq 1; then
 	patch_apply ntdll-SystemRecommendedSharedDataAlignment/0001-include-Add-more-constants-to-SYSTEM_INFORMATION_CLA.patch
-	patch_apply ntdll-SystemRecommendedSharedDataAlignment/0002-ntdll-Implement-SystemRecommendedSharedDataAlignment.patch
 	(
 		echo '+    { "Michael Müller", "include: Add more constants to SYSTEM_INFORMATION_CLASS.", 1 },';
-		echo '+    { "Michael Müller", "ntdll: Implement SystemRecommendedSharedDataAlignment class in NtQuerySystemInformation.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5651,7 +5602,7 @@ fi
 # |   *	rpcrt4-Pipe_Transport, server-Desktop_Refcount, kernel32-Named_Pipe
 # |
 # | Modified files:
-# |   *	dlls/ntdll/tests/om.c, server/named_pipe.c, server/object.c
+# |   *	dlls/ntdll/tests/om.c, server/named_pipe.c, server/object.c, server/object.h
 # |
 if test "$enable_server_Pipe_ObjectName" -eq 1; then
 	patch_apply server-Pipe_ObjectName/0001-server-Store-a-reference-to-the-parent-object-for-pi.patch
@@ -6518,21 +6469,6 @@ if test "$enable_version_VerQueryValue" -eq 1; then
 	patch_apply version-VerQueryValue/0001-version-Test-for-VerQueryValueA-try-2.patch
 	(
 		echo '+    { "Mark Jansen", "version: Test for VerQueryValueA.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset vmm.vxd-PageReserve
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36013] Fix protection flags passed to VirtualAlloc call in PageReserve VxDCall
-# |
-# | Modified files:
-# |   *	dlls/vmm.vxd/vmm.c
-# |
-if test "$enable_vmm_vxd_PageReserve" -eq 1; then
-	patch_apply vmm.vxd-PageReserve/0001-vmm.vxd-Fix-protection-flags-passed-to-VirtualAlloc.patch
-	(
-		echo '+    { "Sebastian Lackner", "vmm.vxd: Fix protection flags passed to VirtualAlloc.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,4 +1,4 @@
-From dea19bf17349a7c1c2398a44e15587dae8fbce44 Mon Sep 17 00:00:00 2001
+From fdc6d717dcc6853d7439fa35961448b0c669e998 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 17 Aug 2015 01:11:47 +0200
 Subject: server: Store a reference to the parent object for pipe servers. (v2)
@@ -6,14 +6,15 @@ Subject: server: Store a reference to the parent object for pipe servers. (v2)
 ---
  dlls/ntdll/tests/om.c |  3 ---
  server/named_pipe.c   | 45 +++++++++++++++++++++++++++++++++++++--------
- server/object.c       | 18 ++++++++++++------
- 3 files changed, 49 insertions(+), 17 deletions(-)
+ server/object.c       | 22 ++++++++++++++--------
+ server/object.h       |  2 ++
+ 4 files changed, 53 insertions(+), 19 deletions(-)
 
 diff --git a/dlls/ntdll/tests/om.c b/dlls/ntdll/tests/om.c
-index 3d0487c..84507de 100644
+index c05f31d..4a3c790 100644
 --- a/dlls/ntdll/tests/om.c
 +++ b/dlls/ntdll/tests/om.c
-@@ -1401,14 +1401,11 @@ static void test_query_object(void)
+@@ -1489,14 +1489,11 @@ static void test_query_object(void)
      status = pNtQueryObject( handle, ObjectNameInformation, buffer, sizeof(buffer), &len );
      ok( status == STATUS_SUCCESS , "NtQueryObject returned %x\n", status );
      str = (UNICODE_STRING *)buffer;
@@ -29,7 +30,7 @@ index 3d0487c..84507de 100644
          "name too short %s\n", wine_dbgstr_w(str->Buffer) );
      trace( "got %s len %u\n", wine_dbgstr_w(str->Buffer), len );
 diff --git a/server/named_pipe.c b/server/named_pipe.c
-index ffa9e32..c92a117 100644
+index 546984ddf..c69f24b 100644
 --- a/server/named_pipe.c
 +++ b/server/named_pipe.c
 @@ -148,6 +148,8 @@ static const struct object_ops named_pipe_ops =
@@ -108,7 +109,7 @@ index ffa9e32..c92a117 100644
  static int pipe_client_close_handle( struct object *obj, struct process *process, obj_handle_t handle )
  {
  #ifdef __linux__
-@@ -768,9 +794,10 @@ static struct pipe_server *get_pipe_server_obj( struct process *process,
+@@ -729,9 +755,10 @@ static struct pipe_server *get_pipe_server_obj( struct process *process,
  static struct pipe_server *create_pipe_server( struct named_pipe *pipe, unsigned int options,
                                                 unsigned int pipe_flags )
  {
@@ -116,11 +117,11 @@ index ffa9e32..c92a117 100644
      struct pipe_server *server;
  
 -    server = alloc_object( &pipe_server_ops );
-+    server = create_object( &pipe->obj, &pipe_server_ops, &str );
++    server = create_object( &pipe->obj, &pipe_server_ops, &str, NULL );
      if (!server)
          return NULL;
  
-@@ -792,11 +819,13 @@ static struct pipe_server *create_pipe_server( struct named_pipe *pipe, unsigned
+@@ -753,11 +780,13 @@ static struct pipe_server *create_pipe_server( struct named_pipe *pipe, unsigned
      return server;
  }
  
@@ -132,11 +133,11 @@ index ffa9e32..c92a117 100644
      struct pipe_client *client;
  
 -    client = alloc_object( &pipe_client_ops );
-+    client = create_object( &pipe->obj, &pipe_client_ops, &str );
++    client = create_object( &pipe->obj, &pipe_client_ops, &str, NULL );
      if (!client)
          return NULL;
  
-@@ -896,7 +925,7 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
+@@ -857,7 +886,7 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
          return NULL;
      }
  
@@ -146,7 +147,7 @@ index ffa9e32..c92a117 100644
          type = ((pipe->flags & NAMED_PIPE_MESSAGE_STREAM_WRITE) && is_messagemode_supported()) ?
                 SOCK_SEQPACKET : SOCK_STREAM;
 diff --git a/server/object.c b/server/object.c
-index d4217c0..ef99334 100644
+index f5d7d9f..0d06745 100644
 --- a/server/object.c
 +++ b/server/object.c
 @@ -162,7 +162,7 @@ WCHAR *get_object_full_name( struct object *obj, data_size_t *ret_len )
@@ -174,7 +175,18 @@ index d4217c0..ef99334 100644
          obj = name->parent;
      }
      return (WCHAR *)ret;
-@@ -269,8 +272,11 @@ static void dump_name( struct object *obj )
+@@ -262,8 +265,8 @@ struct object *lookup_named_object( struct object *root, const struct unicode_st
+     return parent;
+ }
+ 
+-static struct object *create_object( struct object *parent, const struct object_ops *ops,
+-                                     const struct unicode_str *name, const struct security_descriptor *sd )
++void *create_object( struct object *parent, const struct object_ops *ops,
++                     const struct unicode_str *name, const struct security_descriptor *sd )
+ {
+     struct object *obj;
+     struct object_name *name_ptr;
+@@ -358,8 +361,11 @@ static void dump_name( struct object *obj )
  
      if (!name) return;
      if (name->parent) dump_name( name->parent );
@@ -188,6 +200,19 @@ index d4217c0..ef99334 100644
  }
  
  /* dump the name of an object to stderr */
+diff --git a/server/object.h b/server/object.h
+index f82fb67..fb39482 100644
+--- a/server/object.h
++++ b/server/object.h
+@@ -135,6 +135,8 @@ extern WCHAR *get_object_full_name( struct object *obj, data_size_t *ret_len );
+ extern void dump_object_name( struct object *obj );
+ extern struct object *lookup_named_object( struct object *root, const struct unicode_str *name,
+                                            unsigned int attr, struct unicode_str *name_left );
++extern void *create_object( struct object *parent, const struct object_ops *ops,
++                            const struct unicode_str *name, const struct security_descriptor *sd );
+ extern void *create_named_object( struct object *parent, const struct object_ops *ops,
+                                   const struct unicode_str *name, unsigned int attributes,
+                                   const struct security_descriptor *sd );
 -- 
-2.7.0
+2.7.1
 

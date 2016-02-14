@@ -311,6 +311,7 @@ patch_enable_all ()
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_Invalidate_Key_State="$1"
 	enable_user32_ListBox_Size="$1"
+	enable_user32_MDI_Extra_Data="$1"
 	enable_user32_Mouse_Message_Hwnd="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
@@ -1078,6 +1079,9 @@ patch_enable ()
 			;;
 		user32-ListBox_Size)
 			enable_user32_ListBox_Size="$2"
+			;;
+		user32-MDI_Extra_Data)
+			enable_user32_MDI_Extra_Data="$2"
 			;;
 		user32-Mouse_Message_Hwnd)
 			enable_user32_Mouse_Message_Hwnd="$2"
@@ -6319,6 +6323,21 @@ if test "$enable_user32_ListBox_Size" -eq 1; then
 	patch_apply user32-ListBox_Size/0001-user32-Fix-calculation-of-listbox-size-when-horizont.patch
 	(
 		echo '+    { "Michael Müller", "user32: Fix calculation of listbox size when horizontal scrollbar is present.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-MDI_Extra_Data
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15473] Preserve beginning of extra data for MDI windows
+# |
+# | Modified files:
+# |   *	dlls/user32/mdi.c, dlls/user32/tests/msg.c
+# |
+if test "$enable_user32_MDI_Extra_Data" -eq 1; then
+	patch_apply user32-MDI_Extra_Data/0001-user32-Preserve-beginning-of-extra-data-for-MDI-wind.patch
+	(
+		echo '+    { "Michael Müller", "user32: Preserve beginning of extra data for MDI windows.", 1 },';
 	) >> "$patchlist"
 fi
 

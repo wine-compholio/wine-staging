@@ -340,7 +340,6 @@ patch_enable_all ()
 	enable_wined3d_MESA_GPU_Info="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
-	enable_wined3d_resource_check_usage="$1"
 	enable_wined3d_resource_map="$1"
 	enable_wined3d_surface_cpu_blt="$1"
 	enable_wined3d_wined3d_swapchain_present="$1"
@@ -1169,9 +1168,6 @@ patch_enable ()
 		wined3d-Silence_FIXMEs)
 			enable_wined3d_Silence_FIXMEs="$2"
 			;;
-		wined3d-resource_check_usage)
-			enable_wined3d_resource_check_usage="$2"
-			;;
 		wined3d-resource_map)
 			enable_wined3d_resource_map="$2"
 			;;
@@ -1789,9 +1785,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_wined3d_Silence_FIXMEs" -gt 1; then
 		abort "Patchset wined3d-Silence_FIXMEs disabled, but category-stable depends on that."
 	fi
-	if test "$enable_wined3d_resource_check_usage" -gt 1; then
-		abort "Patchset wined3d-resource_check_usage disabled, but category-stable depends on that."
-	fi
 	if test "$enable_wined3d_wined3d_swapchain_present" -gt 1; then
 		abort "Patchset wined3d-wined3d_swapchain_present disabled, but category-stable depends on that."
 	fi
@@ -1873,7 +1866,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_winecfg_Libraries=1
 	enable_wined3d_Revert_PixelFormat=1
 	enable_wined3d_Silence_FIXMEs=1
-	enable_wined3d_resource_check_usage=1
 	enable_wined3d_wined3d_swapchain_present=1
 	enable_winemenubuilder_Desktop_Icon_Path=1
 	enable_winepulse_PulseAudio_Support=1
@@ -6756,25 +6748,15 @@ fi
 # Patchset wined3d-Silence_FIXMEs
 # |
 # | Modified files:
-# |   *	dlls/wined3d/state.c
+# |   *	dlls/wined3d/resource.c, dlls/wined3d/state.c
 # |
 if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
 	patch_apply wined3d-Silence_FIXMEs/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
 	patch_apply wined3d-Silence_FIXMEs/0002-wined3d-Display-FIXME-for-cmp-function-0-only-once.patch
+	patch_apply wined3d-Silence_FIXMEs/0003-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 		echo '+    { "Christian Costa", "wined3d: Display FIXME for cmp function 0 only once.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-resource_check_usage
-# |
-# | Modified files:
-# |   *	dlls/wined3d/resource.c
-# |
-if test "$enable_wined3d_resource_check_usage" -eq 1; then
-	patch_apply wined3d-resource_check_usage/0001-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	(
 		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
 	) >> "$patchlist"
 fi

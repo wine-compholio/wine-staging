@@ -6723,8 +6723,10 @@ fi
 # |
 if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
 	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	patch_apply wined3d-UnhandledBlendFactor/0002-wined3d-Display-FIXME-for-cmp-function-0-only-once.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+		echo '+    { "Christian Costa", "wined3d: Display FIXME for cmp function 0 only once.", 1 },';
 	) >> "$patchlist"
 fi
 

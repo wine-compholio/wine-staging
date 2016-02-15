@@ -1,0 +1,88 @@
+From 9ebdb276a341f55b764eb6d0ac4e6600da9a792d Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 15 Feb 2016 08:25:58 +0100
+Subject: d3dx9_36/tests: Add initial tests for D3DXDisassembleShader.
+
+---
+ dlls/d3dx9_36/shader.c       |  2 +-
+ dlls/d3dx9_36/tests/shader.c | 46 ++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 47 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/d3dx9_36/shader.c b/dlls/d3dx9_36/shader.c
+index c364d45..8fb63aa 100644
+--- a/dlls/d3dx9_36/shader.c
++++ b/dlls/d3dx9_36/shader.c
+@@ -2363,7 +2363,7 @@ HRESULT WINAPI D3DXDisassembleShader(const DWORD *shader, BOOL colorcode, const
+     TRACE("%p %d %s %p\n", shader, colorcode, debugstr_a(comments), disassembly);
+ 
+     if (!shader || !disassembly)
+-        return E_POINTER;
++        return D3DERR_INVALIDCALL;
+ 
+     buf = buffer = HeapAlloc(GetProcessHeap(), 0, capacity);
+     if (!buffer)
+diff --git a/dlls/d3dx9_36/tests/shader.c b/dlls/d3dx9_36/tests/shader.c
+index 946143e..a5f194d 100644
+--- a/dlls/d3dx9_36/tests/shader.c
++++ b/dlls/d3dx9_36/tests/shader.c
+@@ -6628,6 +6628,51 @@ if (0)
+     ok(semantics[0].UsageIndex == 0, "Got %u, expected 0\n", semantics[0].UsageIndex);
+ }
+ 
++static void test_disassemble_shader(void)
++{
++    static const char disasm_vs[] = "    vs_1_1\n"
++                                    "    dcl_position v0\n"
++                                    "    dp4 oPos.x, v0, c0\n"
++                                    "    dp4 oPos.y, v0, c1\n"
++                                    "    dp4 oPos.z, v0, c2\n"
++                                    "    dp4 oPos.w, v0, c3\n";
++    static const char disasm_ps[] = "    ps_1_1\n"
++                                    "    def c1, 1, 0, 0, 0\n"
++                                    "    tex t0\n"
++                                    "    dp3 r0, c1, c0\n"
++                                    "    mul r0, v0, r0\n"
++                                    "    mul r0, t0, r0\n";
++    ID3DXBuffer *disassembly;
++    HRESULT ret;
++    char *ptr;
++
++    /* Check wrong parameters */
++    ret = D3DXDisassembleShader(NULL, FALSE, NULL, NULL);
++    ok(ret == D3DERR_INVALIDCALL, "Returned %#x, expected %#x\n", ret, D3DERR_INVALIDCALL);
++    ret = D3DXDisassembleShader(NULL, FALSE, NULL, &disassembly);
++    ok(ret == D3DERR_INVALIDCALL, "Returned %#x, expected %#x\n", ret, D3DERR_INVALIDCALL);
++    ret = D3DXDisassembleShader(simple_vs, FALSE, NULL, NULL);
++    ok(ret == D3DERR_INVALIDCALL, "Returned %#x, expected %#x\n", ret, D3DERR_INVALIDCALL);
++
++    /* Test with vertex shader */
++    disassembly = (void *)0xdeadbeef;
++    ret = D3DXDisassembleShader(simple_vs, FALSE, NULL, &disassembly);
++    ok(ret == D3D_OK, "Failed with %#x\n", ret);
++    ptr = ID3DXBuffer_GetBufferPointer(disassembly);
++    ok(!memcmp(ptr, disasm_vs, sizeof(disasm_vs) - 1), /* compare beginning */
++       "Returned '%s', expected '%s'\n", ptr, disasm_vs);
++    ID3DXBuffer_Release(disassembly);
++
++    /* Test with pixel shader */
++    disassembly = (void *)0xdeadbeef;
++    ret = D3DXDisassembleShader(simple_ps, FALSE, NULL, &disassembly);
++    ok(ret == D3D_OK, "Failed with %#x\n", ret);
++    ptr = ID3DXBuffer_GetBufferPointer(disassembly);
++    todo_wine ok(!memcmp(ptr, disasm_ps, sizeof(disasm_ps) - 1), /* compare beginning */
++                 "Returned '%s', expected '%s'\n", ptr, disasm_ps);
++    ID3DXBuffer_Release(disassembly);
++}
++
+ START_TEST(shader)
+ {
+     test_get_shader_size();
+@@ -6642,4 +6687,5 @@ START_TEST(shader)
+     test_registerset();
+     test_registerset_defaults();
+     test_get_shader_semantics();
++    test_disassemble_shader();
+ }
+-- 
+2.7.1
+

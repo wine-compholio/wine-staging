@@ -112,6 +112,7 @@ patch_enable_all ()
 	enable_d3dx9_33_Share_Source="$1"
 	enable_d3dx9_36_CloneEffect="$1"
 	enable_d3dx9_36_D3DXCreateTeapot="$1"
+	enable_d3dx9_36_D3DXDisassembleShader="$1"
 	enable_d3dx9_36_D3DXStubs="$1"
 	enable_d3dx9_36_DDS="$1"
 	enable_d3dx9_36_DXTn="$1"
@@ -483,6 +484,9 @@ patch_enable ()
 			;;
 		d3dx9_36-D3DXCreateTeapot)
 			enable_d3dx9_36_D3DXCreateTeapot="$2"
+			;;
+		d3dx9_36-D3DXDisassembleShader)
+			enable_d3dx9_36_D3DXDisassembleShader="$2"
 			;;
 		d3dx9_36-D3DXStubs)
 			enable_d3dx9_36_D3DXStubs="$2"
@@ -2191,6 +2195,13 @@ if test "$enable_ddraw_IDirect3DTexture2_Load" -eq 1; then
 	enable_wined3d_resource_map=1
 fi
 
+if test "$enable_d3dx9_36_D3DXDisassembleShader" -eq 1; then
+	if test "$enable_d3dx9_36_GetShaderSemantics" -gt 1; then
+		abort "Patchset d3dx9_36-GetShaderSemantics disabled, but d3dx9_36-D3DXDisassembleShader depends on that."
+	fi
+	enable_d3dx9_36_GetShaderSemantics=1
+fi
+
 if test "$enable_d3dx9_33_Share_Source" -eq 1; then
 	if test "$enable_d3dx9_36_D3DXStubs" -gt 1; then
 		abort "Patchset d3dx9_36-D3DXStubs disabled, but d3dx9_33-Share_Source depends on that."
@@ -3064,6 +3075,49 @@ if test "$enable_d3dx9_36_D3DXCreateTeapot" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset d3dx9_36-GetShaderSemantics
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#22682] Support for D3DXGetShaderInputSemantics
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/shader.c, dlls/d3dx9_36/tests/shader.c, include/d3dx9shader.h
+# |
+if test "$enable_d3dx9_36_GetShaderSemantics" -eq 1; then
+	patch_apply d3dx9_36-GetShaderSemantics/0001-d3dx9_36-Implement-D3DXGetShaderInputSemantics-tests.patch
+	patch_apply d3dx9_36-GetShaderSemantics/0002-d3dx9_36-Implement-D3DXGetShaderOutputSemantics.-rev.patch
+	(
+		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXGetShaderInputSemantics + tests.", 3 },';
+		echo '+    { "Alistair Leslie-Hughes", "d3dx9_36: Implement D3DXGetShaderOutputSemantics.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3dx9_36-D3DXDisassembleShader
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	d3dx9_36-GetShaderSemantics
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37919] Implement d3dx9_36.D3DXCreateTextureShader with stub interface
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/shader.c, dlls/d3dx9_36/tests/shader.c, include/d3dx9tex.h
+# |
+if test "$enable_d3dx9_36_D3DXDisassembleShader" -eq 1; then
+	patch_apply d3dx9_36-D3DXDisassembleShader/0001-d3dx9_36-Implement-D3DXCreateTextureShader-with-stub.patch
+	patch_apply d3dx9_36-D3DXDisassembleShader/0002-include-Fix-prototypes-of-D3DXFillXXXTextureTx-for-d.patch
+	patch_apply d3dx9_36-D3DXDisassembleShader/0003-d3dx9_36-Add-stub-for-D3DXFillCubeTextureTX.patch
+	patch_apply d3dx9_36-D3DXDisassembleShader/0004-d3dx9_36-Implement-D3DXDisassembleShader.patch
+	patch_apply d3dx9_36-D3DXDisassembleShader/0005-d3dx9_36-tests-Add-initial-tests-for-D3DXDisassemble.patch
+	(
+		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXCreateTextureShader with stubbed ID3DXTextureShader interface.", 1 },';
+		echo '+    { "Christian Costa", "include: Fix prototypes of D3DXFillXXXTextureTx for d3dx9.", 1 },';
+		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXFillCubeTextureTX.", 1 },';
+		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXDisassembleShader.", 1 },';
+		echo '+    { "Sebastian Lackner", "d3dx9_36/tests: Add initial tests for D3DXDisassembleShader.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset d3dx9_36-DDS
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3146,23 +3200,6 @@ if test "$enable_d3dx9_36_FindNextValidTechnique" -eq 1; then
 	patch_apply d3dx9_36-FindNextValidTechnique/0001-d3dx9_36-Implement-ID3DXEffect_FindNextValidTechniqu.patch
 	(
 		echo '+    { "Christian Costa", "d3dx9_36: Implement ID3DXEffect_FindNextValidTechnique + add tests.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3dx9_36-GetShaderSemantics
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#22682] Support for D3DXGetShaderInputSemantics
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/shader.c, dlls/d3dx9_36/tests/shader.c, include/d3dx9shader.h
-# |
-if test "$enable_d3dx9_36_GetShaderSemantics" -eq 1; then
-	patch_apply d3dx9_36-GetShaderSemantics/0001-d3dx9_36-Implement-D3DXGetShaderInputSemantics-tests.patch
-	patch_apply d3dx9_36-GetShaderSemantics/0002-d3dx9_36-Implement-D3DXGetShaderOutputSemantics.-rev.patch
-	(
-		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXGetShaderInputSemantics + tests.", 3 },';
-		echo '+    { "Alistair Leslie-Hughes", "d3dx9_36: Implement D3DXGetShaderOutputSemantics.", 2 },';
 	) >> "$patchlist"
 fi
 

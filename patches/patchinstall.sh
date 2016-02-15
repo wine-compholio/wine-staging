@@ -339,7 +339,7 @@ patch_enable_all ()
 	enable_wined3d_Geforce_425M="$1"
 	enable_wined3d_MESA_GPU_Info="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
-	enable_wined3d_UnhandledBlendFactor="$1"
+	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_resource_check_usage="$1"
 	enable_wined3d_resource_map="$1"
 	enable_wined3d_surface_cpu_blt="$1"
@@ -1166,8 +1166,8 @@ patch_enable ()
 		wined3d-Revert_PixelFormat)
 			enable_wined3d_Revert_PixelFormat="$2"
 			;;
-		wined3d-UnhandledBlendFactor)
-			enable_wined3d_UnhandledBlendFactor="$2"
+		wined3d-Silence_FIXMEs)
+			enable_wined3d_Silence_FIXMEs="$2"
 			;;
 		wined3d-resource_check_usage)
 			enable_wined3d_resource_check_usage="$2"
@@ -1786,8 +1786,8 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_wined3d_Revert_PixelFormat" -gt 1; then
 		abort "Patchset wined3d-Revert_PixelFormat disabled, but category-stable depends on that."
 	fi
-	if test "$enable_wined3d_UnhandledBlendFactor" -gt 1; then
-		abort "Patchset wined3d-UnhandledBlendFactor disabled, but category-stable depends on that."
+	if test "$enable_wined3d_Silence_FIXMEs" -gt 1; then
+		abort "Patchset wined3d-Silence_FIXMEs disabled, but category-stable depends on that."
 	fi
 	if test "$enable_wined3d_resource_check_usage" -gt 1; then
 		abort "Patchset wined3d-resource_check_usage disabled, but category-stable depends on that."
@@ -1872,7 +1872,7 @@ if test "$enable_category_stable" -eq 1; then
 	enable_wineboot_HKEY_DYN_DATA=1
 	enable_winecfg_Libraries=1
 	enable_wined3d_Revert_PixelFormat=1
-	enable_wined3d_UnhandledBlendFactor=1
+	enable_wined3d_Silence_FIXMEs=1
 	enable_wined3d_resource_check_usage=1
 	enable_wined3d_wined3d_swapchain_present=1
 	enable_winemenubuilder_Desktop_Icon_Path=1
@@ -6753,14 +6753,14 @@ if test "$enable_wined3d_Revert_PixelFormat" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-UnhandledBlendFactor
+# Patchset wined3d-Silence_FIXMEs
 # |
 # | Modified files:
 # |   *	dlls/wined3d/state.c
 # |
-if test "$enable_wined3d_UnhandledBlendFactor" -eq 1; then
-	patch_apply wined3d-UnhandledBlendFactor/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	patch_apply wined3d-UnhandledBlendFactor/0002-wined3d-Display-FIXME-for-cmp-function-0-only-once.patch
+if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
+	patch_apply wined3d-Silence_FIXMEs/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	patch_apply wined3d-Silence_FIXMEs/0002-wined3d-Display-FIXME-for-cmp-function-0-only-once.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 		echo '+    { "Christian Costa", "wined3d: Display FIXME for cmp function 0 only once.", 1 },';

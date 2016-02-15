@@ -341,7 +341,6 @@ patch_enable_all ()
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_resource_map="$1"
-	enable_wined3d_wined3d_swapchain_present="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
 	enable_winepulse_PulseAudio_Support="$1"
@@ -1170,9 +1169,6 @@ patch_enable ()
 		wined3d-resource_map)
 			enable_wined3d_resource_map="$2"
 			;;
-		wined3d-wined3d_swapchain_present)
-			enable_wined3d_wined3d_swapchain_present="$2"
-			;;
 		winedevice-Fix_Relocation)
 			enable_winedevice_Fix_Relocation="$2"
 			;;
@@ -1781,9 +1777,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_wined3d_Silence_FIXMEs" -gt 1; then
 		abort "Patchset wined3d-Silence_FIXMEs disabled, but category-stable depends on that."
 	fi
-	if test "$enable_wined3d_wined3d_swapchain_present" -gt 1; then
-		abort "Patchset wined3d-wined3d_swapchain_present disabled, but category-stable depends on that."
-	fi
 	if test "$enable_winemenubuilder_Desktop_Icon_Path" -gt 1; then
 		abort "Patchset winemenubuilder-Desktop_Icon_Path disabled, but category-stable depends on that."
 	fi
@@ -1862,7 +1855,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_winecfg_Libraries=1
 	enable_wined3d_Revert_PixelFormat=1
 	enable_wined3d_Silence_FIXMEs=1
-	enable_wined3d_wined3d_swapchain_present=1
 	enable_winemenubuilder_Desktop_Icon_Path=1
 	enable_winepulse_PulseAudio_Support=1
 	enable_winex11_Window_Style=1
@@ -6744,29 +6736,19 @@ fi
 # Patchset wined3d-Silence_FIXMEs
 # |
 # | Modified files:
-# |   *	dlls/wined3d/resource.c, dlls/wined3d/state.c, dlls/wined3d/surface.c
+# |   *	dlls/wined3d/resource.c, dlls/wined3d/state.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c
 # |
 if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
 	patch_apply wined3d-Silence_FIXMEs/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
 	patch_apply wined3d-Silence_FIXMEs/0002-wined3d-Display-FIXME-for-cmp-function-0-only-once.patch
 	patch_apply wined3d-Silence_FIXMEs/0003-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
 	patch_apply wined3d-Silence_FIXMEs/0004-wined3d-Print-FIXME-only-once-in-surface_cpu_blt.patch
+	patch_apply wined3d-Silence_FIXMEs/0005-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 		echo '+    { "Christian Costa", "wined3d: Display FIXME for cmp function 0 only once.", 1 },';
 		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
 		echo '+    { "Christian Costa", "wined3d: Print FIXME only once in surface_cpu_blt.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-wined3d_swapchain_present
-# |
-# | Modified files:
-# |   *	dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_wined3d_swapchain_present" -eq 1; then
-	patch_apply wined3d-wined3d_swapchain_present/0001-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
 	) >> "$patchlist"
 fi

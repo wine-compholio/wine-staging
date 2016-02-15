@@ -87,6 +87,7 @@ patch_enable_all ()
 	enable_Pipelight="$1"
 	enable_Staging="$1"
 	enable_advapi32_LsaLookupSids="$1"
+	enable_advapi32_RegCopyTree="$1"
 	enable_advapi32_SetSecurityInfo="$1"
 	enable_amstream_GetMultiMediaStream="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
@@ -404,6 +405,9 @@ patch_enable ()
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
+			;;
+		advapi32-RegCopyTree)
+			enable_advapi32_RegCopyTree="$2"
 			;;
 		advapi32-SetSecurityInfo)
 			enable_advapi32_SetSecurityInfo="$2"
@@ -2465,6 +2469,29 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 		echo '+    { "Qian Hong", "advapi32/tests: Test prefix and use of TokenPrimaryGroup Sid.", 1 },';
 		echo '+    { "Qian Hong", "server: Create primary group using DOMAIN_GROUP_RID_USERS.", 1 },';
 		echo '+    { "Qian Hong", "advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset advapi32-RegCopyTree
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39690] Implement advapi32.RegCopyTree{A,W}
+# |
+# | Modified files:
+# |   *	dlls/advapi32/advapi32.spec, dlls/advapi32/registry.c, dlls/advapi32/tests/registry.c, dlls/api-ms-win-core-
+# | 	registry-l1-1-0/api-ms-win-core-registry-l1-1-0.spec, dlls/api-ms-win-downlevel-advapi32-l1-1-0/api-ms-win-downlevel-
+# | 	advapi32-l1-1-0.spec
+# |
+if test "$enable_advapi32_RegCopyTree" -eq 1; then
+	patch_apply advapi32-RegCopyTree/0001-advapi32-tests-Improve-RegDeleteTree-tests.patch
+	patch_apply advapi32-RegCopyTree/0002-advapi32-tests-Add-tests-for-RegCopyTree.patch
+	patch_apply advapi32-RegCopyTree/0003-advapi32-Implement-RegCopyTreeA-W.patch
+	patch_apply advapi32-RegCopyTree/0004-advapi32-Clean-up-RegDeleteTree-implementation.patch
+	(
+		echo '+    { "Sebastian Lackner", "advapi32/tests: Improve RegDeleteTree tests.", 1 },';
+		echo '+    { "Sebastian Lackner", "advapi32/tests: Add tests for RegCopyTree.", 1 },';
+		echo '+    { "Michael Müller", "advapi32: Implement RegCopyTreeA/W.", 1 },';
+		echo '+    { "Sebastian Lackner", "advapi32: Clean up RegDeleteTree implementation.", 1 },';
 	) >> "$patchlist"
 fi
 

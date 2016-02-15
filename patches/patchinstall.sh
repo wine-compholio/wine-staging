@@ -2208,6 +2208,9 @@ if test "$enable_d3dx9_24_ID3DXEffect" -eq 1; then
 fi
 
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
+	if test "$enable_advapi32_RegCopyTree" -gt 1; then
+		abort "Patchset advapi32-RegCopyTree disabled, but api-ms-win-Stub_DLLs depends on that."
+	fi
 	if test "$enable_combase_RoApi" -gt 1; then
 		abort "Patchset combase-RoApi disabled, but api-ms-win-Stub_DLLs depends on that."
 	fi
@@ -2223,6 +2226,7 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	if test "$enable_ole32_CoGetApartmentType" -gt 1; then
 		abort "Patchset ole32-CoGetApartmentType disabled, but api-ms-win-Stub_DLLs depends on that."
 	fi
+	enable_advapi32_RegCopyTree=1
 	enable_combase_RoApi=1
 	enable_kernel32_FreeUserPhysicalPages=1
 	enable_kernel32_GetCurrentPackageFamilyName=1
@@ -2610,8 +2614,8 @@ fi
 # Patchset api-ms-win-Stub_DLLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	combase-RoApi, kernel32-FreeUserPhysicalPages, kernel32-GetCurrentPackageFamilyName, kernel32-GetFinalPathNameByHandle,
-# | 	ole32-CoGetApartmentType
+# |   *	advapi32-RegCopyTree, combase-RoApi, kernel32-FreeUserPhysicalPages, kernel32-GetCurrentPackageFamilyName,
+# | 	kernel32-GetFinalPathNameByHandle, ole32-CoGetApartmentType
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/api-ms-win-appmodel-runtime-l1-1-1/Makefile.in, dlls/api-ms-win-appmodel-runtime-l1-1-1/api-ms-win-

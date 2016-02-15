@@ -341,7 +341,6 @@ patch_enable_all ()
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_resource_map="$1"
-	enable_wined3d_surface_cpu_blt="$1"
 	enable_wined3d_wined3d_swapchain_present="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
@@ -1170,9 +1169,6 @@ patch_enable ()
 			;;
 		wined3d-resource_map)
 			enable_wined3d_resource_map="$2"
-			;;
-		wined3d-surface_cpu_blt)
-			enable_wined3d_surface_cpu_blt="$2"
 			;;
 		wined3d-wined3d_swapchain_present)
 			enable_wined3d_wined3d_swapchain_present="$2"
@@ -6748,27 +6744,17 @@ fi
 # Patchset wined3d-Silence_FIXMEs
 # |
 # | Modified files:
-# |   *	dlls/wined3d/resource.c, dlls/wined3d/state.c
+# |   *	dlls/wined3d/resource.c, dlls/wined3d/state.c, dlls/wined3d/surface.c
 # |
 if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
 	patch_apply wined3d-Silence_FIXMEs/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
 	patch_apply wined3d-Silence_FIXMEs/0002-wined3d-Display-FIXME-for-cmp-function-0-only-once.patch
 	patch_apply wined3d-Silence_FIXMEs/0003-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	patch_apply wined3d-Silence_FIXMEs/0004-wined3d-Print-FIXME-only-once-in-surface_cpu_blt.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 		echo '+    { "Christian Costa", "wined3d: Display FIXME for cmp function 0 only once.", 1 },';
 		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-surface_cpu_blt
-# |
-# | Modified files:
-# |   *	dlls/wined3d/surface.c
-# |
-if test "$enable_wined3d_surface_cpu_blt" -eq 1; then
-	patch_apply wined3d-surface_cpu_blt/0001-wined3d-Print-FIXME-only-once-in-surface_cpu_blt.patch
-	(
 		echo '+    { "Christian Costa", "wined3d: Print FIXME only once in surface_cpu_blt.", 1 },';
 	) >> "$patchlist"
 fi

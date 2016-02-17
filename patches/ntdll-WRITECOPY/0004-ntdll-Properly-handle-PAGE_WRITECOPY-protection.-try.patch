@@ -1,45 +1,41 @@
-From fe342bf68517ea538ccde914094c744e3dfc5192 Mon Sep 17 00:00:00 2001
+From a1743661a00045d656892c8de7f6f0324dcd1404 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 4 Oct 2014 02:56:08 +0200
 Subject: ntdll: Properly handle PAGE_WRITECOPY protection. (try 5)
 
 ---
- dlls/kernel32/tests/virtual.c | 12 ++----------
+ dlls/kernel32/tests/virtual.c |  8 ++------
  dlls/ntdll/virtual.c          | 26 +++++++++++++++++++-------
- 2 files changed, 21 insertions(+), 17 deletions(-)
+ 2 files changed, 21 insertions(+), 13 deletions(-)
 
 diff --git a/dlls/kernel32/tests/virtual.c b/dlls/kernel32/tests/virtual.c
-index 75e91d5..3520546 100644
+index a3ae5e6..3b167d2 100644
 --- a/dlls/kernel32/tests/virtual.c
 +++ b/dlls/kernel32/tests/virtual.c
-@@ -2929,11 +2929,7 @@ todo_wine
+@@ -3278,9 +3278,7 @@ static void test_CreateFileMapping_protection(void)
                  SetLastError(0xdeadbeef);
                  ret = VirtualQuery(base, &info, sizeof(info));
                  ok(ret, "VirtualQuery failed %d\n", GetLastError());
 -                /* FIXME: remove the condition below once Wine is fixed */
--                if (td[i].prot == PAGE_WRITECOPY || td[i].prot == PAGE_EXECUTE_WRITECOPY)
--                    todo_wine ok(info.Protect == td[i].prot_after_write, "%d: got %#x != expected %#x\n", i, info.Protect, td[i].prot_after_write);
--                else
+-                todo_wine_if (td[i].prot == PAGE_WRITECOPY || td[i].prot == PAGE_EXECUTE_WRITECOPY)
 -                    ok(info.Protect == td[i].prot_after_write, "%d: got %#x != expected %#x\n", i, info.Protect, td[i].prot_after_write);
 +                ok(info.Protect == td[i].prot_after_write, "%d: got %#x != expected %#x\n", i, info.Protect, td[i].prot_after_write);
              }
          }
          else
-@@ -2947,11 +2943,7 @@ todo_wine
+@@ -3294,9 +3292,7 @@ static void test_CreateFileMapping_protection(void)
          SetLastError(0xdeadbeef);
          ret = VirtualProtect(base, si.dwPageSize, PAGE_NOACCESS, &old_prot);
          ok(ret, "%d: VirtualProtect error %d\n", i, GetLastError());
 -        /* FIXME: remove the condition below once Wine is fixed */
--        if (td[i].prot == PAGE_WRITECOPY || td[i].prot == PAGE_EXECUTE_WRITECOPY)
--            todo_wine ok(old_prot == td[i].prot_after_write, "%d: got %#x != expected %#x\n", i, old_prot, td[i].prot_after_write);
--        else
+-        todo_wine_if (td[i].prot == PAGE_WRITECOPY || td[i].prot == PAGE_EXECUTE_WRITECOPY)
 -            ok(old_prot == td[i].prot_after_write, "%d: got %#x != expected %#x\n", i, old_prot, td[i].prot_after_write);
 +        ok(old_prot == td[i].prot_after_write, "%d: got %#x != expected %#x\n", i, old_prot, td[i].prot_after_write);
      }
  
      UnmapViewOfFile(base);
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 675e723..1744e35 100644
+index caf2b70..728b857 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
 @@ -178,8 +178,13 @@ static int VIRTUAL_GetUnixProt( BYTE vprot )
@@ -57,7 +53,7 @@ index 675e723..1744e35 100644
          if (vprot & VPROT_WRITEWATCH) prot &= ~PROT_WRITE;
      }
      if (!prot) prot = PROT_NONE;
-@@ -1531,13 +1536,18 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+@@ -1488,13 +1493,18 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
      {
          void *page = ROUND_ADDR( addr, page_mask );
          BYTE *vprot = &view->prot[((const char *)page - (const char *)view->base) >> page_shift];
@@ -78,7 +74,7 @@ index 675e723..1744e35 100644
              /* ignore fault if page is writable now */
              if (VIRTUAL_GetUnixProt( *vprot ) & PROT_WRITE) ret = STATUS_SUCCESS;
          }
-@@ -1746,14 +1756,16 @@ SIZE_T CDECL wine_uninterrupted_write_memory( void *addr, const void *buffer, SI
+@@ -1703,14 +1713,16 @@ SIZE_T CDECL wine_uninterrupted_write_memory( void *addr, const void *buffer, SI
                   * exception. Similar to virtual_handle_fault. */
                  if (!(VIRTUAL_GetUnixProt( *p ) & PROT_WRITE))
                  {
@@ -100,5 +96,5 @@ index 675e723..1744e35 100644
                      if (!(VIRTUAL_GetUnixProt( *p ) & PROT_WRITE))
                          break;
 -- 
-2.3.2
+2.7.1
 

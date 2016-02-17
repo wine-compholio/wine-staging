@@ -1,22 +1,36 @@
-From 66fe4e28e5cf72bbad572c102579ec3259e4c73c Mon Sep 17 00:00:00 2001
+From e08b17148b842fb7399c149d510f7ccafd043b66 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 15 Jan 2016 12:16:32 +0100
 Subject: ole32: Implement CoGetApartmentType.
 
 ---
  .../api-ms-win-core-com-l1-1-0.spec                |  2 +-
+ .../api-ms-win-core-com-l1-1-1.spec                |  2 +-
  .../api-ms-win-downlevel-ole32-l1-1-0.spec         |  2 +-
  dlls/combase/combase.spec                          |  2 +-
  dlls/ole32/compobj.c                               | 29 +++++++++++++
  dlls/ole32/ole32.spec                              |  1 +
  dlls/ole32/tests/compobj.c                         | 50 ++++++++++++++++++++++
  include/objidl.idl                                 |  9 ++++
- 7 files changed, 92 insertions(+), 3 deletions(-)
+ 8 files changed, 93 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/api-ms-win-core-com-l1-1-0/api-ms-win-core-com-l1-1-0.spec b/dlls/api-ms-win-core-com-l1-1-0/api-ms-win-core-com-l1-1-0.spec
 index f8026db..f645c9d 100644
 --- a/dlls/api-ms-win-core-com-l1-1-0/api-ms-win-core-com-l1-1-0.spec
 +++ b/dlls/api-ms-win-core-com-l1-1-0/api-ms-win-core-com-l1-1-0.spec
+@@ -17,7 +17,7 @@
+ @ stub CoEnableCallCancellation
+ @ stdcall CoFreeUnusedLibraries() ole32.CoFreeUnusedLibraries
+ @ stdcall CoFreeUnusedLibrariesEx(long long) ole32.CoFreeUnusedLibrariesEx
+-@ stub CoGetApartmentType
++@ stdcall CoGetApartmentType(ptr ptr) ole32.CoGetApartmentType
+ @ stdcall CoGetCallContext(ptr ptr) ole32.CoGetCallContext
+ @ stdcall CoGetCallerTID(ptr) ole32.CoGetCallerTID
+ @ stub CoGetCancelObject
+diff --git a/dlls/api-ms-win-core-com-l1-1-1/api-ms-win-core-com-l1-1-1.spec b/dlls/api-ms-win-core-com-l1-1-1/api-ms-win-core-com-l1-1-1.spec
+index 56aaf36..d2914f0 100644
+--- a/dlls/api-ms-win-core-com-l1-1-1/api-ms-win-core-com-l1-1-1.spec
++++ b/dlls/api-ms-win-core-com-l1-1-1/api-ms-win-core-com-l1-1-1.spec
 @@ -17,7 +17,7 @@
  @ stub CoEnableCallCancellation
  @ stdcall CoFreeUnusedLibraries() ole32.CoFreeUnusedLibraries
@@ -40,7 +54,7 @@ index a0eabe9..82ff0f1 100644
  @ stdcall CoGetCurrentLogicalThreadId(ptr) ole32.CoGetCurrentLogicalThreadId
  @ stdcall CoGetInterfaceAndReleaseStream(ptr ptr ptr) ole32.CoGetInterfaceAndReleaseStream
 diff --git a/dlls/combase/combase.spec b/dlls/combase/combase.spec
-index 5082f39..075d904 100644
+index 4bda470..b612bef 100644
 --- a/dlls/combase/combase.spec
 +++ b/dlls/combase/combase.spec
 @@ -90,7 +90,7 @@
@@ -53,10 +67,10 @@ index 5082f39..075d904 100644
  @ stdcall CoGetCallState(long ptr) ole32.CoGetCallState
  @ stdcall CoGetCallerTID(ptr) ole32.CoGetCallerTID
 diff --git a/dlls/ole32/compobj.c b/dlls/ole32/compobj.c
-index 90b049a..d8d618e 100644
+index 080940e..d639a3e 100644
 --- a/dlls/ole32/compobj.c
 +++ b/dlls/ole32/compobj.c
-@@ -5027,6 +5027,35 @@ HRESULT Handler_DllGetClassObject(REFCLSID rclsid, REFIID riid, LPVOID *ppv)
+@@ -5029,6 +5029,35 @@ HRESULT Handler_DllGetClassObject(REFCLSID rclsid, REFIID riid, LPVOID *ppv)
  }
  
  /***********************************************************************
@@ -105,7 +119,7 @@ index 04c9f1e..c836176 100644
  @ stdcall CoGetCallState(long ptr)
  @ stdcall CoGetCallerTID(ptr)
 diff --git a/dlls/ole32/tests/compobj.c b/dlls/ole32/tests/compobj.c
-index 5fe9876..2ca5a45 100644
+index 6fa6dfc..f67928e 100644
 --- a/dlls/ole32/tests/compobj.c
 +++ b/dlls/ole32/tests/compobj.c
 @@ -70,6 +70,7 @@ static HRESULT (WINAPI * pCoSwitchCallContext)(IUnknown *pObject, IUnknown **ppO
@@ -116,7 +130,7 @@ index 5fe9876..2ca5a45 100644
  static LONG (WINAPI * pRegDeleteKeyExA)(HKEY, LPCSTR, REGSAM, DWORD);
  static LONG (WINAPI * pRegOverridePredefKey)(HKEY key, HKEY override);
  
-@@ -2812,6 +2813,53 @@ if (0) /* crashes on native */
+@@ -2879,6 +2880,53 @@ if (0) /* crashes on native */
      IMalloc_Release(imalloc);
  }
  
@@ -170,7 +184,7 @@ index 5fe9876..2ca5a45 100644
  static void init_funcs(void)
  {
      HMODULE hOle32 = GetModuleHandleA("ole32");
-@@ -2823,6 +2871,7 @@ static void init_funcs(void)
+@@ -2890,6 +2938,7 @@ static void init_funcs(void)
      pCoGetTreatAsClass = (void*)GetProcAddress(hOle32,"CoGetTreatAsClass");
      pCoTreatAsClass = (void*)GetProcAddress(hOle32,"CoTreatAsClass");
      pCoGetContextToken = (void*)GetProcAddress(hOle32, "CoGetContextToken");
@@ -178,14 +192,14 @@ index 5fe9876..2ca5a45 100644
      pRegDeleteKeyExA = (void*)GetProcAddress(hAdvapi32, "RegDeleteKeyExA");
      pRegOverridePredefKey = (void*)GetProcAddress(hAdvapi32, "RegOverridePredefKey");
      pCoInitializeEx = (void*)GetProcAddress(hOle32, "CoInitializeEx");
-@@ -2876,4 +2925,5 @@ START_TEST(compobj)
+@@ -2944,4 +2993,5 @@ START_TEST(compobj)
      test_CoWaitForMultipleHandles();
      test_CoGetMalloc();
      test_OleRegGetUserType();
 +    test_CoGetApartmentType();
  }
 diff --git a/include/objidl.idl b/include/objidl.idl
-index c18442f..859620a 100644
+index 335282d..d60f016 100644
 --- a/include/objidl.idl
 +++ b/include/objidl.idl
 @@ -2327,6 +2327,15 @@ typedef enum _APTTYPE {
@@ -205,5 +219,5 @@ index c18442f..859620a 100644
      THDTYPE_BLOCKMESSAGES   = 0,
      THDTYPE_PROCESSMESSAGES = 1
 -- 
-2.6.4
+2.7.1
 

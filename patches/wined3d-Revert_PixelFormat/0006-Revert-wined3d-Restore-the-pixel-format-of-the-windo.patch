@@ -1,4 +1,4 @@
-From 1ed6f781025b1b360015e5b2fce084bd558a9af7 Mon Sep 17 00:00:00 2001
+From 2e5d4354d80efc6c672262c0f0fb0e166895cc7a Mon Sep 17 00:00:00 2001
 From: Ken Thomases <ken@codeweavers.com>
 Date: Sun, 14 Sep 2014 19:47:30 -0500
 Subject: Revert "wined3d: Restore the pixel format of the window whose pixel
@@ -18,10 +18,10 @@ https://bugs.winehq.org/show_bug.cgi?id=36900
  2 files changed, 22 insertions(+), 66 deletions(-)
 
 diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
-index 8109a6f..e1658d9 100644
+index 61e36a8..0c6ee52 100644
 --- a/dlls/wined3d/context.c
 +++ b/dlls/wined3d/context.c
-@@ -766,38 +766,8 @@ void context_surface_update(struct wined3d_context *context, const struct wined3
+@@ -781,38 +781,8 @@ void context_surface_update(struct wined3d_context *context, const struct wined3
      }
  }
  
@@ -34,7 +34,7 @@ index 8109a6f..e1658d9 100644
 -    {
 -        if (ctx->gl_info->supported[WGL_WINE_PIXEL_FORMAT_PASSTHROUGH])
 -        {
--            HDC dc = GetDC(ctx->restore_pf_win);
+-            HDC dc = GetDCEx(ctx->restore_pf_win, 0, DCX_USESTYLE | DCX_CACHE);
 -            if (dc)
 -            {
 -                if (!GL_EXTCALL(wglSetPixelFormatWINE(dc, ctx->restore_pf)))
@@ -61,7 +61,7 @@ index 8109a6f..e1658d9 100644
      int current = GetPixelFormat(dc);
  
      if (current == format) return TRUE;
-@@ -811,9 +781,6 @@ static BOOL context_set_pixel_format(struct wined3d_context *context, HDC dc, in
+@@ -826,9 +796,6 @@ static BOOL context_set_pixel_format(struct wined3d_context *context, HDC dc, in
                      format, dc, GetLastError());
              return FALSE;
          }
@@ -71,7 +71,7 @@ index 8109a6f..e1658d9 100644
          return TRUE;
      }
  
-@@ -823,24 +790,12 @@ static BOOL context_set_pixel_format(struct wined3d_context *context, HDC dc, in
+@@ -838,24 +805,12 @@ static BOOL context_set_pixel_format(struct wined3d_context *context, HDC dc, in
       * when really needed. */
      if (gl_info->supported[WGL_WINE_PIXEL_FORMAT_PASSTHROUGH])
      {
@@ -96,7 +96,7 @@ index 8109a6f..e1658d9 100644
          return TRUE;
      }
  
-@@ -858,7 +813,7 @@ static BOOL context_set_gl_context(struct wined3d_context *ctx)
+@@ -873,7 +828,7 @@ static BOOL context_set_gl_context(struct wined3d_context *ctx)
      struct wined3d_swapchain *swapchain = ctx->swapchain;
      BOOL backup = FALSE;
  
@@ -105,7 +105,7 @@ index 8109a6f..e1658d9 100644
      {
          WARN("Failed to set pixel format %d on device context %p.\n",
                  ctx->pixel_format, ctx->hdc);
-@@ -891,7 +846,7 @@ static BOOL context_set_gl_context(struct wined3d_context *ctx)
+@@ -906,7 +861,7 @@ static BOOL context_set_gl_context(struct wined3d_context *ctx)
              return FALSE;
          }
  
@@ -114,7 +114,7 @@ index 8109a6f..e1658d9 100644
          {
              ERR("Failed to set pixel format %d on device context %p.\n",
                      ctx->pixel_format, dc);
-@@ -913,8 +868,15 @@ static BOOL context_set_gl_context(struct wined3d_context *ctx)
+@@ -928,8 +883,15 @@ static BOOL context_set_gl_context(struct wined3d_context *ctx)
      return TRUE;
  }
  
@@ -131,7 +131,7 @@ index 8109a6f..e1658d9 100644
      if (!wglMakeCurrent(dc, gl_ctx))
      {
          ERR("Failed to restore GL context %p on device context %p, last error %#x.\n",
-@@ -955,9 +917,11 @@ static void context_destroy_gl_resources(struct wined3d_context *context)
+@@ -970,9 +932,11 @@ static void context_destroy_gl_resources(struct wined3d_context *context)
      HGLRC restore_ctx;
      HDC restore_dc;
      unsigned int i;
@@ -143,7 +143,7 @@ index 8109a6f..e1658d9 100644
  
      if (restore_ctx == context->glCtx)
          restore_ctx = NULL;
-@@ -1046,10 +1010,9 @@ static void context_destroy_gl_resources(struct wined3d_context *context)
+@@ -1061,10 +1025,9 @@ static void context_destroy_gl_resources(struct wined3d_context *context)
      HeapFree(GetProcessHeap(), 0, context->free_occlusion_queries);
      HeapFree(GetProcessHeap(), 0, context->free_event_queries);
  
@@ -155,7 +155,7 @@ index 8109a6f..e1658d9 100644
      }
      else if (wglGetCurrentContext() && !wglMakeCurrent(NULL, NULL))
      {
-@@ -1145,16 +1108,12 @@ void context_release(struct wined3d_context *context)
+@@ -1165,16 +1128,12 @@ void context_release(struct wined3d_context *context)
              WARN("Context %p is not the current context.\n", context);
      }
  
@@ -177,7 +177,7 @@ index 8109a6f..e1658d9 100644
      }
  }
  
-@@ -1173,10 +1132,9 @@ static void context_enter(struct wined3d_context *context)
+@@ -1207,10 +1166,9 @@ static void context_enter(struct wined3d_context *context)
                      current_gl, wglGetCurrentDC());
              context->restore_ctx = current_gl;
              context->restore_dc = wglGetCurrentDC();
@@ -189,7 +189,7 @@ index 8109a6f..e1658d9 100644
      }
  }
  
-@@ -1500,9 +1458,7 @@ struct wined3d_context *context_create(struct wined3d_swapchain *swapchain,
+@@ -1578,9 +1536,7 @@ struct wined3d_context *context_create(struct wined3d_swapchain *swapchain,
  
      context_enter(ret);
  
@@ -200,7 +200,7 @@ index 8109a6f..e1658d9 100644
      {
          ERR("Failed to set pixel format %d on device context %p.\n", pixel_format, hdc);
          context_release(ret);
-@@ -1557,6 +1513,7 @@ struct wined3d_context *context_create(struct wined3d_swapchain *swapchain,
+@@ -1621,6 +1577,7 @@ struct wined3d_context *context_create(struct wined3d_swapchain *swapchain,
          goto out;
      }
  
@@ -209,10 +209,10 @@ index 8109a6f..e1658d9 100644
      ret->state_table = device->StateTable;
  
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 849a44a..cd8e958 100644
+index c68289e..3c74c07 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -1120,7 +1120,6 @@ struct wined3d_context
+@@ -1291,7 +1291,6 @@ struct wined3d_context
      HGLRC restore_ctx;
      HDC restore_dc;
      int restore_pf;
@@ -221,5 +221,5 @@ index 849a44a..cd8e958 100644
      HWND                    win_handle;
      HDC                     hdc;
 -- 
-2.1.0
+2.7.1
 

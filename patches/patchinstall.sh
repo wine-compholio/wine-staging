@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "b190a72bfe53a41a83ae55d75de8327c24512bee"
+	echo "52a99f2eadf04394a99d81f97a9a6d2a454fa959"
 }
 
 # Show version information
@@ -170,12 +170,10 @@ patch_enable_all ()
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_Profile="$1"
-	enable_kernel32_QT_Environment_Variables="$1"
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
 	enable_kernel32_SetFileInformationByHandle="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
 	enable_kernel32_VerifyVersionInfo="$1"
-	enable_kernel32_VirtualProtect="$1"
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_makedep_PARENTSPEC="$1"
@@ -275,7 +273,6 @@ patch_enable_all ()
 	enable_server_Signal_Thread="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
-	enable_services_SERVICE_FILE_SYSTEM_DRIVER="$1"
 	enable_setupapi_Display_Device="$1"
 	enable_setupapi_HSPFILEQ_Check_Type="$1"
 	enable_setupapi_SetupDiSetDeviceInstallParamsW="$1"
@@ -655,9 +652,6 @@ patch_enable ()
 		kernel32-Profile)
 			enable_kernel32_Profile="$2"
 			;;
-		kernel32-QT_Environment_Variables)
-			enable_kernel32_QT_Environment_Variables="$2"
-			;;
 		kernel32-SetFileCompletionNotificationModes)
 			enable_kernel32_SetFileCompletionNotificationModes="$2"
 			;;
@@ -669,9 +663,6 @@ patch_enable ()
 			;;
 		kernel32-VerifyVersionInfo)
 			enable_kernel32_VerifyVersionInfo="$2"
-			;;
-		kernel32-VirtualProtect)
-			enable_kernel32_VirtualProtect="$2"
 			;;
 		libs-Debug_Channel)
 			enable_libs_Debug_Channel="$2"
@@ -969,9 +960,6 @@ patch_enable ()
 			;;
 		server-Timestamp_Compat)
 			enable_server_Timestamp_Compat="$2"
-			;;
-		services-SERVICE_FILE_SYSTEM_DRIVER)
-			enable_services_SERVICE_FILE_SYSTEM_DRIVER="$2"
 			;;
 		setupapi-Display_Device)
 			enable_setupapi_Display_Device="$2"
@@ -2322,9 +2310,9 @@ fi
 # |   *	[#35561] MSYS2 expects correct handling of WRITECOPY memory protection
 # |
 # | Modified files:
-# |   *	dlls/advapi32/crypt.c, dlls/kernel32/tests/virtual.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c,
-# | 	dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c, dlls/ntdll/signal_powerpc.c,
-# | 	dlls/ntdll/signal_x86_64.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c
+# |   *	dlls/advapi32/crypt.c, dlls/advapi32/tests/security.c, dlls/kernel32/tests/virtual.c, dlls/ntdll/ntdll_misc.h,
+# | 	dlls/ntdll/server.c, dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c,
+# | 	dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c
 # |
 if test "$enable_ntdll_WRITECOPY" -eq 1; then
 	patch_apply ntdll-WRITECOPY/0001-ntdll-Trigger-write-watches-before-passing-userdata-.patch
@@ -2521,9 +2509,9 @@ fi
 # Patchset combase-RoApi
 # |
 # | Modified files:
-# |   *	dlls/api-ms-win-core-winrt-l1-1-0/api-ms-win-core-winrt-l1-1-0.spec, dlls/combase/Makefile.in,
-# | 	dlls/combase/combase.spec, dlls/combase/roapi.c, include/Makefile.in, include/activation.idl, include/objidl.idl,
-# | 	include/roapi.h
+# |   *	dlls/api-ms-win-core-winrt-l1-1-0/api-ms-win-core-winrt-l1-1-0.spec, dlls/api-ms-win-core-winrt-registration-l1-1-0/api-
+# | 	ms-win-core-winrt-registration-l1-1-0.spec, dlls/combase/Makefile.in, dlls/combase/combase.spec, dlls/combase/roapi.c,
+# | 	include/Makefile.in, include/activation.idl, include/objidl.idl, include/roapi.h
 # |
 if test "$enable_combase_RoApi" -eq 1; then
 	patch_apply combase-RoApi/0001-include-Add-activation.idl-with-IActivationFactory-i.patch
@@ -2596,9 +2584,9 @@ fi
 # Patchset ole32-CoGetApartmentType
 # |
 # | Modified files:
-# |   *	dlls/api-ms-win-core-com-l1-1-0/api-ms-win-core-com-l1-1-0.spec, dlls/api-ms-win-downlevel-ole32-l1-1-0/api-ms-win-
-# | 	downlevel-ole32-l1-1-0.spec, dlls/combase/combase.spec, dlls/ole32/compobj.c, dlls/ole32/ole32.spec,
-# | 	dlls/ole32/tests/compobj.c, include/objidl.idl
+# |   *	dlls/api-ms-win-core-com-l1-1-0/api-ms-win-core-com-l1-1-0.spec, dlls/api-ms-win-core-com-l1-1-1/api-ms-win-core-
+# | 	com-l1-1-1.spec, dlls/api-ms-win-downlevel-ole32-l1-1-0/api-ms-win-downlevel-ole32-l1-1-0.spec,
+# | 	dlls/combase/combase.spec, dlls/ole32/compobj.c, dlls/ole32/ole32.spec, dlls/ole32/tests/compobj.c, include/objidl.idl
 # |
 if test "$enable_ole32_CoGetApartmentType" -eq 1; then
 	patch_apply ole32-CoGetApartmentType/0001-ole32-Implement-CoGetApartmentType.patch
@@ -2620,18 +2608,16 @@ fi
 # | 	/api-ms-win-core-heap-l2-1-0.spec, dlls/api-ms-win-core-memory-l1-1-2/Makefile.in, dlls/api-ms-win-core-memory-l1-1-2
 # | 	/api-ms-win-core-memory-l1-1-2.spec, dlls/api-ms-win-core-quirks-l1-1-0/Makefile.in, dlls/api-ms-win-core-quirks-l1-1-0
 # | 	/api-ms-win-core-quirks-l1-1-0.spec, dlls/api-ms-win-core-shlwapi-obsolete-l1-2-0/Makefile.in, dlls/api-ms-win-core-
-# | 	shlwapi-obsolete-l1-2-0/api-ms-win-core-shlwapi-obsolete-l1-2-0.spec, dlls/api-ms-win-core-
-# | 	threadpool-l1-2-0/Makefile.in, dlls/api-ms-win-core-threadpool-l1-2-0/api-ms-win-core-threadpool-l1-2-0.spec, dlls/api-
-# | 	ms-win-core-wow64-l1-1-0/Makefile.in, dlls/api-ms-win-core-wow64-l1-1-0/api-ms-win-core-wow64-l1-1-0.spec, dlls/api-ms-
-# | 	win-rtcore-ntuser-draw-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/api-ms-win-rtcore-ntuser-
-# | 	draw-l1-1-0.spec, dlls/api-ms-win-rtcore-ntuser-window-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-window-l1-1-0
-# | 	/api-ms-win-rtcore-ntuser-window-l1-1-0.spec, dlls/api-ms-win-shcore-obsolete-l1-1-0/Makefile.in, dlls/api-ms-win-
-# | 	shcore-obsolete-l1-1-0/api-ms-win-shcore-obsolete-l1-1-0.spec, dlls/api-ms-win-shcore-stream-l1-1-0/Makefile.in, dlls
-# | 	/api-ms-win-shcore-stream-l1-1-0/api-ms-win-shcore-stream-l1-1-0.spec, dlls/api-ms-win-shcore-thread-l1-1-0/Makefile.in,
-# | 	dlls/api-ms-win-shcore-thread-l1-1-0/api-ms-win-shcore-thread-l1-1-0.spec, dlls/ext-ms-win-appmodel-
-# | 	usercontext-l1-1-0/Makefile.in, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/ext-ms-win-appmodel-usercontext-l1-1-0.spec,
-# | 	dlls/ext-ms-win-appmodel-usercontext-l1-1-0/main.c, dlls/ext-ms-win-kernel32-package-current-l1-1-0/Makefile.in, dlls
-# | 	/ext-ms-win-kernel32-package-current-l1-1-0/ext-ms-win-kernel32-package-current-l1-1-0.spec, dlls/ext-ms-win-ntuser-
+# | 	shlwapi-obsolete-l1-2-0/api-ms-win-core-shlwapi-obsolete-l1-2-0.spec, dlls/api-ms-win-rtcore-ntuser-
+# | 	draw-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/api-ms-win-rtcore-ntuser-draw-l1-1-0.spec, dlls/api-
+# | 	ms-win-rtcore-ntuser-window-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-window-l1-1-0/api-ms-win-rtcore-ntuser-
+# | 	window-l1-1-0.spec, dlls/api-ms-win-shcore-obsolete-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-obsolete-l1-1-0/api-ms-
+# | 	win-shcore-obsolete-l1-1-0.spec, dlls/api-ms-win-shcore-stream-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-stream-l1-1-0
+# | 	/api-ms-win-shcore-stream-l1-1-0.spec, dlls/api-ms-win-shcore-thread-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-
+# | 	thread-l1-1-0/api-ms-win-shcore-thread-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/Makefile.in, dlls/ext-
+# | 	ms-win-appmodel-usercontext-l1-1-0/ext-ms-win-appmodel-usercontext-l1-1-0.spec, dlls/ext-ms-win-appmodel-
+# | 	usercontext-l1-1-0/main.c, dlls/ext-ms-win-kernel32-package-current-l1-1-0/Makefile.in, dlls/ext-ms-win-kernel32
+# | 	-package-current-l1-1-0/ext-ms-win-kernel32-package-current-l1-1-0.spec, dlls/ext-ms-win-ntuser-
 # | 	mouse-l1-1-0/Makefile.in, dlls/ext-ms-win-ntuser-mouse-l1-1-0/ext-ms-win-ntuser-mouse-l1-1-0.spec, dlls/ext-ms-win-
 # | 	rtcore-ntuser-syscolors-l1-1-0/Makefile.in, dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/ext-ms-win-rtcore-ntuser-
 # | 	syscolors-l1-1-0.spec, dlls/ext-ms-win-rtcore-ntuser-sysparams-l1-1-0/Makefile.in, dlls/ext-ms-win-rtcore-ntuser-
@@ -2656,21 +2642,19 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0011-api-ms-win-shcore-thread-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0012-ext-ms-win-xaml-pal-l1-1-0-Add-stub-for-GetThemeServ.patch
 	patch_apply api-ms-win-Stub_DLLs/0013-api-ms-win-core-memory-l1-1-2-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0014-api-ms-win-core-wow64-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0015-api-ms-win-core-shlwapi-obsolete-l1-2-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0016-api-ms-win-core-threadpool-l1-2-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0017-api-ms-win-shcore-stream-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0018-ext-ms-win-ntuser-mouse-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0019-ext-ms-win-uxtheme-themes-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0020-api-ms-win-rtcore-ntuser-window-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0021-ext-ms-win-rtcore-ntuser-syscolors-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0022-api-ms-win-rtcore-ntuser-draw-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0023-ext-ms-win-rtcore-ntuser-sysparams-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0024-ext-ms-win-kernel32-package-current-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0025-shcore-Add-SetProcessDpiAwareness-stub.patch
-	patch_apply api-ms-win-Stub_DLLs/0026-shcore-Implement-stub-for-GetDpiForMonitor.patch
-	patch_apply api-ms-win-Stub_DLLs/0027-kernelbase-Add-stub-for-QuirkIsEnabled3.patch
-	patch_apply api-ms-win-Stub_DLLs/0028-shcore-Add-stub-for-GetProcessDpiAwareness.patch
+	patch_apply api-ms-win-Stub_DLLs/0014-api-ms-win-core-shlwapi-obsolete-l1-2-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0015-api-ms-win-shcore-stream-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0016-ext-ms-win-ntuser-mouse-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0017-ext-ms-win-uxtheme-themes-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0018-api-ms-win-rtcore-ntuser-window-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0019-ext-ms-win-rtcore-ntuser-syscolors-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0020-api-ms-win-rtcore-ntuser-draw-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0021-ext-ms-win-rtcore-ntuser-sysparams-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0022-ext-ms-win-kernel32-package-current-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0023-shcore-Add-SetProcessDpiAwareness-stub.patch
+	patch_apply api-ms-win-Stub_DLLs/0024-shcore-Implement-stub-for-GetDpiForMonitor.patch
+	patch_apply api-ms-win-Stub_DLLs/0025-kernelbase-Add-stub-for-QuirkIsEnabled3.patch
+	patch_apply api-ms-win-Stub_DLLs/0026-shcore-Add-stub-for-GetProcessDpiAwareness.patch
 	(
 		echo '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-quirks-l1-1-0: Add dll.", 1 },';
@@ -2685,9 +2669,7 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		echo '+    { "Michael Müller", "api-ms-win-shcore-thread-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "ext-ms-win-xaml-pal-l1-1-0: Add stub for GetThemeServices.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-memory-l1-1-2: Add dll.", 1 },';
-		echo '+    { "Michael Müller", "api-ms-win-core-wow64-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-shlwapi-obsolete-l1-2-0: Add dll.", 1 },';
-		echo '+    { "Michael Müller", "api-ms-win-core-threadpool-l1-2-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-shcore-stream-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "ext-ms-win-ntuser-mouse-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "ext-ms-win-uxtheme-themes-l1-1-0: Add dll.", 1 },';
@@ -4100,18 +4082,6 @@ if test "$enable_kernel32_Profile" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-QT_Environment_Variables
-# |
-# | Modified files:
-# |   *	dlls/kernel32/process.c
-# |
-if test "$enable_kernel32_QT_Environment_Variables" -eq 1; then
-	patch_apply kernel32-QT_Environment_Variables/0001-kernel32-Do-not-inherit-QT_-environment-variables-to.patch
-	(
-		echo '+    { "Sebastian Lackner", "kernel32: Do not inherit QT_* environment variables to Windows environment.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-SetFileCompletionNotificationModes
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4153,18 +4123,6 @@ if test "$enable_kernel32_VerifyVersionInfo" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for condition mask of VerifyVersionInfoA.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Fix condition mask handling in RtlVerifyVersionInfo.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-VirtualProtect
-# |
-# | Modified files:
-# |   *	dlls/kernel32/virtual.c
-# |
-if test "$enable_kernel32_VirtualProtect" -eq 1; then
-	patch_apply kernel32-VirtualProtect/0001-kernel32-Allow-to-pass-NULL-as-old-protection-in-Vir.patch
-	(
-		echo '+    { "Michael Müller", "kernel32: Allow to pass NULL as old protection in VirtualProtect for Win9X.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5743,21 +5701,6 @@ if test "$enable_server_Timestamp_Compat" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset services-SERVICE_FILE_SYSTEM_DRIVER
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35824] Start SERVICE_FILE_SYSTEM_DRIVER services with winedevice
-# |
-# | Modified files:
-# |   *	programs/services/services.c
-# |
-if test "$enable_services_SERVICE_FILE_SYSTEM_DRIVER" -eq 1; then
-	patch_apply services-SERVICE_FILE_SYSTEM_DRIVER/0001-services-Start-SERVICE_FILE_SYSTEM_DRIVER-services-w.patch
-	(
-		echo '+    { "Sebastian Lackner", "services: Start SERVICE_FILE_SYSTEM_DRIVER services with winedevice.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset setupapi-Display_Device
 # |
 # | This patchset fixes the following Wine bugs:
@@ -7056,10 +6999,8 @@ fi
 # |
 if test "$enable_wpcap_Several_Fixes" -eq 1; then
 	patch_apply wpcap-Several_Fixes/0001-wpcap-Implement-pcap_dump_open-and-pcap_dump.patch
-	patch_apply wpcap-Several_Fixes/0002-wpcap-Fix-crash-on-pcap_loop.patch
 	(
 		echo '+    { "Jianqiu Zhang", "wpcap: Implement pcap_dump_open and pcap_dump.", 1 },';
-		echo '+    { "Jianqiu Zhang", "wpcap: Fix crash on pcap_loop.", 1 },';
 	) >> "$patchlist"
 fi
 

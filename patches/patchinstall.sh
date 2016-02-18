@@ -146,6 +146,7 @@ patch_enable_all ()
 	enable_fonts_Missing_Fonts="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_MultiMonitor="$1"
+	enable_gdi32_Path_Metafile="$1"
 	enable_gdi32_Symbol_Truetype_Font="$1"
 	enable_hal_KeQueryPerformanceCounter="$1"
 	enable_hid_HidP_TranslateUsagesToI8042ScanCodes="$1"
@@ -580,6 +581,9 @@ patch_enable ()
 			;;
 		gdi32-MultiMonitor)
 			enable_gdi32_MultiMonitor="$2"
+			;;
+		gdi32-Path_Metafile)
+			enable_gdi32_Path_Metafile="$2"
 			;;
 		gdi32-Symbol_Truetype_Font)
 			enable_gdi32_Symbol_Truetype_Font="$2"
@@ -3642,6 +3646,21 @@ if test "$enable_gdi32_MultiMonitor" -eq 1; then
 		echo '+    { "Ken Thomases", "winex11: Make GetMonitorInfo() give a different device name (\\\\.\\\\DISPLAY<n>) to each monitor.", 1 },';
 		echo '+    { "Ken Thomases", "user32: Implement EnumDisplayDevicesW() based on EnumDisplayMonitors() and GetMonitorInfoW().", 1 },';
 		echo '+    { "Ken Thomases", "winemac: Make GetMonitorInfo() give a different device name (\\\\\\\\.\\\\DISPLAY<n>) to each monitor.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset gdi32-Path_Metafile
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39185] Add support for paths on a metafile HDC
+# |
+# | Modified files:
+# |   *	dlls/gdi32/enhmfdrv/dc.c, dlls/gdi32/path.c, dlls/gdi32/tests/metafile.c
+# |
+if test "$enable_gdi32_Path_Metafile" -eq 1; then
+	patch_apply gdi32-Path_Metafile/0001-gdi32-Add-support-for-paths-on-a-metafile-HDC.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "gdi32: Add support for paths on a metafile HDC.", 1 },';
 	) >> "$patchlist"
 fi
 

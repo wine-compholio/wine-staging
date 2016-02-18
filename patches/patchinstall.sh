@@ -311,6 +311,7 @@ patch_enable_all ()
 	enable_user32_Invalidate_Key_State="$1"
 	enable_user32_ListBox_Size="$1"
 	enable_user32_MDI_Extra_Data="$1"
+	enable_user32_MessageBox_WS_EX_TOPMOST="$1"
 	enable_user32_Mouse_Message_Hwnd="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
@@ -1074,6 +1075,9 @@ patch_enable ()
 			;;
 		user32-MDI_Extra_Data)
 			enable_user32_MDI_Extra_Data="$2"
+			;;
+		user32-MessageBox_WS_EX_TOPMOST)
+			enable_user32_MessageBox_WS_EX_TOPMOST="$2"
 			;;
 		user32-Mouse_Message_Hwnd)
 			enable_user32_Mouse_Message_Hwnd="$2"
@@ -6325,6 +6329,20 @@ if test "$enable_user32_MDI_Extra_Data" -eq 1; then
 	patch_apply user32-MDI_Extra_Data/0001-user32-Preserve-beginning-of-extra-data-for-MDI-wind.patch
 	(
 		echo '+    { "Michael Müller", "user32: Preserve beginning of extra data for MDI windows.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-MessageBox_WS_EX_TOPMOST
+# |
+# | Modified files:
+# |   *	dlls/user32/msgbox.c, dlls/user32/tests/dialog.c
+# |
+if test "$enable_user32_MessageBox_WS_EX_TOPMOST" -eq 1; then
+	patch_apply user32-MessageBox_WS_EX_TOPMOST/0001-user32-tests-Add-some-tests-to-see-when-MessageBox-g.patch
+	patch_apply user32-MessageBox_WS_EX_TOPMOST/0002-user32-MessageBox-should-be-topmost-when-MB_SYSTEMMO.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "user32/tests: Add some tests to see when MessageBox gains WS_EX_TOPMOST style.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "user32: MessageBox should be topmost when MB_SYSTEMMODAL style is set.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,4 +1,4 @@
-From 24da37188127f234bfefec34ef03cf45746a8402 Mon Sep 17 00:00:00 2001
+From 6d37527a75b5526ecaaf2a1039b7d9aa9e7dd57b Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 28 Sep 2014 22:42:46 +0200
 Subject: ntdll: Throw exception if invalid handle is passed to NtClose and
@@ -10,7 +10,7 @@ Subject: ntdll: Throw exception if invalid handle is passed to NtClose and
  2 files changed, 92 insertions(+)
 
 diff --git a/dlls/ntdll/om.c b/dlls/ntdll/om.c
-index 3fadba7..6527501 100644
+index 1279f2b..35c3672 100644
 --- a/dlls/ntdll/om.c
 +++ b/dlls/ntdll/om.c
 @@ -38,6 +38,7 @@
@@ -62,7 +62,7 @@ index 3fadba7..6527501 100644
  }
  
 diff --git a/dlls/ntdll/tests/exception.c b/dlls/ntdll/tests/exception.c
-index f355513..98d73f4 100644
+index 94ccd7a..6fffef0 100644
 --- a/dlls/ntdll/tests/exception.c
 +++ b/dlls/ntdll/tests/exception.c
 @@ -52,6 +52,7 @@ static NTSTATUS  (WINAPI *pNtTerminateProcess)(HANDLE handle, LONG exit_code);
@@ -73,11 +73,11 @@ index f355513..98d73f4 100644
  
  #if defined(__x86_64__)
  static BOOLEAN   (CDECL *pRtlAddFunctionTable)(RUNTIME_FUNCTION*, DWORD, DWORD64);
-@@ -937,6 +938,16 @@ static void test_debugger(void)
-                         /* here we handle exception */
-                     }
+@@ -952,6 +953,16 @@ static void test_debugger(void)
+ 
+                     if (stage == 8) continuestatus = DBG_EXCEPTION_NOT_HANDLED;
                  }
-+                else if (stage == 7 || stage == 8)
++                else if (stage == 9 || stage == 10)
 +                {
 +                    ok(de.u.Exception.ExceptionRecord.ExceptionCode == EXCEPTION_INVALID_HANDLE,
 +                       "unexpected exception code %08x, expected %08x\n", de.u.Exception.ExceptionRecord.ExceptionCode,
@@ -85,12 +85,12 @@ index f355513..98d73f4 100644
 +                    ok(de.u.Exception.ExceptionRecord.NumberParameters == 0,
 +                       "unexpected number of parameters %d, expected 0\n", de.u.Exception.ExceptionRecord.NumberParameters);
 +
-+                    if (stage == 8) continuestatus = DBG_EXCEPTION_NOT_HANDLED;
++                    if (stage == 10) continuestatus = DBG_EXCEPTION_NOT_HANDLED;
 +                }
                  else
                      ok(FALSE, "unexpected stage %x\n", stage);
  
-@@ -1893,6 +1904,53 @@ static void test_ripevent(DWORD numexc)
+@@ -2049,6 +2060,53 @@ static void test_debug_service(DWORD numexc)
      pRtlRemoveVectoredExceptionHandler(vectored_handler);
  }
  
@@ -144,7 +144,7 @@ index f355513..98d73f4 100644
  static void test_vectored_continue_handler(void)
  {
      PVOID handler1, handler2;
-@@ -1945,6 +2003,7 @@ START_TEST(exception)
+@@ -2101,6 +2159,7 @@ START_TEST(exception)
      pNtGetContextThread  = (void *)GetProcAddress( hntdll, "NtGetContextThread" );
      pNtSetContextThread  = (void *)GetProcAddress( hntdll, "NtSetContextThread" );
      pNtReadVirtualMemory = (void *)GetProcAddress( hntdll, "NtReadVirtualMemory" );
@@ -152,33 +152,33 @@ index f355513..98d73f4 100644
      pRtlUnwind           = (void *)GetProcAddress( hntdll, "RtlUnwind" );
      pRtlRaiseException   = (void *)GetProcAddress( hntdll, "RtlRaiseException" );
      pNtTerminateProcess  = (void *)GetProcAddress( hntdll, "NtTerminateProcess" );
-@@ -2012,6 +2071,10 @@ START_TEST(exception)
-             test_ripevent(0);
-             test_stage = 6;
-             test_ripevent(1);
-+            test_stage = 7;
+@@ -2172,6 +2231,10 @@ START_TEST(exception)
+             test_debug_service(0);
+             test_stage = 8;
+             test_debug_service(1);
++            test_stage = 9;
 +            test_closehandle(0);
-+            test_stage = 8;
++            test_stage = 10;
 +            test_closehandle(1);
          }
          else
              skip( "RtlRaiseException not found\n" );
-@@ -2026,6 +2089,7 @@ START_TEST(exception)
-     test_debug_registers();
+@@ -2187,6 +2250,7 @@ START_TEST(exception)
      test_outputdebugstring(1, FALSE);
      test_ripevent(1);
+     test_debug_service(1);
 +    test_closehandle(0);
      test_vectored_continue_handler();
      test_debugger();
      test_simd_exceptions();
-@@ -2046,6 +2110,7 @@ START_TEST(exception)
-     test_debug_registers();
+@@ -2208,6 +2272,7 @@ START_TEST(exception)
      test_outputdebugstring(1, FALSE);
      test_ripevent(1);
+     test_debug_service(1);
 +    test_closehandle(0);
      test_vectored_continue_handler();
      test_virtual_unwind();
  
 -- 
-2.6.4
+2.7.1
 

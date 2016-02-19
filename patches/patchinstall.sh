@@ -251,6 +251,7 @@ patch_enable_all ()
 	enable_opengl32_glDebugMessageCallback="$1"
 	enable_quartz_AsyncReader="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
+	enable_quartz_Silence_FIXMEs="$1"
 	enable_rasapi32_RasEnumDevicesA="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_rpcrt4_Pipe_Transport="$1"
@@ -896,6 +897,9 @@ patch_enable ()
 			;;
 		quartz-MediaSeeking_Positions)
 			enable_quartz_MediaSeeking_Positions="$2"
+			;;
+		quartz-Silence_FIXMEs)
+			enable_quartz_Silence_FIXMEs="$2"
 			;;
 		rasapi32-RasEnumDevicesA)
 			enable_rasapi32_RasEnumDevicesA="$2"
@@ -5413,6 +5417,18 @@ if test "$enable_quartz_MediaSeeking_Positions" -eq 1; then
 		echo '+    { "Erich E. Hoover", "quartz: Implement MediaSeeking_GetCurrentPosition on top of MediaSeeking_GetPositions.", 1 },';
 		echo '+    { "Erich E. Hoover", "quartz: Implement MediaSeeking_GetStopPosition on top of MediaSeeking_GetPositions.", 1 },';
 		echo '+    { "Erich E. Hoover", "quartz: Remove unused cache of MediaSeeking stop position.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset quartz-Silence_FIXMEs
+# |
+# | Modified files:
+# |   *	dlls/quartz/parser.c
+# |
+if test "$enable_quartz_Silence_FIXMEs" -eq 1; then
+	patch_apply quartz-Silence_FIXMEs/0001-quartz-Don-t-print-FIXME-for-IAMFilterMiscFlags-in-p.patch
+	(
+		echo '+    { "Christian Costa", "quartz: Don'\''t print FIXME for IAMFilterMiscFlags in parsers.", 1 },';
 	) >> "$patchlist"
 fi
 

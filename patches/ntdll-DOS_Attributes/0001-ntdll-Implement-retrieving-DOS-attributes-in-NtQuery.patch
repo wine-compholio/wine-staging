@@ -1,4 +1,4 @@
-From f94504464e6c2ec7a2071912536ca444c38c6996 Mon Sep 17 00:00:00 2001
+From ed679be63daa15df932fa6aae550af4c11a4a66d Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Tue, 19 Aug 2014 22:10:49 -0600
 Subject: ntdll: Implement retrieving DOS attributes in NtQueryInformationFile.
@@ -13,14 +13,18 @@ Subject: ntdll: Implement retrieving DOS attributes in NtQueryInformationFile.
  create mode 100644 libs/port/xattr.c
 
 diff --git a/configure.ac b/configure.ac
-index 2fa4dcc..3c91af3 100644
+index c9445e7..e118600 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -77,2 +77,3 @@ AC_ARG_WITH(tiff,      AS_HELP_STRING([--without-tiff],[do not use TIFF]))
+@@ -76,6 +76,7 @@ AC_ARG_WITH(pulse,     AS_HELP_STRING([--without-pulse],[do not use PulseAudio s
+ AC_ARG_WITH(sane,      AS_HELP_STRING([--without-sane],[do not use SANE (scanner support)]))
+ AC_ARG_WITH(tiff,      AS_HELP_STRING([--without-tiff],[do not use TIFF]))
  AC_ARG_WITH(v4l,       AS_HELP_STRING([--without-v4l],[do not use v4l1 (v4l support)]))
 +AC_ARG_WITH(xattr,     AS_HELP_STRING([--without-xattr],[do not use xattr (security attributes support)]))
  AC_ARG_WITH(xcomposite,AS_HELP_STRING([--without-xcomposite],[do not use the Xcomposite extension]),
-@@ -667,6 +668,17 @@ AC_CHECK_HEADERS([libprocstat.h],,,
+             [if test "x$withval" = "xno"; then ac_cv_header_X11_extensions_Xcomposite_h=no; fi])
+ AC_ARG_WITH(xcursor,   AS_HELP_STRING([--without-xcursor],[do not use the Xcursor extension]),
+@@ -674,6 +675,17 @@ AC_CHECK_HEADERS([libprocstat.h],,,
  #include <sys/socket.h>
  #endif])
  
@@ -39,10 +43,10 @@ index 2fa4dcc..3c91af3 100644
  
  AC_SUBST(dlldir,"\${libdir}/wine")
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index b856b3d..83d07e2 100644
+index a17151d..1f132ee 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -103,6 +103,22 @@ mode_t FILE_umask = 0;
+@@ -117,6 +117,22 @@ mode_t FILE_umask = 0;
  
  static const WCHAR ntfsW[] = {'N','T','F','S'};
  
@@ -65,7 +69,7 @@ index b856b3d..83d07e2 100644
  /* fetch the attributes of a file */
  static inline ULONG get_file_attributes( const struct stat *st )
  {
-@@ -120,12 +136,16 @@ static inline ULONG get_file_attributes( const struct stat *st )
+@@ -134,12 +150,16 @@ static inline ULONG get_file_attributes( const struct stat *st )
  /* get the stat info and file attributes for a file (by file descriptor) */
  int fd_get_file_info( int fd, struct stat *st, ULONG *attr )
  {
@@ -84,7 +88,7 @@ index b856b3d..83d07e2 100644
  }
  
 diff --git a/include/wine/port.h b/include/wine/port.h
-index 3548a44..521246b 100644
+index 2989b39..3219a8a 100644
 --- a/include/wine/port.h
 +++ b/include/wine/port.h
 @@ -363,6 +363,14 @@ extern int mkstemps(char *template, int suffix_len);
@@ -103,15 +107,15 @@ index 3548a44..521246b 100644
  
  #if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
 diff --git a/libs/port/Makefile.in b/libs/port/Makefile.in
-index 65f1714..67efbc7 100644
+index 9d7e44f..8b41050 100644
 --- a/libs/port/Makefile.in
 +++ b/libs/port/Makefile.in
-@@ -23,4 +23,5 @@ C_SRCS = \
- 	strerror.c \
- 	strncasecmp.c \
+@@ -104,4 +104,5 @@ C_SRCS = \
  	symlink.c \
--	usleep.c
-+	usleep.c \
+ 	usleep.c \
+ 	utf8.c \
+-	wctomb.c
++	wctomb.c \
 +	xattr.c
 diff --git a/libs/port/xattr.c b/libs/port/xattr.c
 new file mode 100644
@@ -159,5 +163,5 @@ index 0000000..94b7713
 +#endif
 +}
 -- 
-1.9.1
+2.7.0
 

@@ -1,0 +1,415 @@
+From 6b6a4c13b1fb589196f6e160289dbaab4fd82d01 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Sat, 20 Feb 2016 16:09:40 +0800
+Subject: gdi32: Add support for paths on a metafile HDC. (v2)
+
+---
+ dlls/gdi32/enhmfdrv/dc.c    |   4 +-
+ dlls/gdi32/path.c           | 186 ++++++++++++++++++++++++++++++++++++++++++--
+ dlls/gdi32/tests/metafile.c |   4 +-
+ 3 files changed, 185 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/gdi32/enhmfdrv/dc.c b/dlls/gdi32/enhmfdrv/dc.c
+index cbf3f5c..a92cf4d 100644
+--- a/dlls/gdi32/enhmfdrv/dc.c
++++ b/dlls/gdi32/enhmfdrv/dc.c
+@@ -420,12 +420,14 @@ BOOL EMFDRV_AbortPath( PHYSDEV dev )
+ 
+ BOOL EMFDRV_BeginPath( PHYSDEV dev )
+ {
++    PHYSDEV next = GET_NEXT_PHYSDEV( dev, pBeginPath );
+     EMRBEGINPATH emr;
+ 
+     emr.emr.iType = EMR_BEGINPATH;
+     emr.emr.nSize = sizeof(emr);
+ 
+-    return EMFDRV_WriteRecord( dev, &emr.emr );
++    if (!EMFDRV_WriteRecord( dev, &emr.emr )) return FALSE;
++    return next->funcs->pBeginPath( next );
+ }
+ 
+ BOOL EMFDRV_CloseFigure( PHYSDEV dev )
+diff --git a/dlls/gdi32/path.c b/dlls/gdi32/path.c
+index 8856d49..05d74d2 100644
+--- a/dlls/gdi32/path.c
++++ b/dlls/gdi32/path.c
+@@ -787,13 +787,22 @@ static BOOL pathdrv_AbortPath( PHYSDEV dev )
+ {
+     struct path_physdev *physdev = get_path_physdev( dev );
+     DC *dc = get_dc_ptr( dev->hdc );
++    BOOL ret = TRUE;
++    DWORD obj_type = GetObjectType(dev->hdc);
+ 
+     if (!dc) return FALSE;
++
++    if (obj_type == OBJ_METADC || obj_type == OBJ_ENHMETADC)
++    {
++        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pAbortPath );
++        ret = next->funcs->pAbortPath( next );
++    }
++
+     free_gdi_path( physdev->path );
+     pop_dc_driver( dc, &path_driver );
+     HeapFree( GetProcessHeap(), 0, physdev );
+     release_dc_ptr( dc );
+-    return TRUE;
++    return ret;
+ }
+ 
+ 
+@@ -804,13 +813,22 @@ static BOOL pathdrv_EndPath( PHYSDEV dev )
+ {
+     struct path_physdev *physdev = get_path_physdev( dev );
+     DC *dc = get_dc_ptr( dev->hdc );
++    BOOL ret = TRUE;
++    DWORD obj_type = GetObjectType(dev->hdc);;
+ 
+     if (!dc) return FALSE;
++
++    if (obj_type == OBJ_METADC || obj_type == OBJ_ENHMETADC)
++    {
++        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pEndPath );
++        ret = next->funcs->pEndPath( next );
++    }
++
+     dc->path = physdev->path;
+     pop_dc_driver( dc, &path_driver );
+     HeapFree( GetProcessHeap(), 0, physdev );
+     release_dc_ptr( dc );
+-    return TRUE;
++    return ret;
+ }
+ 
+ 
+@@ -893,6 +911,14 @@ BOOL PATH_RestorePath( DC *dst, DC *src )
+ static BOOL pathdrv_MoveTo( PHYSDEV dev, INT x, INT y )
+ {
+     struct path_physdev *physdev = get_path_physdev( dev );
++    DWORD obj_type = GetObjectType(dev->hdc);
++
++    if (obj_type == OBJ_METADC || obj_type == OBJ_ENHMETADC)
++    {
++        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pMoveTo );
++        if (!next->funcs->pMoveTo( next, x, y )) return FALSE;
++    }
++
+     physdev->path->newStroke = TRUE;
+     return TRUE;
+ }
+@@ -905,6 +931,13 @@ static BOOL pathdrv_LineTo( PHYSDEV dev, INT x, INT y )
+ {
+     struct path_physdev *physdev = get_path_physdev( dev );
+     POINT point;
++    DWORD obj_type = GetObjectType(dev->hdc);
++
++    if (obj_type == OBJ_METADC || obj_type == OBJ_ENHMETADC)
++    {
++        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pLineTo );
++        if (!next->funcs->pLineTo( next, x, y )) return FALSE;
++    }
+ 
+     if (!start_new_stroke( physdev )) return FALSE;
+     point.x = x;
+@@ -925,6 +958,14 @@ static BOOL pathdrv_RoundRect( PHYSDEV dev, INT x1, INT y1, INT x2, INT y2, INT
+     struct path_physdev *physdev = get_path_physdev( dev );
+     POINT corners[2], pointTemp;
+     FLOAT_POINT ellCorners[2];
++    DWORD obj_type = GetObjectType(dev->hdc);
++
++    if (obj_type == OBJ_METADC || obj_type == OBJ_ENHMETADC)
++    {
++        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pRoundRect );
++        if (!next->funcs->pRoundRect( next, x1, y1, x2, y2, ell_width, ell_height ))
++            return FALSE;
++    }
+ 
+     PATH_CheckCorners(dev->hdc,corners,x1,y1,x2,y2);
+ 
+@@ -972,6 +1013,13 @@ static BOOL pathdrv_Rectangle( PHYSDEV dev, INT x1, INT y1, INT x2, INT y2 )
+ {
+     struct path_physdev *physdev = get_path_physdev( dev );
+     POINT corners[2], pointTemp;
++    DWORD obj_type = GetObjectType(dev->hdc);
++
++    if (obj_type == OBJ_METADC || obj_type == OBJ_ENHMETADC)
++    {
++        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pRectangle );
++        if (!next->funcs->pRectangle( next, x1, y1, x2, y2 )) return FALSE;
++    }
+ 
+     PATH_CheckCorners(dev->hdc,corners,x1,y1,x2,y2);
+ 
+@@ -1147,6 +1195,14 @@ static BOOL pathdrv_AngleArc( PHYSDEV dev, INT x, INT y, DWORD radius, FLOAT eSt
+ {
+     INT x1, y1, x2, y2, arcdir;
+     BOOL ret;
++    DWORD obj_type = GetObjectType(dev->hdc);
++
++    if (obj_type == OBJ_METADC || obj_type == OBJ_ENHMETADC)
++    {
++        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pAngleArc );
++        if (!next->funcs->pAngleArc( next, x, y, radius, eStartAngle, eSweepAngle ))
++            return FALSE;
++    }
+ 
+     x1 = GDI_ROUND( x + cos(eStartAngle*M_PI/180) * radius );
+     y1 = GDI_ROUND( y - sin(eStartAngle*M_PI/180) * radius );
+@@ -1165,6 +1221,15 @@ static BOOL pathdrv_AngleArc( PHYSDEV dev, INT x, INT y, DWORD radius, FLOAT eSt
+ static BOOL pathdrv_Arc( PHYSDEV dev, INT left, INT top, INT right, INT bottom,
+                          INT xstart, INT ystart, INT xend, INT yend )
+ {
++    DWORD obj_type = GetObjectType(dev->hdc);
++
++    if (obj_type == OBJ_METADC || obj_type == OBJ_ENHMETADC)
++    {
++        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pArc );
++        if (!next->funcs->pArc( next, left, top, right, bottom, xstart, ystart, xend, yend ))
++            return FALSE;
++    }
++
+     return PATH_Arc( dev, left, top, right, bottom, xstart, ystart, xend, yend, 0 );
+ }
+ 
+@@ -1175,6 +1240,15 @@ static BOOL pathdrv_Arc( PHYSDEV dev, INT left, INT top, INT right, INT bottom,
+ static BOOL pathdrv_ArcTo( PHYSDEV dev, INT left, INT top, INT right, INT bottom,
+                            INT xstart, INT ystart, INT xend, INT yend )
+ {
++    DWORD obj_type = GetObjectType(dev->hdc);
++
++    if (obj_type == OBJ_METADC || obj_type == OBJ_ENHMETADC)
++    {
++        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pArcTo );
++        if (!next->funcs->pArcTo( next, left, top, right, bottom, xstart, ystart, xend, yend ))
++            return FALSE;
++    }
++
+     return PATH_Arc( dev, left, top, right, bottom, xstart, ystart, xend, yend, -1 );
+ }
+ 
+@@ -1185,6 +1259,15 @@ static BOOL pathdrv_ArcTo( PHYSDEV dev, INT left, INT top, INT right, INT bottom
+ static BOOL pathdrv_Chord( PHYSDEV dev, INT left, INT top, INT right, INT bottom,
+                            INT xstart, INT ystart, INT xend, INT yend )
+ {
++    DWORD obj_type = GetObjectType(dev->hdc);
++
++    if (obj_type == OBJ_METADC || obj_type == OBJ_ENHMETADC)
++    {
++        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pChord );
++        if (!next->funcs->pChord( next, left, top, right, bottom, xstart, ystart, xend, yend ))
++            return FALSE;
++    }
++
+     return PATH_Arc( dev, left, top, right, bottom, xstart, ystart, xend, yend, 1);
+ }
+ 
+@@ -1195,6 +1278,15 @@ static BOOL pathdrv_Chord( PHYSDEV dev, INT left, INT top, INT right, INT bottom
+ static BOOL pathdrv_Pie( PHYSDEV dev, INT left, INT top, INT right, INT bottom,
+                          INT xstart, INT ystart, INT xend, INT yend )
+ {
++    DWORD obj_type = GetObjectType(dev->hdc);
++
++    if (obj_type == OBJ_METADC || obj_type == OBJ_ENHMETADC)
++    {
++        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pPie );
++        if (!next->funcs->pPie( next, left, top, right, bottom, xstart, ystart, xend, yend ))
++            return FALSE;
++    }
++
+     return PATH_Arc( dev, left, top, right, bottom, xstart, ystart, xend, yend, 2 );
+ }
+ 
+@@ -1204,6 +1296,15 @@ static BOOL pathdrv_Pie( PHYSDEV dev, INT left, INT top, INT right, INT bottom,
+  */
+ static BOOL pathdrv_Ellipse( PHYSDEV dev, INT x1, INT y1, INT x2, INT y2 )
+ {
++    DWORD obj_type = GetObjectType(dev->hdc);
++
++    if (obj_type == OBJ_METADC || obj_type == OBJ_ENHMETADC)
++    {
++        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pEllipse );
++        if (!next->funcs->pEllipse( next, x1, y1, x2, y2 ))
++            return FALSE;
++    }
++
+     return PATH_Arc( dev, x1, y1, x2, y2, x1, (y1+y2)/2, x1, (y1+y2)/2, 0 ) && CloseFigure( dev->hdc );
+ }
+ 
+@@ -1214,6 +1315,14 @@ static BOOL pathdrv_Ellipse( PHYSDEV dev, INT x1, INT y1, INT x2, INT y2 )
+ static BOOL pathdrv_PolyBezierTo( PHYSDEV dev, const POINT *pts, DWORD cbPoints )
+ {
+     struct path_physdev *physdev = get_path_physdev( dev );
++    DWORD obj_type = GetObjectType(dev->hdc);
++
++    if (obj_type == OBJ_METADC || obj_type == OBJ_ENHMETADC)
++    {
++        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pPolyBezierTo );
++        if (!next->funcs->pPolyBezierTo( next, pts, cbPoints ))
++            return FALSE;
++    }
+ 
+     if (!start_new_stroke( physdev )) return FALSE;
+     return add_log_points( physdev, pts, cbPoints, PT_BEZIERTO ) != NULL;
+@@ -1226,8 +1335,17 @@ static BOOL pathdrv_PolyBezierTo( PHYSDEV dev, const POINT *pts, DWORD cbPoints
+ static BOOL pathdrv_PolyBezier( PHYSDEV dev, const POINT *pts, DWORD cbPoints )
+ {
+     struct path_physdev *physdev = get_path_physdev( dev );
+-    BYTE *type = add_log_points( physdev, pts, cbPoints, PT_BEZIERTO );
++    BYTE *type;
++    DWORD obj_type = GetObjectType(dev->hdc);
++
++    if (obj_type == OBJ_METADC || obj_type == OBJ_ENHMETADC)
++    {
++        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pPolyBezier );
++        if (!next->funcs->pPolyBezier( next, pts, cbPoints ))
++            return FALSE;
++    }
+ 
++    type = add_log_points( physdev, pts, cbPoints, PT_BEZIERTO );
+     if (!type) return FALSE;
+     type[0] = PT_MOVETO;
+     return TRUE;
+@@ -1242,6 +1360,14 @@ static BOOL pathdrv_PolyDraw( PHYSDEV dev, const POINT *pts, const BYTE *types,
+     struct path_physdev *physdev = get_path_physdev( dev );
+     POINT lastmove, orig_pos;
+     INT i;
++    DWORD obj_type = GetObjectType(dev->hdc);
++
++    if (obj_type == OBJ_METADC || obj_type == OBJ_ENHMETADC)
++    {
++        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pPolyDraw );
++        if (!next->funcs->pPolyDraw( next, pts, types, cbPoints ))
++            return FALSE;
++    }
+ 
+     GetCurrentPositionEx( dev->hdc, &orig_pos );
+     lastmove = orig_pos;
+@@ -1300,8 +1426,17 @@ static BOOL pathdrv_PolyDraw( PHYSDEV dev, const POINT *pts, const BYTE *types,
+ static BOOL pathdrv_Polyline( PHYSDEV dev, const POINT *pts, INT cbPoints )
+ {
+     struct path_physdev *physdev = get_path_physdev( dev );
+-    BYTE *type = add_log_points( physdev, pts, cbPoints, PT_LINETO );
++    BYTE *type;
++    DWORD obj_type = GetObjectType(dev->hdc);
++
++    if (obj_type == OBJ_METADC || obj_type == OBJ_ENHMETADC)
++    {
++        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pPolyline );
++        if (!next->funcs->pPolyline( next, pts, cbPoints ))
++            return FALSE;
++    }
+ 
++    type = add_log_points( physdev, pts, cbPoints, PT_LINETO );
+     if (!type) return FALSE;
+     if (cbPoints) type[0] = PT_MOVETO;
+     return TRUE;
+@@ -1314,6 +1449,14 @@ static BOOL pathdrv_Polyline( PHYSDEV dev, const POINT *pts, INT cbPoints )
+ static BOOL pathdrv_PolylineTo( PHYSDEV dev, const POINT *pts, INT cbPoints )
+ {
+     struct path_physdev *physdev = get_path_physdev( dev );
++    DWORD obj_type = GetObjectType(dev->hdc);
++
++    if (obj_type == OBJ_METADC || obj_type == OBJ_ENHMETADC)
++    {
++        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pPolylineTo );
++        if (!next->funcs->pPolylineTo( next, pts, cbPoints ))
++            return FALSE;
++    }
+ 
+     if (!start_new_stroke( physdev )) return FALSE;
+     return add_log_points( physdev, pts, cbPoints, PT_LINETO ) != NULL;
+@@ -1326,8 +1469,17 @@ static BOOL pathdrv_PolylineTo( PHYSDEV dev, const POINT *pts, INT cbPoints )
+ static BOOL pathdrv_Polygon( PHYSDEV dev, const POINT *pts, INT cbPoints )
+ {
+     struct path_physdev *physdev = get_path_physdev( dev );
+-    BYTE *type = add_log_points( physdev, pts, cbPoints, PT_LINETO );
++    BYTE *type;
++    DWORD obj_type = GetObjectType(dev->hdc);
++
++    if (obj_type == OBJ_METADC || obj_type == OBJ_ENHMETADC)
++    {
++        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pPolygon );
++        if (!next->funcs->pPolygon( next, pts, cbPoints ))
++            return FALSE;
++    }
+ 
++    type = add_log_points( physdev, pts, cbPoints, PT_LINETO );
+     if (!type) return FALSE;
+     if (cbPoints) type[0] = PT_MOVETO;
+     if (cbPoints > 1) type[cbPoints - 1] = PT_LINETO | PT_CLOSEFIGURE;
+@@ -1343,6 +1495,14 @@ static BOOL pathdrv_PolyPolygon( PHYSDEV dev, const POINT* pts, const INT* count
+     struct path_physdev *physdev = get_path_physdev( dev );
+     UINT poly;
+     BYTE *type;
++    DWORD obj_type = GetObjectType(dev->hdc);
++
++    if (obj_type == OBJ_METADC || obj_type == OBJ_ENHMETADC)
++    {
++        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pPolyPolygon );
++        if (!next->funcs->pPolyPolygon( next, pts, counts, polygons ))
++            return FALSE;
++    }
+ 
+     for(poly = 0; poly < polygons; poly++) {
+         type = add_log_points( physdev, pts, counts[poly], PT_LINETO );
+@@ -1364,6 +1524,14 @@ static BOOL pathdrv_PolyPolyline( PHYSDEV dev, const POINT* pts, const DWORD* co
+     struct path_physdev *physdev = get_path_physdev( dev );
+     UINT poly, count;
+     BYTE *type;
++    DWORD obj_type = GetObjectType(dev->hdc);
++
++    if (obj_type == OBJ_METADC || obj_type == OBJ_ENHMETADC)
++    {
++        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pPolyPolyline );
++        if (!next->funcs->pPolyPolyline( next, pts, counts, polylines ))
++            return FALSE;
++    }
+ 
+     for (poly = count = 0; poly < polylines; poly++) count += counts[poly];
+ 
+@@ -1513,6 +1681,14 @@ static BOOL pathdrv_ExtTextOut( PHYSDEV dev, INT x, INT y, UINT flags, const REC
+     struct path_physdev *physdev = get_path_physdev( dev );
+     unsigned int idx, ggo_flags = GGO_NATIVE;
+     POINT offset = {0, 0};
++    DWORD obj_type = GetObjectType(dev->hdc);
++
++    if (obj_type == OBJ_METADC || obj_type == OBJ_ENHMETADC)
++    {
++        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pExtTextOut );
++        if (!next->funcs->pExtTextOut( next, x, y, flags, lprc, str, count, dx ))
++            return FALSE;
++    }
+ 
+     if (!count) return TRUE;
+     if (flags & ETO_GLYPH_INDEX) ggo_flags |= GGO_GLYPH_INDEX;
+diff --git a/dlls/gdi32/tests/metafile.c b/dlls/gdi32/tests/metafile.c
+index e247db9..8b487e8 100644
+--- a/dlls/gdi32/tests/metafile.c
++++ b/dlls/gdi32/tests/metafile.c
+@@ -2300,7 +2300,6 @@ static void test_emf_ExtTextOut_on_path(void)
+     ok(ret, "EndPath error %d\n", GetLastError());
+ 
+     ret = GetPath(hdcMetafile, NULL, NULL, 0);
+-todo_wine
+     ok(!ret, "expected 0, got %d\n", ret);
+ 
+     hMetafile = CloseEnhMetaFile(hdcMetafile);
+@@ -2360,7 +2359,6 @@ todo_wine
+     ok(ret, "EndPath error %d\n", GetLastError());
+ 
+     ret = GetPath(hdcMetafile, NULL, NULL, 0);
+-todo_wine
+     ok(!ret, "expected 0, got %d\n", ret);
+ 
+     hFont = SelectObject(hdcMetafile, hFont);
+@@ -3540,7 +3538,7 @@ static void test_emf_GetPath(void)
+     EndPath(hdcMetafile);
+ 
+     size = GetPath(hdcMetafile, NULL, NULL, 0);
+-    todo_wine ok( size == 9, "GetPath returned %d.\n", size);
++    ok( size == 9, "GetPath returned %d.\n", size);
+ 
+     hemf = CloseEnhMetaFile(hdcMetafile);
+     ok(hemf != 0, "CloseEnhMetaFile error %d\n", GetLastError());
+-- 
+2.7.0
+

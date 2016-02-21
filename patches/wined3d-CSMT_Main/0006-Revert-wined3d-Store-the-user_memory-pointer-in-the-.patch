@@ -1,4 +1,4 @@
-From 351ce90ef3980bf24e295982bc4046708255ad1e Mon Sep 17 00:00:00 2001
+From adf0f2d92cb2c1711518bf519c1c96fb64ceef5a Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 10 Feb 2016 02:05:20 +0100
 Subject: Revert "wined3d: Store the "user_memory" pointer in the texture
@@ -7,12 +7,12 @@ Subject: Revert "wined3d: Store the "user_memory" pointer in the texture
 This reverts commit 77088e3faaded7f583903102240b9a2879a42fe8.
 ---
  dlls/wined3d/surface.c         | 10 +++++-----
- dlls/wined3d/texture.c         |  4 +---
- dlls/wined3d/wined3d_private.h |  5 ++---
- 3 files changed, 8 insertions(+), 11 deletions(-)
+ dlls/wined3d/texture.c         |  3 +--
+ dlls/wined3d/wined3d_private.h |  4 ++--
+ 3 files changed, 8 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index 65e07c5..65cb3b7 100644
+index cdbb2be..0be82ff 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
 @@ -488,7 +488,7 @@ static void surface_get_memory(const struct wined3d_surface *surface, struct win
@@ -33,7 +33,7 @@ index 65e07c5..65cb3b7 100644
                  ERR("Map binding is set to WINED3D_LOCATION_USER_MEMORY but surface->user_memory is NULL.\n");
              break;
  
-@@ -1910,7 +1910,7 @@ DWORD CDECL wined3d_surface_get_pitch(const struct wined3d_surface *surface)
+@@ -1897,7 +1897,7 @@ DWORD wined3d_surface_get_pitch(const struct wined3d_surface *surface)
  }
  
  HRESULT wined3d_surface_update_desc(struct wined3d_surface *surface,
@@ -42,16 +42,16 @@ index 65e07c5..65cb3b7 100644
  {
      struct wined3d_resource *texture_resource = &surface->container->resource;
      unsigned int width, height;
-@@ -1954,7 +1954,7 @@ HRESULT wined3d_surface_update_desc(struct wined3d_surface *surface,
-     else
-         surface->flags &= ~SFLAG_NONPOW2;
+@@ -1936,7 +1936,7 @@ HRESULT wined3d_surface_update_desc(struct wined3d_surface *surface,
+             surface->pow2Height <<= 1;
+     }
  
 -    if (surface->container->user_memory)
 +    if ((surface->user_memory = mem))
      {
          surface->resource.map_binding = WINED3D_LOCATION_USER_MEMORY;
          valid_location = WINED3D_LOCATION_USER_MEMORY;
-@@ -2567,7 +2567,7 @@ HRESULT wined3d_surface_map(struct wined3d_surface *surface, struct wined3d_map_
+@@ -2549,7 +2549,7 @@ HRESULT wined3d_surface_map(struct wined3d_surface *surface, struct wined3d_map_
              break;
  
          case WINED3D_LOCATION_USER_MEMORY:
@@ -61,34 +61,39 @@ index 65e07c5..65cb3b7 100644
  
          case WINED3D_LOCATION_DIB:
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index 4ded4ca..0c48c91 100644
+index e1786c9..ea04663 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -644,9 +644,7 @@ HRESULT CDECL wined3d_texture_update_desc(struct wined3d_texture *texture, UINT
+@@ -685,7 +685,6 @@ HRESULT CDECL wined3d_texture_update_desc(struct wined3d_texture *texture, UINT
      texture->resource.width = width;
      texture->resource.height = height;
  
 -    texture->user_memory = mem;
--
+     texture->row_pitch = pitch;
+ 
+     texture->flags &= ~WINED3D_TEXTURE_COND_NP2_EMULATED;
+@@ -693,7 +692,7 @@ HRESULT CDECL wined3d_texture_update_desc(struct wined3d_texture *texture, UINT
+             && !gl_info->supported[ARB_TEXTURE_RECTANGLE] && !gl_info->supported[WINED3D_GL_NORMALIZED_TEXRECT])
+         texture->flags |= WINED3D_TEXTURE_COND_NP2_EMULATED;
+ 
 -    return wined3d_surface_update_desc(surface, gl_info, pitch);
 +    return wined3d_surface_update_desc(surface, gl_info, mem, pitch);
  }
  
  void wined3d_texture_prepare_texture(struct wined3d_texture *texture, struct wined3d_context *context, BOOL srgb)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 2ff3b99..8b2cdb2 100644
+index c486c92..a7ba298 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2364,8 +2364,6 @@ struct wined3d_texture
+@@ -2366,7 +2366,6 @@ struct wined3d_texture
      DWORD flags;
      GLenum target;
  
 -    void *user_memory;
--
+     unsigned int row_pitch;
+ 
      /* May only be accessed from the command stream worker thread. */
-     struct wined3d_texture_async
-     {
-@@ -2488,6 +2486,7 @@ struct wined3d_surface
+@@ -2491,6 +2490,7 @@ struct wined3d_surface
      struct wined3d_resource resource;
      const struct wined3d_surface_ops *surface_ops;
      struct wined3d_texture *container;
@@ -96,7 +101,7 @@ index 2ff3b99..8b2cdb2 100644
      DWORD locations;
  
      DWORD flags;
-@@ -2570,7 +2569,7 @@ void surface_set_texture_target(struct wined3d_surface *surface, GLenum target,
+@@ -2574,7 +2574,7 @@ void surface_set_texture_target(struct wined3d_surface *surface, GLenum target,
  void surface_translate_drawable_coords(const struct wined3d_surface *surface, HWND window, RECT *rect) DECLSPEC_HIDDEN;
  HRESULT wined3d_surface_unmap(struct wined3d_surface *surface) DECLSPEC_HIDDEN;
  HRESULT wined3d_surface_update_desc(struct wined3d_surface *surface,
@@ -106,5 +111,5 @@ index 2ff3b99..8b2cdb2 100644
          struct wined3d_surface *src_surface, const RECT *src_rect) DECLSPEC_HIDDEN;
  void surface_validate_location(struct wined3d_surface *surface, DWORD location) DECLSPEC_HIDDEN;
 -- 
-2.7.0
+2.7.1
 

@@ -1,4 +1,4 @@
-From 00f61862ec59e32534adfabc359009143a9b9651 Mon Sep 17 00:00:00 2001
+From 5b4915863af63b0df11c80611d327820f63f5d0b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 16 Jan 2014 22:04:55 +0100
 Subject: wined3d: Move bitmap_data and user_memory into the resource.
@@ -11,7 +11,7 @@ I may want to change this to keep this in the surface. Not sure yet.
  3 files changed, 17 insertions(+), 19 deletions(-)
 
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index ad9310a..65eefa9 100644
+index 79be75f..ad15f4a 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
 @@ -88,7 +88,7 @@ static void surface_cleanup(struct wined3d_surface *surface)
@@ -23,7 +23,7 @@ index ad9310a..65eefa9 100644
      }
  
      if (surface->overlay_dest)
-@@ -456,7 +456,7 @@ static HRESULT surface_create_dib_section(struct wined3d_surface *surface)
+@@ -456,7 +456,7 @@ HRESULT surface_create_dib_section(struct wined3d_surface *surface)
      TRACE("Creating a DIB section with size %dx%dx%d, size=%d.\n",
              b_info->bmiHeader.biWidth, b_info->bmiHeader.biHeight,
              b_info->bmiHeader.biBitCount, b_info->bmiHeader.biSizeImage);
@@ -32,7 +32,7 @@ index ad9310a..65eefa9 100644
  
      if (!surface->dib.DIBsection)
      {
-@@ -465,7 +465,7 @@ static HRESULT surface_create_dib_section(struct wined3d_surface *surface)
+@@ -465,7 +465,7 @@ HRESULT surface_create_dib_section(struct wined3d_surface *surface)
          return HRESULT_FROM_WIN32(GetLastError());
      }
  
@@ -75,7 +75,7 @@ index ad9310a..65eefa9 100644
              break;
  
          case WINED3D_LOCATION_BUFFER:
-@@ -2100,7 +2100,7 @@ HRESULT wined3d_surface_update_desc(struct wined3d_surface *surface,
+@@ -1914,7 +1914,7 @@ HRESULT wined3d_surface_update_desc(struct wined3d_surface *surface,
      {
          DeleteDC(surface->hDC);
          DeleteObject(surface->dib.DIBsection);
@@ -84,16 +84,16 @@ index ad9310a..65eefa9 100644
          surface->flags &= ~SFLAG_DIBSECTION;
          create_dib = TRUE;
      }
-@@ -2132,7 +2132,7 @@ HRESULT wined3d_surface_update_desc(struct wined3d_surface *surface,
-     else
-         surface->flags &= ~SFLAG_NONPOW2;
+@@ -1941,7 +1941,7 @@ HRESULT wined3d_surface_update_desc(struct wined3d_surface *surface,
+             surface->pow2Height <<= 1;
+     }
  
 -    if ((surface->user_memory = mem))
 +    if ((surface->resource.user_memory = mem))
      {
          surface->resource.map_binding = WINED3D_LOCATION_USER_MEMORY;
          valid_location = WINED3D_LOCATION_USER_MEMORY;
-@@ -2750,11 +2750,11 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
+@@ -2555,11 +2555,11 @@ HRESULT wined3d_surface_map(struct wined3d_surface *surface, struct wined3d_map_
              break;
  
          case WINED3D_LOCATION_USER_MEMORY:
@@ -108,10 +108,10 @@ index ad9310a..65eefa9 100644
  
          case WINED3D_LOCATION_BUFFER:
 diff --git a/dlls/wined3d/swapchain.c b/dlls/wined3d/swapchain.c
-index 4f6be9e..d0b8cf0 100644
+index 41cd400..3ca22cf 100644
 --- a/dlls/wined3d/swapchain.c
 +++ b/dlls/wined3d/swapchain.c
-@@ -666,9 +666,9 @@ static void swapchain_gdi_present(struct wined3d_swapchain *swapchain, const REC
+@@ -680,9 +680,9 @@ static void swapchain_gdi_present(struct wined3d_swapchain *swapchain, const REC
      {
          void *tmp;
  
@@ -125,10 +125,10 @@ index 4f6be9e..d0b8cf0 100644
          if (front->resource.heap_memory)
              ERR("GDI Surface %p has heap memory allocated.\n", front);
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 9d2e40a..3776439 100644
+index e7c872d..861057d 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2164,7 +2164,7 @@ struct wined3d_resource
+@@ -2277,7 +2277,7 @@ struct wined3d_resource
      UINT depth;
      UINT size;
      DWORD priority;
@@ -137,7 +137,7 @@ index 9d2e40a..3776439 100644
      UINT custom_row_pitch, custom_slice_pitch;
      struct list resource_list_entry;
      DWORD locations;
-@@ -2343,7 +2343,6 @@ void wined3d_volume_upload_data(struct wined3d_volume *volume, const struct wine
+@@ -2459,7 +2459,6 @@ void wined3d_volume_upload_data(struct wined3d_volume *volume, const struct wine
  struct wined3d_surface_dib
  {
      HBITMAP DIBsection;
@@ -145,7 +145,7 @@ index 9d2e40a..3776439 100644
      UINT bitmap_size;
  };
  
-@@ -2377,7 +2376,6 @@ struct wined3d_surface
+@@ -2493,7 +2492,6 @@ struct wined3d_surface
      struct wined3d_resource resource;
      const struct wined3d_surface_ops *surface_ops;
      struct wined3d_texture *container;
@@ -154,5 +154,5 @@ index 9d2e40a..3776439 100644
      DWORD flags;
  
 -- 
-2.5.1
+2.7.1
 

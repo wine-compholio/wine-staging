@@ -211,6 +211,7 @@ patch_enable_all ()
 	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_Loader_Machine_Type="$1"
+	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
@@ -777,6 +778,9 @@ patch_enable ()
 			;;
 		ntdll-Loader_Machine_Type)
 			enable_ntdll_Loader_Machine_Type="$2"
+			;;
+		ntdll-NtAccessCheck)
+			enable_ntdll_NtAccessCheck="$2"
 			;;
 		ntdll-NtQueryEaFile)
 			enable_ntdll_NtQueryEaFile="$2"
@@ -4780,6 +4784,18 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 		echo '+    { "Erich E. Hoover", "kernel32,ntdll: Add support for deleting junction points with RemoveDirectory.", 1 },';
 		echo '+    { "Erich E. Hoover", "kernel32: Advertise junction point support.", 1 },';
 		echo '+    { "Erich E. Hoover", "ntdll/tests: Add test for deleting junction point target.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtAccessCheck
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, dlls/ntdll/sec.c
+# |
+if test "$enable_ntdll_NtAccessCheck" -eq 1; then
+	patch_apply ntdll-NtAccessCheck/0001-ntdll-Improve-invalid-paramater-handling-in-NtAccess.patch
+	(
+		echo '+    { "Qian Hong", "ntdll: Improve invalid paramater handling in NtAccessCheck.", 1 },';
 	) >> "$patchlist"
 fi
 

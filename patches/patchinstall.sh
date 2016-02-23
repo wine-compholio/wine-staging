@@ -3675,7 +3675,7 @@ if test "$enable_gdi32_Path_Metafile" -eq 1; then
 	(
 		echo '+    { "Dmitry Timoshkov", "gdi32/tests: Add some additional tests for ExtExtOut on a path for an EMF DC.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "gdi32: ExtTextOut on a path with bitmap font selected shouldn'\''t fail.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "gdi32: Add support for paths on a metafile HDC.", 2 },';
+		echo '+    { "Dmitry Timoshkov", "gdi32: Add support for paths on a metafile HDC.", 3 },';
 	) >> "$patchlist"
 fi
 

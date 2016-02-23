@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "c26284168ccf53e657bdfbedffd4ef13698688c8"
+	echo "f71f7db63caeffdc92ede12bf15e8f7d184addd4"
 }
 
 # Show version information
@@ -187,7 +187,6 @@ patch_enable_all ()
 	enable_msidb_Implementation="$1"
 	enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback="$1"
 	enable_msvcrt_Math_Precision="$1"
-	enable_msvcrt_StdHandle_RefCount="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_APC_Start_Process="$1"
 	enable_ntdll_Activation_Context="$1"
@@ -706,9 +705,6 @@ patch_enable ()
 			;;
 		msvcrt-Math_Precision)
 			enable_msvcrt_Math_Precision="$2"
-			;;
-		msvcrt-StdHandle_RefCount)
-			enable_msvcrt_StdHandle_RefCount="$2"
 			;;
 		ntdll-APC_Performance)
 			enable_ntdll_APC_Performance="$2"
@@ -4371,22 +4367,6 @@ if test "$enable_msvcrt_Math_Precision" -eq 1; then
 	patch_apply msvcrt-Math_Precision/0001-msvcrt-Calculate-sinh-cosh-exp-pow-with-higher-preci.patch
 	(
 		echo '+    { "Sebastian Lackner", "msvcrt: Calculate sinh/cosh/exp/pow with higher precision.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset msvcrt-StdHandle_RefCount
-# |
-# | Modified files:
-# |   *	dlls/msvcrt/file.c, dlls/msvcrt/tests/file.c
-# |
-if test "$enable_msvcrt_StdHandle_RefCount" -eq 1; then
-	patch_apply msvcrt-StdHandle_RefCount/0001-msvcrt-tests-Add-tests-for-stdout-and-stderr-refcoun.patch
-	patch_apply msvcrt-StdHandle_RefCount/0002-msvcrt-Implemenent-refcount-check-for-stdout-and-std.patch
-	patch_apply msvcrt-StdHandle_RefCount/0003-msvcrt-Use-constants-instead-of-hardcoded-values.patch
-	(
-		echo '+    { "Qian Hong", "msvcrt/tests: Add tests for stdout and stderr refcount.", 1 },';
-		echo '+    { "Qian Hong", "msvcrt: Implemenent refcount check for stdout and stderr.", 1 },';
-		echo '+    { "Sebastian Lackner", "msvcrt: Use constants instead of hardcoded values.", 1 },';
 	) >> "$patchlist"
 fi
 

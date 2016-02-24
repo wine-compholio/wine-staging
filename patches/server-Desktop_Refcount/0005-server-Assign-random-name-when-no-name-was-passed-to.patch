@@ -1,0 +1,73 @@
+From ca6e61e6b9c6813d684eb60d074d3036f10d166e Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 24 Feb 2016 19:18:52 +0100
+Subject: server: Assign random name when no name was passed to
+ create_winstation.
+
+---
+ dlls/user32/tests/winstation.c |  4 ++--
+ server/winstation.c            | 24 +++++++++++++++++++++++-
+ 2 files changed, 25 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/user32/tests/winstation.c b/dlls/user32/tests/winstation.c
+index 4a553ca..b4a1a49 100644
+--- a/dlls/user32/tests/winstation.c
++++ b/dlls/user32/tests/winstation.c
+@@ -220,8 +220,8 @@ static void test_handles(void)
+     memset(buffer, 0, sizeof(buffer));
+     ret = GetUserObjectInformationA( w2, UOI_NAME, buffer, sizeof(buffer), &size );
+     ok( ret, "GetUserObjectInformationA returned %x\n", ret );
+-    todo_wine ok( !memcmp(buffer, "Service-0x0-", 12), "unexpected WindowStation name '%s'\n", buffer );
+-    todo_wine ok( buffer[strlen(buffer) - 1] == '$', "unexpected WindowStation name '%s'\n", buffer );
++    ok( !memcmp(buffer, "Service-0x0-", 12), "unexpected WindowStation name '%s'\n", buffer );
++    ok( buffer[strlen(buffer) - 1] == '$', "unexpected WindowStation name '%s'\n", buffer );
+ 
+     SetLastError( 0xdeadbeef );
+     w3 = OpenWindowStationA( "", TRUE, WINSTA_ALL_ACCESS );
+diff --git a/server/winstation.c b/server/winstation.c
+index 0034343..39131d5 100644
+--- a/server/winstation.c
++++ b/server/winstation.c
+@@ -111,9 +111,30 @@ static const struct object_ops desktop_ops =
+ static struct winstation *create_winstation( struct object *root, const struct unicode_str *name,
+                                              unsigned int attr, unsigned int flags )
+ {
++    static const WCHAR formatW[] = {'S','e','r','v','i','c','e','-','0','x','0','-','%','x','$',0};
++    static unsigned int id = 0x10000;
+     struct winstation *winstation;
++    struct unicode_str default_name;
++    WCHAR buffer[32];
+ 
+-    if ((winstation = create_named_object( root, &winstation_ops, name, attr, NULL )))
++    if (name->len)
++    {
++        winstation = create_named_object( root, &winstation_ops, name, attr, NULL );
++        goto done;
++    }
++
++    do
++    {
++        if (!++id) id = 1;  /* avoid an id of 0 */
++        sprintfW( buffer, formatW, id );
++        default_name.str = buffer;
++        default_name.len = strlenW( buffer ) * sizeof(WCHAR);
++        winstation = create_named_object( root, &winstation_ops, &default_name, attr & ~OBJ_OPENIF, NULL );
++    }
++    while (!winstation && get_error() == STATUS_OBJECT_NAME_COLLISION);
++
++done:
++    if (winstation)
+     {
+         if (get_error() != STATUS_OBJECT_NAME_EXISTS)
+         {
+@@ -131,6 +152,7 @@ static struct winstation *create_winstation( struct object *root, const struct u
+         }
+         else clear_error();
+     }
++
+     return winstation;
+ }
+ 
+-- 
+2.7.1
+

@@ -1,0 +1,71 @@
+From 4a137148ed5f42a6f598eba630d668d2b9613b4c Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 24 Feb 2016 17:49:10 +0100
+Subject: user32: Implement CWF_CREATE_ONLY flag for CreateWindowStation.
+
+---
+ dlls/user32/winstation.c | 11 ++++++-----
+ include/winuser.h        |  2 ++
+ 2 files changed, 8 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/user32/winstation.c b/dlls/user32/winstation.c
+index 61add76..70715ad 100644
+--- a/dlls/user32/winstation.c
++++ b/dlls/user32/winstation.c
+@@ -80,26 +80,26 @@ static HANDLE get_winstations_dir_handle(void)
+ /***********************************************************************
+  *              CreateWindowStationA  (USER32.@)
+  */
+-HWINSTA WINAPI CreateWindowStationA( LPCSTR name, DWORD reserved, ACCESS_MASK access,
++HWINSTA WINAPI CreateWindowStationA( LPCSTR name, DWORD flags, ACCESS_MASK access,
+                                      LPSECURITY_ATTRIBUTES sa )
+ {
+     WCHAR buffer[MAX_PATH];
+ 
+-    if (!name) return CreateWindowStationW( NULL, reserved, access, sa );
++    if (!name) return CreateWindowStationW( NULL, flags, access, sa );
+ 
+     if (!MultiByteToWideChar( CP_ACP, 0, name, -1, buffer, MAX_PATH ))
+     {
+         SetLastError( ERROR_FILENAME_EXCED_RANGE );
+         return 0;
+     }
+-    return CreateWindowStationW( buffer, reserved, access, sa );
++    return CreateWindowStationW( buffer, flags, access, sa );
+ }
+ 
+ 
+ /***********************************************************************
+  *              CreateWindowStationW  (USER32.@)
+  */
+-HWINSTA WINAPI CreateWindowStationW( LPCWSTR name, DWORD reserved, ACCESS_MASK access,
++HWINSTA WINAPI CreateWindowStationW( LPCWSTR name, DWORD flags, ACCESS_MASK access,
+                                      LPSECURITY_ATTRIBUTES sa )
+ {
+     HANDLE ret;
+@@ -114,7 +114,8 @@ HWINSTA WINAPI CreateWindowStationW( LPCWSTR name, DWORD reserved, ACCESS_MASK a
+     {
+         req->flags      = 0;
+         req->access     = access;
+-        req->attributes = OBJ_CASE_INSENSITIVE | OBJ_OPENIF |
++        req->attributes = OBJ_CASE_INSENSITIVE |
++                          ((flags & CWF_CREATE_ONLY) ? 0 : OBJ_OPENIF) |
+                           ((sa && sa->bInheritHandle) ? OBJ_INHERIT : 0);
+         req->rootdir    = wine_server_obj_handle( get_winstations_dir_handle() );
+         wine_server_add_data( req, name, len * sizeof(WCHAR) );
+diff --git a/include/winuser.h b/include/winuser.h
+index fa3e661..64dd6e7 100644
+--- a/include/winuser.h
++++ b/include/winuser.h
+@@ -101,6 +101,8 @@ typedef void* HPOWERNOTIFY;
+ #define WSF_VISIBLE     1
+ #define DF_ALLOWOTHERACCOUNTHOOK  1
+ 
++#define CWF_CREATE_ONLY 0x01
++
+ typedef struct tagUSEROBJECTFLAGS {
+     BOOL fInherit;
+     BOOL fReserved;
+-- 
+2.7.1
+

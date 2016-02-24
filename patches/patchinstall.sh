@@ -4011,19 +4011,26 @@ fi
 # Patchset server-Desktop_Refcount
 # |
 # | Modified files:
-# |   *	programs/explorer/desktop.c, server/async.c, server/atom.c, server/change.c, server/clipboard.c, server/completion.c,
-# | 	server/console.c, server/debugger.c, server/device.c, server/directory.c, server/event.c, server/fd.c, server/file.c,
-# | 	server/handle.c, server/handle.h, server/hook.c, server/mailslot.c, server/mapping.c, server/mutex.c,
-# | 	server/named_pipe.c, server/object.c, server/object.h, server/process.c, server/queue.c, server/registry.c,
-# | 	server/request.c, server/semaphore.c, server/serial.c, server/signal.c, server/snapshot.c, server/sock.c,
-# | 	server/symlink.c, server/thread.c, server/timer.c, server/token.c, server/winstation.c
+# |   *	dlls/user32/tests/winstation.c, dlls/user32/winstation.c, include/winuser.h, programs/explorer/desktop.c,
+# | 	server/async.c, server/atom.c, server/change.c, server/clipboard.c, server/completion.c, server/console.c,
+# | 	server/debugger.c, server/device.c, server/directory.c, server/event.c, server/fd.c, server/file.c, server/handle.c,
+# | 	server/handle.h, server/hook.c, server/mailslot.c, server/mapping.c, server/mutex.c, server/named_pipe.c,
+# | 	server/object.c, server/object.h, server/process.c, server/queue.c, server/registry.c, server/request.c,
+# | 	server/semaphore.c, server/serial.c, server/signal.c, server/snapshot.c, server/sock.c, server/symlink.c,
+# | 	server/thread.c, server/timer.c, server/token.c, server/winstation.c
 # |
 if test "$enable_server_Desktop_Refcount" -eq 1; then
 	patch_apply server-Desktop_Refcount/0001-server-Introduce-a-new-alloc_handle-object-callback..patch
 	patch_apply server-Desktop_Refcount/0002-server-Track-desktop-handle-count-more-correctly.patch
+	patch_apply server-Desktop_Refcount/0003-user32-Implement-CWF_CREATE_ONLY-flag-for-CreateWind.patch
+	patch_apply server-Desktop_Refcount/0004-user32-tests-Add-additional-tests-for-window-station.patch
+	patch_apply server-Desktop_Refcount/0005-server-Assign-random-name-when-no-name-was-passed-to.patch
 	(
 		echo '+    { "Sebastian Lackner", "server: Introduce a new alloc_handle object callback.", 2 },';
 		echo '+    { "Sebastian Lackner", "server: Track desktop handle count more correctly.", 1 },';
+		echo '+    { "Sebastian Lackner", "user32: Implement CWF_CREATE_ONLY flag for CreateWindowStation.", 1 },';
+		echo '+    { "Sebastian Lackner", "user32/tests: Add additional tests for window station name.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Assign random name when no name was passed to create_winstation.", 1 },';
 	) >> "$patchlist"
 fi
 

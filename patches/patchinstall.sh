@@ -3671,10 +3671,12 @@ fi
 if test "$enable_gdi32_Path_Metafile" -eq 1; then
 	patch_apply gdi32-Path_Metafile/0001-gdi32-tests-Add-some-additional-tests-for-ExtExtOut-.patch
 	patch_apply gdi32-Path_Metafile/0002-gdi32-ExtTextOut-on-a-path-with-bitmap-font-selected.patch
-	patch_apply gdi32-Path_Metafile/0003-gdi32-Add-support-for-paths-on-a-metafile-HDC.-v2.patch
+	patch_apply gdi32-Path_Metafile/0003-gdi32-tests-Explicitly-test-BeginPath-return-value-i.patch
+	patch_apply gdi32-Path_Metafile/0004-gdi32-Add-support-for-paths-on-a-metafile-HDC.-v2.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "gdi32/tests: Add some additional tests for ExtExtOut on a path for an EMF DC.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "gdi32: ExtTextOut on a path with bitmap font selected shouldn'\''t fail.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "gdi32/tests: Explicitly test BeginPath() return value in the metafile path tests.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "gdi32: Add support for paths on a metafile HDC.", 3 },';
 	) >> "$patchlist"
 fi

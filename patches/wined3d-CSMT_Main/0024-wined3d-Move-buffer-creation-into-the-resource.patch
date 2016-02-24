@@ -1,4 +1,4 @@
-From bd7832b10a3c2c43e33abff97a9447d52166da3e Mon Sep 17 00:00:00 2001
+From 9ab92589f48b8a5b6b8b65f90efb480d1b02c3d3 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 18 Sep 2013 22:49:34 +0200
 Subject: wined3d: Move buffer creation into the resource.
@@ -14,10 +14,10 @@ surface_load_location will write a lot of ERRs.
  3 files changed, 71 insertions(+), 62 deletions(-)
 
 diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
-index 5204fee..0d2145f 100644
+index 45c30ab..e9e5d8d 100644
 --- a/dlls/wined3d/resource.c
 +++ b/dlls/wined3d/resource.c
-@@ -223,6 +223,18 @@ HRESULT resource_init(struct wined3d_resource *resource, struct wined3d_device *
+@@ -233,6 +233,18 @@ HRESULT resource_init(struct wined3d_resource *resource, struct wined3d_device *
      return WINED3D_OK;
  }
  
@@ -36,7 +36,7 @@ index 5204fee..0d2145f 100644
  void resource_cleanup(struct wined3d_resource *resource)
  {
      const struct wined3d *d3d = resource->device->wined3d;
-@@ -235,6 +247,9 @@ void resource_cleanup(struct wined3d_resource *resource)
+@@ -245,6 +257,9 @@ void resource_cleanup(struct wined3d_resource *resource)
          adapter_adjust_memory(resource->device->adapter, (INT64)0 - resource->size);
      }
  
@@ -46,17 +46,17 @@ index 5204fee..0d2145f 100644
      wined3d_resource_free_sysmem(resource);
  
      device_resource_released(resource->device, resource);
-@@ -245,6 +260,9 @@ void resource_unload(struct wined3d_resource *resource)
+@@ -254,6 +269,9 @@ void resource_unload(struct wined3d_resource *resource)
+ {
      if (resource->map_count)
          ERR("Resource %p is being unloaded while mapped.\n", resource);
- 
++
 +    if (resource->buffer_object)
 +        wined3d_resource_free_bo(resource);
-+
-     context_resource_unloaded(resource->device,
-             resource, resource->type);
  }
-@@ -597,3 +615,51 @@ void wined3d_resource_release_map_ptr(const struct wined3d_resource *resource,
+ 
+ DWORD CDECL wined3d_resource_set_priority(struct wined3d_resource *resource, DWORD priority)
+@@ -604,3 +622,51 @@ void wined3d_resource_release_map_ptr(const struct wined3d_resource *resource,
              return;
      }
  }
@@ -109,7 +109,7 @@ index 5204fee..0d2145f 100644
 +    }
 +}
 diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
-index 78b153d..c95af94 100644
+index dd041869..99ab8d1 100644
 --- a/dlls/wined3d/volume.c
 +++ b/dlls/wined3d/volume.c
 @@ -314,42 +314,10 @@ void wined3d_volume_load(struct wined3d_volume *volume, struct wined3d_context *
@@ -215,10 +215,10 @@ index 78b153d..c95af94 100644
          WARN("Out of memory.\n");
          map_desc->data = NULL;
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 6dc1b04..0049165 100644
+index 51aef5a..2df5349 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2238,6 +2238,9 @@ void wined3d_resource_invalidate_location(struct wined3d_resource *resource, DWO
+@@ -2321,6 +2321,9 @@ void wined3d_resource_invalidate_location(struct wined3d_resource *resource, DWO
  BOOL wined3d_resource_is_offscreen(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
  void wined3d_resource_load_location(struct wined3d_resource *resource,
          struct wined3d_context *context, DWORD location) DECLSPEC_HIDDEN;
@@ -228,7 +228,7 @@ index 6dc1b04..0049165 100644
  void wined3d_resource_release_map_ptr(const struct wined3d_resource *resource,
          const struct wined3d_context *context) DECLSPEC_HIDDEN;
  DWORD wined3d_resource_sanitize_map_flags(const struct wined3d_resource *resource, DWORD flags) DECLSPEC_HIDDEN;
-@@ -2367,7 +2370,6 @@ static inline struct wined3d_volume *volume_from_resource(struct wined3d_resourc
+@@ -2457,7 +2460,6 @@ static inline struct wined3d_volume *volume_from_resource(struct wined3d_resourc
      return CONTAINING_RECORD(resource, struct wined3d_volume, resource);
  }
  
@@ -237,5 +237,5 @@ index 6dc1b04..0049165 100644
          unsigned int level, struct wined3d_volume **volume) DECLSPEC_HIDDEN;
  void wined3d_volume_destroy(struct wined3d_volume *volume) DECLSPEC_HIDDEN;
 -- 
-2.6.4
+2.7.1
 

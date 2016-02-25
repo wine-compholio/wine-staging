@@ -4073,6 +4073,7 @@ if test "$enable_kernel32_Named_Pipe" -eq 1; then
 	patch_apply kernel32-Named_Pipe/0019-ntdll-Set-NamedPipeState-to-FILE_PIPE_CLOSING_STATE-.patch
 	patch_apply kernel32-Named_Pipe/0020-server-Return-correct-error-codes-for-NtWriteFile-wh.patch
 	patch_apply kernel32-Named_Pipe/0021-ntdll-Pre-cache-file-descriptors-after-opening-a-fil.patch
+	patch_apply kernel32-Named_Pipe/0022-server-Do-not-allow-to-queue-async-operation-for-bro.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Only allow one test result.", 1 },';
 		echo '+    { "Dan Kegel", "kernel32: ConnectNamedPort should return FALSE and set ERROR_PIPE_CONNECTED on success in overlapped mode.", 1 },';
@@ -4095,6 +4096,7 @@ if test "$enable_kernel32_Named_Pipe" -eq 1; then
 		echo '+    { "Sebastian Lackner", "ntdll: Set NamedPipeState to FILE_PIPE_CLOSING_STATE on broken pipe in NtQueryInformationFile.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Return correct error codes for NtWriteFile when pipes are closed without disconnecting.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Pre-cache file descriptors after opening a file.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Do not allow to queue async operation for broken pipes.", 1 },';
 	) >> "$patchlist"
 fi
 

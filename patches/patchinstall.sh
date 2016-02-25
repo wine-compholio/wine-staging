@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "b652c119690afe8b89b8ce9cddde34b4c1589a62"
+	echo "215e2d7fed58ccd7c5e55ad536fb311608b51d26"
 }
 
 # Show version information
@@ -4422,18 +4422,15 @@ fi
 # Patchset ntdll-EtwRegisterTraceGuids
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#34318] Move implementation of EtwRegisterTraceGuidsW to ntdll
 # |   *	[#33021] Move implementation of EtwEventRegister to ntdll
 # |
 # | Modified files:
 # |   *	dlls/advapi32/advapi32.spec, dlls/advapi32/eventlog.c, dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec
 # |
 if test "$enable_ntdll_EtwRegisterTraceGuids" -eq 1; then
-	patch_apply ntdll-EtwRegisterTraceGuids/0001-ntdll-Move-RegisterTraceGuids-from-advapi32-to-ntdll.patch
-	patch_apply ntdll-EtwRegisterTraceGuids/0002-ntdll-Move-EventRegister-from-advapi32-to-ntdll.patch
-	patch_apply ntdll-EtwRegisterTraceGuids/0003-ntdll-Move-EventSetInformation-from-advapi32-to-ntdl.patch
+	patch_apply ntdll-EtwRegisterTraceGuids/0001-ntdll-Move-EventRegister-from-advapi32-to-ntdll.patch
+	patch_apply ntdll-EtwRegisterTraceGuids/0002-ntdll-Move-EventSetInformation-from-advapi32-to-ntdl.patch
 	(
-		echo '+    { "Michael Müller", "ntdll: Move RegisterTraceGuids from advapi32 to ntdll.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Move EventRegister from advapi32 to ntdll.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Move EventSetInformation from advapi32 to ntdll.", 1 },';
 	) >> "$patchlist"

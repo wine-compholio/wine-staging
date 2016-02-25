@@ -325,6 +325,7 @@ patch_enable_all ()
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_wine_inf_Performance="$1"
 	enable_wine_inf_ProfileList_UserSID="$1"
+	enable_wine_inf_WMP_12="$1"
 	enable_wineboot_DriveSerial="$1"
 	enable_wineboot_HKEY_DYN_DATA="$1"
 	enable_wineboot_drivers_etc_Stubs="$1"
@@ -1119,6 +1120,9 @@ patch_enable ()
 			;;
 		wine.inf-ProfileList_UserSID)
 			enable_wine_inf_ProfileList_UserSID="$2"
+			;;
+		wine.inf-WMP_12)
+			enable_wine_inf_WMP_12="$2"
 			;;
 		wineboot-DriveSerial)
 			enable_wineboot_DriveSerial="$2"
@@ -6556,6 +6560,18 @@ if test "$enable_wine_inf_ProfileList_UserSID" -eq 1; then
 	patch_apply wine.inf-ProfileList_UserSID/0001-wine.inf-Add-a-ProfileList-UserSID-registry-subkey.patch
 	(
 		echo '+    { "Sebastian Lackner", "wine.inf: Add a ProfileList\\\\<UserSID> registry subkey.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wine.inf-WMP_12
+# |
+# | Modified files:
+# |   *	loader/wine.inf.in
+# |
+if test "$enable_wine_inf_WMP_12" -eq 1; then
+	patch_apply wine.inf-WMP_12/0001-wine.inf-Add-WMP-12-as-installed-windows-feature.patch
+	(
+		echo '+    { "Michael Müller", "wine.inf: Add WMP 12 as installed windows feature.", 1 },';
 	) >> "$patchlist"
 fi
 

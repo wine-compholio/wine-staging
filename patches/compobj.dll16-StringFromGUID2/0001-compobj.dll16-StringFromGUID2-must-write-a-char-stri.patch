@@ -1,0 +1,45 @@
+From 9bfa901639b950dbfb16c67fe881f742445b30da Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 27 Feb 2016 00:49:36 +0100
+Subject: compobj.dll16: StringFromGUID2 must write a char string into the
+ buffer.
+
+---
+ dlls/compobj.dll16/compobj.c | 13 +++++++++++--
+ 1 file changed, 11 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/compobj.dll16/compobj.c b/dlls/compobj.dll16/compobj.c
+index 6261c13..9ec8556 100644
+--- a/dlls/compobj.dll16/compobj.c
++++ b/dlls/compobj.dll16/compobj.c
+@@ -54,6 +54,7 @@ typedef LPCSTR LPCOLESTR16;
+ #define STDMETHOD16(m) HRESULT (STDMETHOD16CALLTYPE *m)
+ #define STDMETHOD16_(t,m) t (STDMETHOD16CALLTYPE *m)
+ 
++#define CHARS_IN_GUID 39
+ 
+ /***********************************************************************
+  * IMalloc16 interface
+@@ -689,9 +690,17 @@ HRESULT WINAPI CLSIDFromProgID16(LPCOLESTR16 progid, LPCLSID riid)
+ /******************************************************************************
+  *		StringFromGUID2	[COMPOBJ.76]
+  */
+-INT WINAPI StringFromGUID216(REFGUID id, LPOLESTR str, INT cmax)
++INT WINAPI StringFromGUID216(REFGUID id, LPOLESTR16 str, INT cmax)
+ {
+-    return StringFromGUID2( id, str, cmax );
++    static const char format[] = "{%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}";
++
++    if (!id || cmax < CHARS_IN_GUID) return 0;
++
++    sprintf( str, format, id->Data1, id->Data2, id->Data3,
++             id->Data4[0], id->Data4[1], id->Data4[2], id->Data4[3],
++             id->Data4[4], id->Data4[5], id->Data4[6], id->Data4[7] );
++
++    return CHARS_IN_GUID;
+ }
+ 
+ 
+-- 
+2.7.1
+

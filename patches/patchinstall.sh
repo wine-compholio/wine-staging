@@ -100,6 +100,7 @@ patch_enable_all ()
 	enable_comctl32_Button_Theming="$1"
 	enable_comctl32_PROPSHEET_InsertPage="$1"
 	enable_comctl32_TTM_ADDTOOLW="$1"
+	enable_compobj_dll16_StringFromGUID2="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
 	enable_crypt32_CryptUnprotectMemory="$1"
@@ -445,6 +446,9 @@ patch_enable ()
 			;;
 		comctl32-TTM_ADDTOOLW)
 			enable_comctl32_TTM_ADDTOOLW="$2"
+			;;
+		compobj.dll16-StringFromGUID2)
+			enable_compobj_dll16_StringFromGUID2="$2"
 			;;
 		configure-Absolute_RPATH)
 			enable_configure_Absolute_RPATH="$2"
@@ -2820,6 +2824,18 @@ if test "$enable_comctl32_TTM_ADDTOOLW" -eq 1; then
 	patch_apply comctl32-TTM_ADDTOOLW/0001-comctl32-tooltip-Protect-TTM_ADDTOOLW-from-invalid-t.patch
 	(
 		echo '+    { "Alistair Leslie-Hughes", "comctl32/tooltip: Protect TTM_ADDTOOLW from invalid text pointers.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset compobj.dll16-StringFromGUID2
+# |
+# | Modified files:
+# |   *	dlls/compobj.dll16/compobj.c
+# |
+if test "$enable_compobj_dll16_StringFromGUID2" -eq 1; then
+	patch_apply compobj.dll16-StringFromGUID2/0001-compobj.dll16-StringFromGUID2-must-write-a-char-stri.patch
+	(
+		echo '+    { "Michael Müller", "compobj.dll16: StringFromGUID2 must write a char string into the buffer.", 1 },';
 	) >> "$patchlist"
 fi
 

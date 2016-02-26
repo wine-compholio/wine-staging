@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "215e2d7fed58ccd7c5e55ad536fb311608b51d26"
+	echo "1510b8b92af23a2305de95f074468c231dc11fa3"
 }
 
 # Show version information
@@ -157,7 +157,6 @@ patch_enable_all ()
 	enable_imagehlp_Cleanup="$1"
 	enable_imagehlp_ImageLoad="$1"
 	enable_imm32_IMMDisableLegacyIME="$1"
-	enable_inetcpl_Default_Home="$1"
 	enable_iphlpapi_System_Ping="$1"
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_COMSPEC="$1"
@@ -311,7 +310,6 @@ patch_enable_all ()
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_Invalidate_Key_State="$1"
 	enable_user32_ListBox_Size="$1"
-	enable_user32_MDI_Extra_Data="$1"
 	enable_user32_MessageBox_WS_EX_TOPMOST="$1"
 	enable_user32_Mouse_Message_Hwnd="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
@@ -616,9 +614,6 @@ patch_enable ()
 			;;
 		imm32-IMMDisableLegacyIME)
 			enable_imm32_IMMDisableLegacyIME="$2"
-			;;
-		inetcpl-Default_Home)
-			enable_inetcpl_Default_Home="$2"
 			;;
 		iphlpapi-System_Ping)
 			enable_iphlpapi_System_Ping="$2"
@@ -1078,9 +1073,6 @@ patch_enable ()
 			;;
 		user32-ListBox_Size)
 			enable_user32_ListBox_Size="$2"
-			;;
-		user32-MDI_Extra_Data)
-			enable_user32_MDI_Extra_Data="$2"
 			;;
 		user32-MessageBox_WS_EX_TOPMOST)
 			enable_user32_MessageBox_WS_EX_TOPMOST="$2"
@@ -3830,18 +3822,6 @@ if test "$enable_imm32_IMMDisableLegacyIME" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset inetcpl-Default_Home
-# |
-# | Modified files:
-# |   *	dlls/inetcpl.cpl/general.c
-# |
-if test "$enable_inetcpl_Default_Home" -eq 1; then
-	patch_apply inetcpl-Default_Home/0001-inetcpl-Implement-default-page-button.patch
-	(
-		echo '+    { "Jared Smudde", "inetcpl: Implement default page button.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset iphlpapi-System_Ping
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6353,21 +6333,6 @@ if test "$enable_user32_ListBox_Size" -eq 1; then
 	patch_apply user32-ListBox_Size/0001-user32-Fix-calculation-of-listbox-size-when-horizont.patch
 	(
 		echo '+    { "Michael Müller", "user32: Fix calculation of listbox size when horizontal scrollbar is present.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-MDI_Extra_Data
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15473] Preserve beginning of extra data for MDI windows
-# |
-# | Modified files:
-# |   *	dlls/user32/mdi.c, dlls/user32/tests/msg.c
-# |
-if test "$enable_user32_MDI_Extra_Data" -eq 1; then
-	patch_apply user32-MDI_Extra_Data/0001-user32-Preserve-beginning-of-extra-data-for-MDI-wind.patch
-	(
-		echo '+    { "Michael Müller", "user32: Preserve beginning of extra data for MDI windows.", 1 },';
 	) >> "$patchlist"
 fi
 

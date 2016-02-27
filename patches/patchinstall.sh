@@ -238,6 +238,7 @@ patch_enable_all ()
 	enable_ntdll_WinSqm="$1"
 	enable_ntdll_WriteWatches="$1"
 	enable_ntdll_Zero_mod_name="$1"
+	enable_ntdll_call_thread_func_wrapper="$1"
 	enable_ntoskrnl_DriverTest="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
@@ -863,6 +864,9 @@ patch_enable ()
 			;;
 		ntdll-Zero_mod_name)
 			enable_ntdll_Zero_mod_name="$2"
+			;;
+		ntdll-call_thread_func_wrapper)
+			enable_ntdll_call_thread_func_wrapper="$2"
 			;;
 		ntoskrnl-DriverTest)
 			enable_ntoskrnl_DriverTest="$2"
@@ -5167,6 +5171,21 @@ if test "$enable_ntdll_Zero_mod_name" -eq 1; then
 	patch_apply ntdll-Zero_mod_name/0001-ntdll-Initialize-mod_name-to-zero.patch
 	(
 		echo '+    { "Qian Hong", "ntdll: Initialize mod_name to zero.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-call_thread_func_wrapper
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40068] Reserve some more stack space in call_thread_func_wrapper
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_i386.c
+# |
+if test "$enable_ntdll_call_thread_func_wrapper" -eq 1; then
+	patch_apply ntdll-call_thread_func_wrapper/0001-ntdll-Reserve-some-more-stack-space-in-call_thread_f.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "ntdll: Reserve some more stack space in call_thread_func_wrapper.", 1 },';
 	) >> "$patchlist"
 fi
 

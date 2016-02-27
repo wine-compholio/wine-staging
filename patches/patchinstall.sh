@@ -309,6 +309,7 @@ patch_enable_all ()
 	enable_stdole32_tlb_SLTG_Typelib="$1"
 	enable_taskmgr_Memory_Usage="$1"
 	enable_ucrtbase_Functions="$1"
+	enable_user_exe16_DlgDirList="$1"
 	enable_user32_DeferWindowPos="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawTextExW="$1"
@@ -1075,6 +1076,9 @@ patch_enable ()
 			;;
 		ucrtbase-Functions)
 			enable_ucrtbase_Functions="$2"
+			;;
+		user.exe16-DlgDirList)
+			enable_user_exe16_DlgDirList="$2"
 			;;
 		user32-DeferWindowPos)
 			enable_user32_DeferWindowPos="$2"
@@ -6339,6 +6343,21 @@ if test "$enable_ucrtbase_Functions" -eq 1; then
 	patch_apply ucrtbase-Functions/0001-ucrtbase-Hook-up-some-functions-with-new-names-to-ex.patch
 	(
 		echo '+    { "Martin Storsjo", "ucrtbase: Hook up some functions with new names to existing implementations.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user.exe16-DlgDirList
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#18734] Fix handling of DDL_DRIVES flag in user.exe16.DlgDirList
+# |
+# | Modified files:
+# |   *	dlls/user.exe16/dialog.c
+# |
+if test "$enable_user_exe16_DlgDirList" -eq 1; then
+	patch_apply user.exe16-DlgDirList/0001-user.exe16-Fix-handling-of-DDL_DRIVES-flag-in-DlgDir.patch
+	(
+		echo '+    { "Alex Villacís Lasso", "user.exe16: Fix handling of DDL_DRIVES flag in DlgDirList.", 1 },';
 	) >> "$patchlist"
 fi
 

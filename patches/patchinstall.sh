@@ -182,6 +182,7 @@ patch_enable_all ()
 	enable_makedep_PARENTSPEC="$1"
 	enable_mfplat_MFTRegister="$1"
 	enable_mmdevapi_AEV_Stubs="$1"
+	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mpr_WNetGetUniversalNameW="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -692,6 +693,9 @@ patch_enable ()
 			;;
 		mmdevapi-AEV_Stubs)
 			enable_mmdevapi_AEV_Stubs="$2"
+			;;
+		mmsystem.dll16-MIDIHDR_Refcount)
+			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
 			;;
 		mountmgr-DosDevices)
 			enable_mountmgr_DosDevices="$2"
@@ -4294,6 +4298,23 @@ if test "$enable_mmdevapi_AEV_Stubs" -eq 1; then
 		echo '+    { "Christian Costa", "mmdevapi: Improve AEV_GetVolumeRange stub.", 1 },';
 		echo '+    { "Christian Costa", "mmdevapi: Improve AEV_SetMasterVolumeLevel and AEV_GetMasterVolumeLevel stubs.", 1 },';
 		echo '+    { "Christian Costa", "mmdevapi: Improve AEV_SetMute and AEV_GetMute stubs.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset mmsystem.dll16-MIDIHDR_Refcount
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40024] Fix multiple issues in mmsystem.dll16 when translating MIDI messages
+# |
+# | Modified files:
+# |   *	dlls/mmsystem.dll16/message16.c
+# |
+if test "$enable_mmsystem_dll16_MIDIHDR_Refcount" -eq 1; then
+	patch_apply mmsystem.dll16-MIDIHDR_Refcount/0001-mmsystem.dll16-Refcount-midihdr-to-work-around-buggy.patch
+	patch_apply mmsystem.dll16-MIDIHDR_Refcount/0002-mmsystem.dll16-Translate-MidiIn-messages.patch
+	(
+		echo '+    { "Michael Müller", "mmsystem.dll16: Refcount midihdr to work around buggy application which unprepares buffer during a callback.", 1 },';
+		echo '+    { "Michael Müller", "mmsystem.dll16: Translate MidiIn messages.", 1 },';
 	) >> "$patchlist"
 fi
 

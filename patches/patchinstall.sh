@@ -324,6 +324,7 @@ patch_enable_all ()
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_SetCoalescableTimer="$1"
+	enable_user32_WM_CTLCOLORBTN="$1"
 	enable_user32_WM_MDICALCCHILDSCROLL="$1"
 	enable_user32_WndProc="$1"
 	enable_uxtheme_GTK_Theming="$1"
@@ -1124,6 +1125,9 @@ patch_enable ()
 			;;
 		user32-SetCoalescableTimer)
 			enable_user32_SetCoalescableTimer="$2"
+			;;
+		user32-WM_CTLCOLORBTN)
+			enable_user32_WM_CTLCOLORBTN="$2"
 			;;
 		user32-WM_MDICALCCHILDSCROLL)
 			enable_user32_WM_MDICALCCHILDSCROLL="$2"
@@ -6579,6 +6583,23 @@ if test "$enable_user32_SetCoalescableTimer" -eq 1; then
 	patch_apply user32-SetCoalescableTimer/0001-user32-add-SetCoalescableTimer-stub.patch
 	(
 		echo '+    { "Austin English", "user32: Add SetCoalescableTimer stub.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-WM_CTLCOLORBTN
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#25790] Replicate Windows behavior of WM_SETTEXT handler regarding WM_CTLCOLOR* messages
+# |
+# | Modified files:
+# |   *	dlls/user32/button.c, dlls/user32/tests/msg.c
+# |
+if test "$enable_user32_WM_CTLCOLORBTN" -eq 1; then
+	patch_apply user32-WM_CTLCOLORBTN/0001-user32-Replicate-Windows-behavior-of-WM_SETTEXT-hand.patch
+	patch_apply user32-WM_CTLCOLORBTN/0002-user32-tests-Add-tests-for-button-WM_CTLCOLOR-messag.patch
+	(
+		echo '+    { "Alexander Law", "user32: Replicate Windows behavior of WM_SETTEXT handler regarding WM_CTLCOLOR*.", 1 },';
+		echo '+    { "Sebastian Lackner", "user32/tests: Add tests for button WM_CTLCOLOR* messages.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -126,6 +126,7 @@ patch_enable_all ()
 	enable_d3dx9_36_Texture_Align="$1"
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
 	enable_dbghelp_Debug_Symbols="$1"
+	enable_ddraw_D3DFINDDEVICERESULT="$1"
 	enable_ddraw_Device_Caps="$1"
 	enable_ddraw_EnumSurfaces="$1"
 	enable_ddraw_IDirect3DTexture2_Load="$1"
@@ -529,6 +530,9 @@ patch_enable ()
 			;;
 		dbghelp-Debug_Symbols)
 			enable_dbghelp_Debug_Symbols="$2"
+			;;
+		ddraw-D3DFINDDEVICERESULT)
+			enable_ddraw_D3DFINDDEVICERESULT="$2"
 			;;
 		ddraw-Device_Caps)
 			enable_ddraw_Device_Caps="$2"
@@ -3274,6 +3278,18 @@ if test "$enable_dbghelp_Debug_Symbols" -eq 1; then
 	patch_apply dbghelp-Debug_Symbols/0001-dbghelp-Always-check-for-debug-symbols-in-BINDIR.patch
 	(
 		echo '+    { "Sebastian Lackner", "dbghelp: Always check for debug symbols in BINDIR.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ddraw-D3DFINDDEVICERESULT
+# |
+# | Modified files:
+# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/tests/d3d.c, include/d3dcaps.h
+# |
+if test "$enable_ddraw_D3DFINDDEVICERESULT" -eq 1; then
+	patch_apply ddraw-D3DFINDDEVICERESULT/0001-ddraw-Accept-d3d1-and-d3d2-versions-of-D3DFINDDEVICE.patch
+	(
+		echo '+    { "Michael Müller", "ddraw: Accept d3d1 and d3d2 versions of D3DFINDDEVICERESULT in IDirect3D_FindDevice.", 1 },';
 	) >> "$patchlist"
 fi
 

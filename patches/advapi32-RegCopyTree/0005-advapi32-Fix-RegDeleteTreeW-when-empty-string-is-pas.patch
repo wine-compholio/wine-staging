@@ -1,0 +1,60 @@
+From a46f711251567a2846eb5b0f40a0d8c0b66661ac Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 28 Feb 2016 03:33:09 +0100
+Subject: advapi32: Fix RegDeleteTreeW when empty string is passed.
+
+---
+ dlls/advapi32/registry.c       | 6 +++---
+ dlls/advapi32/tests/registry.c | 4 ++--
+ 2 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/advapi32/registry.c b/dlls/advapi32/registry.c
+index 172423b..aa451b1 100644
+--- a/dlls/advapi32/registry.c
++++ b/dlls/advapi32/registry.c
+@@ -3030,7 +3030,7 @@ LSTATUS WINAPI RegDeleteTreeW( HKEY hkey, const WCHAR *subkey )
+ 
+     TRACE( "(%p, %s)\n", hkey, debugstr_w(subkey) );
+ 
+-    if (subkey)
++    if (subkey && *subkey)
+     {
+         ret = RegOpenKeyExW( hkey, subkey, 0, KEY_READ, &hkey );
+         if (ret) return ret;
+@@ -3060,7 +3060,7 @@ LSTATUS WINAPI RegDeleteTreeW( HKEY hkey, const WCHAR *subkey )
+     }
+ 
+     /* Delete the key itself */
+-    if (subkey)
++    if (subkey && *subkey)
+     {
+         ret = RegDeleteKeyW( hkey, emptyW );
+         goto cleanup;
+@@ -3081,7 +3081,7 @@ LSTATUS WINAPI RegDeleteTreeW( HKEY hkey, const WCHAR *subkey )
+ 
+ cleanup:
+     heap_free( name_buf );
+-    if (subkey)
++    if (subkey && *subkey)
+         RegCloseKey( hkey );
+     return ret;
+ }
+diff --git a/dlls/advapi32/tests/registry.c b/dlls/advapi32/tests/registry.c
+index 483df47..6010123 100644
+--- a/dlls/advapi32/tests/registry.c
++++ b/dlls/advapi32/tests/registry.c
+@@ -2257,9 +2257,9 @@ static void test_reg_delete_tree(void)
+     ok(ret == ERROR_SUCCESS, "Expected ERROR_SUCCESS, got %d\n", ret);
+ 
+     ret = RegOpenKeyA(hkey_main, "subkey", &subkey);
+-    todo_wine ok(ret == ERROR_SUCCESS, "subkey was deleted\n");
++    ok(ret == ERROR_SUCCESS, "subkey was deleted\n");
+     ret = RegCloseKey(subkey);
+-    todo_wine ok(ret == ERROR_SUCCESS, "Expected ERROR_SUCCESS, got %d\n", ret);
++    ok(ret == ERROR_SUCCESS, "Expected ERROR_SUCCESS, got %d\n", ret);
+ 
+     ret = pRegDeleteTreeA(hkey_main, "not-here");
+     ok(ret == ERROR_FILE_NOT_FOUND,
+-- 
+2.7.1
+

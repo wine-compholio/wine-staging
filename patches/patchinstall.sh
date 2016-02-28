@@ -2508,12 +2508,14 @@ if test "$enable_advapi32_RegCopyTree" -eq 1; then
 	patch_apply advapi32-RegCopyTree/0001-advapi32-tests-Improve-RegDeleteTree-tests.patch
 	patch_apply advapi32-RegCopyTree/0002-advapi32-tests-Add-tests-for-RegCopyTree.patch
 	patch_apply advapi32-RegCopyTree/0003-advapi32-Implement-RegCopyTreeA-W.patch
-	patch_apply advapi32-RegCopyTree/0004-advapi32-Clean-up-RegDeleteTree-implementation.patch
+	patch_apply advapi32-RegCopyTree/0004-advapi32-Simplify-and-clean-up-RegDeleteTree-impleme.patch
+	patch_apply advapi32-RegCopyTree/0005-advapi32-Fix-RegDeleteTreeW-when-empty-string-is-pas.patch
 	(
 		echo '+    { "Sebastian Lackner", "advapi32/tests: Improve RegDeleteTree tests.", 1 },';
 		echo '+    { "Sebastian Lackner", "advapi32/tests: Add tests for RegCopyTree.", 1 },';
 		echo '+    { "Michael Müller", "advapi32: Implement RegCopyTreeA/W.", 1 },';
-		echo '+    { "Sebastian Lackner", "advapi32: Clean up RegDeleteTree implementation.", 1 },';
+		echo '+    { "Sebastian Lackner", "advapi32: Simplify and clean up RegDeleteTree implementation.", 1 },';
+		echo '+    { "Sebastian Lackner", "advapi32: Fix RegDeleteTreeW when empty string is passed.", 1 },';
 	) >> "$patchlist"
 fi
 

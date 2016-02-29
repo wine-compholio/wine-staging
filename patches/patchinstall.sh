@@ -136,6 +136,7 @@ patch_enable_all ()
 	enable_ddraw_d3d_execute_buffer="$1"
 	enable_dinput_DIPROP_USERNAME="$1"
 	enable_dinput_Initialize="$1"
+	enable_dsound_DSCAPS_CERTIFIED="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
@@ -561,6 +562,9 @@ patch_enable ()
 			;;
 		dinput-Initialize)
 			enable_dinput_Initialize="$2"
+			;;
+		dsound-DSCAPS_CERTIFIED)
+			enable_dsound_DSCAPS_CERTIFIED="$2"
 			;;
 		dsound-EAX)
 			enable_dsound_EAX="$2"
@@ -3442,6 +3446,18 @@ if test "$enable_dinput_Initialize" -eq 1; then
 	patch_apply dinput-Initialize/0001-dinput-Do-not-wait-for-hook-thread-startup-in-IDirec.patch
 	(
 		echo '+    { "Sebastian Lackner", "dinput: Do not wait for hook thread startup in IDirectInput8::Initialize.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dsound-DSCAPS_CERTIFIED
+# |
+# | Modified files:
+# |   *	dlls/dsound/dsound.c, dlls/dsound/tests/dsound.c
+# |
+if test "$enable_dsound_DSCAPS_CERTIFIED" -eq 1; then
+	patch_apply dsound-DSCAPS_CERTIFIED/0001-dsound-Pretend-that-our-driver-is-certified.patch
+	(
+		echo '+    { "Michael Müller", "dsound: Pretend that our driver is certified.", 1 },';
 	) >> "$patchlist"
 fi
 

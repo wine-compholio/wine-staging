@@ -285,6 +285,7 @@ patch_enable_all ()
 	enable_server_Timestamp_Compat="$1"
 	enable_setupapi_DelReg="$1"
 	enable_setupapi_Display_Device="$1"
+	enable_setupapi_Fix_Parser="$1"
 	enable_setupapi_HSPFILEQ_Check_Type="$1"
 	enable_setupapi_SetupDiSetDeviceInstallParamsW="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
@@ -1013,6 +1014,9 @@ patch_enable ()
 			;;
 		setupapi-Display_Device)
 			enable_setupapi_Display_Device="$2"
+			;;
+		setupapi-Fix_Parser)
+			enable_setupapi_Fix_Parser="$2"
 			;;
 		setupapi-HSPFILEQ_Check_Type)
 			enable_setupapi_HSPFILEQ_Check_Type="$2"
@@ -5941,6 +5945,18 @@ if test "$enable_setupapi_Display_Device" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "setupapi: Create registry keys for display devices and display drivers.", 1 },';
 		echo '+    { "Michael Müller", "setupapi: Handle the case that a full driver path is passed to SetupDiGetClassDevs.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset setupapi-Fix_Parser
+# |
+# | Modified files:
+# |   *	dlls/setupapi/parser.c, dlls/setupapi/tests/parser.c
+# |
+if test "$enable_setupapi_Fix_Parser" -eq 1; then
+	patch_apply setupapi-Fix_Parser/0001-setupapi-Fix-parsing-of-inf-files-containing-garbage.patch
+	(
+		echo '+    { "Sebastian Lackner", "setupapi: Fix parsing of inf files containing garbage at the beginning.", 1 },';
 	) >> "$patchlist"
 fi
 

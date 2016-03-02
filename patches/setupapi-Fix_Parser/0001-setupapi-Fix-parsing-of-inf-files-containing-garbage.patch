@@ -1,0 +1,92 @@
+From 4e1994ca2f169d84b2c879d3d792d177f66086e7 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 2 Mar 2016 21:50:40 +0100
+Subject: setupapi: Fix parsing of inf files containing garbage at the
+ beginning.
+
+---
+ dlls/setupapi/parser.c       | 23 ++++++++++++++++++++---
+ dlls/setupapi/tests/parser.c | 12 ++++++++++++
+ 2 files changed, 32 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/setupapi/parser.c b/dlls/setupapi/parser.c
+index e8c8fd3..1bbeac3 100644
+--- a/dlls/setupapi/parser.c
++++ b/dlls/setupapi/parser.c
+@@ -114,6 +114,7 @@ struct parser
+     int               cur_section;  /* index of section being parsed*/
+     struct line      *line;         /* current line */
+     unsigned int      line_pos;     /* current line position in file */
++    unsigned int      garbage_line; /* first line containing garbage (if any) */
+     unsigned int      error;        /* error code */
+     unsigned int      token_len;    /* current token len */
+     WCHAR token[MAX_FIELD_LEN+1];   /* current token */
+@@ -602,9 +603,17 @@ static const WCHAR *line_start_state( struct parser *parser, const WCHAR *pos )
+         default:
+             if (!isspaceW(*p))
+             {
+-                parser->start = p;
+-                set_state( parser, KEY_NAME );
+-                return p;
++                if (parser->cur_section != -1)
++                {
++                    parser->start = p;
++                    set_state( parser, KEY_NAME );
++                    return p;
++                }
++                else if (!parser->garbage_line)
++                {
++                    /* remember line, and check later */
++                    parser->garbage_line = parser->line_pos;
++                }
+             }
+             break;
+         }
+@@ -886,6 +895,7 @@ static DWORD parse_buffer( struct inf_file *file, const WCHAR *buffer, const WCH
+     parser.stack_pos   = 0;
+     parser.cur_section = -1;
+     parser.line_pos    = 1;
++    parser.garbage_line = 0;
+     parser.error       = 0;
+     parser.token_len   = 0;
+ 
+@@ -916,6 +926,13 @@ static DWORD parse_buffer( struct inf_file *file, const WCHAR *buffer, const WCH
+ 
+     /* find the [strings] section */
+     file->strings_section = find_section( file, Strings );
++
++    if (file->strings_section == -1 && parser.garbage_line)
++    {
++        if (error_line) *error_line = parser.garbage_line;
++        return ERROR_EXPECTED_SECTION_NAME;
++    }
++
+     return 0;
+ }
+ 
+diff --git a/dlls/setupapi/tests/parser.c b/dlls/setupapi/tests/parser.c
+index f929f01..67c9887 100644
+--- a/dlls/setupapi/tests/parser.c
++++ b/dlls/setupapi/tests/parser.c
+@@ -133,6 +133,18 @@ static const struct
+     { STD_HEADER " [Test\x00Section]\n",                     ERROR_BAD_SECTION_NAME_LINE, 3,    FALSE },
+     { STD_HEADER " [TestSection\x00]\n",                     ERROR_BAD_SECTION_NAME_LINE, 3,    FALSE },
+     { STD_HEADER " [Test\x00Section]\n",                     ERROR_BAD_SECTION_NAME_LINE, 3,    FALSE },
++    { "garbage1\ngarbage2\n[abc]\n" STD_HEADER,              ERROR_EXPECTED_SECTION_NAME, 1,    FALSE },
++    { "garbage1\ngarbage2\n[Strings]\n" STD_HEADER,          0,                           0,    FALSE },
++    { ";comment\ngarbage1\ngarbage2\n[abc]\n" STD_HEADER,    ERROR_EXPECTED_SECTION_NAME, 2,    FALSE },
++    { ";comment\ngarbage1\ngarbage2\n[Strings]\n" STD_HEADER, 0,                          0,    FALSE },
++    { " \t\ngarbage1\ngarbage2\n[abc]\n" STD_HEADER,         ERROR_EXPECTED_SECTION_NAME, 2,    FALSE },
++    { " \t\ngarbage1\ngarbage2\n[Strings]\n" STD_HEADER,     0,                           0,    FALSE },
++    { "garbage1\ngarbage2\n" STD_HEADER "[abc]\n",           ERROR_EXPECTED_SECTION_NAME, 1,    FALSE },
++    { "garbage1\ngarbage2\n" STD_HEADER "[Strings]\n",       0,                           0,    FALSE },
++    { ";comment\ngarbage1\ngarbage2\n" STD_HEADER "[abc]\n", ERROR_EXPECTED_SECTION_NAME, 2,    FALSE },
++    { ";comment\ngarbage1\ngarbage2\n" STD_HEADER "[Strings]\n", 0,                       0,    FALSE },
++    { " \t\ngarbage1\ngarbage2\n" STD_HEADER "[abc]\n",      ERROR_EXPECTED_SECTION_NAME, 2,    FALSE },
++    { " \t\ngarbage1\ngarbage2\n" STD_HEADER "[Strings]\n",  0,                           0,    FALSE },
+ };
+ 
+ static void test_invalid_files(void)
+-- 
+2.7.1
+

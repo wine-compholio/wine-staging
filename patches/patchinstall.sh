@@ -332,6 +332,7 @@ patch_enable_all ()
 	enable_user32_WM_MDICALCCHILDSCROLL="$1"
 	enable_user32_WndProc="$1"
 	enable_uxtheme_GTK_Theming="$1"
+	enable_version_VerFindFileA="$1"
 	enable_version_VerQueryValue="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
@@ -1153,6 +1154,9 @@ patch_enable ()
 			;;
 		uxtheme-GTK_Theming)
 			enable_uxtheme_GTK_Theming="$2"
+			;;
+		version-VerFindFileA)
+			enable_version_VerFindFileA="$2"
 			;;
 		version-VerQueryValue)
 			enable_version_VerQueryValue="$2"
@@ -6717,6 +6721,18 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 		echo '+    { "Sebastian Lackner", "uxthemegtk: Add export for OpenThemeDataEx.", 1 },';
 		echo '+    { "Sebastian Lackner", "uxthemegtk: Fix some incorrect error codes.", 1 },';
 		echo '+    { "Sebastian Lackner", "uxthemegtk: Validate theme handles before accessing private data.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset version-VerFindFileA
+# |
+# | Modified files:
+# |   *	dlls/version/tests/Makefile.in, dlls/version/tests/install.c, dlls/version/version.c
+# |
+if test "$enable_version_VerFindFileA" -eq 1; then
+	patch_apply version-VerFindFileA/0001-version-Correctly-return-VFF_CURNEDEST-in-VerFindFil.patch
+	(
+		echo '+    { "Michael Müller", "version: Correctly return VFF_CURNEDEST in VerFindFileA.", 1 },';
 	) >> "$patchlist"
 fi
 

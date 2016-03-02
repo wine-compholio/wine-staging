@@ -305,6 +305,7 @@ patch_enable_all ()
 	enable_shell32_SHCreateSessionKey="$1"
 	enable_shell32_SHFileOperation_Move="$1"
 	enable_shell32_SHFileOperation_Win9x="$1"
+	enable_shell32_Toolbar_Bitmaps="$1"
 	enable_shell32_UNIXFS_get_unix_path="$1"
 	enable_shell32_UnixFS="$1"
 	enable_shlwapi_AssocGetPerceivedType="$1"
@@ -1071,6 +1072,9 @@ patch_enable ()
 			;;
 		shell32-SHFileOperation_Win9x)
 			enable_shell32_SHFileOperation_Win9x="$2"
+			;;
+		shell32-Toolbar_Bitmaps)
+			enable_shell32_Toolbar_Bitmaps="$2"
 			;;
 		shell32-UNIXFS_get_unix_path)
 			enable_shell32_UNIXFS_get_unix_path="$2"
@@ -6236,6 +6240,22 @@ if test "$enable_shell32_SHFileOperation_Win9x" -eq 1; then
 	patch_apply shell32-SHFileOperation_Win9x/0001-shell32-Choose-return-value-for-SHFileOperationW-dep.patch
 	(
 		echo '+    { "Michael Müller", "shell32: Choose return value for SHFileOperationW depending on windows version.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shell32-Toolbar_Bitmaps
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40236] Add missing resources for IE6 buttons
+# |
+# | Modified files:
+# |   *	dlls/shell32/Makefile.in, dlls/shell32/ietoolbar.bmp, dlls/shell32/ietoolbar.svg, dlls/shell32/ietoolbar_small.bmp,
+# | 	dlls/shell32/ietoolbar_small.svg, dlls/shell32/shell32.rc
+# |
+if test "$enable_shell32_Toolbar_Bitmaps" -eq 1; then
+	patch_apply shell32-Toolbar_Bitmaps/0001-shell32-Add-toolbar-bitmaps-compatible-with-IE6.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "shell32: Add toolbar bitmaps compatible with IE6.", 1 },';
 	) >> "$patchlist"
 fi
 

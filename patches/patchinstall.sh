@@ -331,6 +331,7 @@ patch_enable_all ()
 	enable_user32_WM_MDICALCCHILDSCROLL="$1"
 	enable_user32_WndProc="$1"
 	enable_uxtheme_GTK_Theming="$1"
+	enable_version_GetFileVersionInfoSizeExW="$1"
 	enable_version_VerFindFileA="$1"
 	enable_version_VerQueryValue="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
@@ -1149,6 +1150,9 @@ patch_enable ()
 			;;
 		uxtheme-GTK_Theming)
 			enable_uxtheme_GTK_Theming="$2"
+			;;
+		version-GetFileVersionInfoSizeExW)
+			enable_version_GetFileVersionInfoSizeExW="$2"
 			;;
 		version-VerFindFileA)
 			enable_version_VerFindFileA="$2"
@@ -6690,6 +6694,18 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 		echo '+    { "Sebastian Lackner", "uxthemegtk: Add export for OpenThemeDataEx.", 1 },';
 		echo '+    { "Sebastian Lackner", "uxthemegtk: Fix some incorrect error codes.", 1 },';
 		echo '+    { "Sebastian Lackner", "uxthemegtk: Validate theme handles before accessing private data.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset version-GetFileVersionInfoSizeExW
+# |
+# | Modified files:
+# |   *	dlls/version/version.c
+# |
+if test "$enable_version_GetFileVersionInfoSizeExW" -eq 1; then
+	patch_apply version-GetFileVersionInfoSizeExW/0001-version-Return-ERROR_FILE_NOT_FOUND-for-Win-9X-when-.patch
+	(
+		echo '+    { "Michael Müller", "version: Return ERROR_FILE_NOT_FOUND for Win 9X when a file was not found in GetFileVersionInfoSizeEx.", 1 },';
 	) >> "$patchlist"
 fi
 

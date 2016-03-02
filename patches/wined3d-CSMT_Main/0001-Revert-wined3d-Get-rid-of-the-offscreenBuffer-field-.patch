@@ -1,0 +1,246 @@
+From a51564803334f940d200b0f3f1f7a94cfc13425f Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 2 Mar 2016 16:28:44 +0100
+Subject: Revert "wined3d: Get rid of the offscreenBuffer field in struct
+ wined3d_device."
+
+This reverts commit 9dc89561027f32b08978b9fb75da5a0d0966f999.
+---
+ dlls/wined3d/context.c         | 37 ++++++++++++-------------------------
+ dlls/wined3d/device.c          | 21 +++++++++++++++++++++
+ dlls/wined3d/surface.c         | 13 +++++--------
+ dlls/wined3d/wined3d_private.h |  4 +++-
+ 4 files changed, 41 insertions(+), 34 deletions(-)
+
+diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
+index 6f065ba..d0deff9 100644
+--- a/dlls/wined3d/context.c
++++ b/dlls/wined3d/context.c
+@@ -2419,30 +2419,14 @@ static void context_validate_onscreen_formats(struct wined3d_context *context,
+     context_set_render_offscreen(context, TRUE);
+ }
+ 
+-GLenum context_get_offscreen_gl_buffer(const struct wined3d_context *context)
+-{
+-    switch (wined3d_settings.offscreen_rendering_mode)
+-    {
+-        case ORM_FBO:
+-            return GL_COLOR_ATTACHMENT0;
+-
+-        case ORM_BACKBUFFER:
+-            return context->aux_buffers > 0 ? GL_AUX0 : GL_BACK;
+-
+-        default:
+-            FIXME("Unhandled offscreen rendering mode %#x.\n", wined3d_settings.offscreen_rendering_mode);
+-            return GL_BACK;
+-    }
+-}
+-
+-static DWORD context_generate_rt_mask_no_fbo(const struct wined3d_context *context, const struct wined3d_surface *rt)
++static DWORD context_generate_rt_mask_no_fbo(const struct wined3d_device *device, const struct wined3d_surface *rt)
+ {
+     if (!rt || rt->resource.format->id == WINED3DFMT_NULL)
+         return 0;
+     else if (rt->container->swapchain)
+         return context_generate_rt_mask_from_surface(rt);
+     else
+-        return context_generate_rt_mask(context_get_offscreen_gl_buffer(context));
++        return context_generate_rt_mask(device->offscreenBuffer);
+ }
+ 
+ /* Context activation is done by the caller. */
+@@ -2474,7 +2458,7 @@ void context_apply_blit_state(struct wined3d_context *context, const struct wine
+     }
+     else
+     {
+-        rt_mask = context_generate_rt_mask_no_fbo(context, rt);
++        rt_mask = context_generate_rt_mask_no_fbo(device, rt);
+     }
+ 
+     cur_mask = context->current_fbo ? &context->current_fbo->rt_mask : &context->draw_buffers_mask;
+@@ -2563,7 +2547,7 @@ BOOL context_apply_clear_state(struct wined3d_context *context, const struct win
+         }
+         else
+         {
+-            rt_mask = context_generate_rt_mask_no_fbo(context,
++            rt_mask = context_generate_rt_mask_no_fbo(device,
+                     rt_count ? wined3d_rendertarget_view_get_surface(rts[0]) : NULL);
+         }
+     }
+@@ -2578,7 +2562,7 @@ BOOL context_apply_clear_state(struct wined3d_context *context, const struct win
+     }
+     else
+     {
+-        rt_mask = context_generate_rt_mask_no_fbo(context,
++        rt_mask = context_generate_rt_mask_no_fbo(device,
+                 rt_count ? wined3d_rendertarget_view_get_surface(rts[0]) : NULL);
+     }
+ 
+@@ -2622,15 +2606,16 @@ BOOL context_apply_clear_state(struct wined3d_context *context, const struct win
+     return TRUE;
+ }
+ 
+-static DWORD find_draw_buffers_mask(const struct wined3d_context *context, const struct wined3d_state *state)
++static DWORD find_draw_buffers_mask(const struct wined3d_context *context, const struct wined3d_device *device)
+ {
++    const struct wined3d_state *state = &device->state;
+     struct wined3d_rendertarget_view **rts = state->fb->render_targets;
+     struct wined3d_shader *ps = state->shader[WINED3D_SHADER_TYPE_PIXEL];
+     DWORD rt_mask, rt_mask_bits;
+     unsigned int i;
+ 
+     if (wined3d_settings.offscreen_rendering_mode != ORM_FBO)
+-        return context_generate_rt_mask_no_fbo(context, wined3d_rendertarget_view_get_surface(rts[0]));
++        return context_generate_rt_mask_no_fbo(device, wined3d_rendertarget_view_get_surface(rts[0]));
+     else if (!context->render_offscreen)
+         return context_generate_rt_mask_from_surface(wined3d_rendertarget_view_get_surface(rts[0]));
+ 
+@@ -2653,8 +2638,9 @@ static DWORD find_draw_buffers_mask(const struct wined3d_context *context, const
+ /* Context activation is done by the caller. */
+ void context_state_fb(struct wined3d_context *context, const struct wined3d_state *state, DWORD state_id)
+ {
+-    DWORD rt_mask = find_draw_buffers_mask(context, state);
++    const struct wined3d_device *device = context->swapchain->device;
+     const struct wined3d_fb_state *fb = state->fb;
++    DWORD rt_mask = find_draw_buffers_mask(context, device);
+     DWORD *cur_mask;
+ 
+     if (wined3d_settings.offscreen_rendering_mode == ORM_FBO)
+@@ -2931,12 +2917,13 @@ static void context_update_tex_unit_map(struct wined3d_context *context, const s
+ /* Context activation is done by the caller. */
+ void context_state_drawbuf(struct wined3d_context *context, const struct wined3d_state *state, DWORD state_id)
+ {
++    const struct wined3d_device *device = context->swapchain->device;
+     DWORD rt_mask, *cur_mask;
+ 
+     if (isStateDirty(context, STATE_FRAMEBUFFER)) return;
+ 
+     cur_mask = context->current_fbo ? &context->current_fbo->rt_mask : &context->draw_buffers_mask;
+-    rt_mask = find_draw_buffers_mask(context, state);
++    rt_mask = find_draw_buffers_mask(context, device);
+     if (rt_mask != *cur_mask)
+     {
+         context_apply_draw_buffers(context, rt_mask);
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index ded1229..4cebcb8 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -1021,6 +1021,27 @@ HRESULT CDECL wined3d_device_init_3d(struct wined3d_device *device,
+ 
+     device->contexts[0]->last_was_rhw = 0;
+ 
++    switch (wined3d_settings.offscreen_rendering_mode)
++    {
++        case ORM_FBO:
++            device->offscreenBuffer = GL_COLOR_ATTACHMENT0;
++            break;
++
++        case ORM_BACKBUFFER:
++        {
++            if (context_get_current()->aux_buffers > 0)
++            {
++                TRACE("Using auxiliary buffer for offscreen rendering\n");
++                device->offscreenBuffer = GL_AUX0;
++            }
++            else
++            {
++                TRACE("Using back buffer for offscreen rendering\n");
++                device->offscreenBuffer = GL_BACK;
++            }
++        }
++    }
++
+     TRACE("All defaults now set up, leaving 3D init.\n");
+ 
+     context_release(context);
+diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
+index ee6588e..bd6be49 100644
+--- a/dlls/wined3d/surface.c
++++ b/dlls/wined3d/surface.c
+@@ -2435,7 +2435,7 @@ static void read_from_framebuffer(struct wined3d_surface *surface,
+         /* Mapping the primary render target which is not on a swapchain.
+          * Read from the back buffer. */
+         TRACE("Mapping offscreen render target.\n");
+-        gl_info->gl_ops.gl.p_glReadBuffer(context_get_offscreen_gl_buffer(context));
++        gl_info->gl_ops.gl.p_glReadBuffer(device->offscreenBuffer);
+         srcIsUpsideDown = TRUE;
+     }
+     else
+@@ -2541,7 +2541,7 @@ void surface_load_fb_texture(struct wined3d_surface *surface, BOOL srgb, struct
+     TRACE("Reading back offscreen render target %p.\n", surface);
+ 
+     if (wined3d_resource_is_offscreen(&surface->container->resource))
+-        gl_info->gl_ops.gl.p_glReadBuffer(context_get_offscreen_gl_buffer(context));
++        gl_info->gl_ops.gl.p_glReadBuffer(device->offscreenBuffer);
+     else
+         gl_info->gl_ops.gl.p_glReadBuffer(surface_get_gl_buffer(surface));
+     checkGLcall("glReadBuffer");
+@@ -2646,7 +2646,7 @@ static void fb_copy_to_texture_direct(struct wined3d_surface *dst_surface, struc
+     {
+         TRACE("Reading from an offscreen target\n");
+         upsidedown = !upsidedown;
+-        gl_info->gl_ops.gl.p_glReadBuffer(context_get_offscreen_gl_buffer(context));
++        gl_info->gl_ops.gl.p_glReadBuffer(device->offscreenBuffer);
+     }
+     else
+     {
+@@ -2735,7 +2735,6 @@ static void fb_copy_to_texture_hwstretch(struct wined3d_surface *dst_surface, st
+     const struct wined3d_gl_info *gl_info;
+     struct wined3d_context *context;
+     GLenum drawBuffer = GL_BACK;
+-    GLenum offscreen_buffer;
+     GLenum texture_target;
+     BOOL noBackBufferBackup;
+     BOOL src_offscreen;
+@@ -2749,8 +2748,6 @@ static void fb_copy_to_texture_hwstretch(struct wined3d_surface *dst_surface, st
+     context_apply_blit_state(context, device);
+     wined3d_texture_load(dst_surface->container, context, FALSE);
+ 
+-    offscreen_buffer = context_get_offscreen_gl_buffer(context);
+-
+     src_offscreen = wined3d_resource_is_offscreen(&src_surface->container->resource);
+     noBackBufferBackup = src_offscreen && wined3d_settings.offscreen_rendering_mode == ORM_FBO;
+     if (!noBackBufferBackup && !src_surface->container->texture_rgb.name)
+@@ -2767,7 +2764,7 @@ static void fb_copy_to_texture_hwstretch(struct wined3d_surface *dst_surface, st
+         /* Got more than one aux buffer? Use the 2nd aux buffer */
+         drawBuffer = GL_AUX1;
+     }
+-    else if ((!src_offscreen || offscreen_buffer == GL_BACK) && context->aux_buffers >= 1)
++    else if ((!src_offscreen || device->offscreenBuffer == GL_BACK) && context->aux_buffers >= 1)
+     {
+         /* Only one aux buffer, but it isn't used (Onscreen rendering, or non-aux orm)? Use it! */
+         drawBuffer = GL_AUX0;
+@@ -2808,7 +2805,7 @@ static void fb_copy_to_texture_hwstretch(struct wined3d_surface *dst_surface, st
+     {
+         TRACE("Reading from an offscreen target\n");
+         upsidedown = !upsidedown;
+-        gl_info->gl_ops.gl.p_glReadBuffer(offscreen_buffer);
++        gl_info->gl_ops.gl.p_glReadBuffer(device->offscreenBuffer);
+     }
+     else
+     {
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 409ab36..eef58a3 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -1507,7 +1507,6 @@ void context_destroy(struct wined3d_device *device, struct wined3d_context *cont
+ void context_free_event_query(struct wined3d_event_query *query) DECLSPEC_HIDDEN;
+ void context_free_occlusion_query(struct wined3d_occlusion_query *query) DECLSPEC_HIDDEN;
+ struct wined3d_context *context_get_current(void) DECLSPEC_HIDDEN;
+-GLenum context_get_offscreen_gl_buffer(const struct wined3d_context *context) DECLSPEC_HIDDEN;
+ DWORD context_get_tls_idx(void) DECLSPEC_HIDDEN;
+ void context_gl_resource_released(struct wined3d_device *device,
+         GLuint name, BOOL rb_namespace) DECLSPEC_HIDDEN;
+@@ -2142,6 +2141,9 @@ struct wined3d_device
+     LONG                    style;
+     LONG                    exStyle;
+ 
++    /* X and GL Information */
++    GLenum                  offscreenBuffer;
++
+     const struct wined3d_shader_backend_ops *shader_backend;
+     void *shader_priv;
+     void *fragment_priv;
+-- 
+2.7.1
+

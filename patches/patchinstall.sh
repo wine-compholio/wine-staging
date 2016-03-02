@@ -165,6 +165,7 @@ patch_enable_all ()
 	enable_kernel32_COMSPEC="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Cwd_Startup_Info="$1"
+	enable_kernel32_ERROR_DLL_NOT_FOUND="$1"
 	enable_kernel32_FindFirstFile="$1"
 	enable_kernel32_FreeUserPhysicalPages="$1"
 	enable_kernel32_GetCurrentPackageFamilyName="$1"
@@ -649,6 +650,9 @@ patch_enable ()
 			;;
 		kernel32-Cwd_Startup_Info)
 			enable_kernel32_Cwd_Startup_Info="$2"
+			;;
+		kernel32-ERROR_DLL_NOT_FOUND)
+			enable_kernel32_ERROR_DLL_NOT_FOUND="$2"
 			;;
 		kernel32-FindFirstFile)
 			enable_kernel32_FindFirstFile="$2"
@@ -4014,6 +4018,18 @@ if test "$enable_kernel32_Cwd_Startup_Info" -eq 1; then
 	patch_apply kernel32-Cwd_Startup_Info/0001-kernel32-Allow-non-nullterminated-string-as-working-.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32: Allow non-nullterminated string as working directory in create_startup_info.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-ERROR_DLL_NOT_FOUND
+# |
+# | Modified files:
+# |   *	dlls/kernel32/module.c
+# |
+if test "$enable_kernel32_ERROR_DLL_NOT_FOUND" -eq 1; then
+	patch_apply kernel32-ERROR_DLL_NOT_FOUND/0001-kernel32-Set-ERROR_DLL_NOT_FOUND-as-error-code-for-W.patch
+	(
+		echo '+    { "Michael Müller", "kernel32: Set ERROR_DLL_NOT_FOUND as error code for Win 9X instead of ERROR_MOD_NOT_FOUND.", 1 },';
 	) >> "$patchlist"
 fi
 

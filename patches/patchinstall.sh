@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "1510b8b92af23a2305de95f074468c231dc11fa3"
+	echo "846155f1531207a763c099defa90fc2c41135164"
 }
 
 # Show version information
@@ -2512,25 +2512,12 @@ fi
 
 # Patchset advapi32-RegCopyTree
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39690] Implement advapi32.RegCopyTree{A,W}
-# |
 # | Modified files:
-# |   *	dlls/advapi32/advapi32.spec, dlls/advapi32/registry.c, dlls/advapi32/tests/registry.c, dlls/api-ms-win-core-
-# | 	registry-l1-1-0/api-ms-win-core-registry-l1-1-0.spec, dlls/api-ms-win-downlevel-advapi32-l1-1-0/api-ms-win-downlevel-
-# | 	advapi32-l1-1-0.spec
+# |   *	dlls/advapi32/registry.c, dlls/advapi32/tests/registry.c
 # |
 if test "$enable_advapi32_RegCopyTree" -eq 1; then
-	patch_apply advapi32-RegCopyTree/0001-advapi32-tests-Improve-RegDeleteTree-tests.patch
-	patch_apply advapi32-RegCopyTree/0002-advapi32-tests-Add-tests-for-RegCopyTree.patch
-	patch_apply advapi32-RegCopyTree/0003-advapi32-Implement-RegCopyTreeA-W.patch
-	patch_apply advapi32-RegCopyTree/0004-advapi32-Simplify-and-clean-up-RegDeleteTree-impleme.patch
-	patch_apply advapi32-RegCopyTree/0005-advapi32-Fix-RegDeleteTreeW-when-empty-string-is-pas.patch
+	patch_apply advapi32-RegCopyTree/0001-advapi32-Fix-RegDeleteTreeW-when-empty-string-is-pas.patch
 	(
-		echo '+    { "Sebastian Lackner", "advapi32/tests: Improve RegDeleteTree tests.", 1 },';
-		echo '+    { "Sebastian Lackner", "advapi32/tests: Add tests for RegCopyTree.", 1 },';
-		echo '+    { "Michael Müller", "advapi32: Implement RegCopyTreeA/W.", 1 },';
-		echo '+    { "Sebastian Lackner", "advapi32: Simplify and clean up RegDeleteTree implementation.", 1 },';
 		echo '+    { "Sebastian Lackner", "advapi32: Fix RegDeleteTreeW when empty string is passed.", 1 },';
 	) >> "$patchlist"
 fi

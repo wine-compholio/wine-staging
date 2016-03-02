@@ -164,6 +164,7 @@ patch_enable_all ()
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_COMSPEC="$1"
 	enable_kernel32_CopyFileEx="$1"
+	enable_kernel32_CreateFileA="$1"
 	enable_kernel32_Cwd_Startup_Info="$1"
 	enable_kernel32_ERROR_DLL_NOT_FOUND="$1"
 	enable_kernel32_FindFirstFile="$1"
@@ -647,6 +648,9 @@ patch_enable ()
 			;;
 		kernel32-CopyFileEx)
 			enable_kernel32_CopyFileEx="$2"
+			;;
+		kernel32-CreateFileA)
+			enable_kernel32_CreateFileA="$2"
 			;;
 		kernel32-Cwd_Startup_Info)
 			enable_kernel32_Cwd_Startup_Info="$2"
@@ -4006,6 +4010,18 @@ if test "$enable_kernel32_CopyFileEx" -eq 1; then
 	patch_apply kernel32-CopyFileEx/0001-kernel32-Add-support-for-progress-callback-in-CopyFi.patch
 	(
 		echo '+    { "Michael Müller", "kernel32: Add support for progress callback in CopyFileEx.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-CreateFileA
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c
+# |
+if test "$enable_kernel32_CreateFileA" -eq 1; then
+	patch_apply kernel32-CreateFileA/0001-kernel32-Check-for-invalid-filename-pointers-in-Crea.patch
+	(
+		echo '+    { "Michael Müller", "kernel32: Check for invalid filename pointers in CreateFileA in Win 9X mode.", 1 },';
 	) >> "$patchlist"
 fi
 

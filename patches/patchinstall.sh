@@ -6263,8 +6263,10 @@ fi
 # |
 if test "$enable_shell32_Toolbar_Bitmaps" -eq 1; then
 	patch_apply shell32-Toolbar_Bitmaps/0001-shell32-Add-toolbar-bitmaps-compatible-with-IE6.patch
+	patch_apply shell32-Toolbar_Bitmaps/0002-shell32-Add-more-Tango-icons-to-the-IE-toolbar.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "shell32: Add toolbar bitmaps compatible with IE6.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "shell32: Add more Tango icons to the IE toolbar.", 1 },';
 	) >> "$patchlist"
 fi
 

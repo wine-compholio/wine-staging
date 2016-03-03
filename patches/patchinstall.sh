@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0d06ebf5fb515e19cd9ec951dd9e49f6e678b35c"
+	echo "6158405ffdb027fab10456087ee0846c36000a56"
 }
 
 # Show version information
@@ -248,7 +248,6 @@ patch_enable_all ()
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
-	enable_ole32_CoGetApartmentType="$1"
 	enable_ole32_HGLOBALStream="$1"
 	enable_oleaut32_CreateTypeLib="$1"
 	enable_oleaut32_TKIND_COCLASS="$1"
@@ -902,9 +901,6 @@ patch_enable ()
 			;;
 		nvencodeapi-Video_Encoder)
 			enable_nvencodeapi_Video_Encoder="$2"
-			;;
-		ole32-CoGetApartmentType)
-			enable_ole32_CoGetApartmentType="$2"
 			;;
 		ole32-HGLOBALStream)
 			enable_ole32_HGLOBALStream="$2"
@@ -2272,14 +2268,10 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	if test "$enable_kernel32_GetFinalPathNameByHandle" -gt 1; then
 		abort "Patchset kernel32-GetFinalPathNameByHandle disabled, but api-ms-win-Stub_DLLs depends on that."
 	fi
-	if test "$enable_ole32_CoGetApartmentType" -gt 1; then
-		abort "Patchset ole32-CoGetApartmentType disabled, but api-ms-win-Stub_DLLs depends on that."
-	fi
 	enable_combase_RoApi=1
 	enable_kernel32_FreeUserPhysicalPages=1
 	enable_kernel32_GetCurrentPackageFamilyName=1
 	enable_kernel32_GetFinalPathNameByHandle=1
-	enable_ole32_CoGetApartmentType=1
 fi
 
 if test "$enable_advapi32_LsaLookupSids" -eq 1; then
@@ -2622,25 +2614,10 @@ if test "$enable_kernel32_GetFinalPathNameByHandle" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ole32-CoGetApartmentType
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-com-l1-1-0/api-ms-win-core-com-l1-1-0.spec, dlls/api-ms-win-core-com-l1-1-1/api-ms-win-core-
-# | 	com-l1-1-1.spec, dlls/api-ms-win-downlevel-ole32-l1-1-0/api-ms-win-downlevel-ole32-l1-1-0.spec,
-# | 	dlls/combase/combase.spec, dlls/ole32/compobj.c, dlls/ole32/ole32.spec, dlls/ole32/tests/compobj.c, include/objidl.idl
-# |
-if test "$enable_ole32_CoGetApartmentType" -eq 1; then
-	patch_apply ole32-CoGetApartmentType/0001-ole32-Implement-CoGetApartmentType.patch
-	(
-		echo '+    { "Michael Müller", "ole32: Implement CoGetApartmentType.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset api-ms-win-Stub_DLLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	combase-RoApi, kernel32-FreeUserPhysicalPages, kernel32-GetCurrentPackageFamilyName, kernel32-GetFinalPathNameByHandle,
-# | 	ole32-CoGetApartmentType
+# |   *	combase-RoApi, kernel32-FreeUserPhysicalPages, kernel32-GetCurrentPackageFamilyName, kernel32-GetFinalPathNameByHandle
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/api-ms-win-appmodel-runtime-l1-1-1/Makefile.in, dlls/api-ms-win-appmodel-runtime-l1-1-1/api-ms-win-

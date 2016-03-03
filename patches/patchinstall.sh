@@ -283,6 +283,7 @@ patch_enable_all ()
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
 	enable_setupapi_DelReg="$1"
+	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_Display_Device="$1"
 	enable_setupapi_Fix_Parser="$1"
 	enable_setupapi_HSPFILEQ_Check_Type="$1"
@@ -1006,6 +1007,9 @@ patch_enable ()
 			;;
 		setupapi-DelReg)
 			enable_setupapi_DelReg="$2"
+			;;
+		setupapi-DiskSpaceList)
+			enable_setupapi_DiskSpaceList="$2"
 			;;
 		setupapi-Display_Device)
 			enable_setupapi_Display_Device="$2"
@@ -5897,6 +5901,22 @@ if test "$enable_setupapi_DelReg" -eq 1; then
 	patch_apply setupapi-DelReg/0001-setupapi-DelReg-should-recursively-delete-registry-k.patch
 	(
 		echo '+    { "Sebastian Lackner", "setupapi: DelReg should recursively delete registry keys.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset setupapi-DiskSpaceList
+# |
+# | Modified files:
+# |   *	dlls/setupapi/diskspace.c, dlls/setupapi/stubs.c, dlls/setupapi/tests/diskspace.c
+# |
+if test "$enable_setupapi_DiskSpaceList" -eq 1; then
+	patch_apply setupapi-DiskSpaceList/0001-setupapi-Rewrite-DiskSpaceList-logic-using-lists.patch
+	patch_apply setupapi-DiskSpaceList/0002-setupapi-Implement-SetupAddToDiskSpaceList.patch
+	patch_apply setupapi-DiskSpaceList/0003-setupapi-Implement-SetupQueryDrivesInDiskSpaceList.patch
+	(
+		echo '+    { "Michael Müller", "setupapi: Rewrite DiskSpaceList logic using lists.", 1 },';
+		echo '+    { "Michael Müller", "setupapi: Implement SetupAddToDiskSpaceList.", 1 },';
+		echo '+    { "Michael Müller", "setupapi: Implement SetupQueryDrivesInDiskSpaceList.", 1 },';
 	) >> "$patchlist"
 fi
 

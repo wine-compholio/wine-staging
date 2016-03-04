@@ -131,7 +131,6 @@ patch_enable_all ()
 	enable_ddraw_IDirect3DTexture2_Load="$1"
 	enable_ddraw_Rendering_Targets="$1"
 	enable_ddraw_Write_Vtable="$1"
-	enable_ddraw_ZBufferBitDepths="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
 	enable_dinput_DIPROP_USERNAME="$1"
 	enable_dinput_Initialize="$1"
@@ -551,9 +550,6 @@ patch_enable ()
 			;;
 		ddraw-Write_Vtable)
 			enable_ddraw_Write_Vtable="$2"
-			;;
-		ddraw-ZBufferBitDepths)
-			enable_ddraw_ZBufferBitDepths="$2"
 			;;
 		ddraw-d3d_execute_buffer)
 			enable_ddraw_d3d_execute_buffer="$2"
@@ -3264,13 +3260,18 @@ fi
 
 # Patchset ddraw-Device_Caps
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#27002] Properly initialize caps->dwZBufferBitDepths in ddraw7_GetCaps
+# |
 # | Modified files:
 # |   *	dlls/ddraw/ddraw.c, dlls/ddraw/tests/ddraw7.c
 # |
 if test "$enable_ddraw_Device_Caps" -eq 1; then
 	patch_apply ddraw-Device_Caps/0001-ddraw-Don-t-set-HWTRANSFORMANDLIGHT-flag-on-d3d7-RGB.patch
+	patch_apply ddraw-Device_Caps/0002-ddraw-Set-dwZBufferBitDepth-in-ddraw7_GetCaps.patch
 	(
 		echo '+    { "Michael Müller", "ddraw: Don'\''t set HWTRANSFORMANDLIGHT flag on d3d7 RGB device.", 1 },';
+		echo '+    { "Michael Müller", "ddraw: Set dwZBufferBitDepth in ddraw7_GetCaps.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3350,21 +3351,6 @@ if test "$enable_ddraw_Write_Vtable" -eq 1; then
 	patch_apply ddraw-Write_Vtable/0001-ddraw-Remove-const-from-ddraw1_vtbl-and-ddraw_surfac.patch
 	(
 		echo '+    { "Michael Müller", "ddraw: Remove const from ddraw1_vtbl and ddraw_surface1_vtbl.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ddraw-ZBufferBitDepths
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#27002] Properly initialize caps->dwZBufferBitDepths in ddraw7_GetCaps
-# |
-# | Modified files:
-# |   *	dlls/ddraw/ddraw.c
-# |
-if test "$enable_ddraw_ZBufferBitDepths" -eq 1; then
-	patch_apply ddraw-ZBufferBitDepths/0001-ddraw-Set-dwZBufferBitDepth-in-ddraw7_GetCaps.patch
-	(
-		echo '+    { "Michael Müller", "ddraw: Set dwZBufferBitDepth in ddraw7_GetCaps.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -5888,16 +5888,23 @@ fi
 # Patchset setupapi-DiskSpaceList
 # |
 # | Modified files:
-# |   *	dlls/setupapi/diskspace.c, dlls/setupapi/stubs.c, dlls/setupapi/tests/diskspace.c
+# |   *	dlls/setupapi/diskspace.c, dlls/setupapi/queue.c, dlls/setupapi/setupapi.spec, dlls/setupapi/setupapi_private.h,
+# | 	dlls/setupapi/stubs.c, dlls/setupapi/tests/diskspace.c, include/setupapi.h
 # |
 if test "$enable_setupapi_DiskSpaceList" -eq 1; then
 	patch_apply setupapi-DiskSpaceList/0001-setupapi-Rewrite-DiskSpaceList-logic-using-lists.patch
 	patch_apply setupapi-DiskSpaceList/0002-setupapi-Implement-SetupAddToDiskSpaceList.patch
 	patch_apply setupapi-DiskSpaceList/0003-setupapi-Implement-SetupQueryDrivesInDiskSpaceList.patch
+	patch_apply setupapi-DiskSpaceList/0004-setupapi-Ignore-deletion-of-added-files-in-SetupAddT.patch
+	patch_apply setupapi-DiskSpaceList/0005-setupapi-ImplementSetupAddSectionToDiskSpaceList.patch
+	patch_apply setupapi-DiskSpaceList/0006-setupapi-Implement-SetupAddInstallSectionToDiskSpace.patch
 	(
 		echo '+    { "Michael Müller", "setupapi: Rewrite DiskSpaceList logic using lists.", 1 },';
 		echo '+    { "Michael Müller", "setupapi: Implement SetupAddToDiskSpaceList.", 1 },';
 		echo '+    { "Michael Müller", "setupapi: Implement SetupQueryDrivesInDiskSpaceList.", 1 },';
+		echo '+    { "Michael Müller", "setupapi: Ignore deletion of added files in SetupAddToDiskSpaceList.", 1 },';
+		echo '+    { "Michael Müller", "setupapi: ImplementSetupAddSectionToDiskSpaceList.", 1 },';
+		echo '+    { "Michael Müller", "setupapi: Implement SetupAddInstallSectionToDiskSpaceList.", 1 },';
 	) >> "$patchlist"
 fi
 

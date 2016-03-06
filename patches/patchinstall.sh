@@ -183,6 +183,7 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_makedep_PARENTSPEC="$1"
+	enable_makefiles_Disabled_Rules="$1"
 	enable_mfplat_MFTRegister="$1"
 	enable_mmdevapi_AEV_Stubs="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
@@ -707,6 +708,9 @@ patch_enable ()
 			;;
 		makedep-PARENTSPEC)
 			enable_makedep_PARENTSPEC="$2"
+			;;
+		makefiles-Disabled_Rules)
+			enable_makefiles_Disabled_Rules="$2"
 			;;
 		mfplat-MFTRegister)
 			enable_mfplat_MFTRegister="$2"
@@ -4303,6 +4307,21 @@ if test "$enable_makedep_PARENTSPEC" -eq 1; then
 	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
 	(
 		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset makefiles-Disabled_Rules
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40253] Avoid generating Makefiles for disabled rules
+# |
+# | Modified files:
+# |   *	aclocal.m4
+# |
+if test "$enable_makefiles_Disabled_Rules" -eq 1; then
+	patch_apply makefiles-Disabled_Rules/0001-makefiles-Do-not-generate-Makefile-for-disabled-rule.patch
+	(
+		echo '+    { "Sebastian Lackner", "makefiles: Do not generate Makefile for disabled rules.", 1 },';
 	) >> "$patchlist"
 fi
 

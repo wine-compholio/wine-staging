@@ -1,0 +1,75 @@
+From a92902452635740af38a09efa9001b8ce26db5c5 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 6 Mar 2016 00:57:32 +0100
+Subject: user32: Allow to send/post intra-process WM_NOTIFY messages.
+
+---
+ dlls/user32/message.c   |  3 +--
+ dlls/user32/tests/msg.c | 30 ++++++++++++++++++++++++++++++
+ 2 files changed, 31 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/user32/message.c b/dlls/user32/message.c
+index 9e0ce05..8c3a115 100644
+--- a/dlls/user32/message.c
++++ b/dlls/user32/message.c
+@@ -310,8 +310,7 @@ static const unsigned int message_pointer_flags[] =
+     SET(WM_GETMINMAXINFO) | SET(WM_DRAWITEM) | SET(WM_MEASUREITEM) | SET(WM_DELETEITEM) |
+     SET(WM_COMPAREITEM),
+     /* 0x40 - 0x5f */
+-    SET(WM_WINDOWPOSCHANGING) | SET(WM_WINDOWPOSCHANGED) | SET(WM_COPYDATA) |
+-    SET(WM_NOTIFY) | SET(WM_HELP),
++    SET(WM_WINDOWPOSCHANGING) | SET(WM_WINDOWPOSCHANGED) | SET(WM_COPYDATA) | SET(WM_HELP),
+     /* 0x60 - 0x7f */
+     SET(WM_STYLECHANGING) | SET(WM_STYLECHANGED),
+     /* 0x80 - 0x9f */
+diff --git a/dlls/user32/tests/msg.c b/dlls/user32/tests/msg.c
+index 47d754f..7c9e55c 100644
+--- a/dlls/user32/tests/msg.c
++++ b/dlls/user32/tests/msg.c
+@@ -11188,6 +11188,35 @@ static void test_quit_message(void)
+     ok_sequence(WmStopQuitSeq, "WmStopQuitSeq", FALSE);
+ }
+ 
++static void test_notify_message(void)
++{
++    HWND hwnd;
++    BOOL ret;
++
++    hwnd = CreateWindowExA(0, "TestWindowClass", NULL, WS_OVERLAPPEDWINDOW,
++                           CW_USEDEFAULT, CW_USEDEFAULT, 300, 300, 0, NULL, NULL, 0);
++    ok(hwnd != 0, "Failed to create window\n");
++
++    ret = SendNotifyMessageA(hwnd, WM_NOTIFY, 0x1234, 0xdeadbeef);
++    ok(ret == TRUE, "SendNotifyMessageA failed with error %u\n", GetLastError());
++    ret = SendNotifyMessageW(hwnd, WM_NOTIFY, 0x1234, 0xdeadbeef);
++    ok(ret == TRUE, "SendNotifyMessageW failed with error %u\n", GetLastError());
++    ret = SendMessageCallbackA(hwnd, WM_NOTIFY, 0x1234, 0xdeadbeef, NULL, 0);
++    ok(ret == TRUE, "SendMessageCallbackA failed with error %u\n", GetLastError());
++    ret = SendMessageCallbackW(hwnd, WM_NOTIFY, 0x1234, 0xdeadbeef, NULL, 0);
++    ok(ret == TRUE, "SendMessageCallbackW failed with error %u\n", GetLastError());
++    ret = PostMessageA(hwnd, WM_NOTIFY, 0x1234, 0xdeadbeef);
++    ok(ret == TRUE, "PostMessageA failed with error %u\n", GetLastError());
++    ret = PostMessageW(hwnd, WM_NOTIFY, 0x1234, 0xdeadbeef);
++    ok(ret == TRUE, "PostMessageA failed with error %u\n", GetLastError());
++    ret = PostThreadMessageA(GetCurrentThreadId(), WM_NOTIFY, 0x1234, 0xdeadbeef);
++    ok(ret == TRUE, "PostThreadMessageA failed with error %u\n", GetLastError());
++    ret = PostThreadMessageW(GetCurrentThreadId(), WM_NOTIFY, 0x1234, 0xdeadbeef);
++    ok(ret == TRUE, "PostThreadMessageW failed with error %u\n", GetLastError());
++
++    DestroyWindow(hwnd);
++}
++
+ static const struct message WmMouseHoverSeq[] = {
+     { WM_MOUSEACTIVATE, sent|optional },  /* we can get those when moving the mouse in focus-follow-mouse mode under X11 */
+     { WM_MOUSEACTIVATE, sent|optional },
+@@ -15675,6 +15704,7 @@ START_TEST(msg)
+     test_SendMessageTimeout();
+     test_edit_messages();
+     test_quit_message();
++    test_notify_message();
+     test_SetActiveWindow();
+ 
+     if (!pTrackMouseEvent)
+-- 
+2.7.1
+

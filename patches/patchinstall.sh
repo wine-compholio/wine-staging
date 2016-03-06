@@ -328,6 +328,7 @@ patch_enable_all ()
 	enable_user32_SetCoalescableTimer="$1"
 	enable_user32_WM_CTLCOLORBTN="$1"
 	enable_user32_WM_MDICALCCHILDSCROLL="$1"
+	enable_user32_WM_NOTIFY="$1"
 	enable_user32_WndProc="$1"
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_GetFileVersionInfoSizeExW="$1"
@@ -1141,6 +1142,9 @@ patch_enable ()
 			;;
 		user32-WM_MDICALCCHILDSCROLL)
 			enable_user32_WM_MDICALCCHILDSCROLL="$2"
+			;;
+		user32-WM_NOTIFY)
+			enable_user32_WM_NOTIFY="$2"
 			;;
 		user32-WndProc)
 			enable_user32_WndProc="$2"
@@ -6643,6 +6647,21 @@ if test "$enable_user32_WM_MDICALCCHILDSCROLL" -eq 1; then
 	patch_apply user32-WM_MDICALCCHILDSCROLL/0001-user32-Change-value-for-WM_MDICALCCHILDSCROLL-to-0x0.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "user32: Change value for WM_MDICALCCHILDSCROLL to 0x003f.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-WM_NOTIFY
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40244] Fix handling of WM_NOTIFY messages in PostThreadMessage
+# |
+# | Modified files:
+# |   *	dlls/user32/message.c, dlls/user32/tests/msg.c
+# |
+if test "$enable_user32_WM_NOTIFY" -eq 1; then
+	patch_apply user32-WM_NOTIFY/0001-user32-Allow-to-send-post-intra-process-WM_NOTIFY-me.patch
+	(
+		echo '+    { "Sebastian Lackner", "user32: Allow to send/post intra-process WM_NOTIFY messages.", 1 },';
 	) >> "$patchlist"
 fi
 

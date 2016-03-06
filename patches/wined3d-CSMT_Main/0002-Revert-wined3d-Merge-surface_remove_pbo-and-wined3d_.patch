@@ -1,0 +1,167 @@
+From 50e69e1a480a8910aa50b5e6201213ef9d35fea5 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 6 Mar 2016 22:08:35 +0100
+Subject: Revert "wined3d: Merge surface_remove_pbo() and
+ wined3d_volume_free_pbo()."
+
+This reverts commit 5141c082caabd0f18698fe611b57e885adf25fe7.
+---
+ dlls/wined3d/surface.c         | 19 ++++++++++++++++++-
+ dlls/wined3d/texture.c         | 27 ---------------------------
+ dlls/wined3d/volume.c          | 22 ++++++++++++++++++++++
+ dlls/wined3d/wined3d_private.h |  2 --
+ 4 files changed, 40 insertions(+), 30 deletions(-)
+
+diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
+index 469a493..3cd3782 100644
+--- a/dlls/wined3d/surface.c
++++ b/dlls/wined3d/surface.c
+@@ -996,6 +996,19 @@ static HRESULT wined3d_surface_depth_blt(struct wined3d_surface *src_surface, DW
+     return WINED3D_OK;
+ }
+ 
++/* Context activation is done by the caller. */
++static void surface_remove_pbo(struct wined3d_surface *surface, const struct wined3d_gl_info *gl_info)
++{
++    GLuint *buffer_object;
++
++    buffer_object = &surface->container->sub_resources[surface_get_sub_resource_idx(surface)].buffer_object;
++    GL_EXTCALL(glDeleteBuffers(1, buffer_object));
++    checkGLcall("glDeleteBuffers(1, buffer_object)");
++
++    *buffer_object = 0;
++    surface_invalidate_location(surface, WINED3D_LOCATION_BUFFER);
++}
++
+ static ULONG surface_resource_incref(struct wined3d_resource *resource)
+ {
+     struct wined3d_surface *surface = surface_from_resource(resource);
+@@ -1058,6 +1071,10 @@ static void surface_unload(struct wined3d_resource *resource)
+         surface_invalidate_location(surface, ~surface->resource.map_binding);
+     }
+ 
++    /* Destroy PBOs, but load them into real sysmem before */
++    if (surface->container->sub_resources[surface_get_sub_resource_idx(surface)].buffer_object)
++        surface_remove_pbo(surface, gl_info);
++
+     /* Destroy fbo render buffers. This is needed for implicit render targets, for
+      * all application-created targets the application has to release the surface
+      * before calling _Reset
+@@ -3664,7 +3681,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
+ 
+         surface_prepare_map_memory(surface);
+         surface_load_location(surface, context, surface->resource.map_binding);
+-        wined3d_texture_remove_buffer_object(texture, surface_get_sub_resource_idx(surface), gl_info);
++        surface_remove_pbo(surface, gl_info);
+     }
+ 
+     surface_get_memory(surface, &data, surface->locations);
+diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
+index 90a3978..9846f07 100644
+--- a/dlls/wined3d/texture.c
++++ b/dlls/wined3d/texture.c
+@@ -74,23 +74,6 @@ static HRESULT wined3d_texture_init(struct wined3d_texture *texture, const struc
+     return WINED3D_OK;
+ }
+ 
+-/* Context activation is done by the caller. */
+-void wined3d_texture_remove_buffer_object(struct wined3d_texture *texture,
+-        unsigned int sub_resource_idx, const struct wined3d_gl_info *gl_info)
+-{
+-    GLuint *buffer_object;
+-
+-    buffer_object = &texture->sub_resources[sub_resource_idx].buffer_object;
+-    GL_EXTCALL(glDeleteBuffers(1, buffer_object));
+-    checkGLcall("glDeleteBuffers");
+-    texture->texture_ops->texture_sub_resource_invalidate_location(
+-            texture->sub_resources[sub_resource_idx].resource, WINED3D_LOCATION_BUFFER);
+-    *buffer_object = 0;
+-
+-    TRACE("Deleted buffer object %u for texture %p, sub-resource %u.\n",
+-            *buffer_object, texture, sub_resource_idx);
+-}
+-
+ /* A GL context is provided by the caller */
+ static void gltexture_delete(struct wined3d_device *device, const struct wined3d_gl_info *gl_info,
+         struct gl_texture *tex)
+@@ -996,7 +979,6 @@ static void wined3d_texture_unload(struct wined3d_resource *resource)
+ {
+     struct wined3d_texture *texture = wined3d_texture_from_resource(resource);
+     UINT sub_count = texture->level_count * texture->layer_count;
+-    struct wined3d_context *context = NULL;
+     UINT i;
+ 
+     TRACE("texture %p.\n", texture);
+@@ -1006,16 +988,7 @@ static void wined3d_texture_unload(struct wined3d_resource *resource)
+         struct wined3d_resource *sub_resource = texture->sub_resources[i].resource;
+ 
+         sub_resource->resource_ops->resource_unload(sub_resource);
+-
+-        if (texture->sub_resources[i].buffer_object)
+-        {
+-            if (!context)
+-                context = context_acquire(texture->resource.device, NULL);
+-            wined3d_texture_remove_buffer_object(texture, i, context->gl_info);
+-        }
+     }
+-    if (context)
+-        context_release(context);
+ 
+     wined3d_texture_force_reload(texture);
+     wined3d_texture_unload_gl_texture(texture);
+diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
+index 2d88af6..fcadd39 100644
+--- a/dlls/wined3d/volume.c
++++ b/dlls/wined3d/volume.c
+@@ -362,6 +362,19 @@ void wined3d_volume_load(struct wined3d_volume *volume, struct wined3d_context *
+             srgb_mode ? WINED3D_LOCATION_TEXTURE_SRGB : WINED3D_LOCATION_TEXTURE_RGB);
+ }
+ 
++static void wined3d_volume_free_pbo(struct wined3d_volume *volume)
++{
++    GLuint *buffer_object = &volume->container->sub_resources[volume->texture_level].buffer_object;
++    struct wined3d_context *context = context_acquire(volume->resource.device, NULL);
++    const struct wined3d_gl_info *gl_info = context->gl_info;
++
++    TRACE("Deleting PBO %u belonging to volume %p.\n", *buffer_object, volume);
++    GL_EXTCALL(glDeleteBuffers(1, buffer_object));
++    checkGLcall("glDeleteBuffers");
++    *buffer_object = 0;
++    context_release(context);
++}
++
+ void wined3d_volume_cleanup(struct wined3d_volume *volume)
+ {
+     TRACE("volume %p.\n", volume);
+@@ -394,6 +407,15 @@ static void volume_unload(struct wined3d_resource *resource)
+         wined3d_volume_invalidate_location(volume, ~WINED3D_LOCATION_DISCARDED);
+     }
+ 
++    if (volume->container->sub_resources[volume->texture_level].buffer_object)
++    {
++        /* Should not happen because only dynamic default pool volumes
++         * have a buffer, and those are not evicted by device_evit_managed_resources
++         * and must be freed before a non-ex device reset. */
++        ERR("Unloading a volume with a buffer\n");
++        wined3d_volume_free_pbo(volume);
++    }
++
+     /* The texture name is managed by the container. */
+ 
+     resource_unload(resource);
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index da36985..28121b7 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2424,8 +2424,6 @@ void wined3d_texture_prepare_buffer_object(struct wined3d_texture *texture,
+         unsigned int sub_resource_idx, const struct wined3d_gl_info *gl_info) DECLSPEC_HIDDEN;
+ void wined3d_texture_prepare_texture(struct wined3d_texture *texture,
+         struct wined3d_context *context, BOOL srgb) DECLSPEC_HIDDEN;
+-void wined3d_texture_remove_buffer_object(struct wined3d_texture *texture,
+-        unsigned int sub_resource_idx, const struct wined3d_gl_info *gl_info) DECLSPEC_HIDDEN;
+ void wined3d_texture_set_dirty(struct wined3d_texture *texture) DECLSPEC_HIDDEN;
+ void wined3d_texture_set_swapchain(struct wined3d_texture *texture,
+         struct wined3d_swapchain *swapchain) DECLSPEC_HIDDEN;
+-- 
+2.7.1
+

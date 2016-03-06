@@ -1,4 +1,4 @@
-From a51564803334f940d200b0f3f1f7a94cfc13425f Mon Sep 17 00:00:00 2001
+From 3afe02f9f12be379dabe3f085cf222a86d41d94c Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 2 Mar 2016 16:28:44 +0100
 Subject: Revert "wined3d: Get rid of the offscreenBuffer field in struct
@@ -13,7 +13,7 @@ This reverts commit 9dc89561027f32b08978b9fb75da5a0d0966f999.
  4 files changed, 41 insertions(+), 34 deletions(-)
 
 diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
-index 6f065ba..d0deff9 100644
+index 7048175..3a6bc5c 100644
 --- a/dlls/wined3d/context.c
 +++ b/dlls/wined3d/context.c
 @@ -2419,30 +2419,14 @@ static void context_validate_onscreen_formats(struct wined3d_context *context,
@@ -39,7 +39,7 @@ index 6f065ba..d0deff9 100644
 -static DWORD context_generate_rt_mask_no_fbo(const struct wined3d_context *context, const struct wined3d_surface *rt)
 +static DWORD context_generate_rt_mask_no_fbo(const struct wined3d_device *device, const struct wined3d_surface *rt)
  {
-     if (!rt || rt->resource.format->id == WINED3DFMT_NULL)
+     if (!rt || rt->container->resource.format->id == WINED3DFMT_NULL)
          return 0;
      else if (rt->container->swapchain)
          return context_generate_rt_mask_from_surface(rt);
@@ -154,10 +154,10 @@ index ded1229..4cebcb8 100644
  
      context_release(context);
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index ee6588e..bd6be49 100644
+index 7f97b27..4e59ca8 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
-@@ -2435,7 +2435,7 @@ static void read_from_framebuffer(struct wined3d_surface *surface,
+@@ -2588,7 +2588,7 @@ static void read_from_framebuffer(struct wined3d_surface *surface,
          /* Mapping the primary render target which is not on a swapchain.
           * Read from the back buffer. */
          TRACE("Mapping offscreen render target.\n");
@@ -166,7 +166,7 @@ index ee6588e..bd6be49 100644
          srcIsUpsideDown = TRUE;
      }
      else
-@@ -2541,7 +2541,7 @@ void surface_load_fb_texture(struct wined3d_surface *surface, BOOL srgb, struct
+@@ -2694,7 +2694,7 @@ void surface_load_fb_texture(struct wined3d_surface *surface, BOOL srgb, struct
      TRACE("Reading back offscreen render target %p.\n", surface);
  
      if (wined3d_resource_is_offscreen(&surface->container->resource))
@@ -175,7 +175,7 @@ index ee6588e..bd6be49 100644
      else
          gl_info->gl_ops.gl.p_glReadBuffer(surface_get_gl_buffer(surface));
      checkGLcall("glReadBuffer");
-@@ -2646,7 +2646,7 @@ static void fb_copy_to_texture_direct(struct wined3d_surface *dst_surface, struc
+@@ -2799,7 +2799,7 @@ static void fb_copy_to_texture_direct(struct wined3d_surface *dst_surface, struc
      {
          TRACE("Reading from an offscreen target\n");
          upsidedown = !upsidedown;
@@ -184,7 +184,7 @@ index ee6588e..bd6be49 100644
      }
      else
      {
-@@ -2735,7 +2735,6 @@ static void fb_copy_to_texture_hwstretch(struct wined3d_surface *dst_surface, st
+@@ -2888,7 +2888,6 @@ static void fb_copy_to_texture_hwstretch(struct wined3d_surface *dst_surface, st
      const struct wined3d_gl_info *gl_info;
      struct wined3d_context *context;
      GLenum drawBuffer = GL_BACK;
@@ -192,7 +192,7 @@ index ee6588e..bd6be49 100644
      GLenum texture_target;
      BOOL noBackBufferBackup;
      BOOL src_offscreen;
-@@ -2749,8 +2748,6 @@ static void fb_copy_to_texture_hwstretch(struct wined3d_surface *dst_surface, st
+@@ -2902,8 +2901,6 @@ static void fb_copy_to_texture_hwstretch(struct wined3d_surface *dst_surface, st
      context_apply_blit_state(context, device);
      wined3d_texture_load(dst_surface->container, context, FALSE);
  
@@ -201,7 +201,7 @@ index ee6588e..bd6be49 100644
      src_offscreen = wined3d_resource_is_offscreen(&src_surface->container->resource);
      noBackBufferBackup = src_offscreen && wined3d_settings.offscreen_rendering_mode == ORM_FBO;
      if (!noBackBufferBackup && !src_surface->container->texture_rgb.name)
-@@ -2767,7 +2764,7 @@ static void fb_copy_to_texture_hwstretch(struct wined3d_surface *dst_surface, st
+@@ -2920,7 +2917,7 @@ static void fb_copy_to_texture_hwstretch(struct wined3d_surface *dst_surface, st
          /* Got more than one aux buffer? Use the 2nd aux buffer */
          drawBuffer = GL_AUX1;
      }
@@ -210,7 +210,7 @@ index ee6588e..bd6be49 100644
      {
          /* Only one aux buffer, but it isn't used (Onscreen rendering, or non-aux orm)? Use it! */
          drawBuffer = GL_AUX0;
-@@ -2808,7 +2805,7 @@ static void fb_copy_to_texture_hwstretch(struct wined3d_surface *dst_surface, st
+@@ -2961,7 +2958,7 @@ static void fb_copy_to_texture_hwstretch(struct wined3d_surface *dst_surface, st
      {
          TRACE("Reading from an offscreen target\n");
          upsidedown = !upsidedown;
@@ -220,10 +220,10 @@ index ee6588e..bd6be49 100644
      else
      {
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 409ab36..eef58a3 100644
+index 3039180..0b622c0 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -1507,7 +1507,6 @@ void context_destroy(struct wined3d_device *device, struct wined3d_context *cont
+@@ -1508,7 +1508,6 @@ void context_destroy(struct wined3d_device *device, struct wined3d_context *cont
  void context_free_event_query(struct wined3d_event_query *query) DECLSPEC_HIDDEN;
  void context_free_occlusion_query(struct wined3d_occlusion_query *query) DECLSPEC_HIDDEN;
  struct wined3d_context *context_get_current(void) DECLSPEC_HIDDEN;
@@ -231,7 +231,7 @@ index 409ab36..eef58a3 100644
  DWORD context_get_tls_idx(void) DECLSPEC_HIDDEN;
  void context_gl_resource_released(struct wined3d_device *device,
          GLuint name, BOOL rb_namespace) DECLSPEC_HIDDEN;
-@@ -2142,6 +2141,9 @@ struct wined3d_device
+@@ -2143,6 +2142,9 @@ struct wined3d_device
      LONG                    style;
      LONG                    exStyle;
  

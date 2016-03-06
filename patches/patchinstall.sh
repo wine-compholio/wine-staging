@@ -3109,12 +3109,14 @@ if test "$enable_d3dx9_36_D3DXDisassembleShader" -eq 1; then
 	patch_apply d3dx9_36-D3DXDisassembleShader/0003-d3dx9_36-Add-stub-for-D3DXFillCubeTextureTX.patch
 	patch_apply d3dx9_36-D3DXDisassembleShader/0004-d3dx9_36-Implement-D3DXDisassembleShader.patch
 	patch_apply d3dx9_36-D3DXDisassembleShader/0005-d3dx9_36-tests-Add-initial-tests-for-D3DXDisassemble.patch
+	patch_apply d3dx9_36-D3DXDisassembleShader/0006-d3dx9_36-tests-Add-additional-tests-for-special-case.patch
 	(
 		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXCreateTextureShader with stubbed ID3DXTextureShader interface.", 1 },';
 		echo '+    { "Christian Costa", "include: Fix prototypes of D3DXFillXXXTextureTx for d3dx9.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXFillCubeTextureTX.", 1 },';
-		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXDisassembleShader.", 1 },';
+		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXDisassembleShader.", 2 },';
 		echo '+    { "Sebastian Lackner", "d3dx9_36/tests: Add initial tests for D3DXDisassembleShader.", 1 },';
+		echo '+    { "Christian Costa", "d3dx9_36/tests: Add additional tests for special cases.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -57,7 +57,7 @@ upstream_commit()
 # Show version information
 version()
 {
-	echo "Wine Staging 1.9.5"
+	echo "Wine Staging 1.9.6 (unreleased)"
 	echo "Copyright (C) 2014-2016 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -338,6 +338,7 @@ patch_enable_all ()
 	enable_version_VerQueryValue="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
+	enable_windowscodecs_32bppGrayFloat="$1"
 	enable_wine_inf_Performance="$1"
 	enable_wine_inf_ProfileList_UserSID="$1"
 	enable_wine_inf_WMP_12="$1"
@@ -1175,6 +1176,9 @@ patch_enable ()
 			;;
 		widl-SLTG_Typelib_Support)
 			enable_widl_SLTG_Typelib_Support="$2"
+			;;
+		windowscodecs-32bppGrayFloat)
+			enable_windowscodecs_32bppGrayFloat="$2"
 			;;
 		wine.inf-Performance)
 			enable_wine_inf_Performance="$2"
@@ -6808,6 +6812,27 @@ if test "$enable_wbemdisp_ISWbemSecurity" -eq 1; then
 	patch_apply wbemdisp-ISWbemSecurity/0001-wbemdisp-Add-ISWbemSecurity-stub-interface.patch
 	(
 		echo '+    { "Michael Müller", "wbemdisp: Add ISWbemSecurity stub interface.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windowscodecs-32bppGrayFloat
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36517] Implement support for WICPixelFormat32bppGrayFloat
+# |
+# | Modified files:
+# |   *	dlls/windowscodecs/converter.c, dlls/windowscodecs/regsvr.c, dlls/windowscodecs/tests/converter.c, include/wincodec.idl
+# |
+if test "$enable_windowscodecs_32bppGrayFloat" -eq 1; then
+	patch_apply windowscodecs-32bppGrayFloat/0001-windowscodecs-Add-support-for-32bppGrayFloat-format.patch
+	patch_apply windowscodecs-32bppGrayFloat/0002-windowscodecs-Add-support-for-converting-to-8bpp-gra.patch
+	patch_apply windowscodecs-32bppGrayFloat/0003-windowscodecs-Add-support-for-converting-32bpp-grays.patch
+	patch_apply windowscodecs-32bppGrayFloat/0004-windowscodecs-Fix-32bppGrayFloat-to-8bppGray-convers.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 32bppGrayFloat format.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for converting to 8bpp grayscale format.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for converting 32bpp grayscale float to 24bpp BGR format.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fix 32bppGrayFloat to 8bppGray conversion.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "fa6c255f8de4b28e6bdeadca8d27d226ddff48d7"
+	echo "887b445bb87861f2c11e6c5248d105c1fc52f125"
 }
 
 # Show version information
@@ -3343,7 +3343,8 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/d3d11/device.c, dlls/d3d11/texture.c, dlls/d3d8/surface.c, dlls/d3d8/volume.c, dlls/d3d9/surface.c,
-# | 	dlls/d3d9/volume.c, dlls/ddraw/surface.c, dlls/wined3d/resource.c, dlls/wined3d/wined3d.spec, include/wine/wined3d.h
+# | 	dlls/d3d9/volume.c, dlls/ddraw/surface.c, dlls/wined3d/device.c, dlls/wined3d/resource.c, dlls/wined3d/surface.c,
+# | 	dlls/wined3d/wined3d.spec, include/wine/wined3d.h
 # |
 if test "$enable_wined3d_resource_map" -eq 1; then
 	patch_apply wined3d-resource_map/0001-wined3d-Rename-wined3d_resource_-un-map-to-wined3d_r.patch

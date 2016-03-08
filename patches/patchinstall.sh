@@ -6699,7 +6699,7 @@ fi
 if test "$enable_user32_WM_NOTIFY" -eq 1; then
 	patch_apply user32-WM_NOTIFY/0001-user32-Allow-to-send-post-intra-process-WM_NOTIFY-me.patch
 	(
-		echo '+    { "Sebastian Lackner", "user32: Allow to send/post intra-process WM_NOTIFY messages.", 1 },';
+		echo '+    { "Sebastian Lackner", "user32: Do not block sending/posting WM_NOTIFY messages.", 1 },';
 	) >> "$patchlist"
 fi
 

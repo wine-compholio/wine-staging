@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9da6dd2ac93c97bc6f8cd60f26f20f632b8d8ce0"
+	echo "630f5e97b12c1bc934e44a632d30e9129651bb06"
 }
 
 # Show version information
@@ -186,7 +186,6 @@ patch_enable_all ()
 	enable_libs_Unicode_Collation="$1"
 	enable_makedep_PARENTSPEC="$1"
 	enable_mfplat_MFTRegister="$1"
-	enable_mmdevapi_AEV_Stubs="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mpr_WNetGetUniversalNameW="$1"
@@ -720,9 +719,6 @@ patch_enable ()
 			;;
 		mfplat-MFTRegister)
 			enable_mfplat_MFTRegister="$2"
-			;;
-		mmdevapi-AEV_Stubs)
-			enable_mmdevapi_AEV_Stubs="$2"
 			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
@@ -4369,25 +4365,6 @@ if test "$enable_mfplat_MFTRegister" -eq 1; then
 		echo '+    { "Michael Müller", "mfplat: Implement MFTUnregister.", 1 },';
 		echo '+    { "Michael Müller", "mfplat: Implement MFTEnum.", 1 },';
 		echo '+    { "Michael Müller", "mfplat/tests: Add tests.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset mmdevapi-AEV_Stubs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35658] Improve stub for AEV_GetVolumeRange
-# |
-# | Modified files:
-# |   *	dlls/mmdevapi/audiovolume.c
-# |
-if test "$enable_mmdevapi_AEV_Stubs" -eq 1; then
-	patch_apply mmdevapi-AEV_Stubs/0001-mmdevapi-Improve-AEV_GetVolumeRange-stub.patch
-	patch_apply mmdevapi-AEV_Stubs/0002-mmdevapi-Improve-AEV_SetMasterVolumeLevel-and-AEV_Ge.patch
-	patch_apply mmdevapi-AEV_Stubs/0003-mmdevapi-Improve-AEV_SetMute-and-AEV_GetMute-stubs.patch
-	(
-		echo '+    { "Christian Costa", "mmdevapi: Improve AEV_GetVolumeRange stub.", 1 },';
-		echo '+    { "Christian Costa", "mmdevapi: Improve AEV_SetMasterVolumeLevel and AEV_GetMasterVolumeLevel stubs.", 1 },';
-		echo '+    { "Christian Costa", "mmdevapi: Improve AEV_SetMute and AEV_GetMute stubs.", 1 },';
 	) >> "$patchlist"
 fi
 

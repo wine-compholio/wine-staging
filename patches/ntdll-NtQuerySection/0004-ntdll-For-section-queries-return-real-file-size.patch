@@ -1,0 +1,76 @@
+From 83766ac8e17968e234462a35588bc0765a0f35aa Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Wed, 9 Mar 2016 13:51:59 +0800
+Subject: ntdll: For section queries return real file size.
+
+---
+ dlls/kernel32/tests/virtual.c | 4 ----
+ dlls/ntdll/virtual.c          | 9 +++++++++
+ 2 files changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/kernel32/tests/virtual.c b/dlls/kernel32/tests/virtual.c
+index 6d25b5f..485e2f3 100644
+--- a/dlls/kernel32/tests/virtual.c
++++ b/dlls/kernel32/tests/virtual.c
+@@ -3844,7 +3844,6 @@ static void test_NtQuerySection(void)
+     ok(info.basic.BaseAddress == NULL, "expected NULL, got %p\n", info.basic.BaseAddress);
+ todo_wine
+     ok(info.basic.Attributes == SEC_FILE, "expected SEC_FILE, got %#x\n", info.basic.Attributes);
+-todo_wine
+     ok(info.basic.Size.QuadPart == fsize, "expected %#lx, got %#x/%08x\n", fsize, info.basic.Size.HighPart, info.basic.Size.LowPart);
+ 
+     status = pNtQuerySection(mapping, SectionImageInformation, &info, sizeof(info.basic), &ret);
+@@ -3868,7 +3867,6 @@ todo_wine
+     ok(info.basic.BaseAddress == NULL, "expected NULL, got %p\n", info.basic.BaseAddress);
+ todo_wine
+     ok(info.basic.Attributes == SEC_FILE, "expected SEC_FILE, got %#x\n", info.basic.Attributes);
+-todo_wine
+     ok(info.basic.Size.QuadPart == fsize, "expected %#lx, got %#x/%08x\n", fsize, info.basic.Size.HighPart, info.basic.Size.LowPart);
+ 
+     UnmapViewOfFile(p);
+@@ -3954,7 +3952,6 @@ todo_wine
+     ok(info.basic.BaseAddress == NULL, "expected NULL, got %p\n", info.basic.BaseAddress);
+ todo_wine
+     ok(info.basic.Attributes == SEC_FILE, "expected SEC_FILE, got %#x\n", info.basic.Attributes);
+-todo_wine
+     ok(info.basic.Size.QuadPart == fsize, "expected %#lx, got %#x/%08x\n", fsize, info.basic.Size.HighPart, info.basic.Size.LowPart);
+ 
+     CloseHandle(mapping);
+@@ -3971,7 +3968,6 @@ todo_wine
+     ok(info.basic.BaseAddress == NULL, "expected NULL, got %p\n", info.basic.BaseAddress);
+ todo_wine
+     ok(info.basic.Attributes == SEC_FILE, "expected SEC_FILE, got %#x\n", info.basic.Attributes);
+-todo_wine
+     ok(info.basic.Size.QuadPart == fsize, "expected %#lx, got %#x/%08x\n", fsize, info.basic.Size.HighPart, info.basic.Size.LowPart);
+ 
+     CloseHandle(mapping);
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index 5a8d85c..f00aae9 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -2538,6 +2538,7 @@ NTSTATUS WINAPI SYSCALL(NtQuerySection)( HANDLE handle, SECTION_INFORMATION_CLAS
+     short machine, subsystem;
+     short major_subsystem, minor_subsystem;
+     short characteristics, dll_characteristics;
++    int unix_fd, needs_close;
+     NTSTATUS res;
+ 
+     if (info_class == SectionBasicInformation)
+@@ -2579,6 +2580,14 @@ NTSTATUS WINAPI SYSCALL(NtQuerySection)( HANDLE handle, SECTION_INFORMATION_CLAS
+     SERVER_END_REQ;
+     if (res) return res;
+ 
++    if (!(protect & VPROT_IMAGE) && dup_mapping &&
++        !server_get_unix_fd( dup_mapping, 0, &unix_fd, &needs_close, NULL, NULL ))
++    {
++        struct stat st;
++        if (!fstat( unix_fd, &st )) size.QuadPart = st.st_size;
++        if (needs_close) close( unix_fd );
++    }
++
+     if (dup_mapping) close_handle( dup_mapping );
+     if (shared_file) close_handle( shared_file );
+ 
+-- 
+2.7.1
+

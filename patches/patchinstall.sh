@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "887b445bb87861f2c11e6c5248d105c1fc52f125"
+	echo "9da6dd2ac93c97bc6f8cd60f26f20f632b8d8ce0"
 }
 
 # Show version information
@@ -4949,9 +4949,13 @@ fi
 if test "$enable_ntdll_NtQuerySection" -eq 1; then
 	patch_apply ntdll-NtQuerySection/0001-ntdll-Implement-NtQuerySection.patch
 	patch_apply ntdll-NtQuerySection/0002-kernel32-tests-Add-tests-for-NtQuerySection.patch
+	patch_apply ntdll-NtQuerySection/0003-server-CreateFileMapping-should-not-fail-without-SEC.patch
+	patch_apply ntdll-NtQuerySection/0004-ntdll-For-section-queries-return-real-file-size.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "ntdll: Implement NtQuerySection.", 2 },';
 		echo '+    { "Dmitry Timoshkov", "kernel32/tests: Add tests for NtQuerySection.", 2 },';
+		echo '+    { "Dmitry Timoshkov", "server: CreateFileMapping should not fail without SEC_COMMIT for a named file section.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "ntdll: For section queries return real file size.", 1 },';
 	) >> "$patchlist"
 fi
 

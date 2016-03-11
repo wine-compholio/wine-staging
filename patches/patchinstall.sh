@@ -389,6 +389,7 @@ patch_enable_all ()
 	enable_ws2_32_getsockopt="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
 	enable_wtsapi32_WTSQueryUserToken="$1"
+	enable_wuauserv_Dummy_Service="$1"
 	enable_wusa_MSU_Package_Installer="$1"
 }
 
@@ -1328,6 +1329,9 @@ patch_enable ()
 			;;
 		wtsapi32-WTSQueryUserToken)
 			enable_wtsapi32_WTSQueryUserToken="$2"
+			;;
+		wuauserv-Dummy_Service)
+			enable_wuauserv_Dummy_Service="$2"
 			;;
 		wusa-MSU_Package_Installer)
 			enable_wusa_MSU_Package_Installer="$2"
@@ -7523,6 +7527,18 @@ if test "$enable_wtsapi32_WTSQueryUserToken" -eq 1; then
 	patch_apply wtsapi32-WTSQueryUserToken/0001-wtsapi32-Improve-WTSQueryUserToken-stub.patch
 	(
 		echo '+    { "Sebastian Lackner", "wtsapi32: Improve WTSQueryUserToken stub.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wuauserv-Dummy_Service
+# |
+# | Modified files:
+# |   *	configure.ac, loader/wine.inf.in, programs/wuauserv/Makefile.in, programs/wuauserv/main.c
+# |
+if test "$enable_wuauserv_Dummy_Service" -eq 1; then
+	patch_apply wuauserv-Dummy_Service/0001-wuauserv-Add-dummy-service.patch
+	(
+		echo '+    { "Michael Müller", "wuauserv: Add dummy service.", 1 },';
 	) >> "$patchlist"
 fi
 

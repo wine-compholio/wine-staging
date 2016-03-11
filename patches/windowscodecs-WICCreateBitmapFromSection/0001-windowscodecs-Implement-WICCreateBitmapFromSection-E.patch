@@ -1,0 +1,110 @@
+From 398633bacedfe65ead524f9eee28faaeb9b65204 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Fri, 11 Mar 2016 03:48:46 +0100
+Subject: windowscodecs: Implement WICCreateBitmapFromSection(Ex).
+
+---
+ dlls/windowscodecs/imgfactory.c       | 48 +++++++++++++++++++++++++++++++++++
+ dlls/windowscodecs/windowscodecs.spec |  3 ++-
+ include/wincodec.idl                  |  8 ++++++
+ 3 files changed, 58 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/windowscodecs/imgfactory.c b/dlls/windowscodecs/imgfactory.c
+index f2455fc..c3029b6 100644
+--- a/dlls/windowscodecs/imgfactory.c
++++ b/dlls/windowscodecs/imgfactory.c
+@@ -1174,3 +1174,51 @@ HRESULT ComponentFactory_CreateInstance(REFIID iid, void** ppv)
+ 
+     return ret;
+ }
++
++HRESULT WINAPI WICCreateBitmapFromSectionEx(UINT width, UINT height,
++        REFWICPixelFormatGUID format, HANDLE section, UINT stride,
++        UINT offset, WICSectionAccessLevel wicaccess, IWICBitmap **bitmap)
++{
++    DWORD access;
++    void *mem;
++    HRESULT hr;
++
++    TRACE("%u,%u,%s,%p,%u,%#x,%#x,%p\n", width, height, debugstr_guid(format),
++        section, stride, offset, wicaccess, bitmap);
++
++    if (!width || !height || !section || !bitmap) return E_INVALIDARG;
++
++    switch (wicaccess)
++    {
++    case WICSectionAccessLevelReadWrite:
++        access = FILE_MAP_READ | FILE_MAP_WRITE;
++        break;
++
++    case WICSectionAccessLevelRead:
++        access = FILE_MAP_READ;
++        break;
++
++    default:
++        FIXME("unsupported access %#x\n", wicaccess);
++        return E_INVALIDARG;
++    }
++
++    mem = MapViewOfFile(section, access, 0, offset, 0);
++    if (!mem) return E_INVALIDARG;
++
++    hr = BitmapImpl_Create(width, height, stride, 0, mem, format, WICBitmapCacheOnLoad, bitmap);
++
++    UnmapViewOfFile(mem);
++    return hr;
++}
++
++HRESULT WINAPI WICCreateBitmapFromSection(UINT width, UINT height,
++        REFWICPixelFormatGUID format, HANDLE section,
++        UINT stride, UINT offset, IWICBitmap **bitmap)
++{
++    TRACE("%u,%u,%s,%p,%u,%u,%p\n", width, height, debugstr_guid(format),
++        section, stride, offset, bitmap);
++
++    return WICCreateBitmapFromSectionEx(width, height, format, section,
++        stride, offset, WICSectionAccessLevelRead, bitmap);
++}
+diff --git a/dlls/windowscodecs/windowscodecs.spec b/dlls/windowscodecs/windowscodecs.spec
+index 81a827e..7ee76d9 100644
+--- a/dlls/windowscodecs/windowscodecs.spec
++++ b/dlls/windowscodecs/windowscodecs.spec
+@@ -105,7 +105,8 @@
+ @ stdcall IWICStream_InitializeFromIStream_Proxy(ptr ptr) IWICStream_InitializeFromIStream_Proxy_W
+ @ stdcall IWICStream_InitializeFromMemory_Proxy(ptr ptr long) IWICStream_InitializeFromMemory_Proxy_W
+ @ stdcall WICConvertBitmapSource(ptr ptr ptr)
+-@ stub WICCreateBitmapFromSection
++@ stdcall WICCreateBitmapFromSection(long long ptr long long long ptr)
++@ stdcall WICCreateBitmapFromSectionEx(long long ptr long long long long ptr)
+ @ stdcall WICCreateColorContext_Proxy(ptr ptr)
+ @ stdcall WICCreateImagingFactory_Proxy(long ptr)
+ @ stub WICGetMetadataContentSize
+diff --git a/include/wincodec.idl b/include/wincodec.idl
+index 639d925..00a8da8 100644
+--- a/include/wincodec.idl
++++ b/include/wincodec.idl
+@@ -168,6 +168,12 @@ typedef enum WICTiffCompressionOption {
+     WICTIFFCOMPRESSIONOPTION_FORCE_DWORD = CODEC_FORCE_DWORD
+ } WICTiffCompressionOption;
+ 
++typedef enum WICSectionAccessLevel {
++    WICSectionAccessLevelRead = 0x00000001,
++    WICSectionAccessLevelReadWrite = 0x00000003,
++    WICSectionAccessLevel_FORCE_DWORD = CODEC_FORCE_DWORD
++} WICSectionAccessLevel;
++
+ typedef GUID WICPixelFormatGUID;
+ typedef REFGUID REFWICPixelFormatGUID;
+ 
+@@ -982,6 +988,8 @@ interface IWICEnumMetadataItem : IUnknown
+ }
+ 
+ cpp_quote("HRESULT WINAPI WICConvertBitmapSource(REFWICPixelFormatGUID dstFormat, IWICBitmapSource *pISrc, IWICBitmapSource **ppIDst);")
++cpp_quote("HRESULT WINAPI WICCreateBitmapFromSection(UINT width, UINT height, REFWICPixelFormatGUID format, HANDLE section, UINT stride, UINT offset, IWICBitmap **bitmap);")
++cpp_quote("HRESULT WINAPI WICCreateBitmapFromSectionEx(UINT width, UINT height, REFWICPixelFormatGUID format, HANDLE section, UINT stride, UINT offset, WICSectionAccessLevel access, IWICBitmap **bitmap);")
+ 
+ cpp_quote("DEFINE_GUID(CLSID_WICBmpDecoder, 0x6b462062,0x7cbf,0x400d,0x9f,0xdb,0x81,0x3d,0xd1,0x0f,0x27,0x78);")
+ cpp_quote("DEFINE_GUID(CLSID_WICPngDecoder, 0x389ea17b,0x5078,0x4cde,0xb6,0xef,0x25,0xc1,0x51,0x75,0xc7,0x51);")
+-- 
+2.7.1
+

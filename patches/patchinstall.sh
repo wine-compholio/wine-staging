@@ -339,6 +339,7 @@ patch_enable_all ()
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppGrayFloat="$1"
+	enable_windowscodecs_WICCreateBitmapFromSection="$1"
 	enable_wine_inf_Performance="$1"
 	enable_wine_inf_ProfileList_UserSID="$1"
 	enable_wine_inf_WMP_12="$1"
@@ -1178,6 +1179,9 @@ patch_enable ()
 			;;
 		windowscodecs-32bppGrayFloat)
 			enable_windowscodecs_32bppGrayFloat="$2"
+			;;
+		windowscodecs-WICCreateBitmapFromSection)
+			enable_windowscodecs_WICCreateBitmapFromSection="$2"
 			;;
 		wine.inf-Performance)
 			enable_wine_inf_Performance="$2"
@@ -6824,6 +6828,21 @@ if test "$enable_windowscodecs_32bppGrayFloat" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for converting to 8bpp grayscale format.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for converting 32bpp grayscale float to 24bpp BGR format.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fix 32bppGrayFloat to 8bppGray conversion.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windowscodecs-WICCreateBitmapFromSection
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40273] Implement windowscodecs.WICCreateBitmapFromSection(Ex)
+# |
+# | Modified files:
+# |   *	dlls/windowscodecs/imgfactory.c, dlls/windowscodecs/windowscodecs.spec, include/wincodec.idl
+# |
+if test "$enable_windowscodecs_WICCreateBitmapFromSection" -eq 1; then
+	patch_apply windowscodecs-WICCreateBitmapFromSection/0001-windowscodecs-Implement-WICCreateBitmapFromSection-E.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement WICCreateBitmapFromSection(Ex).", 1 },';
 	) >> "$patchlist"
 fi
 

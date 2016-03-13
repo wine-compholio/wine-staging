@@ -339,6 +339,7 @@ patch_enable_all ()
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppGrayFloat="$1"
 	enable_windowscodecs_WICCreateBitmapFromSection="$1"
+	enable_wine_inf_Dummy_CA_Certificate="$1"
 	enable_wine_inf_Performance="$1"
 	enable_wine_inf_ProfileList_UserSID="$1"
 	enable_wine_inf_WMP_12="$1"
@@ -1179,6 +1180,9 @@ patch_enable ()
 			;;
 		windowscodecs-WICCreateBitmapFromSection)
 			enable_windowscodecs_WICCreateBitmapFromSection="$2"
+			;;
+		wine.inf-Dummy_CA_Certificate)
+			enable_wine_inf_Dummy_CA_Certificate="$2"
 			;;
 		wine.inf-Performance)
 			enable_wine_inf_Performance="$2"
@@ -6824,6 +6828,18 @@ if test "$enable_windowscodecs_WICCreateBitmapFromSection" -eq 1; then
 	patch_apply windowscodecs-WICCreateBitmapFromSection/0001-windowscodecs-Implement-WICCreateBitmapFromSection-E.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement WICCreateBitmapFromSection(Ex).", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wine.inf-Dummy_CA_Certificate
+# |
+# | Modified files:
+# |   *	loader/wine.inf.in
+# |
+if test "$enable_wine_inf_Dummy_CA_Certificate" -eq 1; then
+	patch_apply wine.inf-Dummy_CA_Certificate/0001-wine.inf.in-Add-invalid-dummy-certificate-to-CA-cert.patch
+	(
+		echo '+    { "Michael Müller", "wine.inf.in: Add invalid dummy certificate to CA certificate store.", 1 },';
 	) >> "$patchlist"
 fi
 

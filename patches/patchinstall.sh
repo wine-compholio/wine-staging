@@ -186,6 +186,7 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_makedep_PARENTSPEC="$1"
+	enable_makefiles_Revert_libwine_Import="$1"
 	enable_mfplat_MFTRegister="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
@@ -723,6 +724,9 @@ patch_enable ()
 			;;
 		makedep-PARENTSPEC)
 			enable_makedep_PARENTSPEC="$2"
+			;;
+		makefiles-Revert_libwine_Import)
+			enable_makefiles_Revert_libwine_Import="$2"
 			;;
 		mfplat-MFTRegister)
 			enable_mfplat_MFTRegister="$2"
@@ -4387,6 +4391,18 @@ if test "$enable_makedep_PARENTSPEC" -eq 1; then
 	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
 	(
 		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset makefiles-Revert_libwine_Import
+# |
+# | Modified files:
+# |   *	tools/makedep.c
+# |
+if test "$enable_makefiles_Revert_libwine_Import" -eq 1; then
+	patch_apply makefiles-Revert_libwine_Import/0001-Revert-makefiles-Explicitly-import-libwine-only-for-.patch
+	(
+		echo '+    { "Erich E. Hoover", "Revert \"makefiles: Explicitly import libwine only for Windows builds.\".", 1 },';
 	) >> "$patchlist"
 fi
 

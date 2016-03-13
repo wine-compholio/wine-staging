@@ -207,6 +207,7 @@ patch_enable_all ()
 	enable_ntdll_DllRedirects="$1"
 	enable_ntdll_EtwRegisterTraceGuids="$1"
 	enable_ntdll_Exception="$1"
+	enable_ntdll_FSCTL_PIPE_LISTEN="$1"
 	enable_ntdll_FileDispositionInformation="$1"
 	enable_ntdll_FileFsFullSizeInformation="$1"
 	enable_ntdll_FileFsVolumeInformation="$1"
@@ -785,6 +786,9 @@ patch_enable ()
 			;;
 		ntdll-Exception)
 			enable_ntdll_Exception="$2"
+			;;
+		ntdll-FSCTL_PIPE_LISTEN)
+			enable_ntdll_FSCTL_PIPE_LISTEN="$2"
 			;;
 		ntdll-FileDispositionInformation)
 			enable_ntdll_FileDispositionInformation="$2"
@@ -2191,12 +2195,16 @@ if test "$enable_ntdll_ApiSetQueryApiSetPresence" -eq 1; then
 fi
 
 if test "$enable_kernel32_Named_Pipe" -eq 1; then
+	if test "$enable_ntdll_FSCTL_PIPE_LISTEN" -gt 1; then
+		abort "Patchset ntdll-FSCTL_PIPE_LISTEN disabled, but kernel32-Named_Pipe depends on that."
+	fi
 	if test "$enable_rpcrt4_Pipe_Transport" -gt 1; then
 		abort "Patchset rpcrt4-Pipe_Transport disabled, but kernel32-Named_Pipe depends on that."
 	fi
 	if test "$enable_server_Desktop_Refcount" -gt 1; then
 		abort "Patchset server-Desktop_Refcount disabled, but kernel32-Named_Pipe depends on that."
 	fi
+	enable_ntdll_FSCTL_PIPE_LISTEN=1
 	enable_rpcrt4_Pipe_Transport=1
 	enable_server_Desktop_Refcount=1
 fi
@@ -4103,6 +4111,22 @@ if test "$enable_kernel32_LocaleNameToLCID" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-FSCTL_PIPE_LISTEN
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/pipe.c, dlls/ntdll/file.c, dlls/ntdll/tests/pipe.c
+# |
+if test "$enable_ntdll_FSCTL_PIPE_LISTEN" -eq 1; then
+	patch_apply ntdll-FSCTL_PIPE_LISTEN/0001-ntdll-tests-Add-tests-for-iosb.Status-value-after-pe.patch
+	patch_apply ntdll-FSCTL_PIPE_LISTEN/0002-kernel32-tests-Add-additional-tests-for-overlapped-h.patch
+	patch_apply ntdll-FSCTL_PIPE_LISTEN/0003-ntdll-Do-not-update-iosb.Status-after-FSCTL_PIPE_LIS.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for iosb.Status value after pending FSCTL_PIPE_LISTEN call.", 1 },';
+		echo '+    { "Michael Müller", "kernel32/tests: Add additional tests for overlapped handling of CreateNamedPipe.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Do not update iosb.Status after FSCTL_PIPE_LISTEN call.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset rpcrt4-Pipe_Transport
 # |
 # | Modified files:
@@ -4144,7 +4168,7 @@ fi
 # Patchset kernel32-Named_Pipe
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	rpcrt4-Pipe_Transport, server-Desktop_Refcount
+# |   *	ntdll-FSCTL_PIPE_LISTEN, rpcrt4-Pipe_Transport, server-Desktop_Refcount
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#17195] Support for named pipe message mode (Linux only)
@@ -5215,7 +5239,7 @@ fi
 # Patchset ntdll-WriteWatches
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	rpcrt4-Pipe_Transport, server-Desktop_Refcount, kernel32-Named_Pipe, ws2_32-WriteWatches
+# |   *	ntdll-FSCTL_PIPE_LISTEN, rpcrt4-Pipe_Transport, server-Desktop_Refcount, kernel32-Named_Pipe, ws2_32-WriteWatches
 # |
 # | Modified files:
 # |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/file.c
@@ -5812,7 +5836,7 @@ fi
 # Patchset server-Pipe_ObjectName
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	rpcrt4-Pipe_Transport, server-Desktop_Refcount, kernel32-Named_Pipe
+# |   *	ntdll-FSCTL_PIPE_LISTEN, rpcrt4-Pipe_Transport, server-Desktop_Refcount, kernel32-Named_Pipe
 # |
 # | Modified files:
 # |   *	dlls/ntdll/tests/om.c, server/named_pipe.c, server/object.c, server/object.h

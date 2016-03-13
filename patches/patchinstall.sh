@@ -171,6 +171,7 @@ patch_enable_all ()
 	enable_kernel32_FreeUserPhysicalPages="$1"
 	enable_kernel32_GetCurrentPackageFamilyName="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
+	enable_kernel32_GetOverlappedResult="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
@@ -676,6 +677,9 @@ patch_enable ()
 			;;
 		kernel32-GetFinalPathNameByHandle)
 			enable_kernel32_GetFinalPathNameByHandle="$2"
+			;;
+		kernel32-GetOverlappedResult)
+			enable_kernel32_GetOverlappedResult="$2"
 			;;
 		kernel32-LocaleNameToLCID)
 			enable_kernel32_LocaleNameToLCID="$2"
@@ -4069,6 +4073,18 @@ if test "$enable_kernel32_FindFirstFile" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "kernel32: Strip invalid characters from mask in FindFirstFileExW.", 1 },';
 		echo '+    { "Michael Müller", "kernel32/tests: Add tests for FindFirstFileA with invalid characters.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-GetOverlappedResult
+# |
+# | Modified files:
+# |   *	dlls/kernel32/file.c, dlls/kernel32/tests/file.c
+# |
+if test "$enable_kernel32_GetOverlappedResult" -eq 1; then
+	patch_apply kernel32-GetOverlappedResult/0001-kernel32-Fix-handling-of-GetOverlappedResult-when-st.patch
+	(
+		echo '+    { "Sebastian Lackner", "kernel32: Fix handling of GetOverlappedResult when status remains STATUS_PENDING.", 1 },';
 	) >> "$patchlist"
 fi
 

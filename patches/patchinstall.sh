@@ -6838,12 +6838,13 @@ fi
 # |   *	[#40273] Implement windowscodecs.WICCreateBitmapFromSection(Ex)
 # |
 # | Modified files:
-# |   *	dlls/windowscodecs/imgfactory.c, dlls/windowscodecs/windowscodecs.spec, include/wincodec.idl
+# |   *	dlls/windowscodecs/bitmap.c, dlls/windowscodecs/imgfactory.c, dlls/windowscodecs/windowscodecs.spec,
+# | 	include/wincodec.idl
 # |
 if test "$enable_windowscodecs_WICCreateBitmapFromSection" -eq 1; then
 	patch_apply windowscodecs-WICCreateBitmapFromSection/0001-windowscodecs-Implement-WICCreateBitmapFromSection-E.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement WICCreateBitmapFromSection(Ex).", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement WICCreateBitmapFromSection(Ex).", 2 },';
 	) >> "$patchlist"
 fi
 

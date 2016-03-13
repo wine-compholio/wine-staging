@@ -1,19 +1,124 @@
-From 398633bacedfe65ead524f9eee28faaeb9b65204 Mon Sep 17 00:00:00 2001
+From 751e4a44db847913d76615f6ec583c2f4c18c905 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Fri, 11 Mar 2016 03:48:46 +0100
-Subject: windowscodecs: Implement WICCreateBitmapFromSection(Ex).
+Subject: windowscodecs: Implement WICCreateBitmapFromSection(Ex). (v2)
 
 ---
- dlls/windowscodecs/imgfactory.c       | 48 +++++++++++++++++++++++++++++++++++
- dlls/windowscodecs/windowscodecs.spec |  3 ++-
- include/wincodec.idl                  |  8 ++++++
- 3 files changed, 58 insertions(+), 1 deletion(-)
+ dlls/windowscodecs/bitmap.c           | 27 ++++++++-----
+ dlls/windowscodecs/imgfactory.c       | 73 ++++++++++++++++++++++++++++++++++-
+ dlls/windowscodecs/windowscodecs.spec |  3 +-
+ include/wincodec.idl                  |  8 ++++
+ 4 files changed, 100 insertions(+), 11 deletions(-)
 
+diff --git a/dlls/windowscodecs/bitmap.c b/dlls/windowscodecs/bitmap.c
+index 85d0076..2fa19b4 100644
+--- a/dlls/windowscodecs/bitmap.c
++++ b/dlls/windowscodecs/bitmap.c
+@@ -46,6 +46,7 @@ typedef struct BitmapImpl {
+     int palette_set;
+     LONG lock; /* 0 if not locked, -1 if locked for writing, count if locked for reading */
+     BYTE *data;
++    BOOL is_section; /* TRUE if data is a section created by an application */
+     UINT width, height;
+     UINT stride;
+     UINT bpp;
+@@ -285,7 +286,10 @@ static ULONG WINAPI BitmapImpl_Release(IWICBitmap *iface)
+         if (This->palette) IWICPalette_Release(This->palette);
+         This->cs.DebugInfo->Spare[0] = 0;
+         DeleteCriticalSection(&This->cs);
+-        HeapFree(GetProcessHeap(), 0, This->data);
++        if (This->is_section)
++            UnmapViewOfFile(This->data);
++        else
++            HeapFree(GetProcessHeap(), 0, This->data);
+         HeapFree(GetProcessHeap(), 0, This);
+     }
+ 
+@@ -695,13 +699,12 @@ static const IMILUnknown2Vtbl IMILUnknown2Impl_Vtbl =
+ };
+ 
+ HRESULT BitmapImpl_Create(UINT uiWidth, UINT uiHeight,
+-    UINT stride, UINT datasize, BYTE *bits,
++    UINT stride, UINT datasize, BYTE *data,
+     REFWICPixelFormatGUID pixelFormat, WICBitmapCreateCacheOption option,
+     IWICBitmap **ppIBitmap)
+ {
+     HRESULT hr;
+     BitmapImpl *This;
+-    BYTE *data;
+     UINT bpp;
+ 
+     hr = get_pixelformat_bpp(pixelFormat, &bpp);
+@@ -714,14 +717,20 @@ HRESULT BitmapImpl_Create(UINT uiWidth, UINT uiHeight,
+     if (stride < ((bpp*uiWidth)+7)/8) return E_INVALIDARG;
+ 
+     This = HeapAlloc(GetProcessHeap(), 0, sizeof(BitmapImpl));
+-    data = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, datasize);
+-    if (!This || !data)
++    if (!This) return E_OUTOFMEMORY;
++
++    if (!data)
+     {
+-        HeapFree(GetProcessHeap(), 0, This);
+-        HeapFree(GetProcessHeap(), 0, data);
+-        return E_OUTOFMEMORY;
++        data = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, datasize);
++        if (!data)
++        {
++            HeapFree(GetProcessHeap(), 0, This);
++            return E_OUTOFMEMORY;
++        }
++        This->is_section = FALSE;
+     }
+-    if (bits) memcpy(data, bits, datasize);
++    else
++        This->is_section = TRUE;
+ 
+     This->IWICBitmap_iface.lpVtbl = &BitmapImpl_Vtbl;
+     This->IMILBitmapSource_iface.lpVtbl = &IMILBitmapImpl_Vtbl;
 diff --git a/dlls/windowscodecs/imgfactory.c b/dlls/windowscodecs/imgfactory.c
-index f2455fc..c3029b6 100644
+index f2455fc..d6c4c64 100644
 --- a/dlls/windowscodecs/imgfactory.c
 +++ b/dlls/windowscodecs/imgfactory.c
-@@ -1174,3 +1174,51 @@ HRESULT ComponentFactory_CreateInstance(REFIID iid, void** ppv)
+@@ -597,12 +597,36 @@ static HRESULT WINAPI ComponentFactory_CreateBitmapFromMemory(IWICComponentFacto
+     UINT width, UINT height, REFWICPixelFormatGUID format, UINT stride,
+     UINT size, BYTE *buffer, IWICBitmap **bitmap)
+ {
++    HRESULT hr;
++
+     TRACE("(%p,%u,%u,%s,%u,%u,%p,%p\n", iface, width, height,
+         debugstr_guid(format), stride, size, buffer, bitmap);
+ 
+     if (!stride || !size || !buffer || !bitmap) return E_INVALIDARG;
+ 
+-    return BitmapImpl_Create(width, height, stride, size, buffer, format, WICBitmapCacheOnLoad, bitmap);
++    hr = BitmapImpl_Create(width, height, stride, size, NULL, format, WICBitmapCacheOnLoad, bitmap);
++    if (SUCCEEDED(hr))
++    {
++        IWICBitmapLock *lock;
++
++        hr = IWICBitmap_Lock(*bitmap, NULL, WICBitmapLockWrite, &lock);
++        if (SUCCEEDED(hr))
++        {
++            UINT buffersize;
++            BYTE *data;
++
++            IWICBitmapLock_GetDataPointer(lock, &buffersize, &data);
++            memcpy(data, buffer, buffersize);
++
++            IWICBitmapLock_Release(lock);
++        }
++        else
++        {
++            IWICBitmap_Release(*bitmap);
++            *bitmap = NULL;
++        }
++    }
++    return hr;
+ }
+ 
+ static BOOL get_16bpp_format(HBITMAP hbm, WICPixelFormatGUID *format)
+@@ -1174,3 +1198,50 @@ HRESULT ComponentFactory_CreateInstance(REFIID iid, void** ppv)
  
      return ret;
  }
@@ -23,7 +128,7 @@ index f2455fc..c3029b6 100644
 +        UINT offset, WICSectionAccessLevel wicaccess, IWICBitmap **bitmap)
 +{
 +    DWORD access;
-+    void *mem;
++    void *buffer;
 +    HRESULT hr;
 +
 +    TRACE("%u,%u,%s,%p,%u,%#x,%#x,%p\n", width, height, debugstr_guid(format),
@@ -46,12 +151,11 @@ index f2455fc..c3029b6 100644
 +        return E_INVALIDARG;
 +    }
 +
-+    mem = MapViewOfFile(section, access, 0, offset, 0);
-+    if (!mem) return E_INVALIDARG;
++    buffer = MapViewOfFile(section, access, 0, offset, 0);
++    if (!buffer) return HRESULT_FROM_WIN32(GetLastError());
 +
-+    hr = BitmapImpl_Create(width, height, stride, 0, mem, format, WICBitmapCacheOnLoad, bitmap);
-+
-+    UnmapViewOfFile(mem);
++    hr = BitmapImpl_Create(width, height, stride, 0, buffer, format, WICBitmapCacheOnLoad, bitmap);
++    if (FAILED(hr)) UnmapViewOfFile(buffer);
 +    return hr;
 +}
 +

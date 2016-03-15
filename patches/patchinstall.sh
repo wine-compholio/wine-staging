@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "630f5e97b12c1bc934e44a632d30e9129651bb06"
+	echo "62277fb7779f76341efc71999d59242055be5c31"
 }
 
 # Show version information
@@ -2667,8 +2667,7 @@ fi
 # |   *	configure.ac, dlls/api-ms-win-appmodel-runtime-l1-1-1/Makefile.in, dlls/api-ms-win-appmodel-runtime-l1-1-1/api-ms-win-
 # | 	appmodel-runtime-l1-1-1.spec, dlls/api-ms-win-core-apiquery-l1-1-0/Makefile.in, dlls/api-ms-win-core-apiquery-l1-1-0
 # | 	/api-ms-win-core-apiquery-l1-1-0.spec, dlls/api-ms-win-core-heap-l2-1-0/Makefile.in, dlls/api-ms-win-core-heap-l2-1-0
-# | 	/api-ms-win-core-heap-l2-1-0.spec, dlls/api-ms-win-core-memory-l1-1-2/Makefile.in, dlls/api-ms-win-core-memory-l1-1-2
-# | 	/api-ms-win-core-memory-l1-1-2.spec, dlls/api-ms-win-core-quirks-l1-1-0/Makefile.in, dlls/api-ms-win-core-quirks-l1-1-0
+# | 	/api-ms-win-core-heap-l2-1-0.spec, dlls/api-ms-win-core-quirks-l1-1-0/Makefile.in, dlls/api-ms-win-core-quirks-l1-1-0
 # | 	/api-ms-win-core-quirks-l1-1-0.spec, dlls/api-ms-win-core-shlwapi-obsolete-l1-2-0/Makefile.in, dlls/api-ms-win-core-
 # | 	shlwapi-obsolete-l1-2-0/api-ms-win-core-shlwapi-obsolete-l1-2-0.spec, dlls/api-ms-win-rtcore-ntuser-
 # | 	draw-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/api-ms-win-rtcore-ntuser-draw-l1-1-0.spec, dlls/api-
@@ -2703,20 +2702,19 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0010-ext-ms-win-appmodel-usercontext-l1-1-0-Add-dll-and-a.patch
 	patch_apply api-ms-win-Stub_DLLs/0011-api-ms-win-shcore-thread-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0012-ext-ms-win-xaml-pal-l1-1-0-Add-stub-for-GetThemeServ.patch
-	patch_apply api-ms-win-Stub_DLLs/0013-api-ms-win-core-memory-l1-1-2-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0014-api-ms-win-core-shlwapi-obsolete-l1-2-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0015-api-ms-win-shcore-stream-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0016-ext-ms-win-ntuser-mouse-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0017-ext-ms-win-uxtheme-themes-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0018-api-ms-win-rtcore-ntuser-window-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0019-ext-ms-win-rtcore-ntuser-syscolors-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0020-api-ms-win-rtcore-ntuser-draw-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0021-ext-ms-win-rtcore-ntuser-sysparams-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0022-ext-ms-win-kernel32-package-current-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0023-shcore-Add-SetProcessDpiAwareness-stub.patch
-	patch_apply api-ms-win-Stub_DLLs/0024-shcore-Implement-stub-for-GetDpiForMonitor.patch
-	patch_apply api-ms-win-Stub_DLLs/0025-kernelbase-Add-stub-for-QuirkIsEnabled3.patch
-	patch_apply api-ms-win-Stub_DLLs/0026-shcore-Add-stub-for-GetProcessDpiAwareness.patch
+	patch_apply api-ms-win-Stub_DLLs/0013-api-ms-win-core-shlwapi-obsolete-l1-2-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0014-api-ms-win-shcore-stream-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0015-ext-ms-win-ntuser-mouse-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0016-ext-ms-win-uxtheme-themes-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0017-api-ms-win-rtcore-ntuser-window-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0018-ext-ms-win-rtcore-ntuser-syscolors-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0019-api-ms-win-rtcore-ntuser-draw-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0020-ext-ms-win-rtcore-ntuser-sysparams-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0021-ext-ms-win-kernel32-package-current-l1-1-0-Add-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0022-shcore-Add-SetProcessDpiAwareness-stub.patch
+	patch_apply api-ms-win-Stub_DLLs/0023-shcore-Implement-stub-for-GetDpiForMonitor.patch
+	patch_apply api-ms-win-Stub_DLLs/0024-kernelbase-Add-stub-for-QuirkIsEnabled3.patch
+	patch_apply api-ms-win-Stub_DLLs/0025-shcore-Add-stub-for-GetProcessDpiAwareness.patch
 	(
 		echo '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-quirks-l1-1-0: Add dll.", 1 },';
@@ -2730,7 +2728,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		echo '+    { "Michael Müller", "ext-ms-win-appmodel-usercontext-l1-1-0: Add dll and add stub for UserContextExtInitialize.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-shcore-thread-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "ext-ms-win-xaml-pal-l1-1-0: Add stub for GetThemeServices.", 1 },';
-		echo '+    { "Michael Müller", "api-ms-win-core-memory-l1-1-2: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-shlwapi-obsolete-l1-2-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-shcore-stream-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "ext-ms-win-ntuser-mouse-l1-1-0: Add dll.", 1 },';

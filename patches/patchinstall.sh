@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "62277fb7779f76341efc71999d59242055be5c31"
+	echo "03ee99b43c2a01ce0e6f77fc0bbc71570a695336"
 }
 
 # Show version information
@@ -3171,7 +3171,7 @@ fi
 # |   *	[#26898] Support for DDS file format in D3DXSaveTextureToFileInMemory
 # |
 # | Modified files:
-# |   *	dlls/d3dx9_36/d3dx9_36_private.h, dlls/d3dx9_36/surface.c, dlls/d3dx9_36/texture.c
+# |   *	dlls/d3dx9_36/d3dx9_private.h, dlls/d3dx9_36/surface.c, dlls/d3dx9_36/texture.c
 # |
 if test "$enable_d3dx9_36_DDS" -eq 1; then
 	patch_apply d3dx9_36-DDS/0001-d3dx9_36-Add-support-for-FOURCC-surface-to-save_dds_.patch
@@ -3209,7 +3209,7 @@ fi
 # |   *	[#33904] Return dummy ID3DXSkinInfo interface when skinning info not present
 # |
 # | Modified files:
-# |   *	dlls/d3dx9_36/d3dx9_36_private.h, dlls/d3dx9_36/mesh.c, dlls/d3dx9_36/skin.c, dlls/d3dx9_36/tests/mesh.c
+# |   *	dlls/d3dx9_36/d3dx9_private.h, dlls/d3dx9_36/mesh.c, dlls/d3dx9_36/skin.c, dlls/d3dx9_36/tests/mesh.c
 # |
 if test "$enable_d3dx9_36_Dummy_Skininfo" -eq 1; then
 	patch_apply d3dx9_36-Dummy_Skininfo/0001-d3dx9_36-Return-dummy-skininfo-interface-in-D3DXLoad.patch

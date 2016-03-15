@@ -193,6 +193,7 @@ patch_enable_all ()
 	enable_mpr_WNetGetUniversalNameW="$1"
 	enable_mscoree_CorValidateImage="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
+	enable_msi_Fix_Stack_Alignment="$1"
 	enable_msidb_Implementation="$1"
 	enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback="$1"
 	enable_msvcrt_Math_Precision="$1"
@@ -746,6 +747,9 @@ patch_enable ()
 			;;
 		mshtml-HTMLLocation_put_hash)
 			enable_mshtml_HTMLLocation_put_hash="$2"
+			;;
+		msi-Fix_Stack_Alignment)
+			enable_msi_Fix_Stack_Alignment="$2"
 			;;
 		msidb-Implementation)
 			enable_msidb_Implementation="$2"
@@ -4504,6 +4508,18 @@ if test "$enable_mshtml_HTMLLocation_put_hash" -eq 1; then
 	patch_apply mshtml-HTMLLocation_put_hash/0001-mshtml-Add-IHTMLLocation-hash-property-s-getter-impl.patch
 	(
 		echo '+    { "Zhenbo Li", "mshtml: Add IHTMLLocation::hash property'\''s getter implementation.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msi-Fix_Stack_Alignment
+# |
+# | Modified files:
+# |   *	dlls/msi/custom.c
+# |
+if test "$enable_msi_Fix_Stack_Alignment" -eq 1; then
+	patch_apply msi-Fix_Stack_Alignment/0001-msi-Fix-stack-alignment-in-CUSTOMPROC_wrapper.patch
+	(
+		echo '+    { "Sebastian Lackner", "msi: Fix stack alignment in CUSTOMPROC_wrapper.", 1 },';
 	) >> "$patchlist"
 fi
 

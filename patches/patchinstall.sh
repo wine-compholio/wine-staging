@@ -154,6 +154,7 @@ patch_enable_all ()
 	enable_hal_KeQueryPerformanceCounter="$1"
 	enable_hid_HidP_TranslateUsagesToI8042ScanCodes="$1"
 	enable_hnetcfg_INetFwAuthorizedApplication="$1"
+	enable_ieframe_ITargetFrame2="$1"
 	enable_ieframe_IViewObject_Draw="$1"
 	enable_iexplore_Revert_ProductVersion="$1"
 	enable_imagehlp_BindImageEx="$1"
@@ -631,6 +632,9 @@ patch_enable ()
 			;;
 		hnetcfg-INetFwAuthorizedApplication)
 			enable_hnetcfg_INetFwAuthorizedApplication="$2"
+			;;
+		ieframe-ITargetFrame2)
+			enable_ieframe_ITargetFrame2="$2"
 			;;
 		ieframe-IViewObject-Draw)
 			enable_ieframe_IViewObject_Draw="$2"
@@ -3847,6 +3851,18 @@ if test "$enable_hnetcfg_INetFwAuthorizedApplication" -eq 1; then
 	patch_apply hnetcfg-INetFwAuthorizedApplication/0001-hnetcfg-Improve-INetFwAuthorizedApplication-get_Proc.patch
 	(
 		echo '+    { "Michael Müller", "hnetcfg: Improve INetFwAuthorizedApplication::get_ProcessImageFileName stub.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ieframe-ITargetFrame2
+# |
+# | Modified files:
+# |   *	dlls/ieframe/navigate.c
+# |
+if test "$enable_ieframe_ITargetFrame2" -eq 1; then
+	patch_apply ieframe-ITargetFrame2/0001-ieframe-Fix-implementation-of-impl_from_ITargetFrame.patch
+	(
+		echo '+    { "Sebastian Lackner", "ieframe: Fix implementation of impl_from_ITargetFrame2.", 1 },';
 	) >> "$patchlist"
 fi
 

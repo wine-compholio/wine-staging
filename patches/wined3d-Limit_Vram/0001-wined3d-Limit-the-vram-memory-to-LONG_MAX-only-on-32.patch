@@ -1,0 +1,38 @@
+From ce91232e6d3e1dcb7b1571a9dfae76ea7a530757 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 20 Mar 2016 22:34:03 +0100
+Subject: wined3d: Limit the vram memory to LONG_MAX only on 32 bit.
+
+Unlike the author of the original patch pretends, this code also affects 64 bit
+versions of Windows. Windows XP 64 bit uses 5.2 as verison number and is in
+fact the default version used by Wine. This patch compiles the limitation only
+on 32 bit and therefore does not affect a default 64 bit wine prefix when using
+64 bit software. The original patch also didn't work on Windows 3.1 (3.10),
+98 (4.10), ME (4.90) or NT 3.51 (3.51) due to the wrong version compare.
+---
+ dlls/wined3d/directx.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/wined3d/directx.c b/dlls/wined3d/directx.c
+index da66aac..c2b7583 100644
+--- a/dlls/wined3d/directx.c
++++ b/dlls/wined3d/directx.c
+@@ -1528,12 +1528,14 @@ static void init_driver_info(struct wined3d_driver_info *driver_info,
+      * In order to avoid this application bug we limit the amount of video memory
+      * to LONG_MAX for older Windows versions.
+      */
+-    if (os_version.dwMajorVersion <= 5 && os_version.dwMinorVersion <= 2
++#ifdef __i386__
++    if ((os_version.dwMajorVersion < 5 || (os_version.dwMajorVersion == 5 && os_version.dwMinorVersion <= 2))
+             && driver_info->vram_bytes > LONG_MAX)
+     {
+         TRACE("Limiting amount of video memory to %#lx bytes for OS version older than Vista.\n", LONG_MAX);
+         driver_info->vram_bytes = LONG_MAX;
+     }
++#endif
+ 
+     /* Try to obtain driver version information for the current Windows version. This fails in
+      * some cases:
+-- 
+2.7.1
+

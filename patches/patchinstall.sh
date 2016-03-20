@@ -358,6 +358,7 @@ patch_enable_all ()
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Geforce_425M="$1"
+	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_resource_map="$1"
@@ -1243,6 +1244,9 @@ patch_enable ()
 			;;
 		wined3d-Geforce_425M)
 			enable_wined3d_Geforce_425M="$2"
+			;;
+		wined3d-Limit_Vram)
+			enable_wined3d_Limit_Vram="$2"
 			;;
 		wined3d-Revert_PixelFormat)
 			enable_wined3d_Revert_PixelFormat="$2"
@@ -7086,6 +7090,18 @@ if test "$enable_wined3d_Geforce_425M" -eq 1; then
 	patch_apply wined3d-Geforce_425M/0001-wined3d-Add-detection-for-NVIDIA-GeForce-425M.patch
 	(
 		echo '+    { "Jarkko Korpi", "wined3d: Add detection for NVIDIA GeForce 425M.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Limit_Vram
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c
+# |
+if test "$enable_wined3d_Limit_Vram" -eq 1; then
+	patch_apply wined3d-Limit_Vram/0001-wined3d-Limit-the-vram-memory-to-LONG_MAX-only-on-32.patch
+	(
+		echo '+    { "Michael Müller", "wined3d: Limit the vram memory to LONG_MAX only on 32 bit.", 1 },';
 	) >> "$patchlist"
 fi
 

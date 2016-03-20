@@ -6867,8 +6867,10 @@ fi
 # |
 if test "$enable_vulkan_Vulkan_Implementation" -eq 1; then
 	patch_apply vulkan-Vulkan_Implementation/0001-vulkan-Initial-implementation.patch
+	patch_apply vulkan-Vulkan_Implementation/0002-vulkan-Implement-vkGetPhysicalDeviceWin32Presentatio.patch
 	(
 		echo '+    { "Sebastian Lackner", "vulkan: Initial implementation.", 1 },';
+		echo '+    { "Michael Müller", "vulkan: Implement vkGetPhysicalDeviceWin32PresentationSupportKHR.", 1 },';
 	) >> "$patchlist"
 fi
 

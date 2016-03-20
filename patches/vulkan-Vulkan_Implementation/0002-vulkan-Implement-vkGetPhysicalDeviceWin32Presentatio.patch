@@ -1,0 +1,183 @@
+From 52134024b89df5cbd86192a948631fe4281f6515 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 20 Mar 2016 06:47:56 +0100
+Subject: vulkan: Implement vkGetPhysicalDeviceWin32PresentationSupportKHR.
+
+---
+ dlls/vulkan/vulkan_main.c    | 55 +++++++++++++++++++++++++++++++++++++++++---
+ dlls/vulkan/vulkan_private.h | 10 ++++++++
+ dlls/vulkan/vulkan_thunks.c  | 23 ++++++++++++++++++
+ 3 files changed, 85 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/vulkan/vulkan_main.c b/dlls/vulkan/vulkan_main.c
+index 1cc30d1..76a27ec 100644
+--- a/dlls/vulkan/vulkan_main.c
++++ b/dlls/vulkan/vulkan_main.c
+@@ -43,6 +43,9 @@ static Display *display;
+ 
+ #if defined(HAVE_X11_XLIB_H) && defined(SONAME_LIBX11_XCB)
+ static void *libx11_xcb_handle;
++static typeof(xcb_get_setup) *pxcb_get_setup;
++static typeof(xcb_screen_next) *pxcb_screen_next;
++static typeof(xcb_setup_roots_iterator) *pxcb_setup_roots_iterator;
+ static typeof(XGetXCBConnection) *pXGetXCBConnection;
+ 
+ static BOOL init_x11_xcb( void )
+@@ -53,7 +56,11 @@ static BOOL init_x11_xcb( void )
+         return FALSE;
+     }
+ 
+-    pXGetXCBConnection = wine_dlsym( libx11_xcb_handle, "XGetXCBConnection", NULL, 0 );
++    pxcb_get_setup              = wine_dlsym( libx11_xcb_handle, "xcb_get_setup", NULL, 0 );
++    pxcb_screen_next            = wine_dlsym( libx11_xcb_handle, "xcb_screen_next", NULL, 0 );
++    pxcb_setup_roots_iterator   = wine_dlsym( libx11_xcb_handle, "xcb_setup_roots_iterator", NULL, 0 );
++    pXGetXCBConnection          = wine_dlsym( libx11_xcb_handle, "XGetXCBConnection", NULL, 0 );
++
+     return TRUE;
+ }
+ 
+@@ -241,14 +248,56 @@ VkResult WINAPI vkCreateWin32SurfaceKHR( VkInstance instance,
+     return res;
+ }
+ 
++#if defined(HAVE_X11_XLIB_H) && defined(SONAME_LIBX11_XCB)
++static xcb_screen_t *get_xcb_screen( xcb_connection_t *connection, int screen )
++{
++    xcb_screen_iterator_t iter = pxcb_setup_roots_iterator( pxcb_get_setup(connection) );
++    for (; iter.rem; screen--)
++    {
++        if (!screen) return iter.data;
++        pxcb_screen_next( &iter );
++    }
++    return NULL;
++}
++#endif
++
+ /***********************************************************************
+  *              vkGetPhysicalDeviceWin32PresentationSupportKHR (VULKAN.@)
+  */
+ VkBool32 WINAPI vkGetPhysicalDeviceWin32PresentationSupportKHR( VkPhysicalDevice physicalDevice,
+         uint32_t queueFamilyIndex )
+ {
+-    FIXME( "(%p, %u): stub\n", physicalDevice, queueFamilyIndex );
+-    return VK_FALSE;
++    VkResult res = VK_ERROR_INCOMPATIBLE_DRIVER;
++
++    TRACE( "(%p, %u)\n", physicalDevice, queueFamilyIndex );
++
++#if defined(HAVE_X11_XLIB_H) && defined(SONAME_LIBX11_XCB)
++    if (pxcb_get_setup && pxcb_screen_next && pxcb_setup_roots_iterator &&
++        pXGetXCBConnection && res == VK_ERROR_INCOMPATIBLE_DRIVER)
++    {
++        xcb_connection_t *connection = pXGetXCBConnection( display );
++        xcb_screen_t *screen = get_xcb_screen( connection, XDefaultScreen(display) );
++        if (screen)
++        {
++            res = p_vkGetPhysicalDeviceXcbPresentationSupportKHR( physicalDevice, queueFamilyIndex,
++                    connection, screen->root_visual );
++        }
++        else
++            ERR( "failed to find default screen\n" );
++    }
++#endif
++
++#if defined(HAVE_X11_XLIB_H)
++    if (res == VK_ERROR_INCOMPATIBLE_DRIVER)
++    {
++        Visual *visual = XDefaultVisual( display, XDefaultScreen(display) );
++        VisualID visual_id = XVisualIDFromVisual( visual );
++        res = p_vkGetPhysicalDeviceXlibPresentationSupportKHR( physicalDevice, queueFamilyIndex,
++                display, visual_id );
++    }
++#endif
++
++    return res;
+ }
+ 
+ /***********************************************************************
+diff --git a/dlls/vulkan/vulkan_private.h b/dlls/vulkan/vulkan_private.h
+index 0f85854..1d5767a 100644
+--- a/dlls/vulkan/vulkan_private.h
++++ b/dlls/vulkan/vulkan_private.h
+@@ -63,6 +63,9 @@ typedef void *PFN_vkVoidFunction;
+ typedef void *PFN_vkVoidFunction_host;
+ typedef void *VK_DEFINE_HANDLE;
+ typedef uint64_t VK_DEFINE_NON_DISPATCHABLE_HANDLE;
++#if !defined(HAVE_X11_XLIB_H)
++typedef uint32_t VisualID;
++#endif
+ typedef uint32_t VkAccessFlags;
+ typedef uint32_t VkAttachmentDescriptionFlags;
+ typedef int VkAttachmentLoadOp;
+@@ -211,6 +214,9 @@ typedef unsigned long int Window;
+ typedef struct xcb_connection_t xcb_connection_t;
+ #endif
+ #if !defined(HAVE_X11_XLIB_XCB_H)
++typedef uint32_t xcb_visualid_t;
++#endif
++#if !defined(HAVE_X11_XLIB_XCB_H)
+ typedef uint32_t xcb_window_t;
+ #endif
+ 
+@@ -2352,6 +2358,10 @@ extern VkResult (*p_vkGetPhysicalDeviceSurfacePresentModesKHR)( VkPhysicalDevice
+         uint32_t *, VkPresentModeKHR * ) DECLSPEC_HIDDEN;
+ extern VkResult (*p_vkGetPhysicalDeviceSurfaceSupportKHR)( VkPhysicalDevice, uint32_t,
+         VkSurfaceKHR, VkBool32 * ) DECLSPEC_HIDDEN;
++extern VkBool32 (*p_vkGetPhysicalDeviceXcbPresentationSupportKHR)( VkPhysicalDevice, uint32_t,
++        xcb_connection_t *, xcb_visualid_t ) DECLSPEC_HIDDEN;
++extern VkBool32 (*p_vkGetPhysicalDeviceXlibPresentationSupportKHR)( VkPhysicalDevice, uint32_t,
++        Display *, VisualID ) DECLSPEC_HIDDEN;
+ extern VkResult (*p_vkGetPipelineCacheData)( VkDevice, VkPipelineCache, size_t *,
+         void * ) DECLSPEC_HIDDEN;
+ extern VkResult (*p_vkGetQueryPoolResults)( VkDevice, VkQueryPool, uint32_t, uint32_t, size_t,
+diff --git a/dlls/vulkan/vulkan_thunks.c b/dlls/vulkan/vulkan_thunks.c
+index 8af28e7c..8333cb7 100644
+--- a/dlls/vulkan/vulkan_thunks.c
++++ b/dlls/vulkan/vulkan_thunks.c
+@@ -3844,6 +3844,23 @@ static VkResult null_vkGetPhysicalDeviceSurfaceSupportKHR( VkPhysicalDevice phys
+     return VK_ERROR_INCOMPATIBLE_DRIVER;
+ }
+ 
++static VkBool32 null_vkGetPhysicalDeviceXcbPresentationSupportKHR( VkPhysicalDevice physicalDevice,
++        uint32_t queueFamilyIndex, xcb_connection_t *connection, xcb_visualid_t visual_id )
++{
++    FIXME( "(%p, %u, %p, %u) not supported\n", physicalDevice, queueFamilyIndex, connection,
++            visual_id );
++    return VK_FALSE;
++}
++
++static VkBool32 null_vkGetPhysicalDeviceXlibPresentationSupportKHR(
++        VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, Display *dpy,
++        VisualID visualID )
++{
++    FIXME( "(%p, %u, %p, %u) not supported\n", physicalDevice, queueFamilyIndex, dpy,
++            (uint32_t)visualID );
++    return VK_FALSE;
++}
++
+ static VkResult null_vkGetPipelineCacheData( VkDevice device, VkPipelineCache pipelineCache,
+         size_t *pDataSize, void *pData )
+ {
+@@ -4265,6 +4282,10 @@ VkResult (*p_vkGetPhysicalDeviceSurfacePresentModesKHR)( VkPhysicalDevice, VkSur
+         uint32_t *, VkPresentModeKHR * ) = null_vkGetPhysicalDeviceSurfacePresentModesKHR;
+ VkResult (*p_vkGetPhysicalDeviceSurfaceSupportKHR)( VkPhysicalDevice, uint32_t, VkSurfaceKHR,
+         VkBool32 * ) = null_vkGetPhysicalDeviceSurfaceSupportKHR;
++VkBool32 (*p_vkGetPhysicalDeviceXcbPresentationSupportKHR)( VkPhysicalDevice, uint32_t,
++        xcb_connection_t *, xcb_visualid_t ) = null_vkGetPhysicalDeviceXcbPresentationSupportKHR;
++VkBool32 (*p_vkGetPhysicalDeviceXlibPresentationSupportKHR)( VkPhysicalDevice, uint32_t, Display *,
++        VisualID ) = null_vkGetPhysicalDeviceXlibPresentationSupportKHR;
+ VkResult (*p_vkGetPipelineCacheData)( VkDevice, VkPipelineCache, size_t *, void * ) =
+         null_vkGetPipelineCacheData;
+ VkResult (*p_vkGetQueryPoolResults)( VkDevice, VkQueryPool, uint32_t, uint32_t, size_t, void *,
+@@ -6520,6 +6541,8 @@ function_table[] =
+     DEFINE_FUNCTION( vkGetPhysicalDeviceSurfaceFormatsKHR )
+     DEFINE_FUNCTION( vkGetPhysicalDeviceSurfacePresentModesKHR )
+     DEFINE_FUNCTION( vkGetPhysicalDeviceSurfaceSupportKHR )
++    DEFINE_FUNCTION( vkGetPhysicalDeviceXcbPresentationSupportKHR )
++    DEFINE_FUNCTION( vkGetPhysicalDeviceXlibPresentationSupportKHR )
+     DEFINE_FUNCTION( vkGetPipelineCacheData )
+     DEFINE_FUNCTION( vkGetQueryPoolResults )
+     DEFINE_FUNCTION( vkGetRenderAreaGranularity )
+-- 
+2.7.1
+

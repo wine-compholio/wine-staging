@@ -7140,19 +7140,17 @@ fi
 # |   *	[#37042] Implement exclusive mode in PulseAudio backend
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/winealsa.drv/Makefile.in, dlls/winepulse.drv/Makefile.in, dlls/winepulse.drv/mmdevdrv.c
+# |   *	dlls/winepulse.drv/Makefile.in, dlls/winepulse.drv/mmdevdrv.c
 # |
 if test "$enable_winepulse_PulseAudio_Support" -eq 1; then
-	patch_apply winepulse-PulseAudio_Support/0001-winepulse.drv-Use-delay-import-for-winealsa.drv.patch
-	patch_apply winepulse-PulseAudio_Support/0002-winepulse.drv-Use-a-separate-mainloop-and-ctx-for-pu.patch
-	patch_apply winepulse-PulseAudio_Support/0003-winepulse-expose-audio-devices-directly-to-programs.patch
-	patch_apply winepulse-PulseAudio_Support/0004-winepulse-implement-exclusive-mode.patch
-	patch_apply winepulse-PulseAudio_Support/0005-winepulse-fix-segfault-in-pulse_rd_loop.patch
-	patch_apply winepulse-PulseAudio_Support/0006-winepulse-implement-GetPropValue.patch
-	patch_apply winepulse-PulseAudio_Support/0007-winepulse-fetch-actual-program-name-if-possible.patch
-	patch_apply winepulse-PulseAudio_Support/0008-winepulse-return-PKEY_AudioEndpoint_PhysicalSpeakers.patch
+	patch_apply winepulse-PulseAudio_Support/0001-winepulse.drv-Use-a-separate-mainloop-and-ctx-for-pu.patch
+	patch_apply winepulse-PulseAudio_Support/0002-winepulse-expose-audio-devices-directly-to-programs.patch
+	patch_apply winepulse-PulseAudio_Support/0003-winepulse-implement-exclusive-mode.patch
+	patch_apply winepulse-PulseAudio_Support/0004-winepulse-fix-segfault-in-pulse_rd_loop.patch
+	patch_apply winepulse-PulseAudio_Support/0005-winepulse-implement-GetPropValue.patch
+	patch_apply winepulse-PulseAudio_Support/0006-winepulse-fetch-actual-program-name-if-possible.patch
+	patch_apply winepulse-PulseAudio_Support/0007-winepulse-return-PKEY_AudioEndpoint_PhysicalSpeakers.patch
 	(
-		echo '+    { "Sebastian Lackner", "winepulse.drv: Use delay import for winealsa.drv.", 1 },';
 		echo '+    { "Sebastian Lackner", "winepulse.drv: Use a separate mainloop and ctx for pulse_test_connect.", 1 },';
 		echo '+    { "Mark Harmstone", "winepulse: Expose audio devices directly to programs.", 1 },';
 		echo '+    { "Mark Harmstone", "winepulse: Implement exclusive mode.", 1 },';

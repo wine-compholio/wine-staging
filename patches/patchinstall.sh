@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "03ee99b43c2a01ce0e6f77fc0bbc71570a695336"
+	echo "bd332f53f2d7b618e313572159cd7e70e4efb0fc"
 }
 
 # Show version information
@@ -154,7 +154,6 @@ patch_enable_all ()
 	enable_hal_KeQueryPerformanceCounter="$1"
 	enable_hid_HidP_TranslateUsagesToI8042ScanCodes="$1"
 	enable_hnetcfg_INetFwAuthorizedApplication="$1"
-	enable_ieframe_ITargetFrame2="$1"
 	enable_ieframe_IViewObject_Draw="$1"
 	enable_iexplore_Revert_ProductVersion="$1"
 	enable_imagehlp_BindImageEx="$1"
@@ -289,7 +288,6 @@ patch_enable_all ()
 	enable_setupapi_DelReg="$1"
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_Display_Device="$1"
-	enable_setupapi_Fix_Parser="$1"
 	enable_setupapi_HSPFILEQ_Check_Type="$1"
 	enable_setupapi_SetupDiSetDeviceInstallParamsW="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
@@ -359,7 +357,6 @@ patch_enable_all ()
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Geforce_425M="$1"
-	enable_wined3d_MESA_GPU_Info="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_resource_map="$1"
@@ -632,9 +629,6 @@ patch_enable ()
 			;;
 		hnetcfg-INetFwAuthorizedApplication)
 			enable_hnetcfg_INetFwAuthorizedApplication="$2"
-			;;
-		ieframe-ITargetFrame2)
-			enable_ieframe_ITargetFrame2="$2"
 			;;
 		ieframe-IViewObject-Draw)
 			enable_ieframe_IViewObject_Draw="$2"
@@ -1038,9 +1032,6 @@ patch_enable ()
 		setupapi-Display_Device)
 			enable_setupapi_Display_Device="$2"
 			;;
-		setupapi-Fix_Parser)
-			enable_setupapi_Fix_Parser="$2"
-			;;
 		setupapi-HSPFILEQ_Check_Type)
 			enable_setupapi_HSPFILEQ_Check_Type="$2"
 			;;
@@ -1247,9 +1238,6 @@ patch_enable ()
 			;;
 		wined3d-Geforce_425M)
 			enable_wined3d_Geforce_425M="$2"
-			;;
-		wined3d-MESA_GPU_Info)
-			enable_wined3d_MESA_GPU_Info="$2"
 			;;
 		wined3d-Revert_PixelFormat)
 			enable_wined3d_Revert_PixelFormat="$2"
@@ -1985,13 +1973,6 @@ if test "$enable_wpcap_Dynamic_Linking" -eq 1; then
 		abort "Patchset wpcap-Several_Fixes disabled, but wpcap-Dynamic_Linking depends on that."
 	fi
 	enable_wpcap_Several_Fixes=1
-fi
-
-if test "$enable_wined3d_MESA_GPU_Info" -eq 1; then
-	if test "$enable_wined3d_Accounting" -gt 1; then
-		abort "Patchset wined3d-Accounting disabled, but wined3d-MESA_GPU_Info depends on that."
-	fi
-	enable_wined3d_Accounting=1
 fi
 
 if test "$enable_wined3d_CSMT_Helper" -eq 1; then
@@ -3851,18 +3832,6 @@ if test "$enable_hnetcfg_INetFwAuthorizedApplication" -eq 1; then
 	patch_apply hnetcfg-INetFwAuthorizedApplication/0001-hnetcfg-Improve-INetFwAuthorizedApplication-get_Proc.patch
 	(
 		echo '+    { "Michael Müller", "hnetcfg: Improve INetFwAuthorizedApplication::get_ProcessImageFileName stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ieframe-ITargetFrame2
-# |
-# | Modified files:
-# |   *	dlls/ieframe/navigate.c
-# |
-if test "$enable_ieframe_ITargetFrame2" -eq 1; then
-	patch_apply ieframe-ITargetFrame2/0001-ieframe-Fix-implementation-of-impl_from_ITargetFrame.patch
-	(
-		echo '+    { "Sebastian Lackner", "ieframe: Fix implementation of impl_from_ITargetFrame2.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6047,18 +6016,6 @@ if test "$enable_setupapi_Display_Device" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset setupapi-Fix_Parser
-# |
-# | Modified files:
-# |   *	dlls/setupapi/parser.c, dlls/setupapi/tests/parser.c
-# |
-if test "$enable_setupapi_Fix_Parser" -eq 1; then
-	patch_apply setupapi-Fix_Parser/0001-setupapi-Fix-parsing-of-inf-files-containing-garbage.patch
-	(
-		echo '+    { "Sebastian Lackner", "setupapi: Fix parsing of inf files containing garbage at the beginning.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset setupapi-HSPFILEQ_Check_Type
 # |
 # | This patchset fixes the following Wine bugs:
@@ -7114,21 +7071,6 @@ if test "$enable_wined3d_Geforce_425M" -eq 1; then
 	patch_apply wined3d-Geforce_425M/0001-wined3d-Add-detection-for-NVIDIA-GeForce-425M.patch
 	(
 		echo '+    { "Jarkko Korpi", "wined3d: Add detection for NVIDIA GeForce 425M.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-MESA_GPU_Info
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-Accounting
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_gl.h, dlls/winex11.drv/opengl.c, include/wine/wgl_driver.h
-# |
-if test "$enable_wined3d_MESA_GPU_Info" -eq 1; then
-	patch_apply wined3d-MESA_GPU_Info/0001-wined3d-Use-pci-and-memory-information-from-MESA-if-.patch
-	(
-		echo '+    { "Michael Müller", "wined3d: Use pci and memory information from MESA if possible.", 2 },';
 	) >> "$patchlist"
 fi
 

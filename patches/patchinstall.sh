@@ -83,7 +83,6 @@ patch_enable_all ()
 {
 	enable_Compiler_Warnings="$1"
 	enable_Coverity="$1"
-	enable_Exagear="$1"
 	enable_Pipelight="$1"
 	enable_Staging="$1"
 	enable_advapi32_LsaLookupSids="$1"
@@ -412,9 +411,6 @@ patch_enable ()
 			;;
 		Coverity)
 			enable_Coverity="$2"
-			;;
-		Exagear)
-			enable_Exagear="$2"
 			;;
 		Pipelight)
 			enable_Pipelight="$2"
@@ -2116,6 +2112,13 @@ if test "$enable_ntdll_WinSqm" -eq 1; then
 	enable_ntdll_EtwRegisterTraceGuids=1
 fi
 
+if test "$enable_ntdll_WRITECOPY" -eq 1; then
+	if test "$enable_ws2_32_WriteWatches" -gt 1; then
+		abort "Patchset ws2_32-WriteWatches disabled, but ntdll-WRITECOPY depends on that."
+	fi
+	enable_ws2_32_WriteWatches=1
+fi
+
 if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
 	if test "$enable_ntdll_Exception" -gt 1; then
 		abort "Patchset ntdll-Exception disabled, but ntdll-SystemRoot_Symlink depends on that."
@@ -2325,20 +2328,6 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 	enable_server_Misc_ACL=1
 fi
 
-if test "$enable_Exagear" -eq 1; then
-	if test "$enable_ntdll_WRITECOPY" -gt 1; then
-		abort "Patchset ntdll-WRITECOPY disabled, but Exagear depends on that."
-	fi
-	enable_ntdll_WRITECOPY=1
-fi
-
-if test "$enable_ntdll_WRITECOPY" -eq 1; then
-	if test "$enable_ws2_32_WriteWatches" -gt 1; then
-		abort "Patchset ws2_32-WriteWatches disabled, but ntdll-WRITECOPY depends on that."
-	fi
-	enable_ws2_32_WriteWatches=1
-fi
-
 
 # If autoupdate is enabled then create a tempfile to keep track of all patches
 if test "$enable_patchlist" -eq 1; then
@@ -2378,69 +2367,6 @@ if test "$enable_Coverity" -eq 1; then
 	(
 		echo '+    { "André Hentschel", "sfnt2fon: Don'\''t leak output name if specified multiple times (Coverity).", 1 },';
 		echo '+    { "André Hentschel", "winedump: Free debug string in case it was not freed in for-loop (Coverity).", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ws2_32-WriteWatches
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/signal_i386.c, dlls/ntdll/virtual.c, dlls/ws2_32/socket.c,
-# | 	include/winternl.h
-# |
-if test "$enable_ws2_32_WriteWatches" -eq 1; then
-	patch_apply ws2_32-WriteWatches/0001-ntdll-Expose-wine_uninterrupted_-read-write-_memory-.patch
-	patch_apply ws2_32-WriteWatches/0002-ws2_32-Avoid-race-conditions-of-async-WSARecv-operat.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Expose wine_uninterrupted_[read|write]_memory as exports.", 1 },';
-		echo '+    { "Sebastian Lackner", "ws2_32: Avoid race-conditions of async WSARecv() operations with write watches.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-WRITECOPY
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ws2_32-WriteWatches
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#29384] Voobly expects correct handling of WRITECOPY memory protection
-# |   *	[#35561] MSYS2 expects correct handling of WRITECOPY memory protection
-# |
-# | Modified files:
-# |   *	dlls/advapi32/crypt.c, dlls/advapi32/tests/security.c, dlls/kernel32/tests/virtual.c, dlls/ntdll/ntdll_misc.h,
-# | 	dlls/ntdll/server.c, dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c,
-# | 	dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c
-# |
-if test "$enable_ntdll_WRITECOPY" -eq 1; then
-	patch_apply ntdll-WRITECOPY/0001-ntdll-Trigger-write-watches-before-passing-userdata-.patch
-	patch_apply ntdll-WRITECOPY/0002-advapi-Trigger-write-watches-before-passing-userdata.patch
-	patch_apply ntdll-WRITECOPY/0003-ntdll-Setup-a-temporary-signal-handler-during-proces.patch
-	patch_apply ntdll-WRITECOPY/0004-ntdll-Properly-handle-PAGE_WRITECOPY-protection.-try.patch
-	patch_apply ntdll-WRITECOPY/0005-ntdll-Only-enable-true-WRITECOPY-protection-when-a-s.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Trigger write watches before passing userdata pointer to wait_reply.", 1 },';
-		echo '+    { "Sebastian Lackner", "advapi: Trigger write watches before passing userdata pointer to read syscall.", 1 },';
-		echo '+    { "Michael Müller", "ntdll: Setup a temporary signal handler during process startup to handle page faults.", 2 },';
-		echo '+    { "Michael Müller", "ntdll: Properly handle PAGE_WRITECOPY protection.", 5 },';
-		echo '+    { "Michael Müller", "ntdll: Only enable true WRITECOPY protection when a special environment variable is set.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset Exagear
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ws2_32-WriteWatches, ntdll-WRITECOPY
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/ntdll/signal_i386.c, dlls/ntdll/virtual.c, server/ptrace.c
-# |
-if test "$enable_Exagear" -eq 1; then
-	patch_apply Exagear/0001-ntdll-Implement-emulation-of-SIDT-instruction-when-u.patch
-	patch_apply Exagear/0002-ntdll-Fix-issues-with-write-watches-when-using-Exage.patch
-	patch_apply Exagear/0003-server-Don-t-attempt-to-use-ptrace-when-running-with.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Implement emulation of SIDT instruction when using Exagear.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Fix issues with write watches when using Exagear.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Don'\''t attempt to use ptrace when running with Exagear.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5213,6 +5139,50 @@ if test "$enable_ntdll_User_Shared_Data" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Move code to update user shared data into a separate function.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntoskrnl: Update USER_SHARED_DATA before accessing memory.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ws2_32-WriteWatches
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/signal_i386.c, dlls/ntdll/virtual.c, dlls/ws2_32/socket.c,
+# | 	include/winternl.h
+# |
+if test "$enable_ws2_32_WriteWatches" -eq 1; then
+	patch_apply ws2_32-WriteWatches/0001-ntdll-Expose-wine_uninterrupted_-read-write-_memory-.patch
+	patch_apply ws2_32-WriteWatches/0002-ws2_32-Avoid-race-conditions-of-async-WSARecv-operat.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Expose wine_uninterrupted_[read|write]_memory as exports.", 1 },';
+		echo '+    { "Sebastian Lackner", "ws2_32: Avoid race-conditions of async WSARecv() operations with write watches.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-WRITECOPY
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ws2_32-WriteWatches
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#29384] Voobly expects correct handling of WRITECOPY memory protection
+# |   *	[#35561] MSYS2 expects correct handling of WRITECOPY memory protection
+# |
+# | Modified files:
+# |   *	dlls/advapi32/crypt.c, dlls/advapi32/tests/security.c, dlls/kernel32/tests/virtual.c, dlls/ntdll/ntdll_misc.h,
+# | 	dlls/ntdll/server.c, dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c,
+# | 	dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c
+# |
+if test "$enable_ntdll_WRITECOPY" -eq 1; then
+	patch_apply ntdll-WRITECOPY/0001-ntdll-Trigger-write-watches-before-passing-userdata-.patch
+	patch_apply ntdll-WRITECOPY/0002-advapi-Trigger-write-watches-before-passing-userdata.patch
+	patch_apply ntdll-WRITECOPY/0003-ntdll-Setup-a-temporary-signal-handler-during-proces.patch
+	patch_apply ntdll-WRITECOPY/0004-ntdll-Properly-handle-PAGE_WRITECOPY-protection.-try.patch
+	patch_apply ntdll-WRITECOPY/0005-ntdll-Only-enable-true-WRITECOPY-protection-when-a-s.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Trigger write watches before passing userdata pointer to wait_reply.", 1 },';
+		echo '+    { "Sebastian Lackner", "advapi: Trigger write watches before passing userdata pointer to read syscall.", 1 },';
+		echo '+    { "Michael Müller", "ntdll: Setup a temporary signal handler during process startup to handle page faults.", 2 },';
+		echo '+    { "Michael Müller", "ntdll: Properly handle PAGE_WRITECOPY protection.", 5 },';
+		echo '+    { "Michael Müller", "ntdll: Only enable true WRITECOPY protection when a special environment variable is set.", 1 },';
 	) >> "$patchlist"
 fi
 

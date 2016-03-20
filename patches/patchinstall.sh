@@ -338,6 +338,7 @@ patch_enable_all ()
 	enable_version_GetFileVersionInfoSizeExW="$1"
 	enable_version_VerFindFileA="$1"
 	enable_version_VerQueryValue="$1"
+	enable_vulkan_Vulkan_Implementation="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppGrayFloat="$1"
@@ -1181,6 +1182,9 @@ patch_enable ()
 			;;
 		version-VerQueryValue)
 			enable_version_VerQueryValue="$2"
+			;;
+		vulkan-Vulkan_Implementation)
+			enable_vulkan_Vulkan_Implementation="$2"
 			;;
 		wbemdisp-ISWbemSecurity)
 			enable_wbemdisp_ISWbemSecurity="$2"
@@ -6830,6 +6834,22 @@ if test "$enable_version_VerQueryValue" -eq 1; then
 	patch_apply version-VerQueryValue/0001-version-Test-for-VerQueryValueA-try-2.patch
 	(
 		echo '+    { "Mark Jansen", "version: Test for VerQueryValueA.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset vulkan-Vulkan_Implementation
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40164] Implement support for Vulkan
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/vulkan-1/Makefile.in, dlls/vulkan-1/vulkan-1.spec, dlls/vulkan/Makefile.in, dlls/vulkan/vulkan.spec,
+# | 	dlls/vulkan/vulkan_main.c, dlls/vulkan/vulkan_private.h, dlls/vulkan/vulkan_thunks.c
+# |
+if test "$enable_vulkan_Vulkan_Implementation" -eq 1; then
+	patch_apply vulkan-Vulkan_Implementation/0001-vulkan-Initial-implementation.patch
+	(
+		echo '+    { "Sebastian Lackner", "vulkan: Initial implementation.", 1 },';
 	) >> "$patchlist"
 fi
 

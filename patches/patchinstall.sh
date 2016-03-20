@@ -138,6 +138,7 @@ patch_enable_all ()
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
+	enable_dwmapi_DwmSetWindowAttribute="$1"
 	enable_dxdiagn_Display_Information="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
@@ -579,6 +580,9 @@ patch_enable ()
 			;;
 		dsound-Revert_Cleanup)
 			enable_dsound_Revert_Cleanup="$2"
+			;;
+		dwmapi-DwmSetWindowAttribute)
+			enable_dwmapi_DwmSetWindowAttribute="$2"
 			;;
 		dxdiagn-Display_Information)
 			enable_dxdiagn_Display_Information="$2"
@@ -3471,6 +3475,18 @@ if test "$enable_dsound_EAX" -eq 1; then
 		echo '+    { "Sebastian Lackner", "dsound: Allow disabling of EAX support in the registry.", 1 },';
 		echo '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_ListenerProperties.", 1 },';
 		echo '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_BufferProperties.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dwmapi-DwmSetWindowAttribute
+# |
+# | Modified files:
+# |   *	dlls/dwmapi/dwmapi_main.c
+# |
+if test "$enable_dwmapi_DwmSetWindowAttribute" -eq 1; then
+	patch_apply dwmapi-DwmSetWindowAttribute/0001-dwmapi-Return-S_OK-from-DwmSetWindowAttribute-functi.patch
+	(
+		echo '+    { "Michael Müller", "dwmapi: Return S_OK from DwmSetWindowAttribute function.", 1 },';
 	) >> "$patchlist"
 fi
 

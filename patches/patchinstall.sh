@@ -150,6 +150,7 @@ patch_enable_all ()
 	enable_gdi32_MultiMonitor="$1"
 	enable_gdi32_Path_Metafile="$1"
 	enable_gdi32_Symbol_Truetype_Font="$1"
+	enable_gdiplus_GdipCreateMetafileFromStream="$1"
 	enable_hal_KeQueryPerformanceCounter="$1"
 	enable_hid_HidP_TranslateUsagesToI8042ScanCodes="$1"
 	enable_hnetcfg_INetFwAuthorizedApplication="$1"
@@ -618,6 +619,9 @@ patch_enable ()
 			;;
 		gdi32-Symbol_Truetype_Font)
 			enable_gdi32_Symbol_Truetype_Font="$2"
+			;;
+		gdiplus-GdipCreateMetafileFromStream)
+			enable_gdiplus_GdipCreateMetafileFromStream="$2"
 			;;
 		hal-KeQueryPerformanceCounter)
 			enable_hal_KeQueryPerformanceCounter="$2"
@@ -3724,6 +3728,21 @@ if test "$enable_gdi32_Symbol_Truetype_Font" -eq 1; then
 	patch_apply gdi32-Symbol_Truetype_Font/0001-gdi32-Improve-detection-of-symbol-charset-for-old-tr.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "gdi32: Improve detection of symbol charset for old truetype fonts.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset gdiplus-GdipCreateMetafileFromStream
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40325] Implement GdipCreateMetafileFromStream
+# |
+# | Modified files:
+# |   *	dlls/gdiplus/metafile.c
+# |
+if test "$enable_gdiplus_GdipCreateMetafileFromStream" -eq 1; then
+	patch_apply gdiplus-GdipCreateMetafileFromStream/0001-gdiplus-Implement-GdipCreateMetafileFromStream.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipCreateMetafileFromStream.", 1 },';
 	) >> "$patchlist"
 fi
 

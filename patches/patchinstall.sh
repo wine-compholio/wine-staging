@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "bd332f53f2d7b618e313572159cd7e70e4efb0fc"
+	echo "6bc0ce26a853b51f11958545bfa5570bdcb1cf01"
 }
 
 # Show version information
@@ -90,7 +90,6 @@ patch_enable_all ()
 	enable_advapi32_SetSecurityInfo="$1"
 	enable_amstream_GetMultiMediaStream="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
-	enable_authz_Stub_Functions="$1"
 	enable_avifil32_AVIFile_Proxies="$1"
 	enable_avifil32_IGetFrame_fnSetFormat="$1"
 	enable_avifile_dll16_AVIStreamGetFrame="$1"
@@ -434,9 +433,6 @@ patch_enable ()
 			;;
 		api-ms-win-Stub_DLLs)
 			enable_api_ms_win_Stub_DLLs="$2"
-			;;
-		authz-Stub_Functions)
-			enable_authz_Stub_Functions="$2"
 			;;
 		avifil32-AVIFile_Proxies)
 			enable_avifil32_AVIFile_Proxies="$2"
@@ -2741,18 +2737,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "shcore: Implement stub for GetDpiForMonitor.", 1 },';
 		echo '+    { "Michael Müller", "kernelbase: Add stub for QuirkIsEnabled3.", 1 },';
 		echo '+    { "Sebastian Lackner", "shcore: Add stub for GetProcessDpiAwareness.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset authz-Stub_Functions
-# |
-# | Modified files:
-# |   *	dlls/authz/authz.c, dlls/authz/authz.spec
-# |
-if test "$enable_authz_Stub_Functions" -eq 1; then
-	patch_apply authz-Stub_Functions/0001-authz-Added-additional-stub-functions.patch
-	(
-		echo '+    { "Zhenbo Li", "authz: Added additional stub functions.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -254,6 +254,7 @@ patch_enable_all ()
 	enable_nvencodeapi_Video_Encoder="$1"
 	enable_ole32_HGLOBALStream="$1"
 	enable_oleaut32_CreateTypeLib="$1"
+	enable_oleaut32_OLEPictureImpl_SaveAsFile="$1"
 	enable_oleaut32_TKIND_COCLASS="$1"
 	enable_oleaut32_x86_64_Marshaller="$1"
 	enable_openal32_EFX_Extension="$1"
@@ -932,6 +933,9 @@ patch_enable ()
 			;;
 		oleaut32-CreateTypeLib)
 			enable_oleaut32_CreateTypeLib="$2"
+			;;
+		oleaut32-OLEPictureImpl_SaveAsFile)
+			enable_oleaut32_OLEPictureImpl_SaveAsFile="$2"
 			;;
 		oleaut32-TKIND_COCLASS)
 			enable_oleaut32_TKIND_COCLASS="$2"
@@ -5520,6 +5524,24 @@ if test "$enable_oleaut32_CreateTypeLib" -eq 1; then
 	patch_apply oleaut32-CreateTypeLib/0001-oleaut32-Implement-semi-stub-for-CreateTypeLib.patch
 	(
 		echo '+    { "Alistair Leslie-Hughes", "oleaut32: Implement semi-stub for CreateTypeLib.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset oleaut32-OLEPictureImpl_SaveAsFile
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#8532] Implement a better stub for IPicture::SaveAsFile
+# |
+# | Modified files:
+# |   *	dlls/gdiplus/Makefile.in, dlls/gdiplus/gdiplus_private.h, dlls/gdiplus/graphics.c, dlls/gdiplus/image.c,
+# | 	dlls/gdiplus/metafile.c, dlls/gdiplus/tests/image.c, dlls/oleaut32/olepicture.c, dlls/oleaut32/tests/olepicture.c
+# |
+if test "$enable_oleaut32_OLEPictureImpl_SaveAsFile" -eq 1; then
+	patch_apply oleaut32-OLEPictureImpl_SaveAsFile/0001-gdiplus-Reimplement-metafile-loading-using-gdi32-ins.patch
+	patch_apply oleaut32-OLEPictureImpl_SaveAsFile/0002-oleaut32-Implement-a-better-stub-for-IPicture-SaveAs.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "gdiplus: Reimplement metafile loading using gdi32 instead of IPicture.", 2 },';
+		echo '+    { "Dmitry Timoshkov", "oleaut32: Implement a better stub for IPicture::SaveAsFile.", 1 },';
 	) >> "$patchlist"
 fi
 

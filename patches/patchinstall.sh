@@ -7069,12 +7069,14 @@ fi
 # | 	resource_map
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
+# |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc, dlls/wined3d/wined3d_main.c
 # |
 if test "$enable_wined3d_CSMT_Helper" -eq 1; then
-	patch_apply wined3d-CSMT_Helper/0002-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch
+	patch_apply wined3d-CSMT_Helper/0001-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch
+	patch_apply wined3d-CSMT_Helper/0002-wined3d-Add-warning-that-CSMT-patchset-is-disabled.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
+		echo '+    { "Sebastian Lackner", "wined3d: Add warning that CSMT patchset is disabled.", 1 },';
 	) >> "$patchlist"
 fi
 

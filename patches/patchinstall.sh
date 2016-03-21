@@ -264,6 +264,7 @@ patch_enable_all ()
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_quartz_Silence_FIXMEs="$1"
 	enable_rasapi32_RasEnumDevicesA="$1"
+	enable_reg_Implement_Query="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_rpcrt4_Pipe_Transport="$1"
 	enable_rpcrt4_RpcBindingServerFromClient="$1"
@@ -963,6 +964,9 @@ patch_enable ()
 			;;
 		rasapi32-RasEnumDevicesA)
 			enable_rasapi32_RasEnumDevicesA="$2"
+			;;
+		reg-Implement_Query)
+			enable_reg_Implement_Query="$2"
 			;;
 		riched20-IText_Interface)
 			enable_riched20_IText_Interface="$2"
@@ -5688,6 +5692,23 @@ if test "$enable_rasapi32_RasEnumDevicesA" -eq 1; then
 	patch_apply rasapi32-RasEnumDevicesA/0001-rasapi32-Set-lpcDevices-in-RasEnumDevicesA.patch
 	(
 		echo '+    { "Sebastian Lackner", "rasapi32: Set *lpcDevices in RasEnumDevicesA.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset reg-Implement_Query
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#24017] Implement query operation in reg.exe
+# |
+# | Modified files:
+# |   *	programs/reg/reg.c
+# |
+if test "$enable_reg_Implement_Query" -eq 1; then
+	patch_apply reg-Implement_Query/0001-reg-Query-all-values-and-subkeys-in-a-specified-key.patch
+	patch_apply reg-Implement_Query/0002-reg-Add-support-for-querying-the-registry-with-the-v.patch
+	(
+		echo '+    { "Hugh McMaster", "reg: Query all values and subkeys in a specified key.", 1 },';
+		echo '+    { "Hugh McMaster", "reg: Add support for querying the registry with the /v and /ve switches.", 1 },';
 	) >> "$patchlist"
 fi
 

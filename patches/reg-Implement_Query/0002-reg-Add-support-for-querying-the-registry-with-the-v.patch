@@ -1,0 +1,129 @@
+From bf459e7bcaca10acae3f07756d4e63812e7da0c0 Mon Sep 17 00:00:00 2001
+From: Hugh McMaster <hugh.mcmaster@outlook.com>
+Date: Fri, 18 Mar 2016 15:50:31 +1100
+Subject: reg: Add support for querying the registry with the /v and /ve
+ switches
+
+Recursion is supported.
+
+Signed-off-by: Hugh McMaster <hugh.mcmaster@outlook.com>
+---
+ programs/reg/reg.c | 88 +++++++++++++++++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 80 insertions(+), 8 deletions(-)
+
+diff --git a/programs/reg/reg.c b/programs/reg/reg.c
+index 75c5292..3722841 100644
+--- a/programs/reg/reg.c
++++ b/programs/reg/reg.c
+@@ -756,6 +756,83 @@ static int query_all(HKEY key, WCHAR *path, DWORD path_len, BOOL recurse)
+     return 0;
+ }
+ 
++static int num_values_found = 0;
++
++static int query_value(HKEY key, WCHAR *value_name, WCHAR *path, DWORD path_len, BOOL recurse)
++{
++    LONG rc;
++    DWORD num_subkeys, max_subkey_len, subkey_len, subkey_path_len;
++    DWORD max_data_bytes, data_size;
++    DWORD type;
++    BYTE *data;
++    WCHAR fmt[] = {'%','1','\n',0};
++    WCHAR newlineW[] = {'\n',0};
++    WCHAR *subkey_name, *subkey_path;
++    int i;
++    HKEY subkey;
++
++    rc = RegQueryInfoKeyW(key, NULL, NULL, NULL, &num_subkeys, &max_subkey_len,
++                          NULL, NULL, NULL, &max_data_bytes, NULL, NULL);
++    if (rc)
++    {
++        ERR("RegQueryInfoKey failed: %d\n", rc);
++        return 1;
++    }
++
++    max_subkey_len++;
++
++    data = HeapAlloc(GetProcessHeap(), 0, max_data_bytes);
++    if (!data)
++    {
++        ERR("Failed to allocate memory for data\n");
++        return 1;
++    }
++
++    data_size = max_data_bytes;
++    rc = RegQueryValueExW(key, value_name, NULL, &type, data, &data_size);
++    if (rc == ERROR_SUCCESS)
++    {
++        output_string(fmt, path);
++        output_value(value_name, type, data, data_size);
++        output_string(newlineW);
++        num_values_found++;
++    }
++
++    HeapFree(GetProcessHeap(), 0, data);
++
++    if (!recurse)
++    {
++        if (rc == ERROR_FILE_NOT_FOUND)
++            return 1;
++        return 0;
++    }
++
++    subkey_name = HeapAlloc(GetProcessHeap(), 0, max_subkey_len * sizeof(WCHAR));
++    if (!subkey_name)
++    {
++        ERR("Failed to allocate memory for subkey_name\n");
++        return 1;
++    }
++
++    for (i = 0; i < num_subkeys; i++)
++    {
++        subkey_len = max_subkey_len;
++        rc = RegEnumKeyExW(key, i, subkey_name, &subkey_len, NULL, NULL, NULL, NULL);
++        if (rc == ERROR_SUCCESS)
++        {
++            subkey_path_len = path_len + subkey_len + 1;
++            subkey_path = build_subkey_path(path, subkey_name, subkey_path_len);
++            RegOpenKeyExW(key, subkey_name, 0, KEY_READ, &subkey);
++            query_value(subkey, value_name, subkey_path, subkey_path_len, recurse);
++            RegCloseKey(subkey);
++            HeapFree(GetProcessHeap(), 0, subkey_path);
++        }
++    }
++
++    HeapFree(GetProcessHeap(), 0, subkey_name);
++    return 0;
++}
++
+ static WCHAR *get_long_path(HKEY root, WCHAR *path)
+ {
+     int i, len;
+@@ -787,8 +864,6 @@ static int reg_query(WCHAR *key_name, WCHAR *value_name, BOOL value_empty, BOOL
+ {
+     WCHAR *p, *path;
+     HKEY root, key;
+-    static const WCHAR stubW[] = {'S','T','U','B',' ','Q','U','E','R','Y',' ',
+-         '-',' ','%','1',' ','%','2',' ','%','3','!','d','!',' ','%','4','!','d','!','\n',0};
+     DWORD path_len;
+     int ret;
+ 
+@@ -821,12 +896,9 @@ static int reg_query(WCHAR *key_name, WCHAR *value_name, BOOL value_empty, BOOL
+     path_len = strlenW(path);
+ 
+     if (value_name || value_empty)
+-    {
+-        output_string(stubW, key_name, value_name, value_empty, recurse);
+-        return 1;
+-    }
+-
+-    ret = query_all(key, path, path_len, recurse);
++        ret = query_value(key, value_name, path, path_len, recurse);
++    else
++        ret = query_all(key, path, path_len, recurse);
+ 
+     HeapFree(GetProcessHeap(), 0, path);
+     RegCloseKey(key);
+-- 
+2.7.1
+

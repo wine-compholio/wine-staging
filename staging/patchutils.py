@@ -323,6 +323,7 @@ def read_patch(filename, content=None):
 
             elif line.startswith("From: "):
                 header['author'], header['email'] = _parse_author(line[6:])
+                header.pop('signedoffby', None)
                 assert fp.read() == line
 
             elif line.startswith("Subject: "):
@@ -338,6 +339,7 @@ def read_patch(filename, content=None):
                 subject = re.sub('^([^:]*: *)([a-z])', lambda x: "%s%s" %
                                  (x.group(1), x.group(2).upper()), subject, 1)
                 header['subject'], header['revision'] = subject, revision
+                header.pop('signedoffby', None)
 
             elif line.startswith("Signed-off-by: "):
                 if not header.has_key('signedoffby'):

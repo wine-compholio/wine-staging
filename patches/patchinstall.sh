@@ -2378,13 +2378,44 @@ fi
 # Patchset Compiler_Warnings
 # |
 # | Modified files:
-# |   *	dlls/d3d9/tests/visual.c, dlls/netapi32/netapi32.c, dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c,
-# | 	tools/makedep.c
+# |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c, dlls/d3d8/texture.c,
+# | 	dlls/d3d9/tests/visual.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dsound/primary.c, dlls/dwrite/layout.c,
+# | 	dlls/msxml3/schema.c, dlls/netapi32/netapi32.c, dlls/oleaut32/oleaut.c, dlls/quartz/acmwrapper.c, dlls/quartz/avidec.c,
+# | 	dlls/rpcrt4/cstub.c, dlls/vbscript/vbdisp.c, dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c,
+# | 	include/wine/list.h, include/wine/rbtree.h, include/winnt.h, tools/makedep.c
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0001-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch
+	patch_apply Compiler_Warnings/0002-dsound-Avoid-implicit-cast-of-interface-pointer.patch
+	patch_apply Compiler_Warnings/0003-amstream-Avoid-implicit-cast-of-interface-pointer.patch
+	patch_apply Compiler_Warnings/0004-d2d1-Avoid-implicit-cast-of-interface-pointer.patch
+	patch_apply Compiler_Warnings/0005-d3d11-Avoid-implicit-cast-of-interface-pointer.patch
+	patch_apply Compiler_Warnings/0006-d3d8-Avoid-implicit-cast-of-interface-pointer.patch
+	patch_apply Compiler_Warnings/0007-d3d9-Avoid-implicit-cast-of-interface-pointer.patch
+	patch_apply Compiler_Warnings/0008-ddraw-Avoid-implicit-cast-of-interface-pointer.patch
+	patch_apply Compiler_Warnings/0009-dwrite-Avoid-implicit-cast-of-interface-pointer.patch
+	patch_apply Compiler_Warnings/0010-msxml3-Avoid-implicit-cast-of-interface-pointer.patch
+	patch_apply Compiler_Warnings/0011-oleaut32-Avoid-implicit-cast-of-interface-pointer.patch
+	patch_apply Compiler_Warnings/0012-quartz-Avoid-implicit-cast-of-interface-pointer.patch
+	patch_apply Compiler_Warnings/0013-rpcrt4-Avoid-implicit-cast-of-interface-pointer.patch
+	patch_apply Compiler_Warnings/0014-vbscript-Avoid-implicit-cast-of-interface-pointer.patch
+	patch_apply Compiler_Warnings/0015-include-Check-element-type-in-CONTAINING_RECORD-and-.patch
 	(
 		echo '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },';
+		echo '+    { "Sebastian Lackner", "dsound: Avoid implicit cast of interface pointer.", 1 },';
+		echo '+    { "Sebastian Lackner", "amstream: Avoid implicit cast of interface pointer.", 1 },';
+		echo '+    { "Sebastian Lackner", "d2d1: Avoid implicit cast of interface pointer.", 1 },';
+		echo '+    { "Sebastian Lackner", "d3d11: Avoid implicit cast of interface pointer.", 1 },';
+		echo '+    { "Sebastian Lackner", "d3d8: Avoid implicit cast of interface pointer.", 1 },';
+		echo '+    { "Sebastian Lackner", "d3d9: Avoid implicit cast of interface pointer.", 1 },';
+		echo '+    { "Sebastian Lackner", "ddraw: Avoid implicit cast of interface pointer.", 1 },';
+		echo '+    { "Sebastian Lackner", "dwrite: Avoid implicit cast of interface pointer.", 1 },';
+		echo '+    { "Sebastian Lackner", "msxml3: Avoid implicit cast of interface pointer.", 1 },';
+		echo '+    { "Sebastian Lackner", "oleaut32: Avoid implicit cast of interface pointer.", 1 },';
+		echo '+    { "Sebastian Lackner", "quartz: Avoid implicit cast of interface pointer.", 1 },';
+		echo '+    { "Sebastian Lackner", "rpcrt4: Avoid implicit cast of interface pointer.", 1 },';
+		echo '+    { "Sebastian Lackner", "vbscript: Avoid implicit cast of interface pointer.", 1 },';
+		echo '+    { "Sebastian Lackner", "include: Check element type in CONTAINING_RECORD and similar macros.", 1 },';
 	) >> "$patchlist"
 fi
 

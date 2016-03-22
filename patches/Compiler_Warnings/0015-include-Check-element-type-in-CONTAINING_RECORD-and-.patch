@@ -1,0 +1,78 @@
+From a273dda8bac492d1b04ba3b325599d7a3c5330b2 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Tue, 22 Mar 2016 23:08:30 +0100
+Subject: include: Check element type in CONTAINING_RECORD and similar macros.
+
+---
+ include/wine/list.h   | 10 ++++++++--
+ include/wine/rbtree.h | 12 ++++++++++--
+ include/winnt.h       | 10 ++++++++--
+ 3 files changed, 26 insertions(+), 6 deletions(-)
+
+diff --git a/include/wine/list.h b/include/wine/list.h
+index b4d681f..287ad39 100644
+--- a/include/wine/list.h
++++ b/include/wine/list.h
+@@ -228,7 +228,13 @@ static inline void list_move_head( struct list *dst, struct list *src )
+ 
+ /* get pointer to object containing list element */
+ #undef LIST_ENTRY
+-#define LIST_ENTRY(elem, type, field) \
+-    ((type *)((char *)(elem) - offsetof(type, field)))
++#ifdef __GNUC__
++# define LIST_ENTRY(elem, type, field) ({               \
++     const typeof(((type *)0)->field) *__ptr = (elem);  \
++     (type *)((char *)__ptr - offsetof(type, field)); })
++#else
++# define LIST_ENTRY(elem, type, field) \
++     ((type *)((char *)(elem) - offsetof(type, field)))
++#endif
+ 
+ #endif  /* __WINE_SERVER_LIST_H */
+diff --git a/include/wine/rbtree.h b/include/wine/rbtree.h
+index 13452d9..a5a1cdd 100644
+--- a/include/wine/rbtree.h
++++ b/include/wine/rbtree.h
+@@ -22,8 +22,16 @@
+ #ifndef __WINE_WINE_RBTREE_H
+ #define __WINE_WINE_RBTREE_H
+ 
+-#define WINE_RB_ENTRY_VALUE(element, type, field) \
+-    ((type *)((char *)(element) - offsetof(type, field)))
++#ifdef __GNUC__
++# define WINE_RB_ENTRY_VALUE(element, type, field) ({       \
++     const typeof(((type *)0)->field) *__ptr = (element);   \
++     (type *)((char *)__ptr - offsetof(type, field)); })
++#else
++# define WINE_RB_ENTRY_VALUE(element, type, field) \
++     ((type *)((char *)(element) - offsetof(type, field)))
++#endif
++
++
+ 
+ struct wine_rb_entry
+ {
+diff --git a/include/winnt.h b/include/winnt.h
+index 559a719..4a711f4 100644
+--- a/include/winnt.h
++++ b/include/winnt.h
+@@ -753,8 +753,14 @@ typedef struct _MEMORY_BASIC_INFORMATION
+ 
+ #define FIELD_OFFSET(type, field) ((LONG)offsetof(type, field))
+ 
+-#define CONTAINING_RECORD(address, type, field) \
+-  ((type *)((PCHAR)(address) - offsetof(type, field)))
++#ifdef __GNUC__
++# define CONTAINING_RECORD(address, type, field) ({     \
++   const typeof(((type *)0)->field) *__ptr = (address); \
++   (type *)((PCHAR)__ptr - offsetof(type, field)); })
++#else
++# define CONTAINING_RECORD(address, type, field) \
++   ((type *)((PCHAR)(address) - offsetof(type, field)))
++#endif
+ 
+ /* Types */
+ 
+-- 
+2.7.1
+

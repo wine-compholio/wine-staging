@@ -2571,7 +2571,7 @@ fi
 # |   *	[#39543] Add stub kernel32.FreeUserPhysicalPages
 # |
 # | Modified files:
-# |   *	dlls/kernel32/heap.c, dlls/kernel32/kernel32.spec
+# |   *	dlls/api-ms-win-core-memory-l1-1-2/api-ms-win-core-memory-l1-1-2.spec, dlls/kernel32/heap.c, dlls/kernel32/kernel32.spec
 # |
 if test "$enable_kernel32_FreeUserPhysicalPages" -eq 1; then
 	patch_apply kernel32-FreeUserPhysicalPages/0001-kernel32-add-FreeUserPhysicalPages-stub-try-2.patch
@@ -2599,7 +2599,8 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/api-ms-win-core-file-l1-1-0/api-ms-win-core-file-l1-1-0.spec, dlls/api-ms-win-core-file-l1-2-0/api-ms-win-core-
-# | 	file-l1-2-0.spec, dlls/kernel32/file.c, dlls/kernel32/kernel32.spec
+# | 	file-l1-2-0.spec, dlls/api-ms-win-core-file-l1-2-1/api-ms-win-core-file-l1-2-1.spec, dlls/kernel32/file.c,
+# | 	dlls/kernel32/kernel32.spec, dlls/kernelbase/kernelbase.spec
 # |
 if test "$enable_kernel32_GetFinalPathNameByHandle" -eq 1; then
 	patch_apply kernel32-GetFinalPathNameByHandle/0001-kernel32-Implement-GetFinalPathNameByHandle.patch

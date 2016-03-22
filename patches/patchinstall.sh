@@ -345,6 +345,7 @@ patch_enable_all ()
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppGrayFloat="$1"
+	enable_windowscodecs_IMILBitmapSource="$1"
 	enable_windowscodecs_WICCreateBitmapFromSection="$1"
 	enable_wine_inf_Dummy_CA_Certificate="$1"
 	enable_wine_inf_Performance="$1"
@@ -1207,6 +1208,9 @@ patch_enable ()
 			;;
 		windowscodecs-32bppGrayFloat)
 			enable_windowscodecs_32bppGrayFloat="$2"
+			;;
+		windowscodecs-IMILBitmapSource)
+			enable_windowscodecs_IMILBitmapSource="$2"
 			;;
 		windowscodecs-WICCreateBitmapFromSection)
 			enable_windowscodecs_WICCreateBitmapFromSection="$2"
@@ -6952,6 +6956,23 @@ if test "$enable_windowscodecs_32bppGrayFloat" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for converting to 8bpp grayscale format.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for converting 32bpp grayscale float to 24bpp BGR format.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fix 32bppGrayFloat to 8bppGray conversion.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windowscodecs-IMILBitmapSource
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34764] Improve compatibility of IMILBitmapSource interface
+# |
+# | Modified files:
+# |   *	dlls/windowscodecs/bitmap.c, dlls/windowscodecs/scaler.c, dlls/windowscodecs/wincodecs_private.h
+# |
+if test "$enable_windowscodecs_IMILBitmapSource" -eq 1; then
+	patch_apply windowscodecs-IMILBitmapSource/0001-windowscodecs-Improve-compatibility-of-IMILBitmapSou.patch
+	patch_apply windowscodecs-IMILBitmapSource/0002-windowscodecs-Add-support-for-IMILBitmapScaler-inter.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Improve compatibility of IMILBitmapSource interface.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for IMILBitmapScaler interface.", 1 },';
 	) >> "$patchlist"
 fi
 

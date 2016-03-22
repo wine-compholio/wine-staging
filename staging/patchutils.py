@@ -54,8 +54,8 @@ class PatchObject(object):
         self.patch_author       = header['author']
         self.patch_email        = header['email']
         self.patch_subject      = header['subject']
-        self.patch_revision     = header['revision'] if header.has_key('revision') else 1
-        self.signed_off_by      = header['signedoffby'] if header.has_key('signedoffby') else []
+        self.patch_revision     = header.get('revision', 1)
+        self.signed_off_by      = header.get('signedoffby', [])
 
         self.filename           = filename
         self.offset_begin       = None

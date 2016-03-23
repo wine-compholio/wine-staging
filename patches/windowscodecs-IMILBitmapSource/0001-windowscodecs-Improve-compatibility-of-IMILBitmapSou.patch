@@ -1,17 +1,17 @@
-From 9660ba7e1e5e23b1fa2a3e7b434802bfdb8e187b Mon Sep 17 00:00:00 2001
+From b086b2918e0d14549131e15fe7527778f8abfe94 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Tue, 22 Mar 2016 23:46:30 +0800
-Subject: windowscodecs: Improve compatibility of IMILBitmapSource interface.
+Subject: windowscodecs: Improve compatibility of IMILBitmapSource interface. (v2)
 
 Based on Focht's investigation. This makes the test application attached
 to the bug 34764 work.
 ---
- dlls/windowscodecs/bitmap.c            | 181 ++++++++++++++++++++++++++-------
+ dlls/windowscodecs/bitmap.c            | 184 ++++++++++++++++++++++++++-------
  dlls/windowscodecs/wincodecs_private.h |  58 +++++++++--
- 2 files changed, 195 insertions(+), 44 deletions(-)
+ 2 files changed, 197 insertions(+), 45 deletions(-)
 
 diff --git a/dlls/windowscodecs/bitmap.c b/dlls/windowscodecs/bitmap.c
-index 6adaab0..640e146 100644
+index 6adaab0..f2aaef9 100644
 --- a/dlls/windowscodecs/bitmap.c
 +++ b/dlls/windowscodecs/bitmap.c
 @@ -135,6 +135,7 @@ static HRESULT WINAPI BitmapLockImpl_QueryInterface(IWICBitmapLock *iface, REFII
@@ -106,7 +106,14 @@ index 6adaab0..640e146 100644
  {
      BitmapImpl *This = impl_from_IMILBitmapSource(iface);
  
-@@ -597,6 +614,40 @@ static HRESULT WINAPI IMILBitmapImpl_UnknownMethod1(IMILBitmapSource *iface, voi
+@@ -591,12 +608,46 @@ static HRESULT WINAPI IMILBitmapImpl_UnknownMethod1(IMILBitmapSource *iface, voi
+ 
+     if (!ppv) return E_INVALIDARG;
+ 
+-    IUnknown_AddRef(&This->IMILUnknown1_iface);
++    /* reference count is not incremented here */
+     *ppv = &This->IMILUnknown1_iface;
+ 
      return S_OK;
  }
  
@@ -183,7 +190,7 @@ index 6adaab0..640e146 100644
  }
  
  static ULONG WINAPI IMILUnknown1Impl_AddRef(IMILUnknown1 *iface)
-@@ -641,56 +686,118 @@ static ULONG WINAPI IMILUnknown1Impl_Release(IMILUnknown1 *iface)
+@@ -641,47 +686,108 @@ static ULONG WINAPI IMILUnknown1Impl_Release(IMILUnknown1 *iface)
      return IWICBitmap_Release(&This->IWICBitmap_iface);
  }
  
@@ -292,12 +299,13 @@ index 6adaab0..640e146 100644
  }
  
 -static HRESULT WINAPI IMILUnknown2Impl_UnknownMethod1(IMILUnknown2 *iface, void *arg1, void *arg2)
-+static HRESULT WINAPI IMILUnknown2Impl_unknown1(IMILUnknown2 *iface, void *arg1, void *arg2)
++static HRESULT WINAPI IMILUnknown2Impl_unknown1(IMILUnknown2 *iface, void *arg1, void **arg2)
  {
      FIXME("(%p,%p,%p): stub\n", iface, arg1, arg2);
-     return E_NOTIMPL;
- }
- 
++    if (arg2) *arg2 = NULL;
++    return E_NOTIMPL;
++}
++
 +static HRESULT WINAPI IMILUnknown2Impl_unknown2(IMILUnknown2 *iface)
 +{
 +    FIXME("(%p): stub\n", iface);
@@ -307,11 +315,10 @@ index 6adaab0..640e146 100644
 +static HRESULT WINAPI IMILUnknown2Impl_unknown3(IMILUnknown2 *iface, void *arg1)
 +{
 +    FIXME("(%p,%p): stub\n", iface, arg1);
-+    return E_NOTIMPL;
-+}
-+
- static const IMILUnknown2Vtbl IMILUnknown2Impl_Vtbl =
- {
+     return E_NOTIMPL;
+ }
+ 
+@@ -690,7 +796,9 @@ static const IMILUnknown2Vtbl IMILUnknown2Impl_Vtbl =
      IMILUnknown2Impl_QueryInterface,
      IMILUnknown2Impl_AddRef,
      IMILUnknown2Impl_Release,
@@ -323,7 +330,7 @@ index 6adaab0..640e146 100644
  
  HRESULT BitmapImpl_Create(UINT uiWidth, UINT uiHeight,
 diff --git a/dlls/windowscodecs/wincodecs_private.h b/dlls/windowscodecs/wincodecs_private.h
-index f54403c..2bd109e 100644
+index f54403c..eda1b7a 100644
 --- a/dlls/windowscodecs/wincodecs_private.h
 +++ b/dlls/windowscodecs/wincodecs_private.h
 @@ -30,7 +30,13 @@ DEFINE_GUID(GUID_WineContainerFormatTga, 0x0c44fda1,0xa5c5,0x4298,0x96,0x85,0x47
@@ -411,7 +418,7 @@ index f54403c..2bd109e 100644
      STDMETHOD_(ULONG,Release)(THIS) PURE;
      /*** unknown methods ***/
 -    STDMETHOD_(HRESULT,UnknownMethod1)(THIS_ void *, void *) PURE;
-+    STDMETHOD_(HRESULT,unknown1)(THIS_ void *,void *) PURE;
++    STDMETHOD_(HRESULT,unknown1)(THIS_ void *,void **) PURE;
 +    STDMETHOD_(HRESULT,unknown2)(THIS) PURE;
 +    STDMETHOD_(HRESULT,unknown3)(THIS_ void *) PURE;
  };

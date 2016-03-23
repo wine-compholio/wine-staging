@@ -7004,8 +7004,8 @@ if test "$enable_windowscodecs_IMILBitmapSource" -eq 1; then
 	patch_apply windowscodecs-IMILBitmapSource/0001-windowscodecs-Improve-compatibility-of-IMILBitmapSou.patch
 	patch_apply windowscodecs-IMILBitmapSource/0002-windowscodecs-Add-support-for-IMILBitmapScaler-inter.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Improve compatibility of IMILBitmapSource interface.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for IMILBitmapScaler interface.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Improve compatibility of IMILBitmapSource interface.", 2 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for IMILBitmapScaler interface.", 2 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,74 @@
+From 63e3d8fa86ea5bb6dd9154754d57b680b00533ad Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Thu, 24 Mar 2016 02:42:22 +0100
+Subject: advapi32: Fix return value of RegNotifyChangeKeyValue for pending
+ events.
+
+Also remove handling for STATUS_TIMEOUT. Is it ever returned?
+---
+ dlls/advapi32/registry.c       |  2 +-
+ dlls/advapi32/tests/registry.c | 28 ++++++++++++++++++++++++++++
+ 2 files changed, 29 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/advapi32/registry.c b/dlls/advapi32/registry.c
+index 7992384..4b3d852 100644
+--- a/dlls/advapi32/registry.c
++++ b/dlls/advapi32/registry.c
+@@ -2760,7 +2760,7 @@ LSTATUS WINAPI RegNotifyChangeKeyValue( HKEY hkey, BOOL fWatchSubTree,
+                                 fdwNotifyFilter, fWatchSubTree, NULL, 0,
+                                 fAsync);
+ 
+-    if (status && status != STATUS_TIMEOUT)
++    if (status && status != STATUS_PENDING)
+         return RtlNtStatusToDosError( status );
+ 
+     return ERROR_SUCCESS;
+diff --git a/dlls/advapi32/tests/registry.c b/dlls/advapi32/tests/registry.c
+index f877b36..82f5015 100644
+--- a/dlls/advapi32/tests/registry.c
++++ b/dlls/advapi32/tests/registry.c
+@@ -3452,6 +3452,33 @@ static void test_RegOpenCurrentUser(void)
+     RegCloseKey(key);
+ }
+ 
++static void test_RegNotifyChangeKeyValue(void)
++{
++    HKEY key, subkey;
++    HANDLE event;
++    DWORD dwret;
++    LONG ret;
++
++    event = CreateEventW(NULL, FALSE, TRUE, NULL);
++    ok(event != NULL, "CreateEvent failed, error %u\n", GetLastError());
++    ret = RegCreateKeyA(hkey_main, "TestKey", &key);
++    ok(ret == ERROR_SUCCESS, "expected ERROR_SUCCESS, got %d\n", ret);
++
++    ret = RegNotifyChangeKeyValue(key, TRUE, REG_NOTIFY_CHANGE_NAME, event, TRUE);
++    ok(ret == ERROR_SUCCESS, "expected ERROR_SUCCESS, got %d\n", ret);
++    dwret = WaitForSingleObject(event, 0);
++    ok(dwret == WAIT_TIMEOUT, "expected WAIT_TIMEOUT, got %u\n", dwret);
++
++    ret = RegCreateKeyA(key, "SubKey", &subkey);
++    ok(ret == ERROR_SUCCESS, "expected ERROR_SUCCESS, got %d\n", ret);
++    dwret = WaitForSingleObject(event, 0);
++    ok(dwret == WAIT_OBJECT_0, "expected WAIT_OBJECT_0, got %u\n", dwret);
++
++    RegDeleteKeyA(key, "");
++    RegCloseKey(key);
++    CloseHandle(event);
++}
++
+ START_TEST(registry)
+ {
+     /* Load pointers for functions that are not available in all Windows versions */
+@@ -3486,6 +3513,7 @@ START_TEST(registry)
+     test_delete_value();
+     test_delete_key_value();
+     test_RegOpenCurrentUser();
++    test_RegNotifyChangeKeyValue();
+ 
+     /* cleanup */
+     delete_key( hkey_main );
+-- 
+2.7.1
+

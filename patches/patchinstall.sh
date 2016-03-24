@@ -86,6 +86,7 @@ patch_enable_all ()
 	enable_Pipelight="$1"
 	enable_Staging="$1"
 	enable_advapi32_LsaLookupSids="$1"
+	enable_advapi32_RegNotifyChangeKeyValue="$1"
 	enable_advapi32_SetSecurityInfo="$1"
 	enable_amstream_GetMultiMediaStream="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
@@ -428,6 +429,9 @@ patch_enable ()
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
+			;;
+		advapi32-RegNotifyChangeKeyValue)
+			enable_advapi32_RegNotifyChangeKeyValue="$2"
 			;;
 		advapi32-SetSecurityInfo)
 			enable_advapi32_SetSecurityInfo="$2"
@@ -2533,6 +2537,21 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 		echo '+    { "Qian Hong", "advapi32/tests: Test prefix and use of TokenPrimaryGroup Sid.", 1 },';
 		echo '+    { "Qian Hong", "server: Create primary group using DOMAIN_GROUP_RID_USERS.", 1 },';
 		echo '+    { "Qian Hong", "advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset advapi32-RegNotifyChangeKeyValue
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39863] Fix return value of RegNotifyChangeKeyValue for pending events
+# |
+# | Modified files:
+# |   *	dlls/advapi32/registry.c, dlls/advapi32/tests/registry.c
+# |
+if test "$enable_advapi32_RegNotifyChangeKeyValue" -eq 1; then
+	patch_apply advapi32-RegNotifyChangeKeyValue/0001-advapi32-Fix-return-value-of-RegNotifyChangeKeyValue.patch
+	(
+		echo '+    { "Sebastian Lackner", "advapi32: Fix return value of RegNotifyChangeKeyValue for pending events.", 1 },';
 	) >> "$patchlist"
 fi
 

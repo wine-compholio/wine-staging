@@ -256,6 +256,7 @@ patch_enable_all ()
 	enable_ole32_HGLOBALStream="$1"
 	enable_oleaut32_CreateTypeLib="$1"
 	enable_oleaut32_OLEPictureImpl_SaveAsFile="$1"
+	enable_oleaut32_OleLoadPictureFile="$1"
 	enable_oleaut32_TKIND_COCLASS="$1"
 	enable_oleaut32_x86_64_Marshaller="$1"
 	enable_openal32_EFX_Extension="$1"
@@ -942,6 +943,9 @@ patch_enable ()
 			;;
 		oleaut32-OLEPictureImpl_SaveAsFile)
 			enable_oleaut32_OLEPictureImpl_SaveAsFile="$2"
+			;;
+		oleaut32-OleLoadPictureFile)
+			enable_oleaut32_OleLoadPictureFile="$2"
 			;;
 		oleaut32-TKIND_COCLASS)
 			enable_oleaut32_TKIND_COCLASS="$2"
@@ -5601,6 +5605,21 @@ if test "$enable_oleaut32_OLEPictureImpl_SaveAsFile" -eq 1; then
 	(
 		echo '+    { "Dmitry Timoshkov", "gdiplus: Reimplement metafile loading using gdi32 instead of IPicture.", 2 },';
 		echo '+    { "Dmitry Timoshkov", "oleaut32: Implement a better stub for IPicture::SaveAsFile.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset oleaut32-OleLoadPictureFile
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39786] Implement oleaut32.OleLoadPictureFile
+# |
+# | Modified files:
+# |   *	dlls/oleaut32/oleaut32.spec, dlls/oleaut32/olepicture.c, dlls/oleaut32/tests/olepicture.c
+# |
+if test "$enable_oleaut32_OleLoadPictureFile" -eq 1; then
+	patch_apply oleaut32-OleLoadPictureFile/0001-oleaut32-Implement-OleLoadPictureFile.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "oleaut32: Implement OleLoadPictureFile.", 1 },';
 	) >> "$patchlist"
 fi
 

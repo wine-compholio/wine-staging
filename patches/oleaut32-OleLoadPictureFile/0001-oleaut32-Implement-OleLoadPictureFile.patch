@@ -1,0 +1,162 @@
+From 348a0830b6b31fefd170e667f650db437914bee2 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Thu, 24 Mar 2016 13:35:32 +0800
+Subject: oleaut32: Implement OleLoadPictureFile.
+
+---
+ dlls/oleaut32/oleaut32.spec      |  2 +-
+ dlls/oleaut32/olepicture.c       | 19 ++++++++++++++
+ dlls/oleaut32/tests/olepicture.c | 53 ++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 73 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/oleaut32/oleaut32.spec b/dlls/oleaut32/oleaut32.spec
+index f5ad0ef..97aec54 100644
+--- a/dlls/oleaut32/oleaut32.spec
++++ b/dlls/oleaut32/oleaut32.spec
+@@ -390,7 +390,7 @@
+ 419 stdcall OleCreatePictureIndirect(ptr ptr long ptr)
+ 420 stdcall OleCreateFontIndirect(ptr ptr ptr)
+ 421 stdcall OleTranslateColor(long long long)
+-422 stub OleLoadPictureFile
++422 stdcall OleLoadPictureFile(int128 ptr)
+ 423 stdcall OleSavePictureFile(ptr wstr)
+ 424 stdcall OleLoadPicturePath(wstr ptr long long ptr ptr)
+ 425 stdcall VarUI4FromI8(int64 ptr)
+diff --git a/dlls/oleaut32/olepicture.c b/dlls/oleaut32/olepicture.c
+index 44157de..e700656 100644
+--- a/dlls/oleaut32/olepicture.c
++++ b/dlls/oleaut32/olepicture.c
+@@ -2316,6 +2316,25 @@ HRESULT WINAPI OleLoadPictureEx( LPSTREAM lpstream, LONG lSize, BOOL fRunmode,
+ }
+ 
+ /***********************************************************************
++ * OleLoadPictureFile (OLEAUT32.422)
++ */
++HRESULT WINAPI OleLoadPictureFile(VARIANT filename, IDispatch **picture)
++{
++    static const WCHAR file[] = { 'f','i','l','e',':',0 };
++
++    TRACE("(%s,%p)\n", wine_dbgstr_variant(&filename), picture);
++
++    if (V_VT(&filename) != VT_BSTR)
++        return CTL_E_FILENOTFOUND;
++
++    /* explicitly reject file: prefixes */
++    if (!strncmpW(V_BSTR(&filename), file, 5))
++        return CTL_E_PATHFILEACCESSERROR;
++
++    return OleLoadPicturePath(V_BSTR(&filename), NULL, 0, 0, &IID_IDispatch, (void **)picture);
++}
++
++/***********************************************************************
+  * OleSavePictureFile (OLEAUT32.423)
+  */
+ HRESULT WINAPI OleSavePictureFile(IDispatch *picture, BSTR filename)
+diff --git a/dlls/oleaut32/tests/olepicture.c b/dlls/oleaut32/tests/olepicture.c
+index 0903298..8ebf9ea 100644
+--- a/dlls/oleaut32/tests/olepicture.c
++++ b/dlls/oleaut32/tests/olepicture.c
+@@ -850,6 +850,7 @@ static void test_OleLoadPicturePath(void)
+     HANDLE file;
+     DWORD size;
+     WCHAR *ptr;
++    VARIANT var;
+ 
+     const struct
+     {
+@@ -916,6 +917,14 @@ static void test_OleLoadPicturePath(void)
+     if (pic)
+         IPicture_Release(pic);
+ 
++    VariantInit(&var);
++    V_VT(&var) = VT_BSTR;
++    V_BSTR(&var) = SysAllocString(temp_fileW + 8);
++    hres = OleLoadPictureFile(var, (IDispatch **)&pic);
++    ok(hres == S_OK, "OleLoadPictureFile error %#x\n", hres);
++    IPicture_Release(pic);
++    VariantClear(&var);
++
+     /* Try a DOS path with tacked on "file:". */
+     hres = OleLoadPicturePath(temp_fileW, NULL, 0, 0, &IID_IPicture, (void **)&pic);
+     ok(hres == S_OK ||
+@@ -924,6 +933,13 @@ static void test_OleLoadPicturePath(void)
+     if (pic)
+         IPicture_Release(pic);
+ 
++    VariantInit(&var);
++    V_VT(&var) = VT_BSTR;
++    V_BSTR(&var) = SysAllocString(temp_fileW);
++    hres = OleLoadPictureFile(var, (IDispatch **)&pic);
++    ok(hres == CTL_E_PATHFILEACCESSERROR, "wrong error %#x\n", hres);
++    VariantClear(&var);
++
+     DeleteFileA(temp_file);
+ 
+     /* Try with a nonexistent file. */
+@@ -933,12 +949,26 @@ static void test_OleLoadPicturePath(void)
+        broken(hres == E_FAIL), /*Win2k */
+        "Expected OleLoadPicturePath to return INET_E_RESOURCE_NOT_FOUND, got 0x%08x\n", hres);
+ 
++    VariantInit(&var);
++    V_VT(&var) = VT_BSTR;
++    V_BSTR(&var) = SysAllocString(temp_fileW + 8);
++    hres = OleLoadPictureFile(var, (IDispatch **)&pic);
++    todo_wine ok(hres == CTL_E_FILENOTFOUND, "wrong error %#x\n", hres);
++    VariantClear(&var);
++
+     hres = OleLoadPicturePath(temp_fileW, NULL, 0, 0, &IID_IPicture, (void **)&pic);
+     ok(hres == INET_E_RESOURCE_NOT_FOUND || /* XP+ */
+        broken(hres == E_UNEXPECTED) || /* NT4 */
+        broken(hres == E_FAIL), /* Win2k */
+        "Expected OleLoadPicturePath to return INET_E_RESOURCE_NOT_FOUND, got 0x%08x\n", hres);
+ 
++    VariantInit(&var);
++    V_VT(&var) = VT_BSTR;
++    V_BSTR(&var) = SysAllocString(temp_fileW);
++    hres = OleLoadPictureFile(var, (IDispatch **)&pic);
++    ok(hres == CTL_E_PATHFILEACCESSERROR, "wrong error %#x\n", hres);
++    VariantClear(&var);
++
+     file = CreateFileA(temp_file, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS,
+                        FILE_ATTRIBUTE_NORMAL, NULL);
+     WriteFile(file, bmpimage, sizeof(bmpimage), &size, NULL);
+@@ -960,6 +990,13 @@ static void test_OleLoadPicturePath(void)
+     if (pic)
+         IPicture_Release(pic);
+ 
++    VariantInit(&var);
++    V_VT(&var) = VT_BSTR;
++    V_BSTR(&var) = SysAllocString(temp_fileW);
++    hres = OleLoadPictureFile(var, (IDispatch **)&pic);
++    ok(hres == CTL_E_PATHFILEACCESSERROR, "wrong error %#x\n", hres);
++    VariantClear(&var);
++
+     DeleteFileA(temp_file);
+ 
+     /* Try with a nonexistent file. */
+@@ -968,6 +1005,22 @@ static void test_OleLoadPicturePath(void)
+        broken(hres == E_UNEXPECTED) || /* NT4 */
+        broken(hres == E_FAIL), /* Win2k */
+        "Expected OleLoadPicturePath to return INET_E_RESOURCE_NOT_FOUND, got 0x%08x\n", hres);
++
++    VariantInit(&var);
++    V_VT(&var) = VT_BSTR;
++    V_BSTR(&var) = SysAllocString(temp_fileW);
++    hres = OleLoadPictureFile(var, (IDispatch **)&pic);
++    ok(hres == CTL_E_PATHFILEACCESSERROR, "wrong error %#x\n", hres);
++    VariantClear(&var);
++
++    VariantInit(&var);
++    V_VT(&var) = VT_INT;
++    V_INT(&var) = 762;
++    hres = OleLoadPictureFile(var, (IDispatch **)&pic);
++    ok(hres == CTL_E_FILENOTFOUND, "wrong error %#x\n", hres);
++
++if (0) /* crashes under Windows */
++    hres = OleLoadPictureFile(var, NULL);
+ }
+ 
+ static void test_himetric(void)
+-- 
+2.7.1
+

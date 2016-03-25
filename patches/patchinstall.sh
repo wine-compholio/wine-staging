@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "47cf3fe36d4f5a2f83c0d48ee763c256cd6010c5"
+	echo "4315caeff699325cd681b9beb7d22908b098411b"
 }
 
 # Show version information
@@ -326,6 +326,7 @@ patch_enable_all ()
 	enable_user32_DeferWindowPos="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawTextExW="$1"
+	enable_user32_EnumDisplayMonitors="$1"
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_Invalidate_Key_State="$1"
 	enable_user32_ListBox_Size="$1"
@@ -373,7 +374,6 @@ patch_enable_all ()
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_Clipboard_HTML="$1"
 	enable_winex11_DefaultDisplayFrequency="$1"
-	enable_winex11_MONITORENUMPROC="$1"
 	enable_winex11_Window_Groups="$1"
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
@@ -1153,6 +1153,9 @@ patch_enable ()
 		user32-DrawTextExW)
 			enable_user32_DrawTextExW="$2"
 			;;
+		user32-EnumDisplayMonitors)
+			enable_user32_EnumDisplayMonitors="$2"
+			;;
 		user32-GetSystemMetrics)
 			enable_user32_GetSystemMetrics="$2"
 			;;
@@ -1293,9 +1296,6 @@ patch_enable ()
 			;;
 		winex11-DefaultDisplayFrequency)
 			enable_winex11_DefaultDisplayFrequency="$2"
-			;;
-		winex11-MONITORENUMPROC)
-			enable_winex11_MONITORENUMPROC="$2"
 			;;
 		winex11-Window_Groups)
 			enable_winex11_Window_Groups="$2"
@@ -6701,6 +6701,21 @@ if test "$enable_user32_DrawTextExW" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset user32-EnumDisplayMonitors
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#24421] Set %ecx to address of rect in EnumDisplayMonitors callback
+# |
+# | Modified files:
+# |   *	dlls/user32/misc.c
+# |
+if test "$enable_user32_EnumDisplayMonitors" -eq 1; then
+	patch_apply user32-EnumDisplayMonitors/0001-user32-Set-ecx-to-address-of-rect-in-EnumDisplayMoni.patch
+	(
+		echo '+    { "Sebastian Lackner", "user32: Set %ecx to address of rect in EnumDisplayMonitors callback.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset user32-GetSystemMetrics
 # |
 # | This patchset fixes the following Wine bugs:
@@ -7384,21 +7399,6 @@ if test "$enable_winex11_DefaultDisplayFrequency" -eq 1; then
 	patch_apply winex11-DefaultDisplayFrequency/0001-winex11.drv-Allow-to-select-default-display-frequenc.patch
 	(
 		echo '+    { "Michael Müller", "winex11.drv: Allow to select default display frequency in registry key.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winex11-MONITORENUMPROC
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#24421] Use assembler wrapper to call MONITORENUMPROC callback
-# |
-# | Modified files:
-# |   *	dlls/winex11.drv/xinerama.c
-# |
-if test "$enable_winex11_MONITORENUMPROC" -eq 1; then
-	patch_apply winex11-MONITORENUMPROC/0001-winex11.drv-Use-assembler-wrapper-to-call-MONITORENU.patch
-	(
-		echo '+    { "Sebastian Lackner", "winex11.drv: Use assembler wrapper to call MONITORENUMPROC callback.", 1 },';
 	) >> "$patchlist"
 fi
 

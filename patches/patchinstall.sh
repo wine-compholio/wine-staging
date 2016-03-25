@@ -4421,6 +4421,9 @@ fi
 
 # Patchset makefiles-Revert_libwine_Import
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40355] Revert commit to import libwine only for Windows builds
+# |
 # | Modified files:
 # |   *	tools/makedep.c
 # |

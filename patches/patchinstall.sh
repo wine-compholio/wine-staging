@@ -233,6 +233,7 @@ patch_enable_all ()
 	enable_ntdll_RtlIpStringToAddress_Tests="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
+	enable_ntdll_Stack_Guard_Pages="$1"
 	enable_ntdll_Status_Mapping="$1"
 	enable_ntdll_Syscall_Wrappers="$1"
 	enable_ntdll_SystemInterruptInformation="$1"
@@ -874,6 +875,9 @@ patch_enable ()
 			;;
 		ntdll-Serial_Port_Detection)
 			enable_ntdll_Serial_Port_Detection="$2"
+			;;
+		ntdll-Stack_Guard_Pages)
+			enable_ntdll_Stack_Guard_Pages="$2"
 			;;
 		ntdll-Status_Mapping)
 			enable_ntdll_Status_Mapping="$2"
@@ -5173,6 +5177,18 @@ if test "$enable_ntdll_Serial_Port_Detection" -eq 1; then
 	patch_apply ntdll-Serial_Port_Detection/0001-ntdll-Do-a-device-check-before-returning-a-default-s.patch
 	(
 		echo '+    { "Alex Henrie", "ntdll: Do a device check before returning a default serial port name.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Stack_Guard_Pages
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_x86_64.c
+# |
+if test "$enable_ntdll_Stack_Guard_Pages" -eq 1; then
+	patch_apply ntdll-Stack_Guard_Pages/0001-ntdll-Handle-stack-guard-pages-on-x86_64.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Handle stack guard pages on x86_64.", 1 },';
 	) >> "$patchlist"
 fi
 

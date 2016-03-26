@@ -4439,21 +4439,33 @@ fi
 # | This patchset fixes the following Wine bugs:
 # |   *	[#37811] Add implementation for mfplat.MFTRegister
 # |   *	[#39309] Add implementation for mfplat.MFTEnum
+# |   *	[#39367] Return stub interface from mf.MFCreateMediaSession
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/mfplat/Makefile.in, dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, dlls/mfplat/tests/Makefile.in,
-# | 	dlls/mfplat/tests/mfplat.c, loader/wine.inf.in
+# |   *	configure.ac, dlls/mf/Makefile.in, dlls/mf/main.c, dlls/mf/mf.spec, dlls/mf/mf_private.h, dlls/mf/session.c,
+# | 	dlls/mfplat/Makefile.in, dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, dlls/mfplat/tests/Makefile.in,
+# | 	dlls/mfplat/tests/mfplat.c, include/Makefile.in, include/mfidl.idl, include/rpcndr.h, loader/wine.inf.in
 # |
 if test "$enable_mfplat_MFTRegister" -eq 1; then
 	patch_apply mfplat-MFTRegister/0001-mfplat-Implement-MFTRegister.patch
 	patch_apply mfplat-MFTRegister/0002-mfplat-Implement-MFTUnregister.patch
 	patch_apply mfplat-MFTRegister/0003-mfplat-Implement-MFTEnum.patch
 	patch_apply mfplat-MFTRegister/0004-mfplat-tests-Add-tests.patch
+	patch_apply mfplat-MFTRegister/0005-include-mfidl.idl-Add-IMFMediaSession-interface-and-.patch
+	patch_apply mfplat-MFTRegister/0006-mf-Add-stub-for-MFCreateMediaSession.patch
+	patch_apply mfplat-MFTRegister/0007-include-rpcndr.h-Fix-definition-of-EXTERN_GUID.patch
+	patch_apply mfplat-MFTRegister/0008-mf-Implement-IMFMediaSession-stub-interface.patch
+	patch_apply mfplat-MFTRegister/0009-mfplat-Add-stub-for-MFCreateSourceResolver.patch
 	(
 		echo '+    { "Michael Müller", "mfplat: Implement MFTRegister.", 2 },';
 		echo '+    { "Michael Müller", "mfplat: Implement MFTUnregister.", 1 },';
 		echo '+    { "Michael Müller", "mfplat: Implement MFTEnum.", 1 },';
 		echo '+    { "Michael Müller", "mfplat/tests: Add tests.", 1 },';
+		echo '+    { "Michael Müller", "include/mfidl.idl: Add IMFMediaSession interface and dependencies.", 1 },';
+		echo '+    { "Michael Müller", "mf: Add stub for MFCreateMediaSession.", 1 },';
+		echo '+    { "Michael Müller", "include/rpcndr.h: Fix definition of EXTERN_GUID.", 1 },';
+		echo '+    { "Michael Müller", "mf: Implement IMFMediaSession stub interface.", 1 },';
+		echo '+    { "Michael Müller", "mfplat: Add stub for MFCreateSourceResolver.", 1 },';
 	) >> "$patchlist"
 fi
 

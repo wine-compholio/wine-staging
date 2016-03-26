@@ -685,3 +685,29 @@ def generate_ifdef_patch(original, patched, ifdef):
 
     # Return the final diff
     return diff
+
+if __name__ == "__main__":
+    import unittest
+
+    # Basic tests for _preprocess_source()
+    class PreprocessorTests(unittest.TestCase):
+        def test_preprocessor(self):
+            source = ["int a; // comment 1",
+                      "int b; // comment 2 \\",
+                      "          comment 3 \\",
+                      "          comment 4",
+                      "int c; // comment with \"quotes\"",
+                      "int d; // comment with /* c++ comment */",
+                      "int e; /* multi \\",
+                      "          line",
+                      "          comment */",
+                      "char *x = \"\\\\\";",
+                      "char *y = \"abc\\\"def\";",
+                      "char *z = \"multi\" \\",
+                      "          \"line\"",
+                      "          \"string\";"]
+            lines, split = _preprocess_source(source)
+            self.assertEqual(lines, source)
+            self.assertEqual(split, set([0, 1, 4, 5, 6, 9, 10, 11, 13, 14]))
+
+    unittest.main()

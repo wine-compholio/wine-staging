@@ -748,4 +748,63 @@ if __name__ == "__main__":
             self.assertEqual(lines, source)
             self.assertEqual(split, set([0, 1, 4, 5, 6, 9, 10, 11, 13, 14]))
 
+    # Basic tests for generate_ifdef_patch()
+    class GenerateIfdefPatchTests(unittest.TestCase):
+        def test_ifdefined(self):
+            source = ["line1();", "line2();", "line3();",
+                      "function(arg1, \\",
+                      "         arg2, \\",
+                      "         arg3);",
+                      "line5();", "line6();", "line7();"]
+            source1 = tempfile.NamedTemporaryFile()
+            source1.write("\n".join(source + [""]))
+            source1.flush()
+
+            source = ["line1();", "line2();", "line3();",
+                      "function(arg1, \\",
+                      "         new_arg2, \\",
+                      "         arg3);",
+                      "line5();", "line6();", "line7();"]
+            source2  = tempfile.NamedTemporaryFile()
+            source2.write("\n".join(source + [""]))
+            source2.flush()
+
+            diff = generate_ifdef_patch(source1, source1, "PATCHED")
+            self.assertEqual(diff, None)
+
+            diff = generate_ifdef_patch(source2, source2, "PATCHED")
+            self.assertEqual(diff, None)
+
+            expected = ["@@ -1,9 +1,15 @@",
+                        " line1();", " line2();", " line3();",
+                        "+#if defined(PATCHED)",
+                        " function(arg1, \\",
+                        "          new_arg2, \\",
+                        "          arg3);",
+                        "+#else  /* PATCHED */",
+                        "+function(arg1, \\",
+                        "+         arg2, \\",
+                        "+         arg3);",
+                        "+#endif /* PATCHED */",
+                        " line5();", " line6();", " line7();"]
+            diff = generate_ifdef_patch(source1, source2, "PATCHED")
+            lines = diff.read().rstrip("\n").split("\n")
+            self.assertEqual(lines, expected)
+
+            expected = ["@@ -1,9 +1,15 @@",
+                        " line1();", " line2();", " line3();",
+                        "+#if defined(PATCHED)",
+                        " function(arg1, \\",
+                        "          arg2, \\",
+                        "          arg3);",
+                        "+#else  /* PATCHED */",
+                        "+function(arg1, \\",
+                        "+         new_arg2, \\",
+                        "+         arg3);",
+                        "+#endif /* PATCHED */",
+                        " line5();", " line6();", " line7();"]
+            diff = generate_ifdef_patch(source2, source1, "PATCHED")
+            lines = diff.read().rstrip("\n").split("\n")
+            self.assertEqual(lines, expected)
+
     unittest.main()

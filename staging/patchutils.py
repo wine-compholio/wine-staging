@@ -689,6 +689,42 @@ def generate_ifdef_patch(original, patched, ifdef):
 if __name__ == "__main__":
     import unittest
 
+    class PatchParserTests(unittest.TestCase):
+        def test_author(self):
+            author = _parse_author("Author Name <author@email.com>")
+            self.assertEqual(author, ("Author Name", "author@email.com"))
+
+            author = _parse_author("=?UTF-8?q?Author=20Name?= <author@email.com>")
+            self.assertEqual(author, ("Author Name", "author@email.com"))
+
+        def test_subject(self):
+            subject = _parse_subject("[PATCH v3] component: Subject.")
+            self.assertEqual(subject, ("component: Subject", 3))
+
+            subject = _parse_subject("[PATCH] component: Subject (v3).")
+            self.assertEqual(subject, ("component: Subject", 3))
+
+            subject = _parse_subject("[PATCH] component: Subject (try 3).")
+            self.assertEqual(subject, ("component: Subject", 3))
+
+            subject = _parse_subject("[PATCH] component: Subject (take 3).")
+            self.assertEqual(subject, ("component: Subject", 3))
+
+            subject = _parse_subject("[PATCH] component: Subject (rev 3).")
+            self.assertEqual(subject, ("component: Subject", 3))
+
+            subject = _parse_subject("[PATCH] component: Subject [v3].")
+            self.assertEqual(subject, ("component: Subject", 3))
+
+            subject = _parse_subject("[PATCH] component: Subject, v3.")
+            self.assertEqual(subject, ("component: Subject", 3))
+
+            subject = _parse_subject("[PATCH] component: Subject v3.")
+            self.assertEqual(subject, ("component: Subject", 3))
+
+            subject = _parse_subject("[PATCH] component: Subject (resend).")
+            self.assertEqual(subject, ("component: Subject", 1))
+
     # Basic tests for _preprocess_source()
     class PreprocessorTests(unittest.TestCase):
         def test_preprocessor(self):

@@ -508,6 +508,8 @@ def generate_ifdef_patch(original, patched, ifdef):
             line = diff.readline()
             if line == "":
                 break
+            if line.startswith("\\ "):
+                continue
 
             # Parse each hunk, and extract the srclines and dstlines. This algorithm is very
             # similar to _read_single_patch.

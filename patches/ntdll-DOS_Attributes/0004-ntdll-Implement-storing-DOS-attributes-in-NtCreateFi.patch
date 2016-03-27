@@ -1,20 +1,20 @@
-From ac9076b71ddda6d430fe80fcfe62a47c2dcc9dc9 Mon Sep 17 00:00:00 2001
+From 97c810889b2ffe7408c2f185a2e7e399ce13d014 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 20 Aug 2014 15:28:00 -0600
 Subject: ntdll: Implement storing DOS attributes in NtCreateFile.
 
 ---
  dlls/ntdll/file.c            | 79 ++++++++++++++++++++++++++++----------------
- dlls/ntdll/tests/directory.c | 22 +++++-------
+ dlls/ntdll/tests/directory.c | 24 +++++---------
  include/wine/port.h          |  2 ++
  libs/port/xattr.c            | 20 +++++++++++
- 4 files changed, 80 insertions(+), 43 deletions(-)
+ 4 files changed, 81 insertions(+), 44 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 521ab64..b4187d4 100644
+index 17ad605..2381e3c 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -205,6 +205,21 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
+@@ -223,6 +223,21 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
      return ret;
  }
  
@@ -36,7 +36,7 @@ index 521ab64..b4187d4 100644
  /**************************************************************************
   *                 FILE_CreateFile                    (internal)
   * Open a file.
-@@ -216,6 +231,8 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
+@@ -234,6 +249,8 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
                                   ULONG attributes, ULONG sharing, ULONG disposition,
                                   ULONG options, PVOID ea_buffer, ULONG ea_length )
  {
@@ -45,7 +45,7 @@ index 521ab64..b4187d4 100644
      ANSI_STRING unix_name;
      BOOL created = FALSE;
  
-@@ -259,39 +276,37 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
+@@ -287,39 +304,37 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
          io->u.Status = STATUS_SUCCESS;
      }
  
@@ -112,7 +112,7 @@ index 521ab64..b4187d4 100644
  
      if (io->u.Status == STATUS_SUCCESS)
      {
-@@ -313,6 +328,11 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
+@@ -341,6 +356,11 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
              io->Information = FILE_OVERWRITTEN;
              break;
          }
@@ -124,7 +124,7 @@ index 521ab64..b4187d4 100644
      }
      else if (io->u.Status == STATUS_TOO_MANY_OPENED_FILES)
      {
-@@ -320,6 +340,7 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
+@@ -348,6 +368,7 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
          if (!once++) ERR_(winediag)( "Too many open files, ulimit -n probably needs to be increased\n" );
      }
  
@@ -133,7 +133,7 @@ index 521ab64..b4187d4 100644
  }
  
 diff --git a/dlls/ntdll/tests/directory.c b/dlls/ntdll/tests/directory.c
-index f190ff4..68b5406 100644
+index 7b1002a..aa8e97f 100644
 --- a/dlls/ntdll/tests/directory.c
 +++ b/dlls/ntdll/tests/directory.c
 @@ -51,7 +51,6 @@ static NTSTATUS (WINAPI *pRtlWow64EnableFsRedirectionEx)( ULONG disable, ULONG *
@@ -144,10 +144,11 @@ index f190ff4..68b5406 100644
      BOOL attr_done;           /* set if attributes were tested for this file already */
      const DWORD attr;         /* desired attribute */
      const char *name;         /* filename to use */
-@@ -60,13 +59,13 @@ static struct testfile_s {
+@@ -60,14 +59,14 @@ static struct testfile_s {
      int nfound;               /* How many were found (expect 1) */
      WCHAR nameW[20];          /* unicode version of name (filled in later) */
  } testfiles[] = {
+-    { 0, 0, FILE_ATTRIBUTE_NORMAL,    "longfilename.tmp", NULL, "normal" },
 -    { 0, 0, FILE_ATTRIBUTE_NORMAL,    "n.tmp", NULL, "normal" },
 -    { 1, 0, FILE_ATTRIBUTE_HIDDEN,    "h.tmp", NULL, "hidden" },
 -    { 1, 0, FILE_ATTRIBUTE_SYSTEM,    "s.tmp", NULL, "system" },
@@ -155,6 +156,7 @@ index f190ff4..68b5406 100644
 -    { 0, 0, FILE_ATTRIBUTE_DIRECTORY, ".",     NULL, ". directory" },
 -    { 0, 0, FILE_ATTRIBUTE_DIRECTORY, "..",    NULL, ".. directory" },
 -    { 0, 0, 0, NULL }
++    { 0, FILE_ATTRIBUTE_NORMAL,    "longfilename.tmp", NULL, "normal" },
 +    { 0, FILE_ATTRIBUTE_NORMAL,    "n.tmp", NULL, "normal" },
 +    { 0, FILE_ATTRIBUTE_HIDDEN,    "h.tmp", NULL, "hidden" },
 +    { 0, FILE_ATTRIBUTE_SYSTEM,    "s.tmp", NULL, "system" },
@@ -165,7 +167,7 @@ index f190ff4..68b5406 100644
  };
  static const int max_test_dir_size = 20;  /* size of above plus some for .. etc */
  
-@@ -147,12 +146,7 @@ static void tally_test_file(FILE_BOTH_DIRECTORY_INFORMATION *dir_info)
+@@ -148,12 +147,7 @@ static void tally_test_file(FILE_BOTH_DIRECTORY_INFORMATION *dir_info)
          if (namelen != len || memcmp(nameW, testfiles[i].nameW, len*sizeof(WCHAR)))
              continue;
          if (!testfiles[i].attr_done) {
@@ -180,7 +182,7 @@ index f190ff4..68b5406 100644
          }
          testfiles[i].nfound++;
 diff --git a/include/wine/port.h b/include/wine/port.h
-index cc572f3..9e2b8165 100644
+index 445a25e..04ae7a6 100644
 --- a/include/wine/port.h
 +++ b/include/wine/port.h
 @@ -373,6 +373,8 @@ extern int xattr_fget( int filedes, const char *name, void *value, size_t size )
@@ -221,5 +223,5 @@ index 6918c99..683e7a6 100644
 +#endif
 +}
 -- 
-1.9.1
+2.7.1
 

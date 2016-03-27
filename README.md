@@ -91,7 +91,7 @@ for more details.*
 * Allow to edit winecfg library override by double clicking
 * Allow to open files/directories without any access rights in order to query attributes
 * Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE. ([Wine Bug #12652](https://bugs.winehq.org/show_bug.cgi?id=12652))
-* Allow to set debug registers separately in NtSetContextThread ([Wine Bug #39454](https://bugs.winehq.org/show_bug.cgi?id=39454))
+* ~~Allow to set debug registers separately in NtSetContextThread~~ ([Wine Bug #39454](https://bugs.winehq.org/show_bug.cgi?id=39454))
 * Allow to set pixel format for desktop window
 * Allow to specify default display frequency in registry
 * Also send WM_CAPTURECHANGE when capture has not changed ([Wine Bug #13683](https://bugs.winehq.org/show_bug.cgi?id=13683))

@@ -7,7 +7,7 @@ are part of **Wine Staging** and are licensed under the terms of the
 [LGPLv2.1](#gnu-lgpl-version-21), to stay compatible with Wine:
 
 ```
-Copyright (C) 2014-2015 the Wine Staging project authors.
+Copyright (C) 2014-2016 the Wine Staging project authors.
 
 Wine Staging is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public

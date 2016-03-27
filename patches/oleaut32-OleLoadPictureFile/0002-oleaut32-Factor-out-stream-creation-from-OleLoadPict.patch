@@ -1,0 +1,114 @@
+From 80a5db695f22b94335d3945354c1e28c519f81ff Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Sun, 27 Mar 2016 16:26:47 +0800
+Subject: oleaut32: Factor out stream creation from OleLoadPicturePath.
+
+---
+ dlls/oleaut32/olepicture.c | 75 +++++++++++++++++++++++++---------------------
+ 1 file changed, 41 insertions(+), 34 deletions(-)
+
+diff --git a/dlls/oleaut32/olepicture.c b/dlls/oleaut32/olepicture.c
+index 285afba..9badf31 100644
+--- a/dlls/oleaut32/olepicture.c
++++ b/dlls/oleaut32/olepicture.c
+@@ -2315,6 +2315,45 @@ HRESULT WINAPI OleLoadPictureEx( LPSTREAM lpstream, LONG lSize, BOOL fRunmode,
+   return hr;
+ }
+ 
++static HRESULT create_stream(const WCHAR *filename, IStream **stream)
++{
++    HANDLE hFile;
++    DWORD dwFileSize;
++    HGLOBAL hGlobal = NULL;
++    DWORD dwBytesRead;
++    HRESULT hr = S_OK;
++
++    hFile = CreateFileW(filename, GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
++    if (hFile == INVALID_HANDLE_VALUE)
++        return HRESULT_FROM_WIN32(GetLastError());
++
++    dwFileSize = GetFileSize(hFile, NULL);
++    if (dwFileSize != INVALID_FILE_SIZE)
++    {
++        hGlobal = GlobalAlloc(GMEM_FIXED, dwFileSize);
++        if (!hGlobal)
++            hr = E_OUTOFMEMORY;
++        else
++        {
++            if (!ReadFile(hFile, hGlobal, dwFileSize, &dwBytesRead, NULL))
++            {
++                GlobalFree(hGlobal);
++                hr = HRESULT_FROM_WIN32(GetLastError());
++            }
++        }
++    }
++
++    CloseHandle(hFile);
++
++    if (FAILED(hr)) return hr;
++
++    hr = CreateStreamOnHGlobal(hGlobal, TRUE, stream);
++    if (FAILED(hr))
++        GlobalFree(hGlobal);
++
++    return hr;
++}
++
+ /***********************************************************************
+  * OleSavePictureFile (OLEAUT32.423)
+  */
+@@ -2332,12 +2371,7 @@ HRESULT WINAPI OleLoadPicturePath( LPOLESTR szURLorPath, LPUNKNOWN punkCaller,
+ 		LPVOID *ppvRet )
+ {
+   static const WCHAR file[] = { 'f','i','l','e',':',0 };
+-  HANDLE hFile;
+-  DWORD dwFileSize;
+-  HGLOBAL hGlobal = NULL;
+-  DWORD dwBytesRead;
+   IStream *stream;
+-  BOOL bRead;
+   HRESULT hRes;
+   WCHAR *file_candidate;
+   WCHAR path_buf[MAX_PATH];
+@@ -2366,36 +2400,9 @@ HRESULT WINAPI OleLoadPicturePath( LPOLESTR szURLorPath, LPUNKNOWN punkCaller,
+ 
+   /* Handle candidate DOS paths separately. */
+   if (file_candidate[1] == ':') {
+-      hFile = CreateFileW(file_candidate, GENERIC_READ, 0, NULL, OPEN_EXISTING,
+-                          0, NULL);
+-      if (hFile == INVALID_HANDLE_VALUE)
+-          return INET_E_RESOURCE_NOT_FOUND;
+-
+-      dwFileSize = GetFileSize(hFile, NULL);
+-      if (dwFileSize != INVALID_FILE_SIZE )
+-      {
+-	  hGlobal = GlobalAlloc(GMEM_FIXED,dwFileSize);
+-	  if ( hGlobal)
+-	  {
+-	      bRead = ReadFile(hFile, hGlobal, dwFileSize, &dwBytesRead, NULL) && dwBytesRead == dwFileSize;
+-	      if (!bRead)
+-	      {
+-		  GlobalFree(hGlobal);
+-		  hGlobal = 0;
+-	      }
+-	  }
+-      }
+-      CloseHandle(hFile);
+-      
+-      if (!hGlobal)
++      hRes = create_stream(file_candidate, &stream);
++      if (FAILED(hRes))
+ 	  return INET_E_RESOURCE_NOT_FOUND;
+-
+-      hRes = CreateStreamOnHGlobal(hGlobal, TRUE, &stream);
+-      if (FAILED(hRes)) 
+-      {
+-	  GlobalFree(hGlobal);
+-	  return hRes;
+-      }
+   } else {
+       IMoniker *pmnk;
+       IBindCtx *pbc;
+-- 
+2.7.1
+

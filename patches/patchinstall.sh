@@ -5648,9 +5648,13 @@ fi
 # |   *	dlls/oleaut32/oleaut32.spec, dlls/oleaut32/olepicture.c, dlls/oleaut32/tests/olepicture.c
 # |
 if test "$enable_oleaut32_OleLoadPictureFile" -eq 1; then
-	patch_apply oleaut32-OleLoadPictureFile/0001-oleaut32-Implement-OleLoadPictureFile.patch
+	patch_apply oleaut32-OleLoadPictureFile/0001-oleaut32-Do-not-reimplement-OleLoadPicture-in-OleLoa.patch
+	patch_apply oleaut32-OleLoadPictureFile/0002-oleaut32-Factor-out-stream-creation-from-OleLoadPict.patch
+	patch_apply oleaut32-OleLoadPictureFile/0003-oleaut32-Implement-OleLoadPictureFile.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "oleaut32: Implement OleLoadPictureFile.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "oleaut32: Do not reimplement OleLoadPicture in OleLoadPicturePath.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "oleaut32: Factor out stream creation from OleLoadPicturePath.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "oleaut32: Implement OleLoadPictureFile.", 2 },';
 	) >> "$patchlist"
 fi
 

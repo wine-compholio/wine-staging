@@ -317,6 +317,7 @@ patch_enable_all ()
 	enable_shell32_UNIXFS_get_unix_path="$1"
 	enable_shell32_UnixFS="$1"
 	enable_shlwapi_AssocGetPerceivedType="$1"
+	enable_shlwapi_IStream_fnRead="$1"
 	enable_shlwapi_SHMapHandle="$1"
 	enable_shlwapi_UrlCombine="$1"
 	enable_stdole32_idl_Typelib="$1"
@@ -1127,6 +1128,9 @@ patch_enable ()
 			;;
 		shlwapi-AssocGetPerceivedType)
 			enable_shlwapi_AssocGetPerceivedType="$2"
+			;;
+		shlwapi-IStream_fnRead)
+			enable_shlwapi_IStream_fnRead="$2"
 			;;
 		shlwapi-SHMapHandle)
 			enable_shlwapi_SHMapHandle="$2"
@@ -6525,6 +6529,18 @@ if test "$enable_shlwapi_AssocGetPerceivedType" -eq 1; then
 	(
 		echo '+    { "Mark Jansen", "shlwapi/tests: Add tests for AssocGetPerceivedType.", 1 },';
 		echo '+    { "Mark Jansen", "shlwapi: Implement AssocGetPerceivedType.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shlwapi-IStream_fnRead
+# |
+# | Modified files:
+# |   *	dlls/shlwapi/istream.c, dlls/shlwapi/tests/istream.c
+# |
+if test "$enable_shlwapi_IStream_fnRead" -eq 1; then
+	patch_apply shlwapi-IStream_fnRead/0001-shlwapi-Fix-IStream-Read-return-value-for-partial-re.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "shlwapi: Fix IStream::Read() return value for partial reads.", 1 },';
 	) >> "$patchlist"
 fi
 

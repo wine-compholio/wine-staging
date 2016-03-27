@@ -177,7 +177,7 @@ def _latest_wine_commit(commit=None):
     if not os.path.isdir(config.path_wine):
         raise PatchUpdaterError("Please create a symlink to the wine repository in %s" % config.path_wine)
     if commit is None:
-        commit = subprocess.check_output(["git", "rev-parse", "origin/master"], cwd=config.path_wine).strip()
+        commit = subprocess.check_output(["git", "rev-parse", "origin/stable"], cwd=config.path_wine).strip()
     assert len(commit) == 40 and commit == commit.lower()
     return commit
 

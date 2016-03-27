@@ -5820,8 +5820,8 @@ if test "$enable_reg_Implement_Query" -eq 1; then
 	patch_apply reg-Implement_Query/0001-reg-Query-all-values-and-subkeys-in-a-specified-key.patch
 	patch_apply reg-Implement_Query/0002-reg-Add-support-for-querying-the-registry-with-the-v.patch
 	(
-		echo '+    { "Hugh McMaster", "reg: Query all values and subkeys in a specified key.", 1 },';
-		echo '+    { "Hugh McMaster", "reg: Add support for querying the registry with the /v and /ve switches.", 1 },';
+		echo '+    { "Hugh McMaster", "reg: Query all values and subkeys in a specified key.", 2 },';
+		echo '+    { "Hugh McMaster", "reg: Add support for querying the registry with the /v and /ve switches.", 2 },';
 	) >> "$patchlist"
 fi
 

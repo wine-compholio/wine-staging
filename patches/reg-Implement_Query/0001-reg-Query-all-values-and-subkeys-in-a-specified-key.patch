@@ -1,20 +1,20 @@
-From 52a65aa581b8bdcc972efcb8f8a9320481124812 Mon Sep 17 00:00:00 2001
+From 47f219c26491fdffccf4b74e319daf80baf06de6 Mon Sep 17 00:00:00 2001
 From: Hugh McMaster <hugh.mcmaster@outlook.com>
 Date: Thu, 17 Mar 2016 16:10:25 +1100
-Subject: reg: Query all values and subkeys in a specified key
+Subject: reg: Query all values and subkeys in a specified key (v2)
 
 Displays all values and subkeys in a specified key. Recursion is supported.
 
 Signed-off-by: Hugh McMaster <hugh.mcmaster@outlook.com>
 ---
- programs/reg/reg.c | 294 +++++++++++++++++++++++++++++++++++++++++++++++++++--
- 1 file changed, 286 insertions(+), 8 deletions(-)
+ programs/reg/reg.c | 298 +++++++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 291 insertions(+), 7 deletions(-)
 
 diff --git a/programs/reg/reg.c b/programs/reg/reg.c
-index 9dbce32..75c5292 100644
+index b2066e0..ab04ee9 100644
 --- a/programs/reg/reg.c
 +++ b/programs/reg/reg.c
-@@ -546,14 +546,292 @@ static int reg_delete(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
+@@ -536,14 +536,298 @@ static int reg_delete(WCHAR *key_name, WCHAR *value_name, BOOL value_empty,
      return 0;
  }
  
@@ -22,8 +22,7 @@ index 9dbce32..75c5292 100644
 -    BOOL subkey)
 +static WCHAR *reg_data_to_wchar(DWORD type, const BYTE *src, DWORD size_bytes)
  {
-+    WCHAR *buffer = NULL, *ptr = NULL;
-+    WCHAR hex_fmt[] = {'%','0','2','x',0};
++    WCHAR *buffer = NULL;
 +    int i;
 +
 +    switch (type)
@@ -35,24 +34,31 @@ index 9dbce32..75c5292 100644
 +            strcpyW(buffer, (WCHAR *)src);
 +            break;
 +        case REG_BINARY:
++        {
++            WCHAR *ptr;
++            WCHAR fmt[] = {'%','0','2','x',0};
++
 +            buffer = HeapAlloc(GetProcessHeap(), 0, (size_bytes * 2 + 1) * sizeof(WCHAR));
 +            ptr = buffer;
 +            for (i = 0; i < size_bytes; i++)
-+                ptr += sprintfW(ptr, hex_fmt, src[i]);
++                ptr += sprintfW(ptr, fmt, src[i]);
 +            break;
++        }
 +        case REG_DWORD:
 +     /* case REG_DWORD_LITTLE_ENDIAN: */
 +        case REG_DWORD_BIG_ENDIAN:
 +        {
++            DWORD value = 0;
 +            const int zero_x_dword = 10;
-+            WCHAR zero_x[] = {'0','x',0};
-+
-+            buffer = HeapAlloc(GetProcessHeap(), 0, (zero_x_dword + 1) * sizeof(WCHAR));
-+            strcpyW(buffer, zero_x);
-+            ptr = buffer + 2;
++            WCHAR fmt[] = {'0','x','%','x',0};
 +
 +            for (i = size_bytes; i-- > 0;)
-+                ptr += sprintfW(ptr, hex_fmt, src[i]);
++            {
++                value <<= 8;
++                value |= src[i];
++            }
++            buffer = HeapAlloc(GetProcessHeap(), 0, (zero_x_dword + 1) * sizeof(WCHAR));
++            sprintfW(buffer, fmt, value);;
 +            break;
 +        }
 +        case REG_MULTI_SZ:
@@ -102,7 +108,6 @@ index 9dbce32..75c5292 100644
 +        if (type == type_rels[i].type)
 +            return type_rels[i].name;
 +    }
-+
 +    return NULL;
 +}
 +
@@ -127,12 +132,12 @@ index 9dbce32..75c5292 100644
 +    output_string(newlineW);
 +}
 +
-+static WCHAR *build_subkey_path(WCHAR *path, WCHAR *subkey_name, DWORD len)
++static WCHAR *build_subkey_path(WCHAR *path, DWORD path_len, WCHAR *subkey_name, DWORD subkey_len)
 +{
 +    WCHAR *subkey_path;
 +    WCHAR fmt[] = {'%','s','\\','%','s',0};
 +
-+    subkey_path = HeapAlloc(GetProcessHeap(), 0, (len + 1) * sizeof(WCHAR));
++    subkey_path = HeapAlloc(GetProcessHeap(), 0, (path_len + subkey_len + 2) * sizeof(WCHAR));
 +    if (!subkey_path)
 +    {
 +        ERR("Failed to allocate memory for subkey_path\n");
@@ -142,13 +147,13 @@ index 9dbce32..75c5292 100644
 +    return subkey_path;
 +}
 +
-+static int query_all(HKEY key, WCHAR *path, DWORD path_len, BOOL recurse)
++static int query_all(HKEY key, WCHAR *path, BOOL recurse)
 +{
 +    LONG rc;
-+    DWORD num_subkeys, max_subkey_len, subkey_len, subkey_path_len;
++    DWORD num_subkeys, max_subkey_len, subkey_len;
 +    DWORD num_values, max_value_len, value_len;
 +    DWORD max_data_bytes, data_size;
-+    DWORD type;
++    DWORD type, path_len;
 +    WCHAR *value_name, *subkey_name, *subkey_path;
 +    WCHAR fmt[] = {'%','1','\n',0};
 +    WCHAR fmt_path[] = {'%','1','\\','%','2','\n',0};
@@ -166,8 +171,6 @@ index 9dbce32..75c5292 100644
 +    }
 +
 +    max_value_len++;
-+    max_subkey_len++;
-+
 +    value_name = HeapAlloc(GetProcessHeap(), 0, max_value_len * sizeof(WCHAR));
 +    if (!value_name)
 +    {
@@ -200,12 +203,15 @@ index 9dbce32..75c5292 100644
 +    if (num_values || recurse)
 +        output_string(newlineW);
 +
++    max_subkey_len++;
 +    subkey_name = HeapAlloc(GetProcessHeap(), 0, max_subkey_len * sizeof(WCHAR));
 +    if (!subkey_name)
 +    {
 +        ERR("Failed to allocate memory for subkey_name\n");
 +        return 1;
 +    }
++
++    path_len = strlenW(path);
 +
 +    for (i = 0; i < num_subkeys; i++)
 +    {
@@ -215,10 +221,9 @@ index 9dbce32..75c5292 100644
 +        {
 +            if (recurse)
 +            {
-+                subkey_path_len = path_len + subkey_len + 1;
-+                subkey_path = build_subkey_path(path, subkey_name, subkey_path_len);
++                subkey_path = build_subkey_path(path, path_len, subkey_name, subkey_len);
 +                RegOpenKeyExW(key, subkey_name, 0, KEY_READ, &subkey);
-+                query_all(subkey, subkey_path, subkey_path_len, recurse);
++                query_all(subkey, subkey_path, recurse);
 +                RegCloseKey(subkey);
 +                HeapFree(GetProcessHeap(), 0, subkey_path);
 +            }
@@ -226,13 +231,16 @@ index 9dbce32..75c5292 100644
 +        }
 +    }
 +
++    if (num_subkeys && !recurse)
++        output_string(newlineW);
++
 +    HeapFree(GetProcessHeap(), 0, subkey_name);
 +    return 0;
 +}
 +
 +static WCHAR *get_long_path(HKEY root, WCHAR *path)
 +{
-+    int i, len;
++    DWORD i, len;
 +    WCHAR *long_path;
 +    WCHAR fmt[] = {'%','s','\\','%','s',0};
 +
@@ -262,10 +270,8 @@ index 9dbce32..75c5292 100644
 +    WCHAR *p, *path;
 +    HKEY root, key;
      static const WCHAR stubW[] = {'S','T','U','B',' ','Q','U','E','R','Y',' ',
--        '-',' ','%','1',' ','%','2',' ','%','3','!','d','!',' ','%','4','!','d','!','\n',0};
+         '-',' ','%','1',' ','%','2',' ','%','3','!','d','!',' ','%','4','!','d','!','\n',0};
 -    output_string(stubW, key_name, value_name, value_empty, subkey);
-+         '-',' ','%','1',' ','%','2',' ','%','3','!','d','!',' ','%','4','!','d','!','\n',0};
-+    DWORD path_len;
 +    int ret;
 +
 +    if (!sane_path(key_name))
@@ -294,7 +300,6 @@ index 9dbce32..75c5292 100644
 +    }
 +
 +    path = get_long_path(root, p);
-+    path_len = strlenW(path);
 +
 +    if (value_name || value_empty)
 +    {
@@ -302,7 +307,7 @@ index 9dbce32..75c5292 100644
 +        return 1;
 +    }
 +
-+    ret = query_all(key, path, path_len, recurse);
++    ret = query_all(key, path, recurse);
 +
 +    HeapFree(GetProcessHeap(), 0, path);
 +    RegCloseKey(key);
@@ -312,7 +317,7 @@ index 9dbce32..75c5292 100644
  }
  
  int wmain(int argc, WCHAR *argvW[])
-@@ -677,7 +955,7 @@ int wmain(int argc, WCHAR *argvW[])
+@@ -667,7 +951,7 @@ int wmain(int argc, WCHAR *argvW[])
      else if (!lstrcmpiW(argvW[1], queryW))
      {
          WCHAR *key_name, *value_name = NULL;
@@ -321,7 +326,7 @@ index 9dbce32..75c5292 100644
  
          if (argc < 3)
          {
-@@ -705,9 +983,9 @@ int wmain(int argc, WCHAR *argvW[])
+@@ -695,9 +979,9 @@ int wmain(int argc, WCHAR *argvW[])
              else if (!lstrcmpiW(argvW[i], slashVEW))
                  value_empty = TRUE;
              else if (!lstrcmpiW(argvW[i], slashSW))

@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "4315caeff699325cd681b9beb7d22908b098411b"
+	echo "d04a54857cc84f881393e4bc794185650a302084"
 }
 
 # Show version information
@@ -187,7 +187,6 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_makedep_PARENTSPEC="$1"
-	enable_makefiles_Revert_libwine_Import="$1"
 	enable_mfplat_MFTRegister="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
@@ -738,9 +737,6 @@ patch_enable ()
 			;;
 		makedep-PARENTSPEC)
 			enable_makedep_PARENTSPEC="$2"
-			;;
-		makefiles-Revert_libwine_Import)
-			enable_makefiles_Revert_libwine_Import="$2"
 			;;
 		mfplat-MFTRegister)
 			enable_mfplat_MFTRegister="$2"
@@ -2396,9 +2392,9 @@ fi
 # | Modified files:
 # |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c, dlls/d3d8/texture.c,
 # | 	dlls/d3d9/tests/visual.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dsound/primary.c, dlls/dwrite/layout.c,
-# | 	dlls/msxml3/schema.c, dlls/netapi32/netapi32.c, dlls/oleaut32/oleaut.c, dlls/quartz/acmwrapper.c, dlls/quartz/avidec.c,
-# | 	dlls/rpcrt4/cstub.c, dlls/vbscript/vbdisp.c, dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c,
-# | 	include/wine/list.h, include/wine/rbtree.h, include/winnt.h, tools/makedep.c
+# | 	dlls/msxml3/schema.c, dlls/netapi32/netapi32.c, dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/vbscript/vbdisp.c,
+# | 	dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c, include/wine/list.h, include/wine/rbtree.h, include/winnt.h,
+# | 	tools/makedep.c
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0001-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch
@@ -2412,10 +2408,9 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0009-dwrite-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0010-msxml3-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0011-oleaut32-Avoid-implicit-cast-of-interface-pointer.patch
-	patch_apply Compiler_Warnings/0012-quartz-Avoid-implicit-cast-of-interface-pointer.patch
-	patch_apply Compiler_Warnings/0013-rpcrt4-Avoid-implicit-cast-of-interface-pointer.patch
-	patch_apply Compiler_Warnings/0014-vbscript-Avoid-implicit-cast-of-interface-pointer.patch
-	patch_apply Compiler_Warnings/0015-include-Check-element-type-in-CONTAINING_RECORD-and-.patch
+	patch_apply Compiler_Warnings/0012-rpcrt4-Avoid-implicit-cast-of-interface-pointer.patch
+	patch_apply Compiler_Warnings/0013-vbscript-Avoid-implicit-cast-of-interface-pointer.patch
+	patch_apply Compiler_Warnings/0014-include-Check-element-type-in-CONTAINING_RECORD-and-.patch
 	(
 		echo '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },';
 		echo '+    { "Sebastian Lackner", "dsound: Avoid implicit cast of interface pointer.", 1 },';
@@ -2428,7 +2423,6 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 		echo '+    { "Sebastian Lackner", "dwrite: Avoid implicit cast of interface pointer.", 1 },';
 		echo '+    { "Sebastian Lackner", "msxml3: Avoid implicit cast of interface pointer.", 1 },';
 		echo '+    { "Sebastian Lackner", "oleaut32: Avoid implicit cast of interface pointer.", 1 },';
-		echo '+    { "Sebastian Lackner", "quartz: Avoid implicit cast of interface pointer.", 1 },';
 		echo '+    { "Sebastian Lackner", "rpcrt4: Avoid implicit cast of interface pointer.", 1 },';
 		echo '+    { "Sebastian Lackner", "vbscript: Avoid implicit cast of interface pointer.", 1 },';
 		echo '+    { "Sebastian Lackner", "include: Check element type in CONTAINING_RECORD and similar macros.", 1 },';
@@ -4424,21 +4418,6 @@ if test "$enable_makedep_PARENTSPEC" -eq 1; then
 	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
 	(
 		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset makefiles-Revert_libwine_Import
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40355] Revert commit to import libwine only for Windows builds
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makefiles_Revert_libwine_Import" -eq 1; then
-	patch_apply makefiles-Revert_libwine_Import/0001-Revert-makefiles-Explicitly-import-libwine-only-for-.patch
-	(
-		echo '+    { "Erich E. Hoover", "Revert \"makefiles: Explicitly import libwine only for Windows builds.\".", 1 },';
 	) >> "$patchlist"
 fi
 

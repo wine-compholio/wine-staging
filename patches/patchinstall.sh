@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5b3681f62ddd2977924424d6f326ce729de9102a"
+	echo "f34fd257c6c83804075914ee2b82cc42eadc683f"
 }
 
 # Show version information
@@ -5628,7 +5628,7 @@ fi
 # |   *	[#39786] Implement oleaut32.OleLoadPictureFile
 # |
 # | Modified files:
-# |   *	dlls/oleaut32/oleaut32.spec, dlls/oleaut32/olepicture.c, dlls/oleaut32/tests/olepicture.c
+# |   *	dlls/oleaut32/olepicture.c, dlls/oleaut32/tests/olepicture.c
 # |
 if test "$enable_oleaut32_OleLoadPictureFile" -eq 1; then
 	patch_apply oleaut32-OleLoadPictureFile/0001-oleaut32-Do-not-reimplement-OleLoadPicture-in-OleLoa.patch

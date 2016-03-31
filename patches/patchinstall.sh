@@ -146,6 +146,7 @@ patch_enable_all ()
 	enable_dxva2_Video_Decoder="$1"
 	enable_explorer_Video_Registry_Key="$1"
 	enable_fonts_Missing_Fonts="$1"
+	enable_fsutil_Stub_Program="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_MultiMonitor="$1"
 	enable_gdi32_Path_Metafile="$1"
@@ -613,6 +614,9 @@ patch_enable ()
 			;;
 		fonts-Missing_Fonts)
 			enable_fonts_Missing_Fonts="$2"
+			;;
+		fsutil-Stub_Program)
+			enable_fsutil_Stub_Program="$2"
 			;;
 		gdi32-Lazy_Font_Initialization)
 			enable_gdi32_Lazy_Font_Initialization="$2"
@@ -3707,6 +3711,22 @@ if test "$enable_fonts_Missing_Fonts" -eq 1; then
 		echo '+    { "Sebastian Lackner", "fonts: Add Liberation Mono as an Courier New replacement.", 1 },';
 		echo '+    { "Erich E. Hoover", "fonts: Add WenQuanYi Micro Hei as a Microsoft Yahei replacement.", 1 },';
 		echo '+    { "Michael Müller", "Add licenses for fonts as separate files.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset fsutil-Stub_Program
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#22749] Add stub for fsutil.exe hardlink command
+# |
+# | Modified files:
+# |   *	configure.ac, programs/fsutil/Makefile.in, programs/fsutil/fsutil.rc, programs/fsutil/main.c,
+# | 	programs/fsutil/resources.h
+# |
+if test "$enable_fsutil_Stub_Program" -eq 1; then
+	patch_apply fsutil-Stub_Program/0001-fsutil-Add-fsutil-program-with-support-for-creating-.patch
+	(
+		echo '+    { "Michael Müller", "fsutil: Add fsutil program with support for creating hard links.", 1 },';
 	) >> "$patchlist"
 fi
 

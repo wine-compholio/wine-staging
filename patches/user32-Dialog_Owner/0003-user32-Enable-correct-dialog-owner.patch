@@ -1,0 +1,82 @@
+From c2ad598c5826f3b86111f49bde37e226ca7467fe Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Thu, 31 Mar 2016 11:50:20 +0800
+Subject: user32: Enable correct dialog owner.
+
+---
+ dlls/user32/dialog.c    | 32 ++++++++++++++++++++------------
+ dlls/user32/tests/win.c |  1 -
+ 2 files changed, 20 insertions(+), 13 deletions(-)
+
+diff --git a/dlls/user32/dialog.c b/dlls/user32/dialog.c
+index a61090d..d28b840 100644
+--- a/dlls/user32/dialog.c
++++ b/dlls/user32/dialog.c
+@@ -434,6 +434,21 @@ static LPCSTR DIALOG_ParseTemplate32( LPCSTR template, DLG_TEMPLATE * result )
+     return (LPCSTR)(((UINT_PTR)p + 3) & ~3);
+ }
+ 
++static HWND real_owner( HWND owner )
++{
++    HWND parent;
++    /*
++     * Owner needs to be top level window. We need to duplicate the logic from server,
++     * because we need to disable it before creating dialog window.
++     */
++    while ((GetWindowLongW( owner, GWL_STYLE ) & (WS_POPUP|WS_CHILD)) == WS_CHILD)
++    {
++        parent = GetParent( owner );
++        if (!parent || parent == GetDesktopWindow()) break;
++        owner = parent;
++    }
++    return owner;
++}
+ 
+ /***********************************************************************
+  *           DIALOG_CreateIndirect
+@@ -586,18 +601,8 @@ static HWND DIALOG_CreateIndirect( HINSTANCE hInst, LPCVOID dlgTemplate,
+ 
+     if (modal && owner)
+     {
+-        HWND parent;
+-        disabled_owner = owner;
+-        /*
+-         * Owner needs to be top level window. We need to duplicate the logic from server,
+-         * because we need to disable it before creating dialog window.
+-         */
+-        while ((GetWindowLongW( disabled_owner, GWL_STYLE ) & (WS_POPUP|WS_CHILD)) == WS_CHILD)
+-        {
+-            parent = GetParent( disabled_owner );
+-            if (!parent || parent == GetDesktopWindow()) break;
+-            disabled_owner = parent;
+-        }
++        disabled_owner = real_owner( owner );
++
+         if (IsWindowEnabled( disabled_owner ))
+         {
+             flags |= DF_OWNERENABLED;
+@@ -778,6 +783,9 @@ INT DIALOG_DoDialogBox( HWND hwnd, HWND owner )
+ 
+     if (!(dlgInfo = DIALOG_get_info( hwnd, FALSE ))) return -1;
+ 
++    if (owner)
++        owner = real_owner( owner );
++
+     bFirstEmpty = TRUE;
+     if (!(dlgInfo->flags & DF_END)) /* was EndDialog called in WM_INITDIALOG ? */
+     {
+diff --git a/dlls/user32/tests/win.c b/dlls/user32/tests/win.c
+index 9c0a44a..5ec370e 100644
+--- a/dlls/user32/tests/win.c
++++ b/dlls/user32/tests/win.c
+@@ -4419,7 +4419,6 @@ static void check_dialog_style(DWORD style_in, DWORD ex_style_in, DWORD style_ou
+ 
+     ok(IsWindowEnabled(parent), "wrong parent state (dialog style %#x)\n", style_in);
+     if (grand_parent)
+-        todo_wine_if ((style & (WS_CHILD|WS_POPUP)) == WS_CHILD)
+         ok(IsWindowEnabled(grand_parent), "wrong grand parent state (dialog style %#x)\n", style_in);
+ 
+     DestroyWindow(parent);
+-- 
+2.7.1
+

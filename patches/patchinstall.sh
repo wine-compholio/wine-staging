@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f34fd257c6c83804075914ee2b82cc42eadc683f"
+	echo "f820c0942854c14fcd063c83225af03e73286334"
 }
 
 # Show version information
@@ -133,7 +133,6 @@ patch_enable_all ()
 	enable_ddraw_Rendering_Targets="$1"
 	enable_ddraw_Write_Vtable="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
-	enable_dinput_DIPROP_USERNAME="$1"
 	enable_dinput_Initialize="$1"
 	enable_dsound_DSCAPS_CERTIFIED="$1"
 	enable_dsound_EAX="$1"
@@ -165,14 +164,11 @@ patch_enable_all ()
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_COMSPEC="$1"
 	enable_kernel32_CopyFileEx="$1"
-	enable_kernel32_CreateFileA="$1"
 	enable_kernel32_Cwd_Startup_Info="$1"
-	enable_kernel32_ERROR_DLL_NOT_FOUND="$1"
 	enable_kernel32_FindFirstFile="$1"
 	enable_kernel32_FreeUserPhysicalPages="$1"
 	enable_kernel32_GetCurrentPackageFamilyName="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
-	enable_kernel32_GetOverlappedResult="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
@@ -294,7 +290,6 @@ patch_enable_all ()
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_Display_Device="$1"
 	enable_setupapi_HSPFILEQ_Check_Type="$1"
-	enable_setupapi_SetupDiSetDeviceInstallParamsW="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
 	enable_sfc_SfcGetNextProtectedFile="$1"
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
@@ -330,7 +325,6 @@ patch_enable_all ()
 	enable_user32_Dialog_Owner="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawTextExW="$1"
-	enable_user32_EnumDisplayMonitors="$1"
 	enable_user32_FlashWindowEx="$1"
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_Invalidate_Key_State="$1"
@@ -579,9 +573,6 @@ patch_enable ()
 		ddraw-d3d_execute_buffer)
 			enable_ddraw_d3d_execute_buffer="$2"
 			;;
-		dinput-DIPROP_USERNAME)
-			enable_dinput_DIPROP_USERNAME="$2"
-			;;
 		dinput-Initialize)
 			enable_dinput_Initialize="$2"
 			;;
@@ -675,14 +666,8 @@ patch_enable ()
 		kernel32-CopyFileEx)
 			enable_kernel32_CopyFileEx="$2"
 			;;
-		kernel32-CreateFileA)
-			enable_kernel32_CreateFileA="$2"
-			;;
 		kernel32-Cwd_Startup_Info)
 			enable_kernel32_Cwd_Startup_Info="$2"
-			;;
-		kernel32-ERROR_DLL_NOT_FOUND)
-			enable_kernel32_ERROR_DLL_NOT_FOUND="$2"
 			;;
 		kernel32-FindFirstFile)
 			enable_kernel32_FindFirstFile="$2"
@@ -695,9 +680,6 @@ patch_enable ()
 			;;
 		kernel32-GetFinalPathNameByHandle)
 			enable_kernel32_GetFinalPathNameByHandle="$2"
-			;;
-		kernel32-GetOverlappedResult)
-			enable_kernel32_GetOverlappedResult="$2"
 			;;
 		kernel32-LocaleNameToLCID)
 			enable_kernel32_LocaleNameToLCID="$2"
@@ -1062,9 +1044,6 @@ patch_enable ()
 		setupapi-HSPFILEQ_Check_Type)
 			enable_setupapi_HSPFILEQ_Check_Type="$2"
 			;;
-		setupapi-SetupDiSetDeviceInstallParamsW)
-			enable_setupapi_SetupDiSetDeviceInstallParamsW="$2"
-			;;
 		setupapi-SetupPromptForDisk)
 			enable_setupapi_SetupPromptForDisk="$2"
 			;;
@@ -1169,9 +1148,6 @@ patch_enable ()
 			;;
 		user32-DrawTextExW)
 			enable_user32_DrawTextExW="$2"
-			;;
-		user32-EnumDisplayMonitors)
-			enable_user32_EnumDisplayMonitors="$2"
 			;;
 		user32-FlashWindowEx)
 			enable_user32_FlashWindowEx="$2"
@@ -1880,9 +1856,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_server_CreateProcess_ACLs" -gt 1; then
 		abort "Patchset server-CreateProcess_ACLs disabled, but category-stable depends on that."
 	fi
-	if test "$enable_setupapi_SetupDiSetDeviceInstallParamsW" -gt 1; then
-		abort "Patchset setupapi-SetupDiSetDeviceInstallParamsW disabled, but category-stable depends on that."
-	fi
 	if test "$enable_shell32_RunDLL_CallEntry16" -gt 1; then
 		abort "Patchset shell32-RunDLL_CallEntry16 disabled, but category-stable depends on that."
 	fi
@@ -1980,7 +1953,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_opengl32_Revert_Disable_Ext=1
 	enable_server_ClipCursor=1
 	enable_server_CreateProcess_ACLs=1
-	enable_setupapi_SetupDiSetDeviceInstallParamsW=1
 	enable_shell32_RunDLL_CallEntry16=1
 	enable_shell32_SHFileOperation_Win9x=1
 	enable_user32_DrawTextExW=1
@@ -3448,21 +3420,6 @@ if test "$enable_ddraw_d3d_execute_buffer" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dinput-DIPROP_USERNAME
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39667] Implement dinput device property DIPROP_USERNAME
-# |
-# | Modified files:
-# |   *	dlls/dinput/device.c, dlls/dinput/device_private.h, dlls/dinput8/tests/device.c
-# |
-if test "$enable_dinput_DIPROP_USERNAME" -eq 1; then
-	patch_apply dinput-DIPROP_USERNAME/0001-dinput-Implement-device-property-DIPROP_USERNAME.patch
-	(
-		echo '+    { "Bernhard Übelacker", "dinput: Implement device property DIPROP_USERNAME.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dinput-Initialize
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4074,18 +4031,6 @@ if test "$enable_kernel32_CopyFileEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-CreateFileA
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c
-# |
-if test "$enable_kernel32_CreateFileA" -eq 1; then
-	patch_apply kernel32-CreateFileA/0001-kernel32-Check-for-invalid-filename-pointers-in-Crea.patch
-	(
-		echo '+    { "Michael Müller", "kernel32: Check for invalid filename pointers in CreateFileA in Win 9X mode.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-Cwd_Startup_Info
 # |
 # | Modified files:
@@ -4095,18 +4040,6 @@ if test "$enable_kernel32_Cwd_Startup_Info" -eq 1; then
 	patch_apply kernel32-Cwd_Startup_Info/0001-kernel32-Allow-non-nullterminated-string-as-working-.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32: Allow non-nullterminated string as working directory in create_startup_info.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-ERROR_DLL_NOT_FOUND
-# |
-# | Modified files:
-# |   *	dlls/kernel32/module.c
-# |
-if test "$enable_kernel32_ERROR_DLL_NOT_FOUND" -eq 1; then
-	patch_apply kernel32-ERROR_DLL_NOT_FOUND/0001-kernel32-Set-ERROR_DLL_NOT_FOUND-as-error-code-for-W.patch
-	(
-		echo '+    { "Michael Müller", "kernel32: Set ERROR_DLL_NOT_FOUND as error code for Win 9X instead of ERROR_MOD_NOT_FOUND.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4124,18 +4057,6 @@ if test "$enable_kernel32_FindFirstFile" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "kernel32: Strip invalid characters from mask in FindFirstFileExW.", 1 },';
 		echo '+    { "Michael Müller", "kernel32/tests: Add tests for FindFirstFileA with invalid characters.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-GetOverlappedResult
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/kernel32/tests/file.c
-# |
-if test "$enable_kernel32_GetOverlappedResult" -eq 1; then
-	patch_apply kernel32-GetOverlappedResult/0001-kernel32-Fix-handling-of-GetOverlappedResult-when-st.patch
-	(
-		echo '+    { "Sebastian Lackner", "kernel32: Fix handling of GetOverlappedResult when status remains STATUS_PENDING.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4742,14 +4663,12 @@ if test "$enable_ntdll_Syscall_Wrappers" -eq 1; then
 	patch_apply ntdll-Syscall_Wrappers/0003-ntdll-APCs-should-call-the-implementation-instead-of.patch
 	patch_apply ntdll-Syscall_Wrappers/0004-ntdll-Syscalls-should-not-call-Nt-Ex-thunk-wrappers.patch
 	patch_apply ntdll-Syscall_Wrappers/0005-ntdll-Run-directory-initialization-function-early-du.patch
-	patch_apply ntdll-Syscall_Wrappers/0006-ntdll-Use-close_handle-instead-of-NtClose-for-intern.patch
 	(
 		echo '+    { "Sebastian Lackner", "winegcc: Pass '\''-read_only_relocs suppress'\'' to the linker on OSX.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Use wrapper functions for syscalls.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: APCs should call the implementation instead of the syscall thunk.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Syscalls should not call Nt*Ex thunk wrappers.", 1 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Run directory initialization function early during the process startup.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Use close_handle instead of NtClose for internal memory management functions.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6193,21 +6112,6 @@ if test "$enable_setupapi_HSPFILEQ_Check_Type" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset setupapi-SetupDiSetDeviceInstallParamsW
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#29903] Add stub for setupapi.SetupDiSetDeviceInstallParamsW
-# |
-# | Modified files:
-# |   *	dlls/setupapi/devinst.c, dlls/setupapi/setupapi.spec
-# |
-if test "$enable_setupapi_SetupDiSetDeviceInstallParamsW" -eq 1; then
-	patch_apply setupapi-SetupDiSetDeviceInstallParamsW/0001-setupapi-add-SetupDiSetDeviceInstallParamsW-stub.patch
-	(
-		echo '+    { "Austin English", "setupapi: Add SetupDiSetDeviceInstallParamsW stub.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset setupapi-SetupPromptForDisk
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6792,21 +6696,6 @@ if test "$enable_user32_DrawTextExW" -eq 1; then
 	patch_apply user32-DrawTextExW/0001-user32-Fix-handling-of-invert_y-in-DrawTextExW.patch
 	(
 		echo '+    { "Sebastian Lackner", "user32: Fix handling of invert_y in DrawTextExW.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-EnumDisplayMonitors
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#24421] Set %ecx to address of rect in EnumDisplayMonitors callback
-# |
-# | Modified files:
-# |   *	dlls/user32/misc.c
-# |
-if test "$enable_user32_EnumDisplayMonitors" -eq 1; then
-	patch_apply user32-EnumDisplayMonitors/0001-user32-Set-ecx-to-address-of-rect-in-EnumDisplayMoni.patch
-	(
-		echo '+    { "Sebastian Lackner", "user32: Set %ecx to address of rect in EnumDisplayMonitors callback.", 1 },';
 	) >> "$patchlist"
 fi
 

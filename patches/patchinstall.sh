@@ -349,6 +349,7 @@ patch_enable_all ()
 	enable_windowscodecs_32bppGrayFloat="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
 	enable_windowscodecs_WICCreateBitmapFromSection="$1"
+	enable_wine_inf_Directory_ContextMenuHandlers="$1"
 	enable_wine_inf_Dummy_CA_Certificate="$1"
 	enable_wine_inf_Performance="$1"
 	enable_wine_inf_ProfileList_UserSID="$1"
@@ -1220,6 +1221,9 @@ patch_enable ()
 			;;
 		windowscodecs-WICCreateBitmapFromSection)
 			enable_windowscodecs_WICCreateBitmapFromSection="$2"
+			;;
+		wine.inf-Directory_ContextMenuHandlers)
+			enable_wine_inf_Directory_ContextMenuHandlers="$2"
 			;;
 		wine.inf-Dummy_CA_Certificate)
 			enable_wine_inf_Dummy_CA_Certificate="$2"
@@ -7066,6 +7070,21 @@ if test "$enable_windowscodecs_WICCreateBitmapFromSection" -eq 1; then
 	patch_apply windowscodecs-WICCreateBitmapFromSection/0001-windowscodecs-Implement-WICCreateBitmapFromSection-E.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement WICCreateBitmapFromSection(Ex).", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wine.inf-Directory_ContextMenuHandlers
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#29523] Add 'New' context menu handler entry for directories
+# |
+# | Modified files:
+# |   *	loader/wine.inf.in
+# |
+if test "$enable_wine_inf_Directory_ContextMenuHandlers" -eq 1; then
+	patch_apply wine.inf-Directory_ContextMenuHandlers/0001-wine.inf-Add-New-context-menu-handler-entry-for-dire.patch
+	(
+		echo '+    { "Michael Müller", "wine.inf: Add '\''New'\'' context menu handler entry for directories.", 1 },';
 	) >> "$patchlist"
 fi
 

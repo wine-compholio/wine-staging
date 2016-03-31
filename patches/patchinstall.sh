@@ -330,6 +330,7 @@ patch_enable_all ()
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawTextExW="$1"
 	enable_user32_EnumDisplayMonitors="$1"
+	enable_user32_FlashWindowEx="$1"
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_Invalidate_Key_State="$1"
 	enable_user32_ListBox_Size="$1"
@@ -1167,6 +1168,9 @@ patch_enable ()
 			;;
 		user32-EnumDisplayMonitors)
 			enable_user32_EnumDisplayMonitors="$2"
+			;;
+		user32-FlashWindowEx)
+			enable_user32_FlashWindowEx="$2"
 			;;
 		user32-GetSystemMetrics)
 			enable_user32_GetSystemMetrics="$2"
@@ -6775,6 +6779,18 @@ if test "$enable_user32_EnumDisplayMonitors" -eq 1; then
 	patch_apply user32-EnumDisplayMonitors/0001-user32-Set-ecx-to-address-of-rect-in-EnumDisplayMoni.patch
 	(
 		echo '+    { "Sebastian Lackner", "user32: Set %ecx to address of rect in EnumDisplayMonitors callback.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-FlashWindowEx
+# |
+# | Modified files:
+# |   *	dlls/user32/win.c
+# |
+if test "$enable_user32_FlashWindowEx" -eq 1; then
+	patch_apply user32-FlashWindowEx/0001-user32-Avoid-dereferencing-NULL-pointer-in-a-trace.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "user32: Avoid dereferencing NULL pointer in a trace.", 1 },';
 	) >> "$patchlist"
 fi
 

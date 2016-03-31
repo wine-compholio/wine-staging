@@ -197,6 +197,7 @@ patch_enable_all ()
 	enable_msidb_Implementation="$1"
 	enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback="$1"
 	enable_msvcrt_Math_Precision="$1"
+	enable_msvfw32_ICGetDisplayFormat="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_APC_Start_Process="$1"
 	enable_ntdll_Activation_Context="$1"
@@ -767,6 +768,9 @@ patch_enable ()
 			;;
 		msvcrt-Math_Precision)
 			enable_msvcrt_Math_Precision="$2"
+			;;
+		msvfw32-ICGetDisplayFormat)
+			enable_msvfw32_ICGetDisplayFormat="$2"
 			;;
 		ntdll-APC_Performance)
 			enable_ntdll_APC_Performance="$2"
@@ -4606,6 +4610,21 @@ if test "$enable_msvcrt_Math_Precision" -eq 1; then
 	patch_apply msvcrt-Math_Precision/0001-msvcrt-Calculate-sinh-cosh-exp-pow-with-higher-preci.patch
 	(
 		echo '+    { "Sebastian Lackner", "msvcrt: Calculate sinh/cosh/exp/pow with higher precision.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msvfw32-ICGetDisplayFormat
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#23175] Fix implementation of ICGetDisplayFormat
+# |
+# | Modified files:
+# |   *	dlls/msvfw32/msvideo_main.c, dlls/msvfw32/tests/msvfw.c
+# |
+if test "$enable_msvfw32_ICGetDisplayFormat" -eq 1; then
+	patch_apply msvfw32-ICGetDisplayFormat/0001-msvfw32-Try-different-formarts-in-ICGetDisplayFormat.patch
+	(
+		echo '+    { "Michael Müller", "msvfw32: Try different formarts in ICGetDisplayFormat.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -5643,9 +5643,6 @@ fi
 
 # Patchset oleaut32-OleLoadPictureFile
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39786] Implement oleaut32.OleLoadPictureFile
-# |
 # | Modified files:
 # |   *	dlls/oleaut32/olepicture.c, dlls/oleaut32/tests/olepicture.c
 # |

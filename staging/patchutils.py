@@ -51,9 +51,9 @@ class CParserError(RuntimeError):
 
 class PatchObject(object):
     def __init__(self, filename, header):
-        self.patch_author       = header['author']
-        self.patch_email        = header['email']
-        self.patch_subject      = header['subject']
+        self.patch_author       = header.get('author', None)
+        self.patch_email        = header.get('email', None)
+        self.patch_subject      = header.get('subject', None)
         self.patch_revision     = header.get('revision', 1)
         self.signed_off_by      = header.get('signedoffby', [])
 

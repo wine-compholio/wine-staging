@@ -19,7 +19,6 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 #
 
-import cStringIO as StringIO
 import collections
 import difflib
 import email.header
@@ -30,6 +29,11 @@ import re
 import shutil
 import subprocess
 import tempfile
+
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 _devnull = open(os.devnull, 'wb')
 
@@ -95,7 +99,7 @@ class _FileReader(object):
         self.peeked   = None
 
         if content is not None:
-            self.fp = StringIO.StringIO(content)
+            self.fp = StringIO(content)
         else:
             self.fp = open(filename)
 

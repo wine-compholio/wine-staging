@@ -4582,6 +4582,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#23175] Fix implementation of ICGetDisplayFormat
+# |   *	[#25180] Fix rendering of Clonk Endeavour's intro video
 # |
 # | Modified files:
 # |   *	dlls/msvfw32/msvideo_main.c, dlls/msvfw32/tests/msvfw.c
@@ -4589,9 +4590,11 @@ fi
 if test "$enable_msvfw32_ICGetDisplayFormat" -eq 1; then
 	patch_apply msvfw32-ICGetDisplayFormat/0001-msvfw32-Try-different-formarts-in-ICGetDisplayFormat.patch
 	patch_apply msvfw32-ICGetDisplayFormat/0002-msvfw32-Add-test-for-negative-width-height-values-pa.patch
+	patch_apply msvfw32-ICGetDisplayFormat/0003-msvfw32-Set-biSizeImage-correctly-in-ICGetDisplayFor.patch
 	(
 		echo '+    { "Michael Müller", "msvfw32: Try different formarts in ICGetDisplayFormat.", 1 },';
 		echo '+    { "Michael Müller", "msvfw32: Add test for negative width/height values passed to ICGetDisplayFormat.", 1 },';
+		echo '+    { "Michael Müller", "msvfw32: Set biSizeImage correctly in ICGetDisplayFormat.", 1 },';
 	) >> "$patchlist"
 fi
 

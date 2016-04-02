@@ -691,6 +691,7 @@ def generate_ifdef_patch(original, patched, ifdef):
 if __name__ == "__main__":
     import unittest
 
+    # Basic tests for _parse_author() and _parse_subject()
     class PatchParserTests(unittest.TestCase):
         def test_author(self):
             author = _parse_author("Author Name <author@email.com>")
@@ -726,6 +727,39 @@ if __name__ == "__main__":
 
             subject = _parse_subject("[PATCH] component: Subject (resend).")
             self.assertEqual(subject, ("component: Subject", 1))
+
+    # Basic tests for apply_patch()
+    class PatchApplyTests(unittest.TestCase):
+        def test_apply(self):
+            source = ["line1();", "line2();", "line3();",
+                      "function(arg1);",
+                      "line5();", "line6();", "line7();"]
+            original = tempfile.NamedTemporaryFile()
+            original.write("\n".join(source + [""]))
+            original.flush()
+
+            source = ["@@ -1,7 +1,7 @@",
+                      " line1();", " line2();", " line3();",
+                      "-function(arg1);",
+                      "+function(arg2);",
+                      " line5();", " line6();", " line7();"]
+            patchfile = tempfile.NamedTemporaryFile()
+            patchfile.write("\n".join(source + [""]))
+            patchfile.flush()
+
+            expected = ["line1();", "line2();", "line3();",
+                        "function(arg2);",
+                        "line5();", "line6();", "line7();"]
+            result = apply_patch(original, patchfile, fuzz=0)
+            lines = result.read().rstrip("\n").split("\n")
+            self.assertEqual(lines, expected)
+
+            expected = ["line1();", "line2();", "line3();",
+                        "function(arg1);",
+                        "line5();", "line6();", "line7();"]
+            result = apply_patch(result, patchfile, reverse=True, fuzz=0)
+            lines = result.read().rstrip("\n").split("\n")
+            self.assertEqual(lines, expected)
 
     # Basic tests for _preprocess_source()
     class PreprocessorTests(unittest.TestCase):

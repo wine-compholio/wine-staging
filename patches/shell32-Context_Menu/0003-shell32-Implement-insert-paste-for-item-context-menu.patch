@@ -1,0 +1,165 @@
+From f378913d8cb2e40abb4e24d4bfaf0cbe7ea8134a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 2 Apr 2016 01:39:40 +0200
+Subject: shell32: Implement insert/paste for item context menus.
+
+---
+ dlls/shell32/shell32.rc      |  1 +
+ dlls/shell32/shlview_cmenu.c | 68 +++++++++++++++++++++++++++++++++++++++-----
+ 2 files changed, 62 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/shell32/shell32.rc b/dlls/shell32/shell32.rc
+index bfba962..4f2015b 100644
+--- a/dlls/shell32/shell32.rc
++++ b/dlls/shell32/shell32.rc
+@@ -99,6 +99,7 @@ BEGIN
+ 	  MENUITEM SEPARATOR
+ 	  MENUITEM "C&ut",		FCIDM_SHVIEW_CUT
+ 	  MENUITEM "&Copy",		FCIDM_SHVIEW_COPY
++	  MENUITEM "&Paste",		FCIDM_SHVIEW_INSERT
+ 	  MENUITEM SEPARATOR
+ 	  MENUITEM "Create &Link",	FCIDM_SHVIEW_CREATELINK
+ 	  MENUITEM "&Delete",		FCIDM_SHVIEW_DELETE
+diff --git a/dlls/shell32/shlview_cmenu.c b/dlls/shell32/shlview_cmenu.c
+index 7ce6cd9..d972922 100644
+--- a/dlls/shell32/shlview_cmenu.c
++++ b/dlls/shell32/shlview_cmenu.c
+@@ -59,6 +59,8 @@ typedef struct
+     BOOL desktop;
+ } ContextMenu;
+ 
++static BOOL DoPaste(ContextMenu *This);
++
+ static inline ContextMenu *impl_from_IContextMenu3(IContextMenu3 *iface)
+ {
+     return CONTAINING_RECORD(iface, ContextMenu, IContextMenu3_iface);
+@@ -123,6 +125,30 @@ static ULONG WINAPI ContextMenu_Release(IContextMenu3 *iface)
+     return ref;
+ }
+ 
++static BOOL CheckClipboard(void)
++{
++    IDataObject *pda;
++    BOOL ret = FALSE;
++
++    if (SUCCEEDED(OleGetClipboard(&pda)))
++    {
++        STGMEDIUM medium;
++        FORMATETC formatetc;
++
++        /* Set the FORMATETC structure*/
++        InitFormatEtc(formatetc, RegisterClipboardFormatW(CFSTR_SHELLIDLISTW), TYMED_HGLOBAL);
++
++        /* Get the pidls from IDataObject */
++        if (SUCCEEDED(IDataObject_GetData(pda, &formatetc, &medium)))
++        {
++            ReleaseStgMedium(&medium);
++            ret = TRUE;
++        }
++        IDataObject_Release(pda);
++    }
++    return ret;
++}
++
+ static HRESULT WINAPI ItemMenu_QueryContextMenu(
+ 	IContextMenu3 *iface,
+ 	HMENU hmenu,
+@@ -133,6 +159,7 @@ static HRESULT WINAPI ItemMenu_QueryContextMenu(
+ {
+     ContextMenu *This = impl_from_IContextMenu3(iface);
+     INT uIDMax;
++    DWORD attr = SFGAO_CANRENAME;
+ 
+     TRACE("(%p)->(%p %d 0x%x 0x%x 0x%x )\n", This, hmenu, indexMenu, idCmdFirst, idCmdLast, uFlags);
+ 
+@@ -169,6 +196,9 @@ static HRESULT WINAPI ItemMenu_QueryContextMenu(
+ 
+         SetMenuDefaultItem(hmenu, 0, MF_BYPOSITION);
+ 
++        if (This->apidl && This->cidl == 1)
++            IShellFolder_GetAttributesOf(This->parent, 1, (LPCITEMIDLIST*)This->apidl, &attr);
++
+         if(uFlags & ~CMF_CANRENAME)
+             RemoveMenu(hmenu, FCIDM_SHVIEW_RENAME, MF_BYCOMMAND);
+         else
+@@ -179,16 +209,14 @@ static HRESULT WINAPI ItemMenu_QueryContextMenu(
+             if (!This->apidl || This->cidl > 1)
+                 enable |= MFS_DISABLED;
+             else
+-            {
+-                DWORD attr = SFGAO_CANRENAME;
+-
+-                IShellFolder_GetAttributesOf(This->parent, 1, (LPCITEMIDLIST*)This->apidl, &attr);
+                 enable |= (attr & SFGAO_CANRENAME) ? MFS_ENABLED : MFS_DISABLED;
+-            }
+ 
+             EnableMenuItem(hmenu, FCIDM_SHVIEW_RENAME, enable);
+         }
+ 
++        if ((attr & (SFGAO_FILESYSTEM|SFGAO_FOLDER)) != (SFGAO_FILESYSTEM|SFGAO_FOLDER) || !CheckClipboard())
++            RemoveMenu(hmenu, FCIDM_SHVIEW_INSERT + idCmdFirst, MF_BYCOMMAND);
++
+         return MAKE_HRESULT(SEVERITY_SUCCESS, 0, uIDMax-idCmdFirst);
+     }
+     return MAKE_HRESULT(SEVERITY_SUCCESS, 0, 0);
+@@ -447,6 +475,10 @@ static HRESULT WINAPI ItemMenu_InvokeCommand(
+             TRACE("Verb FCIDM_SHVIEW_CUT\n");
+             DoCopyOrCut(This, lpcmi->hwnd, TRUE);
+             break;
++        case FCIDM_SHVIEW_INSERT:
++            TRACE("Verb FCIDM_SHVIEW_INSERT\n");
++            DoPaste(This);
++            break;
+         case FCIDM_SHVIEW_PROPERTIES:
+             TRACE("Verb FCIDM_SHVIEW_PROPERTIES\n");
+             DoOpenProperties(This, lpcmi->hwnd);
+@@ -510,6 +542,10 @@ static HRESULT WINAPI ItemMenu_GetCommandString(
+                 strcpy(lpszName, "copy");
+                 hr = S_OK;
+                 break;
++            case FCIDM_SHVIEW_INSERT:
++                strcpy(lpszName, "paste");
++                hr = S_OK;
++                break;
+             case FCIDM_SHVIEW_CREATELINK:
+                 strcpy(lpszName, "link");
+                 hr = S_OK;
+@@ -550,6 +586,10 @@ static HRESULT WINAPI ItemMenu_GetCommandString(
+                 MultiByteToWideChar(CP_ACP, 0, "copy", -1, (LPWSTR)lpszName, uMaxNameLen);
+                 hr = S_OK;
+                 break;
++            case FCIDM_SHVIEW_INSERT:
++                MultiByteToWideChar(CP_ACP, 0, "paste", -1, (LPWSTR)lpszName, uMaxNameLen);
++                hr = S_OK;
++                break;
+             case FCIDM_SHVIEW_CREATELINK:
+                 MultiByteToWideChar(CP_ACP, 0, "link", -1, (LPWSTR)lpszName, uMaxNameLen);
+                 hr = S_OK;
+@@ -757,8 +797,22 @@ static BOOL DoPaste(ContextMenu *This)
+ 	    if (psfFrom)
+ 	    {
+ 	      /* get source and destination shellfolder */
+-	      ISFHelper *psfhlpdst, *psfhlpsrc;
+-	      IShellFolder_QueryInterface(This->parent, &IID_ISFHelper, (void**)&psfhlpdst);
++            ISFHelper *psfhlpdst = NULL, *psfhlpsrc = NULL;
++
++            /* when using an item context menu we first need to bind to the selected folder */
++            if (This->apidl)
++            {
++                IShellFolder *folder;
++
++                if (SUCCEEDED(IShellFolder_BindToObject(This->parent, This->apidl[0], NULL, &IID_IShellFolder, (LPVOID*)&folder)))
++                {
++                    IShellFolder_QueryInterface(folder, &IID_ISFHelper, (void**)&psfhlpdst);
++                    IShellFolder_Release(folder);
++                }
++            }
++            else
++                IShellFolder_QueryInterface(This->parent, &IID_ISFHelper, (void**)&psfhlpdst);
++
+ 	      IShellFolder_QueryInterface(psfFrom, &IID_ISFHelper, (void**)&psfhlpsrc);
+ 
+ 	      /* do the copy/move */
+-- 
+2.7.1
+

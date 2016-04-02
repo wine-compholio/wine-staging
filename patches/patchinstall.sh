@@ -294,6 +294,7 @@ patch_enable_all ()
 	enable_setupapi_SetupPromptForDisk="$1"
 	enable_sfc_SfcGetNextProtectedFile="$1"
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
+	enable_shell32_Context_Menu="$1"
 	enable_shell32_Default_Path="$1"
 	enable_shell32_File_Property_Dialog="$1"
 	enable_shell32_FolderItems_Stub_Iface="$1"
@@ -1058,6 +1059,9 @@ patch_enable ()
 			;;
 		shdocvw-ParseURLFromOutsideSource_Tests)
 			enable_shdocvw_ParseURLFromOutsideSource_Tests="$2"
+			;;
+		shell32-Context_Menu)
+			enable_shell32_Context_Menu="$2"
 			;;
 		shell32-Default_Path)
 			enable_shell32_Default_Path="$2"
@@ -6178,6 +6182,39 @@ if test "$enable_shdocvw_ParseURLFromOutsideSource_Tests" -eq 1; then
 	patch_apply shdocvw-ParseURLFromOutsideSource_Tests/0001-shdocvw-Check-precisely-ParseURLFromOutsideSourceX-r.patch
 	(
 		echo '+    { "Christian Costa", "shdocvw: Check precisely ParseURLFromOutsideSourceX returned values in tests and make code clearer about that.", 3 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shell32-Context_Menu
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34319] Add support for Paste in context menu
+# |   *	[#34322] Fix implementation of Cut file operation
+# |   *	[#34321] Fix Cut/Copy/Paste keyboard shortcuts in Total Commander
+# |
+# | Modified files:
+# |   *	dlls/shell32/clipboard.c, dlls/shell32/dataobject.c, dlls/shell32/recyclebin.c, dlls/shell32/shell32.rc,
+# | 	dlls/shell32/shell32_main.h, dlls/shell32/shellfolder.h, dlls/shell32/shfldr_fs.c, dlls/shell32/shfldr_unixfs.c,
+# | 	dlls/shell32/shlview.c, dlls/shell32/shlview_cmenu.c
+# |
+if test "$enable_shell32_Context_Menu" -eq 1; then
+	patch_apply shell32-Context_Menu/0001-shell32-Fix-copying-of-files-when-using-a-context-me.patch
+	patch_apply shell32-Context_Menu/0002-shell32-Set-return-value-correctly-in-DoPaste.patch
+	patch_apply shell32-Context_Menu/0003-shell32-Implement-insert-paste-for-item-context-menu.patch
+	patch_apply shell32-Context_Menu/0004-shell32-Correctly-interpret-result-of-SHFileOperatio.patch
+	patch_apply shell32-Context_Menu/0005-shell32-Add-support-for-setting-getting-PREFERREDDRO.patch
+	patch_apply shell32-Context_Menu/0006-shell32-Add-parameter-to-ISFHelper-DeleteItems-to-al.patch
+	patch_apply shell32-Context_Menu/0007-shell32-Remove-source-files-when-using-cut-in-the-co.patch
+	patch_apply shell32-Context_Menu/0008-shell32-Recognize-cut-copy-paste-string-verbs-in-ite.patch
+	(
+		echo '+    { "Michael Müller", "shell32: Fix copying of files when using a context menu.", 1 },';
+		echo '+    { "Michael Müller", "shell32: Set return value correctly in DoPaste.", 1 },';
+		echo '+    { "Michael Müller", "shell32: Implement insert/paste for item context menus.", 1 },';
+		echo '+    { "Michael Müller", "shell32: Correctly interpret result of SHFileOperation in UNIXFS copy and delete.", 1 },';
+		echo '+    { "Michael Müller", "shell32: Add support for setting/getting PREFERREDDROPEFFECT in IDataObject.", 1 },';
+		echo '+    { "Michael Müller", "shell32: Add parameter to ISFHelper::DeleteItems to allow deleting files without confirmation.", 1 },';
+		echo '+    { "Michael Müller", "shell32: Remove source files when using cut in the context menu.", 1 },';
+		echo '+    { "Michael Müller", "shell32: Recognize cut/copy/paste string verbs in item menu context menu.", 1 },';
 	) >> "$patchlist"
 fi
 

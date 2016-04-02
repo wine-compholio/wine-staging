@@ -372,7 +372,7 @@ def read_patch(filename, content=None):
 def apply_patch(original, patchfile, reverse=False, fuzz=2):
     """Apply a patch with optional fuzz - uses the commandline 'patch' utility."""
 
-    result = tempfile.NamedTemporaryFile(delete=False)
+    result = tempfile.NamedTemporaryFile(mode='w+', delete=False)
     try:
         # We open the file again to avoid race-conditions with multithreaded reads
         with open(original.name) as fp:
@@ -390,7 +390,7 @@ def apply_patch(original, patchfile, reverse=False, fuzz=2):
 
         # Hack - we can't keep the file open while patching ('patch' might rename/replace
         # the file), so create a new _TemporaryFileWrapper object for the existing path.
-        return tempfile._TemporaryFileWrapper(file=open(result.name, 'r+b'), \
+        return tempfile._TemporaryFileWrapper(file=open(result.name, 'r+'), \
                                               name=result.name, delete=True)
     except:
         os.unlink(result.name)
@@ -489,7 +489,7 @@ def generate_ifdef_patch(original, patched, ifdef):
     # (4) create another diff to apply the changes on the patched version
     #
 
-    with tempfile.NamedTemporaryFile() as diff:
+    with tempfile.NamedTemporaryFile(mode='w+') as diff:
         exitcode = subprocess.call(["diff", "-u", original.name, patched.name],
                                    stdout=diff, stderr=_devnull)
         if exitcode == 0:
@@ -642,7 +642,7 @@ def generate_ifdef_patch(original, patched, ifdef):
         diff.close()
 
     # Generate resulting file with #ifdefs
-    with tempfile.NamedTemporaryFile() as intermediate:
+    with tempfile.NamedTemporaryFile(mode='w+') as intermediate:
 
         pos = 0
         while len(hunks):
@@ -678,7 +678,7 @@ def generate_ifdef_patch(original, patched, ifdef):
         intermediate.flush()
 
         # Now we can finally compute the diff between the patched file and our intermediate file
-        diff = tempfile.NamedTemporaryFile()
+        diff = tempfile.NamedTemporaryFile(mode='w+')
         exitcode = subprocess.call(["diff", "-u", patched.name, intermediate.name],
                                    stdout=diff, stderr=_devnull)
         if exitcode != 1: # exitcode 0 cannot (=shouldn't) happen in this situation
@@ -770,7 +770,7 @@ if __name__ == "__main__":
                         " line5();", " line6();", " line7();"]
 
             # Test formatted git patch with author and subject
-            patchfile = tempfile.NamedTemporaryFile()
+            patchfile = tempfile.NamedTemporaryFile(mode='w+')
             patchfile.write("\n".join(source + [""]))
             patchfile.flush()
 
@@ -792,7 +792,7 @@ if __name__ == "__main__":
             # Test with git diff
             del source[0:10]
             self.assertTrue(source[0].startswith("diff --git"))
-            patchfile = tempfile.NamedTemporaryFile()
+            patchfile = tempfile.NamedTemporaryFile(mode='w+')
             patchfile.write("\n".join(source + [""]))
             patchfile.flush()
 
@@ -813,7 +813,7 @@ if __name__ == "__main__":
             # Test with unified diff
             del source[0:2]
             self.assertTrue(source[0].startswith("---"))
-            patchfile = tempfile.NamedTemporaryFile()
+            patchfile = tempfile.NamedTemporaryFile(mode='w+')
             patchfile.write("\n".join(source + [""]))
             patchfile.flush()
 
@@ -850,7 +850,7 @@ if __name__ == "__main__":
             source = ["line1();", "line2();", "line3();",
                       "function(arg1);",
                       "line5();", "line6();", "line7();"]
-            original = tempfile.NamedTemporaryFile()
+            original = tempfile.NamedTemporaryFile(mode='w+')
             original.write("\n".join(source + [""]))
             original.flush()
 
@@ -859,7 +859,7 @@ if __name__ == "__main__":
                       "-function(arg1);",
                       "+function(arg2);",
                       " line5();", " line6();", " line7();"]
-            patchfile = tempfile.NamedTemporaryFile()
+            patchfile = tempfile.NamedTemporaryFile(mode='w+')
             patchfile.write("\n".join(source + [""]))
             patchfile.flush()
 
@@ -906,7 +906,7 @@ if __name__ == "__main__":
                       "         arg2, \\",
                       "         arg3);",
                       "line5();", "line6();", "line7();"]
-            source1 = tempfile.NamedTemporaryFile()
+            source1 = tempfile.NamedTemporaryFile(mode='w+')
             source1.write("\n".join(source + [""]))
             source1.flush()
 
@@ -915,7 +915,7 @@ if __name__ == "__main__":
                       "         new_arg2, \\",
                       "         arg3);",
                       "line5();", "line6();", "line7();"]
-            source2  = tempfile.NamedTemporaryFile()
+            source2  = tempfile.NamedTemporaryFile(mode='w+')
             source2.write("\n".join(source + [""]))
             source2.flush()
 

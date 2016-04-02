@@ -391,6 +391,7 @@ patch_enable_all ()
 	enable_winmm_mciSendCommandA="$1"
 	enable_winspool_drv_SetPrinterW="$1"
 	enable_winsta_WinStationEnumerateW="$1"
+	enable_wintrust_WinVerifyTrust="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_wpcap_Several_Fixes="$1"
 	enable_ws2_32_APC_Performance="$1"
@@ -1350,6 +1351,9 @@ patch_enable ()
 			;;
 		winsta-WinStationEnumerateW)
 			enable_winsta_WinStationEnumerateW="$2"
+			;;
+		wintrust-WinVerifyTrust)
+			enable_wintrust_WinVerifyTrust="$2"
 			;;
 		wpcap-Dynamic_Linking)
 			enable_wpcap_Dynamic_Linking="$2"
@@ -7700,6 +7704,22 @@ if test "$enable_winsta_WinStationEnumerateW" -eq 1; then
 	patch_apply winsta-WinStationEnumerateW/0001-winsta-Add-stub-for-WinStationEnumerateW.patch
 	(
 		echo '+    { "Austin English", "winsta: Add stub for WinStationEnumerateW.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wintrust-WinVerifyTrust
+# |
+# | Modified files:
+# |   *	dlls/wintrust/softpub.c, dlls/wintrust/tests/softpub.c
+# |
+if test "$enable_wintrust_WinVerifyTrust" -eq 1; then
+	patch_apply wintrust-WinVerifyTrust/0001-wintrust-tests-Add-tests-for-WinVerifyTrust.-v2.patch
+	patch_apply wintrust-WinVerifyTrust/0002-wintrust-tests-Add-some-additional-tests.patch
+	patch_apply wintrust-WinVerifyTrust/0003-wintrust-Verify-image-hash-in-WinVerifyTrust.patch
+	(
+		echo '+    { "Mark Jansen", "wintrust/tests: Add tests for WinVerifyTrust.", 2 },';
+		echo '+    { "Sebastian Lackner", "wintrust/tests: Add some additional tests.", 1 },';
+		echo '+    { "Mark Jansen", "wintrust: Verify image hash in WinVerifyTrust.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -65,7 +65,7 @@ class PatchObject(object):
         self.filename           = filename
         self.offset_begin       = None
         self.offset_end         = None
-        self.isbinary           = False
+        self.is_binary          = False
 
         self.oldname            = None
         self.newname            = None
@@ -74,9 +74,6 @@ class PatchObject(object):
         self.oldsha1            = None
         self.newsha1            = None
         self.newmode            = None
-
-    def is_binary(self):
-        return self.isbinary
 
     def read_chunks(self):
         """Iterates over arbitrary sized chunks of this patch."""
@@ -276,7 +273,7 @@ def _read_single_patch(fp, header, oldname=None, newname=None):
         if line is None: raise PatchParserError("Unexpected end of file.")
         r = re.match("^(literal|delta) ([0-9]+)", line)
         if not r: raise NotImplementedError("Only literal/delta patches are supported.")
-        patch.isbinary = True
+        patch.is_binary = True
 
         # Skip over patch data
         while True:
@@ -787,7 +784,7 @@ if __name__ == "__main__":
             self.assertEqual(patches[0].signed_off_by,  [("Author Name", "author@email.com"),
                                                          ("Other Developer", "other@email.com")])
             self.assertEqual(patches[0].filename,       patchfile.name)
-            self.assertEqual(patches[0].isbinary,       False)
+            self.assertEqual(patches[0].is_binary,      False)
             self.assertEqual(patches[0].modified_file,  "test.txt")
 
             lines = patches[0].read().rstrip("\n").split("\n")
@@ -808,7 +805,7 @@ if __name__ == "__main__":
             self.assertEqual(patches[0].patch_revision, 1)
             self.assertEqual(patches[0].signed_off_by,  [])
             self.assertEqual(patches[0].filename,       patchfile.name)
-            self.assertEqual(patches[0].isbinary,       False)
+            self.assertEqual(patches[0].is_binary,      False)
             self.assertEqual(patches[0].modified_file, "test.txt")
 
             lines = patches[0].read().rstrip("\n").split("\n")
@@ -829,7 +826,7 @@ if __name__ == "__main__":
             self.assertEqual(patches[0].patch_revision, 1)
             self.assertEqual(patches[0].signed_off_by,  [])
             self.assertEqual(patches[0].filename,       patchfile.name)
-            self.assertEqual(patches[0].isbinary,       False)
+            self.assertEqual(patches[0].is_binary,      False)
             self.assertEqual(patches[0].modified_file,  "test.txt")
 
             del expected[0:2]
@@ -845,7 +842,7 @@ if __name__ == "__main__":
             self.assertEqual(patches[0].patch_revision, 1)
             self.assertEqual(patches[0].signed_off_by,  [])
             self.assertEqual(patches[0].filename,       "unknown.patch")
-            self.assertEqual(patches[0].isbinary,       False)
+            self.assertEqual(patches[0].is_binary,      False)
             self.assertEqual(patches[0].modified_file,  "test.txt")
 
     # Basic tests for apply_patch()

@@ -314,7 +314,7 @@ def contains_binary_patch(all_patches, indices, filename):
     """Checks if any patch with given indices affecting filename is a binary patch."""
     for i in indices:
         for patch in all_patches[i].patches:
-            if patch.modified_file == filename and patch.is_binary():
+            if patch.modified_file == filename and patch.is_binary:
                 return True
     return False
 

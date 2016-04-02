@@ -28,6 +28,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 
 try:
@@ -290,8 +291,11 @@ def _read_single_patch(fp, header, oldname=None, newname=None):
     return patch
 
 def _parse_author(author):
-    author = ' '.join([data.decode(format or 'utf-8').encode('utf-8') for \
-                      data, format in email.header.decode_header(author)])
+    if sys.version_info[0] > 2:
+        author = str(email.header.make_header(email.header.decode_header(author)))
+    else:
+        author = ' '.join([data.decode(format or 'utf-8').encode('utf-8') for \
+                          data, format in email.header.decode_header(author)])
     r =  re.match("\"?([^\"]*)\"? <(.*)>", author)
     if r is None: raise NotImplementedError("Failed to parse From - header.")
     return r.group(1).strip(), r.group(2).strip()
@@ -350,7 +354,7 @@ def read_patch(filename, content=None):
                 header.pop('signedoffby', None)
 
             elif line.startswith("Signed-off-by: "):
-                if not header.has_key('signedoffby'):
+                if 'signedoffby' not in header:
                     header['signedoffby'] = []
                 header['signedoffby'].append(_parse_author(line[15:]))
                 assert fp.read() == line

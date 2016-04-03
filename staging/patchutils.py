@@ -735,31 +735,13 @@ if __name__ == "__main__":
 
     # Basic tests for read_patch()
     class PatchReaderTests(unittest.TestCase):
-        def test_read(self):
-            source = ["From be07df750862699f2515c0ac0ceb7a6c25e9458a Mon Sep 17 00:00:00 2001",
-                      "From: =?UTF-8?q?Author=20Name?= <author@email.com>",
-                      "Subject: [PATCH v3] component: Replace arg1 with arg2.",
-                      "",
-                      "Signed-off-by: =?UTF-8?q?Author=20Name?= <author@email.com>",
-                      "Signed-off-by: Other Developer <other@email.com>",
-                      "---",
-                      " test.txt | 2 +-",
-                      " 1 file changed, 1 insertion(+), 1 deletion(-)",
-                      "",
-                      "diff --git a/test.txt b/test.txt",
-                      "index d54375d..0078e66 100644",
-                      "--- a/test.txt", "+++ b/test.txt",
-                      "@@ -1,7 +1,7 @@",
-                      " line1();", " line2();", " line3();",
-                      "-function(arg1);",
-                      "+function(arg2);",
-                      " line5();", " line6();", " line7();",
-                      "-- ",
-                      "2.7.1"]
+        def test_simple(self):
+            with open("tests/simple.patch") as fp:
+                source = fp.read().split("\n")
 
             # Test formatted git patch with author and subject
             patchfile = tempfile.NamedTemporaryFile(mode='w+')
-            patchfile.write("\n".join(source + [""]))
+            patchfile.write("\n".join(source))
             patchfile.flush()
 
             patches = list(read_patch(patchfile.name))
@@ -781,7 +763,7 @@ if __name__ == "__main__":
             del source[0:10]
             self.assertTrue(source[0].startswith("diff --git"))
             patchfile = tempfile.NamedTemporaryFile(mode='w+')
-            patchfile.write("\n".join(source + [""]))
+            patchfile.write("\n".join(source))
             patchfile.flush()
 
             patches = list(read_patch(patchfile.name))
@@ -802,7 +784,7 @@ if __name__ == "__main__":
             del source[0:2]
             self.assertTrue(source[0].startswith("---"))
             patchfile = tempfile.NamedTemporaryFile(mode='w+')
-            patchfile.write("\n".join(source + [""]))
+            patchfile.write("\n".join(source))
             patchfile.flush()
 
             patches = list(read_patch(patchfile.name))
@@ -820,7 +802,7 @@ if __name__ == "__main__":
             self.assertEqual(lines, source[:11])
 
             # Test with StringIO buffer
-            fp = StringIO("\n".join(source + [""]))
+            fp = StringIO("\n".join(source))
             patches = list(read_patch("unknown.patch", fp))
             self.assertEqual(len(patches), 1)
             self.assertEqual(patches[0].patch_author,   None)

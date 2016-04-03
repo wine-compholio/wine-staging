@@ -146,7 +146,7 @@ def _read_single_patch(fp, header, oldname=None, newname=None):
     # Skip over initial diff --git header
     line = fp.peek()
     if line.startswith("diff --git "):
-        assert fp.read() == line
+        fp.read()
 
     # Read header
     while True:
@@ -188,7 +188,7 @@ def _read_single_patch(fp, header, oldname=None, newname=None):
 
         else:
             break
-        assert fp.read() == line
+        fp.read()
 
     if patch.oldname is None or patch.newname is None:
         raise PatchParserError("Missing old or new name.")
@@ -228,7 +228,7 @@ def _read_single_patch(fp, header, oldname=None, newname=None):
             srclines, dstlines = int(r.group(3)), int(r.group(6))
             if srclines <= 0 and dstlines <= 0:
                 raise PatchParserError("Empty hunk doesn't make sense.")
-            assert fp.read() == line
+            fp.read()
 
             try:
                 while srclines > 0 or dstlines > 0:
@@ -256,14 +256,14 @@ def _read_single_patch(fp, header, oldname=None, newname=None):
             while True:
                 line = fp.peek()
                 if line is None or not line.startswith("\\ "): break
-                assert fp.read() == line
+                fp.read()
 
     elif line.rstrip() == "GIT binary patch":
         if patch.oldsha1 is None or patch.newsha1 is None:
             raise PatchParserError("Missing index header, sha1 sums required for binary patch.")
         elif patch.oldname != patch.newname:
             raise PatchParserError("Stripped old- and new name doesn't match for binary patch.")
-        assert fp.read() == line
+        fp.read()
 
         line = fp.read()
         if line is None: raise PatchParserError("Unexpected end of file.")
@@ -329,16 +329,16 @@ def read_patch(filename, fp=None):
             elif line.startswith("From: "):
                 header['author'], header['email'] = _parse_author(line[6:])
                 header.pop('signedoffby', None)
-                assert fp.read() == line
+                fp.read()
 
             elif line.startswith("Subject: "):
                 subject = line[9:].rstrip("\r\n")
-                assert fp.read() == line
+                fp.read()
                 while True:
                     line = fp.peek()
                     if not line.startswith(" "): break
                     subject += line.rstrip("\r\n")
-                    assert fp.read() == line
+                    fp.read()
                 subject, revision = _parse_subject(subject)
                 if not subject.endswith("."): subject += "."
                 subject = re.sub('^([^:]*: *)([a-z])', lambda x: "%s%s" %
@@ -350,7 +350,7 @@ def read_patch(filename, fp=None):
                 if 'signedoffby' not in header:
                     header['signedoffby'] = []
                 header['signedoffby'].append(_parse_author(line[15:]))
-                assert fp.read() == line
+                fp.read()
 
             elif line.startswith("diff --git "):
                 tmp = line.strip().split(" ")
@@ -364,7 +364,7 @@ def read_patch(filename, fp=None):
                 raise PatchParserError("Patch didn't start with a git or diff header.")
 
             else:
-                assert fp.read() == line
+                fp.read()
 
 def apply_patch(original, patchfile, reverse=False, fuzz=2):
     """Apply a patch with optional fuzz - uses the commandline 'patch' utility."""

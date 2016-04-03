@@ -757,15 +757,6 @@ if __name__ == "__main__":
                       "-- ",
                       "2.7.1"]
 
-            expected = ["diff --git a/test.txt b/test.txt",
-                        "index d54375d..0078e66 100644",
-                        "--- a/test.txt", "+++ b/test.txt",
-                        "@@ -1,7 +1,7 @@",
-                        " line1();", " line2();", " line3();",
-                        "-function(arg1);",
-                        "+function(arg2);",
-                        " line5();", " line6();", " line7();"]
-
             # Test formatted git patch with author and subject
             patchfile = tempfile.NamedTemporaryFile(mode='w+')
             patchfile.write("\n".join(source + [""]))
@@ -784,7 +775,7 @@ if __name__ == "__main__":
             self.assertEqual(patches[0].modified_file,  "test.txt")
 
             lines = patches[0].read().rstrip("\n").split("\n")
-            self.assertEqual(lines, expected)
+            self.assertEqual(lines, source[10:23])
 
             # Test with git diff
             del source[0:10]
@@ -805,7 +796,7 @@ if __name__ == "__main__":
             self.assertEqual(patches[0].modified_file, "test.txt")
 
             lines = patches[0].read().rstrip("\n").split("\n")
-            self.assertEqual(lines, expected)
+            self.assertEqual(lines, source[:13])
 
             # Test with unified diff
             del source[0:2]
@@ -825,9 +816,8 @@ if __name__ == "__main__":
             self.assertEqual(patches[0].is_binary,      False)
             self.assertEqual(patches[0].modified_file,  "test.txt")
 
-            del expected[0:2]
             lines = patches[0].read().rstrip("\n").split("\n")
-            self.assertEqual(lines, expected)
+            self.assertEqual(lines, source[:11])
 
             # Test with StringIO buffer
             fp = StringIO("\n".join(source + [""]))

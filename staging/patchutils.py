@@ -92,14 +92,10 @@ class PatchObject(object):
         return "".join(chunk for chunk in self.read_chunks())
 
 class _FileReader(object):
-    def __init__(self, filename, content=None):
+    def __init__(self, filename, fp=None):
         self.filename = filename
+        self.fp       = fp if fp is not None else open(filename)
         self.peeked   = None
-
-        if content is not None:
-            self.fp = StringIO(content)
-        else:
-            self.fp = open(filename)
 
     def close(self):
         self.fp.close()
@@ -320,11 +316,11 @@ def _parse_subject(subject):
     if r is not None: return r.group(1).strip(), 1
     return subject, 1
 
-def read_patch(filename, content=None):
+def read_patch(filename, fp=None):
     """Iterates over all patches contained in a file, and returns PatchObject objects."""
 
     header = {}
-    with _FileReader(filename, content) as fp:
+    with _FileReader(filename, fp) as fp:
         while True:
             line = fp.peek()
             if line is None:
@@ -834,7 +830,8 @@ if __name__ == "__main__":
             self.assertEqual(lines, expected)
 
             # Test with StringIO buffer
-            patches = list(read_patch("unknown.patch", "\n".join(source + [""])))
+            fp = StringIO("\n".join(source + [""]))
+            patches = list(read_patch("unknown.patch", fp))
             self.assertEqual(len(patches), 1)
             self.assertEqual(patches[0].patch_author,   None)
             self.assertEqual(patches[0].patch_email,    None)

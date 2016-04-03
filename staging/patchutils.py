@@ -814,6 +814,55 @@ if __name__ == "__main__":
             self.assertEqual(patches[0].is_binary,      False)
             self.assertEqual(patches[0].modified_file,  "test.txt")
 
+        def test_multi(self):
+            with open("tests/multi.patch") as fp:
+                source = fp.read().split("\n")
+
+            patchfile = tempfile.NamedTemporaryFile(mode='w+')
+            patchfile.write("\n".join(source))
+            patchfile.flush()
+
+            patches = list(read_patch(patchfile.name))
+            self.assertEqual(len(patches), 3)
+
+            self.assertEqual(patches[0].patch_author,   "Author Name")
+            self.assertEqual(patches[0].patch_email,    "author@email.com")
+            self.assertEqual(patches[0].patch_subject,  "component: Replace arg1 with arg2.")
+            self.assertEqual(patches[0].patch_revision, 3)
+            self.assertEqual(patches[0].signed_off_by,  [("Author Name", "author@email.com"),
+                                                         ("Other Developer", "other@email.com")])
+            self.assertEqual(patches[0].filename,       patchfile.name)
+            self.assertEqual(patches[0].is_binary,      False)
+            self.assertEqual(patches[0].modified_file,  "other_test.txt")
+
+            lines = patches[0].read().rstrip("\n").split("\n")
+            self.assertEqual(lines, source[11:24])
+
+            self.assertEqual(patches[1].patch_author,   "Author Name")
+            self.assertEqual(patches[1].patch_email,    "author@email.com")
+            self.assertEqual(patches[1].patch_subject,  "component: Replace arg1 with arg2.")
+            self.assertEqual(patches[1].patch_revision, 3)
+            self.assertEqual(patches[1].signed_off_by,  [("Author Name", "author@email.com"),
+                                                         ("Other Developer", "other@email.com")])
+            self.assertEqual(patches[1].filename,       patchfile.name)
+            self.assertEqual(patches[1].is_binary,      False)
+            self.assertEqual(patches[1].modified_file,  "test.txt")
+
+            lines = patches[1].read().rstrip("\n").split("\n")
+            self.assertEqual(lines, source[24:46])
+
+            self.assertEqual(patches[2].patch_author,   "Other Developer")
+            self.assertEqual(patches[2].patch_email,    "other@email.com")
+            self.assertEqual(patches[2].patch_subject,  "component: Replace arg2 with arg3.")
+            self.assertEqual(patches[2].patch_revision, 4)
+            self.assertEqual(patches[2].signed_off_by,  [("Other Developer", "other@email.com")])
+            self.assertEqual(patches[2].filename,       patchfile.name)
+            self.assertEqual(patches[2].is_binary,      False)
+            self.assertEqual(patches[2].modified_file,  "test.txt")
+
+            lines = patches[2].read().rstrip("\n").split("\n")
+            self.assertEqual(lines, source[58:71])
+
     # Basic tests for apply_patch()
     class PatchApplyTests(unittest.TestCase):
         def test_apply(self):

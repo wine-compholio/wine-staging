@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "442e60b7e4c010e6622d524f47a2dd0d26ba19d4"
+	echo "f6c10b8a75943dc3a49890c9c7a64c91752a4ee0"
 }
 
 # Show version information
@@ -366,7 +366,6 @@ patch_enable_all ()
 	enable_wined3d_Accounting="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_DXTn="$1"
-	enable_wined3d_Geforce_425M="$1"
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
@@ -1277,9 +1276,6 @@ patch_enable ()
 			;;
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
-			;;
-		wined3d-Geforce_425M)
-			enable_wined3d_Geforce_425M="$2"
 			;;
 		wined3d-Limit_Vram)
 			enable_wined3d_Limit_Vram="$2"
@@ -5427,28 +5423,24 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0002-ntoskrnl.exe-Add-stub-for-IoGetAttachedDeviceReferen.patch
 	patch_apply ntoskrnl-Stubs/0003-ntoskrnl.exe-Add-stubs-for-ExAcquireFastMutexUnsafe-.patch
 	patch_apply ntoskrnl-Stubs/0004-ntoskrnl.exe-Add-stubs-for-ObReferenceObjectByPointe.patch
-	patch_apply ntoskrnl-Stubs/0005-ntoskrnl.exe-Add-stub-for-KeDelayExecutionThread.patch
-	patch_apply ntoskrnl-Stubs/0006-ntoskrnl.exe-Improve-KeReleaseMutex-stub.patch
-	patch_apply ntoskrnl-Stubs/0007-ntoskrnl.exe-Improve-KeInitializeSemaphore-stub.patch
-	patch_apply ntoskrnl-Stubs/0008-ntoskrnl.exe-Improve-KeInitializeTimerEx-stub.patch
-	patch_apply ntoskrnl-Stubs/0009-ntoskrnl.exe-Fix-IoReleaseCancelSpinLock-argument.patch
-	patch_apply ntoskrnl-Stubs/0010-ntoskrnl.exe-Implement-MmMapLockedPages-and-MmUnmapL.patch
-	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Implement-KeInitializeMutex.patch
-	patch_apply ntoskrnl-Stubs/0012-ntoskrnl.exe-Add-stub-for-PsRemoveLoadImageNotifyRou.patch
-	patch_apply ntoskrnl-Stubs/0013-ntoskrnl.exe-Add-IoGetDeviceAttachmentBaseRef-stub.patch
+	patch_apply ntoskrnl-Stubs/0005-ntoskrnl.exe-Improve-KeReleaseMutex-stub.patch
+	patch_apply ntoskrnl-Stubs/0006-ntoskrnl.exe-Improve-KeInitializeSemaphore-stub.patch
+	patch_apply ntoskrnl-Stubs/0007-ntoskrnl.exe-Improve-KeInitializeTimerEx-stub.patch
+	patch_apply ntoskrnl-Stubs/0008-ntoskrnl.exe-Fix-IoReleaseCancelSpinLock-argument.patch
+	patch_apply ntoskrnl-Stubs/0009-ntoskrnl.exe-Implement-MmMapLockedPages-and-MmUnmapL.patch
+	patch_apply ntoskrnl-Stubs/0010-ntoskrnl.exe-Implement-KeInitializeMutex.patch
+	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Add-IoGetDeviceAttachmentBaseRef-stub.patch
 	(
 		echo '+    { "Austin English", "ntoskrnl.exe: Add KeWaitForMultipleObjects stub.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for IoGetAttachedDeviceReference.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ExAcquireFastMutexUnsafe and ExReleaseFastMutexUnsafe.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ObReferenceObjectByPointer and ObDereferenceObject.", 1 },';
-		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for KeDelayExecutionThread.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeReleaseMutex stub.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeSemaphore stub.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeTimerEx stub.", 1 },';
 		echo '+    { "Christian Costa", "ntoskrnl.exe: Fix IoReleaseCancelSpinLock argument.", 1 },';
 		echo '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Implement KeInitializeMutex.", 1 },';
-		echo '+    { "Michael Müller", "ntoskrnl.exe: Add stub for PsRemoveLoadImageNotifyRoutine.", 1 },';
 		echo '+    { "Jarkko Korpi", "ntoskrnl.exe: Add IoGetDeviceAttachmentBaseRef stub.", 1 },';
 	) >> "$patchlist"
 fi
@@ -7329,21 +7321,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Add warning that CSMT patchset is disabled.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Geforce_425M
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35054] Add wined3d detection for GeForce GT 425M
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Geforce_425M" -eq 1; then
-	patch_apply wined3d-Geforce_425M/0001-wined3d-Add-detection-for-NVIDIA-GeForce-425M.patch
-	(
-		echo '+    { "Jarkko Korpi", "wined3d: Add detection for NVIDIA GeForce 425M.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -195,7 +195,6 @@ patch_enable_all ()
 	enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvfw32_ICGetDisplayFormat="$1"
-	enable_msvidc32_Convert_Bitness="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_APC_Start_Process="$1"
 	enable_ntdll_Activation_Context="$1"
@@ -763,9 +762,6 @@ patch_enable ()
 			;;
 		msvfw32-ICGetDisplayFormat)
 			enable_msvfw32_ICGetDisplayFormat="$2"
-			;;
-		msvidc32-Convert_Bitness)
-			enable_msvidc32_Convert_Bitness="$2"
 			;;
 		ntdll-APC_Performance)
 			enable_ntdll_APC_Performance="$2"
@@ -4583,33 +4579,27 @@ fi
 # | This patchset fixes the following Wine bugs:
 # |   *	[#23175] Fix implementation of ICGetDisplayFormat
 # |   *	[#25180] Fix rendering of Clonk Endeavour's intro video
+# |   *	[#14695] Implement support for converting 16 bit depth to 24 bit in msvidc32
 # |
 # | Modified files:
-# |   *	dlls/msvfw32/msvideo_main.c, dlls/msvfw32/tests/msvfw.c
+# |   *	dlls/iccvid/iccvid.c, dlls/msvfw32/msvideo_main.c, dlls/msvfw32/tests/msvfw.c, dlls/msvidc32/msvideo1.c
 # |
 if test "$enable_msvfw32_ICGetDisplayFormat" -eq 1; then
 	patch_apply msvfw32-ICGetDisplayFormat/0001-msvfw32-Try-different-formarts-in-ICGetDisplayFormat.patch
 	patch_apply msvfw32-ICGetDisplayFormat/0002-msvfw32-Add-test-for-negative-width-height-values-pa.patch
 	patch_apply msvfw32-ICGetDisplayFormat/0003-msvfw32-Set-biSizeImage-correctly-in-ICGetDisplayFor.patch
+	patch_apply msvfw32-ICGetDisplayFormat/0004-msvfw32-Take-stride-into-account-and-ask-for-palette.patch
+	patch_apply msvfw32-ICGetDisplayFormat/0005-iccvid-Fix-calculation-of-stride-and-size.patch
+	patch_apply msvfw32-ICGetDisplayFormat/0006-msvidc32-Add-support-for-converting-16-bit-depth-to-.patch
+	patch_apply msvfw32-ICGetDisplayFormat/0007-msvidc32-Fix-calculation-of-stride-and-size.patch
 	(
 		echo '+    { "Michael Müller", "msvfw32: Try different formarts in ICGetDisplayFormat.", 1 },';
 		echo '+    { "Michael Müller", "msvfw32: Add test for negative width/height values passed to ICGetDisplayFormat.", 1 },';
 		echo '+    { "Michael Müller", "msvfw32: Set biSizeImage correctly in ICGetDisplayFormat.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset msvidc32-Convert_Bitness
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#14695] Implement support for converting 16 bit depth to 24 bit in msvidc32
-# |
-# | Modified files:
-# |   *	dlls/msvfw32/tests/msvfw.c, dlls/msvidc32/msvideo1.c
-# |
-if test "$enable_msvidc32_Convert_Bitness" -eq 1; then
-	patch_apply msvidc32-Convert_Bitness/0001-msvidc32-Add-support-for-converting-16-bit-depth-to-.patch
-	(
+		echo '+    { "Michael Müller", "msvfw32: Take stride into account and ask for palette in ICGetDisplayFormat.", 1 },';
+		echo '+    { "Michael Müller", "iccvid: Fix calculation of stride and size.", 1 },';
 		echo '+    { "Michael Müller", "msvidc32: Add support for converting 16 bit depth to 24 bit.", 1 },';
+		echo '+    { "Michael Müller", "msvidc32: Fix calculation of stride and size.", 1 },';
 	) >> "$patchlist"
 fi
 

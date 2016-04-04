@@ -1,0 +1,107 @@
+From 855c99952103f3f76d2c38e1471570dee8dbf2c3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 3 Apr 2016 18:22:29 +0200
+Subject: iccvid: Fix calculation of stride and size.
+
+---
+ dlls/iccvid/iccvid.c       | 10 +++++++---
+ dlls/msvfw32/tests/msvfw.c | 40 ++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 47 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/iccvid/iccvid.c b/dlls/iccvid/iccvid.c
+index 1ef2db6..0531f31 100644
+--- a/dlls/iccvid/iccvid.c
++++ b/dlls/iccvid/iccvid.c
+@@ -91,6 +91,10 @@ static inline BOOL heap_free( LPVOID ptr )
+     return HeapFree( GetProcessHeap(), 0, ptr );
+ }
+ 
++static inline int get_stride(int width, int depth)
++{
++    return ((depth * width + 31) >> 3) & ~3;
++}
+ 
+ /* ------------------------------------------------------------------------ */
+ static unsigned char *in_buffer, uiclip[1024], *uiclp = NULL;
+@@ -459,7 +463,7 @@ static void decode_cinepak(cinepak_info *cvinfo, unsigned char *buf, int size,
+             break;
+         }
+ 
+-    frm_stride = out_width * bpp;
++    frm_stride = get_stride(out_width, bpp * 8);
+     frm_ptr = output;
+ 
+     if(frame.length != size)
+@@ -844,9 +848,9 @@ static LRESULT ICCVID_DecompressGetFormat( ICCVID_Info *info, LPBITMAPINFO in, L
+     if( out )
+     {
+         memcpy( out, in, size );
++        out->bmiHeader.biBitCount = 24;
+         out->bmiHeader.biCompression = BI_RGB;
+-        out->bmiHeader.biSizeImage = in->bmiHeader.biHeight
+-                                   * in->bmiHeader.biWidth *4;
++        out->bmiHeader.biSizeImage = get_stride(in->bmiHeader.biWidth, 24) * in->bmiHeader.biHeight;
+         return ICERR_OK;
+     }
+     return size;
+diff --git a/dlls/msvfw32/tests/msvfw.c b/dlls/msvfw32/tests/msvfw.c
+index 91628e2..7943184 100644
+--- a/dlls/msvfw32/tests/msvfw.c
++++ b/dlls/msvfw32/tests/msvfw.c
+@@ -93,6 +93,7 @@ static void test_Locate(void)
+ {
+     static BITMAPINFOHEADER bi = {sizeof(BITMAPINFOHEADER),32,8, 1,8, BI_RLE8, 0,100000,100000, 0,0};
+     static BITMAPINFOHEADER bo = {sizeof(BITMAPINFOHEADER),32,8, 1,8, BI_RGB, 0,100000,100000, 0,0};
++    BITMAPINFOHEADER tmp = {sizeof(BITMAPINFOHEADER)};
+     HIC h;
+     DWORD err;
+ 
+@@ -128,6 +129,45 @@ static void test_Locate(void)
+         ok(err == ICERR_OK, "Query cvid->RGB32 height<0: %d\n", err);
+         bo.biHeight = -bo.biHeight;
+ 
++        bi.biWidth = 17;
++
++        bi.biBitCount = 8;
++        err = ICDecompressGetFormat(h, &bi, &tmp);
++        ok(err == ICERR_OK, "Query cvid output format: %d\n", err);
++        ok(tmp.biBitCount == 24, "Expected 24 bit, got %d bit\n", tmp.biBitCount);
++        ok(tmp.biSizeImage == get_stride(17, 24) * 8, "Expected size %d, got %d\n",
++           get_stride(17, 24) * 8, tmp.biSizeImage);
++
++        bi.biBitCount = 15;
++        err = ICDecompressGetFormat(h, &bi, &tmp);
++        ok(err == ICERR_OK, "Query cvid output format: %d\n", err);
++        ok(tmp.biBitCount == 24, "Expected 24 bit, got %d bit\n", tmp.biBitCount);
++        ok(tmp.biSizeImage == get_stride(17, 24) * 8, "Expected size %d, got %d\n",
++           get_stride(17, 24) * 8, tmp.biSizeImage);
++
++        bi.biBitCount = 16;
++        err = ICDecompressGetFormat(h, &bi, &tmp);
++        ok(err == ICERR_OK, "Query cvid output format: %d\n", err);
++        ok(tmp.biBitCount == 24, "Expected 24 bit, got %d bit\n", tmp.biBitCount);
++        ok(tmp.biSizeImage == get_stride(17, 24) * 8, "Expected size %d, got %d\n",
++           get_stride(17, 24) * 8, tmp.biSizeImage);
++
++        bi.biBitCount = 24;
++        err = ICDecompressGetFormat(h, &bi, &tmp);
++        ok(err == ICERR_OK, "Query cvid output format: %d\n", err);
++        ok(tmp.biBitCount == 24, "Expected 24 bit, got %d bit\n", tmp.biBitCount);
++        ok(tmp.biSizeImage == get_stride(17, 24) * 8, "Expected size %d, got %d\n",
++           get_stride(17, 24) * 8, tmp.biSizeImage);
++
++        bi.biBitCount = 32;
++        err = ICDecompressGetFormat(h, &bi, &tmp);
++        ok(err == ICERR_OK, "Query cvid output format: %d\n", err);
++        ok(tmp.biBitCount == 24, "Expected 24 bit, got %d bit\n", tmp.biBitCount);
++        ok(tmp.biSizeImage == get_stride(17, 24) * 8, "Expected size %d, got %d\n",
++           get_stride(17, 24) * 8, tmp.biSizeImage);
++
++        bi.biWidth = 32;
++
+         ok(ICClose(h) == ICERR_OK,"ICClose failed\n");
+ 
+         bo.biBitCount = bi.biBitCount = 8;
+-- 
+2.7.1
+

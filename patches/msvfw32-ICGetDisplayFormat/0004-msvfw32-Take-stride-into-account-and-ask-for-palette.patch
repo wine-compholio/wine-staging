@@ -1,0 +1,146 @@
+From 6c25d94295130d7ab3e07dd985311520d303aad2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 3 Apr 2016 17:47:43 +0200
+Subject: msvfw32: Take stride into account and ask for palette in
+ ICGetDisplayFormat.
+
+---
+ dlls/msvfw32/msvideo_main.c | 15 ++++++++++++---
+ dlls/msvfw32/tests/msvfw.c  | 45 ++++++++++++++++++++++++++++++++++++++-------
+ 2 files changed, 50 insertions(+), 10 deletions(-)
+
+diff --git a/dlls/msvfw32/msvideo_main.c b/dlls/msvfw32/msvideo_main.c
+index 6f91859..e3a7719 100644
+--- a/dlls/msvfw32/msvideo_main.c
++++ b/dlls/msvfw32/msvideo_main.c
+@@ -98,6 +98,11 @@ static const char *wine_dbgstr_icerr( int ret )
+     return str;
+ }
+ 
++static inline int get_stride(int width, int depth)
++{
++    return ((depth * width + 31) >> 3) & ~3;
++}
++
+ static WINE_HIC*        MSVIDEO_FirstHic /* = NULL */;
+ 
+ typedef struct _reg_driver reg_driver;
+@@ -770,23 +775,27 @@ HIC VFWAPI ICGetDisplayFormat(
+         found = TRUE;
+         lpbiOut->biBitCount = try_depths[i].depth;
+         lpbiOut->biCompression = try_depths[i].compression;
+-        lpbiOut->biSizeImage = dx * dy * lpbiOut->biBitCount / 8;
++        lpbiOut->biSizeImage = dx * get_stride(dy, lpbiOut->biBitCount);
+ 
+         if (ICDecompressQuery(tmphic, lpbiIn, lpbiOut) == ICERR_OK)
++        {
++            if (try_depths[i].depth == 8)
++                ICDecompressGetPalette(tmphic, lpbiIn, lpbiOut);
+             goto success;
++        }
+     }
+ 
+     if (!found)
+     {
+         lpbiOut->biBitCount = depth;
+         lpbiOut->biCompression = BI_RGB;
+-        lpbiOut->biSizeImage = (dx * dy * depth) / 8;
++        lpbiOut->biSizeImage = dx * get_stride(dy, lpbiOut->biBitCount);
+         if (ICDecompressQuery(tmphic, lpbiIn, lpbiOut) == ICERR_OK)
+             goto success;
+ 
+         lpbiOut->biBitCount = screen_depth;
+         lpbiOut->biCompression = BI_RGB;
+-        lpbiOut->biSizeImage = dx * dy * screen_depth / 8;
++        lpbiOut->biSizeImage = dx * get_stride(dy, lpbiOut->biBitCount);
+         if (ICDecompressQuery(tmphic, lpbiIn, lpbiOut) == ICERR_OK)
+             goto success;
+     }
+diff --git a/dlls/msvfw32/tests/msvfw.c b/dlls/msvfw32/tests/msvfw.c
+index 252aba2..91628e2 100644
+--- a/dlls/msvfw32/tests/msvfw.c
++++ b/dlls/msvfw32/tests/msvfw.c
+@@ -25,6 +25,11 @@
+ 
+ #include "wine/test.h"
+ 
++static inline int get_stride(int width, int depth)
++{
++    return ((depth * width + 31) >> 3) & ~3;
++}
++
+ static void test_OpenCase(void)
+ {
+     HIC h;
+@@ -367,9 +372,30 @@ static struct msg_result expected_msgs[] =
+     {40,  ICM_DECOMPRESS_GET_FORMAT,  TRUE,  320, 240, 16,       BI_RGB,          ICERR_OK, FALSE},
+     {41,  ICM_DECOMPRESS_QUERY,       TRUE,  640, 480, 32,       BI_RGB,          ICERR_OK, FALSE},
+ 
++    /* test 11 */
++    {42,  ICM_DECOMPRESS_QUERY,       FALSE,   0,   0,  0,            0,          ICERR_OK, FALSE},
++    {43,  ICM_DECOMPRESS_GET_FORMAT,  TRUE,  320, 240, 16,       BI_RGB,          ICERR_OK, FALSE},
++    {44,  ICM_DECOMPRESS_QUERY,       TRUE,  270, 270,  8,       BI_RGB,          ICERR_OK, FALSE},
++    {45,  ICM_DECOMPRESS_GET_PALETTE, FALSE,   0,   0,  0,            0, ICERR_UNSUPPORTED, FALSE},
++
++    /* test 12 */
++    {46,  ICM_DECOMPRESS_QUERY,       FALSE,   0,   0,  0,            0,          ICERR_OK, FALSE},
++    {47,  ICM_DECOMPRESS_GET_FORMAT,  TRUE,  320, 240, 16,       BI_RGB,          ICERR_OK, FALSE},
++    {48,  ICM_DECOMPRESS_QUERY,       TRUE,  270, 270, 16,       BI_RGB,          ICERR_OK, FALSE},
++
++    /* test 13 */
++    {49,  ICM_DECOMPRESS_QUERY,       FALSE,   0,   0,  0,            0,          ICERR_OK, FALSE},
++    {50,  ICM_DECOMPRESS_GET_FORMAT,  TRUE,  320, 240, 16,       BI_RGB,          ICERR_OK, FALSE},
++    {51,  ICM_DECOMPRESS_QUERY,       TRUE,  270, 270, 24,       BI_RGB,          ICERR_OK, FALSE},
++
++    /* test 14 */
++    {52,  ICM_DECOMPRESS_QUERY,       FALSE,   0,   0,  0,            0,          ICERR_OK, FALSE},
++    {53,  ICM_DECOMPRESS_GET_FORMAT,  TRUE,  320, 240, 16,       BI_RGB,          ICERR_OK, FALSE},
++    {54,  ICM_DECOMPRESS_QUERY,       TRUE,  640, 480,  4,       BI_RGB,          ICERR_OK, FALSE},
++
+     /* Wine bug - shouldn't be called */
+-    {42,  DRV_DISABLE,                FALSE,   0,   0,  0,            0,          ICERR_OK, TRUE},
+-    {42,  DRV_FREE,                   FALSE,   0,   0,  0,            0,          ICERR_OK, TRUE},
++    {55,  DRV_DISABLE,                FALSE,   0,   0,  0,            0,          ICERR_OK, TRUE},
++    {55,  DRV_FREE,                   FALSE,   0,   0,  0,            0,          ICERR_OK, TRUE},
+ };
+ 
+ static int msg_index = 0;
+@@ -429,8 +455,8 @@ LRESULT WINAPI driver_proc_test(DWORD_PTR dwDriverId, HDRVR hdrvr, UINT msg,
+                "Expected biBitCount %d, got %d\n", expected->bits, out->biBitCount);
+             ok(out->biCompression == expected->compression,
+                "Expected compression %d, got %d\n", expected->compression, out->biCompression);
+-            ok(out->biSizeImage == (out->biWidth * out->biHeight * out->biBitCount) / 8,
+-               "Expected biSizeImage %d, got %d\n", (out->biWidth * out->biHeight * out->biBitCount) / 8,
++            ok(out->biSizeImage == get_stride(out->biWidth, out->biBitCount) * out->biHeight,
++               "Expected biSizeImage %d, got %d\n", get_stride(out->biWidth, out->biBitCount) * out->biHeight,
+                 out->biSizeImage);
+ 
+             trace("query -> width: %d, height: %d, bit: %d, compression: %d, size: %d\n",
+@@ -496,6 +522,10 @@ void test_ICGetDisplayFormat(void)
+         {32, 32, 800, 800, 600, 600, 36},
+         {32, 32,  -1, 640,  -1, 480, 39},
+         {32, 32, -90, 640, -60, 480, 42},
++        { 8,  8, 270, 270, 270, 270, 46},
++        {16, 16, 270, 270, 270, 270, 49},
++        {24, 24, 270, 270, 270, 270, 52},
++        { 4,  4,   0, 640,   0, 480, 55},
+     };
+ 
+     HIC ic, ic2;
+@@ -533,9 +563,10 @@ void test_ICGetDisplayFormat(void)
+            "Expected biWidth %d, got %d\n", tests[i].width_expected, out.biWidth);
+         ok(out.biHeight == tests[i].height_expected,
+            "Expected biHeight %d, got %d\n", tests[i].height_expected, out.biHeight);
+-        real_depth = (out.biBitCount > 32) ? 4 : out.biBitCount / 8;
+-        ok(out.biSizeImage == out.biWidth * out.biHeight * real_depth,
+-           "Expected biSizeImage %d, got %d\n", out.biWidth * out.biHeight * real_depth, out.biSizeImage);
++        real_depth = (out.biBitCount > 32) ? 32 : out.biBitCount;
++        ok(out.biSizeImage == get_stride(out.biWidth, real_depth) * out.biHeight,
++           "Expected biSizeImage %d, got %d\n", get_stride(out.biWidth, real_depth) * out.biHeight,
++           out.biSizeImage);
+         ok(msg_index == tests[i].msg_index,
+            "Expected msg_index %d, got %d\n", tests[i].msg_index, msg_index);
+     }
+-- 
+2.7.1
+

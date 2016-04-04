@@ -91,7 +91,7 @@ class PatchObject(object):
         """Return the full patch as a string."""
         return "".join(chunk for chunk in self.read_chunks())
 
-class _FileReader(object):
+class _PatchReader(object):
     def __init__(self, filename, fp=None):
         self.filename = filename
         self.fp       = fp if fp is not None else open(filename)
@@ -134,6 +134,58 @@ class _FileReader(object):
             return tmp
         tmp, self.peeked = self.peeked, None
         return tmp[1]
+
+    def read_hunk(self):
+        """Read one hunk from a patch file."""
+        line = self.peek()
+        if line is None or not line.startswith("@@ -"):
+            return None
+
+        r = re.match("^@@ -(([0-9]+),)?([0-9]+) \+(([0-9]+),)?([0-9]+) @@", line)
+        if not r: raise PatchParserError("Unable to parse hunk header '%s'." % line)
+        srcpos = max(int(r.group(2)) - 1, 0) if r.group(2) else 0
+        dstpos = max(int(r.group(5)) - 1, 0) if r.group(5) else 0
+        srclines, dstlines = int(r.group(3)), int(r.group(6))
+        if srclines <= 0 and dstlines <= 0:
+            raise PatchParserError("Empty hunk doesn't make sense.")
+        self.read()
+
+        srcdata = []
+        dstdata = []
+
+        try:
+            while srclines > 0 or dstlines > 0:
+                line = self.read().rstrip("\n")
+                if line[0] == " ":
+                    if srclines == 0 or dstlines == 0:
+                        raise PatchParserError("Corrupted patch.")
+                    srcdata.append(line[1:])
+                    dstdata.append(line[1:])
+                    srclines -= 1
+                    dstlines -= 1
+                elif line[0] == "-":
+                    if srclines == 0:
+                        raise PatchParserError("Corrupted patch.")
+                    srcdata.append(line[1:])
+                    srclines -= 1
+                elif line[0] == "+":
+                    if dstlines == 0:
+                        raise PatchParserError("Corrupted patch.")
+                    dstdata.append(line[1:])
+                    dstlines -= 1
+                elif line[0] == "\\":
+                    pass # ignore
+                else:
+                    raise PatchParserError("Unexpected line in hunk.")
+        except IndexError: # triggered by ""[0]
+            raise PatchParserError("Truncated patch.")
+
+        while True:
+            line = self.peek()
+            if line is None or not line.startswith("\\ "): break
+            self.read()
+
+        return (srcpos, srcdata, dstpos, dstdata)
 
 def _read_single_patch(fp, header, oldname=None, newname=None):
     """Internal function to read a single patch from a file."""
@@ -216,47 +268,8 @@ def _read_single_patch(fp, header, oldname=None, newname=None):
             raise PatchParserError("Stripped old- and new name doesn't match.")
 
     elif line.startswith("@@ -"):
-        while True:
-            line = fp.peek()
-            if line is None or not line.startswith("@@ -"):
-                break
-
-            r = re.match("^@@ -(([0-9]+),)?([0-9]+) \+(([0-9]+),)?([0-9]+) @@", line)
-            if not r: raise PatchParserError("Unable to parse hunk header '%s'." % line)
-            srcpos = max(int(r.group(2)) - 1, 0) if r.group(2) else 0
-            dstpos = max(int(r.group(5)) - 1, 0) if r.group(5) else 0
-            srclines, dstlines = int(r.group(3)), int(r.group(6))
-            if srclines <= 0 and dstlines <= 0:
-                raise PatchParserError("Empty hunk doesn't make sense.")
-            fp.read()
-
-            try:
-                while srclines > 0 or dstlines > 0:
-                    line = fp.read()[0]
-                    if line == " ":
-                        if srclines == 0 or dstlines == 0:
-                            raise PatchParserError("Corrupted patch.")
-                        srclines -= 1
-                        dstlines -= 1
-                    elif line == "-":
-                        if srclines == 0:
-                            raise PatchParserError("Corrupted patch.")
-                        srclines -= 1
-                    elif line == "+":
-                        if dstlines == 0:
-                            raise PatchParserError("Corrupted patch.")
-                        dstlines -= 1
-                    elif line == "\\":
-                        pass # ignore
-                    else:
-                        raise PatchParserError("Unexpected line in hunk.")
-            except TypeError: # triggered by None[0]
-                raise PatchParserError("Truncated patch.")
-
-            while True:
-                line = fp.peek()
-                if line is None or not line.startswith("\\ "): break
-                fp.read()
+        while fp.read_hunk() is not None:
+            pass
 
     elif line.rstrip() == "GIT binary patch":
         if patch.oldsha1 is None or patch.newsha1 is None:
@@ -320,7 +333,7 @@ def read_patch(filename, fp=None):
     """Iterates over all patches contained in a file, and returns PatchObject objects."""
 
     header = {}
-    with _FileReader(filename, fp) as fp:
+    with _PatchReader(filename, fp) as fp:
         while True:
             line = fp.peek()
             if line is None:
@@ -499,65 +512,18 @@ def generate_ifdef_patch(original, patched, ifdef):
         lines, split = _preprocess_source(original)
 
         # Parse the created diff file
-        diff.flush()
-        diff.seek(0)
+        fp = _PatchReader(diff.name, diff)
+        fp.seek(0)
 
         # We expect this output format from 'diff', if this is not the case things might go wrong.
-        line = diff.readline()
+        line = fp.read()
         assert line.startswith("--- ")
-        line = diff.readline()
+        line = fp.read()
         assert line.startswith("+++ ")
 
         hunks = []
-        while True:
-            line = diff.readline()
-            if line == "":
-                break
-            if line.startswith("\\ "):
-                continue
-
-            # Parse each hunk, and extract the srclines and dstlines. This algorithm is very
-            # similar to _read_single_patch.
-            if not line.startswith("@@ -"):
-                raise PatchParserError("Unable to parse line '%s'." % line)
-
-            r = re.match("^@@ -(([0-9]+),)?([0-9]+) \+(([0-9]+),)?([0-9]+) @@", line)
-            if not r: raise PatchParserError("Unable to parse hunk header '%s'." % line)
-            srcpos = max(int(r.group(2)) - 1, 0) if r.group(2) else 0
-            dstpos = max(int(r.group(5)) - 1, 0) if r.group(5) else 0
-            srclines, dstlines = int(r.group(3)), int(r.group(6))
-            if srclines <= 0 and dstlines <= 0:
-                raise PatchParserError("Empty hunk doesn't make sense.")
-
-            srcdata = []
-            dstdata = []
-
-            try:
-                while srclines > 0 or dstlines > 0:
-                    line = diff.readline().rstrip("\n")
-                    if line[0] == " ":
-                        if srclines == 0 or dstlines == 0:
-                            raise PatchParserError("Corrupted patch.")
-                        srcdata.append(line[1:])
-                        dstdata.append(line[1:])
-                        srclines -= 1
-                        dstlines -= 1
-                    elif line[0] == "-":
-                        if srclines == 0:
-                            raise PatchParserError("Corrupted patch.")
-                        srcdata.append(line[1:])
-                        srclines -= 1
-                    elif line[0] == "+":
-                        if dstlines == 0:
-                            raise PatchParserError("Corrupted patch.")
-                        dstdata.append(line[1:])
-                        dstlines -= 1
-                    elif line[0] == "\\":
-                        pass # ignore
-                    else:
-                        raise PatchParserError("Unexpected line in hunk.")
-            except IndexError: # triggered by ""[0]
-                raise PatchParserError("Truncated patch.")
+        while fp.peek() is not None:
+            srcpos, srcdata, dstpos, dstdata = fp.read_hunk()
 
             # Ensure that the patch would really apply in practice
             if lines[srcpos:srcpos + len(srcdata)] != srcdata:
@@ -634,9 +600,6 @@ def generate_ifdef_patch(original, patched, ifdef):
                 prev_srcdata.append(lines[prev_endpos])
                 prev_dstdata.append(lines[prev_endpos])
                 prev_endpos += 1
-
-        # We don't need the diff anymore, all hunks are in memory
-        diff.close()
 
     # Generate resulting file with #ifdefs
     with tempfile.NamedTemporaryFile(mode='w+') as intermediate:

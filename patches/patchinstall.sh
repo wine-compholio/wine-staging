@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f6c10b8a75943dc3a49890c9c7a64c91752a4ee0"
+	echo "be91fcd879a1de768a57b4a06be470c10313b08d"
 }
 
 # Show version information
@@ -86,7 +86,6 @@ patch_enable_all ()
 	enable_Pipelight="$1"
 	enable_Staging="$1"
 	enable_advapi32_LsaLookupSids="$1"
-	enable_advapi32_RegNotifyChangeKeyValue="$1"
 	enable_advapi32_SetSecurityInfo="$1"
 	enable_amstream_GetMultiMediaStream="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
@@ -432,9 +431,6 @@ patch_enable ()
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
-			;;
-		advapi32-RegNotifyChangeKeyValue)
-			enable_advapi32_RegNotifyChangeKeyValue="$2"
 			;;
 		advapi32-SetSecurityInfo)
 			enable_advapi32_SetSecurityInfo="$2"
@@ -2546,21 +2542,6 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset advapi32-RegNotifyChangeKeyValue
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39863] Fix return value of RegNotifyChangeKeyValue for pending events
-# |
-# | Modified files:
-# |   *	dlls/advapi32/registry.c, dlls/advapi32/tests/registry.c
-# |
-if test "$enable_advapi32_RegNotifyChangeKeyValue" -eq 1; then
-	patch_apply advapi32-RegNotifyChangeKeyValue/0001-advapi32-Fix-return-value-of-RegNotifyChangeKeyValue.patch
-	(
-		echo '+    { "Sebastian Lackner", "advapi32: Fix return value of RegNotifyChangeKeyValue for pending events.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset advapi32-SetSecurityInfo
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4308,10 +4289,8 @@ fi
 # |   *	dlls/krnl386.exe16/instr.c
 # |
 if test "$enable_krnl386_exe16_GDT_LDT_Emulation" -eq 1; then
-	patch_apply krnl386.exe16-GDT_LDT_Emulation/0001-krnl386.exe16-Emulate-mov-Eb-Gb-instruction-on-x86-p.patch
-	patch_apply krnl386.exe16-GDT_LDT_Emulation/0002-krnl386.exe16-Emulate-GDT-and-LDT-access.patch
+	patch_apply krnl386.exe16-GDT_LDT_Emulation/0001-krnl386.exe16-Emulate-GDT-and-LDT-access.patch
 	(
-		echo '+    { "Michael Müller", "krnl386.exe16: Emulate '\''mov Eb, Gb'\'' instruction on x86 processor architecture.", 1 },';
 		echo '+    { "Michael Müller", "krnl386.exe16: Emulate GDT and LDT access.", 1 },';
 	) >> "$patchlist"
 fi

@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "be91fcd879a1de768a57b4a06be470c10313b08d"
+	echo "dad56c7dc6ed0421e282e97f196bd195749d12ff"
 }
 
 # Show version information
@@ -349,6 +349,7 @@ patch_enable_all ()
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppGrayFloat="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
+	enable_windowscodecs_PNG_Fixes="$1"
 	enable_windowscodecs_WICCreateBitmapFromSection="$1"
 	enable_wine_inf_Directory_ContextMenuHandlers="$1"
 	enable_wine_inf_Dummy_CA_Certificate="$1"
@@ -1223,6 +1224,9 @@ patch_enable ()
 			;;
 		windowscodecs-IMILBitmapSource)
 			enable_windowscodecs_IMILBitmapSource="$2"
+			;;
+		windowscodecs-PNG_Fixes)
+			enable_windowscodecs_PNG_Fixes="$2"
 			;;
 		windowscodecs-WICCreateBitmapFromSection)
 			enable_windowscodecs_WICCreateBitmapFromSection="$2"
@@ -7106,6 +7110,20 @@ if test "$enable_windowscodecs_IMILBitmapSource" -eq 1; then
 	(
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Improve compatibility of IMILBitmapSource interface.", 3 },';
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for IMILBitmapScaler interface.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windowscodecs-PNG_Fixes
+# |
+# | Modified files:
+# |   *	dlls/windowscodecs/pngformat.c
+# |
+if test "$enable_windowscodecs_PNG_Fixes" -eq 1; then
+	patch_apply windowscodecs-PNG_Fixes/0001-windowscodecs-Fix-a-copy-paste-mistake.patch
+	patch_apply windowscodecs-PNG_Fixes/0002-windowscodecs-Allocate-correct-amount-of-memory-for-.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fix a copy/paste mistake.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Allocate correct amount of memory for PNG image data.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -6228,6 +6228,9 @@ fi
 
 # Patchset shell32-File_Property_Dialog
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40426] Implement general tab for file property dialog
+# |
 # | Modified files:
 # |   *	dlls/shell32/shell32.rc, dlls/shell32/shlview_cmenu.c, dlls/shell32/shresdef.h
 # |

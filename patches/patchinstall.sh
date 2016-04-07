@@ -99,7 +99,6 @@ patch_enable_all ()
 	enable_comctl32_TTM_ADDTOOLW="$1"
 	enable_compobj_dll16_StringFromGUID2="$1"
 	enable_configure_Absolute_RPATH="$1"
-	enable_configure_Crosscompiling="$1"
 	enable_crypt32_CMS_Certificates="$1"
 	enable_crypt32_CryptUnprotectMemory="$1"
 	enable_d3d9_DesktopWindow="$1"
@@ -474,9 +473,6 @@ patch_enable ()
 			;;
 		configure-Absolute_RPATH)
 			enable_configure_Absolute_RPATH="$2"
-			;;
-		configure-Crosscompiling)
-			enable_configure_Crosscompiling="$2"
 			;;
 		crypt32-CMS_Certificates)
 			enable_crypt32_CMS_Certificates="$2"
@@ -2867,18 +2863,6 @@ if test "$enable_configure_Absolute_RPATH" -eq 1; then
 	patch_apply configure-Absolute_RPATH/0001-configure-Also-add-the-absolute-RPATH-when-linking-a.patch
 	(
 		echo '+    { "Sebastian Lackner", "configure: Also add the absolute RPATH when linking against libwine.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset configure-Crosscompiling
-# |
-# | Modified files:
-# |   *	configure.ac
-# |
-if test "$enable_configure_Crosscompiling" -eq 1; then
-	patch_apply configure-Crosscompiling/0001-configure.ac-Fix-cross-compiling-of-32-bit-Wine-for-.patch
-	(
-		echo '+    { "Sebastian Lackner", "configure.ac: Fix cross-compiling of 32-bit Wine for OSX.", 1 },';
 	) >> "$patchlist"
 fi
 

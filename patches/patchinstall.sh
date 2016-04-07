@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "dad56c7dc6ed0421e282e97f196bd195749d12ff"
+	echo "aaddf1365a3371263827206eedf1464a83562c00"
 }
 
 # Show version information
@@ -188,7 +188,6 @@ patch_enable_all ()
 	enable_mpr_WNetGetUniversalNameW="$1"
 	enable_mscoree_CorValidateImage="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
-	enable_msi_Fix_Stack_Alignment="$1"
 	enable_msidb_Implementation="$1"
 	enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback="$1"
 	enable_msvcrt_Math_Precision="$1"
@@ -205,7 +204,6 @@ patch_enable_all ()
 	enable_ntdll_DllRedirects="$1"
 	enable_ntdll_EtwRegisterTraceGuids="$1"
 	enable_ntdll_Exception="$1"
-	enable_ntdll_FSCTL_PIPE_LISTEN="$1"
 	enable_ntdll_FileDispositionInformation="$1"
 	enable_ntdll_FileFsFullSizeInformation="$1"
 	enable_ntdll_FileFsVolumeInformation="$1"
@@ -325,7 +323,6 @@ patch_enable_all ()
 	enable_user32_Dialog_Owner="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawTextExW="$1"
-	enable_user32_FlashWindowEx="$1"
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_Invalidate_Key_State="$1"
 	enable_user32_ListBox_Size="$1"
@@ -374,7 +371,6 @@ patch_enable_all ()
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_Clipboard_HTML="$1"
 	enable_winex11_DefaultDisplayFrequency="$1"
-	enable_winex11_Desktop_Resolution="$1"
 	enable_winex11_Window_Groups="$1"
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
@@ -741,9 +737,6 @@ patch_enable ()
 		mshtml-HTMLLocation_put_hash)
 			enable_mshtml_HTMLLocation_put_hash="$2"
 			;;
-		msi-Fix_Stack_Alignment)
-			enable_msi_Fix_Stack_Alignment="$2"
-			;;
 		msidb-Implementation)
 			enable_msidb_Implementation="$2"
 			;;
@@ -791,9 +784,6 @@ patch_enable ()
 			;;
 		ntdll-Exception)
 			enable_ntdll_Exception="$2"
-			;;
-		ntdll-FSCTL_PIPE_LISTEN)
-			enable_ntdll_FSCTL_PIPE_LISTEN="$2"
 			;;
 		ntdll-FileDispositionInformation)
 			enable_ntdll_FileDispositionInformation="$2"
@@ -1152,9 +1142,6 @@ patch_enable ()
 		user32-DrawTextExW)
 			enable_user32_DrawTextExW="$2"
 			;;
-		user32-FlashWindowEx)
-			enable_user32_FlashWindowEx="$2"
-			;;
 		user32-GetSystemMetrics)
 			enable_user32_GetSystemMetrics="$2"
 			;;
@@ -1298,9 +1285,6 @@ patch_enable ()
 			;;
 		winex11-DefaultDisplayFrequency)
 			enable_winex11_DefaultDisplayFrequency="$2"
-			;;
-		winex11-Desktop_Resolution)
-			enable_winex11_Desktop_Resolution="$2"
 			;;
 		winex11-Window_Groups)
 			enable_winex11_Window_Groups="$2"
@@ -2242,16 +2226,12 @@ if test "$enable_ntdll_ApiSetQueryApiSetPresence" -eq 1; then
 fi
 
 if test "$enable_kernel32_Named_Pipe" -eq 1; then
-	if test "$enable_ntdll_FSCTL_PIPE_LISTEN" -gt 1; then
-		abort "Patchset ntdll-FSCTL_PIPE_LISTEN disabled, but kernel32-Named_Pipe depends on that."
-	fi
 	if test "$enable_rpcrt4_Pipe_Transport" -gt 1; then
 		abort "Patchset rpcrt4-Pipe_Transport disabled, but kernel32-Named_Pipe depends on that."
 	fi
 	if test "$enable_server_Desktop_Refcount" -gt 1; then
 		abort "Patchset server-Desktop_Refcount disabled, but kernel32-Named_Pipe depends on that."
 	fi
-	enable_ntdll_FSCTL_PIPE_LISTEN=1
 	enable_rpcrt4_Pipe_Transport=1
 	enable_server_Desktop_Refcount=1
 fi
@@ -4076,22 +4056,6 @@ if test "$enable_kernel32_LocaleNameToLCID" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-FSCTL_PIPE_LISTEN
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/pipe.c, dlls/ntdll/file.c, dlls/ntdll/tests/pipe.c
-# |
-if test "$enable_ntdll_FSCTL_PIPE_LISTEN" -eq 1; then
-	patch_apply ntdll-FSCTL_PIPE_LISTEN/0001-ntdll-tests-Add-tests-for-iosb.Status-value-after-pe.patch
-	patch_apply ntdll-FSCTL_PIPE_LISTEN/0002-kernel32-tests-Add-additional-tests-for-overlapped-h.patch
-	patch_apply ntdll-FSCTL_PIPE_LISTEN/0003-ntdll-Do-not-update-iosb.Status-after-FSCTL_PIPE_LIS.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for iosb.Status value after pending FSCTL_PIPE_LISTEN call.", 1 },';
-		echo '+    { "Michael Müller", "kernel32/tests: Add additional tests for overlapped handling of CreateNamedPipe.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Do not update iosb.Status after FSCTL_PIPE_LISTEN call.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset rpcrt4-Pipe_Transport
 # |
 # | Modified files:
@@ -4133,7 +4097,7 @@ fi
 # Patchset kernel32-Named_Pipe
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-FSCTL_PIPE_LISTEN, rpcrt4-Pipe_Transport, server-Desktop_Refcount
+# |   *	rpcrt4-Pipe_Transport, server-Desktop_Refcount
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#17195] Support for named pipe message mode (Linux only)
@@ -4462,18 +4426,6 @@ if test "$enable_mshtml_HTMLLocation_put_hash" -eq 1; then
 	patch_apply mshtml-HTMLLocation_put_hash/0001-mshtml-Add-IHTMLLocation-hash-property-s-getter-impl.patch
 	(
 		echo '+    { "Zhenbo Li", "mshtml: Add IHTMLLocation::hash property'\''s getter implementation.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset msi-Fix_Stack_Alignment
-# |
-# | Modified files:
-# |   *	dlls/msi/custom.c
-# |
-if test "$enable_msi_Fix_Stack_Alignment" -eq 1; then
-	patch_apply msi-Fix_Stack_Alignment/0001-msi-Fix-stack-alignment-in-CUSTOMPROC_wrapper.patch
-	(
-		echo '+    { "Sebastian Lackner", "msi: Fix stack alignment in CUSTOMPROC_wrapper.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5309,7 +5261,7 @@ fi
 # Patchset ntdll-WriteWatches
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-FSCTL_PIPE_LISTEN, rpcrt4-Pipe_Transport, server-Desktop_Refcount, kernel32-Named_Pipe, ws2_32-WriteWatches
+# |   *	rpcrt4-Pipe_Transport, server-Desktop_Refcount, kernel32-Named_Pipe, ws2_32-WriteWatches
 # |
 # | Modified files:
 # |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/file.c
@@ -5955,7 +5907,7 @@ fi
 # Patchset server-Pipe_ObjectName
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-FSCTL_PIPE_LISTEN, rpcrt4-Pipe_Transport, server-Desktop_Refcount, kernel32-Named_Pipe
+# |   *	rpcrt4-Pipe_Transport, server-Desktop_Refcount, kernel32-Named_Pipe
 # |
 # | Modified files:
 # |   *	dlls/ntdll/tests/om.c, server/named_pipe.c, server/object.c, server/object.h
@@ -6744,18 +6696,6 @@ if test "$enable_user32_DrawTextExW" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset user32-FlashWindowEx
-# |
-# | Modified files:
-# |   *	dlls/user32/win.c
-# |
-if test "$enable_user32_FlashWindowEx" -eq 1; then
-	patch_apply user32-FlashWindowEx/0001-user32-Avoid-dereferencing-NULL-pointer-in-a-trace.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "user32: Avoid dereferencing NULL pointer in a trace.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset user32-GetSystemMetrics
 # |
 # | This patchset fixes the following Wine bugs:
@@ -7106,10 +7046,8 @@ fi
 # |   *	dlls/windowscodecs/pngformat.c
 # |
 if test "$enable_windowscodecs_PNG_Fixes" -eq 1; then
-	patch_apply windowscodecs-PNG_Fixes/0001-windowscodecs-Fix-a-copy-paste-mistake.patch
-	patch_apply windowscodecs-PNG_Fixes/0002-windowscodecs-Allocate-correct-amount-of-memory-for-.patch
+	patch_apply windowscodecs-PNG_Fixes/0001-windowscodecs-Allocate-correct-amount-of-memory-for-.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fix a copy/paste mistake.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Allocate correct amount of memory for PNG image data.", 1 },';
 	) >> "$patchlist"
 fi
@@ -7457,21 +7395,6 @@ if test "$enable_winex11_DefaultDisplayFrequency" -eq 1; then
 	patch_apply winex11-DefaultDisplayFrequency/0001-winex11.drv-Allow-to-select-default-display-frequenc.patch
 	(
 		echo '+    { "Michael Müller", "winex11.drv: Allow to select default display frequency in registry key.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winex11-Desktop_Resolution
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#32979] Allow 320x240 as supported resolution in desktop mode
-# |
-# | Modified files:
-# |   *	dlls/winex11.drv/desktop.c
-# |
-if test "$enable_winex11_Desktop_Resolution" -eq 1; then
-	patch_apply winex11-Desktop_Resolution/0001-winex11-Add-320x240-as-supported-resolution-in-deskt.patch
-	(
-		echo '+    { "Michael Müller", "winex11: Add 320x240 as supported resolution in desktop mode.", 1 },';
 	) >> "$patchlist"
 fi
 

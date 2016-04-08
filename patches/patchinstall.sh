@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "aaddf1365a3371263827206eedf1464a83562c00"
+	echo "ad7cb436571ec66ae7a5687568fca2f5318c7e76"
 }
 
 # Show version information
@@ -167,7 +167,6 @@ patch_enable_all ()
 	enable_kernel32_FindFirstFile="$1"
 	enable_kernel32_FreeUserPhysicalPages="$1"
 	enable_kernel32_GetCurrentPackageFamilyName="$1"
-	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
@@ -672,9 +671,6 @@ patch_enable ()
 			;;
 		kernel32-GetCurrentPackageFamilyName)
 			enable_kernel32_GetCurrentPackageFamilyName="$2"
-			;;
-		kernel32-GetFinalPathNameByHandle)
-			enable_kernel32_GetFinalPathNameByHandle="$2"
 			;;
 		kernel32-LocaleNameToLCID)
 			enable_kernel32_LocaleNameToLCID="$2"
@@ -2313,13 +2309,9 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	if test "$enable_kernel32_GetCurrentPackageFamilyName" -gt 1; then
 		abort "Patchset kernel32-GetCurrentPackageFamilyName disabled, but api-ms-win-Stub_DLLs depends on that."
 	fi
-	if test "$enable_kernel32_GetFinalPathNameByHandle" -gt 1; then
-		abort "Patchset kernel32-GetFinalPathNameByHandle disabled, but api-ms-win-Stub_DLLs depends on that."
-	fi
 	enable_combase_RoApi=1
 	enable_kernel32_FreeUserPhysicalPages=1
 	enable_kernel32_GetCurrentPackageFamilyName=1
-	enable_kernel32_GetFinalPathNameByHandle=1
 fi
 
 if test "$enable_advapi32_LsaLookupSids" -eq 1; then
@@ -2598,27 +2590,10 @@ if test "$enable_kernel32_GetCurrentPackageFamilyName" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-GetFinalPathNameByHandle
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34851] Support for GetFinalPathNameByHandle
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-file-l1-1-0/api-ms-win-core-file-l1-1-0.spec, dlls/api-ms-win-core-file-l1-2-0/api-ms-win-core-
-# | 	file-l1-2-0.spec, dlls/api-ms-win-core-file-l1-2-1/api-ms-win-core-file-l1-2-1.spec, dlls/kernel32/file.c,
-# | 	dlls/kernel32/kernel32.spec, dlls/kernelbase/kernelbase.spec
-# |
-if test "$enable_kernel32_GetFinalPathNameByHandle" -eq 1; then
-	patch_apply kernel32-GetFinalPathNameByHandle/0001-kernel32-Implement-GetFinalPathNameByHandle.patch
-	(
-		echo '+    { "Michael Müller", "kernel32: Implement GetFinalPathNameByHandle.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset api-ms-win-Stub_DLLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	combase-RoApi, kernel32-FreeUserPhysicalPages, kernel32-GetCurrentPackageFamilyName, kernel32-GetFinalPathNameByHandle
+# |   *	combase-RoApi, kernel32-FreeUserPhysicalPages, kernel32-GetCurrentPackageFamilyName
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/api-ms-win-appmodel-runtime-l1-1-1/Makefile.in, dlls/api-ms-win-appmodel-runtime-l1-1-1/api-ms-win-

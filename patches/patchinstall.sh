@@ -364,7 +364,6 @@ patch_enable_all ()
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
-	enable_wined3d_resource_map="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
 	enable_winepulse_PulseAudio_Support="$1"
@@ -1265,9 +1264,6 @@ patch_enable ()
 		wined3d-Silence_FIXMEs)
 			enable_wined3d_Silence_FIXMEs="$2"
 			;;
-		wined3d-resource_map)
-			enable_wined3d_resource_map="$2"
-			;;
 		winedevice-Fix_Relocation)
 			enable_winedevice_Fix_Relocation="$2"
 			;;
@@ -2001,13 +1997,9 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_wined3d_DXTn" -gt 1; then
 		abort "Patchset wined3d-DXTn disabled, but wined3d-CSMT_Helper depends on that."
 	fi
-	if test "$enable_wined3d_resource_map" -gt 1; then
-		abort "Patchset wined3d-resource_map disabled, but wined3d-CSMT_Helper depends on that."
-	fi
 	enable_makedep_PARENTSPEC=1
 	enable_ntdll_DllRedirects=1
 	enable_wined3d_DXTn=1
-	enable_wined3d_resource_map=1
 fi
 
 if test "$enable_uxtheme_GTK_Theming" -eq 1; then
@@ -2277,13 +2269,6 @@ if test "$enable_dsound_EAX" -eq 1; then
 	fi
 	enable_dsound_Fast_Mixer=1
 	enable_dsound_Revert_Cleanup=1
-fi
-
-if test "$enable_ddraw_IDirect3DTexture2_Load" -eq 1; then
-	if test "$enable_wined3d_resource_map" -gt 1; then
-		abort "Patchset wined3d-resource_map disabled, but ddraw-IDirect3DTexture2_Load depends on that."
-	fi
-	enable_wined3d_resource_map=1
 fi
 
 if test "$enable_d3dx9_36_D3DXDisassembleShader" -eq 1; then
@@ -3312,24 +3297,7 @@ if test "$enable_ddraw_Fix_Typos" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-resource_map
-# |
-# | Modified files:
-# |   *	dlls/d3d11/device.c, dlls/d3d11/texture.c, dlls/d3d8/surface.c, dlls/d3d8/volume.c, dlls/d3d9/surface.c,
-# | 	dlls/d3d9/volume.c, dlls/ddraw/surface.c, dlls/wined3d/device.c, dlls/wined3d/resource.c, dlls/wined3d/surface.c,
-# | 	dlls/wined3d/wined3d.spec, include/wine/wined3d.h
-# |
-if test "$enable_wined3d_resource_map" -eq 1; then
-	patch_apply wined3d-resource_map/0001-wined3d-Rename-wined3d_resource_-un-map-to-wined3d_r.patch
-	(
-		echo '+    { "Sebastian Lackner", "wined3d: Rename wined3d_resource_(un)map to wined3d_resource_sub_resource_(un)map.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ddraw-IDirect3DTexture2_Load
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-resource_map
 # |
 # | Modified files:
 # |   *	dlls/ddraw/surface.c, dlls/ddraw/tests/d3d.c, dlls/ddraw/tests/ddraw2.c
@@ -7221,8 +7189,7 @@ fi
 # Patchset wined3d-CSMT_Helper
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-DXTn, wined3d-
-# | 	resource_map
+# |   *	makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-DXTn
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc, dlls/wined3d/wined3d_main.c

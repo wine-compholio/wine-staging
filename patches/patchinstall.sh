@@ -377,6 +377,7 @@ patch_enable_all ()
 	enable_winex11_wglShareLists="$1"
 	enable_winhttp_System_Proxy_Autoconfig="$1"
 	enable_wininet_Cleanup="$1"
+	enable_wininet_HTTPREQ_ReadFile_Async="$1"
 	enable_wininet_HttpOpenRequestW="$1"
 	enable_wininet_Internet_Settings="$1"
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
@@ -1302,6 +1303,9 @@ patch_enable ()
 			;;
 		wininet-Cleanup)
 			enable_wininet_Cleanup="$2"
+			;;
+		wininet-HTTPREQ_ReadFile_Async)
+			enable_wininet_HTTPREQ_ReadFile_Async="$2"
 			;;
 		wininet-HttpOpenRequestW)
 			enable_wininet_HttpOpenRequestW="$2"
@@ -7466,6 +7470,22 @@ if test "$enable_wininet_Cleanup" -eq 1; then
 		echo '+    { "Michael Müller", "wininet/tests: Check cookie behaviour when overriding host.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Strip filename if no path is set in cookie.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Replacing header fields should fail if they do not exist yet.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wininet-HTTPREQ_ReadFile_Async
+# |
+# | Modified files:
+# |   *	dlls/wininet/http.c
+# |
+if test "$enable_wininet_HTTPREQ_ReadFile_Async" -eq 1; then
+	patch_apply wininet-HTTPREQ_ReadFile_Async/0001-wininet-Remove-unused-sync-argument-from-HTTPREQ_Rea.patch
+	patch_apply wininet-HTTPREQ_ReadFile_Async/0002-wininet-Fix-async-check-in-HTTPREQ_ReadFileEx.patch
+	patch_apply wininet-HTTPREQ_ReadFile_Async/0003-wininet-Handle-async-mode-in-HTTPREQ_ReadFile.patch
+	(
+		echo '+    { "Sebastian Lackner", "wininet: Remove unused '\''sync'\'' argument from HTTPREQ_Read.", 1 },';
+		echo '+    { "Michael Müller", "wininet: Fix async check in HTTPREQ_ReadFileEx.", 1 },';
+		echo '+    { "Michael Müller", "wininet: Handle async mode in HTTPREQ_ReadFile.", 1 },';
 	) >> "$patchlist"
 fi
 

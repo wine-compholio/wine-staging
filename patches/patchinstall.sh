@@ -327,6 +327,7 @@ patch_enable_all ()
 	enable_user32_ListBox_Size="$1"
 	enable_user32_MessageBox_WS_EX_TOPMOST="$1"
 	enable_user32_Mouse_Message_Hwnd="$1"
+	enable_user32_PNG_Support="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_SetCoalescableTimer="$1"
@@ -1151,6 +1152,9 @@ patch_enable ()
 			;;
 		user32-Mouse_Message_Hwnd)
 			enable_user32_Mouse_Message_Hwnd="$2"
+			;;
+		user32-PNG_Support)
+			enable_user32_PNG_Support="$2"
 			;;
 		user32-Refresh_MDI_Menus)
 			enable_user32_Refresh_MDI_Menus="$2"
@@ -6733,6 +6737,21 @@ if test "$enable_user32_Mouse_Message_Hwnd" -eq 1; then
 	patch_apply user32-Mouse_Message_Hwnd/0001-user32-Try-harder-to-find-a-target-for-mouse-message.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "user32: Try harder to find a target for mouse messages.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-PNG_Support
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38959] Add support for loading PNG icon files
+# |
+# | Modified files:
+# |   *	dlls/user32/cursoricon.c
+# |
+if test "$enable_user32_PNG_Support" -eq 1; then
+	patch_apply user32-PNG_Support/0001-user32-Add-support-for-PNG-icons.-v4.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "user32: Add support for PNG icons.", 5 },';
 	) >> "$patchlist"
 fi
 

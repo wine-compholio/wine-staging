@@ -216,6 +216,7 @@ patch_enable_all ()
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
+	enable_ntdll_OSX_TEB_x86_64="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_Purist_Mode="$1"
@@ -818,6 +819,9 @@ patch_enable ()
 			;;
 		ntdll-NtSetLdtEntries)
 			enable_ntdll_NtSetLdtEntries="$2"
+			;;
+		ntdll-OSX_TEB_x86_64)
+			enable_ntdll_OSX_TEB_x86_64="$2"
 			;;
 		ntdll-Pipe_SpecialCharacters)
 			enable_ntdll_Pipe_SpecialCharacters="$2"
@@ -4897,6 +4901,18 @@ if test "$enable_ntdll_NtSetLdtEntries" -eq 1; then
 	patch_apply ntdll-NtSetLdtEntries/0001-ntdll-add-NtSetLdtEntries-ZwSetLdtEntries-stub-try-2.patch
 	(
 		echo '+    { "Austin English", "ntdll: Add NtSetLdtEntries/ZwSetLdtEntries stub.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-OSX_TEB_x86_64
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_x86_64.c, include/winnt.h
+# |
+if test "$enable_ntdll_OSX_TEB_x86_64" -eq 1; then
+	patch_apply ntdll-OSX_TEB_x86_64/0001-ntdll-Set-0x30-TEB-field-on-OS-X-64-bit.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Set 0x30 TEB field on OS X 64 bit.", 1 },';
 	) >> "$patchlist"
 fi
 

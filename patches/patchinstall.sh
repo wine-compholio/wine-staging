@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ad7cb436571ec66ae7a5687568fca2f5318c7e76"
+	echo "1c201a96c57a68caaf6c976d7f3732738c9d9ac8"
 }
 
 # Show version information
@@ -319,7 +319,6 @@ patch_enable_all ()
 	enable_user_exe16_CONTAINING_RECORD="$1"
 	enable_user_exe16_DlgDirList="$1"
 	enable_user32_DeferWindowPos="$1"
-	enable_user32_Dialog_Owner="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawTextExW="$1"
 	enable_user32_GetSystemMetrics="$1"
@@ -1129,9 +1128,6 @@ patch_enable ()
 			;;
 		user32-DeferWindowPos)
 			enable_user32_DeferWindowPos="$2"
-			;;
-		user32-Dialog_Owner)
-			enable_user32_Dialog_Owner="$2"
 			;;
 		user32-Dialog_Paint_Event)
 			enable_user32_Dialog_Paint_Event="$2"
@@ -6592,28 +6588,6 @@ if test "$enable_user32_DeferWindowPos" -eq 1; then
 	patch_apply user32-DeferWindowPos/0001-user32-Fix-error-handling-in-Begin-End-DeferWindowPo.patch
 	(
 		echo '+    { "Rodrigo Rivas", "user32: Fix error handling in {Begin,End,}DeferWindowPos() to match Windows behavior.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-Dialog_Owner
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40282] Enable the correct dialog owner in DIALOG_DoDialogBox
-# |
-# | Modified files:
-# |   *	dlls/user.exe16/dialog.c, dlls/user.exe16/user_private.h, dlls/user32/controls.h, dlls/user32/dialog.c,
-# | 	dlls/user32/tests/win.c
-# |
-if test "$enable_user32_Dialog_Owner" -eq 1; then
-	patch_apply user32-Dialog_Owner/0001-user32-tests-Add-some-tests-for-dialog-owner-disable.patch
-	patch_apply user32-Dialog_Owner/0002-user32-Enable-the-specified-dialog-owner.patch
-	patch_apply user32-Dialog_Owner/0003-user32-Enable-correct-dialog-owner.patch
-	patch_apply user32-Dialog_Owner/0004-user32-Unconditionally-enable-dialog-owner.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "user32/tests: Add some tests for dialog owner disabled state.", 3 },';
-		echo '+    { "Dmitry Timoshkov", "user32: Enable the specified dialog owner.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "user32: Enable correct dialog owner.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "user32: Unconditionally enable dialog owner.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -240,6 +240,7 @@ patch_enable_all ()
 	enable_ntdll_WriteWatches="$1"
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll_call_thread_func_wrapper="$1"
+	enable_ntdll_x86_64_Builtin_Frames="$1"
 	enable_ntoskrnl_DriverTest="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
@@ -891,6 +892,9 @@ patch_enable ()
 			;;
 		ntdll-call_thread_func_wrapper)
 			enable_ntdll_call_thread_func_wrapper="$2"
+			;;
+		ntdll-x86_64_Builtin_Frames)
+			enable_ntdll_x86_64_Builtin_Frames="$2"
 			;;
 		ntoskrnl-DriverTest)
 			enable_ntoskrnl_DriverTest="$2"
@@ -5253,6 +5257,18 @@ if test "$enable_ntdll_call_thread_func_wrapper" -eq 1; then
 	patch_apply ntdll-call_thread_func_wrapper/0001-ntdll-Reserve-some-more-stack-space-in-call_thread_f.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "ntdll: Reserve some more stack space in call_thread_func_wrapper.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-x86_64_Builtin_Frames
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_x86_64.c
+# |
+if test "$enable_ntdll_x86_64_Builtin_Frames" -eq 1; then
+	patch_apply ntdll-x86_64_Builtin_Frames/0001-ntdll-Improve-handling-of-builtin-frames-for-x86_64-.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Improve handling of builtin frames for x86_64 when switching stacks.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -2599,6 +2599,9 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	combase-RoApi, kernel32-FreeUserPhysicalPages, kernel32-GetCurrentPackageFamilyName
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40451] Add feclient dll
+# |
 # | Modified files:
 # |   *	configure.ac, dlls/api-ms-win-appmodel-runtime-l1-1-1/Makefile.in, dlls/api-ms-win-appmodel-runtime-l1-1-1/api-ms-win-
 # | 	appmodel-runtime-l1-1-1.spec, dlls/api-ms-win-core-apiquery-l1-1-0/Makefile.in, dlls/api-ms-win-core-apiquery-l1-1-0
@@ -2621,9 +2624,11 @@ fi
 # | 	sysparams-l1-1-0/ext-ms-win-rtcore-ntuser-sysparams-l1-1-0.spec, dlls/ext-ms-win-uxtheme-themes-l1-1-0/Makefile.in, dlls
 # | 	/ext-ms-win-uxtheme-themes-l1-1-0/ext-ms-win-uxtheme-themes-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/Makefile.in,
 # | 	dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/main.c,
-# | 	dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec, dlls/iertutil/main.c, dlls/kernelbase/Makefile.in,
-# | 	dlls/kernelbase/kernelbase.spec, dlls/kernelbase/misc.c, dlls/shcore/Makefile.in, dlls/shcore/main.c,
-# | 	dlls/shcore/shcore.spec, dlls/shlwapi/shlwapi.spec, include/Makefile.in, include/shellscalingapi.h, tools/make_specfiles
+# | 	dlls/feclient/Makefile.in, dlls/feclient/feclient.spec, dlls/feclient/main.c, dlls/iertutil/Makefile.in,
+# | 	dlls/iertutil/iertutil.spec, dlls/iertutil/main.c, dlls/kernelbase/Makefile.in, dlls/kernelbase/kernelbase.spec,
+# | 	dlls/kernelbase/misc.c, dlls/shcore/Makefile.in, dlls/shcore/main.c, dlls/shcore/shcore.spec, dlls/shlwapi/shlwapi.spec,
+# | 	dlls/uiautomationcore/Makefile.in, dlls/uiautomationcore/main.c, dlls/uiautomationcore/uiautomationcore.spec,
+# | 	include/Makefile.in, include/shellscalingapi.h, include/uiautomationcoreapi.h, tools/make_specfiles
 # |
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0001-kernelbase-Add-dll-and-add-stub-for-QuirkIsEnabled.patch
@@ -2651,6 +2656,8 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0023-shcore-Implement-stub-for-GetDpiForMonitor.patch
 	patch_apply api-ms-win-Stub_DLLs/0024-kernelbase-Add-stub-for-QuirkIsEnabled3.patch
 	patch_apply api-ms-win-Stub_DLLs/0025-shcore-Add-stub-for-GetProcessDpiAwareness.patch
+	patch_apply api-ms-win-Stub_DLLs/0026-feclient-Add-stub-dll.patch
+	patch_apply api-ms-win-Stub_DLLs/0027-uiautomationcore-Add-dll-and-stub-some-functions.patch
 	(
 		echo '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-quirks-l1-1-0: Add dll.", 1 },';
@@ -2677,6 +2684,8 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "shcore: Implement stub for GetDpiForMonitor.", 1 },';
 		echo '+    { "Michael Müller", "kernelbase: Add stub for QuirkIsEnabled3.", 1 },';
 		echo '+    { "Sebastian Lackner", "shcore: Add stub for GetProcessDpiAwareness.", 1 },';
+		echo '+    { "Michael Müller", "feclient: Add stub dll.", 1 },';
+		echo '+    { "Michael Müller", "uiautomationcore: Add dll and stub some functions.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,311 @@
+From a1b20acdf908d93184138869d1fc105c133498ef Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Tue, 12 Apr 2016 01:02:34 +0200
+Subject: uiautomationcore: Add dll and stub some functions.
+
+---
+ configure.ac                                |   1 +
+ dlls/uiautomationcore/Makefile.in           |   5 ++
+ dlls/uiautomationcore/main.c                | 117 ++++++++++++++++++++++++++++
+ dlls/uiautomationcore/uiautomationcore.spec |  99 +++++++++++++++++++++++
+ include/uiautomationcoreapi.h               |  16 ++++
+ 5 files changed, 238 insertions(+)
+ create mode 100644 dlls/uiautomationcore/Makefile.in
+ create mode 100644 dlls/uiautomationcore/main.c
+ create mode 100644 dlls/uiautomationcore/uiautomationcore.spec
+
+diff --git a/configure.ac b/configure.ac
+index 39097d1..896d413 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -3304,6 +3304,7 @@ WINE_CONFIG_TEST(dlls/twain_32/tests)
+ WINE_CONFIG_DLL(typelib.dll16,enable_win16)
+ WINE_CONFIG_DLL(ucrtbase)
+ WINE_CONFIG_TEST(dlls/ucrtbase/tests)
++WINE_CONFIG_DLL(uiautomationcore)
+ WINE_CONFIG_DLL(unicows,,[implib])
+ WINE_CONFIG_DLL(updspapi)
+ WINE_CONFIG_DLL(url,,[implib])
+diff --git a/dlls/uiautomationcore/Makefile.in b/dlls/uiautomationcore/Makefile.in
+new file mode 100644
+index 0000000..bd6f9d6
+--- /dev/null
++++ b/dlls/uiautomationcore/Makefile.in
+@@ -0,0 +1,5 @@
++MODULE    = uiautomationcore.dll
++IMPORTS   = uuid
++
++C_SRCS = \
++	main.c
+diff --git a/dlls/uiautomationcore/main.c b/dlls/uiautomationcore/main.c
+new file mode 100644
+index 0000000..71fe84c
+--- /dev/null
++++ b/dlls/uiautomationcore/main.c
+@@ -0,0 +1,117 @@
++/*
++ * uiautomationcore API
++ *
++ * Copyright 2016 Michael Müller
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "config.h"
++
++#include <stdarg.h>
++
++#include "windef.h"
++#include "winbase.h"
++#include "wine/debug.h"
++
++#define COBJMACROS
++#include "uiautomationcoreapi.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(uiautomation);
++
++static HRESULT WINAPI dummy_QueryInterface(IUnknown *iface, REFIID iid, void **ppv)
++{
++    TRACE("(%p, %s, %p)\n", iface, debugstr_guid(iid), ppv);
++
++    if (!ppv) return E_INVALIDARG;
++
++    if (!IsEqualIID(&IID_IUnknown, iid))
++    {
++        FIXME("Unknown interface: %s\n", debugstr_guid(iid));
++        *ppv = NULL;
++        return E_NOINTERFACE;
++    }
++
++    *ppv = iface;
++    IUnknown_AddRef((IUnknown *)*ppv);
++    return S_OK;
++}
++
++static ULONG WINAPI dummy_AddRef(IUnknown *iface)
++{
++    FIXME("(%p): stub\n", iface);
++    return 1;
++}
++
++static ULONG WINAPI dummy_Release(IUnknown *iface)
++{
++    FIXME("(%p): stub\n", iface);
++    return 1;
++}
++
++static const IUnknownVtbl dummy_Vtbl =
++{
++    dummy_QueryInterface,
++    dummy_AddRef,
++    dummy_Release,
++};
++
++static IUnknown dummy = { &dummy_Vtbl };
++
++int WINAPI UiaLookupId(AutomationIdentifierType type, const GUID *guid)
++{
++    FIXME("(%d, %s)\n", type, debugstr_guid(guid));
++    return 1;
++}
++
++HRESULT WINAPI UiaGetReservedMixedAttributeValue(IUnknown **value)
++{
++    FIXME("(%p): stub\n", value);
++
++    *value = &dummy;
++    return S_OK;
++}
++
++HRESULT WINAPI UiaGetReservedNotSupportedValue(IUnknown **value)
++{
++    FIXME("(%p): stub\n", value);
++
++    *value = &dummy;
++    return S_OK;
++}
++
++LRESULT WINAPI UiaReturnRawElementProvider(HWND hwnd, WPARAM wparam, LPARAM lparam,
++                                           IRawElementProviderSimple *provider)
++{
++    FIXME("(%p, %lx, %lx, %p): stub\n", hwnd, wparam, lparam, provider);
++    return 0;
++}
++
++
++BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, void *reserved)
++{
++    TRACE("(%p, %u, %p)\n", instance, reason, reserved);
++
++    switch (reason)
++    {
++        case DLL_WINE_PREATTACH:
++            return FALSE;    /* prefer native version */
++        case DLL_PROCESS_ATTACH:
++            DisableThreadLibraryCalls(instance);
++            break;
++    }
++
++    return TRUE;
++}
+diff --git a/dlls/uiautomationcore/uiautomationcore.spec b/dlls/uiautomationcore/uiautomationcore.spec
+new file mode 100644
+index 0000000..321cd06
+--- /dev/null
++++ b/dlls/uiautomationcore/uiautomationcore.spec
+@@ -0,0 +1,99 @@
++@ stub DllCanUnloadNow
++@ stub DllGetClassObject
++@ stub DllRegisterServer
++@ stub DllUnregisterServer
++@ stub DockPattern_SetDockPosition
++@ stub ExpandCollapsePattern_Collapse
++@ stub ExpandCollapsePattern_Expand
++@ stub GridPattern_GetItem
++@ stub InvokePattern_Invoke
++@ stub ItemContainerPattern_FindItemByProperty
++@ stub LegacyIAccessiblePattern_DoDefaultAction
++@ stub LegacyIAccessiblePattern_GetIAccessible
++@ stub LegacyIAccessiblePattern_Select
++@ stub LegacyIAccessiblePattern_SetValue
++@ stub MultipleViewPattern_GetViewName
++@ stub MultipleViewPattern_SetCurrentView
++@ stub RangeValuePattern_SetValue
++@ stub ScrollItemPattern_ScrollIntoView
++@ stub ScrollPattern_Scroll
++@ stub ScrollPattern_SetScrollPercent
++@ stub SelectionItemPattern_AddToSelection
++@ stub SelectionItemPattern_RemoveFromSelection
++@ stub SelectionItemPattern_Select
++@ stub SynchronizedInputPattern_Cancel
++@ stub SynchronizedInputPattern_StartListening
++@ stub TextPattern_GetSelection
++@ stub TextPattern_GetVisibleRanges
++@ stub TextPattern_RangeFromChild
++@ stub TextPattern_RangeFromPoint
++@ stub TextPattern_get_DocumentRange
++@ stub TextPattern_get_SupportedTextSelection
++@ stub TextRange_AddToSelection
++@ stub TextRange_Clone
++@ stub TextRange_Compare
++@ stub TextRange_CompareEndpoints
++@ stub TextRange_ExpandToEnclosingUnit
++@ stub TextRange_FindAttribute
++@ stub TextRange_FindText
++@ stub TextRange_GetAttributeValue
++@ stub TextRange_GetBoundingRectangles
++@ stub TextRange_GetChildren
++@ stub TextRange_GetEnclosingElement
++@ stub TextRange_GetText
++@ stub TextRange_Move
++@ stub TextRange_MoveEndpointByRange
++@ stub TextRange_MoveEndpointByUnit
++@ stub TextRange_RemoveFromSelection
++@ stub TextRange_ScrollIntoView
++@ stub TextRange_Select
++@ stub TogglePattern_Toggle
++@ stub TransformPattern_Move
++@ stub TransformPattern_Resize
++@ stub TransformPattern_Rotate
++@ stub UiaAddEvent
++@ stub UiaClientsAreListening
++@ stub UiaDisconnectAllProviders
++@ stub UiaDisconnectProvider
++@ stub UiaEventAddWindow
++@ stub UiaEventRemoveWindow
++@ stub UiaFind
++@ stub UiaGetErrorDescription
++@ stub UiaGetPatternProvider
++@ stub UiaGetPropertyValue
++@ stdcall UiaGetReservedMixedAttributeValue(ptr)
++@ stdcall UiaGetReservedNotSupportedValue(ptr)
++@ stub UiaGetRootNode
++@ stub UiaGetRuntimeId
++@ stub UiaGetUpdatedCache
++@ stub UiaHPatternObjectFromVariant
++@ stub UiaHTextRangeFromVariant
++@ stub UiaHUiaNodeFromVariant
++@ stub UiaHasServerSideProvider
++@ stub UiaHostProviderFromHwnd
++@ stub UiaIAccessibleFromProvider
++@ stdcall UiaLookupId(long ptr)
++@ stub UiaNavigate
++@ stub UiaNodeFromFocus
++@ stub UiaNodeFromHandle
++@ stub UiaNodeFromPoint
++@ stub UiaNodeFromProvider
++@ stub UiaNodeRelease
++@ stub UiaPatternRelease
++@ stub UiaProviderForNonClient
++@ stub UiaProviderFromIAccessible
++@ stub UiaRaiseAsyncContentLoadedEvent
++@ stub UiaRaiseAutomationEvent
++@ stub UiaRaiseAutomationPropertyChangedEvent
++@ stub UiaRaiseStructureChangedEvent
++@ stub UiaRaiseTextEditTextChangedEvent
++@ stub UiaRegisterProviderCallback
++@ stub UiaRemoveEvent
++@ stdcall UiaReturnRawElementProvider(long long long ptr)
++@ stub UiaSetFocus
++@ stub UiaTextRangeRelease
++@ stub ValuePattern_SetValue
++@ stub VirtualizedItemPattern_Realize
++@ stub WindowPattern_Close
++@ stub WindowPattern_SetWindowVisualState
++@ stub WindowPattern_WaitForInputIdle
+diff --git a/include/uiautomationcoreapi.h b/include/uiautomationcoreapi.h
+index 340f500..b9107ce 100644
+--- a/include/uiautomationcoreapi.h
++++ b/include/uiautomationcoreapi.h
+@@ -19,6 +19,8 @@
+ #ifndef _INC_UIAUTOMATIONCOREAPI
+ #define _INC_UIAUTOMATIONCOREAPI
+ 
++#include "uiautomationcore.h"
++
+ #ifdef __cplusplus
+ extern "C" {
+ #endif
+@@ -34,6 +36,16 @@ extern "C" {
+ #define UiaAppendRuntimeId  3
+ #define UiaRootObjectId     -25
+ 
++typedef enum AutomationIdentifierType
++{
++    AutomationIdentifierType_Property,
++    AutomationIdentifierType_Pattern,
++    AutomationIdentifierType_Event,
++    AutomationIdentifierType_ControlType,
++    AutomationIdentifierType_TextAttribute,
++    AutomationIdentifierType_LandmarkType,
++} AutomationIdentifierType;
++
+ DECLARE_HANDLE(HUIANODE);
+ DECLARE_HANDLE(HUIAPATTERNOBJECT);
+ DECLARE_HANDLE(HUIATEXTRANGE);
+@@ -41,6 +53,10 @@ DECLARE_HANDLE(HUIAEVENT);
+ 
+ BOOL WINAPI UiaPatternRelease(HUIAPATTERNOBJECT hobj);
+ BOOL WINAPI UiaTextRangeRelease(HUIATEXTRANGE hobj);
++int WINAPI UiaLookupId(AutomationIdentifierType type, const GUID *guid);
++HRESULT WINAPI UiaGetReservedMixedAttributeValue(IUnknown **value);
++HRESULT WINAPI UiaGetReservedNotSupportedValue(IUnknown **value);
++LRESULT WINAPI UiaReturnRawElementProvider(HWND hwnd, WPARAM wparam, LPARAM lparam, IRawElementProviderSimple *provider);
+ 
+ #ifdef __cplusplus
+ }
+-- 
+2.7.1
+

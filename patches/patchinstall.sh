@@ -197,7 +197,6 @@ patch_enable_all ()
 	enable_ntdll_ApiSetQueryApiSetPresence="$1"
 	enable_ntdll_CLI_Images="$1"
 	enable_ntdll_DOS_Attributes="$1"
-	enable_ntdll_Dealloc_Thread_Stack="$1"
 	enable_ntdll_DeviceType_Systemroot="$1"
 	enable_ntdll_DllOverrides_WOW64="$1"
 	enable_ntdll_DllRedirects="$1"
@@ -764,9 +763,6 @@ patch_enable ()
 			;;
 		ntdll-DOS_Attributes)
 			enable_ntdll_DOS_Attributes="$2"
-			;;
-		ntdll-Dealloc_Thread_Stack)
-			enable_ntdll_Dealloc_Thread_Stack="$2"
 			;;
 		ntdll-DeviceType_Systemroot)
 			enable_ntdll_DeviceType_Systemroot="$2"
@@ -4639,19 +4635,6 @@ if test "$enable_ntdll_DOS_Attributes" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-Dealloc_Thread_Stack
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c,
-# | 	dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/virtual.c
-# |
-if test "$enable_ntdll_Dealloc_Thread_Stack" -eq 1; then
-	patch_apply ntdll-Dealloc_Thread_Stack/0001-ntdll-Do-not-allow-to-allocate-thread-stack-for-curr.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Do not allow to deallocate thread stack for current thread.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-DeviceType_Systemroot
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5132,12 +5115,14 @@ fi
 # |   *	ntdll-ThreadTime
 # |
 # | Modified files:
-# |   *	dlls/ntdll/thread.c
+# |   *	dlls/ntdll/signal_i386.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/thread.c
 # |
 if test "$enable_ntdll_Thread_Stack" -eq 1; then
 	patch_apply ntdll-Thread_Stack/0001-ntdll-Use-a-separate-stack-when-starting-new-threads.patch
+	patch_apply ntdll-Thread_Stack/0002-ntdll-Ignore-invalid-exit_frame-when-exiting-thread.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Use a separate stack when starting new threads.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Ignore invalid exit_frame when exiting thread.", 1 },';
 	) >> "$patchlist"
 fi
 

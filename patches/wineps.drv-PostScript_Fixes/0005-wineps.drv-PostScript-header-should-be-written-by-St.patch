@@ -1,0 +1,84 @@
+From f723db2c924b592d8c6e073a2d1b566a035fde92 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Wed, 13 Apr 2016 15:58:36 +0800
+Subject: wineps.drv: PostScript header should be written by StartDoc instead
+ of StartPage.
+
+Otherwise a being created file has wrong signature if an application
+directly injects PostScript code. This patch fixes printing from
+Adobe PageMaker.
+---
+ dlls/gdi32/tests/dc.c    |  1 -
+ dlls/wineps.drv/escape.c | 18 ++++++++++++++----
+ 2 files changed, 14 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/gdi32/tests/dc.c b/dlls/gdi32/tests/dc.c
+index 939f33e..bab99e3 100644
+--- a/dlls/gdi32/tests/dc.c
++++ b/dlls/gdi32/tests/dc.c
+@@ -1444,7 +1444,6 @@ static void print_something(HDC hdc)
+ 
+         while (*p == '\r' || *p == '\n') p++;
+     }
+-todo_wine
+     ok(p && !memcmp(p, psadobe, sizeof(psadobe)), "wrong signature: %.14s\n", p ? p : buf);
+ 
+     DeleteFileA(file_name);
+diff --git a/dlls/wineps.drv/escape.c b/dlls/wineps.drv/escape.c
+index 86a94fd..9cf0277 100644
+--- a/dlls/wineps.drv/escape.c
++++ b/dlls/wineps.drv/escape.c
+@@ -431,15 +431,14 @@ INT PSDRV_StartPage( PHYSDEV dev )
+ {
+     PSDRV_PDEVICE *physDev = get_psdrv_dev( dev );
+ 
++    TRACE("%p\n", dev->hdc);
++
+     if(!physDev->job.OutOfPage) {
+         FIXME("Already started a page?\n");
+ 	return 1;
+     }
+ 
+-    if(physDev->job.PageNo++ == 0) {
+-        if(!PSDRV_WriteHeader( dev, physDev->job.doc_name ))
+-            return 0;
+-    }
++    physDev->job.PageNo++;
+ 
+     if(!PSDRV_WriteNewPage( dev ))
+         return 0;
+@@ -455,6 +454,8 @@ INT PSDRV_EndPage( PHYSDEV dev )
+ {
+     PSDRV_PDEVICE *physDev = get_psdrv_dev( dev );
+ 
++    TRACE("%p\n", dev->hdc);
++
+     if(physDev->job.OutOfPage) {
+         FIXME("Already ended a page?\n");
+ 	return 1;
+@@ -515,6 +516,13 @@ INT PSDRV_StartDoc( PHYSDEV dev, const DOCINFOW *doc )
+         ClosePrinter(physDev->job.hprinter);
+ 	return 0;
+     }
++
++    if (!PSDRV_WriteHeader( dev, doc->lpszDocName )) {
++        WARN("Failed to write header\n");
++        ClosePrinter(physDev->job.hprinter);
++        return 0;
++    }
++
+     physDev->job.banding = FALSE;
+     physDev->job.OutOfPage = TRUE;
+     physDev->job.PageNo = 0;
+@@ -534,6 +542,8 @@ INT PSDRV_EndDoc( PHYSDEV dev )
+     PSDRV_PDEVICE *physDev = get_psdrv_dev( dev );
+     INT ret = 1;
+ 
++    TRACE("%p\n", dev->hdc);
++
+     if(!physDev->job.id) {
+         FIXME("hJob == 0. Now what?\n");
+ 	return 0;
+-- 
+2.7.1
+

@@ -1,0 +1,98 @@
+From 89144b9ac2938a343d9165f16f4b7b594fa98782 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Wed, 13 Apr 2016 15:52:38 +0800
+Subject: wineps.drv: Add support for GETFACENAME and DOWNLOADFACE escapes.
+
+---
+ dlls/wineps.drv/download.c | 26 ++++++++++++++++++++++++++
+ dlls/wineps.drv/escape.c   | 21 ++++++++++++++++++---
+ dlls/wineps.drv/psdrv.h    |  1 +
+ 3 files changed, 45 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/wineps.drv/download.c b/dlls/wineps.drv/download.c
+index dc77cf1..86188d2 100644
+--- a/dlls/wineps.drv/download.c
++++ b/dlls/wineps.drv/download.c
+@@ -259,6 +259,32 @@ static BOOL is_fake_italic( HDC hdc )
+     return !(mac_style & 2);
+ }
+ 
++char *PSDRV_get_download_name(PHYSDEV dev, BOOL vertical)
++{
++    PSDRV_PDEVICE *physDev = get_psdrv_dev( dev );
++    char *ps_name;
++    LPOUTLINETEXTMETRICA potm;
++    DWORD len = GetOutlineTextMetricsA(dev->hdc, 0, NULL);
++    LOGFONTW lf;
++
++    assert(physDev->font.fontloc == Download);
++
++    if (!GetObjectW(GetCurrentObject(dev->hdc, OBJ_FONT), sizeof(lf), &lf))
++        return NULL;
++
++    potm = HeapAlloc(GetProcessHeap(), 0, len);
++    if (!potm)
++        return NULL;
++
++    GetOutlineTextMetricsA(dev->hdc, len, potm);
++
++    ps_name = NULL;
++    get_download_name(dev, potm, &ps_name, vertical);
++    HeapFree(GetProcessHeap(), 0, potm);
++
++    return ps_name;
++}
++
+ /****************************************************************************
+  *  PSDRV_WriteSetDownloadFont
+  *
+diff --git a/dlls/wineps.drv/escape.c b/dlls/wineps.drv/escape.c
+index 2f3ddfc..86a94fd 100644
+--- a/dlls/wineps.drv/escape.c
++++ b/dlls/wineps.drv/escape.c
+@@ -141,12 +141,27 @@ INT PSDRV_ExtEscape( PHYSDEV dev, INT nEscape, INT cbInput, LPCVOID in_data,
+         return 1;
+ 
+     case GETFACENAME:
+-        FIXME("GETFACENAME: stub\n");
+-        lstrcpynA(out_data, "Courier", cbOutput);
++        if (physDev->font.fontloc == Download)
++        {
++            char *name = PSDRV_get_download_name(dev, physDev->font.set);
++            if (name)
++            {
++                TRACE("font name: %s\n", debugstr_a(name));
++                lstrcpynA(out_data, name, cbOutput);
++                HeapFree(GetProcessHeap(), 0, name);
++            }
++            else
++                lstrcpynA(out_data, "Courier", cbOutput);
++        }
++        else
++        {
++            TRACE("font name: %s\n", debugstr_a(physDev->font.fontinfo.Builtin.afm->FontName));
++            lstrcpynA(out_data, physDev->font.fontinfo.Builtin.afm->FontName, cbOutput);
++        }
+         return 1;
+ 
+     case DOWNLOADFACE:
+-        FIXME("DOWNLOADFACE: stub\n");
++        PSDRV_SetFont(dev, physDev->font.set);
+         return 1;
+ 
+     case MFCOMMENT:
+diff --git a/dlls/wineps.drv/psdrv.h b/dlls/wineps.drv/psdrv.h
+index 75c062a..c806d52 100644
+--- a/dlls/wineps.drv/psdrv.h
++++ b/dlls/wineps.drv/psdrv.h
+@@ -547,6 +547,7 @@ extern BOOL PSDRV_SelectBuiltinFont(PHYSDEV dev, HFONT hfont,
+ extern BOOL PSDRV_WriteSetBuiltinFont(PHYSDEV dev) DECLSPEC_HIDDEN;
+ extern BOOL PSDRV_WriteBuiltinGlyphShow(PHYSDEV dev, LPCWSTR str, INT count) DECLSPEC_HIDDEN;
+ 
++extern char *PSDRV_get_download_name(PHYSDEV dev, BOOL vertical) DECLSPEC_HIDDEN;
+ extern BOOL PSDRV_SelectDownloadFont(PHYSDEV dev) DECLSPEC_HIDDEN;
+ extern BOOL PSDRV_WriteSetDownloadFont(PHYSDEV dev, BOOL vertical) DECLSPEC_HIDDEN;
+ extern BOOL PSDRV_WriteDownloadGlyphShow(PHYSDEV dev, const WORD *glpyhs, UINT count) DECLSPEC_HIDDEN;
+-- 
+2.7.1
+

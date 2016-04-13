@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "944190bad442f19fba5e0073d284469bd2329652"
+	echo "1ccc52169730079414eb3e4d1a18ec1131bb6ed3"
 }
 
 # Show version information
@@ -366,6 +366,7 @@ patch_enable_all ()
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
+	enable_wineps_drv_PostScript_Fixes="$1"
 	enable_winepulse_PulseAudio_Support="$1"
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_Clipboard_HTML="$1"
@@ -1270,6 +1271,9 @@ patch_enable ()
 			;;
 		winemenubuilder-Desktop_Icon_Path)
 			enable_winemenubuilder_Desktop_Icon_Path="$2"
+			;;
+		wineps.drv-PostScript_Fixes)
+			enable_wineps_drv_PostScript_Fixes="$2"
 			;;
 		winepulse-PulseAudio_Support)
 			enable_winepulse_PulseAudio_Support="$2"
@@ -7300,6 +7304,27 @@ if test "$enable_winemenubuilder_Desktop_Icon_Path" -eq 1; then
 	patch_apply winemenubuilder-Desktop_Icon_Path/0001-winemenubuilder-Create-desktop-shortcuts-with-absolu.patch
 	(
 		echo '+    { "Sebastian Lackner", "winemenubuilder: Create desktop shortcuts with absolute wine path.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wineps.drv-PostScript_Fixes
+# |
+# | Modified files:
+# |   *	dlls/gdi32/printdrv.c, dlls/gdi32/tests/dc.c, dlls/wineps.drv/download.c, dlls/wineps.drv/escape.c,
+# | 	dlls/wineps.drv/psdrv.h
+# |
+if test "$enable_wineps_drv_PostScript_Fixes" -eq 1; then
+	patch_apply wineps.drv-PostScript_Fixes/0001-gdi32-tests-Add-a-simple-test-for-printing-to-a-Post.patch
+	patch_apply wineps.drv-PostScript_Fixes/0002-gdi32-Trace-full-contents-of-DOCINFO-in-StartDoc.patch
+	patch_apply wineps.drv-PostScript_Fixes/0003-wineps.drv-Add-stubs-for-escapes-required-by-Adobe-P.patch
+	patch_apply wineps.drv-PostScript_Fixes/0004-wineps.drv-Add-support-for-GETFACENAME-and-DOWNLOADF.patch
+	patch_apply wineps.drv-PostScript_Fixes/0005-wineps.drv-PostScript-header-should-be-written-by-St.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "gdi32/tests: Add a simple test for printing to a PostScript device.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "gdi32: Trace full contents of DOCINFO in StartDoc.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "wineps.drv: Add stubs for escapes required by Adobe PageMaker.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "wineps.drv: Add support for GETFACENAME and DOWNLOADFACE escapes.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "wineps.drv: PostScript header should be written by StartDoc instead of StartPage.", 1 },';
 	) >> "$patchlist"
 fi
 

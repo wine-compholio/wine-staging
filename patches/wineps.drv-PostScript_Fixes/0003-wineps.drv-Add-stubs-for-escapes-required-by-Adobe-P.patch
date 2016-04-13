@@ -1,0 +1,118 @@
+From c9912e16ab7c0c5add52913cdc38e98dc81f8690 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Wed, 13 Apr 2016 15:48:10 +0800
+Subject: wineps.drv: Add stubs for escapes required by Adobe PageMaker.
+
+---
+ dlls/gdi32/tests/dc.c    |  7 -------
+ dlls/wineps.drv/escape.c | 41 +++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 41 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/gdi32/tests/dc.c b/dlls/gdi32/tests/dc.c
+index 4a50594..939f33e 100644
+--- a/dlls/gdi32/tests/dc.c
++++ b/dlls/gdi32/tests/dc.c
+@@ -1413,9 +1413,7 @@ static void print_something(HDC hdc)
+ 
+     strcpy(buf, "deadbeef");
+     ret = ExtEscape(hdc, DOWNLOADHEADER, 0, NULL, sizeof(buf), buf );
+-todo_wine
+     ok(ret == 1, "DOWNLOADHEADER failed\n");
+-todo_wine
+     ok(strcmp(buf, "deadbeef") != 0, "DOWNLOADHEADER failed\n");
+ 
+     strcpy(buf + 2, "\n% ===> after DOWNLOADHEADER <===\n");
+@@ -1475,22 +1473,18 @@ static void test_pscript_printer_dc(void)
+ 
+     query = DOWNLOADFACE;
+     ret = Escape(hdc, QUERYESCSUPPORT, sizeof(query), (LPCSTR)&query, NULL);
+-todo_wine
+     ok(ret == 1, "DOWNLOADFACE is not supported\n");
+ 
+     query = OPENCHANNEL;
+     ret = Escape(hdc, QUERYESCSUPPORT, sizeof(query), (LPCSTR)&query, NULL);
+-todo_wine
+     ok(ret == 1, "OPENCHANNEL is not supported\n");
+ 
+     query = DOWNLOADHEADER;
+     ret = Escape(hdc, QUERYESCSUPPORT, sizeof(query), (LPCSTR)&query, NULL);
+-todo_wine
+     ok(ret == 1, "DOWNLOADHEADER is not supported\n");
+ 
+     query = CLOSECHANNEL;
+     ret = Escape(hdc, QUERYESCSUPPORT, sizeof(query), (LPCSTR)&query, NULL);
+-todo_wine
+     ok(ret == 1, "CLOSECHANNEL is not supported\n");
+ 
+     query = POSTSCRIPT_PASSTHROUGH;
+@@ -1498,7 +1492,6 @@ todo_wine
+     ok(ret == 1, "POSTSCRIPT_PASSTHROUGH is not supported\n");
+ 
+     ret = ExtEscape(hdc, GETFACENAME, 0, NULL, sizeof(buf), buf);
+-todo_wine
+     ok(ret == 1, "GETFACENAME failed\n");
+     trace("face name: %s\n", buf);
+ 
+diff --git a/dlls/wineps.drv/escape.c b/dlls/wineps.drv/escape.c
+index 6e89837..2f3ddfc 100644
+--- a/dlls/wineps.drv/escape.c
++++ b/dlls/wineps.drv/escape.c
+@@ -100,14 +100,55 @@ INT PSDRV_ExtEscape( PHYSDEV dev, INT nEscape, INT cbInput, LPCVOID in_data,
+ 	    case CLIP_TO_PATH:
+ 	    case END_PATH:
+ 	    /*case DRAWPATTERNRECT:*/
++
++            /* PageMaker checks for it */
++            case DOWNLOADHEADER:
++
++            /* PageMaker doesn't check for DOWNLOADFACE and GETFACENAME but
++             * uses them, they are supposed to be supported by any PS printer.
++             */
++            case DOWNLOADFACE:
++
++            /* PageMaker checks for these as a part of process of detecting
++             * a "fully compatible" PS printer, but doesn't actually use them.
++             */
++            case OPENCHANNEL:
++            case CLOSECHANNEL:
+ 	        return TRUE;
+ 
++            /* Windows PS driver reports 0, but still supports this escape */
++            case GETFACENAME:
++                return FALSE; /* suppress the FIXME below */
++
+ 	    default:
+ 		FIXME("QUERYESCSUPPORT(%d) - not supported.\n", num);
+ 	        return FALSE;
+ 	    }
+ 	}
+ 
++    case OPENCHANNEL:
++        FIXME("OPENCHANNEL: stub\n");
++        return 1;
++
++    case CLOSECHANNEL:
++        FIXME("CLOSECHANNEL: stub\n");
++        return 1;
++
++    case DOWNLOADHEADER:
++        FIXME("DOWNLOADHEADER: stub\n");
++        /* should return name of the downloaded procset */
++        *(char *)out_data = 0;
++        return 1;
++
++    case GETFACENAME:
++        FIXME("GETFACENAME: stub\n");
++        lstrcpynA(out_data, "Courier", cbOutput);
++        return 1;
++
++    case DOWNLOADFACE:
++        FIXME("DOWNLOADFACE: stub\n");
++        return 1;
++
+     case MFCOMMENT:
+     {
+ 	FIXME("MFCOMMENT(%p, %d)\n", in_data, cbInput);
+-- 
+2.7.1
+

@@ -232,6 +232,7 @@ patch_enable_all ()
 	enable_ntdll_SystemRecommendedSharedDataAlignment="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
 	enable_ntdll_ThreadTime="$1"
+	enable_ntdll_Thread_Stack="$1"
 	enable_ntdll_Threading="$1"
 	enable_ntdll_User_Shared_Data="$1"
 	enable_ntdll_WRITECOPY="$1"
@@ -868,6 +869,9 @@ patch_enable ()
 			;;
 		ntdll-ThreadTime)
 			enable_ntdll_ThreadTime="$2"
+			;;
+		ntdll-Thread_Stack)
+			enable_ntdll_Thread_Stack="$2"
 			;;
 		ntdll-Threading)
 			enable_ntdll_Threading="$2"
@@ -2137,6 +2141,13 @@ if test "$enable_ntdll_WRITECOPY" -eq 1; then
 		abort "Patchset ws2_32-WriteWatches disabled, but ntdll-WRITECOPY depends on that."
 	fi
 	enable_ws2_32_WriteWatches=1
+fi
+
+if test "$enable_ntdll_Thread_Stack" -eq 1; then
+	if test "$enable_ntdll_ThreadTime" -gt 1; then
+		abort "Patchset ntdll-ThreadTime disabled, but ntdll-Thread_Stack depends on that."
+	fi
+	enable_ntdll_ThreadTime=1
 fi
 
 if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
@@ -5112,6 +5123,21 @@ if test "$enable_ntdll_ThreadTime" -eq 1; then
 	patch_apply ntdll-ThreadTime/0001-ntdll-Return-correct-values-in-GetThreadTimes-for-al.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Return correct values in GetThreadTimes() for all threads.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Thread_Stack
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-ThreadTime
+# |
+# | Modified files:
+# |   *	dlls/ntdll/thread.c
+# |
+if test "$enable_ntdll_Thread_Stack" -eq 1; then
+	patch_apply ntdll-Thread_Stack/0001-ntdll-Use-a-separate-stack-when-starting-new-threads.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Use a separate stack when starting new threads.", 1 },';
 	) >> "$patchlist"
 fi
 

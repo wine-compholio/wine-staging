@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "84cae8c3ea2614fce65d5d499159de9d530444ef"
+	echo "24a730187e08699b51c698d4fed58ba2947f0c5d"
 }
 
 # Show version information
@@ -151,13 +151,11 @@ patch_enable_all ()
 	enable_kernel32_COMSPEC="$1"
 	enable_kernel32_Codepage_Conversion="$1"
 	enable_kernel32_CompareStringEx="$1"
-	enable_kernel32_CompareString_Length="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Cwd_Startup_Info="$1"
 	enable_kernel32_FreeUserPhysicalPages="$1"
 	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_GetLargestConsoleWindowSize="$1"
-	enable_kernel32_GetLogicalProcessorInformationEx="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
@@ -289,7 +287,6 @@ patch_enable_all ()
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_SetCoalescableTimer="$1"
-	enable_user32_WM_CAPTURECHANGE="$1"
 	enable_user32_WM_MDICALCCHILDSCROLL="$1"
 	enable_user32_WndProc="$1"
 	enable_uxtheme_GTK_Theming="$1"
@@ -309,7 +306,6 @@ patch_enable_all ()
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Geforce_425M="$1"
 	enable_wined3d_MESA_GPU_Info="$1"
-	enable_wined3d_Multisampling="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_UnhandledBlendFactor="$1"
 	enable_wined3d_resource_check_usage="$1"
@@ -569,9 +565,6 @@ patch_enable ()
 		kernel32-CompareStringEx)
 			enable_kernel32_CompareStringEx="$2"
 			;;
-		kernel32-CompareString_Length)
-			enable_kernel32_CompareString_Length="$2"
-			;;
 		kernel32-CopyFileEx)
 			enable_kernel32_CopyFileEx="$2"
 			;;
@@ -586,9 +579,6 @@ patch_enable ()
 			;;
 		kernel32-GetLargestConsoleWindowSize)
 			enable_kernel32_GetLargestConsoleWindowSize="$2"
-			;;
-		kernel32-GetLogicalProcessorInformationEx)
-			enable_kernel32_GetLogicalProcessorInformationEx="$2"
 			;;
 		kernel32-LocaleNameToLCID)
 			enable_kernel32_LocaleNameToLCID="$2"
@@ -983,9 +973,6 @@ patch_enable ()
 		user32-SetCoalescableTimer)
 			enable_user32_SetCoalescableTimer="$2"
 			;;
-		user32-WM_CAPTURECHANGE)
-			enable_user32_WM_CAPTURECHANGE="$2"
-			;;
 		user32-WM_MDICALCCHILDSCROLL)
 			enable_user32_WM_MDICALCCHILDSCROLL="$2"
 			;;
@@ -1042,9 +1029,6 @@ patch_enable ()
 			;;
 		wined3d-MESA_GPU_Info)
 			enable_wined3d_MESA_GPU_Info="$2"
-			;;
-		wined3d-Multisampling)
-			enable_wined3d_Multisampling="$2"
 			;;
 		wined3d-Revert_PixelFormat)
 			enable_wined3d_Revert_PixelFormat="$2"
@@ -1657,9 +1641,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_winecfg_Libraries" -gt 1; then
 		abort "Patchset winecfg-Libraries disabled, but category-stable depends on that."
 	fi
-	if test "$enable_wined3d_Multisampling" -gt 1; then
-		abort "Patchset wined3d-Multisampling disabled, but category-stable depends on that."
-	fi
 	if test "$enable_wined3d_Revert_PixelFormat" -gt 1; then
 		abort "Patchset wined3d-Revert_PixelFormat disabled, but category-stable depends on that."
 	fi
@@ -1753,7 +1734,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_wine_inf_ProfileList_UserSID=1
 	enable_wineboot_HKEY_DYN_DATA=1
 	enable_winecfg_Libraries=1
-	enable_wined3d_Multisampling=1
 	enable_wined3d_Revert_PixelFormat=1
 	enable_wined3d_UnhandledBlendFactor=1
 	enable_wined3d_resource_check_usage=1
@@ -3384,25 +3364,6 @@ if test "$enable_kernel32_CompareStringEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-CompareString_Length
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37556] CompareString should abort on first non-matching character
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/locale.c, libs/wine/sortkey.c
-# |
-if test "$enable_kernel32_CompareString_Length" -eq 1; then
-	patch_apply kernel32-CompareString_Length/0001-kernel32-CompareStringW-should-abort-on-the-first-no.patch
-	patch_apply kernel32-CompareString_Length/0002-kernel32-tests-Add-some-more-tests-for-NORM_IGNORESY.patch
-	patch_apply kernel32-CompareString_Length/0003-kenrel32-tests-Add-further-tests-for-comparing-strin.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "kernel32: CompareStringW should abort on the first nonmatching character to avoid invalid memory access.", 2 },';
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Add some more tests for NORM_IGNORESYMBOLS.", 1 },';
-		echo '+    { "Sebastian Lackner", "kenrel32/tests: Add further tests for comparing strings ending with multiple \\\\0 characters.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-SetFileInformationByHandle
 # |
 # | Modified files:
@@ -3541,18 +3502,6 @@ if test "$enable_kernel32_GetLargestConsoleWindowSize" -eq 1; then
 		echo '+    { "Hugh McMaster", "kernel32/tests: Refresh the console to clear the console font table.", 1 },';
 		echo '+    { "Hugh McMaster", "kernel32/tests: Add tests for GetLargestConsoleWindowSize.", 1 },';
 		echo '+    { "Sebastian Lackner", "kernel32: Clamp maximum window size to screen buffer size.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-GetLogicalProcessorInformationEx
-# |
-# | Modified files:
-# |   *	dlls/kernel32/process.c
-# |
-if test "$enable_kernel32_GetLogicalProcessorInformationEx" -eq 1; then
-	patch_apply kernel32-GetLogicalProcessorInformationEx/0001-kernel32-Make-GetLogicalProcessorInformationEx-a-stu.patch
-	(
-		echo '+    { "Sebastian Lackner", "kernel32: Make GetLogicalProcessorInformationEx a stub which returns TRUE.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5680,21 +5629,6 @@ if test "$enable_user32_SetCoalescableTimer" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset user32-WM_CAPTURECHANGE
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#13683] Also send WM_CAPTURECHANGE when capture has not changed
-# |
-# | Modified files:
-# |   *	dlls/comctl32/toolbar.c, dlls/comctl32/trackbar.c, dlls/user32/button.c, dlls/user32/input.c, dlls/user32/tests/msg.c
-# |
-if test "$enable_user32_WM_CAPTURECHANGE" -eq 1; then
-	patch_apply user32-WM_CAPTURECHANGE/0001-user32-Also-send-WM_CAPTURECHANGE-when-capture-has-n.patch
-	(
-		echo '+    { "Christopher Thielen", "user32: Also send WM_CAPTURECHANGE when capture has not changed.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset user32-WM_MDICALCCHILDSCROLL
 # |
 # | Modified files:
@@ -5932,21 +5866,6 @@ if test "$enable_wined3d_MESA_GPU_Info" -eq 1; then
 	patch_apply wined3d-MESA_GPU_Info/0001-wined3d-Use-pci-and-memory-information-from-MESA-if-.patch
 	(
 		echo '+    { "Michael Müller", "wined3d: Use pci and memory information from MESA if possible.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Multisampling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12652] Allow to override number of quality levels for D3DMULTISAMPLE_NONMASKABLE.
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Multisampling" -eq 1; then
-	patch_apply wined3d-Multisampling/0001-wined3d-Allow-to-specify-multisampling-AA-quality-le.patch
-	(
-		echo '+    { "Austin English", "wined3d: Allow to specify multisampling AA quality levels via registry.", 1 },';
 	) >> "$patchlist"
 fi
 

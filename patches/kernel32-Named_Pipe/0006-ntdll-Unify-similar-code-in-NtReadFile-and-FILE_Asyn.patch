@@ -1,4 +1,4 @@
-From 8ad4ff3e0ed7e3065a1f408873a69d51cb6b3b51 Mon Sep 17 00:00:00 2001
+From 3963fc7dff07587084a7d91553727bba88871677 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 15 Aug 2014 22:23:08 +0200
 Subject: ntdll: Unify similar code in NtReadFile and FILE_AsyncReadService.
@@ -15,14 +15,14 @@ Changes in FILE_AsyncReadService:
     whereas NtReadFile uses different behaviour based on the fd type.
     Now both implementations match, and behave the same way.
 ---
- dlls/ntdll/file.c | 108 +++++++++++++++++++++++-------------------------------
- 1 file changed, 46 insertions(+), 62 deletions(-)
+ dlls/ntdll/file.c | 113 ++++++++++++++++++++++--------------------------------
+ 1 file changed, 46 insertions(+), 67 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 79daec5..fd88777 100644
+index 6531569..e42cf46 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -471,6 +471,45 @@ NTSTATUS FILE_GetNtStatus(void)
+@@ -486,6 +486,45 @@ NTSTATUS FILE_GetNtStatus(void)
      }
  }
  
@@ -48,7 +48,7 @@ index 79daec5..fd88777 100644
 +                case FD_TYPE_DEVICE:
 +                    return length ? STATUS_END_OF_FILE : STATUS_SUCCESS;
 +                case FD_TYPE_SERIAL:
-+                    return STATUS_PENDING;
++                    return length ? STATUS_PENDING : STATUS_SUCCESS;
 +                default:
 +                    return STATUS_PIPE_BROKEN;
 +                }
@@ -68,7 +68,7 @@ index 79daec5..fd88777 100644
  /***********************************************************************
   *             FILE_AsyncReadService      (INTERNAL)
   */
-@@ -478,44 +517,19 @@ static NTSTATUS FILE_AsyncReadService( void *user, IO_STATUS_BLOCK *iosb,
+@@ -493,44 +532,19 @@ static NTSTATUS FILE_AsyncReadService( void *user, IO_STATUS_BLOCK *iosb,
                                         NTSTATUS status, void **apc, void **arg )
  {
      struct async_fileio_read *fileio = user;
@@ -118,7 +118,7 @@ index 79daec5..fd88777 100644
          break;
  
      case STATUS_TIMEOUT:
-@@ -762,7 +776,6 @@ static NTSTATUS get_io_avail_mode( HANDLE handle, enum server_fd_type type, BOOL
+@@ -777,7 +791,6 @@ static NTSTATUS get_io_avail_mode( HANDLE handle, enum server_fd_type type, BOOL
      return status;
  }
  
@@ -126,7 +126,7 @@ index 79daec5..fd88777 100644
  /******************************************************************************
   *  NtReadFile					[NTDLL.@]
   *  ZwReadFile					[NTDLL.@]
-@@ -858,38 +871,9 @@ NTSTATUS WINAPI NtReadFile(HANDLE hFile, HANDLE hEvent,
+@@ -873,43 +886,9 @@ NTSTATUS WINAPI NtReadFile(HANDLE hFile, HANDLE hEvent,
  
      for (;;)
      {
@@ -148,6 +148,11 @@ index 79daec5..fd88777 100644
 -                    status = length ? STATUS_END_OF_FILE : STATUS_SUCCESS;
 -                    goto done;
 -                case FD_TYPE_SERIAL:
+-                    if (!length)
+-                    {
+-                        status = STATUS_SUCCESS;
+-                        goto done;
+-                    }
 -                    break;
 -                default:
 -                    status = STATUS_PIPE_BROKEN;
@@ -168,5 +173,5 @@ index 79daec5..fd88777 100644
          if (async_read)
          {
 -- 
-2.4.0
+2.7.1
 

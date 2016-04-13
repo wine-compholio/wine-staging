@@ -1,4 +1,4 @@
-From 1d4383d08858f302927f08138bbe81093efbfd14 Mon Sep 17 00:00:00 2001
+From 0cdb31619be9eda07a99f339e1072423b613bb5d Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 28 Sep 2014 22:42:46 +0200
 Subject: ntdll: Throw exception if invalid handle is passed to NtClose and
@@ -10,7 +10,7 @@ Subject: ntdll: Throw exception if invalid handle is passed to NtClose and
  2 files changed, 92 insertions(+)
 
 diff --git a/dlls/ntdll/om.c b/dlls/ntdll/om.c
-index 47a2614..bcc6d69 100644
+index 3fadba7..6527501 100644
 --- a/dlls/ntdll/om.c
 +++ b/dlls/ntdll/om.c
 @@ -38,6 +38,7 @@
@@ -21,7 +21,7 @@ index 47a2614..bcc6d69 100644
  
  WINE_DEFAULT_DEBUG_CHANNEL(ntdll);
  
-@@ -343,6 +344,13 @@ NTSTATUS WINAPI NtDuplicateObject( HANDLE source_process, HANDLE source,
+@@ -377,6 +378,13 @@ NTSTATUS WINAPI NtDuplicateObject( HANDLE source_process, HANDLE source,
      return ret;
  }
  
@@ -35,7 +35,7 @@ index 47a2614..bcc6d69 100644
  /* Everquest 2 / Pirates of the Burning Sea hooks NtClose, so we need a wrapper */
  NTSTATUS close_handle( HANDLE handle )
  {
-@@ -356,6 +364,25 @@ NTSTATUS close_handle( HANDLE handle )
+@@ -390,6 +398,25 @@ NTSTATUS close_handle( HANDLE handle )
      }
      SERVER_END_REQ;
      if (fd != -1) close( fd );
@@ -62,10 +62,10 @@ index 47a2614..bcc6d69 100644
  }
  
 diff --git a/dlls/ntdll/tests/exception.c b/dlls/ntdll/tests/exception.c
-index 5cbab71..7a97ae5 100644
+index c62dcb3..440655c 100644
 --- a/dlls/ntdll/tests/exception.c
 +++ b/dlls/ntdll/tests/exception.c
-@@ -53,6 +53,7 @@ static NTSTATUS  (WINAPI *pNtTerminateProcess)(HANDLE handle, LONG exit_code);
+@@ -52,6 +52,7 @@ static NTSTATUS  (WINAPI *pNtTerminateProcess)(HANDLE handle, LONG exit_code);
  static NTSTATUS  (WINAPI *pNtQueryInformationProcess)(HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG);
  static NTSTATUS  (WINAPI *pNtSetInformationProcess)(HANDLE, PROCESSINFOCLASS, PVOID, ULONG);
  static BOOL      (WINAPI *pIsWow64Process)(HANDLE, PBOOL);
@@ -73,11 +73,11 @@ index 5cbab71..7a97ae5 100644
  
  #if defined(__x86_64__)
  static BOOLEAN   (CDECL *pRtlAddFunctionTable)(RUNTIME_FUNCTION*, DWORD, DWORD64);
-@@ -938,6 +939,16 @@ static void test_debugger(void)
-                         /* here we handle exception */
-                     }
+@@ -963,6 +964,16 @@ static void test_debugger(void)
+ 
+                     if (stage == 10) continuestatus = DBG_EXCEPTION_NOT_HANDLED;
                  }
-+                else if (stage == 7 || stage == 8)
++                else if (stage == 11 || stage == 12)
 +                {
 +                    ok(de.u.Exception.ExceptionRecord.ExceptionCode == EXCEPTION_INVALID_HANDLE,
 +                       "unexpected exception code %08x, expected %08x\n", de.u.Exception.ExceptionRecord.ExceptionCode,
@@ -85,12 +85,12 @@ index 5cbab71..7a97ae5 100644
 +                    ok(de.u.Exception.ExceptionRecord.NumberParameters == 0,
 +                       "unexpected number of parameters %d, expected 0\n", de.u.Exception.ExceptionRecord.NumberParameters);
 +
-+                    if (stage == 8) continuestatus = DBG_EXCEPTION_NOT_HANDLED;
++                    if (stage == 12) continuestatus = DBG_EXCEPTION_NOT_HANDLED;
 +                }
                  else
                      ok(FALSE, "unexpected stage %x\n", stage);
  
-@@ -1791,6 +1802,53 @@ static void test_ripevent(DWORD numexc)
+@@ -2078,6 +2089,53 @@ static void test_breakpoint(DWORD numexc)
      pRtlRemoveVectoredExceptionHandler(vectored_handler);
  }
  
@@ -144,7 +144,7 @@ index 5cbab71..7a97ae5 100644
  static void test_vectored_continue_handler(void)
  {
      PVOID handler1, handler2;
-@@ -1843,6 +1901,7 @@ START_TEST(exception)
+@@ -2130,6 +2188,7 @@ START_TEST(exception)
      pNtGetContextThread  = (void *)GetProcAddress( hntdll, "NtGetContextThread" );
      pNtSetContextThread  = (void *)GetProcAddress( hntdll, "NtSetContextThread" );
      pNtReadVirtualMemory = (void *)GetProcAddress( hntdll, "NtReadVirtualMemory" );
@@ -152,33 +152,33 @@ index 5cbab71..7a97ae5 100644
      pRtlUnwind           = (void *)GetProcAddress( hntdll, "RtlUnwind" );
      pRtlRaiseException   = (void *)GetProcAddress( hntdll, "RtlRaiseException" );
      pNtTerminateProcess  = (void *)GetProcAddress( hntdll, "NtTerminateProcess" );
-@@ -1910,6 +1969,10 @@ START_TEST(exception)
-             test_ripevent(0);
-             test_stage = 6;
-             test_ripevent(1);
-+            test_stage = 7;
+@@ -2205,6 +2264,10 @@ START_TEST(exception)
+             test_breakpoint(0);
+             test_stage = 10;
+             test_breakpoint(1);
++            test_stage = 11;
 +            test_closehandle(0);
-+            test_stage = 8;
++            test_stage = 12;
 +            test_closehandle(1);
          }
          else
              skip( "RtlRaiseException not found\n" );
-@@ -1923,6 +1986,7 @@ START_TEST(exception)
-     test_rtlraiseexception();
-     test_outputdebugstring(1, FALSE);
+@@ -2220,6 +2283,7 @@ START_TEST(exception)
      test_ripevent(1);
+     test_debug_service(1);
+     test_breakpoint(1);
 +    test_closehandle(0);
      test_vectored_continue_handler();
      test_debugger();
      test_simd_exceptions();
-@@ -1942,6 +2006,7 @@ START_TEST(exception)
- 
-     test_outputdebugstring(1, FALSE);
+@@ -2241,6 +2305,7 @@ START_TEST(exception)
      test_ripevent(1);
+     test_debug_service(1);
+     test_breakpoint(1);
 +    test_closehandle(0);
      test_vectored_continue_handler();
      test_virtual_unwind();
  
 -- 
-2.1.3
+2.7.1
 

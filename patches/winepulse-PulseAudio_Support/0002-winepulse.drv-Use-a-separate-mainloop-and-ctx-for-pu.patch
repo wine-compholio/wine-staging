@@ -1,18 +1,18 @@
-From 223fb2bc4c744188440690b7a95c5a2cc0f28ef6 Mon Sep 17 00:00:00 2001
+From e40bdd5226dfa79be37decd3dfca8ee0663550be Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 4 Nov 2015 02:57:56 +0100
 Subject: winepulse.drv: Use a separate mainloop and ctx for
  pulse_test_connect.
 
 ---
- dlls/winepulse.drv/mmdevdrv.c | 57 ++++++++++++++++++++-----------------------
- 1 file changed, 26 insertions(+), 31 deletions(-)
+ dlls/winepulse.drv/mmdevdrv.c | 59 ++++++++++++++++++++-----------------------
+ 1 file changed, 27 insertions(+), 32 deletions(-)
 
 diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
-index 24972ab..e781dbe 100644
+index fcb27d86..7ead734 100644
 --- a/dlls/winepulse.drv/mmdevdrv.c
 +++ b/dlls/winepulse.drv/mmdevdrv.c
-@@ -365,7 +365,7 @@ static DWORD pulse_channel_map_to_channel_mask(const pa_channel_map *map) {
+@@ -366,7 +366,7 @@ static DWORD pulse_channel_map_to_channel_mask(const pa_channel_map *map) {
      return mask;
  }
  
@@ -21,7 +21,7 @@ index 24972ab..e781dbe 100644
      WAVEFORMATEX *wfx = &fmt->Format;
      pa_stream *stream;
      pa_channel_map map;
-@@ -384,7 +384,7 @@ static void pulse_probe_settings(int render, WAVEFORMATEXTENSIBLE *fmt) {
+@@ -385,7 +385,7 @@ static void pulse_probe_settings(int render, WAVEFORMATEXTENSIBLE *fmt) {
      attr.minreq = attr.fragsize = pa_frame_size(&ss);
      attr.prebuf = 0;
  
@@ -30,7 +30,7 @@ index 24972ab..e781dbe 100644
      if (stream)
          pa_stream_set_state_callback(stream, pulse_stream_state, NULL);
      if (!stream)
-@@ -395,7 +395,7 @@ static void pulse_probe_settings(int render, WAVEFORMATEXTENSIBLE *fmt) {
+@@ -396,7 +396,7 @@ static void pulse_probe_settings(int render, WAVEFORMATEXTENSIBLE *fmt) {
      else
          ret = pa_stream_connect_record(stream, NULL, &attr, PA_STREAM_START_CORKED|PA_STREAM_FIX_RATE|PA_STREAM_FIX_CHANNELS|PA_STREAM_EARLY_REQUESTS);
      if (ret >= 0) {
@@ -39,7 +39,7 @@ index 24972ab..e781dbe 100644
                  pa_stream_get_state(stream) == PA_STREAM_CREATING)
          {}
          if (pa_stream_get_state(stream) == PA_STREAM_READY) {
-@@ -406,7 +406,7 @@ static void pulse_probe_settings(int render, WAVEFORMATEXTENSIBLE *fmt) {
+@@ -407,7 +407,7 @@ static void pulse_probe_settings(int render, WAVEFORMATEXTENSIBLE *fmt) {
              else
                  length = pa_stream_get_buffer_attr(stream)->fragsize;
              pa_stream_disconnect(stream);
@@ -48,7 +48,7 @@ index 24972ab..e781dbe 100644
                      pa_stream_get_state(stream) == PA_STREAM_READY)
              {}
          }
-@@ -524,10 +524,12 @@ static HRESULT pulse_test_connect(void)
+@@ -525,10 +525,12 @@ static HRESULT pulse_test_connect(void)
      WCHAR path[MAX_PATH], *name;
      char *str;
      pa_operation *o;
@@ -63,7 +63,7 @@ index 24972ab..e781dbe 100644
  
      GetModuleFileNameW(NULL, path, sizeof(path)/sizeof(*path));
      name = strrchrW(path, '\\');
-@@ -539,24 +541,23 @@ static HRESULT pulse_test_connect(void)
+@@ -540,24 +542,23 @@ static HRESULT pulse_test_connect(void)
      str = pa_xmalloc(len);
      WideCharToMultiByte(CP_UNIXCP, 0, name, -1, str, len, NULL, NULL);
      TRACE("Name: %s\n", str);
@@ -96,8 +96,13 @@ index 24972ab..e781dbe 100644
  
          if (state == PA_CONTEXT_FAILED || state == PA_CONTEXT_TERMINATED)
              goto fail;
-@@ -566,34 +567,28 @@ static HRESULT pulse_test_connect(void)
+@@ -566,38 +567,32 @@ static HRESULT pulse_test_connect(void)
+             break;
      }
+ 
+-    if (pa_context_get_state(pulse_ctx) != PA_CONTEXT_READY)
++    if (pa_context_get_state(ctx) != PA_CONTEXT_READY)
+         goto fail;
  
      TRACE("Test-connected to server %s with protocol version: %i.\n",
 -        pa_context_get_server(pulse_ctx),
@@ -142,5 +147,5 @@ index 24972ab..e781dbe 100644
  }
  
 -- 
-2.6.2
+2.7.1
 

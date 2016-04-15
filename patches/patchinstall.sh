@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ee9ae29a55b12b2c657f968fd3a958d72ecd7857"
+	echo "f0429adbffce1f67b88b8c0a3e3a5badb6d6526e"
 }
 
 # Show version information
@@ -97,7 +97,6 @@ patch_enable_all ()
 	enable_comctl32_Button_Theming="$1"
 	enable_comctl32_PROPSHEET_InsertPage="$1"
 	enable_comctl32_TTM_ADDTOOLW="$1"
-	enable_compobj_dll16_StringFromGUID2="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
 	enable_crypt32_CryptUnprotectMemory="$1"
@@ -224,7 +223,6 @@ patch_enable_all ()
 	enable_ntdll_RtlIpStringToAddress_Tests="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
-	enable_ntdll_Stack_Guard_Pages="$1"
 	enable_ntdll_Status_Mapping="$1"
 	enable_ntdll_Syscall_Wrappers="$1"
 	enable_ntdll_SystemInterruptInformation="$1"
@@ -345,7 +343,6 @@ patch_enable_all ()
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppGrayFloat="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
-	enable_windowscodecs_PNG_Fixes="$1"
 	enable_windowscodecs_WICCreateBitmapFromSection="$1"
 	enable_wine_inf_Directory_ContextMenuHandlers="$1"
 	enable_wine_inf_Dummy_CA_Certificate="$1"
@@ -464,9 +461,6 @@ patch_enable ()
 			;;
 		comctl32-TTM_ADDTOOLW)
 			enable_comctl32_TTM_ADDTOOLW="$2"
-			;;
-		compobj.dll16-StringFromGUID2)
-			enable_compobj_dll16_StringFromGUID2="$2"
 			;;
 		configure-Absolute_RPATH)
 			enable_configure_Absolute_RPATH="$2"
@@ -846,9 +840,6 @@ patch_enable ()
 		ntdll-Serial_Port_Detection)
 			enable_ntdll_Serial_Port_Detection="$2"
 			;;
-		ntdll-Stack_Guard_Pages)
-			enable_ntdll_Stack_Guard_Pages="$2"
-			;;
 		ntdll-Status_Mapping)
 			enable_ntdll_Status_Mapping="$2"
 			;;
@@ -1208,9 +1199,6 @@ patch_enable ()
 			;;
 		windowscodecs-IMILBitmapSource)
 			enable_windowscodecs_IMILBitmapSource="$2"
-			;;
-		windowscodecs-PNG_Fixes)
-			enable_windowscodecs_PNG_Fixes="$2"
 			;;
 		windowscodecs-WICCreateBitmapFromSection)
 			enable_windowscodecs_WICCreateBitmapFromSection="$2"
@@ -2804,18 +2792,6 @@ if test "$enable_comctl32_TTM_ADDTOOLW" -eq 1; then
 	patch_apply comctl32-TTM_ADDTOOLW/0001-comctl32-tooltip-Protect-TTM_ADDTOOLW-from-invalid-t.patch
 	(
 		echo '+    { "Alistair Leslie-Hughes", "comctl32/tooltip: Protect TTM_ADDTOOLW from invalid text pointers.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset compobj.dll16-StringFromGUID2
-# |
-# | Modified files:
-# |   *	dlls/compobj.dll16/compobj.c
-# |
-if test "$enable_compobj_dll16_StringFromGUID2" -eq 1; then
-	patch_apply compobj.dll16-StringFromGUID2/0001-compobj.dll16-StringFromGUID2-must-write-a-char-stri.patch
-	(
-		echo '+    { "Michael Müller", "compobj.dll16: StringFromGUID2 must write a char string into the buffer.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5032,18 +5008,6 @@ if test "$enable_ntdll_Serial_Port_Detection" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-Stack_Guard_Pages
-# |
-# | Modified files:
-# |   *	dlls/ntdll/signal_x86_64.c
-# |
-if test "$enable_ntdll_Stack_Guard_Pages" -eq 1; then
-	patch_apply ntdll-Stack_Guard_Pages/0001-ntdll-Handle-stack-guard-pages-on-x86_64.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Handle stack guard pages on x86_64.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Status_Mapping
 # |
 # | Modified files:
@@ -7017,18 +6981,6 @@ if test "$enable_windowscodecs_IMILBitmapSource" -eq 1; then
 	(
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Improve compatibility of IMILBitmapSource interface.", 3 },';
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for IMILBitmapScaler interface.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset windowscodecs-PNG_Fixes
-# |
-# | Modified files:
-# |   *	dlls/windowscodecs/pngformat.c
-# |
-if test "$enable_windowscodecs_PNG_Fixes" -eq 1; then
-	patch_apply windowscodecs-PNG_Fixes/0001-windowscodecs-Allocate-correct-amount-of-memory-for-.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Allocate correct amount of memory for PNG image data.", 1 },';
 	) >> "$patchlist"
 fi
 

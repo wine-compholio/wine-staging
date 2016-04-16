@@ -1,0 +1,91 @@
+From 97e45707bdd1e43bdafd6a63b68b25cd9ca9ce0a Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 17 Apr 2016 01:13:45 +0200
+Subject: ntdll: Fix a bug when exception handling triggers stack guard page.
+
+---
+ dlls/ntdll/signal_i386.c   | 7 ++-----
+ dlls/ntdll/signal_x86_64.c | 7 ++-----
+ 2 files changed, 4 insertions(+), 10 deletions(-)
+
+diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
+index 59dca6c..d26861d 100644
+--- a/dlls/ntdll/signal_i386.c
++++ b/dlls/ntdll/signal_i386.c
+@@ -1764,7 +1764,6 @@ static EXCEPTION_RECORD *setup_exception_record( ucontext_t *sigcontext, void *s
+         DWORD             ebp;
+         DWORD             eip;
+     } *stack = stack_ptr;
+-    DWORD exception_code = 0;
+ 
+     /* stack sanity checks */
+ 
+@@ -1800,8 +1799,7 @@ static EXCEPTION_RECORD *setup_exception_record( ucontext_t *sigcontext, void *s
+     else if ((char *)(stack - 1) < (char *)NtCurrentTeb()->Tib.StackLimit)
+     {
+         /* stack access below stack limit, may be recoverable */
+-        if (virtual_handle_stack_fault( stack - 1 )) exception_code = EXCEPTION_STACK_OVERFLOW;
+-        else
++        if (!virtual_handle_stack_fault( stack - 1 ))
+         {
+             UINT diff = (char *)NtCurrentTeb()->Tib.StackLimit - (char *)(stack - 1);
+             WINE_ERR( "stack overflow %u bytes in thread %04x eip %08x esp %08x stack %p-%p-%p\n",
+@@ -1823,7 +1821,7 @@ static EXCEPTION_RECORD *setup_exception_record( ucontext_t *sigcontext, void *s
+     stack->context_ptr  = &stack->context;
+ 
+     stack->rec.ExceptionRecord  = NULL;
+-    stack->rec.ExceptionCode    = exception_code;
++    stack->rec.ExceptionCode    = STATUS_SUCCESS;
+     stack->rec.ExceptionFlags   = EXCEPTION_CONTINUABLE;
+     stack->rec.ExceptionAddress = (LPVOID)EIP_sig(sigcontext);
+     stack->rec.NumberParameters = 0;
+@@ -2092,7 +2090,6 @@ static void segv_handler( int signal, siginfo_t *siginfo, void *sigcontext )
+     }
+ 
+     rec = setup_exception_record( context, stack, fs, gs, raise_segv_exception );
+-    if (rec->ExceptionCode == EXCEPTION_STACK_OVERFLOW) return;
+ 
+     switch(get_trap_code(context))
+     {
+diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
+index 1cb7170..f488c00 100644
+--- a/dlls/ntdll/signal_x86_64.c
++++ b/dlls/ntdll/signal_x86_64.c
+@@ -2091,7 +2091,6 @@ static EXCEPTION_RECORD *setup_exception( ucontext_t *sigcontext, raise_func fun
+         ULONG64           red_zone[16];
+     } *stack;
+     ULONG64 *rsp_ptr;
+-    DWORD exception_code = 0;
+ 
+     stack = (struct stack_layout *)(RSP_sig(sigcontext) & ~15);
+ 
+@@ -2126,8 +2125,7 @@ static EXCEPTION_RECORD *setup_exception( ucontext_t *sigcontext, raise_func fun
+     else if ((char *)(stack - 1) < (char *)NtCurrentTeb()->Tib.StackLimit)
+     {
+         /* stack access below stack limit, may be recoverable */
+-        if (virtual_handle_stack_fault( stack - 1 )) exception_code = EXCEPTION_STACK_OVERFLOW;
+-        else
++        if (!virtual_handle_stack_fault( stack - 1 ))
+         {
+             UINT diff = (char *)NtCurrentTeb()->Tib.StackLimit - (char *)(stack - 1);
+             ERR( "stack overflow %u bytes in thread %04x eip %016lx esp %016lx stack %p-%p-%p\n",
+@@ -2145,7 +2143,7 @@ static EXCEPTION_RECORD *setup_exception( ucontext_t *sigcontext, raise_func fun
+     VALGRIND_MAKE_WRITABLE(stack, sizeof(*stack));
+ #endif
+     stack->rec.ExceptionRecord  = NULL;
+-    stack->rec.ExceptionCode    = exception_code;
++    stack->rec.ExceptionCode    = STATUS_SUCCESS;
+     stack->rec.ExceptionFlags   = EXCEPTION_CONTINUABLE;
+     stack->rec.ExceptionAddress = (void *)RIP_sig(sigcontext);
+     stack->rec.NumberParameters = 0;
+@@ -2662,7 +2660,6 @@ static void segv_handler( int signal, siginfo_t *siginfo, void *sigcontext )
+     }
+ 
+     rec = setup_exception( sigcontext, raise_segv_exception );
+-    if (rec->ExceptionCode == EXCEPTION_STACK_OVERFLOW) return;
+ 
+     switch(TRAP_sig(ucontext))
+     {
+-- 
+2.7.1
+

@@ -224,6 +224,7 @@ patch_enable_all ()
 	enable_ntdll_RtlIpStringToAddress_Tests="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
+	enable_ntdll_Stack_Guard_Page="$1"
 	enable_ntdll_Stack_Overflow="$1"
 	enable_ntdll_Status_Mapping="$1"
 	enable_ntdll_Syscall_Wrappers="$1"
@@ -847,6 +848,9 @@ patch_enable ()
 			;;
 		ntdll-Serial_Port_Detection)
 			enable_ntdll_Serial_Port_Detection="$2"
+			;;
+		ntdll-Stack_Guard_Page)
+			enable_ntdll_Stack_Guard_Page="$2"
 			;;
 		ntdll-Stack_Overflow)
 			enable_ntdll_Stack_Overflow="$2"
@@ -5037,6 +5041,18 @@ if test "$enable_ntdll_Serial_Port_Detection" -eq 1; then
 	patch_apply ntdll-Serial_Port_Detection/0001-ntdll-Do-a-device-check-before-returning-a-default-s.patch
 	(
 		echo '+    { "Alex Henrie", "ntdll: Do a device check before returning a default serial port name.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Stack_Guard_Page
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_i386.c, dlls/ntdll/signal_x86_64.c
+# |
+if test "$enable_ntdll_Stack_Guard_Page" -eq 1; then
+	patch_apply ntdll-Stack_Guard_Page/0001-ntdll-Fix-a-bug-when-exception-handling-triggers-sta.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Fix a bug when exception handling triggers stack guard page.", 1 },';
 	) >> "$patchlist"
 fi
 

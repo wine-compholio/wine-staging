@@ -341,6 +341,7 @@ patch_enable_all ()
 	enable_version_VerFindFileA="$1"
 	enable_version_VerQueryValue="$1"
 	enable_vulkan_Vulkan_Implementation="$1"
+	enable_wbemdisp_ASSOCIATORS="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppGrayFloat="$1"
@@ -1197,6 +1198,9 @@ patch_enable ()
 			;;
 		vulkan-Vulkan_Implementation)
 			enable_vulkan_Vulkan_Implementation="$2"
+			;;
+		wbemdisp-ASSOCIATORS)
+			enable_wbemdisp_ASSOCIATORS="$2"
 			;;
 		wbemdisp-ISWbemSecurity)
 			enable_wbemdisp_ISWbemSecurity="$2"
@@ -6971,6 +6975,18 @@ if test "$enable_vulkan_Vulkan_Implementation" -eq 1; then
 		echo '+    { "Michael Müller", "vulkan: Implement vkGetPhysicalDeviceWin32PresentationSupportKHR.", 1 },';
 		echo '+    { "Sebastian Lackner", "vulkan: Use binary search to lookup function in is_null_func.", 1 },';
 		echo '+    { "Michael Müller", "vulkan: Try to load libvulkan.so.1.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wbemdisp-ASSOCIATORS
+# |
+# | Modified files:
+# |   *	dlls/wbemprox/tests/query.c
+# |
+if test "$enable_wbemdisp_ASSOCIATORS" -eq 1; then
+	patch_apply wbemdisp-ASSOCIATORS/0001-wbemprox-tests-Add-tests-for-ASSOCIATORS-queries.patch
+	(
+		echo '+    { "Michael Müller", "wbemprox/tests: Add tests for ASSOCIATORS queries.", 1 },';
 	) >> "$patchlist"
 fi
 

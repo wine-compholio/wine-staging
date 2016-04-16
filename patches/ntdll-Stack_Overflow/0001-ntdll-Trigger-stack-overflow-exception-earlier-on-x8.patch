@@ -1,0 +1,29 @@
+From a679044828d05cd420b1fb4a0dc43fb49da8d665 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 16 Apr 2016 22:29:12 +0200
+Subject: ntdll: Trigger stack overflow exception earlier on x86_64.
+
+The Cygwin/MSYS2 exception handler seems to exceed one page,
+which breaks handling of stack faults.
+---
+ dlls/ntdll/signal_x86_64.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
+index 94157bb..81d1758 100644
+--- a/dlls/ntdll/signal_x86_64.c
++++ b/dlls/ntdll/signal_x86_64.c
+@@ -2600,8 +2600,9 @@ static void segv_handler( int signal, siginfo_t *siginfo, void *sigcontext )
+         virtual_handle_stack_fault( siginfo->si_addr ))
+     {
+         /* check if this was the last guard page */
+-        if ((char *)siginfo->si_addr < (char *)NtCurrentTeb()->DeallocationStack + 2*4096)
++        if ((char *)siginfo->si_addr < (char *)NtCurrentTeb()->DeallocationStack + 3*4096)
+         {
++            virtual_handle_stack_fault( (char *)siginfo->si_addr - 4096 );
+             rec = setup_exception( sigcontext, raise_segv_exception );
+             rec->ExceptionCode = EXCEPTION_STACK_OVERFLOW;
+         }
+-- 
+2.7.1
+

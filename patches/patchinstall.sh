@@ -224,6 +224,7 @@ patch_enable_all ()
 	enable_ntdll_RtlIpStringToAddress_Tests="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
+	enable_ntdll_Stack_Overflow="$1"
 	enable_ntdll_Status_Mapping="$1"
 	enable_ntdll_Syscall_Wrappers="$1"
 	enable_ntdll_SystemInterruptInformation="$1"
@@ -845,6 +846,9 @@ patch_enable ()
 			;;
 		ntdll-Serial_Port_Detection)
 			enable_ntdll_Serial_Port_Detection="$2"
+			;;
+		ntdll-Stack_Overflow)
+			enable_ntdll_Stack_Overflow="$2"
 			;;
 		ntdll-Status_Mapping)
 			enable_ntdll_Status_Mapping="$2"
@@ -5029,6 +5033,18 @@ if test "$enable_ntdll_Serial_Port_Detection" -eq 1; then
 	patch_apply ntdll-Serial_Port_Detection/0001-ntdll-Do-a-device-check-before-returning-a-default-s.patch
 	(
 		echo '+    { "Alex Henrie", "ntdll: Do a device check before returning a default serial port name.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Stack_Overflow
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_x86_64.c
+# |
+if test "$enable_ntdll_Stack_Overflow" -eq 1; then
+	patch_apply ntdll-Stack_Overflow/0001-ntdll-Trigger-stack-overflow-exception-earlier-on-x8.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Trigger stack overflow exception earlier on x86_64.", 1 },';
 	) >> "$patchlist"
 fi
 

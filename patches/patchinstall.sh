@@ -359,6 +359,7 @@ patch_enable_all ()
 	enable_wined3d_Accounting="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_DXTn="$1"
+	enable_wined3d_Fix_Typos="$1"
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
@@ -1248,6 +1249,9 @@ patch_enable ()
 			;;
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
+			;;
+		wined3d-Fix_Typos)
+			enable_wined3d_Fix_Typos="$2"
 			;;
 		wined3d-Limit_Vram)
 			enable_wined3d_Limit_Vram="$2"
@@ -7180,6 +7184,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Add warning that CSMT patchset is disabled.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Fix_Typos
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c
+# |
+if test "$enable_wined3d_Fix_Typos" -eq 1; then
+	patch_apply wined3d-Fix_Typos/0001-wined3d-Fix-typo-in-TRACE-message.patch
+	(
+		echo '+    { "Sergey Isakov", "wined3d: Fix typo in TRACE message.", 1 },';
 	) >> "$patchlist"
 fi
 

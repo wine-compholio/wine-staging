@@ -166,6 +166,7 @@ patch_enable_all ()
 	enable_kernel32_FindFirstFile="$1"
 	enable_kernel32_FreeUserPhysicalPages="$1"
 	enable_kernel32_GetCurrentPackageFamilyName="$1"
+	enable_kernel32_GetShortPathName="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
@@ -675,6 +676,9 @@ patch_enable ()
 			;;
 		kernel32-GetCurrentPackageFamilyName)
 			enable_kernel32_GetCurrentPackageFamilyName="$2"
+			;;
+		kernel32-GetShortPathName)
+			enable_kernel32_GetShortPathName="$2"
 			;;
 		kernel32-LocaleNameToLCID)
 			enable_kernel32_LocaleNameToLCID="$2"
@@ -4013,6 +4017,25 @@ if test "$enable_kernel32_FindFirstFile" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "kernel32: Strip invalid characters from mask in FindFirstFileExW.", 1 },';
 		echo '+    { "Michael Müller", "kernel32/tests: Add tests for FindFirstFileA with invalid characters.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-GetShortPathName
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39355] Fix handling of wildcard paths in GetShortPathName and GetLongPathName
+# |
+# | Modified files:
+# |   *	dlls/kernel32/path.c, dlls/kernel32/tests/path.c
+# |
+if test "$enable_kernel32_GetShortPathName" -eq 1; then
+	patch_apply kernel32-GetShortPathName/0001-kernel32-tests-Add-some-tests-for-GetLongPathName-Ge.patch
+	patch_apply kernel32-GetShortPathName/0002-kernel32-GetShortPathName-should-fail-when-called-wi.patch
+	patch_apply kernel32-GetShortPathName/0003-kernel32-GetLongPathName-should-fail-when-called-wit.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "kernel32/tests: Add some tests for GetLongPathName/GetShortPathName called with a wildcard.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "kernel32: GetShortPathName should fail when called with a wildcard.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "kernel32: GetLongPathName should fail when called with a wildcard.", 1 },';
 	) >> "$patchlist"
 fi
 

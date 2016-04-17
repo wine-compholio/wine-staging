@@ -6788,7 +6788,7 @@ fi
 # |   *	[#38959] Add support for loading PNG icon files
 # |
 # | Modified files:
-# |   *	dlls/user32/cursoricon.c
+# |   *	dlls/user32/Makefile.in, dlls/user32/cursoricon.c
 # |
 if test "$enable_user32_PNG_Support" -eq 1; then
 	patch_apply user32-PNG_Support/0001-user32-Add-support-for-PNG-icons.-v4.patch

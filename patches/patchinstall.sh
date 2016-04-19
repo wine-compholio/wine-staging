@@ -332,6 +332,7 @@ patch_enable_all ()
 	enable_user32_Mouse_Message_Hwnd="$1"
 	enable_user32_PNG_Support="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
+	enable_user32_Revert_Popup_Menu="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_SetCoalescableTimer="$1"
 	enable_user32_WM_CTLCOLORBTN="$1"
@@ -1173,6 +1174,9 @@ patch_enable ()
 			;;
 		user32-Refresh_MDI_Menus)
 			enable_user32_Refresh_MDI_Menus="$2"
+			;;
+		user32-Revert_Popup_Menu)
+			enable_user32_Revert_Popup_Menu="$2"
 			;;
 		user32-ScrollWindowEx)
 			enable_user32_ScrollWindowEx="$2"
@@ -6845,6 +6849,21 @@ if test "$enable_user32_Refresh_MDI_Menus" -eq 1; then
 	patch_apply user32-Refresh_MDI_Menus/0001-user32-Refresh-MDI-menus-when-DefMDIChildProcW-WM_SE.patch
 	(
 		echo '+    { "Sebastian Lackner", "user32: Refresh MDI menus when DefMDIChildProc(WM_SETTEXT) is called.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-Revert_Popup_Menu
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40474] Fix a regression causing popup menus stay open
+# |
+# | Modified files:
+# |   *	dlls/user32/menu.c
+# |
+if test "$enable_user32_Revert_Popup_Menu" -eq 1; then
+	patch_apply user32-Revert_Popup_Menu/0001-Revert-user32-Set-capture-earlier-on-popup-menus.patch
+	(
+		echo '+    { "Sebastian Lackner", "Revert \"user32: Set capture earlier on popup menus.\".", 1 },';
 	) >> "$patchlist"
 fi
 

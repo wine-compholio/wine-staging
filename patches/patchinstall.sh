@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "00b68720bf32748422e6ccab8629acf04aec9d5a"
+	echo "7c18fe17c76efd7d7a2b2648c48e5990c2ae780a"
 }
 
 # Show version information
@@ -392,7 +392,6 @@ patch_enable_all ()
 	enable_wpcap_Several_Fixes="$1"
 	enable_ws2_32_APC_Performance="$1"
 	enable_ws2_32_Connect_Time="$1"
-	enable_ws2_32_DisconnectEx="$1"
 	enable_ws2_32_Sort_default_route="$1"
 	enable_ws2_32_TransmitFile="$1"
 	enable_ws2_32_WSACleanup="$1"
@@ -1350,9 +1349,6 @@ patch_enable ()
 			;;
 		ws2_32-Connect_Time)
 			enable_ws2_32_Connect_Time="$2"
-			;;
-		ws2_32-DisconnectEx)
-			enable_ws2_32_DisconnectEx="$2"
 			;;
 		ws2_32-Sort_default_route)
 			enable_ws2_32_Sort_default_route="$2"
@@ -7708,20 +7704,6 @@ if test "$enable_ws2_32_Connect_Time" -eq 1; then
 	patch_apply ws2_32-Connect_Time/0001-ws2_32-Implement-returning-the-proper-time-with-SO_C.patch
 	(
 		echo '+    { "Sebastian Lackner", "ws2_32: Implement returning the proper time with SO_CONNECT_TIME.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ws2_32-DisconnectEx
-# |
-# | Modified files:
-# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c
-# |
-if test "$enable_ws2_32_DisconnectEx" -eq 1; then
-	patch_apply ws2_32-DisconnectEx/0001-ws2_32-tests-Add-tests-for-DisconnectEx.patch
-	patch_apply ws2_32-DisconnectEx/0002-ws2_32-Add-semi-stub-for-DisconnectEx.patch
-	(
-		echo '+    { "Michael Müller", "ws2_32/tests: Add tests for DisconnectEx.", 1 },';
-		echo '+    { "Michael Müller", "ws2_32: Add semi-stub for DisconnectEx.", 1 },';
 	) >> "$patchlist"
 fi
 

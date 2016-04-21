@@ -334,7 +334,6 @@ patch_enable_all ()
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_SetCoalescableTimer="$1"
-	enable_user32_WndProc="$1"
 	enable_user32_lpCreateParams="$1"
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_GetFileVersionInfoSizeExW="$1"
@@ -1176,9 +1175,6 @@ patch_enable ()
 		user32-SetCoalescableTimer)
 			enable_user32_SetCoalescableTimer="$2"
 			;;
-		user32-WndProc)
-			enable_user32_WndProc="$2"
-			;;
 		user32-lpCreateParams)
 			enable_user32_lpCreateParams="$2"
 			;;
@@ -1865,9 +1861,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_user32_DrawTextExW" -gt 1; then
 		abort "Patchset user32-DrawTextExW disabled, but category-stable depends on that."
 	fi
-	if test "$enable_user32_WndProc" -gt 1; then
-		abort "Patchset user32-WndProc disabled, but category-stable depends on that."
-	fi
 	if test "$enable_wine_inf_Performance" -gt 1; then
 		abort "Patchset wine.inf-Performance disabled, but category-stable depends on that."
 	fi
@@ -1956,7 +1949,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_shell32_RunDLL_CallEntry16=1
 	enable_shell32_SHFileOperation_Win9x=1
 	enable_user32_DrawTextExW=1
-	enable_user32_WndProc=1
 	enable_wine_inf_Performance=1
 	enable_wine_inf_ProfileList_UserSID=1
 	enable_wineboot_HKEY_DYN_DATA=1
@@ -6859,21 +6851,6 @@ if test "$enable_user32_SetCoalescableTimer" -eq 1; then
 	patch_apply user32-SetCoalescableTimer/0001-user32-add-SetCoalescableTimer-stub.patch
 	(
 		echo '+    { "Austin English", "user32: Add SetCoalescableTimer stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-WndProc
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#32451] Fix for programs leaking wndproc slots
-# |
-# | Modified files:
-# |   *	dlls/user.exe16/message.c, dlls/user32/winproc.c
-# |
-if test "$enable_user32_WndProc" -eq 1; then
-	patch_apply user32-WndProc/0001-user32-Increase-MAX_WINPROCS-to-16384.patch
-	(
-		echo '+    { "Sebastian Lackner", "user32: Increase MAX_WINPROCS to 16384.", 2 },';
 	) >> "$patchlist"
 fi
 

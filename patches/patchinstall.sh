@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ab78cffea7ac676a7041c7d6941b61140cfe005c"
+	echo "00b68720bf32748422e6ccab8629acf04aec9d5a"
 }
 
 # Show version information
@@ -332,12 +332,8 @@ patch_enable_all ()
 	enable_user32_Mouse_Message_Hwnd="$1"
 	enable_user32_PNG_Support="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
-	enable_user32_Revert_Popup_Menu="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_SetCoalescableTimer="$1"
-	enable_user32_WM_CTLCOLORBTN="$1"
-	enable_user32_WM_MDICALCCHILDSCROLL="$1"
-	enable_user32_WM_NOTIFY="$1"
 	enable_user32_WndProc="$1"
 	enable_user32_lpCreateParams="$1"
 	enable_uxtheme_GTK_Theming="$1"
@@ -1175,23 +1171,11 @@ patch_enable ()
 		user32-Refresh_MDI_Menus)
 			enable_user32_Refresh_MDI_Menus="$2"
 			;;
-		user32-Revert_Popup_Menu)
-			enable_user32_Revert_Popup_Menu="$2"
-			;;
 		user32-ScrollWindowEx)
 			enable_user32_ScrollWindowEx="$2"
 			;;
 		user32-SetCoalescableTimer)
 			enable_user32_SetCoalescableTimer="$2"
-			;;
-		user32-WM_CTLCOLORBTN)
-			enable_user32_WM_CTLCOLORBTN="$2"
-			;;
-		user32-WM_MDICALCCHILDSCROLL)
-			enable_user32_WM_MDICALCCHILDSCROLL="$2"
-			;;
-		user32-WM_NOTIFY)
-			enable_user32_WM_NOTIFY="$2"
 			;;
 		user32-WndProc)
 			enable_user32_WndProc="$2"
@@ -6852,21 +6836,6 @@ if test "$enable_user32_Refresh_MDI_Menus" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset user32-Revert_Popup_Menu
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40474] Fix a regression causing popup menus stay open
-# |
-# | Modified files:
-# |   *	dlls/user32/menu.c
-# |
-if test "$enable_user32_Revert_Popup_Menu" -eq 1; then
-	patch_apply user32-Revert_Popup_Menu/0001-Revert-user32-Set-capture-earlier-on-popup-menus.patch
-	(
-		echo '+    { "Sebastian Lackner", "Revert \"user32: Set capture earlier on popup menus.\".", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset user32-ScrollWindowEx
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6894,50 +6863,6 @@ if test "$enable_user32_SetCoalescableTimer" -eq 1; then
 	patch_apply user32-SetCoalescableTimer/0001-user32-add-SetCoalescableTimer-stub.patch
 	(
 		echo '+    { "Austin English", "user32: Add SetCoalescableTimer stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-WM_CTLCOLORBTN
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#25790] Replicate Windows behavior of WM_SETTEXT handler regarding WM_CTLCOLOR* messages
-# |
-# | Modified files:
-# |   *	dlls/user32/button.c, dlls/user32/tests/msg.c
-# |
-if test "$enable_user32_WM_CTLCOLORBTN" -eq 1; then
-	patch_apply user32-WM_CTLCOLORBTN/0001-user32-Replicate-Windows-behavior-of-WM_SETTEXT-hand.patch
-	patch_apply user32-WM_CTLCOLORBTN/0002-user32-tests-Add-tests-for-button-WM_CTLCOLOR-messag.patch
-	(
-		echo '+    { "Alexander Law", "user32: Replicate Windows behavior of WM_SETTEXT handler regarding WM_CTLCOLOR*.", 1 },';
-		echo '+    { "Sebastian Lackner", "user32/tests: Add tests for button WM_CTLCOLOR* messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-WM_MDICALCCHILDSCROLL
-# |
-# | Modified files:
-# |   *	dlls/user32/mdi.c, dlls/user32/tests/win.c
-# |
-if test "$enable_user32_WM_MDICALCCHILDSCROLL" -eq 1; then
-	patch_apply user32-WM_MDICALCCHILDSCROLL/0001-user32-Change-value-for-WM_MDICALCCHILDSCROLL-to-0x0.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "user32: Change value for WM_MDICALCCHILDSCROLL to 0x003f.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-WM_NOTIFY
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40244] Fix handling of WM_NOTIFY messages in PostThreadMessage
-# |
-# | Modified files:
-# |   *	dlls/user32/message.c, dlls/user32/tests/msg.c
-# |
-if test "$enable_user32_WM_NOTIFY" -eq 1; then
-	patch_apply user32-WM_NOTIFY/0001-user32-Allow-to-send-post-intra-process-WM_NOTIFY-me.patch
-	(
-		echo '+    { "Sebastian Lackner", "user32: Do not block sending/posting WM_NOTIFY messages.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -7301,6 +7301,9 @@ fi
 
 # Patchset wineps.drv-PostScript_Fixes
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#4836] Various improvements for wineps.drv for Adobe PageMaker compatibility
+# |
 # | Modified files:
 # |   *	dlls/gdi32/printdrv.c, dlls/gdi32/tests/dc.c, dlls/wineps.drv/download.c, dlls/wineps.drv/escape.c,
 # | 	dlls/wineps.drv/psdrv.h

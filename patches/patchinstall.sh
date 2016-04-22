@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "7c18fe17c76efd7d7a2b2648c48e5990c2ae780a"
+	echo "ef36a25aec33670cd2099e4bce379bd6e2ac42a0"
 }
 
 # Show version information
@@ -264,7 +264,6 @@ patch_enable_all ()
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_quartz_Silence_FIXMEs="$1"
 	enable_rasapi32_RasEnumDevicesA="$1"
-	enable_reg_Implement_Query="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_rpcrt4_Pipe_Transport="$1"
 	enable_rpcrt4_RpcBindingServerFromClient="$1"
@@ -965,9 +964,6 @@ patch_enable ()
 			;;
 		rasapi32-RasEnumDevicesA)
 			enable_rasapi32_RasEnumDevicesA="$2"
-			;;
-		reg-Implement_Query)
-			enable_reg_Implement_Query="$2"
 			;;
 		riched20-IText_Interface)
 			enable_riched20_IText_Interface="$2"
@@ -5735,23 +5731,6 @@ if test "$enable_rasapi32_RasEnumDevicesA" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset reg-Implement_Query
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#24017] Implement query operation in reg.exe
-# |
-# | Modified files:
-# |   *	programs/reg/reg.c
-# |
-if test "$enable_reg_Implement_Query" -eq 1; then
-	patch_apply reg-Implement_Query/0001-reg-Query-all-values-and-subkeys-in-a-specified-key.patch
-	patch_apply reg-Implement_Query/0002-reg-Add-support-for-querying-the-registry-with-the-v.patch
-	(
-		echo '+    { "Hugh McMaster", "reg: Query all values and subkeys in a specified key.", 3 },';
-		echo '+    { "Hugh McMaster", "reg: Add support for querying the registry with the /v and /ve switches.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset riched20-IText_Interface
 # |
 # | Modified files:
@@ -7528,11 +7507,9 @@ fi
 # |   *	dlls/wininet/http.c
 # |
 if test "$enable_wininet_HTTPREQ_ReadFile_Async" -eq 1; then
-	patch_apply wininet-HTTPREQ_ReadFile_Async/0001-wininet-Remove-unused-sync-argument-from-HTTPREQ_Rea.patch
-	patch_apply wininet-HTTPREQ_ReadFile_Async/0002-wininet-Fix-async-check-in-HTTPREQ_ReadFileEx.patch
-	patch_apply wininet-HTTPREQ_ReadFile_Async/0003-wininet-Handle-async-mode-in-HTTPREQ_ReadFile.patch
+	patch_apply wininet-HTTPREQ_ReadFile_Async/0001-wininet-Fix-async-check-in-HTTPREQ_ReadFileEx.patch
+	patch_apply wininet-HTTPREQ_ReadFile_Async/0002-wininet-Handle-async-mode-in-HTTPREQ_ReadFile.patch
 	(
-		echo '+    { "Sebastian Lackner", "wininet: Remove unused '\''sync'\'' argument from HTTPREQ_Read.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Fix async check in HTTPREQ_ReadFileEx.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Handle async mode in HTTPREQ_ReadFile.", 1 },';
 	) >> "$patchlist"

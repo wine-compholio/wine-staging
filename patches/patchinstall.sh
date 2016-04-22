@@ -253,6 +253,7 @@ patch_enable_all ()
 	enable_ole32_HGLOBALStream="$1"
 	enable_oleaut32_CreateTypeLib="$1"
 	enable_oleaut32_OLEPictureImpl_SaveAsFile="$1"
+	enable_oleaut32_OleLoadPicture="$1"
 	enable_oleaut32_OleLoadPictureFile="$1"
 	enable_oleaut32_TKIND_COCLASS="$1"
 	enable_oleaut32_x86_64_Marshaller="$1"
@@ -931,6 +932,9 @@ patch_enable ()
 			;;
 		oleaut32-OLEPictureImpl_SaveAsFile)
 			enable_oleaut32_OLEPictureImpl_SaveAsFile="$2"
+			;;
+		oleaut32-OleLoadPicture)
+			enable_oleaut32_OleLoadPicture="$2"
 			;;
 		oleaut32-OleLoadPictureFile)
 			enable_oleaut32_OleLoadPictureFile="$2"
@@ -5551,6 +5555,21 @@ if test "$enable_oleaut32_OLEPictureImpl_SaveAsFile" -eq 1; then
 	(
 		echo '+    { "Dmitry Timoshkov", "gdiplus: Reimplement metafile loading using gdi32 instead of IPicture.", 2 },';
 		echo '+    { "Dmitry Timoshkov", "oleaut32: Implement a better stub for IPicture::SaveAsFile.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset oleaut32-OleLoadPicture
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39474] Create DIB section in OleLoadPicture
+# |
+# | Modified files:
+# |   *	dlls/oleaut32/olepicture.c, dlls/oleaut32/tests/olepicture.c
+# |
+if test "$enable_oleaut32_OleLoadPicture" -eq 1; then
+	patch_apply oleaut32-OleLoadPicture/0001-oleaut32-OleLoadPicture-should-create-a-DIB-section-.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "oleaut32: OleLoadPicture should create a DIB section for a being loaded bitmap.", 2 },';
 	) >> "$patchlist"
 fi
 

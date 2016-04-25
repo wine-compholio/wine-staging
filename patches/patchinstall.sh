@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ef36a25aec33670cd2099e4bce379bd6e2ac42a0"
+	echo "69eafe63ad7e3525f3498ab6af9f4c149753407f"
 }
 
 # Show version information
@@ -277,7 +277,6 @@ patch_enable_all ()
 	enable_server_Key_State="$1"
 	enable_server_Map_EXDEV_Error="$1"
 	enable_server_Misc_ACL="$1"
-	enable_server_Parent_Process="$1"
 	enable_server_PeekMessage="$1"
 	enable_server_Pipe_ObjectName="$1"
 	enable_server_Realtime_Priority="$1"
@@ -1003,9 +1002,6 @@ patch_enable ()
 			;;
 		server-Misc_ACL)
 			enable_server_Misc_ACL="$2"
-			;;
-		server-Parent_Process)
-			enable_server_Parent_Process="$2"
 			;;
 		server-PeekMessage)
 			enable_server_PeekMessage="$2"
@@ -5890,23 +5886,6 @@ if test "$enable_server_Map_EXDEV_Error" -eq 1; then
 	patch_apply server-Map_EXDEV_Error/0001-server-Map-EXDEV-to-STATUS_NOT_SAME_DEVICE.patch
 	(
 		echo '+    { "Qian Hong", "server: Map EXDEV to STATUS_NOT_SAME_DEVICE.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Parent_Process
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37087] Do not hold reference on parent process in wineserver
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/process.c, server/console.c, server/process.c, server/process.h, server/snapshot.c, server/thread.c
-# |
-if test "$enable_server_Parent_Process" -eq 1; then
-	patch_apply server-Parent_Process/0001-server-Increase-size-of-PID-table-to-512-to-reduce-r.patch
-	patch_apply server-Parent_Process/0002-server-Do-not-hold-reference-on-parent-process.patch
-	(
-		echo '+    { "Sebastian Lackner", "server: Increase size of PID table to 512 to reduce risk of collisions.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Do not hold reference on parent process.", 1 },';
 	) >> "$patchlist"
 fi
 

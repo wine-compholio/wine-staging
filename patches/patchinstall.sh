@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "69eafe63ad7e3525f3498ab6af9f4c149753407f"
+	echo "a6e1adb8b701c390b248f8c4d74bef1ed5557599"
 }
 
 # Show version information
@@ -312,7 +312,6 @@ patch_enable_all ()
 	enable_shell32_UNIXFS_get_unix_path="$1"
 	enable_shell32_UnixFS="$1"
 	enable_shlwapi_AssocGetPerceivedType="$1"
-	enable_shlwapi_IStream_fnRead="$1"
 	enable_shlwapi_SHMapHandle="$1"
 	enable_shlwapi_UrlCombine="$1"
 	enable_stdole32_idl_Typelib="$1"
@@ -358,7 +357,6 @@ patch_enable_all ()
 	enable_wined3d_Accounting="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_DXTn="$1"
-	enable_wined3d_Fix_Typos="$1"
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_QUERY_Stubs="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
@@ -394,7 +392,6 @@ patch_enable_all ()
 	enable_ws2_32_TransmitFile="$1"
 	enable_ws2_32_WSACleanup="$1"
 	enable_ws2_32_WriteWatches="$1"
-	enable_ws2_32_getaddrinfo="$1"
 	enable_ws2_32_getsockopt="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
 	enable_wtsapi32_WTSQueryUserToken="$1"
@@ -1108,9 +1105,6 @@ patch_enable ()
 		shlwapi-AssocGetPerceivedType)
 			enable_shlwapi_AssocGetPerceivedType="$2"
 			;;
-		shlwapi-IStream_fnRead)
-			enable_shlwapi_IStream_fnRead="$2"
-			;;
 		shlwapi-SHMapHandle)
 			enable_shlwapi_SHMapHandle="$2"
 			;;
@@ -1246,9 +1240,6 @@ patch_enable ()
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
 			;;
-		wined3d-Fix_Typos)
-			enable_wined3d_Fix_Typos="$2"
-			;;
 		wined3d-Limit_Vram)
 			enable_wined3d_Limit_Vram="$2"
 			;;
@@ -1353,9 +1344,6 @@ patch_enable ()
 			;;
 		ws2_32-WriteWatches)
 			enable_ws2_32_WriteWatches="$2"
-			;;
-		ws2_32-getaddrinfo)
-			enable_ws2_32_getaddrinfo="$2"
 			;;
 		ws2_32-getsockopt)
 			enable_ws2_32_getsockopt="$2"
@@ -6438,18 +6426,6 @@ if test "$enable_shlwapi_AssocGetPerceivedType" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset shlwapi-IStream_fnRead
-# |
-# | Modified files:
-# |   *	dlls/shlwapi/istream.c, dlls/shlwapi/tests/istream.c
-# |
-if test "$enable_shlwapi_IStream_fnRead" -eq 1; then
-	patch_apply shlwapi-IStream_fnRead/0001-shlwapi-Fix-IStream-Read-return-value-for-partial-re.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "shlwapi: Fix IStream::Read() return value for partial reads.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset shlwapi-SHMapHandle
 # |
 # | Modified files:
@@ -7157,18 +7133,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Fix_Typos
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c
-# |
-if test "$enable_wined3d_Fix_Typos" -eq 1; then
-	patch_apply wined3d-Fix_Typos/0001-wined3d-Fix-typo-in-TRACE-message.patch
-	(
-		echo '+    { "Sergey Isakov", "wined3d: Fix typo in TRACE message.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-Limit_Vram
 # |
 # | Modified files:
@@ -7713,18 +7677,6 @@ if test "$enable_ws2_32_WSACleanup" -eq 1; then
 	(
 		echo '+    { "Matt Durgavich", "ws2_32: Proper WSACleanup implementation using wineserver function.", 2 },';
 		echo '+    { "Sebastian Lackner", "ws2_32: Invalidate client-side file descriptor cache in WSACleanup.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ws2_32-getaddrinfo
-# |
-# | Modified files:
-# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c
-# |
-if test "$enable_ws2_32_getaddrinfo" -eq 1; then
-	patch_apply ws2_32-getaddrinfo/0001-ws2_32-Ignore-socket-type-for-protocol-IPPROTO_IPV6-.patch
-	(
-		echo '+    { "Michael Müller", "ws2_32: Ignore socket type for protocol IPPROTO_IPV6 in getaddrinfo.", 1 },';
 	) >> "$patchlist"
 fi
 

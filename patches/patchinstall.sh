@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a6e1adb8b701c390b248f8c4d74bef1ed5557599"
+	echo "4be4e282b737a7cfbccf18552a581ee6de3ac13c"
 }
 
 # Show version information
@@ -385,7 +385,6 @@ patch_enable_all ()
 	enable_winmm_Delay_Import_Depends="$1"
 	enable_winmm_mciSendCommandA="$1"
 	enable_winspool_drv_SetPrinterW="$1"
-	enable_winsta_WinStationEnumerateW="$1"
 	enable_wintrust_WinVerifyTrust="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_wpcap_Several_Fixes="$1"
@@ -1326,9 +1325,6 @@ patch_enable ()
 			;;
 		winspool.drv-SetPrinterW)
 			enable_winspool_drv_SetPrinterW="$2"
-			;;
-		winsta-WinStationEnumerateW)
-			enable_winsta_WinStationEnumerateW="$2"
 			;;
 		wintrust-WinVerifyTrust)
 			enable_wintrust_WinVerifyTrust="$2"
@@ -7541,9 +7537,9 @@ fi
 # |   *	dlls/wininet/http.c, dlls/wininet/tests/http.c
 # |
 if test "$enable_wininet_HttpOpenRequestW" -eq 1; then
-	patch_apply wininet-HttpOpenRequestW/0001-wininet-Set-default-HTTP-port-correctly-when-passing.patch
+	patch_apply wininet-HttpOpenRequestW/0001-wininet-Handle-INTERNET_INVALID_PORT_NUMBER-in-HttpO.patch
 	(
-		echo '+    { "Michael Müller", "wininet: Set default HTTP port correctly when passing INTERNET_FLAG_SECURE to InternetConnect.", 1 },';
+		echo '+    { "Michael Müller", "wininet: Handle INTERNET_INVALID_PORT_NUMBER in HttpOpenRequest.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7615,21 +7611,6 @@ if test "$enable_winspool_drv_SetPrinterW" -eq 1; then
 	patch_apply winspool.drv-SetPrinterW/0001-winspool.drv-Add-case-8-for-SetPrinterW.patch
 	(
 		echo '+    { "Jarkko Korpi", "winspool.drv Add case 8 for SetPrinterW.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winsta-WinStationEnumerateW
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38102] Add stub for winsta.WinStationEnumerateW
-# |
-# | Modified files:
-# |   *	dlls/winsta/main.c, dlls/winsta/winsta.spec
-# |
-if test "$enable_winsta_WinStationEnumerateW" -eq 1; then
-	patch_apply winsta-WinStationEnumerateW/0001-winsta-Add-stub-for-WinStationEnumerateW.patch
-	(
-		echo '+    { "Austin English", "winsta: Add stub for WinStationEnumerateW.", 2 },';
 	) >> "$patchlist"
 fi
 

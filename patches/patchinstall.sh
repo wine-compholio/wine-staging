@@ -252,6 +252,7 @@ patch_enable_all ()
 	enable_nvencodeapi_Video_Encoder="$1"
 	enable_ole32_HGLOBALStream="$1"
 	enable_oleaut32_CreateTypeLib="$1"
+	enable_oleaut32_Load_Save_EMF="$1"
 	enable_oleaut32_OLEPictureImpl_SaveAsFile="$1"
 	enable_oleaut32_OleLoadPicture="$1"
 	enable_oleaut32_OleLoadPictureFile="$1"
@@ -924,6 +925,9 @@ patch_enable ()
 			;;
 		oleaut32-CreateTypeLib)
 			enable_oleaut32_CreateTypeLib="$2"
+			;;
+		oleaut32-Load_Save_EMF)
+			enable_oleaut32_Load_Save_EMF="$2"
 			;;
 		oleaut32-OLEPictureImpl_SaveAsFile)
 			enable_oleaut32_OLEPictureImpl_SaveAsFile="$2"
@@ -5524,6 +5528,23 @@ if test "$enable_oleaut32_CreateTypeLib" -eq 1; then
 	patch_apply oleaut32-CreateTypeLib/0001-oleaut32-Implement-semi-stub-for-CreateTypeLib.patch
 	(
 		echo '+    { "Alistair Leslie-Hughes", "oleaut32: Implement semi-stub for CreateTypeLib.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset oleaut32-Load_Save_EMF
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40523] Implement support for loading and saving EMF to IPicture interface
+# |
+# | Modified files:
+# |   *	dlls/oleaut32/olepicture.c, dlls/oleaut32/tests/olepicture.c
+# |
+if test "$enable_oleaut32_Load_Save_EMF" -eq 1; then
+	patch_apply oleaut32-Load_Save_EMF/0001-oleaut32-tests-Add-some-tests-for-loading-and-saving.patch
+	patch_apply oleaut32-Load_Save_EMF/0002-oleaut32-Add-support-for-loading-and-saving-EMF-to-I.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "oleaut32/tests: Add some tests for loading and saving EMF using IPicture interface.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "oleaut32: Add support for loading and saving EMF to IPicture interface.", 1 },';
 	) >> "$patchlist"
 fi
 

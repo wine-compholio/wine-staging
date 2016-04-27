@@ -1,0 +1,130 @@
+From a7d49a0453ce0947b66f881e7c0e2966bf5549bc Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Tue, 26 Apr 2016 13:15:41 +0800
+Subject: oleaut32: Add support for loading and saving EMF to IPicture
+ interface.
+
+For bug #40523.
+---
+ dlls/oleaut32/olepicture.c       | 52 +++++++++++++++++++++++++++++++++++++---
+ dlls/oleaut32/tests/olepicture.c |  5 +---
+ 2 files changed, 50 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/oleaut32/olepicture.c b/dlls/oleaut32/olepicture.c
+index 96c109a..b82031d 100644
+--- a/dlls/oleaut32/olepicture.c
++++ b/dlls/oleaut32/olepicture.c
+@@ -266,6 +266,18 @@ static void OLEPictureImpl_SetIcon(OLEPictureImpl * This)
+     }
+ }
+ 
++static void OLEPictureImpl_SetEMF(OLEPictureImpl *This)
++{
++    ENHMETAHEADER emh;
++
++    GetEnhMetaFileHeader(This->desc.u.emf.hemf, sizeof(emh), &emh);
++
++    This->origWidth = 0;
++    This->origHeight = 0;
++    This->himetricWidth = emh.rclFrame.right - emh.rclFrame.left;
++    This->himetricHeight = emh.rclFrame.bottom - emh.rclFrame.top;
++}
++
+ /************************************************************************
+  * OLEPictureImpl_Construct
+  *
+@@ -346,7 +358,11 @@ static OLEPictureImpl* OLEPictureImpl_Construct(LPPICTDESC pictDesc, BOOL fOwn)
+       case PICTYPE_ICON:
+         OLEPictureImpl_SetIcon(newObject);
+         break;
++
+       case PICTYPE_ENHMETAFILE:
++        OLEPictureImpl_SetEMF(newObject);
++        break;
++
+       default:
+ 	FIXME("Unsupported type %d\n", pictDesc->picType);
+ 	newObject->himetricWidth = newObject->himetricHeight = 0;
+@@ -1761,6 +1777,17 @@ static BOOL serializeIcon(HICON hIcon, void ** ppBuffer, unsigned int * pLength)
+         return success;
+ }
+ 
++static BOOL serializeEMF(HENHMETAFILE hemf, void **buf, unsigned *size)
++{
++    *size = GetEnhMetaFileBits(hemf, 0, NULL);
++    if (!*size) return FALSE;
++
++    *buf = HeapAlloc(GetProcessHeap(), 0, *size);
++    if (!*buf) return FALSE;
++
++    return GetEnhMetaFileBits(hemf, *size, *buf) != 0;
++}
++
+ static HRESULT WINAPI OLEPictureImpl_Save(
+   IPersistStream* iface,IStream*pStm,BOOL fClearDirty)
+ {
+@@ -1836,12 +1863,31 @@ static HRESULT WINAPI OLEPictureImpl_Save(
+         IStream_Write(pStm, This->data, This->datalen, &dummy);
+         hResult = S_OK;
+         break;
++
++    case PICTYPE_ENHMETAFILE:
++        if (This->bIsDirty || !This->data)
++        {
++            serializeResult = serializeEMF(This->desc.u.emf.hemf, &pIconData, &iDataSize);
++            if (!serializeResult)
++            {
++                hResult = E_FAIL;
++                break;
++            }
++
++            HeapFree(GetProcessHeap(), 0, This->data);
++            This->data = pIconData;
++            This->datalen = iDataSize;
++        }
++        header[0] = 0x0000746c;
++        header[1] = This->datalen;
++        IStream_Write(pStm, header, 2 * sizeof(DWORD), &dummy);
++        IStream_Write(pStm, This->data, This->datalen, &dummy);
++        hResult = S_OK;
++        break;
++
+     case PICTYPE_METAFILE:
+         FIXME("(%p,%p,%d), PICTYPE_METAFILE not implemented!\n",This,pStm,fClearDirty);
+         break;
+-    case PICTYPE_ENHMETAFILE:
+-        FIXME("(%p,%p,%d),PICTYPE_ENHMETAFILE not implemented!\n",This,pStm,fClearDirty);
+-        break;
+     default:
+         FIXME("(%p,%p,%d), [unknown type] not implemented!\n",This,pStm,fClearDirty);
+         break;
+diff --git a/dlls/oleaut32/tests/olepicture.c b/dlls/oleaut32/tests/olepicture.c
+index de45603..7503265 100644
+--- a/dlls/oleaut32/tests/olepicture.c
++++ b/dlls/oleaut32/tests/olepicture.c
+@@ -1372,21 +1372,18 @@ todo_wine
+     ok(hr == S_OK, "QueryInterface error %#x\n", hr);
+ 
+     hr = IPersistStream_Save(src_stream, dst_stream, TRUE);
+-todo_wine
+     ok(hr == S_OK, "Save error %#x\n", hr);
+ 
+     IPersistStream_Release(src_stream);
+     IStream_Release(dst_stream);
+ 
+     mem = GlobalLock(hmem);
+-if (hr == S_OK)
+-{
+     ok(!memcmp(mem, "lt\0\0", 4), "got wrong stream header %04x\n", mem[0]);
+     ok(mem[1] == 128, "expected 128, got %u\n", mem[1]);
+     emh = (ENHMETAHEADER *)(mem + 2);
+     ok(emh->iType == EMR_HEADER, "wrong iType %04x\n", emh->iType);
+     ok(emh->dSignature == ENHMETA_SIGNATURE, "wrong dSignature %08x\n", emh->dSignature);
+-}
++
+     GlobalUnlock(hmem);
+     GlobalFree(hmem);
+ 
+-- 
+2.8.0
+

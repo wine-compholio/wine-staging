@@ -144,6 +144,7 @@ patch_enable_all ()
 	enable_dxva2_Video_Decoder="$1"
 	enable_explorer_Video_Registry_Key="$1"
 	enable_fonts_Missing_Fonts="$1"
+	enable_fontsub_CreateFontPackage="$1"
 	enable_fsutil_Stub_Program="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_MultiMonitor="$1"
@@ -602,6 +603,9 @@ patch_enable ()
 			;;
 		fonts-Missing_Fonts)
 			enable_fonts_Missing_Fonts="$2"
+			;;
+		fontsub-CreateFontPackage)
+			enable_fontsub_CreateFontPackage="$2"
 			;;
 		fsutil-Stub_Program)
 			enable_fsutil_Stub_Program="$2"
@@ -3630,6 +3634,21 @@ if test "$enable_fonts_Missing_Fonts" -eq 1; then
 		echo '+    { "Sebastian Lackner", "fonts: Add Liberation Mono as an Courier New replacement.", 1 },';
 		echo '+    { "Erich E. Hoover", "fonts: Add WenQuanYi Micro Hei as a Microsoft Yahei replacement.", 1 },';
 		echo '+    { "Michael Müller", "Add licenses for fonts as separate files.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset fontsub-CreateFontPackage
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40517] Improve fontsub.CreateFontPackage stub implementation
+# |
+# | Modified files:
+# |   *	dlls/fontsub/main.c, include/fontsub.h
+# |
+if test "$enable_fontsub_CreateFontPackage" -eq 1; then
+	patch_apply fontsub-CreateFontPackage/0001-fontsub-CreateFontPackage-straight-copy.patch
+	(
+		echo '+    { "Nikolay Sivov", "fontsub: CreateFontPackage() straight copy.", 1 },';
 	) >> "$patchlist"
 fi
 

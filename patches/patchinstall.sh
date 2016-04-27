@@ -1971,6 +1971,13 @@ if test "$enable_wpcap_Dynamic_Linking" -eq 1; then
 	enable_wpcap_Several_Fixes=1
 fi
 
+if test "$enable_wininet_Cleanup" -eq 1; then
+	if test "$enable_wininet_HTTPREQ_ReadFile_Async" -gt 1; then
+		abort "Patchset wininet-HTTPREQ_ReadFile_Async disabled, but wininet-Cleanup depends on that."
+	fi
+	enable_wininet_HTTPREQ_ReadFile_Async=1
+fi
+
 if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_makedep_PARENTSPEC" -gt 1; then
 		abort "Patchset makedep-PARENTSPEC disabled, but wined3d-CSMT_Helper depends on that."
@@ -7424,7 +7431,28 @@ if test "$enable_winhttp_System_Proxy_Autoconfig" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wininet-HTTPREQ_ReadFile_Async
+# |
+# | Modified files:
+# |   *	dlls/wininet/http.c, dlls/wininet/tests/http.c
+# |
+if test "$enable_wininet_HTTPREQ_ReadFile_Async" -eq 1; then
+	patch_apply wininet-HTTPREQ_ReadFile_Async/0001-wininet-Fix-async-check-in-HTTPREQ_ReadFileEx.-resen.patch
+	patch_apply wininet-HTTPREQ_ReadFile_Async/0002-wininet-tests-Add-tests-for-asynchronous-InternetRea.patch
+	patch_apply wininet-HTTPREQ_ReadFile_Async/0003-wininet-Handle-async-mode-in-HTTPREQ_ReadFile.-resen.patch
+	patch_apply wininet-HTTPREQ_ReadFile_Async/0004-wininet-tests-Add-tests-for-asynchronous-InternetRea.patch
+	(
+		echo '+    { "Michael Müller", "wininet: Fix async check in HTTPREQ_ReadFileEx.", 1 },';
+		echo '+    { "Sebastian Lackner", "wininet/tests: Add tests for asynchronous InternetReadFileEx.", 3 },';
+		echo '+    { "Michael Müller", "wininet: Handle async mode in HTTPREQ_ReadFile.", 1 },';
+		echo '+    { "Sebastian Lackner", "wininet/tests: Add tests for asynchronous InternetReadFile.", 3 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wininet-Cleanup
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	wininet-HTTPREQ_ReadFile_Async
 # |
 # | Modified files:
 # |   *	dlls/wininet/http.c, dlls/wininet/tests/http.c
@@ -7441,20 +7469,6 @@ if test "$enable_wininet_Cleanup" -eq 1; then
 		echo '+    { "Michael Müller", "wininet/tests: Check cookie behaviour when overriding host.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Strip filename if no path is set in cookie.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Replacing header fields should fail if they do not exist yet.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wininet-HTTPREQ_ReadFile_Async
-# |
-# | Modified files:
-# |   *	dlls/wininet/http.c
-# |
-if test "$enable_wininet_HTTPREQ_ReadFile_Async" -eq 1; then
-	patch_apply wininet-HTTPREQ_ReadFile_Async/0001-wininet-Fix-async-check-in-HTTPREQ_ReadFileEx.patch
-	patch_apply wininet-HTTPREQ_ReadFile_Async/0002-wininet-Handle-async-mode-in-HTTPREQ_ReadFile.patch
-	(
-		echo '+    { "Michael Müller", "wininet: Fix async check in HTTPREQ_ReadFileEx.", 1 },';
-		echo '+    { "Michael Müller", "wininet: Handle async mode in HTTPREQ_ReadFile.", 1 },';
 	) >> "$patchlist"
 fi
 

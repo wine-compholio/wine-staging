@@ -1,14 +1,19 @@
-From e2da56d0cda302fbc815da6f35ef5cc0cf5f7c95 Mon Sep 17 00:00:00 2001
+From ace80a3673e0f48a26e27b821c03e96140c1557b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
-Date: Tue, 5 Apr 2016 17:58:29 +0200
-Subject: wininet: Handle async mode in HTTPREQ_ReadFile.
+Date: Tue, 26 Apr 2016 23:38:16 +0200
+Subject: wininet: Handle async mode in HTTPREQ_ReadFile. (resend)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 
+Signed-off-by: Michael Müller <michael@fds-team.de>
+Signed-off-by: Sebastian Lackner <sebastian@fds-team.de>
 ---
- dlls/wininet/http.c | 57 +++++++++++++++++++++++++++++++++++++----------------
- 1 file changed, 40 insertions(+), 17 deletions(-)
+ dlls/wininet/http.c | 61 ++++++++++++++++++++++++++++++++++++++---------------
+ 1 file changed, 44 insertions(+), 17 deletions(-)
 
 diff --git a/dlls/wininet/http.c b/dlls/wininet/http.c
-index 2774ab0..fac3d4d 100644
+index 2774ab0..6c2c567 100644
 --- a/dlls/wininet/http.c
 +++ b/dlls/wininet/http.c
 @@ -3105,23 +3105,6 @@ static BOOL drain_content(http_request_t *req, BOOL blocking)
@@ -35,7 +40,7 @@ index 2774ab0..fac3d4d 100644
  typedef struct {
      task_header_t hdr;
      void *buf;
-@@ -3238,6 +3221,46 @@ static DWORD HTTPREQ_WriteFile(object_header_t *hdr, const void *buffer, DWORD s
+@@ -3238,6 +3221,50 @@ static DWORD HTTPREQ_WriteFile(object_header_t *hdr, const void *buffer, DWORD s
      return res;
  }
  
@@ -51,8 +56,11 @@ index 2774ab0..fac3d4d 100644
 +        if (TryEnterCriticalSection( &req->read_section ))
 +        {
 +            if (get_avail_data(req))
-+                goto read_data;
-+
++            {
++                res = HTTPREQ_Read(req, buffer, size, read);
++                LeaveCriticalSection( &req->read_section );
++                goto done;
++            }
 +            LeaveCriticalSection( &req->read_section );
 +        }
 +
@@ -61,6 +69,7 @@ index 2774ab0..fac3d4d 100644
 +        task->size = size;
 +        task->ret_read = read;
 +
++        *read = 0;
 +        INTERNET_AsyncCall(&task->hdr);
 +
 +        return ERROR_IO_PENDING;
@@ -70,12 +79,12 @@ index 2774ab0..fac3d4d 100644
 +    if(hdr->dwError == INTERNET_HANDLE_IN_USE)
 +        hdr->dwError = ERROR_INTERNET_INTERNAL_ERROR;
 +
-+read_data:
 +    res = HTTPREQ_Read(req, buffer, size, read);
 +    if(res == ERROR_SUCCESS)
 +        res = hdr->dwError;
 +    LeaveCriticalSection( &req->read_section );
 +
++done:
 +    return res;
 +}
 +
@@ -83,5 +92,5 @@ index 2774ab0..fac3d4d 100644
      task_header_t hdr;
      DWORD *ret_size;
 -- 
-2.7.1
+2.8.0
 

@@ -1,0 +1,74 @@
+From 022ab9291e3d8c324c7c2dacbfb0b23e234fb4ae Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Tue, 26 Apr 2016 18:28:21 +0800
+Subject: comdlg32: Postpone setting ofn->lpstrFileTitle to work around an
+ application bug.
+
+An application in the bug 38400 passes a not initialized ofn->lpstrFileTitle
+to GetSaveFileNameW(). Basically ofn->lpstrFileTitle points to the stack
+approximately 428 bytes above the current stack pointer, and since Wine's
+GetSaveFileNameW() uses more than 4096 bytes one of internal stack frames is
+guaranteed to be trashed after copying file name to ofn->lpstrFileTitle.
+---
+ dlls/comdlg32/filedlg.c | 31 ++++++++++++++-----------------
+ 1 file changed, 14 insertions(+), 17 deletions(-)
+
+diff --git a/dlls/comdlg32/filedlg.c b/dlls/comdlg32/filedlg.c
+index 1453396..6a6a093 100644
+--- a/dlls/comdlg32/filedlg.c
++++ b/dlls/comdlg32/filedlg.c
+@@ -463,6 +463,13 @@ static BOOL GetFileDialog95A(LPOPENFILENAMEA ofn,UINT iDlgType)
+       ret = FALSE;
+   }
+ 
++  /* set the lpstrFileTitle */
++  if (ret && ofn->lpstrFile && ofn->lpstrFileTitle)
++  {
++      LPSTR lpstrFileTitle = PathFindFileNameA(ofn->lpstrFile);
++      lstrcpynA(ofn->lpstrFileTitle, lpstrFileTitle, ofn->nMaxFileTitle);
++  }
++
+   if (lpstrSavDir)
+   {
+       SetCurrentDirectoryA(lpstrSavDir);
+@@ -555,6 +562,13 @@ static BOOL GetFileDialog95W(LPOPENFILENAMEW ofn,UINT iDlgType)
+       ret = FALSE;
+   }
+ 
++  /* set the lpstrFileTitle */
++  if (ret && ofn->lpstrFile && ofn->lpstrFileTitle)
++  {
++      LPWSTR lpstrFileTitle = PathFindFileNameW(ofn->lpstrFile);
++      lstrcpynW(ofn->lpstrFileTitle, lpstrFileTitle, ofn->nMaxFileTitle);
++  }
++
+   if (lpstrSavDir)
+   {
+       SetCurrentDirectoryW(lpstrSavDir);
+@@ -2735,23 +2749,6 @@ BOOL FILEDLG95_OnOpen(HWND hwnd)
+               fodInfos->ofnInfos->nFileExtension = (*lpszTemp) ? (lpszTemp - tempFileA) + 1 : 0;
+           }
+ 
+-          /* set the lpstrFileTitle */
+-          if(fodInfos->ofnInfos->lpstrFileTitle)
+-	  {
+-            LPWSTR lpstrFileTitle = PathFindFileNameW(lpstrPathAndFile);
+-            if(fodInfos->unicode)
+-            {
+-              LPOPENFILENAMEW ofn = fodInfos->ofnInfos;
+-	      lstrcpynW(ofn->lpstrFileTitle, lpstrFileTitle, ofn->nMaxFileTitle);
+-            }
+-            else
+-            {
+-              LPOPENFILENAMEA ofn = (LPOPENFILENAMEA)fodInfos->ofnInfos;
+-              WideCharToMultiByte(CP_ACP, 0, lpstrFileTitle, -1,
+-                    ofn->lpstrFileTitle, ofn->nMaxFileTitle, NULL, NULL);
+-            }
+-	  }
+-
+           /* copy currently selected filter to lpstrCustomFilter */
+           if (fodInfos->ofnInfos->lpstrCustomFilter)
+           {
+-- 
+2.8.0
+

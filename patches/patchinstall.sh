@@ -97,6 +97,7 @@ patch_enable_all ()
 	enable_comctl32_Button_Theming="$1"
 	enable_comctl32_PROPSHEET_InsertPage="$1"
 	enable_comctl32_TTM_ADDTOOLW="$1"
+	enable_comdlg32_lpstrFileTitle="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
 	enable_crypt32_CryptUnprotectMemory="$1"
@@ -460,6 +461,9 @@ patch_enable ()
 			;;
 		comctl32-TTM_ADDTOOLW)
 			enable_comctl32_TTM_ADDTOOLW="$2"
+			;;
+		comdlg32-lpstrFileTitle)
+			enable_comdlg32_lpstrFileTitle="$2"
 			;;
 		configure-Absolute_RPATH)
 			enable_configure_Absolute_RPATH="$2"
@@ -2791,6 +2795,22 @@ if test "$enable_comctl32_TTM_ADDTOOLW" -eq 1; then
 	patch_apply comctl32-TTM_ADDTOOLW/0001-comctl32-tooltip-Protect-TTM_ADDTOOLW-from-invalid-t.patch
 	(
 		echo '+    { "Alistair Leslie-Hughes", "comctl32/tooltip: Protect TTM_ADDTOOLW from invalid text pointers.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset comdlg32-lpstrFileTitle
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38400] Postpone setting lpstrFileTitle in GetSaveFileNameW
+# |   *	[#35200] Postpone setting lpstrFileTitle in GetSaveFileNameA
+# |
+# | Modified files:
+# |   *	dlls/comdlg32/filedlg.c
+# |
+if test "$enable_comdlg32_lpstrFileTitle" -eq 1; then
+	patch_apply comdlg32-lpstrFileTitle/0001-comdlg32-Postpone-setting-ofn-lpstrFileTitle-to-work.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "comdlg32: Postpone setting ofn->lpstrFileTitle to work around an application bug.", 1 },';
 	) >> "$patchlist"
 fi
 

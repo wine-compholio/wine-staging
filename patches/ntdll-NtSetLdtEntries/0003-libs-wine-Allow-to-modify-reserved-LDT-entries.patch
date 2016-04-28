@@ -1,0 +1,68 @@
+From 36cdcc900c03de3e2e27a16252242a7a5ec55513 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Thu, 28 Apr 2016 17:01:16 +0200
+Subject: libs/wine: Allow to modify reserved LDT entries.
+
+Some implementation notes:
+
+1. Some copy protections call NtSetLdtEntries(0x000f) and then with 'retf'
+instruction jump to that selector expecting that it works (the tests show that
+NtSetLdtEntries(0x000f,0x001f) should succeed). In order to make this work a
+limitation to set only selectors > LDT_FIRST_ENTRY (512) in wine_ldt_set_entry()
+was removed.
+
+2. wine_ldt_set_entry() was made to always mark modified selector entries as
+WINE_LDT_FLAGS_ALLOCATED, otherwise get_selector_entry() server call returns
+entries without that flag set and NtQueryInformationThread(ThreadDescriptorTableEntry)
+fails.
+---
+ dlls/kernel32/tests/thread.c | 4 ----
+ libs/wine/ldt.c              | 4 +---
+ 2 files changed, 1 insertion(+), 7 deletions(-)
+
+diff --git a/dlls/kernel32/tests/thread.c b/dlls/kernel32/tests/thread.c
+index 981e3c4..6efc52a 100644
+--- a/dlls/kernel32/tests/thread.c
++++ b/dlls/kernel32/tests/thread.c
+@@ -1163,16 +1163,12 @@ static void test_NtSetLdtEntries(void)
+     {
+         memset(&sel.entry, 0x9a, sizeof(sel.entry));
+         ret = GetThreadSelectorEntry(GetCurrentThread(), 0x000f, &sel.entry);
+-        todo_wine
+         ok(ret, "GetThreadSelectorEntry failed\n");
+-        todo_wine
+         ok(!memcmp(&ds_entry, &sel.entry, sizeof(ds_entry)), "entries do not match\n");
+ 
+         memset(&sel.entry, 0x9a, sizeof(sel.entry));
+         ret = GetThreadSelectorEntry(GetCurrentThread(), 0x001f, &sel.entry);
+-        todo_wine
+         ok(ret, "GetThreadSelectorEntry failed\n");
+-        todo_wine
+         ok(!memcmp(&ds_entry, &sel.entry, sizeof(ds_entry)), "entries do not match\n");
+     }
+ }
+diff --git a/libs/wine/ldt.c b/libs/wine/ldt.c
+index 0946407..8ac779a 100644
+--- a/libs/wine/ldt.c
++++ b/libs/wine/ldt.c
+@@ -169,8 +169,6 @@ static int internal_set_entry( unsigned short sel, const LDT_ENTRY *entry )
+ {
+     int ret = 0, index = sel >> 3;
+ 
+-    if (index < LDT_FIRST_ENTRY) return 0;  /* cannot modify reserved entries */
+-
+ #ifdef linux
+     {
+         struct modify_ldt_s ldt_info;
+@@ -222,7 +220,7 @@ static int internal_set_entry( unsigned short sel, const LDT_ENTRY *entry )
+         wine_ldt_copy.limit[index] = wine_ldt_get_limit(entry);
+         wine_ldt_copy.flags[index] = (entry->HighWord.Bits.Type |
+                                  (entry->HighWord.Bits.Default_Big ? WINE_LDT_FLAGS_32BIT : 0) |
+-                                 (wine_ldt_copy.flags[index] & WINE_LDT_FLAGS_ALLOCATED));
++                                 WINE_LDT_FLAGS_ALLOCATED);
+     }
+     return ret;
+ }
+-- 
+2.8.0
+

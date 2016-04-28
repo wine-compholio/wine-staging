@@ -4957,12 +4957,19 @@ fi
 # |   *	[#26268] Add stub for NtSetLdtEntries/ZwSetLdtEntries
 # |
 # | Modified files:
-# |   *	dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, include/ddk/wdm.h, include/winternl.h
+# |   *	dlls/kernel32/tests/thread.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, include/ddk/wdm.h, include/winternl.h,
+# | 	libs/wine/ldt.c
 # |
 if test "$enable_ntdll_NtSetLdtEntries" -eq 1; then
 	patch_apply ntdll-NtSetLdtEntries/0001-ntdll-add-NtSetLdtEntries-ZwSetLdtEntries-stub-try-2.patch
+	patch_apply ntdll-NtSetLdtEntries/0002-ntdll-Implement-NtSetLdtEntries.patch
+	patch_apply ntdll-NtSetLdtEntries/0003-libs-wine-Allow-to-modify-reserved-LDT-entries.patch
+	patch_apply ntdll-NtSetLdtEntries/0004-ntdll-Export-NtSetLdtEntries-only-on-i386.patch
 	(
 		echo '+    { "Austin English", "ntdll: Add NtSetLdtEntries/ZwSetLdtEntries stub.", 2 },';
+		echo '+    { "Dmitry Timoshkov", "ntdll: Implement NtSetLdtEntries.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "libs/wine: Allow to modify reserved LDT entries.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Export NtSetLdtEntries only on i386.", 1 },';
 	) >> "$patchlist"
 fi
 

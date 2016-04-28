@@ -1,0 +1,170 @@
+From aadd7b2c0ca9bf60d64c3ed4e0722de3899b8c13 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Thu, 28 Apr 2016 18:14:36 +0800
+Subject: ntdll: Implement NtSetLdtEntries.
+
+---
+ dlls/kernel32/tests/thread.c | 79 ++++++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/nt.c              | 28 +++++++++++++++-
+ 2 files changed, 106 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/kernel32/tests/thread.c b/dlls/kernel32/tests/thread.c
+index e0de3f9..981e3c4 100644
+--- a/dlls/kernel32/tests/thread.c
++++ b/dlls/kernel32/tests/thread.c
+@@ -102,6 +102,7 @@ static NTSTATUS (WINAPI *pNtQueryInformationThread)(HANDLE,THREADINFOCLASS,PVOID
+ static BOOL (WINAPI *pGetThreadGroupAffinity)(HANDLE,GROUP_AFFINITY*);
+ static BOOL (WINAPI *pSetThreadGroupAffinity)(HANDLE,const GROUP_AFFINITY*,GROUP_AFFINITY*);
+ static NTSTATUS (WINAPI *pNtSetInformationThread)(HANDLE,THREADINFOCLASS,LPCVOID,ULONG);
++static NTSTATUS (WINAPI *pNtSetLdtEntries)(ULONG,ULONG,ULONG,ULONG,ULONG,ULONG);
+ 
+ static HANDLE create_target_process(const char *arg)
+ {
+@@ -1100,6 +1101,82 @@ static void test_SetThreadContext(void)
+     CloseHandle( thread );
+ }
+ 
++static void test_NtSetLdtEntries(void)
++{
++    THREAD_DESCRIPTOR_INFORMATION tdi;
++    LDT_ENTRY ds_entry;
++    CONTEXT ctx;
++    DWORD ret;
++    union
++    {
++        LDT_ENTRY entry;
++        DWORD dw[2];
++    } sel;
++
++    if (!pNtSetLdtEntries)
++    {
++        win_skip("NtSetLdtEntries is not available on this platform\n");
++        return;
++    }
++
++    if (pNtSetLdtEntries(0, 0, 0, 0, 0, 0) == STATUS_NOT_IMPLEMENTED) /* WoW64 */
++    {
++        win_skip("NtSetLdtEntries is not implemented on this platform\n");
++        return;
++    }
++
++    ret = pNtSetLdtEntries(0, 0, 0, 0, 0, 0);
++    ok(!ret, "NtSetLdtEntries failed: %08x\n", ret);
++
++    ctx.ContextFlags = CONTEXT_SEGMENTS;
++    ret = GetThreadContext(GetCurrentThread(), &ctx);
++    ok(ret, "GetThreadContext failed\n");
++
++    tdi.Selector = ctx.SegDs;
++    ret = pNtQueryInformationThread(GetCurrentThread(), 6 /*ThreadDescriptorTableEntry*/, &tdi, sizeof(tdi), &ret);
++    ok(!ret, "NtQueryInformationThread failed: %08x\n", ret);
++    ds_entry = tdi.Entry;
++
++    tdi.Selector = 0x000f;
++    ret = pNtQueryInformationThread(GetCurrentThread(), 6 /*ThreadDescriptorTableEntry*/, &tdi, sizeof(tdi), &ret);
++    ok(ret == STATUS_ACCESS_VIOLATION, "got %08x\n", ret);
++
++    tdi.Selector = 0x001f;
++    ret = pNtQueryInformationThread(GetCurrentThread(), 6 /*ThreadDescriptorTableEntry*/, &tdi, sizeof(tdi), &ret);
++    ok(ret == STATUS_ACCESS_VIOLATION, "NtQueryInformationThread returned %08x\n", ret);
++
++    ret = GetThreadSelectorEntry(GetCurrentThread(), 0x000f, &sel.entry);
++    ok(!ret, "GetThreadSelectorEntry should fail\n");
++
++    ret = GetThreadSelectorEntry(GetCurrentThread(), 0x001f, &sel.entry);
++    ok(!ret, "GetThreadSelectorEntry should fail\n");
++
++    memset(&sel.entry, 0x9a, sizeof(sel.entry));
++    ret = GetThreadSelectorEntry(GetCurrentThread(), ctx.SegDs, &sel.entry);
++    ok(ret, "GetThreadSelectorEntry failed\n");
++    ok(!memcmp(&ds_entry, &sel.entry, sizeof(ds_entry)), "entries do not match\n");
++
++    ret = pNtSetLdtEntries(0x000f, sel.dw[0], sel.dw[1], 0x001f, sel.dw[0], sel.dw[1]);
++    ok(!ret || broken(ret == STATUS_INVALID_LDT_DESCRIPTOR) /*XP*/, "NtSetLdtEntries failed: %08x\n", ret);
++
++    if (!ret)
++    {
++        memset(&sel.entry, 0x9a, sizeof(sel.entry));
++        ret = GetThreadSelectorEntry(GetCurrentThread(), 0x000f, &sel.entry);
++        todo_wine
++        ok(ret, "GetThreadSelectorEntry failed\n");
++        todo_wine
++        ok(!memcmp(&ds_entry, &sel.entry, sizeof(ds_entry)), "entries do not match\n");
++
++        memset(&sel.entry, 0x9a, sizeof(sel.entry));
++        ret = GetThreadSelectorEntry(GetCurrentThread(), 0x001f, &sel.entry);
++        todo_wine
++        ok(ret, "GetThreadSelectorEntry failed\n");
++        todo_wine
++        ok(!memcmp(&ds_entry, &sel.entry, sizeof(ds_entry)), "entries do not match\n");
++    }
++}
++
+ #endif  /* __i386__ */
+ 
+ static HANDLE finish_event;
+@@ -1913,6 +1990,7 @@ static void init_funcs(void)
+        X(NtQueryInformationThread);
+        X(RtlGetThreadErrorMode);
+        X(NtSetInformationThread);
++       X(NtSetLdtEntries);
+    }
+ #undef X
+ }
+@@ -1965,6 +2043,7 @@ START_TEST(thread)
+    test_GetThreadExitCode();
+ #ifdef __i386__
+    test_SetThreadContext();
++   test_NtSetLdtEntries();
+ #endif
+    test_QueueUserWorkItem();
+    test_RegisterWaitForSingleObject();
+diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
+index 3f5ae2c..fbea627 100644
+--- a/dlls/ntdll/nt.c
++++ b/dlls/ntdll/nt.c
+@@ -56,6 +56,7 @@
+ #include "winternl.h"
+ #include "ntdll_misc.h"
+ #include "wine/server.h"
++#include "wine/library.h"
+ #include "ddk/wdm.h"
+ 
+ #ifdef __APPLE__
+@@ -2790,7 +2791,32 @@ NTSTATUS WINAPI NtSystemDebugControl(SYSDBG_COMMAND command, PVOID inbuffer, ULO
+ NTSTATUS WINAPI NtSetLdtEntries(ULONG selector1, ULONG entry1_low, ULONG entry1_high,
+                                 ULONG selector2, ULONG entry2_low, ULONG entry2_high)
+ {
+-    FIXME("(%u, %u, %u, %u, %u, %u): stub\n", selector1, entry1_low, entry1_high, selector2, entry2_low, entry2_high);
++#ifdef __i386__
++    union
++    {
++        LDT_ENTRY entry;
++        ULONG dw[2];
++    } sel;
++
++    TRACE("(%x,%x,%x,%x,%x,%x)\n", selector1, entry1_low, entry1_high, selector2, entry2_low, entry2_high);
+ 
++    if (selector1)
++    {
++        sel.dw[0] = entry1_low;
++        sel.dw[1] = entry1_high;
++        if (wine_ldt_set_entry(selector1, &sel.entry) < 0)
++            return STATUS_ACCESS_DENIED;
++    }
++    if (selector2)
++    {
++        sel.dw[0] = entry2_low;
++        sel.dw[1] = entry2_high;
++        if (wine_ldt_set_entry(selector2, &sel.entry) < 0)
++            return STATUS_ACCESS_DENIED;
++    }
++    return STATUS_SUCCESS;
++#else
++    FIXME("(%x,%x,%x,%x,%x,%x): stub\n", selector1, entry1_low, entry1_high, selector2, entry2_low, entry2_high);
+     return STATUS_NOT_IMPLEMENTED;
++#endif
+ }
+-- 
+2.8.0
+

@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "4be4e282b737a7cfbccf18552a581ee6de3ac13c"
+	echo "179137c259ffed546fb6f2c88c0d4df0e140cc4c"
 }
 
 # Show version information
@@ -166,7 +166,6 @@ patch_enable_all ()
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Cwd_Startup_Info="$1"
 	enable_kernel32_FindFirstFile="$1"
-	enable_kernel32_FreeUserPhysicalPages="$1"
 	enable_kernel32_GetCurrentPackageFamilyName="$1"
 	enable_kernel32_GetShortPathName="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
@@ -378,7 +377,6 @@ patch_enable_all ()
 	enable_winex11_wglShareLists="$1"
 	enable_winhttp_System_Proxy_Autoconfig="$1"
 	enable_wininet_Cleanup="$1"
-	enable_wininet_HTTPREQ_ReadFile_Async="$1"
 	enable_wininet_HttpOpenRequestW="$1"
 	enable_wininet_Internet_Settings="$1"
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
@@ -668,9 +666,6 @@ patch_enable ()
 			;;
 		kernel32-FindFirstFile)
 			enable_kernel32_FindFirstFile="$2"
-			;;
-		kernel32-FreeUserPhysicalPages)
-			enable_kernel32_FreeUserPhysicalPages="$2"
 			;;
 		kernel32-GetCurrentPackageFamilyName)
 			enable_kernel32_GetCurrentPackageFamilyName="$2"
@@ -1304,9 +1299,6 @@ patch_enable ()
 			;;
 		wininet-Cleanup)
 			enable_wininet_Cleanup="$2"
-			;;
-		wininet-HTTPREQ_ReadFile_Async)
-			enable_wininet_HTTPREQ_ReadFile_Async="$2"
 			;;
 		wininet-HttpOpenRequestW)
 			enable_wininet_HttpOpenRequestW="$2"
@@ -1979,13 +1971,6 @@ if test "$enable_wpcap_Dynamic_Linking" -eq 1; then
 	enable_wpcap_Several_Fixes=1
 fi
 
-if test "$enable_wininet_Cleanup" -eq 1; then
-	if test "$enable_wininet_HTTPREQ_ReadFile_Async" -gt 1; then
-		abort "Patchset wininet-HTTPREQ_ReadFile_Async disabled, but wininet-Cleanup depends on that."
-	fi
-	enable_wininet_HTTPREQ_ReadFile_Async=1
-fi
-
 if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_makedep_PARENTSPEC" -gt 1; then
 		abort "Patchset makedep-PARENTSPEC disabled, but wined3d-CSMT_Helper depends on that."
@@ -2313,14 +2298,10 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	if test "$enable_combase_RoApi" -gt 1; then
 		abort "Patchset combase-RoApi disabled, but api-ms-win-Stub_DLLs depends on that."
 	fi
-	if test "$enable_kernel32_FreeUserPhysicalPages" -gt 1; then
-		abort "Patchset kernel32-FreeUserPhysicalPages disabled, but api-ms-win-Stub_DLLs depends on that."
-	fi
 	if test "$enable_kernel32_GetCurrentPackageFamilyName" -gt 1; then
 		abort "Patchset kernel32-GetCurrentPackageFamilyName disabled, but api-ms-win-Stub_DLLs depends on that."
 	fi
 	enable_combase_RoApi=1
-	enable_kernel32_FreeUserPhysicalPages=1
 	enable_kernel32_GetCurrentPackageFamilyName=1
 fi
 
@@ -2573,21 +2554,6 @@ if test "$enable_combase_RoApi" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-FreeUserPhysicalPages
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39543] Add stub kernel32.FreeUserPhysicalPages
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-memory-l1-1-2/api-ms-win-core-memory-l1-1-2.spec, dlls/kernel32/heap.c, dlls/kernel32/kernel32.spec
-# |
-if test "$enable_kernel32_FreeUserPhysicalPages" -eq 1; then
-	patch_apply kernel32-FreeUserPhysicalPages/0001-kernel32-add-FreeUserPhysicalPages-stub-try-2.patch
-	(
-		echo '+    { "Austin English", "kernel32: Add FreeUserPhysicalPages stub.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-GetCurrentPackageFamilyName
 # |
 # | Modified files:
@@ -2603,7 +2569,7 @@ fi
 # Patchset api-ms-win-Stub_DLLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	combase-RoApi, kernel32-FreeUserPhysicalPages, kernel32-GetCurrentPackageFamilyName
+# |   *	combase-RoApi, kernel32-GetCurrentPackageFamilyName
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#40451] Add feclient dll
@@ -7494,28 +7460,7 @@ if test "$enable_winhttp_System_Proxy_Autoconfig" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wininet-HTTPREQ_ReadFile_Async
-# |
-# | Modified files:
-# |   *	dlls/wininet/http.c, dlls/wininet/tests/http.c
-# |
-if test "$enable_wininet_HTTPREQ_ReadFile_Async" -eq 1; then
-	patch_apply wininet-HTTPREQ_ReadFile_Async/0001-wininet-Fix-async-check-in-HTTPREQ_ReadFileEx.-resen.patch
-	patch_apply wininet-HTTPREQ_ReadFile_Async/0002-wininet-tests-Add-tests-for-asynchronous-InternetRea.patch
-	patch_apply wininet-HTTPREQ_ReadFile_Async/0003-wininet-Handle-async-mode-in-HTTPREQ_ReadFile.-resen.patch
-	patch_apply wininet-HTTPREQ_ReadFile_Async/0004-wininet-tests-Add-tests-for-asynchronous-InternetRea.patch
-	(
-		echo '+    { "Michael Müller", "wininet: Fix async check in HTTPREQ_ReadFileEx.", 1 },';
-		echo '+    { "Sebastian Lackner", "wininet/tests: Add tests for asynchronous InternetReadFileEx.", 3 },';
-		echo '+    { "Michael Müller", "wininet: Handle async mode in HTTPREQ_ReadFile.", 1 },';
-		echo '+    { "Sebastian Lackner", "wininet/tests: Add tests for asynchronous InternetReadFile.", 3 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wininet-Cleanup
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	wininet-HTTPREQ_ReadFile_Async
 # |
 # | Modified files:
 # |   *	dlls/wininet/http.c, dlls/wininet/tests/http.c

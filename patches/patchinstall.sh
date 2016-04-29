@@ -132,6 +132,7 @@ patch_enable_all ()
 	enable_ddraw_Write_Vtable="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
 	enable_dinput_Initialize="$1"
+	enable_dmusic_SynthPort_IKsControl="$1"
 	enable_dsound_DSCAPS_CERTIFIED="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
@@ -563,6 +564,9 @@ patch_enable ()
 			;;
 		dinput-Initialize)
 			enable_dinput_Initialize="$2"
+			;;
+		dmusic-SynthPort_IKsControl)
+			enable_dmusic_SynthPort_IKsControl="$2"
 			;;
 		dsound-DSCAPS_CERTIFIED)
 			enable_dsound_DSCAPS_CERTIFIED="$2"
@@ -3325,6 +3329,23 @@ if test "$enable_dinput_Initialize" -eq 1; then
 	patch_apply dinput-Initialize/0001-dinput-Do-not-wait-for-hook-thread-startup-in-IDirec.patch
 	(
 		echo '+    { "Sebastian Lackner", "dinput: Do not wait for hook thread startup in IDirectInput8::Initialize.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dmusic-SynthPort_IKsControl
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#30105] Implement IKsControl stub subinterface for SynthPort
+# |
+# | Modified files:
+# |   *	dlls/dmusic/buffer.c, dlls/dmusic/dmusic_private.h, dlls/dmusic/port.c
+# |
+if test "$enable_dmusic_SynthPort_IKsControl" -eq 1; then
+	patch_apply dmusic-SynthPort_IKsControl/0001-dmusic-Implement-IDirectMusicBuffer-PackStructured.patch
+	patch_apply dmusic-SynthPort_IKsControl/0002-dmusic-Add-IKsControl-stub-subinterface-for-SynthPor.patch
+	(
+		echo '+    { "Michael Müller", "dmusic: Implement IDirectMusicBuffer::PackStructured.", 1 },';
+		echo '+    { "Michael Müller", "dmusic: Add IKsControl stub subinterface for SynthPort.", 1 },';
 	) >> "$patchlist"
 fi
 

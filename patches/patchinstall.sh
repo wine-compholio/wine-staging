@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "179137c259ffed546fb6f2c88c0d4df0e140cc4c"
+	echo "5e6f35ffbd8795da71c6fd6cb8adc84bf8a36504"
 }
 
 # Show version information
@@ -144,7 +144,6 @@ patch_enable_all ()
 	enable_dxva2_Video_Decoder="$1"
 	enable_explorer_Video_Registry_Key="$1"
 	enable_fonts_Missing_Fonts="$1"
-	enable_fontsub_CreateFontPackage="$1"
 	enable_fsutil_Stub_Program="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_MultiMonitor="$1"
@@ -333,7 +332,6 @@ patch_enable_all ()
 	enable_user32_PNG_Support="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
-	enable_user32_SetCoalescableTimer="$1"
 	enable_user32_lpCreateParams="$1"
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_GetFileVersionInfoSizeExW="$1"
@@ -600,9 +598,6 @@ patch_enable ()
 			;;
 		fonts-Missing_Fonts)
 			enable_fonts_Missing_Fonts="$2"
-			;;
-		fontsub-CreateFontPackage)
-			enable_fontsub_CreateFontPackage="$2"
 			;;
 		fsutil-Stub_Program)
 			enable_fsutil_Stub_Program="$2"
@@ -1167,9 +1162,6 @@ patch_enable ()
 			;;
 		user32-ScrollWindowEx)
 			enable_user32_ScrollWindowEx="$2"
-			;;
-		user32-SetCoalescableTimer)
-			enable_user32_SetCoalescableTimer="$2"
 			;;
 		user32-lpCreateParams)
 			enable_user32_lpCreateParams="$2"
@@ -3599,21 +3591,6 @@ if test "$enable_fonts_Missing_Fonts" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset fontsub-CreateFontPackage
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40517] Improve fontsub.CreateFontPackage stub implementation
-# |
-# | Modified files:
-# |   *	dlls/fontsub/main.c, include/fontsub.h
-# |
-if test "$enable_fontsub_CreateFontPackage" -eq 1; then
-	patch_apply fontsub-CreateFontPackage/0001-fontsub-CreateFontPackage-straight-copy.patch
-	(
-		echo '+    { "Nikolay Sivov", "fontsub: CreateFontPackage() straight copy.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset fsutil-Stub_Program
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4049,13 +4026,11 @@ if test "$enable_server_Desktop_Refcount" -eq 1; then
 	patch_apply server-Desktop_Refcount/0001-server-Introduce-a-new-alloc_handle-object-callback..patch
 	patch_apply server-Desktop_Refcount/0002-server-Track-desktop-handle-count-more-correctly.patch
 	patch_apply server-Desktop_Refcount/0003-user32-Implement-CWF_CREATE_ONLY-flag-for-CreateWind.patch
-	patch_apply server-Desktop_Refcount/0004-user32-tests-Add-additional-tests-for-window-station.patch
-	patch_apply server-Desktop_Refcount/0005-server-Assign-random-name-when-no-name-was-passed-to.patch
+	patch_apply server-Desktop_Refcount/0004-server-Assign-random-name-when-no-name-was-passed-to.patch
 	(
 		echo '+    { "Sebastian Lackner", "server: Introduce a new alloc_handle object callback.", 2 },';
 		echo '+    { "Sebastian Lackner", "server: Track desktop handle count more correctly.", 1 },';
 		echo '+    { "Sebastian Lackner", "user32: Implement CWF_CREATE_ONLY flag for CreateWindowStation.", 1 },';
-		echo '+    { "Sebastian Lackner", "user32/tests: Add additional tests for window station name.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Assign random name when no name was passed to create_winstation.", 1 },';
 	) >> "$patchlist"
 fi
@@ -5695,14 +5670,12 @@ fi
 # Patchset quartz-AsyncReader
 # |
 # | Modified files:
-# |   *	dlls/quartz/filesource.c, dlls/quartz/regsvr.c
+# |   *	dlls/quartz/filesource.c
 # |
 if test "$enable_quartz_AsyncReader" -eq 1; then
 	patch_apply quartz-AsyncReader/0001-quartz-AsyncReader-should-return-NULL-as-media-subty.patch
-	patch_apply quartz-AsyncReader/0002-quartz-Recognize-mpeg2-program-streams.patch
 	(
 		echo '+    { "Michael Müller", "quartz: AsyncReader should return NULL as media subtype for unknown formats instead of failing.", 1 },';
-		echo '+    { "Michael Müller", "quartz: Recognize mpeg2 program streams.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6827,21 +6800,6 @@ if test "$enable_user32_ScrollWindowEx" -eq 1; then
 	patch_apply user32-ScrollWindowEx/0001-user32-Fix-return-value-of-ScrollWindowEx-for-invisi.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "user32: Fix return value of ScrollWindowEx for invisible windows.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-SetCoalescableTimer
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39509] Add stub for SetCoalescableTimer
-# |
-# | Modified files:
-# |   *	dlls/user32/message.c, dlls/user32/user32.spec
-# |
-if test "$enable_user32_SetCoalescableTimer" -eq 1; then
-	patch_apply user32-SetCoalescableTimer/0001-user32-add-SetCoalescableTimer-stub.patch
-	(
-		echo '+    { "Austin English", "user32: Add SetCoalescableTimer stub.", 1 },';
 	) >> "$patchlist"
 fi
 

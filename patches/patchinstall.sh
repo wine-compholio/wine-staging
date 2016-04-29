@@ -185,6 +185,7 @@ patch_enable_all ()
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mpr_WNetGetUniversalNameW="$1"
+	enable_mscoree_Buffer_Overflow="$1"
 	enable_mscoree_CorValidateImage="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
 	enable_msidb_Implementation="$1"
@@ -721,6 +722,9 @@ patch_enable ()
 			;;
 		mpr-WNetGetUniversalNameW)
 			enable_mpr_WNetGetUniversalNameW="$2"
+			;;
+		mscoree-Buffer_Overflow)
+			enable_mscoree_Buffer_Overflow="$2"
 			;;
 		mscoree-CorValidateImage)
 			enable_mscoree_CorValidateImage="$2"
@@ -4337,6 +4341,18 @@ if test "$enable_mpr_WNetGetUniversalNameW" -eq 1; then
 	patch_apply mpr-WNetGetUniversalNameW/0001-mpr-Return-correct-error-code-for-non-network-paths-.patch
 	(
 		echo '+    { "Michael Müller", "mpr: Return correct error code for non network paths and REMOTE_NAME_INFO_LEVEL in WNetGetUniversalName.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset mscoree-Buffer_Overflow
+# |
+# | Modified files:
+# |   *	dlls/mscoree/metahost.c
+# |
+if test "$enable_mscoree_Buffer_Overflow" -eq 1; then
+	patch_apply mscoree-Buffer_Overflow/0001-mscoree-Avoid-buffer-overflow-when-mono-print-handle.patch
+	(
+		echo '+    { "Sebastian Lackner", "mscoree: Avoid buffer overflow when mono print handler returns huge string at once.", 1 },';
 	) >> "$patchlist"
 fi
 

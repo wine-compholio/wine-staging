@@ -4943,13 +4943,11 @@ if test "$enable_ntdll_NtSetLdtEntries" -eq 1; then
 	patch_apply ntdll-NtSetLdtEntries/0002-ntdll-Initialize-Reserved_0-bit-in-NtQueryInformatio.patch
 	patch_apply ntdll-NtSetLdtEntries/0003-ntdll-Implement-NtSetLdtEntries.patch
 	patch_apply ntdll-NtSetLdtEntries/0004-libs-wine-Allow-to-modify-reserved-LDT-entries.patch
-	patch_apply ntdll-NtSetLdtEntries/0005-ntdll-Export-NtSetLdtEntries-only-on-i386.patch
 	(
 		echo '+    { "Austin English", "ntdll: Add NtSetLdtEntries/ZwSetLdtEntries stub.", 2 },';
 		echo '+    { "Sebastian Lackner", "ntdll: Initialize Reserved_0 bit in NtQueryInformationThread.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "ntdll: Implement NtSetLdtEntries.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "libs/wine: Allow to modify reserved LDT entries.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Export NtSetLdtEntries only on i386.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -383,6 +383,7 @@ patch_enable_all ()
 	enable_winmm_mciSendCommandA="$1"
 	enable_winspool_drv_SetPrinterW="$1"
 	enable_wintrust_WinVerifyTrust="$1"
+	enable_wmic_Query_Path="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_wpcap_Several_Fixes="$1"
 	enable_ws2_32_APC_Performance="$1"
@@ -1316,6 +1317,9 @@ patch_enable ()
 			;;
 		wintrust-WinVerifyTrust)
 			enable_wintrust_WinVerifyTrust="$2"
+			;;
+		wmic-Query_Path)
+			enable_wmic_Query_Path="$2"
 			;;
 		wpcap-Dynamic_Linking)
 			enable_wpcap_Dynamic_Linking="$2"
@@ -7509,6 +7513,18 @@ if test "$enable_wintrust_WinVerifyTrust" -eq 1; then
 		echo '+    { "Mark Jansen", "wintrust/tests: Add tests for WinVerifyTrust.", 2 },';
 		echo '+    { "Sebastian Lackner", "wintrust/tests: Add some additional tests.", 1 },';
 		echo '+    { "Mark Jansen", "wintrust: Verify image hash in WinVerifyTrust.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wmic-Query_Path
+# |
+# | Modified files:
+# |   *	programs/wmic/main.c, programs/wmic/wmic.h, programs/wmic/wmic.rc
+# |
+if test "$enable_wmic_Query_Path" -eq 1; then
+	patch_apply wmic-Query_Path/0001-wmic-Improve-cmd-line-parser-and-add-support-for-pat.patch
+	(
+		echo '+    { "Michael Müller", "wmic: Improve cmd line parser and add support for path command.", 1 },';
 	) >> "$patchlist"
 fi
 

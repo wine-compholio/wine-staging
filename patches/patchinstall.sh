@@ -169,6 +169,7 @@ patch_enable_all ()
 	enable_kernel32_GetCurrentPackageFamilyName="$1"
 	enable_kernel32_GetShortPathName="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
+	enable_kernel32_Misalign_Workaround="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_Profile="$1"
@@ -675,6 +676,9 @@ patch_enable ()
 			;;
 		kernel32-LocaleNameToLCID)
 			enable_kernel32_LocaleNameToLCID="$2"
+			;;
+		kernel32-Misalign_Workaround)
+			enable_kernel32_Misalign_Workaround="$2"
 			;;
 		kernel32-Named_Pipe)
 			enable_kernel32_Named_Pipe="$2"
@@ -3996,6 +4000,21 @@ if test "$enable_kernel32_LocaleNameToLCID" -eq 1; then
 	patch_apply kernel32-LocaleNameToLCID/0001-kernel32-Silence-repeated-LocaleNameToLCID-unsupport.patch
 	(
 		echo '+    { "Jarkko Korpi", "kernel32: Silence repeated LocaleNameToLCID unsupported flags message.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-Misalign_Workaround
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#24374] Fill stack with meaningful values in call_process_entry mis-align workaround
+# |
+# | Modified files:
+# |   *	dlls/kernel32/process.c
+# |
+if test "$enable_kernel32_Misalign_Workaround" -eq 1; then
+	patch_apply kernel32-Misalign_Workaround/0001-kernel32-Fill-stack-with-meaningful-values-in-call_p.patch
+	(
+		echo '+    { "Sebastian Lackner", "kernel32: Fill stack with meaningful values in call_process_entry mis-align workaround.", 1 },';
 	) >> "$patchlist"
 fi
 

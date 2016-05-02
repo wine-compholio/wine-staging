@@ -1,4 +1,4 @@
-From 725a496f1d8484b7392ef0f14cb13ddd18b1dca5 Mon Sep 17 00:00:00 2001
+From 3c2e5967acbc177bf43c2cb6012bdc22c7a59fb2 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 27 Feb 2015 01:04:33 +0100
 Subject: shell32: Implement file operation progress dialog.
@@ -11,7 +11,7 @@ Based on a patch by Huw Campbell.
  3 files changed, 285 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/shell32/shell32.rc b/dlls/shell32/shell32.rc
-index 37acbe7..dd054fb 100644
+index bfba962..277b23a 100644
 --- a/dlls/shell32/shell32.rc
 +++ b/dlls/shell32/shell32.rc
 @@ -184,6 +184,13 @@ If the files in the destination folder have the same names as files in the\n\
@@ -29,7 +29,7 @@ index 37acbe7..dd054fb 100644
          IDS_RESTART_TITLE       "Restart"
          IDS_RESTART_PROMPT      "Do you want to simulate a Windows reboot?"
 diff --git a/dlls/shell32/shlfileop.c b/dlls/shell32/shlfileop.c
-index ed8ff38..0d50223 100644
+index 5f0189b..5ad241c 100644
 --- a/dlls/shell32/shlfileop.c
 +++ b/dlls/shell32/shlfileop.c
 @@ -65,6 +65,10 @@ typedef struct
@@ -140,7 +140,7 @@ index ed8ff38..0d50223 100644
      if (ret)
      {
          SHChangeNotify(SHCNE_CREATE, SHCNF_PATHW, dest, NULL);
-@@ -1293,6 +1332,8 @@ static DWORD copy_files(FILE_OPERATION *op, BOOL multidest, const FILE_LIST *flF
+@@ -1292,6 +1331,8 @@ static int copy_files(FILE_OPERATION *op, BOOL multidest, const FILE_LIST *flFro
          }
  
          /* Vista return code. XP would return e.g. ERROR_FILE_NOT_FOUND, ERROR_ALREADY_EXISTS */
@@ -149,7 +149,7 @@ index ed8ff38..0d50223 100644
          if (op->bCancelled)
              return ERROR_CANCELLED;
      }
-@@ -1374,13 +1415,17 @@ static DWORD delete_files(FILE_OPERATION *op, const FILE_LIST *flFrom)
+@@ -1374,13 +1415,17 @@ static int delete_files(FILE_OPERATION *op, const FILE_LIST *flFrom)
  
          /* delete the file or directory */
          if (IsAttribFile(fileEntry->attributes))
@@ -169,7 +169,7 @@ index ed8ff38..0d50223 100644
      }
  
      return ERROR_SUCCESS;
-@@ -1485,6 +1530,11 @@ static DWORD move_files(FILE_OPERATION *op, BOOL multidest, const FILE_LIST *flF
+@@ -1455,6 +1500,11 @@ static int move_files(FILE_OPERATION *op, BOOL multidest, const FILE_LIST *flFro
              move_to_dir(op, entryToMove, fileDest);
          else
              SHNotifyMoveFileW(op, entryToMove->szFullPath, fileDest->szFullPath);
@@ -181,7 +181,7 @@ index ed8ff38..0d50223 100644
      }
  
      if (mismatched > 0)
-@@ -1544,6 +1594,7 @@ int WINAPI SHFileOperationW(LPSHFILEOPSTRUCTW lpFileOp)
+@@ -1514,6 +1564,7 @@ int WINAPI SHFileOperationW(LPSHFILEOPSTRUCTW lpFileOp)
  {
      FILE_OPERATION op;
      FILE_LIST flFrom, flTo;
@@ -189,7 +189,7 @@ index ed8ff38..0d50223 100644
      int ret = 0;
  
      if (!lpFileOp)
-@@ -1562,9 +1613,31 @@ int WINAPI SHFileOperationW(LPSHFILEOPSTRUCTW lpFileOp)
+@@ -1532,9 +1583,31 @@ int WINAPI SHFileOperationW(LPSHFILEOPSTRUCTW lpFileOp)
  
      ZeroMemory(&op, sizeof(op));
      op.req = lpFileOp;
@@ -221,7 +221,7 @@ index ed8ff38..0d50223 100644
      switch (lpFileOp->wFunc)
      {
          case FO_COPY:
-@@ -1584,6 +1657,12 @@ int WINAPI SHFileOperationW(LPSHFILEOPSTRUCTW lpFileOp)
+@@ -1554,6 +1627,12 @@ int WINAPI SHFileOperationW(LPSHFILEOPSTRUCTW lpFileOp)
              break;
      }
  
@@ -234,17 +234,17 @@ index ed8ff38..0d50223 100644
      destroy_file_list(&flFrom);
  
      if (lpFileOp->wFunc != FO_DELETE)
-@@ -1592,6 +1671,9 @@ int WINAPI SHFileOperationW(LPSHFILEOPSTRUCTW lpFileOp)
+@@ -1562,6 +1641,9 @@ int WINAPI SHFileOperationW(LPSHFILEOPSTRUCTW lpFileOp)
      if (ret == ERROR_CANCELLED)
          lpFileOp->fAnyOperationsAborted = TRUE;
  
 +    if (SUCCEEDED(co_ret))
 +        CoUninitialize();
 +
+     SetLastError(ERROR_SUCCESS);
      return ret;
  }
- 
-@@ -1822,3 +1904,184 @@ HRESULT WINAPI SHPathPrepareForWriteW(HWND hwnd, IUnknown *modless, LPCWSTR path
+@@ -1793,3 +1875,184 @@ HRESULT WINAPI SHPathPrepareForWriteW(HWND hwnd, IUnknown *modless, LPCWSTR path
      else
          return HRESULT_FROM_WIN32(ERROR_DIRECTORY);
  }
@@ -449,5 +449,5 @@ index 183a75e..8ee525a 100644
  #define IDS_RECYCLEBIN_FOLDER_NAME   8964
  
 -- 
-2.3.0
+2.8.0
 

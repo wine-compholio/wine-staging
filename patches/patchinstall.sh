@@ -51,13 +51,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5e6f35ffbd8795da71c6fd6cb8adc84bf8a36504"
+	echo "bd2999db92e63f3aa8b48945503c616c28726842"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 1.9.9"
+	echo "Wine Staging 1.9.10 (unreleased)"
 	echo "Copyright (C) 2014-2016 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -137,7 +137,6 @@ patch_enable_all ()
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
-	enable_dwmapi_DwmSetWindowAttribute="$1"
 	enable_dxdiagn_Display_Information="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
@@ -312,7 +311,6 @@ patch_enable_all ()
 	enable_shell32_SHFileOperation_Move="$1"
 	enable_shell32_SHFileOperation_Win9x="$1"
 	enable_shell32_Toolbar_Bitmaps="$1"
-	enable_shell32_UNIXFS_get_unix_path="$1"
 	enable_shell32_UnixFS="$1"
 	enable_shlwapi_AssocGetPerceivedType="$1"
 	enable_shlwapi_SHMapHandle="$1"
@@ -580,9 +578,6 @@ patch_enable ()
 			;;
 		dsound-Revert_Cleanup)
 			enable_dsound_Revert_Cleanup="$2"
-			;;
-		dwmapi-DwmSetWindowAttribute)
-			enable_dwmapi_DwmSetWindowAttribute="$2"
 			;;
 		dxdiagn-Display_Information)
 			enable_dxdiagn_Display_Information="$2"
@@ -1105,9 +1100,6 @@ patch_enable ()
 			;;
 		shell32-Toolbar_Bitmaps)
 			enable_shell32_Toolbar_Bitmaps="$2"
-			;;
-		shell32-UNIXFS_get_unix_path)
-			enable_shell32_UNIXFS_get_unix_path="$2"
 			;;
 		shell32-UnixFS)
 			enable_shell32_UnixFS="$2"
@@ -1813,9 +1805,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_ntdll_Heap_FreeLists" -gt 1; then
 		abort "Patchset ntdll-Heap_FreeLists disabled, but category-stable depends on that."
 	fi
-	if test "$enable_ntdll_NtSetLdtEntries" -gt 1; then
-		abort "Patchset ntdll-NtSetLdtEntries disabled, but category-stable depends on that."
-	fi
 	if test "$enable_ntdll_Pipe_SpecialCharacters" -gt 1; then
 		abort "Patchset ntdll-Pipe_SpecialCharacters disabled, but category-stable depends on that."
 	fi
@@ -1925,7 +1914,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_ntdll_Fix_Alignment=1
 	enable_ntdll_FreeBSD_Directory=1
 	enable_ntdll_Heap_FreeLists=1
-	enable_ntdll_NtSetLdtEntries=1
 	enable_ntdll_Pipe_SpecialCharacters=1
 	enable_ntdll_RtlIpStringToAddress_Tests=1
 	enable_ntdll_Threading=1
@@ -3425,18 +3413,6 @@ if test "$enable_dsound_EAX" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dwmapi-DwmSetWindowAttribute
-# |
-# | Modified files:
-# |   *	dlls/dwmapi/dwmapi_main.c
-# |
-if test "$enable_dwmapi_DwmSetWindowAttribute" -eq 1; then
-	patch_apply dwmapi-DwmSetWindowAttribute/0001-dwmapi-Return-S_OK-from-DwmSetWindowAttribute-functi.patch
-	(
-		echo '+    { "Michael Müller", "dwmapi: Return S_OK from DwmSetWindowAttribute function.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dxdiagn-Display_Information
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4889,21 +4865,13 @@ fi
 
 # Patchset ntdll-NtSetLdtEntries
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#26268] Add stub for NtSetLdtEntries/ZwSetLdtEntries
-# |
 # | Modified files:
-# |   *	dlls/kernel32/tests/thread.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, dlls/ntdll/thread.c, include/ddk/wdm.h,
-# | 	include/winternl.h, libs/wine/ldt.c
+# |   *	dlls/kernel32/tests/thread.c, dlls/ntdll/nt.c, libs/wine/ldt.c
 # |
 if test "$enable_ntdll_NtSetLdtEntries" -eq 1; then
-	patch_apply ntdll-NtSetLdtEntries/0001-ntdll-add-NtSetLdtEntries-ZwSetLdtEntries-stub-try-2.patch
-	patch_apply ntdll-NtSetLdtEntries/0002-ntdll-Initialize-Reserved_0-bit-in-NtQueryInformatio.patch
-	patch_apply ntdll-NtSetLdtEntries/0003-ntdll-Implement-NtSetLdtEntries.patch
-	patch_apply ntdll-NtSetLdtEntries/0004-libs-wine-Allow-to-modify-reserved-LDT-entries.patch
+	patch_apply ntdll-NtSetLdtEntries/0001-ntdll-Implement-NtSetLdtEntries.patch
+	patch_apply ntdll-NtSetLdtEntries/0002-libs-wine-Allow-to-modify-reserved-LDT-entries.patch
 	(
-		echo '+    { "Austin English", "ntdll: Add NtSetLdtEntries/ZwSetLdtEntries stub.", 2 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Initialize Reserved_0 bit in NtQueryInformationThread.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "ntdll: Implement NtSetLdtEntries.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "libs/wine: Allow to modify reserved LDT entries.", 1 },';
 	) >> "$patchlist"
@@ -6389,18 +6357,6 @@ if test "$enable_shell32_Toolbar_Bitmaps" -eq 1; then
 	(
 		echo '+    { "Dmitry Timoshkov", "shell32: Add toolbar bitmaps compatible with IE6.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "shell32: Add more Tango icons to the IE toolbar.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset shell32-UNIXFS_get_unix_path
-# |
-# | Modified files:
-# |   *	dlls/shell32/shfldr_unixfs.c
-# |
-if test "$enable_shell32_UNIXFS_get_unix_path" -eq 1; then
-	patch_apply shell32-UNIXFS_get_unix_path/0001-shell32-Check-IsWoW64Process-before-calling-Wow64-fu.patch
-	(
-		echo '+    { "Olivier F. R. Dierick", "shell32: Check IsWoW64Process before calling Wow64 functions.", 2 },';
 	) >> "$patchlist"
 fi
 

@@ -1,4 +1,4 @@
-From eb62198f629e008a4f24c0aaf05cc61d413685d6 Mon Sep 17 00:00:00 2001
+From 3b870c439904eef2623f7d027213e66dc99822f0 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 30 Mar 2015 12:50:21 +0200
 Subject: server: Temporarily store the full security descriptor for file
@@ -12,10 +12,10 @@ Subject: server: Temporarily store the full security descriptor for file
  4 files changed, 74 insertions(+), 41 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index f34831d..b149ea4 100644
+index 059f798..0bf7228 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -3350,7 +3350,6 @@ static void test_CreateDirectoryA(void)
+@@ -3540,7 +3540,6 @@ static void test_CreateDirectoryA(void)
      ok(error == ERROR_SUCCESS, "GetNamedSecurityInfo failed with error %d\n", error);
      bret = pGetAclInformation(pDacl, &acl_size, sizeof(acl_size), AclSizeInformation);
      ok(bret, "GetAclInformation failed\n");
@@ -23,7 +23,7 @@ index f34831d..b149ea4 100644
      ok(acl_size.AceCount == 0, "GetAclInformation returned unexpected entry count (%d != 0).\n",
                                 acl_size.AceCount);
      LocalFree(pSD);
-@@ -3426,7 +3425,6 @@ static void test_CreateDirectoryA(void)
+@@ -3616,7 +3615,6 @@ static void test_CreateDirectoryA(void)
      ok(error == ERROR_SUCCESS, "GetNamedSecurityInfo failed with error %d\n", error);
      bret = pGetAclInformation(pDacl, &acl_size, sizeof(acl_size), AclSizeInformation);
      ok(bret, "GetAclInformation failed\n");
@@ -31,7 +31,7 @@ index f34831d..b149ea4 100644
      ok(acl_size.AceCount == 0, "GetAclInformation returned unexpected entry count (%d != 0).\n",
                                 acl_size.AceCount);
      LocalFree(pSD);
-@@ -3572,7 +3570,6 @@ static void test_CreateDirectoryA(void)
+@@ -3762,7 +3760,6 @@ static void test_CreateDirectoryA(void)
      ok(error == ERROR_SUCCESS, "GetNamedSecurityInfo failed with error %d\n", error);
      bret = pGetAclInformation(pDacl, &acl_size, sizeof(acl_size), AclSizeInformation);
      ok(bret, "GetAclInformation failed\n");
@@ -39,7 +39,7 @@ index f34831d..b149ea4 100644
      ok(acl_size.AceCount == 0, "GetAclInformation returned unexpected entry count (%d != 0).\n",
                                 acl_size.AceCount);
      LocalFree(pSD);
-@@ -4552,23 +4549,22 @@ static void test_GetSecurityInfo(void)
+@@ -4742,23 +4739,22 @@ static void test_GetSecurityInfo(void)
          bret = pGetAce(pDacl, 0, (VOID **)&ace);
          ok(bret, "Failed to get Current User ACE.\n");
          bret = EqualSid(&ace->SidStart, user_sid);
@@ -70,10 +70,10 @@ index f34831d..b149ea4 100644
      LocalFree(pSD);
      CloseHandle(obj);
 diff --git a/server/change.c b/server/change.c
-index 3d5bae0..4c663c3 100644
+index 66ac1d6..a6ed1c6 100644
 --- a/server/change.c
 +++ b/server/change.c
-@@ -1032,7 +1032,8 @@ static int dir_add_to_existing_notify( struct dir *dir )
+@@ -1125,7 +1125,8 @@ static int dir_add_to_existing_notify( struct dir *dir )
  
  #endif  /* USE_INOTIFY */
  
@@ -83,8 +83,8 @@ index 3d5bae0..4c663c3 100644
  {
      struct dir *dir;
  
-@@ -1051,6 +1052,11 @@ struct object *create_dir_obj( struct fd *fd, unsigned int access, mode_t mode )
-     dir->uid  = ~(uid_t)0;
+@@ -1145,6 +1146,11 @@ struct object *create_dir_obj( struct fd *fd, unsigned int access, mode_t mode )
+     dir->client_process = NULL;
      set_fd_user( fd, &dir_fd_ops, &dir->obj );
  
 +    if (sd) dir_set_sd( &dir->obj, sd, OWNER_SECURITY_INFORMATION |
@@ -241,10 +241,10 @@ index 81a7496..be98fa1 100644
      }
      if (root_fd) release_object( root_fd );
 diff --git a/server/file.h b/server/file.h
-index b9e27e2..3274c5c 100644
+index e11d19f..32bf595 100644
 --- a/server/file.h
 +++ b/server/file.h
-@@ -154,7 +154,8 @@ extern struct device *create_unix_device( struct directory *root, const struct u
+@@ -154,7 +154,8 @@ extern struct device *create_unix_device( struct object *root, const struct unic
  
  extern void do_change_notify( int unix_fd );
  extern void sigio_callback(void);
@@ -255,5 +255,5 @@ index b9e27e2..3274c5c 100644
  
  /* completion */
 -- 
-2.7.0
+2.8.0
 

@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "bd2999db92e63f3aa8b48945503c616c28726842"
+	echo "9eaa37249948c4d77df37cf3649ad1db59412fcb"
 }
 
 # Show version information
@@ -87,7 +87,6 @@ patch_enable_all ()
 	enable_Staging="$1"
 	enable_advapi32_LsaLookupSids="$1"
 	enable_advapi32_SetSecurityInfo="$1"
-	enable_amstream_GetMultiMediaStream="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
 	enable_avifil32_AVIFile_Proxies="$1"
 	enable_avifil32_IGetFrame_fnSetFormat="$1"
@@ -186,7 +185,6 @@ patch_enable_all ()
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mpr_WNetGetUniversalNameW="$1"
-	enable_mscoree_Buffer_Overflow="$1"
 	enable_mscoree_CorValidateImage="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
 	enable_msidb_Implementation="$1"
@@ -210,8 +208,6 @@ patch_enable_all ()
 	enable_ntdll_FileFsVolumeInformation="$1"
 	enable_ntdll_FileNamesInformation="$1"
 	enable_ntdll_Fix_Alignment="$1"
-	enable_ntdll_Fix_Free="$1"
-	enable_ntdll_FreeBSD_Directory="$1"
 	enable_ntdll_Heap_FreeLists="$1"
 	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Junction_Points="$1"
@@ -262,7 +258,6 @@ patch_enable_all ()
 	enable_openal32_EFX_Extension="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_opengl32_glDebugMessageCallback="$1"
-	enable_quartz_AsyncReader="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_quartz_Silence_FIXMEs="$1"
 	enable_rasapi32_RasEnumDevicesA="$1"
@@ -425,9 +420,6 @@ patch_enable ()
 			;;
 		advapi32-SetSecurityInfo)
 			enable_advapi32_SetSecurityInfo="$2"
-			;;
-		amstream-GetMultiMediaStream)
-			enable_amstream_GetMultiMediaStream="$2"
 			;;
 		api-ms-win-Stub_DLLs)
 			enable_api_ms_win_Stub_DLLs="$2"
@@ -726,9 +718,6 @@ patch_enable ()
 		mpr-WNetGetUniversalNameW)
 			enable_mpr_WNetGetUniversalNameW="$2"
 			;;
-		mscoree-Buffer_Overflow)
-			enable_mscoree_Buffer_Overflow="$2"
-			;;
 		mscoree-CorValidateImage)
 			enable_mscoree_CorValidateImage="$2"
 			;;
@@ -797,12 +786,6 @@ patch_enable ()
 			;;
 		ntdll-Fix_Alignment)
 			enable_ntdll_Fix_Alignment="$2"
-			;;
-		ntdll-Fix_Free)
-			enable_ntdll_Fix_Free="$2"
-			;;
-		ntdll-FreeBSD_Directory)
-			enable_ntdll_FreeBSD_Directory="$2"
 			;;
 		ntdll-Heap_FreeLists)
 			enable_ntdll_Heap_FreeLists="$2"
@@ -953,9 +936,6 @@ patch_enable ()
 			;;
 		opengl32-glDebugMessageCallback)
 			enable_opengl32_glDebugMessageCallback="$2"
-			;;
-		quartz-AsyncReader)
-			enable_quartz_AsyncReader="$2"
 			;;
 		quartz-MediaSeeking_Positions)
 			enable_quartz_MediaSeeking_Positions="$2"
@@ -1799,9 +1779,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_ntdll_Fix_Alignment" -gt 1; then
 		abort "Patchset ntdll-Fix_Alignment disabled, but category-stable depends on that."
 	fi
-	if test "$enable_ntdll_FreeBSD_Directory" -gt 1; then
-		abort "Patchset ntdll-FreeBSD_Directory disabled, but category-stable depends on that."
-	fi
 	if test "$enable_ntdll_Heap_FreeLists" -gt 1; then
 		abort "Patchset ntdll-Heap_FreeLists disabled, but category-stable depends on that."
 	fi
@@ -1912,7 +1889,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_ntdll_DllRedirects=1
 	enable_ntdll_FileFsFullSizeInformation=1
 	enable_ntdll_Fix_Alignment=1
-	enable_ntdll_FreeBSD_Directory=1
 	enable_ntdll_Heap_FreeLists=1
 	enable_ntdll_Pipe_SpecialCharacters=1
 	enable_ntdll_RtlIpStringToAddress_Tests=1
@@ -2140,13 +2116,9 @@ if test "$enable_ntdll_Purist_Mode" -eq 1; then
 fi
 
 if test "$enable_ntdll_Junction_Points" -eq 1; then
-	if test "$enable_ntdll_Fix_Free" -gt 1; then
-		abort "Patchset ntdll-Fix_Free disabled, but ntdll-Junction_Points depends on that."
-	fi
 	if test "$enable_ntdll_NtQueryEaFile" -gt 1; then
 		abort "Patchset ntdll-NtQueryEaFile disabled, but ntdll-Junction_Points depends on that."
 	fi
-	enable_ntdll_Fix_Free=1
 	enable_ntdll_NtQueryEaFile=1
 fi
 
@@ -2471,21 +2443,6 @@ if test "$enable_advapi32_SetSecurityInfo" -eq 1; then
 	(
 		echo '+    { "Erich E. Hoover", "advapi32: Move the DACL combining code into a separate routine.", 1 },';
 		echo '+    { "Erich E. Hoover", "advapi32: Fix the initialization of combined DACLs when the new DACL is empty.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset amstream-GetMultiMediaStream
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37090] Implement AMStream GetMultiMediaStream functions
-# |
-# | Modified files:
-# |   *	dlls/amstream/mediastream.c
-# |
-if test "$enable_amstream_GetMultiMediaStream" -eq 1; then
-	patch_apply amstream-GetMultiMediaStream/0001-amstream-Implement-IAMMediaStream-GetMultiMediaStrea.patch
-	(
-		echo '+    { "Michael Müller", "amstream: Implement IAMMediaStream::GetMultiMediaStream.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4335,18 +4292,6 @@ if test "$enable_mpr_WNetGetUniversalNameW" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset mscoree-Buffer_Overflow
-# |
-# | Modified files:
-# |   *	dlls/mscoree/metahost.c
-# |
-if test "$enable_mscoree_Buffer_Overflow" -eq 1; then
-	patch_apply mscoree-Buffer_Overflow/0001-mscoree-Avoid-buffer-overflow-when-mono-print-handle.patch
-	(
-		echo '+    { "Sebastian Lackner", "mscoree: Avoid buffer overflow when mono print handler returns huge string at once.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset mscoree-CorValidateImage
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4732,33 +4677,6 @@ if test "$enable_ntdll_Fix_Alignment" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-Fix_Free
-# |
-# | Modified files:
-# |   *	dlls/kernel32/path.c
-# |
-if test "$enable_ntdll_Fix_Free" -eq 1; then
-	patch_apply ntdll-Fix_Free/0001-kernel32-Fix-leaking-directory-handle-in-RemoveDirec.patch
-	(
-		echo '+    { "Sebastian Lackner", "kernel32: Fix leaking directory handle in RemoveDirectoryW.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-FreeBSD_Directory
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35397] Use POSIX implementation to enumerate directory content on FreeBSD
-# |
-# | Modified files:
-# |   *	dlls/ntdll/directory.c
-# |
-if test "$enable_ntdll_FreeBSD_Directory" -eq 1; then
-	patch_apply ntdll-FreeBSD_Directory/0001-ntdll-Use-POSIX-implementation-to-enumerate-director.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll: Use POSIX implementation to enumerate directory content.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Heap_FreeLists
 # |
 # | Modified files:
@@ -4801,7 +4719,7 @@ fi
 # Patchset ntdll-Junction_Points
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Fix_Free, ntdll-NtQueryEaFile
+# |   *	ntdll-NtQueryEaFile
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#12401] Support for Junction Points
@@ -5625,18 +5543,6 @@ if test "$enable_opengl32_glDebugMessageCallback" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "opengl32/tests: Include wgl.h and remove duplicate declarations.", 1 },';
 		echo '+    { "Sebastian Lackner", "opengl32: Add wrappers for glDebugMessageCallback to handle calling convention differences.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset quartz-AsyncReader
-# |
-# | Modified files:
-# |   *	dlls/quartz/filesource.c
-# |
-if test "$enable_quartz_AsyncReader" -eq 1; then
-	patch_apply quartz-AsyncReader/0001-quartz-AsyncReader-should-return-NULL-as-media-subty.patch
-	(
-		echo '+    { "Michael Müller", "quartz: AsyncReader should return NULL as media subtype for unknown formats instead of failing.", 1 },';
 	) >> "$patchlist"
 fi
 

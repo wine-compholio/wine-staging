@@ -1,4 +1,4 @@
-From 866f4f12b34e5dfdf24da8074c5d9d4aa7a7f77a Mon Sep 17 00:00:00 2001
+From 80ea1e2a8dacb2ca57549236efb236669cc9153f Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 20 Aug 2014 11:26:48 -0600
 Subject: ntdll: Perform the Unix-style hidden file check within the unified
@@ -11,10 +11,10 @@ Subject: ntdll: Perform the Unix-style hidden file check within the unified
  3 files changed, 10 insertions(+), 15 deletions(-)
 
 diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
-index 41e7115..3975612 100644
+index 223b842..8b13cdc 100644
 --- a/dlls/ntdll/directory.c
 +++ b/dlls/ntdll/directory.c
-@@ -1209,17 +1209,17 @@ static DWORD WINAPI init_options( RTL_RUN_ONCE *once, void *param, void **contex
+@@ -1306,17 +1306,17 @@ static DWORD WINAPI init_options( RTL_RUN_ONCE *once, void *param, void **contex
   *
   * Check if the specified file should be hidden based on its name and the show dot files option.
   */
@@ -37,16 +37,16 @@ index 41e7115..3975612 100644
      if (p == end || *p != '.') return FALSE;
      /* make sure it isn't '.' or '..' */
      if (p + 1 == end) return FALSE;
-@@ -1434,9 +1434,6 @@ static union file_directory_info *append_entry( void *info_ptr, IO_STATUS_BLOCK
-         TRACE( "ignoring file %s\n", long_name );
-         return NULL;
+@@ -1548,9 +1548,6 @@ static NTSTATUS get_dir_data_entry( struct dir_data *dir_data, void *info_ptr, I
+         TRACE( "ignoring file %s\n", names->unix_name );
+         return STATUS_SUCCESS;
      }
--    if (!show_dot_files && long_name[0] == '.' && long_name[1] && (long_name[1] != '.' || long_name[2]))
+-    if (!show_dot_files && names->long_name[0] == '.' && names->long_name[1] &&
+-        (names->long_name[1] != '.' || names->long_name[2]))
 -        attributes |= FILE_ATTRIBUTE_HIDDEN;
--
-     total_len = dir_info_size( class, long_len );
-     if (io->Information + total_len > max_length)
-     {
+ 
+     if (st.st_dev != dir_data->id.dev) st.st_ino = 0;  /* ignore inode if on a different device */
+ 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
 index 0b33acd..24c66bc 100644
 --- a/dlls/ntdll/file.c

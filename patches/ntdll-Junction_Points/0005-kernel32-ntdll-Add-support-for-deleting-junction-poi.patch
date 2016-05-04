@@ -1,16 +1,16 @@
-From 63ede7d3be89603d63c228072c6c3fe7a50ea3e8 Mon Sep 17 00:00:00 2001
+From b4d6d566795a8fd35176414297a58dc6596900eb Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 21:02:11 -0700
 Subject: kernel32,ntdll: Add support for deleting junction points with
  RemoveDirectory.
 
 ---
- dlls/kernel32/path.c    | 21 ++++++++++++++-------
+ dlls/kernel32/path.c    | 13 +++++++++++--
  dlls/ntdll/tests/file.c | 34 +++++++++++++++++++++++++++++++++-
- 2 files changed, 47 insertions(+), 8 deletions(-)
+ 2 files changed, 44 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/kernel32/path.c b/dlls/kernel32/path.c
-index 5847a84..58a4c38 100644
+index 620401d..11711b3 100644
 --- a/dlls/kernel32/path.c
 +++ b/dlls/kernel32/path.c
 @@ -1630,6 +1630,7 @@ BOOL WINAPI CreateDirectoryExW( LPCWSTR template, LPCWSTR path, LPSECURITY_ATTRI
@@ -21,35 +21,32 @@ index 5847a84..58a4c38 100644
      OBJECT_ATTRIBUTES attr;
      UNICODE_STRING nt_name;
      ANSI_STRING unix_name;
-@@ -1663,15 +1664,21 @@ BOOL WINAPI RemoveDirectoryW( LPCWSTR path )
+@@ -1663,15 +1664,23 @@ BOOL WINAPI RemoveDirectoryW( LPCWSTR path )
      }
  
      status = wine_nt_to_unix_file_name( &nt_name, &unix_name, FILE_OPEN, FALSE );
 -    RtlFreeUnicodeString( &nt_name );
--
--    if (status != STATUS_SUCCESS)
--        SetLastError( RtlNtStatusToDosError(status) );
--    else if (!(ret = (rmdir( unix_name.Buffer ) != -1)))
--        FILE_SetDosError();
--
-     if (status == STATUS_SUCCESS)
-+    {
-+        status = NtQueryAttributesFile( &attr, &info );
-+        if (status == STATUS_SUCCESS && (info.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) &&
-+                                        (info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY))
-+            ret = (unlink( unix_name.Buffer ) != -1);
-+        else
-+            ret = (rmdir( unix_name.Buffer ) != -1);
-+        if (!ret) FILE_SetDosError();
-         RtlFreeAnsiString( &unix_name );
-+    }
+     if (status != STATUS_SUCCESS)
+     {
+         SetLastError( RtlNtStatusToDosError(status) );
++        RtlFreeUnicodeString( &nt_name );
+         NtClose( handle );
+         return FALSE;
+     }
+ 
+-    if (!(ret = (rmdir( unix_name.Buffer ) != -1))) FILE_SetDosError();
++    status = NtQueryAttributesFile( &attr, &info );
++    if (status == STATUS_SUCCESS && (info.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) &&
++                                    (info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY))
++        ret = (unlink( unix_name.Buffer ) != -1);
 +    else
-+        SetLastError( RtlNtStatusToDosError(status) );
-+    RtlFreeUnicodeString( &nt_name );
++        ret = (rmdir( unix_name.Buffer ) != -1);
++    if (!ret) FILE_SetDosError();
 +
++    RtlFreeUnicodeString( &nt_name );
+     RtlFreeAnsiString( &unix_name );
      NtClose( handle );
      return ret;
- }
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
 index 174d48a..f7b7d48 100644
 --- a/dlls/ntdll/tests/file.c
@@ -103,5 +100,5 @@ index 174d48a..f7b7d48 100644
      /* Cleanup */
      pRtlFreeUnicodeString( &nameW );
 -- 
-2.7.1
+2.8.0
 

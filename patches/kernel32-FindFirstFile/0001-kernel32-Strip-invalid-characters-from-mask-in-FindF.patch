@@ -1,49 +1,72 @@
-From 07791ffe43d1fda2618994f98986ab5e9cbf3c97 Mon Sep 17 00:00:00 2001
+From 8a1bbc2907aee4de18948be8d3c4a8ad04ddd544 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 6 Feb 2016 18:31:25 +0100
 Subject: kernel32: Strip invalid characters from mask in FindFirstFileExW.
 
 ---
- dlls/kernel32/file.c | 20 ++++++++++++++++++++
- 1 file changed, 20 insertions(+)
+ dlls/kernel32/file.c | 27 +++++++++++++++++++++++----
+ 1 file changed, 23 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/kernel32/file.c b/dlls/kernel32/file.c
-index b6dba6a..3297f4b 100644
+index cc7ead1..f078a9c 100644
 --- a/dlls/kernel32/file.c
 +++ b/dlls/kernel32/file.c
-@@ -2009,12 +2009,32 @@ HANDLE WINAPI FindFirstFileExW( LPCWSTR filename, FINDEX_INFO_LEVELS level,
+@@ -1942,6 +1942,7 @@ HANDLE WINAPI FindFirstFileExW( LPCWSTR filename, FINDEX_INFO_LEVELS level,
+     WCHAR *mask;
+     BOOL has_wildcard = FALSE;
+     FIND_FIRST_INFO *info = NULL;
++    UNICODE_STRING mask_str;
+     UNICODE_STRING nt_name;
+     OBJECT_ATTRIBUTES attr;
+     IO_STATUS_BLOCK io;
+@@ -1973,6 +1974,8 @@ HANDLE WINAPI FindFirstFileExW( LPCWSTR filename, FINDEX_INFO_LEVELS level,
+         return INVALID_HANDLE_VALUE;
+     }
+ 
++    RtlInitUnicodeString( &mask_str, NULL );
++
+     if (!mask && (device = RtlIsDosDeviceName_U( filename )))
+     {
+         static const WCHAR dotW[] = {'.',0};
+@@ -2007,8 +2010,27 @@ HANDLE WINAPI FindFirstFileExW( LPCWSTR filename, FINDEX_INFO_LEVELS level,
      }
      else
      {
 +        static const WCHAR invalidW[] = { '<', '>', '\"', 0 };
 +        static const WCHAR wildcardW[] = { '*', 0 };
-+        DWORD mask_len;
++        DWORD mask_len = strlenW( mask );
 +
-         if (!RtlCreateUnicodeString( &info->mask, mask ))
-         {
-             SetLastError( ERROR_NOT_ENOUGH_MEMORY );
-             goto error;
-         }
- 
 +        /* strip invalid characters from mask */
-+        mask_len = info->mask.Length / sizeof(WCHAR);
-+        while (mask_len && strchrW(invalidW, mask[mask_len - 1]))
++        while (mask_len && strchrW( invalidW, mask[mask_len - 1] ))
 +            mask_len--;
 +
 +        if (!mask_len)
 +        {
-+            strcpyW( info->mask.Buffer, wildcardW );
-+            info->mask.Length = strlenW(wildcardW) * sizeof(WCHAR);
++            has_wildcard = TRUE;
++            RtlInitUnicodeString( &mask_str, wildcardW );
 +        }
 +        else
 +        {
-+            info->mask.Buffer[mask_len] = 0;
-+            info->mask.Length = mask_len * sizeof(WCHAR);
++            has_wildcard = strpbrkW( mask, wildcardsW ) != NULL;
++            RtlInitUnicodeString( &mask_str, mask );
++            mask_str.Length = mask_len * sizeof(WCHAR);
 +        }
 +
-         /* truncate dir name before mask */
-         *mask = 0;
          nt_name.Length = (mask - nt_name.Buffer) * sizeof(WCHAR);
+-        has_wildcard = strpbrkW( mask, wildcardsW ) != NULL;
+         size = has_wildcard ? 8192 : max_entry_size;
+     }
+ 
+@@ -2070,9 +2092,6 @@ HANDLE WINAPI FindFirstFileExW( LPCWSTR filename, FINDEX_INFO_LEVELS level,
+     }
+     else
+     {
+-        UNICODE_STRING mask_str;
+-
+-        RtlInitUnicodeString( &mask_str, mask );
+         status = NtQueryDirectoryFile( info->handle, 0, NULL, NULL, &io, info->data, info->data_size,
+                                        FileBothDirectoryInformation, FALSE, &mask_str, TRUE );
+         if (status)
 -- 
-2.7.0
+2.8.0
 

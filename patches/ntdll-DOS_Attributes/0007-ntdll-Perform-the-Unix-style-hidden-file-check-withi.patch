@@ -1,20 +1,20 @@
-From 80ea1e2a8dacb2ca57549236efb236669cc9153f Mon Sep 17 00:00:00 2001
+From 0bb2c8dfad4f4f9c19660a1a1d4e6f9a678c5735 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 20 Aug 2014 11:26:48 -0600
 Subject: ntdll: Perform the Unix-style hidden file check within the unified
  file info grabbing routine.
 
 ---
- dlls/ntdll/directory.c  | 13 +++++--------
+ dlls/ntdll/directory.c  | 15 +++++----------
  dlls/ntdll/file.c       | 10 ++++------
  dlls/ntdll/ntdll_misc.h |  2 +-
- 3 files changed, 10 insertions(+), 15 deletions(-)
+ 3 files changed, 10 insertions(+), 17 deletions(-)
 
 diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
-index 223b842..8b13cdc 100644
+index 4a34475..59617d6 100644
 --- a/dlls/ntdll/directory.c
 +++ b/dlls/ntdll/directory.c
-@@ -1306,17 +1306,17 @@ static DWORD WINAPI init_options( RTL_RUN_ONCE *once, void *param, void **contex
+@@ -1312,17 +1312,17 @@ static DWORD WINAPI init_options( RTL_RUN_ONCE *once, void *param, void **contex
   *
   * Check if the specified file should be hidden based on its name and the show dot files option.
   */
@@ -37,18 +37,20 @@ index 223b842..8b13cdc 100644
      if (p == end || *p != '.') return FALSE;
      /* make sure it isn't '.' or '..' */
      if (p + 1 == end) return FALSE;
-@@ -1548,9 +1548,6 @@ static NTSTATUS get_dir_data_entry( struct dir_data *dir_data, void *info_ptr, I
-         TRACE( "ignoring file %s\n", names->unix_name );
-         return STATUS_SUCCESS;
+@@ -1571,11 +1571,6 @@ static NTSTATUS get_dir_data_entry( struct dir_data *dir_data, void *info_ptr, I
+     if (class != FileNamesInformation)
+     {
+         if (st.st_dev != dir_data->id.dev) st.st_ino = 0;  /* ignore inode if on a different device */
+-
+-        if (!show_dot_files && names->long_name[0] == '.' && names->long_name[1] &&
+-            (names->long_name[1] != '.' || names->long_name[2]))
+-            attributes |= FILE_ATTRIBUTE_HIDDEN;
+-
+         fill_file_info( &st, attributes, info, class );
      }
--    if (!show_dot_files && names->long_name[0] == '.' && names->long_name[1] &&
--        (names->long_name[1] != '.' || names->long_name[2]))
--        attributes |= FILE_ATTRIBUTE_HIDDEN;
- 
-     if (st.st_dev != dir_data->id.dev) st.st_ino = 0;  /* ignore inode if on a different device */
  
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 0b33acd..24c66bc 100644
+index 7b23304..7f16a51 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
 @@ -218,6 +218,10 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
@@ -62,7 +64,7 @@ index 0b33acd..24c66bc 100644
      len = xattr_get( path, SAMBA_XATTR_DOS_ATTRIB, hexattr, sizeof(hexattr)-1 );
      if (len == -1) return ret;
      *attr |= get_file_xattr( hexattr, len );
-@@ -2996,8 +3000,6 @@ NTSTATUS WINAPI NtQueryFullAttributesFile( const OBJECT_ATTRIBUTES *attr,
+@@ -3003,8 +3007,6 @@ NTSTATUS WINAPI NtQueryFullAttributesFile( const OBJECT_ATTRIBUTES *attr,
              info->AllocationSize = std.AllocationSize;
              info->EndOfFile      = std.EndOfFile;
              info->FileAttributes = basic.FileAttributes;
@@ -71,7 +73,7 @@ index 0b33acd..24c66bc 100644
          }
          RtlFreeAnsiString( &unix_name );
      }
-@@ -3025,11 +3027,7 @@ NTSTATUS WINAPI NtQueryAttributesFile( const OBJECT_ATTRIBUTES *attr, FILE_BASIC
+@@ -3032,11 +3034,7 @@ NTSTATUS WINAPI NtQueryAttributesFile( const OBJECT_ATTRIBUTES *attr, FILE_BASIC
          else if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
              status = STATUS_INVALID_INFO_CLASS;
          else

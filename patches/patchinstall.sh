@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9eaa37249948c4d77df37cf3649ad1db59412fcb"
+	echo "6dd6c76299f02a311e37d20a4cef3a0f917f7076"
 }
 
 # Show version information
@@ -206,7 +206,6 @@ patch_enable_all ()
 	enable_ntdll_FileDispositionInformation="$1"
 	enable_ntdll_FileFsFullSizeInformation="$1"
 	enable_ntdll_FileFsVolumeInformation="$1"
-	enable_ntdll_FileNamesInformation="$1"
 	enable_ntdll_Fix_Alignment="$1"
 	enable_ntdll_Heap_FreeLists="$1"
 	enable_ntdll_Hide_Wine_Exports="$1"
@@ -780,9 +779,6 @@ patch_enable ()
 			;;
 		ntdll-FileFsVolumeInformation)
 			enable_ntdll_FileFsVolumeInformation="$2"
-			;;
-		ntdll-FileNamesInformation)
-			enable_ntdll_FileNamesInformation="$2"
 			;;
 		ntdll-Fix_Alignment)
 			enable_ntdll_Fix_Alignment="$2"
@@ -4647,18 +4643,6 @@ if test "$enable_ntdll_FileFsVolumeInformation" -eq 1; then
 	patch_apply ntdll-FileFsVolumeInformation/0001-ntdll-Add-semi-stub-for-FileFsVolumeInformation-info.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Add semi-stub for FileFsVolumeInformation information class.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-FileNamesInformation
-# |
-# | Modified files:
-# |   *	dlls/ntdll/directory.c
-# |
-if test "$enable_ntdll_FileNamesInformation" -eq 1; then
-	patch_apply ntdll-FileNamesInformation/0001-ntdll-Implement-FileNamesInformation-class-support.patch
-	(
-		echo '+    { "Qian Hong", "ntdll: Implement FileNamesInformation class support.", 1 },';
 	) >> "$patchlist"
 fi
 

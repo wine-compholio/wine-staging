@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "6dd6c76299f02a311e37d20a4cef3a0f917f7076"
+	echo "890312ccfd0f54ece6bd330355183cc84a3a97ec"
 }
 
 # Show version information
@@ -253,6 +253,7 @@ patch_enable_all ()
 	enable_oleaut32_OleLoadPicture="$1"
 	enable_oleaut32_OleLoadPictureFile="$1"
 	enable_oleaut32_TKIND_COCLASS="$1"
+	enable_oleaut32_Vtable_Offset="$1"
 	enable_oleaut32_x86_64_Marshaller="$1"
 	enable_openal32_EFX_Extension="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
@@ -920,6 +921,9 @@ patch_enable ()
 			;;
 		oleaut32-TKIND_COCLASS)
 			enable_oleaut32_TKIND_COCLASS="$2"
+			;;
+		oleaut32-Vtable_Offset)
+			enable_oleaut32_Vtable_Offset="$2"
 			;;
 		oleaut32-x86_64_Marshaller)
 			enable_oleaut32_x86_64_Marshaller="$2"
@@ -5463,6 +5467,18 @@ if test "$enable_oleaut32_TKIND_COCLASS" -eq 1; then
 		echo '+    { "Sebastian Lackner", "oleaut32: Implement ITypeInfo_fnInvoke for TKIND_COCLASS in arguments.", 1 },';
 		echo '+    { "Sebastian Lackner", "oleaut32: Handle TKIND_COCLASS in proxy/stub marshalling.", 1 },';
 		echo '+    { "Sebastian Lackner", "oleaut32/tests: Add a test for TKIND_COCLASS in proxy/stub marshalling.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset oleaut32-Vtable_Offset
+# |
+# | Modified files:
+# |   *	dlls/oleaut32/typelib.c
+# |
+if test "$enable_oleaut32_Vtable_Offset" -eq 1; then
+	patch_apply oleaut32-Vtable_Offset/0001-oleaut32-Extend-a-vtable-offset-before-calling-64-bi.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "oleaut32: Extend a vtable offset before calling 64-bit DispCallFunc() for a 32-bit typelib.", 1 },';
 	) >> "$patchlist"
 fi
 

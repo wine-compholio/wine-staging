@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "890312ccfd0f54ece6bd330355183cc84a3a97ec"
+	echo "e1970c8547aa7fed5a097faf172eadc282b3394e"
 }
 
 # Show version information
@@ -213,6 +213,7 @@ patch_enable_all ()
 	enable_ntdll_Loader_Machine_Type="$1"
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtQueryEaFile="$1"
+	enable_ntdll_NtQueryInformationThread="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_OSX_TEB_x86_64="$1"
@@ -801,6 +802,9 @@ patch_enable ()
 			;;
 		ntdll-NtQueryEaFile)
 			enable_ntdll_NtQueryEaFile="$2"
+			;;
+		ntdll-NtQueryInformationThread)
+			enable_ntdll_NtQueryInformationThread="$2"
 			;;
 		ntdll-NtQuerySection)
 			enable_ntdll_NtQuerySection="$2"
@@ -2113,6 +2117,13 @@ if test "$enable_ntdll_Purist_Mode" -eq 1; then
 		abort "Patchset ntdll-DllRedirects disabled, but ntdll-Purist_Mode depends on that."
 	fi
 	enable_ntdll_DllRedirects=1
+fi
+
+if test "$enable_ntdll_NtSetLdtEntries" -eq 1; then
+	if test "$enable_ntdll_NtQueryInformationThread" -gt 1; then
+		abort "Patchset ntdll-NtQueryInformationThread disabled, but ntdll-NtSetLdtEntries depends on that."
+	fi
+	enable_ntdll_NtQueryInformationThread=1
 fi
 
 if test "$enable_ntdll_Junction_Points" -eq 1; then
@@ -4747,6 +4758,18 @@ if test "$enable_ntdll_NtAccessCheck" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-NtQueryInformationThread
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/thread.c, dlls/ntdll/thread.c
+# |
+if test "$enable_ntdll_NtQueryInformationThread" -eq 1; then
+	patch_apply ntdll-NtQueryInformationThread/0001-ntdll-Add-support-for-fs-to-NtQueryInformationThread.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "ntdll: Add support for fs to NtQueryInformationThread(ThreadDescriptorTableEntry).", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-NtQuerySection
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4770,6 +4793,9 @@ if test "$enable_ntdll_NtQuerySection" -eq 1; then
 fi
 
 # Patchset ntdll-NtSetLdtEntries
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-NtQueryInformationThread
 # |
 # | Modified files:
 # |   *	dlls/kernel32/tests/thread.c, dlls/ntdll/nt.c, libs/wine/ldt.c

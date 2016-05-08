@@ -1,0 +1,96 @@
+From 9aaa34a9cd1e72b82212933dffcbf07692d3fa64 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Sat, 7 May 2016 11:56:17 +0800
+Subject: ntdll: Add support for fs to
+ NtQueryInformationThread(ThreadDescriptorTableEntry).
+
+This patch fixes one of the problems reported in the bug 40583.
+---
+ dlls/kernel32/tests/thread.c | 41 +++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/thread.c          | 11 +++++++++++
+ 2 files changed, 52 insertions(+)
+
+diff --git a/dlls/kernel32/tests/thread.c b/dlls/kernel32/tests/thread.c
+index e0de3f9..67c5a37 100644
+--- a/dlls/kernel32/tests/thread.c
++++ b/dlls/kernel32/tests/thread.c
+@@ -1100,6 +1100,46 @@ static void test_SetThreadContext(void)
+     CloseHandle( thread );
+ }
+ 
++static void test_GetThreadSelectorEntry(void)
++{
++    TEB *teb = NtCurrentTeb();
++    LDT_ENTRY entry;
++    CONTEXT ctx;
++    TEB *teb_fs;
++    DWORD ret;
++
++    memset(&ctx, 0x11, sizeof(ctx));
++    ctx.ContextFlags = CONTEXT_SEGMENTS | CONTEXT_CONTROL;
++    ret = GetThreadContext(GetCurrentThread(), &ctx);
++    ok(ret, "GetThreadContext error %u\n", GetLastError());
++    ok(!HIWORD(ctx.SegCs) && !HIWORD(ctx.SegDs) && !HIWORD(ctx.SegEs) && !HIWORD(ctx.SegFs) && !HIWORD(ctx.SegGs),
++       "cs %08x, ds %08x, es %08x, fs %08x, gs %08x\n", ctx.SegCs, ctx.SegDs, ctx.SegEs, ctx.SegFs, ctx.SegGs);
++
++    ret = GetThreadSelectorEntry(GetCurrentThread(), ctx.SegCs, &entry);
++    ok(ret, "GetThreadSelectorEntry(SegCs) error %u\n", GetLastError());
++
++    ret = GetThreadSelectorEntry(GetCurrentThread(), ctx.SegDs, &entry);
++    ok(ret, "GetThreadSelectorEntry(SegDs) error %u\n", GetLastError());
++
++    memset(&entry, 0x11, sizeof(entry));
++    ret = GetThreadSelectorEntry(GetCurrentThread(), ctx.SegFs, &entry);
++    ok(ret, "GetThreadSelectorEntry(SegFs) error %u\n", GetLastError());
++
++    teb_fs = (TEB *)((entry.HighWord.Bits.BaseHi << 24) | (entry.HighWord.Bits.BaseMid << 16) | entry.BaseLow);
++    ok(teb_fs == teb, "teb_fs %p != teb %p\n", teb_fs, teb);
++
++    ret = (entry.HighWord.Bits.LimitHi << 16) | entry.LimitLow;
++    ok(ret == 0x0fff || ret == 0x4000 /* testbot win7u */, "got %#x\n", ret);
++
++    ok(entry.HighWord.Bits.Dpl == 3, "got %#x\n", entry.HighWord.Bits.Dpl);
++    ok(entry.HighWord.Bits.Sys == 0, "got %#x\n", entry.HighWord.Bits.Sys);
++    ok(entry.HighWord.Bits.Pres == 1, "got %#x\n", entry.HighWord.Bits.Pres);
++    ok(entry.HighWord.Bits.Granularity == 0, "got %#x\n", entry.HighWord.Bits.Granularity);
++    ok(entry.HighWord.Bits.Default_Big == 1, "got %#x\n", entry.HighWord.Bits.Default_Big);
++    ok(entry.HighWord.Bits.Type == 0x13, "got %#x\n", entry.HighWord.Bits.Type);
++    ok(entry.HighWord.Bits.Reserved_0 == 0, "got %#x\n", entry.HighWord.Bits.Reserved_0);
++}
++
+ #endif  /* __i386__ */
+ 
+ static HANDLE finish_event;
+@@ -1965,6 +2005,7 @@ START_TEST(thread)
+    test_GetThreadExitCode();
+ #ifdef __i386__
+    test_SetThreadContext();
++   test_GetThreadSelectorEntry();
+ #endif
+    test_QueueUserWorkItem();
+    test_RegisterWaitForSingleObject();
+diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
+index f6a5fbe..8465a26 100644
+--- a/dlls/ntdll/thread.c
++++ b/dlls/ntdll/thread.c
+@@ -1051,6 +1051,17 @@ NTSTATUS WINAPI NtQueryInformationThread( HANDLE handle, THREADINFOCLASS class,
+                     {
+                         if (sel == (wine_get_cs() & ~3))
+                             tdi->Entry.HighWord.Bits.Type |= 8;  /* code segment */
++                        else if (sel == (ntdll_get_thread_data()->fs & ~3))
++                        {
++                            ULONG_PTR fs_base = (ULONG_PTR)NtCurrentTeb();
++                            tdi->Entry.BaseLow = fs_base & 0xffff;
++                            tdi->Entry.HighWord.Bits.BaseMid = (fs_base >> 16) & 0xff;
++                            tdi->Entry.HighWord.Bits.BaseHi = (fs_base >> 24) & 0xff;
++                            tdi->Entry.LimitLow = 0x0fff;
++                            tdi->Entry.HighWord.Bits.LimitHi = 0;
++                            tdi->Entry.HighWord.Bits.Granularity = 0;
++                            tdi->Entry.HighWord.Bits.Type = 0x13;
++                        }
+                         else status = STATUS_ACCESS_DENIED;
+                     }
+                 }
+-- 
+2.8.0
+

@@ -5502,6 +5502,9 @@ fi
 
 # Patchset oleaut32-Vtable_Offset
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35268] Extend a vtable offset before calling 64-bit DispCallFunc() for a 32-bit typelib
+# |
 # | Modified files:
 # |   *	dlls/oleaut32/typelib.c
 # |

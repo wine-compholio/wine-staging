@@ -263,6 +263,7 @@ patch_enable_all ()
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_quartz_Silence_FIXMEs="$1"
 	enable_rasapi32_RasEnumDevicesA="$1"
+	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_rpcrt4_Pipe_Transport="$1"
 	enable_rpcrt4_RpcBindingServerFromClient="$1"
@@ -954,6 +955,9 @@ patch_enable ()
 			;;
 		rasapi32-RasEnumDevicesA)
 			enable_rasapi32_RasEnumDevicesA="$2"
+			;;
+		riched20-Class_Tests)
+			enable_riched20_Class_Tests="$2"
 			;;
 		riched20-IText_Interface)
 			enable_riched20_IText_Interface="$2"
@@ -5661,6 +5665,18 @@ if test "$enable_rasapi32_RasEnumDevicesA" -eq 1; then
 	patch_apply rasapi32-RasEnumDevicesA/0001-rasapi32-Set-lpcDevices-in-RasEnumDevicesA.patch
 	(
 		echo '+    { "Sebastian Lackner", "rasapi32: Set *lpcDevices in RasEnumDevicesA.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset riched20-Class_Tests
+# |
+# | Modified files:
+# |   *	dlls/riched20/tests/editor.c
+# |
+if test "$enable_riched20_Class_Tests" -eq 1; then
+	patch_apply riched20-Class_Tests/0001-riched20-tests-Add-a-test-to-see-what-richedit-class.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "riched20/tests: Add a test to see what richedit class flavours should be available.", 1 },';
 	) >> "$patchlist"
 fi
 

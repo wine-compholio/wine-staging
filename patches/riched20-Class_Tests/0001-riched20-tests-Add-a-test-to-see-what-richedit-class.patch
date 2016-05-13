@@ -1,0 +1,63 @@
+From 2113716e5a404208e978343c5a6cf7bf3cf5bda2 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Fri, 13 May 2016 16:05:13 +0800
+Subject: riched20/tests: Add a test to see what richedit class flavours should
+ be available.
+
+---
+ dlls/riched20/tests/editor.c | 32 ++++++++++++++++++++++++++++++++
+ 1 file changed, 32 insertions(+)
+
+diff --git a/dlls/riched20/tests/editor.c b/dlls/riched20/tests/editor.c
+index ae9c0a5..ef44401 100644
+--- a/dlls/riched20/tests/editor.c
++++ b/dlls/riched20/tests/editor.c
+@@ -8337,6 +8337,37 @@ static void test_rtf_specials(void)
+     DestroyWindow( edit );
+ }
+ 
++static void test_window_classes(void)
++{
++    static const struct
++    {
++        const char *class;
++        BOOL success;
++    } test[] =
++    {
++        { "RichEdit", FALSE },
++        { "RichEdit20A", TRUE },
++        { "RichEdit20W", TRUE },
++        { "RichEdit50A", FALSE },
++        { "RichEdit50W", FALSE }
++    };
++    int i;
++    HWND hwnd;
++
++    for (i = 0; i < sizeof(test)/sizeof(test[0]); i++)
++    {
++        SetLastError(0xdeadbeef);
++        hwnd = CreateWindowExA(0, test[i].class, NULL, WS_POPUP, 0, 0, 0, 0, 0, 0, 0, NULL);
++todo_wine_if(!strcmp(test[i].class, "RichEdit50A") || !strcmp(test[i].class, "RichEdit50W"))
++        ok(!hwnd == !test[i].success, "CreateWindow(%s) should %s\n",
++           test[i].class, test[i].success ? "succeed" : "fail");
++        if (!hwnd)
++todo_wine
++            ok(GetLastError() == ERROR_CANNOT_FIND_WND_CLASS, "got %d\n", GetLastError());
++        else
++            DestroyWindow(hwnd);
++    }
++}
+ 
+ START_TEST( editor )
+ {
+@@ -8347,6 +8378,7 @@ START_TEST( editor )
+   ok(hmoduleRichEdit != NULL, "error: %d\n", (int) GetLastError());
+   is_lang_japanese = (PRIMARYLANGID(GetUserDefaultLangID()) == LANG_JAPANESE);
+ 
++  test_window_classes();
+   test_WM_CHAR();
+   test_EM_FINDTEXT(FALSE);
+   test_EM_FINDTEXT(TRUE);
+-- 
+2.8.0
+

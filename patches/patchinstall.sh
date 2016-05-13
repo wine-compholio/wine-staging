@@ -2195,6 +2195,13 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 	enable_server_File_Permissions=1
 fi
 
+if test "$enable_gdiplus_GdipCreateMetafileFromStream" -eq 1; then
+	if test "$enable_oleaut32_OLEPictureImpl_SaveAsFile" -gt 1; then
+		abort "Patchset oleaut32-OLEPictureImpl_SaveAsFile disabled, but gdiplus-GdipCreateMetafileFromStream depends on that."
+	fi
+	enable_oleaut32_OLEPictureImpl_SaveAsFile=1
+fi
+
 if test "$enable_dxva2_Video_Decoder" -eq 1; then
 	if test "$enable_winecfg_Staging" -gt 1; then
 		abort "Patchset winecfg-Staging disabled, but dxva2-Video_Decoder depends on that."
@@ -3634,18 +3641,48 @@ if test "$enable_gdi32_Symbol_Truetype_Font" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset oleaut32-OLEPictureImpl_SaveAsFile
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#8532] Implement a better stub for IPicture::SaveAsFile
+# |
+# | Modified files:
+# |   *	dlls/gdiplus/Makefile.in, dlls/gdiplus/gdiplus_private.h, dlls/gdiplus/graphics.c, dlls/gdiplus/image.c,
+# | 	dlls/gdiplus/metafile.c, dlls/gdiplus/tests/image.c, dlls/oleaut32/olepicture.c, dlls/oleaut32/tests/olepicture.c
+# |
+if test "$enable_oleaut32_OLEPictureImpl_SaveAsFile" -eq 1; then
+	patch_apply oleaut32-OLEPictureImpl_SaveAsFile/0001-gdiplus-Reimplement-metafile-loading-using-gdi32-ins.patch
+	patch_apply oleaut32-OLEPictureImpl_SaveAsFile/0002-oleaut32-Implement-a-better-stub-for-IPicture-SaveAs.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "gdiplus: Reimplement metafile loading using gdi32 instead of IPicture.", 2 },';
+		echo '+    { "Dmitry Timoshkov", "oleaut32: Implement a better stub for IPicture::SaveAsFile.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset gdiplus-GdipCreateMetafileFromStream
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	oleaut32-OLEPictureImpl_SaveAsFile
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#40325] Implement GdipCreateMetafileFromStream
+# |   *	[#27415] Implement GdipGetMetafileHeaderFromMetafile
 # |
 # | Modified files:
-# |   *	dlls/gdiplus/metafile.c
+# |   *	dlls/gdiplus/gdiplus.spec, dlls/gdiplus/metafile.c, dlls/gdiplus/tests/image.c
 # |
 if test "$enable_gdiplus_GdipCreateMetafileFromStream" -eq 1; then
 	patch_apply gdiplus-GdipCreateMetafileFromStream/0001-gdiplus-Implement-GdipCreateMetafileFromStream.patch
+	patch_apply gdiplus-GdipCreateMetafileFromStream/0002-gdiplus-Implement-GdipGetMetafileHeaderFromMetafile.patch
+	patch_apply gdiplus-GdipCreateMetafileFromStream/0003-gdiplus-Implement-GdipGetMetafileHeaderFromWmf.patch
+	patch_apply gdiplus-GdipCreateMetafileFromStream/0004-gdiplus-Implement-GdipGetMetafileHeaderFromStream.patch
+	patch_apply gdiplus-GdipCreateMetafileFromStream/0005-gdiplus-Implement-GdipGetMetafileHeaderFromFile.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipCreateMetafileFromStream.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipGetMetafileHeaderFromMetafile.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipGetMetafileHeaderFromWmf.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipGetMetafileHeaderFromStream.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipGetMetafileHeaderFromFile.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5446,24 +5483,6 @@ if test "$enable_oleaut32_Load_Save_EMF" -eq 1; then
 	(
 		echo '+    { "Dmitry Timoshkov", "oleaut32/tests: Add some tests for loading and saving EMF using IPicture interface.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "oleaut32: Add support for loading and saving EMF to IPicture interface.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset oleaut32-OLEPictureImpl_SaveAsFile
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#8532] Implement a better stub for IPicture::SaveAsFile
-# |
-# | Modified files:
-# |   *	dlls/gdiplus/Makefile.in, dlls/gdiplus/gdiplus_private.h, dlls/gdiplus/graphics.c, dlls/gdiplus/image.c,
-# | 	dlls/gdiplus/metafile.c, dlls/gdiplus/tests/image.c, dlls/oleaut32/olepicture.c, dlls/oleaut32/tests/olepicture.c
-# |
-if test "$enable_oleaut32_OLEPictureImpl_SaveAsFile" -eq 1; then
-	patch_apply oleaut32-OLEPictureImpl_SaveAsFile/0001-gdiplus-Reimplement-metafile-loading-using-gdi32-ins.patch
-	patch_apply oleaut32-OLEPictureImpl_SaveAsFile/0002-oleaut32-Implement-a-better-stub-for-IPicture-SaveAs.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "gdiplus: Reimplement metafile loading using gdi32 instead of IPicture.", 2 },';
-		echo '+    { "Dmitry Timoshkov", "oleaut32: Implement a better stub for IPicture::SaveAsFile.", 1 },';
 	) >> "$patchlist"
 fi
 

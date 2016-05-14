@@ -321,6 +321,7 @@ patch_enable_all ()
 	enable_user_exe16_CONTAINING_RECORD="$1"
 	enable_user_exe16_DlgDirList="$1"
 	enable_user32_DeferWindowPos="$1"
+	enable_user32_DialogBoxParam="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawTextExW="$1"
 	enable_user32_GetSystemMetrics="$1"
@@ -1129,6 +1130,9 @@ patch_enable ()
 			;;
 		user32-DeferWindowPos)
 			enable_user32_DeferWindowPos="$2"
+			;;
+		user32-DialogBoxParam)
+			enable_user32_DialogBoxParam="$2"
 			;;
 		user32-Dialog_Paint_Event)
 			enable_user32_Dialog_Paint_Event="$2"
@@ -6585,6 +6589,23 @@ if test "$enable_user32_DeferWindowPos" -eq 1; then
 	patch_apply user32-DeferWindowPos/0001-user32-Fix-error-handling-in-Begin-End-DeferWindowPo.patch
 	(
 		echo '+    { "Rodrigo Rivas", "user32: Fix error handling in {Begin,End,}DeferWindowPos() to match Windows behavior.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-DialogBoxParam
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40025] DialogBoxParam should return -1 when dialog control creation fails
+# |
+# | Modified files:
+# |   *	dlls/user32/dialog.c, dlls/user32/tests/dialog.c, dlls/user32/tests/resource.rc
+# |
+if test "$enable_user32_DialogBoxParam" -eq 1; then
+	patch_apply user32-DialogBoxParam/0001-user32-tests-Test-DialogBoxParam-using-a-dialog-temp.patch
+	patch_apply user32-DialogBoxParam/0002-user32-DialogBoxParam-should-return-1-when-dialog-co.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "user32/tests: Test DialogBoxParam using a dialog template with invalid control class.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "user32: DialogBoxParam should return -1 when dialog control creation fails.", 1 },';
 	) >> "$patchlist"
 fi
 

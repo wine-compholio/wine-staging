@@ -94,6 +94,7 @@ patch_enable_all ()
 	enable_browseui_Progress_Dialog="$1"
 	enable_combase_RoApi="$1"
 	enable_comctl32_Button_Theming="$1"
+	enable_comctl32_Listview_DrawItem="$1"
 	enable_comctl32_PROPSHEET_InsertPage="$1"
 	enable_comctl32_TTM_ADDTOOLW="$1"
 	enable_comdlg32_lpstrFileTitle="$1"
@@ -449,6 +450,9 @@ patch_enable ()
 			;;
 		comctl32-Button_Theming)
 			enable_comctl32_Button_Theming="$2"
+			;;
+		comctl32-Listview_DrawItem)
+			enable_comctl32_Listview_DrawItem="$2"
 			;;
 		comctl32-PROPSHEET_InsertPage)
 			enable_comctl32_PROPSHEET_InsertPage="$2"
@@ -2687,6 +2691,21 @@ if test "$enable_comctl32_Button_Theming" -eq 1; then
 	patch_apply comctl32-Button_Theming/0001-comctl32-fix-buttons-becoming-unthemed-when-pressed-.patch
 	(
 		echo '+    { "Samuel Kim", "comctl32: Fix buttons becoming unthemed when pressed/released.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset comctl32-Listview_DrawItem
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38941] Preserve custom colors between subitems for listview control
+# |
+# | Modified files:
+# |   *	dlls/comctl32/listview.c
+# |
+if test "$enable_comctl32_Listview_DrawItem" -eq 1; then
+	patch_apply comctl32-Listview_DrawItem/0001-comctl32-Preserve-custom-colors-between-subitems.patch
+	(
+		echo '+    { "Daniel Jelinski", "comctl32: Preserve custom colors between subitems.", 1 },';
 	) >> "$patchlist"
 fi
 

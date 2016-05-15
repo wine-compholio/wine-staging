@@ -7165,7 +7165,7 @@ fi
 # |   *	[#20776] Add stubs for QUERY_TYPE_SO_STATISTICS and QUERY_TYPE_SO_OVERFLOW
 # |
 # | Modified files:
-# |   *	dlls/wined3d/query.c, include/wine/wined3d.h
+# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/query.c, include/wine/wined3d.h
 # |
 if test "$enable_wined3d_QUERY_Stubs" -eq 1; then
 	patch_apply wined3d-QUERY_Stubs/0001-wined3d-Add-stubs-for-QUERY_TYPE_SO_STATISTICS-and-Q.patch

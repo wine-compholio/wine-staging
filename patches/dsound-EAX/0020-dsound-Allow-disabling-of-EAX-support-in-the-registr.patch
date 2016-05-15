@@ -1,4 +1,4 @@
-From b69c6b88a3628dcaf0f5520f2a33a47013c50aef Mon Sep 17 00:00:00 2001
+From cdfc54a6363804cc8ee9146c3adbd51e431bcbf2 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 5 Apr 2015 19:13:18 +0200
 Subject: dsound: Allow disabling of EAX support in the registry.
@@ -6,13 +6,13 @@ Subject: dsound: Allow disabling of EAX support in the registry.
 Based on a patch by Mark Harmstone.
 ---
  dlls/dsound/buffer.c         | 16 ++++++----------
- dlls/dsound/dsound_main.c    | 10 ++++++++--
+ dlls/dsound/dsound_main.c    |  9 ++++++++-
  dlls/dsound/dsound_private.h |  2 ++
  dlls/dsound/eax.c            | 28 ++++++++++++++++++++++++++++
- 4 files changed, 44 insertions(+), 12 deletions(-)
+ 4 files changed, 44 insertions(+), 11 deletions(-)
 
 diff --git a/dlls/dsound/buffer.c b/dlls/dsound/buffer.c
-index 3641e32..ca6a5b5 100644
+index b763514..ca93972 100644
 --- a/dlls/dsound/buffer.c
 +++ b/dlls/dsound/buffer.c
 @@ -35,6 +35,7 @@
@@ -23,7 +23,7 @@ index 3641e32..ca6a5b5 100644
  
  /*******************************************************************************
   *		IDirectSoundNotify
-@@ -1331,16 +1332,11 @@ static HRESULT WINAPI IKsPropertySetImpl_QuerySupport(IKsPropertySet *iface, REF
+@@ -1329,16 +1330,11 @@ static HRESULT WINAPI IKsPropertySetImpl_QuerySupport(IKsPropertySet *iface, REF
  
      TRACE("(%p,%s,%d,%p)\n",This,debugstr_guid(guidPropSet),dwPropID,pTypeSupport);
  
@@ -46,12 +46,12 @@ index 3641e32..ca6a5b5 100644
  
      return E_PROP_ID_UNSUPPORTED;
 diff --git a/dlls/dsound/dsound_main.c b/dlls/dsound/dsound_main.c
-index 1f512a4..4b7e7b0 100644
+index b349eb4..db2ca50 100644
 --- a/dlls/dsound/dsound_main.c
 +++ b/dlls/dsound/dsound_main.c
-@@ -95,8 +95,12 @@ WCHAR wine_vxd_drv[] = { 'w','i','n','e','m','m','.','v','x','d', 0 };
+@@ -94,8 +94,12 @@ WCHAR wine_vxd_drv[] = { 'w','i','n','e','m','m','.','v','x','d', 0 };
+ /* All default settings, you most likely don't want to touch these, see wiki on UsefulRegistryKeys */
  int ds_hel_buflen = 32768 * 2;
- int ds_snd_queue_max = 10;
  int ds_hq_buffers_max = 4;
 +BOOL ds_eax_enabled = FALSE;
  static HINSTANCE instance;
@@ -62,7 +62,7 @@ index 1f512a4..4b7e7b0 100644
  /*
   * Get a config key from either the app-specific or the default config
   */
-@@ -109,7 +113,6 @@ static inline DWORD get_config_key( HKEY defkey, HKEY appkey, const char *name,
+@@ -108,7 +112,6 @@ static inline DWORD get_config_key( HKEY defkey, HKEY appkey, const char *name,
      return ERROR_FILE_NOT_FOUND;
  }
  
@@ -70,11 +70,7 @@ index 1f512a4..4b7e7b0 100644
  /*
   * Setup the dsound options.
   */
-@@ -150,16 +153,19 @@ void setup_dsound_options(void)
-     if (!get_config_key( hkey, appkey, "SndQueueMax", buffer, MAX_PATH ))
-         ds_snd_queue_max = atoi(buffer);
- 
--
+@@ -149,11 +152,15 @@ void setup_dsound_options(void)
      if (!get_config_key( hkey, appkey, "HQBuffersMax", buffer, MAX_PATH ))
          ds_hq_buffers_max = atoi(buffer);
  
@@ -85,25 +81,24 @@ index 1f512a4..4b7e7b0 100644
      if (hkey) RegCloseKey( hkey );
  
      TRACE("ds_hel_buflen = %d\n", ds_hel_buflen);
-     TRACE("ds_snd_queue_max = %d\n", ds_snd_queue_max);
      TRACE("ds_hq_buffers_max = %d\n", ds_hq_buffers_max);
 +    TRACE("ds_eax_enabled = %u\n", ds_eax_enabled);
  }
  
  static const char * get_device_id(LPCGUID pGuid)
 diff --git a/dlls/dsound/dsound_private.h b/dlls/dsound/dsound_private.h
-index a9987d0..5c21d1f 100644
+index 5a986ba..4e928a4 100644
 --- a/dlls/dsound/dsound_private.h
 +++ b/dlls/dsound/dsound_private.h
-@@ -38,6 +38,7 @@
+@@ -37,6 +37,7 @@
+ 
  extern int ds_hel_buflen DECLSPEC_HIDDEN;
- extern int ds_snd_queue_max DECLSPEC_HIDDEN;
  extern int ds_hq_buffers_max DECLSPEC_HIDDEN;
 +extern BOOL ds_eax_enabled DECLSPEC_HIDDEN;
  
  /*****************************************************************************
   * Predeclare the interface implementation structures
-@@ -234,6 +235,7 @@ LONG capped_refcount_dec(LONG *ref) DECLSPEC_HIDDEN;
+@@ -230,6 +231,7 @@ LONG capped_refcount_dec(LONG *ref) DECLSPEC_HIDDEN;
  HRESULT DSOUND_FullDuplexCreate(REFIID riid, void **ppv) DECLSPEC_HIDDEN;
  
  /* eax.c */
@@ -112,7 +107,7 @@ index a9987d0..5c21d1f 100644
          ULONG dwPropID, void *pInstanceData, ULONG cbInstanceData, void *pPropData,
          ULONG cbPropData, ULONG *pcbReturned) DECLSPEC_HIDDEN;
 diff --git a/dlls/dsound/eax.c b/dlls/dsound/eax.c
-index 4e98812..c9d5b6c 100644
+index e10156e..857f924 100644
 --- a/dlls/dsound/eax.c
 +++ b/dlls/dsound/eax.c
 @@ -809,6 +809,28 @@ void free_eax_buffer(IDirectSoundBufferImpl *dsb)
@@ -165,5 +160,5 @@ index 4e98812..c9d5b6c 100644
          buf->device->eax.using_eax = TRUE;
  
 -- 
-2.3.5
+2.8.0
 

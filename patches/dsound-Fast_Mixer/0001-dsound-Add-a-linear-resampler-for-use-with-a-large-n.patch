@@ -1,4 +1,4 @@
-From 208155a225fef8613f9ef033ba0c895a4e71f409 Mon Sep 17 00:00:00 2001
+From fe24cfe8b8e99c4e41fc9d147d7815bce37d2fa0 Mon Sep 17 00:00:00 2001
 From: "Alexander E. Patrakov" <patrakov at gmail.com>
 Date: Thu, 7 Aug 2014 17:15:00 -0600
 Subject: dsound: Add a linear resampler for use with a large number of mixing
@@ -11,20 +11,20 @@ Subject: dsound: Add a linear resampler for use with a large number of mixing
  3 files changed, 51 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/dsound/dsound_main.c b/dlls/dsound/dsound_main.c
-index cb46301..1f512a4 100644
+index 112ce78..b349eb4 100644
 --- a/dlls/dsound/dsound_main.c
 +++ b/dlls/dsound/dsound_main.c
-@@ -94,6 +94,7 @@ WCHAR wine_vxd_drv[] = { 'w','i','n','e','m','m','.','v','x','d', 0 };
+@@ -93,6 +93,7 @@ WCHAR wine_vxd_drv[] = { 'w','i','n','e','m','m','.','v','x','d', 0 };
+ 
  /* All default settings, you most likely don't want to touch these, see wiki on UsefulRegistryKeys */
  int ds_hel_buflen = 32768 * 2;
- int ds_snd_queue_max = 10;
 +int ds_hq_buffers_max = 4;
  static HINSTANCE instance;
  
  /*
-@@ -150,11 +151,15 @@ void setup_dsound_options(void)
-         ds_snd_queue_max = atoi(buffer);
- 
+@@ -145,10 +146,14 @@ void setup_dsound_options(void)
+     if (!get_config_key( hkey, appkey, "HelBuflen", buffer, MAX_PATH ))
+         ds_hel_buflen = atoi(buffer);
  
 +    if (!get_config_key( hkey, appkey, "HQBuffersMax", buffer, MAX_PATH ))
 +        ds_hq_buffers_max = atoi(buffer);
@@ -33,25 +33,24 @@ index cb46301..1f512a4 100644
      if (hkey) RegCloseKey( hkey );
  
      TRACE("ds_hel_buflen = %d\n", ds_hel_buflen);
-     TRACE("ds_snd_queue_max = %d\n", ds_snd_queue_max);
 +    TRACE("ds_hq_buffers_max = %d\n", ds_hq_buffers_max);
  }
  
  static const char * get_device_id(LPCGUID pGuid)
 diff --git a/dlls/dsound/dsound_private.h b/dlls/dsound/dsound_private.h
-index 9c001ed..726452c 100644
+index b980453..b6bce1d 100644
 --- a/dlls/dsound/dsound_private.h
 +++ b/dlls/dsound/dsound_private.h
-@@ -36,6 +36,7 @@
+@@ -35,6 +35,7 @@
+ #define DS_MAX_CHANNELS 6
  
  extern int ds_hel_buflen DECLSPEC_HIDDEN;
- extern int ds_snd_queue_max DECLSPEC_HIDDEN;
 +extern int ds_hq_buffers_max DECLSPEC_HIDDEN;
  
  /*****************************************************************************
   * Predeclare the interface implementation structures
 diff --git a/dlls/dsound/mixer.c b/dlls/dsound/mixer.c
-index 85ab14a..4f22f85 100644
+index dec8ffd..c358385 100644
 --- a/dlls/dsound/mixer.c
 +++ b/dlls/dsound/mixer.c
 @@ -278,7 +278,47 @@ static UINT cp_fields_noresample(IDirectSoundBufferImpl *dsb, UINT count)
@@ -118,5 +117,5 @@ index 85ab14a..4f22f85 100644
      ipos = dsb->sec_mixpos + adv * dsb->pwfx->nBlockAlign;
      if (ipos >= dsb->buflen) {
 -- 
-2.3.3
+2.8.0
 

@@ -101,6 +101,7 @@ patch_enable_all ()
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
 	enable_crypt32_CryptUnprotectMemory="$1"
+	enable_d2d1_Tests="$1"
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Surface_Refcount="$1"
 	enable_d3d9_Tests="$1"
@@ -473,6 +474,9 @@ patch_enable ()
 			;;
 		crypt32-CryptUnprotectMemory)
 			enable_crypt32_CryptUnprotectMemory="$2"
+			;;
+		d2d1-Tests)
+			enable_d2d1_Tests="$2"
 			;;
 		d3d9-DesktopWindow)
 			enable_d3d9_DesktopWindow="$2"
@@ -2800,6 +2804,18 @@ if test "$enable_crypt32_CryptUnprotectMemory" -eq 1; then
 	patch_apply crypt32-CryptUnprotectMemory/0001-crypt32-Print-CryptUnprotectMemory-FIXME-only-once.patch
 	(
 		echo '+    { "Christian Costa", "crypt32: Print CryptUnprotectMemory FIXME only once.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d2d1-Tests
+# |
+# | Modified files:
+# |   *	dlls/d2d1/tests/d2d1.c
+# |
+if test "$enable_d2d1_Tests" -eq 1; then
+	patch_apply d2d1-Tests/0001-d2d1-tests-Avoid-test-failure-on-specific-Nvidia-gra.patch
+	(
+		echo '+    { "Sebastian Lackner", "d2d1/tests: Avoid test failure on specific Nvidia graphic cards.", 1 },';
 	) >> "$patchlist"
 fi
 

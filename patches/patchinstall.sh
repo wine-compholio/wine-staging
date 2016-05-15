@@ -7121,7 +7121,7 @@ fi
 # Patchset wined3d-Accounting
 # |
 # | Modified files:
-# |   *	dlls/wined3d/device.c, dlls/wined3d/directx.c, dlls/wined3d/wined3d_gl.h
+# |   *	dlls/d3d9/tests/device.c, dlls/wined3d/device.c, dlls/wined3d/directx.c, dlls/wined3d/wined3d_gl.h
 # |
 if test "$enable_wined3d_Accounting" -eq 1; then
 	patch_apply wined3d-Accounting/0001-wined3d-Use-real-values-for-memory-accounting-on-NVI.patch

@@ -1,19 +1,42 @@
-From cc05161339b7fab594d8e7d68c4f52cb63b1ab17 Mon Sep 17 00:00:00 2001
+From 17b9cfdf3a6e5823b9cfa3df256e4bd892943762 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 6 Jun 2015 06:53:34 +0200
 Subject: wined3d: Use real values for memory accounting on NVIDIA cards.
 
 ---
+ dlls/d3d9/tests/device.c  | 11 +++++++----
  dlls/wined3d/device.c     | 23 +++++++++++++++++++++++
  dlls/wined3d/directx.c    | 10 ++++++++++
  dlls/wined3d/wined3d_gl.h |  1 +
- 3 files changed, 34 insertions(+)
+ 4 files changed, 41 insertions(+), 4 deletions(-)
 
+diff --git a/dlls/d3d9/tests/device.c b/dlls/d3d9/tests/device.c
+index 8860bce..b345d1f 100644
+--- a/dlls/d3d9/tests/device.c
++++ b/dlls/d3d9/tests/device.c
+@@ -8857,10 +8857,13 @@ static void test_vidmem_accounting(void)
+     }
+     vidmem_end = IDirect3DDevice9_GetAvailableTextureMem(device);
+ 
+-    ok(vidmem_start > vidmem_end, "Expected available texture memory to decrease during texture creation.\n");
+-    diff = vidmem_start - vidmem_end;
+-    ok(diff > 1024 * 1024 * 2 * i, "Expected a video memory difference of at least %u MB, got %u MB.\n",
+-            2 * i, diff / 1024 / 1024);
++    todo_wine_if(vidmem_start == vidmem_end)
++    {
++        ok(vidmem_start > vidmem_end, "Expected available texture memory to decrease during texture creation.\n");
++        diff = vidmem_start - vidmem_end;
++        ok(diff > 1024 * 1024 * 2 * i, "Expected a video memory difference of at least %u MB, got %u MB.\n",
++                2 * i, diff / 1024 / 1024);
++    }
+ 
+     for (i = 0; i < sizeof(textures) / sizeof(*textures); i++)
+     {
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 37d9ee9..0437c81 100644
+index d1f77ca..312c8c1 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -1244,8 +1244,31 @@ void CDECL wined3d_device_set_multithreaded(struct wined3d_device *device)
+@@ -1278,8 +1278,31 @@ void CDECL wined3d_device_set_multithreaded(struct wined3d_device *device)
  
  UINT CDECL wined3d_device_get_available_texture_mem(const struct wined3d_device *device)
  {
@@ -46,10 +69,10 @@ index 37d9ee9..0437c81 100644
              wine_dbgstr_longlong(device->adapter->vram_bytes),
              wine_dbgstr_longlong(device->adapter->vram_bytes_used),
 diff --git a/dlls/wined3d/directx.c b/dlls/wined3d/directx.c
-index da66aac..36432af 100644
+index 43208b6f..8b26472 100644
 --- a/dlls/wined3d/directx.c
 +++ b/dlls/wined3d/directx.c
-@@ -225,6 +225,7 @@ static const struct wined3d_extension_map gl_extension_map[] =
+@@ -228,6 +228,7 @@ static const struct wined3d_extension_map gl_extension_map[] =
      {"GL_NV_vertex_program2",               NV_VERTEX_PROGRAM2            },
      {"GL_NV_vertex_program2_option",        NV_VERTEX_PROGRAM2_OPTION     },
      {"GL_NV_vertex_program3",               NV_VERTEX_PROGRAM3            },
@@ -57,7 +80,7 @@ index da66aac..36432af 100644
  
      /* SGI */
      {"GL_SGIS_generate_mipmap",             SGIS_GENERATE_MIPMAP          },
-@@ -1422,6 +1423,15 @@ static const struct gpu_description *query_gpu_description(const struct wined3d_
+@@ -1444,6 +1445,15 @@ static const struct gpu_description *query_gpu_description(const struct wined3d_
          TRACE("Card reports vendor PCI ID 0x%04x, device PCI ID 0x%04x, 0x%s bytes of video memory.\n",
                  vendor, device, wine_dbgstr_longlong(*vram_bytes));
      }
@@ -74,10 +97,10 @@ index da66aac..36432af 100644
      if (wined3d_settings.pci_vendor_id != PCI_VENDOR_NONE)
      {
 diff --git a/dlls/wined3d/wined3d_gl.h b/dlls/wined3d/wined3d_gl.h
-index e344ff1..3b982f4 100644
+index 356ee7c..2fb21ff 100644
 --- a/dlls/wined3d/wined3d_gl.h
 +++ b/dlls/wined3d/wined3d_gl.h
-@@ -158,6 +158,7 @@ enum wined3d_gl_extension
+@@ -161,6 +161,7 @@ enum wined3d_gl_extension
      NV_VERTEX_PROGRAM2,
      NV_VERTEX_PROGRAM2_OPTION,
      NV_VERTEX_PROGRAM3,
@@ -86,5 +109,5 @@ index e344ff1..3b982f4 100644
      SGIS_GENERATE_MIPMAP,
      /* WGL extensions */
 -- 
-2.7.1
+2.8.0
 

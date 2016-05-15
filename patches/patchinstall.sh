@@ -102,7 +102,6 @@ patch_enable_all ()
 	enable_crypt32_CMS_Certificates="$1"
 	enable_crypt32_CryptUnprotectMemory="$1"
 	enable_d3d9_DesktopWindow="$1"
-	enable_d3d9_Skip_Tests="$1"
 	enable_d3d9_Surface_Refcount="$1"
 	enable_d3d9_Tests="$1"
 	enable_d3dx9_24_ID3DXEffect="$1"
@@ -477,9 +476,6 @@ patch_enable ()
 			;;
 		d3d9-DesktopWindow)
 			enable_d3d9_DesktopWindow="$2"
-			;;
-		d3d9-Skip_Tests)
-			enable_d3d9_Skip_Tests="$2"
 			;;
 		d3d9-Surface_Refcount)
 			enable_d3d9_Surface_Refcount="$2"
@@ -1737,9 +1733,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_configure_Absolute_RPATH" -gt 1; then
 		abort "Patchset configure-Absolute_RPATH disabled, but category-stable depends on that."
 	fi
-	if test "$enable_d3d9_Skip_Tests" -gt 1; then
-		abort "Patchset d3d9-Skip_Tests disabled, but category-stable depends on that."
-	fi
 	if test "$enable_d3d9_Surface_Refcount" -gt 1; then
 		abort "Patchset d3d9-Surface_Refcount disabled, but category-stable depends on that."
 	fi
@@ -1899,7 +1892,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_Compiler_Warnings=1
 	enable_Staging=1
 	enable_configure_Absolute_RPATH=1
-	enable_d3d9_Skip_Tests=1
 	enable_d3d9_Surface_Refcount=1
 	enable_d3dx9_24_ID3DXEffect=1
 	enable_d3dx9_25_ID3DXEffect=1
@@ -2823,18 +2815,6 @@ if test "$enable_d3d9_DesktopWindow" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset d3d9-Skip_Tests
-# |
-# | Modified files:
-# |   *	dlls/d3d9/tests/device.c
-# |
-if test "$enable_d3d9_Skip_Tests" -eq 1; then
-	patch_apply d3d9-Skip_Tests/0001-d3d9-tests-Avoid-crash-when-surface-and-texture-crea.patch
-	(
-		echo '+    { "Christian Costa", "d3d9/tests: Avoid crash when surface and texture creation fails.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset d3d9-Surface_Refcount
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2853,12 +2833,14 @@ fi
 # Patchset d3d9-Tests
 # |
 # | Modified files:
-# |   *	dlls/d3d9/tests/visual.c
+# |   *	dlls/d3d9/tests/device.c, dlls/d3d9/tests/visual.c
 # |
 if test "$enable_d3d9_Tests" -eq 1; then
 	patch_apply d3d9-Tests/0001-d3d9-tests-Avoid-test-failures-on-specific-Nvidia-graphic-.patch
+	patch_apply d3d9-Tests/0002-d3d9-tests-Avoid-crash-when-surface-and-texture-crea.patch
 	(
 		echo '+    { "Sebastian Lackner", "d3d9/tests: Avoid test failures on specific Nvidia graphic cards.", 1 },';
+		echo '+    { "Christian Costa", "d3d9/tests: Avoid crash when surface and texture creation fails.", 1 },';
 	) >> "$patchlist"
 fi
 

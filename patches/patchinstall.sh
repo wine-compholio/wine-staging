@@ -2222,6 +2222,13 @@ if test "$enable_gdiplus_GdipCreateMetafileFromStream" -eq 1; then
 	enable_oleaut32_OLEPictureImpl_SaveAsFile=1
 fi
 
+if test "$enable_oleaut32_OLEPictureImpl_SaveAsFile" -eq 1; then
+	if test "$enable_oleaut32_Load_Save_EMF" -gt 1; then
+		abort "Patchset oleaut32-Load_Save_EMF disabled, but oleaut32-OLEPictureImpl_SaveAsFile depends on that."
+	fi
+	enable_oleaut32_Load_Save_EMF=1
+fi
+
 if test "$enable_dxva2_Video_Decoder" -eq 1; then
 	if test "$enable_winecfg_Staging" -gt 1; then
 		abort "Patchset winecfg-Staging disabled, but dxva2-Video_Decoder depends on that."
@@ -3692,7 +3699,27 @@ if test "$enable_gdi32_Symbol_Truetype_Font" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset oleaut32-Load_Save_EMF
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40523] Implement support for loading and saving EMF to IPicture interface
+# |
+# | Modified files:
+# |   *	dlls/oleaut32/olepicture.c, dlls/oleaut32/tests/olepicture.c
+# |
+if test "$enable_oleaut32_Load_Save_EMF" -eq 1; then
+	patch_apply oleaut32-Load_Save_EMF/0001-oleaut32-tests-Add-some-tests-for-loading-and-saving.patch
+	patch_apply oleaut32-Load_Save_EMF/0002-oleaut32-Add-support-for-loading-and-saving-EMF-to-I.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "oleaut32/tests: Add some tests for loading and saving EMF using IPicture interface.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "oleaut32: Add support for loading and saving EMF to IPicture interface.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset oleaut32-OLEPictureImpl_SaveAsFile
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	oleaut32-Load_Save_EMF
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#8532] Implement a better stub for IPicture::SaveAsFile
@@ -3704,16 +3731,18 @@ fi
 if test "$enable_oleaut32_OLEPictureImpl_SaveAsFile" -eq 1; then
 	patch_apply oleaut32-OLEPictureImpl_SaveAsFile/0001-gdiplus-Reimplement-metafile-loading-using-gdi32-ins.patch
 	patch_apply oleaut32-OLEPictureImpl_SaveAsFile/0002-oleaut32-Implement-a-better-stub-for-IPicture-SaveAs.patch
+	patch_apply oleaut32-OLEPictureImpl_SaveAsFile/0003-oleaut32-Implement-SaveAsFile-for-PICTYPE_ENHMETAFIL.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "gdiplus: Reimplement metafile loading using gdi32 instead of IPicture.", 2 },';
 		echo '+    { "Dmitry Timoshkov", "oleaut32: Implement a better stub for IPicture::SaveAsFile.", 1 },';
+		echo '+    { "Sebastian Lackner", "oleaut32: Implement SaveAsFile for PICTYPE_ENHMETAFILE.", 1 },';
 	) >> "$patchlist"
 fi
 
 # Patchset gdiplus-GdipCreateMetafileFromStream
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	oleaut32-OLEPictureImpl_SaveAsFile
+# |   *	oleaut32-Load_Save_EMF, oleaut32-OLEPictureImpl_SaveAsFile
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#40325] Implement GdipCreateMetafileFromStream
@@ -5532,23 +5561,6 @@ if test "$enable_oleaut32_CreateTypeLib" -eq 1; then
 	patch_apply oleaut32-CreateTypeLib/0001-oleaut32-Implement-semi-stub-for-CreateTypeLib.patch
 	(
 		echo '+    { "Alistair Leslie-Hughes", "oleaut32: Implement semi-stub for CreateTypeLib.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset oleaut32-Load_Save_EMF
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40523] Implement support for loading and saving EMF to IPicture interface
-# |
-# | Modified files:
-# |   *	dlls/oleaut32/olepicture.c, dlls/oleaut32/tests/olepicture.c
-# |
-if test "$enable_oleaut32_Load_Save_EMF" -eq 1; then
-	patch_apply oleaut32-Load_Save_EMF/0001-oleaut32-tests-Add-some-tests-for-loading-and-saving.patch
-	patch_apply oleaut32-Load_Save_EMF/0002-oleaut32-Add-support-for-loading-and-saving-EMF-to-I.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "oleaut32/tests: Add some tests for loading and saving EMF using IPicture interface.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "oleaut32: Add support for loading and saving EMF to IPicture interface.", 1 },';
 	) >> "$patchlist"
 fi
 

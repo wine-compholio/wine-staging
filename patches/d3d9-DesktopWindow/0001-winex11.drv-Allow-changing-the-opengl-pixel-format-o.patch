@@ -1,4 +1,4 @@
-From 4d175fa573da8103e76f59f93b528dc9d37c146d Mon Sep 17 00:00:00 2001
+From 3b07128afb354df0304f1164ed28084b4619b933 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Wed, 3 Jun 2015 22:57:21 +0200
 Subject: winex11.drv: Allow changing the opengl pixel format on the desktop
@@ -11,15 +11,73 @@ window will fail because of this limitation. Unless someone comes up with
 a more correct solution or finds an application that breaks because of this,
 it seems to be a suitable workaround as it fixes multiple applications.
 ---
- dlls/d3d9/tests/device.c  | 16 ++++++++++++++++
- dlls/winex11.drv/opengl.c |  5 ++++-
- 2 files changed, 20 insertions(+), 1 deletion(-)
+ dlls/d3d10_1/tests/d3d10_1.c | 14 ++++++++++++--
+ dlls/d3d11/tests/d3d11.c     | 20 ++++++++++++++++----
+ dlls/d3d9/tests/device.c     | 16 ++++++++++++++++
+ dlls/winex11.drv/opengl.c    |  5 ++++-
+ 4 files changed, 48 insertions(+), 7 deletions(-)
 
+diff --git a/dlls/d3d10_1/tests/d3d10_1.c b/dlls/d3d10_1/tests/d3d10_1.c
+index f5b1454..ac21f68 100644
+--- a/dlls/d3d10_1/tests/d3d10_1.c
++++ b/dlls/d3d10_1/tests/d3d10_1.c
+@@ -226,8 +226,18 @@ static void test_create_device(void)
+     hr = D3D10CreateDeviceAndSwapChain1(NULL, D3D10_DRIVER_TYPE_HARDWARE, NULL, 0,
+             supported_feature_level, D3D10_1_SDK_VERSION, &swapchain_desc, &swapchain, &device);
+     todo_wine ok(hr == DXGI_ERROR_INVALID_CALL, "D3D10CreateDeviceAndSwapChain1 returned %#x.\n", hr);
+-    ok(!swapchain, "Got unexpected swapchain pointer %p.\n", swapchain);
+-    ok(!device, "Got unexpected device pointer %p.\n", device);
++    if (SUCCEEDED(hr))
++    {
++        refcount = IDXGISwapChain_Release(swapchain);
++        ok(!refcount, "Swapchain has %u references left.\n", refcount);
++        refcount = ID3D10Device1_Release(device);
++        ok(!refcount, "Device has %u references left.\n", refcount);
++    }
++    else
++    {
++        ok(!swapchain, "Got unexpected swapchain pointer %p.\n", swapchain);
++        ok(!device, "Got unexpected device pointer %p.\n", device);
++    }
+ 
+     swapchain = (IDXGISwapChain *)0xdeadbeef;
+     device = (ID3D10Device1 *)0xdeadbeef;
+diff --git a/dlls/d3d11/tests/d3d11.c b/dlls/d3d11/tests/d3d11.c
+index 03b6113..e1c2e37 100644
+--- a/dlls/d3d11/tests/d3d11.c
++++ b/dlls/d3d11/tests/d3d11.c
+@@ -805,10 +805,22 @@ static void test_create_device(void)
+     hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 0, NULL, 0, D3D11_SDK_VERSION,
+             &swapchain_desc, &swapchain, &device, &feature_level, &immediate_context);
+     todo_wine ok(hr == DXGI_ERROR_INVALID_CALL, "D3D11CreateDeviceAndSwapChain returned %#x.\n", hr);
+-    ok(!swapchain, "Got unexpected swapchain pointer %p.\n", swapchain);
+-    ok(!device, "Got unexpected device pointer %p.\n", device);
+-    ok(!feature_level, "Got unexpected feature level %#x.\n", feature_level);
+-    ok(!immediate_context, "Got unexpected immediate context pointer %p.\n", immediate_context);
++    if (SUCCEEDED(hr))
++    {
++        refcount = IDXGISwapChain_Release(swapchain);
++        ok(!refcount, "Swapchain has %u references left.\n", refcount);
++        refcount = ID3D11DeviceContext_Release(immediate_context);
++        ok(!refcount, "Immediate context has %u references left.\n", refcount);
++        refcount = ID3D11Device_Release(device);
++        ok(!refcount, "Device has %u references left.\n", refcount);
++    }
++    else
++    {
++        ok(!swapchain, "Got unexpected swapchain pointer %p.\n", swapchain);
++        ok(!device, "Got unexpected device pointer %p.\n", device);
++        ok(!feature_level, "Got unexpected feature level %#x.\n", feature_level);
++        ok(!immediate_context, "Got unexpected immediate context pointer %p.\n", immediate_context);
++    }
+ 
+     swapchain = (IDXGISwapChain *)0xdeadbeef;
+     device = (ID3D11Device *)0xdeadbeef;
 diff --git a/dlls/d3d9/tests/device.c b/dlls/d3d9/tests/device.c
-index e6edb00..5a75f3a 100644
+index 8860bce..f1d6488 100644
 --- a/dlls/d3d9/tests/device.c
 +++ b/dlls/d3d9/tests/device.c
-@@ -11049,6 +11049,21 @@ done:
+@@ -11122,6 +11122,21 @@ done:
      DestroyWindow(window);
  }
  
@@ -41,7 +99,7 @@ index e6edb00..5a75f3a 100644
  START_TEST(device)
  {
      WNDCLASSA wc = {0};
-@@ -11164,6 +11179,7 @@ START_TEST(device)
+@@ -11237,6 +11252,7 @@ START_TEST(device)
      test_swapchain_parameters();
      test_check_device_format();
      test_miptree_layout();
@@ -50,10 +108,10 @@ index e6edb00..5a75f3a 100644
      UnregisterClassA("d3d9_test_wc", GetModuleHandleA(NULL));
  }
 diff --git a/dlls/winex11.drv/opengl.c b/dlls/winex11.drv/opengl.c
-index ab29ce4..ce87d14 100644
+index 0f7534e..613d1df 100644
 --- a/dlls/winex11.drv/opengl.c
 +++ b/dlls/winex11.drv/opengl.c
-@@ -1454,12 +1454,15 @@ static BOOL set_pixel_format(HDC hdc, int format, BOOL allow_change)
+@@ -1457,12 +1457,15 @@ static BOOL set_pixel_format(HDC hdc, int format, BOOL allow_change)
  
      TRACE("(%p,%d)\n", hdc, format);
  
@@ -71,5 +129,5 @@ index ab29ce4..ce87d14 100644
      if (!fmt)
      {
 -- 
-2.7.1
+2.8.0
 

@@ -2829,7 +2829,7 @@ fi
 # Patchset d3d9-DesktopWindow
 # |
 # | Modified files:
-# |   *	dlls/d3d9/tests/device.c, dlls/winex11.drv/opengl.c
+# |   *	dlls/d3d10_1/tests/d3d10_1.c, dlls/d3d11/tests/d3d11.c, dlls/d3d9/tests/device.c, dlls/winex11.drv/opengl.c
 # |
 if test "$enable_d3d9_DesktopWindow" -eq 1; then
 	patch_apply d3d9-DesktopWindow/0001-winex11.drv-Allow-changing-the-opengl-pixel-format-o.patch

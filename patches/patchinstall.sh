@@ -3856,7 +3856,7 @@ fi
 # |   *	[#8332] Fallback to system ping command when CAP_NET_RAW is not available
 # |
 # | Modified files:
-# |   *	dlls/iphlpapi/icmp.c
+# |   *	dlls/iphlpapi/icmp.c, dlls/iphlpapi/tests/iphlpapi.c
 # |
 if test "$enable_iphlpapi_System_Ping" -eq 1; then
 	patch_apply iphlpapi-System_Ping/0001-iphlpapi-Fallback-to-system-ping-when-ICMP-permissio.patch

@@ -2215,6 +2215,13 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 	enable_server_File_Permissions=1
 fi
 
+if test "$enable_imagehlp_ImageLoad" -eq 1; then
+	if test "$enable_imagehlp_Cleanup" -gt 1; then
+		abort "Patchset imagehlp-Cleanup disabled, but imagehlp-ImageLoad depends on that."
+	fi
+	enable_imagehlp_Cleanup=1
+fi
+
 if test "$enable_gdiplus_GdipCreateMetafileFromStream" -eq 1; then
 	if test "$enable_oleaut32_OLEPictureImpl_SaveAsFile" -gt 1; then
 		abort "Patchset oleaut32-OLEPictureImpl_SaveAsFile disabled, but gdiplus-GdipCreateMetafileFromStream depends on that."
@@ -3870,6 +3877,9 @@ if test "$enable_imagehlp_Cleanup" -eq 1; then
 fi
 
 # Patchset imagehlp-ImageLoad
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	imagehlp-Cleanup
 # |
 # | Modified files:
 # |   *	dlls/imagehlp/tests/image.c

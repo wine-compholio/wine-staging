@@ -7415,7 +7415,7 @@ fi
 # |   *	[#25419] Fix broken textures in XIII Century: Death or Glory
 # |
 # | Modified files:
-# |   *	dlls/winex11.drv/opengl.c
+# |   *	dlls/opengl32/tests/opengl.c, dlls/winex11.drv/opengl.c
 # |
 if test "$enable_winex11_wglShareLists" -eq 1; then
 	patch_apply winex11-wglShareLists/0001-winex11.drv-Only-warn-about-used-contexts-in-wglShar.patch

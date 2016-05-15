@@ -104,6 +104,7 @@ patch_enable_all ()
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Skip_Tests="$1"
 	enable_d3d9_Surface_Refcount="$1"
+	enable_d3d9_Tests="$1"
 	enable_d3dx9_24_ID3DXEffect="$1"
 	enable_d3dx9_25_ID3DXEffect="$1"
 	enable_d3dx9_26_ID3DXEffect="$1"
@@ -482,6 +483,9 @@ patch_enable ()
 			;;
 		d3d9-Surface_Refcount)
 			enable_d3d9_Surface_Refcount="$2"
+			;;
+		d3d9-Tests)
+			enable_d3d9_Tests="$2"
 			;;
 		d3dx9_24-ID3DXEffect)
 			enable_d3dx9_24_ID3DXEffect="$2"
@@ -2843,6 +2847,18 @@ if test "$enable_d3d9_Surface_Refcount" -eq 1; then
 	patch_apply d3d9-Surface_Refcount/0001-d3d9-Don-t-decrease-surface-refcount-when-its-alread.patch
 	(
 		echo '+    { "Henri Verbeet", "d3d9: Don'\''t decrease surface refcount when its already zero.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3d9-Tests
+# |
+# | Modified files:
+# |   *	dlls/d3d9/tests/visual.c
+# |
+if test "$enable_d3d9_Tests" -eq 1; then
+	patch_apply d3d9-Tests/0001-d3d9-tests-Avoid-test-failures-on-specific-Nvidia-graphic-.patch
+	(
+		echo '+    { "Sebastian Lackner", "d3d9/tests: Avoid test failures on specific Nvidia graphic cards.", 1 },';
 	) >> "$patchlist"
 fi
 

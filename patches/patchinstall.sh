@@ -124,6 +124,7 @@ patch_enable_all ()
 	enable_d3dx9_36_Texture_Align="$1"
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
 	enable_dbghelp_Debug_Symbols="$1"
+	enable_dbghelp_EnumerateLoadedModulesExW="$1"
 	enable_ddraw_D3DFINDDEVICERESULT="$1"
 	enable_ddraw_Device_Caps="$1"
 	enable_ddraw_EnumSurfaces="$1"
@@ -545,6 +546,9 @@ patch_enable ()
 			;;
 		dbghelp-Debug_Symbols)
 			enable_dbghelp_Debug_Symbols="$2"
+			;;
+		dbghelp-EnumerateLoadedModulesExW)
+			enable_dbghelp_EnumerateLoadedModulesExW="$2"
 			;;
 		ddraw-D3DFINDDEVICERESULT)
 			enable_ddraw_D3DFINDDEVICERESULT="$2"
@@ -3216,6 +3220,21 @@ if test "$enable_dbghelp_Debug_Symbols" -eq 1; then
 	patch_apply dbghelp-Debug_Symbols/0001-dbghelp-Always-check-for-debug-symbols-in-BINDIR.patch
 	(
 		echo '+    { "Sebastian Lackner", "dbghelp: Always check for debug symbols in BINDIR.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dbghelp-EnumerateLoadedModulesExW
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40614] Implement dbghelp.EnumerateLoadedModulesExW
+# |
+# | Modified files:
+# |   *	dlls/dbghelp/dbghelp.spec, dlls/dbghelp/module.c
+# |
+if test "$enable_dbghelp_EnumerateLoadedModulesExW" -eq 1; then
+	patch_apply dbghelp-EnumerateLoadedModulesExW/0001-dbghelp-Implement-EnumerateLoadedModulesExW.patch
+	(
+		echo '+    { "Michael Müller", "dbghelp: Implement EnumerateLoadedModulesExW.", 1 },';
 	) >> "$patchlist"
 fi
 

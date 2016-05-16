@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "1348d9e97b1e83c99b68e0c9b592798038dc7f41"
+	echo "f7ac364b0c06bbe7a1ef5b715f2be46b5e6c04d4"
 }
 
 # Show version information
@@ -3410,33 +3410,31 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/dsound/Makefile.in, dlls/dsound/buffer.c, dlls/dsound/dsound.c, dlls/dsound/dsound_eax.h,
-# | 	dlls/dsound/dsound_main.c, dlls/dsound/dsound_private.h, dlls/dsound/eax.c, dlls/dsound/mixer.c, dlls/dsound/primary.c
+# | 	dlls/dsound/dsound_main.c, dlls/dsound/dsound_private.h, dlls/dsound/eax.c, dlls/dsound/mixer.c
 # |
 if test "$enable_dsound_EAX" -eq 1; then
-	patch_apply dsound-EAX/0001-dsound-Get-rid-of-no-longer-needed-mix_buffer_len-fi.patch
-	patch_apply dsound-EAX/0002-dsound-Apply-filters-before-sound-is-multiplied-to-s.patch
-	patch_apply dsound-EAX/0003-dsound-Add-EAX-v1-constants-and-structs.patch
-	patch_apply dsound-EAX/0004-dsound-Report-that-we-support-EAX-v1.patch
-	patch_apply dsound-EAX/0005-dsound-Add-EAX-propset-stubs.patch
-	patch_apply dsound-EAX/0006-dsound-Add-EAX-presets.patch
-	patch_apply dsound-EAX/0007-dsound-Support-getting-and-setting-EAX-properties.patch
-	patch_apply dsound-EAX/0008-dsound-Support-getting-and-setting-EAX-buffer-proper.patch
-	patch_apply dsound-EAX/0009-dsound-Add-EAX-init-and-free-stubs.patch
-	patch_apply dsound-EAX/0010-dsound-Feed-data-through-EAX-function.patch
-	patch_apply dsound-EAX/0011-dsound-Allocate-EAX-delay-lines.patch
-	patch_apply dsound-EAX/0012-dsound-Add-EAX-VerbPass-stub.patch
-	patch_apply dsound-EAX/0013-dsound-Implement-EAX-lowpass-filter.patch
-	patch_apply dsound-EAX/0014-dsound-Add-delay-line-EAX-functions.patch
-	patch_apply dsound-EAX/0015-dsound-Implement-EAX-early-reflections.patch
-	patch_apply dsound-EAX/0016-dsound-Implement-EAX-decorrelator.patch
-	patch_apply dsound-EAX/0017-dsound-Implement-EAX-late-reverb.patch
-	patch_apply dsound-EAX/0018-dsound-Implement-EAX-late-all-pass-filter.patch
-	patch_apply dsound-EAX/0019-dsound-Various-improvements-to-EAX-support.patch
-	patch_apply dsound-EAX/0020-dsound-Allow-disabling-of-EAX-support-in-the-registr.patch
-	patch_apply dsound-EAX/0021-dsound-Add-stub-support-for-DSPROPSETID_EAX20_Listen.patch
-	patch_apply dsound-EAX/0022-dsound-Add-stub-support-for-DSPROPSETID_EAX20_Buffer.patch
+	patch_apply dsound-EAX/0001-dsound-Apply-filters-before-sound-is-multiplied-to-s.patch
+	patch_apply dsound-EAX/0002-dsound-Add-EAX-v1-constants-and-structs.patch
+	patch_apply dsound-EAX/0003-dsound-Report-that-we-support-EAX-v1.patch
+	patch_apply dsound-EAX/0004-dsound-Add-EAX-propset-stubs.patch
+	patch_apply dsound-EAX/0005-dsound-Add-EAX-presets.patch
+	patch_apply dsound-EAX/0006-dsound-Support-getting-and-setting-EAX-properties.patch
+	patch_apply dsound-EAX/0007-dsound-Support-getting-and-setting-EAX-buffer-proper.patch
+	patch_apply dsound-EAX/0008-dsound-Add-EAX-init-and-free-stubs.patch
+	patch_apply dsound-EAX/0009-dsound-Feed-data-through-EAX-function.patch
+	patch_apply dsound-EAX/0010-dsound-Allocate-EAX-delay-lines.patch
+	patch_apply dsound-EAX/0011-dsound-Add-EAX-VerbPass-stub.patch
+	patch_apply dsound-EAX/0012-dsound-Implement-EAX-lowpass-filter.patch
+	patch_apply dsound-EAX/0013-dsound-Add-delay-line-EAX-functions.patch
+	patch_apply dsound-EAX/0014-dsound-Implement-EAX-early-reflections.patch
+	patch_apply dsound-EAX/0015-dsound-Implement-EAX-decorrelator.patch
+	patch_apply dsound-EAX/0016-dsound-Implement-EAX-late-reverb.patch
+	patch_apply dsound-EAX/0017-dsound-Implement-EAX-late-all-pass-filter.patch
+	patch_apply dsound-EAX/0018-dsound-Various-improvements-to-EAX-support.patch
+	patch_apply dsound-EAX/0019-dsound-Allow-disabling-of-EAX-support-in-the-registr.patch
+	patch_apply dsound-EAX/0020-dsound-Add-stub-support-for-DSPROPSETID_EAX20_Listen.patch
+	patch_apply dsound-EAX/0021-dsound-Add-stub-support-for-DSPROPSETID_EAX20_Buffer.patch
 	(
-		echo '+    { "Sebastian Lackner", "dsound: Get rid of no longer needed mix_buffer_len field.", 1 },';
 		echo '+    { "Sebastian Lackner", "dsound: Apply filters before sound is multiplied to speakers.", 1 },';
 		echo '+    { "Mark Harmstone", "dsound: Add EAX v1 constants and structs.", 1 },';
 		echo '+    { "Mark Harmstone", "dsound: Report that we support EAX.", 1 },';

@@ -379,6 +379,7 @@ patch_enable_all ()
 	enable_winhttp_System_Proxy_Autoconfig="$1"
 	enable_wininet_Cleanup="$1"
 	enable_wininet_HttpOpenRequestW="$1"
+	enable_wininet_InternetReadFile="$1"
 	enable_wininet_Internet_Settings="$1"
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
 	enable_winmm_Delay_Import_Depends="$1"
@@ -1308,6 +1309,9 @@ patch_enable ()
 			;;
 		wininet-HttpOpenRequestW)
 			enable_wininet_HttpOpenRequestW="$2"
+			;;
+		wininet-InternetReadFile)
+			enable_wininet_InternetReadFile="$2"
 			;;
 		wininet-Internet_Settings)
 			enable_wininet_Internet_Settings="$2"
@@ -7508,6 +7512,21 @@ if test "$enable_wininet_HttpOpenRequestW" -eq 1; then
 	patch_apply wininet-HttpOpenRequestW/0001-wininet-Handle-INTERNET_INVALID_PORT_NUMBER-in-HttpO.patch
 	(
 		echo '+    { "Michael Müller", "wininet: Handle INTERNET_INVALID_PORT_NUMBER in HttpOpenRequest.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wininet-InternetReadFile
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40536] Return synchronously from InternetReadFile if there is no more data to read
+# |
+# | Modified files:
+# |   *	dlls/wininet/http.c
+# |
+if test "$enable_wininet_InternetReadFile" -eq 1; then
+	patch_apply wininet-InternetReadFile/0001-wininet-Return-synchronously-from-InternetReadFile-i.patch
+	(
+		echo '+    { "Sebastian Lackner", "wininet: Return synchronously from InternetReadFile if there is no more data to read.", 1 },';
 	) >> "$patchlist"
 fi
 

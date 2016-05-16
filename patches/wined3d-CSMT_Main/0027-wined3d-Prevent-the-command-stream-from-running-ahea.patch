@@ -1,0 +1,60 @@
+From ed255dd2796f1f6c5dfa6053256f4f2a4b43d7e9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Wed, 10 Apr 2013 19:10:41 +0200
+Subject: wined3d: Prevent the command stream from running ahead too far
+
+---
+ dlls/wined3d/cs.c              | 8 ++++++++
+ dlls/wined3d/wined3d_private.h | 2 ++
+ 2 files changed, 10 insertions(+)
+
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 85337db..c7bb109 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -473,6 +473,8 @@ static UINT wined3d_cs_exec_present(struct wined3d_cs *cs, const void *data)
+     swapchain->swapchain_ops->swapchain_present(swapchain, &op->src_rect, &op->dst_rect, op->flags,
+             cs->state.fb.depth_stencil);
+ 
++    InterlockedDecrement(&cs->pending_presents);
++
+     return sizeof(*op);
+ }
+ 
+@@ -480,6 +482,7 @@ void wined3d_cs_emit_present(struct wined3d_cs *cs, struct wined3d_swapchain *sw
+         const RECT *src_rect, const RECT *dst_rect, HWND dst_window_override, DWORD flags)
+ {
+     struct wined3d_cs_present *op;
++    LONG pending;
+ 
+     op = cs->ops->require_space(cs, sizeof(*op));
+     op->opcode = WINED3D_CS_OP_PRESENT;
+@@ -489,7 +492,12 @@ void wined3d_cs_emit_present(struct wined3d_cs *cs, struct wined3d_swapchain *sw
+     op->dst_rect = *dst_rect;
+     op->flags = flags;
+ 
++    pending = InterlockedIncrement(&cs->pending_presents);
++
+     cs->ops->submit(cs);
++
++    while (pending > 1)
++        pending = InterlockedCompareExchange(&cs->pending_presents, 0, 0);
+ }
+ 
+ static UINT wined3d_cs_exec_clear(struct wined3d_cs *cs, const void *data)
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index a085783..925a326 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2894,6 +2894,8 @@ struct wined3d_cs
+ 
+     struct wined3d_cs_list free_list;
+     struct wined3d_cs_list exec_list;
++
++    LONG pending_presents;
+ };
+ 
+ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device) DECLSPEC_HIDDEN;
+-- 
+2.8.0
+

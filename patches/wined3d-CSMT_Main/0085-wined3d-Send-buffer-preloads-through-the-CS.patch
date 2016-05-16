@@ -1,0 +1,122 @@
+From 2230e8a2635b98e710facae0c430711ad70f3a0c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Sun, 7 Jul 2013 12:02:59 +0200
+Subject: wined3d: Send buffer preloads through the CS
+
+Think about making this a fast command. Might help if the driver
+supports async data transfer, but synchronization side effects, esp. wrt
+the dirty area list, have to be considered.
+---
+ dlls/wined3d/buffer.c          | 12 +-----------
+ dlls/wined3d/cs.c              | 31 +++++++++++++++++++++++++++++++
+ dlls/wined3d/wined3d_private.h |  1 +
+ 3 files changed, 33 insertions(+), 11 deletions(-)
+
+diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
+index 3fb0d7c..4a73dcb 100644
+--- a/dlls/wined3d/buffer.c
++++ b/dlls/wined3d/buffer.c
+@@ -934,7 +934,6 @@ void buffer_internal_preload(struct wined3d_buffer *buffer, struct wined3d_conte
+ 
+ void CDECL wined3d_buffer_preload(struct wined3d_buffer *buffer)
+ {
+-    struct wined3d_context *context;
+     struct wined3d_device *device = buffer->resource.device;
+ 
+     if (buffer->resource.map_count)
+@@ -943,16 +942,7 @@ void CDECL wined3d_buffer_preload(struct wined3d_buffer *buffer)
+         return;
+     }
+ 
+-    if (wined3d_settings.cs_multithreaded)
+-    {
+-        FIXME("Waiting for cs.\n");
+-        wined3d_cs_emit_glfinish(device->cs);
+-        device->cs->ops->finish(device->cs);
+-    }
+-
+-    context = context_acquire(buffer->resource.device, NULL);
+-    buffer_internal_preload(buffer, context, NULL);
+-    context_release(context);
++    wined3d_cs_emit_buffer_preload(device->cs, buffer);
+ }
+ 
+ struct wined3d_resource * CDECL wined3d_buffer_get_resource(struct wined3d_buffer *buffer)
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index b530ab2..91e4a84 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -71,6 +71,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_TEXTURE_UNMAP,
+     WINED3D_CS_OP_BUFFER_SWAP_MEM,
+     WINED3D_CS_OP_BUFFER_INVALIDATE_RANGE,
++    WINED3D_CS_OP_BUFFER_PRELOAD,
+     WINED3D_CS_OP_QUERY_ISSUE,
+     WINED3D_CS_OP_QUERY_DESTROY,
+     WINED3D_CS_OP_TEXTURE_PRELOAD,
+@@ -447,6 +448,12 @@ struct wined3d_cs_update_sub_resource
+     const void *data;
+ };
+ 
++struct wined3d_cs_buffer_preload
++{
++    enum wined3d_cs_op opcode;
++    struct wined3d_buffer *buffer;
++};
++
+ static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
+ {
+     LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
+@@ -2299,6 +2306,29 @@ void wined3d_cs_emit_buffer_invalidate_bo_range(struct wined3d_cs *cs,
+     cs->ops->submit(cs, sizeof(*op));
+ }
+ 
++static UINT wined3d_cs_exec_buffer_preload(struct wined3d_cs *cs, const void *data)
++{
++    const struct wined3d_cs_buffer_preload *op = data;
++    struct wined3d_context *context;
++
++    context = context_acquire(cs->device, NULL);
++    buffer_internal_preload(op->buffer, context, NULL);
++    context_release(context);
++
++    return sizeof(*op);
++}
++
++void wined3d_cs_emit_buffer_preload(struct wined3d_cs *cs, struct wined3d_buffer *buffer)
++{
++    struct wined3d_cs_buffer_preload *op;
++
++    op = cs->ops->require_space(cs, sizeof(*op));
++    op->opcode = WINED3D_CS_OP_BUFFER_PRELOAD;
++    op->buffer = buffer;
++
++    cs->ops->submit(cs, sizeof(*op));
++}
++
+ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
+ {
+     /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
+@@ -2348,6 +2378,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_TEXTURE_UNMAP              */ wined3d_cs_exec_texture_unmap,
+     /* WINED3D_CS_OP_BUFFER_SWAP_MEM            */ wined3d_cs_exec_buffer_swap_mem,
+     /* WINED3D_CS_OP_BUFFER_INVALIDATE_RANGE    */ wined3d_cs_exec_buffer_invalidate_bo_range,
++    /* WINED3D_CS_OP_BUFFER_PRELOAD             */ wined3d_cs_exec_buffer_preload,
+     /* WINED3D_CS_OP_QUERY_ISSUE                */ wined3d_cs_exec_query_issue,
+     /* WINED3D_CS_OP_QUERY_DESTROY              */ wined3d_cs_exec_query_destroy,
+     /* WINED3D_CS_OP_TEXTURE_PRELOAD            */ wined3d_cs_exec_texture_preload,
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 18693e3..dcaab57 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -3037,6 +3037,7 @@ void wined3d_cs_emit_buffer_swap_mem(struct wined3d_cs *cs, struct wined3d_buffe
+         BYTE *mem) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_buffer_invalidate_bo_range(struct wined3d_cs *cs,
+         struct wined3d_buffer *buffer, unsigned int offset, unsigned int size) DECLSPEC_HIDDEN;
++void wined3d_cs_emit_buffer_preload(struct wined3d_cs *cs, struct wined3d_buffer *buffer) DECLSPEC_HIDDEN;
+ 
+ /* Direct3D terminology with little modifications. We do not have an issued state
+  * because only the driver knows about it, but we have a created state because d3d
+-- 
+2.8.0
+

@@ -1,0 +1,100 @@
+From 5d3739d94ccb7e4a7bfaebf33cdb399a0707f9e7 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Thu, 29 Oct 2015 15:41:59 +0100
+Subject: wined3d: Make surface_load_location return nothing.
+
+FIXME: I guess Henri disagrees.
+---
+ dlls/wined3d/surface.c         | 12 ++++++------
+ dlls/wined3d/texture.c         |  3 ++-
+ dlls/wined3d/wined3d_private.h |  2 +-
+ 3 files changed, 9 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
+index e0d7c80..3435d17 100644
+--- a/dlls/wined3d/surface.c
++++ b/dlls/wined3d/surface.c
+@@ -3035,7 +3035,7 @@ static void surface_load_renderbuffer(struct wined3d_surface *surface, struct wi
+ }
+ 
+ /* Context activation is done by the caller. Context may be NULL in ddraw-only mode. */
+-HRESULT surface_load_location(struct wined3d_surface *surface, struct wined3d_context *context, DWORD location)
++void surface_load_location(struct wined3d_surface *surface, struct wined3d_context *context, DWORD location)
+ {
+     unsigned int sub_resource_idx = surface_get_sub_resource_idx(surface);
+     struct wined3d_texture *texture = surface->container;
+@@ -3053,7 +3053,7 @@ HRESULT surface_load_location(struct wined3d_surface *surface, struct wined3d_co
+             || (surface->ds_current_size.cx == surface_w && surface->ds_current_size.cy == surface_h)))
+     {
+         TRACE("Location (%#x) is already up to date.\n", location);
+-        return WINED3D_OK;
++        return;
+     }
+ 
+     if (WARN_ON(d3d))
+@@ -3091,7 +3091,7 @@ HRESULT surface_load_location(struct wined3d_surface *surface, struct wined3d_co
+ 
+         FIXME("Unimplemented copy from %s to %s for depth/stencil buffers.\n",
+                 wined3d_debug_location(sub_resource->locations), wined3d_debug_location(location));
+-        return WINED3DERR_INVALIDCALL;
++        return;
+     }
+ 
+     switch (location)
+@@ -3104,7 +3104,7 @@ HRESULT surface_load_location(struct wined3d_surface *surface, struct wined3d_co
+ 
+         case WINED3D_LOCATION_DRAWABLE:
+             if (FAILED(hr = surface_load_drawable(surface, context)))
+-                return hr;
++                return;
+             break;
+ 
+         case WINED3D_LOCATION_RB_RESOLVED:
+@@ -3116,7 +3116,7 @@ HRESULT surface_load_location(struct wined3d_surface *surface, struct wined3d_co
+         case WINED3D_LOCATION_TEXTURE_SRGB:
+             if (FAILED(hr = surface_load_texture(surface, context,
+                     location == WINED3D_LOCATION_TEXTURE_SRGB)))
+-                return hr;
++                return;
+             break;
+ 
+         default:
+@@ -3133,7 +3133,7 @@ done:
+         surface->ds_current_size.cy = surface_h;
+     }
+ 
+-    return WINED3D_OK;
++    return;
+ }
+ 
+ static HRESULT ffp_blit_alloc(struct wined3d_device *device) { return WINED3D_OK; }
+diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
+index 3a03bb6..fcea428 100644
+--- a/dlls/wined3d/texture.c
++++ b/dlls/wined3d/texture.c
+@@ -1353,7 +1353,8 @@ static void texture2d_upload_data(struct wined3d_texture *texture, unsigned int
+ static BOOL texture2d_load_location(struct wined3d_texture *texture, unsigned int sub_resource_idx,
+         struct wined3d_context *context, DWORD location)
+ {
+-    return SUCCEEDED(surface_load_location(texture->sub_resources[sub_resource_idx].u.surface, context, location));
++    surface_load_location(texture->sub_resources[sub_resource_idx].u.surface, context, location);
++    return TRUE;
+ }
+ 
+ /* Context activation is done by the caller. */
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 274f620..d5fa2f0 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2708,7 +2708,7 @@ void surface_get_drawable_size(const struct wined3d_surface *surface, const stru
+         unsigned int *width, unsigned int *height) DECLSPEC_HIDDEN;
+ void surface_load_fb_texture(struct wined3d_surface *surface, BOOL srgb,
+         struct wined3d_context *context) DECLSPEC_HIDDEN;
+-HRESULT surface_load_location(struct wined3d_surface *surface,
++void surface_load_location(struct wined3d_surface *surface,
+         struct wined3d_context *context, DWORD location) DECLSPEC_HIDDEN;
+ void surface_modify_ds_location(struct wined3d_surface *surface, DWORD location, UINT w, UINT h) DECLSPEC_HIDDEN;
+ void wined3d_surface_prepare(struct wined3d_surface *surface, struct wined3d_context *context,
+-- 
+2.8.0
+

@@ -1,0 +1,37 @@
+From 9d6b1a62deec5feb33889b0268171c1b40daf976 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Thu, 10 Oct 2013 19:18:06 +0200
+Subject: wined3d: Ignore WINED3D_MAP_NO_DIRTY_UPDATE in resource_map.
+
+TODO: This flag and add_dirty_rect need tests.
+
+The primary purpose of this patch is to fix a memory leak in World of
+Warcraft. WoW uses WINED3D_MAP_NO_DIRTY_UPDATE | WINED3D_MAP_DISCARD on
+sysmem surfaces. A new block of memory is allocated, but never assigned
+to heap_mem because wined3d_cs_emit_resource_changed is not called.
+
+The bigger picture is that we don't know how this flag and AddDirtyRect
+/ AddDirtyBox are supposed to work. Msdn mentions some interaction with
+update_surface and update_texture, but personally I think it is more
+likely that this functionality is used to update separate rectangles in
+a texture, similar to what can be achieved by mapping a buffer twice.
+---
+ dlls/wined3d/texture.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
+index 4b0cc31..9be152d 100644
+--- a/dlls/wined3d/texture.c
++++ b/dlls/wined3d/texture.c
+@@ -1673,7 +1673,7 @@ void *wined3d_texture_map_internal(struct wined3d_texture *texture, unsigned int
+         return NULL;
+     }
+ 
+-    if (!(flags & (WINED3D_MAP_NO_DIRTY_UPDATE | WINED3D_MAP_READONLY)))
++    if (!(flags & WINED3D_MAP_READONLY))
+         sub_resource->unmap_dirtify = TRUE;
+ 
+     wined3d_texture_get_memory(texture, sub_resource_idx, &bo_data, texture->resource.map_binding, TRUE);
+-- 
+2.8.0
+

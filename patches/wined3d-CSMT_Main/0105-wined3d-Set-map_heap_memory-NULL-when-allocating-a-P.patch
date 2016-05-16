@@ -1,0 +1,38 @@
+From 50433d57ff5e1b37596385d63cc40ddd1d8b355b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Thu, 5 Jun 2014 13:07:27 +0200
+Subject: wined3d: Set map_heap_memory = NULL when allocating a PBO.
+
+Otherwise the next unmap will re-assign it with the resource_changed
+message. Freeing the actual memory and setting the read pointer to 0 is
+the task of the worker thread.
+
+Wined3d_resource_prepare_bo is only called if the map binding is
+LOCATION_BUFFER, and map_heap_memory is only used if the map binding is
+LOCATION_SYSMEM.
+---
+ dlls/wined3d/texture.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
+index f42127e..77ef2e8 100644
+--- a/dlls/wined3d/texture.c
++++ b/dlls/wined3d/texture.c
+@@ -1125,6 +1125,14 @@ static void wined3d_texture_prepare_buffer_object(struct wined3d_texture *textur
+ 
+     TRACE("Created buffer object %u for texture %p, sub-resource %u.\n",
+             sub_resource->buffer->name, texture, sub_resource_idx);
++
++    /* FIXME: PBOs are (still) allocated per sub resource, this is global for the texture. It *should* work
++     * since whether we use PBOs is a per-texture choice, but it is shaky.
++     *
++     * This is needed because otherwise the next unmap will re-assign it with the resource_changed
++     * message. Freeing the actual memory and setting the read pointer to 0 is
++     * the task of the worker thread. */
++    texture->resource.map_heap_memory = NULL;
+ }
+ 
+ static void wined3d_texture_force_reload(struct wined3d_texture *texture)
+-- 
+2.8.0
+

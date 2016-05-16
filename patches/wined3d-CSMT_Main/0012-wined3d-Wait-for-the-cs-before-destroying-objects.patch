@@ -1,0 +1,117 @@
+From 914b61d3d8b4a6c680ed6bfe0f3b614a7c32c320 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Wed, 3 Apr 2013 18:01:34 +0200
+Subject: wined3d: Wait for the cs before destroying objects
+
+This is to avoid destroying objects that are still referenced in
+commands in the cs. Later patches will migrate resource destruction to
+the CS.
+---
+ dlls/wined3d/buffer.c            | 6 ++++++
+ dlls/wined3d/cs.c                | 2 ++
+ dlls/wined3d/shader.c            | 5 +++++
+ dlls/wined3d/texture.c           | 6 ++++++
+ dlls/wined3d/vertexdeclaration.c | 5 +++++
+ dlls/wined3d/wined3d_private.h   | 1 +
+ 6 files changed, 25 insertions(+)
+
+diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
+index 054c67c..2ae620c 100644
+--- a/dlls/wined3d/buffer.c
++++ b/dlls/wined3d/buffer.c
+@@ -557,6 +557,12 @@ ULONG CDECL wined3d_buffer_decref(struct wined3d_buffer *buffer)
+ 
+     if (!refcount)
+     {
++        if (wined3d_settings.cs_multithreaded)
++        {
++            FIXME("Waiting for cs.\n");
++            buffer->resource.device->cs->ops->finish(buffer->resource.device->cs);
++        }
++
+         if (buffer->buffer_object)
+         {
+             context = context_acquire(buffer->resource.device, NULL);
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index d92ce21..fe96c38 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -1279,12 +1279,14 @@ static const struct wined3d_cs_ops wined3d_cs_st_ops =
+ {
+     wined3d_cs_st_require_space,
+     wined3d_cs_st_submit,
++    wined3d_cs_st_submit,
+ };
+ 
+ static const struct wined3d_cs_ops wined3d_cs_mt_ops =
+ {
+     wined3d_cs_mt_require_space,
+     wined3d_cs_flush_and_wait,
++    wined3d_cs_flush_and_wait,
+ };
+ 
+ /* FIXME: wined3d_device_uninit_3d() should either flush and wait, or be an
+diff --git a/dlls/wined3d/shader.c b/dlls/wined3d/shader.c
+index 0ee045f..21ecdd5 100644
+--- a/dlls/wined3d/shader.c
++++ b/dlls/wined3d/shader.c
+@@ -2578,6 +2578,11 @@ ULONG CDECL wined3d_shader_decref(struct wined3d_shader *shader)
+ 
+     if (!refcount)
+     {
++        if (wined3d_settings.cs_multithreaded)
++        {
++            FIXME("Waiting for cs.\n");
++            shader->device->cs->ops->finish(shader->device->cs);
++        }
+         shader_cleanup(shader);
+         shader->parent_ops->wined3d_object_destroyed(shader->parent);
+         HeapFree(GetProcessHeap(), 0, shader);
+diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
+index 708470e..0c7fca1 100644
+--- a/dlls/wined3d/texture.c
++++ b/dlls/wined3d/texture.c
+@@ -399,6 +399,12 @@ static void wined3d_texture_cleanup(struct wined3d_texture *texture)
+ 
+     TRACE("texture %p.\n", texture);
+ 
++    if (wined3d_settings.cs_multithreaded)
++    {
++        FIXME("Waiting for cs.\n");
++        texture->resource.device->cs->ops->finish(texture->resource.device->cs);
++    }
++
+     for (i = 0; i < sub_count; ++i)
+     {
+         if (!(buffer_object = texture->sub_resources[i].buffer_object))
+diff --git a/dlls/wined3d/vertexdeclaration.c b/dlls/wined3d/vertexdeclaration.c
+index 9eb5907..601a5f5 100644
+--- a/dlls/wined3d/vertexdeclaration.c
++++ b/dlls/wined3d/vertexdeclaration.c
+@@ -58,6 +58,11 @@ ULONG CDECL wined3d_vertex_declaration_decref(struct wined3d_vertex_declaration
+ 
+     if (!refcount)
+     {
++        if (wined3d_settings.cs_multithreaded)
++        {
++            FIXME("Waiting for cs.\n");
++            declaration->device->cs->ops->finish(declaration->device->cs);
++        }
+         HeapFree(GetProcessHeap(), 0, declaration->elements);
+         declaration->parent_ops->wined3d_object_destroyed(declaration->parent);
+         HeapFree(GetProcessHeap(), 0, declaration);
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 4e3a326..973c512 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2879,6 +2879,7 @@ struct wined3d_cs_ops
+ {
+     void *(*require_space)(struct wined3d_cs *cs, size_t size);
+     void (*submit)(struct wined3d_cs *cs);
++    void (*finish)(struct wined3d_cs *cs);
+ };
+ 
+ struct wined3d_cs
+-- 
+2.8.0
+

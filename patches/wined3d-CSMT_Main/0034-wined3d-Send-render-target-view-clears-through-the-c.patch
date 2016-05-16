@@ -1,0 +1,141 @@
+From 8ebc385053df54728b9b4bfca6851f92cca509fb Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Thu, 4 Jul 2013 21:10:16 +0200
+Subject: wined3d: Send render target view clears through the command stream
+
+---
+ dlls/wined3d/cs.c              | 47 ++++++++++++++++++++++++++++++++++++++++++
+ dlls/wined3d/device.c          | 15 +++-----------
+ dlls/wined3d/wined3d_private.h |  3 +++
+ 3 files changed, 53 insertions(+), 12 deletions(-)
+
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 6cbf83e..fd4a0ce 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -75,6 +75,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_SET_LIGHT,
+     WINED3D_CS_OP_SET_LIGHT_ENABLE,
+     WINED3D_CS_OP_BLT,
++    WINED3D_CS_OP_CLEAR_RTV,
+     WINED3D_CS_OP_STOP,
+ };
+ 
+@@ -348,6 +349,18 @@ struct wined3d_cs_blt
+     enum wined3d_texture_filter_type filter;
+ };
+ 
++struct wined3d_cs_clear_rtv
++{
++    enum wined3d_cs_op opcode;
++    struct wined3d_rendertarget_view *view;
++    RECT rect;
++    DWORD flags;
++    struct wined3d_color color;
++    float depth;
++    DWORD stencil;
++    const struct blit_shader *blitter;
++};
++
+ /* FIXME: The list synchronization probably isn't particularly fast. */
+ static void wined3d_cs_list_enqueue(struct wined3d_cs_list *list, struct wined3d_cs_block *block)
+ {
+@@ -1749,6 +1762,39 @@ void wined3d_cs_emit_blt(struct wined3d_cs *cs, struct wined3d_surface *dst_surf
+     cs->ops->submit(cs);
+ }
+ 
++static UINT wined3d_cs_exec_clear_rtv(struct wined3d_cs *cs, const void *data)
++{
++    const struct wined3d_cs_clear_rtv *op = data;
++    struct wined3d_device *device = cs->device;
++
++    if (op->flags & WINED3DCLEAR_TARGET)
++        op->blitter->color_fill(device, op->view, &op->rect, &op->color);
++    else
++        op->blitter->depth_fill(device, op->view, &op->rect, op->flags, op->depth, op->stencil);
++
++    return sizeof(*op);
++}
++
++void wined3d_cs_emit_clear_rtv(struct wined3d_cs *cs, struct wined3d_rendertarget_view *view,
++        const RECT *rect, DWORD flags, const struct wined3d_color *color, float depth, DWORD stencil,
++        const struct blit_shader *blitter)
++{
++    struct wined3d_cs_clear_rtv *op;
++
++    op = cs->ops->require_space(cs, sizeof(*op));
++    op->opcode = WINED3D_CS_OP_CLEAR_RTV;
++    op->view = view;
++    op->rect = *rect;
++    op->flags = flags;
++    if (flags & WINED3DCLEAR_TARGET)
++        op->color = *color;
++    op->depth = depth;
++    op->stencil = stencil;
++    op->blitter = blitter;
++
++    cs->ops->submit(cs);
++}
++
+ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
+ {
+     /* WINED3D_CS_OP_FENCE                      */ wined3d_cs_exec_fence,
+@@ -1790,6 +1836,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_SET_LIGHT                  */ wined3d_cs_exec_set_light,
+     /* WINED3D_CS_OP_SET_LIGHT_ENABLE           */ wined3d_cs_exec_set_light_enable,
+     /* WINED3D_CS_OP_BLT                        */ wined3d_cs_exec_blt,
++    /* WINED3D_CS_OP_CLEAR_RTV                  */ wined3d_cs_exec_clear_rtv,
+ };
+ 
+ static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index e580e34..d851c52 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -4140,8 +4140,8 @@ HRESULT CDECL wined3d_device_clear_rendertarget_view(struct wined3d_device *devi
+ {
+     const struct blit_shader *blitter;
+     struct wined3d_resource *resource;
+-    enum wined3d_blit_op blit_op;
+     RECT r;
++    enum wined3d_blit_op blit_op;
+ 
+     TRACE("device %p, view %p, rect %s, flags %#x, color %s, depth %.8e, stencil %u.\n",
+             device, view, wine_dbgstr_rect(rect), flags, debug_color(color), depth, stencil);
+@@ -4180,17 +4180,8 @@ HRESULT CDECL wined3d_device_clear_rendertarget_view(struct wined3d_device *devi
+         return WINED3DERR_INVALIDCALL;
+     }
+ 
+-    if (wined3d_settings.cs_multithreaded)
+-    {
+-        FIXME("Waiting for cs.\n");
+-        wined3d_cs_emit_glfinish(device->cs);
+-        device->cs->ops->finish(device->cs);
+-    }
+-
+-    if (blit_op == WINED3D_BLIT_OP_COLOR_FILL)
+-        return blitter->color_fill(device, view, rect, color);
+-    else
+-        return blitter->depth_fill(device, view, rect, flags, depth, stencil);
++    wined3d_cs_emit_clear_rtv(device->cs, view, rect, flags, color, depth, stencil, blitter);
++    return WINED3D_OK;
+ }
+ 
+ struct wined3d_rendertarget_view * CDECL wined3d_device_get_rendertarget_view(const struct wined3d_device *device,
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index a248e24..3b8ad5e 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2971,6 +2971,9 @@ void wined3d_cs_emit_blt(struct wined3d_cs *cs, struct wined3d_surface *dst_surf
+         const RECT *dst_rect, struct wined3d_surface *src_surface,
+         const RECT *src_rect, DWORD flags, const struct wined3d_blt_fx *fx,
+         enum wined3d_texture_filter_type filter) DECLSPEC_HIDDEN;
++void wined3d_cs_emit_clear_rtv(struct wined3d_cs *cs, struct wined3d_rendertarget_view *view,
++        const RECT *rect, DWORD flags, const struct wined3d_color *color, float depth, DWORD stencil,
++        const struct blit_shader *blitter) DECLSPEC_HIDDEN;
+ 
+ /* Direct3D terminology with little modifications. We do not have an issued state
+  * because only the driver knows about it, but we have a created state because d3d
+-- 
+2.8.0
+

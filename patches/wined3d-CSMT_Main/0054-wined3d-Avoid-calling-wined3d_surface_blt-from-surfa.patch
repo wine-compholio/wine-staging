@@ -1,0 +1,48 @@
+From 96c599ab1d4e51536794f22b7a4c8460ce4ba822 Mon Sep 17 00:00:00 2001
+From: Matteo Bruni <mbruni@codeweavers.com>
+Date: Fri, 12 Sep 2014 19:03:05 +0200
+Subject: wined3d: Avoid calling wined3d_surface_blt() from
+ surface_upload_from_surface().
+
+---
+ dlls/wined3d/surface.c | 16 ++++++++++++++--
+ 1 file changed, 14 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
+index 7e060ae..e39b8ff 100644
+--- a/dlls/wined3d/surface.c
++++ b/dlls/wined3d/surface.c
+@@ -36,6 +36,11 @@ WINE_DECLARE_DEBUG_CHANNEL(d3d_perf);
+ static const DWORD surface_simple_locations = WINED3D_LOCATION_SYSMEM
+         | WINED3D_LOCATION_USER_MEMORY | WINED3D_LOCATION_BUFFER;
+ 
++static HRESULT surface_cpu_blt(struct wined3d_texture *dst_texture, unsigned int dst_sub_resource_idx,
++        const struct wined3d_box *dst_box, struct wined3d_texture *src_texture, unsigned int src_sub_resource_idx,
++        const struct wined3d_box *src_box, DWORD flags, const struct wined3d_blt_fx *fx,
++        enum wined3d_texture_filter_type filter);
++
+ void surface_get_drawable_size(const struct wined3d_surface *surface, const struct wined3d_context *context,
+         unsigned int *width, unsigned int *height)
+ {
+@@ -1187,9 +1192,16 @@ HRESULT surface_upload_from_surface(struct wined3d_surface *dst_surface, const P
+         return WINED3DERR_INVALIDCALL;
+     }
+ 
+-    /* Use wined3d_surface_blt() instead of uploading directly if we need conversion. */
++    /* Use surface_cpu_blt() instead of uploading directly if we need
++     * conversion. Avoid calling wined3d_surface_blt() since that goes
++     * through the CS. */
+     if (dst_format->convert || wined3d_format_get_color_key_conversion(dst_texture, FALSE))
+-        return wined3d_surface_blt(dst_surface, &dst_rect, src_surface, src_rect, 0, NULL, WINED3D_TEXF_POINT);
++    {
++        const struct wined3d_box dst_box = {dst_rect.left, dst_rect.top, dst_rect.right, dst_rect.bottom, 0, 1};
++        const struct wined3d_box src_box = {src_rect->left, src_rect->top, src_rect->right, src_rect->bottom, 0, 1};
++        return surface_cpu_blt(dst_texture, dst_sub_resource_idx, &dst_box, src_texture,
++                src_sub_resource_idx, &src_box, 0, NULL, WINED3D_TEXF_POINT);
++    }
+ 
+     context = context_acquire(dst_texture->resource.device, NULL);
+     gl_info = context->gl_info;
+-- 
+2.8.0
+

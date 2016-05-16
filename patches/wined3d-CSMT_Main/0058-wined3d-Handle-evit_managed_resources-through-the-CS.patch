@@ -1,0 +1,129 @@
+From 4cd31abbb46ce2584a71b523edfc0c057a13359e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Tue, 6 Aug 2013 13:50:31 +0200
+Subject: wined3d: Handle evit_managed_resources through the CS
+
+---
+ dlls/wined3d/cs.c              | 37 +++++++++++++++++++++++++++++++++++++
+ dlls/wined3d/device.c          | 14 +++-----------
+ dlls/wined3d/wined3d_private.h |  1 +
+ 3 files changed, 41 insertions(+), 11 deletions(-)
+
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 0ef6d4b..e036b3e 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -72,6 +72,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_QUERY_DESTROY,
+     WINED3D_CS_OP_TEXTURE_PRELOAD,
+     WINED3D_CS_OP_UPDATE_TEXTURE,
++    WINED3D_CS_OP_EVICT_RESOURCE,
+     WINED3D_CS_OP_STOP,
+ };
+ 
+@@ -404,6 +405,12 @@ struct wined3d_cs_update_texture
+     struct wined3d_texture *src, *dst;
+ };
+ 
++struct wined3d_cs_evict_resource
++{
++    enum wined3d_cs_op opcode;
++    struct wined3d_resource *resource;
++};
++
+ static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
+ {
+     LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
+@@ -1952,6 +1959,35 @@ void wined3d_cs_emit_update_texture(struct wined3d_cs *cs, struct wined3d_textur
+     cs->ops->submit(cs, sizeof(*op));
+ }
+ 
++static UINT wined3d_cs_exec_evict_resource(struct wined3d_cs *cs, const void *data)
++{
++    const struct wined3d_cs_evict_resource *op = data;
++    struct wined3d_resource *resource = op->resource;
++
++    resource->resource_ops->resource_unload(resource);
++
++    /* FIXME: Is this necessary? Bound buffers are preloaded anyway, and in theory
++     * PreLoad should take care of invalidating the state if the VBO changes */
++    if (resource->bind_count && resource->type == WINED3D_RTYPE_BUFFER)
++    {
++        device_invalidate_state(cs->device, STATE_STREAMSRC);
++        device_invalidate_state(cs->device, STATE_INDEXBUFFER);
++    }
++
++    return sizeof(*op);
++}
++
++void wined3d_cs_emit_evict_resource(struct wined3d_cs *cs, struct wined3d_resource *resource)
++{
++    struct wined3d_cs_evict_resource *op;
++
++    op = cs->ops->require_space(cs, sizeof(*op));
++    op->opcode = WINED3D_CS_OP_EVICT_RESOURCE;
++    op->resource = resource;
++
++    cs->ops->submit(cs, sizeof(*op));
++}
++
+ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
+ {
+     /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
+@@ -2002,6 +2038,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_QUERY_DESTROY              */ wined3d_cs_exec_query_destroy,
+     /* WINED3D_CS_OP_TEXTURE_PRELOAD            */ wined3d_cs_exec_texture_preload,
+     /* WINED3D_CS_OP_UPDATE_TEXTURE             */ wined3d_cs_exec_update_texture,
++    /* WINED3D_CS_OP_EVICT_RESOURCE             */ wined3d_cs_exec_evict_resource,
+ };
+ 
+ static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index 12e87e1..8dbefcf 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -4499,13 +4499,8 @@ void CDECL wined3d_device_evict_managed_resources(struct wined3d_device *device)
+ 
+     TRACE("device %p.\n", device);
+ 
+-    if (wined3d_settings.cs_multithreaded)
+-    {
+-        FIXME("Waiting for cs.\n");
+-        wined3d_cs_emit_glfinish(device->cs);
+-        device->cs->ops->finish(device->cs);
+-    }
+-
++    /* The resource list is manged by the main thread, iterate here and emit commands for
++     * each resource */
+     LIST_FOR_EACH_ENTRY_SAFE(resource, cursor, &device->resources, struct wined3d_resource, resource_list_entry)
+     {
+         TRACE("Checking resource %p for eviction.\n", resource);
+@@ -4513,12 +4508,9 @@ void CDECL wined3d_device_evict_managed_resources(struct wined3d_device *device)
+         if (resource->pool == WINED3D_POOL_MANAGED && !resource->map_count)
+         {
+             TRACE("Evicting %p.\n", resource);
+-            resource->resource_ops->resource_unload(resource);
++            wined3d_cs_emit_evict_resource(device->cs, resource);
+         }
+     }
+-
+-    /* Invalidate stream sources, the buffer(s) may have been evicted. */
+-    device_invalidate_state(device, STATE_STREAMSRC);
+ }
+ 
+ static void delete_opengl_contexts(struct wined3d_device *device, struct wined3d_swapchain *swapchain)
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index a6ff922..38a72de 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2993,6 +2993,7 @@ void wined3d_cs_emit_query_destroy(struct wined3d_cs *cs, struct wined3d_query *
+ void wined3d_cs_emit_texture_preload(struct wined3d_cs *cs, struct wined3d_texture *texture) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_update_texture(struct wined3d_cs *cs, struct wined3d_texture *src,
+         struct wined3d_texture *dst) DECLSPEC_HIDDEN;
++void wined3d_cs_emit_evict_resource(struct wined3d_cs *cs, struct wined3d_resource *resource) DECLSPEC_HIDDEN;
+ 
+ /* Direct3D terminology with little modifications. We do not have an issued state
+  * because only the driver knows about it, but we have a created state because d3d
+-- 
+2.8.0
+

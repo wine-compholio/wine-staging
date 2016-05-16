@@ -1,0 +1,137 @@
+From 1752f853d8b96b779acbd0b62273e75d7b647732 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Mon, 23 Sep 2013 23:58:41 +0200
+Subject: wined3d: Don't call the public map function in
+ surface_convert_format.
+
+TODO: Creating a helper surface and releasing it won't work with the CS.
+surface_cpu_blt will be called via the CS, so it can't call external
+methods that enqueue commands in the stream.
+---
+ dlls/wined3d/surface.c | 78 ++++++++++++++++++++++++++++++++++----------------
+ 1 file changed, 53 insertions(+), 25 deletions(-)
+
+diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
+index 1189b97..d5e9f36 100644
+--- a/dlls/wined3d/surface.c
++++ b/dlls/wined3d/surface.c
+@@ -1548,11 +1548,14 @@ static struct wined3d_texture *surface_convert_format(struct wined3d_texture *sr
+ {
+     unsigned int texture_level = sub_resource_idx % src_texture->level_count;
+     const struct wined3d_format *src_format = src_texture->resource.format;
+-    struct wined3d_device *device = src_texture->resource.device;
+-    const struct d3dfmt_converter_desc *conv = NULL;
++    void *dst_data = NULL, *src_data = NULL;
++    UINT src_row_pitch, src_slice_pitch, dst_row_pitch, dst_slice_pitch;
++    const struct d3dfmt_converter_desc *conv;
+     struct wined3d_texture *dst_texture;
+     struct wined3d_resource_desc desc;
+-    struct wined3d_map_desc src_map;
++    struct wined3d_context *context = NULL;
++    struct wined3d_device *device = src_texture->resource.device;
++    struct wined3d_bo_address src_bo_addr;
+ 
+     if (!(conv = find_converter(src_format->id, dst_format->id)) && (!device->d3d_initialized
+             || !is_identity_fixup(src_format->color_fixup) || src_format->convert
+@@ -1582,34 +1585,45 @@ static struct wined3d_texture *surface_convert_format(struct wined3d_texture *sr
+         return NULL;
+     }
+ 
+-    memset(&src_map, 0, sizeof(src_map));
+-    if (FAILED(wined3d_resource_map(&src_texture->resource, sub_resource_idx,
+-            &src_map, NULL, WINED3D_MAP_READONLY)))
+-    {
+-        ERR("Failed to map the source texture.\n");
+-        wined3d_texture_decref(dst_texture);
+-        return NULL;
+-    }
++    wined3d_texture_get_pitch(src_texture, sub_resource_idx & src_texture->level_count,
++            &src_row_pitch, &src_slice_pitch);
++    wined3d_texture_get_pitch(dst_texture, 0, &dst_row_pitch, &dst_slice_pitch);
++
++    if (device->d3d_initialized)
++        context = context_acquire(device, NULL);
++
++    wined3d_texture_load_location(src_texture, sub_resource_idx, context,
++            src_texture->resource.map_binding);
++    wined3d_texture_get_memory(src_texture, sub_resource_idx, &src_bo_addr,
++            src_texture->resource.map_binding);
++    src_data = wined3d_texture_map_bo_address(&src_bo_addr,
++            src_texture->sub_resources[sub_resource_idx].size,
++            context->gl_info, GL_PIXEL_UNPACK_BUFFER, WINED3D_MAP_READONLY);
++    if (!src_data)
++        goto error;
++
+     if (conv)
+     {
+-        struct wined3d_map_desc dst_map;
++        struct wined3d_bo_address dst_bo_addr;
+ 
+-        memset(&dst_map, 0, sizeof(dst_map));
+-        if (FAILED(wined3d_resource_map(&dst_texture->resource, 0, &dst_map, NULL, 0)))
+-        {
+-            ERR("Failed to map the destination texture.\n");
+-            wined3d_resource_unmap(&src_texture->resource, sub_resource_idx);
+-            wined3d_texture_decref(dst_texture);
+-            return NULL;
+-        }
++        wined3d_texture_prepare_location(dst_texture, 0, context, dst_texture->resource.map_binding);
++        wined3d_texture_get_memory(dst_texture, 0, &dst_bo_addr,
++                dst_texture->resource.map_binding);
++        dst_data = wined3d_texture_map_bo_address(&dst_bo_addr,
++                dst_texture->sub_resources[0].size,
++                context->gl_info, GL_PIXEL_UNPACK_BUFFER, 0);
++        if (!dst_data)
++            goto error;
+ 
+-        conv->convert(src_map.data, dst_map.data, src_map.row_pitch, dst_map.row_pitch, desc.width, desc.height);
++        conv->convert(src_data, dst_data, src_row_pitch, dst_row_pitch, desc.width, desc.height);
+ 
+-        wined3d_resource_unmap(&dst_texture->resource, 0);
++        wined3d_texture_unmap_bo_address(&dst_bo_addr, context->gl_info, GL_PIXEL_UNPACK_BUFFER);
+     }
+     else
+     {
+-        struct wined3d_bo_address data = {0, src_map.data};
++        /* FIXME: This seems weird, considering that we got a wined3d_bo_address from the source
++         * surface above. Though not sure if the upload_data would work properly with a PBO src. */
++        struct wined3d_bo_address data = {0, src_data};
+         RECT src_rect = {0, 0, desc.width, desc.height};
+         const struct wined3d_gl_info *gl_info;
+         struct wined3d_context *context;
+@@ -1622,16 +1636,30 @@ static struct wined3d_texture *surface_convert_format(struct wined3d_texture *sr
+         wined3d_texture_prepare_texture(dst_texture, context, FALSE);
+         wined3d_texture_bind_and_dirtify(dst_texture, context, FALSE);
+         wined3d_surface_upload_data(dst_texture->sub_resources[0].u.surface, gl_info, src_format,
+-                &src_rect, src_map.row_pitch, &dst_point, FALSE, wined3d_const_bo_address(&data));
++                &src_rect, src_row_pitch, &dst_point, FALSE, wined3d_const_bo_address(&data));
+ 
+         context_release(context);
+ 
+         wined3d_texture_validate_location(dst_texture, 0, WINED3D_LOCATION_TEXTURE_RGB);
+         wined3d_texture_invalidate_location(dst_texture, 0, ~WINED3D_LOCATION_TEXTURE_RGB);
+     }
+-    wined3d_resource_unmap(&src_texture->resource, sub_resource_idx);
++    wined3d_texture_unmap_bo_address(&src_bo_addr, context->gl_info, GL_PIXEL_UNPACK_BUFFER);
++
++    if (context)
++        context_release(context);
+ 
+     return dst_texture;
++
++error:
++    ERR("Surface conversion failed.\n");
++
++    if (src_data)
++        wined3d_texture_unmap_bo_address(&src_bo_addr, context->gl_info, GL_PIXEL_UNPACK_BUFFER);
++    if (dst_texture)
++        wined3d_texture_decref(dst_texture);
++    if (context)
++        context_release(context);
++    return NULL;
+ }
+ 
+ static HRESULT _Blt_ColorFill(BYTE *buf, unsigned int width, unsigned int height,
+-- 
+2.8.0
+

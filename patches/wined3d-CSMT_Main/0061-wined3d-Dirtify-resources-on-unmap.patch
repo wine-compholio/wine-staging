@@ -1,0 +1,59 @@
+From 2b962b605baab864dd991d827e00a49c5bc229be Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefandoesinger@gmx.at>
+Date: Thu, 7 Apr 2016 20:48:38 +0100
+Subject: wined3d: Dirtify resources on unmap.
+
+---
+ dlls/wined3d/texture.c         | 9 ++++++++-
+ dlls/wined3d/wined3d_private.h | 1 +
+ 2 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
+index 541e3c2..165330e 100644
+--- a/dlls/wined3d/texture.c
++++ b/dlls/wined3d/texture.c
+@@ -1614,7 +1614,7 @@ void *wined3d_texture_map_internal(struct wined3d_texture *texture, unsigned int
+     }
+ 
+     if (!(flags & (WINED3D_MAP_NO_DIRTY_UPDATE | WINED3D_MAP_READONLY)))
+-        wined3d_texture_invalidate_location(texture, sub_resource_idx, ~texture->resource.map_binding);
++        sub_resource->unmap_dirtify = TRUE;
+ 
+     wined3d_texture_get_memory(texture, sub_resource_idx, &bo_data, texture->resource.map_binding);
+     data = wined3d_texture_map_bo_address(&bo_data, sub_resource->size,
+@@ -1740,6 +1740,7 @@ static HRESULT texture_resource_sub_resource_map(struct wined3d_resource *resour
+ 
+ void wined3d_texture_unmap_internal(struct wined3d_texture *texture, unsigned int sub_resource_idx)
+ {
++    struct wined3d_texture_sub_resource *sub_resource = wined3d_texture_get_sub_resource(texture, sub_resource_idx);
+     struct wined3d_context *context = NULL;
+     struct wined3d_bo_address data;
+ 
+@@ -1763,6 +1764,12 @@ void wined3d_texture_unmap_internal(struct wined3d_texture *texture, unsigned in
+     {
+         FIXME("Depth / stencil buffer locking is not implemented.\n");
+     }
++
++    if (sub_resource->unmap_dirtify)
++    {
++        wined3d_texture_invalidate_location(texture, sub_resource_idx, ~texture->resource.map_binding);
++        sub_resource->unmap_dirtify = FALSE;
++    }
+ }
+ 
+ static HRESULT texture_resource_sub_resource_unmap(struct wined3d_resource *resource, unsigned int sub_resource_idx)
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 19ec752..f0fb633 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2561,6 +2561,7 @@ struct wined3d_texture
+         unsigned int map_count;
+         DWORD locations;
+         GLuint buffer_object;
++        BOOL unmap_dirtify;
+     } sub_resources[1];
+ };
+ 
+-- 
+2.8.0
+

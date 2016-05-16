@@ -1,0 +1,30 @@
+From ceb5e15dca96c44ee25df8830a26d75f0f1f931d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Wed, 3 Sep 2014 20:20:39 +0200
+Subject: wined3d: Wait for the resource to be idle when destroying user memory
+ surfaces.
+
+---
+ dlls/wined3d/texture.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
+index 77ef2e8..44d38f8 100644
+--- a/dlls/wined3d/texture.c
++++ b/dlls/wined3d/texture.c
+@@ -746,6 +746,12 @@ static void wined3d_texture_cleanup_main(struct wined3d_texture *texture)
+             sub_resource->parent_ops->wined3d_object_destroyed(sub_resource->parent);
+     }
+ 
++    /* Wait for the CS to finish operations on this texture when user memory was in use.
++     * The application is allowed to free the memory after texture / surface destruction
++     * returns. */
++    if (texture->resource.map_binding == WINED3D_LOCATION_USER_MEMORY)
++        wined3d_resource_wait_fence(&texture->resource);
++
+     resource_cleanup(&texture->resource);
+     wined3d_cs_emit_texture_cleanup(device->cs, texture);
+ }
+-- 
+2.8.0
+

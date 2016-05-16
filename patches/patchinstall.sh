@@ -220,6 +220,7 @@ patch_enable_all ()
 	enable_ntdll_NtQueryInformationThread="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
+	enable_ntdll_NtUnmapViewOfSection="$1"
 	enable_ntdll_OSX_TEB_x86_64="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
@@ -832,6 +833,9 @@ patch_enable ()
 			;;
 		ntdll-NtSetLdtEntries)
 			enable_ntdll_NtSetLdtEntries="$2"
+			;;
+		ntdll-NtUnmapViewOfSection)
+			enable_ntdll_NtUnmapViewOfSection="$2"
 			;;
 		ntdll-OSX_TEB_x86_64)
 			enable_ntdll_OSX_TEB_x86_64="$2"
@@ -4975,6 +4979,23 @@ if test "$enable_ntdll_NtSetLdtEntries" -eq 1; then
 	(
 		echo '+    { "Dmitry Timoshkov", "ntdll: Implement NtSetLdtEntries.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "libs/wine: Allow to modify reserved LDT entries.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtUnmapViewOfSection
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#2905] UnmapViewOfFile should fail on Win9x when addr is not the base address of a mapping
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/virtual.c, dlls/kernel32/virtual.c, dlls/ntdll/tests/info.c, dlls/ntdll/virtual.c
+# |
+if test "$enable_ntdll_NtUnmapViewOfSection" -eq 1; then
+	patch_apply ntdll-NtUnmapViewOfSection/0001-ntdll-NtUnmapViewOfSection-must-succeed-for-all-offs.patch
+	patch_apply ntdll-NtUnmapViewOfSection/0002-kernel32-Fail-in-UnmapViewOfFile-on-Win-9X-when-addr.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: NtUnmapViewOfSection must succeed for all offsets within the mapped range.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Fail in UnmapViewOfFile on Win 9X when addr is not a base address of a mapping.", 1 },';
 	) >> "$patchlist"
 fi
 

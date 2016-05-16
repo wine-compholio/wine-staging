@@ -1,0 +1,38 @@
+From 6ca6102f0f4c52dee00013a8e1d0d924f4b6c5a7 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 14 May 2016 17:21:54 +0200
+Subject: kernel32: Fail in UnmapViewOfFile on Win 9X when addr is not a base
+ address of a mapping.
+
+---
+ dlls/kernel32/virtual.c | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/kernel32/virtual.c b/dlls/kernel32/virtual.c
+index 32f2d65..7e9c2f3 100644
+--- a/dlls/kernel32/virtual.c
++++ b/dlls/kernel32/virtual.c
+@@ -576,7 +576,19 @@ LPVOID WINAPI MapViewOfFileEx( HANDLE handle, DWORD access,
+  */
+ BOOL WINAPI UnmapViewOfFile( LPCVOID addr )
+ {
+-    NTSTATUS status = NtUnmapViewOfSection( GetCurrentProcess(), (void *)addr );
++    NTSTATUS status;
++
++    if (GetVersion() & 0x80000000)
++    {
++        MEMORY_BASIC_INFORMATION info;
++        if (!VirtualQuery( addr, &info, sizeof(info) ) || info.AllocationBase != addr)
++        {
++            SetLastError( ERROR_INVALID_ADDRESS );
++            return FALSE;
++        }
++    }
++
++    status = NtUnmapViewOfSection( GetCurrentProcess(), (void *)addr );
+     if (status) SetLastError( RtlNtStatusToDosError(status) );
+     return !status;
+ }
+-- 
+2.8.0
+

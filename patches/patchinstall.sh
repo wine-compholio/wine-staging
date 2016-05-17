@@ -382,6 +382,7 @@ patch_enable_all ()
 	enable_winhttp_System_Proxy_Autoconfig="$1"
 	enable_wininet_Cleanup="$1"
 	enable_wininet_HttpOpenRequestW="$1"
+	enable_wininet_InternetCrackUrlW="$1"
 	enable_wininet_InternetReadFile="$1"
 	enable_wininet_Internet_Settings="$1"
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
@@ -1321,6 +1322,9 @@ patch_enable ()
 			;;
 		wininet-HttpOpenRequestW)
 			enable_wininet_HttpOpenRequestW="$2"
+			;;
+		wininet-InternetCrackUrlW)
+			enable_wininet_InternetCrackUrlW="$2"
 			;;
 		wininet-InternetReadFile)
 			enable_wininet_InternetReadFile="$2"
@@ -7864,6 +7868,27 @@ if test "$enable_wininet_HttpOpenRequestW" -eq 1; then
 	patch_apply wininet-HttpOpenRequestW/0001-wininet-Handle-INTERNET_INVALID_PORT_NUMBER-in-HttpO.patch
 	(
 		echo '+    { "Michael Müller", "wininet: Handle INTERNET_INVALID_PORT_NUMBER in HttpOpenRequest.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wininet-InternetCrackUrlW
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40598] Resize buffer when call to InternetCanonicalizeUrlW fails in InternetCrackUrlW
+# |
+# | Modified files:
+# |   *	dlls/wininet/internet.c, dlls/wininet/tests/url.c
+# |
+if test "$enable_wininet_InternetCrackUrlW" -eq 1; then
+	patch_apply wininet-InternetCrackUrlW/0001-wininet-Set-lpszUrlPath-to-the-end-of-the-string-in-.patch
+	patch_apply wininet-InternetCrackUrlW/0002-wininet-Resize-buffer-when-call-to-InternetCanonical.patch
+	patch_apply wininet-InternetCrackUrlW/0003-wininet-tests-Fix-typo-lpszPath-lpszUrlPath-in-messa.patch
+	patch_apply wininet-InternetCrackUrlW/0004-wininet-tests-Add-test-to-verify-correct-handling-of.patch
+	(
+		echo '+    { "Michael Müller", "wininet: Set lpszUrlPath to the end of the string in InternetCrackUrlW when dwUrlPathLength > 0.", 1 },';
+		echo '+    { "Michael Müller", "wininet: Resize buffer when call to InternetCanonicalizeUrlW fails in InternetCrackUrlW.", 1 },';
+		echo '+    { "Michael Müller", "wininet/tests: Fix typo (lpszPath -> lpszUrlPath) in messages.", 1 },';
+		echo '+    { "Michael Müller", "wininet/tests: Add test to verify correct handling of urls without a path component.", 1 },';
 	) >> "$patchlist"
 fi
 

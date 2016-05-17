@@ -1,0 +1,53 @@
+From 3179cb380b56e3a86385a32ad4b7a3430ff6ae8b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Mon, 16 May 2016 22:36:25 +0200
+Subject: wininet: Resize buffer when call to InternetCanonicalizeUrlW fails in
+ InternetCrackUrlW.
+
+---
+ dlls/wininet/internet.c | 21 ++++++++++++++++++---
+ 1 file changed, 18 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/wininet/internet.c b/dlls/wininet/internet.c
+index 8149973..e7dc577 100644
+--- a/dlls/wininet/internet.c
++++ b/dlls/wininet/internet.c
+@@ -1688,7 +1688,7 @@ BOOL WINAPI InternetCrackUrlW(const WCHAR *lpszUrl, DWORD dwUrlLength, DWORD dwF
+ 
+     if (dwFlags & ICU_DECODE)
+     {
+-        WCHAR *url_tmp;
++        WCHAR *url_tmp, *buffer;
+         DWORD len = dwUrlLength + 1;
+         BOOL ret;
+ 
+@@ -1697,9 +1697,24 @@ BOOL WINAPI InternetCrackUrlW(const WCHAR *lpszUrl, DWORD dwUrlLength, DWORD dwF
+             SetLastError(ERROR_OUTOFMEMORY);
+             return FALSE;
+         }
+-        ret = InternetCanonicalizeUrlW(url_tmp, url_tmp, &len, ICU_DECODE | ICU_NO_ENCODE);
++
++        buffer = url_tmp;
++        ret = InternetCanonicalizeUrlW(url_tmp, buffer, &len, ICU_DECODE | ICU_NO_ENCODE);
++        if (!ret && GetLastError() == ERROR_INSUFFICIENT_BUFFER)
++        {
++            buffer = heap_alloc(len * sizeof(WCHAR));
++            if (!buffer)
++            {
++                SetLastError(ERROR_OUTOFMEMORY);
++                heap_free(url_tmp);
++                return FALSE;
++            }
++            ret = InternetCanonicalizeUrlW(url_tmp, buffer, &len, ICU_DECODE | ICU_NO_ENCODE);
++        }
+         if (ret)
+-            ret = InternetCrackUrlW(url_tmp, len, dwFlags & ~ICU_DECODE, lpUC);
++            ret = InternetCrackUrlW(buffer, len, dwFlags & ~ICU_DECODE, lpUC);
++
++        if (buffer != url_tmp) heap_free(buffer);
+         heap_free(url_tmp);
+         return ret;
+     }
+-- 
+2.8.0
+

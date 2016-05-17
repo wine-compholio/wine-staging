@@ -1,16 +1,16 @@
-From bd25fc1277b13ce1474ef65b95945cca69cfee48 Mon Sep 17 00:00:00 2001
+From f62f9c0774759bd920543c3603d6b65ba77347a4 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 10 Apr 2013 14:20:47 +0200
 Subject: wined3d: Send int constant updates through the command stream
 
 ---
- dlls/wined3d/cs.c              | 76 ++++++++++++++++++++++++++++++++++++++----
+ dlls/wined3d/cs.c              | 74 ++++++++++++++++++++++++++++++++++++++----
  dlls/wined3d/device.c          |  6 ++--
  dlls/wined3d/wined3d_private.h |  2 ++
- 3 files changed, 76 insertions(+), 8 deletions(-)
+ 3 files changed, 74 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index f1fc4b9..86a8603 100644
+index f1fc4b9..e8d7b9a 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -66,8 +66,10 @@ enum wined3d_cs_op
@@ -24,21 +24,22 @@ index f1fc4b9..86a8603 100644
      WINED3D_CS_OP_GLFINISH,
      WINED3D_CS_OP_SET_BASE_VERTEX_INDEX,
      WINED3D_CS_OP_SET_PRIMITIVE_TYPE,
-@@ -301,6 +303,13 @@ struct wined3d_cs_set_consts_b
+@@ -301,6 +303,14 @@ struct wined3d_cs_set_consts_b
      BOOL constants[1];
  };
  
 +struct wined3d_cs_set_consts_i
 +{
 +    enum wined3d_cs_op opcode;
-+    UINT start_register, vector4i_count;
-+    int constants[4];
++    unsigned int start_idx;
++    unsigned int count;
++    struct wined3d_ivec4 constants[1];
 +};
 +
  struct wined3d_cs_finish
  {
      enum wined3d_cs_op opcode;
-@@ -969,9 +978,6 @@ static UINT wined3d_cs_exec_transfer_stateblock(struct wined3d_cs *cs, const voi
+@@ -969,9 +979,6 @@ static UINT wined3d_cs_exec_transfer_stateblock(struct wined3d_cs *cs, const voi
  
      /* Don't memcpy the entire struct, we'll remove single items as we add dedicated
       * ops for setting states */
@@ -48,7 +49,7 @@ index f1fc4b9..86a8603 100644
  
      memcpy(cs->state.lights, op->state.lights, sizeof(cs->state.lights));
  
-@@ -987,9 +993,6 @@ void wined3d_cs_emit_transfer_stateblock(struct wined3d_cs *cs, const struct win
+@@ -987,9 +994,6 @@ void wined3d_cs_emit_transfer_stateblock(struct wined3d_cs *cs, const struct win
  
      /* Don't memcpy the entire struct, we'll remove single items as we add dedicated
       * ops for setting states */
@@ -58,7 +59,7 @@ index f1fc4b9..86a8603 100644
  
      /* FIXME: This is not ideal. CS is still running synchronously, so this is ok.
       * It will go away soon anyway. */
-@@ -1211,6 +1214,65 @@ void wined3d_cs_emit_set_consts_b(struct wined3d_cs *cs, UINT start_register,
+@@ -1211,6 +1215,62 @@ void wined3d_cs_emit_set_consts_b(struct wined3d_cs *cs, UINT start_register,
      cs->ops->submit(cs);
  }
  
@@ -67,12 +68,11 @@ index f1fc4b9..86a8603 100644
 +    const struct wined3d_cs_set_consts_i *op = data;
 +    struct wined3d_device *device = cs->device;
 +
-+    memcpy(&cs->state.vs_consts_i[op->start_register * 4], op->constants,
-+            sizeof(*cs->state.vs_consts_i) * 4 * op->vector4i_count);
++    memcpy(&cs->state.vs_consts_i[op->start_idx], op->constants, sizeof(op->constants[0]) * op->count);
 +
 +    device_invalidate_shader_constants(device, WINED3D_SHADER_CONST_VS_I);
 +
-+    return sizeof(*op) + sizeof(op->constants) * (op->vector4i_count - 1);
++    return sizeof(*op) + sizeof(op->constants[0]) * (op->count - 1);
 +}
 +
 +static UINT wined3d_cs_exec_set_ps_consts_i(struct wined3d_cs *cs, const void *data)
@@ -80,21 +80,19 @@ index f1fc4b9..86a8603 100644
 +    const struct wined3d_cs_set_consts_i *op = data;
 +    struct wined3d_device *device = cs->device;
 +
-+    memcpy(&cs->state.ps_consts_i[op->start_register * 4], op->constants,
-+            sizeof(*cs->state.ps_consts_i) * 4 * op->vector4i_count);
++    memcpy(&cs->state.ps_consts_i[op->start_idx], op->constants, sizeof(op->constants[0]) * op->count);
 +
 +    device_invalidate_shader_constants(device, WINED3D_SHADER_CONST_PS_I);
 +
-+    return sizeof(*op) + sizeof(op->constants) * (op->vector4i_count - 1);
++    return sizeof(*op) + sizeof(op->constants[0]) * (op->count - 1);
 +}
 +
-+void wined3d_cs_emit_set_consts_i(struct wined3d_cs *cs, UINT start_register,
-+        const int *constants, UINT vector4i_count, enum wined3d_shader_type type)
++void wined3d_cs_emit_set_consts_i(struct wined3d_cs *cs, unsigned int start_idx, unsigned int count,
++        const struct wined3d_ivec4 *constants, enum wined3d_shader_type type)
 +{
 +    struct wined3d_cs_set_consts_i *op;
-+    UINT extra_space = vector4i_count - 1;
 +
-+    op = cs->ops->require_space(cs, sizeof(*op) + sizeof(op->constants) * extra_space);
++    op = cs->ops->require_space(cs, sizeof(*op) + sizeof(op->constants[0]) * (count - 1));
 +    switch (type)
 +    {
 +        case WINED3D_SHADER_TYPE_PIXEL:
@@ -114,9 +112,9 @@ index f1fc4b9..86a8603 100644
 +        case WINED3D_SHADER_TYPE_COUNT:
 +            break;
 +    }
-+    op->start_register = start_register;
-+    op->vector4i_count = vector4i_count;
-+    memcpy(op->constants, constants, sizeof(op->constants) * vector4i_count);
++    op->start_idx = start_idx;
++    op->count = count;
++    memcpy(op->constants, constants, sizeof(op->constants[0]) * count);
 +
 +    cs->ops->submit(cs);
 +}
@@ -124,7 +122,7 @@ index f1fc4b9..86a8603 100644
  static UINT wined3d_cs_exec_set_texture_state(struct wined3d_cs *cs, const void *data)
  {
      const struct wined3d_cs_set_texture_state *op = data;
-@@ -1538,8 +1600,10 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -1538,8 +1598,10 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_STATEBLOCK                 */ wined3d_cs_exec_transfer_stateblock,
      /* WINED3D_CS_OP_SET_VS_CONSTS_F            */ wined3d_cs_exec_set_vs_consts_f,
      /* WINED3D_CS_OP_SET_VS_CONSTS_B            */ wined3d_cs_exec_set_vs_consts_b,
@@ -136,39 +134,39 @@ index f1fc4b9..86a8603 100644
      /* WINED3D_CS_OP_SET_BASE_VERTEX_INDEX      */ wined3d_cs_exec_set_base_vertex_index,
      /* WINED3D_CS_OP_SET_PRIMITIVE_TYPE         */ wined3d_cs_exec_set_primitive_type,
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 70cc2af..34d03ef 100644
+index f961e3d..b1a3b02 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -2411,7 +2411,8 @@ HRESULT CDECL wined3d_device_set_vs_consts_i(struct wined3d_device *device,
+@@ -2436,7 +2436,8 @@ HRESULT CDECL wined3d_device_set_vs_consts_i(struct wined3d_device *device,
      }
      else
      {
 -        device_invalidate_shader_constants(device, WINED3D_SHADER_CONST_VS_I);
-+        wined3d_cs_emit_set_consts_i(device->cs, start_register, constants,
-+                vector4i_count, WINED3D_SHADER_TYPE_VERTEX);
++        wined3d_cs_emit_set_consts_i(device->cs, start_idx, count,
++                constants, WINED3D_SHADER_TYPE_VERTEX);
      }
  
      return WINED3D_OK;
-@@ -2640,7 +2641,8 @@ HRESULT CDECL wined3d_device_set_ps_consts_i(struct wined3d_device *device,
+@@ -2667,7 +2668,8 @@ HRESULT CDECL wined3d_device_set_ps_consts_i(struct wined3d_device *device,
      }
      else
      {
 -        device_invalidate_shader_constants(device, WINED3D_SHADER_CONST_PS_I);
-+        wined3d_cs_emit_set_consts_i(device->cs, start_register, constants,
-+                vector4i_count, WINED3D_SHADER_TYPE_PIXEL);
++        wined3d_cs_emit_set_consts_i(device->cs, start_idx, count,
++                constants, WINED3D_SHADER_TYPE_PIXEL);
      }
  
      return WINED3D_OK;
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 263925f..04d17b1 100644
+index 684a4c3..b14db6d 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -2952,6 +2952,8 @@ void wined3d_cs_emit_set_consts_f(struct wined3d_cs *cs, UINT start_register, co
          UINT vector4f_count, enum wined3d_shader_type type) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_consts_b(struct wined3d_cs *cs, UINT start_register,
          const BOOL *constants, UINT bool_count, enum wined3d_shader_type type) DECLSPEC_HIDDEN;
-+void wined3d_cs_emit_set_consts_i(struct wined3d_cs *cs, UINT start_register,
-+        const int *constants, UINT vector4i_count, enum wined3d_shader_type type) DECLSPEC_HIDDEN;
++void wined3d_cs_emit_set_consts_i(struct wined3d_cs *cs, unsigned int start_idx,
++        unsigned int count, const struct wined3d_ivec4 *constants, enum wined3d_shader_type type) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_glfinish(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_base_vertex_index(struct wined3d_cs *cs,
          UINT base_vertex_index) DECLSPEC_HIDDEN;

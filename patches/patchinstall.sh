@@ -51,13 +51,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f7ac364b0c06bbe7a1ef5b715f2be46b5e6c04d4"
+	echo "aa475ce23fa295a8f5d0fa120d7b3dac1a5a41b5"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 1.9.10"
+	echo "Wine Staging 1.9.11 (unreleased)"
 	echo "Copyright (C) 2014-2016 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -385,7 +385,6 @@ patch_enable_all ()
 	enable_wininet_Cleanup="$1"
 	enable_wininet_HttpOpenRequestW="$1"
 	enable_wininet_InternetCrackUrlW="$1"
-	enable_wininet_InternetReadFile="$1"
 	enable_wininet_Internet_Settings="$1"
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
 	enable_winmm_Delay_Import_Depends="$1"
@@ -1333,9 +1332,6 @@ patch_enable ()
 			;;
 		wininet-InternetCrackUrlW)
 			enable_wininet_InternetCrackUrlW="$2"
-			;;
-		wininet-InternetReadFile)
-			enable_wininet_InternetReadFile="$2"
 			;;
 		wininet-Internet_Settings)
 			enable_wininet_Internet_Settings="$2"
@@ -7372,7 +7368,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/0002-wined3d-Start-to-move-surface-volume_load_location-i.patch
 	patch_apply wined3d-CSMT_Main/0003-wined3d-Call-texture_load_location-instead-of-surfac.patch
 	patch_apply wined3d-CSMT_Main/0004-wined3d-Share-surface-and-volume-system-memory-loadi.patch
-	patch_apply wined3d-CSMT_Main/0005-wined3d-Discard-the-backbuffer-in-discard-presents.patch
 	patch_apply wined3d-CSMT_Main/0006-wined3d-Don-t-call-the-public-map-function-in-surfac.patch
 	patch_apply wined3d-CSMT_Main/0007-wined3d-Don-t-call-the-public-map-function-in-surfac.patch
 	patch_apply wined3d-CSMT_Main/0008-wined3d-Move-the-framebuffer-into-wined3d_state.patch
@@ -7507,7 +7502,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Start to move surface/volume_load_location into the texture.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Call texture_load_location instead of surface_load_location.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Share surface and volume system memory loading code.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Discard the backbuffer in discard presents.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call the public map function in surface_convert_format.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call the public map function in surface_cpu_blt.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Move the framebuffer into wined3d_state.", 1 },';
@@ -7904,21 +7898,6 @@ if test "$enable_wininet_InternetCrackUrlW" -eq 1; then
 		echo '+    { "Michael Müller", "wininet: Resize buffer when call to InternetCanonicalizeUrlW fails in InternetCrackUrlW.", 1 },';
 		echo '+    { "Michael Müller", "wininet/tests: Fix typo (lpszPath -> lpszUrlPath) in messages.", 1 },';
 		echo '+    { "Michael Müller", "wininet/tests: Add test to verify correct handling of urls without a path component.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wininet-InternetReadFile
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40536] Return synchronously from InternetReadFile if there is no more data to read
-# |
-# | Modified files:
-# |   *	dlls/wininet/http.c
-# |
-if test "$enable_wininet_InternetReadFile" -eq 1; then
-	patch_apply wininet-InternetReadFile/0001-wininet-Return-synchronously-from-InternetReadFile-i.patch
-	(
-		echo '+    { "Sebastian Lackner", "wininet: Return synchronously from InternetReadFile if there is no more data to read.", 1 },';
 	) >> "$patchlist"
 fi
 

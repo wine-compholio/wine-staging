@@ -325,6 +325,7 @@ patch_enable_all ()
 	enable_ucrtbase_Functions="$1"
 	enable_user_exe16_CONTAINING_RECORD="$1"
 	enable_user_exe16_DlgDirList="$1"
+	enable_user32_CharToOem="$1"
 	enable_user32_DeferWindowPos="$1"
 	enable_user32_DialogBoxParam="$1"
 	enable_user32_Dialog_Paint_Event="$1"
@@ -1151,6 +1152,9 @@ patch_enable ()
 			;;
 		user.exe16-DlgDirList)
 			enable_user_exe16_DlgDirList="$2"
+			;;
+		user32-CharToOem)
+			enable_user32_CharToOem="$2"
 			;;
 		user32-DeferWindowPos)
 			enable_user32_DeferWindowPos="$2"
@@ -6723,6 +6727,21 @@ if test "$enable_user_exe16_DlgDirList" -eq 1; then
 	patch_apply user.exe16-DlgDirList/0001-user.exe16-Fix-handling-of-DDL_DRIVES-flag-in-DlgDir.patch
 	(
 		echo '+    { "Alex Villacís Lasso", "user.exe16: Fix handling of DDL_DRIVES flag in DlgDirList.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-CharToOem
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#21891] Properly handle invalid parameters in CharToOem* and OemToChar* APIs
+# |
+# | Modified files:
+# |   *	dlls/user32/lstr.c, dlls/user32/tests/text.c
+# |
+if test "$enable_user32_CharToOem" -eq 1; then
+	patch_apply user32-CharToOem/0001-user32-Properly-handle-invalid-parameters-in-CharToO.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "user32: Properly handle invalid parameters in CharToOem* and OemToChar* APIs.", 1 },';
 	) >> "$patchlist"
 fi
 

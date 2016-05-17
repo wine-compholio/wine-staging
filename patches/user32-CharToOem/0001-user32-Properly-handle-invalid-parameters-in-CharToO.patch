@@ -1,0 +1,145 @@
+From 34d57635381ada21fdf49cde329a12dab02fa537 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Tue, 17 May 2016 14:47:24 +0800
+Subject: user32: Properly handle invalid parameters in CharToOem* and
+ OemToChar* APIs.
+
+Fixes #21891.
+---
+ dlls/user32/lstr.c       | 12 ++++++++++--
+ dlls/user32/tests/text.c | 37 ++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 46 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/user32/lstr.c b/dlls/user32/lstr.c
+index a56e21c..b73f40b 100644
+--- a/dlls/user32/lstr.c
++++ b/dlls/user32/lstr.c
+@@ -136,7 +136,7 @@ LPWSTR WINAPI CharPrevW(LPCWSTR start,LPCWSTR x)
+  */
+ BOOL WINAPI CharToOemA( LPCSTR s, LPSTR d )
+ {
+-    if ( !s || !d ) return TRUE;
++    if ( !s || !d ) return FALSE;
+     return CharToOemBuffA( s, d, strlen( s ) + 1 );
+ }
+ 
+@@ -148,6 +148,8 @@ BOOL WINAPI CharToOemBuffA( LPCSTR s, LPSTR d, DWORD len )
+ {
+     WCHAR *bufW;
+ 
++    if ( !s || !d ) return FALSE;
++
+     bufW = HeapAlloc( GetProcessHeap(), 0, len * sizeof(WCHAR) );
+     if( bufW )
+     {
+@@ -164,7 +166,7 @@ BOOL WINAPI CharToOemBuffA( LPCSTR s, LPSTR d, DWORD len )
+  */
+ BOOL WINAPI CharToOemBuffW( LPCWSTR s, LPSTR d, DWORD len )
+ {
+-    if ( !s || !d ) return TRUE;
++    if ( !s || !d ) return FALSE;
+     WideCharToMultiByte( CP_OEMCP, 0, s, len, d, len, NULL, NULL );
+     return TRUE;
+ }
+@@ -175,6 +177,7 @@ BOOL WINAPI CharToOemBuffW( LPCWSTR s, LPSTR d, DWORD len )
+  */
+ BOOL WINAPI CharToOemW( LPCWSTR s, LPSTR d )
+ {
++    if ( !s || !d ) return FALSE;
+     return CharToOemBuffW( s, d, lstrlenW( s ) + 1 );
+ }
+ 
+@@ -184,6 +187,7 @@ BOOL WINAPI CharToOemW( LPCWSTR s, LPSTR d )
+  */
+ BOOL WINAPI OemToCharA( LPCSTR s, LPSTR d )
+ {
++    if ( !s || !d ) return FALSE;
+     return OemToCharBuffA( s, d, strlen( s ) + 1 );
+ }
+ 
+@@ -195,6 +199,8 @@ BOOL WINAPI OemToCharBuffA( LPCSTR s, LPSTR d, DWORD len )
+ {
+     WCHAR *bufW;
+ 
++    if ( !s || !d ) return FALSE;
++
+     bufW = HeapAlloc( GetProcessHeap(), 0, len * sizeof(WCHAR) );
+     if( bufW )
+     {
+@@ -211,6 +217,7 @@ BOOL WINAPI OemToCharBuffA( LPCSTR s, LPSTR d, DWORD len )
+  */
+ BOOL WINAPI OemToCharBuffW( LPCSTR s, LPWSTR d, DWORD len )
+ {
++    if ( !s || !d ) return FALSE;
+     MultiByteToWideChar( CP_OEMCP, 0, s, len, d, len );
+     return TRUE;
+ }
+@@ -221,6 +228,7 @@ BOOL WINAPI OemToCharBuffW( LPCSTR s, LPWSTR d, DWORD len )
+  */
+ BOOL WINAPI OemToCharW( LPCSTR s, LPWSTR d )
+ {
++    if ( !s || !d ) return FALSE;
+     return OemToCharBuffW( s, d, strlen( s ) + 1 );
+ }
+ 
+diff --git a/dlls/user32/tests/text.c b/dlls/user32/tests/text.c
+index eccf972..6bc1017 100644
+--- a/dlls/user32/tests/text.c
++++ b/dlls/user32/tests/text.c
+@@ -2,7 +2,7 @@
+  * DrawText tests
+  *
+  * Copyright (c) 2004 Zach Gorman
+- * Copyright 2007 Dmitry Timoshkov
++ * Copyright 2007,2016 Dmitry Timoshkov
+  *
+  * This library is free software; you can redistribute it and/or
+  * modify it under the terms of the GNU Lesser General Public
+@@ -759,9 +759,44 @@ static void test_DrawState(void)
+     DestroyWindow(hwnd);
+ }
+ 
++static void test_string_conversions(void)
++{
++    char buf[64] = "string";
++    int i;
++    BOOL ret;
++    struct
++    {
++        char *src, *dst;
++        unsigned len;
++        BOOL ret;
++    } test[] =
++    {
++        { NULL, NULL, 1, FALSE },
++        { buf, NULL, 1, FALSE },
++        { NULL, buf, 1, FALSE },
++        { buf, buf, 1, TRUE }
++    };
++
++    for (i = 0; i < sizeof(test)/sizeof(test[0]); i++)
++    {
++        ret = CharToOemA(test[i].src, test[i].dst);
++        ok(ret == test[i].ret, "%d: expected %d, got %d\n", i, test[i].ret, ret);
++
++        ret = CharToOemBuffA(test[i].src, test[i].dst, test[i].len);
++        ok(ret == test[i].ret, "%d: expected %d, got %d\n", i, test[i].ret, ret);
++
++        ret = OemToCharA(test[i].src, test[i].dst);
++        ok(ret == test[i].ret, "%d: expected %d, got %d\n", i, test[i].ret, ret);
++
++        ret = OemToCharBuffA(test[i].src, test[i].dst, test[i].len);
++        ok(ret == test[i].ret, "%d: expected %d, got %d\n", i, test[i].ret, ret);
++    }
++}
++
+ START_TEST(text)
+ {
+     test_TabbedText();
+     test_DrawTextCalcRect();
+     test_DrawState();
++    test_string_conversions();
+ }
+-- 
+2.8.0
+

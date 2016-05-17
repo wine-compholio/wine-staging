@@ -4154,9 +4154,6 @@ fi
 
 # Patchset kernel32-Locale_Definitions
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40619] Add sr-Latn-RS locale definition
-# |
 # | Modified files:
 # |   *	dlls/kernel32/locale_rc.rc, dlls/kernel32/nls/srl.nls, dlls/kernel32/nls/srsl.nls
 # |

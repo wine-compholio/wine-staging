@@ -109,6 +109,7 @@ patch_enable_all ()
 	enable_d3dx9_25_ID3DXEffect="$1"
 	enable_d3dx9_26_ID3DXEffect="$1"
 	enable_d3dx9_33_Share_Source="$1"
+	enable_d3dx9_36_BumpLuminance="$1"
 	enable_d3dx9_36_CloneEffect="$1"
 	enable_d3dx9_36_D3DXCreateTeapot="$1"
 	enable_d3dx9_36_D3DXDisassembleShader="$1"
@@ -504,6 +505,9 @@ patch_enable ()
 			;;
 		d3dx9_33-Share_Source)
 			enable_d3dx9_33_Share_Source="$2"
+			;;
+		d3dx9_36-BumpLuminance)
+			enable_d3dx9_36_BumpLuminance="$2"
 			;;
 		d3dx9_36-CloneEffect)
 			enable_d3dx9_36_CloneEffect="$2"
@@ -3043,6 +3047,20 @@ if test "$enable_d3dx9_33_Share_Source" -eq 1; then
 	patch_apply d3dx9_33-Share_Source/0001-d3dx9_33-Share-the-source-with-d3dx9_36.patch
 	(
 		echo '+    { "Alistair Leslie-Hughes", "d3dx9_33: Share the source with d3dx9_36.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3dx9_36-BumpLuminance
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/surface.c, dlls/d3dx9_36/util.c
+# |
+if test "$enable_d3dx9_36_BumpLuminance" -eq 1; then
+	patch_apply d3dx9_36-BumpLuminance/0001-d3dx9_36-Recognize-bump-luminance-X8L8V8U8-when-load.patch
+	patch_apply d3dx9_36-BumpLuminance/0002-d3dx9_36-Add-format-description-for-X8L8V8U8-for-for.patch
+	(
+		echo '+    { "Christian Costa", "d3dx9_36: Recognize bump luminance X8L8V8U8 when loading dds file.", 1 },';
+		echo '+    { "Christian Costa", "d3dx9_36: Add format description for X8L8V8U8 for format conversions.", 1 },';
 	) >> "$patchlist"
 fi
 

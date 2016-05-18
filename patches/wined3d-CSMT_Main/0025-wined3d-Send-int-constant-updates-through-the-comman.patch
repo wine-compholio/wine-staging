@@ -1,4 +1,4 @@
-From f62f9c0774759bd920543c3603d6b65ba77347a4 Mon Sep 17 00:00:00 2001
+From 609309679395d581e84f6e12a796f1e0e83947bc Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 10 Apr 2013 14:20:47 +0200
 Subject: wined3d: Send int constant updates through the command stream
@@ -10,7 +10,7 @@ Subject: wined3d: Send int constant updates through the command stream
  3 files changed, 74 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index f1fc4b9..e8d7b9a 100644
+index 675e81e..b4b6bb9 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -66,8 +66,10 @@ enum wined3d_cs_op
@@ -24,7 +24,7 @@ index f1fc4b9..e8d7b9a 100644
      WINED3D_CS_OP_GLFINISH,
      WINED3D_CS_OP_SET_BASE_VERTEX_INDEX,
      WINED3D_CS_OP_SET_PRIMITIVE_TYPE,
-@@ -301,6 +303,14 @@ struct wined3d_cs_set_consts_b
+@@ -302,6 +304,14 @@ struct wined3d_cs_set_consts_b
      BOOL constants[1];
  };
  
@@ -39,7 +39,7 @@ index f1fc4b9..e8d7b9a 100644
  struct wined3d_cs_finish
  {
      enum wined3d_cs_op opcode;
-@@ -969,9 +979,6 @@ static UINT wined3d_cs_exec_transfer_stateblock(struct wined3d_cs *cs, const voi
+@@ -970,9 +980,6 @@ static UINT wined3d_cs_exec_transfer_stateblock(struct wined3d_cs *cs, const voi
  
      /* Don't memcpy the entire struct, we'll remove single items as we add dedicated
       * ops for setting states */
@@ -49,7 +49,7 @@ index f1fc4b9..e8d7b9a 100644
  
      memcpy(cs->state.lights, op->state.lights, sizeof(cs->state.lights));
  
-@@ -987,9 +994,6 @@ void wined3d_cs_emit_transfer_stateblock(struct wined3d_cs *cs, const struct win
+@@ -988,9 +995,6 @@ void wined3d_cs_emit_transfer_stateblock(struct wined3d_cs *cs, const struct win
  
      /* Don't memcpy the entire struct, we'll remove single items as we add dedicated
       * ops for setting states */
@@ -59,7 +59,7 @@ index f1fc4b9..e8d7b9a 100644
  
      /* FIXME: This is not ideal. CS is still running synchronously, so this is ok.
       * It will go away soon anyway. */
-@@ -1211,6 +1215,62 @@ void wined3d_cs_emit_set_consts_b(struct wined3d_cs *cs, UINT start_register,
+@@ -1209,6 +1213,62 @@ void wined3d_cs_emit_set_consts_b(struct wined3d_cs *cs, unsigned int start_idx,
      cs->ops->submit(cs);
  }
  
@@ -122,7 +122,7 @@ index f1fc4b9..e8d7b9a 100644
  static UINT wined3d_cs_exec_set_texture_state(struct wined3d_cs *cs, const void *data)
  {
      const struct wined3d_cs_set_texture_state *op = data;
-@@ -1538,8 +1598,10 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -1536,8 +1596,10 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_STATEBLOCK                 */ wined3d_cs_exec_transfer_stateblock,
      /* WINED3D_CS_OP_SET_VS_CONSTS_F            */ wined3d_cs_exec_set_vs_consts_f,
      /* WINED3D_CS_OP_SET_VS_CONSTS_B            */ wined3d_cs_exec_set_vs_consts_b,
@@ -134,10 +134,10 @@ index f1fc4b9..e8d7b9a 100644
      /* WINED3D_CS_OP_SET_BASE_VERTEX_INDEX      */ wined3d_cs_exec_set_base_vertex_index,
      /* WINED3D_CS_OP_SET_PRIMITIVE_TYPE         */ wined3d_cs_exec_set_primitive_type,
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index f961e3d..b1a3b02 100644
+index 3c9c737..0b07ad5 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -2436,7 +2436,8 @@ HRESULT CDECL wined3d_device_set_vs_consts_i(struct wined3d_device *device,
+@@ -2440,7 +2440,8 @@ HRESULT CDECL wined3d_device_set_vs_consts_i(struct wined3d_device *device,
      }
      else
      {
@@ -147,7 +147,7 @@ index f961e3d..b1a3b02 100644
      }
  
      return WINED3D_OK;
-@@ -2667,7 +2668,8 @@ HRESULT CDECL wined3d_device_set_ps_consts_i(struct wined3d_device *device,
+@@ -2675,7 +2676,8 @@ HRESULT CDECL wined3d_device_set_ps_consts_i(struct wined3d_device *device,
      }
      else
      {
@@ -158,13 +158,13 @@ index f961e3d..b1a3b02 100644
  
      return WINED3D_OK;
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 684a4c3..b14db6d 100644
+index 69a7dac..81d4226 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -2952,6 +2952,8 @@ void wined3d_cs_emit_set_consts_f(struct wined3d_cs *cs, UINT start_register, co
          UINT vector4f_count, enum wined3d_shader_type type) DECLSPEC_HIDDEN;
- void wined3d_cs_emit_set_consts_b(struct wined3d_cs *cs, UINT start_register,
-         const BOOL *constants, UINT bool_count, enum wined3d_shader_type type) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_set_consts_b(struct wined3d_cs *cs, unsigned int start_idx,
+         unsigned int count, const BOOL *constants, enum wined3d_shader_type type) DECLSPEC_HIDDEN;
 +void wined3d_cs_emit_set_consts_i(struct wined3d_cs *cs, unsigned int start_idx,
 +        unsigned int count, const struct wined3d_ivec4 *constants, enum wined3d_shader_type type) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_glfinish(struct wined3d_cs *cs) DECLSPEC_HIDDEN;

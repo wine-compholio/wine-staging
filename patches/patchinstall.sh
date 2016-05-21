@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9a80284e1a886ff7e01d33f68715c9bfdb773459"
+	echo "e36a7e5da441be201ceb3b576999198998ad5b43"
 }
 
 # Show version information
@@ -333,6 +333,7 @@ patch_enable_all ()
 	enable_user32_DrawTextExW="$1"
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_Invalidate_Key_State="$1"
+	enable_user32_LR_LOADFROMFILE="$1"
 	enable_user32_ListBox_Size="$1"
 	enable_user32_MessageBox_WS_EX_TOPMOST="$1"
 	enable_user32_Mouse_Message_Hwnd="$1"
@@ -1175,6 +1176,9 @@ patch_enable ()
 			;;
 		user32-Invalidate_Key_State)
 			enable_user32_Invalidate_Key_State="$2"
+			;;
+		user32-LR_LOADFROMFILE)
+			enable_user32_LR_LOADFROMFILE="$2"
 			;;
 		user32-ListBox_Size)
 			enable_user32_ListBox_Size="$2"
@@ -6836,6 +6840,21 @@ if test "$enable_user32_Invalidate_Key_State" -eq 1; then
 	patch_apply user32-Invalidate_Key_State/0001-user32-Globally-invalidate-key-state-on-changes-in-o.patch
 	(
 		echo '+    { "Sebastian Lackner", "user32: Globally invalidate key state on changes in other threads.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-LR_LOADFROMFILE
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#24963] Workaround for Windows 3.1 apps which call LoadImage(LR_LOADFROMFILE) with a resource id
+# |
+# | Modified files:
+# |   *	dlls/user32/cursoricon.c
+# |
+if test "$enable_user32_LR_LOADFROMFILE" -eq 1; then
+	patch_apply user32-LR_LOADFROMFILE/0001-user32-Add-a-workaround-for-Windows-3.1-apps-which-c.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "user32: Add a workaround for Windows 3.1 apps which call LoadImage(LR_LOADFROMFILE) with a resource id.", 2 },';
 	) >> "$patchlist"
 fi
 

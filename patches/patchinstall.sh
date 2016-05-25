@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e36a7e5da441be201ceb3b576999198998ad5b43"
+	echo "698d4114677205c3e5a0df659d230fe982578757"
 }
 
 # Show version information
@@ -7364,6 +7364,7 @@ fi
 # | 	dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h, dlls/winex11.drv/opengl.c
 # |
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
+	patch_apply wined3d-CSMT_Main/0000-Revert-wined3d-Send-shader-constant-updates-through-.patch
 	patch_apply wined3d-CSMT_Main/0001-wined3d-Make-surface_load_location-return-nothing.patch
 	patch_apply wined3d-CSMT_Main/0002-wined3d-Start-to-move-surface-volume_load_location-i.patch
 	patch_apply wined3d-CSMT_Main/0003-wined3d-Call-texture_load_location-instead-of-surfac.patch
@@ -7498,6 +7499,7 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/9998-wined3d-Enable-CSMT-by-default-print-a-winediag-mess.patch
 	patch_apply wined3d-CSMT_Main/9999-IfDefined.patch
 	(
+		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Send shader constant updates through the command stream.\".", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Make surface_load_location return nothing.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Start to move surface/volume_load_location into the texture.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Call texture_load_location instead of surface_load_location.", 1 },';

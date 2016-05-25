@@ -1,4 +1,4 @@
-From 92f3d474363e16b72f0edf94b7b4673c5df25e1c Mon Sep 17 00:00:00 2001
+From 5efe6c30c29fba801d533fa5071aaae3d5652c47 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 10 Apr 2013 17:16:02 +0200
 Subject: wined3d: Send light updates through the command stream
@@ -10,7 +10,7 @@ Subject: wined3d: Send light updates through the command stream
  3 files changed, 174 insertions(+), 65 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 86a8603..85337db 100644
+index 03bed96..220f05f 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -63,7 +63,6 @@ enum wined3d_cs_op
@@ -43,7 +43,7 @@ index 86a8603..85337db 100644
  struct wined3d_cs_set_consts_f
  {
      enum wined3d_cs_op opcode;
-@@ -327,6 +322,19 @@ struct wined3d_cs_set_primitive_type
+@@ -330,6 +325,19 @@ struct wined3d_cs_set_primitive_type
      GLenum gl_primitive_type;
  };
  
@@ -63,7 +63,7 @@ index 86a8603..85337db 100644
  /* FIXME: The list synchronization probably isn't particularly fast. */
  static void wined3d_cs_list_enqueue(struct wined3d_cs_list *list, struct wined3d_cs_block *block)
  {
-@@ -972,35 +980,6 @@ void wined3d_cs_emit_set_texture(struct wined3d_cs *cs, UINT stage, struct wined
+@@ -975,35 +983,6 @@ void wined3d_cs_emit_set_texture(struct wined3d_cs *cs, UINT stage, struct wined
      cs->ops->submit(cs);
  }
  
@@ -99,7 +99,7 @@ index 86a8603..85337db 100644
  static UINT wined3d_cs_exec_set_shader_resource_view(struct wined3d_cs *cs, const void *data)
  {
      const struct wined3d_cs_set_shader_resource_view *op = data;
-@@ -1568,6 +1547,152 @@ void wined3d_cs_emit_set_primitive_type(struct wined3d_cs *cs, GLenum primitive_
+@@ -1562,6 +1541,152 @@ void wined3d_cs_emit_set_primitive_type(struct wined3d_cs *cs, GLenum primitive_
      cs->ops->submit(cs);
  }
  
@@ -252,7 +252,7 @@ index 86a8603..85337db 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_FENCE                      */ wined3d_cs_exec_fence,
-@@ -1597,7 +1722,6 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -1591,7 +1716,6 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_SET_COLOR_KEY              */ wined3d_cs_exec_set_color_key,
      /* WINED3D_CS_OP_SET_MATERIAL               */ wined3d_cs_exec_set_material,
      /* WINED3D_CS_OP_RESET_STATE                */ wined3d_cs_exec_reset_state,
@@ -260,7 +260,7 @@ index 86a8603..85337db 100644
      /* WINED3D_CS_OP_SET_VS_CONSTS_F            */ wined3d_cs_exec_set_vs_consts_f,
      /* WINED3D_CS_OP_SET_VS_CONSTS_B            */ wined3d_cs_exec_set_vs_consts_b,
      /* WINED3D_CS_OP_SET_VS_CONSTS_I            */ wined3d_cs_exec_set_vs_consts_i,
-@@ -1607,6 +1731,8 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -1601,6 +1725,8 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_GLFINISH                   */ wined3d_cs_exec_glfinish,
      /* WINED3D_CS_OP_SET_BASE_VERTEX_INDEX      */ wined3d_cs_exec_set_base_vertex_index,
      /* WINED3D_CS_OP_SET_PRIMITIVE_TYPE         */ wined3d_cs_exec_set_primitive_type,
@@ -270,10 +270,10 @@ index 86a8603..85337db 100644
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 34d03ef..81cf94e 100644
+index 6560687..b713dfc 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -1566,14 +1566,6 @@ HRESULT CDECL wined3d_device_set_light(struct wined3d_device *device,
+@@ -1591,14 +1591,6 @@ HRESULT CDECL wined3d_device_set_light(struct wined3d_device *device,
              light->direction.x, light->direction.y, light->direction.z,
              light->range, light->falloff, light->theta, light->phi);
  
@@ -288,7 +288,7 @@ index 34d03ef..81cf94e 100644
      /* Save away the information. */
      object->OriginalParms = *light;
  
-@@ -1653,6 +1645,9 @@ HRESULT CDECL wined3d_device_set_light(struct wined3d_device *device,
+@@ -1678,6 +1670,9 @@ HRESULT CDECL wined3d_device_set_light(struct wined3d_device *device,
              FIXME("Unrecognized light type %#x.\n", light->type);
      }
  
@@ -298,7 +298,7 @@ index 34d03ef..81cf94e 100644
      return WINED3D_OK;
  }
  
-@@ -1725,12 +1720,6 @@ HRESULT CDECL wined3d_device_set_light_enable(struct wined3d_device *device, UIN
+@@ -1750,12 +1745,6 @@ HRESULT CDECL wined3d_device_set_light_enable(struct wined3d_device *device, UIN
      {
          if (light_info->glIndex != -1)
          {
@@ -311,7 +311,7 @@ index 34d03ef..81cf94e 100644
              device->update_state->lights[light_info->glIndex] = NULL;
              light_info->glIndex = -1;
          }
-@@ -1772,16 +1761,12 @@ HRESULT CDECL wined3d_device_set_light_enable(struct wined3d_device *device, UIN
+@@ -1797,16 +1786,12 @@ HRESULT CDECL wined3d_device_set_light_enable(struct wined3d_device *device, UIN
                  WARN("Too many concurrently active lights\n");
                  return WINED3D_OK;
              }
@@ -331,15 +331,15 @@ index 34d03ef..81cf94e 100644
      return WINED3D_OK;
  }
  
-@@ -3468,7 +3453,6 @@ HRESULT CDECL wined3d_device_draw_primitive(struct wined3d_device *device, UINT
-         return WINED3DERR_INVALIDCALL;
-     }
+@@ -3499,7 +3484,6 @@ HRESULT CDECL wined3d_device_draw_primitive(struct wined3d_device *device, UINT
+ {
+     TRACE("device %p, start_vertex %u, vertex_count %u.\n", device, start_vertex, vertex_count);
  
 -    wined3d_cs_emit_transfer_stateblock(device->cs, &device->state);
      wined3d_cs_emit_draw(device->cs, start_vertex, vertex_count, 0, 0, FALSE);
  
      return WINED3D_OK;
-@@ -3503,8 +3487,6 @@ HRESULT CDECL wined3d_device_draw_indexed_primitive(struct wined3d_device *devic
+@@ -3528,8 +3512,6 @@ HRESULT CDECL wined3d_device_draw_indexed_primitive(struct wined3d_device *devic
          return WINED3DERR_INVALIDCALL;
      }
  
@@ -348,7 +348,7 @@ index 34d03ef..81cf94e 100644
      wined3d_cs_emit_draw(device->cs, start_idx, index_count, 0, 0, TRUE);
  
      return WINED3D_OK;
-@@ -3516,7 +3498,6 @@ void CDECL wined3d_device_draw_indexed_primitive_instanced(struct wined3d_device
+@@ -3541,7 +3523,6 @@ void CDECL wined3d_device_draw_indexed_primitive_instanced(struct wined3d_device
      TRACE("device %p, start_idx %u, index_count %u, start_instance %u, instance_count %u.\n",
              device, start_idx, index_count, start_instance, instance_count);
  
@@ -357,10 +357,10 @@ index 34d03ef..81cf94e 100644
  }
  
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 04d17b1..a085783 100644
+index c39fd9c..4a78bfa 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2868,7 +2868,9 @@ struct wined3d_cs_block
+@@ -2884,7 +2884,9 @@ struct wined3d_cs_block
  {
      struct list entry;
      UINT pos;
@@ -371,7 +371,7 @@ index 04d17b1..a085783 100644
  };
  
  struct wined3d_cs_ops
-@@ -2912,8 +2914,6 @@ void wined3d_cs_emit_set_color_key(struct wined3d_cs *cs, struct wined3d_texture
+@@ -2928,8 +2930,6 @@ void wined3d_cs_emit_set_color_key(struct wined3d_cs *cs, struct wined3d_texture
          WORD flags, const struct wined3d_color_key *color_key) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_constant_buffer(struct wined3d_cs *cs, enum wined3d_shader_type type,
          UINT cb_idx, struct wined3d_buffer *buffer) DECLSPEC_HIDDEN;
@@ -380,7 +380,7 @@ index 04d17b1..a085783 100644
  void wined3d_cs_emit_set_depth_stencil_view(struct wined3d_cs *cs,
          struct wined3d_rendertarget_view *view) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_index_buffer(struct wined3d_cs *cs, struct wined3d_buffer *buffer,
-@@ -2959,6 +2959,8 @@ void wined3d_cs_emit_set_base_vertex_index(struct wined3d_cs *cs,
+@@ -2975,6 +2975,8 @@ void wined3d_cs_emit_set_base_vertex_index(struct wined3d_cs *cs,
          UINT base_vertex_index) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_primitive_type(struct wined3d_cs *cs,
          GLenum primitive_type) DECLSPEC_HIDDEN;

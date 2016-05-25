@@ -1,4 +1,4 @@
-From cc099c1c4fe340252f21a48aaee31db74e543af7 Mon Sep 17 00:00:00 2001
+From 964c9547663bccec6e1dc8d1e6de8c66d1651d99 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefandoesinger@gmx.at>
 Date: Sat, 7 May 2016 13:02:33 +0100
 Subject: wined3d: Clean up textures through the command stream.
@@ -11,7 +11,7 @@ FIXME: This HeapFree stuff when creation fails is ugly.
  3 files changed, 72 insertions(+), 37 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index b08ca4b..54123ca 100644
+index 5a521d3..452b16f 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -84,6 +84,7 @@ enum wined3d_cs_op
@@ -22,7 +22,7 @@ index b08ca4b..54123ca 100644
      WINED3D_CS_OP_STOP,
  };
  
-@@ -496,6 +497,12 @@ struct wined3d_cs_buffer_cleanup
+@@ -499,6 +500,12 @@ struct wined3d_cs_buffer_cleanup
      struct wined3d_buffer *buffer;
  };
  
@@ -35,7 +35,7 @@ index b08ca4b..54123ca 100644
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
  {
      LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
-@@ -2502,6 +2509,26 @@ void wined3d_cs_emit_buffer_cleanup(struct wined3d_cs *cs, struct wined3d_buffer
+@@ -2496,6 +2503,26 @@ void wined3d_cs_emit_buffer_cleanup(struct wined3d_cs *cs, struct wined3d_buffer
      cs->ops->submit(cs, sizeof(*op));
  }
  
@@ -62,7 +62,7 @@ index b08ca4b..54123ca 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2564,6 +2591,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2558,6 +2585,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_CREATE_VBO                 */ wined3d_cs_exec_create_vbo,
      /* WINED3D_CS_OP_RESOURCE_CLEANUP           */ wined3d_cs_exec_resource_cleanup,
      /* WINED3D_CS_OP_BUFFER_CLEANUP             */ wined3d_cs_exec_buffer_cleanup,
@@ -71,10 +71,10 @@ index b08ca4b..54123ca 100644
  
  static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index 7953053..765192d 100644
+index 4db6bb4..4a4c4f8 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -399,7 +399,7 @@ static void wined3d_texture_unload_gl_texture(struct wined3d_texture *texture)
+@@ -404,7 +404,7 @@ static void wined3d_texture_unload_gl_texture(struct wined3d_texture *texture)
      resource_unload(&texture->resource);
  }
  
@@ -83,7 +83,7 @@ index 7953053..765192d 100644
  {
      unsigned int sub_count = texture->level_count * texture->layer_count;
      struct wined3d_device *device = texture->resource.device;
-@@ -409,12 +409,6 @@ static void wined3d_texture_cleanup(struct wined3d_texture *texture)
+@@ -414,12 +414,6 @@ static void wined3d_texture_cleanup(struct wined3d_texture *texture)
  
      TRACE("texture %p.\n", texture);
  
@@ -96,7 +96,7 @@ index 7953053..765192d 100644
      for (i = 0; i < sub_count; ++i)
      {
          if (texture->sub_resources[i].buffer != texture->sub_resources[i].map_buffer)
-@@ -440,9 +434,7 @@ static void wined3d_texture_cleanup(struct wined3d_texture *texture)
+@@ -445,9 +439,7 @@ static void wined3d_texture_cleanup(struct wined3d_texture *texture)
  
      texture->texture_ops->texture_cleanup_sub_resources(texture);
      wined3d_texture_unload_gl_texture(texture);
@@ -214,16 +214,16 @@ index 7953053..765192d 100644
          return hr;
      }
  
-@@ -2048,7 +2062,7 @@ static HRESULT texture_init(struct wined3d_texture *texture, const struct wined3
- 
-     if (!(surfaces = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*surfaces) * level_count * layer_count)))
+@@ -2049,7 +2063,7 @@ static HRESULT texture_init(struct wined3d_texture *texture, const struct wined3
+     if (level_count > ~(SIZE_T)0 / layer_count
+             || !(surfaces = wined3d_calloc(level_count * layer_count, sizeof(*surfaces))))
      {
 -        wined3d_texture_cleanup(texture);
 +        wined3d_texture_cleanup_main(texture);
          return E_OUTOFMEMORY;
      }
  
-@@ -2091,7 +2105,7 @@ static HRESULT texture_init(struct wined3d_texture *texture, const struct wined3
+@@ -2092,7 +2106,7 @@ static HRESULT texture_init(struct wined3d_texture *texture, const struct wined3
                      texture, idx, &sub_resource->parent, &sub_resource->parent_ops)))
              {
                  WARN("Failed to create surface parent, hr %#x.\n", hr);
@@ -232,7 +232,7 @@ index 7953053..765192d 100644
                  return hr;
              }
  
-@@ -2102,7 +2116,7 @@ static HRESULT texture_init(struct wined3d_texture *texture, const struct wined3
+@@ -2103,7 +2117,7 @@ static HRESULT texture_init(struct wined3d_texture *texture, const struct wined3
              if (((desc->usage & WINED3DUSAGE_OWNDC) || (device->wined3d->flags & WINED3D_NO3D))
                      && FAILED(hr = wined3d_surface_create_dc(surface)))
              {
@@ -241,7 +241,7 @@ index 7953053..765192d 100644
                  return hr;
              }
          }
-@@ -2159,21 +2173,6 @@ static void texture3d_prepare_texture(struct wined3d_texture *texture, struct wi
+@@ -2160,21 +2174,6 @@ static void texture3d_prepare_texture(struct wined3d_texture *texture, struct wi
  
  static void texture3d_cleanup_sub_resources(struct wined3d_texture *texture)
  {
@@ -263,7 +263,7 @@ index 7953053..765192d 100644
      HeapFree(GetProcessHeap(), 0, texture->sub_resources[0].u.volume);
  }
  
-@@ -2227,6 +2226,7 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
+@@ -2228,6 +2227,7 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
      if (layer_count != 1)
      {
          ERR("Invalid layer count for volume texture.\n");
@@ -271,7 +271,7 @@ index 7953053..765192d 100644
          return E_INVALIDARG;
      }
  
-@@ -2235,12 +2235,14 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
+@@ -2236,12 +2236,14 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
      if (WINED3DFMT_UNKNOWN >= desc->format)
      {
          WARN("(%p) : Texture cannot be created with a format of WINED3DFMT_UNKNOWN.\n", texture);
@@ -286,7 +286,7 @@ index 7953053..765192d 100644
          return WINED3DERR_INVALIDCALL;
      }
  
-@@ -2250,12 +2252,14 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
+@@ -2251,12 +2253,14 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
          if (!gl_info->supported[SGIS_GENERATE_MIPMAP])
          {
              WARN("No mipmap generation support, returning D3DERR_INVALIDCALL.\n");
@@ -301,7 +301,7 @@ index 7953053..765192d 100644
              return WINED3DERR_INVALIDCALL;
          }
      }
-@@ -2264,6 +2268,7 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
+@@ -2265,6 +2269,7 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
              || desc->pool == WINED3D_POOL_SCRATCH))
      {
          WARN("Attempted to create a DYNAMIC texture in pool %s.\n", debug_d3dpool(desc->pool));
@@ -309,7 +309,7 @@ index 7953053..765192d 100644
          return WINED3DERR_INVALIDCALL;
      }
  
-@@ -2290,6 +2295,7 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
+@@ -2291,6 +2296,7 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
              {
                  WARN("Attempted to create a NPOT volume texture (%u, %u, %u) without GL support.\n",
                          desc->width, desc->height, desc->depth);
@@ -317,7 +317,7 @@ index 7953053..765192d 100644
                  return WINED3DERR_INVALIDCALL;
              }
          }
-@@ -2299,6 +2305,7 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
+@@ -2300,6 +2306,7 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
              0, device, parent, parent_ops, &texture_resource_ops)))
      {
          WARN("Failed to initialize texture, returning %#x.\n", hr);
@@ -325,16 +325,16 @@ index 7953053..765192d 100644
          return hr;
      }
  
-@@ -2317,7 +2324,7 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
+@@ -2318,7 +2325,7 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
  
-     if (!(volumes = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*volumes) * level_count)))
+     if (!(volumes = wined3d_calloc(level_count, sizeof(*volumes))))
      {
 -        wined3d_texture_cleanup(texture);
 +        wined3d_texture_cleanup_main(texture);
          return E_OUTOFMEMORY;
      }
  
-@@ -2339,7 +2346,7 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
+@@ -2340,7 +2347,7 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
                  texture, i, &sub_resource->parent, &sub_resource->parent_ops)))
          {
              WARN("Failed to create volume parent, hr %#x.\n", hr);
@@ -343,7 +343,7 @@ index 7953053..765192d 100644
              return hr;
          }
  
-@@ -2636,7 +2643,6 @@ HRESULT CDECL wined3d_texture_create(struct wined3d_device *device, const struct
+@@ -2637,7 +2644,6 @@ HRESULT CDECL wined3d_texture_create(struct wined3d_device *device, const struct
      if (FAILED(hr))
      {
          WARN("Failed to initialize texture, returning %#x.\n", hr);
@@ -351,7 +351,7 @@ index 7953053..765192d 100644
          return hr;
      }
  
-@@ -2644,8 +2650,7 @@ HRESULT CDECL wined3d_texture_create(struct wined3d_device *device, const struct
+@@ -2645,8 +2651,7 @@ HRESULT CDECL wined3d_texture_create(struct wined3d_device *device, const struct
       * in this case. */
      if (data && FAILED(hr = wined3d_texture_upload_data(object, data)))
      {
@@ -362,10 +362,10 @@ index 7953053..765192d 100644
      }
  
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 3d972d3..0e4602c 100644
+index b366807..6f0656e 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2631,6 +2631,7 @@ void wined3d_texture_changed(struct wined3d_texture *texture,
+@@ -2652,6 +2652,7 @@ void wined3d_texture_changed(struct wined3d_texture *texture,
          void *swap_heap_memory) DECLSPEC_HIDDEN;
  BOOL wined3d_texture_check_block_align(const struct wined3d_texture *texture,
          unsigned int level, const struct wined3d_box *box) DECLSPEC_HIDDEN;
@@ -373,7 +373,7 @@ index 3d972d3..0e4602c 100644
  GLenum wined3d_texture_get_gl_buffer(const struct wined3d_texture *texture) DECLSPEC_HIDDEN;
  void wined3d_texture_get_memory(struct wined3d_texture *texture, unsigned int sub_resource_idx,
          struct wined3d_bo_address *data, DWORD locations, BOOL map) DECLSPEC_HIDDEN;
-@@ -3049,6 +3050,7 @@ void wined3d_cs_emit_create_vbo(struct wined3d_cs *cs, struct wined3d_buffer *bu
+@@ -3065,6 +3066,7 @@ void wined3d_cs_emit_create_vbo(struct wined3d_cs *cs, struct wined3d_buffer *bu
  void wined3d_cs_emit_resource_cleanup(struct wined3d_cs *cs,
          struct wined3d_resource *resource) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_buffer_cleanup(struct wined3d_cs *cs, struct wined3d_buffer *buffer) DECLSPEC_HIDDEN;

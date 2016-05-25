@@ -541,22 +541,21 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
 diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
 --- a/dlls/wined3d/context.c
 +++ b/dlls/wined3d/context.c
-@@ -1680,12 +1680,14 @@
+@@ -1680,11 +1680,13 @@
          goto out;
      }
  
 +#if defined(STAGING_CSMT)
-     ret->current_fb.render_targets = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY,
-             sizeof(*ret->current_fb.render_targets) * gl_info->limits.buffers);
      ret->current_fb.rt_size = gl_info->limits.buffers;
-     if (!ret->current_fb.render_targets)
+     if (!(ret->current_fb.render_targets = wined3d_calloc(ret->current_fb.rt_size,
+             sizeof(*ret->current_fb.render_targets))))
          goto out;
  
 +#endif /* STAGING_CSMT */
      /* Initialize the texture unit mapping to a 1:1 mapping */
      for (s = 0; s < MAX_COMBINED_SAMPLERS; ++s)
      {
-@@ -1990,7 +1992,9 @@
+@@ -1989,7 +1991,9 @@
      if (hdc) wined3d_release_dc(swapchain->win_handle, hdc);
      device->shader_backend->shader_free_context_data(ret);
      device->adapter->fragment_pipe->free_context_data(ret);
@@ -566,7 +565,7 @@ diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
      HeapFree(GetProcessHeap(), 0, ret->free_event_queries);
      HeapFree(GetProcessHeap(), 0, ret->free_occlusion_queries);
      HeapFree(GetProcessHeap(), 0, ret->free_timestamp_queries);
-@@ -2027,7 +2031,9 @@
+@@ -2026,7 +2030,9 @@
      device->shader_backend->shader_free_context_data(context);
      device->adapter->fragment_pipe->free_context_data(context);
      HeapFree(GetProcessHeap(), 0, context->fbo_key);
@@ -576,7 +575,7 @@ diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
      HeapFree(GetProcessHeap(), 0, context->draw_buffers);
      HeapFree(GetProcessHeap(), 0, context->blit_targets);
      device_context_remove(device, context);
-@@ -2443,6 +2449,9 @@
+@@ -2442,6 +2448,9 @@
  {
      /* Onscreen surfaces are always in a swapchain */
      struct wined3d_swapchain *swapchain = context->current_rt.texture->swapchain;
@@ -586,7 +585,7 @@ diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
  
      if (context->render_offscreen || !depth_stencil) return;
      if (match_depth_stencil_format(swapchain->ds_format, depth_stencil->format)) return;
-@@ -2453,8 +2462,13 @@
+@@ -2452,8 +2461,13 @@
      WARN("Depth stencil format is not supported by WGL, rendering the backbuffer in an FBO\n");
  
      /* The currently active context is the necessary context to access the swapchain's onscreen buffers */
@@ -600,7 +599,7 @@ diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
      swapchain->render_to_fbo = TRUE;
      swapchain_update_draw_bindings(swapchain);
      context_set_render_offscreen(context, TRUE);
-@@ -2555,7 +2569,11 @@
+@@ -2554,7 +2568,11 @@
  }
  
  /* Context activation is done by the caller. */
@@ -612,7 +611,7 @@ diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
          UINT rt_count, const struct wined3d_fb_state *fb)
  {
      struct wined3d_rendertarget_view **rts = fb->render_targets;
-@@ -2564,7 +2582,11 @@
+@@ -2563,7 +2581,11 @@
      DWORD rt_mask = 0, *cur_mask;
      UINT i;
  
@@ -624,7 +623,7 @@ diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
              || rt_count != gl_info->limits.buffers)
      {
          if (!context_validate_rt_config(rt_count, rts, dsv))
-@@ -2609,8 +2631,10 @@
+@@ -2608,8 +2630,10 @@
              rt_mask = context_generate_rt_mask_no_fbo(context,
                      rt_count ? wined3d_rendertarget_view_get_surface(rts[0])->container : NULL);
          }
@@ -635,7 +634,7 @@ diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
      }
      else if (wined3d_settings.offscreen_rendering_mode == ORM_FBO
              && (!rt_count || wined3d_resource_is_offscreen(rts[0]->resource)))
-@@ -2651,8 +2675,12 @@
+@@ -2650,8 +2674,12 @@
      gl_info->gl_ops.gl.p_glEnable(GL_SCISSOR_TEST);
      if (rt_count && gl_info->supported[ARB_FRAMEBUFFER_SRGB])
      {
@@ -648,7 +647,7 @@ diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
              gl_info->gl_ops.gl.p_glEnable(GL_FRAMEBUFFER_SRGB);
          else
              gl_info->gl_ops.gl.p_glDisable(GL_FRAMEBUFFER_SRGB);
-@@ -2669,7 +2697,11 @@
+@@ -2668,7 +2696,11 @@
  
  static DWORD find_draw_buffers_mask(const struct wined3d_context *context, const struct wined3d_state *state)
  {
@@ -660,7 +659,7 @@ diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
      struct wined3d_shader *ps = state->shader[WINED3D_SHADER_TYPE_PIXEL];
      DWORD rt_mask, rt_mask_bits;
      unsigned int i;
-@@ -2699,7 +2731,11 @@
+@@ -2698,7 +2730,11 @@
  void context_state_fb(struct wined3d_context *context, const struct wined3d_state *state, DWORD state_id)
  {
      DWORD rt_mask = find_draw_buffers_mask(context, state);
@@ -672,7 +671,7 @@ diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
      DWORD *cur_mask;
  
      if (wined3d_settings.offscreen_rendering_mode == ORM_FBO)
-@@ -2730,8 +2766,10 @@
+@@ -2729,8 +2765,10 @@
          context_apply_draw_buffers(context, rt_mask);
          *cur_mask = rt_mask;
      }
@@ -683,7 +682,7 @@ diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
  }
  
  static void context_map_stage(struct wined3d_context *context, DWORD stage, DWORD unit)
-@@ -3379,7 +3417,11 @@
+@@ -3378,7 +3416,11 @@
          const struct wined3d_device *device, const struct wined3d_state *state)
  {
      const struct StateEntry *state_table = context->state_table;
@@ -695,7 +694,7 @@ diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
      unsigned int i;
      WORD map;
  
-@@ -3412,12 +3454,17 @@
+@@ -3411,12 +3453,17 @@
          for (i = 0, map = context->stream_info.use_map; map; map >>= 1, ++i)
          {
              if (map & 1)
@@ -713,7 +712,7 @@ diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
      }
      if (state->index_buffer)
      {
-@@ -3536,9 +3583,11 @@
+@@ -3535,9 +3582,11 @@
  
      TRACE("device %p, target %p.\n", device, target);
  
@@ -4587,7 +4586,7 @@ diff --git a/dlls/wined3d/stateblock.c b/dlls/wined3d/stateblock.c
          state->textures[i] = NULL;
      }
  
-@@ -1313,6 +1325,37 @@
+@@ -1312,6 +1324,37 @@
  
      if (FAILED(hr = state_init(&stateblock->state, gl_info, d3d_info, 0)))
          return hr;

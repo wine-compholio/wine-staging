@@ -215,6 +215,7 @@ patch_enable_all ()
 	enable_ntdll_Fix_Alignment="$1"
 	enable_ntdll_Heap_FreeLists="$1"
 	enable_ntdll_Hide_Wine_Exports="$1"
+	enable_ntdll_InMemoryOrderModuleList="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_Loader_Machine_Type="$1"
 	enable_ntdll_NtAccessCheck="$1"
@@ -822,6 +823,9 @@ patch_enable ()
 			;;
 		ntdll-Hide_Wine_Exports)
 			enable_ntdll_Hide_Wine_Exports="$2"
+			;;
+		ntdll-InMemoryOrderModuleList)
+			enable_ntdll_InMemoryOrderModuleList="$2"
 			;;
 		ntdll-Junction_Points)
 			enable_ntdll_Junction_Points="$2"
@@ -4929,6 +4933,21 @@ if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
 	patch_apply ntdll-Hide_Wine_Exports/0001-ntdll-Add-support-for-hiding-wine-version-informatio.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Add support for hiding wine version information from applications.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-InMemoryOrderModuleList
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40623] Do not sort the InMemoryOrderModuleList by memory addresses
+# |
+# | Modified files:
+# |   *	dlls/ntdll/loader.c
+# |
+if test "$enable_ntdll_InMemoryOrderModuleList" -eq 1; then
+	patch_apply ntdll-InMemoryOrderModuleList/0001-ntdll-Do-not-sort-the-InMemoryOrderModuleList-by-mem.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Do not sort the InMemoryOrderModuleList by memory addresses.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "b5aeb661b9297a6ee6047335f42543936f593525"
+	echo "a0c651cd7cf83c9fac6b8776de2d54a731fc4b29"
 }
 
 # Show version information
@@ -274,7 +274,6 @@ patch_enable_all ()
 	enable_riched20_IText_Interface="$1"
 	enable_rpcrt4_Pipe_Transport="$1"
 	enable_rpcrt4_RpcBindingServerFromClient="$1"
-	enable_secur32_ANSI_NTLM_Credentials="$1"
 	enable_secur32_Zero_Buffer_Length="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
@@ -1000,9 +999,6 @@ patch_enable ()
 			;;
 		rpcrt4-RpcBindingServerFromClient)
 			enable_rpcrt4_RpcBindingServerFromClient="$2"
-			;;
-		secur32-ANSI_NTLM_Credentials)
-			enable_secur32_ANSI_NTLM_Credentials="$2"
 			;;
 		secur32-Zero_Buffer_Length)
 			enable_secur32_Zero_Buffer_Length="$2"
@@ -5901,21 +5897,6 @@ if test "$enable_rpcrt4_RpcBindingServerFromClient" -eq 1; then
 	patch_apply rpcrt4-RpcBindingServerFromClient/0001-rpcrt4-Fix-prototype-of-RpcBindingServerFromClient.patch
 	(
 		echo '+    { "Sebastian Lackner", "rpcrt4: Fix prototype of RpcBindingServerFromClient.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset secur32-ANSI_NTLM_Credentials
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37063] Fix handling of ANSI NTLM credentials
-# |
-# | Modified files:
-# |   *	dlls/secur32/ntlm.c
-# |
-if test "$enable_secur32_ANSI_NTLM_Credentials" -eq 1; then
-	patch_apply secur32-ANSI_NTLM_Credentials/0001-secur32-Fix-handling-of-ANSI-NTLM-credentials.patch
-	(
-		echo '+    { "David Woodhouse", "secur32: Fix handling of ANSI NTLM credentials.", 1 },';
 	) >> "$patchlist"
 fi
 

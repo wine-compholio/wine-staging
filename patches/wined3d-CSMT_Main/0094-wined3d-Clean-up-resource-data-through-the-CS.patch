@@ -1,4 +1,4 @@
-From 05080047f8c6b58cf0d53e4839c813ddf7e7cbf8 Mon Sep 17 00:00:00 2001
+From 790ed84dedaba0c7dbbb31c28d6d304cf92c312b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 2 Oct 2013 22:38:51 +0200
 Subject: wined3d: Clean up resource data through the CS.
@@ -13,10 +13,10 @@ Subject: wined3d: Clean up resource data through the CS.
  6 files changed, 48 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
-index 8e95d88..b06c502 100644
+index 62360c0..348a24a 100644
 --- a/dlls/wined3d/buffer.c
 +++ b/dlls/wined3d/buffer.c
-@@ -578,6 +578,9 @@ ULONG CDECL wined3d_buffer_decref(struct wined3d_buffer *buffer)
+@@ -571,6 +571,9 @@ ULONG CDECL wined3d_buffer_decref(struct wined3d_buffer *buffer)
          }
  
          resource_cleanup(&buffer->resource);
@@ -26,8 +26,8 @@ index 8e95d88..b06c502 100644
          buffer->resource.parent_ops->wined3d_object_destroyed(buffer->resource.parent);
          HeapFree(GetProcessHeap(), 0, buffer->maps);
          HeapFree(GetProcessHeap(), 0, buffer);
-@@ -1365,6 +1368,8 @@ static HRESULT buffer_init(struct wined3d_buffer *buffer, struct wined3d_device
-         ERR("Out of memory\n");
+@@ -1357,6 +1360,8 @@ static HRESULT buffer_init(struct wined3d_buffer *buffer, struct wined3d_device
+         ERR("Out of memory.\n");
          buffer_unload(&buffer->resource);
          resource_cleanup(&buffer->resource);
 +        if (wined3d_settings.cs_multithreaded)
@@ -35,17 +35,17 @@ index 8e95d88..b06c502 100644
          return E_OUTOFMEMORY;
      }
      buffer->maps_size = 1;
-@@ -1377,6 +1382,8 @@ static HRESULT buffer_init(struct wined3d_buffer *buffer, struct wined3d_device
-             HeapFree(GetProcessHeap(), 0, buffer->maps);
-             buffer_unload(&buffer->resource);
-             resource_cleanup(&buffer->resource);
-+            if (wined3d_settings.cs_multithreaded)
-+                buffer->resource.device->cs->ops->finish(buffer->resource.device->cs);
-             return hr;
-         }
+@@ -1367,6 +1372,8 @@ static HRESULT buffer_init(struct wined3d_buffer *buffer, struct wined3d_device
+         buffer_unload(&buffer->resource);
+         resource_cleanup(&buffer->resource);
+         HeapFree(GetProcessHeap(), 0, buffer->maps);
++        if (wined3d_settings.cs_multithreaded)
++            buffer->resource.device->cs->ops->finish(buffer->resource.device->cs);
+         return hr;
      }
+ 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 65c5db3..f8c14ce 100644
+index badc0b1..d727e71 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -82,6 +82,7 @@ enum wined3d_cs_op
@@ -56,7 +56,7 @@ index 65c5db3..f8c14ce 100644
      WINED3D_CS_OP_STOP,
  };
  
-@@ -482,6 +483,12 @@ struct wined3d_cs_create_vbo
+@@ -485,6 +486,12 @@ struct wined3d_cs_create_vbo
      struct wined3d_buffer *buffer;
  };
  
@@ -69,7 +69,7 @@ index 65c5db3..f8c14ce 100644
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
  {
      LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
-@@ -2448,6 +2455,26 @@ void wined3d_cs_emit_create_vbo(struct wined3d_cs *cs, struct wined3d_buffer *bu
+@@ -2442,6 +2449,26 @@ void wined3d_cs_emit_create_vbo(struct wined3d_cs *cs, struct wined3d_buffer *bu
      cs->ops->finish_prio(cs);
  }
  
@@ -96,7 +96,7 @@ index 65c5db3..f8c14ce 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2508,6 +2535,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2502,6 +2529,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_VDECL_DESTROY              */ wined3d_cs_exec_vertex_declaration_destroy,
      /* WINED3D_CS_OP_SHADER_CLEANUP             */ wined3d_cs_exec_shader_cleanup,
      /* WINED3D_CS_OP_CREATE_VBO                 */ wined3d_cs_exec_create_vbo,
@@ -105,10 +105,10 @@ index 65c5db3..f8c14ce 100644
  
  static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 3ea4508..c22910d 100644
+index b35fa06..627eca6 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -4957,8 +4957,6 @@ void device_resource_released(struct wined3d_device *device, struct wined3d_reso
+@@ -4982,8 +4982,6 @@ void device_resource_released(struct wined3d_device *device, struct wined3d_reso
  
      TRACE("device %p, resource %p, type %s.\n", device, resource, debug_d3dresourcetype(type));
  
@@ -118,10 +118,10 @@ index 3ea4508..c22910d 100644
      {
          if ((rtv = device->state.fb.render_targets[i]) && rtv->resource == resource)
 diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
-index acbf7a6..53a8fff 100644
+index 9acc7be..3af6851 100644
 --- a/dlls/wined3d/resource.c
 +++ b/dlls/wined3d/resource.c
-@@ -234,6 +234,13 @@ HRESULT resource_init(struct wined3d_resource *resource, struct wined3d_device *
+@@ -237,6 +237,13 @@ HRESULT resource_init(struct wined3d_resource *resource, struct wined3d_device *
      return WINED3D_OK;
  }
  
@@ -135,7 +135,7 @@ index acbf7a6..53a8fff 100644
  void resource_cleanup(struct wined3d_resource *resource)
  {
      const struct wined3d *d3d = resource->device->wined3d;
-@@ -246,10 +253,8 @@ void resource_cleanup(struct wined3d_resource *resource)
+@@ -249,10 +256,8 @@ void resource_cleanup(struct wined3d_resource *resource)
          adapter_adjust_memory(resource->device->adapter, (INT64)0 - resource->size);
      }
  
@@ -148,10 +148,10 @@ index acbf7a6..53a8fff 100644
  
  void resource_unload(struct wined3d_resource *resource)
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index bc1bb27..7953053 100644
+index eacdca1..8190279 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -441,6 +441,8 @@ static void wined3d_texture_cleanup(struct wined3d_texture *texture)
+@@ -521,6 +521,8 @@ static void wined3d_texture_cleanup(struct wined3d_texture *texture)
      texture->texture_ops->texture_cleanup_sub_resources(texture);
      wined3d_texture_unload_gl_texture(texture);
      resource_cleanup(&texture->resource);
@@ -161,10 +161,10 @@ index bc1bb27..7953053 100644
  
  void wined3d_texture_set_swapchain(struct wined3d_texture *texture, struct wined3d_swapchain *swapchain)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index d46bb87..0f16e5f 100644
+index 0cfe28a..e0ce86e 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2457,6 +2457,7 @@ HRESULT resource_init(struct wined3d_resource *resource, struct wined3d_device *
+@@ -2484,6 +2484,7 @@ HRESULT resource_init(struct wined3d_resource *resource, struct wined3d_device *
          const struct wined3d_resource_ops *resource_ops) DECLSPEC_HIDDEN;
  void resource_unload(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
  BOOL wined3d_resource_allocate_sysmem(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
@@ -172,7 +172,7 @@ index d46bb87..0f16e5f 100644
  void wined3d_resource_free_sysmem(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
  GLbitfield wined3d_resource_gl_map_flags(DWORD d3d_flags) DECLSPEC_HIDDEN;
  GLenum wined3d_resource_gl_legacy_map_flags(DWORD d3d_flags) DECLSPEC_HIDDEN;
-@@ -3045,6 +3046,8 @@ void wined3d_cs_emit_vertex_declaration_destroy(struct wined3d_cs *cs,
+@@ -3067,6 +3068,8 @@ void wined3d_cs_emit_vertex_declaration_destroy(struct wined3d_cs *cs,
          struct wined3d_vertex_declaration *declaration) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_shader_cleanup(struct wined3d_cs *cs, struct wined3d_shader *shader) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_create_vbo(struct wined3d_cs *cs, struct wined3d_buffer *buffer) DECLSPEC_HIDDEN;

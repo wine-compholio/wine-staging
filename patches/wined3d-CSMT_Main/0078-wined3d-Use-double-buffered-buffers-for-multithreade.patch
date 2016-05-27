@@ -1,54 +1,26 @@
-From 2290a66b052bb1a5b0e1af7befaeb8637adcfb8d Mon Sep 17 00:00:00 2001
+From d868b0b30b06dd1cc8133da99b8f6f60c57014b3 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 4 Jul 2013 23:44:11 +0200
 Subject: wined3d: Use double-buffered buffers for multithreaded CS
 
 ---
- dlls/wined3d/buffer.c | 24 ++++++++++++++----------
- 1 file changed, 14 insertions(+), 10 deletions(-)
+ dlls/wined3d/buffer.c | 3 +++
+ 1 file changed, 3 insertions(+)
 
 diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
-index f887ee6..6967697 100644
+index e8d1027..ce567be 100644
 --- a/dlls/wined3d/buffer.c
 +++ b/dlls/wined3d/buffer.c
-@@ -1360,16 +1360,8 @@ static HRESULT buffer_init(struct wined3d_buffer *buffer, struct wined3d_device
+@@ -1353,6 +1353,9 @@ static HRESULT buffer_init(struct wined3d_buffer *buffer, struct wined3d_device
          buffer->flags |= WINED3D_BUFFER_CREATEBO;
      }
  
--    if (data)
--    {
--        if (FAILED(hr = wined3d_buffer_upload_data(buffer, NULL, data->data)))
--        {
--            ERR("Failed to upload data, hr %#x.\n", hr);
--            buffer_unload(&buffer->resource);
--            resource_cleanup(&buffer->resource);
--            return hr;
--        }
--    }
 +    if (wined3d_settings.cs_multithreaded)
 +        buffer->flags |= WINED3D_BUFFER_DOUBLEBUFFER;
- 
-     buffer->maps = HeapAlloc(GetProcessHeap(), 0, sizeof(*buffer->maps));
-     if (!buffer->maps)
-@@ -1381,6 +1373,18 @@ static HRESULT buffer_init(struct wined3d_buffer *buffer, struct wined3d_device
-     }
-     buffer->maps_size = 1;
- 
-+    if (data)
-+    {
-+        if (FAILED(hr = wined3d_buffer_upload_data(buffer, NULL, data->data)))
-+        {
-+            ERR("Failed to upload data, hr %#x.\n", hr);
-+            HeapFree(GetProcessHeap(), 0, buffer->maps);
-+            buffer_unload(&buffer->resource);
-+            resource_cleanup(&buffer->resource);
-+            return hr;
-+        }
-+    }
 +
-     return WINED3D_OK;
- }
- 
+     if (!(buffer->maps = HeapAlloc(GetProcessHeap(), 0, sizeof(*buffer->maps))))
+     {
+         ERR("Out of memory.\n");
 -- 
 2.8.0
 

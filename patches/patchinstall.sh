@@ -197,6 +197,7 @@ patch_enable_all ()
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvcrt__fstat32i64="$1"
 	enable_msvfw32_ICGetDisplayFormat="$1"
+	enable_msvideo_dll16_DrawDibProfileDisplay="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_APC_Start_Process="$1"
 	enable_ntdll_Activation_Context="$1"
@@ -770,6 +771,9 @@ patch_enable ()
 			;;
 		msvfw32-ICGetDisplayFormat)
 			enable_msvfw32_ICGetDisplayFormat="$2"
+			;;
+		msvideo.dll16-DrawDibProfileDisplay)
+			enable_msvideo_dll16_DrawDibProfileDisplay="$2"
 			;;
 		ntdll-APC_Performance)
 			enable_ntdll_APC_Performance="$2"
@@ -4660,6 +4664,18 @@ if test "$enable_msvfw32_ICGetDisplayFormat" -eq 1; then
 		echo '+    { "Michael Müller", "iccvid: Fix calculation of stride and size.", 1 },';
 		echo '+    { "Michael Müller", "msvidc32: Add support for converting 16 bit depth to 24 bit.", 1 },';
 		echo '+    { "Michael Müller", "msvidc32: Fix calculation of stride and size.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msvideo.dll16-DrawDibProfileDisplay
+# |
+# | Modified files:
+# |   *	dlls/msvideo.dll16/msvideo.dll16.spec, dlls/msvideo.dll16/msvideo16.c
+# |
+if test "$enable_msvideo_dll16_DrawDibProfileDisplay" -eq 1; then
+	patch_apply msvideo.dll16-DrawDibProfileDisplay/0001-msvideo.dll16-Implement-DrawDibProfileDisplay.patch
+	(
+		echo '+    { "Michael Müller", "msvideo.dll16: Implement DrawDibProfileDisplay.", 1 },';
 	) >> "$patchlist"
 fi
 

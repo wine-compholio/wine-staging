@@ -348,6 +348,7 @@ patch_enable_all ()
 	enable_version_VerQueryValue="$1"
 	enable_vulkan_Vulkan_Implementation="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
+	enable_wbemdisp_Printer="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppGrayFloat="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
@@ -1222,6 +1223,9 @@ patch_enable ()
 			;;
 		wbemdisp-ISWbemSecurity)
 			enable_wbemdisp_ISWbemSecurity="$2"
+			;;
+		wbemdisp-Printer)
+			enable_wbemdisp_Printer="$2"
 			;;
 		widl-SLTG_Typelib_Support)
 			enable_widl_SLTG_Typelib_Support="$2"
@@ -7091,6 +7095,21 @@ if test "$enable_wbemdisp_ISWbemSecurity" -eq 1; then
 	patch_apply wbemdisp-ISWbemSecurity/0001-wbemdisp-Add-ISWbemSecurity-stub-interface.patch
 	(
 		echo '+    { "Michael Müller", "wbemdisp: Add ISWbemSecurity stub interface.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wbemdisp-Printer
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40539] Provide DeviceID, Location and PortName for printers
+# |
+# | Modified files:
+# |   *	dlls/wbemprox/builtin.c
+# |
+if test "$enable_wbemdisp_Printer" -eq 1; then
+	patch_apply wbemdisp-Printer/0001-wbemprox-Provide-DeviceID-Location-and-PortName-for-.patch
+	(
+		echo '+    { "Michael Müller", "wbemprox: Provide DeviceID, Location and PortName for printers.", 1 },';
 	) >> "$patchlist"
 fi
 

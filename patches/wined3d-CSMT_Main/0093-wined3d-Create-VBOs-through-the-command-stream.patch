@@ -1,4 +1,4 @@
-From f86243044bf0a13fe8778e6b96a9192d59506ee4 Mon Sep 17 00:00:00 2001
+From c7a8885b345150606ee93c1ada440109f8e26126 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 2 Oct 2013 21:47:08 +0200
 Subject: wined3d: Create VBOs through the command stream.
@@ -11,10 +11,10 @@ A stop-gap solution to make fglrx happier until buffers are updated.
  3 files changed, 37 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
-index cddbdc1..8e95d88 100644
+index 5566c1e..b611daf 100644
 --- a/dlls/wined3d/buffer.c
 +++ b/dlls/wined3d/buffer.c
-@@ -128,7 +128,7 @@ static void delete_gl_buffer(struct wined3d_buffer *This, const struct wined3d_g
+@@ -122,7 +122,7 @@ static void delete_gl_buffer(struct wined3d_buffer *This, const struct wined3d_g
  }
  
  /* Context activation is done by the caller. */
@@ -23,7 +23,7 @@ index cddbdc1..8e95d88 100644
  {
      GLenum gl_usage = GL_STATIC_DRAW_ARB;
      GLenum error;
-@@ -194,8 +194,6 @@ static void buffer_create_buffer_object(struct wined3d_buffer *This, struct wine
+@@ -188,8 +188,6 @@ static void buffer_create_buffer_object(struct wined3d_buffer *This, struct wine
          ERR("glBufferData failed with error %s (%#x)\n", debug_glerror(error), error);
          goto fail;
      }
@@ -32,19 +32,19 @@ index cddbdc1..8e95d88 100644
  
      This->buffer_object_usage = gl_usage;
  
-@@ -941,9 +939,7 @@ HRESULT CDECL wined3d_buffer_map(struct wined3d_buffer *buffer, UINT offset, UIN
+@@ -932,9 +930,7 @@ HRESULT CDECL wined3d_buffer_map(struct wined3d_buffer *buffer, UINT offset, UIN
       * on buffer creation won't work either. */
-     if (buffer->flags & WINED3D_BUFFER_CREATEBO)
+     if (!buffer->buffer_object && buffer->flags & WINED3D_BUFFER_USE_BO)
      {
 -        context = context_acquire(device, NULL);
 -        buffer_create_buffer_object(buffer, context);
 -        context_release(context);
 +        wined3d_cs_emit_create_vbo(device->cs, buffer);
-         buffer->flags &= ~WINED3D_BUFFER_CREATEBO;
      }
  
+     flags = wined3d_resource_sanitize_map_flags(&buffer->resource, flags);
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index b58cc89..65c5db3 100644
+index bd40193..badc0b1 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -81,6 +81,7 @@ enum wined3d_cs_op
@@ -55,7 +55,7 @@ index b58cc89..65c5db3 100644
      WINED3D_CS_OP_STOP,
  };
  
-@@ -475,6 +476,12 @@ struct wined3d_cs_shader_cleanup
+@@ -478,6 +479,12 @@ struct wined3d_cs_shader_cleanup
      struct wined3d_shader *shader;
  };
  
@@ -68,7 +68,7 @@ index b58cc89..65c5db3 100644
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
  {
      LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
-@@ -2417,6 +2424,30 @@ void wined3d_cs_emit_shader_cleanup(struct wined3d_cs *cs, struct wined3d_shader
+@@ -2411,6 +2418,30 @@ void wined3d_cs_emit_shader_cleanup(struct wined3d_cs *cs, struct wined3d_shader
      cs->ops->submit(cs, sizeof(*op));
  }
  
@@ -99,7 +99,7 @@ index b58cc89..65c5db3 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2476,6 +2507,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2470,6 +2501,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_VIEW_DESTROY               */ wined3d_cs_exec_view_destroy,
      /* WINED3D_CS_OP_VDECL_DESTROY              */ wined3d_cs_exec_vertex_declaration_destroy,
      /* WINED3D_CS_OP_SHADER_CLEANUP             */ wined3d_cs_exec_shader_cleanup,
@@ -108,10 +108,10 @@ index b58cc89..65c5db3 100644
  
  static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 44a77ce..d46bb87 100644
+index 4bf5313..0cfe28a 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3044,6 +3044,7 @@ void wined3d_cs_emit_view_destroy(struct wined3d_cs *cs, struct wined3d_renderta
+@@ -3066,6 +3066,7 @@ void wined3d_cs_emit_view_destroy(struct wined3d_cs *cs, struct wined3d_renderta
  void wined3d_cs_emit_vertex_declaration_destroy(struct wined3d_cs *cs,
          struct wined3d_vertex_declaration *declaration) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_shader_cleanup(struct wined3d_cs *cs, struct wined3d_shader *shader) DECLSPEC_HIDDEN;
@@ -119,7 +119,7 @@ index 44a77ce..d46bb87 100644
  
  /* Direct3D terminology with little modifications. We do not have an issued state
   * because only the driver knows about it, but we have a created state because d3d
-@@ -3136,6 +3137,8 @@ HRESULT wined3d_buffer_upload_data(struct wined3d_buffer *buffer,
+@@ -3158,6 +3159,8 @@ HRESULT wined3d_buffer_upload_data(struct wined3d_buffer *buffer,
          const struct wined3d_box *box, const void *data) DECLSPEC_HIDDEN;
  void buffer_invalidate_bo_range(struct wined3d_buffer *buffer, unsigned int offset, unsigned int size) DECLSPEC_HIDDEN;
  void buffer_swap_mem(struct wined3d_buffer *buffer, BYTE *mem) DECLSPEC_HIDDEN;

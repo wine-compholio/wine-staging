@@ -1,17 +1,17 @@
-From 0050fafe7b359c4d8c5d9f94c57521fd4263c15e Mon Sep 17 00:00:00 2001
+From 53cf8182c26262a3ffaf9d1d961ac94e7d6ed18d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 29 Aug 2013 17:35:53 +0200
 Subject: wined3d: Create buffers before mapping them.
 
 ---
- dlls/wined3d/buffer.c | 26 +++++++++++++++++++++++++-
- 1 file changed, 25 insertions(+), 1 deletion(-)
+ dlls/wined3d/buffer.c | 25 ++++++++++++++++++++++++-
+ 1 file changed, 24 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
-index 6a201b9..cddbdc1 100644
+index 1602ff1..5566c1e 100644
 --- a/dlls/wined3d/buffer.c
 +++ b/dlls/wined3d/buffer.c
-@@ -194,6 +194,8 @@ static void buffer_create_buffer_object(struct wined3d_buffer *This, struct wine
+@@ -188,6 +188,8 @@ static void buffer_create_buffer_object(struct wined3d_buffer *This, struct wine
          ERR("glBufferData failed with error %s (%#x)\n", debug_glerror(error), error);
          goto fail;
      }
@@ -20,7 +20,7 @@ index 6a201b9..cddbdc1 100644
  
      This->buffer_object_usage = gl_usage;
  
-@@ -919,9 +921,32 @@ HRESULT CDECL wined3d_buffer_map(struct wined3d_buffer *buffer, UINT offset, UIN
+@@ -910,9 +912,31 @@ HRESULT CDECL wined3d_buffer_map(struct wined3d_buffer *buffer, UINT offset, UIN
      LONG count;
      BYTE *base;
      struct wined3d_device *device = buffer->resource.device;
@@ -42,18 +42,17 @@ index 6a201b9..cddbdc1 100644
 +     *
 +     * Also keep in mind that UnLoad can destroy the VBO, so simply creating it
 +     * on buffer creation won't work either. */
-+    if (buffer->flags & WINED3D_BUFFER_CREATEBO)
++    if (!buffer->buffer_object && buffer->flags & WINED3D_BUFFER_USE_BO)
 +    {
 +        context = context_acquire(device, NULL);
 +        buffer_create_buffer_object(buffer, context);
 +        context_release(context);
-+        buffer->flags &= ~WINED3D_BUFFER_CREATEBO;
 +    }
 +
      flags = wined3d_resource_sanitize_map_flags(&buffer->resource, flags);
      /* Filter redundant WINED3D_MAP_DISCARD maps. The 3DMark2001 multitexture
       * fill rate test seems to depend on this. When we map a buffer with
-@@ -949,7 +974,6 @@ HRESULT CDECL wined3d_buffer_map(struct wined3d_buffer *buffer, UINT offset, UIN
+@@ -940,7 +964,6 @@ HRESULT CDECL wined3d_buffer_map(struct wined3d_buffer *buffer, UINT offset, UIN
              if (count == 1)
              {
                  struct wined3d_device *device = buffer->resource.device;

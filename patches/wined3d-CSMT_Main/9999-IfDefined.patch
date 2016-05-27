@@ -122,7 +122,7 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
 +++ b/dlls/wined3d/buffer.c
 @@ -32,7 +32,11 @@
  #define WINED3D_BUFFER_HASDESC      0x01    /* A vertex description has been found. */
- #define WINED3D_BUFFER_CREATEBO     0x02    /* Create a buffer object for this buffer. */
+ #define WINED3D_BUFFER_USE_BO       0x02    /* Use a buffer object for this buffer. */
  #define WINED3D_BUFFER_DOUBLEBUFFER 0x04    /* Keep both a buffer object and a system memory copy for this buffer. */
 +#if defined(STAGING_CSMT)
  #define WINED3D_BUFFER_DISCARD      0x08    /* The next PreLoad may discard the buffer contents. */
@@ -171,19 +171,19 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
  
      return;
  
-@@ -460,8 +476,12 @@
+@@ -461,8 +477,12 @@
      data->buffer_object = buffer->buffer_object;
      if (!buffer->buffer_object)
      {
 +#if defined(STAGING_CSMT)
          if ((!buffer->resource.map_count || buffer->flags & WINED3D_BUFFER_DOUBLEBUFFER)
-                 && buffer->flags & WINED3D_BUFFER_CREATEBO)
+                 && buffer->flags & WINED3D_BUFFER_USE_BO)
 +#else  /* STAGING_CSMT */
-+        if ((buffer->flags & WINED3D_BUFFER_CREATEBO) && !buffer->resource.map_count)
++        if ((buffer->flags & WINED3D_BUFFER_USE_BO) && !buffer->resource.map_count)
 +#endif /* STAGING_CSMT */
          {
              buffer_create_buffer_object(buffer, context);
-             buffer->flags &= ~WINED3D_BUFFER_CREATEBO;
+             if (buffer->buffer_object)
 @@ -500,7 +520,9 @@
  
      if (!wined3d_resource_allocate_sysmem(&buffer->resource))
@@ -194,7 +194,7 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
  
      buffer_bind(buffer, context);
      GL_EXTCALL(glGetBufferSubData(buffer->buffer_type_hint, 0, buffer->resource.size, buffer->resource.heap_memory));
-@@ -546,6 +568,7 @@
+@@ -545,6 +567,7 @@
      resource_unload(resource);
  }
  
@@ -202,7 +202,7 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
  void wined3d_buffer_cleanup_cs(struct wined3d_buffer *buffer)
  {
      struct wined3d_context *context;
-@@ -578,6 +601,30 @@
+@@ -577,6 +600,30 @@
  
          buffer->resource.parent_ops->wined3d_object_destroyed(buffer->resource.parent);
          wined3d_cs_emit_buffer_cleanup(device->cs, buffer);
@@ -233,7 +233,7 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
      }
  
      return refcount;
-@@ -662,6 +709,7 @@
+@@ -661,6 +708,7 @@
  /* The caller provides a GL context */
  static void buffer_direct_upload(struct wined3d_buffer *This, const struct wined3d_gl_info *gl_info, DWORD flags)
  {
@@ -241,7 +241,7 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
      UINT start = 0, len = 0;
  
      /* This potentially invalidates the element array buffer binding, but the
-@@ -685,6 +733,45 @@
+@@ -684,6 +732,45 @@
          GL_EXTCALL(glBufferParameteriAPPLE(This->buffer_type_hint, GL_BUFFER_SERIALIZED_MODIFY_APPLE, GL_TRUE));
          checkGLcall("glBufferParameteriAPPLE(This->buffer_type_hint, GL_BUFFER_SERIALIZED_MODIFY_APPLE, GL_TRUE)");
          This->flags &= ~WINED3D_BUFFER_APPLESYNC;
@@ -287,7 +287,7 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
      }
  
      while (This->modified_areas)
-@@ -693,12 +780,33 @@
+@@ -692,12 +779,33 @@
          start = This->maps[This->modified_areas].offset;
          len = This->maps[This->modified_areas].size;
  
@@ -321,7 +321,7 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
  {
      buffer->flags &= ~(WINED3D_BUFFER_SYNC | WINED3D_BUFFER_DISCARD);
  }
-@@ -717,6 +825,14 @@
+@@ -716,6 +824,14 @@
  
      TRACE("buffer %p.\n", buffer);
  
@@ -336,7 +336,7 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
      buffer_mark_used(buffer);
  
      if (!buffer->buffer_object)
-@@ -905,6 +1021,7 @@
+@@ -903,6 +1019,7 @@
  
  void CDECL wined3d_buffer_preload(struct wined3d_buffer *buffer)
  {
@@ -344,7 +344,7 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
      struct wined3d_device *device = buffer->resource.device;
  
      if (buffer->resource.map_count)
-@@ -914,6 +1031,12 @@
+@@ -912,6 +1029,12 @@
      }
  
      wined3d_cs_emit_buffer_preload(device->cs, buffer);
@@ -357,7 +357,7 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
  }
  
  struct wined3d_resource * CDECL wined3d_buffer_get_resource(struct wined3d_buffer *buffer)
-@@ -927,6 +1050,7 @@
+@@ -925,6 +1048,7 @@
  {
      LONG count;
      BYTE *base;
@@ -365,9 +365,9 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
      struct wined3d_device *device = buffer->resource.device;
      struct wined3d_context *context;
  
-@@ -951,6 +1075,10 @@
+@@ -948,6 +1072,10 @@
+     {
          wined3d_cs_emit_create_vbo(device->cs, buffer);
-         buffer->flags &= ~WINED3D_BUFFER_CREATEBO;
      }
 +#else  /* STAGING_CSMT */
 +
@@ -376,7 +376,7 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
  
      flags = wined3d_resource_sanitize_map_flags(&buffer->resource, flags);
      /* Filter redundant WINED3D_MAP_DISCARD maps. The 3DMark2001 multitexture
-@@ -959,7 +1087,11 @@
+@@ -956,7 +1084,11 @@
       * previous contents of the buffer. The r600g driver only does this when
       * the buffer is currently in use, while the proprietary NVIDIA driver
       * appears to do this unconditionally. */
@@ -388,7 +388,7 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
          flags &= ~WINED3D_MAP_DISCARD;
      count = ++buffer->resource.map_count;
  
-@@ -970,6 +1102,7 @@
+@@ -967,6 +1099,7 @@
           * being uploaded in that case. Two such applications are Port Royale
           * and Darkstar One. */
          if (flags & WINED3D_MAP_DISCARD)
@@ -396,7 +396,7 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
              wined3d_cs_emit_buffer_invalidate_bo_range(device->cs, buffer, 0, 0);
          else if (!(flags & WINED3D_MAP_READONLY))
              wined3d_cs_emit_buffer_invalidate_bo_range(device->cs, buffer, offset, size);
-@@ -987,6 +1120,19 @@
+@@ -984,6 +1117,19 @@
                      wined3d_cs_emit_glfinish(device->cs);
                      device->cs->ops->finish(device->cs);
                  }
@@ -416,7 +416,7 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
  
                  context = context_acquire(device, NULL);
                  gl_info = context->gl_info;
-@@ -1035,6 +1181,7 @@
+@@ -1032,6 +1178,7 @@
                          buffer_get_sysmem(buffer, context);
                      }
                      TRACE("New pointer is %p.\n", buffer->resource.heap_memory);
@@ -424,7 +424,7 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
                  }
                  context_release(context);
              }
-@@ -1074,6 +1221,21 @@
+@@ -1071,6 +1218,21 @@
      }
  
      base = buffer->map_ptr ? buffer->map_ptr : buffer->resource.map_heap_memory;
@@ -446,7 +446,7 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
      *data = base + offset;
  
      TRACE("Returning memory at %p (base %p, offset %u).\n", *data, base, offset);
-@@ -1136,6 +1298,7 @@
+@@ -1133,6 +1295,7 @@
          }
  
          GL_EXTCALL(glUnmapBuffer(buffer->buffer_type_hint));
@@ -454,7 +454,7 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
          if (wined3d_settings.cs_multithreaded)
              gl_info->gl_ops.gl.p_glFinish();
          else if (wined3d_settings.strict_draw_ordering)
-@@ -1144,6 +1307,18 @@
+@@ -1141,6 +1304,18 @@
  
          buffer_clear_dirty_areas(buffer);
          buffer->map_ptr = NULL;
@@ -473,7 +473,7 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
      }
  }
  
-@@ -1336,7 +1511,9 @@
+@@ -1333,7 +1508,9 @@
          return hr;
      }
      buffer->buffer_type_hint = bind_hint;
@@ -483,15 +483,15 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
  
      TRACE("size %#x, usage %#x, format %s, memory @ %p, iface @ %p.\n", buffer->resource.size, buffer->resource.usage,
              debug_d3dformat(buffer->resource.format->id), buffer->resource.heap_memory, buffer);
-@@ -1372,6 +1549,7 @@
-         buffer->flags |= WINED3D_BUFFER_CREATEBO;
+@@ -1369,6 +1546,7 @@
+         buffer->flags |= WINED3D_BUFFER_USE_BO;
      }
  
 +#if defined(STAGING_CSMT)
      if (wined3d_settings.cs_multithreaded)
          buffer->flags |= WINED3D_BUFFER_DOUBLEBUFFER;
  
-@@ -1382,6 +1560,13 @@
+@@ -1379,6 +1557,13 @@
          resource_cleanup(&buffer->resource);
          if (wined3d_settings.cs_multithreaded)
              buffer->resource.device->cs->ops->finish(buffer->resource.device->cs);
@@ -505,7 +505,7 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
          return E_OUTOFMEMORY;
      }
      buffer->maps_size = 1;
-@@ -1392,8 +1577,10 @@
+@@ -1389,8 +1574,10 @@
          buffer_unload(&buffer->resource);
          resource_cleanup(&buffer->resource);
          HeapFree(GetProcessHeap(), 0, buffer->maps);
@@ -516,7 +516,7 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
          return hr;
      }
  
-@@ -1504,6 +1691,7 @@
+@@ -1501,6 +1688,7 @@
  
      return WINED3D_OK;
  }
@@ -524,7 +524,7 @@ diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
  
  void buffer_swap_mem(struct wined3d_buffer *buffer, BYTE *mem)
  {
-@@ -1511,3 +1699,4 @@
+@@ -1508,3 +1696,4 @@
      buffer->resource.heap_memory = mem;
      buffer->flags |= WINED3D_BUFFER_DISCARD;
  }

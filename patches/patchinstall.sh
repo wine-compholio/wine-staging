@@ -5518,6 +5518,7 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0009-ntoskrnl.exe-Implement-MmMapLockedPages-and-MmUnmapL.patch
 	patch_apply ntoskrnl-Stubs/0010-ntoskrnl.exe-Implement-KeInitializeMutex.patch
 	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Add-IoGetDeviceAttachmentBaseRef-stub.patch
+	patch_apply ntoskrnl-Stubs/0012-ntoskrnl.exe-Add-IoStopTimer-stub.patch
 	(
 		echo '+    { "Austin English", "ntoskrnl.exe: Add KeWaitForMultipleObjects stub.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for IoGetAttachedDeviceReference.", 1 },';
@@ -5530,6 +5531,7 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 		echo '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Implement KeInitializeMutex.", 1 },';
 		echo '+    { "Jarkko Korpi", "ntoskrnl.exe: Add IoGetDeviceAttachmentBaseRef stub.", 1 },';
+		echo '+    { "Michael Müller", "ntoskrnl.exe: Add IoStopTimer stub.", 1 },';
 	) >> "$patchlist"
 fi
 

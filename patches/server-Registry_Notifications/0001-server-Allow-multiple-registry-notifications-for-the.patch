@@ -1,4 +1,4 @@
-From b556ce4de01cf5e98a486aa13c26d5d5f651d33d Mon Sep 17 00:00:00 2001
+From 7d0a3a7800a523d111df2d40da43ee7bb4ab362b Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 13 Nov 2015 22:39:00 +0100
 Subject: server: Allow multiple registry notifications for the same key.
@@ -9,11 +9,11 @@ Subject: server: Allow multiple registry notifications for the same key.
  2 files changed, 31 insertions(+), 28 deletions(-)
 
 diff --git a/dlls/ntdll/tests/reg.c b/dlls/ntdll/tests/reg.c
-index 96f190b..e0a58f2 100644
+index 0160869..e67b2b4 100644
 --- a/dlls/ntdll/tests/reg.c
 +++ b/dlls/ntdll/tests/reg.c
-@@ -1611,7 +1611,7 @@ static void test_notify(void)
-     ok(status == STATUS_SUCCESS, "NtCreateKey failed: 0x%08x\n", status);
+@@ -1785,7 +1785,7 @@ static void test_notify(void)
+     pRtlFreeUnicodeString(&str);
  
      status = pNtWaitForSingleObject(events[0], FALSE, &timeout);
 -    todo_wine ok(status == STATUS_SUCCESS, "NtWaitForSingleObject returned %x\n", status);
@@ -21,7 +21,7 @@ index 96f190b..e0a58f2 100644
      status = pNtWaitForSingleObject(events[1], FALSE, &timeout);
      ok(status == STATUS_SUCCESS, "NtWaitForSingleObject returned %x\n", status);
  
-@@ -1624,7 +1624,7 @@ static void test_notify(void)
+@@ -1798,7 +1798,7 @@ static void test_notify(void)
      ok(status == STATUS_SUCCESS, "NtDeleteSubkey failed: %x\n", status);
  
      status = pNtWaitForSingleObject(events[0], FALSE, &timeout);
@@ -30,7 +30,7 @@ index 96f190b..e0a58f2 100644
      status = pNtWaitForSingleObject(events[1], FALSE, &timeout);
      ok(status == STATUS_SUCCESS, "NtWaitForSingleObject returned %x\n", status);
  
-@@ -1638,7 +1638,7 @@ static void test_notify(void)
+@@ -1812,7 +1812,7 @@ static void test_notify(void)
      pNtClose(key);
  
      status = pNtWaitForSingleObject(events[0], FALSE, &timeout);
@@ -40,7 +40,7 @@ index 96f190b..e0a58f2 100644
      ok(status == STATUS_SUCCESS, "NtWaitForSingleObject returned %x\n", status);
  
 diff --git a/server/registry.c b/server/registry.c
-index c95e103..ead9749 100644
+index 97b16ed..53a8d43 100644
 --- a/server/registry.c
 +++ b/server/registry.c
 @@ -50,10 +50,16 @@
@@ -61,7 +61,7 @@ index c95e103..ead9749 100644
      int               subtree;  /* true if subtree notification */
      unsigned int      filter;   /* which events to notify on */
      obj_handle_t      hkey;     /* hkey associated with this notification */
-@@ -303,12 +309,17 @@ static void key_dump( struct object *obj, int verbose )
+@@ -313,12 +319,17 @@ static struct object_type *key_get_type( struct object *obj )
  /* notify waiter and maybe delete the notification */
  static void do_notification( struct key *key, struct notify *notify, int del )
  {
@@ -83,7 +83,7 @@ index c95e103..ead9749 100644
      if (del)
      {
          list_remove( &notify->entry );
-@@ -2260,6 +2271,7 @@ DECL_HANDLER(set_registry_notification)
+@@ -2263,6 +2274,7 @@ DECL_HANDLER(set_registry_notification)
      struct key *key;
      struct event *event;
      struct notify *notify;
@@ -91,7 +91,7 @@ index c95e103..ead9749 100644
  
      key = get_hkey_obj( req->hkey, KEY_NOTIFY );
      if (key)
-@@ -2268,29 +2280,20 @@ DECL_HANDLER(set_registry_notification)
+@@ -2271,29 +2283,20 @@ DECL_HANDLER(set_registry_notification)
          if (event)
          {
              notify = find_notify( key, current->process, req->hkey );
@@ -133,5 +133,5 @@ index c95e103..ead9749 100644
                  set_error( STATUS_PENDING );
              }
 -- 
-2.6.2
+2.8.0
 

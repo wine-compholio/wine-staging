@@ -57,7 +57,7 @@ upstream_commit()
 # Show version information
 version()
 {
-	echo "Wine Staging 1.9.11"
+	echo "Wine Staging 1.9.12 (unreleased)"
 	echo "Copyright (C) 2014-2016 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -331,6 +331,7 @@ patch_enable_all ()
 	enable_user32_DeferWindowPos="$1"
 	enable_user32_DialogBoxParam="$1"
 	enable_user32_Dialog_Paint_Event="$1"
+	enable_user32_DrawMenuItem="$1"
 	enable_user32_DrawTextExW="$1"
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_Invalidate_Key_State="$1"
@@ -1172,6 +1173,9 @@ patch_enable ()
 			;;
 		user32-Dialog_Paint_Event)
 			enable_user32_Dialog_Paint_Event="$2"
+			;;
+		user32-DrawMenuItem)
+			enable_user32_DrawMenuItem="$2"
 			;;
 		user32-DrawTextExW)
 			enable_user32_DrawTextExW="$2"
@@ -6808,6 +6812,21 @@ if test "$enable_user32_Dialog_Paint_Event" -eq 1; then
 	patch_apply user32-Dialog_Paint_Event/0001-user32-Call-UpdateWindow-during-DIALOG_CreateIndirec.patch
 	(
 		echo '+    { "Sebastian Lackner", "user32: Call UpdateWindow() during DIALOG_CreateIndirect.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-DrawMenuItem
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40704] Add a check if the menu text is a valid string in MENU_DrawMenuItem
+# |
+# | Modified files:
+# |   *	dlls/user32/menu.c
+# |
+if test "$enable_user32_DrawMenuItem" -eq 1; then
+	patch_apply user32-DrawMenuItem/0001-user32-Add-a-check-if-the-menu-text-is-a-valid-strin.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "user32: Add a check if the menu text is a valid string.", 1 },';
 	) >> "$patchlist"
 fi
 

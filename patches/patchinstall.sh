@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "59ee884bdf4947f5939499456539fca7a5806939"
+	echo "03fa4cfaffd4c10f56a2f8bfd383f4eaf67d364c"
 }
 
 # Show version information
@@ -244,7 +244,6 @@ patch_enable_all ()
 	enable_ntdll_User_Shared_Data="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_Wait_User_APC="$1"
-	enable_ntdll_WinSqm="$1"
 	enable_ntdll_WriteWatches="$1"
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll_call_thread_func_wrapper="$1"
@@ -912,9 +911,6 @@ patch_enable ()
 			;;
 		ntdll-Wait_User_APC)
 			enable_ntdll_Wait_User_APC="$2"
-			;;
-		ntdll-WinSqm)
-			enable_ntdll_WinSqm="$2"
 			;;
 		ntdll-WriteWatches)
 			enable_ntdll_WriteWatches="$2"
@@ -2154,13 +2150,6 @@ if test "$enable_ntdll_WriteWatches" -eq 1; then
 	fi
 	enable_kernel32_Named_Pipe=1
 	enable_ws2_32_WriteWatches=1
-fi
-
-if test "$enable_ntdll_WinSqm" -eq 1; then
-	if test "$enable_ntdll_EtwRegisterTraceGuids" -gt 1; then
-		abort "Patchset ntdll-EtwRegisterTraceGuids disabled, but ntdll-WinSqm depends on that."
-	fi
-	enable_ntdll_EtwRegisterTraceGuids=1
 fi
 
 if test "$enable_ntdll_WRITECOPY" -eq 1; then
@@ -5380,24 +5369,6 @@ if test "$enable_ntdll_Wait_User_APC" -eq 1; then
 	patch_apply ntdll-Wait_User_APC/0001-ntdll-Block-signals-while-executing-system-APCs.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Block signals while executing system APCs.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-WinSqm
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-EtwRegisterTraceGuids
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#31971] ntdll is missing WinSqm[Start|End]Session implementation
-# |
-# | Modified files:
-# |   *	dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec, dlls/ntdll/tests/rtl.c
-# |
-if test "$enable_ntdll_WinSqm" -eq 1; then
-	patch_apply ntdll-WinSqm/0001-ntdll-Add-stubs-for-WinSqmStartSession-WinSqmEndSess.patch
-	(
-		echo '+    { "Erich E. Hoover", "ntdll: Add stubs for WinSqmStartSession / WinSqmEndSession.", 1 },';
 	) >> "$patchlist"
 fi
 

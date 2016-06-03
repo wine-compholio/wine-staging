@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5840ea47e6a0d761acbd45cd5a59fbcebfb86326"
+	echo "d8641197c041763c2c9784f4b4a8b3dba2bbf0cb"
 }
 
 # Show version information
@@ -291,7 +291,6 @@ patch_enable_all ()
 	enable_server_Signal_Thread="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
-	enable_setupapi_CM_Get_DevNode_Status="$1"
 	enable_setupapi_DelReg="$1"
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_Display_Device="$1"
@@ -1052,9 +1051,6 @@ patch_enable ()
 			;;
 		server-Timestamp_Compat)
 			enable_server_Timestamp_Compat="$2"
-			;;
-		setupapi-CM_Get_DevNode_Status)
-			enable_setupapi_CM_Get_DevNode_Status="$2"
 			;;
 		setupapi-DelReg)
 			enable_setupapi_DelReg="$2"
@@ -6104,21 +6100,6 @@ if test "$enable_server_Timestamp_Compat" -eq 1; then
 	patch_apply server-Timestamp_Compat/0001-server-Compatibility-with-Wine-Staging-format-for-hi.patch
 	(
 		echo '+    { "Michael Müller", "server: Compatibility with Wine Staging format for high precision registry timestamps.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset setupapi-CM_Get_DevNode_Status
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40691] Add stub for setupapi.CM_Get_DevNode_Status
-# |
-# | Modified files:
-# |   *	dlls/setupapi/setupapi.spec, dlls/setupapi/stubs.c
-# |
-if test "$enable_setupapi_CM_Get_DevNode_Status" -eq 1; then
-	patch_apply setupapi-CM_Get_DevNode_Status/0001-setupapi-Add-stub-for-CM_Get_DevNode_Status.patch
-	(
-		echo '+    { "Michael Müller", "setupapi: Add stub for CM_Get_DevNode_Status.", 1 },';
 	) >> "$patchlist"
 fi
 

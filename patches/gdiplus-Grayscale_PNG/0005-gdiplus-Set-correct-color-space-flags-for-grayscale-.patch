@@ -1,0 +1,45 @@
+From c0115ba521b2be3e061ffbe022ba4c10c78c0706 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Fri, 3 Jun 2016 18:39:37 +0800
+Subject: gdiplus: Set correct color space flags for grayscale images.
+
+---
+ dlls/gdiplus/image.c       | 9 ++++++++-
+ dlls/gdiplus/tests/image.c | 1 -
+ 2 files changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/gdiplus/image.c b/dlls/gdiplus/image.c
+index a8d8f2d..38af3d5 100644
+--- a/dlls/gdiplus/image.c
++++ b/dlls/gdiplus/image.c
+@@ -3709,7 +3709,14 @@ static GpStatus decode_frame_wic(IWICBitmapDecoder *decoder, BOOL force_conversi
+     if (status == Ok)
+     {
+         /* Native GDI+ used to be smarter, but since Win7 it just sets these flags. */
+-        bitmap->image.flags |= ImageFlagsReadOnly|ImageFlagsHasRealPixelSize|ImageFlagsHasRealDPI|ImageFlagsColorSpaceRGB;
++        bitmap->image.flags |= ImageFlagsReadOnly|ImageFlagsHasRealPixelSize|ImageFlagsHasRealDPI;
++        if (IsEqualGUID(&wic_format, &GUID_WICPixelFormat2bppGray) ||
++            IsEqualGUID(&wic_format, &GUID_WICPixelFormat4bppGray) ||
++            IsEqualGUID(&wic_format, &GUID_WICPixelFormat8bppGray) ||
++            IsEqualGUID(&wic_format, &GUID_WICPixelFormat16bppGray))
++            bitmap->image.flags |= ImageFlagsColorSpaceGRAY;
++        else
++            bitmap->image.flags |= ImageFlagsColorSpaceRGB;
+         bitmap->image.frame_count = frame_count;
+         bitmap->image.current_frame = active_frame;
+         bitmap->image.decoder = decoder;
+diff --git a/dlls/gdiplus/tests/image.c b/dlls/gdiplus/tests/image.c
+index 10b0477..3e64c3a 100644
+--- a/dlls/gdiplus/tests/image.c
++++ b/dlls/gdiplus/tests/image.c
+@@ -4781,7 +4781,6 @@ static void test_png_color_formats(void)
+ 
+         status = GdipGetImageFlags(image, &flags);
+         expect(Ok, status);
+-todo_wine_if(td[i].bit_depth > 1 && td[i].color_type == 0)
+         ok((flags & td[i].flags) == td[i].flags ||
+            broken(td[i].bit_depth == 1 && td[i].color_type == 0 && (flags & ImageFlagsColorSpaceGRAY)), /* XP */
+            "%d: expected %#x, got %#x\n", i, td[i].flags, flags);
+-- 
+2.8.0
+

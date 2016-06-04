@@ -153,6 +153,7 @@ patch_enable_all ()
 	enable_gdi32_Path_Metafile="$1"
 	enable_gdi32_Symbol_Truetype_Font="$1"
 	enable_gdiplus_GdipCreateMetafileFromStream="$1"
+	enable_gdiplus_Grayscale_PNG="$1"
 	enable_hal_KeQueryPerformanceCounter="$1"
 	enable_hid_HidP_TranslateUsagesToI8042ScanCodes="$1"
 	enable_hnetcfg_INetFwAuthorizedApplication="$1"
@@ -638,6 +639,9 @@ patch_enable ()
 			;;
 		gdiplus-GdipCreateMetafileFromStream)
 			enable_gdiplus_GdipCreateMetafileFromStream="$2"
+			;;
+		gdiplus-Grayscale_PNG)
+			enable_gdiplus_Grayscale_PNG="$2"
 			;;
 		hal-KeQueryPerformanceCounter)
 			enable_hal_KeQueryPerformanceCounter="$2"
@@ -3830,6 +3834,29 @@ if test "$enable_gdiplus_GdipCreateMetafileFromStream" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipGetMetafileHeaderFromWmf.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipGetMetafileHeaderFromStream.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipGetMetafileHeaderFromFile.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset gdiplus-Grayscale_PNG
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38622] Force conversion of 8 bpp grayscale PNG images to 32 bpp BGRA
+# |
+# | Modified files:
+# |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, dlls/windowscodecs/tests/pngformat.c
+# |
+if test "$enable_gdiplus_Grayscale_PNG" -eq 1; then
+	patch_apply gdiplus-Grayscale_PNG/0001-windowscodecs-tests-Add-a-test-for-loading-PNG-grays.patch
+	patch_apply gdiplus-Grayscale_PNG/0002-gdiplus-tests-Add-a-test-for-loading-PNG-grayscale-i.patch
+	patch_apply gdiplus-Grayscale_PNG/0003-gdiplus-Force-conversion-of-8-bpp-grayscale-PNG-imag.patch
+	patch_apply gdiplus-Grayscale_PNG/0004-gdiplus-tests-Add-a-test-for-image-flags-to-PNG-gray.patch
+	patch_apply gdiplus-Grayscale_PNG/0005-gdiplus-Set-correct-color-space-flags-for-grayscale-.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add a test for loading PNG grayscale images.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "gdiplus/tests: Add a test for loading PNG grayscale images.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "gdiplus: Force conversion of 8 bpp grayscale PNG images to 32 bpp BGRA.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "gdiplus/tests: Add a test for image flags to PNG grayscale image tests.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "gdiplus: Set correct color space flags for grayscale images.", 1 },';
 	) >> "$patchlist"
 fi
 

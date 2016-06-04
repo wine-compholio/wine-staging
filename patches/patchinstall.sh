@@ -379,6 +379,7 @@ patch_enable_all ()
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_Clipboard_HTML="$1"
 	enable_winex11_DefaultDisplayFrequency="$1"
+	enable_winex11_SC_KEYMENU="$1"
 	enable_winex11_Window_Groups="$1"
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
@@ -1317,6 +1318,9 @@ patch_enable ()
 			;;
 		winex11-DefaultDisplayFrequency)
 			enable_winex11_DefaultDisplayFrequency="$2"
+			;;
+		winex11-SC_KEYMENU)
+			enable_winex11_SC_KEYMENU="$2"
 			;;
 		winex11-Window_Groups)
 			enable_winex11_Window_Groups="$2"
@@ -7799,6 +7803,21 @@ if test "$enable_winex11_DefaultDisplayFrequency" -eq 1; then
 	patch_apply winex11-DefaultDisplayFrequency/0001-winex11.drv-Allow-to-select-default-display-frequenc.patch
 	(
 		echo '+    { "Michael Müller", "winex11.drv: Allow to select default display frequency in registry key.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11-SC_KEYMENU
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#21918] Send SC_KEYMENU on managed windows
+# |
+# | Modified files:
+# |   *	dlls/user32/tests/msg.c, dlls/winex11.drv/window.c
+# |
+if test "$enable_winex11_SC_KEYMENU" -eq 1; then
+	patch_apply winex11-SC_KEYMENU/0001-winex11-Send-SC_KEYMENU-on-managed-windows.patch
+	(
+		echo '+    { "Alex Henrie", "winex11: Send SC_KEYMENU on managed windows.", 1 },';
 	) >> "$patchlist"
 fi
 

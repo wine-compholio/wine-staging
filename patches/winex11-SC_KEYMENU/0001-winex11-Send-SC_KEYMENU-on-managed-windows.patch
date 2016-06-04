@@ -1,0 +1,58 @@
+From f178746e3950e20c97e6dbe598775e805ef13eea Mon Sep 17 00:00:00 2001
+From: Alex Henrie <alexhenrie24@gmail.com>
+Date: Sat, 21 May 2016 17:55:58 -0600
+Subject: winex11: Send SC_KEYMENU on managed windows.
+
+---
+ dlls/user32/tests/msg.c   |  5 ++---
+ dlls/winex11.drv/window.c | 11 -----------
+ 2 files changed, 2 insertions(+), 14 deletions(-)
+
+diff --git a/dlls/user32/tests/msg.c b/dlls/user32/tests/msg.c
+index 52cf901..bb9691c 100644
+--- a/dlls/user32/tests/msg.c
++++ b/dlls/user32/tests/msg.c
+@@ -7997,8 +7997,7 @@ static void test_accelerators(void)
+     keybd_event(VK_MENU, 0, 0, 0);
+     keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0);
+     pump_msg_loop(hwnd, 0);
+-    /* this test doesn't pass in Wine for managed windows */
+-    ok_sequence(WmAltPressRelease, "Alt press/release", TRUE);
++    ok_sequence(WmAltPressRelease, "Alt press/release", FALSE);
+ 
+     trace("testing VK_F1 press/release\n");
+     keybd_event(VK_F1, 0, 0, 0);
+@@ -8018,7 +8017,7 @@ static void test_accelerators(void)
+     keybd_event(VK_F10, 0, 0, 0);
+     keybd_event(VK_F10, 0, KEYEVENTF_KEYUP, 0);
+     pump_msg_loop(hwnd, 0);
+-    ok_sequence(WmVkF10Seq, "VK_F10 press/release", TRUE);
++    ok_sequence(WmVkF10Seq, "VK_F10 press/release", FALSE);
+ 
+     trace("testing SHIFT+F10 press/release\n");
+     keybd_event(VK_SHIFT, 0, 0, 0);
+diff --git a/dlls/winex11.drv/window.c b/dlls/winex11.drv/window.c
+index 06ce26e..4c3632d 100644
+--- a/dlls/winex11.drv/window.c
++++ b/dlls/winex11.drv/window.c
+@@ -2750,17 +2750,6 @@ LRESULT CDECL X11DRV_SysCommand( HWND hwnd, WPARAM wparam, LPARAM lparam )
+         default:               dir = _NET_WM_MOVERESIZE_SIZE_KEYBOARD; break;
+         }
+         break;
+-
+-    case SC_KEYMENU:
+-        /* prevent a simple ALT press+release from activating the system menu,
+-         * as that can get confusing on managed windows */
+-        if ((WCHAR)lparam) goto failed;  /* got an explicit char */
+-        if (GetMenu( hwnd )) goto failed;  /* window has a real menu */
+-        if (!(GetWindowLongW( hwnd, GWL_STYLE ) & WS_SYSMENU)) goto failed;  /* no system menu */
+-        TRACE( "ignoring SC_KEYMENU wp %lx lp %lx\n", wparam, lparam );
+-        release_win_data( data );
+-        return 0;
+-
+     default:
+         goto failed;
+     }
+-- 
+2.8.0
+

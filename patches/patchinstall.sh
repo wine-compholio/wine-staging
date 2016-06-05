@@ -7876,7 +7876,7 @@ if test "$enable_winex11__NET_ACTIVE_WINDOW" -eq 1; then
 	patch_apply winex11-_NET_ACTIVE_WINDOW/0001-winex11.drv-Add-support-for-_NET_ACTIVE_WINDOW.patch
 	patch_apply winex11-_NET_ACTIVE_WINDOW/0002-user32-Before-asking-a-WM-to-activate-a-window-make-.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "winex11.drv: Add support for _NET_ACTIVE_WINDOW.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "winex11.drv: Add support for _NET_ACTIVE_WINDOW.", 2 },';
 		echo '+    { "Dmitry Timoshkov", "user32: Before asking a WM to activate a window make sure that the window is in foreground and not minimized.", 1 },';
 	) >> "$patchlist"
 fi

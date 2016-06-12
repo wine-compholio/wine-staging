@@ -2767,12 +2767,12 @@ fi
 # |   *	[#38941] Preserve custom colors between subitems for listview control
 # |
 # | Modified files:
-# |   *	dlls/comctl32/listview.c
+# |   *	dlls/comctl32/listview.c, dlls/comctl32/tests/listview.c
 # |
 if test "$enable_comctl32_Listview_DrawItem" -eq 1; then
 	patch_apply comctl32-Listview_DrawItem/0001-comctl32-Preserve-custom-colors-between-subitems.patch
 	(
-		echo '+    { "Daniel Jelinski", "comctl32: Preserve custom colors between subitems.", 1 },';
+		echo '+    { "Michael Müller", "comctl32: Preserve custom colors between subitems.", 2 },';
 	) >> "$patchlist"
 fi
 

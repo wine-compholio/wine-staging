@@ -1,0 +1,43 @@
+From ed64f216fbfa33dcabf5e33b207d856491a0d360 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Thu, 9 Jun 2016 17:43:19 +0800
+Subject: user32: Pass correct itemData to WM_MEASUREITEM when inserting an
+ item to an owner-drawn listbox.
+
+---
+ dlls/user32/listbox.c   | 4 +++-
+ dlls/user32/tests/msg.c | 2 +-
+ 2 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/user32/listbox.c b/dlls/user32/listbox.c
+index b73aa79..1776624 100644
+--- a/dlls/user32/listbox.c
++++ b/dlls/user32/listbox.c
+@@ -1566,8 +1566,10 @@ static LRESULT LISTBOX_InsertItem( LB_DESCR *descr, INT index,
+         mis.CtlType    = ODT_LISTBOX;
+         mis.CtlID      = id;
+         mis.itemID     = index;
+-        mis.itemData   = descr->items[index].data;
++        mis.itemData   = (ULONG_PTR)str;
+         mis.itemHeight = descr->item_height;
++        TRACE("owner=%p CtlID=%08x, itemID=%08x, itemData=%08lx\n",
++              descr->owner, mis.CtlID, mis.itemID, mis.itemData);
+         SendMessageW( descr->owner, WM_MEASUREITEM, id, (LPARAM)&mis );
+         item->height = mis.itemHeight ? mis.itemHeight : 1;
+         TRACE("[%p]: measure item %d (%s) = %d\n",
+diff --git a/dlls/user32/tests/msg.c b/dlls/user32/tests/msg.c
+index 6580721..9b853a4 100644
+--- a/dlls/user32/tests/msg.c
++++ b/dlls/user32/tests/msg.c
+@@ -13533,7 +13533,7 @@ static void test_listbox_messages(void)
+     ret = SendMessageA(listbox, LB_ADDSTRING, 0, (LPARAM)"item 2");
+     ok(ret == 2, "expected 2, got %ld\n", ret);
+ 
+-    ok_sequence(wm_lb_addstring, "LB_ADDSTRING", TRUE);
++    ok_sequence(wm_lb_addstring, "LB_ADDSTRING", FALSE);
+     check_lb_state(listbox, 3, LB_ERR, 0, 0);
+ 
+     flush_sequence();
+-- 
+2.8.0
+

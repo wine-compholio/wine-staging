@@ -342,6 +342,7 @@ patch_enable_all ()
 	enable_user32_PNG_Support="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
+	enable_user32_WM_MEASUREITEM="$1"
 	enable_user32_lpCreateParams="$1"
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_GetFileVersionInfoSizeExW="$1"
@@ -1207,6 +1208,9 @@ patch_enable ()
 			;;
 		user32-ScrollWindowEx)
 			enable_user32_ScrollWindowEx="$2"
+			;;
+		user32-WM_MEASUREITEM)
+			enable_user32_WM_MEASUREITEM="$2"
 			;;
 		user32-lpCreateParams)
 			enable_user32_lpCreateParams="$2"
@@ -7001,6 +7005,20 @@ if test "$enable_user32_ScrollWindowEx" -eq 1; then
 	patch_apply user32-ScrollWindowEx/0001-user32-Fix-return-value-of-ScrollWindowEx-for-invisi.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "user32: Fix return value of ScrollWindowEx for invisible windows.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-WM_MEASUREITEM
+# |
+# | Modified files:
+# |   *	dlls/user32/listbox.c, dlls/user32/tests/msg.c
+# |
+if test "$enable_user32_WM_MEASUREITEM" -eq 1; then
+	patch_apply user32-WM_MEASUREITEM/0001-user32-tests-Add-a-test-for-WM_MEASUREITEM-when-inse.patch
+	patch_apply user32-WM_MEASUREITEM/0002-user32-Pass-correct-itemData-to-WM_MEASUREITEM-when-.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "user32/tests: Add a test for WM_MEASUREITEM when inserting an item to an owner-drawn listbox.", 2 },';
+		echo '+    { "Dmitry Timoshkov", "user32: Pass correct itemData to WM_MEASUREITEM when inserting an item to an owner-drawn listbox.", 1 },';
 	) >> "$patchlist"
 fi
 

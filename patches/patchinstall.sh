@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "7cb3b72559745d94e7b7e3a0fbb40426f93d775f"
+	echo "41d01871fef296dc717cf2c4f0bdbb07f5266acd"
 }
 
 # Show version information
@@ -149,7 +149,6 @@ patch_enable_all ()
 	enable_fsutil_Stub_Program="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_MultiMonitor="$1"
-	enable_gdi32_PS_GEOMETRIC="$1"
 	enable_gdi32_Path_Metafile="$1"
 	enable_gdi32_Symbol_Truetype_Font="$1"
 	enable_gdiplus_GdipCreateMetafileFromStream="$1"
@@ -628,9 +627,6 @@ patch_enable ()
 			;;
 		gdi32-MultiMonitor)
 			enable_gdi32_MultiMonitor="$2"
-			;;
-		gdi32-PS_GEOMETRIC)
-			enable_gdi32_PS_GEOMETRIC="$2"
 			;;
 		gdi32-Path_Metafile)
 			enable_gdi32_Path_Metafile="$2"
@@ -3719,21 +3715,6 @@ if test "$enable_gdi32_MultiMonitor" -eq 1; then
 		echo '+    { "Ken Thomases", "winex11: Make GetMonitorInfo() give a different device name (\\\\.\\\\DISPLAY<n>) to each monitor.", 1 },';
 		echo '+    { "Ken Thomases", "user32: Implement EnumDisplayDevicesW() based on EnumDisplayMonitors() and GetMonitorInfoW().", 1 },';
 		echo '+    { "Ken Thomases", "winemac: Make GetMonitorInfo() give a different device name (\\\\\\\\.\\\\DISPLAY<n>) to each monitor.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset gdi32-PS_GEOMETRIC
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39172] Scale a geometric pen for the mapping mode used by PATH_StrokePath
-# |
-# | Modified files:
-# |   *	dlls/gdi32/path.c
-# |
-if test "$enable_gdi32_PS_GEOMETRIC" -eq 1; then
-	patch_apply gdi32-PS_GEOMETRIC/0001-gdi32-Scale-a-geometric-pen-for-the-mapping-mode-use.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "gdi32: Scale a geometric pen for the mapping mode used by PATH_StrokePath.", 2 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,62 @@
+From d068cb5331e7dee5ceb0c14a3eff9ef2c273865d Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Wed, 15 Jun 2016 15:07:39 +0800
+Subject: user32: Use root dialog for DM_SETDEFID/DM_GETDEFID in DefDlgProc.
+
+This patch fixes DM_SETDEFID/DM_GETDEFID handling in complex dialog
+structures such as a property sheet.
+---
+ dlls/user32/defdlg.c | 25 +++++++++++++++++++++++++
+ 1 file changed, 25 insertions(+)
+
+diff --git a/dlls/user32/defdlg.c b/dlls/user32/defdlg.c
+index 258c3a9..6765a51 100644
+--- a/dlls/user32/defdlg.c
++++ b/dlls/user32/defdlg.c
+@@ -209,6 +209,25 @@ static BOOL DEFDLG_SetDefButton( HWND hwndDlg, DIALOGINFO *dlgInfo, HWND hwndNew
+ }
+ 
+ 
++static HWND root_dialog(HWND hwnd)
++{
++    while ((GetWindowLongA(hwnd, GWL_EXSTYLE) & WS_EX_CONTROLPARENT) &&
++           (GetWindowLongA(hwnd, GWL_STYLE) & (WS_CHILD|WS_POPUP)) == WS_CHILD)
++    {
++        HWND parent = GetParent(hwnd);
++
++        if (!DIALOG_get_info(parent, FALSE))
++            break;
++
++        hwnd = parent;
++
++        if (!(GetWindowLongA(hwnd, GWL_STYLE) & DS_CONTROL))
++            break;
++    }
++
++    return hwnd;
++}
++
+ /***********************************************************************
+  *           DEFDLG_Proc
+  *
+@@ -264,11 +283,17 @@ static LRESULT DEFDLG_Proc( HWND hwnd, UINT msg, WPARAM wParam,
+             return 0;
+ 
+         case DM_SETDEFID:
++            hwnd = root_dialog( hwnd );
++            dlgInfo = DIALOG_get_info( hwnd, FALSE );
++
+             if (dlgInfo && !(dlgInfo->flags & DF_END))
+                 DEFDLG_SetDefId( hwnd, dlgInfo, wParam );
+             return 1;
+ 
+         case DM_GETDEFID:
++            hwnd = root_dialog( hwnd );
++            dlgInfo = DIALOG_get_info( hwnd, FALSE );
++
+             if (dlgInfo && !(dlgInfo->flags & DF_END))
+             {
+                 HWND hwndDefId;
+-- 
+2.8.0
+

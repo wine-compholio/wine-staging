@@ -326,6 +326,7 @@ patch_enable_all ()
 	enable_user_exe16_CONTAINING_RECORD="$1"
 	enable_user_exe16_DlgDirList="$1"
 	enable_user32_CharToOem="$1"
+	enable_user32_DM_SETDEFID="$1"
 	enable_user32_DeferWindowPos="$1"
 	enable_user32_DialogBoxParam="$1"
 	enable_user32_Dialog_Paint_Event="$1"
@@ -1158,6 +1159,9 @@ patch_enable ()
 			;;
 		user32-CharToOem)
 			enable_user32_CharToOem="$2"
+			;;
+		user32-DM_SETDEFID)
+			enable_user32_DM_SETDEFID="$2"
 			;;
 		user32-DeferWindowPos)
 			enable_user32_DeferWindowPos="$2"
@@ -6733,6 +6737,25 @@ if test "$enable_user32_CharToOem" -eq 1; then
 	patch_apply user32-CharToOem/0001-user32-Properly-handle-invalid-parameters-in-CharToO.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "user32: Properly handle invalid parameters in CharToOem* and OemToChar* APIs.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-DM_SETDEFID
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#22764] Use root dialog for DM_SETDEFID/DM_GETDEFID in DefDlgProc
+# |
+# | Modified files:
+# |   *	dlls/user32/defdlg.c, dlls/user32/dialog.c, dlls/user32/tests/win.c
+# |
+if test "$enable_user32_DM_SETDEFID" -eq 1; then
+	patch_apply user32-DM_SETDEFID/0001-user32-Do-not-initialize-dialog-info-for-every-windo.patch
+	patch_apply user32-DM_SETDEFID/0002-user32-Use-root-dialog-for-DM_SETDEFID-DM_GETDEFID-i.patch
+	patch_apply user32-DM_SETDEFID/0003-user32-tests-Add-a-bunch-of-tests-for-DM_SETDEFID-DM.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "user32: Do not initialize dialog info for every window passed to DefDlgProc.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "user32: Use root dialog for DM_SETDEFID/DM_GETDEFID in DefDlgProc.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "user32/tests: Add a bunch of tests for DM_SETDEFID/DM_GETDEFID handling by a DefDlgProc.", 1 },';
 	) >> "$patchlist"
 fi
 

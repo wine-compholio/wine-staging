@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "41d01871fef296dc717cf2c4f0bdbb07f5266acd"
+	echo "754c68182623657b4862d7700afbf781b4555c77"
 }
 
 # Show version information
@@ -323,7 +323,6 @@ patch_enable_all ()
 	enable_stdole32_idl_Typelib="$1"
 	enable_stdole32_tlb_SLTG_Typelib="$1"
 	enable_taskmgr_Memory_Usage="$1"
-	enable_ucrtbase_Functions="$1"
 	enable_user_exe16_CONTAINING_RECORD="$1"
 	enable_user_exe16_DlgDirList="$1"
 	enable_user32_CharToOem="$1"
@@ -1151,9 +1150,6 @@ patch_enable ()
 			;;
 		taskmgr-Memory_Usage)
 			enable_taskmgr_Memory_Usage="$2"
-			;;
-		ucrtbase-Functions)
-			enable_ucrtbase_Functions="$2"
 			;;
 		user.exe16-CONTAINING_RECORD)
 			enable_user_exe16_CONTAINING_RECORD="$2"
@@ -6699,18 +6695,6 @@ if test "$enable_taskmgr_Memory_Usage" -eq 1; then
 		echo '+    { "Michael Müller", "ntdll: Report system information SystemPerformanceInformation info class.", 1 },';
 		echo '+    { "Michael Müller", "taskmgr: Use system font instead of special bitmap font.", 1 },';
 		echo '+    { "Michael Müller", "taskmgr: Use different units depending on memory usage.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ucrtbase-Functions
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-crt-heap-l1-1-0/api-ms-win-crt-heap-l1-1-0.spec, dlls/ucrtbase/ucrtbase.spec
-# |
-if test "$enable_ucrtbase_Functions" -eq 1; then
-	patch_apply ucrtbase-Functions/0001-ucrtbase-Hook-up-some-functions-with-new-names-to-ex.patch
-	(
-		echo '+    { "Martin Storsjo", "ucrtbase: Hook up some functions with new names to existing implementations.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -179,6 +179,7 @@ patch_enable_all ()
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
 	enable_kernel32_SetFileInformationByHandle="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
+	enable_kernel32_UmsStubs="$1"
 	enable_kernel32_VerifyVersionInfo="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
@@ -718,6 +719,9 @@ patch_enable ()
 			;;
 		kernel32-TimezoneInformation_Registry)
 			enable_kernel32_TimezoneInformation_Registry="$2"
+			;;
+		kernel32-UmsStubs)
+			enable_kernel32_UmsStubs="$2"
 			;;
 		kernel32-VerifyVersionInfo)
 			enable_kernel32_VerifyVersionInfo="$2"
@@ -4341,6 +4345,18 @@ if test "$enable_kernel32_TimezoneInformation_Registry" -eq 1; then
 	patch_apply kernel32-TimezoneInformation_Registry/0001-kernel32-Init-TimezoneInformation-registry.patch
 	(
 		echo '+    { "Qian Hong", "kernel32: Init TimezoneInformation registry.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-UmsStubs
+# |
+# | Modified files:
+# |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/sync.c, dlls/kernel32/thread.c, include/winbase.h, include/winnt.h
+# |
+if test "$enable_kernel32_UmsStubs" -eq 1; then
+	patch_apply kernel32-UmsStubs/0001-kernel32-Add-a-bunch-of-kernel32-stubs.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "kernel32: Add a bunch of kernel32 stubs.", 1 },';
 	) >> "$patchlist"
 fi
 

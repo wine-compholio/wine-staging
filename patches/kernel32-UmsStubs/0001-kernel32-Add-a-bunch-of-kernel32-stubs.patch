@@ -1,0 +1,447 @@
+From 6e35f663754af35e90b801bb71c01e1c55073492 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Thu, 16 Jun 2016 18:56:21 +0800
+Subject: kernel32: Add a bunch of kernel32 stubs.
+
+64-bit ACDSee Pro 9.0 on start up queries them with GetProcAddress() and
+fails to start if any of these APIs is missing.
+---
+ dlls/kernel32/kernel32.spec |  34 +++++------
+ dlls/kernel32/sync.c        | 145 ++++++++++++++++++++++++++++++++++++++++++++
+ dlls/kernel32/thread.c      |  48 +++++++++++++++
+ include/winbase.h           |  19 ++++++
+ include/winnt.h             |  22 ++++++-
+ 5 files changed, 250 insertions(+), 18 deletions(-)
+
+diff --git a/dlls/kernel32/kernel32.spec b/dlls/kernel32/kernel32.spec
+index 0fc4dcb..b6329c1 100644
+--- a/dlls/kernel32/kernel32.spec
++++ b/dlls/kernel32/kernel32.spec
+@@ -319,7 +319,7 @@
+ # @ stub CreateProcessInternalWSecure
+ @ stdcall CreateProcessW(wstr wstr ptr ptr long long ptr wstr ptr ptr)
+ @ stdcall CreateRemoteThread(long ptr long ptr long long ptr)
+-# @ stub CreateRemoteThreadEx
++@ stdcall CreateRemoteThreadEx(long ptr long ptr long long ptr ptr)
+ @ stdcall CreateSemaphoreA(ptr long long str)
+ @ stdcall CreateSemaphoreExA(ptr long long str long long)
+ @ stdcall CreateSemaphoreExW(ptr long long wstr long long)
+@@ -340,8 +340,8 @@
+ @ stdcall CreateTimerQueue ()
+ @ stdcall CreateTimerQueueTimer(ptr long ptr ptr long long long)
+ @ stdcall CreateToolhelp32Snapshot(long long)
+-# @ stub -arch=x86_64 CreateUmsCompletionList
+-# @ stub -arch=x86_64 CreateUmsThreadContext
++@ stdcall -arch=x86_64 CreateUmsCompletionList(ptr)
++@ stdcall -arch=x86_64 CreateUmsThreadContext(ptr)
+ @ stub CreateVirtualBuffer
+ @ stdcall CreateWaitableTimerA(ptr long str)
+ @ stdcall CreateWaitableTimerExA(ptr str long long)
+@@ -367,17 +367,17 @@
+ # @ stub DeleteFileTransactedA
+ # @ stub DeleteFileTransactedW
+ @ stdcall DeleteFileW(wstr)
+-# @ stub DeleteProcThreadAttributeList
++@ stdcall DeleteProcThreadAttributeList(ptr)
+ # @ stub DisableThreadProfiling
+ @ stdcall DisassociateCurrentThreadFromCallback(ptr) ntdll.TpDisassociateCallback
+ @ stdcall DeleteTimerQueue(long)
+ @ stdcall DeleteTimerQueueEx (long long)
+ @ stdcall DeleteTimerQueueTimer(long long long)
+-# @ stub -arch=x86_64 DeleteUmsCompletionList
+-# @ stub -arch=x86_64 DeleteUmsThreadContext
++@ stdcall -arch=x86_64 DeleteUmsCompletionList(ptr)
++@ stdcall -arch=x86_64 DeleteUmsThreadContext(ptr)
+ @ stdcall DeleteVolumeMountPointA(str)
+ @ stdcall DeleteVolumeMountPointW(wstr)
+-# @ stub -arch=x86_64 DequeueUmsCompletionListItems
++@ stdcall -arch=x86_64 DequeueUmsCompletionListItems(ptr long ptr)
+ @ stdcall DeviceIoControl(long long ptr long ptr long ptr ptr)
+ @ stdcall DisableThreadLibraryCalls(long)
+ @ stdcall DisconnectNamedPipe(long)
+@@ -434,10 +434,10 @@
+ @ stdcall EnumUILanguagesW(ptr long long)
+ # @ stub EnumerateLocalComputerNamesA
+ # @ stub EnumerateLocalComputerNamesW
+-# @ stub -arch=x86_64 EnterUmsSchedulingMode
++@ stdcall -arch=x86_64 EnterUmsSchedulingMode(ptr)
+ @ stdcall EraseTape(ptr long long)
+ @ stdcall EscapeCommFunction(long long)
+-# @ stub -arch=x86_64 ExecuteUmsThread
++@ stdcall -arch=x86_64 ExecuteUmsThread(ptr)
+ @ stdcall ExitProcess(long)
+ @ stdcall ExitThread(long)
+ @ stub ExitVDM
+@@ -635,7 +635,7 @@
+ @ stdcall GetCurrentProcessorNumberEx(ptr) ntdll.RtlGetCurrentProcessorNumberEx
+ @ stdcall -norelay GetCurrentThread()
+ @ stdcall -norelay GetCurrentThreadId()
+-# @ stub -arch=x86_64 GetCurrentUmsThread
++@ stdcall -arch=x86_64 GetCurrentUmsThread()
+ @ stdcall GetDateFormatA(long long ptr str ptr long)
+ @ stdcall GetDateFormatEx(wstr long ptr wstr ptr long wstr)
+ @ stdcall GetDateFormatW(long long ptr wstr ptr long)
+@@ -733,7 +733,7 @@
+ # @ stub GetNamedPipeServerProcessId
+ # @ stub GetNamedPipeServerSessionId
+ @ stdcall GetNativeSystemInfo(ptr)
+-# @ stub -arch=x86_64 GetNextUmsListItem
++@ stdcall -arch=x86_64 GetNextUmsListItem(ptr)
+ @ stub GetNextVDMCommand
+ @ stub GetNlsSectionName
+ # @ stub GetNLSVersion
+@@ -863,7 +863,7 @@
+ @ stdcall GetTimeZoneInformationForYear(long ptr ptr)
+ @ stdcall GetThreadUILanguage()
+ # @ stub GetUILanguageInfo
+-# @ stub -arch=x86_64 GetUmsCompletionListEvent
++@ stdcall -arch=x86_64 GetUmsCompletionListEvent(ptr ptr)
+ # @ stub -arch=x86_64 GetUmsSystemThreadInformation
+ @ stdcall GetUserDefaultLCID()
+ @ stdcall GetUserDefaultLangID()
+@@ -945,7 +945,7 @@
+ @ stdcall InitializeCriticalSection(ptr)
+ @ stdcall InitializeCriticalSectionAndSpinCount(ptr long)
+ @ stdcall InitializeCriticalSectionEx(ptr long long)
+-# @ stub InitializeProcThreadAttributeList
++@ stdcall InitializeProcThreadAttributeList(ptr long long ptr)
+ @ stdcall InitializeSListHead(ptr) ntdll.RtlInitializeSListHead
+ @ stdcall InitializeSRWLock(ptr) ntdll.RtlInitializeSRWLock
+ @ stdcall -arch=i386 InterlockedCompareExchange (ptr long long)
+@@ -1172,7 +1172,7 @@
+ @ stdcall QueryThreadCycleTime(long ptr)
+ # @ stub QueryThreadProfiling
+ # @ stub QueryThreadpoolStackInformation
+-# @ stub -arch=x86_64 QueryUmsThreadInformation
++@ stdcall -arch=x86_64 QueryUmsThreadInformation(ptr long ptr long ptr)
+ @ stdcall QueryUnbiasedInterruptTime(ptr)
+ @ stub QueryWin31IniFilesMappedToRegistry
+ @ stdcall QueueUserAPC(ptr long long)
+@@ -1461,7 +1461,7 @@
+ @ stdcall SetThreadpoolWait(ptr long ptr)
+ @ stdcall SetTimeZoneInformation(ptr)
+ @ stub SetTimerQueueTimer
+-# @ stub -arch=x86_64 SetUmsThreadInformation
++@ stdcall -arch=x86_64 SetUmsThreadInformation(ptr long ptr long)
+ @ stdcall SetUnhandledExceptionFilter(ptr)
+ @ stdcall SetUserGeoID(long)
+ @ stub SetVDMCurrentDirectories
+@@ -1521,7 +1521,7 @@
+ # @ stub -arch=x86_64 uaw_wcsicmp
+ # @ stub -arch=x86_64 uaw_wcslen
+ # @ stub -arch=x86_64 uaw_wcsrchr
+-# @ stub -arch=x86_64 UmsThreadYield
++@ stdcall -arch=x86_64 UmsThreadYield(ptr)
+ # @ stub -arch=x86_64 __misaligned_access
+ @ stdcall -i386 -private UTRegister(long str str str ptr ptr ptr) krnl386.exe16.UTRegister
+ @ stdcall -i386 -private UTUnRegister(long) krnl386.exe16.UTUnRegister
+@@ -1538,7 +1538,7 @@
+ @ stdcall UnregisterWait(long)
+ @ stdcall UnregisterWaitEx(long long)
+ # @ stub UpdateCalendarDayOfWeek
+-# @ stub UpdateProcThreadAttribute
++@ stdcall UpdateProcThreadAttribute(ptr long long ptr long ptr ptr)
+ @ stdcall UpdateResourceA(long str str long ptr long)
+ @ stdcall UpdateResourceW(long wstr wstr long ptr long)
+ @ stub VDMConsoleOperation
+diff --git a/dlls/kernel32/sync.c b/dlls/kernel32/sync.c
+index 13fb0f0..81833cc 100644
+--- a/dlls/kernel32/sync.c
++++ b/dlls/kernel32/sync.c
+@@ -2447,3 +2447,148 @@ BOOL WINAPI SleepConditionVariableSRW( RTL_CONDITION_VARIABLE *variable, RTL_SRW
+     }
+     return TRUE;
+ }
++
++
++/***********************************************************************
++ *           CreateUmsCompletionList   (KERNEL32.@)
++ */
++BOOL WINAPI CreateUmsCompletionList( PUMS_COMPLETION_LIST *list )
++{
++    FIXME( "%p: stub\n", list );
++    SetLastError( ERROR_CALL_NOT_IMPLEMENTED );
++    return FALSE;
++}
++
++
++/***********************************************************************
++ *           DequeueUmsCompletionListItems   (KERNEL32.@)
++ */
++BOOL WINAPI DequeueUmsCompletionListItems( void *list, DWORD timeout, PUMS_CONTEXT *ctx )
++{
++    FIXME( "%p,%08x,%p: stub\n", list, timeout, ctx );
++    SetLastError( ERROR_CALL_NOT_IMPLEMENTED );
++    return FALSE;
++}
++
++
++/***********************************************************************
++ *           DeleteUmsCompletionList   (KERNEL32.@)
++ */
++BOOL WINAPI DeleteUmsCompletionList( PUMS_COMPLETION_LIST list )
++{
++    FIXME( "%p: stub\n", list );
++    SetLastError( ERROR_CALL_NOT_IMPLEMENTED );
++    return FALSE;
++}
++
++
++/***********************************************************************
++ *           GetUmsCompletionListEvent   (KERNEL32.@)
++ */
++BOOL WINAPI GetUmsCompletionListEvent( PUMS_COMPLETION_LIST list, HANDLE *event )
++{
++    FIXME( "%p,%p: stub\n", list, event );
++    SetLastError( ERROR_CALL_NOT_IMPLEMENTED );
++    return FALSE;
++}
++
++
++/***********************************************************************
++ *           CreateUmsThreadContext   (KERNEL32.@)
++ */
++BOOL WINAPI CreateUmsThreadContext( PUMS_CONTEXT *ctx )
++{
++    FIXME( "%p: stub\n", ctx );
++    SetLastError( ERROR_CALL_NOT_IMPLEMENTED );
++    return FALSE;
++}
++
++
++/***********************************************************************
++ *           DeleteUmsThreadContext   (KERNEL32.@)
++ */
++BOOL WINAPI DeleteUmsThreadContext( PUMS_CONTEXT ctx )
++{
++    FIXME( "%p: stub\n", ctx );
++    SetLastError( ERROR_CALL_NOT_IMPLEMENTED );
++    return FALSE;
++}
++
++
++/***********************************************************************
++ *           EnterUmsSchedulingMode   (KERNEL32.@)
++ */
++BOOL WINAPI EnterUmsSchedulingMode( UMS_SCHEDULER_STARTUP_INFO *info )
++{
++    FIXME( "%p: stub\n", info );
++    SetLastError( ERROR_CALL_NOT_IMPLEMENTED );
++    return FALSE;
++}
++
++
++/***********************************************************************
++ *           ExecuteUmsThread   (KERNEL32.@)
++ */
++BOOL WINAPI ExecuteUmsThread( PUMS_CONTEXT ctx )
++{
++    FIXME( "%p: stub\n", ctx );
++    SetLastError( ERROR_CALL_NOT_IMPLEMENTED );
++    return FALSE;
++}
++
++
++/***********************************************************************
++ *           GetCurrentUmsThread   (KERNEL32.@)
++ */
++PUMS_CONTEXT WINAPI GetCurrentUmsThread( void )
++{
++    FIXME( "stub\n" );
++    SetLastError( ERROR_CALL_NOT_IMPLEMENTED );
++    return FALSE;
++}
++
++
++/***********************************************************************
++ *           GetNextUmsListItem   (KERNEL32.@)
++ */
++PUMS_CONTEXT WINAPI GetNextUmsListItem( PUMS_CONTEXT ctx )
++{
++    FIXME( "%p: stub\n", ctx );
++    SetLastError( ERROR_CALL_NOT_IMPLEMENTED );
++    return NULL;
++}
++
++
++/***********************************************************************
++ *           QueryUmsThreadInformation   (KERNEL32.@)
++ */
++BOOL WINAPI QueryUmsThreadInformation( PUMS_CONTEXT ctx, UMS_THREAD_INFO_CLASS class,
++                                       void *buf, ULONG length, ULONG *ret_length )
++{
++    FIXME( "%p,%08x,%p,%08x,%p: stub\n", ctx, class, buf, length, ret_length );
++    SetLastError( ERROR_CALL_NOT_IMPLEMENTED );
++    return FALSE;
++}
++
++
++/***********************************************************************
++ *           SetUmsThreadInformation   (KERNEL32.@)
++ */
++BOOL WINAPI SetUmsThreadInformation( PUMS_CONTEXT ctx, UMS_THREAD_INFO_CLASS class,
++                                     void *buf, ULONG length )
++{
++    FIXME( "%p,%08x,%p,%08x: stub\n", ctx, class, buf, length );
++    SetLastError( ERROR_CALL_NOT_IMPLEMENTED );
++    return FALSE;
++}
++
++
++/***********************************************************************
++ *           UmsThreadYield   (KERNEL32.@)
++ */
++BOOL WINAPI UmsThreadYield( void *param )
++{
++    FIXME( "%p: stub\n", param );
++    SetLastError( ERROR_CALL_NOT_IMPLEMENTED );
++    return FALSE;
++}
+diff --git a/dlls/kernel32/thread.c b/dlls/kernel32/thread.c
+index 6630e7f..d302855 100644
+--- a/dlls/kernel32/thread.c
++++ b/dlls/kernel32/thread.c
+@@ -113,6 +113,54 @@ HANDLE WINAPI CreateRemoteThread( HANDLE hProcess, SECURITY_ATTRIBUTES *sa, SIZE
+ }
+ 
+ 
++/***************************************************************************
++ *                  CreateRemoteThreadEx   (KERNEL32.@)
++ */
++HANDLE WINAPI CreateRemoteThreadEx( HANDLE hProcess, SECURITY_ATTRIBUTES *sa, SIZE_T stack,
++                                    LPTHREAD_START_ROUTINE start, LPVOID param, DWORD flags,
++                                    LPPROC_THREAD_ATTRIBUTE_LIST attrs, LPDWORD id )
++{
++    FIXME( "attribute list ignored\n" );
++    return CreateRemoteThread( hProcess, sa, stack, start, param, flags, id );
++}
++
++
++/***************************************************************************
++ *                  InitializeProcThreadAttributeList   (KERNEL32.@)
++ */
++BOOL WINAPI InitializeProcThreadAttributeList( LPPROC_THREAD_ATTRIBUTE_LIST *attrs,
++                                               DWORD count, DWORD flags, PSIZE_T size )
++{
++    FIXME( "%p,%u,%08x,%p: stub\n", attrs, count, flags, size );
++    SetLastError( ERROR_CALL_NOT_IMPLEMENTED );
++    return FALSE;
++}
++
++
++/***************************************************************************
++ *                  DeleteProcThreadAttributeList   (KERNEL32.@)
++ */
++void WINAPI DeleteProcThreadAttributeList( LPPROC_THREAD_ATTRIBUTE_LIST attrs )
++{
++    FIXME( "%p: stub\n", attrs );
++    SetLastError( ERROR_CALL_NOT_IMPLEMENTED );
++}
++
++
++/***************************************************************************
++ *                  UpdateProcThreadAttribute   (KERNEL32.@)
++ */
++BOOL WINAPI UpdateProcThreadAttribute( LPPROC_THREAD_ATTRIBUTE_LIST attrs, DWORD flags,
++                                       DWORD_PTR attributes, void *value, SIZE_T size,
++                                       void *prev_value, SIZE_T *ret_size )
++{
++    FIXME( "%p,%08x,%08lx,%p,%08lx,%p,%p: stub\n", attrs, flags, attributes, value,
++                                                   size, prev_value, ret_size );
++    SetLastError( ERROR_CALL_NOT_IMPLEMENTED );
++    return FALSE;
++}
++
++
+ /***********************************************************************
+  * OpenThread  [KERNEL32.@]   Retrieves a handle to a thread from its thread id
+  */
+diff --git a/include/winbase.h b/include/winbase.h
+index c5332c0..7af479c 100644
+--- a/include/winbase.h
++++ b/include/winbase.h
+@@ -1644,6 +1644,21 @@ typedef struct _REASON_CONTEXT
+ #define RESOURCE_ENUM_MUI_SYSTEM  0x0004
+ #define RESOURCE_ENUM_VALIDATE    0x0008
+ 
++typedef struct _PROC_THREAD_ATTRIBUTE_LIST *PPROC_THREAD_ATTRIBUTE_LIST, *LPPROC_THREAD_ATTRIBUTE_LIST;
++typedef void *PUMS_CONTEXT;
++typedef void *PUMS_COMPLETION_LIST;
++typedef PRTL_UMS_SCHEDULER_ENTRY_POINT PUMS_SCHEDULER_ENTRY_POINT;
++typedef struct _UMS_SCHEDULER_STARTUP_INFO
++{
++    ULONG UmsVersion;
++    PUMS_COMPLETION_LIST CompletionList;
++    PUMS_SCHEDULER_ENTRY_POINT SchedulerProc;
++    PVOID SchedulerParam;
++} UMS_SCHEDULER_STARTUP_INFO, *PUMS_SCHEDULER_STARTUP_INFO;
++
++typedef enum _RTL_UMS_SCHEDULER_REASON UMS_SCHEDULER_REASON;
++typedef enum _RTL_UMS_THREAD_INFO_CLASS UMS_THREAD_INFO_CLASS, *PUMS_THREAD_INFO_CLASS;
++
+ WINBASEAPI BOOL        WINAPI ActivateActCtx(HANDLE,ULONG_PTR *);
+ WINADVAPI  BOOL        WINAPI AddAccessAllowedAce(PACL,DWORD,DWORD,PSID);
+ WINADVAPI  BOOL        WINAPI AddAccessAllowedAceEx(PACL,DWORD,DWORD,DWORD,PSID);
+@@ -1784,6 +1799,7 @@ WINADVAPI  BOOL        WINAPI CreateProcessAsUserW(HANDLE,LPCWSTR,LPWSTR,LPSECUR
+ #define                       CreateProcessAsUser WINELIB_NAME_AW(CreateProcessAsUser)
+ WINADVAPI  BOOL        WINAPI CreateProcessWithLogonW(LPCWSTR,LPCWSTR,LPCWSTR,DWORD,LPCWSTR,LPWSTR,DWORD,LPVOID,LPCWSTR,LPSTARTUPINFOW,LPPROCESS_INFORMATION);
+ WINBASEAPI HANDLE      WINAPI CreateRemoteThread(HANDLE,LPSECURITY_ATTRIBUTES,SIZE_T,LPTHREAD_START_ROUTINE,LPVOID,DWORD,LPDWORD);
++WINBASEAPI HANDLE      WINAPI CreateRemoteThreadEx(HANDLE,LPSECURITY_ATTRIBUTES,SIZE_T,LPTHREAD_START_ROUTINE,LPVOID,DWORD,LPPROC_THREAD_ATTRIBUTE_LIST,LPDWORD);
+ WINADVAPI  BOOL        WINAPI CreateRestrictedToken(HANDLE,DWORD,DWORD,PSID_AND_ATTRIBUTES,DWORD,PLUID_AND_ATTRIBUTES,DWORD,PSID_AND_ATTRIBUTES,PHANDLE);
+ WINBASEAPI HANDLE      WINAPI CreateSemaphoreA(LPSECURITY_ATTRIBUTES,LONG,LONG,LPCSTR);
+ WINBASEAPI HANDLE      WINAPI CreateSemaphoreW(LPSECURITY_ATTRIBUTES,LONG,LONG,LPCWSTR);
+@@ -1801,6 +1817,8 @@ WINBASEAPI DWORD       WINAPI CreateTapePartition(HANDLE,DWORD,DWORD,DWORD);
+ WINBASEAPI HANDLE      WINAPI CreateThread(LPSECURITY_ATTRIBUTES,SIZE_T,LPTHREAD_START_ROUTINE,LPVOID,DWORD,LPDWORD);
+ WINBASEAPI HANDLE      WINAPI CreateTimerQueue(void);
+ WINBASEAPI BOOL        WINAPI CreateTimerQueueTimer(PHANDLE,HANDLE,WAITORTIMERCALLBACK,PVOID,DWORD,DWORD,ULONG);
++WINBASEAPI BOOL        WINAPI CreateUmsCompletionList(PUMS_COMPLETION_LIST*);
++WINBASEAPI BOOL        WINAPI CreateUmsThreadContext(PUMS_CONTEXT*);
+ WINBASEAPI HANDLE      WINAPI CreateWaitableTimerA(LPSECURITY_ATTRIBUTES,BOOL,LPCSTR);
+ WINBASEAPI HANDLE      WINAPI CreateWaitableTimerW(LPSECURITY_ATTRIBUTES,BOOL,LPCWSTR);
+ #define                       CreateWaitableTimer WINELIB_NAME_AW(CreateWaitableTimer)
+@@ -1856,6 +1874,7 @@ WINBASEAPI BOOL        WINAPI EndUpdateResourceA(HANDLE,BOOL);
+ WINBASEAPI BOOL        WINAPI EndUpdateResourceW(HANDLE,BOOL);
+ #define                       EndUpdateResource WINELIB_NAME_AW(EndUpdateResource)
+ WINBASEAPI void        WINAPI EnterCriticalSection(CRITICAL_SECTION *lpCrit);
++WINBASEAPI BOOL        WINAPI EnterUmsSchedulingMode(PUMS_SCHEDULER_STARTUP_INFO);
+ WINBASEAPI BOOL        WINAPI EnumResourceLanguagesA(HMODULE,LPCSTR,LPCSTR,ENUMRESLANGPROCA,LONG_PTR);
+ WINBASEAPI BOOL        WINAPI EnumResourceLanguagesW(HMODULE,LPCWSTR,LPCWSTR,ENUMRESLANGPROCW,LONG_PTR);
+ #define                       EnumResourceLanguages WINELIB_NAME_AW(EnumResourceLanguages)
+diff --git a/include/winnt.h b/include/winnt.h
+index 1a767e7..d6af66a 100644
+--- a/include/winnt.h
++++ b/include/winnt.h
+@@ -5992,9 +5992,29 @@ typedef VOID (CALLBACK *PTP_TIMER_CALLBACK)(PTP_CALLBACK_INSTANCE,PVOID,PTP_TIME
+ typedef VOID (CALLBACK *PTP_WAIT_CALLBACK)(PTP_CALLBACK_INSTANCE,PVOID,PTP_WAIT,TP_WAIT_RESULT);
+ typedef VOID (CALLBACK *PTP_WIN32_IO_CALLBACK)(PTP_CALLBACK_INSTANCE,PVOID,PVOID,ULONG,ULONG_PTR,PTP_IO);
+ 
+-
+ NTSYSAPI BOOLEAN NTAPI RtlGetProductInfo(DWORD,DWORD,DWORD,DWORD,PDWORD);
+ 
++typedef enum _RTL_UMS_THREAD_INFO_CLASS
++{
++    UmsThreadInvalidInfoClass,
++    UmsThreadUserContext,
++    UmsThreadPriority,
++    UmsThreadAffinity,
++    UmsThreadTeb,
++    UmsThreadIsSuspended,
++    UmsThreadIsTerminated,
++    UmsThreadMaxInfoClass
++} RTL_UMS_THREAD_INFO_CLASS, *PRTL_UMS_THREAD_INFO_CLASS;
++
++typedef enum _RTL_UMS_SCHEDULER_REASON
++{
++    UmsSchedulerStartup,
++    UmsSchedulerThreadBlocked,
++    UmsSchedulerThreadYield,
++} RTL_UMS_SCHEDULER_REASON, *PRTL_UMS_SCHEDULER_REASON;
++
++typedef void (CALLBACK *PRTL_UMS_SCHEDULER_ENTRY_POINT)(RTL_UMS_SCHEDULER_REASON,ULONG_PTR,PVOID);
++
+ #ifdef __cplusplus
+ }
+ #endif
+-- 
+2.8.0
+

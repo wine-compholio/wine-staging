@@ -1,13 +1,13 @@
-From d0011ed5a3bc0f15c8066f8b8d316c606fde5d87 Mon Sep 17 00:00:00 2001
+From aad8c5691d2fd196c3f6f7f84d56e002f1a6ce0e Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
-Date: Sat, 20 Feb 2016 16:09:40 +0800
-Subject: gdi32: Add support for paths on a metafile HDC. (v3)
+Date: Tue, 21 Jun 2016 11:39:41 +0800
+Subject: gdi32: Add support for paths on a metafile HDC. (v5)
 
 ---
  dlls/gdi32/enhmfdrv/dc.c    |   4 +-
- dlls/gdi32/path.c           | 160 ++++++++++++++++++++++++++++++++++++++++++--
+ dlls/gdi32/path.c           | 170 +++++++++++++++++++++++++++++++++++++++++---
  dlls/gdi32/tests/metafile.c |   2 -
- 3 files changed, 158 insertions(+), 8 deletions(-)
+ 3 files changed, 164 insertions(+), 12 deletions(-)
 
 diff --git a/dlls/gdi32/enhmfdrv/dc.c b/dlls/gdi32/enhmfdrv/dc.c
 index 8525067..7a31224 100644
@@ -32,10 +32,10 @@ index 8525067..7a31224 100644
  
  BOOL EMFDRV_CloseFigure( PHYSDEV dev )
 diff --git a/dlls/gdi32/path.c b/dlls/gdi32/path.c
-index 8856d49..73357a3 100644
+index f3dc79b..65d79db 100644
 --- a/dlls/gdi32/path.c
 +++ b/dlls/gdi32/path.c
-@@ -787,13 +787,21 @@ static BOOL pathdrv_AbortPath( PHYSDEV dev )
+@@ -752,13 +752,21 @@ static BOOL pathdrv_AbortPath( PHYSDEV dev )
  {
      struct path_physdev *physdev = get_path_physdev( dev );
      DC *dc = get_dc_ptr( dev->hdc );
@@ -58,7 +58,7 @@ index 8856d49..73357a3 100644
  }
  
  
-@@ -804,13 +812,21 @@ static BOOL pathdrv_EndPath( PHYSDEV dev )
+@@ -769,13 +777,21 @@ static BOOL pathdrv_EndPath( PHYSDEV dev )
  {
      struct path_physdev *physdev = get_path_physdev( dev );
      DC *dc = get_dc_ptr( dev->hdc );
@@ -81,7 +81,7 @@ index 8856d49..73357a3 100644
  }
  
  
-@@ -893,6 +909,13 @@ BOOL PATH_RestorePath( DC *dst, DC *src )
+@@ -858,6 +874,13 @@ BOOL PATH_RestorePath( DC *dst, DC *src )
  static BOOL pathdrv_MoveTo( PHYSDEV dev, INT x, INT y )
  {
      struct path_physdev *physdev = get_path_physdev( dev );
@@ -93,9 +93,9 @@ index 8856d49..73357a3 100644
 +    }
 +
      physdev->path->newStroke = TRUE;
-     return TRUE;
- }
-@@ -906,6 +929,12 @@ static BOOL pathdrv_LineTo( PHYSDEV dev, INT x, INT y )
+     physdev->path->pos.x = x;
+     physdev->path->pos.y = y;
+@@ -874,6 +897,12 @@ static BOOL pathdrv_LineTo( PHYSDEV dev, INT x, INT y )
      struct path_physdev *physdev = get_path_physdev( dev );
      POINT point;
  
@@ -105,10 +105,10 @@ index 8856d49..73357a3 100644
 +        if (!next->funcs->pLineTo( next, x, y )) return FALSE;
 +    }
 +
-     if (!start_new_stroke( physdev )) return FALSE;
      point.x = x;
      point.y = y;
-@@ -926,6 +955,13 @@ static BOOL pathdrv_RoundRect( PHYSDEV dev, INT x1, INT y1, INT x2, INT y2, INT
+     return add_log_points_new_stroke( physdev, &point, 1, PT_LINETO );
+@@ -893,6 +922,13 @@ static BOOL pathdrv_RoundRect( PHYSDEV dev, INT x1, INT y1, INT x2, INT y2, INT
      POINT corners[2], pointTemp;
      FLOAT_POINT ellCorners[2];
  
@@ -122,9 +122,9 @@ index 8856d49..73357a3 100644
      PATH_CheckCorners(dev->hdc,corners,x1,y1,x2,y2);
  
     /* Add points to the roundrect path */
-@@ -973,6 +1009,12 @@ static BOOL pathdrv_Rectangle( PHYSDEV dev, INT x1, INT y1, INT x2, INT y2 )
-     struct path_physdev *physdev = get_path_physdev( dev );
-     POINT corners[2], pointTemp;
+@@ -942,6 +978,12 @@ static BOOL pathdrv_Rectangle( PHYSDEV dev, INT x1, INT y1, INT x2, INT y2 )
+     POINT corners[2], points[4];
+     BYTE *type;
  
 +    if (GdiIsMetaFileDC(dev->hdc))
 +    {
@@ -134,11 +134,17 @@ index 8856d49..73357a3 100644
 +
      PATH_CheckCorners(dev->hdc,corners,x1,y1,x2,y2);
  
-    /* Add four points to the path */
-@@ -1148,6 +1190,13 @@ static BOOL pathdrv_AngleArc( PHYSDEV dev, INT x, INT y, DWORD radius, FLOAT eSt
-     INT x1, y1, x2, y2, arcdir;
-     BOOL ret;
- 
+     points[0].x = corners[1].x;
+@@ -1111,10 +1153,19 @@ static BOOL PATH_Arc( PHYSDEV dev, INT x1, INT y1, INT x2, INT y2,
+  */
+ static BOOL pathdrv_AngleArc( PHYSDEV dev, INT x, INT y, DWORD radius, FLOAT eStartAngle, FLOAT eSweepAngle)
+ {
+-    int x1 = GDI_ROUND( x + cos(eStartAngle*M_PI/180) * radius );
+-    int y1 = GDI_ROUND( y - sin(eStartAngle*M_PI/180) * radius );
+-    int x2 = GDI_ROUND( x + cos((eStartAngle+eSweepAngle)*M_PI/180) * radius );
+-    int y2 = GDI_ROUND( y - sin((eStartAngle+eSweepAngle)*M_PI/180) * radius );
++    int x1, x2, y1, y2;
++
 +    if (GdiIsMetaFileDC(dev->hdc))
 +    {
 +        PHYSDEV next = GET_NEXT_PHYSDEV( dev, pAngleArc );
@@ -146,10 +152,14 @@ index 8856d49..73357a3 100644
 +            return FALSE;
 +    }
 +
-     x1 = GDI_ROUND( x + cos(eStartAngle*M_PI/180) * radius );
-     y1 = GDI_ROUND( y - sin(eStartAngle*M_PI/180) * radius );
-     x2 = GDI_ROUND( x + cos((eStartAngle+eSweepAngle)*M_PI/180) * radius );
-@@ -1165,6 +1214,13 @@ static BOOL pathdrv_AngleArc( PHYSDEV dev, INT x, INT y, DWORD radius, FLOAT eSt
++    x1 = GDI_ROUND( x + cos(eStartAngle*M_PI/180) * radius );
++    y1 = GDI_ROUND( y - sin(eStartAngle*M_PI/180) * radius );
++    x2 = GDI_ROUND( x + cos((eStartAngle+eSweepAngle)*M_PI/180) * radius );
++    y2 = GDI_ROUND( y - sin((eStartAngle+eSweepAngle)*M_PI/180) * radius );
+     return PATH_Arc( dev, x-radius, y-radius, x+radius, y+radius, x1, y1, x2, y2,
+                      eSweepAngle >= 0 ? AD_COUNTERCLOCKWISE : AD_CLOCKWISE, -1 );
+ }
+@@ -1126,6 +1177,13 @@ static BOOL pathdrv_AngleArc( PHYSDEV dev, INT x, INT y, DWORD radius, FLOAT eSt
  static BOOL pathdrv_Arc( PHYSDEV dev, INT left, INT top, INT right, INT bottom,
                           INT xstart, INT ystart, INT xend, INT yend )
  {
@@ -160,10 +170,10 @@ index 8856d49..73357a3 100644
 +            return FALSE;
 +    }
 +
-     return PATH_Arc( dev, left, top, right, bottom, xstart, ystart, xend, yend, 0 );
+     return PATH_Arc( dev, left, top, right, bottom, xstart, ystart, xend, yend,
+                      GetArcDirection( dev->hdc ), 0 );
  }
- 
-@@ -1175,6 +1231,13 @@ static BOOL pathdrv_Arc( PHYSDEV dev, INT left, INT top, INT right, INT bottom,
+@@ -1137,6 +1195,13 @@ static BOOL pathdrv_Arc( PHYSDEV dev, INT left, INT top, INT right, INT bottom,
  static BOOL pathdrv_ArcTo( PHYSDEV dev, INT left, INT top, INT right, INT bottom,
                             INT xstart, INT ystart, INT xend, INT yend )
  {
@@ -174,10 +184,10 @@ index 8856d49..73357a3 100644
 +            return FALSE;
 +    }
 +
-     return PATH_Arc( dev, left, top, right, bottom, xstart, ystart, xend, yend, -1 );
+     return PATH_Arc( dev, left, top, right, bottom, xstart, ystart, xend, yend,
+                      GetArcDirection( dev->hdc ), -1 );
  }
- 
-@@ -1185,6 +1248,13 @@ static BOOL pathdrv_ArcTo( PHYSDEV dev, INT left, INT top, INT right, INT bottom
+@@ -1148,6 +1213,13 @@ static BOOL pathdrv_ArcTo( PHYSDEV dev, INT left, INT top, INT right, INT bottom
  static BOOL pathdrv_Chord( PHYSDEV dev, INT left, INT top, INT right, INT bottom,
                             INT xstart, INT ystart, INT xend, INT yend )
  {
@@ -188,10 +198,10 @@ index 8856d49..73357a3 100644
 +            return FALSE;
 +    }
 +
-     return PATH_Arc( dev, left, top, right, bottom, xstart, ystart, xend, yend, 1);
+     return PATH_Arc( dev, left, top, right, bottom, xstart, ystart, xend, yend,
+                      GetArcDirection( dev->hdc ), 1 );
  }
- 
-@@ -1195,6 +1265,13 @@ static BOOL pathdrv_Chord( PHYSDEV dev, INT left, INT top, INT right, INT bottom
+@@ -1159,6 +1231,13 @@ static BOOL pathdrv_Chord( PHYSDEV dev, INT left, INT top, INT right, INT bottom
  static BOOL pathdrv_Pie( PHYSDEV dev, INT left, INT top, INT right, INT bottom,
                           INT xstart, INT ystart, INT xend, INT yend )
  {
@@ -202,10 +212,10 @@ index 8856d49..73357a3 100644
 +            return FALSE;
 +    }
 +
-     return PATH_Arc( dev, left, top, right, bottom, xstart, ystart, xend, yend, 2 );
+     return PATH_Arc( dev, left, top, right, bottom, xstart, ystart, xend, yend,
+                      GetArcDirection( dev->hdc ), 2 );
  }
- 
-@@ -1204,6 +1281,13 @@ static BOOL pathdrv_Pie( PHYSDEV dev, INT left, INT top, INT right, INT bottom,
+@@ -1169,6 +1248,13 @@ static BOOL pathdrv_Pie( PHYSDEV dev, INT left, INT top, INT right, INT bottom,
   */
  static BOOL pathdrv_Ellipse( PHYSDEV dev, INT x1, INT y1, INT x2, INT y2 )
  {
@@ -216,10 +226,10 @@ index 8856d49..73357a3 100644
 +            return FALSE;
 +    }
 +
-     return PATH_Arc( dev, x1, y1, x2, y2, x1, (y1+y2)/2, x1, (y1+y2)/2, 0 ) && CloseFigure( dev->hdc );
+     return PATH_Arc( dev, x1, y1, x2, y2, x1, (y1+y2)/2, x1, (y1+y2)/2, GetArcDirection( dev->hdc ), 1 );
  }
  
-@@ -1215,6 +1299,13 @@ static BOOL pathdrv_PolyBezierTo( PHYSDEV dev, const POINT *pts, DWORD cbPoints
+@@ -1180,6 +1266,13 @@ static BOOL pathdrv_PolyBezierTo( PHYSDEV dev, const POINT *pts, DWORD cbPoints
  {
      struct path_physdev *physdev = get_path_physdev( dev );
  
@@ -230,10 +240,10 @@ index 8856d49..73357a3 100644
 +            return FALSE;
 +    }
 +
-     if (!start_new_stroke( physdev )) return FALSE;
-     return add_log_points( physdev, pts, cbPoints, PT_BEZIERTO ) != NULL;
+     return add_log_points_new_stroke( physdev, pts, cbPoints, PT_BEZIERTO );
  }
-@@ -1226,8 +1317,16 @@ static BOOL pathdrv_PolyBezierTo( PHYSDEV dev, const POINT *pts, DWORD cbPoints
+ 
+@@ -1190,8 +1283,16 @@ static BOOL pathdrv_PolyBezierTo( PHYSDEV dev, const POINT *pts, DWORD cbPoints
  static BOOL pathdrv_PolyBezier( PHYSDEV dev, const POINT *pts, DWORD cbPoints )
  {
      struct path_physdev *physdev = get_path_physdev( dev );
@@ -251,9 +261,9 @@ index 8856d49..73357a3 100644
      if (!type) return FALSE;
      type[0] = PT_MOVETO;
      return TRUE;
-@@ -1243,6 +1342,13 @@ static BOOL pathdrv_PolyDraw( PHYSDEV dev, const POINT *pts, const BYTE *types,
-     POINT lastmove, orig_pos;
-     INT i;
+@@ -1208,6 +1309,13 @@ static BOOL pathdrv_PolyDraw( PHYSDEV dev, const POINT *pts, const BYTE *types,
+     POINT orig_pos;
+     INT i, lastmove = 0;
  
 +    if (GdiIsMetaFileDC(dev->hdc))
 +    {
@@ -262,10 +272,10 @@ index 8856d49..73357a3 100644
 +            return FALSE;
 +    }
 +
-     GetCurrentPositionEx( dev->hdc, &orig_pos );
-     lastmove = orig_pos;
+     for (i = 0; i < path->count; i++) if (path->flags[i] == PT_MOVETO) lastmove = i;
+     orig_pos = path->pos;
  
-@@ -1300,8 +1406,16 @@ static BOOL pathdrv_PolyDraw( PHYSDEV dev, const POINT *pts, const BYTE *types,
+@@ -1260,8 +1368,16 @@ static BOOL pathdrv_PolyDraw( PHYSDEV dev, const POINT *pts, const BYTE *types,
  static BOOL pathdrv_Polyline( PHYSDEV dev, const POINT *pts, INT cbPoints )
  {
      struct path_physdev *physdev = get_path_physdev( dev );
@@ -283,7 +293,7 @@ index 8856d49..73357a3 100644
      if (!type) return FALSE;
      if (cbPoints) type[0] = PT_MOVETO;
      return TRUE;
-@@ -1315,6 +1429,13 @@ static BOOL pathdrv_PolylineTo( PHYSDEV dev, const POINT *pts, INT cbPoints )
+@@ -1275,6 +1391,13 @@ static BOOL pathdrv_PolylineTo( PHYSDEV dev, const POINT *pts, INT cbPoints )
  {
      struct path_physdev *physdev = get_path_physdev( dev );
  
@@ -294,10 +304,10 @@ index 8856d49..73357a3 100644
 +            return FALSE;
 +    }
 +
-     if (!start_new_stroke( physdev )) return FALSE;
-     return add_log_points( physdev, pts, cbPoints, PT_LINETO ) != NULL;
+     return add_log_points_new_stroke( physdev, pts, cbPoints, PT_LINETO );
  }
-@@ -1326,8 +1447,16 @@ static BOOL pathdrv_PolylineTo( PHYSDEV dev, const POINT *pts, INT cbPoints )
+ 
+@@ -1285,8 +1408,16 @@ static BOOL pathdrv_PolylineTo( PHYSDEV dev, const POINT *pts, INT cbPoints )
  static BOOL pathdrv_Polygon( PHYSDEV dev, const POINT *pts, INT cbPoints )
  {
      struct path_physdev *physdev = get_path_physdev( dev );
@@ -315,7 +325,7 @@ index 8856d49..73357a3 100644
      if (!type) return FALSE;
      if (cbPoints) type[0] = PT_MOVETO;
      if (cbPoints > 1) type[cbPoints - 1] = PT_LINETO | PT_CLOSEFIGURE;
-@@ -1344,6 +1473,13 @@ static BOOL pathdrv_PolyPolygon( PHYSDEV dev, const POINT* pts, const INT* count
+@@ -1303,6 +1434,13 @@ static BOOL pathdrv_PolyPolygon( PHYSDEV dev, const POINT* pts, const INT* count
      UINT poly;
      BYTE *type;
  
@@ -329,7 +339,7 @@ index 8856d49..73357a3 100644
      for(poly = 0; poly < polygons; poly++) {
          type = add_log_points( physdev, pts, counts[poly], PT_LINETO );
          if (!type) return FALSE;
-@@ -1365,6 +1501,13 @@ static BOOL pathdrv_PolyPolyline( PHYSDEV dev, const POINT* pts, const DWORD* co
+@@ -1324,6 +1462,13 @@ static BOOL pathdrv_PolyPolyline( PHYSDEV dev, const POINT* pts, const DWORD* co
      UINT poly, count;
      BYTE *type;
  
@@ -343,7 +353,7 @@ index 8856d49..73357a3 100644
      for (poly = count = 0; poly < polylines; poly++) count += counts[poly];
  
      type = add_log_points( physdev, pts, count, PT_LINETO );
-@@ -1514,6 +1657,13 @@ static BOOL pathdrv_ExtTextOut( PHYSDEV dev, INT x, INT y, UINT flags, const REC
+@@ -1472,6 +1617,13 @@ static BOOL pathdrv_ExtTextOut( PHYSDEV dev, INT x, INT y, UINT flags, const REC
      unsigned int idx, ggo_flags = GGO_NATIVE;
      POINT offset = {0, 0};
  
@@ -358,7 +368,7 @@ index 8856d49..73357a3 100644
      if (flags & ETO_GLYPH_INDEX) ggo_flags |= GGO_GLYPH_INDEX;
  
 diff --git a/dlls/gdi32/tests/metafile.c b/dlls/gdi32/tests/metafile.c
-index d45bae0..f556863 100644
+index 4bd4778..d3848b0 100644
 --- a/dlls/gdi32/tests/metafile.c
 +++ b/dlls/gdi32/tests/metafile.c
 @@ -2460,7 +2460,6 @@ static void test_emf_ExtTextOut_on_path(void)

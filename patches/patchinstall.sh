@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "754c68182623657b4862d7700afbf781b4555c77"
+	echo "025c54344230ca8b32e80f08b9af13a16dfd2445"
 }
 
 # Show version information
@@ -400,7 +400,6 @@ patch_enable_all ()
 	enable_wpcap_Several_Fixes="$1"
 	enable_ws2_32_APC_Performance="$1"
 	enable_ws2_32_Connect_Time="$1"
-	enable_ws2_32_Sort_default_route="$1"
 	enable_ws2_32_Tests="$1"
 	enable_ws2_32_TransmitFile="$1"
 	enable_ws2_32_WSACleanup="$1"
@@ -1381,9 +1380,6 @@ patch_enable ()
 			;;
 		ws2_32-Connect_Time)
 			enable_ws2_32_Connect_Time="$2"
-			;;
-		ws2_32-Sort_default_route)
-			enable_ws2_32_Sort_default_route="$2"
 			;;
 		ws2_32-Tests)
 			enable_ws2_32_Tests="$2"
@@ -3739,7 +3735,7 @@ if test "$enable_gdi32_Path_Metafile" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "gdi32/tests: Add some additional tests for ExtExtOut on a path for an EMF DC.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "gdi32: ExtTextOut on a path with bitmap font selected shouldn'\''t fail.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "gdi32/tests: Explicitly test BeginPath() return value in the metafile path tests.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "gdi32: Add support for paths on a metafile HDC.", 3 },';
+		echo '+    { "Dmitry Timoshkov", "gdi32: Add support for paths on a metafile HDC.", 5 },';
 	) >> "$patchlist"
 fi
 
@@ -8117,22 +8113,6 @@ if test "$enable_ws2_32_Connect_Time" -eq 1; then
 	patch_apply ws2_32-Connect_Time/0001-ws2_32-Implement-returning-the-proper-time-with-SO_C.patch
 	(
 		echo '+    { "Sebastian Lackner", "ws2_32: Implement returning the proper time with SO_CONNECT_TIME.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ws2_32-Sort_default_route
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#22819] Ensure default route IP addresses are returned first in gethostbyname
-# |   *	[#37271] Fix issue causing applications to report magic loopback address instead of real IP
-# |
-# | Modified files:
-# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c
-# |
-if test "$enable_ws2_32_Sort_default_route" -eq 1; then
-	patch_apply ws2_32-Sort_default_route/0001-ws2_32-Ensure-default-route-IP-addresses-are-returne.patch
-	(
-		echo '+    { "Bruno Jesus", "ws2_32: Ensure default route IP addresses are returned first in gethostbyname.", 1 },';
 	) >> "$patchlist"
 fi
 

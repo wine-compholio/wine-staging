@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "025c54344230ca8b32e80f08b9af13a16dfd2445"
+	echo "9c1fbe509576d7cbaada3af9736888cfa1d02847"
 }
 
 # Show version information
@@ -3720,22 +3720,17 @@ fi
 
 # Patchset gdi32-Path_Metafile
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39185] Add support for paths on a metafile HDC
-# |
 # | Modified files:
-# |   *	dlls/gdi32/enhmfdrv/dc.c, dlls/gdi32/path.c, dlls/gdi32/tests/metafile.c
+# |   *	dlls/gdi32/path.c, dlls/gdi32/tests/metafile.c
 # |
 if test "$enable_gdi32_Path_Metafile" -eq 1; then
 	patch_apply gdi32-Path_Metafile/0001-gdi32-tests-Add-some-additional-tests-for-ExtExtOut-.patch
 	patch_apply gdi32-Path_Metafile/0002-gdi32-ExtTextOut-on-a-path-with-bitmap-font-selected.patch
 	patch_apply gdi32-Path_Metafile/0003-gdi32-tests-Explicitly-test-BeginPath-return-value-i.patch
-	patch_apply gdi32-Path_Metafile/0004-gdi32-Add-support-for-paths-on-a-metafile-HDC.-v2.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "gdi32/tests: Add some additional tests for ExtExtOut on a path for an EMF DC.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "gdi32/tests: Add some additional tests for ExtExtOut on a path for an EMF DC.", 2 },';
 		echo '+    { "Dmitry Timoshkov", "gdi32: ExtTextOut on a path with bitmap font selected shouldn'\''t fail.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "gdi32/tests: Explicitly test BeginPath() return value in the metafile path tests.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "gdi32: Add support for paths on a metafile HDC.", 5 },';
 	) >> "$patchlist"
 fi
 

@@ -1,4 +1,4 @@
-From 1ba3d1dcdb9ee4a1d33a333fdac6cd9f4e86443c Mon Sep 17 00:00:00 2001
+From 37e72e356c337dad588e39ddb603a4f17d9d2ddc Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Tue, 1 Oct 2013 14:31:56 +0200
 Subject: wined3d: Hackily introduce a multithreaded command stream
@@ -771,18 +771,18 @@ index a83459c..3bcbf19 100644
      HeapFree(GetProcessHeap(), 0, cs);
  }
 diff --git a/dlls/wined3d/wined3d_main.c b/dlls/wined3d/wined3d_main.c
-index 434d32e..beeb9fa 100644
+index 1dd6a8b..f573dcb 100644
 --- a/dlls/wined3d/wined3d_main.c
 +++ b/dlls/wined3d/wined3d_main.c
-@@ -90,6 +90,7 @@ struct wined3d_settings wined3d_settings =
-     ~0U,            /* No GS shader model limit by default. */
+@@ -91,6 +91,7 @@ struct wined3d_settings wined3d_settings =
      ~0U,            /* No PS shader model limit by default. */
+     ~0u,            /* No CS shader model limit by default. */
      FALSE,          /* 3D support enabled by default. */
 +    FALSE,          /* No multithreaded CS by default. */
  };
  
  struct wined3d * CDECL wined3d_create(DWORD flags)
-@@ -331,6 +332,14 @@ static BOOL wined3d_dll_init(HINSTANCE hInstDLL)
+@@ -334,6 +335,14 @@ static BOOL wined3d_dll_init(HINSTANCE hInstDLL)
              TRACE("Disabling 3D support.\n");
              wined3d_settings.no_3d = TRUE;
          }
@@ -798,18 +798,18 @@ index 434d32e..beeb9fa 100644
  
      if (appkey) RegCloseKey( appkey );
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 7bb86d6..d37f30e 100644
+index edb4399..29f218e 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -309,6 +309,7 @@ struct wined3d_settings
-     unsigned int max_sm_gs;
+@@ -310,6 +310,7 @@ struct wined3d_settings
      unsigned int max_sm_ps;
+     unsigned int max_sm_cs;
      BOOL no_3d;
 +    BOOL cs_multithreaded;
  };
  
  extern struct wined3d_settings wined3d_settings DECLSPEC_HIDDEN;
-@@ -2907,6 +2908,18 @@ HRESULT state_init(struct wined3d_state *state, const struct wined3d_gl_info *gl
+@@ -2921,6 +2922,18 @@ HRESULT state_init(struct wined3d_state *state, const struct wined3d_gl_info *gl
          const struct wined3d_d3d_info *d3d_info, DWORD flags) DECLSPEC_HIDDEN;
  void state_unbind_resources(struct wined3d_state *state) DECLSPEC_HIDDEN;
  
@@ -828,7 +828,7 @@ index 7bb86d6..d37f30e 100644
  struct wined3d_cs_ops
  {
      void *(*require_space)(struct wined3d_cs *cs, size_t size);
-@@ -2918,9 +2931,14 @@ struct wined3d_cs
+@@ -2932,9 +2945,14 @@ struct wined3d_cs
      const struct wined3d_cs_ops *ops;
      struct wined3d_device *device;
      struct wined3d_state state;

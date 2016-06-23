@@ -1,92 +1,18 @@
-From 6b9da441bf00c2b644a4bc85dcfea976f78edae3 Mon Sep 17 00:00:00 2001
+From 21fc0b94f7981bc3bc1450835abd5534723072c1 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 21 Aug 2014 22:47:58 +0200
 Subject: wined3d: Destroy views through the CS.
 
 Move this ahead. This has caused sporadic test failures ever since blits were moved to the CS.
 ---
- dlls/wined3d/cs.c              | 28 ++++++++++++++++++++++++++++
- dlls/wined3d/view.c            | 13 ++++++-------
- dlls/wined3d/wined3d_private.h |  3 +++
- 3 files changed, 37 insertions(+), 7 deletions(-)
+ dlls/wined3d/view.c | 6 ------
+ 1 file changed, 6 deletions(-)
 
-diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index f0b21c0..ecb9d9e 100644
---- a/dlls/wined3d/cs.c
-+++ b/dlls/wined3d/cs.c
-@@ -78,6 +78,7 @@ enum wined3d_cs_op
-     WINED3D_CS_OP_UPDATE_TEXTURE,
-     WINED3D_CS_OP_EVICT_RESOURCE,
-     WINED3D_CS_OP_UPDATE_SUB_RESOURCE,
-+    WINED3D_CS_OP_VIEW_DESTROY,
-     WINED3D_CS_OP_STOP,
- };
- 
-@@ -454,6 +455,12 @@ struct wined3d_cs_buffer_preload
-     struct wined3d_buffer *buffer;
- };
- 
-+struct wined3d_cs_view_destroy
-+{
-+    enum wined3d_cs_op opcode;
-+    struct wined3d_rendertarget_view *view;
-+};
-+
- static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
- {
-     LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
-@@ -2334,6 +2341,26 @@ void wined3d_cs_emit_buffer_preload(struct wined3d_cs *cs, struct wined3d_buffer
-     cs->ops->submit(cs, sizeof(*op));
- }
- 
-+static UINT wined3d_cs_exec_view_destroy(struct wined3d_cs *cs, const void *data)
-+{
-+    const struct wined3d_cs_view_destroy *op = data;
-+
-+    wined3d_rendertarget_view_destroy(op->view);
-+
-+    return sizeof(*op);
-+}
-+
-+void wined3d_cs_emit_view_destroy(struct wined3d_cs *cs, struct wined3d_rendertarget_view *view)
-+{
-+    struct wined3d_cs_view_destroy *op;
-+
-+    op = cs->ops->require_space(cs, sizeof(*op));
-+    op->opcode = WINED3D_CS_OP_VIEW_DESTROY;
-+    op->view = view;
-+
-+    cs->ops->submit(cs, sizeof(*op));
-+}
-+
- static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
- {
-     /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2390,6 +2417,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
-     /* WINED3D_CS_OP_UPDATE_TEXTURE             */ wined3d_cs_exec_update_texture,
-     /* WINED3D_CS_OP_EVICT_RESOURCE             */ wined3d_cs_exec_evict_resource,
-     /* WINED3D_CS_OP_UPDATE_SUB_RESOURCE        */ wined3d_cs_exec_update_sub_resource,
-+    /* WINED3D_CS_OP_VIEW_DESTROY               */ wined3d_cs_exec_view_destroy,
- };
- 
- static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
 diff --git a/dlls/wined3d/view.c b/dlls/wined3d/view.c
-index 5ad4ab0..1a8e88c 100644
+index b4bc771..2147cc7 100644
 --- a/dlls/wined3d/view.c
 +++ b/dlls/wined3d/view.c
-@@ -33,6 +33,11 @@ ULONG CDECL wined3d_rendertarget_view_incref(struct wined3d_rendertarget_view *v
-     return refcount;
- }
- 
-+void wined3d_rendertarget_view_destroy(struct wined3d_rendertarget_view *view)
-+{
-+    HeapFree(GetProcessHeap(), 0, view);
-+}
-+
- ULONG CDECL wined3d_rendertarget_view_decref(struct wined3d_rendertarget_view *view)
- {
-     ULONG refcount = InterlockedDecrement(&view->refcount);
-@@ -43,17 +48,11 @@ ULONG CDECL wined3d_rendertarget_view_decref(struct wined3d_rendertarget_view *v
+@@ -48,12 +48,6 @@ ULONG CDECL wined3d_rendertarget_view_decref(struct wined3d_rendertarget_view *v
      {
          struct wined3d_device *device = view->resource->device;
  
@@ -99,33 +25,6 @@ index 5ad4ab0..1a8e88c 100644
          /* Call wined3d_object_destroyed() before releasing the resource,
           * since releasing the resource may end up destroying the parent. */
          view->parent_ops->wined3d_object_destroyed(view->parent);
-         wined3d_resource_decref(view->resource);
--        HeapFree(GetProcessHeap(), 0, view);
-+        wined3d_cs_emit_view_destroy(device->cs, view);
-     }
- 
-     return refcount;
-diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index b5b0246..4714ca7 100644
---- a/dlls/wined3d/wined3d_private.h
-+++ b/dlls/wined3d/wined3d_private.h
-@@ -3038,6 +3038,7 @@ void wined3d_cs_emit_buffer_swap_mem(struct wined3d_cs *cs, struct wined3d_buffe
- void wined3d_cs_emit_buffer_invalidate_bo_range(struct wined3d_cs *cs,
-         struct wined3d_buffer *buffer, unsigned int offset, unsigned int size) DECLSPEC_HIDDEN;
- void wined3d_cs_emit_buffer_preload(struct wined3d_cs *cs, struct wined3d_buffer *buffer) DECLSPEC_HIDDEN;
-+void wined3d_cs_emit_view_destroy(struct wined3d_cs *cs, struct wined3d_rendertarget_view *view) DECLSPEC_HIDDEN;
- 
- /* Direct3D terminology with little modifications. We do not have an issued state
-  * because only the driver knows about it, but we have a created state because d3d
-@@ -3162,6 +3163,8 @@ static inline struct wined3d_surface *wined3d_rendertarget_view_get_surface(
-     return texture->sub_resources[view->sub_resource_idx].u.surface;
- }
- 
-+void wined3d_rendertarget_view_destroy(struct wined3d_rendertarget_view *view) DECLSPEC_HIDDEN;
-+
- struct wined3d_shader_resource_view
- {
-     LONG refcount;
 -- 
 2.8.0
 

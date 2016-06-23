@@ -1,84 +1,23 @@
-From dc11fbb6d581044d08aa04f76d7c264b276054b0 Mon Sep 17 00:00:00 2001
+From 4dc96ab42f9d44017ed6510922c1a324a3e1f2bd Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 27 Aug 2015 23:43:08 +0200
 Subject: wined3d: Destroy samplers through the command stream.
 
 ---
- dlls/wined3d/cs.c              | 28 ++++++++++++++++++++++++++++
- dlls/wined3d/sampler.c         | 21 +++++++++++++--------
- dlls/wined3d/wined3d_private.h |  3 +++
- 3 files changed, 44 insertions(+), 8 deletions(-)
+ dlls/wined3d/sampler.c | 22 ++++++++++++++--------
+ 1 file changed, 14 insertions(+), 8 deletions(-)
 
-diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index b8ee474..4ec6260 100644
---- a/dlls/wined3d/cs.c
-+++ b/dlls/wined3d/cs.c
-@@ -85,6 +85,7 @@ enum wined3d_cs_op
-     WINED3D_CS_OP_RESOURCE_CLEANUP,
-     WINED3D_CS_OP_BUFFER_CLEANUP,
-     WINED3D_CS_OP_TEXTURE_CLEANUP,
-+    WINED3D_CS_OP_SAMPLER_DESTROY,
-     WINED3D_CS_OP_STOP,
- };
- 
-@@ -503,6 +504,12 @@ struct wined3d_cs_texture_cleanup
-     struct wined3d_texture *texture;
- };
- 
-+struct wined3d_cs_sampler_destroy
-+{
-+    enum wined3d_cs_op opcode;
-+    struct wined3d_sampler *sampler;
-+};
-+
- static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
- {
-     LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
-@@ -2551,6 +2558,26 @@ void wined3d_cs_emit_texture_cleanup(struct wined3d_cs *cs, struct wined3d_textu
-     cs->ops->submit(cs, sizeof(*op));
- }
- 
-+static UINT wined3d_cs_exec_sampler_destroy(struct wined3d_cs *cs, const void *data)
-+{
-+    const struct wined3d_cs_sampler_destroy *op = data;
-+
-+    wined3d_sampler_destroy(op->sampler);
-+
-+    return sizeof(*op);
-+}
-+
-+void wined3d_cs_emit_sampler_destroy(struct wined3d_cs *cs, struct wined3d_sampler *sampler)
-+{
-+    struct wined3d_cs_sampler_destroy *op;
-+
-+    op = cs->ops->require_space(cs, sizeof(*op));
-+    op->opcode = WINED3D_CS_OP_SAMPLER_DESTROY;
-+    op->sampler = sampler;
-+
-+    cs->ops->submit(cs, sizeof(*op));
-+}
-+
- static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
- {
-     /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2614,6 +2641,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
-     /* WINED3D_CS_OP_RESOURCE_CLEANUP           */ wined3d_cs_exec_resource_cleanup,
-     /* WINED3D_CS_OP_BUFFER_CLEANUP             */ wined3d_cs_exec_buffer_cleanup,
-     /* WINED3D_CS_OP_TEXTURE_CLEANUP            */ wined3d_cs_exec_texture_cleanup,
-+    /* WINED3D_CS_OP_SAMPLER_DESTROY            */ wined3d_cs_exec_sampler_destroy,
- };
- 
- static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
 diff --git a/dlls/wined3d/sampler.c b/dlls/wined3d/sampler.c
-index 865198b..7c04472 100644
+index 865198b..8c73466 100644
 --- a/dlls/wined3d/sampler.c
 +++ b/dlls/wined3d/sampler.c
-@@ -33,22 +33,27 @@ ULONG CDECL wined3d_sampler_incref(struct wined3d_sampler *sampler)
+@@ -33,22 +33,28 @@ ULONG CDECL wined3d_sampler_incref(struct wined3d_sampler *sampler)
      return refcount;
  }
  
-+void wined3d_sampler_destroy(struct wined3d_sampler *sampler)
++static void wined3d_sampler_destroy_object(void *object)
 +{
++    struct wined3d_sampler *sampler = object;
 +    struct wined3d_context *context = context_acquire(sampler->device, NULL);
 +    const struct wined3d_gl_info *gl_info = context->gl_info;
 +
@@ -105,31 +44,10 @@ index 865198b..7c04472 100644
 -
 -        HeapFree(GetProcessHeap(), 0, sampler);
 +        struct wined3d_device *device = sampler->device;
-+        wined3d_cs_emit_sampler_destroy(device->cs, sampler);
++        wined3d_cs_emit_destroy_object(device->cs, wined3d_sampler_destroy_object, sampler);
      }
  
      return refcount;
-diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 9f966fa..dc1386a 100644
---- a/dlls/wined3d/wined3d_private.h
-+++ b/dlls/wined3d/wined3d_private.h
-@@ -2808,6 +2808,8 @@ struct wined3d_sampler
-     GLuint name;
- };
- 
-+void wined3d_sampler_destroy(struct wined3d_sampler *sampler) DECLSPEC_HIDDEN;
-+
- struct wined3d_vertex_declaration_element
- {
-     const struct wined3d_format *format;
-@@ -3056,6 +3058,7 @@ void wined3d_cs_emit_resource_cleanup(struct wined3d_cs *cs,
-         struct wined3d_resource *resource) DECLSPEC_HIDDEN;
- void wined3d_cs_emit_buffer_cleanup(struct wined3d_cs *cs, struct wined3d_buffer *buffer) DECLSPEC_HIDDEN;
- void wined3d_cs_emit_texture_cleanup(struct wined3d_cs *cs, struct wined3d_texture *texture) DECLSPEC_HIDDEN;
-+void wined3d_cs_emit_sampler_destroy(struct wined3d_cs *cs, struct wined3d_sampler *sampler) DECLSPEC_HIDDEN;
- 
- /* Direct3D terminology with little modifications. We do not have an issued state
-  * because only the driver knows about it, but we have a created state because d3d
 -- 
 2.8.0
 

@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0c83f4d5bec8b01e1e6dcbb0a9a9932b6c24570b"
+	echo "e3bd659be9b2868b121857fb2643d775bbf0d8c7"
 }
 
 # Show version information
@@ -105,10 +105,7 @@ patch_enable_all ()
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Surface_Refcount="$1"
 	enable_d3d9_Tests="$1"
-	enable_d3dx9_24_ID3DXEffect="$1"
 	enable_d3dx9_25_ID3DXEffect="$1"
-	enable_d3dx9_26_ID3DXEffect="$1"
-	enable_d3dx9_33_Share_Source="$1"
 	enable_d3dx9_36_BumpLuminance="$1"
 	enable_d3dx9_36_CloneEffect="$1"
 	enable_d3dx9_36_D3DXCreateTeapot="$1"
@@ -496,17 +493,8 @@ patch_enable ()
 		d3d9-Tests)
 			enable_d3d9_Tests="$2"
 			;;
-		d3dx9_24-ID3DXEffect)
-			enable_d3dx9_24_ID3DXEffect="$2"
-			;;
 		d3dx9_25-ID3DXEffect)
 			enable_d3dx9_25_ID3DXEffect="$2"
-			;;
-		d3dx9_26-ID3DXEffect)
-			enable_d3dx9_26_ID3DXEffect="$2"
-			;;
-		d3dx9_33-Share_Source)
-			enable_d3dx9_33_Share_Source="$2"
 			;;
 		d3dx9_36-BumpLuminance)
 			enable_d3dx9_36_BumpLuminance="$2"
@@ -1776,15 +1764,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_d3d9_Surface_Refcount" -gt 1; then
 		abort "Patchset d3d9-Surface_Refcount disabled, but category-stable depends on that."
 	fi
-	if test "$enable_d3dx9_24_ID3DXEffect" -gt 1; then
-		abort "Patchset d3dx9_24-ID3DXEffect disabled, but category-stable depends on that."
-	fi
-	if test "$enable_d3dx9_25_ID3DXEffect" -gt 1; then
-		abort "Patchset d3dx9_25-ID3DXEffect disabled, but category-stable depends on that."
-	fi
-	if test "$enable_d3dx9_26_ID3DXEffect" -gt 1; then
-		abort "Patchset d3dx9_26-ID3DXEffect disabled, but category-stable depends on that."
-	fi
 	if test "$enable_d3dx9_36_D3DXStubs" -gt 1; then
 		abort "Patchset d3dx9_36-D3DXStubs disabled, but category-stable depends on that."
 	fi
@@ -1930,9 +1909,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_Staging=1
 	enable_configure_Absolute_RPATH=1
 	enable_d3d9_Surface_Refcount=1
-	enable_d3dx9_24_ID3DXEffect=1
-	enable_d3dx9_25_ID3DXEffect=1
-	enable_d3dx9_26_ID3DXEffect=1
 	enable_d3dx9_36_D3DXStubs=1
 	enable_d3dx9_36_FindNextValidTechnique=1
 	enable_d3dx9_36_Optimize_Inplace=1
@@ -2298,6 +2274,17 @@ if test "$enable_dsound_EAX" -eq 1; then
 	enable_dsound_Revert_Cleanup=1
 fi
 
+if test "$enable_d3dx9_36_DXTn" -eq 1; then
+	if test "$enable_d3dx9_25_ID3DXEffect" -gt 1; then
+		abort "Patchset d3dx9_25-ID3DXEffect disabled, but d3dx9_36-DXTn depends on that."
+	fi
+	if test "$enable_wined3d_DXTn" -gt 1; then
+		abort "Patchset wined3d-DXTn disabled, but d3dx9_36-DXTn depends on that."
+	fi
+	enable_d3dx9_25_ID3DXEffect=1
+	enable_wined3d_DXTn=1
+fi
+
 if test "$enable_d3dx9_36_D3DXDisassembleShader" -eq 1; then
 	if test "$enable_d3dx9_36_GetShaderSemantics" -gt 1; then
 		abort "Patchset d3dx9_36-GetShaderSemantics disabled, but d3dx9_36-D3DXDisassembleShader depends on that."
@@ -2305,27 +2292,9 @@ if test "$enable_d3dx9_36_D3DXDisassembleShader" -eq 1; then
 	enable_d3dx9_36_GetShaderSemantics=1
 fi
 
-if test "$enable_d3dx9_33_Share_Source" -eq 1; then
-	if test "$enable_d3dx9_36_D3DXStubs" -gt 1; then
-		abort "Patchset d3dx9_36-D3DXStubs disabled, but d3dx9_33-Share_Source depends on that."
-	fi
-	if test "$enable_d3dx9_36_DXTn" -gt 1; then
-		abort "Patchset d3dx9_36-DXTn disabled, but d3dx9_33-Share_Source depends on that."
-	fi
-	enable_d3dx9_36_D3DXStubs=1
-	enable_d3dx9_36_DXTn=1
-fi
-
-if test "$enable_d3dx9_36_DXTn" -eq 1; then
-	if test "$enable_wined3d_DXTn" -gt 1; then
-		abort "Patchset wined3d-DXTn disabled, but d3dx9_36-DXTn depends on that."
-	fi
-	enable_wined3d_DXTn=1
-fi
-
-if test "$enable_d3dx9_24_ID3DXEffect" -eq 1; then
+if test "$enable_d3dx9_36_CloneEffect" -eq 1; then
 	if test "$enable_d3dx9_25_ID3DXEffect" -gt 1; then
-		abort "Patchset d3dx9_25-ID3DXEffect disabled, but d3dx9_24-ID3DXEffect depends on that."
+		abort "Patchset d3dx9_25-ID3DXEffect disabled, but d3dx9_36-CloneEffect depends on that."
 	fi
 	enable_d3dx9_25_ID3DXEffect=1
 fi
@@ -2917,126 +2886,15 @@ fi
 # |   *	[#25138] Fix wrong version of ID3DXEffect interface for d3dx9_25
 # |
 # | Modified files:
-# |   *	dlls/d3dx9_25/Makefile.in, dlls/d3dx9_25/d3dx9_25.spec, dlls/d3dx9_25/effect.c
+# |   *	dlls/d3dx9_24/Makefile.in, dlls/d3dx9_25/Makefile.in, dlls/d3dx9_26/Makefile.in, dlls/d3dx9_27/Makefile.in,
+# | 	dlls/d3dx9_28/Makefile.in, dlls/d3dx9_29/Makefile.in, dlls/d3dx9_30/Makefile.in, dlls/d3dx9_31/Makefile.in,
+# | 	dlls/d3dx9_32/Makefile.in, dlls/d3dx9_33/Makefile.in, dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/effect.c,
+# | 	include/d3dx9effect.h
 # |
 if test "$enable_d3dx9_25_ID3DXEffect" -eq 1; then
-	patch_apply d3dx9_25-ID3DXEffect/0001-d3dx9_25-Add-an-interface-wrapper-for-different-vers.patch
+	patch_apply d3dx9_25-ID3DXEffect/0001-d3dx9_-Adjust-ID3DXEffect-interface-based-on-DLL-ver.patch
 	(
-		echo '+    { "Sebastian Lackner", "d3dx9_25: Add an interface wrapper for different version of ID3DXEffect.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3dx9_24-ID3DXEffect
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3dx9_25-ID3DXEffect
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_24/d3dx9_24.spec
-# |
-if test "$enable_d3dx9_24_ID3DXEffect" -eq 1; then
-	patch_apply d3dx9_24-ID3DXEffect/0001-d3dx9_24-Add-an-interface-wrapper-for-different-vers.patch
-	(
-		echo '+    { "Sebastian Lackner", "d3dx9_24: Add an interface wrapper for different version of ID3DXEffect.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3dx9_26-ID3DXEffect
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_36/effect.c
-# |
-if test "$enable_d3dx9_26_ID3DXEffect" -eq 1; then
-	patch_apply d3dx9_26-ID3DXEffect/0001-d3dx9_36-Allow-to-query-for-d3dx9_26-specific-ID3DXE.patch
-	(
-		echo '+    { "Sebastian Lackner", "d3dx9_36: Allow to query for d3dx9_26 specific ID3DXEffect interface.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3dx9_36-D3DXStubs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38334] Add stub for D3DXFrameFind
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_24/d3dx9_24.spec, dlls/d3dx9_25/d3dx9_25.spec, dlls/d3dx9_26/d3dx9_26.spec, dlls/d3dx9_27/d3dx9_27.spec,
-# | 	dlls/d3dx9_28/d3dx9_28.spec, dlls/d3dx9_29/d3dx9_29.spec, dlls/d3dx9_30/d3dx9_30.spec, dlls/d3dx9_31/d3dx9_31.spec,
-# | 	dlls/d3dx9_32/d3dx9_32.spec, dlls/d3dx9_33/d3dx9_33.spec, dlls/d3dx9_34/d3dx9_34.spec, dlls/d3dx9_35/d3dx9_35.spec,
-# | 	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/mesh.c, dlls/d3dx9_37/d3dx9_37.spec, dlls/d3dx9_38/d3dx9_38.spec,
-# | 	dlls/d3dx9_39/d3dx9_39.spec, dlls/d3dx9_40/d3dx9_40.spec, dlls/d3dx9_41/d3dx9_41.spec, dlls/d3dx9_42/d3dx9_42.spec,
-# | 	dlls/d3dx9_43/d3dx9_43.spec
-# |
-if test "$enable_d3dx9_36_D3DXStubs" -eq 1; then
-	patch_apply d3dx9_36-D3DXStubs/0001-d3dx9_36-Add-stub-for-D3DXComputeNormalMap.patch
-	patch_apply d3dx9_36-D3DXStubs/0002-d3dx9_36-Add-D3DXFrameFind-stub.patch
-	(
-		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeNormalMap.", 1 },';
-		echo '+    { "Andrey Gusev", "d3dx9_36: Add D3DXFrameFind stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-DXTn
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#25486] Lego Stunt Rally requires DXTn software de/encoding support
-# |   *	[#29586] Tumblebugs 2 requires DXTn software encoding support
-# |   *	[#14939] Black & White needs DXTn software decoding support
-# |   *	[#17913] Port Royale doesn't display ocean correctly
-# |   *	[#29598] eRacer Demo doesn't correctly display text
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/wined3d/Makefile.in, dlls/wined3d/dxtn.c, dlls/wined3d/surface.c, dlls/wined3d/wined3d.spec,
-# | 	dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
-# |
-if test "$enable_wined3d_DXTn" -eq 1; then
-	patch_apply wined3d-DXTn/0001-wined3d-Add-support-for-DXTn-software-decoding-throu.patch
-	patch_apply wined3d-DXTn/0002-wined3d-Improve-DXTn-support-and-export-conversion-f.patch
-	patch_apply wined3d-DXTn/0003-wined3d-add-DXT1-to-B4G4R4A4-DXT1-to-B5G5R5A1-and-DX.patch
-	patch_apply wined3d-DXTn/0004-wined3d-Load-dxtn-dylib-library-on-Mac-OS-X.patch
-	(
-		echo '+    { "Michael Müller", "wined3d: Add support for DXTn software decoding through libtxc_dxtn.", 3 },';
-		echo '+    { "Christian Costa", "wined3d: Improve DXTn support and export conversion functions for d3dx9_36.", 1 },';
-		echo '+    { "Michael Müller", "wined3d: Add DXT1 to B4G4R4A4, DXT1 to B5G5R5A1 and DXT3 to B4G4R4A4 conversion.", 1 },';
-		echo '+    { "Michael Müller", "wined3d: Load dxtn dylib library on Mac OS X.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3dx9_36-DXTn
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-DXTn
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#33768] Fix texture corruption in CSI: Fatal Conspiracy
-# |   *	[#37391] Exception during start of fr-043 caused by missing DXTn support
-# |   *	[#34692] Fix wrong colors in Wolfenstein (2009)
-# |   *	[#24983] Fix crash in Space Rangers2 caused by missing DXTn support
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/surface.c, dlls/d3dx9_36/tests/surface.c
-# |
-if test "$enable_d3dx9_36_DXTn" -eq 1; then
-	patch_apply d3dx9_36-DXTn/0001-d3dx9_36-Add-dxtn-support.patch
-	(
-		echo '+    { "Christian Costa", "d3dx9_36: Add dxtn support.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3dx9_33-Share_Source
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3dx9_36-D3DXStubs, wined3d-DXTn, d3dx9_36-DXTn
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#21817] Share source of d3dx9_36 with d3dx9_33 to avoid Wine DLL forwards
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_33/Makefile.in, dlls/d3dx9_33/d3dx9_33.spec, dlls/d3dx9_33/d3dx9_33_main.c, tools/make_specfiles
-# |
-if test "$enable_d3dx9_33_Share_Source" -eq 1; then
-	patch_apply d3dx9_33-Share_Source/0001-d3dx9_33-Share-the-source-with-d3dx9_36.patch
-	(
-		echo '+    { "Alistair Leslie-Hughes", "d3dx9_33: Share the source with d3dx9_36.", 1 },';
+		echo '+    { "Sebastian Lackner", "d3dx9_*: Adjust ID3DXEffect interface based on DLL version.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3055,6 +2913,9 @@ if test "$enable_d3dx9_36_BumpLuminance" -eq 1; then
 fi
 
 # Patchset d3dx9_36-CloneEffect
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	d3dx9_25-ID3DXEffect
 # |
 # | Modified files:
 # |   *	dlls/d3dx9_36/effect.c
@@ -3126,6 +2987,23 @@ if test "$enable_d3dx9_36_D3DXDisassembleShader" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset d3dx9_36-D3DXStubs
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38334] Add stub for D3DXFrameFind
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/mesh.c
+# |
+if test "$enable_d3dx9_36_D3DXStubs" -eq 1; then
+	patch_apply d3dx9_36-D3DXStubs/0001-d3dx9_36-Add-stub-for-D3DXComputeNormalMap.patch
+	patch_apply d3dx9_36-D3DXStubs/0002-d3dx9_36-Add-D3DXFrameFind-stub.patch
+	(
+		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeNormalMap.", 1 },';
+		echo '+    { "Andrey Gusev", "d3dx9_36: Add D3DXFrameFind stub.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset d3dx9_36-DDS
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3140,6 +3018,56 @@ if test "$enable_d3dx9_36_DDS" -eq 1; then
 	(
 		echo '+    { "Christian Costa", "d3dx9_36: Add support for FOURCC surface to save_dds_surface_to_memory.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Improve D3DXSaveTextureToFile to save simple texture to dds file.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-DXTn
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#25486] Lego Stunt Rally requires DXTn software de/encoding support
+# |   *	[#29586] Tumblebugs 2 requires DXTn software encoding support
+# |   *	[#14939] Black & White needs DXTn software decoding support
+# |   *	[#17913] Port Royale doesn't display ocean correctly
+# |   *	[#29598] eRacer Demo doesn't correctly display text
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/wined3d/Makefile.in, dlls/wined3d/dxtn.c, dlls/wined3d/surface.c, dlls/wined3d/wined3d.spec,
+# | 	dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
+# |
+if test "$enable_wined3d_DXTn" -eq 1; then
+	patch_apply wined3d-DXTn/0001-wined3d-Add-support-for-DXTn-software-decoding-throu.patch
+	patch_apply wined3d-DXTn/0002-wined3d-Improve-DXTn-support-and-export-conversion-f.patch
+	patch_apply wined3d-DXTn/0003-wined3d-add-DXT1-to-B4G4R4A4-DXT1-to-B5G5R5A1-and-DX.patch
+	patch_apply wined3d-DXTn/0004-wined3d-Load-dxtn-dylib-library-on-Mac-OS-X.patch
+	(
+		echo '+    { "Michael Müller", "wined3d: Add support for DXTn software decoding through libtxc_dxtn.", 3 },';
+		echo '+    { "Christian Costa", "wined3d: Improve DXTn support and export conversion functions for d3dx9_36.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Add DXT1 to B4G4R4A4, DXT1 to B5G5R5A1 and DXT3 to B4G4R4A4 conversion.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Load dxtn dylib library on Mac OS X.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3dx9_36-DXTn
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	d3dx9_25-ID3DXEffect, wined3d-DXTn
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33768] Fix texture corruption in CSI: Fatal Conspiracy
+# |   *	[#37391] Exception during start of fr-043 caused by missing DXTn support
+# |   *	[#34692] Fix wrong colors in Wolfenstein (2009)
+# |   *	[#24983] Fix crash in Space Rangers2 caused by missing DXTn support
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_24/Makefile.in, dlls/d3dx9_25/Makefile.in, dlls/d3dx9_26/Makefile.in, dlls/d3dx9_27/Makefile.in,
+# | 	dlls/d3dx9_28/Makefile.in, dlls/d3dx9_29/Makefile.in, dlls/d3dx9_30/Makefile.in, dlls/d3dx9_31/Makefile.in,
+# | 	dlls/d3dx9_32/Makefile.in, dlls/d3dx9_33/Makefile.in, dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/surface.c,
+# | 	dlls/d3dx9_36/tests/surface.c
+# |
+if test "$enable_d3dx9_36_DXTn" -eq 1; then
+	patch_apply d3dx9_36-DXTn/0001-d3dx9_36-Add-dxtn-support.patch
+	(
+		echo '+    { "Christian Costa", "d3dx9_36: Add dxtn support.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,4 +1,4 @@
-From d4219aaabd252d45506c391898326af17c1d1417 Mon Sep 17 00:00:00 2001
+From 59ad07b3a1737ba2cb291ceb967840ed999e63ba Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 1 Aug 2013 00:33:48 +0200
 Subject: wined3d: Send update_texture calls through the CS
@@ -11,18 +11,18 @@ FIXME: This logic duplication is ugly.
  3 files changed, 137 insertions(+), 82 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index d65f27a..9a4aec1 100644
+index 66c2f62..39f6978 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -71,6 +71,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_TEXTURE_UNMAP,
      WINED3D_CS_OP_QUERY_ISSUE,
-     WINED3D_CS_OP_QUERY_DESTROY,
      WINED3D_CS_OP_TEXTURE_PRELOAD,
 +    WINED3D_CS_OP_UPDATE_TEXTURE,
      WINED3D_CS_OP_STOP,
  };
  
-@@ -402,6 +403,12 @@ struct wined3d_cs_texture_preload
+@@ -403,6 +404,12 @@ struct wined3d_cs_texture_preload
      struct wined3d_texture *texture;
  };
  
@@ -35,7 +35,7 @@ index d65f27a..9a4aec1 100644
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
  {
      LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
-@@ -1919,6 +1926,31 @@ void wined3d_cs_emit_texture_preload(struct wined3d_cs *cs, struct wined3d_textu
+@@ -1929,6 +1936,31 @@ void wined3d_cs_emit_texture_preload(struct wined3d_cs *cs, struct wined3d_textu
      cs->ops->submit(cs, sizeof(*op));
  }
  
@@ -67,9 +67,9 @@ index d65f27a..9a4aec1 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -1968,6 +2000,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -1978,6 +2010,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_TEXTURE_UNMAP              */ wined3d_cs_exec_texture_unmap,
      /* WINED3D_CS_OP_QUERY_ISSUE                */ wined3d_cs_exec_query_issue,
-     /* WINED3D_CS_OP_QUERY_DESTROY              */ wined3d_cs_exec_query_destroy,
      /* WINED3D_CS_OP_TEXTURE_PRELOAD            */ wined3d_cs_exec_texture_preload,
 +    /* WINED3D_CS_OP_UPDATE_TEXTURE             */ wined3d_cs_exec_update_texture,
  };
@@ -319,10 +319,10 @@ index 903b091..6dc0a25 100644
  
  HRESULT CDECL wined3d_device_validate_device(const struct wined3d_device *device, DWORD *num_passes)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 4eb0689..9519e5d 100644
+index 25f1ec9..769a970 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2421,6 +2421,8 @@ void device_resource_add(struct wined3d_device *device, struct wined3d_resource
+@@ -2435,6 +2435,8 @@ void device_resource_add(struct wined3d_device *device, struct wined3d_resource
  void device_resource_released(struct wined3d_device *device, struct wined3d_resource *resource) DECLSPEC_HIDDEN;
  void device_invalidate_state(const struct wined3d_device *device, DWORD state) DECLSPEC_HIDDEN;
  void device_invalidate_shader_constants(const struct wined3d_device *device, DWORD mask) DECLSPEC_HIDDEN;
@@ -331,9 +331,9 @@ index 4eb0689..9519e5d 100644
  
  static inline BOOL isStateDirty(const struct wined3d_context *context, DWORD state)
  {
-@@ -3034,6 +3036,8 @@ void wined3d_cs_emit_query_get_data(struct wined3d_cs *cs, struct wined3d_query
+@@ -3049,6 +3051,8 @@ void wined3d_cs_emit_query_issue(struct wined3d_cs *cs, struct wined3d_query *qu
+ void wined3d_cs_emit_query_get_data(struct wined3d_cs *cs, struct wined3d_query *query, void *data,
          UINT data_size, DWORD flags, HRESULT *ret) DECLSPEC_HIDDEN;
- void wined3d_cs_emit_query_destroy(struct wined3d_cs *cs, struct wined3d_query *query) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_texture_preload(struct wined3d_cs *cs, struct wined3d_texture *texture) DECLSPEC_HIDDEN;
 +void wined3d_cs_emit_update_texture(struct wined3d_cs *cs, struct wined3d_texture *src,
 +        struct wined3d_texture *dst) DECLSPEC_HIDDEN;

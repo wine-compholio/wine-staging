@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e3bd659be9b2868b121857fb2643d775bbf0d8c7"
+	echo "9ba058e94c2662f5296c95adeafd29c59b137249"
 }
 
 # Show version information
@@ -7449,7 +7449,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/0112-wined3d-Don-t-discard-new-buffers.patch
 	patch_apply wined3d-CSMT_Main/0113-wined3d-Don-t-try-to-sync-VBOs-manually-on-OSX-with-.patch
 	patch_apply wined3d-CSMT_Main/0114-wined3d-Only-discard-buffers-that-are-in-use.patch
-	patch_apply wined3d-CSMT_Main/0115-wined3d-Destroy-samplers-through-the-command-stream.patch
 	patch_apply wined3d-CSMT_Main/0116-wined3d-Destroy-shader-resource-views-through-the-CS.patch
 	patch_apply wined3d-CSMT_Main/0117-wined3d-Send-getdc-and-releasedc-through-the-command.patch
 	patch_apply wined3d-CSMT_Main/0118-wined3d-Ignore-WINED3D_MAP_NO_DIRTY_UPDATE-in-resour.patch
@@ -7584,7 +7583,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t discard new buffers.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t try to sync VBOs manually on OSX with CSMT.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Only discard buffers that are in use.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Destroy samplers through the command stream.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Destroy shader resource views through the CS.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Send getdc and releasedc through the command stream.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Ignore WINED3D_MAP_NO_DIRTY_UPDATE in resource_map.", 1 },';

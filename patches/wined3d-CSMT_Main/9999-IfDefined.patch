@@ -3844,40 +3844,7 @@ diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
 diff --git a/dlls/wined3d/sampler.c b/dlls/wined3d/sampler.c
 --- a/dlls/wined3d/sampler.c
 +++ b/dlls/wined3d/sampler.c
-@@ -33,6 +33,7 @@
-     return refcount;
- }
- 
-+#if defined(STAGING_CSMT)
- static void wined3d_sampler_destroy_object(void *object)
- {
-     struct wined3d_sampler *sampler = object;
-@@ -55,6 +56,24 @@
-     {
-         struct wined3d_device *device = sampler->device;
-         wined3d_cs_emit_destroy_object(device->cs, wined3d_sampler_destroy_object, sampler);
-+#else  /* STAGING_CSMT */
-+ULONG CDECL wined3d_sampler_decref(struct wined3d_sampler *sampler)
-+{
-+    ULONG refcount = InterlockedDecrement(&sampler->refcount);
-+    const struct wined3d_gl_info *gl_info;
-+    struct wined3d_context *context;
-+
-+    TRACE("%p decreasing refcount to %u.\n", sampler, refcount);
-+
-+    if (!refcount)
-+    {
-+        context = context_acquire(sampler->device, NULL);
-+        gl_info = context->gl_info;
-+        GL_EXTCALL(glDeleteSamplers(1, &sampler->name));
-+        context_release(context);
-+
-+        HeapFree(GetProcessHeap(), 0, sampler);
-+#endif /* STAGING_CSMT */
-     }
- 
-     return refcount;
-@@ -67,6 +86,7 @@
+@@ -66,6 +66,7 @@
      return sampler->parent;
  }
  
@@ -3885,7 +3852,7 @@ diff --git a/dlls/wined3d/sampler.c b/dlls/wined3d/sampler.c
  void wined3d_sampler_init(struct wined3d_sampler *sampler)
  {
      const struct wined3d_gl_info *gl_info;
-@@ -98,6 +118,45 @@
+@@ -97,6 +98,45 @@
              wined3d_gl_compare_func(sampler->desc.comparison_func)));
      if ((context->d3d_info->wined3d_creation_flags & WINED3D_SRGB_READ_WRITE_CONTROL)
              && gl_info->supported[EXT_TEXTURE_SRGB_DECODE] && !sampler->desc.srgb_decode)
@@ -3931,7 +3898,7 @@ diff --git a/dlls/wined3d/sampler.c b/dlls/wined3d/sampler.c
          GL_EXTCALL(glSamplerParameteri(sampler->name, GL_TEXTURE_SRGB_DECODE_EXT, GL_SKIP_DECODE_EXT));
      checkGLcall("sampler creation");
  
-@@ -109,12 +168,14 @@
+@@ -108,12 +148,14 @@
  HRESULT CDECL wined3d_sampler_create(struct wined3d_device *device, const struct wined3d_sampler_desc *desc,
          void *parent, struct wined3d_sampler **sampler)
  {
@@ -3946,7 +3913,7 @@ diff --git a/dlls/wined3d/sampler.c b/dlls/wined3d/sampler.c
      struct wined3d_sampler *object;
  
      TRACE("device %p, desc %p, parent %p, sampler %p.\n", device, desc, parent, sampler);
-@@ -135,6 +196,7 @@
+@@ -134,6 +176,7 @@
      if (!(object = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*object))))
          return E_OUTOFMEMORY;
  
@@ -3954,7 +3921,7 @@ diff --git a/dlls/wined3d/sampler.c b/dlls/wined3d/sampler.c
      object->refcount = 1;
      object->device = device;
      object->parent = parent;
-@@ -143,6 +205,9 @@
+@@ -142,6 +185,9 @@
          wined3d_sampler_init(object);
      else
          wined3d_cs_emit_sampler_init(device->cs, object);
@@ -3967,40 +3934,7 @@ diff --git a/dlls/wined3d/sampler.c b/dlls/wined3d/sampler.c
 diff --git a/dlls/wined3d/shader.c b/dlls/wined3d/shader.c
 --- a/dlls/wined3d/shader.c
 +++ b/dlls/wined3d/shader.c
-@@ -2650,6 +2650,7 @@
-     return refcount;
- }
- 
-+#if defined(STAGING_CSMT)
- static void wined3d_shader_destroy_object(void *object)
- {
-     struct wined3d_shader *shader = object;
-@@ -2658,6 +2659,7 @@
-     HeapFree(GetProcessHeap(), 0, shader);
- }
- 
-+#endif /* STAGING_CSMT */
- ULONG CDECL wined3d_shader_decref(struct wined3d_shader *shader)
- {
-     ULONG refcount = InterlockedDecrement(&shader->ref);
-@@ -2666,10 +2668,16 @@
- 
-     if (!refcount)
-     {
-+#if defined(STAGING_CSMT)
-         const struct wined3d_device *device = shader->device;
- 
-         shader->parent_ops->wined3d_object_destroyed(shader->parent);
-         wined3d_cs_emit_destroy_object(device->cs, wined3d_shader_destroy_object, shader);
-+#else  /* STAGING_CSMT */
-+        shader_cleanup(shader);
-+        shader->parent_ops->wined3d_object_destroyed(shader->parent);
-+        HeapFree(GetProcessHeap(), 0, shader);
-+#endif /* STAGING_CSMT */
-     }
- 
-     return refcount;
-@@ -2990,7 +2998,11 @@
+@@ -2986,7 +2986,11 @@
      UINT i;
  
      memset(args, 0, sizeof(*args)); /* FIXME: Make sure all bits are set. */
@@ -6612,41 +6546,6 @@ diff --git a/dlls/wined3d/utils.c b/dlls/wined3d/utils.c
      if (d3d_info->vs_clipping || !use_vs(state) || !state->render_states[WINED3D_RS_CLIPPING]
              || !state->render_states[WINED3D_RS_CLIPPLANEENABLE])
      {
-diff --git a/dlls/wined3d/vertexdeclaration.c b/dlls/wined3d/vertexdeclaration.c
---- a/dlls/wined3d/vertexdeclaration.c
-+++ b/dlls/wined3d/vertexdeclaration.c
-@@ -50,6 +50,7 @@
-     return refcount;
- }
- 
-+#if defined(STAGING_CSMT)
- static void wined3d_vertex_declaration_destroy_object(void *object)
- {
-     struct wined3d_vertex_declaration *declaration = object;
-@@ -58,6 +59,7 @@
-     HeapFree(GetProcessHeap(), 0, declaration);
- }
- 
-+#endif /* STAGING_CSMT */
- ULONG CDECL wined3d_vertex_declaration_decref(struct wined3d_vertex_declaration *declaration)
- {
-     ULONG refcount = InterlockedDecrement(&declaration->ref);
-@@ -66,9 +68,15 @@
- 
-     if (!refcount)
-     {
-+#if defined(STAGING_CSMT)
-         const struct wined3d_device *device = declaration->device;
-         declaration->parent_ops->wined3d_object_destroyed(declaration->parent);
-         wined3d_cs_emit_destroy_object(device->cs, wined3d_vertex_declaration_destroy_object, declaration);
-+#else  /* STAGING_CSMT */
-+        HeapFree(GetProcessHeap(), 0, declaration->elements);
-+        declaration->parent_ops->wined3d_object_destroyed(declaration->parent);
-+        HeapFree(GetProcessHeap(), 0, declaration);
-+#endif /* STAGING_CSMT */
-     }
- 
-     return refcount;
 diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
 --- a/dlls/wined3d/volume.c
 +++ b/dlls/wined3d/volume.c

@@ -1,32 +1,17 @@
-From 2bba243cce7043d8cbac3f670d994a032db0fc77 Mon Sep 17 00:00:00 2001
+From df9cd44711651586d8aeabd4f4dde47f5bd1801b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 31 Jul 2013 23:18:28 +0200
 Subject: wined3d: Destroy shaders through the CS
 
 ---
- dlls/wined3d/shader.c | 18 +++++++++++-------
- 1 file changed, 11 insertions(+), 7 deletions(-)
+ dlls/wined3d/shader.c | 5 -----
+ 1 file changed, 5 deletions(-)
 
 diff --git a/dlls/wined3d/shader.c b/dlls/wined3d/shader.c
-index 72ea8bc..f5e29b4 100644
+index 975a927..05eae08 100644
 --- a/dlls/wined3d/shader.c
 +++ b/dlls/wined3d/shader.c
-@@ -2612,6 +2612,14 @@ ULONG CDECL wined3d_shader_incref(struct wined3d_shader *shader)
-     return refcount;
- }
- 
-+static void wined3d_shader_destroy_object(void *object)
-+{
-+    struct wined3d_shader *shader = object;
-+
-+    shader_cleanup(shader);
-+    HeapFree(GetProcessHeap(), 0, shader);
-+}
-+
- ULONG CDECL wined3d_shader_decref(struct wined3d_shader *shader)
- {
-     ULONG refcount = InterlockedDecrement(&shader->ref);
-@@ -2620,14 +2628,10 @@ ULONG CDECL wined3d_shader_decref(struct wined3d_shader *shader)
+@@ -2664,11 +2664,6 @@ ULONG CDECL wined3d_shader_decref(struct wined3d_shader *shader)
  
      if (!refcount)
      {
@@ -35,15 +20,9 @@ index 72ea8bc..f5e29b4 100644
 -            FIXME("Waiting for cs.\n");
 -            shader->device->cs->ops->finish(shader->device->cs);
 -        }
--        shader_cleanup(shader);
-+        const struct wined3d_device *device = shader->device;
-+
          shader->parent_ops->wined3d_object_destroyed(shader->parent);
--        HeapFree(GetProcessHeap(), 0, shader);
-+        wined3d_cs_emit_destroy_object(device->cs, wined3d_shader_destroy_object, shader);
+         wined3d_cs_emit_destroy_object(shader->device->cs, wined3d_shader_destroy_object, shader);
      }
- 
-     return refcount;
 -- 
 2.8.0
 

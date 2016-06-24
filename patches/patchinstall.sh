@@ -253,6 +253,7 @@ patch_enable_all ()
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
 	enable_ole32_HGLOBALStream="$1"
+	enable_ole32_OleGetIconOfFile="$1"
 	enable_oleaut32_CreateTypeLib="$1"
 	enable_oleaut32_Load_Save_EMF="$1"
 	enable_oleaut32_OLEPictureImpl_SaveAsFile="$1"
@@ -936,6 +937,9 @@ patch_enable ()
 			;;
 		ole32-HGLOBALStream)
 			enable_ole32_HGLOBALStream="$2"
+			;;
+		ole32-OleGetIconOfFile)
+			enable_ole32_OleGetIconOfFile="$2"
 			;;
 		oleaut32-CreateTypeLib)
 			enable_oleaut32_CreateTypeLib="$2"
@@ -5572,6 +5576,18 @@ if test "$enable_ole32_HGLOBALStream" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "ole32: Allow moving a being reallocated block of memory managed by HGLOBAL based IStream.", 1 },';
 		echo '+    { "Sebastian Lackner", "ole32: Improve thread-safety of HGLOBALStreamImpl_Read.", 1 },';
 		echo '+    { "Sebastian Lackner", "ole32: Improve thread-safety of HGLOBALStreamImpl_Write.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ole32-OleGetIconOfFile
+# |
+# | Modified files:
+# |   *	dlls/ole32/ole2stubs.c, dlls/ole32/ole32.spec
+# |
+if test "$enable_ole32_OleGetIconOfFile" -eq 1; then
+	patch_apply ole32-OleGetIconOfFile/0001-ole32-Add-stub-for-OleGetIconOfFile.patch
+	(
+		echo '+    { "Zhenbo Li", "ole32: Add stub for OleGetIconOfFile.", 1 },';
 	) >> "$patchlist"
 fi
 

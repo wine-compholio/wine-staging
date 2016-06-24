@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "82f3446c5d09aba0aa0cffcf7ece54d44d3b86ef"
+	echo "af6f8ca4136ad937f8743494a8d3cea0b52d71cf"
 }
 
 # Show version information
@@ -193,7 +193,6 @@ patch_enable_all ()
 	enable_msidb_Implementation="$1"
 	enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback="$1"
 	enable_msvcrt_Math_Precision="$1"
-	enable_msvcrt__fstat32i64="$1"
 	enable_msvfw32_ICGetDisplayFormat="$1"
 	enable_msvideo_dll16_DrawDibProfileDisplay="$1"
 	enable_ntdll_APC_Performance="$1"
@@ -757,9 +756,6 @@ patch_enable ()
 			;;
 		msvcrt-Math_Precision)
 			enable_msvcrt_Math_Precision="$2"
-			;;
-		msvcrt-_fstat32i64)
-			enable_msvcrt__fstat32i64="$2"
 			;;
 		msvfw32-ICGetDisplayFormat)
 			enable_msvfw32_ICGetDisplayFormat="$2"
@@ -4556,20 +4552,6 @@ if test "$enable_msvcrt_Math_Precision" -eq 1; then
 	patch_apply msvcrt-Math_Precision/0001-msvcrt-Calculate-sinh-cosh-exp-pow-with-higher-preci.patch
 	(
 		echo '+    { "Sebastian Lackner", "msvcrt: Calculate sinh/cosh/exp/pow with higher precision.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset msvcrt-_fstat32i64
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-crt-filesystem-l1-1-0/api-ms-win-crt-filesystem-l1-1-0.spec, dlls/msvcr100/msvcr100.spec,
-# | 	dlls/msvcr110/msvcr110.spec, dlls/msvcr120/msvcr120.spec, dlls/msvcr120_app/msvcr120_app.spec,
-# | 	dlls/msvcr80/msvcr80.spec, dlls/msvcr90/msvcr90.spec, dlls/msvcrt/file.c, dlls/ucrtbase/ucrtbase.spec
-# |
-if test "$enable_msvcrt__fstat32i64" -eq 1; then
-	patch_apply msvcrt-_fstat32i64/0001-msvcrt-Add-support-for-_fstat32i64.patch
-	(
-		echo '+    { "Erich E. Hoover", "msvcrt: Add support for _fstat32i64.", 1 },';
 	) >> "$patchlist"
 fi
 

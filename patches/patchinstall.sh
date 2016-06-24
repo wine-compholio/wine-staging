@@ -7331,8 +7331,8 @@ fi
 # | 	dlls/wined3d/context.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/drawprim.c, dlls/wined3d/glsl_shader.c,
 # | 	dlls/wined3d/query.c, dlls/wined3d/resource.c, dlls/wined3d/sampler.c, dlls/wined3d/shader.c, dlls/wined3d/state.c,
 # | 	dlls/wined3d/stateblock.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c,
-# | 	dlls/wined3d/utils.c, dlls/wined3d/vertexdeclaration.c, dlls/wined3d/view.c, dlls/wined3d/volume.c,
-# | 	dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h, dlls/winex11.drv/opengl.c
+# | 	dlls/wined3d/utils.c, dlls/wined3d/volume.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h,
+# | 	dlls/winex11.drv/opengl.c
 # |
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/0000-Revert-wined3d-Send-shader-constant-updates-through-.patch
@@ -7347,7 +7347,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/0010-wined3d-Hackily-introduce-a-multithreaded-command-st.patch
 	patch_apply wined3d-CSMT_Main/0011-wined3d-Wait-for-resource-updates-to-finish-when-usi.patch
 	patch_apply wined3d-CSMT_Main/0012-wined3d-Wait-for-the-cs-before-destroying-objects.patch
-	patch_apply wined3d-CSMT_Main/0013-wined3d-Wait-for-the-CS-before-destroying-views.patch
 	patch_apply wined3d-CSMT_Main/0014-wined3d-Give-the-cs-its-own-state.patch
 	patch_apply wined3d-CSMT_Main/0015-wined3d-Send-float-constant-updates-through-the-comm.patch
 	patch_apply wined3d-CSMT_Main/0016-wined3d-Request-a-glFinish-before-modifying-resource.patch
@@ -7423,10 +7422,7 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/0086-wined3d-Use-glBufferSubData-instead-of-glMapBufferRa.patch
 	patch_apply wined3d-CSMT_Main/0087-wined3d-Separate-GL-buffer-discard-control-from-igno.patch
 	patch_apply wined3d-CSMT_Main/0088-wined3d-Create-buffers-before-mapping-them.patch
-	patch_apply wined3d-CSMT_Main/0089-wined3d-Destroy-views-through-the-CS.patch
 	patch_apply wined3d-CSMT_Main/0090-wined3d-Remove-another-glFinish.patch
-	patch_apply wined3d-CSMT_Main/0091-wined3d-Destroy-vertex-declarations-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0092-wined3d-Destroy-shaders-through-the-CS.patch
 	patch_apply wined3d-CSMT_Main/0093-wined3d-Create-VBOs-through-the-command-stream.patch
 	patch_apply wined3d-CSMT_Main/0094-wined3d-Clean-up-resource-data-through-the-CS.patch
 	patch_apply wined3d-CSMT_Main/0095-wined3d-Clean-up-buffer-resource-data-through-the-CS.patch
@@ -7449,7 +7445,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/0112-wined3d-Don-t-discard-new-buffers.patch
 	patch_apply wined3d-CSMT_Main/0113-wined3d-Don-t-try-to-sync-VBOs-manually-on-OSX-with-.patch
 	patch_apply wined3d-CSMT_Main/0114-wined3d-Only-discard-buffers-that-are-in-use.patch
-	patch_apply wined3d-CSMT_Main/0116-wined3d-Destroy-shader-resource-views-through-the-CS.patch
 	patch_apply wined3d-CSMT_Main/0117-wined3d-Send-getdc-and-releasedc-through-the-command.patch
 	patch_apply wined3d-CSMT_Main/0118-wined3d-Ignore-WINED3D_MAP_NO_DIRTY_UPDATE-in-resour.patch
 	patch_apply wined3d-CSMT_Main/0119-d3d8-tests-D3DLOCK_NO_DIRTY_UPDATE-on-managed-textur.patch
@@ -7481,7 +7476,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Hackily introduce a multithreaded command stream.", 1 },';
 		echo '+    { "Henri Verbeet", "wined3d: Wait for resource updates to finish when using the multithreaded command stream.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Wait for the cs before destroying objects.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Wait for the CS before destroying views.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Give the cs its own state.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Send float constant updates through the command stream.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Request a glFinish before modifying resources outside the cs.", 1 },';
@@ -7557,10 +7551,7 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Use glBufferSubData instead of glMapBufferRange.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Separate GL buffer discard control from ignoring MAP_DISCARD.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Create buffers before mapping them.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Destroy views through the CS.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Remove another glFinish.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Destroy vertex declarations through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Destroy shaders through the CS.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Create VBOs through the command stream.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Clean up resource data through the CS.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Clean up buffer resource data through the CS.", 1 },';
@@ -7583,7 +7574,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t discard new buffers.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t try to sync VBOs manually on OSX with CSMT.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Only discard buffers that are in use.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Destroy shader resource views through the CS.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Send getdc and releasedc through the command stream.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Ignore WINED3D_MAP_NO_DIRTY_UPDATE in resource_map.", 1 },';
 		echo '+    { "Stefan Dösinger", "d3d8/tests: D3DLOCK_NO_DIRTY_UPDATE on managed textures is temporarily broken.", 1 },';

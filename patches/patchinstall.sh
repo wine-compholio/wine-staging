@@ -3736,12 +3736,14 @@ if test "$enable_gdiplus_GdipCreateMetafileFromStream" -eq 1; then
 	patch_apply gdiplus-GdipCreateMetafileFromStream/0003-gdiplus-Implement-GdipGetMetafileHeaderFromWmf.patch
 	patch_apply gdiplus-GdipCreateMetafileFromStream/0004-gdiplus-Implement-GdipGetMetafileHeaderFromStream.patch
 	patch_apply gdiplus-GdipCreateMetafileFromStream/0005-gdiplus-Implement-GdipGetMetafileHeaderFromFile.patch
+	patch_apply gdiplus-GdipCreateMetafileFromStream/0006-gdiplus-Implement-GdipCreateMetafileFromFile.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipCreateMetafileFromStream.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipGetMetafileHeaderFromMetafile.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipGetMetafileHeaderFromWmf.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipGetMetafileHeaderFromStream.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipGetMetafileHeaderFromFile.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipCreateMetafileFromFile.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "24a730187e08699b51c698d4fed58ba2947f0c5d"
+	echo "205228eb80089c38b25e7249073021e7806d2bfa"
 }
 
 # Show version information
@@ -126,7 +126,6 @@ patch_enable_all ()
 	enable_ddraw_Write_Vtable="$1"
 	enable_ddraw_ZBufferBitDepths="$1"
 	enable_ddraw_d3d_execute_buffer="$1"
-	enable_dinput_DIPROP_USERNAME="$1"
 	enable_dinput_Initialize="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
@@ -154,7 +153,6 @@ patch_enable_all ()
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Cwd_Startup_Info="$1"
 	enable_kernel32_FreeUserPhysicalPages="$1"
-	enable_kernel32_GetFinalPathNameByHandle="$1"
 	enable_kernel32_GetLargestConsoleWindowSize="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
 	enable_kernel32_Named_Pipe="$1"
@@ -304,7 +302,6 @@ patch_enable_all ()
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
-	enable_wined3d_Geforce_425M="$1"
 	enable_wined3d_MESA_GPU_Info="$1"
 	enable_wined3d_Revert_PixelFormat="$1"
 	enable_wined3d_UnhandledBlendFactor="$1"
@@ -326,7 +323,6 @@ patch_enable_all ()
 	enable_wininet_Internet_Settings="$1"
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
 	enable_winmm_Delay_Import_Depends="$1"
-	enable_winscard_SCardListReaders="$1"
 	enable_winspool_drv_SetPrinterW="$1"
 	enable_winsta_WinStationEnumerateW="$1"
 	enable_wpcap_Dynamic_Linking="$1"
@@ -490,9 +486,6 @@ patch_enable ()
 		ddraw-d3d_execute_buffer)
 			enable_ddraw_d3d_execute_buffer="$2"
 			;;
-		dinput-DIPROP_USERNAME)
-			enable_dinput_DIPROP_USERNAME="$2"
-			;;
 		dinput-Initialize)
 			enable_dinput_Initialize="$2"
 			;;
@@ -573,9 +566,6 @@ patch_enable ()
 			;;
 		kernel32-FreeUserPhysicalPages)
 			enable_kernel32_FreeUserPhysicalPages="$2"
-			;;
-		kernel32-GetFinalPathNameByHandle)
-			enable_kernel32_GetFinalPathNameByHandle="$2"
 			;;
 		kernel32-GetLargestConsoleWindowSize)
 			enable_kernel32_GetLargestConsoleWindowSize="$2"
@@ -1024,9 +1014,6 @@ patch_enable ()
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
 			;;
-		wined3d-Geforce_425M)
-			enable_wined3d_Geforce_425M="$2"
-			;;
 		wined3d-MESA_GPU_Info)
 			enable_wined3d_MESA_GPU_Info="$2"
 			;;
@@ -1089,9 +1076,6 @@ patch_enable ()
 			;;
 		winmm-Delay_Import_Depends)
 			enable_winmm_Delay_Import_Depends="$2"
-			;;
-		winscard-SCardListReaders)
-			enable_winscard_SCardListReaders="$2"
 			;;
 		winspool.drv-SetPrinterW)
 			enable_winspool_drv_SetPrinterW="$2"
@@ -2899,21 +2883,6 @@ if test "$enable_ddraw_d3d_execute_buffer" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dinput-DIPROP_USERNAME
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39667] Implement dinput device property DIPROP_USERNAME
-# |
-# | Modified files:
-# |   *	dlls/dinput/device.c, dlls/dinput/device_private.h, dlls/dinput8/tests/device.c
-# |
-if test "$enable_dinput_DIPROP_USERNAME" -eq 1; then
-	patch_apply dinput-DIPROP_USERNAME/0001-dinput-Implement-device-property-DIPROP_USERNAME.patch
-	(
-		echo '+    { "Bernhard Übelacker", "dinput: Implement device property DIPROP_USERNAME.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dinput-Initialize
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3460,22 +3429,6 @@ if test "$enable_kernel32_FreeUserPhysicalPages" -eq 1; then
 	patch_apply kernel32-FreeUserPhysicalPages/0001-kernel32-add-FreeUserPhysicalPages-stub-try-2.patch
 	(
 		echo '+    { "Austin English", "kernel32: Add FreeUserPhysicalPages stub.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-GetFinalPathNameByHandle
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34851] Support for GetFinalPathNameByHandle
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-file-l1-1-0/api-ms-win-core-file-l1-1-0.spec, dlls/api-ms-win-core-file-l1-2-0/api-ms-win-core-
-# | 	file-l1-2-0.spec, dlls/kernel32/file.c, dlls/kernel32/kernel32.spec
-# |
-if test "$enable_kernel32_GetFinalPathNameByHandle" -eq 1; then
-	patch_apply kernel32-GetFinalPathNameByHandle/0001-kernel32-Implement-GetFinalPathNameByHandle.patch
-	(
-		echo '+    { "Michael Müller", "kernel32: Implement GetFinalPathNameByHandle.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4553,27 +4506,23 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0002-ntoskrnl.exe-Add-stub-for-IoGetAttachedDeviceReferen.patch
 	patch_apply ntoskrnl-Stubs/0003-ntoskrnl.exe-Add-stubs-for-ExAcquireFastMutexUnsafe-.patch
 	patch_apply ntoskrnl-Stubs/0004-ntoskrnl.exe-Add-stubs-for-ObReferenceObjectByPointe.patch
-	patch_apply ntoskrnl-Stubs/0005-ntoskrnl.exe-Add-stub-for-KeDelayExecutionThread.patch
 	patch_apply ntoskrnl-Stubs/0006-ntoskrnl.exe-Improve-KeReleaseMutex-stub.patch
 	patch_apply ntoskrnl-Stubs/0007-ntoskrnl.exe-Improve-KeInitializeSemaphore-stub.patch
 	patch_apply ntoskrnl-Stubs/0008-ntoskrnl.exe-Improve-KeInitializeTimerEx-stub.patch
 	patch_apply ntoskrnl-Stubs/0009-ntoskrnl.exe-Fix-IoReleaseCancelSpinLock-argument.patch
 	patch_apply ntoskrnl-Stubs/0010-ntoskrnl.exe-Implement-MmMapLockedPages-and-MmUnmapL.patch
 	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Implement-KeInitializeMutex.patch
-	patch_apply ntoskrnl-Stubs/0012-ntoskrnl.exe-Add-stub-for-PsRemoveLoadImageNotifyRou.patch
 	(
 		echo '+    { "Austin English", "ntoskrnl.exe: Add KeWaitForMultipleObjects stub.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for IoGetAttachedDeviceReference.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ExAcquireFastMutexUnsafe and ExReleaseFastMutexUnsafe.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ObReferenceObjectByPointer and ObDereferenceObject.", 1 },';
-		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for KeDelayExecutionThread.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeReleaseMutex stub.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeSemaphore stub.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeTimerEx stub.", 1 },';
 		echo '+    { "Christian Costa", "ntoskrnl.exe: Fix IoReleaseCancelSpinLock argument.", 1 },';
 		echo '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Implement KeInitializeMutex.", 1 },';
-		echo '+    { "Michael Müller", "ntoskrnl.exe: Add stub for PsRemoveLoadImageNotifyRoutine.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4951,25 +4900,17 @@ fi
 
 # Patchset server-Parent_Process
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37087] Do not hold reference on parent process in wineserver
-# |
 # | Modified files:
-# |   *	dlls/kernel32/tests/process.c, server/console.c, server/process.c, server/process.h, server/snapshot.c, server/thread.c,
-# | 	server/token.c
+# |   *	dlls/kernel32/tests/process.c, server/process.c, server/token.c
 # |
 if test "$enable_server_Parent_Process" -eq 1; then
 	patch_apply server-Parent_Process/0001-kernel32-tests-Remove-unnecessary-call-to-GetExitCod.patch
-	patch_apply server-Parent_Process/0002-kernel32-tests-Add-test-for-process-object-destructi.patch
-	patch_apply server-Parent_Process/0003-server-token_duplicate-should-not-reference-the-orig.patch
-	patch_apply server-Parent_Process/0004-server-Increase-size-of-PID-table-to-512-to-reduce-r.patch
-	patch_apply server-Parent_Process/0005-server-Do-not-hold-reference-on-parent-process.patch
+	patch_apply server-Parent_Process/0002-server-token_duplicate-should-not-reference-the-orig.patch
+	patch_apply server-Parent_Process/0003-server-Increase-size-of-PID-table-to-512-to-reduce-r.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Remove unnecessary call to GetExitCodeProcess in process tests.", 1 },';
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Add test for process object destruction.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Token_duplicate should not reference the original token, which will get destroyed on process exit.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Increase size of PID table to 512 to reduce risk of collisions.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Do not hold reference on parent process.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5839,21 +5780,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Geforce_425M
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35054] Add wined3d detection for GeForce GT 425M
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Geforce_425M" -eq 1; then
-	patch_apply wined3d-Geforce_425M/0001-wined3d-Add-detection-for-NVIDIA-GeForce-425M.patch
-	(
-		echo '+    { "Jarkko Korpi", "wined3d: Add detection for NVIDIA GeForce 425M.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-MESA_GPU_Info
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -6547,21 +6473,6 @@ if test "$enable_winmm_Delay_Import_Depends" -eq 1; then
 	patch_apply winmm-Delay_Import_Depends/0001-winmm-Delay-import-ole32-msacm32-to-workaround-bug-w.patch
 	(
 		echo '+    { "Michael Müller", "winmm: Delay import ole32 msacm32 to workaround bug when loading multiple winmm versions.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winscard-SCardListReaders
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#26978] Add stub for winscard.SCardListReadersA/W
-# |
-# | Modified files:
-# |   *	dlls/winscard/winscard.c, dlls/winscard/winscard.spec
-# |
-if test "$enable_winscard_SCardListReaders" -eq 1; then
-	patch_apply winscard-SCardListReaders/0001-winscard-add-stubs-for-SCardListReadersA-W.patch
-	(
-		echo '+    { "Austin English", "winscard: Add stubs for SCardListReadersA/W.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -639,7 +639,7 @@ def generate_ifdef_patch(original, patched, ifdef):
 
         # Now we can finally compute the diff between the patched file and our intermediate file
         diff = tempfile.NamedTemporaryFile(mode='w+')
-        exitcode = subprocess.call(["diff", "-u", patched.name, intermediate.name],
+        exitcode = subprocess.call(["git", "diff", "--no-index", patched.name, intermediate.name],
                                    stdout=diff, stderr=_devnull)
         if exitcode != 1: # exitcode 0 cannot (=shouldn't) happen in this situation
             raise PatchDiffError("Failed to compute diff (exitcode %d)." % exitcode)
@@ -647,7 +647,11 @@ def generate_ifdef_patch(original, patched, ifdef):
         diff.flush()
         diff.seek(0)
 
-        # We expect this output format from 'diff', if this is not the case things might go wrong.
+        # We expect this output format from 'git diff', if this is not the case things might go wrong.
+        line = diff.readline()
+        assert line.startswith("diff --git ")
+        line = diff.readline()
+        assert line.startswith("index ")
         line = diff.readline()
         assert line.startswith("--- ")
         line = diff.readline()

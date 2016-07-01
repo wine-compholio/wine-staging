@@ -1543,7 +1543,7 @@ else
 		# Shifting by 62 bits is undefined behaviour when off_t is 32-bit, see also
 		# https://launchpad.net/ubuntu/+source/autoconf/2.69-6 - the bug is still
 		# present in some other distros (including Archlinux).
-		_large_off_old="^#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))$"
+		_large_off_old="^#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))\$"
 		_large_off_new="#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))"
 		sed -i'' -e "s|$_large_off_old|$_large_off_new|g" "$_file"
 		unset _large_off_old _large_off_new

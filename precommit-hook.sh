@@ -8,17 +8,17 @@ warning()
 	echo ""
 }
 
-if git status --porcelain "staging" | grep "^.[^ ]" &> /dev/null; then
+if git status --porcelain "staging" | grep -q "^.[^ ]"; then
 	warning "PLEASE ADD OR STASH YOUR CHANGES IN staging"
 	exit 1
 fi
 
-if git status --porcelain "patches" | grep -v "^.\\?.*\\.py$" | grep "^.[^ ]" &> /dev/null; then
+if git status --porcelain "patches" | grep -v "^.\\?.*\\.py$" | grep -q "^.[^ ]"; then
 	warning "PLEASE ADD OR STASH YOUR CHANGES IN patches"
 	exit 1
 fi
 
-if ! git status --porcelain "staging/VERSION" | grep "^M." &> /dev/null; then
+if ! git status --porcelain "staging/VERSION" | grep -q "^M."; then
 	perl -i -pe 's/(\d+)$/($1 + 1)." (unreleased)"/e' "staging/VERSION"
 	git add "staging/VERSION"
 fi

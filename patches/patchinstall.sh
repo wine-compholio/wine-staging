@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "af6f8ca4136ad937f8743494a8d3cea0b52d71cf"
+	echo "a9a6948b7944dccca6831914ea40e5c9aa5929bc"
 }
 
 # Show version information
@@ -391,7 +391,6 @@ patch_enable_all ()
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
 	enable_winmm_Delay_Import_Depends="$1"
 	enable_winmm_mciSendCommandA="$1"
-	enable_winspool_drv_SetPrinterW="$1"
 	enable_wintrust_WinVerifyTrust="$1"
 	enable_wmic_Query_Path="$1"
 	enable_wpcap_Dynamic_Linking="$1"
@@ -1351,9 +1350,6 @@ patch_enable ()
 			;;
 		winmm-mciSendCommandA)
 			enable_winmm_mciSendCommandA="$2"
-			;;
-		winspool.drv-SetPrinterW)
-			enable_winspool_drv_SetPrinterW="$2"
 			;;
 		wintrust-WinVerifyTrust)
 			enable_wintrust_WinVerifyTrust="$2"
@@ -2892,8 +2888,10 @@ fi
 # | Modified files:
 # |   *	dlls/d3dx9_24/Makefile.in, dlls/d3dx9_25/Makefile.in, dlls/d3dx9_26/Makefile.in, dlls/d3dx9_27/Makefile.in,
 # | 	dlls/d3dx9_28/Makefile.in, dlls/d3dx9_29/Makefile.in, dlls/d3dx9_30/Makefile.in, dlls/d3dx9_31/Makefile.in,
-# | 	dlls/d3dx9_32/Makefile.in, dlls/d3dx9_33/Makefile.in, dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/effect.c,
-# | 	include/d3dx9effect.h
+# | 	dlls/d3dx9_32/Makefile.in, dlls/d3dx9_33/Makefile.in, dlls/d3dx9_34/Makefile.in, dlls/d3dx9_35/Makefile.in,
+# | 	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/effect.c, dlls/d3dx9_37/Makefile.in, dlls/d3dx9_38/Makefile.in,
+# | 	dlls/d3dx9_39/Makefile.in, dlls/d3dx9_40/Makefile.in, dlls/d3dx9_41/Makefile.in, dlls/d3dx9_42/Makefile.in,
+# | 	dlls/d3dx9_43/Makefile.in, include/d3dx9effect.h
 # |
 if test "$enable_d3dx9_25_ID3DXEffect" -eq 1; then
 	patch_apply d3dx9_25-ID3DXEffect/0001-d3dx9_-Adjust-ID3DXEffect-interface-based-on-DLL-ver.patch
@@ -3065,8 +3063,10 @@ fi
 # | Modified files:
 # |   *	dlls/d3dx9_24/Makefile.in, dlls/d3dx9_25/Makefile.in, dlls/d3dx9_26/Makefile.in, dlls/d3dx9_27/Makefile.in,
 # | 	dlls/d3dx9_28/Makefile.in, dlls/d3dx9_29/Makefile.in, dlls/d3dx9_30/Makefile.in, dlls/d3dx9_31/Makefile.in,
-# | 	dlls/d3dx9_32/Makefile.in, dlls/d3dx9_33/Makefile.in, dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/surface.c,
-# | 	dlls/d3dx9_36/tests/surface.c
+# | 	dlls/d3dx9_32/Makefile.in, dlls/d3dx9_33/Makefile.in, dlls/d3dx9_34/Makefile.in, dlls/d3dx9_35/Makefile.in,
+# | 	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/surface.c, dlls/d3dx9_36/tests/surface.c, dlls/d3dx9_37/Makefile.in,
+# | 	dlls/d3dx9_38/Makefile.in, dlls/d3dx9_39/Makefile.in, dlls/d3dx9_40/Makefile.in, dlls/d3dx9_41/Makefile.in,
+# | 	dlls/d3dx9_42/Makefile.in, dlls/d3dx9_43/Makefile.in
 # |
 if test "$enable_d3dx9_36_DXTn" -eq 1; then
 	patch_apply d3dx9_36-DXTn/0001-d3dx9_36-Add-dxtn-support.patch
@@ -7946,21 +7946,6 @@ if test "$enable_winmm_mciSendCommandA" -eq 1; then
 	patch_apply winmm-mciSendCommandA/0001-winmm-Do-not-crash-in-Win-9X-mode-when-an-invalid-de.patch
 	(
 		echo '+    { "Michael Müller", "winmm: Do not crash in Win 9X mode when an invalid device ptr is passed to MCI_OPEN.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winspool.drv-SetPrinterW
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#24645] Add stub for winspool.SetPrinterW level 8
-# |
-# | Modified files:
-# |   *	dlls/winspool.drv/info.c
-# |
-if test "$enable_winspool_drv_SetPrinterW" -eq 1; then
-	patch_apply winspool.drv-SetPrinterW/0001-winspool.drv-Add-case-8-for-SetPrinterW.patch
-	(
-		echo '+    { "Jarkko Korpi", "winspool.drv Add case 8 for SetPrinterW.", 1 },';
 	) >> "$patchlist"
 fi
 

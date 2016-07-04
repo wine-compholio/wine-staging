@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a9a6948b7944dccca6831914ea40e5c9aa5929bc"
+	echo "b1930ee4b8a0f77654bbab65c3bc30d721bf5d6a"
 }
 
 # Show version information
@@ -159,7 +159,6 @@ patch_enable_all ()
 	enable_imagehlp_Cleanup="$1"
 	enable_imagehlp_ImageLoad="$1"
 	enable_imm32_IMMDisableLegacyIME="$1"
-	enable_include_webservices="$1"
 	enable_iphlpapi_System_Ping="$1"
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_COMSPEC="$1"
@@ -654,9 +653,6 @@ patch_enable ()
 			;;
 		imm32-IMMDisableLegacyIME)
 			enable_imm32_IMMDisableLegacyIME="$2"
-			;;
-		include-webservices)
-			enable_include_webservices="$2"
 			;;
 		iphlpapi-System_Ping)
 			enable_iphlpapi_System_Ping="$2"
@@ -3906,18 +3902,6 @@ if test "$enable_imm32_IMMDisableLegacyIME" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset include-webservices
-# |
-# | Modified files:
-# |   *	include/webservices.h
-# |
-if test "$enable_include_webservices" -eq 1; then
-	patch_apply include-webservices/0001-include-Remove-duplicate-definition-of-WS_XML_NODE_P.patch
-	(
-		echo '+    { "Sebastian Lackner", "include: Remove duplicate definition of WS_XML_NODE_POSITION.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset iphlpapi-System_Ping
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6197,7 +6181,6 @@ if test "$enable_shell32_Context_Menu" -eq 1; then
 	patch_apply shell32-Context_Menu/0001-shell32-Fix-copying-of-files-when-using-a-context-me.patch
 	patch_apply shell32-Context_Menu/0002-shell32-Set-return-value-correctly-in-DoPaste.patch
 	patch_apply shell32-Context_Menu/0003-shell32-Implement-insert-paste-for-item-context-menu.patch
-	patch_apply shell32-Context_Menu/0004-shell32-Correctly-interpret-result-of-SHFileOperatio.patch
 	patch_apply shell32-Context_Menu/0005-shell32-Add-support-for-setting-getting-PREFERREDDRO.patch
 	patch_apply shell32-Context_Menu/0006-shell32-Add-parameter-to-ISFHelper-DeleteItems-to-al.patch
 	patch_apply shell32-Context_Menu/0007-shell32-Remove-source-files-when-using-cut-in-the-co.patch
@@ -6206,7 +6189,6 @@ if test "$enable_shell32_Context_Menu" -eq 1; then
 		echo '+    { "Michael Müller", "shell32: Fix copying of files when using a context menu.", 1 },';
 		echo '+    { "Michael Müller", "shell32: Set return value correctly in DoPaste.", 1 },';
 		echo '+    { "Michael Müller", "shell32: Implement insert/paste for item context menus.", 1 },';
-		echo '+    { "Michael Müller", "shell32: Correctly interpret result of SHFileOperation in UNIXFS copy and delete.", 1 },';
 		echo '+    { "Michael Müller", "shell32: Add support for setting/getting PREFERREDDROPEFFECT in IDataObject.", 1 },';
 		echo '+    { "Michael Müller", "shell32: Add parameter to ISFHelper::DeleteItems to allow deleting files without confirmation.", 1 },';
 		echo '+    { "Michael Müller", "shell32: Remove source files when using cut in the context menu.", 1 },';

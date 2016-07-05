@@ -102,6 +102,7 @@ patch_enable_all ()
 	enable_crypt32_CMS_Certificates="$1"
 	enable_crypt32_CryptUnprotectMemory="$1"
 	enable_d2d1_Tests="$1"
+	enable_d3d10_1_Forwards="$1"
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Surface_Refcount="$1"
 	enable_d3d9_Tests="$1"
@@ -482,6 +483,9 @@ patch_enable ()
 			;;
 		d2d1-Tests)
 			enable_d2d1_Tests="$2"
+			;;
+		d3d10_1-Forwards)
+			enable_d3d10_1_Forwards="$2"
 			;;
 		d3d9-DesktopWindow)
 			enable_d3d9_DesktopWindow="$2"
@@ -2832,6 +2836,18 @@ if test "$enable_d2d1_Tests" -eq 1; then
 	patch_apply d2d1-Tests/0001-d2d1-tests-Avoid-test-failure-on-specific-Nvidia-gra.patch
 	(
 		echo '+    { "Sebastian Lackner", "d2d1/tests: Avoid test failure on specific Nvidia graphic cards.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3d10_1-Forwards
+# |
+# | Modified files:
+# |   *	dlls/d3d10_1/d3d10_1.spec, tools/make_specfiles
+# |
+if test "$enable_d3d10_1_Forwards" -eq 1; then
+	patch_apply d3d10_1-Forwards/0001-d3d10_1-Add-missing-forwards-to-d3d10.patch
+	(
+		echo '+    { "Sebastian Lackner", "d3d10_1: Add missing forwards to d3d10.", 1 },';
 	) >> "$patchlist"
 fi
 

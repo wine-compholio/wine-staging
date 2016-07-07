@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "27ea3804ddc8077fedb7a0ea81ac96910f78a26f"
+	echo "94b6a885a880728f5e0a865fc17a82532723e756"
 }
 
 # Show version information
@@ -214,7 +214,6 @@ patch_enable_all ()
 	enable_ntdll_Fix_Alignment="$1"
 	enable_ntdll_Heap_FreeLists="$1"
 	enable_ntdll_Hide_Wine_Exports="$1"
-	enable_ntdll_InMemoryOrderModuleList="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_Loader_Machine_Type="$1"
 	enable_ntdll_NtAccessCheck="$1"
@@ -819,9 +818,6 @@ patch_enable ()
 			;;
 		ntdll-Hide_Wine_Exports)
 			enable_ntdll_Hide_Wine_Exports="$2"
-			;;
-		ntdll-InMemoryOrderModuleList)
-			enable_ntdll_InMemoryOrderModuleList="$2"
 			;;
 		ntdll-Junction_Points)
 			enable_ntdll_Junction_Points="$2"
@@ -4889,21 +4885,6 @@ if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-InMemoryOrderModuleList
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40623] Do not sort the InMemoryOrderModuleList by memory addresses
-# |
-# | Modified files:
-# |   *	dlls/ntdll/loader.c
-# |
-if test "$enable_ntdll_InMemoryOrderModuleList" -eq 1; then
-	patch_apply ntdll-InMemoryOrderModuleList/0001-ntdll-Do-not-sort-the-InMemoryOrderModuleList-by-mem.patch
-	(
-		echo '+    { "Michael Müller", "ntdll: Do not sort the InMemoryOrderModuleList by memory addresses.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-NtQueryEaFile
 # |
 # | Modified files:
@@ -7881,12 +7862,10 @@ fi
 if test "$enable_wininet_InternetCrackUrlW" -eq 1; then
 	patch_apply wininet-InternetCrackUrlW/0001-wininet-Set-lpszUrlPath-to-the-end-of-the-string-in-.patch
 	patch_apply wininet-InternetCrackUrlW/0002-wininet-Resize-buffer-when-call-to-InternetCanonical.patch
-	patch_apply wininet-InternetCrackUrlW/0003-wininet-tests-Fix-typo-lpszPath-lpszUrlPath-in-messa.patch
 	patch_apply wininet-InternetCrackUrlW/0004-wininet-tests-Add-test-to-verify-correct-handling-of.patch
 	(
 		echo '+    { "Michael Müller", "wininet: Set lpszUrlPath to the end of the string in InternetCrackUrlW when dwUrlPathLength > 0.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Resize buffer when call to InternetCanonicalizeUrlW fails in InternetCrackUrlW.", 1 },';
-		echo '+    { "Michael Müller", "wininet/tests: Fix typo (lpszPath -> lpszUrlPath) in messages.", 1 },';
 		echo '+    { "Michael Müller", "wininet/tests: Add test to verify correct handling of urls without a path component.", 1 },';
 	) >> "$patchlist"
 fi

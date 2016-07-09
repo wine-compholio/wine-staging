@@ -7303,12 +7303,11 @@ fi
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance
 # |
 # | Modified files:
-# |   *	dlls/d3d8/tests/visual.c, dlls/d3d9/tests/visual.c, dlls/wined3d/arb_program_shader.c, dlls/wined3d/buffer.c,
-# | 	dlls/wined3d/context.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/drawprim.c, dlls/wined3d/glsl_shader.c,
-# | 	dlls/wined3d/query.c, dlls/wined3d/resource.c, dlls/wined3d/sampler.c, dlls/wined3d/shader.c, dlls/wined3d/state.c,
-# | 	dlls/wined3d/stateblock.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c,
-# | 	dlls/wined3d/utils.c, dlls/wined3d/volume.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h,
-# | 	dlls/winex11.drv/opengl.c
+# |   *	dlls/d3d9/tests/visual.c, dlls/wined3d/arb_program_shader.c, dlls/wined3d/buffer.c, dlls/wined3d/context.c,
+# | 	dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/drawprim.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/query.c,
+# | 	dlls/wined3d/resource.c, dlls/wined3d/sampler.c, dlls/wined3d/shader.c, dlls/wined3d/state.c, dlls/wined3d/stateblock.c,
+# | 	dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c, dlls/wined3d/utils.c, dlls/wined3d/volume.c,
+# | 	dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
 # |
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/0000-Revert-wined3d-Send-shader-constant-updates-through-.patch
@@ -7411,7 +7410,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/0105-wined3d-Set-map_heap_memory-NULL-when-allocating-a-P.patch
 	patch_apply wined3d-CSMT_Main/0106-wined3d-Wait-only-for-the-buffer-to-be-idle.patch
 	patch_apply wined3d-CSMT_Main/0107-wined3d-Add-a-comment-about-worker-thread-lag.patch
-	patch_apply wined3d-CSMT_Main/0108-Winex11-complain-about-glfinish.patch
 	patch_apply wined3d-CSMT_Main/0109-wined3d-Put-GL_APPLE_flush_buffer_range-syncing-back.patch
 	patch_apply wined3d-CSMT_Main/0110-wined3d-Wait-for-the-resource-to-be-idle-when-destro.patch
 	patch_apply wined3d-CSMT_Main/0111-wined3d-Don-t-sync-on-redundant-discard-calls.patch
@@ -7420,8 +7418,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/0114-wined3d-Only-discard-buffers-that-are-in-use.patch
 	patch_apply wined3d-CSMT_Main/0117-wined3d-Send-getdc-and-releasedc-through-the-command.patch
 	patch_apply wined3d-CSMT_Main/0118-wined3d-Ignore-WINED3D_MAP_NO_DIRTY_UPDATE-in-resour.patch
-	patch_apply wined3d-CSMT_Main/0119-d3d8-tests-D3DLOCK_NO_DIRTY_UPDATE-on-managed-textur.patch
-	patch_apply wined3d-CSMT_Main/0120-d3d9-tests-D3DLOCK_NO_DIRTY_UPDATE-on-managed-textur.patch
 	patch_apply wined3d-CSMT_Main/0121-wined3d-Create-dummy-textures-through-the-CS.patch
 	patch_apply wined3d-CSMT_Main/0122-wined3d-Create-the-initial-context-through-the-CS.patch
 	patch_apply wined3d-CSMT_Main/0123-wined3d-Recreate-ctx-and-dummy-textures-through-the-.patch
@@ -7537,7 +7533,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Set map_heap_memory = NULL when allocating a PBO.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Wait only for the buffer to be idle.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Add a comment about worker thread lag.", 1 },';
-		echo '+    { "Stefan Dösinger", "Winex11: Complain about glfinish.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Put GL_APPLE_flush_buffer_range syncing back in place.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Wait for the resource to be idle when destroying user memory surfaces.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t sync on redundant discard calls.", 1 },';
@@ -7546,8 +7541,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Only discard buffers that are in use.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Send getdc and releasedc through the command stream.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Ignore WINED3D_MAP_NO_DIRTY_UPDATE in resource_map.", 1 },';
-		echo '+    { "Stefan Dösinger", "d3d8/tests: D3DLOCK_NO_DIRTY_UPDATE on managed textures is temporarily broken.", 1 },';
-		echo '+    { "Stefan Dösinger", "d3d9/tests: D3DLOCK_NO_DIRTY_UPDATE on managed textures is temporarily broken.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Create dummy textures through the CS.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Create the initial context through the CS.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Recreate ctx and dummy textures through the CS after resets.", 1 },';

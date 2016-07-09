@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "38f3d59ed694afba7913b4992d13cb044a09126c"
+	echo "cc9c18a46d1ce7e2834bae0fa65a6ed7904820dd"
 }
 
 # Show version information
@@ -7400,10 +7400,7 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/0088-wined3d-Create-buffers-before-mapping-them.patch
 	patch_apply wined3d-CSMT_Main/0090-wined3d-Remove-another-glFinish.patch
 	patch_apply wined3d-CSMT_Main/0093-wined3d-Create-VBOs-through-the-command-stream.patch
-	patch_apply wined3d-CSMT_Main/0094-wined3d-Clean-up-resource-data-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0095-wined3d-Clean-up-buffer-resource-data-through-the-CS.patch
 	patch_apply wined3d-CSMT_Main/0096-Swapchain-waits.patch
-	patch_apply wined3d-CSMT_Main/0097-wined3d-Clean-up-textures-through-the-command-stream.patch
 	patch_apply wined3d-CSMT_Main/0098-wined3d-Unload-resources-through-the-CS-in-uninit_3d.patch
 	patch_apply wined3d-CSMT_Main/0099-wined3d-Unload-resources-through-the-CS-in-device_re.patch
 	patch_apply wined3d-CSMT_Main/0100-wined3d-Don-t-glFinish-after-a-depth-buffer-blit.patch
@@ -7529,10 +7526,7 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Create buffers before mapping them.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Remove another glFinish.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Create VBOs through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Clean up resource data through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Clean up buffer resource data through the CS.", 1 },';
 		echo '+    { "Stefan Dösinger", "Swapchain waits.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Clean up textures through the command stream.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Unload resources through the CS in uninit_3d.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Unload resources through the CS in device_reset.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t glFinish after a depth buffer blit.", 1 },';

@@ -1,30 +1,42 @@
-From 025efa13f043ec294bea8f5efac0c39782d4f774 Mon Sep 17 00:00:00 2001
+From f893866b12daa27f420b50ed001fae189151020c Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 3 Sep 2014 20:20:39 +0200
 Subject: wined3d: Wait for the resource to be idle when destroying user memory
  surfaces.
 
 ---
- dlls/wined3d/texture.c | 6 ++++++
- 1 file changed, 6 insertions(+)
+ dlls/wined3d/texture.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
 
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index c075b3c..2f57373 100644
+index cecdfcd..d20322d 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -822,6 +822,12 @@ static void wined3d_texture_cleanup_main(struct wined3d_texture *texture)
-             sub_resource->parent_ops->wined3d_object_destroyed(sub_resource->parent);
-     }
- 
-+    /* Wait for the CS to finish operations on this texture when user memory was in use.
-+     * The application is allowed to free the memory after texture / surface destruction
-+     * returns. */
+@@ -828,6 +828,10 @@ ULONG CDECL wined3d_texture_incref(struct wined3d_texture *texture)
+ static void wined3d_texture_cleanup_sync(struct wined3d_texture *texture)
+ {
+     wined3d_texture_sub_resources_destroyed(texture);
++
 +    if (texture->resource.map_binding == WINED3D_LOCATION_USER_MEMORY)
-+        wined3d_resource_wait_fence(&texture->resource);
++        wined3d_resource_wait_idle(&texture->resource);
 +
      resource_cleanup(&texture->resource);
-     wined3d_cs_emit_destroy_object(device->cs, wined3d_texture_destroy_object, texture);
- }
+     wined3d_resource_wait_idle(&texture->resource);
+     wined3d_texture_cleanup(texture);
+@@ -855,6 +859,13 @@ ULONG CDECL wined3d_texture_decref(struct wined3d_texture *texture)
+     {
+         wined3d_texture_sub_resources_destroyed(texture);
+         texture->resource.parent_ops->wined3d_object_destroyed(texture->resource.parent);
++
++        /* Wait for the CS to finish operations on this texture when user memory was in use.
++         * The application is allowed to free the memory after texture / surface destruction
++         * returns. */
++        if (texture->resource.map_binding == WINED3D_LOCATION_USER_MEMORY)
++            wined3d_resource_wait_idle(&texture->resource);
++
+         resource_cleanup(&texture->resource);
+         wined3d_cs_emit_destroy_object(texture->resource.device->cs, wined3d_texture_destroy_object, texture);
+     }
 -- 
 2.8.0
 

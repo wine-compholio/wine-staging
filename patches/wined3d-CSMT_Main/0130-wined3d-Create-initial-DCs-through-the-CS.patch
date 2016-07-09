@@ -1,4 +1,4 @@
-From 30c2a0ff87ec71e48c3f2358708dac4ff3ab4cda Mon Sep 17 00:00:00 2001
+From 64a1d858b61ca163234d2c387fb26555b6843257 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefandoesinger@gmx.at>
 Date: Sat, 7 May 2016 22:31:28 +0100
 Subject: wined3d: Create initial DCs through the CS.
@@ -10,7 +10,7 @@ Subject: wined3d: Create initial DCs through the CS.
  3 files changed, 19 insertions(+), 17 deletions(-)
 
 diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
-index d6e116f..794e8d9 100644
+index 0db879f..0258510 100644
 --- a/dlls/wined3d/context.c
 +++ b/dlls/wined3d/context.c
 @@ -3539,6 +3539,9 @@ struct wined3d_context *context_acquire(const struct wined3d_device *device, str
@@ -24,10 +24,10 @@ index d6e116f..794e8d9 100644
          current_context = NULL;
  
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index d59ffb7..5a86b7c 100644
+index acf2ae0..b5ccf07 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -2877,6 +2877,9 @@ static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t s
+@@ -2666,6 +2666,9 @@ static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t s
      struct wined3d_cs_queue *queue = prio ? &cs->prio_queue : &cs->queue;
      size_t queue_size = sizeof(queue->data) / sizeof(*queue->data);
  
@@ -37,7 +37,7 @@ index d59ffb7..5a86b7c 100644
      if (queue_size - size < queue->head)
      {
          struct wined3d_cs_skip *skip;
-@@ -2949,18 +2952,6 @@ static void wined3d_cs_emit_stop(struct wined3d_cs *cs)
+@@ -2738,18 +2741,6 @@ static void wined3d_cs_emit_stop(struct wined3d_cs *cs)
  static void wined3d_cs_mt_finish(struct wined3d_cs *cs)
  {
      BOOL fence;
@@ -57,10 +57,10 @@ index d59ffb7..5a86b7c 100644
  
      /* A busy wait should be fine, we're not supposed to have to wait very
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index 9be152d..0f0bdf2 100644
+index 42f0ba7..372559a 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -1110,7 +1110,11 @@ HRESULT CDECL wined3d_texture_update_desc(struct wined3d_texture *texture, UINT
+@@ -1205,7 +1205,11 @@ HRESULT CDECL wined3d_texture_update_desc(struct wined3d_texture *texture, UINT
      wined3d_texture_invalidate_location(texture, 0, ~valid_location);
  
      if (create_dib)
@@ -73,7 +73,7 @@ index 9be152d..0f0bdf2 100644
  
      return WINED3D_OK;
  }
-@@ -2130,11 +2134,15 @@ static HRESULT texture_init(struct wined3d_texture *texture, const struct wined3
+@@ -2188,11 +2192,15 @@ static HRESULT texture_init(struct wined3d_texture *texture, const struct wined3
  
              TRACE("Created surface level %u, layer %u @ %p.\n", i, j, surface);
  
@@ -81,12 +81,12 @@ index 9be152d..0f0bdf2 100644
 -                    && FAILED(hr = wined3d_surface_create_dc(surface)))
 +            if ((desc->usage & WINED3DUSAGE_OWNDC) || (device->wined3d->flags & WINED3D_NO3D))
              {
--                wined3d_texture_cleanup_main(texture);
+-                wined3d_texture_cleanup_sync(texture);
 -                return hr;
 +                HDC dc;
 +                if (FAILED(hr = wined3d_texture_get_dc(texture, idx, &dc)))
 +                {
-+                    wined3d_texture_cleanup_main(texture);
++                    wined3d_texture_cleanup_sync(texture);
 +                    return hr;
 +                }
 +                wined3d_texture_release_dc(texture, idx, dc);

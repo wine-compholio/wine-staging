@@ -1,4 +1,4 @@
-From 46b7d05ee6b1ff14469c78be3f2b9c1fd0192996 Mon Sep 17 00:00:00 2001
+From 6dab3b97a20b3b51219c2158309a303cd98898cb Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 3 Apr 2013 18:01:34 +0200
 Subject: wined3d: Wait for the cs before destroying objects
@@ -13,23 +13,6 @@ the CS.
  dlls/wined3d/wined3d_private.h | 1 +
  4 files changed, 15 insertions(+)
 
-diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
-index edecdbe..66e13cb 100644
---- a/dlls/wined3d/buffer.c
-+++ b/dlls/wined3d/buffer.c
-@@ -565,6 +565,12 @@ ULONG CDECL wined3d_buffer_decref(struct wined3d_buffer *buffer)
- 
-     if (!refcount)
-     {
-+        if (wined3d_settings.cs_multithreaded)
-+        {
-+            FIXME("Waiting for cs.\n");
-+            buffer->resource.device->cs->ops->finish(buffer->resource.device->cs);
-+        }
-+
-         if (buffer->buffer_object)
-         {
-             context = context_acquire(buffer->resource.device, NULL);
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
 index 3bcbf19..185def9 100644
 --- a/dlls/wined3d/cs.c
@@ -49,28 +32,11 @@ index 3bcbf19..185def9 100644
  };
  
  /* FIXME: wined3d_device_uninit_3d() should either flush and wait, or be an
-diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index cdb7636..ecabc60 100644
---- a/dlls/wined3d/texture.c
-+++ b/dlls/wined3d/texture.c
-@@ -479,6 +479,12 @@ static void wined3d_texture_cleanup(struct wined3d_texture *texture)
- 
-     TRACE("texture %p.\n", texture);
- 
-+    if (wined3d_settings.cs_multithreaded)
-+    {
-+        FIXME("Waiting for cs.\n");
-+        texture->resource.device->cs->ops->finish(texture->resource.device->cs);
-+    }
-+
-     for (i = 0; i < sub_count; ++i)
-     {
-         if (!(buffer_object = texture->sub_resources[i].buffer_object))
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 1b6077d..dfb3cca 100644
+index cedb36d..e88f172 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2969,6 +2969,7 @@ struct wined3d_cs_ops
+@@ -2981,6 +2981,7 @@ struct wined3d_cs_ops
  {
      void *(*require_space)(struct wined3d_cs *cs, size_t size);
      void (*submit)(struct wined3d_cs *cs);

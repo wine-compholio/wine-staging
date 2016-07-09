@@ -1,19 +1,18 @@
-From 7af03f1c752ad8e933f75f73841f3deeeeb5ebdb Mon Sep 17 00:00:00 2001
+From 1eb816c58ca5ed8999d8914e2c5dee650e0bb2a4 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 20 Aug 2014 18:01:36 +0200
 Subject: wined3d: Introduce resource fencing.
 
 FIXME: The buffer part doesn't really make sense without dynamic buffer maps.
 ---
- dlls/wined3d/cs.c              | 19 +++++++++++++++++++
- dlls/wined3d/wined3d_private.h | 16 ++++++++++++++++
- 2 files changed, 35 insertions(+)
+ dlls/wined3d/cs.c | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 766dbad..0f8a03f 100644
+index f33cfa8..f196f72 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -553,6 +553,7 @@ static UINT wined3d_cs_exec_draw(struct wined3d_cs *cs, const void *data)
+@@ -554,6 +554,7 @@ static UINT wined3d_cs_exec_draw(struct wined3d_cs *cs, const void *data)
      struct wined3d_state *state = &cs->state;
      const struct wined3d_cs_draw *op = data;
      const struct wined3d_gl_info *gl_info = &cs->device->adapter->gl_info;
@@ -21,22 +20,22 @@ index 766dbad..0f8a03f 100644
  
      if (op->indexed && !gl_info->supported[ARB_DRAW_ELEMENTS_BASE_VERTEX])
      {
-@@ -578,6 +579,14 @@ static UINT wined3d_cs_exec_draw(struct wined3d_cs *cs, const void *data)
+@@ -579,6 +580,14 @@ static UINT wined3d_cs_exec_draw(struct wined3d_cs *cs, const void *data)
      draw_primitive(cs->device, state, op->base_vertex_idx, op->start_idx,
              op->index_count, op->start_instance, op->instance_count, op->indexed);
  
 +    if (op->indexed)
-+        wined3d_resource_dec_fence(&cs->state.index_buffer->resource);
++        wined3d_resource_release(&cs->state.index_buffer->resource);
 +    for (i = 0; i < sizeof(cs->state.streams) / sizeof(*cs->state.streams); i++)
 +    {
 +        if (cs->state.streams[i].buffer)
-+            wined3d_resource_dec_fence(&cs->state.streams[i].buffer->resource);
++            wined3d_resource_release(&cs->state.streams[i].buffer->resource);
 +    }
 +
      return sizeof(*op);
  }
  
-@@ -585,6 +594,8 @@ void wined3d_cs_emit_draw(struct wined3d_cs *cs, int base_vertex_idx, unsigned i
+@@ -586,6 +595,8 @@ void wined3d_cs_emit_draw(struct wined3d_cs *cs, int base_vertex_idx, unsigned i
          unsigned int index_count, unsigned int start_instance, unsigned int instance_count, BOOL indexed)
  {
      struct wined3d_cs_draw *op;
@@ -45,54 +44,20 @@ index 766dbad..0f8a03f 100644
  
      op = cs->ops->require_space(cs, sizeof(*op));
      op->opcode = WINED3D_CS_OP_DRAW;
-@@ -595,6 +606,14 @@ void wined3d_cs_emit_draw(struct wined3d_cs *cs, int base_vertex_idx, unsigned i
+@@ -596,6 +607,14 @@ void wined3d_cs_emit_draw(struct wined3d_cs *cs, int base_vertex_idx, unsigned i
      op->instance_count = instance_count;
      op->indexed = indexed;
  
 +    if (indexed)
-+        wined3d_resource_inc_fence(&state->index_buffer->resource);
++        wined3d_resource_acquire(&state->index_buffer->resource);
 +    for (i = 0; i < sizeof(state->streams) / sizeof(*state->streams); i++)
 +    {
 +        if (state->streams[i].buffer)
-+            wined3d_resource_inc_fence(&state->streams[i].buffer->resource);
++            wined3d_resource_acquire(&state->streams[i].buffer->resource);
 +    }
 +
      cs->ops->submit(cs, sizeof(*op));
  }
- 
-diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index c9e467b..a70d88f 100644
---- a/dlls/wined3d/wined3d_private.h
-+++ b/dlls/wined3d/wined3d_private.h
-@@ -2468,6 +2468,7 @@ struct wined3d_resource
-     DWORD priority;
-     void *heap_memory;
-     struct list resource_list_entry;
-+    LONG access_fence;
- 
-     void *parent;
-     const struct wined3d_parent_ops *parent_ops;
-@@ -2500,6 +2501,21 @@ BOOL wined3d_resource_is_offscreen(struct wined3d_resource *resource) DECLSPEC_H
- DWORD wined3d_resource_sanitize_map_flags(const struct wined3d_resource *resource, DWORD flags) DECLSPEC_HIDDEN;
- void wined3d_resource_update_draw_binding(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
- 
-+static inline void wined3d_resource_inc_fence(struct wined3d_resource *resource)
-+{
-+    InterlockedIncrement(&resource->access_fence);
-+}
-+
-+static inline void wined3d_resource_dec_fence(struct wined3d_resource *resource)
-+{
-+    InterlockedDecrement(&resource->access_fence);
-+}
-+
-+static inline void wined3d_resource_wait_fence(struct wined3d_resource *resource)
-+{
-+    while(InterlockedCompareExchange(&resource->access_fence, 0, 0));
-+}
-+
- /* Tests show that the start address of resources is 32 byte aligned */
- #define RESOURCE_ALIGNMENT 16
  
 -- 
 2.8.0

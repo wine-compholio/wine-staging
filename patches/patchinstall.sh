@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "cc9c18a46d1ce7e2834bae0fa65a6ed7904820dd"
+	echo "abb221fa81b60f53c14f6864bbfb9453455aeeeb"
 }
 
 # Show version information
@@ -7835,13 +7835,9 @@ fi
 # |   *	dlls/wininet/internet.c, dlls/wininet/tests/url.c
 # |
 if test "$enable_wininet_InternetCrackUrlW" -eq 1; then
-	patch_apply wininet-InternetCrackUrlW/0001-wininet-Set-lpszUrlPath-to-the-end-of-the-string-in-.patch
 	patch_apply wininet-InternetCrackUrlW/0002-wininet-Resize-buffer-when-call-to-InternetCanonical.patch
-	patch_apply wininet-InternetCrackUrlW/0004-wininet-tests-Add-test-to-verify-correct-handling-of.patch
 	(
-		echo '+    { "Michael Müller", "wininet: Set lpszUrlPath to the end of the string in InternetCrackUrlW when dwUrlPathLength > 0.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Resize buffer when call to InternetCanonicalizeUrlW fails in InternetCrackUrlW.", 1 },';
-		echo '+    { "Michael Müller", "wininet/tests: Add test to verify correct handling of urls without a path component.", 1 },';
 	) >> "$patchlist"
 fi
 

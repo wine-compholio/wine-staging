@@ -272,6 +272,7 @@ patch_enable_all ()
 	enable_riched20_IText_Interface="$1"
 	enable_rpcrt4_Pipe_Transport="$1"
 	enable_rpcrt4_RpcBindingServerFromClient="$1"
+	enable_secur32_Gnutls_Algorithms="$1"
 	enable_secur32_Zero_Buffer_Length="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
@@ -992,6 +993,9 @@ patch_enable ()
 			;;
 		rpcrt4-RpcBindingServerFromClient)
 			enable_rpcrt4_RpcBindingServerFromClient="$2"
+			;;
+		secur32-Gnutls_Algorithms)
+			enable_secur32_Gnutls_Algorithms="$2"
 			;;
 		secur32-Zero_Buffer_Length)
 			enable_secur32_Zero_Buffer_Length="$2"
@@ -5826,6 +5830,18 @@ if test "$enable_rpcrt4_RpcBindingServerFromClient" -eq 1; then
 	patch_apply rpcrt4-RpcBindingServerFromClient/0001-rpcrt4-Fix-prototype-of-RpcBindingServerFromClient.patch
 	(
 		echo '+    { "Sebastian Lackner", "rpcrt4: Fix prototype of RpcBindingServerFromClient.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset secur32-Gnutls_Algorithms
+# |
+# | Modified files:
+# |   *	dlls/secur32/schannel_gnutls.c
+# |
+if test "$enable_secur32_Gnutls_Algorithms" -eq 1; then
+	patch_apply secur32-Gnutls_Algorithms/0001-secur32-Define-missing-gnutls_kx_algorithm_t-values-.patch
+	(
+		echo '+    { "Sebastian Lackner", "secur32: Define missing gnutls_kx_algorithm_t values for old gnutls versions.", 1 },';
 	) >> "$patchlist"
 fi
 

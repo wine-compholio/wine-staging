@@ -148,6 +148,7 @@ patch_enable_all ()
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_MultiMonitor="$1"
 	enable_gdi32_Path_Metafile="$1"
+	enable_gdi32_PtInRegion="$1"
 	enable_gdi32_Symbol_Truetype_Font="$1"
 	enable_gdiplus_GdipCreateMetafileFromStream="$1"
 	enable_gdiplus_Grayscale_PNG="$1"
@@ -619,6 +620,9 @@ patch_enable ()
 			;;
 		gdi32-Path_Metafile)
 			enable_gdi32_Path_Metafile="$2"
+			;;
+		gdi32-PtInRegion)
+			enable_gdi32_PtInRegion="$2"
 			;;
 		gdi32-Symbol_Truetype_Font)
 			enable_gdi32_Symbol_Truetype_Font="$2"
@@ -3667,6 +3671,18 @@ if test "$enable_gdi32_Path_Metafile" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "gdi32/tests: Add some additional tests for ExtExtOut on a path for an EMF DC.", 2 },';
 		echo '+    { "Dmitry Timoshkov", "gdi32: ExtTextOut on a path with bitmap font selected shouldn'\''t fail.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "gdi32/tests: Explicitly test BeginPath() return value in the metafile path tests.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset gdi32-PtInRegion
+# |
+# | Modified files:
+# |   *	dlls/gdi32/region.c
+# |
+if test "$enable_gdi32_PtInRegion" -eq 1; then
+	patch_apply gdi32-PtInRegion/0001-gdi32-Add-back-the-extents-test.patch
+	(
+		echo '+    { "Huw Davies", "gdi32: Add back the extents test.", 1 },';
 	) >> "$patchlist"
 fi
 

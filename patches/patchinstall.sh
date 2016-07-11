@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0a3700e051f3e9473c5daa40a5cdd951b1310b8c"
+	echo "1bcc7ce75f64f2894de43379674bc5c53c52bb3a"
 }
 
 # Show version information
@@ -7383,15 +7383,11 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/0056-wined3d-Get-rid-of-the-surface_upload_data-glFinish.patch
 	patch_apply wined3d-CSMT_Main/0057-wined3d-Don-t-lock-the-src-volume-in-device_update_v.patch
 	patch_apply wined3d-CSMT_Main/0058-wined3d-Handle-evit_managed_resources-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0059-wined3d-Introduce-resource-fencing.patch
 	patch_apply wined3d-CSMT_Main/0060-wined3d-Fence-update_texture-calls.patch
 	patch_apply wined3d-CSMT_Main/0061-wined3d-Dirtify-resources-on-unmap.patch
-	patch_apply wined3d-CSMT_Main/0062-wined3d-Fence-texture-reads-in-draws.patch
 	patch_apply wined3d-CSMT_Main/0063-wined3d-Fence-render-targets-and-depth-stencils.patch
 	patch_apply wined3d-CSMT_Main/0064-wined3d-Fence-blit-operations.patch
 	patch_apply wined3d-CSMT_Main/0065-wined3d-Fence-color_fill-operations.patch
-	patch_apply wined3d-CSMT_Main/0066-wined3d-Fence-clear-calls.patch
-	patch_apply wined3d-CSMT_Main/0067-wined3d-Fence-present-calls.patch
 	patch_apply wined3d-CSMT_Main/0068-d3d9-tests-Remove-a-TODO-that-has-been-hacked-away.patch
 	patch_apply wined3d-CSMT_Main/0069-wined3d-Make-resource-maps-and-unmaps-a-priority-com.patch
 	patch_apply wined3d-CSMT_Main/0070-wined3d-Send-update_sub_resource-calls-through-the-c.patch
@@ -7506,15 +7502,11 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Get rid of the surface_upload_data glFinish.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t lock the src volume in device_update_volume.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Handle evit_managed_resources through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Introduce resource fencing.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Fence update_texture calls.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Dirtify resources on unmap.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Fence texture reads in draws.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Fence render targets and depth stencils.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Fence blit operations.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Fence color_fill operations.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Fence clear calls.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Fence present calls.", 1 },';
 		echo '+    { "Stefan Dösinger", "d3d9/tests: Remove a TODO that has been hacked away.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Make resource maps and unmaps a priority command.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Send update_sub_resource calls through the command stream.", 1 },';

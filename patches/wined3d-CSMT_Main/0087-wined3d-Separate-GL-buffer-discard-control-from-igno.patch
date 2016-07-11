@@ -1,4 +1,4 @@
-From 95ab414f54e4b6b157593c001a7bf047f74566a5 Mon Sep 17 00:00:00 2001
+From f4ee680803cc4d5e1871796147a7839d8b5c9a2f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Tue, 30 Jul 2013 22:17:10 +0200
 Subject: wined3d: Separate GL buffer discard control from ignoring
@@ -18,7 +18,7 @@ There are some problems left:
  3 files changed, 28 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
-index e3659b2..f939c57 100644
+index 94913be..07dca47 100644
 --- a/dlls/wined3d/buffer.c
 +++ b/dlls/wined3d/buffer.c
 @@ -32,7 +32,7 @@ WINE_DEFAULT_DEBUG_CHANNEL(d3d);
@@ -30,7 +30,7 @@ index e3659b2..f939c57 100644
  #define WINED3D_BUFFER_SYNC         0x10    /* There has been at least one synchronized map since the last preload. */
  #define WINED3D_BUFFER_APPLESYNC    0x20    /* Using sync as in GL_APPLE_flush_buffer_range. */
  
-@@ -931,7 +931,7 @@ HRESULT CDECL wined3d_buffer_map(struct wined3d_buffer *buffer, UINT offset, UIN
+@@ -925,7 +925,7 @@ HRESULT CDECL wined3d_buffer_map(struct wined3d_buffer *buffer, UINT offset, UIN
       * previous contents of the buffer. The r600g driver only does this when
       * the buffer is currently in use, while the proprietary NVIDIA driver
       * appears to do this unconditionally. */
@@ -39,7 +39,7 @@ index e3659b2..f939c57 100644
          flags &= ~WINED3D_MAP_DISCARD;
      count = ++buffer->resource.map_count;
  
-@@ -1009,10 +1009,15 @@ HRESULT CDECL wined3d_buffer_map(struct wined3d_buffer *buffer, UINT offset, UIN
+@@ -1003,10 +1003,15 @@ HRESULT CDECL wined3d_buffer_map(struct wined3d_buffer *buffer, UINT offset, UIN
                  context_release(context);
              }
          }
@@ -59,7 +59,7 @@ index e3659b2..f939c57 100644
              buffer->flags |= WINED3D_BUFFER_SYNC;
      }
  
-@@ -1021,6 +1026,7 @@ HRESULT CDECL wined3d_buffer_map(struct wined3d_buffer *buffer, UINT offset, UIN
+@@ -1015,6 +1020,7 @@ HRESULT CDECL wined3d_buffer_map(struct wined3d_buffer *buffer, UINT offset, UIN
          BOOL swvp = device->create_parms.flags & WINED3DCREATE_SOFTWARE_VERTEXPROCESSING;
          if (flags & WINED3D_MAP_DISCARD && !swvp)
          {
@@ -67,7 +67,7 @@ index e3659b2..f939c57 100644
              wined3d_resource_allocate_sysmem(&buffer->resource);
              wined3d_cs_emit_buffer_swap_mem(device->cs, buffer, buffer->resource.map_heap_memory);
          }
-@@ -1459,3 +1465,10 @@ HRESULT CDECL wined3d_buffer_create_ib(struct wined3d_device *device, UINT size,
+@@ -1453,3 +1459,10 @@ HRESULT CDECL wined3d_buffer_create_ib(struct wined3d_device *device, UINT size,
  
      return WINED3D_OK;
  }
@@ -79,10 +79,10 @@ index e3659b2..f939c57 100644
 +    buffer->flags |= WINED3D_BUFFER_DISCARD;
 +}
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 9044495..4833fda 100644
+index 577928e..991adbc 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -723,11 +723,17 @@ void wined3d_cs_emit_draw(struct wined3d_cs *cs, int base_vertex_idx, unsigned i
+@@ -755,11 +755,17 @@ void wined3d_cs_emit_draw(struct wined3d_cs *cs, int base_vertex_idx, unsigned i
      op->indexed = indexed;
  
      if (indexed)
@@ -90,7 +90,7 @@ index 9044495..4833fda 100644
          wined3d_resource_acquire(&state->index_buffer->resource);
 +        state->index_buffer->ignore_discard = FALSE;
 +    }
-     for (i = 0; i < sizeof(state->streams) / sizeof(*state->streams); i++)
+     for (i = 0; i < ARRAY_SIZE(state->streams); ++i)
      {
          if (state->streams[i].buffer)
 +        {
@@ -98,9 +98,9 @@ index 9044495..4833fda 100644
 +            state->streams[i].buffer->ignore_discard = FALSE;
 +        }
      }
-     for (i = 0; i < sizeof(state->textures) / sizeof(*state->textures); i++)
+     for (i = 0; i < ARRAY_SIZE(state->textures); ++i)
      {
-@@ -2270,8 +2276,7 @@ static UINT wined3d_cs_exec_buffer_swap_mem(struct wined3d_cs *cs, const void *d
+@@ -2323,8 +2329,7 @@ static UINT wined3d_cs_exec_buffer_swap_mem(struct wined3d_cs *cs, const void *d
      const struct wined3d_cs_buffer_swap_mem *op = data;
      struct wined3d_buffer *buffer = op->buffer;
  
@@ -111,7 +111,7 @@ index 9044495..4833fda 100644
      if (!buffer->buffer_object && buffer->resource.bind_count)
      {
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 748546f..2d8a2e6 100644
+index 2b76e81..c13a553 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -3200,6 +3200,7 @@ struct wined3d_buffer

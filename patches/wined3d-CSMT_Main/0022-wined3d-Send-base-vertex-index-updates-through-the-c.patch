@@ -1,4 +1,4 @@
-From cd87357f0b178411a5290b836ce1bd5689e1816f Mon Sep 17 00:00:00 2001
+From 2395e19d3954fa806523a7353275bc635fcbe73c Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Sun, 7 Apr 2013 17:33:20 +0200
 Subject: wined3d: Send base vertex index updates through the cs
@@ -10,10 +10,10 @@ Subject: wined3d: Send base vertex index updates through the cs
  3 files changed, 50 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 3d2c4e3..14032bc 100644
+index a68e9e6..0a3780b 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -67,6 +67,7 @@ enum wined3d_cs_op
+@@ -68,6 +68,7 @@ enum wined3d_cs_op
      WINED3D_CS_OP_SET_VS_CONSTS_F,
      WINED3D_CS_OP_SET_PS_CONSTS_F,
      WINED3D_CS_OP_GLFINISH,
@@ -21,7 +21,7 @@ index 3d2c4e3..14032bc 100644
      WINED3D_CS_OP_STOP,
  };
  
-@@ -298,6 +299,12 @@ struct wined3d_cs_finish
+@@ -306,6 +307,12 @@ struct wined3d_cs_finish
      enum wined3d_cs_op opcode;
  };
  
@@ -34,12 +34,14 @@ index 3d2c4e3..14032bc 100644
  /* FIXME: The list synchronization probably isn't particularly fast. */
  static void wined3d_cs_list_enqueue(struct wined3d_cs_list *list, struct wined3d_cs_block *block)
  {
-@@ -492,6 +499,21 @@ static UINT wined3d_cs_exec_draw(struct wined3d_cs *cs, const void *data)
- {
-     struct wined3d_state *state = &cs->state;
+@@ -543,9 +550,24 @@ static UINT wined3d_cs_exec_draw(struct wined3d_cs *cs, const void *data)
+     struct wined3d_shader_sampler_map_entry *entry;
+     struct wined3d_shader_resource_view *view;
      const struct wined3d_cs_draw *op = data;
 +    const struct wined3d_gl_info *gl_info = &cs->device->adapter->gl_info;
-+
+     struct wined3d_shader *shader;
+     unsigned int i, j;
+ 
 +    if (op->indexed && !gl_info->supported[ARB_DRAW_ELEMENTS_BASE_VERTEX])
 +    {
 +        if (cs->state.load_base_vertex_index != cs->state.base_vertex_index)
@@ -53,10 +55,11 @@ index 3d2c4e3..14032bc 100644
 +        cs->state.load_base_vertex_index = 0;
 +        device_invalidate_state(cs->device, STATE_BASEVERTEXINDEX);
 +    }
- 
++
      if (!cs->device->adapter->gl_info.supported[ARB_DRAW_ELEMENTS_BASE_VERTEX]
              && state->load_base_vertex_index != op->base_vertex_idx)
-@@ -946,7 +968,6 @@ static UINT wined3d_cs_exec_transfer_stateblock(struct wined3d_cs *cs, const voi
+     {
+@@ -1086,7 +1108,6 @@ static UINT wined3d_cs_exec_transfer_stateblock(struct wined3d_cs *cs, const voi
      /* Don't memcpy the entire struct, we'll remove single items as we add dedicated
       * ops for setting states */
  
@@ -64,7 +67,7 @@ index 3d2c4e3..14032bc 100644
      cs->state.gl_primitive_type = op->state.gl_primitive_type;
  
      memcpy(cs->state.vs_consts_b, op->state.vs_consts_b, sizeof(cs->state.vs_consts_b));
-@@ -969,7 +990,6 @@ void wined3d_cs_emit_transfer_stateblock(struct wined3d_cs *cs, const struct win
+@@ -1109,7 +1130,6 @@ void wined3d_cs_emit_transfer_stateblock(struct wined3d_cs *cs, const struct win
  
      /* Don't memcpy the entire struct, we'll remove single items as we add dedicated
       * ops for setting states */
@@ -72,7 +75,7 @@ index 3d2c4e3..14032bc 100644
      op->state.gl_primitive_type = state->gl_primitive_type;
  
      memcpy(op->state.vs_consts_b, state->vs_consts_b, sizeof(op->state.vs_consts_b));
-@@ -1383,6 +1403,28 @@ void wined3d_cs_emit_glfinish(struct wined3d_cs *cs)
+@@ -1545,6 +1565,28 @@ void wined3d_cs_emit_glfinish(struct wined3d_cs *cs)
      cs->ops->submit(cs);
  }
  
@@ -101,7 +104,7 @@ index 3d2c4e3..14032bc 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_FENCE                      */ wined3d_cs_exec_fence,
-@@ -1416,6 +1458,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -1579,6 +1621,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_SET_VS_CONSTS_F            */ wined3d_cs_exec_set_vs_consts_f,
      /* WINED3D_CS_OP_SET_PS_CONSTS_F            */ wined3d_cs_exec_set_ps_consts_f,
      /* WINED3D_CS_OP_GLFINISH                   */ wined3d_cs_exec_glfinish,
@@ -110,7 +113,7 @@ index 3d2c4e3..14032bc 100644
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index e90588c..1df5cab 100644
+index 7a43657..fcb8d7e 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
 @@ -1987,6 +1987,9 @@ void CDECL wined3d_device_set_base_vertex_index(struct wined3d_device *device, I
@@ -124,10 +127,10 @@ index e90588c..1df5cab 100644
  
  INT CDECL wined3d_device_get_base_vertex_index(const struct wined3d_device *device)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index b5f7937..6fe7b09 100644
+index a325ee2..db70629 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2995,6 +2995,8 @@ void wined3d_cs_emit_set_viewport(struct wined3d_cs *cs, const struct wined3d_vi
+@@ -3070,6 +3070,8 @@ void wined3d_cs_emit_set_viewport(struct wined3d_cs *cs, const struct wined3d_vi
  void wined3d_cs_emit_set_consts_f(struct wined3d_cs *cs, unsigned int start_idx,
          unsigned int count, const struct wined3d_vec4 *constants, enum wined3d_shader_type type) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_glfinish(struct wined3d_cs *cs) DECLSPEC_HIDDEN;

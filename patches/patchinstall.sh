@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "1bcc7ce75f64f2894de43379674bc5c53c52bb3a"
+	echo "5101a90bca2bd2618b488f37624af43efe17a0e0"
 }
 
 # Show version information
@@ -271,7 +271,6 @@ patch_enable_all ()
 	enable_riched20_IText_Interface="$1"
 	enable_rpcrt4_Pipe_Transport="$1"
 	enable_rpcrt4_RpcBindingServerFromClient="$1"
-	enable_secur32_Gnutls_Algorithms="$1"
 	enable_secur32_Zero_Buffer_Length="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
@@ -989,9 +988,6 @@ patch_enable ()
 			;;
 		rpcrt4-RpcBindingServerFromClient)
 			enable_rpcrt4_RpcBindingServerFromClient="$2"
-			;;
-		secur32-Gnutls_Algorithms)
-			enable_secur32_Gnutls_Algorithms="$2"
 			;;
 		secur32-Zero_Buffer_Length)
 			enable_secur32_Zero_Buffer_Length="$2"
@@ -5817,18 +5813,6 @@ if test "$enable_rpcrt4_RpcBindingServerFromClient" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset secur32-Gnutls_Algorithms
-# |
-# | Modified files:
-# |   *	dlls/secur32/schannel_gnutls.c
-# |
-if test "$enable_secur32_Gnutls_Algorithms" -eq 1; then
-	patch_apply secur32-Gnutls_Algorithms/0001-secur32-Define-missing-gnutls_kx_algorithm_t-values-.patch
-	(
-		echo '+    { "Sebastian Lackner", "secur32: Define missing gnutls_kx_algorithm_t values for old gnutls versions.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset secur32-Zero_Buffer_Length
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6608,16 +6592,14 @@ fi
 # Patchset taskmgr-Memory_Usage
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/ntdll/nt.c, dlls/ntdll/virtual.c, programs/taskmgr/font.bmp, programs/taskmgr/graph.c,
-# | 	programs/taskmgr/resource.h, programs/taskmgr/taskmgr.c, programs/taskmgr/taskmgr.rc
+# |   *	dlls/ntdll/nt.c, programs/taskmgr/font.bmp, programs/taskmgr/graph.c, programs/taskmgr/resource.h,
+# | 	programs/taskmgr/taskmgr.c, programs/taskmgr/taskmgr.rc
 # |
 if test "$enable_taskmgr_Memory_Usage" -eq 1; then
-	patch_apply taskmgr-Memory_Usage/0001-ntdll-Use-sysinfo-to-report-correct-number-of-physic.patch
 	patch_apply taskmgr-Memory_Usage/0002-ntdll-Report-system-information-SystemPerformanceInf.patch
 	patch_apply taskmgr-Memory_Usage/0003-taskmgr-Use-system-font-instead-of-special-bitmap-fo.patch
 	patch_apply taskmgr-Memory_Usage/0004-taskmgr-Use-different-units-depending-on-memory-usag.patch
 	(
-		echo '+    { "Michael Müller", "ntdll: Use sysinfo to report correct number of physical pages.", 1 },';
 		echo '+    { "Michael Müller", "ntdll: Report system information SystemPerformanceInformation info class.", 1 },';
 		echo '+    { "Michael Müller", "taskmgr: Use system font instead of special bitmap font.", 1 },';
 		echo '+    { "Michael Müller", "taskmgr: Use different units depending on memory usage.", 1 },';

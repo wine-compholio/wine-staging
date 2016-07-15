@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5101a90bca2bd2618b488f37624af43efe17a0e0"
+	echo "fec0b697c74a8e016b41968b342f9fc9fe11bf74"
 }
 
 # Show version information
@@ -218,7 +218,6 @@ patch_enable_all ()
 	enable_ntdll_Loader_Machine_Type="$1"
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtQueryEaFile="$1"
-	enable_ntdll_NtQueryInformationThread="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_NtUnmapViewOfSection="$1"
@@ -829,9 +828,6 @@ patch_enable ()
 			;;
 		ntdll-NtQueryEaFile)
 			enable_ntdll_NtQueryEaFile="$2"
-			;;
-		ntdll-NtQueryInformationThread)
-			enable_ntdll_NtQueryInformationThread="$2"
 			;;
 		ntdll-NtQuerySection)
 			enable_ntdll_NtQuerySection="$2"
@@ -2150,13 +2146,6 @@ if test "$enable_ntdll_Purist_Mode" -eq 1; then
 		abort "Patchset ntdll-DllRedirects disabled, but ntdll-Purist_Mode depends on that."
 	fi
 	enable_ntdll_DllRedirects=1
-fi
-
-if test "$enable_ntdll_NtSetLdtEntries" -eq 1; then
-	if test "$enable_ntdll_NtQueryInformationThread" -gt 1; then
-		abort "Patchset ntdll-NtQueryInformationThread disabled, but ntdll-NtSetLdtEntries depends on that."
-	fi
-	enable_ntdll_NtQueryInformationThread=1
 fi
 
 if test "$enable_ntdll_Junction_Points" -eq 1; then
@@ -4936,18 +4925,6 @@ if test "$enable_ntdll_NtAccessCheck" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-NtQueryInformationThread
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/thread.c, dlls/ntdll/thread.c
-# |
-if test "$enable_ntdll_NtQueryInformationThread" -eq 1; then
-	patch_apply ntdll-NtQueryInformationThread/0001-ntdll-Add-support-for-fs-to-NtQueryInformationThread.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "ntdll: Add support for fs to NtQueryInformationThread(ThreadDescriptorTableEntry).", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-NtQuerySection
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4971,9 +4948,6 @@ if test "$enable_ntdll_NtQuerySection" -eq 1; then
 fi
 
 # Patchset ntdll-NtSetLdtEntries
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-NtQueryInformationThread
 # |
 # | Modified files:
 # |   *	dlls/kernel32/tests/thread.c, dlls/ntdll/nt.c, libs/wine/ldt.c
@@ -5704,10 +5678,8 @@ fi
 # | 	dlls/opengl32/wgl.c
 # |
 if test "$enable_opengl32_glDebugMessageCallback" -eq 1; then
-	patch_apply opengl32-glDebugMessageCallback/0001-opengl32-tests-Include-wgl.h-and-remove-duplicate-de.patch
 	patch_apply opengl32-glDebugMessageCallback/0002-opengl32-Add-wrappers-for-glDebugMessageCallback-to-.patch
 	(
-		echo '+    { "Sebastian Lackner", "opengl32/tests: Include wgl.h and remove duplicate declarations.", 1 },';
 		echo '+    { "Sebastian Lackner", "opengl32: Add wrappers for glDebugMessageCallback to handle calling convention differences.", 1 },';
 	) >> "$patchlist"
 fi

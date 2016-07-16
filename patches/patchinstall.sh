@@ -271,6 +271,7 @@ patch_enable_all ()
 	enable_rpcrt4_Pipe_Transport="$1"
 	enable_rpcrt4_RpcBindingServerFromClient="$1"
 	enable_secur32_Zero_Buffer_Length="$1"
+	enable_server_BaseNamedObjects="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
 	enable_server_Desktop_Refcount="$1"
@@ -987,6 +988,9 @@ patch_enable ()
 			;;
 		secur32-Zero_Buffer_Length)
 			enable_secur32_Zero_Buffer_Length="$2"
+			;;
+		server-BaseNamedObjects)
+			enable_server_BaseNamedObjects="$2"
 			;;
 		server-ClipCursor)
 			enable_server_ClipCursor="$2"
@@ -5797,6 +5801,21 @@ if test "$enable_secur32_Zero_Buffer_Length" -eq 1; then
 	patch_apply secur32-Zero_Buffer_Length/0001-secur32-Set-output-buffer-size-to-zero-during-handsh.patch
 	(
 		echo '+    { "Michael Müller", "secur32: Set output buffer size to zero during handshake when no data needs to be sent.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-BaseNamedObjects
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40875] Provide symlink to BaseNamedObjects in \Sessions\1
+# |
+# | Modified files:
+# |   *	server/directory.c
+# |
+if test "$enable_server_BaseNamedObjects" -eq 1; then
+	patch_apply server-BaseNamedObjects/0001-server-Move-the-BaseNamedObjects-symlink-in-Sessions.patch
+	(
+		echo '+    { "Piotr Chruściel", "server: Move the \\\\BaseNamedObjects symlink in \\\\Sessions\\\\0 to \\\\Sessions\\\\1\\\\BaseNamedObjects.", 1 },';
 	) >> "$patchlist"
 fi
 

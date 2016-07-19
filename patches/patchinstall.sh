@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "adde9fadebe07c30ecc9f12685751fb78b3473c5"
+	echo "a71128513767d44a8f42e10895578b650061bdce"
 }
 
 # Show version information
@@ -220,7 +220,6 @@ patch_enable_all ()
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
-	enable_ntdll_NtUnmapViewOfSection="$1"
 	enable_ntdll_OSX_TEB_x86_64="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
@@ -298,7 +297,6 @@ patch_enable_all ()
 	enable_shell32_Context_Menu="$1"
 	enable_shell32_Default_Path="$1"
 	enable_shell32_File_Property_Dialog="$1"
-	enable_shell32_FolderItems_Stub_Iface="$1"
 	enable_shell32_IDragSourceHelper="$1"
 	enable_shell32_Icons="$1"
 	enable_shell32_Microsoft_Windows_Themes="$1"
@@ -835,9 +833,6 @@ patch_enable ()
 		ntdll-NtSetLdtEntries)
 			enable_ntdll_NtSetLdtEntries="$2"
 			;;
-		ntdll-NtUnmapViewOfSection)
-			enable_ntdll_NtUnmapViewOfSection="$2"
-			;;
 		ntdll-OSX_TEB_x86_64)
 			enable_ntdll_OSX_TEB_x86_64="$2"
 			;;
@@ -1068,9 +1063,6 @@ patch_enable ()
 			;;
 		shell32-File_Property_Dialog)
 			enable_shell32_File_Property_Dialog="$2"
-			;;
-		shell32-FolderItems_Stub_Iface)
-			enable_shell32_FolderItems_Stub_Iface="$2"
 			;;
 		shell32-IDragSourceHelper)
 			enable_shell32_IDragSourceHelper="$2"
@@ -4966,23 +4958,6 @@ if test "$enable_ntdll_NtSetLdtEntries" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-NtUnmapViewOfSection
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#2905] UnmapViewOfFile should fail on Win9x when addr is not the base address of a mapping
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/virtual.c, dlls/kernel32/virtual.c, dlls/ntdll/tests/info.c, dlls/ntdll/virtual.c
-# |
-if test "$enable_ntdll_NtUnmapViewOfSection" -eq 1; then
-	patch_apply ntdll-NtUnmapViewOfSection/0001-ntdll-NtUnmapViewOfSection-must-succeed-for-all-offs.patch
-	patch_apply ntdll-NtUnmapViewOfSection/0002-kernel32-Fail-in-UnmapViewOfFile-on-Win-9X-when-addr.patch
-	(
-		echo '+    { "Michael Müller", "ntdll: NtUnmapViewOfSection must succeed for all offsets within the mapped range.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Fail in UnmapViewOfFile on Win 9X when addr is not a base address of a mapping.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-OSX_TEB_x86_64
 # |
 # | Modified files:
@@ -6193,18 +6168,6 @@ if test "$enable_shell32_File_Property_Dialog" -eq 1; then
 	patch_apply shell32-File_Property_Dialog/0001-shell32-Add-general-tab-in-file-property-dialog.patch
 	(
 		echo '+    { "Michael Müller", "shell32: Add general tab in file property dialog.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset shell32-FolderItems_Stub_Iface
-# |
-# | Modified files:
-# |   *	dlls/shell32/shell32_main.h, dlls/shell32/shelldispatch.c
-# |
-if test "$enable_shell32_FolderItems_Stub_Iface" -eq 1; then
-	patch_apply shell32-FolderItems_Stub_Iface/0001-shell32-Implement-FolterImpl_Items-and-stubbed-Folde.patch
-	(
-		echo '+    { "Christian Costa", "shell32: Implement FolderImpl_Items and stubbed FolderItems interface.", 1 },';
 	) >> "$patchlist"
 fi
 

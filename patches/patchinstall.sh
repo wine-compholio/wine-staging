@@ -200,6 +200,7 @@ patch_enable_all ()
 	enable_ntdll_APC_Start_Process="$1"
 	enable_ntdll_Activation_Context="$1"
 	enable_ntdll_ApiSetQueryApiSetPresence="$1"
+	enable_ntdll_Attach_Process_DLLs="$1"
 	enable_ntdll_CLI_Images="$1"
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_Dealloc_Thread_Stack="$1"
@@ -772,6 +773,9 @@ patch_enable ()
 			;;
 		ntdll-ApiSetQueryApiSetPresence)
 			enable_ntdll_ApiSetQueryApiSetPresence="$2"
+			;;
+		ntdll-Attach_Process_DLLs)
+			enable_ntdll_Attach_Process_DLLs="$2"
 			;;
 		ntdll-CLI_Images)
 			enable_ntdll_CLI_Images="$2"
@@ -2147,13 +2151,24 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	enable_ntdll_NtQueryEaFile=1
 fi
 
+if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
+	if test "$enable_ntdll_Attach_Process_DLLs" -gt 1; then
+		abort "Patchset ntdll-Attach_Process_DLLs disabled, but ntdll-Hide_Wine_Exports depends on that."
+	fi
+	enable_ntdll_Attach_Process_DLLs=1
+fi
+
 if test "$enable_ntdll_DllRedirects" -eq 1; then
+	if test "$enable_ntdll_Attach_Process_DLLs" -gt 1; then
+		abort "Patchset ntdll-Attach_Process_DLLs disabled, but ntdll-DllRedirects depends on that."
+	fi
 	if test "$enable_ntdll_DllOverrides_WOW64" -gt 1; then
 		abort "Patchset ntdll-DllOverrides_WOW64 disabled, but ntdll-DllRedirects depends on that."
 	fi
 	if test "$enable_ntdll_Loader_Machine_Type" -gt 1; then
 		abort "Patchset ntdll-Loader_Machine_Type disabled, but ntdll-DllRedirects depends on that."
 	fi
+	enable_ntdll_Attach_Process_DLLs=1
 	enable_ntdll_DllOverrides_WOW64=1
 	enable_ntdll_Loader_Machine_Type=1
 fi
@@ -4658,6 +4673,21 @@ if test "$enable_ntdll_ApiSetQueryApiSetPresence" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-Attach_Process_DLLs
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40714] Ensure process_attach callbacks are not executed too early
+# |
+# | Modified files:
+# |   *	dlls/ntdll/loader.c
+# |
+if test "$enable_ntdll_Attach_Process_DLLs" -eq 1; then
+	patch_apply ntdll-Attach_Process_DLLs/0001-ntdll-Ensure-process-dlls-are-not-attached-too-early.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Ensure process dlls are not attached too early.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-CLI_Images
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -4764,7 +4794,7 @@ fi
 # Patchset ntdll-DllRedirects
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type
+# |   *	ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type
 # |
 # | Modified files:
 # |   *	dlls/ntdll/loader.c, dlls/ntdll/loadorder.c, dlls/ntdll/ntdll_misc.h
@@ -4853,6 +4883,9 @@ if test "$enable_ntdll_Heap_FreeLists" -eq 1; then
 fi
 
 # Patchset ntdll-Hide_Wine_Exports
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Attach_Process_DLLs
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#38656] Add support for hiding wine version information from applications
@@ -5000,7 +5033,7 @@ fi
 # Patchset ntdll-Purist_Mode
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects
+# |   *	ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects
 # |
 # | Modified files:
 # |   *	dlls/ntdll/loadorder.c
@@ -6843,7 +6876,7 @@ fi
 # Patchset uxtheme-GTK_Theming
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects
+# |   *	ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects
 # |
 # | Modified files:
 # |   *	aclocal.m4, configure.ac, dlls/uxtheme-gtk/Makefile.in, dlls/uxtheme-gtk/button.c, dlls/uxtheme-gtk/combobox.c, dlls
@@ -7206,8 +7239,8 @@ fi
 # Patchset wined3d-CSMT_Helper
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting,
-# | 	wined3d-DXTn, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs
+# |   *	makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects,
+# | 	wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
@@ -7234,8 +7267,8 @@ fi
 # Patchset wined3d-CSMT_Main
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting,
-# | 	wined3d-DXTn, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-CSMT_Helper
+# |   *	makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects,
+# | 	wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance

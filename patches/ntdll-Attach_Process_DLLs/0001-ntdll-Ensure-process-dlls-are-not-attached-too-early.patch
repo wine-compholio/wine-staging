@@ -1,0 +1,41 @@
+From de0a7b30ea846237b6ea60ec75cf30540ef25743 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 20 Jul 2016 02:21:41 +0200
+Subject: ntdll: Ensure process dlls are not attached too early.
+
+---
+ dlls/ntdll/loader.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index d9176d7..f90b347 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -63,6 +63,7 @@ WINE_DECLARE_DEBUG_CHANNEL(pid);
+ 
+ typedef DWORD (CALLBACK *DLLENTRYPROC)(HMODULE,DWORD,LPVOID);
+ 
++static BOOL process_attaching = TRUE;   /* set on process attach to avoid calling callbacks too early */
+ static BOOL process_detaching = FALSE;  /* set on process detach to avoid deadlocks with thread detach */
+ static int free_lib_count;   /* recursion depth of LdrUnloadDll calls */
+ 
+@@ -443,7 +444,7 @@ static FARPROC find_forwarded_export( HMODULE module, const char *forward, LPCWS
+     {
+         TRACE( "delay loading %s for '%s'\n", debugstr_w(mod_name), forward );
+         if (load_dll( load_path, mod_name, 0, &wm ) == STATUS_SUCCESS &&
+-            !(wm->ldr.Flags & LDR_DONT_RESOLVE_REFS))
++            !(wm->ldr.Flags & LDR_DONT_RESOLVE_REFS) && !process_attaching)
+         {
+             if (process_attach( wm, NULL ) != STATUS_SUCCESS)
+             {
+@@ -2961,6 +2962,7 @@ static NTSTATUS attach_process_dlls( void *wm )
+ {
+     NTSTATUS status;
+ 
++    process_attaching = FALSE;
+     pthread_sigmask( SIG_UNBLOCK, &server_block_set, NULL );
+ 
+     RtlEnterCriticalSection( &loader_section );
+-- 
+2.8.0
+

@@ -1,4 +1,4 @@
-From fe785b9c3faa38f33c228d45582d799641848378 Mon Sep 17 00:00:00 2001
+From 56b4e37209099adf0c6304ac1eeef6cbb367cc1f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 24 Jul 2013 16:34:17 +0200
 Subject: wined3d: Separate main and worker thread query state
@@ -9,10 +9,10 @@ Subject: wined3d: Separate main and worker thread query state
  2 files changed, 13 insertions(+), 21 deletions(-)
 
 diff --git a/dlls/wined3d/query.c b/dlls/wined3d/query.c
-index acdaa0d..d469857 100644
+index 6147cb4..e3ec9be 100644
 --- a/dlls/wined3d/query.c
 +++ b/dlls/wined3d/query.c
-@@ -304,6 +304,12 @@ HRESULT CDECL wined3d_query_issue(struct wined3d_query *query, DWORD flags)
+@@ -321,6 +321,12 @@ HRESULT CDECL wined3d_query_issue(struct wined3d_query *query, DWORD flags)
          query->counter_main++;
  
      wined3d_cs_emit_query_issue(query->device->cs, query, flags);
@@ -25,8 +25,8 @@ index acdaa0d..d469857 100644
      return WINED3D_OK;
  }
  
-@@ -479,11 +485,6 @@ static void wined3d_event_query_ops_issue(struct wined3d_query *query, DWORD fla
-         /* Started implicitly at device creation */
+@@ -495,11 +501,6 @@ static void wined3d_event_query_ops_issue(struct wined3d_query *query, DWORD fla
+         /* Started implicitly at query creation. */
          ERR("Event query issued with START flag - what to do?\n");
      }
 -
@@ -37,7 +37,7 @@ index acdaa0d..d469857 100644
  }
  
  static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD flags)
-@@ -499,7 +500,7 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
+@@ -515,7 +516,7 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
       * restart. */
      if (flags & WINED3DISSUE_BEGIN)
      {
@@ -46,7 +46,7 @@ index acdaa0d..d469857 100644
          {
              if (oq->context->tid != GetCurrentThreadId())
              {
-@@ -529,13 +530,14 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
+@@ -545,13 +546,14 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
          checkGLcall("glBeginQuery()");
  
          context_release(context);
@@ -62,7 +62,7 @@ index acdaa0d..d469857 100644
          {
              if (oq->context->tid != GetCurrentThreadId())
              {
-@@ -551,13 +553,9 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
+@@ -567,13 +569,9 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
                  context_release(context);
              }
          }
@@ -77,7 +77,7 @@ index acdaa0d..d469857 100644
      return;
  }
  
-@@ -664,8 +662,6 @@ static void wined3d_timestamp_query_ops_issue(struct wined3d_query *query, DWORD
+@@ -680,8 +678,6 @@ static void wined3d_timestamp_query_ops_issue(struct wined3d_query *query, DWORD
          GL_EXTCALL(glQueryCounter(tq->id, GL_TIMESTAMP));
          checkGLcall("glQueryCounter()");
          context_release(context);
@@ -86,7 +86,7 @@ index acdaa0d..d469857 100644
      }
  }
  
-@@ -702,11 +698,6 @@ static BOOL wined3d_timestamp_disjoint_query_ops_poll(struct wined3d_query *quer
+@@ -718,11 +714,6 @@ static BOOL wined3d_timestamp_disjoint_query_ops_poll(struct wined3d_query *quer
  static void wined3d_timestamp_disjoint_query_ops_issue(struct wined3d_query *query, DWORD flags)
  {
      TRACE("query %p, flags %#x.\n", query, flags);
@@ -98,7 +98,7 @@ index acdaa0d..d469857 100644
  }
  
  static HRESULT wined3d_statistics_query_ops_get_data(struct wined3d_query *query,
-@@ -813,13 +804,13 @@ static HRESULT query_init(struct wined3d_query *query, struct wined3d_device *de
+@@ -854,13 +845,13 @@ static HRESULT query_init(struct wined3d_query *query, struct wined3d_device *de
              }
              query->query_ops = &occlusion_query_ops;
              query->data_size = sizeof(DWORD);
@@ -113,12 +113,12 @@ index acdaa0d..d469857 100644
 -            ((struct wined3d_occlusion_query *)query->extendedData)->context = NULL;
              break;
  
-         case WINED3D_QUERY_TYPE_EVENT:
+         case WINED3D_QUERY_TYPE_SO_STATISTICS:
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 3d05e42..d9d0b63 100644
+index bbc9eea..e81ebc6 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -1375,6 +1375,7 @@ struct wined3d_occlusion_query
+@@ -1408,6 +1408,7 @@ struct wined3d_occlusion_query
      GLuint id;
      struct wined3d_context *context;
      DWORD samples;

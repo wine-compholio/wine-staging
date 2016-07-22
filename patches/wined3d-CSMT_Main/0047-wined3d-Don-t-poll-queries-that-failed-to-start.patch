@@ -1,4 +1,4 @@
-From e032a3b18797783a291ff0cc53900d2461612c5f Mon Sep 17 00:00:00 2001
+From c7d7d750b08d361b93070b5064aa69c6089a6d37 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 24 Jul 2013 17:27:35 +0200
 Subject: wined3d: Don't poll queries that failed to start
@@ -28,10 +28,10 @@ index 2f66eff..7178624 100644
          list_add_tail(&cs->query_poll_list, &query->poll_list_entry);
  
 diff --git a/dlls/wined3d/query.c b/dlls/wined3d/query.c
-index d469857..b7d3da2 100644
+index e3ec9be..dd81df0 100644
 --- a/dlls/wined3d/query.c
 +++ b/dlls/wined3d/query.c
-@@ -469,7 +469,7 @@ enum wined3d_query_type CDECL wined3d_query_get_type(const struct wined3d_query
+@@ -486,7 +486,7 @@ enum wined3d_query_type CDECL wined3d_query_get_type(const struct wined3d_query
      return query->type;
  }
  
@@ -40,15 +40,15 @@ index d469857..b7d3da2 100644
  {
      TRACE("query %p, flags %#x.\n", query, flags);
  
-@@ -479,20 +479,23 @@ static void wined3d_event_query_ops_issue(struct wined3d_query *query, DWORD fla
-         struct wined3d_event_query *event_query = query->extendedData;
+@@ -495,20 +495,23 @@ static void wined3d_event_query_ops_issue(struct wined3d_query *query, DWORD fla
+         struct wined3d_event_query *event_query = wined3d_event_query_from_query(query);
  
          wined3d_event_query_issue(event_query, query->device);
 +        return TRUE;
      }
      else if (flags & WINED3DISSUE_BEGIN)
      {
-         /* Started implicitly at device creation */
+         /* Started implicitly at query creation. */
          ERR("Event query issued with START flag - what to do?\n");
      }
 +    return FALSE;
@@ -65,7 +65,7 @@ index d469857..b7d3da2 100644
  
      TRACE("query %p, flags %#x.\n", query, flags);
  
-@@ -554,9 +557,10 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
+@@ -570,9 +573,10 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
              }
          }
          oq->started = FALSE;
@@ -77,7 +77,7 @@ index d469857..b7d3da2 100644
  }
  
  static HRESULT wined3d_timestamp_query_ops_get_data(struct wined3d_query *query,
-@@ -640,7 +644,7 @@ static BOOL wined3d_timestamp_query_ops_poll(struct wined3d_query *query)
+@@ -656,7 +660,7 @@ static BOOL wined3d_timestamp_query_ops_poll(struct wined3d_query *query)
      return ret;
  }
  
@@ -86,7 +86,7 @@ index d469857..b7d3da2 100644
  {
      struct wined3d_timestamp_query *tq = query->extendedData;
      struct wined3d_device *device = query->device;
-@@ -663,6 +667,10 @@ static void wined3d_timestamp_query_ops_issue(struct wined3d_query *query, DWORD
+@@ -679,6 +683,10 @@ static void wined3d_timestamp_query_ops_issue(struct wined3d_query *query, DWORD
          checkGLcall("glQueryCounter()");
          context_release(context);
      }
@@ -97,7 +97,7 @@ index d469857..b7d3da2 100644
  }
  
  static HRESULT wined3d_timestamp_disjoint_query_ops_get_data(struct wined3d_query *query,
-@@ -695,9 +703,10 @@ static BOOL wined3d_timestamp_disjoint_query_ops_poll(struct wined3d_query *quer
+@@ -711,9 +719,10 @@ static BOOL wined3d_timestamp_disjoint_query_ops_poll(struct wined3d_query *quer
      return TRUE;
  }
  
@@ -109,7 +109,7 @@ index d469857..b7d3da2 100644
  }
  
  static HRESULT wined3d_statistics_query_ops_get_data(struct wined3d_query *query,
-@@ -717,9 +726,10 @@ static BOOL wined3d_statistics_query_ops_poll(struct wined3d_query *query)
+@@ -733,9 +742,10 @@ static BOOL wined3d_statistics_query_ops_poll(struct wined3d_query *query)
      return TRUE;
  }
  
@@ -121,7 +121,7 @@ index d469857..b7d3da2 100644
  }
  
  static HRESULT wined3d_overflow_query_ops_get_data(struct wined3d_query *query,
-@@ -739,9 +749,10 @@ static BOOL wined3d_overflow_query_ops_poll(struct wined3d_query *query)
+@@ -755,9 +765,10 @@ static BOOL wined3d_overflow_query_ops_poll(struct wined3d_query *query)
      return TRUE;
  }
  
@@ -134,10 +134,10 @@ index d469857..b7d3da2 100644
  
  static const struct wined3d_query_ops event_query_ops =
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index d9d0b63..91b343c 100644
+index e81ebc6..277d891 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3130,7 +3130,7 @@ struct wined3d_query_ops
+@@ -1383,7 +1383,7 @@ struct wined3d_query_ops
  {
      HRESULT (*query_get_data)(struct wined3d_query *query, void *data, DWORD data_size, DWORD flags);
      BOOL (*query_poll)(struct wined3d_query *query);

@@ -1,4 +1,4 @@
-From fb8eb9da970ffe7ce1d39a233375e113c8c5d48c Mon Sep 17 00:00:00 2001
+From 9087e6cbcc3113c89bb617a7ab9cb0134d6ecd9d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 10 Apr 2013 17:16:02 +0200
 Subject: wined3d: Send light updates through the command stream
@@ -10,7 +10,7 @@ Subject: wined3d: Send light updates through the command stream
  3 files changed, 174 insertions(+), 64 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index a7b8f79..556edc0 100644
+index af7ec74..00c26b4 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -64,7 +64,6 @@ enum wined3d_cs_op
@@ -63,7 +63,7 @@ index a7b8f79..556edc0 100644
  /* FIXME: The list synchronization probably isn't particularly fast. */
  static void wined3d_cs_list_enqueue(struct wined3d_cs_list *list, struct wined3d_cs_block *block)
  {
-@@ -996,35 +1004,6 @@ void wined3d_cs_emit_set_texture(struct wined3d_cs *cs, UINT stage, struct wined
+@@ -1128,35 +1136,6 @@ void wined3d_cs_emit_set_texture(struct wined3d_cs *cs, UINT stage, struct wined
      cs->ops->submit(cs);
  }
  
@@ -99,7 +99,7 @@ index a7b8f79..556edc0 100644
  static UINT wined3d_cs_exec_set_shader_resource_view(struct wined3d_cs *cs, const void *data)
  {
      const struct wined3d_cs_set_shader_resource_view *op = data;
-@@ -1604,6 +1583,152 @@ void wined3d_cs_emit_set_primitive_type(struct wined3d_cs *cs, GLenum primitive_
+@@ -1739,6 +1718,152 @@ void wined3d_cs_emit_set_primitive_type(struct wined3d_cs *cs, GLenum primitive_
      cs->ops->submit(cs);
  }
  
@@ -252,7 +252,7 @@ index a7b8f79..556edc0 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_FENCE                      */ wined3d_cs_exec_fence,
-@@ -1634,7 +1759,6 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -1769,7 +1894,6 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_SET_MATERIAL               */ wined3d_cs_exec_set_material,
      /* WINED3D_CS_OP_RESET_STATE                */ wined3d_cs_exec_reset_state,
      /* WINED3D_CS_OP_DESTROY_OBJECT             */ wined3d_cs_exec_destroy_object,
@@ -260,7 +260,7 @@ index a7b8f79..556edc0 100644
      /* WINED3D_CS_OP_SET_VS_CONSTS_F            */ wined3d_cs_exec_set_vs_consts_f,
      /* WINED3D_CS_OP_SET_VS_CONSTS_B            */ wined3d_cs_exec_set_vs_consts_b,
      /* WINED3D_CS_OP_SET_VS_CONSTS_I            */ wined3d_cs_exec_set_vs_consts_i,
-@@ -1644,6 +1768,8 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -1779,6 +1903,8 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_GLFINISH                   */ wined3d_cs_exec_glfinish,
      /* WINED3D_CS_OP_SET_BASE_VERTEX_INDEX      */ wined3d_cs_exec_set_base_vertex_index,
      /* WINED3D_CS_OP_SET_PRIMITIVE_TYPE         */ wined3d_cs_exec_set_primitive_type,
@@ -270,7 +270,7 @@ index a7b8f79..556edc0 100644
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 766e393..cb6f2ee 100644
+index 09cb1ba..4b209d3 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
 @@ -1601,14 +1601,6 @@ HRESULT CDECL wined3d_device_set_light(struct wined3d_device *device,
@@ -356,10 +356,10 @@ index 766e393..cb6f2ee 100644
              start_idx, index_count, start_instance, instance_count, TRUE);
  }
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index fe1cd27..0cf9522 100644
+index 29f9063..bc8eec2 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2913,7 +2913,9 @@ struct wined3d_cs_block
+@@ -3026,7 +3026,9 @@ struct wined3d_cs_block
  {
      struct list entry;
      UINT pos;
@@ -370,7 +370,7 @@ index fe1cd27..0cf9522 100644
  };
  
  struct wined3d_cs_ops
-@@ -2959,8 +2961,6 @@ void wined3d_cs_emit_set_color_key(struct wined3d_cs *cs, struct wined3d_texture
+@@ -3072,8 +3074,6 @@ void wined3d_cs_emit_set_color_key(struct wined3d_cs *cs, struct wined3d_texture
          WORD flags, const struct wined3d_color_key *color_key) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_constant_buffer(struct wined3d_cs *cs, enum wined3d_shader_type type,
          UINT cb_idx, struct wined3d_buffer *buffer) DECLSPEC_HIDDEN;
@@ -379,15 +379,15 @@ index fe1cd27..0cf9522 100644
  void wined3d_cs_emit_set_depth_stencil_view(struct wined3d_cs *cs,
          struct wined3d_rendertarget_view *view) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_index_buffer(struct wined3d_cs *cs, struct wined3d_buffer *buffer,
-@@ -3006,6 +3006,8 @@ void wined3d_cs_emit_set_base_vertex_index(struct wined3d_cs *cs,
+@@ -3119,6 +3119,8 @@ void wined3d_cs_emit_set_base_vertex_index(struct wined3d_cs *cs,
          UINT base_vertex_index) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_primitive_type(struct wined3d_cs *cs,
          GLenum primitive_type) DECLSPEC_HIDDEN;
 +void wined3d_cs_emit_set_light(struct wined3d_cs *cs, const struct wined3d_light_info *light) DECLSPEC_HIDDEN;
 +void wined3d_cs_emit_set_light_enable(struct wined3d_cs *cs, UINT idx, BOOL enable) DECLSPEC_HIDDEN;
  
- /* Direct3D terminology with little modifications. We do not have an issued state
-  * because only the driver knows about it, but we have a created state because d3d
+ /* TODO: Add tests and support for FLOAT16_4 POSITIONT, D3DCOLOR position, other
+  * fixed function semantics as D3DCOLOR or FLOAT16 */
 -- 
 2.8.0
 

@@ -1,4 +1,4 @@
-From 9b3cf0aa76222ef02934a1689065411f5a2c3ac2 Mon Sep 17 00:00:00 2001
+From bf3c76661ed644e19dc55141e3244f29e9bace4d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 2 Oct 2013 21:47:08 +0200
 Subject: wined3d: Create VBOs through the command stream.
@@ -11,7 +11,7 @@ A stop-gap solution to make fglrx happier until buffers are updated.
  3 files changed, 37 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
-index 5566c1e..b611daf 100644
+index 646903a..cedd5c3 100644
 --- a/dlls/wined3d/buffer.c
 +++ b/dlls/wined3d/buffer.c
 @@ -122,7 +122,7 @@ static void delete_gl_buffer(struct wined3d_buffer *This, const struct wined3d_g
@@ -32,7 +32,7 @@ index 5566c1e..b611daf 100644
  
      This->buffer_object_usage = gl_usage;
  
-@@ -932,9 +930,7 @@ HRESULT CDECL wined3d_buffer_map(struct wined3d_buffer *buffer, UINT offset, UIN
+@@ -940,9 +938,7 @@ HRESULT CDECL wined3d_buffer_map(struct wined3d_buffer *buffer, UINT offset, UIN
       * on buffer creation won't work either. */
      if (!buffer->buffer_object && buffer->flags & WINED3D_BUFFER_USE_BO)
      {
@@ -44,10 +44,10 @@ index 5566c1e..b611daf 100644
  
      flags = wined3d_resource_sanitize_map_flags(&buffer->resource, flags);
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 477af0b..f501fa4 100644
+index ac22a08..3d51e6c 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -79,6 +79,7 @@ enum wined3d_cs_op
+@@ -78,6 +78,7 @@ enum wined3d_cs_op
      WINED3D_CS_OP_UPDATE_TEXTURE,
      WINED3D_CS_OP_EVICT_RESOURCE,
      WINED3D_CS_OP_UPDATE_SUB_RESOURCE,
@@ -55,7 +55,7 @@ index 477af0b..f501fa4 100644
      WINED3D_CS_OP_STOP,
  };
  
-@@ -467,6 +468,12 @@ struct wined3d_cs_buffer_preload
+@@ -460,6 +461,12 @@ struct wined3d_cs_buffer_preload
      struct wined3d_buffer *buffer;
  };
  
@@ -68,7 +68,7 @@ index 477af0b..f501fa4 100644
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
  {
      LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
-@@ -2370,6 +2377,30 @@ void wined3d_cs_emit_buffer_preload(struct wined3d_cs *cs, struct wined3d_buffer
+@@ -2396,6 +2403,30 @@ void wined3d_cs_emit_buffer_preload(struct wined3d_cs *cs, struct wined3d_buffer
      cs->ops->submit(cs, sizeof(*op));
  }
  
@@ -99,7 +99,7 @@ index 477af0b..f501fa4 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2427,6 +2458,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2452,6 +2483,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_UPDATE_TEXTURE             */ wined3d_cs_exec_update_texture,
      /* WINED3D_CS_OP_EVICT_RESOURCE             */ wined3d_cs_exec_evict_resource,
      /* WINED3D_CS_OP_UPDATE_SUB_RESOURCE        */ wined3d_cs_exec_update_sub_resource,
@@ -108,18 +108,18 @@ index 477af0b..f501fa4 100644
  
  static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 399e310..012494d 100644
+index b2fb28e..e3e718e 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3085,6 +3085,7 @@ void wined3d_cs_emit_buffer_swap_mem(struct wined3d_cs *cs, struct wined3d_buffe
+@@ -3184,6 +3184,7 @@ void wined3d_cs_emit_buffer_swap_mem(struct wined3d_cs *cs, struct wined3d_buffe
  void wined3d_cs_emit_buffer_invalidate_bo_range(struct wined3d_cs *cs,
          struct wined3d_buffer *buffer, unsigned int offset, unsigned int size) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_buffer_preload(struct wined3d_cs *cs, struct wined3d_buffer *buffer) DECLSPEC_HIDDEN;
 +void wined3d_cs_emit_create_vbo(struct wined3d_cs *cs, struct wined3d_buffer *buffer) DECLSPEC_HIDDEN;
  
- /* Direct3D terminology with little modifications. We do not have an issued state
-  * because only the driver knows about it, but we have a created state because d3d
-@@ -3177,6 +3178,8 @@ HRESULT wined3d_buffer_upload_data(struct wined3d_buffer *buffer,
+ /* TODO: Add tests and support for FLOAT16_4 POSITIONT, D3DCOLOR position, other
+  * fixed function semantics as D3DCOLOR or FLOAT16 */
+@@ -3241,6 +3242,8 @@ HRESULT wined3d_buffer_upload_data(struct wined3d_buffer *buffer,
          const struct wined3d_box *box, const void *data) DECLSPEC_HIDDEN;
  void buffer_invalidate_bo_range(struct wined3d_buffer *buffer, unsigned int offset, unsigned int size) DECLSPEC_HIDDEN;
  void buffer_swap_mem(struct wined3d_buffer *buffer, BYTE *mem) DECLSPEC_HIDDEN;

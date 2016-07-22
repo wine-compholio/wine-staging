@@ -141,11 +141,12 @@ class _PatchReader(object):
         if line is None or not line.startswith("@@ -"):
             return None
 
-        r = re.match("^@@ -(([0-9]+),)?([0-9]+) \+(([0-9]+),)?([0-9]+) @@", line)
+        r = re.match("^@@ -([0-9]+)(,([0-9]+))? \+([0-9]+)(,([0-9]+))? @@", line)
         if not r: raise PatchParserError("Unable to parse hunk header '%s'." % line)
-        srcpos = max(int(r.group(2)) - 1, 0) if r.group(2) else 0
-        dstpos = max(int(r.group(5)) - 1, 0) if r.group(5) else 0
-        srclines, dstlines = int(r.group(3)), int(r.group(6))
+        srcpos   = max(int(r.group(1)) - 1, 0)
+        dstpos   = max(int(r.group(4)) - 1, 0)
+        srclines = int(r.group(3)) if r.group(3) else 1
+        dstlines = int(r.group(6)) if r.group(6) else 1
         if srclines <= 0 and dstlines <= 0:
             raise PatchParserError("Empty hunk doesn't make sense.")
         self.read()

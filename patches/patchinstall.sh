@@ -7281,123 +7281,6 @@ fi
 # | 	dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
 # |
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
-	patch_apply wined3d-CSMT_Main/0000-Revert-wined3d-Send-shader-constant-updates-through-.patch
-	patch_apply wined3d-CSMT_Main/0001-wined3d-Make-surface_load_location-return-nothing.patch
-	patch_apply wined3d-CSMT_Main/0002-wined3d-Start-to-move-surface-volume_load_location-i.patch
-	patch_apply wined3d-CSMT_Main/0003-wined3d-Call-texture_load_location-instead-of-surfac.patch
-	patch_apply wined3d-CSMT_Main/0004-wined3d-Share-surface-and-volume-system-memory-loadi.patch
-	patch_apply wined3d-CSMT_Main/0006-wined3d-Don-t-call-the-public-map-function-in-surfac.patch
-	patch_apply wined3d-CSMT_Main/0007-wined3d-Don-t-call-the-public-map-function-in-surfac.patch
-	patch_apply wined3d-CSMT_Main/0008-wined3d-Move-the-framebuffer-into-wined3d_state.patch
-	patch_apply wined3d-CSMT_Main/0009-wined3d-Preload-buffers-if-streamsrc-is-not-dirty.patch
-	patch_apply wined3d-CSMT_Main/0010-wined3d-Hackily-introduce-a-multithreaded-command-st.patch
-	patch_apply wined3d-CSMT_Main/0011-wined3d-Wait-for-resource-updates-to-finish-when-usi.patch
-	patch_apply wined3d-CSMT_Main/0012-wined3d-Wait-for-the-cs-before-destroying-objects.patch
-	patch_apply wined3d-CSMT_Main/0014-wined3d-Give-the-cs-its-own-state.patch
-	patch_apply wined3d-CSMT_Main/0015-wined3d-Send-float-constant-updates-through-the-comm.patch
-	patch_apply wined3d-CSMT_Main/0016-wined3d-Request-a-glFinish-before-modifying-resource.patch
-	patch_apply wined3d-CSMT_Main/0017-wined3d-Finish-the-cs-before-changing-the-texture-lo.patch
-	patch_apply wined3d-CSMT_Main/0018-wined3d-Don-t-call-glFinish-after-clears.patch
-	patch_apply wined3d-CSMT_Main/0019-wined3d-Don-t-call-glFinish-after-draws.patch
-	patch_apply wined3d-CSMT_Main/0020-wined3d-Pass-the-depth-stencil-to-swapchain-present.patch
-	patch_apply wined3d-CSMT_Main/0021-wined3d-Keep-track-of-the-onscreen-depth-stencil-in-.patch
-	patch_apply wined3d-CSMT_Main/0022-wined3d-Send-base-vertex-index-updates-through-the-c.patch
-	patch_apply wined3d-CSMT_Main/0023-wined3d-Send-primitive-type-updates-through-the-comm.patch
-	patch_apply wined3d-CSMT_Main/0024-wined3d-Send-bool-constant-updates-through-the-comma.patch
-	patch_apply wined3d-CSMT_Main/0025-wined3d-Send-int-constant-updates-through-the-comman.patch
-	patch_apply wined3d-CSMT_Main/0026-wined3d-Send-light-updates-through-the-command-strea.patch
-	patch_apply wined3d-CSMT_Main/0027-wined3d-Prevent-the-command-stream-from-running-ahea.patch
-	patch_apply wined3d-CSMT_Main/0028-wined3d-Wait-for-the-cs-to-finish-before-destroying-.patch
-	patch_apply wined3d-CSMT_Main/0029-wined3d-Run-the-cs-asynchronously.patch
-	patch_apply wined3d-CSMT_Main/0030-wined3d-Send-blits-through-the-command-stream.patch
-	patch_apply wined3d-CSMT_Main/0031-wined3d-Hack-to-reject-unsupported-color-fills.patch
-	patch_apply wined3d-CSMT_Main/0032-wined3d-Restore-some-wined3d_device_copy_sub_resourc.patch
-	patch_apply wined3d-CSMT_Main/0033-wined3d-Don-t-force-strict-draw-ordering-for-multith.patch
-	patch_apply wined3d-CSMT_Main/0034-wined3d-Send-render-target-view-clears-through-the-c.patch
-	patch_apply wined3d-CSMT_Main/0035-wined3d-send-texture-maps-through-the-command-stream.patch
-	patch_apply wined3d-CSMT_Main/0036-wined3d-Get-rid-of-the-end_scene-flush-and-finish.patch
-	patch_apply wined3d-CSMT_Main/0037-wined3d-Replace-the-linked-lists-with-a-ringbuffer.patch
-	patch_apply wined3d-CSMT_Main/0038-wined3d-Don-t-preload-buffers-on-unmap.patch
-	patch_apply wined3d-CSMT_Main/0039-wined3d-Don-t-call-glFinish-before-swapping.patch
-	patch_apply wined3d-CSMT_Main/0040-wined3d-wined3d_-_query_issue-never-fails.patch
-	patch_apply wined3d-CSMT_Main/0041-wined3d-Add-query-support-to-the-command-stream.patch
-	patch_apply wined3d-CSMT_Main/0042-wined3d-Check-our-CS-state-to-find-out-if-a-query-is.patch
-	patch_apply wined3d-CSMT_Main/0043-wined3d-Poll-queries-automatically-in-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0044-wined3d-Introduce-a-separate-queue-for-priority-comm.patch
-	patch_apply wined3d-CSMT_Main/0045-wined3d-Destroy-queries-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0046-wined3d-Separate-main-and-worker-thread-query-state.patch
-	patch_apply wined3d-CSMT_Main/0047-wined3d-Don-t-poll-queries-that-failed-to-start.patch
-	patch_apply wined3d-CSMT_Main/0048-wined3d-Remove-restated-queries-from-the-poll-list.patch
-	patch_apply wined3d-CSMT_Main/0049-wined3d-Don-t-reset-the-query-state-if-it-doesn-t-ha.patch
-	patch_apply wined3d-CSMT_Main/0050-wined3d-Put-this-into-the-query-poll-patch.patch
-	patch_apply wined3d-CSMT_Main/0051-wined3d-Send-texture-preloads-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0052-wined3d-Don-t-access-device-state-in-clears.patch
-	patch_apply wined3d-CSMT_Main/0053-wined3d-Avoid-destroying-views-in-color-and-depth-fi.patch
-	patch_apply wined3d-CSMT_Main/0054-wined3d-Avoid-calling-wined3d_surface_blt-from-surfa.patch
-	patch_apply wined3d-CSMT_Main/0055-wined3d-Send-update_texture-calls-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0056-wined3d-Get-rid-of-the-surface_upload_data-glFinish.patch
-	patch_apply wined3d-CSMT_Main/0057-wined3d-Don-t-lock-the-src-volume-in-device_update_v.patch
-	patch_apply wined3d-CSMT_Main/0058-wined3d-Handle-evit_managed_resources-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0060-wined3d-Fence-update_texture-calls.patch
-	patch_apply wined3d-CSMT_Main/0061-wined3d-Dirtify-resources-on-unmap.patch
-	patch_apply wined3d-CSMT_Main/0063-wined3d-Fence-render-targets-and-depth-stencils.patch
-	patch_apply wined3d-CSMT_Main/0064-wined3d-Fence-blit-operations.patch
-	patch_apply wined3d-CSMT_Main/0065-wined3d-Fence-color_fill-operations.patch
-	patch_apply wined3d-CSMT_Main/0068-d3d9-tests-Remove-a-TODO-that-has-been-hacked-away.patch
-	patch_apply wined3d-CSMT_Main/0069-wined3d-Make-resource-maps-and-unmaps-a-priority-com.patch
-	patch_apply wined3d-CSMT_Main/0070-wined3d-Send-update_sub_resource-calls-through-the-c.patch
-	patch_apply wined3d-CSMT_Main/0071-wined3d-Dirtify-changed-textures-through-the-command.patch
-	patch_apply wined3d-CSMT_Main/0072-wined3d-Wrap-GL-BOs-in-a-structure.patch
-	patch_apply wined3d-CSMT_Main/0073-wined3d-Separate-resource-map-and-draw-buffers.patch
-	patch_apply wined3d-CSMT_Main/0074-wined3d-Implement-DISCARD-texture-maps-with-PBOs.patch
-	patch_apply wined3d-CSMT_Main/0075-wined3d-Implement-DISCARD-resource-maps-with-heap-me.patch
-	patch_apply wined3d-CSMT_Main/0076-wined3d-Unset-some-objects-in-state_init_default.patch
-	patch_apply wined3d-CSMT_Main/0077-wined3d-Don-t-request-the-frontbuffer-to-create-dumm.patch
-	patch_apply wined3d-CSMT_Main/0078-wined3d-Use-double-buffered-buffers-for-multithreade.patch
-	patch_apply wined3d-CSMT_Main/0079-wined3d-Don-t-synchronize-NOOVERWRITE-buffer-maps.patch
-	patch_apply wined3d-CSMT_Main/0080-wined3d-Separate-buffer-map-write-and-draw-read-memo.patch
-	patch_apply wined3d-CSMT_Main/0081-wined3d-Accelerate-DISCARD-buffer-maps.patch
-	patch_apply wined3d-CSMT_Main/0082-wined3d-Accelerate-READONLY-buffer-maps.patch
-	patch_apply wined3d-CSMT_Main/0083-wined3d-Access-the-buffer-dirty-areas-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0084-wined3d-Ignore-buffer-resource.map_count-in-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0085-wined3d-Send-buffer-preloads-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0086-wined3d-Use-glBufferSubData-instead-of-glMapBufferRa.patch
-	patch_apply wined3d-CSMT_Main/0087-wined3d-Separate-GL-buffer-discard-control-from-igno.patch
-	patch_apply wined3d-CSMT_Main/0088-wined3d-Create-buffers-before-mapping-them.patch
-	patch_apply wined3d-CSMT_Main/0090-wined3d-Remove-another-glFinish.patch
-	patch_apply wined3d-CSMT_Main/0093-wined3d-Create-VBOs-through-the-command-stream.patch
-	patch_apply wined3d-CSMT_Main/0096-Swapchain-waits.patch
-	patch_apply wined3d-CSMT_Main/0098-wined3d-Unload-resources-through-the-CS-in-uninit_3d.patch
-	patch_apply wined3d-CSMT_Main/0099-wined3d-Unload-resources-through-the-CS-in-device_re.patch
-	patch_apply wined3d-CSMT_Main/0100-wined3d-Don-t-glFinish-after-a-depth-buffer-blit.patch
-	patch_apply wined3d-CSMT_Main/0101-wined3d-Use-surface_blt_ugly-in-swapchain_gl_present.patch
-	patch_apply wined3d-CSMT_Main/0102-wined3d-Invoke-surface_unload-through-the-CS-in-wine.patch
-	patch_apply wined3d-CSMT_Main/0103-wined3d-Use-an-event-to-block-the-worker-thread-when.patch
-	patch_apply wined3d-CSMT_Main/0104-wined3d-Fence-preload-operations.patch
-	patch_apply wined3d-CSMT_Main/0105-wined3d-Set-map_heap_memory-NULL-when-allocating-a-P.patch
-	patch_apply wined3d-CSMT_Main/0106-wined3d-Wait-only-for-the-buffer-to-be-idle.patch
-	patch_apply wined3d-CSMT_Main/0107-wined3d-Add-a-comment-about-worker-thread-lag.patch
-	patch_apply wined3d-CSMT_Main/0109-wined3d-Put-GL_APPLE_flush_buffer_range-syncing-back.patch
-	patch_apply wined3d-CSMT_Main/0110-wined3d-Wait-for-the-resource-to-be-idle-when-destro.patch
-	patch_apply wined3d-CSMT_Main/0111-wined3d-Don-t-sync-on-redundant-discard-calls.patch
-	patch_apply wined3d-CSMT_Main/0112-wined3d-Don-t-discard-new-buffers.patch
-	patch_apply wined3d-CSMT_Main/0113-wined3d-Don-t-try-to-sync-VBOs-manually-on-OSX-with-.patch
-	patch_apply wined3d-CSMT_Main/0114-wined3d-Only-discard-buffers-that-are-in-use.patch
-	patch_apply wined3d-CSMT_Main/0117-wined3d-Send-getdc-and-releasedc-through-the-command.patch
-	patch_apply wined3d-CSMT_Main/0118-wined3d-Ignore-WINED3D_MAP_NO_DIRTY_UPDATE-in-resour.patch
-	patch_apply wined3d-CSMT_Main/0121-wined3d-Create-dummy-textures-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0122-wined3d-Create-the-initial-context-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0123-wined3d-Recreate-ctx-and-dummy-textures-through-the-.patch
-	patch_apply wined3d-CSMT_Main/0124-wined3d-Call-create_default_sampler-from-create_dumm.patch
-	patch_apply wined3d-CSMT_Main/0125-wined3d-Delete-GL-contexts-through-the-CS-in-reset.patch
-	patch_apply wined3d-CSMT_Main/0126-wined3d-Delete-GL-contexts-through-the-CS-in-uninit_.patch
-	patch_apply wined3d-CSMT_Main/0127-wined3d-Update-the-swap-interval-through-the-CS-in-r.patch
-	patch_apply wined3d-CSMT_Main/0128-wined3d-Do-the-sampler-GL-init-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0129-wined3d-Remove-the-device_reset-CS-sync-fixme.patch
-	patch_apply wined3d-CSMT_Main/0130-wined3d-Create-initial-DCs-through-the-CS.patch
-	patch_apply wined3d-CSMT_Main/0131-wined3d-Assign-a-read-buffer-when-discarding-a-new-t.patch
-	patch_apply wined3d-CSMT_Main/0132-wined3d-Do-not-query-available-GPU-memory-on-main-th.patch
-	patch_apply wined3d-CSMT_Main/9998-wined3d-Enable-CSMT-by-default-print-a-winediag-mess.patch
 	patch_apply wined3d-CSMT_Main/9999-IfDefined.patch
 	(
 		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Send shader constant updates through the command stream.\".", 1 },';
@@ -7517,7 +7400,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Assign a read buffer when discarding a new texture.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Do not query available GPU memory on main thread when CSMT is enabled.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Enable CSMT by default, print a winediag message informing about this patchset.", 1 },';
-		echo '+    { "Wine Staging Team", "Autogenerated #ifdef patch for wined3d-CSMT_Main.", 1 },';
 	) >> "$patchlist"
 fi
 

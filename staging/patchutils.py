@@ -612,10 +612,10 @@ def generate_ifdef_patch(original, patched, ifdef):
                 intermediate.write("\n")
 
             if len(srcdata) and len(dstdata):
-                intermediate.write("#if defined(%s)\n" % ifdef)
-                intermediate.write("\n".join(dstdata))
-                intermediate.write("\n#else  /* %s */\n" % ifdef)
+                intermediate.write("#if !defined(%s)\n" % ifdef)
                 intermediate.write("\n".join(srcdata))
+                intermediate.write("\n#else  /* %s */\n" % ifdef)
+                intermediate.write("\n".join(dstdata))
                 intermediate.write("\n#endif /* %s */\n" % ifdef)
 
             elif len(srcdata):
@@ -637,9 +637,9 @@ def generate_ifdef_patch(original, patched, ifdef):
             intermediate.write("\n")
         intermediate.flush()
 
-        # Now we can finally compute the diff between the patched file and our intermediate file
+        # Now we can finally compute the diff between the original file and our intermediate file
         diff = tempfile.NamedTemporaryFile(mode='w+')
-        exitcode = subprocess.call(["git", "diff", "--no-index", patched.name, intermediate.name],
+        exitcode = subprocess.call(["git", "diff", "--no-index", original.name, intermediate.name],
                                    stdout=diff, stderr=_devnull)
         if exitcode != 1: # exitcode 0 cannot (=shouldn't) happen in this situation
             raise PatchDiffError("Failed to compute diff (exitcode %d)." % exitcode)
@@ -913,13 +913,13 @@ if __name__ == "__main__":
 
             expected = ["@@ -1,9 +1,15 @@",
                         " line1();", " line2();", " line3();",
-                        "+#if defined(PATCHED)",
+                        "+#if !defined(PATCHED)",
                         " function(arg1, \\",
-                        "          new_arg2, \\",
+                        "          arg2, \\",
                         "          arg3);",
                         "+#else  /* PATCHED */",
                         "+function(arg1, \\",
-                        "+         arg2, \\",
+                        "+         new_arg2, \\",
                         "+         arg3);",
                         "+#endif /* PATCHED */",
                         " line5();", " line6();", " line7();"]
@@ -929,13 +929,13 @@ if __name__ == "__main__":
 
             expected = ["@@ -1,9 +1,15 @@",
                         " line1();", " line2();", " line3();",
-                        "+#if defined(PATCHED)",
+                        "+#if !defined(PATCHED)",
                         " function(arg1, \\",
-                        "          arg2, \\",
+                        "          new_arg2, \\",
                         "          arg3);",
                         "+#else  /* PATCHED */",
                         "+function(arg1, \\",
-                        "+         new_arg2, \\",
+                        "+         arg2, \\",
                         "+         arg3);",
                         "+#endif /* PATCHED */",
                         " line5();", " line6();", " line7();"]

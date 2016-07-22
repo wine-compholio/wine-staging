@@ -501,7 +501,7 @@ def generate_ifdef_patch(original, patched, ifdef):
     #
 
     with tempfile.NamedTemporaryFile(mode='w+') as diff:
-        exitcode = subprocess.call(["diff", "-u", original.name, patched.name],
+        exitcode = subprocess.call(["diff", "-U", "1", original.name, patched.name],
                                    stdout=diff, stderr=_devnull)
         if exitcode == 0:
             return None

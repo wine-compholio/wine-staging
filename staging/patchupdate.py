@@ -481,6 +481,10 @@ def generate_ifdefined(all_patches, skip_checks=False):
             fp.write("From: %s <%s>\n" % (headers['author'], headers['email']))
             fp.write("Subject: %s\n" % headers['subject'])
             fp.write("\n")
+            fp.write("Based on patches by:\n")
+            for author, email in sorted(set([(p.patch_author, p.patch_email) for p in patch.patches])):
+                fp.write("    %s <%s>\n" % (author, email))
+            fp.write("\n")
 
             depends = resolve_dependencies(enabled_patches, i)
             for f in sorted(patch.modified_files):

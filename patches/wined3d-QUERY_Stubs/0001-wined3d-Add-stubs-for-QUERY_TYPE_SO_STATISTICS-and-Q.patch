@@ -1,15 +1,15 @@
-From 1295d2929164a855aee33f52350cf457f8028ff9 Mon Sep 17 00:00:00 2001
+From 148ec0e10734a650f5c8988d5c173eb7e98e9449 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 16 Apr 2016 18:18:54 +0200
 Subject: wined3d: Add stubs for QUERY_TYPE_SO_STATISTICS and
  QUERY_TYPE_SO_OVERFLOW.
 
 ---
- dlls/d3d10core/tests/device.c |  4 +--
- dlls/d3d11/tests/d3d11.c      |  4 +--
- dlls/wined3d/query.c          | 60 +++++++++++++++++++++++++++++++++++++++++++
- include/wine/wined3d.h        |  6 +++++
- 4 files changed, 70 insertions(+), 4 deletions(-)
+ dlls/d3d10core/tests/device.c |  4 +-
+ dlls/d3d11/tests/d3d11.c      |  4 +-
+ dlls/wined3d/query.c          | 99 +++++++++++++++++++++++++++++++++++++++++++
+ include/wine/wined3d.h        |  6 +++
+ 4 files changed, 109 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/d3d10core/tests/device.c b/dlls/d3d10core/tests/device.c
 index 9b3a943..fb1ec06 100644
@@ -42,10 +42,25 @@ index df45eb5..4c65997 100644
          {D3D11_QUERY_SO_OVERFLOW_PREDICATE_STREAM0, D3D_FEATURE_LEVEL_11_0, TRUE,  FALSE, TRUE},
          {D3D11_QUERY_SO_STATISTICS_STREAM1,         D3D_FEATURE_LEVEL_11_0, FALSE, FALSE, TRUE},
 diff --git a/dlls/wined3d/query.c b/dlls/wined3d/query.c
-index 976cdd9..ef93d3b 100644
+index 591d6c5..2d1da66 100644
 --- a/dlls/wined3d/query.c
 +++ b/dlls/wined3d/query.c
-@@ -682,6 +682,42 @@ static HRESULT wined3d_timestamp_disjoint_query_ops_issue(struct wined3d_query *
+@@ -293,6 +293,14 @@ static void wined3d_query_destroy_object(void *object)
+     {
+         HeapFree(GetProcessHeap(), 0, query);
+     }
++    else if (query->type == WINED3D_QUERY_TYPE_SO_STATISTICS)
++    {
++        HeapFree(GetProcessHeap(), 0, query);
++    }
++    else if (query->type == WINED3D_QUERY_TYPE_SO_OVERFLOW)
++    {
++        HeapFree(GetProcessHeap(), 0, query);
++    }
+     else
+     {
+         ERR("Query %p has invalid type %#x.\n", query, query->type);
+@@ -686,6 +694,42 @@ static HRESULT wined3d_timestamp_disjoint_query_ops_issue(struct wined3d_query *
      return WINED3D_OK;
  }
  
@@ -88,9 +103,9 @@ index 976cdd9..ef93d3b 100644
  static const struct wined3d_query_ops event_query_ops =
  {
      wined3d_event_query_ops_get_data,
-@@ -781,6 +817,18 @@ static const struct wined3d_query_ops timestamp_disjoint_query_ops =
-     wined3d_timestamp_disjoint_query_ops_issue,
- };
+@@ -814,6 +858,55 @@ static HRESULT wined3d_timestamp_disjoint_query_create(struct wined3d_device *de
+     return WINED3D_OK;
+ }
  
 +static const struct wined3d_query_ops statistics_query_ops =
 +{
@@ -98,34 +113,65 @@ index 976cdd9..ef93d3b 100644
 +    wined3d_statistics_query_ops_issue,
 +};
 +
++static HRESULT wined3d_statistics_query_create(struct wined3d_device *device,
++        enum wined3d_query_type type, void *parent, struct wined3d_query **query)
++{
++    struct wined3d_query *object;
++
++    FIXME("device %p, type %#x, parent %p, query %p.\n", device, type, parent, query);
++
++    if (!(object = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*object))))
++        return E_OUTOFMEMORY;
++
++    wined3d_query_init(object, device, type,
++            sizeof(struct wined3d_query_data_so_statistics), &statistics_query_ops, parent);
++
++    TRACE("Created query %p.\n", object);
++    *query = object;
++
++    return WINED3D_OK;
++}
++
 +static const struct wined3d_query_ops overflow_query_ops =
 +{
 +    wined3d_overflow_query_ops_get_data,
-+    wined3d_overflow_query_ops_issue
++    wined3d_overflow_query_ops_issue,
 +};
 +
- static HRESULT query_init(struct wined3d_query *query, struct wined3d_device *device,
-         enum wined3d_query_type type, void *parent)
++static HRESULT wined3d_overflow_query_create(struct wined3d_device *device,
++        enum wined3d_query_type type, void *parent, struct wined3d_query **query)
++{
++    struct wined3d_query *object;
++
++    FIXME("device %p, type %#x, parent %p, query %p.\n", device, type, parent, query);
++
++    if (!(object = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*object))))
++        return E_OUTOFMEMORY;
++
++    wined3d_query_init(object, device, type, sizeof(BOOL), &overflow_query_ops, parent);
++
++    TRACE("Created query %p.\n", object);
++    *query = object;
++
++    return WINED3D_OK;
++}
++
+ HRESULT CDECL wined3d_query_create(struct wined3d_device *device,
+         enum wined3d_query_type type, void *parent, struct wined3d_query **query)
  {
-@@ -790,6 +838,18 @@ static HRESULT query_init(struct wined3d_query *query, struct wined3d_device *de
+@@ -834,6 +927,12 @@ HRESULT CDECL wined3d_query_create(struct wined3d_device *device,
+         case WINED3D_QUERY_TYPE_TIMESTAMP_FREQ:
+             return wined3d_timestamp_disjoint_query_create(device, type, parent, query);
  
-     switch (type)
-     {
 +        case WINED3D_QUERY_TYPE_SO_STATISTICS:
-+            FIXME("Statistics query.\n");
-+            query->query_ops = &statistics_query_ops;
-+            query->data_size = sizeof(struct wined3d_query_data_so_statistics);
-+            break;
++            return wined3d_statistics_query_create(device, type, parent, query);
 +
 +        case WINED3D_QUERY_TYPE_SO_OVERFLOW:
-+            FIXME("Overflow query.\n");
-+            query->query_ops = &overflow_query_ops;
-+            query->data_size = sizeof(BOOL);
-+            break;
++            return wined3d_overflow_query_create(device, type, parent, query);
 +
-         case WINED3D_QUERY_TYPE_TIMESTAMP_DISJOINT:
-         case WINED3D_QUERY_TYPE_TIMESTAMP_FREQ:
-             TRACE("TIMESTAMP_DISJOINT query.\n");
+         default:
+             FIXME("Unhandled query type %#x.\n", type);
+             return WINED3DERR_NOTAVAILABLE;
 diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
 index 36de1de..468ce98 100644
 --- a/include/wine/wined3d.h

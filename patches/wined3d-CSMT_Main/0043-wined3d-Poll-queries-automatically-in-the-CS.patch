@@ -1,13 +1,13 @@
-From 2353a70817f7f380819049b3d5b5d65a5d216e14 Mon Sep 17 00:00:00 2001
+From a0114579d6805521af8d74adf7a09e40803f4425 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Sat, 6 Jul 2013 19:18:48 +0200
 Subject: wined3d: Poll queries automatically in the CS
 
 ---
  dlls/wined3d/cs.c              |  76 ++++++--------
- dlls/wined3d/query.c           | 224 +++++++++++++++++++++++++++--------------
+ dlls/wined3d/query.c           | 223 +++++++++++++++++++++++++++--------------
  dlls/wined3d/wined3d_private.h |   7 +-
- 3 files changed, 186 insertions(+), 121 deletions(-)
+ 3 files changed, 185 insertions(+), 121 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
 index 94232db..213943f 100644
@@ -143,7 +143,7 @@ index 94232db..213943f 100644
          {
              continue;
 diff --git a/dlls/wined3d/query.c b/dlls/wined3d/query.c
-index 726da3b..7d743b7 100644
+index fb948d7..d86dd30 100644
 --- a/dlls/wined3d/query.c
 +++ b/dlls/wined3d/query.c
 @@ -35,6 +35,7 @@ static void wined3d_query_init(struct wined3d_query *query, struct wined3d_devic
@@ -154,7 +154,7 @@ index 726da3b..7d743b7 100644
  }
  
  static struct wined3d_event_query *wined3d_event_query_from_query(struct wined3d_query *query)
-@@ -302,7 +303,18 @@ ULONG CDECL wined3d_query_decref(struct wined3d_query *query)
+@@ -314,7 +315,18 @@ ULONG CDECL wined3d_query_decref(struct wined3d_query *query)
      TRACE("%p decreasing refcount to %u.\n", query, refcount);
  
      if (!refcount)
@@ -173,7 +173,7 @@ index 726da3b..7d743b7 100644
  
      return refcount;
  }
-@@ -310,20 +322,10 @@ ULONG CDECL wined3d_query_decref(struct wined3d_query *query)
+@@ -322,20 +334,10 @@ ULONG CDECL wined3d_query_decref(struct wined3d_query *query)
  HRESULT CDECL wined3d_query_get_data(struct wined3d_query *query,
          void *data, UINT data_size, DWORD flags)
  {
@@ -195,7 +195,7 @@ index 726da3b..7d743b7 100644
  }
  
  UINT CDECL wined3d_query_get_data_size(const struct wined3d_query *query)
-@@ -353,14 +355,7 @@ static HRESULT wined3d_occlusion_query_ops_get_data(struct wined3d_query *query,
+@@ -365,14 +367,7 @@ static HRESULT wined3d_occlusion_query_ops_get_data(struct wined3d_query *query,
          void *data, DWORD size, DWORD flags)
  {
      struct wined3d_occlusion_query *oq = wined3d_occlusion_query_from_query(query);
@@ -210,7 +210,7 @@ index 726da3b..7d743b7 100644
  
      if (!oq->context)
          query->state = QUERY_CREATED;
-@@ -374,6 +369,8 @@ static HRESULT wined3d_occlusion_query_ops_get_data(struct wined3d_query *query,
+@@ -386,6 +381,8 @@ static HRESULT wined3d_occlusion_query_ops_get_data(struct wined3d_query *query,
          return S_OK;
      }
  
@@ -219,7 +219,7 @@ index 726da3b..7d743b7 100644
      if (query->state == QUERY_BUILDING)
      {
          /* Msdn says this returns an error, but our tests show that S_FALSE is returned */
-@@ -381,12 +378,37 @@ static HRESULT wined3d_occlusion_query_ops_get_data(struct wined3d_query *query,
+@@ -393,12 +390,37 @@ static HRESULT wined3d_occlusion_query_ops_get_data(struct wined3d_query *query,
          return S_FALSE;
      }
  
@@ -260,7 +260,7 @@ index 726da3b..7d743b7 100644
      }
  
      context = context_acquire(device, context_get_rt_surface(oq->context));
-@@ -397,61 +419,71 @@ static HRESULT wined3d_occlusion_query_ops_get_data(struct wined3d_query *query,
+@@ -409,61 +431,71 @@ static HRESULT wined3d_occlusion_query_ops_get_data(struct wined3d_query *query,
  
      if (available)
      {
@@ -360,7 +360,7 @@ index 726da3b..7d743b7 100644
  
      return S_OK;
  }
-@@ -571,33 +603,57 @@ static HRESULT wined3d_timestamp_query_ops_get_data(struct wined3d_query *query,
+@@ -583,33 +615,57 @@ static HRESULT wined3d_timestamp_query_ops_get_data(struct wined3d_query *query,
          void *data, DWORD size, DWORD flags)
  {
      struct wined3d_timestamp_query *tq = wined3d_timestamp_query_from_query(query);
@@ -402,10 +402,10 @@ index 726da3b..7d743b7 100644
      GLuint available;
      GLuint64 timestamp;
 -    HRESULT res;
--
--    TRACE("query %p, data %p, size %#x, flags %#x.\n", query, data, size, flags);
 +    BOOL ret;
  
+-    TRACE("query %p, data %p, size %#x, flags %#x.\n", query, data, size, flags);
+-
 -    if (!tq->context)
 -        query->state = QUERY_CREATED;
 -
@@ -433,7 +433,7 @@ index 726da3b..7d743b7 100644
      }
  
      context = context_acquire(device, context_get_rt_surface(tq->context));
-@@ -608,23 +664,20 @@ static HRESULT wined3d_timestamp_query_ops_get_data(struct wined3d_query *query,
+@@ -620,23 +676,20 @@ static HRESULT wined3d_timestamp_query_ops_get_data(struct wined3d_query *query,
  
      if (available)
      {
@@ -464,7 +464,7 @@ index 726da3b..7d743b7 100644
  }
  
  static void wined3d_timestamp_query_ops_issue(struct wined3d_query *query, DWORD flags)
-@@ -658,7 +711,6 @@ static HRESULT wined3d_timestamp_disjoint_query_ops_get_data(struct wined3d_quer
+@@ -670,7 +723,6 @@ static HRESULT wined3d_timestamp_disjoint_query_ops_get_data(struct wined3d_quer
          void *data, DWORD size, DWORD flags)
  {
      TRACE("query %p, data %p, size %#x, flags %#x.\n", query, data, size, flags);
@@ -472,7 +472,7 @@ index 726da3b..7d743b7 100644
      if (query->type == WINED3D_QUERY_TYPE_TIMESTAMP_DISJOINT)
      {
          static const struct wined3d_query_data_timestamp_disjoint disjoint_data = {1000 * 1000 * 1000, FALSE};
-@@ -680,6 +732,11 @@ static HRESULT wined3d_timestamp_disjoint_query_ops_get_data(struct wined3d_quer
+@@ -692,6 +744,11 @@ static HRESULT wined3d_timestamp_disjoint_query_ops_get_data(struct wined3d_quer
      return S_OK;
  }
  
@@ -484,7 +484,7 @@ index 726da3b..7d743b7 100644
  static void wined3d_timestamp_disjoint_query_ops_issue(struct wined3d_query *query, DWORD flags)
  {
      TRACE("query %p, flags %#x.\n", query, flags);
-@@ -702,6 +759,11 @@ static HRESULT wined3d_statistics_query_ops_get_data(struct wined3d_query *query
+@@ -714,6 +771,11 @@ static HRESULT wined3d_statistics_query_ops_get_data(struct wined3d_query *query
      return S_OK;
  }
  
@@ -496,7 +496,7 @@ index 726da3b..7d743b7 100644
  static void wined3d_statistics_query_ops_issue(struct wined3d_query *query, DWORD flags)
  {
      FIXME("query %p, flags %#x.\n", query, flags);
-@@ -719,6 +781,11 @@ static HRESULT wined3d_overflow_query_ops_get_data(struct wined3d_query *query,
+@@ -731,6 +793,11 @@ static HRESULT wined3d_overflow_query_ops_get_data(struct wined3d_query *query,
      return S_OK;
  }
  
@@ -508,7 +508,7 @@ index 726da3b..7d743b7 100644
  static void wined3d_overflow_query_ops_issue(struct wined3d_query *query, DWORD flags)
  {
      FIXME("query %p, flags %#x.\n", query, flags);
-@@ -727,6 +794,7 @@ static void wined3d_overflow_query_ops_issue(struct wined3d_query *query, DWORD
+@@ -739,6 +806,7 @@ static void wined3d_overflow_query_ops_issue(struct wined3d_query *query, DWORD
  static const struct wined3d_query_ops event_query_ops =
  {
      wined3d_event_query_ops_get_data,
@@ -516,7 +516,7 @@ index 726da3b..7d743b7 100644
      wined3d_event_query_ops_issue,
  };
  
-@@ -758,6 +826,7 @@ static HRESULT wined3d_event_query_create(struct wined3d_device *device,
+@@ -770,6 +838,7 @@ static HRESULT wined3d_event_query_create(struct wined3d_device *device,
  static const struct wined3d_query_ops occlusion_query_ops =
  {
      wined3d_occlusion_query_ops_get_data,
@@ -524,7 +524,7 @@ index 726da3b..7d743b7 100644
      wined3d_occlusion_query_ops_issue,
  };
  
-@@ -789,6 +858,7 @@ static HRESULT wined3d_occlusion_query_create(struct wined3d_device *device,
+@@ -801,6 +870,7 @@ static HRESULT wined3d_occlusion_query_create(struct wined3d_device *device,
  static const struct wined3d_query_ops timestamp_query_ops =
  {
      wined3d_timestamp_query_ops_get_data,
@@ -532,7 +532,7 @@ index 726da3b..7d743b7 100644
      wined3d_timestamp_query_ops_issue,
  };
  
-@@ -820,18 +890,21 @@ static HRESULT wined3d_timestamp_query_create(struct wined3d_device *device,
+@@ -832,6 +902,7 @@ static HRESULT wined3d_timestamp_query_create(struct wined3d_device *device,
  static const struct wined3d_query_ops timestamp_disjoint_query_ops =
  {
      wined3d_timestamp_disjoint_query_ops_get_data,
@@ -540,6 +540,7 @@ index 726da3b..7d743b7 100644
      wined3d_timestamp_disjoint_query_ops_issue,
  };
  
+@@ -867,6 +938,7 @@ static HRESULT wined3d_timestamp_disjoint_query_create(struct wined3d_device *de
  static const struct wined3d_query_ops statistics_query_ops =
  {
      wined3d_statistics_query_ops_get_data,
@@ -547,21 +548,14 @@ index 726da3b..7d743b7 100644
      wined3d_statistics_query_ops_issue,
  };
  
+@@ -892,6 +964,7 @@ static HRESULT wined3d_statistics_query_create(struct wined3d_device *device,
  static const struct wined3d_query_ops overflow_query_ops =
  {
      wined3d_overflow_query_ops_get_data,
 +    wined3d_overflow_query_ops_poll,
-     wined3d_overflow_query_ops_issue
+     wined3d_overflow_query_ops_issue,
  };
  
-@@ -887,6 +960,7 @@ static HRESULT query_init(struct wined3d_query *query, struct wined3d_device *de
-     query->state = QUERY_CREATED;
-     query->device = device;
-     query->ref = 1;
-+    list_init(&query->poll_list_entry);
- 
-     return WINED3D_OK;
- }
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
 index 232f099..3688ef9 100644
 --- a/dlls/wined3d/wined3d_private.h

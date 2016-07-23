@@ -174,6 +174,7 @@ patch_enable_all ()
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_Profile="$1"
+	enable_kernel32_SCSI_Sysfs="$1"
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
 	enable_kernel32_SetFileInformationByHandle="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
@@ -695,6 +696,9 @@ patch_enable ()
 			;;
 		kernel32-Profile)
 			enable_kernel32_Profile="$2"
+			;;
+		kernel32-SCSI_Sysfs)
+			enable_kernel32_SCSI_Sysfs="$2"
 			;;
 		kernel32-SetFileCompletionNotificationModes)
 			enable_kernel32_SetFileCompletionNotificationModes="$2"
@@ -4244,6 +4248,23 @@ if test "$enable_kernel32_Profile" -eq 1; then
 	patch_apply kernel32-Profile/0001-kernel32-Allow-empty-profile-section-and-key-name-st.patch
 	(
 		echo '+    { "Claudio Fontana", "kernel32: Allow empty profile section and key name strings.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SCSI_Sysfs
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#31592] Use sysfs to populate SCSI registry keys
+# |
+# | Modified files:
+# |   *	dlls/kernel32/oldconfig.c
+# |
+if test "$enable_kernel32_SCSI_Sysfs" -eq 1; then
+	patch_apply kernel32-SCSI_Sysfs/0001-kernel32-Convert-scsi-device-type-in-SCSI_getprocent.patch
+	patch_apply kernel32-SCSI_Sysfs/0002-kernel32-Add-support-for-reading-scsi-devices-from-s.patch
+	(
+		echo '+    { "Michael Müller", "kernel32: Convert scsi device type in SCSI_getprocentry.", 1 },';
+		echo '+    { "Michael Müller", "kernel32: Add support for reading scsi devices from sysfs.", 1 },';
 	) >> "$patchlist"
 fi
 

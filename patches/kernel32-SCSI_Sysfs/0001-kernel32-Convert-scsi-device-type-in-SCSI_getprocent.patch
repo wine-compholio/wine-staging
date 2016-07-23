@@ -1,0 +1,90 @@
+From 553c390a55bb9184aa4d35cc2e6689f6633e4a9b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Fri, 22 Jul 2016 21:00:40 +0200
+Subject: kernel32: Convert scsi device type in SCSI_getprocentry.
+
+---
+ dlls/kernel32/oldconfig.c | 27 ++++++++++++++++-----------
+ 1 file changed, 16 insertions(+), 11 deletions(-)
+
+diff --git a/dlls/kernel32/oldconfig.c b/dlls/kernel32/oldconfig.c
+index 6c80dc6..8446f2d 100644
+--- a/dlls/kernel32/oldconfig.c
++++ b/dlls/kernel32/oldconfig.c
+@@ -204,7 +204,7 @@ struct LinuxProcScsiDevice
+     char vendor[9];
+     char model[17];
+     char rev[5];
+-    char type[33];
++    int type;
+     int ansirev;
+ };
+ 
+@@ -217,6 +217,7 @@ struct LinuxProcScsiDevice
+ static int SCSI_getprocentry( FILE * procfile, struct LinuxProcScsiDevice * dev )
+ {
+     int result;
++    char type[33];
+ 
+     result = fscanf( procfile,
+         "Host:%*1[ ]scsi%d%*1[ ]Channel:%*1[ ]%d%*1[ ]Id:%*1[ ]%d%*1[ ]Lun:%*1[ ]%d\n",
+@@ -247,7 +248,7 @@ static int SCSI_getprocentry( FILE * procfile, struct LinuxProcScsiDevice * dev
+ 
+     result = fscanf( procfile,
+         "  Type:%*3[ ]%32c%*1[ ]ANSI SCSI%*1[ ]revision:%*1[ ]%x\n",
+-        dev->type,
++        type,
+         &dev->ansirev );
+     if( result != 2 )
+     {
+@@ -258,7 +259,15 @@ static int SCSI_getprocentry( FILE * procfile, struct LinuxProcScsiDevice * dev
+     dev->vendor[8] = 0;
+     dev->model[16] = 0;
+     dev->rev[4] = 0;
+-    dev->type[32] = 0;
++    type[32] = 0;
++
++    if (strncmp(type, "Direct-Access", 13) == 0) dev->type = DRIVE_FIXED;
++    else if (strncmp(type, "Sequential-Access", 17) == 0) dev->type = DRIVE_REMOVABLE;
++    else if (strncmp(type, "CD-ROM", 6) == 0) dev->type = DRIVE_CDROM;
++    else if (strncmp(type, "Processor", 9) == 0) dev->type = DRIVE_NO_ROOT_DIR;
++    else if (strncmp(type, "Scanner", 7) == 0) dev->type = DRIVE_NO_ROOT_DIR;
++    else if (strncmp(type, "Printer", 7) == 0) dev->type = DRIVE_NO_ROOT_DIR;
++    else dev->type = DRIVE_UNKNOWN;
+ 
+     return 1;
+ }
+@@ -362,26 +371,22 @@ static void create_hardware_branch(void)
+     /* Read info for one device */
+     while ((result = SCSI_getprocentry(procfile, &dev)) > 0)
+     {
++        if (dev.type == DRIVE_UNKNOWN)
++            continue;
++
+         scsi_addr.PortNumber = dev.host;
+         scsi_addr.PathId = dev.channel;
+         scsi_addr.TargetId = dev.target;
+         scsi_addr.Lun = dev.lun;
+ 
+         scsi_addr.PortNumber += uFirstSCSIPort;
+-        if (strncmp(dev.type, "Direct-Access", 13) == 0) nType = DRIVE_FIXED;
+-        else if (strncmp(dev.type, "Sequential-Access", 17) == 0) nType = DRIVE_REMOVABLE;
+-        else if (strncmp(dev.type, "CD-ROM", 6) == 0) nType = DRIVE_CDROM;
+-        else if (strncmp(dev.type, "Processor", 9) == 0) nType = DRIVE_NO_ROOT_DIR;
+-        else if (strncmp(dev.type, "Scanner", 7) == 0) nType = DRIVE_NO_ROOT_DIR;
+-        else if (strncmp(dev.type, "Printer", 7) == 0) nType = DRIVE_NO_ROOT_DIR;
+-        else continue;
+ 
+         strcpy(cDevModel, dev.vendor);
+         strcat(cDevModel, dev.model);
+         strcat(cDevModel, dev.rev);
+         sprintf(cUnixDeviceName, "/dev/sg%d", nSgNumber++);
+         /* FIXME: get real driver name */
+-        create_scsi_entry(&scsi_addr, "WINE SCSI", nType, cDevModel, cUnixDeviceName);
++        create_scsi_entry(&scsi_addr, "WINE SCSI", dev.type, cDevModel, cUnixDeviceName);
+     }
+     if( result != EOF )
+         WARN("Incorrect %s format\n", procname_scsi);
+-- 
+2.8.0
+

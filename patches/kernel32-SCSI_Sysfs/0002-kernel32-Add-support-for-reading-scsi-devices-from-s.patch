@@ -1,0 +1,151 @@
+From 49435131943ae82e369d2a666de25e6242d242ab Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Fri, 22 Jul 2016 21:01:33 +0200
+Subject: kernel32: Add support for reading scsi devices from sysfs.
+
+---
+ dlls/kernel32/oldconfig.c | 114 +++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 113 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/kernel32/oldconfig.c b/dlls/kernel32/oldconfig.c
+index 8446f2d..9001a04 100644
+--- a/dlls/kernel32/oldconfig.c
++++ b/dlls/kernel32/oldconfig.c
+@@ -272,6 +272,89 @@ static int SCSI_getprocentry( FILE * procfile, struct LinuxProcScsiDevice * dev
+     return 1;
+ }
+ 
++static BOOL read_file_content(char *path, char *buffer, int length)
++{
++    size_t read;
++
++    FILE *f = fopen(path, "r");
++    if (!f) return FALSE;
++
++    read = fread(buffer, 1, length-1, f);
++    fclose(f);
++    if (!read) return FALSE;
++
++    /* ensure NULL termination */
++    buffer[read] = 0;
++    return TRUE;
++}
++
++static BOOL read_file_content_int(char *path, int *result)
++{
++    char buffer[20];
++
++    if (!read_file_content(path, buffer, sizeof(buffer)))
++        return FALSE;
++
++    *result = atoi(buffer);
++    return TRUE;
++}
++
++static BOOL SCSI_getsysentry(char *device_key, struct LinuxProcScsiDevice *dev, char *unix_path)
++{
++    struct dirent *dent = NULL;
++    char path_buffer[100];
++    DIR *generic_dir;
++    int result, type;
++
++    result = sscanf(device_key, "%d:%d:%d:%d", &dev->host, &dev->channel, &dev->target, &dev->lun);
++    if (result != 4)
++    {
++        ERR("Failed to extract device information from %s\n", device_key);
++        return FALSE;
++    }
++
++    snprintf(path_buffer, sizeof(path_buffer), "/sys/class/scsi_device/%s/device/vendor", device_key);
++    if (!read_file_content(path_buffer, dev->vendor, sizeof(dev->vendor))) return FALSE;
++
++    snprintf(path_buffer, sizeof(path_buffer), "/sys/class/scsi_device/%s/device/model", device_key);
++    if (!read_file_content(path_buffer, dev->model, sizeof(dev->model))) return FALSE;
++
++    snprintf(path_buffer, sizeof(path_buffer), "/sys/class/scsi_device/%s/device/rev", device_key);
++    if (!read_file_content(path_buffer, dev->rev, sizeof(dev->rev))) return FALSE;
++
++    snprintf(path_buffer, sizeof(path_buffer), "/sys/class/scsi_device/%s/device/type", device_key);
++    if (!read_file_content_int(path_buffer, &type)) return FALSE;
++
++    /* see SCSI specification standard for values */
++    if (type == 0x0) dev->type = DRIVE_FIXED;
++    else if (type == 0x1) dev->type = DRIVE_REMOVABLE;
++    else if (type == 0x5) dev->type = DRIVE_CDROM;
++    else dev->type = DRIVE_NO_ROOT_DIR;
++
++    /* FIXME: verify */
++    snprintf(path_buffer, sizeof(path_buffer), "/sys/class/scsi_device/%s/device/scsi_level", device_key);
++    if (!read_file_content_int(path_buffer, &dev->ansirev)) return FALSE;
++
++    result = FALSE;
++
++    snprintf(path_buffer, sizeof(path_buffer), "/sys/class/scsi_device/%s/device/scsi_generic", device_key);
++    generic_dir = opendir(path_buffer);
++    if (generic_dir)
++    {
++        while ((dent = readdir(generic_dir)))
++        {
++            if (!strcmp(dent->d_name, ".") || !strcmp(dent->d_name, ".."))
++                continue;
++
++            sprintf(unix_path, "/dev/%s", dent->d_name);
++            result = TRUE;
++            break;
++        }
++        closedir(generic_dir);
++    }
++
++    return result;
++}
+ 
+ /* create the hardware registry branch */
+ static void create_hardware_branch(void)
+@@ -281,7 +364,7 @@ static void create_hardware_branch(void)
+     static const char procname_ide_media[] = "/proc/ide/%s/media";
+     static const char procname_ide_model[] = "/proc/ide/%s/model";
+     static const char procname_scsi[] = "/proc/scsi/scsi";
+-    DIR *idedir;
++    DIR *idedir, *scsidir;
+     struct dirent *dent = NULL;
+     FILE *procfile = NULL;
+     char cStr[40], cDevModel[40], cUnixDeviceName[40], read1[10] = "\0", read2[10] = "\0";
+@@ -346,6 +429,35 @@ static void create_hardware_branch(void)
+     }
+ 
+     /* Now goes SCSI */
++    scsidir = opendir("/sys/class/scsi_device");
++    if (scsidir)
++    {
++        while ((dent = readdir(scsidir)))
++        {
++            if (!strcmp(dent->d_name, ".") || !strcmp(dent->d_name, ".."))
++                continue;
++
++            if (!SCSI_getsysentry(dent->d_name, &dev, cUnixDeviceName))
++                continue;
++
++            scsi_addr.PortNumber = dev.host;
++            scsi_addr.PathId = dev.channel;
++            scsi_addr.TargetId = dev.target;
++            scsi_addr.Lun = dev.lun;
++
++            scsi_addr.PortNumber += uFirstSCSIPort;
++
++            strcpy(cDevModel, dev.vendor);
++            strcat(cDevModel, dev.model);
++            strcat(cDevModel, dev.rev);
++
++            /* FIXME: get real driver name */
++            create_scsi_entry(&scsi_addr, "WINE SCSI", dev.type, cDevModel, cUnixDeviceName);
++        }
++        closedir(scsidir);
++        return;
++    }
++
+     procfile = fopen(procname_scsi, "r");
+     if (!procfile)
+     {
+-- 
+2.8.0
+

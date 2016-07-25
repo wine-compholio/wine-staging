@@ -1,24 +1,17 @@
-From f781fe643462f94c07cef57b28403ab6a3b5348a Mon Sep 17 00:00:00 2001
+From b28aedb793ed3367b42906a19da394d4e8b93753 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Thu, 16 Oct 2014 23:26:35 +0200
 Subject: kernel32/tests: Add tests for NtQuerySection. (try 2)
 
 ---
- dlls/kernel32/tests/virtual.c | 258 ++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 258 insertions(+)
+ dlls/kernel32/tests/virtual.c | 251 ++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 251 insertions(+)
 
 diff --git a/dlls/kernel32/tests/virtual.c b/dlls/kernel32/tests/virtual.c
-index 5503e25..fb8d598 100644
+index 40b1bc9..26e5195 100644
 --- a/dlls/kernel32/tests/virtual.c
 +++ b/dlls/kernel32/tests/virtual.c
-@@ -47,12 +47,30 @@ static PVOID  (WINAPI *pRtlAddVectoredExceptionHandler)(ULONG, PVECTORED_EXCEPTI
- static ULONG  (WINAPI *pRtlRemoveVectoredExceptionHandler)(PVOID);
- static BOOL   (WINAPI *pGetProcessDEPPolicy)(HANDLE, LPDWORD, PBOOL);
- static BOOL   (WINAPI *pIsWow64Process)(HANDLE, PBOOL);
-+static NTSTATUS (WINAPI *pNtQuerySection)(HANDLE, int, PVOID, ULONG, PULONG);
- static NTSTATUS (WINAPI *pNtProtectVirtualMemory)(HANDLE, PVOID *, SIZE_T *, ULONG, ULONG *);
- static NTSTATUS (WINAPI *pNtAllocateVirtualMemory)(HANDLE, PVOID *, ULONG, SIZE_T *, ULONG, ULONG);
- static NTSTATUS (WINAPI *pNtFreeVirtualMemory)(HANDLE, PVOID *, SIZE_T *, ULONG);
+@@ -56,6 +56,23 @@ static NTSTATUS (WINAPI *pNtFreeVirtualMemory)(HANDLE, PVOID *, SIZE_T *, ULONG)
  
  /* ############################### */
  
@@ -42,7 +35,7 @@ index 5503e25..fb8d598 100644
  static HANDLE create_target_process(const char *arg)
  {
      char **argv;
-@@ -3768,6 +3786,244 @@ static void test_shared_memory_ro(BOOL is_child, DWORD child_access)
+@@ -3828,6 +3845,239 @@ static void test_shared_memory_ro(BOOL is_child, DWORD child_access)
      CloseHandle(mapping);
  }
  
@@ -103,7 +96,6 @@ index 5503e25..fb8d598 100644
 +    ok(status == STATUS_SUCCESS, "NtQuerySection error %#x\n", status);
 +    ok(ret == sizeof(info.basic), "wrong returned size %u\n", ret);
 +    ok(info.basic.BaseAddress == NULL, "expected NULL, got %p\n", info.basic.BaseAddress);
-+todo_wine
 +    ok(info.basic.Attributes == SEC_FILE, "expected SEC_FILE, got %#x\n", info.basic.Attributes);
 +todo_wine
 +    ok(info.basic.Size.QuadPart == fsize, "expected %#lx, got %#x/%08x\n", fsize, info.basic.Size.HighPart, info.basic.Size.LowPart);
@@ -127,7 +119,6 @@ index 5503e25..fb8d598 100644
 +    ok(status == STATUS_SUCCESS, "NtQuerySection error %#x\n", status);
 +    ok(ret == sizeof(info.basic), "wrong returned size %u\n", ret);
 +    ok(info.basic.BaseAddress == NULL, "expected NULL, got %p\n", info.basic.BaseAddress);
-+todo_wine
 +    ok(info.basic.Attributes == SEC_FILE, "expected SEC_FILE, got %#x\n", info.basic.Attributes);
 +todo_wine
 +    ok(info.basic.Size.QuadPart == fsize, "expected %#lx, got %#x/%08x\n", fsize, info.basic.Size.HighPart, info.basic.Size.LowPart);
@@ -148,7 +139,6 @@ index 5503e25..fb8d598 100644
 +    ok(status == STATUS_SUCCESS, "NtQuerySection error %#x\n", status);
 +    ok(ret == sizeof(info.basic), "wrong returned size %u\n", ret);
 +    ok(info.basic.BaseAddress == NULL, "expected NULL, got %p\n", info.basic.BaseAddress);
-+todo_wine
 +    ok(info.basic.Attributes == (SEC_FILE|SEC_IMAGE), "expected SEC_FILE|SEC_IMAGE, got %#x\n", info.basic.Attributes);
 +    ok(info.basic.Size.QuadPart == image_size, "expected %#lx, got %#x/%08x\n", image_size, info.basic.Size.HighPart, info.basic.Size.LowPart);
 +
@@ -178,9 +168,7 @@ index 5503e25..fb8d598 100644
 +    ok((ULONG_PTR)info.image.TransferAddress == nt->OptionalHeader.ImageBase + nt->OptionalHeader.AddressOfEntryPoint,
 +       "expected %#lx, got %p\n", (SIZE_T)(nt->OptionalHeader.ImageBase + nt->OptionalHeader.AddressOfEntryPoint), info.image.TransferAddress);
 +    ok(info.image.ZeroBits == 0, "expected 0, got %#x\n", info.image.ZeroBits);
-+todo_wine
 +    ok(info.image.MaximumStackSize == nt->OptionalHeader.SizeOfStackReserve, "expected %#lx, got %#lx\n", (SIZE_T)nt->OptionalHeader.SizeOfStackReserve, info.image.MaximumStackSize);
-+todo_wine
 +    ok(info.image.CommittedStackSize == nt->OptionalHeader.SizeOfStackCommit, "expected %#lx, got %#lx\n", (SIZE_T)nt->OptionalHeader.SizeOfStackCommit, info.image.CommittedStackSize);
 +    ok(info.image.SubSystemType == nt->OptionalHeader.Subsystem, "expected %#x, got %#x\n", nt->OptionalHeader.Subsystem, info.image.SubSystemType);
 +    ok(info.image.SubsystemVersionLow == nt->OptionalHeader.MinorSubsystemVersion, "expected %#x, got %#x\n", nt->OptionalHeader.MinorSubsystemVersion, info.image.SubsystemVersionLow);
@@ -188,6 +176,7 @@ index 5503e25..fb8d598 100644
 +    ok(info.image.ImageCharacteristics == nt->FileHeader.Characteristics, "expected %#x, got %#x\n", nt->FileHeader.Characteristics, info.image.ImageCharacteristics);
 +    ok(info.image.DllCharacteristics == nt->OptionalHeader.DllCharacteristics, "expected %#x, got %#x\n", nt->OptionalHeader.DllCharacteristics, info.image.DllCharacteristics);
 +    ok(info.image.Machine == nt->FileHeader.Machine, "expected %#x, got %#x\n", nt->FileHeader.Machine, info.image.Machine);
++todo_wine
 +    ok(info.image.ImageContainsCode == TRUE, "expected 1, got %#x\n", info.image.ImageContainsCode);
 +
 +    memset(&info, 0x55, sizeof(info));
@@ -196,7 +185,6 @@ index 5503e25..fb8d598 100644
 +    ok(status == STATUS_SUCCESS, "NtQuerySection error %#x\n", status);
 +    ok(ret == sizeof(info.basic), "wrong returned size %u\n", ret);
 +    ok(info.basic.BaseAddress == NULL, "expected NULL, got %p\n", info.basic.BaseAddress);
-+todo_wine
 +    ok(info.basic.Attributes == (SEC_FILE|SEC_IMAGE), "expected SEC_FILE|SEC_IMAGE, got %#x\n", info.basic.Attributes);
 +    ok(info.basic.Size.QuadPart == image_size, "expected %#lx, got %#x/%08x\n", image_size, info.basic.Size.HighPart, info.basic.Size.LowPart);
 +
@@ -287,15 +275,7 @@ index 5503e25..fb8d598 100644
  START_TEST(virtual)
  {
      int argc;
-@@ -3820,6 +4076,7 @@ START_TEST(virtual)
-     pNtUnmapViewOfSection = (void *)GetProcAddress( hntdll, "NtUnmapViewOfSection" );
-     pRtlAddVectoredExceptionHandler = (void *)GetProcAddress( hntdll, "RtlAddVectoredExceptionHandler" );
-     pRtlRemoveVectoredExceptionHandler = (void *)GetProcAddress( hntdll, "RtlRemoveVectoredExceptionHandler" );
-+    pNtQuerySection = (void *)GetProcAddress( hntdll, "NtQuerySection" );
-     pNtProtectVirtualMemory = (void *)GetProcAddress( hntdll, "NtProtectVirtualMemory" );
-     pNtAllocateVirtualMemory = (void *)GetProcAddress( hntdll, "NtAllocateVirtualMemory" );
-     pNtFreeVirtualMemory = (void *)GetProcAddress( hntdll, "NtFreeVirtualMemory" );
-@@ -3829,6 +4086,7 @@ START_TEST(virtual)
+@@ -3891,6 +4141,7 @@ START_TEST(virtual)
      test_shared_memory_ro(FALSE, FILE_MAP_COPY);
      test_shared_memory_ro(FALSE, FILE_MAP_COPY|FILE_MAP_WRITE);
      test_mapping();
@@ -304,5 +284,5 @@ index 5503e25..fb8d598 100644
      test_VirtualAlloc_protection();
      test_VirtualProtect();
 -- 
-2.7.1
+2.8.0
 

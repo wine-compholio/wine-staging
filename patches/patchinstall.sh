@@ -51,13 +51,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "267e8e3eeb6d0b6e8ccab809fddd27bae05cbfc2"
+	echo "b54a8dda844a1a43d1dff22eff0ea206be5c630c"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 1.9.15"
+	echo "Wine Staging 1.9.16 (unreleased)"
 	echo "Copyright (C) 2014-2016 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -2975,22 +2975,15 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	d3dx9_36-GetShaderSemantics
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37919] Implement d3dx9_36.D3DXCreateTextureShader with stub interface
-# |
 # | Modified files:
-# |   *	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/shader.c, dlls/d3dx9_36/tests/shader.c, include/d3dx9tex.h
+# |   *	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/shader.c, dlls/d3dx9_36/tests/shader.c
 # |
 if test "$enable_d3dx9_36_D3DXDisassembleShader" -eq 1; then
-	patch_apply d3dx9_36-D3DXDisassembleShader/0001-d3dx9_36-Implement-D3DXCreateTextureShader-with-stub.patch
-	patch_apply d3dx9_36-D3DXDisassembleShader/0002-include-Fix-prototypes-of-D3DXFillXXXTextureTx-for-d.patch
 	patch_apply d3dx9_36-D3DXDisassembleShader/0003-d3dx9_36-Add-stub-for-D3DXFillCubeTextureTX.patch
 	patch_apply d3dx9_36-D3DXDisassembleShader/0004-d3dx9_36-Implement-D3DXDisassembleShader.patch
 	patch_apply d3dx9_36-D3DXDisassembleShader/0005-d3dx9_36-tests-Add-initial-tests-for-D3DXDisassemble.patch
 	patch_apply d3dx9_36-D3DXDisassembleShader/0006-d3dx9_36-tests-Add-additional-tests-for-special-case.patch
 	(
-		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXCreateTextureShader with stubbed ID3DXTextureShader interface.", 1 },';
-		echo '+    { "Christian Costa", "include: Fix prototypes of D3DXFillXXXTextureTx for d3dx9.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXFillCubeTextureTX.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXDisassembleShader.", 2 },';
 		echo '+    { "Sebastian Lackner", "d3dx9_36/tests: Add initial tests for D3DXDisassembleShader.", 1 },';
@@ -4978,23 +4971,15 @@ fi
 
 # Patchset ntdll-NtQuerySection
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37338] Support for NtQuerySection
-# |
 # | Modified files:
-# |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, dlls/ntdll/virtual.c,
-# | 	dlls/ntoskrnl.exe/ntoskrnl.exe.spec, server/mapping.c, server/protocol.def
+# |   *	dlls/kernel32/tests/virtual.c, server/mapping.c
 # |
 if test "$enable_ntdll_NtQuerySection" -eq 1; then
-	patch_apply ntdll-NtQuerySection/0001-ntdll-Implement-NtQuerySection.patch
 	patch_apply ntdll-NtQuerySection/0002-kernel32-tests-Add-tests-for-NtQuerySection.patch
 	patch_apply ntdll-NtQuerySection/0003-server-CreateFileMapping-should-not-fail-without-SEC.patch
-	patch_apply ntdll-NtQuerySection/0004-ntdll-For-section-queries-return-real-file-size.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "ntdll: Implement NtQuerySection.", 2 },';
 		echo '+    { "Dmitry Timoshkov", "kernel32/tests: Add tests for NtQuerySection.", 2 },';
 		echo '+    { "Dmitry Timoshkov", "server: CreateFileMapping should not fail without SEC_COMMIT for a named file section.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "ntdll: For section queries return real file size.", 1 },';
 	) >> "$patchlist"
 fi
 

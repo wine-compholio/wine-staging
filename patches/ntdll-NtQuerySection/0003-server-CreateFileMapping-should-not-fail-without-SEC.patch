@@ -1,4 +1,4 @@
-From e25dd58ca9b187745ddfb4b8eb10cbcef24992de Mon Sep 17 00:00:00 2001
+From 84cdc8afb6575024f2ebab1347cfc6becf41ce06 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Wed, 9 Mar 2016 13:06:13 +0800
 Subject: server: CreateFileMapping should not fail without SEC_COMMIT for a
@@ -6,15 +6,15 @@ Subject: server: CreateFileMapping should not fail without SEC_COMMIT for a
 
 Anonymous file mapping already behaves this way.
 ---
- dlls/kernel32/tests/virtual.c | 5 ++---
+ dlls/kernel32/tests/virtual.c | 4 +---
  server/mapping.c              | 5 +++--
- 2 files changed, 5 insertions(+), 5 deletions(-)
+ 2 files changed, 4 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/kernel32/tests/virtual.c b/dlls/kernel32/tests/virtual.c
-index 10e72b2..6d25b5f 100644
+index 26e5195..866d1b8 100644
 --- a/dlls/kernel32/tests/virtual.c
 +++ b/dlls/kernel32/tests/virtual.c
-@@ -3961,9 +3961,7 @@ todo_wine
+@@ -4016,9 +4016,7 @@ todo_wine
  
      SetLastError(0xdeadbef);
      mapping = CreateFileMappingA(file, NULL, PAGE_READONLY|SEC_RESERVE, 0, 0, NULL);
@@ -24,11 +24,9 @@ index 10e72b2..6d25b5f 100644
  
      memset(&info, 0x55, sizeof(info));
      ret = 0xdeadbeef;
-@@ -3971,11 +3969,12 @@ todo_wine
-     ok(status == STATUS_SUCCESS, "NtQuerySection error %#x\n", status);
+@@ -4027,10 +4025,10 @@ todo_wine
      ok(ret == sizeof(info.basic), "wrong returned size %u\n", ret);
      ok(info.basic.BaseAddress == NULL, "expected NULL, got %p\n", info.basic.BaseAddress);
-+todo_wine
      ok(info.basic.Attributes == SEC_FILE, "expected SEC_FILE, got %#x\n", info.basic.Attributes);
 +todo_wine
      ok(info.basic.Size.QuadPart == fsize, "expected %#lx, got %#x/%08x\n", fsize, info.basic.Size.HighPart, info.basic.Size.LowPart);
@@ -39,12 +37,12 @@ index 10e72b2..6d25b5f 100644
  
      SetLastError(0xdeadbef);
 diff --git a/server/mapping.c b/server/mapping.c
-index ec0ef98..aa38193 100644
+index 71c3437..c223037 100644
 --- a/server/mapping.c
 +++ b/server/mapping.c
-@@ -539,8 +539,9 @@ static struct object *create_mapping( struct object *root, const struct unicode_
+@@ -529,8 +529,9 @@ static struct object *create_mapping( struct object *root, const struct unicode_
  
-         if (!(protect & VPROT_COMMITTED))
+         if (flags & SEC_RESERVE)
          {
 -            set_error( STATUS_INVALID_PARAMETER );
 -            goto error;
@@ -55,5 +53,5 @@ index ec0ef98..aa38193 100644
          if (!(file = get_file_obj( current->process, handle, access ))) goto error;
          fd = get_obj_fd( (struct object *)file );
 -- 
-2.7.1
+2.8.0
 

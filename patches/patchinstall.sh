@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "b05704dbbd429a5325132c77a3e13fcb88b2995f"
+	echo "63fcf7faee88aea9425f57de8516dea262f54531"
 }
 
 # Show version information
@@ -222,7 +222,6 @@ patch_enable_all ()
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
-	enable_ntdll_OSX_TEB_x86_64="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_Purist_Mode="$1"
@@ -840,9 +839,6 @@ patch_enable ()
 			;;
 		ntdll-NtSetLdtEntries)
 			enable_ntdll_NtSetLdtEntries="$2"
-			;;
-		ntdll-OSX_TEB_x86_64)
-			enable_ntdll_OSX_TEB_x86_64="$2"
 			;;
 		ntdll-Pipe_SpecialCharacters)
 			enable_ntdll_Pipe_SpecialCharacters="$2"
@@ -4994,18 +4990,6 @@ if test "$enable_ntdll_NtSetLdtEntries" -eq 1; then
 	(
 		echo '+    { "Dmitry Timoshkov", "ntdll: Implement NtSetLdtEntries.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "libs/wine: Allow to modify reserved LDT entries.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-OSX_TEB_x86_64
-# |
-# | Modified files:
-# |   *	dlls/ntdll/signal_x86_64.c, include/winnt.h
-# |
-if test "$enable_ntdll_OSX_TEB_x86_64" -eq 1; then
-	patch_apply ntdll-OSX_TEB_x86_64/0001-ntdll-Set-0x30-TEB-field-on-OS-X-64-bit.patch
-	(
-		echo '+    { "Michael Müller", "ntdll: Set 0x30 TEB field on OS X 64 bit.", 1 },';
 	) >> "$patchlist"
 fi
 

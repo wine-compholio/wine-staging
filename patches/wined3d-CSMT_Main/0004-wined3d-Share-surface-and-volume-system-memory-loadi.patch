@@ -1,4 +1,4 @@
-From 7bce6d69497a6dcb14bcaf8b02f9b0e68f5cbbd1 Mon Sep 17 00:00:00 2001
+From 1a83fb7e0d0636b42ae5c5088bd5e8910af10193 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 18 Nov 2015 08:31:14 +0000
 Subject: wined3d: Share surface and volume system memory loading code.
@@ -10,10 +10,10 @@ Subject: wined3d: Share surface and volume system memory loading code.
  3 files changed, 124 insertions(+), 155 deletions(-)
 
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index 68bf333..1189b97 100644
+index 105fcb5..2933b82 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
-@@ -2720,67 +2720,6 @@ static void surface_load_ds_location(struct wined3d_surface *surface, struct win
+@@ -2869,67 +2869,6 @@ static void surface_load_ds_location(struct wined3d_surface *surface, struct win
      }
  }
  
@@ -81,7 +81,7 @@ index 68bf333..1189b97 100644
  /* Context activation is done by the caller. */
  static void surface_load_sysmem(struct wined3d_surface *surface,
          struct wined3d_context *context, DWORD dst_location)
-@@ -2793,12 +2732,6 @@ static void surface_load_sysmem(struct wined3d_surface *surface,
+@@ -2942,12 +2881,6 @@ static void surface_load_sysmem(struct wined3d_surface *surface,
      wined3d_texture_prepare_location(texture, sub_resource_idx, context, dst_location);
  
      sub_resource = &texture->sub_resources[sub_resource_idx];
@@ -94,7 +94,7 @@ index 68bf333..1189b97 100644
      if (sub_resource->locations & (WINED3D_LOCATION_RB_MULTISAMPLE | WINED3D_LOCATION_RB_RESOLVED))
          wined3d_texture_load_location(surface->container, surface_get_sub_resource_idx(surface),
                  context, WINED3D_LOCATION_TEXTURE_RGB);
-@@ -3048,46 +2981,11 @@ void surface_load_location(struct wined3d_surface *surface, struct wined3d_conte
+@@ -3195,46 +3128,11 @@ void surface_load_location(struct wined3d_surface *surface, struct wined3d_conte
      unsigned int sub_resource_idx = surface_get_sub_resource_idx(surface);
      struct wined3d_texture *texture = surface->container;
      struct wined3d_texture_sub_resource *sub_resource;
@@ -141,7 +141,7 @@ index 68bf333..1189b97 100644
  
      if (texture->resource.usage & WINED3DUSAGE_DEPTHSTENCIL)
      {
-@@ -3134,14 +3032,6 @@ void surface_load_location(struct wined3d_surface *surface, struct wined3d_conte
+@@ -3281,14 +3179,6 @@ void surface_load_location(struct wined3d_surface *surface, struct wined3d_conte
      }
  
  done:
@@ -157,10 +157,10 @@ index 68bf333..1189b97 100644
  }
  
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index 9780cc5..708470e 100644
+index ad9a73d..f6beefc 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -2636,9 +2636,132 @@ HRESULT CDECL wined3d_texture_release_dc(struct wined3d_texture *texture, unsign
+@@ -2709,9 +2709,132 @@ HRESULT CDECL wined3d_texture_release_dc(struct wined3d_texture *texture, unsign
      return WINED3D_OK;
  }
  
@@ -295,10 +295,10 @@ index 9780cc5..708470e 100644
 +    return ret;
  }
 diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
-index f59f963..dda5f98 100644
+index 2e38aa7..d625f1e 100644
 --- a/dlls/wined3d/volume.c
 +++ b/dlls/wined3d/volume.c
-@@ -119,27 +119,6 @@ static void wined3d_volume_download_data(struct wined3d_volume *volume,
+@@ -119,27 +119,6 @@ static void texture3d_download_data(struct wined3d_texture *texture, unsigned in
  
  }
  
@@ -324,9 +324,9 @@ index f59f963..dda5f98 100644
 -}
 -
  /* Context activation is done by the caller. */
- static void wined3d_volume_srgb_transfer(struct wined3d_volume *volume,
+ static void texture3d_srgb_transfer(struct wined3d_texture *texture, unsigned int sub_resource_idx,
          struct wined3d_context *context, BOOL dest_is_srgb)
-@@ -170,7 +149,6 @@ static void wined3d_volume_srgb_transfer(struct wined3d_volume *volume,
+@@ -171,7 +150,6 @@ static void texture3d_srgb_transfer(struct wined3d_texture *texture, unsigned in
  BOOL wined3d_volume_load_location(struct wined3d_volume *volume,
          struct wined3d_context *context, DWORD location)
  {
@@ -334,7 +334,7 @@ index f59f963..dda5f98 100644
      unsigned int sub_resource_idx = volume->texture_level;
      struct wined3d_texture *texture = volume->container;
      struct wined3d_texture_sub_resource *sub_resource;
-@@ -179,30 +157,9 @@ BOOL wined3d_volume_load_location(struct wined3d_volume *volume,
+@@ -180,30 +158,9 @@ BOOL wined3d_volume_load_location(struct wined3d_volume *volume,
      TRACE("Volume %p, loading %s, have %s.\n", volume, wined3d_debug_location(location),
          wined3d_debug_location(sub_resource->locations));
  
@@ -365,7 +365,7 @@ index f59f963..dda5f98 100644
      switch (location)
      {
          case WINED3D_LOCATION_TEXTURE_RGB:
-@@ -285,7 +242,6 @@ BOOL wined3d_volume_load_location(struct wined3d_volume *volume,
+@@ -286,7 +243,6 @@ BOOL wined3d_volume_load_location(struct wined3d_volume *volume,
              return FALSE;
      }
  

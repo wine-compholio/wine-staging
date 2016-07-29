@@ -1,13 +1,12 @@
-From 1a83fb7e0d0636b42ae5c5088bd5e8910af10193 Mon Sep 17 00:00:00 2001
+From 8a19a2579927f3b47f3c894af877a2d810c01c6a Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 18 Nov 2015 08:31:14 +0000
 Subject: wined3d: Share surface and volume system memory loading code.
 
 ---
- dlls/wined3d/surface.c | 110 -------------------------------------------
- dlls/wined3d/texture.c | 125 ++++++++++++++++++++++++++++++++++++++++++++++++-
- dlls/wined3d/volume.c  |  44 -----------------
- 3 files changed, 124 insertions(+), 155 deletions(-)
+ dlls/wined3d/surface.c | 110 --------------------------------
+ dlls/wined3d/texture.c | 169 ++++++++++++++++++++++++++++++++++++-------------
+ 2 files changed, 124 insertions(+), 155 deletions(-)
 
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
 index 105fcb5..2933b82 100644
@@ -157,10 +156,84 @@ index 105fcb5..2933b82 100644
  }
  
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index ad9a73d..f6beefc 100644
+index 8975155..634314b 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -2709,9 +2709,132 @@ HRESULT CDECL wined3d_texture_release_dc(struct wined3d_texture *texture, unsign
+@@ -80,27 +80,6 @@ GLenum wined3d_texture_get_gl_buffer(const struct wined3d_texture *texture)
+     return GL_BACK;
+ }
+ 
+-static DWORD wined3d_resource_access_from_location(DWORD location)
+-{
+-    switch (location)
+-    {
+-        case WINED3D_LOCATION_DISCARDED:
+-            return 0;
+-
+-        case WINED3D_LOCATION_SYSMEM:
+-            return WINED3D_RESOURCE_ACCESS_CPU;
+-
+-        case WINED3D_LOCATION_BUFFER:
+-        case WINED3D_LOCATION_TEXTURE_RGB:
+-        case WINED3D_LOCATION_TEXTURE_SRGB:
+-            return WINED3D_RESOURCE_ACCESS_GPU;
+-
+-        default:
+-            FIXME("Unhandled location %#x.\n", location);
+-            return 0;
+-    }
+-}
+-
+ static void wined3d_texture_evict_sysmem(struct wined3d_texture *texture)
+ {
+     struct wined3d_texture_sub_resource *sub_resource;
+@@ -2182,37 +2161,15 @@ static BOOL texture3d_load_location(struct wined3d_texture *texture, unsigned in
+         struct wined3d_context *context, DWORD location)
+ {
+     struct wined3d_texture_sub_resource *sub_resource = &texture->sub_resources[sub_resource_idx];
+-    DWORD required_access = wined3d_resource_access_from_location(location);
+ 
+     TRACE("texture %p, sub_resource_idx %u, context %p, location %s.\n",
+             texture, sub_resource_idx, context, wined3d_debug_location(location));
+ 
+     TRACE("Current resource location %s.\n", wined3d_debug_location(sub_resource->locations));
+ 
+-    if ((sub_resource->locations & location) == location)
+-    {
+-        TRACE("Location(s) already up to date.\n");
+-        return TRUE;
+-    }
+-
+-    if ((texture->resource.access_flags & required_access) != required_access)
+-    {
+-        ERR("Operation requires %#x access, but volume only has %#x.\n",
+-                required_access, texture->resource.access_flags);
+-        return FALSE;
+-    }
+-
+     if (!wined3d_texture_prepare_location(texture, sub_resource_idx, context, location))
+         return FALSE;
+ 
+-    if (sub_resource->locations & WINED3D_LOCATION_DISCARDED)
+-    {
+-        TRACE("Volume previously discarded, nothing to do.\n");
+-        wined3d_texture_validate_location(texture, sub_resource_idx, location);
+-        wined3d_texture_invalidate_location(texture, sub_resource_idx, WINED3D_LOCATION_DISCARDED);
+-        goto done;
+-    }
+-
+     switch (location)
+     {
+         case WINED3D_LOCATION_TEXTURE_RGB:
+@@ -2295,7 +2252,6 @@ static BOOL texture3d_load_location(struct wined3d_texture *texture, unsigned in
+             return FALSE;
+     }
+ 
+-done:
+     wined3d_texture_validate_location(texture, sub_resource_idx, location);
+ 
+     return TRUE;
+@@ -2906,9 +2862,132 @@ HRESULT CDECL wined3d_texture_release_dc(struct wined3d_texture *texture, unsign
      return WINED3D_OK;
  }
  
@@ -294,85 +367,6 @@ index ad9a73d..f6beefc 100644
 +    }
 +    return ret;
  }
-diff --git a/dlls/wined3d/volume.c b/dlls/wined3d/volume.c
-index 2e38aa7..d625f1e 100644
---- a/dlls/wined3d/volume.c
-+++ b/dlls/wined3d/volume.c
-@@ -119,27 +119,6 @@ static void texture3d_download_data(struct wined3d_texture *texture, unsigned in
- 
- }
- 
--static DWORD volume_access_from_location(DWORD location)
--{
--    switch (location)
--    {
--        case WINED3D_LOCATION_DISCARDED:
--            return 0;
--
--        case WINED3D_LOCATION_SYSMEM:
--            return WINED3D_RESOURCE_ACCESS_CPU;
--
--        case WINED3D_LOCATION_BUFFER:
--        case WINED3D_LOCATION_TEXTURE_RGB:
--        case WINED3D_LOCATION_TEXTURE_SRGB:
--            return WINED3D_RESOURCE_ACCESS_GPU;
--
--        default:
--            FIXME("Unhandled location %#x.\n", location);
--            return 0;
--    }
--}
--
- /* Context activation is done by the caller. */
- static void texture3d_srgb_transfer(struct wined3d_texture *texture, unsigned int sub_resource_idx,
-         struct wined3d_context *context, BOOL dest_is_srgb)
-@@ -171,7 +150,6 @@ static void texture3d_srgb_transfer(struct wined3d_texture *texture, unsigned in
- BOOL wined3d_volume_load_location(struct wined3d_volume *volume,
-         struct wined3d_context *context, DWORD location)
- {
--    DWORD required_access = volume_access_from_location(location);
-     unsigned int sub_resource_idx = volume->texture_level;
-     struct wined3d_texture *texture = volume->container;
-     struct wined3d_texture_sub_resource *sub_resource;
-@@ -180,30 +158,9 @@ BOOL wined3d_volume_load_location(struct wined3d_volume *volume,
-     TRACE("Volume %p, loading %s, have %s.\n", volume, wined3d_debug_location(location),
-         wined3d_debug_location(sub_resource->locations));
- 
--    if ((sub_resource->locations & location) == location)
--    {
--        TRACE("Location(s) already up to date.\n");
--        return TRUE;
--    }
--
--    if ((texture->resource.access_flags & required_access) != required_access)
--    {
--        ERR("Operation requires %#x access, but volume only has %#x.\n",
--                required_access, texture->resource.access_flags);
--        return FALSE;
--    }
--
-     if (!wined3d_texture_prepare_location(texture, sub_resource_idx, context, location))
-         return FALSE;
- 
--    if (sub_resource->locations & WINED3D_LOCATION_DISCARDED)
--    {
--        TRACE("Volume previously discarded, nothing to do.\n");
--        wined3d_texture_validate_location(texture, sub_resource_idx, location);
--        wined3d_texture_invalidate_location(texture, sub_resource_idx, WINED3D_LOCATION_DISCARDED);
--        goto done;
--    }
--
-     switch (location)
-     {
-         case WINED3D_LOCATION_TEXTURE_RGB:
-@@ -286,7 +243,6 @@ BOOL wined3d_volume_load_location(struct wined3d_volume *volume,
-             return FALSE;
-     }
- 
--done:
-     wined3d_texture_validate_location(texture, sub_resource_idx, location);
- 
-     return TRUE;
 -- 
-2.8.0
+2.9.0
 

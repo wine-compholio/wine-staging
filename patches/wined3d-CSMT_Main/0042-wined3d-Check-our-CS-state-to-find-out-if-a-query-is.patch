@@ -1,4 +1,4 @@
-From f4a2f28e195b9b5125e5360f4e7167fa2aaca230 Mon Sep 17 00:00:00 2001
+From 84e3897a8d1dc4f1925979a2d876609735a0ef4d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Sat, 6 Jul 2013 18:31:41 +0200
 Subject: wined3d: Check our CS state to find out if a query is done
@@ -10,10 +10,10 @@ Subject: wined3d: Check our CS state to find out if a query is done
  3 files changed, 15 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 4aaf259..94232db 100644
+index 90bb9f2..f51656c 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -1985,8 +1985,12 @@ void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture
+@@ -2011,8 +2011,12 @@ void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture
  static UINT wined3d_cs_exec_query_issue(struct wined3d_cs *cs, const void *data)
  {
      const struct wined3d_cs_query_issue *op = data;
@@ -28,12 +28,12 @@ index 4aaf259..94232db 100644
      return sizeof(*op);
  }
 diff --git a/dlls/wined3d/query.c b/dlls/wined3d/query.c
-index fbbd4f2..726da3b 100644
+index 048a0cf..64dd14b 100644
 --- a/dlls/wined3d/query.c
 +++ b/dlls/wined3d/query.c
-@@ -314,6 +314,12 @@ HRESULT CDECL wined3d_query_get_data(struct wined3d_query *query,
-     TRACE("query %p, data %p, data_size %u, flags %#x.\n",
-             query, data, data_size, flags);
+@@ -330,6 +330,12 @@ HRESULT CDECL wined3d_query_get_data(struct wined3d_query *query,
+     if (flags)
+         WARN("Ignoring flags %#x.\n", flags);
  
 +    if (query->counter_main != query->counter_worker)
 +    {
@@ -41,10 +41,10 @@ index fbbd4f2..726da3b 100644
 +        return S_FALSE;
 +    }
 +
-     wined3d_cs_emit_query_get_data(query->device->cs, query, data, data_size,
-             flags, &hr);
- 
-@@ -331,6 +337,9 @@ HRESULT CDECL wined3d_query_issue(struct wined3d_query *query, DWORD flags)
+     if (query->state == QUERY_BUILDING)
+     {
+         WARN("Query is building, returning S_FALSE.\n");
+@@ -363,6 +369,9 @@ HRESULT CDECL wined3d_query_issue(struct wined3d_query *query, DWORD flags)
  {
      TRACE("query %p, flags %#x.\n", query, flags);
  
@@ -52,14 +52,14 @@ index fbbd4f2..726da3b 100644
 +        query->counter_main++;
 +
      wined3d_cs_emit_query_issue(query->device->cs, query, flags);
-     return WINED3D_OK;
- }
+ 
+     if (flags & WINED3DISSUE_BEGIN)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 6f00f06..232f099 100644
+index 9c4ed1e..a641df3 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -1395,6 +1395,7 @@ struct wined3d_query
-     enum wined3d_query_type type;
+@@ -1396,6 +1396,7 @@ struct wined3d_query
+     const void *data;
      DWORD data_size;
      const struct wined3d_query_ops *query_ops;
 +    LONG counter_main, counter_worker;
@@ -67,5 +67,5 @@ index 6f00f06..232f099 100644
  
  union wined3d_gl_query_object
 -- 
-2.8.0
+2.9.0
 

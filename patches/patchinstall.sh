@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "2337c50ed769f2078257283f82aa7e696b452324"
+	echo "ba2e025b94fa3705d439803a545129c32e8818af"
 }
 
 # Show version information
@@ -7311,16 +7311,13 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Replace the linked lists with a ringbuffer.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t preload buffers on unmap.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish before swapping.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Wined3d_*_query_issue never fails.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Add query support to the command stream.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Check our CS state to find out if a query is done.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Poll queries automatically in the CS.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Introduce a separate queue for priority commands.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Destroy queries through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Separate main and worker thread query state.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t poll queries that failed to start.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Remove restated queries from the poll list.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t reset the query state if it doesn'\''t have a ctx.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Put this into the query poll patch.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Send texture preloads through the CS.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t access device state in clears.", 1 },';

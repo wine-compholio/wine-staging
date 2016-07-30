@@ -1,4 +1,4 @@
-From e98df687ff8ca219bc6518a82f120b0fe856f9c7 Mon Sep 17 00:00:00 2001
+From 49c421c543e672fb83aaf887a51cabd52a9dd13b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 1 Aug 2013 00:33:48 +0200
 Subject: wined3d: Send update_texture calls through the CS
@@ -11,12 +11,12 @@ FIXME: This logic duplication is ugly.
  3 files changed, 137 insertions(+), 82 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 811c4b7..2cb9ad7 100644
+index b056e22..4611f41 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -72,6 +72,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_TEXTURE_MAP,
      WINED3D_CS_OP_TEXTURE_UNMAP,
-     WINED3D_CS_OP_QUERY_ISSUE,
      WINED3D_CS_OP_TEXTURE_PRELOAD,
 +    WINED3D_CS_OP_UPDATE_TEXTURE,
      WINED3D_CS_OP_STOP,
@@ -68,8 +68,8 @@ index 811c4b7..2cb9ad7 100644
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
 @@ -2140,6 +2172,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_TEXTURE_MAP                */ wined3d_cs_exec_texture_map,
      /* WINED3D_CS_OP_TEXTURE_UNMAP              */ wined3d_cs_exec_texture_unmap,
-     /* WINED3D_CS_OP_QUERY_ISSUE                */ wined3d_cs_exec_query_issue,
      /* WINED3D_CS_OP_TEXTURE_PRELOAD            */ wined3d_cs_exec_texture_preload,
 +    /* WINED3D_CS_OP_UPDATE_TEXTURE             */ wined3d_cs_exec_update_texture,
  };
@@ -319,7 +319,7 @@ index d458747..99118f2 100644
  
  HRESULT CDECL wined3d_device_validate_device(const struct wined3d_device *device, DWORD *num_passes)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index e2e8673..9caeb46 100644
+index 8af4864..3caec37 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -2533,6 +2533,8 @@ void device_resource_add(struct wined3d_device *device, struct wined3d_resource
@@ -331,8 +331,8 @@ index e2e8673..9caeb46 100644
  
  static inline BOOL isStateDirty(const struct wined3d_context *context, DWORD state)
  {
-@@ -3162,6 +3164,8 @@ void wined3d_cs_emit_query_issue(struct wined3d_cs *cs, struct wined3d_query *qu
-         DWORD flags) DECLSPEC_HIDDEN;
+@@ -3154,6 +3156,8 @@ void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture
+         unsigned int sub_resource_idx) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_query_poll(struct wined3d_cs *cs, struct wined3d_query *query, BOOL *ret) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_texture_preload(struct wined3d_cs *cs, struct wined3d_texture *texture) DECLSPEC_HIDDEN;
 +void wined3d_cs_emit_update_texture(struct wined3d_cs *cs, struct wined3d_texture *src,

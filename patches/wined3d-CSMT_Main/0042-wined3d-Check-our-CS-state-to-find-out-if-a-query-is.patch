@@ -1,34 +1,30 @@
-From 84e3897a8d1dc4f1925979a2d876609735a0ef4d Mon Sep 17 00:00:00 2001
+From 4cff677153ca4c20bf4864281f5feb45eba8887b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Sat, 6 Jul 2013 18:31:41 +0200
 Subject: wined3d: Check our CS state to find out if a query is done
 
 ---
- dlls/wined3d/cs.c              | 6 +++++-
+ dlls/wined3d/cs.c              | 3 +++
  dlls/wined3d/query.c           | 9 +++++++++
  dlls/wined3d/wined3d_private.h | 1 +
- 3 files changed, 15 insertions(+), 1 deletion(-)
+ 3 files changed, 13 insertions(+)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 90bb9f2..f51656c 100644
+index 1c79290..2952104 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -2011,8 +2011,12 @@ void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture
- static UINT wined3d_cs_exec_query_issue(struct wined3d_cs *cs, const void *data)
- {
-     const struct wined3d_cs_query_issue *op = data;
-+    struct wined3d_query *query = op->query;
-+
-+    query->query_ops->query_issue(query, op->flags);
+@@ -1675,6 +1675,9 @@ static UINT wined3d_cs_exec_query_issue(struct wined3d_cs *cs, const void *data)
  
--    op->query->query_ops->query_issue(op->query, op->flags);
+     query->query_ops->query_issue(query, op->flags);
+ 
 +    if (op->flags & WINED3DISSUE_END)
 +        InterlockedIncrement(&query->counter_worker);
- 
++
      return sizeof(*op);
  }
+ 
 diff --git a/dlls/wined3d/query.c b/dlls/wined3d/query.c
-index 048a0cf..64dd14b 100644
+index c64e5fb..99a1411 100644
 --- a/dlls/wined3d/query.c
 +++ b/dlls/wined3d/query.c
 @@ -330,6 +330,12 @@ HRESULT CDECL wined3d_query_get_data(struct wined3d_query *query,
@@ -55,7 +51,7 @@ index 048a0cf..64dd14b 100644
  
      if (flags & WINED3DISSUE_BEGIN)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 9c4ed1e..a641df3 100644
+index c0c5b38..a10b30f 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -1396,6 +1396,7 @@ struct wined3d_query

@@ -1,4 +1,4 @@
-From 885bd3fb62e71c7faaf269dbe4709fd95c012065 Mon Sep 17 00:00:00 2001
+From 45dd4157e3456db1d50368029269acc72e082cf6 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefandoesinger@gmx.at>
 Date: Sun, 24 Apr 2016 15:07:54 +0100
 Subject: wined3d: Dirtify changed textures through the command stream.
@@ -14,18 +14,18 @@ FIXME: The lost unmap_dirtify = FALSE is unfortunate.
  3 files changed, 45 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 2187005..ee83438 100644
+index 9471829..eac0aaa 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -66,6 +66,7 @@ enum wined3d_cs_op
+@@ -69,6 +69,7 @@ enum wined3d_cs_op
      WINED3D_CS_OP_SET_LIGHT_ENABLE,
      WINED3D_CS_OP_BLT,
      WINED3D_CS_OP_CLEAR_RTV,
 +    WINED3D_CS_OP_TEXTURE_CHANGED,
      WINED3D_CS_OP_TEXTURE_MAP,
      WINED3D_CS_OP_TEXTURE_UNMAP,
-     WINED3D_CS_OP_QUERY_ISSUE,
-@@ -375,6 +376,13 @@ struct wined3d_cs_texture_unmap
+     WINED3D_CS_OP_TEXTURE_PRELOAD,
+@@ -401,6 +402,13 @@ struct wined3d_cs_texture_unmap
      unsigned int sub_resource_idx;
  };
  
@@ -39,7 +39,7 @@ index 2187005..ee83438 100644
  struct wined3d_cs_skip
  {
      enum wined3d_cs_op opcode;
-@@ -1907,6 +1915,28 @@ void wined3d_cs_emit_clear_rtv(struct wined3d_cs *cs, struct wined3d_rendertarge
+@@ -2071,6 +2079,28 @@ void wined3d_cs_emit_clear_rtv(struct wined3d_cs *cs, struct wined3d_rendertarge
      cs->ops->submit(cs, sizeof(*op));
  }
  
@@ -68,19 +68,19 @@ index 2187005..ee83438 100644
  static UINT wined3d_cs_exec_texture_map(struct wined3d_cs *cs, const void *data)
  {
      const struct wined3d_cs_texture_map *op = data;
-@@ -2243,6 +2273,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2337,6 +2367,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_SET_LIGHT_ENABLE           */ wined3d_cs_exec_set_light_enable,
      /* WINED3D_CS_OP_BLT                        */ wined3d_cs_exec_blt,
      /* WINED3D_CS_OP_CLEAR_RTV                  */ wined3d_cs_exec_clear_rtv,
 +    /* WINED3D_CS_OP_TEXTURE_CHANGED            */ wined3d_cs_exec_texture_changed,
      /* WINED3D_CS_OP_TEXTURE_MAP                */ wined3d_cs_exec_texture_map,
      /* WINED3D_CS_OP_TEXTURE_UNMAP              */ wined3d_cs_exec_texture_unmap,
-     /* WINED3D_CS_OP_QUERY_ISSUE                */ wined3d_cs_exec_query_issue,
+     /* WINED3D_CS_OP_TEXTURE_PRELOAD            */ wined3d_cs_exec_texture_preload,
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index 82f7aa0..1b656df 100644
+index 5145de0..605e851 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -1744,7 +1744,6 @@ static HRESULT texture_resource_sub_resource_map(struct wined3d_resource *resour
+@@ -1784,7 +1784,6 @@ static HRESULT texture_resource_sub_resource_map(struct wined3d_resource *resour
  
  void wined3d_texture_unmap_internal(struct wined3d_texture *texture, unsigned int sub_resource_idx)
  {
@@ -88,7 +88,7 @@ index 82f7aa0..1b656df 100644
      struct wined3d_context *context = NULL;
      struct wined3d_bo_address data;
  
-@@ -1768,12 +1767,11 @@ void wined3d_texture_unmap_internal(struct wined3d_texture *texture, unsigned in
+@@ -1808,12 +1807,11 @@ void wined3d_texture_unmap_internal(struct wined3d_texture *texture, unsigned in
      {
          FIXME("Depth / stencil buffer locking is not implemented.\n");
      }
@@ -105,7 +105,7 @@ index 82f7aa0..1b656df 100644
  }
  
  static HRESULT texture_resource_sub_resource_unmap(struct wined3d_resource *resource, unsigned int sub_resource_idx)
-@@ -1798,6 +1796,12 @@ static HRESULT texture_resource_sub_resource_unmap(struct wined3d_resource *reso
+@@ -1838,6 +1836,12 @@ static HRESULT texture_resource_sub_resource_unmap(struct wined3d_resource *reso
  
      wined3d_cs_emit_texture_unmap(device->cs, texture, sub_resource_idx);
  
@@ -119,10 +119,10 @@ index 82f7aa0..1b656df 100644
      if (!--resource->map_count && texture->update_map_binding)
          wined3d_texture_update_map_binding(texture);
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 7ce28b1..0934cee 100644
+index b5785b4..68d076b 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2612,6 +2612,8 @@ void wined3d_texture_bind(struct wined3d_texture *texture,
+@@ -2774,6 +2774,8 @@ void wined3d_texture_bind(struct wined3d_texture *texture,
          struct wined3d_context *context, BOOL srgb) DECLSPEC_HIDDEN;
  void wined3d_texture_bind_and_dirtify(struct wined3d_texture *texture,
          struct wined3d_context *context, BOOL srgb) DECLSPEC_HIDDEN;
@@ -131,7 +131,7 @@ index 7ce28b1..0934cee 100644
  BOOL wined3d_texture_check_block_align(const struct wined3d_texture *texture,
          unsigned int level, const struct wined3d_box *box) DECLSPEC_HIDDEN;
  GLenum wined3d_texture_get_gl_buffer(const struct wined3d_texture *texture) DECLSPEC_HIDDEN;
-@@ -2998,6 +3000,8 @@ void wined3d_cs_emit_blt(struct wined3d_cs *cs, struct wined3d_surface *dst_surf
+@@ -3151,6 +3153,8 @@ void wined3d_cs_emit_blt(struct wined3d_cs *cs, struct wined3d_surface *dst_surf
  void wined3d_cs_emit_clear_rtv(struct wined3d_cs *cs, struct wined3d_rendertarget_view *view,
          const RECT *rect, DWORD flags, const struct wined3d_color *color, float depth, DWORD stencil,
          const struct blit_shader *blitter) DECLSPEC_HIDDEN;
@@ -141,5 +141,5 @@ index 7ce28b1..0934cee 100644
          unsigned int sub_resource_idx, DWORD flags) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture *texture,
 -- 
-2.8.0
+2.9.0
 

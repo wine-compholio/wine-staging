@@ -1,4 +1,4 @@
-From df11e80df5719fba6dea98957f2d763282e03704 Mon Sep 17 00:00:00 2001
+From ab9aeec2012b5d821f22d71714a3ad5008209e0d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Sat, 6 Jul 2013 16:14:16 +0200
 Subject: wined3d: Accelerate DISCARD buffer maps
@@ -40,18 +40,18 @@ index 4cf3cdd..35deef8 100644
  
      base = buffer->map_ptr ? buffer->map_ptr : buffer->resource.map_heap_memory;
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index c7e47d8..366f641 100644
+index 20a3d66..cb4f7a2 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -70,6 +70,7 @@ enum wined3d_cs_op
+@@ -72,6 +72,7 @@ enum wined3d_cs_op
      WINED3D_CS_OP_TEXTURE_CHANGED,
      WINED3D_CS_OP_TEXTURE_MAP,
      WINED3D_CS_OP_TEXTURE_UNMAP,
 +    WINED3D_CS_OP_BUFFER_SWAP_MEM,
-     WINED3D_CS_OP_QUERY_ISSUE,
      WINED3D_CS_OP_TEXTURE_PRELOAD,
      WINED3D_CS_OP_UPDATE_TEXTURE,
-@@ -397,6 +398,13 @@ struct wined3d_cs_texture_changed
+     WINED3D_CS_OP_EVICT_RESOURCE,
+@@ -411,6 +412,13 @@ struct wined3d_cs_texture_changed
      void *swap_heap_memory;
  };
  
@@ -65,7 +65,7 @@ index c7e47d8..366f641 100644
  struct wined3d_cs_skip
  {
      enum wined3d_cs_op opcode;
-@@ -2295,6 +2303,34 @@ void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_r
+@@ -2324,6 +2332,34 @@ void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_r
      cs->ops->finish(cs);
  }
  
@@ -100,19 +100,19 @@ index c7e47d8..366f641 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2343,6 +2379,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2374,6 +2410,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_TEXTURE_CHANGED            */ wined3d_cs_exec_texture_changed,
      /* WINED3D_CS_OP_TEXTURE_MAP                */ wined3d_cs_exec_texture_map,
      /* WINED3D_CS_OP_TEXTURE_UNMAP              */ wined3d_cs_exec_texture_unmap,
 +    /* WINED3D_CS_OP_BUFFER_SWAP_MEM            */ wined3d_cs_exec_buffer_swap_mem,
-     /* WINED3D_CS_OP_QUERY_ISSUE                */ wined3d_cs_exec_query_issue,
      /* WINED3D_CS_OP_TEXTURE_PRELOAD            */ wined3d_cs_exec_texture_preload,
      /* WINED3D_CS_OP_UPDATE_TEXTURE             */ wined3d_cs_exec_update_texture,
+     /* WINED3D_CS_OP_EVICT_RESOURCE             */ wined3d_cs_exec_evict_resource,
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index d463a81..1664282 100644
+index 31375ed..2b25a33 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3179,6 +3179,8 @@ void wined3d_cs_emit_evict_resource(struct wined3d_cs *cs, struct wined3d_resour
+@@ -3182,6 +3182,8 @@ void wined3d_cs_emit_evict_resource(struct wined3d_cs *cs, struct wined3d_resour
  void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_resource *resource,
          unsigned int sub_resource_idx, const struct wined3d_box *box, const void *data, unsigned int row_pitch,
          unsigned int depth_pitch) DECLSPEC_HIDDEN;
@@ -122,5 +122,5 @@ index d463a81..1664282 100644
  /* TODO: Add tests and support for FLOAT16_4 POSITIONT, D3DCOLOR position, other
   * fixed function semantics as D3DCOLOR or FLOAT16 */
 -- 
-2.8.0
+2.9.0
 

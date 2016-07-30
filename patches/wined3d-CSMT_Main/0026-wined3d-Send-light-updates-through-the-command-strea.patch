@@ -1,4 +1,4 @@
-From 9087e6cbcc3113c89bb617a7ab9cb0134d6ecd9d Mon Sep 17 00:00:00 2001
+From dec9faf13d51f50f6e7393490a2634f4482e6ea0 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 10 Apr 2013 17:16:02 +0200
 Subject: wined3d: Send light updates through the command stream
@@ -10,18 +10,18 @@ Subject: wined3d: Send light updates through the command stream
  3 files changed, 174 insertions(+), 64 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index af7ec74..00c26b4 100644
+index 0ca8f23..da077f7 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -64,7 +64,6 @@ enum wined3d_cs_op
-     WINED3D_CS_OP_SET_MATERIAL,
+@@ -66,7 +66,6 @@ enum wined3d_cs_op
      WINED3D_CS_OP_RESET_STATE,
      WINED3D_CS_OP_DESTROY_OBJECT,
+     WINED3D_CS_OP_QUERY_ISSUE,
 -    WINED3D_CS_OP_STATEBLOCK,
      WINED3D_CS_OP_SET_VS_CONSTS_F,
      WINED3D_CS_OP_SET_VS_CONSTS_B,
      WINED3D_CS_OP_SET_VS_CONSTS_I,
-@@ -74,6 +73,8 @@ enum wined3d_cs_op
+@@ -76,6 +75,8 @@ enum wined3d_cs_op
      WINED3D_CS_OP_GLFINISH,
      WINED3D_CS_OP_SET_BASE_VERTEX_INDEX,
      WINED3D_CS_OP_SET_PRIMITIVE_TYPE,
@@ -30,8 +30,8 @@ index af7ec74..00c26b4 100644
      WINED3D_CS_OP_STOP,
  };
  
-@@ -293,12 +294,6 @@ struct wined3d_cs_destroy_object
-     void *object;
+@@ -308,12 +309,6 @@ struct wined3d_cs_query_issue
+     DWORD flags;
  };
  
 -struct wined3d_cs_stateblock
@@ -43,7 +43,7 @@ index af7ec74..00c26b4 100644
  struct wined3d_cs_set_consts_f
  {
      enum wined3d_cs_op opcode;
-@@ -340,6 +335,19 @@ struct wined3d_cs_set_primitive_type
+@@ -355,6 +350,19 @@ struct wined3d_cs_set_primitive_type
      GLenum gl_primitive_type;
  };
  
@@ -63,7 +63,7 @@ index af7ec74..00c26b4 100644
  /* FIXME: The list synchronization probably isn't particularly fast. */
  static void wined3d_cs_list_enqueue(struct wined3d_cs_list *list, struct wined3d_cs_block *block)
  {
-@@ -1128,35 +1136,6 @@ void wined3d_cs_emit_set_texture(struct wined3d_cs *cs, UINT stage, struct wined
+@@ -1143,35 +1151,6 @@ void wined3d_cs_emit_set_texture(struct wined3d_cs *cs, UINT stage, struct wined
      cs->ops->submit(cs);
  }
  
@@ -99,7 +99,7 @@ index af7ec74..00c26b4 100644
  static UINT wined3d_cs_exec_set_shader_resource_view(struct wined3d_cs *cs, const void *data)
  {
      const struct wined3d_cs_set_shader_resource_view *op = data;
-@@ -1739,6 +1718,152 @@ void wined3d_cs_emit_set_primitive_type(struct wined3d_cs *cs, GLenum primitive_
+@@ -1798,6 +1777,152 @@ void wined3d_cs_emit_set_primitive_type(struct wined3d_cs *cs, GLenum primitive_
      cs->ops->submit(cs);
  }
  
@@ -252,15 +252,15 @@ index af7ec74..00c26b4 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_FENCE                      */ wined3d_cs_exec_fence,
-@@ -1769,7 +1894,6 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
-     /* WINED3D_CS_OP_SET_MATERIAL               */ wined3d_cs_exec_set_material,
+@@ -1830,7 +1955,6 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_RESET_STATE                */ wined3d_cs_exec_reset_state,
      /* WINED3D_CS_OP_DESTROY_OBJECT             */ wined3d_cs_exec_destroy_object,
+     /* WINED3D_CS_OP_QUERY_ISSUE                */ wined3d_cs_exec_query_issue,
 -    /* WINED3D_CS_OP_STATEBLOCK                 */ wined3d_cs_exec_transfer_stateblock,
      /* WINED3D_CS_OP_SET_VS_CONSTS_F            */ wined3d_cs_exec_set_vs_consts_f,
      /* WINED3D_CS_OP_SET_VS_CONSTS_B            */ wined3d_cs_exec_set_vs_consts_b,
      /* WINED3D_CS_OP_SET_VS_CONSTS_I            */ wined3d_cs_exec_set_vs_consts_i,
-@@ -1779,6 +1903,8 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -1840,6 +1964,8 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_GLFINISH                   */ wined3d_cs_exec_glfinish,
      /* WINED3D_CS_OP_SET_BASE_VERTEX_INDEX      */ wined3d_cs_exec_set_base_vertex_index,
      /* WINED3D_CS_OP_SET_PRIMITIVE_TYPE         */ wined3d_cs_exec_set_primitive_type,
@@ -270,7 +270,7 @@ index af7ec74..00c26b4 100644
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 09cb1ba..4b209d3 100644
+index 91ab533..caec3e88 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
 @@ -1601,14 +1601,6 @@ HRESULT CDECL wined3d_device_set_light(struct wined3d_device *device,
@@ -331,7 +331,7 @@ index 09cb1ba..4b209d3 100644
      return WINED3D_OK;
  }
  
-@@ -3514,7 +3499,6 @@ HRESULT CDECL wined3d_device_draw_primitive(struct wined3d_device *device, UINT
+@@ -3540,7 +3525,6 @@ HRESULT CDECL wined3d_device_draw_primitive(struct wined3d_device *device, UINT
  {
      TRACE("device %p, start_vertex %u, vertex_count %u.\n", device, start_vertex, vertex_count);
  
@@ -339,7 +339,7 @@ index 09cb1ba..4b209d3 100644
      wined3d_cs_emit_draw(device->cs, 0, start_vertex, vertex_count, 0, 0, FALSE);
  
      return WINED3D_OK;
-@@ -3543,7 +3527,6 @@ HRESULT CDECL wined3d_device_draw_indexed_primitive(struct wined3d_device *devic
+@@ -3569,7 +3553,6 @@ HRESULT CDECL wined3d_device_draw_indexed_primitive(struct wined3d_device *devic
          return WINED3DERR_INVALIDCALL;
      }
  
@@ -347,7 +347,7 @@ index 09cb1ba..4b209d3 100644
      wined3d_cs_emit_draw(device->cs, device->state.base_vertex_index, start_idx, index_count, 0, 0, TRUE);
  
      return WINED3D_OK;
-@@ -3555,7 +3538,6 @@ void CDECL wined3d_device_draw_indexed_primitive_instanced(struct wined3d_device
+@@ -3581,7 +3564,6 @@ void CDECL wined3d_device_draw_indexed_primitive_instanced(struct wined3d_device
      TRACE("device %p, start_idx %u, index_count %u, start_instance %u, instance_count %u.\n",
              device, start_idx, index_count, start_instance, instance_count);
  
@@ -356,10 +356,10 @@ index 09cb1ba..4b209d3 100644
              start_idx, index_count, start_instance, instance_count, TRUE);
  }
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 29f9063..bc8eec2 100644
+index 18f7d78..3069877 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3026,7 +3026,9 @@ struct wined3d_cs_block
+@@ -3032,7 +3032,9 @@ struct wined3d_cs_block
  {
      struct list entry;
      UINT pos;
@@ -370,7 +370,7 @@ index 29f9063..bc8eec2 100644
  };
  
  struct wined3d_cs_ops
-@@ -3072,8 +3074,6 @@ void wined3d_cs_emit_set_color_key(struct wined3d_cs *cs, struct wined3d_texture
+@@ -3079,8 +3081,6 @@ void wined3d_cs_emit_set_color_key(struct wined3d_cs *cs, struct wined3d_texture
          WORD flags, const struct wined3d_color_key *color_key) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_constant_buffer(struct wined3d_cs *cs, enum wined3d_shader_type type,
          UINT cb_idx, struct wined3d_buffer *buffer) DECLSPEC_HIDDEN;
@@ -379,7 +379,7 @@ index 29f9063..bc8eec2 100644
  void wined3d_cs_emit_set_depth_stencil_view(struct wined3d_cs *cs,
          struct wined3d_rendertarget_view *view) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_index_buffer(struct wined3d_cs *cs, struct wined3d_buffer *buffer,
-@@ -3119,6 +3119,8 @@ void wined3d_cs_emit_set_base_vertex_index(struct wined3d_cs *cs,
+@@ -3128,6 +3128,8 @@ void wined3d_cs_emit_set_base_vertex_index(struct wined3d_cs *cs,
          UINT base_vertex_index) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_primitive_type(struct wined3d_cs *cs,
          GLenum primitive_type) DECLSPEC_HIDDEN;
@@ -389,5 +389,5 @@ index 29f9063..bc8eec2 100644
  /* TODO: Add tests and support for FLOAT16_4 POSITIONT, D3DCOLOR position, other
   * fixed function semantics as D3DCOLOR or FLOAT16 */
 -- 
-2.8.0
+2.9.0
 

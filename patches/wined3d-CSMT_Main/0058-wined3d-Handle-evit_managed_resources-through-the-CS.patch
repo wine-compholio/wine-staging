@@ -1,4 +1,4 @@
-From ca779bf66fca8a4f62db32a30cc895def00cd4ed Mon Sep 17 00:00:00 2001
+From 90c36c36a147bdf75db57285ba85c1f504ea13ea Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Tue, 6 Aug 2013 13:50:31 +0200
 Subject: wined3d: Handle evit_managed_resources through the CS
@@ -10,18 +10,18 @@ Subject: wined3d: Handle evit_managed_resources through the CS
  3 files changed, 41 insertions(+), 11 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index aa66603..5d5ddbb 100644
+index 4611f41..d1c9ae6 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -72,6 +72,7 @@ enum wined3d_cs_op
-     WINED3D_CS_OP_QUERY_ISSUE,
+@@ -73,6 +73,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_TEXTURE_UNMAP,
      WINED3D_CS_OP_TEXTURE_PRELOAD,
      WINED3D_CS_OP_UPDATE_TEXTURE,
 +    WINED3D_CS_OP_EVICT_RESOURCE,
      WINED3D_CS_OP_STOP,
  };
  
-@@ -410,6 +411,12 @@ struct wined3d_cs_update_texture
+@@ -417,6 +418,12 @@ struct wined3d_cs_update_texture
      struct wined3d_texture *src, *dst;
  };
  
@@ -34,7 +34,7 @@ index aa66603..5d5ddbb 100644
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
  {
      LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
-@@ -2093,6 +2100,35 @@ void wined3d_cs_emit_update_texture(struct wined3d_cs *cs, struct wined3d_textur
+@@ -2122,6 +2129,35 @@ void wined3d_cs_emit_update_texture(struct wined3d_cs *cs, struct wined3d_textur
      cs->ops->submit(cs, sizeof(*op));
  }
  
@@ -70,8 +70,8 @@ index aa66603..5d5ddbb 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2143,6 +2179,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
-     /* WINED3D_CS_OP_QUERY_ISSUE                */ wined3d_cs_exec_query_issue,
+@@ -2173,6 +2209,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_TEXTURE_UNMAP              */ wined3d_cs_exec_texture_unmap,
      /* WINED3D_CS_OP_TEXTURE_PRELOAD            */ wined3d_cs_exec_texture_preload,
      /* WINED3D_CS_OP_UPDATE_TEXTURE             */ wined3d_cs_exec_update_texture,
 +    /* WINED3D_CS_OP_EVICT_RESOURCE             */ wined3d_cs_exec_evict_resource,
@@ -79,10 +79,10 @@ index aa66603..5d5ddbb 100644
  
  static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index a4dd9fb..fd866ad 100644
+index 84071e4..612f1dd 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -4540,13 +4540,8 @@ void CDECL wined3d_device_evict_managed_resources(struct wined3d_device *device)
+@@ -4566,13 +4566,8 @@ void CDECL wined3d_device_evict_managed_resources(struct wined3d_device *device)
  
      TRACE("device %p.\n", device);
  
@@ -98,7 +98,7 @@ index a4dd9fb..fd866ad 100644
      LIST_FOR_EACH_ENTRY_SAFE(resource, cursor, &device->resources, struct wined3d_resource, resource_list_entry)
      {
          TRACE("Checking resource %p for eviction.\n", resource);
-@@ -4554,12 +4549,9 @@ void CDECL wined3d_device_evict_managed_resources(struct wined3d_device *device)
+@@ -4580,12 +4575,9 @@ void CDECL wined3d_device_evict_managed_resources(struct wined3d_device *device)
          if (resource->pool == WINED3D_POOL_MANAGED && !resource->map_count)
          {
              TRACE("Evicting %p.\n", resource);
@@ -113,10 +113,10 @@ index a4dd9fb..fd866ad 100644
  
  static void delete_opengl_contexts(struct wined3d_device *device, struct wined3d_swapchain *swapchain)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 47fdc9e..d823040 100644
+index 3caec37..1ea6b94 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3155,6 +3155,7 @@ void wined3d_cs_emit_query_get_data(struct wined3d_cs *cs, struct wined3d_query
+@@ -3158,6 +3158,7 @@ void wined3d_cs_emit_query_poll(struct wined3d_cs *cs, struct wined3d_query *que
  void wined3d_cs_emit_texture_preload(struct wined3d_cs *cs, struct wined3d_texture *texture) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_update_texture(struct wined3d_cs *cs, struct wined3d_texture *src,
          struct wined3d_texture *dst) DECLSPEC_HIDDEN;
@@ -125,5 +125,5 @@ index 47fdc9e..d823040 100644
  /* TODO: Add tests and support for FLOAT16_4 POSITIONT, D3DCOLOR position, other
   * fixed function semantics as D3DCOLOR or FLOAT16 */
 -- 
-2.8.0
+2.9.0
 

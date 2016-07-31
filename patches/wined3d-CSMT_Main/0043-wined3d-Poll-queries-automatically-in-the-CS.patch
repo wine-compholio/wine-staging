@@ -1,13 +1,13 @@
-From 1bea1e621c0fb6b91af41755e847f90cf438168b Mon Sep 17 00:00:00 2001
+From d1901e9158ced30ba849f799ba1b612d8e74752d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Sat, 6 Jul 2013 19:18:48 +0200
 Subject: wined3d: Poll queries automatically in the CS
 
 ---
  dlls/wined3d/cs.c              | 69 +++++++++++++++++++-----------------------
- dlls/wined3d/query.c           | 30 ++++++++++++------
- dlls/wined3d/wined3d_private.h |  4 ++-
- 3 files changed, 54 insertions(+), 49 deletions(-)
+ dlls/wined3d/query.c           | 22 ++++++++------
+ dlls/wined3d/wined3d_private.h |  5 +--
+ 3 files changed, 46 insertions(+), 50 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
 index 2952104..f7ffc1c 100644
@@ -136,7 +136,7 @@ index 2952104..f7ffc1c 100644
          {
              continue;
 diff --git a/dlls/wined3d/query.c b/dlls/wined3d/query.c
-index 99a1411..4048714 100644
+index 99a1411..b5e1fde 100644
 --- a/dlls/wined3d/query.c
 +++ b/dlls/wined3d/query.c
 @@ -37,6 +37,7 @@ static void wined3d_query_init(struct wined3d_query *query, struct wined3d_devic
@@ -147,26 +147,17 @@ index 99a1411..4048714 100644
  }
  
  static struct wined3d_event_query *wined3d_event_query_from_query(struct wined3d_query *query)
-@@ -316,7 +317,18 @@ ULONG CDECL wined3d_query_decref(struct wined3d_query *query)
-     TRACE("%p decreasing refcount to %u.\n", query, refcount);
+@@ -266,6 +267,9 @@ static void wined3d_query_destroy_object(void *object)
+ {
+     struct wined3d_query *query = object;
  
-     if (!refcount)
-+    {
-+        if (wined3d_settings.cs_multithreaded)
-+        {
-+            struct wined3d_device *device = query->device;
++    if (!list_empty(&query->poll_list_entry))
++        list_remove(&query->poll_list_entry);
 +
-+            FIXME("waiting for cs\n");
-+            wined3d_cs_emit_glfinish(device->cs);
-+            device->cs->ops->finish(device->cs);
-+        }
-+
-         wined3d_cs_emit_destroy_object(query->device->cs, wined3d_query_destroy_object, query);
-+    }
- 
-     return refcount;
- }
-@@ -330,12 +342,6 @@ HRESULT CDECL wined3d_query_get_data(struct wined3d_query *query,
+     /* Queries are specific to the GL context that created them. Not
+      * deleting the query will obviously leak it, but that's still better
+      * than potentially deleting a different query with the same id in this
+@@ -330,12 +334,6 @@ HRESULT CDECL wined3d_query_get_data(struct wined3d_query *query,
      if (flags)
          WARN("Ignoring flags %#x.\n", flags);
  
@@ -179,7 +170,7 @@ index 99a1411..4048714 100644
      if (query->state == QUERY_BUILDING)
      {
          WARN("Query is building, returning S_FALSE.\n");
-@@ -343,14 +349,18 @@ HRESULT CDECL wined3d_query_get_data(struct wined3d_query *query,
+@@ -343,14 +341,18 @@ HRESULT CDECL wined3d_query_get_data(struct wined3d_query *query,
      }
  
      if (query->state == QUERY_CREATED)
@@ -203,7 +194,7 @@ index 99a1411..4048714 100644
      if (data)
          memcpy(data, query->data, min(data_size, query->data_size));
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index a10b30f..5e45522 100644
+index a10b30f..e6d2602 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -1396,7 +1396,8 @@ struct wined3d_query
@@ -224,6 +215,14 @@ index a10b30f..5e45522 100644
  };
  
  struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device) DECLSPEC_HIDDEN;
+@@ -3147,7 +3149,6 @@ void *wined3d_cs_emit_texture_map(struct wined3d_cs *cs, struct wined3d_texture
+         unsigned int sub_resource_idx, DWORD flags) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture *texture,
+         unsigned int sub_resource_idx) DECLSPEC_HIDDEN;
+-void wined3d_cs_emit_query_poll(struct wined3d_cs *cs, struct wined3d_query *query, BOOL *ret) DECLSPEC_HIDDEN;
+ 
+ /* TODO: Add tests and support for FLOAT16_4 POSITIONT, D3DCOLOR position, other
+  * fixed function semantics as D3DCOLOR or FLOAT16 */
 -- 
 2.9.0
 

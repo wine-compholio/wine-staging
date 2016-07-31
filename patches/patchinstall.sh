@@ -7365,7 +7365,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Check our CS state to find out if a query is done.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Poll queries automatically in the CS.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Introduce a separate queue for priority commands.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Destroy queries through the CS.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t poll queries that failed to start.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Remove restated queries from the poll list.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Put this into the query poll patch.", 1 },';

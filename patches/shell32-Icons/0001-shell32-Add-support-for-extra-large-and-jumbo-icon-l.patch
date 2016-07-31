@@ -1,16 +1,16 @@
-From 8fd25fe53f564ebbe2dd2a2de6ed1126c4b4ee1a Mon Sep 17 00:00:00 2001
+From a66b90e5aec80fd065815dcd31f567256ed989b1 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 3 Aug 2014 02:23:44 +0200
 Subject: shell32: Add support for extra large and jumbo icon lists. (v2)
 
 ---
- dlls/shell32/iconcache.c    | 203 +++++++++++++++++++++++++++++---------------
+ dlls/shell32/iconcache.c    | 209 ++++++++++++++++++++++++++++----------------
  dlls/shell32/shell32_main.h |   3 +
  dlls/shell32/shellord.c     |  28 ++++--
- 3 files changed, 156 insertions(+), 78 deletions(-)
+ 3 files changed, 159 insertions(+), 81 deletions(-)
 
 diff --git a/dlls/shell32/iconcache.c b/dlls/shell32/iconcache.c
-index 4549d5b..2aff054 100644
+index c3284a2..7f33131 100644
 --- a/dlls/shell32/iconcache.c
 +++ b/dlls/shell32/iconcache.c
 @@ -62,7 +62,9 @@ typedef struct
@@ -217,6 +217,12 @@ index 4549d5b..2aff054 100644
 -
 -        ImageList_SetBkColor(ShellSmallIconList, CLR_NONE);
 -        ImageList_SetBkColor(ShellBigIconList, CLR_NONE);
+-
+-        /* Load the document icon, which is used as the default if an icon isn't found. */
+-        hSm = LoadImageA(shell32_hInstance, MAKEINTRESOURCEA(IDI_SHELL_DOCUMENT),
+-                                IMAGE_ICON, cx_small, cy_small, LR_SHARED);
+-        hLg = LoadImageA(shell32_hInstance, MAKEINTRESOURCEA(IDI_SHELL_DOCUMENT),
+-                                IMAGE_ICON, cx_large, cy_large, LR_SHARED);
 +    ShellSmallIconList = ImageList_Create( cx_small,cy_small,ILC_COLOR32|ILC_MASK,0,0x20 );
 +    ShellLargeIconList = ImageList_Create( cx_large,cy_large,ILC_COLOR32|ILC_MASK,0,0x20 );
 +    ShellExtraLargeIconList = ImageList_Create( cx_extralarge,cy_extralarge,ILC_COLOR32|ILC_MASK,0,0x20 );
@@ -242,20 +248,14 @@ index 4549d5b..2aff054 100644
 +      return FALSE;
 +    }
  
--        /* Load the document icon, which is used as the default if an icon isn't found. */
--        hSm = LoadImageA(shell32_hInstance, MAKEINTRESOURCEA(IDI_SHELL_DOCUMENT),
--                                IMAGE_ICON, cx_small, cy_small, LR_SHARED);
--        hLg = LoadImageA(shell32_hInstance, MAKEINTRESOURCEA(IDI_SHELL_DOCUMENT),
--                                IMAGE_ICON, cx_large, cy_large, LR_SHARED);
-+    SIC_IconAppend( swShell32Name, IDI_SHELL_DOCUMENT-1, hSm, hLg, hELg, hJb, 0 );
-+    SIC_IconAppend( swShell32Name, -IDI_SHELL_DOCUMENT, hSm, hLg, hELg, hJb, 0 );
- 
 -        if (!hSm || !hLg) 
 -        {
 -          FIXME("Failed to load IDI_SHELL_DOCUMENT icon!\n");
 -          return FALSE;
 -        }
--
++    SIC_IconAppend( swShell32Name, IDI_SHELL_DOCUMENT-1, hSm, hLg, hELg, hJb, 0 );
++    SIC_IconAppend( swShell32Name, -IDI_SHELL_DOCUMENT, hSm, hLg, hELg, hJb, 0 );
+ 
 -        SIC_IconAppend (swShell32Name, IDI_SHELL_DOCUMENT-1, hSm, hLg, 0);
 -        SIC_IconAppend (swShell32Name, -IDI_SHELL_DOCUMENT, hSm, hLg, 0);
 -   
@@ -265,7 +265,7 @@ index 4549d5b..2aff054 100644
  
  	return TRUE;
  }
-@@ -409,10 +457,14 @@ void SIC_Destroy(void)
+@@ -409,13 +457,17 @@ void SIC_Destroy(void)
  
  	if (sic_hdpa) DPA_DestroyCallback(sic_hdpa, sic_free, NULL );
  
@@ -273,6 +273,9 @@ index 4549d5b..2aff054 100644
 -	    ImageList_Destroy(ShellSmallIconList);
 -	if (ShellBigIconList)
 -	    ImageList_Destroy(ShellBigIconList);
+-
+-	LeaveCriticalSection(&SHELL32_SicCS);
+-	DeleteCriticalSection(&SHELL32_SicCS);
 +    if (ShellSmallIconList)
 +        ImageList_Destroy( ShellSmallIconList );
 +    if (ShellLargeIconList)
@@ -281,9 +284,12 @@ index 4549d5b..2aff054 100644
 +        ImageList_Destroy( ShellExtraLargeIconList );
 +    if (ShellJumboIconList)
 +        ImageList_Destroy( ShellJumboIconList );
++
++    LeaveCriticalSection(&SHELL32_SicCS);
++    DeleteCriticalSection(&SHELL32_SicCS);
+ }
  
- 	LeaveCriticalSection(&SHELL32_SicCS);
- 	DeleteCriticalSection(&SHELL32_SicCS);
+ /*****************************************************************************
 @@ -529,10 +581,21 @@ BOOL WINAPI Shell_GetImageLists(HIMAGELIST * lpBigList, HIMAGELIST * lpSmallList
  {
      TRACE("(%p,%p)\n",lpBigList,lpSmallList);
@@ -308,10 +314,10 @@ index 4549d5b..2aff054 100644
   * PidlToSicIndex			[INTERNAL]
   *
 diff --git a/dlls/shell32/shell32_main.h b/dlls/shell32/shell32_main.h
-index 492f79f..69d2c86 100644
+index 0178e10..dd680a4 100644
 --- a/dlls/shell32/shell32_main.h
 +++ b/dlls/shell32/shell32_main.h
-@@ -244,4 +244,7 @@ HRESULT get_typeinfo(enum tid_t, ITypeInfo**) DECLSPEC_HIDDEN;
+@@ -245,4 +245,7 @@ HRESULT get_typeinfo(enum tid_t, ITypeInfo**) DECLSPEC_HIDDEN;
  void release_typelib(void) DECLSPEC_HIDDEN;
  void release_desktop_folder(void) DECLSPEC_HIDDEN;
  
@@ -320,10 +326,10 @@ index 492f79f..69d2c86 100644
 +
  #endif
 diff --git a/dlls/shell32/shellord.c b/dlls/shell32/shellord.c
-index 914dc5a..75e5d645a 100644
+index 60492de..e04157c 100644
 --- a/dlls/shell32/shellord.c
 +++ b/dlls/shell32/shellord.c
-@@ -2182,20 +2182,32 @@ void WINAPI SHFlushSFCache(void)
+@@ -2171,20 +2171,32 @@ void WINAPI SHFlushSFCache(void)
   */
  HRESULT WINAPI SHGetImageList(int iImageList, REFIID riid, void **ppv)
  {
@@ -365,5 +371,5 @@ index 914dc5a..75e5d645a 100644
      if (hNew)
      {
 -- 
-2.5.0
+2.9.0
 

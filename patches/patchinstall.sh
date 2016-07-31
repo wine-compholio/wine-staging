@@ -3012,7 +3012,12 @@ fi
 # |   *	d3dx9_36-GetShaderSemantics
 # |
 # | Modified files:
-# |   *	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/shader.c, dlls/d3dx9_36/tests/shader.c
+# |   *	dlls/d3dx9_24/d3dx9_24.spec, dlls/d3dx9_25/d3dx9_25.spec, dlls/d3dx9_26/d3dx9_26.spec, dlls/d3dx9_27/d3dx9_27.spec,
+# | 	dlls/d3dx9_28/d3dx9_28.spec, dlls/d3dx9_29/d3dx9_29.spec, dlls/d3dx9_30/d3dx9_30.spec, dlls/d3dx9_31/d3dx9_31.spec,
+# | 	dlls/d3dx9_32/d3dx9_32.spec, dlls/d3dx9_33/d3dx9_33.spec, dlls/d3dx9_34/d3dx9_34.spec, dlls/d3dx9_35/d3dx9_35.spec,
+# | 	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/shader.c, dlls/d3dx9_36/tests/shader.c, dlls/d3dx9_37/d3dx9_37.spec,
+# | 	dlls/d3dx9_38/d3dx9_38.spec, dlls/d3dx9_39/d3dx9_39.spec, dlls/d3dx9_40/d3dx9_40.spec, dlls/d3dx9_41/d3dx9_41.spec,
+# | 	dlls/d3dx9_42/d3dx9_42.spec, dlls/d3dx9_43/d3dx9_43.spec
 # |
 if test "$enable_d3dx9_36_D3DXDisassembleShader" -eq 1; then
 	patch_apply d3dx9_36-D3DXDisassembleShader/0003-d3dx9_36-Add-stub-for-D3DXFillCubeTextureTX.patch

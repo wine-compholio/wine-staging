@@ -1,4 +1,4 @@
-From f35c5d6bcd2b0d61a70da8a55b7c6bda4510fd25 Mon Sep 17 00:00:00 2001
+From 39a2802a5a07da378f07e6e56b9ba89e297390fb Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 29 Oct 2015 17:33:23 +0100
 Subject: wined3d: Start to move surface/volume_load_location into the texture.
@@ -9,101 +9,12 @@ FIXME 2: This breaks some rtv->resource != buffer checks.
 wined3d_surface_prepare will be moved into the texture a lot later, after
 moving allocation of all locations (including sysmem) there.
 ---
- dlls/wined3d/context.c         |  5 ++---
- dlls/wined3d/device.c          | 11 ++++++-----
- dlls/wined3d/drawprim.c        | 10 +++++-----
- dlls/wined3d/swapchain.c       |  7 ++++---
- dlls/wined3d/texture.c         |  3 ++-
- dlls/wined3d/wined3d_private.h |  2 ++
- 6 files changed, 21 insertions(+), 17 deletions(-)
+ dlls/wined3d/swapchain.c | 7 ++++---
+ dlls/wined3d/texture.c   | 1 +
+ 2 files changed, 5 insertions(+), 3 deletions(-)
 
-diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
-index 085ed03..20d7868 100644
---- a/dlls/wined3d/context.c
-+++ b/dlls/wined3d/context.c
-@@ -2455,7 +2455,6 @@ static void context_validate_onscreen_formats(struct wined3d_context *context,
- {
-     /* Onscreen surfaces are always in a swapchain */
-     struct wined3d_swapchain *swapchain = context->current_rt.texture->swapchain;
--    struct wined3d_surface *surface;
- 
-     if (context->render_offscreen || !depth_stencil) return;
-     if (match_depth_stencil_format(swapchain->ds_format, depth_stencil->format)) return;
-@@ -2466,8 +2465,8 @@ static void context_validate_onscreen_formats(struct wined3d_context *context,
-     WARN("Depth stencil format is not supported by WGL, rendering the backbuffer in an FBO\n");
- 
-     /* The currently active context is the necessary context to access the swapchain's onscreen buffers */
--    surface = context->current_rt.texture->sub_resources[context->current_rt.sub_resource_idx].u.surface;
--    surface_load_location(surface, context, WINED3D_LOCATION_TEXTURE_RGB);
-+    wined3d_texture_load_location(context->current_rt.texture, context->current_rt.sub_resource_idx,
-+            context, WINED3D_LOCATION_TEXTURE_RGB);
-     swapchain->render_to_fbo = TRUE;
-     swapchain_update_draw_bindings(swapchain);
-     context_set_render_offscreen(context, TRUE);
-diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 0031f79..a9cbadb 100644
---- a/dlls/wined3d/device.c
-+++ b/dlls/wined3d/device.c
-@@ -324,14 +324,15 @@ void device_clear_render_targets(struct wined3d_device *device, UINT rt_count, c
-     for (i = 0; i < rt_count; ++i)
-     {
-         struct wined3d_rendertarget_view *rtv = fb->render_targets[i];
--        struct wined3d_surface *rt = wined3d_rendertarget_view_get_surface(rtv);
- 
--        if (rt && rtv->format->id != WINED3DFMT_NULL)
-+        if (rtv && rtv->format->id != WINED3DFMT_NULL)
-         {
-+            struct wined3d_texture *rt = wined3d_texture_from_resource(fb->render_targets[i]->resource);
-+
-             if (flags & WINED3DCLEAR_TARGET && !is_full_clear(target, draw_rect, rect_count ? clear_rect : NULL))
--                surface_load_location(rt, context, rtv->resource->draw_binding);
-+                wined3d_texture_load_location(rt, rtv->sub_resource_idx, context, rtv->resource->draw_binding);
-             else
--                wined3d_texture_prepare_location(rt->container, rtv->sub_resource_idx,
-+                wined3d_texture_prepare_location(rt, rtv->sub_resource_idx,
-                         context, rtv->resource->draw_binding);
-         }
-     }
-@@ -4184,7 +4185,7 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
-     if (!dst_point.x && !dst_point.y && src_rect.right == width && src_rect.bottom == height)
-         wined3d_texture_prepare_texture(texture, context, FALSE);
-     else
--        surface_load_location(surface, context, WINED3D_LOCATION_TEXTURE_RGB);
-+        wined3d_texture_load_location(texture, sub_resource_idx, context, WINED3D_LOCATION_TEXTURE_RGB);
-     wined3d_texture_bind_and_dirtify(texture, context, FALSE);
- 
-     wined3d_surface_upload_data(surface, gl_info, resource->format,
-diff --git a/dlls/wined3d/drawprim.c b/dlls/wined3d/drawprim.c
-index 9f92851..1821db4 100644
---- a/dlls/wined3d/drawprim.c
-+++ b/dlls/wined3d/drawprim.c
-@@ -438,19 +438,19 @@ void draw_primitive(struct wined3d_device *device, const struct wined3d_state *s
-     for (i = 0; i < gl_info->limits.buffers; ++i)
-     {
-         struct wined3d_rendertarget_view *rtv = fb->render_targets[i];
--        struct wined3d_surface *target = wined3d_rendertarget_view_get_surface(rtv);
- 
--        if (target && rtv->format->id != WINED3DFMT_NULL)
-+        if (rtv && rtv->format->id != WINED3DFMT_NULL)
-         {
-+            struct wined3d_texture *target = wined3d_texture_from_resource(rtv->resource);
-             if (state->render_states[WINED3D_RS_COLORWRITEENABLE])
-             {
--                surface_load_location(target, context, rtv->resource->draw_binding);
--                wined3d_texture_invalidate_location(target->container,
-+                wined3d_texture_load_location(target, rtv->sub_resource_idx, context, rtv->resource->draw_binding);
-+                wined3d_texture_invalidate_location(target,
-                         rtv->sub_resource_idx, ~rtv->resource->draw_binding);
-             }
-             else
-             {
--                wined3d_texture_prepare_location(target->container, rtv->sub_resource_idx,
-+                wined3d_texture_prepare_location(target, rtv->sub_resource_idx,
-                         context, rtv->resource->draw_binding);
-             }
-         }
 diff --git a/dlls/wined3d/swapchain.c b/dlls/wined3d/swapchain.c
-index 9596735..ea52af6 100644
+index 8f93095..306c499 100644
 --- a/dlls/wined3d/swapchain.c
 +++ b/dlls/wined3d/swapchain.c
 @@ -327,7 +327,7 @@ static void swapchain_blit(const struct wined3d_swapchain *swapchain,
@@ -134,18 +45,9 @@ index 9596735..ea52af6 100644
  
      if (swapchain->render_to_fbo)
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index 8cb8274..8939660 100644
+index 873d72b..0acc74f 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -176,7 +176,7 @@ void wined3d_texture_invalidate_location(struct wined3d_texture *texture,
- 
- /* Context activation is done by the caller. Context may be NULL in
-  * WINED3D_NO3D mode. */
--static BOOL wined3d_texture_load_location(struct wined3d_texture *texture,
-+BOOL wined3d_texture_load_location(struct wined3d_texture *texture,
-         unsigned int sub_resource_idx, struct wined3d_context *context, DWORD location)
- {
-     return texture->texture_ops->texture_load_location(texture, sub_resource_idx, context, location);
 @@ -1441,6 +1441,7 @@ void wined3d_texture_upload_data(struct wined3d_texture *texture, unsigned int s
              context, data, row_pitch, slice_pitch);
  }
@@ -154,19 +56,6 @@ index 8cb8274..8939660 100644
  static void texture2d_upload_data(struct wined3d_texture *texture, unsigned int sub_resource_idx,
          const struct wined3d_context *context, const struct wined3d_const_bo_address *data,
          unsigned int row_pitch, unsigned int slice_pitch)
-diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 12fc7de..bbfb1f6 100644
---- a/dlls/wined3d/wined3d_private.h
-+++ b/dlls/wined3d/wined3d_private.h
-@@ -2761,6 +2761,8 @@ void *wined3d_texture_map_bo_address(const struct wined3d_bo_address *data, size
-         const struct wined3d_gl_info *gl_info, GLenum binding, DWORD flags) DECLSPEC_HIDDEN;
- BOOL wined3d_texture_prepare_location(struct wined3d_texture *texture, unsigned int sub_resource_idx,
-         struct wined3d_context *context, DWORD location) DECLSPEC_HIDDEN;
-+BOOL wined3d_texture_load_location(struct wined3d_texture *texture, unsigned int sub_resource_idx,
-+        struct wined3d_context *context, DWORD location) DECLSPEC_HIDDEN;
- void wined3d_texture_prepare_texture(struct wined3d_texture *texture,
-         struct wined3d_context *context, BOOL srgb) DECLSPEC_HIDDEN;
- void wined3d_texture_set_map_binding(struct wined3d_texture *texture, DWORD map_binding) DECLSPEC_HIDDEN;
 -- 
 2.9.0
 

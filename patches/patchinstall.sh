@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0f2a776a59006a15fb84a2a51237d3484f136966"
+	echo "7aadb08212a5269ebefcb100cf567f7cf7aa0a7c"
 }
 
 # Show version information
@@ -2330,19 +2330,18 @@ fi
 # |   *	dlls/amstream/mediastreamfilter.c, dlls/comctl32/listview.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c,
 # | 	dlls/d3d8/texture.c, dlls/d3d9/tests/visual.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dsound/primary.c,
 # | 	dlls/dwrite/layout.c, dlls/dwrite/tests/analyzer.c, dlls/dwrite/tests/font.c, dlls/dwrite/tests/layout.c,
-# | 	dlls/gdi32/enhmfdrv/dc.c, dlls/mshtml/script.c, dlls/msvcirt/tests/msvcirt.c, dlls/msxml3/schema.c,
-# | 	dlls/netapi32/netapi32.c, dlls/ole32/tests/compobj.c, dlls/oleaut32/oleaut.c, dlls/oleaut32/tests/safearray.c,
-# | 	dlls/rpcrt4/cstub.c, dlls/rpcrt4/tests/ndr_marshall.c, dlls/scrrun/tests/dictionary.c, dlls/shell32/tests/appbar.c,
+# | 	dlls/mshtml/script.c, dlls/msvcirt/tests/msvcirt.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c,
+# | 	dlls/ole32/tests/compobj.c, dlls/oleaut32/oleaut.c, dlls/oleaut32/tests/safearray.c, dlls/rpcrt4/cstub.c,
+# | 	dlls/rpcrt4/tests/ndr_marshall.c, dlls/scrrun/tests/dictionary.c, dlls/shell32/tests/appbar.c,
 # | 	dlls/shell32/tests/shelldispatch.c, dlls/shell32/tests/shellole.c, dlls/shlwapi/tests/ordinal.c,
 # | 	dlls/user32/tests/input.c, dlls/user32/tests/menu.c, dlls/vbscript/vbdisp.c, dlls/winealsa.drv/mmdevdrv.c,
 # | 	dlls/wined3d/glsl_shader.c, dlls/winhttp/tests/winhttp.c, dlls/wshom.ocx/tests/wshom.c, dlls/xaudio2_7/compat.c,
 # | 	dlls/xaudio2_7/x3daudio.c, include/d3dtypes.h, include/wine/list.h, include/wine/rbtree.h, include/winnt.h,
-# | 	programs/winetest/gui.c, server/request.c, server/sock.c, tools/makedep.c
+# | 	server/request.c, server/sock.c, tools/makedep.c
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0001-comctl32-Avoid-misleading-indentation-warnings.patch
 	patch_apply Compiler_Warnings/0002-dwrite-tests-Avoid-misleading-indentation-warnings.patch
-	patch_apply Compiler_Warnings/0003-gdi32-Remove-unnecessary-debug-channel.patch
 	patch_apply Compiler_Warnings/0004-mshtml-Avoid-misleading-indentation-warnings.patch
 	patch_apply Compiler_Warnings/0005-msvcirt-tests-Avoid-misleading-indentation-warnings.patch
 	patch_apply Compiler_Warnings/0006-oleaut32-tests-Avoid-misleading-indentation-warnings.patch
@@ -2355,7 +2354,6 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0013-wshom.ocx-tests-Avoid-misleading-indentation-warning.patch
 	patch_apply Compiler_Warnings/0014-xaudio2_7-Only-declare-debug-channel-when-needed.patch
 	patch_apply Compiler_Warnings/0015-include-Avoid-shift-overflow-warning.patch
-	patch_apply Compiler_Warnings/0016-winetest-Remove-duplicate-if-check.patch
 	patch_apply Compiler_Warnings/0017-server-Workaround-duplicate-condition-warning-of-GCC.patch
 	patch_apply Compiler_Warnings/0018-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch
 	patch_apply Compiler_Warnings/0019-dsound-Avoid-implicit-cast-of-interface-pointer.patch
@@ -2374,7 +2372,6 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "comctl32: Avoid misleading indentation warnings.", 1 },';
 		echo '+    { "Sebastian Lackner", "dwrite/tests: Avoid misleading indentation warnings.", 1 },';
-		echo '+    { "Sebastian Lackner", "gdi32: Remove unnecessary debug channel.", 1 },';
 		echo '+    { "Sebastian Lackner", "mshtml: Avoid misleading indentation warnings.", 1 },';
 		echo '+    { "Sebastian Lackner", "msvcirt/tests: Avoid misleading indentation warnings.", 1 },';
 		echo '+    { "Sebastian Lackner", "oleaut32/tests: Avoid misleading indentation warnings.", 1 },';
@@ -2387,7 +2384,6 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 		echo '+    { "Sebastian Lackner", "wshom.ocx/tests: Avoid misleading indentation warnings.", 1 },';
 		echo '+    { "Sebastian Lackner", "xaudio2_7: Only declare debug channel when needed.", 1 },';
 		echo '+    { "Sebastian Lackner", "include: Avoid shift overflow warning.", 1 },';
-		echo '+    { "Sebastian Lackner", "winetest: Remove duplicate if check.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Workaround duplicate condition warning of GCC 6.", 1 },';
 		echo '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },';
 		echo '+    { "Sebastian Lackner", "dsound: Avoid implicit cast of interface pointer.", 1 },';

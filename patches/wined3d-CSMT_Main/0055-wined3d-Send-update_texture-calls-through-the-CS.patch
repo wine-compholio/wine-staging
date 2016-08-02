@@ -1,4 +1,4 @@
-From 50cab9c747626e21eb7e80343da79a9004a1b505 Mon Sep 17 00:00:00 2001
+From 614b05bd7947d8178fbdf3193641c3675608dbc8 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 1 Aug 2013 00:33:48 +0200
 Subject: wined3d: Send update_texture calls through the CS
@@ -11,7 +11,7 @@ FIXME: This logic duplication is ugly.
  3 files changed, 137 insertions(+), 82 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 67e2c13..8e56772 100644
+index b056e22..4611f41 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -72,6 +72,7 @@ enum wined3d_cs_op
@@ -76,7 +76,7 @@ index 67e2c13..8e56772 100644
  
  static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index d458747..99118f2 100644
+index 1735f85..de927cc 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
 @@ -3558,34 +3558,17 @@ void CDECL wined3d_device_draw_indexed_primitive_instanced(struct wined3d_device
@@ -130,7 +130,7 @@ index d458747..99118f2 100644
  
          data.buffer_object = 0;
          data.addr = src.data;
-         wined3d_volume_upload_data(dst_texture, i, context, &data);
+         wined3d_texture_upload_data(dst_texture, i, context, &data, src.row_pitch, src.slice_pitch);
          wined3d_texture_invalidate_location(dst_texture, i, ~WINED3D_LOCATION_TEXTURE_RGB);
  
 -        if (FAILED(hr = wined3d_resource_unmap(&src_texture->resource, src_level + i)))
@@ -319,7 +319,7 @@ index d458747..99118f2 100644
  
  HRESULT CDECL wined3d_device_validate_device(const struct wined3d_device *device, DWORD *num_passes)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index cdcf620..75f2983 100644
+index 06fe9cb..e468abb 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -2533,6 +2533,8 @@ void device_resource_add(struct wined3d_device *device, struct wined3d_resource
@@ -331,7 +331,7 @@ index cdcf620..75f2983 100644
  
  static inline BOOL isStateDirty(const struct wined3d_context *context, DWORD state)
  {
-@@ -3153,6 +3155,8 @@ void *wined3d_cs_emit_texture_map(struct wined3d_cs *cs, struct wined3d_texture
+@@ -3156,6 +3158,8 @@ void *wined3d_cs_emit_texture_map(struct wined3d_cs *cs, struct wined3d_texture
  void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture *texture,
          unsigned int sub_resource_idx) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_texture_preload(struct wined3d_cs *cs, struct wined3d_texture *texture) DECLSPEC_HIDDEN;

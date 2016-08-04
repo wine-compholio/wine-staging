@@ -6609,7 +6609,7 @@ if test "$enable_taskmgr_Memory_Usage" -eq 1; then
 	patch_apply taskmgr-Memory_Usage/0003-taskmgr-Use-system-font-instead-of-special-bitmap-fo.patch
 	patch_apply taskmgr-Memory_Usage/0004-taskmgr-Use-different-units-depending-on-memory-usag.patch
 	(
-		echo '+    { "Michael Müller", "ntdll: Report system information SystemPerformanceInformation info class.", 1 },';
+		echo '+    { "Michael Müller", "ntdll: Report system information SystemPerformanceInformation info class.", 2 },';
 		echo '+    { "Michael Müller", "taskmgr: Use system font instead of special bitmap font.", 1 },';
 		echo '+    { "Michael Müller", "taskmgr: Use different units depending on memory usage.", 1 },';
 	) >> "$patchlist"

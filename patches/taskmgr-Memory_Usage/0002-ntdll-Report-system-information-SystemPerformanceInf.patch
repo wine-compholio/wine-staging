@@ -1,15 +1,15 @@
-From 67f11502fdf5bdabbc786efe99ce4e681683ba31 Mon Sep 17 00:00:00 2001
+From 67cf23ba06fa874f27f0170ba9c8ea90ea8ffc3b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 28 Jan 2016 06:43:00 +0100
 Subject: ntdll: Report system information SystemPerformanceInformation info
- class.
+ class. (v2)
 
 ---
- dlls/ntdll/nt.c | 20 ++++++++++++++++++++
- 1 file changed, 20 insertions(+)
+ dlls/ntdll/nt.c | 35 +++++++++++++++++++++++++++++++++++
+ 1 file changed, 35 insertions(+)
 
 diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
-index 9ee1923..947b410 100644
+index 46393a4..ac6f8dd 100644
 --- a/dlls/ntdll/nt.c
 +++ b/dlls/ntdll/nt.c
 @@ -30,6 +30,9 @@
@@ -22,7 +22,7 @@ index 9ee1923..947b410 100644
  #ifdef HAVE_MACHINE_CPU_H
  # include <machine/cpu.h>
  #endif
-@@ -1718,6 +1721,9 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+@@ -1861,6 +1864,9 @@ NTSTATUS WINAPI NtQuerySystemInformation(
              SYSTEM_PERFORMANCE_INFORMATION spi;
              static BOOL fixme_written = FALSE;
              FILE *fp;
@@ -32,20 +32,35 @@ index 9ee1923..947b410 100644
  
              memset(&spi, 0 , sizeof(spi));
              len = sizeof(spi);
-@@ -1739,6 +1745,20 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+@@ -1882,6 +1888,35 @@ NTSTATUS WINAPI NtQuerySystemInformation(
                  spi.IdleTime.QuadPart = ++idle;
              }
  
 +        #ifdef HAVE_SYS_SYSINFO_H
 +            if (!sysinfo(&sinfo))
 +            {
-+                ULONG64 freemem   = (ULONG64)sinfo.freeram * sinfo.mem_unit;
++                ULONG64 freeram   = (ULONG64)sinfo.freeram * sinfo.mem_unit;
 +                ULONG64 totalram  = (ULONG64)sinfo.totalram * sinfo.mem_unit;
 +                ULONG64 totalswap = (ULONG64)sinfo.totalswap * sinfo.mem_unit;
 +                ULONG64 freeswap  = (ULONG64)sinfo.freeswap * sinfo.mem_unit;
 +
-+                spi.AvailablePages      = freemem / page_size;
-+                spi.TotalCommittedPages = (totalram + totalswap - freemem - freeswap) / page_size;
++                if ((fp = fopen("/proc/meminfo", "r")))
++                {
++                    unsigned long long available;
++                    char line[64];
++                    while (fgets(line, sizeof(line), fp))
++                    {
++                        if (sscanf(line, "MemAvailable: %llu kB", &available) == 1)
++                        {
++                            freeram = min(available * 1024, totalram);
++                            break;
++                        }
++                    }
++                    fclose(fp);
++                }
++
++                spi.AvailablePages      = freeram / page_size;
++                spi.TotalCommittedPages = (totalram + totalswap - freeram - freeswap) / page_size;
 +                spi.TotalCommitLimit    = (totalram + totalswap) / page_size;
 +            }
 +        #endif
@@ -54,5 +69,5 @@ index 9ee1923..947b410 100644
              {
                  if (!SystemInformation) ret = STATUS_ACCESS_VIOLATION;
 -- 
-2.6.4
+2.9.0
 

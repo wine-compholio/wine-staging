@@ -4740,7 +4740,7 @@ fi
 if test "$enable_ntdll_Attach_Process_DLLs" -eq 1; then
 	patch_apply ntdll-Attach_Process_DLLs/0001-ntdll-Ensure-process-dlls-are-not-attached-too-early.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Ensure process dlls are not attached too early.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Ensure process dlls are not attached too early.", 2 },';
 	) >> "$patchlist"
 fi
 

@@ -1,14 +1,14 @@
-From de0a7b30ea846237b6ea60ec75cf30540ef25743 Mon Sep 17 00:00:00 2001
+From 3c9bfe68c7bc4accbe80eeba910a227dc5ffa588 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 20 Jul 2016 02:21:41 +0200
-Subject: ntdll: Ensure process dlls are not attached too early.
+Subject: ntdll: Ensure process dlls are not attached too early. (v2)
 
 ---
- dlls/ntdll/loader.c | 4 +++-
- 1 file changed, 3 insertions(+), 1 deletion(-)
+ dlls/ntdll/loader.c | 17 ++++++++++++++++-
+ 1 file changed, 16 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index d9176d7..f90b347 100644
+index f1ef7ab..adb6b95 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -63,6 +63,7 @@ WINE_DECLARE_DEBUG_CHANNEL(pid);
@@ -19,16 +19,29 @@ index d9176d7..f90b347 100644
  static BOOL process_detaching = FALSE;  /* set on process detach to avoid deadlocks with thread detach */
  static int free_lib_count;   /* recursion depth of LdrUnloadDll calls */
  
-@@ -443,7 +444,7 @@ static FARPROC find_forwarded_export( HMODULE module, const char *forward, LPCWS
-     {
-         TRACE( "delay loading %s for '%s'\n", debugstr_w(mod_name), forward );
+@@ -445,7 +446,20 @@ static FARPROC find_forwarded_export( HMODULE module, const char *forward, LPCWS
          if (load_dll( load_path, mod_name, 0, &wm ) == STATUS_SUCCESS &&
--            !(wm->ldr.Flags & LDR_DONT_RESOLVE_REFS))
-+            !(wm->ldr.Flags & LDR_DONT_RESOLVE_REFS) && !process_attaching)
+             !(wm->ldr.Flags & LDR_DONT_RESOLVE_REFS))
          {
-             if (process_attach( wm, NULL ) != STATUS_SUCCESS)
+-            if (process_attach( wm, NULL ) != STATUS_SUCCESS)
++            if (process_attaching)
++            {
++                WINE_MODREF **deps, *prev = get_modref( module );
++                if (!prev->deps)
++                    deps = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*deps) );
++                else
++                    deps = RtlReAllocateHeap( GetProcessHeap(), 0, prev->deps, (prev->nDeps + 1) * sizeof(*deps) );
++                if (deps)
++                {
++                    prev->deps = deps;
++                    prev->deps[prev->nDeps++] = wm;
++                }
++            }
++            else if (process_attach( wm, NULL ) != STATUS_SUCCESS)
              {
-@@ -2961,6 +2962,7 @@ static NTSTATUS attach_process_dlls( void *wm )
+                 LdrUnloadDll( wm->ldr.BaseAddress );
+                 wm = NULL;
+@@ -2970,6 +2984,7 @@ static NTSTATUS attach_process_dlls( void *wm )
  {
      NTSTATUS status;
  
@@ -37,5 +50,5 @@ index d9176d7..f90b347 100644
  
      RtlEnterCriticalSection( &loader_section );
 -- 
-2.8.0
+2.9.0
 

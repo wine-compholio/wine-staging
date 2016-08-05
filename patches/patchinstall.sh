@@ -3071,7 +3071,6 @@ fi
 # |   *	[#29586] Tumblebugs 2 requires DXTn software encoding support
 # |   *	[#14939] Black & White needs DXTn software decoding support
 # |   *	[#17913] Port Royale doesn't display ocean correctly
-# |   *	[#29598] eRacer Demo doesn't correctly display text
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d/Makefile.in, dlls/wined3d/dxtn.c, dlls/wined3d/surface.c, dlls/wined3d/wined3d.spec,

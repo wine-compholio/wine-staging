@@ -1,18 +1,18 @@
-From 902b45818f4c0d733065be2e253d8a39f41b1cfe Mon Sep 17 00:00:00 2001
+From db37e592d76e30834d83029cdfdec6f42a322086 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 10 Apr 2013 19:10:41 +0200
 Subject: wined3d: Prevent the command stream from running ahead too far
 
 ---
- dlls/wined3d/cs.c              | 8 ++++++++
- dlls/wined3d/wined3d_private.h | 2 ++
- 2 files changed, 10 insertions(+)
+ dlls/wined3d/cs.c              | 16 ++++++++++++++++
+ dlls/wined3d/wined3d_private.h |  2 ++
+ 2 files changed, 18 insertions(+)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 00c26b4..509ed82 100644
+index d03dd1c..7311ac5 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -487,6 +487,8 @@ static UINT wined3d_cs_exec_present(struct wined3d_cs *cs, const void *data)
+@@ -509,6 +509,8 @@ static UINT wined3d_cs_exec_present(struct wined3d_cs *cs, const void *data)
      swapchain->swapchain_ops->swapchain_present(swapchain, &op->src_rect, &op->dst_rect, op->flags,
              cs->state.fb.depth_stencil);
  
@@ -21,7 +21,7 @@ index 00c26b4..509ed82 100644
      wined3d_resource_release(&swapchain->front_buffer->resource);
      for (i = 0; i < swapchain->desc.backbuffer_count; ++i)
      {
-@@ -501,6 +503,7 @@ void wined3d_cs_emit_present(struct wined3d_cs *cs, struct wined3d_swapchain *sw
+@@ -523,6 +525,7 @@ void wined3d_cs_emit_present(struct wined3d_cs *cs, struct wined3d_swapchain *sw
  {
      struct wined3d_cs_present *op;
      unsigned int i;
@@ -29,7 +29,7 @@ index 00c26b4..509ed82 100644
  
      op = cs->ops->require_space(cs, sizeof(*op));
      op->opcode = WINED3D_CS_OP_PRESENT;
-@@ -516,7 +519,12 @@ void wined3d_cs_emit_present(struct wined3d_cs *cs, struct wined3d_swapchain *sw
+@@ -538,7 +541,20 @@ void wined3d_cs_emit_present(struct wined3d_cs *cs, struct wined3d_swapchain *sw
          wined3d_resource_acquire(&swapchain->back_buffers[i]->resource);
      }
  
@@ -37,16 +37,24 @@ index 00c26b4..509ed82 100644
 +
      cs->ops->submit(cs);
 +
++    /* D3D10 documentation suggests that Windows allows the game to run
++     * 3 frames ahead of the GPU. Increasing this above 1 causes uneven
++     * animation in some games, most notably StarCraft II. The framerates
++     * don't show this problem. The issue is more noticable with vsync
++     * on, but also happens with vsync off.
++     *
++     * In Counter-Strike: Source a frame difference of 3 causes noticable
++     * input delay that makes the game unplayable. */
 +    while (pending > 1)
 +        pending = InterlockedCompareExchange(&cs->pending_presents, 0, 0);
  }
  
  static UINT wined3d_cs_exec_clear(struct wined3d_cs *cs, const void *data)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 76c7fbf..b49ceaf 100644
+index 4c57f7b..1d84bf9 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3012,6 +3012,8 @@ struct wined3d_cs
+@@ -3061,6 +3061,8 @@ struct wined3d_cs
  
      struct wined3d_cs_list free_list;
      struct wined3d_cs_list exec_list;
@@ -56,5 +64,5 @@ index 76c7fbf..b49ceaf 100644
  
  struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device) DECLSPEC_HIDDEN;
 -- 
-2.8.0
+2.9.0
 

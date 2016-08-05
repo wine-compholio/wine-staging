@@ -1,4 +1,4 @@
-From 7061e74d97edf88035aacacc3e6a549ed7792d96 Mon Sep 17 00:00:00 2001
+From a836152c841dc2929ada3eece3466a8b1741ef05 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Sat, 6 Jul 2013 17:05:12 +0200
 Subject: wined3d: Access the buffer dirty areas through the CS
@@ -27,7 +27,7 @@ be protected by locks.
  3 files changed, 37 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
-index 2f049fc..e23ec3b 100644
+index 3307fd4..d7ea6ee 100644
 --- a/dlls/wined3d/buffer.c
 +++ b/dlls/wined3d/buffer.c
 @@ -41,7 +41,7 @@ WINE_DEFAULT_DEBUG_CHANNEL(d3d);
@@ -39,7 +39,7 @@ index 2f049fc..e23ec3b 100644
  {
      if (!offset && (!size || size == buffer->resource.size))
          goto invalidate_all;
-@@ -986,9 +986,9 @@ HRESULT CDECL wined3d_buffer_map(struct wined3d_buffer *buffer, UINT offset, UIN
+@@ -982,9 +982,9 @@ HRESULT CDECL wined3d_buffer_map(struct wined3d_buffer *buffer, UINT offset, UIN
           * being uploaded in that case. Two such applications are Port Royale
           * and Darkstar One. */
          if (flags & WINED3D_MAP_DISCARD)
@@ -52,18 +52,18 @@ index 2f049fc..e23ec3b 100644
          if (!(buffer->flags & WINED3D_BUFFER_DOUBLEBUFFER))
          {
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index cb4f7a2..819a371 100644
+index 3d68c71..9e8539d 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -73,6 +73,7 @@ enum wined3d_cs_op
+@@ -74,6 +74,7 @@ enum wined3d_cs_op
      WINED3D_CS_OP_TEXTURE_MAP,
      WINED3D_CS_OP_TEXTURE_UNMAP,
      WINED3D_CS_OP_BUFFER_SWAP_MEM,
 +    WINED3D_CS_OP_BUFFER_INVALIDATE_RANGE,
      WINED3D_CS_OP_TEXTURE_PRELOAD,
      WINED3D_CS_OP_UPDATE_TEXTURE,
-     WINED3D_CS_OP_EVICT_RESOURCE,
-@@ -419,6 +420,13 @@ struct wined3d_cs_buffer_swap_mem
+     WINED3D_CS_OP_UPDATE_SUB_RESOURCE,
+@@ -425,6 +426,13 @@ struct wined3d_cs_buffer_swap_mem
      BYTE *mem;
  };
  
@@ -106,28 +106,28 @@ index cb4f7a2..819a371 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2411,6 +2441,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2412,6 +2442,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_TEXTURE_MAP                */ wined3d_cs_exec_texture_map,
      /* WINED3D_CS_OP_TEXTURE_UNMAP              */ wined3d_cs_exec_texture_unmap,
      /* WINED3D_CS_OP_BUFFER_SWAP_MEM            */ wined3d_cs_exec_buffer_swap_mem,
 +    /* WINED3D_CS_OP_BUFFER_INVALIDATE_RANGE    */ wined3d_cs_exec_buffer_invalidate_bo_range,
      /* WINED3D_CS_OP_TEXTURE_PRELOAD            */ wined3d_cs_exec_texture_preload,
      /* WINED3D_CS_OP_UPDATE_TEXTURE             */ wined3d_cs_exec_update_texture,
-     /* WINED3D_CS_OP_EVICT_RESOURCE             */ wined3d_cs_exec_evict_resource,
+     /* WINED3D_CS_OP_UPDATE_SUB_RESOURCE        */ wined3d_cs_exec_update_sub_resource,
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 2b25a33..6b566fe 100644
+index 6858059..f23efe7 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3184,6 +3184,8 @@ void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_r
-         unsigned int depth_pitch) DECLSPEC_HIDDEN;
- void wined3d_cs_emit_buffer_swap_mem(struct wined3d_cs *cs, struct wined3d_buffer *buffer,
-         BYTE *mem) DECLSPEC_HIDDEN;
+@@ -3102,6 +3102,8 @@ void wined3d_cs_emit_blt(struct wined3d_cs *cs, struct wined3d_surface *dst_surf
+         const RECT *dst_rect, struct wined3d_surface *src_surface,
+         const RECT *src_rect, DWORD flags, const struct wined3d_blt_fx *fx,
+         enum wined3d_texture_filter_type filter) DECLSPEC_HIDDEN;
 +void wined3d_cs_emit_buffer_invalidate_bo_range(struct wined3d_cs *cs,
 +        struct wined3d_buffer *buffer, unsigned int offset, unsigned int size) DECLSPEC_HIDDEN;
- 
- /* TODO: Add tests and support for FLOAT16_4 POSITIONT, D3DCOLOR position, other
-  * fixed function semantics as D3DCOLOR or FLOAT16 */
-@@ -3238,6 +3240,7 @@ HRESULT wined3d_buffer_copy(struct wined3d_buffer *dst_buffer, unsigned int dst_
+ void wined3d_cs_emit_buffer_swap_mem(struct wined3d_cs *cs, struct wined3d_buffer *buffer,
+         BYTE *mem) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_clear(struct wined3d_cs *cs, DWORD rect_count, const RECT *rects,
+@@ -3240,6 +3242,7 @@ HRESULT wined3d_buffer_copy(struct wined3d_buffer *dst_buffer, unsigned int dst_
          struct wined3d_buffer *src_buffer, unsigned int src_offset, unsigned int size) DECLSPEC_HIDDEN;
  HRESULT wined3d_buffer_upload_data(struct wined3d_buffer *buffer,
          const struct wined3d_box *box, const void *data) DECLSPEC_HIDDEN;

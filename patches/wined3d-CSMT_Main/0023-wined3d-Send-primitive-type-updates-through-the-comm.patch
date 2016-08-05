@@ -1,4 +1,4 @@
-From b0f1bcf4dbb0c48a34335bbe243581e4270e93bd Mon Sep 17 00:00:00 2001
+From e5be3dd2d9e963f7f447fb379a2739a2f5428ccb Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Sun, 7 Apr 2013 17:53:43 +0200
 Subject: wined3d: Send primitive type updates through the command stream
@@ -11,10 +11,10 @@ Subject: wined3d: Send primitive type updates through the command stream
  4 files changed, 40 insertions(+), 10 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 0a3780b..aef2374 100644
+index 5424965..d467911 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -69,6 +69,7 @@ enum wined3d_cs_op
+@@ -72,6 +72,7 @@ enum wined3d_cs_op
      WINED3D_CS_OP_SET_PS_CONSTS_F,
      WINED3D_CS_OP_GLFINISH,
      WINED3D_CS_OP_SET_BASE_VERTEX_INDEX,
@@ -22,7 +22,7 @@ index 0a3780b..aef2374 100644
      WINED3D_CS_OP_STOP,
  };
  
-@@ -313,6 +314,12 @@ struct wined3d_cs_set_base_vertex_index
+@@ -335,6 +336,12 @@ struct wined3d_cs_set_base_vertex_index
      UINT base_vertex_index;
  };
  
@@ -35,7 +35,7 @@ index 0a3780b..aef2374 100644
  /* FIXME: The list synchronization probably isn't particularly fast. */
  static void wined3d_cs_list_enqueue(struct wined3d_cs_list *list, struct wined3d_cs_block *block)
  {
-@@ -1107,9 +1114,6 @@ static UINT wined3d_cs_exec_transfer_stateblock(struct wined3d_cs *cs, const voi
+@@ -1129,9 +1136,6 @@ static UINT wined3d_cs_exec_transfer_stateblock(struct wined3d_cs *cs, const voi
  
      /* Don't memcpy the entire struct, we'll remove single items as we add dedicated
       * ops for setting states */
@@ -45,7 +45,7 @@ index 0a3780b..aef2374 100644
      memcpy(cs->state.vs_consts_b, op->state.vs_consts_b, sizeof(cs->state.vs_consts_b));
      memcpy(cs->state.vs_consts_i, op->state.vs_consts_i, sizeof(cs->state.vs_consts_i));
  
-@@ -1130,8 +1134,6 @@ void wined3d_cs_emit_transfer_stateblock(struct wined3d_cs *cs, const struct win
+@@ -1152,8 +1156,6 @@ void wined3d_cs_emit_transfer_stateblock(struct wined3d_cs *cs, const struct win
  
      /* Don't memcpy the entire struct, we'll remove single items as we add dedicated
       * ops for setting states */
@@ -54,7 +54,7 @@ index 0a3780b..aef2374 100644
      memcpy(op->state.vs_consts_b, state->vs_consts_b, sizeof(op->state.vs_consts_b));
      memcpy(op->state.vs_consts_i, state->vs_consts_i, sizeof(op->state.vs_consts_i));
  
-@@ -1587,6 +1589,32 @@ void wined3d_cs_emit_set_base_vertex_index(struct wined3d_cs *cs,
+@@ -1674,6 +1676,32 @@ void wined3d_cs_emit_set_base_vertex_index(struct wined3d_cs *cs,
      cs->ops->submit(cs);
  }
  
@@ -87,7 +87,7 @@ index 0a3780b..aef2374 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_FENCE                      */ wined3d_cs_exec_fence,
-@@ -1622,6 +1650,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -1712,6 +1740,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_SET_PS_CONSTS_F            */ wined3d_cs_exec_set_ps_consts_f,
      /* WINED3D_CS_OP_GLFINISH                   */ wined3d_cs_exec_glfinish,
      /* WINED3D_CS_OP_SET_BASE_VERTEX_INDEX      */ wined3d_cs_exec_set_base_vertex_index,
@@ -96,10 +96,10 @@ index 0a3780b..aef2374 100644
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index fcb8d7e..36405a1 100644
+index 72266fb..7bd3994 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -3485,7 +3485,6 @@ void CDECL wined3d_device_set_primitive_type(struct wined3d_device *device,
+@@ -3520,7 +3520,6 @@ void CDECL wined3d_device_set_primitive_type(struct wined3d_device *device,
          enum wined3d_primitive_type primitive_type)
  {
      GLenum gl_primitive_type, prev;
@@ -107,7 +107,7 @@ index fcb8d7e..36405a1 100644
      TRACE("device %p, primitive_type %s\n", device, debug_d3dprimitivetype(primitive_type));
  
      gl_primitive_type = gl_primitive_type_from_d3d(primitive_type);
-@@ -3493,8 +3492,8 @@ void CDECL wined3d_device_set_primitive_type(struct wined3d_device *device,
+@@ -3528,8 +3527,8 @@ void CDECL wined3d_device_set_primitive_type(struct wined3d_device *device,
      device->update_state->gl_primitive_type = gl_primitive_type;
      if (device->recording)
          device->recording->changed.primitive_type = TRUE;
@@ -119,7 +119,7 @@ index fcb8d7e..36405a1 100644
  
  void CDECL wined3d_device_get_primitive_type(const struct wined3d_device *device,
 diff --git a/dlls/wined3d/stateblock.c b/dlls/wined3d/stateblock.c
-index 08f5ed5..a9f313c 100644
+index bb3c0cc..732a45b 100644
 --- a/dlls/wined3d/stateblock.c
 +++ b/dlls/wined3d/stateblock.c
 @@ -1009,8 +1009,8 @@ void CDECL wined3d_stateblock_apply(const struct wined3d_stateblock *stateblock)
@@ -134,18 +134,18 @@ index 08f5ed5..a9f313c 100644
  
      if (stateblock->changed.indices)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 6096c23..ee8c1cb 100644
+index 0abec70..5648bda 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3112,6 +3112,8 @@ void wined3d_cs_emit_set_consts_f(struct wined3d_cs *cs, unsigned int start_idx,
- void wined3d_cs_emit_glfinish(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
- void wined3d_cs_emit_set_base_vertex_index(struct wined3d_cs *cs,
-         UINT base_vertex_index) DECLSPEC_HIDDEN;
+@@ -3093,6 +3093,8 @@ void wined3d_cs_emit_set_index_buffer(struct wined3d_cs *cs, struct wined3d_buff
+ void wined3d_cs_emit_set_material(struct wined3d_cs *cs, const struct wined3d_material *material) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_set_predication(struct wined3d_cs *cs,
+         struct wined3d_query *predicate, BOOL value) DECLSPEC_HIDDEN;
 +void wined3d_cs_emit_set_primitive_type(struct wined3d_cs *cs,
 +        GLenum primitive_type) DECLSPEC_HIDDEN;
- 
- /* TODO: Add tests and support for FLOAT16_4 POSITIONT, D3DCOLOR position, other
-  * fixed function semantics as D3DCOLOR or FLOAT16 */
+ void wined3d_cs_emit_set_rasterizer_state(struct wined3d_cs *cs,
+         struct wined3d_rasterizer_state *rasterizer_state) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_set_render_state(struct wined3d_cs *cs,
 -- 
-2.8.0
+2.9.0
 

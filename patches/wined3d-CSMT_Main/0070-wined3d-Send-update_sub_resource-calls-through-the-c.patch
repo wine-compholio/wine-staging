@@ -1,4 +1,4 @@
-From 9d6b9f329a6674d90617333f95b452fda08c08ed Mon Sep 17 00:00:00 2001
+From a2672003445240c74f636792ceffd135bf2a06f3 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Fri, 4 Sep 2015 15:22:49 +0200
 Subject: wined3d: Send update_sub_resource calls through the command stream.
@@ -10,19 +10,19 @@ Subject: wined3d: Send update_sub_resource calls through the command stream.
  3 files changed, 105 insertions(+), 46 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 3ffefd4..e4f1a87 100644
+index fcb4081..befc742 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -73,6 +73,7 @@ enum wined3d_cs_op
+@@ -74,6 +74,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_TEXTURE_UNMAP,
      WINED3D_CS_OP_TEXTURE_PRELOAD,
      WINED3D_CS_OP_UPDATE_TEXTURE,
-     WINED3D_CS_OP_EVICT_RESOURCE,
 +    WINED3D_CS_OP_UPDATE_SUB_RESOURCE,
      WINED3D_CS_OP_STOP,
  };
  
-@@ -417,6 +418,15 @@ struct wined3d_cs_evict_resource
-     struct wined3d_resource *resource;
+@@ -424,6 +425,15 @@ struct wined3d_cs_update_texture
+     struct wined3d_texture *src, *dst;
  };
  
 +struct wined3d_cs_update_sub_resource
@@ -37,7 +37,7 @@ index 3ffefd4..e4f1a87 100644
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
  {
      LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
-@@ -2167,6 +2177,90 @@ void wined3d_cs_emit_evict_resource(struct wined3d_cs *cs, struct wined3d_resour
+@@ -2196,6 +2206,90 @@ void wined3d_cs_emit_update_texture(struct wined3d_cs *cs, struct wined3d_textur
      cs->ops->submit(cs, sizeof(*op));
  }
  
@@ -128,19 +128,19 @@ index 3ffefd4..e4f1a87 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2218,6 +2312,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2248,6 +2342,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_TEXTURE_UNMAP              */ wined3d_cs_exec_texture_unmap,
      /* WINED3D_CS_OP_TEXTURE_PRELOAD            */ wined3d_cs_exec_texture_preload,
      /* WINED3D_CS_OP_UPDATE_TEXTURE             */ wined3d_cs_exec_update_texture,
-     /* WINED3D_CS_OP_EVICT_RESOURCE             */ wined3d_cs_exec_evict_resource,
 +    /* WINED3D_CS_OP_UPDATE_SUB_RESOURCE        */ wined3d_cs_exec_update_sub_resource,
  };
  
  static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index fd866ad..79326f8 100644
+index 5aecf4e..f2f0d7b 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -4079,14 +4079,7 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
+@@ -4117,14 +4117,7 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
          unsigned int depth_pitch)
  {
      struct wined3d_texture_sub_resource *sub_resource;
@@ -155,7 +155,7 @@ index fd866ad..79326f8 100644
  
      TRACE("device %p, resource %p, sub_resource_idx %u, box %s, data %p, row_pitch %u, depth_pitch %u.\n",
              device, resource, sub_resource_idx, debug_box(box), data, row_pitch, depth_pitch);
-@@ -4120,16 +4113,15 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
+@@ -4158,16 +4151,15 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
          WARN("Invalid sub_resource_idx %u.\n", sub_resource_idx);
          return;
      }
@@ -178,7 +178,7 @@ index fd866ad..79326f8 100644
          if (box->left >= box->right || box->right > width
                  || box->top >= box->bottom || box->bottom > height
                  || box->front >= box->back)
-@@ -4137,40 +4129,9 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
+@@ -4175,40 +4167,9 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
              WARN("Invalid box %s specified.\n", debug_box(box));
              return;
          }
@@ -221,19 +221,19 @@ index fd866ad..79326f8 100644
  
  HRESULT CDECL wined3d_device_clear_rendertarget_view(struct wined3d_device *device,
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index a23106e..a26123d 100644
+index 1571657..c0829a1 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3157,6 +3157,9 @@ void wined3d_cs_emit_texture_preload(struct wined3d_cs *cs, struct wined3d_textu
- void wined3d_cs_emit_update_texture(struct wined3d_cs *cs, struct wined3d_texture *src,
-         struct wined3d_texture *dst) DECLSPEC_HIDDEN;
- void wined3d_cs_emit_evict_resource(struct wined3d_cs *cs, struct wined3d_resource *resource) DECLSPEC_HIDDEN;
+@@ -3160,6 +3160,9 @@ void wined3d_cs_emit_texture_preload(struct wined3d_cs *cs, struct wined3d_textu
+ void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture *texture,
+         unsigned int sub_resource_idx) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_unload_resource(struct wined3d_cs *cs, struct wined3d_resource *resource) DECLSPEC_HIDDEN;
 +void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_resource *resource,
 +        unsigned int sub_resource_idx, const struct wined3d_box *box, const void *data, unsigned int row_pitch,
 +        unsigned int depth_pitch) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_update_texture(struct wined3d_cs *cs, struct wined3d_texture *src,
+         struct wined3d_texture *dst) DECLSPEC_HIDDEN;
  
- /* TODO: Add tests and support for FLOAT16_4 POSITIONT, D3DCOLOR position, other
-  * fixed function semantics as D3DCOLOR or FLOAT16 */
 -- 
-2.8.0
+2.9.0
 

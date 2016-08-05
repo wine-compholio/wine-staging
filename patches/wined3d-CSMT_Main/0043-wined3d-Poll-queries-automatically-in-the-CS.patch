@@ -1,4 +1,4 @@
-From d1901e9158ced30ba849f799ba1b612d8e74752d Mon Sep 17 00:00:00 2001
+From 30ac0963aabd73ccd9a2035f828cc10ad8e9dc76 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Sat, 6 Jul 2013 19:18:48 +0200
 Subject: wined3d: Poll queries automatically in the CS
@@ -10,10 +10,10 @@ Subject: wined3d: Poll queries automatically in the CS
  3 files changed, 46 insertions(+), 50 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 2952104..f7ffc1c 100644
+index 9054fc3..920f93d 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -71,7 +71,6 @@ enum wined3d_cs_op
+@@ -72,7 +72,6 @@ enum wined3d_cs_op
      WINED3D_CS_OP_CLEAR_RTV,
      WINED3D_CS_OP_TEXTURE_MAP,
      WINED3D_CS_OP_TEXTURE_UNMAP,
@@ -21,7 +21,7 @@ index 2952104..f7ffc1c 100644
      WINED3D_CS_OP_STOP,
  };
  
-@@ -404,13 +403,6 @@ struct wined3d_cs_skip
+@@ -411,13 +410,6 @@ struct wined3d_cs_skip
      DWORD size;
  };
  
@@ -35,7 +35,7 @@ index 2952104..f7ffc1c 100644
  static void wined3d_cs_submit(struct wined3d_cs *cs, size_t size)
  {
      LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
-@@ -1675,8 +1667,9 @@ static UINT wined3d_cs_exec_query_issue(struct wined3d_cs *cs, const void *data)
+@@ -1682,8 +1674,9 @@ static UINT wined3d_cs_exec_query_issue(struct wined3d_cs *cs, const void *data)
  
      query->query_ops->query_issue(query, op->flags);
  
@@ -47,7 +47,7 @@ index 2952104..f7ffc1c 100644
  
      return sizeof(*op);
  }
-@@ -2033,33 +2026,6 @@ void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture
+@@ -2061,33 +2054,6 @@ void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture
      cs->ops->submit(cs, sizeof(*op));
  }
  
@@ -81,7 +81,7 @@ index 2952104..f7ffc1c 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2109,7 +2075,6 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2138,7 +2104,6 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_CLEAR_RTV                  */ wined3d_cs_exec_clear_rtv,
      /* WINED3D_CS_OP_TEXTURE_MAP                */ wined3d_cs_exec_texture_map,
      /* WINED3D_CS_OP_TEXTURE_UNMAP              */ wined3d_cs_exec_texture_unmap,
@@ -89,7 +89,7 @@ index 2952104..f7ffc1c 100644
  };
  
  static void *wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size)
-@@ -2228,17 +2193,45 @@ void wined3d_cs_switch_onscreen_ds(struct wined3d_cs *cs,
+@@ -2257,17 +2222,45 @@ void wined3d_cs_switch_onscreen_ds(struct wined3d_cs *cs,
      wined3d_texture_incref(cs->onscreen_depth_stencil->container);
  }
  
@@ -194,7 +194,7 @@ index 99a1411..b5e1fde 100644
      if (data)
          memcpy(data, query->data, min(data_size, query->data_size));
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index a10b30f..e6d2602 100644
+index d6518c7..83d270e 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -1396,7 +1396,8 @@ struct wined3d_query
@@ -207,7 +207,7 @@ index a10b30f..e6d2602 100644
  };
  
  union wined3d_gl_query_object
-@@ -3064,6 +3065,7 @@ struct wined3d_cs
+@@ -3067,6 +3068,7 @@ struct wined3d_cs
      struct wined3d_cs_queue queue;
  
      LONG pending_presents;
@@ -215,14 +215,14 @@ index a10b30f..e6d2602 100644
  };
  
  struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device) DECLSPEC_HIDDEN;
-@@ -3147,7 +3149,6 @@ void *wined3d_cs_emit_texture_map(struct wined3d_cs *cs, struct wined3d_texture
-         unsigned int sub_resource_idx, DWORD flags) DECLSPEC_HIDDEN;
- void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture *texture,
-         unsigned int sub_resource_idx) DECLSPEC_HIDDEN;
+@@ -3091,7 +3093,6 @@ void wined3d_cs_emit_glfinish(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_present(struct wined3d_cs *cs, struct wined3d_swapchain *swapchain,
+         const RECT *src_rect, const RECT *dst_rect, HWND dst_window_override, DWORD flags) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_query_issue(struct wined3d_cs *cs, struct wined3d_query *query, DWORD flags) DECLSPEC_HIDDEN;
 -void wined3d_cs_emit_query_poll(struct wined3d_cs *cs, struct wined3d_query *query, BOOL *ret) DECLSPEC_HIDDEN;
- 
- /* TODO: Add tests and support for FLOAT16_4 POSITIONT, D3DCOLOR position, other
-  * fixed function semantics as D3DCOLOR or FLOAT16 */
+ void wined3d_cs_emit_reset_state(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_set_base_vertex_index(struct wined3d_cs *cs,
+         UINT base_vertex_index) DECLSPEC_HIDDEN;
 -- 
 2.9.0
 

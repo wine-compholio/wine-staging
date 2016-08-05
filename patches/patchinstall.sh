@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0b49495b8ed9e725b47b7ca791312a2a3c3e3c97"
+	echo "3852d3357d087353d71d4d11359014a97dbf3e5a"
 }
 
 # Show version information
@@ -3005,20 +3005,13 @@ fi
 # |   *	d3dx9_36-GetShaderSemantics
 # |
 # | Modified files:
-# |   *	dlls/d3dx9_24/d3dx9_24.spec, dlls/d3dx9_25/d3dx9_25.spec, dlls/d3dx9_26/d3dx9_26.spec, dlls/d3dx9_27/d3dx9_27.spec,
-# | 	dlls/d3dx9_28/d3dx9_28.spec, dlls/d3dx9_29/d3dx9_29.spec, dlls/d3dx9_30/d3dx9_30.spec, dlls/d3dx9_31/d3dx9_31.spec,
-# | 	dlls/d3dx9_32/d3dx9_32.spec, dlls/d3dx9_33/d3dx9_33.spec, dlls/d3dx9_34/d3dx9_34.spec, dlls/d3dx9_35/d3dx9_35.spec,
-# | 	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/shader.c, dlls/d3dx9_36/tests/shader.c, dlls/d3dx9_37/d3dx9_37.spec,
-# | 	dlls/d3dx9_38/d3dx9_38.spec, dlls/d3dx9_39/d3dx9_39.spec, dlls/d3dx9_40/d3dx9_40.spec, dlls/d3dx9_41/d3dx9_41.spec,
-# | 	dlls/d3dx9_42/d3dx9_42.spec, dlls/d3dx9_43/d3dx9_43.spec
+# |   *	dlls/d3dx9_36/shader.c, dlls/d3dx9_36/tests/shader.c
 # |
 if test "$enable_d3dx9_36_D3DXDisassembleShader" -eq 1; then
-	patch_apply d3dx9_36-D3DXDisassembleShader/0003-d3dx9_36-Add-stub-for-D3DXFillCubeTextureTX.patch
 	patch_apply d3dx9_36-D3DXDisassembleShader/0004-d3dx9_36-Implement-D3DXDisassembleShader.patch
 	patch_apply d3dx9_36-D3DXDisassembleShader/0005-d3dx9_36-tests-Add-initial-tests-for-D3DXDisassemble.patch
 	patch_apply d3dx9_36-D3DXDisassembleShader/0006-d3dx9_36-tests-Add-additional-tests-for-special-case.patch
 	(
-		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXFillCubeTextureTX.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXDisassembleShader.", 2 },';
 		echo '+    { "Sebastian Lackner", "d3dx9_36/tests: Add initial tests for D3DXDisassembleShader.", 1 },';
 		echo '+    { "Christian Costa", "d3dx9_36/tests: Add additional tests for special cases.", 1 },';
@@ -7306,8 +7299,8 @@ fi
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance
 # |
 # | Modified files:
-# |   *	dlls/d3d9/tests/visual.c, dlls/wined3d/arb_program_shader.c, dlls/wined3d/buffer.c, dlls/wined3d/context.c,
-# | 	dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/drawprim.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/query.c,
+# |   *	dlls/wined3d/arb_program_shader.c, dlls/wined3d/buffer.c, dlls/wined3d/context.c, dlls/wined3d/cs.c,
+# | 	dlls/wined3d/device.c, dlls/wined3d/drawprim.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/query.c,
 # | 	dlls/wined3d/resource.c, dlls/wined3d/sampler.c, dlls/wined3d/shader.c, dlls/wined3d/state.c, dlls/wined3d/stateblock.c,
 # | 	dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c, dlls/wined3d/utils.c,
 # | 	dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
@@ -7317,7 +7310,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Send shader constant updates through the command stream.\".", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Make surface_load_location return nothing.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Start to move surface/volume_load_location into the texture.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Call texture_load_location instead of surface_load_location.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Share surface and volume system memory loading code.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call the public map function in surface_convert_format.", 1 },';
@@ -7367,13 +7359,11 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Send update_texture calls through the CS.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Get rid of the surface_upload_data glFinish.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t lock the src volume in device_update_volume.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Handle evit_managed_resources through the CS.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Fence update_texture calls.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Dirtify resources on unmap.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Fence render targets and depth stencils.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Fence blit operations.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Fence color_fill operations.", 1 },';
-		echo '+    { "Stefan Dösinger", "d3d9/tests: Remove a TODO that has been hacked away.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Make resource maps and unmaps a priority command.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Send update_sub_resource calls through the command stream.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Dirtify changed textures through the command stream.", 1 },';
@@ -7406,7 +7396,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Fence preload operations.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Set map_heap_memory = NULL when allocating a PBO.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Wait only for the buffer to be idle.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Add a comment about worker thread lag.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Put GL_APPLE_flush_buffer_range syncing back in place.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Wait for the resource to be idle when destroying user memory surfaces.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t sync on redundant discard calls.", 1 },';
@@ -7423,7 +7412,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Delete GL contexts through the CS in uninit_3d.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Update the swap interval through the CS in reset.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Do the sampler GL init through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Remove the device_reset CS sync fixme.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Create initial DCs through the CS.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Assign a read buffer when discarding a new texture.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Do not query available GPU memory on main thread when CSMT is enabled.", 1 },';

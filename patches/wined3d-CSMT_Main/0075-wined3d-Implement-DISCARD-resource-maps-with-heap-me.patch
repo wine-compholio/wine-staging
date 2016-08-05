@@ -1,4 +1,4 @@
-From bd07c044ca2439da5464de6f88f4e001e13a0dc2 Mon Sep 17 00:00:00 2001
+From 490b534e7c3bb675d447aa86ddaa019c0eed28d8 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Fri, 27 Sep 2013 19:24:21 +0200
 Subject: wined3d: Implement DISCARD resource maps with heap memory.
@@ -12,10 +12,10 @@ Subject: wined3d: Implement DISCARD resource maps with heap memory.
  5 files changed, 51 insertions(+), 10 deletions(-)
 
 diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
-index 314415c..a841f6b 100644
+index 9a5d6c5..5b684cb 100644
 --- a/dlls/wined3d/buffer.c
 +++ b/dlls/wined3d/buffer.c
-@@ -496,6 +496,7 @@ BYTE *buffer_get_sysmem(struct wined3d_buffer *buffer, struct wined3d_context *c
+@@ -499,6 +499,7 @@ BYTE *buffer_get_sysmem(struct wined3d_buffer *buffer, struct wined3d_context *c
  
      if (!wined3d_resource_allocate_sysmem(&buffer->resource))
          ERR("Failed to allocate system memory.\n");
@@ -24,10 +24,10 @@ index 314415c..a841f6b 100644
      buffer_bind(buffer, context);
      GL_EXTCALL(glGetBufferSubData(buffer->buffer_type_hint, 0, buffer->resource.size, buffer->resource.heap_memory));
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index d30c449..2325138 100644
+index 1f288e0..3fc1fce 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -394,6 +394,7 @@ struct wined3d_cs_texture_changed
+@@ -414,6 +414,7 @@ struct wined3d_cs_texture_changed
      struct wined3d_texture *texture;
      unsigned int sub_resource_idx;
      struct wined3d_gl_bo *swap_buffer;
@@ -35,7 +35,7 @@ index d30c449..2325138 100644
  };
  
  struct wined3d_cs_skip
-@@ -1952,13 +1953,13 @@ static UINT wined3d_cs_exec_texture_changed(struct wined3d_cs *cs, const void *d
+@@ -2113,13 +2114,13 @@ static UINT wined3d_cs_exec_texture_changed(struct wined3d_cs *cs, const void *d
  {
      const struct wined3d_cs_texture_changed *op = data;
  
@@ -51,7 +51,7 @@ index d30c449..2325138 100644
  {
      struct wined3d_cs_texture_changed *op;
  
-@@ -1967,6 +1968,7 @@ void wined3d_cs_emit_texture_changed(struct wined3d_cs *cs, struct wined3d_textu
+@@ -2128,6 +2129,7 @@ void wined3d_cs_emit_texture_changed(struct wined3d_cs *cs, struct wined3d_textu
      op->texture = texture;
      op->sub_resource_idx = sub_resource_idx;
      op->swap_buffer = swap_buffer;
@@ -89,7 +89,7 @@ index 7f80957..1029f12 100644
      return TRUE;
  }
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index 43bcb51..15d27a5 100644
+index df0cd21..bf142b4 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
 @@ -104,6 +104,7 @@ static void wined3d_texture_evict_sysmem(struct wined3d_texture *texture)
@@ -100,7 +100,7 @@ index 43bcb51..15d27a5 100644
  }
  
  void wined3d_texture_validate_location(struct wined3d_texture *texture,
-@@ -220,7 +221,10 @@ void wined3d_texture_get_memory(struct wined3d_texture *texture, unsigned int su
+@@ -351,7 +352,10 @@ void wined3d_texture_get_memory(struct wined3d_texture *texture, unsigned int su
      }
      if (locations & WINED3D_LOCATION_SYSMEM)
      {
@@ -112,7 +112,7 @@ index 43bcb51..15d27a5 100644
          data->addr += sub_resource->offset;
          data->buffer_object = 0;
          return;
-@@ -1137,6 +1141,7 @@ HRESULT CDECL wined3d_texture_update_desc(struct wined3d_texture *texture, UINT
+@@ -1262,6 +1266,7 @@ HRESULT CDECL wined3d_texture_update_desc(struct wined3d_texture *texture, UINT
      }
  
      wined3d_resource_free_sysmem(&texture->resource);
@@ -120,7 +120,7 @@ index 43bcb51..15d27a5 100644
  
      if ((texture->row_pitch = pitch))
          texture->slice_pitch = height * pitch;
-@@ -1331,6 +1336,7 @@ BOOL wined3d_texture_prepare_location(struct wined3d_texture *texture, unsigned
+@@ -1456,6 +1461,7 @@ BOOL wined3d_texture_prepare_location(struct wined3d_texture *texture, unsigned
                  ERR("Failed to allocate system memory.\n");
                  return FALSE;
              }
@@ -128,7 +128,7 @@ index 43bcb51..15d27a5 100644
              return TRUE;
  
          case WINED3D_LOCATION_USER_MEMORY:
-@@ -1686,6 +1692,12 @@ void *wined3d_texture_map_internal(struct wined3d_texture *texture, unsigned int
+@@ -1781,6 +1787,12 @@ void *wined3d_texture_map_internal(struct wined3d_texture *texture, unsigned int
                  ret = !!sub_resource->map_buffer;
                  break;
  
@@ -141,7 +141,7 @@ index 43bcb51..15d27a5 100644
              default:
                  ret = wined3d_texture_prepare_location(texture, sub_resource_idx,
                          context, texture->resource.map_binding);
-@@ -1791,7 +1803,21 @@ static HRESULT texture_resource_sub_resource_map(struct wined3d_resource *resour
+@@ -1886,7 +1898,21 @@ static HRESULT texture_resource_sub_resource_map(struct wined3d_resource *resour
      if (flags & WINED3D_MAP_NOOVERWRITE)
          FIXME("WINED3D_MAP_NOOVERWRITE is not implemented yet.\n");
  
@@ -164,7 +164,7 @@ index 43bcb51..15d27a5 100644
          wined3d_resource_wait_idle(&texture->resource);
  
      base_memory = wined3d_cs_emit_texture_map(device->cs, texture, sub_resource_idx, flags);
-@@ -1867,7 +1893,7 @@ void wined3d_texture_unmap_internal(struct wined3d_texture *texture, unsigned in
+@@ -1962,7 +1988,7 @@ void wined3d_texture_unmap_internal(struct wined3d_texture *texture, unsigned in
  }
  
  void wined3d_texture_changed(struct wined3d_texture *texture, unsigned int sub_resource_idx,
@@ -173,7 +173,7 @@ index 43bcb51..15d27a5 100644
  {
      struct wined3d_texture_sub_resource *sub_resource = &texture->sub_resources[sub_resource_idx];
  
-@@ -1880,6 +1906,12 @@ void wined3d_texture_changed(struct wined3d_texture *texture, unsigned int sub_r
+@@ -1975,6 +2001,12 @@ void wined3d_texture_changed(struct wined3d_texture *texture, unsigned int sub_r
          sub_resource->buffer = swap_buffer;
      }
  
@@ -186,7 +186,7 @@ index 43bcb51..15d27a5 100644
      wined3d_texture_invalidate_location(texture, sub_resource_idx, ~texture->resource.map_binding);
  }
  
-@@ -1907,7 +1939,8 @@ static HRESULT texture_resource_sub_resource_unmap(struct wined3d_resource *reso
+@@ -2002,7 +2034,8 @@ static HRESULT texture_resource_sub_resource_unmap(struct wined3d_resource *reso
  
      if (sub_resource->unmap_dirtify)
      {
@@ -196,7 +196,7 @@ index 43bcb51..15d27a5 100644
          sub_resource->unmap_dirtify = FALSE;
      }
  
-@@ -2348,6 +2381,7 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
+@@ -2644,6 +2677,7 @@ static HRESULT volumetexture_init(struct wined3d_texture *texture, const struct
      if (wined3d_texture_use_pbo(texture, gl_info))
      {
          wined3d_resource_free_sysmem(&texture->resource);
@@ -205,10 +205,10 @@ index 43bcb51..15d27a5 100644
      }
  
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index e3b6ff8..de30dd4 100644
+index 7899487..c690d2c 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2536,7 +2536,7 @@ struct wined3d_resource
+@@ -2594,7 +2594,7 @@ struct wined3d_resource
      UINT depth;
      UINT size;
      DWORD priority;
@@ -217,7 +217,7 @@ index e3b6ff8..de30dd4 100644
      struct list resource_list_entry;
      LONG access_count;
  
-@@ -2733,7 +2733,8 @@ void wined3d_texture_bind(struct wined3d_texture *texture,
+@@ -2791,7 +2791,8 @@ void wined3d_texture_bind(struct wined3d_texture *texture,
  void wined3d_texture_bind_and_dirtify(struct wined3d_texture *texture,
          struct wined3d_context *context, BOOL srgb) DECLSPEC_HIDDEN;
  void wined3d_texture_changed(struct wined3d_texture *texture,
@@ -227,16 +227,16 @@ index e3b6ff8..de30dd4 100644
  BOOL wined3d_texture_check_block_align(const struct wined3d_texture *texture,
          unsigned int level, const struct wined3d_box *box) DECLSPEC_HIDDEN;
  GLenum wined3d_texture_get_gl_buffer(const struct wined3d_texture *texture) DECLSPEC_HIDDEN;
-@@ -3118,7 +3119,8 @@ void wined3d_cs_emit_clear_rtv(struct wined3d_cs *cs, struct wined3d_rendertarge
-         const RECT *rect, DWORD flags, const struct wined3d_color *color, float depth, DWORD stencil,
-         const struct blit_shader *blitter) DECLSPEC_HIDDEN;
+@@ -3170,7 +3171,8 @@ void wined3d_cs_emit_set_vertex_declaration(struct wined3d_cs *cs,
+         struct wined3d_vertex_declaration *declaration) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_set_viewport(struct wined3d_cs *cs, const struct wined3d_viewport *viewport) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_texture_changed(struct wined3d_cs *cs, struct wined3d_texture *texture,
 -        unsigned int sub_resource_idx, struct wined3d_gl_bo *swap_buffer) DECLSPEC_HIDDEN;
 +        unsigned int sub_resource_idx, struct wined3d_gl_bo *swap_buffer,
 +        void *swap_heap_memory) DECLSPEC_HIDDEN;
  void *wined3d_cs_emit_texture_map(struct wined3d_cs *cs, struct wined3d_texture *texture,
          unsigned int sub_resource_idx, DWORD flags) DECLSPEC_HIDDEN;
- void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture *texture,
+ void wined3d_cs_emit_texture_preload(struct wined3d_cs *cs, struct wined3d_texture *texture) DECLSPEC_HIDDEN;
 -- 
-2.8.0
+2.9.0
 

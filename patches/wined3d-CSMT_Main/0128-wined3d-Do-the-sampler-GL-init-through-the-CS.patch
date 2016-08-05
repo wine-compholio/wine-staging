@@ -1,4 +1,4 @@
-From 3bc2195fcff838f6875a50a6b07332a232e7f546 Mon Sep 17 00:00:00 2001
+From 3122cfad1f999ea1e66d15da8faac83ddc12bc94 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefandoesinger@gmx.at>
 Date: Sat, 7 May 2016 22:07:22 +0100
 Subject: wined3d: Do the sampler GL init through the CS.
@@ -12,18 +12,18 @@ This extra parameter is barf-inducing.
  4 files changed, 63 insertions(+), 23 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 0e976b0..acf2ae0 100644
+index aea9a8a..f139241 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -79,6 +79,7 @@ enum wined3d_cs_op
-     WINED3D_CS_OP_EVICT_RESOURCE,
+@@ -80,6 +80,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_UPDATE_TEXTURE,
      WINED3D_CS_OP_UPDATE_SUB_RESOURCE,
      WINED3D_CS_OP_CREATE_VBO,
 +    WINED3D_CS_OP_SAMPLER_INIT,
      WINED3D_CS_OP_GET_DC,
      WINED3D_CS_OP_RELEASE_DC,
      WINED3D_CS_OP_CREATE_DUMMY_TEXTURES,
-@@ -473,6 +474,12 @@ struct wined3d_cs_create_vbo
+@@ -480,6 +481,12 @@ struct wined3d_cs_create_vbo
      struct wined3d_buffer *buffer;
  };
  
@@ -36,7 +36,7 @@ index 0e976b0..acf2ae0 100644
  struct wined3d_cs_get_release_dc
  {
      enum wined3d_cs_op opcode;
-@@ -2433,6 +2440,26 @@ void wined3d_cs_emit_create_vbo(struct wined3d_cs *cs, struct wined3d_buffer *bu
+@@ -2515,6 +2522,26 @@ void wined3d_cs_emit_create_vbo(struct wined3d_cs *cs, struct wined3d_buffer *bu
      cs->ops->finish_prio(cs);
  }
  
@@ -63,8 +63,8 @@ index 0e976b0..acf2ae0 100644
  static UINT wined3d_cs_exec_get_dc(struct wined3d_cs *cs, const void *data)
  {
      const struct wined3d_cs_get_release_dc *op = data;
-@@ -2625,6 +2652,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
-     /* WINED3D_CS_OP_EVICT_RESOURCE             */ wined3d_cs_exec_evict_resource,
+@@ -2708,6 +2735,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_UPDATE_TEXTURE             */ wined3d_cs_exec_update_texture,
      /* WINED3D_CS_OP_UPDATE_SUB_RESOURCE        */ wined3d_cs_exec_update_sub_resource,
      /* WINED3D_CS_OP_CREATE_VBO                 */ wined3d_cs_exec_create_vbo,
 +    /* WINED3D_CS_OP_SAMPLER_INIT               */ wined3d_cs_exec_sampler_init,
@@ -72,7 +72,7 @@ index 0e976b0..acf2ae0 100644
      /* WINED3D_CS_OP_RELEASE_DC                 */ wined3d_cs_exec_release_dc,
      /* WINED3D_CS_OP_CREATE_DUMMY_TEXTURES      */ wined3d_cs_exec_create_dummy_textures,
 diff --git a/dlls/wined3d/sampler.c b/dlls/wined3d/sampler.c
-index 1a2e2a1..2bf881f 100644
+index 5902feb..9939b78 100644
 --- a/dlls/wined3d/sampler.c
 +++ b/dlls/wined3d/sampler.c
 @@ -66,43 +66,37 @@ void * CDECL wined3d_sampler_get_parent(const struct wined3d_sampler *sampler)
@@ -164,10 +164,10 @@ index 1a2e2a1..2bf881f 100644
      TRACE("Created sampler %p.\n", object);
      *sampler = object;
 diff --git a/dlls/wined3d/state.c b/dlls/wined3d/state.c
-index 50cf6cd..64afaac 100644
+index c08af26..f0d025c 100644
 --- a/dlls/wined3d/state.c
 +++ b/dlls/wined3d/state.c
-@@ -3604,7 +3604,7 @@ static void sampler(struct wined3d_context *context, const struct wined3d_state
+@@ -3651,7 +3651,7 @@ static void sampler(struct wined3d_context *context, const struct wined3d_state
              }
              else
              {
@@ -177,10 +177,10 @@ index 50cf6cd..64afaac 100644
                      ERR("Failed to create sampler.\n");
                      sampler = NULL;
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 9a43938..fd4ba77 100644
+index 693093e..849c5ad 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2914,6 +2914,10 @@ struct wined3d_sampler
+@@ -2963,6 +2963,10 @@ struct wined3d_sampler
      GLuint name;
  };
  
@@ -191,14 +191,14 @@ index 9a43938..fd4ba77 100644
  struct wined3d_vertex_declaration_element
  {
      const struct wined3d_format *format;
-@@ -3153,6 +3157,7 @@ void wined3d_cs_emit_buffer_invalidate_bo_range(struct wined3d_cs *cs,
-         struct wined3d_buffer *buffer, unsigned int offset, unsigned int size) DECLSPEC_HIDDEN;
- void wined3d_cs_emit_buffer_preload(struct wined3d_cs *cs, struct wined3d_buffer *buffer) DECLSPEC_HIDDEN;
- void wined3d_cs_emit_create_vbo(struct wined3d_cs *cs, struct wined3d_buffer *buffer) DECLSPEC_HIDDEN;
-+void wined3d_cs_emit_sampler_init(struct wined3d_cs *cs, struct wined3d_sampler *sampler) DECLSPEC_HIDDEN;
- void wined3d_cs_emit_get_dc(struct wined3d_cs *cs, struct wined3d_texture *texture,
-         unsigned int sub_resource_idx) DECLSPEC_HIDDEN;
+@@ -3142,6 +3146,7 @@ void wined3d_cs_emit_query_issue(struct wined3d_cs *cs, struct wined3d_query *qu
  void wined3d_cs_emit_release_dc(struct wined3d_cs *cs, struct wined3d_texture *texture,
+         unsigned int sub_resource_idx) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_reset_state(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
++void wined3d_cs_emit_sampler_init(struct wined3d_cs *cs, struct wined3d_sampler *sampler) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_set_base_vertex_index(struct wined3d_cs *cs,
+         UINT base_vertex_index) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_set_clip_plane(struct wined3d_cs *cs, UINT plane_idx,
 -- 
-2.8.0
+2.9.0
 

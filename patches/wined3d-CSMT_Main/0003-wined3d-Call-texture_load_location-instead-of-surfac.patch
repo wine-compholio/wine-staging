@@ -1,14 +1,13 @@
-From 0de3c15670f2fa6a665f75a77ae522456372ed9b Mon Sep 17 00:00:00 2001
+From 6930278bb1ba99c7cfcbd1cfaef73c8034cc48a7 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Tue, 17 Nov 2015 23:13:29 -0800
 Subject: wined3d: Call texture_load_location instead of surface_load_location.
 
 ---
- dlls/wined3d/device.c    | 9 ++++++---
- dlls/wined3d/surface.c   | 8 +++++---
- dlls/wined3d/swapchain.c | 8 ++++----
- dlls/wined3d/texture.c   | 2 +-
- 4 files changed, 16 insertions(+), 11 deletions(-)
+ dlls/wined3d/device.c  | 9 ++++++---
+ dlls/wined3d/surface.c | 5 +++--
+ dlls/wined3d/texture.c | 2 +-
+ 3 files changed, 10 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
 index e052557..604be94 100644
@@ -42,7 +41,7 @@ index e052557..604be94 100644
  }
  
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index 859f481..6d5b22b 100644
+index 2796590..5dfdcfd 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
 @@ -2447,7 +2447,7 @@ static void surface_blt_to_drawable(const struct wined3d_device *device,
@@ -64,45 +63,6 @@ index 859f481..6d5b22b 100644
      }
  
      if (texture->resource.usage & WINED3DUSAGE_DEPTHSTENCIL)
-@@ -4380,7 +4381,8 @@ HRESULT wined3d_surface_blt(struct wined3d_surface *dst_surface, const RECT *dst
-                         if (!wined3d_resource_is_offscreen(&dst_texture->resource))
-                         {
-                             struct wined3d_context *context = context_acquire(device, dst_surface);
--                            surface_load_location(dst_surface, context, dst_texture->resource.draw_binding);
-+                            wined3d_texture_load_location(dst_texture, surface_get_sub_resource_idx(dst_surface),
-+                                    context, dst_texture->resource.draw_binding);
-                             context_release(context);
-                         }
-                         return WINED3D_OK;
-diff --git a/dlls/wined3d/swapchain.c b/dlls/wined3d/swapchain.c
-index 4d7f60a..6f3b4d8 100644
---- a/dlls/wined3d/swapchain.c
-+++ b/dlls/wined3d/swapchain.c
-@@ -464,7 +464,7 @@ static void wined3d_swapchain_rotate(struct wined3d_swapchain *swapchain, struct
-         sub_resource = &texture->sub_resources[0];
- 
-         if (!(sub_resource->locations & supported_locations))
--            surface_load_location(sub_resource->u.surface, context, texture->resource.draw_binding);
-+            wined3d_texture_load_location(texture, 0, context, texture->resource.draw_binding);
- 
-         texture_prev->texture_rgb = texture->texture_rgb;
-         texture_prev->rb_multisample = texture->rb_multisample;
-@@ -644,12 +644,12 @@ static void swapchain_gl_present(struct wined3d_swapchain *swapchain,
- 
- static void swapchain_gl_frontbuffer_updated(struct wined3d_swapchain *swapchain)
- {
--    struct wined3d_surface *surface;
-+    struct wined3d_texture *texture = swapchain->front_buffer;
-+    struct wined3d_surface *surface = texture->sub_resources[0].u.surface;
-     struct wined3d_context *context;
- 
--    surface = swapchain->front_buffer->sub_resources[0].u.surface;
-     context = context_acquire(swapchain->device, surface);
--    surface_load_location(surface, context, surface->container->resource.draw_binding);
-+    wined3d_texture_load_location(texture, 0, context, texture->resource.draw_binding);
-     context_release(context);
-     SetRectEmpty(&swapchain->front_buffer_update);
- }
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
 index 0acc74f..2d155cb 100644
 --- a/dlls/wined3d/texture.c

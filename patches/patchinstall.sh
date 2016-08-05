@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a65718a3e7b95443a82dafd5d2c9cded961404a6"
+	echo "0b49495b8ed9e725b47b7ca791312a2a3c3e3c97"
 }
 
 # Show version information
@@ -2335,9 +2335,8 @@ fi
 # | 	dlls/rpcrt4/tests/ndr_marshall.c, dlls/scrrun/tests/dictionary.c, dlls/shell32/tests/appbar.c,
 # | 	dlls/shell32/tests/shelldispatch.c, dlls/shell32/tests/shellole.c, dlls/shlwapi/tests/ordinal.c,
 # | 	dlls/user32/tests/input.c, dlls/user32/tests/menu.c, dlls/vbscript/vbdisp.c, dlls/winealsa.drv/mmdevdrv.c,
-# | 	dlls/wined3d/glsl_shader.c, dlls/winhttp/tests/winhttp.c, dlls/wshom.ocx/tests/wshom.c, dlls/xaudio2_7/compat.c,
-# | 	dlls/xaudio2_7/x3daudio.c, include/d3dtypes.h, include/wine/list.h, include/wine/rbtree.h, include/winnt.h,
-# | 	server/request.c, server/sock.c, tools/makedep.c
+# | 	dlls/wined3d/glsl_shader.c, dlls/winhttp/tests/winhttp.c, dlls/wshom.ocx/tests/wshom.c, include/d3dtypes.h,
+# | 	include/wine/list.h, include/wine/rbtree.h, include/winnt.h, server/request.c, server/sock.c, tools/makedep.c
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0001-comctl32-Avoid-misleading-indentation-warnings.patch
@@ -2352,7 +2351,6 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0011-user32-tests-Avoid-misleading-indentation-warnings.patch
 	patch_apply Compiler_Warnings/0012-winhttp-tests-Avoid-misleading-indentation-warnings.patch
 	patch_apply Compiler_Warnings/0013-wshom.ocx-tests-Avoid-misleading-indentation-warning.patch
-	patch_apply Compiler_Warnings/0014-xaudio2_7-Only-declare-debug-channel-when-needed.patch
 	patch_apply Compiler_Warnings/0015-include-Avoid-shift-overflow-warning.patch
 	patch_apply Compiler_Warnings/0017-server-Workaround-duplicate-condition-warning-of-GCC.patch
 	patch_apply Compiler_Warnings/0018-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch
@@ -2382,7 +2380,6 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 		echo '+    { "Sebastian Lackner", "user32/tests: Avoid misleading indentation warnings.", 1 },';
 		echo '+    { "Sebastian Lackner", "winhttp/tests: Avoid misleading indentation warnings.", 1 },';
 		echo '+    { "Sebastian Lackner", "wshom.ocx/tests: Avoid misleading indentation warnings.", 1 },';
-		echo '+    { "Sebastian Lackner", "xaudio2_7: Only declare debug channel when needed.", 1 },';
 		echo '+    { "Sebastian Lackner", "include: Avoid shift overflow warning.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Workaround duplicate condition warning of GCC 6.", 1 },';
 		echo '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },';

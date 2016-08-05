@@ -1,0 +1,143 @@
+From 50fa1cd464e2ad5a85d3a4400e32b4f9f7ff4e36 Mon Sep 17 00:00:00 2001
+From: Nils Kuhnhenn <nils@volafile.io>
+Date: Fri, 5 Aug 2016 20:28:46 +0200
+Subject: wined3d: Fix context_acquire not being called from the command thread
+ in wined3d_texture_add_dirty_region.
+
+---
+ dlls/wined3d/cs.c              | 50 ++++++++++++++++++++++++++++++++++++++++++
+ dlls/wined3d/texture.c         | 15 +------------
+ dlls/wined3d/wined3d_private.h |  2 ++
+ 3 files changed, 53 insertions(+), 14 deletions(-)
+
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 7052c19..9f850a5 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -72,6 +72,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_TEXTURE_CHANGED,
+     WINED3D_CS_OP_TEXTURE_MAP,
+     WINED3D_CS_OP_TEXTURE_UNMAP,
++    WINED3D_CS_OP_TEXTURE_ADD_DIRTY_REGION,
+     WINED3D_CS_OP_BUFFER_SWAP_MEM,
+     WINED3D_CS_OP_BUFFER_INVALIDATE_RANGE,
+     WINED3D_CS_OP_BUFFER_PRELOAD,
+@@ -413,6 +414,13 @@ struct wined3d_cs_texture_unmap
+     unsigned int sub_resource_idx;
+ };
+ 
++struct wined3d_cs_texture_add_dirty_region
++{
++    enum wined3d_cs_op opcode;
++    struct wined3d_texture *texture;
++    unsigned int sub_resource_idx;
++};
++
+ struct wined3d_cs_texture_changed
+ {
+     enum wined3d_cs_op opcode;
+@@ -2253,6 +2261,47 @@ void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture
+     cs->ops->submit_prio(cs, sizeof(*op));
+ }
+ 
++static UINT wined3d_cs_exec_texture_add_dirty_region(struct wined3d_cs *cs, const void *data)
++{
++    const struct wined3d_cs_texture_add_dirty_region *op = data;
++    struct wined3d_texture *texture = op->texture;
++    struct wined3d_context *context;
++
++    context = context_acquire(cs->device, NULL);
++    if (!wined3d_texture_load_location(texture, op->sub_resource_idx, context, texture->resource.map_binding))
++    {
++        ERR("Failed to load location %s.\n", wined3d_debug_location(texture->resource.map_binding));
++    }
++    else
++    {
++        wined3d_texture_invalidate_location(texture, op->sub_resource_idx, ~texture->resource.map_binding);
++    }
++    context_release(context);
++
++    wined3d_resource_release(&texture->resource);
++
++    return sizeof(*op);
++}
++
++void wined3d_cs_emit_texture_add_dirty_region(struct wined3d_cs *cs,
++        struct wined3d_texture *texture, unsigned int sub_resource_idx,
++        const struct wined3d_box *dirty_region)
++{
++    struct wined3d_cs_texture_add_dirty_region *op;
++
++    if (dirty_region)
++        WARN("Ignoring dirty_region %s.\n", debug_box(dirty_region));
++
++    op = cs->ops->require_space(cs, sizeof(*op));
++    op->opcode = WINED3D_CS_OP_TEXTURE_ADD_DIRTY_REGION;
++    op->texture = texture;
++    op->sub_resource_idx = sub_resource_idx;
++
++    wined3d_resource_acquire(&texture->resource);
++
++    cs->ops->submit(cs, sizeof(*op));
++}
++
+ static UINT wined3d_cs_exec_texture_preload(struct wined3d_cs *cs, const void *data)
+ {
+     const struct wined3d_cs_texture_preload *op = data;
+@@ -2730,6 +2779,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_TEXTURE_CHANGED            */ wined3d_cs_exec_texture_changed,
+     /* WINED3D_CS_OP_TEXTURE_MAP                */ wined3d_cs_exec_texture_map,
+     /* WINED3D_CS_OP_TEXTURE_UNMAP              */ wined3d_cs_exec_texture_unmap,
++    /* WINED3D_CS_OP_TEXTURE_ADD_DIRTY_REGION   */ wined3d_cs_exec_texture_add_dirty_region,
+     /* WINED3D_CS_OP_BUFFER_SWAP_MEM            */ wined3d_cs_exec_buffer_swap_mem,
+     /* WINED3D_CS_OP_BUFFER_INVALIDATE_RANGE    */ wined3d_cs_exec_buffer_invalidate_bo_range,
+     /* WINED3D_CS_OP_BUFFER_PRELOAD             */ wined3d_cs_exec_buffer_preload,
+diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
+index de0cf58..585cf8e 100644
+--- a/dlls/wined3d/texture.c
++++ b/dlls/wined3d/texture.c
+@@ -1551,7 +1551,6 @@ struct wined3d_texture_sub_resource *wined3d_texture_get_sub_resource(struct win
+ HRESULT CDECL wined3d_texture_add_dirty_region(struct wined3d_texture *texture,
+         UINT layer, const struct wined3d_box *dirty_region)
+ {
+-    struct wined3d_context *context;
+     unsigned int sub_resource_idx;
+ 
+     TRACE("texture %p, layer %u, dirty_region %s.\n", texture, layer, debug_box(dirty_region));
+@@ -1563,19 +1562,7 @@ HRESULT CDECL wined3d_texture_add_dirty_region(struct wined3d_texture *texture,
+     }
+     sub_resource_idx = layer * texture->level_count;
+ 
+-    if (dirty_region)
+-        WARN("Ignoring dirty_region %s.\n", debug_box(dirty_region));
+-
+-    context = context_acquire(texture->resource.device, NULL);
+-    if (!wined3d_texture_load_location(texture, sub_resource_idx, context, texture->resource.map_binding))
+-    {
+-        ERR("Failed to load location %s.\n", wined3d_debug_location(texture->resource.map_binding));
+-        context_release(context);
+-        return E_OUTOFMEMORY;
+-    }
+-    wined3d_texture_invalidate_location(texture, sub_resource_idx, ~texture->resource.map_binding);
+-    context_release(context);
+-
++    wined3d_cs_emit_texture_add_dirty_region(texture->resource.device->cs, texture, sub_resource_idx, dirty_region);
+     return WINED3D_OK;
+ }
+ 
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index d8eaeb7..bd8557c 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -3192,6 +3192,8 @@ void *wined3d_cs_emit_texture_map(struct wined3d_cs *cs, struct wined3d_texture
+         unsigned int sub_resource_idx, DWORD flags) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture *texture,
+         unsigned int sub_resource_idx) DECLSPEC_HIDDEN;
++void wined3d_cs_emit_texture_add_dirty_region(struct wined3d_cs *cs, struct wined3d_texture *texture,
++        unsigned int sub_resource_idx, const struct wined3d_box *dirty_region) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_texture_preload(struct wined3d_cs *cs, struct wined3d_texture *texture) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_update_texture(struct wined3d_cs *cs, struct wined3d_texture *src,
+         struct wined3d_texture *dst) DECLSPEC_HIDDEN;
+-- 
+2.9.0
+

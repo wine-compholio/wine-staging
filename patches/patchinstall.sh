@@ -51,13 +51,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "3852d3357d087353d71d4d11359014a97dbf3e5a"
+	echo "84b3218ed6ad5975f537481edf2f61fb26bedb8b"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 1.9.16"
+	echo "Wine Staging 1.9.17 (unreleased)"
 	echo "Copyright (C) 2014-2016 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -7240,8 +7240,7 @@ fi
 # Patchset wined3d-Silence_FIXMEs
 # |
 # | Modified files:
-# |   *	dlls/wined3d/glsl_shader.c, dlls/wined3d/resource.c, dlls/wined3d/state.c, dlls/wined3d/surface.c,
-# | 	dlls/wined3d/swapchain.c, dlls/wined3d/texture.c
+# |   *	dlls/wined3d/resource.c, dlls/wined3d/state.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c
 # |
 if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
 	patch_apply wined3d-Silence_FIXMEs/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
@@ -7251,7 +7250,6 @@ if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
 	patch_apply wined3d-Silence_FIXMEs/0005-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
 	patch_apply wined3d-Silence_FIXMEs/0006-wined3d-Silence-extremely-noisy-FIXME-in-wined3d_tex.patch
 	patch_apply wined3d-Silence_FIXMEs/0007-wined3d-Display-FIXME-only-once-when-blen-op-is-0.patch
-	patch_apply wined3d-Silence_FIXMEs/0008-wined3d-Silence-false-FIXME-message.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 		echo '+    { "Christian Costa", "wined3d: Display FIXME for cmp function 0 only once.", 1 },';
@@ -7260,7 +7258,6 @@ if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Silence extremely noisy FIXME in wined3d_texture_add_dirty_region.", 1 },';
 		echo '+    { "Christian Costa", "wined3d: Display FIXME only once when blen op is 0.", 1 },';
-		echo '+    { "Józef Kucia", "wined3d: Silence false FIXME message.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7639,13 +7636,11 @@ fi
 # Patchset winhttp-System_Proxy_Autoconfig
 # |
 # | Modified files:
-# |   *	dlls/winhttp/session.c, dlls/wininet/internet.c
+# |   *	dlls/wininet/internet.c
 # |
 if test "$enable_winhttp_System_Proxy_Autoconfig" -eq 1; then
-	patch_apply winhttp-System_Proxy_Autoconfig/0001-winhttp-Silence-repeated-no-support-on-this-platform.patch
 	patch_apply winhttp-System_Proxy_Autoconfig/0002-wininet-Silence-wininet-no-support-on-this-platform-.patch
 	(
-		echo '+    { "Jarkko Korpi", "winhttp: Silence repeated \"no support on this platform\" message.", 1 },';
 		echo '+    { "Jarkko Korpi", "wininet: Silence wininet no support on this platform message.", 1 },';
 	) >> "$patchlist"
 fi

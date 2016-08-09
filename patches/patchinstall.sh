@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "84b3218ed6ad5975f537481edf2f61fb26bedb8b"
+	echo "ba858c28fd489a812ea0f55a11680a8edaf99ce5"
 }
 
 # Show version information
@@ -2329,10 +2329,9 @@ fi
 # | Modified files:
 # |   *	dlls/amstream/mediastreamfilter.c, dlls/comctl32/listview.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c,
 # | 	dlls/d3d8/texture.c, dlls/d3d9/tests/visual.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dsound/primary.c,
-# | 	dlls/dwrite/layout.c, dlls/dwrite/tests/analyzer.c, dlls/dwrite/tests/font.c, dlls/dwrite/tests/layout.c,
-# | 	dlls/mshtml/script.c, dlls/msvcirt/tests/msvcirt.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c,
-# | 	dlls/ole32/tests/compobj.c, dlls/oleaut32/oleaut.c, dlls/oleaut32/tests/safearray.c, dlls/rpcrt4/cstub.c,
-# | 	dlls/rpcrt4/tests/ndr_marshall.c, dlls/scrrun/tests/dictionary.c, dlls/shell32/tests/appbar.c,
+# | 	dlls/dwrite/layout.c, dlls/mshtml/script.c, dlls/msvcirt/tests/msvcirt.c, dlls/msxml3/schema.c,
+# | 	dlls/netapi32/netapi32.c, dlls/ole32/tests/compobj.c, dlls/oleaut32/oleaut.c, dlls/oleaut32/tests/safearray.c,
+# | 	dlls/rpcrt4/cstub.c, dlls/rpcrt4/tests/ndr_marshall.c, dlls/scrrun/tests/dictionary.c, dlls/shell32/tests/appbar.c,
 # | 	dlls/shell32/tests/shelldispatch.c, dlls/shell32/tests/shellole.c, dlls/shlwapi/tests/ordinal.c,
 # | 	dlls/user32/tests/input.c, dlls/user32/tests/menu.c, dlls/vbscript/vbdisp.c, dlls/winealsa.drv/mmdevdrv.c,
 # | 	dlls/wined3d/glsl_shader.c, dlls/winhttp/tests/winhttp.c, dlls/wshom.ocx/tests/wshom.c, include/d3dtypes.h,
@@ -2340,7 +2339,6 @@ fi
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0001-comctl32-Avoid-misleading-indentation-warnings.patch
-	patch_apply Compiler_Warnings/0002-dwrite-tests-Avoid-misleading-indentation-warnings.patch
 	patch_apply Compiler_Warnings/0004-mshtml-Avoid-misleading-indentation-warnings.patch
 	patch_apply Compiler_Warnings/0005-msvcirt-tests-Avoid-misleading-indentation-warnings.patch
 	patch_apply Compiler_Warnings/0006-oleaut32-tests-Avoid-misleading-indentation-warnings.patch
@@ -2369,7 +2367,6 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0031-include-Check-element-type-in-CONTAINING_RECORD-and-.patch
 	(
 		echo '+    { "Sebastian Lackner", "comctl32: Avoid misleading indentation warnings.", 1 },';
-		echo '+    { "Sebastian Lackner", "dwrite/tests: Avoid misleading indentation warnings.", 1 },';
 		echo '+    { "Sebastian Lackner", "mshtml: Avoid misleading indentation warnings.", 1 },';
 		echo '+    { "Sebastian Lackner", "msvcirt/tests: Avoid misleading indentation warnings.", 1 },';
 		echo '+    { "Sebastian Lackner", "oleaut32/tests: Avoid misleading indentation warnings.", 1 },';
@@ -5410,7 +5407,7 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 		echo '+    { "Austin English", "ntoskrnl.exe: Add KeWaitForMultipleObjects stub.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for IoGetAttachedDeviceReference.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ExAcquireFastMutexUnsafe and ExReleaseFastMutexUnsafe.", 1 },';
-		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ObReferenceObjectByPointer and ObDereferenceObject.", 1 },';
+		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for ObReferenceObjectByPointer.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeReleaseMutex stub.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeSemaphore stub.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeTimerEx stub.", 1 },';

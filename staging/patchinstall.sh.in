@@ -41,7 +41,8 @@ usage()
 	echo ""
 	echo "Backends:"
 	echo "  --backend=patch      Use regular 'patch' utility to apply patches (default)"
-	echo "  --backend=epatch     Use 'epatch' to apply patches (Gentoo only)"
+	echo "  --backend=eapply     Use 'eapply' to apply patches (Gentoo only)"
+	echo "  --backend=epatch     Use 'epatch' to apply patches (Gentoo only, deprecated)"
 	echo "  --backend=git-am     Use 'git am' to apply patches"
 	echo "  --backend=git-apply  Use 'git apply' to apply patches"
 	echo "  --backend=stg        Import the patches using stacked git"
@@ -177,7 +178,7 @@ elif test ! -f "$DESTDIR/tools/make_requests"; then
 	abort "DESTDIR does not point to the Wine source tree."
 fi
 
-# Change directory to DESTDIR, epatch depends on that
+# Change directory to DESTDIR, eapply/epatch depends on that
 if ! cd "$DESTDIR"; then
 	abort "Unable to change directory to $DESTDIR."
 fi
@@ -292,8 +293,8 @@ if test "$backend" = "patch"; then
 		fi
 	}}
 
-# 'epatch' backend - used on Gentoo
-elif test "$backend" = "epatch"; then
+# 'eapply/epatch' backend - used on Gentoo
+elif test "$backend" = "eapply" -o "$backend" = "epatch"; then
 
 	if test "$workaround_git_bug" -eq 0; then
 		gitapply_args="--nogit"
@@ -301,11 +302,11 @@ elif test "$backend" = "epatch"; then
 		gitapply_args=""
 	fi
 
-	if ! command -v epatch >/dev/null 2>&1 || \
-	   ! command -v ebegin >/dev/null 2>&1 || \
-	   ! command -v eend   >/dev/null 2>&1 || \
-	   ! command -v die    >/dev/null 2>&1; then
-		abort "Shell functions epatch/ebegin/eend not found. You have to source this script from your ebuild."
+	if ! command -v "$backend"  >/dev/null 2>&1 || \
+	   ! command -v ebegin      >/dev/null 2>&1 || \
+	   ! command -v eend        >/dev/null 2>&1 || \
+	   ! command -v nonfatal    >/dev/null 2>&1; then
+		abort "Shell functions $backend/ebegin/eend/nonfatal not found. You have to source this script from your ebuild."
 	fi
 
 	if test "$enable_autoconf" -gt 1; then
@@ -318,13 +319,15 @@ elif test "$backend" = "epatch"; then
 		_shortname="$(basename "$1")"
 		if grep -q "^GIT binary patch" "$1"; then
 			ebegin "Applying $_shortname"
-			if ! "$patchdir/gitapply.sh" $gitapply_args < "$1"; then
-				die "Failed Patch: $1!"
+			"$patchdir/gitapply.sh" $gitapply_args < "$1"
+			if ! eend $?; then
+				exit 1
 			fi
-			eend
-
 		else
-			epatch "$1" # epatch calls die upon failure
+			# we are run from a subshell, so we can't call die
+			if ! nonfatal "$backend" "$1"; then
+				exit 1
+			fi
 		fi
 		unset _shortname
 	}}

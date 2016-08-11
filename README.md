@@ -66,7 +66,8 @@ Configuration:
 
 Backends:
   --backend=patch      Use regular 'patch' utility to apply patches (default)
-  --backend=epatch     Use 'epatch' to apply patches (Gentoo only)
+  --backend=eapply     Use 'eapply' to apply patches (Gentoo only)
+  --backend=epatch     Use 'epatch' to apply patches (Gentoo only, deprecated)
   --backend=git-am     Use 'git am' to apply patches
   --backend=git-apply  Use 'git apply' to apply patches
   --backend=stg        Import the patches using stacked git

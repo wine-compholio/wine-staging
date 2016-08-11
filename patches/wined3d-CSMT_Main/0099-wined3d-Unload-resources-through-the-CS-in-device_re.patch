@@ -1,43 +1,25 @@
-From 88fc47f261800a4c622935e5ad03dae71215c3ac Mon Sep 17 00:00:00 2001
+From 39344ce1023a10cf7303f75c50aee588f6ec4e45 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 2 Oct 2013 23:40:20 +0200
 Subject: wined3d: Unload resources through the CS in device_reset.
 
 ---
- dlls/wined3d/device.c | 10 ++++++----
- 1 file changed, 6 insertions(+), 4 deletions(-)
+ dlls/wined3d/device.c | 2 ++
+ 1 file changed, 2 insertions(+)
 
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 44ff6fc..2b5c063 100644
+index 632754d6..efd4c1b 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -4559,20 +4559,22 @@ static void delete_opengl_contexts(struct wined3d_device *device, struct wined3d
-     struct wined3d_context *context;
-     struct wined3d_shader *shader;
- 
--    context = context_acquire(device, NULL);
--    gl_info = context->gl_info;
--
-     LIST_FOR_EACH_ENTRY_SAFE(resource, cursor, &device->resources, struct wined3d_resource, resource_list_entry)
-     {
+@@ -4562,6 +4562,8 @@ static void delete_opengl_contexts(struct wined3d_device *device, struct wined3d
          TRACE("Unloading resource %p.\n", resource);
--        resource->resource_ops->resource_unload(resource);
-+        wined3d_cs_emit_unload_resource(device->cs, resource);
+         wined3d_cs_emit_unload_resource(device->cs, resource);
      }
 +    if (wined3d_settings.cs_multithreaded)
 +        device->cs->ops->finish(device->cs);
  
      LIST_FOR_EACH_ENTRY(shader, &device->shaders, struct wined3d_shader, shader_list_entry)
      {
-         device->shader_backend->shader_destroy(shader);
-     }
- 
-+    context = context_acquire(device, NULL);
-+    gl_info = context->gl_info;
-+
-     if (device->depth_blt_texture)
-     {
-         gl_info->gl_ops.gl.p_glDeleteTextures(1, &device->depth_blt_texture);
 -- 
 2.9.0
 

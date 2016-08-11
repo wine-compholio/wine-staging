@@ -1,4 +1,4 @@
-From e7e3a3a2157e282988cb3350745373259a5d040f Mon Sep 17 00:00:00 2001
+From 6494b85657fd270879356f5fcb81225f12acdd1c Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 4 Jul 2013 23:33:14 +0200
 Subject: wined3d: Replace the linked lists with a ringbuffer
@@ -9,7 +9,7 @@ Subject: wined3d: Replace the linked lists with a ringbuffer
  2 files changed, 165 insertions(+), 226 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 6dd95af..f66056b 100644
+index 23579c4..4ebb988 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -22,20 +22,10 @@
@@ -500,16 +500,16 @@ index 6dd95af..f66056b 100644
  }
  
  static UINT wined3d_cs_exec_unload_resource(struct wined3d_cs *cs, const void *data)
-@@ -1791,7 +1715,7 @@ void wined3d_cs_emit_unload_resource(struct wined3d_cs *cs, struct wined3d_resou
-     op->opcode = WINED3D_CS_OP_UNLOAD_RESOURCE;
-     op->resource = resource;
+@@ -1794,7 +1718,7 @@ void wined3d_cs_emit_unload_resource(struct wined3d_cs *cs, struct wined3d_resou
+ 
+     wined3d_resource_acquire(resource);
  
 -    cs->ops->submit(cs);
 +    cs->ops->submit(cs, sizeof(*op));
  }
  
  static UINT wined3d_cs_exec_glfinish(struct wined3d_cs *cs, const void *data)
-@@ -1817,7 +1741,7 @@ void wined3d_cs_emit_glfinish(struct wined3d_cs *cs)
+@@ -1820,7 +1744,7 @@ void wined3d_cs_emit_glfinish(struct wined3d_cs *cs)
      op = cs->ops->require_space(cs, sizeof(*op));
      op->opcode = WINED3D_CS_OP_GLFINISH;
  
@@ -518,7 +518,7 @@ index 6dd95af..f66056b 100644
  }
  
  static UINT wined3d_cs_exec_set_base_vertex_index(struct wined3d_cs *cs, const void *data)
-@@ -1839,7 +1763,7 @@ void wined3d_cs_emit_set_base_vertex_index(struct wined3d_cs *cs,
+@@ -1842,7 +1766,7 @@ void wined3d_cs_emit_set_base_vertex_index(struct wined3d_cs *cs,
      op->opcode = WINED3D_CS_OP_SET_BASE_VERTEX_INDEX;
      op->base_vertex_index = base_vertex_index;
  
@@ -527,7 +527,7 @@ index 6dd95af..f66056b 100644
  }
  
  static UINT wined3d_cs_exec_set_primitive_type(struct wined3d_cs *cs, const void *data)
-@@ -1865,7 +1789,7 @@ void wined3d_cs_emit_set_primitive_type(struct wined3d_cs *cs, GLenum primitive_
+@@ -1868,7 +1792,7 @@ void wined3d_cs_emit_set_primitive_type(struct wined3d_cs *cs, GLenum primitive_
      op->opcode = WINED3D_CS_OP_SET_PRIMITIVE_TYPE;
      op->gl_primitive_type = primitive_type;
  
@@ -536,7 +536,7 @@ index 6dd95af..f66056b 100644
  }
  
  static UINT wined3d_cs_exec_set_light(struct wined3d_cs *cs, const void *data)
-@@ -1922,7 +1846,7 @@ void wined3d_cs_emit_set_light(struct wined3d_cs *cs, const struct wined3d_light
+@@ -1925,7 +1849,7 @@ void wined3d_cs_emit_set_light(struct wined3d_cs *cs, const struct wined3d_light
      op->opcode = WINED3D_CS_OP_SET_LIGHT;
      op->light = *light;
  
@@ -545,7 +545,7 @@ index 6dd95af..f66056b 100644
  }
  
  static UINT wined3d_cs_exec_set_light_enable(struct wined3d_cs *cs, const void *data)
-@@ -2011,7 +1935,7 @@ void wined3d_cs_emit_set_light_enable(struct wined3d_cs *cs, UINT idx, BOOL enab
+@@ -2014,7 +1938,7 @@ void wined3d_cs_emit_set_light_enable(struct wined3d_cs *cs, UINT idx, BOOL enab
      op->idx = idx;
      op->enable = enable;
  
@@ -554,7 +554,7 @@ index 6dd95af..f66056b 100644
  }
  
  static UINT wined3d_cs_exec_blt(struct wined3d_cs *cs, const void *data)
-@@ -2043,7 +1967,7 @@ void wined3d_cs_emit_blt(struct wined3d_cs *cs, struct wined3d_surface *dst_surf
+@@ -2046,7 +1970,7 @@ void wined3d_cs_emit_blt(struct wined3d_cs *cs, struct wined3d_surface *dst_surf
      if (fx)
          op->fx = *fx;
  
@@ -563,7 +563,7 @@ index 6dd95af..f66056b 100644
  }
  
  static UINT wined3d_cs_exec_clear_rtv(struct wined3d_cs *cs, const void *data)
-@@ -2076,7 +2000,7 @@ void wined3d_cs_emit_clear_rtv(struct wined3d_cs *cs, struct wined3d_rendertarge
+@@ -2079,7 +2003,7 @@ void wined3d_cs_emit_clear_rtv(struct wined3d_cs *cs, struct wined3d_rendertarge
      op->stencil = stencil;
      op->blitter = blitter;
  
@@ -572,7 +572,7 @@ index 6dd95af..f66056b 100644
  }
  
  static UINT wined3d_cs_exec_texture_map(struct wined3d_cs *cs, const void *data)
-@@ -2101,12 +2025,14 @@ void *wined3d_cs_emit_texture_map(struct wined3d_cs *cs, struct wined3d_texture
+@@ -2104,12 +2028,14 @@ void *wined3d_cs_emit_texture_map(struct wined3d_cs *cs, struct wined3d_texture
      op->flags = flags;
      op->mem = &ret;
  
@@ -588,7 +588,7 @@ index 6dd95af..f66056b 100644
      return ret;
  }
  
-@@ -2129,11 +2055,13 @@ void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture
+@@ -2132,11 +2058,13 @@ void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture
      op->texture = texture;
      op->sub_resource_idx = sub_resource_idx;
  
@@ -603,7 +603,7 @@ index 6dd95af..f66056b 100644
      /* WINED3D_CS_OP_FENCE                      */ wined3d_cs_exec_fence,
      /* WINED3D_CS_OP_PRESENT                    */ wined3d_cs_exec_present,
      /* WINED3D_CS_OP_CLEAR                      */ wined3d_cs_exec_clear,
-@@ -2182,42 +2110,59 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2185,42 +2113,59 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_TEXTURE_UNMAP              */ wined3d_cs_exec_texture_unmap,
  };
  
@@ -686,7 +686,7 @@ index 6dd95af..f66056b 100644
  };
  
  /* FIXME: wined3d_device_uninit_3d() should either flush and wait, or be an
-@@ -2229,9 +2174,38 @@ static void wined3d_cs_emit_stop(struct wined3d_cs *cs)
+@@ -2232,9 +2177,38 @@ static void wined3d_cs_emit_stop(struct wined3d_cs *cs)
      op = wined3d_cs_mt_require_space(cs, sizeof(*op));
      op->opcode = WINED3D_CS_OP_STOP;
  
@@ -726,7 +726,7 @@ index 6dd95af..f66056b 100644
  void wined3d_cs_switch_onscreen_ds(struct wined3d_cs *cs,
          struct wined3d_context *context, struct wined3d_surface *depth_stencil)
  {
-@@ -2255,31 +2229,32 @@ void wined3d_cs_switch_onscreen_ds(struct wined3d_cs *cs,
+@@ -2258,31 +2232,32 @@ void wined3d_cs_switch_onscreen_ds(struct wined3d_cs *cs,
  static DWORD WINAPI wined3d_cs_run(void *thread_param)
  {
      struct wined3d_cs *cs = thread_param;
@@ -773,7 +773,7 @@ index 6dd95af..f66056b 100644
      }
  
  done:
-@@ -2304,25 +2279,10 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
+@@ -2307,25 +2282,10 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
      cs->ops = &wined3d_cs_st_ops;
      cs->device = device;
  
@@ -799,7 +799,7 @@ index 6dd95af..f66056b 100644
          if (!(cs->thread = CreateThread(NULL, 0, wined3d_cs_run, cs, 0, NULL)))
          {
              ERR("Failed to create wined3d command stream thread.\n");
-@@ -2334,12 +2294,7 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
+@@ -2337,12 +2297,7 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
  
  err:
      if (cs)
@@ -812,7 +812,7 @@ index 6dd95af..f66056b 100644
      HeapFree(GetProcessHeap(), 0, cs);
      return NULL;
  }
-@@ -2358,17 +2313,7 @@ void wined3d_cs_destroy(struct wined3d_cs *cs)
+@@ -2361,17 +2316,7 @@ void wined3d_cs_destroy(struct wined3d_cs *cs)
          CloseHandle(cs->thread);
          if (ret != WAIT_OBJECT_0)
              ERR("Wait failed (%#x).\n", ret);

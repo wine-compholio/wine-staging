@@ -1,4 +1,4 @@
-From 366a6468228b98fd526e614503364b61a4d6b61b Mon Sep 17 00:00:00 2001
+From 9718a2a0fb3ca81fc32a5ffc97522ae448363a9d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Sun, 7 Jul 2013 12:02:59 +0200
 Subject: wined3d: Send buffer preloads through the CS
@@ -13,18 +13,18 @@ the dirty area list, have to be considered.
  3 files changed, 33 insertions(+), 11 deletions(-)
 
 diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
-index 1da6f03..8b6d6b6 100644
+index 6ea1e5e..2625d9d 100644
 --- a/dlls/wined3d/buffer.c
 +++ b/dlls/wined3d/buffer.c
-@@ -929,7 +929,6 @@ void buffer_internal_preload(struct wined3d_buffer *buffer, struct wined3d_conte
+@@ -1238,7 +1238,6 @@ static ULONG buffer_resource_decref(struct wined3d_resource *resource)
  
- void CDECL wined3d_buffer_preload(struct wined3d_buffer *buffer)
+ static void buffer_resource_preload(struct wined3d_resource *resource)
  {
 -    struct wined3d_context *context;
-     struct wined3d_device *device = buffer->resource.device;
+     struct wined3d_device *device = resource->device;
  
-     if (buffer->resource.map_count)
-@@ -938,16 +937,7 @@ void CDECL wined3d_buffer_preload(struct wined3d_buffer *buffer)
+     if (resource->map_count)
+@@ -1247,16 +1246,7 @@ static void buffer_resource_preload(struct wined3d_resource *resource)
          return;
      }
  
@@ -35,15 +35,15 @@ index 1da6f03..8b6d6b6 100644
 -        device->cs->ops->finish(device->cs);
 -    }
 -
--    context = context_acquire(buffer->resource.device, NULL);
--    buffer_internal_preload(buffer, context, NULL);
+-    context = context_acquire(device, NULL);
+-    buffer_internal_preload(buffer_from_resource(resource), context, NULL);
 -    context_release(context);
-+    wined3d_cs_emit_buffer_preload(device->cs, buffer);
++    wined3d_cs_emit_buffer_preload(device->cs, buffer_from_resource(resource));
  }
  
- struct wined3d_resource * CDECL wined3d_buffer_get_resource(struct wined3d_buffer *buffer)
+ static HRESULT buffer_resource_sub_resource_map(struct wined3d_resource *resource, unsigned int sub_resource_idx,
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 9e8539d..650290b 100644
+index aee2f60..f24a37d 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -75,6 +75,7 @@ enum wined3d_cs_op
@@ -67,7 +67,7 @@ index 9e8539d..650290b 100644
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
  {
      LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
-@@ -2390,6 +2397,29 @@ void wined3d_cs_emit_buffer_invalidate_bo_range(struct wined3d_cs *cs,
+@@ -2393,6 +2400,29 @@ void wined3d_cs_emit_buffer_invalidate_bo_range(struct wined3d_cs *cs,
      cs->ops->submit(cs, sizeof(*op));
  }
  
@@ -97,7 +97,7 @@ index 9e8539d..650290b 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2443,6 +2473,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2446,6 +2476,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_TEXTURE_UNMAP              */ wined3d_cs_exec_texture_unmap,
      /* WINED3D_CS_OP_BUFFER_SWAP_MEM            */ wined3d_cs_exec_buffer_swap_mem,
      /* WINED3D_CS_OP_BUFFER_INVALIDATE_RANGE    */ wined3d_cs_exec_buffer_invalidate_bo_range,
@@ -106,10 +106,10 @@ index 9e8539d..650290b 100644
      /* WINED3D_CS_OP_UPDATE_TEXTURE             */ wined3d_cs_exec_update_texture,
      /* WINED3D_CS_OP_UPDATE_SUB_RESOURCE        */ wined3d_cs_exec_update_sub_resource,
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index f23efe7..dc70283 100644
+index 14585d1..4c64b9a 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3104,6 +3104,7 @@ void wined3d_cs_emit_blt(struct wined3d_cs *cs, struct wined3d_surface *dst_surf
+@@ -3105,6 +3105,7 @@ void wined3d_cs_emit_blt(struct wined3d_cs *cs, struct wined3d_surface *dst_surf
          enum wined3d_texture_filter_type filter) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_buffer_invalidate_bo_range(struct wined3d_cs *cs,
          struct wined3d_buffer *buffer, unsigned int offset, unsigned int size) DECLSPEC_HIDDEN;

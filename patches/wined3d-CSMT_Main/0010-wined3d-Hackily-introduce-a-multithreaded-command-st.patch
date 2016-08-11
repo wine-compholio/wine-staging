@@ -1,4 +1,4 @@
-From 9ac471fe3bc3eb4156bbcfef799314dabed8eec7 Mon Sep 17 00:00:00 2001
+From 086e024e36bde8a490e128bfe552129eb51396d5 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Tue, 1 Oct 2013 14:31:56 +0200
 Subject: wined3d: Hackily introduce a multithreaded command stream
@@ -10,7 +10,7 @@ Subject: wined3d: Hackily introduce a multithreaded command stream
  3 files changed, 369 insertions(+), 31 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 825523e..bb090a3 100644
+index b9d7e87..2789726 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -24,8 +24,19 @@ WINE_DEFAULT_DEBUG_CHANNEL(d3d);
@@ -674,7 +674,7 @@ index 825523e..bb090a3 100644
  }
  
  void wined3d_cs_emit_query_issue(struct wined3d_cs *cs, struct wined3d_query *query, DWORD flags)
-@@ -1252,12 +1460,14 @@ void wined3d_cs_emit_query_issue(struct wined3d_cs *cs, struct wined3d_query *qu
+@@ -1252,13 +1460,15 @@ void wined3d_cs_emit_query_issue(struct wined3d_cs *cs, struct wined3d_query *qu
      cs->ops->submit(cs);
  }
  
@@ -685,12 +685,13 @@ index 825523e..bb090a3 100644
      struct wined3d_resource *resource = op->resource;
  
      resource->resource_ops->resource_unload(resource);
+     wined3d_resource_release(resource);
 +
 +    return sizeof(*op);
  }
  
  void wined3d_cs_emit_unload_resource(struct wined3d_cs *cs, struct wined3d_resource *resource)
-@@ -1271,8 +1481,9 @@ void wined3d_cs_emit_unload_resource(struct wined3d_cs *cs, struct wined3d_resou
+@@ -1274,8 +1484,9 @@ void wined3d_cs_emit_unload_resource(struct wined3d_cs *cs, struct wined3d_resou
      cs->ops->submit(cs);
  }
  
@@ -701,7 +702,7 @@ index 825523e..bb090a3 100644
      /* WINED3D_CS_OP_PRESENT                    */ wined3d_cs_exec_present,
      /* WINED3D_CS_OP_CLEAR                      */ wined3d_cs_exec_clear,
      /* WINED3D_CS_OP_DRAW                       */ wined3d_cs_exec_draw,
-@@ -1335,6 +1546,58 @@ static const struct wined3d_cs_ops wined3d_cs_st_ops =
+@@ -1338,6 +1549,58 @@ static const struct wined3d_cs_ops wined3d_cs_st_ops =
      wined3d_cs_st_submit,
  };
  
@@ -760,7 +761,7 @@ index 825523e..bb090a3 100644
  struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
  {
      const struct wined3d_gl_info *gl_info = &device->adapter->gl_info;
-@@ -1361,12 +1624,60 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
+@@ -1364,12 +1627,60 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
          return NULL;
      }
  

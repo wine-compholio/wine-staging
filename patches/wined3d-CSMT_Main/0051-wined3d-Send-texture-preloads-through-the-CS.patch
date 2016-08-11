@@ -1,16 +1,16 @@
-From 37b8a4fd33c54e561d3da0e57319b333df55bdbd Mon Sep 17 00:00:00 2001
+From 378cf53090eb9cd3f4ba691671913e1c9ba36872 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 1 Aug 2013 00:10:40 +0200
 Subject: wined3d: Send texture preloads through the CS
 
 ---
  dlls/wined3d/cs.c              | 32 ++++++++++++++++++++++++++++++++
- dlls/wined3d/texture.c         |  6 ++----
+ dlls/wined3d/texture.c         |  7 ++-----
  dlls/wined3d/wined3d_private.h |  1 +
- 3 files changed, 35 insertions(+), 4 deletions(-)
+ 3 files changed, 35 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 550dbcd..6f78651 100644
+index a36d205..b7c33ab 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -72,6 +72,7 @@ enum wined3d_cs_op
@@ -34,7 +34,7 @@ index 550dbcd..6f78651 100644
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
  {
      LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
-@@ -2095,6 +2102,30 @@ void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture
+@@ -2098,6 +2105,30 @@ void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture
      cs->ops->submit(cs, sizeof(*op));
  }
  
@@ -65,7 +65,7 @@ index 550dbcd..6f78651 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2145,6 +2176,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2148,6 +2179,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_CLEAR_RTV                  */ wined3d_cs_exec_clear_rtv,
      /* WINED3D_CS_OP_TEXTURE_MAP                */ wined3d_cs_exec_texture_map,
      /* WINED3D_CS_OP_TEXTURE_UNMAP              */ wined3d_cs_exec_texture_unmap,
@@ -74,27 +74,28 @@ index 550dbcd..6f78651 100644
  
  static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index 1acf5d5..19105a5 100644
+index b391afd..4c8856d 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -1051,10 +1051,8 @@ void wined3d_texture_load(struct wined3d_texture *texture,
- 
- void CDECL wined3d_texture_preload(struct wined3d_texture *texture)
+@@ -1684,11 +1684,8 @@ static ULONG texture_resource_decref(struct wined3d_resource *resource)
+ static void texture_resource_preload(struct wined3d_resource *resource)
  {
+     struct wined3d_texture *texture = texture_from_resource(resource);
 -    struct wined3d_context *context;
--    context = context_acquire(texture->resource.device, NULL);
+-
+-    context = context_acquire(resource->device, NULL);
 -    wined3d_texture_load(texture, context, texture->flags & WINED3D_TEXTURE_IS_SRGB);
 -    context_release(context);
 +    const struct wined3d_device *device = texture->resource.device;
 +    wined3d_cs_emit_texture_preload(device->cs, texture);
  }
  
- void * CDECL wined3d_texture_get_parent(const struct wined3d_texture *texture)
+ static void wined3d_texture_unload(struct wined3d_resource *resource)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 949fb07..5f918f7 100644
+index 784a622..fc825a9 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3153,6 +3153,7 @@ void wined3d_cs_emit_set_vertex_declaration(struct wined3d_cs *cs,
+@@ -3154,6 +3154,7 @@ void wined3d_cs_emit_set_vertex_declaration(struct wined3d_cs *cs,
  void wined3d_cs_emit_set_viewport(struct wined3d_cs *cs, const struct wined3d_viewport *viewport) DECLSPEC_HIDDEN;
  void *wined3d_cs_emit_texture_map(struct wined3d_cs *cs, struct wined3d_texture *texture,
          unsigned int sub_resource_idx, DWORD flags) DECLSPEC_HIDDEN;

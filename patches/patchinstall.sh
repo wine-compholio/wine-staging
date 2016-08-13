@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "dca0e38d82c737cd8aeab63e08cf1990d05d9671"
+	echo "d6d0d96402b9c187877f11da173f8fbbf62ba072"
 }
 
 # Show version information
@@ -2333,17 +2333,14 @@ fi
 # |   *	dlls/amstream/mediastreamfilter.c, dlls/comctl32/listview.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c,
 # | 	dlls/d3d8/texture.c, dlls/d3d9/tests/visual.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dsound/primary.c,
 # | 	dlls/dwrite/layout.c, dlls/msvcirt/tests/msvcirt.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c,
-# | 	dlls/oleaut32/oleaut.c, dlls/oleaut32/tests/safearray.c, dlls/rpcrt4/cstub.c, dlls/shell32/tests/shellole.c,
-# | 	dlls/shlwapi/tests/ordinal.c, dlls/vbscript/vbdisp.c, dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c,
-# | 	include/d3dtypes.h, include/wine/list.h, include/wine/rbtree.h, include/winnt.h, server/request.c, server/sock.c,
-# | 	tools/makedep.c
+# | 	dlls/oleaut32/oleaut.c, dlls/oleaut32/tests/safearray.c, dlls/rpcrt4/cstub.c, dlls/vbscript/vbdisp.c,
+# | 	dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c, include/d3dtypes.h, include/wine/list.h,
+# | 	include/wine/rbtree.h, include/winnt.h, server/request.c, server/sock.c, tools/makedep.c
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0001-comctl32-Avoid-misleading-indentation-warnings.patch
 	patch_apply Compiler_Warnings/0005-msvcirt-tests-Avoid-misleading-indentation-warnings.patch
 	patch_apply Compiler_Warnings/0006-oleaut32-tests-Avoid-misleading-indentation-warnings.patch
-	patch_apply Compiler_Warnings/0009-shell32-tests-Avoid-misleading-indentation-warnings.patch
-	patch_apply Compiler_Warnings/0010-shlwapi-tests-Avoid-misleading-indentation-warnings.patch
 	patch_apply Compiler_Warnings/0015-include-Avoid-shift-overflow-warning.patch
 	patch_apply Compiler_Warnings/0017-server-Workaround-duplicate-condition-warning-of-GCC.patch
 	patch_apply Compiler_Warnings/0018-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch
@@ -2364,8 +2361,6 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 		echo '+    { "Sebastian Lackner", "comctl32: Avoid misleading indentation warnings.", 1 },';
 		echo '+    { "Sebastian Lackner", "msvcirt/tests: Avoid misleading indentation warnings.", 1 },';
 		echo '+    { "Sebastian Lackner", "oleaut32/tests: Avoid misleading indentation warnings.", 1 },';
-		echo '+    { "Sebastian Lackner", "shell32/tests: Avoid misleading indentation warnings.", 1 },';
-		echo '+    { "Sebastian Lackner", "shlwapi/tests: Avoid misleading indentation warnings.", 1 },';
 		echo '+    { "Sebastian Lackner", "include: Avoid shift overflow warning.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Workaround duplicate condition warning of GCC 6.", 1 },';
 		echo '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },';

@@ -1,4 +1,4 @@
-From 0f30681ee760c8197b95273e6c38cd6c2a4164a6 Mon Sep 17 00:00:00 2001
+From 1da1bc40cd02cab32f45b0f043bdf37add0bac7a Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Mon, 21 Mar 2016 14:34:04 +0800
 Subject: gdiplus: Reimplement metafile loading using gdi32 instead of
@@ -8,10 +8,10 @@ Subject: gdiplus: Reimplement metafile loading using gdi32 instead of
  dlls/gdiplus/Makefile.in       |   2 +-
  dlls/gdiplus/gdiplus_private.h |   1 -
  dlls/gdiplus/graphics.c        |  18 +---
- dlls/gdiplus/image.c           | 204 +++++++++++++++++++++--------------------
+ dlls/gdiplus/image.c           | 205 +++++++++++++++++++++--------------------
  dlls/gdiplus/metafile.c        |   1 -
  dlls/gdiplus/tests/image.c     |  10 +-
- 6 files changed, 113 insertions(+), 123 deletions(-)
+ 6 files changed, 113 insertions(+), 124 deletions(-)
 
 diff --git a/dlls/gdiplus/Makefile.in b/dlls/gdiplus/Makefile.in
 index 6495eb7..ac12bd1 100644
@@ -26,10 +26,10 @@ index 6495eb7..ac12bd1 100644
  
  C_SRCS = \
 diff --git a/dlls/gdiplus/gdiplus_private.h b/dlls/gdiplus/gdiplus_private.h
-index 0013d75..5c8e7a4 100644
+index 4ad49ca..4658fee 100644
 --- a/dlls/gdiplus/gdiplus_private.h
 +++ b/dlls/gdiplus/gdiplus_private.h
-@@ -319,7 +319,6 @@ struct GpAdustableArrowCap{
+@@ -333,7 +333,6 @@ struct GpAdjustableArrowCap{
  };
  
  struct GpImage{
@@ -38,10 +38,10 @@ index 0013d75..5c8e7a4 100644
      ImageType type;
      GUID format;
 diff --git a/dlls/gdiplus/graphics.c b/dlls/gdiplus/graphics.c
-index 15c0bed..a51b689 100644
+index 370fa88..a045c61 100644
 --- a/dlls/gdiplus/graphics.c
 +++ b/dlls/gdiplus/graphics.c
-@@ -2897,23 +2897,7 @@ GpStatus WINGDIPAPI GdipDrawImagePointsRect(GpGraphics *graphics, GpImage *image
+@@ -2904,23 +2904,7 @@ GpStatus WINGDIPAPI GdipDrawImagePointsRect(GpGraphics *graphics, GpImage *image
      srcheight = units_to_pixels(srcheight, srcUnit, image->yres);
      TRACE("src pixels: %f,%f %fx%f\n", srcx, srcy, srcwidth, srcheight);
  
@@ -67,7 +67,7 @@ index 15c0bed..a51b689 100644
          GpBitmap* bitmap = (GpBitmap*)image;
          BOOL do_resampling = FALSE;
 diff --git a/dlls/gdiplus/image.c b/dlls/gdiplus/image.c
-index f803efa..2402c9d 100644
+index c3f6a5e..bee40b9 100644
 --- a/dlls/gdiplus/image.c
 +++ b/dlls/gdiplus/image.c
 @@ -1,6 +1,6 @@
@@ -168,7 +168,7 @@ index f803efa..2402c9d 100644
      (*bitmap)->image.decoder = NULL;
      (*bitmap)->hbitmap = hbitmap;
      (*bitmap)->hdc = NULL;
-@@ -2148,8 +2086,6 @@ static GpStatus free_image_data(GpImage *image)
+@@ -2152,8 +2090,6 @@ static GpStatus free_image_data(GpImage *image)
          WARN("invalid image: %p\n", image);
          return ObjectBusy;
      }
@@ -177,7 +177,7 @@ index f803efa..2402c9d 100644
      if (image->decoder)
          IWICBitmapDecoder_Release(image->decoder);
      heap_free(image->palette);
-@@ -2215,12 +2151,6 @@ GpStatus WINGDIPAPI GdipGetImageBounds(GpImage *image, GpRectF *srcRect,
+@@ -2219,12 +2155,6 @@ GpStatus WINGDIPAPI GdipGetImageBounds(GpImage *image, GpRectF *srcRect,
          srcRect->Height = (REAL) ((GpBitmap*)image)->height;
          *srcUnit = UnitPixel;
      }
@@ -190,7 +190,7 @@ index f803efa..2402c9d 100644
  
      TRACE("returning (%f, %f) (%f, %f) unit type %d\n", srcRect->X, srcRect->Y,
            srcRect->Width, srcRect->Height, *srcUnit);
-@@ -2244,10 +2174,6 @@ GpStatus WINGDIPAPI GdipGetImageDimension(GpImage *image, REAL *width,
+@@ -2248,10 +2178,6 @@ GpStatus WINGDIPAPI GdipGetImageDimension(GpImage *image, REAL *width,
          *height = ((GpBitmap*)image)->height;
          *width = ((GpBitmap*)image)->width;
      }
@@ -201,7 +201,7 @@ index f803efa..2402c9d 100644
  
      TRACE("returning (%f, %f)\n", *height, *width);
      return Ok;
-@@ -2302,8 +2228,6 @@ GpStatus WINGDIPAPI GdipGetImageHeight(GpImage *image, UINT *height)
+@@ -2306,8 +2232,6 @@ GpStatus WINGDIPAPI GdipGetImageHeight(GpImage *image, UINT *height)
          *height = units_to_pixels(((GpMetafile*)image)->bounds.Height, ((GpMetafile*)image)->unit, image->yres);
      else if(image->type == ImageTypeBitmap)
          *height = ((GpBitmap*)image)->height;
@@ -210,7 +210,7 @@ index f803efa..2402c9d 100644
  
      TRACE("returning %d\n", *height);
  
-@@ -2402,8 +2326,6 @@ GpStatus WINGDIPAPI GdipGetImageWidth(GpImage *image, UINT *width)
+@@ -2406,8 +2330,6 @@ GpStatus WINGDIPAPI GdipGetImageWidth(GpImage *image, UINT *width)
          *width = units_to_pixels(((GpMetafile*)image)->bounds.Width, ((GpMetafile*)image)->unit, image->xres);
      else if(image->type == ImageTypeBitmap)
          *width = ((GpBitmap*)image)->width;
@@ -219,7 +219,7 @@ index f803efa..2402c9d 100644
  
      TRACE("returning %d\n", *width);
  
-@@ -3982,32 +3904,118 @@ static GpStatus decode_image_tiff(IStream* stream, GpImage **image)
+@@ -4037,33 +3959,118 @@ static GpStatus decode_image_tiff(IStream* stream, GpImage **image)
      return decode_image_wic(stream, &GUID_ContainerFormatTiff, NULL, image);
  }
  
@@ -349,12 +349,13 @@ index f803efa..2402c9d 100644
 -    (*image)->frame_count = 1;
 -    (*image)->current_frame = 0;
 -    (*image)->palette = NULL;
+-    list_init(&(*(GpMetafile**)image)->containers);
 -
 +    *image = (GpImage *)metafile;
      TRACE("<-- %p\n", *image);
  
      return Ok;
-@@ -4665,7 +4673,7 @@ static const struct image_codec codecs[NUM_CODECS] = {
+@@ -4721,7 +4728,7 @@ static const struct image_codec codecs[NUM_CODECS] = {
              /* SigMask */            emf_sig_mask,
          },
          NULL,
@@ -363,7 +364,7 @@ index f803efa..2402c9d 100644
          NULL
      },
      {
-@@ -4685,7 +4693,7 @@ static const struct image_codec codecs[NUM_CODECS] = {
+@@ -4741,7 +4748,7 @@ static const struct image_codec codecs[NUM_CODECS] = {
              /* SigMask */            wmf_sig_mask,
          },
          NULL,
@@ -373,10 +374,10 @@ index f803efa..2402c9d 100644
      },
      {
 diff --git a/dlls/gdiplus/metafile.c b/dlls/gdiplus/metafile.c
-index 922c101..e8bab06 100644
+index a854e55..8b93e81 100644
 --- a/dlls/gdiplus/metafile.c
 +++ b/dlls/gdiplus/metafile.c
-@@ -255,7 +255,6 @@ GpStatus WINGDIPAPI GdipRecordMetafile(HDC hdc, EmfType type, GDIPCONST GpRectF
+@@ -317,7 +317,6 @@ GpStatus WINGDIPAPI GdipRecordMetafile(HDC hdc, EmfType type, GDIPCONST GpRectF
      }
  
      (*metafile)->image.type = ImageTypeMetafile;
@@ -385,7 +386,7 @@ index 922c101..e8bab06 100644
      (*metafile)->image.palette = NULL;
      (*metafile)->image.xres = dpix;
 diff --git a/dlls/gdiplus/tests/image.c b/dlls/gdiplus/tests/image.c
-index 6a51714..e6de9db 100644
+index ad84feb..cabd2fce 100644
 --- a/dlls/gdiplus/tests/image.c
 +++ b/dlls/gdiplus/tests/image.c
 @@ -1446,19 +1446,19 @@ static void test_loadwmf(void)
@@ -414,5 +415,5 @@ index 6a51714..e6de9db 100644
      memset(&header, 0, sizeof(header));
      stat = GdipGetMetafileHeaderFromMetafile((GpMetafile*)img, &header);
 -- 
-2.7.1
+2.9.0
 

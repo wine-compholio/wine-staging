@@ -2293,8 +2293,12 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	if test "$enable_kernel32_GetCurrentPackageFamilyName" -gt 1; then
 		abort "Patchset kernel32-GetCurrentPackageFamilyName disabled, but api-ms-win-Stub_DLLs depends on that."
 	fi
+	if test "$enable_kernel32_UmsStubs" -gt 1; then
+		abort "Patchset kernel32-UmsStubs disabled, but api-ms-win-Stub_DLLs depends on that."
+	fi
 	enable_combase_RoApi=1
 	enable_kernel32_GetCurrentPackageFamilyName=1
+	enable_kernel32_UmsStubs=1
 fi
 
 if test "$enable_advapi32_LsaLookupSids" -eq 1; then
@@ -2547,10 +2551,25 @@ if test "$enable_kernel32_GetCurrentPackageFamilyName" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-UmsStubs
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-processthreads-l1-1-0/api-ms-win-core-processthreads-l1-1-0.spec, dlls/api-ms-win-core-
+# | 	processthreads-l1-1-1/api-ms-win-core-processthreads-l1-1-1.spec, dlls/api-ms-win-core-processthreads-l1-1-2/api-ms-win-
+# | 	core-processthreads-l1-1-2.spec, dlls/kernel32/kernel32.spec, dlls/kernel32/sync.c, dlls/kernel32/thread.c,
+# | 	dlls/kernelbase/kernelbase.spec, include/winbase.h, include/winnt.h
+# |
+if test "$enable_kernel32_UmsStubs" -eq 1; then
+	patch_apply kernel32-UmsStubs/0001-kernel32-Add-a-bunch-of-kernel32-stubs.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "kernel32: Add a bunch of kernel32 stubs.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset api-ms-win-Stub_DLLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	combase-RoApi, kernel32-GetCurrentPackageFamilyName
+# |   *	combase-RoApi, kernel32-GetCurrentPackageFamilyName, kernel32-UmsStubs
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#40451] Add feclient dll
@@ -4286,18 +4305,6 @@ if test "$enable_kernel32_TimezoneInformation_Registry" -eq 1; then
 	patch_apply kernel32-TimezoneInformation_Registry/0001-kernel32-Init-TimezoneInformation-registry.patch
 	(
 		echo '+    { "Qian Hong", "kernel32: Init TimezoneInformation registry.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-UmsStubs
-# |
-# | Modified files:
-# |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/sync.c, dlls/kernel32/thread.c, include/winbase.h, include/winnt.h
-# |
-if test "$enable_kernel32_UmsStubs" -eq 1; then
-	patch_apply kernel32-UmsStubs/0001-kernel32-Add-a-bunch-of-kernel32-stubs.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "kernel32: Add a bunch of kernel32 stubs.", 1 },';
 	) >> "$patchlist"
 fi
 

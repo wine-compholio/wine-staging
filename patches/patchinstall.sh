@@ -238,6 +238,7 @@ patch_enable_all ()
 	enable_ntdll_SystemRoot_Symlink="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
+	enable_ntdll_ThreadpoolCleanupGroup="$1"
 	enable_ntdll_User_Shared_Data="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_Wait_User_APC="$1"
@@ -884,6 +885,9 @@ patch_enable ()
 			;;
 		ntdll-Threading)
 			enable_ntdll_Threading="$2"
+			;;
+		ntdll-ThreadpoolCleanupGroup)
+			enable_ntdll_ThreadpoolCleanupGroup="$2"
 			;;
 		ntdll-User_Shared_Data)
 			enable_ntdll_User_Shared_Data="$2"
@@ -5215,6 +5219,30 @@ if test "$enable_ntdll_Threading" -eq 1; then
 	patch_apply ntdll-Threading/0001-ntdll-Fix-race-condition-when-threads-are-killed-dur.patch
 	(
 		echo '+    { "Sebastian Lackner", "ntdll: Fix race-condition when threads are killed during shutdown.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-ThreadpoolCleanupGroup
+# |
+# | Modified files:
+# |   *	dlls/ntdll/tests/threadpool.c, dlls/ntdll/threadpool.c, programs/services/rpc.c
+# |
+if test "$enable_ntdll_ThreadpoolCleanupGroup" -eq 1; then
+	patch_apply ntdll-ThreadpoolCleanupGroup/0001-ntdll-tests-Use-longer-waits-to-reduce-risk-of-rando.patch
+	patch_apply ntdll-ThreadpoolCleanupGroup/0002-ntdll-Allow-to-release-threadpool-objects-while-wait.patch
+	patch_apply ntdll-ThreadpoolCleanupGroup/0003-ntdll-tests-Add-tests-for-releasing-threadpool-objec.patch
+	patch_apply ntdll-ThreadpoolCleanupGroup/0004-ntdll-Call-group-cancel-callback-with-the-correct-ar.patch
+	patch_apply ntdll-ThreadpoolCleanupGroup/0005-ntdll-Group-cancel-callbacks-should-be-executed-afte.patch
+	patch_apply ntdll-ThreadpoolCleanupGroup/0006-ntdll-Do-not-call-group-cancel-callback-for-finished.patch
+	patch_apply ntdll-ThreadpoolCleanupGroup/0007-services-Remove-synchronization-for-CloseThreadpoolC.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Use longer waits to reduce risk of random failures on the testbot.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Allow to release threadpool objects while waiting for group.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for releasing threadpool objects during TpReleaseCleanupGroupMembers.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Call group cancel callback with the correct arguments.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Group cancel callbacks should be executed after waiting for pending callbacks.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Do not call group cancel callback for finished simple callbacks.", 2 },';
+		echo '+    { "Sebastian Lackner", "services: Remove synchronization for CloseThreadpoolCleanupGroupMembers.", 1 },';
 	) >> "$patchlist"
 fi
 

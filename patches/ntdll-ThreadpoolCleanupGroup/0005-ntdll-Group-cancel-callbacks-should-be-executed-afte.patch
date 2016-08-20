@@ -1,0 +1,193 @@
+From 0a7918f7b5703de00508a54baf82a6423e0a04f5 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 20 Aug 2016 21:23:48 +0200
+Subject: ntdll: Group cancel callbacks should be executed after waiting for
+ pending callbacks.
+
+Signed-off-by: Sebastian Lackner <sebastian@fds-team.de>
+---
+ dlls/ntdll/tests/threadpool.c | 65 +++++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/threadpool.c       | 29 +++++++++----------
+ 2 files changed, 80 insertions(+), 14 deletions(-)
+
+diff --git a/dlls/ntdll/tests/threadpool.c b/dlls/ntdll/tests/threadpool.c
+index f59a15c..7eccb23 100644
+--- a/dlls/ntdll/tests/threadpool.c
++++ b/dlls/ntdll/tests/threadpool.c
+@@ -835,6 +835,18 @@ static void CALLBACK simple_group_cancel_cb(TP_CALLBACK_INSTANCE *instance, void
+     ReleaseSemaphore(semaphores[1], 1, NULL);
+ }
+ 
++static void CALLBACK work_group_cancel_cb(TP_CALLBACK_INSTANCE *instance, void *userdata, TP_WORK *work)
++{
++    HANDLE *semaphores = userdata;
++    DWORD result;
++
++    trace("Running work group cancel callback\n");
++
++    ReleaseSemaphore(semaphores[1], 1, NULL);
++    result = WaitForSingleObject(semaphores[0], 200);
++    ok(result == WAIT_TIMEOUT, "WaitForSingleObject returned %u\n", result);
++}
++
+ static void CALLBACK group_cancel_cleanup_release_cb(void *object, void *userdata)
+ {
+     HANDLE *semaphores = userdata;
+@@ -844,6 +856,15 @@ static void CALLBACK group_cancel_cleanup_release_cb(void *object, void *userdat
+     ReleaseSemaphore(semaphores[0], 1, NULL);
+ }
+ 
++static void CALLBACK group_cancel_cleanup_release2_cb(void *object, void *userdata)
++{
++    HANDLE *semaphores = userdata;
++    trace("Running group cancel cleanup release2 callback\n");
++    group_cancel_tid = GetCurrentThreadId();
++    ok(object == userdata, "expected %p, got %p\n", userdata, object);
++    ReleaseSemaphore(semaphores[0], 1, NULL);
++}
++
+ static void CALLBACK group_cancel_cleanup_increment_cb(void *object, void *userdata)
+ {
+     trace("Running group cancel cleanup increment callback\n");
+@@ -872,6 +893,11 @@ static void CALLBACK unexpected_wait_cb(TP_CALLBACK_INSTANCE *instance, void *us
+     ok(0, "Unexpected callback\n");
+ }
+ 
++static void CALLBACK unexpected_group_cancel_cleanup_cb(void *object, void *userdata)
++{
++    ok(0, "Unexpected callback\n");
++}
++
+ static void test_tp_group_cancel(void)
+ {
+     TP_CALLBACK_ENVIRON environment;
+@@ -943,6 +969,45 @@ static void test_tp_group_cancel(void)
+     ok(group_cancel_tid == GetCurrentThreadId(), "expected tid %x, got %x\n",
+        GetCurrentThreadId(), group_cancel_tid);
+ 
++    /* test if cancellation callbacks are executed before or after wait */
++    work = NULL;
++    memset(&environment, 0, sizeof(environment));
++    environment.Version = 1;
++    environment.Pool = pool;
++    environment.CleanupGroup = group;
++    environment.CleanupGroupCancelCallback = group_cancel_cleanup_release2_cb;
++    status = pTpAllocWork(&work, work_group_cancel_cb, semaphores, &environment);
++    ok(!status, "TpAllocWork failed with status %x\n", status);
++    ok(work != NULL, "expected work != NULL\n");
++    pTpPostWork(work);
++    pTpPostWork(work);
++
++    result = WaitForSingleObject(semaphores[1], 1000);
++    ok(result == WAIT_OBJECT_0, "WaitForSingleObject returned %u\n", result);
++
++    group_cancel_tid = 0xdeadbeef;
++    pTpReleaseCleanupGroupMembers(group, TRUE, semaphores);
++    result = WaitForSingleObject(semaphores[0], 1000);
++    ok(result == WAIT_OBJECT_0, "WaitForSingleObject returned %u\n", result);
++    ok(group_cancel_tid == GetCurrentThreadId(), "expected tid %x, got %x\n",
++       GetCurrentThreadId(), group_cancel_tid);
++
++    /* group cancel callback is not executed if object is destroyed while waiting */
++    work = NULL;
++    memset(&environment, 0, sizeof(environment));
++    environment.Version = 1;
++    environment.Pool = pool;
++    environment.CleanupGroup = group;
++    environment.CleanupGroupCancelCallback = unexpected_group_cancel_cleanup_cb;
++    status = pTpAllocWork(&work, work_release_cb, semaphores[1], &environment);
++    ok(!status, "TpAllocWork failed with status %x\n", status);
++    ok(work != NULL, "expected work != NULL\n");
++    pTpPostWork(work);
++
++    result = WaitForSingleObject(semaphores[1], 1000);
++    ok(result == WAIT_OBJECT_0, "WaitForSingleObject returned %u\n", result);
++    pTpReleaseCleanupGroupMembers(group, TRUE, NULL);
++
+     /* test cancellation callback for objects with multiple instances */
+     work = NULL;
+     memset(&environment, 0, sizeof(environment));
+diff --git a/dlls/ntdll/threadpool.c b/dlls/ntdll/threadpool.c
+index 61f6ea0..a572869 100644
+--- a/dlls/ntdll/threadpool.c
++++ b/dlls/ntdll/threadpool.c
+@@ -1948,7 +1948,7 @@ static void tp_object_submit( struct threadpool_object *object, BOOL signaled )
+  *
+  * Cancels all currently pending callbacks for a specific object.
+  */
+-static void tp_object_cancel( struct threadpool_object *object, BOOL group_cancel, PVOID userdata )
++static void tp_object_cancel( struct threadpool_object *object )
+ {
+     struct threadpool *pool = object->pool;
+     LONG pending_callbacks = 0;
+@@ -1965,15 +1965,6 @@ static void tp_object_cancel( struct threadpool_object *object, BOOL group_cance
+     }
+     RtlLeaveCriticalSection( &pool->cs );
+ 
+-    /* Execute group cancellation callback if defined, and if this was actually a group cancel. */
+-    if (group_cancel && object->group_cancel_callback)
+-    {
+-        TRACE( "executing group cancel callback %p(%p, %p)\n",
+-               object->group_cancel_callback, object->userdata, userdata );
+-        object->group_cancel_callback( object->userdata, userdata );
+-        TRACE( "callback %p returned\n", object->group_cancel_callback );
+-    }
+-
+     while (pending_callbacks--)
+         tp_object_release( object );
+ }
+@@ -2598,7 +2589,7 @@ VOID WINAPI TpReleaseCleanupGroupMembers( TP_CLEANUP_GROUP *group, BOOL cancel_p
+     {
+         LIST_FOR_EACH_ENTRY( object, &members, struct threadpool_object, group_entry )
+         {
+-            tp_object_cancel( object, TRUE, userdata );
++            tp_object_cancel( object );
+         }
+     }
+ 
+@@ -2607,6 +2598,16 @@ VOID WINAPI TpReleaseCleanupGroupMembers( TP_CLEANUP_GROUP *group, BOOL cancel_p
+     {
+         tp_object_wait( object, TRUE );
+ 
++        /* Execute group cancellation callback if defined, and if this was actually a group cancel. */
++        if ((object->type == TP_OBJECT_TYPE_SIMPLE || !object->shutdown) &&
++            cancel_pending && object->group_cancel_callback)
++        {
++            TRACE( "executing group cancel callback %p(%p, %p)\n",
++                   object->group_cancel_callback, object->userdata, userdata );
++            object->group_cancel_callback( object->userdata, userdata );
++            TRACE( "callback %p returned\n", object->group_cancel_callback );
++        }
++
+         if (object->type != TP_OBJECT_TYPE_SIMPLE && !object->shutdown)
+             tp_object_release( object );
+ 
+@@ -2900,7 +2901,7 @@ VOID WINAPI TpWaitForTimer( TP_TIMER *timer, BOOL cancel_pending )
+     TRACE( "%p %d\n", timer, cancel_pending );
+ 
+     if (cancel_pending)
+-        tp_object_cancel( this, FALSE, NULL );
++        tp_object_cancel( this );
+     tp_object_wait( this, FALSE );
+ }
+ 
+@@ -2914,7 +2915,7 @@ VOID WINAPI TpWaitForWait( TP_WAIT *wait, BOOL cancel_pending )
+     TRACE( "%p %d\n", wait, cancel_pending );
+ 
+     if (cancel_pending)
+-        tp_object_cancel( this, FALSE, NULL );
++        tp_object_cancel( this );
+     tp_object_wait( this, FALSE );
+ }
+ 
+@@ -2928,6 +2929,6 @@ VOID WINAPI TpWaitForWork( TP_WORK *work, BOOL cancel_pending )
+     TRACE( "%p %u\n", work, cancel_pending );
+ 
+     if (cancel_pending)
+-        tp_object_cancel( this, FALSE, NULL );
++        tp_object_cancel( this );
+     tp_object_wait( this, FALSE );
+ }
+-- 
+2.9.0
+

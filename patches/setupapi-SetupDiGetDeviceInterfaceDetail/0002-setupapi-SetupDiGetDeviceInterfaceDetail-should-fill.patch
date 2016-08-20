@@ -1,0 +1,80 @@
+From 687fc3ff0c5ea37f782bd0f02c7fe856cab583a5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Fri, 19 Aug 2016 00:47:08 +0200
+Subject: setupapi: SetupDiGetDeviceInterfaceDetail should fill out
+ DeviceInfoData even if the buffer for DeviceInterfaceData is too small.
+
+---
+ dlls/setupapi/devinst.c       | 8 ++++----
+ dlls/setupapi/tests/devinst.c | 6 +++++-
+ 2 files changed, 9 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/setupapi/devinst.c b/dlls/setupapi/devinst.c
+index 02e75b6..4dac40d 100644
+--- a/dlls/setupapi/devinst.c
++++ b/dlls/setupapi/devinst.c
+@@ -2956,8 +2956,6 @@ BOOL WINAPI SetupDiGetDeviceInterfaceDetailA(
+                     NULL, NULL);
+         else
+             DeviceInterfaceDetailData->DevicePath[0] = '\0';
+-        if (DeviceInfoData && DeviceInfoData->cbSize == sizeof(SP_DEVINFO_DATA))
+-            *DeviceInfoData = *info->device;
+         ret = TRUE;
+     }
+     else
+@@ -2966,6 +2964,8 @@ BOOL WINAPI SetupDiGetDeviceInterfaceDetailA(
+             *RequiredSize = bytesNeeded;
+         SetLastError(ERROR_INSUFFICIENT_BUFFER);
+     }
++    if (DeviceInfoData && DeviceInfoData->cbSize == sizeof(SP_DEVINFO_DATA))
++        *DeviceInfoData = *info->device;
+     return ret;
+ }
+ 
+@@ -3024,8 +3024,6 @@ BOOL WINAPI SetupDiGetDeviceInterfaceDetailW(
+             lstrcpyW(DeviceInterfaceDetailData->DevicePath, info->symbolicLink);
+         else
+             DeviceInterfaceDetailData->DevicePath[0] = '\0';
+-        if (DeviceInfoData && DeviceInfoData->cbSize == sizeof(SP_DEVINFO_DATA))
+-            *DeviceInfoData = *info->device;
+         ret = TRUE;
+     }
+     else
+@@ -3034,6 +3032,8 @@ BOOL WINAPI SetupDiGetDeviceInterfaceDetailW(
+             *RequiredSize = bytesNeeded;
+         SetLastError(ERROR_INSUFFICIENT_BUFFER);
+     }
++    if (DeviceInfoData && DeviceInfoData->cbSize == sizeof(SP_DEVINFO_DATA))
++        *DeviceInfoData = *info->device;
+     return ret;
+ }
+ 
+diff --git a/dlls/setupapi/tests/devinst.c b/dlls/setupapi/tests/devinst.c
+index 319bb31..d349917 100644
+--- a/dlls/setupapi/tests/devinst.c
++++ b/dlls/setupapi/tests/devinst.c
+@@ -833,6 +833,7 @@ static void testGetDeviceInterfaceDetail(void)
+              "\\\\?\\root#legacy_bogus#0000#{6a55b5a4-3f65-11db-b704-0011955c2bdb}";
+             static const char path_w2k[] =
+              "\\\\?\\root#legacy_bogus#0000#{6a55b5a4-3f65-11db-b704-0011955c2bdb}\\";
++            SP_DEVINFO_DATA devinfo;
+             LPBYTE buf = HeapAlloc(GetProcessHeap(), 0, size);
+             SP_DEVICE_INTERFACE_DETAIL_DATA_A *detail =
+                 (SP_DEVICE_INTERFACE_DETAIL_DATA_A *)buf;
+@@ -860,9 +861,12 @@ static void testGetDeviceInterfaceDetail(void)
+              !lstrcmpiA(path_w2k, detail->DevicePath), "Unexpected path %s\n",
+              detail->DevicePath);
+             /* Check SetupDiGetDeviceInterfaceDetailW */
+-            ret = pSetupDiGetDeviceInterfaceDetailW(set, &interfaceData, NULL, 0, &size, NULL);
++            memset(&devinfo, 0, sizeof(devinfo));
++            devinfo.cbSize = sizeof(devinfo);
++            ret = pSetupDiGetDeviceInterfaceDetailW(set, &interfaceData, NULL, 0, &size, &devinfo);
+             ok(!ret && GetLastError() == ERROR_INSUFFICIENT_BUFFER,
+              "Expected ERROR_INSUFFICIENT_BUFFER, got error code: %d\n", GetLastError());
++            ok(devinfo.DevInst, "Expected DevInst to be set\n");
+             ok(expectedsize == size ||
+              (expectedsize + sizeof(WCHAR)) == size /* W2K adds a backslash */,
+              "SetupDiGetDeviceInterfaceDetailW returned wrong reqsize, got %d\n",
+-- 
+2.9.0
+

@@ -293,6 +293,7 @@ patch_enable_all ()
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_Display_Device="$1"
 	enable_setupapi_HSPFILEQ_Check_Type="$1"
+	enable_setupapi_SetupDiGetDeviceInterfaceDetail="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
 	enable_sfc_SfcGetNextProtectedFile="$1"
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
@@ -1050,6 +1051,9 @@ patch_enable ()
 			;;
 		setupapi-HSPFILEQ_Check_Type)
 			enable_setupapi_HSPFILEQ_Check_Type="$2"
+			;;
+		setupapi-SetupDiGetDeviceInterfaceDetail)
+			enable_setupapi_SetupDiGetDeviceInterfaceDetail="$2"
 			;;
 		setupapi-SetupPromptForDisk)
 			enable_setupapi_SetupPromptForDisk="$2"
@@ -6117,6 +6121,20 @@ if test "$enable_setupapi_HSPFILEQ_Check_Type" -eq 1; then
 	patch_apply setupapi-HSPFILEQ_Check_Type/0001-setupapi-Check-handle-type-for-HSPFILEQ-handles.patch
 	(
 		echo '+    { "Michael Müller", "setupapi: Check handle type for HSPFILEQ handles.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset setupapi-SetupDiGetDeviceInterfaceDetail
+# |
+# | Modified files:
+# |   *	dlls/setupapi/devinst.c, dlls/setupapi/setupapi.spec, dlls/setupapi/tests/devinst.c
+# |
+if test "$enable_setupapi_SetupDiGetDeviceInterfaceDetail" -eq 1; then
+	patch_apply setupapi-SetupDiGetDeviceInterfaceDetail/0001-setupapi-Add-spec-file-stub-entry-for-SetupDiInstall.patch
+	patch_apply setupapi-SetupDiGetDeviceInterfaceDetail/0002-setupapi-SetupDiGetDeviceInterfaceDetail-should-fill.patch
+	(
+		echo '+    { "Michael Müller", "setupapi: Add spec file stub entry for SetupDiInstallDeviceInterfaces and SetupDiRegisterCoDeviceInstallers.", 1 },';
+		echo '+    { "Michael Müller", "setupapi: SetupDiGetDeviceInterfaceDetail should fill out DeviceInfoData even if the buffer for DeviceInterfaceData is too small.", 1 },';
 	) >> "$patchlist"
 fi
 

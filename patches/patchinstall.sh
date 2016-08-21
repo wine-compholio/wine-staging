@@ -370,6 +370,7 @@ patch_enable_all ()
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
+	enable_winemp3_acm_MPEG3_StreamOpen="$1"
 	enable_wineps_drv_PostScript_Fixes="$1"
 	enable_winepulse_PulseAudio_Support="$1"
 	enable_winex11_CandidateWindowPos="$1"
@@ -1282,6 +1283,9 @@ patch_enable ()
 			;;
 		winemenubuilder-Desktop_Icon_Path)
 			enable_winemenubuilder_Desktop_Icon_Path="$2"
+			;;
+		winemp3.acm-MPEG3_StreamOpen)
+			enable_winemp3_acm_MPEG3_StreamOpen="$2"
 			;;
 		wineps.drv-PostScript_Fixes)
 			enable_wineps_drv_PostScript_Fixes="$2"
@@ -7457,6 +7461,18 @@ if test "$enable_winemenubuilder_Desktop_Icon_Path" -eq 1; then
 	patch_apply winemenubuilder-Desktop_Icon_Path/0001-winemenubuilder-Create-desktop-shortcuts-with-absolu.patch
 	(
 		echo '+    { "Sebastian Lackner", "winemenubuilder: Create desktop shortcuts with absolute wine path.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winemp3.acm-MPEG3_StreamOpen
+# |
+# | Modified files:
+# |   *	dlls/msacm32/tests/msacm.c, dlls/winemp3.acm/mpegl3.c
+# |
+if test "$enable_winemp3_acm_MPEG3_StreamOpen" -eq 1; then
+	patch_apply winemp3.acm-MPEG3_StreamOpen/0001-winemp3.acm-Check-input-format-in-MPEG3_StreamOpen.patch
+	(
+		echo '+    { "Michael Müller", "winemp3.acm: Check input format in MPEG3_StreamOpen.", 1 },';
 	) >> "$patchlist"
 fi
 

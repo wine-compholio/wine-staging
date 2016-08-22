@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a83d5d3b83042d2305de0595c0d03e4e7bf1e29e"
+	echo "90173ce448e5afe55627c2cbece28fb4f6bae99d"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 1.9.17"
+	echo "Wine Staging 1.9.18 (unreleased)"
 	echo "Copyright (C) 2014-2016 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -238,7 +238,6 @@ patch_enable_all ()
 	enable_ntdll_SystemRoot_Symlink="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
-	enable_ntdll_ThreadpoolCleanupGroup="$1"
 	enable_ntdll_User_Shared_Data="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_Wait_User_APC="$1"
@@ -887,9 +886,6 @@ patch_enable ()
 			;;
 		ntdll-Threading)
 			enable_ntdll_Threading="$2"
-			;;
-		ntdll-ThreadpoolCleanupGroup)
-			enable_ntdll_ThreadpoolCleanupGroup="$2"
 			;;
 		ntdll-User_Shared_Data)
 			enable_ntdll_User_Shared_Data="$2"
@@ -2095,6 +2091,13 @@ if test "$enable_server_Stored_ACLs" -eq 1; then
 	enable_server_File_Permissions=1
 fi
 
+if test "$enable_oleaut32_OLEPictureImpl_SaveAsFile" -eq 1; then
+	if test "$enable_oleaut32_Load_Save_EMF" -gt 1; then
+		abort "Patchset oleaut32-Load_Save_EMF disabled, but oleaut32-OLEPictureImpl_SaveAsFile depends on that."
+	fi
+	enable_oleaut32_Load_Save_EMF=1
+fi
+
 if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
 	if test "$enable_nvcuvid_CUDA_Video_Support" -gt 1; then
 		abort "Patchset nvcuvid-CUDA_Video_Support disabled, but nvencodeapi-Video_Encoder depends on that."
@@ -2232,20 +2235,6 @@ if test "$enable_imagehlp_ImageLoad" -eq 1; then
 		abort "Patchset imagehlp-Cleanup disabled, but imagehlp-ImageLoad depends on that."
 	fi
 	enable_imagehlp_Cleanup=1
-fi
-
-if test "$enable_gdiplus_GdipCreateMetafileFromStream" -eq 1; then
-	if test "$enable_oleaut32_OLEPictureImpl_SaveAsFile" -gt 1; then
-		abort "Patchset oleaut32-OLEPictureImpl_SaveAsFile disabled, but gdiplus-GdipCreateMetafileFromStream depends on that."
-	fi
-	enable_oleaut32_OLEPictureImpl_SaveAsFile=1
-fi
-
-if test "$enable_oleaut32_OLEPictureImpl_SaveAsFile" -eq 1; then
-	if test "$enable_oleaut32_Load_Save_EMF" -gt 1; then
-		abort "Patchset oleaut32-Load_Save_EMF disabled, but oleaut32-OLEPictureImpl_SaveAsFile depends on that."
-	fi
-	enable_oleaut32_Load_Save_EMF=1
 fi
 
 if test "$enable_dxva2_Video_Decoder" -eq 1; then
@@ -3716,50 +3705,7 @@ if test "$enable_gdi32_Symbol_Truetype_Font" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset oleaut32-Load_Save_EMF
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40523] Implement support for loading and saving EMF to IPicture interface
-# |
-# | Modified files:
-# |   *	dlls/oleaut32/olepicture.c, dlls/oleaut32/tests/olepicture.c
-# |
-if test "$enable_oleaut32_Load_Save_EMF" -eq 1; then
-	patch_apply oleaut32-Load_Save_EMF/0001-oleaut32-tests-Add-some-tests-for-loading-and-saving.patch
-	patch_apply oleaut32-Load_Save_EMF/0002-oleaut32-Add-support-for-loading-and-saving-EMF-to-I.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "oleaut32/tests: Add some tests for loading and saving EMF using IPicture interface.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "oleaut32: Add support for loading and saving EMF to IPicture interface.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset oleaut32-OLEPictureImpl_SaveAsFile
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	oleaut32-Load_Save_EMF
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#8532] Implement a better stub for IPicture::SaveAsFile
-# |
-# | Modified files:
-# |   *	dlls/gdiplus/Makefile.in, dlls/gdiplus/gdiplus_private.h, dlls/gdiplus/graphics.c, dlls/gdiplus/image.c,
-# | 	dlls/gdiplus/metafile.c, dlls/gdiplus/tests/image.c, dlls/oleaut32/olepicture.c, dlls/oleaut32/tests/olepicture.c
-# |
-if test "$enable_oleaut32_OLEPictureImpl_SaveAsFile" -eq 1; then
-	patch_apply oleaut32-OLEPictureImpl_SaveAsFile/0001-gdiplus-Reimplement-metafile-loading-using-gdi32-ins.patch
-	patch_apply oleaut32-OLEPictureImpl_SaveAsFile/0002-oleaut32-Implement-a-better-stub-for-IPicture-SaveAs.patch
-	patch_apply oleaut32-OLEPictureImpl_SaveAsFile/0003-oleaut32-Implement-SaveAsFile-for-PICTYPE_ENHMETAFIL.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "gdiplus: Reimplement metafile loading using gdi32 instead of IPicture.", 2 },';
-		echo '+    { "Dmitry Timoshkov", "oleaut32: Implement a better stub for IPicture::SaveAsFile.", 1 },';
-		echo '+    { "Sebastian Lackner", "oleaut32: Implement SaveAsFile for PICTYPE_ENHMETAFILE.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset gdiplus-GdipCreateMetafileFromStream
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	oleaut32-Load_Save_EMF, oleaut32-OLEPictureImpl_SaveAsFile
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#40325] Implement GdipCreateMetafileFromStream
@@ -5230,30 +5176,6 @@ if test "$enable_ntdll_Threading" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-ThreadpoolCleanupGroup
-# |
-# | Modified files:
-# |   *	dlls/ntdll/tests/threadpool.c, dlls/ntdll/threadpool.c, programs/services/rpc.c
-# |
-if test "$enable_ntdll_ThreadpoolCleanupGroup" -eq 1; then
-	patch_apply ntdll-ThreadpoolCleanupGroup/0001-ntdll-tests-Use-longer-waits-to-reduce-risk-of-rando.patch
-	patch_apply ntdll-ThreadpoolCleanupGroup/0002-ntdll-Allow-to-release-threadpool-objects-while-wait.patch
-	patch_apply ntdll-ThreadpoolCleanupGroup/0003-ntdll-tests-Add-tests-for-releasing-threadpool-objec.patch
-	patch_apply ntdll-ThreadpoolCleanupGroup/0004-ntdll-Call-group-cancel-callback-with-the-correct-ar.patch
-	patch_apply ntdll-ThreadpoolCleanupGroup/0005-ntdll-Group-cancel-callbacks-should-be-executed-afte.patch
-	patch_apply ntdll-ThreadpoolCleanupGroup/0006-ntdll-Do-not-call-group-cancel-callback-for-finished.patch
-	patch_apply ntdll-ThreadpoolCleanupGroup/0007-services-Remove-synchronization-for-CloseThreadpoolC.patch
-	(
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Use longer waits to reduce risk of random failures on the testbot.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Allow to release threadpool objects while waiting for group.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll/tests: Add tests for releasing threadpool objects during TpReleaseCleanupGroupMembers.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Call group cancel callback with the correct arguments.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Group cancel callbacks should be executed after waiting for pending callbacks.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Do not call group cancel callback for finished simple callbacks.", 2 },';
-		echo '+    { "Sebastian Lackner", "services: Remove synchronization for CloseThreadpoolCleanupGroupMembers.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-User_Shared_Data
 # |
 # | Modified files:
@@ -5591,6 +5513,43 @@ if test "$enable_oleaut32_CreateTypeLib" -eq 1; then
 	patch_apply oleaut32-CreateTypeLib/0001-oleaut32-Implement-semi-stub-for-CreateTypeLib.patch
 	(
 		echo '+    { "Alistair Leslie-Hughes", "oleaut32: Implement semi-stub for CreateTypeLib.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset oleaut32-Load_Save_EMF
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40523] Implement support for loading and saving EMF to IPicture interface
+# |
+# | Modified files:
+# |   *	dlls/oleaut32/olepicture.c, dlls/oleaut32/tests/olepicture.c
+# |
+if test "$enable_oleaut32_Load_Save_EMF" -eq 1; then
+	patch_apply oleaut32-Load_Save_EMF/0001-oleaut32-tests-Add-some-tests-for-loading-and-saving.patch
+	patch_apply oleaut32-Load_Save_EMF/0002-oleaut32-Add-support-for-loading-and-saving-EMF-to-I.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "oleaut32/tests: Add some tests for loading and saving EMF using IPicture interface.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "oleaut32: Add support for loading and saving EMF to IPicture interface.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset oleaut32-OLEPictureImpl_SaveAsFile
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	oleaut32-Load_Save_EMF
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#8532] Implement a better stub for IPicture::SaveAsFile
+# |
+# | Modified files:
+# |   *	dlls/oleaut32/olepicture.c, dlls/oleaut32/tests/olepicture.c
+# |
+if test "$enable_oleaut32_OLEPictureImpl_SaveAsFile" -eq 1; then
+	patch_apply oleaut32-OLEPictureImpl_SaveAsFile/0002-oleaut32-Implement-a-better-stub-for-IPicture-SaveAs.patch
+	patch_apply oleaut32-OLEPictureImpl_SaveAsFile/0003-oleaut32-Implement-SaveAsFile-for-PICTYPE_ENHMETAFIL.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "oleaut32: Implement a better stub for IPicture::SaveAsFile.", 1 },';
+		echo '+    { "Sebastian Lackner", "oleaut32: Implement SaveAsFile for PICTYPE_ENHMETAFILE.", 1 },';
 	) >> "$patchlist"
 fi
 

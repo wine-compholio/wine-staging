@@ -1,4 +1,4 @@
-From a0bdaee449916e202a5cac26f3e66c28d1566efb Mon Sep 17 00:00:00 2001
+From 9890259605aa0c35db96e3709f7fad6e840aa29c Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Tue, 26 Jan 2016 15:05:54 +0800
 Subject: oleaut32: Implement decoding of SLTG help strings.
@@ -10,10 +10,10 @@ Based on the patch by Sebastian Lackner <sebastian@fds-team.de>.
  2 files changed, 109 insertions(+), 25 deletions(-)
 
 diff --git a/dlls/oleaut32/typelib.c b/dlls/oleaut32/typelib.c
-index d8d8ec8..4fb5a95 100644
+index 82ea76c..0a5e07c 100644
 --- a/dlls/oleaut32/typelib.c
 +++ b/dlls/oleaut32/typelib.c
-@@ -3717,6 +3717,87 @@ static BOOL TLB_GUIDFromString(const char *str, GUID *guid)
+@@ -3703,6 +3703,87 @@ static BOOL TLB_GUIDFromString(const char *str, GUID *guid)
    return TRUE;
  }
  
@@ -101,7 +101,7 @@ index d8d8ec8..4fb5a95 100644
  static WORD SLTG_ReadString(const char *ptr, const TLBString **pStr, ITypeLibImpl *lib)
  {
      WORD bytelen;
-@@ -4400,17 +4481,17 @@ static void SLTG_ProcessModule(char *pBlk, ITypeInfoImpl *pTI,
+@@ -4386,17 +4467,17 @@ static void SLTG_ProcessModule(char *pBlk, ITypeInfoImpl *pTI,
  /* Because SLTG_OtherTypeInfo is such a painful struct, we make a more
     manageable copy of it into this */
  typedef struct {
@@ -121,7 +121,7 @@ index d8d8ec8..4fb5a95 100644
  } SLTG_InternalOtherTypeInfo;
  
  /****************************************************************************
-@@ -4429,8 +4510,8 @@ static ITypeLib2* ITypeLib2_Constructor_SLTG(LPVOID pLib, DWORD dwTLBLength)
+@@ -4415,8 +4496,8 @@ static ITypeLib2* ITypeLib2_Constructor_SLTG(LPVOID pLib, DWORD dwTLBLength)
      LPVOID pBlk, pFirstBlk;
      SLTG_LibBlk *pLibBlk;
      SLTG_InternalOtherTypeInfo *pOtherTypeInfoBlks;
@@ -131,7 +131,7 @@ index d8d8ec8..4fb5a95 100644
      int i;
      DWORD len, order;
      ITypeInfoImpl **ppTypeInfoImpl;
-@@ -4496,53 +4577,55 @@ static ITypeLib2* ITypeLib2_Constructor_SLTG(LPVOID pLib, DWORD dwTLBLength)
+@@ -4482,53 +4563,55 @@ static ITypeLib2* ITypeLib2_Constructor_SLTG(LPVOID pLib, DWORD dwTLBLength)
      len += 0x40;
  
      /* And now TypeInfoCount of SLTG_OtherTypeInfo */
@@ -207,16 +207,16 @@ index d8d8ec8..4fb5a95 100644
  
      /* Now add this to pLibBLk look at what we're pointing at and
         possibly add 0x20, then add 0x216, sprinkle a bit a magic
-@@ -4608,6 +4691,7 @@ static ITypeLib2* ITypeLib2_Constructor_SLTG(LPVOID pLib, DWORD dwTLBLength)
+@@ -4594,6 +4677,7 @@ static ITypeLib2* ITypeLib2_Constructor_SLTG(LPVOID pLib, DWORD dwTLBLength)
        (*ppTypeInfoImpl)->index = i;
        (*ppTypeInfoImpl)->Name = SLTG_ReadName(pNameTable, pOtherTypeInfoBlks[i].name_offs, pTypeLibImpl);
        (*ppTypeInfoImpl)->dwHelpContext = pOtherTypeInfoBlks[i].helpcontext;
 +      (*ppTypeInfoImpl)->DocString = decode_string(hlp_strings, pOtherTypeInfoBlks[i].extra, pOtherTypeInfoBlks[i].hlpstr_len, pTypeLibImpl);
        (*ppTypeInfoImpl)->guid = TLB_append_guid(&pTypeLibImpl->guid_list, &pOtherTypeInfoBlks[i].uuid, 2);
-       (*ppTypeInfoImpl)->typekind = pTIHeader->typekind;
-       (*ppTypeInfoImpl)->wMajorVerNum = pTIHeader->major_version;
+       (*ppTypeInfoImpl)->typeattr.typekind = pTIHeader->typekind;
+       (*ppTypeInfoImpl)->typeattr.wMajorVerNum = pTIHeader->major_version;
 diff --git a/dlls/oleaut32/typelib.h b/dlls/oleaut32/typelib.h
-index 8f274ba..94ec8f2 100644
+index 31c9ab9..93b96ea 100644
 --- a/dlls/oleaut32/typelib.h
 +++ b/dlls/oleaut32/typelib.h
 @@ -387,18 +387,18 @@ typedef struct {
@@ -241,5 +241,5 @@ index 8f274ba..94ec8f2 100644
  
  /* Next we get WORD 0x0003 followed by a DWORD which if we add to
 -- 
-2.6.4
+2.9.0
 

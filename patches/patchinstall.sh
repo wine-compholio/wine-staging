@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "205228eb80089c38b25e7249073021e7806d2bfa"
+	echo "c03303838dc648b4dc9fc8d0c78b4ec51a455253"
 }
 
 # Show version information
@@ -90,7 +90,6 @@ patch_enable_all ()
 	enable_advapi32_RegCreateKeyTransacted="$1"
 	enable_advapi32_SetSecurityInfo="$1"
 	enable_amstream_GetMultiMediaStream="$1"
-	enable_api_ms_win_crt_Stub_DLLs="$1"
 	enable_authz_Stub_Functions="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_comctl32_Button_Theming="$1"
@@ -152,7 +151,6 @@ patch_enable_all ()
 	enable_kernel32_CompareStringEx="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Cwd_Startup_Info="$1"
-	enable_kernel32_FreeUserPhysicalPages="$1"
 	enable_kernel32_GetLargestConsoleWindowSize="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
 	enable_kernel32_Named_Pipe="$1"
@@ -198,7 +196,6 @@ patch_enable_all ()
 	enable_ntdll_Loader_Machine_Type="$1"
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
-	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessDebugFlags="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
@@ -230,7 +227,6 @@ patch_enable_all ()
 	enable_rasapi32_RasEnumDevicesA="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_rpcrt4_Pipe_Transport="$1"
-	enable_secur32_ANSI_NTLM_Credentials="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
 	enable_server_Desktop_Refcount="$1"
@@ -324,11 +320,9 @@ patch_enable_all ()
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
 	enable_winmm_Delay_Import_Depends="$1"
 	enable_winspool_drv_SetPrinterW="$1"
-	enable_winsta_WinStationEnumerateW="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_APC_Performance="$1"
 	enable_ws2_32_Connect_Time="$1"
-	enable_ws2_32_Sort_default_route="$1"
 	enable_ws2_32_TransmitFile="$1"
 	enable_ws2_32_WSACleanup="$1"
 	enable_ws2_32_WSAPoll="$1"
@@ -374,9 +368,6 @@ patch_enable ()
 			;;
 		amstream-GetMultiMediaStream)
 			enable_amstream_GetMultiMediaStream="$2"
-			;;
-		api-ms-win-crt-Stub_DLLs)
-			enable_api_ms_win_crt_Stub_DLLs="$2"
 			;;
 		authz-Stub_Functions)
 			enable_authz_Stub_Functions="$2"
@@ -564,9 +555,6 @@ patch_enable ()
 		kernel32-Cwd_Startup_Info)
 			enable_kernel32_Cwd_Startup_Info="$2"
 			;;
-		kernel32-FreeUserPhysicalPages)
-			enable_kernel32_FreeUserPhysicalPages="$2"
-			;;
 		kernel32-GetLargestConsoleWindowSize)
 			enable_kernel32_GetLargestConsoleWindowSize="$2"
 			;;
@@ -702,9 +690,6 @@ patch_enable ()
 		ntdll-NtQuerySection)
 			enable_ntdll_NtQuerySection="$2"
 			;;
-		ntdll-NtSetLdtEntries)
-			enable_ntdll_NtSetLdtEntries="$2"
-			;;
 		ntdll-Pipe_SpecialCharacters)
 			enable_ntdll_Pipe_SpecialCharacters="$2"
 			;;
@@ -797,9 +782,6 @@ patch_enable ()
 			;;
 		rpcrt4-Pipe_Transport)
 			enable_rpcrt4_Pipe_Transport="$2"
-			;;
-		secur32-ANSI_NTLM_Credentials)
-			enable_secur32_ANSI_NTLM_Credentials="$2"
 			;;
 		server-ClipCursor)
 			enable_server_ClipCursor="$2"
@@ -1080,9 +1062,6 @@ patch_enable ()
 		winspool.drv-SetPrinterW)
 			enable_winspool_drv_SetPrinterW="$2"
 			;;
-		winsta-WinStationEnumerateW)
-			enable_winsta_WinStationEnumerateW="$2"
-			;;
 		wpcap-Dynamic_Linking)
 			enable_wpcap_Dynamic_Linking="$2"
 			;;
@@ -1091,9 +1070,6 @@ patch_enable ()
 			;;
 		ws2_32-Connect_Time)
 			enable_ws2_32_Connect_Time="$2"
-			;;
-		ws2_32-Sort_default_route)
-			enable_ws2_32_Sort_default_route="$2"
 			;;
 		ws2_32-TransmitFile)
 			enable_ws2_32_TransmitFile="$2"
@@ -1571,9 +1547,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_ntdll_Heap_FreeLists" -gt 1; then
 		abort "Patchset ntdll-Heap_FreeLists disabled, but category-stable depends on that."
 	fi
-	if test "$enable_ntdll_NtSetLdtEntries" -gt 1; then
-		abort "Patchset ntdll-NtSetLdtEntries disabled, but category-stable depends on that."
-	fi
 	if test "$enable_ntdll_Pipe_SpecialCharacters" -gt 1; then
 		abort "Patchset ntdll-Pipe_SpecialCharacters disabled, but category-stable depends on that."
 	fi
@@ -1700,7 +1673,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_ntdll_Fix_Alignment=1
 	enable_ntdll_FreeBSD_Directory=1
 	enable_ntdll_Heap_FreeLists=1
-	enable_ntdll_NtSetLdtEntries=1
 	enable_ntdll_Pipe_SpecialCharacters=1
 	enable_ntdll_RtlIpStringToAddress=1
 	enable_ntdll_Threading=1
@@ -2306,18 +2278,6 @@ if test "$enable_amstream_GetMultiMediaStream" -eq 1; then
 	patch_apply amstream-GetMultiMediaStream/0001-amstream-Implement-IAMMediaStream-GetMultiMediaStrea.patch
 	(
 		echo '+    { "Michael Müller", "amstream: Implement IAMMediaStream::GetMultiMediaStream.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset api-ms-win-crt-Stub_DLLs
-# |
-# | Modified files:
-# |   *	dlls/ucrtbase/ucrtbase.spec
-# |
-if test "$enable_api_ms_win_crt_Stub_DLLs" -eq 1; then
-	patch_apply api-ms-win-crt-Stub_DLLs/0001-ucrtbase-Hook-up-some-functions-with-new-names-to-ex.patch
-	(
-		echo '+    { "Martin Storsjo", "ucrtbase: Hook up some functions with new names to existing implementations.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3417,21 +3377,6 @@ if test "$enable_kernel32_Cwd_Startup_Info" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-FreeUserPhysicalPages
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39543] Add stub kernel32.FreeUserPhysicalPages
-# |
-# | Modified files:
-# |   *	dlls/kernel32/heap.c, dlls/kernel32/kernel32.spec
-# |
-if test "$enable_kernel32_FreeUserPhysicalPages" -eq 1; then
-	patch_apply kernel32-FreeUserPhysicalPages/0001-kernel32-add-FreeUserPhysicalPages-stub-try-2.patch
-	(
-		echo '+    { "Austin English", "kernel32: Add FreeUserPhysicalPages stub.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-GetLargestConsoleWindowSize
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4248,21 +4193,6 @@ if test "$enable_ntdll_NtQuerySection" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-NtSetLdtEntries
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#26268] Add stub for NtSetLdtEntries/ZwSetLdtEntries
-# |
-# | Modified files:
-# |   *	dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, include/ddk/wdm.h, include/winternl.h
-# |
-if test "$enable_ntdll_NtSetLdtEntries" -eq 1; then
-	patch_apply ntdll-NtSetLdtEntries/0001-ntdll-add-NtSetLdtEntries-ZwSetLdtEntries-stub-try-2.patch
-	(
-		echo '+    { "Austin English", "ntdll: Add NtSetLdtEntries/ZwSetLdtEntries stub.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Pipe_SpecialCharacters
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4778,21 +4708,6 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset secur32-ANSI_NTLM_Credentials
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37063] Fix handling of ANSI NTLM credentials
-# |
-# | Modified files:
-# |   *	dlls/secur32/ntlm.c
-# |
-if test "$enable_secur32_ANSI_NTLM_Credentials" -eq 1; then
-	patch_apply secur32-ANSI_NTLM_Credentials/0001-secur32-Fix-handling-of-ANSI-NTLM-credentials.patch
-	(
-		echo '+    { "David Woodhouse", "secur32: Fix handling of ANSI NTLM credentials.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-ClipCursor
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4901,15 +4816,13 @@ fi
 # Patchset server-Parent_Process
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/process.c, server/process.c, server/token.c
+# |   *	dlls/kernel32/tests/process.c, server/process.c
 # |
 if test "$enable_server_Parent_Process" -eq 1; then
 	patch_apply server-Parent_Process/0001-kernel32-tests-Remove-unnecessary-call-to-GetExitCod.patch
-	patch_apply server-Parent_Process/0002-server-token_duplicate-should-not-reference-the-orig.patch
 	patch_apply server-Parent_Process/0003-server-Increase-size-of-PID-table-to-512-to-reduce-r.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32/tests: Remove unnecessary call to GetExitCodeProcess in process tests.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Token_duplicate should not reference the original token, which will get destroyed on process exit.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Increase size of PID table to 512 to reduce risk of collisions.", 1 },';
 	) >> "$patchlist"
 fi
@@ -6491,21 +6404,6 @@ if test "$enable_winspool_drv_SetPrinterW" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset winsta-WinStationEnumerateW
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38102] Add stub for winsta.WinStationEnumerateW
-# |
-# | Modified files:
-# |   *	dlls/winsta/main.c, dlls/winsta/winsta.spec
-# |
-if test "$enable_winsta_WinStationEnumerateW" -eq 1; then
-	patch_apply winsta-WinStationEnumerateW/0001-winsta-Add-stub-for-WinStationEnumerateW.patch
-	(
-		echo '+    { "Austin English", "winsta: Add stub for WinStationEnumerateW.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wpcap-Dynamic_Linking
 # |
 # | Modified files:
@@ -6539,22 +6437,6 @@ if test "$enable_ws2_32_Connect_Time" -eq 1; then
 	patch_apply ws2_32-Connect_Time/0001-ws2_32-Implement-returning-the-proper-time-with-SO_C.patch
 	(
 		echo '+    { "Sebastian Lackner", "ws2_32: Implement returning the proper time with SO_CONNECT_TIME.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ws2_32-Sort_default_route
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#22819] Ensure default route IP addresses are returned first in gethostbyname
-# |   *	[#37271] Fix issue causing applications to report magic loopback address instead of real IP
-# |
-# | Modified files:
-# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c
-# |
-if test "$enable_ws2_32_Sort_default_route" -eq 1; then
-	patch_apply ws2_32-Sort_default_route/0001-ws2_32-Ensure-default-route-IP-addresses-are-returne.patch
-	(
-		echo '+    { "Bruno Jesus", "ws2_32: Ensure default route IP addresses are returned first in gethostbyname.", 1 },';
 	) >> "$patchlist"
 fi
 

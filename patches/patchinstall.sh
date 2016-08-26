@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "839995d5e9afcbcdcd084eac3a8e6e48a2173eda"
+	echo "30cdd1fb8cea410cb9e363b16278528669e2c19a"
 }
 
 # Show version information
@@ -7326,7 +7326,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t poll queries that failed to start.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Remove restated queries from the poll list.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Put this into the query poll patch.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send texture preloads through the CS.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t access device state in clears.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Avoid destroying views in color and depth fills.", 1 },';
 		echo '+    { "Matteo Bruni", "wined3d: Avoid calling wined3d_surface_blt() from surface_upload_from_surface().", 1 },';
@@ -7354,7 +7353,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Accelerate READONLY buffer maps.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Access the buffer dirty areas through the CS.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Ignore buffer->resource.map_count in the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send buffer preloads through the CS.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Use glBufferSubData instead of glMapBufferRange.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Separate GL buffer discard control from ignoring MAP_DISCARD.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Create buffers before mapping them.", 1 },';
@@ -7367,7 +7365,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Use surface_blt_ugly in swapchain_gl_present.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Invoke surface_unload through the CS in wined3d_surface_update_desc.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Use an event to block the worker thread when it is idle.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Fence preload operations.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Set map_heap_memory = NULL when allocating a PBO.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Wait only for the buffer to be idle.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Put GL_APPLE_flush_buffer_range syncing back in place.", 1 },';

@@ -1,4 +1,4 @@
-From 6e1451770f45f6e635f49956e5756d9e7c0f167b Mon Sep 17 00:00:00 2001
+From 70ac363172221646e6139f1f1ad6a8691f2ee2da Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 2 Oct 2013 21:47:08 +0200
 Subject: wined3d: Create VBOs through the command stream.
@@ -11,7 +11,7 @@ A stop-gap solution to make fglrx happier until buffers are updated.
  3 files changed, 37 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
-index 47155ed..b69f8a3 100644
+index ff6c0ac..9765c4e 100644
 --- a/dlls/wined3d/buffer.c
 +++ b/dlls/wined3d/buffer.c
 @@ -122,7 +122,7 @@ static void delete_gl_buffer(struct wined3d_buffer *This, const struct wined3d_g
@@ -32,7 +32,7 @@ index 47155ed..b69f8a3 100644
  
      This->buffer_object_usage = gl_usage;
  
-@@ -936,9 +934,7 @@ HRESULT CDECL wined3d_buffer_map(struct wined3d_buffer *buffer, UINT offset, UIN
+@@ -929,9 +927,7 @@ HRESULT CDECL wined3d_buffer_map(struct wined3d_buffer *buffer, UINT offset, UIN
       * on buffer creation won't work either. */
      if (!buffer->buffer_object && buffer->flags & WINED3D_BUFFER_USE_BO)
      {
@@ -44,19 +44,19 @@ index 47155ed..b69f8a3 100644
  
      flags = wined3d_resource_sanitize_map_flags(&buffer->resource, flags);
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 24e9a74..826d6ec 100644
+index 93beab0..391c6f1 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -79,6 +79,7 @@ enum wined3d_cs_op
-     WINED3D_CS_OP_TEXTURE_PRELOAD,
+@@ -78,6 +78,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_BUFFER_INVALIDATE_RANGE,
      WINED3D_CS_OP_UPDATE_TEXTURE,
      WINED3D_CS_OP_UPDATE_SUB_RESOURCE,
 +    WINED3D_CS_OP_CREATE_VBO,
      WINED3D_CS_OP_STOP,
  };
  
-@@ -467,6 +468,12 @@ struct wined3d_cs_buffer_preload
-     struct wined3d_buffer *buffer;
+@@ -460,6 +461,12 @@ struct wined3d_cs_update_sub_resource
+     const void *data;
  };
  
 +struct wined3d_cs_create_vbo
@@ -68,7 +68,7 @@ index 24e9a74..826d6ec 100644
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
  {
      LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
-@@ -2425,6 +2432,30 @@ void wined3d_cs_emit_buffer_preload(struct wined3d_cs *cs, struct wined3d_buffer
+@@ -2398,6 +2405,30 @@ void wined3d_cs_emit_buffer_invalidate_bo_range(struct wined3d_cs *cs,
      cs->ops->submit(cs, sizeof(*op));
  }
  
@@ -99,8 +99,8 @@ index 24e9a74..826d6ec 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2482,6 +2513,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
-     /* WINED3D_CS_OP_TEXTURE_PRELOAD            */ wined3d_cs_exec_texture_preload,
+@@ -2454,6 +2485,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_BUFFER_INVALIDATE_RANGE    */ wined3d_cs_exec_buffer_invalidate_bo_range,
      /* WINED3D_CS_OP_UPDATE_TEXTURE             */ wined3d_cs_exec_update_texture,
      /* WINED3D_CS_OP_UPDATE_SUB_RESOURCE        */ wined3d_cs_exec_update_sub_resource,
 +    /* WINED3D_CS_OP_CREATE_VBO                 */ wined3d_cs_exec_create_vbo,
@@ -108,10 +108,10 @@ index 24e9a74..826d6ec 100644
  
  static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 718afab..486f8d9 100644
+index a4e24aa..c93ce68 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3112,6 +3112,7 @@ void wined3d_cs_emit_clear(struct wined3d_cs *cs, DWORD rect_count, const RECT *
+@@ -3115,6 +3115,7 @@ void wined3d_cs_emit_clear(struct wined3d_cs *cs, DWORD rect_count, const RECT *
  void wined3d_cs_emit_clear_rtv(struct wined3d_cs *cs, struct wined3d_rendertarget_view *view,
          const RECT *rect, DWORD flags, const struct wined3d_color *color, float depth, DWORD stencil,
          const struct blit_shader *blitter) DECLSPEC_HIDDEN;
@@ -119,7 +119,7 @@ index 718afab..486f8d9 100644
  void wined3d_cs_emit_destroy_object(struct wined3d_cs *cs,
          void (*callback)(void *object), void *object) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_draw(struct wined3d_cs *cs, int base_vertex_idx, unsigned int start_idx, unsigned int index_count,
-@@ -3246,6 +3247,8 @@ HRESULT wined3d_buffer_upload_data(struct wined3d_buffer *buffer,
+@@ -3249,6 +3250,8 @@ HRESULT wined3d_buffer_upload_data(struct wined3d_buffer *buffer,
          const struct wined3d_box *box, const void *data) DECLSPEC_HIDDEN;
  void buffer_invalidate_bo_range(struct wined3d_buffer *buffer, unsigned int offset, unsigned int size) DECLSPEC_HIDDEN;
  void buffer_swap_mem(struct wined3d_buffer *buffer, BYTE *mem) DECLSPEC_HIDDEN;

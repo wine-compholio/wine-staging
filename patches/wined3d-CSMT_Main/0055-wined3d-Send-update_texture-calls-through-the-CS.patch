@@ -1,4 +1,4 @@
-From ac1a9cc75bab361113fd4cb1b3bcda0a9aadeb71 Mon Sep 17 00:00:00 2001
+From a7ae79e550f236f00a348b8cfdad719f69a0323c Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 1 Aug 2013 00:33:48 +0200
 Subject: wined3d: Send update_texture calls through the CS
@@ -11,19 +11,19 @@ FIXME: This logic duplication is ugly.
  3 files changed, 137 insertions(+), 82 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 908f416..84adcb4 100644
+index 87763b5..40d7c91 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -73,6 +73,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_CLEAR_RTV,
      WINED3D_CS_OP_TEXTURE_MAP,
      WINED3D_CS_OP_TEXTURE_UNMAP,
-     WINED3D_CS_OP_TEXTURE_PRELOAD,
 +    WINED3D_CS_OP_UPDATE_TEXTURE,
      WINED3D_CS_OP_STOP,
  };
  
-@@ -417,6 +418,12 @@ struct wined3d_cs_texture_preload
-     struct wined3d_texture *texture;
+@@ -417,6 +418,12 @@ struct wined3d_cs_skip
+     DWORD size;
  };
  
 +struct wined3d_cs_update_texture
@@ -35,7 +35,7 @@ index 908f416..84adcb4 100644
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
  {
      LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
-@@ -2118,6 +2125,31 @@ void wined3d_cs_emit_texture_preload(struct wined3d_cs *cs, struct wined3d_textu
+@@ -2129,6 +2136,31 @@ void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture
      cs->ops->submit(cs, sizeof(*op));
  }
  
@@ -67,16 +67,16 @@ index 908f416..84adcb4 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2169,6 +2201,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2180,6 +2212,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_CLEAR_RTV                  */ wined3d_cs_exec_clear_rtv,
      /* WINED3D_CS_OP_TEXTURE_MAP                */ wined3d_cs_exec_texture_map,
      /* WINED3D_CS_OP_TEXTURE_UNMAP              */ wined3d_cs_exec_texture_unmap,
-     /* WINED3D_CS_OP_TEXTURE_PRELOAD            */ wined3d_cs_exec_texture_preload,
 +    /* WINED3D_CS_OP_UPDATE_TEXTURE             */ wined3d_cs_exec_update_texture,
  };
  
  static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 58f1669..7255804 100644
+index ad2da77..aa6d796 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
 @@ -3567,34 +3567,17 @@ void CDECL wined3d_device_draw_indexed_primitive_instanced(struct wined3d_device
@@ -319,10 +319,10 @@ index 58f1669..7255804 100644
  
  HRESULT CDECL wined3d_device_validate_device(const struct wined3d_device *device, DWORD *num_passes)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index b904a7d..156cb71 100644
+index bd3bebf..7ba4fd3 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2536,6 +2536,8 @@ void device_resource_add(struct wined3d_device *device, struct wined3d_resource
+@@ -2539,6 +2539,8 @@ void device_resource_add(struct wined3d_device *device, struct wined3d_resource
  void device_resource_released(struct wined3d_device *device, struct wined3d_resource *resource) DECLSPEC_HIDDEN;
  void device_invalidate_state(const struct wined3d_device *device, DWORD state) DECLSPEC_HIDDEN;
  void device_invalidate_shader_constants(const struct wined3d_device *device, DWORD mask) DECLSPEC_HIDDEN;
@@ -331,7 +331,7 @@ index b904a7d..156cb71 100644
  
  static inline BOOL isStateDirty(const struct wined3d_context *context, DWORD state)
  {
-@@ -3157,6 +3159,8 @@ void wined3d_cs_emit_texture_preload(struct wined3d_cs *cs, struct wined3d_textu
+@@ -3161,6 +3163,8 @@ void *wined3d_cs_emit_texture_map(struct wined3d_cs *cs, struct wined3d_texture
  void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture *texture,
          unsigned int sub_resource_idx) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_unload_resource(struct wined3d_cs *cs, struct wined3d_resource *resource) DECLSPEC_HIDDEN;

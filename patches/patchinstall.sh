@@ -368,6 +368,7 @@ patch_enable_all ()
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_QUERY_Stubs="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
+	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
 	enable_winemp3_acm_MPEG3_StreamOpen="$1"
@@ -1277,6 +1278,9 @@ patch_enable ()
 			;;
 		wined3d-Silence_FIXMEs)
 			enable_wined3d_Silence_FIXMEs="$2"
+			;;
+		wined3d-WINED3DFMT_R32G32_UINT)
+			enable_wined3d_WINED3DFMT_R32G32_UINT="$2"
 			;;
 		winedevice-Fix_Relocation)
 			enable_winedevice_Fix_Relocation="$2"
@@ -7276,6 +7280,18 @@ if test "$enable_wined3d_Limit_Vram" -eq 1; then
 	patch_apply wined3d-Limit_Vram/0001-wined3d-Limit-the-vram-memory-to-LONG_MAX-only-on-32.patch
 	(
 		echo '+    { "Michael Müller", "wined3d: Limit the vram memory to LONG_MAX only on 32 bit.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-WINED3DFMT_R32G32_UINT
+# |
+# | Modified files:
+# |   *	dlls/wined3d/utils.c
+# |
+if test "$enable_wined3d_WINED3DFMT_R32G32_UINT" -eq 1; then
+	patch_apply wined3d-WINED3DFMT_R32G32_UINT/0001-wined3d-Add-WINED3DFMT_R32G32_-U-S-INT-as-render-tar.patch
+	(
+		echo '+    { "Michael Müller", "wined3d: Add WINED3DFMT_R32G32_{U,S}INT as render target format.", 1 },';
 	) >> "$patchlist"
 fi
 

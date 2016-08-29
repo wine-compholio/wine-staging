@@ -86,6 +86,7 @@ patch_enable_all ()
 	enable_Coverity="$1"
 	enable_Pipelight="$1"
 	enable_Staging="$1"
+	enable_advapi32_GetExplicitEntriesFromAclW="$1"
 	enable_advapi32_LsaLookupSids="$1"
 	enable_advapi32_SetSecurityInfo="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
@@ -427,6 +428,9 @@ patch_enable ()
 			;;
 		Staging)
 			enable_Staging="$2"
+			;;
+		advapi32-GetExplicitEntriesFromAclW)
+			enable_advapi32_GetExplicitEntriesFromAclW="$2"
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
@@ -2425,6 +2429,18 @@ if test "$enable_Staging" -eq 1; then
 		echo '+    { "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list.", 1 },';
 		echo '+    { "Michael Müller", "loader: Add commandline option --check-libs.", 1 },';
 		echo '+    { "Michael Müller", "loader: Print library paths for --check-libs on Mac OS X.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset advapi32-GetExplicitEntriesFromAclW
+# |
+# | Modified files:
+# |   *	dlls/advapi32/security.c, dlls/advapi32/tests/security.c
+# |
+if test "$enable_advapi32_GetExplicitEntriesFromAclW" -eq 1; then
+	patch_apply advapi32-GetExplicitEntriesFromAclW/0001-advapi32-Implement-GetExplicitEntriesFromAclW.patch
+	(
+		echo '+    { "Michael Müller", "advapi32: Implement GetExplicitEntriesFromAclW.", 1 },';
 	) >> "$patchlist"
 fi
 

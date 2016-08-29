@@ -1,8 +1,8 @@
-From ed940af97f6488f87739b4d332101e69ed624412 Mon Sep 17 00:00:00 2001
+From b8426b424f9ed456f29189459f27ab51b1a9bd7c Mon Sep 17 00:00:00 2001
 From: Felix Yan <felixonmars@gmail.com>
 Date: Tue, 23 Sep 2014 23:22:17 +0800
-Subject: [PATCH] winex11.drv: Update a candidate window's position with
- over-the-spot style. (try 2)
+Subject: winex11.drv: Update a candidate window's position with over-the-spot
+ style. (try 2)
 
 In the current implementation, the candidate window position of a input
 method is fixed because XNSpotLocation isn't updated after an input
@@ -18,14 +18,14 @@ This patch was based on the original work by Muneyuki Noguchi, and
 received a lot of help from Sebastian Lackner.
 ---
  dlls/user32/caret.c               |  4 +++
- dlls/user32/driver.c              | 19 +++++++++--
+ dlls/user32/driver.c              | 14 ++++++++
  dlls/user32/user_private.h        |  2 ++
  dlls/winex11.drv/winex11.drv.spec |  1 +
  dlls/winex11.drv/xim.c            | 72 ++++++++++++++++++++++++++++++++++++++-
- 5 files changed, 95 insertions(+), 3 deletions(-)
+ 5 files changed, 92 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/user32/caret.c b/dlls/user32/caret.c
-index 53bb5b4..fff9e3e 100644
+index 686dade..d1cde7f 100644
 --- a/dlls/user32/caret.c
 +++ b/dlls/user32/caret.c
 @@ -30,6 +30,8 @@
@@ -54,18 +54,18 @@ index 53bb5b4..fff9e3e 100644
      }
      return ret;
 diff --git a/dlls/user32/driver.c b/dlls/user32/driver.c
-index e0bc38c..0e8b007 100644
+index 32acf28..33648b8 100644
 --- a/dlls/user32/driver.c
 +++ b/dlls/user32/driver.c
-@@ -154,6 +154,7 @@ static const USER_DRIVER *load_driver(void)
+@@ -155,6 +155,7 @@ static const USER_DRIVER *load_driver(void)
          GET_USER_FUNC(WindowPosChanging);
          GET_USER_FUNC(WindowPosChanged);
          GET_USER_FUNC(SystemParametersInfo);
 +        GET_USER_FUNC(UpdateCandidatePos);
+         GET_USER_FUNC(ThreadDetach);
  #undef GET_USER_FUNC
      }
- 
-@@ -512,6 +513,10 @@ static BOOL CDECL nulldrv_SystemParametersInfo( UINT action, UINT int_param, voi
+@@ -513,6 +514,10 @@ static BOOL CDECL nulldrv_SystemParametersInfo( UINT action, UINT int_param, voi
      return FALSE;
  }
  
@@ -73,21 +73,19 @@ index e0bc38c..0e8b007 100644
 +{
 +}
 +
- static USER_DRIVER null_driver =
+ static void CDECL nulldrv_ThreadDetach( void )
  {
-     /* keyboard functions */
-@@ -572,7 +577,9 @@ static USER_DRIVER null_driver =
-     nulldrv_WindowPosChanging,
+ }
+@@ -578,6 +583,8 @@ static USER_DRIVER null_driver =
      nulldrv_WindowPosChanged,
      /* system parameters */
--    nulldrv_SystemParametersInfo
-+    nulldrv_SystemParametersInfo,
+     nulldrv_SystemParametersInfo,
 +    /* candidate pos functions */
-+    nulldrv_UpdateCandidatePos
++    nulldrv_UpdateCandidatePos,
+     /* thread management */
+     nulldrv_ThreadDetach
  };
- 
- 
-@@ -767,6 +774,12 @@ static BOOL CDECL loaderdrv_UpdateLayeredWindow( HWND hwnd, const UPDATELAYEREDW
+@@ -774,6 +781,11 @@ static BOOL CDECL loaderdrv_UpdateLayeredWindow( HWND hwnd, const UPDATELAYEREDW
      return load_driver()->pUpdateLayeredWindow( hwnd, info, window_rect );
  }
  
@@ -96,21 +94,20 @@ index e0bc38c..0e8b007 100644
 +    load_driver()->pUpdateCandidatePos( hwnd, caret_rect );
 +}
 +
-+
  static USER_DRIVER lazy_load_driver =
  {
      /* keyboard functions */
-@@ -827,5 +840,7 @@ static USER_DRIVER lazy_load_driver =
-     nulldrv_WindowPosChanging,
+@@ -835,6 +847,8 @@ static USER_DRIVER lazy_load_driver =
      nulldrv_WindowPosChanged,
      /* system parameters */
--    nulldrv_SystemParametersInfo
-+    nulldrv_SystemParametersInfo,
+     nulldrv_SystemParametersInfo,
 +    /* candidate pos functions */
-+    loaderdrv_UpdateCandidatePos
++    loaderdrv_UpdateCandidatePos,
+     /* thread management */
+     nulldrv_ThreadDetach
  };
 diff --git a/dlls/user32/user_private.h b/dlls/user32/user_private.h
-index adf3f7d..6202818 100644
+index 68aa699..cba4aa9 100644
 --- a/dlls/user32/user_private.h
 +++ b/dlls/user32/user_private.h
 @@ -117,6 +117,8 @@ typedef struct tagUSER_DRIVER {
@@ -119,11 +116,11 @@ index adf3f7d..6202818 100644
      BOOL   (CDECL *pSystemParametersInfo)(UINT,UINT,void*,UINT);
 +    /* candidate pos functions */
 +    void   (CDECL *pUpdateCandidatePos)(HWND,const RECT *);
+     /* thread management */
+     void   (CDECL *pThreadDetach)(void);
  } USER_DRIVER;
- 
- extern const USER_DRIVER *USER_Driver DECLSPEC_HIDDEN;
 diff --git a/dlls/winex11.drv/winex11.drv.spec b/dlls/winex11.drv/winex11.drv.spec
-index b6e5c05..2a0d737 100644
+index 7cdce52..167ecb2 100644
 --- a/dlls/winex11.drv/winex11.drv.spec
 +++ b/dlls/winex11.drv/winex11.drv.spec
 @@ -53,6 +53,7 @@
@@ -135,7 +132,7 @@ index b6e5c05..2a0d737 100644
  # WinTab32
  @ cdecl AttachEventQueueToTablet(long) X11DRV_AttachEventQueueToTablet
 diff --git a/dlls/winex11.drv/xim.c b/dlls/winex11.drv/xim.c
-index e0548b8..187323f 100644
+index e51169d..069115d 100644
 --- a/dlls/winex11.drv/xim.c
 +++ b/dlls/winex11.drv/xim.c
 @@ -31,6 +31,7 @@
@@ -238,5 +235,5 @@ index e0548b8..187323f 100644
      return xic;
  }
 -- 
-2.1.0
+2.9.0
 

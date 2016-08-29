@@ -369,6 +369,7 @@ patch_enable_all ()
 	enable_wined3d_QUERY_Stubs="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
+	enable_wined3d_check_format_support="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
 	enable_winemp3_acm_MPEG3_StreamOpen="$1"
@@ -1281,6 +1282,9 @@ patch_enable ()
 			;;
 		wined3d-WINED3DFMT_R32G32_UINT)
 			enable_wined3d_WINED3DFMT_R32G32_UINT="$2"
+			;;
+		wined3d-check_format_support)
+			enable_wined3d_check_format_support="$2"
 			;;
 		winedevice-Fix_Relocation)
 			enable_winedevice_Fix_Relocation="$2"
@@ -7292,6 +7296,20 @@ if test "$enable_wined3d_WINED3DFMT_R32G32_UINT" -eq 1; then
 	patch_apply wined3d-WINED3DFMT_R32G32_UINT/0001-wined3d-Add-WINED3DFMT_R32G32_-U-S-INT-as-render-tar.patch
 	(
 		echo '+    { "Michael Müller", "wined3d: Add WINED3DFMT_R32G32_{U,S}INT as render target format.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-check_format_support
+# |
+# | Modified files:
+# |   *	dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/device.c, dlls/wined3d/wined3d.spec, include/wine/wined3d.h
+# |
+if test "$enable_wined3d_check_format_support" -eq 1; then
+	patch_apply wined3d-check_format_support/0001-wined3d-Add-wined3d_check_device_format_support.patch
+	patch_apply wined3d-check_format_support/0002-d3d11-Implement-ID3D11Device_CheckFormatSupport.patch
+	(
+		echo '+    { "Michael Müller", "wined3d: Add wined3d_check_device_format_support.", 1 },';
+		echo '+    { "Michael Müller", "d3d11: Implement ID3D11Device_CheckFormatSupport.", 1 },';
 	) >> "$patchlist"
 fi
 

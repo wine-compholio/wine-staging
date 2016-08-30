@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d3cb5c24a5ebbc7dcfb181a56f0f55cf3d1a1c30"
+	echo "002af352fac43d170aad216bf15098b27555539a"
 }
 
 # Show version information
@@ -2347,11 +2347,10 @@ fi
 # | 	dlls/d3d9/tests/visual.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dsound/primary.c, dlls/dwrite/layout.c,
 # | 	dlls/msxml3/schema.c, dlls/netapi32/netapi32.c, dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/vbscript/vbdisp.c,
 # | 	dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c, include/d3dtypes.h, include/wine/list.h,
-# | 	include/wine/rbtree.h, include/winnt.h, server/request.c, server/sock.c, tools/makedep.c
+# | 	include/wine/rbtree.h, include/winnt.h, tools/makedep.c
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0015-include-Avoid-shift-overflow-warning.patch
-	patch_apply Compiler_Warnings/0017-server-Workaround-duplicate-condition-warning-of-GCC.patch
 	patch_apply Compiler_Warnings/0018-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch
 	patch_apply Compiler_Warnings/0019-dsound-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0020-amstream-Avoid-implicit-cast-of-interface-pointer.patch
@@ -2368,7 +2367,6 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0031-include-Check-element-type-in-CONTAINING_RECORD-and-.patch
 	(
 		echo '+    { "Sebastian Lackner", "include: Avoid shift overflow warning.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Workaround duplicate condition warning of GCC 6.", 1 },';
 		echo '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },';
 		echo '+    { "Sebastian Lackner", "dsound: Avoid implicit cast of interface pointer.", 1 },';
 		echo '+    { "Sebastian Lackner", "amstream: Avoid implicit cast of interface pointer.", 1 },';

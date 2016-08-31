@@ -351,6 +351,7 @@ patch_enable_all ()
 	enable_windowscodecs_32bppGrayFloat="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
 	enable_windowscodecs_WICCreateBitmapFromSection="$1"
+	enable_windowscodecs_copypixels_to_24bppRGB="$1"
 	enable_wine_inf_Directory_ContextMenuHandlers="$1"
 	enable_wine_inf_Dummy_CA_Certificate="$1"
 	enable_wine_inf_Performance="$1"
@@ -1231,6 +1232,9 @@ patch_enable ()
 		windowscodecs-WICCreateBitmapFromSection)
 			enable_windowscodecs_WICCreateBitmapFromSection="$2"
 			;;
+		windowscodecs-copypixels_to_24bppRGB)
+			enable_windowscodecs_copypixels_to_24bppRGB="$2"
+			;;
 		wine.inf-Directory_ContextMenuHandlers)
 			enable_wine_inf_Directory_ContextMenuHandlers="$2"
 			;;
@@ -2026,6 +2030,13 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	enable_wined3d_DXTn=1
 	enable_wined3d_QUERY_Stubs=1
 	enable_wined3d_Silence_FIXMEs=1
+fi
+
+if test "$enable_windowscodecs_32bppGrayFloat" -eq 1; then
+	if test "$enable_windowscodecs_copypixels_to_24bppRGB" -gt 1; then
+		abort "Patchset windowscodecs-copypixels_to_24bppRGB disabled, but windowscodecs-32bppGrayFloat depends on that."
+	fi
+	enable_windowscodecs_copypixels_to_24bppRGB=1
 fi
 
 if test "$enable_uxtheme_GTK_Theming" -eq 1; then
@@ -7134,7 +7145,22 @@ if test "$enable_wbemdisp_Printer" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset windowscodecs-copypixels_to_24bppRGB
+# |
+# | Modified files:
+# |   *	dlls/windowscodecs/converter.c, dlls/windowscodecs/tests/converter.c
+# |
+if test "$enable_windowscodecs_copypixels_to_24bppRGB" -eq 1; then
+	patch_apply windowscodecs-copypixels_to_24bppRGB/0001-windowscodecs-Avoid-extra-conversion-step-BGR-RGB-wh.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Avoid extra conversion step BGR->RGB when converting 32bpp BGRA to 24bpp RGB.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset windowscodecs-32bppGrayFloat
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	windowscodecs-copypixels_to_24bppRGB
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#36517] Implement support for WICPixelFormat32bppGrayFloat

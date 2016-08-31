@@ -1,0 +1,78 @@
+From 5011cd6f4e78bb9d00c5264e3b5033e36fe6b986 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 27 Aug 2016 22:22:26 +0200
+Subject: wined3d: Implement preparation for 1d textures.
+
+---
+ dlls/wined3d/texture.c | 55 +++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 54 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
+index e4ca54b..942337b 100644
+--- a/dlls/wined3d/texture.c
++++ b/dlls/wined3d/texture.c
+@@ -1463,7 +1463,60 @@ static BOOL texture1d_load_location(struct wined3d_texture *texture, unsigned in
+ 
+ static void texture1d_prepare_texture(struct wined3d_texture *texture, struct wined3d_context *context, BOOL srgb)
+ {
+-    FIXME("stub.\n");
++    const struct wined3d_format *format = texture->resource.format;
++    unsigned int sub_count = texture->level_count * texture->layer_count;
++    const struct wined3d_gl_info *gl_info = context->gl_info;
++    unsigned int width;
++    GLenum internal;
++
++    wined3d_texture_bind_and_dirtify(texture, context, srgb);
++
++    if (srgb)
++        internal = format->glGammaInternal;
++    else if (texture->resource.usage & WINED3DUSAGE_RENDERTARGET
++            && wined3d_resource_is_offscreen(&texture->resource))
++        internal = format->rtInternal;
++    else
++        internal = format->glInternal;
++
++    if (wined3d_texture_use_immutable_storage(texture, gl_info))
++    {
++        width = wined3d_texture_get_level_width(texture, 0);
++
++        if (texture->target == GL_TEXTURE_1D_ARRAY)
++        {
++            GL_EXTCALL(glTexStorage2D(texture->target, texture->level_count, internal, width, texture->layer_count));
++            checkGLcall("glTexStorage2D");
++        }
++        else
++        {
++            GL_EXTCALL(glTexStorage1D(texture->target, texture->level_count, internal, width));
++            checkGLcall("glTexStorage1D");
++        }
++    }
++    else
++    {
++        unsigned int i;
++
++        for (i = 0; i < sub_count; ++i)
++        {
++            struct wined3d_surface *surface = texture->sub_resources[i].u.surface;
++            width = wined3d_texture_get_level_width(texture, surface->texture_level);
++
++            if (texture->target == GL_TEXTURE_1D_ARRAY)
++            {
++                gl_info->gl_ops.gl.p_glTexImage2D(surface->texture_target, surface->texture_level,
++                        internal, width, texture->layer_count, 0, format->glFormat, format->glType, NULL);
++                checkGLcall("glTexImage2D");
++            }
++            else
++            {
++                gl_info->gl_ops.gl.p_glTexImage1D(surface->texture_target, surface->texture_level,
++                        internal, width, 0, format->glFormat, format->glType, NULL);
++                checkGLcall("glTexImage1D");
++            }
++        }
++    }
+ }
+ 
+ static void texture1d_cleanup_sub_resources(struct wined3d_texture *texture)
+-- 
+2.8.1
+

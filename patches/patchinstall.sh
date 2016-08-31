@@ -105,6 +105,7 @@ patch_enable_all ()
 	enable_crypt32_CryptUnprotectMemory="$1"
 	enable_d2d1_Tests="$1"
 	enable_d3d10_1_Forwards="$1"
+	enable_d3d11_ID3D11Texture1D="$1"
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Surface_Refcount="$1"
 	enable_d3d9_Tests="$1"
@@ -361,6 +362,7 @@ patch_enable_all ()
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
 	enable_winecfg_Unmounted_Devices="$1"
+	enable_wined3d_1DTextures="$1"
 	enable_wined3d_Accounting="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
@@ -490,6 +492,9 @@ patch_enable ()
 			;;
 		d3d10_1-Forwards)
 			enable_d3d10_1_Forwards="$2"
+			;;
+		d3d11-ID3D11Texture1D)
+			enable_d3d11_ID3D11Texture1D="$2"
 			;;
 		d3d9-DesktopWindow)
 			enable_d3d9_DesktopWindow="$2"
@@ -1259,6 +1264,9 @@ patch_enable ()
 		winecfg-Unmounted_Devices)
 			enable_winecfg_Unmounted_Devices="$2"
 			;;
+		wined3d-1DTextures)
+			enable_wined3d_1DTextures="$2"
+			;;
 		wined3d-Accounting)
 			enable_wined3d_Accounting="$2"
 			;;
@@ -1996,6 +2004,9 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_ntdll_DllRedirects" -gt 1; then
 		abort "Patchset ntdll-DllRedirects disabled, but wined3d-CSMT_Helper depends on that."
 	fi
+	if test "$enable_wined3d_1DTextures" -gt 1; then
+		abort "Patchset wined3d-1DTextures disabled, but wined3d-CSMT_Helper depends on that."
+	fi
 	if test "$enable_wined3d_Accounting" -gt 1; then
 		abort "Patchset wined3d-Accounting disabled, but wined3d-CSMT_Helper depends on that."
 	fi
@@ -2010,6 +2021,7 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	fi
 	enable_makedep_PARENTSPEC=1
 	enable_ntdll_DllRedirects=1
+	enable_wined3d_1DTextures=1
 	enable_wined3d_Accounting=1
 	enable_wined3d_DXTn=1
 	enable_wined3d_QUERY_Stubs=1
@@ -2297,6 +2309,13 @@ if test "$enable_d3dx9_36_CloneEffect" -eq 1; then
 		abort "Patchset d3dx9_25-ID3DXEffect disabled, but d3dx9_36-CloneEffect depends on that."
 	fi
 	enable_d3dx9_25_ID3DXEffect=1
+fi
+
+if test "$enable_d3d11_ID3D11Texture1D" -eq 1; then
+	if test "$enable_wined3d_1DTextures" -gt 1; then
+		abort "Patchset wined3d-1DTextures disabled, but d3d11-ID3D11Texture1D depends on that."
+	fi
+	enable_wined3d_1DTextures=1
 fi
 
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
@@ -2881,6 +2900,107 @@ if test "$enable_d3d10_1_Forwards" -eq 1; then
 	patch_apply d3d10_1-Forwards/0001-d3d10_1-Add-missing-forwards-to-d3d10.patch
 	(
 		echo '+    { "Sebastian Lackner", "d3d10_1: Add missing forwards to d3d10.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-1DTextures
+# |
+# | Modified files:
+# |   *	dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/resource.c,
+# | 	dlls/wined3d/texture.c, dlls/wined3d/utils.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_private.h,
+# | 	include/wine/wined3d.h
+# |
+if test "$enable_wined3d_1DTextures" -eq 1; then
+	patch_apply wined3d-1DTextures/0001-wined3d-Create-dummy-1d-textures.patch
+	patch_apply wined3d-1DTextures/0002-wined3d-Add-1d-texture-resource-type.patch
+	patch_apply wined3d-1DTextures/0003-wined3d-Add-is_power_of_two-helper-function.patch
+	patch_apply wined3d-1DTextures/0004-wined3d-Create-dummy-1d-textures-and-surfaces.patch
+	patch_apply wined3d-1DTextures/0005-wined3d-Implement-preparation-for-1d-textures.patch
+	patch_apply wined3d-1DTextures/0006-wined3d-Implement-uploading-for-1d-textures.patch
+	patch_apply wined3d-1DTextures/0007-wined3d-Implement-loading-from-system-memory-and-buf.patch
+	patch_apply wined3d-1DTextures/0008-wined3d-Implement-downloading-from-s-rgb-1d-textures.patch
+	patch_apply wined3d-1DTextures/0009-wined3d-Implement-converting-between-s-rgb-1d-textur.patch
+	patch_apply wined3d-1DTextures/0010-wined3d-Check-for-1d-textures-in-wined3d_texture_upd.patch
+	patch_apply wined3d-1DTextures/0011-wined3d-Check-if-1d-teture-is-still-in-use-before-re.patch
+	patch_apply wined3d-1DTextures/0012-wined3d-Generate-glsl-samplers-for-1d-texture-arrays.patch
+	patch_apply wined3d-1DTextures/0013-wined3d-Add-support-for-1d-textures-in-context_attac.patch
+	patch_apply wined3d-1DTextures/0014-wined3d-Handle-1d-textures-in-texture_activate_dimen.patch
+	patch_apply wined3d-1DTextures/0015-wined3d-Allow-creation-of-1d-shader-views.patch
+	(
+		echo '+    { "Michael Müller", "wined3d: Create dummy 1d textures.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Add 1d texture resource type.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Add is_power_of_two helper function.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Create dummy 1d textures and surfaces.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Implement preparation for 1d textures.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Implement uploading for 1d textures.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Implement loading from system memory and buffers to (s)rgb 1d textures.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Implement downloading from (s)rgb 1d textures to system memory.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Implement converting between (s)rgb 1d textures.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Check for 1d textures in wined3d_texture_update_desc.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Check if 1d teture is still in use before releasing.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Generate glsl samplers for 1d texture arrays.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Add support for 1d textures in context_attach_gl_texture_fbo.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Handle 1d textures in texture_activate_dimensions.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Allow creation of 1d shader views.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3d11-ID3D11Texture1D
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	wined3d-1DTextures
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40976] Implement support for ID3D11Texture1D
+# |
+# | Modified files:
+# |   *	dlls/d3d11/d3d11_private.h, dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/d3d11/texture.c, dlls/d3d11/utils.c,
+# | 	dlls/d3d11/view.c
+# |
+if test "$enable_d3d11_ID3D11Texture1D" -eq 1; then
+	patch_apply d3d11-ID3D11Texture1D/0001-d3d11-Add-stub-ID3D11Texture2D-and-ID3D10Texture2D-i.patch
+	patch_apply d3d11-ID3D11Texture1D/0002-d3d11-Create-a-texture-in-d3d_texture1d_init.patch
+	patch_apply d3d11-ID3D11Texture1D/0003-d3d11-Create-a-private-store-in-d3d_texture1d_init.patch
+	patch_apply d3d11-ID3D11Texture1D/0004-d3d11-Generate-dxgi-surface-in-d3d_texture1d_init.patch
+	patch_apply d3d11-ID3D11Texture1D/0005-d3d11-Improve-d3d11_texture1d_GetDesc-by-obtaining-t.patch
+	patch_apply d3d11-ID3D11Texture1D/0006-d3d11-Implement-d3d10_texture1d_-Un-map.patch
+	patch_apply d3d11-ID3D11Texture1D/0007-d3d11-Implement-d3d10_texture1d_GetDesc.patch
+	patch_apply d3d11-ID3D11Texture1D/0008-d3d11-Implement-d3d11_texture1d_-G-S-etPrivateData.patch
+	patch_apply d3d11-ID3D11Texture1D/0009-d3d11-Add-d3d11_texture1d_SetPrivateDataInterface.patch
+	patch_apply d3d11-ID3D11Texture1D/0010-d3d11-Add-a-hack-to-prevent-creation-of-1d-cube-text.patch
+	patch_apply d3d11-ID3D11Texture1D/0011-d3d11-Add-support-for-1d-textures-in-normalize_srv_d.patch
+	patch_apply d3d11-ID3D11Texture1D/0012-d3d11-Add-support-for-1d-textures-in-normalize_rtv_d.patch
+	patch_apply d3d11-ID3D11Texture1D/0013-d3d11-tests-Add-support-for-1d-textures-in-check_srv.patch
+	patch_apply d3d11-ID3D11Texture1D/0014-d3d11-tests-Add-support-for-1d-textures-in-check_rtv.patch
+	patch_apply d3d11-ID3D11Texture1D/0015-d3d11-tests-Add-test-for-creating-1d-textures.patch
+	patch_apply d3d11-ID3D11Texture1D/0016-d3d11-tests-Test-1d-texture-interfaces.patch
+	patch_apply d3d11-ID3D11Texture1D/0017-d3d11-tests-Test-the-creation-of-1d-render-buffers-i.patch
+	patch_apply d3d11-ID3D11Texture1D/0018-d3d11-tests-Test-the-creation-of-1d-shader-resource-.patch
+	patch_apply d3d11-ID3D11Texture1D/0019-d3d11-tests-Prepare-test_texture-for-non-2d-textures.patch
+	patch_apply d3d11-ID3D11Texture1D/0020-d3d11-tests-Prepare-test_texture-for-1d-textures.patch
+	patch_apply d3d11-ID3D11Texture1D/0021-d3d11-tests-Add-some-basic-1d-texture-tests-in-test_.patch
+	(
+		echo '+    { "Michael Müller", "d3d11: Add stub ID3D11Texture2D and ID3D10Texture2D interfaces.", 1 },';
+		echo '+    { "Michael Müller", "d3d11: Create a texture in d3d_texture1d_init.", 1 },';
+		echo '+    { "Michael Müller", "d3d11: Create a private store in d3d_texture1d_init.", 1 },';
+		echo '+    { "Michael Müller", "d3d11: Generate dxgi surface in d3d_texture1d_init.", 1 },';
+		echo '+    { "Michael Müller", "d3d11: Improve d3d11_texture1d_GetDesc by obtaining the current width and format from wined3d.", 1 },';
+		echo '+    { "Michael Müller", "d3d11: Implement d3d10_texture1d_(Un)map.", 1 },';
+		echo '+    { "Michael Müller", "d3d11: Implement d3d10_texture1d_GetDesc.", 1 },';
+		echo '+    { "Michael Müller", "d3d11: Implement d3d11_texture1d_{G,S}etPrivateData.", 1 },';
+		echo '+    { "Michael Müller", "d3d11: Add d3d11_texture1d_SetPrivateDataInterface.", 1 },';
+		echo '+    { "Michael Müller", "d3d11: Add a hack to prevent creation of 1d cube textures.", 1 },';
+		echo '+    { "Michael Müller", "d3d11: Add support for 1d textures in normalize_srv_desc.", 1 },';
+		echo '+    { "Michael Müller", "d3d11: Add support for 1d textures in normalize_rtv_desc.", 1 },';
+		echo '+    { "Michael Müller", "d3d11/tests: Add support for 1d textures in check_srv_desc_.", 1 },';
+		echo '+    { "Michael Müller", "d3d11/tests: Add support for 1d textures in check_rtv_desc_.", 1 },';
+		echo '+    { "Michael Müller", "d3d11/tests: Add test for creating 1d textures.", 1 },';
+		echo '+    { "Michael Müller", "d3d11/tests: Test 1d texture interfaces.", 1 },';
+		echo '+    { "Michael Müller", "d3d11/tests: Test the creation of 1d render buffers in test_create_rendertarget_view.", 1 },';
+		echo '+    { "Michael Müller", "d3d11/tests: Test the creation of 1d shader resource views in test_create_shader_resource_view.", 1 },';
+		echo '+    { "Michael Müller", "d3d11/tests: Prepare test_texture for non 2d textures.", 1 },';
+		echo '+    { "Michael Müller", "d3d11/tests: Prepare test_texture for 1d textures.", 1 },';
+		echo '+    { "Michael Müller", "d3d11/tests: Add some basic 1d texture tests in test_texture.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7261,7 +7381,7 @@ fi
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects,
-# | 	wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs
+# | 	wined3d-1DTextures, wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
@@ -7315,7 +7435,7 @@ fi
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects,
-# | 	wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-CSMT_Helper
+# | 	wined3d-1DTextures, wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance

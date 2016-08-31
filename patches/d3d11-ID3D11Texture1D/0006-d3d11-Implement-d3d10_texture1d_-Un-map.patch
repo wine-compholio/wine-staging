@@ -1,0 +1,56 @@
+From 6709d525107a787f91530b7ffae1e108bd971744 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 27 Aug 2016 23:36:25 +0200
+Subject: d3d11: Implement d3d10_texture1d_(Un)map.
+
+---
+ dlls/d3d11/texture.c | 27 ++++++++++++++++++++++++---
+ 1 file changed, 24 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/d3d11/texture.c b/dlls/d3d11/texture.c
+index 3336367..204aa98 100644
+--- a/dlls/d3d11/texture.c
++++ b/dlls/d3d11/texture.c
+@@ -307,15 +307,36 @@ static UINT STDMETHODCALLTYPE d3d10_texture1d_GetEvictionPriority(ID3D10Texture1
+ static HRESULT STDMETHODCALLTYPE d3d10_texture1d_Map(ID3D10Texture1D *iface, UINT sub_resource_idx,
+         D3D10_MAP map_type, UINT map_flags, void **data)
+ {
+-    FIXME("iface %p, sub_resource_idx %u, map_type %u, map_flags %#x, mapped_texture %p: stub.\n",
++    struct d3d_texture1d *texture = impl_from_ID3D10Texture1D(iface);
++    struct wined3d_map_desc wined3d_map_desc;
++    HRESULT hr;
++
++    TRACE("iface %p, sub_resource_idx %u, map_type %u, map_flags %#x, mapped_texture %p.\n",
+             iface, sub_resource_idx, map_type, map_flags, data);
+ 
+-    return E_FAIL;
++    if (map_flags)
++        FIXME("Ignoring map_flags %#x.\n", map_flags);
++
++    wined3d_mutex_lock();
++    if (SUCCEEDED(hr = wined3d_resource_map(wined3d_texture_get_resource(texture->wined3d_texture), sub_resource_idx,
++            &wined3d_map_desc, NULL, wined3d_map_flags_from_d3d11_map_type(map_type))))
++    {
++        *data = wined3d_map_desc.data;
++    }
++    wined3d_mutex_unlock();
++
++    return hr;
+ }
+ 
+ static void STDMETHODCALLTYPE d3d10_texture1d_Unmap(ID3D10Texture1D *iface, UINT sub_resource_idx)
+ {
+-    FIXME("iface %p, sub_resource_idx %u: stub.\n", iface, sub_resource_idx);
++    struct d3d_texture1d *texture = impl_from_ID3D10Texture1D(iface);
++
++    TRACE("iface %p, sub_resource_idx %u.\n", iface, sub_resource_idx);
++
++    wined3d_mutex_lock();
++    wined3d_resource_unmap(wined3d_texture_get_resource(texture->wined3d_texture), sub_resource_idx);
++    wined3d_mutex_unlock();
+ }
+ 
+ static void STDMETHODCALLTYPE d3d10_texture1d_GetDesc(ID3D10Texture1D *iface, D3D10_TEXTURE1D_DESC *desc)
+-- 
+2.8.1
+

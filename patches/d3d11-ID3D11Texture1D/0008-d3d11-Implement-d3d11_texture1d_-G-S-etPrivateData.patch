@@ -1,0 +1,62 @@
+From d204de51fa14b6245cbf4afd0f0ddc01f9aa554b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 27 Aug 2016 23:39:56 +0200
+Subject: d3d11: Implement d3d11_texture1d_{G,S}etPrivateData.
+
+---
+ dlls/d3d11/texture.c | 32 ++++++++++++++++++++++++++++----
+ 1 file changed, 28 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/d3d11/texture.c b/dlls/d3d11/texture.c
+index e8b0047..411dca6 100644
+--- a/dlls/d3d11/texture.c
++++ b/dlls/d3d11/texture.c
+@@ -122,17 +122,41 @@ static void STDMETHODCALLTYPE d3d11_texture1d_GetDevice(ID3D11Texture1D *iface,
+ static HRESULT STDMETHODCALLTYPE d3d11_texture1d_GetPrivateData(ID3D11Texture1D *iface,
+         REFGUID guid, UINT *data_size, void *data)
+ {
+-    FIXME("iface %p, guid %s, data_size %p, data %p: stub.\n", iface, debugstr_guid(guid), data_size, data);
++    struct d3d_texture1d *texture = impl_from_ID3D11Texture1D(iface);
++    IDXGISurface *dxgi_surface;
++    HRESULT hr;
+ 
+-    return E_FAIL;
++    TRACE("iface %p, guid %s, data_size %p, data %p.\n", iface, debugstr_guid(guid), data_size, data);
++
++    if (texture->dxgi_surface
++            && SUCCEEDED(IUnknown_QueryInterface(texture->dxgi_surface, &IID_IDXGISurface, (void **)&dxgi_surface)))
++    {
++        hr = IDXGISurface_GetPrivateData(dxgi_surface, guid, data_size, data);
++        IDXGISurface_Release(dxgi_surface);
++        return hr;
++    }
++
++    return d3d_get_private_data(&texture->private_store, guid, data_size, data);
+ }
+ 
+ static HRESULT STDMETHODCALLTYPE d3d11_texture1d_SetPrivateData(ID3D11Texture1D *iface,
+         REFGUID guid, UINT data_size, const void *data)
+ {
+-    FIXME("iface %p, guid %s, data_size %u, data %p: stub.\n", iface, debugstr_guid(guid), data_size, data);
++    struct d3d_texture1d *texture = impl_from_ID3D11Texture1D(iface);
++    IDXGISurface *dxgi_surface;
++    HRESULT hr;
+ 
+-    return E_FAIL;
++    TRACE("iface %p, guid %s, data_size %u, data %p.\n", iface, debugstr_guid(guid), data_size, data);
++
++    if (texture->dxgi_surface
++            && SUCCEEDED(IUnknown_QueryInterface(texture->dxgi_surface, &IID_IDXGISurface, (void **)&dxgi_surface)))
++    {
++        hr = IDXGISurface_SetPrivateData(dxgi_surface, guid, data_size, data);
++        IDXGISurface_Release(dxgi_surface);
++        return hr;
++    }
++
++    return d3d_set_private_data(&texture->private_store, guid, data_size, data);
+ }
+ 
+ static HRESULT STDMETHODCALLTYPE d3d11_texture1d_SetPrivateDataInterface(ID3D11Texture1D *iface,
+-- 
+2.8.1
+

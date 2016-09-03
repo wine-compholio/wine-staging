@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "225c43b8124aaeb4c2e307379ab98036db1a38b3"
+	echo "7baaab5b53011c3a593e1ff32538c9ca706db212"
 }
 
 # Show version information
@@ -7476,6 +7476,9 @@ fi
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/9999-IfDefined.patch
 	(
+		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Sanitise resource map flags in wined3d_resource_map().\".", 1 },';
+		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Send resource unmaps through the command stream.\".", 1 },';
+		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Send resource maps through the command stream.\".", 1 },';
 		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Send shader constant updates through the command stream.\".", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Make surface_load_location return nothing.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Call texture_load_location instead of surface_load_location.", 1 },';

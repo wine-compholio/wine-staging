@@ -1,0 +1,146 @@
+From 32f4bb5c9ced812f0ff4544ae7f887dfb5a50c39 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 3 Sep 2016 02:31:26 +0200
+Subject: Revert "wined3d: Sanitise resource map flags in
+ wined3d_resource_map()."
+
+This reverts commit 8232f371d82fb1068416e1f6c9bde792f12e137c.
+---
+ dlls/wined3d/buffer.c          |  1 +
+ dlls/wined3d/resource.c        | 68 ++++++++++++++++++++----------------------
+ dlls/wined3d/texture.c         |  2 ++
+ dlls/wined3d/wined3d_private.h |  1 +
+ 4 files changed, 37 insertions(+), 35 deletions(-)
+
+diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
+index 7dc33c7..fdecb04 100644
+--- a/dlls/wined3d/buffer.c
++++ b/dlls/wined3d/buffer.c
+@@ -942,6 +942,7 @@ static HRESULT wined3d_buffer_map(struct wined3d_buffer *buffer, UINT offset, UI
+ 
+     TRACE("buffer %p, offset %u, size %u, data %p, flags %#x.\n", buffer, offset, size, data, flags);
+ 
++    flags = wined3d_resource_sanitize_map_flags(&buffer->resource, flags);
+     /* Filter redundant WINED3D_MAP_DISCARD maps. The 3DMark2001 multitexture
+      * fill rate test seems to depend on this. When we map a buffer with
+      * GL_MAP_INVALIDATE_BUFFER_BIT, the driver is free to discard the
+diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
+index ab64de0..b3e2747 100644
+--- a/dlls/wined3d/resource.c
++++ b/dlls/wined3d/resource.c
+@@ -315,47 +315,12 @@ void CDECL wined3d_resource_get_desc(const struct wined3d_resource *resource, st
+     desc->size = resource->size;
+ }
+ 
+-static DWORD wined3d_resource_sanitise_map_flags(const struct wined3d_resource *resource, DWORD flags)
+-{
+-    /* Not all flags make sense together, but Windows never returns an error.
+-     * Catch the cases that could cause issues. */
+-    if (flags & WINED3D_MAP_READONLY)
+-    {
+-        if (flags & WINED3D_MAP_DISCARD)
+-        {
+-            WARN("WINED3D_MAP_READONLY combined with WINED3D_MAP_DISCARD, ignoring flags.\n");
+-            return 0;
+-        }
+-        if (flags & WINED3D_MAP_NOOVERWRITE)
+-        {
+-            WARN("WINED3D_MAP_READONLY combined with WINED3D_MAP_NOOVERWRITE, ignoring flags.\n");
+-            return 0;
+-        }
+-    }
+-    else if ((flags & (WINED3D_MAP_DISCARD | WINED3D_MAP_NOOVERWRITE))
+-            == (WINED3D_MAP_DISCARD | WINED3D_MAP_NOOVERWRITE))
+-    {
+-        WARN("WINED3D_MAP_DISCARD and WINED3D_MAP_NOOVERWRITE used together, ignoring.\n");
+-        return 0;
+-    }
+-    else if (flags & (WINED3D_MAP_DISCARD | WINED3D_MAP_NOOVERWRITE)
+-            && !(resource->usage & WINED3DUSAGE_DYNAMIC))
+-    {
+-        WARN("DISCARD or NOOVERWRITE map on non-dynamic buffer, ignoring.\n");
+-        return 0;
+-    }
+-
+-    return flags;
+-}
+-
+ HRESULT CDECL wined3d_resource_map(struct wined3d_resource *resource, unsigned int sub_resource_idx,
+         struct wined3d_map_desc *map_desc, const struct wined3d_box *box, DWORD flags)
+ {
+     TRACE("resource %p, sub_resource_idx %u, map_desc %p, box %s, flags %#x.\n",
+             resource, sub_resource_idx, map_desc, debug_box(box), flags);
+ 
+-    flags = wined3d_resource_sanitise_map_flags(resource, flags);
+-
+     return wined3d_cs_map(resource->device->cs, resource, sub_resource_idx, map_desc, box, flags);
+ }
+ 
+@@ -399,6 +364,39 @@ void wined3d_resource_free_sysmem(struct wined3d_resource *resource)
+     resource->heap_memory = NULL;
+ }
+ 
++DWORD wined3d_resource_sanitize_map_flags(const struct wined3d_resource *resource, DWORD flags)
++{
++    /* Not all flags make sense together, but Windows never returns an error.
++     * Catch the cases that could cause issues. */
++    if (flags & WINED3D_MAP_READONLY)
++    {
++        if (flags & WINED3D_MAP_DISCARD)
++        {
++            WARN("WINED3D_MAP_READONLY combined with WINED3D_MAP_DISCARD, ignoring flags.\n");
++            return 0;
++        }
++        if (flags & WINED3D_MAP_NOOVERWRITE)
++        {
++            WARN("WINED3D_MAP_READONLY combined with WINED3D_MAP_NOOVERWRITE, ignoring flags.\n");
++            return 0;
++        }
++    }
++    else if ((flags & (WINED3D_MAP_DISCARD | WINED3D_MAP_NOOVERWRITE))
++            == (WINED3D_MAP_DISCARD | WINED3D_MAP_NOOVERWRITE))
++    {
++        WARN("WINED3D_MAP_DISCARD and WINED3D_MAP_NOOVERWRITE used together, ignoring.\n");
++        return 0;
++    }
++    else if (flags & (WINED3D_MAP_DISCARD | WINED3D_MAP_NOOVERWRITE)
++            && !(resource->usage & WINED3DUSAGE_DYNAMIC))
++    {
++        WARN("DISCARD or NOOVERWRITE map on non-dynamic buffer, ignoring.\n");
++        return 0;
++    }
++
++    return flags;
++}
++
+ GLbitfield wined3d_resource_gl_map_flags(DWORD d3d_flags)
+ {
+     GLbitfield ret = 0;
+diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
+index 2844d3e..9b2df5c 100644
+--- a/dlls/wined3d/texture.c
++++ b/dlls/wined3d/texture.c
+@@ -2068,6 +2068,8 @@ static HRESULT texture_resource_sub_resource_map(struct wined3d_resource *resour
+         return WINED3DERR_INVALIDCALL;
+     }
+ 
++    flags = wined3d_resource_sanitize_map_flags(resource, flags);
++
+     if (device->d3d_initialized)
+     {
+         context = context_acquire(device, NULL);
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 35e8398..bedda9b 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2604,6 +2604,7 @@ void wined3d_resource_free_sysmem(struct wined3d_resource *resource) DECLSPEC_HI
+ GLbitfield wined3d_resource_gl_map_flags(DWORD d3d_flags) DECLSPEC_HIDDEN;
+ GLenum wined3d_resource_gl_legacy_map_flags(DWORD d3d_flags) DECLSPEC_HIDDEN;
+ BOOL wined3d_resource_is_offscreen(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
++DWORD wined3d_resource_sanitize_map_flags(const struct wined3d_resource *resource, DWORD flags) DECLSPEC_HIDDEN;
+ void wined3d_resource_update_draw_binding(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
+ 
+ /* Tests show that the start address of resources is 32 byte aligned */
+-- 
+2.9.0
+

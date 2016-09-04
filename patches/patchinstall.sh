@@ -350,6 +350,7 @@ patch_enable_all ()
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppGrayFloat="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
+	enable_windowscodecs_IWICPalette_InitializeFromBitmap="$1"
 	enable_windowscodecs_WICCreateBitmapFromSection="$1"
 	enable_windowscodecs_copypixels_to_24bppRGB="$1"
 	enable_wine_inf_Directory_ContextMenuHandlers="$1"
@@ -1229,6 +1230,9 @@ patch_enable ()
 		windowscodecs-IMILBitmapSource)
 			enable_windowscodecs_IMILBitmapSource="$2"
 			;;
+		windowscodecs-IWICPalette_InitializeFromBitmap)
+			enable_windowscodecs_IWICPalette_InitializeFromBitmap="$2"
+			;;
 		windowscodecs-WICCreateBitmapFromSection)
 			enable_windowscodecs_WICCreateBitmapFromSection="$2"
 			;;
@@ -2030,6 +2034,13 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	enable_wined3d_DXTn=1
 	enable_wined3d_QUERY_Stubs=1
 	enable_wined3d_Silence_FIXMEs=1
+fi
+
+if test "$enable_windowscodecs_IWICPalette_InitializeFromBitmap" -eq 1; then
+	if test "$enable_gdiplus_Grayscale_PNG" -gt 1; then
+		abort "Patchset gdiplus-Grayscale_PNG disabled, but windowscodecs-IWICPalette_InitializeFromBitmap depends on that."
+	fi
+	enable_gdiplus_Grayscale_PNG=1
 fi
 
 if test "$enable_windowscodecs_32bppGrayFloat" -eq 1; then
@@ -7195,6 +7206,33 @@ if test "$enable_windowscodecs_IMILBitmapSource" -eq 1; then
 	(
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Improve compatibility of IMILBitmapSource interface.", 3 },';
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for IMILBitmapScaler interface.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windowscodecs-IWICPalette_InitializeFromBitmap
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	gdiplus-Grayscale_PNG
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39890] Implement IWICPalette::InitializeFromBitmap
+# |
+# | Modified files:
+# |   *	dlls/gdiplus/gdiplus.spec, dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, dlls/windowscodecs/palette.c,
+# | 	dlls/windowscodecs/pngformat.c, dlls/windowscodecs/tests/palette.c, include/gdiplusflat.h
+# |
+if test "$enable_windowscodecs_IWICPalette_InitializeFromBitmap" -eq 1; then
+	patch_apply windowscodecs-IWICPalette_InitializeFromBitmap/0001-windowscodecs-tests-Add-some-tests-for-IWICPalette-I.patch
+	patch_apply windowscodecs-IWICPalette_InitializeFromBitmap/0002-windowscodecs-Implement-IWICPalette-InitializeFromBi.patch
+	patch_apply windowscodecs-IWICPalette_InitializeFromBitmap/0003-gdiplus-Implement-GdipInitializePalette.-v2.patch
+	patch_apply windowscodecs-IWICPalette_InitializeFromBitmap/0004-gdiplus-tests-Add-some-tests-for-GdipInitializePalet.patch
+	patch_apply windowscodecs-IWICPalette_InitializeFromBitmap/0005-windowscodecs-Return-S_OK-from-PngFrameEncode_SetPal.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add some tests for IWICPalette::InitializeFromBitmap.", 2 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICPalette::InitializeFromBitmap.", 5 },';
+		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipInitializePalette.", 2 },';
+		echo '+    { "Dmitry Timoshkov", "gdiplus/tests: Add some tests for GdipInitializePalette.", 2 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Return S_OK from PngFrameEncode_SetPalette.", 1 },';
 	) >> "$patchlist"
 fi
 

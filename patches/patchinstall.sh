@@ -7476,8 +7476,10 @@ fi
 # |
 if test "$enable_wined3d_WINED3DFMT_R32G32_UINT" -eq 1; then
 	patch_apply wined3d-WINED3DFMT_R32G32_UINT/0001-wined3d-Add-WINED3DFMT_R32G32_-U-S-INT-as-render-tar.patch
+	patch_apply wined3d-WINED3DFMT_R32G32_UINT/0002-wined3d-Add-hack-for-WINED3DFMT_R24_UNORM_X8_TYPELES.patch
 	(
 		echo '+    { "Michael Müller", "wined3d: Add WINED3DFMT_R32G32_{U,S}INT as render target format.", 1 },';
+		echo '+    { "Michael Müller", "wined3d: Add hack for WINED3DFMT_R24_UNORM_X8_TYPELESS.", 1 },';
 	) >> "$patchlist"
 fi
 

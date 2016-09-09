@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f53c320f04114253955b509da294ef454864679d"
+	echo "7c06f1c218a2ecb1f2dda2cfb97b3a2c5b7f01e8"
 }
 
 # Show version information
@@ -5482,7 +5482,6 @@ fi
 # |
 if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0001-ntoskrnl.exe-add-KeWaitForMultipleObjects-stub.patch
-	patch_apply ntoskrnl-Stubs/0002-ntoskrnl.exe-Add-stub-for-IoGetAttachedDeviceReferen.patch
 	patch_apply ntoskrnl-Stubs/0003-ntoskrnl.exe-Add-stubs-for-ExAcquireFastMutexUnsafe-.patch
 	patch_apply ntoskrnl-Stubs/0004-ntoskrnl.exe-Add-stubs-for-ObReferenceObjectByPointe.patch
 	patch_apply ntoskrnl-Stubs/0005-ntoskrnl.exe-Improve-KeReleaseMutex-stub.patch
@@ -5495,7 +5494,6 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0012-ntoskrnl.exe-Add-IoStopTimer-stub.patch
 	(
 		echo '+    { "Austin English", "ntoskrnl.exe: Add KeWaitForMultipleObjects stub.", 1 },';
-		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for IoGetAttachedDeviceReference.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ExAcquireFastMutexUnsafe and ExReleaseFastMutexUnsafe.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for ObReferenceObjectByPointer.", 1 },';
 		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeReleaseMutex stub.", 1 },';

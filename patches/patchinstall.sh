@@ -198,6 +198,7 @@ patch_enable_all ()
 	enable_msidb_Implementation="$1"
 	enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback="$1"
 	enable_msvcrt_Math_Precision="$1"
+	enable_msvcrt_Silence_FIXMEs="$1"
 	enable_msvfw32_ICGetDisplayFormat="$1"
 	enable_msvideo_dll16_DrawDibProfileDisplay="$1"
 	enable_ntdll_APC_Performance="$1"
@@ -773,6 +774,9 @@ patch_enable ()
 			;;
 		msvcrt-Math_Precision)
 			enable_msvcrt_Math_Precision="$2"
+			;;
+		msvcrt-Silence_FIXMEs)
+			enable_msvcrt_Silence_FIXMEs="$2"
 			;;
 		msvfw32-ICGetDisplayFormat)
 			enable_msvfw32_ICGetDisplayFormat="$2"
@@ -4705,6 +4709,18 @@ if test "$enable_msvcrt_Math_Precision" -eq 1; then
 	patch_apply msvcrt-Math_Precision/0001-msvcrt-Calculate-sinh-cosh-exp-pow-with-higher-preci.patch
 	(
 		echo '+    { "Sebastian Lackner", "msvcrt: Calculate sinh/cosh/exp/pow with higher precision.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msvcrt-Silence_FIXMEs
+# |
+# | Modified files:
+# |   *	dlls/msvcrt/printf.h
+# |
+if test "$enable_msvcrt_Silence_FIXMEs" -eq 1; then
+	patch_apply msvcrt-Silence_FIXMEs/0001-msvcrt-Display-noisy-FIXME-only-once-in-pf_printf.patch
+	(
+		echo '+    { "Christian Costa", "msvcrt: Display noisy FIXME only once in pf_printf.", 1 },';
 	) >> "$patchlist"
 fi
 

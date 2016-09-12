@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "4bfefc5c7132023ee40d70572b677ae0e441df38"
+	echo "c1bc25dd38dab0504bd9eb45641a830ff08488b3"
 }
 
 # Show version information
@@ -3875,27 +3875,17 @@ fi
 
 # Patchset gdiplus-GdipCreateMetafileFromStream
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40325] Implement GdipCreateMetafileFromStream
-# |   *	[#27415] Implement GdipGetMetafileHeaderFromMetafile
-# |
 # | Modified files:
-# |   *	dlls/gdiplus/gdiplus.spec, dlls/gdiplus/metafile.c, dlls/gdiplus/tests/image.c
+# |   *	dlls/gdiplus/gdiplus.spec, dlls/gdiplus/metafile.c
 # |
 if test "$enable_gdiplus_GdipCreateMetafileFromStream" -eq 1; then
-	patch_apply gdiplus-GdipCreateMetafileFromStream/0001-gdiplus-Implement-GdipCreateMetafileFromStream.patch
-	patch_apply gdiplus-GdipCreateMetafileFromStream/0002-gdiplus-Implement-GdipGetMetafileHeaderFromMetafile.patch
 	patch_apply gdiplus-GdipCreateMetafileFromStream/0003-gdiplus-Implement-GdipGetMetafileHeaderFromWmf.patch
 	patch_apply gdiplus-GdipCreateMetafileFromStream/0004-gdiplus-Implement-GdipGetMetafileHeaderFromStream.patch
 	patch_apply gdiplus-GdipCreateMetafileFromStream/0005-gdiplus-Implement-GdipGetMetafileHeaderFromFile.patch
-	patch_apply gdiplus-GdipCreateMetafileFromStream/0006-gdiplus-Implement-GdipCreateMetafileFromFile.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipCreateMetafileFromStream.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipGetMetafileHeaderFromMetafile.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipGetMetafileHeaderFromWmf.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipGetMetafileHeaderFromStream.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipGetMetafileHeaderFromFile.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipCreateMetafileFromFile.", 1 },';
 	) >> "$patchlist"
 fi
 

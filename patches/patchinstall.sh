@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "4e9cc305bb1a758eb70419318c7c41c2918fc180"
+	echo "4931e6f92bc7e0c229a057ebf2e000f8f5aa1edd"
 }
 
 # Show version information
@@ -2644,37 +2644,35 @@ fi
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/api-ms-win-appmodel-runtime-l1-1-1/Makefile.in, dlls/api-ms-win-appmodel-runtime-l1-1-1/api-ms-win-
-# | 	appmodel-runtime-l1-1-1.spec, dlls/api-ms-win-core-apiquery-l1-1-0/Makefile.in, dlls/api-ms-win-core-apiquery-l1-1-0
-# | 	/api-ms-win-core-apiquery-l1-1-0.spec, dlls/api-ms-win-core-heap-l2-1-0/Makefile.in, dlls/api-ms-win-core-heap-l2-1-0
-# | 	/api-ms-win-core-heap-l2-1-0.spec, dlls/api-ms-win-core-quirks-l1-1-0/Makefile.in, dlls/api-ms-win-core-quirks-l1-1-0
-# | 	/api-ms-win-core-quirks-l1-1-0.spec, dlls/api-ms-win-core-shlwapi-obsolete-l1-2-0/Makefile.in, dlls/api-ms-win-core-
-# | 	shlwapi-obsolete-l1-2-0/api-ms-win-core-shlwapi-obsolete-l1-2-0.spec, dlls/api-ms-win-rtcore-ntuser-
-# | 	draw-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/api-ms-win-rtcore-ntuser-draw-l1-1-0.spec, dlls/api-
-# | 	ms-win-rtcore-ntuser-window-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-window-l1-1-0/api-ms-win-rtcore-ntuser-
-# | 	window-l1-1-0.spec, dlls/api-ms-win-shcore-obsolete-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-obsolete-l1-1-0/api-ms-
-# | 	win-shcore-obsolete-l1-1-0.spec, dlls/api-ms-win-shcore-stream-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-stream-l1-1-0
-# | 	/api-ms-win-shcore-stream-l1-1-0.spec, dlls/api-ms-win-shcore-thread-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-
-# | 	thread-l1-1-0/api-ms-win-shcore-thread-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/Makefile.in, dlls/ext-
-# | 	ms-win-appmodel-usercontext-l1-1-0/ext-ms-win-appmodel-usercontext-l1-1-0.spec, dlls/ext-ms-win-appmodel-
-# | 	usercontext-l1-1-0/main.c, dlls/ext-ms-win-kernel32-package-current-l1-1-0/Makefile.in, dlls/ext-ms-win-kernel32
-# | 	-package-current-l1-1-0/ext-ms-win-kernel32-package-current-l1-1-0.spec, dlls/ext-ms-win-ntuser-
-# | 	mouse-l1-1-0/Makefile.in, dlls/ext-ms-win-ntuser-mouse-l1-1-0/ext-ms-win-ntuser-mouse-l1-1-0.spec, dlls/ext-ms-win-
-# | 	rtcore-ntuser-syscolors-l1-1-0/Makefile.in, dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/ext-ms-win-rtcore-ntuser-
-# | 	syscolors-l1-1-0.spec, dlls/ext-ms-win-rtcore-ntuser-sysparams-l1-1-0/Makefile.in, dlls/ext-ms-win-rtcore-ntuser-
-# | 	sysparams-l1-1-0/ext-ms-win-rtcore-ntuser-sysparams-l1-1-0.spec, dlls/ext-ms-win-uxtheme-themes-l1-1-0/Makefile.in, dlls
-# | 	/ext-ms-win-uxtheme-themes-l1-1-0/ext-ms-win-uxtheme-themes-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/Makefile.in,
-# | 	dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/main.c,
-# | 	dlls/feclient/Makefile.in, dlls/feclient/feclient.spec, dlls/feclient/main.c, dlls/iertutil/Makefile.in,
-# | 	dlls/iertutil/iertutil.spec, dlls/iertutil/main.c, dlls/kernelbase/Makefile.in, dlls/kernelbase/kernelbase.spec,
-# | 	dlls/kernelbase/misc.c, dlls/shcore/Makefile.in, dlls/shcore/main.c, dlls/shcore/shcore.spec, dlls/shlwapi/shlwapi.spec,
-# | 	dlls/uiautomationcore/Makefile.in, dlls/uiautomationcore/main.c, dlls/uiautomationcore/uiautomationcore.spec,
-# | 	include/Makefile.in, include/shellscalingapi.h, include/uiautomationcoreapi.h, tools/make_specfiles
+# | 	appmodel-runtime-l1-1-1.spec, dlls/api-ms-win-core-heap-l2-1-0/Makefile.in, dlls/api-ms-win-core-heap-l2-1-0/api-ms-win-
+# | 	core-heap-l2-1-0.spec, dlls/api-ms-win-core-quirks-l1-1-0/Makefile.in, dlls/api-ms-win-core-quirks-l1-1-0/api-ms-win-
+# | 	core-quirks-l1-1-0.spec, dlls/api-ms-win-core-shlwapi-obsolete-l1-2-0/Makefile.in, dlls/api-ms-win-core-shlwapi-
+# | 	obsolete-l1-2-0/api-ms-win-core-shlwapi-obsolete-l1-2-0.spec, dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/Makefile.in,
+# | 	dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/api-ms-win-rtcore-ntuser-draw-l1-1-0.spec, dlls/api-ms-win-rtcore-ntuser-
+# | 	window-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-window-l1-1-0/api-ms-win-rtcore-ntuser-window-l1-1-0.spec, dlls
+# | 	/api-ms-win-shcore-obsolete-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-obsolete-l1-1-0/api-ms-win-shcore-
+# | 	obsolete-l1-1-0.spec, dlls/api-ms-win-shcore-stream-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-stream-l1-1-0/api-ms-win-
+# | 	shcore-stream-l1-1-0.spec, dlls/api-ms-win-shcore-thread-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-thread-l1-1-0/api-
+# | 	ms-win-shcore-thread-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/Makefile.in, dlls/ext-ms-win-appmodel-
+# | 	usercontext-l1-1-0/ext-ms-win-appmodel-usercontext-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/main.c, dlls
+# | 	/ext-ms-win-kernel32-package-current-l1-1-0/Makefile.in, dlls/ext-ms-win-kernel32-package-current-l1-1-0/ext-ms-win-
+# | 	kernel32-package-current-l1-1-0.spec, dlls/ext-ms-win-ntuser-mouse-l1-1-0/Makefile.in, dlls/ext-ms-win-ntuser-
+# | 	mouse-l1-1-0/ext-ms-win-ntuser-mouse-l1-1-0.spec, dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/Makefile.in, dlls/ext-
+# | 	ms-win-rtcore-ntuser-syscolors-l1-1-0/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0.spec, dlls/ext-ms-win-rtcore-ntuser-
+# | 	sysparams-l1-1-0/Makefile.in, dlls/ext-ms-win-rtcore-ntuser-sysparams-l1-1-0/ext-ms-win-rtcore-ntuser-
+# | 	sysparams-l1-1-0.spec, dlls/ext-ms-win-uxtheme-themes-l1-1-0/Makefile.in, dlls/ext-ms-win-uxtheme-themes-l1-1-0/ext-ms-
+# | 	win-uxtheme-themes-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/Makefile.in, dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-
+# | 	xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/main.c, dlls/feclient/Makefile.in, dlls/feclient/feclient.spec,
+# | 	dlls/feclient/main.c, dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec, dlls/iertutil/main.c,
+# | 	dlls/kernelbase/Makefile.in, dlls/kernelbase/kernelbase.spec, dlls/kernelbase/misc.c, dlls/shcore/Makefile.in,
+# | 	dlls/shcore/main.c, dlls/shcore/shcore.spec, dlls/shlwapi/shlwapi.spec, dlls/uiautomationcore/Makefile.in,
+# | 	dlls/uiautomationcore/main.c, dlls/uiautomationcore/uiautomationcore.spec, include/Makefile.in,
+# | 	include/shellscalingapi.h, include/uiautomationcoreapi.h, tools/make_specfiles
 # |
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0001-kernelbase-Add-dll-and-add-stub-for-QuirkIsEnabled.patch
 	patch_apply api-ms-win-Stub_DLLs/0002-api-ms-win-core-quirks-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0003-api-ms-win-appmodel-runtime-l1-1-1-Add-new-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0004-api-ms-win-core-apiquery-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0005-api-ms-win-core-heap-l2-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0006-iertutil-Add-dll-and-add-stub-for-ordinal-811.patch
 	patch_apply api-ms-win-Stub_DLLs/0007-shcore-Add-dll.patch
@@ -2702,7 +2700,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		echo '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-quirks-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-appmodel-runtime-l1-1-1: Add new dll.", 1 },';
-		echo '+    { "Michael Müller", "api-ms-win-core-apiquery-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-heap-l2-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "iertutil: Add dll and add stub for ordinal 811.", 1 },';
 		echo '+    { "Sebastian Lackner", "shcore: Add dll.", 1 },';
@@ -4814,7 +4811,7 @@ fi
 # |   *	ntdll-EtwRegisterTraceGuids
 # |
 # | Modified files:
-# |   *	dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec
+# |   *	dlls/api-ms-win-core-apiquery-l1-1-0/api-ms-win-core-apiquery-l1-1-0.spec, dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec
 # |
 if test "$enable_ntdll_ApiSetQueryApiSetPresence" -eq 1; then
 	patch_apply ntdll-ApiSetQueryApiSetPresence/0001-ntdll-Add-stub-for-ApiSetQueryApiSetPresence.patch

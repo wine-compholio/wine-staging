@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "4931e6f92bc7e0c229a057ebf2e000f8f5aa1edd"
+	echo "1938d389b293930c5ac2f2970c6241e09517cf49"
 }
 
 # Show version information
@@ -152,7 +152,6 @@ patch_enable_all ()
 	enable_gdi32_MultiMonitor="$1"
 	enable_gdi32_Path_Metafile="$1"
 	enable_gdi32_Symbol_Truetype_Font="$1"
-	enable_gdiplus_GdipCreateMetafileFromStream="$1"
 	enable_gdiplus_Grayscale_PNG="$1"
 	enable_hal_KeQueryPerformanceCounter="$1"
 	enable_hid_HidP_TranslateUsagesToI8042ScanCodes="$1"
@@ -636,9 +635,6 @@ patch_enable ()
 			;;
 		gdi32-Symbol_Truetype_Font)
 			enable_gdi32_Symbol_Truetype_Font="$2"
-			;;
-		gdiplus-GdipCreateMetafileFromStream)
-			enable_gdiplus_GdipCreateMetafileFromStream="$2"
 			;;
 		gdiplus-Grayscale_PNG)
 			enable_gdiplus_Grayscale_PNG="$2"
@@ -3867,22 +3863,6 @@ if test "$enable_gdi32_Symbol_Truetype_Font" -eq 1; then
 	patch_apply gdi32-Symbol_Truetype_Font/0001-gdi32-Improve-detection-of-symbol-charset-for-old-tr.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "gdi32: Improve detection of symbol charset for old truetype fonts.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset gdiplus-GdipCreateMetafileFromStream
-# |
-# | Modified files:
-# |   *	dlls/gdiplus/gdiplus.spec, dlls/gdiplus/metafile.c
-# |
-if test "$enable_gdiplus_GdipCreateMetafileFromStream" -eq 1; then
-	patch_apply gdiplus-GdipCreateMetafileFromStream/0003-gdiplus-Implement-GdipGetMetafileHeaderFromWmf.patch
-	patch_apply gdiplus-GdipCreateMetafileFromStream/0004-gdiplus-Implement-GdipGetMetafileHeaderFromStream.patch
-	patch_apply gdiplus-GdipCreateMetafileFromStream/0005-gdiplus-Implement-GdipGetMetafileHeaderFromFile.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipGetMetafileHeaderFromWmf.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipGetMetafileHeaderFromStream.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipGetMetafileHeaderFromFile.", 1 },';
 	) >> "$patchlist"
 fi
 

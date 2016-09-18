@@ -291,6 +291,7 @@ patch_enable_all ()
 	enable_server_Signal_Thread="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
+	enable_server_Win32_Prefix="$1"
 	enable_setupapi_DelReg="$1"
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_Display_Device="$1"
@@ -1052,6 +1053,9 @@ patch_enable ()
 			;;
 		server-Timestamp_Compat)
 			enable_server_Timestamp_Compat="$2"
+			;;
+		server-Win32_Prefix)
+			enable_server_Win32_Prefix="$2"
 			;;
 		setupapi-DelReg)
 			enable_setupapi_DelReg="$2"
@@ -6167,6 +6171,21 @@ if test "$enable_server_Timestamp_Compat" -eq 1; then
 	patch_apply server-Timestamp_Compat/0001-server-Compatibility-with-Wine-Staging-format-for-hi.patch
 	(
 		echo '+    { "Michael Müller", "server: Compatibility with Wine Staging format for high precision registry timestamps.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Win32_Prefix
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#29661] Allow to create win23 prefix when directory already exists
+# |
+# | Modified files:
+# |   *	dlls/ntdll/server.c, server/registry.c
+# |
+if test "$enable_server_Win32_Prefix" -eq 1; then
+	patch_apply server-Win32_Prefix/0001-server-Allow-to-create-win23-prefix-when-directory-a.patch
+	(
+		echo '+    { "Sebastian Lackner", "server: Allow to create win23 prefix when directory already exists.", 1 },';
 	) >> "$patchlist"
 fi
 

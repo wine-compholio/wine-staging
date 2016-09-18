@@ -1,0 +1,61 @@
+From 11444a1efc32c983c49e40112d9a71042fd92f36 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 18 Sep 2016 19:48:14 +0200
+Subject: server: Allow to create win23 prefix when directory already exists.
+
+---
+ dlls/ntdll/server.c | 11 -----------
+ server/registry.c   |  8 +++++++-
+ 2 files changed, 7 insertions(+), 12 deletions(-)
+
+diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
+index 356d631..25c6473 100644
+--- a/dlls/ntdll/server.c
++++ b/dlls/ntdll/server.c
+@@ -1139,17 +1139,6 @@ static void setup_config_dir(void)
+         mkdir( config_dir, 0777 );
+         if (chdir( config_dir ) == -1) fatal_perror( "chdir to %s\n", config_dir );
+ 
+-        if ((p = getenv( "WINEARCH" )) && !strcmp( p, "win32" ))
+-        {
+-            /* force creation of a 32-bit prefix */
+-            int fd = open( "system.reg", O_WRONLY | O_CREAT | O_EXCL, 0666 );
+-            if (fd != -1)
+-            {
+-                static const char regfile[] = "WINE REGISTRY Version 2\n\n#arch=win32\n";
+-                write( fd, regfile, sizeof(regfile) - 1 );
+-                close( fd );
+-            }
+-        }
+         MESSAGE( "wine: created the configuration directory '%s'\n", config_dir );
+     }
+ 
+diff --git a/server/registry.c b/server/registry.c
+index 97b16ed..0731b22 100644
+--- a/server/registry.c
++++ b/server/registry.c
+@@ -1805,6 +1805,7 @@ void init_registry(void)
+     WCHAR *current_user_path;
+     struct unicode_str current_user_str;
+     struct key *key, *hklm, *hkcu;
++    char *p;
+ 
+     /* switch to the config dir */
+ 
+@@ -1821,7 +1822,12 @@ void init_registry(void)
+         fatal_error( "could not create Machine registry key\n" );
+ 
+     if (!load_init_registry_from_file( "system.reg", hklm ))
+-        prefix_type = sizeof(void *) > sizeof(int) ? PREFIX_64BIT : PREFIX_32BIT;
++    {
++        if ((p = getenv( "WINEARCH" )) && !strcmp( p, "win32" ))
++            prefix_type = PREFIX_32BIT;
++        else
++            prefix_type = sizeof(void *) > sizeof(int) ? PREFIX_64BIT : PREFIX_32BIT;
++    }
+     else if (prefix_type == PREFIX_UNKNOWN)
+         prefix_type = PREFIX_32BIT;
+ 
+-- 
+2.9.0
+

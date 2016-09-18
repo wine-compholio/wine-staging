@@ -297,6 +297,7 @@ patch_enable_all ()
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_Display_Device="$1"
 	enable_setupapi_HSPFILEQ_Check_Type="$1"
+	enable_setupapi_SP_COPY_IN_USE_NEEDS_REBOOT="$1"
 	enable_setupapi_SetupDiGetDeviceInterfaceDetail="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
 	enable_sfc_SfcGetNextProtectedFile="$1"
@@ -1072,6 +1073,9 @@ patch_enable ()
 			;;
 		setupapi-HSPFILEQ_Check_Type)
 			enable_setupapi_HSPFILEQ_Check_Type="$2"
+			;;
+		setupapi-SP_COPY_IN_USE_NEEDS_REBOOT)
+			enable_setupapi_SP_COPY_IN_USE_NEEDS_REBOOT="$2"
 			;;
 		setupapi-SetupDiGetDeviceInterfaceDetail)
 			enable_setupapi_SetupDiGetDeviceInterfaceDetail="$2"
@@ -6276,6 +6280,21 @@ if test "$enable_setupapi_HSPFILEQ_Check_Type" -eq 1; then
 	patch_apply setupapi-HSPFILEQ_Check_Type/0001-setupapi-Check-handle-type-for-HSPFILEQ-handles.patch
 	(
 		echo '+    { "Michael Müller", "setupapi: Check handle type for HSPFILEQ handles.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset setupapi-SP_COPY_IN_USE_NEEDS_REBOOT
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36059] Implement support for SP_COPY_IN_USE_NEEDS_REBOOT in do_file_copyW
+# |
+# | Modified files:
+# |   *	dlls/setupapi/queue.c
+# |
+if test "$enable_setupapi_SP_COPY_IN_USE_NEEDS_REBOOT" -eq 1; then
+	patch_apply setupapi-SP_COPY_IN_USE_NEEDS_REBOOT/0001-setupapi-Implement-SP_COPY_IN_USE_NEEDS_REBOOT.patch
+	(
+		echo '+    { "Michael Müller", "setupapi: Implement SP_COPY_IN_USE_NEEDS_REBOOT.", 1 },';
 	) >> "$patchlist"
 fi
 

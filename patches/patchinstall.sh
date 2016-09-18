@@ -231,6 +231,7 @@ patch_enable_all ()
 	enable_ntdll_RtlIpStringToAddress_Stubs="$1"
 	enable_ntdll_RtlIpStringToAddress_Tests="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
+	enable_ntdll_RtlSetCurrentDirectory_U="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
 	enable_ntdll_Stack_Guard_Page="$1"
 	enable_ntdll_Stack_Overflow="$1"
@@ -871,6 +872,9 @@ patch_enable ()
 			;;
 		ntdll-RtlQueryPackageIdentity)
 			enable_ntdll_RtlQueryPackageIdentity="$2"
+			;;
+		ntdll-RtlSetCurrentDirectory_U)
+			enable_ntdll_RtlSetCurrentDirectory_U="$2"
 			;;
 		ntdll-Serial_Port_Detection)
 			enable_ntdll_Serial_Port_Detection="$2"
@@ -5189,6 +5193,21 @@ if test "$enable_ntdll_RtlIpStringToAddress_Tests" -eq 1; then
 		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddressEx.", 6 },';
 		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv4StringToAddressEx (try 5, resend).", 1 },';
 		echo '+    { "Mark Jansen", "ntdll/tests: Add tests for RtlIpv6AddressToString and RtlIpv6AddressToStringEx.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-RtlSetCurrentDirectory_U
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#27671] Open current working directory with FILE_TRAVERSE access
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/directory.c, dlls/ntdll/path.c
+# |
+if test "$enable_ntdll_RtlSetCurrentDirectory_U" -eq 1; then
+	patch_apply ntdll-RtlSetCurrentDirectory_U/0001-ntdll-Open-current-working-directory-with-FILE_TRAVE.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Open current working directory with FILE_TRAVERSE access.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -162,6 +162,7 @@ patch_enable_all ()
 	enable_imagehlp_Cleanup="$1"
 	enable_imagehlp_ImageLoad="$1"
 	enable_imm32_IMMDisableLegacyIME="$1"
+	enable_inseng_Implementation="$1"
 	enable_iphlpapi_System_Ping="$1"
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_COMSPEC="$1"
@@ -666,6 +667,9 @@ patch_enable ()
 			;;
 		imm32-IMMDisableLegacyIME)
 			enable_imm32_IMMDisableLegacyIME="$2"
+			;;
+		inseng-Implementation)
+			enable_inseng_Implementation="$2"
 			;;
 		iphlpapi-System_Ping)
 			enable_iphlpapi_System_Ping="$2"
@@ -4015,6 +4019,22 @@ if test "$enable_imm32_IMMDisableLegacyIME" -eq 1; then
 	patch_apply imm32-IMMDisableLegacyIME/0001-imm32-Add-stub-for-ImmDisableLegacyIME.patch
 	(
 		echo '+    { "Michael Müller", "imm32: Add stub for ImmDisableLegacyIME.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset inseng-Implementation
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39456] Implement CIF reader and download functionality in inseng.dll
+# |
+# | Modified files:
+# |   *	dlls/inseng/Makefile.in, dlls/inseng/icif.c, dlls/inseng/inf.c, dlls/inseng/inseng.spec, dlls/inseng/inseng_main.c,
+# | 	dlls/inseng/inseng_private.h, include/inseng.idl
+# |
+if test "$enable_inseng_Implementation" -eq 1; then
+	patch_apply inseng-Implementation/0001-inseng-Implement-CIF-reader-and-download-functions.patch
+	(
+		echo '+    { "Michael Müller", "inseng: Implement CIF reader and download functions.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -374,6 +374,7 @@ patch_enable_all ()
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_QUERY_Stubs="$1"
+	enable_wined3d_Revert_Texture_Upload="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_wined3d_check_format_support="$1"
@@ -1304,6 +1305,9 @@ patch_enable ()
 			;;
 		wined3d-QUERY_Stubs)
 			enable_wined3d_QUERY_Stubs="$2"
+			;;
+		wined3d-Revert_Texture_Upload)
+			enable_wined3d_Revert_Texture_Upload="$2"
 			;;
 		wined3d-Silence_FIXMEs)
 			enable_wined3d_Silence_FIXMEs="$2"
@@ -7492,6 +7496,18 @@ if test "$enable_wined3d_Limit_Vram" -eq 1; then
 	patch_apply wined3d-Limit_Vram/0001-wined3d-Limit-the-vram-memory-to-LONG_MAX-only-on-32.patch
 	(
 		echo '+    { "Michael Müller", "wined3d: Limit the vram memory to LONG_MAX only on 32 bit.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Revert_Texture_Upload
+# |
+# | Modified files:
+# |   *	dlls/wined3d/texture.c
+# |
+if test "$enable_wined3d_Revert_Texture_Upload" -eq 1; then
+	patch_apply wined3d-Revert_Texture_Upload/0001-Revert-wined3d-Implement-the-initial-texture-data-up.patch
+	(
+		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Implement the initial texture data upload on top of wined3d_device_update_sub_resource().\".", 1 },';
 	) >> "$patchlist"
 fi
 

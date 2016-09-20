@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5a9f7ef06df15e26acf46b0210dd7697356da7ac"
+	echo "e6e8ed47e6d6d245e4bbda13691eb714cf95a675"
 }
 
 # Show version information
@@ -7608,7 +7608,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Implement DISCARD texture maps with PBOs.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Implement DISCARD resource maps with heap memory.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Unset some objects in state_init_default.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t request the frontbuffer to create dummy textures.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Use double-buffered buffers for multithreaded CS.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t synchronize NOOVERWRITE buffer maps.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Separate buffer map write and draw read memory pointers.", 1 },';
@@ -7626,12 +7625,10 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Stefan Dösinger", "wined3d: Unload resources through the CS in device_reset.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t glFinish after a depth buffer blit.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Use surface_blt_ugly in swapchain_gl_present.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Invoke surface_unload through the CS in wined3d_surface_update_desc.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Use an event to block the worker thread when it is idle.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Set map_heap_memory = NULL when allocating a PBO.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Wait only for the buffer to be idle.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Put GL_APPLE_flush_buffer_range syncing back in place.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Wait for the resource to be idle when destroying user memory surfaces.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t sync on redundant discard calls.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t discard new buffers.", 1 },';
 		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t try to sync VBOs manually on OSX with CSMT.", 1 },';

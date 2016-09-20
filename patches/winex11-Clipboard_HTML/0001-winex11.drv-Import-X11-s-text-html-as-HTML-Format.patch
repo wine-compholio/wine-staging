@@ -1,4 +1,4 @@
-From 74bd99f226b3bb69b58e7b8a9d54d10e400b0533 Mon Sep 17 00:00:00 2001
+From 70d43790faf45a7ba68101bc770f89fed707a112 Mon Sep 17 00:00:00 2001
 From: Damjan Jovanovic <damjan.jov@gmail.com>
 Date: Fri, 8 Aug 2014 20:05:54 +0200
 Subject: winex11.drv: Import X11's "text/html" as "HTML Format". (try 3)
@@ -11,22 +11,22 @@ Changes by Sebastian Lackner <sebastian@fds-team.de>:
 * Fix incorrect detection of startOfMarkup
 * Some small formatting fixes
 ---
- dlls/winex11.drv/clipboard.c | 203 ++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 202 insertions(+), 1 deletion(-)
+ dlls/winex11.drv/clipboard.c | 202 ++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 201 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/winex11.drv/clipboard.c b/dlls/winex11.drv/clipboard.c
-index 190935c..b750e2e 100644
+index f2062f0..0caf5b5 100644
 --- a/dlls/winex11.drv/clipboard.c
 +++ b/dlls/winex11.drv/clipboard.c
-@@ -134,6 +134,7 @@ static HANDLE import_image_bmp(Display *d, Window w, Atom prop);
- static HANDLE import_string(Display *d, Window w, Atom prop);
- static HANDLE import_utf8_string(Display *d, Window w, Atom prop);
- static HANDLE import_compound_text(Display *d, Window w, Atom prop);
-+static HANDLE import_text_html(Display *display, Window w, Atom prop);
- static HANDLE import_text_uri_list(Display *display, Window w, Atom prop);
+@@ -133,6 +133,7 @@ static HANDLE import_image_bmp( Atom type, const void *data, size_t size );
+ static HANDLE import_string( Atom type, const void *data, size_t size );
+ static HANDLE import_utf8_string( Atom type, const void *data, size_t size );
+ static HANDLE import_compound_text( Atom type, const void *data, size_t size );
++static HANDLE import_text_html( Atom type, const void *data, size_t size );
+ static HANDLE import_text_uri_list( Atom type, const void *data, size_t size );
  
- static HANDLE export_data(Display *display, Window requestor, Atom aTarget,
-@@ -210,7 +211,7 @@ static const struct
+ static BOOL export_data( Display *display, Window win, Atom prop, Atom target, HANDLE handle );
+@@ -203,7 +204,7 @@ static const struct
      { JFIFW, 0,              XATOM_image_jpeg,          import_data,          export_data },
      { PNGW, 0,               XATOM_image_png,           import_data,          export_data },
      { HTMLFormatW, 0,        XATOM_HTML_Format,         import_data,          export_data },
@@ -35,24 +35,24 @@ index 190935c..b750e2e 100644
  };
  
  static struct list format_list = LIST_INIT( format_list );
-@@ -1172,6 +1173,206 @@ static HANDLE import_enhmetafile(Display *display, Window w, Atom prop)
+@@ -1132,6 +1133,205 @@ static HANDLE import_enhmetafile( Atom type, const void *data, size_t size )
  }
  
  
-+static char* read_and_standardize_text_html(Display *display, Window w, Atom prop)
++static char* read_and_standardize_text_html( const void *data, size_t size )
 +{
 +    BOOL needHtmlTag = FALSE, needBodyTag = FALSE;
-+    char *textHtml, *dst, *fullHtml = NULL;
++    char *dst, *fullHtml, *textHtmlUtf8 = NULL;
 +    unsigned long textHtmlLen;
++    const char *textHtml;
 +    int startOfMarkup = 0;
 +
-+    if (!X11DRV_CLIPBOARD_ReadProperty(display, w, prop, (LPBYTE*)&textHtml, &textHtmlLen))
-+        return 0;
++    textHtml = data;
++    textHtmlLen = size;
 +
 +    /* Firefox uses UTF-16LE with byte order mark. Convert to UTF-8 without the BOM. */
 +    if (textHtmlLen >= 2 && ((BYTE*)textHtml)[0] == 0xff && ((BYTE*)textHtml)[1] == 0xfe)
 +    {
-+        char *textHtmlUtf8;
 +        INT size = WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)&textHtml[2], (textHtmlLen-2)/sizeof(WCHAR),
 +                                       NULL, 0, NULL, NULL);
 +        textHtmlUtf8 = HeapAlloc(GetProcessHeap(), 0, size);
@@ -64,7 +64,6 @@ index 190935c..b750e2e 100644
 +
 +        WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)&textHtml[2], (textHtmlLen-2)/sizeof(WCHAR),
 +                            textHtmlUtf8, size, NULL, NULL);
-+        HeapFree(GetProcessHeap(), 0, textHtml);
 +
 +        textHtml = textHtmlUtf8;
 +        textHtmlLen = size;
@@ -145,7 +144,7 @@ index 190935c..b750e2e 100644
 +        ERR("out of memory\n");
 +
 +end:
-+    HeapFree(GetProcessHeap(), 0, textHtml);
++    HeapFree(GetProcessHeap(), 0, textHtmlUtf8);
 +    return fullHtml;
 +}
 +
@@ -155,7 +154,7 @@ index 190935c..b750e2e 100644
 + *
 + *  Import text/html into "HTML Format".
 + */
-+static HANDLE import_text_html(Display *display, Window w, Atom prop)
++static HANDLE import_text_html( Atom type, const void *data, size_t size )
 +{
 +    static const char startFragment[] = "<!--StartFragment -->";
 +    static const char endFragment[]   = "<!--EndFragment -->";
@@ -164,7 +163,7 @@ index 190935c..b750e2e 100644
 +    char *textHtml = NULL;
 +    char description[256];
 +
-+    textHtml = read_and_standardize_text_html(display, w, prop);
++    textHtml = read_and_standardize_text_html(data, size);
 +    if (textHtml == NULL)
 +        goto end;
 +

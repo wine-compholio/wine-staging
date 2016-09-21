@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e6e8ed47e6d6d245e4bbda13691eb714cf95a675"
+	echo "6fd36314d051ceff8dbb0f2d442f57983e0bcd65"
 }
 
 # Show version information
@@ -136,7 +136,6 @@ patch_enable_all ()
 	enable_ddraw_d3d_execute_buffer="$1"
 	enable_dinput_Initialize="$1"
 	enable_dmusic_SynthPort_IKsControl="$1"
-	enable_dsound_DSCAPS_CERTIFIED="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
@@ -154,7 +153,6 @@ patch_enable_all ()
 	enable_gdi32_Symbol_Truetype_Font="$1"
 	enable_gdiplus_Grayscale_PNG="$1"
 	enable_hal_KeQueryPerformanceCounter="$1"
-	enable_hid_HidP_TranslateUsagesToI8042ScanCodes="$1"
 	enable_hnetcfg_INetFwAuthorizedApplication="$1"
 	enable_ieframe_IViewObject_Draw="$1"
 	enable_iexplore_Revert_ProductVersion="$1"
@@ -592,9 +590,6 @@ patch_enable ()
 		dmusic-SynthPort_IKsControl)
 			enable_dmusic_SynthPort_IKsControl="$2"
 			;;
-		dsound-DSCAPS_CERTIFIED)
-			enable_dsound_DSCAPS_CERTIFIED="$2"
-			;;
 		dsound-EAX)
 			enable_dsound_EAX="$2"
 			;;
@@ -645,9 +640,6 @@ patch_enable ()
 			;;
 		hal-KeQueryPerformanceCounter)
 			enable_hal_KeQueryPerformanceCounter="$2"
-			;;
-		hid-HidP_TranslateUsagesToI8042ScanCodes)
-			enable_hid_HidP_TranslateUsagesToI8042ScanCodes="$2"
 			;;
 		hnetcfg-INetFwAuthorizedApplication)
 			enable_hnetcfg_INetFwAuthorizedApplication="$2"
@@ -3538,18 +3530,6 @@ if test "$enable_dmusic_SynthPort_IKsControl" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dsound-DSCAPS_CERTIFIED
-# |
-# | Modified files:
-# |   *	dlls/dsound/dsound.c, dlls/dsound/tests/dsound.c
-# |
-if test "$enable_dsound_DSCAPS_CERTIFIED" -eq 1; then
-	patch_apply dsound-DSCAPS_CERTIFIED/0001-dsound-Pretend-that-our-driver-is-certified.patch
-	(
-		echo '+    { "Michael Müller", "dsound: Pretend that our driver is certified.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dsound-Fast_Mixer
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3910,21 +3890,6 @@ if test "$enable_hal_KeQueryPerformanceCounter" -eq 1; then
 	patch_apply hal-KeQueryPerformanceCounter/0001-hal-Implement-KeQueryPerformanceCounter.patch
 	(
 		echo '+    { "Michael Müller", "hal: Implement KeQueryPerformanceCounter.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset hid-HidP_TranslateUsagesToI8042ScanCodes
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39447] Implement stub for hid.HidP_TranslateUsagesToI8042ScanCodes
-# |
-# | Modified files:
-# |   *	dlls/hid/hid.spec, dlls/hid/hidp.c, include/ddk/hidpi.h
-# |
-if test "$enable_hid_HidP_TranslateUsagesToI8042ScanCodes" -eq 1; then
-	patch_apply hid-HidP_TranslateUsagesToI8042ScanCodes/0001-hid-Stub-HidP_TranslateUsagesToI8042ScanCodes.patch
-	(
-		echo '+    { "Aric Stewart", "hid: Stub HidP_TranslateUsagesToI8042ScanCodes.", 1 },';
 	) >> "$patchlist"
 fi
 

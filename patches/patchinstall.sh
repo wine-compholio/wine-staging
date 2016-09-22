@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "6fd36314d051ceff8dbb0f2d442f57983e0bcd65"
+	echo "1513c706341a6c04ddfa8b1998a346d343fc4983"
 }
 
 # Show version information
@@ -230,7 +230,6 @@ patch_enable_all ()
 	enable_ntdll_RtlIpStringToAddress_Stubs="$1"
 	enable_ntdll_RtlIpStringToAddress_Tests="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
-	enable_ntdll_RtlSetCurrentDirectory_U="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
 	enable_ntdll_Stack_Guard_Page="$1"
 	enable_ntdll_Stack_Overflow="$1"
@@ -290,7 +289,6 @@ patch_enable_all ()
 	enable_server_Signal_Thread="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
-	enable_server_Win32_Prefix="$1"
 	enable_setupapi_DelReg="$1"
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_Display_Device="$1"
@@ -872,9 +870,6 @@ patch_enable ()
 		ntdll-RtlQueryPackageIdentity)
 			enable_ntdll_RtlQueryPackageIdentity="$2"
 			;;
-		ntdll-RtlSetCurrentDirectory_U)
-			enable_ntdll_RtlSetCurrentDirectory_U="$2"
-			;;
 		ntdll-Serial_Port_Detection)
 			enable_ntdll_Serial_Port_Detection="$2"
 			;;
@@ -1051,9 +1046,6 @@ patch_enable ()
 			;;
 		server-Timestamp_Compat)
 			enable_server_Timestamp_Compat="$2"
-			;;
-		server-Win32_Prefix)
-			enable_server_Win32_Prefix="$2"
 			;;
 		setupapi-DelReg)
 			enable_setupapi_DelReg="$2"
@@ -5193,21 +5185,6 @@ if test "$enable_ntdll_RtlIpStringToAddress_Tests" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-RtlSetCurrentDirectory_U
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#27671] Open current working directory with FILE_TRAVERSE access
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/directory.c, dlls/ntdll/path.c
-# |
-if test "$enable_ntdll_RtlSetCurrentDirectory_U" -eq 1; then
-	patch_apply ntdll-RtlSetCurrentDirectory_U/0001-ntdll-Open-current-working-directory-with-FILE_TRAVE.patch
-	(
-		echo '+    { "Michael Müller", "ntdll: Open current working directory with FILE_TRAVERSE access.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Serial_Port_Detection
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6164,21 +6141,6 @@ if test "$enable_server_Timestamp_Compat" -eq 1; then
 	patch_apply server-Timestamp_Compat/0001-server-Compatibility-with-Wine-Staging-format-for-hi.patch
 	(
 		echo '+    { "Michael Müller", "server: Compatibility with Wine Staging format for high precision registry timestamps.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Win32_Prefix
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#29661] Allow to create win23 prefix when directory already exists
-# |
-# | Modified files:
-# |   *	dlls/ntdll/server.c, server/registry.c
-# |
-if test "$enable_server_Win32_Prefix" -eq 1; then
-	patch_apply server-Win32_Prefix/0001-server-Allow-to-create-win23-prefix-when-directory-a.patch
-	(
-		echo '+    { "Sebastian Lackner", "server: Allow to create win23 prefix when directory already exists.", 1 },';
 	) >> "$patchlist"
 fi
 

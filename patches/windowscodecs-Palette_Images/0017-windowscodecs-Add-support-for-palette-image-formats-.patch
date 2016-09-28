@@ -1,0 +1,236 @@
+From 3f53a82d7bb5e2cd8ea740094675a009df702fbb Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Fri, 23 Sep 2016 20:17:47 +0800
+Subject: windowscodecs: Add support for palette image formats to BMP encoder.
+
+---
+ dlls/windowscodecs/bmpencode.c       | 44 ++++++++++++++++++++++++++++--------
+ dlls/windowscodecs/main.c            |  8 ++++++-
+ dlls/windowscodecs/tests/converter.c | 18 +++++++++++----
+ 3 files changed, 55 insertions(+), 15 deletions(-)
+
+diff --git a/dlls/windowscodecs/bmpencode.c b/dlls/windowscodecs/bmpencode.c
+index af082ae..d4ec651 100644
+--- a/dlls/windowscodecs/bmpencode.c
++++ b/dlls/windowscodecs/bmpencode.c
+@@ -1,5 +1,6 @@
+ /*
+  * Copyright 2009 Vincent Povirk for CodeWeavers
++ * Copyright 2016 Dmitry Timoshkov
+  *
+  * This library is free software; you can redistribute it and/or
+  * modify it under the terms of the GNU Lesser General Public
+@@ -37,6 +38,7 @@ WINE_DEFAULT_DEBUG_CHANNEL(wincodecs);
+ struct bmp_pixelformat {
+     const WICPixelFormatGUID *guid;
+     UINT bpp;
++    UINT colors; /* palette size */
+     DWORD compression;
+     DWORD redmask;
+     DWORD greenmask;
+@@ -45,13 +47,18 @@ struct bmp_pixelformat {
+ };
+ 
+ static const struct bmp_pixelformat formats[] = {
+-    {&GUID_WICPixelFormat24bppBGR, 24, BI_RGB},
+-    {&GUID_WICPixelFormat16bppBGR555, 16, BI_RGB},
+-    {&GUID_WICPixelFormat16bppBGR565, 16, BI_BITFIELDS, 0xf800, 0x7e0, 0x1f, 0},
+-    {&GUID_WICPixelFormat32bppBGR, 32, BI_RGB},
++    {&GUID_WICPixelFormat24bppBGR, 24, 0, BI_RGB},
++    {&GUID_WICPixelFormatBlackWhite, 1, 2, BI_RGB},
++    {&GUID_WICPixelFormat1bppIndexed, 1, 2, BI_RGB},
++    {&GUID_WICPixelFormat2bppIndexed, 2, 4, BI_RGB},
++    {&GUID_WICPixelFormat4bppIndexed, 4, 16, BI_RGB},
++    {&GUID_WICPixelFormat8bppIndexed, 8, 256, BI_RGB},
++    {&GUID_WICPixelFormat16bppBGR555, 16, 0, BI_RGB},
++    {&GUID_WICPixelFormat16bppBGR565, 16, 0, BI_BITFIELDS, 0xf800, 0x7e0, 0x1f, 0},
++    {&GUID_WICPixelFormat32bppBGR, 32, 0, BI_RGB},
+ #if 0
+     /* Windows doesn't seem to support this one. */
+-    {&GUID_WICPixelFormat32bppBGRA, 32, BI_BITFIELDS, 0xff0000, 0xff00, 0xff, 0xff000000},
++    {&GUID_WICPixelFormat32bppBGRA, 32, 0, BI_BITFIELDS, 0xff0000, 0xff00, 0xff, 0xff000000},
+ #endif
+     {NULL}
+ };
+@@ -179,11 +186,13 @@ static HRESULT WINAPI BmpFrameEncode_SetPixelFormat(IWICBitmapFrameEncode *iface
+ 
+     for (i=0; formats[i].guid; i++)
+     {
+-        if (memcmp(formats[i].guid, pPixelFormat, sizeof(GUID)) == 0)
++        if (IsEqualGUID(formats[i].guid, pPixelFormat))
+             break;
+     }
+ 
+     if (!formats[i].guid) i = 0;
++    else if (IsEqualGUID(pPixelFormat, &GUID_WICPixelFormatBlackWhite))
++        i = 2; /* GUID_WICPixelFormat1bppIndexed */
+ 
+     This->format = &formats[i];
+     memcpy(pPixelFormat, This->format->guid, sizeof(GUID));
+@@ -202,6 +211,7 @@ static HRESULT WINAPI BmpFrameEncode_SetPalette(IWICBitmapFrameEncode *iface,
+     IWICPalette *palette)
+ {
+     BmpFrameEncode *This = impl_from_IWICBitmapFrameEncode(iface);
++    HRESULT hr;
+ 
+     TRACE("(%p,%p)\n", iface, palette);
+ 
+@@ -210,7 +220,14 @@ static HRESULT WINAPI BmpFrameEncode_SetPalette(IWICBitmapFrameEncode *iface,
+     if (!This->initialized)
+         return WINCODEC_ERR_NOTINITIALIZED;
+ 
+-    return IWICPalette_GetColors(palette, 256, This->palette, &This->colors);
++    hr = IWICPalette_GetColors(palette, 256, This->palette, &This->colors);
++    if (hr == S_OK)
++    {
++        UINT i;
++        for (i = 0; i < This->colors; i++)
++            This->palette[i] |= 0xff000000; /* BMP palette has no alpha */
++    }
++    return hr;
+ }
+ 
+ static HRESULT WINAPI BmpFrameEncode_SetThumbnail(IWICBitmapFrameEncode *iface,
+@@ -316,8 +333,8 @@ static HRESULT WINAPI BmpFrameEncode_Commit(IWICBitmapFrameEncode *iface)
+     bih.bV5SizeImage = This->stride*This->height;
+     bih.bV5XPelsPerMeter = (This->xres+0.0127) / 0.0254;
+     bih.bV5YPelsPerMeter = (This->yres+0.0127) / 0.0254;
+-    bih.bV5ClrUsed = 0;
+-    bih.bV5ClrImportant = 0;
++    bih.bV5ClrUsed = (This->format->bpp <= 8) ? This->colors : 0;
++    bih.bV5ClrImportant = bih.bV5ClrUsed;
+ 
+     if (This->format->compression == BI_BITFIELDS)
+     {
+@@ -334,6 +351,7 @@ static HRESULT WINAPI BmpFrameEncode_Commit(IWICBitmapFrameEncode *iface)
+ 
+     bfh.bfSize = sizeof(BITMAPFILEHEADER) + info_size + bih.bV5SizeImage;
+     bfh.bfOffBits = sizeof(BITMAPFILEHEADER) + info_size;
++    bfh.bfOffBits += bih.bV5ClrUsed * sizeof(WICColor);
+ 
+     pos.QuadPart = 0;
+     hr = IStream_Seek(This->stream, pos, STREAM_SEEK_SET, NULL);
+@@ -347,6 +365,14 @@ static HRESULT WINAPI BmpFrameEncode_Commit(IWICBitmapFrameEncode *iface)
+     if (FAILED(hr)) return hr;
+     if (byteswritten != info_size) return E_FAIL;
+ 
++    /* write the palette */
++    if (This->format->colors)
++    {
++        hr = IStream_Write(This->stream, This->palette, This->colors * sizeof(WICColor), &byteswritten);
++        if (FAILED(hr)) return hr;
++        if (byteswritten != This->colors * sizeof(WICColor)) return E_FAIL;
++    }
++
+     /* write the image bits as a bottom-top array */
+     bits = This->bits + bih.bV5SizeImage;
+     for (i = 0; i < This->height; i++)
+diff --git a/dlls/windowscodecs/main.c b/dlls/windowscodecs/main.c
+index fdd26dd..7931b3d 100644
+--- a/dlls/windowscodecs/main.c
++++ b/dlls/windowscodecs/main.c
+@@ -117,6 +117,12 @@ HRESULT copy_pixels(UINT bpp, const BYTE *srcbuffer,
+     }
+ }
+ 
++static BOOL is_1bpp_format(const WICPixelFormatGUID *format)
++{
++    return IsEqualGUID(format, &GUID_WICPixelFormatBlackWhite) ||
++           IsEqualGUID(format, &GUID_WICPixelFormat1bppIndexed);
++}
++
+ HRESULT configure_write_source(IWICBitmapFrameEncode *iface,
+     IWICBitmapSource *source, const WICRect *prc,
+     const WICPixelFormatGUID *format,
+@@ -141,7 +147,7 @@ HRESULT configure_write_source(IWICBitmapFrameEncode *iface,
+         format = &dst_format;
+     }
+ 
+-    if (!IsEqualGUID(&src_format, format))
++    if (!IsEqualGUID(&src_format, format) && !(is_1bpp_format(&src_format) && is_1bpp_format(format)))
+     {
+         /* FIXME: should use WICConvertBitmapSource to convert */
+         FIXME("format %s unsupported\n", debugstr_guid(&src_format));
+diff --git a/dlls/windowscodecs/tests/converter.c b/dlls/windowscodecs/tests/converter.c
+index 865029f..901fbd8 100644
+--- a/dlls/windowscodecs/tests/converter.c
++++ b/dlls/windowscodecs/tests/converter.c
+@@ -768,6 +768,8 @@ static void check_bmp_format(IStream *stream, const WICPixelFormatGUID *format)
+ 
+     if (IsEqualGUID(format, &GUID_WICPixelFormat1bppIndexed))
+     {
++        ok(bfh.bfOffBits == 0x0436, "wrong bfOffBits %02x\n", bfh.bfOffBits);
++
+         ok(bih.bV5Width == 32, "wrong width %u\n", bih.bV5Width);
+         ok(bih.bV5Height == 2, "wrong height %u\n", bih.bV5Height);
+ 
+@@ -778,6 +780,8 @@ static void check_bmp_format(IStream *stream, const WICPixelFormatGUID *format)
+     }
+     else if (IsEqualGUID(format, &GUID_WICPixelFormat2bppIndexed))
+     {
++        ok(bfh.bfOffBits == 0x0436, "wrong bfOffBits %02x\n", bfh.bfOffBits);
++
+         ok(bih.bV5Width == 16, "wrong width %u\n", bih.bV5Width);
+         ok(bih.bV5Height == 2, "wrong height %u\n", bih.bV5Height);
+ 
+@@ -788,6 +792,8 @@ static void check_bmp_format(IStream *stream, const WICPixelFormatGUID *format)
+     }
+     else if (IsEqualGUID(format, &GUID_WICPixelFormat4bppIndexed))
+     {
++        ok(bfh.bfOffBits == 0x0436, "wrong bfOffBits %02x\n", bfh.bfOffBits);
++
+         ok(bih.bV5Width == 8, "wrong width %u\n", bih.bV5Width);
+         ok(bih.bV5Height == 2, "wrong height %u\n", bih.bV5Height);
+ 
+@@ -798,6 +804,8 @@ static void check_bmp_format(IStream *stream, const WICPixelFormatGUID *format)
+     }
+     else if (IsEqualGUID(format, &GUID_WICPixelFormat8bppIndexed))
+     {
++        ok(bfh.bfOffBits == 0x0436, "wrong bfOffBits %02x\n", bfh.bfOffBits);
++
+         ok(bih.bV5Width == 4, "wrong width %u\n", bih.bV5Width);
+         ok(bih.bV5Height == 2, "wrong height %u\n", bih.bV5Height);
+ 
+@@ -808,6 +816,8 @@ static void check_bmp_format(IStream *stream, const WICPixelFormatGUID *format)
+     }
+     else if (IsEqualGUID(format, &GUID_WICPixelFormat32bppBGR))
+     {
++        ok(bfh.bfOffBits == 0x0036, "wrong bfOffBits %02x\n", bfh.bfOffBits);
++
+         ok(bih.bV5Width == 4, "wrong width %u\n", bih.bV5Width);
+         ok(bih.bV5Height == 2, "wrong height %u\n", bih.bV5Height);
+ 
+@@ -1044,7 +1054,8 @@ static void test_multi_encoder(const struct bitmap_data **srcs, const CLSID* cls
+                     hr = IWICBitmapFrameEncode_SetPixelFormat(frameencode, &pixelformat);
+                     ok(SUCCEEDED(hr), "SetPixelFormat failed, hr=%x\n", hr);
+                     ok(IsEqualGUID(&pixelformat, dsts[i]->format) ||
+-                       broken(IsEqualGUID(clsid_encoder, &CLSID_WICTiffEncoder) && srcs[i]->bpp == 2 && IsEqualGUID(&pixelformat, &GUID_WICPixelFormat4bppIndexed)),
++                       broken(IsEqualGUID(clsid_encoder, &CLSID_WICTiffEncoder) && srcs[i]->bpp == 2 && IsEqualGUID(&pixelformat, &GUID_WICPixelFormat4bppIndexed)) ||
++                       broken(IsEqualGUID(clsid_encoder, &CLSID_WICBmpEncoder) && srcs[i]->bpp == 2 && IsEqualGUID(&pixelformat, &GUID_WICPixelFormat4bppIndexed)),
+                        "SetPixelFormat changed the format to %s (%s)\n", wine_dbgstr_guid(&pixelformat), name);
+ 
+                     hr = IWICBitmapFrameEncode_SetSize(frameencode, srcs[i]->width, srcs[i]->height);
+@@ -1377,19 +1388,16 @@ START_TEST(converter)
+     test_encoder(&testdata_24bppBGR, &CLSID_WICPngEncoder,
+                  &testdata_24bppBGR, &CLSID_WICPngDecoder, "PNG encoder 24bppBGR");
+ 
+-if (!strcmp(winetest_platform, "windows")) /* FIXME: enable once implemented in Wine */
+-{
+     test_encoder(&testdata_BlackWhite, &CLSID_WICBmpEncoder,
+                  &testdata_1bppIndexed, &CLSID_WICBmpDecoder, "BMP encoder BlackWhite");
+     test_encoder(&testdata_1bppIndexed, &CLSID_WICBmpEncoder,
+                  &testdata_1bppIndexed, &CLSID_WICBmpDecoder, "BMP encoder 1bppIndexed");
+     test_encoder(&testdata_2bppIndexed, &CLSID_WICBmpEncoder,
+-                 &testdata_4bppIndexed, &CLSID_WICBmpDecoder, "BMP encoder 2bppIndexed");
++                 &testdata_2bppIndexed, &CLSID_WICBmpDecoder, "BMP encoder 2bppIndexed");
+     test_encoder(&testdata_4bppIndexed, &CLSID_WICBmpEncoder,
+                  &testdata_4bppIndexed, &CLSID_WICBmpDecoder, "BMP encoder 4bppIndexed");
+     test_encoder(&testdata_8bppIndexed, &CLSID_WICBmpEncoder,
+                  &testdata_8bppIndexed, &CLSID_WICBmpDecoder, "BMP encoder 8bppIndexed");
+-}
+     test_encoder(&testdata_32bppBGR, &CLSID_WICBmpEncoder,
+                  &testdata_32bppBGR, &CLSID_WICBmpDecoder, "BMP encoder 32bppBGR");
+ 
+-- 
+2.9.0
+

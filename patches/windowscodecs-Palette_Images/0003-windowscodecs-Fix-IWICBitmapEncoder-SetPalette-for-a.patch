@@ -1,0 +1,41 @@
+From 21789956f3eab8c48e1291437a9edef7ab4de638 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Tue, 20 Sep 2016 14:15:41 +0800
+Subject: windowscodecs: Fix IWICBitmapEncoder::SetPalette for a not
+ initialized case in PNG encoder.
+
+---
+ dlls/windowscodecs/pngformat.c | 16 +++++++++++++---
+ 1 file changed, 13 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/windowscodecs/pngformat.c b/dlls/windowscodecs/pngformat.c
+index 1fda2b7..fa54a23 100644
+--- a/dlls/windowscodecs/pngformat.c
++++ b/dlls/windowscodecs/pngformat.c
+@@ -1919,10 +1919,20 @@ static HRESULT WINAPI PngEncoder_SetColorContexts(IWICBitmapEncoder *iface,
+     return E_NOTIMPL;
+ }
+ 
+-static HRESULT WINAPI PngEncoder_SetPalette(IWICBitmapEncoder *iface, IWICPalette *pIPalette)
++static HRESULT WINAPI PngEncoder_SetPalette(IWICBitmapEncoder *iface, IWICPalette *palette)
+ {
+-    TRACE("(%p,%p)\n", iface, pIPalette);
+-    return WINCODEC_ERR_UNSUPPORTEDOPERATION;
++    PngEncoder *This = impl_from_IWICBitmapEncoder(iface);
++    HRESULT hr;
++
++    TRACE("(%p,%p)\n", iface, palette);
++
++    EnterCriticalSection(&This->lock);
++
++    hr = This->stream ? WINCODEC_ERR_UNSUPPORTEDOPERATION : WINCODEC_ERR_NOTINITIALIZED;
++
++    LeaveCriticalSection(&This->lock);
++
++    return hr;
+ }
+ 
+ static HRESULT WINAPI PngEncoder_SetThumbnail(IWICBitmapEncoder *iface, IWICBitmapSource *pIThumbnail)
+-- 
+2.9.0
+

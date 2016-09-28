@@ -1,0 +1,73 @@
+From abeeebfd3c9fc5ed2901ea10de915932c8812c66 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Fri, 23 Sep 2016 17:02:05 +0800
+Subject: windowscodecs: Write the image bits as a bottom-top array in BMP
+ encoder.
+
+This matches what Windows BMP encoder does.
+---
+ dlls/windowscodecs/bmpencode.c       | 17 ++++++++++++-----
+ dlls/windowscodecs/tests/converter.c |  2 +-
+ 2 files changed, 13 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/windowscodecs/bmpencode.c b/dlls/windowscodecs/bmpencode.c
+index 48a8e27..af082ae 100644
+--- a/dlls/windowscodecs/bmpencode.c
++++ b/dlls/windowscodecs/bmpencode.c
+@@ -292,10 +292,11 @@ static HRESULT WINAPI BmpFrameEncode_Commit(IWICBitmapFrameEncode *iface)
+     BmpFrameEncode *This = impl_from_IWICBitmapFrameEncode(iface);
+     BITMAPFILEHEADER bfh;
+     BITMAPV5HEADER bih;
+-    UINT info_size;
++    UINT info_size, i;
+     LARGE_INTEGER pos;
+     ULONG byteswritten;
+     HRESULT hr;
++    const BYTE *bits;
+ 
+     TRACE("(%p)\n", iface);
+ 
+@@ -308,7 +309,7 @@ static HRESULT WINAPI BmpFrameEncode_Commit(IWICBitmapFrameEncode *iface)
+ 
+     bih.bV5Size = info_size = sizeof(BITMAPINFOHEADER);
+     bih.bV5Width = This->width;
+-    bih.bV5Height = -This->height; /* top-down bitmap */
++    bih.bV5Height = This->height; /* bottom-top bitmap */
+     bih.bV5Planes = 1;
+     bih.bV5BitCount = This->format->bpp;
+     bih.bV5Compression = This->format->compression;
+@@ -346,9 +347,15 @@ static HRESULT WINAPI BmpFrameEncode_Commit(IWICBitmapFrameEncode *iface)
+     if (FAILED(hr)) return hr;
+     if (byteswritten != info_size) return E_FAIL;
+ 
+-    hr = IStream_Write(This->stream, This->bits, bih.bV5SizeImage, &byteswritten);
+-    if (FAILED(hr)) return hr;
+-    if (byteswritten != bih.bV5SizeImage) return E_FAIL;
++    /* write the image bits as a bottom-top array */
++    bits = This->bits + bih.bV5SizeImage;
++    for (i = 0; i < This->height; i++)
++    {
++        bits -= This->stride;
++        hr = IStream_Write(This->stream, bits, This->stride, &byteswritten);
++        if (FAILED(hr)) return hr;
++        if (byteswritten != This->stride) return E_FAIL;
++    }
+ 
+     This->committed = TRUE;
+ 
+diff --git a/dlls/windowscodecs/tests/converter.c b/dlls/windowscodecs/tests/converter.c
+index e7b9ba9..865029f 100644
+--- a/dlls/windowscodecs/tests/converter.c
++++ b/dlls/windowscodecs/tests/converter.c
+@@ -809,7 +809,7 @@ static void check_bmp_format(IStream *stream, const WICPixelFormatGUID *format)
+     else if (IsEqualGUID(format, &GUID_WICPixelFormat32bppBGR))
+     {
+         ok(bih.bV5Width == 4, "wrong width %u\n", bih.bV5Width);
+-        ok(bih.bV5Height == 2 || bih.bV5Height == -2 /* Wine */, "wrong height %u\n", bih.bV5Height);
++        ok(bih.bV5Height == 2, "wrong height %u\n", bih.bV5Height);
+ 
+         ok(bih.bV5Planes == 1, "wrong Planes %d\n", bih.bV5Planes);
+         ok(bih.bV5BitCount == 32, "wrong BitCount %d\n", bih.bV5BitCount);
+-- 
+2.9.0
+

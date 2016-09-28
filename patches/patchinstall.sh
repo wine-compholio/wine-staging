@@ -351,6 +351,7 @@ patch_enable_all ()
 	enable_windowscodecs_32bppGrayFloat="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
 	enable_windowscodecs_IWICPalette_InitializeFromBitmap="$1"
+	enable_windowscodecs_Palette_Images="$1"
 	enable_windowscodecs_WICCreateBitmapFromSection="$1"
 	enable_wine_inf_Directory_ContextMenuHandlers="$1"
 	enable_wine_inf_Dummy_CA_Certificate="$1"
@@ -1233,6 +1234,9 @@ patch_enable ()
 		windowscodecs-IWICPalette_InitializeFromBitmap)
 			enable_windowscodecs_IWICPalette_InitializeFromBitmap="$2"
 			;;
+		windowscodecs-Palette_Images)
+			enable_windowscodecs_Palette_Images="$2"
+			;;
 		windowscodecs-WICCreateBitmapFromSection)
 			enable_windowscodecs_WICCreateBitmapFromSection="$2"
 			;;
@@ -2034,6 +2038,13 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	enable_wined3d_DXTn=1
 	enable_wined3d_QUERY_Stubs=1
 	enable_wined3d_Silence_FIXMEs=1
+fi
+
+if test "$enable_windowscodecs_Palette_Images" -eq 1; then
+	if test "$enable_windowscodecs_32bppGrayFloat" -gt 1; then
+		abort "Patchset windowscodecs-32bppGrayFloat disabled, but windowscodecs-Palette_Images depends on that."
+	fi
+	enable_windowscodecs_32bppGrayFloat=1
 fi
 
 if test "$enable_windowscodecs_IWICPalette_InitializeFromBitmap" -eq 1; then
@@ -7176,20 +7187,66 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/gdiplus/gdiplus.spec, dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, dlls/windowscodecs/palette.c,
-# | 	dlls/windowscodecs/pngformat.c, dlls/windowscodecs/tests/palette.c, include/gdiplusflat.h
+# | 	dlls/windowscodecs/tests/palette.c, include/gdiplusflat.h
 # |
 if test "$enable_windowscodecs_IWICPalette_InitializeFromBitmap" -eq 1; then
 	patch_apply windowscodecs-IWICPalette_InitializeFromBitmap/0001-windowscodecs-tests-Add-some-tests-for-IWICPalette-I.patch
 	patch_apply windowscodecs-IWICPalette_InitializeFromBitmap/0002-windowscodecs-Implement-IWICPalette-InitializeFromBi.patch
 	patch_apply windowscodecs-IWICPalette_InitializeFromBitmap/0003-gdiplus-Implement-GdipInitializePalette.-v2.patch
 	patch_apply windowscodecs-IWICPalette_InitializeFromBitmap/0004-gdiplus-tests-Add-some-tests-for-GdipInitializePalet.patch
-	patch_apply windowscodecs-IWICPalette_InitializeFromBitmap/0005-windowscodecs-Return-S_OK-from-PngFrameEncode_SetPal.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add some tests for IWICPalette::InitializeFromBitmap.", 2 },';
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICPalette::InitializeFromBitmap.", 5 },';
 		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipInitializePalette.", 2 },';
 		echo '+    { "Dmitry Timoshkov", "gdiplus/tests: Add some tests for GdipInitializePalette.", 2 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Return S_OK from PngFrameEncode_SetPalette.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windowscodecs-Palette_Images
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	windowscodecs-32bppGrayFloat
+# |
+# | Modified files:
+# |   *	dlls/windowscodecs/bmpdecode.c, dlls/windowscodecs/bmpencode.c, dlls/windowscodecs/main.c,
+# | 	dlls/windowscodecs/pngformat.c, dlls/windowscodecs/tests/converter.c, dlls/windowscodecs/tiffformat.c
+# |
+if test "$enable_windowscodecs_Palette_Images" -eq 1; then
+	patch_apply windowscodecs-Palette_Images/0001-windowscodecs-Implement-IWICBitmapDecoder-CopyPalett.patch
+	patch_apply windowscodecs-Palette_Images/0002-windowscodecs-Implement-IWICBitmapFrameEncode-SetPal.patch
+	patch_apply windowscodecs-Palette_Images/0003-windowscodecs-Fix-IWICBitmapEncoder-SetPalette-for-a.patch
+	patch_apply windowscodecs-Palette_Images/0004-windowscodecs-Decode-PNG-images-with-a-tRNS-chunk-in.patch
+	patch_apply windowscodecs-Palette_Images/0005-windowscodecs-Add-support-for-palette-image-formats-.patch
+	patch_apply windowscodecs-Palette_Images/0006-windowscodecs-Fix-IWICBitmapEncoder-SetPalette-for-a.patch
+	patch_apply windowscodecs-Palette_Images/0007-windowscodecs-Implement-IWICBitmapFrameEncode-SetPal.patch
+	patch_apply windowscodecs-Palette_Images/0008-windowscodecs-Implement-IWICBitmapDecoder-CopyPalett.patch
+	patch_apply windowscodecs-Palette_Images/0009-windowscodecs-Implement-IWICBitmapFrameEncode-SetPal.patch
+	patch_apply windowscodecs-Palette_Images/0010-windowscodecs-Fix-IWICBitmapEncoder-SetPalette-for-a.patch
+	patch_apply windowscodecs-Palette_Images/0011-windowscodecs-tests-Add-some-tests-for-encoding-1bpp.patch
+	patch_apply windowscodecs-Palette_Images/0012-windowscodecs-tests-Add-tests-for-encoding-2bpp-4bpp.patch
+	patch_apply windowscodecs-Palette_Images/0013-windowscodecs-Use-V_UI1-instead-of-V_UNION-to-assign.patch
+	patch_apply windowscodecs-Palette_Images/0014-windowscodecs-Add-support-for-palette-image-formats-.patch
+	patch_apply windowscodecs-Palette_Images/0015-windowscodecs-Write-the-image-bits-as-a-bottom-top-a.patch
+	patch_apply windowscodecs-Palette_Images/0016-windowscodecs-Limit-number-of-colors-in-a-palette-in.patch
+	patch_apply windowscodecs-Palette_Images/0017-windowscodecs-Add-support-for-palette-image-formats-.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapDecoder::CopyPalette in PNG decoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapFrameEncode::SetPalette in PNG encoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapEncoder::SetPalette for a not initialized case in PNG encoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Decode PNG images with a tRNS chunk in their native formats.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for palette image formats to PNG encoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapEncoder::SetPalette for a not initialized case in BMP encoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapFrameEncode::SetPalette in BMP encoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapDecoder::CopyPalette in TIFF decoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapFrameEncode::SetPalette in the TIFF encoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapEncoder::SetPalette for a not initialized case in TIFF encoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add some tests for encoding 1bpp/8bpp images with a palette.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add tests for encoding 2bpp/4bpp images with a palette.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Use V_UI1() instead of V_UNION() to assign a VT_UI1 variant member.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for palette image formats to TIFF encoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Write the image bits as a bottom-top array in BMP encoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Limit number of colors in a palette in BMP decoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for palette image formats to BMP encoder.", 1 },';
 	) >> "$patchlist"
 fi
 

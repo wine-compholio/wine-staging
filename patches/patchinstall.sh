@@ -6204,9 +6204,11 @@ fi
 if test "$enable_setupapi_Display_Device" -eq 1; then
 	patch_apply setupapi-Display_Device/0001-setupapi-Create-registry-keys-for-display-devices-an.patch
 	patch_apply setupapi-Display_Device/0002-setupapi-Handle-the-case-that-a-full-driver-path-is-.patch
+	patch_apply setupapi-Display_Device/0003-setupapi-Also-create-HardwareId-registry-key-for-dis.patch
 	(
 		echo '+    { "Michael Müller", "setupapi: Create registry keys for display devices and display drivers.", 1 },';
 		echo '+    { "Michael Müller", "setupapi: Handle the case that a full driver path is passed to SetupDiGetClassDevs.", 1 },';
+		echo '+    { "Sebastian Lackner", "setupapi: Also create HardwareId registry key for display devices.", 1 },';
 	) >> "$patchlist"
 fi
 

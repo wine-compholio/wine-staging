@@ -1,24 +1,24 @@
-From e55823e0bef6e6d5d9ff1bce222bc5b7853f18a1 Mon Sep 17 00:00:00 2001
+From fc4e50699e4494de94a941c52799e987d6702e28 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefandoesinger@gmx.at>
 Date: Sat, 7 May 2016 21:16:47 +0100
 Subject: wined3d: Call create_default_sampler from create_dummy_textures.
 
 I should really rename it, don't feel like it now.
 ---
- dlls/wined3d/device.c | 76 ++++++++++++++++++++++++---------------------------
- 1 file changed, 35 insertions(+), 41 deletions(-)
+ dlls/wined3d/device.c | 75 +++++++++++++++++++++++----------------------------
+ 1 file changed, 34 insertions(+), 41 deletions(-)
 
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index ed1bba1..2449d77 100644
+index 2b30135..32946e8 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -664,6 +664,39 @@ out:
+@@ -663,6 +663,39 @@ out:
  }
  
  /* Context activation is done by the caller. */
-+static void create_default_samplers(struct wined3d_device *device)
++static void create_default_samplers(struct wined3d_device *device, struct wined3d_context *context)
 +{
-+    const struct wined3d_gl_info *gl_info = &device->adapter->gl_info;
++    const struct wined3d_gl_info *gl_info = context->gl_info;
 +
 +    if (gl_info->supported[ARB_SAMPLER_OBJECTS])
 +    {
@@ -52,22 +52,21 @@ index ed1bba1..2449d77 100644
  void device_create_dummy_textures(struct wined3d_device *device, struct wined3d_context *context)
  {
      const struct wined3d_d3d_info *d3d_info = &device->adapter->d3d_info;
-@@ -756,6 +789,8 @@ void device_create_dummy_textures(struct wined3d_device *device, struct wined3d_
-             checkGLcall("glTexImage3D");
-         }
+@@ -774,6 +807,7 @@ void device_create_dummy_textures(struct wined3d_device *device, struct wined3d_
      }
-+
-+    create_default_samplers(device);
+ 
+     context_bind_dummy_textures(device, context);
++    create_default_samplers(device, context);
  }
  
  /* Context activation is done by the caller. */
-@@ -798,39 +833,6 @@ static void destroy_dummy_textures(struct wined3d_device *device, const struct w
+@@ -803,39 +837,6 @@ static void destroy_dummy_textures(struct wined3d_device *device, const struct w
  }
  
  /* Context activation is done by the caller. */
--static void create_default_samplers(struct wined3d_device *device)
+-static void create_default_samplers(struct wined3d_device *device, struct wined3d_context *context)
 -{
--    const struct wined3d_gl_info *gl_info = &device->adapter->gl_info;
+-    const struct wined3d_gl_info *gl_info = context->gl_info;
 -
 -    if (gl_info->supported[ARB_SAMPLER_OBJECTS])
 -    {
@@ -101,7 +100,7 @@ index ed1bba1..2449d77 100644
  static void destroy_default_samplers(struct wined3d_device *device)
  {
      const struct wined3d_gl_info *gl_info = &device->adapter->gl_info;
-@@ -986,7 +988,6 @@ HRESULT CDECL wined3d_device_init_3d(struct wined3d_device *device,
+@@ -1001,7 +1002,6 @@ HRESULT CDECL wined3d_device_init_3d(struct wined3d_device *device,
  {
      static const struct wined3d_color black = {0.0f, 0.0f, 0.0f, 0.0f};
      struct wined3d_swapchain *swapchain = NULL;
@@ -109,17 +108,17 @@ index ed1bba1..2449d77 100644
      DWORD clear_flags = 0;
      HRESULT hr;
  
-@@ -1045,9 +1046,6 @@ HRESULT CDECL wined3d_device_init_3d(struct wined3d_device *device,
+@@ -1061,9 +1061,6 @@ HRESULT CDECL wined3d_device_init_3d(struct wined3d_device *device,
      device_init_swapchain_state(device, swapchain);
  
      wined3d_cs_emit_create_dummy_textures(device->cs);
 -    context = context_acquire(device, NULL);
--    create_default_samplers(device);
+-    create_default_samplers(device, context);
 -    context_release(context);
  
      device->contexts[0]->last_was_rhw = 0;
  
-@@ -4560,7 +4558,6 @@ static void delete_opengl_contexts(struct wined3d_device *device, struct wined3d
+@@ -4606,7 +4603,6 @@ static void delete_opengl_contexts(struct wined3d_device *device, struct wined3d
  
  static HRESULT create_primary_opengl_context(struct wined3d_device *device, struct wined3d_swapchain *swapchain)
  {
@@ -127,16 +126,16 @@ index ed1bba1..2449d77 100644
      HRESULT hr;
  
      if (FAILED(hr = device->shader_backend->shader_alloc_private(device,
-@@ -4587,9 +4584,6 @@ static HRESULT create_primary_opengl_context(struct wined3d_device *device, stru
+@@ -4633,9 +4629,6 @@ static HRESULT create_primary_opengl_context(struct wined3d_device *device, stru
      }
  
      wined3d_cs_emit_create_dummy_textures(device->cs);
 -    context = context_acquire(device, NULL);
--    create_default_samplers(device);
+-    create_default_samplers(device, context);
 -    context_release(context);
  
      return WINED3D_OK;
  }
 -- 
-2.8.0
+2.9.0
 

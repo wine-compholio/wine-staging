@@ -1,0 +1,62 @@
+From 133657f27695ca083e6abed70e8aef0e759b9559 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 9 Oct 2016 23:06:34 +0200
+Subject: vulkan: Improve vkGetPhysicalDeviceWin32PresentationSupportKHR and
+ vkCreateWin32SurfaceKHR.
+
+---
+ dlls/vulkan/vulkan_main.c | 12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/vulkan/vulkan_main.c b/dlls/vulkan/vulkan_main.c
+index 55361a4..7700f02 100644
+--- a/dlls/vulkan/vulkan_main.c
++++ b/dlls/vulkan/vulkan_main.c
+@@ -208,7 +208,8 @@ VkResult WINAPI vkCreateWin32SurfaceKHR( VkInstance instance,
+     TRACE( "(%p, %p, %p, %p)\n", instance, pCreateInfo, pAllocator, pSurface );
+ 
+ #if defined(HAVE_X11_XLIB_H) && defined(SONAME_LIBX11_XCB)
+-    if (pXGetXCBConnection && res == VK_ERROR_INCOMPATIBLE_DRIVER)
++    if (pXGetXCBConnection && (res == VK_ERROR_INCOMPATIBLE_DRIVER ||
++                               res == VK_ERROR_EXTENSION_NOT_PRESENT))
+     {
+         VkAllocationCallbacks_host tmp_pAllocator, *ptr_pAllocator;
+         VkXcbSurfaceCreateInfoKHR_host tmp_pCreateInfo;
+@@ -226,7 +227,8 @@ VkResult WINAPI vkCreateWin32SurfaceKHR( VkInstance instance,
+ #endif
+ 
+ #if defined(HAVE_X11_XLIB_H)
+-    if (res == VK_ERROR_INCOMPATIBLE_DRIVER)
++    if (res == VK_ERROR_INCOMPATIBLE_DRIVER ||
++        res == VK_ERROR_EXTENSION_NOT_PRESENT)
+     {
+         VkAllocationCallbacks_host tmp_pAllocator, *ptr_pAllocator;
+         VkXlibSurfaceCreateInfoKHR_host tmp_pCreateInfo;
+@@ -268,13 +270,13 @@ static xcb_screen_t *get_xcb_screen( xcb_connection_t *connection, int screen )
+ VkBool32 WINAPI vkGetPhysicalDeviceWin32PresentationSupportKHR( VkPhysicalDevice physicalDevice,
+         uint32_t queueFamilyIndex )
+ {
+-    VkResult res = VK_ERROR_INCOMPATIBLE_DRIVER;
++    VkBool32 res = VK_FALSE;
+ 
+     TRACE( "(%p, %u)\n", physicalDevice, queueFamilyIndex );
+ 
+ #if defined(HAVE_X11_XLIB_H) && defined(SONAME_LIBX11_XCB)
+     if (pxcb_get_setup && pxcb_screen_next && pxcb_setup_roots_iterator &&
+-        pXGetXCBConnection && res == VK_ERROR_INCOMPATIBLE_DRIVER)
++        pXGetXCBConnection && !res)
+     {
+         xcb_connection_t *connection = pXGetXCBConnection( display );
+         xcb_screen_t *screen = get_xcb_screen( connection, XDefaultScreen(display) );
+@@ -289,7 +291,7 @@ VkBool32 WINAPI vkGetPhysicalDeviceWin32PresentationSupportKHR( VkPhysicalDevice
+ #endif
+ 
+ #if defined(HAVE_X11_XLIB_H)
+-    if (res == VK_ERROR_INCOMPATIBLE_DRIVER)
++    if (!res)
+     {
+         Visual *visual = XDefaultVisual( display, XDefaultScreen(display) );
+         VisualID visual_id = XVisualIDFromVisual( visual );
+-- 
+2.9.0
+

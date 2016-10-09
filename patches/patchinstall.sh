@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "eac56fbda547e21cf9f40d57c913b3b582fc5697"
+	echo "1dedd90e8c56ff61772915d575a43ad6c95813cd"
 }
 
 # Show version information
@@ -269,7 +269,6 @@ patch_enable_all ()
 	enable_rasapi32_RasEnumDevicesA="$1"
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
-	enable_rpcrt4_Pipe_Transport="$1"
 	enable_rpcrt4_RpcBindingServerFromClient="$1"
 	enable_secur32_Zero_Buffer_Length="$1"
 	enable_server_ClipCursor="$1"
@@ -987,9 +986,6 @@ patch_enable ()
 			;;
 		riched20-IText_Interface)
 			enable_riched20_IText_Interface="$2"
-			;;
-		rpcrt4-Pipe_Transport)
-			enable_rpcrt4_Pipe_Transport="$2"
 			;;
 		rpcrt4-RpcBindingServerFromClient)
 			enable_rpcrt4_RpcBindingServerFromClient="$2"
@@ -2252,13 +2248,9 @@ if test "$enable_ntdll_ApiSetQueryApiSetPresence" -eq 1; then
 fi
 
 if test "$enable_kernel32_Named_Pipe" -eq 1; then
-	if test "$enable_rpcrt4_Pipe_Transport" -gt 1; then
-		abort "Patchset rpcrt4-Pipe_Transport disabled, but kernel32-Named_Pipe depends on that."
-	fi
 	if test "$enable_server_Desktop_Refcount" -gt 1; then
 		abort "Patchset server-Desktop_Refcount disabled, but kernel32-Named_Pipe depends on that."
 	fi
-	enable_rpcrt4_Pipe_Transport=1
 	enable_server_Desktop_Refcount=1
 fi
 
@@ -4218,18 +4210,6 @@ if test "$enable_kernel32_Misalign_Workaround" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset rpcrt4-Pipe_Transport
-# |
-# | Modified files:
-# |   *	dlls/rpcrt4/rpc_transport.c
-# |
-if test "$enable_rpcrt4_Pipe_Transport" -eq 1; then
-	patch_apply rpcrt4-Pipe_Transport/0001-rpcrt4-Restore-original-error-code-when-ReadFile-fai.patch
-	(
-		echo '+    { "Sebastian Lackner", "rpcrt4: Restore original error code when ReadFile fails with ERROR_MORE_DATA.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-Desktop_Refcount
 # |
 # | Modified files:
@@ -4257,7 +4237,7 @@ fi
 # Patchset kernel32-Named_Pipe
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	rpcrt4-Pipe_Transport, server-Desktop_Refcount
+# |   *	server-Desktop_Refcount
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#17195] Support for named pipe message mode (Linux only)
@@ -5388,7 +5368,7 @@ fi
 # Patchset ntdll-WriteWatches
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	rpcrt4-Pipe_Transport, server-Desktop_Refcount, kernel32-Named_Pipe, ws2_32-WriteWatches
+# |   *	server-Desktop_Refcount, kernel32-Named_Pipe, ws2_32-WriteWatches
 # |
 # | Modified files:
 # |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/file.c
@@ -6057,7 +6037,7 @@ fi
 # Patchset server-Pipe_ObjectName
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	rpcrt4-Pipe_Transport, server-Desktop_Refcount, kernel32-Named_Pipe
+# |   *	server-Desktop_Refcount, kernel32-Named_Pipe
 # |
 # | Modified files:
 # |   *	dlls/ntdll/tests/om.c, server/named_pipe.c, server/object.c, server/object.h

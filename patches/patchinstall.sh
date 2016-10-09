@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5d96ef42a58e09a2d6cf47a685abb3f42b513ceb"
+	echo "7756d6ba9b0213d5533eb5248e62716e7e8409b8"
 }
 
 # Show version information
@@ -3522,14 +3522,12 @@ fi
 # |   *	[#30105] Implement IKsControl stub subinterface for SynthPort
 # |
 # | Modified files:
-# |   *	dlls/dmusic/buffer.c, dlls/dmusic/dmusic_private.h, dlls/dmusic/port.c
+# |   *	dlls/dmusic/buffer.c
 # |
 if test "$enable_dmusic_SynthPort_IKsControl" -eq 1; then
 	patch_apply dmusic-SynthPort_IKsControl/0001-dmusic-Implement-IDirectMusicBuffer-PackStructured.patch
-	patch_apply dmusic-SynthPort_IKsControl/0002-dmusic-Add-IKsControl-stub-subinterface-for-SynthPor.patch
 	(
 		echo '+    { "Michael Müller", "dmusic: Implement IDirectMusicBuffer::PackStructured.", 1 },';
-		echo '+    { "Michael Müller", "dmusic: Add IKsControl stub subinterface for SynthPort.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -2037,9 +2037,13 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 fi
 
 if test "$enable_windowscodecs_Palette_Images" -eq 1; then
+	if test "$enable_gdiplus_Grayscale_PNG" -gt 1; then
+		abort "Patchset gdiplus-Grayscale_PNG disabled, but windowscodecs-Palette_Images depends on that."
+	fi
 	if test "$enable_windowscodecs_32bppGrayFloat" -gt 1; then
 		abort "Patchset windowscodecs-32bppGrayFloat disabled, but windowscodecs-Palette_Images depends on that."
 	fi
+	enable_gdiplus_Grayscale_PNG=1
 	enable_windowscodecs_32bppGrayFloat=1
 fi
 
@@ -7187,11 +7191,12 @@ fi
 # Patchset windowscodecs-Palette_Images
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	windowscodecs-32bppGrayFloat
+# |   *	gdiplus-Grayscale_PNG, windowscodecs-32bppGrayFloat
 # |
 # | Modified files:
-# |   *	dlls/windowscodecs/bmpdecode.c, dlls/windowscodecs/bmpencode.c, dlls/windowscodecs/main.c,
-# | 	dlls/windowscodecs/pngformat.c, dlls/windowscodecs/tests/converter.c, dlls/windowscodecs/tiffformat.c
+# |   *	dlls/windowscodecs/bmpdecode.c, dlls/windowscodecs/bmpencode.c, dlls/windowscodecs/imgfactory.c,
+# | 	dlls/windowscodecs/main.c, dlls/windowscodecs/pngformat.c, dlls/windowscodecs/tests/converter.c,
+# | 	dlls/windowscodecs/tests/pngformat.c, dlls/windowscodecs/tiffformat.c
 # |
 if test "$enable_windowscodecs_Palette_Images" -eq 1; then
 	patch_apply windowscodecs-Palette_Images/0001-windowscodecs-Implement-IWICBitmapDecoder-CopyPalett.patch
@@ -7211,6 +7216,11 @@ if test "$enable_windowscodecs_Palette_Images" -eq 1; then
 	patch_apply windowscodecs-Palette_Images/0015-windowscodecs-Write-the-image-bits-as-a-bottom-top-a.patch
 	patch_apply windowscodecs-Palette_Images/0016-windowscodecs-Limit-number-of-colors-in-a-palette-in.patch
 	patch_apply windowscodecs-Palette_Images/0017-windowscodecs-Add-support-for-palette-image-formats-.patch
+	patch_apply windowscodecs-Palette_Images/0018-windowscodecs-tests-Make-create_decoder-return-an-er.patch
+	patch_apply windowscodecs-Palette_Images/0019-windowscodecs-tests-Add-more-tests-for-loading-PNG-i.patch
+	patch_apply windowscodecs-Palette_Images/0020-windowscodecs-find_decoder-should-return-an-error-it.patch
+	patch_apply windowscodecs-Palette_Images/0021-windowscodecs-PNG-decoder-should-return-WINCODEC_ERR.patch
+	patch_apply windowscodecs-Palette_Images/0022-windowscodecs-PNG-decoder-should-use-indexed-formats.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapDecoder::CopyPalette in PNG decoder.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapFrameEncode::SetPalette in PNG encoder.", 1 },';
@@ -7229,6 +7239,11 @@ if test "$enable_windowscodecs_Palette_Images" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Write the image bits as a bottom-top array in BMP encoder.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Limit number of colors in a palette in BMP decoder.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for palette image formats to BMP encoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Make create_decoder() return an error code in PNG tests.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add more tests for loading PNG images in various color formats.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Find_decoder() should return an error it received from the decoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: PNG decoder should return WINCODEC_ERR_UNKNOWNIMAGEFORMAT when image loading fails.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: PNG decoder should use indexed formats for grayscale images when a PLTE chunk exists.", 1 },';
 	) >> "$patchlist"
 fi
 

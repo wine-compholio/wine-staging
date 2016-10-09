@@ -1,0 +1,48 @@
+From 7ea6ea9c3538448255f6c14047cdbb88e9d73336 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Tue, 4 Oct 2016 19:04:34 +0800
+Subject: windowscodecs: PNG decoder should use indexed formats for grayscale
+ images when a PLTE chunk exists.
+
+todo_wine statements in the tests can't be removed because libpng refuses to
+return a PLTE chunk for grayscale images even though the chunk does exist in
+the data stream, and issues a warning: "ignoring PLTE chunk in grayscale PNG".
+---
+ dlls/windowscodecs/pngformat.c | 18 +++++++++++++-----
+ 1 file changed, 13 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/windowscodecs/pngformat.c b/dlls/windowscodecs/pngformat.c
+index 9cce735..1a409ae 100644
+--- a/dlls/windowscodecs/pngformat.c
++++ b/dlls/windowscodecs/pngformat.c
+@@ -657,14 +657,22 @@ static HRESULT WINAPI PngDecoder_Initialize(IWICBitmapDecoder *iface, IStream *p
+         This->bpp = bit_depth;
+         switch (bit_depth)
+         {
+-        case 1: This->format = &GUID_WICPixelFormatBlackWhite; break;
+-        case 2: This->format = &GUID_WICPixelFormat2bppGray; break;
+-        case 4: This->format = &GUID_WICPixelFormat4bppGray; break;
+-        case 8: This->format = &GUID_WICPixelFormat8bppGray; break;
++        case 1:
++            This->format = num_palette ? &GUID_WICPixelFormat1bppIndexed : &GUID_WICPixelFormatBlackWhite;
++            break;
++        case 2:
++            This->format = num_palette ? &GUID_WICPixelFormat2bppIndexed : &GUID_WICPixelFormat2bppGray;
++            break;
++        case 4:
++            This->format = num_palette ? &GUID_WICPixelFormat4bppIndexed : &GUID_WICPixelFormat4bppGray;
++            break;
++        case 8:
++            This->format = num_palette ? &GUID_WICPixelFormat8bppIndexed : &GUID_WICPixelFormat8bppGray;
++            break;
+         case 16: This->format = &GUID_WICPixelFormat16bppGray; break;
+         default:
+             ERR("invalid grayscale bit depth: %i\n", bit_depth);
+-            hr = E_FAIL;
++            hr = WINCODEC_ERR_UNKNOWNIMAGEFORMAT;
+             goto end;
+         }
+         break;
+-- 
+2.9.0
+

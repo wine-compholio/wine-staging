@@ -6245,9 +6245,11 @@ fi
 if test "$enable_setupapi_SetupPromptForDisk" -eq 1; then
 	patch_apply setupapi-SetupPromptForDisk/0001-setupapi-Add-support-for-IDF_CHECKFIRST-flag-in-Setu.patch
 	patch_apply setupapi-SetupPromptForDisk/0002-setupapi-tests-Add-test-for-IDF_CHECKFIRST-and-Setup.patch
+	patch_apply setupapi-SetupPromptForDisk/0003-setupapi-tests-Determine-path-to-system32-directory-.patch
 	(
 		echo '+    { "Michael Müller", "setupapi: Add support for IDF_CHECKFIRST flag in SetupPromptForDiskW.", 1 },';
 		echo '+    { "Michael Müller", "setupapi/tests: Add test for IDF_CHECKFIRST and SetupPromptForDiskA/W.", 1 },';
+		echo '+    { "Hermes Belusca-Maito", "setupapi/tests: Determine path to system32 directory at runtime.", 1 },';
 	) >> "$patchlist"
 fi
 

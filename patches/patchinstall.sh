@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "c03303838dc648b4dc9fc8d0c78b4ec51a455253"
+	echo "b1387f9b18cd7e1ca1ddf54ff8ff6fe32c286f44"
 }
 
 # Show version information
@@ -149,7 +149,6 @@ patch_enable_all ()
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_COMSPEC="$1"
 	enable_kernel32_Codepage_Conversion="$1"
-	enable_kernel32_CompareStringEx="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Cwd_Startup_Info="$1"
 	enable_kernel32_GetLargestConsoleWindowSize="$1"
@@ -157,7 +156,6 @@ patch_enable_all ()
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_Profile="$1"
-	enable_kernel32_QT_Environment_Variables="$1"
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
 	enable_kernel32_SetFileInformationByHandle="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
@@ -246,7 +244,6 @@ patch_enable_all ()
 	enable_server_Signal_Thread="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
-	enable_services_SERVICE_FILE_SYSTEM_DRIVER="$1"
 	enable_setupapi_HSPFILEQ_Check_Type="$1"
 	enable_setupapi_SetupDiSelectBestCompatDrv="$1"
 	enable_setupapi_SetupDiSetDeviceInstallParamsW="$1"
@@ -320,7 +317,6 @@ patch_enable_all ()
 	enable_wininet_Internet_Settings="$1"
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
 	enable_winmm_Delay_Import_Depends="$1"
-	enable_winspool_drv_SetPrinterW="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_APC_Performance="$1"
 	enable_ws2_32_Connect_Time="$1"
@@ -547,9 +543,6 @@ patch_enable ()
 		kernel32-Codepage_Conversion)
 			enable_kernel32_Codepage_Conversion="$2"
 			;;
-		kernel32-CompareStringEx)
-			enable_kernel32_CompareStringEx="$2"
-			;;
 		kernel32-CopyFileEx)
 			enable_kernel32_CopyFileEx="$2"
 			;;
@@ -570,9 +563,6 @@ patch_enable ()
 			;;
 		kernel32-Profile)
 			enable_kernel32_Profile="$2"
-			;;
-		kernel32-QT_Environment_Variables)
-			enable_kernel32_QT_Environment_Variables="$2"
 			;;
 		kernel32-SetFileCompletionNotificationModes)
 			enable_kernel32_SetFileCompletionNotificationModes="$2"
@@ -838,9 +828,6 @@ patch_enable ()
 		server-Timestamp_Compat)
 			enable_server_Timestamp_Compat="$2"
 			;;
-		services-SERVICE_FILE_SYSTEM_DRIVER)
-			enable_services_SERVICE_FILE_SYSTEM_DRIVER="$2"
-			;;
 		setupapi-HSPFILEQ_Check_Type)
 			enable_setupapi_HSPFILEQ_Check_Type="$2"
 			;;
@@ -1059,9 +1046,6 @@ patch_enable ()
 			;;
 		winmm-Delay_Import_Depends)
 			enable_winmm_Delay_Import_Depends="$2"
-			;;
-		winspool.drv-SetPrinterW)
-			enable_winspool_drv_SetPrinterW="$2"
 			;;
 		wpcap-Dynamic_Linking)
 			enable_wpcap_Dynamic_Linking="$2"
@@ -1502,9 +1486,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_fonts_Missing_Fonts" -gt 1; then
 		abort "Patchset fonts-Missing_Fonts disabled, but category-stable depends on that."
 	fi
-	if test "$enable_kernel32_CompareStringEx" -gt 1; then
-		abort "Patchset kernel32-CompareStringEx disabled, but category-stable depends on that."
-	fi
 	if test "$enable_kernel32_Named_Pipe" -gt 1; then
 		abort "Patchset kernel32-Named_Pipe disabled, but category-stable depends on that."
 	fi
@@ -1660,7 +1641,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_dbghelp_Debug_Symbols=1
 	enable_ddraw_EnumSurfaces=1
 	enable_fonts_Missing_Fonts=1
-	enable_kernel32_CompareStringEx=1
 	enable_kernel32_Named_Pipe=1
 	enable_libs_Debug_Channel=1
 	enable_libs_Unicode_Collation=1
@@ -3284,18 +3264,6 @@ if test "$enable_kernel32_Codepage_Conversion" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-CompareStringEx
-# |
-# | Modified files:
-# |   *	dlls/kernel32/locale.c
-# |
-if test "$enable_kernel32_CompareStringEx" -eq 1; then
-	patch_apply kernel32-CompareStringEx/0001-kernel32-Silence-repeated-CompareStringEx-FIXME.patch
-	(
-		echo '+    { "Sebastian Lackner", "kernel32: Silence repeated CompareStringEx FIXME.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-SetFileInformationByHandle
 # |
 # | Modified files:
@@ -3544,18 +3512,6 @@ if test "$enable_kernel32_Profile" -eq 1; then
 	patch_apply kernel32-Profile/0001-kernel32-Allow-empty-profile-section-and-key-name-st.patch
 	(
 		echo '+    { "Claudio Fontana", "kernel32: Allow empty profile section and key name strings.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-QT_Environment_Variables
-# |
-# | Modified files:
-# |   *	dlls/kernel32/process.c
-# |
-if test "$enable_kernel32_QT_Environment_Variables" -eq 1; then
-	patch_apply kernel32-QT_Environment_Variables/0001-kernel32-Do-not-inherit-QT_-environment-variables-to.patch
-	(
-		echo '+    { "Sebastian Lackner", "kernel32: Do not inherit QT_* environment variables to Windows environment.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4945,21 +4901,6 @@ if test "$enable_server_Timestamp_Compat" -eq 1; then
 	patch_apply server-Timestamp_Compat/0001-server-Compatibility-with-Wine-Staging-format-for-hi.patch
 	(
 		echo '+    { "Michael Müller", "server: Compatibility with Wine Staging format for high precision registry timestamps.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset services-SERVICE_FILE_SYSTEM_DRIVER
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35824] Start SERVICE_FILE_SYSTEM_DRIVER services with winedevice
-# |
-# | Modified files:
-# |   *	programs/services/services.c
-# |
-if test "$enable_services_SERVICE_FILE_SYSTEM_DRIVER" -eq 1; then
-	patch_apply services-SERVICE_FILE_SYSTEM_DRIVER/0001-services-Start-SERVICE_FILE_SYSTEM_DRIVER-services-w.patch
-	(
-		echo '+    { "Sebastian Lackner", "services: Start SERVICE_FILE_SYSTEM_DRIVER services with winedevice.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6389,21 +6330,6 @@ if test "$enable_winmm_Delay_Import_Depends" -eq 1; then
 	patch_apply winmm-Delay_Import_Depends/0001-winmm-Delay-import-ole32-msacm32-to-workaround-bug-w.patch
 	(
 		echo '+    { "Michael Müller", "winmm: Delay import ole32 msacm32 to workaround bug when loading multiple winmm versions.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winspool.drv-SetPrinterW
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#24645] Add stub for winspool.SetPrinterW level 8
-# |
-# | Modified files:
-# |   *	dlls/winspool.drv/info.c
-# |
-if test "$enable_winspool_drv_SetPrinterW" -eq 1; then
-	patch_apply winspool.drv-SetPrinterW/0001-winspool.drv-Add-case-8-for-SetPrinterW.patch
-	(
-		echo '+    { "Jarkko Korpi", "winspool.drv Add case 8 for SetPrinterW.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,4 +1,4 @@
-From b26629e64f25b8a3a431f7b784fc4d70d1539c48 Mon Sep 17 00:00:00 2001
+From 35d0f8966363273f5112223ad3a9231181c92e25 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Sun, 17 Nov 2013 20:33:17 +0100
 Subject: wined3d: Replace surface_load_location with resource_load_location.
@@ -9,16 +9,16 @@ FIXME: Check if this patch is complete enough to make sense.
  dlls/wined3d/device.c          |   4 +-
  dlls/wined3d/drawprim.c        |   2 +-
  dlls/wined3d/surface.c         | 115 +++++++++++++----------------------------
- dlls/wined3d/swapchain.c       |   8 +--
+ dlls/wined3d/swapchain.c       |  10 ++--
  dlls/wined3d/texture.c         |   2 +-
  dlls/wined3d/wined3d_private.h |   2 -
- 7 files changed, 46 insertions(+), 89 deletions(-)
+ 7 files changed, 47 insertions(+), 90 deletions(-)
 
 diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
-index 52fb407..15a2dc3 100644
+index a303aa6..93cc08a 100644
 --- a/dlls/wined3d/context.c
 +++ b/dlls/wined3d/context.c
-@@ -2287,7 +2287,7 @@ static void context_validate_onscreen_formats(struct wined3d_context *context,
+@@ -2261,7 +2261,7 @@ static void context_validate_onscreen_formats(struct wined3d_context *context,
      WARN("Depth stencil format is not supported by WGL, rendering the backbuffer in an FBO\n");
  
      /* The currently active context is the necessary context to access the swapchain's onscreen buffers */
@@ -28,10 +28,10 @@ index 52fb407..15a2dc3 100644
      swapchain_update_draw_bindings(swapchain);
      context_set_render_offscreen(context, TRUE);
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 77ea1e9..367dc22 100644
+index 817cb57..21e826c 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -323,7 +323,7 @@ void device_clear_render_targets(struct wined3d_device *device, UINT rt_count, c
+@@ -324,7 +324,7 @@ void device_clear_render_targets(struct wined3d_device *device, UINT rt_count, c
          if (rt && rt->resource.format->id != WINED3DFMT_NULL)
          {
              if (flags & WINED3DCLEAR_TARGET && !is_full_clear(target, draw_rect, clear_rect))
@@ -40,7 +40,7 @@ index 77ea1e9..367dc22 100644
              else
                  wined3d_surface_prepare(rt, context, rt->container->resource.draw_binding);
          }
-@@ -4010,7 +4010,7 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
+@@ -4046,7 +4046,7 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
              && src_rect.bottom == sub_resource->height)
          wined3d_texture_prepare_texture(texture, context, FALSE);
      else
@@ -63,7 +63,7 @@ index 95245a9..4b01b7d 100644
              }
              else
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index 9aff2f2..421b1ed 100644
+index 51079b2..f2bb078 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
 @@ -759,7 +759,7 @@ static void surface_unmap(struct wined3d_surface *surface)
@@ -99,7 +99,7 @@ index 9aff2f2..421b1ed 100644
      else
          wined3d_surface_prepare(dst_surface, old_ctx, dst_location);
  
-@@ -1178,7 +1178,7 @@ static void surface_unload(struct wined3d_resource *resource)
+@@ -1172,7 +1172,7 @@ static void surface_unload(struct wined3d_resource *resource)
      else
      {
          surface_prepare_map_memory(surface);
@@ -108,7 +108,7 @@ index 9aff2f2..421b1ed 100644
          wined3d_resource_invalidate_location(&surface->resource, ~surface->resource.map_binding);
      }
  
-@@ -1236,24 +1236,6 @@ static void wined3d_surface_location_invalidated(struct wined3d_resource *resour
+@@ -1230,24 +1230,6 @@ static void wined3d_surface_location_invalidated(struct wined3d_resource *resour
          wined3d_texture_set_dirty(surface->container);
  }
  
@@ -133,7 +133,7 @@ index 9aff2f2..421b1ed 100644
  static const struct wined3d_surface_ops surface_ops =
  {
      surface_private_setup,
-@@ -1707,7 +1689,7 @@ HRESULT surface_upload_from_surface(struct wined3d_surface *dst_surface, const P
+@@ -1701,7 +1683,7 @@ HRESULT surface_upload_from_surface(struct wined3d_surface *dst_surface, const P
      if (update_w == dst_w && update_h == dst_h)
          wined3d_texture_prepare_texture(dst_surface->container, context, FALSE);
      else
@@ -142,7 +142,7 @@ index 9aff2f2..421b1ed 100644
      wined3d_texture_bind_and_dirtify(dst_surface->container, context, FALSE);
  
      surface_get_memory(src_surface, &data, src_surface->resource.locations);
-@@ -1840,7 +1822,7 @@ void surface_load(struct wined3d_surface *surface, struct wined3d_context *conte
+@@ -1834,7 +1816,7 @@ void surface_load(struct wined3d_surface *surface, struct wined3d_context *conte
      }
      TRACE("Reloading because surface is dirty.\n");
  
@@ -151,7 +151,7 @@ index 9aff2f2..421b1ed 100644
      surface_evict_sysmem(surface);
  }
  
-@@ -2729,7 +2711,7 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
+@@ -2709,7 +2691,7 @@ HRESULT CDECL wined3d_surface_map(struct wined3d_surface *surface,
  
          if (surface->resource.device->d3d_initialized)
              context = context_acquire(surface->resource.device, NULL);
@@ -160,7 +160,7 @@ index 9aff2f2..421b1ed 100644
          if (context)
              context_release(context);
      }
-@@ -2834,7 +2816,7 @@ HRESULT CDECL wined3d_surface_getdc(struct wined3d_surface *surface, HDC *dc)
+@@ -2814,7 +2796,7 @@ HRESULT CDECL wined3d_surface_getdc(struct wined3d_surface *surface, HDC *dc)
      {
          if (surface->flags & SFLAG_CLIENT)
          {
@@ -169,7 +169,7 @@ index 9aff2f2..421b1ed 100644
              surface_release_client_storage(surface);
          }
          hr = surface_create_dib_section(surface);
-@@ -2850,7 +2832,7 @@ HRESULT CDECL wined3d_surface_getdc(struct wined3d_surface *surface, HDC *dc)
+@@ -2830,7 +2812,7 @@ HRESULT CDECL wined3d_surface_getdc(struct wined3d_surface *surface, HDC *dc)
              surface->resource.map_binding = WINED3D_LOCATION_DIB;
      }
  
@@ -178,7 +178,7 @@ index 9aff2f2..421b1ed 100644
      wined3d_resource_invalidate_location(&surface->resource, ~WINED3D_LOCATION_DIB);
  
      if (context)
-@@ -2899,7 +2881,7 @@ HRESULT CDECL wined3d_surface_releasedc(struct wined3d_surface *surface, HDC dc)
+@@ -2879,7 +2861,7 @@ HRESULT CDECL wined3d_surface_releasedc(struct wined3d_surface *surface, HDC dc)
          if (device->d3d_initialized)
              context = context_acquire(device, NULL);
  
@@ -187,7 +187,7 @@ index 9aff2f2..421b1ed 100644
          wined3d_resource_invalidate_location(&surface->resource, WINED3D_LOCATION_DIB);
          if (context)
              context_release(context);
-@@ -3536,8 +3518,8 @@ static void surface_blt_to_drawable(const struct wined3d_device *device,
+@@ -3516,8 +3498,8 @@ static void surface_blt_to_drawable(const struct wined3d_device *device,
      gl_info = context->gl_info;
  
      /* Make sure the surface is up-to-date. This should probably use
@@ -198,7 +198,7 @@ index 9aff2f2..421b1ed 100644
      wined3d_texture_load(src_surface->container, context, FALSE);
  
      /* Activate the destination context, set it up for blitting */
-@@ -3957,29 +3939,6 @@ void surface_load_ds_location(struct wined3d_surface *surface, struct wined3d_co
+@@ -3937,29 +3919,6 @@ void surface_load_ds_location(struct wined3d_surface *surface, struct wined3d_co
      surface->ds_current_size.cy = surface->resource.height;
  }
  
@@ -228,7 +228,7 @@ index 9aff2f2..421b1ed 100644
  static void surface_copy_simple_location(struct wined3d_surface *surface, DWORD location)
  {
      struct wined3d_device *device = surface->resource.device;
-@@ -4029,7 +3988,7 @@ static void surface_load_sysmem(struct wined3d_surface *surface,
+@@ -4009,7 +3968,7 @@ static void surface_load_sysmem(struct wined3d_surface *surface,
      }
  
      if (surface->resource.locations & (WINED3D_LOCATION_RB_MULTISAMPLE | WINED3D_LOCATION_RB_RESOLVED))
@@ -237,7 +237,7 @@ index 9aff2f2..421b1ed 100644
  
      /* Download the surface to system memory. */
      if (surface->resource.locations & (WINED3D_LOCATION_TEXTURE_RGB | WINED3D_LOCATION_TEXTURE_SRGB))
-@@ -4065,7 +4024,7 @@ static HRESULT surface_load_drawable(struct wined3d_surface *surface,
+@@ -4045,7 +4004,7 @@ static HRESULT surface_load_drawable(struct wined3d_surface *surface,
      }
  
      surface_get_rect(surface, NULL, &r);
@@ -246,7 +246,7 @@ index 9aff2f2..421b1ed 100644
      surface_blt_to_drawable(surface->resource.device, context,
              WINED3D_TEXF_POINT, FALSE, surface, &r, surface, &r);
  
-@@ -4138,7 +4097,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
+@@ -4118,7 +4077,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
              /* Performance warning... */
              FIXME("Downloading RGB surface %p to reload it as sRGB.\n", surface);
              surface_prepare_map_memory(surface);
@@ -255,7 +255,7 @@ index 9aff2f2..421b1ed 100644
          }
      }
      else
-@@ -4149,7 +4108,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
+@@ -4129,7 +4088,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
              /* Performance warning... */
              FIXME("Downloading sRGB surface %p to reload it as RGB.\n", surface);
              surface_prepare_map_memory(surface);
@@ -264,7 +264,7 @@ index 9aff2f2..421b1ed 100644
          }
      }
  
-@@ -4158,7 +4117,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
+@@ -4138,7 +4097,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
          WARN("Trying to load a texture from sysmem, but no simple location is valid.\n");
          /* Lets hope we get it from somewhere... */
          surface_prepare_system_memory(surface);
@@ -273,7 +273,7 @@ index 9aff2f2..421b1ed 100644
      }
  
      wined3d_texture_prepare_texture(texture, context, srgb);
-@@ -4184,7 +4143,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
+@@ -4164,7 +4123,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
              surface->resource.map_binding = WINED3D_LOCATION_SYSMEM;
  
          surface_prepare_map_memory(surface);
@@ -282,7 +282,7 @@ index 9aff2f2..421b1ed 100644
          surface_remove_pbo(surface, gl_info);
      }
  
-@@ -4259,9 +4218,11 @@ static void surface_load_renderbuffer(struct wined3d_surface *surface, struct wi
+@@ -4239,9 +4198,11 @@ static void surface_load_renderbuffer(struct wined3d_surface *surface, struct wi
              surface, src_location, &rect, surface, dst_location, &rect);
  }
  
@@ -296,7 +296,7 @@ index 9aff2f2..421b1ed 100644
      HRESULT hr;
  
      TRACE("surface %p, location %s.\n", surface, wined3d_debug_location(location));
-@@ -4288,20 +4249,6 @@ void surface_load_location(struct wined3d_surface *surface, struct wined3d_conte
+@@ -4268,20 +4229,6 @@ void surface_load_location(struct wined3d_surface *surface, struct wined3d_conte
          }
      }
  
@@ -317,7 +317,7 @@ index 9aff2f2..421b1ed 100644
      if (!surface->resource.locations)
      {
          ERR("Surface %p does not have any up to date location.\n", surface);
-@@ -5452,7 +5399,8 @@ HRESULT CDECL wined3d_surface_blt(struct wined3d_surface *dst_surface, const REC
+@@ -5445,7 +5392,8 @@ HRESULT CDECL wined3d_surface_blt(struct wined3d_surface *dst_surface, const REC
                          if (!wined3d_resource_is_offscreen(&dst_surface->container->resource))
                          {
                              struct wined3d_context *context = context_acquire(device, dst_surface);
@@ -327,7 +327,7 @@ index 9aff2f2..421b1ed 100644
                              context_release(context);
                          }
                          return WINED3D_OK;
-@@ -5525,6 +5473,17 @@ cpu:
+@@ -5519,6 +5467,17 @@ cpu:
      return surface_cpu_blt(dst_surface, &dst_rect, src_surface, &src_rect, flags, fx, filter);
  }
  
@@ -346,7 +346,7 @@ index 9aff2f2..421b1ed 100644
          const struct wined3d_resource_desc *desc, GLenum target, unsigned int level, unsigned int layer, DWORD flags)
  {
 diff --git a/dlls/wined3d/swapchain.c b/dlls/wined3d/swapchain.c
-index e87a209..b9bf4c1 100644
+index 4ca9ac0..75aece5 100644
 --- a/dlls/wined3d/swapchain.c
 +++ b/dlls/wined3d/swapchain.c
 @@ -315,7 +315,7 @@ static void swapchain_blit(const struct wined3d_swapchain *swapchain,
@@ -358,7 +358,16 @@ index e87a209..b9bf4c1 100644
          }
  
          context_apply_fbo_state_blit(context, GL_READ_FRAMEBUFFER, backbuffer, NULL, location);
-@@ -517,14 +517,14 @@ static void swapchain_gl_present(struct wined3d_swapchain *swapchain, const RECT
+@@ -447,7 +447,7 @@ static void wined3d_swapchain_rotate(struct wined3d_swapchain *swapchain, struct
+         surface = surface_from_resource(wined3d_texture_get_sub_resource(swapchain->back_buffers[i], 0));
+ 
+         if (!(surface->resource.locations & supported_locations))
+-            surface_load_location(surface, context, swapchain->back_buffers[i]->resource.draw_binding);
++            wined3d_resource_load_location(&surface->resource, context, swapchain->back_buffers[i]->resource.draw_binding);
+ 
+         swapchain->back_buffers[i - 1]->texture_rgb = swapchain->back_buffers[i]->texture_rgb;
+         surface_prev->rb_multisample = surface->rb_multisample;
+@@ -570,14 +570,14 @@ static void swapchain_gl_present(struct wined3d_swapchain *swapchain, const RECT
       */
      if (!swapchain->render_to_fbo && render_to_fbo && wined3d_settings.offscreen_rendering_mode == ORM_FBO)
      {
@@ -375,7 +384,7 @@ index e87a209..b9bf4c1 100644
      }
  
      if (swapchain->render_to_fbo)
-@@ -617,7 +617,7 @@ void x11_copy_to_screen(const struct wined3d_swapchain *swapchain, const RECT *r
+@@ -672,7 +672,7 @@ void x11_copy_to_screen(const struct wined3d_swapchain *swapchain, const RECT *r
  
      TRACE("Copying surface %p to screen.\n", front);
  
@@ -398,10 +407,10 @@ index 2a183e8..29c7eec 100644
      wined3d_resource_invalidate_location(&surface->resource, ~surface->resource.map_binding);
  }
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 031e684..879d5f0 100644
+index ddf264f..a5826fc 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2466,8 +2466,6 @@ void surface_load_ds_location(struct wined3d_surface *surface,
+@@ -2504,8 +2504,6 @@ void surface_load_ds_location(struct wined3d_surface *surface,
          struct wined3d_context *context, DWORD location) DECLSPEC_HIDDEN;
  void surface_load_fb_texture(struct wined3d_surface *surface, BOOL srgb,
          struct wined3d_context *context) DECLSPEC_HIDDEN;
@@ -411,5 +420,5 @@ index 031e684..879d5f0 100644
  void wined3d_surface_prepare(struct wined3d_surface *surface, struct wined3d_context *context,
          DWORD location) DECLSPEC_HIDDEN;
 -- 
-2.6.2
+2.9.0
 

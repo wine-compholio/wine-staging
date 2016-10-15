@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "7ce384c4153112201aa263da6dee15fed21a4e06"
+	echo "eb5339edaca1c09d76b4afa32bdb07c1549e6650"
 }
 
 # Show version information
@@ -397,7 +397,6 @@ patch_enable_all ()
 	enable_winmm_Delay_Import_Depends="$1"
 	enable_winmm_mciSendCommandA="$1"
 	enable_wintrust_WinVerifyTrust="$1"
-	enable_wmic_Query_Path="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_wpcap_Several_Fixes="$1"
 	enable_ws2_32_APC_Performance="$1"
@@ -1370,9 +1369,6 @@ patch_enable ()
 			;;
 		wintrust-WinVerifyTrust)
 			enable_wintrust_WinVerifyTrust="$2"
-			;;
-		wmic-Query_Path)
-			enable_wmic_Query_Path="$2"
 			;;
 		wpcap-Dynamic_Linking)
 			enable_wpcap_Dynamic_Linking="$2"
@@ -2606,7 +2602,8 @@ fi
 # Patchset kernel32-GetCurrentPackageFamilyName
 # |
 # | Modified files:
-# |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/version.c
+# |   *	dlls/api-ms-win-appmodel-runtime-l1-1-1/api-ms-win-appmodel-runtime-l1-1-1.spec, dlls/kernel32/kernel32.spec,
+# | 	dlls/kernel32/version.c
 # |
 if test "$enable_kernel32_GetCurrentPackageFamilyName" -eq 1; then
 	patch_apply kernel32-GetCurrentPackageFamilyName/0001-kernel32-Add-stub-for-GetCurrentPackageFamilyName-an.patch
@@ -2639,10 +2636,9 @@ fi
 # |   *	[#40451] Add feclient dll
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/api-ms-win-appmodel-runtime-l1-1-1/Makefile.in, dlls/api-ms-win-appmodel-runtime-l1-1-1/api-ms-win-
-# | 	appmodel-runtime-l1-1-1.spec, dlls/api-ms-win-core-heap-l2-1-0/Makefile.in, dlls/api-ms-win-core-heap-l2-1-0/api-ms-win-
-# | 	core-heap-l2-1-0.spec, dlls/api-ms-win-core-quirks-l1-1-0/Makefile.in, dlls/api-ms-win-core-quirks-l1-1-0/api-ms-win-
-# | 	core-quirks-l1-1-0.spec, dlls/api-ms-win-core-shlwapi-obsolete-l1-2-0/Makefile.in, dlls/api-ms-win-core-shlwapi-
+# |   *	configure.ac, dlls/api-ms-win-core-heap-l2-1-0/Makefile.in, dlls/api-ms-win-core-heap-l2-1-0/api-ms-win-core-
+# | 	heap-l2-1-0.spec, dlls/api-ms-win-core-quirks-l1-1-0/Makefile.in, dlls/api-ms-win-core-quirks-l1-1-0/api-ms-win-core-
+# | 	quirks-l1-1-0.spec, dlls/api-ms-win-core-shlwapi-obsolete-l1-2-0/Makefile.in, dlls/api-ms-win-core-shlwapi-
 # | 	obsolete-l1-2-0/api-ms-win-core-shlwapi-obsolete-l1-2-0.spec, dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/Makefile.in,
 # | 	dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/api-ms-win-rtcore-ntuser-draw-l1-1-0.spec, dlls/api-ms-win-rtcore-ntuser-
 # | 	window-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-window-l1-1-0/api-ms-win-rtcore-ntuser-window-l1-1-0.spec, dlls
@@ -2651,24 +2647,22 @@ fi
 # | 	shcore-stream-l1-1-0.spec, dlls/api-ms-win-shcore-thread-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-thread-l1-1-0/api-
 # | 	ms-win-shcore-thread-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/Makefile.in, dlls/ext-ms-win-appmodel-
 # | 	usercontext-l1-1-0/ext-ms-win-appmodel-usercontext-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/main.c, dlls
-# | 	/ext-ms-win-kernel32-package-current-l1-1-0/Makefile.in, dlls/ext-ms-win-kernel32-package-current-l1-1-0/ext-ms-win-
-# | 	kernel32-package-current-l1-1-0.spec, dlls/ext-ms-win-ntuser-mouse-l1-1-0/Makefile.in, dlls/ext-ms-win-ntuser-
-# | 	mouse-l1-1-0/ext-ms-win-ntuser-mouse-l1-1-0.spec, dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/Makefile.in, dlls/ext-
-# | 	ms-win-rtcore-ntuser-syscolors-l1-1-0/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0.spec, dlls/ext-ms-win-rtcore-ntuser-
-# | 	sysparams-l1-1-0/Makefile.in, dlls/ext-ms-win-rtcore-ntuser-sysparams-l1-1-0/ext-ms-win-rtcore-ntuser-
-# | 	sysparams-l1-1-0.spec, dlls/ext-ms-win-uxtheme-themes-l1-1-0/Makefile.in, dlls/ext-ms-win-uxtheme-themes-l1-1-0/ext-ms-
-# | 	win-uxtheme-themes-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/Makefile.in, dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-
-# | 	xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/main.c, dlls/feclient/Makefile.in, dlls/feclient/feclient.spec,
-# | 	dlls/feclient/main.c, dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec, dlls/iertutil/main.c,
-# | 	dlls/kernelbase/Makefile.in, dlls/kernelbase/kernelbase.spec, dlls/kernelbase/misc.c, dlls/shcore/Makefile.in,
-# | 	dlls/shcore/main.c, dlls/shcore/shcore.spec, dlls/shlwapi/shlwapi.spec, dlls/uiautomationcore/Makefile.in,
-# | 	dlls/uiautomationcore/main.c, dlls/uiautomationcore/uiautomationcore.spec, include/Makefile.in,
-# | 	include/shellscalingapi.h, include/uiautomationcoreapi.h, tools/make_specfiles
+# | 	/ext-ms-win-ntuser-mouse-l1-1-0/Makefile.in, dlls/ext-ms-win-ntuser-mouse-l1-1-0/ext-ms-win-ntuser-mouse-l1-1-0.spec,
+# | 	dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/Makefile.in, dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/ext-ms-win-
+# | 	rtcore-ntuser-syscolors-l1-1-0.spec, dlls/ext-ms-win-rtcore-ntuser-sysparams-l1-1-0/Makefile.in, dlls/ext-ms-win-rtcore-
+# | 	ntuser-sysparams-l1-1-0/ext-ms-win-rtcore-ntuser-sysparams-l1-1-0.spec, dlls/ext-ms-win-uxtheme-
+# | 	themes-l1-1-0/Makefile.in, dlls/ext-ms-win-uxtheme-themes-l1-1-0/ext-ms-win-uxtheme-themes-l1-1-0.spec, dlls/ext-ms-win-
+# | 	xaml-pal-l1-1-0/Makefile.in, dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-
+# | 	pal-l1-1-0/main.c, dlls/feclient/Makefile.in, dlls/feclient/feclient.spec, dlls/feclient/main.c,
+# | 	dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec, dlls/iertutil/main.c, dlls/kernelbase/Makefile.in,
+# | 	dlls/kernelbase/kernelbase.spec, dlls/kernelbase/misc.c, dlls/shcore/Makefile.in, dlls/shcore/main.c,
+# | 	dlls/shcore/shcore.spec, dlls/shlwapi/shlwapi.spec, dlls/uiautomationcore/Makefile.in, dlls/uiautomationcore/main.c,
+# | 	dlls/uiautomationcore/uiautomationcore.spec, include/Makefile.in, include/shellscalingapi.h,
+# | 	include/uiautomationcoreapi.h, tools/make_specfiles
 # |
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0001-kernelbase-Add-dll-and-add-stub-for-QuirkIsEnabled.patch
 	patch_apply api-ms-win-Stub_DLLs/0002-api-ms-win-core-quirks-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0003-api-ms-win-appmodel-runtime-l1-1-1-Add-new-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0005-api-ms-win-core-heap-l2-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0006-iertutil-Add-dll-and-add-stub-for-ordinal-811.patch
 	patch_apply api-ms-win-Stub_DLLs/0007-shcore-Add-dll.patch
@@ -2685,7 +2679,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0018-ext-ms-win-rtcore-ntuser-syscolors-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0019-api-ms-win-rtcore-ntuser-draw-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0020-ext-ms-win-rtcore-ntuser-sysparams-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0021-ext-ms-win-kernel32-package-current-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0022-shcore-Add-SetProcessDpiAwareness-stub.patch
 	patch_apply api-ms-win-Stub_DLLs/0023-shcore-Implement-stub-for-GetDpiForMonitor.patch
 	patch_apply api-ms-win-Stub_DLLs/0024-kernelbase-Add-stub-for-QuirkIsEnabled3.patch
@@ -2695,7 +2688,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-quirks-l1-1-0: Add dll.", 1 },';
-		echo '+    { "Michael Müller", "api-ms-win-appmodel-runtime-l1-1-1: Add new dll.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-heap-l2-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "iertutil: Add dll and add stub for ordinal 811.", 1 },';
 		echo '+    { "Sebastian Lackner", "shcore: Add dll.", 1 },';
@@ -2712,7 +2704,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		echo '+    { "Michael Müller", "ext-ms-win-rtcore-ntuser-syscolors-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-rtcore-ntuser-draw-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Michael Müller", "ext-ms-win-rtcore-ntuser-sysparams-l1-1-0: Add dll.", 1 },';
-		echo '+    { "Michael Müller", "ext-ms-win-kernel32-package-current-l1-1-0: Add dll.", 1 },';
 		echo '+    { "Sebastian Lackner", "shcore: Add SetProcessDpiAwareness stub.", 1 },';
 		echo '+    { "Sebastian Lackner", "shcore: Implement stub for GetDpiForMonitor.", 1 },';
 		echo '+    { "Michael Müller", "kernelbase: Add stub for QuirkIsEnabled3.", 1 },';
@@ -8011,18 +8002,6 @@ if test "$enable_wintrust_WinVerifyTrust" -eq 1; then
 		echo '+    { "Mark Jansen", "wintrust/tests: Add tests for WinVerifyTrust.", 2 },';
 		echo '+    { "Sebastian Lackner", "wintrust/tests: Add some additional tests.", 1 },';
 		echo '+    { "Mark Jansen", "wintrust: Verify image hash in WinVerifyTrust.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wmic-Query_Path
-# |
-# | Modified files:
-# |   *	programs/wmic/main.c, programs/wmic/wmic.h, programs/wmic/wmic.rc
-# |
-if test "$enable_wmic_Query_Path" -eq 1; then
-	patch_apply wmic-Query_Path/0001-wmic-Improve-cmd-line-parser-and-add-support-for-pat.patch
-	(
-		echo '+    { "Michael Müller", "wmic: Improve cmd line parser and add support for path command.", 1 },';
 	) >> "$patchlist"
 fi
 

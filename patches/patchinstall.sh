@@ -2395,10 +2395,11 @@ fi
 # |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c, dlls/d3d8/texture.c,
 # | 	dlls/d3d9/tests/visual.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dsound/primary.c, dlls/dwrite/layout.c,
 # | 	dlls/msxml3/schema.c, dlls/netapi32/netapi32.c, dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/vbscript/vbdisp.c,
-# | 	dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c, include/d3dtypes.h, include/wine/list.h,
+# | 	dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c, include/d3dtypes.h, include/evntrace.h, include/wine/list.h,
 # | 	include/wine/rbtree.h, include/winnt.h, tools/makedep.c
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
+	patch_apply Compiler_Warnings/0001-include-Avoid-duplicate-definition-of-PEVENT_FILTER_.patch
 	patch_apply Compiler_Warnings/0015-include-Avoid-shift-overflow-warning.patch
 	patch_apply Compiler_Warnings/0018-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch
 	patch_apply Compiler_Warnings/0019-dsound-Avoid-implicit-cast-of-interface-pointer.patch
@@ -2415,6 +2416,7 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0030-vbscript-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0031-include-Check-element-type-in-CONTAINING_RECORD-and-.patch
 	(
+		echo '+    { "Hans Leidekker", "include: Avoid duplicate definition of PEVENT_FILTER_DESCRIPTOR.", 1 },';
 		echo '+    { "Sebastian Lackner", "include: Avoid shift overflow warning.", 1 },';
 		echo '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },';
 		echo '+    { "Sebastian Lackner", "dsound: Avoid implicit cast of interface pointer.", 1 },';

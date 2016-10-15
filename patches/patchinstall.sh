@@ -7220,8 +7220,8 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/windowscodecs/bmpdecode.c, dlls/windowscodecs/bmpencode.c, dlls/windowscodecs/imgfactory.c,
-# | 	dlls/windowscodecs/main.c, dlls/windowscodecs/pngformat.c, dlls/windowscodecs/tests/converter.c,
-# | 	dlls/windowscodecs/tests/pngformat.c, dlls/windowscodecs/tiffformat.c
+# | 	dlls/windowscodecs/main.c, dlls/windowscodecs/pngformat.c, dlls/windowscodecs/regsvr.c,
+# | 	dlls/windowscodecs/tests/converter.c, dlls/windowscodecs/tests/pngformat.c, dlls/windowscodecs/tiffformat.c
 # |
 if test "$enable_windowscodecs_Palette_Images" -eq 1; then
 	patch_apply windowscodecs-Palette_Images/0001-windowscodecs-Implement-IWICBitmapDecoder-CopyPalett.patch

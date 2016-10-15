@@ -246,6 +246,7 @@ patch_enable_all ()
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll_call_thread_func_wrapper="$1"
 	enable_ntoskrnl_DriverTest="$1"
+	enable_ntoskrnl_METHOD_OUT_DIRECT="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
@@ -917,6 +918,9 @@ patch_enable ()
 			;;
 		ntoskrnl-DriverTest)
 			enable_ntoskrnl_DriverTest="$2"
+			;;
+		ntoskrnl-METHOD_OUT_DIRECT)
+			enable_ntoskrnl_METHOD_OUT_DIRECT="$2"
 			;;
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
@@ -5426,6 +5430,20 @@ if test "$enable_ntoskrnl_DriverTest" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "ntoskrnl.exe/tests: Add initial driver testing framework and corresponding changes to Makefile system.", 2 },';
 		echo '+    { "Michael Müller", "ntoskrnl.exe/tests: Add kernel compliant test functions.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntoskrnl-METHOD_OUT_DIRECT
+# |
+# | Modified files:
+# |   *	dlls/ntdll/file.c, dlls/ntoskrnl.exe/ntoskrnl.c
+# |
+if test "$enable_ntoskrnl_METHOD_OUT_DIRECT" -eq 1; then
+	patch_apply ntoskrnl-METHOD_OUT_DIRECT/0001-ntoskrnl.exe-Defer-deallocation-of-in_buff-in-dispat.patch
+	patch_apply ntoskrnl-METHOD_OUT_DIRECT/0002-ntoskrnl.exe-Add-support-for-METHOD_IN_DIRECT-and-ME.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntoskrnl.exe: Defer deallocation of in_buff in dispatch_ioctl.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntoskrnl.exe: Add support for METHOD_IN_DIRECT and METHOD_OUT_DIRECT ioctls.", 1 },';
 	) >> "$patchlist"
 fi
 

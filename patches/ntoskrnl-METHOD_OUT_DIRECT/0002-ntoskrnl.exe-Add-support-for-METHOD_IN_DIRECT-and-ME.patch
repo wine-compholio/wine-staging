@@ -1,0 +1,73 @@
+From b839b21ed37ea38c1cce82e4c45f5762492742cd Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 14 Oct 2016 22:19:27 +0200
+Subject: ntoskrnl.exe: Add support for METHOD_IN_DIRECT and METHOD_OUT_DIRECT
+ ioctls.
+
+---
+ dlls/ntdll/file.c            |  2 ++
+ dlls/ntoskrnl.exe/ntoskrnl.c | 21 +++++++++++++++++----
+ 2 files changed, 19 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index 7fbde50..cefc1dd 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -1561,6 +1561,8 @@ static NTSTATUS server_ioctl_file( HANDLE handle, HANDLE event,
+         req->async.event    = wine_server_obj_handle( event );
+         req->async.cvalue   = cvalue;
+         wine_server_add_data( req, in_buffer, in_size );
++        if ((code & 3) != METHOD_BUFFERED)
++            wine_server_add_data( req, out_buffer, out_size );
+         wine_server_set_reply( req, out_buffer, out_size );
+         status = wine_server_call( req );
+         wait_handle = wine_server_ptr_handle( reply->wait );
+diff --git a/dlls/ntoskrnl.exe/ntoskrnl.c b/dlls/ntoskrnl.exe/ntoskrnl.c
+index 3c18ee6..912d084 100644
+--- a/dlls/ntoskrnl.exe/ntoskrnl.c
++++ b/dlls/ntoskrnl.exe/ntoskrnl.c
+@@ -428,17 +428,27 @@ static NTSTATUS dispatch_ioctl( const irp_params_t *params, void *in_buff, ULONG
+     TRACE( "ioctl %x device %p file %p in_size %u out_size %u\n",
+            params->ioctl.code, device, file, in_size, out_size );
+ 
+-    if ((params->ioctl.code & 3) == METHOD_BUFFERED) out_size = max( in_size, out_size );
+-
+     if (out_size)
+     {
+-        if (!(out_buff = HeapAlloc( GetProcessHeap(), 0, out_size ))) return STATUS_NO_MEMORY;
+-        if ((params->ioctl.code & 3) == METHOD_BUFFERED)
++        if ((params->ioctl.code & 3) != METHOD_BUFFERED)
++        {
++            if (in_size < out_size) return STATUS_INVALID_DEVICE_REQUEST;
++            in_size -= out_size;
++            if (!(out_buff = HeapAlloc( GetProcessHeap(), 0, out_size ))) return STATUS_NO_MEMORY;
++            memcpy( out_buff, (char *)in_buff + in_size, out_size );
++        }
++        else if (out_size > in_size)
+         {
++            if (!(out_buff = HeapAlloc( GetProcessHeap(), 0, out_size ))) return STATUS_NO_MEMORY;
+             memcpy( out_buff, in_buff, in_size );
+             to_free = in_buff;
+             in_buff = out_buff;
+         }
++        else
++        {
++            out_buff = in_buff;
++            out_size = in_size;
++        }
+     }
+ 
+     irp = IoBuildDeviceIoControlRequest( params->ioctl.code, device, in_buff, in_size, out_buff, out_size,
+@@ -449,6 +459,9 @@ static NTSTATUS dispatch_ioctl( const irp_params_t *params, void *in_buff, ULONG
+         return STATUS_NO_MEMORY;
+     }
+ 
++    if (out_size && (params->ioctl.code & 3) != METHOD_BUFFERED)
++        HeapReAlloc( GetProcessHeap(), HEAP_REALLOC_IN_PLACE_ONLY, in_buff, in_size );
++
+     irp->Tail.Overlay.OriginalFileObject = file;
+     irp->RequestorMode = UserMode;
+     irp->AssociatedIrp.SystemBuffer = in_buff;
+-- 
+2.9.0
+

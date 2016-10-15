@@ -2223,6 +2223,13 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	enable_ntdll_NtQueryEaFile=1
 fi
 
+if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
+	if test "$enable_kernel32_SetFileCompletionNotificationModes" -gt 1; then
+		abort "Patchset kernel32-SetFileCompletionNotificationModes disabled, but ntdll-NtQueryEaFile depends on that."
+	fi
+	enable_kernel32_SetFileCompletionNotificationModes=1
+fi
+
 if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
 	if test "$enable_ntdll_Attach_Process_DLLs" -gt 1; then
 		abort "Patchset ntdll-Attach_Process_DLLs disabled, but ntdll-Hide_Wine_Exports depends on that."
@@ -4357,15 +4364,15 @@ fi
 # Patchset kernel32-SetFileCompletionNotificationModes
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#38960] Fake success in kernel32.SetFileCompletionNotificationModes
+# |   *	[#38960] Add support for kernel32.SetFileCompletionNotificationModes
 # |
 # | Modified files:
-# |   *	dlls/kernel32/file.c
+# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/winternl.h, server/fd.c, server/protocol.def
 # |
 if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
-	patch_apply kernel32-SetFileCompletionNotificationModes/0001-kernel32-Fake-success-in-SetFileCompletionNotificati.patch
+	patch_apply kernel32-SetFileCompletionNotificationModes/0001-ntdll-Implement-FileIoCompletionNotificationInformat.patch
 	(
-		echo '+    { "Sebastian Lackner", "kernel32: Fake success in SetFileCompletionNotificationModes.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Implement FileIoCompletionNotificationInformation info class.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5009,6 +5016,9 @@ fi
 
 # Patchset ntdll-NtQueryEaFile
 # |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	kernel32-SetFileCompletionNotificationModes
+# |
 # | Modified files:
 # |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
 # |
@@ -5022,7 +5032,7 @@ fi
 # Patchset ntdll-Junction_Points
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-NtQueryEaFile
+# |   *	kernel32-SetFileCompletionNotificationModes, ntdll-NtQueryEaFile
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#12401] Support for Junction Points

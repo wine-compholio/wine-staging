@@ -5985,8 +5985,8 @@ fi
 # |   *	[#33576] Support for stored file ACLs
 # |
 # | Modified files:
-# |   *	dlls/advapi32/tests/security.c, include/wine/port.h, server/change.c, server/file.c, server/file.h, server/object.c,
-# | 	server/object.h
+# |   *	dlls/advapi32/tests/security.c, include/wine/port.h, server/change.c, server/file.c, server/file.h, server/handle.c,
+# | 	server/object.c, server/object.h, server/token.c
 # |
 if test "$enable_server_Stored_ACLs" -eq 1; then
 	patch_apply server-Stored_ACLs/0001-server-Unify-the-storage-of-security-attributes-for-.patch
@@ -5996,6 +5996,8 @@ if test "$enable_server_Stored_ACLs" -eq 1; then
 	patch_apply server-Stored_ACLs/0005-server-Store-file-security-attributes-with-extended-.patch
 	patch_apply server-Stored_ACLs/0006-server-Convert-return-of-file-security-masks-with-ge.patch
 	patch_apply server-Stored_ACLs/0007-server-Retrieve-file-security-attributes-with-extend.patch
+	patch_apply server-Stored_ACLs/0008-server-Fix-handling-of-MAXIMUM_ALLOWED-in-token_acce.patch
+	patch_apply server-Stored_ACLs/0009-server-Map-MAXIMUM_ALLOWED-even-if-skipping-access-c.patch
 	(
 		echo '+    { "Erich E. Hoover", "server: Unify the storage of security attributes for files and directories.", 7 },';
 		echo '+    { "Erich E. Hoover", "server: Unify the retrieval of security attributes for files and directories.", 7 },';
@@ -6004,6 +6006,8 @@ if test "$enable_server_Stored_ACLs" -eq 1; then
 		echo '+    { "Erich E. Hoover", "server: Store file security attributes with extended file attributes.", 8 },';
 		echo '+    { "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings.", 7 },';
 		echo '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes.", 7 },';
+		echo '+    { "Sebastian Lackner", "server: Fix handling of MAXIMUM_ALLOWED in token_access_check.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Map MAXIMUM_ALLOWED even if skipping access check.", 1 },';
 	) >> "$patchlist"
 fi
 

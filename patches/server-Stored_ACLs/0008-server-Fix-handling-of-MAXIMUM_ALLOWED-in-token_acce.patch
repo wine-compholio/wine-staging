@@ -1,0 +1,46 @@
+From f85560693bd9a615e9c1b1ff2eabda967389dd32 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 16 Oct 2016 01:50:17 +0200
+Subject: server: Fix handling of MAXIMUM_ALLOWED in token_access_check.
+
+---
+ dlls/advapi32/tests/security.c | 6 ++++++
+ server/token.c                 | 5 ++++-
+ 2 files changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
+index 403c04a..9fbe33e 100644
+--- a/dlls/advapi32/tests/security.c
++++ b/dlls/advapi32/tests/security.c
+@@ -1378,6 +1378,12 @@ static void test_AccessCheck(void)
+     ok(AccessStatus && (Access == KEY_READ),
+         "AccessCheck failed to grant access with error %d\n",
+         GetLastError());
++    ret = AccessCheck(SecurityDescriptor, Token, MAXIMUM_ALLOWED, &Mapping,
++                      PrivSet, &PrivSetLen, &Access, &AccessStatus);
++    ok(ret, "AccessCheck failed with error %d\n", GetLastError());
++    ok(AccessStatus && (Access == KEY_ALL_ACCESS),
++        "AccessCheck failed to grant access with error %d\n",
++        GetLastError());
+ 
+     /* sd with blank dacl */
+     ret = SetSecurityDescriptorDacl(SecurityDescriptor, TRUE, Acl, FALSE);
+diff --git a/server/token.c b/server/token.c
+index f77ca2c..b903420 100644
+--- a/server/token.c
++++ b/server/token.c
+@@ -854,7 +854,10 @@ static unsigned int token_access_check( struct token *token,
+     if (!dacl_present || !dacl)
+     {
+         if (priv_count) *priv_count = 0;
+-        *granted_access = desired_access;
++        if (desired_access & MAXIMUM_ALLOWED)
++            *granted_access = mapping->GenericAll;
++        else
++            *granted_access = desired_access;
+         return *status = STATUS_SUCCESS;
+     }
+ 
+-- 
+2.9.0
+

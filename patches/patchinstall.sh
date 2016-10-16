@@ -349,6 +349,7 @@ patch_enable_all ()
 	enable_wbemdisp_Printer="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppGrayFloat="$1"
+	enable_windowscodecs_GIF_Encoder="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
 	enable_windowscodecs_IWICPalette_InitializeFromBitmap="$1"
 	enable_windowscodecs_Palette_Images="$1"
@@ -1228,6 +1229,9 @@ patch_enable ()
 			;;
 		windowscodecs-32bppGrayFloat)
 			enable_windowscodecs_32bppGrayFloat="$2"
+			;;
+		windowscodecs-GIF_Encoder)
+			enable_windowscodecs_GIF_Encoder="$2"
 			;;
 		windowscodecs-IMILBitmapSource)
 			enable_windowscodecs_IMILBitmapSource="$2"
@@ -7194,6 +7198,34 @@ if test "$enable_windowscodecs_32bppGrayFloat" -eq 1; then
 	patch_apply windowscodecs-32bppGrayFloat/0004-windowscodecs-Fix-32bppGrayFloat-to-8bppGray-convers.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fix 32bppGrayFloat to 8bppGray conversion.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windowscodecs-GIF_Encoder
+# |
+# | Modified files:
+# |   *	dlls/windowscodecs/bmpencode.c, dlls/windowscodecs/clsfactory.c, dlls/windowscodecs/gifformat.c,
+# | 	dlls/windowscodecs/info.c, dlls/windowscodecs/jpegformat.c, dlls/windowscodecs/regsvr.c,
+# | 	dlls/windowscodecs/tiffformat.c, dlls/windowscodecs/wincodecs_private.h
+# |
+if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
+	patch_apply windowscodecs-GIF_Encoder/0001-windowscodecs-Implement-IWICBitmapEncoder-GetEncoder.patch
+	patch_apply windowscodecs-GIF_Encoder/0002-windowscodecs-Implement-IWICBitmapEncoderInfo-GetFil.patch
+	patch_apply windowscodecs-GIF_Encoder/0003-windowscodecs-Implement-IWICBitmapFrameEncode-SetPal.patch
+	patch_apply windowscodecs-GIF_Encoder/0004-windowscodecs-Implement-IWICBitmapEncoder-GetEncoder.patch
+	patch_apply windowscodecs-GIF_Encoder/0005-windowscodecs-Avoid-crashing-if-no-IPropertyBag2-was.patch
+	patch_apply windowscodecs-GIF_Encoder/0006-windowscodecs-Implement-IWICBitmapEncoder-GetEncoder.patch
+	patch_apply windowscodecs-GIF_Encoder/0007-windowscodecs-Avoid-crashing-if-no-IPropertyBag2-was.patch
+	patch_apply windowscodecs-GIF_Encoder/0008-windowscodecs-Add-initial-implementation-of-the-GIF-.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in BMP encoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoderInfo::GetFileExtensions.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapFrameEncode::SetPalette in JPEG encoder,.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in JPEG encoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Avoid crashing if no IPropertyBag2 was passed to IWICBitmapEncoder::CreateNewFrame in JPEG encoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in TIFF encoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Avoid crashing if no IPropertyBag2 was passed to IWICBitmapEncoder::CreateNewFrame in TIFF encoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add initial implementation of the GIF encoder.", 1 },';
 	) >> "$patchlist"
 fi
 

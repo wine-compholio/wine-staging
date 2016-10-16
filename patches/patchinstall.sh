@@ -369,6 +369,7 @@ patch_enable_all ()
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
+	enable_wined3d_GTX_560M="$1"
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_QUERY_Stubs="$1"
 	enable_wined3d_Revert_Pixel_Center_Offset="$1"
@@ -1287,6 +1288,9 @@ patch_enable ()
 			;;
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
+			;;
+		wined3d-GTX_560M)
+			enable_wined3d_GTX_560M="$2"
 			;;
 		wined3d-Limit_Vram)
 			enable_wined3d_Limit_Vram="$2"
@@ -7525,6 +7529,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	patch_apply wined3d-CSMT_Helper/0001-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-GTX_560M
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_GTX_560M" -eq 1; then
+	patch_apply wined3d-GTX_560M/0001-wined3d-Recognize-GTX-560M-card-with-NVIDIA-driver.patch
+	(
+		echo '+    { "Christian Costa", "wined3d: Recognize GTX 560M card with NVIDIA driver.", 1 },';
 	) >> "$patchlist"
 fi
 

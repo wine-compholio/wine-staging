@@ -4080,13 +4080,15 @@ fi
 # |   *	dlls/advapi32/tests/security.c, dlls/ntdll/tests/file.c, server/fd.c
 # |
 if test "$enable_server_File_Permissions" -eq 1; then
-	patch_apply server-File_Permissions/0001-server-Allow-to-open-files-without-any-permission-bi.patch
-	patch_apply server-File_Permissions/0002-server-When-creating-new-directories-temporarily-giv.patch
-	patch_apply server-File_Permissions/0003-advapi32-tests-Add-tests-for-ACL-inheritance-in-Crea.patch
-	patch_apply server-File_Permissions/0004-advapi32-tests-Add-ACL-inheritance-tests-for-creatin.patch
-	patch_apply server-File_Permissions/0005-ntdll-tests-Added-tests-for-open-behaviour-on-readon.patch
-	patch_apply server-File_Permissions/0006-server-FILE_WRITE_ATTRIBUTES-should-succeed-for-read.patch
+	patch_apply server-File_Permissions/0001-server-Improve-STATUS_CANNOT_DELETE-checks-for-direc.patch
+	patch_apply server-File_Permissions/0002-server-Allow-to-open-files-without-any-permission-bi.patch
+	patch_apply server-File_Permissions/0003-server-When-creating-new-directories-temporarily-giv.patch
+	patch_apply server-File_Permissions/0004-advapi32-tests-Add-tests-for-ACL-inheritance-in-Crea.patch
+	patch_apply server-File_Permissions/0005-advapi32-tests-Add-ACL-inheritance-tests-for-creatin.patch
+	patch_apply server-File_Permissions/0006-ntdll-tests-Added-tests-for-open-behaviour-on-readon.patch
+	patch_apply server-File_Permissions/0007-server-FILE_WRITE_ATTRIBUTES-should-succeed-for-read.patch
 	(
+		echo '+    { "Sebastian Lackner", "server: Improve STATUS_CANNOT_DELETE checks for directory case.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Allow to open files without any permission bits.", 2 },';
 		echo '+    { "Sebastian Lackner", "server: When creating new directories temporarily give read-permissions until they are opened.", 1 },';
 		echo '+    { "Sebastian Lackner", "advapi32/tests: Add tests for ACL inheritance in CreateDirectoryA.", 1 },';

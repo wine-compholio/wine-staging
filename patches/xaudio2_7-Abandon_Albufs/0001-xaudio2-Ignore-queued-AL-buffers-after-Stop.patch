@@ -1,0 +1,222 @@
+From 14d181155cd442b6f4b06c9837d6541e9d574fff Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Fri, 22 Jul 2016 10:21:20 -0500
+Subject: xaudio2: Ignore queued AL buffers after Stop
+
+Changes by Sebastian Lackner <sebastian@fds-team.de>:
+* Fixed flawed logic to skip abandoned buffers.
+---
+ dlls/xaudio2_7/tests/xaudio2.c  | 78 +++++++++++++++++++++++++++++++++++++++++
+ dlls/xaudio2_7/xaudio_dll.c     | 37 +++++++++++++++----
+ dlls/xaudio2_7/xaudio_private.h |  2 +-
+ 3 files changed, 109 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/xaudio2_7/tests/xaudio2.c b/dlls/xaudio2_7/tests/xaudio2.c
+index 54176ea..ff402f8 100644
+--- a/dlls/xaudio2_7/tests/xaudio2.c
++++ b/dlls/xaudio2_7/tests/xaudio2.c
+@@ -841,6 +841,82 @@ static void test_submix(IXAudio2 *xa)
+     IXAudio2MasteringVoice_DestroyVoice(master);
+ }
+ 
++static void test_flush(IXAudio2 *xa)
++{
++    HRESULT hr;
++    IXAudio2MasteringVoice *master;
++    IXAudio2SourceVoice *src;
++    WAVEFORMATEX fmt;
++    XAUDIO2_BUFFER buf;
++    XAUDIO2_VOICE_STATE state;
++
++    XA2CALL_0V(StopEngine);
++
++    if(xaudio27)
++        hr = IXAudio27_CreateMasteringVoice((IXAudio27*)xa, &master, 2, 44100, 0, 0, NULL);
++    else
++        hr = IXAudio2_CreateMasteringVoice(xa, &master, 2, 44100, 0, NULL, NULL, AudioCategory_GameEffects);
++    ok(hr == S_OK, "CreateMasteringVoice failed: %08x\n", hr);
++
++    fmt.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
++    fmt.nChannels = 2;
++    fmt.nSamplesPerSec = 44100;
++    fmt.wBitsPerSample = 32;
++    fmt.nBlockAlign = fmt.nChannels * fmt.wBitsPerSample / 8;
++    fmt.nAvgBytesPerSec = fmt.nSamplesPerSec * fmt.nBlockAlign;
++    fmt.cbSize = 0;
++
++    XA2CALL(CreateSourceVoice, &src, &fmt, 0, 1.f, NULL, NULL, NULL);
++    ok(hr == S_OK, "CreateSourceVoice failed: %08x\n", hr);
++
++    memset(&buf, 0, sizeof(buf));
++    buf.AudioBytes = 22050 * fmt.nBlockAlign;
++    buf.pAudioData = HeapAlloc(GetProcessHeap(), 0, buf.AudioBytes);
++    fill_buf((float*)buf.pAudioData, &fmt, 440, 22050);
++
++    hr = IXAudio2SourceVoice_SubmitSourceBuffer(src, &buf, NULL);
++    ok(hr == S_OK, "SubmitSourceBuffer failed: %08x\n", hr);
++
++    hr = IXAudio2SourceVoice_Start(src, 0, XAUDIO2_COMMIT_NOW);
++    ok(hr == S_OK, "Start failed: %08x\n", hr);
++
++    XA2CALL_0(StartEngine);
++    ok(hr == S_OK, "StartEngine failed: %08x\n", hr);
++
++    while(1){
++        if(xaudio27)
++            IXAudio27SourceVoice_GetState((IXAudio27SourceVoice*)src, &state);
++        else
++            IXAudio2SourceVoice_GetState(src, &state, 0);
++        if(state.SamplesPlayed >= 2205)
++            break;
++        Sleep(10);
++    }
++
++    hr = IXAudio2SourceVoice_Stop(src, 0, XAUDIO2_COMMIT_NOW);
++    ok(hr == S_OK, "Stop failed: %08x\n", hr);
++
++    hr = IXAudio2SourceVoice_FlushSourceBuffers(src);
++    ok(hr == S_OK, "FlushSourceBuffers failed: %08x\n", hr);
++
++    hr = IXAudio2SourceVoice_Start(src, 0, XAUDIO2_COMMIT_NOW);
++    ok(hr == S_OK, "Start failed: %08x\n", hr);
++
++    Sleep(100);
++
++    hr = IXAudio2SourceVoice_SubmitSourceBuffer(src, &buf, NULL);
++    ok(hr == S_OK, "SubmitSourceBuffer failed: %08x\n", hr);
++
++    if(xaudio27){
++        IXAudio27SourceVoice_DestroyVoice((IXAudio27SourceVoice*)src);
++    }else{
++        IXAudio2SourceVoice_DestroyVoice(src);
++    }
++    IXAudio2MasteringVoice_DestroyVoice(master);
++
++    HeapFree(GetProcessHeap(), 0, (void*)buf.pAudioData);
++}
++
+ static UINT32 test_DeviceDetails(IXAudio27 *xa)
+ {
+     HRESULT hr;
+@@ -1136,6 +1212,7 @@ START_TEST(xaudio2)
+             test_buffer_callbacks((IXAudio2*)xa27);
+             test_looping((IXAudio2*)xa27);
+             test_submix((IXAudio2*)xa27);
++            test_flush((IXAudio2*)xa27);
+         }else
+             skip("No audio devices available\n");
+ 
+@@ -1159,6 +1236,7 @@ START_TEST(xaudio2)
+             test_buffer_callbacks(xa);
+             test_looping(xa);
+             test_submix(xa);
++            test_flush(xa);
+         }else
+             skip("No audio devices available\n");
+ 
+diff --git a/dlls/xaudio2_7/xaudio_dll.c b/dlls/xaudio2_7/xaudio_dll.c
+index b2a5e3b..8465a67 100644
+--- a/dlls/xaudio2_7/xaudio_dll.c
++++ b/dlls/xaudio2_7/xaudio_dll.c
+@@ -414,6 +414,7 @@ static void WINAPI XA2SRC_DestroyVoice(IXAudio2SourceVoice *iface)
+     This->nbufs = 0;
+     This->first_buf = 0;
+     This->cur_buf = 0;
++    This->abandoned_albufs = 0;
+ 
+     LeaveCriticalSection(&This->lock);
+ }
+@@ -438,11 +439,17 @@ static HRESULT WINAPI XA2SRC_Stop(IXAudio2SourceVoice *iface, UINT32 Flags,
+         UINT32 OperationSet)
+ {
+     XA2SourceImpl *This = impl_from_IXAudio2SourceVoice(iface);
++    ALint bufs;
+ 
+     TRACE("%p, 0x%x, 0x%x\n", This, Flags, OperationSet);
+ 
++    palcSetThreadContext(This->xa2->al_ctx);
++
+     EnterCriticalSection(&This->lock);
+ 
++    alGetSourcei(This->al_src, AL_BUFFERS_QUEUED, &bufs);
++    This->abandoned_albufs = bufs;
++
+     This->running = FALSE;
+ 
+     LeaveCriticalSection(&This->lock);
+@@ -2252,10 +2259,24 @@ static void update_source_state(XA2SourceImpl *src)
+ 
+     alGetSourcei(src->al_src, AL_BUFFERS_PROCESSED, &processed);
+ 
++    if(processed > 0 && src->abandoned_albufs > 0)
++    {
++        ALuint al_buffers[XAUDIO2_MAX_QUEUED_BUFFERS];
++        ALint abandoned = min(processed, src->abandoned_albufs);
++
++        alSourceUnqueueBuffers(src->al_src, abandoned, al_buffers);
++        src->abandoned_albufs -= abandoned;
++        processed -= abandoned;
++    }
++
++    if(!src->running)
++        return;
++
+     if(processed > 0){
+         ALuint al_buffers[XAUDIO2_MAX_QUEUED_BUFFERS];
+ 
+         alSourceUnqueueBuffers(src->al_src, processed, al_buffers);
++
+         src->first_al_buf += processed;
+         src->first_al_buf %= XAUDIO2_MAX_QUEUED_BUFFERS;
+         src->al_bufs_used -= processed;
+@@ -2367,12 +2388,12 @@ static void do_engine_tick(IXAudio2Impl *This)
+ 
+         EnterCriticalSection(&src->lock);
+ 
+-        if(!src->in_use || !src->running){
++        if(!src->in_use){
+             LeaveCriticalSection(&src->lock);
+             continue;
+         }
+ 
+-        if(src->cb){
++        if(src->cb && This->running){
+ #if XAUDIO2_VER == 0
+             IXAudio20VoiceCallback_OnVoiceProcessingPassStart((IXAudio20VoiceCallback*)src->cb);
+ #else
+@@ -2386,12 +2407,14 @@ static void do_engine_tick(IXAudio2Impl *This)
+ 
+         update_source_state(src);
+ 
+-        alGetSourcei(src->al_src, AL_SOURCE_STATE, &st);
+-        if(st != AL_PLAYING)
+-            alSourcePlay(src->al_src);
++        if(This->running){
++            alGetSourcei(src->al_src, AL_SOURCE_STATE, &st);
++            if(st != AL_PLAYING)
++                alSourcePlay(src->al_src);
+ 
+-        if(src->cb)
+-            IXAudio2VoiceCallback_OnVoiceProcessingPassEnd(src->cb);
++            if(src->cb)
++                IXAudio2VoiceCallback_OnVoiceProcessingPassEnd(src->cb);
++        }
+ 
+         LeaveCriticalSection(&src->lock);
+     }
+diff --git a/dlls/xaudio2_7/xaudio_private.h b/dlls/xaudio2_7/xaudio_private.h
+index f28a0ae..1a4aa08 100644
+--- a/dlls/xaudio2_7/xaudio_private.h
++++ b/dlls/xaudio2_7/xaudio_private.h
+@@ -81,7 +81,7 @@ typedef struct _XA2SourceImpl {
+     /* most cases will only need about 4 AL buffers, but some corner cases
+      * could require up to MAX_QUEUED_BUFFERS */
+     ALuint al_bufs[XAUDIO2_MAX_QUEUED_BUFFERS];
+-    DWORD first_al_buf, al_bufs_used;
++    DWORD first_al_buf, al_bufs_used, abandoned_albufs;
+ 
+     struct list entry;
+ } XA2SourceImpl;
+-- 
+2.9.0
+

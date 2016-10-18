@@ -1,4 +1,4 @@
-From 47b0e70a85956bc0688fb0cef2218f482d2e94fb Mon Sep 17 00:00:00 2001
+From 3c34bb2ce1988fbd772c19339ef10df3df700e2d Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 19 Oct 2015 00:34:01 +0200
 Subject: server: Do not signal thread until it is really gone.
@@ -9,10 +9,10 @@ Subject: server: Do not signal thread until it is really gone.
  2 files changed, 24 insertions(+), 2 deletions(-)
 
 diff --git a/server/thread.c b/server/thread.c
-index 6383000..438d9d0 100644
+index 5f8405b..7de022b 100644
 --- a/server/thread.c
 +++ b/server/thread.c
-@@ -195,6 +195,7 @@ static inline void init_thread_structure( struct thread *thread )
+@@ -199,6 +199,7 @@ static inline void init_thread_structure( struct thread *thread )
      thread->suspend         = 0;
      thread->desktop_users   = 0;
      thread->token           = NULL;
@@ -20,7 +20,7 @@ index 6383000..438d9d0 100644
  
      thread->creation_time = current_time;
      thread->exit_time     = 0;
-@@ -316,6 +317,7 @@ static void destroy_thread( struct object *obj )
+@@ -320,6 +321,7 @@ static void destroy_thread( struct object *obj )
      list_remove( &thread->entry );
      cleanup_thread( thread );
      release_object( thread->process );
@@ -28,7 +28,7 @@ index 6383000..438d9d0 100644
      if (thread->id) free_ptid( thread->id );
      if (thread->token) release_object( thread->token );
  }
-@@ -333,7 +335,7 @@ static void dump_thread( struct object *obj, int verbose )
+@@ -337,7 +339,7 @@ static void dump_thread( struct object *obj, int verbose )
  static int thread_signaled( struct object *obj, struct wait_queue_entry *entry )
  {
      struct thread *mythread = (struct thread *)obj;
@@ -37,7 +37,7 @@ index 6383000..438d9d0 100644
  }
  
  static unsigned int thread_map_access( struct object *obj, unsigned int access )
-@@ -1091,6 +1093,25 @@ int thread_get_inflight_fd( struct thread *thread, int client )
+@@ -1095,6 +1097,25 @@ int thread_get_inflight_fd( struct thread *thread, int client )
      return -1;
  }
  
@@ -49,7 +49,7 @@ index 6383000..438d9d0 100644
 +
 +    if (thread->unix_tid != -1 && !kill( thread->unix_tid, 0 ))
 +    {
-+        thread->exit_poll = add_timeout_user( -TICKS_PER_SEC / 100, check_terminated, thread );
++        thread->exit_poll = add_timeout_user( -TICKS_PER_SEC / 1000, check_terminated, thread );
 +        return;
 +    }
 +
@@ -63,7 +63,7 @@ index 6383000..438d9d0 100644
  /* kill a thread on the spot */
  void kill_thread( struct thread *thread, int violent_death )
  {
-@@ -1111,8 +1132,8 @@ void kill_thread( struct thread *thread, int violent_death )
+@@ -1115,8 +1136,8 @@ void kill_thread( struct thread *thread, int violent_death )
      kill_console_processes( thread, 0 );
      debug_exit_thread( thread );
      abandon_mutexes( thread );
@@ -86,5 +86,5 @@ index 2821991..ac9af24 100644
  
  struct thread_snapshot
 -- 
-2.6.1
+2.9.0
 

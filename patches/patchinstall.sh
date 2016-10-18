@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "eb5339edaca1c09d76b4afa32bdb07c1549e6650"
+	echo "ddfc5275af0081cba6e834bf9d9e35dcaa17d256"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 1.9.21"
+	echo "Wine Staging 1.9.22 (unreleased)"
 	echo "Copyright (C) 2014-2016 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -5462,19 +5462,11 @@ fi
 # Patchset ntoskrnl-METHOD_OUT_DIRECT
 # |
 # | Modified files:
-# |   *	dlls/hidclass.sys/device.c, dlls/ntdll/file.c, dlls/ntoskrnl.exe/ntoskrnl.c, include/ddk/wdm.h
+# |   *	dlls/hidclass.sys/device.c
 # |
 if test "$enable_ntoskrnl_METHOD_OUT_DIRECT" -eq 1; then
-	patch_apply ntoskrnl-METHOD_OUT_DIRECT/0001-ntoskrnl.exe-Defer-deallocation-of-in_buff-in-dispat.patch
-	patch_apply ntoskrnl-METHOD_OUT_DIRECT/0002-ntoskrnl.exe-Add-support-for-METHOD_IN_DIRECT-and-ME.patch
-	patch_apply ntoskrnl-METHOD_OUT_DIRECT/0003-ntoskrnl.exe-Use-MmInitializeMdl-in-IoAllocateMdl.patch
-	patch_apply ntoskrnl-METHOD_OUT_DIRECT/0004-ntoskrnl.exe-Explicitly-set-MappedSystemVa-for-MDLs.patch
 	patch_apply ntoskrnl-METHOD_OUT_DIRECT/0005-hidclass.sys-Use-MmGetSystemAddressForMdlSafe-to-acc.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntoskrnl.exe: Defer deallocation of in_buff in dispatch_ioctl.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntoskrnl.exe: Add support for METHOD_IN_DIRECT/METHOD_OUT_DIRECT ioctls.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntoskrnl.exe: Use MmInitializeMdl in IoAllocateMdl.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntoskrnl.exe: Explicitly set MappedSystemVa for MDLs.", 1 },';
 		echo '+    { "Sebastian Lackner", "hidclass.sys: Use MmGetSystemAddressForMdlSafe to access MDL data.", 1 },';
 	) >> "$patchlist"
 fi

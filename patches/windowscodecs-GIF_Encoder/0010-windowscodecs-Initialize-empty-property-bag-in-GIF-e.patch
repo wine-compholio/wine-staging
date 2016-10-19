@@ -1,0 +1,70 @@
+From b71e5960bb9cc8926ab03d7c2abf70ad976f9732 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Mon, 17 Oct 2016 15:27:47 +0800
+Subject: windowscodecs: Initialize empty property bag in GIF encoder's
+ CreateNewFrame implementation.
+
+gdiplus depends on IPropertyBag2 being initialized, otherwise it crashes.
+---
+ dlls/gdiplus/tests/image.c     | 14 ++++++--------
+ dlls/windowscodecs/gifformat.c | 10 ++++++++++
+ 2 files changed, 16 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/gdiplus/tests/image.c b/dlls/gdiplus/tests/image.c
+index 8c123b9..8cbbb5b 100644
+--- a/dlls/gdiplus/tests/image.c
++++ b/dlls/gdiplus/tests/image.c
+@@ -4637,14 +4637,13 @@ static void test_supported_encoders(void)
+     {
+         LPCWSTR mime;
+         const GUID *format;
+-        BOOL todo;
+     } td[] =
+     {
+-        { bmp_mimetype, &ImageFormatBMP, FALSE },
+-        { jpeg_mimetype, &ImageFormatJPEG, FALSE },
+-        { gif_mimetype, &ImageFormatGIF, TRUE },
+-        { tiff_mimetype, &ImageFormatTIFF, FALSE },
+-        { png_mimetype, &ImageFormatPNG, FALSE }
++        { bmp_mimetype, &ImageFormatBMP },
++        { jpeg_mimetype, &ImageFormatJPEG },
++        { gif_mimetype, &ImageFormatGIF },
++        { tiff_mimetype, &ImageFormatTIFF },
++        { png_mimetype, &ImageFormatPNG }
+     };
+     GUID format, clsid;
+     BOOL ret;
+@@ -4670,8 +4669,7 @@ static void test_supported_encoders(void)
+         ok(hr == S_OK, "CreateStreamOnHGlobal error %#x\n", hr);
+ 
+         status = GdipSaveImageToStream((GpImage *)bm, stream, &clsid, NULL);
+-        todo_wine_if (td[i].todo)
+-            ok(status == Ok, "GdipSaveImageToStream error %d\n", status);
++        ok(status == Ok, "GdipSaveImageToStream error %d\n", status);
+ 
+         IStream_Release(stream);
+     }
+diff --git a/dlls/windowscodecs/gifformat.c b/dlls/windowscodecs/gifformat.c
+index b5c56aa..6052726 100644
+--- a/dlls/windowscodecs/gifformat.c
++++ b/dlls/windowscodecs/gifformat.c
+@@ -2296,6 +2296,16 @@ static HRESULT WINAPI GifEncoder_CreateNewFrame(IWICBitmapEncoder *iface, IWICBi
+             *frame = &ret->IWICBitmapFrameEncode_iface;
+ 
+             hr = S_OK;
++
++            if (options)
++            {
++                hr = CreatePropertyBag2(NULL, 0, options);
++                if (hr != S_OK)
++                {
++                    IWICBitmapFrameEncode_Release(*frame);
++                    *frame = NULL;
++                }
++            }
+         }
+         else
+             hr = E_OUTOFMEMORY;
+-- 
+2.9.0
+

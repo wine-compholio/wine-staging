@@ -7200,8 +7200,8 @@ fi
 # Patchset windowscodecs-GIF_Encoder
 # |
 # | Modified files:
-# |   *	dlls/windowscodecs/bmpencode.c, dlls/windowscodecs/clsfactory.c, dlls/windowscodecs/gifformat.c,
-# | 	dlls/windowscodecs/info.c, dlls/windowscodecs/jpegformat.c, dlls/windowscodecs/regsvr.c,
+# |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, dlls/windowscodecs/bmpencode.c, dlls/windowscodecs/clsfactory.c,
+# | 	dlls/windowscodecs/gifformat.c, dlls/windowscodecs/info.c, dlls/windowscodecs/jpegformat.c, dlls/windowscodecs/regsvr.c,
 # | 	dlls/windowscodecs/tiffformat.c, dlls/windowscodecs/wincodecs_private.h
 # |
 if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
@@ -7213,6 +7213,8 @@ if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 	patch_apply windowscodecs-GIF_Encoder/0006-windowscodecs-Implement-IWICBitmapEncoder-GetEncoder.patch
 	patch_apply windowscodecs-GIF_Encoder/0007-windowscodecs-Avoid-crashing-if-no-IPropertyBag2-was.patch
 	patch_apply windowscodecs-GIF_Encoder/0008-windowscodecs-Add-initial-implementation-of-the-GIF-.patch
+	patch_apply windowscodecs-GIF_Encoder/0009-gdiplus-Fix-a-typo-in-GIF-container-format-passed-to.patch
+	patch_apply windowscodecs-GIF_Encoder/0010-windowscodecs-Initialize-empty-property-bag-in-GIF-e.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in BMP encoder.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoderInfo::GetFileExtensions.", 1 },';
@@ -7222,6 +7224,8 @@ if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in TIFF encoder.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Avoid crashing if no IPropertyBag2 was passed to IWICBitmapEncoder::CreateNewFrame in TIFF encoder.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add initial implementation of the GIF encoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "gdiplus: Fix a typo in GIF container format passed to encode_image_wic().", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Initialize empty property bag in GIF encoder'\''s CreateNewFrame implementation.", 1 },';
 	) >> "$patchlist"
 fi
 

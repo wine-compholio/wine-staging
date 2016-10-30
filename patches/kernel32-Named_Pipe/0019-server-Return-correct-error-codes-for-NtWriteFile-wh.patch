@@ -1,4 +1,4 @@
-From f31780d39178e9e4aa98962d04a51e4f7440757d Mon Sep 17 00:00:00 2001
+From 01f63c1b25a7b0f964e9558d1054a613d1cd90e8 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 6 Jun 2015 01:21:05 +0200
 Subject: server: Return correct error codes for NtWriteFile when pipes are
@@ -12,7 +12,7 @@ Subject: server: Return correct error codes for NtWriteFile when pipes are
  4 files changed, 46 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/kernel32/tests/pipe.c b/dlls/kernel32/tests/pipe.c
-index 3035dd4..9986337 100644
+index db2d49d..a2a425d 100644
 --- a/dlls/kernel32/tests/pipe.c
 +++ b/dlls/kernel32/tests/pipe.c
 @@ -1909,7 +1909,7 @@ static void test_CloseHandle(void)
@@ -25,10 +25,10 @@ index 3035dd4..9986337 100644
      CloseHandle(hfile);
  
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index a925899..af4b64e 100644
+index d1dd1e7..1b97ef0 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -1211,6 +1211,9 @@ static NTSTATUS write_unix_fd(int fd, const char *buf, ULONG *total, ULONG lengt
+@@ -1240,6 +1240,9 @@ static NTSTATUS write_unix_fd(int fd, const char *buf, ULONG *total, ULONG lengt
                  return STATUS_SUCCESS;
              else if (errno == EFAULT)
                  return STATUS_INVALID_USER_BUFFER;
@@ -39,7 +39,7 @@ index a925899..af4b64e 100644
          }
      }
 diff --git a/server/named_pipe.c b/server/named_pipe.c
-index 55c0db7..e4dbf26 100644
+index 6e627bd..69293a9 100644
 --- a/server/named_pipe.c
 +++ b/server/named_pipe.c
 @@ -147,6 +147,7 @@ static const struct object_ops named_pipe_ops =
@@ -85,7 +85,7 @@ index 55c0db7..e4dbf26 100644
  static void named_pipe_dump( struct object *obj, int verbose )
  {
      fputs( "Named pipe\n", stderr );
-@@ -394,6 +398,23 @@ static void do_disconnect( struct pipe_server *server )
+@@ -393,6 +397,23 @@ static void do_disconnect( struct pipe_server *server )
      server->fd = NULL;
  }
  
@@ -109,7 +109,7 @@ index 55c0db7..e4dbf26 100644
  static void pipe_server_destroy( struct object *obj)
  {
      struct pipe_server *server = (struct pipe_server *)obj;
-@@ -420,6 +441,24 @@ static void pipe_server_destroy( struct object *obj)
+@@ -419,6 +440,24 @@ static void pipe_server_destroy( struct object *obj)
      release_object( server->pipe );
  }
  
@@ -121,7 +121,7 @@ index 55c0db7..e4dbf26 100644
 +    int unix_fd;
 +
 +    assert( obj->ops == &pipe_client_ops );
-+    if (obj->handle_count == 1 && server && server->fd && server->state != ps_disconnected_server &&
++    if (obj->handle_count == 1 && server && server->fd &&
 +        server->state != ps_wait_connect && (unix_fd = get_unix_fd( server->fd )) != -1)
 +    {
 +        /* set the NAMED_PIPE_CLOSED_HANDLE flag, to distinguish disconnect / closing pipe */
@@ -135,10 +135,10 @@ index 55c0db7..e4dbf26 100644
  {
      struct pipe_client *client = (struct pipe_client *)obj;
 diff --git a/server/protocol.def b/server/protocol.def
-index 2d87f03..1dc70d4 100644
+index 29f3a52..2dd44dd 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -2378,6 +2378,7 @@ enum message_type
+@@ -2428,6 +2428,7 @@ enum message_type
  #define NAMED_PIPE_MESSAGE_STREAM_WRITE 0x0001
  #define NAMED_PIPE_MESSAGE_STREAM_READ  0x0002
  #define NAMED_PIPE_NONBLOCKING_MODE     0x0004
@@ -147,5 +147,5 @@ index 2d87f03..1dc70d4 100644
  
  /* Get named pipe information by handle */
 -- 
-2.7.0
+2.9.0
 

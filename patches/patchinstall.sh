@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ddfc5275af0081cba6e834bf9d9e35dcaa17d256"
+	echo "1316520a8029c0a99b358d1cd754294634d1855a"
 }
 
 # Show version information
@@ -246,7 +246,6 @@ patch_enable_all ()
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll_call_thread_func_wrapper="$1"
 	enable_ntoskrnl_DriverTest="$1"
-	enable_ntoskrnl_METHOD_OUT_DIRECT="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
@@ -270,7 +269,6 @@ patch_enable_all ()
 	enable_rasapi32_RasEnumDevicesA="$1"
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
-	enable_rpcrt4_RpcBindingServerFromClient="$1"
 	enable_secur32_Zero_Buffer_Length="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
@@ -368,7 +366,6 @@ patch_enable_all ()
 	enable_wined3d_1DTextures="$1"
 	enable_wined3d_Accounting="$1"
 	enable_wined3d_CSMT_Helper="$1"
-	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_GTX_560M="$1"
 	enable_wined3d_Limit_Vram="$1"
@@ -922,9 +919,6 @@ patch_enable ()
 		ntoskrnl-DriverTest)
 			enable_ntoskrnl_DriverTest="$2"
 			;;
-		ntoskrnl-METHOD_OUT_DIRECT)
-			enable_ntoskrnl_METHOD_OUT_DIRECT="$2"
-			;;
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
 			;;
@@ -993,9 +987,6 @@ patch_enable ()
 			;;
 		riched20-IText_Interface)
 			enable_riched20_IText_Interface="$2"
-			;;
-		rpcrt4-RpcBindingServerFromClient)
-			enable_rpcrt4_RpcBindingServerFromClient="$2"
 			;;
 		secur32-Zero_Buffer_Length)
 			enable_secur32_Zero_Buffer_Length="$2"
@@ -1287,9 +1278,6 @@ patch_enable ()
 			;;
 		wined3d-CSMT_Helper)
 			enable_wined3d_CSMT_Helper="$2"
-			;;
-		wined3d-CSMT_Main)
-			enable_wined3d_CSMT_Main="$2"
 			;;
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
@@ -2014,13 +2002,6 @@ if test "$enable_wpcap_Dynamic_Linking" -eq 1; then
 	enable_wpcap_Several_Fixes=1
 fi
 
-if test "$enable_wined3d_CSMT_Main" -eq 1; then
-	if test "$enable_wined3d_CSMT_Helper" -gt 1; then
-		abort "Patchset wined3d-CSMT_Helper disabled, but wined3d-CSMT_Main depends on that."
-	fi
-	enable_wined3d_CSMT_Helper=1
-fi
-
 if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_makedep_PARENTSPEC" -gt 1; then
 		abort "Patchset makedep-PARENTSPEC disabled, but wined3d-CSMT_Helper depends on that."
@@ -2414,11 +2395,10 @@ fi
 # |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c, dlls/d3d8/texture.c,
 # | 	dlls/d3d9/tests/visual.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dsound/primary.c, dlls/dwrite/layout.c,
 # | 	dlls/msxml3/schema.c, dlls/netapi32/netapi32.c, dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/vbscript/vbdisp.c,
-# | 	dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c, include/d3dtypes.h, include/evntrace.h, include/wine/list.h,
+# | 	dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c, include/d3dtypes.h, include/wine/list.h,
 # | 	include/wine/rbtree.h, include/winnt.h, tools/makedep.c
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
-	patch_apply Compiler_Warnings/0001-include-Avoid-duplicate-definition-of-PEVENT_FILTER_.patch
 	patch_apply Compiler_Warnings/0015-include-Avoid-shift-overflow-warning.patch
 	patch_apply Compiler_Warnings/0018-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch
 	patch_apply Compiler_Warnings/0019-dsound-Avoid-implicit-cast-of-interface-pointer.patch
@@ -2435,7 +2415,6 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0030-vbscript-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0031-include-Check-element-type-in-CONTAINING_RECORD-and-.patch
 	(
-		echo '+    { "Hans Leidekker", "include: Avoid duplicate definition of PEVENT_FILTER_DESCRIPTOR.", 1 },';
 		echo '+    { "Sebastian Lackner", "include: Avoid shift overflow warning.", 1 },';
 		echo '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },';
 		echo '+    { "Sebastian Lackner", "dsound: Avoid implicit cast of interface pointer.", 1 },';
@@ -5459,18 +5438,6 @@ if test "$enable_ntoskrnl_DriverTest" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntoskrnl-METHOD_OUT_DIRECT
-# |
-# | Modified files:
-# |   *	dlls/hidclass.sys/device.c
-# |
-if test "$enable_ntoskrnl_METHOD_OUT_DIRECT" -eq 1; then
-	patch_apply ntoskrnl-METHOD_OUT_DIRECT/0005-hidclass.sys-Use-MmGetSystemAddressForMdlSafe-to-acc.patch
-	(
-		echo '+    { "Sebastian Lackner", "hidclass.sys: Use MmGetSystemAddressForMdlSafe to access MDL data.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntoskrnl-Stubs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5929,18 +5896,6 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 		echo '+    { "Jactry Zeng", "riched20: Implement ITextRange::GetStoryLength.", 1 },';
 		echo '+    { "Jactry Zeng", "riched20: Implement ITextSelection::GetStoryLength.", 1 },';
 		echo '+    { "Sebastian Lackner", "riched20: Silence repeated FIXMEs triggered by Adobe Reader.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset rpcrt4-RpcBindingServerFromClient
-# |
-# | Modified files:
-# |   *	dlls/rpcrt4/rpc_binding.c
-# |
-if test "$enable_rpcrt4_RpcBindingServerFromClient" -eq 1; then
-	patch_apply rpcrt4-RpcBindingServerFromClient/0001-rpcrt4-Fix-prototype-of-RpcBindingServerFromClient.patch
-	(
-		echo '+    { "Sebastian Lackner", "rpcrt4: Fix prototype of RpcBindingServerFromClient.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6552,7 +6507,7 @@ fi
 # |   *	[#35630] Support for SHCreateSessionKey
 # |
 # | Modified files:
-# |   *	dlls/shell32/shell32.spec, dlls/shell32/shellreg.c, dlls/shell32/tests/shellole.c
+# |   *	dlls/shell32/shellreg.c, dlls/shell32/tests/shellole.c
 # |
 if test "$enable_shell32_SHCreateSessionKey" -eq 1; then
 	patch_apply shell32-SHCreateSessionKey/0001-shell32-Implement-SHCreateSessionKey.patch
@@ -7625,137 +7580,6 @@ if test "$enable_wined3d_check_format_support" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "wined3d: Add wined3d_check_device_format_support.", 1 },';
 		echo '+    { "Michael Müller", "d3d11: Implement ID3D11Device_CheckFormatSupport.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-CSMT_Main
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects,
-# | 	wined3d-1DTextures, wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs, wined3d-Revert_Pixel_Center_Offset, wined3d-
-# | 	Silence_FIXMEs, wined3d-CSMT_Helper
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#11674] Support for CSMT (command stream) to increase graphic performance
-# |
-# | Modified files:
-# |   *	dlls/wined3d/arb_program_shader.c, dlls/wined3d/buffer.c, dlls/wined3d/context.c, dlls/wined3d/cs.c,
-# | 	dlls/wined3d/device.c, dlls/wined3d/drawprim.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/query.c,
-# | 	dlls/wined3d/resource.c, dlls/wined3d/sampler.c, dlls/wined3d/shader.c, dlls/wined3d/state.c, dlls/wined3d/stateblock.c,
-# | 	dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c, dlls/wined3d/utils.c,
-# | 	dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_CSMT_Main" -eq 1; then
-	patch_apply wined3d-CSMT_Main/9999-IfDefined.patch
-	(
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Sanitise resource map flags in wined3d_resource_map().\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Send resource unmaps through the command stream.\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Send resource maps through the command stream.\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Send shader constant updates through the command stream.\".", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Make surface_load_location return nothing.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Call texture_load_location instead of surface_load_location.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Share surface and volume system memory loading code.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call the public map function in surface_convert_format.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call the public map function in surface_cpu_blt.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Move the framebuffer into wined3d_state.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Preload buffers if streamsrc is not dirty.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Hackily introduce a multithreaded command stream.", 1 },';
-		echo '+    { "Henri Verbeet", "wined3d: Wait for resource updates to finish when using the multithreaded command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Wait for the cs before destroying objects.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Give the cs its own state.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send float constant updates through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Request a glFinish before modifying resources outside the cs.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Finish the cs before changing the texture lod.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish after clears.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish after draws.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Pass the depth stencil to swapchain->present.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Keep track of the onscreen depth stencil in the command stream instead of the device.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send base vertex index updates through the cs.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send primitive type updates through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send bool constant updates through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send int constant updates through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send light updates through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Prevent the command stream from running ahead too far.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Wait for the cs to finish before destroying the device.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Run the cs asynchronously.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send blits through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Hack to reject unsupported color fills.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Restore some wined3d_device_copy_sub_resource_region checks.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t force strict draw ordering for multithreaded CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send render target view clears through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send texture maps through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Get rid of the end_scene flush and finish.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Replace the linked lists with a ringbuffer.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t preload buffers on unmap.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish before swapping.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Add query support to the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Check our CS state to find out if a query is done.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Poll queries automatically in the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Introduce a separate queue for priority commands.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t poll queries that failed to start.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Remove restated queries from the poll list.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Put this into the query poll patch.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t access device state in clears.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Avoid destroying views in color and depth fills.", 1 },';
-		echo '+    { "Matteo Bruni", "wined3d: Avoid calling wined3d_surface_blt() from surface_upload_from_surface().", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send update_texture calls through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Get rid of the surface_upload_data glFinish.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t lock the src volume in device_update_volume.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Fence update_texture calls.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Dirtify resources on unmap.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Fence render targets and depth stencils.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Fence blit operations.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Fence color_fill operations.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Make resource maps and unmaps a priority command.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send update_sub_resource calls through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Dirtify changed textures through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Wrap GL BOs in a structure.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Separate resource map and draw buffers.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Implement DISCARD texture maps with PBOs.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Implement DISCARD resource maps with heap memory.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Unset some objects in state_init_default.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Use double-buffered buffers for multithreaded CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t synchronize NOOVERWRITE buffer maps.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Separate buffer map write and draw read memory pointers.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Accelerate DISCARD buffer maps.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Accelerate READONLY buffer maps.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Access the buffer dirty areas through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Ignore buffer->resource.map_count in the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Use glBufferSubData instead of glMapBufferRange.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Separate GL buffer discard control from ignoring MAP_DISCARD.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Create buffers before mapping them.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Remove another glFinish.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Create VBOs through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "Swapchain waits.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Unload resources through the CS in uninit_3d.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Unload resources through the CS in device_reset.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t glFinish after a depth buffer blit.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Use surface_blt_ugly in swapchain_gl_present.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Use an event to block the worker thread when it is idle.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Set map_heap_memory = NULL when allocating a PBO.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Wait only for the buffer to be idle.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Put GL_APPLE_flush_buffer_range syncing back in place.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t sync on redundant discard calls.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t discard new buffers.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t try to sync VBOs manually on OSX with CSMT.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Only discard buffers that are in use.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send getdc and releasedc through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Ignore WINED3D_MAP_NO_DIRTY_UPDATE in resource_map.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Create dummy textures through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Create the initial context through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Recreate ctx and dummy textures through the CS after resets.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Call create_default_sampler from create_dummy_textures.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Delete GL contexts through the CS in reset.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Delete GL contexts through the CS in uninit_3d.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Update the swap interval through the CS in reset.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Do the sampler GL init through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Create initial DCs through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Assign a read buffer when discarding a new texture.", 1 },';
-		echo '+    { "Sebastian Lackner", "wined3d: Do not query available GPU memory on main thread when CSMT is enabled.", 1 },';
-		echo '+    { "Nils Kuhnhenn", "wined3d: Fix incorrect return value in wined3d_cs_exec_set_light.", 1 },';
-		echo '+    { "Nils Kuhnhenn", "wined3d: Fix context_acquire not being called from the command thread in wined3d_texture_add_dirty_region.", 1 },';
-		echo '+    { "Sebastian Lackner", "wined3d: Do not signal CS event when we manage to unset waiting_for_event quickly enough.", 1 },';
-		echo '+    { "Sebastian Lackner", "wined3d: Enable CSMT by default, print a winediag message informing about this patchset.", 1 },';
 	) >> "$patchlist"
 fi
 

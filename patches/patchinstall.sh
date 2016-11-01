@@ -6522,9 +6522,6 @@ fi
 
 # Patchset shell32-SHCreateSessionKey
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35630] Support for SHCreateSessionKey
-# |
 # | Modified files:
 # |   *	dlls/shell32/shellreg.c, dlls/shell32/tests/shellole.c
 # |

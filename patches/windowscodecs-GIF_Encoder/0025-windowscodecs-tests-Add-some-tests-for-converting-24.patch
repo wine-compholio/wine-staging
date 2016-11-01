@@ -1,0 +1,190 @@
+From cf2301cafab21d7a67cf7a3b3a11db0ed17d0042 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Thu, 27 Oct 2016 15:13:24 +0800
+Subject: windowscodecs/tests: Add some tests for converting 24bppBGR to
+ 8bppIndexed format.
+
+---
+ dlls/windowscodecs/tests/converter.c | 159 +++++++++++++++++++++++++++++++++++
+ 1 file changed, 159 insertions(+)
+
+diff --git a/dlls/windowscodecs/tests/converter.c b/dlls/windowscodecs/tests/converter.c
+index e6d21ac..b8ed4d4 100644
+--- a/dlls/windowscodecs/tests/converter.c
++++ b/dlls/windowscodecs/tests/converter.c
+@@ -1459,6 +1459,163 @@ static const struct setting png_interlace_settings[] = {
+     {NULL}
+ };
+ 
++static void test_converter_8bppIndexed(void)
++{
++    HRESULT hr;
++    BitmapTestSrc *src_obj;
++    IWICFormatConverter *converter;
++    IWICPalette *palette;
++    UINT count, i;
++    BYTE buf[32 * 2 * 3]; /* enough to hold 32x2 24bppBGR data */
++
++    CreateTestBitmap(&testdata_24bppBGR, &src_obj);
++
++    hr = IWICImagingFactory_CreatePalette(factory, &palette);
++    ok(hr == S_OK, "CreatePalette error %#x\n", hr);
++    count = 0xdeadbeef;
++    hr = IWICPalette_GetColorCount(palette, &count);
++    ok(hr == S_OK, "GetColorCount error %#x\n", hr);
++    ok(count == 0, "expected 0, got %u\n", count);
++
++    /* NULL palette + Custom type*/
++    hr = IWICImagingFactory_CreateFormatConverter(factory, &converter);
++    ok(hr == S_OK, "CreateFormatConverter error %#x\n", hr);
++    hr = IWICFormatConverter_Initialize(converter, &src_obj->IWICBitmapSource_iface,
++                                        &GUID_WICPixelFormat24bppBGR, WICBitmapDitherTypeNone,
++                                        NULL, 0.0, WICBitmapPaletteTypeCustom);
++    ok(hr == S_OK, "Initialize error %#x\n", hr);
++    hr = IWICFormatConverter_CopyPalette(converter, palette);
++    ok(hr == 0xdeadbeef, "unexpected error %#x\n", hr);
++    hr = IWICFormatConverter_CopyPixels(converter, NULL, 32 * 3, sizeof(buf), buf);
++    ok(hr == S_OK, "CopyPixels error %#x\n", hr);
++    IWICFormatConverter_Release(converter);
++
++    /* NULL palette + Custom type*/
++    hr = IWICImagingFactory_CreateFormatConverter(factory, &converter);
++    ok(hr == S_OK, "CreateFormatConverter error %#x\n", hr);
++    hr = IWICFormatConverter_Initialize(converter, &src_obj->IWICBitmapSource_iface,
++                                        &GUID_WICPixelFormat8bppIndexed, WICBitmapDitherTypeNone,
++                                        NULL, 0.0, WICBitmapPaletteTypeCustom);
++    ok(hr == E_INVALIDARG, "unexpected error %#x\n", hr);
++    hr = IWICFormatConverter_CopyPalette(converter, palette);
++    ok(hr == WINCODEC_ERR_WRONGSTATE, "unexpected error %#x\n", hr);
++    hr = IWICFormatConverter_CopyPixels(converter, NULL, 32, sizeof(buf), buf);
++    ok(hr == WINCODEC_ERR_WRONGSTATE, "unexpected error %#x\n", hr);
++    IWICFormatConverter_Release(converter);
++
++    /* empty palette + Custom type*/
++    hr = IWICImagingFactory_CreateFormatConverter(factory, &converter);
++    ok(hr == S_OK, "CreateFormatConverter error %#x\n", hr);
++    hr = IWICFormatConverter_Initialize(converter, &src_obj->IWICBitmapSource_iface,
++                                        &GUID_WICPixelFormat8bppIndexed, WICBitmapDitherTypeNone,
++                                        palette, 0.0, WICBitmapPaletteTypeCustom);
++    ok(hr == S_OK, "Initialize error %#x\n", hr);
++    hr = IWICFormatConverter_CopyPalette(converter, palette);
++    ok(hr == S_OK, "CopyPalette error %#x\n", hr);
++    count = 0xdeadbeef;
++    hr = IWICPalette_GetColorCount(palette, &count);
++    ok(hr == S_OK, "GetColorCount error %#x\n", hr);
++    ok(count == 0, "expected 0, got %u\n", count);
++    memset(buf, 0xaa, sizeof(buf));
++    hr = IWICFormatConverter_CopyPixels(converter, NULL, 32, sizeof(buf), buf);
++    ok(hr == S_OK, "CopyPixels error %#x\n", hr);
++    count = 0;
++    for (i = 0; i < 32 * 2; i++)
++        if (buf[i] != 0) count++;
++    ok(count == 0, "expected 0\n");
++    IWICFormatConverter_Release(converter);
++
++    /* NULL palette + Predefined type*/
++    hr = IWICImagingFactory_CreateFormatConverter(factory, &converter);
++    ok(hr == S_OK, "CreateFormatConverter error %#x\n", hr);
++    hr = IWICFormatConverter_Initialize(converter, &src_obj->IWICBitmapSource_iface,
++                                        &GUID_WICPixelFormat8bppIndexed, WICBitmapDitherTypeNone,
++                                        NULL, 0.0, WICBitmapPaletteTypeFixedGray16);
++    ok(hr == S_OK, "Initialize error %#x\n", hr);
++    hr = IWICFormatConverter_CopyPalette(converter, palette);
++    ok(hr == S_OK, "CopyPalette error %#x\n", hr);
++    count = 0xdeadbeef;
++    hr = IWICPalette_GetColorCount(palette, &count);
++    ok(hr == S_OK, "GetColorCount error %#x\n", hr);
++    ok(count == 16, "expected 16, got %u\n", count);
++    hr = IWICFormatConverter_CopyPixels(converter, NULL, 32, sizeof(buf), buf);
++    ok(hr == S_OK, "CopyPixels error %#x\n", hr);
++    count = 0;
++    for (i = 0; i < 32 * 2; i++)
++        if (buf[i] != 0) count++;
++    ok(count != 0, "expected != 0\n");
++    IWICFormatConverter_Release(converter);
++
++    /* not empty palette + Predefined type*/
++    hr = IWICImagingFactory_CreateFormatConverter(factory, &converter);
++    ok(hr == S_OK, "CreateFormatConverter error %#x\n", hr);
++    hr = IWICFormatConverter_Initialize(converter, &src_obj->IWICBitmapSource_iface,
++                                        &GUID_WICPixelFormat8bppIndexed, WICBitmapDitherTypeNone,
++                                        palette, 0.0, WICBitmapPaletteTypeFixedHalftone64);
++    ok(hr == S_OK, "Initialize error %#x\n", hr);
++    hr = IWICFormatConverter_CopyPalette(converter, palette);
++    ok(hr == S_OK, "CopyPalette error %#x\n", hr);
++    count = 0xdeadbeef;
++    hr = IWICPalette_GetColorCount(palette, &count);
++    ok(hr == S_OK, "GetColorCount error %#x\n", hr);
++    ok(count == 16, "expected 16, got %u\n", count);
++    hr = IWICFormatConverter_CopyPixels(converter, NULL, 32, sizeof(buf), buf);
++    ok(hr == S_OK, "CopyPixels error %#x\n", hr);
++    count = 0;
++    for (i = 0; i < 32 * 2; i++)
++        if (buf[i] != 0) count++;
++    ok(count != 0, "expected != 0\n");
++    IWICFormatConverter_Release(converter);
++
++    /* not empty palette + MedianCut type*/
++    hr = IWICImagingFactory_CreateFormatConverter(factory, &converter);
++    ok(hr == S_OK, "CreateFormatConverter error %#x\n", hr);
++    hr = IWICFormatConverter_Initialize(converter, &src_obj->IWICBitmapSource_iface,
++                                        &GUID_WICPixelFormat8bppIndexed, WICBitmapDitherTypeNone,
++                                        palette, 0.0, WICBitmapPaletteTypeMedianCut);
++    ok(hr == S_OK, "Initialize error %#x\n", hr);
++    hr = IWICFormatConverter_CopyPalette(converter, palette);
++    ok(hr == S_OK, "CopyPalette error %#x\n", hr);
++    count = 0xdeadbeef;
++    hr = IWICPalette_GetColorCount(palette, &count);
++    ok(hr == S_OK, "GetColorCount error %#x\n", hr);
++    ok(count == 16, "expected 16, got %u\n", count);
++    hr = IWICFormatConverter_CopyPixels(converter, NULL, 32, sizeof(buf), buf);
++    ok(hr == S_OK, "CopyPixels error %#x\n", hr);
++    count = 0;
++    for (i = 0; i < 32 * 2; i++)
++        if (buf[i] != 0) count++;
++    ok(count != 0, "expected != 0\n");
++    IWICFormatConverter_Release(converter);
++
++    /* NULL palette + MedianCut type*/
++    hr = IWICImagingFactory_CreateFormatConverter(factory, &converter);
++    ok(hr == S_OK, "CreateFormatConverter error %#x\n", hr);
++    hr = IWICFormatConverter_Initialize(converter, &src_obj->IWICBitmapSource_iface,
++                                        &GUID_WICPixelFormat8bppIndexed, WICBitmapDitherTypeNone,
++                                        NULL, 0.0, WICBitmapPaletteTypeMedianCut);
++    ok(hr == S_OK || broken(hr == E_INVALIDARG) /* XP */, "Initialize error %#x\n", hr);
++    if (hr == S_OK)
++    {
++        hr = IWICFormatConverter_CopyPalette(converter, palette);
++        ok(hr == S_OK, "CopyPalette error %#x\n", hr);
++        count = 0xdeadbeef;
++        hr = IWICPalette_GetColorCount(palette, &count);
++        ok(hr == S_OK, "GetColorCount error %#x\n", hr);
++        ok(count == 8, "expected 8, got %u\n", count);
++        hr = IWICFormatConverter_CopyPixels(converter, NULL, 32, sizeof(buf), buf);
++        ok(hr == S_OK, "CopyPixels error %#x\n", hr);
++        count = 0;
++        for (i = 0; i < 32 * 2; i++)
++            if (buf[i] != 0) count++;
++        ok(count != 0, "expected != 0\n");
++    }
++    IWICFormatConverter_Release(converter);
++
++    IWICPalette_Release(palette);
++    DeleteTestBitmap(src_obj);
++}
++
+ START_TEST(converter)
+ {
+     HRESULT hr;
+@@ -1469,6 +1626,8 @@ START_TEST(converter)
+                           &IID_IWICImagingFactory, (void **)&factory);
+     ok(hr == S_OK, "failed to create factory: %#x\n", hr);
+ 
++    test_converter_8bppIndexed();
++
+     test_conversion(&testdata_24bppRGB, &testdata_2bppIndexed, "24bppRGB -> 1bppIndexed", TRUE);
+     test_conversion(&testdata_24bppRGB, &testdata_2bppIndexed, "24bppRGB -> 2bppIndexed", TRUE);
+     test_conversion(&testdata_24bppRGB, &testdata_4bppIndexed, "24bppRGB -> 4bppIndexed", TRUE);
+-- 
+2.9.0
+

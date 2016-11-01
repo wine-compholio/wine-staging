@@ -1,0 +1,88 @@
+From ccb0dc220e1b76fc78fa689bee336bdd0967d43f Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Tue, 1 Nov 2016 15:06:18 +0100
+Subject: Revert "wined3d: Introduce wined3d_buffer_get_memory()."
+
+This reverts commit 2e15ae85a1f7f0799a296cd8b7627a4ec5e2db3e.
+---
+ dlls/wined3d/buffer.c          | 26 +-------------------------
+ dlls/wined3d/context.c         |  2 +-
+ dlls/wined3d/wined3d_private.h |  4 ++--
+ 3 files changed, 4 insertions(+), 28 deletions(-)
+
+diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
+index eaec38a..fb6592c 100644
+--- a/dlls/wined3d/buffer.c
++++ b/dlls/wined3d/buffer.c
+@@ -611,7 +611,7 @@ BYTE *wined3d_buffer_load_sysmem(struct wined3d_buffer *buffer, struct wined3d_c
+ }
+ 
+ /* Context activation is done by the caller. */
+-static void buffer_get_memory(struct wined3d_buffer *buffer, struct wined3d_context *context,
++void buffer_get_memory(struct wined3d_buffer *buffer, struct wined3d_context *context,
+         struct wined3d_bo_address *data)
+ {
+     data->buffer_object = buffer->buffer_object;
+@@ -635,30 +635,6 @@ static void buffer_get_memory(struct wined3d_buffer *buffer, struct wined3d_cont
+     }
+ }
+ 
+-void wined3d_buffer_get_memory(struct wined3d_buffer *buffer,
+-        struct wined3d_bo_address *data, DWORD locations)
+-{
+-    TRACE("buffer %p, data %p, locations %s.\n",
+-            buffer, data, wined3d_debug_location(locations));
+-
+-    if (locations & WINED3D_LOCATION_BUFFER)
+-    {
+-        data->buffer_object = buffer->buffer_object;
+-        data->addr = NULL;
+-        return;
+-    }
+-    if (locations & WINED3D_LOCATION_SYSMEM)
+-    {
+-        data->buffer_object = 0;
+-        data->addr = buffer->resource.heap_memory;
+-        return;
+-    }
+-
+-    ERR("Unexpected locations %s.\n", wined3d_debug_location(locations));
+-    data->buffer_object = 0;
+-    data->addr = NULL;
+-}
+-
+ static void buffer_unload(struct wined3d_resource *resource)
+ {
+     struct wined3d_buffer *buffer = buffer_from_resource(resource);
+diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
+index 88d34e6..1ca12bc 100644
+--- a/dlls/wined3d/context.c
++++ b/dlls/wined3d/context.c
+@@ -3201,7 +3201,7 @@ static void context_update_stream_info(struct wined3d_context *context, const st
+         else
+         {
+             wined3d_buffer_load(buffer, context, state);
+-            wined3d_buffer_get_memory(buffer, &data, buffer->locations);
++            buffer_get_memory(buffer, context, &data);
+             element->data.buffer_object = data.buffer_object;
+             element->data.addr += (ULONG_PTR)data.addr;
+         }
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index c56558d..bf2f938 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -3179,9 +3179,9 @@ static inline struct wined3d_buffer *buffer_from_resource(struct wined3d_resourc
+     return CONTAINING_RECORD(resource, struct wined3d_buffer, resource);
+ }
+ 
++void buffer_get_memory(struct wined3d_buffer *buffer, struct wined3d_context *context,
++        struct wined3d_bo_address *data) DECLSPEC_HIDDEN;
+ void buffer_mark_used(struct wined3d_buffer *buffer) DECLSPEC_HIDDEN;
+-void wined3d_buffer_get_memory(struct wined3d_buffer *buffer,
+-        struct wined3d_bo_address *data, DWORD locations) DECLSPEC_HIDDEN;
+ void wined3d_buffer_invalidate_location(struct wined3d_buffer *buffer, DWORD location) DECLSPEC_HIDDEN;
+ void wined3d_buffer_load(struct wined3d_buffer *buffer, struct wined3d_context *context,
+         const struct wined3d_state *state) DECLSPEC_HIDDEN;
+-- 
+2.9.0
+

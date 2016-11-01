@@ -1,0 +1,148 @@
+From 0acb445f332dd03e7c2c2e708679251f069689a1 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Tue, 1 Nov 2016 15:47:27 +0100
+Subject: Revert "wined3d: Clean up buffer_internal_preload()."
+
+This reverts commit e3a8cd20ced9f33db64a35f60bc8487ae8173e47.
+---
+ dlls/wined3d/buffer.c | 54 ++++++++++++++++++++++-----------------------------
+ 1 file changed, 23 insertions(+), 31 deletions(-)
+
+diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
+index a35436b..b49494f 100644
+--- a/dlls/wined3d/buffer.c
++++ b/dlls/wined3d/buffer.c
+@@ -422,7 +422,7 @@ static BOOL buffer_find_decl(struct wined3d_buffer *This, const struct wined3d_s
+     return ret;
+ }
+ 
+-static inline unsigned int fixup_d3dcolor(DWORD *dst_color)
++static inline void fixup_d3dcolor(DWORD *dst_color)
+ {
+     DWORD src_color = *dst_color;
+ 
+@@ -439,11 +439,9 @@ static inline unsigned int fixup_d3dcolor(DWORD *dst_color)
+     *dst_color |= (src_color & 0xff00ff00u);         /* Alpha Green */
+     *dst_color |= (src_color & 0x00ff0000u) >> 16;   /* Red */
+     *dst_color |= (src_color & 0x000000ffu) << 16;   /* Blue */
+-
+-    return sizeof(*dst_color);
+ }
+ 
+-static inline unsigned int fixup_transformed_pos(float *p)
++static inline void fixup_transformed_pos(float *p)
+ {
+     /* rhw conversion like in position_float4(). */
+     if (p[3] != 1.0f && p[3] != 0.0f)
+@@ -454,8 +452,6 @@ static inline unsigned int fixup_transformed_pos(float *p)
+         p[2] *= w;
+         p[3] = w;
+     }
+-
+-    return 4 * sizeof(*p);
+ }
+ 
+ /* Context activation is done by the caller. */
+@@ -549,12 +545,7 @@ static void buffer_unload(struct wined3d_resource *resource)
+          * happens only once per changed vertexbuffer and should occur rather
+          * rarely. */
+         if (resource->bind_count)
+-        {
+             device_invalidate_state(device, STATE_STREAMSRC);
+-
+-            if (buffer->buffer_type_hint == GL_ELEMENT_ARRAY_BUFFER)
+-                device_invalidate_state(device, STATE_INDEXBUFFER);
+-        }
+     }
+ 
+     resource_unload(resource);
+@@ -750,8 +741,10 @@ void wined3d_buffer_load(struct wined3d_buffer *buffer, struct wined3d_context *
+ {
+     DWORD flags = buffer->flags & (WINED3D_BUFFER_SYNC | WINED3D_BUFFER_DISCARD);
+     const struct wined3d_gl_info *gl_info = context->gl_info;
+-    unsigned int i, j, start, end, len, vertex_count;
++    struct wined3d_device *device = buffer->resource.device;
++    UINT start, end, len, vertices;
+     BOOL decl_changed = FALSE;
++    unsigned int i, j;
+     BYTE *data;
+ 
+     TRACE("buffer %p.\n", buffer);
+@@ -858,6 +851,9 @@ void wined3d_buffer_load(struct wined3d_buffer *buffer, struct wined3d_context *
+         }
+     }
+ 
++    if (buffer->buffer_type_hint == GL_ELEMENT_ARRAY_BUFFER_ARB)
++        device_invalidate_state(device, STATE_INDEXBUFFER);
++
+     if (!buffer->conversion_map)
+     {
+         /* That means that there is nothing to fixup. Just upload from
+@@ -875,23 +871,17 @@ void wined3d_buffer_load(struct wined3d_buffer *buffer, struct wined3d_context *
+         return;
+     }
+ 
+-    /* This would potentially invalidate the element array buffer binding. */
+-    if (buffer->buffer_type_hint != GL_ARRAY_BUFFER)
+-        ERR("Converting data in non-vertex buffer.\n");
+-
+-    if (!(buffer->flags & WINED3D_BUFFER_DOUBLEBUFFER))
++    if(!(buffer->flags & WINED3D_BUFFER_DOUBLEBUFFER))
++    {
+         wined3d_buffer_load_sysmem(buffer, context);
++    }
+ 
+     /* Now for each vertex in the buffer that needs conversion */
+-    vertex_count = buffer->resource.size / buffer->stride;
++    vertices = buffer->resource.size / buffer->stride;
+ 
+-    if (!(data = HeapAlloc(GetProcessHeap(), 0, buffer->resource.size)))
+-    {
+-        ERR("Out of memory.\n");
+-        return;
+-    }
++    data = HeapAlloc(GetProcessHeap(), 0, buffer->resource.size);
+ 
+-    while (buffer->modified_areas)
++    while(buffer->modified_areas)
+     {
+         buffer->modified_areas--;
+         start = buffer->maps[buffer->modified_areas].offset;
+@@ -899,25 +889,27 @@ void wined3d_buffer_load(struct wined3d_buffer *buffer, struct wined3d_context *
+         end = start + len;
+ 
+         memcpy(data + start, (BYTE *)buffer->resource.heap_memory + start, end - start);
+-        for (i = start / buffer->stride; i < min((end / buffer->stride) + 1, vertex_count); ++i)
++        for (i = start / buffer->stride; i < min((end / buffer->stride) + 1, vertices); ++i)
+         {
+-            for (j = 0; j < buffer->stride;)
++            for (j = 0; j < buffer->stride; ++j)
+             {
+                 switch (buffer->conversion_map[j])
+                 {
+                     case CONV_NONE:
+                         /* Done already */
+-                        j += sizeof(DWORD);
++                        j += 3;
+                         break;
+                     case CONV_D3DCOLOR:
+-                        j += fixup_d3dcolor((DWORD *) (data + i * buffer->stride + j));
++                        fixup_d3dcolor((DWORD *) (data + i * buffer->stride + j));
++                        j += 3;
+                         break;
++
+                     case CONV_POSITIONT:
+-                        j += fixup_transformed_pos((float *) (data + i * buffer->stride + j));
++                        fixup_transformed_pos((float *) (data + i * buffer->stride + j));
++                        j += 15;
+                         break;
+                     default:
+-                        FIXME("Unimplemented conversion %d in shifted conversion.\n", buffer->conversion_map[j]);
+-                        ++j;
++                        FIXME("Unimplemented conversion %d in shifted conversion\n", buffer->conversion_map[j]);
+                 }
+             }
+         }
+-- 
+2.9.0
+

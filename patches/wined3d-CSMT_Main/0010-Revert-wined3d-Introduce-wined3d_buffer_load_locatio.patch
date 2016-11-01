@@ -1,0 +1,111 @@
+From cfef7146a768b0b511effedb4210165bf223b45c Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Tue, 1 Nov 2016 15:06:52 +0100
+Subject: Revert "wined3d: Introduce wined3d_buffer_load_location()."
+
+This reverts commit 645d3cac14b1303d0152ac6463586ce147c25b9c.
+---
+ dlls/wined3d/buffer.c          | 66 ++++++++----------------------------------
+ dlls/wined3d/wined3d_private.h |  2 --
+ 2 files changed, 12 insertions(+), 56 deletions(-)
+
+diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
+index 912c4d6..fdd7e3b 100644
+--- a/dlls/wined3d/buffer.c
++++ b/dlls/wined3d/buffer.c
+@@ -564,67 +564,25 @@ static BOOL wined3d_buffer_prepare_location(struct wined3d_buffer *buffer,
+     }
+ }
+ 
+-BOOL wined3d_buffer_load_location(struct wined3d_buffer *buffer,
+-        struct wined3d_context *context, DWORD location)
++/* Context activation is done by the caller. */
++BYTE *wined3d_buffer_load_sysmem(struct wined3d_buffer *buffer, struct wined3d_context *context)
+ {
+     const struct wined3d_gl_info *gl_info = context->gl_info;
+ 
+-    TRACE("buffer %p, context %p, location %s.\n",
+-            buffer, context, wined3d_debug_location(location));
+-
+-    if (buffer->locations & location)
+-    {
+-        TRACE("Location (%#x) is already up to date.\n", location);
+-        return WINED3D_OK;
+-    }
+-
+-    if (!buffer->locations)
+-    {
+-        ERR("Buffer %p does not have any up to date location.\n", buffer);
+-        wined3d_buffer_validate_location(buffer, WINED3D_LOCATION_DISCARDED);
+-        return wined3d_buffer_load_location(buffer, context, location);
+-    }
+-
+-    TRACE("Current buffer location %s.\n", wined3d_debug_location(buffer->locations));
+-
+-    if (!wined3d_buffer_prepare_location(buffer, context, location))
+-        return FALSE;
+-
+-    if (buffer->locations & WINED3D_LOCATION_DISCARDED)
+-    {
+-        TRACE("Buffer previously discarded, nothing to do.\n");
+-        wined3d_buffer_validate_location(buffer, location);
+-        wined3d_buffer_invalidate_location(buffer, WINED3D_LOCATION_DISCARDED);
+-        return TRUE;
+-    }
+-
+-    switch (location)
+-    {
+-        case WINED3D_LOCATION_SYSMEM:
+-            buffer_bind(buffer, context);
+-            GL_EXTCALL(glGetBufferSubData(buffer->buffer_type_hint, 0, buffer->resource.size,
+-                    buffer->resource.heap_memory));
+-            checkGLcall("buffer download");
+-            buffer->flags |= WINED3D_BUFFER_DOUBLEBUFFER;
+-            break;
++    /* Heap_memory exists if the buffer is double buffered or has no buffer object at all. */
++    if (buffer->resource.heap_memory)
++        return buffer->resource.heap_memory;
+ 
+-        case WINED3D_LOCATION_BUFFER:
+-            FIXME("Not implemented yet.\n");
+-            return FALSE;
++    if (!wined3d_buffer_prepare_location(buffer, context, WINED3D_LOCATION_SYSMEM))
++        return NULL;
+ 
+-        default:
+-            ERR("Invalid location %s.\n", wined3d_debug_location(location));
+-            return FALSE;
+-    }
++    buffer_bind(buffer, context);
++    GL_EXTCALL(glGetBufferSubData(buffer->buffer_type_hint, 0, buffer->resource.size, buffer->resource.heap_memory));
++    checkGLcall("buffer download");
++    buffer->flags |= WINED3D_BUFFER_DOUBLEBUFFER;
+ 
+-    wined3d_buffer_validate_location(buffer, location);
+-    return TRUE;
+-}
++    wined3d_buffer_validate_location(buffer, WINED3D_LOCATION_SYSMEM);
+ 
+-/* Context activation is done by the caller. */
+-BYTE *wined3d_buffer_load_sysmem(struct wined3d_buffer *buffer, struct wined3d_context *context)
+-{
+-    wined3d_buffer_load_location(buffer, context, WINED3D_LOCATION_SYSMEM);
+     return buffer->resource.heap_memory;
+ }
+ 
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index bf2f938..c5de837 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -3185,8 +3185,6 @@ void buffer_mark_used(struct wined3d_buffer *buffer) DECLSPEC_HIDDEN;
+ void wined3d_buffer_invalidate_location(struct wined3d_buffer *buffer, DWORD location) DECLSPEC_HIDDEN;
+ void wined3d_buffer_load(struct wined3d_buffer *buffer, struct wined3d_context *context,
+         const struct wined3d_state *state) DECLSPEC_HIDDEN;
+-BOOL wined3d_buffer_load_location(struct wined3d_buffer *buffer, struct wined3d_context *context,
+-        DWORD location) DECLSPEC_HIDDEN;
+ BYTE *wined3d_buffer_load_sysmem(struct wined3d_buffer *buffer, struct wined3d_context *context) DECLSPEC_HIDDEN;
+ HRESULT wined3d_buffer_copy(struct wined3d_buffer *dst_buffer, unsigned int dst_offset,
+         struct wined3d_buffer *src_buffer, unsigned int src_offset, unsigned int size) DECLSPEC_HIDDEN;
+-- 
+2.9.0
+

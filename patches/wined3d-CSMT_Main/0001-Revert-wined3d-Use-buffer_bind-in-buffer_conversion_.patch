@@ -1,0 +1,45 @@
+From a03e60da52d29835dfbace07951eeb399959f3d5 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Tue, 1 Nov 2016 14:56:36 +0100
+Subject: Revert "wined3d: Use buffer_bind() in buffer_conversion_upload()."
+
+This reverts commit 61fef3bd1ead45deca83e94e404790d8d5f8e6c4.
+---
+ dlls/wined3d/buffer.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
+index 13953c9..2030ae7 100644
+--- a/dlls/wined3d/buffer.c
++++ b/dlls/wined3d/buffer.c
+@@ -863,6 +863,10 @@ static void buffer_conversion_upload(struct wined3d_buffer *buffer, struct wined
+     unsigned int i, j, start, end, len, vertex_count;
+     BYTE *data;
+ 
++    /* This would potentially invalidate the element array buffer binding. */
++    if (buffer->buffer_type_hint != GL_ARRAY_BUFFER)
++        ERR("Converting data in non-vertex buffer.\n");
++
+     wined3d_buffer_load_location(buffer, context, WINED3D_LOCATION_SYSMEM);
+ 
+     /* Now for each vertex in the buffer that needs conversion. */
+@@ -874,7 +878,6 @@ static void buffer_conversion_upload(struct wined3d_buffer *buffer, struct wined
+         return;
+     }
+ 
+-    buffer_bind(buffer, context);
+     while (buffer->modified_areas)
+     {
+         buffer->modified_areas--;
+@@ -906,6 +909,8 @@ static void buffer_conversion_upload(struct wined3d_buffer *buffer, struct wined
+             }
+         }
+ 
++        GL_EXTCALL(glBindBuffer(buffer->buffer_type_hint, buffer->buffer_object));
++        checkGLcall("glBindBuffer");
+         GL_EXTCALL(glBufferSubData(buffer->buffer_type_hint, start, len, data + start));
+         checkGLcall("glBufferSubData");
+     }
+-- 
+2.9.0
+

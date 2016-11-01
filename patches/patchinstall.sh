@@ -94,6 +94,7 @@ patch_enable_all ()
 	enable_avifil32_IGetFrame_fnSetFormat="$1"
 	enable_avifile_dll16_AVIStreamGetFrame="$1"
 	enable_browseui_Progress_Dialog="$1"
+	enable_cabinet_iFolder="$1"
 	enable_combase_RoApi="$1"
 	enable_comctl32_Button_Theming="$1"
 	enable_comctl32_Listview_DrawItem="$1"
@@ -460,6 +461,9 @@ patch_enable ()
 			;;
 		browseui-Progress_Dialog)
 			enable_browseui_Progress_Dialog="$2"
+			;;
+		cabinet-iFolder)
+			enable_cabinet_iFolder="$2"
 			;;
 		category-stable)
 			enable_category_stable="$2"
@@ -2782,6 +2786,21 @@ if test "$enable_browseui_Progress_Dialog" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "browseui: Implement IProgressDialog::SetAnimation.", 1 },';
 		echo '+    { "Michael Müller", "browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset cabinet-iFolder
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#10858] Set index of folder in FDICopy callback
+# |
+# | Modified files:
+# |   *	dlls/cabinet/fdi.c
+# |
+if test "$enable_cabinet_iFolder" -eq 1; then
+	patch_apply cabinet-iFolder/0001-cabinet-Set-index-of-folder-in-FDICopy-callback.patch
+	(
+		echo '+    { "Michael Müller", "cabinet: Set index of folder in FDICopy callback.", 1 },';
 	) >> "$patchlist"
 fi
 

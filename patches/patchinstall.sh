@@ -198,6 +198,7 @@ patch_enable_all ()
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvcrt_Silence_FIXMEs="$1"
 	enable_msvfw32_ICGetDisplayFormat="$1"
+	enable_msvfw32_ICInfo_enum_handler="$1"
 	enable_msvideo_dll16_DrawDibProfileDisplay="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_APC_Start_Process="$1"
@@ -774,6 +775,9 @@ patch_enable ()
 			;;
 		msvfw32-ICGetDisplayFormat)
 			enable_msvfw32_ICGetDisplayFormat="$2"
+			;;
+		msvfw32-ICInfo_enum_handler)
+			enable_msvfw32_ICInfo_enum_handler="$2"
 			;;
 		msvideo.dll16-DrawDibProfileDisplay)
 			enable_msvideo_dll16_DrawDibProfileDisplay="$2"
@@ -4697,6 +4701,21 @@ if test "$enable_msvfw32_ICGetDisplayFormat" -eq 1; then
 		echo '+    { "Michael Müller", "iccvid: Fix calculation of stride and size.", 1 },';
 		echo '+    { "Michael Müller", "msvidc32: Add support for converting 16 bit depth to 24 bit.", 1 },';
 		echo '+    { "Michael Müller", "msvidc32: Fix calculation of stride and size.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msvfw32-ICInfo_enum_handler
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#41602] Use case insensitive compare in ICInfo_enum_handler
+# |
+# | Modified files:
+# |   *	dlls/msvfw32/msvideo_main.c
+# |
+if test "$enable_msvfw32_ICInfo_enum_handler" -eq 1; then
+	patch_apply msvfw32-ICInfo_enum_handler/0001-msvfw32-Use-case-insensitive-compare-in-ICInfo-for-f.patch
+	(
+		echo '+    { "Michael Müller", "msvfw32: Use case insensitive compare in ICInfo for fourcc codes.", 1 },';
 	) >> "$patchlist"
 fi
 

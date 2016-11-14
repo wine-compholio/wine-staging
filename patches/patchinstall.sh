@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f7187ecbd62f778649e055af61cd2c6786ead7f1"
+	echo "02d723045ff15d2bda5475b8b6fe212ee3483cd8"
 }
 
 # Show version information
@@ -307,7 +307,6 @@ patch_enable_all ()
 	enable_shell32_Placeholder_Icons="$1"
 	enable_shell32_Progress_Dialog="$1"
 	enable_shell32_RunDLL_CallEntry16="$1"
-	enable_shell32_Run_Dialog="$1"
 	enable_shell32_SFGAO_HASSUBFOLDER="$1"
 	enable_shell32_SHCreateSessionKey="$1"
 	enable_shell32_SHFileOperation_Move="$1"
@@ -1102,9 +1101,6 @@ patch_enable ()
 			;;
 		shell32-RunDLL_CallEntry16)
 			enable_shell32_RunDLL_CallEntry16="$2"
-			;;
-		shell32-Run_Dialog)
-			enable_shell32_Run_Dialog="$2"
 			;;
 		shell32-SFGAO_HASSUBFOLDER)
 			enable_shell32_SFGAO_HASSUBFOLDER="$2"
@@ -6489,18 +6485,6 @@ if test "$enable_shell32_RunDLL_CallEntry16" -eq 1; then
 	patch_apply shell32-RunDLL_CallEntry16/0001-shell32-Use-manual-redirection-for-RunDLL_CallEntry1.patch
 	(
 		echo '+    { "Michael Müller", "shell32: Use manual redirection for RunDLL_CallEntry16.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset shell32-Run_Dialog
-# |
-# | Modified files:
-# |   *	dlls/shell32/shell32.rc
-# |
-if test "$enable_shell32_Run_Dialog" -eq 1; then
-	patch_apply shell32-Run_Dialog/0001-shell32-Add-caption-to-Run-dialog.patch
-	(
-		echo '+    { "Jared Smudde", "shell32: Add caption to Run dialog.", 1 },';
 	) >> "$patchlist"
 fi
 

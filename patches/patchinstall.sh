@@ -255,6 +255,7 @@ patch_enable_all ()
 	enable_ole32_HGLOBALStream="$1"
 	enable_ole32_OleGetIconOfFile="$1"
 	enable_oleaut32_CreateTypeLib="$1"
+	enable_oleaut32_LoadTypeLibEx="$1"
 	enable_oleaut32_Load_Save_EMF="$1"
 	enable_oleaut32_OLEPictureImpl_SaveAsFile="$1"
 	enable_oleaut32_OleLoadPicture="$1"
@@ -945,6 +946,9 @@ patch_enable ()
 			;;
 		oleaut32-CreateTypeLib)
 			enable_oleaut32_CreateTypeLib="$2"
+			;;
+		oleaut32-LoadTypeLibEx)
+			enable_oleaut32_LoadTypeLibEx="$2"
 			;;
 		oleaut32-Load_Save_EMF)
 			enable_oleaut32_Load_Save_EMF="$2"
@@ -5655,6 +5659,21 @@ if test "$enable_oleaut32_CreateTypeLib" -eq 1; then
 	patch_apply oleaut32-CreateTypeLib/0001-oleaut32-Implement-semi-stub-for-CreateTypeLib.patch
 	(
 		echo '+    { "Alistair Leslie-Hughes", "oleaut32: Implement semi-stub for CreateTypeLib.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset oleaut32-LoadTypeLibEx
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38328] Add arguments check to LoadTypeLibEx
+# |
+# | Modified files:
+# |   *	dlls/oleaut32/typelib.c
+# |
+if test "$enable_oleaut32_LoadTypeLibEx" -eq 1; then
+	patch_apply oleaut32-LoadTypeLibEx/0001-oleaut32-Add-an-arguments-check-to-LoadTypeLibEx.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "oleaut32: Add an arguments check to LoadTypeLibEx.", 1 },';
 	) >> "$patchlist"
 fi
 

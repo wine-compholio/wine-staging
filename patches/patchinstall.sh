@@ -161,6 +161,7 @@ patch_enable_all ()
 	enable_imagehlp_Cleanup="$1"
 	enable_imagehlp_ImageLoad="$1"
 	enable_imm32_IMMDisableLegacyIME="$1"
+	enable_include_Duplicate_Typedef="$1"
 	enable_inseng_Implementation="$1"
 	enable_iphlpapi_System_Ping="$1"
 	enable_iphlpapi_TCP_Table="$1"
@@ -665,6 +666,9 @@ patch_enable ()
 			;;
 		imm32-IMMDisableLegacyIME)
 			enable_imm32_IMMDisableLegacyIME="$2"
+			;;
+		include-Duplicate_Typedef)
+			enable_include_Duplicate_Typedef="$2"
 			;;
 		inseng-Implementation)
 			enable_inseng_Implementation="$2"
@@ -4019,6 +4023,18 @@ if test "$enable_imm32_IMMDisableLegacyIME" -eq 1; then
 	patch_apply imm32-IMMDisableLegacyIME/0001-imm32-Add-stub-for-ImmDisableLegacyIME.patch
 	(
 		echo '+    { "Michael Müller", "imm32: Add stub for ImmDisableLegacyIME.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset include-Duplicate_Typedef
+# |
+# | Modified files:
+# |   *	include/dpaddr.h
+# |
+if test "$enable_include_Duplicate_Typedef" -eq 1; then
+	patch_apply include-Duplicate_Typedef/0001-dpnet-Avoid-redefinition-of-SOCKADDR.patch
+	(
+		echo '+    { "Alistair Leslie-Hughes", "dpnet: Avoid redefinition of SOCKADDR.", 1 },';
 	) >> "$patchlist"
 fi
 

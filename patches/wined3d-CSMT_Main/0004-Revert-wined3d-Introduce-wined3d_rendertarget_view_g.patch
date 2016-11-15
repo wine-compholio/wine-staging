@@ -1,0 +1,124 @@
+From 2bd4f2e4ad2310471f7c3cd85f59f261314cd6c4 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Tue, 15 Nov 2016 22:07:56 +0100
+Subject: Revert "wined3d: Introduce
+ wined3d_rendertarget_view_get_drawable_size() as replacement for
+ surface_get_drawable_size()."
+
+This reverts commit 5cdb8f2486cf00a61c1aac20daef8c7cac0d8312.
+---
+ dlls/wined3d/device.c          |  5 ++---
+ dlls/wined3d/state.c           |  6 +++---
+ dlls/wined3d/view.c            | 17 +++--------------
+ dlls/wined3d/wined3d_private.h |  5 ++---
+ 4 files changed, 10 insertions(+), 23 deletions(-)
+
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index d7349fcf..a611531 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -291,8 +291,7 @@ void device_clear_render_targets(struct wined3d_device *device, UINT rt_count, c
+         UINT rect_count, const RECT *clear_rect, const RECT *draw_rect, DWORD flags, const struct wined3d_color *color,
+         float depth, DWORD stencil)
+ {
+-    struct wined3d_rendertarget_view *rtv = rt_count ? fb->render_targets[0] : NULL;
+-    struct wined3d_surface *target = rtv ? wined3d_rendertarget_view_get_surface(rtv) : NULL;
++    struct wined3d_surface *target = rt_count ? wined3d_rendertarget_view_get_surface(fb->render_targets[0]) : NULL;
+     struct wined3d_rendertarget_view *dsv = fb->depth_stencil;
+     struct wined3d_surface *depth_stencil = dsv ? wined3d_rendertarget_view_get_surface(dsv) : NULL;
+     const struct wined3d_state *state = &device->state;
+@@ -340,7 +339,7 @@ void device_clear_render_targets(struct wined3d_device *device, UINT rt_count, c
+     if (target)
+     {
+         render_offscreen = context->render_offscreen;
+-        wined3d_rendertarget_view_get_drawable_size(rtv, context, &drawable_width, &drawable_height);
++        surface_get_drawable_size(target, context, &drawable_width, &drawable_height);
+     }
+     else
+     {
+diff --git a/dlls/wined3d/state.c b/dlls/wined3d/state.c
+index cd3763c..9e36bcd 100644
+--- a/dlls/wined3d/state.c
++++ b/dlls/wined3d/state.c
+@@ -4624,7 +4624,7 @@ static void viewport_miscpart(struct wined3d_context *context, const struct wine
+         if (vp.height > target->height)
+             vp.height = target->height;
+ 
+-        wined3d_rendertarget_view_get_drawable_size(target, context, &width, &height);
++        surface_get_drawable_size(wined3d_rendertarget_view_get_surface(target), context, &width, &height);
+     }
+     else if (depth_stencil)
+     {
+@@ -4668,7 +4668,7 @@ static void viewport_miscpart_cc(struct wined3d_context *context,
+         if (vp.height > target->height)
+             vp.height = target->height;
+ 
+-        wined3d_rendertarget_view_get_drawable_size(target, context, &width, &height);
++        surface_get_drawable_size(wined3d_rendertarget_view_get_surface(target), context, &width, &height);
+     }
+     else if (depth_stencil)
+     {
+@@ -4853,7 +4853,7 @@ static void scissorrect(struct wined3d_context *context, const struct wined3d_st
+         UINT height;
+         UINT width;
+ 
+-        wined3d_rendertarget_view_get_drawable_size(target, context, &width, &height);
++        surface_get_drawable_size(wined3d_rendertarget_view_get_surface(target), context, &width, &height);
+         gl_info->gl_ops.gl.p_glScissor(r->left, height - r->bottom, r->right - r->left, r->bottom - r->top);
+     }
+     checkGLcall("glScissor");
+diff --git a/dlls/wined3d/view.c b/dlls/wined3d/view.c
+index a67c506..1f819e6 100644
+--- a/dlls/wined3d/view.c
++++ b/dlls/wined3d/view.c
+@@ -94,21 +94,10 @@ struct wined3d_resource * CDECL wined3d_rendertarget_view_get_resource(const str
+     return view->resource;
+ }
+ 
+-void wined3d_rendertarget_view_get_drawable_size(const struct wined3d_rendertarget_view *view,
+-        const struct wined3d_context *context, unsigned int *width, unsigned int *height)
++void surface_get_drawable_size(const struct wined3d_surface *surface, const struct wined3d_context *context,
++        unsigned int *width, unsigned int *height)
+ {
+-    const struct wined3d_texture *texture;
+-
+-    if (view->resource->type != WINED3D_RTYPE_TEXTURE_2D)
+-    {
+-        FIXME("Not implemented for %s resources.\n", debug_d3dresourcetype(view->resource->type));
+-        *width = 0;
+-        *height = 0;
+-        return;
+-    }
+-
+-    texture = texture_from_resource(view->resource);
+-    if (texture->swapchain)
++    if (surface->container->swapchain)
+     {
+         /* The drawable size of an onscreen drawable is the surface size.
+          * (Actually: The window size, but the surface is created in window
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 503f7f2..19b650e 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2908,6 +2908,8 @@ HRESULT surface_color_fill(struct wined3d_surface *s,
+         const RECT *rect, const struct wined3d_color *color) DECLSPEC_HIDDEN;
+ HRESULT wined3d_surface_create_dc(struct wined3d_surface *surface) DECLSPEC_HIDDEN;
+ void wined3d_surface_destroy_dc(struct wined3d_surface *surface) DECLSPEC_HIDDEN;
++void surface_get_drawable_size(const struct wined3d_surface *surface, const struct wined3d_context *context,
++        unsigned int *width, unsigned int *height) DECLSPEC_HIDDEN;
+ void surface_load_fb_texture(struct wined3d_surface *surface, BOOL srgb,
+         struct wined3d_context *context) DECLSPEC_HIDDEN;
+ HRESULT surface_load_location(struct wined3d_surface *surface,
+@@ -3224,9 +3226,6 @@ static inline struct wined3d_surface *wined3d_rendertarget_view_get_surface(
+     return texture->sub_resources[view->sub_resource_idx].u.surface;
+ }
+ 
+-void wined3d_rendertarget_view_get_drawable_size(const struct wined3d_rendertarget_view *view,
+-        const struct wined3d_context *context, unsigned int *width, unsigned int *height) DECLSPEC_HIDDEN;
+-
+ struct wined3d_shader_resource_view
+ {
+     LONG refcount;
+-- 
+2.9.0
+

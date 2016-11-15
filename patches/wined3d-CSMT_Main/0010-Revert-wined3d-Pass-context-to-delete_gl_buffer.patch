@@ -1,0 +1,57 @@
+From d826efd7c8bce9cc50f79ab5589455d8e7882561 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Tue, 15 Nov 2016 22:10:01 +0100
+Subject: Revert "wined3d: Pass context to delete_gl_buffer()."
+
+This reverts commit 20eb55fdefa9f0b7a0864dce3b4a12b132dba651.
+---
+ dlls/wined3d/buffer.c | 11 +++++------
+ 1 file changed, 5 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
+index a3d7dfd..43b3366 100644
+--- a/dlls/wined3d/buffer.c
++++ b/dlls/wined3d/buffer.c
+@@ -138,10 +138,9 @@ static void buffer_bind(struct wined3d_buffer *buffer, struct wined3d_context *c
+     GL_EXTCALL(glBindBuffer(buffer->buffer_type_hint, buffer->buffer_object));
+ }
+ 
+-/* Context activation is done by the caller. */
+-static void delete_gl_buffer(struct wined3d_buffer *This, const struct wined3d_context *context)
++/* Context activation is done by the caller */
++static void delete_gl_buffer(struct wined3d_buffer *This, const struct wined3d_gl_info *gl_info)
+ {
+-    const struct wined3d_gl_info *gl_info = context->gl_info;
+     struct wined3d_resource *resource = &This->resource;
+ 
+     if(!This->buffer_object) return;
+@@ -257,7 +256,7 @@ fail:
+     /* Clean up all BO init, but continue because we can work without a BO :-) */
+     ERR("Failed to create a buffer object. Continuing, but performance issues may occur.\n");
+     buffer->flags &= ~WINED3D_BUFFER_USE_BO;
+-    delete_gl_buffer(buffer, context);
++    delete_gl_buffer(buffer, gl_info);
+     buffer_clear_dirty_areas(buffer);
+     return FALSE;
+ }
+@@ -663,7 +662,7 @@ static void buffer_unload(struct wined3d_resource *resource)
+             buffer->flags &= ~WINED3D_BUFFER_DOUBLEBUFFER;
+ 
+         wined3d_buffer_invalidate_location(buffer, WINED3D_LOCATION_BUFFER);
+-        delete_gl_buffer(buffer, context);
++        delete_gl_buffer(buffer, context->gl_info);
+         buffer_clear_dirty_areas(buffer);
+ 
+         context_release(context);
+@@ -692,7 +691,7 @@ static void wined3d_buffer_destroy_object(void *object)
+     if (buffer->buffer_object)
+     {
+         context = context_acquire(buffer->resource.device, NULL);
+-        delete_gl_buffer(buffer, context);
++        delete_gl_buffer(buffer, context->gl_info);
+         context_release(context);
+ 
+         HeapFree(GetProcessHeap(), 0, buffer->conversion_map);
+-- 
+2.9.0
+

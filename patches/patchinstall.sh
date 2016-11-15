@@ -90,6 +90,7 @@ patch_enable_all ()
 	enable_advapi32_LsaLookupSids="$1"
 	enable_advapi32_SetSecurityInfo="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
+	enable_avifil32_AVIFileGetStream="$1"
 	enable_avifil32_AVIFile_Proxies="$1"
 	enable_avifil32_IGetFrame_fnSetFormat="$1"
 	enable_avifile_dll16_AVIStreamGetFrame="$1"
@@ -448,6 +449,9 @@ patch_enable ()
 			;;
 		api-ms-win-Stub_DLLs)
 			enable_api_ms_win_Stub_DLLs="$2"
+			;;
+		avifil32-AVIFileGetStream)
+			enable_avifil32_AVIFileGetStream="$2"
 			;;
 		avifil32-AVIFile_Proxies)
 			enable_avifil32_AVIFile_Proxies="$2"
@@ -2727,6 +2731,21 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "shcore: Add stub for GetProcessDpiAwareness.", 1 },';
 		echo '+    { "Michael Müller", "feclient: Add stub dll.", 1 },';
 		echo '+    { "Michael Müller", "uiautomationcore: Add dll and stub some functions.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset avifil32-AVIFileGetStream
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#41579] AVIFileGetStream should set stream to NULL in case of an error
+# |
+# | Modified files:
+# |   *	dlls/avifil32/avifile.c, dlls/avifil32/tests/api.c
+# |
+if test "$enable_avifil32_AVIFileGetStream" -eq 1; then
+	patch_apply avifil32-AVIFileGetStream/0001-avifil32-AVIFileGetStream-should-set-stream-to-NULL-.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "avifil32: AVIFileGetStream should set stream to NULL in case of an error.", 1 },';
 	) >> "$patchlist"
 fi
 

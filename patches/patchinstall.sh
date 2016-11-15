@@ -174,6 +174,7 @@ patch_enable_all ()
 	enable_kernel32_LocaleNameToLCID="$1"
 	enable_kernel32_Locale_Definitions="$1"
 	enable_kernel32_Misalign_Workaround="$1"
+	enable_kernel32_MoveFile="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_Profile="$1"
@@ -705,6 +706,9 @@ patch_enable ()
 			;;
 		kernel32-Misalign_Workaround)
 			enable_kernel32_Misalign_Workaround="$2"
+			;;
+		kernel32-MoveFile)
+			enable_kernel32_MoveFile="$2"
 			;;
 		kernel32-Named_Pipe)
 			enable_kernel32_Named_Pipe="$2"
@@ -4259,6 +4263,30 @@ if test "$enable_kernel32_Misalign_Workaround" -eq 1; then
 	patch_apply kernel32-Misalign_Workaround/0001-kernel32-Fill-stack-with-meaningful-values-in-call_p.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32: Fill stack with meaningful values in call_process_entry mis-align workaround.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-MoveFile
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#14901] MoveFile with source == dest should succeed.
+# |
+# | Modified files:
+# |   *	dlls/kernel32/path.c, dlls/kernel32/tests/file.c, dlls/msvcp120/tests/msvcp120.c,
+# | 	programs/cmd/tests/test_builtins.cmd.exp
+# |
+if test "$enable_kernel32_MoveFile" -eq 1; then
+	patch_apply kernel32-MoveFile/0001-kernel32-tests-Fix-compilation-with-PSDK.patch
+	patch_apply kernel32-MoveFile/0002-kernel32-tests-Fix-a-bunch-of-access-denied-errors-b.patch
+	patch_apply kernel32-MoveFile/0003-kernel32-tests-Move-the-MoveFile-test-where-it-belon.patch
+	patch_apply kernel32-MoveFile/0004-kernel32-MoveFile-source-source-should-succeed.patch
+	patch_apply kernel32-MoveFile/0005-kernel32-MoveFile-should-make-sure-that-it-has-the-d.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "kernel32/tests: Fix compilation with PSDK.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "kernel32/tests: Fix a bunch of access denied errors by using a dedicated TEMP directory.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "kernel32/tests: Move the MoveFile test where it belongs.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "kernel32: MoveFile(source, source) should succeed.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "kernel32: MoveFile should make sure that it has the delete access to the source file.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,104 @@
+From 44e1890d7de78cc246d1905ba91c10822de78368 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Tue, 15 Nov 2016 13:02:13 +0800
+Subject: kernel32: MoveFile(source, source) should succeed.
+
+---
+ dlls/kernel32/path.c                     | 15 ++++++++++-----
+ dlls/kernel32/tests/file.c               |  2 +-
+ dlls/msvcp120/tests/msvcp120.c           |  2 +-
+ programs/cmd/tests/test_builtins.cmd.exp |  4 ++--
+ 4 files changed, 14 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/kernel32/path.c b/dlls/kernel32/path.c
+index c746693..954ea71 100644
+--- a/dlls/kernel32/path.c
++++ b/dlls/kernel32/path.c
+@@ -1235,7 +1235,7 @@ BOOL WINAPI MoveFileWithProgressW( LPCWSTR source, LPCWSTR dest,
+     OBJECT_ATTRIBUTES attr;
+     IO_STATUS_BLOCK io;
+     NTSTATUS status;
+-    HANDLE source_handle = 0, dest_handle;
++    HANDLE source_handle = 0, dest_handle = 0;
+     ANSI_STRING source_unix, dest_unix;
+ 
+     TRACE("(%s,%s,%p,%p,%04x)\n",
+@@ -1294,18 +1294,22 @@ BOOL WINAPI MoveFileWithProgressW( LPCWSTR source, LPCWSTR dest,
+                          FILE_NON_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT );
+     if (status == STATUS_SUCCESS)  /* destination exists */
+     {
+-        NtClose( dest_handle );
+         if (!(flag & MOVEFILE_REPLACE_EXISTING))
+         {
+-            SetLastError( ERROR_ALREADY_EXISTS );
+-            RtlFreeUnicodeString( &nt_name );
+-            goto error;
++            if (!is_same_file( source_handle, dest_handle ))
++            {
++                SetLastError( ERROR_ALREADY_EXISTS );
++                RtlFreeUnicodeString( &nt_name );
++                goto error;
++            }
+         }
+         else if (info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) /* cannot replace directory */
+         {
+             SetLastError( ERROR_ACCESS_DENIED );
+             goto error;
+         }
++
++        NtClose( dest_handle );
+     }
+     else if (status != STATUS_OBJECT_NAME_NOT_FOUND)
+     {
+@@ -1365,6 +1369,7 @@ BOOL WINAPI MoveFileWithProgressW( LPCWSTR source, LPCWSTR dest,
+ 
+ error:
+     if (source_handle) NtClose( source_handle );
++    if (dest_handle) NtClose( dest_handle );
+     RtlFreeAnsiString( &source_unix );
+     RtlFreeAnsiString( &dest_unix );
+     return FALSE;
+diff --git a/dlls/kernel32/tests/file.c b/dlls/kernel32/tests/file.c
+index e784a1c..2f9f21a 100644
+--- a/dlls/kernel32/tests/file.c
++++ b/dlls/kernel32/tests/file.c
+@@ -1891,7 +1891,7 @@ static void test_MoveFileA(void)
+     ok(ret != 0, "GetTempFileNameA error %d\n", GetLastError());
+ 
+     ret = MoveFileA(source, source);
+-    todo_wine ok(ret, "MoveFileA: failed, error %d\n", GetLastError());
++    ok(ret, "MoveFileA: failed, error %d\n", GetLastError());
+ 
+     ret = MoveFileA(source, dest);
+     ok(!ret && GetLastError() == ERROR_ALREADY_EXISTS,
+diff --git a/dlls/msvcp120/tests/msvcp120.c b/dlls/msvcp120/tests/msvcp120.c
+index 5df5440..b169dc5 100644
+--- a/dlls/msvcp120/tests/msvcp120.c
++++ b/dlls/msvcp120/tests/msvcp120.c
+@@ -1204,7 +1204,7 @@ static void test_tr2_sys__Rename(void)
+     CloseHandle(file);
+ 
+     ret = p_tr2_sys__Rename("tr2_test_dir\\f1", "tr2_test_dir\\f1");
+-    todo_wine ok(ERROR_SUCCESS == ret, "test_tr2_sys__Rename(): expect: ERROR_SUCCESS, got %d\n", ret);
++    ok(ERROR_SUCCESS == ret, "test_tr2_sys__Rename(): expect: ERROR_SUCCESS, got %d\n", ret);
+     for(i=0; i<sizeof(tests)/sizeof(tests[0]); i++) {
+         errno = 0xdeadbeef;
+         if(tests[i].val == ERROR_SUCCESS) {
+diff --git a/programs/cmd/tests/test_builtins.cmd.exp b/programs/cmd/tests/test_builtins.cmd.exp
+index d01a23e..c559e3b 100644
+--- a/programs/cmd/tests/test_builtins.cmd.exp
++++ b/programs/cmd/tests/test_builtins.cmd.exp
+@@ -1058,8 +1058,8 @@ file move succeeded
+ @todo_wine@bar@or_broken@baz
+ read-only files are moveable
+ file moved in subdirectory
+-@todo_wine@moving a file to itself is a no-op@or_broken@moving a file to itself should be a no-op!
+-@todo_wine@ErrorLevel: 0@or_broken@ErrorLevel: 1
++moving a file to itself is a no-op@or_broken@moving a file to itself should be a no-op!
++ErrorLevel: 0@or_broken@ErrorLevel: 1
+ --- directory move
+ simple directory move succeeded
+ moving a directory to itself gives error; errlevel 1
+-- 
+2.9.0
+

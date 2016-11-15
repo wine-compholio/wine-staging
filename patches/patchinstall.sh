@@ -7251,6 +7251,8 @@ if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 	patch_apply windowscodecs-GIF_Encoder/0024-windowscodecs-tests-Add-a-bunch-of-new-tests-for-ind.patch
 	patch_apply windowscodecs-GIF_Encoder/0025-windowscodecs-tests-Add-some-tests-for-converting-24.patch
 	patch_apply windowscodecs-GIF_Encoder/0026-windowscodecs-tests-Add-the-tests-for-GIF-encoder-an.patch
+	patch_apply windowscodecs-GIF_Encoder/0027-windowscodecs-tests-Add-a-missing-check-for-IWICBitm.patch
+	patch_apply windowscodecs-GIF_Encoder/0028-windowscodecs-Correctly-indicate-that-the-global-inf.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in BMP encoder.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoderInfo::GetFileExtensions.", 1 },';
@@ -7278,6 +7280,8 @@ if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add a bunch of new tests for indexed format conversions.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add some tests for converting 24bppBGR to 8bppIndexed format.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add the tests for GIF encoder and decoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add a missing check for IWICBitmapFrameDecode::GetPixelFormat return value.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Correctly indicate that the global info was written even without the global palette.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -345,6 +345,7 @@ patch_enable_all ()
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_wbemdisp_Printer="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
+	enable_windowscodecs_32bppBGRA="$1"
 	enable_windowscodecs_32bppGrayFloat="$1"
 	enable_windowscodecs_GIF_Encoder="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
@@ -1214,6 +1215,9 @@ patch_enable ()
 			;;
 		widl-SLTG_Typelib_Support)
 			enable_widl_SLTG_Typelib_Support="$2"
+			;;
+		windowscodecs-32bppBGRA)
+			enable_windowscodecs_32bppBGRA="$2"
 			;;
 		windowscodecs-32bppGrayFloat)
 			enable_windowscodecs_32bppGrayFloat="$2"
@@ -7114,6 +7118,18 @@ if test "$enable_wbemdisp_Printer" -eq 1; then
 	patch_apply wbemdisp-Printer/0001-wbemprox-Provide-DeviceID-Location-and-PortName-for-.patch
 	(
 		echo '+    { "Michael Müller", "wbemprox: Provide DeviceID, Location and PortName for printers.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windowscodecs-32bppBGRA
+# |
+# | Modified files:
+# |   *	dlls/windowscodecs/converter.c
+# |
+if test "$enable_windowscodecs_32bppBGRA" -eq 1; then
+	patch_apply windowscodecs-32bppBGRA/0001-windowscodecs-Fix-a-typo-in-2bppIndexed-to-32bppBGRA.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fix a typo in 2bppIndexed to 32bppBGRA conversion routine.", 1 },';
 	) >> "$patchlist"
 fi
 

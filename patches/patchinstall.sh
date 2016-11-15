@@ -2715,6 +2715,7 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0025-shcore-Add-stub-for-GetProcessDpiAwareness.patch
 	patch_apply api-ms-win-Stub_DLLs/0026-feclient-Add-stub-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0027-uiautomationcore-Add-dll-and-stub-some-functions.patch
+	patch_apply api-ms-win-Stub_DLLs/0028-uiautomationcore-Add-stub-for-UiaClientsAreListening.patch
 	(
 		echo '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
 		echo '+    { "Michael Müller", "api-ms-win-core-quirks-l1-1-0: Add dll.", 1 },';
@@ -2739,6 +2740,7 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		echo '+    { "Sebastian Lackner", "shcore: Add stub for GetProcessDpiAwareness.", 1 },';
 		echo '+    { "Michael Müller", "feclient: Add stub dll.", 1 },';
 		echo '+    { "Michael Müller", "uiautomationcore: Add dll and stub some functions.", 1 },';
+		echo '+    { "Sebastian Lackner", "uiautomationcore: Add stub for UiaClientsAreListening.", 1 },';
 	) >> "$patchlist"
 fi
 

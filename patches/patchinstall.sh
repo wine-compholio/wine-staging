@@ -3223,6 +3223,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#38334] Add stub for D3DXFrameFind
+# |   *	[#41697] Add stub for D3DXComputeTangent
 # |
 # | Modified files:
 # |   *	dlls/d3dx9_24/d3dx9_24.spec, dlls/d3dx9_25/d3dx9_25.spec, dlls/d3dx9_26/d3dx9_26.spec, dlls/d3dx9_27/d3dx9_27.spec,
@@ -3235,9 +3236,11 @@ fi
 if test "$enable_d3dx9_36_D3DXStubs" -eq 1; then
 	patch_apply d3dx9_36-D3DXStubs/0001-d3dx9_36-Add-stub-for-D3DXComputeNormalMap.patch
 	patch_apply d3dx9_36-D3DXStubs/0002-d3dx9_36-Add-D3DXFrameFind-stub.patch
+	patch_apply d3dx9_36-D3DXStubs/0003-d3dx9-Implement-D3DXComputeTangent.patch
 	(
 		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeNormalMap.", 1 },';
 		echo '+    { "Andrey Gusev", "d3dx9_36: Add D3DXFrameFind stub.", 1 },';
+		echo '+    { "Alistair Leslie-Hughes", "d3dx9: Implement D3DXComputeTangent.", 1 },';
 	) >> "$patchlist"
 fi
 

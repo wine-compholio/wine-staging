@@ -4068,12 +4068,13 @@ fi
 # Patchset include-Duplicate_Typedef
 # |
 # | Modified files:
-# |   *	include/dpaddr.h
+# |   *	dlls/dpnet/address.c, dlls/dpnet/client.c, dlls/dpnet/lobbiedapp.c, dlls/dpnet/peer.c, dlls/dpnet/server.c,
+# | 	dlls/dpnet/threadpool.c, include/dpaddr.h
 # |
 if test "$enable_include_Duplicate_Typedef" -eq 1; then
 	patch_apply include-Duplicate_Typedef/0001-dpnet-Avoid-redefinition-of-SOCKADDR.patch
 	(
-		echo '+    { "Alistair Leslie-Hughes", "dpnet: Avoid redefinition of SOCKADDR.", 1 },';
+		echo '+    { "Alistair Leslie-Hughes", "dpnet: Header files cleanup.", 1 },';
 	) >> "$patchlist"
 fi
 

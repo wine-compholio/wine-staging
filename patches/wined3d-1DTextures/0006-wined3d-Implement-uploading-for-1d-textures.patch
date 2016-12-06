@@ -1,33 +1,59 @@
-From c80bcc9a789842075b2f68178a00525ac0cabcf7 Mon Sep 17 00:00:00 2001
+From 736b314e18e7e4d3c7dc7732e2e38c6b8de7ddfd Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 27 Aug 2016 22:25:20 +0200
 Subject: wined3d: Implement uploading for 1d textures.
 
 ---
- dlls/wined3d/texture.c | 57 +++++++++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 56 insertions(+), 1 deletion(-)
+ dlls/wined3d/device.c  |  3 ++-
+ dlls/wined3d/texture.c | 68 +++++++++++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 69 insertions(+), 2 deletions(-)
 
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index 150f18f..c87b325 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -4140,7 +4140,8 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
+         return;
+     }
+ 
+-    if (resource->type != WINED3D_RTYPE_TEXTURE_2D && resource->type != WINED3D_RTYPE_TEXTURE_3D)
++    if (resource->type != WINED3D_RTYPE_TEXTURE_1D &&
++        resource->type != WINED3D_RTYPE_TEXTURE_2D && resource->type != WINED3D_RTYPE_TEXTURE_3D)
+     {
+         FIXME("Not implemented for %s resources.\n", debug_d3dresourcetype(resource->type));
+         return;
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index 942337b..442ec27 100644
+index 2b66b68..614b4cf 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -1447,8 +1447,63 @@ static void texture1d_upload_data(struct wined3d_texture *texture, unsigned int
-         const struct wined3d_context *context, const struct wined3d_const_bo_address *data,
+@@ -1456,8 +1456,74 @@ static void texture1d_upload_data(struct wined3d_texture *texture, unsigned int
+         const struct wined3d_context *context, const struct wined3d_box *box, const struct wined3d_const_bo_address *data,
          unsigned int row_pitch, unsigned int slice_pitch)
  {
--    FIXME("texture %p, sub_resource_idx %u, context %p, data {%#x:%p}, row_pitch %#x, slice_pitch %#x: stub.\n",
+-    FIXME("texture %p, sub_resource_idx %u, context %p, box %p, data {%#x:%p}, row_pitch %#x, slice_pitch %#x: stub.\n",
 +    struct wined3d_surface *surface = texture->sub_resources[sub_resource_idx].u.surface;
 +    const struct wined3d_format *format = texture->resource.format;
 +    unsigned int level = sub_resource_idx % texture->level_count;
 +    const struct wined3d_gl_info *gl_info = context->gl_info;
 +    const void *mem = data->addr;
 +    void *converted_mem = NULL;
-+    unsigned int width;
++    unsigned int width, x, update_w;
 +
-+    TRACE("texture %p, sub_resource_idx %u, context %p, data {%#x:%p}, row_pitch %#x, slice_pitch %#x.\n",
-             texture, sub_resource_idx, context, data->buffer_object, data->addr, row_pitch, slice_pitch);
++    TRACE("texture %p, sub_resource_idx %u, context %p, box %p, data {%#x:%p}, row_pitch %#x, slice_pitch %#x.\n",
+             texture, sub_resource_idx, context, box, data->buffer_object, data->addr, row_pitch, slice_pitch);
 +
 +    width = wined3d_texture_get_level_width(texture, level);
++
++    if (!box)
++    {
++        x = 0;
++        update_w = width;
++    }
++    else
++    {
++        x = box->left;
++        update_w = box->right - box->left;
++    }
 +
 +    if (format->convert)
 +    {
@@ -38,10 +64,10 @@ index 942337b..442ec27 100644
 +        if (texture->resource.format_flags & WINED3DFMT_FLAG_BLOCKS)
 +            ERR("Converting a block-based format.\n");
 +
-+        dst_row_pitch = width * format->conv_byte_count;
++        dst_row_pitch = update_w * format->conv_byte_count;
 +
 +        converted_mem = HeapAlloc(GetProcessHeap(), 0, dst_row_pitch);
-+        format->convert(data->addr, converted_mem, row_pitch, slice_pitch, dst_row_pitch, dst_row_pitch, width, 1, 1);
++        format->convert(data->addr, converted_mem, row_pitch, slice_pitch, dst_row_pitch, dst_row_pitch, update_w, 1, 1);
 +        mem = converted_mem;
 +    }
 +
@@ -55,14 +81,14 @@ index 942337b..442ec27 100644
 +    {
 +        gl_info->gl_ops.gl.p_glPixelStorei(GL_UNPACK_ROW_LENGTH, row_pitch / format->byte_count);
 +
-+        gl_info->gl_ops.gl.p_glTexSubImage2D(surface->texture_target, level, 0, surface->texture_layer, width, 1, format->glFormat, format->glType, mem);
++        gl_info->gl_ops.gl.p_glTexSubImage2D(surface->texture_target, level, x, surface->texture_layer, update_w, 1, format->glFormat, format->glType, mem);
 +        checkGLcall("glTexSubImage2D");
 +
 +        gl_info->gl_ops.gl.p_glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 +    }
 +    else
 +    {
-+        gl_info->gl_ops.gl.p_glTexSubImage1D(surface->texture_target, level, 0, width, format->glFormat, format->glType, mem);
++        gl_info->gl_ops.gl.p_glTexSubImage1D(surface->texture_target, level, x, update_w, format->glFormat, format->glType, mem);
 +        checkGLcall("glTexSubImage1D");
 +    }
 +
@@ -77,5 +103,5 @@ index 942337b..442ec27 100644
  
  /* Context activation is done by the caller. */
 -- 
-2.8.1
+2.9.0
 

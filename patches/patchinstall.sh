@@ -319,6 +319,7 @@ patch_enable_all ()
 	enable_taskmgr_Memory_Usage="$1"
 	enable_user_exe16_CONTAINING_RECORD="$1"
 	enable_user_exe16_DlgDirList="$1"
+	enable_user32_Combobox_WM_SIZE="$1"
 	enable_user32_DM_SETDEFID="$1"
 	enable_user32_DeferWindowPos="$1"
 	enable_user32_DialogBoxParam="$1"
@@ -1134,6 +1135,9 @@ patch_enable ()
 			;;
 		user.exe16-DlgDirList)
 			enable_user_exe16_DlgDirList="$2"
+			;;
+		user32-Combobox_WM_SIZE)
+			enable_user32_Combobox_WM_SIZE="$2"
 			;;
 		user32-DM_SETDEFID)
 			enable_user32_DM_SETDEFID="$2"
@@ -6709,6 +6713,21 @@ if test "$enable_user_exe16_DlgDirList" -eq 1; then
 	patch_apply user.exe16-DlgDirList/0001-user.exe16-Fix-handling-of-DDL_DRIVES-flag-in-DlgDir.patch
 	(
 		echo '+    { "Alex Villacís Lasso", "user.exe16: Fix handling of DDL_DRIVES flag in DlgDirList.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-Combobox_WM_SIZE
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#41404] Don't force a combobox repaint on WM_SIZE
+# |
+# | Modified files:
+# |   *	dlls/user32/combo.c
+# |
+if test "$enable_user32_Combobox_WM_SIZE" -eq 1; then
+	patch_apply user32-Combobox_WM_SIZE/0001-user32-Don-t-force-a-combobox-repaint-on-WM_SIZE.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "user32: Don'\''t force a combobox repaint on WM_SIZE.", 1 },';
 	) >> "$patchlist"
 fi
 

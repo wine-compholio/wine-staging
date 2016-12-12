@@ -5607,6 +5607,9 @@ fi
 
 # Patchset ole32-HGLOBALStream
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#41738] Implement proper refcounting and locking for HGLOBAL based IStream
+# |
 # | Modified files:
 # |   *	dlls/ole32/hglobalstream.c, dlls/ole32/tests/hglobalstream.c
 # |

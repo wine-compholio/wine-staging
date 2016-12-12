@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "705c52691a4e8c6224cda5080fb88f257de5fd77"
+	echo "4c7f3f8af856888f5ab020b2a32d0b01db0c82f7"
 }
 
 # Show version information
@@ -212,7 +212,6 @@ patch_enable_all ()
 	enable_ntdll_DeviceType_Systemroot="$1"
 	enable_ntdll_DllOverrides_WOW64="$1"
 	enable_ntdll_DllRedirects="$1"
-	enable_ntdll_EtwRegisterTraceGuids="$1"
 	enable_ntdll_Exception="$1"
 	enable_ntdll_FileDispositionInformation="$1"
 	enable_ntdll_FileFsFullSizeInformation="$1"
@@ -299,9 +298,7 @@ patch_enable_all ()
 	enable_sfc_SfcGetNextProtectedFile="$1"
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
 	enable_shell32_Context_Menu="$1"
-	enable_shell32_Default_Path="$1"
 	enable_shell32_File_Property_Dialog="$1"
-	enable_shell32_IDragSourceHelper="$1"
 	enable_shell32_Icons="$1"
 	enable_shell32_Microsoft_Windows_Themes="$1"
 	enable_shell32_NewMenu_Interface="$1"
@@ -347,7 +344,6 @@ patch_enable_all ()
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_wbemdisp_Printer="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
-	enable_windowscodecs_32bppBGRA="$1"
 	enable_windowscodecs_32bppGrayFloat="$1"
 	enable_windowscodecs_GIF_Encoder="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
@@ -818,9 +814,6 @@ patch_enable ()
 		ntdll-DllRedirects)
 			enable_ntdll_DllRedirects="$2"
 			;;
-		ntdll-EtwRegisterTraceGuids)
-			enable_ntdll_EtwRegisterTraceGuids="$2"
-			;;
 		ntdll-Exception)
 			enable_ntdll_Exception="$2"
 			;;
@@ -1079,14 +1072,8 @@ patch_enable ()
 		shell32-Context_Menu)
 			enable_shell32_Context_Menu="$2"
 			;;
-		shell32-Default_Path)
-			enable_shell32_Default_Path="$2"
-			;;
 		shell32-File_Property_Dialog)
 			enable_shell32_File_Property_Dialog="$2"
-			;;
-		shell32-IDragSourceHelper)
-			enable_shell32_IDragSourceHelper="$2"
 			;;
 		shell32-Icons)
 			enable_shell32_Icons="$2"
@@ -1222,9 +1209,6 @@ patch_enable ()
 			;;
 		widl-SLTG_Typelib_Support)
 			enable_widl_SLTG_Typelib_Support="$2"
-			;;
-		windowscodecs-32bppBGRA)
-			enable_windowscodecs_32bppBGRA="$2"
 			;;
 		windowscodecs-32bppGrayFloat)
 			enable_windowscodecs_32bppGrayFloat="$2"
@@ -2263,13 +2247,6 @@ if test "$enable_ntdll_CLI_Images" -eq 1; then
 	enable_mscoree_CorValidateImage=1
 fi
 
-if test "$enable_ntdll_ApiSetQueryApiSetPresence" -eq 1; then
-	if test "$enable_ntdll_EtwRegisterTraceGuids" -gt 1; then
-		abort "Patchset ntdll-EtwRegisterTraceGuids disabled, but ntdll-ApiSetQueryApiSetPresence depends on that."
-	fi
-	enable_ntdll_EtwRegisterTraceGuids=1
-fi
-
 if test "$enable_kernel32_Named_Pipe" -eq 1; then
 	if test "$enable_server_Desktop_Refcount" -gt 1; then
 		abort "Patchset server-Desktop_Refcount disabled, but kernel32-Named_Pipe depends on that."
@@ -2404,10 +2381,10 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c, dlls/d3d8/texture.c,
-# | 	dlls/d3d9/tests/visual.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dsound/primary.c, dlls/dwrite/layout.c,
-# | 	dlls/msxml3/schema.c, dlls/netapi32/netapi32.c, dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/vbscript/vbdisp.c,
-# | 	dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c, include/wine/list.h, include/wine/rbtree.h, include/winnt.h,
-# | 	tools/makedep.c
+# | 	dlls/d3d9/tests/visual.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dsound/primary.c, dlls/dwrite/font.c,
+# | 	dlls/dwrite/layout.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c, dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c,
+# | 	dlls/vbscript/vbdisp.c, dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c, include/wine/list.h,
+# | 	include/wine/rbtree.h, include/winnt.h, tools/makedep.c
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0018-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch
@@ -4803,22 +4780,7 @@ if test "$enable_ntdll_Activation_Context" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-EtwRegisterTraceGuids
-# |
-# | Modified files:
-# |   *	dlls/advapi32/advapi32.spec, dlls/advapi32/eventlog.c, dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec
-# |
-if test "$enable_ntdll_EtwRegisterTraceGuids" -eq 1; then
-	patch_apply ntdll-EtwRegisterTraceGuids/0002-ntdll-Move-EventSetInformation-from-advapi32-to-ntdl.patch
-	(
-		echo '+    { "Michael Müller", "ntdll: Move EventSetInformation from advapi32 to ntdll.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-ApiSetQueryApiSetPresence
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-EtwRegisterTraceGuids
 # |
 # | Modified files:
 # |   *	dlls/api-ms-win-core-apiquery-l1-1-0/api-ms-win-core-apiquery-l1-1-0.spec, dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec
@@ -6362,21 +6324,6 @@ if test "$enable_shell32_Context_Menu" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset shell32-Default_Path
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#30385] Support for KF_FLAG_DEFAULT_PATH in SHGetKnownFolderPath
-# |
-# | Modified files:
-# |   *	dlls/shell32/shellpath.c, dlls/shell32/tests/shellpath.c
-# |
-if test "$enable_shell32_Default_Path" -eq 1; then
-	patch_apply shell32-Default_Path/0001-shell32-Implement-KF_FLAG_DEFAULT_PATH-flag-for-SHGe.patch
-	(
-		echo '+    { "Sebastian Lackner", "shell32: Implement KF_FLAG_DEFAULT_PATH flag for SHGetKnownFolderPath.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset shell32-File_Property_Dialog
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6389,23 +6336,6 @@ if test "$enable_shell32_File_Property_Dialog" -eq 1; then
 	patch_apply shell32-File_Property_Dialog/0001-shell32-Add-general-tab-in-file-property-dialog.patch
 	(
 		echo '+    { "Michael Müller", "shell32: Add general tab in file property dialog.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset shell32-IDragSourceHelper
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#24699] Add IDragSourceHelper stub interface
-# |
-# | Modified files:
-# |   *	dlls/shell32/dragdrophelper.c
-# |
-if test "$enable_shell32_IDragSourceHelper" -eq 1; then
-	patch_apply shell32-IDragSourceHelper/0001-shell32-Cleanup-IDropTargetHelper-and-preparation-fo.patch
-	patch_apply shell32-IDragSourceHelper/0002-shell32-Add-IDragSourceHelper-stub-interface.patch
-	(
-		echo '+    { "Michael Müller", "shell32: Cleanup IDropTargetHelper and preparation for IDragSourceHelper.", 1 },';
-		echo '+    { "Michael Müller", "shell32: Add IDragSourceHelper stub interface.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7172,18 +7102,6 @@ if test "$enable_wbemdisp_Printer" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset windowscodecs-32bppBGRA
-# |
-# | Modified files:
-# |   *	dlls/windowscodecs/converter.c
-# |
-if test "$enable_windowscodecs_32bppBGRA" -eq 1; then
-	patch_apply windowscodecs-32bppBGRA/0001-windowscodecs-Fix-a-typo-in-2bppIndexed-to-32bppBGRA.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fix a typo in 2bppIndexed to 32bppBGRA conversion routine.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset windowscodecs-32bppGrayFloat
 # |
 # | This patchset fixes the following Wine bugs:
@@ -7206,7 +7124,7 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/windowscodecs/bmpdecode.c, dlls/windowscodecs/bmpencode.c, dlls/windowscodecs/imgfactory.c,
-# | 	dlls/windowscodecs/main.c, dlls/windowscodecs/pngformat.c, dlls/windowscodecs/regsvr.c,
+# | 	dlls/windowscodecs/info.c, dlls/windowscodecs/pngformat.c, dlls/windowscodecs/regsvr.c,
 # | 	dlls/windowscodecs/tests/converter.c, dlls/windowscodecs/tests/pngformat.c, dlls/windowscodecs/tiffformat.c
 # |
 if test "$enable_windowscodecs_Palette_Images" -eq 1; then

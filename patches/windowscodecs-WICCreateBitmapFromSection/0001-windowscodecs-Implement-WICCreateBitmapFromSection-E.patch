@@ -1,4 +1,4 @@
-From 751e4a44db847913d76615f6ec583c2f4c18c905 Mon Sep 17 00:00:00 2001
+From 4fb9b87edfb24fe5676f5944fc6aaeff7fdbfdc3 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Fri, 11 Mar 2016 03:48:46 +0100
 Subject: windowscodecs: Implement WICCreateBitmapFromSection(Ex). (v2)
@@ -11,10 +11,10 @@ Subject: windowscodecs: Implement WICCreateBitmapFromSection(Ex). (v2)
  4 files changed, 100 insertions(+), 11 deletions(-)
 
 diff --git a/dlls/windowscodecs/bitmap.c b/dlls/windowscodecs/bitmap.c
-index 85d0076..2fa19b4 100644
+index 6adaab0..76298b2 100644
 --- a/dlls/windowscodecs/bitmap.c
 +++ b/dlls/windowscodecs/bitmap.c
-@@ -46,6 +46,7 @@ typedef struct BitmapImpl {
+@@ -45,6 +45,7 @@ typedef struct BitmapImpl {
      int palette_set;
      LONG lock; /* 0 if not locked, -1 if locked for writing, count if locked for reading */
      BYTE *data;
@@ -22,7 +22,7 @@ index 85d0076..2fa19b4 100644
      UINT width, height;
      UINT stride;
      UINT bpp;
-@@ -285,7 +286,10 @@ static ULONG WINAPI BitmapImpl_Release(IWICBitmap *iface)
+@@ -284,7 +285,10 @@ static ULONG WINAPI BitmapImpl_Release(IWICBitmap *iface)
          if (This->palette) IWICPalette_Release(This->palette);
          This->cs.DebugInfo->Spare[0] = 0;
          DeleteCriticalSection(&This->cs);
@@ -34,7 +34,7 @@ index 85d0076..2fa19b4 100644
          HeapFree(GetProcessHeap(), 0, This);
      }
  
-@@ -695,13 +699,12 @@ static const IMILUnknown2Vtbl IMILUnknown2Impl_Vtbl =
+@@ -694,13 +698,12 @@ static const IMILUnknown2Vtbl IMILUnknown2Impl_Vtbl =
  };
  
  HRESULT BitmapImpl_Create(UINT uiWidth, UINT uiHeight,
@@ -49,7 +49,7 @@ index 85d0076..2fa19b4 100644
      UINT bpp;
  
      hr = get_pixelformat_bpp(pixelFormat, &bpp);
-@@ -714,14 +717,20 @@ HRESULT BitmapImpl_Create(UINT uiWidth, UINT uiHeight,
+@@ -713,14 +716,20 @@ HRESULT BitmapImpl_Create(UINT uiWidth, UINT uiHeight,
      if (stride < ((bpp*uiWidth)+7)/8) return E_INVALIDARG;
  
      This = HeapAlloc(GetProcessHeap(), 0, sizeof(BitmapImpl));
@@ -77,10 +77,10 @@ index 85d0076..2fa19b4 100644
      This->IWICBitmap_iface.lpVtbl = &BitmapImpl_Vtbl;
      This->IMILBitmapSource_iface.lpVtbl = &IMILBitmapImpl_Vtbl;
 diff --git a/dlls/windowscodecs/imgfactory.c b/dlls/windowscodecs/imgfactory.c
-index f2455fc..d6c4c64 100644
+index 659aa7e..3cd6fd0 100644
 --- a/dlls/windowscodecs/imgfactory.c
 +++ b/dlls/windowscodecs/imgfactory.c
-@@ -597,12 +597,36 @@ static HRESULT WINAPI ComponentFactory_CreateBitmapFromMemory(IWICComponentFacto
+@@ -595,12 +595,36 @@ static HRESULT WINAPI ComponentFactory_CreateBitmapFromMemory(IWICComponentFacto
      UINT width, UINT height, REFWICPixelFormatGUID format, UINT stride,
      UINT size, BYTE *buffer, IWICBitmap **bitmap)
  {
@@ -118,7 +118,7 @@ index f2455fc..d6c4c64 100644
  }
  
  static BOOL get_16bpp_format(HBITMAP hbm, WICPixelFormatGUID *format)
-@@ -1174,3 +1198,50 @@ HRESULT ComponentFactory_CreateInstance(REFIID iid, void** ppv)
+@@ -1176,3 +1200,50 @@ HRESULT ComponentFactory_CreateInstance(REFIID iid, void** ppv)
  
      return ret;
  }
@@ -184,12 +184,12 @@ index 81a827e..7ee76d9 100644
  @ stdcall WICCreateImagingFactory_Proxy(long ptr)
  @ stub WICGetMetadataContentSize
 diff --git a/include/wincodec.idl b/include/wincodec.idl
-index 639d925..00a8da8 100644
+index 406fe6b..c0afe52 100644
 --- a/include/wincodec.idl
 +++ b/include/wincodec.idl
-@@ -168,6 +168,12 @@ typedef enum WICTiffCompressionOption {
-     WICTIFFCOMPRESSIONOPTION_FORCE_DWORD = CODEC_FORCE_DWORD
- } WICTiffCompressionOption;
+@@ -179,6 +179,12 @@ typedef enum WICPngFilterOption {
+     WICPNFFILTEROPTION_FORCE_DWORD = CODEC_FORCE_DWORD
+ } WICPngFilterOption;
  
 +typedef enum WICSectionAccessLevel {
 +    WICSectionAccessLevelRead = 0x00000001,
@@ -200,7 +200,7 @@ index 639d925..00a8da8 100644
  typedef GUID WICPixelFormatGUID;
  typedef REFGUID REFWICPixelFormatGUID;
  
-@@ -982,6 +988,8 @@ interface IWICEnumMetadataItem : IUnknown
+@@ -994,6 +1000,8 @@ interface IWICEnumMetadataItem : IUnknown
  }
  
  cpp_quote("HRESULT WINAPI WICConvertBitmapSource(REFWICPixelFormatGUID dstFormat, IWICBitmapSource *pISrc, IWICBitmapSource **ppIDst);")
@@ -210,5 +210,5 @@ index 639d925..00a8da8 100644
  cpp_quote("DEFINE_GUID(CLSID_WICBmpDecoder, 0x6b462062,0x7cbf,0x400d,0x9f,0xdb,0x81,0x3d,0xd1,0x0f,0x27,0x78);")
  cpp_quote("DEFINE_GUID(CLSID_WICPngDecoder, 0x389ea17b,0x5078,0x4cde,0xb6,0xef,0x25,0xc1,0x51,0x75,0xc7,0x51);")
 -- 
-2.7.1
+2.9.0
 

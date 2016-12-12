@@ -1,4 +1,4 @@
-From 01f63c1b25a7b0f964e9558d1054a613d1cd90e8 Mon Sep 17 00:00:00 2001
+From 463a6541de5c95ed1ca3c79a3b5b721e2edade45 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 6 Jun 2015 01:21:05 +0200
 Subject: server: Return correct error codes for NtWriteFile when pipes are
@@ -12,10 +12,10 @@ Subject: server: Return correct error codes for NtWriteFile when pipes are
  4 files changed, 46 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/kernel32/tests/pipe.c b/dlls/kernel32/tests/pipe.c
-index db2d49d..a2a425d 100644
+index 6f70285..817f857 100644
 --- a/dlls/kernel32/tests/pipe.c
 +++ b/dlls/kernel32/tests/pipe.c
-@@ -1909,7 +1909,7 @@ static void test_CloseHandle(void)
+@@ -1917,7 +1917,7 @@ static void test_CloseHandle(void)
      SetLastError(0xdeadbeef);
      ret = WriteFile(hfile, testdata, sizeof(testdata), &numbytes, NULL);
      ok(!ret, "WriteFile unexpectedly succeeded\n");
@@ -25,10 +25,10 @@ index db2d49d..a2a425d 100644
      CloseHandle(hfile);
  
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index d1dd1e7..1b97ef0 100644
+index 863ff78..e9efa92 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -1240,6 +1240,9 @@ static NTSTATUS write_unix_fd(int fd, const char *buf, ULONG *total, ULONG lengt
+@@ -1239,6 +1239,9 @@ static NTSTATUS write_unix_fd(int fd, const char *buf, ULONG *total, ULONG lengt
                  return STATUS_SUCCESS;
              else if (errno == EFAULT)
                  return STATUS_INVALID_USER_BUFFER;
@@ -39,7 +39,7 @@ index d1dd1e7..1b97ef0 100644
          }
      }
 diff --git a/server/named_pipe.c b/server/named_pipe.c
-index 6e627bd..69293a9 100644
+index ad7d537..5bec9bc 100644
 --- a/server/named_pipe.c
 +++ b/server/named_pipe.c
 @@ -147,6 +147,7 @@ static const struct object_ops named_pipe_ops =
@@ -59,7 +59,7 @@ index 6e627bd..69293a9 100644
      pipe_server_destroy           /* destroy */
  };
  
-@@ -194,6 +195,7 @@ static const struct fd_ops pipe_server_fd_ops =
+@@ -193,6 +194,7 @@ static const struct fd_ops pipe_server_fd_ops =
  static void pipe_client_dump( struct object *obj, int verbose );
  static int pipe_client_signaled( struct object *obj, struct wait_queue_entry *entry );
  static struct fd *pipe_client_get_fd( struct object *obj );
@@ -67,7 +67,7 @@ index 6e627bd..69293a9 100644
  static void pipe_client_destroy( struct object *obj );
  static obj_handle_t pipe_client_flush( struct fd *fd, const async_data_t *async, int blocking );
  static enum server_fd_type pipe_client_get_fd_type( struct fd *fd );
-@@ -217,7 +219,7 @@ static const struct object_ops pipe_client_ops =
+@@ -216,7 +218,7 @@ static const struct object_ops pipe_client_ops =
      NULL,                         /* unlink_name */
      no_open_file,                 /* open_file */
      no_alloc_handle,              /* alloc_handle */
@@ -76,8 +76,8 @@ index 6e627bd..69293a9 100644
      pipe_client_destroy           /* destroy */
  };
  
-@@ -284,6 +286,8 @@ static const struct fd_ops named_pipe_device_fd_ops =
-     default_fd_cancel_async           /* cancel_async */
+@@ -281,6 +283,8 @@ static const struct fd_ops named_pipe_device_fd_ops =
+     default_fd_reselect_async         /* reselect_async */
  };
  
 +static inline int messagemode_flags( int flags );
@@ -85,7 +85,7 @@ index 6e627bd..69293a9 100644
  static void named_pipe_dump( struct object *obj, int verbose )
  {
      fputs( "Named pipe\n", stderr );
-@@ -393,6 +397,23 @@ static void do_disconnect( struct pipe_server *server )
+@@ -390,6 +394,23 @@ static void do_disconnect( struct pipe_server *server )
      server->fd = NULL;
  }
  
@@ -109,7 +109,7 @@ index 6e627bd..69293a9 100644
  static void pipe_server_destroy( struct object *obj)
  {
      struct pipe_server *server = (struct pipe_server *)obj;
-@@ -419,6 +440,24 @@ static void pipe_server_destroy( struct object *obj)
+@@ -416,6 +437,24 @@ static void pipe_server_destroy( struct object *obj)
      release_object( server->pipe );
  }
  
@@ -135,10 +135,10 @@ index 6e627bd..69293a9 100644
  {
      struct pipe_client *client = (struct pipe_client *)obj;
 diff --git a/server/protocol.def b/server/protocol.def
-index 29f3a52..2dd44dd 100644
+index e7a55d7..f1e7af1 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -2428,6 +2428,7 @@ enum message_type
+@@ -2427,6 +2427,7 @@ enum message_type
  #define NAMED_PIPE_MESSAGE_STREAM_WRITE 0x0001
  #define NAMED_PIPE_MESSAGE_STREAM_READ  0x0002
  #define NAMED_PIPE_NONBLOCKING_MODE     0x0004

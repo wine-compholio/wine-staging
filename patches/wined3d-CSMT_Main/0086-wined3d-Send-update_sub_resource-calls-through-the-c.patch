@@ -1,19 +1,19 @@
-From 3831f30d2549855400978627d4912ea6b28e4333 Mon Sep 17 00:00:00 2001
+From 52b35f31cc613857f6131ea7662150ebba7f3a75 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Fri, 4 Sep 2015 15:22:49 +0200
 Subject: wined3d: Send update_sub_resource calls through the command stream.
 
 ---
  dlls/wined3d/cs.c              | 95 ++++++++++++++++++++++++++++++++++++++++++
- dlls/wined3d/device.c          | 53 ++++-------------------
+ dlls/wined3d/device.c          | 22 +---------
  dlls/wined3d/wined3d_private.h |  3 ++
- 3 files changed, 105 insertions(+), 46 deletions(-)
+ 3 files changed, 99 insertions(+), 21 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 5375f04..6857e8c 100644
+index 9a1c076..011020f 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -74,6 +74,7 @@ enum wined3d_cs_op
+@@ -75,6 +75,7 @@ enum wined3d_cs_op
      WINED3D_CS_OP_TEXTURE_MAP,
      WINED3D_CS_OP_TEXTURE_UNMAP,
      WINED3D_CS_OP_UPDATE_TEXTURE,
@@ -21,7 +21,7 @@ index 5375f04..6857e8c 100644
      WINED3D_CS_OP_STOP,
  };
  
-@@ -424,6 +425,15 @@ struct wined3d_cs_update_texture
+@@ -432,6 +433,15 @@ struct wined3d_cs_update_texture
      struct wined3d_texture *src, *dst;
  };
  
@@ -37,7 +37,7 @@ index 5375f04..6857e8c 100644
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
  {
      LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
-@@ -2199,6 +2209,90 @@ void wined3d_cs_emit_update_texture(struct wined3d_cs *cs, struct wined3d_textur
+@@ -2238,6 +2248,90 @@ void wined3d_cs_emit_update_texture(struct wined3d_cs *cs, struct wined3d_textur
      cs->ops->submit(cs, sizeof(*op));
  }
  
@@ -128,7 +128,7 @@ index 5375f04..6857e8c 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2251,6 +2345,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2291,6 +2385,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_TEXTURE_MAP                */ wined3d_cs_exec_texture_map,
      /* WINED3D_CS_OP_TEXTURE_UNMAP              */ wined3d_cs_exec_texture_unmap,
      /* WINED3D_CS_OP_UPDATE_TEXTURE             */ wined3d_cs_exec_update_texture,
@@ -137,80 +137,36 @@ index 5375f04..6857e8c 100644
  
  static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 2597aa2..a8403b6 100644
+index 480da33..172b7ee 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -4117,14 +4117,7 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
+@@ -4154,8 +4154,6 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
          unsigned int depth_pitch)
  {
-     struct wined3d_texture_sub_resource *sub_resource;
--    const struct wined3d_gl_info *gl_info;
+     unsigned int width, height, depth, level;
 -    struct wined3d_const_bo_address addr;
--    unsigned int width, height, level;
 -    struct wined3d_context *context;
      struct wined3d_texture *texture;
--    struct wined3d_surface *surface;
--    POINT dst_point;
--    RECT src_rect;
  
      TRACE("device %p, resource %p, sub_resource_idx %u, box %s, data %p, row_pitch %u, depth_pitch %u.\n",
-             device, resource, sub_resource_idx, debug_box(box), data, row_pitch, depth_pitch);
-@@ -4158,16 +4151,15 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
-         WARN("Invalid sub_resource_idx %u.\n", sub_resource_idx);
+@@ -4205,25 +4203,7 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
          return;
-     }
--    surface = sub_resource->u.surface;
- 
--    level = sub_resource_idx % texture->level_count;
--    width = wined3d_texture_get_level_width(texture, level);
--    height = wined3d_texture_get_level_height(texture, level);
--
--    src_rect.left = 0;
--    src_rect.top = 0;
-     if (box)
-     {
-+        unsigned int width, height, level;
-+
-+        level = sub_resource_idx % texture->level_count;
-+        width = wined3d_texture_get_level_width(texture, level);
-+        height = wined3d_texture_get_level_height(texture, level);
-+
-         if (box->left >= box->right || box->right > width
-                 || box->top >= box->bottom || box->bottom > height
-                 || box->front >= box->back)
-@@ -4175,40 +4167,9 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
-             WARN("Invalid box %s specified.\n", debug_box(box));
-             return;
-         }
--
--        src_rect.right = box->right - box->left;
--        src_rect.bottom = box->bottom - box->top;
--        dst_point.x = box->left;
--        dst_point.y = box->top;
--    }
--    else
--    {
--        src_rect.right = width;
--        src_rect.bottom = height;
--        dst_point.x = 0;
--        dst_point.y = 0;
      }
  
 -    addr.buffer_object = 0;
 -    addr.addr = data;
 -
 -    context = context_acquire(resource->device, NULL);
--    gl_info = context->gl_info;
 -
--    /* Only load the surface for partial updates. */
--    if (!dst_point.x && !dst_point.y && src_rect.right == width && src_rect.bottom == height)
+-    /* Only load the sub-resource for partial updates. */
+-    if (!box || (!box->left && !box->top && !box->front
+-            && box->right == width && box->bottom == height && box->back == depth))
 -        wined3d_texture_prepare_texture(texture, context, FALSE);
 -    else
 -        wined3d_texture_load_location(texture, sub_resource_idx, context, WINED3D_LOCATION_TEXTURE_RGB);
 -    wined3d_texture_bind_and_dirtify(texture, context, FALSE);
 -
--    wined3d_surface_upload_data(surface, gl_info, resource->format,
--            &src_rect, row_pitch, &dst_point, FALSE, &addr);
+-    wined3d_texture_upload_data(texture, sub_resource_idx, context, box, &addr, row_pitch, depth_pitch);
 -
 -    context_release(context);
 -
@@ -221,10 +177,10 @@ index 2597aa2..a8403b6 100644
  
  HRESULT CDECL wined3d_device_clear_rendertarget_view(struct wined3d_device *device,
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index c3f104e..9db3cf1 100644
+index 643f366..e832af2 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3164,6 +3164,9 @@ void *wined3d_cs_emit_texture_map(struct wined3d_cs *cs, struct wined3d_texture
+@@ -3259,6 +3259,9 @@ void *wined3d_cs_emit_texture_map(struct wined3d_cs *cs, struct wined3d_texture
  void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture *texture,
          unsigned int sub_resource_idx) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_unload_resource(struct wined3d_cs *cs, struct wined3d_resource *resource) DECLSPEC_HIDDEN;

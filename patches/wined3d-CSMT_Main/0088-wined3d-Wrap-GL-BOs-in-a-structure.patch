@@ -1,4 +1,4 @@
-From 67f6c320ba0d32d73a7cde737a1ecea30f627cca Mon Sep 17 00:00:00 2001
+From 420f9451c9d2267ad8133abdf9821e185a0b6515 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Fri, 30 Aug 2013 17:00:35 +0200
 Subject: wined3d: Wrap GL BOs in a structure
@@ -13,10 +13,10 @@ them for DISCARD maps.
  4 files changed, 93 insertions(+), 34 deletions(-)
 
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 56d45e5..824fa89 100644
+index 172b7ee..afc94b9 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -5241,3 +5241,56 @@ LRESULT device_process_message(struct wined3d_device *device, HWND window, BOOL
+@@ -5242,3 +5242,56 @@ LRESULT device_process_message(struct wined3d_device *device, HWND window, BOOL
      else
          return CallWindowProcA(proc, window, message, wparam, lparam);
  }
@@ -74,7 +74,7 @@ index 56d45e5..824fa89 100644
 +    wined3d_device_destroy_bo(device, context, bo);
 +}
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index a0b6d62..e187742 100644
+index 7c37160..344299b 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
 @@ -3075,7 +3075,7 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
@@ -87,7 +87,7 @@ index a0b6d62..e187742 100644
          TRACE("Removing the pbo attached to surface %p.\n", surface);
  
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index 6ca00ce..06ae160 100644
+index 4fc6c38..6160b6b 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
 @@ -342,7 +342,7 @@ void wined3d_texture_get_memory(struct wined3d_texture *texture, unsigned int su
@@ -99,7 +99,7 @@ index 6ca00ce..06ae160 100644
          return;
      }
      if (locations & WINED3D_LOCATION_USER_MEMORY)
-@@ -439,18 +439,17 @@ static HRESULT wined3d_texture_init(struct wined3d_texture *texture, const struc
+@@ -441,18 +441,17 @@ static HRESULT wined3d_texture_init(struct wined3d_texture *texture, const struc
  
  /* Context activation is done by the caller. */
  static void wined3d_texture_remove_buffer_object(struct wined3d_texture *texture,
@@ -124,7 +124,7 @@ index 6ca00ce..06ae160 100644
  }
  
  static void wined3d_texture_update_map_binding(struct wined3d_texture *texture)
-@@ -470,7 +469,7 @@ static void wined3d_texture_update_map_binding(struct wined3d_texture *texture)
+@@ -472,7 +471,7 @@ static void wined3d_texture_update_map_binding(struct wined3d_texture *texture)
                  && !wined3d_texture_load_location(texture, i, context, map_binding))
              ERR("Failed to load location %s.\n", wined3d_debug_location(map_binding));
          if (texture->resource.map_binding == WINED3D_LOCATION_BUFFER)
@@ -133,7 +133,7 @@ index 6ca00ce..06ae160 100644
      }
  
      if (context)
-@@ -627,28 +626,25 @@ static void wined3d_texture_cleanup(struct wined3d_texture *texture)
+@@ -629,28 +628,25 @@ static void wined3d_texture_cleanup(struct wined3d_texture *texture)
      unsigned int sub_count = texture->level_count * texture->layer_count;
      struct wined3d_device *device = texture->resource.device;
      struct wined3d_context *context = NULL;
@@ -167,7 +167,7 @@ index 6ca00ce..06ae160 100644
      }
      if (context)
          context_release(context);
-@@ -1321,22 +1317,19 @@ HRESULT CDECL wined3d_texture_update_desc(struct wined3d_texture *texture, UINT
+@@ -1330,22 +1326,19 @@ HRESULT CDECL wined3d_texture_update_desc(struct wined3d_texture *texture, UINT
  
  /* Context activation is done by the caller. */
  static void wined3d_texture_prepare_buffer_object(struct wined3d_texture *texture,
@@ -195,7 +195,7 @@ index 6ca00ce..06ae160 100644
  }
  
  static void wined3d_texture_force_reload(struct wined3d_texture *texture)
-@@ -1462,7 +1455,7 @@ BOOL wined3d_texture_prepare_location(struct wined3d_texture *texture, unsigned
+@@ -1471,7 +1464,7 @@ BOOL wined3d_texture_prepare_location(struct wined3d_texture *texture, unsigned
              return TRUE;
  
          case WINED3D_LOCATION_BUFFER:
@@ -204,7 +204,7 @@ index 6ca00ce..06ae160 100644
              return TRUE;
  
          case WINED3D_LOCATION_TEXTURE_RGB:
-@@ -1742,7 +1735,7 @@ static BOOL texture1d_load_location(struct wined3d_texture *texture, unsigned in
+@@ -1762,7 +1755,7 @@ static BOOL texture1d_load_location(struct wined3d_texture *texture, unsigned in
              }
              else if (sub_resource->locations & WINED3D_LOCATION_BUFFER)
              {
@@ -212,8 +212,8 @@ index 6ca00ce..06ae160 100644
 +                struct wined3d_const_bo_address data = {sub_resource->buffer->name, NULL};
                  wined3d_texture_bind_and_dirtify(texture, context, location == WINED3D_LOCATION_TEXTURE_SRGB);
                  wined3d_texture_get_pitch(texture, sub_resource_idx, &row_pitch, &slice_pitch);
-                 texture1d_upload_data(texture, sub_resource_idx, context, &data, row_pitch, slice_pitch);
-@@ -1787,7 +1780,7 @@ static BOOL texture1d_load_location(struct wined3d_texture *texture, unsigned in
+                 texture1d_upload_data(texture, sub_resource_idx, context, NULL, &data, row_pitch, slice_pitch);
+@@ -1807,7 +1800,7 @@ static BOOL texture1d_load_location(struct wined3d_texture *texture, unsigned in
          case WINED3D_LOCATION_BUFFER:
              if (sub_resource->locations & (WINED3D_LOCATION_TEXTURE_RGB | WINED3D_LOCATION_TEXTURE_SRGB))
              {
@@ -222,7 +222,7 @@ index 6ca00ce..06ae160 100644
  
                  if (sub_resource->locations & WINED3D_LOCATION_TEXTURE_RGB)
                      wined3d_texture_bind_and_dirtify(texture, context, FALSE);
-@@ -2068,8 +2061,8 @@ static void wined3d_texture_unload(struct wined3d_resource *resource)
+@@ -2101,8 +2094,8 @@ static void wined3d_texture_unload(struct wined3d_resource *resource)
              wined3d_texture_invalidate_location(texture, i, ~WINED3D_LOCATION_DISCARDED);
          }
  
@@ -233,7 +233,7 @@ index 6ca00ce..06ae160 100644
  
          if (resource->type == WINED3D_RTYPE_TEXTURE_2D)
          {
-@@ -2845,7 +2838,7 @@ static BOOL texture3d_load_location(struct wined3d_texture *texture, unsigned in
+@@ -2897,7 +2890,7 @@ static BOOL texture3d_load_location(struct wined3d_texture *texture, unsigned in
              }
              else if (sub_resource->locations & WINED3D_LOCATION_BUFFER)
              {
@@ -242,7 +242,7 @@ index 6ca00ce..06ae160 100644
                  wined3d_texture_bind_and_dirtify(texture, context,
                          location == WINED3D_LOCATION_TEXTURE_SRGB);
                  wined3d_texture_get_pitch(texture, sub_resource_idx, &row_pitch, &slice_pitch);
-@@ -2891,7 +2884,7 @@ static BOOL texture3d_load_location(struct wined3d_texture *texture, unsigned in
+@@ -2943,7 +2936,7 @@ static BOOL texture3d_load_location(struct wined3d_texture *texture, unsigned in
          case WINED3D_LOCATION_BUFFER:
              if (sub_resource->locations & (WINED3D_LOCATION_TEXTURE_RGB | WINED3D_LOCATION_TEXTURE_SRGB))
              {
@@ -252,10 +252,10 @@ index 6ca00ce..06ae160 100644
                  if (sub_resource->locations & WINED3D_LOCATION_TEXTURE_RGB)
                      wined3d_texture_bind_and_dirtify(texture, context, FALSE);
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index e6d6647..3796ebb 100644
+index d19b380..4f8abb8 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2433,6 +2433,14 @@ struct wined3d_state
+@@ -2520,6 +2520,14 @@ struct wined3d_state
      struct wined3d_rasterizer_state *rasterizer_state;
  };
  
@@ -270,7 +270,7 @@ index e6d6647..3796ebb 100644
  #define WINED3D_UNMAPPED_STAGE ~0U
  
  /* Multithreaded flag. Removed from the public header to signal that
-@@ -2543,6 +2551,11 @@ void device_invalidate_state(const struct wined3d_device *device, DWORD state) D
+@@ -2633,6 +2641,11 @@ void device_invalidate_state(const struct wined3d_device *device, DWORD state) D
  void device_invalidate_shader_constants(const struct wined3d_device *device, DWORD mask) DECLSPEC_HIDDEN;
  void device_exec_update_texture(struct wined3d_context *context, struct wined3d_texture *src_texture,
          struct wined3d_texture *dst_texture) DECLSPEC_HIDDEN;
@@ -282,7 +282,7 @@ index e6d6647..3796ebb 100644
  
  static inline BOOL isStateDirty(const struct wined3d_context *context, DWORD state)
  {
-@@ -2731,7 +2744,7 @@ struct wined3d_texture
+@@ -2822,7 +2835,7 @@ struct wined3d_texture
  
          unsigned int map_count;
          DWORD locations;
@@ -292,5 +292,5 @@ index e6d6647..3796ebb 100644
      } sub_resources[1];
  };
 -- 
-2.8.1
+2.9.0
 

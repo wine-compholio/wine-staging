@@ -7763,6 +7763,7 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		echo '+    { "Nils Kuhnhenn", "wined3d: Fix incorrect return value in wined3d_cs_exec_set_light.", 1 },';
 		echo '+    { "Nils Kuhnhenn", "wined3d: Fix context_acquire not being called from the command thread in wined3d_texture_add_dirty_region.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Do not signal CS event when we manage to unset waiting_for_event quickly enough.", 1 },';
+		echo '+    { "Sebastian Lackner", "wined3d: Fix occlusion query tests.", 1 },';
 		echo '+    { "Sebastian Lackner", "wined3d: Enable CSMT by default, print a winediag message informing about this patchset.", 1 },';
 	) >> "$patchlist"
 fi

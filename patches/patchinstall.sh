@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "4c7f3f8af856888f5ab020b2a32d0b01db0c82f7"
+	echo "56040acaa3f584150b3ab7fc644cd1a81e34fece"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 2.0-rc1"
+	echo "Wine Staging 2.0-rc2 (unreleased)"
 	echo "Copyright (C) 2014-2016 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -390,7 +390,6 @@ patch_enable_all ()
 	enable_winex11_wglShareLists="$1"
 	enable_winhttp_System_Proxy_Autoconfig="$1"
 	enable_wininet_Cleanup="$1"
-	enable_wininet_HttpOpenRequestW="$1"
 	enable_wininet_InternetCrackUrlW="$1"
 	enable_wininet_Internet_Settings="$1"
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
@@ -1349,9 +1348,6 @@ patch_enable ()
 			;;
 		wininet-Cleanup)
 			enable_wininet_Cleanup="$2"
-			;;
-		wininet-HttpOpenRequestW)
-			enable_wininet_HttpOpenRequestW="$2"
 			;;
 		wininet-InternetCrackUrlW)
 			enable_wininet_InternetCrackUrlW="$2"
@@ -8021,21 +8017,6 @@ if test "$enable_wininet_Cleanup" -eq 1; then
 		echo '+    { "Michael Müller", "wininet/tests: Check cookie behaviour when overriding host.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Strip filename if no path is set in cookie.", 1 },';
 		echo '+    { "Michael Müller", "wininet: Replacing header fields should fail if they do not exist yet.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wininet-HttpOpenRequestW
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40169] Fix handling of INTERNET_INVALID_PORT_NUMBER in HttpOpenRequestW
-# |
-# | Modified files:
-# |   *	dlls/wininet/http.c, dlls/wininet/tests/http.c
-# |
-if test "$enable_wininet_HttpOpenRequestW" -eq 1; then
-	patch_apply wininet-HttpOpenRequestW/0001-wininet-Handle-INTERNET_INVALID_PORT_NUMBER-in-HttpO.patch
-	(
-		echo '+    { "Michael Müller", "wininet: Handle INTERNET_INVALID_PORT_NUMBER in HttpOpenRequest.", 1 },';
 	) >> "$patchlist"
 fi
 

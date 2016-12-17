@@ -1,4 +1,4 @@
-From 9015c6fda2f38e2552ee7056b7f97ad994d75310 Mon Sep 17 00:00:00 2001
+From 5559a51191a5cae71dd6e1b1378a17b1faf539ec Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 10 Oct 2013 16:43:19 +0200
 Subject: wined3d: Create the initial context through the CS.
@@ -11,10 +11,10 @@ Very hacky.
  3 files changed, 103 insertions(+), 54 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index cf11c3c..230c04d 100644
+index 342cfc4..22c1031 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -84,6 +84,7 @@ enum wined3d_cs_op
+@@ -83,6 +83,7 @@ enum wined3d_cs_op
      WINED3D_CS_OP_GET_DC,
      WINED3D_CS_OP_RELEASE_DC,
      WINED3D_CS_OP_CREATE_DUMMY_TEXTURES,
@@ -22,7 +22,7 @@ index cf11c3c..230c04d 100644
      WINED3D_CS_OP_STOP,
  };
  
-@@ -496,6 +497,13 @@ struct wined3d_cs_create_dummy_textures
+@@ -490,6 +491,13 @@ struct wined3d_cs_create_dummy_textures
      enum wined3d_cs_op opcode;
  };
  
@@ -36,7 +36,7 @@ index cf11c3c..230c04d 100644
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs, size_t size)
  {
      LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
-@@ -2587,6 +2595,31 @@ void wined3d_cs_emit_create_dummy_textures(struct wined3d_cs *cs)
+@@ -2557,6 +2565,31 @@ void wined3d_cs_emit_create_dummy_textures(struct wined3d_cs *cs)
      cs->ops->finish(cs);
  }
  
@@ -68,7 +68,7 @@ index cf11c3c..230c04d 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2649,6 +2682,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2618,6 +2651,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_GET_DC                     */ wined3d_cs_exec_get_dc,
      /* WINED3D_CS_OP_RELEASE_DC                 */ wined3d_cs_exec_release_dc,
      /* WINED3D_CS_OP_CREATE_DUMMY_TEXTURES      */ wined3d_cs_exec_create_dummy_textures,
@@ -77,7 +77,7 @@ index cf11c3c..230c04d 100644
  
  static inline void *_wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, BOOL prio)
 diff --git a/dlls/wined3d/swapchain.c b/dlls/wined3d/swapchain.c
-index 256f9db..eac171b 100644
+index 9d0cabd..0efaa88 100644
 --- a/dlls/wined3d/swapchain.c
 +++ b/dlls/wined3d/swapchain.c
 @@ -817,6 +817,69 @@ static void wined3d_swapchain_apply_sample_count_override(const struct wined3d_s
@@ -120,7 +120,7 @@ index 256f9db..eac171b 100644
 +     * issue needs to be fixed. */
 +    for (i = 0; i < (sizeof(formats) / sizeof(*formats)); i++)
 +    {
-+        swapchain->ds_format = wined3d_get_format(gl_info, formats[i]);
++        swapchain->ds_format = wined3d_get_format(gl_info, formats[i], WINED3DUSAGE_DEPTHSTENCIL);
 +        swapchain->context[0] = context_create(swapchain, swapchain->front_buffer, swapchain->ds_format);
 +        if (swapchain->context[0]) break;
 +        TRACE("Depth stencil format %s is not supported, trying next format\n",
@@ -189,7 +189,7 @@ index 256f9db..eac171b 100644
 -         * issue needs to be fixed. */
 -        for (i = 0; i < (sizeof(formats) / sizeof(*formats)); i++)
 -        {
--            swapchain->ds_format = wined3d_get_format(gl_info, formats[i]);
+-            swapchain->ds_format = wined3d_get_format(gl_info, formats[i], WINED3DUSAGE_DEPTHSTENCIL);
 -            swapchain->context[0] = context_create(swapchain, swapchain->front_buffer, swapchain->ds_format);
 -            if (swapchain->context[0]) break;
 -            TRACE("Depth stencil format %s is not supported, trying next format\n",
@@ -215,10 +215,10 @@ index 256f9db..eac171b 100644
  
      if (swapchain->desc.backbuffer_count > 0)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index a635118..f18858b 100644
+index 175b5a0..875c59d 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3126,6 +3126,8 @@ void wined3d_cs_emit_clear_rtv(struct wined3d_cs *cs, struct wined3d_rendertarge
+@@ -3222,6 +3222,8 @@ void wined3d_cs_emit_clear_rtv(struct wined3d_cs *cs, struct wined3d_rendertarge
          const RECT *rect, DWORD flags, const struct wined3d_color *color, float depth, DWORD stencil,
          const struct blit_shader *blitter) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_create_dummy_textures(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
@@ -227,7 +227,7 @@ index a635118..f18858b 100644
  void wined3d_cs_emit_create_vbo(struct wined3d_cs *cs, struct wined3d_buffer *buffer) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_destroy_object(struct wined3d_cs *cs,
          void (*callback)(void *object), void *object) DECLSPEC_HIDDEN;
-@@ -3367,6 +3369,8 @@ struct wined3d_swapchain
+@@ -3476,6 +3478,8 @@ struct wined3d_swapchain
  
  void wined3d_swapchain_activate(struct wined3d_swapchain *swapchain, BOOL activate) DECLSPEC_HIDDEN;
  struct wined3d_context *swapchain_get_context(struct wined3d_swapchain *swapchain) DECLSPEC_HIDDEN;

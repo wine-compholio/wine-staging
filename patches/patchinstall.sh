@@ -89,6 +89,7 @@ patch_enable_all ()
 	enable_advapi32_GetExplicitEntriesFromAclW="$1"
 	enable_advapi32_LsaLookupSids="$1"
 	enable_advapi32_SetSecurityInfo="$1"
+	enable_advapi32_WinBuiltinAnyPackageSid="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
 	enable_avifil32_AVIFileGetStream="$1"
 	enable_avifil32_AVIFile_Proxies="$1"
@@ -443,6 +444,9 @@ patch_enable ()
 			;;
 		advapi32-SetSecurityInfo)
 			enable_advapi32_SetSecurityInfo="$2"
+			;;
+		advapi32-WinBuiltinAnyPackageSid)
+			enable_advapi32_WinBuiltinAnyPackageSid="$2"
 			;;
 		api-ms-win-Stub_DLLs)
 			enable_api_ms_win_Stub_DLLs="$2"
@@ -2577,6 +2581,23 @@ if test "$enable_advapi32_SetSecurityInfo" -eq 1; then
 	(
 		echo '+    { "Erich E. Hoover", "advapi32: Move the DACL combining code into a separate routine.", 1 },';
 		echo '+    { "Erich E. Hoover", "advapi32: Fix the initialization of combined DACLs when the new DACL is empty.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset advapi32-WinBuiltinAnyPackageSid
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#41934] Assigns the AC abbreviation to WinBuiltinAnyPackageSid
+# |
+# | Modified files:
+# |   *	dlls/advapi32/security.c, dlls/advapi32/tests/security.c
+# |
+if test "$enable_advapi32_WinBuiltinAnyPackageSid" -eq 1; then
+	patch_apply advapi32-WinBuiltinAnyPackageSid/0001-advapi32-SDDL-assigns-the-AC-abbreviation-to-WinBuil.patch
+	patch_apply advapi32-WinBuiltinAnyPackageSid/0002-advapi32-tests-Add-a-test-that-compares-a-well-known.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "advapi32: SDDL assigns the \"AC\" abbreviation to WinBuiltinAnyPackageSid.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "advapi32/tests: Add a test that compares a well-known SID to a SID created from a SDDL abbreviation.", 1 },';
 	) >> "$patchlist"
 fi
 

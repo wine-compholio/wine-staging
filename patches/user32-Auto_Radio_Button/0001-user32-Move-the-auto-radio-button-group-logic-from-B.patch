@@ -1,0 +1,54 @@
+From f2f3dfcd09e64bd0a3af1db277884e6dd59a5368 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Mon, 19 Dec 2016 22:25:46 +0800
+Subject: user32: Move the auto radio button group logic from BM_SETCHECK to
+ WM_LBUTTONUP handler.
+
+This patch also changes the logic to get the control style with WM_GETDLGCODE
+instead of GetWindowLong to make the message test pass.
+---
+ dlls/user32/button.c | 11 ++++-------
+ 1 file changed, 4 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/user32/button.c b/dlls/user32/button.c
+index e85e30d..98d8289 100644
+--- a/dlls/user32/button.c
++++ b/dlls/user32/button.c
+@@ -334,7 +334,7 @@ LRESULT ButtonWndProc_common(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam,
+                 SendMessageW( hWnd, BM_SETCHECK, !(state & BST_CHECKED), 0 );
+                 break;
+             case BS_AUTORADIOBUTTON:
+-                SendMessageW( hWnd, BM_SETCHECK, TRUE, 0 );
++                BUTTON_CheckAutoRadioButton( hWnd );
+                 break;
+             case BS_AUTO3STATE:
+                 SendMessageW( hWnd, BM_SETCHECK,
+@@ -497,8 +497,6 @@ LRESULT ButtonWndProc_common(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam,
+             set_button_state( hWnd, (state & ~3) | wParam );
+             paint_button( hWnd, btn_type, ODA_SELECT );
+         }
+-        if ((btn_type == BS_AUTORADIOBUTTON) && (wParam == BST_CHECKED) && (style & WS_CHILD))
+-            BUTTON_CheckAutoRadioButton( hWnd );
+         break;
+ 
+     case BM_GETSTATE:
+@@ -976,13 +974,12 @@ static void BUTTON_CheckAutoRadioButton( HWND hwnd )
+ 
+     parent = GetParent(hwnd);
+     /* make sure that starting control is not disabled or invisible */
+-    start = sibling = GetNextDlgGroupItem( parent, hwnd, TRUE );
++    start = sibling = hwnd;
+     do
+     {
+         if (!sibling) break;
+-        if ((hwnd != sibling) &&
+-            ((GetWindowLongW( sibling, GWL_STYLE) & BS_TYPEMASK) == BS_AUTORADIOBUTTON))
+-            SendMessageW( sibling, BM_SETCHECK, BST_UNCHECKED, 0 );
++        if (SendMessageW( sibling, WM_GETDLGCODE, 0, 0 ) == (DLGC_BUTTON | DLGC_RADIOBUTTON))
++            SendMessageW( sibling, BM_SETCHECK, sibling == hwnd ? BST_CHECKED : BST_UNCHECKED, 0 );
+         sibling = GetNextDlgGroupItem( parent, sibling, FALSE );
+     } while (sibling != start);
+ }
+-- 
+2.9.0
+

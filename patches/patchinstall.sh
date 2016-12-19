@@ -319,6 +319,7 @@ patch_enable_all ()
 	enable_taskmgr_Memory_Usage="$1"
 	enable_user_exe16_CONTAINING_RECORD="$1"
 	enable_user_exe16_DlgDirList="$1"
+	enable_user32_Auto_Radio_Button="$1"
 	enable_user32_Combobox_WM_SIZE="$1"
 	enable_user32_DM_SETDEFID="$1"
 	enable_user32_DeferWindowPos="$1"
@@ -1135,6 +1136,9 @@ patch_enable ()
 			;;
 		user.exe16-DlgDirList)
 			enable_user_exe16_DlgDirList="$2"
+			;;
+		user32-Auto_Radio_Button)
+			enable_user32_Auto_Radio_Button="$2"
 			;;
 		user32-Combobox_WM_SIZE)
 			enable_user32_Combobox_WM_SIZE="$2"
@@ -6720,6 +6724,23 @@ if test "$enable_user_exe16_DlgDirList" -eq 1; then
 	patch_apply user.exe16-DlgDirList/0001-user.exe16-Fix-handling-of-DDL_DRIVES-flag-in-DlgDir.patch
 	(
 		echo '+    { "Alex Villacís Lasso", "user.exe16: Fix handling of DDL_DRIVES flag in DlgDirList.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-Auto_Radio_Button
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42010] Move the auto radio button group logic from BM_SETCHECK to WM_LBUTTONUP handler
+# |
+# | Modified files:
+# |   *	dlls/user32/button.c, dlls/user32/tests/msg.c
+# |
+if test "$enable_user32_Auto_Radio_Button" -eq 1; then
+	patch_apply user32-Auto_Radio_Button/0001-user32-Move-the-auto-radio-button-group-logic-from-B.patch
+	patch_apply user32-Auto_Radio_Button/0002-user32-tests-Add-a-message-test-for-group-of-radio-b.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "user32: Move the auto radio button group logic from BM_SETCHECK to WM_LBUTTONUP handler.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "user32/tests: Add a message test for group of radio buttons.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -257,6 +257,7 @@ patch_enable_all ()
 	enable_ole32_HGLOBALStream="$1"
 	enable_ole32_OleGetIconOfFile="$1"
 	enable_oleaut32_CreateTypeLib="$1"
+	enable_oleaut32_ITypeInfo_fnInvoke="$1"
 	enable_oleaut32_LoadTypeLibEx="$1"
 	enable_oleaut32_Load_Save_EMF="$1"
 	enable_oleaut32_OLEPictureImpl_SaveAsFile="$1"
@@ -953,6 +954,9 @@ patch_enable ()
 			;;
 		oleaut32-CreateTypeLib)
 			enable_oleaut32_CreateTypeLib="$2"
+			;;
+		oleaut32-ITypeInfo_fnInvoke)
+			enable_oleaut32_ITypeInfo_fnInvoke="$2"
 			;;
 		oleaut32-LoadTypeLibEx)
 			enable_oleaut32_LoadTypeLibEx="$2"
@@ -5725,6 +5729,21 @@ if test "$enable_oleaut32_CreateTypeLib" -eq 1; then
 	patch_apply oleaut32-CreateTypeLib/0001-oleaut32-Implement-semi-stub-for-CreateTypeLib.patch
 	(
 		echo '+    { "Alistair Leslie-Hughes", "oleaut32: Implement semi-stub for CreateTypeLib.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset oleaut32-ITypeInfo_fnInvoke
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#41488] Accept DISP_E_PARAMNOTFOUND for missing optional param in typelib implementation
+# |
+# | Modified files:
+# |   *	dlls/oleaut32/typelib.c
+# |
+if test "$enable_oleaut32_ITypeInfo_fnInvoke" -eq 1; then
+	patch_apply oleaut32-ITypeInfo_fnInvoke/0001-oleaut32-Gracefully-handle-a-failure-to-convert-an-o.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "oleaut32: Gracefully handle a failure to convert an optional param in typelib'\''s Invoke implementation.", 2 },';
 	) >> "$patchlist"
 fi
 

@@ -340,6 +340,7 @@ patch_enable_all ()
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_WM_MEASUREITEM="$1"
 	enable_user32_lpCreateParams="$1"
+	enable_uxtheme_CloseThemeClass="$1"
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_GetFileVersionInfoSizeExW="$1"
 	enable_version_VerFindFileA="$1"
@@ -1201,6 +1202,9 @@ patch_enable ()
 			;;
 		user32-lpCreateParams)
 			enable_user32_lpCreateParams="$2"
+			;;
+		uxtheme-CloseThemeClass)
+			enable_uxtheme_CloseThemeClass="$2"
 			;;
 		uxtheme-GTK_Theming)
 			enable_uxtheme_GTK_Theming="$2"
@@ -7073,6 +7077,21 @@ if test "$enable_user32_WM_MEASUREITEM" -eq 1; then
 	(
 		echo '+    { "Dmitry Timoshkov", "user32/tests: Add a test for WM_MEASUREITEM when inserting an item to an owner-drawn listbox.", 2 },';
 		echo '+    { "Dmitry Timoshkov", "user32: Pass correct itemData to WM_MEASUREITEM when inserting an item to an owner-drawn listbox.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset uxtheme-CloseThemeClass
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#41029] Protect CloseThemeData() from invalid input
+# |
+# | Modified files:
+# |   *	dlls/uxtheme/msstyles.c, dlls/uxtheme/msstyles.h, dlls/uxtheme/tests/system.c
+# |
+if test "$enable_uxtheme_CloseThemeClass" -eq 1; then
+	patch_apply uxtheme-CloseThemeClass/0001-uxtheme-Protect-CloseThemeData-from-invalid-input.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "uxtheme: Protect CloseThemeData() from invalid input.", 1 },';
 	) >> "$patchlist"
 fi
 

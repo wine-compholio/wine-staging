@@ -4807,6 +4807,9 @@ fi
 
 # Patchset msvideo.dll16-DrawDibProfileDisplay
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42022] Implement DrawDibProfileDisplay in msvideo.dll16
+# |
 # | Modified files:
 # |   *	dlls/msvideo.dll16/msvideo.dll16.spec, dlls/msvideo.dll16/msvideo16.c
 # |

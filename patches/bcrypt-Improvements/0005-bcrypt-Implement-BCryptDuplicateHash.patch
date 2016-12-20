@@ -1,0 +1,56 @@
+From 9331e2a78e8ec0ba29ed1041a9f851ffd39cc249 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Tue, 20 Dec 2016 03:59:19 +0100
+Subject: bcrypt: Implement BCryptDuplicateHash.
+
+FIXME: Should we check for NULL pointers?
+---
+ dlls/bcrypt/bcrypt.spec   |  2 +-
+ dlls/bcrypt/bcrypt_main.c | 18 ++++++++++++++++++
+ 2 files changed, 19 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/bcrypt/bcrypt.spec b/dlls/bcrypt/bcrypt.spec
+index 962953e..9ecd21d 100644
+--- a/dlls/bcrypt/bcrypt.spec
++++ b/dlls/bcrypt/bcrypt.spec
+@@ -11,7 +11,7 @@
+ @ stdcall BCryptDestroyHash(ptr)
+ @ stdcall BCryptDestroyKey(ptr)
+ @ stub BCryptDestroySecret
+-@ stub BCryptDuplicateHash
++@ stdcall BCryptDuplicateHash(ptr ptr ptr long long)
+ @ stub BCryptDuplicateKey
+ @ stdcall BCryptEncrypt(ptr ptr long ptr ptr long ptr long ptr long)
+ @ stdcall BCryptEnumAlgorithms(long ptr ptr long)
+diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
+index 3e2b22d..944a9ea 100644
+--- a/dlls/bcrypt/bcrypt_main.c
++++ b/dlls/bcrypt/bcrypt_main.c
+@@ -672,6 +672,24 @@ end:
+     return STATUS_SUCCESS;
+ }
+ 
++NTSTATUS WINAPI BCryptDuplicateHash( BCRYPT_HASH_HANDLE handle, BCRYPT_HASH_HANDLE *handle_copy,
++                                     UCHAR *object, ULONG object_count, ULONG flags )
++{
++    struct hash *hash_orig = handle;
++    struct hash *hash_copy;
++
++    TRACE( "%p, %p, %p, %u, %u\n", handle, handle_copy, object, object_count, flags );
++
++    if (!hash_orig || hash_orig->hdr.magic != MAGIC_HASH) return STATUS_INVALID_HANDLE;
++    if (!(hash_copy = HeapAlloc( GetProcessHeap(), 0, sizeof(*hash_copy) )))
++        return STATUS_NO_MEMORY;
++
++    memcpy( hash_copy, hash_orig, sizeof(*hash_orig) );
++
++    *handle_copy = hash_copy;
++    return STATUS_SUCCESS;
++}
++
+ NTSTATUS WINAPI BCryptDestroyHash( BCRYPT_HASH_HANDLE handle )
+ {
+     struct hash *hash = handle;
+-- 
+2.9.0
+

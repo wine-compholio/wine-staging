@@ -95,6 +95,7 @@ patch_enable_all ()
 	enable_avifil32_AVIFile_Proxies="$1"
 	enable_avifil32_IGetFrame_fnSetFormat="$1"
 	enable_avifile_dll16_AVIStreamGetFrame="$1"
+	enable_bcrypt_Improvements="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_cabinet_iFolder="$1"
 	enable_combase_RoApi="$1"
@@ -462,6 +463,9 @@ patch_enable ()
 			;;
 		avifile.dll16-AVIStreamGetFrame)
 			enable_avifile_dll16_AVIStreamGetFrame="$2"
+			;;
+		bcrypt-Improvements)
+			enable_bcrypt_Improvements="$2"
 			;;
 		browseui-Progress_Dialog)
 			enable_browseui_Progress_Dialog="$2"
@@ -2799,6 +2803,31 @@ if test "$enable_avifile_dll16_AVIStreamGetFrame" -eq 1; then
 	(
 		echo '+    { "Michael Müller", "avifile.dll16: Correctly convert result of AVIStreamGetFrame to a segptr.", 1 },';
 		echo '+    { "Michael Müller", "avifile.dll16: Convert between AVISTREAMINFO (16 bit) and AVISTREAMINFOA.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset bcrypt-Improvements
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#41951] Implement bcrypt.BCryptDuplicateHash
+# |   *	[#40418] Implement BCrypt AES provider
+# |
+# | Modified files:
+# |   *	dlls/bcrypt/Makefile.in, dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_internal.h, dlls/bcrypt/bcrypt_main.c,
+# | 	dlls/bcrypt/sha256.c, dlls/bcrypt/sha384.c, dlls/bcrypt/sha512.c, dlls/bcrypt/tests/bcrypt.c, include/bcrypt.h
+# |
+if test "$enable_bcrypt_Improvements" -eq 1; then
+	patch_apply bcrypt-Improvements/0001-bcrypt-Add-AES-provider.patch
+	patch_apply bcrypt-Improvements/0002-bcrypt-Directly-implement-hmac-computation.patch
+	patch_apply bcrypt-Improvements/0003-bcrypt-Add-internal-fallback-implementation-for-hash.patch
+	patch_apply bcrypt-Improvements/0004-bcrypt-Use-hash-fallback-implementation-as-default-a.patch
+	patch_apply bcrypt-Improvements/0005-bcrypt-Implement-BCryptDuplicateHash.patch
+	(
+		echo '+    { "Hans Leidekker", "bcrypt: Add AES provider.", 1 },';
+		echo '+    { "Michael Müller", "bcrypt: Directly implement hmac computation.", 1 },';
+		echo '+    { "Michael Müller", "bcrypt: Add internal fallback implementation for hash calculations.", 1 },';
+		echo '+    { "Michael Müller", "bcrypt: Use hash fallback implementation as default and remove gnutls / commoncrypto hash implemetation.", 1 },';
+		echo '+    { "Michael Müller", "bcrypt: Implement BCryptDuplicateHash.", 1 },';
 	) >> "$patchlist"
 fi
 

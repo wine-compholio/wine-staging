@@ -1,0 +1,66 @@
+From 163cf44e74082d92b0f5b85a97ad6952a457b83f Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Fri, 9 Dec 2016 12:36:56 +0800
+Subject: windowscodecs: Add support for 12bpp RGB format to TIFF decoder.
+
+---
+ dlls/windowscodecs/tiffformat.c | 36 ++++++++++++++++++++++++++++++++++++
+ 1 file changed, 36 insertions(+)
+
+diff --git a/dlls/windowscodecs/tiffformat.c b/dlls/windowscodecs/tiffformat.c
+index 9906d75..f17e508 100644
+--- a/dlls/windowscodecs/tiffformat.c
++++ b/dlls/windowscodecs/tiffformat.c
+@@ -428,6 +428,7 @@ static HRESULT tiff_get_decode_info(TIFF *tiff, tiff_decode_info *decode_info)
+         switch(bps)
+         {
+         case 1:
++        case 4:
+         case 8:
+             decode_info->reverse_bgr = 1;
+             if (samples == 3)
+@@ -1081,6 +1082,41 @@ static HRESULT TiffFrameDecode_ReadTile(TiffFrameDecode *This, UINT tile_x, UINT
+ 
+         HeapFree(GetProcessHeap(), 0, srcdata);
+     }
++    /* 12bpp RGB */
++    else if (This->decode_info.source_bpp == 12 && This->decode_info.samples == 3 && This->decode_info.bpp == 24)
++    {
++        BYTE *srcdata, *src, *dst;
++        DWORD x, y, count, width_bytes = (This->decode_info.tile_width * 12 + 7) / 8;
++
++        count = width_bytes * This->decode_info.tile_height;
++
++        srcdata = HeapAlloc(GetProcessHeap(), 0, count);
++        if (!srcdata) return E_OUTOFMEMORY;
++        memcpy(srcdata, This->cached_tile, count);
++
++        for (y = 0; y < This->decode_info.tile_height; y++)
++        {
++            src = srcdata + y * width_bytes;
++            dst = This->cached_tile + y * This->decode_info.tile_width * 3;
++
++            for (x = 0; x < This->decode_info.tile_width; x += 2)
++            {
++                dst[0] = ((src[1] & 0xf0) >> 4) * 17; /* B */
++                dst[1] = (src[0] & 0x0f) * 17; /* G */
++                dst[2] = ((src[0] & 0xf0) >> 4) * 17; /* R */
++                if (x + 1 < This->decode_info.tile_width)
++                {
++                    dst[5] = (src[1] & 0x0f) * 17; /* B */
++                    dst[4] = ((src[2] & 0xf0) >> 4) * 17; /* G */
++                    dst[3] = (src[2] & 0x0f) * 17; /* R */
++                }
++                src += 3;
++                dst += 6;
++            }
++        }
++
++        HeapFree(GetProcessHeap(), 0, srcdata);
++    }
+     /* 8bpp grayscale with extra alpha */
+     else if (This->decode_info.source_bpp == 16 && This->decode_info.samples == 2 && This->decode_info.bpp == 32)
+     {
+-- 
+2.9.0
+

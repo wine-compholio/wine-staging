@@ -1,0 +1,68 @@
+From a528571c8c5ffd11b0fbc4c2f16a4374dc766b76 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Fri, 9 Dec 2016 12:28:02 +0800
+Subject: windowscodecs: Add support for 16bppGray and 32bppGrayFloat formats
+ to TIFF decoder.
+
+---
+ dlls/windowscodecs/regsvr.c     |  2 ++
+ dlls/windowscodecs/tiffformat.c | 22 ++++++++++++++++++++--
+ 2 files changed, 22 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/windowscodecs/regsvr.c b/dlls/windowscodecs/regsvr.c
+index ca9ca94..d1649fa 100644
+--- a/dlls/windowscodecs/regsvr.c
++++ b/dlls/windowscodecs/regsvr.c
+@@ -1211,6 +1211,8 @@ static GUID const * const tiff_decode_formats[] = {
+     &GUID_WICPixelFormatBlackWhite,
+     &GUID_WICPixelFormat4bppGray,
+     &GUID_WICPixelFormat8bppGray,
++    &GUID_WICPixelFormat16bppGray,
++    &GUID_WICPixelFormat32bppGrayFloat,
+     &GUID_WICPixelFormat1bppIndexed,
+     &GUID_WICPixelFormat2bppIndexed,
+     &GUID_WICPixelFormat4bppIndexed,
+diff --git a/dlls/windowscodecs/tiffformat.c b/dlls/windowscodecs/tiffformat.c
+index c72fadf..166bacd 100644
+--- a/dlls/windowscodecs/tiffformat.c
++++ b/dlls/windowscodecs/tiffformat.c
+@@ -319,6 +319,8 @@ static HRESULT tiff_get_decode_info(TIFF *tiff, tiff_decode_info *decode_info)
+     }
+     decode_info->planar = planar;
+ 
++    TRACE("planar %u, photometric %u, samples %u, bps %u\n", planar, photometric, samples, bps);
++
+     switch(photometric)
+     {
+     case 0: /* WhiteIsZero */
+@@ -383,9 +385,25 @@ static HRESULT tiff_get_decode_info(TIFF *tiff, tiff_decode_info *decode_info)
+                 }
+             }
+             break;
++        case 16:
++            if (samples != 1)
++            {
++                FIXME("unhandled 16bpp grayscale sample count %u\n", samples);
++                return WINCODEC_ERR_UNSUPPORTEDPIXELFORMAT;
++            }
++            decode_info->format = &GUID_WICPixelFormat16bppGray;
++            break;
++        case 32:
++            if (samples != 1)
++            {
++                FIXME("unhandled 32bpp grayscale sample count %u\n", samples);
++                return WINCODEC_ERR_UNSUPPORTEDPIXELFORMAT;
++            }
++            decode_info->format = &GUID_WICPixelFormat32bppGrayFloat;
++            break;
+         default:
+-            FIXME("unhandled greyscale bit count %u\n", bps);
+-            return E_FAIL;
++            WARN("unhandled greyscale bit count %u\n", bps);
++            return WINCODEC_ERR_UNSUPPORTEDPIXELFORMAT;
+         }
+         break;
+     case 2: /* RGB */
+-- 
+2.9.0
+

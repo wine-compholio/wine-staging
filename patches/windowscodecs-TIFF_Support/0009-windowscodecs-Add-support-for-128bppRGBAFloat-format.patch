@@ -1,0 +1,82 @@
+From badd83bc062034d92c62518210f7a578880c3f96 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Fri, 9 Dec 2016 12:46:00 +0800
+Subject: windowscodecs: Add support for 128bppRGBAFloat format to TIFF
+ decoder.
+
+---
+ dlls/windowscodecs/regsvr.c     | 12 ++++++++++++
+ dlls/windowscodecs/tiffformat.c | 12 ++++++++++--
+ include/wincodec.idl            |  2 ++
+ 3 files changed, 24 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/windowscodecs/regsvr.c b/dlls/windowscodecs/regsvr.c
+index d1649fa..2d6a5d2 100644
+--- a/dlls/windowscodecs/regsvr.c
++++ b/dlls/windowscodecs/regsvr.c
+@@ -1224,6 +1224,7 @@ static GUID const * const tiff_decode_formats[] = {
+     &GUID_WICPixelFormat48bppRGB,
+     &GUID_WICPixelFormat64bppRGBA,
+     &GUID_WICPixelFormat64bppPRGBA,
++    &GUID_WICPixelFormat128bppRGBAFloat,
+     NULL
+ };
+ 
+@@ -2019,6 +2020,17 @@ static struct regsvr_pixelformat const pixelformat_list[] = {
+         WICPixelFormatNumericRepresentationUnsignedInteger,
+         0
+     },
++    {   &GUID_WICPixelFormat128bppRGBAFloat,
++        "The Wine Project",
++        "128bpp RGBAFloat",
++        NULL, /* no version */
++        &GUID_VendorMicrosoft,
++        128, /* bitsperpixel */
++        4, /* channel count */
++        channel_masks_32bit,
++        WICPixelFormatNumericRepresentationUnsignedInteger,
++        1
++    },
+     { NULL }			/* list terminator */
+ };
+ 
+diff --git a/dlls/windowscodecs/tiffformat.c b/dlls/windowscodecs/tiffformat.c
+index f17e508..48e46d6 100644
+--- a/dlls/windowscodecs/tiffformat.c
++++ b/dlls/windowscodecs/tiffformat.c
+@@ -466,9 +466,17 @@ static HRESULT tiff_get_decode_info(TIFF *tiff, tiff_decode_info *decode_info)
+                     return E_FAIL;
+                 }
+             break;
++        case 32:
++            if (samples != 4)
++            {
++                FIXME("unhandled 32bpp RGB sample count %u\n", samples);
++                return WINCODEC_ERR_UNSUPPORTEDPIXELFORMAT;
++            }
++            decode_info->format = &GUID_WICPixelFormat128bppRGBAFloat;
++            break;
+         default:
+-            FIXME("unhandled RGB bit count %u\n", bps);
+-            return E_FAIL;
++            WARN("unhandled RGB bit count %u\n", bps);
++            return WINCODEC_ERR_UNSUPPORTEDPIXELFORMAT;
+         }
+         break;
+     case 3: /* RGB Palette */
+diff --git a/include/wincodec.idl b/include/wincodec.idl
+index c0afe52..e8c7023 100644
+--- a/include/wincodec.idl
++++ b/include/wincodec.idl
+@@ -219,6 +219,8 @@ cpp_quote("DEFINE_GUID(GUID_WICPixelFormat48bppRGB, 0x6fddc324,0x4e03,0x4bfe,0xb
+ cpp_quote("DEFINE_GUID(GUID_WICPixelFormat64bppRGBA, 0x6fddc324,0x4e03,0x4bfe,0xb1,0x85,0x3d,0x77,0x76,0x8d,0xc9,0x16);")
+ cpp_quote("DEFINE_GUID(GUID_WICPixelFormat64bppPRGBA, 0x6fddc324,0x4e03,0x4bfe,0xb1,0x85,0x3d,0x77,0x76,0x8d,0xc9,0x17);")
+ 
++cpp_quote("DEFINE_GUID(GUID_WICPixelFormat128bppRGBAFloat, 0x6fddc324,0x4e03,0x4bfe,0xb1,0x85,0x3d,0x77,0x76,0x8d,0xc9,0x19);")
++
+ cpp_quote("DEFINE_GUID(GUID_WICPixelFormat32bppCMYK, 0x6fddc324,0x4e03,0x4fbe,0xb1,0x85,0x3d,0x77,0x76,0x8d,0xc9,0x1c);")
+ 
+ typedef struct WICRect {
+-- 
+2.9.0
+

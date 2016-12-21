@@ -357,6 +357,7 @@ patch_enable_all ()
 	enable_windowscodecs_IMILBitmapSource="$1"
 	enable_windowscodecs_IWICPalette_InitializeFromBitmap="$1"
 	enable_windowscodecs_Palette_Images="$1"
+	enable_windowscodecs_TIFF_Support="$1"
 	enable_windowscodecs_WICCreateBitmapFromSection="$1"
 	enable_wine_inf_Directory_ContextMenuHandlers="$1"
 	enable_wine_inf_Dummy_CA_Certificate="$1"
@@ -1258,6 +1259,9 @@ patch_enable ()
 		windowscodecs-Palette_Images)
 			enable_windowscodecs_Palette_Images="$2"
 			;;
+		windowscodecs-TIFF_Support)
+			enable_windowscodecs_TIFF_Support="$2"
+			;;
 		windowscodecs-WICCreateBitmapFromSection)
 			enable_windowscodecs_WICCreateBitmapFromSection="$2"
 			;;
@@ -2066,6 +2070,17 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	enable_wined3d_QUERY_Stubs=1
 	enable_wined3d_Revert_Pixel_Center_Offset=1
 	enable_wined3d_Silence_FIXMEs=1
+fi
+
+if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
+	if test "$enable_windowscodecs_GIF_Encoder" -gt 1; then
+		abort "Patchset windowscodecs-GIF_Encoder disabled, but windowscodecs-TIFF_Support depends on that."
+	fi
+	if test "$enable_windowscodecs_IWICPalette_InitializeFromBitmap" -gt 1; then
+		abort "Patchset windowscodecs-IWICPalette_InitializeFromBitmap disabled, but windowscodecs-TIFF_Support depends on that."
+	fi
+	enable_windowscodecs_GIF_Encoder=1
+	enable_windowscodecs_IWICPalette_InitializeFromBitmap=1
 fi
 
 if test "$enable_windowscodecs_IWICPalette_InitializeFromBitmap" -eq 1; then
@@ -7475,6 +7490,55 @@ if test "$enable_windowscodecs_IWICPalette_InitializeFromBitmap" -eq 1; then
 		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICPalette::InitializeFromBitmap.", 5 },';
 		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipInitializePalette.", 2 },';
 		echo '+    { "Dmitry Timoshkov", "gdiplus/tests: Add some tests for GdipInitializePalette.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windowscodecs-TIFF_Support
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	gdiplus-Grayscale_PNG, windowscodecs-32bppGrayFloat, windowscodecs-Palette_Images, windowscodecs-GIF_Encoder,
+# | 	windowscodecs-IWICPalette_InitializeFromBitmap
+# |
+# | Modified files:
+# |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, dlls/windowscodecs/metadatahandler.c, dlls/windowscodecs/regsvr.c,
+# | 	dlls/windowscodecs/tests/tiffformat.c, dlls/windowscodecs/tiffformat.c, include/wincodec.idl
+# |
+if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
+	patch_apply windowscodecs-TIFF_Support/0001-windowscodecs-tests-Add-a-test-for-8bpp-indexed-TIFF.patch
+	patch_apply windowscodecs-TIFF_Support/0002-windowscodecs-tests-Make-the-test-for-8bpp-indexed-T.patch
+	patch_apply windowscodecs-TIFF_Support/0003-windowscodecs-Fix-the-SupportsTransparency-flag-valu.patch
+	patch_apply windowscodecs-TIFF_Support/0004-windowscodecs-Fail-earlier-in-TIFF-decoder-s-Initial.patch
+	patch_apply windowscodecs-TIFF_Support/0005-windowscodecs-Avoid-redundant-checks-when-reading-a-.patch
+	patch_apply windowscodecs-TIFF_Support/0006-windowscodecs-Add-support-for-16bppGray-and-32bppGra.patch
+	patch_apply windowscodecs-TIFF_Support/0007-windowscodecs-Add-support-for-3bps-RGB-format-to-TIF.patch
+	patch_apply windowscodecs-TIFF_Support/0008-windowscodecs-Add-support-for-12bpp-RGB-format-to-TI.patch
+	patch_apply windowscodecs-TIFF_Support/0009-windowscodecs-Add-support-for-128bppRGBAFloat-format.patch
+	patch_apply windowscodecs-TIFF_Support/0010-include-Fix-the-GUID_WICPixelFormat32bppCMYK-definit.patch
+	patch_apply windowscodecs-TIFF_Support/0011-windowscodecs-Add-support-for-32bppCMYK-and-64bppCMY.patch
+	patch_apply windowscodecs-TIFF_Support/0012-windowscodecs-Add-support-for-4bpp-RGBA-format-to-TI.patch
+	patch_apply windowscodecs-TIFF_Support/0013-windowscodecs-Add-support-for-16bpp-RGBA-format-to-T.patch
+	patch_apply windowscodecs-TIFF_Support/0014-windowscodecs-Add-some-tests-for-various-TIFF-color-.patch
+	patch_apply windowscodecs-TIFF_Support/0015-windowscodecs-Tolerate-partial-reads-in-the-IFD-meta.patch
+	patch_apply windowscodecs-TIFF_Support/0016-gdiplus-Add-support-for-more-image-color-formats.patch
+	patch_apply windowscodecs-TIFF_Support/0017-gdiplus-tests-Add-some-tests-for-loading-TIFF-images.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add a test for 8bpp indexed TIFF format.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Make the test for 8bpp indexed TIFF format run under XP.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fix the SupportsTransparency flag value for various pixel formats.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fail earlier in TIFF decoder'\''s Initialize method for unsupported pixel formats.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Avoid redundant checks when reading a TIFF tile.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 16bppGray and 32bppGrayFloat formats to TIFF decoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 3bps RGB format to TIFF decoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 12bpp RGB format to TIFF decoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 128bppRGBAFloat format to TIFF decoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "include: Fix the GUID_WICPixelFormat32bppCMYK definition.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 32bppCMYK and 64bppCMYK formats to TIFF decoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 4bpp RGBA format to TIFF decoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 16bpp RGBA format to TIFF decoder.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add some tests for various TIFF color formats.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "windowscodecs: Tolerate partial reads in the IFD metadata loader.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "gdiplus: Add support for more image color formats.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "gdiplus/tests: Add some tests for loading TIFF images in various color formats.", 1 },';
 	) >> "$patchlist"
 fi
 

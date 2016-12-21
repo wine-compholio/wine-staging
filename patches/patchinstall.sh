@@ -86,6 +86,7 @@ patch_enable_all ()
 	enable_Coverity="$1"
 	enable_Pipelight="$1"
 	enable_Staging="$1"
+	enable_advapi32_AddMandatoryAce="$1"
 	enable_advapi32_GetExplicitEntriesFromAclW="$1"
 	enable_advapi32_LsaLookupSids="$1"
 	enable_advapi32_SetSecurityInfo="$1"
@@ -442,6 +443,9 @@ patch_enable ()
 			;;
 		Staging)
 			enable_Staging="$2"
+			;;
+		advapi32-AddMandatoryAce)
+			enable_advapi32_AddMandatoryAce="$2"
 			;;
 		advapi32-GetExplicitEntriesFromAclW)
 			enable_advapi32_GetExplicitEntriesFromAclW="$2"
@@ -2528,6 +2532,19 @@ if test "$enable_Staging" -eq 1; then
 		echo '+    { "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list.", 1 },';
 		echo '+    { "Michael Müller", "loader: Add commandline option --check-libs.", 1 },';
 		echo '+    { "Michael Müller", "loader: Print library paths for --check-libs on Mac OS X.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset advapi32-AddMandatoryAce
+# |
+# | Modified files:
+# |   *	dlls/advapi32/security.c, dlls/advapi32/tests/security.c, dlls/ntdll/ntdll.spec, dlls/ntdll/sec.c, include/winbase.h,
+# | 	include/winternl.h
+# |
+if test "$enable_advapi32_AddMandatoryAce" -eq 1; then
+	patch_apply advapi32-AddMandatoryAce/0001-advapi32-Implement-AddMandatoryAce.patch
+	(
+		echo '+    { "Michael Müller", "advapi32: Implement AddMandatoryAce.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,40 @@
+From 3452ba066216b5c7175a66cf612812bab5c81cd8 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Sun, 27 Nov 2016 14:01:58 +0800
+Subject: user32: BUTTON_CalcLabelRect should use the button font.
+
+Otherwise WM_SETTEXT handler gets wrong rectangle to erase an old text.
+---
+ dlls/user32/button.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/dlls/user32/button.c b/dlls/user32/button.c
+index e4074cd..623b425 100644
+--- a/dlls/user32/button.c
++++ b/dlls/user32/button.c
+@@ -596,15 +596,22 @@ static UINT BUTTON_CalcLabelRect(HWND hwnd, HDC hdc, RECT *rc)
+    switch (style & (BS_ICON|BS_BITMAP))
+    {
+       case BS_TEXT:
++      {
++          HFONT hFont, hPrevFont = 0;
++
+           if (!(text = get_button_text( hwnd ))) goto empty_rect;
+           if (!text[0])
+           {
+               HeapFree( GetProcessHeap(), 0, text );
+               goto empty_rect;
+           }
++
++          if ((hFont = get_button_font( hwnd ))) hPrevFont = SelectObject( hdc, hFont );
+           DrawTextW(hdc, text, -1, &r, dtStyle | DT_CALCRECT);
++          if (hPrevFont) SelectObject( hdc, hPrevFont );
+           HeapFree( GetProcessHeap(), 0, text );
+           break;
++      }
+ 
+       case BS_ICON:
+          if (!GetIconInfo((HICON)GetWindowLongPtrW( hwnd, HIMAGE_GWL_OFFSET ), &iconInfo))
+-- 
+2.9.0
+

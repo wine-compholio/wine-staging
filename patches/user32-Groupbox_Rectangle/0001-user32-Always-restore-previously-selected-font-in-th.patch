@@ -1,0 +1,119 @@
+From c9fc6254889cae885e831b77f945b5c38b019fc4 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Sun, 27 Nov 2016 14:00:12 +0800
+Subject: user32: Always restore previously selected font in the button
+ painting helpers.
+
+---
+ dlls/user32/button.c | 21 +++++++++++++--------
+ 1 file changed, 13 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/user32/button.c b/dlls/user32/button.c
+index 98d8289..e4074cd 100644
+--- a/dlls/user32/button.c
++++ b/dlls/user32/button.c
+@@ -750,7 +750,7 @@ static void PB_Paint( HWND hwnd, HDC hDC, UINT action )
+     HBRUSH   hOldBrush;
+     INT      oldBkMode;
+     COLORREF oldTxtColor;
+-    HFONT hFont;
++    HFONT hFont, hPrevFont = 0;
+     LONG state = get_button_state( hwnd );
+     LONG style = GetWindowLongW( hwnd, GWL_STYLE );
+     BOOL pushedState = (state & BST_PUSHED);
+@@ -760,7 +760,7 @@ static void PB_Paint( HWND hwnd, HDC hDC, UINT action )
+     GetClientRect( hwnd, &rc );
+ 
+     /* Send WM_CTLCOLOR to allow changing the font (the colors are fixed) */
+-    if ((hFont = get_button_font( hwnd ))) SelectObject( hDC, hFont );
++    if ((hFont = get_button_font( hwnd ))) hPrevFont = SelectObject( hDC, hFont );
+     parent = GetParent(hwnd);
+     if (!parent) parent = hwnd;
+     SendMessageW( parent, WM_CTLCOLORBTN, (WPARAM)hDC, (LPARAM)hwnd );
+@@ -827,6 +827,7 @@ draw_focus:
+     SetBkMode(hDC, oldBkMode);
+     SelectClipRgn( hDC, hrgn );
+     if (hrgn) DeleteObject( hrgn );
++    if (hPrevFont) SelectObject( hDC, hPrevFont );
+ }
+ 
+ /**********************************************************************
+@@ -839,7 +840,7 @@ static void CB_Paint( HWND hwnd, HDC hDC, UINT action )
+     HBRUSH hBrush;
+     int delta, text_offset, checkBoxWidth, checkBoxHeight;
+     UINT dtFlags;
+-    HFONT hFont;
++    HFONT hFont, hPrevFont = 0;
+     LONG state = get_button_state( hwnd );
+     LONG style = GetWindowLongW( hwnd, GWL_STYLE );
+     LONG ex_style = GetWindowLongW( hwnd, GWL_EXSTYLE );
+@@ -858,7 +859,7 @@ static void CB_Paint( HWND hwnd, HDC hDC, UINT action )
+     checkBoxWidth  = 12 * GetDeviceCaps( hDC, LOGPIXELSX ) / 96 + 1;
+     checkBoxHeight = 12 * GetDeviceCaps( hDC, LOGPIXELSY ) / 96 + 1;
+ 
+-    if ((hFont = get_button_font( hwnd ))) SelectObject( hDC, hFont );
++    if ((hFont = get_button_font( hwnd ))) hPrevFont = SelectObject( hDC, hFont );
+     GetCharWidthW( hDC, '0', '0', &text_offset );
+     text_offset /= 2;
+ 
+@@ -960,6 +961,7 @@ static void CB_Paint( HWND hwnd, HDC hDC, UINT action )
+     }
+     SelectClipRgn( hDC, hrgn );
+     if (hrgn) DeleteObject( hrgn );
++    if (hPrevFont) SelectObject( hDC, hPrevFont );
+ }
+ 
+ 
+@@ -993,14 +995,14 @@ static void GB_Paint( HWND hwnd, HDC hDC, UINT action )
+ {
+     RECT rc, rcFrame;
+     HBRUSH hbr;
+-    HFONT hFont;
++    HFONT hFont, hPrevFont = 0;
+     UINT dtFlags;
+     TEXTMETRICW tm;
+     LONG style = GetWindowLongW( hwnd, GWL_STYLE );
+     HWND parent;
+     HRGN hrgn;
+ 
+-    if ((hFont = get_button_font( hwnd ))) SelectObject( hDC, hFont );
++    if ((hFont = get_button_font( hwnd ))) hPrevFont = SelectObject( hDC, hFont );
+     /* GroupBox acts like static control, so it sends CTLCOLORSTATIC */
+     parent = GetParent(hwnd);
+     if (!parent) parent = hwnd;
+@@ -1035,6 +1037,7 @@ static void GB_Paint( HWND hwnd, HDC hDC, UINT action )
+     }
+     SelectClipRgn( hDC, hrgn );
+     if (hrgn) DeleteObject( hrgn );
++    if (hPrevFont) SelectObject( hDC, hPrevFont );
+ }
+ 
+ 
+@@ -1046,13 +1049,13 @@ static void UB_Paint( HWND hwnd, HDC hDC, UINT action )
+ {
+     RECT rc;
+     HBRUSH hBrush;
+-    HFONT hFont;
++    HFONT hFont, hPrevFont = 0;
+     LONG state = get_button_state( hwnd );
+     HWND parent;
+ 
+     GetClientRect( hwnd, &rc);
+ 
+-    if ((hFont = get_button_font( hwnd ))) SelectObject( hDC, hFont );
++    if ((hFont = get_button_font( hwnd ))) hPrevFont = SelectObject( hDC, hFont );
+ 
+     parent = GetParent(hwnd);
+     if (!parent) parent = hwnd;
+@@ -1079,6 +1082,8 @@ static void UB_Paint( HWND hwnd, HDC hDC, UINT action )
+         BUTTON_NOTIFY_PARENT( hwnd, BN_PAINT );
+         break;
+     }
++
++    if (hPrevFont) SelectObject( hDC, hPrevFont );
+ }
+ 
+ 
+-- 
+2.9.0
+

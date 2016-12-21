@@ -393,6 +393,7 @@ patch_enable_all ()
 	enable_winex11_XEMBED="$1"
 	enable_winex11__NET_ACTIVE_WINDOW="$1"
 	enable_winex11_wglShareLists="$1"
+	enable_winhttp_Accept_Headers="$1"
 	enable_winhttp_System_Proxy_Autoconfig="$1"
 	enable_wininet_Cleanup="$1"
 	enable_wininet_InternetCrackUrlW="$1"
@@ -1362,6 +1363,9 @@ patch_enable ()
 			;;
 		winex11-wglShareLists)
 			enable_winex11_wglShareLists="$2"
+			;;
+		winhttp-Accept_Headers)
+			enable_winhttp_Accept_Headers="$2"
 			;;
 		winhttp-System_Proxy_Autoconfig)
 			enable_winhttp_System_Proxy_Autoconfig="$2"
@@ -8097,6 +8101,18 @@ if test "$enable_winex11_wglShareLists" -eq 1; then
 	patch_apply winex11-wglShareLists/0001-winex11.drv-Only-warn-about-used-contexts-in-wglShar.patch
 	(
 		echo '+    { "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winhttp-Accept_Headers
+# |
+# | Modified files:
+# |   *	dlls/winhttp/request.c, dlls/winhttp/session.c, dlls/winhttp/winhttp_private.h
+# |
+if test "$enable_winhttp_Accept_Headers" -eq 1; then
+	patch_apply winhttp-Accept_Headers/0001-winhttp-Fix-handling-of-Accept-headers.patch
+	(
+		echo '+    { "Sebastian Lackner", "winhttp: Fix handling of Accept headers.", 1 },';
 	) >> "$patchlist"
 fi
 

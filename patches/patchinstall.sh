@@ -2874,12 +2874,16 @@ if test "$enable_bcrypt_Improvements" -eq 1; then
 	patch_apply bcrypt-Improvements/0003-bcrypt-Add-internal-fallback-implementation-for-hash.patch
 	patch_apply bcrypt-Improvements/0004-bcrypt-Use-hash-fallback-implementation-as-default-a.patch
 	patch_apply bcrypt-Improvements/0005-bcrypt-Implement-BCryptDuplicateHash.patch
+	patch_apply bcrypt-Improvements/0006-bcrypt-Fix-handling-of-padding-when-input-size-equal.patch
+	patch_apply bcrypt-Improvements/0007-bcrypt-Properly-handle-padding-in-AES-decryption.patch
 	(
 		echo '+    { "Hans Leidekker", "bcrypt: Add AES provider.", 1 },';
 		echo '+    { "Michael Müller", "bcrypt: Directly implement hmac computation.", 1 },';
 		echo '+    { "Michael Müller", "bcrypt: Add internal fallback implementation for hash calculations.", 1 },';
 		echo '+    { "Michael Müller", "bcrypt: Use hash fallback implementation as default and remove gnutls / commoncrypto hash implemetation.", 1 },';
 		echo '+    { "Michael Müller", "bcrypt: Implement BCryptDuplicateHash.", 1 },';
+		echo '+    { "Michael Müller", "bcrypt: Fix handling of padding when input size equals block size for AES.", 1 },';
+		echo '+    { "Michael Müller", "bcrypt: Properly handle padding in AES decryption.", 1 },';
 	) >> "$patchlist"
 fi
 

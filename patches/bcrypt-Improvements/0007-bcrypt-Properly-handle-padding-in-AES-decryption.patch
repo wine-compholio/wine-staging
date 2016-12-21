@@ -1,0 +1,165 @@
+From 6a57c0b62866b751a5140d35ae7b131bd895745f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Wed, 21 Dec 2016 05:12:06 +0100
+Subject: bcrypt: Properly handle padding in AES decryption.
+
+---
+ dlls/bcrypt/bcrypt_main.c  | 39 +++++++++++++++++++++++++++--
+ dlls/bcrypt/tests/bcrypt.c | 62 +++++++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 98 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
+index f97638f..653301b 100644
+--- a/dlls/bcrypt/bcrypt_main.c
++++ b/dlls/bcrypt/bcrypt_main.c
+@@ -1032,6 +1032,8 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+                                ULONG output_len, ULONG *ret_len, ULONG flags )
+ {
+     struct key *key = handle;
++    ULONG bytes_left = input_len;
++    UCHAR *buf, *src, *dst;
+     NTSTATUS status;
+ 
+     FIXME( "%p, %p, %u, %p, %p, %u, %p, %u, %p, %08x\n", handle, input, input_len,
+@@ -1052,11 +1054,44 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+     if ((status = key_set_params( key, iv, iv_len ))) return status;
+ 
+     *ret_len = input_len;
++
+     if (input_len & (key->block_size - 1)) return STATUS_INVALID_BUFFER_SIZE;
+     if (!output) return STATUS_SUCCESS;
+-    if (output_len < *ret_len) return STATUS_BUFFER_TOO_SMALL;
++    if (flags & BCRYPT_BLOCK_PADDING)
++    {
++        if (output_len + key->block_size < *ret_len) return STATUS_BUFFER_TOO_SMALL;
++        if (input_len < key->block_size) return STATUS_BUFFER_TOO_SMALL;
++        bytes_left -= key->block_size;
++    }
++    else if (output_len < *ret_len)
++        return STATUS_BUFFER_TOO_SMALL;
+ 
+-    return key_decrypt( key, input, input_len, output, output_len );
++    src = input;
++    dst = output;
++    while (bytes_left >= key->block_size)
++    {
++        if ((status = key_decrypt( key, src, key->block_size, dst, key->block_size ))) return status;
++        bytes_left -= key->block_size;
++        src += key->block_size;
++        dst += key->block_size;
++    }
++
++    if (flags & BCRYPT_BLOCK_PADDING)
++    {
++        if (!(buf = HeapAlloc( GetProcessHeap(), 0, key->block_size ))) return STATUS_NO_MEMORY;
++        status = key_decrypt( key, src, key->block_size, buf, key->block_size );
++        if (!status && buf[ key->block_size - 1 ] <= key->block_size)
++        {
++            *ret_len -= buf[ key->block_size - 1 ];
++            if (output_len < *ret_len) status = STATUS_BUFFER_TOO_SMALL;
++            else memcpy( dst, buf, key->block_size - buf[ key->block_size - 1 ] );
++        }
++        else
++            status = STATUS_UNSUCCESSFUL; /* FIXME: invalid padding */
++        HeapFree( GetProcessHeap(), 0, buf );
++    }
++
++    return status;
+ }
+ 
+ BOOL WINAPI DllMain( HINSTANCE hinst, DWORD reason, LPVOID reserved )
+diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
+index 64a4625..997b298 100644
+--- a/dlls/bcrypt/tests/bcrypt.c
++++ b/dlls/bcrypt/tests/bcrypt.c
+@@ -1037,12 +1037,24 @@ static void test_BCryptDecrypt(void)
+         {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f};
+     static UCHAR expected[] =
+         {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f};
++    static UCHAR expected2[] =
++        {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,0x10};
++    static UCHAR expected3[] =
++        {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,
++         0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x10};
+     static UCHAR ciphertext[32] =
+         {0xc6,0xa1,0x3b,0x37,0x87,0x8f,0x5b,0x82,0x6f,0x4f,0x81,0x62,0xa1,0xc8,0xd8,0x79,
+          0x28,0x73,0x3d,0xef,0x84,0x8f,0xb0,0xa6,0x5d,0x1a,0x51,0xb7,0xec,0x8f,0xea,0xe9};
++    static UCHAR ciphertext2[] =
++        {0xc6,0xa1,0x3b,0x37,0x87,0x8f,0x5b,0x82,0x6f,0x4f,0x81,0x62,0xa1,0xc8,0xd8,0x79,
++         0x28,0x73,0x3d,0xef,0x84,0x8f,0xb0,0xa6,0x5d,0x1a,0x51,0xb7,0xec,0x8f,0xea,0xe9};
++    static UCHAR ciphertext3[] =
++        {0xc6,0xa1,0x3b,0x37,0x87,0x8f,0x5b,0x82,0x6f,0x4f,0x81,0x62,0xa1,0xc8,0xd8,0x79,
++         0xb1,0xa2,0x92,0x73,0xbe,0x2c,0x42,0x07,0xa5,0xac,0xe3,0x93,0x39,0x8c,0xb6,0xfb,
++         0x87,0x5d,0xea,0xa3,0x7e,0x0f,0xde,0xfa,0xd9,0xec,0x6c,0x4e,0x3c,0x76,0x86,0xe4};
+     BCRYPT_ALG_HANDLE aes;
+     BCRYPT_KEY_HANDLE key;
+-    UCHAR *buf, plaintext[32], ivbuf[16];
++    UCHAR *buf, plaintext[48], ivbuf[16];
+     ULONG size, len;
+     NTSTATUS ret;
+ 
+@@ -1073,6 +1085,36 @@ static void test_BCryptDecrypt(void)
+     ok(size == 32, "got %u\n", size);
+     ok(!memcmp(plaintext, expected, sizeof(expected)), "wrong data\n");
+ 
++    /* test with padding smaller than block size */
++    size = 0;
++    memcpy(ivbuf, iv, sizeof(iv));
++    ret = pBCryptDecrypt(key, ciphertext2, 32, NULL, ivbuf, 16, NULL, 0, &size, 0);
++    ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
++    ok(size == 32, "got %u\n", size);
++
++    size = 0;
++    memcpy(ivbuf, iv, sizeof(iv));
++    memset(plaintext, 0, sizeof(plaintext));
++    ret = pBCryptDecrypt(key, ciphertext2, 32, NULL, ivbuf, 16, plaintext, 17, &size, BCRYPT_BLOCK_PADDING);
++    ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
++    ok(size == 17, "got %u\n", size);
++    ok(!memcmp(plaintext, expected2, sizeof(expected2)), "wrong data\n");
++
++    /* test with padding of block size */
++    size = 0;
++    memcpy(ivbuf, iv, sizeof(iv));
++    ret = pBCryptDecrypt(key, ciphertext3, 48, NULL, ivbuf, 16, NULL, 0, &size, 0);
++    ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
++    ok(size == 48, "got %u\n", size);
++
++    size = 0;
++    memcpy(ivbuf, iv, sizeof(iv));
++    memset(plaintext, 0, sizeof(plaintext));
++    ret = pBCryptDecrypt(key, ciphertext3, 48, NULL, ivbuf, 16, plaintext, 32, &size, BCRYPT_BLOCK_PADDING);
++    ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
++    ok(size == 32, "got %u\n", size);
++    ok(!memcmp(plaintext, expected3, sizeof(expected3)), "wrong data\n");
++
+     /* output size too small */
+     size = 0;
+     memcpy(ivbuf, iv, sizeof(iv));
+@@ -1080,6 +1122,24 @@ static void test_BCryptDecrypt(void)
+     ok(ret == STATUS_BUFFER_TOO_SMALL, "got %08x\n", ret);
+     ok(size == 32, "got %u\n", size);
+ 
++    size = 0;
++    memcpy(ivbuf, iv, sizeof(iv));
++    ret = pBCryptDecrypt(key, ciphertext2, 32, NULL, ivbuf, 16, plaintext, 15, &size, BCRYPT_BLOCK_PADDING);
++    ok(ret == STATUS_BUFFER_TOO_SMALL, "got %08x\n", ret);
++    ok(size == 32, "got %u\n", size);
++
++    size = 0;
++    memcpy(ivbuf, iv, sizeof(iv));
++    ret = pBCryptDecrypt(key, ciphertext2, 32, NULL, ivbuf, 16, plaintext, 16, &size, BCRYPT_BLOCK_PADDING);
++    ok(ret == STATUS_BUFFER_TOO_SMALL, "got %08x\n", ret);
++    ok(size == 17, "got %u\n", size);
++
++    size = 0;
++    memcpy(ivbuf, iv, sizeof(iv));
++    ret = pBCryptDecrypt(key, ciphertext3, 48, NULL, ivbuf, 16, plaintext, 31, &size, BCRYPT_BLOCK_PADDING);
++    ok(ret == STATUS_BUFFER_TOO_SMALL, "got %08x\n", ret);
++    ok(size == 48, "got %u\n", size);
++
+     /* input size is not a multiple of block size */
+     size = 0;
+     memcpy(ivbuf, iv, sizeof(iv));
+-- 
+2.9.0
+

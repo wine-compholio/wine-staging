@@ -230,6 +230,7 @@ patch_enable_all ()
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_Purist_Mode="$1"
+	enable_ntdll_RtlCaptureStackBackTrace="$1"
 	enable_ntdll_RtlIpStringToAddress_Stubs="$1"
 	enable_ntdll_RtlIpStringToAddress_Tests="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
@@ -874,6 +875,9 @@ patch_enable ()
 			;;
 		ntdll-Purist_Mode)
 			enable_ntdll_Purist_Mode="$2"
+			;;
+		ntdll-RtlCaptureStackBackTrace)
+			enable_ntdll_RtlCaptureStackBackTrace="$2"
 			;;
 		ntdll-RtlIpStringToAddress_Stubs)
 			enable_ntdll_RtlIpStringToAddress_Stubs="$2"
@@ -5224,6 +5228,21 @@ if test "$enable_ntdll_Purist_Mode" -eq 1; then
 	patch_apply ntdll-Purist_Mode/0001-ntdll-Add-dll-override-default-rule-for-purist-mode.patch
 	(
 		echo '+    { "Christian Costa", "ntdll: Add dll override default rule for purist mode.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-RtlCaptureStackBackTrace
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40868] Silence FIXME in RtlCaptureStackBackTrace stub function
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_x86_64.c
+# |
+if test "$enable_ntdll_RtlCaptureStackBackTrace" -eq 1; then
+	patch_apply ntdll-RtlCaptureStackBackTrace/0001-ntdll-Silence-FIXME-in-RtlCaptureStackBackTrace-stub.patch
+	(
+		echo '+    { "Jarkko Korpi", "ntdll: Silence FIXME in RtlCaptureStackBackTrace stub function.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "56040acaa3f584150b3ab7fc644cd1a81e34fece"
+	echo "1bcd38f788bb5165cc65a830ea912ff4eda50b84"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 2.0-rc2"
+	echo "Wine Staging 2.0-rc3 (unreleased)"
 	echo "Copyright (C) 2014-2016 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -109,7 +109,6 @@ patch_enable_all ()
 	enable_crypt32_CMS_Certificates="$1"
 	enable_crypt32_Certificate_Check="$1"
 	enable_crypt32_CryptUnprotectMemory="$1"
-	enable_d2d1_Tests="$1"
 	enable_d3d10_1_Forwards="$1"
 	enable_d3d11_ID3D11Texture1D="$1"
 	enable_d3d9_DesktopWindow="$1"
@@ -515,9 +514,6 @@ patch_enable ()
 			;;
 		crypt32-CryptUnprotectMemory)
 			enable_crypt32_CryptUnprotectMemory="$2"
-			;;
-		d2d1-Tests)
-			enable_d2d1_Tests="$2"
 			;;
 		d3d10_1-Forwards)
 			enable_d3d10_1_Forwards="$2"
@@ -3048,18 +3044,6 @@ if test "$enable_crypt32_CryptUnprotectMemory" -eq 1; then
 	patch_apply crypt32-CryptUnprotectMemory/0001-crypt32-Print-CryptUnprotectMemory-FIXME-only-once.patch
 	(
 		echo '+    { "Christian Costa", "crypt32: Print CryptUnprotectMemory FIXME only once.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d2d1-Tests
-# |
-# | Modified files:
-# |   *	dlls/d2d1/tests/d2d1.c
-# |
-if test "$enable_d2d1_Tests" -eq 1; then
-	patch_apply d2d1-Tests/0001-d2d1-tests-Avoid-test-failure-on-specific-Nvidia-gra.patch
-	(
-		echo '+    { "Sebastian Lackner", "d2d1/tests: Avoid test failure on specific Nvidia graphic cards.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,100 @@
+From e930551dfa4e0bb97db71d056a4ed59f9e459e01 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Mon, 26 Dec 2016 08:28:24 +0100
+Subject: bcrypt: Implement BCryptDuplicateKey.
+
+---
+ dlls/bcrypt/bcrypt.spec   |  2 +-
+ dlls/bcrypt/bcrypt_main.c | 49 +++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 50 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/bcrypt/bcrypt.spec b/dlls/bcrypt/bcrypt.spec
+index 9ecd21d..f5911d2 100644
+--- a/dlls/bcrypt/bcrypt.spec
++++ b/dlls/bcrypt/bcrypt.spec
+@@ -12,7 +12,7 @@
+ @ stdcall BCryptDestroyKey(ptr)
+ @ stub BCryptDestroySecret
+ @ stdcall BCryptDuplicateHash(ptr ptr ptr long long)
+-@ stub BCryptDuplicateKey
++@ stdcall BCryptDuplicateKey(ptr ptr ptr long long)
+ @ stdcall BCryptEncrypt(ptr ptr long ptr ptr long ptr long ptr long)
+ @ stdcall BCryptEnumAlgorithms(long ptr ptr long)
+ @ stub BCryptEnumContextFunctionProviders
+diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
+index 198b010..37d6909 100644
+--- a/dlls/bcrypt/bcrypt_main.c
++++ b/dlls/bcrypt/bcrypt_main.c
+@@ -915,6 +915,24 @@ static NTSTATUS key_init( struct key *key, struct algorithm *alg, UCHAR *secret,
+     return STATUS_SUCCESS;
+ }
+ 
++static NTSTATUS key_duplicate( struct key *key_orig, struct key *key_copy )
++{
++    UCHAR *buffer;
++
++    if (!(buffer = HeapAlloc( GetProcessHeap(), 0, key_orig->secret_len ))) return STATUS_NO_MEMORY;
++    memcpy( buffer, key_orig->secret, key_orig->secret_len );
++
++    key_copy->hdr           = key_orig->hdr;
++    key_copy->alg_id        = key_orig->alg_id;
++    key_copy->mode          = key_orig->mode;
++    key_copy->block_size    = key_orig->block_size;
++    key_copy->handle        = NULL;
++    key_copy->secret        = buffer;
++    key_copy->secret_len    = key_orig->secret_len;
++
++    return STATUS_SUCCESS;
++}
++
+ static gnutls_cipher_algorithm_t get_gnutls_cipher( const struct key *key )
+ {
+     switch (key->alg_id)
+@@ -1028,6 +1046,13 @@ static NTSTATUS key_init( struct key *key, struct algorithm *alg, UCHAR *secret,
+     return STATUS_NOT_IMPLEMENTED;
+ }
+ 
++static NTSTATUS key_duplicate( struct key *key_orig, struct key *key_copy )
++{
++    ERR( "support for keys not available at build time\n" );
++    key_copy->mode = MODE_ID_CBC;
++    return STATUS_NOT_IMPLEMENTED;
++}
++
+ static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
+ {
+     ERR( "support for keys not available at build time\n" );
+@@ -1087,6 +1112,30 @@ NTSTATUS WINAPI BCryptGenerateSymmetricKey( BCRYPT_ALG_HANDLE algorithm, BCRYPT_
+     return STATUS_SUCCESS;
+ }
+ 
++NTSTATUS WINAPI BCryptDuplicateKey( BCRYPT_KEY_HANDLE handle, BCRYPT_KEY_HANDLE *handle_copy,
++                                    UCHAR *object, ULONG object_len, ULONG flags )
++{
++    struct key *key_orig = handle;
++    struct key *key_copy;
++    NTSTATUS status;
++
++    TRACE( "%p, %p, %p, %u, %08x\n", handle, handle_copy, object, object_len, flags );
++
++    if (!key_orig || key_orig->hdr.magic != MAGIC_KEY) return STATUS_INVALID_HANDLE;
++    if (!handle_copy) return STATUS_INVALID_PARAMETER;
++    if (!(key_copy = HeapAlloc( GetProcessHeap(), 0, sizeof(*key_copy) )))
++        return STATUS_NO_MEMORY;
++
++    if ((status = key_duplicate( key_orig, key_copy )))
++    {
++        HeapFree( GetProcessHeap(), 0, key_copy );
++        return status;
++    }
++
++    *handle_copy = key_copy;
++    return STATUS_SUCCESS;
++}
++
+ NTSTATUS WINAPI BCryptDestroyKey( BCRYPT_KEY_HANDLE handle )
+ {
+     struct key *key = handle;
+-- 
+2.9.0
+

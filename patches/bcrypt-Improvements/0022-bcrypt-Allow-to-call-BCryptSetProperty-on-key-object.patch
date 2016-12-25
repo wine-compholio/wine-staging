@@ -1,0 +1,98 @@
+From 85c7ad0c67aa6cc57e93f2160922305f80d49b4c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Mon, 26 Dec 2016 08:41:31 +0100
+Subject: bcrypt: Allow to call BCryptSetProperty on key objects.
+
+---
+ dlls/bcrypt/bcrypt_main.c  | 38 ++++++++++++++++++++++++++++++++++++--
+ dlls/bcrypt/tests/bcrypt.c |  4 ++++
+ 2 files changed, 40 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
+index a07250e..3638c77 100644
+--- a/dlls/bcrypt/bcrypt_main.c
++++ b/dlls/bcrypt/bcrypt_main.c
+@@ -215,6 +215,9 @@ int alg_block_bits[] =
+     /* ALG_ID_SHA512 */ 1024
+ };
+ 
++struct key;
++static NTSTATUS set_key_property( struct key *key, const WCHAR *prop, UCHAR *value, ULONG size, ULONG flags );
++
+ NTSTATUS WINAPI BCryptGenRandom(BCRYPT_ALG_HANDLE handle, UCHAR *buffer, ULONG count, ULONG flags)
+ {
+     const DWORD supported_flags = BCRYPT_USE_SYSTEM_PREFERRED_RNG;
+@@ -685,8 +688,8 @@ NTSTATUS WINAPI BCryptSetProperty( BCRYPT_HANDLE handle, const WCHAR *prop, UCHA
+     }
+     case MAGIC_KEY:
+     {
+-        FIXME( "keys not implemented yet\n" );
+-        return STATUS_NOT_IMPLEMENTED;
++        struct key *key = (struct key *)object;
++        return set_key_property( key, prop, value, size, flags );
+     }
+     default:
+         WARN( "unknown magic %08x\n", object->magic );
+@@ -933,6 +936,31 @@ static NTSTATUS key_duplicate( struct key *key_orig, struct key *key_copy )
+     return STATUS_SUCCESS;
+ }
+ 
++static NTSTATUS set_key_property( struct key *key, const WCHAR *prop, UCHAR *value, ULONG size, ULONG flags )
++{
++    if (!strcmpW( prop, BCRYPT_CHAINING_MODE ))
++    {
++        if (!strncmpW( (WCHAR *)value, BCRYPT_CHAIN_MODE_CBC, size ))
++        {
++            key->mode = MODE_ID_CBC;
++            return STATUS_SUCCESS;
++        }
++        else if (!strncmpW( (WCHAR *)value, BCRYPT_CHAIN_MODE_GCM, size ))
++        {
++            key->mode = MODE_ID_GCM;
++            return STATUS_SUCCESS;
++        }
++        else
++        {
++            FIXME( "unsupported mode %s\n", debugstr_wn( (WCHAR *)value, size ) );
++            return STATUS_NOT_IMPLEMENTED;
++        }
++    }
++
++    FIXME( "unsupported key property %s\n", debugstr_w(prop) );
++    return STATUS_NOT_IMPLEMENTED;
++}
++
+ static gnutls_cipher_algorithm_t get_gnutls_cipher( const struct key *key )
+ {
+     switch (key->alg_id)
+@@ -1050,6 +1078,12 @@ static NTSTATUS key_duplicate( struct key *key_orig, struct key *key_copy )
+     return STATUS_NOT_IMPLEMENTED;
+ }
+ 
++static NTSTATUS set_key_property( struct key *key, const WCHAR *prop, UCHAR *value, ULONG size, ULONG flags )
++{
++    ERR( "support for keys not available at build time\n" );
++    return STATUS_NOT_IMPLEMENTED;
++}
++
+ static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
+ {
+     ERR( "support for keys not available at build time\n" );
+diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
+index a55d9a9..62f0ca7 100644
+--- a/dlls/bcrypt/tests/bcrypt.c
++++ b/dlls/bcrypt/tests/bcrypt.c
+@@ -903,6 +903,10 @@ static void test_BCryptGenerateSymmetricKey(void)
+                             sizeof(BCRYPT_CHAIN_MODE_CBC), 0);
+     ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
+ 
++    ret = pBCryptSetProperty(key, BCRYPT_CHAINING_MODE, (UCHAR *)BCRYPT_CHAIN_MODE_CBC,
++                             sizeof(BCRYPT_CHAIN_MODE_CBC), 0);
++    ok(ret == STATUS_SUCCESS || broken(ret == STATUS_NOT_SUPPORTED) /* < Win 8 */, "got %08x\n", ret);
++
+     size = 0xdeadbeef;
+     ret = pBCryptEncrypt(key, NULL, 0, NULL, NULL, 0, NULL, 0, &size, 0);
+     ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
+-- 
+2.9.0
+

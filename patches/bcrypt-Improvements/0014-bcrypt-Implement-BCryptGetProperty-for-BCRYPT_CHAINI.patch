@@ -1,0 +1,58 @@
+From f7749755c11e54d1e75cd05b6656d2c474ade8ae Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Mon, 26 Dec 2016 06:46:11 +0100
+Subject: bcrypt: Implement BCryptGetProperty for BCRYPT_CHAINING_MODE.
+
+---
+ dlls/bcrypt/bcrypt_main.c  | 19 ++++++++++---------
+ dlls/bcrypt/tests/bcrypt.c |  2 +-
+ 2 files changed, 11 insertions(+), 10 deletions(-)
+
+diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
+index 4757878..24dee8b 100644
+--- a/dlls/bcrypt/bcrypt_main.c
++++ b/dlls/bcrypt/bcrypt_main.c
+@@ -482,17 +482,18 @@ static NTSTATUS get_alg_property( const struct algorithm *alg, const WCHAR *prop
+         }
+         if (!strcmpW( prop, BCRYPT_CHAINING_MODE ))
+         {
+-            if (size >= sizeof(BCRYPT_CHAIN_MODE_CBC))
++            const WCHAR *mode;
++            switch (alg->mode)
+             {
+-                memcpy(buf, BCRYPT_CHAIN_MODE_CBC, sizeof(BCRYPT_CHAIN_MODE_CBC));
+-                *ret_size = sizeof(BCRYPT_CHAIN_MODE_CBC) * sizeof(WCHAR);
+-                return STATUS_SUCCESS;
+-            }
+-            else
+-            {
+-                *ret_size = sizeof(BCRYPT_CHAIN_MODE_CBC) * sizeof(WCHAR);
+-                return STATUS_BUFFER_TOO_SMALL;
++                case MODE_ID_GCM: mode = BCRYPT_CHAIN_MODE_GCM; break;
++                case MODE_ID_CBC: mode = BCRYPT_CHAIN_MODE_CBC; break;
++                default: return STATUS_NOT_IMPLEMENTED;
+             }
++
++            *ret_size = 64;
++            if (size < *ret_size) return STATUS_BUFFER_TOO_SMALL;
++            memcpy( buf, mode, (strlenW(mode) + 1) * sizeof(WCHAR) );
++            return STATUS_SUCCESS;
+         }
+         FIXME( "unsupported aes algorithm property %s\n", debugstr_w(prop) );
+         return STATUS_NOT_IMPLEMENTED;
+diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
+index d850738..bbf18c4 100644
+--- a/dlls/bcrypt/tests/bcrypt.c
++++ b/dlls/bcrypt/tests/bcrypt.c
+@@ -842,7 +842,7 @@ static void test_aes(void)
+ 
+     size = 0;
+     ret = pBCryptGetProperty(alg, BCRYPT_CHAINING_MODE, mode, sizeof(mode) - 1, &size, 0);
+-    todo_wine ok(ret == STATUS_BUFFER_TOO_SMALL, "got %08x\n", ret);
++    ok(ret == STATUS_BUFFER_TOO_SMALL, "got %08x\n", ret);
+     ok(size == 64, "got %u\n", size);
+ 
+     size = 0;
+-- 
+2.9.0
+

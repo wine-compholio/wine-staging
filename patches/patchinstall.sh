@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "1bcd38f788bb5165cc65a830ea912ff4eda50b84"
+	echo "80d2edd5845c09b98cb5b6b7779b4455dfbc1095"
 }
 
 # Show version information
@@ -2862,7 +2862,8 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/bcrypt/Makefile.in, dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_internal.h, dlls/bcrypt/bcrypt_main.c,
-# | 	dlls/bcrypt/sha256.c, dlls/bcrypt/sha384.c, dlls/bcrypt/sha512.c, dlls/bcrypt/tests/bcrypt.c, include/bcrypt.h
+# | 	dlls/bcrypt/sha256.c, dlls/bcrypt/sha384.c, dlls/bcrypt/sha512.c, dlls/bcrypt/tests/bcrypt.c, include/bcrypt.h,
+# | 	include/ntstatus.h
 # |
 if test "$enable_bcrypt_Improvements" -eq 1; then
 	patch_apply bcrypt-Improvements/0001-bcrypt-Add-AES-provider.patch
@@ -2872,6 +2873,24 @@ if test "$enable_bcrypt_Improvements" -eq 1; then
 	patch_apply bcrypt-Improvements/0005-bcrypt-Implement-BCryptDuplicateHash.patch
 	patch_apply bcrypt-Improvements/0006-bcrypt-Fix-handling-of-padding-when-input-size-equal.patch
 	patch_apply bcrypt-Improvements/0007-bcrypt-Properly-handle-padding-in-AES-decryption.patch
+	patch_apply bcrypt-Improvements/0008-bcrypt-Fix-use-after-free-in-key_init.patch
+	patch_apply bcrypt-Improvements/0009-bcrypt-Handle-NULL-pointers-in-BCryptDuplicateHash-a.patch
+	patch_apply bcrypt-Improvements/0010-bcrypt-tests-Add-test-for-bugs-in-BCryptGetProperty.patch
+	patch_apply bcrypt-Improvements/0011-bcrypt-tests-Add-tests-for-AES-GCM-mode.patch
+	patch_apply bcrypt-Improvements/0012-bcrypt-Pass-object-to-get_-alg-hash-_property-instea.patch
+	patch_apply bcrypt-Improvements/0013-bcrypt-Implement-BCryptSetProperty-for-algorithms.patch
+	patch_apply bcrypt-Improvements/0014-bcrypt-Implement-BCryptGetProperty-for-BCRYPT_CHAINI.patch
+	patch_apply bcrypt-Improvements/0015-bcrypt-Implement-BCryptGetProperty-for-BCRYPT_AUTH_T.patch
+	patch_apply bcrypt-Improvements/0016-bcrypt-Fix-string-comparison-in-set_alg_property.patch
+	patch_apply bcrypt-Improvements/0017-bcrypt-Implement-BCryptEncrypt-for-AES-GCM-mode.patch
+	patch_apply bcrypt-Improvements/0018-bcrypt-Implement-BCryptDecrypt-for-AES-GCM-mode.patch
+	patch_apply bcrypt-Improvements/0019-bcrypt-Add-support-for-computing-comparing-cipher-ta.patch
+	patch_apply bcrypt-Improvements/0020-bcrypt-Implement-BCryptDuplicateKey.patch
+	patch_apply bcrypt-Improvements/0021-bcrypt-tests-Add-tests-for-BCryptDuplicateKey.patch
+	patch_apply bcrypt-Improvements/0022-bcrypt-Allow-to-call-BCryptSetProperty-on-key-object.patch
+	patch_apply bcrypt-Improvements/0023-bcrypt-Add-support-for-auth-data-in-AES-GCM-mode.patch
+	patch_apply bcrypt-Improvements/0024-bcrypt-tests-Add-tests-for-auth-data-in-AES-GCM-mode.patch
+	patch_apply bcrypt-Improvements/0025-bcrypt-Avoid-crash-in-tests-when-compiling-without-g.patch
 	(
 		echo '+    { "Hans Leidekker", "bcrypt: Add AES provider.", 1 },';
 		echo '+    { "Michael Müller", "bcrypt: Directly implement hmac computation.", 1 },';
@@ -2880,6 +2899,24 @@ if test "$enable_bcrypt_Improvements" -eq 1; then
 		echo '+    { "Michael Müller", "bcrypt: Implement BCryptDuplicateHash.", 1 },';
 		echo '+    { "Michael Müller", "bcrypt: Fix handling of padding when input size equals block size for AES.", 1 },';
 		echo '+    { "Michael Müller", "bcrypt: Properly handle padding in AES decryption.", 1 },';
+		echo '+    { "Michael Müller", "bcrypt: Fix use-after-free in key_init.", 1 },';
+		echo '+    { "Sebastian Lackner", "bcrypt: Handle NULL pointers in BCryptDuplicateHash and add tests.", 1 },';
+		echo '+    { "Sebastian Lackner", "bcrypt/tests: Add test for bugs in BCryptGetProperty.", 1 },';
+		echo '+    { "Michael Müller", "bcrypt/tests: Add tests for AES GCM mode.", 1 },';
+		echo '+    { "Sebastian Lackner", "bcrypt: Pass object to get_{alg,hash}_property instead of alg_id.", 1 },';
+		echo '+    { "Michael Müller", "bcrypt: Implement BCryptSetProperty for algorithms.", 1 },';
+		echo '+    { "Michael Müller", "bcrypt: Implement BCryptGetProperty for BCRYPT_CHAINING_MODE.", 1 },';
+		echo '+    { "Michael Müller", "bcrypt: Implement BCryptGetProperty for BCRYPT_AUTH_TAG_LENGTH.", 1 },';
+		echo '+    { "Sebastian Lackner", "bcrypt: Fix string comparison in set_alg_property.", 1 },';
+		echo '+    { "Michael Müller", "bcrypt: Implement BCryptEncrypt for AES GCM mode.", 1 },';
+		echo '+    { "Michael Müller", "bcrypt: Implement BCryptDecrypt for AES GCM mode.", 1 },';
+		echo '+    { "Michael Müller", "bcrypt: Add support for computing/comparing cipher tag.", 1 },';
+		echo '+    { "Michael Müller", "bcrypt: Implement BCryptDuplicateKey.", 1 },';
+		echo '+    { "Sebastian Lackner", "bcrypt/tests: Add tests for BCryptDuplicateKey.", 1 },';
+		echo '+    { "Michael Müller", "bcrypt: Allow to call BCryptSetProperty on key objects.", 1 },';
+		echo '+    { "Michael Müller", "bcrypt: Add support for auth data in AES GCM mode.", 1 },';
+		echo '+    { "Sebastian Lackner", "bcrypt/tests: Add tests for auth data in AES GCM mode.", 1 },';
+		echo '+    { "Sebastian Lackner", "bcrypt: Avoid crash in tests when compiling without gnutls support.", 1 },';
 	) >> "$patchlist"
 fi
 

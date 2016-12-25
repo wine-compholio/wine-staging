@@ -1,0 +1,83 @@
+From ebe7443d7e83bd4ba3143b52010ca97eaf767a9e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Mon, 26 Dec 2016 07:53:10 +0100
+Subject: bcrypt: Implement BCryptDecrypt for AES GCM mode.
+
+---
+ dlls/bcrypt/bcrypt_main.c  | 28 +++++++++++++++++++++++-----
+ dlls/bcrypt/tests/bcrypt.c |  8 ++++----
+ 2 files changed, 27 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
+index 77db0b1..c41524d 100644
+--- a/dlls/bcrypt/bcrypt_main.c
++++ b/dlls/bcrypt/bcrypt_main.c
+@@ -1153,17 +1153,35 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+            padding, iv, iv_len, output, output_len, ret_len, flags );
+ 
+     if (!key || key->hdr.magic != MAGIC_KEY) return STATUS_INVALID_HANDLE;
+-    if (padding)
+-    {
+-        FIXME( "padding info not implemented\n" );
+-        return STATUS_NOT_IMPLEMENTED;
+-    }
+     if (flags & ~BCRYPT_BLOCK_PADDING)
+     {
+         FIXME( "flags %08x not supported\n", flags );
+         return STATUS_NOT_IMPLEMENTED;
+     }
+ 
++    if (key->mode == MODE_ID_GCM)
++    {
++        BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO *auth_info = padding;
++
++        if (!auth_info) return STATUS_INVALID_PARAMETER;
++        if (!auth_info->pbNonce) return STATUS_INVALID_PARAMETER;
++        if (!auth_info->pbTag) return STATUS_INVALID_PARAMETER;
++        if (auth_info->cbTag < 12 || auth_info->cbTag > 16) return STATUS_INVALID_PARAMETER;
++
++        if ((status = key_set_params( key, auth_info->pbNonce, auth_info->cbNonce )))
++            return status;
++
++        *ret_len = input_len;
++        if (flags & BCRYPT_BLOCK_PADDING) return STATUS_INVALID_PARAMETER;
++        if (!output) return STATUS_SUCCESS;
++        if (output_len < *ret_len) return STATUS_BUFFER_TOO_SMALL;
++
++        if ((status = key_decrypt( key, input, input_len, output, output_len )))
++            return status;
++
++        return STATUS_SUCCESS;
++    }
++
+     if ((status = key_set_params( key, iv, iv_len ))) return status;
+ 
+     *ret_len = input_len;
+diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
+index d2a74ce..3a1bc00 100644
+--- a/dlls/bcrypt/tests/bcrypt.c
++++ b/dlls/bcrypt/tests/bcrypt.c
+@@ -1336,16 +1336,16 @@ static void test_BCryptDecrypt(void)
+     memcpy(ivbuf, iv, sizeof(iv));
+     memset(plaintext, 0, sizeof(plaintext));
+     ret = pBCryptDecrypt(key, ciphertext4, 32, &auth_info, ivbuf, 16, plaintext, 32, &size, 0);
+-    todo_wine ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
+-    todo_wine ok(size == 32, "got %u\n", size);
+-    todo_wine ok(!memcmp(plaintext, expected3, sizeof(expected3)), "wrong data\n");
++    ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
++    ok(size == 32, "got %u\n", size);
++    ok(!memcmp(plaintext, expected3, sizeof(expected3)), "wrong data\n");
+ 
+     /* test with wrong tag */
+     memcpy(ivbuf, iv, sizeof(iv));
+     auth_info.pbTag = iv; /* wrong tag */
+     ret = pBCryptDecrypt(key, ciphertext4, 32, &auth_info, ivbuf, 16, plaintext, 32, &size, 0);
+     todo_wine ok(ret == STATUS_AUTH_TAG_MISMATCH, "got %08x\n", ret);
+-    todo_wine ok(size == 32, "got %u\n", size);
++    ok(size == 32, "got %u\n", size);
+ 
+     ret = pBCryptDestroyKey(key);
+     ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
+-- 
+2.9.0
+

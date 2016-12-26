@@ -366,6 +366,7 @@ patch_enable_all ()
 	enable_wine_inf_WMP_12="$1"
 	enable_wineboot_DriveSerial="$1"
 	enable_wineboot_HKEY_DYN_DATA="$1"
+	enable_wineboot_ProxySettings="$1"
 	enable_wineboot_drivers_etc_Stubs="$1"
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
@@ -1286,6 +1287,9 @@ patch_enable ()
 		wineboot-HKEY_DYN_DATA)
 			enable_wineboot_HKEY_DYN_DATA="$2"
 			;;
+		wineboot-ProxySettings)
+			enable_wineboot_ProxySettings="$2"
+			;;
 		wineboot-drivers_etc_Stubs)
 			enable_wineboot_drivers_etc_Stubs="$2"
 			;;
@@ -2070,6 +2074,17 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	enable_wined3d_QUERY_Stubs=1
 	enable_wined3d_Revert_Pixel_Center_Offset=1
 	enable_wined3d_Silence_FIXMEs=1
+fi
+
+if test "$enable_wineboot_ProxySettings" -eq 1; then
+	if test "$enable_wineboot_DriveSerial" -gt 1; then
+		abort "Patchset wineboot-DriveSerial disabled, but wineboot-ProxySettings depends on that."
+	fi
+	if test "$enable_wineboot_drivers_etc_Stubs" -gt 1; then
+		abort "Patchset wineboot-drivers_etc_Stubs disabled, but wineboot-ProxySettings depends on that."
+	fi
+	enable_wineboot_DriveSerial=1
+	enable_wineboot_drivers_etc_Stubs=1
 fi
 
 if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
@@ -7713,6 +7728,24 @@ if test "$enable_wineboot_drivers_etc_Stubs" -eq 1; then
 	patch_apply wineboot-drivers_etc_Stubs/0001-wineboot-Init-system32-drivers-etc-host-networks-pro.patch
 	(
 		echo '+    { "Sebastian Lackner", "wineboot: Init system32/drivers/etc/{host,networks,protocol,services}.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wineboot-ProxySettings
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	wineboot-DriveSerial, wineboot-drivers_etc_Stubs
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42024] Create ProxyEnable key on wineprefix update
+# |
+# | Modified files:
+# |   *	programs/wineboot/Makefile.in, programs/wineboot/wineboot.c
+# |
+if test "$enable_wineboot_ProxySettings" -eq 1; then
+	patch_apply wineboot-ProxySettings/0001-wineboot-Initialize-proxy-settings-registry-key.patch
+	(
+		echo '+    { "Michael Müller", "wineboot: Initialize proxy settings registry key.", 1 },';
 	) >> "$patchlist"
 fi
 

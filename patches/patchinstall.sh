@@ -58,7 +58,7 @@ upstream_commit()
 # Show version information
 version()
 {
-	echo "Wine Staging 2.0-rc3 (unreleased)"
+	echo "Wine Staging 2.0-rc3"
 	echo "Copyright (C) 2014-2016 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"

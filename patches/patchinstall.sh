@@ -155,6 +155,7 @@ patch_enable_all ()
 	enable_gdi32_MultiMonitor="$1"
 	enable_gdi32_Path_Metafile="$1"
 	enable_gdi32_Symbol_Truetype_Font="$1"
+	enable_gdiplus_DC_Handling="$1"
 	enable_gdiplus_Grayscale_PNG="$1"
 	enable_hal_KeQueryPerformanceCounter="$1"
 	enable_hnetcfg_INetFwAuthorizedApplication="$1"
@@ -653,6 +654,9 @@ patch_enable ()
 			;;
 		gdi32-Symbol_Truetype_Font)
 			enable_gdi32_Symbol_Truetype_Font="$2"
+			;;
+		gdiplus-DC_Handling)
+			enable_gdiplus_DC_Handling="$2"
 			;;
 		gdiplus-Grayscale_PNG)
 			enable_gdiplus_Grayscale_PNG="$2"
@@ -4031,6 +4035,23 @@ if test "$enable_gdi32_Symbol_Truetype_Font" -eq 1; then
 	patch_apply gdi32-Symbol_Truetype_Font/0001-gdi32-Improve-detection-of-symbol-charset-for-old-tr.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "gdi32: Improve detection of symbol charset for old truetype fonts.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset gdiplus-DC_Handling
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35372] Ignore externally set DC state in gdiplus
+# |
+# | Modified files:
+# |   *	dlls/gdiplus/graphics.c
+# |
+if test "$enable_gdiplus_DC_Handling" -eq 1; then
+	patch_apply gdiplus-DC_Handling/0001-gdiplus-Ignore-an-externally-set-DC-origin.patch
+	patch_apply gdiplus-DC_Handling/0002-gdiplus-Ignore-an-externally-set-DC-clipping-region.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "gdiplus: Ignore an externally set DC origin.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "gdiplus: Ignore an externally set DC clipping region.", 1 },';
 	) >> "$patchlist"
 fi
 

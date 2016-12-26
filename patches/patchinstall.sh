@@ -7225,7 +7225,7 @@ fi
 # Patchset uxtheme-CloseThemeClass
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#41029] Protect CloseThemeData() from invalid input
+# |   *	[#41729] Protect CloseThemeData() from invalid input
 # |
 # | Modified files:
 # |   *	dlls/uxtheme/msstyles.c, dlls/uxtheme/msstyles.h, dlls/uxtheme/tests/system.c

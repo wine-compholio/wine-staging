@@ -58,7 +58,7 @@ upstream_commit()
 # Show version information
 version()
 {
-	echo "Wine Staging 2.0-rc3"
+	echo "Wine Staging 2.0-rc4 (unreleased)"
 	echo "Copyright (C) 2014-2016 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -5935,7 +5935,7 @@ fi
 if test "$enable_oleaut32_OleLoadPicture" -eq 1; then
 	patch_apply oleaut32-OleLoadPicture/0001-oleaut32-OleLoadPicture-should-create-a-DIB-section-.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "oleaut32: OleLoadPicture should create a DIB section for a being loaded bitmap.", 2 },';
+		echo '+    { "Dmitry Timoshkov", "oleaut32: OleLoadPicture should create a DIB section for a being loaded bitmap.", 3 },';
 	) >> "$patchlist"
 fi
 
@@ -7230,6 +7230,9 @@ if test "$enable_user32_ScrollWindowEx" -eq 1; then
 fi
 
 # Patchset user32-WM_MEASUREITEM
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37025] Pass correct itemData to WM_MEASUREITEM when inserting an item to an owner-drawn listbox
 # |
 # | Modified files:
 # |   *	dlls/user32/listbox.c, dlls/user32/tests/msg.c

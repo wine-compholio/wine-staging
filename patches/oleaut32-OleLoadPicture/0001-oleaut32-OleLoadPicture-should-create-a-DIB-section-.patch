@@ -1,21 +1,21 @@
-From b4917347dd207d2c02682ca7b16d70838c1c4096 Mon Sep 17 00:00:00 2001
+From 182a2cbf47a8562a43db6bdc8bd29e0980a9ddcd Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Thu, 21 Apr 2016 14:40:58 +0800
 Subject: oleaut32: OleLoadPicture should create a DIB section for a being
- loaded bitmap. (v2)
+ loaded bitmap. (v3)
 
 Application in the bug 39474 depends on this (GetObject/bmBits should not be
 NULL, otherwise it crashes).
 ---
- dlls/oleaut32/olepicture.c       | 53 ++++++++++++----------------------------
+ dlls/oleaut32/olepicture.c       | 65 ++++++++++++++++------------------------
  dlls/oleaut32/tests/olepicture.c |  2 +-
- 2 files changed, 17 insertions(+), 38 deletions(-)
+ 2 files changed, 27 insertions(+), 40 deletions(-)
 
 diff --git a/dlls/oleaut32/olepicture.c b/dlls/oleaut32/olepicture.c
-index 96c109a..d9cab92 100644
+index bfca22f..1b6fb2c 100644
 --- a/dlls/oleaut32/olepicture.c
 +++ b/dlls/oleaut32/olepicture.c
-@@ -998,23 +998,16 @@ static HRESULT OLEPictureImpl_LoadDIB(OLEPictureImpl *This, BYTE *xbuf, ULONG xr
+@@ -999,23 +999,16 @@ static HRESULT OLEPictureImpl_LoadDIB(OLEPictureImpl *This, BYTE *xbuf, ULONG xr
  {
      BITMAPFILEHEADER	*bfh = (BITMAPFILEHEADER*)xbuf;
      BITMAPINFO		*bi = (BITMAPINFO*)(bfh+1);
@@ -46,7 +46,7 @@ index 96c109a..d9cab92 100644
      This->desc.picType = PICTYPE_BITMAP;
      OLEPictureImpl_SetBitmap(This);
      return S_OK;
-@@ -1024,10 +1017,9 @@ static HRESULT OLEPictureImpl_LoadWICSource(OLEPictureImpl *This, IWICBitmapSour
+@@ -1025,10 +1018,9 @@ static HRESULT OLEPictureImpl_LoadWICSource(OLEPictureImpl *This, IWICBitmapSour
  {
      HRESULT hr;
      BITMAPINFOHEADER bih;
@@ -54,25 +54,33 @@ index 96c109a..d9cab92 100644
      UINT width, height;
      UINT stride, buffersize;
 -    LPBYTE bits=NULL;
-+    BYTE *bits;
++    BYTE *bits, *mask = NULL;
      WICRect rc;
      IWICBitmapSource *real_source;
      UINT x, y;
-@@ -1055,10 +1047,10 @@ static HRESULT OLEPictureImpl_LoadWICSource(OLEPictureImpl *This, IWICBitmapSour
+@@ -1056,34 +1048,28 @@ static HRESULT OLEPictureImpl_LoadWICSource(OLEPictureImpl *This, IWICBitmapSour
      stride = 4 * width;
      buffersize = stride * height;
  
 -    bits = HeapAlloc(GetProcessHeap(), 0, buffersize);
 -    if (!bits)
-+    This->desc.u.bmp.hbitmap = CreateDIBSection(0, (BITMAPINFO*)&bih, DIB_RGB_COLORS, (void **)&bits, NULL, 0);
-+    if (This->desc.u.bmp.hbitmap == 0)
++    mask = HeapAlloc(GetProcessHeap(), 0, buffersize);
++    if (!mask)
      {
--        hr = E_OUTOFMEMORY;
-+        hr = E_FAIL;
+         hr = E_OUTOFMEMORY;
          goto end;
      }
  
-@@ -1068,21 +1060,8 @@ static HRESULT OLEPictureImpl_LoadWICSource(OLEPictureImpl *This, IWICBitmapSour
++    This->desc.u.bmp.hbitmap = CreateDIBSection(0, (BITMAPINFO*)&bih, DIB_RGB_COLORS, (void **)&bits, NULL, 0);
++    if (This->desc.u.bmp.hbitmap == 0)
++    {
++        hr = E_FAIL;
++        goto end;
++    }
++
+     rc.X = 0;
+     rc.Y = 0;
+     rc.Width = width;
      rc.Height = height;
      hr = IWICBitmapSource_CopyPixels(real_source, &rc, stride, buffersize, bits);
      if (FAILED(hr))
@@ -95,7 +103,18 @@ index 96c109a..d9cab92 100644
          goto end;
      }
  
-@@ -1105,9 +1084,11 @@ static HRESULT OLEPictureImpl_LoadWICSource(OLEPictureImpl *This, IWICBitmapSour
+@@ -1097,23 +1083,25 @@ static HRESULT OLEPictureImpl_LoadWICSource(OLEPictureImpl *This, IWICBitmapSour
+             if((*pixel & 0x80000000) == 0)
+             {
+                 has_alpha = TRUE;
+-                *pixel = black;
++                *(DWORD *)(mask + stride * y + 4 * x) = black;
+             }
+             else
+-                *pixel = white;
++                *(DWORD *)(mask + stride * y + 4 * x) = white;
+         }
+     }
  
      if (has_alpha)
      {
@@ -108,7 +127,13 @@ index 96c109a..d9cab92 100644
          This->hbmXor = CreateDIBitmap(
              hdcref,
              &bih,
-@@ -1137,12 +1118,10 @@ static HRESULT OLEPictureImpl_LoadWICSource(OLEPictureImpl *This, IWICBitmapSour
+             CBM_INIT,
+-            bits,
++            mask,
+             (BITMAPINFO*)&bih,
+             DIB_RGB_COLORS
+         );
+@@ -1138,12 +1126,11 @@ static HRESULT OLEPictureImpl_LoadWICSource(OLEPictureImpl *This, IWICBitmapSour
          DeleteDC(hdcBmp);
          DeleteDC(hdcXor);
          DeleteDC(hdcMask);
@@ -119,14 +144,15 @@ index 96c109a..d9cab92 100644
 -
  end:
 -    HeapFree(GetProcessHeap(), 0, bits);
++    HeapFree(GetProcessHeap(), 0, mask);
      IWICBitmapSource_Release(real_source);
      return hr;
  }
 diff --git a/dlls/oleaut32/tests/olepicture.c b/dlls/oleaut32/tests/olepicture.c
-index 0903298..5618d1e 100644
+index b716f25..795ee71 100644
 --- a/dlls/oleaut32/tests/olepicture.c
 +++ b/dlls/oleaut32/tests/olepicture.c
-@@ -221,7 +221,7 @@ test_pic_with_stream(LPSTREAM stream, unsigned int imgsize)
+@@ -240,7 +240,7 @@ test_pic_with_stream(LPSTREAM stream, unsigned int imgsize)
          {
              BITMAP bmp;
              GetObjectA(UlongToHandle(handle), sizeof(BITMAP), &bmp);
@@ -136,5 +162,5 @@ index 0903298..5618d1e 100644
  
  	width = 0;
 -- 
-2.7.1
+2.9.0
 

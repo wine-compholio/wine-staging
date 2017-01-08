@@ -1,4 +1,4 @@
-From 48c046442f6e2ace49692a725e0b1ad2e67794d3 Mon Sep 17 00:00:00 2001
+From 2551a777dc1ef94ae39b1ce075d1a347198886f4 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Wed, 24 Jul 2013 17:27:35 +0200
 Subject: wined3d: Don't poll queries that failed to start
@@ -10,10 +10,10 @@ Subject: wined3d: Don't poll queries that failed to start
  3 files changed, 23 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index fb55549..105cf45 100644
+index 68a5c3a6fcf..35b0ce2e7b9 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -2013,10 +2013,11 @@ static UINT wined3d_cs_exec_query_issue(struct wined3d_cs *cs, const void *data)
+@@ -1734,10 +1734,11 @@ static UINT wined3d_cs_exec_query_issue(struct wined3d_cs *cs, const void *data)
  {
      const struct wined3d_cs_query_issue *op = data;
      struct wined3d_query *query = op->query;
@@ -28,10 +28,10 @@ index fb55549..105cf45 100644
          list_add_tail(&cs->query_poll_list, &query->poll_list_entry);
  
 diff --git a/dlls/wined3d/query.c b/dlls/wined3d/query.c
-index b5e1fde..164a60e 100644
+index e1ca7e7e01a..5fa7f4cd83d 100644
 --- a/dlls/wined3d/query.c
 +++ b/dlls/wined3d/query.c
-@@ -465,7 +465,7 @@ enum wined3d_query_type CDECL wined3d_query_get_type(const struct wined3d_query
+@@ -479,7 +479,7 @@ enum wined3d_query_type CDECL wined3d_query_get_type(const struct wined3d_query
      return query->type;
  }
  
@@ -40,7 +40,7 @@ index b5e1fde..164a60e 100644
  {
      TRACE("query %p, flags %#x.\n", query, flags);
  
-@@ -474,20 +474,23 @@ static void wined3d_event_query_ops_issue(struct wined3d_query *query, DWORD fla
+@@ -488,20 +488,23 @@ static void wined3d_event_query_ops_issue(struct wined3d_query *query, DWORD fla
          struct wined3d_event_query *event_query = wined3d_event_query_from_query(query);
  
          wined3d_event_query_issue(event_query, query->device);
@@ -65,7 +65,7 @@ index b5e1fde..164a60e 100644
  
      TRACE("query %p, flags %#x.\n", query, flags);
  
-@@ -549,7 +552,10 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
+@@ -563,7 +566,10 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
              }
          }
          oq->started = FALSE;
@@ -75,8 +75,8 @@ index b5e1fde..164a60e 100644
 +    return poll;
  }
  
- static BOOL wined3d_timestamp_query_ops_poll(struct wined3d_query *query)
-@@ -590,7 +596,7 @@ static BOOL wined3d_timestamp_query_ops_poll(struct wined3d_query *query)
+ static BOOL wined3d_timestamp_query_ops_poll(struct wined3d_query *query, DWORD flags)
+@@ -604,7 +610,7 @@ static BOOL wined3d_timestamp_query_ops_poll(struct wined3d_query *query, DWORD
      return available;
  }
  
@@ -85,7 +85,7 @@ index b5e1fde..164a60e 100644
  {
      struct wined3d_timestamp_query *tq = wined3d_timestamp_query_from_query(query);
      const struct wined3d_gl_info *gl_info;
-@@ -613,6 +619,10 @@ static void wined3d_timestamp_query_ops_issue(struct wined3d_query *query, DWORD
+@@ -627,6 +633,10 @@ static void wined3d_timestamp_query_ops_issue(struct wined3d_query *query, DWORD
          checkGLcall("glQueryCounter()");
          context_release(context);
      }
@@ -95,8 +95,8 @@ index b5e1fde..164a60e 100644
 +    return FALSE;
  }
  
- static BOOL wined3d_timestamp_disjoint_query_ops_poll(struct wined3d_query *query)
-@@ -622,9 +632,10 @@ static BOOL wined3d_timestamp_disjoint_query_ops_poll(struct wined3d_query *quer
+ static BOOL wined3d_timestamp_disjoint_query_ops_poll(struct wined3d_query *query, DWORD flags)
+@@ -636,9 +646,10 @@ static BOOL wined3d_timestamp_disjoint_query_ops_poll(struct wined3d_query *quer
      return TRUE;
  }
  
@@ -107,8 +107,8 @@ index b5e1fde..164a60e 100644
 +    return FALSE;
  }
  
- static BOOL wined3d_statistics_query_ops_poll(struct wined3d_query *query)
-@@ -634,9 +645,10 @@ static BOOL wined3d_statistics_query_ops_poll(struct wined3d_query *query)
+ static BOOL wined3d_statistics_query_ops_poll(struct wined3d_query *query, DWORD flags)
+@@ -648,9 +659,10 @@ static BOOL wined3d_statistics_query_ops_poll(struct wined3d_query *query, DWORD
      return TRUE;
  }
  
@@ -119,8 +119,8 @@ index b5e1fde..164a60e 100644
 +    return FALSE;
  }
  
- static HRESULT wined3d_overflow_query_ops_poll(struct wined3d_query *query)
-@@ -646,9 +658,10 @@ static HRESULT wined3d_overflow_query_ops_poll(struct wined3d_query *query)
+ static HRESULT wined3d_overflow_query_ops_poll(struct wined3d_query *query, DWORD flags)
+@@ -660,9 +672,10 @@ static HRESULT wined3d_overflow_query_ops_poll(struct wined3d_query *query, DWOR
      return TRUE;
  }
  
@@ -133,18 +133,18 @@ index b5e1fde..164a60e 100644
  
  static const struct wined3d_query_ops event_query_ops =
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 0da5480..0abb30b 100644
+index 9e8b8ad14c5..aac56fe1848 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -1382,7 +1382,7 @@ enum wined3d_query_state
+@@ -1440,7 +1440,7 @@ enum wined3d_query_state
  struct wined3d_query_ops
  {
-     BOOL (*query_poll)(struct wined3d_query *query);
+     BOOL (*query_poll)(struct wined3d_query *query, DWORD flags);
 -    void (*query_issue)(struct wined3d_query *query, DWORD flags);
 +    BOOL (*query_issue)(struct wined3d_query *query, DWORD flags);
  };
  
  struct wined3d_query
 -- 
-2.9.0
+2.11.0
 

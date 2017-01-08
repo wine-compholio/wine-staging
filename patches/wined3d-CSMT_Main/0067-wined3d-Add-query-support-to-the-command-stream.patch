@@ -1,16 +1,16 @@
-From b5aa14996c4b4968eb011080fc0f9b6211c486aa Mon Sep 17 00:00:00 2001
+From e5b486b16a916f4d08e671e8efb851aca39b1ade Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Sat, 6 Jul 2013 18:26:11 +0200
 Subject: wined3d: Add query support to the command stream
 
 ---
- dlls/wined3d/cs.c              | 36 ++++++++++++++++++++++++++++++++++++
+ dlls/wined3d/cs.c              | 38 ++++++++++++++++++++++++++++++++++++++
  dlls/wined3d/query.c           | 15 +++++++++++----
  dlls/wined3d/wined3d_private.h |  2 ++
- 3 files changed, 49 insertions(+), 4 deletions(-)
+ 3 files changed, 51 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 2643713..ee57a56 100644
+index 26437136163..b0a25f86374 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -74,6 +74,7 @@ enum wined3d_cs_op
@@ -21,7 +21,7 @@ index 2643713..ee57a56 100644
      WINED3D_CS_OP_STOP,
  };
  
-@@ -425,6 +426,13 @@ struct wined3d_cs_skip
+@@ -425,6 +426,14 @@ struct wined3d_cs_skip
      DWORD size;
  };
  
@@ -29,13 +29,14 @@ index 2643713..ee57a56 100644
 +{
 +    enum wined3d_cs_op opcode;
 +    struct wined3d_query *query;
++    DWORD flags;
 +    BOOL *ret;
 +};
 +
  static void wined3d_cs_submit(struct wined3d_cs *cs, size_t size)
  {
      LONG new_val = (cs->queue.head + size) & (WINED3D_CS_QUEUE_SIZE - 1);
-@@ -2131,6 +2139,33 @@ void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture
+@@ -2131,6 +2140,34 @@ void wined3d_cs_emit_texture_unmap(struct wined3d_cs *cs, struct wined3d_texture
      cs->ops->submit(cs, sizeof(*op));
  }
  
@@ -44,18 +45,19 @@ index 2643713..ee57a56 100644
 +    const struct wined3d_cs_query_poll *op = data;
 +    struct wined3d_query *query = op->query;
 +
-+    *op->ret = query->query_ops->query_poll(query);
++    *op->ret = query->query_ops->query_poll(query, op->flags);
 +
 +    return sizeof(*op);
 +}
 +
-+void wined3d_cs_emit_query_poll(struct wined3d_cs *cs, struct wined3d_query *query, BOOL *ret)
++void wined3d_cs_emit_query_poll(struct wined3d_cs *cs, struct wined3d_query *query, DWORD flags, BOOL *ret)
 +{
 +    struct wined3d_cs_query_poll *op;
 +
 +    op = cs->ops->require_space(cs, sizeof(*op));
 +    op->opcode = WINED3D_CS_OP_QUERY_POLL;
 +    op->query = query;
++    op->flags = flags;
 +    op->ret = ret;
 +
 +    cs->ops->submit(cs, sizeof(*op));
@@ -69,7 +71,7 @@ index 2643713..ee57a56 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_NOP                        */ wined3d_cs_exec_nop,
-@@ -2183,6 +2218,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2183,6 +2220,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_CLEAR_RTV                  */ wined3d_cs_exec_clear_rtv,
      /* WINED3D_CS_OP_TEXTURE_MAP                */ wined3d_cs_exec_texture_map,
      /* WINED3D_CS_OP_TEXTURE_UNMAP              */ wined3d_cs_exec_texture_unmap,
@@ -78,26 +80,26 @@ index 2643713..ee57a56 100644
  
  static void *wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/query.c b/dlls/wined3d/query.c
-index 902e01a..d8cfb64 100644
+index c5ca37d4878..c8dd76155d8 100644
 --- a/dlls/wined3d/query.c
 +++ b/dlls/wined3d/query.c
-@@ -338,8 +338,13 @@ HRESULT CDECL wined3d_query_get_data(struct wined3d_query *query,
+@@ -339,8 +339,13 @@ HRESULT CDECL wined3d_query_get_data(struct wined3d_query *query,
  
      if (query->state == QUERY_CREATED)
          WARN("Query wasn't started yet.\n");
--    else if (!query->query_ops->query_poll(query))
+-    else if (!query->query_ops->query_poll(query, flags))
 -        return S_FALSE;
 +    else
 +    {
 +        BOOL ret;
-+        wined3d_cs_emit_query_poll(query->device->cs, query, &ret);
++        wined3d_cs_emit_query_poll(query->device->cs, query, flags, &ret);
 +        if (!ret)
 +            return S_FALSE;
 +    }
  
      if (data)
          memcpy(data, query->data, min(data_size, query->data_size));
-@@ -491,7 +496,7 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
+@@ -492,7 +497,7 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
       * restart. */
      if (flags & WINED3DISSUE_BEGIN)
      {
@@ -106,7 +108,7 @@ index 902e01a..d8cfb64 100644
          {
              if (oq->context->tid != GetCurrentThreadId())
              {
-@@ -521,13 +526,14 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
+@@ -522,13 +527,14 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
          checkGLcall("glBeginQuery()");
  
          context_release(context);
@@ -122,7 +124,7 @@ index 902e01a..d8cfb64 100644
          {
              if (oq->context->tid != GetCurrentThreadId())
              {
-@@ -543,6 +549,7 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
+@@ -544,6 +550,7 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
                  context_release(context);
              }
          }
@@ -131,10 +133,10 @@ index 902e01a..d8cfb64 100644
  }
  
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 12835d0..2f6a586 100644
+index 6fff9e1674b..bf1ffb1e87c 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -1491,6 +1491,7 @@ struct wined3d_occlusion_query
+@@ -1495,6 +1495,7 @@ struct wined3d_occlusion_query
      GLuint id;
      struct wined3d_context *context;
      UINT64 samples;
@@ -142,14 +144,14 @@ index 12835d0..2f6a586 100644
  };
  
  struct wined3d_timestamp_query
-@@ -3187,6 +3188,7 @@ void wined3d_cs_emit_preload_resource(struct wined3d_cs *cs, struct wined3d_reso
+@@ -3191,6 +3192,7 @@ void wined3d_cs_emit_preload_resource(struct wined3d_cs *cs, struct wined3d_reso
  void wined3d_cs_emit_present(struct wined3d_cs *cs, struct wined3d_swapchain *swapchain,
          const RECT *src_rect, const RECT *dst_rect, HWND dst_window_override, DWORD flags) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_query_issue(struct wined3d_cs *cs, struct wined3d_query *query, DWORD flags) DECLSPEC_HIDDEN;
-+void wined3d_cs_emit_query_poll(struct wined3d_cs *cs, struct wined3d_query *query, BOOL *ret) DECLSPEC_HIDDEN;
++void wined3d_cs_emit_query_poll(struct wined3d_cs *cs, struct wined3d_query *query, DWORD flags, BOOL *ret) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_reset_state(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_base_vertex_index(struct wined3d_cs *cs,
          UINT base_vertex_index) DECLSPEC_HIDDEN;
 -- 
-2.9.0
+2.11.0
 

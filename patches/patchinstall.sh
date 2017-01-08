@@ -140,6 +140,7 @@ patch_enable_all ()
 	enable_ddraw_Write_Vtable="$1"
 	enable_dinput_Initialize="$1"
 	enable_dmusic_SynthPort_IKsControl="$1"
+	enable_dsound_Clear_Mixing_Buffer="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
@@ -610,6 +611,9 @@ patch_enable ()
 			;;
 		dmusic-SynthPort_IKsControl)
 			enable_dmusic_SynthPort_IKsControl="$2"
+			;;
+		dsound-Clear_Mixing_Buffer)
+			enable_dsound_Clear_Mixing_Buffer="$2"
 			;;
 		dsound-EAX)
 			enable_dsound_EAX="$2"
@@ -2382,12 +2386,16 @@ if test "$enable_dxdiagn_GetChildContainer_Leaf_Nodes" -eq 1; then
 fi
 
 if test "$enable_dsound_EAX" -eq 1; then
+	if test "$enable_dsound_Clear_Mixing_Buffer" -gt 1; then
+		abort "Patchset dsound-Clear_Mixing_Buffer disabled, but dsound-EAX depends on that."
+	fi
 	if test "$enable_dsound_Fast_Mixer" -gt 1; then
 		abort "Patchset dsound-Fast_Mixer disabled, but dsound-EAX depends on that."
 	fi
 	if test "$enable_dsound_Revert_Cleanup" -gt 1; then
 		abort "Patchset dsound-Revert_Cleanup disabled, but dsound-EAX depends on that."
 	fi
+	enable_dsound_Clear_Mixing_Buffer=1
 	enable_dsound_Fast_Mixer=1
 	enable_dsound_Revert_Cleanup=1
 fi
@@ -3722,6 +3730,18 @@ if test "$enable_dmusic_SynthPort_IKsControl" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset dsound-Clear_Mixing_Buffer
+# |
+# | Modified files:
+# |   *	dlls/dsound/mixer.c
+# |
+if test "$enable_dsound_Clear_Mixing_Buffer" -eq 1; then
+	patch_apply dsound-Clear_Mixing_Buffer/0001-dsound-Clear-the-temporary-mixing-buffer-after-alloc.patch
+	(
+		echo '+    { "Erich E. Hoover", "dsound: Clear the temporary mixing buffer after allocation.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset dsound-Fast_Mixer
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3754,7 +3774,7 @@ fi
 # Patchset dsound-EAX
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	dsound-Fast_Mixer, dsound-Revert_Cleanup
+# |   *	dsound-Clear_Mixing_Buffer, dsound-Fast_Mixer, dsound-Revert_Cleanup
 # |
 # | Modified files:
 # |   *	dlls/dsound/Makefile.in, dlls/dsound/buffer.c, dlls/dsound/dsound.c, dlls/dsound/dsound_eax.h,

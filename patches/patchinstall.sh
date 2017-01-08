@@ -136,6 +136,7 @@ patch_enable_all ()
 	enable_ddraw_Device_Caps="$1"
 	enable_ddraw_EnumSurfaces="$1"
 	enable_ddraw_Fix_Typos="$1"
+	enable_ddraw_FlipToGDISurface="$1"
 	enable_ddraw_IDirect3DTexture2_Load="$1"
 	enable_ddraw_Rendering_Targets="$1"
 	enable_ddraw_Write_Vtable="$1"
@@ -600,6 +601,9 @@ patch_enable ()
 			;;
 		ddraw-Fix_Typos)
 			enable_ddraw_Fix_Typos="$2"
+			;;
+		ddraw-FlipToGDISurface)
+			enable_ddraw_FlipToGDISurface="$2"
 			;;
 		ddraw-IDirect3DTexture2_Load)
 			enable_ddraw_IDirect3DTexture2_Load="$2"
@@ -3673,6 +3677,21 @@ if test "$enable_ddraw_Fix_Typos" -eq 1; then
 	patch_apply ddraw-Fix_Typos/0001-ddraw-tests-Fix-function-name-in-multiple-ok-message.patch
 	(
 		echo '+    { "Sebastian Lackner", "ddraw/tests: Fix function name in multiple ok() messages.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ddraw-FlipToGDISurface
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#30062] Implement ddraw7_FlipToGDISurface.
+# |
+# | Modified files:
+# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/ddraw_private.h, dlls/ddraw/surface.c
+# |
+if test "$enable_ddraw_FlipToGDISurface" -eq 1; then
+	patch_apply ddraw-FlipToGDISurface/0001-ddraw-Implement-ddraw7_FlipToGDISurface.patch
+	(
+		echo '+    { "Henri Verbeet", "ddraw: Implement ddraw7_FlipToGDISurface.", 1 },';
 	) >> "$patchlist"
 fi
 

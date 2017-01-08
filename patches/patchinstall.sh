@@ -5894,12 +5894,12 @@ fi
 # |   *	[#41488] Accept DISP_E_PARAMNOTFOUND for missing optional param in typelib implementation
 # |
 # | Modified files:
-# |   *	dlls/oleaut32/typelib.c
+# |   *	dlls/oleaut32/tests/tmarshal.c, dlls/oleaut32/typelib.c
 # |
 if test "$enable_oleaut32_ITypeInfo_fnInvoke" -eq 1; then
-	patch_apply oleaut32-ITypeInfo_fnInvoke/0001-oleaut32-Gracefully-handle-a-failure-to-convert-an-o.patch
+	patch_apply oleaut32-ITypeInfo_fnInvoke/0001-oleaut32-Accept-DISP_E_PARAMNOTFOUND-for-missing-opt.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "oleaut32: Gracefully handle a failure to convert an optional param in typelib'\''s Invoke implementation.", 2 },';
+		echo '+    { "Dmitry Timoshkov", "oleaut32: Accept DISP_E_PARAMNOTFOUND for missing optional parameters in ITypeInfo::Invoke implementation.", 3 },';
 	) >> "$patchlist"
 fi
 

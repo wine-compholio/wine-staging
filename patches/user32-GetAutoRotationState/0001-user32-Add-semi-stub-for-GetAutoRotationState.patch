@@ -1,0 +1,133 @@
+From 916af67f174d81515eb825e1bb45af8b54781bdf Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 8 Jan 2017 18:22:30 +0100
+Subject: user32: Add semi-stub for GetAutoRotationState.
+
+---
+ dlls/user32/sysparams.c       | 17 +++++++++++++++++
+ dlls/user32/tests/sysparams.c | 25 +++++++++++++++++++++++++
+ dlls/user32/user32.spec       |  1 +
+ include/winuser.h             | 13 +++++++++++++
+ 4 files changed, 56 insertions(+)
+
+diff --git a/dlls/user32/sysparams.c b/dlls/user32/sysparams.c
+index 63c4ffe070d..c79b53c6e7b 100644
+--- a/dlls/user32/sysparams.c
++++ b/dlls/user32/sysparams.c
+@@ -2913,3 +2913,20 @@ BOOL WINAPI IsProcessDPIAware(void)
+     FIXME( "stub!\n");
+     return FALSE;
+ }
++
++/***********************************************************************
++ *      GetAutoRotationState   (USER32.@)
++ */
++BOOL WINAPI GetAutoRotationState(AR_STATE *state)
++{
++    TRACE("(%p)\n", state);
++
++    if (!state)
++    {
++        SetLastError(ERROR_INVALID_PARAMETER);
++        return FALSE;
++    }
++
++    *state = AR_NOSENSOR;
++    return TRUE;
++}
+diff --git a/dlls/user32/tests/sysparams.c b/dlls/user32/tests/sysparams.c
+index 075a0c71f65..758fd45399a 100644
+--- a/dlls/user32/tests/sysparams.c
++++ b/dlls/user32/tests/sysparams.c
+@@ -39,6 +39,7 @@
+ #endif
+ 
+ static LONG (WINAPI *pChangeDisplaySettingsExA)(LPCSTR, LPDEVMODEA, HWND, DWORD, LPVOID);
++static LONG (WINAPI *pGetAutoRotationState)(PAR_STATE);
+ 
+ static BOOL strict;
+ static int dpi;
+@@ -2917,6 +2918,28 @@ static void test_GetSysColorBrush(void)
+         win_skip("COLOR_MENUBAR unsupported\n");
+ }
+ 
++static void test_GetAutoRotationState(void)
++{
++    AR_STATE state;
++    BOOL ret;
++
++    if (!pGetAutoRotationState)
++    {
++        win_skip("GetAutoRotationState not supported\n");
++        return;
++    }
++
++    SetLastError(0xdeadbeef);
++    ret = pGetAutoRotationState(NULL);
++    ok(!ret, "Expected GetAutoRotationState to fail\n");
++    ok(GetLastError() == ERROR_INVALID_PARAMETER, "Expected ERROR_INVALID_PARAMETER, got %d\n", GetLastError());
++
++    state = 0;
++    ret = pGetAutoRotationState(&state);
++    ok(ret, "Expected GetAutoRotationState to succeed, error %d\n", GetLastError());
++    ok((state & AR_NOSENSOR) != 0, "Expected AR_NOSENSOR, got %d\n", state);
++}
++
+ START_TEST(sysparams)
+ {
+     int argc;
+@@ -2929,6 +2952,7 @@ START_TEST(sysparams)
+ 
+     hdll = GetModuleHandleA("user32.dll");
+     pChangeDisplaySettingsExA=(void*)GetProcAddress(hdll, "ChangeDisplaySettingsExA");
++    pGetAutoRotationState=(void*)GetProcAddress(hdll, "GetAutoRotationState");
+ 
+     hInstance = GetModuleHandleA( NULL );
+     hdc = GetDC(0);
+@@ -2948,6 +2972,7 @@ START_TEST(sysparams)
+     trace("testing EnumDisplaySettings vs GetDeviceCaps\n");
+     test_EnumDisplaySettings( );
+     test_GetSysColorBrush( );
++    test_GetAutoRotationState( );
+ 
+     change_counter = 0;
+     change_last_param = 0;
+diff --git a/dlls/user32/user32.spec b/dlls/user32/user32.spec
+index 65a5bfe3c08..e53d57ca9ed 100644
+--- a/dlls/user32/user32.spec
++++ b/dlls/user32/user32.spec
+@@ -251,6 +251,7 @@
+ @ stdcall GetAppCompatFlags(long)
+ @ stdcall GetAppCompatFlags2(long)
+ @ stdcall GetAsyncKeyState(long)
++@ stdcall GetAutoRotationState(ptr)
+ @ stdcall GetCapture()
+ @ stdcall GetCaretBlinkTime()
+ @ stdcall GetCaretPos(ptr)
+diff --git a/include/winuser.h b/include/winuser.h
+index 2b8331c3b63..8af65e51380 100644
+--- a/include/winuser.h
++++ b/include/winuser.h
+@@ -1458,6 +1458,19 @@ DECL_WINELIB_TYPE_AW(LPHELPWININFO)
+ #define	CDS_SETRECT		0x20000000
+ #define	CDS_RESET		0x40000000
+ 
++typedef enum tagAR_STATE
++{
++    AR_ENABLED       = 0x0,
++    AR_DISABLED      = 0x1,
++    AR_SUPPRESSED    = 0x2,
++    AR_REMOTESESSION = 0x4,
++    AR_MULTIMON      = 0x8,
++    AR_NOSENSOR      = 0x10,
++    AR_NOT_SUPPORTED = 0x20,
++    AR_DOCKED        = 0x40,
++    AR_LAPTOP        = 0x80
++} AR_STATE, *PAR_STATE;
++
+ typedef struct tagWNDCLASSEXA
+ {
+     UINT      cbSize;
+-- 
+2.11.0
+

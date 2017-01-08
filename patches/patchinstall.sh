@@ -333,6 +333,7 @@ patch_enable_all ()
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawMenuItem="$1"
 	enable_user32_DrawTextExW="$1"
+	enable_user32_GetAutoRotationState="$1"
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_Groupbox_Rectangle="$1"
 	enable_user32_Invalidate_Key_State="$1"
@@ -1189,6 +1190,9 @@ patch_enable ()
 			;;
 		user32-DrawTextExW)
 			enable_user32_DrawTextExW="$2"
+			;;
+		user32-GetAutoRotationState)
+			enable_user32_GetAutoRotationState="$2"
 			;;
 		user32-GetSystemMetrics)
 			enable_user32_GetSystemMetrics="$2"
@@ -7077,6 +7081,21 @@ if test "$enable_user32_DrawTextExW" -eq 1; then
 	patch_apply user32-DrawTextExW/0001-user32-Fix-handling-of-invert_y-in-DrawTextExW.patch
 	(
 		echo '+    { "Sebastian Lackner", "user32: Fix handling of invert_y in DrawTextExW.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-GetAutoRotationState
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42106] Implement user32.GetAutoRotationState
+# |
+# | Modified files:
+# |   *	dlls/user32/sysparams.c, dlls/user32/tests/sysparams.c, dlls/user32/user32.spec, include/winuser.h
+# |
+if test "$enable_user32_GetAutoRotationState" -eq 1; then
+	patch_apply user32-GetAutoRotationState/0001-user32-Add-semi-stub-for-GetAutoRotationState.patch
+	(
+		echo '+    { "Michael Müller", "user32: Add semi-stub for GetAutoRotationState.", 1 },';
 	) >> "$patchlist"
 fi
 

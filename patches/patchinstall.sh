@@ -393,6 +393,7 @@ patch_enable_all ()
 	enable_winex11_Clipboard_HTML="$1"
 	enable_winex11_DefaultDisplayFrequency="$1"
 	enable_winex11_SC_KEYMENU="$1"
+	enable_winex11_WM_WINDOWPOSCHANGING="$1"
 	enable_winex11_Window_Groups="$1"
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
@@ -1369,6 +1370,9 @@ patch_enable ()
 		winex11-SC_KEYMENU)
 			enable_winex11_SC_KEYMENU="$2"
 			;;
+		winex11-WM_WINDOWPOSCHANGING)
+			enable_winex11_WM_WINDOWPOSCHANGING="$2"
+			;;
 		winex11-Window_Groups)
 			enable_winex11_Window_Groups="$2"
 			;;
@@ -2036,6 +2040,13 @@ if test "$enable_wpcap_Dynamic_Linking" -eq 1; then
 		abort "Patchset wpcap-Several_Fixes disabled, but wpcap-Dynamic_Linking depends on that."
 	fi
 	enable_wpcap_Several_Fixes=1
+fi
+
+if test "$enable_winex11_WM_WINDOWPOSCHANGING" -eq 1; then
+	if test "$enable_winex11__NET_ACTIVE_WINDOW" -gt 1; then
+		abort "Patchset winex11-_NET_ACTIVE_WINDOW disabled, but winex11-WM_WINDOWPOSCHANGING depends on that."
+	fi
+	enable_winex11__NET_ACTIVE_WINDOW=1
 fi
 
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
@@ -8235,6 +8246,42 @@ if test "$enable_winex11_SC_KEYMENU" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset winex11-_NET_ACTIVE_WINDOW
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#2155] Forward activate window requests to WM using _NET_ACTIVE_WINDOW
+# |
+# | Modified files:
+# |   *	dlls/user32/driver.c, dlls/user32/focus.c, dlls/user32/user_private.h, dlls/winex11.drv/event.c,
+# | 	dlls/winex11.drv/window.c, dlls/winex11.drv/winex11.drv.spec, dlls/winex11.drv/x11drv.h, dlls/winex11.drv/x11drv_main.c
+# |
+if test "$enable_winex11__NET_ACTIVE_WINDOW" -eq 1; then
+	patch_apply winex11-_NET_ACTIVE_WINDOW/0001-winex11.drv-Add-support-for-_NET_ACTIVE_WINDOW.patch
+	patch_apply winex11-_NET_ACTIVE_WINDOW/0002-user32-Before-asking-a-WM-to-activate-a-window-make-.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "winex11.drv: Add support for _NET_ACTIVE_WINDOW.", 2 },';
+		echo '+    { "Dmitry Timoshkov", "user32: Before asking a WM to activate a window make sure that the window is in foreground and not minimized.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11-WM_WINDOWPOSCHANGING
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	winex11-_NET_ACTIVE_WINDOW
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34594] Fix handling of WM_WINDOWPOS{CHANGING,CHANGED} for deactivated topmost window
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/event.c
+# |
+if test "$enable_winex11_WM_WINDOWPOSCHANGING" -eq 1; then
+	patch_apply winex11-WM_WINDOWPOSCHANGING/0001-winex11.drv-Send-WM_WINDOWPOSCHANGING-WM_WINDOWPOSCH.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "winex11.drv: Send WM_WINDOWPOSCHANGING/WM_WINDOWPOSCHANGED messages to a being deactivated topmost window.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset winex11-Window_Groups
 # |
 # | This patchset fixes the following Wine bugs:
@@ -8274,24 +8321,6 @@ if test "$enable_winex11_XEMBED" -eq 1; then
 	patch_apply winex11-XEMBED/0001-winex11-Enable-disable-windows-when-they-are-un-mapped.patch
 	(
 		echo '+    { "Sebastian Lackner", "winex11: Enable/disable windows when they are (un)mapped by foreign applications.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winex11-_NET_ACTIVE_WINDOW
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#2155] Forward activate window requests to WM using _NET_ACTIVE_WINDOW
-# |
-# | Modified files:
-# |   *	dlls/user32/driver.c, dlls/user32/focus.c, dlls/user32/user_private.h, dlls/winex11.drv/event.c,
-# | 	dlls/winex11.drv/window.c, dlls/winex11.drv/winex11.drv.spec, dlls/winex11.drv/x11drv.h, dlls/winex11.drv/x11drv_main.c
-# |
-if test "$enable_winex11__NET_ACTIVE_WINDOW" -eq 1; then
-	patch_apply winex11-_NET_ACTIVE_WINDOW/0001-winex11.drv-Add-support-for-_NET_ACTIVE_WINDOW.patch
-	patch_apply winex11-_NET_ACTIVE_WINDOW/0002-user32-Before-asking-a-WM-to-activate-a-window-make-.patch
-	(
-		echo '+    { "Dmitry Timoshkov", "winex11.drv: Add support for _NET_ACTIVE_WINDOW.", 2 },';
-		echo '+    { "Dmitry Timoshkov", "user32: Before asking a WM to activate a window make sure that the window is in foreground and not minimized.", 1 },';
 	) >> "$patchlist"
 fi
 

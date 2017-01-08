@@ -422,7 +422,6 @@ patch_enable_all ()
 	enable_wtsapi32_WTSQueryUserToken="$1"
 	enable_wuauserv_Dummy_Service="$1"
 	enable_wusa_MSU_Package_Installer="$1"
-	enable_xaudio2_7_Abandon_Albufs="$1"
 }
 
 # Enable or disable all categories
@@ -1457,9 +1456,6 @@ patch_enable ()
 			;;
 		wusa-MSU_Package_Installer)
 			enable_wusa_MSU_Package_Installer="$2"
-			;;
-		xaudio2_7-Abandon_Albufs)
-			enable_xaudio2_7_Abandon_Albufs="$2"
 			;;
 		*)
 			return 1
@@ -8678,21 +8674,6 @@ if test "$enable_wusa_MSU_Package_Installer" -eq 1; then
 		echo '+    { "Sebastian Lackner", "wusa: Add workaround to be compatible with Vista packages.", 1 },';
 		echo '+    { "Sebastian Lackner", "wusa: Improve tracing of installation process.", 1 },';
 		echo '+    { "Michael Müller", "wusa: Print warning when encountering msdelta compressed files.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset xaudio2_7-Abandon_Albufs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40963] Ignore queued xaudio2 AL buffers after Stop
-# |
-# | Modified files:
-# |   *	dlls/xaudio2_7/tests/xaudio2.c, dlls/xaudio2_7/xaudio_dll.c, dlls/xaudio2_7/xaudio_private.h
-# |
-if test "$enable_xaudio2_7_Abandon_Albufs" -eq 1; then
-	patch_apply xaudio2_7-Abandon_Albufs/0001-xaudio2-Ignore-queued-AL-buffers-after-Stop.patch
-	(
-		echo '+    { "Andrew Eikum", "xaudio2: Ignore queued AL buffers after Stop.", 1 },';
 	) >> "$patchlist"
 fi
 

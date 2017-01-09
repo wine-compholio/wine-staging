@@ -2251,7 +2251,7 @@ fi
 # |   *	[#37090] Implement AMStream GetMultiMediaStream functions
 # |
 # | Modified files:
-# |   *	dlls/amstream/mediastream.c
+# |   *	dlls/amstream/mediastream.c, dlls/amstream/tests/amstream.c
 # |
 if test "$enable_amstream_GetMultiMediaStream" -eq 1; then
 	patch_apply amstream-GetMultiMediaStream/0001-amstream-Implement-IAMMediaStream-GetMultiMediaStrea.patch

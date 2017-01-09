@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "b1387f9b18cd7e1ca1ddf54ff8ff6fe32c286f44"
+	echo "7b38d4f9efd899a68d754b83b1b396929549a973"
 }
 
 # Show version information
@@ -138,7 +138,6 @@ patch_enable_all ()
 	enable_gdi32_MultiMonitor="$1"
 	enable_gdi32_Symbol_Truetype_Font="$1"
 	enable_hal_KeQueryPerformanceCounter="$1"
-	enable_hid_HidP_TranslateUsagesToI8042ScanCodes="$1"
 	enable_hnetcfg_INetFwAuthorizedApplication="$1"
 	enable_ieframe_IViewObject_Draw="$1"
 	enable_imagehlp_BindImageEx="$1"
@@ -509,9 +508,6 @@ patch_enable ()
 			;;
 		hal-KeQueryPerformanceCounter)
 			enable_hal_KeQueryPerformanceCounter="$2"
-			;;
-		hid-HidP_TranslateUsagesToI8042ScanCodes)
-			enable_hid_HidP_TranslateUsagesToI8042ScanCodes="$2"
 			;;
 		hnetcfg-INetFwAuthorizedApplication)
 			enable_hnetcfg_INetFwAuthorizedApplication="$2"
@@ -3108,21 +3104,6 @@ if test "$enable_hal_KeQueryPerformanceCounter" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset hid-HidP_TranslateUsagesToI8042ScanCodes
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39447] Implement stub for hid.HidP_TranslateUsagesToI8042ScanCodes
-# |
-# | Modified files:
-# |   *	dlls/hid/hid.spec, dlls/hid/hidp.c, include/ddk/hidpi.h
-# |
-if test "$enable_hid_HidP_TranslateUsagesToI8042ScanCodes" -eq 1; then
-	patch_apply hid-HidP_TranslateUsagesToI8042ScanCodes/0001-hid-Stub-HidP_TranslateUsagesToI8042ScanCodes.patch
-	(
-		echo '+    { "Aric Stewart", "hid: Stub HidP_TranslateUsagesToI8042ScanCodes.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset hnetcfg-INetFwAuthorizedApplication
 # |
 # | Modified files:
@@ -3631,11 +3612,9 @@ fi
 # |   *	dlls/mmdevapi/audiovolume.c
 # |
 if test "$enable_mmdevapi_AEV_Stubs" -eq 1; then
-	patch_apply mmdevapi-AEV_Stubs/0001-mmdevapi-Improve-AEV_GetVolumeRange-stub.patch
 	patch_apply mmdevapi-AEV_Stubs/0002-mmdevapi-Improve-AEV_SetMasterVolumeLevel-and-AEV_Ge.patch
 	patch_apply mmdevapi-AEV_Stubs/0003-mmdevapi-Improve-AEV_SetMute-and-AEV_GetMute-stubs.patch
 	(
-		echo '+    { "Christian Costa", "mmdevapi: Improve AEV_GetVolumeRange stub.", 1 },';
 		echo '+    { "Christian Costa", "mmdevapi: Improve AEV_SetMasterVolumeLevel and AEV_GetMasterVolumeLevel stubs.", 1 },';
 		echo '+    { "Christian Costa", "mmdevapi: Improve AEV_SetMute and AEV_GetMute stubs.", 1 },';
 	) >> "$patchlist"

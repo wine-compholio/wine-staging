@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ac59a68162321610841ed072981adddb8bc78c56"
+	echo "05f9b023d2996984dda3b8143e80a2b5037968b3"
 }
 
 # Show version information
@@ -396,6 +396,7 @@ patch_enable_all ()
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_Clipboard_HTML="$1"
 	enable_winex11_DefaultDisplayFrequency="$1"
+	enable_winex11_MWM_Decorations="$1"
 	enable_winex11_SC_KEYMENU="$1"
 	enable_winex11_WM_WINDOWPOSCHANGING="$1"
 	enable_winex11_Window_Groups="$1"
@@ -1381,6 +1382,9 @@ patch_enable ()
 			;;
 		winex11-DefaultDisplayFrequency)
 			enable_winex11_DefaultDisplayFrequency="$2"
+			;;
+		winex11-MWM_Decorations)
+			enable_winex11_MWM_Decorations="$2"
 			;;
 		winex11-SC_KEYMENU)
 			enable_winex11_SC_KEYMENU="$2"
@@ -8307,6 +8311,21 @@ if test "$enable_winex11_DefaultDisplayFrequency" -eq 1; then
 	patch_apply winex11-DefaultDisplayFrequency/0001-winex11.drv-Allow-to-select-default-display-frequenc.patch
 	(
 		echo '+    { "Michael Müller", "winex11.drv: Allow to select default display frequency in registry key.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11-MWM_Decorations
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42117] Avoid double captions observed under some WMs
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/window.c
+# |
+if test "$enable_winex11_MWM_Decorations" -eq 1; then
+	patch_apply winex11-MWM_Decorations/0001-winex11.drv-Don-t-use-MWM_DECOR_RESIZEH-window-resiz.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "winex11.drv: Don'\''t use MWM_DECOR_RESIZEH, window resizing is controlled by MWM_FUNC_RESIZE.", 1 },';
 	) >> "$patchlist"
 fi
 

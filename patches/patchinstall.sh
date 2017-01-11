@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "05f9b023d2996984dda3b8143e80a2b5037968b3"
+	echo "8df9a11adebf72f3f1046a2efad6e8c85fc44c40"
 }
 
 # Show version information
@@ -395,7 +395,6 @@ patch_enable_all ()
 	enable_wineps_drv_PostScript_Fixes="$1"
 	enable_winepulse_PulseAudio_Support="$1"
 	enable_winex11_CandidateWindowPos="$1"
-	enable_winex11_Clipboard_HTML="$1"
 	enable_winex11_DefaultDisplayFrequency="$1"
 	enable_winex11_MWM_Decorations="$1"
 	enable_winex11_SC_KEYMENU="$1"
@@ -1380,9 +1379,6 @@ patch_enable ()
 			;;
 		winex11-CandidateWindowPos)
 			enable_winex11_CandidateWindowPos="$2"
-			;;
-		winex11-Clipboard_HTML)
-			enable_winex11_Clipboard_HTML="$2"
 			;;
 		winex11-DefaultDisplayFrequency)
 			enable_winex11_DefaultDisplayFrequency="$2"
@@ -8321,21 +8317,6 @@ if test "$enable_winex11_CandidateWindowPos" -eq 1; then
 	patch_apply winex11-CandidateWindowPos/0001-winex11.drv-Update-a-candidate-window-s-position-wit.patch
 	(
 		echo '+    { "Felix Yan", "winex11.drv: Update a candidate window'\''s position with over-the-spot style.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winex11-Clipboard_HTML
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#7372] Support for pasting HTML from Unix applications
-# |
-# | Modified files:
-# |   *	dlls/winex11.drv/clipboard.c
-# |
-if test "$enable_winex11_Clipboard_HTML" -eq 1; then
-	patch_apply winex11-Clipboard_HTML/0001-winex11.drv-Import-X11-s-text-html-as-HTML-Format.patch
-	(
-		echo '+    { "Damjan Jovanovic", "winex11.drv: Import X11'\''s \"text/html\" as \"HTML Format\".", 3 },';
 	) >> "$patchlist"
 fi
 

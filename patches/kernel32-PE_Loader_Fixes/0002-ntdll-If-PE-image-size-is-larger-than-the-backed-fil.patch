@@ -1,0 +1,31 @@
+From bbc0ffba68c07dbd27ba4c33b8b6f1a66783b8ff Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Mon, 2 Jan 2017 15:35:41 +0800
+Subject: ntdll: If PE image size is larger than the backed file size then
+ treat file as removable.
+
+---
+ dlls/ntdll/virtual.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index bdf94063871..1a60fec7cfd 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -1163,6 +1163,13 @@ static NTSTATUS map_image( HANDLE hmapping, int fd, char *base, SIZE_T total_siz
+         /* unaligned sections, this happens for native subsystem binaries */
+         /* in that case Windows simply maps in the whole file */
+ 
++        /* if the image size is larger than the backed file size we can't mmap it */
++        if (total_size > ROUND_SIZE( 0, st.st_size ))
++        {
++            close_handle( dup_mapping );
++            dup_mapping = 0;
++        }
++
+         if (map_file_into_view( view, fd, 0, total_size, 0, VPROT_COMMITTED | VPROT_READ | VPROT_WRITECOPY,
+                                 !dup_mapping ) != STATUS_SUCCESS) goto error;
+ 
+-- 
+2.11.0
+

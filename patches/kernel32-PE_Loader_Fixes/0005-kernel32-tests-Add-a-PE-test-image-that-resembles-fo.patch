@@ -1,0 +1,112 @@
+From b2443dc0deaec8c5e7d70f1bf2004181d2240177 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Mon, 2 Jan 2017 15:50:01 +0800
+Subject: kernel32/tests: Add a PE test image that resembles format of some of
+ 8k demos.
+
+---
+ dlls/kernel32/tests/loader.c | 39 +++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 37 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
+index 9ddfd8d7922..a74647b3d40 100644
+--- a/dlls/kernel32/tests/loader.c
++++ b/dlls/kernel32/tests/loader.c
+@@ -184,7 +184,7 @@ static DWORD create_test_dll( const IMAGE_DOS_HEADER *dos_header, UINT dos_size,
+     {
+         SetLastError(0xdeadbeef);
+         ret = WriteFile(hfile, &nt_header->OptionalHeader,
+-                        min(nt_header->FileHeader.SizeOfOptionalHeader, sizeof(IMAGE_OPTIONAL_HEADER)),
++                        sizeof(IMAGE_OPTIONAL_HEADER),
+                         &dummy, NULL);
+         ok(ret, "WriteFile error %d\n", GetLastError());
+         if (nt_header->FileHeader.SizeOfOptionalHeader > sizeof(IMAGE_OPTIONAL_HEADER))
+@@ -200,6 +200,8 @@ static DWORD create_test_dll( const IMAGE_DOS_HEADER *dos_header, UINT dos_size,
+     assert(nt_header->FileHeader.NumberOfSections <= 1);
+     if (nt_header->FileHeader.NumberOfSections)
+     {
++        SetFilePointer(hfile, dos_size + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER) + nt_header->FileHeader.SizeOfOptionalHeader, NULL, FILE_BEGIN);
++
+         section.SizeOfRawData = 10;
+ 
+         if (nt_header->OptionalHeader.SectionAlignment >= page_size)
+@@ -224,6 +226,17 @@ static DWORD create_test_dll( const IMAGE_DOS_HEADER *dos_header, UINT dos_size,
+         ret = WriteFile(hfile, section_data, sizeof(section_data), &dummy, NULL);
+         ok(ret, "WriteFile error %d\n", GetLastError());
+     }
++
++    /* Minimal PE image that Windows7+ is able to load: 268 bytes */
++    size = GetFileSize(hfile, NULL);
++    if (size < 268)
++    {
++        file_align = 268 - size;
++        SetLastError(0xdeadbeef);
++        ret = WriteFile(hfile, filler, file_align, &dummy, NULL);
++        ok(ret, "WriteFile error %d\n", GetLastError());
++    }
++
+     size = GetFileSize(hfile, NULL);
+     CloseHandle(hfile);
+     return size;
+@@ -294,7 +307,8 @@ static void query_image_section( int id, const char *dll_name, const IMAGE_NT_HE
+         image.LoaderFlags, nt_header->OptionalHeader.LoaderFlags );
+     ok( image.ImageFileSize == file_size || broken(!image.ImageFileSize), /* winxpsp1 */
+         "%u: ImageFileSize wrong %08x / %08x\n", id, image.ImageFileSize, file_size );
+-    ok( image.CheckSum == nt_header->OptionalHeader.CheckSum, "%u: CheckSum wrong %08x / %08x\n", id,
++    ok( image.CheckSum == nt_header->OptionalHeader.CheckSum || broken(truncated),
++        "%u: CheckSum wrong %08x / %08x\n", id,
+         image.CheckSum, nt_header->OptionalHeader.CheckSum );
+     /* FIXME: needs more work: */
+     /* image.GpValue */
+@@ -444,6 +458,7 @@ static void test_Loader(void)
+         /* Mandatory are all fields up to SizeOfHeaders, everything else
+          * is really optional (at least that's true for XP).
+          */
++#if 0 /* 32-bit Windows 8 crashes inside of LoadLibrary */
+         { sizeof(dos_header),
+           1, FIELD_OFFSET(IMAGE_OPTIONAL_HEADER, CheckSum), 0x200, 0x200,
+           sizeof(dos_header) + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER) + FIELD_OFFSET(IMAGE_OPTIONAL_HEADER, CheckSum) + sizeof(IMAGE_SECTION_HEADER) + 0x10,
+@@ -451,6 +466,7 @@ static void test_Loader(void)
+           { ERROR_SUCCESS, ERROR_BAD_EXE_FORMAT, ERROR_INVALID_ADDRESS,
+             ERROR_NOACCESS }
+         },
++#endif
+         { sizeof(dos_header),
+           0, FIELD_OFFSET(IMAGE_OPTIONAL_HEADER, CheckSum), 0x200, 0x200,
+           0xd0, /* beyond of the end of file */
+@@ -519,6 +535,14 @@ static void test_Loader(void)
+           0x40, /* minimal image size that Windows7 accepts */
+           0,
+           { ERROR_SUCCESS }
++        },
++        /* the following data mimics the PE image which 8k demos have */
++        { 0x04,
++          0, 0x08,
++          0x04 /* also serves as e_lfanew in the truncated MZ header */, 0x04,
++          0x200000,
++          0x40,
++          { ERROR_SUCCESS }
+         }
+     };
+     int i;
+@@ -709,6 +733,17 @@ static void test_Loader(void)
+             ret = FreeLibrary(hlib_as_data_file);
+             ok(ret, "FreeLibrary error %d\n", GetLastError());
+ 
++            SetLastError(0xdeadbeef);
++            ret = DeleteFileA(dll_name);
++            ok(ret, "DeleteFile error %d\n", GetLastError());
++
++            nt_header.OptionalHeader.AddressOfEntryPoint = 0x12345678;
++            file_size = create_test_dll( &dos_header, td[i].size_of_dos_header, &nt_header, dll_name );
++            if (!file_size)
++            {
++                ok(0, "could not create %s\n", dll_name);
++                break;
++            }
+             query_image_section( i, dll_name, &nt_header );
+         }
+         else
+-- 
+2.11.0
+

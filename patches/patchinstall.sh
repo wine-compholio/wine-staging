@@ -183,6 +183,7 @@ patch_enable_all ()
 	enable_kernel32_MoveFile="$1"
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
+	enable_kernel32_PE_Loader_Fixes="$1"
 	enable_kernel32_Profile="$1"
 	enable_kernel32_SCSI_Sysfs="$1"
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
@@ -743,6 +744,9 @@ patch_enable ()
 			;;
 		kernel32-NeedCurrentDirectoryForExePath)
 			enable_kernel32_NeedCurrentDirectoryForExePath="$2"
+			;;
+		kernel32-PE_Loader_Fixes)
+			enable_kernel32_PE_Loader_Fixes="$2"
 			;;
 		kernel32-Profile)
 			enable_kernel32_Profile="$2"
@@ -2349,6 +2353,13 @@ if test "$enable_ntdll_CLI_Images" -eq 1; then
 		abort "Patchset mscoree-CorValidateImage disabled, but ntdll-CLI_Images depends on that."
 	fi
 	enable_mscoree_CorValidateImage=1
+fi
+
+if test "$enable_kernel32_PE_Loader_Fixes" -eq 1; then
+	if test "$enable_kernel32_Misalign_Workaround" -gt 1; then
+		abort "Patchset kernel32-Misalign_Workaround disabled, but kernel32-PE_Loader_Fixes depends on that."
+	fi
+	enable_kernel32_Misalign_Workaround=1
 fi
 
 if test "$enable_kernel32_Named_Pipe" -eq 1; then
@@ -4616,6 +4627,32 @@ if test "$enable_kernel32_NeedCurrentDirectoryForExePath" -eq 1; then
 		echo '+    { "Erich E. Hoover", "kernel32: Add SearchPath test demonstrating the priority of the working directory.", 1 },';
 		echo '+    { "Erich E. Hoover", "kernel32: NeedCurrentDirectoryForExePath does not use the registry.", 1 },';
 		echo '+    { "Erich E. Hoover", "kernel32: Consider the working directory first when launching executables with CreateProcess.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-PE_Loader_Fixes
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	kernel32-Misalign_Workaround
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42125] Various PE loader fixes for 8k demos
+# |
+# | Modified files:
+# |   *	dlls/kernel32/process.c, dlls/kernel32/tests/loader.c, dlls/ntdll/virtual.c, server/mapping.c
+# |
+if test "$enable_kernel32_PE_Loader_Fixes" -eq 1; then
+	patch_apply kernel32-PE_Loader_Fixes/0001-server-All-fields-up-to-CheckSum-are-mandatory-regar.patch
+	patch_apply kernel32-PE_Loader_Fixes/0002-ntdll-If-PE-image-size-is-larger-than-the-backed-fil.patch
+	patch_apply kernel32-PE_Loader_Fixes/0003-kernel32-On-process-entry-store-PEB-address-in-ebx.patch
+	patch_apply kernel32-PE_Loader_Fixes/0004-kernel32-tests-Fix-a-module-reference-leak-leading-t.patch
+	patch_apply kernel32-PE_Loader_Fixes/0005-kernel32-tests-Add-a-PE-test-image-that-resembles-fo.patch
+	(
+		echo '+    { "Dmitry Timoshkov", "server: All fields up to CheckSum are mandatory regardless of SizeOfOptionalHeader value.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "ntdll: If PE image size is larger than the backed file size then treat file as removable.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "kernel32: On process entry store PEB address in %ebx.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "kernel32/tests: Fix a module reference leak leading to an undeletable temporary file.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "kernel32/tests: Add a PE test image that resembles format of some of 8k demos.", 1 },';
 	) >> "$patchlist"
 fi
 

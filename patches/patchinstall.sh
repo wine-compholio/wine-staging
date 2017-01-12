@@ -356,7 +356,7 @@ patch_enable_all ()
 	enable_version_VerQueryValue="$1"
 	enable_vulkan_Vulkan_Implementation="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
-	enable_wbemdisp_Printer="$1"
+	enable_wbemprox_Printer="$1"
 	enable_wbemprox_fill_processor="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppGrayFloat="$1"
@@ -1264,8 +1264,8 @@ patch_enable ()
 		wbemdisp-ISWbemSecurity)
 			enable_wbemdisp_ISWbemSecurity="$2"
 			;;
-		wbemdisp-Printer)
-			enable_wbemdisp_Printer="$2"
+		wbemprox-Printer)
+			enable_wbemprox_Printer="$2"
 			;;
 		wbemprox-fill_processor)
 			enable_wbemprox_fill_processor="$2"
@@ -2158,9 +2158,9 @@ if test "$enable_windowscodecs_Palette_Images" -eq 1; then
 	enable_windowscodecs_32bppGrayFloat=1
 fi
 
-if test "$enable_wbemdisp_Printer" -eq 1; then
+if test "$enable_wbemprox_Printer" -eq 1; then
 	if test "$enable_wbemprox_fill_processor" -gt 1; then
-		abort "Patchset wbemprox-fill_processor disabled, but wbemdisp-Printer depends on that."
+		abort "Patchset wbemprox-fill_processor disabled, but wbemprox-Printer depends on that."
 	fi
 	enable_wbemprox_fill_processor=1
 fi
@@ -7520,7 +7520,7 @@ if test "$enable_wbemprox_fill_processor" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wbemdisp-Printer
+# Patchset wbemprox-Printer
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	wbemprox-fill_processor
@@ -7531,8 +7531,8 @@ fi
 # | Modified files:
 # |   *	dlls/wbemprox/builtin.c
 # |
-if test "$enable_wbemdisp_Printer" -eq 1; then
-	patch_apply wbemdisp-Printer/0001-wbemprox-Provide-DeviceID-Location-and-PortName-for-.patch
+if test "$enable_wbemprox_Printer" -eq 1; then
+	patch_apply wbemprox-Printer/0001-wbemprox-Provide-DeviceID-Location-and-PortName-for-.patch
 	(
 		echo '+    { "Michael Müller", "wbemprox: Provide DeviceID, Location and PortName for printers.", 1 },';
 	) >> "$patchlist"

@@ -7049,14 +7049,20 @@ fi
 # |   *	[#42010] Move the auto radio button group logic from BM_SETCHECK to WM_LBUTTONUP handler
 # |
 # | Modified files:
-# |   *	dlls/user32/button.c, dlls/user32/tests/msg.c
+# |   *	dlls/user32/button.c, dlls/user32/dialog.c, dlls/user32/tests/msg.c, dlls/user32/tests/resource.rc
 # |
 if test "$enable_user32_Auto_Radio_Button" -eq 1; then
 	patch_apply user32-Auto_Radio_Button/0001-user32-Move-the-auto-radio-button-group-logic-from-B.patch
 	patch_apply user32-Auto_Radio_Button/0002-user32-tests-Add-a-message-test-for-group-of-radio-b.patch
+	patch_apply user32-Auto_Radio_Button/0003-user32-tests-Simplify-the-test-for-BM_CLICK-on-autor.patch
+	patch_apply user32-Auto_Radio_Button/0004-user32-tests-Add-a-test-for-navigating-a-group-of-bu.patch
+	patch_apply user32-Auto_Radio_Button/0005-user32-Add-support-for-navigating-a-group-of-radio-b.patch
 	(
 		echo '+    { "Dmitry Timoshkov", "user32: Move the auto radio button group logic from BM_SETCHECK to WM_LBUTTONUP handler.", 1 },';
 		echo '+    { "Dmitry Timoshkov", "user32/tests: Add a message test for group of radio buttons.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "user32/tests: Simplify the test for BM_CLICK on autoradio button by using a dialog.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "user32/tests: Add a test for navigating a group of buttons using keyboard events.", 1 },';
+		echo '+    { "Dmitry Timoshkov", "user32: Add support for navigating a group of radio buttons using a keyboard.", 1 },';
 	) >> "$patchlist"
 fi
 

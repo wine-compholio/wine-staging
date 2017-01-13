@@ -4359,8 +4359,11 @@ fi
 
 # Patchset server-File_Permissions
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38970] Improve mapping of DACL to file permissions
+# |
 # | Modified files:
-# |   *	dlls/advapi32/tests/security.c, dlls/ntdll/tests/file.c, server/fd.c
+# |   *	dlls/advapi32/tests/security.c, dlls/ntdll/tests/file.c, server/fd.c, server/file.c
 # |
 if test "$enable_server_File_Permissions" -eq 1; then
 	patch_apply server-File_Permissions/0001-server-Improve-STATUS_CANNOT_DELETE-checks-for-direc.patch
@@ -4370,6 +4373,7 @@ if test "$enable_server_File_Permissions" -eq 1; then
 	patch_apply server-File_Permissions/0005-advapi32-tests-Add-ACL-inheritance-tests-for-creatin.patch
 	patch_apply server-File_Permissions/0006-ntdll-tests-Added-tests-for-open-behaviour-on-readon.patch
 	patch_apply server-File_Permissions/0007-server-FILE_WRITE_ATTRIBUTES-should-succeed-for-read.patch
+	patch_apply server-File_Permissions/0008-server-Improve-mapping-of-DACL-to-file-permissions.patch
 	(
 		echo '+    { "Sebastian Lackner", "server: Improve STATUS_CANNOT_DELETE checks for directory case.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Allow to open files without any permission bits.", 2 },';
@@ -4378,6 +4382,7 @@ if test "$enable_server_File_Permissions" -eq 1; then
 		echo '+    { "Sebastian Lackner", "advapi32/tests: Add ACL inheritance tests for creating subdirectories with NtCreateFile.", 1 },';
 		echo '+    { "Qian Hong", "ntdll/tests: Added tests for open behaviour on readonly files.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: FILE_WRITE_ATTRIBUTES should succeed for readonly files.", 1 },';
+		echo '+    { "Sebastian Lackner", "server: Improve mapping of DACL to file permissions.", 1 },';
 	) >> "$patchlist"
 fi
 

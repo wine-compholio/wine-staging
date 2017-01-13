@@ -174,6 +174,7 @@ patch_enable_all ()
 	enable_kernel32_COMSPEC="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Cwd_Startup_Info="$1"
+	enable_kernel32_Debugger="$1"
 	enable_kernel32_FindFirstFile="$1"
 	enable_kernel32_GetCurrentPackageFamilyName="$1"
 	enable_kernel32_GetShortPathName="$1"
@@ -717,6 +718,9 @@ patch_enable ()
 			;;
 		kernel32-Cwd_Startup_Info)
 			enable_kernel32_Cwd_Startup_Info="$2"
+			;;
+		kernel32-Debugger)
+			enable_kernel32_Debugger="$2"
 			;;
 		kernel32-FindFirstFile)
 			enable_kernel32_FindFirstFile="$2"
@@ -4433,6 +4437,18 @@ if test "$enable_kernel32_Cwd_Startup_Info" -eq 1; then
 	patch_apply kernel32-Cwd_Startup_Info/0001-kernel32-Allow-non-nullterminated-string-as-working-.patch
 	(
 		echo '+    { "Sebastian Lackner", "kernel32: Allow non-nullterminated string as working directory in create_startup_info.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-Debugger
+# |
+# | Modified files:
+# |   *	dlls/kernel32/except.c
+# |
+if test "$enable_kernel32_Debugger" -eq 1; then
+	patch_apply kernel32-Debugger/0001-kernel32-Always-start-debugger-on-WinSta0.patch
+	(
+		echo '+    { "Sebastian Lackner", "kernel32: Always start debugger on WinSta0.", 1 },';
 	) >> "$patchlist"
 fi
 

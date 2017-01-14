@@ -232,6 +232,7 @@ patch_enable_all ()
 	enable_ntdll_Loader_Machine_Type="$1"
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtQueryEaFile="$1"
+	enable_ntdll_NtQueryPerformanceCounter="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetInformationToken="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
@@ -896,6 +897,9 @@ patch_enable ()
 			;;
 		ntdll-NtQueryEaFile)
 			enable_ntdll_NtQueryEaFile="$2"
+			;;
+		ntdll-NtQueryPerformanceCounter)
+			enable_ntdll_NtQueryPerformanceCounter="$2"
 			;;
 		ntdll-NtQuerySection)
 			enable_ntdll_NtQuerySection="$2"
@@ -5443,6 +5447,18 @@ if test "$enable_ntdll_NtAccessCheck" -eq 1; then
 	patch_apply ntdll-NtAccessCheck/0001-ntdll-Improve-invalid-paramater-handling-in-NtAccess.patch
 	(
 		echo '+    { "Qian Hong", "ntdll: Improve invalid paramater handling in NtAccessCheck.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtQueryPerformanceCounter
+# |
+# | Modified files:
+# |   *	dlls/ntdll/tests/time.c, dlls/ntdll/time.c
+# |
+if test "$enable_ntdll_NtQueryPerformanceCounter" -eq 1; then
+	patch_apply ntdll-NtQueryPerformanceCounter/0001-ntdll-Catch-page-faults-in-NtQueryPerformanceCounter.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Catch page faults in NtQueryPerformanceCounter.", 1 },';
 	) >> "$patchlist"
 fi
 

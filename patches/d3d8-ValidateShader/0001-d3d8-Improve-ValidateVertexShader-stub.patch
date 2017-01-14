@@ -1,0 +1,156 @@
+From 3dc821fe683d1e17976ca9367465c1412e1140b4 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 14 Jan 2017 07:50:36 +0100
+Subject: d3d8: Improve ValidateVertexShader stub.
+
+---
+ dlls/d3d8/d3d8_main.c    | 43 ++++++++++++++++++++++---------------------
+ dlls/d3d8/tests/device.c | 40 +++++++++++++++++++++++++---------------
+ 2 files changed, 47 insertions(+), 36 deletions(-)
+
+diff --git a/dlls/d3d8/d3d8_main.c b/dlls/d3d8/d3d8_main.c
+index 8ac704c364c..2ab0414b7f2 100644
+--- a/dlls/d3d8/d3d8_main.c
++++ b/dlls/d3d8/d3d8_main.c
+@@ -58,38 +58,39 @@ IDirect3D8 * WINAPI DECLSPEC_HOTPATCH Direct3DCreate8(UINT sdk_version)
+ 
+ /***********************************************************************
+  *              ValidateVertexShader (D3D8.@)
+- *
+- * I've seen reserved1 and reserved2 always passed as 0's
+- * bool seems always passed as 0 or 1, but other values work as well...
+- * toto       result?
+  */
+-HRESULT WINAPI ValidateVertexShader(DWORD* vertexshader, DWORD* reserved1, DWORD* reserved2, BOOL bool, DWORD* toto)
++HRESULT WINAPI ValidateVertexShader(DWORD *vertexshader, DWORD *reserved1, DWORD *reserved2,
++                                    BOOL return_error, char **errors)
+ {
+-  HRESULT ret;
+-  static BOOL warned;
+-
+-  if (TRACE_ON(d3d8) || !warned) {
+-      FIXME("(%p %p %p %d %p): stub\n", vertexshader, reserved1, reserved2, bool, toto);
+-      warned = TRUE;
+-  }
++    const char *message = "";
++    HRESULT hr = E_FAIL;
+ 
+-  if (!vertexshader)
+-      return E_FAIL;
++    TRACE("(%p %p %p %d %p): semi-stub\n", vertexshader, reserved1, reserved2, return_error, errors);
+ 
+-  if (reserved1 || reserved2)
+-      return E_FAIL;
++    if (!vertexshader)
++    {
++        message = "(Global Validation Error) Version Token: Code pointer cannot be NULL.\n";
++        goto done;
++    }
+ 
+-  switch(*vertexshader) {
++    switch (*vertexshader)
++    {
+         case 0xFFFE0101:
+         case 0xFFFE0100:
+-            ret=S_OK;
++            hr = S_OK;
+             break;
++
+         default:
+             WARN("Invalid shader version token %#x.\n", *vertexshader);
+-            ret=E_FAIL;
+-        }
++            message = "(Global Validation Error) Version Token: Unsupported vertex shader version.\n";
++    }
+ 
+-  return ret;
++done:
++    if (!return_error) message = "";
++    if (errors && (*errors = HeapAlloc(GetProcessHeap(), 0, strlen(message) + 1)))
++        strcpy(*errors, message);
++
++    return hr;
+ }
+ 
+ /***********************************************************************
+diff --git a/dlls/d3d8/tests/device.c b/dlls/d3d8/tests/device.c
+index 28c6af32e0c..1368ce3a2cf 100644
+--- a/dlls/d3d8/tests/device.c
++++ b/dlls/d3d8/tests/device.c
+@@ -50,7 +50,7 @@ struct device_desc
+ 
+ static DEVMODEW registry_mode;
+ 
+-static HRESULT (WINAPI *ValidateVertexShader)(DWORD *, DWORD *, DWORD *, int, DWORD *);
++static HRESULT (WINAPI *ValidateVertexShader)(DWORD *, DWORD *, DWORD *, BOOL, char **);
+ static HRESULT (WINAPI *ValidatePixelShader)(DWORD *, DWORD *, int, DWORD *);
+ 
+ static BOOL (WINAPI *pGetCursorInfo)(PCURSORINFO);
+@@ -4238,18 +4238,31 @@ static void test_validate_vs(void)
+         0x00000009, 0xc0080000, 0x90e40000, 0xa0e40003,                         /* dp4 oPos.w, v0, c3           */
+         0x0000ffff,                                                             /* end                          */
+     };
++    char *errors;
+     HRESULT hr;
+ 
+     hr = ValidateVertexShader(0, 0, 0, 0, 0);
+     ok(hr == E_FAIL, "Got unexpected hr %#x.\n", hr);
+     hr = ValidateVertexShader(0, 0, 0, 1, 0);
+     ok(hr == E_FAIL, "Got unexpected hr %#x.\n", hr);
++
++    errors = (void *)0xdeadbeef;
++    hr = ValidateVertexShader(0, 0, 0, 0, &errors);
++    ok(hr == E_FAIL, "Got unexpected hr %#x.\n", hr);
++    ok(!strcmp(errors, ""), "Got unexpected string '%s'.\n", errors);
++    HeapFree(GetProcessHeap(), 0, errors);
++
++    errors = (void *)0xdeadbeef;
++    hr = ValidateVertexShader(0, 0, 0, 1, &errors);
++    ok(hr == E_FAIL, "Got unexpected hr %#x.\n", hr);
++    ok(strstr(errors, "Validation Error") != NULL, "Got unexpected string '%s'.\n", errors);
++    HeapFree(GetProcessHeap(), 0, errors);
++
+     hr = ValidateVertexShader(vs, 0, 0, 0, 0);
+     ok(hr == S_OK, "Got unexpected hr %#x.\n", hr);
+-
+     hr = ValidateVertexShader(vs, 0, 0, 1, 0);
+     ok(hr == S_OK, "Got unexpected hr %#x.\n", hr);
+-    /* Seems to do some version checking. */
++
+     *vs = 0xfffe0100;                                                           /* vs_1_0                       */
+     hr = ValidateVertexShader(vs, 0, 0, 0, 0);
+     ok(hr == S_OK, "Got unexpected hr %#x.\n", hr);
+@@ -4257,21 +4270,18 @@ static void test_validate_vs(void)
+     *vs = 0xfffe0102;                                                           /* bogus version                */
+     hr = ValidateVertexShader(vs, 0, 0, 1, 0);
+     ok(hr == E_FAIL, "Got unexpected hr %#x.\n", hr);
+-    /* I've seen that applications always pass the 2nd and 3rd parameter as 0.
+-     * Simple test with non-zero parameters. */
+-    *vs = 0xfffe0101;                                                           /* vs_1_1                       */
+-    hr = ValidateVertexShader(vs, vs, 0, 1, 0);
++
++    errors = (void *)0xdeadbeef;
++    hr = ValidateVertexShader(vs, 0, 0, 0, &errors);
+     ok(hr == E_FAIL, "Got unexpected hr %#x.\n", hr);
++    ok(!strcmp(errors, ""), "Got unexpected string '%s'.\n", errors);
++    HeapFree(GetProcessHeap(), 0, errors);
+ 
+-    hr = ValidateVertexShader(vs, 0, vs, 1, 0);
++    errors = (void *)0xdeadbeef;
++    hr = ValidateVertexShader(vs, 0, 0, 1, &errors);
+     ok(hr == E_FAIL, "Got unexpected hr %#x.\n", hr);
+-    /* I've seen the 4th parameter always passed as either 0 or 1, but passing
+-     * other values doesn't seem to hurt. */
+-    hr = ValidateVertexShader(vs, 0, 0, 12345, 0);
+-    ok(hr == S_OK, "Got unexpected hr %#x.\n", hr);
+-    /* What is the 5th parameter? The following seems to work ok. */
+-    hr = ValidateVertexShader(vs, 0, 0, 1, vs);
+-    ok(hr == S_OK, "Got unexpected hr %#x.\n", hr);
++    ok(strstr(errors, "Validation Error") != NULL, "Got unexpected string '%s'.\n", errors);
++    HeapFree(GetProcessHeap(), 0, errors);
+ }
+ 
+ static void test_validate_ps(void)
+-- 
+2.11.0
+

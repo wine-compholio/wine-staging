@@ -111,6 +111,7 @@ patch_enable_all ()
 	enable_crypt32_CryptUnprotectMemory="$1"
 	enable_d3d10_1_Forwards="$1"
 	enable_d3d11_ID3D11Texture1D="$1"
+	enable_d3d8_ValidateShader="$1"
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Surface_Refcount="$1"
 	enable_d3d9_Tests="$1"
@@ -534,6 +535,9 @@ patch_enable ()
 			;;
 		d3d11-ID3D11Texture1D)
 			enable_d3d11_ID3D11Texture1D="$2"
+			;;
+		d3d8-ValidateShader)
+			enable_d3d8_ValidateShader="$2"
 			;;
 		d3d9-DesktopWindow)
 			enable_d3d9_DesktopWindow="$2"
@@ -3305,6 +3309,23 @@ if test "$enable_d3d11_ID3D11Texture1D" -eq 1; then
 		echo '+    { "Michael Müller", "d3d11/tests: Prepare test_texture for non 2d textures.", 1 },';
 		echo '+    { "Michael Müller", "d3d11/tests: Prepare test_texture for 1d textures.", 1 },';
 		echo '+    { "Michael Müller", "d3d11/tests: Add some basic 1d texture tests in test_texture.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3d8-ValidateShader
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40036] Improve stubs for Validate{Vertex,Pixel}Shader
+# |
+# | Modified files:
+# |   *	dlls/d3d8/d3d8_main.c, dlls/d3d8/tests/device.c
+# |
+if test "$enable_d3d8_ValidateShader" -eq 1; then
+	patch_apply d3d8-ValidateShader/0001-d3d8-Improve-ValidateVertexShader-stub.patch
+	patch_apply d3d8-ValidateShader/0002-d3d8-Improve-ValidatePixelShader-stub.patch
+	(
+		echo '+    { "Sebastian Lackner", "d3d8: Improve ValidateVertexShader stub.", 1 },';
+		echo '+    { "Sebastian Lackner", "d3d8: Improve ValidatePixelShader stub.", 1 },';
 	) >> "$patchlist"
 fi
 

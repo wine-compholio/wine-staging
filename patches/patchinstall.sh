@@ -434,6 +434,7 @@ patch_enable_all ()
 	enable_wtsapi32_WTSQueryUserToken="$1"
 	enable_wuauserv_Dummy_Service="$1"
 	enable_wusa_MSU_Package_Installer="$1"
+	enable_xinput9_1_0_Parentsrc="$1"
 }
 
 # Enable or disable all categories
@@ -1504,6 +1505,9 @@ patch_enable ()
 			;;
 		wusa-MSU_Package_Installer)
 			enable_wusa_MSU_Package_Installer="$2"
+			;;
+		xinput9_1_0-Parentsrc)
+			enable_xinput9_1_0_Parentsrc="$2"
 			;;
 		*)
 			return 1
@@ -8970,6 +8974,21 @@ if test "$enable_wusa_MSU_Package_Installer" -eq 1; then
 		echo '+    { "Sebastian Lackner", "wusa: Add workaround to be compatible with Vista packages.", 1 },';
 		echo '+    { "Sebastian Lackner", "wusa: Improve tracing of installation process.", 1 },';
 		echo '+    { "Michael Müller", "wusa: Print warning when encountering msdelta compressed files.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset xinput9_1_0-Parentsrc
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42154] Build independent xinput9_1_0.dll instead of using forwards
+# |
+# | Modified files:
+# |   *	dlls/xinput9_1_0/Makefile.in, dlls/xinput9_1_0/xinput9_1_0.spec
+# |
+if test "$enable_xinput9_1_0_Parentsrc" -eq 1; then
+	patch_apply xinput9_1_0-Parentsrc/0001-xinput9_1_0-Build-independent-xinput9_1_0.dll-instea.patch
+	(
+		echo '+    { "Michael Müller", "xinput9_1_0: Build independent xinput9_1_0.dll instead of using forwards.", 1 },';
 	) >> "$patchlist"
 fi
 

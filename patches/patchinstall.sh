@@ -147,6 +147,7 @@ patch_enable_all ()
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
+	enable_dsound_enumerate_mmdevices="$1"
 	enable_dxdiagn_Display_Information="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
@@ -644,6 +645,9 @@ patch_enable ()
 			;;
 		dsound-Revert_Cleanup)
 			enable_dsound_Revert_Cleanup="$2"
+			;;
+		dsound-enumerate_mmdevices)
+			enable_dsound_enumerate_mmdevices="$2"
 			;;
 		dxdiagn-Display_Information)
 			enable_dxdiagn_Display_Information="$2"
@@ -3953,6 +3957,21 @@ if test "$enable_dsound_EAX" -eq 1; then
 		echo '+    { "Sebastian Lackner", "dsound: Allow disabling of EAX support in the registry.", 1 },';
 		echo '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_ListenerProperties.", 1 },';
 		echo '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_BufferProperties.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dsound-enumerate_mmdevices
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42163] Respect return value of callback in DirectSoundEnumerateA/W
+# |
+# | Modified files:
+# |   *	dlls/dsound/dsound_main.c
+# |
+if test "$enable_dsound_enumerate_mmdevices" -eq 1; then
+	patch_apply dsound-enumerate_mmdevices/0001-dsound-Respect-return-value-of-callback-in-DirectSou.patch
+	(
+		echo '+    { "Michael Müller", "dsound: Respect return value of callback in DirectSoundEnumerateA/W.", 1 },';
 	) >> "$patchlist"
 fi
 

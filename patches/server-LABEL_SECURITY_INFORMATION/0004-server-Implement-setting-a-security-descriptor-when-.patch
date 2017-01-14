@@ -1,0 +1,147 @@
+From 402dca4fe8a333c8d76035c6b81c549be07882c8 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 12 Jan 2017 05:23:57 +0100
+Subject: server: Implement setting a security descriptor when duplicating
+ tokens.
+
+---
+ dlls/ntdll/nt.c     |  7 ++++++-
+ server/process.c    |  2 +-
+ server/protocol.def |  2 +-
+ server/security.h   |  2 +-
+ server/token.c      | 20 +++++++++++++++++---
+ 5 files changed, 26 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
+index 9347170a593..cc5c653d23e 100644
+--- a/dlls/ntdll/nt.c
++++ b/dlls/ntdll/nt.c
+@@ -87,11 +87,15 @@ NTSTATUS WINAPI NtDuplicateToken(
+         OUT PHANDLE NewToken)
+ {
+     NTSTATUS status;
++    data_size_t len;
++    struct object_attributes *objattr;
+ 
+     TRACE("(%p,0x%08x,%s,0x%08x,0x%08x,%p)\n",
+           ExistingToken, DesiredAccess, debugstr_ObjectAttributes(ObjectAttributes),
+           ImpersonationLevel, TokenType, NewToken);
+ 
++    if ((status = alloc_object_attributes( ObjectAttributes, &objattr, &len ))) return status;
++
+     if (ObjectAttributes && ObjectAttributes->SecurityQualityOfService)
+     {
+         SECURITY_QUALITY_OF_SERVICE *SecurityQOS = ObjectAttributes->SecurityQualityOfService;
+@@ -106,14 +110,15 @@ NTSTATUS WINAPI NtDuplicateToken(
+     {
+         req->handle              = wine_server_obj_handle( ExistingToken );
+         req->access              = DesiredAccess;
+-        req->attributes          = ObjectAttributes ? ObjectAttributes->Attributes : 0;
+         req->primary             = (TokenType == TokenPrimary);
+         req->impersonation_level = ImpersonationLevel;
++        wine_server_add_data( req, objattr, len );
+         status = wine_server_call( req );
+         if (!status) *NewToken = wine_server_ptr_handle( reply->new_handle );
+     }
+     SERVER_END_REQ;
+ 
++    RtlFreeHeap( GetProcessHeap(), 0, objattr );
+     return status;
+ }
+ 
+diff --git a/server/process.c b/server/process.c
+index ca5982fe061..f476cfaf0fe 100644
+--- a/server/process.c
++++ b/server/process.c
+@@ -569,7 +569,7 @@ struct thread *create_process( int fd, struct thread *parent_thread, int inherit
+                                        : alloc_handle_table( process, 0 );
+         /* Note: for security reasons, starting a new process does not attempt
+          * to use the current impersonation token for the new process */
+-        process->token = token_duplicate( parent->token, TRUE, 0 );
++        process->token = token_duplicate( parent->token, TRUE, 0, NULL );
+         process->affinity = parent->affinity;
+     }
+     if (!process->handles || !process->token) goto error;
+diff --git a/server/protocol.def b/server/protocol.def
+index 97cf5adf298..3da579650fa 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -3361,9 +3361,9 @@ enum caret_state
+ @REQ(duplicate_token)
+     obj_handle_t  handle;        /* handle to the token to duplicate */
+     unsigned int  access;        /* access rights to the new token */
+-    unsigned int  attributes;    /* object attributes */
+     int           primary;       /* is the new token to be a primary one? */
+     int           impersonation_level; /* impersonation level of the new token */
++    VARARG(objattr,object_attributes); /* object attributes */
+ @REPLY
+     obj_handle_t  new_handle; /* duplicated handle */
+ @END
+diff --git a/server/security.h b/server/security.h
+index bdb7d42f09d..0342f643187 100644
+--- a/server/security.h
++++ b/server/security.h
+@@ -54,7 +54,7 @@ extern const PSID security_domain_users_sid;
+ 
+ extern struct token *token_create_admin(void);
+ extern struct token *token_duplicate( struct token *src_token, unsigned primary,
+-                                      int impersonation_level );
++                                      int impersonation_level, const struct security_descriptor *sd );
+ extern int token_check_privileges( struct token *token, int all_required,
+                                    const LUID_AND_ATTRIBUTES *reqprivs,
+                                    unsigned int count, LUID_AND_ATTRIBUTES *usedprivs);
+diff --git a/server/token.c b/server/token.c
+index b903420bbe3..74a97bb1319 100644
+--- a/server/token.c
++++ b/server/token.c
+@@ -521,7 +521,7 @@ static struct token *create_token( unsigned primary, const SID *user,
+ }
+ 
+ struct token *token_duplicate( struct token *src_token, unsigned primary,
+-                               int impersonation_level )
++                               int impersonation_level, const struct security_descriptor *sd )
+ {
+     const luid_t *modified_id =
+         primary || (impersonation_level == src_token->impersonation_level) ?
+@@ -571,6 +571,15 @@ struct token *token_duplicate( struct token *src_token, unsigned primary,
+             return NULL;
+         }
+ 
++    if (sd)
++    {
++        default_set_sd( &token->obj, sd,
++                        OWNER_SECURITY_INFORMATION |
++                        GROUP_SECURITY_INFORMATION |
++                        DACL_SECURITY_INFORMATION  |
++                        SACL_SECURITY_INFORMATION );
++    }
++
+     return token;
+ }
+ 
+@@ -1141,15 +1150,20 @@ DECL_HANDLER(get_token_privileges)
+ DECL_HANDLER(duplicate_token)
+ {
+     struct token *src_token;
++    struct unicode_str name;
++    const struct security_descriptor *sd;
++    const struct object_attributes *objattr = get_req_object_attributes( &sd, &name, NULL );
++
++    if (!objattr) return;
+ 
+     if ((src_token = (struct token *)get_handle_obj( current->process, req->handle,
+                                                      TOKEN_DUPLICATE,
+                                                      &token_ops )))
+     {
+-        struct token *token = token_duplicate( src_token, req->primary, req->impersonation_level );
++        struct token *token = token_duplicate( src_token, req->primary, req->impersonation_level, sd );
+         if (token)
+         {
+-            reply->new_handle = alloc_handle( current->process, token, req->access, req->attributes);
++            reply->new_handle = alloc_handle_no_access_check( current->process, token, req->access, objattr->attributes );
+             release_object( token );
+         }
+         release_object( src_token );
+-- 
+2.11.0
+

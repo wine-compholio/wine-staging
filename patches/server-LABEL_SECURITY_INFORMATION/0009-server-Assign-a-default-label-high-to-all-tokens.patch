@@ -1,0 +1,196 @@
+From 43ddf2395d512c436fb8912c81d8596f6a16aaab Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 12 Jan 2017 05:58:02 +0100
+Subject: server: Assign a default label (high) to all tokens.
+
+---
+ dlls/advapi32/tests/security.c | 42 ++++++++++++++++++++++++++++++++-
+ server/process.c               |  7 ++++++
+ server/security.h              |  2 ++
+ server/token.c                 | 53 ++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 103 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
+index 8f0cff78695..44321553226 100644
+--- a/dlls/advapi32/tests/security.c
++++ b/dlls/advapi32/tests/security.c
+@@ -6436,6 +6436,8 @@ static void test_integrity(void)
+                                                     {SECURITY_MANDATORY_LOW_RID}};
+     static SID medium_level = {SID_REVISION, 1, {SECURITY_MANDATORY_LABEL_AUTHORITY},
+                                                     {SECURITY_MANDATORY_MEDIUM_RID}};
++    static SID high_level = {SID_REVISION, 1, {SECURITY_MANDATORY_LABEL_AUTHORITY},
++                                                    {SECURITY_MANDATORY_HIGH_RID}};
+     SYSTEM_MANDATORY_LABEL_ACE *ace;
+     char buffer_sd[SECURITY_DESCRIPTOR_MIN_LENGTH];
+     SECURITY_DESCRIPTOR *sd2, *sd = (SECURITY_DESCRIPTOR *)&buffer_sd;
+@@ -6657,6 +6659,45 @@ static void test_integrity(void)
+ 
+     HeapFree(GetProcessHeap(), 0, sd2);
+     CloseHandle(handle);
++
++    ret = OpenProcessToken(GetCurrentProcess(), READ_CONTROL, &handle);
++    ok(ret, "got %d with %d (expected TRUE)\n", ret, GetLastError());
++
++    ret = GetKernelObjectSecurity(handle, LABEL_SECURITY_INFORMATION, NULL, 0, &size);
++    ok(!ret && GetLastError() == ERROR_INSUFFICIENT_BUFFER,
++       "GetKernelObjectSecurity failed with %u\n", GetLastError());
++
++    sd2 = HeapAlloc(GetProcessHeap(), 0, size);
++    ret = GetKernelObjectSecurity(handle, LABEL_SECURITY_INFORMATION, sd2, size, &size);
++    ok(ret, "GetKernelObjectSecurity failed %u\n", GetLastError());
++
++    sAcl = (void *)0xdeadbeef;
++    present = FALSE;
++    defaulted = TRUE;
++    ret = GetSecurityDescriptorSacl(sd2, &present, &sAcl, &defaulted);
++    ok(ret, "GetSecurityDescriptorSacl failed with %u\n", GetLastError());
++    ok(present, "sAcl not present\n");
++    ok(sAcl != (void *)0xdeadbeef, "sAcl not set\n");
++    ok(sAcl->AceCount == 1, "Expected 1 ACEs, got %d\n", sAcl->AceCount);
++    ok(!defaulted, "sAcl defaulted\n");
++
++    index = 0;
++    found = FALSE;
++    while (pGetAce( sAcl, index++, (void **)&ace ))
++    {
++        if (ace->Header.AceType == SYSTEM_MANDATORY_LABEL_ACE_TYPE &&
++            (EqualSid(&ace->SidStart, &medium_level) || EqualSid(&ace->SidStart, &high_level)))
++        {
++            found = TRUE;
++            ok(ace->Header.AceFlags == 0, "Expected 0 as flags, got %x\n", ace->Header.AceFlags);
++            ok(ace->Mask == SYSTEM_MANDATORY_LABEL_NO_WRITE_UP,
++               "Expected SYSTEM_MANDATORY_LABEL_NO_WRITE_UP as flag, got %x\n", ace->Mask);
++        }
++    }
++    ok(found, "Could not find medium/high mandatory label\n");
++
++    HeapFree(GetProcessHeap(), 0, sd2);
++    CloseHandle(handle);
+ }
+ 
+ static void test_AdjustTokenPrivileges(void)
+@@ -7274,7 +7315,6 @@ static void test_token_security_descriptor(void)
+     defaulted = TRUE;
+     ret = GetSecurityDescriptorDacl(sd2, &present, &pAcl2, &defaulted);
+     ok(ret, "GetSecurityDescriptorDacl failed with %u\n", GetLastError());
+-    todo_wine
+     ok(present, "pAcl2 not present\n");
+     ok(pAcl2 != (void *)0xdeadbeef, "pAcl2 not set\n");
+     ok(!defaulted, "pAcl2 defaulted\n");
+diff --git a/server/process.c b/server/process.c
+index f476cfaf0fe..eaf61eaea99 100644
+--- a/server/process.c
++++ b/server/process.c
+@@ -574,6 +574,13 @@ struct thread *create_process( int fd, struct thread *parent_thread, int inherit
+     }
+     if (!process->handles || !process->token) goto error;
+ 
++    /* Assign high security label to token. The default would be medium, but wine provides
++     * admin access to all applications, so high makes more sense. For further information:
++     * "Default integrity level" at https://msdn.microsoft.com/en-us/library/bb625963.aspx
++     */
++    if (!token_assign_label( process->token, security_high_label_sid ))
++        goto error;
++
+     /* create the main thread */
+     if (pipe( request_pipe ) == -1)
+     {
+diff --git a/server/security.h b/server/security.h
+index 0342f643187..ee927f91a3d 100644
+--- a/server/security.h
++++ b/server/security.h
+@@ -48,11 +48,13 @@ extern const PSID security_local_system_sid;
+ extern const PSID security_builtin_users_sid;
+ extern const PSID security_builtin_admins_sid;
+ extern const PSID security_domain_users_sid;
++extern const PSID security_high_label_sid;
+ 
+ 
+ /* token functions */
+ 
+ extern struct token *token_create_admin(void);
++extern int token_assign_label( struct token *token, PSID label );
+ extern struct token *token_duplicate( struct token *src_token, unsigned primary,
+                                       int impersonation_level, const struct security_descriptor *sd );
+ extern int token_check_privileges( struct token *token, int all_required,
+diff --git a/server/token.c b/server/token.c
+index 74a97bb1319..99a62de0ffa 100644
+--- a/server/token.c
++++ b/server/token.c
+@@ -70,6 +70,7 @@ static const SID interactive_sid = { SID_REVISION, 1, { SECURITY_NT_AUTHORITY },
+ static const SID anonymous_logon_sid = { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_ANONYMOUS_LOGON_RID } };
+ static const SID authenticated_user_sid = { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_AUTHENTICATED_USER_RID } };
+ static const SID local_system_sid = { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_LOCAL_SYSTEM_RID } };
++static const SID high_label_sid = { SID_REVISION, 1, { SECURITY_MANDATORY_LABEL_AUTHORITY }, { SECURITY_MANDATORY_HIGH_RID } };
+ static const struct /* same fields as struct SID */
+ {
+     BYTE Revision;
+@@ -108,6 +109,7 @@ const PSID security_local_user_sid = (PSID)&local_user_sid;
+ const PSID security_builtin_admins_sid = (PSID)&builtin_admins_sid;
+ const PSID security_builtin_users_sid = (PSID)&builtin_users_sid;
+ const PSID security_domain_users_sid = (PSID)&domain_users_sid;
++const PSID security_high_label_sid = (PSID)&high_label_sid;
+ 
+ static luid_t prev_luid_value = { 1000, 0 };
+ 
+@@ -631,6 +633,57 @@ struct sid_data
+     unsigned int subauth[MAX_SUBAUTH_COUNT];
+ };
+ 
++static struct security_descriptor *create_security_label_sd( PSID label_sid )
++{
++    size_t sid_len   = security_sid_len( label_sid );
++    size_t sacl_size = sizeof(ACL) + FIELD_OFFSET(SYSTEM_MANDATORY_LABEL_ACE, SidStart) + sid_len;
++    size_t sd_size   = sizeof(struct security_descriptor) + sacl_size;
++    SYSTEM_MANDATORY_LABEL_ACE *smla;
++    struct security_descriptor *sd;
++    ACL *sacl;
++
++    sd = mem_alloc( sd_size );
++    if (!sd) return NULL;
++
++    sd->control   = SE_SACL_PRESENT;
++    sd->owner_len = 0;
++    sd->group_len = 0;
++    sd->sacl_len  = sacl_size;
++    sd->dacl_len  = 0;
++
++    sacl = (ACL *)(sd + 1);
++    sacl->AclRevision = ACL_REVISION;
++    sacl->Sbz1 = 0;
++    sacl->AclSize = sacl_size;
++    sacl->AceCount = 1;
++    sacl->Sbz2 = 0;
++
++    smla = (SYSTEM_MANDATORY_LABEL_ACE *)(sacl + 1);
++    smla->Header.AceType = SYSTEM_MANDATORY_LABEL_ACE_TYPE;
++    smla->Header.AceFlags = 0;
++    smla->Header.AceSize = FIELD_OFFSET(SYSTEM_MANDATORY_LABEL_ACE, SidStart) + sid_len;
++    smla->Mask = SYSTEM_MANDATORY_LABEL_NO_WRITE_UP;
++    memcpy( &smla->SidStart, label_sid, sid_len );
++
++    assert( sd_is_valid( sd, sd_size ) );
++    return sd;
++}
++
++int token_assign_label( struct token *token, PSID label )
++{
++    struct security_descriptor *sd;
++    int ret = 0;
++
++    if ((sd = create_security_label_sd( label )))
++    {
++        /* FIXME: this overwrites the complete SACL, not only the label */
++        ret = set_sd_defaults_from_token( &token->obj, sd, SACL_SECURITY_INFORMATION, token );
++        free( sd );
++    }
++
++    return ret;
++}
++
+ struct token *token_create_admin( void )
+ {
+     struct token *token = NULL;
+-- 
+2.11.0
+

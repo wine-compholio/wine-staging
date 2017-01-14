@@ -1,0 +1,129 @@
+From 5ee9eaecad03eda9e6eb45abc23ce20f49f17c13 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 12 Jan 2017 05:28:30 +0100
+Subject: advapi32/tests: Add basic tests for token security descriptors.
+
+---
+ dlls/advapi32/tests/security.c | 87 +++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 86 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
+index 263d2f11544..8af1d0604a4 100644
+--- a/dlls/advapi32/tests/security.c
++++ b/dlls/advapi32/tests/security.c
+@@ -217,6 +217,7 @@ static void init(void)
+     pGetWindowsAccountDomainSid = (void *)GetProcAddress(hmod, "GetWindowsAccountDomainSid");
+     pGetSidIdentifierAuthority = (void *)GetProcAddress(hmod, "GetSidIdentifierAuthority");
+     pGetExplicitEntriesFromAclW = (void *)GetProcAddress(hmod, "GetExplicitEntriesFromAclW");
++    pDuplicateTokenEx = (void *)GetProcAddress(hmod, "DuplicateTokenEx");
+ 
+     myARGC = winetest_get_mainargs( &myARGV );
+ }
+@@ -3117,7 +3118,6 @@ static void test_impersonation_level(void)
+     HKEY hkey;
+     DWORD error;
+ 
+-    pDuplicateTokenEx = (void *)GetProcAddress(hmod, "DuplicateTokenEx");
+     if( !pDuplicateTokenEx ) {
+         win_skip("DuplicateTokenEx is not available\n");
+         return;
+@@ -7136,6 +7136,90 @@ static void test_GetExplicitEntriesFromAclW(void)
+     HeapFree(GetProcessHeap(), 0, old_acl);
+ }
+ 
++static void test_token_security_descriptor(void)
++{
++    ACCESS_ALLOWED_ACE *ace;
++    char buffer_sd[SECURITY_DESCRIPTOR_MIN_LENGTH];
++    SECURITY_DESCRIPTOR *sd = (SECURITY_DESCRIPTOR *)&buffer_sd, *sd2;
++    char buffer_acl[256];
++    ACL *pAcl = (ACL *)&buffer_acl, *pAcl2;
++    BOOL defaulted, present, ret, found;
++    HANDLE token, token2;
++    SECURITY_ATTRIBUTES sa;
++    DWORD size, index;
++    PSID psid;
++
++    if (!pDuplicateTokenEx || !pConvertStringSidToSidA || !pAddAccessAllowedAceEx || !pGetAce || !pSetEntriesInAclW)
++    {
++        win_skip("Some functions not available\n");
++        return;
++    }
++
++    /* Test whether we can create tokens with security descriptors */
++    ret = OpenProcessToken(GetCurrentProcess(), MAXIMUM_ALLOWED, &token);
++    ok(ret, "OpenProcessToken failed with error %u\n", GetLastError());
++
++    ret = InitializeSecurityDescriptor(sd, SECURITY_DESCRIPTOR_REVISION);
++    ok(ret, "InitializeSecurityDescriptor failed with %u\n", GetLastError());
++
++    ret = InitializeAcl(pAcl, 256, ACL_REVISION);
++    ok(ret, "InitializeAcl failed with %u\n", GetLastError());
++
++    ret = pConvertStringSidToSidA("S-1-5-6", &psid);
++    ok(ret, "ConvertStringSidToSidA failed with %u\n", GetLastError());
++
++    ret = pAddAccessAllowedAceEx(pAcl, ACL_REVISION, NO_PROPAGATE_INHERIT_ACE, GENERIC_ALL, psid);
++    ok(ret, "AddAccessAllowedAceEx failed with %u\n", GetLastError());
++
++    ret = SetSecurityDescriptorDacl(sd, TRUE, pAcl, FALSE);
++    ok(ret, "SetSecurityDescriptorDacl failed with %u\n", GetLastError());
++
++    sa.nLength              = sizeof(SECURITY_ATTRIBUTES);
++    sa.lpSecurityDescriptor = sd;
++    sa.bInheritHandle       = FALSE;
++
++    ret = pDuplicateTokenEx(token, MAXIMUM_ALLOWED, &sa, SecurityImpersonation, TokenImpersonation, &token2);
++    ok(ret, "DuplicateTokenEx failed with %u\n", GetLastError());
++
++    ret = GetKernelObjectSecurity(token2, DACL_SECURITY_INFORMATION, NULL, 0, &size);
++    ok(!ret && GetLastError() == ERROR_INSUFFICIENT_BUFFER,
++       "GetKernelObjectSecurity failed with %u\n", GetLastError());
++
++    sd2 = HeapAlloc(GetProcessHeap(), 0, size);
++    ret = GetKernelObjectSecurity(token2, DACL_SECURITY_INFORMATION, sd2, size, &size);
++    ok(ret, "GetKernelObjectSecurity failed %u\n", GetLastError());
++
++    pAcl2 = (void *)0xdeadbeef;
++    present = FALSE;
++    defaulted = TRUE;
++    ret = GetSecurityDescriptorDacl(sd2, &present, &pAcl2, &defaulted);
++    ok(ret, "GetSecurityDescriptorDacl failed with %u\n", GetLastError());
++    ok(present, "pAcl2 not present\n");
++    ok(pAcl2 != (void *)0xdeadbeef, "pAcl2 not set\n");
++    ok(pAcl2->AceCount == 1, "Expected 1 ACEs, got %d\n", pAcl2->AceCount);
++    ok(!defaulted, "pAcl2 defaulted\n");
++
++    index = 0;
++    found = FALSE;
++    while (pGetAce( pAcl2, index++, (void **)&ace ))
++    {
++        if (ace->Header.AceType == ACCESS_ALLOWED_ACE_TYPE && EqualSid(&ace->SidStart, psid))
++        {
++            found = TRUE;
++            ok(ace->Header.AceFlags == NO_PROPAGATE_INHERIT_ACE,
++               "Expected NO_PROPAGATE_INHERIT_ACE as flags, got %x\n", ace->Header.AceFlags);
++        }
++    }
++    ok(found, "Could not find access allowed ace\n");
++
++    HeapFree( GetProcessHeap(), 0, sd2);
++
++    LocalFree(psid);
++
++    CloseHandle(token2);
++    CloseHandle(token);
++}
++
+ START_TEST(security)
+ {
+     init();
+@@ -7185,4 +7269,5 @@ START_TEST(security)
+     test_GetSidIdentifierAuthority();
+     test_pseudo_tokens();
+     test_GetExplicitEntriesFromAclW();
++    test_token_security_descriptor();
+ }
+-- 
+2.11.0
+

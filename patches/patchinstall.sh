@@ -290,6 +290,7 @@ patch_enable_all ()
 	enable_server_File_Permissions="$1"
 	enable_server_Inherited_ACLs="$1"
 	enable_server_Key_State="$1"
+	enable_server_LABEL_SECURITY_INFORMATION="$1"
 	enable_server_Map_EXDEV_Error="$1"
 	enable_server_Misc_ACL="$1"
 	enable_server_PeekMessage="$1"
@@ -1068,6 +1069,9 @@ patch_enable ()
 			;;
 		server-Key_State)
 			enable_server_Key_State="$2"
+			;;
+		server-LABEL_SECURITY_INFORMATION)
+			enable_server_LABEL_SECURITY_INFORMATION="$2"
 			;;
 		server-Map_EXDEV_Error)
 			enable_server_Map_EXDEV_Error="$2"
@@ -2244,6 +2248,25 @@ if test "$enable_server_Pipe_ObjectName" -eq 1; then
 		abort "Patchset kernel32-Named_Pipe disabled, but server-Pipe_ObjectName depends on that."
 	fi
 	enable_kernel32_Named_Pipe=1
+fi
+
+if test "$enable_server_LABEL_SECURITY_INFORMATION" -eq 1; then
+	if test "$enable_advapi32_AddMandatoryAce" -gt 1; then
+		abort "Patchset advapi32-AddMandatoryAce disabled, but server-LABEL_SECURITY_INFORMATION depends on that."
+	fi
+	if test "$enable_advapi32_GetExplicitEntriesFromAclW" -gt 1; then
+		abort "Patchset advapi32-GetExplicitEntriesFromAclW disabled, but server-LABEL_SECURITY_INFORMATION depends on that."
+	fi
+	if test "$enable_server_Misc_ACL" -gt 1; then
+		abort "Patchset server-Misc_ACL disabled, but server-LABEL_SECURITY_INFORMATION depends on that."
+	fi
+	if test "$enable_server_Stored_ACLs" -gt 1; then
+		abort "Patchset server-Stored_ACLs disabled, but server-LABEL_SECURITY_INFORMATION depends on that."
+	fi
+	enable_advapi32_AddMandatoryAce=1
+	enable_advapi32_GetExplicitEntriesFromAclW=1
+	enable_server_Misc_ACL=1
+	enable_server_Stored_ACLs=1
 fi
 
 if test "$enable_server_Inherited_ACLs" -eq 1; then
@@ -6410,6 +6433,39 @@ if test "$enable_server_Key_State" -eq 1; then
 	(
 		echo '+    { "Sebastian Lackner", "server: Introduce a helper function to update the thread_input key state.", 1 },';
 		echo '+    { "Sebastian Lackner", "server: Implement locking and synchronization of keystate buffer.", 3 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-LABEL_SECURITY_INFORMATION
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	advapi32-AddMandatoryAce, advapi32-GetExplicitEntriesFromAclW, server-Misc_ACL, ntdll-DOS_Attributes, server-
+# | 	File_Permissions, server-Stored_ACLs
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, dlls/ntdll/nt.c, dlls/ntdll/sec.c, include/winnt.h, server/handle.c, server/object.c,
+# | 	server/process.c, server/protocol.def, server/security.h, server/token.c
+# |
+if test "$enable_server_LABEL_SECURITY_INFORMATION" -eq 1; then
+	patch_apply server-LABEL_SECURITY_INFORMATION/0001-server-Implement-querying-the-security-label-of-a-se.patch
+	patch_apply server-LABEL_SECURITY_INFORMATION/0002-server-Implement-changing-the-label-of-a-security-de.patch
+	patch_apply server-LABEL_SECURITY_INFORMATION/0003-server-Do-not-set-SE_-D-S-ACL_PRESENT-if-no-D-S-ACL-.patch
+	patch_apply server-LABEL_SECURITY_INFORMATION/0004-server-Implement-setting-a-security-descriptor-when-.patch
+	patch_apply server-LABEL_SECURITY_INFORMATION/0005-advapi32-tests-Add-basic-tests-for-token-security-de.patch
+	patch_apply server-LABEL_SECURITY_INFORMATION/0006-advapi32-tests-Show-that-tokens-do-not-inherit-secur.patch
+	patch_apply server-LABEL_SECURITY_INFORMATION/0007-advapi32-tests-Show-that-tokens-do-not-inherit-dacls.patch
+	patch_apply server-LABEL_SECURITY_INFORMATION/0008-advapi32-tests-Show-that-tokens-do-not-inherit-sacls.patch
+	patch_apply server-LABEL_SECURITY_INFORMATION/0009-server-Assign-a-default-label-high-to-all-tokens.patch
+	(
+		echo '+    { "Michael Müller", "server: Implement querying the security label of a security descriptor.", 1 },';
+		echo '+    { "Michael Müller", "server: Implement changing the label of a security descriptor.", 1 },';
+		echo '+    { "Michael Müller", "server: Do not set SE_{D,S}ACL_PRESENT if no {D,S}ACL was set.", 1 },';
+		echo '+    { "Michael Müller", "server: Implement setting a security descriptor when duplicating tokens.", 1 },';
+		echo '+    { "Michael Müller", "advapi32/tests: Add basic tests for token security descriptors.", 1 },';
+		echo '+    { "Michael Müller", "advapi32/tests: Show that tokens do not inherit security descriptors during duplication.", 1 },';
+		echo '+    { "Michael Müller", "advapi32/tests: Show that tokens do not inherit dacls while creating child processes.", 1 },';
+		echo '+    { "Michael Müller", "advapi32/tests: Show that tokens do not inherit sacls / mandatory labels while creating child processes.", 1 },';
+		echo '+    { "Michael Müller", "server: Assign a default label (high) to all tokens.", 1 },';
 	) >> "$patchlist"
 fi
 

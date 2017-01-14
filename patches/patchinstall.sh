@@ -232,6 +232,7 @@ patch_enable_all ()
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
+	enable_ntdll_NtSetInformationToken="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
@@ -892,6 +893,9 @@ patch_enable ()
 			;;
 		ntdll-NtQuerySection)
 			enable_ntdll_NtQuerySection="$2"
+			;;
+		ntdll-NtSetInformationToken)
+			enable_ntdll_NtSetInformationToken="$2"
 			;;
 		ntdll-NtSetLdtEntries)
 			enable_ntdll_NtSetLdtEntries="$2"
@@ -5410,6 +5414,21 @@ if test "$enable_ntdll_NtQuerySection" -eq 1; then
 	(
 		echo '+    { "Dmitry Timoshkov", "kernel32/tests: Add tests for NtQuerySection.", 2 },';
 		echo '+    { "Dmitry Timoshkov", "server: CreateFileMapping should not fail without SEC_COMMIT for a named file section.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtSetInformationToken
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#32907] Return success for TokenSessionId in NtSetInformationToken
+# |
+# | Modified files:
+# |   *	dlls/ntdll/nt.c
+# |
+if test "$enable_ntdll_NtSetInformationToken" -eq 1; then
+	patch_apply ntdll-NtSetInformationToken/0001-ntdll-Return-success-for-TokenSessionId-in-NtSetInfo.patch
+	(
+		echo '+    { "Michael Müller", "ntdll: Return success for TokenSessionId in NtSetInformationToken.", 1 },';
 	) >> "$patchlist"
 fi
 

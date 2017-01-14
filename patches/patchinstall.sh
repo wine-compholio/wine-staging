@@ -409,6 +409,7 @@ patch_enable_all ()
 	enable_winex11_XEMBED="$1"
 	enable_winex11__NET_ACTIVE_WINDOW="$1"
 	enable_winex11_wglShareLists="$1"
+	enable_winhlp32_Flex_Workaround="$1"
 	enable_winhttp_Accept_Headers="$1"
 	enable_winhttp_System_Proxy_Autoconfig="$1"
 	enable_wininet_Cleanup="$1"
@@ -1426,6 +1427,9 @@ patch_enable ()
 			;;
 		winex11-wglShareLists)
 			enable_winex11_wglShareLists="$2"
+			;;
+		winhlp32-Flex_Workaround)
+			enable_winhlp32_Flex_Workaround="$2"
 			;;
 		winhttp-Accept_Headers)
 			enable_winhttp_Accept_Headers="$2"
@@ -8598,6 +8602,21 @@ if test "$enable_winex11_wglShareLists" -eq 1; then
 	patch_apply winex11-wglShareLists/0001-winex11.drv-Only-warn-about-used-contexts-in-wglShar.patch
 	(
 		echo '+    { "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winhlp32-Flex_Workaround
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42132] Workaround a bug present in the current versions of Flex
+# |
+# | Modified files:
+# |   *	programs/winhlp32/macro.lex.l
+# |
+if test "$enable_winhlp32_Flex_Workaround" -eq 1; then
+	patch_apply winhlp32-Flex_Workaround/0001-winhlp32-Workaround-a-bug-in-Flex.patch
+	(
+		echo '+    { "Sebastian Lackner", "winhlp32: Workaround a bug in Flex.", 1 },';
 	) >> "$patchlist"
 fi
 

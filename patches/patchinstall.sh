@@ -212,6 +212,7 @@ patch_enable_all ()
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvfw32_ICGetDisplayFormat="$1"
 	enable_msvideo_dll16_DrawDibProfileDisplay="$1"
+	enable_msvideo16_HasThunk="$1"
 	enable_msxml3_AllowXsltScript="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_APC_Start_Process="$1"
@@ -845,6 +846,9 @@ patch_enable ()
 			;;
 		msvideo.dll16-DrawDibProfileDisplay)
 			enable_msvideo_dll16_DrawDibProfileDisplay="$2"
+			;;
+		msvideo16-HasThunk)
+			enable_msvideo16_HasThunk="$2"
 			;;
 		msxml3-AllowXsltScript)
 			enable_msxml3_AllowXsltScript="$2"
@@ -5178,6 +5182,21 @@ if test "$enable_msvideo_dll16_DrawDibProfileDisplay" -eq 1; then
 	patch_apply msvideo.dll16-DrawDibProfileDisplay/0001-msvideo.dll16-Implement-DrawDibProfileDisplay.patch
 	(
 		echo '+    { "Michael Müller", "msvideo.dll16: Implement DrawDibProfileDisplay.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msvideo16-HasThunk
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#41448] Check if any 16 bit thunks have been allocated before accessing pointer
+# |
+# | Modified files:
+# |   *	dlls/msvideo.dll16/msvideo16.c
+# |
+if test "$enable_msvideo16_HasThunk" -eq 1; then
+	patch_apply msvideo16-HasThunk/0001-msvideo16-Check-if-any-16-bit-thunks-have-been-alloc.patch
+	(
+		echo '+    { "Michael Müller", "msvideo16: Check if any 16 bit thunks have been allocated before accessing pointer.", 1 },';
 	) >> "$patchlist"
 fi
 

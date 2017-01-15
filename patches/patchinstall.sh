@@ -246,6 +246,7 @@ patch_enable_all ()
 	enable_ntdll_RtlIpStringToAddress_Stubs="$1"
 	enable_ntdll_RtlIpStringToAddress_Tests="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
+	enable_ntdll_RunlevelInformationInActivationContext="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
 	enable_ntdll_Stack_Guard_Page="$1"
 	enable_ntdll_Stack_Overflow="$1"
@@ -944,6 +945,9 @@ patch_enable ()
 			;;
 		ntdll-RtlQueryPackageIdentity)
 			enable_ntdll_RtlQueryPackageIdentity="$2"
+			;;
+		ntdll-RunlevelInformationInActivationContext)
+			enable_ntdll_RunlevelInformationInActivationContext="$2"
 			;;
 		ntdll-Serial_Port_Detection)
 			enable_ntdll_Serial_Port_Detection="$2"
@@ -5677,6 +5681,22 @@ if test "$enable_ntdll_RtlIpStringToAddress_Tests" -eq 1; then
 		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddressEx.", 6 },';
 		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv4StringToAddressEx (try 5, resend).", 1 },';
 		echo '+    { "Mark Jansen", "ntdll/tests: Add tests for RtlIpv6AddressToString and RtlIpv6AddressToStringEx.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-RunlevelInformationInActivationContext
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/actctx.c, dlls/ntdll/actctx.c, include/winnt.h
+# |
+if test "$enable_ntdll_RunlevelInformationInActivationContext" -eq 1; then
+	patch_apply ntdll-RunlevelInformationInActivationContext/0001-include-Add-run-level-information-enum-and-structure.patch
+	patch_apply ntdll-RunlevelInformationInActivationContext/0002-ntdll-Parse-execution-level-information-in-manifest-.patch
+	patch_apply ntdll-RunlevelInformationInActivationContext/0003-ntdll-Implement-RunlevelInformationInActivationConte.patch
+	(
+		echo '+    { "Michael Müller", "include: Add run level information enum and structure to winnt.h.", 1 },';
+		echo '+    { "Michael Müller", "ntdll: Parse execution level information in manifest data.", 1 },';
+		echo '+    { "Michael Müller", "ntdll: Implement RunlevelInformationInActivationContext in RtlQueryInformationActivationContext.", 1 },';
 	) >> "$patchlist"
 fi
 

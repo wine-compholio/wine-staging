@@ -212,6 +212,7 @@ patch_enable_all ()
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvfw32_ICGetDisplayFormat="$1"
 	enable_msvideo_dll16_DrawDibProfileDisplay="$1"
+	enable_msxml3_AllowXsltScript="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_APC_Start_Process="$1"
 	enable_ntdll_Activation_Context="$1"
@@ -841,6 +842,9 @@ patch_enable ()
 			;;
 		msvideo.dll16-DrawDibProfileDisplay)
 			enable_msvideo_dll16_DrawDibProfileDisplay="$2"
+			;;
+		msxml3-AllowXsltScript)
+			enable_msxml3_AllowXsltScript="$2"
 			;;
 		ntdll-APC_Performance)
 			enable_ntdll_APC_Performance="$2"
@@ -5162,6 +5166,21 @@ if test "$enable_msvideo_dll16_DrawDibProfileDisplay" -eq 1; then
 	patch_apply msvideo.dll16-DrawDibProfileDisplay/0001-msvideo.dll16-Implement-DrawDibProfileDisplay.patch
 	(
 		echo '+    { "Michael Müller", "msvideo.dll16: Implement DrawDibProfileDisplay.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msxml3-AllowXsltScript
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#41747] Ignore AllowXsltScript and AllowDocumentFunction properties in msxml
+# |
+# | Modified files:
+# |   *	dlls/msxml3/domdoc.c
+# |
+if test "$enable_msxml3_AllowXsltScript" -eq 1; then
+	patch_apply msxml3-AllowXsltScript/0001-msxml3-Accept-AllowXsltScript-and-AllowDocumentFunct.patch
+	(
+		echo '+    { "Nikolay Sivov", "msxml3: Accept AllowXsltScript and AllowDocumentFunction properties.", 1 },';
 	) >> "$patchlist"
 fi
 

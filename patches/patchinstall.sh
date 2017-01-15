@@ -287,6 +287,7 @@ patch_enable_all ()
 	enable_rasapi32_RasEnumDevicesA="$1"
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
+	enable_rstrtmgr_RmShutdown="$1"
 	enable_secur32_Zero_Buffer_Length="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
@@ -1068,6 +1069,9 @@ patch_enable ()
 			;;
 		riched20-IText_Interface)
 			enable_riched20_IText_Interface="$2"
+			;;
+		rstrtmgr-RmShutdown)
+			enable_rstrtmgr_RmShutdown="$2"
 			;;
 		secur32-Zero_Buffer_Length)
 			enable_secur32_Zero_Buffer_Length="$2"
@@ -6428,6 +6432,21 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 		echo '+    { "Jactry Zeng", "riched20: Implement ITextRange::GetStoryLength.", 1 },';
 		echo '+    { "Jactry Zeng", "riched20: Implement ITextSelection::GetStoryLength.", 1 },';
 		echo '+    { "Sebastian Lackner", "riched20: Silence repeated FIXMEs triggered by Adobe Reader.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset rstrtmgr-RmShutdown
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42093] Add stub for rstrtmgr.RmShutdown
+# |
+# | Modified files:
+# |   *	dlls/rstrtmgr/main.c, dlls/rstrtmgr/rstrtmgr.spec, include/restartmanager.h
+# |
+if test "$enable_rstrtmgr_RmShutdown" -eq 1; then
+	patch_apply rstrtmgr-RmShutdown/0001-rstrtmgr-add-RmShutdown-stub.patch
+	(
+		echo '+    { "Austin English", "rstrtmgr: Add RmShutdown stub.", 1 },';
 	) >> "$patchlist"
 fi
 

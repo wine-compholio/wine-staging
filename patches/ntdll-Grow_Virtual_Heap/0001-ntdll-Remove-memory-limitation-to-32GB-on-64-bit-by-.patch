@@ -1,0 +1,147 @@
+From 45f7d8b0e09bbb7d858752c4c0896934bc52e225 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 15 Jan 2017 17:48:58 +0100
+Subject: ntdll: Remove memory limitation to 32GB on 64-bit by growing heap
+ dynamically.
+
+---
+ dlls/ntdll/heap.c       | 46 ++++++++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/ntdll_misc.h |  3 +++
+ dlls/ntdll/virtual.c    | 28 +++++++++++++++++++++++++---
+ 3 files changed, 74 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/ntdll/heap.c b/dlls/ntdll/heap.c
+index f928ebff500..bfa7ba49b4a 100644
+--- a/dlls/ntdll/heap.c
++++ b/dlls/ntdll/heap.c
+@@ -27,6 +27,9 @@
+ #include <stdarg.h>
+ #include <stdio.h>
+ #include <string.h>
++#ifdef HAVE_SYS_MMAN_H
++# include <sys/mman.h>
++#endif
+ #ifdef HAVE_VALGRIND_MEMCHECK_H
+ #include <valgrind/memcheck.h>
+ #else
+@@ -40,6 +43,7 @@
+ #include "winnt.h"
+ #include "winternl.h"
+ #include "ntdll_misc.h"
++#include "wine/library.h"
+ #include "wine/list.h"
+ #include "wine/debug.h"
+ #include "wine/server.h"
+@@ -1048,6 +1052,48 @@ static ARENA_FREE *HEAP_FindFreeBlock( HEAP *heap, SIZE_T size,
+ }
+ 
+ 
++/* similar to HEAP_FindFreeBlock, but for the virtual heap */
++void *grow_virtual_heap( HANDLE handle, SIZE_T *size )
++{
++    HEAP *heap = HEAP_GetPtr( handle );
++    SIZE_T rounded_size, total_size;
++    SUBHEAP *subheap;
++    void *address;
++
++    assert( !(heap->flags & HEAP_GROWABLE) );
++
++    /* compute rounded size, see RtlAllocateHeap */
++    rounded_size = ROUND_SIZE( *size ) + HEAP_TAIL_EXTRA_SIZE( heap->flags );
++    if (rounded_size < *size) return NULL;
++    if (rounded_size < HEAP_MIN_DATA_SIZE) rounded_size = HEAP_MIN_DATA_SIZE;
++
++    /* compute total size, see HEAP_FindFreeBlock */
++    total_size = rounded_size + ROUND_SIZE(sizeof(SUBHEAP)) + sizeof(ARENA_INUSE) + sizeof(ARENA_FREE);
++    if (total_size < rounded_size) return NULL;
++
++    *size = (max( heap->grow_size, total_size ) + page_size - 1) & ~(page_size - 1);
++    if ((address = wine_anon_mmap( NULL, *size, PROT_READ|PROT_WRITE, 0 )) != (void *)-1)
++    {
++        if (heap->grow_size < 128 * 1024 * 1024) heap->grow_size *= 2;
++    }
++    else while (address != (void *)-1)  /* shrink the grow size again if we are running out of space */
++    {
++        if (heap->grow_size <= total_size || heap->grow_size <= 4 * 1024 * 1024) return NULL;
++        heap->grow_size /= 2;
++        *size = (max( heap->grow_size, total_size ) + page_size - 1) & ~(page_size - 1);
++        address = wine_anon_mmap( NULL, *size, PROT_READ|PROT_WRITE, 0 );
++    }
++
++    subheap = HEAP_CreateSubHeap( heap, address, heap->flags, *size, *size );
++    assert( subheap != NULL );
++
++    TRACE("created new sub-heap %p of %08lx bytes for heap %p\n",
++          subheap, subheap->size, heap );
++
++    return address;
++}
++
++
+ /***********************************************************************
+  *           HEAP_IsValidArenaPtr
+  *
+diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
+index 5e4c39e8bd6..ecd839b0436 100644
+--- a/dlls/ntdll/ntdll_misc.h
++++ b/dlls/ntdll/ntdll_misc.h
+@@ -75,6 +75,9 @@ extern void actctx_init(void) DECLSPEC_HIDDEN;
+ extern void virtual_init(void) DECLSPEC_HIDDEN;
+ extern void virtual_init_threading(void) DECLSPEC_HIDDEN;
+ extern void fill_cpu_info(void) DECLSPEC_HIDDEN;
++
++/* heap routines */
++extern void *grow_virtual_heap( HANDLE handle, SIZE_T *size ) DECLSPEC_HIDDEN;
+ extern void heap_set_debug_flags( HANDLE handle ) DECLSPEC_HIDDEN;
+ 
+ /* server support */
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index e826fa03c0c..a6a6f5c3823 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -454,6 +454,7 @@ static NTSTATUS create_view( struct file_view **view_ret, void *base, size_t siz
+ {
+     struct file_view *view;
+     struct list *ptr;
++    SIZE_T view_size = sizeof(*view) + (size >> page_shift) - 1;
+     int unix_prot = VIRTUAL_GetUnixProt( vprot );
+ 
+     assert( !((UINT_PTR)base & page_mask) );
+@@ -461,10 +462,31 @@ static NTSTATUS create_view( struct file_view **view_ret, void *base, size_t siz
+ 
+     /* Create the view structure */
+ 
+-    if (!(view = RtlAllocateHeap( virtual_heap, 0, sizeof(*view) + (size >> page_shift) - 1 )))
++    if (!(view = RtlAllocateHeap( virtual_heap, 0, view_size )))
+     {
+-        FIXME( "out of memory in virtual heap for %p-%p\n", base, (char *)base + size );
+-        return STATUS_NO_MEMORY;
++        SIZE_T heap_size = max( view_size, VIRTUAL_HEAP_SIZE );
++        struct file_view *heap_view;
++        void *heap_base;
++
++        if (!(heap_base = grow_virtual_heap( virtual_heap, &heap_size )))
++        {
++            FIXME( "failed to grow virtual heap for %p-%p\n", base, (char *)base + size );
++            return STATUS_NO_MEMORY;
++        }
++
++        /* FIXME: The grown heap is guaranteed to be large to handle allocation
++         * of size 'view_size', but we also have to add a second view for the
++         * newly reserved area. If this fails we can no longer track all memory
++         * areas. On the other hand, first calling create_view and then
++         * RtlAllocateHeap would be even worse, and could end in an endless loop. */
++        view = RtlAllocateHeap( virtual_heap, 0, view_size );
++        create_view( &heap_view, heap_base, heap_size, VPROT_COMMITTED | VPROT_READ | VPROT_WRITE );
++
++        if (!view)
++        {
++            FIXME( "out of memory in virtual heap for %p-%p\n", base, (char *)base + size );
++            return STATUS_NO_MEMORY;
++        }
+     }
+ 
+     view->base    = base;
+-- 
+2.11.0
+

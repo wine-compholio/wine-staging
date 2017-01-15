@@ -229,6 +229,7 @@ patch_enable_all ()
 	enable_ntdll_FileFsFullSizeInformation="$1"
 	enable_ntdll_FileFsVolumeInformation="$1"
 	enable_ntdll_Fix_Alignment="$1"
+	enable_ntdll_Grow_Virtual_Heap="$1"
 	enable_ntdll_Heap_FreeLists="$1"
 	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Junction_Points="$1"
@@ -895,6 +896,9 @@ patch_enable ()
 			;;
 		ntdll-Fix_Alignment)
 			enable_ntdll_Fix_Alignment="$2"
+			;;
+		ntdll-Grow_Virtual_Heap)
+			enable_ntdll_Grow_Virtual_Heap="$2"
 			;;
 		ntdll-Heap_FreeLists)
 			enable_ntdll_Heap_FreeLists="$2"
@@ -5434,6 +5438,21 @@ if test "$enable_ntdll_Fix_Alignment" -eq 1; then
 	patch_apply ntdll-Fix_Alignment/0001-ntdll-Move-NtProtectVirtualMemory-and-NtCreateSectio.patch
 	(
 		echo '+    { "Michael Müller", "ntdll: Move NtProtectVirtualMemory and NtCreateSection to separate pages on x86.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Grow_Virtual_Heap
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39885] Remove memory limitation to 32GB on 64-bit by growing heap dynamically
+# |
+# | Modified files:
+# |   *	dlls/ntdll/heap.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/virtual.c
+# |
+if test "$enable_ntdll_Grow_Virtual_Heap" -eq 1; then
+	patch_apply ntdll-Grow_Virtual_Heap/0001-ntdll-Remove-memory-limitation-to-32GB-on-64-bit-by-.patch
+	(
+		echo '+    { "Sebastian Lackner", "ntdll: Remove memory limitation to 32GB on 64-bit by growing heap dynamically.", 1 },';
 	) >> "$patchlist"
 fi
 

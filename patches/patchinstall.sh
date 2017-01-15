@@ -389,6 +389,7 @@ patch_enable_all ()
 	enable_wined3d_Accounting="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
+	enable_wined3d_DDCAPS_ALIGNBOUNDARYSRC="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_GTX_560M="$1"
 	enable_wined3d_Limit_Vram="$1"
@@ -1371,6 +1372,9 @@ patch_enable ()
 			;;
 		wined3d-CSMT_Main)
 			enable_wined3d_CSMT_Main="$2"
+			;;
+		wined3d-DDCAPS_ALIGNBOUNDARYSRC)
+			enable_wined3d_DDCAPS_ALIGNBOUNDARYSRC="$2"
 			;;
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
@@ -8212,6 +8216,21 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	patch_apply wined3d-CSMT_Helper/0001-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-DDCAPS_ALIGNBOUNDARYSRC
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#28672] Do not set DDCAPS_ALIGNBOUNDARYSRC as cap for ddraw
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c
+# |
+if test "$enable_wined3d_DDCAPS_ALIGNBOUNDARYSRC" -eq 1; then
+	patch_apply wined3d-DDCAPS_ALIGNBOUNDARYSRC/0001-wined3d-Do-not-set-DDCAPS_ALIGNBOUNDARYSRC-as-cap-fo.patch
+	(
+		echo '+    { "Michael Müller", "wined3d: Do not set DDCAPS_ALIGNBOUNDARYSRC as cap for ddraw.", 1 },';
 	) >> "$patchlist"
 fi
 

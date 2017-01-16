@@ -58,7 +58,7 @@ upstream_commit()
 # Show version information
 version()
 {
-	echo "Wine Staging 2.0-rc5"
+	echo "Wine Staging 2.0-rc6 (unreleased)"
 	echo "Copyright (C) 2014-2017 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -7342,6 +7342,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#42010] Move the auto radio button group logic from BM_SETCHECK to WM_LBUTTONUP handler
+# |   *	[#16845] Add support for navigating a group of radio buttons using a keyboard.
 # |
 # | Modified files:
 # |   *	dlls/user32/button.c, dlls/user32/dialog.c, dlls/user32/tests/msg.c, dlls/user32/tests/resource.rc

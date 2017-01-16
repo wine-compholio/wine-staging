@@ -5490,7 +5490,7 @@ fi
 if test "$enable_ntdll_Grow_Virtual_Heap" -eq 1; then
 	patch_apply ntdll-Grow_Virtual_Heap/0001-ntdll-Remove-memory-limitation-to-32GB-on-64-bit-by-.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Remove memory limitation to 32GB on 64-bit by growing heap dynamically.", 1 },';
+		echo '+    { "Sebastian Lackner", "ntdll: Remove memory limitation to 32GB on 64-bit by growing heap dynamically.", 2 },';
 	) >> "$patchlist"
 fi
 

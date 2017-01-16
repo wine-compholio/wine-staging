@@ -1,17 +1,17 @@
-From 45f7d8b0e09bbb7d858752c4c0896934bc52e225 Mon Sep 17 00:00:00 2001
+From 9b16ad9a6bfe64270aa8747c6f701264840eec04 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 15 Jan 2017 17:48:58 +0100
 Subject: ntdll: Remove memory limitation to 32GB on 64-bit by growing heap
- dynamically.
+ dynamically. (v2)
 
 ---
- dlls/ntdll/heap.c       | 46 ++++++++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/heap.c       | 49 +++++++++++++++++++++++++++++++++++++++++++++++++
  dlls/ntdll/ntdll_misc.h |  3 +++
  dlls/ntdll/virtual.c    | 28 +++++++++++++++++++++++++---
- 3 files changed, 74 insertions(+), 3 deletions(-)
+ 3 files changed, 77 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/ntdll/heap.c b/dlls/ntdll/heap.c
-index f928ebff500..bfa7ba49b4a 100644
+index f928ebff500..e4517c0b69b 100644
 --- a/dlls/ntdll/heap.c
 +++ b/dlls/ntdll/heap.c
 @@ -27,6 +27,9 @@
@@ -32,7 +32,17 @@ index f928ebff500..bfa7ba49b4a 100644
  #include "wine/list.h"
  #include "wine/debug.h"
  #include "wine/server.h"
-@@ -1048,6 +1052,48 @@ static ARENA_FREE *HEAP_FindFreeBlock( HEAP *heap, SIZE_T size,
+@@ -658,6 +662,9 @@ static void HEAP_MakeInUseBlockFree( SUBHEAP *subheap, ARENA_INUSE *pArena )
+     if ((char *)pFree + size < (char *)subheap->base + subheap->size)
+         return;  /* Not the last block, so nothing more to do */
+ 
++    if (!(subheap->heap->flags & HEAP_GROWABLE) && (subheap != &subheap->heap->subheap))
++        return;  /* virtual heap, never attempt to release or decommit memory */
++
+     /* Free the whole sub-heap if it's empty and not the original one */
+ 
+     if (((char *)pFree == (char *)subheap->base + subheap->headerSize) &&
+@@ -1048,6 +1055,48 @@ static ARENA_FREE *HEAP_FindFreeBlock( HEAP *heap, SIZE_T size,
  }
  
  

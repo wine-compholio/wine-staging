@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "3c54d4fb6926195e43a1163b0a243d2614a5951f"
+	echo "c3e6ecde36692d03dc360200c7a7044a02c4a392"
 }
 
 # Show version information
@@ -147,7 +147,6 @@ patch_enable_all ()
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
-	enable_dsound_enumerate_mmdevices="$1"
 	enable_dxdiagn_Display_Information="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
@@ -170,7 +169,6 @@ patch_enable_all ()
 	enable_imagehlp_Cleanup="$1"
 	enable_imagehlp_ImageLoad="$1"
 	enable_imm32_IMMDisableLegacyIME="$1"
-	enable_include_Duplicate_Typedef="$1"
 	enable_inseng_Implementation="$1"
 	enable_iphlpapi_System_Ping="$1"
 	enable_iphlpapi_TCP_Table="$1"
@@ -395,7 +393,6 @@ patch_enable_all ()
 	enable_wined3d_Accounting="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
-	enable_wined3d_DDCAPS_ALIGNBOUNDARYSRC="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_GTX_560M="$1"
 	enable_wined3d_Limit_Vram="$1"
@@ -653,9 +650,6 @@ patch_enable ()
 		dsound-Revert_Cleanup)
 			enable_dsound_Revert_Cleanup="$2"
 			;;
-		dsound-enumerate_mmdevices)
-			enable_dsound_enumerate_mmdevices="$2"
-			;;
 		dxdiagn-Display_Information)
 			enable_dxdiagn_Display_Information="$2"
 			;;
@@ -721,9 +715,6 @@ patch_enable ()
 			;;
 		imm32-IMMDisableLegacyIME)
 			enable_imm32_IMMDisableLegacyIME="$2"
-			;;
-		include-Duplicate_Typedef)
-			enable_include_Duplicate_Typedef="$2"
 			;;
 		inseng-Implementation)
 			enable_inseng_Implementation="$2"
@@ -1396,9 +1387,6 @@ patch_enable ()
 			;;
 		wined3d-CSMT_Main)
 			enable_wined3d_CSMT_Main="$2"
-			;;
-		wined3d-DDCAPS_ALIGNBOUNDARYSRC)
-			enable_wined3d_DDCAPS_ALIGNBOUNDARYSRC="$2"
 			;;
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
@@ -3988,21 +3976,6 @@ if test "$enable_dsound_EAX" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dsound-enumerate_mmdevices
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42163] Respect return value of callback in DirectSoundEnumerateA/W
-# |
-# | Modified files:
-# |   *	dlls/dsound/dsound_main.c
-# |
-if test "$enable_dsound_enumerate_mmdevices" -eq 1; then
-	patch_apply dsound-enumerate_mmdevices/0001-dsound-Respect-return-value-of-callback-in-DirectSou.patch
-	(
-		echo '+    { "Michael Müller", "dsound: Respect return value of callback in DirectSoundEnumerateA/W.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dxdiagn-Display_Information
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4399,21 +4372,6 @@ if test "$enable_imm32_IMMDisableLegacyIME" -eq 1; then
 	patch_apply imm32-IMMDisableLegacyIME/0001-imm32-Add-stub-for-ImmDisableLegacyIME.patch
 	(
 		echo '+    { "Michael Müller", "imm32: Add stub for ImmDisableLegacyIME.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset include-Duplicate_Typedef
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42211] Avoid duplicate definition of REFERENCE_TIME
-# |
-# | Modified files:
-# |   *	include/dmdls.h
-# |
-if test "$enable_include_Duplicate_Typedef" -eq 1; then
-	patch_apply include-Duplicate_Typedef/0001-include-Avoid-duplicate-definition-of-REFERENCE_TIME.patch
-	(
-		echo '+    { "Sebastian Lackner", "include: Avoid duplicate definition of REFERENCE_TIME.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8332,21 +8290,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	patch_apply wined3d-CSMT_Helper/0001-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch
 	(
 		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-DDCAPS_ALIGNBOUNDARYSRC
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#28672] Do not set DDCAPS_ALIGNBOUNDARYSRC as cap for ddraw
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c
-# |
-if test "$enable_wined3d_DDCAPS_ALIGNBOUNDARYSRC" -eq 1; then
-	patch_apply wined3d-DDCAPS_ALIGNBOUNDARYSRC/0001-wined3d-Do-not-set-DDCAPS_ALIGNBOUNDARYSRC-as-cap-fo.patch
-	(
-		echo '+    { "Michael Müller", "wined3d: Do not set DDCAPS_ALIGNBOUNDARYSRC as cap for ddraw.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,92 @@
+From 7e74fd6dcb57447cc0ae2054291bc3ea30ac3c3d Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 18 Jan 2017 20:29:33 +0100
+Subject: vulkan: Only convert VkDescriptor{Image,Buffer}Info when type is
+ valid.
+
+---
+ dlls/vulkan/vulkan_private.h | 41 +++++++++++++++++++++++++++++++++++++++++
+ dlls/vulkan/vulkan_thunks.c  |  8 ++++++--
+ 2 files changed, 47 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/vulkan/vulkan_private.h b/dlls/vulkan/vulkan_private.h
+index 1d4f5b6b833..22696e2d400 100644
+--- a/dlls/vulkan/vulkan_private.h
++++ b/dlls/vulkan/vulkan_private.h
+@@ -45,6 +45,18 @@
+ #define VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR 1000004000
+ #define VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR 1000005000
+ 
++#define VK_DESCRIPTOR_TYPE_SAMPLER                 0
++#define VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER  1
++#define VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE           2
++#define VK_DESCRIPTOR_TYPE_STORAGE_IMAGE           3
++#define VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER    4
++#define VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER    5
++#define VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER          6
++#define VK_DESCRIPTOR_TYPE_STORAGE_BUFFER          7
++#define VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC  8
++#define VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC  9
++#define VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT       10
++
+ #if !defined(HAVE_X11_XLIB_H)
+ typedef struct _XDisplay Display;
+ #endif
+@@ -3389,6 +3401,35 @@ static inline void release_VkCopyDescriptorSet_array( VkCopyDescriptorSet *out,
+ #endif /* defined(USE_STRUCT_CONVERSION) */
+ 
+ 
++static inline BOOL valid_pImageInfo( VkDescriptorType descriptorType )
++{
++    switch (descriptorType)
++    {
++        case VK_DESCRIPTOR_TYPE_SAMPLER:
++        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
++        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
++        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
++        case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
++            return TRUE;
++        default:
++            return FALSE;
++    }
++}
++
++static inline BOOL valid_pBufferInfo( VkDescriptorType descriptorType )
++{
++    switch (descriptorType)
++    {
++        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
++        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
++        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
++        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
++            return TRUE;
++        default:
++            return FALSE;
++    }
++}
++
+ extern BOOL init_vulkan( void ) DECLSPEC_HIDDEN;
+ extern BOOL is_null_func( const char *name ); DECLSPEC_HIDDEN
+ extern void free_vulkan( void ) DECLSPEC_HIDDEN;
+diff --git a/dlls/vulkan/vulkan_thunks.c b/dlls/vulkan/vulkan_thunks.c
+index 3e612483a3c..0475c70e62a 100644
+--- a/dlls/vulkan/vulkan_thunks.c
++++ b/dlls/vulkan/vulkan_thunks.c
+@@ -2822,8 +2822,12 @@ VkWriteDescriptorSet_host *convert_VkWriteDescriptorSet( VkWriteDescriptorSet_ho
+     out->dstArrayElement    = in->dstArrayElement;
+     out->descriptorCount    = in->descriptorCount;
+     out->descriptorType     = in->descriptorType;
+-    out->pImageInfo         = convert_VkDescriptorImageInfo_array( in->pImageInfo, in->descriptorCount );
+-    out->pBufferInfo        = convert_VkDescriptorBufferInfo_array( in->pBufferInfo, in->descriptorCount );
++    out->pImageInfo         = valid_pImageInfo( in->descriptorType ) ?
++                              convert_VkDescriptorImageInfo_array( in->pImageInfo, in->descriptorCount ) :
++                              (void *)0xbadc0ded;  /* should be ignored */
++    out->pBufferInfo        = valid_pBufferInfo( in->descriptorType ) ?
++                              convert_VkDescriptorBufferInfo_array( in->pBufferInfo, in->descriptorCount ) :
++                              (void *)0xbadc0ded;  /* should be ignored */
+     out->pTexelBufferView   = in->pTexelBufferView; /* length is descriptorCount */
+ 
+     return out;
+-- 
+2.11.0
+

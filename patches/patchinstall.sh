@@ -7740,6 +7740,7 @@ if test "$enable_vulkan_Vulkan_Implementation" -eq 1; then
 	patch_apply vulkan-Vulkan_Implementation/0005-vulkan-Enumerate-VK_KHR_win32_surface-only-one-time-.patch
 	patch_apply vulkan-Vulkan_Implementation/0006-vulkan-Update-to-spec-version-1.0.30-no-VK_EXT_debug.patch
 	patch_apply vulkan-Vulkan_Implementation/0007-vulkan-Improve-vkGetPhysicalDeviceWin32PresentationS.patch
+	patch_apply vulkan-Vulkan_Implementation/0008-vulkan-Only-convert-VkDescriptor-Image-Buffer-Info-w.patch
 	(
 		echo '+    { "Sebastian Lackner", "vulkan: Initial implementation.", 2 },';
 		echo '+    { "Michael Müller", "vulkan: Implement vkGetPhysicalDeviceWin32PresentationSupportKHR.", 1 },';
@@ -7748,6 +7749,7 @@ if test "$enable_vulkan_Vulkan_Implementation" -eq 1; then
 		echo '+    { "Michael Müller", "vulkan: Enumerate VK_KHR_win32_surface only one time in vkEnumerateInstanceExtensionProperties.", 1 },';
 		echo '+    { "Michael Müller", "vulkan: Update to spec version 1.0.30 (no VK_EXT_debug_marker support yet).", 1 },';
 		echo '+    { "Michael Müller", "vulkan: Improve vkGetPhysicalDeviceWin32PresentationSupportKHR and vkCreateWin32SurfaceKHR.", 1 },';
+		echo '+    { "Sebastian Lackner", "vulkan: Only convert VkDescriptor{Image,Buffer}Info when type is valid.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -235,6 +235,7 @@ patch_enable_all ()
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_Loader_Machine_Type="$1"
 	enable_ntdll_NtAccessCheck="$1"
+	enable_ntdll_NtAllocateUuids="$1"
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQueryPerformanceCounter="$1"
 	enable_ntdll_NtQuerySection="$1"
@@ -913,6 +914,9 @@ patch_enable ()
 			;;
 		ntdll-NtAccessCheck)
 			enable_ntdll_NtAccessCheck="$2"
+			;;
+		ntdll-NtAllocateUuids)
+			enable_ntdll_NtAllocateUuids="$2"
 			;;
 		ntdll-NtQueryEaFile)
 			enable_ntdll_NtQueryEaFile="$2"
@@ -5535,6 +5539,21 @@ if test "$enable_ntdll_NtAccessCheck" -eq 1; then
 	patch_apply ntdll-NtAccessCheck/0001-ntdll-Improve-invalid-paramater-handling-in-NtAccess.patch
 	(
 		echo '+    { "Qian Hong", "ntdll: Improve invalid paramater handling in NtAccessCheck.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtAllocateUuids
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35910] Fix API signature of ntdll.NtAllocateUuids
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/om.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/winternl.h
+# |
+if test "$enable_ntdll_NtAllocateUuids" -eq 1; then
+	patch_apply ntdll-NtAllocateUuids/0001-ntdll-Improve-stub-for-NtAllocateUuids.patch
+	(
+		echo '+    { "Louis Lenders", "ntdll: Improve stub for NtAllocateUuids.", 1 },';
 	) >> "$patchlist"
 fi
 

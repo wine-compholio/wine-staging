@@ -4415,7 +4415,7 @@ fi
 if test "$enable_iphlpapi_TCP_Table" -eq 1; then
 	patch_apply iphlpapi-TCP_Table/0001-iphlpapi-Implement-AllocateAndGetTcpExTableFromStack.patch
 	(
-		echo '+    { "Erich E. Hoover", "iphlpapi: Implement AllocateAndGetTcpExTableFromStack.", 1 },';
+		echo '+    { "Erich E. Hoover", "iphlpapi: Implement AllocateAndGetTcpExTableFromStack.", 2 },';
 	) >> "$patchlist"
 fi
 

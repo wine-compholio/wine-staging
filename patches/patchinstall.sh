@@ -2,7 +2,7 @@
 #
 # Script to automatically install all Wine Staging patches
 #
-# Copyright (C) 2015-2016 Sebastian Lackner
+# Copyright (C) 2015-2017 Sebastian Lackner
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -69,14 +69,14 @@ version()
 # Critical error, abort
 abort()
 {
-	echo "ERROR: $1" >&2
+	printf '%s\n' "ERROR: $1" >&2
 	exit 1
 }
 
 # Show a warning
 warning()
 {
-	echo "WARNING: $1" >&2
+	printf '%s\n' "WARNING: $1" >&2
 }
 
 # Enable or disable all patchsets
@@ -1737,8 +1737,7 @@ fi
 # Unfortunately this does not work when "$DESTDIR" points to a
 # subdirectory of a git tree, which has the effect that no patches
 # are applied, but the exitcode is zero. To avoid broken builds we
-# will workaround this issue or abort. For more information see
-# https://github.com/wine-compholio/wine-staging/issues/7
+# will workaround this issue or abort.
 test ! -d ".git" && git rev-parse --git-dir >/dev/null 2>&1
 workaround_git_bug="$?"
 
@@ -1758,7 +1757,7 @@ if test "$backend" = "patch"; then
 
 	patch_apply_file()
 	{
-		echo "Applying $1"
+		printf '%s\n' "Applying $1"
 		if ! "$patchdir/gitapply.sh" $gitapply_args < "$1"; then
 			abort "Failed to apply patch, aborting!"
 		fi
@@ -1812,7 +1811,7 @@ elif test "$backend" = "git" -o "$backend" = "git-am"; then
 
 	patch_apply_file()
 	{
-		echo "Applying $1"
+		printf '%s\n' "Applying $1"
 		if ! git am "$1"; then
 			abort "Failed to apply patch, aborting!"
 		fi
@@ -1864,7 +1863,7 @@ elif test "$backend" = "git-apply"; then
 
 	patch_apply_file()
 	{
-		echo "Applying $1"
+		printf '%s\n' "Applying $1"
 		if ! git apply "$1"; then
 			abort "Failed to apply patch, aborting!"
 		fi
@@ -1884,9 +1883,9 @@ elif test "$backend" = "stg"; then
 
 	patch_apply_file()
 	{
-		echo "Applying $1"
+		printf '%s\n' "Applying $1"
 		_shortname="$(basename "$1")"
-		if ! echo "staging/$_shortname" | cat - "$1" | stg import; then
+		if ! printf '%s\n' "staging/$_shortname" | cat - "$1" | stg import; then
 			abort "Failed to apply patch, aborting!"
 		fi
 		unset _shortname
@@ -9166,7 +9165,7 @@ if test "$enable_patchlist" -eq 1; then
 	# Generate a temporary patch containing the patchlist and apply it
 	patch_data=$(cat "$patchlist" | sort)
 	if test ! -z "$patch_data"; then
-		patch_lines=$(echo "$patch_data" | wc -l)
+		patch_lines=$(printf '%s\n' "$patch_data" | wc -l)
 		patch_lines=$((${patch_lines}+21))
 		cat > "$patchlist" <<EOF
 From: Wine Staging Team <webmaster@fds-team.de>

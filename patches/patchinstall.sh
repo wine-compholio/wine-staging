@@ -139,6 +139,7 @@ patch_enable_all ()
 	enable_ddraw_Fix_Typos="$1"
 	enable_ddraw_FlipToGDISurface="$1"
 	enable_ddraw_IDirect3DTexture2_Load="$1"
+	enable_ddraw_Relax_dwSize_Validation="$1"
 	enable_ddraw_Rendering_Targets="$1"
 	enable_ddraw_Write_Vtable="$1"
 	enable_dinput_Initialize="$1"
@@ -629,6 +630,9 @@ patch_enable ()
 			;;
 		ddraw-IDirect3DTexture2_Load)
 			enable_ddraw_IDirect3DTexture2_Load="$2"
+			;;
+		ddraw-Relax_dwSize_Validation)
+			enable_ddraw_Relax_dwSize_Validation="$2"
 			;;
 		ddraw-Rendering_Targets)
 			enable_ddraw_Rendering_Targets="$2"
@@ -3829,6 +3833,21 @@ if test "$enable_ddraw_IDirect3DTexture2_Load" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "ddraw: Allow size and format conversions in IDirect3DTexture2::Load.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ddraw/tests: Add more tests for IDirect3DTexture2::Load.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ddraw-Relax_dwSize_Validation
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#14897] Relax dwSize validation ddraw_surface*_Lock
+# |
+# | Modified files:
+# |   *	dlls/ddraw/ddraw_private.h, dlls/ddraw/surface.c, dlls/ddraw/tests/ddraw7.c
+# |
+if test "$enable_ddraw_Relax_dwSize_Validation" -eq 1; then
+	patch_apply ddraw-Relax_dwSize_Validation/0001-ddraw-Relax-dwSize-validation-in-ddraw_surface-_Lock.patch
+	(
+		printf '%s\n' '+    { "Józef Kucia", "ddraw: Relax \"dwSize\" validation in ddraw_surface*_Lock().", 1 },';
 	) >> "$patchlist"
 fi
 

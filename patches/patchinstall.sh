@@ -3016,8 +3016,8 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/bcrypt/Makefile.in, dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_internal.h, dlls/bcrypt/bcrypt_main.c,
-# | 	dlls/bcrypt/sha256.c, dlls/bcrypt/sha384.c, dlls/bcrypt/sha512.c, dlls/bcrypt/tests/bcrypt.c, include/bcrypt.h,
-# | 	include/ntstatus.h
+# | 	dlls/bcrypt/sha256.c, dlls/bcrypt/sha384.c, dlls/bcrypt/sha512.c, dlls/bcrypt/tests/bcrypt.c, dlls/ncrypt/ncrypt.spec,
+# | 	include/bcrypt.h, include/ntstatus.h
 # |
 if test "$enable_bcrypt_Improvements" -eq 1; then
 	patch_apply bcrypt-Improvements/0001-bcrypt-Add-AES-provider.patch

@@ -1,4 +1,4 @@
-From b6efa0b8bb1bba73863ca985c13d46a5eaec4198 Mon Sep 17 00:00:00 2001
+From c178117abacbf8644ae05429999ff8e8f8585a7e Mon Sep 17 00:00:00 2001
 From: Hans Leidekker <hans@codeweavers.com>
 Date: Mon, 19 Dec 2016 19:38:52 +0100
 Subject: bcrypt: Add AES provider.
@@ -7,11 +7,12 @@ Subject: bcrypt: Add AES provider.
  dlls/bcrypt/bcrypt.spec    |  10 +-
  dlls/bcrypt/bcrypt_main.c  | 347 ++++++++++++++++++++++++++++++++++++++++++++-
  dlls/bcrypt/tests/bcrypt.c |  18 +--
+ dlls/ncrypt/ncrypt.spec    |  10 +-
  include/bcrypt.h           |   3 +
- 4 files changed, 352 insertions(+), 26 deletions(-)
+ 5 files changed, 357 insertions(+), 31 deletions(-)
 
 diff --git a/dlls/bcrypt/bcrypt.spec b/dlls/bcrypt/bcrypt.spec
-index e299fe0..962953e 100644
+index e299fe0cce8..962953e509b 100644
 --- a/dlls/bcrypt/bcrypt.spec
 +++ b/dlls/bcrypt/bcrypt.spec
 @@ -5,15 +5,15 @@
@@ -52,7 +53,7 @@ index e299fe0..962953e 100644
  @ stub BCryptUnregisterConfigChangeNotify
  @ stub BCryptUnregisterProvider
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index 6023c94..937bdf7 100644
+index 6023c942e49..5e066283f6e 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
 @@ -49,6 +49,10 @@ WINE_DECLARE_DEBUG_CHANNEL(winediag);
@@ -498,7 +499,7 @@ index 6023c94..937bdf7 100644
  {
      switch (reason)
 diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
-index 3e41335..2668153 100644
+index 422f2cfd340..d2df74ed919 100644
 --- a/dlls/bcrypt/tests/bcrypt.c
 +++ b/dlls/bcrypt/tests/bcrypt.c
 @@ -780,7 +780,7 @@ static void test_aes(void)
@@ -510,7 +511,7 @@ index 3e41335..2668153 100644
      alg = NULL;
      ret = pBCryptOpenAlgorithmProvider(&alg, BCRYPT_AES_ALGORITHM, MS_PRIMITIVE_PROVIDER, 0);
      ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
-@@ -828,7 +828,6 @@ todo_wine {
+@@ -814,7 +814,6 @@ todo_wine {
      ret = pBCryptCloseAlgorithmProvider(alg, 0);
      ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
  }
@@ -518,7 +519,7 @@ index 3e41335..2668153 100644
  
  static void test_BCryptGenerateSymmetricKey(void)
  {
-@@ -847,11 +846,6 @@ static void test_BCryptGenerateSymmetricKey(void)
+@@ -833,11 +832,6 @@ static void test_BCryptGenerateSymmetricKey(void)
      NTSTATUS ret;
  
      ret = pBCryptOpenAlgorithmProvider(&aes, BCRYPT_AES_ALGORITHM, NULL, 0);
@@ -530,7 +531,7 @@ index 3e41335..2668153 100644
      ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
  
      len = size = 0xdeadbeef;
-@@ -936,11 +930,6 @@ static void test_BCryptEncrypt(void)
+@@ -922,11 +916,6 @@ static void test_BCryptEncrypt(void)
      NTSTATUS ret;
  
      ret = pBCryptOpenAlgorithmProvider(&aes, BCRYPT_AES_ALGORITHM, NULL, 0);
@@ -542,7 +543,7 @@ index 3e41335..2668153 100644
      ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
  
      len = 0xdeadbeef;
-@@ -1027,11 +1016,6 @@ static void test_BCryptDecrypt(void)
+@@ -1013,11 +1002,6 @@ static void test_BCryptDecrypt(void)
      NTSTATUS ret;
  
      ret = pBCryptOpenAlgorithmProvider(&aes, BCRYPT_AES_ALGORITHM, NULL, 0);
@@ -554,8 +555,51 @@ index 3e41335..2668153 100644
      ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
  
      len = 0xdeadbeef;
+diff --git a/dlls/ncrypt/ncrypt.spec b/dlls/ncrypt/ncrypt.spec
+index 04127608d68..60b7eb37075 100644
+--- a/dlls/ncrypt/ncrypt.spec
++++ b/dlls/ncrypt/ncrypt.spec
+@@ -5,17 +5,17 @@
+ @ stub BCryptConfigureContextFunction
+ @ stub BCryptCreateContext
+ @ stdcall BCryptCreateHash(ptr ptr ptr long ptr long long) bcrypt.BCryptCreateHash
+-@ stub BCryptDecrypt
++@ stdcall BCryptDecrypt(ptr ptr long ptr ptr long ptr long ptr long) bcrypt.BCryptDecrypt
+ @ stub BCryptDeleteContext
+ @ stub BCryptDeriveKey
+ @ stub BCryptDeriveKeyCapi
+ @ stub BCryptDeriveKeyPBKDF2
+ @ stdcall BCryptDestroyHash(ptr) bcrypt.BCryptDestroyHash
+-@ stub BCryptDestroyKey
++@ stdcall BCryptDestroyKey(ptr) bcrypt.BCryptDestroyKey
+ @ stub BCryptDestroySecret
+ @ stub BCryptDuplicateHash
+ @ stub BCryptDuplicateKey
+-@ stub BCryptEncrypt
++@ stdcall BCryptEncrypt(ptr ptr long ptr ptr long ptr long ptr long) bcrypt.BCryptEncrypt
+ @ stdcall BCryptEnumAlgorithms(long ptr ptr long) bcrypt.BCryptEnumAlgorithms
+ @ stub BCryptEnumContextFunctionProviders
+ @ stub BCryptEnumContextFunctions
+@@ -28,7 +28,7 @@
+ @ stub BCryptFreeBuffer
+ @ stdcall BCryptGenRandom(ptr ptr long long) bcrypt.BCryptGenRandom
+ @ stub BCryptGenerateKeyPair
+-@ stub BCryptGenerateSymmetricKey
++@ stdcall BCryptGenerateSymmetricKey(ptr ptr ptr long ptr long long) bcrypt.BCryptGenerateSymmetricKey
+ @ stdcall BCryptGetFipsAlgorithmMode(ptr) bcrypt.BCryptGetFipsAlgorithmMode
+ @ stdcall BCryptGetProperty(ptr wstr ptr long ptr long) bcrypt.BCryptGetProperty
+ @ stdcall BCryptHash(ptr ptr long ptr long ptr long) bcrypt.BCryptHash
+@@ -49,7 +49,7 @@
+ @ stub BCryptSecretAgreement
+ @ stub BCryptSetAuditingInterface
+ @ stub BCryptSetContextFunctionProperty
+-@ stub BCryptSetProperty
++@ stdcall BCryptSetProperty(ptr wstr ptr long long) bcrypt.BCryptSetProperty
+ @ stub BCryptSignHash
+ @ stub BCryptUnregisterConfigChangeNotify
+ @ stub BCryptUnregisterProvider
 diff --git a/include/bcrypt.h b/include/bcrypt.h
-index 05d0691..6af85e3 100644
+index 05d0691f9c3..6af85e36143 100644
 --- a/include/bcrypt.h
 +++ b/include/bcrypt.h
 @@ -74,6 +74,9 @@ typedef LONG NTSTATUS;
@@ -569,5 +613,5 @@ index 05d0691..6af85e3 100644
  typedef struct _BCRYPT_ALGORITHM_IDENTIFIER
  {
 -- 
-2.9.0
+2.11.0
 

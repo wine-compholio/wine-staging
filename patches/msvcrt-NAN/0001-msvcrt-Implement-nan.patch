@@ -1,0 +1,123 @@
+From e5645a1c812b49838249db23391d22384031d7ec Mon Sep 17 00:00:00 2001
+From: Daniel Lehman <dlehman@esri.com>
+Date: Fri, 13 Jan 2017 09:48:05 -0800
+Subject: [PATCH v2] msvcrt: Implement nan
+
+Windows ignores the input (https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/nan-nanf-nanl)
+
+Visual Studio #defines NAN differently (-inf * 0) from glibc (builtin) and has different values (0xfff80... vs 0x7ff80...)
+but glibc's #define NAN value matches what Windows returns for nan(), so use that
+
+Signed-off-by: Daniel Lehman <dlehman@esri.com>
+---
+ .../api-ms-win-crt-math-l1-1-0.spec                |  6 +++---
+ dlls/msvcr120/msvcr120.spec                        |  6 +++---
+ dlls/msvcr120_app/msvcr120_app.spec                |  6 +++---
+ dlls/msvcrt/math.c                                 | 25 ++++++++++++++++++++++
+ dlls/ucrtbase/ucrtbase.spec                        |  6 +++---
+ 5 files changed, 37 insertions(+), 12 deletions(-)
+
+diff --git a/dlls/api-ms-win-crt-math-l1-1-0/api-ms-win-crt-math-l1-1-0.spec b/dlls/api-ms-win-crt-math-l1-1-0/api-ms-win-crt-math-l1-1-0.spec
+index 6a311971aff..8ff4c58c36a 100644
+--- a/dlls/api-ms-win-crt-math-l1-1-0/api-ms-win-crt-math-l1-1-0.spec
++++ b/dlls/api-ms-win-crt-math-l1-1-0/api-ms-win-crt-math-l1-1-0.spec
+@@ -288,9 +288,9 @@
+ @ cdecl lroundl(double) ucrtbase.lroundl
+ @ cdecl modf(double ptr) ucrtbase.modf
+ @ cdecl -arch=arm,x86_64 modff(float ptr) ucrtbase.modff
+-@ stub nan
+-@ stub nanf
+-@ stub nanl
++@ cdecl nan(str) ucrtbase.nan
++@ cdecl nanf(str) ucrtbase.nanf
++@ cdecl nanl(str) ucrtbase.nanl
+ @ cdecl nearbyint(double) ucrtbase.nearbyint
+ @ cdecl nearbyintf(float) ucrtbase.nearbyintf
+ @ cdecl nearbyintl(double) ucrtbase.nearbyintl
+diff --git a/dlls/msvcr120/msvcr120.spec b/dlls/msvcr120/msvcr120.spec
+index edd31e3cdbe..e38de79773d 100644
+--- a/dlls/msvcr120/msvcr120.spec
++++ b/dlls/msvcr120/msvcr120.spec
+@@ -2293,9 +2293,9 @@
+ @ cdecl memset(ptr long long) MSVCRT_memset
+ @ cdecl modf(double ptr) MSVCRT_modf
+ @ cdecl -arch=arm,x86_64 modff(float ptr) MSVCRT_modff
+-@ stub nan
+-@ stub nanf
+-@ stub nanl
++@ cdecl nan(str) MSVCR120_nan
++@ cdecl nanf(str) MSVCR120_nanf
++@ cdecl nanl(str) MSVCR120_nanl
+ @ cdecl nearbyint(double) MSVCRT_nearbyint
+ @ cdecl nearbyintf(float) MSVCRT_nearbyintf
+ @ cdecl nearbyintl(double) MSVCRT_nearbyint
+diff --git a/dlls/msvcr120_app/msvcr120_app.spec b/dlls/msvcr120_app/msvcr120_app.spec
+index 3c1c343521a..e6ab0f73caa 100644
+--- a/dlls/msvcr120_app/msvcr120_app.spec
++++ b/dlls/msvcr120_app/msvcr120_app.spec
+@@ -1956,9 +1956,9 @@
+ @ cdecl memset(ptr long long) msvcr120.memset
+ @ cdecl modf(double ptr) msvcr120.modf
+ @ cdecl -arch=arm,x86_64 modff(float ptr) msvcr120.modff
+-@ stub nan
+-@ stub nanf
+-@ stub nanl
++@ cdecl nan(str) msvcr120.nan
++@ cdecl nanf(str) msvcr120.nanf
++@ cdecl nanl(str) msvcr120.nanl
+ @ cdecl nearbyint(double) msvcr120.nearbyint
+ @ cdecl nearbyintf(float) msvcr120.nearbyintf
+ @ cdecl nearbyintl(double) msvcr120.nearbyintl
+diff --git a/dlls/msvcrt/math.c b/dlls/msvcrt/math.c
+index 6880d6ce0ab..323b6668c31 100644
+--- a/dlls/msvcrt/math.c
++++ b/dlls/msvcrt/math.c
+@@ -2901,3 +2901,28 @@ LDOUBLE CDECL MSVCR120_lgammal(LDOUBLE x)
+ {
+     return MSVCR120_lgamma(x);
+ }
++
++/*********************************************************************
++ *      nan (MSVCR120.@)
++ */
++double CDECL MSVCR120_nan(const char *tagp)
++{
++    /* Windows ignores input (MSDN) */
++    return NAN;
++}
++
++/*********************************************************************
++ *      nanf (MSVCR120.@)
++ */
++float CDECL MSVCR120_nanf(const char *tagp)
++{
++    return NAN;
++}
++
++/*********************************************************************
++ *      nanl (MSVCR120.@)
++ */
++LDOUBLE CDECL MSVCR120_nanl(const char *tagp)
++{
++    return MSVCR120_nan(tagp);
++}
+diff --git a/dlls/ucrtbase/ucrtbase.spec b/dlls/ucrtbase/ucrtbase.spec
+index 4cd3760f6a2..df7cc939ef7 100644
+--- a/dlls/ucrtbase/ucrtbase.spec
++++ b/dlls/ucrtbase/ucrtbase.spec
+@@ -2429,9 +2429,9 @@
+ @ cdecl memset(ptr long long) MSVCRT_memset
+ @ cdecl modf(double ptr) MSVCRT_modf
+ @ cdecl -arch=arm,x86_64 modff(float ptr) MSVCRT_modff
+-@ stub nan
+-@ stub nanf
+-@ stub nanl
++@ cdecl nan(str) MSVCR120_nan
++@ cdecl nanf(str) MSVCR120_nanf
++@ cdecl nanl(str) MSVCR120_nanl
+ @ cdecl nearbyint(double) MSVCRT_nearbyint
+ @ cdecl nearbyintf(float) MSVCRT_nearbyintf
+ @ cdecl nearbyintl(double) MSVCRT_nearbyint
+-- 
+2.11.0
+

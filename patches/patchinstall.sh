@@ -209,6 +209,7 @@ patch_enable_all ()
 	enable_msidb_Implementation="$1"
 	enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback="$1"
 	enable_msvcrt_Math_Precision="$1"
+	enable_msvcrt_NAN="$1"
 	enable_msvfw32_ICGetDisplayFormat="$1"
 	enable_msvideo_dll16_DrawDibProfileDisplay="$1"
 	enable_msvideo16_HasThunk="$1"
@@ -838,6 +839,9 @@ patch_enable ()
 			;;
 		msvcrt-Math_Precision)
 			enable_msvcrt_Math_Precision="$2"
+			;;
+		msvcrt-NAN)
+			enable_msvcrt_NAN="$2"
 			;;
 		msvfw32-ICGetDisplayFormat)
 			enable_msvfw32_ICGetDisplayFormat="$2"
@@ -5125,6 +5129,19 @@ if test "$enable_msvcrt_Math_Precision" -eq 1; then
 	patch_apply msvcrt-Math_Precision/0001-msvcrt-Calculate-sinh-cosh-exp-pow-with-higher-preci.patch
 	(
 		echo '+    { "Sebastian Lackner", "msvcrt: Calculate sinh/cosh/exp/pow with higher precision.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msvcrt-NAN
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-crt-math-l1-1-0/api-ms-win-crt-math-l1-1-0.spec, dlls/msvcr120/msvcr120.spec,
+# | 	dlls/msvcr120_app/msvcr120_app.spec, dlls/msvcrt/math.c, dlls/ucrtbase/ucrtbase.spec
+# |
+if test "$enable_msvcrt_NAN" -eq 1; then
+	patch_apply msvcrt-NAN/0001-msvcrt-Implement-nan.patch
+	(
+		echo '+    { "Daniel Lehman", "msvcrt: Implement nan.", 2 },';
 	) >> "$patchlist"
 fi
 

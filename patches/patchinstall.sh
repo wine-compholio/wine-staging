@@ -334,6 +334,7 @@ patch_enable_all ()
 	enable_shell32_Toolbar_Bitmaps="$1"
 	enable_shell32_UnixFS="$1"
 	enable_shlwapi_AssocGetPerceivedType="$1"
+	enable_shlwapi_SHAddDataBlock="$1"
 	enable_shlwapi_SHMapHandle="$1"
 	enable_shlwapi_UrlCombine="$1"
 	enable_stdole32_idl_Typelib="$1"
@@ -1212,6 +1213,9 @@ patch_enable ()
 			;;
 		shlwapi-AssocGetPerceivedType)
 			enable_shlwapi_AssocGetPerceivedType="$2"
+			;;
+		shlwapi-SHAddDataBlock)
+			enable_shlwapi_SHAddDataBlock="$2"
 			;;
 		shlwapi-SHMapHandle)
 			enable_shlwapi_SHMapHandle="$2"
@@ -7164,6 +7168,18 @@ if test "$enable_shlwapi_AssocGetPerceivedType" -eq 1; then
 	(
 		echo '+    { "Mark Jansen", "shlwapi/tests: Add tests for AssocGetPerceivedType.", 1 },';
 		echo '+    { "Mark Jansen", "shlwapi: Implement AssocGetPerceivedType.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shlwapi-SHAddDataBlock
+# |
+# | Modified files:
+# |   *	dlls/shlwapi/clist.c, dlls/shlwapi/tests/clist.c
+# |
+if test "$enable_shlwapi_SHAddDataBlock" -eq 1; then
+	patch_apply shlwapi-SHAddDataBlock/0001-shlwapi-Fix-the-return-value-of-SHAddDataBlock.patch
+	(
+		echo '+    { "Hermès BÉLUSCA-MAÏTO", "shlwapi: Fix the return value of SHAddDataBlock.", 1 },';
 	) >> "$patchlist"
 fi
 

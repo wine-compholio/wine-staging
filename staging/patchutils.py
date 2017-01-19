@@ -135,6 +135,16 @@ class _PatchReader(object):
         tmp, self.peeked = self.peeked, None
         return tmp[1]
 
+    def read_multiline(self):
+        """Read multiline data from a patch file."""
+        line = self.read().rstrip("\r\n")
+        while True:
+            tmp = self.peek()
+            if not tmp.startswith(" "): break
+            line += tmp.rstrip("\r\n")
+            self.read()
+        return line
+
     def read_hunk(self):
         """Read one hunk from a patch file."""
         line = self.peek()
@@ -341,18 +351,12 @@ def read_patch(filename, fp=None):
                 break
 
             elif line.startswith("From: "):
-                header['author'], header['email'] = _parse_author(line[6:])
+                author = fp.read_multiline()[6:]
+                header['author'], header['email'] = _parse_author(author)
                 header.pop('signedoffby', None)
-                fp.read()
 
             elif line.startswith("Subject: "):
-                subject = line[9:].rstrip("\r\n")
-                fp.read()
-                while True:
-                    line = fp.peek()
-                    if not line.startswith(" "): break
-                    subject += line.rstrip("\r\n")
-                    fp.read()
+                subject = fp.read_multiline()[9:]
                 subject, revision = _parse_subject(subject)
                 if not subject.endswith("."): subject += "."
                 subject = re.sub('^([^:]*: *)([a-z])', lambda x: "%s%s" %

@@ -1,11 +1,11 @@
-From e6ddf6fa378fc8e41535fb3d06daab9587fded2a Mon Sep 17 00:00:00 2001
+From 91d1ab12e88ed9013ca63589f50b635ba9ed46b1 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 22 Feb 2015 01:25:20 +0100
 Subject: dxva2: Initial implementation of MPEG2 decoder using vaapi backend.
 
 ---
- configure.ac                |  16 +
- dlls/dxva2/Makefile.in      |  14 +-
+ configure.ac                |  18 +-
+ dlls/dxva2/Makefile.in      |  12 +-
  dlls/dxva2/backend.idl      |  96 ++++++
  dlls/dxva2/dxva2_private.h  | 115 ++++++-
  dlls/dxva2/genericdecoder.c | 432 +++++++++++++++++++++++++
@@ -21,10 +21,10 @@ Subject: dxva2: Initial implementation of MPEG2 decoder using vaapi backend.
  create mode 100644 dlls/dxva2/vaapi.c
 
 diff --git a/configure.ac b/configure.ac
-index 3473566..ff3b189 100644
+index c94403b1a9b..52604e2bf35 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -100,6 +100,8 @@ AC_ARG_WITH(xxf86vm,   AS_HELP_STRING([--without-xxf86vm],[do not use XFree vide
+@@ -101,6 +101,8 @@ AC_ARG_WITH(xxf86vm,   AS_HELP_STRING([--without-xxf86vm],[do not use XFree vide
              [if test "x$withval" = "xno"; then ac_cv_header_X11_extensions_xf86vmode_h=no; ac_cv_header_X11_extensions_xf86vmproto_h=no; fi])
  AC_ARG_WITH(zlib,      AS_HELP_STRING([--without-zlib],[do not use Zlib (data compression)]),
              [if test "x$withval" = "xno"; then ac_cv_header_zlib_h=no; fi])
@@ -33,7 +33,7 @@ index 3473566..ff3b189 100644
  
  AC_ARG_WITH(wine-tools,AS_HELP_STRING([--with-wine-tools=DIR],[use Wine tools from directory DIR]))
  AC_ARG_WITH(wine64,    AS_HELP_STRING([--with-wine64=DIR],[use the 64-bit Wine in DIR for a Wow64 build]))
-@@ -1261,6 +1263,20 @@ This probably prevents linking to OpenGL. Try deleting the file and restarting c
+@@ -1157,6 +1159,20 @@ This probably prevents linking to OpenGL. Try deleting the file and restarting c
      WINE_WARNING_WITH(opengl,[test -n "$opengl_msg"],[$opengl_msg
  OpenGL and Direct3D won't be supported.])
  
@@ -54,8 +54,17 @@ index 3473566..ff3b189 100644
      CPPFLAGS="$ac_save_CPPFLAGS"
  else
      X_CFLAGS=""
+@@ -3012,7 +3028,7 @@ WINE_CONFIG_LIB(dxerr9)
+ WINE_CONFIG_DLL(dxgi,,[implib])
+ WINE_CONFIG_TEST(dlls/dxgi/tests)
+ WINE_CONFIG_LIB(dxguid)
+-WINE_CONFIG_DLL(dxva2)
++WINE_CONFIG_DLL(dxva2,,[clean])
+ WINE_CONFIG_TEST(dlls/dxva2/tests)
+ WINE_CONFIG_DLL(esent)
+ WINE_CONFIG_DLL(evr)
 diff --git a/dlls/dxva2/Makefile.in b/dlls/dxva2/Makefile.in
-index 4af9dc0..afdefc3 100644
+index d484cb14bf2..68a7e3c8c0a 100644
 --- a/dlls/dxva2/Makefile.in
 +++ b/dlls/dxva2/Makefile.in
 @@ -1,8 +1,14 @@
@@ -67,19 +76,18 @@ index 4af9dc0..afdefc3 100644
 +	backend.idl
  
  C_SRCS = \
--	main.c \
--	videoservices.c \
  	devicemanager.c \
--	softwareprocessor.c
 +	genericdecoder.c \
-+	main.c \
+ 	main.c \
+-	videoservices.c \
+-	softwareprocessor.c
 +	softwareprocessor.c \
-+	vaapi.c \
 +	vaapi-mpeg2.c \
++	vaapi.c \
 +	videoservices.c
 diff --git a/dlls/dxva2/backend.idl b/dlls/dxva2/backend.idl
 new file mode 100644
-index 0000000..8d48835
+index 00000000000..8d488351ff2
 --- /dev/null
 +++ b/dlls/dxva2/backend.idl
 @@ -0,0 +1,96 @@
@@ -180,7 +188,7 @@ index 0000000..8d48835
 +        [out] IWineVideoDecoder **decoder);
 +}
 diff --git a/dlls/dxva2/dxva2_private.h b/dlls/dxva2/dxva2_private.h
-index f0068b6..f518637 100644
+index f0068b68891..f51863739b0 100644
 --- a/dlls/dxva2/dxva2_private.h
 +++ b/dlls/dxva2/dxva2_private.h
 @@ -1,5 +1,5 @@
@@ -315,7 +323,7 @@ index f0068b6..f518637 100644
 +#endif /* HAVE_VAAPI */
 diff --git a/dlls/dxva2/genericdecoder.c b/dlls/dxva2/genericdecoder.c
 new file mode 100644
-index 0000000..3903d6b
+index 00000000000..3903d6b0b46
 --- /dev/null
 +++ b/dlls/dxva2/genericdecoder.c
 @@ -0,0 +1,432 @@
@@ -752,7 +760,7 @@ index 0000000..3903d6b
 +    return S_OK;
 +}
 diff --git a/dlls/dxva2/main.c b/dlls/dxva2/main.c
-index 355e11f..758c146 100644
+index 0382b5fb00a..3006f175b7f 100644
 --- a/dlls/dxva2/main.c
 +++ b/dlls/dxva2/main.c
 @@ -32,6 +32,8 @@
@@ -764,7 +772,7 @@ index 355e11f..758c146 100644
  BOOL WINAPI CapabilitiesRequestAndCapabilitiesReply( HMONITOR monitor, LPSTR buffer, DWORD length )
  {
      FIXME("(%p, %p, %d): stub\n", monitor, buffer, length);
-@@ -323,16 +325,76 @@ BOOL WINAPI SetVCPFeature( HMONITOR monitor, BYTE vcpCode, DWORD value )
+@@ -322,16 +324,76 @@ BOOL WINAPI SetVCPFeature( HMONITOR monitor, BYTE vcpCode, DWORD value )
      return FALSE;
  }
  
@@ -846,7 +854,7 @@ index 355e11f..758c146 100644
  
      return TRUE;
 diff --git a/dlls/dxva2/tests/dxva2.c b/dlls/dxva2/tests/dxva2.c
-index dcbb990..c28be4d 100644
+index dcbb990ee5c..c28be4d8e3c 100644
 --- a/dlls/dxva2/tests/dxva2.c
 +++ b/dlls/dxva2/tests/dxva2.c
 @@ -1,7 +1,7 @@
@@ -927,7 +935,7 @@ index dcbb990..c28be4d 100644
      IDirectXVideoDecoderService_Release(service);
 diff --git a/dlls/dxva2/vaapi-mpeg2.c b/dlls/dxva2/vaapi-mpeg2.c
 new file mode 100644
-index 0000000..7b7f61d
+index 00000000000..7b7f61db755
 --- /dev/null
 +++ b/dlls/dxva2/vaapi-mpeg2.c
 @@ -0,0 +1,753 @@
@@ -1686,7 +1694,7 @@ index 0000000..7b7f61d
 +#endif /* HAVE_VAAPI */
 diff --git a/dlls/dxva2/vaapi.c b/dlls/dxva2/vaapi.c
 new file mode 100644
-index 0000000..80e63bf
+index 00000000000..80e63bf38d9
 --- /dev/null
 +++ b/dlls/dxva2/vaapi.c
 @@ -0,0 +1,767 @@
@@ -2458,7 +2466,7 @@ index 0000000..80e63bf
 +
 +#endif /* HAVE_VAAPI */
 diff --git a/dlls/dxva2/videoservices.c b/dlls/dxva2/videoservices.c
-index 46e431a..84222dc 100644
+index 46e431a7f29..84222dce558 100644
 --- a/dlls/dxva2/videoservices.c
 +++ b/dlls/dxva2/videoservices.c
 @@ -1,5 +1,5 @@
@@ -2635,5 +2643,5 @@ index 46e431a..84222dc 100644
          return E_NOINTERFACE;
      }
 -- 
-2.6.2
+2.11.0
 

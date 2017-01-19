@@ -2,7 +2,7 @@
 #
 # Python functions to read, split and apply patches.
 #
-# Copyright (C) 2014-2016 Sebastian Lackner
+# Copyright (C) 2014-2017 Sebastian Lackner
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -27,6 +27,7 @@ import itertools
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -665,6 +666,14 @@ def generate_ifdef_patch(original, patched, ifdef):
     # Return the final diff
     return diff
 
+def escape_sh(text):
+    """Escape string for usage in shell '...' quotes."""
+    return text.replace("'", "'\\''")
+
+def escape_c(text):
+    """Escape string for usage in C "..." quotes."""
+    return text.replace("\\", "\\\\").replace("\"", "\\\"")
+
 if __name__ == "__main__":
     import unittest
 
@@ -947,5 +956,63 @@ if __name__ == "__main__":
             diff = generate_ifdef_patch(source2, source1, "PATCHED")
             lines = diff.read().rstrip("\n").split("\n")
             self.assertEqual(lines, expected)
+
+    # Basic tests for escape_sh()
+    class EscapeShellTests(unittest.TestCase):
+        ascii = "".join([chr(i) for i in range(32, 127)] + \
+                        ["\\" + chr(i) for i in range(32, 127)])
+
+        def test_bash(self):
+            script = tempfile.NamedTemporaryFile(mode='w+', delete=False)
+            try:
+                script.write("#!/bin/bash\nprintf '%%s\\n' '%s'\n" % escape_sh(self.ascii))
+                script.close()
+
+                st = os.stat(script.name)
+                os.chmod(script.name, st.st_mode | stat.S_IEXEC)
+
+                result = subprocess.check_output([script.name])
+                self.assertEqual(result.rstrip("\n"), self.ascii)
+            finally:
+                os.unlink(script.name)
+
+        @unittest.skipUnless(os.path.exists("/bin/dash"), "requires Dash")
+        def test_dash(self):
+            script = tempfile.NamedTemporaryFile(mode='w+', delete=False)
+            try:
+                script.write("#!/bin/dash\nprintf '%%s\\n' '%s'\n" % escape_sh(self.ascii))
+                script.close()
+
+                st = os.stat(script.name)
+                os.chmod(script.name, st.st_mode | stat.S_IEXEC)
+
+                result = subprocess.check_output([script.name])
+                self.assertEqual(result.rstrip("\n"), self.ascii)
+            finally:
+                os.unlink(script.name)
+
+    # Basic tests for escape_c()
+    class EscapeCTests(unittest.TestCase):
+        ascii = "".join([chr(i) for i in range(32, 127)] + \
+                        ["\\" + chr(i) for i in range(32, 127)])
+
+        def test_c(self):
+            source = tempfile.NamedTemporaryFile(mode='w+', suffix='.c', delete=False)
+            try:
+                source.write("#include <stdio.h>\n")
+                source.write("int main() { printf(\"%%s\", \"%s\"); return 0; }\n" % escape_c(self.ascii))
+                source.close()
+
+                compiled = tempfile.NamedTemporaryFile(mode='w+', delete=False)
+                try:
+                    compiled.close()
+                    subprocess.call(["gcc", source.name, "-o", compiled.name])
+
+                    result = subprocess.check_output([compiled.name])
+                    self.assertEqual(result.rstrip("\n"), self.ascii)
+                finally:
+                    os.unlink(compiled.name)
+            finally:
+                os.unlink(source.name)
 
     unittest.main()

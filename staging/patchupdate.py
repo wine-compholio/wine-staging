@@ -3,7 +3,7 @@
 #
 # Automatic patch dependency checker and apply script generator.
 #
-# Copyright (C) 2014-2016 Sebastian Lackner
+# Copyright (C) 2014-2017 Sebastian Lackner
 # Copyright (C) 2015 Michael Müller
 #
 # This library is free software; you can redistribute it and/or
@@ -21,6 +21,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 #
 
+from patchutils import escape_sh, escape_c
 import argparse
 import binascii
 import cPickle as pickle
@@ -112,10 +113,6 @@ def _split_seq(iterable, size):
     while items:
         yield items
         items = list(itertools.islice(it, size))
-
-def _escape(s):
-    """Escape string inside of '...' quotes."""
-    return s.replace("\\", "\\\\\\\\").replace("\"", "\\\"").replace("'", "'\\''")
 
 def _load_dict(filename):
     """Load a Python dictionary object from a file."""
@@ -753,8 +750,8 @@ def generate_script(all_patches, resolved):
             lines.append("\t(\n")
             for p in _unique(patch.patches, key=lambda p: (p.patch_author, p.patch_subject, p.patch_revision)):
                 if p.patch_author is None: continue
-                lines.append("\t\techo '+    { \"%s\", \"%s\", %d },';\n" %
-                             (_escape(p.patch_author), _escape(p.patch_subject), p.patch_revision))
+                lines.append("\t\tprintf '%%s\\n' '+    { \"%s\", \"%s\", %d },';\n" %
+                             (escape_sh(escape_c(p.patch_author)), escape_sh(escape_c(p.patch_subject)), p.patch_revision))
             lines.append("\t) >> \"$patchlist\"\n")
         lines.append("fi\n\n")
     lines_apply = lines

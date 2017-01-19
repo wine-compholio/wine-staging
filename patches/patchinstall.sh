@@ -2615,20 +2615,20 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0030-vbscript-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0031-include-Check-element-type-in-CONTAINING_RECORD-and-.patch
 	(
-		echo '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },';
-		echo '+    { "Sebastian Lackner", "dsound: Avoid implicit cast of interface pointer.", 1 },';
-		echo '+    { "Sebastian Lackner", "amstream: Avoid implicit cast of interface pointer.", 1 },';
-		echo '+    { "Sebastian Lackner", "d2d1: Avoid implicit cast of interface pointer.", 1 },';
-		echo '+    { "Sebastian Lackner", "d3d11: Avoid implicit cast of interface pointer.", 1 },';
-		echo '+    { "Sebastian Lackner", "d3d8: Avoid implicit cast of interface pointer.", 1 },';
-		echo '+    { "Sebastian Lackner", "d3d9: Avoid implicit cast of interface pointer.", 1 },';
-		echo '+    { "Sebastian Lackner", "ddraw: Avoid implicit cast of interface pointer.", 1 },';
-		echo '+    { "Sebastian Lackner", "dwrite: Avoid implicit cast of interface pointer.", 1 },';
-		echo '+    { "Sebastian Lackner", "msxml3: Avoid implicit cast of interface pointer.", 1 },';
-		echo '+    { "Sebastian Lackner", "oleaut32: Avoid implicit cast of interface pointer.", 1 },';
-		echo '+    { "Sebastian Lackner", "rpcrt4: Avoid implicit cast of interface pointer.", 1 },';
-		echo '+    { "Sebastian Lackner", "vbscript: Avoid implicit cast of interface pointer.", 1 },';
-		echo '+    { "Sebastian Lackner", "include: Check element type in CONTAINING_RECORD and similar macros.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "dsound: Avoid implicit cast of interface pointer.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "amstream: Avoid implicit cast of interface pointer.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "d2d1: Avoid implicit cast of interface pointer.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "d3d11: Avoid implicit cast of interface pointer.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "d3d8: Avoid implicit cast of interface pointer.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "d3d9: Avoid implicit cast of interface pointer.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ddraw: Avoid implicit cast of interface pointer.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "dwrite: Avoid implicit cast of interface pointer.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "msxml3: Avoid implicit cast of interface pointer.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Avoid implicit cast of interface pointer.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "rpcrt4: Avoid implicit cast of interface pointer.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "vbscript: Avoid implicit cast of interface pointer.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "include: Check element type in CONTAINING_RECORD and similar macros.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2641,8 +2641,8 @@ if test "$enable_Coverity" -eq 1; then
 	patch_apply Coverity/0001-sfnt2fon-Don-t-leak-output-name-if-specified-multipl.patch
 	patch_apply Coverity/0002-winedump-Free-debug-string-in-case-it-was-not-freed-.patch
 	(
-		echo '+    { "André Hentschel", "sfnt2fon: Don'\''t leak output name if specified multiple times (Coverity).", 1 },';
-		echo '+    { "André Hentschel", "winedump: Free debug string in case it was not freed in for-loop (Coverity).", 1 },';
+		printf '%s\n' '+    { "André Hentschel", "sfnt2fon: Don'\''t leak output name if specified multiple times (Coverity).", 1 },';
+		printf '%s\n' '+    { "André Hentschel", "winedump: Free debug string in case it was not freed in for-loop (Coverity).", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2658,10 +2658,10 @@ if test "$enable_Pipelight" -eq 1; then
 	patch_apply Pipelight/0003-wined3d-allow-changing-strict-drawing-through-an-exp.patch
 	patch_apply Pipelight/0004-winex11.drv-Indicate-direct-rendering-through-OpenGL.patch
 	(
-		echo '+    { "Sebastian Lackner", "winex11: Implement X11DRV_FLUSH_GDI_DISPLAY ExtEscape command.", 1 },';
-		echo '+    { "Michael Müller", "user32: Decrease minimum SetTimer interval to 5 ms.", 2 },';
-		echo '+    { "Michael Müller", "wined3d: Allow changing strict drawing through an exported function.", 1 },';
-		echo '+    { "Michael Müller", "winex11.drv: Indicate direct rendering through OpenGL extension.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Implement X11DRV_FLUSH_GDI_DISPLAY ExtEscape command.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "user32: Decrease minimum SetTimer interval to 5 ms.", 2 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Allow changing strict drawing through an exported function.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Indicate direct rendering through OpenGL extension.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2678,11 +2678,11 @@ if test "$enable_Staging" -eq 1; then
 	patch_apply Staging/0004-loader-Add-commandline-option-check-libs.patch
 	patch_apply Staging/0005-loader-Print-library-paths-for-check-libs-on-Mac-OS-.patch
 	(
-		echo '+    { "Sebastian Lackner", "kernel32: Add winediag message to show warning, that this isn'\''t vanilla wine.", 1 },';
-		echo '+    { "Sebastian Lackner", "winelib: Append '\''(Staging)'\'' at the end of the version string.", 1 },';
-		echo '+    { "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list.", 1 },';
-		echo '+    { "Michael Müller", "loader: Add commandline option --check-libs.", 1 },';
-		echo '+    { "Michael Müller", "loader: Print library paths for --check-libs on Mac OS X.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Add winediag message to show warning, that this isn'\''t vanilla wine.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "winelib: Append '\''(Staging)'\'' at the end of the version string.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "loader: Add commandline option --check-libs.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "loader: Print library paths for --check-libs on Mac OS X.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2695,7 +2695,7 @@ fi
 if test "$enable_advapi32_AddMandatoryAce" -eq 1; then
 	patch_apply advapi32-AddMandatoryAce/0001-advapi32-Implement-AddMandatoryAce.patch
 	(
-		echo '+    { "Michael Müller", "advapi32: Implement AddMandatoryAce.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "advapi32: Implement AddMandatoryAce.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2707,7 +2707,7 @@ fi
 if test "$enable_advapi32_GetExplicitEntriesFromAclW" -eq 1; then
 	patch_apply advapi32-GetExplicitEntriesFromAclW/0001-advapi32-Implement-GetExplicitEntriesFromAclW.patch
 	(
-		echo '+    { "Michael Müller", "advapi32: Implement GetExplicitEntriesFromAclW.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "advapi32: Implement GetExplicitEntriesFromAclW.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2724,9 +2724,9 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 	patch_apply server-CreateProcess_ACLs/0002-kernel32-Implement-passing-security-descriptors-from.patch
 	patch_apply server-CreateProcess_ACLs/0003-advapi32-tests-Add-additional-tests-for-passing-a-th.patch
 	(
-		echo '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
-		echo '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
-		echo '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
+		printf '%s\n' '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2742,8 +2742,8 @@ if test "$enable_server_Misc_ACL" -eq 1; then
 	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
 	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
 	(
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2764,13 +2764,13 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 	patch_apply advapi32-LsaLookupSids/0006-server-Create-primary-group-using-DOMAIN_GROUP_RID_U.patch
 	patch_apply advapi32-LsaLookupSids/0007-advapi32-Fix-name-and-use-of-DOMAIN_GROUP_RID_USERS.patch
 	(
-		echo '+    { "Qian Hong", "advapi32: Initialize buffer length to zero in LsaLookupSids to prevent crash.", 2 },';
-		echo '+    { "Qian Hong", "advapi32: Prepend a hidden LSA_TRUST_INFORMATION in LsaLookupSids to avoid crash when Domains[-1] incorrectly accessed by application.", 2 },';
-		echo '+    { "Qian Hong", "advapi32: Prepend a hidden LSA_TRUST_INFORMATION in LsaLookupNames2 to avoid crash when Domains[-1] incorrectly accessed by application.", 2 },';
-		echo '+    { "Qian Hong", "advapi32: Fallback to Sid string when LookupAccountSid fails.", 1 },';
-		echo '+    { "Qian Hong", "advapi32/tests: Test prefix and use of TokenPrimaryGroup Sid.", 1 },';
-		echo '+    { "Qian Hong", "server: Create primary group using DOMAIN_GROUP_RID_USERS.", 1 },';
-		echo '+    { "Qian Hong", "advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.", 1 },';
+		printf '%s\n' '+    { "Qian Hong", "advapi32: Initialize buffer length to zero in LsaLookupSids to prevent crash.", 2 },';
+		printf '%s\n' '+    { "Qian Hong", "advapi32: Prepend a hidden LSA_TRUST_INFORMATION in LsaLookupSids to avoid crash when Domains[-1] incorrectly accessed by application.", 2 },';
+		printf '%s\n' '+    { "Qian Hong", "advapi32: Prepend a hidden LSA_TRUST_INFORMATION in LsaLookupNames2 to avoid crash when Domains[-1] incorrectly accessed by application.", 2 },';
+		printf '%s\n' '+    { "Qian Hong", "advapi32: Fallback to Sid string when LookupAccountSid fails.", 1 },';
+		printf '%s\n' '+    { "Qian Hong", "advapi32/tests: Test prefix and use of TokenPrimaryGroup Sid.", 1 },';
+		printf '%s\n' '+    { "Qian Hong", "server: Create primary group using DOMAIN_GROUP_RID_USERS.", 1 },';
+		printf '%s\n' '+    { "Qian Hong", "advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2786,8 +2786,8 @@ if test "$enable_advapi32_SetSecurityInfo" -eq 1; then
 	patch_apply advapi32-SetSecurityInfo/0001-advapi32-Move-the-DACL-combining-code-into-a-separat.patch
 	patch_apply advapi32-SetSecurityInfo/0002-advapi32-Fix-the-initialization-of-combined-DACLs-wh.patch
 	(
-		echo '+    { "Erich E. Hoover", "advapi32: Move the DACL combining code into a separate routine.", 1 },';
-		echo '+    { "Erich E. Hoover", "advapi32: Fix the initialization of combined DACLs when the new DACL is empty.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "advapi32: Move the DACL combining code into a separate routine.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "advapi32: Fix the initialization of combined DACLs when the new DACL is empty.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2803,8 +2803,8 @@ if test "$enable_advapi32_WinBuiltinAnyPackageSid" -eq 1; then
 	patch_apply advapi32-WinBuiltinAnyPackageSid/0001-advapi32-SDDL-assigns-the-AC-abbreviation-to-WinBuil.patch
 	patch_apply advapi32-WinBuiltinAnyPackageSid/0002-advapi32-tests-Add-a-test-that-compares-a-well-known.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "advapi32: SDDL assigns the \"AC\" abbreviation to WinBuiltinAnyPackageSid.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "advapi32/tests: Add a test that compares a well-known SID to a SID created from a SDDL abbreviation.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "advapi32: SDDL assigns the \"AC\" abbreviation to WinBuiltinAnyPackageSid.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "advapi32/tests: Add a test that compares a well-known SID to a SID created from a SDDL abbreviation.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2827,16 +2827,16 @@ if test "$enable_combase_RoApi" -eq 1; then
 	patch_apply combase-RoApi/0009-combase-Add-stub-for-RoRegisterActivationFactories.patch
 	patch_apply combase-RoApi/0010-combase-Add-stub-for-CleanupTlsOleState.patch
 	(
-		echo '+    { "Michael Müller", "include: Add activation.idl with IActivationFactory interface.", 1 },';
-		echo '+    { "Michael Müller", "include/roapi.h: Add further typedefs.", 1 },';
-		echo '+    { "Michael Müller", "combase: Implement RoGetActivationFactory.", 1 },';
-		echo '+    { "Michael Müller", "combase: Implement RoActivateInstance.", 1 },';
-		echo '+    { "Michael Müller", "combase: Add stub for RoGetApartmentIdentifier.", 1 },';
-		echo '+    { "Michael Müller", "include/objidl.idl: Add IApartmentShutdown interface.", 1 },';
-		echo '+    { "Michael Müller", "combase: Add stub for RoRegisterForApartmentShutdown.", 1 },';
-		echo '+    { "Michael Müller", "combase: Add stub for RoGetServerActivatableClasses.", 1 },';
-		echo '+    { "Michael Müller", "combase: Add stub for RoRegisterActivationFactories.", 1 },';
-		echo '+    { "Michael Müller", "combase: Add stub for CleanupTlsOleState.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "include: Add activation.idl with IActivationFactory interface.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "include/roapi.h: Add further typedefs.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "combase: Implement RoGetActivationFactory.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "combase: Implement RoActivateInstance.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "combase: Add stub for RoGetApartmentIdentifier.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "include/objidl.idl: Add IApartmentShutdown interface.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "combase: Add stub for RoRegisterForApartmentShutdown.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "combase: Add stub for RoGetServerActivatableClasses.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "combase: Add stub for RoRegisterActivationFactories.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "combase: Add stub for CleanupTlsOleState.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2849,7 +2849,7 @@ fi
 if test "$enable_kernel32_GetCurrentPackageFamilyName" -eq 1; then
 	patch_apply kernel32-GetCurrentPackageFamilyName/0001-kernel32-Add-stub-for-GetCurrentPackageFamilyName-an.patch
 	(
-		echo '+    { "Michael Müller", "kernel32: Add stub for GetCurrentPackageFamilyName and add related functions to spec file.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "kernel32: Add stub for GetCurrentPackageFamilyName and add related functions to spec file.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2864,7 +2864,7 @@ fi
 if test "$enable_kernel32_UmsStubs" -eq 1; then
 	patch_apply kernel32-UmsStubs/0001-kernel32-Add-a-bunch-of-kernel32-stubs.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "kernel32: Add a bunch of kernel32 stubs.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Add a bunch of kernel32 stubs.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2925,30 +2925,30 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0027-uiautomationcore-Add-dll-and-stub-some-functions.patch
 	patch_apply api-ms-win-Stub_DLLs/0028-uiautomationcore-Add-stub-for-UiaClientsAreListening.patch
 	(
-		echo '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
-		echo '+    { "Michael Müller", "api-ms-win-core-quirks-l1-1-0: Add dll.", 1 },';
-		echo '+    { "Michael Müller", "api-ms-win-core-heap-l2-1-0: Add dll.", 1 },';
-		echo '+    { "Michael Müller", "iertutil: Add dll and add stub for ordinal 811.", 1 },';
-		echo '+    { "Sebastian Lackner", "shcore: Add dll.", 1 },';
-		echo '+    { "Michael Müller", "api-ms-win-shcore-obsolete-l1-1-0: Add dll.", 1 },';
-		echo '+    { "Michael Müller", "ext-ms-win-xaml-pal-l1-1-0: Add dll and add stub for XamlBehaviorEnabled.", 1 },';
-		echo '+    { "Michael Müller", "ext-ms-win-appmodel-usercontext-l1-1-0: Add dll and add stub for UserContextExtInitialize.", 1 },';
-		echo '+    { "Michael Müller", "api-ms-win-shcore-thread-l1-1-0: Add dll.", 1 },';
-		echo '+    { "Michael Müller", "ext-ms-win-xaml-pal-l1-1-0: Add stub for GetThemeServices.", 1 },';
-		echo '+    { "Michael Müller", "api-ms-win-core-shlwapi-obsolete-l1-2-0: Add dll.", 1 },';
-		echo '+    { "Michael Müller", "api-ms-win-shcore-stream-l1-1-0: Add dll.", 1 },';
-		echo '+    { "Michael Müller", "ext-ms-win-ntuser-mouse-l1-1-0: Add dll.", 1 },';
-		echo '+    { "Michael Müller", "ext-ms-win-uxtheme-themes-l1-1-0: Add dll.", 1 },';
-		echo '+    { "Michael Müller", "api-ms-win-rtcore-ntuser-window-l1-1-0: Add dll.", 1 },';
-		echo '+    { "Michael Müller", "ext-ms-win-rtcore-ntuser-syscolors-l1-1-0: Add dll.", 1 },';
-		echo '+    { "Michael Müller", "api-ms-win-rtcore-ntuser-draw-l1-1-0: Add dll.", 1 },';
-		echo '+    { "Sebastian Lackner", "shcore: Add SetProcessDpiAwareness stub.", 1 },';
-		echo '+    { "Sebastian Lackner", "shcore: Implement stub for GetDpiForMonitor.", 1 },';
-		echo '+    { "Michael Müller", "kernelbase: Add stub for QuirkIsEnabled3.", 1 },';
-		echo '+    { "Sebastian Lackner", "shcore: Add stub for GetProcessDpiAwareness.", 1 },';
-		echo '+    { "Michael Müller", "feclient: Add stub dll.", 1 },';
-		echo '+    { "Michael Müller", "uiautomationcore: Add dll and stub some functions.", 1 },';
-		echo '+    { "Sebastian Lackner", "uiautomationcore: Add stub for UiaClientsAreListening.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "api-ms-win-core-quirks-l1-1-0: Add dll.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "api-ms-win-core-heap-l2-1-0: Add dll.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "iertutil: Add dll and add stub for ordinal 811.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "shcore: Add dll.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "api-ms-win-shcore-obsolete-l1-1-0: Add dll.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-xaml-pal-l1-1-0: Add dll and add stub for XamlBehaviorEnabled.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-appmodel-usercontext-l1-1-0: Add dll and add stub for UserContextExtInitialize.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "api-ms-win-shcore-thread-l1-1-0: Add dll.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-xaml-pal-l1-1-0: Add stub for GetThemeServices.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "api-ms-win-core-shlwapi-obsolete-l1-2-0: Add dll.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "api-ms-win-shcore-stream-l1-1-0: Add dll.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-ntuser-mouse-l1-1-0: Add dll.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-uxtheme-themes-l1-1-0: Add dll.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "api-ms-win-rtcore-ntuser-window-l1-1-0: Add dll.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-rtcore-ntuser-syscolors-l1-1-0: Add dll.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "api-ms-win-rtcore-ntuser-draw-l1-1-0: Add dll.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "shcore: Add SetProcessDpiAwareness stub.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "shcore: Implement stub for GetDpiForMonitor.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "kernelbase: Add stub for QuirkIsEnabled3.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "shcore: Add stub for GetProcessDpiAwareness.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "feclient: Add stub dll.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "uiautomationcore: Add dll and stub some functions.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "uiautomationcore: Add stub for UiaClientsAreListening.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2963,7 +2963,7 @@ fi
 if test "$enable_avifil32_AVIFileGetStream" -eq 1; then
 	patch_apply avifil32-AVIFileGetStream/0001-avifil32-AVIFileGetStream-should-set-stream-to-NULL-.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "avifil32: AVIFileGetStream should set stream to NULL in case of an error.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "avifil32: AVIFileGetStream should set stream to NULL in case of an error.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -2979,7 +2979,7 @@ fi
 if test "$enable_avifil32_AVIFile_Proxies" -eq 1; then
 	patch_apply avifil32-AVIFile_Proxies/0001-avifil32-Add-support-for-AVIFile-interface-proxies.-.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "avifil32: Add support for AVIFile interface proxies.", 2 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "avifil32: Add support for AVIFile interface proxies.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -2991,7 +2991,7 @@ fi
 if test "$enable_avifil32_IGetFrame_fnSetFormat" -eq 1; then
 	patch_apply avifil32-IGetFrame_fnSetFormat/0001-avifil32-Correctly-handle-compressed-frames-when-des.patch
 	(
-		echo '+    { "Michael Müller", "avifil32: Correctly handle compressed frames when desired format is specified.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "avifil32: Correctly handle compressed frames when desired format is specified.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3004,8 +3004,8 @@ if test "$enable_avifile_dll16_AVIStreamGetFrame" -eq 1; then
 	patch_apply avifile.dll16-AVIStreamGetFrame/0001-avifile-Correctly-convert-result-of-AVIStreamGetFram.patch
 	patch_apply avifile.dll16-AVIStreamGetFrame/0002-avifile-Convert-between-AVISTREAMINFO-16-bit-and-AVI.patch
 	(
-		echo '+    { "Michael Müller", "avifile.dll16: Correctly convert result of AVIStreamGetFrame to a segptr.", 1 },';
-		echo '+    { "Michael Müller", "avifile.dll16: Convert between AVISTREAMINFO (16 bit) and AVISTREAMINFOA.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "avifile.dll16: Correctly convert result of AVIStreamGetFrame to a segptr.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "avifile.dll16: Convert between AVISTREAMINFO (16 bit) and AVISTREAMINFOA.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3047,31 +3047,31 @@ if test "$enable_bcrypt_Improvements" -eq 1; then
 	patch_apply bcrypt-Improvements/0024-bcrypt-tests-Add-tests-for-auth-data-in-AES-GCM-mode.patch
 	patch_apply bcrypt-Improvements/0025-bcrypt-Avoid-crash-in-tests-when-compiling-without-g.patch
 	(
-		echo '+    { "Hans Leidekker", "bcrypt: Add AES provider.", 1 },';
-		echo '+    { "Michael Müller", "bcrypt: Directly implement hmac computation.", 1 },';
-		echo '+    { "Michael Müller", "bcrypt: Add internal fallback implementation for hash calculations.", 1 },';
-		echo '+    { "Michael Müller", "bcrypt: Use hash fallback implementation as default and remove gnutls / commoncrypto hash implemetation.", 1 },';
-		echo '+    { "Michael Müller", "bcrypt: Implement BCryptDuplicateHash.", 1 },';
-		echo '+    { "Michael Müller", "bcrypt: Fix handling of padding when input size equals block size for AES.", 1 },';
-		echo '+    { "Michael Müller", "bcrypt: Properly handle padding in AES decryption.", 1 },';
-		echo '+    { "Michael Müller", "bcrypt: Fix use-after-free in key_init.", 1 },';
-		echo '+    { "Sebastian Lackner", "bcrypt: Handle NULL pointers in BCryptDuplicateHash and add tests.", 1 },';
-		echo '+    { "Sebastian Lackner", "bcrypt/tests: Add test for bugs in BCryptGetProperty.", 1 },';
-		echo '+    { "Michael Müller", "bcrypt/tests: Add tests for AES GCM mode.", 1 },';
-		echo '+    { "Sebastian Lackner", "bcrypt: Pass object to get_{alg,hash}_property instead of alg_id.", 1 },';
-		echo '+    { "Michael Müller", "bcrypt: Implement BCryptSetProperty for algorithms.", 1 },';
-		echo '+    { "Michael Müller", "bcrypt: Implement BCryptGetProperty for BCRYPT_CHAINING_MODE.", 1 },';
-		echo '+    { "Michael Müller", "bcrypt: Implement BCryptGetProperty for BCRYPT_AUTH_TAG_LENGTH.", 1 },';
-		echo '+    { "Sebastian Lackner", "bcrypt: Fix string comparison in set_alg_property.", 1 },';
-		echo '+    { "Michael Müller", "bcrypt: Implement BCryptEncrypt for AES GCM mode.", 1 },';
-		echo '+    { "Michael Müller", "bcrypt: Implement BCryptDecrypt for AES GCM mode.", 1 },';
-		echo '+    { "Michael Müller", "bcrypt: Add support for computing/comparing cipher tag.", 1 },';
-		echo '+    { "Michael Müller", "bcrypt: Implement BCryptDuplicateKey.", 1 },';
-		echo '+    { "Sebastian Lackner", "bcrypt/tests: Add tests for BCryptDuplicateKey.", 1 },';
-		echo '+    { "Michael Müller", "bcrypt: Allow to call BCryptSetProperty on key objects.", 1 },';
-		echo '+    { "Michael Müller", "bcrypt: Add support for auth data in AES GCM mode.", 1 },';
-		echo '+    { "Sebastian Lackner", "bcrypt/tests: Add tests for auth data in AES GCM mode.", 1 },';
-		echo '+    { "Sebastian Lackner", "bcrypt: Avoid crash in tests when compiling without gnutls support.", 1 },';
+		printf '%s\n' '+    { "Hans Leidekker", "bcrypt: Add AES provider.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Directly implement hmac computation.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Add internal fallback implementation for hash calculations.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Use hash fallback implementation as default and remove gnutls / commoncrypto hash implemetation.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement BCryptDuplicateHash.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Fix handling of padding when input size equals block size for AES.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Properly handle padding in AES decryption.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Fix use-after-free in key_init.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Handle NULL pointers in BCryptDuplicateHash and add tests.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt/tests: Add test for bugs in BCryptGetProperty.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt/tests: Add tests for AES GCM mode.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Pass object to get_{alg,hash}_property instead of alg_id.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement BCryptSetProperty for algorithms.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement BCryptGetProperty for BCRYPT_CHAINING_MODE.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement BCryptGetProperty for BCRYPT_AUTH_TAG_LENGTH.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Fix string comparison in set_alg_property.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement BCryptEncrypt for AES GCM mode.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement BCryptDecrypt for AES GCM mode.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Add support for computing/comparing cipher tag.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement BCryptDuplicateKey.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt/tests: Add tests for BCryptDuplicateKey.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Allow to call BCryptSetProperty on key objects.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Add support for auth data in AES GCM mode.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt/tests: Add tests for auth data in AES GCM mode.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Avoid crash in tests when compiling without gnutls support.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3084,8 +3084,8 @@ if test "$enable_browseui_Progress_Dialog" -eq 1; then
 	patch_apply browseui-Progress_Dialog/0001-browseui-Implement-IProgressDialog-SetAnimation.patch
 	patch_apply browseui-Progress_Dialog/0002-browseui-Implement-PROGDLG_AUTOTIME-flag-for-IProgre.patch
 	(
-		echo '+    { "Michael Müller", "browseui: Implement IProgressDialog::SetAnimation.", 1 },';
-		echo '+    { "Michael Müller", "browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "browseui: Implement IProgressDialog::SetAnimation.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3100,7 +3100,7 @@ fi
 if test "$enable_cabinet_iFolder" -eq 1; then
 	patch_apply cabinet-iFolder/0001-cabinet-Set-index-of-folder-in-FDICopy-callback.patch
 	(
-		echo '+    { "Michael Müller", "cabinet: Set index of folder in FDICopy callback.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "cabinet: Set index of folder in FDICopy callback.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3115,7 +3115,7 @@ fi
 if test "$enable_comctl32_Button_Theming" -eq 1; then
 	patch_apply comctl32-Button_Theming/0001-comctl32-fix-buttons-becoming-unthemed-when-pressed-.patch
 	(
-		echo '+    { "Samuel Kim", "comctl32: Fix buttons becoming unthemed when pressed/released.", 1 },';
+		printf '%s\n' '+    { "Samuel Kim", "comctl32: Fix buttons becoming unthemed when pressed/released.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3130,7 +3130,7 @@ fi
 if test "$enable_comctl32_Listview_DrawItem" -eq 1; then
 	patch_apply comctl32-Listview_DrawItem/0001-comctl32-Preserve-custom-colors-between-subitems.patch
 	(
-		echo '+    { "Michael Müller", "comctl32: Preserve custom colors between subitems.", 2 },';
+		printf '%s\n' '+    { "Michael Müller", "comctl32: Preserve custom colors between subitems.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -3145,7 +3145,7 @@ fi
 if test "$enable_comctl32_PROPSHEET_InsertPage" -eq 1; then
 	patch_apply comctl32-PROPSHEET_InsertPage/0002-comctl32-Implement-PROPSHEET_InsertPage-based-on-PRO.patch
 	(
-		echo '+    { "Peter Hater", "comctl32: Implement PROPSHEET_InsertPage based on PROPSHEET_AddPage.", 1 },';
+		printf '%s\n' '+    { "Peter Hater", "comctl32: Implement PROPSHEET_InsertPage based on PROPSHEET_AddPage.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3160,7 +3160,7 @@ fi
 if test "$enable_comctl32_TTM_ADDTOOLW" -eq 1; then
 	patch_apply comctl32-TTM_ADDTOOLW/0001-comctl32-tooltip-Protect-TTM_ADDTOOLW-from-invalid-t.patch
 	(
-		echo '+    { "Alistair Leslie-Hughes", "comctl32/tooltip: Protect TTM_ADDTOOLW from invalid text pointers.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "comctl32/tooltip: Protect TTM_ADDTOOLW from invalid text pointers.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3176,7 +3176,7 @@ fi
 if test "$enable_comdlg32_lpstrFileTitle" -eq 1; then
 	patch_apply comdlg32-lpstrFileTitle/0001-comdlg32-Postpone-setting-ofn-lpstrFileTitle-to-work.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "comdlg32: Postpone setting ofn->lpstrFileTitle to work around an application bug.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "comdlg32: Postpone setting ofn->lpstrFileTitle to work around an application bug.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3191,7 +3191,7 @@ fi
 if test "$enable_configure_Absolute_RPATH" -eq 1; then
 	patch_apply configure-Absolute_RPATH/0001-configure-Also-add-the-absolute-RPATH-when-linking-a.patch
 	(
-		echo '+    { "Sebastian Lackner", "configure: Also add the absolute RPATH when linking against libwine.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "configure: Also add the absolute RPATH when linking against libwine.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3206,7 +3206,7 @@ fi
 if test "$enable_crypt32_CMS_Certificates" -eq 1; then
 	patch_apply crypt32-CMS_Certificates/0001-crypt32-Skip-unknown-item-when-decoding-a-CMS-certif.patch
 	(
-		echo '+    { "Charles Davis", "crypt32: Skip unknown item when decoding a CMS certificate.", 1 },';
+		printf '%s\n' '+    { "Charles Davis", "crypt32: Skip unknown item when decoding a CMS certificate.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3221,7 +3221,7 @@ fi
 if test "$enable_crypt32_Certificate_Check" -eq 1; then
 	patch_apply crypt32-Certificate_Check/0001-crypt32-Properly-check-root-certificate-in-CERT_CHAI.patch
 	(
-		echo '+    { "Michael Müller", "crypt32: Properly check root certificate in CERT_CHAIN_REVOCATION_CHECK_CHAIN.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "crypt32: Properly check root certificate in CERT_CHAIN_REVOCATION_CHECK_CHAIN.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3233,7 +3233,7 @@ fi
 if test "$enable_crypt32_CryptUnprotectMemory" -eq 1; then
 	patch_apply crypt32-CryptUnprotectMemory/0001-crypt32-Print-CryptUnprotectMemory-FIXME-only-once.patch
 	(
-		echo '+    { "Christian Costa", "crypt32: Print CryptUnprotectMemory FIXME only once.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "crypt32: Print CryptUnprotectMemory FIXME only once.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3245,7 +3245,7 @@ fi
 if test "$enable_d3d10_1_Forwards" -eq 1; then
 	patch_apply d3d10_1-Forwards/0001-d3d10_1-Add-missing-forwards-to-d3d10.patch
 	(
-		echo '+    { "Sebastian Lackner", "d3d10_1: Add missing forwards to d3d10.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "d3d10_1: Add missing forwards to d3d10.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3273,21 +3273,21 @@ if test "$enable_wined3d_1DTextures" -eq 1; then
 	patch_apply wined3d-1DTextures/0014-wined3d-Handle-1d-textures-in-texture_activate_dimen.patch
 	patch_apply wined3d-1DTextures/0015-wined3d-Allow-creation-of-1d-shader-views.patch
 	(
-		echo '+    { "Michael Müller", "wined3d: Create dummy 1d textures.", 1 },';
-		echo '+    { "Michael Müller", "wined3d: Add 1d texture resource type.", 1 },';
-		echo '+    { "Michael Müller", "wined3d: Add is_power_of_two helper function.", 1 },';
-		echo '+    { "Michael Müller", "wined3d: Create dummy 1d textures and surfaces.", 1 },';
-		echo '+    { "Michael Müller", "wined3d: Implement preparation for 1d textures.", 1 },';
-		echo '+    { "Michael Müller", "wined3d: Implement uploading for 1d textures.", 1 },';
-		echo '+    { "Michael Müller", "wined3d: Implement loading from system memory and buffers to (s)rgb 1d textures.", 1 },';
-		echo '+    { "Michael Müller", "wined3d: Implement downloading from (s)rgb 1d textures to system memory.", 1 },';
-		echo '+    { "Michael Müller", "wined3d: Implement converting between (s)rgb 1d textures.", 1 },';
-		echo '+    { "Michael Müller", "wined3d: Check for 1d textures in wined3d_texture_update_desc.", 1 },';
-		echo '+    { "Michael Müller", "wined3d: Check if 1d teture is still in use before releasing.", 1 },';
-		echo '+    { "Michael Müller", "wined3d: Generate glsl samplers for 1d texture arrays.", 1 },';
-		echo '+    { "Michael Müller", "wined3d: Add support for 1d textures in context_attach_gl_texture_fbo.", 1 },';
-		echo '+    { "Michael Müller", "wined3d: Handle 1d textures in texture_activate_dimensions.", 1 },';
-		echo '+    { "Michael Müller", "wined3d: Allow creation of 1d shader views.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Create dummy 1d textures.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Add 1d texture resource type.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Add is_power_of_two helper function.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Create dummy 1d textures and surfaces.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement preparation for 1d textures.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement uploading for 1d textures.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement loading from system memory and buffers to (s)rgb 1d textures.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement downloading from (s)rgb 1d textures to system memory.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement converting between (s)rgb 1d textures.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Check for 1d textures in wined3d_texture_update_desc.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Check if 1d teture is still in use before releasing.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Generate glsl samplers for 1d texture arrays.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Add support for 1d textures in context_attach_gl_texture_fbo.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Handle 1d textures in texture_activate_dimensions.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Allow creation of 1d shader views.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3326,27 +3326,27 @@ if test "$enable_d3d11_ID3D11Texture1D" -eq 1; then
 	patch_apply d3d11-ID3D11Texture1D/0020-d3d11-tests-Prepare-test_texture-for-1d-textures.patch
 	patch_apply d3d11-ID3D11Texture1D/0021-d3d11-tests-Add-some-basic-1d-texture-tests-in-test_.patch
 	(
-		echo '+    { "Michael Müller", "d3d11: Add stub ID3D11Texture2D and ID3D10Texture2D interfaces.", 1 },';
-		echo '+    { "Michael Müller", "d3d11: Create a texture in d3d_texture1d_init.", 1 },';
-		echo '+    { "Michael Müller", "d3d11: Create a private store in d3d_texture1d_init.", 1 },';
-		echo '+    { "Michael Müller", "d3d11: Generate dxgi surface in d3d_texture1d_init.", 1 },';
-		echo '+    { "Michael Müller", "d3d11: Improve d3d11_texture1d_GetDesc by obtaining the current width and format from wined3d.", 1 },';
-		echo '+    { "Michael Müller", "d3d11: Implement d3d10_texture1d_(Un)map.", 1 },';
-		echo '+    { "Michael Müller", "d3d11: Implement d3d10_texture1d_GetDesc.", 1 },';
-		echo '+    { "Michael Müller", "d3d11: Implement d3d11_texture1d_{G,S}etPrivateData.", 1 },';
-		echo '+    { "Michael Müller", "d3d11: Add d3d11_texture1d_SetPrivateDataInterface.", 1 },';
-		echo '+    { "Michael Müller", "d3d11: Add a hack to prevent creation of 1d cube textures.", 1 },';
-		echo '+    { "Michael Müller", "d3d11: Add support for 1d textures in normalize_srv_desc.", 1 },';
-		echo '+    { "Michael Müller", "d3d11: Add support for 1d textures in normalize_rtv_desc.", 1 },';
-		echo '+    { "Michael Müller", "d3d11/tests: Add support for 1d textures in check_srv_desc_.", 1 },';
-		echo '+    { "Michael Müller", "d3d11/tests: Add support for 1d textures in check_rtv_desc_.", 1 },';
-		echo '+    { "Michael Müller", "d3d11/tests: Add test for creating 1d textures.", 1 },';
-		echo '+    { "Michael Müller", "d3d11/tests: Test 1d texture interfaces.", 1 },';
-		echo '+    { "Michael Müller", "d3d11/tests: Test the creation of 1d render buffers in test_create_rendertarget_view.", 1 },';
-		echo '+    { "Michael Müller", "d3d11/tests: Test the creation of 1d shader resource views in test_create_shader_resource_view.", 1 },';
-		echo '+    { "Michael Müller", "d3d11/tests: Prepare test_texture for non 2d textures.", 1 },';
-		echo '+    { "Michael Müller", "d3d11/tests: Prepare test_texture for 1d textures.", 1 },';
-		echo '+    { "Michael Müller", "d3d11/tests: Add some basic 1d texture tests in test_texture.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Add stub ID3D11Texture2D and ID3D10Texture2D interfaces.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Create a texture in d3d_texture1d_init.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Create a private store in d3d_texture1d_init.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Generate dxgi surface in d3d_texture1d_init.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Improve d3d11_texture1d_GetDesc by obtaining the current width and format from wined3d.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement d3d10_texture1d_(Un)map.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement d3d10_texture1d_GetDesc.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement d3d11_texture1d_{G,S}etPrivateData.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Add d3d11_texture1d_SetPrivateDataInterface.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Add a hack to prevent creation of 1d cube textures.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Add support for 1d textures in normalize_srv_desc.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Add support for 1d textures in normalize_rtv_desc.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add support for 1d textures in check_srv_desc_.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add support for 1d textures in check_rtv_desc_.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add test for creating 1d textures.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Test 1d texture interfaces.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Test the creation of 1d render buffers in test_create_rendertarget_view.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Test the creation of 1d shader resource views in test_create_shader_resource_view.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Prepare test_texture for non 2d textures.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Prepare test_texture for 1d textures.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add some basic 1d texture tests in test_texture.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3362,8 +3362,8 @@ if test "$enable_d3d8_ValidateShader" -eq 1; then
 	patch_apply d3d8-ValidateShader/0001-d3d8-Improve-ValidateVertexShader-stub.patch
 	patch_apply d3d8-ValidateShader/0002-d3d8-Improve-ValidatePixelShader-stub.patch
 	(
-		echo '+    { "Sebastian Lackner", "d3d8: Improve ValidateVertexShader stub.", 1 },';
-		echo '+    { "Sebastian Lackner", "d3d8: Improve ValidatePixelShader stub.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "d3d8: Improve ValidateVertexShader stub.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "d3d8: Improve ValidatePixelShader stub.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3375,7 +3375,7 @@ fi
 if test "$enable_d3d9_DesktopWindow" -eq 1; then
 	patch_apply d3d9-DesktopWindow/0001-winex11.drv-Allow-changing-the-opengl-pixel-format-o.patch
 	(
-		echo '+    { "Michael Müller", "winex11.drv: Allow changing the opengl pixel format on the desktop window.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Allow changing the opengl pixel format on the desktop window.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3390,7 +3390,7 @@ fi
 if test "$enable_d3d9_Surface_Refcount" -eq 1; then
 	patch_apply d3d9-Surface_Refcount/0001-d3d9-Don-t-decrease-surface-refcount-when-its-alread.patch
 	(
-		echo '+    { "Henri Verbeet", "d3d9: Don'\''t decrease surface refcount when its already zero.", 1 },';
+		printf '%s\n' '+    { "Henri Verbeet", "d3d9: Don'\''t decrease surface refcount when its already zero.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3403,8 +3403,8 @@ if test "$enable_d3d9_Tests" -eq 1; then
 	patch_apply d3d9-Tests/0001-d3d9-tests-Avoid-test-failures-on-specific-Nvidia-graphic-.patch
 	patch_apply d3d9-Tests/0002-d3d9-tests-Avoid-crash-when-surface-and-texture-crea.patch
 	(
-		echo '+    { "Sebastian Lackner", "d3d9/tests: Avoid test failures on specific Nvidia graphic cards.", 1 },';
-		echo '+    { "Christian Costa", "d3d9/tests: Avoid crash when surface and texture creation fails.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "d3d9/tests: Avoid test failures on specific Nvidia graphic cards.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "d3d9/tests: Avoid crash when surface and texture creation fails.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3420,7 +3420,7 @@ fi
 if test "$enable_d3dx11_D3DX11CreateShaderResourceViewFromMemory" -eq 1; then
 	patch_apply d3dx11-D3DX11CreateShaderResourceViewFromMemory/0001-d3dx11-Add-D3DX11CreateShaderResourceViewFromMemory-.patch
 	(
-		echo '+    { "Andrey Gusev", "d3dx11: Add D3DX11CreateShaderResourceViewFromMemory stub.", 1 },';
+		printf '%s\n' '+    { "Andrey Gusev", "d3dx11: Add D3DX11CreateShaderResourceViewFromMemory stub.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3440,7 +3440,7 @@ fi
 if test "$enable_d3dx9_25_ID3DXEffect" -eq 1; then
 	patch_apply d3dx9_25-ID3DXEffect/0001-d3dx9_-Adjust-ID3DXEffect-interface-based-on-DLL-ver.patch
 	(
-		echo '+    { "Sebastian Lackner", "d3dx9_*: Adjust ID3DXEffect interface based on DLL version.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "d3dx9_*: Adjust ID3DXEffect interface based on DLL version.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3453,8 +3453,8 @@ if test "$enable_d3dx9_36_BumpLuminance" -eq 1; then
 	patch_apply d3dx9_36-BumpLuminance/0001-d3dx9_36-Recognize-bump-luminance-X8L8V8U8-when-load.patch
 	patch_apply d3dx9_36-BumpLuminance/0002-d3dx9_36-Add-format-description-for-X8L8V8U8-for-for.patch
 	(
-		echo '+    { "Christian Costa", "d3dx9_36: Recognize bump luminance X8L8V8U8 when loading dds file.", 1 },';
-		echo '+    { "Christian Costa", "d3dx9_36: Add format description for X8L8V8U8 for format conversions.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Recognize bump luminance X8L8V8U8 when loading dds file.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Add format description for X8L8V8U8 for format conversions.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3469,7 +3469,7 @@ fi
 if test "$enable_d3dx9_36_CloneEffect" -eq 1; then
 	patch_apply d3dx9_36-CloneEffect/0001-d3dx9_36-Improve-stub-for-ID3DXEffectImpl_CloneEffec.patch
 	(
-		echo '+    { "Sebastian Lackner", "d3dx9_36: Improve stub for ID3DXEffectImpl_CloneEffect.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "d3dx9_36: Improve stub for ID3DXEffectImpl_CloneEffect.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3484,7 +3484,7 @@ fi
 if test "$enable_d3dx9_36_D3DXCreateTeapot" -eq 1; then
 	patch_apply d3dx9_36-D3DXCreateTeapot/0001-d3dx9_36-Return-a-mesh-in-D3DXCreateTeapot.patch
 	(
-		echo '+    { "Alistair Leslie-Hughes", "d3dx9_36: Return a mesh in D3DXCreateTeapot.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "d3dx9_36: Return a mesh in D3DXCreateTeapot.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3505,8 +3505,8 @@ if test "$enable_d3dx9_36_GetShaderSemantics" -eq 1; then
 	patch_apply d3dx9_36-GetShaderSemantics/0001-d3dx9_36-Implement-D3DXGetShaderInputSemantics-tests.patch
 	patch_apply d3dx9_36-GetShaderSemantics/0002-d3dx9_36-Implement-D3DXGetShaderOutputSemantics.-rev.patch
 	(
-		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXGetShaderInputSemantics + tests.", 3 },';
-		echo '+    { "Alistair Leslie-Hughes", "d3dx9_36: Implement D3DXGetShaderOutputSemantics.", 2 },';
+		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Implement D3DXGetShaderInputSemantics + tests.", 3 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "d3dx9_36: Implement D3DXGetShaderOutputSemantics.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -3523,9 +3523,9 @@ if test "$enable_d3dx9_36_D3DXDisassembleShader" -eq 1; then
 	patch_apply d3dx9_36-D3DXDisassembleShader/0005-d3dx9_36-tests-Add-initial-tests-for-D3DXDisassemble.patch
 	patch_apply d3dx9_36-D3DXDisassembleShader/0006-d3dx9_36-tests-Add-additional-tests-for-special-case.patch
 	(
-		echo '+    { "Christian Costa", "d3dx9_36: Implement D3DXDisassembleShader.", 2 },';
-		echo '+    { "Sebastian Lackner", "d3dx9_36/tests: Add initial tests for D3DXDisassembleShader.", 1 },';
-		echo '+    { "Christian Costa", "d3dx9_36/tests: Add additional tests for special cases.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Implement D3DXDisassembleShader.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "d3dx9_36/tests: Add initial tests for D3DXDisassembleShader.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "d3dx9_36/tests: Add additional tests for special cases.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3548,9 +3548,9 @@ if test "$enable_d3dx9_36_D3DXStubs" -eq 1; then
 	patch_apply d3dx9_36-D3DXStubs/0002-d3dx9_36-Add-D3DXFrameFind-stub.patch
 	patch_apply d3dx9_36-D3DXStubs/0003-d3dx9-Implement-D3DXComputeTangent.patch
 	(
-		echo '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeNormalMap.", 1 },';
-		echo '+    { "Andrey Gusev", "d3dx9_36: Add D3DXFrameFind stub.", 1 },';
-		echo '+    { "Alistair Leslie-Hughes", "d3dx9: Implement D3DXComputeTangent.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeNormalMap.", 1 },';
+		printf '%s\n' '+    { "Andrey Gusev", "d3dx9_36: Add D3DXFrameFind stub.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "d3dx9: Implement D3DXComputeTangent.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3566,8 +3566,8 @@ if test "$enable_d3dx9_36_DDS" -eq 1; then
 	patch_apply d3dx9_36-DDS/0001-d3dx9_36-Add-support-for-FOURCC-surface-to-save_dds_.patch
 	patch_apply d3dx9_36-DDS/0002-d3dx9_36-Improve-D3DXSaveTextureToFile-to-save-simpl.patch
 	(
-		echo '+    { "Christian Costa", "d3dx9_36: Add support for FOURCC surface to save_dds_surface_to_memory.", 1 },';
-		echo '+    { "Christian Costa", "d3dx9_36: Improve D3DXSaveTextureToFile to save simple texture to dds file.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Add support for FOURCC surface to save_dds_surface_to_memory.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Improve D3DXSaveTextureToFile to save simple texture to dds file.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3589,10 +3589,10 @@ if test "$enable_wined3d_DXTn" -eq 1; then
 	patch_apply wined3d-DXTn/0003-wined3d-add-DXT1-to-B4G4R4A4-DXT1-to-B5G5R5A1-and-DX.patch
 	patch_apply wined3d-DXTn/0004-wined3d-Load-dxtn-dylib-library-on-Mac-OS-X.patch
 	(
-		echo '+    { "Michael Müller", "wined3d: Add support for DXTn software decoding through libtxc_dxtn.", 3 },';
-		echo '+    { "Christian Costa", "wined3d: Improve DXTn support and export conversion functions for d3dx9_36.", 1 },';
-		echo '+    { "Michael Müller", "wined3d: Add DXT1 to B4G4R4A4, DXT1 to B5G5R5A1 and DXT3 to B4G4R4A4 conversion.", 1 },';
-		echo '+    { "Michael Müller", "wined3d: Load dxtn dylib library on Mac OS X.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Add support for DXTn software decoding through libtxc_dxtn.", 3 },';
+		printf '%s\n' '+    { "Christian Costa", "wined3d: Improve DXTn support and export conversion functions for d3dx9_36.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Add DXT1 to B4G4R4A4, DXT1 to B5G5R5A1 and DXT3 to B4G4R4A4 conversion.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Load dxtn dylib library on Mac OS X.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3618,7 +3618,7 @@ fi
 if test "$enable_d3dx9_36_DXTn" -eq 1; then
 	patch_apply d3dx9_36-DXTn/0001-d3dx9_36-Add-dxtn-support.patch
 	(
-		echo '+    { "Christian Costa", "d3dx9_36: Add dxtn support.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Add dxtn support.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3636,10 +3636,10 @@ if test "$enable_d3dx9_36_DrawText" -eq 1; then
 	patch_apply d3dx9_36-DrawText/0003-d3dx9_36-Support-NULL-terminated-strings-in-ID3DXFon.patch
 	patch_apply d3dx9_36-DrawText/0004-d3dx9_36-ID3DXFont_DrawText-calc_rect-can-be-null.patch
 	(
-		echo '+    { "Christian Costa", "d3dx9_36: Implement ID3DXFontImpl_DrawText.", 1 },';
-		echo '+    { "Christian Costa", "d3dx9_36: Fix horizontal centering in ID3DXFont_DrawText.", 1 },';
-		echo '+    { "Alistair Leslie-Hughes", "d3dx9_36: Support NULL terminated strings in ID3DXFont_DrawText.", 1 },';
-		echo '+    { "Alistair Leslie-Hughes", "d3dx9_36: ID3DXFont_DrawText calc_rect can be null.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Implement ID3DXFontImpl_DrawText.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Fix horizontal centering in ID3DXFont_DrawText.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "d3dx9_36: Support NULL terminated strings in ID3DXFont_DrawText.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "d3dx9_36: ID3DXFont_DrawText calc_rect can be null.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3655,8 +3655,8 @@ if test "$enable_d3dx9_36_Dummy_Skininfo" -eq 1; then
 	patch_apply d3dx9_36-Dummy_Skininfo/0001-d3dx9_36-Return-dummy-skininfo-interface-in-D3DXLoad.patch
 	patch_apply d3dx9_36-Dummy_Skininfo/0002-d3dx9_36-tests-Add-initial-tests-for-dummy-skininfo-.patch
 	(
-		echo '+    { "Michael Müller", "d3dx9_36: Return dummy skininfo interface in D3DXLoadSkinMeshFromXof when skin information is unavailable.", 1 },';
-		echo '+    { "Michael Müller", "d3dx9_36/tests: Add initial tests for dummy skininfo interface.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3dx9_36: Return dummy skininfo interface in D3DXLoadSkinMeshFromXof when skin information is unavailable.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3dx9_36/tests: Add initial tests for dummy skininfo interface.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3671,7 +3671,7 @@ fi
 if test "$enable_d3dx9_36_Filter_Warnings" -eq 1; then
 	patch_apply d3dx9_36-Filter_Warnings/0001-d3dx9_36-Filter-out-D3DCompile-warning-messages-that.patch
 	(
-		echo '+    { "Christian Costa", "d3dx9_36: Filter out D3DCompile warning messages that are not present with D3DCompileShader.", 4 },';
+		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Filter out D3DCompile warning messages that are not present with D3DCompileShader.", 4 },';
 	) >> "$patchlist"
 fi
 
@@ -3686,7 +3686,7 @@ fi
 if test "$enable_d3dx9_36_FindNextValidTechnique" -eq 1; then
 	patch_apply d3dx9_36-FindNextValidTechnique/0001-d3dx9_36-Implement-ID3DXEffect_FindNextValidTechniqu.patch
 	(
-		echo '+    { "Christian Costa", "d3dx9_36: Implement ID3DXEffect_FindNextValidTechnique + add tests.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Implement ID3DXEffect_FindNextValidTechnique + add tests.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3698,7 +3698,7 @@ fi
 if test "$enable_d3dx9_36_Optimize_Inplace" -eq 1; then
 	patch_apply d3dx9_36-Optimize_Inplace/0001-d3dx9_36-No-need-to-fail-if-we-don-t-support-vertice.patch
 	(
-		echo '+    { "Christian Costa", "d3dx9_36: No need to fail if we don'\''t support vertices reordering in D3DXMESHOPT_ATTRSORT.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: No need to fail if we don'\''t support vertices reordering in D3DXMESHOPT_ATTRSORT.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3710,7 +3710,7 @@ fi
 if test "$enable_d3dx9_36_Texture_Align" -eq 1; then
 	patch_apply d3dx9_36-Texture_Align/0001-d3dx9_36-Align-texture-dimensions-to-block-size-for-.patch
 	(
-		echo '+    { "Christian Costa", "d3dx9_36: Align texture dimensions to block size for compressed textures in D3DXCheckTextureRequirements.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Align texture dimensions to block size for compressed textures in D3DXCheckTextureRequirements.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3725,7 +3725,7 @@ fi
 if test "$enable_d3dx9_36_UpdateSkinnedMesh" -eq 1; then
 	patch_apply d3dx9_36-UpdateSkinnedMesh/0001-d3dx9_36-Implement-ID3DXSkinInfoImpl_UpdateSkinnedMe.patch
 	(
-		echo '+    { "Christian Costa", "d3dx9_36: Implement ID3DXSkinInfoImpl_UpdateSkinnedMesh.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Implement ID3DXSkinInfoImpl_UpdateSkinnedMesh.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3737,7 +3737,7 @@ fi
 if test "$enable_dbghelp_Debug_Symbols" -eq 1; then
 	patch_apply dbghelp-Debug_Symbols/0001-dbghelp-Always-check-for-debug-symbols-in-BINDIR.patch
 	(
-		echo '+    { "Sebastian Lackner", "dbghelp: Always check for debug symbols in BINDIR.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "dbghelp: Always check for debug symbols in BINDIR.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3749,7 +3749,7 @@ fi
 if test "$enable_ddraw_D3DFINDDEVICERESULT" -eq 1; then
 	patch_apply ddraw-D3DFINDDEVICERESULT/0001-ddraw-Accept-d3d1-and-d3d2-versions-of-D3DFINDDEVICE.patch
 	(
-		echo '+    { "Michael Müller", "ddraw: Accept d3d1 and d3d2 versions of D3DFINDDEVICERESULT in IDirect3D_FindDevice.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ddraw: Accept d3d1 and d3d2 versions of D3DFINDDEVICERESULT in IDirect3D_FindDevice.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3767,9 +3767,9 @@ if test "$enable_ddraw_Device_Caps" -eq 1; then
 	patch_apply ddraw-Device_Caps/0002-ddraw-Set-dwZBufferBitDepth-in-ddraw7_GetCaps.patch
 	patch_apply ddraw-Device_Caps/0003-ddraw-Set-ddsOldCaps-correctly-in-ddraw7_GetCaps.patch
 	(
-		echo '+    { "Michael Müller", "ddraw: Don'\''t set HWTRANSFORMANDLIGHT flag on d3d7 RGB device.", 1 },';
-		echo '+    { "Michael Müller", "ddraw: Set dwZBufferBitDepth in ddraw7_GetCaps.", 1 },';
-		echo '+    { "Michael Müller", "ddraw: Set ddsOldCaps correctly in ddraw7_GetCaps.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ddraw: Don'\''t set HWTRANSFORMANDLIGHT flag on d3d7 RGB device.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ddraw: Set dwZBufferBitDepth in ddraw7_GetCaps.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ddraw: Set ddsOldCaps correctly in ddraw7_GetCaps.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3786,9 +3786,9 @@ if test "$enable_ddraw_EnumSurfaces" -eq 1; then
 	patch_apply ddraw-EnumSurfaces/0002-ddraw-Fix-arguments-to-IDirectDraw7-EnumSurfaces-in-.patch
 	patch_apply ddraw-EnumSurfaces/0003-ddraw-Implement-DDENUMSURFACES_CANBECREATED-flag-in-.patch
 	(
-		echo '+    { "Michael Müller", "ddraw/tests: Add more tests for IDirectDraw7::EnumSurfaces.", 1 },';
-		echo '+    { "Michael Müller", "ddraw: Fix arguments to IDirectDraw7::EnumSurfaces in DllMain.", 1 },';
-		echo '+    { "Michael Müller", "ddraw: Implement DDENUMSURFACES_CANBECREATED flag in ddraw7_EnumSurfaces.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ddraw/tests: Add more tests for IDirectDraw7::EnumSurfaces.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ddraw: Fix arguments to IDirectDraw7::EnumSurfaces in DllMain.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ddraw: Implement DDENUMSURFACES_CANBECREATED flag in ddraw7_EnumSurfaces.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3800,7 +3800,7 @@ fi
 if test "$enable_ddraw_Fix_Typos" -eq 1; then
 	patch_apply ddraw-Fix_Typos/0001-ddraw-tests-Fix-function-name-in-multiple-ok-message.patch
 	(
-		echo '+    { "Sebastian Lackner", "ddraw/tests: Fix function name in multiple ok() messages.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ddraw/tests: Fix function name in multiple ok() messages.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3815,7 +3815,7 @@ fi
 if test "$enable_ddraw_FlipToGDISurface" -eq 1; then
 	patch_apply ddraw-FlipToGDISurface/0001-ddraw-Implement-ddraw7_FlipToGDISurface.patch
 	(
-		echo '+    { "Henri Verbeet", "ddraw: Implement ddraw7_FlipToGDISurface.", 1 },';
+		printf '%s\n' '+    { "Henri Verbeet", "ddraw: Implement ddraw7_FlipToGDISurface.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3828,8 +3828,8 @@ if test "$enable_ddraw_IDirect3DTexture2_Load" -eq 1; then
 	patch_apply ddraw-IDirect3DTexture2_Load/0001-ddraw-Allow-size-and-format-conversions-in-IDirect3D.patch
 	patch_apply ddraw-IDirect3DTexture2_Load/0002-ddraw-tests-Add-more-tests-for-IDirect3DTexture2-Loa.patch
 	(
-		echo '+    { "Michael Müller", "ddraw: Allow size and format conversions in IDirect3DTexture2::Load.", 1 },';
-		echo '+    { "Michael Müller", "ddraw/tests: Add more tests for IDirect3DTexture2::Load.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ddraw: Allow size and format conversions in IDirect3DTexture2::Load.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ddraw/tests: Add more tests for IDirect3DTexture2::Load.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3844,7 +3844,7 @@ fi
 if test "$enable_ddraw_Rendering_Targets" -eq 1; then
 	patch_apply ddraw-Rendering_Targets/0001-ddraw-Create-rendering-targets-in-video-memory-if-po.patch
 	(
-		echo '+    { "Michael Müller", "ddraw: Create rendering targets in video memory if possible.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ddraw: Create rendering targets in video memory if possible.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3859,7 +3859,7 @@ fi
 if test "$enable_ddraw_Write_Vtable" -eq 1; then
 	patch_apply ddraw-Write_Vtable/0001-ddraw-Remove-const-from-ddraw1_vtbl-and-ddraw_surfac.patch
 	(
-		echo '+    { "Michael Müller", "ddraw: Remove const from ddraw1_vtbl and ddraw_surface1_vtbl.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ddraw: Remove const from ddraw1_vtbl and ddraw_surface1_vtbl.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3874,7 +3874,7 @@ fi
 if test "$enable_dinput_Initialize" -eq 1; then
 	patch_apply dinput-Initialize/0001-dinput-Do-not-wait-for-hook-thread-startup-in-IDirec.patch
 	(
-		echo '+    { "Sebastian Lackner", "dinput: Do not wait for hook thread startup in IDirectInput8::Initialize.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "dinput: Do not wait for hook thread startup in IDirectInput8::Initialize.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3889,7 +3889,7 @@ fi
 if test "$enable_dmusic_SynthPort_IKsControl" -eq 1; then
 	patch_apply dmusic-SynthPort_IKsControl/0001-dmusic-Implement-IDirectMusicBuffer-PackStructured.patch
 	(
-		echo '+    { "Michael Müller", "dmusic: Implement IDirectMusicBuffer::PackStructured.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "dmusic: Implement IDirectMusicBuffer::PackStructured.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3901,7 +3901,7 @@ fi
 if test "$enable_dsound_Clear_Mixing_Buffer" -eq 1; then
 	patch_apply dsound-Clear_Mixing_Buffer/0001-dsound-Clear-the-temporary-mixing-buffer-after-alloc.patch
 	(
-		echo '+    { "Erich E. Hoover", "dsound: Clear the temporary mixing buffer after allocation.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "dsound: Clear the temporary mixing buffer after allocation.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3916,7 +3916,7 @@ fi
 if test "$enable_dsound_Fast_Mixer" -eq 1; then
 	patch_apply dsound-Fast_Mixer/0001-dsound-Add-a-linear-resampler-for-use-with-a-large-n.patch
 	(
-		echo '+    { "Alexander E. Patrakov", "dsound: Add a linear resampler for use with a large number of mixing buffers.", 2 },';
+		printf '%s\n' '+    { "Alexander E. Patrakov", "dsound: Add a linear resampler for use with a large number of mixing buffers.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -3929,8 +3929,8 @@ if test "$enable_dsound_Revert_Cleanup" -eq 1; then
 	patch_apply dsound-Revert_Cleanup/0001-Revert-dsound-Use-a-better-name-for-IDirectSoundBuff.patch
 	patch_apply dsound-Revert_Cleanup/0002-Revert-dsound-Simplify-error-handling-when-creating-.patch
 	(
-		echo '+    { "Sebastian Lackner", "Revert \"dsound: Use a better name for IDirectSoundBufferImpl_Create().\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"dsound: Simplify error handling when creating a sound buffer.\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"dsound: Use a better name for IDirectSoundBufferImpl_Create().\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"dsound: Simplify error handling when creating a sound buffer.\".", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3966,27 +3966,27 @@ if test "$enable_dsound_EAX" -eq 1; then
 	patch_apply dsound-EAX/0020-dsound-Add-stub-support-for-DSPROPSETID_EAX20_Listen.patch
 	patch_apply dsound-EAX/0021-dsound-Add-stub-support-for-DSPROPSETID_EAX20_Buffer.patch
 	(
-		echo '+    { "Sebastian Lackner", "dsound: Apply filters before sound is multiplied to speakers.", 1 },';
-		echo '+    { "Mark Harmstone", "dsound: Add EAX v1 constants and structs.", 1 },';
-		echo '+    { "Mark Harmstone", "dsound: Report that we support EAX.", 1 },';
-		echo '+    { "Mark Harmstone", "dsound: Add EAX propset stubs.", 1 },';
-		echo '+    { "Mark Harmstone", "dsound: Add EAX presets.", 1 },';
-		echo '+    { "Mark Harmstone", "dsound: Support getting and setting EAX properties.", 1 },';
-		echo '+    { "Mark Harmstone", "dsound: Support getting and setting EAX buffer properties.", 1 },';
-		echo '+    { "Mark Harmstone", "dsound: Add EAX init and free stubs.", 1 },';
-		echo '+    { "Mark Harmstone", "dsound: Feed data through EAX function.", 1 },';
-		echo '+    { "Mark Harmstone", "dsound: Allocate EAX delay lines.", 1 },';
-		echo '+    { "Mark Harmstone", "dsound: Add EAX VerbPass stub.", 1 },';
-		echo '+    { "Mark Harmstone", "dsound: Implement EAX lowpass filter.", 1 },';
-		echo '+    { "Mark Harmstone", "dsound: Add delay line EAX functions.", 1 },';
-		echo '+    { "Mark Harmstone", "dsound: Implement EAX early reflections.", 1 },';
-		echo '+    { "Mark Harmstone", "dsound: Implement EAX decorrelator.", 1 },';
-		echo '+    { "Mark Harmstone", "dsound: Implement EAX late reverb.", 1 },';
-		echo '+    { "Mark Harmstone", "dsound: Implement EAX late all-pass filter.", 1 },';
-		echo '+    { "Sebastian Lackner", "dsound: Various improvements to EAX support.", 1 },';
-		echo '+    { "Sebastian Lackner", "dsound: Allow disabling of EAX support in the registry.", 1 },';
-		echo '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_ListenerProperties.", 1 },';
-		echo '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_BufferProperties.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "dsound: Apply filters before sound is multiplied to speakers.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "dsound: Add EAX v1 constants and structs.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "dsound: Report that we support EAX.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "dsound: Add EAX propset stubs.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "dsound: Add EAX presets.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "dsound: Support getting and setting EAX properties.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "dsound: Support getting and setting EAX buffer properties.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "dsound: Add EAX init and free stubs.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "dsound: Feed data through EAX function.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "dsound: Allocate EAX delay lines.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "dsound: Add EAX VerbPass stub.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "dsound: Implement EAX lowpass filter.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "dsound: Add delay line EAX functions.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "dsound: Implement EAX early reflections.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "dsound: Implement EAX decorrelator.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "dsound: Implement EAX late reverb.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "dsound: Implement EAX late all-pass filter.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "dsound: Various improvements to EAX support.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "dsound: Allow disabling of EAX support in the registry.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_ListenerProperties.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_BufferProperties.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4001,7 +4001,7 @@ fi
 if test "$enable_dxdiagn_Display_Information" -eq 1; then
 	patch_apply dxdiagn-Display_Information/0001-dxdiagn-Add-several-more-fields-for-DisplayDevices.patch
 	(
-		echo '+    { "Michael Müller", "dxdiagn: Add several more fields for DisplayDevices.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "dxdiagn: Add several more fields for DisplayDevices.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4016,7 +4016,7 @@ fi
 if test "$enable_dxdiagn_Enumerate_DirectSound" -eq 1; then
 	patch_apply dxdiagn-Enumerate_DirectSound/0001-dxdiagn-Enumerate-DirectSound-devices-and-add-some-b.patch
 	(
-		echo '+    { "Michael Müller", "dxdiagn: Enumerate DirectSound devices and add some basic properties.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "dxdiagn: Enumerate DirectSound devices and add some basic properties.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4034,7 +4034,7 @@ fi
 if test "$enable_dxdiagn_GetChildContainer_Leaf_Nodes" -eq 1; then
 	patch_apply dxdiagn-GetChildContainer_Leaf_Nodes/0001-dxdiagn-Calling-GetChildContainer-with-an-empty-stri.patch
 	(
-		echo '+    { "Michael Müller", "dxdiagn: Calling GetChildContainer with an empty string on a leaf container returns the object itself.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "dxdiagn: Calling GetChildContainer with an empty string on a leaf container returns the object itself.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4046,7 +4046,7 @@ fi
 if test "$enable_dxgi_MakeWindowAssociation" -eq 1; then
 	patch_apply dxgi-MakeWindowAssociation/0001-dxgi-Improve-stubs-for-MakeWindowAssociation-and-Get.patch
 	(
-		echo '+    { "Michael Müller", "dxgi: Improve stubs for MakeWindowAssociation and GetWindowAssociation.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "dxgi: Improve stubs for MakeWindowAssociation and GetWindowAssociation.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4063,11 +4063,11 @@ if test "$enable_winecfg_Staging" -eq 1; then
 	patch_apply winecfg-Staging/0004-winecfg-Add-checkbox-to-enable-disable-HideWineExpor.patch
 	patch_apply winecfg-Staging/0005-winecfg-Add-option-to-enable-disable-GTK3-theming.patch
 	(
-		echo '+    { "Michael Müller", "winecfg: Add staging tab for CSMT.", 1 },';
-		echo '+    { "Sebastian Lackner", "winecfg: Add checkbox to enable/disable vaapi GPU decoder.", 1 },';
-		echo '+    { "Mark Harmstone", "winecfg: Add checkbox to enable/disable EAX support.", 1 },';
-		echo '+    { "Sebastian Lackner", "winecfg: Add checkbox to enable/disable HideWineExports registry key.", 1 },';
-		echo '+    { "Michael Müller", "winecfg: Add option to enable/disable GTK3 theming.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winecfg: Add staging tab for CSMT.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "winecfg: Add checkbox to enable/disable vaapi GPU decoder.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "winecfg: Add checkbox to enable/disable EAX support.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "winecfg: Add checkbox to enable/disable HideWineExports registry key.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winecfg: Add option to enable/disable GTK3 theming.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4096,18 +4096,18 @@ if test "$enable_dxva2_Video_Decoder" -eq 1; then
 	patch_apply dxva2-Video_Decoder/0011-dxva2-Always-destroy-buffers-when-calling-vaRenderPi.patch
 	patch_apply dxva2-Video_Decoder/0012-dxva2-Only-declare-debug-channels-when-they-are-actu.patch
 	(
-		echo '+    { "Sebastian Lackner", "dxva2: Implement semi-stub for Direct3DDeviceManager9 interface.", 1 },';
-		echo '+    { "Michael Müller", "dxva2: Implement stubbed interfaces for IDirectXVideo{Acceleration,Decoder,Processor}Service.", 1 },';
-		echo '+    { "Michael Müller", "include: Fix an invalid UUID in dxva2api.idl.", 1 },';
-		echo '+    { "Michael Müller", "dxva2: Implement stubbed DirectX Software VideoProcessor interface.", 1 },';
-		echo '+    { "Michael Müller", "include: Add dxva.h header file.", 1 },';
-		echo '+    { "Michael Müller", "dxva2/tests: Add tests for dxva2 decoder.", 1 },';
-		echo '+    { "Michael Müller", "dxva2: Initial implementation of MPEG2 decoder using vaapi backend.", 1 },';
-		echo '+    { "Michael Müller", "dxva2: Implement h264 decoder.", 1 },';
-		echo '+    { "Michael Müller", "dxva2: Add DRM mode for vaapi.", 1 },';
-		echo '+    { "Michael Müller", "dxva2: Fill h264 luma and chroma weights / offsets with default values in case they are not specified.", 1 },';
-		echo '+    { "Michael Müller", "dxva2: Always destroy buffers when calling vaRenderPicture.", 1 },';
-		echo '+    { "Michael Müller", "dxva2: Only declare debug channels when they are actually used.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "dxva2: Implement semi-stub for Direct3DDeviceManager9 interface.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "dxva2: Implement stubbed interfaces for IDirectXVideo{Acceleration,Decoder,Processor}Service.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "include: Fix an invalid UUID in dxva2api.idl.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "dxva2: Implement stubbed DirectX Software VideoProcessor interface.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "include: Add dxva.h header file.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "dxva2/tests: Add tests for dxva2 decoder.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "dxva2: Initial implementation of MPEG2 decoder using vaapi backend.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "dxva2: Implement h264 decoder.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "dxva2: Add DRM mode for vaapi.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "dxva2: Fill h264 luma and chroma weights / offsets with default values in case they are not specified.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "dxva2: Always destroy buffers when calling vaRenderPicture.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "dxva2: Only declare debug channels when they are actually used.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4119,7 +4119,7 @@ fi
 if test "$enable_explorer_Video_Registry_Key" -eq 1; then
 	patch_apply explorer-Video_Registry_Key/0001-explorer-Create-CurrentControlSet-Control-Video-regi.patch
 	(
-		echo '+    { "Michael Müller", "explorer: Create CurrentControlSet\\\\Control\\\\Video registry key as non-volatile.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "explorer: Create CurrentControlSet\\Control\\Video registry key as non-volatile.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4142,11 +4142,11 @@ if test "$enable_fonts_Missing_Fonts" -eq 1; then
 	patch_apply fonts-Missing_Fonts/0004-fonts-Add-WenQuanYi-Micro-Hei-as-a-Microsoft-Yahei-r.patch
 	patch_apply fonts-Missing_Fonts/0005-Add-licenses-for-fonts-as-separate-files.patch
 	(
-		echo '+    { "Torsten Kurbad", "fonts: Add Liberation Sans as an Arial replacement.", 2 },';
-		echo '+    { "Sebastian Lackner", "fonts: Add Liberation Serif as an Times New Roman replacement.", 1 },';
-		echo '+    { "Sebastian Lackner", "fonts: Add Liberation Mono as an Courier New replacement.", 1 },';
-		echo '+    { "Erich E. Hoover", "fonts: Add WenQuanYi Micro Hei as a Microsoft Yahei replacement.", 1 },';
-		echo '+    { "Michael Müller", "Add licenses for fonts as separate files.", 1 },';
+		printf '%s\n' '+    { "Torsten Kurbad", "fonts: Add Liberation Sans as an Arial replacement.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "fonts: Add Liberation Serif as an Times New Roman replacement.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "fonts: Add Liberation Mono as an Courier New replacement.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "fonts: Add WenQuanYi Micro Hei as a Microsoft Yahei replacement.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "Add licenses for fonts as separate files.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4162,7 +4162,7 @@ fi
 if test "$enable_fsutil_Stub_Program" -eq 1; then
 	patch_apply fsutil-Stub_Program/0001-fsutil-Add-fsutil-program-with-support-for-creating-.patch
 	(
-		echo '+    { "Michael Müller", "fsutil: Add fsutil program with support for creating hard links.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "fsutil: Add fsutil program with support for creating hard links.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4174,7 +4174,7 @@ fi
 if test "$enable_gdi32_Lazy_Font_Initialization" -eq 1; then
 	patch_apply gdi32-Lazy_Font_Initialization/0001-gdi32-Perform-lazy-initialization-of-fonts-to-improv.patch
 	(
-		echo '+    { "Sebastian Lackner", "gdi32: Perform lazy initialization of fonts to improve startup performance.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "gdi32: Perform lazy initialization of fonts to improve startup performance.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4193,10 +4193,10 @@ if test "$enable_gdi32_MultiMonitor" -eq 1; then
 	patch_apply gdi32-MultiMonitor/0003-user32-Implement-EnumDisplayDevicesW-based-on-EnumDi.patch
 	patch_apply gdi32-MultiMonitor/0004-winemac-Make-GetMonitorInfo-give-a-different-device-.patch
 	(
-		echo '+    { "Ken Thomases", "gdi32: Also accept \"\\\\\\\\.\\\\DISPLAY<n>\" devices names with <n> other than 1 as display devices.", 1 },';
-		echo '+    { "Ken Thomases", "winex11: Make GetMonitorInfo() give a different device name (\\\\.\\\\DISPLAY<n>) to each monitor.", 1 },';
-		echo '+    { "Ken Thomases", "user32: Implement EnumDisplayDevicesW() based on EnumDisplayMonitors() and GetMonitorInfoW().", 1 },';
-		echo '+    { "Ken Thomases", "winemac: Make GetMonitorInfo() give a different device name (\\\\\\\\.\\\\DISPLAY<n>) to each monitor.", 1 },';
+		printf '%s\n' '+    { "Ken Thomases", "gdi32: Also accept \"\\\\.\\DISPLAY<n>\" devices names with <n> other than 1 as display devices.", 1 },';
+		printf '%s\n' '+    { "Ken Thomases", "winex11: Make GetMonitorInfo() give a different device name (\\.\\DISPLAY<n>) to each monitor.", 1 },';
+		printf '%s\n' '+    { "Ken Thomases", "user32: Implement EnumDisplayDevicesW() based on EnumDisplayMonitors() and GetMonitorInfoW().", 1 },';
+		printf '%s\n' '+    { "Ken Thomases", "winemac: Make GetMonitorInfo() give a different device name (\\\\.\\DISPLAY<n>) to each monitor.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4210,9 +4210,9 @@ if test "$enable_gdi32_Path_Metafile" -eq 1; then
 	patch_apply gdi32-Path_Metafile/0002-gdi32-ExtTextOut-on-a-path-with-bitmap-font-selected.patch
 	patch_apply gdi32-Path_Metafile/0003-gdi32-tests-Explicitly-test-BeginPath-return-value-i.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "gdi32/tests: Add some additional tests for ExtExtOut on a path for an EMF DC.", 2 },';
-		echo '+    { "Dmitry Timoshkov", "gdi32: ExtTextOut on a path with bitmap font selected shouldn'\''t fail.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "gdi32/tests: Explicitly test BeginPath() return value in the metafile path tests.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdi32/tests: Add some additional tests for ExtExtOut on a path for an EMF DC.", 2 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdi32: ExtTextOut on a path with bitmap font selected shouldn'\''t fail.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdi32/tests: Explicitly test BeginPath() return value in the metafile path tests.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4228,7 +4228,7 @@ fi
 if test "$enable_gdi32_Symbol_Truetype_Font" -eq 1; then
 	patch_apply gdi32-Symbol_Truetype_Font/0001-gdi32-Improve-detection-of-symbol-charset-for-old-tr.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "gdi32: Improve detection of symbol charset for old truetype fonts.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdi32: Improve detection of symbol charset for old truetype fonts.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4244,8 +4244,8 @@ if test "$enable_gdiplus_DC_Handling" -eq 1; then
 	patch_apply gdiplus-DC_Handling/0001-gdiplus-Ignore-an-externally-set-DC-origin.patch
 	patch_apply gdiplus-DC_Handling/0002-gdiplus-Ignore-an-externally-set-DC-clipping-region.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "gdiplus: Ignore an externally set DC origin.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "gdiplus: Ignore an externally set DC clipping region.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Ignore an externally set DC origin.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Ignore an externally set DC clipping region.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4264,11 +4264,11 @@ if test "$enable_gdiplus_Grayscale_PNG" -eq 1; then
 	patch_apply gdiplus-Grayscale_PNG/0004-gdiplus-tests-Add-a-test-for-image-flags-to-PNG-gray.patch
 	patch_apply gdiplus-Grayscale_PNG/0005-gdiplus-Set-correct-color-space-flags-for-grayscale-.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add a test for loading PNG grayscale images.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "gdiplus/tests: Add a test for loading PNG grayscale images.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "gdiplus: Force conversion of 8 bpp grayscale PNG images to 32 bpp BGRA.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "gdiplus/tests: Add a test for image flags to PNG grayscale image tests.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "gdiplus: Set correct color space flags for grayscale images.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add a test for loading PNG grayscale images.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus/tests: Add a test for loading PNG grayscale images.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Force conversion of 8 bpp grayscale PNG images to 32 bpp BGRA.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus/tests: Add a test for image flags to PNG grayscale image tests.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Set correct color space flags for grayscale images.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4283,7 +4283,7 @@ fi
 if test "$enable_hal_KeQueryPerformanceCounter" -eq 1; then
 	patch_apply hal-KeQueryPerformanceCounter/0001-hal-Implement-KeQueryPerformanceCounter.patch
 	(
-		echo '+    { "Michael Müller", "hal: Implement KeQueryPerformanceCounter.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "hal: Implement KeQueryPerformanceCounter.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4295,7 +4295,7 @@ fi
 if test "$enable_hnetcfg_INetFwAuthorizedApplication" -eq 1; then
 	patch_apply hnetcfg-INetFwAuthorizedApplication/0001-hnetcfg-Improve-INetFwAuthorizedApplication-get_Proc.patch
 	(
-		echo '+    { "Michael Müller", "hnetcfg: Improve INetFwAuthorizedApplication::get_ProcessImageFileName stub.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "hnetcfg: Improve INetFwAuthorizedApplication::get_ProcessImageFileName stub.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4310,7 +4310,7 @@ fi
 if test "$enable_ieframe_IViewObject_Draw" -eq 1; then
 	patch_apply ieframe-IViewObject-Draw/0001-ieframe-Return-S_OK-in-IViewObject-Draw-stub.patch
 	(
-		echo '+    { "Michael Müller", "ieframe: Return S_OK in IViewObject::Draw stub.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ieframe: Return S_OK in IViewObject::Draw stub.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4322,7 +4322,7 @@ fi
 if test "$enable_iexplore_Revert_ProductVersion" -eq 1; then
 	patch_apply iexplore-Revert_ProductVersion/0001-Revert-iexplore-Sync-registry-and-program-resource-v.patch
 	(
-		echo '+    { "Sebastian Lackner", "Revert \"iexplore: Sync registry and program resource values.\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"iexplore: Sync registry and program resource values.\".", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4337,7 +4337,7 @@ fi
 if test "$enable_imagehlp_BindImageEx" -eq 1; then
 	patch_apply imagehlp-BindImageEx/0001-imagehlp-Implement-parts-of-BindImageEx-to-make-free.patch
 	(
-		echo '+    { "Bernhard Reiter", "imagehlp: Implement parts of BindImageEx to make freezing Python scripts work.", 1 },';
+		printf '%s\n' '+    { "Bernhard Reiter", "imagehlp: Implement parts of BindImageEx to make freezing Python scripts work.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4354,9 +4354,9 @@ if test "$enable_imagehlp_Cleanup" -eq 1; then
 	patch_apply imagehlp-Cleanup/0002-imagehlp-Fix-checksum-calculation-for-odd-sizes.patch
 	patch_apply imagehlp-Cleanup/0003-imagehlp-Implement-ImageLoad-and-cleanup-ImageUnload.patch
 	(
-		echo '+    { "Michael Müller", "imagehlp: Catch invalid memory access in CheckSumMappedFile and add tests.", 1 },';
-		echo '+    { "Michael Müller", "imagehlp: Fix checksum calculation for odd sizes.", 1 },';
-		echo '+    { "Michael Müller", "imagehlp: Implement ImageLoad and cleanup ImageUnload.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "imagehlp: Catch invalid memory access in CheckSumMappedFile and add tests.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "imagehlp: Fix checksum calculation for odd sizes.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "imagehlp: Implement ImageLoad and cleanup ImageUnload.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4372,8 +4372,8 @@ if test "$enable_imagehlp_ImageLoad" -eq 1; then
 	patch_apply imagehlp-ImageLoad/0001-imagehlp-tests-Add-tests-for-ImageLoad-ImageUnload-G.patch
 	patch_apply imagehlp-ImageLoad/0002-imagehlp-tests-msvc-compatibility-fixes.patch
 	(
-		echo '+    { "Mark Jansen", "imagehlp/tests: Add tests for ImageLoad, ImageUnload, GetImageUnusedHeaderBytes.", 1 },';
-		echo '+    { "Mark Jansen", "imagehlp/tests: Msvc compatibility fixes.", 1 },';
+		printf '%s\n' '+    { "Mark Jansen", "imagehlp/tests: Add tests for ImageLoad, ImageUnload, GetImageUnusedHeaderBytes.", 1 },';
+		printf '%s\n' '+    { "Mark Jansen", "imagehlp/tests: Msvc compatibility fixes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4385,7 +4385,7 @@ fi
 if test "$enable_imm32_IMMDisableLegacyIME" -eq 1; then
 	patch_apply imm32-IMMDisableLegacyIME/0001-imm32-Add-stub-for-ImmDisableLegacyIME.patch
 	(
-		echo '+    { "Michael Müller", "imm32: Add stub for ImmDisableLegacyIME.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "imm32: Add stub for ImmDisableLegacyIME.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4401,7 +4401,7 @@ fi
 if test "$enable_inseng_Implementation" -eq 1; then
 	patch_apply inseng-Implementation/0001-inseng-Implement-CIF-reader-and-download-functions.patch
 	(
-		echo '+    { "Michael Müller", "inseng: Implement CIF reader and download functions.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "inseng: Implement CIF reader and download functions.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4416,7 +4416,7 @@ fi
 if test "$enable_iphlpapi_System_Ping" -eq 1; then
 	patch_apply iphlpapi-System_Ping/0001-iphlpapi-Fallback-to-system-ping-when-ICMP-permissio.patch
 	(
-		echo '+    { "Sebastian Lackner", "iphlpapi: Fallback to system ping when ICMP permissions are not present.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "iphlpapi: Fallback to system ping when ICMP permissions are not present.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4431,7 +4431,7 @@ fi
 if test "$enable_iphlpapi_TCP_Table" -eq 1; then
 	patch_apply iphlpapi-TCP_Table/0001-iphlpapi-Implement-AllocateAndGetTcpExTableFromStack.patch
 	(
-		echo '+    { "Erich E. Hoover", "iphlpapi: Implement AllocateAndGetTcpExTableFromStack.", 2 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "iphlpapi: Implement AllocateAndGetTcpExTableFromStack.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -4443,7 +4443,7 @@ fi
 if test "$enable_kernel32_COMSPEC" -eq 1; then
 	patch_apply kernel32-COMSPEC/0001-kernel32-Fallback-to-default-comspec-when-COMSPEC-is.patch
 	(
-		echo '+    { "Qian Hong", "kernel32: Fallback to default comspec when %COMSPEC% is not set.", 1 },';
+		printf '%s\n' '+    { "Qian Hong", "kernel32: Fallback to default comspec when %COMSPEC% is not set.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4455,7 +4455,7 @@ fi
 if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
 	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
 	(
-		echo '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4477,14 +4477,14 @@ if test "$enable_server_File_Permissions" -eq 1; then
 	patch_apply server-File_Permissions/0007-server-FILE_WRITE_ATTRIBUTES-should-succeed-for-read.patch
 	patch_apply server-File_Permissions/0008-server-Improve-mapping-of-DACL-to-file-permissions.patch
 	(
-		echo '+    { "Sebastian Lackner", "server: Improve STATUS_CANNOT_DELETE checks for directory case.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Allow to open files without any permission bits.", 2 },';
-		echo '+    { "Sebastian Lackner", "server: When creating new directories temporarily give read-permissions until they are opened.", 1 },';
-		echo '+    { "Sebastian Lackner", "advapi32/tests: Add tests for ACL inheritance in CreateDirectoryA.", 1 },';
-		echo '+    { "Sebastian Lackner", "advapi32/tests: Add ACL inheritance tests for creating subdirectories with NtCreateFile.", 1 },';
-		echo '+    { "Qian Hong", "ntdll/tests: Added tests for open behaviour on readonly files.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: FILE_WRITE_ATTRIBUTES should succeed for readonly files.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Improve mapping of DACL to file permissions.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Improve STATUS_CANNOT_DELETE checks for directory case.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Allow to open files without any permission bits.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: When creating new directories temporarily give read-permissions until they are opened.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "advapi32/tests: Add tests for ACL inheritance in CreateDirectoryA.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "advapi32/tests: Add ACL inheritance tests for creating subdirectories with NtCreateFile.", 1 },';
+		printf '%s\n' '+    { "Qian Hong", "ntdll/tests: Added tests for open behaviour on readonly files.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: FILE_WRITE_ATTRIBUTES should succeed for readonly files.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Improve mapping of DACL to file permissions.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4501,9 +4501,9 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 	patch_apply ntdll-FileDispositionInformation/0002-server-Do-not-allow-to-set-disposition-on-file-which.patch
 	patch_apply ntdll-FileDispositionInformation/0003-server-When-combining-root-and-name-make-sure-there-.patch
 	(
-		echo '+    { "Qian Hong", "ntdll/tests: Added tests to set disposition on file which is mapped to memory.", 1 },';
-		echo '+    { "Qian Hong", "server: Do not allow to set disposition on file which has a file mapping.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: When combining root and name, make sure there is only one slash.", 2 },';
+		printf '%s\n' '+    { "Qian Hong", "ntdll/tests: Added tests to set disposition on file which is mapped to memory.", 1 },';
+		printf '%s\n' '+    { "Qian Hong", "server: Do not allow to set disposition on file which has a file mapping.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: When combining root and name, make sure there is only one slash.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -4522,7 +4522,7 @@ fi
 if test "$enable_kernel32_CopyFileEx" -eq 1; then
 	patch_apply kernel32-CopyFileEx/0001-kernel32-Add-support-for-progress-callback-in-CopyFi.patch
 	(
-		echo '+    { "Michael Müller", "kernel32: Add support for progress callback in CopyFileEx.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "kernel32: Add support for progress callback in CopyFileEx.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4534,7 +4534,7 @@ fi
 if test "$enable_kernel32_Cwd_Startup_Info" -eq 1; then
 	patch_apply kernel32-Cwd_Startup_Info/0001-kernel32-Allow-non-nullterminated-string-as-working-.patch
 	(
-		echo '+    { "Sebastian Lackner", "kernel32: Allow non-nullterminated string as working directory in create_startup_info.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Allow non-nullterminated string as working directory in create_startup_info.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4546,7 +4546,7 @@ fi
 if test "$enable_kernel32_Debugger" -eq 1; then
 	patch_apply kernel32-Debugger/0001-kernel32-Always-start-debugger-on-WinSta0.patch
 	(
-		echo '+    { "Sebastian Lackner", "kernel32: Always start debugger on WinSta0.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Always start debugger on WinSta0.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4562,8 +4562,8 @@ if test "$enable_kernel32_FindFirstFile" -eq 1; then
 	patch_apply kernel32-FindFirstFile/0001-kernel32-Strip-invalid-characters-from-mask-in-FindF.patch
 	patch_apply kernel32-FindFirstFile/0002-kernel32-tests-Add-tests-for-FindFirstFileA-with-inv.patch
 	(
-		echo '+    { "Michael Müller", "kernel32: Strip invalid characters from mask in FindFirstFileExW.", 1 },';
-		echo '+    { "Michael Müller", "kernel32/tests: Add tests for FindFirstFileA with invalid characters.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "kernel32: Strip invalid characters from mask in FindFirstFileExW.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "kernel32/tests: Add tests for FindFirstFileA with invalid characters.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4580,9 +4580,9 @@ if test "$enable_kernel32_GetShortPathName" -eq 1; then
 	patch_apply kernel32-GetShortPathName/0002-kernel32-GetShortPathName-should-fail-when-called-wi.patch
 	patch_apply kernel32-GetShortPathName/0003-kernel32-GetLongPathName-should-fail-when-called-wit.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "kernel32/tests: Add some tests for GetLongPathName/GetShortPathName called with a wildcard.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "kernel32: GetShortPathName should fail when called with a wildcard.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "kernel32: GetLongPathName should fail when called with a wildcard.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Add some tests for GetLongPathName/GetShortPathName called with a wildcard.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: GetShortPathName should fail when called with a wildcard.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: GetLongPathName should fail when called with a wildcard.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4597,7 +4597,7 @@ fi
 if test "$enable_kernel32_LocaleNameToLCID" -eq 1; then
 	patch_apply kernel32-LocaleNameToLCID/0001-kernel32-Silence-repeated-LocaleNameToLCID-unsupport.patch
 	(
-		echo '+    { "Jarkko Korpi", "kernel32: Silence repeated LocaleNameToLCID unsupported flags message.", 1 },';
+		printf '%s\n' '+    { "Jarkko Korpi", "kernel32: Silence repeated LocaleNameToLCID unsupported flags message.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4610,8 +4610,8 @@ if test "$enable_kernel32_Locale_Definitions" -eq 1; then
 	patch_apply kernel32-Locale_Definitions/0001-kernel32-Update-sr-Latn-locale-definition.patch
 	patch_apply kernel32-Locale_Definitions/0002-kernel32-Add-sr-Latn-RS-locale-definition.patch
 	(
-		echo '+    { "Michael Müller", "kernel32: Update sr-Latn locale definition.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Add sr-Latn-RS locale definition.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "kernel32: Update sr-Latn locale definition.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "kernel32: Add sr-Latn-RS locale definition.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4626,7 +4626,7 @@ fi
 if test "$enable_kernel32_Misalign_Workaround" -eq 1; then
 	patch_apply kernel32-Misalign_Workaround/0001-kernel32-Fill-stack-with-meaningful-values-in-call_p.patch
 	(
-		echo '+    { "Sebastian Lackner", "kernel32: Fill stack with meaningful values in call_process_entry mis-align workaround.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Fill stack with meaningful values in call_process_entry mis-align workaround.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4646,11 +4646,11 @@ if test "$enable_kernel32_MoveFile" -eq 1; then
 	patch_apply kernel32-MoveFile/0004-kernel32-MoveFile-source-source-should-succeed.patch
 	patch_apply kernel32-MoveFile/0005-kernel32-MoveFile-should-make-sure-that-it-has-the-d.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "kernel32/tests: Fix compilation with PSDK.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "kernel32/tests: Fix a bunch of access denied errors by using a dedicated TEMP directory.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "kernel32/tests: Move the MoveFile test where it belongs.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "kernel32: MoveFile(source, source) should succeed.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "kernel32: MoveFile should make sure that it has the delete access to the source file.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Fix compilation with PSDK.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Fix a bunch of access denied errors by using a dedicated TEMP directory.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Move the MoveFile test where it belongs.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: MoveFile(source, source) should succeed.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: MoveFile should make sure that it has the delete access to the source file.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4671,10 +4671,10 @@ if test "$enable_server_Desktop_Refcount" -eq 1; then
 	patch_apply server-Desktop_Refcount/0003-user32-Implement-CWF_CREATE_ONLY-flag-for-CreateWind.patch
 	patch_apply server-Desktop_Refcount/0004-server-Assign-random-name-when-no-name-was-passed-to.patch
 	(
-		echo '+    { "Sebastian Lackner", "server: Introduce a new alloc_handle object callback.", 2 },';
-		echo '+    { "Sebastian Lackner", "server: Track desktop handle count more correctly.", 1 },';
-		echo '+    { "Sebastian Lackner", "user32: Implement CWF_CREATE_ONLY flag for CreateWindowStation.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Assign random name when no name was passed to create_winstation.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Introduce a new alloc_handle object callback.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Track desktop handle count more correctly.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32: Implement CWF_CREATE_ONLY flag for CreateWindowStation.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Assign random name when no name was passed to create_winstation.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4713,27 +4713,27 @@ if test "$enable_kernel32_Named_Pipe" -eq 1; then
 	patch_apply kernel32-Named_Pipe/0020-ntdll-Pre-cache-file-descriptors-after-opening-a-fil.patch
 	patch_apply kernel32-Named_Pipe/0021-server-Do-not-allow-to-queue-async-operation-for-bro.patch
 	(
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Only allow one test result.", 1 },';
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for PeekNamedPipe with partial received messages.", 1 },';
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for sending and receiving large messages.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Show warning if message mode is not supported.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Unify similar code in NtReadFile and FILE_AsyncReadService.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Move logic to check for broken pipe into a separate function.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Unify similar code in NtWriteFile and FILE_AsyncWriteService.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Use SOCK_SEQPACKET socket in combination with SO_PEEK_OFF to implement message mode on Unix.", 6 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Add handling for partially received messages in NtReadFile.", 1 },';
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Add more tests with overlapped IO and partial reads from named pipes.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Fix some tests for overlapped partial reads.", 1 },';
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Test sending, peeking and receiving an empty message.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Add support for nonblocking pipes.", 1 },';
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Add tests for PIPE_NOWAIT in message mode.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Allow to set PIPE_NOWAIT on byte-mode pipes.", 1 },';
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for PIPE_NOWAIT in overlapped mode.", 1 },';
-		echo '+    { "Qian Hong", "ntdll: Improve ReadDataAvailable handling in FilePipeLocalInformation class support.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Set NamedPipeState to FILE_PIPE_CLOSING_STATE on broken pipe in NtQueryInformationFile.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Return correct error codes for NtWriteFile when pipes are closed without disconnecting.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Pre-cache file descriptors after opening a file.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Do not allow to queue async operation for broken pipes.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "kernel32/tests: Only allow one test result.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "kernel32/tests: Add tests for PeekNamedPipe with partial received messages.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "kernel32/tests: Add tests for sending and receiving large messages.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Show warning if message mode is not supported.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Unify similar code in NtReadFile and FILE_AsyncReadService.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Move logic to check for broken pipe into a separate function.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Unify similar code in NtWriteFile and FILE_AsyncWriteService.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Use SOCK_SEQPACKET socket in combination with SO_PEEK_OFF to implement message mode on Unix.", 6 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add handling for partially received messages in NtReadFile.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "kernel32/tests: Add more tests with overlapped IO and partial reads from named pipes.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Fix some tests for overlapped partial reads.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "kernel32/tests: Test sending, peeking and receiving an empty message.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add support for nonblocking pipes.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "kernel32/tests: Add tests for PIPE_NOWAIT in message mode.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Allow to set PIPE_NOWAIT on byte-mode pipes.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for PIPE_NOWAIT in overlapped mode.", 1 },';
+		printf '%s\n' '+    { "Qian Hong", "ntdll: Improve ReadDataAvailable handling in FilePipeLocalInformation class support.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Set NamedPipeState to FILE_PIPE_CLOSING_STATE on broken pipe in NtQueryInformationFile.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Return correct error codes for NtWriteFile when pipes are closed without disconnecting.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Pre-cache file descriptors after opening a file.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Do not allow to queue async operation for broken pipes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4750,9 +4750,9 @@ if test "$enable_kernel32_NeedCurrentDirectoryForExePath" -eq 1; then
 	patch_apply kernel32-NeedCurrentDirectoryForExePath/0002-kernel32-NeedCurrentDirectoryForExePath-does-not-use.patch
 	patch_apply kernel32-NeedCurrentDirectoryForExePath/0003-kernel32-Consider-the-working-directory-first-when-l.patch
 	(
-		echo '+    { "Erich E. Hoover", "kernel32: Add SearchPath test demonstrating the priority of the working directory.", 1 },';
-		echo '+    { "Erich E. Hoover", "kernel32: NeedCurrentDirectoryForExePath does not use the registry.", 1 },';
-		echo '+    { "Erich E. Hoover", "kernel32: Consider the working directory first when launching executables with CreateProcess.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Add SearchPath test demonstrating the priority of the working directory.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: NeedCurrentDirectoryForExePath does not use the registry.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Consider the working directory first when launching executables with CreateProcess.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4774,11 +4774,11 @@ if test "$enable_kernel32_PE_Loader_Fixes" -eq 1; then
 	patch_apply kernel32-PE_Loader_Fixes/0004-kernel32-tests-Fix-a-module-reference-leak-leading-t.patch
 	patch_apply kernel32-PE_Loader_Fixes/0005-kernel32-tests-Add-a-PE-test-image-that-resembles-fo.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "server: All fields up to CheckSum are mandatory regardless of SizeOfOptionalHeader value.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "ntdll: If PE image size is larger than the backed file size then treat file as removable.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "kernel32: On process entry store PEB address in %ebx.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "kernel32/tests: Fix a module reference leak leading to an undeletable temporary file.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "kernel32/tests: Add a PE test image that resembles format of some of 8k demos.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "server: All fields up to CheckSum are mandatory regardless of SizeOfOptionalHeader value.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: If PE image size is larger than the backed file size then treat file as removable.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: On process entry store PEB address in %ebx.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Fix a module reference leak leading to an undeletable temporary file.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Add a PE test image that resembles format of some of 8k demos.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4794,7 +4794,7 @@ fi
 if test "$enable_kernel32_Profile" -eq 1; then
 	patch_apply kernel32-Profile/0001-kernel32-Allow-empty-profile-section-and-key-name-st.patch
 	(
-		echo '+    { "Claudio Fontana", "kernel32: Allow empty profile section and key name strings.", 1 },';
+		printf '%s\n' '+    { "Claudio Fontana", "kernel32: Allow empty profile section and key name strings.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4810,8 +4810,8 @@ if test "$enable_kernel32_SCSI_Sysfs" -eq 1; then
 	patch_apply kernel32-SCSI_Sysfs/0001-kernel32-Convert-scsi-device-type-in-SCSI_getprocent.patch
 	patch_apply kernel32-SCSI_Sysfs/0002-kernel32-Add-support-for-reading-scsi-devices-from-s.patch
 	(
-		echo '+    { "Michael Müller", "kernel32: Convert scsi device type in SCSI_getprocentry.", 1 },';
-		echo '+    { "Michael Müller", "kernel32: Add support for reading scsi devices from sysfs.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "kernel32: Convert scsi device type in SCSI_getprocentry.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "kernel32: Add support for reading scsi devices from sysfs.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4826,7 +4826,7 @@ fi
 if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
 	patch_apply kernel32-SetFileCompletionNotificationModes/0001-ntdll-Implement-FileIoCompletionNotificationInformat.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Implement FileIoCompletionNotificationInformation info class.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Implement FileIoCompletionNotificationInformation info class.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4838,7 +4838,7 @@ fi
 if test "$enable_kernel32_TimezoneInformation_Registry" -eq 1; then
 	patch_apply kernel32-TimezoneInformation_Registry/0001-kernel32-Init-TimezoneInformation-registry.patch
 	(
-		echo '+    { "Qian Hong", "kernel32: Init TimezoneInformation registry.", 1 },';
+		printf '%s\n' '+    { "Qian Hong", "kernel32: Init TimezoneInformation registry.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4854,8 +4854,8 @@ if test "$enable_kernel32_VerifyVersionInfo" -eq 1; then
 	patch_apply kernel32-VerifyVersionInfo/0001-kernel32-tests-Add-additional-tests-for-condition-ma.patch
 	patch_apply kernel32-VerifyVersionInfo/0002-ntdll-Fix-condition-mask-handling-in-RtlVerifyVersio.patch
 	(
-		echo '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for condition mask of VerifyVersionInfoA.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Fix condition mask handling in RtlVerifyVersionInfo.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for condition mask of VerifyVersionInfoA.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Fix condition mask handling in RtlVerifyVersionInfo.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4870,7 +4870,7 @@ fi
 if test "$enable_krnl386_exe16_GDT_LDT_Emulation" -eq 1; then
 	patch_apply krnl386.exe16-GDT_LDT_Emulation/0001-krnl386.exe16-Emulate-GDT-and-LDT-access.patch
 	(
-		echo '+    { "Michael Müller", "krnl386.exe16: Emulate GDT and LDT access.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "krnl386.exe16: Emulate GDT and LDT access.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4885,7 +4885,7 @@ fi
 if test "$enable_krnl386_exe16_Invalid_Console_Handles" -eq 1; then
 	patch_apply krnl386.exe16-Invalid_Console_Handles/0001-krnl386.exe16-Really-translate-all-invalid-console-h.patch
 	(
-		echo '+    { "Michael Müller", "krnl386.exe16: Really translate all invalid console handles into usable DOS handles.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "krnl386.exe16: Really translate all invalid console handles into usable DOS handles.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4900,7 +4900,7 @@ fi
 if test "$enable_krnl386_exe16__lclose16" -eq 1; then
 	patch_apply krnl386.exe16-_lclose16/0001-krnl386.exe16-Do-not-reassign-default-handles-after-.patch
 	(
-		echo '+    { "Michael Müller", "krnl386.exe16: Do not reassign default handles after they got closed.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "krnl386.exe16: Do not reassign default handles after they got closed.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4912,7 +4912,7 @@ fi
 if test "$enable_libs_Debug_Channel" -eq 1; then
 	patch_apply libs-Debug_Channel/0001-libwine-Add-process-specific-debug-channels.patch
 	(
-		echo '+    { "Michael Müller", "libwine: Add process specific debug channels.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "libwine: Add process specific debug channels.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4928,7 +4928,7 @@ fi
 if test "$enable_libs_Unicode_Collation" -eq 1; then
 	patch_apply libs-Unicode_Collation/0001-libs-Fix-most-problems-with-CompareString.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "libs: Fix most problems with CompareString.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "libs: Fix most problems with CompareString.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4940,7 +4940,7 @@ fi
 if test "$enable_makedep_PARENTSPEC" -eq 1; then
 	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
 	(
-		echo '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4967,15 +4967,15 @@ if test "$enable_mfplat_MFTRegister" -eq 1; then
 	patch_apply mfplat-MFTRegister/0008-mf-Implement-IMFMediaSession-stub-interface.patch
 	patch_apply mfplat-MFTRegister/0009-mfplat-Add-stub-for-MFCreateSourceResolver.patch
 	(
-		echo '+    { "Michael Müller", "mfplat: Implement MFTRegister.", 2 },';
-		echo '+    { "Michael Müller", "mfplat: Implement MFTUnregister.", 1 },';
-		echo '+    { "Michael Müller", "mfplat: Implement MFTEnum.", 1 },';
-		echo '+    { "Michael Müller", "mfplat/tests: Add tests.", 1 },';
-		echo '+    { "Michael Müller", "include/mfidl.idl: Add IMFMediaSession interface and dependencies.", 1 },';
-		echo '+    { "Michael Müller", "mf: Add stub for MFCreateMediaSession.", 1 },';
-		echo '+    { "Michael Müller", "include/rpcndr.h: Fix definition of EXTERN_GUID.", 1 },';
-		echo '+    { "Michael Müller", "mf: Implement IMFMediaSession stub interface.", 1 },';
-		echo '+    { "Michael Müller", "mfplat: Add stub for MFCreateSourceResolver.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "mfplat: Implement MFTRegister.", 2 },';
+		printf '%s\n' '+    { "Michael Müller", "mfplat: Implement MFTUnregister.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "mfplat: Implement MFTEnum.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "mfplat/tests: Add tests.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "include/mfidl.idl: Add IMFMediaSession interface and dependencies.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "mf: Add stub for MFCreateMediaSession.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "include/rpcndr.h: Fix definition of EXTERN_GUID.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "mf: Implement IMFMediaSession stub interface.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "mfplat: Add stub for MFCreateSourceResolver.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4991,8 +4991,8 @@ if test "$enable_mmsystem_dll16_MIDIHDR_Refcount" -eq 1; then
 	patch_apply mmsystem.dll16-MIDIHDR_Refcount/0001-mmsystem.dll16-Refcount-midihdr-to-work-around-buggy.patch
 	patch_apply mmsystem.dll16-MIDIHDR_Refcount/0002-mmsystem.dll16-Translate-MidiIn-messages.patch
 	(
-		echo '+    { "Michael Müller", "mmsystem.dll16: Refcount midihdr to work around buggy application which unprepares buffer during a callback.", 1 },';
-		echo '+    { "Michael Müller", "mmsystem.dll16: Translate MidiIn messages.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "mmsystem.dll16: Refcount midihdr to work around buggy application which unprepares buffer during a callback.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "mmsystem.dll16: Translate MidiIn messages.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5007,7 +5007,7 @@ fi
 if test "$enable_mountmgr_DosDevices" -eq 1; then
 	patch_apply mountmgr-DosDevices/0001-mountmgr.sys-Write-usable-device-paths-into-HKLM-SYS.patch
 	(
-		echo '+    { "Michael Müller", "mountmgr.sys: Write usable device paths into HKLM\\\\SYSTEM\\\\MountedDevices.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "mountmgr.sys: Write usable device paths into HKLM\\SYSTEM\\MountedDevices.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5022,7 +5022,7 @@ fi
 if test "$enable_mpr_WNetGetUniversalNameW" -eq 1; then
 	patch_apply mpr-WNetGetUniversalNameW/0001-mpr-Return-correct-error-code-for-non-network-paths-.patch
 	(
-		echo '+    { "Michael Müller", "mpr: Return correct error code for non network paths and REMOTE_NAME_INFO_LEVEL in WNetGetUniversalName.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "mpr: Return correct error code for non network paths and REMOTE_NAME_INFO_LEVEL in WNetGetUniversalName.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5037,7 +5037,7 @@ fi
 if test "$enable_mscoree_CorValidateImage" -eq 1; then
 	patch_apply mscoree-CorValidateImage/0001-mscoree-Implement-_CorValidateImage.patch
 	(
-		echo '+    { "Michael Müller", "mscoree: Implement semi-stub for _CorValidateImage.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "mscoree: Implement semi-stub for _CorValidateImage.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5052,7 +5052,7 @@ fi
 if test "$enable_mshtml_HTMLLocation_put_hash" -eq 1; then
 	patch_apply mshtml-HTMLLocation_put_hash/0001-mshtml-Add-IHTMLLocation-hash-property-s-getter-impl.patch
 	(
-		echo '+    { "Zhenbo Li", "mshtml: Add IHTMLLocation::hash property'\''s getter implementation.", 1 },';
+		printf '%s\n' '+    { "Zhenbo Li", "mshtml: Add IHTMLLocation::hash property'\''s getter implementation.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5064,7 +5064,7 @@ fi
 if test "$enable_msi_msi_vcl_get_cost" -eq 1; then
 	patch_apply msi-msi_vcl_get_cost/0001-msi-Do-not-sign-extend-after-multiplying.patch
 	(
-		echo '+    { "Mark Jansen", "msi: Do not sign extend after multiplying.", 1 },';
+		printf '%s\n' '+    { "Mark Jansen", "msi: Do not sign extend after multiplying.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5089,19 +5089,19 @@ if test "$enable_msidb_Implementation" -eq 1; then
 	patch_apply msidb-Implementation/0012-msi-Add-support-for-exporting-binary-streams-Binary-.patch
 	patch_apply msidb-Implementation/0013-msidb-Add-support-for-wildcard-full-database-export.patch
 	(
-		echo '+    { "Erich E. Hoover", "msidb: Add stub tool for manipulating MSI databases.", 1 },';
-		echo '+    { "Erich E. Hoover", "msi: Return an error when MsiDatabaseImport is passed an invalid pathname.", 1 },';
-		echo '+    { "Erich E. Hoover", "msidb: Add support for importing database tables.", 1 },';
-		echo '+    { "Erich E. Hoover", "msidb: Add support for adding stream/cabinet files to MSI databases.", 1 },';
-		echo '+    { "Erich E. Hoover", "msi: Add support for deleting streams from an MSI database.", 1 },';
-		echo '+    { "Erich E. Hoover", "msidb: Add support for removing stream/cabinet files from MSI databases.", 1 },';
-		echo '+    { "Erich E. Hoover", "msidb: Add support for extracting stream/cabinet files from MSI databases.", 1 },';
-		echo '+    { "Erich E. Hoover", "msidb: Add support for exporting database tables.", 1 },';
-		echo '+    { "Erich E. Hoover", "msidb: Add support for exporting with short (DOS) filenames.", 1 },';
-		echo '+    { "Erich E. Hoover", "msi: Add support for exporting the _SummaryInformation table.", 1 },';
-		echo '+    { "Erich E. Hoover", "msi: Break out field exporting into a separate routine.", 1 },';
-		echo '+    { "Erich E. Hoover", "msi: Add support for exporting binary streams (Binary/Icon tables).", 1 },';
-		echo '+    { "Erich E. Hoover", "msidb: Add support for wildcard (full database) export.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add stub tool for manipulating MSI databases.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "msi: Return an error when MsiDatabaseImport is passed an invalid pathname.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add support for importing database tables.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add support for adding stream/cabinet files to MSI databases.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "msi: Add support for deleting streams from an MSI database.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add support for removing stream/cabinet files from MSI databases.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add support for extracting stream/cabinet files from MSI databases.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add support for exporting database tables.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add support for exporting with short (DOS) filenames.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "msi: Add support for exporting the _SummaryInformation table.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "msi: Break out field exporting into a separate routine.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "msi: Add support for exporting binary streams (Binary/Icon tables).", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add support for wildcard (full database) export.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5113,7 +5113,7 @@ fi
 if test "$enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback" -eq 1; then
 	patch_apply msvcr120-_SetWinRTOutOfMemoryExceptionCallback/0001-msvcr120-Add-stub-for-_SetWinRTOutOfMemoryExceptionC.patch
 	(
-		echo '+    { "Michael Müller", "msvcr120: Add stub for _SetWinRTOutOfMemoryExceptionCallback.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "msvcr120: Add stub for _SetWinRTOutOfMemoryExceptionCallback.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5128,7 +5128,7 @@ fi
 if test "$enable_msvcrt_Math_Precision" -eq 1; then
 	patch_apply msvcrt-Math_Precision/0001-msvcrt-Calculate-sinh-cosh-exp-pow-with-higher-preci.patch
 	(
-		echo '+    { "Sebastian Lackner", "msvcrt: Calculate sinh/cosh/exp/pow with higher precision.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "msvcrt: Calculate sinh/cosh/exp/pow with higher precision.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -5141,7 +5141,7 @@ fi
 if test "$enable_msvcrt_NAN" -eq 1; then
 	patch_apply msvcrt-NAN/0001-msvcrt-Implement-nan.patch
 	(
-		echo '+    { "Daniel Lehman", "msvcrt: Implement nan.", 2 },';
+		printf '%s\n' '+    { "Daniel Lehman", "msvcrt: Implement nan.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -5164,13 +5164,13 @@ if test "$enable_msvfw32_ICGetDisplayFormat" -eq 1; then
 	patch_apply msvfw32-ICGetDisplayFormat/0006-msvidc32-Add-support-for-converting-16-bit-depth-to-.patch
 	patch_apply msvfw32-ICGetDisplayFormat/0007-msvidc32-Fix-calculation-of-stride-and-size.patch
 	(
-		echo '+    { "Michael Müller", "msvfw32: Try different formarts in ICGetDisplayFormat.", 1 },';
-		echo '+    { "Michael Müller", "msvfw32: Add test for negative width/height values passed to ICGetDisplayFormat.", 1 },';
-		echo '+    { "Michael Müller", "msvfw32: Set biSizeImage correctly in ICGetDisplayFormat.", 1 },';
-		echo '+    { "Michael Müller", "msvfw32: Take stride into account and ask for palette in ICGetDisplayFormat.", 1 },';
-		echo '+    { "Michael Müller", "iccvid: Fix calculation of stride and size.", 1 },';
-		echo '+    { "Michael Müller", "msvidc32: Add support for converting 16 bit depth to 24 bit.", 1 },';
-		echo '+    { "Michael Müller", "msvidc32: Fix calculation of stride and size.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "msvfw32: Try different formarts in ICGetDisplayFormat.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "msvfw32: Add test for negative width/height values passed to ICGetDisplayFormat.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "msvfw32: Set biSizeImage correctly in ICGetDisplayFormat.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "msvfw32: Take stride into account and ask for palette in ICGetDisplayFormat.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "iccvid: Fix calculation of stride and size.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "msvidc32: Add support for converting 16 bit depth to 24 bit.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "msvidc32: Fix calculation of stride and size.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5185,7 +5185,7 @@ fi
 if test "$enable_msvideo_dll16_DrawDibProfileDisplay" -eq 1; then
 	patch_apply msvideo.dll16-DrawDibProfileDisplay/0001-msvideo.dll16-Implement-DrawDibProfileDisplay.patch
 	(
-		echo '+    { "Michael Müller", "msvideo.dll16: Implement DrawDibProfileDisplay.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "msvideo.dll16: Implement DrawDibProfileDisplay.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5200,7 +5200,7 @@ fi
 if test "$enable_msvideo16_HasThunk" -eq 1; then
 	patch_apply msvideo16-HasThunk/0001-msvideo16-Check-if-any-16-bit-thunks-have-been-alloc.patch
 	(
-		echo '+    { "Michael Müller", "msvideo16: Check if any 16 bit thunks have been allocated before accessing pointer.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "msvideo16: Check if any 16 bit thunks have been allocated before accessing pointer.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5215,7 +5215,7 @@ fi
 if test "$enable_msxml3_AllowXsltScript" -eq 1; then
 	patch_apply msxml3-AllowXsltScript/0001-msxml3-Accept-AllowXsltScript-and-AllowDocumentFunct.patch
 	(
-		echo '+    { "Nikolay Sivov", "msxml3: Accept AllowXsltScript and AllowDocumentFunction properties.", 1 },';
+		printf '%s\n' '+    { "Nikolay Sivov", "msxml3: Accept AllowXsltScript and AllowDocumentFunction properties.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5227,7 +5227,7 @@ fi
 if test "$enable_ntdll_APC_Performance" -eq 1; then
 	patch_apply ntdll-APC_Performance/0001-ntdll-Reuse-old-async-fileio-structures-if-possible.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Reuse old async fileio structures if possible.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Reuse old async fileio structures if possible.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5239,7 +5239,7 @@ fi
 if test "$enable_ntdll_APC_Start_Process" -eq 1; then
 	patch_apply ntdll-APC_Start_Process/0001-ntdll-Process-APC-calls-before-starting-process.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Process APC calls before starting process.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Process APC calls before starting process.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5251,7 +5251,7 @@ fi
 if test "$enable_ntdll_Activation_Context" -eq 1; then
 	patch_apply ntdll-Activation_Context/0001-ntdll-Fix-return-value-for-missing-ACTIVATION_CONTEX.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Fix return value for missing ACTIVATION_CONTEXT_SECTION_ASSEMBLY_INFORMATION key.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Fix return value for missing ACTIVATION_CONTEXT_SECTION_ASSEMBLY_INFORMATION key.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5263,7 +5263,7 @@ fi
 if test "$enable_ntdll_ApiSetQueryApiSetPresence" -eq 1; then
 	patch_apply ntdll-ApiSetQueryApiSetPresence/0001-ntdll-Add-stub-for-ApiSetQueryApiSetPresence.patch
 	(
-		echo '+    { "Michael Müller", "ntdll: Add stub for ApiSetQueryApiSetPresence.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for ApiSetQueryApiSetPresence.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5278,7 +5278,7 @@ fi
 if test "$enable_ntdll_Attach_Process_DLLs" -eq 1; then
 	patch_apply ntdll-Attach_Process_DLLs/0001-ntdll-Ensure-process-dlls-are-not-attached-too-early.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Ensure process dlls are not attached too early.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Ensure process dlls are not attached too early.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -5296,7 +5296,7 @@ fi
 if test "$enable_ntdll_CLI_Images" -eq 1; then
 	patch_apply ntdll-CLI_Images/0001-ntdll-Load-CLI-.NET-images-in-the-same-way-as-Window.patch
 	(
-		echo '+    { "Michael Müller", "ntdll: Load CLI/.NET images in the same way as Windows XP and above.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Load CLI/.NET images in the same way as Windows XP and above.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5319,14 +5319,14 @@ if test "$enable_ntdll_DOS_Attributes" -eq 1; then
 	patch_apply ntdll-DOS_Attributes/0007-ntdll-Perform-the-Unix-style-hidden-file-check-withi.patch
 	patch_apply ntdll-DOS_Attributes/0008-ntdll-Always-store-SAMBA_XATTR_DOS_ATTRIB-when-path-.patch
 	(
-		echo '+    { "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQueryInformationFile.", 1 },';
-		echo '+    { "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQuery[Full]AttributesFile and NtQueryDirectoryFile.", 1 },';
-		echo '+    { "Erich E. Hoover", "ntdll: Implement storing DOS attributes in NtSetInformationFile.", 1 },';
-		echo '+    { "Erich E. Hoover", "ntdll: Implement storing DOS attributes in NtCreateFile.", 1 },';
-		echo '+    { "Erich E. Hoover", "libport: Add support for Mac OS X style extended attributes.", 1 },';
-		echo '+    { "Erich E. Hoover", "libport: Add support for FreeBSD style extended attributes.", 1 },';
-		echo '+    { "Erich E. Hoover", "ntdll: Perform the Unix-style hidden file check within the unified file info grabbing routine.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Always store SAMBA_XATTR_DOS_ATTRIB when path could be interpreted as hidden.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQueryInformationFile.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQuery[Full]AttributesFile and NtQueryDirectoryFile.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Implement storing DOS attributes in NtSetInformationFile.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Implement storing DOS attributes in NtCreateFile.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "libport: Add support for Mac OS X style extended attributes.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "libport: Add support for FreeBSD style extended attributes.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Perform the Unix-style hidden file check within the unified file info grabbing routine.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Always store SAMBA_XATTR_DOS_ATTRIB when path could be interpreted as hidden.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5339,7 +5339,7 @@ fi
 if test "$enable_ntdll_Dealloc_Thread_Stack" -eq 1; then
 	patch_apply ntdll-Dealloc_Thread_Stack/0001-ntdll-Do-not-allow-to-allocate-thread-stack-for-curr.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Do not allow to deallocate thread stack for current thread.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Do not allow to deallocate thread stack for current thread.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5354,7 +5354,7 @@ fi
 if test "$enable_ntdll_DeviceType_Systemroot" -eq 1; then
 	patch_apply ntdll-DeviceType_Systemroot/0001-ntdll-Return-fake-device-type-when-systemroot-is-loc.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Return fake device type when systemroot is located on virtual disk.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Return fake device type when systemroot is located on virtual disk.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5366,7 +5366,7 @@ fi
 if test "$enable_ntdll_DllOverrides_WOW64" -eq 1; then
 	patch_apply ntdll-DllOverrides_WOW64/0001-ntdll-Always-use-64-bit-registry-view-on-WOW64-setup.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Always use 64-bit registry view on WOW64 setups.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Always use 64-bit registry view on WOW64 setups.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5381,7 +5381,7 @@ fi
 if test "$enable_ntdll_Loader_Machine_Type" -eq 1; then
 	patch_apply ntdll-Loader_Machine_Type/0001-ntdll-Check-architecture-before-loading-module.patch
 	(
-		echo '+    { "Michael Müller", "ntdll: Check architecture before loading module.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Check architecture before loading module.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5400,11 +5400,11 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 	patch_apply ntdll-DllRedirects/0004-ntdll-Implement-get_redirect-function.patch
 	patch_apply ntdll-DllRedirects/0005-ntdll-Implement-loader-redirection-scheme.patch
 	(
-		echo '+    { "Michael Müller", "ntdll: Move logic to determine loadorder HKCU/app key into separate functions.", 1 },';
-		echo '+    { "Michael Müller", "ntdll: Move logic to read loadorder registry values into separate function.", 1 },';
-		echo '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
-		echo '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
-		echo '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Move logic to determine loadorder HKCU/app key into separate functions.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Move logic to read loadorder registry values into separate function.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5417,8 +5417,8 @@ if test "$enable_ntdll_Exception" -eq 1; then
 	patch_apply ntdll-Exception/0001-ntdll-Throw-exception-if-invalid-handle-is-passed-to.patch
 	patch_apply ntdll-Exception/0002-ntdll-OutputDebugString-should-throw-the-exception-a.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Throw exception if invalid handle is passed to NtClose and debugger enabled.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: OutputDebugString should throw the exception a second time, if a debugger is attached.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Throw exception if invalid handle is passed to NtClose and debugger enabled.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: OutputDebugString should throw the exception a second time, if a debugger is attached.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5430,7 +5430,7 @@ fi
 if test "$enable_ntdll_FileFsFullSizeInformation" -eq 1; then
 	patch_apply ntdll-FileFsFullSizeInformation/0001-ntdll-Add-support-for-FileFsFullSizeInformation-clas.patch
 	(
-		echo '+    { "Jianqiu Zhang", "ntdll: Add support for FileFsFullSizeInformation class in NtQueryVolumeInformationFile.", 2 },';
+		printf '%s\n' '+    { "Jianqiu Zhang", "ntdll: Add support for FileFsFullSizeInformation class in NtQueryVolumeInformationFile.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -5445,7 +5445,7 @@ fi
 if test "$enable_ntdll_FileFsVolumeInformation" -eq 1; then
 	patch_apply ntdll-FileFsVolumeInformation/0001-ntdll-Add-semi-stub-for-FileFsVolumeInformation-info.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Add semi-stub for FileFsVolumeInformation information class.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add semi-stub for FileFsVolumeInformation information class.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5460,7 +5460,7 @@ fi
 if test "$enable_ntdll_Fix_Alignment" -eq 1; then
 	patch_apply ntdll-Fix_Alignment/0001-ntdll-Move-NtProtectVirtualMemory-and-NtCreateSectio.patch
 	(
-		echo '+    { "Michael Müller", "ntdll: Move NtProtectVirtualMemory and NtCreateSection to separate pages on x86.", 2 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Move NtProtectVirtualMemory and NtCreateSection to separate pages on x86.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -5475,7 +5475,7 @@ fi
 if test "$enable_ntdll_Grow_Virtual_Heap" -eq 1; then
 	patch_apply ntdll-Grow_Virtual_Heap/0001-ntdll-Remove-memory-limitation-to-32GB-on-64-bit-by-.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Remove memory limitation to 32GB on 64-bit by growing heap dynamically.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Remove memory limitation to 32GB on 64-bit by growing heap dynamically.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -5487,7 +5487,7 @@ fi
 if test "$enable_ntdll_Heap_FreeLists" -eq 1; then
 	patch_apply ntdll-Heap_FreeLists/0001-ntdll-Improve-heap-allocation-performance-by-using-m.patch
 	(
-		echo '+    { "Steaphan Greene", "ntdll: Improve heap allocation performance by using more fine-grained free lists.", 1 },';
+		printf '%s\n' '+    { "Steaphan Greene", "ntdll: Improve heap allocation performance by using more fine-grained free lists.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5505,7 +5505,7 @@ fi
 if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
 	patch_apply ntdll-Hide_Wine_Exports/0001-ntdll-Add-support-for-hiding-wine-version-informatio.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Add support for hiding wine version information from applications.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add support for hiding wine version information from applications.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5520,7 +5520,7 @@ fi
 if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
 	patch_apply ntdll-NtQueryEaFile/0001-ntdll-Improve-stub-of-NtQueryEaFile.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Improve stub of NtQueryEaFile.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Improve stub of NtQueryEaFile.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5545,13 +5545,13 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	patch_apply ntdll-Junction_Points/0006-kernel32-Advertise-junction-point-support.patch
 	patch_apply ntdll-Junction_Points/0007-ntdll-tests-Add-test-for-deleting-junction-point-tar.patch
 	(
-		echo '+    { "Erich E. Hoover", "ntdll: Add support for junction point creation.", 1 },';
-		echo '+    { "Erich E. Hoover", "ntdll: Add support for reading junction points.", 1 },';
-		echo '+    { "Erich E. Hoover", "ntdll: Add support for deleting junction points.", 1 },';
-		echo '+    { "Erich E. Hoover", "ntdll: Add a test for junction point advertisement.", 1 },';
-		echo '+    { "Erich E. Hoover", "kernel32,ntdll: Add support for deleting junction points with RemoveDirectory.", 1 },';
-		echo '+    { "Erich E. Hoover", "kernel32: Advertise junction point support.", 1 },';
-		echo '+    { "Erich E. Hoover", "ntdll/tests: Add test for deleting junction point target.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for junction point creation.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading junction points.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for deleting junction points.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add a test for junction point advertisement.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "kernel32,ntdll: Add support for deleting junction points with RemoveDirectory.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Advertise junction point support.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll/tests: Add test for deleting junction point target.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5563,7 +5563,7 @@ fi
 if test "$enable_ntdll_NtAccessCheck" -eq 1; then
 	patch_apply ntdll-NtAccessCheck/0001-ntdll-Improve-invalid-paramater-handling-in-NtAccess.patch
 	(
-		echo '+    { "Qian Hong", "ntdll: Improve invalid paramater handling in NtAccessCheck.", 1 },';
+		printf '%s\n' '+    { "Qian Hong", "ntdll: Improve invalid paramater handling in NtAccessCheck.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5578,7 +5578,7 @@ fi
 if test "$enable_ntdll_NtAllocateUuids" -eq 1; then
 	patch_apply ntdll-NtAllocateUuids/0001-ntdll-Improve-stub-for-NtAllocateUuids.patch
 	(
-		echo '+    { "Louis Lenders", "ntdll: Improve stub for NtAllocateUuids.", 1 },';
+		printf '%s\n' '+    { "Louis Lenders", "ntdll: Improve stub for NtAllocateUuids.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5590,7 +5590,7 @@ fi
 if test "$enable_ntdll_NtQueryPerformanceCounter" -eq 1; then
 	patch_apply ntdll-NtQueryPerformanceCounter/0001-ntdll-Catch-page-faults-in-NtQueryPerformanceCounter.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Catch page faults in NtQueryPerformanceCounter.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Catch page faults in NtQueryPerformanceCounter.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5603,8 +5603,8 @@ if test "$enable_ntdll_NtQuerySection" -eq 1; then
 	patch_apply ntdll-NtQuerySection/0002-kernel32-tests-Add-tests-for-NtQuerySection.patch
 	patch_apply ntdll-NtQuerySection/0003-server-CreateFileMapping-should-not-fail-without-SEC.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "kernel32/tests: Add tests for NtQuerySection.", 2 },';
-		echo '+    { "Dmitry Timoshkov", "server: CreateFileMapping should not fail without SEC_COMMIT for a named file section.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Add tests for NtQuerySection.", 2 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "server: CreateFileMapping should not fail without SEC_COMMIT for a named file section.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5619,7 +5619,7 @@ fi
 if test "$enable_ntdll_NtSetInformationToken" -eq 1; then
 	patch_apply ntdll-NtSetInformationToken/0001-ntdll-Return-success-for-TokenSessionId-in-NtSetInfo.patch
 	(
-		echo '+    { "Michael Müller", "ntdll: Return success for TokenSessionId in NtSetInformationToken.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Return success for TokenSessionId in NtSetInformationToken.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5632,8 +5632,8 @@ if test "$enable_ntdll_NtSetLdtEntries" -eq 1; then
 	patch_apply ntdll-NtSetLdtEntries/0001-ntdll-Implement-NtSetLdtEntries.patch
 	patch_apply ntdll-NtSetLdtEntries/0002-libs-wine-Allow-to-modify-reserved-LDT-entries.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "ntdll: Implement NtSetLdtEntries.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "libs/wine: Allow to modify reserved LDT entries.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Implement NtSetLdtEntries.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "libs/wine: Allow to modify reserved LDT entries.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5648,7 +5648,7 @@ fi
 if test "$enable_ntdll_Pipe_SpecialCharacters" -eq 1; then
 	patch_apply ntdll-Pipe_SpecialCharacters/0001-ntdll-Allow-special-characters-in-pipe-names.patch
 	(
-		echo '+    { "Michael Müller", "ntdll: Allow special characters in pipe names.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Allow special characters in pipe names.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5660,7 +5660,7 @@ fi
 if test "$enable_ntdll_ProcessQuotaLimits" -eq 1; then
 	patch_apply ntdll-ProcessQuotaLimits/0001-ntdll-Add-fake-data-implementation-for-ProcessQuotaL.patch
 	(
-		echo '+    { "Qian Hong", "ntdll: Add fake data implementation for ProcessQuotaLimits class.", 1 },';
+		printf '%s\n' '+    { "Qian Hong", "ntdll: Add fake data implementation for ProcessQuotaLimits class.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5675,7 +5675,7 @@ fi
 if test "$enable_ntdll_Purist_Mode" -eq 1; then
 	patch_apply ntdll-Purist_Mode/0001-ntdll-Add-dll-override-default-rule-for-purist-mode.patch
 	(
-		echo '+    { "Christian Costa", "ntdll: Add dll override default rule for purist mode.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "ntdll: Add dll override default rule for purist mode.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5690,7 +5690,7 @@ fi
 if test "$enable_ntdll_RtlCaptureStackBackTrace" -eq 1; then
 	patch_apply ntdll-RtlCaptureStackBackTrace/0001-ntdll-Silence-FIXME-in-RtlCaptureStackBackTrace-stub.patch
 	(
-		echo '+    { "Jarkko Korpi", "ntdll: Silence FIXME in RtlCaptureStackBackTrace stub function.", 1 },';
+		printf '%s\n' '+    { "Jarkko Korpi", "ntdll: Silence FIXME in RtlCaptureStackBackTrace stub function.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5703,8 +5703,8 @@ if test "$enable_ntdll_RtlIpStringToAddress_Stubs" -eq 1; then
 	patch_apply ntdll-RtlIpStringToAddress_Stubs/0001-ntdll-Fix-parameters-for-RtlIpv4StringToAddressExW-s.patch
 	patch_apply ntdll-RtlIpStringToAddress_Stubs/0002-ntdll-Add-stub-for-RtlIpv6StringToAddressExW.patch
 	(
-		echo '+    { "Michael Müller", "ntdll: Fix parameters for RtlIpv4StringToAddressExW stub.", 1 },';
-		echo '+    { "Michael Müller", "ntdll: Add stub for RtlIpv6StringToAddressExW.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Fix parameters for RtlIpv4StringToAddressExW stub.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for RtlIpv6StringToAddressExW.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5718,9 +5718,9 @@ if test "$enable_ntdll_RtlQueryPackageIdentity" -eq 1; then
 	patch_apply ntdll-RtlQueryPackageIdentity/0002-include-Add-IApplicationActivationManager-interface-.patch
 	patch_apply ntdll-RtlQueryPackageIdentity/0003-ntdll-tests-Add-basic-tests-for-RtlQueryPackageIdent.patch
 	(
-		echo '+    { "Michael Müller", "ntdll: Add stub for RtlQueryPackageIdentity.", 1 },';
-		echo '+    { "Michael Müller", "include: Add IApplicationActivationManager interface declaration.", 1 },';
-		echo '+    { "Michael Müller", "ntdll/tests: Add basic tests for RtlQueryPackageIdentity.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for RtlQueryPackageIdentity.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "include: Add IApplicationActivationManager interface declaration.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll/tests: Add basic tests for RtlQueryPackageIdentity.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5738,10 +5738,10 @@ if test "$enable_ntdll_RtlIpStringToAddress_Tests" -eq 1; then
 	patch_apply ntdll-RtlIpStringToAddress_Tests/0003-ntdll-tests-Tests-for-RtlIpv4StringToAddressEx-try-5.patch
 	patch_apply ntdll-RtlIpStringToAddress_Tests/0004-ntdll-tests-Add-tests-for-RtlIpv6AddressToString-and.patch
 	(
-		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddress.", 6 },';
-		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddressEx.", 6 },';
-		echo '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv4StringToAddressEx (try 5, resend).", 1 },';
-		echo '+    { "Mark Jansen", "ntdll/tests: Add tests for RtlIpv6AddressToString and RtlIpv6AddressToStringEx.", 1 },';
+		printf '%s\n' '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddress.", 6 },';
+		printf '%s\n' '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddressEx.", 6 },';
+		printf '%s\n' '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv4StringToAddressEx (try 5, resend).", 1 },';
+		printf '%s\n' '+    { "Mark Jansen", "ntdll/tests: Add tests for RtlIpv6AddressToString and RtlIpv6AddressToStringEx.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5755,9 +5755,9 @@ if test "$enable_ntdll_RunlevelInformationInActivationContext" -eq 1; then
 	patch_apply ntdll-RunlevelInformationInActivationContext/0002-ntdll-Parse-execution-level-information-in-manifest-.patch
 	patch_apply ntdll-RunlevelInformationInActivationContext/0003-ntdll-Implement-RunlevelInformationInActivationConte.patch
 	(
-		echo '+    { "Michael Müller", "include: Add run level information enum and structure to winnt.h.", 1 },';
-		echo '+    { "Michael Müller", "ntdll: Parse execution level information in manifest data.", 1 },';
-		echo '+    { "Michael Müller", "ntdll: Implement RunlevelInformationInActivationContext in RtlQueryInformationActivationContext.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "include: Add run level information enum and structure to winnt.h.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Parse execution level information in manifest data.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement RunlevelInformationInActivationContext in RtlQueryInformationActivationContext.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5772,7 +5772,7 @@ fi
 if test "$enable_ntdll_Serial_Port_Detection" -eq 1; then
 	patch_apply ntdll-Serial_Port_Detection/0001-ntdll-Do-a-device-check-before-returning-a-default-s.patch
 	(
-		echo '+    { "Alex Henrie", "ntdll: Do a device check before returning a default serial port name.", 1 },';
+		printf '%s\n' '+    { "Alex Henrie", "ntdll: Do a device check before returning a default serial port name.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5784,7 +5784,7 @@ fi
 if test "$enable_ntdll_Stack_Guard_Page" -eq 1; then
 	patch_apply ntdll-Stack_Guard_Page/0001-ntdll-Fix-a-bug-when-exception-handling-triggers-sta.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Fix a bug when exception handling triggers stack guard page.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Fix a bug when exception handling triggers stack guard page.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5796,7 +5796,7 @@ fi
 if test "$enable_ntdll_Stack_Overflow" -eq 1; then
 	patch_apply ntdll-Stack_Overflow/0001-ntdll-Trigger-stack-overflow-exception-earlier-on-x8.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Trigger stack overflow exception earlier on x86_64.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Trigger stack overflow exception earlier on x86_64.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5808,7 +5808,7 @@ fi
 if test "$enable_ntdll_Status_Mapping" -eq 1; then
 	patch_apply ntdll-Status_Mapping/0001-ntdll-Return-STATUS_INVALID_DEVICE_REQUEST-when-tryi.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Return STATUS_INVALID_DEVICE_REQUEST when trying to call NtReadFile on directory.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Return STATUS_INVALID_DEVICE_REQUEST when trying to call NtReadFile on directory.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5823,7 +5823,7 @@ fi
 if test "$enable_ntdll_SystemInterruptInformation" -eq 1; then
 	patch_apply ntdll-SystemInterruptInformation/0001-ntdll-Return-buffer-filled-with-random-values-from-S.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Return buffer filled with random values from SystemInterruptInformation.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Return buffer filled with random values from SystemInterruptInformation.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5835,7 +5835,7 @@ fi
 if test "$enable_ntdll_SystemRecommendedSharedDataAlignment" -eq 1; then
 	patch_apply ntdll-SystemRecommendedSharedDataAlignment/0001-include-Add-more-constants-to-SYSTEM_INFORMATION_CLA.patch
 	(
-		echo '+    { "Michael Müller", "include: Add more constants to SYSTEM_INFORMATION_CLASS.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "include: Add more constants to SYSTEM_INFORMATION_CLASS.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5850,7 +5850,7 @@ fi
 if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
 	patch_apply ntdll-SystemRoot_Symlink/0001-ntdll-Add-special-handling-for-SystemRoot-to-satisfy.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Add special handling for \\\\SystemRoot to satisfy MSYS2 case-insensitive system check.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add special handling for \\SystemRoot to satisfy MSYS2 case-insensitive system check.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5865,7 +5865,7 @@ fi
 if test "$enable_ntdll_ThreadTime" -eq 1; then
 	patch_apply ntdll-ThreadTime/0001-ntdll-Return-correct-values-in-GetThreadTimes-for-al.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Return correct values in GetThreadTimes() for all threads.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Return correct values in GetThreadTimes() for all threads.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5877,7 +5877,7 @@ fi
 if test "$enable_ntdll_Threading" -eq 1; then
 	patch_apply ntdll-Threading/0001-ntdll-Fix-race-condition-when-threads-are-killed-dur.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Fix race-condition when threads are killed during shutdown.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Fix race-condition when threads are killed during shutdown.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5890,8 +5890,8 @@ if test "$enable_ntdll_User_Shared_Data" -eq 1; then
 	patch_apply ntdll-User_Shared_Data/0001-ntdll-Move-code-to-update-user-shared-data-into-a-se.patch
 	patch_apply ntdll-User_Shared_Data/0002-ntoskrnl-Update-USER_SHARED_DATA-before-accessing-me.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Move code to update user shared data into a separate function.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntoskrnl: Update USER_SHARED_DATA before accessing memory.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Move code to update user shared data into a separate function.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntoskrnl: Update USER_SHARED_DATA before accessing memory.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5905,8 +5905,8 @@ if test "$enable_ws2_32_WriteWatches" -eq 1; then
 	patch_apply ws2_32-WriteWatches/0001-ntdll-Expose-wine_uninterrupted_-read-write-_memory-.patch
 	patch_apply ws2_32-WriteWatches/0002-ws2_32-Avoid-race-conditions-of-async-WSARecv-operat.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Expose wine_uninterrupted_[read|write]_memory as exports.", 1 },';
-		echo '+    { "Sebastian Lackner", "ws2_32: Avoid race-conditions of async WSARecv() operations with write watches.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Expose wine_uninterrupted_[read|write]_memory as exports.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Avoid race-conditions of async WSARecv() operations with write watches.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -5930,10 +5930,10 @@ if test "$enable_ntdll_WRITECOPY" -eq 1; then
 	patch_apply ntdll-WRITECOPY/0003-ntdll-Setup-a-temporary-signal-handler-during-proces.patch
 	patch_apply ntdll-WRITECOPY/0004-ntdll-Properly-handle-PAGE_WRITECOPY-protection.-try.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Trigger write watches before passing userdata pointer to wait_reply.", 1 },';
-		echo '+    { "Sebastian Lackner", "advapi: Trigger write watches before passing userdata pointer to read syscall.", 1 },';
-		echo '+    { "Michael Müller", "ntdll: Setup a temporary signal handler during process startup to handle page faults.", 2 },';
-		echo '+    { "Michael Müller", "ntdll: Properly handle PAGE_WRITECOPY protection.", 5 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Trigger write watches before passing userdata pointer to wait_reply.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "advapi: Trigger write watches before passing userdata pointer to read syscall.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Setup a temporary signal handler during process startup to handle page faults.", 2 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Properly handle PAGE_WRITECOPY protection.", 5 },';
 	) >> "$patchlist"
 fi
 
@@ -5948,7 +5948,7 @@ fi
 if test "$enable_ntdll_Wait_User_APC" -eq 1; then
 	patch_apply ntdll-Wait_User_APC/0001-ntdll-Block-signals-while-executing-system-APCs.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Block signals while executing system APCs.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Block signals while executing system APCs.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -5963,7 +5963,7 @@ fi
 if test "$enable_ntdll_WriteWatches" -eq 1; then
 	patch_apply ntdll-WriteWatches/0001-ntdll-Avoid-race-conditions-with-write-watches-in-Nt.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "ntdll: Avoid race-conditions with write watches in NtReadFile.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Avoid race-conditions with write watches in NtReadFile.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5975,7 +5975,7 @@ fi
 if test "$enable_ntdll_Zero_mod_name" -eq 1; then
 	patch_apply ntdll-Zero_mod_name/0001-ntdll-Initialize-mod_name-to-zero.patch
 	(
-		echo '+    { "Qian Hong", "ntdll: Initialize mod_name to zero.", 1 },';
+		printf '%s\n' '+    { "Qian Hong", "ntdll: Initialize mod_name to zero.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5990,7 +5990,7 @@ fi
 if test "$enable_ntdll_call_thread_func_wrapper" -eq 1; then
 	patch_apply ntdll-call_thread_func_wrapper/0001-ntdll-Reserve-some-more-stack-space-in-call_thread_f.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "ntdll: Reserve some more stack space in call_thread_func_wrapper.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Reserve some more stack space in call_thread_func_wrapper.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6008,8 +6008,8 @@ if test "$enable_ntoskrnl_DriverTest" -eq 1; then
 	patch_apply ntoskrnl-DriverTest/0001-ntoskrnl.exe-tests-Add-initial-driver-testing-framew.patch
 	patch_apply ntoskrnl-DriverTest/0002-ntoskrnl.exe-tests-Add-kernel-compliant-test-functio.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntoskrnl.exe/tests: Add initial driver testing framework and corresponding changes to Makefile system.", 2 },';
-		echo '+    { "Michael Müller", "ntoskrnl.exe/tests: Add kernel compliant test functions.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntoskrnl.exe/tests: Add initial driver testing framework and corresponding changes to Makefile system.", 2 },';
+		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe/tests: Add kernel compliant test functions.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6034,17 +6034,17 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Add-IoGetDeviceAttachmentBaseRef-stub.patch
 	patch_apply ntoskrnl-Stubs/0012-ntoskrnl.exe-Add-IoStopTimer-stub.patch
 	(
-		echo '+    { "Austin English", "ntoskrnl.exe: Add KeWaitForMultipleObjects stub.", 1 },';
-		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ExAcquireFastMutexUnsafe and ExReleaseFastMutexUnsafe.", 1 },';
-		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for ObReferenceObjectByPointer.", 1 },';
-		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeReleaseMutex stub.", 1 },';
-		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeSemaphore stub.", 1 },';
-		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeTimerEx stub.", 1 },';
-		echo '+    { "Christian Costa", "ntoskrnl.exe: Fix IoReleaseCancelSpinLock argument.", 1 },';
-		echo '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
-		echo '+    { "Alexander Morozov", "ntoskrnl.exe: Implement KeInitializeMutex.", 1 },';
-		echo '+    { "Jarkko Korpi", "ntoskrnl.exe: Add IoGetDeviceAttachmentBaseRef stub.", 1 },';
-		echo '+    { "Michael Müller", "ntoskrnl.exe: Add IoStopTimer stub.", 1 },';
+		printf '%s\n' '+    { "Austin English", "ntoskrnl.exe: Add KeWaitForMultipleObjects stub.", 1 },';
+		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ExAcquireFastMutexUnsafe and ExReleaseFastMutexUnsafe.", 1 },';
+		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for ObReferenceObjectByPointer.", 1 },';
+		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeReleaseMutex stub.", 1 },';
+		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeSemaphore stub.", 1 },';
+		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeTimerEx stub.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "ntoskrnl.exe: Fix IoReleaseCancelSpinLock argument.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
+		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Implement KeInitializeMutex.", 1 },';
+		printf '%s\n' '+    { "Jarkko Korpi", "ntoskrnl.exe: Add IoGetDeviceAttachmentBaseRef stub.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Add IoStopTimer stub.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6070,16 +6070,16 @@ if test "$enable_nvcuda_CUDA_Support" -eq 1; then
 	patch_apply nvcuda-CUDA_Support/0009-nvcuda-Implement-cuModuleLoad-wrapper-function.patch
 	patch_apply nvcuda-CUDA_Support/0010-nvcuda-Search-for-dylib-library-on-Mac-OS-X.patch
 	(
-		echo '+    { "Sebastian Lackner", "include: Add cuda.h.", 1 },';
-		echo '+    { "Sebastian Lackner", "nvcuda: Add stub dll.", 1 },';
-		echo '+    { "Michael Müller", "nvcuda: First implementation.", 2 },';
-		echo '+    { "Sebastian Lackner", "nvcuda: Implement new functions added in CUDA 6.5.", 1 },';
-		echo '+    { "Michael Müller", "nvcuda: Properly wrap undocumented '\''ContextStorage'\'' interface and add tests.", 1 },';
-		echo '+    { "Michael Müller", "nvcuda: Emulate two d3d9 initialization functions.", 1 },';
-		echo '+    { "Sebastian Lackner", "nvcuda: Properly wrap stream callbacks by forwarding them to a worker thread.", 1 },';
-		echo '+    { "Sebastian Lackner", "nvcuda: Add support for CUDA 7.0.", 1 },';
-		echo '+    { "Sebastian Lackner", "nvcuda: Implement cuModuleLoad wrapper function.", 1 },';
-		echo '+    { "Michael Müller", "nvcuda: Search for dylib library on Mac OS X.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "include: Add cuda.h.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "nvcuda: Add stub dll.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvcuda: First implementation.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "nvcuda: Implement new functions added in CUDA 6.5.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvcuda: Properly wrap undocumented '\''ContextStorage'\'' interface and add tests.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvcuda: Emulate two d3d9 initialization functions.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "nvcuda: Properly wrap stream callbacks by forwarding them to a worker thread.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "nvcuda: Add support for CUDA 7.0.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "nvcuda: Implement cuModuleLoad wrapper function.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvcuda: Search for dylib library on Mac OS X.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6113,22 +6113,22 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 	patch_apply nvapi-Stub_DLL/0015-nvapi-Add-stub-for-NvAPI_D3D_GetObjectHandleForResou.patch
 	patch_apply nvapi-Stub_DLL/0016-nvapi-Add-stub-for-NvAPI_D3D9_RegisterResource.patch
 	(
-		echo '+    { "Michael Müller", "nvapi: First implementation.", 1 },';
-		echo '+    { "Michael Müller", "nvapi: Add stubs for NvAPI_EnumLogicalGPUs and undocumented equivalent.", 1 },';
-		echo '+    { "Michael Müller", "nvapi: Add NvAPI_GetPhysicalGPUsFromLogicalGPU.", 1 },';
-		echo '+    { "Michael Müller", "nvapi: Add stub for NvAPI_EnumPhysicalGPUs.", 1 },';
-		echo '+    { "Michael Müller", "nvapi: Add stubs for NvAPI_GPU_GetFullName.", 1 },';
-		echo '+    { "Michael Müller", "nvapi: Explicity return NULL for 0x33c7358c and 0x593e8644.", 1 },';
-		echo '+    { "Michael Müller", "nvapi: Add stub for NvAPI_DISP_GetGDIPrimaryDisplayId.", 1 },';
-		echo '+    { "Michael Müller", "nvapi: Add stub for EnumNvidiaDisplayHandle.", 1 },';
-		echo '+    { "Michael Müller", "nvapi: Add stub for NvAPI_SYS_GetDriverAndBranchVersion.", 1 },';
-		echo '+    { "Michael Müller", "nvapi: Add stub for NvAPI_Unload.", 1 },';
-		echo '+    { "Michael Müller", "nvapi: Add stub for NvAPI_D3D_GetCurrentSLIState.", 1 },';
-		echo '+    { "Michael Müller", "nvapi: Print fixme message for NvAPI_D3D9_StretchRectEx.", 1 },';
-		echo '+    { "Michael Müller", "nvapi/tests: Use structure to list imports.", 1 },';
-		echo '+    { "Michael Müller", "nvapi: Add stub for NvAPI_GetLogicalGPUFromDisplay.", 1 },';
-		echo '+    { "Michael Müller", "nvapi: Add stub for NvAPI_D3D_GetObjectHandleForResource.", 1 },';
-		echo '+    { "Michael Müller", "nvapi: Add stub for NvAPI_D3D9_RegisterResource.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: First implementation.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stubs for NvAPI_EnumLogicalGPUs and undocumented equivalent.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add NvAPI_GetPhysicalGPUsFromLogicalGPU.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_EnumPhysicalGPUs.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stubs for NvAPI_GPU_GetFullName.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Explicity return NULL for 0x33c7358c and 0x593e8644.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_DISP_GetGDIPrimaryDisplayId.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for EnumNvidiaDisplayHandle.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_SYS_GetDriverAndBranchVersion.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_Unload.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_D3D_GetCurrentSLIState.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Print fixme message for NvAPI_D3D9_StretchRectEx.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi/tests: Use structure to list imports.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_GetLogicalGPUFromDisplay.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_D3D_GetObjectHandleForResource.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_D3D9_RegisterResource.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6144,7 +6144,7 @@ fi
 if test "$enable_nvcuvid_CUDA_Video_Support" -eq 1; then
 	patch_apply nvcuvid-CUDA_Video_Support/0001-nvcuvid-First-implementation.patch
 	(
-		echo '+    { "Michael Müller", "nvcuvid: First implementation.", 2 },';
+		printf '%s\n' '+    { "Michael Müller", "nvcuvid: First implementation.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -6162,9 +6162,9 @@ if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
 	patch_apply nvencodeapi-Video_Encoder/0002-nvencodeapi-Add-debian-specific-paths-to-native-libr.patch
 	patch_apply nvencodeapi-Video_Encoder/0003-nvencodeapi-Add-support-for-version-6.0.patch
 	(
-		echo '+    { "Michael Müller", "nvencodeapi: First implementation.", 1 },';
-		echo '+    { "Michael Müller", "nvencodeapi: Add debian specific paths to native library.", 1 },';
-		echo '+    { "Michael Müller", "nvencodeapi: Add support for version 6.0.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvencodeapi: First implementation.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvencodeapi: Add debian specific paths to native library.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvencodeapi: Add support for version 6.0.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6185,13 +6185,13 @@ if test "$enable_ole32_HGLOBALStream" -eq 1; then
 	patch_apply ole32-HGLOBALStream/0006-ole32-Improve-thread-safety-of-HGLOBALStreamImpl_Rea.patch
 	patch_apply ole32-HGLOBALStream/0007-ole32-Improve-thread-safety-of-HGLOBALStreamImpl_Wri.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "ole32/tests: Add a bunch of tests for HGLOBAL based IStream::Clone.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "ole32: Add a check for hglobal pointer to GetHGlobalFromStream.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "ole32: Add a wrapper for memory block managed by HGLOBAL based IStream.", 1 },';
-		echo '+    { "Sebastian Lackner", "ole32: Set DebugInfo->Spare[0] for handle_wrapper lock.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "ole32: Allow moving a being reallocated block of memory managed by HGLOBAL based IStream.", 1 },';
-		echo '+    { "Sebastian Lackner", "ole32: Improve thread-safety of HGLOBALStreamImpl_Read.", 1 },';
-		echo '+    { "Sebastian Lackner", "ole32: Improve thread-safety of HGLOBALStreamImpl_Write.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "ole32/tests: Add a bunch of tests for HGLOBAL based IStream::Clone.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "ole32: Add a check for hglobal pointer to GetHGlobalFromStream.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "ole32: Add a wrapper for memory block managed by HGLOBAL based IStream.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ole32: Set DebugInfo->Spare[0] for handle_wrapper lock.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "ole32: Allow moving a being reallocated block of memory managed by HGLOBAL based IStream.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ole32: Improve thread-safety of HGLOBALStreamImpl_Read.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ole32: Improve thread-safety of HGLOBALStreamImpl_Write.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6203,7 +6203,7 @@ fi
 if test "$enable_ole32_OleGetIconOfFile" -eq 1; then
 	patch_apply ole32-OleGetIconOfFile/0001-ole32-Add-stub-for-OleGetIconOfFile.patch
 	(
-		echo '+    { "Zhenbo Li", "ole32: Add stub for OleGetIconOfFile.", 1 },';
+		printf '%s\n' '+    { "Zhenbo Li", "ole32: Add stub for OleGetIconOfFile.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6218,7 +6218,7 @@ fi
 if test "$enable_oleaut32_CreateTypeLib" -eq 1; then
 	patch_apply oleaut32-CreateTypeLib/0001-oleaut32-Implement-semi-stub-for-CreateTypeLib.patch
 	(
-		echo '+    { "Alistair Leslie-Hughes", "oleaut32: Implement semi-stub for CreateTypeLib.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "oleaut32: Implement semi-stub for CreateTypeLib.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6233,7 +6233,7 @@ fi
 if test "$enable_oleaut32_DispCallFunc" -eq 1; then
 	patch_apply oleaut32-DispCallFunc/0001-oleaut32-Fix-calling-function-with-instance-and-VARI.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "oleaut32: Fix calling function with instance and VARIANT return type.", 2 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Fix calling function with instance and VARIANT return type.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -6248,7 +6248,7 @@ fi
 if test "$enable_oleaut32_ITypeInfo_fnInvoke" -eq 1; then
 	patch_apply oleaut32-ITypeInfo_fnInvoke/0001-oleaut32-Accept-DISP_E_PARAMNOTFOUND-for-missing-opt.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "oleaut32: Accept DISP_E_PARAMNOTFOUND for missing optional parameters in ITypeInfo::Invoke implementation.", 3 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Accept DISP_E_PARAMNOTFOUND for missing optional parameters in ITypeInfo::Invoke implementation.", 3 },';
 	) >> "$patchlist"
 fi
 
@@ -6263,7 +6263,7 @@ fi
 if test "$enable_oleaut32_LoadTypeLibEx" -eq 1; then
 	patch_apply oleaut32-LoadTypeLibEx/0001-oleaut32-Add-an-arguments-check-to-LoadTypeLibEx.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "oleaut32: Add an arguments check to LoadTypeLibEx.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Add an arguments check to LoadTypeLibEx.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6279,8 +6279,8 @@ if test "$enable_oleaut32_Load_Save_EMF" -eq 1; then
 	patch_apply oleaut32-Load_Save_EMF/0001-oleaut32-tests-Add-some-tests-for-loading-and-saving.patch
 	patch_apply oleaut32-Load_Save_EMF/0002-oleaut32-Add-support-for-loading-and-saving-EMF-to-I.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "oleaut32/tests: Add some tests for loading and saving EMF using IPicture interface.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "oleaut32: Add support for loading and saving EMF to IPicture interface.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32/tests: Add some tests for loading and saving EMF using IPicture interface.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Add support for loading and saving EMF to IPicture interface.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6299,8 +6299,8 @@ if test "$enable_oleaut32_OLEPictureImpl_SaveAsFile" -eq 1; then
 	patch_apply oleaut32-OLEPictureImpl_SaveAsFile/0002-oleaut32-Implement-a-better-stub-for-IPicture-SaveAs.patch
 	patch_apply oleaut32-OLEPictureImpl_SaveAsFile/0003-oleaut32-Implement-SaveAsFile-for-PICTYPE_ENHMETAFIL.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "oleaut32: Implement a better stub for IPicture::SaveAsFile.", 1 },';
-		echo '+    { "Sebastian Lackner", "oleaut32: Implement SaveAsFile for PICTYPE_ENHMETAFILE.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Implement a better stub for IPicture::SaveAsFile.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Implement SaveAsFile for PICTYPE_ENHMETAFILE.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6315,7 +6315,7 @@ fi
 if test "$enable_oleaut32_OleLoadPicture" -eq 1; then
 	patch_apply oleaut32-OleLoadPicture/0001-oleaut32-OleLoadPicture-should-create-a-DIB-section-.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "oleaut32: OleLoadPicture should create a DIB section for a being loaded bitmap.", 3 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: OleLoadPicture should create a DIB section for a being loaded bitmap.", 3 },';
 	) >> "$patchlist"
 fi
 
@@ -6329,9 +6329,9 @@ if test "$enable_oleaut32_OleLoadPictureFile" -eq 1; then
 	patch_apply oleaut32-OleLoadPictureFile/0002-oleaut32-Factor-out-stream-creation-from-OleLoadPict.patch
 	patch_apply oleaut32-OleLoadPictureFile/0003-oleaut32-Implement-OleLoadPictureFile.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "oleaut32: Do not reimplement OleLoadPicture in OleLoadPicturePath.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "oleaut32: Factor out stream creation from OleLoadPicturePath.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "oleaut32: Implement OleLoadPictureFile.", 2 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Do not reimplement OleLoadPicture in OleLoadPicturePath.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Factor out stream creation from OleLoadPicturePath.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Implement OleLoadPictureFile.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -6349,10 +6349,10 @@ if test "$enable_oleaut32_TKIND_COCLASS" -eq 1; then
 	patch_apply oleaut32-TKIND_COCLASS/0003-oleaut32-Handle-TKIND_COCLASS-in-proxy-stub-marshall.patch
 	patch_apply oleaut32-TKIND_COCLASS/0004-oleaut32-tests-Add-a-test-for-TKIND_COCLASS-in-proxy.patch
 	(
-		echo '+    { "Sebastian Lackner", "oleaut32: Pass a HREFTYPE to get_iface_guid.", 1 },';
-		echo '+    { "Sebastian Lackner", "oleaut32: Implement ITypeInfo_fnInvoke for TKIND_COCLASS in arguments.", 1 },';
-		echo '+    { "Sebastian Lackner", "oleaut32: Handle TKIND_COCLASS in proxy/stub marshalling.", 1 },';
-		echo '+    { "Sebastian Lackner", "oleaut32/tests: Add a test for TKIND_COCLASS in proxy/stub marshalling.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Pass a HREFTYPE to get_iface_guid.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Implement ITypeInfo_fnInvoke for TKIND_COCLASS in arguments.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Handle TKIND_COCLASS in proxy/stub marshalling.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32/tests: Add a test for TKIND_COCLASS in proxy/stub marshalling.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6367,7 +6367,7 @@ fi
 if test "$enable_oleaut32_Vtable_Offset" -eq 1; then
 	patch_apply oleaut32-Vtable_Offset/0001-oleaut32-Extend-a-vtable-offset-before-calling-64-bi.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "oleaut32: Extend a vtable offset before calling 64-bit DispCallFunc() for a 32-bit typelib.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Extend a vtable offset before calling 64-bit DispCallFunc() for a 32-bit typelib.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6384,9 +6384,9 @@ if test "$enable_oleaut32_x86_64_Marshaller" -eq 1; then
 	patch_apply oleaut32-x86_64_Marshaller/0002-oleaut32-Implement-TMStubImpl_Invoke-on-x86_64.patch
 	patch_apply oleaut32-x86_64_Marshaller/0003-oleaut32-Implement-asm-proxys-for-x86_64.patch
 	(
-		echo '+    { "Sebastian Lackner", "oleaut32: Initial preparation to make marshalling compatible with x86_64.", 1 },';
-		echo '+    { "Sebastian Lackner", "oleaut32: Implement TMStubImpl_Invoke on x86_64.", 1 },';
-		echo '+    { "Sebastian Lackner", "oleaut32: Implement asm proxys for x86_64.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Initial preparation to make marshalling compatible with x86_64.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Implement TMStubImpl_Invoke on x86_64.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Implement asm proxys for x86_64.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6398,7 +6398,7 @@ fi
 if test "$enable_opengl32_Revert_Disable_Ext" -eq 1; then
 	patch_apply opengl32-Revert_Disable_Ext/0001-Revert-opengl32-Return-a-NULL-pointer-for-functions-.patch
 	(
-		echo '+    { "Sebastian Lackner", "Revert \"opengl32: Return a NULL pointer for functions requiring unsupported or disabled extensions.\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"opengl32: Return a NULL pointer for functions requiring unsupported or disabled extensions.\".", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6414,7 +6414,7 @@ fi
 if test "$enable_opengl32_glDebugMessageCallback" -eq 1; then
 	patch_apply opengl32-glDebugMessageCallback/0002-opengl32-Add-wrappers-for-glDebugMessageCallback-to-.patch
 	(
-		echo '+    { "Sebastian Lackner", "opengl32: Add wrappers for glDebugMessageCallback to handle calling convention differences.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "opengl32: Add wrappers for glDebugMessageCallback to handle calling convention differences.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6430,11 +6430,11 @@ if test "$enable_quartz_MediaSeeking_Positions" -eq 1; then
 	patch_apply quartz-MediaSeeking_Positions/0004-quartz-Implement-MediaSeeking_GetStopPosition-on-top.patch
 	patch_apply quartz-MediaSeeking_Positions/0005-quartz-Remove-unused-cache-of-MediaSeeking-stop-posi.patch
 	(
-		echo '+    { "Erich E. Hoover", "strmbase: Fix MediaSeekingPassThru_GetPositions return when the pins are unconnected.", 1 },';
-		echo '+    { "Erich E. Hoover", "quartz: Include the stream position in addition to the reference clock offset in the time returned by MediaSeeking_GetPositions.", 1 },';
-		echo '+    { "Erich E. Hoover", "quartz: Implement MediaSeeking_GetCurrentPosition on top of MediaSeeking_GetPositions.", 1 },';
-		echo '+    { "Erich E. Hoover", "quartz: Implement MediaSeeking_GetStopPosition on top of MediaSeeking_GetPositions.", 1 },';
-		echo '+    { "Erich E. Hoover", "quartz: Remove unused cache of MediaSeeking stop position.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "strmbase: Fix MediaSeekingPassThru_GetPositions return when the pins are unconnected.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "quartz: Include the stream position in addition to the reference clock offset in the time returned by MediaSeeking_GetPositions.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "quartz: Implement MediaSeeking_GetCurrentPosition on top of MediaSeeking_GetPositions.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "quartz: Implement MediaSeeking_GetStopPosition on top of MediaSeeking_GetPositions.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "quartz: Remove unused cache of MediaSeeking stop position.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6446,7 +6446,7 @@ fi
 if test "$enable_quartz_Silence_FIXMEs" -eq 1; then
 	patch_apply quartz-Silence_FIXMEs/0001-quartz-Don-t-print-FIXME-for-IAMFilterMiscFlags-in-p.patch
 	(
-		echo '+    { "Christian Costa", "quartz: Don'\''t print FIXME for IAMFilterMiscFlags in parsers.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "quartz: Don'\''t print FIXME for IAMFilterMiscFlags in parsers.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6461,7 +6461,7 @@ fi
 if test "$enable_rasapi32_RasEnumDevicesA" -eq 1; then
 	patch_apply rasapi32-RasEnumDevicesA/0001-rasapi32-Set-lpcDevices-in-RasEnumDevicesA.patch
 	(
-		echo '+    { "Sebastian Lackner", "rasapi32: Set *lpcDevices in RasEnumDevicesA.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "rasapi32: Set *lpcDevices in RasEnumDevicesA.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6473,7 +6473,7 @@ fi
 if test "$enable_riched20_Class_Tests" -eq 1; then
 	patch_apply riched20-Class_Tests/0001-riched20-tests-Add-a-test-to-see-what-richedit-class.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "riched20/tests: Add a test to see what richedit class flavours should be available.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "riched20/tests: Add a test to see what richedit class flavours should be available.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6494,16 +6494,16 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 	patch_apply riched20-IText_Interface/0009-riched20-Implement-ITextSelection-GetStoryLength.patch
 	patch_apply riched20-IText_Interface/0010-riched20-Silence-repeated-FIXMEs-triggered-by-Adobe-.patch
 	(
-		echo '+    { "Jactry Zeng", "riched20: Implement IText{Selection, Range}::Set{Start, End}.", 1 },';
-		echo '+    { "Jactry Zeng", "riched20: Stub for ITextFont interface and implement ITextRange::GetFont and ITextSelection::GetFont.", 1 },';
-		echo '+    { "Jactry Zeng", "riched20: Stub for ITextPara interface and implement ITextRange::GetPara.", 1 },';
-		echo '+    { "Jactry Zeng", "riched20: Fix ME_RunOfsFromCharOfs() when nCharOfs > strlen().", 1 },';
-		echo '+    { "Jactry Zeng", "riched20: Implement ITextRange::GetText.", 1 },';
-		echo '+    { "Jactry Zeng", "riched20: Implement ITextRange::SetRange.", 1 },';
-		echo '+    { "Jactry Zeng", "riched20: Implement ITextRange::IsEqual.", 1 },';
-		echo '+    { "Jactry Zeng", "riched20: Implement ITextRange::GetStoryLength.", 1 },';
-		echo '+    { "Jactry Zeng", "riched20: Implement ITextSelection::GetStoryLength.", 1 },';
-		echo '+    { "Sebastian Lackner", "riched20: Silence repeated FIXMEs triggered by Adobe Reader.", 1 },';
+		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement IText{Selection, Range}::Set{Start, End}.", 1 },';
+		printf '%s\n' '+    { "Jactry Zeng", "riched20: Stub for ITextFont interface and implement ITextRange::GetFont and ITextSelection::GetFont.", 1 },';
+		printf '%s\n' '+    { "Jactry Zeng", "riched20: Stub for ITextPara interface and implement ITextRange::GetPara.", 1 },';
+		printf '%s\n' '+    { "Jactry Zeng", "riched20: Fix ME_RunOfsFromCharOfs() when nCharOfs > strlen().", 1 },';
+		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextRange::GetText.", 1 },';
+		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextRange::SetRange.", 1 },';
+		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextRange::IsEqual.", 1 },';
+		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextRange::GetStoryLength.", 1 },';
+		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextSelection::GetStoryLength.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "riched20: Silence repeated FIXMEs triggered by Adobe Reader.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6518,7 +6518,7 @@ fi
 if test "$enable_rstrtmgr_RmShutdown" -eq 1; then
 	patch_apply rstrtmgr-RmShutdown/0001-rstrtmgr-add-RmShutdown-stub.patch
 	(
-		echo '+    { "Austin English", "rstrtmgr: Add RmShutdown stub.", 1 },';
+		printf '%s\n' '+    { "Austin English", "rstrtmgr: Add RmShutdown stub.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6533,7 +6533,7 @@ fi
 if test "$enable_secur32_Zero_Buffer_Length" -eq 1; then
 	patch_apply secur32-Zero_Buffer_Length/0001-secur32-Set-output-buffer-size-to-zero-during-handsh.patch
 	(
-		echo '+    { "Michael Müller", "secur32: Set output buffer size to zero during handshake when no data needs to be sent.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "secur32: Set output buffer size to zero during handshake when no data needs to be sent.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6548,7 +6548,7 @@ fi
 if test "$enable_server_ClipCursor" -eq 1; then
 	patch_apply server-ClipCursor/0001-winex11-Forward-all-clipping-requests-to-the-right-t.patch
 	(
-		echo '+    { "Sebastian Lackner", "winex11: Forward all clipping requests to the right thread (including fullscreen clipping).", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Forward all clipping requests to the right thread (including fullscreen clipping).", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6561,8 +6561,8 @@ if test "$enable_server_FileEndOfFileInformation" -eq 1; then
 	patch_apply server-FileEndOfFileInformation/0001-ntdll-Set-EOF-on-file-which-has-a-memory-mapping-sho.patch
 	patch_apply server-FileEndOfFileInformation/0002-server-Growing-files-which-are-mapped-to-memory-shou.patch
 	(
-		echo '+    { "Qian Hong", "ntdll: Set EOF on file which has a memory mapping should fail.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Growing files which are mapped to memory should still work.", 1 },';
+		printf '%s\n' '+    { "Qian Hong", "ntdll: Set EOF on file which has a memory mapping should fail.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Growing files which are mapped to memory should still work.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6589,15 +6589,15 @@ if test "$enable_server_Stored_ACLs" -eq 1; then
 	patch_apply server-Stored_ACLs/0008-server-Fix-handling-of-MAXIMUM_ALLOWED-in-token_acce.patch
 	patch_apply server-Stored_ACLs/0009-server-Give-all-access-rights-when-opening-an-object.patch
 	(
-		echo '+    { "Erich E. Hoover", "server: Unify the storage of security attributes for files and directories.", 7 },';
-		echo '+    { "Erich E. Hoover", "server: Unify the retrieval of security attributes for files and directories.", 7 },';
-		echo '+    { "Sebastian Lackner", "server: Add a helper function set_sd_from_token_internal to merge two security descriptors.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Temporarily store the full security descriptor for file objects.", 1 },';
-		echo '+    { "Erich E. Hoover", "server: Store file security attributes with extended file attributes.", 8 },';
-		echo '+    { "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings.", 7 },';
-		echo '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes.", 7 },';
-		echo '+    { "Sebastian Lackner", "server: Fix handling of MAXIMUM_ALLOWED in token_access_check.", 1 },';
-		echo '+    { "Michael Müller", "server: Give all access rights when opening an object with MAXIMUM_ALLOWED.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Unify the storage of security attributes for files and directories.", 7 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Unify the retrieval of security attributes for files and directories.", 7 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Add a helper function set_sd_from_token_internal to merge two security descriptors.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Temporarily store the full security descriptor for file objects.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Store file security attributes with extended file attributes.", 8 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings.", 7 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes.", 7 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Fix handling of MAXIMUM_ALLOWED in token_access_check.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "server: Give all access rights when opening an object with MAXIMUM_ALLOWED.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6612,7 +6612,7 @@ fi
 if test "$enable_server_Inherited_ACLs" -eq 1; then
 	patch_apply server-Inherited_ACLs/0001-server-Inherit-security-attributes-from-parent-direc.patch
 	(
-		echo '+    { "Erich E. Hoover", "server: Inherit security attributes from parent directories on creation.", 7 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Inherit security attributes from parent directories on creation.", 7 },';
 	) >> "$patchlist"
 fi
 
@@ -6629,8 +6629,8 @@ if test "$enable_server_Key_State" -eq 1; then
 	patch_apply server-Key_State/0001-server-Introduce-a-helper-function-to-update-the-thr.patch
 	patch_apply server-Key_State/0002-server-Implement-locking-and-synchronization-of-keys.patch
 	(
-		echo '+    { "Sebastian Lackner", "server: Introduce a helper function to update the thread_input key state.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Implement locking and synchronization of keystate buffer.", 3 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Introduce a helper function to update the thread_input key state.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Implement locking and synchronization of keystate buffer.", 3 },';
 	) >> "$patchlist"
 fi
 
@@ -6655,15 +6655,15 @@ if test "$enable_server_LABEL_SECURITY_INFORMATION" -eq 1; then
 	patch_apply server-LABEL_SECURITY_INFORMATION/0008-advapi32-tests-Show-that-tokens-do-not-inherit-sacls.patch
 	patch_apply server-LABEL_SECURITY_INFORMATION/0009-server-Assign-a-default-label-high-to-all-tokens.patch
 	(
-		echo '+    { "Michael Müller", "server: Implement querying the security label of a security descriptor.", 1 },';
-		echo '+    { "Michael Müller", "server: Implement changing the label of a security descriptor.", 1 },';
-		echo '+    { "Michael Müller", "server: Do not set SE_{D,S}ACL_PRESENT if no {D,S}ACL was set.", 1 },';
-		echo '+    { "Michael Müller", "server: Implement setting a security descriptor when duplicating tokens.", 1 },';
-		echo '+    { "Michael Müller", "advapi32/tests: Add basic tests for token security descriptors.", 1 },';
-		echo '+    { "Michael Müller", "advapi32/tests: Show that tokens do not inherit security descriptors during duplication.", 1 },';
-		echo '+    { "Michael Müller", "advapi32/tests: Show that tokens do not inherit dacls while creating child processes.", 1 },';
-		echo '+    { "Michael Müller", "advapi32/tests: Show that tokens do not inherit sacls / mandatory labels while creating child processes.", 1 },';
-		echo '+    { "Michael Müller", "server: Assign a default label (high) to all tokens.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "server: Implement querying the security label of a security descriptor.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "server: Implement changing the label of a security descriptor.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "server: Do not set SE_{D,S}ACL_PRESENT if no {D,S}ACL was set.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "server: Implement setting a security descriptor when duplicating tokens.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "advapi32/tests: Add basic tests for token security descriptors.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "advapi32/tests: Show that tokens do not inherit security descriptors during duplication.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "advapi32/tests: Show that tokens do not inherit dacls while creating child processes.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "advapi32/tests: Show that tokens do not inherit sacls / mandatory labels while creating child processes.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "server: Assign a default label (high) to all tokens.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6675,7 +6675,7 @@ fi
 if test "$enable_server_Map_EXDEV_Error" -eq 1; then
 	patch_apply server-Map_EXDEV_Error/0001-server-Map-EXDEV-to-STATUS_NOT_SAME_DEVICE.patch
 	(
-		echo '+    { "Qian Hong", "server: Map EXDEV to STATUS_NOT_SAME_DEVICE.", 1 },';
+		printf '%s\n' '+    { "Qian Hong", "server: Map EXDEV to STATUS_NOT_SAME_DEVICE.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6690,7 +6690,7 @@ fi
 if test "$enable_server_PeekMessage" -eq 1; then
 	patch_apply server-PeekMessage/0001-server-Fix-handling-of-GetMessage-after-previous-Pee.patch
 	(
-		echo '+    { "Sebastian Lackner", "server: Fix handling of GetMessage after previous PeekMessage call.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Fix handling of GetMessage after previous PeekMessage call.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -6705,7 +6705,7 @@ fi
 if test "$enable_server_Pipe_ObjectName" -eq 1; then
 	patch_apply server-Pipe_ObjectName/0001-server-Store-a-reference-to-the-parent-object-for-pi.patch
 	(
-		echo '+    { "Sebastian Lackner", "server: Store a reference to the parent object for pipe servers.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Store a reference to the parent object for pipe servers.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -6717,7 +6717,7 @@ fi
 if test "$enable_server_Realtime_Priority" -eq 1; then
 	patch_apply server-Realtime_Priority/0001-wineserver-Draft-to-implement-priority-levels-throug.patch
 	(
-		echo '+    { "Joakim Hernberg", "wineserver: Draft to implement priority levels through POSIX scheduling policies on linux.", 1 },';
+		printf '%s\n' '+    { "Joakim Hernberg", "wineserver: Draft to implement priority levels through POSIX scheduling policies on linux.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6730,8 +6730,8 @@ if test "$enable_server_Registry_Notifications" -eq 1; then
 	patch_apply server-Registry_Notifications/0001-server-Allow-multiple-registry-notifications-for-the.patch
 	patch_apply server-Registry_Notifications/0002-server-Introduce-refcounting-for-registry-notificati.patch
 	(
-		echo '+    { "Sebastian Lackner", "server: Allow multiple registry notifications for the same key.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Introduce refcounting for registry notifications.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Allow multiple registry notifications for the same key.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Introduce refcounting for registry notifications.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6743,7 +6743,7 @@ fi
 if test "$enable_server_Signal_Thread" -eq 1; then
 	patch_apply server-Signal_Thread/0001-server-Do-not-signal-thread-until-it-is-really-gone.patch
 	(
-		echo '+    { "Sebastian Lackner", "server: Do not signal thread until it is really gone.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Do not signal thread until it is really gone.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6769,15 +6769,15 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 	patch_apply server-Shared_Memory/0008-user32-Get-rid-of-wineserver-call-for-GetActiveWindo.patch
 	patch_apply server-Shared_Memory/0009-user32-Cache-the-result-of-GetForegroundWindow.patch
 	(
-		echo '+    { "Sebastian Lackner", "ntdll: Implement virtual_map_shared_memory.", 1 },';
-		echo '+    { "Michael Müller", "server: Implement support for global and local shared memory blocks based on memfd.", 1 },';
-		echo '+    { "Sebastian Lackner", "user32: Get rid of wineserver call for GetInputState.", 1 },';
-		echo '+    { "Sebastian Lackner", "user32: Avoid unnecessary wineserver calls in PeekMessage/GetMessage.", 1 },';
-		echo '+    { "Michael Müller", "user32: Get rid of wineserver call for GetLastInputInfo.", 1 },';
-		echo '+    { "Sebastian Lackner", "ntdll: Only enable wineserver shared memory communication when a special environment variable is set.", 1 },';
-		echo '+    { "Sebastian Lackner", "server: Store a list of associated queues for each thread input.", 1 },';
-		echo '+    { "Sebastian Lackner", "user32: Get rid of wineserver call for GetActiveWindow, GetFocus, GetCapture.", 1 },';
-		echo '+    { "Sebastian Lackner", "user32: Cache the result of GetForegroundWindow.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Implement virtual_map_shared_memory.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "server: Implement support for global and local shared memory blocks based on memfd.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32: Get rid of wineserver call for GetInputState.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32: Avoid unnecessary wineserver calls in PeekMessage/GetMessage.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "user32: Get rid of wineserver call for GetLastInputInfo.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Only enable wineserver shared memory communication when a special environment variable is set.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Store a list of associated queues for each thread input.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32: Get rid of wineserver call for GetActiveWindow, GetFocus, GetCapture.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32: Cache the result of GetForegroundWindow.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6789,7 +6789,7 @@ fi
 if test "$enable_server_Timestamp_Compat" -eq 1; then
 	patch_apply server-Timestamp_Compat/0001-server-Compatibility-with-Wine-Staging-format-for-hi.patch
 	(
-		echo '+    { "Michael Müller", "server: Compatibility with Wine Staging format for high precision registry timestamps.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "server: Compatibility with Wine Staging format for high precision registry timestamps.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6804,7 +6804,7 @@ fi
 if test "$enable_setupapi_DelReg" -eq 1; then
 	patch_apply setupapi-DelReg/0001-setupapi-DelReg-should-recursively-delete-registry-k.patch
 	(
-		echo '+    { "Sebastian Lackner", "setupapi: DelReg should recursively delete registry keys.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "setupapi: DelReg should recursively delete registry keys.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6822,12 +6822,12 @@ if test "$enable_setupapi_DiskSpaceList" -eq 1; then
 	patch_apply setupapi-DiskSpaceList/0005-setupapi-ImplementSetupAddSectionToDiskSpaceList.patch
 	patch_apply setupapi-DiskSpaceList/0006-setupapi-Implement-SetupAddInstallSectionToDiskSpace.patch
 	(
-		echo '+    { "Michael Müller", "setupapi: Rewrite DiskSpaceList logic using lists.", 1 },';
-		echo '+    { "Michael Müller", "setupapi: Implement SetupAddToDiskSpaceList.", 1 },';
-		echo '+    { "Michael Müller", "setupapi: Implement SetupQueryDrivesInDiskSpaceList.", 1 },';
-		echo '+    { "Michael Müller", "setupapi: Ignore deletion of added files in SetupAddToDiskSpaceList.", 1 },';
-		echo '+    { "Michael Müller", "setupapi: ImplementSetupAddSectionToDiskSpaceList.", 1 },';
-		echo '+    { "Michael Müller", "setupapi: Implement SetupAddInstallSectionToDiskSpaceList.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "setupapi: Rewrite DiskSpaceList logic using lists.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "setupapi: Implement SetupAddToDiskSpaceList.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "setupapi: Implement SetupQueryDrivesInDiskSpaceList.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "setupapi: Ignore deletion of added files in SetupAddToDiskSpaceList.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "setupapi: ImplementSetupAddSectionToDiskSpaceList.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "setupapi: Implement SetupAddInstallSectionToDiskSpaceList.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6844,9 +6844,9 @@ if test "$enable_setupapi_Display_Device" -eq 1; then
 	patch_apply setupapi-Display_Device/0002-setupapi-Handle-the-case-that-a-full-driver-path-is-.patch
 	patch_apply setupapi-Display_Device/0003-setupapi-Also-create-HardwareId-registry-key-for-dis.patch
 	(
-		echo '+    { "Michael Müller", "setupapi: Create registry keys for display devices and display drivers.", 1 },';
-		echo '+    { "Michael Müller", "setupapi: Handle the case that a full driver path is passed to SetupDiGetClassDevs.", 1 },';
-		echo '+    { "Sebastian Lackner", "setupapi: Also create HardwareId registry key for display devices.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "setupapi: Create registry keys for display devices and display drivers.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "setupapi: Handle the case that a full driver path is passed to SetupDiGetClassDevs.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "setupapi: Also create HardwareId registry key for display devices.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6861,7 +6861,7 @@ fi
 if test "$enable_setupapi_HSPFILEQ_Check_Type" -eq 1; then
 	patch_apply setupapi-HSPFILEQ_Check_Type/0001-setupapi-Check-handle-type-for-HSPFILEQ-handles.patch
 	(
-		echo '+    { "Michael Müller", "setupapi: Check handle type for HSPFILEQ handles.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "setupapi: Check handle type for HSPFILEQ handles.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6876,7 +6876,7 @@ fi
 if test "$enable_setupapi_SP_COPY_IN_USE_NEEDS_REBOOT" -eq 1; then
 	patch_apply setupapi-SP_COPY_IN_USE_NEEDS_REBOOT/0001-setupapi-Implement-SP_COPY_IN_USE_NEEDS_REBOOT.patch
 	(
-		echo '+    { "Michael Müller", "setupapi: Implement SP_COPY_IN_USE_NEEDS_REBOOT.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "setupapi: Implement SP_COPY_IN_USE_NEEDS_REBOOT.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6889,8 +6889,8 @@ if test "$enable_setupapi_SetupDiGetDeviceInterfaceDetail" -eq 1; then
 	patch_apply setupapi-SetupDiGetDeviceInterfaceDetail/0001-setupapi-Add-spec-file-stub-entry-for-SetupDiInstall.patch
 	patch_apply setupapi-SetupDiGetDeviceInterfaceDetail/0002-setupapi-SetupDiGetDeviceInterfaceDetail-should-fill.patch
 	(
-		echo '+    { "Michael Müller", "setupapi: Add spec file stub entry for SetupDiInstallDeviceInterfaces and SetupDiRegisterCoDeviceInstallers.", 1 },';
-		echo '+    { "Michael Müller", "setupapi: SetupDiGetDeviceInterfaceDetail should fill out DeviceInfoData even if the buffer for DeviceInterfaceData is too small.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "setupapi: Add spec file stub entry for SetupDiInstallDeviceInterfaces and SetupDiRegisterCoDeviceInstallers.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "setupapi: SetupDiGetDeviceInterfaceDetail should fill out DeviceInfoData even if the buffer for DeviceInterfaceData is too small.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6907,9 +6907,9 @@ if test "$enable_setupapi_SetupPromptForDisk" -eq 1; then
 	patch_apply setupapi-SetupPromptForDisk/0002-setupapi-tests-Add-test-for-IDF_CHECKFIRST-and-Setup.patch
 	patch_apply setupapi-SetupPromptForDisk/0003-setupapi-tests-Determine-path-to-system32-directory-.patch
 	(
-		echo '+    { "Michael Müller", "setupapi: Add support for IDF_CHECKFIRST flag in SetupPromptForDiskW.", 1 },';
-		echo '+    { "Michael Müller", "setupapi/tests: Add test for IDF_CHECKFIRST and SetupPromptForDiskA/W.", 1 },';
-		echo '+    { "Hermes Belusca-Maito", "setupapi/tests: Determine path to system32 directory at runtime.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "setupapi: Add support for IDF_CHECKFIRST flag in SetupPromptForDiskW.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "setupapi/tests: Add test for IDF_CHECKFIRST and SetupPromptForDiskA/W.", 1 },';
+		printf '%s\n' '+    { "Hermes Belusca-Maito", "setupapi/tests: Determine path to system32 directory at runtime.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6921,7 +6921,7 @@ fi
 if test "$enable_sfc_SfcGetNextProtectedFile" -eq 1; then
 	patch_apply sfc-SfcGetNextProtectedFile/0001-sfc_os-Set-an-error-code-in-SfcGetNextProtectedFile-.patch
 	(
-		echo '+    { "Michael Müller", "sfc_os: Set an error code in SfcGetNextProtectedFile stub.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "sfc_os: Set an error code in SfcGetNextProtectedFile stub.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6933,7 +6933,7 @@ fi
 if test "$enable_shdocvw_ParseURLFromOutsideSource_Tests" -eq 1; then
 	patch_apply shdocvw-ParseURLFromOutsideSource_Tests/0001-shdocvw-Check-precisely-ParseURLFromOutsideSourceX-r.patch
 	(
-		echo '+    { "Christian Costa", "shdocvw: Check precisely ParseURLFromOutsideSourceX returned values in tests and make code clearer about that.", 3 },';
+		printf '%s\n' '+    { "Christian Costa", "shdocvw: Check precisely ParseURLFromOutsideSourceX returned values in tests and make code clearer about that.", 3 },';
 	) >> "$patchlist"
 fi
 
@@ -6958,13 +6958,13 @@ if test "$enable_shell32_Context_Menu" -eq 1; then
 	patch_apply shell32-Context_Menu/0007-shell32-Remove-source-files-when-using-cut-in-the-co.patch
 	patch_apply shell32-Context_Menu/0008-shell32-Recognize-cut-copy-paste-string-verbs-in-ite.patch
 	(
-		echo '+    { "Michael Müller", "shell32: Fix copying of files when using a context menu.", 1 },';
-		echo '+    { "Michael Müller", "shell32: Set return value correctly in DoPaste.", 1 },';
-		echo '+    { "Michael Müller", "shell32: Implement insert/paste for item context menus.", 1 },';
-		echo '+    { "Michael Müller", "shell32: Add support for setting/getting PREFERREDDROPEFFECT in IDataObject.", 1 },';
-		echo '+    { "Michael Müller", "shell32: Add parameter to ISFHelper::DeleteItems to allow deleting files without confirmation.", 1 },';
-		echo '+    { "Michael Müller", "shell32: Remove source files when using cut in the context menu.", 1 },';
-		echo '+    { "Michael Müller", "shell32: Recognize cut/copy/paste string verbs in item menu context menu.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Fix copying of files when using a context menu.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Set return value correctly in DoPaste.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Implement insert/paste for item context menus.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Add support for setting/getting PREFERREDDROPEFFECT in IDataObject.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Add parameter to ISFHelper::DeleteItems to allow deleting files without confirmation.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Remove source files when using cut in the context menu.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Recognize cut/copy/paste string verbs in item menu context menu.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6979,7 +6979,7 @@ fi
 if test "$enable_shell32_File_Property_Dialog" -eq 1; then
 	patch_apply shell32-File_Property_Dialog/0001-shell32-Add-general-tab-in-file-property-dialog.patch
 	(
-		echo '+    { "Michael Müller", "shell32: Add general tab in file property dialog.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Add general tab in file property dialog.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6994,7 +6994,7 @@ fi
 if test "$enable_shell32_Icons" -eq 1; then
 	patch_apply shell32-Icons/0001-shell32-Add-support-for-extra-large-and-jumbo-icon-l.patch
 	(
-		echo '+    { "Michael Müller", "shell32: Add support for extra large and jumbo icon lists.", 2 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Add support for extra large and jumbo icon lists.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -7009,7 +7009,7 @@ fi
 if test "$enable_shell32_Microsoft_Windows_Themes" -eq 1; then
 	patch_apply shell32-Microsoft_Windows_Themes/0001-shell32-Create-Microsoft-Windows-Themes-directory-du.patch
 	(
-		echo '+    { "Sebastian Lackner", "shell32: Create Microsoft\\\\Windows\\\\Themes directory during Wineprefix creation.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "shell32: Create Microsoft\\Windows\\Themes directory during Wineprefix creation.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7025,7 +7025,7 @@ fi
 if test "$enable_shell32_NewMenu_Interface" -eq 1; then
 	patch_apply shell32-NewMenu_Interface/0001-shell32-Implement-NewMenu-with-new-folder-item.patch
 	(
-		echo '+    { "Michael Müller", "shell32: Implement NewMenu with new folder item.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Implement NewMenu with new folder item.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7040,7 +7040,7 @@ fi
 if test "$enable_shell32_Placeholder_Icons" -eq 1; then
 	patch_apply shell32-Placeholder_Icons/0001-shell32-Add-placeholder-icons-to-match-icon-offset-w.patch
 	(
-		echo '+    { "Michael Müller", "shell32: Add placeholder icons to match icon offset with XP.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Add placeholder icons to match icon offset with XP.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7055,7 +7055,7 @@ fi
 if test "$enable_shell32_SHFileOperation_Move" -eq 1; then
 	patch_apply shell32-SHFileOperation_Move/0001-shell32-Fix-SHFileOperation-FO_MOVE-for-creating-sub.patch
 	(
-		echo '+    { "Zhenbo Li", "shell32: Fix SHFileOperation(FO_MOVE) for creating subdirectories.", 1 },';
+		printf '%s\n' '+    { "Zhenbo Li", "shell32: Fix SHFileOperation(FO_MOVE) for creating subdirectories.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7074,10 +7074,10 @@ if test "$enable_shell32_Progress_Dialog" -eq 1; then
 	patch_apply shell32-Progress_Dialog/0003-shell32-Implement-file-operation-progress-dialog.patch
 	patch_apply shell32-Progress_Dialog/0004-shell32-Show-animation-during-SHFileOperation.patch
 	(
-		echo '+    { "Michael Müller", "shell32: Correct indentation in shfileop.c.", 1 },';
-		echo '+    { "Michael Müller", "shell32: Pass FILE_INFORMATION into SHNotify* functions.", 1 },';
-		echo '+    { "Michael Müller", "shell32: Implement file operation progress dialog.", 1 },';
-		echo '+    { "Michael Müller", "shell32: Show animation during SHFileOperation.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Correct indentation in shfileop.c.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Pass FILE_INFORMATION into SHNotify* functions.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Implement file operation progress dialog.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Show animation during SHFileOperation.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7092,7 +7092,7 @@ fi
 if test "$enable_shell32_RunDLL_CallEntry16" -eq 1; then
 	patch_apply shell32-RunDLL_CallEntry16/0001-shell32-Use-manual-redirection-for-RunDLL_CallEntry1.patch
 	(
-		echo '+    { "Michael Müller", "shell32: Use manual redirection for RunDLL_CallEntry16.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Use manual redirection for RunDLL_CallEntry16.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7108,8 +7108,8 @@ if test "$enable_shell32_SFGAO_HASSUBFOLDER" -eq 1; then
 	patch_apply shell32-SFGAO_HASSUBFOLDER/0001-shell32-Set-SFGAO_HASSUBFOLDER-correctly-for-unixfs.patch
 	patch_apply shell32-SFGAO_HASSUBFOLDER/0002-shell32-Set-SFGAO_HASSUBFOLDER-correctly-for-normal-.patch
 	(
-		echo '+    { "Michael Müller", "shell32: Set SFGAO_HASSUBFOLDER correctly for unixfs.", 1 },';
-		echo '+    { "Michael Müller", "shell32: Set SFGAO_HASSUBFOLDER correctly for normal shellfolders.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Set SFGAO_HASSUBFOLDER correctly for unixfs.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Set SFGAO_HASSUBFOLDER correctly for normal shellfolders.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7121,7 +7121,7 @@ fi
 if test "$enable_shell32_SHCreateSessionKey" -eq 1; then
 	patch_apply shell32-SHCreateSessionKey/0001-shell32-Implement-SHCreateSessionKey.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "shell32: Implement SHCreateSessionKey.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "shell32: Implement SHCreateSessionKey.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7140,7 +7140,7 @@ fi
 if test "$enable_shell32_SHFileOperation_Win9x" -eq 1; then
 	patch_apply shell32-SHFileOperation_Win9x/0001-shell32-Choose-return-value-for-SHFileOperationW-dep.patch
 	(
-		echo '+    { "Michael Müller", "shell32: Choose return value for SHFileOperationW depending on windows version.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Choose return value for SHFileOperationW depending on windows version.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7157,8 +7157,8 @@ if test "$enable_shell32_Toolbar_Bitmaps" -eq 1; then
 	patch_apply shell32-Toolbar_Bitmaps/0001-shell32-Add-toolbar-bitmaps-compatible-with-IE6.patch
 	patch_apply shell32-Toolbar_Bitmaps/0002-shell32-Add-more-Tango-icons-to-the-IE-toolbar.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "shell32: Add toolbar bitmaps compatible with IE6.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "shell32: Add more Tango icons to the IE toolbar.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "shell32: Add toolbar bitmaps compatible with IE6.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "shell32: Add more Tango icons to the IE toolbar.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7170,7 +7170,7 @@ fi
 if test "$enable_shell32_UnixFS" -eq 1; then
 	patch_apply shell32-UnixFS/0001-shell32-Do-not-use-unixfs-for-devices-without-mountp.patch
 	(
-		echo '+    { "Michael Müller", "shell32: Do not use unixfs for devices without mountpoint.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Do not use unixfs for devices without mountpoint.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7183,8 +7183,8 @@ if test "$enable_shlwapi_AssocGetPerceivedType" -eq 1; then
 	patch_apply shlwapi-AssocGetPerceivedType/0001-shlwapi-tests-Add-tests-for-AssocGetPerceivedType.patch
 	patch_apply shlwapi-AssocGetPerceivedType/0002-shlwapi-Implement-AssocGetPerceivedType.patch
 	(
-		echo '+    { "Mark Jansen", "shlwapi/tests: Add tests for AssocGetPerceivedType.", 1 },';
-		echo '+    { "Mark Jansen", "shlwapi: Implement AssocGetPerceivedType.", 2 },';
+		printf '%s\n' '+    { "Mark Jansen", "shlwapi/tests: Add tests for AssocGetPerceivedType.", 1 },';
+		printf '%s\n' '+    { "Mark Jansen", "shlwapi: Implement AssocGetPerceivedType.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -7196,7 +7196,7 @@ fi
 if test "$enable_shlwapi_SHAddDataBlock" -eq 1; then
 	patch_apply shlwapi-SHAddDataBlock/0001-shlwapi-Fix-the-return-value-of-SHAddDataBlock.patch
 	(
-		echo '+    { "Hermès BÉLUSCA-MAÏTO", "shlwapi: Fix the return value of SHAddDataBlock.", 1 },';
+		printf '%s\n' '+    { "Hermès BÉLUSCA-MAÏTO", "shlwapi: Fix the return value of SHAddDataBlock.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7209,8 +7209,8 @@ if test "$enable_shlwapi_SHMapHandle" -eq 1; then
 	patch_apply shlwapi-SHMapHandle/0001-shlwapi-tests-Test-NULL-handle-duplication-in-SHMapH.patch
 	patch_apply shlwapi-SHMapHandle/0002-shlwapi-SHMapHandle-should-not-set-error-when-NULL-i.patch
 	(
-		echo '+    { "Bruno Jesus", "shlwapi/tests: Test NULL handle duplication in SHMapHandle().", 1 },';
-		echo '+    { "Sebastian Lackner", "shlwapi: SHMapHandle should not set error when NULL is passed as hShared.", 1 },';
+		printf '%s\n' '+    { "Bruno Jesus", "shlwapi/tests: Test NULL handle duplication in SHMapHandle().", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "shlwapi: SHMapHandle should not set error when NULL is passed as hShared.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7223,8 +7223,8 @@ if test "$enable_shlwapi_UrlCombine" -eq 1; then
 	patch_apply shlwapi-UrlCombine/0001-shlwapi-tests-Add-additional-tests-for-UrlCombine-and-.patch
 	patch_apply shlwapi-UrlCombine/0002-shlwapi-UrlCombineW-workaround-for-relative-paths.patch
 	(
-		echo '+    { "Sebastian Lackner", "shlwapi/tests: Add additional tests for UrlCombine and UrlCanonicalize.", 1 },';
-		echo '+    { "Sebastian Lackner", "shlwapi: UrlCombineW workaround for relative paths.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "shlwapi/tests: Add additional tests for UrlCombine and UrlCanonicalize.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "shlwapi: UrlCombineW workaround for relative paths.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7236,7 +7236,7 @@ fi
 if test "$enable_stdole32_idl_Typelib" -eq 1; then
 	patch_apply stdole32.idl-Typelib/0001-include-Make-stdole32.idl-a-public-component.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "include: Make stdole32.idl a public component.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "include: Make stdole32.idl a public component.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7274,32 +7274,32 @@ if test "$enable_widl_SLTG_Typelib_Support" -eq 1; then
 	patch_apply widl-SLTG_Typelib_Support/0025-oleaut32-Add-support-for-decoding-SLTG-variable-help.patch
 	patch_apply widl-SLTG_Typelib_Support/0026-widl-Minor-cosmetic-clean-up.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "widl: Add initial implementation of SLTG typelib generator.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Add support for structures.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Properly align name table entries.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: More accurately report variable descriptions data size.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Calculate size of instance for structures.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Write correct typekind to the SLTG typeinfo block.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Write SLTG blocks according to the index order.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Write correct syskind by SLTG typelib generator.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Add support for VT_VOID and VT_VARIANT to SLTG typelib generator.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Add support for VT_USERDEFINED to SLTG typelib generator.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Factor out SLTG tail initialization.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Add support for recursive type references to SLTG typelib generator.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Add support for interfaces to SLTG typelib generator.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Add support for inherited interfaces to SLTG typelib generator.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Make automatic dispid generation scheme better match what midl does.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Create library block index right after the CompObj one.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Fix generation of resources containing an old typelib.", 1 },';
-		echo '+    { "Sebastian Lackner", "widl: Add --oldtlb switch in usage message.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Avoid relying on side effects when marking function index as the last one.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Set the lowest bit in the param name to indicate whether type description follows the name.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "oleaut32: Fix logic for deciding whether type description follows the name.", 2 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Add support for function parameter flags to SLTG typelib generator.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "oleaut32: Implement decoding of SLTG help strings.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "oleaut32: Add support for decoding SLTG function help strings.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "oleaut32: Add support for decoding SLTG variable help strings.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "widl: Minor/cosmetic clean up.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "widl: Add initial implementation of SLTG typelib generator.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "widl: Add support for structures.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "widl: Properly align name table entries.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "widl: More accurately report variable descriptions data size.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "widl: Calculate size of instance for structures.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "widl: Write correct typekind to the SLTG typeinfo block.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "widl: Write SLTG blocks according to the index order.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "widl: Write correct syskind by SLTG typelib generator.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "widl: Add support for VT_VOID and VT_VARIANT to SLTG typelib generator.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "widl: Add support for VT_USERDEFINED to SLTG typelib generator.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "widl: Factor out SLTG tail initialization.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "widl: Add support for recursive type references to SLTG typelib generator.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "widl: Add support for interfaces to SLTG typelib generator.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "widl: Add support for inherited interfaces to SLTG typelib generator.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "widl: Make automatic dispid generation scheme better match what midl does.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "widl: Create library block index right after the CompObj one.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "widl: Fix generation of resources containing an old typelib.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "widl: Add --oldtlb switch in usage message.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "widl: Avoid relying on side effects when marking function index as the last one.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "widl: Set the lowest bit in the param name to indicate whether type description follows the name.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Fix logic for deciding whether type description follows the name.", 2 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "widl: Add support for function parameter flags to SLTG typelib generator.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Implement decoding of SLTG help strings.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Add support for decoding SLTG function help strings.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Add support for decoding SLTG variable help strings.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "widl: Minor/cosmetic clean up.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7317,7 +7317,7 @@ fi
 if test "$enable_stdole32_tlb_SLTG_Typelib" -eq 1; then
 	patch_apply stdole32.tlb-SLTG_Typelib/0020-stdole32.tlb-Compile-typelib-with-oldtlb.patch
 	(
-		echo '+    { "Sebastian Lackner", "stdole32.tlb: Compile typelib with --oldtlb.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "stdole32.tlb: Compile typelib with --oldtlb.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7332,9 +7332,9 @@ if test "$enable_taskmgr_Memory_Usage" -eq 1; then
 	patch_apply taskmgr-Memory_Usage/0003-taskmgr-Use-system-font-instead-of-special-bitmap-fo.patch
 	patch_apply taskmgr-Memory_Usage/0004-taskmgr-Use-different-units-depending-on-memory-usag.patch
 	(
-		echo '+    { "Michael Müller", "ntdll: Report system information SystemPerformanceInformation info class.", 2 },';
-		echo '+    { "Michael Müller", "taskmgr: Use system font instead of special bitmap font.", 1 },';
-		echo '+    { "Michael Müller", "taskmgr: Use different units depending on memory usage.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Report system information SystemPerformanceInformation info class.", 2 },';
+		printf '%s\n' '+    { "Michael Müller", "taskmgr: Use system font instead of special bitmap font.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "taskmgr: Use different units depending on memory usage.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7346,7 +7346,7 @@ fi
 if test "$enable_user_exe16_CONTAINING_RECORD" -eq 1; then
 	patch_apply user.exe16-CONTAINING_RECORD/0001-user.exe16-Don-t-open-code-CONTAINING_RECORD.patch
 	(
-		echo '+    { "Sebastian Lackner", "user.exe16: Don'\''t open code CONTAINING_RECORD.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user.exe16: Don'\''t open code CONTAINING_RECORD.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7361,7 +7361,7 @@ fi
 if test "$enable_user_exe16_DlgDirList" -eq 1; then
 	patch_apply user.exe16-DlgDirList/0001-user.exe16-Fix-handling-of-DDL_DRIVES-flag-in-DlgDir.patch
 	(
-		echo '+    { "Alex Villacís Lasso", "user.exe16: Fix handling of DDL_DRIVES flag in DlgDirList.", 1 },';
+		printf '%s\n' '+    { "Alex Villacís Lasso", "user.exe16: Fix handling of DDL_DRIVES flag in DlgDirList.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7381,11 +7381,11 @@ if test "$enable_user32_Auto_Radio_Button" -eq 1; then
 	patch_apply user32-Auto_Radio_Button/0004-user32-tests-Add-a-test-for-navigating-a-group-of-bu.patch
 	patch_apply user32-Auto_Radio_Button/0005-user32-Add-support-for-navigating-a-group-of-radio-b.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "user32: Move the auto radio button group logic from BM_SETCHECK to WM_LBUTTONUP handler.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "user32/tests: Add a message test for group of radio buttons.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "user32/tests: Simplify the test for BM_CLICK on autoradio button by using a dialog.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "user32/tests: Add a test for navigating a group of buttons using keyboard events.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "user32: Add support for navigating a group of radio buttons using a keyboard.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Move the auto radio button group logic from BM_SETCHECK to WM_LBUTTONUP handler.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add a message test for group of radio buttons.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Simplify the test for BM_CLICK on autoradio button by using a dialog.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add a test for navigating a group of buttons using keyboard events.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Add support for navigating a group of radio buttons using a keyboard.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7400,7 +7400,7 @@ fi
 if test "$enable_user32_Combobox_WM_SIZE" -eq 1; then
 	patch_apply user32-Combobox_WM_SIZE/0001-user32-Don-t-force-a-combobox-repaint-on-WM_SIZE.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "user32: Don'\''t force a combobox repaint on WM_SIZE.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Don'\''t force a combobox repaint on WM_SIZE.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7417,9 +7417,9 @@ if test "$enable_user32_DM_SETDEFID" -eq 1; then
 	patch_apply user32-DM_SETDEFID/0002-user32-Use-root-dialog-for-DM_SETDEFID-DM_GETDEFID-i.patch
 	patch_apply user32-DM_SETDEFID/0003-user32-tests-Add-a-bunch-of-tests-for-DM_SETDEFID-DM.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "user32: Do not initialize dialog info for every window passed to DefDlgProc.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "user32: Use root dialog for DM_SETDEFID/DM_GETDEFID in DefDlgProc.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "user32/tests: Add a bunch of tests for DM_SETDEFID/DM_GETDEFID handling by a DefDlgProc.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Do not initialize dialog info for every window passed to DefDlgProc.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Use root dialog for DM_SETDEFID/DM_GETDEFID in DefDlgProc.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add a bunch of tests for DM_SETDEFID/DM_GETDEFID handling by a DefDlgProc.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7434,7 +7434,7 @@ fi
 if test "$enable_user32_DeferWindowPos" -eq 1; then
 	patch_apply user32-DeferWindowPos/0001-user32-Fix-error-handling-in-Begin-End-DeferWindowPo.patch
 	(
-		echo '+    { "Rodrigo Rivas", "user32: Fix error handling in {Begin,End,}DeferWindowPos() to match Windows behavior.", 1 },';
+		printf '%s\n' '+    { "Rodrigo Rivas", "user32: Fix error handling in {Begin,End,}DeferWindowPos() to match Windows behavior.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7450,8 +7450,8 @@ if test "$enable_user32_DialogBoxParam" -eq 1; then
 	patch_apply user32-DialogBoxParam/0001-user32-tests-Test-DialogBoxParam-using-a-dialog-temp.patch
 	patch_apply user32-DialogBoxParam/0002-user32-DialogBoxParam-should-return-1-when-dialog-co.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "user32/tests: Test DialogBoxParam using a dialog template with invalid control class.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "user32: DialogBoxParam should return -1 when dialog control creation fails.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Test DialogBoxParam using a dialog template with invalid control class.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: DialogBoxParam should return -1 when dialog control creation fails.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7466,7 +7466,7 @@ fi
 if test "$enable_user32_Dialog_Paint_Event" -eq 1; then
 	patch_apply user32-Dialog_Paint_Event/0001-user32-Call-UpdateWindow-during-DIALOG_CreateIndirec.patch
 	(
-		echo '+    { "Sebastian Lackner", "user32: Call UpdateWindow() during DIALOG_CreateIndirect.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32: Call UpdateWindow() during DIALOG_CreateIndirect.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7481,7 +7481,7 @@ fi
 if test "$enable_user32_DrawMenuItem" -eq 1; then
 	patch_apply user32-DrawMenuItem/0001-user32-Add-a-check-if-the-menu-text-is-a-valid-strin.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "user32: Add a check if the menu text is a valid string.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Add a check if the menu text is a valid string.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7496,7 +7496,7 @@ fi
 if test "$enable_user32_DrawTextExW" -eq 1; then
 	patch_apply user32-DrawTextExW/0001-user32-Fix-handling-of-invert_y-in-DrawTextExW.patch
 	(
-		echo '+    { "Sebastian Lackner", "user32: Fix handling of invert_y in DrawTextExW.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32: Fix handling of invert_y in DrawTextExW.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7511,7 +7511,7 @@ fi
 if test "$enable_user32_GetAutoRotationState" -eq 1; then
 	patch_apply user32-GetAutoRotationState/0001-user32-Add-semi-stub-for-GetAutoRotationState.patch
 	(
-		echo '+    { "Michael Müller", "user32: Add semi-stub for GetAutoRotationState.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "user32: Add semi-stub for GetAutoRotationState.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7526,7 +7526,7 @@ fi
 if test "$enable_user32_GetSystemMetrics" -eq 1; then
 	patch_apply user32-GetSystemMetrics/0001-user32-Allow-changing-the-tablet-media-center-status.patch
 	(
-		echo '+    { "Michael Müller", "user32: Allow changing the tablet / media center status via wine registry key.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "user32: Allow changing the tablet / media center status via wine registry key.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7543,9 +7543,9 @@ if test "$enable_user32_Groupbox_Rectangle" -eq 1; then
 	patch_apply user32-Groupbox_Rectangle/0002-user32-BUTTON_CalcLabelRect-should-use-the-button-fo.patch
 	patch_apply user32-Groupbox_Rectangle/0003-user32-Fix-groupbox-rectangle-calculation-in-the-but.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "user32: Always restore previously selected font in the button painting helpers.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "user32: BUTTON_CalcLabelRect should use the button font.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "user32: Fix groupbox rectangle calculation in the button'\''s WM_SETTEXT handler.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Always restore previously selected font in the button painting helpers.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: BUTTON_CalcLabelRect should use the button font.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Fix groupbox rectangle calculation in the button'\''s WM_SETTEXT handler.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7560,7 +7560,7 @@ fi
 if test "$enable_user32_Invalidate_Key_State" -eq 1; then
 	patch_apply user32-Invalidate_Key_State/0001-user32-Globally-invalidate-key-state-on-changes-in-o.patch
 	(
-		echo '+    { "Sebastian Lackner", "user32: Globally invalidate key state on changes in other threads.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32: Globally invalidate key state on changes in other threads.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7575,7 +7575,7 @@ fi
 if test "$enable_user32_LR_LOADFROMFILE" -eq 1; then
 	patch_apply user32-LR_LOADFROMFILE/0001-user32-Add-a-workaround-for-Windows-3.1-apps-which-c.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "user32: Add a workaround for Windows 3.1 apps which call LoadImage(LR_LOADFROMFILE) with a resource id.", 2 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Add a workaround for Windows 3.1 apps which call LoadImage(LR_LOADFROMFILE) with a resource id.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -7590,7 +7590,7 @@ fi
 if test "$enable_user32_ListBox_Size" -eq 1; then
 	patch_apply user32-ListBox_Size/0001-user32-Fix-calculation-of-listbox-size-when-horizont.patch
 	(
-		echo '+    { "Michael Müller", "user32: Fix calculation of listbox size when horizontal scrollbar is present.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "user32: Fix calculation of listbox size when horizontal scrollbar is present.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7607,9 +7607,9 @@ if test "$enable_user32_lpCreateParams" -eq 1; then
 	patch_apply user32-lpCreateParams/0002-tools-wrc-Fix-generation-of-custom-dialog-control-da.patch
 	patch_apply user32-lpCreateParams/0003-user32-Fix-the-pointer-to-custom-dialog-control-data.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "user32/tests: Add a test for custom dialog control data.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "tools/wrc: Fix generation of custom dialog control data.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "user32: Fix the pointer to custom dialog control data.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add a test for custom dialog control data.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "tools/wrc: Fix generation of custom dialog control data.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Fix the pointer to custom dialog control data.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7625,8 +7625,8 @@ if test "$enable_user32_MessageBox_WS_EX_TOPMOST" -eq 1; then
 	patch_apply user32-MessageBox_WS_EX_TOPMOST/0001-user32-tests-Add-some-tests-to-see-when-MessageBox-g.patch
 	patch_apply user32-MessageBox_WS_EX_TOPMOST/0002-user32-MessageBox-should-be-topmost-when-MB_SYSTEMMO.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "user32/tests: Add some tests to see when MessageBox gains WS_EX_TOPMOST style.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "user32: MessageBox should be topmost when MB_SYSTEMMODAL style is set.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add some tests to see when MessageBox gains WS_EX_TOPMOST style.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: MessageBox should be topmost when MB_SYSTEMMODAL style is set.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7642,7 +7642,7 @@ fi
 if test "$enable_user32_Mouse_Message_Hwnd" -eq 1; then
 	patch_apply user32-Mouse_Message_Hwnd/0001-user32-Try-harder-to-find-a-target-for-mouse-message.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "user32: Try harder to find a target for mouse messages.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Try harder to find a target for mouse messages.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7657,7 +7657,7 @@ fi
 if test "$enable_user32_PNG_Support" -eq 1; then
 	patch_apply user32-PNG_Support/0001-user32-Add-support-for-PNG-icons.-v4.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "user32: Add support for PNG icons.", 5 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Add support for PNG icons.", 5 },';
 	) >> "$patchlist"
 fi
 
@@ -7672,7 +7672,7 @@ fi
 if test "$enable_user32_Refresh_MDI_Menus" -eq 1; then
 	patch_apply user32-Refresh_MDI_Menus/0001-user32-Refresh-MDI-menus-when-DefMDIChildProcW-WM_SE.patch
 	(
-		echo '+    { "Sebastian Lackner", "user32: Refresh MDI menus when DefMDIChildProc(WM_SETTEXT) is called.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32: Refresh MDI menus when DefMDIChildProc(WM_SETTEXT) is called.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7687,7 +7687,7 @@ fi
 if test "$enable_user32_ScrollWindowEx" -eq 1; then
 	patch_apply user32-ScrollWindowEx/0001-user32-Fix-return-value-of-ScrollWindowEx-for-invisi.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "user32: Fix return value of ScrollWindowEx for invisible windows.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Fix return value of ScrollWindowEx for invisible windows.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7703,8 +7703,8 @@ if test "$enable_user32_WM_MEASUREITEM" -eq 1; then
 	patch_apply user32-WM_MEASUREITEM/0001-user32-tests-Add-a-test-for-WM_MEASUREITEM-when-inse.patch
 	patch_apply user32-WM_MEASUREITEM/0002-user32-Pass-correct-itemData-to-WM_MEASUREITEM-when-.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "user32/tests: Add a test for WM_MEASUREITEM when inserting an item to an owner-drawn listbox.", 2 },';
-		echo '+    { "Dmitry Timoshkov", "user32: Pass correct itemData to WM_MEASUREITEM when inserting an item to an owner-drawn listbox.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add a test for WM_MEASUREITEM when inserting an item to an owner-drawn listbox.", 2 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Pass correct itemData to WM_MEASUREITEM when inserting an item to an owner-drawn listbox.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7719,7 +7719,7 @@ fi
 if test "$enable_uxtheme_CloseThemeClass" -eq 1; then
 	patch_apply uxtheme-CloseThemeClass/0001-uxtheme-Protect-CloseThemeData-from-invalid-input.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "uxtheme: Protect CloseThemeData() from invalid input.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "uxtheme: Protect CloseThemeData() from invalid input.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7746,15 +7746,15 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 	patch_apply uxtheme-GTK_Theming/0008-uxthemegtk-Fix-some-incorrect-error-codes.patch
 	patch_apply uxtheme-GTK_Theming/0009-uxthemegtk-Validate-theme-handles-before-accessing-p.patch
 	(
-		echo '+    { "Michael Müller", "uxthemegtk: Add configure check and stub dll.", 1 },';
-		echo '+    { "Ivan Akulinchev", "uxthemegtk: Initial implementation.", 1 },';
-		echo '+    { "Michael Müller", "uxthemegtk: Implement enumeration of themes, color and sizes.", 1 },';
-		echo '+    { "Sebastian Lackner", "uxthemegtk: Correctly render buttons with GTK >= 3.14.0.", 1 },';
-		echo '+    { "Michael Müller", "uxthemegtk: Print class name before calling vtable functions.", 1 },';
-		echo '+    { "Michael Müller", "uxthemegtk: Reset FPU flags before calling GTK3 functions.", 1 },';
-		echo '+    { "Sebastian Lackner", "uxthemegtk: Add export for OpenThemeDataEx.", 1 },';
-		echo '+    { "Sebastian Lackner", "uxthemegtk: Fix some incorrect error codes.", 1 },';
-		echo '+    { "Sebastian Lackner", "uxthemegtk: Validate theme handles before accessing private data.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "uxthemegtk: Add configure check and stub dll.", 1 },';
+		printf '%s\n' '+    { "Ivan Akulinchev", "uxthemegtk: Initial implementation.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "uxthemegtk: Implement enumeration of themes, color and sizes.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "uxthemegtk: Correctly render buttons with GTK >= 3.14.0.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "uxthemegtk: Print class name before calling vtable functions.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "uxthemegtk: Reset FPU flags before calling GTK3 functions.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "uxthemegtk: Add export for OpenThemeDataEx.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "uxthemegtk: Fix some incorrect error codes.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "uxthemegtk: Validate theme handles before accessing private data.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7766,7 +7766,7 @@ fi
 if test "$enable_version_GetFileVersionInfoSizeExW" -eq 1; then
 	patch_apply version-GetFileVersionInfoSizeExW/0001-version-Return-ERROR_FILE_NOT_FOUND-for-Win-9X-when-.patch
 	(
-		echo '+    { "Michael Müller", "version: Return ERROR_FILE_NOT_FOUND for Win 9X when a file was not found in GetFileVersionInfoSizeEx.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "version: Return ERROR_FILE_NOT_FOUND for Win 9X when a file was not found in GetFileVersionInfoSizeEx.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7778,7 +7778,7 @@ fi
 if test "$enable_version_VerFindFileA" -eq 1; then
 	patch_apply version-VerFindFileA/0001-version-Correctly-return-VFF_CURNEDEST-in-VerFindFil.patch
 	(
-		echo '+    { "Michael Müller", "version: Correctly return VFF_CURNEDEST in VerFindFileA.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "version: Correctly return VFF_CURNEDEST in VerFindFileA.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7790,7 +7790,7 @@ fi
 if test "$enable_version_VerQueryValue" -eq 1; then
 	patch_apply version-VerQueryValue/0001-version-Test-for-VerQueryValueA-try-2.patch
 	(
-		echo '+    { "Mark Jansen", "version: Test for VerQueryValueA.", 2 },';
+		printf '%s\n' '+    { "Mark Jansen", "version: Test for VerQueryValueA.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -7813,14 +7813,14 @@ if test "$enable_vulkan_Vulkan_Implementation" -eq 1; then
 	patch_apply vulkan-Vulkan_Implementation/0007-vulkan-Improve-vkGetPhysicalDeviceWin32PresentationS.patch
 	patch_apply vulkan-Vulkan_Implementation/0008-vulkan-Only-convert-VkDescriptor-Image-Buffer-Info-w.patch
 	(
-		echo '+    { "Sebastian Lackner", "vulkan: Initial implementation.", 2 },';
-		echo '+    { "Michael Müller", "vulkan: Implement vkGetPhysicalDeviceWin32PresentationSupportKHR.", 1 },';
-		echo '+    { "Sebastian Lackner", "vulkan: Use binary search to lookup function in is_null_func.", 1 },';
-		echo '+    { "Michael Müller", "vulkan: Try to load libvulkan.so.1.", 1 },';
-		echo '+    { "Michael Müller", "vulkan: Enumerate VK_KHR_win32_surface only one time in vkEnumerateInstanceExtensionProperties.", 1 },';
-		echo '+    { "Michael Müller", "vulkan: Update to spec version 1.0.30 (no VK_EXT_debug_marker support yet).", 1 },';
-		echo '+    { "Michael Müller", "vulkan: Improve vkGetPhysicalDeviceWin32PresentationSupportKHR and vkCreateWin32SurfaceKHR.", 1 },';
-		echo '+    { "Sebastian Lackner", "vulkan: Only convert VkDescriptor{Image,Buffer}Info when type is valid.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "vulkan: Initial implementation.", 2 },';
+		printf '%s\n' '+    { "Michael Müller", "vulkan: Implement vkGetPhysicalDeviceWin32PresentationSupportKHR.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "vulkan: Use binary search to lookup function in is_null_func.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "vulkan: Try to load libvulkan.so.1.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "vulkan: Enumerate VK_KHR_win32_surface only one time in vkEnumerateInstanceExtensionProperties.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "vulkan: Update to spec version 1.0.30 (no VK_EXT_debug_marker support yet).", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "vulkan: Improve vkGetPhysicalDeviceWin32PresentationSupportKHR and vkCreateWin32SurfaceKHR.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "vulkan: Only convert VkDescriptor{Image,Buffer}Info when type is valid.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7832,7 +7832,7 @@ fi
 if test "$enable_wbemdisp_ISWbemSecurity" -eq 1; then
 	patch_apply wbemdisp-ISWbemSecurity/0001-wbemdisp-Add-ISWbemSecurity-stub-interface.patch
 	(
-		echo '+    { "Michael Müller", "wbemdisp: Add ISWbemSecurity stub interface.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wbemdisp: Add ISWbemSecurity stub interface.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7847,7 +7847,7 @@ fi
 if test "$enable_wbemprox_fill_processor" -eq 1; then
 	patch_apply wbemprox-fill_processor/0001-wbemprox-Only-include-matching-rows-in-the-table-row.patch
 	(
-		echo '+    { "Hans Leidekker", "wbemprox: Only include matching rows in the table row count.", 1 },';
+		printf '%s\n' '+    { "Hans Leidekker", "wbemprox: Only include matching rows in the table row count.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7865,7 +7865,7 @@ fi
 if test "$enable_wbemprox_Printer" -eq 1; then
 	patch_apply wbemprox-Printer/0001-wbemprox-Provide-DeviceID-Location-and-PortName-for-.patch
 	(
-		echo '+    { "Michael Müller", "wbemprox: Provide DeviceID, Location and PortName for printers.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wbemprox: Provide DeviceID, Location and PortName for printers.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7880,7 +7880,7 @@ fi
 if test "$enable_windowscodecs_32bppGrayFloat" -eq 1; then
 	patch_apply windowscodecs-32bppGrayFloat/0004-windowscodecs-Fix-32bppGrayFloat-to-8bppGray-convers.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fix 32bppGrayFloat to 8bppGray conversion.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix 32bppGrayFloat to 8bppGray conversion.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7918,28 +7918,28 @@ if test "$enable_windowscodecs_Palette_Images" -eq 1; then
 	patch_apply windowscodecs-Palette_Images/0021-windowscodecs-PNG-decoder-should-return-WINCODEC_ERR.patch
 	patch_apply windowscodecs-Palette_Images/0022-windowscodecs-PNG-decoder-should-use-indexed-formats.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapDecoder::CopyPalette in PNG decoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapFrameEncode::SetPalette in PNG encoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapEncoder::SetPalette for a not initialized case in PNG encoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Decode PNG images with a tRNS chunk in their native formats.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for palette image formats to PNG encoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapEncoder::SetPalette for a not initialized case in BMP encoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapFrameEncode::SetPalette in BMP encoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapDecoder::CopyPalette in TIFF decoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapFrameEncode::SetPalette in the TIFF encoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapEncoder::SetPalette for a not initialized case in TIFF encoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add some tests for encoding 1bpp/8bpp images with a palette.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add tests for encoding 2bpp/4bpp images with a palette.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Use V_UI1() instead of V_UNION() to assign a VT_UI1 variant member.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for palette image formats to TIFF encoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Write the image bits as a bottom-top array in BMP encoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Limit number of colors in a palette in BMP decoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for palette image formats to BMP encoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Make create_decoder() return an error code in PNG tests.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add more tests for loading PNG images in various color formats.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Find_decoder() should return an error it received from the decoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: PNG decoder should return WINCODEC_ERR_UNKNOWNIMAGEFORMAT when image loading fails.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: PNG decoder should use indexed formats for grayscale images when a PLTE chunk exists.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapDecoder::CopyPalette in PNG decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapFrameEncode::SetPalette in PNG encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapEncoder::SetPalette for a not initialized case in PNG encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Decode PNG images with a tRNS chunk in their native formats.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for palette image formats to PNG encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapEncoder::SetPalette for a not initialized case in BMP encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapFrameEncode::SetPalette in BMP encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapDecoder::CopyPalette in TIFF decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapFrameEncode::SetPalette in the TIFF encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapEncoder::SetPalette for a not initialized case in TIFF encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add some tests for encoding 1bpp/8bpp images with a palette.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add tests for encoding 2bpp/4bpp images with a palette.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Use V_UI1() instead of V_UNION() to assign a VT_UI1 variant member.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for palette image formats to TIFF encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Write the image bits as a bottom-top array in BMP encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Limit number of colors in a palette in BMP decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for palette image formats to BMP encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Make create_decoder() return an error code in PNG tests.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add more tests for loading PNG images in various color formats.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Find_decoder() should return an error it received from the decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: PNG decoder should return WINCODEC_ERR_UNKNOWNIMAGEFORMAT when image loading fails.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: PNG decoder should use indexed formats for grayscale images when a PLTE chunk exists.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7985,34 +7985,34 @@ if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 	patch_apply windowscodecs-GIF_Encoder/0027-windowscodecs-tests-Add-a-missing-check-for-IWICBitm.patch
 	patch_apply windowscodecs-GIF_Encoder/0028-windowscodecs-Correctly-indicate-that-the-global-inf.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in BMP encoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoderInfo::GetFileExtensions.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapFrameEncode::SetPalette in JPEG encoder,.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in JPEG encoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Avoid crashing if no IPropertyBag2 was passed to IWICBitmapEncoder::CreateNewFrame in JPEG encoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in TIFF encoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Avoid crashing if no IPropertyBag2 was passed to IWICBitmapEncoder::CreateNewFrame in TIFF encoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add initial implementation of the GIF encoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "gdiplus: Fix a typo in GIF container format passed to encode_image_wic().", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Initialize empty property bag in GIF encoder'\''s CreateNewFrame implementation.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add registration for GUID_WICPixelFormat32bppGrayFloat pixel format.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapDecoder::GetMetadataQueryReader in the TIFF decoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Improve stub for IWICMetadataQueryReader::GetMetadataByName.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fix the buffer size check in the TIFF decoder'\''s IWICBitmapFrameDecode::CopyPixels implementation.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for converting to 8bppIndexed format to IWICFormatConverter.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: WICConvertBitmapSource should ask IWICFormatConverter::Initialize to use an optimized palette.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in the JPEG encoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in the PNG encoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Improve stub for IWICBitmapDecoder::GetMetadataQueryReader in the PNG decoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add registration of the GIF encoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapDecoder::CopyPalette for a not initialized case in the GIF decoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Better follow the GIF spec and don'\''t specify the local color table size if there is no local palette.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fix behaviour of format converter for indexed formats when NULL or empty palette has been provided.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add a bunch of new tests for indexed format conversions.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add some tests for converting 24bppBGR to 8bppIndexed format.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add the tests for GIF encoder and decoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add a missing check for IWICBitmapFrameDecode::GetPixelFormat return value.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Correctly indicate that the global info was written even without the global palette.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in BMP encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoderInfo::GetFileExtensions.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapFrameEncode::SetPalette in JPEG encoder,.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in JPEG encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Avoid crashing if no IPropertyBag2 was passed to IWICBitmapEncoder::CreateNewFrame in JPEG encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in TIFF encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Avoid crashing if no IPropertyBag2 was passed to IWICBitmapEncoder::CreateNewFrame in TIFF encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add initial implementation of the GIF encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Fix a typo in GIF container format passed to encode_image_wic().", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Initialize empty property bag in GIF encoder'\''s CreateNewFrame implementation.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add registration for GUID_WICPixelFormat32bppGrayFloat pixel format.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapDecoder::GetMetadataQueryReader in the TIFF decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Improve stub for IWICMetadataQueryReader::GetMetadataByName.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix the buffer size check in the TIFF decoder'\''s IWICBitmapFrameDecode::CopyPixels implementation.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for converting to 8bppIndexed format to IWICFormatConverter.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: WICConvertBitmapSource should ask IWICFormatConverter::Initialize to use an optimized palette.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in the JPEG encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in the PNG encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Improve stub for IWICBitmapDecoder::GetMetadataQueryReader in the PNG decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add registration of the GIF encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapDecoder::CopyPalette for a not initialized case in the GIF decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Better follow the GIF spec and don'\''t specify the local color table size if there is no local palette.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix behaviour of format converter for indexed formats when NULL or empty palette has been provided.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add a bunch of new tests for indexed format conversions.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add some tests for converting 24bppBGR to 8bppIndexed format.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add the tests for GIF encoder and decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add a missing check for IWICBitmapFrameDecode::GetPixelFormat return value.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Correctly indicate that the global info was written even without the global palette.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8028,8 +8028,8 @@ if test "$enable_windowscodecs_IMILBitmapSource" -eq 1; then
 	patch_apply windowscodecs-IMILBitmapSource/0001-windowscodecs-Improve-compatibility-of-IMILBitmapSou.patch
 	patch_apply windowscodecs-IMILBitmapSource/0002-windowscodecs-Add-support-for-IMILBitmapScaler-inter.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Improve compatibility of IMILBitmapSource interface.", 3 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for IMILBitmapScaler interface.", 2 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Improve compatibility of IMILBitmapSource interface.", 3 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for IMILBitmapScaler interface.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -8051,10 +8051,10 @@ if test "$enable_windowscodecs_IWICPalette_InitializeFromBitmap" -eq 1; then
 	patch_apply windowscodecs-IWICPalette_InitializeFromBitmap/0003-gdiplus-Implement-GdipInitializePalette.-v2.patch
 	patch_apply windowscodecs-IWICPalette_InitializeFromBitmap/0004-gdiplus-tests-Add-some-tests-for-GdipInitializePalet.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add some tests for IWICPalette::InitializeFromBitmap.", 2 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICPalette::InitializeFromBitmap.", 5 },';
-		echo '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipInitializePalette.", 2 },';
-		echo '+    { "Dmitry Timoshkov", "gdiplus/tests: Add some tests for GdipInitializePalette.", 2 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add some tests for IWICPalette::InitializeFromBitmap.", 2 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICPalette::InitializeFromBitmap.", 5 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipInitializePalette.", 2 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus/tests: Add some tests for GdipInitializePalette.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -8087,23 +8087,23 @@ if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
 	patch_apply windowscodecs-TIFF_Support/0016-gdiplus-Add-support-for-more-image-color-formats.patch
 	patch_apply windowscodecs-TIFF_Support/0017-gdiplus-tests-Add-some-tests-for-loading-TIFF-images.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add a test for 8bpp indexed TIFF format.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs/tests: Make the test for 8bpp indexed TIFF format run under XP.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fix the SupportsTransparency flag value for various pixel formats.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Fail earlier in TIFF decoder'\''s Initialize method for unsupported pixel formats.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Avoid redundant checks when reading a TIFF tile.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 16bppGray and 32bppGrayFloat formats to TIFF decoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 3bps RGB format to TIFF decoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 12bpp RGB format to TIFF decoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 128bppRGBAFloat format to TIFF decoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "include: Fix the GUID_WICPixelFormat32bppCMYK definition.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 32bppCMYK and 64bppCMYK formats to TIFF decoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 4bpp RGBA format to TIFF decoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 16bpp RGBA format to TIFF decoder.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Add some tests for various TIFF color formats.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Tolerate partial reads in the IFD metadata loader.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "gdiplus: Add support for more image color formats.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "gdiplus/tests: Add some tests for loading TIFF images in various color formats.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add a test for 8bpp indexed TIFF format.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Make the test for 8bpp indexed TIFF format run under XP.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix the SupportsTransparency flag value for various pixel formats.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fail earlier in TIFF decoder'\''s Initialize method for unsupported pixel formats.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Avoid redundant checks when reading a TIFF tile.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 16bppGray and 32bppGrayFloat formats to TIFF decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 3bps RGB format to TIFF decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 12bpp RGB format to TIFF decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 128bppRGBAFloat format to TIFF decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "include: Fix the GUID_WICPixelFormat32bppCMYK definition.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 32bppCMYK and 64bppCMYK formats to TIFF decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 4bpp RGBA format to TIFF decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 16bpp RGBA format to TIFF decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add some tests for various TIFF color formats.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Tolerate partial reads in the IFD metadata loader.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Add support for more image color formats.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus/tests: Add some tests for loading TIFF images in various color formats.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8119,7 +8119,7 @@ fi
 if test "$enable_windowscodecs_WICCreateBitmapFromSection" -eq 1; then
 	patch_apply windowscodecs-WICCreateBitmapFromSection/0001-windowscodecs-Implement-WICCreateBitmapFromSection-E.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "windowscodecs: Implement WICCreateBitmapFromSection(Ex).", 2 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement WICCreateBitmapFromSection(Ex).", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -8134,7 +8134,7 @@ fi
 if test "$enable_wine_inf_Directory_ContextMenuHandlers" -eq 1; then
 	patch_apply wine.inf-Directory_ContextMenuHandlers/0001-wine.inf-Add-New-context-menu-handler-entry-for-dire.patch
 	(
-		echo '+    { "Michael Müller", "wine.inf: Add '\''New'\'' context menu handler entry for directories.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wine.inf: Add '\''New'\'' context menu handler entry for directories.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8146,7 +8146,7 @@ fi
 if test "$enable_wine_inf_Dummy_CA_Certificate" -eq 1; then
 	patch_apply wine.inf-Dummy_CA_Certificate/0001-wine.inf.in-Add-invalid-dummy-certificate-to-CA-cert.patch
 	(
-		echo '+    { "Michael Müller", "wine.inf.in: Add invalid dummy certificate to CA certificate store.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wine.inf.in: Add invalid dummy certificate to CA certificate store.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8161,7 +8161,7 @@ fi
 if test "$enable_wine_inf_Performance" -eq 1; then
 	patch_apply wine.inf-Performance/0001-wine.inf-Add-registry-keys-for-Windows-Performance-L.patch
 	(
-		echo '+    { "Daniel Jelinski", "wine.inf: Add registry keys for Windows Performance Library.", 1 },';
+		printf '%s\n' '+    { "Daniel Jelinski", "wine.inf: Add registry keys for Windows Performance Library.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8176,7 +8176,7 @@ fi
 if test "$enable_wine_inf_ProfileList_UserSID" -eq 1; then
 	patch_apply wine.inf-ProfileList_UserSID/0001-wine.inf-Add-a-ProfileList-UserSID-registry-subkey.patch
 	(
-		echo '+    { "Sebastian Lackner", "wine.inf: Add a ProfileList\\\\<UserSID> registry subkey.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wine.inf: Add a ProfileList\\<UserSID> registry subkey.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8188,7 +8188,7 @@ fi
 if test "$enable_wine_inf_WMP_12" -eq 1; then
 	patch_apply wine.inf-WMP_12/0001-wine.inf-Add-WMP-12-as-installed-windows-feature.patch
 	(
-		echo '+    { "Michael Müller", "wine.inf: Add WMP 12 as installed windows feature.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wine.inf: Add WMP 12 as installed windows feature.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8203,7 +8203,7 @@ fi
 if test "$enable_wineboot_DriveSerial" -eq 1; then
 	patch_apply wineboot-DriveSerial/0001-wineboot-Assign-a-drive-serial-number-during-prefix-.patch
 	(
-		echo '+    { "Sebastian Lackner", "wineboot: Assign a drive serial number during prefix creation/update.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wineboot: Assign a drive serial number during prefix creation/update.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8218,7 +8218,7 @@ fi
 if test "$enable_wineboot_HKEY_DYN_DATA" -eq 1; then
 	patch_apply wineboot-HKEY_DYN_DATA/0001-wineboot-Add-some-generic-hardware-in-HKEY_DYN_DATA-.patch
 	(
-		echo '+    { "Michael Müller", "wineboot: Add some generic hardware in HKEY_DYN_DATA\\\\Config Manager\\\\Enum.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wineboot: Add some generic hardware in HKEY_DYN_DATA\\Config Manager\\Enum.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8233,7 +8233,7 @@ fi
 if test "$enable_wineboot_drivers_etc_Stubs" -eq 1; then
 	patch_apply wineboot-drivers_etc_Stubs/0001-wineboot-Init-system32-drivers-etc-host-networks-pro.patch
 	(
-		echo '+    { "Sebastian Lackner", "wineboot: Init system32/drivers/etc/{host,networks,protocol,services}.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wineboot: Init system32/drivers/etc/{host,networks,protocol,services}.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8251,7 +8251,7 @@ fi
 if test "$enable_wineboot_ProxySettings" -eq 1; then
 	patch_apply wineboot-ProxySettings/0001-wineboot-Initialize-proxy-settings-registry-key.patch
 	(
-		echo '+    { "Michael Müller", "wineboot: Initialize proxy settings registry key.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wineboot: Initialize proxy settings registry key.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8263,7 +8263,7 @@ fi
 if test "$enable_winecfg_Libraries" -eq 1; then
 	patch_apply winecfg-Libraries/0001-winecfg-Double-click-in-dlls-list-to-edit-item-s-ove.patch
 	(
-		echo '+    { "Hao Peng", "winecfg: Double click in dlls list to edit item'\''s overides.", 3 },';
+		printf '%s\n' '+    { "Hao Peng", "winecfg: Double click in dlls list to edit item'\''s overides.", 3 },';
 	) >> "$patchlist"
 fi
 
@@ -8275,7 +8275,7 @@ fi
 if test "$enable_winecfg_Unmounted_Devices" -eq 1; then
 	patch_apply winecfg-Unmounted_Devices/0001-winecfg-Show-unmounted-devices-and-allow-changing-th.patch
 	(
-		echo '+    { "Michael Müller", "winecfg: Show unmounted devices and allow changing the device value.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winecfg: Show unmounted devices and allow changing the device value.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8287,7 +8287,7 @@ fi
 if test "$enable_wined3d_Accounting" -eq 1; then
 	patch_apply wined3d-Accounting/0001-wined3d-Use-real-values-for-memory-accounting-on-NVI.patch
 	(
-		echo '+    { "Michael Müller", "wined3d: Use real values for memory accounting on NVIDIA cards.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Use real values for memory accounting on NVIDIA cards.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8302,7 +8302,7 @@ fi
 if test "$enable_wined3d_QUERY_Stubs" -eq 1; then
 	patch_apply wined3d-QUERY_Stubs/0001-wined3d-Add-stubs-for-QUERY_TYPE_SO_STATISTICS-and-Q.patch
 	(
-		echo '+    { "Michael Müller", "wined3d: Add stubs for QUERY_TYPE_SO_STATISTICS and QUERY_TYPE_SO_OVERFLOW.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Add stubs for QUERY_TYPE_SO_STATISTICS and QUERY_TYPE_SO_OVERFLOW.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8314,7 +8314,7 @@ fi
 if test "$enable_wined3d_Revert_Pixel_Center_Offset" -eq 1; then
 	patch_apply wined3d-Revert_Pixel_Center_Offset/0001-Revert-wined3d-Slightly-offset-the-viewport-in-the-A.patch
 	(
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Slightly offset the viewport in the ARB_clip_control case.\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Slightly offset the viewport in the ARB_clip_control case.\".", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8336,14 +8336,14 @@ if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
 	patch_apply wined3d-Silence_FIXMEs/0007-wined3d-Display-FIXME-only-once-when-blen-op-is-0.patch
 	patch_apply wined3d-Silence_FIXMEs/0008-wined3d-Silence-noisy-fixme-Unrecognized-stencil-op-.patch
 	(
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-		echo '+    { "Christian Costa", "wined3d: Display FIXME for cmp function 0 only once.", 1 },';
-		echo '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-		echo '+    { "Christian Costa", "wined3d: Print FIXME only once in surface_cpu_blt.", 1 },';
-		echo '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
-		echo '+    { "Sebastian Lackner", "wined3d: Silence extremely noisy FIXME in wined3d_texture_add_dirty_region.", 1 },';
-		echo '+    { "Christian Costa", "wined3d: Display FIXME only once when blen op is 0.", 1 },';
-		echo '+    { "Christian Costa", "wined3d: Silence noisy fixme Unrecognized stencil op 0.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "wined3d: Display FIXME for cmp function 0 only once.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+		printf '%s\n' '+    { "Christian Costa", "wined3d: Print FIXME only once in surface_cpu_blt.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence extremely noisy FIXME in wined3d_texture_add_dirty_region.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "wined3d: Display FIXME only once when blen op is 0.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "wined3d: Silence noisy fixme Unrecognized stencil op 0.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8360,7 +8360,7 @@ fi
 if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	patch_apply wined3d-CSMT_Helper/0001-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch
 	(
-		echo '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8372,7 +8372,7 @@ fi
 if test "$enable_wined3d_GTX_560M" -eq 1; then
 	patch_apply wined3d-GTX_560M/0001-wined3d-Recognize-GTX-560M-card-with-NVIDIA-driver.patch
 	(
-		echo '+    { "Christian Costa", "wined3d: Recognize GTX 560M card with NVIDIA driver.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "wined3d: Recognize GTX 560M card with NVIDIA driver.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8384,7 +8384,7 @@ fi
 if test "$enable_wined3d_Limit_Vram" -eq 1; then
 	patch_apply wined3d-Limit_Vram/0001-wined3d-Limit-the-vram-memory-to-LONG_MAX-only-on-32.patch
 	(
-		echo '+    { "Michael Müller", "wined3d: Limit the vram memory to LONG_MAX only on 32 bit.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Limit the vram memory to LONG_MAX only on 32 bit.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8396,7 +8396,7 @@ fi
 if test "$enable_wined3d_WINED3DFMT_R32G32_UINT" -eq 1; then
 	patch_apply wined3d-WINED3DFMT_R32G32_UINT/0002-wined3d-Add-hack-for-WINED3DFMT_R24_UNORM_X8_TYPELES.patch
 	(
-		echo '+    { "Michael Müller", "wined3d: Add hack for WINED3DFMT_R24_UNORM_X8_TYPELESS.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Add hack for WINED3DFMT_R24_UNORM_X8_TYPELESS.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8409,8 +8409,8 @@ if test "$enable_wined3d_check_format_support" -eq 1; then
 	patch_apply wined3d-check_format_support/0001-wined3d-Add-wined3d_check_device_format_support.patch
 	patch_apply wined3d-check_format_support/0002-d3d11-Implement-ID3D11Device_CheckFormatSupport.patch
 	(
-		echo '+    { "Michael Müller", "wined3d: Add wined3d_check_device_format_support.", 1 },';
-		echo '+    { "Michael Müller", "d3d11: Implement ID3D11Device_CheckFormatSupport.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Add wined3d_check_device_format_support.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ID3D11Device_CheckFormatSupport.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8434,141 +8434,141 @@ fi
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/9999-IfDefined.patch
 	(
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Return location from wined3d_buffer_get_memory().\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Use unsynchronized buffer updates only if there has been at least one buffer map.\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Avoid unsynchronized buffer update when reloading whole buffer.\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Introduce wined3d_rendertarget_view_get_drawable_size() as replacement for surface_get_drawable_size().\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Move surface_get_drawable_size() to view.c file.\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Mark buffers as used in wined3d_buffer_copy().\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Use wined3d_vec4 in fixup_transformed_pos().\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Invalidate STATE_CONSTANT_BUFFER(*) device state in buffer_destroy_buffer_object() when needed.\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Fix style issues in delete_gl_buffer().\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Pass context to delete_gl_buffer().\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Invalidate device state based on buffer bind flags when buffer is deleted.\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Compute \"buffer_type_hint\" from buffer bind flags.\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Use buffer_bind() in buffer_conversion_upload().\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Fix index offset for immediate mode draws.\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Introduce buffer_conversion_upload() helper function.\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Replace wined3d_buffer_load_sysmem() calls with wined3d_buffer_load_location().\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Prefer current locations to WINED3D_LOCATION_SYSMEM in wined3d_buffer_copy().\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Introduce wined3d_buffer_get_memory().\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Implement wined3d_buffer_prepare_location() for WINED3D_LOCATION_BUFFER.\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Move buffer_get_memory() under wined3d_buffer_load_sysmem().\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Do not assume that WINED3D_LOCATION_SYSMEM is always valid for double buffered buffers.\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Introduce wined3d_buffer_load_location().\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Introduce wined3d_buffer_prepapre_location().\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Explicitly track locations for buffers.\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Clean up buffer_internal_preload().\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Let buffer_direct_upload() invalidate STATE_INDEXBUFFER if needed.\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Sanitise resource map flags in wined3d_resource_map().\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Send resource unmaps through the command stream.\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Send resource maps through the command stream.\".", 1 },';
-		echo '+    { "Sebastian Lackner", "Revert \"wined3d: Send shader constant updates through the command stream.\".", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Make surface_load_location return nothing.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Call texture_load_location instead of surface_load_location.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Share surface and volume system memory loading code.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call the public map function in surface_convert_format.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call the public map function in surface_cpu_blt.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Move the framebuffer into wined3d_state.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Preload buffers if streamsrc is not dirty.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Hackily introduce a multithreaded command stream.", 1 },';
-		echo '+    { "Henri Verbeet", "wined3d: Wait for resource updates to finish when using the multithreaded command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Wait for the cs before destroying objects.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Give the cs its own state.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send float constant updates through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Request a glFinish before modifying resources outside the cs.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Finish the cs before changing the texture lod.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish after clears.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish after draws.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Pass the depth stencil to swapchain->present.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Keep track of the onscreen depth stencil in the command stream instead of the device.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send base vertex index updates through the cs.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send primitive type updates through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send bool constant updates through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send int constant updates through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send light updates through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Prevent the command stream from running ahead too far.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Wait for the cs to finish before destroying the device.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Run the cs asynchronously.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send blits through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Hack to reject unsupported color fills.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Restore some wined3d_device_copy_sub_resource_region checks.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t force strict draw ordering for multithreaded CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send render target view clears through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send texture maps through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Get rid of the end_scene flush and finish.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Replace the linked lists with a ringbuffer.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t preload buffers on unmap.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish before swapping.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Add query support to the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Check our CS state to find out if a query is done.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Poll queries automatically in the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Introduce a separate queue for priority commands.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t poll queries that failed to start.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Remove restated queries from the poll list.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Put this into the query poll patch.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t access device state in clears.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Avoid destroying views in color and depth fills.", 1 },';
-		echo '+    { "Matteo Bruni", "wined3d: Avoid calling wined3d_surface_blt() from surface_upload_from_surface().", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send update_texture calls through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Get rid of the surface_upload_data glFinish.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t lock the src volume in device_update_volume.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Fence update_texture calls.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Dirtify resources on unmap.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Fence render targets and depth stencils.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Fence blit operations.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Fence color_fill operations.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Make resource maps and unmaps a priority command.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send update_sub_resource calls through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Dirtify changed textures through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Wrap GL BOs in a structure.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Separate resource map and draw buffers.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Implement DISCARD texture maps with PBOs.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Implement DISCARD resource maps with heap memory.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Unset some objects in state_init_default.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Use double-buffered buffers for multithreaded CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t synchronize NOOVERWRITE buffer maps.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Separate buffer map write and draw read memory pointers.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Accelerate DISCARD buffer maps.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Accelerate READONLY buffer maps.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Access the buffer dirty areas through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Ignore buffer->resource.map_count in the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Use glBufferSubData instead of glMapBufferRange.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Separate GL buffer discard control from ignoring MAP_DISCARD.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Create buffers before mapping them.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Remove another glFinish.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Create VBOs through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "Swapchain waits.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Unload resources through the CS in uninit_3d.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Unload resources through the CS in device_reset.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t glFinish after a depth buffer blit.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Use surface_blt_ugly in swapchain_gl_present.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Use an event to block the worker thread when it is idle.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Set map_heap_memory = NULL when allocating a PBO.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Wait only for the buffer to be idle.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Put GL_APPLE_flush_buffer_range syncing back in place.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t sync on redundant discard calls.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t discard new buffers.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Don'\''t try to sync VBOs manually on OSX with CSMT.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Only discard buffers that are in use.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Send getdc and releasedc through the command stream.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Ignore WINED3D_MAP_NO_DIRTY_UPDATE in resource_map.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Create dummy textures through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Create the initial context through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Recreate ctx and dummy textures through the CS after resets.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Call create_default_sampler from create_dummy_textures.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Delete GL contexts through the CS in reset.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Delete GL contexts through the CS in uninit_3d.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Update the swap interval through the CS in reset.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Do the sampler GL init through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Create initial DCs through the CS.", 1 },';
-		echo '+    { "Stefan Dösinger", "wined3d: Assign a read buffer when discarding a new texture.", 1 },';
-		echo '+    { "Sebastian Lackner", "wined3d: Do not query available GPU memory on main thread when CSMT is enabled.", 1 },';
-		echo '+    { "Nils Kuhnhenn", "wined3d: Fix incorrect return value in wined3d_cs_exec_set_light.", 1 },';
-		echo '+    { "Nils Kuhnhenn", "wined3d: Fix context_acquire not being called from the command thread in wined3d_texture_add_dirty_region.", 1 },';
-		echo '+    { "Sebastian Lackner", "wined3d: Do not signal CS event when we manage to unset waiting_for_event quickly enough.", 1 },';
-		echo '+    { "Sebastian Lackner", "wined3d: Fix occlusion query tests.", 1 },';
-		echo '+    { "Sebastian Lackner", "wined3d: Enable CSMT by default, print a winediag message informing about this patchset.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Return location from wined3d_buffer_get_memory().\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Use unsynchronized buffer updates only if there has been at least one buffer map.\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Avoid unsynchronized buffer update when reloading whole buffer.\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Introduce wined3d_rendertarget_view_get_drawable_size() as replacement for surface_get_drawable_size().\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Move surface_get_drawable_size() to view.c file.\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Mark buffers as used in wined3d_buffer_copy().\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Use wined3d_vec4 in fixup_transformed_pos().\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Invalidate STATE_CONSTANT_BUFFER(*) device state in buffer_destroy_buffer_object() when needed.\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Fix style issues in delete_gl_buffer().\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Pass context to delete_gl_buffer().\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Invalidate device state based on buffer bind flags when buffer is deleted.\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Compute \"buffer_type_hint\" from buffer bind flags.\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Use buffer_bind() in buffer_conversion_upload().\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Fix index offset for immediate mode draws.\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Introduce buffer_conversion_upload() helper function.\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Replace wined3d_buffer_load_sysmem() calls with wined3d_buffer_load_location().\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Prefer current locations to WINED3D_LOCATION_SYSMEM in wined3d_buffer_copy().\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Introduce wined3d_buffer_get_memory().\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Implement wined3d_buffer_prepare_location() for WINED3D_LOCATION_BUFFER.\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Move buffer_get_memory() under wined3d_buffer_load_sysmem().\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Do not assume that WINED3D_LOCATION_SYSMEM is always valid for double buffered buffers.\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Introduce wined3d_buffer_load_location().\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Introduce wined3d_buffer_prepapre_location().\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Explicitly track locations for buffers.\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Clean up buffer_internal_preload().\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Let buffer_direct_upload() invalidate STATE_INDEXBUFFER if needed.\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Sanitise resource map flags in wined3d_resource_map().\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Send resource unmaps through the command stream.\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Send resource maps through the command stream.\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Send shader constant updates through the command stream.\".", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Make surface_load_location return nothing.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Call texture_load_location instead of surface_load_location.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Share surface and volume system memory loading code.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t call the public map function in surface_convert_format.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t call the public map function in surface_cpu_blt.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Move the framebuffer into wined3d_state.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Preload buffers if streamsrc is not dirty.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Hackily introduce a multithreaded command stream.", 1 },';
+		printf '%s\n' '+    { "Henri Verbeet", "wined3d: Wait for resource updates to finish when using the multithreaded command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wait for the cs before destroying objects.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Give the cs its own state.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send float constant updates through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Request a glFinish before modifying resources outside the cs.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Finish the cs before changing the texture lod.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish after clears.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish after draws.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Pass the depth stencil to swapchain->present.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Keep track of the onscreen depth stencil in the command stream instead of the device.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send base vertex index updates through the cs.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send primitive type updates through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send bool constant updates through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send int constant updates through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send light updates through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Prevent the command stream from running ahead too far.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wait for the cs to finish before destroying the device.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Run the cs asynchronously.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send blits through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Hack to reject unsupported color fills.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Restore some wined3d_device_copy_sub_resource_region checks.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t force strict draw ordering for multithreaded CS.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send render target view clears through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send texture maps through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Get rid of the end_scene flush and finish.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Replace the linked lists with a ringbuffer.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t preload buffers on unmap.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish before swapping.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Add query support to the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Check our CS state to find out if a query is done.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Poll queries automatically in the CS.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Introduce a separate queue for priority commands.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t poll queries that failed to start.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Remove restated queries from the poll list.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Put this into the query poll patch.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t access device state in clears.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Avoid destroying views in color and depth fills.", 1 },';
+		printf '%s\n' '+    { "Matteo Bruni", "wined3d: Avoid calling wined3d_surface_blt() from surface_upload_from_surface().", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send update_texture calls through the CS.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Get rid of the surface_upload_data glFinish.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t lock the src volume in device_update_volume.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Fence update_texture calls.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Dirtify resources on unmap.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Fence render targets and depth stencils.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Fence blit operations.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Fence color_fill operations.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Make resource maps and unmaps a priority command.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send update_sub_resource calls through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Dirtify changed textures through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wrap GL BOs in a structure.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Separate resource map and draw buffers.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Implement DISCARD texture maps with PBOs.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Implement DISCARD resource maps with heap memory.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Unset some objects in state_init_default.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Use double-buffered buffers for multithreaded CS.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t synchronize NOOVERWRITE buffer maps.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Separate buffer map write and draw read memory pointers.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Accelerate DISCARD buffer maps.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Accelerate READONLY buffer maps.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Access the buffer dirty areas through the CS.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Ignore buffer->resource.map_count in the CS.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Use glBufferSubData instead of glMapBufferRange.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Separate GL buffer discard control from ignoring MAP_DISCARD.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Create buffers before mapping them.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Remove another glFinish.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Create VBOs through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "Swapchain waits.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Unload resources through the CS in uninit_3d.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Unload resources through the CS in device_reset.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t glFinish after a depth buffer blit.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Use surface_blt_ugly in swapchain_gl_present.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Use an event to block the worker thread when it is idle.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Set map_heap_memory = NULL when allocating a PBO.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wait only for the buffer to be idle.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Put GL_APPLE_flush_buffer_range syncing back in place.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t sync on redundant discard calls.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t discard new buffers.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t try to sync VBOs manually on OSX with CSMT.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Only discard buffers that are in use.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send getdc and releasedc through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Ignore WINED3D_MAP_NO_DIRTY_UPDATE in resource_map.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Create dummy textures through the CS.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Create the initial context through the CS.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Recreate ctx and dummy textures through the CS after resets.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Call create_default_sampler from create_dummy_textures.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Delete GL contexts through the CS in reset.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Delete GL contexts through the CS in uninit_3d.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Update the swap interval through the CS in reset.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Do the sampler GL init through the CS.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Create initial DCs through the CS.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Assign a read buffer when discarding a new texture.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Do not query available GPU memory on main thread when CSMT is enabled.", 1 },';
+		printf '%s\n' '+    { "Nils Kuhnhenn", "wined3d: Fix incorrect return value in wined3d_cs_exec_set_light.", 1 },';
+		printf '%s\n' '+    { "Nils Kuhnhenn", "wined3d: Fix context_acquire not being called from the command thread in wined3d_texture_add_dirty_region.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Do not signal CS event when we manage to unset waiting_for_event quickly enough.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Fix occlusion query tests.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Enable CSMT by default, print a winediag message informing about this patchset.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8583,7 +8583,7 @@ fi
 if test "$enable_winedevice_Fix_Relocation" -eq 1; then
 	patch_apply winedevice-Fix_Relocation/0001-winedevice-Avoid-invalid-memory-access-when-relocati.patch
 	(
-		echo '+    { "Sebastian Lackner", "winedevice: Avoid invalid memory access when relocation block addresses memory outside of the current page.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "winedevice: Avoid invalid memory access when relocation block addresses memory outside of the current page.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8595,7 +8595,7 @@ fi
 if test "$enable_winemenubuilder_Desktop_Icon_Path" -eq 1; then
 	patch_apply winemenubuilder-Desktop_Icon_Path/0001-winemenubuilder-Create-desktop-shortcuts-with-absolu.patch
 	(
-		echo '+    { "Sebastian Lackner", "winemenubuilder: Create desktop shortcuts with absolute wine path.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "winemenubuilder: Create desktop shortcuts with absolute wine path.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8607,7 +8607,7 @@ fi
 if test "$enable_winemp3_acm_MPEG3_StreamOpen" -eq 1; then
 	patch_apply winemp3.acm-MPEG3_StreamOpen/0001-winemp3.acm-Check-input-format-in-MPEG3_StreamOpen.patch
 	(
-		echo '+    { "Michael Müller", "winemp3.acm: Check input format in MPEG3_StreamOpen.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winemp3.acm: Check input format in MPEG3_StreamOpen.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8627,11 +8627,11 @@ if test "$enable_wineps_drv_PostScript_Fixes" -eq 1; then
 	patch_apply wineps.drv-PostScript_Fixes/0004-wineps.drv-Add-support-for-GETFACENAME-and-DOWNLOADF.patch
 	patch_apply wineps.drv-PostScript_Fixes/0005-wineps.drv-PostScript-header-should-be-written-by-St.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "gdi32/tests: Add a simple test for printing to a PostScript device.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "gdi32: Trace full contents of DOCINFO in StartDoc.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "wineps.drv: Add stubs for escapes required by Adobe PageMaker.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "wineps.drv: Add support for GETFACENAME and DOWNLOADFACE escapes.", 1 },';
-		echo '+    { "Dmitry Timoshkov", "wineps.drv: PostScript header should be written by StartDoc instead of StartPage.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdi32/tests: Add a simple test for printing to a PostScript device.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdi32: Trace full contents of DOCINFO in StartDoc.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "wineps.drv: Add stubs for escapes required by Adobe PageMaker.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "wineps.drv: Add support for GETFACENAME and DOWNLOADFACE escapes.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "wineps.drv: PostScript header should be written by StartDoc instead of StartPage.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8652,13 +8652,13 @@ if test "$enable_winepulse_PulseAudio_Support" -eq 1; then
 	patch_apply winepulse-PulseAudio_Support/0006-winepulse-fetch-actual-program-name-if-possible.patch
 	patch_apply winepulse-PulseAudio_Support/0007-winepulse-return-PKEY_AudioEndpoint_PhysicalSpeakers.patch
 	(
-		echo '+    { "Sebastian Lackner", "winepulse.drv: Use a separate mainloop and ctx for pulse_test_connect.", 1 },';
-		echo '+    { "Mark Harmstone", "winepulse: Expose audio devices directly to programs.", 1 },';
-		echo '+    { "Mark Harmstone", "winepulse: Implement exclusive mode.", 1 },';
-		echo '+    { "Mark Harmstone", "winepulse: Fix segfault in pulse_rd_loop.", 1 },';
-		echo '+    { "Mark Harmstone", "winepulse: Implement GetPropValue.", 1 },';
-		echo '+    { "Mark Harmstone", "winepulse: Fetch actual program name if possible.", 1 },';
-		echo '+    { "Mark Harmstone", "winepulse: Return PKEY_AudioEndpoint_PhysicalSpeakers device prop.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "winepulse.drv: Use a separate mainloop and ctx for pulse_test_connect.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "winepulse: Expose audio devices directly to programs.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "winepulse: Implement exclusive mode.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "winepulse: Fix segfault in pulse_rd_loop.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "winepulse: Implement GetPropValue.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "winepulse: Fetch actual program name if possible.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "winepulse: Return PKEY_AudioEndpoint_PhysicalSpeakers device prop.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8674,7 +8674,7 @@ fi
 if test "$enable_winex11_CandidateWindowPos" -eq 1; then
 	patch_apply winex11-CandidateWindowPos/0001-winex11.drv-Update-a-candidate-window-s-position-wit.patch
 	(
-		echo '+    { "Felix Yan", "winex11.drv: Update a candidate window'\''s position with over-the-spot style.", 2 },';
+		printf '%s\n' '+    { "Felix Yan", "winex11.drv: Update a candidate window'\''s position with over-the-spot style.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -8686,7 +8686,7 @@ fi
 if test "$enable_winex11_DefaultDisplayFrequency" -eq 1; then
 	patch_apply winex11-DefaultDisplayFrequency/0001-winex11.drv-Allow-to-select-default-display-frequenc.patch
 	(
-		echo '+    { "Michael Müller", "winex11.drv: Allow to select default display frequency in registry key.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Allow to select default display frequency in registry key.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8701,7 +8701,7 @@ fi
 if test "$enable_winex11_MWM_Decorations" -eq 1; then
 	patch_apply winex11-MWM_Decorations/0001-winex11.drv-Don-t-use-MWM_DECOR_RESIZEH-window-resiz.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "winex11.drv: Don'\''t use MWM_DECOR_RESIZEH, window resizing is controlled by MWM_FUNC_RESIZE.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "winex11.drv: Don'\''t use MWM_DECOR_RESIZEH, window resizing is controlled by MWM_FUNC_RESIZE.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8716,7 +8716,7 @@ fi
 if test "$enable_winex11_SC_KEYMENU" -eq 1; then
 	patch_apply winex11-SC_KEYMENU/0001-winex11-Send-SC_KEYMENU-on-managed-windows.patch
 	(
-		echo '+    { "Alex Henrie", "winex11: Send SC_KEYMENU on managed windows.", 1 },';
+		printf '%s\n' '+    { "Alex Henrie", "winex11: Send SC_KEYMENU on managed windows.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8733,8 +8733,8 @@ if test "$enable_winex11__NET_ACTIVE_WINDOW" -eq 1; then
 	patch_apply winex11-_NET_ACTIVE_WINDOW/0001-winex11.drv-Add-support-for-_NET_ACTIVE_WINDOW.patch
 	patch_apply winex11-_NET_ACTIVE_WINDOW/0002-user32-Before-asking-a-WM-to-activate-a-window-make-.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "winex11.drv: Add support for _NET_ACTIVE_WINDOW.", 2 },';
-		echo '+    { "Dmitry Timoshkov", "user32: Before asking a WM to activate a window make sure that the window is in foreground and not minimized.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "winex11.drv: Add support for _NET_ACTIVE_WINDOW.", 2 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Before asking a WM to activate a window make sure that the window is in foreground and not minimized.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8752,7 +8752,7 @@ fi
 if test "$enable_winex11_WM_WINDOWPOSCHANGING" -eq 1; then
 	patch_apply winex11-WM_WINDOWPOSCHANGING/0001-winex11.drv-Send-WM_WINDOWPOSCHANGING-WM_WINDOWPOSCH.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "winex11.drv: Send WM_WINDOWPOSCHANGING/WM_WINDOWPOSCHANGED messages to a being deactivated topmost window.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "winex11.drv: Send WM_WINDOWPOSCHANGING/WM_WINDOWPOSCHANGED messages to a being deactivated topmost window.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8767,7 +8767,7 @@ fi
 if test "$enable_winex11_Window_Groups" -eq 1; then
 	patch_apply winex11-Window_Groups/0001-winex11-Prevent-window-managers-from-grouping-all-wi.patch
 	(
-		echo '+    { "Michael Müller", "winex11: Prevent window managers from grouping all wine programs together.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winex11: Prevent window managers from grouping all wine programs together.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8782,7 +8782,7 @@ fi
 if test "$enable_winex11_Window_Style" -eq 1; then
 	patch_apply winex11-Window_Style/0001-winex11-Fix-handling-of-window-attributes-for-WS_EX_.patch
 	(
-		echo '+    { "Dmitry Timoshkov", "winex11: Fix handling of window attributes for WS_EX_LAYERED | WS_EX_COMPOSITED.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "winex11: Fix handling of window attributes for WS_EX_LAYERED | WS_EX_COMPOSITED.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8794,7 +8794,7 @@ fi
 if test "$enable_winex11_XEMBED" -eq 1; then
 	patch_apply winex11-XEMBED/0001-winex11-Enable-disable-windows-when-they-are-un-mapped.patch
 	(
-		echo '+    { "Sebastian Lackner", "winex11: Enable/disable windows when they are (un)mapped by foreign applications.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Enable/disable windows when they are (un)mapped by foreign applications.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8810,7 +8810,7 @@ fi
 if test "$enable_winex11_wglShareLists" -eq 1; then
 	patch_apply winex11-wglShareLists/0001-winex11.drv-Only-warn-about-used-contexts-in-wglShar.patch
 	(
-		echo '+    { "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8825,7 +8825,7 @@ fi
 if test "$enable_winhlp32_Flex_Workaround" -eq 1; then
 	patch_apply winhlp32-Flex_Workaround/0001-winhlp32-Workaround-a-bug-in-Flex.patch
 	(
-		echo '+    { "Sebastian Lackner", "winhlp32: Workaround a bug in Flex.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "winhlp32: Workaround a bug in Flex.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8837,7 +8837,7 @@ fi
 if test "$enable_winhttp_Accept_Headers" -eq 1; then
 	patch_apply winhttp-Accept_Headers/0001-winhttp-Fix-handling-of-Accept-headers.patch
 	(
-		echo '+    { "Sebastian Lackner", "winhttp: Fix handling of Accept headers.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "winhttp: Fix handling of Accept headers.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8849,7 +8849,7 @@ fi
 if test "$enable_winhttp_System_Proxy_Autoconfig" -eq 1; then
 	patch_apply winhttp-System_Proxy_Autoconfig/0002-wininet-Silence-wininet-no-support-on-this-platform-.patch
 	(
-		echo '+    { "Jarkko Korpi", "wininet: Silence wininet no support on this platform message.", 1 },';
+		printf '%s\n' '+    { "Jarkko Korpi", "wininet: Silence wininet no support on this platform message.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8865,11 +8865,11 @@ if test "$enable_wininet_Cleanup" -eq 1; then
 	patch_apply wininet-Cleanup/0004-wininet-Strip-filename-if-no-path-is-set-in-cookie.patch
 	patch_apply wininet-Cleanup/0005-wininet-Replacing-header-fields-should-fail-if-they-.patch
 	(
-		echo '+    { "Michael Müller", "wininet/tests: Add more tests for cookies.", 1 },';
-		echo '+    { "Michael Müller", "wininet/tests: Test auth credential reusage with host override.", 1 },';
-		echo '+    { "Michael Müller", "wininet/tests: Check cookie behaviour when overriding host.", 1 },';
-		echo '+    { "Michael Müller", "wininet: Strip filename if no path is set in cookie.", 1 },';
-		echo '+    { "Michael Müller", "wininet: Replacing header fields should fail if they do not exist yet.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wininet/tests: Add more tests for cookies.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wininet/tests: Test auth credential reusage with host override.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wininet/tests: Check cookie behaviour when overriding host.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wininet: Strip filename if no path is set in cookie.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wininet: Replacing header fields should fail if they do not exist yet.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8884,7 +8884,7 @@ fi
 if test "$enable_wininet_InternetCrackUrlW" -eq 1; then
 	patch_apply wininet-InternetCrackUrlW/0002-wininet-Resize-buffer-when-call-to-InternetCanonical.patch
 	(
-		echo '+    { "Michael Müller", "wininet: Resize buffer when call to InternetCanonicalizeUrlW fails in InternetCrackUrlW.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wininet: Resize buffer when call to InternetCanonicalizeUrlW fails in InternetCrackUrlW.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8897,8 +8897,8 @@ if test "$enable_wininet_Internet_Settings" -eq 1; then
 	patch_apply wininet-Internet_Settings/0001-wininet-Allow-INTERNET_OPTION_SETTINGS_CHANGED-on-co.patch
 	patch_apply wininet-Internet_Settings/0002-wininet-Add-support-for-INTERNET_OPTION_SETTINGS_CHA.patch
 	(
-		echo '+    { "Michael Müller", "wininet: Allow INTERNET_OPTION_SETTINGS_CHANGED on connections.", 1 },';
-		echo '+    { "Michael Müller", "wininet: Add support for INTERNET_OPTION_SETTINGS_CHANGED in InternetSetOption.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wininet: Allow INTERNET_OPTION_SETTINGS_CHANGED on connections.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wininet: Add support for INTERNET_OPTION_SETTINGS_CHANGED in InternetSetOption.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8913,7 +8913,7 @@ fi
 if test "$enable_wininet_ParseX509EncodedCertificateForListBoxEntry" -eq 1; then
 	patch_apply wininet-ParseX509EncodedCertificateForListBoxEntry/0001-wininet-add-ParseX509EncodedCertificateForListBoxEnt.patch
 	(
-		echo '+    { "Austin English", "wininet: Add ParseX509EncodedCertificateForListBoxEntry stub.", 2 },';
+		printf '%s\n' '+    { "Austin English", "wininet: Add ParseX509EncodedCertificateForListBoxEntry stub.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -8928,7 +8928,7 @@ fi
 if test "$enable_winmm_Delay_Import_Depends" -eq 1; then
 	patch_apply winmm-Delay_Import_Depends/0001-winmm-Delay-import-ole32-msacm32-to-workaround-bug-w.patch
 	(
-		echo '+    { "Michael Müller", "winmm: Delay import ole32 msacm32 to workaround bug when loading multiple winmm versions.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winmm: Delay import ole32 msacm32 to workaround bug when loading multiple winmm versions.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8940,7 +8940,7 @@ fi
 if test "$enable_winmm_mciSendCommandA" -eq 1; then
 	patch_apply winmm-mciSendCommandA/0001-winmm-Do-not-crash-in-Win-9X-mode-when-an-invalid-de.patch
 	(
-		echo '+    { "Michael Müller", "winmm: Do not crash in Win 9X mode when an invalid device ptr is passed to MCI_OPEN.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winmm: Do not crash in Win 9X mode when an invalid device ptr is passed to MCI_OPEN.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8954,9 +8954,9 @@ if test "$enable_wintrust_WinVerifyTrust" -eq 1; then
 	patch_apply wintrust-WinVerifyTrust/0002-wintrust-tests-Add-some-additional-tests.patch
 	patch_apply wintrust-WinVerifyTrust/0003-wintrust-Verify-image-hash-in-WinVerifyTrust.patch
 	(
-		echo '+    { "Mark Jansen", "wintrust/tests: Add tests for WinVerifyTrust.", 2 },';
-		echo '+    { "Sebastian Lackner", "wintrust/tests: Add some additional tests.", 1 },';
-		echo '+    { "Mark Jansen", "wintrust: Verify image hash in WinVerifyTrust.", 1 },';
+		printf '%s\n' '+    { "Mark Jansen", "wintrust/tests: Add tests for WinVerifyTrust.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wintrust/tests: Add some additional tests.", 1 },';
+		printf '%s\n' '+    { "Mark Jansen", "wintrust: Verify image hash in WinVerifyTrust.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8968,7 +8968,7 @@ fi
 if test "$enable_wpcap_Several_Fixes" -eq 1; then
 	patch_apply wpcap-Several_Fixes/0001-wpcap-Implement-pcap_dump_open-and-pcap_dump.patch
 	(
-		echo '+    { "Jianqiu Zhang", "wpcap: Implement pcap_dump_open and pcap_dump.", 1 },';
+		printf '%s\n' '+    { "Jianqiu Zhang", "wpcap: Implement pcap_dump_open and pcap_dump.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8983,7 +8983,7 @@ fi
 if test "$enable_wpcap_Dynamic_Linking" -eq 1; then
 	patch_apply wpcap-Dynamic_Linking/0001-wpcap-Load-libpcap-dynamically.patch
 	(
-		echo '+    { "André Hentschel", "wpcap: Load libpcap dynamically.", 1 },';
+		printf '%s\n' '+    { "André Hentschel", "wpcap: Load libpcap dynamically.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8995,7 +8995,7 @@ fi
 if test "$enable_ws2_32_APC_Performance" -eq 1; then
 	patch_apply ws2_32-APC_Performance/0001-ws2_32-Reuse-old-async-ws2_async_io-structures-if-po.patch
 	(
-		echo '+    { "Sebastian Lackner", "ws2_32: Reuse old async ws2_async_io structures if possible.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Reuse old async ws2_async_io structures if possible.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -9007,7 +9007,7 @@ fi
 if test "$enable_ws2_32_Connect_Time" -eq 1; then
 	patch_apply ws2_32-Connect_Time/0001-ws2_32-Implement-returning-the-proper-time-with-SO_C.patch
 	(
-		echo '+    { "Sebastian Lackner", "ws2_32: Implement returning the proper time with SO_CONNECT_TIME.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Implement returning the proper time with SO_CONNECT_TIME.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -9019,7 +9019,7 @@ fi
 if test "$enable_ws2_32_Tests" -eq 1; then
 	patch_apply ws2_32-Tests/0001-ws2_32-tests-Hide-random-test-failures-in-socket-tests.patch
 	(
-		echo '+    { "Sebastian Lackner", "ws2_32/tests: Hide random test failures in socket tests.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32/tests: Hide random test failures in socket tests.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -9035,8 +9035,8 @@ if test "$enable_ws2_32_TransmitFile" -eq 1; then
 	patch_apply ws2_32-TransmitFile/0001-ws2_32-Add-support-for-TF_DISCONNECT-to-TransmitFile.patch
 	patch_apply ws2_32-TransmitFile/0002-ws2_32-Add-support-for-TF_REUSE_SOCKET-to-TransmitFi.patch
 	(
-		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_DISCONNECT to TransmitFile.", 1 },';
-		echo '+    { "Erich E. Hoover", "ws2_32: Add support for TF_REUSE_SOCKET to TransmitFile.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ws2_32: Add support for TF_DISCONNECT to TransmitFile.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ws2_32: Add support for TF_REUSE_SOCKET to TransmitFile.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -9056,8 +9056,8 @@ if test "$enable_ws2_32_WSACleanup" -eq 1; then
 	patch_apply ws2_32-WSACleanup/0001-ws2_32-Proper-WSACleanup-implementation-using-winese.patch
 	patch_apply ws2_32-WSACleanup/0002-ws2_32-Invalidate-client-side-file-descriptor-cache-.patch
 	(
-		echo '+    { "Matt Durgavich", "ws2_32: Proper WSACleanup implementation using wineserver function.", 2 },';
-		echo '+    { "Sebastian Lackner", "ws2_32: Invalidate client-side file descriptor cache in WSACleanup.", 1 },';
+		printf '%s\n' '+    { "Matt Durgavich", "ws2_32: Proper WSACleanup implementation using wineserver function.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Invalidate client-side file descriptor cache in WSACleanup.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -9072,7 +9072,7 @@ fi
 if test "$enable_ws2_32_getsockopt" -eq 1; then
 	patch_apply ws2_32-getsockopt/0001-ws2_32-Divide-values-returned-by-SO_RCVBUF-and-SO_SN.patch
 	(
-		echo '+    { "Sebastian Lackner", "ws2_32: Divide values returned by SO_RCVBUF and SO_SNDBUF getsockopt options by two.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Divide values returned by SO_RCVBUF and SO_SNDBUF getsockopt options by two.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -9087,7 +9087,7 @@ fi
 if test "$enable_wtsapi32_EnumerateProcesses" -eq 1; then
 	patch_apply wtsapi32-EnumerateProcesses/0001-wtsapi32-Partial-implementation-of-WTSEnumerateProce.patch
 	(
-		echo '+    { "Sebastian Lackner", "wtsapi32: Partial implementation of WTSEnumerateProcessesW.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wtsapi32: Partial implementation of WTSEnumerateProcessesW.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -9102,7 +9102,7 @@ fi
 if test "$enable_wtsapi32_WTSQueryUserToken" -eq 1; then
 	patch_apply wtsapi32-WTSQueryUserToken/0001-wtsapi32-Improve-WTSQueryUserToken-stub.patch
 	(
-		echo '+    { "Sebastian Lackner", "wtsapi32: Improve WTSQueryUserToken stub.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wtsapi32: Improve WTSQueryUserToken stub.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -9114,7 +9114,7 @@ fi
 if test "$enable_wuauserv_Dummy_Service" -eq 1; then
 	patch_apply wuauserv-Dummy_Service/0001-wuauserv-Add-dummy-service.patch
 	(
-		echo '+    { "Michael Müller", "wuauserv: Add dummy service.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wuauserv: Add dummy service.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -9135,13 +9135,13 @@ if test "$enable_wusa_MSU_Package_Installer" -eq 1; then
 	patch_apply wusa-MSU_Package_Installer/0006-wusa-Improve-tracing-of-installation-process.patch
 	patch_apply wusa-MSU_Package_Installer/0007-wusa-Print-warning-when-encountering-msdelta-compres.patch
 	(
-		echo '+    { "Michael Müller", "wusa: Implement basic installation logic.", 1 },';
-		echo '+    { "Michael Müller", "wusa: Ignore systemProtection subkey of registry key.", 1 },';
-		echo '+    { "Michael Müller", "wusa: Treat empty update list as error.", 1 },';
-		echo '+    { "Michael Müller", "wusa: Implement WOW64 support.", 1 },';
-		echo '+    { "Sebastian Lackner", "wusa: Add workaround to be compatible with Vista packages.", 1 },';
-		echo '+    { "Sebastian Lackner", "wusa: Improve tracing of installation process.", 1 },';
-		echo '+    { "Michael Müller", "wusa: Print warning when encountering msdelta compressed files.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wusa: Implement basic installation logic.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wusa: Ignore systemProtection subkey of registry key.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wusa: Treat empty update list as error.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wusa: Implement WOW64 support.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wusa: Add workaround to be compatible with Vista packages.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wusa: Improve tracing of installation process.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wusa: Print warning when encountering msdelta compressed files.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -9156,7 +9156,7 @@ fi
 if test "$enable_xinput9_1_0_Parentsrc" -eq 1; then
 	patch_apply xinput9_1_0-Parentsrc/0001-xinput9_1_0-Build-independent-xinput9_1_0.dll-instea.patch
 	(
-		echo '+    { "Michael Müller", "xinput9_1_0: Build independent xinput9_1_0.dll instead of using forwards.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "xinput9_1_0: Build independent xinput9_1_0.dll instead of using forwards.", 1 },';
 	) >> "$patchlist"
 fi
 

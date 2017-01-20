@@ -113,6 +113,7 @@ patch_enable_all ()
 	enable_d3d11_ID3D11Texture1D="$1"
 	enable_d3d8_ValidateShader="$1"
 	enable_d3d9_DesktopWindow="$1"
+	enable_d3d9_DrawIndexedPrimitiveUP="$1"
 	enable_d3d9_Surface_Refcount="$1"
 	enable_d3d9_Tests="$1"
 	enable_d3dx11_D3DX11CreateShaderResourceViewFromMemory="$1"
@@ -552,6 +553,9 @@ patch_enable ()
 			;;
 		d3d9-DesktopWindow)
 			enable_d3d9_DesktopWindow="$2"
+			;;
+		d3d9-DrawIndexedPrimitiveUP)
+			enable_d3d9_DrawIndexedPrimitiveUP="$2"
 			;;
 		d3d9-Surface_Refcount)
 			enable_d3d9_Surface_Refcount="$2"
@@ -3379,6 +3383,27 @@ if test "$enable_d3d9_DesktopWindow" -eq 1; then
 	patch_apply d3d9-DesktopWindow/0001-winex11.drv-Allow-changing-the-opengl-pixel-format-o.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Allow changing the opengl pixel format on the desktop window.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3d9-DrawIndexedPrimitiveUP
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35993] Fix DrawIndexedPrimitiveUP with non-zero min_vertex_idx
+# |
+# | Modified files:
+# |   *	dlls/d3d8/device.c, dlls/d3d8/tests/visual.c, dlls/d3d9/device.c, dlls/d3d9/tests/visual.c
+# |
+if test "$enable_d3d9_DrawIndexedPrimitiveUP" -eq 1; then
+	patch_apply d3d9-DrawIndexedPrimitiveUP/0001-d3d9-Fix-DrawIndexedPrimitiveUP-with-non-zero-min_ve.patch
+	patch_apply d3d9-DrawIndexedPrimitiveUP/0002-d3d8-Fix-DrawIndexedPrimitiveUP-with-non-zero-min_ve.patch
+	patch_apply d3d9-DrawIndexedPrimitiveUP/0003-d3d9-tests-Add-a-test-for-DrawIndexedPrimitiveUP.patch
+	patch_apply d3d9-DrawIndexedPrimitiveUP/0004-d3d8-tests-Add-a-test-for-DrawIndexedPrimitiveUP.patch
+	(
+		printf '%s\n' '+    { "Matteo Bruni", "d3d9: Fix DrawIndexedPrimitiveUP with non-zero min_vertex_idx.", 1 },';
+		printf '%s\n' '+    { "Matteo Bruni", "d3d8: Fix DrawIndexedPrimitiveUP with non-zero min_vertex_idx.", 1 },';
+		printf '%s\n' '+    { "Matteo Bruni", "d3d9/tests: Add a test for DrawIndexedPrimitiveUP().", 1 },';
+		printf '%s\n' '+    { "Matteo Bruni", "d3d8/tests: Add a test for DrawIndexedPrimitiveUP().", 1 },';
 	) >> "$patchlist"
 fi
 

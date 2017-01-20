@@ -3868,7 +3868,7 @@ fi
 if test "$enable_ddraw_FlipToGDISurface" -eq 1; then
 	patch_apply ddraw-FlipToGDISurface/0001-ddraw-Implement-ddraw7_FlipToGDISurface.patch
 	(
-		printf '%s\n' '+    { "Henri Verbeet", "ddraw: Implement ddraw7_FlipToGDISurface.", 1 },';
+		printf '%s\n' '+    { "Henri Verbeet", "ddraw: Implement ddraw7_FlipToGDISurface.", 2 },';
 	) >> "$patchlist"
 fi
 

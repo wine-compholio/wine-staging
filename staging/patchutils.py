@@ -976,6 +976,7 @@ if __name__ == "__main__":
                 os.chmod(script.name, st.st_mode | stat.S_IEXEC)
 
                 result = subprocess.check_output([script.name])
+                if not isinstance(result, str): result = result.decode('utf-8')
                 self.assertEqual(result.rstrip("\n"), self.ascii)
             finally:
                 os.unlink(script.name)
@@ -991,6 +992,7 @@ if __name__ == "__main__":
                 os.chmod(script.name, st.st_mode | stat.S_IEXEC)
 
                 result = subprocess.check_output([script.name])
+                if not isinstance(result, str): result = result.decode('utf-8')
                 self.assertEqual(result.rstrip("\n"), self.ascii)
             finally:
                 os.unlink(script.name)
@@ -1013,6 +1015,7 @@ if __name__ == "__main__":
                     subprocess.call(["gcc", source.name, "-o", compiled.name])
 
                     result = subprocess.check_output([compiled.name])
+                    if not isinstance(result, str): result = result.decode('utf-8')
                     self.assertEqual(result.rstrip("\n"), self.ascii)
                 finally:
                     os.unlink(compiled.name)

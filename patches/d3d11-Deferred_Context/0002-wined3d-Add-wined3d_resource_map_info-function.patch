@@ -1,0 +1,174 @@
+From 06cf41da9e0aeb09d3753132262d1b0e1207cd7f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 19 Jan 2017 16:54:42 +0100
+Subject: wined3d: Add wined3d_resource_map_info function.
+
+---
+ dlls/wined3d/buffer.c          | 19 +++++++++++++++++++
+ dlls/wined3d/resource.c        |  8 ++++++++
+ dlls/wined3d/texture.c         | 31 +++++++++++++++++++++++++++++++
+ dlls/wined3d/wined3d.spec      |  1 +
+ dlls/wined3d/wined3d_private.h |  2 ++
+ include/wine/wined3d.h         |  9 +++++++++
+ 6 files changed, 70 insertions(+)
+
+diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
+index 6883b4010a0..1924752a421 100644
+--- a/dlls/wined3d/buffer.c
++++ b/dlls/wined3d/buffer.c
+@@ -1405,6 +1405,24 @@ static HRESULT buffer_resource_sub_resource_map(struct wined3d_resource *resourc
+     return wined3d_buffer_map(buffer, offset, size, (BYTE **)&map_desc->data, flags);
+ }
+ 
++static HRESULT buffer_resource_sub_resource_map_info(struct wined3d_resource *resource, unsigned int sub_resource_idx,
++        struct wined3d_map_info *info, DWORD flags)
++{
++    struct wined3d_buffer *buffer = buffer_from_resource(resource);
++
++    if (sub_resource_idx)
++    {
++        WARN("Invalid sub_resource_idx %u.\n", sub_resource_idx);
++        return E_INVALIDARG;
++    }
++
++    info->row_pitch   = buffer->desc.byte_width;
++    info->slice_pitch = buffer->desc.byte_width;
++    info->size        = buffer->resource.size;
++
++    return WINED3D_OK;
++}
++
+ static HRESULT buffer_resource_sub_resource_unmap(struct wined3d_resource *resource, unsigned int sub_resource_idx)
+ {
+     if (sub_resource_idx)
+@@ -1424,6 +1442,7 @@ static const struct wined3d_resource_ops buffer_resource_ops =
+     buffer_resource_preload,
+     buffer_unload,
+     buffer_resource_sub_resource_map,
++    buffer_resource_sub_resource_map_info,
+     buffer_resource_sub_resource_unmap,
+ };
+ 
+diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
+index ab64de07f41..51da49077ed 100644
+--- a/dlls/wined3d/resource.c
++++ b/dlls/wined3d/resource.c
+@@ -359,6 +359,14 @@ HRESULT CDECL wined3d_resource_map(struct wined3d_resource *resource, unsigned i
+     return wined3d_cs_map(resource->device->cs, resource, sub_resource_idx, map_desc, box, flags);
+ }
+ 
++HRESULT CDECL wined3d_resource_map_info(struct wined3d_resource *resource, unsigned int sub_resource_idx,
++        struct wined3d_map_info *info, DWORD flags)
++{
++    TRACE("resource %p, sub_resource_idx %u.\n", resource, sub_resource_idx);
++
++    return resource->resource_ops->resource_map_info(resource, sub_resource_idx, info, flags);
++}
++
+ HRESULT CDECL wined3d_resource_unmap(struct wined3d_resource *resource, unsigned int sub_resource_idx)
+ {
+     TRACE("resource %p, sub_resource_idx %u.\n", resource, sub_resource_idx);
+diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
+index 8d5e37a4949..be301420858 100644
+--- a/dlls/wined3d/texture.c
++++ b/dlls/wined3d/texture.c
+@@ -2194,6 +2194,36 @@ static HRESULT texture_resource_sub_resource_map(struct wined3d_resource *resour
+     return WINED3D_OK;
+ }
+ 
++static HRESULT texture_resource_sub_resource_map_info(struct wined3d_resource *resource, unsigned int sub_resource_idx,
++        struct wined3d_map_info *info, DWORD flags)
++{
++    const struct wined3d_format *format = resource->format;
++    struct wined3d_texture_sub_resource *sub_resource;
++    unsigned int fmt_flags = resource->format_flags;
++    struct wined3d_texture *texture;
++    unsigned int texture_level;
++
++    texture = texture_from_resource(resource);
++    if (!(sub_resource = wined3d_texture_get_sub_resource(texture, sub_resource_idx)))
++        return E_INVALIDARG;
++
++    texture_level = sub_resource_idx % texture->level_count;
++
++    if (fmt_flags & WINED3DFMT_FLAG_BROKEN_PITCH)
++    {
++        info->row_pitch = wined3d_texture_get_level_width(texture, texture_level) * format->byte_count;
++        info->slice_pitch = wined3d_texture_get_level_height(texture, texture_level) * info->row_pitch;
++    }
++    else
++    {
++        wined3d_texture_get_pitch(texture, texture_level, &info->row_pitch, &info->slice_pitch);
++    }
++
++    info->size = info->slice_pitch * wined3d_texture_get_level_depth(texture, texture_level);
++
++    return WINED3D_OK;
++}
++
+ static HRESULT texture_resource_sub_resource_unmap(struct wined3d_resource *resource, unsigned int sub_resource_idx)
+ {
+     struct wined3d_texture_sub_resource *sub_resource;
+@@ -2253,6 +2283,7 @@ static const struct wined3d_resource_ops texture_resource_ops =
+     texture_resource_preload,
+     wined3d_texture_unload,
+     texture_resource_sub_resource_map,
++    texture_resource_sub_resource_map_info,
+     texture_resource_sub_resource_unmap,
+ };
+ 
+diff --git a/dlls/wined3d/wined3d.spec b/dlls/wined3d/wined3d.spec
+index 05df9f3db7e..e51380304b1 100644
+--- a/dlls/wined3d/wined3d.spec
++++ b/dlls/wined3d/wined3d.spec
+@@ -187,6 +187,7 @@
+ @ cdecl wined3d_resource_get_parent(ptr)
+ @ cdecl wined3d_resource_get_priority(ptr)
+ @ cdecl wined3d_resource_map(ptr long ptr ptr long)
++@ cdecl wined3d_resource_map_info(ptr long ptr long)
+ @ cdecl wined3d_resource_preload(ptr)
+ @ cdecl wined3d_resource_set_parent(ptr ptr)
+ @ cdecl wined3d_resource_set_priority(ptr long)
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index ff61d9d872b..65f95004b44 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2639,6 +2639,8 @@ struct wined3d_resource_ops
+     void (*resource_unload)(struct wined3d_resource *resource);
+     HRESULT (*resource_sub_resource_map)(struct wined3d_resource *resource, unsigned int sub_resource_idx,
+             struct wined3d_map_desc *map_desc, const struct wined3d_box *box, DWORD flags);
++    HRESULT (*resource_map_info)(struct wined3d_resource *resource, unsigned int sub_resource_idx,
++            struct wined3d_map_info *info, DWORD flags);
+     HRESULT (*resource_sub_resource_unmap)(struct wined3d_resource *resource, unsigned int sub_resource_idx);
+ };
+ 
+diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
+index 8c8fbcbe7e5..fff39e2fa0f 100644
+--- a/include/wine/wined3d.h
++++ b/include/wine/wined3d.h
+@@ -1746,6 +1746,13 @@ struct wined3d_map_desc
+     void *data;
+ };
+ 
++struct wined3d_map_info
++{
++    UINT row_pitch;
++    UINT slice_pitch;
++    UINT size;
++};
++
+ struct wined3d_sub_resource_data
+ {
+     const void *data;
+@@ -2431,6 +2438,8 @@ void * __cdecl wined3d_resource_get_parent(const struct wined3d_resource *resour
+ DWORD __cdecl wined3d_resource_get_priority(const struct wined3d_resource *resource);
+ HRESULT __cdecl wined3d_resource_map(struct wined3d_resource *resource, unsigned int sub_resource_idx,
+         struct wined3d_map_desc *map_desc, const struct wined3d_box *box, DWORD flags);
++HRESULT __cdecl wined3d_resource_map_info(struct wined3d_resource *resource, unsigned int sub_resource_idx,
++        struct wined3d_map_info *info, DWORD flags);
+ void __cdecl wined3d_resource_preload(struct wined3d_resource *resource);
+ void __cdecl wined3d_resource_set_parent(struct wined3d_resource *resource, void *parent);
+ DWORD __cdecl wined3d_resource_set_priority(struct wined3d_resource *resource, DWORD priority);
+-- 
+2.11.0
+

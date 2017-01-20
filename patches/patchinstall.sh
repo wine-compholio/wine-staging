@@ -110,6 +110,7 @@ patch_enable_all ()
 	enable_crypt32_Certificate_Check="$1"
 	enable_crypt32_CryptUnprotectMemory="$1"
 	enable_d3d10_1_Forwards="$1"
+	enable_d3d11_Deferred_Context="$1"
 	enable_d3d11_ID3D11Texture1D="$1"
 	enable_d3d8_ValidateShader="$1"
 	enable_d3d9_DesktopWindow="$1"
@@ -544,6 +545,9 @@ patch_enable ()
 			;;
 		d3d10_1-Forwards)
 			enable_d3d10_1_Forwards="$2"
+			;;
+		d3d11-Deferred_Context)
+			enable_d3d11_Deferred_Context="$2"
 			;;
 		d3d11-ID3D11Texture1D)
 			enable_d3d11_ID3D11Texture1D="$2"
@@ -2152,6 +2156,9 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 fi
 
 if test "$enable_wined3d_CSMT_Helper" -eq 1; then
+	if test "$enable_d3d11_Deferred_Context" -gt 1; then
+		abort "Patchset d3d11-Deferred_Context disabled, but wined3d-CSMT_Helper depends on that."
+	fi
 	if test "$enable_makedep_PARENTSPEC" -gt 1; then
 		abort "Patchset makedep-PARENTSPEC disabled, but wined3d-CSMT_Helper depends on that."
 	fi
@@ -2176,6 +2183,7 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_wined3d_Silence_FIXMEs" -gt 1; then
 		abort "Patchset wined3d-Silence_FIXMEs disabled, but wined3d-CSMT_Helper depends on that."
 	fi
+	enable_d3d11_Deferred_Context=1
 	enable_makedep_PARENTSPEC=1
 	enable_ntdll_DllRedirects=1
 	enable_wined3d_1DTextures=1
@@ -3253,6 +3261,23 @@ if test "$enable_d3d10_1_Forwards" -eq 1; then
 	patch_apply d3d10_1-Forwards/0001-d3d10_1-Add-missing-forwards-to-d3d10.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "d3d10_1: Add missing forwards to d3d10.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3d11-Deferred_Context
+# |
+# | Modified files:
+# |   *	dlls/d3d11/device.c, dlls/wined3d/buffer.c, dlls/wined3d/resource.c, dlls/wined3d/texture.c, dlls/wined3d/wined3d.spec,
+# | 	dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
+# |
+if test "$enable_d3d11_Deferred_Context" -eq 1; then
+	patch_apply d3d11-Deferred_Context/0001-d3d11-Add-stub-deferred-rendering-context.patch
+	patch_apply d3d11-Deferred_Context/0002-wined3d-Add-wined3d_resource_map_info-function.patch
+	patch_apply d3d11-Deferred_Context/0003-d3d11-Initial-implementation-for-deferred-contexts.patch
+	(
+		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Add stub deferred rendering context.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Add wined3d_resource_map_info function.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Initial implementation for deferred contexts.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8393,9 +8418,9 @@ fi
 # Patchset wined3d-CSMT_Helper
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects,
-# | 	wined3d-1DTextures, wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs, wined3d-Revert_Pixel_Center_Offset, wined3d-
-# | 	Silence_FIXMEs
+# |   *	d3d11-Deferred_Context, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-
+# | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-1DTextures, wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs,
+# | 	wined3d-Revert_Pixel_Center_Offset, wined3d-Silence_FIXMEs
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
@@ -8460,9 +8485,9 @@ fi
 # Patchset wined3d-CSMT_Main
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects,
-# | 	wined3d-1DTextures, wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs, wined3d-Revert_Pixel_Center_Offset, wined3d-
-# | 	Silence_FIXMEs, wined3d-CSMT_Helper
+# |   *	d3d11-Deferred_Context, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-
+# | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-1DTextures, wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs,
+# | 	wined3d-Revert_Pixel_Center_Offset, wined3d-Silence_FIXMEs, wined3d-CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance

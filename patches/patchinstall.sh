@@ -8768,8 +8768,10 @@ fi
 # |
 if test "$enable_winex11_MWM_Decorations" -eq 1; then
 	patch_apply winex11-MWM_Decorations/0001-winex11.drv-Don-t-use-MWM_DECOR_RESIZEH-window-resiz.patch
+	patch_apply winex11-MWM_Decorations/0002-winex11.drv-Don-t-add-MWM_DECOR_BORDER-to-windows-wi.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "winex11.drv: Don'\''t use MWM_DECOR_RESIZEH, window resizing is controlled by MWM_FUNC_RESIZE.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "winex11.drv: Don'\''t add MWM_DECOR_BORDER to windows without a caption.", 1 },';
 	) >> "$patchlist"
 fi
 

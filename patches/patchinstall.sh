@@ -406,6 +406,7 @@ patch_enable_all ()
 	enable_wined3d_GTX_560M="$1"
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_QUERY_Stubs="$1"
+	enable_wined3d_Render_Target="$1"
 	enable_wined3d_Revert_Pixel_Center_Offset="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
@@ -1438,6 +1439,9 @@ patch_enable ()
 		wined3d-QUERY_Stubs)
 			enable_wined3d_QUERY_Stubs="$2"
 			;;
+		wined3d-Render_Target)
+			enable_wined3d_Render_Target="$2"
+			;;
 		wined3d-Revert_Pixel_Center_Offset)
 			enable_wined3d_Revert_Pixel_Center_Offset="$2"
 			;;
@@ -2193,6 +2197,9 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_wined3d_QUERY_Stubs" -gt 1; then
 		abort "Patchset wined3d-QUERY_Stubs disabled, but wined3d-CSMT_Helper depends on that."
 	fi
+	if test "$enable_wined3d_Render_Target" -gt 1; then
+		abort "Patchset wined3d-Render_Target disabled, but wined3d-CSMT_Helper depends on that."
+	fi
 	if test "$enable_wined3d_Revert_Pixel_Center_Offset" -gt 1; then
 		abort "Patchset wined3d-Revert_Pixel_Center_Offset disabled, but wined3d-CSMT_Helper depends on that."
 	fi
@@ -2206,6 +2213,7 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	enable_wined3d_Accounting=1
 	enable_wined3d_DXTn=1
 	enable_wined3d_QUERY_Stubs=1
+	enable_wined3d_Render_Target=1
 	enable_wined3d_Revert_Pixel_Center_Offset=1
 	enable_wined3d_Silence_FIXMEs=1
 fi
@@ -8424,6 +8432,20 @@ if test "$enable_wined3d_QUERY_Stubs" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-Render_Target
+# |
+# | Modified files:
+# |   *	dlls/wined3d/context.c, dlls/wined3d/state.c
+# |
+if test "$enable_wined3d_Render_Target" -eq 1; then
+	patch_apply wined3d-Render_Target/0001-wined3d-Handle-no-render-target-view-case-when-setti.patch
+	patch_apply wined3d-Render_Target/0002-wined3d-Set-draw-buffer-mask-to-zero-GL_NONE-when-no.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Handle no render target view case when setting scissors.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Set draw buffer mask to zero (GL_NONE) when no render target view is attached.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-Revert_Pixel_Center_Offset
 # |
 # | Modified files:
@@ -8470,7 +8492,7 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	d3d11-Deferred_Context, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-
 # | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-1DTextures, wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs,
-# | 	wined3d-Revert_Pixel_Center_Offset, wined3d-Silence_FIXMEs
+# | 	wined3d-Render_Target, wined3d-Revert_Pixel_Center_Offset, wined3d-Silence_FIXMEs
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
@@ -8537,7 +8559,7 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	d3d11-Deferred_Context, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-
 # | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-1DTextures, wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs,
-# | 	wined3d-Revert_Pixel_Center_Offset, wined3d-Silence_FIXMEs, wined3d-CSMT_Helper
+# | 	wined3d-Render_Target, wined3d-Revert_Pixel_Center_Offset, wined3d-Silence_FIXMEs, wined3d-CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance

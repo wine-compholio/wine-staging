@@ -4129,8 +4129,8 @@ fi
 # Patchset winecfg-Staging
 # |
 # | Modified files:
-# |   *	programs/winecfg/Makefile.in, programs/winecfg/main.c, programs/winecfg/resource.h, programs/winecfg/staging.c,
-# | 	programs/winecfg/winecfg.h, programs/winecfg/winecfg.rc
+# |   *	programs/winecfg/Makefile.in, programs/winecfg/about.c, programs/winecfg/main.c, programs/winecfg/resource.h,
+# | 	programs/winecfg/staging.c, programs/winecfg/winecfg.h, programs/winecfg/winecfg.rc
 # |
 if test "$enable_winecfg_Staging" -eq 1; then
 	patch_apply winecfg-Staging/0001-winecfg-Add-staging-tab-for-CSMT.patch

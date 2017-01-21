@@ -409,6 +409,7 @@ patch_enable_all ()
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_wined3d_check_format_support="$1"
+	enable_winedbg_Process_Arguments="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
 	enable_winemp3_acm_MPEG3_StreamOpen="$1"
@@ -1443,6 +1444,9 @@ patch_enable ()
 			;;
 		wined3d-check_format_support)
 			enable_wined3d_check_format_support="$2"
+			;;
+		winedbg-Process_Arguments)
+			enable_winedbg_Process_Arguments="$2"
 			;;
 		winedevice-Fix_Relocation)
 			enable_winedevice_Fix_Relocation="$2"
@@ -8660,6 +8664,18 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Do not signal CS event when we manage to unset waiting_for_event quickly enough.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Fix occlusion query tests.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Enable CSMT by default, print a winediag message informing about this patchset.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winedbg-Process_Arguments
+# |
+# | Modified files:
+# |   *	programs/winedbg/info.c
+# |
+if test "$enable_winedbg_Process_Arguments" -eq 1; then
+	patch_apply winedbg-Process_Arguments/0001-programs-winedbg-Print-process-arguments-in-info-thr.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "programs/winedbg: Print process arguments in info threads.", 1 },';
 	) >> "$patchlist"
 fi
 

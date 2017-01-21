@@ -433,6 +433,7 @@ patch_enable_all ()
 	enable_wininet_Internet_Settings="$1"
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
 	enable_winmm_Delay_Import_Depends="$1"
+	enable_winmm_PlaySoundA="$1"
 	enable_winmm_mciSendCommandA="$1"
 	enable_wintrust_WinVerifyTrust="$1"
 	enable_wpcap_Dynamic_Linking="$1"
@@ -1516,6 +1517,9 @@ patch_enable ()
 			;;
 		winmm-Delay_Import_Depends)
 			enable_winmm_Delay_Import_Depends="$2"
+			;;
+		winmm-PlaySoundA)
+			enable_winmm_PlaySoundA="$2"
 			;;
 		winmm-mciSendCommandA)
 			enable_winmm_mciSendCommandA="$2"
@@ -9038,6 +9042,21 @@ if test "$enable_winmm_Delay_Import_Depends" -eq 1; then
 	patch_apply winmm-Delay_Import_Depends/0001-winmm-Delay-import-ole32-msacm32-to-workaround-bug-w.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "winmm: Delay import ole32 msacm32 to workaround bug when loading multiple winmm versions.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winmm-PlaySoundA
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42257] Fix ordinal number of winmm.PlaySoundA
+# |
+# | Modified files:
+# |   *	dlls/winmm/winmm.spec
+# |
+if test "$enable_winmm_PlaySoundA" -eq 1; then
+	patch_apply winmm-PlaySoundA/0001-winmm-Fix-the-ordinal-number-of-PlaySoundA.patch
+	(
+		printf '%s\n' '+    { "Bruno Jesus", "winmm: Fix the ordinal number of PlaySoundA.", 1 },';
 	) >> "$patchlist"
 fi
 

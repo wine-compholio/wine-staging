@@ -112,6 +112,7 @@ patch_enable_all ()
 	enable_d3d10_1_Forwards="$1"
 	enable_d3d11_Deferred_Context="$1"
 	enable_d3d11_ID3D11Texture1D="$1"
+	enable_d3d11_ResolveSubresource="$1"
 	enable_d3d8_ValidateShader="$1"
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_DrawIndexedPrimitiveUP="$1"
@@ -556,6 +557,9 @@ patch_enable ()
 			;;
 		d3d11-ID3D11Texture1D)
 			enable_d3d11_ID3D11Texture1D="$2"
+			;;
+		d3d11-ResolveSubresource)
+			enable_d3d11_ResolveSubresource="$2"
 			;;
 		d3d8-ValidateShader)
 			enable_d3d8_ValidateShader="$2"
@@ -3403,6 +3407,18 @@ if test "$enable_d3d11_ID3D11Texture1D" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Prepare test_texture for non 2d textures.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Prepare test_texture for 1d textures.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add some basic 1d texture tests in test_texture.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3d11-ResolveSubresource
+# |
+# | Modified files:
+# |   *	dlls/d3d11/device.c
+# |
+if test "$enable_d3d11_ResolveSubresource" -eq 1; then
+	patch_apply d3d11-ResolveSubresource/0001-d3d11-Implement-ResolveSubresource-by-copying-sub-re.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ResolveSubresource by copying sub resource (there is no multisample texture support yet).", 1 },';
 	) >> "$patchlist"
 fi
 

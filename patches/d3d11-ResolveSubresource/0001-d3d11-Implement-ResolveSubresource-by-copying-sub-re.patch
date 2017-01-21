@@ -1,0 +1,41 @@
+From d16a0f5f4bde197dbdda7b61d8c6b69bbc9be128 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 21 Jan 2017 22:43:12 +0100
+Subject: d3d11: Implement ResolveSubresource by copying sub resource (there is
+ no multisample texture support yet).
+
+---
+ dlls/d3d11/device.c | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/d3d11/device.c b/dlls/d3d11/device.c
+index 777146d717e..9ad2b2ecaa5 100644
+--- a/dlls/d3d11/device.c
++++ b/dlls/d3d11/device.c
+@@ -1120,10 +1120,22 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_ResolveSubresource(ID3D11D
+         ID3D11Resource *src_resource, UINT src_subresource_idx,
+         DXGI_FORMAT format)
+ {
+-    FIXME("iface %p, dst_resource %p, dst_subresource_idx %u, src_resource %p, src_subresource_idx %u, "
++    struct d3d_device *device = device_from_immediate_ID3D11DeviceContext(iface);
++    struct wined3d_resource *wined3d_dst_resource, *wined3d_src_resource;
++
++    TRACE("iface %p, dst_resource %p, dst_subresource_idx %u, src_resource %p, src_subresource_idx %u, "
+             "format %s stub!\n",
+             iface, dst_resource, dst_subresource_idx, src_resource, src_subresource_idx,
+             debug_dxgi_format(format));
++
++    wined3d_dst_resource = wined3d_resource_from_d3d11_resource(dst_resource);
++    wined3d_src_resource = wined3d_resource_from_d3d11_resource(src_resource);
++
++    /* Multisampled textures are not supported yet, so simply copy the sub resource */
++    wined3d_mutex_lock();
++    wined3d_device_copy_sub_resource_region(device->wined3d_device, wined3d_dst_resource, dst_subresource_idx,
++            0, 0, 0, wined3d_src_resource, src_subresource_idx, NULL);
++    wined3d_mutex_unlock();
+ }
+ 
+ static void STDMETHODCALLTYPE d3d11_immediate_context_ExecuteCommandList(ID3D11DeviceContext *iface,
+-- 
+2.11.0
+

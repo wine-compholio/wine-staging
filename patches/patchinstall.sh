@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "3ba2b5898cf9c78f81afc1fd620e5046a3392be0"
+	echo "199e30663efadfb1539f240e6fa29204440e9974"
 }
 
 # Show version information
@@ -276,6 +276,7 @@ patch_enable_all ()
 	enable_nvencodeapi_Video_Encoder="$1"
 	enable_ole32_HGLOBALStream="$1"
 	enable_ole32_OleGetIconOfFile="$1"
+	enable_ole32_STGPROP="$1"
 	enable_oleaut32_CreateTypeLib="$1"
 	enable_oleaut32_DispCallFunc="$1"
 	enable_oleaut32_ITypeInfo_fnInvoke="$1"
@@ -1043,6 +1044,9 @@ patch_enable ()
 			;;
 		ole32-OleGetIconOfFile)
 			enable_ole32_OleGetIconOfFile="$2"
+			;;
+		ole32-STGPROP)
+			enable_ole32_STGPROP="$2"
 			;;
 		oleaut32-CreateTypeLib)
 			enable_oleaut32_CreateTypeLib="$2"
@@ -6272,6 +6276,25 @@ if test "$enable_ole32_OleGetIconOfFile" -eq 1; then
 	patch_apply ole32-OleGetIconOfFile/0001-ole32-Add-stub-for-OleGetIconOfFile.patch
 	(
 		printf '%s\n' '+    { "Zhenbo Li", "ole32: Add stub for OleGetIconOfFile.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ole32-STGPROP
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42046] Multiple fixes for ole32 property storage
+# |
+# | Modified files:
+# |   *	dlls/ole32/enumx.c, dlls/ole32/enumx.h, dlls/ole32/stg_prop.c
+# |
+if test "$enable_ole32_STGPROP" -eq 1; then
+	patch_apply ole32-STGPROP/0001-ole32-Correctly-parse-unicode-property-storage-dicti.patch
+	patch_apply ole32-STGPROP/0002-ole32-Support-reading-VT_BOOL-VT_R8-and-VT_I8-into-p.patch
+	patch_apply ole32-STGPROP/0003-ole32-Implement-returning-a-name-in-IEnumSTATPROPSTG.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ole32: Correctly parse unicode property storage dictionaries.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ole32: Support reading VT_BOOL, VT_R8 and VT_I8 into propery storage.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ole32: Implement returning a name in IEnumSTATPROPSTG.", 1 },';
 	) >> "$patchlist"
 fi
 

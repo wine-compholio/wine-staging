@@ -267,6 +267,7 @@ patch_enable_all ()
 	enable_ntdll_Wait_User_APC="$1"
 	enable_ntdll_WriteWatches="$1"
 	enable_ntdll_Zero_mod_name="$1"
+	enable_ntdll__aulldvrm="$1"
 	enable_ntdll_call_thread_func_wrapper="$1"
 	enable_ntoskrnl_DriverTest="$1"
 	enable_ntoskrnl_Stubs="$1"
@@ -1019,6 +1020,9 @@ patch_enable ()
 			;;
 		ntdll-Zero_mod_name)
 			enable_ntdll_Zero_mod_name="$2"
+			;;
+		ntdll-_aulldvrm)
+			enable_ntdll__aulldvrm="$2"
 			;;
 		ntdll-call_thread_func_wrapper)
 			enable_ntdll_call_thread_func_wrapper="$2"
@@ -6056,6 +6060,21 @@ if test "$enable_ntdll_Zero_mod_name" -eq 1; then
 	patch_apply ntdll-Zero_mod_name/0001-ntdll-Initialize-mod_name-to-zero.patch
 	(
 		printf '%s\n' '+    { "Qian Hong", "ntdll: Initialize mod_name to zero.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-_aulldvrm
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42267] Implement ntdll._aulldvrm
+# |
+# | Modified files:
+# |   *	dlls/ntdll/large_int.c, dlls/ntdll/ntdll.spec, dlls/ntdll/tests/large_int.c
+# |
+if test "$enable_ntdll__aulldvrm" -eq 1; then
+	patch_apply ntdll-_aulldvrm/0001-ntdll-Implement-_alldvrm-_aulldvrm-and-add-tests.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Implement _alldvrm/_aulldvrm and add tests.", 1 },';
 	) >> "$patchlist"
 fi
 

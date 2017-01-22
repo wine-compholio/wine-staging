@@ -58,7 +58,7 @@ upstream_commit()
 # Show version information
 version()
 {
-	echo "Wine Staging 2.0-rc6"
+	echo "Wine Staging 2.0-rc7 (unreleased)"
 	echo "Copyright (C) 2014-2017 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -401,6 +401,7 @@ patch_enable_all ()
 	enable_winecfg_Unmounted_Devices="$1"
 	enable_wined3d_1DTextures="$1"
 	enable_wined3d_Accounting="$1"
+	enable_wined3d_Blend_Factor="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
@@ -1425,6 +1426,9 @@ patch_enable ()
 		wined3d-Accounting)
 			enable_wined3d_Accounting="$2"
 			;;
+		wined3d-Blend_Factor)
+			enable_wined3d_Blend_Factor="$2"
+			;;
 		wined3d-CSMT_Helper)
 			enable_wined3d_CSMT_Helper="$2"
 			;;
@@ -2219,6 +2223,13 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	enable_wined3d_QUERY_Stubs=1
 	enable_wined3d_Render_Target=1
 	enable_wined3d_Revert_Pixel_Center_Offset=1
+	enable_wined3d_Silence_FIXMEs=1
+fi
+
+if test "$enable_wined3d_Blend_Factor" -eq 1; then
+	if test "$enable_wined3d_Silence_FIXMEs" -gt 1; then
+		abort "Patchset wined3d-Silence_FIXMEs disabled, but wined3d-Blend_Factor depends on that."
+	fi
 	enable_wined3d_Silence_FIXMEs=1
 fi
 
@@ -8433,6 +8444,50 @@ if test "$enable_wined3d_Accounting" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-Silence_FIXMEs
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42140] Silence noisy FIXME in gl_stencil_op
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c, dlls/wined3d/state.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c
+# |
+if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
+	patch_apply wined3d-Silence_FIXMEs/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	patch_apply wined3d-Silence_FIXMEs/0002-wined3d-Display-FIXME-for-cmp-function-0-only-once.patch
+	patch_apply wined3d-Silence_FIXMEs/0003-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	patch_apply wined3d-Silence_FIXMEs/0004-wined3d-Print-FIXME-only-once-in-surface_cpu_blt.patch
+	patch_apply wined3d-Silence_FIXMEs/0005-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	patch_apply wined3d-Silence_FIXMEs/0006-wined3d-Silence-extremely-noisy-FIXME-in-wined3d_tex.patch
+	patch_apply wined3d-Silence_FIXMEs/0007-wined3d-Display-FIXME-only-once-when-blen-op-is-0.patch
+	patch_apply wined3d-Silence_FIXMEs/0008-wined3d-Silence-noisy-fixme-Unrecognized-stencil-op-.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "wined3d: Display FIXME for cmp function 0 only once.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+		printf '%s\n' '+    { "Christian Costa", "wined3d: Print FIXME only once in surface_cpu_blt.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence extremely noisy FIXME in wined3d_texture_add_dirty_region.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "wined3d: Display FIXME only once when blen op is 0.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "wined3d: Silence noisy fixme Unrecognized stencil op 0.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Blend_Factor
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	wined3d-Silence_FIXMEs
+# |
+# | Modified files:
+# |   *	dlls/wined3d/state.c, include/wine/wined3d.h
+# |
+if test "$enable_wined3d_Blend_Factor" -eq 1; then
+	patch_apply wined3d-Blend_Factor/0001-wined3d-Add-more-blend-modes.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Add more blend modes.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-QUERY_Stubs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -8473,35 +8528,6 @@ if test "$enable_wined3d_Revert_Pixel_Center_Offset" -eq 1; then
 	patch_apply wined3d-Revert_Pixel_Center_Offset/0001-Revert-wined3d-Slightly-offset-the-viewport-in-the-A.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Slightly offset the viewport in the ARB_clip_control case.\".", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Silence_FIXMEs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42140] Silence noisy FIXME in gl_stencil_op
-# |
-# | Modified files:
-# |   *	dlls/wined3d/resource.c, dlls/wined3d/state.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c
-# |
-if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
-	patch_apply wined3d-Silence_FIXMEs/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	patch_apply wined3d-Silence_FIXMEs/0002-wined3d-Display-FIXME-for-cmp-function-0-only-once.patch
-	patch_apply wined3d-Silence_FIXMEs/0003-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	patch_apply wined3d-Silence_FIXMEs/0004-wined3d-Print-FIXME-only-once-in-surface_cpu_blt.patch
-	patch_apply wined3d-Silence_FIXMEs/0005-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	patch_apply wined3d-Silence_FIXMEs/0006-wined3d-Silence-extremely-noisy-FIXME-in-wined3d_tex.patch
-	patch_apply wined3d-Silence_FIXMEs/0007-wined3d-Display-FIXME-only-once-when-blen-op-is-0.patch
-	patch_apply wined3d-Silence_FIXMEs/0008-wined3d-Silence-noisy-fixme-Unrecognized-stencil-op-.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-		printf '%s\n' '+    { "Christian Costa", "wined3d: Display FIXME for cmp function 0 only once.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-		printf '%s\n' '+    { "Christian Costa", "wined3d: Print FIXME only once in surface_cpu_blt.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence extremely noisy FIXME in wined3d_texture_add_dirty_region.", 1 },';
-		printf '%s\n' '+    { "Christian Costa", "wined3d: Display FIXME only once when blen op is 0.", 1 },';
-		printf '%s\n' '+    { "Christian Costa", "wined3d: Silence noisy fixme Unrecognized stencil op 0.", 1 },';
 	) >> "$patchlist"
 fi
 

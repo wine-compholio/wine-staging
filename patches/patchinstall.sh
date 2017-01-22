@@ -6093,7 +6093,7 @@ fi
 # |   *	[#42267] Implement ntdll._aulldvrm
 # |
 # | Modified files:
-# |   *	dlls/ntdll/large_int.c, dlls/ntdll/ntdll.spec, dlls/ntdll/tests/large_int.c
+# |   *	dlls/ntdll/large_int.c, dlls/ntdll/ntdll.spec, dlls/ntdll/tests/large_int.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec
 # |
 if test "$enable_ntdll__aulldvrm" -eq 1; then
 	patch_apply ntdll-_aulldvrm/0001-ntdll-Implement-_alldvrm-_aulldvrm-and-add-tests.patch

@@ -8443,8 +8443,10 @@ fi
 # |
 if test "$enable_wined3d_QUERY_Stubs" -eq 1; then
 	patch_apply wined3d-QUERY_Stubs/0001-wined3d-Add-stubs-for-QUERY_TYPE_SO_STATISTICS-and-Q.patch
+	patch_apply wined3d-QUERY_Stubs/0002-d3d11-Add-dummy-support-for-D3D11_QUERY_PIPELINE_STA.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add stubs for QUERY_TYPE_SO_STATISTICS and QUERY_TYPE_SO_OVERFLOW.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Add dummy support for D3D11_QUERY_PIPELINE_STATISTICS query.", 1 },';
 	) >> "$patchlist"
 fi
 

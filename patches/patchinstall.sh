@@ -2056,9 +2056,6 @@ if test "$enable_category_stable" -eq 1; then
 	if test "$enable_wine_inf_Performance" -gt 1; then
 		abort "Patchset wine.inf-Performance disabled, but category-stable depends on that."
 	fi
-	if test "$enable_wine_inf_ProfileList_UserSID" -gt 1; then
-		abort "Patchset wine.inf-ProfileList_UserSID disabled, but category-stable depends on that."
-	fi
 	if test "$enable_wineboot_HKEY_DYN_DATA" -gt 1; then
 		abort "Patchset wineboot-HKEY_DYN_DATA disabled, but category-stable depends on that."
 	fi
@@ -2133,7 +2130,6 @@ if test "$enable_category_stable" -eq 1; then
 	enable_shell32_SHFileOperation_Win9x=1
 	enable_user32_DrawTextExW=1
 	enable_wine_inf_Performance=1
-	enable_wine_inf_ProfileList_UserSID=1
 	enable_wineboot_HKEY_DYN_DATA=1
 	enable_winecfg_Libraries=1
 	enable_wined3d_Silence_FIXMEs=1
@@ -8322,14 +8318,17 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#15670] Add a ProfileList\<UserSID> registry subkey
+# |   *	[#42249] Add a ProfileImagePath key with users profile directory
 # |
 # | Modified files:
 # |   *	loader/wine.inf.in
 # |
 if test "$enable_wine_inf_ProfileList_UserSID" -eq 1; then
 	patch_apply wine.inf-ProfileList_UserSID/0001-wine.inf-Add-a-ProfileList-UserSID-registry-subkey.patch
+	patch_apply wine.inf-ProfileList_UserSID/0002-wine.inf-Add-ProfileImagePath-with-the-user-s-profil.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "wine.inf: Add a ProfileList\\<UserSID> registry subkey.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "wine.inf: Add \"ProfileImagePath\" with the user'\''s profile directory under ProfileList key.", 1 },';
 	) >> "$patchlist"
 fi
 

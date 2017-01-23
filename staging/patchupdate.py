@@ -77,14 +77,12 @@ class PatchUpdaterError(RuntimeError):
 class PatchSet(object):
     def __init__(self, name, directory):
         self.name           = name
-        self.is_category    = False
         self.variable       = None
         self.directory      = directory
         self.fixes          = []
         self.changes        = []
         self.disabled       = False
         self.ifdefined      = None
-        self.categories     = []
 
         self.files          = []
         self.patches        = []
@@ -176,7 +174,6 @@ def load_patchsets():
     unique_id   = itertools.count()
     all_patches = {}
     name_to_id  = {}
-    categories  = {}
 
     for name, directory in enum_patchsets(config.path_patches):
         patch = PatchSet(name, directory)
@@ -235,12 +232,6 @@ def load_patchsets():
                     if i != j and any([fnmatch.fnmatch(f, val) for f in other_patch.modified_files]):
                         other_patch.auto_depends.add(i)
 
-            elif key == "category":
-                val = "category-%s" % val
-                if name_to_id.has_key(val):
-                    raise PatchUpdaterError("Category name in definition file %s collides with patchset %s" % (filename, val))
-                patch.categories.append(val)
-
             elif key == "fixes":
                 r = re.match("^\\[ *(!)? *([0-9]+) *\\](.*)$", val)
                 if r:
@@ -259,28 +250,9 @@ def load_patchsets():
             else:
                 print "WARNING: Ignoring unknown command in definition file %s: %s" % (filename, line)
 
-        # If patch is not disabled then finally add it to the category
-        if patch.disabled:
-            continue
-
-        for category in patch.categories:
-            if not categories.has_key(category):
-                categories[category] = set()
-            categories[category].add(i)
-
     # Filter autodepends on disabled patchsets
     for i, patch in all_patches.iteritems():
         patch.auto_depends = set([j for j in patch.auto_depends if not all_patches[j].disabled])
-
-    # Add virtual targets for all the categories
-    for category, indices in categories.iteritems():
-        patch = PatchSet(category, directory)
-        patch.is_category = True
-        patch.depends = indices
-
-        i = next(unique_id)
-        all_patches[i] = patch
-        name_to_id[name] = i
 
     return all_patches
 
@@ -665,23 +637,12 @@ def generate_script(all_patches, resolved):
     lines.append("patch_enable_all ()\n")
     lines.append("{\n")
     for i, patch in sorted([(i, all_patches[i]) for i in resolved], key=lambda x:x[1].name):
-        if patch.is_category: continue
         patch.variable = "enable_%s" % patch.name.replace("-","_").replace(".","_")
         lines.append("\t%s=\"$1\"\n" % patch.variable)
     lines.append("}\n")
     lines.append("\n")
 
-    lines.append("# Enable or disable all categories\n")
-    lines.append("category_enable_all ()\n")
-    lines.append("{\n")
-    for i, patch in sorted([(i, all_patches[i]) for i in resolved], key=lambda x:x[1].name):
-        if not patch.is_category: continue
-        patch.variable = "enable_%s" % patch.name.replace("-","_").replace(".","_")
-        lines.append("\t%s=\"$1\"\n" % patch.variable)
-    lines.append("}\n")
-    lines.append("\n")
-
-    lines.append("# Enable or disable a specific patchset/category\n")
+    lines.append("# Enable or disable a specific patchset\n")
     lines.append("patch_enable ()\n")
     lines.append("{\n")
     lines.append("\tcase \"$1\" in\n")
@@ -715,11 +676,6 @@ def generate_script(all_patches, resolved):
     # Generate code for applying all patchsets
     lines = []
     for i, patch in [(i, all_patches[i]) for i in resolved]:
-
-        # Categories do not have any files associated, so just skip over
-        if len(patch.files) == 0:
-            continue
-
         lines.append("# Patchset %s\n" % patch.name)
         lines.append("# |\n")
 

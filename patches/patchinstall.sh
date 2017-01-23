@@ -456,13 +456,7 @@ patch_enable_all ()
 	enable_xinput9_1_0_Parentsrc="$1"
 }
 
-# Enable or disable all categories
-category_enable_all ()
-{
-	enable_category_stable="$1"
-}
-
-# Enable or disable a specific patchset/category
+# Enable or disable a specific patchset
 patch_enable ()
 {
 	case "$1" in
@@ -516,9 +510,6 @@ patch_enable ()
 			;;
 		cabinet-iFolder)
 			enable_cabinet_iFolder="$2"
-			;;
-		category-stable)
-			enable_category_stable="$2"
 			;;
 		combase-RoApi)
 			enable_combase_RoApi="$2"
@@ -1594,7 +1585,6 @@ patch_enable ()
 
 # Default settings
 patch_enable_all 0
-category_enable_all 0
 enable_patchlist=1
 enable_autoconf=1
 patchlist="/dev/null"
@@ -1940,209 +1930,6 @@ patch_apply()
 	patch_apply_file "$patchdir/$1"
 }
 
-
-if test "$enable_category_stable" -eq 1; then
-	if test "$enable_Compiler_Warnings" -gt 1; then
-		abort "Patchset Compiler_Warnings disabled, but category-stable depends on that."
-	fi
-	if test "$enable_Staging" -gt 1; then
-		abort "Patchset Staging disabled, but category-stable depends on that."
-	fi
-	if test "$enable_configure_Absolute_RPATH" -gt 1; then
-		abort "Patchset configure-Absolute_RPATH disabled, but category-stable depends on that."
-	fi
-	if test "$enable_d3d9_Surface_Refcount" -gt 1; then
-		abort "Patchset d3d9-Surface_Refcount disabled, but category-stable depends on that."
-	fi
-	if test "$enable_d3dx9_36_D3DXStubs" -gt 1; then
-		abort "Patchset d3dx9_36-D3DXStubs disabled, but category-stable depends on that."
-	fi
-	if test "$enable_d3dx9_36_FindNextValidTechnique" -gt 1; then
-		abort "Patchset d3dx9_36-FindNextValidTechnique disabled, but category-stable depends on that."
-	fi
-	if test "$enable_d3dx9_36_Optimize_Inplace" -gt 1; then
-		abort "Patchset d3dx9_36-Optimize_Inplace disabled, but category-stable depends on that."
-	fi
-	if test "$enable_d3dx9_36_Texture_Align" -gt 1; then
-		abort "Patchset d3dx9_36-Texture_Align disabled, but category-stable depends on that."
-	fi
-	if test "$enable_d3dx9_36_UpdateSkinnedMesh" -gt 1; then
-		abort "Patchset d3dx9_36-UpdateSkinnedMesh disabled, but category-stable depends on that."
-	fi
-	if test "$enable_dbghelp_Debug_Symbols" -gt 1; then
-		abort "Patchset dbghelp-Debug_Symbols disabled, but category-stable depends on that."
-	fi
-	if test "$enable_ddraw_EnumSurfaces" -gt 1; then
-		abort "Patchset ddraw-EnumSurfaces disabled, but category-stable depends on that."
-	fi
-	if test "$enable_fonts_Missing_Fonts" -gt 1; then
-		abort "Patchset fonts-Missing_Fonts disabled, but category-stable depends on that."
-	fi
-	if test "$enable_kernel32_Named_Pipe" -gt 1; then
-		abort "Patchset kernel32-Named_Pipe disabled, but category-stable depends on that."
-	fi
-	if test "$enable_libs_Debug_Channel" -gt 1; then
-		abort "Patchset libs-Debug_Channel disabled, but category-stable depends on that."
-	fi
-	if test "$enable_libs_Unicode_Collation" -gt 1; then
-		abort "Patchset libs-Unicode_Collation disabled, but category-stable depends on that."
-	fi
-	if test "$enable_makedep_PARENTSPEC" -gt 1; then
-		abort "Patchset makedep-PARENTSPEC disabled, but category-stable depends on that."
-	fi
-	if test "$enable_mfplat_MFTRegister" -gt 1; then
-		abort "Patchset mfplat-MFTRegister disabled, but category-stable depends on that."
-	fi
-	if test "$enable_mountmgr_DosDevices" -gt 1; then
-		abort "Patchset mountmgr-DosDevices disabled, but category-stable depends on that."
-	fi
-	if test "$enable_mscoree_CorValidateImage" -gt 1; then
-		abort "Patchset mscoree-CorValidateImage disabled, but category-stable depends on that."
-	fi
-	if test "$enable_ntdll_APC_Start_Process" -gt 1; then
-		abort "Patchset ntdll-APC_Start_Process disabled, but category-stable depends on that."
-	fi
-	if test "$enable_ntdll_CLI_Images" -gt 1; then
-		abort "Patchset ntdll-CLI_Images disabled, but category-stable depends on that."
-	fi
-	if test "$enable_ntdll_DOS_Attributes" -gt 1; then
-		abort "Patchset ntdll-DOS_Attributes disabled, but category-stable depends on that."
-	fi
-	if test "$enable_ntdll_DllRedirects" -gt 1; then
-		abort "Patchset ntdll-DllRedirects disabled, but category-stable depends on that."
-	fi
-	if test "$enable_ntdll_FileFsFullSizeInformation" -gt 1; then
-		abort "Patchset ntdll-FileFsFullSizeInformation disabled, but category-stable depends on that."
-	fi
-	if test "$enable_ntdll_Fix_Alignment" -gt 1; then
-		abort "Patchset ntdll-Fix_Alignment disabled, but category-stable depends on that."
-	fi
-	if test "$enable_ntdll_Heap_FreeLists" -gt 1; then
-		abort "Patchset ntdll-Heap_FreeLists disabled, but category-stable depends on that."
-	fi
-	if test "$enable_ntdll_Pipe_SpecialCharacters" -gt 1; then
-		abort "Patchset ntdll-Pipe_SpecialCharacters disabled, but category-stable depends on that."
-	fi
-	if test "$enable_ntdll_RtlIpStringToAddress_Tests" -gt 1; then
-		abort "Patchset ntdll-RtlIpStringToAddress_Tests disabled, but category-stable depends on that."
-	fi
-	if test "$enable_ntdll_Threading" -gt 1; then
-		abort "Patchset ntdll-Threading disabled, but category-stable depends on that."
-	fi
-	if test "$enable_ntdll_User_Shared_Data" -gt 1; then
-		abort "Patchset ntdll-User_Shared_Data disabled, but category-stable depends on that."
-	fi
-	if test "$enable_ntdll_WriteWatches" -gt 1; then
-		abort "Patchset ntdll-WriteWatches disabled, but category-stable depends on that."
-	fi
-	if test "$enable_opengl32_Revert_Disable_Ext" -gt 1; then
-		abort "Patchset opengl32-Revert_Disable_Ext disabled, but category-stable depends on that."
-	fi
-	if test "$enable_server_ClipCursor" -gt 1; then
-		abort "Patchset server-ClipCursor disabled, but category-stable depends on that."
-	fi
-	if test "$enable_server_CreateProcess_ACLs" -gt 1; then
-		abort "Patchset server-CreateProcess_ACLs disabled, but category-stable depends on that."
-	fi
-	if test "$enable_shell32_RunDLL_CallEntry16" -gt 1; then
-		abort "Patchset shell32-RunDLL_CallEntry16 disabled, but category-stable depends on that."
-	fi
-	if test "$enable_shell32_SHFileOperation_Win9x" -gt 1; then
-		abort "Patchset shell32-SHFileOperation_Win9x disabled, but category-stable depends on that."
-	fi
-	if test "$enable_user32_DrawTextExW" -gt 1; then
-		abort "Patchset user32-DrawTextExW disabled, but category-stable depends on that."
-	fi
-	if test "$enable_wine_inf_Performance" -gt 1; then
-		abort "Patchset wine.inf-Performance disabled, but category-stable depends on that."
-	fi
-	if test "$enable_wineboot_HKEY_DYN_DATA" -gt 1; then
-		abort "Patchset wineboot-HKEY_DYN_DATA disabled, but category-stable depends on that."
-	fi
-	if test "$enable_winecfg_Libraries" -gt 1; then
-		abort "Patchset winecfg-Libraries disabled, but category-stable depends on that."
-	fi
-	if test "$enable_wined3d_Silence_FIXMEs" -gt 1; then
-		abort "Patchset wined3d-Silence_FIXMEs disabled, but category-stable depends on that."
-	fi
-	if test "$enable_winemenubuilder_Desktop_Icon_Path" -gt 1; then
-		abort "Patchset winemenubuilder-Desktop_Icon_Path disabled, but category-stable depends on that."
-	fi
-	if test "$enable_winepulse_PulseAudio_Support" -gt 1; then
-		abort "Patchset winepulse-PulseAudio_Support disabled, but category-stable depends on that."
-	fi
-	if test "$enable_winex11_Window_Style" -gt 1; then
-		abort "Patchset winex11-Window_Style disabled, but category-stable depends on that."
-	fi
-	if test "$enable_winex11_XEMBED" -gt 1; then
-		abort "Patchset winex11-XEMBED disabled, but category-stable depends on that."
-	fi
-	if test "$enable_winex11_wglShareLists" -gt 1; then
-		abort "Patchset winex11-wglShareLists disabled, but category-stable depends on that."
-	fi
-	if test "$enable_wininet_ParseX509EncodedCertificateForListBoxEntry" -gt 1; then
-		abort "Patchset wininet-ParseX509EncodedCertificateForListBoxEntry disabled, but category-stable depends on that."
-	fi
-	if test "$enable_winmm_Delay_Import_Depends" -gt 1; then
-		abort "Patchset winmm-Delay_Import_Depends disabled, but category-stable depends on that."
-	fi
-	if test "$enable_ws2_32_Connect_Time" -gt 1; then
-		abort "Patchset ws2_32-Connect_Time disabled, but category-stable depends on that."
-	fi
-	if test "$enable_ws2_32_WriteWatches" -gt 1; then
-		abort "Patchset ws2_32-WriteWatches disabled, but category-stable depends on that."
-	fi
-	enable_Compiler_Warnings=1
-	enable_Staging=1
-	enable_configure_Absolute_RPATH=1
-	enable_d3d9_Surface_Refcount=1
-	enable_d3dx9_36_D3DXStubs=1
-	enable_d3dx9_36_FindNextValidTechnique=1
-	enable_d3dx9_36_Optimize_Inplace=1
-	enable_d3dx9_36_Texture_Align=1
-	enable_d3dx9_36_UpdateSkinnedMesh=1
-	enable_dbghelp_Debug_Symbols=1
-	enable_ddraw_EnumSurfaces=1
-	enable_fonts_Missing_Fonts=1
-	enable_kernel32_Named_Pipe=1
-	enable_libs_Debug_Channel=1
-	enable_libs_Unicode_Collation=1
-	enable_makedep_PARENTSPEC=1
-	enable_mfplat_MFTRegister=1
-	enable_mountmgr_DosDevices=1
-	enable_mscoree_CorValidateImage=1
-	enable_ntdll_APC_Start_Process=1
-	enable_ntdll_CLI_Images=1
-	enable_ntdll_DOS_Attributes=1
-	enable_ntdll_DllRedirects=1
-	enable_ntdll_FileFsFullSizeInformation=1
-	enable_ntdll_Fix_Alignment=1
-	enable_ntdll_Heap_FreeLists=1
-	enable_ntdll_Pipe_SpecialCharacters=1
-	enable_ntdll_RtlIpStringToAddress_Tests=1
-	enable_ntdll_Threading=1
-	enable_ntdll_User_Shared_Data=1
-	enable_ntdll_WriteWatches=1
-	enable_opengl32_Revert_Disable_Ext=1
-	enable_server_ClipCursor=1
-	enable_server_CreateProcess_ACLs=1
-	enable_shell32_RunDLL_CallEntry16=1
-	enable_shell32_SHFileOperation_Win9x=1
-	enable_user32_DrawTextExW=1
-	enable_wine_inf_Performance=1
-	enable_wineboot_HKEY_DYN_DATA=1
-	enable_winecfg_Libraries=1
-	enable_wined3d_Silence_FIXMEs=1
-	enable_winemenubuilder_Desktop_Icon_Path=1
-	enable_winepulse_PulseAudio_Support=1
-	enable_winex11_Window_Style=1
-	enable_winex11_XEMBED=1
-	enable_winex11_wglShareLists=1
-	enable_wininet_ParseX509EncodedCertificateForListBoxEntry=1
-	enable_winmm_Delay_Import_Depends=1
-	enable_ws2_32_Connect_Time=1
-	enable_ws2_32_WriteWatches=1
-fi
 
 if test "$enable_ws2_32_WSACleanup" -eq 1; then
 	if test "$enable_server_Desktop_Refcount" -gt 1; then

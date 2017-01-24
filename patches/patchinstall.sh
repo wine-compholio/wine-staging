@@ -382,6 +382,7 @@ patch_enable_all ()
 	enable_wbemprox_fill_processor="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppGrayFloat="$1"
+	enable_windowscodecs_32bppPRGBA="$1"
 	enable_windowscodecs_GIF_Encoder="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
 	enable_windowscodecs_IWICPalette_InitializeFromBitmap="$1"
@@ -1361,6 +1362,9 @@ patch_enable ()
 		windowscodecs-32bppGrayFloat)
 			enable_windowscodecs_32bppGrayFloat="$2"
 			;;
+		windowscodecs-32bppPRGBA)
+			enable_windowscodecs_32bppPRGBA="$2"
+			;;
 		windowscodecs-GIF_Encoder)
 			enable_windowscodecs_GIF_Encoder="$2"
 			;;
@@ -2029,6 +2033,13 @@ if test "$enable_wineboot_ProxySettings" -eq 1; then
 	fi
 	enable_wineboot_DriveSerial=1
 	enable_wineboot_drivers_etc_Stubs=1
+fi
+
+if test "$enable_windowscodecs_32bppPRGBA" -eq 1; then
+	if test "$enable_windowscodecs_TIFF_Support" -gt 1; then
+		abort "Patchset windowscodecs-TIFF_Support disabled, but windowscodecs-32bppPRGBA depends on that."
+	fi
+	enable_windowscodecs_TIFF_Support=1
 fi
 
 if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
@@ -7968,23 +7979,6 @@ if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset windowscodecs-IMILBitmapSource
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34764] Improve compatibility of IMILBitmapSource interface
-# |
-# | Modified files:
-# |   *	dlls/windowscodecs/bitmap.c, dlls/windowscodecs/scaler.c, dlls/windowscodecs/wincodecs_private.h
-# |
-if test "$enable_windowscodecs_IMILBitmapSource" -eq 1; then
-	patch_apply windowscodecs-IMILBitmapSource/0001-windowscodecs-Improve-compatibility-of-IMILBitmapSou.patch
-	patch_apply windowscodecs-IMILBitmapSource/0002-windowscodecs-Add-support-for-IMILBitmapScaler-inter.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Improve compatibility of IMILBitmapSource interface.", 3 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for IMILBitmapScaler interface.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset windowscodecs-IWICPalette_InitializeFromBitmap
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -8056,6 +8050,39 @@ if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Tolerate partial reads in the IFD metadata loader.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Add support for more image color formats.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus/tests: Add some tests for loading TIFF images in various color formats.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windowscodecs-32bppPRGBA
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	gdiplus-Grayscale_PNG, windowscodecs-32bppGrayFloat, windowscodecs-Palette_Images, windowscodecs-GIF_Encoder,
+# | 	windowscodecs-IWICPalette_InitializeFromBitmap, windowscodecs-TIFF_Support
+# |
+# | Modified files:
+# |   *	dlls/windowscodecs/converter.c, dlls/windowscodecs/info.c, dlls/windowscodecs/regsvr.c
+# |
+if test "$enable_windowscodecs_32bppPRGBA" -eq 1; then
+	patch_apply windowscodecs-32bppPRGBA/0001-windowscodecs-Add-support-for-32bppRGB-32bppRGBA-and.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 32bppRGB, 32bppRGBA and 32bppPRGBA to format converter.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windowscodecs-IMILBitmapSource
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34764] Improve compatibility of IMILBitmapSource interface
+# |
+# | Modified files:
+# |   *	dlls/windowscodecs/bitmap.c, dlls/windowscodecs/scaler.c, dlls/windowscodecs/wincodecs_private.h
+# |
+if test "$enable_windowscodecs_IMILBitmapSource" -eq 1; then
+	patch_apply windowscodecs-IMILBitmapSource/0001-windowscodecs-Improve-compatibility-of-IMILBitmapSou.patch
+	patch_apply windowscodecs-IMILBitmapSource/0002-windowscodecs-Add-support-for-IMILBitmapScaler-inter.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Improve compatibility of IMILBitmapSource interface.", 3 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for IMILBitmapScaler interface.", 2 },';
 	) >> "$patchlist"
 fi
 

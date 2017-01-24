@@ -3127,10 +3127,26 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 	patch_apply d3d11-Deferred_Context/0001-d3d11-Add-stub-deferred-rendering-context.patch
 	patch_apply d3d11-Deferred_Context/0002-wined3d-Add-wined3d_resource_map_info-function.patch
 	patch_apply d3d11-Deferred_Context/0003-d3d11-Initial-implementation-for-deferred-contexts.patch
+	patch_apply d3d11-Deferred_Context/0004-d3d11-Implement-CSSetShader-for-deferred-contexts.patch
+	patch_apply d3d11-Deferred_Context/0005-d3d11-Implement-CSSetConstantBuffers-for-deferred-co.patch
+	patch_apply d3d11-Deferred_Context/0006-d3d11-Implement-Dispatch-for-deferred-contexts.patch
+	patch_apply d3d11-Deferred_Context/0007-d3d11-Implement-CSSetUnorderedAccessViews-for-deferr.patch
+	patch_apply d3d11-Deferred_Context/0008-d3d11-Implement-ClearRenderTargetView-for-deferred-c.patch
+	patch_apply d3d11-Deferred_Context/0009-d3d11-Implement-Draw-for-deferred-contexts.patch
+	patch_apply d3d11-Deferred_Context/0010-d3d11-Implement-ClearDepthStencilView-for-deferred-c.patch
+	patch_apply d3d11-Deferred_Context/0011-d3d11-Simplify-d3d11_deferred_context_IASetVertexBuf.patch
 	(
 		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Add stub deferred rendering context.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add wined3d_resource_map_info function.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Initial implementation for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement CSSetShader for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement CSSetConstantBuffers for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement Dispatch for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement CSSetUnorderedAccessViews for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ClearRenderTargetView for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement Draw for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ClearDepthStencilView for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "d3d11: Simplify d3d11_deferred_context_IASetVertexBuffers.", 1 },';
 	) >> "$patchlist"
 fi
 

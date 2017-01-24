@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "199e30663efadfb1539f240e6fa29204440e9974"
+	echo "d6b89a0ffca8fa1d4a0b8bfc1fa7a72381dfe918"
 }
 
 # Show version information
@@ -3131,6 +3131,9 @@ if test "$enable_crypt32_CryptUnprotectMemory" -eq 1; then
 fi
 
 # Patchset crypt32-SHA_OIDs
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#41356] Recognize sha256/384/512 KEY OIDs
 # |
 # | Modified files:
 # |   *	dlls/crypt32/oid.c, include/wincrypt.h

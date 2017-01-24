@@ -1,0 +1,54 @@
+From a3c36a9407542059fcab059b071a9cff16840ed9 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Tue, 24 Jan 2017 19:18:13 +0800
+Subject: kernel32: Replace Peb->BeingDebugged check by
+ CheckRemoteDebuggerPresent().
+
+misctool.dll from AmiBroker on PROCESS_ATTACH event intentionally sets
+teb->peb->BeingDebugged to random value returned by rdtsc instruction,
+but that doesn't generate exceptions or debug events under Windows.
+---
+ dlls/kernel32/process.c | 6 +++++-
+ include/winbase.h       | 1 +
+ 2 files changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
+index 21302407b76..6d0fc74cdf4 100644
+--- a/dlls/kernel32/process.c
++++ b/dlls/kernel32/process.c
+@@ -1087,6 +1087,7 @@ static DWORD WINAPI start_process( PEB *peb )
+ {
+     IMAGE_NT_HEADERS *nt;
+     LPTHREAD_START_ROUTINE entry;
++    BOOL being_debugged;
+ 
+     nt = RtlImageNtHeader( peb->ImageBaseAddress );
+     entry = (LPTHREAD_START_ROUTINE)((char *)peb->ImageBaseAddress +
+@@ -1103,8 +1104,11 @@ static DWORD WINAPI start_process( PEB *peb )
+         DPRINTF( "%04x:Starting process %s (entryproc=%p)\n", GetCurrentThreadId(),
+                  debugstr_w(peb->ProcessParameters->ImagePathName.Buffer), entry );
+ 
++    if (!CheckRemoteDebuggerPresent( GetCurrentProcess(), &being_debugged ))
++        being_debugged = FALSE;
++
+     SetLastError( 0 );  /* clear error code */
+-    if (peb->BeingDebugged) DbgBreakPoint();
++    if (being_debugged) DbgBreakPoint();
+     return call_process_entry( peb, entry );
+ }
+ 
+diff --git a/include/winbase.h b/include/winbase.h
+index eff59724eb0..0a2a3a334fd 100644
+--- a/include/winbase.h
++++ b/include/winbase.h
+@@ -1737,6 +1737,7 @@ WINBASEAPI BOOL        WINAPI CancelTimerQueueTimer(HANDLE,HANDLE);
+ WINBASEAPI BOOL        WINAPI CancelWaitableTimer(HANDLE);
+ WINBASEAPI BOOL        WINAPI CheckNameLegalDOS8Dot3A(const char*,char*,DWORD,BOOL*,BOOL*);
+ WINBASEAPI BOOL        WINAPI CheckNameLegalDOS8Dot3W(const WCHAR*, char*,DWORD,BOOL*,BOOL*);
++WINBASEAPI BOOL        WINAPI CheckRemoteDebuggerPresent(HANDLE,PBOOL);
+ WINBASEAPI BOOL        WINAPI ChangeTimerQueueTimer(HANDLE,HANDLE,ULONG,ULONG);
+ WINADVAPI  BOOL        WINAPI CheckTokenMembership(HANDLE,PSID,PBOOL);
+ WINBASEAPI BOOL        WINAPI ClearCommBreak(HANDLE);
+-- 
+2.11.0
+

@@ -427,6 +427,7 @@ patch_enable_all ()
 	enable_winex11_DefaultDisplayFrequency="$1"
 	enable_winex11_MWM_Decorations="$1"
 	enable_winex11_SC_KEYMENU="$1"
+	enable_winex11_UpdateLayeredWindow="$1"
 	enable_winex11_WM_WINDOWPOSCHANGING="$1"
 	enable_winex11_Window_Groups="$1"
 	enable_winex11_Window_Style="$1"
@@ -1498,6 +1499,9 @@ patch_enable ()
 			;;
 		winex11-SC_KEYMENU)
 			enable_winex11_SC_KEYMENU="$2"
+			;;
+		winex11-UpdateLayeredWindow)
+			enable_winex11_UpdateLayeredWindow="$2"
 			;;
 		winex11-WM_WINDOWPOSCHANGING)
 			enable_winex11_WM_WINDOWPOSCHANGING="$2"
@@ -8809,6 +8813,21 @@ if test "$enable_winex11_SC_KEYMENU" -eq 1; then
 	patch_apply winex11-SC_KEYMENU/0001-winex11-Send-SC_KEYMENU-on-managed-windows.patch
 	(
 		printf '%s\n' '+    { "Alex Henrie", "winex11: Send SC_KEYMENU on managed windows.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11-UpdateLayeredWindow
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33943] Fix alpha blending in X11DRV_UpdateLayeredWindow
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/window.c
+# |
+if test "$enable_winex11_UpdateLayeredWindow" -eq 1; then
+	patch_apply winex11-UpdateLayeredWindow/0001-winex11-Fix-alpha-blending-in-X11DRV_UpdateLayeredWi.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Fix alpha blending in X11DRV_UpdateLayeredWindow.", 1 },';
 	) >> "$patchlist"
 fi
 

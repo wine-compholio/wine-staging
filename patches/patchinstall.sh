@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "088968f242a7efd57cd6d07602443157c40be6ac"
+	echo "76644a7c26f2c2b3a5968665c349b45bdb294387"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 2.0"
+	echo "Wine Staging 2.1 (unreleased)"
 	echo "Copyright (C) 2014-2017 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -116,7 +116,6 @@ patch_enable_all ()
 	enable_d3d11_ResolveSubresource="$1"
 	enable_d3d8_ValidateShader="$1"
 	enable_d3d9_DesktopWindow="$1"
-	enable_d3d9_DrawIndexedPrimitiveUP="$1"
 	enable_d3d9_Surface_Refcount="$1"
 	enable_d3d9_Tests="$1"
 	enable_d3dx11_D3DX11CreateShaderResourceViewFromMemory="$1"
@@ -143,7 +142,6 @@ patch_enable_all ()
 	enable_ddraw_Fix_Typos="$1"
 	enable_ddraw_FlipToGDISurface="$1"
 	enable_ddraw_IDirect3DTexture2_Load="$1"
-	enable_ddraw_Relax_dwSize_Validation="$1"
 	enable_ddraw_Rendering_Targets="$1"
 	enable_ddraw_Write_Vtable="$1"
 	enable_dinput_Initialize="$1"
@@ -412,7 +410,6 @@ patch_enable_all ()
 	enable_wined3d_GTX_560M="$1"
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_QUERY_Stubs="$1"
-	enable_wined3d_Render_Target="$1"
 	enable_wined3d_Revert_Pixel_Center_Offset="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
@@ -567,9 +564,6 @@ patch_enable ()
 		d3d9-DesktopWindow)
 			enable_d3d9_DesktopWindow="$2"
 			;;
-		d3d9-DrawIndexedPrimitiveUP)
-			enable_d3d9_DrawIndexedPrimitiveUP="$2"
-			;;
 		d3d9-Surface_Refcount)
 			enable_d3d9_Surface_Refcount="$2"
 			;;
@@ -647,9 +641,6 @@ patch_enable ()
 			;;
 		ddraw-IDirect3DTexture2_Load)
 			enable_ddraw_IDirect3DTexture2_Load="$2"
-			;;
-		ddraw-Relax_dwSize_Validation)
-			enable_ddraw_Relax_dwSize_Validation="$2"
 			;;
 		ddraw-Rendering_Targets)
 			enable_ddraw_Rendering_Targets="$2"
@@ -1455,9 +1446,6 @@ patch_enable ()
 		wined3d-QUERY_Stubs)
 			enable_wined3d_QUERY_Stubs="$2"
 			;;
-		wined3d-Render_Target)
-			enable_wined3d_Render_Target="$2"
-			;;
 		wined3d-Revert_Pixel_Center_Offset)
 			enable_wined3d_Revert_Pixel_Center_Offset="$2"
 			;;
@@ -2008,9 +1996,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_wined3d_QUERY_Stubs" -gt 1; then
 		abort "Patchset wined3d-QUERY_Stubs disabled, but wined3d-CSMT_Helper depends on that."
 	fi
-	if test "$enable_wined3d_Render_Target" -gt 1; then
-		abort "Patchset wined3d-Render_Target disabled, but wined3d-CSMT_Helper depends on that."
-	fi
 	if test "$enable_wined3d_Revert_Pixel_Center_Offset" -gt 1; then
 		abort "Patchset wined3d-Revert_Pixel_Center_Offset disabled, but wined3d-CSMT_Helper depends on that."
 	fi
@@ -2024,7 +2009,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	enable_wined3d_Accounting=1
 	enable_wined3d_DXTn=1
 	enable_wined3d_QUERY_Stubs=1
-	enable_wined3d_Render_Target=1
 	enable_wined3d_Revert_Pixel_Center_Offset=1
 	enable_wined3d_Silence_FIXMEs=1
 fi
@@ -3332,27 +3316,6 @@ if test "$enable_d3d9_DesktopWindow" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset d3d9-DrawIndexedPrimitiveUP
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35993] Fix DrawIndexedPrimitiveUP with non-zero min_vertex_idx
-# |
-# | Modified files:
-# |   *	dlls/d3d8/device.c, dlls/d3d8/tests/visual.c, dlls/d3d9/device.c, dlls/d3d9/tests/visual.c
-# |
-if test "$enable_d3d9_DrawIndexedPrimitiveUP" -eq 1; then
-	patch_apply d3d9-DrawIndexedPrimitiveUP/0001-d3d9-Fix-DrawIndexedPrimitiveUP-with-non-zero-min_ve.patch
-	patch_apply d3d9-DrawIndexedPrimitiveUP/0002-d3d8-Fix-DrawIndexedPrimitiveUP-with-non-zero-min_ve.patch
-	patch_apply d3d9-DrawIndexedPrimitiveUP/0003-d3d9-tests-Add-a-test-for-DrawIndexedPrimitiveUP.patch
-	patch_apply d3d9-DrawIndexedPrimitiveUP/0004-d3d8-tests-Add-a-test-for-DrawIndexedPrimitiveUP.patch
-	(
-		printf '%s\n' '+    { "Matteo Bruni", "d3d9: Fix DrawIndexedPrimitiveUP with non-zero min_vertex_idx.", 1 },';
-		printf '%s\n' '+    { "Matteo Bruni", "d3d8: Fix DrawIndexedPrimitiveUP with non-zero min_vertex_idx.", 1 },';
-		printf '%s\n' '+    { "Matteo Bruni", "d3d9/tests: Add a test for DrawIndexedPrimitiveUP().", 1 },';
-		printf '%s\n' '+    { "Matteo Bruni", "d3d8/tests: Add a test for DrawIndexedPrimitiveUP().", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset d3d9-Surface_Refcount
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3804,21 +3767,6 @@ if test "$enable_ddraw_IDirect3DTexture2_Load" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "ddraw: Allow size and format conversions in IDirect3DTexture2::Load.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ddraw/tests: Add more tests for IDirect3DTexture2::Load.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ddraw-Relax_dwSize_Validation
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#14897] Relax dwSize validation ddraw_surface*_Lock
-# |
-# | Modified files:
-# |   *	dlls/ddraw/ddraw_private.h, dlls/ddraw/surface.c, dlls/ddraw/tests/ddraw7.c
-# |
-if test "$enable_ddraw_Relax_dwSize_Validation" -eq 1; then
-	patch_apply ddraw-Relax_dwSize_Validation/0001-ddraw-Relax-dwSize-validation-in-ddraw_surface-_Lock.patch
-	(
-		printf '%s\n' '+    { "Józef Kucia", "ddraw: Relax \"dwSize\" validation in ddraw_surface*_Lock().", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8406,20 +8354,6 @@ if test "$enable_wined3d_QUERY_Stubs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Render_Target
-# |
-# | Modified files:
-# |   *	dlls/wined3d/context.c, dlls/wined3d/state.c
-# |
-if test "$enable_wined3d_Render_Target" -eq 1; then
-	patch_apply wined3d-Render_Target/0001-wined3d-Handle-no-render-target-view-case-when-setti.patch
-	patch_apply wined3d-Render_Target/0002-wined3d-Set-draw-buffer-mask-to-zero-GL_NONE-when-no.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Handle no render target view case when setting scissors.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Set draw buffer mask to zero (GL_NONE) when no render target view is attached.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-Revert_Pixel_Center_Offset
 # |
 # | Modified files:
@@ -8437,7 +8371,7 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	d3d11-Deferred_Context, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-
 # | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-1DTextures, wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs,
-# | 	wined3d-Render_Target, wined3d-Revert_Pixel_Center_Offset, wined3d-Silence_FIXMEs
+# | 	wined3d-Revert_Pixel_Center_Offset, wined3d-Silence_FIXMEs
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
@@ -8504,7 +8438,7 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	d3d11-Deferred_Context, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-
 # | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-1DTextures, wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs,
-# | 	wined3d-Render_Target, wined3d-Revert_Pixel_Center_Offset, wined3d-Silence_FIXMEs, wined3d-CSMT_Helper
+# | 	wined3d-Revert_Pixel_Center_Offset, wined3d-Silence_FIXMEs, wined3d-CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance

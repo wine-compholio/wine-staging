@@ -5134,7 +5134,7 @@ fi
 if test "$enable_msvideo_dll16_DrawDibProfileDisplay" -eq 1; then
 	patch_apply msvideo.dll16-DrawDibProfileDisplay/0001-msvideo.dll16-Implement-DrawDibProfileDisplay.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "msvideo.dll16: Implement DrawDibProfileDisplay.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "msvideo.dll16: Implement DrawDibProfileDisplay.", 2 },';
 	) >> "$patchlist"
 fi
 

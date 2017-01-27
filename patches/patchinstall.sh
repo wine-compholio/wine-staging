@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "96a48efeeade7359c8c84a8c3a0a9768fb2a6194"
+	echo "152b24015308286441399f9fc2be57213c762c7a"
 }
 
 # Show version information
@@ -214,9 +214,7 @@ patch_enable_all ()
 	enable_msidb_Implementation="$1"
 	enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback="$1"
 	enable_msvcrt_Math_Precision="$1"
-	enable_msvcrt_NAN="$1"
 	enable_msvfw32_ICGetDisplayFormat="$1"
-	enable_msvideo_dll16_DrawDibProfileDisplay="$1"
 	enable_msvideo16_HasThunk="$1"
 	enable_msxml3_AllowXsltScript="$1"
 	enable_ntdll_APC_Performance="$1"
@@ -377,7 +375,6 @@ patch_enable_all ()
 	enable_vulkan_Vulkan_Implementation="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_wbemprox_Printer="$1"
-	enable_wbemprox_fill_processor="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppGrayFloat="$1"
 	enable_windowscodecs_32bppPRGBA="$1"
@@ -855,14 +852,8 @@ patch_enable ()
 		msvcrt-Math_Precision)
 			enable_msvcrt_Math_Precision="$2"
 			;;
-		msvcrt-NAN)
-			enable_msvcrt_NAN="$2"
-			;;
 		msvfw32-ICGetDisplayFormat)
 			enable_msvfw32_ICGetDisplayFormat="$2"
-			;;
-		msvideo.dll16-DrawDibProfileDisplay)
-			enable_msvideo_dll16_DrawDibProfileDisplay="$2"
 			;;
 		msvideo16-HasThunk)
 			enable_msvideo16_HasThunk="$2"
@@ -1343,9 +1334,6 @@ patch_enable ()
 			;;
 		wbemprox-Printer)
 			enable_wbemprox_Printer="$2"
-			;;
-		wbemprox-fill_processor)
-			enable_wbemprox_fill_processor="$2"
 			;;
 		widl-SLTG_Typelib_Support)
 			enable_widl_SLTG_Typelib_Support="$2"
@@ -2053,13 +2041,6 @@ if test "$enable_windowscodecs_Palette_Images" -eq 1; then
 	fi
 	enable_gdiplus_Grayscale_PNG=1
 	enable_windowscodecs_32bppGrayFloat=1
-fi
-
-if test "$enable_wbemprox_Printer" -eq 1; then
-	if test "$enable_wbemprox_fill_processor" -gt 1; then
-		abort "Patchset wbemprox-fill_processor disabled, but wbemprox-Printer depends on that."
-	fi
-	enable_wbemprox_fill_processor=1
 fi
 
 if test "$enable_uxtheme_GTK_Theming" -eq 1; then
@@ -5062,19 +5043,6 @@ if test "$enable_msvcrt_Math_Precision" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset msvcrt-NAN
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-crt-math-l1-1-0/api-ms-win-crt-math-l1-1-0.spec, dlls/msvcr120/msvcr120.spec,
-# | 	dlls/msvcr120_app/msvcr120_app.spec, dlls/msvcrt/math.c, dlls/ucrtbase/ucrtbase.spec
-# |
-if test "$enable_msvcrt_NAN" -eq 1; then
-	patch_apply msvcrt-NAN/0001-msvcrt-Implement-nan.patch
-	(
-		printf '%s\n' '+    { "Daniel Lehman", "msvcrt: Implement nan.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset msvfw32-ICGetDisplayFormat
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5101,21 +5069,6 @@ if test "$enable_msvfw32_ICGetDisplayFormat" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "iccvid: Fix calculation of stride and size.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "msvidc32: Add support for converting 16 bit depth to 24 bit.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "msvidc32: Fix calculation of stride and size.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset msvideo.dll16-DrawDibProfileDisplay
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42022] Implement DrawDibProfileDisplay in msvideo.dll16
-# |
-# | Modified files:
-# |   *	dlls/msvideo.dll16/msvideo.dll16.spec, dlls/msvideo.dll16/msvideo16.c
-# |
-if test "$enable_msvideo_dll16_DrawDibProfileDisplay" -eq 1; then
-	patch_apply msvideo.dll16-DrawDibProfileDisplay/0001-msvideo.dll16-Implement-DrawDibProfileDisplay.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "msvideo.dll16: Implement DrawDibProfileDisplay.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -7773,25 +7726,7 @@ if test "$enable_wbemdisp_ISWbemSecurity" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wbemprox-fill_processor
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40392] Fix row count in fill_processor and fill_printer function
-# |
-# | Modified files:
-# |   *	dlls/wbemprox/builtin.c
-# |
-if test "$enable_wbemprox_fill_processor" -eq 1; then
-	patch_apply wbemprox-fill_processor/0001-wbemprox-Only-include-matching-rows-in-the-table-row.patch
-	(
-		printf '%s\n' '+    { "Hans Leidekker", "wbemprox: Only include matching rows in the table row count.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wbemprox-Printer
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	wbemprox-fill_processor
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#40539] Provide DeviceID, Location and PortName for printers

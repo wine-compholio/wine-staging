@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "152b24015308286441399f9fc2be57213c762c7a"
+	echo "2dd0fb880c005cd5660928d1646a117407cec238"
 }
 
 # Show version information
@@ -92,7 +92,6 @@ patch_enable_all ()
 	enable_advapi32_SetSecurityInfo="$1"
 	enable_advapi32_WinBuiltinAnyPackageSid="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
-	enable_avifil32_AVIFileGetStream="$1"
 	enable_avifil32_AVIFile_Proxies="$1"
 	enable_avifil32_IGetFrame_fnSetFormat="$1"
 	enable_avifile_dll16_AVIStreamGetFrame="$1"
@@ -433,7 +432,6 @@ patch_enable_all ()
 	enable_wininet_Internet_Settings="$1"
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
 	enable_winmm_Delay_Import_Depends="$1"
-	enable_winmm_PlaySoundA="$1"
 	enable_winmm_mciSendCommandA="$1"
 	enable_wintrust_WinVerifyTrust="$1"
 	enable_wpcap_Dynamic_Linking="$1"
@@ -485,9 +483,6 @@ patch_enable ()
 			;;
 		api-ms-win-Stub_DLLs)
 			enable_api_ms_win_Stub_DLLs="$2"
-			;;
-		avifil32-AVIFileGetStream)
-			enable_avifil32_AVIFileGetStream="$2"
 			;;
 		avifil32-AVIFile_Proxies)
 			enable_avifil32_AVIFile_Proxies="$2"
@@ -1508,9 +1503,6 @@ patch_enable ()
 			;;
 		winmm-Delay_Import_Depends)
 			enable_winmm_Delay_Import_Depends="$2"
-			;;
-		winmm-PlaySoundA)
-			enable_winmm_PlaySoundA="$2"
 			;;
 		winmm-mciSendCommandA)
 			enable_winmm_mciSendCommandA="$2"
@@ -2788,21 +2780,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "feclient: Add stub dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "uiautomationcore: Add dll and stub some functions.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "uiautomationcore: Add stub for UiaClientsAreListening.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset avifil32-AVIFileGetStream
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#41579] AVIFileGetStream should set stream to NULL in case of an error
-# |
-# | Modified files:
-# |   *	dlls/avifil32/avifile.c, dlls/avifil32/tests/api.c
-# |
-if test "$enable_avifil32_AVIFileGetStream" -eq 1; then
-	patch_apply avifil32-AVIFileGetStream/0001-avifil32-AVIFileGetStream-should-set-stream-to-NULL-.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "avifil32: AVIFileGetStream should set stream to NULL in case of an error.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7768,7 +7745,6 @@ fi
 # |
 if test "$enable_windowscodecs_Palette_Images" -eq 1; then
 	patch_apply windowscodecs-Palette_Images/0001-windowscodecs-Implement-IWICBitmapDecoder-CopyPalett.patch
-	patch_apply windowscodecs-Palette_Images/0002-windowscodecs-Implement-IWICBitmapFrameEncode-SetPal.patch
 	patch_apply windowscodecs-Palette_Images/0003-windowscodecs-Fix-IWICBitmapEncoder-SetPalette-for-a.patch
 	patch_apply windowscodecs-Palette_Images/0004-windowscodecs-Decode-PNG-images-with-a-tRNS-chunk-in.patch
 	patch_apply windowscodecs-Palette_Images/0005-windowscodecs-Add-support-for-palette-image-formats-.patch
@@ -7791,7 +7767,6 @@ if test "$enable_windowscodecs_Palette_Images" -eq 1; then
 	patch_apply windowscodecs-Palette_Images/0022-windowscodecs-PNG-decoder-should-use-indexed-formats.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapDecoder::CopyPalette in PNG decoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapFrameEncode::SetPalette in PNG encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapEncoder::SetPalette for a not initialized case in PNG encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Decode PNG images with a tRNS chunk in their native formats.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for palette image formats to PNG encoder.", 1 },';
@@ -8708,21 +8683,6 @@ if test "$enable_winmm_Delay_Import_Depends" -eq 1; then
 	patch_apply winmm-Delay_Import_Depends/0001-winmm-Delay-import-ole32-msacm32-to-workaround-bug-w.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "winmm: Delay import ole32 msacm32 to workaround bug when loading multiple winmm versions.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winmm-PlaySoundA
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42257] Fix ordinal number of winmm.PlaySoundA
-# |
-# | Modified files:
-# |   *	dlls/winmm/winmm.spec
-# |
-if test "$enable_winmm_PlaySoundA" -eq 1; then
-	patch_apply winmm-PlaySoundA/0001-winmm-Fix-the-ordinal-number-of-PlaySoundA.patch
-	(
-		printf '%s\n' '+    { "Bruno Jesus", "winmm: Fix the ordinal number of PlaySoundA.", 1 },';
 	) >> "$patchlist"
 fi
 

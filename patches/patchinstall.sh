@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "2dd0fb880c005cd5660928d1646a117407cec238"
+	echo "36bb9d905ae10713bcd197958fb71aa86930a505"
 }
 
 # Show version information
@@ -215,7 +215,6 @@ patch_enable_all ()
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvfw32_ICGetDisplayFormat="$1"
 	enable_msvideo16_HasThunk="$1"
-	enable_msxml3_AllowXsltScript="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_APC_Start_Process="$1"
 	enable_ntdll_Activation_Context="$1"
@@ -852,9 +851,6 @@ patch_enable ()
 			;;
 		msvideo16-HasThunk)
 			enable_msvideo16_HasThunk="$2"
-			;;
-		msxml3-AllowXsltScript)
-			enable_msxml3_AllowXsltScript="$2"
 			;;
 		ntdll-APC_Performance)
 			enable_ntdll_APC_Performance="$2"
@@ -5064,21 +5060,6 @@ if test "$enable_msvideo16_HasThunk" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset msxml3-AllowXsltScript
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#41747] Ignore AllowXsltScript and AllowDocumentFunction properties in msxml
-# |
-# | Modified files:
-# |   *	dlls/msxml3/domdoc.c
-# |
-if test "$enable_msxml3_AllowXsltScript" -eq 1; then
-	patch_apply msxml3-AllowXsltScript/0001-msxml3-Accept-AllowXsltScript-and-AllowDocumentFunct.patch
-	(
-		printf '%s\n' '+    { "Nikolay Sivov", "msxml3: Accept AllowXsltScript and AllowDocumentFunction properties.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-APC_Performance
 # |
 # | Modified files:
@@ -7073,10 +7054,8 @@ fi
 # |   *	dlls/shlwapi/ordinal.c, dlls/shlwapi/tests/ordinal.c
 # |
 if test "$enable_shlwapi_SHMapHandle" -eq 1; then
-	patch_apply shlwapi-SHMapHandle/0001-shlwapi-tests-Test-NULL-handle-duplication-in-SHMapH.patch
 	patch_apply shlwapi-SHMapHandle/0002-shlwapi-SHMapHandle-should-not-set-error-when-NULL-i.patch
 	(
-		printf '%s\n' '+    { "Bruno Jesus", "shlwapi/tests: Test NULL handle duplication in SHMapHandle().", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "shlwapi: SHMapHandle should not set error when NULL is passed as hShared.", 1 },';
 	) >> "$patchlist"
 fi

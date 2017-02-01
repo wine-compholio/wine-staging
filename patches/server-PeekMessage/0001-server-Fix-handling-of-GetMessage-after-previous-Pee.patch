@@ -1,21 +1,24 @@
-From 8150c449a9de5f2dc981b0a469d4f299d6d6eba2 Mon Sep 17 00:00:00 2001
+From 52837e975cb343d78e626bd8a9464db59d27565b Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 15 Mar 2015 01:05:48 +0100
 Subject: server: Fix handling of GetMessage after previous PeekMessage call.
- (v2)
+ (v3)
 
 Changes in v2:
-* accept_hardware_message should also reset ignore_post_msg
+* accept_hardware_message should also reset ignore_post_msg.
+
+Changes in v3:
+* Fix remaining todo_wine.
 ---
- dlls/user32/tests/msg.c | 26 ++++++++++++++++++--------
- server/queue.c          | 34 +++++++++++++++++++++++++++++-----
- 2 files changed, 47 insertions(+), 13 deletions(-)
+ dlls/user32/tests/msg.c | 29 +++++++++++++++++++---------
+ server/queue.c          | 50 +++++++++++++++++++++++++++++++++++++++++--------
+ 2 files changed, 62 insertions(+), 17 deletions(-)
 
 diff --git a/dlls/user32/tests/msg.c b/dlls/user32/tests/msg.c
-index d92fbc7..f7d41c0 100644
+index 45b5222deba..e36d0f8af49 100644
 --- a/dlls/user32/tests/msg.c
 +++ b/dlls/user32/tests/msg.c
-@@ -10601,13 +10601,10 @@ static void test_PeekMessage3(void)
+@@ -11037,13 +11037,10 @@ static void test_PeekMessage3(void)
      ok(msg.message == WM_TIMER, "msg.message = %u instead of WM_TIMER\n", msg.message);
      PostMessageA(hwnd, WM_USER, 0, 0);
      ret = PeekMessageA(&msg, NULL, 0, 0, PM_NOREMOVE);
@@ -29,7 +32,7 @@ index d92fbc7..f7d41c0 100644
      ok(ret && msg.message == WM_USER, "msg.message = %u instead of WM_USER\n", msg.message);
      ret = PeekMessageA(&msg, NULL, 0, 0, 0);
      ok(!ret, "expected PeekMessage to return FALSE, got %u\n", ret);
-@@ -10617,10 +10614,8 @@ static void test_PeekMessage3(void)
+@@ -11053,10 +11050,8 @@ static void test_PeekMessage3(void)
      ok(msg.message == WM_TIMER, "msg.message = %u instead of WM_TIMER\n", msg.message);
      PostMessageA(hwnd, WM_USER, 0, 0);
      ret = PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE);
@@ -40,7 +43,7 @@ index d92fbc7..f7d41c0 100644
      ok(ret && msg.message == WM_USER, "msg.message = %u instead of WM_USER\n", msg.message);
      ret = PeekMessageA(&msg, NULL, 0, 0, 0);
      ok(!ret, "expected PeekMessage to return FALSE, got %u\n", ret);
-@@ -10632,10 +10627,8 @@ static void test_PeekMessage3(void)
+@@ -11068,10 +11063,8 @@ static void test_PeekMessage3(void)
      ok(msg.message == WM_TIMER, "msg.message = %u instead of WM_TIMER\n", msg.message);
      PostMessageA(hwnd, WM_USER, 0, 0);
      ret = GetMessageA(&msg, NULL, 0, 0);
@@ -51,17 +54,18 @@ index d92fbc7..f7d41c0 100644
      ok(ret && msg.message == WM_USER, "msg.message = %u instead of WM_USER\n", msg.message);
      ret = PeekMessageA(&msg, NULL, 0, 0, 0);
      ok(!ret, "expected PeekMessage to return FALSE, got %u\n", ret);
-@@ -10663,11 +10656,28 @@ static void test_PeekMessage3(void)
+@@ -11099,14 +11092,32 @@ static void test_PeekMessage3(void)
      ret = GetMessageA(&msg, NULL, 0, 0);
      ok(ret && msg.message == WM_USER, "msg.message = %u instead of WM_USER\n", msg.message);
      ret = GetMessageA(&msg, NULL, 0, 0);
 -    todo_wine
      ok(ret && msg.message == WM_TIMER, "msg.message = %u instead of WM_TIMER\n", msg.message);
      ret = GetMessageA(&msg, NULL, 0, 0);
-+    ok(ret && msg.message == WM_USER + 1, "msg.message = %u instead of WM_USER + 1\n", msg.message);
-+    ret = PeekMessageA(&msg, NULL, 0, 0, 0);
-+    ok(!ret, "expected PeekMessage to return FALSE, got %u\n", ret);
-+
+-    todo_wine
+     ok(ret && msg.message == WM_USER + 1, "msg.message = %u instead of WM_USER + 1\n", msg.message);
+     ret = PeekMessageA(&msg, NULL, 0, 0, 0);
+     ok(!ret, "expected PeekMessage to return FALSE, got %u\n", ret);
+ 
 +    /* Newer messages are still returned when specifying a message range. */
 +
 +    SetTimer(hwnd, 1, 0, NULL);
@@ -70,19 +74,23 @@ index d92fbc7..f7d41c0 100644
 +    PostMessageA(hwnd, WM_USER + 1, 0, 0);
 +    PostMessageA(hwnd, WM_USER, 0, 0);
 +    ret = PeekMessageA(&msg, NULL, WM_USER, WM_USER, PM_NOREMOVE);
-     todo_wine
 +    ok(ret && msg.message == WM_USER, "msg.message = %u instead of WM_USER\n", msg.message);
++    ret = PeekMessageA(&msg, NULL, WM_USER, WM_USER + 1, PM_NOREMOVE);
++    ok(ret && msg.message == WM_USER + 1, "msg.message = %u instead of WM_USER + 1\n", msg.message);
 +    ret = PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE);
 +    ok(ret && msg.message == WM_TIMER, "msg.message = %u instead of WM_TIMER\n", msg.message);
 +    ret = PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE);
-     ok(ret && msg.message == WM_USER + 1, "msg.message = %u instead of WM_USER + 1\n", msg.message);
++    ok(ret && msg.message == WM_USER + 1, "msg.message = %u instead of WM_USER + 1\n", msg.message);
 +    ret = PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE);
 +    ok(ret && msg.message == WM_USER, "msg.message = %u instead of WM_USER\n", msg.message);
-     ret = PeekMessageA(&msg, NULL, 0, 0, 0);
-     ok(!ret, "expected PeekMessage to return FALSE, got %u\n", ret);
++    ret = PeekMessageA(&msg, NULL, 0, 0, 0);
++    ok(!ret, "expected PeekMessage to return FALSE, got %u\n", ret);
++
+     /* Also works for posted messages, but the situation is a bit different,
+      * because both messages are in the same queue. */
  
 diff --git a/server/queue.c b/server/queue.c
-index 13ca2b2..a46ba24 100644
+index c479b388bd6..fdb09d93238 100644
 --- a/server/queue.c
 +++ b/server/queue.c
 @@ -140,6 +140,7 @@ struct msg_queue
@@ -93,7 +101,7 @@ index 13ca2b2..a46ba24 100644
  };
  
  struct hotkey
-@@ -294,6 +295,7 @@ static struct msg_queue *create_msg_queue( struct thread *thread, struct thread_
+@@ -298,6 +299,7 @@ static struct msg_queue *create_msg_queue( struct thread *thread, struct thread_
          queue->input           = (struct thread_input *)grab_object( input );
          queue->hooks           = NULL;
          queue->last_get_msg    = current_time;
@@ -101,7 +109,7 @@ index 13ca2b2..a46ba24 100644
          list_init( &queue->send_result );
          list_init( &queue->callback_result );
          list_init( &queue->pending_timers );
-@@ -491,13 +493,21 @@ static inline struct msg_queue *get_current_queue(void)
+@@ -495,13 +497,21 @@ static inline struct msg_queue *get_current_queue(void)
  }
  
  /* get a (pseudo-)unique id to tag hardware messages */
@@ -124,15 +132,24 @@ index 13ca2b2..a46ba24 100644
  /* try to merge a message with the last in the list; return 1 if successful */
  static int merge_message( struct thread_input *input, const struct message *msg )
  {
-@@ -786,6 +796,7 @@ static int get_posted_message( struct msg_queue *queue, user_handle_t win,
+@@ -779,7 +789,7 @@ static int match_window( user_handle_t win, user_handle_t msg_win )
+ }
+ 
+ /* retrieve a posted message */
+-static int get_posted_message( struct msg_queue *queue, user_handle_t win,
++static int get_posted_message( struct msg_queue *queue, unsigned int ignore_msg, user_handle_t win,
+                                unsigned int first, unsigned int last, unsigned int flags,
+                                struct get_message_reply *reply )
+ {
+@@ -790,6 +800,7 @@ static int get_posted_message( struct msg_queue *queue, user_handle_t win,
      {
          if (!match_window( win, msg->win )) continue;
          if (!check_msg_filter( msg->msg, first, last )) continue;
-+        if (queue->ignore_post_msg && (int)(msg->unique_id - queue->ignore_post_msg) >= 0) continue;
++        if (ignore_msg && (int)(msg->unique_id - ignore_msg) >= 0) continue;
          goto found; /* found one */
      }
      return 0;
-@@ -1383,6 +1394,7 @@ found:
+@@ -1387,6 +1398,7 @@ found:
      msg->msg       = WM_HOTKEY;
      msg->wparam    = hotkey->id;
      msg->lparam    = ((hotkey->vkey & 0xffff) << 16) | modifiers;
@@ -140,7 +157,7 @@ index 13ca2b2..a46ba24 100644
  
      free( msg->data );
      msg->data      = NULL;
-@@ -1988,7 +2000,7 @@ static int get_hardware_message( struct thread *thread, unsigned int hw_id, user
+@@ -1992,7 +2004,7 @@ static int get_hardware_message( struct thread *thread, unsigned int hw_id, user
              continue;
          }
          /* now we can return it */
@@ -149,7 +166,7 @@ index 13ca2b2..a46ba24 100644
          reply->type   = MSG_HARDWARE;
          reply->win    = win;
          reply->msg    = msg_code;
-@@ -2094,6 +2106,7 @@ void post_message( user_handle_t win, unsigned int message, lparam_t wparam, lpa
+@@ -2098,6 +2110,7 @@ void post_message( user_handle_t win, unsigned int message, lparam_t wparam, lpa
          msg->result    = NULL;
          msg->data      = NULL;
          msg->data_size = 0;
@@ -157,7 +174,7 @@ index 13ca2b2..a46ba24 100644
  
          get_message_defaults( thread->queue, &msg->x, &msg->y, &msg->time );
  
-@@ -2311,6 +2324,7 @@ DECL_HANDLER(send_message)
+@@ -2342,6 +2355,7 @@ DECL_HANDLER(send_message)
              set_queue_bits( recv_queue, QS_SENDMESSAGE );
              break;
          case MSG_POSTED:
@@ -165,7 +182,22 @@ index 13ca2b2..a46ba24 100644
              list_add_tail( &recv_queue->msg_list[POST_MESSAGE], &msg->entry );
              set_queue_bits( recv_queue, QS_POSTMESSAGE|QS_ALLPOSTMESSAGE );
              if (msg->msg == WM_HOTKEY)
-@@ -2440,7 +2454,7 @@ DECL_HANDLER(get_message)
+@@ -2455,12 +2469,12 @@ DECL_HANDLER(get_message)
+ 
+     /* then check for posted messages */
+     if ((filter & QS_POSTMESSAGE) &&
+-        get_posted_message( queue, get_win, req->get_first, req->get_last, req->flags, reply ))
++        get_posted_message( queue, queue->ignore_post_msg, get_win, req->get_first, req->get_last, req->flags, reply ))
+         return;
+ 
+     if ((filter & QS_HOTKEY) && queue->hotkey_count &&
+         req->get_first <= WM_HOTKEY && req->get_last >= WM_HOTKEY &&
+-        get_posted_message( queue, get_win, WM_HOTKEY, WM_HOTKEY, req->flags, reply ))
++        get_posted_message( queue, queue->ignore_post_msg, get_win, WM_HOTKEY, WM_HOTKEY, req->flags, reply ))
+         return;
+ 
+     /* only check for quit messages if not posted messages pending */
+@@ -2471,7 +2485,7 @@ DECL_HANDLER(get_message)
      if ((filter & QS_INPUT) &&
          filter_contains_hw_range( req->get_first, req->get_last ) &&
          get_hardware_message( current, req->hw_id, get_win, req->get_first, req->get_last, req->flags, reply ))
@@ -174,7 +206,7 @@ index 13ca2b2..a46ba24 100644
  
      /* now check for WM_PAINT */
      if ((filter & QS_PAINT) &&
-@@ -2453,7 +2467,7 @@ DECL_HANDLER(get_message)
+@@ -2484,7 +2498,7 @@ DECL_HANDLER(get_message)
          reply->wparam = 0;
          reply->lparam = 0;
          get_message_defaults( queue, &reply->x, &reply->y, &reply->time );
@@ -183,7 +215,7 @@ index 13ca2b2..a46ba24 100644
      }
  
      /* now check for timer */
-@@ -2469,13 +2483,20 @@ DECL_HANDLER(get_message)
+@@ -2500,13 +2514,30 @@ DECL_HANDLER(get_message)
          get_message_defaults( queue, &reply->x, &reply->y, &reply->time );
          if (!(req->flags & PM_NOYIELD) && current->process->idle_event)
              set_event( current->process->idle_event );
@@ -191,6 +223,16 @@ index 13ca2b2..a46ba24 100644
 +        goto found_msg;
      }
  
++    /* if we previously skipped posted messages then check again */
++    if (queue->ignore_post_msg && (filter & QS_POSTMESSAGE) &&
++        get_posted_message( queue, 0, get_win, req->get_first, req->get_last, req->flags, reply ))
++        return;
++
++    if (queue->ignore_post_msg && (filter & QS_HOTKEY) && queue->hotkey_count &&
++        req->get_first <= WM_HOTKEY && req->get_last >= WM_HOTKEY &&
++        get_posted_message( queue, 0, get_win, WM_HOTKEY, WM_HOTKEY, req->flags, reply ))
++        return;
++
      if (get_win == -1 && current->process->idle_event) set_event( current->process->idle_event );
      queue->wake_mask = req->wake_mask;
      queue->changed_mask = req->changed_mask;
@@ -205,7 +247,7 @@ index 13ca2b2..a46ba24 100644
  }
  
  
-@@ -2493,7 +2514,10 @@ DECL_HANDLER(reply_message)
+@@ -2524,7 +2555,10 @@ DECL_HANDLER(reply_message)
  DECL_HANDLER(accept_hardware_message)
  {
      if (current->queue)
@@ -217,5 +259,5 @@ index 13ca2b2..a46ba24 100644
          set_error( STATUS_ACCESS_DENIED );
  }
 -- 
-2.5.0
+2.11.0
 

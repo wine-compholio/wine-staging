@@ -6542,7 +6542,7 @@ fi
 if test "$enable_server_PeekMessage" -eq 1; then
 	patch_apply server-PeekMessage/0001-server-Fix-handling-of-GetMessage-after-previous-Pee.patch
 	(
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Fix handling of GetMessage after previous PeekMessage call.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Fix handling of GetMessage after previous PeekMessage call.", 3 },';
 	) >> "$patchlist"
 fi
 

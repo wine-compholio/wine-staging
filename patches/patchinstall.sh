@@ -367,6 +367,7 @@ patch_enable_all ()
 	enable_user32_lpCreateParams="$1"
 	enable_uxtheme_CloseThemeClass="$1"
 	enable_uxtheme_GTK_Theming="$1"
+	enable_vcomp__vcomp_for_static_init="$1"
 	enable_version_GetFileVersionInfoSizeExW="$1"
 	enable_version_VerFindFileA="$1"
 	enable_version_VerQueryValue="$1"
@@ -1307,6 +1308,9 @@ patch_enable ()
 			;;
 		uxtheme-GTK_Theming)
 			enable_uxtheme_GTK_Theming="$2"
+			;;
+		vcomp-_vcomp_for_static_init)
+			enable_vcomp__vcomp_for_static_init="$2"
 			;;
 		version-GetFileVersionInfoSizeExW)
 			enable_version_GetFileVersionInfoSizeExW="$2"
@@ -7601,6 +7605,18 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "uxthemegtk: Add export for OpenThemeDataEx.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "uxthemegtk: Fix some incorrect error codes.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "uxthemegtk: Validate theme handles before accessing private data.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset vcomp-_vcomp_for_static_init
+# |
+# | Modified files:
+# |   *	dlls/vcomp/main.c, dlls/vcomp/tests/vcomp.c
+# |
+if test "$enable_vcomp__vcomp_for_static_init" -eq 1; then
+	patch_apply vcomp-_vcomp_for_static_init/0001-vcomp-Handle-begin-NULL-in-_vcomp_for_static_init.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "vcomp: Handle begin == NULL in _vcomp_for_static_init.", 1 },';
 	) >> "$patchlist"
 fi
 

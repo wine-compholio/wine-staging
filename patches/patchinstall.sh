@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "36bb9d905ae10713bcd197958fb71aa86930a505"
+	echo "2a28e4d843ec5302f53a3168061fdf2ca30eb076"
 }
 
 # Show version information
@@ -117,7 +117,6 @@ patch_enable_all ()
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Surface_Refcount="$1"
 	enable_d3d9_Tests="$1"
-	enable_d3dx11_D3DX11CreateShaderResourceViewFromMemory="$1"
 	enable_d3dx9_25_ID3DXEffect="$1"
 	enable_d3dx9_36_BumpLuminance="$1"
 	enable_d3dx9_36_CloneEffect="$1"
@@ -558,9 +557,6 @@ patch_enable ()
 			;;
 		d3d9-Tests)
 			enable_d3d9_Tests="$2"
-			;;
-		d3dx11-D3DX11CreateShaderResourceViewFromMemory)
-			enable_d3dx11_D3DX11CreateShaderResourceViewFromMemory="$2"
 			;;
 		d3dx9_25-ID3DXEffect)
 			enable_d3dx9_25_ID3DXEffect="$2"
@@ -3281,22 +3277,6 @@ if test "$enable_d3d9_Tests" -eq 1; then
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "d3d9/tests: Avoid test failures on specific Nvidia graphic cards.", 1 },';
 		printf '%s\n' '+    { "Christian Costa", "d3d9/tests: Avoid crash when surface and texture creation fails.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3dx11-D3DX11CreateShaderResourceViewFromMemory
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42078] Add D3DX11CreateShaderResourceViewFromMemory stub
-# |
-# | Modified files:
-# |   *	dlls/d3dx11_42/Makefile.in, dlls/d3dx11_42/d3dx11_42.spec, dlls/d3dx11_43/Makefile.in, dlls/d3dx11_43/d3dx11_43.spec,
-# | 	dlls/d3dx11_43/shader.c
-# |
-if test "$enable_d3dx11_D3DX11CreateShaderResourceViewFromMemory" -eq 1; then
-	patch_apply d3dx11-D3DX11CreateShaderResourceViewFromMemory/0001-d3dx11-Add-D3DX11CreateShaderResourceViewFromMemory-.patch
-	(
-		printf '%s\n' '+    { "Andrey Gusev", "d3dx11: Add D3DX11CreateShaderResourceViewFromMemory stub.", 1 },';
 	) >> "$patchlist"
 fi
 

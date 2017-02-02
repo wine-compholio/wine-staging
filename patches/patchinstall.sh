@@ -7919,12 +7919,15 @@ fi
 # | 	windowscodecs-IWICPalette_InitializeFromBitmap, windowscodecs-TIFF_Support
 # |
 # | Modified files:
-# |   *	dlls/windowscodecs/converter.c, dlls/windowscodecs/info.c, dlls/windowscodecs/regsvr.c
+# |   *	dlls/windowscodecs/converter.c, dlls/windowscodecs/info.c, dlls/windowscodecs/regsvr.c,
+# | 	dlls/windowscodecs/tests/converter.c
 # |
 if test "$enable_windowscodecs_32bppPRGBA" -eq 1; then
 	patch_apply windowscodecs-32bppPRGBA/0001-windowscodecs-Add-support-for-32bppRGB-32bppRGBA-and.patch
+	patch_apply windowscodecs-32bppPRGBA/0002-windowscodecs-Fix-32bppRGB-to-32bppRGBA-conversion.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 32bppRGB, 32bppRGBA and 32bppPRGBA to format converter.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix 32bppRGB to 32bppRGBA conversion.", 1 },';
 	) >> "$patchlist"
 fi
 

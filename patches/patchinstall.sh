@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "2a28e4d843ec5302f53a3168061fdf2ca30eb076"
+	echo "e08ed6cac218fc09044d06d3cbe2a54f7ec898cf"
 }
 
 # Show version information
@@ -213,7 +213,6 @@ patch_enable_all ()
 	enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvfw32_ICGetDisplayFormat="$1"
-	enable_msvideo16_HasThunk="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_APC_Start_Process="$1"
 	enable_ntdll_Activation_Context="$1"
@@ -845,9 +844,6 @@ patch_enable ()
 			;;
 		msvfw32-ICGetDisplayFormat)
 			enable_msvfw32_ICGetDisplayFormat="$2"
-			;;
-		msvideo16-HasThunk)
-			enable_msvideo16_HasThunk="$2"
 			;;
 		ntdll-APC_Performance)
 			enable_ntdll_APC_Performance="$2"
@@ -5029,21 +5025,6 @@ if test "$enable_msvfw32_ICGetDisplayFormat" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset msvideo16-HasThunk
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#41448] Check if any 16 bit thunks have been allocated before accessing pointer
-# |
-# | Modified files:
-# |   *	dlls/msvideo.dll16/msvideo16.c
-# |
-if test "$enable_msvideo16_HasThunk" -eq 1; then
-	patch_apply msvideo16-HasThunk/0001-msvideo16-Check-if-any-16-bit-thunks-have-been-alloc.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "msvideo16: Check if any 16 bit thunks have been allocated before accessing pointer.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-APC_Performance
 # |
 # | Modified files:
@@ -6408,7 +6389,7 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/advapi32/tests/security.c, include/wine/port.h, server/change.c, server/file.c, server/file.h, server/handle.c,
-# | 	server/object.c, server/object.h, server/token.c
+# | 	server/object.c, server/object.h
 # |
 if test "$enable_server_Stored_ACLs" -eq 1; then
 	patch_apply server-Stored_ACLs/0001-server-Unify-the-storage-of-security-attributes-for-.patch
@@ -6418,7 +6399,6 @@ if test "$enable_server_Stored_ACLs" -eq 1; then
 	patch_apply server-Stored_ACLs/0005-server-Store-file-security-attributes-with-extended-.patch
 	patch_apply server-Stored_ACLs/0006-server-Convert-return-of-file-security-masks-with-ge.patch
 	patch_apply server-Stored_ACLs/0007-server-Retrieve-file-security-attributes-with-extend.patch
-	patch_apply server-Stored_ACLs/0008-server-Fix-handling-of-MAXIMUM_ALLOWED-in-token_acce.patch
 	patch_apply server-Stored_ACLs/0009-server-Give-all-access-rights-when-opening-an-object.patch
 	(
 		printf '%s\n' '+    { "Erich E. Hoover", "server: Unify the storage of security attributes for files and directories.", 7 },';
@@ -6428,7 +6408,6 @@ if test "$enable_server_Stored_ACLs" -eq 1; then
 		printf '%s\n' '+    { "Erich E. Hoover", "server: Store file security attributes with extended file attributes.", 8 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings.", 7 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes.", 7 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Fix handling of MAXIMUM_ALLOWED in token_access_check.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "server: Give all access rights when opening an object with MAXIMUM_ALLOWED.", 1 },';
 	) >> "$patchlist"
 fi

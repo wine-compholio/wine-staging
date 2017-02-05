@@ -181,6 +181,7 @@ patch_enable_all ()
 	enable_kernel32_Debugger="$1"
 	enable_kernel32_FindFirstFile="$1"
 	enable_kernel32_GetCurrentPackageFamilyName="$1"
+	enable_kernel32_GetPackageFullName="$1"
 	enable_kernel32_GetShortPathName="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
 	enable_kernel32_Locale_Definitions="$1"
@@ -751,6 +752,9 @@ patch_enable ()
 			;;
 		kernel32-GetCurrentPackageFamilyName)
 			enable_kernel32_GetCurrentPackageFamilyName="$2"
+			;;
+		kernel32-GetPackageFullName)
+			enable_kernel32_GetPackageFullName="$2"
 			;;
 		kernel32-GetShortPathName)
 			enable_kernel32_GetShortPathName="$2"
@@ -2278,6 +2282,17 @@ if test "$enable_kernel32_Named_Pipe" -eq 1; then
 		abort "Patchset server-Desktop_Refcount disabled, but kernel32-Named_Pipe depends on that."
 	fi
 	enable_server_Desktop_Refcount=1
+fi
+
+if test "$enable_kernel32_GetPackageFullName" -eq 1; then
+	if test "$enable_api_ms_win_Stub_DLLs" -gt 1; then
+		abort "Patchset api-ms-win-Stub_DLLs disabled, but kernel32-GetPackageFullName depends on that."
+	fi
+	if test "$enable_kernel32_GetCurrentPackageFamilyName" -gt 1; then
+		abort "Patchset kernel32-GetCurrentPackageFamilyName disabled, but kernel32-GetPackageFullName depends on that."
+	fi
+	enable_api_ms_win_Stub_DLLs=1
+	enable_kernel32_GetCurrentPackageFamilyName=1
 fi
 
 if test "$enable_kernel32_CopyFileEx" -eq 1; then
@@ -4447,6 +4462,22 @@ if test "$enable_kernel32_FindFirstFile" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "kernel32: Strip invalid characters from mask in FindFirstFileExW.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "kernel32/tests: Add tests for FindFirstFileA with invalid characters.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-GetPackageFullName
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	combase-RoApi, kernel32-GetCurrentPackageFamilyName, kernel32-UmsStubs, api-ms-win-Stub_DLLs
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-appmodel-runtime-l1-1-1/api-ms-win-appmodel-runtime-l1-1-1.spec, dlls/kernel32/kernel32.spec,
+# | 	dlls/kernel32/version.c, dlls/kernelbase/kernelbase.spec
+# |
+if test "$enable_kernel32_GetPackageFullName" -eq 1; then
+	patch_apply kernel32-GetPackageFullName/0001-kernel32-Add-stub-for-GetPackageFullName.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "kernel32: Add stub for GetPackageFullName.", 1 },';
 	) >> "$patchlist"
 fi
 

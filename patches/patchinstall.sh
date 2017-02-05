@@ -4758,12 +4758,17 @@ fi
 # |   *	[#38960] Add support for kernel32.SetFileCompletionNotificationModes
 # |
 # | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/winternl.h, server/fd.c, server/protocol.def
+# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, dlls/ws2_32/tests/sock.c, include/winternl.h,
+# | 	server/fd.c, server/protocol.def
 # |
 if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
 	patch_apply kernel32-SetFileCompletionNotificationModes/0001-ntdll-Implement-FileIoCompletionNotificationInformat.patch
+	patch_apply kernel32-SetFileCompletionNotificationModes/0002-ntdll-Allow-to-query-file-IO-completion-notification.patch
+	patch_apply kernel32-SetFileCompletionNotificationModes/0003-ws2_32-tests-Add-test-for-completion-notification-fl.patch
 	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Implement FileIoCompletionNotificationInformation info class.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Implement FileIoCompletionNotificationInformation info class.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Allow to query file IO completion notification mode.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32/tests: Add test for completion notification flags.", 1 },';
 	) >> "$patchlist"
 fi
 

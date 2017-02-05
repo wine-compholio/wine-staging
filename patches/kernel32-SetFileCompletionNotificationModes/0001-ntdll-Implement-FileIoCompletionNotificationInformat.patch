@@ -1,7 +1,8 @@
-From 542040171f936b56bc90f663cf6118a5998179af Mon Sep 17 00:00:00 2001
+From 624410b16ab0e56d0f87ce4cb2382df29710ba73 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 15 Oct 2016 19:50:46 +0200
 Subject: ntdll: Implement FileIoCompletionNotificationInformation info class.
+ (v2)
 
 FIXME: The tests do not seem to work on all testbots yet.
 FIXME: Could we use the existing wineserver call instead?
@@ -10,12 +11,12 @@ FIXME: Could we use the existing wineserver call instead?
  dlls/ntdll/file.c       |  17 +++++++
  dlls/ntdll/tests/file.c | 130 ++++++++++++++++++++++++++++++++++++++++++++++++
  include/winternl.h      |   8 +++
- server/fd.c             |  21 +++++++-
+ server/fd.c             |  23 ++++++++-
  server/protocol.def     |   8 +++
- 6 files changed, 193 insertions(+), 4 deletions(-)
+ 6 files changed, 195 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/kernel32/file.c b/dlls/kernel32/file.c
-index cc7ead1..5fe2268 100644
+index cc7ead1cdd6..5fe22686bb1 100644
 --- a/dlls/kernel32/file.c
 +++ b/dlls/kernel32/file.c
 @@ -1061,13 +1061,20 @@ BOOL WINAPI SetEndOfFile( HANDLE hFile )
@@ -43,10 +44,10 @@ index cc7ead1..5fe2268 100644
  }
  
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 7fbde50..14715b1 100644
+index c7669ee02fe..5560762b3cd 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -2788,6 +2788,23 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
+@@ -2787,6 +2787,23 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
              io->u.Status = STATUS_INVALID_PARAMETER_3;
          break;
  
@@ -71,7 +72,7 @@ index 7fbde50..14715b1 100644
          io->u.Status = STATUS_INVALID_INFO_CLASS;
          break;
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 586b2c9..dfaf4a5 100644
+index 57d7df9c00a..f9c61e2f25b 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
 @@ -3261,6 +3261,135 @@ static void test_file_all_name_information(void)
@@ -210,7 +211,7 @@ index 586b2c9..dfaf4a5 100644
  static void test_query_volume_information_file(void)
  {
      NTSTATUS status;
-@@ -4214,6 +4343,7 @@ START_TEST(file)
+@@ -4260,6 +4389,7 @@ START_TEST(file)
      test_file_rename_information();
      test_file_link_information();
      test_file_disposition_information();
@@ -219,7 +220,7 @@ index 586b2c9..dfaf4a5 100644
      test_query_attribute_information_file();
  }
 diff --git a/include/winternl.h b/include/winternl.h
-index f35091c..7613d8b 100644
+index f35091cba1a..7613d8b9264 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
 @@ -725,6 +725,14 @@ typedef struct _FILE_ALL_INFORMATION {
@@ -238,7 +239,7 @@ index f35091c..7613d8b 100644
      FileFsVolumeInformation = 1,
      FileFsLabelInformation,
 diff --git a/server/fd.c b/server/fd.c
-index 17b1b66..0d5c7a2 100644
+index 732a5b798f3..8ff5f9801ad 100644
 --- a/server/fd.c
 +++ b/server/fd.c
 @@ -194,6 +194,7 @@ struct fd
@@ -257,7 +258,23 @@ index 17b1b66..0d5c7a2 100644
      list_init( &fd->inode_entry );
      list_init( &fd->locks );
  
-@@ -2556,12 +2558,29 @@ DECL_HANDLER(add_fd_completion)
+@@ -1642,6 +1644,7 @@ struct fd *alloc_pseudo_fd( const struct fd_ops *fd_user_ops, struct object *use
+     fd->write_q    = NULL;
+     fd->wait_q     = NULL;
+     fd->completion = NULL;
++    fd->comp_flags = 0;
+     fd->no_fd_status = STATUS_BAD_DEVICE_TYPE;
+     list_init( &fd->inode_entry );
+     list_init( &fd->locks );
+@@ -2369,6 +2372,7 @@ void fd_copy_completion( struct fd *src, struct fd *dst )
+ {
+     assert( !dst->completion );
+     dst->completion = fd_get_completion( src, &dst->comp_key );
++    dst->comp_flags = src->comp_flags;
+ }
+ 
+ /* flush a file buffers */
+@@ -2539,12 +2543,29 @@ DECL_HANDLER(add_fd_completion)
      struct fd *fd = get_handle_fd_obj( current->process, req->handle, 0 );
      if (fd)
      {
@@ -289,10 +306,10 @@ index 17b1b66..0d5c7a2 100644
  DECL_HANDLER(set_fd_disp_info)
  {
 diff --git a/server/protocol.def b/server/protocol.def
-index 8d86737..229596a 100644
+index 60865a6ffc2..73fef6fade6 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -3678,6 +3678,14 @@ struct handle_info
+@@ -3657,6 +3657,14 @@ struct handle_info
  @END
  
  
@@ -308,5 +325,5 @@ index 8d86737..229596a 100644
  @REQ(set_fd_disp_info)
      obj_handle_t handle;          /* handle to a file or directory */
 -- 
-2.9.0
+2.11.0
 

@@ -233,6 +233,7 @@ patch_enable_all ()
 	enable_ntdll_Heap_FreeLists="$1"
 	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Junction_Points="$1"
+	enable_ntdll_LdrEnumerateLoadedModules="$1"
 	enable_ntdll_Loader_Machine_Type="$1"
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtAllocateUuids="$1"
@@ -906,6 +907,9 @@ patch_enable ()
 			;;
 		ntdll-Junction_Points)
 			enable_ntdll_Junction_Points="$2"
+			;;
+		ntdll-LdrEnumerateLoadedModules)
+			enable_ntdll_LdrEnumerateLoadedModules="$2"
 			;;
 		ntdll-Loader_Machine_Type)
 			enable_ntdll_Loader_Machine_Type="$2"
@@ -2206,6 +2210,13 @@ if test "$enable_ntdll_Purist_Mode" -eq 1; then
 		abort "Patchset ntdll-DllRedirects disabled, but ntdll-Purist_Mode depends on that."
 	fi
 	enable_ntdll_DllRedirects=1
+fi
+
+if test "$enable_ntdll_LdrEnumerateLoadedModules" -eq 1; then
+	if test "$enable_ntdll_RtlQueryPackageIdentity" -gt 1; then
+		abort "Patchset ntdll-RtlQueryPackageIdentity disabled, but ntdll-LdrEnumerateLoadedModules depends on that."
+	fi
+	enable_ntdll_RtlQueryPackageIdentity=1
 fi
 
 if test "$enable_ntdll_Junction_Points" -eq 1; then
@@ -5369,6 +5380,40 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-RtlQueryPackageIdentity
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntdll/tests/Makefile.in, dlls/ntdll/tests/rtl.c, include/shobjidl.idl
+# |
+if test "$enable_ntdll_RtlQueryPackageIdentity" -eq 1; then
+	patch_apply ntdll-RtlQueryPackageIdentity/0001-ntdll-Add-stub-for-RtlQueryPackageIdentity.patch
+	patch_apply ntdll-RtlQueryPackageIdentity/0002-include-Add-IApplicationActivationManager-interface-.patch
+	patch_apply ntdll-RtlQueryPackageIdentity/0003-ntdll-tests-Add-basic-tests-for-RtlQueryPackageIdent.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for RtlQueryPackageIdentity.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "include: Add IApplicationActivationManager interface declaration.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll/tests: Add basic tests for RtlQueryPackageIdentity.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-LdrEnumerateLoadedModules
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-RtlQueryPackageIdentity
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42296] Implement ntdll.LdrEnumerateLoadedModules
+# |
+# | Modified files:
+# |   *	dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/ntdll/tests/rtl.c
+# |
+if test "$enable_ntdll_LdrEnumerateLoadedModules" -eq 1; then
+	patch_apply ntdll-LdrEnumerateLoadedModules/0001-ntdll-Implement-LdrEnumerateLoadedModules.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement LdrEnumerateLoadedModules.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-NtAccessCheck
 # |
 # | Modified files:
@@ -5507,22 +5552,6 @@ if test "$enable_ntdll_RtlIpStringToAddress_Stubs" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Fix parameters for RtlIpv4StringToAddressExW stub.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for RtlIpv6StringToAddressExW.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-RtlQueryPackageIdentity
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntdll/tests/Makefile.in, dlls/ntdll/tests/rtl.c, include/shobjidl.idl
-# |
-if test "$enable_ntdll_RtlQueryPackageIdentity" -eq 1; then
-	patch_apply ntdll-RtlQueryPackageIdentity/0001-ntdll-Add-stub-for-RtlQueryPackageIdentity.patch
-	patch_apply ntdll-RtlQueryPackageIdentity/0002-include-Add-IApplicationActivationManager-interface-.patch
-	patch_apply ntdll-RtlQueryPackageIdentity/0003-ntdll-tests-Add-basic-tests-for-RtlQueryPackageIdent.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for RtlQueryPackageIdentity.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "include: Add IApplicationActivationManager interface declaration.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll/tests: Add basic tests for RtlQueryPackageIdentity.", 1 },';
 	) >> "$patchlist"
 fi
 

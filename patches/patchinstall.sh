@@ -243,6 +243,7 @@ patch_enable_all ()
 	enable_ntdll_NtSetInformationToken="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
+	enable_ntdll_ProcessPriorityClass="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_Purist_Mode="$1"
 	enable_ntdll_RtlCaptureStackBackTrace="$1"
@@ -938,6 +939,9 @@ patch_enable ()
 			;;
 		ntdll-Pipe_SpecialCharacters)
 			enable_ntdll_Pipe_SpecialCharacters="$2"
+			;;
+		ntdll-ProcessPriorityClass)
+			enable_ntdll_ProcessPriorityClass="$2"
 			;;
 		ntdll-ProcessQuotaLimits)
 			enable_ntdll_ProcessQuotaLimits="$2"
@@ -5527,6 +5531,18 @@ if test "$enable_ntdll_Pipe_SpecialCharacters" -eq 1; then
 	patch_apply ntdll-Pipe_SpecialCharacters/0001-ntdll-Allow-special-characters-in-pipe-names.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Allow special characters in pipe names.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-ProcessPriorityClass
+# |
+# | Modified files:
+# |   *	dlls/ntdll/process.c, dlls/ntdll/tests/info.c
+# |
+if test "$enable_ntdll_ProcessPriorityClass" -eq 1; then
+	patch_apply ntdll-ProcessPriorityClass/0001-ntdll-Implement-ProcessPriorityClass-in-NtQueryInfor.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement ProcessPriorityClass in NtQueryInformationProcess.", 1 },';
 	) >> "$patchlist"
 fi
 

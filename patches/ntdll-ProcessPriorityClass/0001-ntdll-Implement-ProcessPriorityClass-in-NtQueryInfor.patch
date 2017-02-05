@@ -1,0 +1,116 @@
+From 04a7eb12b90c7361e5c71b7bea7e6ad53442c45d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 2 Feb 2017 22:05:37 +0100
+Subject: ntdll: Implement ProcessPriorityClass in NtQueryInformationProcess.
+
+---
+ dlls/ntdll/process.c    | 29 ++++++++++++++++++++++++++++-
+ dlls/ntdll/tests/info.c | 38 ++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 66 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/process.c b/dlls/ntdll/process.c
+index 0cdd1e09b50..a14b6707167 100644
+--- a/dlls/ntdll/process.c
++++ b/dlls/ntdll/process.c
+@@ -173,7 +173,6 @@ NTSTATUS WINAPI NtQueryInformationProcess(
+     UNIMPLEMENTED_INFO_CLASS(ProcessWorkingSetWatch);
+     UNIMPLEMENTED_INFO_CLASS(ProcessUserModeIOPL);
+     UNIMPLEMENTED_INFO_CLASS(ProcessEnableAlignmentFaultFixup);
+-    UNIMPLEMENTED_INFO_CLASS(ProcessPriorityClass);
+     UNIMPLEMENTED_INFO_CLASS(ProcessWx86Information);
+     UNIMPLEMENTED_INFO_CLASS(ProcessPriorityBoost);
+     UNIMPLEMENTED_INFO_CLASS(ProcessDeviceMap);
+@@ -526,6 +525,34 @@ NTSTATUS WINAPI NtQueryInformationProcess(
+         else
+             ret = STATUS_INFO_LENGTH_MISMATCH;
+         break;
++    case ProcessPriorityClass:
++        len = sizeof(PROCESS_PRIORITY_CLASS);
++        if (ProcessInformationLength == len)
++        {
++            if (!ProcessInformation)
++                ret = STATUS_ACCESS_VIOLATION;
++            else if (!ProcessHandle)
++                ret = STATUS_INVALID_HANDLE;
++            else
++            {
++                PROCESS_PRIORITY_CLASS *priority = ProcessInformation;
++
++                SERVER_START_REQ(get_process_info)
++                {
++                    req->handle = wine_server_obj_handle( ProcessHandle );
++                    if ((ret = wine_server_call( req )) == STATUS_SUCCESS)
++                    {
++                        priority->PriorityClass = reply->priority;
++                        /* FIXME: Not yet supported by the wineserver */
++                        priority->Foreground = FALSE;
++                    }
++                }
++                SERVER_END_REQ;
++            }
++        }
++        else
++            ret = STATUS_INFO_LENGTH_MISMATCH;
++        break;
+     default:
+         FIXME("(%p,info_class=%d,%p,0x%08x,%p) Unknown information class\n",
+               ProcessHandle,ProcessInformationClass,
+diff --git a/dlls/ntdll/tests/info.c b/dlls/ntdll/tests/info.c
+index 448bc64c28a..6652409eaca 100644
+--- a/dlls/ntdll/tests/info.c
++++ b/dlls/ntdll/tests/info.c
+@@ -1253,6 +1253,40 @@ static void test_query_process_debug_port(int argc, char **argv)
+     ok(ret, "CloseHandle failed, last error %#x.\n", GetLastError());
+ }
+ 
++static void test_query_process_priority(void)
++{
++    PROCESS_PRIORITY_CLASS priority[2];
++    ULONG ReturnLength;
++    DWORD orig_priority;
++    NTSTATUS status;
++    BOOL ret;
++
++    status = pNtQueryInformationProcess(NULL, ProcessPriorityClass, NULL, sizeof(priority[0]), NULL);
++    ok(status == STATUS_ACCESS_VIOLATION || broken(status == STATUS_INVALID_HANDLE) /* w2k3 */,
++       "Expected STATUS_ACCESS_VIOLATION, got %08x\n", status);
++
++    status = pNtQueryInformationProcess(NULL, ProcessPriorityClass, &priority, sizeof(priority[0]), NULL);
++    ok(status == STATUS_INVALID_HANDLE, "Expected STATUS_INVALID_HANDLE, got %08x\n", status);
++
++    status = pNtQueryInformationProcess(GetCurrentProcess(), ProcessPriorityClass, &priority, 1, &ReturnLength);
++    ok(status == STATUS_INFO_LENGTH_MISMATCH, "Expected STATUS_INFO_LENGTH_MISMATCH, got %08x\n", status);
++
++    status = pNtQueryInformationProcess(GetCurrentProcess(), ProcessPriorityClass, &priority, sizeof(priority), &ReturnLength);
++    ok(status == STATUS_INFO_LENGTH_MISMATCH, "Expected STATUS_INFO_LENGTH_MISMATCH, got %08x\n", status);
++
++    orig_priority = GetPriorityClass(GetCurrentProcess());
++    ret = SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
++    ok(ret, "Failed to set priority class: %u\n", GetLastError());
++
++    status = pNtQueryInformationProcess(GetCurrentProcess(), ProcessPriorityClass, &priority, sizeof(priority[0]), &ReturnLength);
++    ok(status == STATUS_SUCCESS, "Expected STATUS_SUCCESS, got %08x\n", status);
++    ok(priority[0].PriorityClass == PROCESS_PRIOCLASS_BELOW_NORMAL,
++       "Expected PROCESS_PRIOCLASS_BELOW_NORMAL, got %u\n", priority[0].PriorityClass);
++
++    ret = SetPriorityClass(GetCurrentProcess(), orig_priority);
++    ok(ret, "Failed to reset priority class: %u\n", GetLastError());
++}
++
+ static void test_query_process_handlecount(void)
+ {
+     NTSTATUS status;
+@@ -2107,6 +2141,10 @@ START_TEST(info)
+     trace("Starting test_process_debug_port()\n");
+     test_query_process_debug_port(argc, argv);
+ 
++    /* 0x12 ProcessPriorityClass */
++    trace("Starting test_query_process_priority()\n");
++    test_query_process_priority();
++
+     /* 0x14 ProcessHandleCount */
+     trace("Starting test_query_process_handlecount()\n");
+     test_query_process_handlecount();
+-- 
+2.11.0
+

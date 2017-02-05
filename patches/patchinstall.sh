@@ -88,6 +88,7 @@ patch_enable_all ()
 	enable_Staging="$1"
 	enable_advapi32_AddMandatoryAce="$1"
 	enable_advapi32_GetExplicitEntriesFromAclW="$1"
+	enable_advapi32_LookupSecurityDescriptorParts="$1"
 	enable_advapi32_LsaLookupSids="$1"
 	enable_advapi32_SetSecurityInfo="$1"
 	enable_advapi32_WinBuiltinAnyPackageSid="$1"
@@ -474,6 +475,9 @@ patch_enable ()
 			;;
 		advapi32-GetExplicitEntriesFromAclW)
 			enable_advapi32_GetExplicitEntriesFromAclW="$2"
+			;;
+		advapi32-LookupSecurityDescriptorParts)
+			enable_advapi32_LookupSecurityDescriptorParts="$2"
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
@@ -2569,6 +2573,21 @@ if test "$enable_advapi32_GetExplicitEntriesFromAclW" -eq 1; then
 	patch_apply advapi32-GetExplicitEntriesFromAclW/0001-advapi32-Implement-GetExplicitEntriesFromAclW.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "advapi32: Implement GetExplicitEntriesFromAclW.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset advapi32-LookupSecurityDescriptorParts
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#41682] Add stub for advapi32.LookupSecurityDescriptorPartsA/W
+# |
+# | Modified files:
+# |   *	dlls/advapi32/advapi32.spec, dlls/advapi32/security.c
+# |
+if test "$enable_advapi32_LookupSecurityDescriptorParts" -eq 1; then
+	patch_apply advapi32-LookupSecurityDescriptorParts/0001-advapi32-add-LookupSecurityDescriptorPartsA-W-stubs.patch
+	(
+		printf '%s\n' '+    { "Austin English", "advapi32: Add LookupSecurityDescriptorPartsA/W stubs.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -373,6 +373,7 @@ patch_enable_all ()
 	enable_vulkan_Vulkan_Implementation="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_wbemprox_Printer="$1"
+	enable_wevtapi_EvtNext="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppGrayFloat="$1"
 	enable_windowscodecs_32bppPRGBA="$1"
@@ -1325,6 +1326,9 @@ patch_enable ()
 			;;
 		wbemprox-Printer)
 			enable_wbemprox_Printer="$2"
+			;;
+		wevtapi-EvtNext)
+			enable_wevtapi_EvtNext="$2"
 			;;
 		widl-SLTG_Typelib_Support)
 			enable_widl_SLTG_Typelib_Support="$2"
@@ -7690,6 +7694,21 @@ if test "$enable_wbemprox_Printer" -eq 1; then
 	patch_apply wbemprox-Printer/0001-wbemprox-Provide-DeviceID-Location-and-PortName-for-.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wbemprox: Provide DeviceID, Location and PortName for printers.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wevtapi-EvtNext
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42170] Add stub for wevtapi.EvtNext
+# |
+# | Modified files:
+# |   *	dlls/wevtapi/main.c, dlls/wevtapi/wevtapi.spec
+# |
+if test "$enable_wevtapi_EvtNext" -eq 1; then
+	patch_apply wevtapi-EvtNext/0001-wevtapi-Add-stub-for-EvtNext.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wevtapi: Add stub for EvtNext.", 1 },';
 	) >> "$patchlist"
 fi
 
